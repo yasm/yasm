@@ -196,15 +196,28 @@ typedef enum {
     STN_UNDEF = 0
 } elf_symbol_index;
 
+/* elf symbol visibility - lower two bits of OTHER field */
+typedef enum {
+    STV_DEFAULT = 0,		/* Default symbol visibility rules */
+    STV_INTERNAL = 1,		/* Processor specific hidden class */
+    STV_HIDDEN = 2,		/* Sym unavailable in other modules */
+    STV_PROTECTED = 3		/* Not preemptable, not exported */
+} elf_symbol_vis;
+
 
 /* internal only object definitions */
 #ifdef YASM_OBJFMT_ELF_INTERNAL
 
+#define ELF_VISIBILITY_MASK		0x03
+#define ELF_ST_VISIBILITY(v)            ((v) & ELF_VISIBILITY_MASK)
+
 #define ELF32_ST_INFO(bind, type)	(((bind) << 4) + ((type) & 0xf))
 #define ELF32_R_INFO(s,t)		(((s)<<8)+(unsigned char)(t))
+#define ELF32_ST_OTHER(vis)             ELF_ST_VISIBILITY(vis)
 
 #define ELF64_ST_INFO(bind, type)	(((bind) << 4) + ((type) & 0xf))
 #define ELF64_R_INFO(s,t)		(((s)<<32) + ((t) & 0xffffffffL))
+#define ELF64_ST_OTHER(vis)             ELF_ST_VISIBILITY(vis)
 
 #define EHDR32_SIZE 52
 #define EHDR64_SIZE 64
@@ -376,6 +389,7 @@ struct elf_symtab_entry {
     elf_section_index	 index;
     elf_symbol_binding	 bind;
     elf_symbol_type	 type;
+    elf_symbol_vis       vis;
     elf_symbol_index	 symindex;
 };
 
@@ -422,7 +436,8 @@ void elf_symtab_set_nonzero(elf_symtab_entry	*entry,
 			    elf_symbol_type	 type,
 			    struct yasm_expr	*size,
 			    elf_address		 value);
-
+void elf_sym_set_visibility(elf_symtab_entry    *entry,
+                            elf_symbol_vis       vis);
 
 /* section header functions */
 elf_secthead *elf_secthead_create(elf_strtab_entry	*name,

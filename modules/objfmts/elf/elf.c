@@ -252,6 +252,7 @@ elf_symtab_entry_create(elf_strtab_entry *name,
     entry->index = 0;
     entry->bind = 0;
     entry->type = STT_NOTYPE;
+    entry->vis = STV_DEFAULT;
 
     return entry;
 }
@@ -324,6 +325,7 @@ elf_symtab_create()
     entry->index = SHN_UNDEF;
     entry->bind = 0;
     entry->type = 0;
+    entry->vis = STV_DEFAULT;
     entry->symindex = 0;
     STAILQ_INSERT_TAIL(symtab, entry, qlink);
     return symtab;
@@ -489,6 +491,12 @@ void elf_symtab_set_nonzero(elf_symtab_entry *entry,
     if (value) entry->value = value;
 }
 
+void
+elf_sym_set_visibility(elf_symtab_entry *entry,
+                       elf_symbol_vis    vis)
+{
+    entry->vis = ELF_ST_VISIBILITY(vis);
+}                            
 
 elf_secthead *
 elf_secthead_create(elf_strtab_entry	*name,

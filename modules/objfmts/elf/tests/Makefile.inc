@@ -34,6 +34,9 @@ EXTRA_DIST += modules/objfmts/elf/tests/elfreloc-ext.hex
 EXTRA_DIST += modules/objfmts/elf/tests/elfabssect.asm
 EXTRA_DIST += modules/objfmts/elf/tests/elfabssect.errwarn
 EXTRA_DIST += modules/objfmts/elf/tests/elfabssect.hex
+EXTRA_DIST += modules/objfmts/elf/tests/elfvisibility.asm
+EXTRA_DIST += modules/objfmts/elf/tests/elfvisibility.errwarn
+EXTRA_DIST += modules/objfmts/elf/tests/elfvisibility.hex
 
 EXTRA_DIST += modules/objfmts/elf/tests/amd64/Makefile.inc
 

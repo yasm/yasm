@@ -86,8 +86,8 @@ yasm_objfmt_module yasm_elf_LTX_objfmt;
 static elf_symtab_entry *
 elf_objfmt_symtab_append(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym,
 			 elf_section_index sectidx, elf_symbol_binding bind,
-			 elf_symbol_type type, yasm_expr *size,
-			 elf_address value)
+			 elf_symbol_type type, elf_symbol_vis vis,
+                         yasm_expr *size, elf_address value)
 {
     elf_strtab_entry *name = elf_strtab_append_str(objfmt_elf->strtab,
 						   yasm_symrec_get_name(sym));
@@ -95,6 +95,7 @@ elf_objfmt_symtab_append(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym,
     elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
 
     elf_symtab_set_nonzero(entry, NULL, sectidx, bind, type, size, value);
+    elf_sym_set_visibility(entry, vis);
     yasm_symrec_add_data(sym, &elf_symrec_data, entry);
 
     return entry;
@@ -822,8 +823,16 @@ elf_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
 
     sym = yasm_symtab_declare(objfmt_elf->symtab, name, YASM_SYM_EXTERN, line);
     elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_GLOBAL,
-			     STT_NOTYPE, NULL, 0);
+                             STT_NOTYPE, STV_DEFAULT, NULL, 0);
 
+    if (objext_valparams) {
+	yasm_valparam *vp = yasm_vps_first(objext_valparams);
+	for (; vp; vp = yasm_vps_next(vp))
+        {
+            if (vp->val)
+                yasm__error(line, N_("unrecognized symbol type `%s'"), vp->val);
+        }
+    }
     return sym;
 }
 
@@ -836,30 +845,50 @@ elf_objfmt_global_declare(yasm_objfmt *objfmt, const char *name,
     yasm_symrec *sym;
     elf_symbol_type type = STT_NOTYPE;
     yasm_expr *size = NULL;
+    elf_symbol_vis vis = STV_DEFAULT;
+    unsigned int vis_overrides = 0;
 
     sym = yasm_symtab_declare(objfmt_elf->symtab, name, YASM_SYM_GLOBAL, line);
 
     if (objext_valparams) {
 	yasm_valparam *vp = yasm_vps_first(objext_valparams);
-	if (vp && vp->val) {
-	    if (yasm__strcasecmp(vp->val, "function") == 0)
-		type = STT_FUNC;
-	    else if (yasm__strcasecmp(vp->val, "data") == 0 ||
-		     yasm__strcasecmp(vp->val, "object") == 0)
-		type = STT_OBJECT;
-	    else
-		yasm__error(line, N_("unrecognized symbol type `%s'"),
-			    vp->val);
-	    vp = yasm_vps_next(vp);
+	for (; vp; vp = yasm_vps_next(vp))
+        {
+            if (vp->val) {
+                if (yasm__strcasecmp(vp->val, "function") == 0)
+                    type = STT_FUNC;
+                else if (yasm__strcasecmp(vp->val, "data") == 0 ||
+                         yasm__strcasecmp(vp->val, "object") == 0)
+                    type = STT_OBJECT;
+                else if (yasm__strcasecmp(vp->val, "internal") == 0) {
+                    vis = STV_INTERNAL;
+                    vis_overrides++;
+                }
+                else if (yasm__strcasecmp(vp->val, "hidden") == 0) {
+                    vis = STV_HIDDEN;
+                    vis_overrides++;
+                }
+                else if (yasm__strcasecmp(vp->val, "protected") == 0) {
+                    vis = STV_PROTECTED;
+                    vis_overrides++;
+                }
+                else
+                    yasm__error(line, N_("unrecognized symbol type `%s'"),
+                                vp->val);
+            }
+            else if (vp->param && !size) {
+                size = vp->param;
+                vp->param = NULL;	/* to avoid deleting the expr */
+            }
 	}
-	if (vp && !vp->val && vp->param) {
-	    size = vp->param;
-	    vp->param = NULL;	/* to avoid deleting the expr */
-	}
+        if (vis_overrides > 1) {
+            yasm__warning(YASM_WARN_GENERAL, line,
+                N_("More than one symbol visibility provided; using last"));
+        }
     }
 
     elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_GLOBAL,
-			     type, size, 0);
+                             type, vis, size, 0);
 
     return sym;
 }
@@ -878,30 +907,32 @@ elf_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
 
     if (objext_valparams) {
 	yasm_valparam *vp = yasm_vps_first(objext_valparams);
-	if (vp && !vp->val && vp->param) {
-            /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
+        for (; vp; vp = yasm_vps_next(vp)) {
+            if (!vp->val && vp->param) {
+                /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
 
-            align_expr = yasm_expr_get_intnum(&vp->param, NULL);
-            if (!align_expr) {
-                yasm__error(line,
-                            N_("alignment constraint is not a power of two"));
-                return sym;
-            }
-            addralign = yasm_intnum_get_uint(align_expr);
+                align_expr = yasm_expr_get_intnum(&vp->param, NULL);
+                if (!align_expr) {
+                    yasm__error(line,
+                                N_("alignment constraint is not a power of two"));
+                    return sym;
+                }
+                addralign = yasm_intnum_get_uint(align_expr);
 
-            /* Alignments must be a power of two. */
-            if ((addralign & (addralign - 1)) != 0) {
-                yasm__error(line,
-                            N_("alignment constraint is not a power of two"));
-                return sym;
-            }
-	} else if (vp && vp->val)
-	    yasm__warning(YASM_WARN_GENERAL, line,
-			  N_("Unrecognized qualifier `%s'"), vp->val);
+                /* Alignments must be a power of two. */
+                if ((addralign & (addralign - 1)) != 0) {
+                    yasm__error(line,
+                                N_("alignment constraint is not a power of two"));
+                    return sym;
+                }
+            } else if (vp->val)
+                yasm__warning(YASM_WARN_GENERAL, line,
+                              N_("Unrecognized qualifier `%s'"), vp->val);
+        }
     }
 
     elf_objfmt_symtab_append(objfmt_elf, sym, SHN_COMMON, STB_GLOBAL,
-			     STT_NOTYPE, size, addralign);
+                             STT_NOTYPE, STV_DEFAULT, size, addralign);
 
     return sym;
 }

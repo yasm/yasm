@@ -63,7 +63,7 @@ elf_x86_amd64_write_symtab_entry(unsigned char *bufp,
 {
     YASM_WRITE_32_L(bufp, entry->name ? entry->name->index : 0);
     YASM_WRITE_8(bufp, ELF64_ST_INFO(entry->bind, entry->type));
-    YASM_WRITE_8(bufp, 0);
+    YASM_WRITE_8(bufp, ELF64_ST_OTHER(entry->vis));
     if (entry->sect) {
         if (yasm_section_is_absolute(entry->sect)) {
             YASM_WRITE_16_L(bufp, SHN_ABS);
