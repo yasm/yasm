@@ -18,7 +18,7 @@ libcheck_a_SOURCES = \
 	list.c		\
 	list.h
 
-CFLAGS = @ANSI_CFLAGS@ @CHECK_CFLAGS@
+CFLAGS = @ANSI_CFLAGS@
 
 EXTRA_DIST = \
 	NEWS	\
