@@ -841,6 +841,100 @@ static const x86_insn_info ffree_insn[] = {
       {OPT_Reg|OPS_80|OPA_Op1Add, 0, 0} }
 };
 
+/* 486 extensions */
+static const x86_insn_info bswap_insn[] = {
+    { CPU_486, 0, 32, 2, {0x0F, 0xC8, 0}, 0, 1,
+      {OPT_Reg|OPS_32|OPA_Op1Add, 0, 0} }
+};
+static const x86_insn_info cmpxchgxadd_insn[] = {
+    { CPU_486, MOD_Op1Add, 0, 2, {0x0F, 0x00, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_8|OPA_Spare, 0} },
+    { CPU_486, MOD_Op1Add, 16, 2, {0x0F, 0x01, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare, 0} },
+    { CPU_486, MOD_Op1Add, 32, 2, {0x0F, 0x01, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} }
+};
+
+/* Pentium extensions */
+static const x86_insn_info cmpxchg8b_insn[] = {
+    { CPU_586, 0, 0, 2, {0x0F, 0xC7, 0}, 1, 1,
+      {OPT_Mem|OPS_64|OPS_Relaxed|OPA_EA, 0, 0} }
+};
+
+/* Pentium II/Pentium Pro extensions */
+static const x86_insn_info cmovcc_insn[] = {
+    { CPU_686, MOD_Op1Add, 16, 2, {0x0F, 0x40, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_686, MOD_Op1Add, 32, 2, {0x0F, 0x40, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} }
+};
+static const x86_insn_info fcmovcc_insn[] = {
+    { CPU_686|CPU_FPU, MOD_Op0Add|MOD_Op1Add, 0, 2, {0x00, 0x00, 0}, 0, 2,
+      {OPT_ST0|OPS_80|OPA_None, OPT_Reg|OPS_80|OPA_Op1Add, 0} }
+};
+
+/* Pentium4 extensions */
+static const x86_insn_info movnti_insn[] = {
+    { CPU_P4, 0, 0, 2, {0x0F, 0xC3, 0}, 0, 2,
+      {OPT_Mem|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} }
+};
+static const x86_insn_info clflush_insn[] = {
+    { CPU_P3, 0, 0, 2, {0x0F, 0xAE, 0}, 7, 1,
+      {OPT_Mem|OPS_8|OPS_Relaxed|OPA_EA, 0, 0} }
+};
+
+/* TODO: MMX/SSE2 instructions */
+
+/* TODO: PIII (Katmai) new instructions / SIMD instructiosn */
+
+/* TODO: SSE2 instructions */
+
+/* TODO: AMD 3DNow! instructions */
+
+/* TODO: Cyrix MMX instructions */
+
+/* Cyrix extensions */
+static const x86_insn_info rsdc_insn[] = {
+    { CPU_486|CPU_Cyrix|CPU_SMM, 0, 0, 2, {0x0F, 0x79, 0}, 0, 2,
+      {OPT_SegReg|OPS_16|OPA_Spare, OPT_Mem|OPS_80|OPS_Relaxed|OPA_EA, 0} }
+};
+static const x86_insn_info cyrixsmm_insn[] = {
+    { CPU_486|CPU_Cyrix|CPU_SMM, MOD_Op1Add, 0, 2, {0x0F, 0x00, 0}, 0, 1,
+      {OPT_Mem|OPS_80|OPS_Relaxed|OPA_EA, 0, 0} }
+};
+static const x86_insn_info svdc_insn[] = {
+    { CPU_486|CPU_Cyrix|CPU_SMM, 0, 0, 2, {0x0F, 0x78, 0}, 0, 2,
+      {OPT_Mem|OPS_80|OPS_Relaxed|OPA_EA, OPT_SegReg|OPS_16|OPA_Spare, 0} }
+};
+
+/* Obsolete/undocumented instructions */
+static const x86_insn_info ibts_insn[] = {
+    { CPU_386|CPU_Undoc|CPU_Obs, 0, 16, 2, {0x0F, 0xA7, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare, 0} },
+    { CPU_386|CPU_Undoc|CPU_Obs, 0, 32, 2, {0x0F, 0xA7, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} }
+};
+static const x86_insn_info umov_insn[] = {
+    { CPU_386|CPU_Undoc, 0, 0, 2, {0x0F, 0x10, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_8|OPA_Spare, 0} },
+    { CPU_386|CPU_Undoc, 0, 16, 2, {0x0F, 0x11, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare, 0} },
+    { CPU_386|CPU_Undoc, 0, 32, 2, {0x0F, 0x11, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} },
+    { CPU_386|CPU_Undoc, 0, 0, 2, {0x0F, 0x12, 0}, 0, 2,
+      {OPT_Reg|OPS_8|OPA_Spare, OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_386|CPU_Undoc, 0, 16, 2, {0x0F, 0x13, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_386|CPU_Undoc, 0, 32, 2, {0x0F, 0x13, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} }
+};
+static const x86_insn_info xbts_insn[] = {
+    { CPU_386|CPU_Undoc|CPU_Obs, 0, 16, 2, {0x0F, 0xA6, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_Mem|OPS_16|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_386|CPU_Undoc|CPU_Obs, 0, 32, 2, {0x0F, 0xA6, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_Mem|OPS_32|OPS_Relaxed|OPA_EA, 0} }
+};
+
 
 bytecode *
 x86_new_insn(const unsigned long data[4], int num_operands,
@@ -1834,10 +1928,10 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	/* Prefixes (should the others be here too? should wait be a prefix? */
 	W A I T { RET_INSN(onebyte, 0x009B, CPU_Any); }
 	/* 486 extensions */
-	/* B S W A P */
-	/* X A D D */
-	/* C M P X C H G */
-	/* C M P X C H G 4 8 6 */
+	B S W A P { RET_INSN(bswap, 0, CPU_486); }
+	X A D D { RET_INSN(cmpxchgxadd, 0xC0, CPU_486); }
+	C M P X C H G { RET_INSN(cmpxchgxadd, 0xB0, CPU_486); }
+	C M P X C H G "486" { RET_INSN(cmpxchgxadd, 0xA6, CPU_486|CPU_Undoc); }
 	I N V D { RET_INSN(twobyte, 0x0F08, CPU_486|CPU_Priv); }
 	W B I N V D { RET_INSN(twobyte, 0x0F09, CPU_486|CPU_Priv); }
 	I N V L P G { RET_INSN(twobytemem, 0x070F01, CPU_486|CPU_Priv); }
@@ -1847,7 +1941,7 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	W R M S R { RET_INSN(twobyte, 0x0F30, CPU_586|CPU_Priv); }
 	R D T S C { RET_INSN(twobyte, 0x0F31, CPU_586); }
 	R D M S R { RET_INSN(twobyte, 0x0F32, CPU_586|CPU_Priv); }
-	/* C M P X C H G 8 B */
+	C M P X C H G "8" B { RET_INSN(cmpxchg8b, 0, CPU_586); }
 	/* Pentium II/Pentium Pro extensions */
 	S Y S E N T E R { RET_INSN(twobyte, 0x0F34, CPU_686); }
 	S Y S E X I T { RET_INSN(twobyte, 0x0F35, CPU_686|CPU_Priv); }
@@ -1856,15 +1950,51 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	R D P M C { RET_INSN(twobyte, 0x0F33, CPU_686); }
 	U D "2" { RET_INSN(twobyte, 0x0F0B, CPU_286); }
 	U D "1" { RET_INSN(twobyte, 0x0FB9, CPU_286|CPU_Undoc); }
-	/* C M O V */
-	/* F C M O V */
+	C M O V O { RET_INSN(cmovcc, 0x00, CPU_686); }
+	C M O V N O { RET_INSN(cmovcc, 0x01, CPU_686); }
+	C M O V B { RET_INSN(cmovcc, 0x02, CPU_686); }
+	C M O V C { RET_INSN(cmovcc, 0x02, CPU_686); }
+	C M O V N A E { RET_INSN(cmovcc, 0x02, CPU_686); }
+	C M O V N B { RET_INSN(cmovcc, 0x03, CPU_686); }
+	C M O V N C { RET_INSN(cmovcc, 0x03, CPU_686); }
+	C M O V A E { RET_INSN(cmovcc, 0x03, CPU_686); }
+	C M O V E { RET_INSN(cmovcc, 0x04, CPU_686); }
+	C M O V Z { RET_INSN(cmovcc, 0x04, CPU_686); }
+	C M O V N E { RET_INSN(cmovcc, 0x05, CPU_686); }
+	C M O V N Z { RET_INSN(cmovcc, 0x05, CPU_686); }
+	C M O V B E { RET_INSN(cmovcc, 0x06, CPU_686); }
+	C M O V N A { RET_INSN(cmovcc, 0x06, CPU_686); }
+	C M O V N B E { RET_INSN(cmovcc, 0x07, CPU_686); }
+	C M O V A { RET_INSN(cmovcc, 0x07, CPU_686); }
+	C M O V S { RET_INSN(cmovcc, 0x08, CPU_686); }
+	C M O V N S { RET_INSN(cmovcc, 0x09, CPU_686); }
+	C M O V P { RET_INSN(cmovcc, 0x0A, CPU_686); }
+	C M O V P E { RET_INSN(cmovcc, 0x0A, CPU_686); }
+	C M O V N P { RET_INSN(cmovcc, 0x0B, CPU_686); }
+	C M O V P O { RET_INSN(cmovcc, 0x0B, CPU_686); }
+	C M O V L { RET_INSN(cmovcc, 0x0C, CPU_686); }
+	C M O V N G E { RET_INSN(cmovcc, 0x0C, CPU_686); }
+	C M O V N L { RET_INSN(cmovcc, 0x0D, CPU_686); }
+	C M O V G E { RET_INSN(cmovcc, 0x0D, CPU_686); }
+	C M O V L E { RET_INSN(cmovcc, 0x0E, CPU_686); }
+	C M O V N G { RET_INSN(cmovcc, 0x0E, CPU_686); }
+	C M O V N L E { RET_INSN(cmovcc, 0x0F, CPU_686); }
+	C M O V G { RET_INSN(cmovcc, 0x0F, CPU_686); }
+	F C M O V B { RET_INSN(fcmovcc, 0xDAC0, CPU_686|CPU_FPU); }
+	F C M O V E { RET_INSN(fcmovcc, 0xDAC8, CPU_686|CPU_FPU); }
+	F C M O V B E { RET_INSN(fcmovcc, 0xDAD0, CPU_686|CPU_FPU); }
+	F C M O V U { RET_INSN(fcmovcc, 0xDAD8, CPU_686|CPU_FPU); }
+	F C M O V N B { RET_INSN(fcmovcc, 0xDBC0, CPU_686|CPU_FPU); }
+	F C M O V N E { RET_INSN(fcmovcc, 0xDBC8, CPU_686|CPU_FPU); }
+	F C M O V N B E { RET_INSN(fcmovcc, 0xDBD0, CPU_686|CPU_FPU); }
+	F C M O V U { RET_INSN(fcmovcc, 0xDBD8, CPU_686|CPU_FPU); }
 	F C O M I { RET_INSN(fcom2, 0xDBF0, CPU_686|CPU_FPU); }
 	F U C O M I { RET_INSN(fcom2, 0xDBE8, CPU_686|CPU_FPU); }
 	F C O M I P { RET_INSN(fcom2, 0xDFF0, CPU_686|CPU_FPU); }
 	F U C O M I P { RET_INSN(fcom2, 0xDFE8, CPU_686|CPU_FPU); }
 	/* Pentium4 extensions */
-	/* M O V N T I */
-	/* C L F L U S H */
+	M O V N T I { RET_INSN(movnti, 0, CPU_P4); }
+	C L F L U S H { RET_INSN(clflush, 0, CPU_P3); }
 	L F E N C E { RET_INSN(threebyte, 0x0FAEE8, CPU_P3); }
 	M F E N C E { RET_INSN(threebyte, 0x0FAEF0, CPU_P3); }
 	P A U S E { RET_INSN(twobyte, 0xF390, CPU_P4); }
@@ -1891,24 +2021,24 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	/* Cyrix MMX instructions */
 	/* Cyrix extensions */
 	R D S H R { RET_INSN(twobyte, 0x0F36, CPU_686|CPU_Cyrix|CPU_SMM); }
-	/* R S D C */
-	/* R S L D T */
-	/* R S T S */
-	/* S V D C */
-	/* S V L D T */
-	/* S V T S */
+	R S D C { RET_INSN(rsdc, 0, CPU_486|CPU_Cyrix|CPU_SMM); }
+	R S L D T { RET_INSN(cyrixsmm, 0x7B, CPU_486|CPU_Cyrix|CPU_SMM); }
+	R S T S { RET_INSN(cyrixsmm, 0x7D, CPU_486|CPU_Cyrix|CPU_SMM); }
+	S V D C { RET_INSN(svdc, 0, CPU_486|CPU_Cyrix|CPU_SMM); }
+	S V L D T { RET_INSN(cyrixsmm, 0x7A, CPU_486|CPU_Cyrix|CPU_SMM); }
+	S V T S { RET_INSN(cyrixsmm, 0x7C, CPU_486|CPU_Cyrix|CPU_SMM); }
 	S M I N T { RET_INSN(twobyte, 0x0F38, CPU_686|CPU_Cyrix); }
 	S M I N T O L D { RET_INSN(twobyte, 0x0F7E, CPU_486|CPU_Cyrix|CPU_Obs); }
 	W R S H R { RET_INSN(twobyte, 0x0F37, CPU_686|CPU_Cyrix|CPU_SMM); }
 	/* Obsolete/undocumented instructions */
 	F S E T P M { RET_INSN(twobyte, 0xDBE4, CPU_286|CPU_FPU|CPU_Obs); }
-	/* I B T S */
+	I B T S { RET_INSN(ibts, 0, CPU_386|CPU_Undoc|CPU_Obs); }
 	L O A D A L L { RET_INSN(twobyte, 0x0F07, CPU_386|CPU_Undoc); }
 	L O A D A L L "286" { RET_INSN(twobyte, 0x0F05, CPU_286|CPU_Undoc); }
 	S A L C { RET_INSN(onebyte, 0x00D6, CPU_Undoc); }
 	S M I { RET_INSN(onebyte, 0x00F1, CPU_386|CPU_Undoc); }
-	/* U M O V */
-	/* X B T S */
+	U M O V { RET_INSN(umov, 0, CPU_386|CPU_Undoc); }
+	X B T S { RET_INSN(xbts, 0, CPU_386|CPU_Undoc|CPU_Obs); }
 
 
 	/* catchalls */
