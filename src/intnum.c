@@ -195,6 +195,25 @@ intnum_new_int(unsigned long i)
     return intn;
 }
 
+intnum *
+intnum_copy(const intnum *intn)
+{
+    intnum *n = xmalloc(sizeof(intnum));
+
+    switch (intn->type) {
+	case INTNUM_UL:
+	    n->val.ul = intn->val.ul;
+	    break;
+	case INTNUM_BV:
+	    n->val.bv = BitVector_Clone(intn->val.bv);
+	    break;
+    }
+    n->type = intn->type;
+    n->origsize = intn->origsize;
+
+    return n;
+}
+
 void
 intnum_delete(intnum *intn)
 {

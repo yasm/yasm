@@ -60,6 +60,7 @@ typedef struct floatnum floatnum;
 #endif
 
 floatnum *floatnum_new(const char *str);
+floatnum *floatnum_copy(const floatnum *flt);
 void floatnum_delete(floatnum *flt);
 
 /* calculation function: acc = acc op operand */

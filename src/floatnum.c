@@ -477,6 +477,19 @@ floatnum_new(const char *str)
     return flt;
 }
 
+floatnum *
+floatnum_copy(const floatnum *flt)
+{
+    floatnum *f = xmalloc(sizeof(floatnum));
+
+    f->mantissa = BitVector_Clone(flt->mantissa);
+    f->exponent = flt->exponent;
+    f->sign = flt->sign;
+    f->flags = flt->flags;
+
+    return f;
+}
+
 void
 floatnum_delete(floatnum *flt)
 {

@@ -89,15 +89,23 @@ ExprItem *ExprReg(unsigned char reg, unsigned char size);
 #define expr_new_ident(r) \
     expr_new ((ExprItem *)NULL, EXPR_IDENT, (r))
 
+/* allocates and makes an exact duplicate of e */
+expr *expr_copy(const expr *e);
+
 void expr_delete(expr *e);
 
-int expr_contains_float(const expr *);
+int expr_contains_float(expr *);
 
 int expr_checkea(expr **e, unsigned char *addrsize, unsigned char bits,
 		 unsigned char *displen, unsigned char *modrm,
 		 unsigned char *v_modrm, unsigned char *n_modrm,
 		 unsigned char *sib, unsigned char *v_sib,
 		 unsigned char *n_sib);
+
+/* Expands all (symrec) equ's in the expression into full expression
+ * instances.
+ */
+void expr_expand_equ(expr *e);
 
 /* Simplifies the expression e as much as possible, eliminating extraneous
  * branches and simplifying integer-only subexpressions.

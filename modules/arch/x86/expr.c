@@ -83,8 +83,8 @@ struct expr {
 
 static int expr_traverse_nodes_post(expr *e, void *d,
 				    int (*func) (expr *e, void *d));
-static int expr_traverse_leaves_in(const expr *e, void *d,
-				   int (*func) (const ExprItem *ei, void *d));
+static int expr_traverse_leaves_in(expr *e, void *d,
+				   int (*func) (ExprItem *ei, void *d));
 
 /* allocate a new expression node, with children as defined.
  * If it's a unary operator, put the element on the right */
@@ -162,6 +162,51 @@ ExprReg(unsigned char reg, unsigned char size)
     return e;
 }
 
+static void
+expr_copy_side(ExprItem *dest, const ExprItem *ei)
+{
+    dest->type = ei->type;
+    switch (ei->type) {
+	case EXPR_SYM:
+	    dest->data.sym = ei->data.sym;
+	    break;
+	case EXPR_EXPR:
+	    dest->data.expn = expr_copy(ei->data.expn);
+	    break;
+	case EXPR_INT:
+	    dest->data.intn = intnum_copy(ei->data.intn);
+	    break;
+	case EXPR_FLOAT:
+	    dest->data.flt = floatnum_copy(ei->data.flt);
+	    break;
+	case EXPR_REG:
+	    dest->data.reg.num = ei->data.reg.num;
+	    dest->data.reg.size = ei->data.reg.size;
+	    break;
+	default:
+	    break;
+    }
+}
+
+expr *
+expr_copy(const expr *e)
+{
+    expr *n;
+    
+    if (!e)
+	return 0;
+
+    n = xmalloc(sizeof(expr));
+
+    expr_copy_side(&n->left, &e->left);
+    expr_copy_side(&n->right, &e->right);
+    n->op = e->op;
+    n->filename = xstrdup(e->filename);
+    n->line = e->line;
+
+    return n;
+}
+
 static
 int expr_delete_each(expr *e, void *d)
 {
@@ -197,13 +242,13 @@ expr_delete(expr *e)
 }
 
 static int
-expr_contains_float_callback(const ExprItem *ei, void *d)
+expr_contains_float_callback(ExprItem *ei, void *d)
 {
     return (ei->type == EXPR_FLOAT);
 }
 
 int
-expr_contains_float(const expr *e)
+expr_contains_float(expr *e)
 {
     return expr_traverse_leaves_in(e, NULL, expr_contains_float_callback);
 }
@@ -300,7 +345,7 @@ expr_checkea_invalid16_callback(expr *e, void *d)
 }
 
 static int
-expr_checkea_getregsize_callback(const ExprItem *ei, void *d)
+expr_checkea_getregsize_callback(ExprItem *ei, void *d)
 {
     unsigned char *addrsize = (unsigned char *)d;
 
@@ -490,6 +535,26 @@ expr_checkea(expr **e, unsigned char *addrsize, unsigned char bits,
     return 1;
 }
 
+static int
+expr_expand_equ_callback(ExprItem *ei, void *d)
+{
+    const expr *equ_expr;
+    if (ei->type == EXPR_SYM) {
+	equ_expr = symrec_get_equ(ei->data.sym);
+	if (equ_expr) {
+	    ei->type = EXPR_EXPR;
+	    ei->data.expn = expr_copy(equ_expr);
+	}
+    }
+    return 0;
+}
+
+void
+expr_expand_equ(expr *e)
+{
+    expr_traverse_leaves_in(e, NULL, expr_expand_equ_callback);
+}
+
 /* Traverse over expression tree, calling func for each operation AFTER the
  * two branches (if expressions) have been traversed (eg, postorder
  * traversal).  The data pointer d is passed to each func call.
@@ -522,40 +587,25 @@ expr_traverse_nodes_post(expr *e, void *d, int (*func) (expr *e, void *d))
  * Stops early (and returns 1) if func returns 1.  Otherwise returns 0.
  */
 static int
-expr_traverse_leaves_in(const expr *e, void *d,
-			int (*func) (const ExprItem *ei, void *d))
+expr_traverse_leaves_in(expr *e, void *d,
+			int (*func) (ExprItem *ei, void *d))
 {
     if (!e)
 	return 0;
 
-    switch (e->left.type) {
-	case EXPR_SYM:
-	    if (expr_traverse_leaves_in(symrec_get_equ(e->left.data.sym), d,
-					func))
-		return 1;
-	    break;
-	case EXPR_EXPR:
-	    if (expr_traverse_leaves_in(e->left.data.expn, d, func))
-		return 1;
-	    break;
-	default:
-	    if (func(&e->left, d))
-		return 1;
+    if (e->left.type == EXPR_EXPR) {
+	if (expr_traverse_leaves_in(e->left.data.expn, d, func))
+	    return 1;
+    } else {
+	if (func(&e->left, d))
+	    return 1;
     }
 
-    switch (e->right.type) {
-	case EXPR_SYM:
-	    if (expr_traverse_leaves_in(symrec_get_equ(e->right.data.sym), d,
-					func))
-		return 1;
-	    break;
-	case EXPR_EXPR:
-	    if (expr_traverse_leaves_in(e->right.data.expn, d, func))
-		return 1;
-	    break;
-	default:
-	    return func(&e->right, d);
-    }
+    if (e->right.type == EXPR_EXPR) {
+	if (expr_traverse_leaves_in(e->right.data.expn, d, func))
+	    return 1;
+    } else
+	return func(&e->right, d);
 
     return 0;
 }

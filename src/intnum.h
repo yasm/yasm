@@ -64,6 +64,7 @@ intnum *intnum_new_hex(char *str);
 /* convert character constant to integer value, using NASM rules */
 intnum *intnum_new_charconst_nasm(const char *str);
 intnum *intnum_new_int(unsigned long i);
+intnum *intnum_copy(const intnum *intn);
 void intnum_delete(intnum *intn);
 
 /* calculation function: acc = acc op operand */
