@@ -301,9 +301,12 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 
     /* Handle floating point expressions */
     flt = yasm_expr_get_floatnum(ep);
-    if (flt)
-	return cur_arch->floatnum_tobytes(flt, buf, destsize, valsize, shift,
-					  warn, bc->line);
+    if (flt) {
+	if (shift < 0)
+	    yasm_internal_error(N_("attempting to negative shift a float"));
+	return cur_arch->floatnum_tobytes(flt, buf, destsize, valsize,
+					  (unsigned int)shift, warn, bc->line);
+    }
 
     /* Handle integer expressions, with relocation if necessary */
     sym = yasm_expr_extract_symrec(ep, yasm_common_calc_bc_dist);

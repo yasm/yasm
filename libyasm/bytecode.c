@@ -691,7 +691,7 @@ bc_tobytes_data(bytecode_data *bc_data, unsigned char **bufp,
 		break;
 	    case DV_EXPR:
 		if (output_expr(&dv->data.expn, *bufp, bc_data->size,
-				bc_data->size*8, 0,
+				(size_t)(bc_data->size*8), 0,
 				(unsigned long)(*bufp-bufp_orig), sect, bc, 0,
 				1, d))
 		    return 1;

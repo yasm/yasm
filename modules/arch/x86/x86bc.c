@@ -956,9 +956,9 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp,
 		yasm_internal_error(N_("checkea failed"));
 
 	    if (ea->disp) {
-		if (output_expr(&ea->disp, *bufp, ea->len, ea->len*8, 0,
-				(unsigned long)(*bufp-bufp_orig), sect, bc, 0,
-				1, d))
+		if (output_expr(&ea->disp, *bufp, ea->len, (size_t)(ea->len*8),
+				0, (unsigned long)(*bufp-bufp_orig), sect, bc,
+				0, 1, d))
 		    return 1;
 		*bufp += ea->len;
 	    } else {
@@ -973,7 +973,7 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp,
 
     /* Immediate (if required) */
     if (imm && imm->val) {
-	if (output_expr(&imm->val, *bufp, imm->len, imm->len*8, 0,
+	if (output_expr(&imm->val, *bufp, imm->len, (size_t)(imm->len*8), 0,
 			(unsigned long)(*bufp-bufp_orig), sect, bc, 0, 1, d))
 	    return 1;
 	*bufp += imm->len;

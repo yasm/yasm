@@ -563,7 +563,7 @@ yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
     }
 
     /* Write the new value into the destination bitvect */
-    BitVector_Interval_Copy(op1, op2, shift, 0, valsize);
+    BitVector_Interval_Copy(op1, op2, (unsigned int)shift, 0, valsize);
 
     /* Write out the new data */
     buf = BitVector_Block_Read(op1, &len);
