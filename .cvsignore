@@ -7,7 +7,6 @@ nasm-token.c
 yapp-token.c
 yasm
 *_test
-lemon
 configure
 configure.scan
 config.*

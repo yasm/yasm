@@ -274,6 +274,9 @@ case "$host" in
 esac
 
 AC_CONFIG_FILES([Makefile
+	tools/Makefile
+	tools/lemon/Makefile
+	tools/re2c/Makefile
 	intl/Makefile
 	po/Makefile.in
 ])
