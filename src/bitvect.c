@@ -776,7 +776,7 @@ boolean BitVector_interval_scan_inc(wordptr addr, N_int start,
             empty = TRUE;
             while (empty and (--size > 0))
             {
-                if (value = *addr++) empty = FALSE; else offset++;
+                if ((value = *addr++)) empty = FALSE; else offset++;
             }
             if (empty) return(FALSE);
         }
@@ -801,7 +801,7 @@ boolean BitVector_interval_scan_inc(wordptr addr, N_int start,
         empty = TRUE;
         while (empty and (--size > 0))
         {
-            if (value = NOT *addr++) empty = FALSE; else offset++;
+            if ((value = NOT *addr++)) empty = FALSE; else offset++;
         }
         if (empty) value = LSB;
     }
@@ -852,7 +852,7 @@ boolean BitVector_interval_scan_dec(wordptr addr, N_int start,
             empty = TRUE;
             while (empty and (--size > 0))
             {
-                if (value = *addr--) empty = FALSE; else offset--;
+                if ((value = *addr--)) empty = FALSE; else offset--;
             }
             if (empty) return(FALSE);
         }
@@ -877,7 +877,7 @@ boolean BitVector_interval_scan_dec(wordptr addr, N_int start,
         empty = TRUE;
         while (empty and (--size > 0))
         {
-            if (value = NOT *addr--) empty = FALSE; else offset--;
+            if ((value = NOT *addr--)) empty = FALSE; else offset--;
         }
         if (empty) value = MSB;
     }
@@ -1359,7 +1359,7 @@ ErrCode BitVector_from_Hex(wordptr addr, charptr string)
                 digit = (int) *(--string); length--;
                 /* separate because toupper() is likely a macro! */
                 digit = toupper(digit);
-                if (ok = (isxdigit(digit) != 0))
+                if ((ok = (isxdigit(digit)) != 0))
                 {
                     if (digit >= (int) 'A') digit -= (int) 'A' - 10;
                     else                    digit -= (int) '0';
@@ -2955,7 +2955,7 @@ Z_long Set_Min(wordptr addr)                                /* = min(X)      */
 
     while (empty and (size-- > 0))
     {
-        if (c = *addr++) empty = FALSE; else i++;
+        if ((c = *addr++)) empty = FALSE; else i++;
     }
     if (empty) return((Z_long) LONG_MAX);                  /* plus infinity  */
     i <<= LOGBITS;
@@ -2977,7 +2977,7 @@ Z_long Set_Max(wordptr addr)                                /* = max(X)      */
     addr += size-1;
     while (empty and (size-- > 0))
     {
-        if (c = *addr--) empty = FALSE; else i--;
+        if ((c = *addr--)) empty = FALSE; else i--;
     }
     if (empty) return((Z_long) LONG_MIN);                  /* minus infinity */
     i <<= LOGBITS;
