@@ -40,6 +40,20 @@ void Fatal(fatal_num);
 void Error(char *, ...);
 void Warning(char *, ...);
 
+/* Use Error() and Warning() instead of ErrorAt() and WarningAt() when being
+ * called in line order from a parser.  The *At() functions are much slower,
+ * at least in the current implementation.
+ */
+void ErrorAt(char *filename, unsigned long line, char *, ...);
+void WarningAt(char *filename, unsigned long line, char *, ...);
+
+/* These two functions immediately output the error or warning, with no file
+ * or line information.  They should be used for errors and warnings outside
+ * the parser stage (at program startup, for instance).
+ */
+void ErrorNow(char *, ...);
+void WarningNow(char *, ...);
+
 /* Returns total number of errors to this point in assembly. */
 unsigned int OutputAllErrorWarning(void);
 

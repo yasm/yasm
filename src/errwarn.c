@@ -151,7 +151,7 @@ Fatal(fatal_num num)
 
 /* Register an error.  Uses argtypes as described above to specify the
  * argument types.  Does not print the error, only stores it for
- * OutputError() to print. */
+ * OutputAllErrorWarning() to print. */
 void
 Error(char *fmt, ...)
 {
@@ -198,7 +198,7 @@ Error(char *fmt, ...)
 
 /* Register a warning.  Uses argtypes as described above to specify the
  * argument types.  Does not print the warning, only stores it for
- * OutputWarning() to print. */
+ * OutputAllErrorWarning() to print. */
 void
 Warning(char *fmt, ...)
 {
@@ -231,6 +231,41 @@ Warning(char *fmt, ...)
     }
     STAILQ_INSERT_TAIL(errwarns, we, link);
     warning_count++;
+}
+
+void
+ErrorNow(char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fprintf(stderr, "\n");
+}
+
+void
+WarningNow(char *fmt, ...)
+{
+    va_list ap;
+
+    fprintf(stderr, "%s ", _("warning:"));
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fprintf(stderr, "\n");
+}
+
+void
+ErrorAt(char *filename, unsigned long line, char *fmt, ...)
+{
+    /* TODO */
+}
+
+void
+WarningAt(char *filename, unsigned long line, char *fmt, ...)
+{
+    /* TODO */
 }
 
 /* Output all previously stored errors and warnings to stderr. */
