@@ -305,6 +305,7 @@ static const x86_insn_info mov_insn[] = {
       {OPT_MemOffs|OPS_16|OPS_Relaxed|OPA_EA, OPT_Areg|OPS_16|OPA_None, 0} },
     { CPU_Any, 0, 32, 1, {0xA3, 0, 0}, 0, 2,
       {OPT_MemOffs|OPS_32|OPS_Relaxed|OPA_EA, OPT_Areg|OPS_32|OPA_None, 0} },
+
     { CPU_Any, 0, 0, 1, {0x88, 0, 0}, 0, 2,
       {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_8|OPA_Spare, 0} },
     { CPU_Any, 0, 16, 1, {0x89, 0, 0}, 0, 2,
@@ -317,7 +318,31 @@ static const x86_insn_info mov_insn[] = {
       {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0} },
     { CPU_386, 0, 32, 1, {0x8B, 0, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} },
-    /* TODO: segreg here */
+
+    /* Need two sets here, one for strictness on left side, one for right. */
+    { CPU_Any, 0, 16, 1, {0x8C, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_SegReg|OPS_16|OPA_Spare, 0} },
+    { CPU_386, 0, 32, 1, {0x8C, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_SegReg|OPS_32|OPA_Spare, 0} },
+    { CPU_Any, 0, 16, 1, {0x8C, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPA_EA, OPT_SegReg|OPS_Any|OPA_Spare, 0} },
+    { CPU_386, 0, 32, 1, {0x8C, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPA_EA, OPT_SegReg|OPS_Any|OPA_Spare, 0} },
+    /* These allow for unspecified sized moves /to/ a segreg */
+    { CPU_Any, 0, 0, 1, {0x8E, 0, 0}, 0, 2,
+      {OPT_SegReg|OPS_Any|OPA_Spare, OPT_RM|OPS_Any|OPA_EA, 0} },
+    { CPU_386, 0, 0, 1, {0x8E, 0, 0}, 0, 2,
+      {OPT_SegReg|OPS_Any|OPA_Spare, OPT_RM|OPS_Any|OPA_EA, 0} },
+    /* Need two sets here, one for strictness on left side, one for right. */
+    { CPU_Any, 0, 16, 1, {0x8E, 0, 0}, 0, 2,
+      {OPT_SegReg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_386, 0, 32, 1, {0x8E, 0, 0}, 0, 2,
+      {OPT_SegReg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_Any, 0, 16, 1, {0x8E, 0, 0}, 0, 2,
+      {OPT_SegReg|OPS_Any|OPA_Spare, OPT_RM|OPS_16|OPA_EA, 0} },
+    { CPU_386, 0, 32, 1, {0x8E, 0, 0}, 0, 2,
+      {OPT_SegReg|OPS_Any|OPA_Spare, OPT_RM|OPS_32|OPA_EA, 0} },
+
     { CPU_Any, 0, 0, 1, {0xB0, 0, 0}, 0, 2,
       {OPT_Reg|OPS_8|OPA_Op0Add, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
     { CPU_Any, 0, 16, 1, {0xB8, 0, 0}, 0, 2,
@@ -337,6 +362,7 @@ static const x86_insn_info mov_insn[] = {
       {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm, 0} },
     { CPU_386, 0, 32, 1, {0xC7, 0, 0}, 0, 2,
       {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm, 0} },
+
     { CPU_586|CPU_Priv, 0, 0, 2, {0x0F, 0x22, 0}, 0, 2,
       {OPT_CR4|OPS_32|OPA_Spare, OPT_Reg|OPS_32|OPA_EA, 0} },
     { CPU_386|CPU_Priv, 0, 0, 2, {0x0F, 0x22, 0}, 0, 2,
@@ -345,6 +371,7 @@ static const x86_insn_info mov_insn[] = {
       {OPT_Reg|OPS_32|OPA_EA, OPT_CR4|OPS_32|OPA_Spare, 0} },
     { CPU_386|CPU_Priv, 0, 0, 2, {0x0F, 0x20, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_EA, OPT_CRReg|OPS_32|OPA_Spare, 0} },
+
     { CPU_386|CPU_Priv, 0, 0, 2, {0x0F, 0x23, 0}, 0, 2,
       {OPT_DRReg|OPS_32|OPA_Spare, OPT_Reg|OPS_32|OPA_EA, 0} },
     { CPU_386|CPU_Priv, 0, 0, 2, {0x0F, 0x21, 0}, 0, 2,
