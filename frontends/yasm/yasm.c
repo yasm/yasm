@@ -90,7 +90,7 @@ static const char *help_tail =
     "\n";
 
 /* main function */
-/*@-globstate@*/
+/*@-globstate -unrecog@*/
 int
 main(int argc, char *argv[])
 {
@@ -150,7 +150,9 @@ main(int argc, char *argv[])
 	exttail = strrchr(obj_filename, '.');
 	if (!exttail)
 	    exttail = strrchr(obj_filename, '\0');
+	/*@-nullpass@*/
 	sprintf(exttail, ".%s", cur_objfmt->extension);
+	/*@=nullpass@*/
 
 	/* open the built filename */
 	obj = fopen(obj_filename, "wb");
@@ -223,7 +225,7 @@ main(int argc, char *argv[])
     BitVector_Shutdown();
     return EXIT_SUCCESS;
 }
-/*@=globstate@*/
+/*@=globstate =unrecog@*/
 
 /*
  *  Command line options handlers
