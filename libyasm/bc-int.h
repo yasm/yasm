@@ -82,6 +82,10 @@ struct yasm_bytecode {
 
     /* storage for optimizer flags */
     unsigned long opt_flags;
+
+    /* NULL-terminated array of labels that point to this bytecode (as the
+     * bytecode previous to the label).  NULL if no labels point here. */
+    /*@null@*/ yasm_symrec **symrecs;
 };
 
 /** Create a bytecode of any specified type.

@@ -220,6 +220,8 @@ yasm_symtab_define_label(yasm_symtab *symtab, const char *name,
     yasm_symrec *rec;
     rec = symtab_define(symtab, name, SYM_LABEL, in_table, line);
     rec->value.precbc = precbc;
+    if (precbc)
+	yasm_bc__add_symrec(precbc, rec);
     return rec;
 }
 

@@ -261,6 +261,8 @@ yasm_bc_create_common(const yasm_bytecode_callback *callback, size_t size,
 
     bc->opt_flags = 0;
 
+    bc->symrecs = NULL;
+
     return bc;
 }
 
@@ -678,6 +680,27 @@ yasm_bc_get_section(yasm_bytecode *bc)
 }
 
 void
+yasm_bc__add_symrec(yasm_bytecode *bc, yasm_symrec *sym)
+{
+    if (!bc->symrecs) {
+	bc->symrecs = yasm_xmalloc(2*sizeof(yasm_symrec *));
+	bc->symrecs[0] = sym;
+	bc->symrecs[1] = NULL;
+    } else {
+	/* Very inefficient implementation for large numbers of symbols.  But
+	 * that would be very unusual, so use the simple algorithm instead.
+	 */
+	size_t count = 1;
+	while (bc->symrecs[count])
+	    count++;
+	bc->symrecs = yasm_xrealloc(bc->symrecs,
+				    (count+2)*sizeof(yasm_symrec *));
+	bc->symrecs[count] = sym;
+	bc->symrecs[count+1] = NULL;
+    }
+}
+
+void
 yasm_bc_destroy(yasm_bytecode *bc)
 {
     if (!bc)
@@ -686,6 +709,7 @@ yasm_bc_destroy(yasm_bytecode *bc)
     if (bc->callback)
 	bc->callback->destroy(bc);
     yasm_expr_destroy(bc->multiple);
+    yasm_xfree(bc->symrecs);
     yasm_xfree(bc);
 }
 
