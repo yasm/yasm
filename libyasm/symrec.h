@@ -91,6 +91,17 @@ void yasm_symtab_destroy(/*@only@*/ yasm_symtab *symtab);
     (const char *name, /*@dependent@*/ yasm_bytecode *precbc, int in_table,
      unsigned long line);
 
+/** Define a special symbol that will appear in the symbol table and have a
+ * defined name, but have no other data associated with it within the
+ * standard symrec.
+ * \param symtab    symbol table
+ * \param name	    symbol name
+ * \param vis	    symbol visibility
+ * \return Symbol (dependent pointer, do not free).
+ */
+/*@dependent@*/ yasm_symrec *yasm_symtab_define_special
+    (yasm_symtab *symtab, const char *name, yasm_sym_vis vis);
+
 /** Declare external visibility of a symbol.
  * \note Not all visibility combinations are allowed.
  * \param symtab    symbol table
@@ -102,6 +113,15 @@ void yasm_symtab_destroy(/*@only@*/ yasm_symtab *symtab);
 /*@dependent@*/ yasm_symrec *yasm_symtab_declare
     (yasm_symtab *symtab, const char *name, yasm_sym_vis vis,
      unsigned long line);
+
+/** Declare external visibility of a symbol.
+ * \note Not all visibility combinations are allowed.
+ * \param symrec    symbol
+ * \param vis	    visibility
+ * \param line      virtual line of visibility-setting
+ */
+void yasm_symrec_declare(yasm_symrec *rec, yasm_sym_vis vis,
+			 unsigned long line);
 
 /** Callback function for yasm_symrec_traverse().
  * \param sym	    symbol
@@ -164,6 +184,12 @@ typedef /*@dependent@*/ yasm_bytecode *yasm_symrec_get_label_bytecodep;
  */
 int yasm_symrec_get_label(const yasm_symrec *sym,
 			  /*@out@*/ yasm_symrec_get_label_bytecodep *precbc);
+
+/** Determine if symbol is a special symbol.
+ * \param sym	    symbol
+ * \return 0 if symbol is not a special symbol, nonzero otherwise.
+ */
+int yasm_symrec_is_special(const yasm_symrec *sym);
 
 /** Get associated data for a symbol and data callback.
  * \param sym	    symbol

@@ -86,17 +86,10 @@ typedef struct xdf_symrec_data {
     unsigned long index;		/* assigned XDF symbol table index */
 } xdf_symrec_data;
 
-typedef struct xdf_symtab_entry {
-    STAILQ_ENTRY(xdf_symtab_entry) link;
-    /*@dependent@*/ yasm_symrec *sym;
-} xdf_symtab_entry;
-typedef STAILQ_HEAD(xdf_symtab_head, xdf_symtab_entry) xdf_symtab_head;
-
 typedef struct yasm_objfmt_xdf {
     yasm_objfmt_base objfmt;		    /* base structure */
 
     long parse_scnum;		    /* sect numbering in parser */
-    xdf_symtab_head xdf_symtab;	    /* symbol table of indexed syms */
 
     yasm_object *object;
     yasm_symtab *symtab;
@@ -109,6 +102,10 @@ typedef struct xdf_objfmt_output_info {
     /*@only@*/ unsigned char *buf;
     yasm_section *sect;
     /*@dependent@*/ xdf_section_data *xsd;
+
+    unsigned long indx;		    /* current symbol index */
+    int all_syms;		    /* outputting all symbols? */
+    unsigned long strtab_offset;    /* current string table offset */
 } xdf_objfmt_output_info;
 
 static void xdf_section_data_destroy(/*@only@*/ void *d);
@@ -129,44 +126,6 @@ static const yasm_assoc_data_callback xdf_symrec_data_cb = {
 
 yasm_objfmt_module yasm_xdf_LTX_objfmt;
 
-
-static /*@dependent@*/ xdf_symtab_entry *
-xdf_objfmt_symtab_append(yasm_objfmt_xdf *objfmt_xdf, yasm_symrec *sym)
-{
-    /*@null@*/ /*@dependent@*/ xdf_symrec_data *sym_data_prev;
-    xdf_symrec_data *sym_data;
-    xdf_symtab_entry *entry;
-    unsigned long indx;
-
-    if (STAILQ_EMPTY(&objfmt_xdf->xdf_symtab))
-	indx = 0;
-    else {
-	entry = STAILQ_LAST(&objfmt_xdf->xdf_symtab, xdf_symtab_entry, link);
-	sym_data_prev = yasm_symrec_get_data(entry->sym, &xdf_symrec_data_cb);
-	assert(sym_data_prev != NULL);
-	indx = sym_data_prev->index + 1;
-    }
-
-    sym_data = yasm_xmalloc(sizeof(xdf_symrec_data));
-    sym_data->index = indx;
-    yasm_symrec_add_data(sym, &xdf_symrec_data_cb, sym_data);
-
-    entry = yasm_xmalloc(sizeof(xdf_symtab_entry));
-    entry->sym = sym;
-    STAILQ_INSERT_TAIL(&objfmt_xdf->xdf_symtab, entry, link);
-
-    return entry;
-}
-
-static int
-xdf_objfmt_append_local_sym(yasm_symrec *sym, /*@unused@*/ /*@null@*/ void *d)
-{
-    /*@null@*/ yasm_objfmt_xdf *objfmt_xdf = (yasm_objfmt_xdf *)d;
-    assert(objfmt_xdf != NULL);
-    if (!yasm_symrec_get_data(sym, &xdf_symrec_data_cb))
-	xdf_objfmt_symtab_append(objfmt_xdf, sym);
-    return 1;
-}
 
 static yasm_objfmt *
 xdf_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
@@ -191,7 +150,6 @@ xdf_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
     }
 
     objfmt_xdf->parse_scnum = 0;    /* section numbering starts at 0 */
-    STAILQ_INIT(&objfmt_xdf->xdf_symtab);
 
     objfmt_xdf->objfmt.module = &yasm_xdf_LTX_objfmt;
 
@@ -493,73 +451,47 @@ xdf_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     return 0;
 }
 
-static void
-xdf_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
-		   int all_syms, /*@unused@*/ yasm_dbgfmt *df)
+static int
+xdf_objfmt_count_sym(yasm_symrec *sym, /*@null@*/ void *d)
 {
-    yasm_objfmt_xdf *objfmt_xdf = (yasm_objfmt_xdf *)objfmt;
-    xdf_objfmt_output_info info;
-    unsigned char *localbuf;
-    unsigned long symtab_count = 0;
-    unsigned long strtab_offset;
-    xdf_symtab_entry *entry;
+    /*@null@*/ xdf_objfmt_output_info *info = (xdf_objfmt_output_info *)d;
+    assert(info != NULL);
+    if (info->all_syms || yasm_symrec_get_visibility(sym) != YASM_SYM_LOCAL) {
+	/* Save index in symrec data */
+	xdf_symrec_data *sym_data = yasm_xmalloc(sizeof(xdf_symrec_data));
+	sym_data->index = info->indx;
+	yasm_symrec_add_data(sym, &xdf_symrec_data_cb, sym_data);
 
-    info.objfmt_xdf = objfmt_xdf;
-    info.f = f;
-    info.buf = yasm_xmalloc(REGULAR_OUTBUF_SIZE);
-
-    /* Allocate space for headers by seeking forward */
-    if (fseek(f, (long)(16+32*(objfmt_xdf->parse_scnum)), SEEK_SET) < 0) {
-	yasm__fatal(N_("could not seek on output file"));
-	/*@notreached@*/
-	return;
+	info->indx++;
     }
+    return 1;
+}
 
-    /* Symbol table */
-    all_syms = 1;	/* force all syms into symbol table */
-    if (all_syms) {
-	/* Need to put all local syms into XDF symbol table */
-	yasm_symtab_traverse(objfmt_xdf->symtab, objfmt_xdf,
-			     xdf_objfmt_append_local_sym);
-    }
+static int
+xdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
+{
+    /*@null@*/ xdf_objfmt_output_info *info = (xdf_objfmt_output_info *)d;
+    yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
 
-    /* Get number of symbols */
-    if (STAILQ_EMPTY(&objfmt_xdf->xdf_symtab))
-	symtab_count = 0;
-    else {
-	/*@null@*/ /*@dependent@*/ xdf_symrec_data *sym_data_prev;
-	entry = STAILQ_LAST(&objfmt_xdf->xdf_symtab, xdf_symtab_entry, link);
-	sym_data_prev = yasm_symrec_get_data(entry->sym, &xdf_symrec_data_cb);
-	assert(sym_data_prev != NULL);
-	symtab_count = sym_data_prev->index + 1;
-    }
+    assert(info != NULL);
 
-    /* Get file offset of start of string table */
-    strtab_offset = 16+32*(objfmt_xdf->parse_scnum)+16*symtab_count;
-
-    STAILQ_FOREACH(entry, &objfmt_xdf->xdf_symtab, link) {
-	const char *name = yasm_symrec_get_name(entry->sym);
+    if (info->all_syms || vis != YASM_SYM_LOCAL) {
+	const char *name = yasm_symrec_get_name(sym);
 	const yasm_expr *equ_val;
 	const yasm_intnum *intn;
 	size_t len = strlen(name);
-	/*@dependent@*/ /*@null@*/ xdf_symrec_data *xsymd;
 	unsigned long value = 0;
 	long scnum = -3;	/* -3 = debugging symbol */
 	/*@dependent@*/ /*@null@*/ yasm_section *sect;
 	/*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
-	yasm_sym_vis vis = yasm_symrec_get_visibility(entry->sym);
 	unsigned long flags = 0;
-
-	/* Get symrec's of_data (needed for storage class) */
-	xsymd = yasm_symrec_get_data(entry->sym, &xdf_symrec_data_cb);
-	if (!xsymd)
-	    yasm_internal_error(N_("xdf: expected sym data to be present"));
+	unsigned char *localbuf;
 
 	if (vis & YASM_SYM_GLOBAL)
 	    flags = XDF_SYM_GLOBAL;
 
 	/* Look at symrec for value/scnum/etc. */
-	if (yasm_symrec_get_label(entry->sym, &precbc)) {
+	if (yasm_symrec_get_label(sym, &precbc)) {
 	    if (precbc)
 		sect = yasm_bc_get_section(precbc);
 	    else
@@ -592,7 +524,7 @@ xdf_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
 		if (precbc)
 		    value += precbc->offset + precbc->len;
 	    }
-	} else if ((equ_val = yasm_symrec_get_equ(entry->sym))) {
+	} else if ((equ_val = yasm_symrec_get_equ(sym))) {
 	    yasm_expr *equ_val_copy = yasm_expr_copy(equ_val);
 	    intn = yasm_expr_get_intnum(&equ_val_copy,
 					yasm_common_calc_bc_dist);
@@ -613,21 +545,67 @@ xdf_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
 	    }
 	}
 
-	localbuf = info.buf;
+	localbuf = info->buf;
 	YASM_WRITE_32_L(localbuf, scnum);	/* section number */
 	YASM_WRITE_32_L(localbuf, value);	/* value */
-	YASM_WRITE_32_L(localbuf, strtab_offset); /* string table offset */
-	strtab_offset += len+1;
+	YASM_WRITE_32_L(localbuf, info->strtab_offset);
+	info->strtab_offset += len+1;
 	YASM_WRITE_32_L(localbuf, flags);	/* flags */
-	fwrite(info.buf, 16, 1, f);
+	fwrite(info->buf, 16, 1, info->f);
+    }
+    return 1;
+}
+
+static int
+xdf_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
+{
+    /*@null@*/ xdf_objfmt_output_info *info = (xdf_objfmt_output_info *)d;
+    yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
+
+    assert(info != NULL);
+
+    if (info->all_syms || vis != YASM_SYM_LOCAL) {
+	const char *name = yasm_symrec_get_name(sym);
+	size_t len = strlen(name);
+	fwrite(name, len+1, 1, info->f);
+    }
+    return 1;
+}
+
+static void
+xdf_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
+		  int all_syms, /*@unused@*/ yasm_dbgfmt *df)
+{
+    yasm_objfmt_xdf *objfmt_xdf = (yasm_objfmt_xdf *)objfmt;
+    xdf_objfmt_output_info info;
+    unsigned char *localbuf;
+    unsigned long symtab_count = 0;
+
+    info.objfmt_xdf = objfmt_xdf;
+    info.f = f;
+    info.buf = yasm_xmalloc(REGULAR_OUTBUF_SIZE);
+
+    /* Allocate space for headers by seeking forward */
+    if (fseek(f, (long)(16+32*(objfmt_xdf->parse_scnum)), SEEK_SET) < 0) {
+	yasm__fatal(N_("could not seek on output file"));
+	/*@notreached@*/
+	return;
     }
 
-    /* String table */
-    STAILQ_FOREACH(entry, &objfmt_xdf->xdf_symtab, link) {
-	const char *name = yasm_symrec_get_name(entry->sym);
-	size_t len = strlen(name);
-	fwrite(name, len+1, 1, f);
-    }
+    /* Get number of symbols */
+    info.indx = 0;
+    info.all_syms = 1;	/* force all syms into symbol table */
+    yasm_symtab_traverse(objfmt_xdf->symtab, &info, xdf_objfmt_count_sym);
+    symtab_count = info.indx;
+
+    /* Get file offset of start of string table */
+    info.strtab_offset = 16+32*(objfmt_xdf->parse_scnum)+16*symtab_count;
+
+    /* Output symbol table */
+    yasm_symtab_traverse(objfmt_xdf->symtab, &info, xdf_objfmt_output_sym);
+
+    /* Output string table */
+    yasm_symtab_traverse(objfmt_xdf->symtab, &info, xdf_objfmt_output_str);
 
     /* Section data/relocs */
     if (yasm_object_sections_traverse(objfmt_xdf->object, &info,
@@ -646,7 +624,7 @@ xdf_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
     YASM_WRITE_32_L(localbuf, objfmt_xdf->parse_scnum); /* number of sects */
     YASM_WRITE_32_L(localbuf, symtab_count);		/* number of symtabs */
     /* size of sect headers + symbol table + strings */
-    YASM_WRITE_32_L(localbuf, strtab_offset-16);
+    YASM_WRITE_32_L(localbuf, info.strtab_offset-16);
     fwrite(info.buf, 16, 1, f);
 
     yasm_object_sections_traverse(objfmt_xdf->object, &info,
@@ -658,16 +636,6 @@ xdf_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
 static void
 xdf_objfmt_destroy(yasm_objfmt *objfmt)
 {
-    yasm_objfmt_xdf *objfmt_xdf = (yasm_objfmt_xdf *)objfmt;
-    xdf_symtab_entry *entry1, *entry2;
-
-    /* Delete local symbol table */
-    entry1 = STAILQ_FIRST(&objfmt_xdf->xdf_symtab);
-    while (entry1 != NULL) {
-	entry2 = STAILQ_NEXT(entry1, link);
-	yasm_xfree(entry1);
-	entry1 = entry2;
-    }
     yasm_xfree(objfmt);
 }
 
@@ -777,7 +745,6 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	sym =
 	    yasm_symtab_define_label(objfmt_xdf->symtab, sectname,
 				     yasm_section_bcs_first(retval), 1, line);
-	xdf_objfmt_symtab_append(objfmt_xdf, sym);
 	data->sym = sym;
     } else if (flags_override)
 	yasm__warning(YASM_WARN_GENERAL, line,
@@ -818,13 +785,9 @@ xdf_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
 			   unsigned long line)
 {
     yasm_objfmt_xdf *objfmt_xdf = (yasm_objfmt_xdf *)objfmt;
-    yasm_symrec *sym;
 
-    sym = yasm_symtab_declare(objfmt_xdf->symtab, name, YASM_SYM_EXTERN,
-			      line);
-    xdf_objfmt_symtab_append(objfmt_xdf, sym);
-
-    return sym;
+    return yasm_symtab_declare(objfmt_xdf->symtab, name, YASM_SYM_EXTERN,
+			       line);
 }
 
 static yasm_symrec *
@@ -833,13 +796,9 @@ xdf_objfmt_global_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
 			   unsigned long line)
 {
     yasm_objfmt_xdf *objfmt_xdf = (yasm_objfmt_xdf *)objfmt;
-    yasm_symrec *sym;
 
-    sym = yasm_symtab_declare(objfmt_xdf->symtab, name, YASM_SYM_GLOBAL,
-			      line);
-    xdf_objfmt_symtab_append(objfmt_xdf, sym);
-
-    return sym;
+    return yasm_symtab_declare(objfmt_xdf->symtab, name, YASM_SYM_GLOBAL,
+			       line);
 }
 
 static yasm_symrec *
@@ -849,14 +808,13 @@ xdf_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
 			   unsigned long line)
 {
     yasm_objfmt_xdf *objfmt_xdf = (yasm_objfmt_xdf *)objfmt;
-    yasm_symrec *sym;
 
     yasm_expr_destroy(size);
     yasm__error(line,
 	N_("XDF object format does not support common variables"));
 
-    sym = yasm_symtab_declare(objfmt_xdf->symtab, name, YASM_SYM_COMMON, line);
-    return sym;
+    return yasm_symtab_declare(objfmt_xdf->symtab, name, YASM_SYM_COMMON,
+			       line);
 }
 
 static void

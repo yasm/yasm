@@ -58,7 +58,10 @@ typedef enum {
 typedef enum {
     SYM_UNKNOWN,		/* for unknown type (COMMON/EXTERN) */
     SYM_EQU,			/* for EQU defined symbols (expressions) */
-    SYM_LABEL			/* for labels */
+    SYM_LABEL,			/* for labels */
+    SYM_SPECIAL			/* for special symbols that need to be in
+				   the symbol table but otherwise have no
+				   purpose */
 } sym_type;
 
 struct yasm_symrec {
@@ -235,11 +238,27 @@ yasm_symtab_define_label2(const char *name, yasm_bytecode *precbc,
 }
 
 yasm_symrec *
+yasm_symtab_define_special(yasm_symtab *symtab, const char *name,
+			   yasm_sym_vis vis)
+{
+    yasm_symrec *rec = symtab_define(symtab, name, SYM_SPECIAL, 1, 0);
+    rec->status |= SYM_VALUED;
+    rec->visibility = vis;
+    return rec;
+}
+
+yasm_symrec *
 yasm_symtab_declare(yasm_symtab *symtab, const char *name, yasm_sym_vis vis,
 		    unsigned long line)
 {
     yasm_symrec *rec = symtab_get_or_new(symtab, name, 1);
+    yasm_symrec_declare(rec, vis, line);
+    return rec;
+}
 
+void
+yasm_symrec_declare(yasm_symrec *rec, yasm_sym_vis vis, unsigned long line)
+{
     /* Allowable combinations:
      *  Existing State--------------  vis  New State-------------------
      *  DEFINED GLOBAL COMMON EXTERN  GCE  DEFINED GLOBAL COMMON EXTERN
@@ -260,8 +279,7 @@ yasm_symtab_declare(yasm_symtab *symtab, const char *name, yasm_sym_vis vis,
     else
 	yasm__error(line,
 	    N_("duplicate definition of `%s'; first defined on line %lu"),
-	    name, rec->line);
-    return rec;
+	    rec->name, rec->line);
 }
 
 static int
@@ -362,6 +380,12 @@ yasm_symrec_get_label(const yasm_symrec *sym,
     }
     *precbc = sym->value.precbc;
     return 1;
+}
+
+int
+yasm_symrec_is_special(const yasm_symrec *sym)
+{
+    return (sym->type == SYM_SPECIAL);
 }
 
 void *

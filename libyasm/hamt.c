@@ -37,7 +37,7 @@
 #include "hamt.h"
 
 typedef struct HAMTEntry {
-    SLIST_ENTRY(HAMTEntry) next;	/* next hash table entry */
+    STAILQ_ENTRY(HAMTEntry) next;	/* next hash table entry */
     /*@dependent@*/ const char *str;	/* string being hashed */
     /*@owned@*/ void *data;		/* data pointer being stored */
 } HAMTEntry;
@@ -48,7 +48,7 @@ typedef struct HAMTNode {
 } HAMTNode;
 
 struct HAMT {
-    SLIST_HEAD(HAMTEntryHead, HAMTEntry) entries;
+    STAILQ_HEAD(HAMTEntryHead, HAMTEntry) entries;
     HAMTNode *root;
     /*@exits@*/ void (*error_func) (const char *file, unsigned int line,
 				    const char *message);
@@ -92,7 +92,7 @@ HAMT_create(/*@exits@*/ void (*error_func)
     /*@out@*/ HAMT *hamt = yasm_xmalloc(sizeof(HAMT));
     int i;
 
-    SLIST_INIT(&hamt->entries);
+    STAILQ_INIT(&hamt->entries);
     hamt->root = yasm_xmalloc(32*sizeof(HAMTNode));
 
     for (i=0; i<32; i++) {
@@ -127,10 +127,10 @@ HAMT_destroy(HAMT *hamt, void (*deletefunc) (/*@only@*/ void *data))
     int i;
 
     /* delete entries */
-    while (!SLIST_EMPTY(&hamt->entries)) {
+    while (!STAILQ_EMPTY(&hamt->entries)) {
 	HAMTEntry *entry;
-	entry = SLIST_FIRST(&hamt->entries);
-	SLIST_REMOVE_HEAD(&hamt->entries, next);
+	entry = STAILQ_FIRST(&hamt->entries);
+	STAILQ_REMOVE_HEAD(&hamt->entries, next);
 	deletefunc(entry->data);
 	yasm_xfree(entry);
     }
@@ -149,7 +149,7 @@ HAMT_traverse(HAMT *hamt, void *d,
 			    /*@null@*/ void *d))
 {
     HAMTEntry *entry;
-    SLIST_FOREACH(entry, &hamt->entries, next)
+    STAILQ_FOREACH(entry, &hamt->entries, next)
 	if (func(entry->data, d) == 0)
 	    return 0;
     return 1;
@@ -175,7 +175,7 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 	entry = yasm_xmalloc(sizeof(HAMTEntry));
 	entry->str = str;
 	entry->data = data;
-	SLIST_INSERT_HEAD(&hamt->entries, entry, next);
+	STAILQ_INSERT_TAIL(&hamt->entries, entry, next);
 	node->BaseValue = entry;
 	if (IsSubTrie(node))
 	    hamt->error_func(__FILE__, __LINE__,
@@ -231,7 +231,7 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 			entry = yasm_xmalloc(sizeof(HAMTEntry));
 			entry->str = str;
 			entry->data = data;
-			SLIST_INSERT_HEAD(&hamt->entries, entry, next);
+			STAILQ_INSERT_TAIL(&hamt->entries, entry, next);
 
 			/* Copy nodes into subtrie based on order */
 			if (keypart2 < keypart) {
@@ -290,7 +290,7 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 	    entry = yasm_xmalloc(sizeof(HAMTEntry));
 	    entry->str = str;
 	    entry->data = data;
-	    SLIST_INSERT_HEAD(&hamt->entries, entry, next);
+	    STAILQ_INSERT_TAIL(&hamt->entries, entry, next);
 	    newnodes[Map].BaseValue = entry;
 	    SetSubTrie(hamt, node, newnodes);
 

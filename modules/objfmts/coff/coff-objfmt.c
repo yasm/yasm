@@ -144,12 +144,6 @@ typedef enum coff_symrec_sclass {
     COFF_SCL_HIDDEN = 106	/* ext symbol in dmert public lib */
 } coff_symrec_sclass;
 
-typedef struct coff_symrec_data {
-    unsigned long index;		/* assigned COFF symbol table index */
-    coff_symrec_sclass sclass;		/* storage class */
-    /*@owned@*/ /*@null@*/ yasm_expr *size; /* size if COMMON declaration */
-} coff_symrec_data;
-
 typedef union coff_symtab_auxent {
     /* no data needed for section symbol auxent, all info avail from sym */
     /*@owned@*/ char *fname;	    /* filename aux entry */
@@ -161,20 +155,21 @@ typedef enum coff_symtab_auxtype {
     COFF_SYMTAB_AUX_FILE
 } coff_symtab_auxtype;
 
-typedef struct coff_symtab_entry {
-    STAILQ_ENTRY(coff_symtab_entry) link;
-    /*@dependent@*/ yasm_symrec *sym;
+typedef struct coff_symrec_data {
+    unsigned long index;		/* assigned COFF symbol table index */
+    coff_symrec_sclass sclass;		/* storage class */
+
+    /*@owned@*/ /*@null@*/ yasm_expr *size; /* size if COMMON declaration */
+
     int numaux;			/* number of auxiliary entries */
     coff_symtab_auxtype auxtype;    /* type of aux entries */
     coff_symtab_auxent aux[1];	/* actually may be any size (including 0) */
-} coff_symtab_entry;
-typedef STAILQ_HEAD(coff_symtab_head, coff_symtab_entry) coff_symtab_head;
+} coff_symrec_data;
 
 typedef struct yasm_objfmt_coff {
     yasm_objfmt_base objfmt;		    /* base structure*/
 
     unsigned int parse_scnum;		    /* sect numbering in parser */
-    coff_symtab_head coff_symtab;	    /* symbol table of indexed syms */
     int win32;				    /* nonzero for win32 output */
 
     unsigned int machine;		    /* COFF machine to use */
@@ -190,7 +185,11 @@ typedef struct coff_objfmt_output_info {
     /*@only@*/ unsigned char *buf;
     yasm_section *sect;
     /*@dependent@*/ coff_section_data *csd;
-    unsigned long addr;	    /* start of next section */
+    unsigned long addr;			/* start of next section */
+
+    unsigned long indx;			/* current symbol index */
+    int all_syms;			/* outputting all symbols? */
+    unsigned long strtab_offset;	/* current string table offset */
 } coff_objfmt_output_info;
 
 static void coff_section_data_destroy(/*@only@*/ void *d);
@@ -213,47 +212,24 @@ yasm_objfmt_module yasm_coff_LTX_objfmt;
 yasm_objfmt_module yasm_win32_LTX_objfmt;
 
 
-static /*@dependent@*/ coff_symtab_entry *
-coff_objfmt_symtab_append(yasm_objfmt_coff *objfmt_coff, yasm_symrec *sym,
-			  coff_symrec_sclass sclass,
-			  /*@only@*/ /*@null@*/ yasm_expr *size, int numaux,
-			  coff_symtab_auxtype auxtype)
+static /*@dependent@*/ coff_symrec_data *
+coff_objfmt_sym_set_data(yasm_symrec *sym, coff_symrec_sclass sclass,
+			 /*@only@*/ /*@null@*/ yasm_expr *size, int numaux,
+			 coff_symtab_auxtype auxtype)
 {
-    /*@null@*/ /*@dependent@*/ coff_symrec_data *sym_data_prev;
     coff_symrec_data *sym_data;
-    coff_symtab_entry *entry;
 
-    if (STAILQ_EMPTY(&objfmt_coff->coff_symtab))
-	yasm_internal_error(N_("empty COFF symbol table"));
-    entry = STAILQ_LAST(&objfmt_coff->coff_symtab, coff_symtab_entry, link);
-    sym_data_prev = yasm_symrec_get_data(entry->sym, &coff_symrec_data_cb);
-    assert(sym_data_prev != NULL);
-
-    sym_data = yasm_xmalloc(sizeof(coff_symrec_data));
-    sym_data->index = sym_data_prev->index + entry->numaux + 1;
+    sym_data = yasm_xmalloc(sizeof(coff_symrec_data) +
+			    (numaux-1)*sizeof(coff_symtab_auxent));
+    sym_data->index = 0;
     sym_data->sclass = sclass;
     sym_data->size = size;
+    sym_data->numaux = numaux;
+    sym_data->auxtype = auxtype;
+
     yasm_symrec_add_data(sym, &coff_symrec_data_cb, sym_data);
 
-    entry = yasm_xmalloc(sizeof(coff_symtab_entry) +
-			 (numaux-1)*sizeof(coff_symtab_auxent));
-    entry->sym = sym;
-    entry->numaux = numaux;
-    entry->auxtype = auxtype;
-    STAILQ_INSERT_TAIL(&objfmt_coff->coff_symtab, entry, link);
-
-    return entry;
-}
-
-static int
-coff_objfmt_append_local_sym(yasm_symrec *sym, /*@unused@*/ /*@null@*/ void *d)
-{
-    /*@null@*/ yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)d;
-    assert(objfmt_coff != NULL);
-    if (!yasm_symrec_get_data(sym, &coff_symrec_data_cb))
-	coff_objfmt_symtab_append(objfmt_coff, sym, COFF_SCL_STAT, NULL, 0,
-				  COFF_SYMTAB_AUX_NONE);
-    return 1;
+    return sym_data;
 }
 
 static yasm_objfmt_coff *
@@ -262,7 +238,6 @@ coff_common_create(const char *in_filename, yasm_object *object, yasm_arch *a)
     yasm_objfmt_coff *objfmt_coff = yasm_xmalloc(sizeof(yasm_objfmt_coff));
     yasm_symrec *filesym;
     coff_symrec_data *data;
-    coff_symtab_entry *entry;
 
     objfmt_coff->object = object;
     objfmt_coff->symtab = yasm_object_get_symtab(object);
@@ -285,23 +260,13 @@ coff_common_create(const char *in_filename, yasm_object *object, yasm_arch *a)
     }
 
     objfmt_coff->parse_scnum = 1;    /* section numbering starts at 1 */
-    STAILQ_INIT(&objfmt_coff->coff_symtab);
 
-    data = yasm_xmalloc(sizeof(coff_symrec_data));
-    data->index = 0;
-    data->sclass = COFF_SCL_FILE;
-    data->size = NULL;
     /* FIXME: misuse of NULL bytecode here; it works, but only barely. */
-    filesym = yasm_symtab_define_label(objfmt_coff->symtab, ".file", NULL, 0,
-				       0);
-    yasm_symrec_add_data(filesym, &coff_symrec_data_cb, data);
-
-    entry = yasm_xmalloc(sizeof(coff_symtab_entry));
-    entry->sym = filesym;
-    entry->numaux = 1;
-    entry->auxtype = COFF_SYMTAB_AUX_FILE;
-    entry->aux[0].fname = yasm__xstrdup(in_filename);
-    STAILQ_INSERT_TAIL(&objfmt_coff->coff_symtab, entry, link);
+    filesym = yasm_symtab_define_special(objfmt_coff->symtab, ".file",
+					 YASM_SYM_GLOBAL);
+    data = coff_objfmt_sym_set_data(filesym, COFF_SCL_FILE, NULL, 1,
+				    COFF_SYMTAB_AUX_FILE);
+    data->aux[0].fname = yasm__xstrdup(in_filename);
 
     return objfmt_coff;
 }
@@ -665,64 +630,40 @@ coff_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     return 0;
 }
 
-static void
-coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
-		   int all_syms, /*@unused@*/ yasm_dbgfmt *df)
+static int
+coff_objfmt_count_sym(yasm_symrec *sym, /*@null@*/ void *d)
 {
-    yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
-    coff_objfmt_output_info info;
-    unsigned char *localbuf;
-    long pos;
-    unsigned long symtab_pos;
-    unsigned long symtab_count = 0;
-    unsigned long strtab_offset = 4;
-    coff_symtab_entry *entry;
+    /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
+    assert(info != NULL);
+    if (info->all_syms || yasm_symrec_get_visibility(sym) != YASM_SYM_LOCAL) {
+	/* Save index in symrec data */
+	coff_symrec_data *sym_data =
+	    yasm_symrec_get_data(sym, &coff_symrec_data_cb);
+	if (!sym_data) {
+	    sym_data = coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, NULL, 0,
+						COFF_SYMTAB_AUX_NONE);
+	}
+	sym_data->index = info->indx;
 
-    info.objfmt_coff = objfmt_coff;
-    info.f = f;
-    info.buf = yasm_xmalloc(REGULAR_OUTBUF_SIZE);
+	info->indx += sym_data->numaux + 1;
+    }
+    return 1;
+}
 
-    /* Allocate space for headers by seeking forward */
-    if (fseek(f, (long)(20+40*(objfmt_coff->parse_scnum-1)), SEEK_SET) < 0) {
-	yasm__fatal(N_("could not seek on output file"));
-	/*@notreached@*/
-	return;
-    }
+static int
+coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
+{
+    /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
+    yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
 
-    /* Section data/relocs */
-    if (COFF_SET_VMA) {
-	/* If we're setting the VMA, we need to do a first section pass to
-	 * determine each section's addr value before actually outputting
-	 * relocations, as a relocation's section address is added into the
-	 * addends in the generated code.
-	 */
-	info.addr = 0;
-	if (yasm_object_sections_traverse(objfmt_coff->object, &info,
-					  coff_objfmt_set_section_addr))
-	    return;
-    }
-    info.addr = 0;
-    if (yasm_object_sections_traverse(objfmt_coff->object, &info,
-				      coff_objfmt_output_section))
-	return;
+    assert(info != NULL);
 
-    /* Symbol table */
-    if (all_syms) {
-	/* Need to put all local syms into COFF symbol table */
-	yasm_symtab_traverse(objfmt_coff->symtab, objfmt_coff,
-			     coff_objfmt_append_local_sym);
-    }
-    pos = ftell(f);
-    if (pos == -1) {
-	yasm__fatal(N_("could not get file position on output file"));
-	/*@notreached@*/
-	return;
-    }
-    symtab_pos = (unsigned long)pos;
-    STAILQ_FOREACH(entry, &objfmt_coff->coff_symtab, link) {
-	const char *name = yasm_symrec_get_name(entry->sym);
+    /* Don't output local syms unless outputting all syms */
+    if (info->all_syms || vis != YASM_SYM_LOCAL) {
+	const char *name = yasm_symrec_get_name(sym);
 	const yasm_expr *equ_val;
 	const yasm_intnum *intn;
+	unsigned char *localbuf;
 	size_t len = strlen(name);
 	int aux;
 	/*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
@@ -732,14 +673,15 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
 	/*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
 	unsigned long scnlen = 0;   /* for sect auxent */
 	unsigned long nreloc = 0;   /* for sect auxent */
+	yasm_objfmt_coff *objfmt_coff = info->objfmt_coff;
 
 	/* Get symrec's of_data (needed for storage class) */
-	csymd = yasm_symrec_get_data(entry->sym, &coff_symrec_data_cb);
+	csymd = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
 	if (!csymd)
 	    yasm_internal_error(N_("coff: expected sym data to be present"));
 
 	/* Look at symrec for value/scnum/etc. */
-	if (yasm_symrec_get_label(entry->sym, &precbc)) {
+	if (yasm_symrec_get_label(sym, &precbc)) {
 	    if (precbc)
 		sect = yasm_bc_get_section(precbc);
 	    else
@@ -775,12 +717,11 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
 		if (precbc)
 		    value += precbc->offset + precbc->len;
 	    }
-	} else if ((equ_val = yasm_symrec_get_equ(entry->sym))) {
+	} else if ((equ_val = yasm_symrec_get_equ(sym))) {
 	    yasm_expr *equ_val_copy = yasm_expr_copy(equ_val);
 	    intn = yasm_expr_get_intnum(&equ_val_copy,
 					yasm_common_calc_bc_dist);
 	    if (!intn) {
-		yasm_sym_vis vis = yasm_symrec_get_visibility(entry->sym);
 		if (vis & YASM_SYM_GLOBAL)
 		    yasm__error(equ_val->line,
 			N_("global EQU value not an integer expression"));
@@ -790,7 +731,6 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
 
 	    scnum = 0xffff;     /* -1 = absolute symbol */
 	} else {
-	    yasm_sym_vis vis = yasm_symrec_get_visibility(entry->sym);
 	    if (vis & YASM_SYM_COMMON) {
 		intn = yasm_expr_get_intnum(&csymd->size,
 					    yasm_common_calc_bc_dist);
@@ -805,11 +745,11 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
 		scnum = 0;
 	}
 
-	localbuf = info.buf;
+	localbuf = info->buf;
 	if (len > 8) {
 	    YASM_WRITE_32_L(localbuf, 0);	/* "zeros" field */
-	    YASM_WRITE_32_L(localbuf, strtab_offset); /* string table offset */
-	    strtab_offset += len+1;
+	    YASM_WRITE_32_L(localbuf, info->strtab_offset); /* strtab offset */
+	    info->strtab_offset += len+1;
 	} else {
 	    /* <8 chars, so no string table entry needed */
 	    strncpy((char *)localbuf, name, 8);
@@ -819,12 +759,12 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
 	YASM_WRITE_16_L(localbuf, scnum);	/* section number */
 	YASM_WRITE_16_L(localbuf, 0);	    /* type is always zero (for now) */
 	YASM_WRITE_8(localbuf, csymd->sclass);	/* storage class */
-	YASM_WRITE_8(localbuf, entry->numaux);	/* number of aux entries */
-	fwrite(info.buf, 18, 1, f);
-	for (aux=0; aux<entry->numaux; aux++) {
-	    localbuf = info.buf;
+	YASM_WRITE_8(localbuf, csymd->numaux);	/* number of aux entries */
+	fwrite(info->buf, 18, 1, info->f);
+	for (aux=0; aux<csymd->numaux; aux++) {
+	    localbuf = info->buf;
 	    memset(localbuf, 0, 18);
-	    switch (entry->auxtype) {
+	    switch (csymd->auxtype) {
 		case COFF_SYMTAB_AUX_NONE:
 		    break;
 		case COFF_SYMTAB_AUX_SECT:
@@ -833,45 +773,119 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
 		    YASM_WRITE_16_L(localbuf, 0);	/* number line nums */
 		    break;
 		case COFF_SYMTAB_AUX_FILE:
-		    len = strlen(entry->aux[0].fname);
+		    len = strlen(csymd->aux[0].fname);
 		    if (len > 14) {
 			YASM_WRITE_32_L(localbuf, 0);
-			YASM_WRITE_32_L(localbuf, strtab_offset);
-			strtab_offset += len+1;
+			YASM_WRITE_32_L(localbuf, info->strtab_offset);
+			info->strtab_offset += len+1;
 		    } else
-			strncpy((char *)localbuf, entry->aux[0].fname, 14);
+			strncpy((char *)localbuf, csymd->aux[0].fname, 14);
 		    break;
 		default:
 		    yasm_internal_error(
 			N_("coff: unrecognized aux symtab type"));
 	    }
-	    fwrite(info.buf, 18, 1, f);
-	    symtab_count++;
+	    fwrite(info->buf, 18, 1, info->f);
 	}
-	symtab_count++;
     }
+    return 1;
+}
 
-    /* String table */
-    yasm_fwrite_32_l(strtab_offset, f); /* first four bytes are total length */
-    STAILQ_FOREACH(entry, &objfmt_coff->coff_symtab, link) {
-	const char *name = yasm_symrec_get_name(entry->sym);
+static int
+coff_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
+{
+    /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
+    yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
+
+    assert(info != NULL);
+
+    /* Don't output local syms unless outputting all syms */
+    if (info->all_syms || vis != YASM_SYM_LOCAL) {
+	const char *name = yasm_symrec_get_name(sym);
+	/*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
 	size_t len = strlen(name);
 	int aux;
 
+	csymd = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
+	if (!csymd)
+	    yasm_internal_error(N_("coff: expected sym data to be present"));
+
 	if (len > 8)
-	    fwrite(name, len+1, 1, f);
-	for (aux=0; aux<entry->numaux; aux++) {
-	    switch (entry->auxtype) {
+	    fwrite(name, len+1, 1, info->f);
+	for (aux=0; aux<csymd->numaux; aux++) {
+	    switch (csymd->auxtype) {
 		case COFF_SYMTAB_AUX_FILE:
-		    len = strlen(entry->aux[0].fname);
+		    len = strlen(csymd->aux[0].fname);
 		    if (len > 14)
-			fwrite(entry->aux[0].fname, len+1, 1, f);
+			fwrite(csymd->aux[0].fname, len+1, 1, info->f);
 		    break;
 		default:
 		    break;
 	    }
 	}
     }
+    return 1;
+}
+
+static void
+coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
+		   int all_syms, /*@unused@*/ yasm_dbgfmt *df)
+{
+    yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
+    coff_objfmt_output_info info;
+    unsigned char *localbuf;
+    long pos;
+    unsigned long symtab_pos;
+    unsigned long symtab_count;
+
+    info.strtab_offset = 4;
+    info.objfmt_coff = objfmt_coff;
+    info.f = f;
+    info.buf = yasm_xmalloc(REGULAR_OUTBUF_SIZE);
+
+    /* Allocate space for headers by seeking forward */
+    if (fseek(f, (long)(20+40*(objfmt_coff->parse_scnum-1)), SEEK_SET) < 0) {
+	yasm__fatal(N_("could not seek on output file"));
+	/*@notreached@*/
+	return;
+    }
+
+    /* Finalize symbol table (assign index to each symbol) */
+    info.indx = 0;
+    info.all_syms = all_syms;
+    yasm_symtab_traverse(objfmt_coff->symtab, &info, coff_objfmt_count_sym);
+    symtab_count = info.indx;
+
+    /* Section data/relocs */
+    if (COFF_SET_VMA) {
+	/* If we're setting the VMA, we need to do a first section pass to
+	 * determine each section's addr value before actually outputting
+	 * relocations, as a relocation's section address is added into the
+	 * addends in the generated code.
+	 */
+	info.addr = 0;
+	if (yasm_object_sections_traverse(objfmt_coff->object, &info,
+					  coff_objfmt_set_section_addr))
+	    return;
+    }
+    info.addr = 0;
+    if (yasm_object_sections_traverse(objfmt_coff->object, &info,
+				      coff_objfmt_output_section))
+	return;
+
+    /* Symbol table */
+    pos = ftell(f);
+    if (pos == -1) {
+	yasm__fatal(N_("could not get file position on output file"));
+	/*@notreached@*/
+	return;
+    }
+    symtab_pos = (unsigned long)pos;
+    yasm_symtab_traverse(objfmt_coff->symtab, &info, coff_objfmt_output_sym);
+
+    /* String table */
+    yasm_fwrite_32_l(info.strtab_offset, f); /* total length */
+    yasm_symtab_traverse(objfmt_coff->symtab, &info, coff_objfmt_output_str);
 
     /* Write headers */
     if (fseek(f, 0, SEEK_SET) < 0) {
@@ -901,18 +915,6 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
 static void
 coff_objfmt_destroy(yasm_objfmt *objfmt)
 {
-    yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
-    coff_symtab_entry *entry1, *entry2;
-
-    /* Delete local symbol table */
-    entry1 = STAILQ_FIRST(&objfmt_coff->coff_symtab);
-    while (entry1 != NULL) {
-	entry2 = STAILQ_NEXT(entry1, link);
-	if (entry1->numaux == 1 && entry1->auxtype == COFF_SYMTAB_AUX_FILE)
-	    yasm_xfree(entry1->aux[0].fname);
-	yasm_xfree(entry1);
-	entry1 = entry2;
-    }
     yasm_xfree(objfmt);
 }
 
@@ -1112,8 +1114,9 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	sym =
 	    yasm_symtab_define_label(objfmt_coff->symtab, sectname,
 				     yasm_section_bcs_first(retval), 1, line);
-	coff_objfmt_symtab_append(objfmt_coff, sym, COFF_SCL_STAT, NULL, 1,
-				  COFF_SYMTAB_AUX_SECT);
+	yasm_symrec_declare(sym, YASM_SYM_GLOBAL, line);
+	coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, NULL, 1,
+				 COFF_SYMTAB_AUX_SECT);
 	data->sym = sym;
     } else if (flags_override)
 	yasm__warning(YASM_WARN_GENERAL, line,
@@ -1168,8 +1171,8 @@ coff_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
 
     sym = yasm_symtab_declare(objfmt_coff->symtab, name, YASM_SYM_EXTERN,
 			      line);
-    coff_objfmt_symtab_append(objfmt_coff, sym, COFF_SCL_EXT, NULL, 0,
-			      COFF_SYMTAB_AUX_NONE);
+    coff_objfmt_sym_set_data(sym, COFF_SCL_EXT, NULL, 0,
+			     COFF_SYMTAB_AUX_NONE);
 
     return sym;
 }
@@ -1184,8 +1187,8 @@ coff_objfmt_global_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
 
     sym = yasm_symtab_declare(objfmt_coff->symtab, name, YASM_SYM_GLOBAL,
 			      line);
-    coff_objfmt_symtab_append(objfmt_coff, sym, COFF_SCL_EXT, NULL, 0,
-			      COFF_SYMTAB_AUX_NONE);
+    coff_objfmt_sym_set_data(sym, COFF_SCL_EXT, NULL, 0,
+			     COFF_SYMTAB_AUX_NONE);
 
     return sym;
 }
@@ -1201,8 +1204,8 @@ coff_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
 
     sym = yasm_symtab_declare(objfmt_coff->symtab, name, YASM_SYM_COMMON,
 			      line);
-    coff_objfmt_symtab_append(objfmt_coff, sym, COFF_SCL_EXT, size, 0,
-			      COFF_SYMTAB_AUX_NONE);
+    coff_objfmt_sym_set_data(sym, COFF_SCL_EXT, size, 0,
+			     COFF_SYMTAB_AUX_NONE);
 
     return sym;
 }
