@@ -35,43 +35,6 @@ RCSID("$IdPath$");
 #include "modules/arch/x86/x86arch.h"
 
 
-/* Available CPU feature flags */
-#define CPU_Any	    (0UL)	/* Any old cpu will do */
-#define CPU_086	    CPU_Any
-#define CPU_186	    (1UL<<0)	/* i186 or better required */
-#define CPU_286	    (1UL<<1)	/* i286 or better required */
-#define CPU_386	    (1UL<<2)	/* i386 or better required */
-#define CPU_486	    (1UL<<3)	/* i486 or better required */
-#define CPU_586	    (1UL<<4)	/* i585 or better required */
-#define CPU_686	    (1UL<<5)	/* i686 or better required */
-#define CPU_P3	    (1UL<<6)	/* Pentium3 or better required */
-#define CPU_P4	    (1UL<<7)	/* Pentium4 or better required */
-#define CPU_IA64    (1UL<<8)	/* IA-64 or better required */
-#define CPU_K6	    (1UL<<9)	/* AMD K6 or better required */
-#define CPU_Athlon  (1UL<<10)	/* AMD Athlon or better required */
-#define CPU_Hammer  (1UL<<11)	/* AMD Sledgehammer or better required */
-#define CPU_FPU	    (1UL<<12)	/* FPU support required */
-#define CPU_MMX	    (1UL<<13)	/* MMX support required */
-#define CPU_SSE	    (1UL<<14)	/* Streaming SIMD extensions required */
-#define CPU_SSE2    (1UL<<15)	/* Streaming SIMD extensions 2 required */
-#define CPU_3DNow   (1UL<<16)	/* 3DNow! support required */
-#define CPU_Cyrix   (1UL<<17)	/* Cyrix-specific instruction */
-#define CPU_AMD	    (1UL<<18)	/* AMD-specific inst. (older than K6) */
-#define CPU_SMM	    (1UL<<19)	/* System Management Mode instruction */
-#define CPU_Prot    (1UL<<20)	/* Protected mode only instruction */
-#define CPU_Undoc   (1UL<<21)	/* Undocumented instruction */
-#define CPU_Obs	    (1UL<<22)	/* Obsolete instruction */
-#define CPU_Priv    (1UL<<23)	/* Priveleged instruction */
-
-/* Technically not CPU capabilities, they do affect what instructions are
- * available.  These are tested against BITS==64.
- */
-#define CPU_64	    (1UL<<24)	/* Only available in 64-bit mode */
-#define CPU_Not64   (1UL<<25)	/* Not available (invalid) in 64-bit mode */
-
-/* What instructions/features are enabled?  Defaults to all. */
-static unsigned long cpu_enabled = ~CPU_Any;
-
 /* Opcode modifiers.  The opcode bytes are in "reverse" order because the
  * parameters are read from the arch-specific data in LSB->MSB order.
  * (only for asthetic reasons in the lexer code below, no practical reason).
@@ -1605,7 +1568,7 @@ x86_new_jmp(const unsigned long data[4], int num_operands,
 	    continue;
 	cpu &= ~(CPU_64 | CPU_Not64);
 
-	if ((cpu_enabled & cpu) != cpu)
+	if ((yasm_x86__cpu_enabled & cpu) != cpu)
 	    continue;
 
 	if (info->num_operands == 0)
@@ -1676,7 +1639,7 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 	    continue;
 	cpu &= ~(CPU_64 | CPU_Not64);
 
-	if ((cpu_enabled & cpu) != cpu)
+	if ((yasm_x86__cpu_enabled & cpu) != cpu)
 	    continue;
 
 	/* Match # of operands */
@@ -2174,106 +2137,114 @@ yasm_x86__parse_cpu(const char *id, unsigned long lindex)
     /*!re2c
 	/* The standard CPU names /set/ cpu_enabled. */
 	"8086" {
-	    cpu_enabled = CPU_Priv;
+	    yasm_x86__cpu_enabled = CPU_Priv;
 	    return;
 	}
 	("80" | I)? "186" {
-	    cpu_enabled = CPU_186|CPU_Priv;
+	    yasm_x86__cpu_enabled = CPU_186|CPU_Priv;
 	    return;
 	}
 	("80" | I)? "286" {
-	    cpu_enabled = CPU_186|CPU_286|CPU_Priv;
+	    yasm_x86__cpu_enabled = CPU_186|CPU_286|CPU_Priv;
 	    return;
 	}
 	("80" | I)? "386" {
-	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_SMM|CPU_Prot|CPU_Priv;
+	    yasm_x86__cpu_enabled =
+		CPU_186|CPU_286|CPU_386|CPU_SMM|CPU_Prot|CPU_Priv;
 	    return;
 	}
 	("80" | I)? "486" {
-	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_FPU|CPU_SMM|
-			  CPU_Prot|CPU_Priv;
+	    yasm_x86__cpu_enabled =
+		CPU_186|CPU_286|CPU_386|CPU_486|CPU_FPU|CPU_SMM|CPU_Prot|
+		CPU_Priv;
 	    return;
 	}
 	(I? "586") | (P E N T I U M) | (P "5") {
-	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_FPU|
-			  CPU_SMM|CPU_Prot|CPU_Priv;
+	    yasm_x86__cpu_enabled =
+		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_FPU|CPU_SMM|
+		CPU_Prot|CPU_Priv;
 	    return;
 	}
 	(I? "686") | (P "6") | (P P R O) | (P E N T I U M P R O) {
-	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
-			  CPU_FPU|CPU_SMM|CPU_Prot|CPU_Priv;
+	    yasm_x86__cpu_enabled =
+		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_FPU|
+		CPU_SMM|CPU_Prot|CPU_Priv;
 	    return;
 	}
 	(P "2") | (P E N T I U M "-"? ("2" | (I I))) {
-	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
-			  CPU_FPU|CPU_MMX|CPU_SMM|CPU_Prot|CPU_Priv;
+	    yasm_x86__cpu_enabled =
+		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_FPU|
+		CPU_MMX|CPU_SMM|CPU_Prot|CPU_Priv;
 	    return;
 	}
 	(P "3") | (P E N T I U M "-"? ("3" | (I I I))) | (K A T M A I) {
-	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
-			  CPU_P3|CPU_FPU|CPU_MMX|CPU_SSE|CPU_SMM|CPU_Prot|
-			  CPU_Priv;
+	    yasm_x86__cpu_enabled =
+		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_P3|CPU_FPU|
+		CPU_MMX|CPU_SSE|CPU_SMM|CPU_Prot|CPU_Priv;
 	    return;
 	}
 	(P "4") | (P E N T I U M "-"? ("4" | (I V))) | (W I L L I A M E T T E) {
-	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
-			  CPU_P3|CPU_P4|CPU_FPU|CPU_MMX|CPU_SSE|CPU_SSE2|
-			  CPU_SMM|CPU_Prot|CPU_Priv;
+	    yasm_x86__cpu_enabled =
+		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_P3|CPU_P4|
+		CPU_FPU|CPU_MMX|CPU_SSE|CPU_SSE2|CPU_SMM|CPU_Prot|CPU_Priv;
 	    return;
 	}
 	(I A "-"? "64") | (I T A N I U M) {
-	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
-			  CPU_P3|CPU_P4|CPU_IA64|CPU_FPU|CPU_MMX|CPU_SSE|
-			  CPU_SSE2|CPU_SMM|CPU_Prot|CPU_Priv;
+	    yasm_x86__cpu_enabled =
+		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_P3|CPU_P4|
+		CPU_IA64|CPU_FPU|CPU_MMX|CPU_SSE|CPU_SSE2|CPU_SMM|CPU_Prot|
+		CPU_Priv;
 	    return;
 	}
 	K "6" {
-	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
-			  CPU_K6|CPU_FPU|CPU_MMX|CPU_3DNow|CPU_SMM|CPU_Prot|
-			  CPU_Priv;
+	    yasm_x86__cpu_enabled =
+		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_K6|CPU_FPU|
+		CPU_MMX|CPU_3DNow|CPU_SMM|CPU_Prot|CPU_Priv;
 	    return;
 	}
 	(A T H L O N) | (K "7") {
-	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
-			  CPU_K6|CPU_Athlon|CPU_FPU|CPU_MMX|CPU_SSE|CPU_3DNow|
-			  CPU_SMM|CPU_Prot|CPU_Priv;
+	    yasm_x86__cpu_enabled =
+		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_K6|
+		CPU_Athlon|CPU_FPU|CPU_MMX|CPU_SSE|CPU_3DNow|CPU_SMM|CPU_Prot|
+		CPU_Priv;
 	    return;
 	}
 	((S L E D G E)? (H A M M E R)) | (O P T E R O N) |
 	(A T H L O N "-"? "64") {
-	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
-			  CPU_K6|CPU_Athlon|CPU_Hammer|CPU_FPU|CPU_MMX|CPU_SSE|
-			  CPU_3DNow|CPU_SMM|CPU_Prot|CPU_Priv;
+	    yasm_x86__cpu_enabled =
+		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_K6|
+		CPU_Athlon|CPU_Hammer|CPU_FPU|CPU_MMX|CPU_SSE|CPU_3DNow|
+		CPU_SMM|CPU_Prot|CPU_Priv;
 	    return;
 	}
 
 	/* Features have "no" versions to disable them, and only set/reset the
 	 * specific feature being changed.  All other bits are left alone.
 	 */
-	F P U		{ cpu_enabled |= CPU_FPU; return; }
-	N O F P U	{ cpu_enabled &= ~CPU_FPU; return; }
-	M M X		{ cpu_enabled |= CPU_MMX; return; }
-	N O M M X	{ cpu_enabled &= ~CPU_MMX; return; }
-	S S E		{ cpu_enabled |= CPU_SSE; return; }
-	N O S S E	{ cpu_enabled &= ~CPU_SSE; return; }
-	S S E "2"	{ cpu_enabled |= CPU_SSE2; return; }
-	N O S S E "2"	{ cpu_enabled &= ~CPU_SSE2; return; }
-	"3" D N O W	{ cpu_enabled |= CPU_3DNow; return; }
-	N O "3" D N O W	{ cpu_enabled &= ~CPU_3DNow; return; }
-	C Y R I X	{ cpu_enabled |= CPU_Cyrix; return; }
-	N O C Y R I X	{ cpu_enabled &= ~CPU_Cyrix; return; }
-	A M D		{ cpu_enabled |= CPU_AMD; return; }
-	N O A M D	{ cpu_enabled &= ~CPU_AMD; return; }
-	S M M		{ cpu_enabled |= CPU_SMM; return; }
-	N O S M M	{ cpu_enabled &= ~CPU_SMM; return; }
-	P R O T		{ cpu_enabled |= CPU_Prot; return; }
-	N O P R O T	{ cpu_enabled &= ~CPU_Prot; return; }
-	U N D O C	{ cpu_enabled |= CPU_Undoc; return; }
-	N O U N D O C	{ cpu_enabled &= ~CPU_Undoc; return; }
-	O B S		{ cpu_enabled |= CPU_Obs; return; }
-	N O O B S	{ cpu_enabled &= ~CPU_Obs; return; }
-	P R I V		{ cpu_enabled |= CPU_Priv; return; }
-	N O P R I V	{ cpu_enabled &= ~CPU_Priv; return; }
+	F P U		{ yasm_x86__cpu_enabled |= CPU_FPU; return; }
+	N O F P U	{ yasm_x86__cpu_enabled &= ~CPU_FPU; return; }
+	M M X		{ yasm_x86__cpu_enabled |= CPU_MMX; return; }
+	N O M M X	{ yasm_x86__cpu_enabled &= ~CPU_MMX; return; }
+	S S E		{ yasm_x86__cpu_enabled |= CPU_SSE; return; }
+	N O S S E	{ yasm_x86__cpu_enabled &= ~CPU_SSE; return; }
+	S S E "2"	{ yasm_x86__cpu_enabled |= CPU_SSE2; return; }
+	N O S S E "2"	{ yasm_x86__cpu_enabled &= ~CPU_SSE2; return; }
+	"3" D N O W	{ yasm_x86__cpu_enabled |= CPU_3DNow; return; }
+	N O "3" D N O W	{ yasm_x86__cpu_enabled &= ~CPU_3DNow; return; }
+	C Y R I X	{ yasm_x86__cpu_enabled |= CPU_Cyrix; return; }
+	N O C Y R I X	{ yasm_x86__cpu_enabled &= ~CPU_Cyrix; return; }
+	A M D		{ yasm_x86__cpu_enabled |= CPU_AMD; return; }
+	N O A M D	{ yasm_x86__cpu_enabled &= ~CPU_AMD; return; }
+	S M M		{ yasm_x86__cpu_enabled |= CPU_SMM; return; }
+	N O S M M	{ yasm_x86__cpu_enabled &= ~CPU_SMM; return; }
+	P R O T		{ yasm_x86__cpu_enabled |= CPU_Prot; return; }
+	N O P R O T	{ yasm_x86__cpu_enabled &= ~CPU_Prot; return; }
+	U N D O C	{ yasm_x86__cpu_enabled |= CPU_Undoc; return; }
+	N O U N D O C	{ yasm_x86__cpu_enabled &= ~CPU_Undoc; return; }
+	O B S		{ yasm_x86__cpu_enabled |= CPU_Obs; return; }
+	N O O B S	{ yasm_x86__cpu_enabled &= ~CPU_Obs; return; }
+	P R I V		{ yasm_x86__cpu_enabled |= CPU_Priv; return; }
+	N O P R I V	{ yasm_x86__cpu_enabled &= ~CPU_Priv; return; }
 
 	/* catchalls */
 	[\001-\377]+	{

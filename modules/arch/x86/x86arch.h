@@ -27,6 +27,43 @@
 #ifndef YASM_X86ARCH_H
 #define YASM_X86ARCH_H
 
+/* Available CPU feature flags */
+#define CPU_Any	    (0UL)	/* Any old cpu will do */
+#define CPU_086	    CPU_Any
+#define CPU_186	    (1UL<<0)	/* i186 or better required */
+#define CPU_286	    (1UL<<1)	/* i286 or better required */
+#define CPU_386	    (1UL<<2)	/* i386 or better required */
+#define CPU_486	    (1UL<<3)	/* i486 or better required */
+#define CPU_586	    (1UL<<4)	/* i585 or better required */
+#define CPU_686	    (1UL<<5)	/* i686 or better required */
+#define CPU_P3	    (1UL<<6)	/* Pentium3 or better required */
+#define CPU_P4	    (1UL<<7)	/* Pentium4 or better required */
+#define CPU_IA64    (1UL<<8)	/* IA-64 or better required */
+#define CPU_K6	    (1UL<<9)	/* AMD K6 or better required */
+#define CPU_Athlon  (1UL<<10)	/* AMD Athlon or better required */
+#define CPU_Hammer  (1UL<<11)	/* AMD Sledgehammer or better required */
+#define CPU_FPU	    (1UL<<12)	/* FPU support required */
+#define CPU_MMX	    (1UL<<13)	/* MMX support required */
+#define CPU_SSE	    (1UL<<14)	/* Streaming SIMD extensions required */
+#define CPU_SSE2    (1UL<<15)	/* Streaming SIMD extensions 2 required */
+#define CPU_3DNow   (1UL<<16)	/* 3DNow! support required */
+#define CPU_Cyrix   (1UL<<17)	/* Cyrix-specific instruction */
+#define CPU_AMD	    (1UL<<18)	/* AMD-specific inst. (older than K6) */
+#define CPU_SMM	    (1UL<<19)	/* System Management Mode instruction */
+#define CPU_Prot    (1UL<<20)	/* Protected mode only instruction */
+#define CPU_Undoc   (1UL<<21)	/* Undocumented instruction */
+#define CPU_Obs	    (1UL<<22)	/* Obsolete instruction */
+#define CPU_Priv    (1UL<<23)	/* Priveleged instruction */
+
+/* Technically not CPU capabilities, they do affect what instructions are
+ * available.  These are tested against BITS==64.
+ */
+#define CPU_64	    (1UL<<24)	/* Only available in 64-bit mode */
+#define CPU_Not64   (1UL<<25)	/* Not available (invalid) in 64-bit mode */
+
+/* What instructions/features are enabled? */
+extern unsigned long yasm_x86__cpu_enabled;
+
 typedef enum {
     X86_BC_INSN = YASM_BYTECODE_TYPE_BASE,
     X86_BC_JMP

@@ -34,11 +34,13 @@
 
 
 unsigned char yasm_x86_LTX_mode_bits = 0;
+unsigned long yasm_x86__cpu_enabled;
 
 
 static void
 x86_initialize(void)
 {
+    yasm_x86__cpu_enabled = ~CPU_Any;
 }
 
 static void
