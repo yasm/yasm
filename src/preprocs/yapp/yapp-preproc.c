@@ -67,6 +67,7 @@ typedef struct YAPP_Macro_s {
     } type;
     int args;
     int fillargs;
+    int expanding;
 } YAPP_Macro;
 
 YAPP_Macro *
@@ -111,6 +112,7 @@ yapp_define_insert (char *name, int argc, int fillargs)
     ym->type = YAPP_DEFINE;
     ym->args = argc;
     ym->fillargs = fillargs;
+    ym->expanding = 0;
 
     /*ydebug (("]]Inserting %s:%d:%d\n", name, argc, fillargs));*/
 
@@ -400,6 +402,10 @@ copy_token(YAPP_Token *tok)
 void
 expand_macro(YAPP_Macro *ym)
 {
+    if (ym->expanding) InternalError(_("Recursively expanding a macro!"));
+
+    ym->expanding = 1;
+
     if (ym->type == YAPP_DEFINE) {
 	if (ym->args == -1) {
 	    source *src;
@@ -407,8 +413,9 @@ expand_macro(YAPP_Macro *ym)
 	    src = SLIST_FIRST(&ym->macro_head);
 	    while (src != NULL) {
 		if (src->token.type == IDENT) {
-		    if (yapp_defined(src->token.str)) {
-			expand_macro(yapp_macro_get(src->token.str));
+		    YAPP_Macro *imacro = yapp_macro_get(src->token.str);
+		    if (imacro != NULL && !imacro->expanding) {
+			expand_macro(imacro);
 		    }
 		    else {
 			copy_token(&src->token);
@@ -425,6 +432,8 @@ expand_macro(YAPP_Macro *ym)
     }
     else
 	InternalError(_("Invoking Macros not yet supported"));
+
+    ym->expanding = 0;
 }
 
 static size_t
