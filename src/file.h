@@ -38,35 +38,35 @@
 
 #define WRITE_SHORT(ptr, val)			\
 	do {					\
-	    *((ptr)++) = (val) & 0xFF;		\
-	    *((ptr)++) = ((val) >> 8) & 0xFF;	\
+	    *((ptr)++) = (unsigned char)((val) & 0xFF);		\
+	    *((ptr)++) = (unsigned char)(((val) >> 8) & 0xFF);	\
 	} while (0)
 
 #define WRITE_LONG(ptr, val)			\
 	do {					\
-	    *((ptr)++) = (val) & 0xFF;		\
-	    *((ptr)++) = ((val) >> 8) & 0xFF;	\
-	    *((ptr)++) = ((val) >> 16) & 0xFF;	\
-	    *((ptr)++) = ((val) >> 24) & 0xFF;	\
+	    *((ptr)++) = (unsigned char)((val) & 0xFF);		\
+	    *((ptr)++) = (unsigned char)(((val) >> 8) & 0xFF);	\
+	    *((ptr)++) = (unsigned char)(((val) >> 16) & 0xFF);	\
+	    *((ptr)++) = (unsigned char)(((val) >> 24) & 0xFF);	\
 	} while (0)
 
 /* Non-incrementing versions of the above. */
 
 #define SAVE_BYTE(ptr, val)			\
-	*(ptr) = (val) & 0xFF
+	*(ptr) = (unsigned char)((val) & 0xFF)
 
 #define SAVE_SHORT(ptr, val)			\
 	do {					\
-	    *(ptr) = (val) & 0xFF;		\
-	    *((ptr)+1) = ((val) >> 8) & 0xFF;	\
+	    *(ptr) = (unsigned char)((val) & 0xFF);		\
+	    *((ptr)+1) = (unsigned char)(((val) >> 8) & 0xFF);	\
 	} while (0)
 
 #define SAVE_LONG(ptr, val)			\
 	do {					\
-	    *(ptr) = (val) & 0xFF;		\
-	    *((ptr)+1) = ((val) >> 8) & 0xFF;	\
-	    *((ptr)+2) = ((val) >> 16) & 0xFF;	\
-	    *((ptr)+3) = ((val) >> 24) & 0xFF;	\
+	    *(ptr) = (unsigned char)((val) & 0xFF);		\
+	    *((ptr)+1) = (unsigned char)(((val) >> 8) & 0xFF);	\
+	    *((ptr)+2) = (unsigned char)(((val) >> 16) & 0xFF);	\
+	    *((ptr)+3) = (unsigned char)(((val) >> 24) & 0xFF);	\
 	} while (0)
 
 /* Direct-to-file versions of the above.  Using the above macros and a single
