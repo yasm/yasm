@@ -145,11 +145,26 @@ typedef struct list_module_data {
     size_t matches_num, matches_alloc;
 } list_module_data;
 
+#ifdef HAVE_BASENAME
+extern char *basename(const char *);
+#else
+static const char *
+basename(const char *path)
+{
+    const char *base;
+    base = strrchr(path, '/');
+    if (!base)
+	base = path;
+    else
+	base++;
+}
+#endif
+
 static int
 list_module_load(const char *filename, lt_ptr data)
 {
     list_module_data *lmdata = data;
-    const char *basename;
+    const char *base;
     const char *module_keyword = NULL, *module_name = NULL;
     char *name;
 
@@ -162,24 +177,20 @@ list_module_load(const char *filename, lt_ptr data)
 
     lt_dlhandle handle;
 
-    /* All modules have '_' in them; early check */
-    if (!strchr(filename, '_'))
+    /* Strip off path components, if any */
+    base = basename(filename);
+    if (!base)
 	return 0;
 
-    /* Strip off path components, if any */
-    basename = strrchr(filename, '/');
-    if (!basename)
-	basename = strrchr(filename, '\\');
-    if (!basename)
-	basename = filename;
-    else
-	basename++;
+    /* All modules have '_' in them; early check */
+    if (!strchr(base, '_'))
+	return 0;
 
     /* Check to see if module is of the type we're looking for.
      * Even though this check is also implicitly performed below, there's a
      * massive speedup in avoiding the dlopen() call.
      */
-    if (strncmp(basename, module_type_str[lmdata->type],
+    if (strncmp(base, module_type_str[lmdata->type],
 		strlen(module_type_str[lmdata->type])) != 0)
 	return 0;
 
@@ -189,9 +200,9 @@ list_module_load(const char *filename, lt_ptr data)
 	return 0;
 
     /* Build base symbol name */
-    name = yasm_xmalloc(strlen(basename)+5+
+    name = yasm_xmalloc(strlen(base)+5+
 			strlen(module_type_str[lmdata->type])+1);
-    strcpy(name, basename);
+    strcpy(name, base);
     strcat(name, "_LTX_");
     strcat(name, module_type_str[lmdata->type]);
 

@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $IdPath: yasm/configure.ac,v 1.70 2003/03/18 05:00:54 peter Exp $
+# $IdPath$
 
 # Minimum required perl version for development
 PERL_VERSION=5.004
@@ -116,7 +116,7 @@ AC_TYPE_SIZE_T
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([abort memcpy memmove strrchr toascii vsnprintf])
+AC_CHECK_FUNCS([abort basename memcpy memmove strrchr toascii vsnprintf])
 AC_CHECK_FUNCS([strsep mergesort])
 # Look for the case-insensitive comparison functions
 AC_CHECK_FUNCS([strcasecmp strncasecmp stricmp strcmpi])
