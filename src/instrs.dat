@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.9 2001/07/04 04:45:51 peter Exp $
+; $Id: instrs.dat,v 1.10 2001/07/04 07:05:13 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -888,17 +888,14 @@ wrmsr!twobyte		0F,30		P5,PRIV
 xadd	reg8,reg8		nil	0F,C0		$1r,$2	nil	486
 xadd	mem,reg8		nil	0F,C0		$1,$2	nil	486
 xadd	mem8x,reg8		nil	0F,C0		$1,$2	nil	486
-xadd	reg8,mem8		nil	0F,C0		$2,$1	nil	486
 ; arbitrary encoding, picked $1r,$2 instead of $2r,$1
 xadd	reg16,reg16		16	0F,C1		$1r,$2	nil	486
 xadd	mem,reg16		16	0F,C1		$1,$2	nil	486
 xadd	mem16x,reg16		16	0F,C1		$1,$2	nil	486
-xadd	reg16,mem16		16	0F,C1		$2,$1	nil	486
 ; arbitrary encoding, picked $1r,$2 instead of $2r,$1
 xadd	reg32,reg32		32	0F,C1		$1r,$2	nil	486
 xadd	mem,reg32		32	0F,C1		$1,$2	nil	486
 xadd	mem32x,reg32		32	0F,C1		$1,$2	nil	486
-xadd	reg32,mem32		32	0F,C1		$2,$1	nil	486
 ;xchg	REG_AX,reg16		16	90+$2		nil	nil	8086
 ;xchg	reg16,REG_AX		16	90+$1		nil	nil	8086
 ;xchg	REG_EAX,reg32		32	90+$2		nil	nil	386
