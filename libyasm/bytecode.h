@@ -271,8 +271,8 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
  *			representation
  * \param output_bc_objfmt_data	function to call to convert yasm_objfmt data
  *				bytecodes into their byte representation
- * \param objfmt_output_reloc   function to call to output relocation entries
- *				for a single sym
+ * \param output_reloc	function to call to output relocation entries
+ *			for a single sym
  * \return Newly allocated buffer that should be used instead of buf for
  *	   reading the byte representation, or NULL if buf was big enough to
  *	   hold the entire byte representation.
