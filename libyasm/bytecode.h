@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.11 2001/07/05 08:59:29 mu Exp $
+/* $Id: bytecode.h,v 1.12 2001/07/06 06:25:53 mu Exp $
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -23,7 +23,7 @@
 #define YASM_BYTECODE_H
 
 typedef struct effaddr_s {
-    unsigned long disp;		/* address displacement */
+    struct expr_s *disp;	/* address displacement */
     unsigned char len;		/* length of disp (in bytes), 0 if none */
 
     unsigned char segment;	/* segment override, 0 if none */
@@ -86,6 +86,7 @@ typedef struct bytecode_s {
 effaddr *ConvertIntToEA(effaddr *ptr, unsigned long int_val);
 effaddr *ConvertRegToEA(effaddr *ptr, unsigned long reg);
 effaddr *ConvertImmToEA(effaddr *ptr, immval *im_ptr, unsigned char im_len);
+effaddr *ConvertExprToEA(effaddr *ptr, struct expr_s *expr_ptr);
 
 immval *ConvertIntToImm(immval *ptr, unsigned long int_val);
 immval *ConvertExprToImm(immval *ptr, struct expr_s *expr_ptr);

@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.10 2001/07/05 09:32:58 mu Exp $
+/* $Id: bytecode.c,v 1.11 2001/07/06 06:25:53 mu Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -41,7 +41,8 @@ effaddr *ConvertIntToEA(effaddr *ptr, unsigned long int_val)
     ptr->valid_sib = 0;
     ptr->need_sib = 0;
 
-    ptr->disp = int_val;
+    /* FIXME: this will leak expr's if static is used */
+    ptr->disp = expr_new_ident(EXPR_NUM, ExprNum(int_val));
 
     if((int_val & 0xFF) == int_val)
 	ptr->len = 1;
@@ -69,14 +70,29 @@ effaddr *ConvertRegToEA(effaddr *ptr, unsigned long reg)
     return ptr;
 }
 
-effaddr *ConvertImmToEA(effaddr *ptr, immval *im_ptr, unsigned char im_len)
+effaddr *ConvertExprToEA(effaddr *ptr, expr *expr_ptr)
 {
-    int gotexprval;
     if(!ptr)
 	ptr = &eff_static;
 
-    /* FIXME: warn when gotexprval is 0, and/or die */
-    gotexprval = expr_get_value (im_ptr->val, &ptr->disp);
+    ptr->segment = 0;
+
+    ptr->valid_modrm = 0;
+    ptr->need_modrm = 1;
+    ptr->valid_sib = 0;
+    ptr->need_sib = 0;
+
+    ptr->disp = expr_ptr;
+
+    return ptr;
+}
+
+effaddr *ConvertImmToEA(effaddr *ptr, immval *im_ptr, unsigned char im_len)
+{
+    if(!ptr)
+	ptr = &eff_static;
+
+    ptr->disp = im_ptr->val;
     if(im_ptr->len > im_len)
 	Warning(WARN_VALUE_EXCEEDS_BOUNDS, (char *)NULL, "word");
     ptr->len = im_len;
@@ -245,7 +261,13 @@ void DebugPrintBC(bytecode *bc)
 	case BC_INSN:
 	    printf("_Instruction_\n");
 	    printf("Effective Address:\n");
-	    printf(" Disp=%lx Len=%u SegmentOv=%2x\n", bc->data.insn.ea.disp,
+	    printf(" Disp=");
+	    if (!bc->data.insn.ea.disp)
+		printf("(nil)");
+	    else
+		expr_print(bc->data.insn.ea.disp);
+	    printf("\n");
+	    printf (" Len=%u SegmentOv=%2x\n",
 		(unsigned int)bc->data.insn.ea.len,
 		(unsigned int)bc->data.insn.ea.segment);
 	    printf(" ModRM=%2x ValidRM=%u NeedRM=%u\n",
@@ -258,7 +280,10 @@ void DebugPrintBC(bytecode *bc)
 		(unsigned int)bc->data.insn.ea.need_sib);
 	    printf("Immediate/Relative Value:\n");
 	    printf(" Val=");
-	    expr_print(bc->data.insn.imm.val);
+	    if (!bc->data.insn.imm.val)
+		printf("(nil)");
+	    else
+		expr_print(bc->data.insn.imm.val);
 	    printf("\n");
 	    printf(" Len=%u, IsRel=%u, IsNeg=%u\n",
 		(unsigned int)bc->data.insn.imm.len,
