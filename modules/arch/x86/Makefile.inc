@@ -8,7 +8,7 @@ YASMARCHFILES += \
 	x86id.c
 
 x86id.c: $(srcdir)/src/arch/x86/x86id.re re2c$(EXEEXT) $(srcdir)/tools/re2c/cleanup.pl
-	re2c$(EXEEXT) -b $(srcdir)/src/arch/x86/x86id.re | $(PERL) $(srcdir)/tools/re2c/cleanup.pl > $@
+	$(top_builddir)/re2c$(EXEEXT) -b $(srcdir)/src/arch/x86/x86id.re | $(PERL) $(srcdir)/tools/re2c/cleanup.pl > $@
 
 BUILT_SOURCES += \
 	x86id.c
