@@ -18,7 +18,11 @@
  */
 #define nasm_malloc yasm_xmalloc
 #define nasm_realloc yasm_xrealloc
+#ifdef WITH_DMALLOC
+#define nasm_free(p) do { if (p) yasm_xfree(p); } while(0)
+#else
 #define nasm_free(p) yasm_xfree(p)
+#endif
 #define nasm_strdup yasm__xstrdup
 #define nasm_strndup yasm__xstrndup
 #define nasm_stricmp yasm__strcasecmp
