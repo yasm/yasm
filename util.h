@@ -126,7 +126,6 @@ int strncasecmp(const char *s1, const char *s2, size_t n);
 #else
 /* strdup() implementation with error checking (using xmalloc). */
 /*@only@*/ char *xstrdup(const char *str);
-/*@only@*/ char *xstrndup(const char *str, size_t len);
 
 /* Error-checking memory allocation routines in xmalloc.c. */
 /*@only@*/ /*@out@*/ void *xmalloc(size_t size);
@@ -135,6 +134,8 @@ int strncasecmp(const char *s1, const char *s2, size_t n);
 			  void *oldmem, size_t size) /*@modifies oldmem@*/;
 void xfree(/*@only@*/ /*@out@*/ /*@null@*/ void *p) /*@modifies p@*/;
 #endif
+
+/*@only@*/ char *xstrndup(const char *str, size_t len);
 
 /* Bit-counting: used primarily by HAMT but also in a few other places. */
 #define SK5	0x55555555
