@@ -76,6 +76,10 @@ static int special_options = 0;
 /*@null@*/ /*@dependent@*/ static yasm_dbgfmt *cur_dbgfmt = NULL;
 static int preproc_only = 0;
 static int warning_error = 0;	/* warnings being treated as errors */
+static enum {
+    EWSTYLE_GNU = 0,
+    EWSTYLE_VC
+} ewmsg_style = EWSTYLE_GNU;
 
 /*@null@*/ /*@dependent@*/ static FILE *open_obj(const char *mode);
 static void cleanup(/*@null@*/ yasm_object *object);
@@ -92,6 +96,7 @@ static int opt_machine_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int preproc_only_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_preproc_option(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_ewmsg_handler(char *cmd, /*@null@*/ char *param, int extra); 
 
 static /*@only@*/ char *replace_extension(const char *orig, /*@null@*/
 					  const char *ext, const char *def);
@@ -150,6 +155,8 @@ static opt_option options[] =
       N_("pre-define a macro, optionally to value"), N_("macro[=value]") },
     { 'U', NULL, 1, opt_preproc_option, 3,
       N_("undefine a macro"), N_("macro") },
+    { 'X', NULL, 1, opt_ewmsg_handler, 0,
+      N_("select error/warning message style (`gnu' or `vc')"), N_("style") },
 };
 
 /* version message */
@@ -892,6 +899,20 @@ opt_preproc_option(/*@unused@*/ char *cmd, char *param, int extra)
     return 0;
 }
 
+static int
+opt_ewmsg_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
+{
+    if (yasm__strcasecmp(param, "gnu") == 0 ||
+	yasm__strcasecmp(param, "gcc") == 0) {
+	ewmsg_style = EWSTYLE_GNU;
+    } else if (yasm__strcasecmp(param, "vc") == 0) {
+	ewmsg_style = EWSTYLE_VC;
+    } else
+	print_error(_("warning: unrecognized message style `%s'"), param);
+
+    return 0;
+}
+
 static void
 apply_preproc_saved_options()
 {
@@ -1016,14 +1037,19 @@ handle_yasm_gettext(const char *msgid)
     return gettext(msgid);
 }
 
+const char *fmt[2] = {
+	"%s:%lu: %s%s\n",	/* GNU */
+	"%s(%lu) : %s%s\n"	/* VC */
+};
+
 static void
 print_yasm_error(const char *filename, unsigned long line, const char *msg)
 {
-    fprintf(stderr, "%s:%lu: %s\n", filename, line, msg);
+    fprintf(stderr, fmt[ewmsg_style], filename, line, "", msg);
 }
 
 static void
 print_yasm_warning(const char *filename, unsigned long line, const char *msg)
 {
-    fprintf(stderr, "%s:%lu: %s %s\n", filename, line, _("warning:"), msg);
+    fprintf(stderr, fmt[ewmsg_style], filename, line, _("warning: "), msg);
 }
