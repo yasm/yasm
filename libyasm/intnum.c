@@ -446,22 +446,19 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
 int
 yasm_intnum_is_zero(yasm_intnum *intn)
 {
-    return ((intn->type == INTNUM_UL && intn->val.ul == 0) ||
-	    (intn->type == INTNUM_BV && BitVector_is_empty(intn->val.bv)));
+    return (intn->type == INTNUM_UL && intn->val.ul == 0);
 }
 
 int
 yasm_intnum_is_pos1(yasm_intnum *intn)
 {
-    return ((intn->type == INTNUM_UL && intn->val.ul == 1) ||
-	    (intn->type == INTNUM_BV && Set_Max(intn->val.bv) == 0));
+    return (intn->type == INTNUM_UL && intn->val.ul == 1);
 }
 
 int
 yasm_intnum_is_neg1(yasm_intnum *intn)
 {
-    return ((intn->type == INTNUM_UL && (long)intn->val.ul == -1) ||
-	    (intn->type == INTNUM_BV && BitVector_is_full(intn->val.bv)));
+    return (intn->type == INTNUM_BV && BitVector_is_full(intn->val.bv));
 }
 
 unsigned long
