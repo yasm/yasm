@@ -2,7 +2,7 @@
  * \file section.h
  * \brief YASM section interface.
  *
- * $IdPath: yasm/libyasm/section.h,v 1.38 2003/05/04 20:31:57 peter Exp $
+ * $IdPath$
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -89,7 +89,7 @@ void yasm_section_set_opt_flags(yasm_section *sect, unsigned long opt_flags);
 /*@dependent@*/ /*@null@*/ void *yasm_section_get_of_data(yasm_section *sect);
 
 /** Set yasm_objfmt-specific data.  For yasm_objfmt use only.
- * \caution Deletes any existing of_data.
+ * \attention Deletes any existing of_data.
  * \param sect	    section
  * \param of	    object format
  * \param of_data   object format-specific data.

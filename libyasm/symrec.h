@@ -2,7 +2,7 @@
  * \file symrec.h
  * \brief YASM symbol table interface.
  *
- * $IdPath: yasm/libyasm/symrec.h,v 1.38 2003/03/13 06:54:19 peter Exp $
+ * $IdPath$
  *
  *  Copyright (C) 2001  Michael Urman, Peter Johnson
  *
@@ -137,7 +137,7 @@ void yasm_symrec_set_opt_flags(yasm_symrec *sym, unsigned long opt_flags);
 /*@dependent@*/ /*@null@*/ void *yasm_symrec_get_of_data(yasm_symrec *sym);
 
 /** Set yasm_objfmt-specific data.  For yasm_objfmt use only.
- * \caution Deletes any existing of_data.
+ * \attention Deletes any existing of_data.
  * \param sym	    symbol
  * \param of	    object format
  * \param of_data   object format-specific data.
