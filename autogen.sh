@@ -75,8 +75,8 @@ if test ! -d "config"; then
 fi
 
 rm -f stamp-h.in
-echo "  gettextize -f"
-echo "N" | gettextize -f || exit 1
+echo "  gettextize -f --no-changelog"
+echo "N" | gettextize -f --no-changelog || exit 1
 echo "  aclocal $ACLOCAL_FLAGS"
 aclocal $ACLOCAL_FLAGS || exit 1
 echo "  autoheader"
