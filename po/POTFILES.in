@@ -25,6 +25,7 @@ src/arch/x86/x86bc.c
 src/arch/x86/x86expr.c
 src/objfmts/dbg/dbg-objfmt.c
 src/objfmts/bin/bin-objfmt.c
+src/objfmts/coff/coff-objfmt.c
 src/optimizers/basic/basic-optimizer.c
 src/preprocs/raw/raw-preproc.c
 src/preprocs/yapp/yapp-preproc.c
