@@ -112,6 +112,11 @@ void yasm_intnum_destroy(/*@only@*/ yasm_intnum *intn);
 void yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
 		      unsigned long line);
 
+/** Zero an intnum.
+ * \param intn	    intnum
+ */
+void yasm_intnum_zero(yasm_intnum *intn);
+
 /** Simple value check for 0.
  * \param acc	    intnum
  * \return Nonzero if acc==0.

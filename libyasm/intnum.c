@@ -445,6 +445,16 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
 }
 /*@=nullderef =nullpass =branchstate@*/
 
+void
+yasm_intnum_zero(yasm_intnum *intn)
+{
+    if (intn->type == INTNUM_BV) {
+	BitVector_Destroy(intn->val.bv);
+	intn->type = INTNUM_UL;
+    }
+    intn->val.ul = 0;
+}
+
 int
 yasm_intnum_is_zero(yasm_intnum *intn)
 {
