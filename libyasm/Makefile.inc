@@ -53,7 +53,8 @@ EXTRA_DIST += \
 	src/parsers/Makefile.inc	\
 	src/preprocs/Makefile.inc	\
 	src/optimizers/Makefile.inc	\
-	src/objfmts/Makefile.inc
+	src/objfmts/Makefile.inc	\
+	src/tests/Makefile.inc
 
 include src/arch/Makefile.inc
 include src/parsers/Makefile.inc
