@@ -1,20 +1,21 @@
 # $IdPath$
 
-SUBDIRS = tools m4 po
+SUBDIRS = libltdl tools m4 po
 
 CFLAGS = @ANSI_CFLAGS@
 AM_YFLAGS = -d
 INCLUDES = \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/src \
-	-I$(top_srcdir)/check
+	-I$(top_srcdir)/check \
+	@INCLTDL@
 
 bin_PROGRAMS = yasm
 TESTS =
 noinst_PROGRAMS =
 
 yasm_SOURCES =
-yasm_LDADD = @LIBOBJS@ $(INTLLIBS)
+yasm_LDADD = @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@
 
 BUILT_SOURCES =
 CLEANFILES =

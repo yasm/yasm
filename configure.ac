@@ -14,6 +14,7 @@ AC_CONFIG_AUX_DIR(config)
 AM_CONFIG_HEADER([config.h])
 
 AM_INIT_AUTOMAKE(yasm, 0.1.0)
+AM_MAINTAINER_MODE
 
 #
 # autoconf command-line options
@@ -68,7 +69,12 @@ AC_PROG_CC_STDC
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AM_PROG_LEX
-AC_PROG_RANLIB
+AC_LIBTOOL_DLOPEN
+AC_LIBLTDL_CONVENIENCE
+AC_LIBTOOL_WIN32_DLL
+AM_PROG_LIBTOOL
+AC_SUBST(LIBTOOL_DEPS)
+AC_LIB_LTDL
 
 # REQUIRE a standard (ANSI/ISO) C compiler
 if test "$ac_cv_prog_cc_stdc" = no; then
@@ -273,7 +279,12 @@ case "$host" in
 	;;
 esac
 
+# Substitutions for libltdl
+AC_SUBST(INCLTDL)
+AC_SUBST(LIBLTDL)
+
 AC_CONFIG_FILES([Makefile
+	libltdl/Makefile
 	tools/Makefile
 	tools/lemon/Makefile
 	tools/re2c/Makefile

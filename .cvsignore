@@ -12,8 +12,6 @@ configure.scan
 config.*
 stamp-h*
 aclocal.m4
-m4
-ABOUT-NLS
 *.tar.gz
 *.yp
 *.hx

@@ -9,4 +9,5 @@ EXTRA_DIST = Makefile.am \
 	lib-link.m4 \
 	lib-prefix.m4 \
 	libtool.m4 \
+	ltdl.m4 \
 	progtest.m4

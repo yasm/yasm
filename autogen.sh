@@ -13,14 +13,14 @@ test -z "$srcdir" && srcdir=.
 cd "$srcdir"
 DIE=0
 
-(gettextize --version) < /dev/null > /dev/null 2>&1 || {
-        echo
-        echo "You must have gettext installed to compile $package."
-	echo "Download the appropriate package for your system,"
-	echo "or get the source from one of the GNU ftp sites"
-	echo "listed in http://www.gnu.org/order/ftp.html"
-        DIE=1
-}
+#(gettextize --version) < /dev/null > /dev/null 2>&1 || {
+#        echo
+#        echo "You must have gettext installed to compile $package."
+#	echo "Download the appropriate package for your system,"
+#	echo "or get the source from one of the GNU ftp sites"
+#	echo "listed in http://www.gnu.org/order/ftp.html"
+#        DIE=1
+#}
 
 (aclocal --version) < /dev/null > /dev/null 2>&1 || {
         echo
@@ -75,8 +75,8 @@ if test ! -d "config"; then
 fi
 
 rm -f stamp-h.in
-echo "  gettextize -f --no-changelog"
-echo "N" | gettextize -f --no-changelog || exit 1
+#echo "  gettextize -f --no-changelog"
+#echo "N" | gettextize -f --no-changelog || exit 1
 echo "  aclocal $ACLOCAL_FLAGS"
 aclocal $ACLOCAL_FLAGS || exit 1
 echo "  autoheader"
