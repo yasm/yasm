@@ -41,32 +41,32 @@ RCSID("$IdPath$");
 
 
 /* Available CPU feature flags */
-#define CPU_Any	    (0)		/* Any old cpu will do */
+#define CPU_Any	    (0UL)	/* Any old cpu will do */
 #define CPU_086	    CPU_Any
-#define CPU_186	    (1<<0)	/* i186 or better required */
-#define CPU_286	    (1<<1)	/* i286 or better required */
-#define CPU_386	    (1<<2)	/* i386 or better required */
-#define CPU_486	    (1<<3)	/* i486 or better required */
-#define CPU_586	    (1<<4)	/* i585 or better required */
-#define CPU_686	    (1<<5)	/* i686 or better required */
-#define CPU_P3	    (1<<6)	/* Pentium3 or better required */
-#define CPU_P4	    (1<<7)	/* Pentium4 or better required */
-#define CPU_IA64    (1<<8)	/* IA-64 or better required */
-#define CPU_K6	    (1<<9)	/* AMD K6 or better required */
-#define CPU_Athlon  (1<<10)	/* AMD Athlon or better required */
-#define CPU_Hammer  (1<<11)	/* AMD Sledgehammer or better required */
-#define CPU_FPU	    (1<<12)	/* FPU support required */
-#define CPU_MMX	    (1<<13)	/* MMX support required */
-#define CPU_SSE	    (1<<14)	/* Streaming SIMD extensions required */
-#define CPU_SSE2    (1<<15)	/* Streaming SIMD extensions 2 required */
-#define CPU_3DNow   (1<<16)	/* 3DNow! support required */
-#define CPU_Cyrix   (1<<17)	/* Cyrix-specific instruction */
-#define CPU_AMD	    (1<<18)	/* AMD-specific inst. (older than K6) */
-#define CPU_SMM	    (1<<19)	/* System Management Mode instruction */
-#define CPU_Prot    (1<<20)	/* Protected mode only instruction */
-#define CPU_Undoc   (1<<21)	/* Undocumented instruction */
-#define CPU_Obs	    (1<<22)	/* Obsolete instruction */
-#define CPU_Priv    (1<<23)	/* Priveleged instruction */
+#define CPU_186	    (1UL<<0)	/* i186 or better required */
+#define CPU_286	    (1UL<<1)	/* i286 or better required */
+#define CPU_386	    (1UL<<2)	/* i386 or better required */
+#define CPU_486	    (1UL<<3)	/* i486 or better required */
+#define CPU_586	    (1UL<<4)	/* i585 or better required */
+#define CPU_686	    (1UL<<5)	/* i686 or better required */
+#define CPU_P3	    (1UL<<6)	/* Pentium3 or better required */
+#define CPU_P4	    (1UL<<7)	/* Pentium4 or better required */
+#define CPU_IA64    (1UL<<8)	/* IA-64 or better required */
+#define CPU_K6	    (1UL<<9)	/* AMD K6 or better required */
+#define CPU_Athlon  (1UL<<10)	/* AMD Athlon or better required */
+#define CPU_Hammer  (1UL<<11)	/* AMD Sledgehammer or better required */
+#define CPU_FPU	    (1UL<<12)	/* FPU support required */
+#define CPU_MMX	    (1UL<<13)	/* MMX support required */
+#define CPU_SSE	    (1UL<<14)	/* Streaming SIMD extensions required */
+#define CPU_SSE2    (1UL<<15)	/* Streaming SIMD extensions 2 required */
+#define CPU_3DNow   (1UL<<16)	/* 3DNow! support required */
+#define CPU_Cyrix   (1UL<<17)	/* Cyrix-specific instruction */
+#define CPU_AMD	    (1UL<<18)	/* AMD-specific inst. (older than K6) */
+#define CPU_SMM	    (1UL<<19)	/* System Management Mode instruction */
+#define CPU_Prot    (1UL<<20)	/* Protected mode only instruction */
+#define CPU_Undoc   (1UL<<21)	/* Undocumented instruction */
+#define CPU_Obs	    (1UL<<22)	/* Obsolete instruction */
+#define CPU_Priv    (1UL<<23)	/* Priveleged instruction */
 
 /* What instructions/features are enabled?  Defaults to all. */
 static unsigned long cpu_enabled = ~CPU_Any;
@@ -75,15 +75,15 @@ static unsigned long cpu_enabled = ~CPU_Any;
  * parameters are read from the arch-specific data in LSB->MSB order.
  * (only for asthetic reasons in the lexer code below, no practical reason).
  */
-#define MOD_Op2Add  (1<<0)	/* Parameter adds to opcode byte 2 */
-#define MOD_Gap0    (1<<1)	/* Eats a parameter */
-#define MOD_Op1Add  (1<<2)	/* Parameter adds to opcode byte 1 */
-#define MOD_Gap1    (1<<3)	/* Eats a parameter */
-#define MOD_Op0Add  (1<<4)	/* Parameter adds to opcode byte 0 */
-#define MOD_SpAdd   (1<<5)	/* Parameter adds to "spare" value */
-#define MOD_OpSizeR (1<<6)	/* Parameter replaces opersize */
-#define MOD_Imm8    (1<<7)	/* Parameter is included as immediate byte */
-#define MOD_AdSizeR (1<<8)	/* Parameter replaces addrsize (jmprel only) */
+#define MOD_Op2Add  (1UL<<0)	/* Parameter adds to opcode byte 2 */
+#define MOD_Gap0    (1UL<<1)	/* Eats a parameter */
+#define MOD_Op1Add  (1UL<<2)	/* Parameter adds to opcode byte 1 */
+#define MOD_Gap1    (1UL<<3)	/* Eats a parameter */
+#define MOD_Op0Add  (1UL<<4)	/* Parameter adds to opcode byte 0 */
+#define MOD_SpAdd   (1UL<<5)	/* Parameter adds to "spare" value */
+#define MOD_OpSizeR (1UL<<6)	/* Parameter replaces opersize */
+#define MOD_Imm8    (1UL<<7)	/* Parameter is included as immediate byte */
+#define MOD_AdSizeR (1UL<<8)	/* Parameter replaces addrsize (jmprel only) */
 
 /* Operand types.  These are more detailed than the "general" types for all
  * architectures, as they include the size, for instance.
@@ -174,42 +174,42 @@ static unsigned long cpu_enabled = ~CPU_Any;
 #define OPT_MemOffs	0x13
 #define OPT_MASK	0x1F
 
-#define OPS_Any		(0<<5)
-#define OPS_8		(1<<5)
-#define OPS_16		(2<<5)
-#define OPS_32		(3<<5)
-#define OPS_64		(4<<5)
-#define OPS_80		(5<<5)
-#define OPS_128		(6<<5)
-#define OPS_MASK	(7<<5)
+#define OPS_Any		(0UL<<5)
+#define OPS_8		(1UL<<5)
+#define OPS_16		(2UL<<5)
+#define OPS_32		(3UL<<5)
+#define OPS_64		(4UL<<5)
+#define OPS_80		(5UL<<5)
+#define OPS_128		(6UL<<5)
+#define OPS_MASK	(7UL<<5)
 #define OPS_SHIFT	5
 
-#define OPS_Relaxed	(1<<8)
-#define OPS_RMASK	(1<<8)
+#define OPS_Relaxed	(1UL<<8)
+#define OPS_RMASK	(1UL<<8)
 
-#define OPTM_None	(0<<9)
-#define OPTM_Near	(1<<9)
-#define OPTM_Short	(2<<9)
-#define OPTM_Far	(3<<9)
-#define OPTM_To		(4<<9)
-#define OPTM_MASK	(7<<9)
+#define OPTM_None	(0UL<<9)
+#define OPTM_Near	(1UL<<9)
+#define OPTM_Short	(2UL<<9)
+#define OPTM_Far	(3UL<<9)
+#define OPTM_To		(4UL<<9)
+#define OPTM_MASK	(7UL<<9)
 
-#define OPA_None	(0<<12)
-#define OPA_EA		(1<<12)
-#define OPA_Imm		(2<<12)
-#define OPA_SImm	(3<<12)
-#define OPA_Spare	(4<<12)
-#define OPA_Op0Add	(5<<12)
-#define OPA_Op1Add	(6<<12)
-#define OPA_SpareEA	(7<<12)
-#define OPA_JmpRel	(8<<12)
-#define OPA_AdSizeR	(9<<12)
-#define OPA_MASK	(0xF<<12)
+#define OPA_None	(0UL<<12)
+#define OPA_EA		(1UL<<12)
+#define OPA_Imm		(2UL<<12)
+#define OPA_SImm	(3UL<<12)
+#define OPA_Spare	(4UL<<12)
+#define OPA_Op0Add	(5UL<<12)
+#define OPA_Op1Add	(6UL<<12)
+#define OPA_SpareEA	(7UL<<12)
+#define OPA_JmpRel	(8UL<<12)
+#define OPA_AdSizeR	(9UL<<12)
+#define OPA_MASK	(0xFUL<<12)
 
-#define OPAP_None	(0<<16)
-#define OPAP_ShiftOp	(1<<16)
-#define OPAP_SImm8Avail	(2<<16)
-#define OPAP_MASK	(3<<16)
+#define OPAP_None	(0UL<<16)
+#define OPAP_ShiftOp	(1UL<<16)
+#define OPAP_SImm8Avail	(2UL<<16)
+#define OPAP_MASK	(3UL<<16)
 
 typedef struct x86_insn_info {
     /* The CPU feature flags needed to execute this instruction.  This is OR'ed
