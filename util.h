@@ -1,4 +1,4 @@
-/* $IdPath: yasm/util.h,v 1.51 2003/05/04 20:28:28 peter Exp $
+/* $IdPath: yasm/util.h,v 1.52 2003/05/05 03:42:08 peter Exp $
  * YASM utility functions.
  *
  * Includes standard headers and defines prototypes for replacement functions
@@ -50,6 +50,8 @@
 # include <string.h>
 # include <assert.h>
 #endif
+
+#include <libyasm/coretype.h>
 
 #ifdef lint
 # define _(String)	String
