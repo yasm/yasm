@@ -543,6 +543,40 @@ bytecode_new_reserve(expr *numitems, unsigned long itemsize)
     return bc;
 }
 
+void
+bytecode_delete(bytecode *bc)
+{
+    if (!bc)
+	return;
+
+    switch (bc->type) {
+	case BC_EMPTY:
+	    break;
+	case BC_INSN:
+	    if (bc->data.insn.ea) {
+		expr_delete(bc->data.insn.ea->disp);
+		xfree(bc->data.insn.ea);
+	    }
+	    if (bc->data.insn.imm) {
+		expr_delete(bc->data.insn.imm->val);
+		xfree(bc->data.insn.imm);
+	    }
+	    break;
+	case BC_JMPREL:
+	    expr_delete(bc->data.jmprel.target);
+	    break;
+	case BC_DATA:
+	    datavals_delete(&bc->data.data.datahead);
+	    break;
+	case BC_RESERVE:
+	    expr_delete(bc->data.reserve.numitems);
+	    break;
+    }
+
+    expr_delete(bc->multiple);
+    xfree(bc);
+}
+
 int
 bytecode_get_offset(section *sect, bytecode *bc, unsigned long *ret_val)
 {
@@ -658,7 +692,7 @@ bytecode_print(const bytecode *bc)
 	    printf("Final Element Size=%u\n",
 		   (unsigned int)bc->data.data.size);
 	    printf("Elements:\n");
-	    dataval_print(&bc->data.data.datahead);
+	    datavals_print(&bc->data.data.datahead);
 	    break;
 	case BC_RESERVE:
 	    printf("_Reserve_\n");
@@ -723,6 +757,20 @@ bytecode_parser_finalize(bytecode *bc)
     }
 }
 
+void
+bytecodes_delete(bytecodehead *headp)
+{
+    bytecode *cur, *next;
+
+    cur = STAILQ_FIRST(headp);
+    while (cur) {
+	next = STAILQ_NEXT(cur, link);
+	bytecode_delete(cur);
+	cur = next;
+    }
+    STAILQ_INIT(headp);
+}
+
 bytecode *
 bytecodes_append(bytecodehead *headp, bytecode *bc)
 {
@@ -779,6 +827,22 @@ dataval_new_string(char *str_val)
     return retval;
 }
 
+void
+datavals_delete(datavalhead *headp)
+{
+    dataval *cur, *next;
+
+    cur = STAILQ_FIRST(headp);
+    while (cur) {
+	next = STAILQ_NEXT(cur, link);
+	if (cur->type == DV_EXPR)
+	    expr_delete(cur->data.expn);
+	xfree(cur);
+	cur = next;
+    }
+    STAILQ_INIT(headp);
+}
+
 dataval *
 datavals_append(datavalhead *headp, dataval *dv)
 {
@@ -790,7 +854,7 @@ datavals_append(datavalhead *headp, dataval *dv)
 }
 
 void
-dataval_print(const datavalhead *head)
+datavals_print(const datavalhead *head)
 {
     dataval *cur;
 

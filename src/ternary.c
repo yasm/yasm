@@ -102,14 +102,16 @@ ternary_insert (ternary_tree * root, const char *s, void *data, int replace)
 
 /* Free the ternary search tree rooted at p. */
 void
-ternary_cleanup (ternary_tree p)
+ternary_cleanup (ternary_tree p, void (*data_cleanup)(void *d))
 {
   if (p)
     {
-      ternary_cleanup (p->lokid);
+      ternary_cleanup (p->lokid, data_cleanup);
       if (p->splitchar)
-	ternary_cleanup (p->eqkid);
-      ternary_cleanup (p->hikid);
+	ternary_cleanup (p->eqkid, data_cleanup);
+      else
+	data_cleanup (p->eqkid);
+      ternary_cleanup (p->hikid, data_cleanup);
       xfree (p);
     }
 }

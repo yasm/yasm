@@ -550,6 +550,8 @@ expr_level_op(expr *e, int fold_const, int simplify_ident)
 			intnum_delete(sube->terms[j].data.intn);
 		    }
 		} else {
+		    if (o == first_int_term)
+			o--;
 		    e->terms[o--] = sube->terms[j];	/* structure copy */
 		}
 	    }
@@ -560,6 +562,8 @@ expr_level_op(expr *e, int fold_const, int simplify_ident)
 	    xfree(sube);
 	} else if (o != i) {
 	    /* copy operand if it changed places */
+	    if (o == first_int_term)
+		o--;
 	    e->terms[o--] = e->terms[i];
 	}
     }

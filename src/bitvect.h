@@ -108,6 +108,7 @@ typedef enum
 /* ===> MISCELLANEOUS: <=== */
 
 ErrCode BitVector_Boot       (void);                 /* 0 = ok, 1..7 = error */
+void    BitVector_Shutdown   (void);                            /* undo Boot */
 
 N_word  BitVector_Size  (N_int bits);       /* bit vector size (# of words)  */
 N_word  BitVector_Mask  (N_int bits);       /* bit vector mask (unused bits) */

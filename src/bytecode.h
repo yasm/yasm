@@ -114,6 +114,8 @@ bytecode *bytecode_new_data(datavalhead *datahead, unsigned long size);
 
 bytecode *bytecode_new_reserve(expr *numitems, unsigned long itemsize);
 
+void bytecode_delete(bytecode *bc);
+
 /* Gets the offset of the bytecode specified by bc if possible.
  * Return value is IF POSSIBLE, not the value.
  */
@@ -125,6 +127,8 @@ void bytecode_parser_finalize(bytecode *bc);
 
 /* void bytecodes_initialize(bytecodehead *headp); */
 #define	bytecodes_initialize(headp)	STAILQ_INIT(headp)
+
+void bytecodes_delete(bytecodehead *headp);
 
 /* Adds bc to the list of bytecodes headp.
  * NOTE: Does not make a copy of bc; so don't pass this function
@@ -145,6 +149,8 @@ dataval *dataval_new_string(char *str_val);
 /* void datavals_initialize(datavalhead *headp); */
 #define	datavals_initialize(headp)	STAILQ_INIT(headp)
 
+void datavals_delete(datavalhead *headp);
+
 /* Adds dv to the list of datavals headp.
  * NOTE: Does not make a copy of dv; so don't pass this function
  * static or local variables, and discard the dv pointer after calling
@@ -153,6 +159,6 @@ dataval *dataval_new_string(char *str_val);
  */
 dataval *datavals_append(datavalhead *headp, dataval *dv);
 
-void dataval_print(const datavalhead *head);
+void datavals_print(const datavalhead *head);
 
 #endif

@@ -164,6 +164,7 @@ lineexp: exp
     | label TIMES expr exp		{ $$ = $4; SetBCMultiple($$, $3); }
     | label_id EQU expr			{
 	symrec_define_equ($1, $3);
+	xfree($1);
 	$$ = (bytecode *)NULL;
     }
 ;
@@ -194,15 +195,19 @@ dataval: expr_no_string	{ $$ = dataval_new_expr($1); }
 label: label_id	    {
 	symrec_define_label($1, nasm_parser_cur_section, nasm_parser_prev_bc,
 			    1);
+	xfree($1);
     }
     | label_id ':'  {
 	symrec_define_label($1, nasm_parser_cur_section, nasm_parser_prev_bc,
 			    1);
+	xfree($1);
     }
 ;
 
 label_id: ID	    {
 	$$ = $1;
+	if (nasm_parser_locallabel_base)
+	    xfree(nasm_parser_locallabel_base);
 	nasm_parser_locallabel_base = xstrdup($1);
     }
     | SPECIAL_ID
@@ -315,6 +320,7 @@ memexpr: INTNUM			{ $$ = expr_new_ident(ExprInt($1)); }
     | '(' memexpr ')'		{ $$ = $2; }
     | STRING			{
 	$$ = expr_new_ident(ExprInt(intnum_new_charconst_nasm($1)));
+	xfree($1);
     }
     | error			{ Error(_("invalid effective address")); }
 ;
@@ -478,12 +484,13 @@ expr_no_string: INTNUM		{ $$ = expr_new_ident(ExprInt($1)); }
 expr: expr_no_string
     | STRING		{
 	$$ = expr_new_ident(ExprInt(intnum_new_charconst_nasm($1)));
+	xfree($1);
     }
 ;
 
-explabel: ID		{ $$ = symrec_use($1); }
-    | SPECIAL_ID	{ $$ = symrec_use($1); }
-    | LOCAL_ID		{ $$ = symrec_use($1); }
+explabel: ID		{ $$ = symrec_use($1); xfree($1); }
+    | SPECIAL_ID	{ $$ = symrec_use($1); xfree($1); }
+    | LOCAL_ID		{ $$ = symrec_use($1); xfree($1); }
     | '$'		{
 	$$ = symrec_define_label("$", nasm_parser_cur_section,
 				 nasm_parser_prev_bc, 0);

@@ -132,8 +132,13 @@ main(int argc, char *argv[])
 
     sections = nasm_parser.do_parse(&nasm_parser, &dbg_objfmt, in);
 
-    if (OutputAllErrorWarning() > 0)
+    if (OutputAllErrorWarning() > 0) {
+	sections_delete(sections);
+	symrec_delete_all();
+	filename_delete_all();
+	BitVector_Shutdown();
 	return EXIT_FAILURE;
+    }
 
     sections_print(sections);
     printf("\n***Symbol Table***\n");
@@ -145,7 +150,10 @@ main(int argc, char *argv[])
     printf("Post-parser-finalization:\n");
     sections_print(sections);
 
+    sections_delete(sections);
+    symrec_delete_all();
     filename_delete_all();
+    BitVector_Shutdown();
     return EXIT_SUCCESS;
 }
 

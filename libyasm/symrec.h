@@ -74,5 +74,7 @@ int symrec_foreach(int (*func) (symrec *sym));
 
 void symrec_parser_finalize(void);
 
+void symrec_delete_all(void);
+
 void symrec_print(const symrec *sym);
 #endif

@@ -128,6 +128,20 @@ sections_switch(sectionhead *headp, objfmt *of, const char *name)
 }
 
 void
+sections_delete(sectionhead *headp)
+{
+    section *cur, *next;
+
+    cur = STAILQ_FIRST(headp);
+    while (cur) {
+	next = STAILQ_NEXT(cur, link);
+	section_delete(cur);
+	cur = next;
+    }
+    STAILQ_INIT(headp);
+}
+
+void
 sections_print(const sectionhead *headp)
 {
     section *cur;
@@ -155,6 +169,17 @@ const char *
 section_get_name(const section *sect)
 {
     return sect->name;
+}
+
+void
+section_delete(section *sect)
+{
+    if (!sect)
+	return;
+
+    xfree(sect->name);
+    bytecodes_delete(&sect->bc);
+    xfree(sect);
 }
 
 void

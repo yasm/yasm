@@ -177,12 +177,12 @@ WS       [ \t\r]
 
 <DIRECTIVE>[a-z]+   {
     BEGIN DIRECTIVE2;
-    yylval.str_val = xstrdup(yytext);
+    yylval.str_val = yytext;
     return DIRECTIVE_NAME;
 }
     /* everything printable except for ' ', '[' and ']'. */
 <DIRECTIVE2>[!-@a-z\\^-`{|}~]+ {
-    yylval.str_val = xstrdup(yytext);
+    yylval.str_val = yytext;
     return DIRECTIVE_VAL;
 }
 <DIRECTIVE>. {

@@ -266,6 +266,23 @@ symrec_parser_finalize(void)
     symrec_foreach(symrec_parser_finalize_checksym);
 }
 
+static void
+symrec_delete_one(void *d)
+{
+    symrec *sym = d;
+    xfree(sym->name);
+    if (sym->type == SYM_EQU)
+	expr_delete(sym->value.expn);
+    free(sym);
+}
+
+void
+symrec_delete_all(void)
+{
+    ternary_cleanup(sym_table, symrec_delete_one);
+    sym_table = NULL;
+}
+
 void
 symrec_print(const symrec *sym)
 {

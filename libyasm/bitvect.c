@@ -304,6 +304,11 @@ ErrCode BitVector_Boot(void)
     return(ErrCode_Ok);
 }
 
+void BitVector_Shutdown(void)
+{
+    if (BITMASKTAB) xfree(BITMASKTAB);
+}
+
 N_word BitVector_Size(N_int bits)           /* bit vector size (# of words)  */
 {
     N_word size;

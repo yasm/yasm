@@ -42,7 +42,7 @@ void *ternary_insert (ternary_tree *p, const char *s, void *data, int replace);
 
 /* Delete the ternary search tree rooted at P. 
    Does NOT delete the data you associated with the strings. */
-void ternary_cleanup (ternary_tree p);
+void ternary_cleanup (ternary_tree p, void (*data_cleanup)(void *d));
 
 /* Search the ternary tree for string S, returning the data associated
    with it if found. */

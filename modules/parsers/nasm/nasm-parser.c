@@ -35,6 +35,10 @@
 #include "preproc.h"
 #include "parser.h"
 
+#ifdef DMALLOC
+# include <dmalloc.h>
+#endif
+
 RCSID("$IdPath$");
 
 extern FILE *nasm_parser_in;
@@ -47,6 +51,8 @@ int (*nasm_parser_yyinput) (char *buf, int max_size);
 objfmt *nasm_parser_objfmt;
 sectionhead nasm_parser_sections;
 section *nasm_parser_cur_section;
+
+extern char *nasm_parser_locallabel_base;
 
 static sectionhead *
 nasm_parser_do_parse(parser *p, objfmt *of, FILE *f)
@@ -64,6 +70,10 @@ nasm_parser_do_parse(parser *p, objfmt *of, FILE *f)
     nasm_parser_debug = 0;
 
     nasm_parser_parse();
+
+    /* Free locallabel base if necessary */
+    if (nasm_parser_locallabel_base)
+	xfree(nasm_parser_locallabel_base);
 
     return &nasm_parser_sections;
 }

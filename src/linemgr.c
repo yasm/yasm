@@ -51,10 +51,16 @@ switch_filename(const char *filename)
 	xfree(copy);
 }
 
+static void
+filename_delete_one(void *d)
+{
+    xfree(d);
+}
+
 void
 filename_delete_all(void)
 {
     in_filename = NULL;
-    ternary_cleanup(filename_table);
+    ternary_cleanup(filename_table, filename_delete_one);
     filename_table = NULL;
 }
