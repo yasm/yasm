@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.1 2001/05/20 08:28:57 peter Exp $
+/* $Id: errwarn.c,v 1.2 2001/05/21 18:31:43 peter Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -82,15 +82,39 @@ void Fatal(fatal_num num)
     exit(EXIT_FAILURE);
 }
 
+/* replace %1, %2, etc in src with %c, %s, etc. in argtypes. */
+/* currently limits maximum number of args to 9 (%1-%9). */
 static char *process_argtypes(char *src, char *argtypes)
 {
     char *dest;
+    char *argtype[9];
+    int at_num;
+    char *destp, *srcp, *argtypep;
 
     if(argtypes) {
 	dest = malloc(strlen(src) + strlen(argtypes));
 	if(!dest)
 	    Fatal(FATAL_NOMEM);
-	/* TODO: Implement */
+	/* split argtypes by % */
+	at_num = 0;
+	while((argtypes = strchr(argtypes, '%')) && at_num < 9)
+	    argtype[at_num++] = ++argtypes;
+	/* search through src for %, copying as we go */
+	destp = dest;
+	srcp = src;
+	while(*srcp != '\0') {
+	    *(destp++) = *srcp;
+	    if(*(srcp++) == '%') {
+		if(isdigit(*srcp)) {
+		    /* %1, %2, etc */
+		    argtypep = argtype[*srcp-'1'];
+		    while((*argtypep != '%') && (*argtypep != '\0'))
+			*(destp++) = *(argtypep++);
+		} else
+		    *(destp++) = *srcp;
+		srcp++;
+	    }
+	}
     } else {
 	dest = strdup(src);
 	if(!dest)

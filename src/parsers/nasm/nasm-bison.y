@@ -1,4 +1,4 @@
-/* $Id: nasm-bison.y,v 1.3 2001/05/20 08:35:18 peter Exp $
+/* $Id: nasm-bison.y,v 1.4 2001/05/21 18:31:42 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -101,8 +101,7 @@ directive: '[' DIRECTIVE_NAME DIRECTIVE_VAL ']' {
 	printf("Directive: Name='%s' Value='%s'\n", $2, $3);
     }
     | '[' DIRECTIVE_NAME DIRECTIVE_VAL error {
-	/*Error(ERR_MISSING, "%c", ']');*/
-	fprintf(stderr, "missing ']'\n");
+	Error(ERR_MISSING, "%c", ']');
     }
     | '[' DIRECTIVE_NAME error {
 	Error(ERR_MISSING_ARG, (char *)NULL, $2);
