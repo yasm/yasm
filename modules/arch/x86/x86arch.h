@@ -198,6 +198,9 @@ int yasm_x86__bc_tobytes(yasm_bytecode *bc, unsigned char **bufp,
 			 const yasm_section *sect, void *d,
 			 yasm_output_expr_func output_expr);
 
+/* Check an effective address.  Returns 0 if EA was successfully determined,
+ * 1 if invalid EA, or 2 if indeterminate EA.
+ */
 int yasm_x86__expr_checkea
     (yasm_expr **ep, unsigned char *addrsize, unsigned int bits,
      unsigned int nosplit, unsigned char *displen, unsigned char *modrm,

@@ -600,16 +600,23 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 	     * of the Mod/RM byte until we know more about the
 	     * displacement.
 	     */
-	    if (!yasm_x86__expr_checkea(&temp, &insn->addrsize,
+	    switch (yasm_x86__expr_checkea(&temp, &insn->addrsize,
 		    insn->mode_bits, ea->nosplit, &displen, &eat.modrm,
 		    &eat.valid_modrm, &eat.need_modrm, &eat.sib,
 		    &eat.valid_sib, &eat.need_sib, &insn->rex, calc_bc_dist)) {
-		yasm_expr_delete(temp);
-		/* failed, don't bother checking rest of insn */
-		return YASM_BC_RESOLVE_UNKNOWN_LEN|YASM_BC_RESOLVE_ERROR;
+		case 1:
+		    yasm_expr_delete(temp);
+		    /* failed, don't bother checking rest of insn */
+		    return YASM_BC_RESOLVE_UNKNOWN_LEN|YASM_BC_RESOLVE_ERROR;
+		case 2:
+		    yasm_expr_delete(temp);
+		    /* failed, don't bother checking rest of insn */
+		    return YASM_BC_RESOLVE_UNKNOWN_LEN;
+		default:
+		    yasm_expr_delete(temp);
+		    /* okay */
+		    break;
 	    }
-
-	    yasm_expr_delete(temp);
 
 	    if (displen != 1) {
 		/* Fits into a word/dword, or unknown. */
@@ -940,12 +947,12 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp,
 	     * displacement.  Throw away all of the return values except for
 	     * the modified expr.
 	     */
-	    if (!yasm_x86__expr_checkea(&ea->disp, &addrsize, insn->mode_bits,
-					ea->nosplit, &displen, &eat.modrm,
-					&eat.valid_modrm, &eat.need_modrm,
-					&eat.sib, &eat.valid_sib,
-					&eat.need_sib, &insn->rex,
-					yasm_common_calc_bc_dist))
+	    if (yasm_x86__expr_checkea(&ea->disp, &addrsize, insn->mode_bits,
+				       ea->nosplit, &displen, &eat.modrm,
+				       &eat.valid_modrm, &eat.need_modrm,
+				       &eat.sib, &eat.valid_sib,
+				       &eat.need_sib, &insn->rex,
+				       yasm_common_calc_bc_dist))
 		yasm_internal_error(N_("checkea failed"));
 
 	    if (ea->disp) {
