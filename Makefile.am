@@ -24,6 +24,7 @@ EXTRA_DIST = \
 	src/Makefile.inc
 
 include check/Makefile.inc
+include tools/Makefile.inc
 include src/Makefile.inc
 
 EXTRA_DIST += \
