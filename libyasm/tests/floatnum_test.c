@@ -13,7 +13,7 @@ void get_family_setup(void)
 {
 
     flt = malloc(sizeof(floatnum));
-    flt->mantissa = BitVector_Create(64, TRUE);
+    flt->mantissa = BitVector_Create(80, TRUE);
 }
 
 void get_family_teardown(void)
@@ -25,12 +25,12 @@ void get_family_teardown(void)
 void pi_setup(void)
 {
     /* test value: 3.141592653589793 */
-    /* 80-bit little endian hex: E9 BD 68 21 A2 DA 0F C9 00 40 */
-    unsigned char val[] = {0xE9, 0xBD, 0x68, 0x21, 0xA2, 0xDA, 0x0F, 0xC9};
+    /* 80-bit little endian mantissa: C6 0D E9 BD 68 21 A2 DA 0F C9 */
+    unsigned char val[] = {0xC6, 0x0D, 0xE9, 0xBD, 0x68, 0x21, 0xA2, 0xDA, 0x0F, 0xC9};
     unsigned char sign = 0;
     unsigned short exp = 32767 + 1;
 
-    BitVector_Block_Store(flt->mantissa, val, 8);
+    BitVector_Block_Store(flt->mantissa, val, 10);
     flt->sign = sign;
     flt->exponent = exp;
 }
