@@ -1,4 +1,5 @@
 AC_INIT(src/main.c)
+AC_CONFIG_AUX_DIR(config)
 AM_CONFIG_HEADER(include/config.h)
 
 AM_INIT_AUTOMAKE(yasm, 0.0.1)
