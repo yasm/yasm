@@ -35,6 +35,7 @@ include src/Makefile.inc
 
 EXTRA_DIST += \
 	out_test.sh \
+	test_hd.pl \
 	strsep.c mergesort.c \
 	COPYING.LIB-2.0 \
 	splint.sh \

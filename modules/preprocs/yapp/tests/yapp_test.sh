@@ -1,4 +1,12 @@
-#!/bin/sh
+#! /bin/sh
+# $IdPath$
+
+case `echo "testing\c"; echo 1,2,3`,`echo -n testing; echo 1,2,3` in
+  *c*,-n*) ECHO_N= ECHO_C='
+' ECHO_T='	' ;;
+  *c*,*  ) ECHO_N=-n ECHO_C= ECHO_T= ;;
+  *)       ECHO_N= ECHO_C='\c' ECHO_T= ;;
+esac
 
 #
 # Verify that all test cases match
@@ -17,19 +25,19 @@ YT="yapp_test"
 
 for asm in ${srcdir}/src/preprocs/yapp/tests/*.asm
 do
-    a=`echo ${asm} | sed -e 's,^.*/,,' | sed -e 's,.asm$,,'`
+    a=`echo ${asm} | sed 's,^.*/,,;s,.asm$,,'`
     y=${a}.yp
-    p=`echo ${asm} | sed -e 's,.asm$,.pre,'`
+    p=`echo ${asm} | sed 's,.asm$,.pre,'`
 
-    echo -n "$YT: Testing yapp for ${a} ..."
-    if sed -e "s,\./,${srcdir}/," ${asm} | ./yasm -e |
-	sed -e "s,${srcdir}/,./," > ${y}; then
+    echo $ECHO_N "$YT: Testing yapp for ${a} ... $ECHO_C"
+    if sed "s,\./,${srcdir}/," ${asm} | ./yasm -e |
+	sed "s,${srcdir}/,./," > ${y}; then
 	if diff -w ${p} ${y} > /dev/null; then
-	    echo " PASS."
+	    echo "PASS."
 	    passedct=`expr $passedct + 1`
 	    passedlist="${passedlist}${a} "
 	else
-	    echo " FAIL."
+	    echo "FAIL."
 	    failedct=`expr $failedct + 1`
 	    failedlist="${failedlist}${a} "
 	fi
