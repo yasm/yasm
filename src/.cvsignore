@@ -1,3 +1,5 @@
 .*.sw?
 bison.tab.c
 lex.yy.c
+bison.y
+token.l
