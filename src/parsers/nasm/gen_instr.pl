@@ -406,6 +406,17 @@ sub action_setshiftflag ( @ $ )
 	. rule_footer; 
 }
 
+sub action_setjrshort ( @ $ )
+{
+    my ($rule, $tokens, $func, $a_args, $count) = splice @_;
+    return rule_header ($rule, $tokens, $count)
+	. "        if (\$2.op_sel == JR_NONE)\n"
+	. "            \$2.op_sel = JR_SHORT;\n"
+	. "        @$a_args\n"
+	. "        \$\$ = $func;\n"
+	. rule_footer; 
+}
+
 sub get_token_number ( $ $ )
 {
     my ($tokens, $str) = splice @_;
@@ -579,7 +590,15 @@ sub output_yacc ($@)
 			}
 
 			# generate the grammar
-			print GRAMMAR action ($rule, $tokens, $func, \@args, $count++);
+			# Specialcase jcc to set op_sel=JR_SHORT.
+			if ($rule =~ m/jcc/)
+			{
+			    print GRAMMAR action_setjrshort ($rule, $tokens, $func, \@args, $count++);
+			}
+			else
+			{
+			    print GRAMMAR action ($rule, $tokens, $func, \@args, $count++);
+			}
 		    }
 		    else
 		    {

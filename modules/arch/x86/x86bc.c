@@ -612,10 +612,7 @@ x86_bc_calc_len_jmprel(x86_jmprel *jmprel, unsigned long *len,
 		rel = (long)(target-offset);
 		/* short displacement must fit within -128 <= rel <= +127 */
 		if (rel >= -128 && rel <= 127) {
-		    /* It fits into a short displacement.  Remember it fit as
-		     * such, and return minimal sizing.
-		     */
-		    jmprel->op_sel = JR_SHORT;
+		    /* It fits into a short displacement. */
 		    jrshort = 1;
 		} else {
 		    /* Near for now, but could get shorter in the future. */
@@ -623,8 +620,11 @@ x86_bc_calc_len_jmprel(x86_jmprel *jmprel, unsigned long *len,
 		    retval = 0;
 		}
 	    } else {
-		/* We have to assume it'll be a near displacement */
-		jrshort = 0;
+		/* Assume whichever size is claimed as default by op_sel */
+		if (jmprel->op_sel == JR_SHORT)
+		    jrshort = 1;
+		else
+		    jrshort = 0;
 		retval = 0;
 	    }
 	    expr_delete(temp);
