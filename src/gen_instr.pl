@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.9 2001/07/05 04:17:52 mu Exp $
+# $Id: gen_instr.pl,v 1.10 2001/07/05 04:32:13 mu Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -80,6 +80,10 @@ my $valid_regs = join '|', qw(
     mem8 mem16 mem32 mem1632 mem64 mem80 mem128
     mem8x mem16x mem32x mem1632x mem64x mem80x mem128x
 );
+my $valid_opcodes = join '|', qw(
+    [0-9A-F]{2}
+    \\$0\\.1 \\$0\\.2 \\$0\\.3
+);
 my $valid_cpus = join '|', qw(
     8086 186 286 386 486 P4 P5 P6
     FPU MMX KATMAI SSE SSE2
@@ -142,19 +146,16 @@ sub read_instructions ($)
 		    if $op !~ m/^(?:TO\s)?nil|(?:$valid_regs)(?:,(?:$valid_regs)){0,2}$/oi;
 	    die "Invalid Operation Size\n"
 		    if $size !~ m/^nil|16|32|128$/oi;
-	    # TODO: update these for $0.\d inclusion
-	    #die "Invalid Opcode\n"
-	#	    if $opcode !~ m/[0-9A-F]{2}(,[0-9A-F]{2})?(\+\$\d)?/oi;
-	    #die "Invalid Effective Address\n"
-	#	    if $eff !~ m/nil|(\$?\d[ir]?(,\$?\d))/oi;
-	    #die "Invalid Immediate Operand\n"
-	#	    if $imm !~ m/nil|((\$\d[r]?|8|16|32|[0-9A-F]{2})(,\$\d|(8|16|32[s]?))?)/oi;
+	    die "Invalid Opcode\n"
+		    if $opcode !~ m/(?:$valid_opcodes)(?:,$valid_opcodes)?(\+\$\d)?/oi;
+	    die "Invalid Effective Address\n"
+		    if $eff !~ m/nil|(\$?\d[ir]?(,\$?\d|,\$0.\d))/oi;
+	    die "Invalid Immediate Operand\n"
+		    if $imm !~ m/nil|((\$\d[r]?|8|16|32|[0-9A-F]{2}|\$0\.\d)(,\$\d|(8|16|32[s]?))?)/oi;
 	    die "Invalid CPU\n"
 		    if $cpu !~ m/^(?:$valid_cpus)(?:,(?:$valid_cpus))*$/o;
 	};
 	die "Malformed Instruction at $instrfile line $.: $@" if $@;
-#    die "Multiple Definiton for alias $inst at $instrfile line $.\n"
-#	    if exists $instr{$inst} and not ref $instr{$inst};
 	# knock the ! off of $inst for the groupname
 	$inst = substr $inst, 1;
 	push @{$groups->{$inst}{rules}}, [$inst, $op, $size, $opcode, $eff, $imm, $cpu];
@@ -355,7 +356,6 @@ sub output_yacc ($@)
 	    print GRAMMAR "%type <bc>";
 	    foreach my $group (sort keys %$groups)
 	    {
-		#next unless ref $instrlist->{$inst};
 		if ($len + length($group) < 76)
 		{
 		    print GRAMMAR " $group";
@@ -391,7 +391,6 @@ sub output_yacc ($@)
 		# original version we would have otherwise.
 		($ONE, $AL, $AX, $EAX) = (0, 0, 0, 0);
 		my $count = 0;
-		#next unless ref $instrlist->{$instrname};
 		foreach my $inst (@{$groups->{$group}{rules}}) {
 		    # build the instruction in pieces.
 
