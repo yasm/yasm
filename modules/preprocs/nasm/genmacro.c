@@ -37,7 +37,7 @@ main(int argc, char *argv[])
 {
     FILE *in, *out;
     int i;
-    char str[MAXLINE];
+    char *str;
     char *strp;
     char *charp;
     int fline;
@@ -57,6 +57,8 @@ main(int argc, char *argv[])
 	fprintf(stderr, "Could not open `%s'.\n", OUTPUT);
 	return EXIT_FAILURE;
     }
+
+    str = malloc(MAXLINE);
 
     fprintf(out, "/* This file auto-generated from standard.mac by genmacro.c"
 		 " - don't edit it */\n\n#include <stddef.h>\n\n"
@@ -136,6 +138,8 @@ main(int argc, char *argv[])
 	tasm_count = lindex;
     fprintf(out, "#define TASM_MACRO_COUNT %d\n", tasm_count);
     fclose(out);
+
+    free(str);
 
     return EXIT_SUCCESS;
 }
