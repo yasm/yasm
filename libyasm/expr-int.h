@@ -86,7 +86,7 @@ int expr_traverse_leaves_in(expr *e, /*@null@*/ void *d,
 void expr_order_terms(expr *e);
 
 /* Copy entire expression EXCEPT for index "except" at *top level only*. */
-/*@null@*/ expr *expr_copy_except(const expr *e, int except);
+expr *expr_copy_except(const expr *e, int except);
 
 int expr_contains(expr *e, ExprType t);
 

@@ -41,7 +41,7 @@ typedef struct ExprItem ExprItem;
     expr_new (EXPR_IDENT, (r), (ExprItem *)NULL)
 
 /* allocates and makes an exact duplicate of e */
-/*@null@*/ expr *expr_copy(const expr *e);
+expr *expr_copy(const expr *e);
 
 void expr_delete(/*@only@*/ /*@null@*/ expr *e);
 

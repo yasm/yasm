@@ -42,7 +42,7 @@ static int expr_traverse_nodes_post(/*@null@*/ expr *e, /*@null@*/ void *d,
 
 /* allocate a new expression node, with children as defined.
  * If it's a unary operator, put the element in left and set right=NULL. */
-/*@-usedef@*/
+/*@-compmempass@*/
 expr *
 expr_new(ExprOp op, ExprItem *left, ExprItem *right)
 {
@@ -95,7 +95,7 @@ expr_new(ExprOp op, ExprItem *left, ExprItem *right)
 
     return ptr;
 }
-/*@=usedef@*/
+/*@=compmempass@*/
 
 /* helpers */
 ExprItem *
@@ -627,9 +627,6 @@ expr_copy_except(const expr *e, int except)
     expr *n;
     int i;
     
-    if (!e)
-	return 0;
-
     n = xmalloc(sizeof(expr)+sizeof(ExprItem)*(e->numterms<2?0:e->numterms-2));
 
     n->op = e->op;
