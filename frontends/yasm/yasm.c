@@ -32,6 +32,16 @@
 # include <string.h>
 #endif
 
+#include <libintl.h>
+#define _(String)	gettext(String)
+#ifdef gettext_noop
+#define N_(String)	gettext_noop(String)
+#else
+#define N_(String)	(String)
+#endif
+
+#include "bitvect.h"
+
 #include "globals.h"
 #include "errwarn.h"
 
@@ -47,6 +57,12 @@ int
 main(int argc, char *argv[])
 {
     FILE *in;
+
+    /* Initialize BitVector (needed for floating point). */
+    if (BitVector_Boot() != ErrCode_Ok) {
+	fprintf(stderr, _("Could not initialize BitVector"));
+	return EXIT_FAILURE;
+    }
 
     if (argc == 2) {
 	in = fopen(argv[1], "rt");
