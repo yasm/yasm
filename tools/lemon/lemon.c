@@ -26,7 +26,7 @@
 **   http://www.hwaci.com/drh/
 **
 ** $IdPath$
-** $Id: lemon.c,v 1.5 2002/04/07 20:57:52 peter Exp $
+** $Id: lemon.c,v 1.6 2002/04/07 21:57:43 peter Exp $
 */
 #include <stdio.h>
 #include <stdarg.h>
@@ -1153,6 +1153,9 @@ void ErrorMsg(const char *filename, int lineno, const char *format, ...)
 ** Main program file for the LEMON parser generator.
 */
 
+void setlempar(const char *);
+void setoutput(const char *);
+
 /* Report an out-of-memory condition and abort.  This function
 ** is used mostly by the "MemoryCheck" macro in struct.h
 */
@@ -1161,6 +1164,26 @@ void memory_error(void){
   exit(1);
 }
 
+static const char *lempar_locations[] = {
+	NULL, "lempar.c"
+};
+
+void setlempar(const char *lempar)
+{
+  if (access(lempar, 004)) {
+    perror(lempar);
+    exit(1);
+  }
+  lempar_locations[0] = lempar;
+}
+
+static char *output_file = NULL;
+
+void setoutput(const char *base)
+{
+  if ((output_file = malloc(strlen(base) + 1)))
+    sprintf(output_file, "%s.", base);
+}
 
 /* The main program.  Parse the command line and do it... */
 int main(int argc, char **argv)
@@ -1176,14 +1199,21 @@ int main(int argc, char **argv)
     {OPT_FLAG, "b", {&basisflag}, "Print only the basis in report."},
     {OPT_FLAG, "c", {&compress}, "Don't compress the action table."},
     {OPT_FLAG, "g", {&rpflag}, "Print grammar without actions."},
-    {OPT_FLAG, "m", {&mhflag}, "Output a makeheaders compatible file"},
+    {OPT_FLAG, "m", {&mhflag}, "Output a makeheaders compatible file."},
+    {OPT_FSTR, "o", {0}, "Set the dirname/basename for the output file(s)."},
     {OPT_FLAG, "q", {&quiet}, "(Quiet) Don't print the report file."},
     {OPT_FLAG, "s", {&statistics}, "Print parser stats to standard output."},
+    {OPT_FSTR, "t", {0}, "An alternative template -- instead of "
+                         "\"./lempar.c\"."},
     {OPT_FLAG, "x", {&version}, "Print the version number."},
     {OPT_FLAG,0,{0},0}
   };
   int i;
   struct lemon lem;
+
+  /* Initialize function union members of options array */
+  options[4].arg.fstr = setoutput;
+  options[7].arg.fstr = setlempar;
 
   OptInit(argv,options,stderr);
   if( version ){
@@ -2270,6 +2300,7 @@ void Plink_delete(struct plink *plp)
     plp = nextpl;
   }
 }
+
 /*********************** From the file "report.c" **************************/
 /*
 ** Procedures for generating reports and tables in the LEMON parser generator.
@@ -2279,7 +2310,7 @@ PRIVATE char *file_makename(struct lemon *, const char *);
 PRIVATE FILE *file_open(struct lemon *, const char *, const char *);
 void ConfigPrint(FILE *, struct config *);
 int PrintAction(struct action *, FILE *, int);
-PRIVATE char *pathsearch(char *, char *, int);
+PRIVATE const char *pathsearch(void);
 PRIVATE int compute_action(struct lemon *, struct action *);
 PRIVATE void tplt_xfer(char *, FILE *, FILE *, int *);
 PRIVATE FILE *tplt_open(struct lemon *);
@@ -2295,15 +2326,16 @@ void print_stack_union(FILE *, struct lemon *, int *, int);
 */
 PRIVATE char *file_makename(struct lemon *lemp, const char *suffix)
 {
-  char *name;
-  char *cp;
+  char *name = NULL;
+  char *cp, *fname;
 
-  name = malloc( strlen(lemp->filename) + strlen(suffix) + 5 );
+  fname = output_file ? output_file : lemp->filename;
+  name = malloc( strlen(fname) + strlen(suffix));
   if( name==0 ){
     fprintf(stderr,"Can't allocate space for a filename.\n");
     exit(1);
   }
-  strcpy(name,lemp->filename);
+  strcpy(name, fname);
   cp = strrchr(name,'.');
   if( cp ) *cp = 0;
   strcat(name,suffix);
@@ -2489,46 +2521,15 @@ void ReportOutput(struct lemon *lemp)
   return;
 }
 
-/* Search for the file "name" which is in the same directory as
-** the exacutable */
-PRIVATE char *pathsearch(char *argv0, char *name, int modemask)
+PRIVATE const char *pathsearch(void)
 {
-  char *pathlist;
-  char stdpathlist[] = ".:/bin:/usr/bin";
-  char emptypathlist[] = "";
-  char *path,*cp;
-  char c;
+  int i;
 
-#ifdef __WIN32__
-  cp = strrchr(argv0,'\\');
-#else
-  cp = strrchr(argv0,'/');
-#endif
-  if( cp ){
-    c = *cp;
-    *cp = 0;
-    path = (char *)malloc( strlen(argv0) + strlen(name) + 2 );
-    if( path ) sprintf(path,"%s/%s",argv0,name);
-    *cp = c;
-  }else{
-    pathlist = getenv("PATH");
-    if( pathlist==0 ) pathlist = stdpathlist;
-    path = (char *)malloc( strlen(pathlist)+strlen(name)+2 );
-    if( path!=0 ){
-      while( *pathlist ){
-        cp = strchr(pathlist,':');
-        if( cp==0 ) cp = &pathlist[strlen(pathlist)];
-        c = *cp;
-        *cp = 0;
-        sprintf(path,"%s/%s",pathlist,name);
-        *cp = c;
-        if( c==0 ) pathlist = emptypathlist;
-        else pathlist = &cp[1];
-        if( access(path,modemask)==0 ) break;
-      }
-    }
-  }
-  return path;
+  for (i = 0; i < sizeof(lempar_locations)/sizeof(char *); i++)
+    if (lempar_locations[i] && access(lempar_locations[i], 004) == 0)
+      return lempar_locations[i];
+
+  return(NULL);
 }
 
 /* Given an action, compute the integer value for that action
@@ -2585,10 +2586,9 @@ PRIVATE void tplt_xfer(char *name, FILE *in, FILE *out, int *lineno)
 ** a pointer to the opened file. */
 PRIVATE FILE *tplt_open(struct lemon *lemp)
 {
-  static char templatename[] = "lempar.c";
   char buf[1000];
   FILE *in;
-  char *tpltname;
+  const char *tpltname;
   char *cp;
 
   cp = strrchr(lemp->filename,'.');
@@ -2600,17 +2600,16 @@ PRIVATE FILE *tplt_open(struct lemon *lemp)
   if( access(buf,004)==0 ){
     tpltname = buf;
   }else{
-    tpltname = pathsearch(lemp->argv0,templatename,0);
+    tpltname = pathsearch();
   }
   if( tpltname==0 ){
-    fprintf(stderr,"Can't find the parser driver template file \"%s\".\n",
-    templatename);
+    fprintf(stderr,"Can't find the parser driver template file.\n");
     lemp->errorcnt++;
     return 0;
   }
   in = fopen(tpltname,"r");
   if( in==0 ){
-    fprintf(stderr,"Can't open the template file \"%s\".\n",templatename);
+    fprintf(stderr,"Can't open the template file \"%s\".\n", tpltname);
     lemp->errorcnt++;
     return 0;
   }
