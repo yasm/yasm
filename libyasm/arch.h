@@ -1,14 +1,17 @@
-/* $IdPath$
- * YASM architecture interface header file
+/**
+ * \file arch.h
+ * \brief YASM architecture interface.
+ *
+ * $IdPath$
  *
  *  Copyright (C) 2002  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 1. Redistributions of source code must retain the above copyright
+ *  - Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
+ *  - Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
@@ -27,25 +30,31 @@
 #ifndef YASM_ARCH_H
 #define YASM_ARCH_H
 
+/** Return value from yasm_arch::check_identifier(). */
 typedef enum {
-    YASM_ARCH_CHECK_ID_NONE = 0,	/* just a normal identifier */
-    YASM_ARCH_CHECK_ID_INSN,		/* an instruction */
-    YASM_ARCH_CHECK_ID_PREFIX,		/* an instruction prefix */ 
-    YASM_ARCH_CHECK_ID_REG,		/* a register */
-    YASM_ARCH_CHECK_ID_SEGREG,	/* a segment register (for memory overrides) */
-    YASM_ARCH_CHECK_ID_TARGETMOD	/* an target modifier (for jumps) */
+    YASM_ARCH_CHECK_ID_NONE = 0,	/**< Just a normal identifier. */
+    YASM_ARCH_CHECK_ID_INSN,		/**< An instruction. */
+    YASM_ARCH_CHECK_ID_PREFIX,		/**< An instruction prefix. */
+    YASM_ARCH_CHECK_ID_REG,		/**< A register. */
+    YASM_ARCH_CHECK_ID_SEGREG,/**< a segment register (for memory overrides). */
+    YASM_ARCH_CHECK_ID_TARGETMOD	/**< A target modifier (for jumps) */
 } yasm_arch_check_id_retval;
 
+/** An instruction operand (opaque type). */
 typedef struct yasm_insn_operand yasm_insn_operand;
+/** A list of instruction operands (opaque type).
+ * The list goes from left-to-right as parsed.
+ */
 typedef struct yasm_insn_operandhead yasm_insn_operandhead;
 #ifdef YASM_INTERNAL
 /*@reldef@*/ STAILQ_HEAD(yasm_insn_operandhead, yasm_insn_operand);
 #endif
 
-/* Different assemblers order instruction operands differently.  Also, some
+/** "Flavor" of the parser.
+ * Different assemblers order instruction operands differently.  Also, some
  * differ on how exactly various registers are specified.  There's no great
  * solution to this, as the parsers aren't supposed to have knowledge of the
- * architectural internals, and the architecture is supposed to be parser-
+ * architectural internals, and the architecture is supposed to be parser
  * independent.  To make things work, as a rather hackish solution, we give the
  * architecture a little knowledge about the general "flavor" of the parser,
  * and let the architecture decide what to do with it.  Most architectures will
@@ -53,191 +62,339 @@ typedef struct yasm_insn_operandhead yasm_insn_operandhead;
  * for correct behavior on all parsers.
  */
 typedef enum {
-    YASM_ARCH_SYNTAX_FLAVOR_NASM = 1,	/* like NASM */
-    YASM_ARCH_SYNTAX_FLAVOR_GAS		/* like GAS */
+    YASM_ARCH_SYNTAX_FLAVOR_NASM = 1,	/**< Like NASM */
+    YASM_ARCH_SYNTAX_FLAVOR_GAS		/**< Like GAS */
 } yasm_arch_syntax_flavor;
 
+/** YASM architecture interface.
+ * \note All "data" in parser-related functions needs to start the parse
+ *	 initialized to 0 to make it okay for a parser-related function to
+ *	 use/check previously stored data to see if it's been called before on
+ *	 the same piece of data.
+ */
 struct yasm_arch {
-    /* one-line description of the architecture */
+    /** One-line description of the architecture. */
     const char *name;
 
-    /* keyword used to select architecture */
+    /** Keyword used to select architecture. */
     const char *keyword;
 
+    /** Initialize architecture for use. */
     void (*initialize) (void);
+
+    /** Clean up, free any architecture-allocated memory. */
     void (*cleanup) (void);
 
-    /* All "data" below starts the parse initialized to 0.  Thus, it is
-     * okay for a funtion to use/check previously stored data to see if
-     * it's been called before on the same piece of data.
-     */
-
-    /* Switches available instructions/registers/etc. based on a
-     * user-specified CPU identifier.  Should modify behavior ONLY of
-     * parse_* functions!  The bytecode and output functions should be able
-     * to handle any CPU.
+    /** Switch available instructions/registers/etc based on a user-specified
+     * CPU identifier.  Should modify behavior ONLY of parse_* functions!  The
+     * bytecode and output functions should be able to handle any CPU.
+     * \param cpuid	cpu identifier as in the input file
+     * \param lindex	line index (as from yasm_linemgr)
      */
     void (*parse_cpu) (const char *cpuid, unsigned long lindex);
 
-    /* Checks an generic identifier to see if it matches architecture
-     * specific names for instructions, registers, etc (see the
-     * arch_check_id_retval enum above for the various types this function
-     * can detect & return.  Unrecognized identifiers should be returned
-     * as NONE so they can be treated as normal symbols.  Any additional
-     * data beyond just the type (almost always necessary) should be
-     * returned into the space provided by the data parameter.
-     * Note: even though this is passed a data[4], only data[0] should be
-     * used for TARGETMOD, REG, and SEGREG return values.
+    /** Check an generic identifier to see if it matches architecture specific
+     * names for instructions, registers, etc.  Unrecognized identifiers should
+     * be returned as #YASM_ARCH_CHECK_ID_NONE so they can be treated as normal
+     * symbols.  Any additional data beyond just the type (almost always
+     * necessary) should be returned into the space provided by the data
+     * parameter.
+     * \note Even though this is passed a data[4], only data[0] should be used
+     *	     for #YASM_ARCH_CHECK_ID_TARGETMOD, #YASM_ARCH_CHECK_ID_REG, and
+     *	     #YASM_ARCH_CHECK_ID_SEGREG return values.
+     * \param data	extra identification information (yasm_arch-specific)
+     *			[output]
+     * \param id	identifier as in the input file
+     * \param lindex	line index (as from yasm_linemgr)
+     * \return General type of identifier (#yasm_arch_check_id_retval).
      */
     yasm_arch_check_id_retval (*parse_check_id)
 	(unsigned long data[4], const char *id, unsigned long lindex);
 
-    /* Architecture-specific directive support.  Returns 1 if directive was
-     * not recognized.  Returns 0 if directive was recognized, even if it
-     * wasn't valid.  Should modify behavior ONLY of parse functions, much
-     * like switch_cpu() above.
+    /** Handle architecture-specific directives.
+     * Should modify behavior ONLY of parse functions, much like switch_cpu().
+     * \param name		directive name
+     * \param valparams		value/parameters
+     * \param objext_valparams	object format extensions
+     *				value/parameters
+     * \param headp		list of sections
+     * \param lindex		line index (as from yasm_linemgr)
+     * \return Nonzero if directive was recognized; 0 if directive was
+     *	       recognized, even if it wasn't valid.
      */
     int (*parse_directive) (const char *name, yasm_valparamhead *valparams,
 			    /*@null@*/ yasm_valparamhead *objext_valparams,
 			    yasm_sectionhead *headp, unsigned long lindex);
 
-    /* Creates an instruction.  Creates a bytecode by matching the
+    /** Create an instruction.  Creates a bytecode by matching the
      * instruction data and the parameters given with a valid instruction.
-     * If no match is found (the instruction is invalid), returns NULL.
-     * All zero data indicates an empty instruction should be created.
+     * \param data		instruction data (from check_identifier()); all
+     *				zero indicates an empty instruction
+     * \param num_operands	number of operands parsed
+     * \param operands		list of operands (in parse order)
+     * \param cur_section	currently active section
+     * \param prev_bc		previously parsed bytecode in section (NULL if
+     *				first bytecode in section)
+     * \param lindex		line index (as from yasm_linemgr)
+     * \return If no match is found (the instruction is invalid), NULL,
+     *	       otherwise newly allocated bytecode containing instruction.
      */
     /*@null@*/ yasm_bytecode * (*parse_insn)
 	(const unsigned long data[4], int num_operands,
-	 /*@null@*/ yasm_insn_operandhead *operands,
-	 yasm_section *cur_section, /*@null@*/ yasm_bytecode *prev_bc,
-	 unsigned long lindex);
+	 /*@null@*/ yasm_insn_operandhead *operands, yasm_section *cur_section,
+	 /*@null@*/ yasm_bytecode *prev_bc, unsigned long lindex);
 
-    /* Handle an instruction prefix by modifying bc as necessary. */
+    /** Handle an instruction prefix.
+     * Modifies an instruction bytecode based on the prefix in data.
+     * \param bc	bytecode (must be instruction bytecode)
+     * \param data	prefix (from check_identifier())
+     * \param lindex	line index (as from yasm_linemgr)
+     */
     void (*parse_prefix) (yasm_bytecode *bc, const unsigned long data[4],
 			  unsigned long lindex);
 
-    /* Handle an segment register instruction prefix by modifying bc as
-     * necessary.
+    /** Handle an segment register instruction prefix.
+     * Modifies an instruction bytecode based on a segment register prefix.
+     * \param bc	bytecode (must be instruction bytecode)
+     * \param segreg	segment register (from check_identifier())
+     * \param lindex	line index (as from yasm_linemgr)
      */
     void (*parse_seg_prefix) (yasm_bytecode *bc, unsigned long segreg,
 			      unsigned long lindex);
 
-    /* Handle memory expression segment overrides by modifying ea as
-     * necessary.
+    /** Handle a memory expression segment override.
+     * Modifies an instruction bytecode based on a segment override in a
+     * memory expression.
+     * \param bc	bytecode (must be instruction bytecode)
+     * \param segreg	segment register (from check_identifier())
+     * \param lindex	line index (as from yasm_linemgr)
      */
     void (*parse_seg_override) (yasm_effaddr *ea, unsigned long segreg,
 				unsigned long lindex);
 
-    /* Maximum used bytecode type value+1.  Should be set to
-     * BYTECODE_TYPE_BASE if no additional bytecode types are defined by
-     * the architecture.
+    /** Maximum used bytecode type value+1.  Should be set to
+     * #YASM_BYTECODE_TYPE_BASE if no additional bytecode types are defined
+     * by the architecture.
+     * \internal
      */
     const int bc_type_max;
 
+    /** Delete a yasm_arch-defined bytecode.
+     * \internal Do not call directly, instead call yasm_bc_delete().
+     *
+     * \copydoc yasm_bc_delete()
+     */
     void (*bc_delete) (yasm_bytecode *bc);
+
+    /** Print a yasm_arch-defined bytecode.
+     * \internal Do not call directly, instead call yasm_bc_print().
+     *
+     * \copydoc yasm_bc_print()
+     */
     void (*bc_print) (FILE *f, int indent_level, const yasm_bytecode *bc);
 
-    /* See bytecode.h comments on bc_resolve() */
+    /** Resolve labels in a yasm_arch-defined bytecode.
+     * \internal Do not call directly, instead call yasm_bc_resolve().
+     *
+     * \copydoc yasm_bc_resolve()
+     */
     yasm_bc_resolve_flags (*bc_resolve)
 	(yasm_bytecode *bc, int save, const yasm_section *sect,
 	 yasm_calc_bc_dist_func calc_bc_dist);
-    /* See bytecode.h comments on bc_tobytes() */
+
+    /** Convert a yasm_arch-defined bytecode into its byte representation.
+     * \internal Do not call directly, instead call yasm_bc_tobytes().
+     *
+     * \copydoc yasm_bc_tobytes()
+     */
     int (*bc_tobytes) (yasm_bytecode *bc, unsigned char **bufp,
 		       const yasm_section *sect, void *d,
 		       yasm_output_expr_func output_expr);
 
-    /* Functions to output floats and integers, architecture-specific because
-     * of endianness.  Returns nonzero on error, otherwise updates bufp by
-     * valsize (bytes saved to bufp).  For intnums, rel indicates a relative
-     * displacement, and bc is the containing bytecode to compute it from.
+    /** Output #yasm_floatnum to buffer.
+     * Architecture-specific because of endianness.
+     * \param flt	floating point value
+     * \param bufp	buffer to write into
+     * \param valsize	length (in bytes)
+     * \param e		expression containing value
+     * \return Nonzero on error, otherwise updates *bufp by valsize (number of
+     * bytes saved to bufp).
      */
     int (*floatnum_tobytes) (const yasm_floatnum *flt, unsigned char **bufp,
 			     unsigned long valsize, const yasm_expr *e);
+
+    /** Output #yasm_intnum to buffer.
+     * \param intn	integer value
+     * \param bufp	buffer to write into
+     * \param valsize	length (in bytes)
+     * \param e		expression containing value
+     * \param bc	bytecode being output ("parent" of value)
+     * \param rel	value is a relative displacement from bc
+     * \return Nonzero on error, otherwise updates *bufp by valsize (number of
+     * bytes saved to bufp).
+     */
     int (*intnum_tobytes) (const yasm_intnum *intn, unsigned char **bufp,
 			   unsigned long valsize, const yasm_expr *e,
 			   const yasm_bytecode *bc, int rel);
 
-    /* Gets the equivalent register size in bytes.  Returns 0 if there is no
-     * suitable equivalent size.
+    /** Get the equivalent byte size of a register.
+     * \param reg	register
+     * \return 0 if there is no suitable equivalent size, otherwise the size.
      */
     unsigned int (*get_reg_size) (unsigned long reg);
 
+    /** Print a register.  For debugging purposes.
+     * \param f			file
+     * \param indent_level	indentation level
+     * \param reg		register
+     */
     void (*reg_print) (FILE *f, unsigned long reg);
+
+    /** Print a segment register.  For debugging purposes.
+     * \param f			file
+     * \param indent_level	indentation level
+     * \param segreg		segment register
+     */
     void (*segreg_print) (FILE *f, unsigned long segreg);
 
-    /* Convert an expression into an effective address. */
+    /** Create an effective address from an expression.
+     * \param e	expression (kept, do not delete)
+     * \return Newly allocated effective address.
+     */
     yasm_effaddr * (*ea_new_expr) (/*@keep@*/ yasm_expr *e);
 
-    /* Deletes the arch-specific data in ea.  May be NULL if no special
-     * deletion is required (e.g. there's no dynamically allocated pointers
-     * in the ea data).
+    /** Delete the yasm_arch-specific data in an effective address.
+     * May be NULL if no special deletion is required (e.g. there's no
+     * dynamically allocated pointers in the effective address data).
+     * \internal Do not call directly, instead call yasm_ea_delete().
+     *
+     * \copydoc yasm_ea_delete()
      */
     void (*ea_data_delete) (yasm_effaddr *ea);
 
+    /** Print the yasm_arch-specific data in an effective address.
+     * \internal Do not call directly, instead call yasm_ea_print().
+     *
+     * \copydoc yasm_ea_print()
+     */
     void (*ea_data_print) (FILE *f, int indent_level, const yasm_effaddr *ea);
 };
 
 #ifdef YASM_INTERNAL
+/** An instruction operand. */
 struct yasm_insn_operand {
+    /** Link for building linked list of operands.  \internal */
     /*@reldef@*/ STAILQ_ENTRY(yasm_insn_operand) link;
 
+    /** Operand type. */
     enum {
-	YASM_INSN__OPERAND_REG = 1,	/* a register */
-	YASM_INSN__OPERAND_SEGREG,	/* a segment register */
-	YASM_INSN__OPERAND_MEMORY,/* an effective address (memory reference) */
-	YASM_INSN__OPERAND_IMM		/* an immediate or jump target */
+	YASM_INSN__OPERAND_REG = 1,	/**< A register. */
+	YASM_INSN__OPERAND_SEGREG,	/**< A segment register. */
+	YASM_INSN__OPERAND_MEMORY,	/**< An effective address
+					 *   (memory reference). */
+	YASM_INSN__OPERAND_IMM		/**< An immediate or jump target. */
     } type;
 
+    /** Operand data. */
     union {
-	unsigned long reg;	/* arch data for reg/segreg */
-	yasm_effaddr *ea;	/* effective address for memory references */
-	yasm_expr *val;		/* value of immediate or jump target */
+	unsigned long reg;  /**< Arch data for reg/segreg. */
+	yasm_effaddr *ea;   /**< Effective address for memory references. */
+	yasm_expr *val;	    /**< Value of immediate or jump target. */
     } data;
 
-    unsigned long targetmod;	/* arch target modifier, 0 if none */
+    unsigned long targetmod;	/**< Arch target modifier, 0 if none. */
 
-    /* Specified size of the operand, in bytes.  0 if not user-specified. */
+    /** Specified size of the operand, in bytes.  0 if not user-specified. */
     unsigned int size;
 };
 #endif
 
+/** Common initializer for yasm_arch helper functions.
+ * \param a	architecture in use
+ */
 void yasm_arch_common_initialize(yasm_arch *a);
 
-/* insn_operand constructors.  operand_new_imm() will look for cases of a
- * single register and create an INSN_OPERAND_REG variant of insn_operand.
+/** Create a yasm_insn_operand from a register.
+ * \param reg	register
+ * \return Newly allocated operand.
  */
 yasm_insn_operand *yasm_operand_new_reg(unsigned long reg);
+
+/** Create a yasm_insn_operand from a segment register.
+ * \param segreg	segment register
+ * \return Newly allocated operand.
+ */
 yasm_insn_operand *yasm_operand_new_segreg(unsigned long segreg);
+
+/** Create a yasm_insn_operand from an effective address.
+ * \param ea	effective address
+ * \return Newly allocated operand.
+ */
 yasm_insn_operand *yasm_operand_new_mem(/*@only@*/ yasm_effaddr *ea);
+
+/** Create a yasm_insn_operand from an immediate expression.
+ * Looks for cases of a single register and creates an INSN_OPERAND_REG variant
+ * of yasm_insn_operand.
+ * \param val	immediate expression
+ * \return Newly allocated operand.
+ */
 yasm_insn_operand *yasm_operand_new_imm(/*@only@*/ yasm_expr *val);
 
+/** Print an instruction operand.  For debugging purposes.
+ * \param f		file
+ * \param indent_level	indentation level
+ * \param op		instruction operand
+ */
 void yasm_operand_print(FILE *f, int indent_level,
 			const yasm_insn_operand *op);
 
+/** Initialize a list of instruction operands.
+ * \param headp	list of instruction operands
+ */
 void yasm_ops_initialize(yasm_insn_operandhead *headp);
+
+/** Get the first operand in a list of instruction operands.
+ * \param headp		list of instruction operands
+ * \return First operand in list (NULL if list is empty).
+ */
 yasm_insn_operand *yasm_ops_first(yasm_insn_operandhead *headp);
+
+/** Get the next operand in a list of instruction operands.
+ * \param cur		previous operand
+ * \return Next operand in list (NULL if cur was the last operand).
+ */
 yasm_insn_operand *yasm_ops_next(yasm_insn_operand *cur);
+
 #ifdef YASM_INTERNAL
 #define yasm_ops_initialize(headp)	STAILQ_INIT(headp)
 #define yasm_ops_first(headp)		STAILQ_FIRST(headp)
 #define yasm_ops_next(cur)		STAILQ_NEXT(cur, link)
 #endif
 
-/* Deletes operands linked list.  Deletes content of each operand if content i
- * nonzero.
+/** Delete (free allocated memory for) a list of instruction operands.
+ * \param headp		list of instruction operands
+ * \param content	if nonzero, deletes content of each operand
  */
 void yasm_ops_delete(yasm_insn_operandhead *headp, int content);
 
-/* Adds op to the list of operands headp.
- * NOTE: Does not make a copy of op; so don't pass this function
- * static or local variables, and discard the op pointer after calling
- * this function.  If op was actually appended (it wasn't NULL), then
- * returns op, otherwise returns NULL.
+/** Add data value to the end of a list of instruction operands.
+ * \note Does not make a copy of the operand; so don't pass this function
+ *	 static or local variables, and discard the op pointer after calling
+ *	 this function.
+ * \param headp		list of instruction operands
+ * \param op		operand (may be NULL)
+ * \return If operand was actually appended (it wasn't NULL), the operand;
+ *	   otherwise NULL.
  */
 /*@null@*/ yasm_insn_operand *yasm_ops_append
     (yasm_insn_operandhead *headp,
      /*@returned@*/ /*@null@*/ yasm_insn_operand *op);
 
+/** Print a list of instruction operands.  For debugging purposes.
+ * \param f		file
+ * \param indent_level	indentation level
+ * \param headp		list of instruction operands
+ */
 void yasm_ops_print(FILE *f, int indent_level,
 		    const yasm_insn_operandhead *headp);
 
