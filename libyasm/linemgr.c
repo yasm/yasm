@@ -120,6 +120,7 @@ yasm_linemap_set(yasm_linemap *linemap, const char *filename,
 yasm_linemap *
 yasm_linemap_create(void)
 {
+    size_t i;
     yasm_linemap *linemap = yasm_xmalloc(sizeof(yasm_linemap));
 
     linemap->filenames = HAMT_create(yasm_internal_error_);
@@ -136,6 +137,10 @@ yasm_linemap_create(void)
     linemap->source_info_size = 2;
     linemap->source_info = yasm_xmalloc(linemap->source_info_size *
 					sizeof(line_source_info));
+    for (i=0; i<linemap->source_info_size; i++) {
+	linemap->source_info[i].bc = NULL;
+	linemap->source_info[i].source = NULL;
+    }
 
     return linemap;
 }
