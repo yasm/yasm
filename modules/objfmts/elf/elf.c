@@ -350,7 +350,29 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab)
 		yasm__error(entry->xsize->line,
 			    N_("size specifier not an integer expression"));
 	}
-	
+
+	/* get EQU value for constants */
+	if (entry->sym) {
+	    const yasm_expr *equ_expr_c;
+	    equ_expr_c = yasm_symrec_get_equ(entry->sym);
+
+	    if (equ_expr_c != NULL) {
+		const yasm_intnum *equ_intn;
+		yasm_expr *equ_expr = yasm_expr_copy(equ_expr_c);
+		equ_intn = yasm_expr_get_intnum(&equ_expr,
+						yasm_common_calc_bc_dist);
+
+		if (equ_intn == NULL) {
+		    yasm__error(equ_expr->line,
+				N_("EQU value not an integer expression"));
+		}
+
+		entry->value = yasm_intnum_get_uint(equ_intn);
+		entry->index = SHN_ABS;
+		yasm_expr_delete(equ_expr);
+	    }
+	}
+
 	/* ? refer to nasty coff_objfmt_output_symtab code - add it */
 	YASM_WRITE_32_L(bufp, entry->name ? entry->name->index : 0);
 	YASM_WRITE_32_L(bufp, entry->value);
