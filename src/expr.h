@@ -1,4 +1,4 @@
-/* $Id: expr.h,v 1.4 2001/07/11 23:16:50 peter Exp $
+/* $Id: expr.h,v 1.5 2001/08/19 03:52:58 peter Exp $
  * Expression handling header file
  *
  *  Copyright (C) 2001  Michael Urman
@@ -44,11 +44,11 @@ typedef enum {
     EXPR_LE,
     EXPR_GE,
     EXPR_NE,
-    EXPR_IDENT	    /* if right is IDENT, then the entire expr is just a num */
+    EXPR_IDENT			/* if right is IDENT, then the entire expr is just a num */
 } ExprOp;
 
 typedef enum {
-    EXPR_NONE,	    /* for left side of a NOT, NEG, etc. */
+    EXPR_NONE,			/* for left side of a NOT, NEG, etc. */
     EXPR_NUM,
     EXPR_EXPR,
     EXPR_SYM
@@ -66,12 +66,12 @@ typedef struct expr_s {
     ExprOp op;
 } expr;
 
-expr *expr_new (ExprType, ExprItem, ExprOp, ExprType, ExprItem);
+expr *expr_new(ExprType, ExprItem, ExprOp, ExprType, ExprItem);
 
-ExprItem ExprSym (struct symrec_s *);
-ExprItem ExprExpr (expr *);
-ExprItem ExprNum (unsigned long);
-ExprItem ExprNone (void);
+ExprItem ExprSym(struct symrec_s *);
+ExprItem ExprExpr(expr *);
+ExprItem ExprNum(unsigned long);
+ExprItem ExprNone(void);
 
 #define expr_new_tree(l,o,r) \
     expr_new (EXPR_EXPR, ExprExpr(l), (o), EXPR_EXPR, ExprExpr(r))
@@ -80,10 +80,10 @@ ExprItem ExprNone (void);
 #define expr_new_ident(t,r) \
     expr_new (EXPR_NONE, ExprNone(), EXPR_IDENT, (ExprType)(t), (r))
 
-int expr_simplify (expr *);
-void expr_print (expr *);
+int expr_simplify(expr *);
+void expr_print(expr *);
 
 /* get the value if possible.  return value is IF POSSIBLE, not the val */
-int expr_get_value (expr *, unsigned long *);
+int expr_get_value(expr *, unsigned long *);
 
 #endif

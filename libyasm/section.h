@@ -1,4 +1,4 @@
-/* $Id: section.h,v 1.4 2001/08/19 02:54:20 peter Exp $
+/* $Id: section.h,v 1.5 2001/08/19 03:52:58 peter Exp $
  * Section header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -36,7 +36,7 @@ typedef struct section_s {
 	unsigned long start;
     } data;
 
-    bytecode *bc;	/* the bytecodes for the section's contents */
+    bytecode *bc;		/* the bytecodes for the section's contents */
 } section;
 
 #endif

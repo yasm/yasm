@@ -1,4 +1,4 @@
-/* $Id: symrec.h,v 1.5 2001/07/11 21:16:22 peter Exp $
+/* $Id: symrec.h,v 1.6 2001/08/19 03:52:58 peter Exp $
  * Symbol table handling header file
  *
  *  Copyright (C) 2001  Michael Urman
@@ -24,14 +24,14 @@
 
 typedef enum {
     SYM_NOSTATUS = 0,
-    SYM_USED	 = 1 << 0,  /* for using variables before declared */
-    SYM_DECLARED = 1 << 1,  /* once it's been declared */
-    SYM_VALUED	 = 1 << 2   /* once its value has been determined */
+    SYM_USED = 1 << 0,		/* for using variables before declared */
+    SYM_DECLARED = 1 << 1,	/* once it's been declared */
+    SYM_VALUED = 1 << 2		/* once its value has been determined */
 } SymStatus;
 
 typedef enum {
-    SYM_CONSTANT,	    /* for EQU defined symbols */
-    SYM_LABEL		    /* for labels */
+    SYM_CONSTANT,		/* for EQU defined symbols */
+    SYM_LABEL			/* for labels */
 } SymType;
 
 typedef struct symrec_s {
@@ -52,8 +52,8 @@ extern symtab *sym_table;
 /*symrec *putsym(char *, SymType);*/
 /*symrec *getsym(char *);*/
 
-symrec *sym_use_get (char *, SymType);
-symrec *sym_def_get (char *, SymType);
-void sym_foreach (int(*)(symrec *));
+symrec *sym_use_get(char *, SymType);
+symrec *sym_def_get(char *, SymType);
+void sym_foreach(int (*)(symrec *));
 
 #endif

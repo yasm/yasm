@@ -1,4 +1,4 @@
-/* $Id: raw-preproc.c,v 1.2 2001/08/19 02:50:14 peter Exp $
+/* $Id: raw-preproc.c,v 1.3 2001/08/19 03:52:58 peter Exp $
  * Raw preprocessor (preforms NO preprocessing)
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -41,14 +41,14 @@ input(char *buf, int max_size)
 {
     int c = '*', n;
 
-    if(is_interactive) {
-	for(n = 0; n < max_size && (c = getc(in)) != EOF && c != '\n'; n++)
-	    buf[n] = (char) c;
-	if(c == '\n')
-	    buf[n++] = (char) c;
-	if(c == EOF && ferror(in))
+    if (is_interactive) {
+	for (n = 0; n < max_size && (c = getc(in)) != EOF && c != '\n'; n++)
+	    buf[n] = (char)c;
+	if (c == '\n')
+	    buf[n++] = (char)c;
+	if (c == EOF && ferror(in))
 	    Error(ERR_FILE_READ, (char *)NULL);
-    } else if(((n = fread(buf, 1, max_size, in)) == 0) && ferror(in))
+    } else if (((n = fread(buf, 1, max_size, in)) == 0) && ferror(in))
 	Error(ERR_FILE_READ, (char *)NULL);
 
     return n;

@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.15 2001/07/25 00:33:10 peter Exp $
+/* $Id: bytecode.h,v 1.16 2001/08/19 03:52:58 peter Exp $
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -80,9 +80,9 @@ typedef struct bytecode_s {
 
     union {
 	struct {
-	    effaddr ea;			/* effective address */
+	    effaddr ea;		/* effective address */
 
-	    immval imm;			/* immediate or relative value */
+	    immval imm;		/* immediate or relative value */
 
 	    unsigned char opcode[3];	/* opcode */
 	    unsigned char opcode_len;
@@ -109,7 +109,7 @@ typedef struct bytecode_s {
 	    unsigned char lockrep_pre;	/* 0 indicates no prefix */
 	} jmprel;
 	struct {
-	    dataval *data;		/* non-converted data (linked list) */
+	    dataval *data;	/* non-converted data (linked list) */
 
 	    /* final (converted) size of each element (in bytes) */
 	    unsigned char size;
@@ -120,7 +120,7 @@ typedef struct bytecode_s {
 	} reserve;
     } data;
 
-    unsigned long len;	/* total length of entire bytecode */
+    unsigned long len;		/* total length of entire bytecode */
 
     /* where it came from */
     char *filename;
@@ -173,9 +173,7 @@ void BuildBC_JmpRel(bytecode      *bc,
 		    unsigned char  near_op2,
 		    unsigned char  addrsize);
 
-void BuildBC_Data(bytecode      *bc,
-		  dataval       *data,
-		  unsigned long  size);
+void BuildBC_Data(bytecode *bc, dataval *data, unsigned long size);
 
 void BuildBC_Reserve(bytecode      *bc,
 		     struct expr_s *numitems,

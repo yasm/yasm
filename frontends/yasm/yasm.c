@@ -1,4 +1,4 @@
-/* $Id: yasm.c,v 1.6 2001/08/19 02:15:18 peter Exp $
+/* $Id: yasm.c,v 1.7 2001/08/19 03:52:58 peter Exp $
  * Program entry point, command line parsing
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -33,13 +33,13 @@ unsigned int line_number = 1;
 unsigned int mode_bits = 32;
 
 int
-main (int argc, char *argv[])
+main(int argc, char *argv[])
 {
     FILE *in;
 
-    if(argc==2) {
+    if (argc == 2) {
 	in = fopen(argv[1], "rt");
-	if(!in) {
+	if (!in) {
 	    fprintf(stderr, "could not open file `%s'\n", argv[1]);
 	    return EXIT_FAILURE;
 	}
@@ -51,8 +51,7 @@ main (int argc, char *argv[])
 
     nasm_parser.doparse(&raw_preproc, &dbg_outfmt, in);
 
-    if(filename)
+    if (filename)
 	free(filename);
     return EXIT_SUCCESS;
 }
-

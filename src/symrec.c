@@ -1,4 +1,4 @@
-/* $Id: symrec.c,v 1.5 2001/07/11 23:16:50 peter Exp $
+/* $Id: symrec.c,v 1.6 2001/08/19 03:52:58 peter Exp $
  * Symbol table handling
  *
  *  Copyright (C) 2001  Michael Urman
@@ -26,17 +26,17 @@
 #include "errwarn.h"
 
 /* private functions */
-static symtab *symtab_get (char *);
-static symtab *symtab_new (char *, SymType);
-static symtab *symtab_get_or_new (char *, SymType);
-static void symtab_insert (symtab *);
+static symtab *symtab_get(char *);
+static symtab *symtab_new(char *, SymType);
+static symtab *symtab_get_or_new(char *, SymType);
+static void symtab_insert(symtab *);
 
 /* The symbol table: a chain of `symtab'. */
 symtab *sym_table = (symtab *)NULL;
 
 /* insert a symtab into the global sym_table */
 void
-symtab_insert (symtab *tab)
+symtab_insert(symtab *tab)
 {
     tab->next = (symtab *)sym_table;
     sym_table = tab;
@@ -44,13 +44,12 @@ symtab_insert (symtab *tab)
 
 /* find a symtab in the global sym_table */
 symtab *
-symtab_get (char *name)
+symtab_get(char *name)
 {
     symtab *tab;
-    for (tab = sym_table; tab != NULL; tab = tab->next)
-    {
-	if (strcmp (tab->rec.name, name) == 0)
-	{
+
+    for (tab = sym_table; tab != NULL; tab = tab->next) {
+	if (strcmp(tab->rec.name, name) == 0) {
 	    return tab;
 	}
     }
@@ -59,13 +58,12 @@ symtab_get (char *name)
 
 /* call a function with each symrec.  stop early if 0 returned */
 void
-sym_foreach (int(*mapfunc)(symrec *))
+sym_foreach(int (*mapfunc) (symrec *))
 {
     symtab *tab;
-    for (tab = sym_table; tab != NULL; tab = tab->next)
-    {
-	if (mapfunc(&(tab->rec)) == 0)
-	{
+
+    for (tab = sym_table; tab != NULL; tab = tab->next) {
+	if (mapfunc(&(tab->rec)) == 0) {
 	    return;
 	}
     }
@@ -73,15 +71,15 @@ sym_foreach (int(*mapfunc)(symrec *))
 
 /* create a new symtab */
 symtab *
-symtab_new (char *name, SymType type)
+symtab_new(char *name, SymType type)
 {
     symtab *tab;
     tab = malloc(sizeof(symtab));
-    if (tab == NULL) return NULL;
-    tab->rec.name = malloc(strlen(name)+1);
-    if (tab->rec.name == NULL)
-    {
-	free (tab);
+    if (tab == NULL)
+	return NULL;
+    tab->rec.name = malloc(strlen(name) + 1);
+    if (tab->rec.name == NULL) {
+	free(tab);
 	return NULL;
     }
     strcpy(tab->rec.name, name);
@@ -89,68 +87,70 @@ symtab_new (char *name, SymType type)
     tab->rec.value = 0;
     tab->rec.line = line_number;
     tab->rec.status = SYM_NOSTATUS;
-    symtab_insert (tab);
+    symtab_insert(tab);
     return tab;
 }
 
 symtab *
-symtab_get_or_new (char *name, SymType type)
+symtab_get_or_new(char *name, SymType type)
 {
     symtab *tab;
-    tab = symtab_get (name);
-    if (tab == NULL)
-    {
-	tab = symtab_new (name, type);
-	if (tab == NULL)
-	{
-	    Fatal (FATAL_NOMEM);
+
+    tab = symtab_get(name);
+    if (tab == NULL) {
+	tab = symtab_new(name, type);
+	if (tab == NULL) {
+	    Fatal(FATAL_NOMEM);
 	}
     }
     return tab;
 }
 
 symrec *
-sym_use_get (char *name, SymType type)
+sym_use_get(char *name, SymType type)
 {
     symtab *tab;
-    tab = symtab_get_or_new (name, type);
+
+    tab = symtab_get_or_new(name, type);
     tab->rec.status |= SYM_USED;
     return &(tab->rec);
 }
 
 symrec *
-sym_def_get (char *name, SymType type)
+sym_def_get(char *name, SymType type)
 {
     symtab *tab;
-    tab = symtab_get_or_new (name, type);
+
+    tab = symtab_get_or_new(name, type);
     if (tab->rec.status & SYM_DECLARED)
-	Error (ERR_DUPLICATE_DEF, "%s%d", tab->rec.name, tab->rec.line);
+	Error(ERR_DUPLICATE_DEF, "%s%d", tab->rec.name, tab->rec.line);
     tab->rec.status |= SYM_DECLARED;
     return &(tab->rec);
 }
 
 #if 0
 symrec *
-putsym (char *sym_name, int sym_type)
+putsym(char *sym_name, int sym_type)
 {
     symrec *ptr;
     ptr = malloc(sizeof(symrec));
-    ptr->name = malloc(strlen(sym_name)+1);
+    ptr->name = malloc(strlen(sym_name) + 1);
     strcpy(ptr->name, sym_name);
     ptr->type = sym_type;
-    ptr->value.var = 0; /* set value to 0 even if fctn.  */
+    ptr->value.var = 0;		/* set value to 0 even if fctn.  */
     ptr->next = (symrec *)sym_table;
     sym_table = ptr;
     return ptr;
 }
 
 symrec *
-getsym (char *sym_name)
+getsym(char *sym_name)
 {
     symrec *ptr;
-    for(ptr=sym_table; ptr != (symrec *)NULL; ptr=(symrec *)ptr->next)
-	if(strcmp(ptr->name, sym_name) == 0)
+
+    for (ptr = sym_table; ptr != (symrec *)NULL; ptr = (symrec *)ptr->next)
+	if (strcmp(ptr->name, sym_name) == 0)
 	    return ptr;
     return 0;
 }
-#endif /* 0 */
+#endif				/* 0 */

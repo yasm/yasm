@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.19 2001/08/18 23:05:37 peter Exp $
+/* $Id: errwarn.c,v 1.20 2001/08/19 03:52:58 peter Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -112,16 +112,16 @@ static char unprint[5];
 /* Convert a possibly unprintable character into a printable string, using
  * standard cat(1) convention for unprintable characters. */
 char *
-conv_unprint (char ch)
+conv_unprint(char ch)
 {
-    int pos=0;
+    int pos = 0;
 
-    if(((ch & ~0x7F) != 0)/*!isascii(ch)*/ && !isprint(ch)) {
+    if (((ch & ~0x7F) != 0) /*!isascii(ch)*/ && !isprint(ch)) {
 	unprint[pos++] = 'M';
 	unprint[pos++] = '-';
 	ch &= toascii(ch);
     }
-    if(iscntrl(ch)) {
+    if (iscntrl(ch)) {
 	unprint[pos++] = '^';
 	unprint[pos++] = (ch == '\177') ? '?' : ch | 0100;
     } else
@@ -133,7 +133,7 @@ conv_unprint (char ch)
 
 /* Parser error handler.  Moves error into our error handling system. */
 void
-yyerror (char *s)
+yyerror(char *s)
 {
     Error(ERR_PARSER, (char *)NULL, s);
 }
@@ -141,17 +141,17 @@ yyerror (char *s)
 /* Report an internal error.  Essentially a fatal error with trace info.
  * Exit immediately because it's essentially an assert() trap. */
 void
-InternalError (unsigned int line, char *file, char *message)
+InternalError(unsigned int line, char *file, char *message)
 {
     fprintf(stderr, "INTERNAL ERROR at %s, line %d: %s\n", file, line,
-	message);
+	    message);
     exit(EXIT_FAILURE);
 }
 
 /* Report a fatal error.  These are unrecoverable (such as running out of
  * memory), so just exit immediately. */
 void
-Fatal (fatal_num num)
+Fatal(fatal_num num)
 {
     fprintf(stderr, "FATAL: %s\n", fatal_msgs[num]);
     exit(EXIT_FAILURE);
@@ -183,31 +183,31 @@ Fatal (fatal_num num)
  * specified and NULL passed for the argtypes parameter when Error() is
  * called. */
 static char *
-process_argtypes (char *src, char *argtypes)
+process_argtypes(char *src, char *argtypes)
 {
     char *dest;
     char *argtype[9];
     int at_num;
     char *destp, *srcp, *argtypep;
 
-    if(argtypes) {
+    if (argtypes) {
 	dest = malloc(strlen(src) + strlen(argtypes));
-	if(!dest)
+	if (!dest)
 	    Fatal(FATAL_NOMEM);
 	/* split argtypes by % */
 	at_num = 0;
-	while((argtypes = strchr(argtypes, '%')) && at_num < 9)
+	while ((argtypes = strchr(argtypes, '%')) && at_num < 9)
 	    argtype[at_num++] = ++argtypes;
 	/* search through src for %, copying as we go */
 	destp = dest;
 	srcp = src;
-	while(*srcp != '\0') {
+	while (*srcp != '\0') {
 	    *(destp++) = *srcp;
-	    if(*(srcp++) == '%') {
-		if(isdigit(*srcp)) {
+	    if (*(srcp++) == '%') {
+		if (isdigit(*srcp)) {
 		    /* %1, %2, etc */
-		    argtypep = argtype[*srcp-'1'];
-		    while((*argtypep != '%') && (*argtypep != '\0'))
+		    argtypep = argtype[*srcp - '1'];
+		    while ((*argtypep != '%') && (*argtypep != '\0'))
 			*(destp++) = *(argtypep++);
 		} else
 		    *(destp++) = *srcp;
@@ -216,7 +216,7 @@ process_argtypes (char *src, char *argtypes)
 	}
     } else {
 	dest = strdup(src);
-	if(!dest)
+	if (!dest)
 	    Fatal(FATAL_NOMEM);
     }
     return dest;
@@ -226,12 +226,12 @@ process_argtypes (char *src, char *argtypes)
  * argument types.  Does not print the error, only stores it for
  * OutputError() to print. */
 void
-Error (err_num num, char *argtypes, ...)
+Error(err_num num, char *argtypes, ...)
 {
     va_list ap;
     char *printf_str;
 
-    if((last_err_num != ERR_NONE) && (last_err_num != ERR_PARSER))
+    if ((last_err_num != ERR_NONE) && (last_err_num != ERR_PARSER))
 	return;
 
     last_err_num = num;
@@ -251,12 +251,12 @@ Error (err_num num, char *argtypes, ...)
  * argument types.  Does not print the warning, only stores it for
  * OutputWarning() to print. */
 void
-Warning (warn_num num, char *argtypes, ...)
+Warning(warn_num num, char *argtypes, ...)
 {
     va_list ap;
     char *printf_str;
 
-    if(last_warn_num != WARN_NONE)
+    if (last_warn_num != WARN_NONE)
 	return;
 
     last_warn_num = num;
@@ -274,20 +274,19 @@ Warning (warn_num num, char *argtypes, ...)
 
 /* Output a previously stored error (if any) to stderr. */
 void
-OutputError (void)
+OutputError(void)
 {
-    if(last_err_num != ERR_NONE)
+    if (last_err_num != ERR_NONE)
 	fprintf(stderr, "%s:%u: %s\n", filename, line_number, last_err);
     last_err_num = ERR_NONE;
 }
 
 /* Output a previously stored warning (if any) to stderr. */
 void
-OutputWarning (void)
+OutputWarning(void)
 {
-    if(last_warn_num != WARN_NONE)
+    if (last_warn_num != WARN_NONE)
 	fprintf(stderr, "%s:%u: warning: %s\n", filename, line_number,
-	    last_warn);
+		last_warn);
     last_warn_num = WARN_NONE;
 }
-

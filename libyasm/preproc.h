@@ -1,4 +1,4 @@
-/* $Id: preproc.h,v 1.1 2001/08/19 02:15:18 peter Exp $
+/* $Id: preproc.h,v 1.2 2001/08/19 03:52:58 peter Exp $
  * Preprocessor module interface header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -24,10 +24,11 @@
 
 /* Interface to the preprocesor module(s) */
 typedef struct preproc_s {
-    char *name;		/* one-line description of the preprocessor */
+    /* one-line description of the preprocessor */
+    char *name;
 
     /* keyword used to select preprocessor on the command line */
-    char *keyword;	
+    char *keyword;
 
     /* Initializes preprocessor.
      *

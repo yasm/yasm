@@ -1,4 +1,4 @@
-/* $Id: outfmt.h,v 1.1 2001/08/19 02:15:18 peter Exp $
+/* $Id: outfmt.h,v 1.2 2001/08/19 03:52:58 peter Exp $
  * Output format module interface header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -24,8 +24,11 @@
 
 /* Interface to the output format module(s) */
 typedef struct outfmt_s {
-    char *name;		/* one-line description of the format */
-    char *keyword;	/* keyword used to select format on the command line */
+    /* one-line description of the format */
+    char *name;
+
+    /* keyword used to select format on the command line */
+    char *keyword;
 
     /* NULL-terminated list of debugging formats that are valid to use with
      * this output format.

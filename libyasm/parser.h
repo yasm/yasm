@@ -1,4 +1,4 @@
-/* $Id: parser.h,v 1.1 2001/08/19 02:15:18 peter Exp $
+/* $Id: parser.h,v 1.2 2001/08/19 03:52:58 peter Exp $
  * Parser module interface header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -24,8 +24,11 @@
 
 /* Interface to the parser module(s) -- the "front end" of the assembler */
 typedef struct parser_s {
-    char *name;		/* one-line description of the parser */
-    char *keyword;	/* keyword used to select parser on the command line */
+    /* one-line description of the parser */
+    char *name;
+
+    /* keyword used to select parser on the command line */
+    char *keyword;
 
     /* NULL-terminated list of preprocessors that are valid to use with this
      * parser.  The raw preprocessor (raw_preproc) should always be in this
@@ -52,7 +55,7 @@ typedef struct parser_s {
      * Note that calling this has many side effects in the output format
      * module: sections and variables are declared, etc.
      */
-    section * (*doparse) (preproc *pp, outfmt *of, FILE *f);
+    section *(*doparse) (preproc *pp, outfmt *of, FILE *f);
 } parser;
 
 /* Available parsers */
