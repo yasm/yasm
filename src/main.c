@@ -46,7 +46,7 @@
 #endif
 
 static int files_open = 0;
-/*@null@*/ /*@only@*/ static char *obj_filename = NULL;
+/*@null@*/ /*@only@*/ static char *obj_filename = NULL, *in_filename = NULL;
 /*@null@*/ static FILE *in = NULL, *obj = NULL;
 
 /* Forward declarations: cmd line parser handlers */
@@ -119,10 +119,13 @@ main(int argc, char *argv[])
     /* if no files were specified, fallback to reading stdin */
     if (!in) {
 	in = stdin;
-	switch_filename("<STDIN>");
+	in_filename = xstrdup("<STDIN>");
 	if (!obj)
 	    obj = stdout;
     }
+
+    /* Initialize line info */
+    line_set(in_filename, 1, 1);
 
     /* Set x86 as the architecture */
     cur_arch = &x86_arch;
@@ -173,7 +176,8 @@ main(int argc, char *argv[])
     if (OutputAllErrorWarning() > 0) {
 	sections_delete(sections);
 	symrec_delete_all();
-	filename_delete_all();
+	line_shutdown();
+	floatnum_shutdown();
 	BitVector_Shutdown();
 	return EXIT_FAILURE;
     }
@@ -208,7 +212,7 @@ main(int argc, char *argv[])
 
     sections_delete(sections);
     symrec_delete_all();
-    filename_delete_all();
+    line_shutdown();
 
     floatnum_shutdown();
 
@@ -227,6 +231,8 @@ not_an_option_handler(char *param)
 	WarningNow("can open only one input file, only latest file will be processed");
 	if(fclose(in))
 	    ErrorNow("could not close old input file");
+	if (in_filename)
+	    xfree(in_filename);
     }
 
     in = fopen(param, "rt");
@@ -234,7 +240,7 @@ not_an_option_handler(char *param)
 	ErrorNow(_("could not open file `%s'"), param);
 	return 1;
     }
-    switch_filename(param);
+    in_filename = xstrdup(param);
 
     files_open++;
     return 0;

@@ -46,10 +46,8 @@ void Warning(const char *, ...) /*@printflike@*/;
  * called in line order from a parser.  The *At() functions are much slower,
  * at least in the current implementation.
  */
-void ErrorAt(/*@null@*/ const char *filename, unsigned long line, const char *,
-	     ...) /*@printflike@*/;
-void WarningAt(/*@null@*/ const char *filename, unsigned long line,
-	       const char *, ...) /*@printflike@*/;
+void ErrorAt(unsigned long index, const char *, ...) /*@printflike@*/;
+void WarningAt(unsigned long index, const char *, ...) /*@printflike@*/;
 
 /* These two functions immediately output the error or warning, with no file
  * or line information.  They should be used for errors and warnings outside

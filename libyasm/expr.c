@@ -89,8 +89,7 @@ expr_new(ExprOp op, ExprItem *left, ExprItem *right)
 	}
     }
 
-    ptr->filename = in_filename;
-    ptr->line = line_number;
+    ptr->line = line_index;
 
     return ptr;
 }
@@ -151,7 +150,6 @@ expr_xform_neg_item(expr *e, ExprItem *ei)
 
     /* Build -1*ei subexpression */
     sube->op = EXPR_MUL;
-    sube->filename = e->filename;
     sube->line = e->line;
     sube->numterms = 2;
     sube->terms[0].type = EXPR_INT;
@@ -212,7 +210,6 @@ expr_xform_neg_helper(/*@returned@*/ /*@only@*/ expr *e)
 	     */
 	    ne = xmalloc(sizeof(expr));
 	    ne->op = EXPR_MUL;
-	    ne->filename = e->filename;
 	    ne->line = e->line;
 	    ne->numterms = 2;
 	    ne->terms[0].type = EXPR_INT;
@@ -634,7 +631,6 @@ expr_copy_except(const expr *e, int except)
     n = xmalloc(sizeof(expr)+sizeof(ExprItem)*(e->numterms<2?0:e->numterms-2));
 
     n->op = e->op;
-    n->filename = e->filename;
     n->line = e->line;
     n->numterms = e->numterms;
     for (i=0; i<e->numterms; i++) {

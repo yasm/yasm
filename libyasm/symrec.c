@@ -59,7 +59,6 @@ struct symrec {
     SymType type;
     SymStatus status;
     SymVisibility visibility;
-    /*@dependent@*/ /*@null@*/ const char *filename;	/* file and line */
     unsigned long line;		/*  symbol was first declared or used on */
     union {
 	expr *expn;		/* equ value */
@@ -113,8 +112,7 @@ symrec_get_or_new(const char *name, int in_table)
     rec = xmalloc(sizeof(symrec));
     rec->name = symname;
     rec->type = SYM_UNKNOWN;
-    rec->filename = in_filename;
-    rec->line = line_number;
+    rec->line = line_index;
     rec->visibility = SYM_LOCAL;
     rec->of_data_vis_ce = NULL;
     rec->of_data_vis_g = NULL;
@@ -163,7 +161,7 @@ symrec_define(const char *name, SymType type, int in_table)
 	Error(_("duplicate definition of `%s'; first defined on line %d"),
 	      name, rec->line);
     } else {
-	rec->line = line_number;	/* set line number of definition */
+	rec->line = line_index;	/* set line number of definition */
 	rec->type = type;
 	rec->status |= SYM_DEFINED;
     }
@@ -206,7 +204,7 @@ symrec_declare(const char *name, SymVisibility vis, void *of_data)
 	if (of_data)
 	    cur_objfmt->declare_data_delete(vis, of_data);
     } else {
-	rec->line = line_number;	/* set line number of declaration */
+	rec->line = line_index;	/* set line number of declaration */
 	rec->visibility |= vis;
 
 	/* If declared as COMMON or EXTERN, set as DEFINED. */
@@ -299,18 +297,14 @@ symrec_set_opt_flags(symrec *sym, unsigned long opt_flags)
 }
 
 static unsigned long firstundef_line;
-static /*@dependent@*/ /*@null@*/ const char *firstundef_filename;
 static int
 symrec_parser_finalize_checksym(symrec *sym, /*@unused@*/ /*@null@*/ void *d)
 {
     /* error if a symbol is used but never defined */
     if ((sym->status & SYM_USED) && !(sym->status & SYM_DEFINED)) {
-	ErrorAt(sym->filename, sym->line,
-		_("undefined symbol `%s' (first use)"), sym->name);
-	if (sym->line < firstundef_line) {
+	ErrorAt(sym->line, _("undefined symbol `%s' (first use)"), sym->name);
+	if (sym->line < firstundef_line)
 	    firstundef_line = sym->line;
-	    firstundef_filename = sym->filename;
-	}
     }
 
     return 1;
@@ -322,7 +316,7 @@ symrec_parser_finalize(void)
     firstundef_line = ULONG_MAX;
     symrec_traverse(NULL, symrec_parser_finalize_checksym);
     if (firstundef_line < ULONG_MAX)
-	ErrorAt(firstundef_filename, firstundef_line,
+	ErrorAt(firstundef_line,
 		_(" (Each undefined symbol is reported only once.)"));
 }
 
@@ -368,6 +362,9 @@ symrec_print_all(FILE *f)
 void
 symrec_print(FILE *f, const symrec *sym)
 {
+    const char *filename;
+    unsigned long line;
+
     switch (sym->type) {
 	case SYM_UNKNOWN:
 	    fprintf(f, "%*s-Unknown (Common/Extern)-\n", indent_level, "");
@@ -439,6 +436,7 @@ symrec_print(FILE *f, const symrec *sym)
 	indent_level--;
     }
 
+    line_lookup(sym->line, &filename, &line);
     fprintf(f, "%*sFilename=\"%s\" Line Number=%lu\n", indent_level, "",
-	   sym->filename?sym->filename:"(NULL)", sym->line);
+	   filename, line);
 }

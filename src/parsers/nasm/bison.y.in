@@ -146,17 +146,18 @@ input: /* empty */
 					       $2);
 	if (nasm_parser_temp_bc)
 	    nasm_parser_prev_bc = nasm_parser_temp_bc;
-	line_number += line_number_inc;
+	line_index++;
     }
 ;
 
 line: '\n'		{ $$ = (bytecode *)NULL; }
     | lineexp '\n'
     | LINE INTNUM '+' INTNUM FILENAME '\n' {
-	line_number = (unsigned int)intnum_get_uint($2);
-	line_number_inc = (unsigned int)intnum_get_uint($4);
-	line_number -= line_number_inc;	/* as we'll add it back in */
-	switch_filename($5);
+	/* %line indicates the line number of the *next* line, so subtract out
+	 * the increment when setting the line number.
+	 */
+	line_set($5, intnum_get_uint($2)-intnum_get_uint($4),
+		 intnum_get_uint($4));
 	intnum_delete($2);
 	intnum_delete($4);
 	xfree($5);

@@ -373,7 +373,7 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 	     */
 	    if (!intnum_check_size(intn, (size_t)wordsize, 0) &&
 		!intnum_check_size(intn, 1, 1)) {
-		ErrorAt(e->filename, e->line, _("invalid effective address"));
+		ErrorAt(e->line, _("invalid effective address"));
 		return 0;
 	    }
 
@@ -431,7 +431,7 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 	case 2:
 	case 4:
 	    if (wordsize != *displen) {
-		ErrorAt(e->filename, e->line,
+		ErrorAt(e->line,
 			_("invalid effective address (displacement size)"));
 		return 0;
 	    }
@@ -522,7 +522,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 					     x86_expr_checkea_get_reg32)) {
 	    case 0:
 		e = *ep;
-		ErrorAt(e->filename, e->line, _("invalid effective address"));
+		ErrorAt(e->line, _("invalid effective address"));
 		return 0;
 	    case 1:
 		return 1;
@@ -544,7 +544,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	 */
 	for (i=0; i<8; i++) {
 	    if (reg32mult[i] < 0) {
-		ErrorAt(e->filename, e->line, _("invalid effective address"));
+		ErrorAt(e->line, _("invalid effective address"));
 		return 0;
 	    }
 	    if (i != indexreg && reg32mult[i] == 1)
@@ -585,7 +585,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	 */
 	for (i=0; i<8; i++)
 	    if (i != basereg && i != indexreg && reg32mult[i] != 0) {
-		ErrorAt(e->filename, e->line, _("invalid effective address"));
+		ErrorAt(e->line, _("invalid effective address"));
 		return 0;
 	    }
 
@@ -593,7 +593,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	if (indexreg != REG32_NONE && reg32mult[indexreg] != 1 &&
 	    reg32mult[indexreg] != 2 && reg32mult[indexreg] != 4 &&
 	    reg32mult[indexreg] != 8) {
-	    ErrorAt(e->filename, e->line, _("invalid effective address"));
+	    ErrorAt(e->line, _("invalid effective address"));
 	    return 0;
 	}
 
@@ -603,7 +603,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	     * legal.
 	     */
 	    if (reg32mult[REG32_ESP] > 1 || basereg == REG32_ESP) {
-		ErrorAt(e->filename, e->line, _("invalid effective address"));
+		ErrorAt(e->line, _("invalid effective address"));
 		return 0;
 	    }
 	    /* If mult==1 and basereg is not ESP, swap indexreg w/basereg. */
@@ -705,7 +705,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 					     x86_expr_checkea_get_reg16)) {
 	    case 0:
 		e = *ep;
-		ErrorAt(e->filename, e->line, _("invalid effective address"));
+		ErrorAt(e->line, _("invalid effective address"));
 		return 0;
 	    case 1:
 		return 1;
@@ -717,7 +717,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	/* reg multipliers not 0 or 1 are illegal. */
 	if (reg16mult.bx & ~1 || reg16mult.si & ~1 || reg16mult.di & ~1 ||
 	    reg16mult.bp & ~1) {
-	    ErrorAt(e->filename, e->line, _("invalid effective address"));
+	    ErrorAt(e->line, _("invalid effective address"));
 	    return 0;
 	}
 
@@ -733,7 +733,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 
 	/* Check the modrm value for invalid combinations. */
 	if (modrm16[havereg] & 0070) {
-	    ErrorAt(e->filename, e->line, _("invalid effective address"));
+	    ErrorAt(e->line, _("invalid effective address"));
 	    return 0;
 	}
 

@@ -52,7 +52,6 @@ struct ExprItem {
  */
 struct expr {
     ExprOp op;
-    /*@dependent@*/ /*@null@*/ const char *filename;
     unsigned long line;
     int numterms;
     ExprItem terms[2];		/* structure may be extended to include more */

@@ -33,14 +33,36 @@
 /* Current (selected) object format) */
 /*@null@*/ objfmt *cur_objfmt = NULL;
 
-/*@null@*/ /*@dependent@*/ const char *in_filename = (const char *)NULL;
-unsigned int line_number = 1;
-unsigned int line_number_inc = 1;
+/* Source lines tracking */
+/* FIXME: Need better data structure for this than a linked list. */
+typedef /*@reldef@*/ STAILQ_HEAD(line_index_mapping_head, line_index_mapping)
+    line_index_mapping_head;
+typedef struct line_index_mapping {
+    /*@reldef@*/ STAILQ_ENTRY(line_index_mapping) link;
+
+    /* monotonically increasing line index */
+    unsigned long index;
+
+    /* related info */
+    /* "original" source filename */
+    /*@null@*/ /*@dependent@*/ const char *filename;
+    /* "original" source base line number */
+    unsigned long line;
+    /* "original" source line number increment (for following lines) */
+    unsigned int line_inc;
+} line_index_mapping;
+/* Shared storage for filenames */
+static /*@only@*/ /*@null@*/ HAMT *filename_table = NULL;
+
+/* Virtual line number.  Uniquely specifies every line read by the parser. */
+unsigned long line_index = 1;
+static line_index_mapping_head *line_index_map = NULL;
+
+/* Global assembler options. */
 unsigned int asm_options = 0;
 
+/* Indentation level for assembler *_print() routines */
 int indent_level = 0;
-
-static /*@only@*/ /*@null@*/ HAMT *filename_table = NULL;
 
 static void
 filename_delete_one(/*@only@*/ void *d)
@@ -49,24 +71,70 @@ filename_delete_one(/*@only@*/ void *d)
 }
 
 void
-switch_filename(const char *filename)
+line_set(const char *filename, unsigned long line, unsigned long line_inc)
 {
-    char *copy = xstrdup(filename);
+    char *copy;
     int replace = 0;
+    line_index_mapping *mapping;
+
+    /* Build a mapping */
+    mapping = xmalloc(sizeof(line_index_mapping));
+
+    /* Copy the filename (via shared storage) */
+    copy = xstrdup(filename);
     if (!filename_table)
 	filename_table = HAMT_new();
     /*@-aliasunique@*/
-    in_filename = HAMT_insert(filename_table, copy, copy, &replace,
-			      filename_delete_one);
+    mapping->filename = HAMT_insert(filename_table, copy, copy, &replace,
+				    filename_delete_one);
     /*@=aliasunique@*/
+
+    mapping->index = line_index;
+    mapping->line = line;
+    mapping->line_inc = line_inc;
+
+    /* Add the mapping to the map */
+    if (!line_index_map) {
+	line_index_map = xmalloc(sizeof(line_index_mapping_head));
+	STAILQ_INIT(line_index_map);
+    }
+    STAILQ_INSERT_TAIL(line_index_map, mapping, link);
 }
 
 void
-filename_delete_all(void)
+line_shutdown(void)
 {
-    in_filename = NULL;
+    line_index_mapping *mapping, *mapping2;
+    mapping = STAILQ_FIRST(line_index_map);
+    while (mapping) {
+	mapping2 = STAILQ_NEXT(mapping, link);
+	xfree(mapping);
+	mapping = mapping2;
+    }
+    xfree(line_index_map);
+
     if (filename_table) {
 	HAMT_delete(filename_table, filename_delete_one);
 	filename_table = NULL;
     }
+}
+
+void
+line_lookup(unsigned long index, const char **filename, unsigned long *line)
+{
+    line_index_mapping *mapping, *mapping2;
+
+    assert(index <= line_index);
+
+    /* Linearly search through map to find highest line_index <= index */
+    mapping = STAILQ_FIRST(line_index_map);
+    while (mapping) {
+	mapping2 = STAILQ_NEXT(mapping, link);
+	if (!mapping2 || mapping2->index > index)
+	    break;
+	mapping = mapping2;
+    }
+
+    *filename = mapping->filename;
+    *line = mapping->line+mapping->line_inc*(index-mapping->index);
 }

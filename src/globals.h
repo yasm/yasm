@@ -28,20 +28,19 @@ extern /*@null@*/ parser *cur_parser;
 /* Current (selected) object format */
 extern /*@null@*/ objfmt *cur_objfmt;
 
-/*@null@*/ /*@dependent@*/ extern const char *in_filename;
-extern unsigned int line_number;
+/* Virtual line number.  Uniquely specifies every line read by the parser. */
+extern unsigned long line_index;
 
-/* Amount to increase line_number by after each line.  Should be 0 or 1, set by
- * %line (in NASM syntax).  Initialized to 1 at startup.
- * (0 is for 1-line macros that expand to multiple lines).
- */
-extern unsigned int line_number_inc;
-
+/* Global assembler options. */
 extern unsigned int asm_options;
 
+/* Indentation level for assembler *_print() routines */
 extern int indent_level;
 
-void switch_filename(const char *filename);
-void filename_delete_all(void);
+void line_set(const char *filename, unsigned long line,
+	      unsigned long line_inc);
+void line_shutdown(void);
+void line_lookup(unsigned long index, const char **filename,
+		 unsigned long *line);
 
 #endif

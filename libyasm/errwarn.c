@@ -65,7 +65,6 @@ typedef struct errwarn_s {
 
     enum { WE_ERROR, WE_WARNING } type;
 
-    /*@dependent@*/ const char *filename;
     unsigned long line;
     /* FIXME: This should not be a fixed size.  But we don't have vasprintf()
      * right now. */
@@ -151,7 +150,7 @@ Error(const char *fmt, ...)
     va_list ap;
     errwarn *we;
 
-    if ((previous_error_line == line_number) && !previous_error_parser)
+    if ((previous_error_line == line_index) && !previous_error_parser)
 	return;
 
     if (!errwarns) {
@@ -166,8 +165,7 @@ Error(const char *fmt, ...)
 	we = xmalloc(sizeof(errwarn));
 
 	we->type = WE_ERROR;
-	we->filename = in_filename;
-	we->line = line_number;
+	we->line = line_index;
     }
 
     assert(we != NULL);
@@ -181,7 +179,7 @@ Error(const char *fmt, ...)
 	STAILQ_INSERT_TAIL(errwarns, we, link);
     /*@=branchstate@*/
 
-    previous_error_line = line_number;
+    previous_error_line = line_index;
     previous_error_parser = 0;
 
     error_count++;
@@ -196,16 +194,15 @@ Warning(const char *fmt, ...)
     va_list ap;
     errwarn *we;
 
-    if (previous_warning_line == line_number)
+    if (previous_warning_line == line_index)
 	return;
 
-    previous_warning_line = line_number;
+    previous_warning_line = line_index;
 
     we = xmalloc(sizeof(errwarn));
 
     we->type = WE_WARNING;
-    we->filename = in_filename;
-    we->line = line_number;
+    we->line = line_index;
     va_start(ap, fmt);
     vsprintf(we->msg, fmt, ap);
     va_end(ap);
@@ -242,11 +239,14 @@ WarningNow(const char *fmt, ...)
 }
 
 void
-ErrorAt(const char *filename, unsigned long line, const char *fmt, ...)
+ErrorAt(unsigned long index, const char *fmt, ...)
 {
     /* XXX: Should insert into list instead of printing immediately */
     va_list ap;
+    const char *filename;
+    unsigned long line;
 
+    line_lookup(index, &filename, &line);
     fprintf(stderr, "%s:%lu: ", filename?filename:"(NULL)", line);
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
@@ -255,11 +255,14 @@ ErrorAt(const char *filename, unsigned long line, const char *fmt, ...)
 }
 
 void
-WarningAt(const char *filename, unsigned long line, const char *fmt, ...)
+WarningAt(unsigned long index, const char *fmt, ...)
 {
     /* XXX: Should insert into list instead of printing immediately */
     va_list ap;
+    const char *filename;
+    unsigned long line;
 
+    line_lookup(index, &filename, &line);
     fprintf(stderr, "%s:%lu: %s ", filename?filename:"NULL", line,
 	    _("warning:"));
     va_start(ap, fmt);
@@ -273,6 +276,8 @@ unsigned int
 OutputAllErrorWarning(void)
 {
     errwarn *we, *we2;
+    const char *filename;
+    unsigned long line;
 
     /* If errwarns hasn't been initialized, there are no messages. */
     if (!errwarns)
@@ -280,11 +285,12 @@ OutputAllErrorWarning(void)
 
     /* Output error and warning messages. */
     STAILQ_FOREACH(we, errwarns, link) {
+	line_lookup(we->line, &filename, &line);
 	if (we->type == WE_ERROR)
-	    fprintf(stderr, "%s:%lu: %s\n", we->filename, we->line, we->msg);
+	    fprintf(stderr, "%s:%lu: %s\n", filename, line, we->msg);
 	else
-	    fprintf(stderr, "%s:%lu: %s %s\n", we->filename, we->line,
-		    _("warning:"), we->msg);
+	    fprintf(stderr, "%s:%lu: %s %s\n", filename, line, _("warning:"),
+		    we->msg);
     }
 
     /* Delete messages. */

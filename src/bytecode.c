@@ -148,8 +148,7 @@ bc_new_common(bytecode_type type, size_t datasize)
     bc->multiple = (expr *)NULL;
     bc->len = 0;
 
-    bc->filename = in_filename;
-    bc->lineno = line_number;
+    bc->line = line_index;
 
     bc->offset = 0;
 
@@ -246,6 +245,8 @@ bc_print(FILE *f, const bytecode *bc)
     const bytecode_data *data;
     const bytecode_reserve *reserve;
     const bytecode_incbin *incbin;
+    const char *filename;
+    unsigned long line;
 
     switch (bc->type) {
 	case BC_EMPTY:
@@ -300,8 +301,9 @@ bc_print(FILE *f, const bytecode *bc)
     else
 	expr_print(f, bc->multiple);
     fprintf(f, "\n%*sLength=%lu\n", indent_level, "", bc->len);
-    fprintf(f, "%*sFilename=\"%s\" Line Number=%u\n", indent_level, "",
-	    bc->filename ? bc->filename : "<UNKNOWN>", bc->lineno);
+    line_lookup(bc->line, &filename, &line);
+    fprintf(f, "%*sFilename=\"%s\" Line Number=%lu\n", indent_level, "",
+	    filename, line);
     fprintf(f, "%*sOffset=%lx\n", indent_level, "", bc->offset);
 }
 

@@ -59,8 +59,7 @@ struct bytecode {
 				   multiple copies), 0 if unknown */
 
     /* where it came from */
-    /*@dependent@*/ /*@null@*/ const char *filename;
-    unsigned int lineno;
+    unsigned int line;
 
     /* other assembler state info */
     unsigned long offset;	/* 0 if unknown */
