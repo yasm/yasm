@@ -676,7 +676,7 @@ yasm_bc_resolve(yasm_bytecode *bc, int save, const yasm_section *sect,
 
 static int
 bc_tobytes_data(bytecode_data *bc_data, unsigned char **bufp,
-		const yasm_section *sect, const yasm_bytecode *bc, void *d,
+		const yasm_section *sect, yasm_bytecode *bc, void *d,
 		yasm_output_expr_func output_expr)
     /*@sets **bufp@*/
 {

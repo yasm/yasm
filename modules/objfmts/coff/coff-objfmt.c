@@ -247,8 +247,7 @@ static int
 coff_objfmt_output_expr(yasm_expr **ep, unsigned char **bufp,
 			unsigned long valsize, unsigned long offset,
 			/*@observer@*/ const yasm_section *sect,
-			/*@observer@*/ const yasm_bytecode *bc, int rel,
-			/*@unused@*/ /*@null@*/ void *d)
+			yasm_bytecode *bc, int rel, /*@null@*/ void *d)
 {
     /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *intn;

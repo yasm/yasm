@@ -119,7 +119,7 @@ typedef /*@null@*/ yasm_intnum * (*yasm_calc_bc_dist_func)
 typedef int (*yasm_output_expr_func)
     (yasm_expr **ep, unsigned char **bufp, unsigned long valsize,
      unsigned long offset, /*@observer@*/ const yasm_section *sect,
-     /*@observer@*/ const yasm_bytecode *bc, int rel, /*@null@*/ void *d)
+     yasm_bytecode *bc, int rel, /*@null@*/ void *d)
     /*@uses *ep@*/ /*@sets **bufp@*/;
 
 /* Converts a objfmt data bytecode into its byte representation.  Usually

@@ -129,7 +129,7 @@ bin_objfmt_output_expr(yasm_expr **ep, unsigned char **bufp,
 		       unsigned long valsize,
 		       /*@unused@*/ unsigned long offset,
 		       /*@observer@*/ const yasm_section *sect,
-		       /*@observer@*/ const yasm_bytecode *bc, int rel,
+		       yasm_bytecode *bc, int rel,
 		       /*@unused@*/ /*@null@*/ void *d)
 {
     /*@dependent@*/ /*@null@*/ const yasm_intnum *intn;

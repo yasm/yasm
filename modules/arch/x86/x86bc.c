@@ -831,7 +831,7 @@ yasm_x86__bc_resolve(yasm_bytecode *bc, int save, const yasm_section *sect,
 
 static int
 x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp,
-		    const yasm_section *sect, const yasm_bytecode *bc, void *d,
+		    const yasm_section *sect, yasm_bytecode *bc, void *d,
 		    yasm_output_expr_func output_expr)
 {
     /*@null@*/ x86_effaddr *x86_ea = insn->ea;
@@ -925,7 +925,7 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp,
 
 static int
 x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
-		      const yasm_section *sect, const yasm_bytecode *bc,
+		      const yasm_section *sect, yasm_bytecode *bc,
 		      void *d, yasm_output_expr_func output_expr)
 {
     unsigned char opersize;
