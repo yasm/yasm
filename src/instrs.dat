@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.10 2001/07/04 07:05:13 peter Exp $
+; $Id: instrs.dat,v 1.11 2001/07/04 08:03:04 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -139,6 +139,20 @@
 !bsfr	reg16,rm16		16	0F,BC+$0.1	$2,$1		nil	386
 !bsfr	reg32,rm32		32	0F,BC+$0.1	$2,$1		nil	386
 ;
+; CMPXCHG/XADD:
+; arbitrary encoding, picked $1r,$2 instead of $2r,$1
+!cmpxchgxadd	reg8,reg8		nil	0F,$0.1		$1r,$2	nil	486
+!cmpxchgxadd	mem,reg8		nil	0F,$0.1		$1,$2	nil	486
+!cmpxchgxadd	mem8x,reg8		nil	0F,$0.1		$1,$2	nil	486
+; arbitrary encoding, picked $1r,$2 instead of $2r,$1
+!cmpxchgxadd	reg16,reg16		16	0F,$0.1+1	$1r,$2	nil	486
+!cmpxchgxadd	mem,reg16		16	0F,$0.1+1	$1,$2	nil	486
+!cmpxchgxadd	mem16x,reg16		16	0F,$0.1+1	$1,$2	nil	486
+; arbitrary encoding, picked $1r,$2 instead of $2r,$1
+!cmpxchgxadd	reg32,reg32		32	0F,$0.1+1	$1r,$2	nil	486
+!cmpxchgxadd	mem,reg32		32	0F,$0.1+1	$1,$2	nil	486
+!cmpxchgxadd	mem32x,reg32		32	0F,$0.1+1	$1,$2	nil	486
+;
 ; Cyrix MMX instructions:
 !cyrixmmx	MMXREG,rm64	nil	0F,$0.1		$2,$1		nil	P5,MMX,CYRIX
 ;
@@ -235,14 +249,17 @@
 ;
 ; SSE/SSE2 standard variations:
 !sse2pd	XMMREG,rm128		nil	66,0F,$0.1	$2,$1		nil	P4,SSE2
-!sseps	XMMREG,rm128		nil	0F,$0.1		$2,$1		nil	KATMAI,SSE
-!sse2ps	XMMREG,rm128		nil	0F,$0.1		$2,$1		nil	P4,SSE2
+!sseps	XMMREG,rm128		nil	0F,$0.1		$2,$1		nil	#0
 !sse2sd	XMMREG,rm128		nil	F2,0F,$0.1	$2,$1		nil	P4,SSE2
 !sse2ss	XMMREG,rm128		nil	F3,0F,$0.1	$2,$1		nil	P4,SSE2
 ;
-; SSE2/P5 MMX shared instructions:
-!sse2mmx	MMXREG,rm64	nil	0F,$0.1		$2,$1		nil	#0,MMX
-!sse2mmx	XMMREG,rm128	nil	66,0F,$0.1	$2,$1		nil	P4,SSE2
+; SSE/SSE2 standard variations, with immediate:
+!sse2pdimm	XMMREG,rm128,imm8	nil	66,0F,$0.1	$2,$1	$3,8	P4,SSE2
+!ssepsimm	XMMREG,rm128,imm8	nil	0F,$0.1		$2,$1	$3,8	KATMAI,SSE
+;
+; SSE/SSE2 and MMX shared instructions:
+!mmxsse	MMXREG,rm64		nil	0F,$0.1		$2,$1		nil	#0,MMX
+!mmxsse	XMMREG,rm128		nil	66,0F,$0.1	$2,$1		nil	#1
 ;
 ; Two byte opcode instructions with no operands:
 !twobyte	nil		nil	$0.1,$0.2	nil		nil	#0
@@ -264,14 +281,14 @@ aas!onebyte		3F		8086
 adc!arith		10,2
 add!arith		00,0
 addpd!sse2pd		58
-addps!sseps		58
+addps!sseps		58		KATMAI,SSE
 addsd!sse2sd		58
 addss!sse2ss		58
 and!arith		20,4
 andpd!sse2pd		54
-andps!sse2ps		54
+andps!sseps		54		P4,SSE2
 andnpd!sse2pd		55
-andnps!sse2ps		55
+andnps!sseps		55		P4,SSE2
 arpl	rm16,reg16		nil	63		$1,$2	nil	286,PROT
 bound	reg16,mem16		16	62		$2,$1	nil	186
 bound	reg32,mem32		32	62		$2,$1	nil	386
@@ -293,39 +310,28 @@ clts!twobyte		0F,06		286,PRIV
 cmc!onebyte		F5		8086
 ; cmov
 cmp!arith		38,7
-cmppd	XMMREG,rm128,imm8	nil	66,0F,C2	$2,$1	$3,8	P4,SSE2
-cmpps	XMMREG,rm128,imm8	nil	0F,C2		$2,$1	$3,8	KATMAI,SSE
+cmppd!sse2pdimm		C2
+cmpps!ssepsimm		C2
 cmpsb!onebyte		A6		8086
 cmpsw!onebyte16		A7
 cmpsd	nil			32	A7		nil	nil	386
 cmpsd	XMMREG,rm128,imm8	nil	F2,0F,C2	$2,$1	$3,8	P4,SSE2
 cmpss	XMMREG,rm128,imm8	nil	F3,0F,C2	$2,$1	$3,8	P4,SSE2
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-cmpxchg	reg8,reg8		nil	0F,B0		$1r,$2	nil	486
-cmpxchg	mem,reg8		nil	0F,B0		$1,$2	nil	486
-cmpxchg	mem8x,reg8		nil	0F,B0		$1,$2	nil	486
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-cmpxchg	reg16,reg16		16	0F,B1		$1r,$2	nil	486
-cmpxchg	mem,reg16		16	0F,B1		$1,$2	nil	486
-cmpxchg	mem16x,reg16		16	0F,B1		$1,$2	nil	486
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-cmpxchg	reg32,reg32		32	0F,B1		$1r,$2	nil	486
-cmpxchg	mem,reg32		32	0F,B1		$1,$2	nil	486
-cmpxchg	mem32x,reg32		32	0F,B1		$1,$2	nil	486
+cmpxchg!cmpxchgxadd	B0
 cmpxchg8b	mem64		nil	0F,C7		$1,1	nil	P5
 comisd!sse2pd		2F
-comiss	XMMREG,rm128		nil	0F,2F		$2,$1	nil	KATMAI,SSE
+comiss!sseps		2F		KATMAI,SSE
 cpuid!twobyte		0F,A2		P5
 cvtdq2pd!sse2ss		E6
-cvtdq2ps!sse2ps		5B
+cvtdq2ps!sseps		5B		P4,SSE2
 cvtpd2dq!sse2sd		E6
 cvtpd2pi!sse2pd		2D
 cvtpd2ps!sse2pd		5A
 cvtpi2pd!sse2pd		2A
-cvtpi2ps!sse2ps		2A
+cvtpi2ps!sseps		2A		P4,SSE2
 cvtps2dq!sse2pd		5B
-cvtps2pd!sse2ps		5A
-cvtps2pi!sse2ps		2D
+cvtps2pd!sseps		5A		P4,SSE2
+cvtps2pi!sseps		2D		P4,SSE2
 cvtsd2si!sse2sd		2D
 cvtsd2ss!sse2sd		5A
 cvtsi2sd!sse2sd		2A
@@ -335,7 +341,7 @@ cvtss2si!sse2ss		2D
 cvttpd2pi!sse2pd	2C
 cvttpd2dq!sse2pd	E6
 cvttps2dq!sse2ss	5B
-cvttps2pi!sse2ps	2C
+cvttps2pi!sseps		2C		P4,SSE2
 cvttsd2si!sse2sd	2C
 cvttss2si!sse2ss	2C
 cwd!onebyte16		99
@@ -345,7 +351,7 @@ das!onebyte		2F		8086
 dec!incdec		1,48
 div!groupf6		6
 divpd!sse2pd		5E
-divps!sseps		5E
+divps!sseps		5E		KATMAI,SSE
 divsd!sse2sd		5E
 divss!sse2ss		5E
 emms!twobyte		0F,77		P5,MMX
@@ -534,7 +540,7 @@ ltr!prot286		3		PRIV
 maskmovdqu	XMMREG,XMMREG	nil	66,0F,F7	$2r,$1	nil	P4,SSE2
 maskmovq	MMXREG,MMXREG	nil	0F,F7		$2r,$1	nil	KATMAI,MMX
 maxpd!sse2pd		5F
-maxps!sseps		5F
+maxps!sseps		5F		KATMAI,SSE
 maxsd!sse2sd		5F
 maxss!sse2ss		5F
 ; opcode arbitrarily picked for next 3 (could be 8A/8B instead of 88/89).
@@ -651,7 +657,7 @@ movups	mem64,XMMREG		nil	0F,11		$1,$2	nil	P4,SSE2
 movzx!movszx		B6
 mul!groupf6		4
 mulpd!sse2pd		59
-mulps!sseps		59
+mulps!sseps		59		KATMAI,SSE
 mulsd!sse2sd		59
 mulss!sse2ss		59
 neg!groupf6		3
@@ -659,7 +665,7 @@ nop!onebyte		90		8086
 not!groupf6		2
 or!arith		08,1
 orpd!sse2pd		56
-orps!sseps		56
+orps!sseps		56		KATMAI,SSE
 out	imm8,REG_AL		nil	E6		nil	$1,8	8086
 out	imm8,REG_AX		16	E7		nil	$1,8	8086
 out	imm8,REG_EAX		32	E7		nil	$1,8	386
@@ -669,46 +675,45 @@ out	REG_DX,REG_EAX		32	EF		nil	nil	386
 outsb!onebyte		6E		8086
 outsw!onebyte16		6F
 outsd!onebyte32		6F
-packsswb!sse2mmx	63		P5
-packssdw!sse2mmx	6B		P5
-packuswb!sse2mmx	67		P5
-paddb!sse2mmx		FC		P5
-paddw!sse2mmx		FD		P5
-paddd!sse2mmx		FE		P5
-paddq!sse2mmx		D4		P5
-paddsb!sse2mmx		EC		P5
-paddsw!sse2mmx		ED		P5
-paddusb!sse2mmx		DC		P5
-paddusw!sse2mmx		DD		P5
-pand!sse2mmx		DB		P5
-pandn!sse2mmx		DF		P5
+packsswb!mmxsse		63		P5		P4,SSE2
+packssdw!mmxsse		6B		P5		P4,SSE2
+packuswb!mmxsse		67		P5		P4,SSE2
+paddb!mmxsse		FC		P5		P4,SSE2
+paddw!mmxsse		FD		P5		P4,SSE2
+paddd!mmxsse		FE		P5		P4,SSE2
+paddq!mmxsse		D4		P5		P4,SSE2
+paddsb!mmxsse		EC		P5		P4,SSE2
+paddsw!mmxsse		ED		P5		P4,SSE2
+paddusb!mmxsse		DC		P5		P4,SSE2
+paddusw!mmxsse		DD		P5		P4,SSE2
+pand!mmxsse		DB		P5		P4,SSE2
+pandn!mmxsse		DF		P5		P4,SSE2
 pause!twobyte		F3,90		P4
-pavgb!sse2mmx		E0		KATMAI
-pavgw!sse2mmx		E3		KATMAI
-pcmpeqb!sse2mmx		74		P5
-pcmpeqw!sse2mmx		75		P5
-pcmpeqd!sse2mmx		76		P5
-pcmpgtb!sse2mmx		64		P5
-pcmpgtw!sse2mmx		65		P5
-pcmpgtd!sse2mmx		66		P5
+pavgb!mmxsse		E0		KATMAI		P4,SSE2
+pavgw!mmxsse		E3		KATMAI		P4,SSE2
+pcmpeqb!mmxsse		74		P5		P4,SSE2
+pcmpeqw!mmxsse		75		P5		P4,SSE2
+pcmpeqd!mmxsse		76		P5		P4,SSE2
+pcmpgtb!mmxsse		64		P5		P4,SSE2
+pcmpgtw!mmxsse		65		P5		P4,SSE2
+pcmpgtd!mmxsse		66		P5		P4,SSE2
 pextrw	reg32,MMXREG,imm8	nil	0F,C5		$1r,$2	$3,8	KATMAI,MMX
 pextrw	reg32,XMMREG,imm8	nil	66,0F,C5	$1r,$2	$3,8	P4,SSE2
 pinsrw	MMXREG,reg32,imm8	nil	0F,C4		$2r,$1	$3,8	KATMAI,MMX
 pinsrw	MMXREG,rm16,imm8	nil	0F,C4		$2,$1	$3,8	KATMAI,MMX
 pinsrw	XMMREG,reg32,imm8	nil	66,0F,C4	$2r,$1	$3,8	P4,SSE2
 pinsrw	XMMREG,rm16,imm8	nil	66,0F,C4	$2,$1	$3,8	P4,SSE2
-pmaddwd!sse2mmx		F5		P5
-pmaxsw!sse2mmx		EE		KATMAI
-pmaxub!sse2mmx		DE		KATMAI
-pminsw!sse2mmx		EA		KATMAI
-pminub!sse2mmx		DA		KATMAI
+pmaddwd!mmxsse		F5		P5		P4,SSE2
+pmaxsw!mmxsse		EE		KATMAI		P4,SSE2
+pmaxub!mmxsse		DE		KATMAI		P4,SSE2
+pminsw!mmxsse		EA		KATMAI		P4,SSE2
+pminub!mmxsse		DA		KATMAI		P4,SSE2
 pmovmskb	reg32,MMXREG	nil	0F,D7		$1r,$2	nil	KATMAI,MMX
 pmovmskb	reg32,XMMREG	nil	66,0F,D7	$1r,$2	nil	P4,SSE2
-pmulhuw!sse2mmx		E4		KATMAI
-pmulhw!sse2mmx		E5		P5
-pmullw!sse2mmx		D5		P5
-pmuludq	MMXREG,rm64		nil	0F,F4		$2,$1	nil	P4,MMX
-pmuludq	XMMREG,rm128		nil	66,0F,F4	$2,$1	nil	P4,SSE2
+pmulhuw!mmxsse		E4		KATMAI		P4,SSE2
+pmulhw!mmxsse		E5		P5		P4,SSE2
+pmullw!mmxsse		D5		P5		P4,SSE2
+pmuludq!mmxsse		F4		P4		P4,SSE2
 pop	mem16x			16	8F		$1,0	nil	8086
 pop	mem32x			32	8F		$1,0	nil	386
 pop	reg16			16	58+$1		nil	nil	8086
@@ -724,15 +729,13 @@ popaw!onebyte16		61
 popf!onebyte		9D		8086
 popfd!onebyte32		9D
 popfw!onebyte16		9D
-por	MMXREG,rm64		nil	0F,EB		$2,$1	nil	P5,MMX
-por	XMMREG,rm128		nil	66,0F,EB	$2,$1	nil	KATMAI,SSE
+por!mmxsse		EB		P5		KATMAI,SSE
 prefetcht0	mem		nil	0F,18		$1,1	nil	KATMAI
 prefetcht1	mem		nil	0F,18		$1,2	nil	KATMAI
 prefetcht2	mem		nil	0F,18		$1,3	nil	KATMAI
 prefetchnta	mem		nil	0F,18		$1,0	nil	KATMAI
-psadbw	MMXREG,rm64		nil	0F,F6		$2,$1	nil	KATMAI,MMX
-psadbw	XMMREG,rm128		nil	66,0F,F6	$2,$1	nil	KATMAI,SSE
-pshufd	XMMREG,rm128,imm8	nil	66,0F,70	$2,$1	$3,8	P4,SSE2
+psadbw!mmxsse		F6		KATMAI		KATMAI,SSE
+pshufd!sse2pdimm	70
 pshufhw	XMMREG,rm128,imm8	nil	F3,0F,70	$2,$1	$3,8	P4,SSE2
 pshuflw	XMMREG,rm128,imm8	nil	F2,0F,70	$2,$1	$3,8	P4,SSE2
 pshufw	MMXREG,rm64,imm8	nil	0F,70		$2,$1	$3,8	KATMAI,MMX
@@ -750,20 +753,20 @@ psubb	MMXREG,imm8		nil	0F,F8		$1r,2	$2,8	P5,MMX
 psubb	XMMREG,imm8		nil	66,0F,F8	$1r,2	$2,8	P4,SSE2
 psubw	MMXREG,imm8		nil	0F,F9		$1r,2	$2,8	P5,MMX
 psubw	XMMREG,imm8		nil	66,0F,F9	$1r,2	$2,8	P4,SSE2
-psubd!sse2mmx		FA		P5
-psubq!sse2mmx		FB		P5
-psubsb!sse2mmx		E8		P5
-psubsw!sse2mmx		E9		P5
-psubusb!sse2mmx		D8		P5
-psubusw!sse2mmx		D9		P5
-punpckhbw!sse2mmx	68		P5
-punpckhwd!sse2mmx	69		P5
-punpckhdq!sse2mmx	6A		P5
-punpckhqdq	XMMREG,rm128	nil	66,0F,6D	$2,$1	nil	P4,SSE2
-punpcklbw!sse2mmx	60		P5
-punpcklwd!sse2mmx	61		P5
-punpckldq!sse2mmx	62		P5
-punpcklqdq	XMMREG,rm128	nil	66,0F,6C	$2,$1	nil	P4,SSE2
+psubd!mmxsse		FA		P5		P4,SSE2
+psubq!mmxsse		FB		P5		P4,SSE2
+psubsb!mmxsse		E8		P5		P4,SSE2
+psubsw!mmxsse		E9		P5		P4,SSE2
+psubusb!mmxsse		D8		P5		P4,SSE2
+psubusw!mmxsse		D9		P5		P4,SSE2
+punpckhbw!mmxsse	68		P5		P4,SSE2
+punpckhwd!mmxsse	69		P5		P4,SSE2
+punpckhdq!mmxsse	6A		P5		P4,SSE2
+punpckhqdq!sse2pd	6D
+punpcklbw!mmxsse	60		P5		P4,SSE2
+punpcklwd!mmxsse	61		P5		P4,SSE2
+punpckldq!mmxsse	62		P5		P4,SSE2
+punpcklqdq!sse2pd	6C
 push	mem16x			16	FF		$1,6	nil	8086
 push	mem32x			32	FF		$1,6	nil	386
 push	reg16			16	50+$1		nil	nil	8086
@@ -783,12 +786,12 @@ pushaw!onebyte16	60
 pushf!onebyte		9C		8086
 pushfd!onebyte32	9C
 pushfw!onebyte16	9C
-pxor!sse2mmx		EF		P5
+pxor!mmxsse		EF		P5		P4,SSE2
 rcl!shift		2
 rcr!shift		3
 rol!shift		0
 ror!shift		1
-rcpps!sseps		53
+rcpps!sseps		53		KATMAI,SSE
 rcpss!sse2ss		53
 rdmsr!twobyte		0F,32		P5,PRIV
 rdpmc!twobyte		0F,33		P6
@@ -799,7 +802,7 @@ retf	nil			nil	CB		nil	nil	8086
 retn	imm16			nil	C2		nil	$1,16	8086
 retf	imm16			nil	CA		nil	$1,16	8086
 rsm	nil			nil	0F,AA		nil	nil	P5,SMM
-rsqrtps!sseps		52
+rsqrtps!sseps		52		KATMAI,SSE
 rsqrtss!sse2ss		52
 sahf!onebyte		9E		8086
 sal!shift		4
@@ -816,8 +819,8 @@ sgdt	mem			nil	0F,01		$1,0	nil	286
 sidt	mem			nil	0F,01		$1,1	nil	286
 shld!shlrd		A4
 shrd!shlrd		AC
-shufpd	XMMREG,rm128,imm8	nil	66,0F,C6	$2,$1	$3,8	P4,SSE2
-shufps	XMMREG,rm128,imm8	nil	0F,C6		$2,$1	$3,8	KATMAI,SSE
+shufpd!sse2pdimm	C6
+shufps!ssepsimm		C6
 sldt	mem1632			nil	0F,00		$1,0	nil	286
 sldt	reg16			16	0F,00		$1r,0	nil	286
 sldt	reg32			32	0F,00		$1r,0	nil	386
@@ -825,7 +828,7 @@ smsw	mem1632			nil	0F,01		$1,4	nil	286
 smsw	reg16			16	0F,01		$1r,4	nil	286
 smsw	reg32			32	0F,01		$1r,4	nil	386
 sqrtpd!sse2pd		51
-sqrtps!sseps		51
+sqrtps!sseps		51		KATMAI,SSE
 sqrtsd!sse2sd		51
 sqrtss!sse2ss		51
 stc!onebyte		F9		8086
@@ -838,7 +841,7 @@ stosd!onebyte32		AB
 str!prot286		1
 sub!arith		28,5
 subpd!sse2pd		5C
-subps!sseps		5C
+subps!sseps		5C		KATMAI,SSE
 subsd!sse2sd		5C
 subss!sse2ss		5C
 sysenter!twobyte	0F,34		P6
@@ -875,27 +878,16 @@ ucomisd!sse2sd		2E
 ucomiss!sse2ss		2E
 ud2!twobyte		0F,0B		286
 unpckhpd!sse2pd		15
-unpckhps!sseps		15
+unpckhps!sseps		15		KATMAI,SSE
 unpcklpd!sse2pd		14
-unpcklps!sseps		14
+unpcklps!sseps		14		KATMAI,SSE
 verr!prot286		4
 verw!prot286		5
 wait!onebyte		9B		8086
 fwait!onebyte		9B		8086,FPU
 wbinvd!twobyte		0F,09		486,PRIV
 wrmsr!twobyte		0F,30		P5,PRIV
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-xadd	reg8,reg8		nil	0F,C0		$1r,$2	nil	486
-xadd	mem,reg8		nil	0F,C0		$1,$2	nil	486
-xadd	mem8x,reg8		nil	0F,C0		$1,$2	nil	486
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-xadd	reg16,reg16		16	0F,C1		$1r,$2	nil	486
-xadd	mem,reg16		16	0F,C1		$1,$2	nil	486
-xadd	mem16x,reg16		16	0F,C1		$1,$2	nil	486
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-xadd	reg32,reg32		32	0F,C1		$1r,$2	nil	486
-xadd	mem,reg32		32	0F,C1		$1,$2	nil	486
-xadd	mem32x,reg32		32	0F,C1		$1,$2	nil	486
+xadd!cmpxchgxadd	C0
 ;xchg	REG_AX,reg16		16	90+$2		nil	nil	8086
 ;xchg	reg16,REG_AX		16	90+$1		nil	nil	8086
 ;xchg	REG_EAX,reg32		32	90+$2		nil	nil	386
@@ -919,7 +911,7 @@ xlat!onebyte		D7		8086
 xlatb!onebyte		D7		8086
 xor!arith		30,6
 xorpd!sse2pd		57
-xorps!sseps		57
+xorps!sseps		57		KATMAI,SSE
 ;
 ; Obsolete/Undocumented Instructions
 ;
