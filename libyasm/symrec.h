@@ -25,7 +25,9 @@
 /*@dependent@*/ symrec *symrec_use(const char *name);
 /*@dependent@*/ symrec *symrec_define_equ(const char *name,
 					  /*@keep@*/ expr *e);
-/* in_table specifies if the label should be inserted into the symbol table. */
+/* in_table specifies if the label should be inserted into the symbol table.
+ * All labels are memory managed internally.
+ */
 /*@dependent@*/ symrec *symrec_define_label(const char *name,
 					    /*@dependent@*/ /*@null@*/
 					    section *sect,
@@ -56,16 +58,6 @@ int /*@alt void@*/ symrec_traverse(/*@null@*/ void *d,
 void symrec_parser_finalize(void);
 
 void symrec_delete_all(void);
-
-/* Copies symrec if it isn't in the symbol table.  If it *is* in the symbol
- * table, simply returns sym.
- */
-symrec *symrec_copy(symrec *sym);
-
-/* Deletes symrec if it isn't in the symbol table.  If it *is* in the symbol
- * table, does nothing.
- */
-void symrec_delete(/*@only@*/ symrec *sym);
 
 void symrec_print_all(FILE *f);
 

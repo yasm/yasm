@@ -81,6 +81,15 @@ struct symrec {
 /* The symbol table: a ternary tree. */
 static /*@only@*/ /*@null@*/ HAMT *sym_table = NULL;
 
+/* Linked list of symbols not in the symbol table. */
+typedef struct non_table_symrec_s {
+     /*@reldef@*/ SLIST_ENTRY(non_table_symrec_s) link;
+     /*@owned@*/ symrec *rec;
+} non_table_symrec;
+typedef /*@reldef@*/ SLIST_HEAD(nontablesymhead_s, non_table_symrec_s)
+	nontablesymhead;
+static /*@only@*/ /*@null@*/ nontablesymhead *non_table_syms = NULL;
+
 static void
 symrec_delete_one(/*@only@*/ void *d)
 {
@@ -100,34 +109,63 @@ symrec_delete_one(/*@only@*/ void *d)
     xfree(sym);
 }
 
-/* create a new symrec */
-/*@-freshtrans -mustfree@*/
-static /*@partial@*/ /*@dependent@*/ symrec *
-symrec_get_or_new(const char *name, int in_table)
+static /*@partial@*/ symrec *
+symrec_new_common(/*@keep@*/ char *name)
 {
-    symrec *rec;
-    int replace = 0;
-    char *symname = xstrdup(name);
-
-    rec = xmalloc(sizeof(symrec));
-    rec->name = symname;
+    symrec *rec = xmalloc(sizeof(symrec));
+    rec->name = name;
     rec->type = SYM_UNKNOWN;
     rec->line = 0;
     rec->visibility = SYM_LOCAL;
     rec->of_data_vis_ce = NULL;
     rec->of_data_vis_g = NULL;
     rec->opt_flags = 0;
+    return rec;
+}
 
-    if (in_table) {
-	rec->status = SYM_NOSTATUS;
-	if (!sym_table)
-	    sym_table = HAMT_new();
-	return HAMT_insert(sym_table, symname, rec, &replace,
-			   symrec_delete_one);
+static /*@partial@*/ /*@dependent@*/ symrec *
+symrec_get_or_new_in_table(/*@only@*/ char *name)
+{
+    symrec *rec = symrec_new_common(name);
+    int replace = 0;
+
+    if (!sym_table)
+	sym_table = HAMT_new();
+
+    rec->status = SYM_NOSTATUS;
+
+    return HAMT_insert(sym_table, name, rec, &replace, symrec_delete_one);
+}
+
+static /*@partial@*/ /*@dependent@*/ symrec *
+symrec_get_or_new_not_in_table(/*@only@*/ char *name)
+{
+    non_table_symrec *sym = xmalloc(sizeof(non_table_symrec));
+    sym->rec = symrec_new_common(name);
+
+    if (!non_table_syms) {
+	non_table_syms = xmalloc(sizeof(nontablesymhead));
+	SLIST_INIT(non_table_syms);
     }
 
-    rec->status = SYM_NOTINTABLE;
-    return rec;
+    sym->rec->status = SYM_NOTINTABLE;
+
+    SLIST_INSERT_HEAD(non_table_syms, sym, link);
+
+    return sym->rec;
+}
+
+/* create a new symrec */
+/*@-freshtrans -mustfree@*/
+static /*@partial@*/ /*@dependent@*/ symrec *
+symrec_get_or_new(const char *name, int in_table)
+{
+    char *symname = xstrdup(name);
+
+    if (in_table)
+	return symrec_get_or_new_in_table(symname);
+    else
+	return symrec_get_or_new_not_in_table(symname);
 }
 /*@=freshtrans =mustfree@*/
 
@@ -160,7 +198,7 @@ symrec_define(const char *name, SymType type, int in_table)
     /* Has it been defined before (either by DEFINED or COMMON/EXTERN)? */
     if ((rec->status & SYM_DEFINED) ||
 	(rec->visibility & (SYM_COMMON | SYM_EXTERN))) {
-	Error(_("duplicate definition of `%s'; first defined on line %d"),
+	Error(_("duplicate definition of `%s'; first defined on line %lu"),
 	      name, rec->line);
     } else {
 	rec->line = line_index;	/* set line number of definition */
@@ -237,7 +275,7 @@ symrec_declare(const char *name, SymVisibility vis, void *of_data)
 	    }
 	}
     } else {
-	Error(_("duplicate definition of `%s'; first defined on line %d"),
+	Error(_("duplicate definition of `%s'; first defined on line %lu"),
 	      name, rec->line);
 	if (of_data)
 	    cur_objfmt->declare_data_delete(vis, of_data);
@@ -269,8 +307,11 @@ int
 symrec_get_label(const symrec *sym, symrec_get_label_sectionp *sect,
 		 symrec_get_label_bytecodep *precbc)
 {
-    if (sym->type != SYM_LABEL)
+    if (sym->type != SYM_LABEL) {
+	*sect = (symrec_get_label_sectionp)0xDEADBEEF;
+	*precbc = (symrec_get_label_bytecodep)0xDEADBEEF;
 	return 0;
+    }
     *sect = sym->value.label.sect;
     *precbc = sym->value.label.bc;
     return 1;
@@ -320,55 +361,16 @@ symrec_delete_all(void)
 	HAMT_delete(sym_table, symrec_delete_one);
 	sym_table = NULL;
     }
-}
-
-symrec *
-symrec_copy(symrec *sym)
-{
-    if (sym->status & SYM_NOTINTABLE) {
-	/* create an allocated duplicate of the symbol */
-	symrec *rec = xmalloc(sizeof(symrec));
-	rec->name = xstrdup(sym->name);
-	rec->type = sym->type;
-	rec->status = sym->status;
-	rec->visibility = sym->visibility;
-	rec->line = sym->line;
-	if (sym->type == SYM_EQU)
-	    rec->value.expn = expr_copy(sym->value.expn);
-	else {
-	    rec->value.label.sect = sym->value.label.sect;
-	    rec->value.label.bc = sym->value.label.bc;
+    if (non_table_syms) {
+	while (!SLIST_EMPTY(non_table_syms)) {
+	    non_table_symrec *sym = SLIST_FIRST(non_table_syms);
+	    SLIST_REMOVE_HEAD(non_table_syms, link);
+	    symrec_delete_one(sym->rec);
+	    xfree(sym);
 	}
-	assert(cur_objfmt != NULL);
-	if (sym->of_data_vis_g && (sym->visibility & SYM_GLOBAL))
-	    rec->of_data_vis_g =
-		cur_objfmt->declare_data_copy(SYM_GLOBAL, sym->of_data_vis_g);
-	else
-	    rec->of_data_vis_g = NULL;
-	if (sym->of_data_vis_ce) {
-	    if (sym->visibility & SYM_COMMON)
-		rec->of_data_vis_ce =
-		    cur_objfmt->declare_data_copy(SYM_COMMON,
-						  sym->of_data_vis_ce);
-	    else if (sym->visibility & SYM_EXTERN)
-		rec->of_data_vis_ce =
-		    cur_objfmt->declare_data_copy(SYM_EXTERN,
-						  sym->of_data_vis_ce);
-	} else
-	    rec->of_data_vis_ce = NULL;
-	rec->opt_flags = sym->opt_flags;
-	return rec;
-    } else
-	return sym;
-}
-
-void
-symrec_delete(symrec *sym)
-{
-    /*@-branchstate@*/
-    if (sym->status & SYM_NOTINTABLE)
-	symrec_delete_one(sym);
-    /*@=branchstate@*/
+	xfree(non_table_syms);
+	non_table_syms = NULL;
+    }
 }
 
 /*@+voidabstract@*/

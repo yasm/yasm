@@ -640,7 +640,8 @@ expr_copy_except(const expr *e, int except)
 	    dest->type = src->type;
 	    switch (src->type) {
 		case EXPR_SYM:
-		    dest->data.sym = symrec_copy(src->data.sym);
+		    /* Symbols don't need to be copied */
+		    dest->data.sym = src->data.sym;
 		    break;
 		case EXPR_EXPR:
 		    dest->data.expn = expr_copy_except(src->data.expn, -1);
@@ -681,10 +682,6 @@ expr_delete_each(/*@only@*/ expr *e, /*@unused@*/ void *d)
 		break;
 	    case EXPR_FLOAT:
 		floatnum_delete(e->terms[i].data.flt);
-		break;
-	    case EXPR_SYM:
-		/* call symrec_delete in case sym isn't in the symbol table */
-		symrec_delete(e->terms[i].data.sym);
 		break;
 	    default:
 		break;	/* none of the other types needs to be deleted */
