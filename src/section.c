@@ -59,14 +59,12 @@ sections_initialize(sectionhead *headp, objfmt *of)
     STAILQ_INIT(headp);
 
     /* Add an initial "default" section to the list */
-    s = calloc(1, sizeof(section));
-    if (!s)
-	Fatal(FATAL_NOMEM);
+    s = xcalloc(1, sizeof(section));
     STAILQ_INSERT_TAIL(headp, s, link);
 
     /* Initialize default section */
     s->type = SECTION_GENERAL;
-    s->name = strdup(of->default_section_name);
+    s->name = xstrdup(of->default_section_name);
     bytecodes_initialize(&s->bc);
 
     return s;
@@ -100,13 +98,11 @@ sections_switch(sectionhead *headp, objfmt *of, const char *name)
     }
 
     /* Okay, the name is valid; now allocate and initialize */
-    s = calloc(1, sizeof(section));
-    if (!s)
-	Fatal(FATAL_NOMEM);
+    s = xcalloc(1, sizeof(section));
     STAILQ_INSERT_TAIL(headp, s, link);
 
     s->type = SECTION_GENERAL;
-    s->name = strdup(name);
+    s->name = xstrdup(name);
     bytecodes_initialize(&s->bc);
 
     return s;

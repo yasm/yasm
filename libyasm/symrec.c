@@ -56,10 +56,7 @@ symrec_get_or_new(const char *name)
 {
     symrec *rec, *rec2;
 
-    rec = malloc(sizeof(symrec));
-    if (!rec)
-	Fatal(FATAL_NOMEM);
-
+    rec = xmalloc(sizeof(symrec));
     rec2 = ternary_insert(&sym_table, name, rec, 0);
 
     if (rec2 != rec) {
@@ -67,11 +64,9 @@ symrec_get_or_new(const char *name)
 	return rec2;
     }
 
-    rec->name = strdup(name);
-    if (!rec->name)
-	Fatal(FATAL_NOMEM);
+    rec->name = xstrdup(name);
     rec->type = SYM_UNKNOWN;
-    rec->filename = strdup(in_filename);
+    rec->filename = xstrdup(in_filename);
     rec->line = line_number;
     rec->status = SYM_NOSTATUS;
     rec->visibility = SYM_LOCAL;

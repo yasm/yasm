@@ -162,9 +162,7 @@ Error(const char *fmt, ...)
 	return;
 
     if (!errwarns) {
-	errwarns = malloc(sizeof(errwarnhead));
-	if (!errwarns)
-	    Fatal(FATAL_NOMEM);
+	errwarns = xmalloc(sizeof(errwarnhead));
 	STAILQ_INIT(errwarns);
     }
 
@@ -172,14 +170,10 @@ Error(const char *fmt, ...)
 	/* overwrite last (parser) error */	
 	we = STAILQ_LAST(errwarns, errwarn_s, link);
     } else {
-	we = malloc(sizeof(errwarn));
-	if (!we)
-	    Fatal(FATAL_NOMEM);
+	we = xmalloc(sizeof(errwarn));
 
 	we->type = WE_ERROR;
-	we->filename = strdup(in_filename);
-	if (!we->filename)
-	    Fatal(FATAL_NOMEM);
+	we->filename = xstrdup(in_filename);
 	we->line = line_number;
     }
 
@@ -210,23 +204,17 @@ Warning(const char *fmt, ...)
 
     previous_warning_line = line_number;
 
-    we = malloc(sizeof(errwarn));
-    if (!we)
-	Fatal(FATAL_NOMEM);
+    we = xmalloc(sizeof(errwarn));
 
     we->type = WE_WARNING;
-    we->filename = strdup(in_filename);
-    if (!we->filename)
-	Fatal(FATAL_NOMEM);
+    we->filename = xstrdup(in_filename);
     we->line = line_number;
     va_start(ap, fmt);
     vsprintf(we->msg, fmt, ap);
     va_end(ap);
 
     if (!errwarns) {
-	errwarns = malloc(sizeof(errwarnhead));
-	if (!errwarns)
-	    Fatal(FATAL_NOMEM);
+	errwarns = xmalloc(sizeof(errwarnhead));
 	STAILQ_INIT(errwarns);
     }
     STAILQ_INSERT_TAIL(errwarns, we, link);

@@ -184,7 +184,7 @@ label: label_id	    {
 
 label_id: ID	    {
 	$$ = $1;
-	nasm_parser_locallabel_base = strdup($1);
+	nasm_parser_locallabel_base = xstrdup($1);
     }
     | SPECIAL_ID
     | LOCAL_ID

@@ -26,9 +26,8 @@
 # include <stddef.h>
 #endif
 
-#if !defined(HAVE_STRDUP) || defined(HAVE_GNU_C_LIBRARY)
-char *strdup(const char *str);
-#endif
+/* strdup() implementation with error checking (using xmalloc). */
+char *xstrdup(const char *str);
 
 #if !defined(HAVE_STRSEP) || defined(HAVE_GNU_C_LIBRARY)
 char *strsep(char **stringp, const char *delim);
@@ -66,6 +65,11 @@ int strncasecmp(const char *s1, const char *s2, size_t n);
 #endif
 
 #include "ternary.h"
+
+/* Error-checking memory allocation routines in xmalloc.c. */
+void *xmalloc(size_t size);
+void *xcalloc(size_t nelem, size_t elsize);
+void *xrealloc(void *oldmem, size_t size);
 
 #ifdef HAVE_SYS_CDEFS_H
 # include <sys/cdefs.h>

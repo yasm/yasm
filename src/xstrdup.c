@@ -1,5 +1,5 @@
 /* $IdPath$
- * strdup() implementation for systems that don't have it.
+ * strdup() implementation with error checking (using xmalloc).
  *
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -44,7 +44,6 @@ static char sccsid[] = "@(#)strdup.c	8.1 (Berkeley) 6/4/93";
 # include <stdlib.h>
 # include <string.h>
 #else
-void *malloc(size_t);
 size_t strlen(const char *);
 # ifndef HAVE_MEMCPY
 void bcopy(const void *, void *, size_t);
@@ -57,14 +56,13 @@ void memcpy(void *, const void *, size_t);
 RCSID("$IdPath$");
 
 char *
-strdup(const char *str)
+xstrdup(const char *str)
 {
 	size_t len;
 	char *copy;
 
 	len = strlen(str) + 1;
-	if ((copy = malloc(len)) == NULL)
-		return (NULL);
+	copy = xmalloc(len);
 	memcpy(copy, str, len);
 	return (copy);
 }

@@ -47,6 +47,8 @@ libyasm_a_SOURCES = \
 	ternary.h		\
 	bitvect.c		\
 	bitvect.h		\
+	xmalloc.c		\
+	xstrdup.c		\
 	strcasecmp.c
 
 CFLAGS = @ANSI_CFLAGS@
@@ -54,5 +56,4 @@ CFLAGS = @ANSI_CFLAGS@
 EXTRA_DIST = \
 	instrs.dat		\
 	compat-queue.h		\
-	strdup.c		\
 	strtoul.c

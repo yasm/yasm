@@ -161,12 +161,8 @@ POT_Table_Init(void)
     int i;
 
     /* Allocate space for two POT tables */
-    POT_TableN = malloc(14*sizeof(POT_Entry));
-    if (!POT_TableN)
-	Fatal(FATAL_NOMEM);
-    POT_TableP = malloc(15*sizeof(POT_Entry));	/* note 1 extra for -1 */
-    if (!POT_TableP)
-	Fatal(FATAL_NOMEM);
+    POT_TableN = xmalloc(14*sizeof(POT_Entry));
+    POT_TableP = xmalloc(15*sizeof(POT_Entry));	/* note 1 extra for -1 */
 
     /* Initialize entry[0..12] */
     for (i=12; i>=0; i--) {
@@ -299,9 +295,7 @@ floatnum_new(char *str)
     if (!POT_TableN)
 	POT_Table_Init();
 
-    flt = malloc(sizeof(floatnum));
-    if (!flt)
-	Fatal(FATAL_NOMEM);
+    flt = xmalloc(sizeof(floatnum));
 
     flt->mantissa = BitVector_Create(MANT_BITS, TRUE);
     if (!flt->mantissa)

@@ -57,10 +57,7 @@ static bytecode *bytecode_new_common(void);
 effaddr *
 effaddr_new_reg(unsigned long reg)
 {
-    effaddr *ea = malloc(sizeof(effaddr));
-
-    if (!ea)
-	Fatal(FATAL_NOMEM);
+    effaddr *ea = xmalloc(sizeof(effaddr));
 
     ea->len = 0;
     ea->segment = 0;
@@ -76,10 +73,7 @@ effaddr_new_reg(unsigned long reg)
 effaddr *
 effaddr_new_expr(expr *expr_ptr)
 {
-    effaddr *ea = malloc(sizeof(effaddr));
-
-    if (!ea)
-	Fatal(FATAL_NOMEM);
+    effaddr *ea = xmalloc(sizeof(effaddr));
 
     ea->segment = 0;
 
@@ -96,10 +90,7 @@ effaddr_new_expr(expr *expr_ptr)
 effaddr *
 effaddr_new_imm(immval *im_ptr, unsigned char im_len)
 {
-    effaddr *ea = malloc(sizeof(effaddr));
-
-    if (!ea)
-	Fatal(FATAL_NOMEM);
+    effaddr *ea = xmalloc(sizeof(effaddr));
 
     ea->disp = im_ptr->val;
     if (im_ptr->len > im_len)
@@ -267,14 +258,11 @@ SetOpcodeSel(jmprel_opcode_sel *old_sel, jmprel_opcode_sel new_sel)
 static bytecode *
 bytecode_new_common(void)
 {
-    bytecode *bc = malloc(sizeof(bytecode));
-
-    if (!bc)
-	Fatal(FATAL_NOMEM);
+    bytecode *bc = xmalloc(sizeof(bytecode));
 
     bc->len = 0;
 
-    bc->filename = strdup(in_filename);
+    bc->filename = xstrdup(in_filename);
     bc->lineno = line_number;
 
     bc->offset = 0;
@@ -578,10 +566,7 @@ bytecodes_append(bytecodehead *headp, bytecode *bc)
 dataval *
 dataval_new_expr(expr *expn)
 {
-    dataval *retval = malloc(sizeof(dataval));
-
-    if (!retval)
-	Fatal(FATAL_NOMEM);
+    dataval *retval = xmalloc(sizeof(dataval));
 
     retval->type = DV_EXPR;
     retval->data.expn = expn;
@@ -592,10 +577,7 @@ dataval_new_expr(expr *expn)
 dataval *
 dataval_new_float(floatnum *flt)
 {
-    dataval *retval = malloc(sizeof(dataval));
-
-    if (!retval)
-	Fatal(FATAL_NOMEM);
+    dataval *retval = xmalloc(sizeof(dataval));
 
     retval->type = DV_FLOAT;
     retval->data.flt = flt;
@@ -606,10 +588,7 @@ dataval_new_float(floatnum *flt)
 dataval *
 dataval_new_string(char *str_val)
 {
-    dataval *retval = malloc(sizeof(dataval));
-
-    if (!retval)
-	Fatal(FATAL_NOMEM);
+    dataval *retval = xmalloc(sizeof(dataval));
 
     retval->type = DV_STRING;
     retval->data.str_val = str_val;

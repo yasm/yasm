@@ -50,9 +50,8 @@ expr_new(ExprType ltype,
 	 ExprItem right)
 {
     expr *ptr;
-    ptr = malloc(sizeof(expr));
-    if (ptr == NULL)
-	Fatal(FATAL_NOMEM);
+    ptr = xmalloc(sizeof(expr));
+
     ptr->ltype = ltype;
     ptr->op = op;
     ptr->rtype = rtype;

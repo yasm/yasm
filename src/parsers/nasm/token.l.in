@@ -126,9 +126,7 @@ WS       [ \t\r]
     int inch, count;
     char endch = yytext[0];
 
-    strbuf = malloc(STRBUF_ALLOC_SIZE);
-    if (!strbuf)
-	Fatal(FATAL_NOMEM);
+    strbuf = xmalloc(STRBUF_ALLOC_SIZE);
 
     strbuf_size = STRBUF_ALLOC_SIZE;
     inch = input();
@@ -166,16 +164,12 @@ WS       [ \t\r]
 
 <DIRECTIVE>[a-z]+   {
     BEGIN DIRECTIVE2;
-    yylval.str_val = strdup(yytext);
-    if (!yylval.str_val)
-	Fatal(FATAL_NOMEM);
+    yylval.str_val = xstrdup(yytext);
     return DIRECTIVE_NAME;
 }
     /* everything printable except for ' ', '[' and ']'. */
 <DIRECTIVE2>[!-@a-z\\^-`{|}~]+ {
-    yylval.str_val = strdup(yytext);
-    if (!yylval.str_val)
-	Fatal(FATAL_NOMEM);
+    yylval.str_val = xstrdup(yytext);
     return DIRECTIVE_VAL;
 }
 <DIRECTIVE>. {
@@ -298,10 +292,7 @@ gs	{ yylval.int_val = 5; return REG_GS; }
 
     /* special non-local ..@label and labels like ..start */
 $$|$|\.\.[a-z0-9_$#@~.?]+ {
-    yylval.str_val = strdup(yytext);
-    if (!yylval.str_val)
-	Fatal(FATAL_NOMEM);
-
+    yylval.str_val = xstrdup(yytext);
     return SPECIAL_ID;
 }
 
@@ -309,14 +300,10 @@ $$|$|\.\.[a-z0-9_$#@~.?]+ {
 \.[a-z0-9_$#@~?][a-z0-9_$#@~.?]* {
     if (!nasm_parser_locallabel_base) {
 	Warning(_("no non-local label before `%s'"), yytext);
-	yylval.str_val = strdup(yytext);
-	if (!yylval.str_val)
-	    Fatal(FATAL_NOMEM);
+	yylval.str_val = xstrdup(yytext);
     } else {
-	yylval.str_val = malloc(strlen(yytext) +
-				strlen(nasm_parser_locallabel_base) + 1);
-	if (!yylval.str_val)
-	    Fatal(FATAL_NOMEM);
+	yylval.str_val = xmalloc(strlen(yytext) +
+				 strlen(nasm_parser_locallabel_base) + 1);
 	strcpy(yylval.str_val, nasm_parser_locallabel_base);
 	strcat(yylval.str_val, yytext);
     }
@@ -329,10 +316,7 @@ $$|$|\.\.[a-z0-9_$#@~.?]+ {
 
     /* label */
 [a-z_?][a-z0-9_$#@~.?]* {
-    yylval.str_val = strdup(yytext);
-    if (!yylval.str_val)
-	Fatal(FATAL_NOMEM);
-
+    yylval.str_val = xstrdup(yytext);
     return ID;
 }
 

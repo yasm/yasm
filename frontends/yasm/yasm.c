@@ -117,7 +117,7 @@ main(int argc, char *argv[])
     if (!files_open)
     {
 	in = stdin;
-	in_filename = strdup("<STDIN>");
+	in_filename = xstrdup("<STDIN>");
     }
 
     /* Get initial BITS setting from object format */
@@ -150,7 +150,7 @@ not_an_option_handler(char *param)
 	ErrorNow(_("could not open file `%s'"), param);
 	return 1;
     }
-    in_filename = strdup(param);
+    in_filename = xstrdup(param);
 
     files_open++;
     return 0;
