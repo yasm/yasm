@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.4 2001/05/21 20:17:51 peter Exp $
+/* $Id: bytecode.h,v 1.5 2001/05/22 20:46:13 peter Exp $
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -81,6 +81,9 @@ effaddr *ConvertRegToEA(effaddr *ptr, unsigned long reg);
 effaddr *ConvertImmToEA(effaddr *ptr, immval *im_ptr, unsigned char im_len);
 
 immval *ConvertIntToImm(immval *ptr, unsigned long int_val);
+
+void SetEASegment(effaddr *ptr, unsigned char segment);
+void SetEAAddressSize(effaddr *ptr, unsigned char addrsize, unsigned char len);
 
 void BuildBC_Insn(bytecode      *bc,
 		  unsigned char  opersize,

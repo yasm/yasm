@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.5 2001/05/21 21:04:54 peter Exp $
+/* $Id: bytecode.c,v 1.6 2001/05/22 20:46:13 peter Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -108,6 +108,23 @@ immval *ConvertIntToImm(immval *ptr, unsigned long int_val)
     ptr->isneg = 0;
 
     return ptr;
+}
+
+void SetEASegment(effaddr *ptr, unsigned char segment)
+{
+    if(!ptr)
+	return;
+
+    if(ptr->segment != 0) {
+	Error(ERR_INVALID_EA, (char *)NULL);
+	return;
+    }
+
+    ptr->segment = segment;
+}
+
+void SetEAAddressSize(effaddr *ptr, unsigned char addrsize, unsigned char len)
+{
 }
 
 void BuildBC_Insn(bytecode      *bc,
