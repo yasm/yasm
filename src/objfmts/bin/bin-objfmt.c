@@ -394,6 +394,12 @@ bin_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 }
 
 static void
+bin_objfmt_section_data_delete(/*@only@*/ void *d)
+{
+    xfree(d);
+}
+
+static void
 bin_objfmt_common_declare(/*@unused@*/ symrec *sym, /*@only@*/ expr *size,
 			  /*@unused@*/ /*@null@*/
 			  valparamhead *objext_valparams)
@@ -454,7 +460,7 @@ objfmt yasm_bin_LTX_objfmt = {
     bin_objfmt_output,
     bin_objfmt_cleanup,
     bin_objfmt_sections_switch,
-    xfree,
+    bin_objfmt_section_data_delete,
     bin_objfmt_section_data_print,
     NULL /*bin_objfmt_extern_declare*/,
     NULL /*bin_objfmt_global_declare*/,
