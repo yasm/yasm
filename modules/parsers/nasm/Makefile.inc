@@ -2,6 +2,7 @@
 
 YASMPARSERFILES += \
 	src/parsers/nasm/nasm-parser.c		\
+	src/parsers/nasm/nasm-defs.h		\
 	nasm-bison.y				\
 	nasm-bison.h				\
 	nasm-token.l
@@ -37,9 +38,6 @@ nasm-bison.h: $(srcdir)/nasm-bison.h
 endif
 
 noinst_SCRIPTS = src/parsers/nasm/gen_instr.pl
-
-AM_YFLAGS = -d --name-prefix=nasm_parser_
-AM_LFLAGS = -Pnasm_parser_ -olex.yy.c
 
 BUILT_SOURCES += \
 	nasm-bison.y				\

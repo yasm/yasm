@@ -35,7 +35,7 @@ extern int nasm_parser_debug;
 
 extern int nasm_parser_parse(void);
 
-size_t (*nasm_parser_yyinput) (char *buf, size_t max_size);
+size_t (*nasm_parser_input) (char *buf, size_t max_size);
 
 sectionhead nasm_parser_sections;
 /*@dependent@*/ section *nasm_parser_cur_section;
@@ -48,7 +48,7 @@ nasm_parser_do_parse(parser *p, FILE *f)
 {
     p->current_pp->initialize(f);
     nasm_parser_in = f;
-    nasm_parser_yyinput = p->current_pp->input;
+    nasm_parser_input = p->current_pp->input;
 
     /* Initialize section list */
     nasm_parser_cur_section = sections_initialize(&nasm_parser_sections);

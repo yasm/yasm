@@ -35,18 +35,17 @@ RCSID("$IdPath$");
 
 #include "arch.h"
 
+#include "src/parsers/nasm/nasm-defs.h"
 #include "nasm-bison.h"
 
 
 #define YY_NEVER_INTERACTIVE	1
 
-#define yylval	nasm_parser_lval
-
 int nasm_parser_lex(void);
 
-extern size_t (*nasm_parser_yyinput) (char *buf, size_t max_size);
+extern size_t (*nasm_parser_input) (char *buf, size_t max_size);
 #undef YY_INPUT
-#define YY_INPUT(b, r, ms)	(r = nasm_parser_yyinput(b, ms))
+#define YY_INPUT(b, r, ms)	(r = nasm_parser_input(b, ms))
 
 /* starting size of string buffer */
 #define STRBUF_ALLOC_SIZE	128
@@ -66,6 +65,9 @@ static int linechg_numcount;
 %option noyywrap
 %option nounput
 %option case-insensitive
+%option never-interactive
+%option prefix="nasm_parser_"
+%option outfile="lex.yy.c"
 
 %x DIRECTIVE LINECHG LINECHG2
 %s DIRECTIVE2
