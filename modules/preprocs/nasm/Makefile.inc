@@ -17,13 +17,16 @@ YASM_MODULES += -dlopen preproc_nasm.la
 
 $(top_modulesdir)/src/preprocs/nasm/nasm-pp.c: nasm-macros.c
 
-nasm-macros.c: $(top_srcdir)/modules/preprocs/nasm/macros.pl $(top_srcdir)/modules/preprocs/nasm/standard.mac
-	$(PERL) $(top_srcdir)/modules/preprocs/nasm/macros.pl $(top_srcdir)/modules/preprocs/nasm/standard.mac
+nasm-macros.c: $(top_srcdir)/modules/preprocs/nasm/standard.mac genmacro$(EXEEXT)
+	$(top_builddir)/genmacro$(EXEEXT) $(top_srcdir)/modules/preprocs/nasm/standard.mac
 
 BUILT_SOURCES += nasm-macros.c
 CLEANFILES += nasm-macros.c
 
-EXTRA_DIST += modules/preprocs/nasm/macros.pl
+noinst_PROGRAMS += genmacro
+
+genmacro_SOURCES = modules/preprocs/nasm/genmacro.c
+
 EXTRA_DIST += modules/preprocs/nasm/standard.mac
 EXTRA_DIST += modules/preprocs/nasm/tests/Makefile.inc
 
