@@ -65,7 +65,7 @@ yasm_x86__directive(const char *name, yasm_valparamhead *valparams,
     const yasm_intnum *intn;
     long lval;
 
-    if (strcasecmp(name, "bits") == 0) {
+    if (yasm__strcasecmp(name, "bits") == 0) {
 	if ((vp = yasm_vps_first(valparams)) && !vp->val &&
 	    vp->param != NULL &&
 	    (intn = yasm_expr_get_intnum(&vp->param, NULL)) != NULL &&

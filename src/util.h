@@ -82,21 +82,24 @@ int mergesort(void *base, size_t nmemb, size_t size,
 /*@null@*/ char *strsep(char **stringp, const char *delim);
 #endif
 
-#ifndef HAVE_STRCASECMP
+#ifdef HAVE_STRCASECMP
+# define yasm__strcasecmp(x, y)		strcasecmp(x, y)
+# define yasm__strncasecmp(x, y)	strncasecmp(x, y)
+#else
 # ifdef HAVE_STRICMP
-#  define strcasecmp(x, y)	stricmp(x, y)
-#  define strncasecmp(x, y)	strnicmp(x, y)
+#  define yasm__strcasecmp(x, y)	stricmp(x, y)
+#  define yasm__strncasecmp(x, y)	strnicmp(x, y)
 # elif HAVE_STRCMPI
-#  define strcasecmp(x, y)	strcmpi(x, y)
-#  define strncasecmp(x, y)	strncmpi(x, y)
+#  define yasm__strcasecmp(x, y)	strcmpi(x, y)
+#  define yasm__strncasecmp(x, y)	strncmpi(x, y)
 # else
 #  define USE_OUR_OWN_STRCASECMP
 # endif
 #endif
 
 #if defined(USE_OUR_OWN_STRCASECMP) || defined(lint)
-int strcasecmp(const char *s1, const char *s2);
-int strncasecmp(const char *s1, const char *s2, size_t n);
+int yasm__strcasecmp(const char *s1, const char *s2);
+int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
 #endif
 
 #if !defined(HAVE_TOASCII) || defined(lint)

@@ -361,7 +361,7 @@ bin_objfmt_sections_switch(yasm_sectionhead *headp,
 
 	/* Check for ALIGN qualifier */
 	while ((vp = yasm_vps_next(vp))) {
-	    if (strcasecmp(vp->val, "align") == 0 && vp->param) {
+	    if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
 		/*@dependent@*/ /*@null@*/ const yasm_intnum *align;
 		unsigned long bitcnt;
 
@@ -444,7 +444,7 @@ bin_objfmt_directive(const char *name, yasm_valparamhead *valparams,
     yasm_section *sect;
     yasm_valparam *vp;
 
-    if (strcasecmp(name, "org") == 0) {
+    if (yasm__strcasecmp(name, "org") == 0) {
 	/*@dependent@*/ /*@null@*/ const yasm_intnum *start = NULL;
 
 	/* ORG takes just a simple integer as param */

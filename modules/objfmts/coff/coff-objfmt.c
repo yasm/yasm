@@ -744,14 +744,14 @@ coff_objfmt_sections_switch(yasm_sectionhead *headp,
 	flags = COFF_STYP_TEXT;
 
     while ((vp = yasm_vps_next(vp))) {
-	if (strcasecmp(vp->val, "code") == 0 ||
-	    strcasecmp(vp->val, "text") == 0) {
+	if (yasm__strcasecmp(vp->val, "code") == 0 ||
+	    yasm__strcasecmp(vp->val, "text") == 0) {
 	    flags = COFF_STYP_TEXT;
 	    flags_override = 1;
-	} else if (strcasecmp(vp->val, "data") == 0) {
+	} else if (yasm__strcasecmp(vp->val, "data") == 0) {
 	    flags = COFF_STYP_DATA;
 	    flags_override = 1;
-	} else if (strcasecmp(vp->val, "bss") == 0) {
+	} else if (yasm__strcasecmp(vp->val, "bss") == 0) {
 	    flags = COFF_STYP_BSS;
 	    flags_override = 1;
 	    resonly = 1;

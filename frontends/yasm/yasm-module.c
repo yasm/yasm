@@ -74,7 +74,7 @@ load_module(const char *keyword)
 
     /* See if the module has already been loaded. */
     SLIST_FOREACH(m, &modules, link) {
-	if (strcasecmp(m->keyword, keyword) == 0)
+	if (yasm__strcasecmp(m->keyword, keyword) == 0)
 	    return m;
     }
 

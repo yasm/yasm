@@ -550,7 +550,7 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
     unsigned long lindex = cur_lindex;
 
     /* Handle (mostly) output-format independent directives here */
-    if (strcasecmp(name, "extern") == 0) {
+    if (yasm__strcasecmp(name, "extern") == 0) {
 	vp = yasm_vps_first(valparams);
 	if (vp->val) {
 	    sym = yasm_symrec_declare(vp->val, YASM_SYM_EXTERN, lindex);
@@ -559,7 +559,7 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
 						   lindex);
 	} else
 	    cur_we->error(lindex, N_("invalid argument to [%s]"), "EXTERN");
-    } else if (strcasecmp(name, "global") == 0) {
+    } else if (yasm__strcasecmp(name, "global") == 0) {
 	vp = yasm_vps_first(valparams);
 	if (vp->val) {
 	    sym = yasm_symrec_declare(vp->val, YASM_SYM_GLOBAL, lindex);
@@ -568,7 +568,7 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
 						   lindex);
 	} else
 	    cur_we->error(lindex, N_("invalid argument to [%s]"), "GLOBAL");
-    } else if (strcasecmp(name, "common") == 0) {
+    } else if (yasm__strcasecmp(name, "common") == 0) {
 	vp = yasm_vps_first(valparams);
 	if (vp->val) {
 	    vp2 = yasm_vps_next(vp);
@@ -597,8 +597,8 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
 	    }
 	} else
 	    cur_we->error(lindex, N_("invalid argument to [%s]"), "COMMON");
-    } else if (strcasecmp(name, "section") == 0 ||
-	       strcasecmp(name, "segment") == 0) {
+    } else if (yasm__strcasecmp(name, "section") == 0 ||
+	       yasm__strcasecmp(name, "segment") == 0) {
 	yasm_section *new_section =
 	    nasm_parser_objfmt->sections_switch(&nasm_parser_sections,
 						valparams, objext_valparams,
@@ -609,7 +609,7 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
 		yasm_bcs_last(yasm_section_get_bytecodes(new_section));
 	} else
 	    cur_we->error(lindex, N_("invalid argument to [%s]"), "SECTION");
-    } else if (strcasecmp(name, "absolute") == 0) {
+    } else if (yasm__strcasecmp(name, "absolute") == 0) {
 	/* it can be just an ID or a complete expression, so handle both. */
 	vp = yasm_vps_first(valparams);
 	if (vp->val)
@@ -625,7 +625,7 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
 	    vp->param = NULL;
 	}
 	nasm_parser_prev_bc = (yasm_bytecode *)NULL;
-    } else if (strcasecmp(name, "cpu") == 0) {
+    } else if (yasm__strcasecmp(name, "cpu") == 0) {
 	yasm_vps_foreach(vp, valparams) {
 	    if (vp->val)
 		nasm_parser_arch->parse.switch_cpu(vp->val, lindex);

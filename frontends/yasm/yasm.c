@@ -325,8 +325,8 @@ main(int argc, char *argv[])
 	 * for the active object format.
 	 */
 	for (i=0; cur_objfmt->dbgfmt_keywords[i]; i++)
-	    if (strcasecmp(cur_objfmt->dbgfmt_keywords[i],
-			   cur_dbgfmt->keyword) == 0)
+	    if (yasm__strcasecmp(cur_objfmt->dbgfmt_keywords[i],
+				 cur_dbgfmt->keyword) == 0)
 		matched_dbgfmt = 1;
 	if (!matched_dbgfmt) {
 	    print_error(
@@ -378,7 +378,7 @@ main(int argc, char *argv[])
 	 * for the active parser.
 	 */
 	for (i=0; cur_parser->preproc_keywords[i]; i++)
-	    if (strcasecmp(cur_parser->preproc_keywords[i],
+	    if (yasm__strcasecmp(cur_parser->preproc_keywords[i],
 			   cur_preproc->keyword) == 0)
 		matched_preproc = 1;
 	if (!matched_preproc) {

@@ -21,8 +21,8 @@
 #define nasm_free(p) if (p) xfree(p)
 #define nasm_strdup xstrdup
 #define nasm_strndup xstrndup
-#define nasm_stricmp strcasecmp
-#define nasm_strnicmp strncasecmp
+#define nasm_stricmp yasm__strcasecmp
+#define nasm_strnicmp yasm__strncasecmp
 
 /*
  * Convert a string into a number, using NASM number rules. Sets

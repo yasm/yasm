@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)strcasecmp.c	8.1 (Berkeley) 6/4/93";
 #include <ctype.h>
 
 int
-strcasecmp(const char *s1, const char *s2)
+yasm__strcasecmp(const char *s1, const char *s2)
 {
 	const unsigned char
 			*us1 = (const unsigned char *)s1,
@@ -55,7 +55,7 @@ strcasecmp(const char *s1, const char *s2)
 }
 
 int
-strncasecmp(const char *s1, const char *s2, size_t n)
+yasm__strncasecmp(const char *s1, const char *s2, size_t n)
 {
 	const unsigned char
 			*us1 = (const unsigned char *)s1,
