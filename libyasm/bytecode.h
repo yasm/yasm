@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.17 2001/08/19 05:41:01 peter Exp $
+/* $Id: bytecode.h,v 1.18 2001/09/16 04:49:46 peter Exp $
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -74,6 +74,8 @@ typedef struct targetval_s {
 
     jmprel_opcode_sel op_sel;
 } targetval;
+
+typedef STAILQ_HEAD(bytecodehead_s, bytecode_s) bytecodehead;
 
 typedef struct bytecode_s {
     STAILQ_ENTRY(bytecode_s) link;
@@ -187,8 +189,6 @@ void DebugPrintBC(bytecode *bc);
 dataval *dataval_new_expr(struct expr_s *exp);
 dataval *dataval_new_float(double float_val);
 dataval *dataval_new_string(char *str_val);
-
-dataval *dataval_append(dataval *list, dataval *item);
 
 void dataval_print(datavalhead *head);
 

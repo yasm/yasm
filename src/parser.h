@@ -1,4 +1,4 @@
-/* $Id: parser.h,v 1.3 2001/09/15 07:16:59 peter Exp $
+/* $Id: parser.h,v 1.4 2001/09/16 04:49:46 peter Exp $
  * Parser module interface header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -36,14 +36,14 @@ typedef struct parser_s {
      */
     preproc **preprocs;
 
-    /* Default preprocessor (set even if there's only one available to use) */
-    preproc *default_pp;
+    /* Current preprocessor (set to the default at compile time) */
+    preproc *current_pp;
 
     /* Main entrance point for the parser.
      *
      * The parser needs access to both the object format module (for format-
-     * specific directives and segment names), and the selected preprocessor
-     * (which should naturally be in the preprocs list above).
+     * specific directives and segment names), and the preprocessor
+     * (it uses current_pp as set either at compile-time or by parser_setpp).
      *
      * This function also takes the FILE * to the initial starting file, but
      * not the filename (which is in a global variable and is not
@@ -51,12 +51,31 @@ typedef struct parser_s {
      *
      * This function returns the starting section of a linked list of sections
      * (whatever was in the file).
-     *
-     * Note that calling this has many side effects in the output format
-     * module: sections and variables are declared, etc.
      */
-    section *(*doparse) (preproc *pp, objfmt *of, FILE *f);
+    sectionhead *(*doparse) (struct parser_s *p, objfmt *of, FILE *f);
 } parser;
+
+/* Generic functions for all parsers - implemented in src/parser.c */
+
+/* Sets current_pp within p by searching the preprocs list for a preproc
+ * matching pp_keyword.  Returns nonzero if no match was found.
+ */
+int parser_setpp(parser *p, const char *pp_keyword);
+
+/* Lists preprocessors available for p.  Calls printfunc with the name
+ * and keyword of each available preprocessor.
+ */
+void parser_listpp(parser *p,
+		   void (*printfunc) (const char *name, const char *keyword));
+
+/* Finds a parser based on its keyword.  Returns NULL if no match was found.
+ */
+parser *find_parser(const char *keyword);
+
+/* Lists all available parsers.  Calls printfunc with the name and keyword
+ * of each available parser.
+ */
+void list_parsers(void (*printfunc) (const char *name, const char *keyword));
 
 /* Available parsers */
 extern parser nasm_parser;

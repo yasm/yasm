@@ -1,4 +1,4 @@
-/* $Id: nasm-parser.c,v 1.7 2001/09/15 07:16:59 peter Exp $
+/* $Id: nasm-parser.c,v 1.8 2001/09/16 04:49:46 peter Exp $
  * NASM-compatible parser
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -33,7 +33,7 @@
 #include "preproc.h"
 #include "parser.h"
 
-RCSID("$Id: nasm-parser.c,v 1.7 2001/09/15 07:16:59 peter Exp $");
+RCSID("$Id: nasm-parser.c,v 1.8 2001/09/16 04:49:46 peter Exp $");
 
 extern FILE *nasm_parser_in;
 extern int nasm_parser_debug;
@@ -42,12 +42,12 @@ extern int nasm_parser_parse(void);
 
 int (*nasm_parser_yyinput) (char *buf, int max_size);
 
-static section *
-doparse(preproc *pp, objfmt *of, FILE *f)
+static sectionhead *
+nasm_parser_doparse(parser *p, objfmt *of, FILE *f)
 {
-    pp->initialize(of, f);
+    p->current_pp->initialize(of, f);
     nasm_parser_in = f;
-    nasm_parser_yyinput = pp->input;
+    nasm_parser_yyinput = p->current_pp->input;
 
     /* only temporary */
     nasm_parser_debug = 1;
@@ -58,7 +58,7 @@ doparse(preproc *pp, objfmt *of, FILE *f)
 }
 
 /* Define valid preprocessors to use with this parser */
-static preproc *preprocs[] = {
+static preproc *nasm_parser_preprocs[] = {
     &raw_preproc,
     NULL
 };
@@ -67,7 +67,7 @@ static preproc *preprocs[] = {
 parser nasm_parser = {
     "NASM-compatible parser",
     "nasm",
-    preprocs,
+    nasm_parser_preprocs,
     &raw_preproc,
-    doparse
+    nasm_parser_doparse
 };

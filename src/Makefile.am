@@ -19,6 +19,7 @@ yasm_SOURCES = \
 	section.h		\
 	objfmt.h		\
 	preproc.h		\
+	parser.c		\
 	parser.h
 
 yasm_LDADD = \

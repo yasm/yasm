@@ -1,4 +1,4 @@
-/* $Id: section.h,v 1.5 2001/08/19 03:52:58 peter Exp $
+/* $Id: section.h,v 1.6 2001/09/16 04:49:46 peter Exp $
  * Section header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -22,8 +22,10 @@
 #ifndef YASM_SECTION_H
 #define YASM_SECTION_H
 
+typedef STAILQ_HEAD(sectionhead_s, section_s) sectionhead;
+
 typedef struct section_s {
-    struct section_s *next;
+    STAILQ_ENTRY(section_s) link;
 
     enum { SECTION, ABSOLUTE } type;
 
@@ -36,7 +38,7 @@ typedef struct section_s {
 	unsigned long start;
     } data;
 
-    bytecode *bc;		/* the bytecodes for the section's contents */
+    bytecodehead bc;		/* the bytecodes for the section's contents */
 } section;
 
 #endif
