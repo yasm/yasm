@@ -90,7 +90,7 @@ Results of 32\-bit operations are implicitly zero\-extended to the upper 32 bits
 .IP
 mov ecx, 1  ; 1 byte shorter than mov rcx, 1
 .IP
-and edx, 3  ; equivalent to and rdx, 5
+and edx, 3  ; equivalent to and rdx, 3
 .PP
 For most instructions in 64\-bit mode, immediate values remain 32 bits; their value is sign\-extended into the upper 32 bits of the target register prior to being used\&. The exception is the mov instruction, which can take a 64\-bit immediate when the destination is a 64\-bit register\&. Examples in NASM syntax:
 

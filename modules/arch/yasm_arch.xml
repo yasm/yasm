@@ -169,7 +169,7 @@
                 Examples in NASM syntax:</para>
 
             <screen>mov ecx, 1  ; 1 byte shorter than mov rcx, 1</screen>
-            <screen>and edx, 3  ; equivalent to and rdx, 5</screen>
+            <screen>and edx, 3  ; equivalent to and rdx, 3</screen>
 
         </refsect3>
 
