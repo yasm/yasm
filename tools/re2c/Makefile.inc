@@ -3,10 +3,10 @@
 noinst_PROGRAMS += re2c
 
 re2c_SOURCES = \
-	tools/re2c/basics.h	\
-	tools/re2c/globals.h	\
+	tools/re2c/basics.h		\
+	tools/re2c/globals.h		\
 	tools/re2c/ins.h		\
-	tools/re2c/re.h		\
+	tools/re2c/re.h			\
 	tools/re2c/token.h		\
 	tools/re2c/code.c		\
 	tools/re2c/dfa.h		\
@@ -14,11 +14,11 @@ re2c_SOURCES = \
 	tools/re2c/re2c.c		\
 	tools/re2c/parse.h		\
 	tools/re2c/re2c-parser.y	\
-	tools/re2c/actions.c	\
-	tools/re2c/scanner.h	\
-	tools/re2c/scanner.c	\
-	tools/re2c/substr.h	\
-	tools/re2c/substr.c	\
+	tools/re2c/actions.c		\
+	tools/re2c/scanner.h		\
+	tools/re2c/scanner.c		\
+	tools/re2c/substr.h		\
+	tools/re2c/substr.c		\
 	tools/re2c/translate.c
 
 BUILT_SOURCES += \
