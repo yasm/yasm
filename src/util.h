@@ -97,13 +97,13 @@ int strncasecmp(const char *s1, const char *s2, size_t n);
 # include <dmalloc.h>
 #else
 /* strdup() implementation with error checking (using xmalloc). */
-char *xstrdup(const char *str);
+/*@only@*/ char *xstrdup(const char *str);
 
 /* Error-checking memory allocation routines in xmalloc.c. */
-void *xmalloc(size_t size);
-void *xcalloc(size_t nelem, size_t elsize);
+/*@only@*/ void *xmalloc(size_t size);
+/*@only@*/ void *xcalloc(size_t nelem, size_t elsize);
 void *xrealloc(void *oldmem, size_t size);
-void xfree(void *p);
+void xfree(/*@only@*/ void *p);
 #endif
 
 #include "coretype.h"
