@@ -632,5 +632,30 @@ floatnum_get_extended(unsigned char *ptr, const floatnum *flt)
 void
 floatnum_print(const floatnum *flt)
 {
-   /* TODO */
+    unsigned char out[10];
+    unsigned char *str;
+    int i;
+
+    /* Internal format */
+    str = BitVector_to_Hex(flt->mantissa);
+    printf("%c %s *2^%04x\n", flt->sign?'-':'+', str, flt->exponent);
+    free(str);
+
+    /* 32-bit (single precision) format */
+    printf("32-bit: %d: ", floatnum_get_single(out, flt));
+    for (i=0; i<4; i++)
+	printf("%02x ", out[i]);
+    printf("\n");
+
+    /* 64-bit (double precision) format */
+    printf("64-bit: %d: ", floatnum_get_double(out, flt));
+    for (i=0; i<8; i++)
+	printf("%02x ", out[i]);
+    printf("\n");
+
+    /* 80-bit (extended precision) format */
+    printf("80-bit: %d: ", floatnum_get_extended(out, flt));
+    for (i=0; i<10; i++)
+	printf("%02x ", out[i]);
+    printf("\n");
 }
