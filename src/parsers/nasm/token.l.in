@@ -35,7 +35,7 @@ RCSID("$IdPath$");
 
 #include "arch.h"
 
-#include "bison.h"
+#include "nasm-bison.h"
 
 
 #define YY_NEVER_INTERACTIVE	1

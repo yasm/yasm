@@ -272,25 +272,11 @@ case "$host" in
 esac
 
 AC_OUTPUT(Makefile
-	check/Makefile
 	intl/Makefile
 	po/Makefile.in
-	src/Makefile
-	src/arch/Makefile
-	src/arch/x86/Makefile
-	src/parsers/Makefile
-	src/parsers/nasm/Makefile
-	src/preprocs/Makefile
-	src/preprocs/raw/Makefile
-	src/optimizers/Makefile
-	src/optimizers/basic/Makefile
-	src/objfmts/Makefile
-	src/objfmts/dbg/Makefile
-	src/tests/Makefile
 	doc/Makefile
 	doc/user/Makefile
 	doc/programmer/Makefile
 	doc/programmer/queue/Makefile
 	doc/programmer/bitvect/Makefile
-	tests/Makefile
 )
