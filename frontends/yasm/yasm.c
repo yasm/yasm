@@ -117,8 +117,10 @@ main(int argc, char *argv[])
     }
 
     /* if no files were specified, fallback to reading stdin */
-    if (!in) {
+    if (!in || !in_filename) {
 	in = stdin;
+	if (in_filename)
+	    xfree(in_filename);
 	in_filename = xstrdup("<STDIN>");
 	if (!obj)
 	    obj = stdout;
@@ -229,10 +231,8 @@ not_an_option_handler(char *param)
 {
     if (in) {
 	WarningNow("can open only one input file, only latest file will be processed");
-	if(fclose(in))
+	if (fclose(in))
 	    ErrorNow("could not close old input file");
-	if (in_filename)
-	    xfree(in_filename);
     }
 
     in = fopen(param, "rt");
@@ -240,6 +240,8 @@ not_an_option_handler(char *param)
 	ErrorNow(_("could not open file `%s'"), param);
 	return 1;
     }
+    if (in_filename)
+	xfree(in_filename);
     in_filename = xstrdup(param);
 
     files_open++;
