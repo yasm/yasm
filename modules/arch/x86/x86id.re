@@ -1725,14 +1725,9 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 			    InternalError(_("invalid operand conversion"));
 			case INSN_OPERAND_MEMORY:
 			    d.ea = op->data.ea;
-			    if ((info->operands[i] & OPT_MASK) == OPT_MemOffs) {
+			    if ((info->operands[i] & OPT_MASK) == OPT_MemOffs)
 				/* Special-case for MOV MemOffs instruction */
-				x86_effaddr_data *ead = ea_get_data(d.ea);
-				ead->valid_modrm = 0;
-				ead->need_modrm = 0;
-				ead->valid_sib = 0;
-				ead->need_sib = 0;
-			    }
+				x86_ea_set_disponly(d.ea);
 			    break;
 			case INSN_OPERAND_IMM:
 			    d.ea = x86_ea_new_imm(op->data.val,

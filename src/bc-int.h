@@ -29,13 +29,7 @@ struct effaddr {
 				 */
     unsigned char nosplit;	/* 1 if reg*2 should not be split into
 				   reg+reg. (0 if not) */
-
-    /* architecture-dependent data may be appended */
 };
-void *ea_get_data(effaddr *);
-#define ea_get_data(x)		(void *)(((char *)x)+sizeof(effaddr))
-const void *ea_get_const_data(const effaddr *);
-#define ea_get_const_data(x)	(const void *)(((const char *)x)+sizeof(effaddr))
 
 struct immval {
     /*@only@*/ /*@null@*/ expr *val;
@@ -63,13 +57,7 @@ struct bytecode {
 
     /* storage for optimizer flags */
     unsigned long opt_flags;
-
-    /* architecture-dependent data may be appended */
 };
-void *bc_get_data(bytecode *);
-#define bc_get_data(x)		(void *)(((char *)x)+sizeof(bytecode))
-const void *bc_get_const_data(const bytecode *);
-#define bc_get_const_data(x)	(const void *)(((const char *)x)+sizeof(bytecode))
 
 #define bcs_next(x)		STAILQ_NEXT(x, link)
 

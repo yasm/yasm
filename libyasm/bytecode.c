@@ -50,6 +50,8 @@ struct dataval {
 };
 
 typedef struct bytecode_data {
+    bytecode bc;    /* base structure */
+
     /* non-converted data (linked list) */
     datavalhead datahead;
 
@@ -58,11 +60,15 @@ typedef struct bytecode_data {
 } bytecode_data;
 
 typedef struct bytecode_reserve {
+    bytecode bc;    /* base structure */
+
     /*@only@*/ expr *numitems;	/* number of items to reserve */
     unsigned char itemsize;	/* size of each item (in bytes) */
 } bytecode_reserve;
 
 typedef struct bytecode_incbin {
+    bytecode bc;    /* base structure */
+
     /*@only@*/ char *filename;		/* file to include data from */
 
     /* starting offset to read from (NULL=0) */
@@ -73,10 +79,14 @@ typedef struct bytecode_incbin {
 } bytecode_incbin;
 
 typedef struct bytecode_align {
+    bytecode bc;    /* base structure */
+
     unsigned long boundary;	/* alignment boundary */
 } bytecode_align;
 
 typedef struct bytecode_objfmt_data {
+    bytecode bc;    /* base structure */
+
     unsigned int type;		/* objfmt-specific type */
     /*@only@*/ void *data;	/* objfmt-specific data */
 } bytecode_objfmt_data;
@@ -165,9 +175,9 @@ bc_set_multiple(bytecode *bc, expr *e)
 }
 
 bytecode *
-bc_new_common(bytecode_type type, size_t datasize)
+bc_new_common(bytecode_type type, size_t size)
 {
-    bytecode *bc = xmalloc(sizeof(bytecode)+datasize);
+    bytecode *bc = xmalloc(size);
 
     bc->type = type;
 
@@ -186,34 +196,39 @@ bc_new_common(bytecode_type type, size_t datasize)
 bytecode *
 bc_new_data(datavalhead *datahead, unsigned char size)
 {
-    bytecode *bc = bc_new_common(BC_DATA, sizeof(bytecode_data));
-    bytecode_data *data = bc_get_data(bc);
+    bytecode_data *data;
+
+    data = (bytecode_data *)bc_new_common(BC_DATA, sizeof(bytecode_data));
 
     data->datahead = *datahead;
     data->size = size;
 
-    return bc;
+    return (bytecode *)data;
 }
 
 bytecode *
 bc_new_reserve(expr *numitems, unsigned char itemsize)
 {
-    bytecode *bc = bc_new_common(BC_RESERVE, sizeof(bytecode_reserve));
-    bytecode_reserve *reserve = bc_get_data(bc);
+    bytecode_reserve *reserve;
+
+    reserve = (bytecode_reserve *)bc_new_common(BC_RESERVE,
+						sizeof(bytecode_reserve));
 
     /*@-mustfree@*/
     reserve->numitems = numitems;
     /*@=mustfree@*/
     reserve->itemsize = itemsize;
 
-    return bc;
+    return (bytecode *)reserve;
 }
 
 bytecode *
 bc_new_incbin(char *filename, expr *start, expr *maxlen)
 {
-    bytecode *bc = bc_new_common(BC_INCBIN, sizeof(bytecode_incbin));
-    bytecode_incbin *incbin = bc_get_data(bc);
+    bytecode_incbin *incbin;
+
+    incbin = (bytecode_incbin *)bc_new_common(BC_INCBIN,
+					      sizeof(bytecode_incbin));
 
     /*@-mustfree@*/
     incbin->filename = filename;
@@ -221,25 +236,29 @@ bc_new_incbin(char *filename, expr *start, expr *maxlen)
     incbin->maxlen = maxlen;
     /*@=mustfree@*/
 
-    return bc;
+    return (bytecode *)incbin;
 }
 
 bytecode *
 bc_new_align(unsigned long boundary)
 {
-    bytecode *bc = bc_new_common(BC_ALIGN, sizeof(bytecode_align));
-    bytecode_align *align = bc_get_data(bc);
+    bytecode_align *align;
+
+    align = (bytecode_align *)bc_new_common(BC_ALIGN, sizeof(bytecode_align));
 
     align->boundary = boundary;
 
-    return bc;
+    return (bytecode *)align;
 }
 
 bytecode *
 bc_new_objfmt_data(unsigned int type, unsigned long len, void *data)
 {
-    bytecode *bc = bc_new_common(BC_ALIGN, sizeof(bytecode_objfmt_data));
-    bytecode_objfmt_data *objfmt_data = bc_get_data(bc);
+    bytecode_objfmt_data *objfmt_data;
+
+    objfmt_data =
+	(bytecode_objfmt_data *)bc_new_common(BC_ALIGN,
+					      sizeof(bytecode_objfmt_data));
 
     objfmt_data->type = type;
     /*@-mustfree@*/
@@ -250,9 +269,9 @@ bc_new_objfmt_data(unsigned int type, unsigned long len, void *data)
      * unlike other bytecode data--it's internally generated after the
      * other bytecodes have been resolved, and the length is ALWAYS known.
      */
-    bc->len = len;
+    objfmt_data->bc.len = len;
 
-    return bc;
+    return (bytecode *)objfmt_data;
 }
 
 void
@@ -271,15 +290,15 @@ bc_delete(bytecode *bc)
 	case BC_EMPTY:
 	    break;
 	case BC_DATA:
-	    data = bc_get_data(bc);
+	    data = (bytecode_data *)bc;
 	    dvs_delete(&data->datahead);
 	    break;
 	case BC_RESERVE:
-	    reserve = bc_get_data(bc);
+	    reserve = (bytecode_reserve *)bc;
 	    expr_delete(reserve->numitems);
 	    break;
 	case BC_INCBIN:
-	    incbin = bc_get_data(bc);
+	    incbin = (bytecode_incbin *)bc;
 	    xfree(incbin->filename);
 	    expr_delete(incbin->start);
 	    expr_delete(incbin->maxlen);
@@ -287,7 +306,7 @@ bc_delete(bytecode *bc)
 	case BC_ALIGN:
 	    break;
 	case BC_OBJFMT_DATA:
-	    objfmt_data = bc_get_data(bc);
+	    objfmt_data = (bytecode_objfmt_data *)bc;
 	    assert(cur_objfmt != NULL);
 	    if (cur_objfmt->bc_objfmt_data_delete)
 		cur_objfmt->bc_objfmt_data_delete(objfmt_data->type,
@@ -324,7 +343,7 @@ bc_print(FILE *f, const bytecode *bc)
 	    fprintf(f, "%*s_Empty_\n", indent_level, "");
 	    break;
 	case BC_DATA:
-	    data = bc_get_const_data(bc);
+	    data = (const bytecode_data *)bc;
 	    fprintf(f, "%*s_Data_\n", indent_level, "");
 	    indent_level++;
 	    fprintf(f, "%*sFinal Element Size=%u\n", indent_level, "",
@@ -335,7 +354,7 @@ bc_print(FILE *f, const bytecode *bc)
 	    indent_level-=2;
 	    break;
 	case BC_RESERVE:
-	    reserve = bc_get_const_data(bc);
+	    reserve = (const bytecode_reserve *)bc;
 	    fprintf(f, "%*s_Reserve_\n", indent_level, "");
 	    fprintf(f, "%*sNum Items=", indent_level, "");
 	    expr_print(f, reserve->numitems);
@@ -343,7 +362,7 @@ bc_print(FILE *f, const bytecode *bc)
 		    (unsigned int)reserve->itemsize);
 	    break;
 	case BC_INCBIN:
-	    incbin = bc_get_const_data(bc);
+	    incbin = (const bytecode_incbin *)bc;
 	    fprintf(f, "%*s_IncBin_\n", indent_level, "");
 	    fprintf(f, "%*sFilename=`%s'\n", indent_level, "",
 		    incbin->filename);
@@ -360,12 +379,12 @@ bc_print(FILE *f, const bytecode *bc)
 	    fprintf(f, "\n");
 	    break;
 	case BC_ALIGN:
-	    align = bc_get_const_data(bc);
+	    align = (const bytecode_align *)bc;
 	    fprintf(f, "%*s_Align_\n", indent_level, "");
 	    fprintf(f, "%*sBoundary=%lu\n", indent_level, "", align->boundary);
 	    break;
 	case BC_OBJFMT_DATA:
-	    objfmt_data = bc_get_const_data(bc);
+	    objfmt_data = (const bytecode_objfmt_data *)bc;
 	    fprintf(f, "%*s_ObjFmt_Data_\n", indent_level, "");
 	    assert(cur_objfmt != NULL);
 	    if (cur_objfmt->bc_objfmt_data_print)
@@ -569,9 +588,6 @@ bc_resolve(bytecode *bc, int save, const section *sect,
 	   calc_bc_dist_func calc_bc_dist)
 {
     bc_resolve_flags retval = BC_RESOLVE_MIN_LEN;
-    bytecode_data *bc_data;
-    bytecode_reserve *reserve;
-    bytecode_incbin *incbin;
     /*@null@*/ expr *temp;
     expr **tempp;
     /*@dependent@*/ /*@null@*/ const intnum *num;
@@ -582,18 +598,15 @@ bc_resolve(bytecode *bc, int save, const section *sect,
 	case BC_EMPTY:
 	    InternalError(_("got empty bytecode in bc_calc_len"));
 	case BC_DATA:
-	    bc_data = bc_get_data(bc);
-	    retval = bc_resolve_data(bc_data, &bc->len);
+	    retval = bc_resolve_data((bytecode_data *)bc, &bc->len);
 	    break;
 	case BC_RESERVE:
-	    reserve = bc_get_data(bc);
-	    retval = bc_resolve_reserve(reserve, &bc->len, save, bc->line,
-					sect, calc_bc_dist);
+	    retval = bc_resolve_reserve((bytecode_reserve *)bc, &bc->len, save,
+					bc->line, sect, calc_bc_dist);
 	    break;
 	case BC_INCBIN:
-	    incbin = bc_get_data(bc);
-	    retval = bc_resolve_incbin(incbin, &bc->len, save, bc->line, sect,
-				       calc_bc_dist);
+	    retval = bc_resolve_incbin((bytecode_incbin *)bc, &bc->len, save,
+				       bc->line, sect, calc_bc_dist);
 	    break;
 	case BC_ALIGN:
 	    /* TODO */
@@ -733,8 +746,6 @@ bc_tobytes(bytecode *bc, unsigned char *buf, unsigned long *bufsize,
     /*@only@*/ /*@null@*/ unsigned char *mybuf = NULL;
     unsigned char *origbuf, *destbuf;
     /*@dependent@*/ /*@null@*/ const intnum *num;
-    bytecode_data *bc_data;
-    bytecode_incbin *incbin;
     bytecode_objfmt_data *objfmt_data;
     unsigned long datasize;
     int error = 0;
@@ -774,20 +785,19 @@ bc_tobytes(bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 	case BC_EMPTY:
 	    InternalError(_("got empty bytecode in bc_tobytes"));
 	case BC_DATA:
-	    bc_data = bc_get_data(bc);
-	    error = bc_tobytes_data(bc_data, &destbuf, sect, bc, d,
+	    error = bc_tobytes_data((bytecode_data *)bc, &destbuf, sect, bc, d,
 				    output_expr);
 	    break;
 	case BC_INCBIN:
-	    incbin = bc_get_data(bc);
-	    error = bc_tobytes_incbin(incbin, &destbuf, bc->len, bc->line);
+	    error = bc_tobytes_incbin((bytecode_incbin *)bc, &destbuf, bc->len,
+				      bc->line);
 	    break;
 	case BC_ALIGN:
 	    /* TODO */
 	    InternalError(_("TODO: align bytecode not implemented!"));
 	    /*break;*/
 	case BC_OBJFMT_DATA:
-	    objfmt_data = bc_get_data(bc);
+	    objfmt_data = (bytecode_objfmt_data *)bc;
 	    if (output_bc_objfmt_data)
 		error = output_bc_objfmt_data(objfmt_data->type,
 					      objfmt_data->data, &destbuf);

@@ -37,21 +37,100 @@
 #include "bc-int.h"
 
 
+typedef struct x86_effaddr {
+    effaddr ea;	    /* base structure */
+
+    unsigned char segment;	/* segment override, 0 if none */
+
+    /* How the spare (register) bits in Mod/RM are handled:
+     * Even if valid_modrm=0, the spare bits are still valid (don't overwrite!)
+     * They're set in bytecode_new_insn().
+     */
+    unsigned char modrm;
+    unsigned char valid_modrm;	/* 1 if Mod/RM byte currently valid, 0 if not */
+    unsigned char need_modrm;	/* 1 if Mod/RM byte needed, 0 if not */
+
+    unsigned char sib;
+    unsigned char valid_sib;	/* 1 if SIB byte currently valid, 0 if not */
+    unsigned char need_sib;	/* 1 if SIB byte needed, 0 if not,
+				   0xff if unknown */
+} x86_effaddr;
+
+typedef struct x86_insn {
+    bytecode bc;    /* base structure */
+
+    /*@null@*/ x86_effaddr *ea;	/* effective address */
+
+    /*@null@*/ immval *imm;	/* immediate or relative value */
+
+    unsigned char opcode[3];	/* opcode */
+    unsigned char opcode_len;
+
+    unsigned char addrsize;	/* 0 or =mode_bits => no override */
+    unsigned char opersize;	/* 0 indicates no override */
+    unsigned char lockrep_pre;	/* 0 indicates no prefix */
+
+    unsigned char rex;		/* REX x86-64 extension, 0 if none */
+
+    /* HACK, but a space-saving one: shift opcodes have an immediate
+     * form and a ,1 form (with no immediate).  In the parser, we
+     * set this and opcode_len=1, but store the ,1 version in the
+     * second byte of the opcode array.  We then choose between the
+     * two versions once we know the actual value of imm (because we
+     * don't know it in the parser module).
+     *
+     * A override to force the imm version should just leave this at
+     * 0.  Then later code won't know the ,1 version even exists.
+     * TODO: Figure out how this affects CPU flags processing.
+     *
+     * Call x86_SetInsnShiftFlag() to set this flag to 1.
+     */
+    unsigned char shift_op;
+
+    /* HACK, similar to that for shift_op above, for optimizing instructions
+     * that take a sign-extended imm8 as well as imm values (eg, the arith
+     * instructions and a subset of the imul instructions).
+     */
+    unsigned char signext_imm8_op;
+
+    unsigned char mode_bits;
+} x86_insn;
+
+typedef struct x86_jmprel {
+    bytecode bc;    /* base structure */
+
+    expr *target;		/* target location */
+
+    struct {
+	unsigned char opcode[3];
+	unsigned char opcode_len;   /* 0 = no opc for this version */
+    } shortop, nearop;
+
+    /* which opcode are we using? */
+    /* The *FORCED forms are specified in the source as such */
+    x86_jmprel_opcode_sel op_sel;
+
+    unsigned char addrsize;	/* 0 or =mode_bits => no override */
+    unsigned char opersize;	/* 0 indicates no override */
+    unsigned char lockrep_pre;	/* 0 indicates no prefix */
+
+    unsigned char mode_bits;
+} x86_jmprel;
+
+
 /*@-compmempass -mustfree@*/
 bytecode *
 x86_bc_new_insn(x86_new_insn_data *d)
 {
-    bytecode *bc;
     x86_insn *insn;
    
-    bc = bc_new_common((bytecode_type)X86_BC_INSN, sizeof(x86_insn));
-    insn = bc_get_data(bc);
+    insn = (x86_insn *)bc_new_common((bytecode_type)X86_BC_INSN,
+				     sizeof(x86_insn));
 
-    insn->ea = d->ea;
+    insn->ea = (x86_effaddr *)d->ea;
     if (d->ea) {
-	x86_effaddr_data *ead = ea_get_data(d->ea);
-	ead->modrm &= 0xC7;	/* zero spare/reg bits */
-	ead->modrm |= (d->spare << 3) & 0x38;	/* plug in provided bits */
+	insn->ea->modrm &= 0xC7;	/* zero spare/reg bits */
+	insn->ea->modrm |= (d->spare << 3) & 0x38;  /* plug in provided bits */
     }
 
     if (d->imm) {
@@ -75,7 +154,7 @@ x86_bc_new_insn(x86_new_insn_data *d)
 
     insn->mode_bits = x86_mode_bits;
 
-    return bc;
+    return (bytecode *)insn;
 }
 /*@=compmempass =mustfree@*/
 
@@ -83,11 +162,10 @@ x86_bc_new_insn(x86_new_insn_data *d)
 bytecode *
 x86_bc_new_jmprel(x86_new_jmprel_data *d)
 {
-    bytecode *bc;
     x86_jmprel *jmprel;
 
-    bc = bc_new_common((bytecode_type)X86_BC_JMPREL, sizeof(x86_jmprel));
-    jmprel = bc_get_data(bc);
+    jmprel = (x86_jmprel *)bc_new_common((bytecode_type)X86_BC_JMPREL,
+					 sizeof(x86_jmprel));
 
     jmprel->target = d->target;
     jmprel->op_sel = d->op_sel;
@@ -113,101 +191,113 @@ x86_bc_new_jmprel(x86_new_jmprel_data *d)
 
     jmprel->mode_bits = x86_mode_bits;
 
-    return bc;
+    return (bytecode *)jmprel;
 }
 /*@=compmempass =mustfree@*/
 
 void
 x86_ea_set_segment(effaddr *ea, unsigned char segment)
 {
-    x86_effaddr_data *ead;
+    x86_effaddr *x86_ea = (x86_effaddr *)ea;
 
     if (!ea)
 	return;
 
-    ead = ea_get_data(ea);
-
-    if (segment != 0 && ead->segment != 0)
+    if (segment != 0 && x86_ea->segment != 0)
 	Warning(_("multiple segment overrides, using leftmost"));
 
-    ead->segment = segment;
+    x86_ea->segment = segment;
+}
+
+void
+x86_ea_set_disponly(effaddr *ea)
+{
+    x86_effaddr *x86_ea = (x86_effaddr *)ea;
+
+    x86_ea->valid_modrm = 0;
+    x86_ea->need_modrm = 0;
+    x86_ea->valid_sib = 0;
+    x86_ea->need_sib = 0;
 }
 
 effaddr *
 x86_ea_new_reg(unsigned char reg)
 {
-    effaddr *ea = xmalloc(sizeof(effaddr)+sizeof(x86_effaddr_data));
-    x86_effaddr_data *ead = ea_get_data(ea);
+    x86_effaddr *x86_ea;
 
-    ea->disp = (expr *)NULL;
-    ea->len = 0;
-    ea->nosplit = 0;
-    ead->segment = 0;
-    ead->modrm = 0xC0 | (reg & 0x07);	/* Mod=11, R/M=Reg, Reg=0 */
-    ead->valid_modrm = 1;
-    ead->need_modrm = 1;
-    ead->sib = 0;
-    ead->valid_sib = 0;
-    ead->need_sib = 0;
+    x86_ea = xmalloc(sizeof(x86_effaddr));
 
-    return ea;
+    x86_ea->ea.disp = (expr *)NULL;
+    x86_ea->ea.len = 0;
+    x86_ea->ea.nosplit = 0;
+    x86_ea->segment = 0;
+    x86_ea->modrm = 0xC0 | (reg & 0x07);	/* Mod=11, R/M=Reg, Reg=0 */
+    x86_ea->valid_modrm = 1;
+    x86_ea->need_modrm = 1;
+    x86_ea->sib = 0;
+    x86_ea->valid_sib = 0;
+    x86_ea->need_sib = 0;
+
+    return (effaddr *)x86_ea;
 }
 
 effaddr *
 x86_ea_new_expr(expr *e)
 {
-    effaddr *ea = xmalloc(sizeof(effaddr)+sizeof(x86_effaddr_data));
-    x86_effaddr_data *ead = ea_get_data(ea);
+    x86_effaddr *x86_ea;
 
-    ea->disp = e;
-    ea->len = 0;
-    ea->nosplit = 0;
-    ead->segment = 0;
-    ead->modrm = 0;
-    ead->valid_modrm = 0;
-    ead->need_modrm = 1;
-    ead->sib = 0;
-    ead->valid_sib = 0;
-    ead->need_sib = 0xff;   /* we won't know until we know more about expr and
-			       the BITS/address override setting */
+    x86_ea = xmalloc(sizeof(x86_effaddr));
 
-    return ea;
+    x86_ea->ea.disp = e;
+    x86_ea->ea.len = 0;
+    x86_ea->ea.nosplit = 0;
+    x86_ea->segment = 0;
+    x86_ea->modrm = 0;
+    x86_ea->valid_modrm = 0;
+    x86_ea->need_modrm = 1;
+    x86_ea->sib = 0;
+    x86_ea->valid_sib = 0;
+    /* We won't know whether we need an SIB until we know more about expr and
+     * the BITS/address override setting.
+     */
+    x86_ea->need_sib = 0xff;
+
+    return (effaddr *)x86_ea;
 }
 
 /*@-compmempass@*/
 effaddr *
 x86_ea_new_imm(expr *imm, unsigned char im_len)
 {
-    effaddr *ea = xmalloc(sizeof(effaddr)+sizeof(x86_effaddr_data));
-    x86_effaddr_data *ead = ea_get_data(ea);
+    x86_effaddr *x86_ea;
 
-    ea->disp = imm;
-    ea->len = im_len;
-    ea->nosplit = 0;
-    ead->segment = 0;
-    ead->modrm = 0;
-    ead->valid_modrm = 0;
-    ead->need_modrm = 0;
-    ead->sib = 0;
-    ead->valid_sib = 0;
-    ead->need_sib = 0;
+    x86_ea = xmalloc(sizeof(x86_effaddr));
 
-    return ea;
+    x86_ea->ea.disp = imm;
+    x86_ea->ea.len = im_len;
+    x86_ea->ea.nosplit = 0;
+    x86_ea->segment = 0;
+    x86_ea->modrm = 0;
+    x86_ea->valid_modrm = 0;
+    x86_ea->need_modrm = 0;
+    x86_ea->sib = 0;
+    x86_ea->valid_sib = 0;
+    x86_ea->need_sib = 0;
+
+    return (effaddr *)x86_ea;
 }
 /*@=compmempass@*/
 
 effaddr *
 x86_bc_insn_get_ea(bytecode *bc)
 {
-    x86_insn *insn = bc_get_data(bc);
-
     if (!bc)
 	return NULL;
 
     if ((x86_bytecode_type)bc->type != X86_BC_INSN)
 	InternalError(_("Trying to get EA of non-instruction"));
 
-    return insn->ea;
+    return (effaddr *)(((x86_insn *)bc)->ea);
 }
 
 void
@@ -221,11 +311,11 @@ x86_bc_insn_opersize_override(bytecode *bc, unsigned char opersize)
 
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
-	    insn = bc_get_data(bc);
+	    insn = (x86_insn *)bc;
 	    insn->opersize = opersize;
 	    break;
 	case X86_BC_JMPREL:
-	    jmprel = bc_get_data(bc);
+	    jmprel = (x86_jmprel *)bc;
 	    jmprel->opersize = opersize;
 	    break;
 	default:
@@ -244,11 +334,11 @@ x86_bc_insn_addrsize_override(bytecode *bc, unsigned char addrsize)
 
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
-	    insn = bc_get_data(bc);
+	    insn = (x86_insn *)bc;
 	    insn->addrsize = addrsize;
 	    break;
 	case X86_BC_JMPREL:
-	    jmprel = bc_get_data(bc);
+	    jmprel = (x86_jmprel *)bc;
 	    jmprel->addrsize = addrsize;
 	    break;
 	default:
@@ -268,11 +358,11 @@ x86_bc_insn_set_lockrep_prefix(bytecode *bc, unsigned char prefix)
 
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
-	    insn = bc_get_data(bc);
+	    insn = (x86_insn *)bc;
 	    lockrep_pre = &insn->lockrep_pre;
 	    break;
 	case X86_BC_JMPREL:
-	    jmprel = bc_get_data(bc);
+	    jmprel = (x86_jmprel *)bc;
 	    lockrep_pre = &jmprel->lockrep_pre;
 	    break;
 	default:
@@ -306,16 +396,16 @@ x86_bc_delete(bytecode *bc)
 
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
-	    insn = bc_get_data(bc);
+	    insn = (x86_insn *)bc;
 	    if (insn->ea)
-		ea_delete(insn->ea);
+		ea_delete((effaddr *)insn->ea);
 	    if (insn->imm) {
 		expr_delete(insn->imm->val);
 		xfree(insn->imm);
 	    }
 	    break;
 	case X86_BC_JMPREL:
-	    jmprel = bc_get_data(bc);
+	    jmprel = (x86_jmprel *)bc;
 	    expr_delete(jmprel->target);
 	    break;
     }
@@ -324,15 +414,15 @@ x86_bc_delete(bytecode *bc)
 void
 x86_ea_data_print(FILE *f, const effaddr *ea)
 {
-    const x86_effaddr_data *ead = ea_get_const_data(ea);
+    const x86_effaddr *x86_ea = (const x86_effaddr *)ea;
     fprintf(f, "%*sSegmentOv=%02x\n", indent_level, "",
-	    (unsigned int)ead->segment);
+	    (unsigned int)x86_ea->segment);
     fprintf(f, "%*sModRM=%03o ValidRM=%u NeedRM=%u\n", indent_level, "",
-	    (unsigned int)ead->modrm, (unsigned int)ead->valid_modrm,
-	    (unsigned int)ead->need_modrm);
+	    (unsigned int)x86_ea->modrm, (unsigned int)x86_ea->valid_modrm,
+	    (unsigned int)x86_ea->need_modrm);
     fprintf(f, "%*sSIB=%03o ValidSIB=%u NeedSIB=%u\n", indent_level, "",
-	    (unsigned int)ead->sib, (unsigned int)ead->valid_sib,
-	    (unsigned int)ead->need_sib);
+	    (unsigned int)x86_ea->sib, (unsigned int)x86_ea->valid_sib,
+	    (unsigned int)x86_ea->need_sib);
 }
 
 void
@@ -343,13 +433,13 @@ x86_bc_print(FILE *f, const bytecode *bc)
 
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
-	    insn = bc_get_const_data(bc);
+	    insn = (const x86_insn *)bc;
 	    fprintf(f, "%*s_Instruction_\n", indent_level, "");
 	    fprintf(f, "%*sEffective Address:", indent_level, "");
 	    if (insn->ea) {
 		fprintf(f, "\n");
 		indent_level++;
-		ea_print(f, insn->ea);
+		ea_print(f, (effaddr *)insn->ea);
 		indent_level--;
 	    } else
 		fprintf(f, " (nil)\n");
@@ -386,7 +476,7 @@ x86_bc_print(FILE *f, const bytecode *bc)
 		    (unsigned int)insn->mode_bits);
 	    break;
 	case X86_BC_JMPREL:
-	    jmprel = bc_get_const_data(bc);
+	    jmprel = (const x86_jmprel *)bc;
 	    fprintf(f, "%*s_Relative Jump_\n", indent_level, "");
 	    fprintf(f, "%*sTarget=", indent_level, "");
 	    expr_print(f, jmprel->target);
@@ -451,14 +541,14 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 		    const section *sect, calc_bc_dist_func calc_bc_dist)
 {
     /*@null@*/ expr *temp;
-    effaddr *ea = insn->ea;
-    x86_effaddr_data *ead = ea_get_data(ea);
+    x86_effaddr *x86_ea = insn->ea;
+    effaddr *ea = &x86_ea->ea;
     immval *imm = insn->imm;
     bc_resolve_flags retval = BC_RESOLVE_MIN_LEN;
 
     if (ea) {
 	/* Create temp copy of disp, etc. */
-	x86_effaddr_data ead_t = *ead;  /* structure copy */
+	x86_effaddr eat = *x86_ea;  /* structure copy */
 	unsigned char displen = ea->len;
 
 	if (ea->disp) {
@@ -471,10 +561,10 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 	     * displacement.
 	     */
 	    if (!x86_expr_checkea(&temp, &insn->addrsize, insn->mode_bits,
-				  ea->nosplit, &displen, &ead_t.modrm,
-				  &ead_t.valid_modrm, &ead_t.need_modrm,
-				  &ead_t.sib, &ead_t.valid_sib,
-				  &ead_t.need_sib, calc_bc_dist)) {
+				  ea->nosplit, &displen, &eat.modrm,
+				  &eat.valid_modrm, &eat.need_modrm,
+				  &eat.sib, &eat.valid_sib,
+				  &eat.need_sib, calc_bc_dist)) {
 		expr_delete(temp);
 		/* failed, don't bother checking rest of insn */
 		return BC_RESOLVE_UNKNOWN_LEN|BC_RESOLVE_ERROR;
@@ -492,7 +582,7 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 	    }
 
 	    if (save) {
-		*ead = ead_t;	/* structure copy */
+		*x86_ea = eat;	/* structure copy */
 		ea->len = displen;
 		if (displen == 0 && ea->disp) {
 		    expr_delete(ea->disp);
@@ -502,8 +592,8 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 	}
 
 	/* Compute length of ea and add to total */
-	*len += ead_t.need_modrm + ead_t.need_sib + displen;
-	*len += (ead_t.segment != 0) ? 1 : 0;
+	*len += eat.need_modrm + eat.need_sib + displen;
+	*len += (eat.segment != 0) ? 1 : 0;
     }
 
     if (imm) {
@@ -698,18 +788,13 @@ bc_resolve_flags
 x86_bc_resolve(bytecode *bc, int save, const section *sect,
 	       calc_bc_dist_func calc_bc_dist)
 {
-    x86_insn *insn;
-    x86_jmprel *jmprel;
-
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
-	    insn = bc_get_data(bc);
-	    return x86_bc_resolve_insn(insn, &bc->len, save, sect,
+	    return x86_bc_resolve_insn((x86_insn *)bc, &bc->len, save, sect,
 				       calc_bc_dist);
 	case X86_BC_JMPREL:
-	    jmprel = bc_get_data(bc);
-	    return x86_bc_resolve_jmprel(jmprel, &bc->len, save, bc, sect,
-					 calc_bc_dist);
+	    return x86_bc_resolve_jmprel((x86_jmprel *)bc, &bc->len, save, bc,
+					 sect, calc_bc_dist);
 	default:
 	    break;
     }
@@ -722,16 +807,16 @@ static int
 x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
 		    const bytecode *bc, void *d, output_expr_func output_expr)
 {
-    /*@null@*/ effaddr *ea = insn->ea;
-    x86_effaddr_data *ead = ea_get_data(ea);
+    /*@null@*/ x86_effaddr *x86_ea = insn->ea;
+    /*@null@*/ effaddr *ea = &x86_ea->ea;
     immval *imm = insn->imm;
     unsigned int i;
 
     /* Prefixes */
     if (insn->lockrep_pre != 0)
 	WRITE_8(*bufp, insn->lockrep_pre);
-    if (ea && ead->segment != 0)
-	WRITE_8(*bufp, ead->segment);
+    if (x86_ea && x86_ea->segment != 0)
+	WRITE_8(*bufp, x86_ea->segment);
     if (insn->opersize != 0 && insn->opersize != insn->mode_bits)
 	WRITE_8(*bufp, 0x66);
     if (insn->addrsize != 0 && insn->addrsize != insn->mode_bits)
@@ -750,34 +835,34 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
      * displacement (if required).
      */
     if (ea) {
-	if (ead->need_modrm) {
-	    if (!ead->valid_modrm)
+	if (x86_ea->need_modrm) {
+	    if (!x86_ea->valid_modrm)
 		InternalError(_("invalid Mod/RM in x86 tobytes_insn"));
-	    WRITE_8(*bufp, ead->modrm);
+	    WRITE_8(*bufp, x86_ea->modrm);
 	}
 
-	if (ead->need_sib) {
-	    if (!ead->valid_sib)
+	if (x86_ea->need_sib) {
+	    if (!x86_ea->valid_sib)
 		InternalError(_("invalid SIB in x86 tobytes_insn"));
-	    WRITE_8(*bufp, ead->sib);
+	    WRITE_8(*bufp, x86_ea->sib);
 	}
 
 	if (ea->disp) {
-	    x86_effaddr_data ead_t = *ead;  /* structure copy */
+	    x86_effaddr eat = *x86_ea;  /* structure copy */
 	    unsigned char displen = ea->len;
 	    unsigned char addrsize = insn->addrsize;
 
-	    ead_t.valid_modrm = 0;  /* force checkea to actually run */
+	    eat.valid_modrm = 0;    /* force checkea to actually run */
 
 	    /* Call checkea() to simplify the registers out of the
 	     * displacement.  Throw away all of the return values except for
 	     * the modified expr.
 	     */
 	    if (!x86_expr_checkea(&ea->disp, &addrsize, insn->mode_bits,
-				  ea->nosplit, &displen, &ead_t.modrm,
-				  &ead_t.valid_modrm, &ead_t.need_modrm,
-				  &ead_t.sib, &ead_t.valid_sib,
-				  &ead_t.need_sib, common_calc_bc_dist))
+				  ea->nosplit, &displen, &eat.modrm,
+				  &eat.valid_modrm, &eat.need_modrm,
+				  &eat.sib, &eat.valid_sib,
+				  &eat.need_sib, common_calc_bc_dist))
 		InternalError(_("checkea failed"));
 
 	    if (ea->disp) {
@@ -867,16 +952,12 @@ int
 x86_bc_tobytes(bytecode *bc, unsigned char **bufp, const section *sect,
 	       void *d, output_expr_func output_expr)
 {
-    x86_insn *insn;
-    x86_jmprel *jmprel;
-
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
-	    insn = bc_get_data(bc);
-	    return x86_bc_tobytes_insn(insn, bufp, sect, bc, d, output_expr);
+	    return x86_bc_tobytes_insn((x86_insn *)bc, bufp, sect, bc, d,
+				       output_expr);
 	case X86_BC_JMPREL:
-	    jmprel = bc_get_data(bc);
-	    return x86_bc_tobytes_jmprel(jmprel, bufp, sect, bc, d,
+	    return x86_bc_tobytes_jmprel((x86_jmprel *)bc, bufp, sect, bc, d,
 					 output_expr);
 	default:
 	    break;
