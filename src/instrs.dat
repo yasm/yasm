@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.18 2001/07/05 02:53:35 peter Exp $
+; $Id: instrs.dat,v 1.19 2001/07/05 02:57:56 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -461,8 +461,6 @@ leave!onebyte		C9		186
 ; String instructions
 ;
 ;  NOTE: cmpsd,movsd can't go to !onebyte32 group because of other variations
-cmppd!sse2pdimm		C2
-cmpps!ssepsimm		C2
 cmpsb!onebyte		A6		8086
 cmpsw!onebyte16		A7
 cmpsd	nil			32	A7		nil	nil	386
@@ -845,7 +843,7 @@ andps!sseps		54		KATMAI,SSE
 ; cmpordss
 ; cmpunordps
 ; cmpunordss
-; cmpps
+cmpps!ssepsimm		C2
 cmpss	XMMREG,rm128,imm8	nil	F3,0F,C2	$2,$1	$3,8	P4,SSE2
 comiss!sseps		2F		KATMAI,SSE
 cvtpi2ps!sseps		2A		KATMAI,SSE
@@ -952,7 +950,7 @@ andpd!sse2pd		54
 ; cmpordsd
 ; cmpunordpd
 ; cmpunordsd
-; cmppd
+cmppd!sse2pdimm		C2
 cmpsd	XMMREG,rm128,imm8	nil	F2,0F,C2	$2,$1	$3,8	P4,SSE2
 comisd!sse2pd		2F
 cvtpi2pd!sse2pd		2A
