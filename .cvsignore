@@ -16,3 +16,4 @@ aclocal.m4
 intl
 ABOUT-NLS
 *.tar.gz
+*.yp
