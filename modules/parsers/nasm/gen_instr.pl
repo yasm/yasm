@@ -539,7 +539,6 @@ sub output_yacc ($@)
 			else
 			{
 			    my @opcodes;
-			    print $inst->[SHORTOPCODE]."\n";
 			    # Check for possible length parameter
 			    if($inst->[SHORTOPCODE] =~ m/\?/)
 			    {
