@@ -471,12 +471,12 @@ x86_bc_calc_len_insn(x86_insn *insn, unsigned long *len,
     int retval = 1;		/* may turn into 0 at some point */
 
     if (ea) {
+	/* Create temp copy of disp, etc. */
+	x86_effaddr_data ead_t = *ead;  /* structure copy */
+	unsigned char displen = ea->len;
+
 	if ((ea->disp) && ((!ead->valid_sib && ead->need_sib) ||
 			   (!ead->valid_modrm && ead->need_modrm))) {
-	    /* Create temp copy of disp, etc. */
-	    x86_effaddr_data ead_t = *ead;  /* structure copy */
-	    unsigned char displen = ea->len;
-
 	    temp = expr_copy(ea->disp);
 	    assert(temp != NULL);
 
@@ -526,10 +526,11 @@ x86_bc_calc_len_insn(x86_insn *insn, unsigned long *len,
 		if (displen == 0xff)
 		    displen = (insn->addrsize == 32) ? 4 : 2;
 	    }
-
-	    /* Compute length of ea and add to total */
-	    *len += ead_t.need_modrm + ead_t.need_sib + displen;
 	}
+
+	/* Compute length of ea and add to total */
+	*len += ead_t.need_modrm + ead_t.need_sib + displen;
+	*len += (ead_t.segment != 0) ? 1 : 0;
     }
 
     if (imm) {
@@ -564,18 +565,107 @@ x86_bc_calc_len_insn(x86_insn *insn, unsigned long *len,
     *len += (insn->opersize != 0 && insn->opersize != insn->mode_bits) ? 1:0;
     *len += (insn->lockrep_pre != 0) ? 1:0;
 
-    return 0;
+    return retval;
+}
+
+static int
+x86_bc_calc_len_jmprel(x86_jmprel *jmprel, unsigned long *len,
+		       unsigned long offset,
+		       intnum *(*resolve_label) (symrec *sym))
+{
+    int retval = 1;
+    /*@null@*/ expr *temp;
+    /*@dependent@*/ /*@null@*/ const intnum *num;
+    unsigned long target;
+    long rel;
+    unsigned char opersize;
+    int jrshort = 1;
+
+    /* As opersize may be 0, figure out its "real" value. */
+    opersize = (jmprel->opersize == 0) ? jmprel->mode_bits :
+	jmprel->opersize;
+
+    /* We don't check here to see if forced forms are actually legal; we
+     * assume that they are, and only check it in x86_bc_resolve_jmprel().
+     */
+    switch (jmprel->op_sel) {
+	case JR_SHORT_FORCED:
+	    /* 1 byte relative displacement */
+	    jrshort = 1;
+	    break;
+	case JR_NEAR_FORCED:
+	    /* 2/4 byte relative displacement (depending on operand size) */
+	    jrshort = 0;
+	    break;
+	default:
+	    /* Try to find shortest displacement based on difference between
+	     * target expr value and our (this bytecode's) offset.  Note this
+	     * requires offset to be set BEFORE calling calc_len in order for
+	     * this test to be valid.
+	     */
+	    temp = expr_copy(jmprel->target);
+	    assert(temp != NULL);
+	    expr_expand_labelequ(temp, resolve_label);
+	    num = expr_get_intnum(&temp);
+	    if (num) {
+		target = intnum_get_uint(num);
+		rel = (long)(target-offset);
+		/* short displacement must fit within -128 <= rel <= +127 */
+		if (rel >= -128 && rel <= 127) {
+		    /* It fits into a short displacement.  Remember it fit as
+		     * such, and return minimal sizing.
+		     */
+		    jmprel->op_sel = JR_SHORT;
+		    jrshort = 1;
+		} else {
+		    /* Near for now, but could get shorter in the future. */
+		    jrshort = 0;
+		    retval = 0;
+		}
+	    } else {
+		/* We have to assume it'll be a near displacement */
+		jrshort = 0;
+		retval = 0;
+	    }
+	    expr_delete(temp);
+	    break;
+    }
+
+    if (jrshort) {
+	if (jmprel->shortop.opcode_len == 0)
+	    return -1;	    /* uh-oh, that size not available */
+
+	*len += jmprel->shortop.opcode_len + 1;
+    } else {
+	if (jmprel->nearop.opcode_len == 0)
+	    return -1;	    /* uh-oh, that size not available */
+
+	*len += jmprel->nearop.opcode_len;
+	*len += (opersize == 32) ? 4 : 2;
+    }
+    *len += (jmprel->addrsize != 0 && jmprel->addrsize != jmprel->mode_bits) ?
+	1:0;
+    *len += (jmprel->opersize != 0 && jmprel->opersize != jmprel->mode_bits) ?
+	1:0;
+    *len += (jmprel->lockrep_pre != 0) ? 1:0;
+
+    return retval;
 }
 
 int
 x86_bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
 {
     x86_insn *insn;
+    x86_jmprel *jmprel;
 
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
 	    insn = bc_get_data(bc);
 	    return x86_bc_calc_len_insn(insn, &bc->len, resolve_label);
+	case X86_BC_JMPREL:
+	    jmprel = bc_get_data(bc);
+	    return x86_bc_calc_len_jmprel(jmprel, &bc->len, bc->offset,
+					  resolve_label);
 	default:
 	    break;
     }
