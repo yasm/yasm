@@ -1,3 +1,5 @@
+#include <config.h>
+
 #include "globals.h"
 
 uchar asc2asc[256] = {

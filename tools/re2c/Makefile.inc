@@ -1,6 +1,8 @@
 # $IdPath$
 AM_YFLAGS = -d
 
+INCLUDES = -I$(top_srcdir)
+
 noinst_PROGRAMS = re2c
 
 re2c_SOURCES = \

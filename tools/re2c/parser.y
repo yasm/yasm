@@ -1,4 +1,5 @@
 %{
+#include <config.h>
 
 #include <time.h>
 #include <stdio.h>
@@ -127,6 +128,18 @@ int yylex(){
     return Scanner_scan(in);
 }
 
+char *
+mystrdup(const char *str)
+{
+	size_t len;
+	char *copy;
+
+	len = strlen(str) + 1;
+	copy = malloc(len);
+	memcpy(copy, str, len);
+	return (copy);
+}
+
 void parse(FILE *i, FILE *o){
     char *	fnamebuf;
     char *	token;
@@ -142,9 +155,9 @@ void parse(FILE *i, FILE *o){
 
     fprintf(o, "#line %u \"", Scanner_line(in));
     if( fileName != NULL ) {
-    	fnamebuf = strdup( fileName );
+    	fnamebuf = mystrdup( fileName );
     } else {
-	fnamebuf = strdup( "<stdin>" );
+	fnamebuf = mystrdup( "<stdin>" );
     }
     token = strtok( fnamebuf, "\\" );
     for(;;) {

@@ -1,3 +1,5 @@
+#include <config.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -10,7 +12,7 @@
  */
 
 void Go_compact(Go *g){
-    // arrange so that adjacent spans have different targets
+    /* arrange so that adjacent spans have different targets */
     uint i = 0, j;
     for(j = 1; j < g->nSpans; ++j){
 	if(g->span[j].to != g->span[i].to){
