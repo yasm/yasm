@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.6 2001/05/22 20:46:13 peter Exp $
+/* $Id: bytecode.c,v 1.7 2001/05/30 07:07:16 peter Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -132,6 +132,7 @@ void BuildBC_Insn(bytecode      *bc,
 		  unsigned char  opcode_len,
 		  unsigned char  op0,
 		  unsigned char  op1,
+		  unsigned char  op2,
 		  effaddr       *ea_ptr,
 		  unsigned char  spare,
 		  immval        *im_ptr,
@@ -165,6 +166,7 @@ void BuildBC_Insn(bytecode      *bc,
 
     bc->data.insn.opcode[0] = op0;
     bc->data.insn.opcode[1] = op1;
+    bc->data.insn.opcode[2] = op2;
     bc->data.insn.opcode_len = opcode_len;
 
     bc->data.insn.opersize = opersize;

@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.5 2001/05/22 20:46:13 peter Exp $
+/* $Id: bytecode.h,v 1.6 2001/05/30 07:07:16 peter Exp $
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -54,7 +54,7 @@ typedef struct bytecode_s {
 	    unsigned char f_rel_imm;	/* 1 if final imm should be rel */
 	    unsigned char f_sign_imm;	/* 1 if final imm should be signed */
 
-	    unsigned char opcode[2];	/* opcode */
+	    unsigned char opcode[3];	/* opcode */
 	    unsigned char opcode_len;
 
 	    unsigned char opersize;	/* 0 indicates no override */
@@ -90,6 +90,7 @@ void BuildBC_Insn(bytecode      *bc,
 		  unsigned char  opcode_len,
 		  unsigned char  op0,
 		  unsigned char  op1,
+		  unsigned char  op2,
 		  effaddr       *ea_ptr,
 		  unsigned char  spare,
 		  immval        *im_ptr,
