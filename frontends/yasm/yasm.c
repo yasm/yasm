@@ -434,7 +434,8 @@ main(int argc, char *argv[])
     }
 
     /* Write the object file */
-    cur_objfmt->output(obj?obj:stderr, sections);
+    cur_objfmt->output(obj?obj:stderr, sections,
+		       strcmp(cur_dbgfmt->keyword, "null"));
 
     /* Close object file */
     if (obj)

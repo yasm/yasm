@@ -182,6 +182,15 @@ coff_objfmt_symtab_append(yasm_symrec *sym, coff_symrec_sclass sclass,
     return entry;
 }
 
+static int
+coff_objfmt_append_local_sym(yasm_symrec *sym, /*@unused@*/ /*@null@*/ void *d)
+{
+    if (!yasm_symrec_get_of_data(sym))
+	coff_objfmt_symtab_append(sym, COFF_SCL_STAT, NULL, 0,
+				  COFF_SYMTAB_AUX_NONE);
+    return 1;
+}
+
 static void
 coff_objfmt_initialize(const char *in_filename,
 		       /*@unused@*/ const char *obj_filename,
@@ -494,7 +503,7 @@ coff_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 }
 
 static void
-coff_objfmt_output(FILE *f, yasm_sectionhead *sections)
+coff_objfmt_output(FILE *f, yasm_sectionhead *sections, int all_syms)
 {
     coff_objfmt_output_info info;
     unsigned char *localbuf;
@@ -530,6 +539,10 @@ coff_objfmt_output(FILE *f, yasm_sectionhead *sections)
 	return;
 
     /* Symbol table */
+    if (all_syms) {
+	/* Need to put all local syms into COFF symbol table */
+	yasm_symrec_traverse(NULL, coff_objfmt_append_local_sym);
+    }
     pos = ftell(f);
     if (pos == -1) {
 	yasm__error(0, N_("could not get file position on output file"));
@@ -667,7 +680,9 @@ coff_objfmt_output(FILE *f, yasm_sectionhead *sections)
     YASM_WRITE_32_L(localbuf, symtab_pos);		/* file ptr to symtab */
     YASM_WRITE_32_L(localbuf, symtab_count);		/* number of symtabs */
     YASM_WRITE_16_L(localbuf, 0);	/* size of optional header (none) */
-    YASM_WRITE_16_L(localbuf, COFF_F_AR32WR|COFF_F_LNNO|COFF_F_LSYMS); /* flags */
+    /* flags */
+    YASM_WRITE_16_L(localbuf, COFF_F_AR32WR|COFF_F_LNNO
+		    |(all_syms?0:COFF_F_LSYMS));
     fwrite(info.buf, 20, 1, f);
 
     yasm_sections_traverse(sections, &info, coff_objfmt_output_secthead);

@@ -216,7 +216,8 @@ bin_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 }
 
 static void
-bin_objfmt_output(FILE *f, yasm_sectionhead *sections)
+bin_objfmt_output(FILE *f, yasm_sectionhead *sections,
+		  /*@unused@*/ int all_syms)
 {
     /*@observer@*/ /*@null@*/ yasm_section *text, *data, *bss, *prevsect;
     /*@null@*/ yasm_expr *startexpr;

@@ -68,7 +68,7 @@ struct yasm_objfmt {
      * This function may call symrec functions as necessary (including
      * symrec_traverse) to retrieve symbolic information.
      */
-    void (*output) (FILE *f, yasm_sectionhead *sections);
+    void (*output) (FILE *f, yasm_sectionhead *sections, int all_syms);
 
     /* Cleans up anything allocated by initialize.
      * May be NULL if not needed by the object format.

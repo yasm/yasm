@@ -58,11 +58,12 @@ dbg_objfmt_initialize(const char *in_filename, const char *obj_filename,
 }
 
 static void
-dbg_objfmt_output(/*@unused@*/ FILE *f, yasm_sectionhead *sections)
+dbg_objfmt_output(/*@unused@*/ FILE *f, yasm_sectionhead *sections,
+		  int all_syms)
 {
     fprintf(dbg_objfmt_file, "output(f, sections->\n");
     yasm_sections_print(dbg_objfmt_file, 1, sections);
-    fprintf(dbg_objfmt_file, ")\n");
+    fprintf(dbg_objfmt_file, "%d)\n", all_syms);
     fprintf(dbg_objfmt_file, " Symbol Table:\n");
     yasm_symrec_print_all(dbg_objfmt_file, 1);
 }
