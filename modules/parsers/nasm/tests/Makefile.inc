@@ -18,3 +18,7 @@ EXTRA_DIST += modules/parsers/nasm/tests/newsect.hex
 EXTRA_DIST += modules/parsers/nasm/tests/prevlocalwarn.asm
 EXTRA_DIST += modules/parsers/nasm/tests/prevlocalwarn.errwarn
 EXTRA_DIST += modules/parsers/nasm/tests/prevlocalwarn.hex
+
+EXTRA_DIST += modules/parsers/nasm/tests/worphan/Makefile.inc
+
+include modules/parsers/nasm/tests/worphan/Makefile.inc

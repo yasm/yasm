@@ -158,7 +158,13 @@ line: '\n'		{ $$ = (yasm_bytecode *)NULL; }
 
 lineexp: exp
     | TIMES expr exp		{ $$ = $3; yasm_bc_set_multiple($$, $2); }
-    | label			{
+    | label_id			{
+	yasm__warning(YASM_WARN_ORPHAN_LABEL, cur_line,
+		      N_("label alone on a line without a colon might be in error"));
+	$$ = (yasm_bytecode *)NULL;
+	define_label(parser_nasm, $1.name, $1.local);
+    }
+    | label_id ':'		{
 	$$ = (yasm_bytecode *)NULL;
 	define_label(parser_nasm, $1.name, $1.local);
     }

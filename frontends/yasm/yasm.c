@@ -892,6 +892,11 @@ opt_warning_handler(char *cmd, /*@unused@*/ char *param, int extra)
 	    yasm_warn_enable(YASM_WARN_UNREC_CHAR);
 	else
 	    yasm_warn_disable(YASM_WARN_UNREC_CHAR);
+    } else if (strcmp(cmd, "orphan-labels") == 0) {
+	if (enable)
+	    yasm_warn_enable(YASM_WARN_ORPHAN_LABEL);
+	else
+	    yasm_warn_disable(YASM_WARN_ORPHAN_LABEL);
     } else
 	return 1;
 
