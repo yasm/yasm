@@ -148,7 +148,8 @@ expr_simplify(expr *e)
 
 	/* if the left subexpr is just an IDENT (or string thereof),
 	 * pull it up into the current node */
-	while (e->left.type == EXPR_EXPR && e->left.data.expn->op == EXPR_IDENT) {
+	while (e->left.type == EXPR_EXPR &&
+	       e->left.data.expn->op == EXPR_IDENT) {
 	    ExprItem tmp;
 	    e->left.type = e->left.data.expn->right.type;
 	    memcpy(&tmp, &(e->left.data.expn->right), sizeof(ExprItem));
@@ -171,7 +172,8 @@ expr_simplify(expr *e)
 	if (e->right.data.expn->op != EXPR_IDENT)
 	    simplified |= expr_simplify(e->right.data.expn);
 
-	while (e->right.type == EXPR_EXPR && e->right.data.expn->op == EXPR_IDENT) {
+	while (e->right.type == EXPR_EXPR &&
+	       e->right.data.expn->op == EXPR_IDENT) {
 	    ExprItem tmp;
 	    e->right.type = e->right.data.expn->right.type;
 	    memcpy(&tmp, &(e->right.data.expn->right), sizeof(ExprItem));
@@ -188,23 +190,28 @@ expr_simplify(expr *e)
 	}
     }
 
-    if ((e->left.type == EXPR_INT || e->left.type == EXPR_NONE)
-	&& e->right.type == EXPR_INT && e->op != EXPR_IDENT) {
+    if ((e->left.type == EXPR_INT || e->left.type == EXPR_NONE) &&
+	e->right.type == EXPR_INT && e->op != EXPR_IDENT) {
 	switch (e->op) {
 	    case EXPR_ADD:
-		e->right.data.int_val = e->left.data.int_val + e->right.data.int_val;
+		e->right.data.int_val = e->left.data.int_val +
+					e->right.data.int_val;
 		break;
 	    case EXPR_SUB:
-		e->right.data.int_val = e->left.data.int_val - e->right.data.int_val;
+		e->right.data.int_val = e->left.data.int_val -
+					e->right.data.int_val;
 		break;
 	    case EXPR_MUL:
-		e->right.data.int_val = e->left.data.int_val * e->right.data.int_val;
+		e->right.data.int_val = e->left.data.int_val *
+					e->right.data.int_val;
 		break;
 	    case EXPR_DIV:
-		e->right.data.int_val = e->left.data.int_val / e->right.data.int_val;
+		e->right.data.int_val = e->left.data.int_val /
+					e->right.data.int_val;
 		break;
 	    case EXPR_MOD:
-		e->right.data.int_val = e->left.data.int_val % e->right.data.int_val;
+		e->right.data.int_val = e->left.data.int_val %
+					e->right.data.int_val;
 		break;
 	    case EXPR_NEG:
 		e->right.data.int_val = -(e->right.data.int_val);
@@ -213,46 +220,59 @@ expr_simplify(expr *e)
 		e->right.data.int_val = ~(e->right.data.int_val);
 		break;
 	    case EXPR_OR:
-		e->right.data.int_val = e->left.data.int_val | e->right.data.int_val;
+		e->right.data.int_val = e->left.data.int_val |
+					e->right.data.int_val;
 		break;
 	    case EXPR_AND:
-		e->right.data.int_val = e->left.data.int_val & e->right.data.int_val;
+		e->right.data.int_val = e->left.data.int_val &
+					e->right.data.int_val;
 		break;
 	    case EXPR_XOR:
-		e->right.data.int_val = e->left.data.int_val ^ e->right.data.int_val;
+		e->right.data.int_val = e->left.data.int_val ^
+					e->right.data.int_val;
 		break;
 	    case EXPR_SHL:
-		e->right.data.int_val = e->right.data.int_val << e->left.data.int_val;
+		e->right.data.int_val = e->right.data.int_val <<
+					e->left.data.int_val;
 		break;
 	    case EXPR_SHR:
-		e->right.data.int_val = e->right.data.int_val << e->left.data.int_val;
+		e->right.data.int_val = e->right.data.int_val >>
+					e->left.data.int_val;
 		break;
 	    case EXPR_LOR:
-		e->right.data.int_val = e->left.data.int_val || e->right.data.int_val;
+		e->right.data.int_val = e->left.data.int_val ||
+					e->right.data.int_val;
 		break;
 	    case EXPR_LAND:
-		e->right.data.int_val = e->left.data.int_val && e->right.data.int_val;
+		e->right.data.int_val = e->left.data.int_val &&
+					e->right.data.int_val;
 		break;
 	    case EXPR_LNOT:
 		e->right.data.int_val = !e->right.data.int_val;
 		break;
 	    case EXPR_EQ:
-		e->right.data.int_val = e->right.data.int_val == e->left.data.int_val;
+		e->right.data.int_val = e->right.data.int_val ==
+					e->left.data.int_val;
 		break;
 	    case EXPR_LT:
-		e->right.data.int_val = e->right.data.int_val < e->left.data.int_val;
+		e->right.data.int_val = e->right.data.int_val <
+					e->left.data.int_val;
 		break;
 	    case EXPR_GT:
-		e->right.data.int_val = e->right.data.int_val > e->left.data.int_val;
+		e->right.data.int_val = e->right.data.int_val >
+					e->left.data.int_val;
 		break;
 	    case EXPR_LE:
-		e->right.data.int_val = e->right.data.int_val <= e->left.data.int_val;
+		e->right.data.int_val = e->right.data.int_val <=
+					e->left.data.int_val;
 		break;
 	    case EXPR_GE:
-		e->right.data.int_val = e->right.data.int_val >= e->left.data.int_val;
+		e->right.data.int_val = e->right.data.int_val >=
+					e->left.data.int_val;
 		break;
 	    case EXPR_NE:
-		e->right.data.int_val = e->right.data.int_val != e->left.data.int_val;
+		e->right.data.int_val = e->right.data.int_val !=
+					e->left.data.int_val;
 		break;
 	    case EXPR_IDENT:
 		break;
@@ -262,32 +282,24 @@ expr_simplify(expr *e)
     }
 
     /* catch simple identities like 0+x, 1*x, etc., for x not a num */
-    else if (e->left.type == EXPR_INT && ((e->left.data.int_val == 1 && e->op == EXPR_MUL)
-				      || (e->left.data.int_val == 0 &&
-					  e->op == EXPR_ADD)
-				      || (e->left.data.int_val == -1 &&
-					  e->op == EXPR_AND)
-				      || (e->left.data.int_val == 0 &&
-					  e->op == EXPR_OR))) {
+    else if (e->left.type == EXPR_INT &&
+	     ((e->left.data.int_val == 1 && e->op == EXPR_MUL) ||
+	      (e->left.data.int_val == 0 && e->op == EXPR_ADD) ||
+	      (e->left.data.int_val == -1 && e->op == EXPR_AND) ||
+	      (e->left.data.int_val == 0 && e->op == EXPR_OR))) {
 	e->op = EXPR_IDENT;
 	simplified = 1;
     }
     /* and the corresponding x+|-0, x*&/1 */
-    else if (e->right.type == EXPR_INT && ((e->right.data.int_val == 1 && e->op == EXPR_MUL)
-				      || (e->right.data.int_val == 1 &&
-					  e->op == EXPR_DIV)
-				      || (e->right.data.int_val == 0 &&
-					  e->op == EXPR_ADD)
-				      || (e->right.data.int_val == 0 &&
-					  e->op == EXPR_SUB)
-				      || (e->right.data.int_val == -1 &&
-					  e->op == EXPR_AND)
-				      || (e->right.data.int_val == 0 &&
-					  e->op == EXPR_OR)
-				      || (e->right.data.int_val == 0 &&
-					  e->op == EXPR_SHL)
-				      || (e->right.data.int_val == 0 &&
-					  e->op == EXPR_SHR))) {
+    else if (e->right.type == EXPR_INT &&
+	     ((e->right.data.int_val == 1 && e->op == EXPR_MUL) ||
+	      (e->right.data.int_val == 1 && e->op == EXPR_DIV) ||
+	      (e->right.data.int_val == 0 && e->op == EXPR_ADD) ||
+	      (e->right.data.int_val == 0 && e->op == EXPR_SUB) ||
+	      (e->right.data.int_val == -1 && e->op == EXPR_AND) ||
+	      (e->right.data.int_val == 0 && e->op == EXPR_OR) ||
+	      (e->right.data.int_val == 0 && e->op == EXPR_SHL) ||
+	      (e->right.data.int_val == 0 && e->op == EXPR_SHR))) {
 	e->op = EXPR_IDENT;
 	e->right.type = e->left.type;
 	memcpy(&e->right, &e->left, sizeof(ExprItem));
