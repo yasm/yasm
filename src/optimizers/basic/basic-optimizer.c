@@ -143,6 +143,7 @@ basic_optimize_resolve_label_2(symrec *sym, int withstart)
 typedef struct basic_optimize_data {
     /*@observer@*/ bytecode *precbc;
     /*@observer@*/ const section *sect;
+    int saw_unknown;
 } basic_optimize_data;
 
 static int
@@ -170,7 +171,8 @@ basic_optimize_bytecode_1(/*@observer@*/ bytecode *bc, void *d)
      */
     if (bc_resolve(bc, 0, data->sect, basic_optimize_resolve_label) < 0) {
 	ErrorAt(bc->line, _("Circular reference detected."));
-	return -1;
+	data->saw_unknown = -1;
+	return 0;
     }
 
     bc->opt_flags = BCFLAG_DONE;
@@ -187,6 +189,7 @@ basic_optimize_section_1(section *sect, /*@unused@*/ /*@null@*/ void *d)
 
     data.precbc = NULL;
     data.sect = sect;
+    data.saw_unknown = 0;
 
     /* Don't even bother if we're in-progress or done. */
     flags = section_get_opt_flags(sect);
@@ -201,6 +204,9 @@ basic_optimize_section_1(section *sect, /*@unused@*/ /*@null@*/ void *d)
 			  basic_optimize_bytecode_1);
     if (retval != 0)
 	return retval;
+
+    if (data.saw_unknown != 0)
+	return data.saw_unknown;
 
     section_set_opt_flags(sect, SECTFLAG_DONE);
 

@@ -493,6 +493,10 @@ bc_resolve(bytecode *bc, int save, const section *sect,
 	expr_delete(temp);
     }
 
+    /* If we got an error somewhere along the line, clear out any calc len */
+    if (retval < 0)
+	bc->len = 0;
+
     return retval;
 }
 
