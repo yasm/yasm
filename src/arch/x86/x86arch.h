@@ -62,12 +62,6 @@ typedef enum {
     JR_NEAR_FORCED
 } x86_jmprel_opcode_sel;
 
-typedef struct x86_targetval {
-    expr *val;
-
-    x86_jmprel_opcode_sel op_sel;
-} x86_targetval;
-
 void x86_ea_set_segment(/*@null@*/ effaddr *ea, unsigned char segment);
 effaddr *x86_ea_new_reg(unsigned char reg);
 effaddr *x86_ea_new_imm(/*@keep@*/expr *imm, unsigned char im_len);
@@ -105,7 +99,8 @@ bytecode *x86_bc_new_insn(x86_new_insn_data *d);
  * Pass 0 for the opcode_len if that version of the opcode doesn't exist.
  */
 typedef struct x86_new_jmprel_data {
-    /*@keep@*/ x86_targetval *target;
+    /*@keep@*/ expr *target;
+    x86_jmprel_opcode_sel op_sel;
     unsigned char short_op_len;
     unsigned char short_op[3];
     unsigned char near_op_len;

@@ -88,12 +88,12 @@ x86_bc_new_jmprel(x86_new_jmprel_data *d)
     bc = bc_new_common((bytecode_type)X86_BC_JMPREL, sizeof(x86_jmprel));
     jmprel = bc_get_data(bc);
 
-    jmprel->target = d->target->val;
-    jmprel->op_sel = d->target->op_sel;
+    jmprel->target = d->target;
+    jmprel->op_sel = d->op_sel;
 
-    if ((d->target->op_sel == JR_SHORT_FORCED) && (d->near_op_len == 0))
+    if ((d->op_sel == JR_SHORT_FORCED) && (d->near_op_len == 0))
 	Error(_("no SHORT form of that jump instruction exists"));
-    if ((d->target->op_sel == JR_NEAR_FORCED) && (d->short_op_len == 0))
+    if ((d->op_sel == JR_NEAR_FORCED) && (d->short_op_len == 0))
 	Error(_("no NEAR form of that jump instruction exists"));
 
     jmprel->shortop.opcode[0] = d->short_op[0];
