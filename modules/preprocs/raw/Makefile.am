@@ -1,3 +1,5 @@
+# $IdPath$
+
 noinst_LIBRARIES = libpreproc.a
 
 libpreproc_a_SOURCES = \

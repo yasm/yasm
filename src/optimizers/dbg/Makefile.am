@@ -1,3 +1,5 @@
+# $IdPath$
+
 noinst_LIBRARIES = liboptimizer.a
 
 liboptimizer_a_SOURCES = \

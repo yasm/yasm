@@ -1,3 +1,5 @@
+# $IdPath$
+
 noinst_LIBRARIES = libobjfmt.a
 
 libobjfmt_a_SOURCES = \

@@ -1,3 +1,5 @@
+# $IdPath$
+
 SUBDIRS = parsers preprocs optimizers objfmts
 
 INCLUDES = -I../intl
