@@ -1,4 +1,4 @@
-/* $Id: nasm-bison.y,v 1.20 2001/07/11 04:07:10 peter Exp $
+/* $Id: nasm-bison.y,v 1.21 2001/07/11 21:04:58 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -70,7 +70,6 @@ extern void yyerror(char *);
 %token <int_val> REG_AL REG_CL REG_DL REG_BL REG_AH REG_CH REG_DH REG_BH
 %token <int_val> REG_ES REG_CS REG_SS REG_DS REG_FS REG_GS
 %token LEFT_OP RIGHT_OP SIGNDIV SIGNMOD
-%token START_SECTION_OFFSET ENTRY_POINT
 %token <syminfo> ID LOCAL_ID SPECIAL_ID
 
 /* instruction tokens (dynamically generated) */
@@ -97,8 +96,8 @@ extern void yyerror(char *);
 %left '&'
 %left LEFT_OP RIGHT_OP
 %left '-' '+'
-%left '*' '/' '%'
-%nonassoc '~'
+%left '*' '/' SIGNDIV '%' SIGNMOD
+%nonassoc UNARYOP
 
 %%
 input: /* empty */
@@ -307,10 +306,7 @@ imm32: imm
 ;
 
 /* jump targets */
-target: explabel	{
-	$$.val = expr_new_ident(EXPR_SYM, ExprSym(sym_use_get($1.name, SYM_LABEL)));
-	$$.op_sel = JR_NONE;
-    }
+target: expr		{ $$.val = $1; $$.op_sel = JR_NONE; }
     | SHORT target	{ $$ = $2; SetOpcodeSel(&$$.op_sel, JR_SHORT_FORCED); }
     | NEAR target	{ $$ = $2; SetOpcodeSel(&$$.op_sel, JR_NEAR_FORCED); }
 ;
@@ -337,9 +333,10 @@ expr:
     | expr '*' expr	{ $$ = expr_new_tree ($1, EXPR_MUL, $3); }
     | expr '/' expr	{ $$ = expr_new_tree ($1, EXPR_DIV, $3); }
     | expr '%' expr	{ $$ = expr_new_tree ($1, EXPR_MOD, $3); }
-    | '-' expr		{ $$ = expr_new_branch (EXPR_NEG, $2); }
+    | '+' expr %prec UNARYOP	{ $$ = $2; }
+    | '-' expr %prec UNARYOP	{ $$ = expr_new_branch (EXPR_NEG, $2); }
     /*| '!' expr		{ $$ = expr_new_branch (EXPR_LNOT, $2); }*/
-    | '~' expr		{ $$ = expr_new_branch (EXPR_NOT, $2); }
+    | '~' expr %prec UNARYOP	{ $$ = expr_new_branch (EXPR_NOT, $2); }
     | '(' expr ')'	{ $$ = $2; }
 ;
 
