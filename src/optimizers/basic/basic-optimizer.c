@@ -99,8 +99,10 @@ basic_optimize_bytecode_1(bytecode *bc, void *d)
      * is minimum or not, and just check for indeterminate length (indicative
      * of circular reference).
      */
-    if (bc_calc_len(bc, basic_optimize_resolve_label) < 0)
+    if (bc_calc_len(bc, basic_optimize_resolve_label) < 0) {
+	ErrorAt(bc->line, _("Circular reference detected."));
 	return -1;
+    }
 
     bc->opt_flags = BCFLAG_DONE;
 
@@ -166,10 +168,8 @@ basic_optimize(sectionhead *sections)
      *   - not strictly top->bottom scanning; we scan through a section and
      *     hop to other sections as necessary.
      */
-    if (sections_traverse(sections, NULL, basic_optimize_section_1) < 0) {
-	ErrorAt(1, "circular reference");
+    if (sections_traverse(sections, NULL, basic_optimize_section_1) < 0)
 	return;
-    }
 
     /* Pass 2:
      *  Resolve (compute value of) forward references.
