@@ -24,6 +24,49 @@
 
 #include "file.h"
 
+#include "errwarn.h"
+
+
+char *
+replace_extension(const char *orig, const char *ext, const char *def)
+{
+    char *out, *outext;
+
+    /* allocate enough space for full existing name + extension */
+    out = xmalloc(strlen(orig)+strlen(ext)+2);
+    strcpy(out, orig);
+    outext = strrchr(out, '.');
+    if (outext) {
+	/* Existing extension: make sure it's not the same as the replacement
+	 * (as we don't want to overwrite the source file).
+	 */
+	outext++;   /* advance past '.' */
+	if (strcmp(outext, ext)) {
+	    outext = NULL;  /* indicate default should be used */
+	    WarningNow(_("file name already ends in `.%s': output will be in `%s'"),
+		       ext, def);
+	}
+    } else {
+	/* No extension: make sure the output extension is not empty
+	 * (again, we don't want to overwrite the source file).
+	 */
+	if (*ext == '\0')
+	    WarningNow(_("file name already has no extension: output will be in `%s'"),
+		       def);
+	else {
+	    outext = strrchr(out, '\0');    /* point to end of the string */
+	    *outext++ = '.';		    /* append '.' */
+	}
+    }
+
+    /* replace extension or use default name */
+    if (outext)
+	strcpy(outext, ext);
+    else
+	strcpy(out, def);
+
+    return out;
+}
 
 size_t
 fwrite_short(unsigned short val, FILE *f)

@@ -22,6 +22,13 @@
 #ifndef YASM_FILE_H
 #define YASM_FILE_H
 
+/* Replace extension on a filename (or append one if none is present).
+ * If output filename would be identical to input (same extension out as in),
+ * returns (copy of) def.
+ */
+/*@only@*/ char *replace_extension(const char *orig, const char *ext,
+				   const char *def);
+
 /* These functions only work properly if p is an (unsigned char *) */
 
 #define WRITE_BYTE(ptr, val)			\

@@ -27,6 +27,7 @@
 #endif
 
 #include "bitvect.h"
+#include "file.h"
 
 #include "globals.h"
 #include "options.h"
@@ -139,20 +140,12 @@ main(int argc, char *argv[])
     /* open the object file if not specified */
     if (!obj) {
 	/* build the object filename */
-	char *exttail;
 	if (obj_filename)
 	    xfree(obj_filename);
 	assert(in_filename != NULL);
-	/* allocate enough space for full existing name + extension */
-	obj_filename = xmalloc(strlen(in_filename)+
-			       strlen(cur_objfmt->extension)+2);
-	strcpy(obj_filename, in_filename);
-	exttail = strrchr(obj_filename, '.');
-	if (!exttail)
-	    exttail = strrchr(obj_filename, '\0');
-	/*@-nullpass@*/
-	sprintf(exttail, ".%s", cur_objfmt->extension);
-	/*@=nullpass@*/
+	/* replace (or add) extension */
+	obj_filename = replace_extension(in_filename, cur_objfmt->extension,
+					 "yasm.out");
 
 	/* open the built filename */
 	obj = fopen(obj_filename, "wb");
