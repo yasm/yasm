@@ -66,13 +66,14 @@ static const char *fatal_msgs[] = {
 };
 /*@=observertrans@*/
 
-typedef /*@reldef@*/ STAILQ_HEAD(errwarnhead_s, errwarn_s) errwarnhead;
-static /*@only@*/ /*@null@*/ errwarnhead *errwarns = (errwarnhead *)NULL;
+typedef /*@reldef@*/ SLIST_HEAD(errwarnhead_s, errwarn_s) errwarnhead;
+static /*@only@*/ /*@null@*/ errwarnhead errwarns =
+    SLIST_HEAD_INITIALIZER(errwarns);
 
 typedef struct errwarn_s {
-    /*@reldef@*/ STAILQ_ENTRY(errwarn_s) link;
+    /*@reldef@*/ SLIST_ENTRY(errwarn_s) link;
 
-    enum { WE_ERROR, WE_WARNING } type;
+    enum { WE_UNKNOWN, WE_ERROR, WE_WARNING, WE_PARSERERROR } type;
 
     unsigned long line;
     /* FIXME: This should not be a fixed size.  But we don't have vasprintf()
@@ -80,15 +81,8 @@ typedef struct errwarn_s {
     char msg[MSG_MAXSIZE];
 } errwarn;
 
-/* Line number of the previous error.  Set and checked by Error(). */
-static unsigned long previous_error_line = 0;
-
-/* Is the last error a parser error?  Error() lets other errors override parser
- * errors. Set by yyerror(), read and reset by Error(). */
-static int previous_error_parser = 0;
-
-/* Line number of the previous warning. Set and checked by Warning(). */
-static unsigned long previous_warning_line = 0;
+/* Last inserted error/warning.  Used to speed up insertions. */
+static /*@null@*/ errwarn *previous_we = NULL;
 
 /* Static buffer for use by conv_unprint(). */
 static char unprint[5];
@@ -113,14 +107,6 @@ conv_unprint(char ch)
     unprint[pos] = '\0';
 
     return unprint;
-}
-
-/* Parser error handler.  Moves error into our error handling system. */
-void
-ParserError(const char *s)
-{
-    Error("%s %s", _("parser error:"), s);
-    previous_error_parser = 1;
 }
 
 /* Report an internal error.  Essentially a fatal error with trace info.
@@ -150,89 +136,155 @@ Fatal(fatal_num num)
 #endif
 }
 
-/* Register an error.  Uses argtypes as described above to specify the
- * argument types.  Does not print the error, only stores it for
- * OutputAllErrorWarning() to print. */
-void
-Error(const char *fmt, ...)
+/* Create an errwarn structure in the correct linked list location.
+ * If replace_parser_error is nonzero, overwrites the last error if its
+ * type is WE_PARSERERROR.
+ */
+errwarn *
+errwarn_new(unsigned long lindex, int replace_parser_error)
 {
-    va_list ap;
-    errwarn *we;
+    errwarn *first, *next, *ins_we, *we;
+    enum { INS_NONE, INS_HEAD, INS_AFTER } action = INS_NONE;
 
-    if ((previous_error_line == line_index) && !previous_error_parser)
-	return;
-
-    if (!errwarns) {
-	errwarns = xmalloc(sizeof(errwarnhead));
-	STAILQ_INIT(errwarns);
+    /* Find the entry with either line=lindex or the last one with line<lindex.
+     * Start with the last entry added to speed the search.
+     */
+    ins_we = previous_we;
+    first = SLIST_FIRST(&errwarns);
+    if (!ins_we || !first)
+	action = INS_HEAD;
+    while (action == INS_NONE) {
+	next = SLIST_NEXT(ins_we, link);
+	if (lindex < ins_we->line) {
+	    if (ins_we == first)
+		action = INS_HEAD;
+	    else
+		ins_we = first;
+	} else if (!next)
+	    action = INS_AFTER;
+	else if (lindex >= ins_we->line && lindex < next->line)
+	    action = INS_AFTER;
     }
 
-    if (previous_error_parser) {
-	/* overwrite last (parser) error */	
-	we = STAILQ_LAST(errwarns, errwarn_s, link);
+    if (replace_parser_error && ins_we && ins_we->type == WE_PARSERERROR) {
+	/* overwrite last error */	
+	we = ins_we;
     } else {
+	/* add a new error */
 	we = xmalloc(sizeof(errwarn));
 
-	we->type = WE_ERROR;
-	we->line = line_index;
+	we->type = WE_UNKNOWN;
+	we->line = lindex;
+
+	if (action == INS_HEAD)
+	    SLIST_INSERT_HEAD(&errwarns, we, link);
+	else if (action == INS_AFTER) {
+	    assert(ins_we != NULL);
+	    SLIST_INSERT_AFTER(ins_we, we, link);
+	} else
+	    InternalError(_("Unexpected errwarn insert action"));
     }
 
-    assert(we != NULL);
+    /* Remember previous err/warn */
+    previous_we = we;
 
-    va_start(ap, fmt);
+    return we;
+}
+
+/* Register an error.  Does not print the error, only stores it for
+ * OutputAllErrorWarning() to print.
+ */
+void
+error_common(unsigned long lindex, const char *fmt, va_list ap)
+{
+    errwarn *we = errwarn_new(lindex, 1);
+
+    we->type = WE_ERROR;
+
 #ifdef HAVE_VSNPRINTF
     vsnprintf(we->msg, MSG_MAXSIZE, fmt, ap);
 #else
     vsprintf(we->msg, fmt, ap);
 #endif
-    va_end(ap);
-
-    /*@-branchstate@*/
-    if (!previous_error_parser)
-	STAILQ_INSERT_TAIL(errwarns, we, link);
-    /*@=branchstate@*/
-
-    previous_error_line = line_index;
-    previous_error_parser = 0;
 
     error_count++;
 }
 
-/* Register a warning.  Uses argtypes as described above to specify the
- * argument types.  Does not print the warning, only stores it for
- * OutputAllErrorWarning() to print. */
+/* Register an warning.  Does not print the warning, only stores it for
+ * OutputAllErrorWarning() to print.
+ */
+void
+warning_common(unsigned long lindex, const char *fmt, va_list va)
+{
+    errwarn *we = errwarn_new(lindex, 0);
+
+    we->type = WE_WARNING;
+
+#ifdef HAVE_VSNPRINTF
+    vsnprintf(we->msg, MSG_MAXSIZE, fmt, va);
+#else
+    vsprintf(we->msg, fmt, va);
+#endif
+
+    warning_count++;
+}
+
+/* Parser error handler.  Moves YACC-style error into our error handling
+ * system.
+ */
+void
+ParserError(const char *s)
+{
+    Error("%s %s", _("parser error:"), s);
+    previous_we->type = WE_PARSERERROR;
+}
+
+/* Register an error during the parser stage (uses global line_index).  Does
+ * not print the error, only stores it for OutputAllErrorWarning() to print.
+ */
+void
+Error(const char *fmt, ...)
+{
+    va_list va;
+    va_start(va, fmt);
+    error_common(line_index, fmt, va);
+    va_end(va);
+}
+
+/* Register an error at line lindex.  Does not print the error, only stores it
+ * for OutputAllErrorWarning() to print.
+ */
+void
+ErrorAt(unsigned long lindex, const char *fmt, ...)
+{
+    va_list va;
+    va_start(va, fmt);
+    error_common(lindex, fmt, va);
+    va_end(va);
+}
+
+/* Register a warning during the parser stage (uses global line_index).  Does
+ * not print the warning, only stores it for OutputAllErrorWarning() to print.
+ */
 void
 Warning(const char *fmt, ...)
 {
-    va_list ap;
-    errwarn *we;
+    va_list va;
+    va_start(va, fmt);
+    warning_common(line_index, fmt, va);
+    va_end(va);
+}
 
-    if (warnings_disabled)
-	return;
-
-    if (previous_warning_line == line_index)
-	return;
-
-    previous_warning_line = line_index;
-
-    we = xmalloc(sizeof(errwarn));
-
-    we->type = WE_WARNING;
-    we->line = line_index;
-    va_start(ap, fmt);
-#ifdef HAVE_VSNPRINTF
-    vsnprintf(we->msg, MSG_MAXSIZE, fmt, ap);
-#else
-    vsprintf(we->msg, fmt, ap);
-#endif
-    va_end(ap);
-
-    if (!errwarns) {
-	errwarns = xmalloc(sizeof(errwarnhead));
-	STAILQ_INIT(errwarns);
-    }
-    STAILQ_INSERT_TAIL(errwarns, we, link);
-    warning_count++;
+/* Register an warning at line lindex.  Does not print the warning, only stores
+ * it for OutputAllErrorWarning() to print.
+ */
+void
+WarningAt(unsigned long lindex, const char *fmt, ...)
+{
+    va_list va;
+    va_start(va, fmt);
+    warning_common(lindex, fmt, va);
+    va_end(va);
 }
 
 void
@@ -261,61 +313,25 @@ WarningNow(const char *fmt, ...)
     fprintf(stderr, "\n");
 }
 
-void
-ErrorAt(unsigned long lindex, const char *fmt, ...)
+/* Get the number of errors (including warnings if warnings are being treated
+ * as errors).
+ */
+unsigned int
+GetNumErrors(void)
 {
-    /* XXX: Should insert into list instead of printing immediately */
-    va_list ap;
-    const char *filename;
-    unsigned long line;
-
-    line_lookup(lindex, &filename, &line);
-    fprintf(stderr, "%s:%lu: ", filename?filename:"(NULL)", line);
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
-    fprintf(stderr, "\n");
-
-    error_count++;
-}
-
-void
-WarningAt(unsigned long lindex, const char *fmt, ...)
-{
-    /* XXX: Should insert into list instead of printing immediately */
-    va_list ap;
-    const char *filename;
-    unsigned long line;
-
-    if (warnings_disabled)
-	return;
-
-    line_lookup(lindex, &filename, &line);
-    fprintf(stderr, "%s:%lu: %s ", filename?filename:"NULL", line,
-	    _("warning:"));
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
-    fprintf(stderr, "\n");
-
-    warning_count++;
+    if (warning_error)
+	return error_count+warning_count;
+    else
+	return error_count;
 }
 
 /* Output all previously stored errors and warnings to stderr. */
-unsigned int
+void
 OutputAllErrorWarning(void)
 {
-    errwarn *we, *we2;
+    errwarn *we;
     const char *filename;
     unsigned long line;
-
-    /* If errwarns hasn't been initialized, there are no messages. */
-    if (!errwarns) {
-	if (warning_error)
-	    return error_count+warning_count;
-	else
-	    return error_count;
-    }
 
     /* If we're treating warnings as errors, tell the user about it. */
     if (warning_error && warning_error != 2) {
@@ -323,28 +339,19 @@ OutputAllErrorWarning(void)
 	warning_error = 2;
     }
 
-    /* Output error and warning messages. */
-    STAILQ_FOREACH(we, errwarns, link) {
+    /* Output error/warning, then delete each message. */
+    while (!SLIST_EMPTY(&errwarns)) {
+	we = SLIST_FIRST(&errwarns);
+	/* Output error/warning */
 	line_lookup(we->line, &filename, &line);
 	if (we->type == WE_ERROR)
 	    fprintf(stderr, "%s:%lu: %s\n", filename, line, we->msg);
 	else
 	    fprintf(stderr, "%s:%lu: %s %s\n", filename, line, _("warning:"),
 		    we->msg);
-    }
 
-    /* Delete messages. */
-    we = STAILQ_FIRST(errwarns);
-    while (we) {
-	we2 = STAILQ_NEXT(we, link);
+	/* Delete */
+	SLIST_REMOVE_HEAD(&errwarns, link);
 	xfree(we);
-	we = we2;
     }
-
-    /* Return the total error count up to this point.
-     * If we're treating warnings as errors, add that to the total as well.
-     */
-    if (warning_error)
-	return error_count+warning_count;
-    return error_count;
 }

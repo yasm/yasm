@@ -1,6 +1,2 @@
 ./src/objfmts/bin/tests/integer-warn.asm:5: warning: Numeric constant too large for internal format
 ./src/objfmts/bin/tests/integer-warn.asm:6: warning: Numeric constant too large for internal format
-./src/objfmts/bin/tests/integer-warn.asm:5: warning: Numeric constant too large for internal format
-./src/objfmts/bin/tests/integer-warn.asm:6: warning: Numeric constant too large for internal format
-./src/objfmts/bin/tests/integer-warn.asm:5: warning: Numeric constant too large for internal format
-./src/objfmts/bin/tests/integer-warn.asm:6: warning: Numeric constant too large for internal format

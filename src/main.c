@@ -204,7 +204,8 @@ main(int argc, char *argv[])
 	if (obj != stdout)
 	    fclose(obj);
 
-	if (OutputAllErrorWarning() > 0) {
+	if (GetNumErrors() > 0) {
+	    OutputAllErrorWarning();
 	    if (obj != stdout)
 		remove(obj_filename);
 	    xfree(preproc_buf);
@@ -263,7 +264,8 @@ main(int argc, char *argv[])
 	fclose(in);
     xfree(in_filename);
 
-    if (OutputAllErrorWarning() > 0) {
+    if (GetNumErrors() > 0) {
+	OutputAllErrorWarning();
 	cleanup(sections);
 	return EXIT_FAILURE;
     }
@@ -271,7 +273,8 @@ main(int argc, char *argv[])
     symrec_parser_finalize();
     basic_optimizer.optimize(sections);
 
-    if (OutputAllErrorWarning() > 0) {
+    if (GetNumErrors() > 0) {
+	OutputAllErrorWarning();
 	cleanup(sections);
 	return EXIT_FAILURE;
     }
@@ -295,13 +298,15 @@ main(int argc, char *argv[])
     /* If we had an error at this point, we also need to delete the output
      * object file (to make sure it's not left newer than the source).
      */
-    if (OutputAllErrorWarning() > 0) {
+    if (GetNumErrors() > 0) {
+	OutputAllErrorWarning();
 	cleanup(sections);
 	if (obj != stdout)
 	    remove(obj_filename);
 	return EXIT_FAILURE;
     }
 
+    OutputAllErrorWarning();
     xfree(obj_filename);
 
     cleanup(sections);

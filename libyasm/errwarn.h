@@ -71,8 +71,7 @@ void Error(const char *, ...) /*@printflike@*/;
 void Warning(const char *, ...) /*@printflike@*/;
 
 /* Use Error() and Warning() instead of ErrorAt() and WarningAt() when being
- * called in line order from a parser.  The *At() functions are much slower,
- * at least in the current implementation.
+ * called in line order from a parser.
  */
 void ErrorAt(unsigned long lindex, const char *, ...) /*@printflike@*/;
 void WarningAt(unsigned long lindex, const char *, ...) /*@printflike@*/;
@@ -85,6 +84,9 @@ void ErrorNow(const char *, ...) /*@printflike@*/;
 void WarningNow(const char *, ...) /*@printflike@*/;
 
 /* Returns total number of errors to this point in assembly. */
-unsigned int OutputAllErrorWarning(void);
+unsigned int GetNumErrors(void);
+
+/* Outputs all errors/warnings to standard error. */
+void OutputAllErrorWarning(void);
 
 #endif
