@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.13 2001/07/04 20:09:44 peter Exp $
+; $Id: instrs.dat,v 1.14 2001/07/04 20:16:43 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -522,7 +522,7 @@ lgs	reg32,mem		32	0F,B5		$2,$1	nil	386
 lea	reg16,mem16		16	8D		$2,$1	nil	8086
 lea	reg32,mem32		32	8D		$2,$1	nil	386
 leave!onebyte		C9		186
-; lfence
+lfence!threebyte	0F,AE,E8
 lgdt!twobytemem		0F,01,2		286,PRIV
 lidt!twobytemem		0F,01,3		286,PRIV
 lldt!prot286		2		PRIV
@@ -549,6 +549,11 @@ maxpd!sse2pd		5F
 maxps!sseps		5F		KATMAI,SSE
 maxsd!sse2sd		5F
 maxss!sse2ss		5F
+mfence!threebyte	0F,AE,F0
+minpd!sse2pd		5D
+minps!sseps		5D		KATMAI,SSE
+minsd!sse2sd		5D
+minss!sse2ss		5D
 ; opcode arbitrarily picked for next 3 (could be 8A/8B instead of 88/89).
 mov	reg8,reg8		nil	88		$1r,$2	nil	8086
 mov	reg16,reg16		16	89		$1r,$2	nil	8086
