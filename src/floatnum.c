@@ -52,16 +52,16 @@
 RCSID("$IdPath$");
 
 /* 97-bit internal floating point format:
- * xxxxxxxs eeeeeeee eeeeeeee m.....................................m
+ * 0000000s eeeeeeee eeeeeeee m.....................................m
  * Sign          exponent     mantissa (80 bits)
  *                            79                                    0
  *
- * Only L.O. bit of Sign byte is significant.  The rest is garbage.
+ * Only L.O. bit of Sign byte is significant.  The rest is zero.
  * Exponent is bias 32767.
  * Mantissa does NOT have an implied one bit (it's explicit).
  */
 struct floatnum {
-    unsigned int *mantissa;	/* Allocated to 64 bits */
+    wordptr mantissa;		/* Allocated to MANT_BITS bits */
     unsigned short exponent;
     unsigned char sign;
     unsigned char flags;
@@ -222,7 +222,7 @@ static void
 floatnum_mul(floatnum *acc, const floatnum *op)
 {
     int exp;
-    unsigned int *product, *op1, *op2;
+    wordptr product, op1, op2;
     int norm_amt;
 
     /* Compute the new sign */
@@ -302,7 +302,7 @@ floatnum_new(const char *str)
     floatnum *flt;
     int dec_exponent, dec_exp_add;	/* decimal (powers of 10) exponent */
     int POT_index;
-    unsigned int *operand[2];
+    wordptr operand[2];
     int sig_digits;
     int decimal_pt;
     boolean carry;
@@ -527,8 +527,8 @@ floatnum_get_common(unsigned char *ptr, const floatnum *flt, int byte_size,
 		    int mant_bits, int implicit1, int exp_bits)
 {
     int exponent = flt->exponent;
-    unsigned int *output;
-    unsigned char *buf;
+    wordptr output;
+    charptr buf;
     unsigned int len;
     unsigned int overflow = 0, underflow = 0, retval = 0;
     int exp_bias = (1<<(exp_bits-1))-1;
