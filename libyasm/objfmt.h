@@ -38,8 +38,8 @@ struct objfmt {
     /* default (starting) section name */
     const char *default_section_name;
 
-    /* default (starting) BITS setting */
-    const unsigned char default_mode_bits;
+    /* default (starting) x86 BITS setting */
+    const unsigned char default_x86_mode_bits;
 
     /* NULL-terminated list of debugging formats that are valid to use with
      * this object format.

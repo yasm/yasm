@@ -44,6 +44,9 @@
 #include "arch.h"
 
 
+/* FIXME: figure out a better way to handle this */
+extern unsigned char x86_mode_bits;
+
 /* Extra path to search for our modules. */
 #ifndef YASM_MODULE_PATH_ENV
 # define YASM_MODULE_PATH_ENV	"YASM_MODULE_PATH"
@@ -288,8 +291,9 @@ main(int argc, char *argv[])
 	}
     }
 
-    /* Get initial BITS setting from object format */
-    /*x86_mode_bits = cur_objfmt->default_mode_bits;*/
+    /* Get initial x86 BITS setting from object format */
+    if (cur_arch == &x86_arch)
+	x86_mode_bits = cur_objfmt->default_x86_mode_bits;
 
     /* Parse! */
     sections = cur_parser->do_parse(cur_parser, in, in_filename);
