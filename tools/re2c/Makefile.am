@@ -24,6 +24,14 @@ re2c_SOURCES = \
 	substr.c	\
 	translate.c
 
+BUILT_SOURCES = \
+	parser.c \
+	parser.h
+
+CLEANFILES = \
+	parser.c \
+	parser.h
+
 EXTRA_DIST = \
 	CHANGELOG		\
 	NO_WARRANTY		\
