@@ -519,7 +519,7 @@ intnum_get_int(const intnum *intn)
 	case INTNUM_UL:
 	    return (long)intn->val.ul;
 	case INTNUM_BV:
-	    if (BitVector_msb(intn->val.bv)) {
+	    if (BitVector_msb_(intn->val.bv)) {
 		/* it's negative: negate the bitvector to get a positive
 		 * number, then negate the positive number.
 		 */
@@ -594,7 +594,7 @@ intnum_check_size(const intnum *intn, size_t size, int is_signed)
 	    case INTNUM_BV:
 		if (size >= 10)
 		    return 1;
-		if (BitVector_msb(intn->val.bv)) {
+		if (BitVector_msb_(intn->val.bv)) {
 		    /* it's negative */
 		    intptr abs_bv = BitVector_Create(BITVECT_ALLOC_SIZE,
 						     FALSE);
