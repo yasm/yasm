@@ -546,7 +546,7 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 					objext_valparams);
 	if (new_section) {
 	    nasm_parser_cur_section = new_section;
-	    nasm_parser_prev_bc = (bytecode *)NULL;
+	    nasm_parser_prev_bc = bcs_last(section_get_bytecodes(new_section));
 	} else
 	    Error(_("invalid argument to [%s]"), "SECTION");
     } else if (strcasecmp(name, "absolute") == 0) {
