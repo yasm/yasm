@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$IdPath: yasm/modules/objfmts/coff/coff-objfmt.c,v 1.19 2003/03/26 05:07:56 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #define YASM_LIB_INTERNAL
 #define YASM_BC_INTERNAL
@@ -216,6 +216,13 @@ coff_common_initialize(const char *in_filename,
     coff_symtab_entry *entry;
 
     cur_arch = a;
+
+    if (strcasecmp(cur_arch->keyword, "x86") != 0) {
+	yasm_fatal(N_("%s: Unsupported architecture `%s'"), "COFF",
+		   cur_arch->keyword);
+	/*@notreached@*/
+	return;
+    }
 
     coff_objfmt_parse_scnum = 1;    /* section numbering starts at 1 */
     STAILQ_INIT(&coff_symtab);
@@ -561,7 +568,8 @@ coff_objfmt_output(FILE *f, yasm_sectionhead *sections, int all_syms)
 
     /* Allocate space for headers by seeking forward */
     if (fseek(f, (long)(20+40*(coff_objfmt_parse_scnum-1)), SEEK_SET) < 0) {
-	yasm__error(0, N_("could not seek on output file"));
+	yasm_fatal(N_("could not seek on output file"));
+	/*@notreached@*/
 	return;
     }
 
@@ -588,7 +596,8 @@ coff_objfmt_output(FILE *f, yasm_sectionhead *sections, int all_syms)
     }
     pos = ftell(f);
     if (pos == -1) {
-	yasm__error(0, N_("could not get file position on output file"));
+	yasm_fatal(N_("could not get file position on output file"));
+	/*@notreached@*/
 	return;
     }
     symtab_pos = (unsigned long)pos;
@@ -744,7 +753,8 @@ coff_objfmt_output(FILE *f, yasm_sectionhead *sections, int all_syms)
 
     /* Write headers */
     if (fseek(f, 0, SEEK_SET) < 0) {
-	yasm__error(0, N_("could not seek on output file"));
+	yasm_fatal(N_("could not seek on output file"));
+	/*@notreached@*/
 	return;
     }
 
