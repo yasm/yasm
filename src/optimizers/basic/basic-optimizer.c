@@ -158,7 +158,6 @@ basic_optimize_bytecode_2(bytecode *bc, /*@unused@*/ /*@null@*/ void *d)
 	InternalError(_("Optimizer pass 1 missed a bytecode!"));
 	return -1;
     }
-    bc_resolve(bc, basic_optimize_resolve_label);
     return 0;
 }
 
@@ -191,9 +190,7 @@ basic_optimize(sectionhead *sections)
     if (sections_traverse(sections, NULL, basic_optimize_section_1) < 0)
 	return;
 
-    /* Pass 2:
-     *  Resolve (compute value of) forward references.
-     */
+    /* FIXME: Really necessary?  Check completion of all sections */
     sections_traverse(sections, NULL, basic_optimize_section_2);
 }
 
