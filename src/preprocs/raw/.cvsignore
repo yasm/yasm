@@ -1,5 +1,0 @@
-.*.sw?
-Makefile.in
-Makefile
-.deps
-libpreproc.a
