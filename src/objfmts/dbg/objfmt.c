@@ -1,5 +1,5 @@
-/* $Id: objfmt.c,v 1.3 2001/08/19 07:46:52 peter Exp $
- * Debugging output format (used to debug output format module interface)
+/* $Id: objfmt.c,v 1.4 2001/09/15 07:16:59 peter Exp $
+ * Debugging object format (used to debug object format module interface)
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -25,12 +25,12 @@
 
 #include "util.h"
 
-#include "outfmt.h"
+#include "objfmt.h"
 
-RCSID("$Id: objfmt.c,v 1.3 2001/08/19 07:46:52 peter Exp $");
+RCSID("$Id: objfmt.c,v 1.4 2001/09/15 07:16:59 peter Exp $");
 
-/* Define outfmt structure -- see outfmt.h for details */
-outfmt dbg_outfmt = {
-    "Trace of all info passed to output format module",
+/* Define objfmt structure -- see objfmt.h for details */
+objfmt dbg_objfmt = {
+    "Trace of all info passed to object format module",
     "dbg"
 };

@@ -1,7 +1,7 @@
-noinst_LIBRARIES = liboutfmt.a
+noinst_LIBRARIES = libobjfmt.a
 
-liboutfmt_a_SOURCES = \
-	outfmt.c
+libobjfmt_a_SOURCES = \
+	objfmt.c
 
 INCLUDES = \
 	-I$(top_srcdir)/src	\

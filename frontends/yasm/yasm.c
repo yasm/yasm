@@ -1,4 +1,4 @@
-/* $Id: yasm.c,v 1.10 2001/08/19 07:46:52 peter Exp $
+/* $Id: yasm.c,v 1.11 2001/09/15 07:16:59 peter Exp $
  * Program entry point, command line parsing
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -34,11 +34,11 @@
 
 #include "bytecode.h"
 #include "section.h"
-#include "outfmt.h"
+#include "objfmt.h"
 #include "preproc.h"
 #include "parser.h"
 
-RCSID("$Id: yasm.c,v 1.10 2001/08/19 07:46:52 peter Exp $");
+RCSID("$Id: yasm.c,v 1.11 2001/09/15 07:16:59 peter Exp $");
 
 char *filename = (char *)NULL;
 unsigned int line_number = 1;
@@ -61,7 +61,7 @@ main(int argc, char *argv[])
 	filename = strdup("<STDIN>");
     }
 
-    nasm_parser.doparse(&raw_preproc, &dbg_outfmt, in);
+    nasm_parser.doparse(&raw_preproc, &dbg_objfmt, in);
 
     if (filename)
 	free(filename);

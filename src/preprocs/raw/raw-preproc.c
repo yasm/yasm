@@ -1,4 +1,4 @@
-/* $Id: raw-preproc.c,v 1.6 2001/08/30 03:45:26 peter Exp $
+/* $Id: raw-preproc.c,v 1.7 2001/09/15 07:16:59 peter Exp $
  * Raw preprocessor (preforms NO preprocessing)
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -32,10 +32,10 @@
 
 #include "errwarn.h"
 
-#include "outfmt.h"
+#include "objfmt.h"
 #include "preproc.h"
 
-RCSID("$Id: raw-preproc.c,v 1.6 2001/08/30 03:45:26 peter Exp $");
+RCSID("$Id: raw-preproc.c,v 1.7 2001/09/15 07:16:59 peter Exp $");
 
 static int is_interactive;
 static FILE *in;
@@ -43,7 +43,7 @@ static FILE *in;
 int isatty(int);
 
 static void
-initialize(outfmt *of, FILE *f)
+initialize(objfmt *of, FILE *f)
 {
     in = f;
     is_interactive = f ? (isatty(fileno(f)) > 0) : 0;

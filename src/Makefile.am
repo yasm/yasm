@@ -1,4 +1,4 @@
-SUBDIRS = parsers preprocs outfmts
+SUBDIRS = parsers preprocs objfmts
 
 INCLUDES = -I$(top_srcdir)/intl
 
@@ -17,14 +17,14 @@ yasm_SOURCES = \
 	globals.h		\
 	util.h			\
 	section.h		\
-	outfmt.h		\
+	objfmt.h		\
 	preproc.h		\
 	parser.h
 
 yasm_LDADD = \
 	parsers/nasm/libparser.a	\
 	preprocs/raw/libpreproc.a	\
-	outfmts/dbg/liboutfmt.a		\
+	objfmts/dbg/libobjfmt.a		\
 	$(INTLLIBS)
 
 if DEV

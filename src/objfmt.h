@@ -1,5 +1,5 @@
-/* $Id: objfmt.h,v 1.2 2001/08/19 03:52:58 peter Exp $
- * Output format module interface header file
+/* $Id: objfmt.h,v 1.3 2001/09/15 07:16:59 peter Exp $
+ * Object format module interface header file
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -19,11 +19,11 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef YASM_OUTFMT_H
-#define YASM_OUTFMT_H
+#ifndef YASM_OBJFMT_H
+#define YASM_OBJFMT_H
 
-/* Interface to the output format module(s) */
-typedef struct outfmt_s {
+/* Interface to the object format module(s) */
+typedef struct objfmt_s {
     /* one-line description of the format */
     char *name;
 
@@ -31,7 +31,7 @@ typedef struct outfmt_s {
     char *keyword;
 
     /* NULL-terminated list of debugging formats that are valid to use with
-     * this output format.
+     * this object format.
      */
 /*    struct debugfmt_s **debugfmts;*/
 
@@ -39,9 +39,9 @@ typedef struct outfmt_s {
      * use)
      */
 /*    struct debugfmt_s *default_df;*/
-} outfmt;
+} objfmt;
 
-/* Available output formats */
-extern outfmt dbg_outfmt;
+/* Available object formats */
+extern objfmt dbg_objfmt;
 
 #endif

@@ -1,4 +1,4 @@
-/* $Id: preproc.h,v 1.2 2001/08/19 03:52:58 peter Exp $
+/* $Id: preproc.h,v 1.3 2001/09/15 07:16:59 peter Exp $
  * Preprocessor module interface header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -32,14 +32,14 @@ typedef struct preproc_s {
 
     /* Initializes preprocessor.
      *
-     * The preprocessor needs access to the output format module to find out
+     * The preprocessor needs access to the object format module to find out
      * any output format specific macros.
      *
      * This function also takes the FILE * to the initial starting file, but
      * not the filename (which is in a global variable and is not
      * preprocessor-specific).
      */
-    void (*initialize) (outfmt *of, FILE *f);
+    void (*initialize) (objfmt *of, FILE *f);
 
     /* Gets more preprocessed source code (up to max_size bytes) into buf.
      * Note that more than a single line may be returned in buf. */

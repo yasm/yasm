@@ -1,4 +1,4 @@
-/* $Id: parser.h,v 1.2 2001/08/19 03:52:58 peter Exp $
+/* $Id: parser.h,v 1.3 2001/09/15 07:16:59 peter Exp $
  * Parser module interface header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -41,7 +41,7 @@ typedef struct parser_s {
 
     /* Main entrance point for the parser.
      *
-     * The parser needs access to both the output format module (for format-
+     * The parser needs access to both the object format module (for format-
      * specific directives and segment names), and the selected preprocessor
      * (which should naturally be in the preprocs list above).
      *
@@ -55,7 +55,7 @@ typedef struct parser_s {
      * Note that calling this has many side effects in the output format
      * module: sections and variables are declared, etc.
      */
-    section *(*doparse) (preproc *pp, outfmt *of, FILE *f);
+    section *(*doparse) (preproc *pp, objfmt *of, FILE *f);
 } parser;
 
 /* Available parsers */

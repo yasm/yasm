@@ -1,4 +1,4 @@
-/* $Id: nasm-parser.c,v 1.6 2001/08/19 07:46:52 peter Exp $
+/* $Id: nasm-parser.c,v 1.7 2001/09/15 07:16:59 peter Exp $
  * NASM-compatible parser
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -29,11 +29,11 @@
 
 #include "bytecode.h"
 #include "section.h"
-#include "outfmt.h"
+#include "objfmt.h"
 #include "preproc.h"
 #include "parser.h"
 
-RCSID("$Id: nasm-parser.c,v 1.6 2001/08/19 07:46:52 peter Exp $");
+RCSID("$Id: nasm-parser.c,v 1.7 2001/09/15 07:16:59 peter Exp $");
 
 extern FILE *nasm_parser_in;
 extern int nasm_parser_debug;
@@ -43,7 +43,7 @@ extern int nasm_parser_parse(void);
 int (*nasm_parser_yyinput) (char *buf, int max_size);
 
 static section *
-doparse(preproc *pp, outfmt *of, FILE *f)
+doparse(preproc *pp, objfmt *of, FILE *f)
 {
     pp->initialize(of, f);
     nasm_parser_in = f;
