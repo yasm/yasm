@@ -137,16 +137,15 @@
 #endif
 
 /* Bit-counting: used primarily by HAMT but also in a few other places. */
-#define SK5	0x55555555
-#define SK3	0x33333333
-#define SKF0	0x0F0F0F0F
+#define BC_TWO(c)	(0x1ul << (c))
+#define BC_MSK(c)	(((unsigned long)(-1)) / (BC_TWO(BC_TWO(c)) + 1ul))
+#define BC_COUNT(x,c)	((x) & BC_MSK(c)) + (((x) >> (BC_TWO(c))) & BC_MSK(c))
 #define BitCount(d, s)		do {		\
-	d = s;					\
-	d -= (d>>1) & SK5;			\
-	d = (d & SK3) + ((d>>2) & SK3);		\
-	d = (d & SKF0) + ((d>>4) & SKF0);	\
-	d += d>>16;				\
-	d += d>>8;				\
+	d = BC_COUNT(s, 0);			\
+	d = BC_COUNT(d, 1);			\
+	d = BC_COUNT(d, 2);			\
+	d = BC_COUNT(d, 3);			\
+	d = BC_COUNT(d, 4);			\
     } while (0)
 
 #ifndef NELEMS
