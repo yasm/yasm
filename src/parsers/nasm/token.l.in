@@ -1,4 +1,4 @@
-/* $Id: token.l.in,v 1.10 2001/07/11 21:00:34 peter Exp $
+/* $Id: token.l.in,v 1.11 2001/07/11 21:01:54 peter Exp $
  * Main lexer
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -226,18 +226,8 @@ gs	{ yylval.int_val = 5; return REG_GS; }
 "%%"	{ return SIGNMOD; }
 [-+|^&*/%~():[\],]	{ return yytext[0]; }
 
-    /* special labels like ..start */
-\.\.[a-z0-9_$#@~.?]+ {
-    /* For now, just treat like regular label */
-    yylval.syminfo.name = strdup (yytext);
-    if (yylval.syminfo.name == NULL) Fatal (FATAL_NOMEM);
-    yylval.syminfo.line = line_number;
-
-    return ID;
-}
-
-    /* special non-local ..@label */
-$$|$|\.\.@[a-z0-9_$#@~.?]+ {
+    /* special non-local ..@label and labels like ..start */
+$$|$|\.\.[a-z0-9_$#@~.?]+ {
     yylval.syminfo.name = strdup (yytext);
     if (yylval.syminfo.name == NULL) Fatal (FATAL_NOMEM);
     yylval.syminfo.line = line_number;
