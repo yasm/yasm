@@ -218,9 +218,15 @@ typedef enum {
 #define SYMTAB64_SIZE 24
 #define SYMTAB_MAXSIZE 24
 
+#define SYMTAB32_ALIGN 4
+#define SYMTAB64_ALIGN 8
+
 #define RELOC32_SIZE 8
 #define RELOC64_SIZE 16
 #define RELOC_MAXSIZE 16
+
+#define RELOC32_ALIGN 4
+#define RELOC64_ALIGN 8
 
 
 /* elf relocation type - index of semantics */
@@ -260,12 +266,11 @@ typedef enum {
 struct elf_secthead {
     elf_section_type	 type;
     elf_section_flags	 flags;
-    elf_address		 addr;
     elf_address		 offset;
-    elf_size		 size;
+    yasm_intnum		*size;
     elf_section_index	 link;
     elf_section_info	 info;	    /* see note ESD1 */
-    elf_address		 align;
+    yasm_intnum 	*align;
     elf_size		 entsize;
 
     yasm_symrec		*sym;
@@ -300,7 +305,7 @@ struct elf_secthead {
 STAILQ_HEAD(elf_reloc_head, elf_reloc_entry);
 struct elf_reloc_entry {
     STAILQ_ENTRY(elf_reloc_entry) qlink;
-    elf_address		 addr;
+    yasm_intnum		*addr;
     yasm_symrec		*sym;
     int			 rtype_rel;
     size_t		 valsize;
@@ -336,7 +341,7 @@ int elf_set_arch(struct yasm_arch *arch, const char *machine);
 
 /* reloc functions */
 elf_reloc_entry *elf_reloc_entry_new(yasm_symrec *sym,
-				     elf_address addr,
+				     yasm_intnum *addr,
 				     int rel,
 				     size_t valsize);
 void elf_reloc_entry_delete(elf_reloc_entry *entry);
@@ -386,10 +391,10 @@ unsigned long elf_secthead_write_to_file(FILE *f, elf_secthead *esd,
 void elf_secthead_print(FILE *f, int indent_level, elf_secthead *esh);
 int elf_secthead_append_reloc(elf_secthead *shead, elf_reloc_entry *reloc);
 elf_section_type elf_secthead_get_type(elf_secthead *shead);
-elf_size elf_secthead_get_size(elf_secthead *shead);
+int elf_secthead_is_empty(elf_secthead *shead);
 struct yasm_symrec *elf_secthead_get_sym(elf_secthead *shead);
-elf_address elf_secthead_set_addr(elf_secthead *shead, elf_address addr);
-elf_address elf_secthead_set_align(elf_secthead *shead, elf_address align);
+const struct yasm_intnum *elf_secthead_set_align(elf_secthead *shead,
+						 struct yasm_intnum *align);
 elf_section_info elf_secthead_set_info(elf_secthead *shead,
 				       elf_section_info info);
 elf_section_index elf_secthead_set_index(elf_secthead *shead,
@@ -402,7 +407,7 @@ elf_strtab_entry *elf_secthead_set_rel_name(elf_secthead *shead,
 					    elf_strtab_entry *entry);
 struct yasm_symrec *elf_secthead_set_sym(elf_secthead *shead,
 					 struct yasm_symrec *sym);
-unsigned long elf_secthead_add_size(elf_secthead *shead, unsigned long size);
+void elf_secthead_add_size(elf_secthead *shead, yasm_intnum *size);
 unsigned long elf_secthead_write_rel_to_file(FILE *f, elf_section_index symtab,
 					     elf_secthead *esd,
 					     elf_section_index sindex);

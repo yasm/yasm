@@ -56,7 +56,6 @@ typedef struct {
     elf_secthead *shead;
     yasm_section *sect;
     unsigned long sindex;
-    unsigned long addr;
 } elf_objfmt_output_info;
 
 static unsigned int elf_objfmt_parse_scnum;	/* sect numbering in parser */
@@ -234,7 +233,8 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	    *ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
 	}
 
-	reloc = elf_reloc_entry_new(sym, bc->offset + offset, rel, valsize);
+	reloc = elf_reloc_entry_new(sym,
+	    yasm_intnum_new_uint(bc->offset + offset), rel, valsize);
 	if (reloc == NULL) {
 	    yasm__error(bc->line, N_("elf: invalid relocation size"));
 	    return 1;
@@ -283,8 +283,16 @@ elf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 	    yasm_xfree(bigbuf);
 	return 0;
     }
+    else {
+	yasm_intnum *bcsize = yasm_intnum_new_uint(size);
+	yasm_intnum *mult = yasm_intnum_new_uint(multiple);
 
-    elf_secthead_add_size(info->shead, multiple * size);
+	yasm_intnum_calc(bcsize, YASM_EXPR_MUL, mult, 0);
+	elf_secthead_add_size(info->shead, bcsize);
+
+	yasm_intnum_delete(bcsize);
+	yasm_intnum_delete(mult);
+    }
 
     /* Warn that gaps are converted to 0 and write out the 0's. */
     if (gap) {
@@ -333,14 +341,16 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     if (shead == NULL)
 	yasm_internal_error("no section header attached to section");
 
-    /*elf_secthead_set_addr(shead, info->addr);*/
-
     /* don't output header-only sections */
     if ((elf_secthead_get_type(shead) & SHT_NOBITS) == SHT_NOBITS)
     {
 	yasm_bytecode *last = yasm_bcs_last(yasm_section_get_bytecodes(sect));
-	if (last)
-	    elf_secthead_add_size(shead, last->offset + last->len);
+	if (last) {
+	    yasm_intnum *sectsize;
+	    sectsize = yasm_intnum_new_uint(last->offset + last->len);
+	    elf_secthead_add_size(shead, sectsize);
+	    yasm_intnum_delete(sectsize);
+	}
 	elf_secthead_set_index(shead, ++info->sindex);
 	return 0;
     }
@@ -362,10 +372,9 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 		      elf_objfmt_output_bytecode);
 
     /* Empty?  Go on to next section */
-    if (elf_secthead_get_size(shead) == 0)
+    if (elf_secthead_is_empty(shead))
 	return 0;
 
-    info->addr += elf_secthead_get_size(shead);
     elf_secthead_set_index(shead, ++info->sindex);
 
     /* No relocations to output?  Go on to next section */
@@ -428,7 +437,6 @@ elf_objfmt_output(FILE *f, yasm_sectionhead *sections, int all_syms)
     unsigned long elf_symtab_nlocal;
 
     info.f = f;
-    info.addr = 0;
 
     /* Allocate space for Ehdr by seeking forward */
     if (fseek(f, (long)(elf_proghead_get_size()), SEEK_SET) < 0) {
@@ -444,7 +452,6 @@ elf_objfmt_output(FILE *f, yasm_sectionhead *sections, int all_syms)
     /* output known sections - includes reloc sections which aren't in yasm's
      * list.  Assign indices as we go. */
     info.sindex = 3;
-    info.addr = 0;
     if (yasm_sections_traverse(sections, &info, elf_objfmt_output_section))
 	return;
 
@@ -535,6 +542,7 @@ elf_objfmt_sections_switch(yasm_sectionhead *headp,
     unsigned long type = SHT_PROGBITS;
     unsigned long flags = SHF_ALLOC;
     unsigned long align = 4;
+    yasm_intnum *align_intn = NULL;
     int flags_override = 0;
     char *sectname;
     int resonly = 0;
@@ -602,17 +610,17 @@ elf_objfmt_sections_switch(yasm_sectionhead *headp,
 	}
 	else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
 	    if (0 /* win32 */) {
-		/*@dependent@*/ /*@null@*/ const yasm_intnum *align_inum;
+		/*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
 		unsigned long addralign;
 
-		align_inum = yasm_expr_get_intnum(&vp->param, NULL);
-		if (!align_inum) {
+		align_expr = yasm_expr_get_intnum(&vp->param, NULL);
+		if (!align_expr) {
 		    yasm__error(lindex,
 				N_("argument to `%s' is not a power of two"),
 				vp->val);
 		    return NULL;
 		}
-		addralign = yasm_intnum_get_uint(align_inum);
+		addralign = yasm_intnum_get_uint(align_expr);
 
 		/* Alignments must be a power of two. */
 		if ((addralign & (addralign - 1)) != 0) {
@@ -622,8 +630,7 @@ elf_objfmt_sections_switch(yasm_sectionhead *headp,
 		    return NULL;
 		}
 
-		/* Convert alignment into flags setting */
-		align = addralign;
+		align_intn = yasm_intnum_copy(align_expr);
 	    } 
 	} else
 	    yasm__warning(YASM_WARN_GENERAL, lindex,
@@ -640,7 +647,10 @@ elf_objfmt_sections_switch(yasm_sectionhead *headp,
 
 	esd = elf_secthead_new(name, type, flags,
 			       elf_objfmt_parse_scnum++, 0, 0);
-	if (align) elf_secthead_set_align(esd, align);
+	if (!align_intn)
+	    align_intn = yasm_intnum_new_uint(align);
+	if (align_intn)
+	    elf_secthead_set_align(esd, align_intn);
 	yasm_section_set_of_data(retval, &yasm_elf_LTX_objfmt, esd);
 	sym = yasm_symrec_define_label(sectname, retval, (yasm_bytecode *)NULL,
 				       1, lindex);

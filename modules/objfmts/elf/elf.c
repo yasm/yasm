@@ -34,9 +34,21 @@
 #define YASM_OBJFMT_ELF_INTERNAL
 #include "elf.h"
 
-#define YASM_WRITE_64C_L(p,hi,lo) \
+#define YASM_WRITE_32I_L(p, i) do {\
+    assert(yasm_intnum_check_size(i, 32, 0, 2)); \
+    yasm_intnum_get_sized(i, p, 4, 32, 0, 0, 0, 0); \
+    p += 4; } while (0)
+
+#define YASM_WRITE_64I_L(p, i) do {\
+    assert(yasm_intnum_check_size(i, 64, 0, 2)); \
+    yasm_intnum_get_sized(i, p, 8, 64, 0, 0, 0, 0); \
+    p += 8; } while (0)
+
+#define YASM_WRITE_64C_L(p, hi, lo) do {\
     YASM_WRITE_32_L(p, lo); \
-    YASM_WRITE_32_L(p, hi)
+    YASM_WRITE_32_L(p, hi); } while (0)
+
+#define YASM_WRITE_64Z_L(p, i)		YASM_WRITE_64C_L(p, 0, i)
 
 static /*@dependent@*/ yasm_arch *cur_arch;
 static enum {
@@ -73,22 +85,30 @@ elf_set_arch(yasm_arch *arch, const char *machine)
 }
 
 /* reloc functions */
+/* takes ownership of addr */
 elf_reloc_entry *
 elf_reloc_entry_new(yasm_symrec *sym,
-		    elf_address addr,
+		    yasm_intnum *addr,
 		    int rel,
 		    size_t valsize)
 {
     elf_reloc_entry *entry;
     switch (cur_machine) {
 	case M_X86_32:
-	    if (valsize != 32)
+	    if (valsize != 32) {
+		if (addr)
+		    yasm_intnum_delete(addr);
 		return NULL;
+	    }
 	    break;
 
 	case M_X86_64:
 	    if (valsize != 8 && valsize != 16 && valsize != 32 && valsize != 64)
+	    {
+		if (addr)
+		    yasm_intnum_delete(addr);
 		return NULL;
+	    }
 	    break;
 
 	default:
@@ -110,6 +130,8 @@ elf_reloc_entry_new(yasm_symrec *sym,
 void
 elf_reloc_entry_delete(elf_reloc_entry *entry)
 {
+    if (entry->addr)
+	yasm_intnum_delete(entry->addr);
     yasm_xfree(entry);
 }
 
@@ -392,19 +414,19 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab)
     prev = NULL;
     STAILQ_FOREACH(entry, symtab, qlink) {
 
-	const yasm_intnum *size_intn;
+	yasm_intnum *size_intn=NULL, *value_intn=NULL;
 	bufp = buf;
 
 	/* get size (if specified); expr overrides stored integer */
 	if (entry->xsize) {
-	    size_intn = yasm_expr_get_intnum(&entry->xsize,
-					     yasm_common_calc_bc_dist);
-	    if (size_intn)
-		entry->size = yasm_intnum_get_uint(size_intn);
-	    else
+	    size_intn = yasm_intnum_copy(
+		yasm_expr_get_intnum(&entry->xsize, yasm_common_calc_bc_dist));
+	    if (!size_intn)
 		yasm__error(entry->xsize->line,
-			    N_("size specifier not an integer expression"));
+		    N_("size specifier not an integer expression"));
 	}
+	else
+	    size_intn = yasm_intnum_new_uint(entry->size);
 
 	/* get EQU value for constants */
 	if (entry->sym) {
@@ -422,17 +444,20 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab)
 				N_("EQU value not an integer expression"));
 		}
 
-		entry->value = yasm_intnum_get_uint(equ_intn);
+		value_intn = yasm_intnum_copy(equ_intn);
 		entry->index = SHN_ABS;
 		yasm_expr_delete(equ_expr);
 	    }
 	}
+	if (value_intn == NULL)
+	    value_intn = yasm_intnum_new_uint(entry->value);
 
 	switch (cur_elf) {
 	    case ELF32:
 		YASM_WRITE_32_L(bufp, entry->name ? entry->name->index : 0);
-		YASM_WRITE_32_L(bufp, entry->value);
-		YASM_WRITE_32_L(bufp, entry->size);
+		YASM_WRITE_32I_L(bufp, value_intn);
+		YASM_WRITE_32I_L(bufp, size_intn);
+
 		YASM_WRITE_8(bufp, ELF32_ST_INFO(entry->bind, entry->type));
 		YASM_WRITE_8(bufp, 0);
 		if (entry->sect) {
@@ -461,14 +486,16 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab)
 		} else {
 		    YASM_WRITE_16_L(bufp, entry->index);
 		}
-		/* XXX: instead of turning arbitrary sized intnums to 32-bit
-		 * values above, write them directly here */
-		YASM_WRITE_64C_L(bufp, 0, entry->value);
-		YASM_WRITE_64C_L(bufp, 0, entry->size);
+		YASM_WRITE_64I_L(bufp, value_intn);
+		YASM_WRITE_64I_L(bufp, size_intn);
 		fwrite(buf, SYMTAB64_SIZE, 1, f);
 		size += SYMTAB64_SIZE;
 		break;
 	}
+
+	yasm_intnum_delete(size_intn);
+	yasm_intnum_delete(value_intn);
+
 	prev = entry;
     }
     return size;
@@ -505,12 +532,11 @@ elf_secthead_new(elf_strtab_entry	*name,
 
     esd->type = type;
     esd->flags = flags;
-    esd->addr = 0;
     esd->offset = offset;
-    esd->size = size;
+    esd->size = yasm_intnum_new_uint(size);
     esd->link = 0;
     esd->info = 0;
-    esd->align = 0;
+    esd->align = NULL;
     esd->entsize = 0;
     esd->index = idx;
 
@@ -524,14 +550,15 @@ elf_secthead_new(elf_strtab_entry	*name,
     esd->nreloc = 0;
 
     if (name && (strcmp(name->str, ".symtab") == 0)) {
-	esd->align = 4;
 	switch (cur_elf) {
 	    case ELF32:
 		esd->entsize = SYMTAB32_SIZE;
+		esd->align = yasm_intnum_new_uint(SYMTAB32_ALIGN);
 		break;
 
 	    case ELF64:
 		esd->entsize = SYMTAB64_SIZE;
+		esd->align = yasm_intnum_new_uint(SYMTAB64_ALIGN);
 		break;
 
 	    default:
@@ -548,15 +575,12 @@ elf_secthead_delete(elf_secthead *shead)
     if (shead == NULL)
 	yasm_internal_error(N_("shead is null"));
 
-    if (shead->relocs) {
-	elf_reloc_entry *r1, *r2;
-	r1 = STAILQ_FIRST(shead->relocs);
-	while (r1 != NULL) {
-	    r2 = STAILQ_NEXT(r1, qlink);
-	    yasm_xfree(r1);
-	    r1 = r2;
-	}
-    }
+    if (shead->align)
+	yasm_intnum_delete(shead->align);
+
+    if (shead->relocs)
+	elf_reloc_delete(shead->relocs);
+
     yasm_xfree(shead);
 }
 
@@ -576,11 +600,12 @@ void elf_secthead_print(FILE *f, int indent_level, elf_secthead *sect)
 	fprintf(f, "EXEC ");
     /*if (sect->flags & SHF_MASKPROC)
 	fprintf(f, "PROC-SPECIFIC"); */
-    fprintf(f, "\n%*saddr=0x%lx\n", indent_level, "", sect->addr);
     fprintf(f, "%*soffset=0x%lx\n", indent_level, "", sect->offset);
-    fprintf(f, "%*ssize=0x%lx\n", indent_level, "", sect->size);
+    fprintf(f, "%*ssize=0x%lx\n", indent_level, "",
+	    yasm_intnum_get_uint(sect->size));
     fprintf(f, "%*slink=0x%x\n", indent_level, "", sect->link);
-    fprintf(f, "%*salign=%ld\n", indent_level, "", sect->align);
+    fprintf(f, "%*salign=%ld\n", indent_level, "",
+	    yasm_intnum_get_uint(sect->align));
     fprintf(f, "%*snreloc=%ld\n", indent_level, "", sect->nreloc);
     if (sect->nreloc) {
 	elf_reloc_entry *reloc;
@@ -592,7 +617,8 @@ void elf_secthead_print(FILE *f, int indent_level, elf_secthead *sect)
 	fprintf(f, "%*soffset=0x%lx\n", indent_level+1, "", sect->rel_offset);
 	STAILQ_FOREACH(reloc, sect->relocs, qlink) {
 	    fprintf(f, "%*s%s at 0x%lx\n", indent_level+2, "",
-		    yasm_symrec_get_name(reloc->sym), reloc->addr);
+		    yasm_symrec_get_name(reloc->sym),
+		    yasm_intnum_get_uint(reloc->addr));
 	}
     }
 }
@@ -612,14 +638,17 @@ elf_secthead_write_to_file(FILE *f, elf_secthead *shead,
 	    YASM_WRITE_32_L(bufp, shead->name ? shead->name->index : 0);
 	    YASM_WRITE_32_L(bufp, shead->type);
 	    YASM_WRITE_32_L(bufp, shead->flags);
-	    YASM_WRITE_32_L(bufp, shead->addr);
+	    YASM_WRITE_32_L(bufp, 0); /* vmem address */
 
 	    YASM_WRITE_32_L(bufp, shead->offset);
-	    YASM_WRITE_32_L(bufp, shead->size);
+	    YASM_WRITE_32I_L(bufp, shead->size);
 	    YASM_WRITE_32_L(bufp, shead->link);
 	    YASM_WRITE_32_L(bufp, shead->info);
 
-	    YASM_WRITE_32_L(bufp, shead->align);
+	    if (shead->align)
+		YASM_WRITE_32I_L(bufp, shead->align);
+	    else
+		YASM_WRITE_32_L(bufp, 0);
 	    YASM_WRITE_32_L(bufp, shead->entsize);
 
 	    if (fwrite(buf, SHDR32_SIZE, 1, f))
@@ -629,16 +658,19 @@ elf_secthead_write_to_file(FILE *f, elf_secthead *shead,
 	case ELF64:
 	    YASM_WRITE_32_L(bufp, shead->name ? shead->name->index : 0);
 	    YASM_WRITE_32_L(bufp, shead->type);
-	    YASM_WRITE_64C_L(bufp, 0, shead->flags);
-	    YASM_WRITE_64C_L(bufp, 0, shead->addr);
-	    YASM_WRITE_64C_L(bufp, 0, shead->offset);
-	    YASM_WRITE_64C_L(bufp, 0, shead->size);
+	    YASM_WRITE_64Z_L(bufp, shead->flags);
+	    YASM_WRITE_64Z_L(bufp, 0);		/* vmem address */
+	    YASM_WRITE_64Z_L(bufp, shead->offset);
+	    YASM_WRITE_64I_L(bufp, shead->size);
 
 	    YASM_WRITE_32_L(bufp, shead->link);
 	    YASM_WRITE_32_L(bufp, shead->info);
 
-	    YASM_WRITE_64C_L(bufp, 0, shead->align);
-	    YASM_WRITE_64C_L(bufp, 0, shead->entsize);
+	    if (shead->align)
+		YASM_WRITE_64I_L(bufp, shead->align);
+	    else
+		YASM_WRITE_64Z_L(bufp, 0);
+	    YASM_WRITE_64Z_L(bufp, shead->entsize);
 	    
 	    if (fwrite(buf, SHDR64_SIZE, 1, f))
 		return SHDR64_SIZE;
@@ -684,6 +716,9 @@ elf_secthead_write_rel_to_file(FILE *f, elf_section_index symtab_idx,
     shead->rel_index = sindex;
 
     switch (cur_elf) {
+	yasm_intnum *nreloc;
+	yasm_intnum *relocsize;
+
 	case ELF32:
 	    YASM_WRITE_32_L(bufp, shead->rel_name ? shead->rel_name->index : 0);
 	    YASM_WRITE_32_L(bufp, SHT_REL);
@@ -695,7 +730,7 @@ elf_secthead_write_rel_to_file(FILE *f, elf_section_index symtab_idx,
 	    YASM_WRITE_32_L(bufp, symtab_idx);		/* link: symtab index */
 	    YASM_WRITE_32_L(bufp, shead->index);	/* info: relocated's index */
 
-	    YASM_WRITE_32_L(bufp, 4);			/* align */
+	    YASM_WRITE_32_L(bufp, RELOC32_ALIGN);	/* align */
 	    YASM_WRITE_32_L(bufp, RELOC32_SIZE);	/* entity size */
 
 	    if (fwrite(buf, SHDR32_SIZE, 1, f))
@@ -705,15 +740,21 @@ elf_secthead_write_rel_to_file(FILE *f, elf_section_index symtab_idx,
 	case ELF64:
 	    YASM_WRITE_32_L(bufp, shead->rel_name ? shead->rel_name->index : 0);
 	    YASM_WRITE_32_L(bufp, SHT_REL);
-	    YASM_WRITE_64C_L(bufp, 0, 0);
-	    YASM_WRITE_64C_L(bufp, 0, 0);
-	    YASM_WRITE_64C_L(bufp, 0, shead->rel_offset);
-	    YASM_WRITE_64C_L(bufp, 0, RELOC64_SIZE * shead->nreloc); /* size */
+	    YASM_WRITE_64Z_L(bufp, 0);
+	    YASM_WRITE_64Z_L(bufp, 0);
+	    YASM_WRITE_64Z_L(bufp, shead->rel_offset);
+
+	    nreloc = yasm_intnum_new_uint(shead->nreloc);
+	    relocsize = yasm_intnum_new_uint(RELOC64_SIZE);
+	    yasm_intnum_calc(relocsize, YASM_EXPR_MUL, nreloc, 0);
+	    YASM_WRITE_64I_L(bufp, relocsize);		/* size */
+	    yasm_intnum_delete(nreloc);
+	    yasm_intnum_delete(relocsize);
 
 	    YASM_WRITE_32_L(bufp, symtab_idx);		/* link: symtab index */
 	    YASM_WRITE_32_L(bufp, shead->index);	/* info: relocated's index */
-	    YASM_WRITE_64C_L(bufp, 0, 8);		/* align */
-	    YASM_WRITE_64C_L(bufp, 0, RELOC64_SIZE);	/* entity size */
+	    YASM_WRITE_64Z_L(bufp, RELOC64_ALIGN);	/* align */
+	    YASM_WRITE_64Z_L(bufp, RELOC64_SIZE);	/* entity size */
 
 	    if (fwrite(buf, SHDR64_SIZE, 1, f))
 		return SHDR64_SIZE;
@@ -810,14 +851,14 @@ elf_secthead_write_relocs_to_file(FILE *f, elf_secthead *shead)
 	bufp = buf;
 	switch (cur_elf) {
 	    case ELF32:
-		YASM_WRITE_32_L(bufp, reloc->addr);
+		YASM_WRITE_32I_L(bufp, reloc->addr);
 		YASM_WRITE_32_L(bufp, ELF32_R_INFO(r_sym, r_type));
 		fwrite(buf, RELOC32_SIZE, 1, f);
 		size += RELOC32_SIZE;
 		break;
 
 	    case ELF64:
-		YASM_WRITE_64C_L(bufp, 0, reloc->addr);
+		YASM_WRITE_64I_L(bufp, reloc->addr);
 		/*YASM_WRITE_64_L(bufp, ELF64_R_INFO(r_sym, r_type));*/
 		YASM_WRITE_64C_L(bufp, r_sym, r_type);
 		fwrite(buf, RELOC64_SIZE, 1, f);
@@ -838,10 +879,10 @@ elf_secthead_get_type(elf_secthead *shead)
     return shead->type;
 }
 
-elf_size
-elf_secthead_get_size(elf_secthead *shead)
+int
+elf_secthead_is_empty(elf_secthead *shead)
 {
-    return shead->size;
+    return yasm_intnum_is_zero(shead->size);
 }
 
 yasm_symrec *
@@ -850,15 +891,12 @@ elf_secthead_get_sym(elf_secthead *shead)
     return shead->sym;
 }
 
-elf_address
-elf_secthead_set_addr(elf_secthead *shead, elf_address addr)
+const yasm_intnum *
+elf_secthead_set_align(elf_secthead *shead, yasm_intnum *align)
 {
-    return shead->addr = addr;
-}
-
-elf_address
-elf_secthead_set_align(elf_secthead *shead, elf_address align)
-{
+    if (shead->align != NULL)
+	yasm_intnum_delete(shead->align);
+    
     return shead->align = align;
 }
 
@@ -898,16 +936,18 @@ elf_secthead_set_sym(elf_secthead *shead, yasm_symrec *sym)
     return shead->sym = sym;
 }
 
-unsigned long
-elf_secthead_add_size(elf_secthead *shead, unsigned long size)
+void
+elf_secthead_add_size(elf_secthead *shead, yasm_intnum *size)
 {
-    return shead->size += size;
+    if (size) {
+	yasm_intnum_calc(shead->size, YASM_EXPR_ADD, size, 0);
+    }
 }
 
 long
 elf_secthead_set_file_offset(elf_secthead *shead, long pos)
 {
-    unsigned long align = shead->align;
+    unsigned long align = yasm_intnum_get_uint(shead->align);
 
     if (align == 0 || align == 1) {
 	shead->offset = (unsigned long)pos;
@@ -982,16 +1022,16 @@ elf_proghead_write_to_file(FILE *f,
 	    YASM_WRITE_8(bufp, ELFDATA2LSB);	    /* data encoding :: MSB? */
 	    YASM_WRITE_8(bufp, EV_CURRENT);	    /* elf version */
 	    YASM_WRITE_8(bufp, ELFOSABI_SYSV);	    /* os/abi */
-	    YASM_WRITE_8(bufp, 0);			/* SYSV v3 ABI=0 */
-	    while (bufp-buf < EI_NIDENT)		/* e_ident padding */
+	    YASM_WRITE_8(bufp, 0);		    /* SYSV v3 ABI=0 */
+	    while (bufp-buf < EI_NIDENT)	    /* e_ident padding */
 		YASM_WRITE_8(bufp, 0);
 
 	    YASM_WRITE_16_L(bufp, ET_REL);	    /* e_type - object file */
 	    YASM_WRITE_16_L(bufp, EM_X86_64);	    /* e_machine - or others */
 	    YASM_WRITE_32_L(bufp, EV_CURRENT);	    /* elf version */
-	    YASM_WRITE_64C_L(bufp, 0, 0);	    /* e_entry */
-	    YASM_WRITE_64C_L(bufp, 0, 0);	    /* e_phoff */
-	    YASM_WRITE_64C_L(bufp, 0, secthead_addr);/* e_shoff secthead off */
+	    YASM_WRITE_64Z_L(bufp, 0);		    /* e_entry */
+	    YASM_WRITE_64Z_L(bufp, 0);		    /* e_phoff */
+	    YASM_WRITE_64Z_L(bufp, secthead_addr);  /* e_shoff secthead off */
 
 	    YASM_WRITE_32_L(bufp, 0);		    /* e_flags */
 	    YASM_WRITE_16_L(bufp, EHDR64_SIZE);	    /* e_ehsize */
