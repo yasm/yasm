@@ -91,7 +91,7 @@ AC_REQUIRE([AC_LTDL_DLLIB])
 AC_REQUIRE([AC_LTDL_SYMBOL_USCORE])
 AC_REQUIRE([AC_LTDL_DLSYM_USCORE])
 AC_REQUIRE([AC_LTDL_SYS_DLOPEN_DEPLIBS])
-#AC_REQUIRE([AC_LTDL_FUNC_ARGZ])
+AC_REQUIRE([AC_LTDL_FUNC_ARGZ])
 
 AC_CHECK_HEADERS([assert.h ctype.h errno.h malloc.h memory.h stdlib.h \
 		  stdio.h unistd.h])
@@ -413,16 +413,16 @@ fi
 
 # AC_LTDL_FUNC_ARGZ
 # -----------------
-#AC_DEFUN([AC_LTDL_FUNC_ARGZ],
-#[AC_CHECK_HEADERS([argz.h])
-#
-#AC_CHECK_TYPES([error_t],
-#  [],
-#  [AC_DEFINE([error_t], [int],
-#    [Define to a type to use for `error_t' if it is not otherwise available.])],
-#  [#if HAVE_ARGZ_H
-##  include <argz.h>
-##endif])
-#
+AC_DEFUN([AC_LTDL_FUNC_ARGZ],
+[AC_CHECK_HEADERS([argz.h])
+
+AC_CHECK_TYPES([error_t],
+  [],
+  [AC_DEFINE([error_t], [int],
+    [Define to a type to use for `error_t' if it is not otherwise available.])],
+  [#if HAVE_ARGZ_H
+#  include <argz.h>
+#endif])
+
 #AC_CHECK_FUNCS([argz_append argz_create_sep argz_insert argz_next argz_stringify])
-#])# AC_LTDL_FUNC_ARGZ
+])# AC_LTDL_FUNC_ARGZ
