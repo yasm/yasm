@@ -107,7 +107,7 @@ static bytecode *nasm_parser_temp_bc;
 %type <ea> memaddr
 %type <exp> dvexpr expr direxpr
 %type <sym> explabel
-%type <str_val> label_id
+%type <str_val> label_id label_id_equ
 %type <data> dataval
 %type <datahead> datavals
 %type <dir_valparams> directive_valparams
@@ -164,7 +164,7 @@ lineexp: exp
     | label				{ $$ = (bytecode *)NULL; }
     | label exp				{ $$ = $2; }
     | label TIMES expr exp		{ $$ = $4; bc_set_multiple($$, $3); }
-    | label_id EQU expr			{
+    | label_id_equ EQU expr		{
 	symrec_define_equ($1, $3);
 	xfree($1);
 	$$ = (bytecode *)NULL;
@@ -236,6 +236,11 @@ label_id: ID	    {
 	    xmalloc(nasm_parser_locallabel_base_len+1);
 	strcpy(nasm_parser_locallabel_base, $1);
     }
+    | SPECIAL_ID
+    | LOCAL_ID
+;
+
+label_id_equ: ID
     | SPECIAL_ID
     | LOCAL_ID
 ;
