@@ -42,10 +42,6 @@
 #include "arch.h"
 
 
-#ifndef countof
-#define countof(x,y)	(sizeof(x)/sizeof(y))
-#endif
-
 /* Preprocess-only buffer size */
 #define PREPROC_BUF_SIZE    16384
 
@@ -127,14 +123,13 @@ main(int argc, char *argv[])
 #endif
     textdomain(PACKAGE);
 
-    if (parse_cmdline(argc, argv, options, countof(options, opt_option)))
+    if (parse_cmdline(argc, argv, options, NELEMS(options)))
 	return EXIT_FAILURE;
 
     switch (special_options) {
 	case SPECIAL_SHOW_HELP:
 	    /* Does gettext calls internally */
-	    help_msg(help_head, help_tail, options,
-		     countof(options, opt_option));
+	    help_msg(help_head, help_tail, options, NELEMS(options));
 	    return EXIT_SUCCESS;
 	case SPECIAL_SHOW_VERSION:
 	    for (i=0; i<sizeof(version_msg)/sizeof(char *); i++)

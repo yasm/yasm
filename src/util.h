@@ -147,6 +147,11 @@ void xfree(/*@only@*/ /*@out@*/ /*@null@*/ void *p);
 	d += d>>8;				\
     } while (0)
 
+/* Get the number of elements in an array. */
+#ifndef NELEMS
+#define NELEMS(array)	(sizeof(array) / sizeof(array[0]))
+#endif
+
 #include "coretype.h"
 
 #include "valparam.h"
