@@ -90,7 +90,8 @@ typedef enum {
  * When save is nonzero, all fields in bc may be modified by this function.
  */
 bc_resolve_flags bc_resolve(bytecode *bc, int save, const section *sect,
-			    resolve_label_func resolve_label);
+			    resolve_label_func resolve_label,
+			    resolve_precall_func resolve_precall);
 
 /* Converts the bytecode bc into its byte representation.
  * Inputs:

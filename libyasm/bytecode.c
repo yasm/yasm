@@ -422,7 +422,8 @@ bc_resolve_data(bytecode_data *bc_data, unsigned long *len)
 static bc_resolve_flags
 bc_resolve_reserve(bytecode_reserve *reserve, unsigned long *len, int save,
 		   unsigned long line, const section *sect,
-		   resolve_label_func resolve_label)
+		   resolve_label_func resolve_label,
+		   resolve_precall_func resolve_precall)
 {
     bc_resolve_flags retval = BC_RESOLVE_MIN_LEN;
     /*@null@*/ expr *temp;
@@ -437,7 +438,7 @@ bc_resolve_reserve(bytecode_reserve *reserve, unsigned long *len, int save,
 	assert(temp != NULL);
 	tempp = &temp;
     }
-    expr_expand_labelequ(*tempp, sect, 1, resolve_label);
+    expr_expand_labelequ(*tempp, sect, 1, resolve_label, resolve_precall);
     num = expr_get_intnum(tempp);
     if (!num) {
 	if (temp && expr_contains(temp, EXPR_FLOAT))
@@ -453,7 +454,8 @@ bc_resolve_reserve(bytecode_reserve *reserve, unsigned long *len, int save,
 static bc_resolve_flags
 bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
 		  unsigned long line, const section *sect,
-		  resolve_label_func resolve_label)
+		  resolve_label_func resolve_label,
+		  resolve_precall_func resolve_precall)
 {
     FILE *f;
     /*@null@*/ expr *temp;
@@ -471,7 +473,7 @@ bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
 	    assert(temp != NULL);
 	    tempp = &temp;
 	}
-	expr_expand_labelequ(*tempp, sect, 1, resolve_label);
+	expr_expand_labelequ(*tempp, sect, 1, resolve_label, resolve_precall);
 	num = expr_get_intnum(tempp);
 	if (num)
 	    start = intnum_get_uint(num);
@@ -490,7 +492,7 @@ bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
 	    assert(temp != NULL);
 	    tempp = &temp;
 	}
-	expr_expand_labelequ(*tempp, sect, 1, resolve_label);
+	expr_expand_labelequ(*tempp, sect, 1, resolve_label, resolve_precall);
 	num = expr_get_intnum(tempp);
 	if (num)
 	    maxlen = intnum_get_uint(num);
@@ -534,7 +536,8 @@ bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
 
 bc_resolve_flags
 bc_resolve(bytecode *bc, int save, const section *sect,
-	   resolve_label_func resolve_label)
+	   resolve_label_func resolve_label,
+	   resolve_precall_func resolve_precall)
 {
     bc_resolve_flags retval = BC_RESOLVE_MIN_LEN;
     bytecode_data *bc_data;
@@ -556,12 +559,12 @@ bc_resolve(bytecode *bc, int save, const section *sect,
 	case BC_RESERVE:
 	    reserve = bc_get_data(bc);
 	    retval = bc_resolve_reserve(reserve, &bc->len, save, bc->line,
-					sect, resolve_label);
+					sect, resolve_label, resolve_precall);
 	    break;
 	case BC_INCBIN:
 	    incbin = bc_get_data(bc);
 	    retval = bc_resolve_incbin(incbin, &bc->len, save, bc->line, sect,
-				       resolve_label);
+				       resolve_label, resolve_precall);
 	    break;
 	case BC_ALIGN:
 	    /* TODO */
@@ -573,7 +576,8 @@ bc_resolve(bytecode *bc, int save, const section *sect,
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
 		retval = cur_arch->bc.bc_resolve(bc, save, sect,
-						 resolve_label);
+						 resolve_label,
+						 resolve_precall);
 	    else
 		InternalError(_("Unknown bytecode type"));
     }
@@ -588,7 +592,7 @@ bc_resolve(bytecode *bc, int save, const section *sect,
 	    assert(temp != NULL);
 	    tempp = &temp;
 	}
-	expr_expand_labelequ(*tempp, sect, 1, resolve_label);
+	expr_expand_labelequ(*tempp, sect, 1, resolve_label, resolve_precall);
 	num = expr_get_intnum(tempp);
 	if (!num) {
 	    if (temp && expr_contains(temp, EXPR_FLOAT))

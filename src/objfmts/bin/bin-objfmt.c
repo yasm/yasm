@@ -42,7 +42,11 @@
 
 #define REGULAR_OUTBUF_SIZE	1024
 
-static /*@null@*/ intnum *bin_objfmt_resolve_label(symrec *sym, int withstart);
+static /*@null@*/ intnum *
+    bin_objfmt_resolve_label(symrec *sym, section *sect,
+			     /*@null@*/ bytecode *precbc,
+			     /*@null@*/ bytecode *bc,
+			     /*@unused@*/ unsigned long startval);
 
 static void
 bin_objfmt_initialize(/*@unused@*/ const char *in_filename,
@@ -95,32 +99,22 @@ bin_objfmt_align_section(section *sect, section *prevsect, unsigned long base,
 }
 
 static /*@null@*/ intnum *
-bin_objfmt_resolve_label2(symrec *sym, /*@null@*/ const section *cursect,
+bin_objfmt_resolve_label2(symrec *sym, section *sect,
+			  /*@null@*/ bytecode *precbc, /*@null@*/ bytecode *bc,
+			  /*@null@*/ const section *cursect,
 			  unsigned long cursectstart, int withstart)
 {
-    /*@dependent@*/ section *sect;
-    /*@dependent@*/ /*@null@*/ bytecode *precbc;
-    /*@null@*/ bytecode *bc;
     /*@null@*/ expr *startexpr;
     /*@dependent@*/ /*@null@*/ const intnum *start;
     unsigned long startval = 0;
-
-    if (!symrec_get_label(sym, &sect, &precbc))
-	return NULL;
-
-    /* determine actual bc from preceding bc (how labels are stored) */
-    if (!precbc)
-	bc = bcs_first(section_get_bytecodes(sect));
-    else
-	bc = bcs_next(precbc);
-    assert(bc != NULL);
 
     /* Figure out the starting offset of the entire section */
     if (withstart || (cursect && sect != cursect) ||
 	section_is_absolute(sect)) {
 	startexpr = expr_copy(section_get_start(sect));
 	assert(startexpr != NULL);
-	expr_expand_labelequ(startexpr, sect, 1, bin_objfmt_resolve_label);
+	expr_expand_labelequ(startexpr, sect, 0, bin_objfmt_resolve_label,
+			     NULL);
 	start = expr_get_intnum(&startexpr);
 	if (!start) {
 	    expr_delete(startexpr);
@@ -140,9 +134,11 @@ bin_objfmt_resolve_label2(symrec *sym, /*@null@*/ const section *cursect,
 }
 
 static intnum *
-bin_objfmt_resolve_label(symrec *sym, int withstart)
+bin_objfmt_resolve_label(symrec *sym, section *sect,
+			 /*@null@*/ bytecode *precbc, /*@null@*/ bytecode *bc,
+			 /*@unused@*/ unsigned long startval)
 {
-    return bin_objfmt_resolve_label2(sym, NULL, 0, withstart);
+    return bin_objfmt_resolve_label2(sym, sect, precbc, bc, NULL, 0, 1);
 }
 
 typedef struct bin_objfmt_expr_data {
@@ -165,13 +161,24 @@ bin_objfmt_expr_traverse_callback(ExprItem *ei, void *d)
 	    expr_traverse_leaves_in(ei->data.expn, data,
 				    bin_objfmt_expr_traverse_callback);
 	} else {
+	    /*@dependent@*/ section *sect;
+	    /*@dependent@*/ /*@null@*/ bytecode *precbc;
+	    /*@null@*/ bytecode *bc;
 	    intnum *intn;
 
-	    intn = bin_objfmt_resolve_label2(ei->data.sym, data->sect,
-					     data->start, data->withstart);
-	    if (intn) {
-		ei->type = EXPR_INT;
-		ei->data.intn = intn;
+	    if (symrec_get_label(ei->data.sym, &sect, &precbc)) {
+		if (!precbc)
+		    bc = bcs_first(section_get_bytecodes(sect));
+		else
+		    bc = bcs_next(precbc);
+
+		intn = bin_objfmt_resolve_label2(ei->data.sym, sect, precbc,
+						 bc, data->sect, data->start,
+						 data->withstart);
+		if (intn) {
+		    ei->type = EXPR_INT;
+		    ei->data.intn = intn;
+		}
 	    }
 	}
     }

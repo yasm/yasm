@@ -132,7 +132,8 @@ struct arch {
 	/* See bytecode.h comments on bc_resolve() */
 	bc_resolve_flags (*bc_resolve) (bytecode *bc, int save,
 					const section *sect,
-					resolve_label_func resolve_label);
+					resolve_label_func resolve_label,
+					resolve_precall_func resolve_precall);
 	/* See bytecode.h comments on bc_tobytes() */
 	int (*bc_tobytes) (bytecode *bc, unsigned char **bufp,
 			   const section *sect, void *d,

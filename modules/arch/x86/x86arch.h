@@ -188,7 +188,8 @@ typedef struct x86_jmprel {
 void x86_bc_delete(bytecode *bc);
 void x86_bc_print(FILE *f, const bytecode *bc);
 bc_resolve_flags x86_bc_resolve(bytecode *bc, int save, const section *sect,
-				resolve_label_func resolve_label);
+				resolve_label_func resolve_label,
+				resolve_precall_func resolve_precall);
 int x86_bc_tobytes(bytecode *bc, unsigned char **bufp, const section *sect,
 		   void *d, output_expr_func output_expr);
 

@@ -37,6 +37,7 @@
 #include "arch.h"
 
 #include "expr-int.h"
+#include "bc-int.h"
 
 
 static int expr_traverse_nodes_post(/*@null@*/ expr *e, /*@null@*/ void *d,
@@ -730,6 +731,7 @@ expr_contains(const expr *e, ExprType t)
 
 typedef struct labelequ_data {
     resolve_label_func resolve_label;
+    /*@null@*/ resolve_precall_func resolve_precall;
     const section *sect;
     int withstart;
 } labelequ_data;
@@ -746,15 +748,46 @@ expr_expand_labelequ_callback(ExprItem *ei, void *d)
 	    ei->type = EXPR_EXPR;
 	    ei->data.expn = expr_copy(equ_expr);
 	    expr_expand_labelequ(ei->data.expn, data->sect, data->withstart,
-				 data->resolve_label);
+				 data->resolve_label, data->resolve_precall);
 	} else {
 	    /*@dependent@*/ section *sect;
 	    /*@dependent@*/ /*@null@*/ bytecode *precbc;
+	    /*@null@*/ bytecode *bc;
 	    intnum *intn;
 
 	    if (symrec_get_label(ei->data.sym, &sect, &precbc) &&
-		(sect == data->sect || section_is_absolute(sect))) {
-		intn = data->resolve_label(ei->data.sym, data->withstart);
+		sect == data->sect) {
+		unsigned long startval = 0;
+
+		if (!precbc)
+		    bc = bcs_first(section_get_bytecodes(sect));
+		else
+		    bc = bcs_next(precbc);
+
+		if (data->resolve_precall)
+		    data->resolve_precall(sect);
+
+		if (data->withstart || section_is_absolute(sect)) {
+		    /*@null@*/ expr *startexpr;
+		    /*@dependent@*/ /*@null@*/ const intnum *start;
+
+		    startexpr = expr_copy(section_get_start(sect));
+		    assert(startexpr != NULL);
+		    /* recurse */
+		    expr_expand_labelequ(startexpr, sect, 1,
+					 data->resolve_label,
+					 data->resolve_precall);
+		    start = expr_get_intnum(&startexpr);
+		    if (!start) {
+			expr_delete(startexpr);
+			return 0;
+		    }
+		    startval = intnum_get_uint(start);
+		    expr_delete(startexpr);
+		}
+
+		intn = data->resolve_label(ei->data.sym, sect, precbc, bc,
+					   startval);
 		if (intn) {
 		    ei->type = EXPR_INT;
 		    ei->data.intn = intn;
@@ -767,10 +800,12 @@ expr_expand_labelequ_callback(ExprItem *ei, void *d)
 
 void
 expr_expand_labelequ(expr *e, const section *sect, int withstart,
-		     resolve_label_func resolve_label)
+		     resolve_label_func resolve_label,
+		     resolve_precall_func resolve_precall)
 {
     labelequ_data data;
     data.resolve_label = resolve_label;
+    data.resolve_precall = resolve_precall;
     data.sect = sect;
     data.withstart = withstart;
     expr_traverse_leaves_in(e, &data, expr_expand_labelequ_callback);
