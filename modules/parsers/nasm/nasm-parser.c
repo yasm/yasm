@@ -83,7 +83,6 @@ nasm_parser_do_parse(yasm_preproc *pp, yasm_arch *a, yasm_objfmt *of,
 static const char *nasm_parser_preproc_keywords[] = {
     "raw",
     "nasm",
-    "yapp",
     NULL
 };
 
@@ -92,6 +91,6 @@ yasm_parser yasm_nasm_LTX_parser = {
     "NASM-compatible parser",
     "nasm",
     nasm_parser_preproc_keywords,
-    "raw",
+    "nasm",
     nasm_parser_do_parse
 };
