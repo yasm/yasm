@@ -34,6 +34,23 @@
 #define YASM_OBJFMT_ELF_INTERNAL
 #include "elf.h"
 
+static /*@dependent@*/ yasm_arch *cur_arch;
+static const char *arch_machine = NULL;
+
+int
+elf_set_arch(yasm_arch *arch, const char *machine)
+{
+    cur_arch = arch;
+    arch_machine = machine;
+
+    /* FIXME: only support x86 arch, x86 machine */
+    if (yasm__strcasecmp(cur_arch->keyword, "x86") != 0 ||
+	yasm__strcasecmp(machine, "x86") != 0)
+	return 0;
+
+    return 1;
+}
+
 /* reloc functions */
 elf_reloc_entry *
 elf_reloc_entry_new(yasm_symrec *sym,

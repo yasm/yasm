@@ -49,6 +49,8 @@ typedef enum {
     ET_EXEC = 2,				/* Executable */
     ET_DYN = 3,					/* Shared object */
     ET_CORE = 4,				/* Core */
+    ET_LOOS = 0xfe00,				/* Environment specific */
+    ET_HIOS = 0xfeff,
     ET_LOPROC = 0xff00,				/* Processor specific */
     ET_HIPROC = 0xffff
 } elf_file_type;
@@ -84,9 +86,18 @@ typedef enum {
     EI_CLASS = 4,				/* File class */
     EI_DATA = 5,				/* Data encoding */
     EI_VERSION = 6,				/* File version */
-    EI_PAD = 7,					/* Pad through end */
+    EI_OSABI = 7,				/* OS and ABI */
+    EI_ABIVERSION = 8,				/* version of ABI */
+
+    EI_PAD = 9,					/* Pad to end; start here */
     EI_NIDENT = 16				/* Sizeof e_ident[] */
 } elf_identification_index;
+
+typedef enum {
+    ELFOSABI_SYSV = 0,				/* System V ABI */
+    ELFOSABI_HPUX = 1,				/* HP-UX os */
+    ELFOSABI_STANDALONE = 255			/* Standalone / embedded app */
+} elf_osabi_index;
 
 typedef enum {
     ELFCLASSNONE = 0,				/* invalid */
@@ -115,6 +126,8 @@ typedef enum {
     SHT_SHLIB = 10,		/* reserved; unspecified semantics */
     SHT_DYNSYM = 11,		/* like symtab, but more for dynamic linking */
 
+    SHT_LOOS = 0x60000000,	/* reserved for environment specific use */
+    SHT_HIOS = 0x6fffffff,
     SHT_LOPROC = 0x70000000,	/* reserved for processor specific semantics */
     SHT_HIPROC = 0x7fffffff/*,
     SHT_LOUSER = 0x80000000,*/	/* reserved for applications; safe */
@@ -125,7 +138,8 @@ typedef enum {
 typedef enum {
     SHF_WRITE = 0x1,		/* data should be writable at runtime */
     SHF_ALLOC = 0x2,		/* occupies memory at runtime */
-    SHF_EXECINSTR = 0x4/*,*/	/* contains machine instructions */
+    SHF_EXECINSTR = 0x4,	/* contains machine instructions */
+    SHF_MASKOS = 0x0f000000/*,*//* environment specific use */
     /*SHF_MASKPROC = 0xf0000000*/	/* bits reserved for processor specific needs */
 } elf_section_flags;
 
@@ -135,6 +149,8 @@ typedef enum {
     SHN_LORESERVE = 0xff00,	/* reserved for various semantics */
     SHN_LOPROC = 0xff00,	/* reserved for processor specific semantics */
     SHN_HIPROC = 0xff1f,
+    SHN_LOOS = 0xff20,		/* reserved for environment specific use */
+    SHN_HIOS = 0xff3f,
     SHN_ABS = 0xfff1,		/* associated symbols don't change on reloc */
     SHN_COMMON = 0xfff2,	/* associated symbols refer to unallocated */
     SHN_HIRESERVE = 0xffff
@@ -146,6 +162,8 @@ typedef enum {
     STB_GLOBAL = 1,		/* visible to all combined object files */
     STB_WEAK = 2,		/* global but lower precedence */
 
+    STB_LOOS = 10,		/* Environment specific use */
+    STB_HIOS = 12,
     STB_LOPROC = 13,		/* reserved for processor specific semantics */
     STB_HIPROC = 15
 } elf_symbol_binding;
@@ -158,6 +176,8 @@ typedef enum {
     STT_SECTION = 3,		/* a section: often for relocation, STB_LOCAL */
     STT_FILE = 4,		/* often source filename: STB_LOCAL, SHN_ABS */
 
+    STT_LOOS = 10,		/* Environment specific use */
+    STT_HIOS = 12,
     STT_LOPROC = 13,		/* reserved for processor specific semantics */
     STT_HIPROC = 15
 } elf_symbol_type;
@@ -172,6 +192,8 @@ typedef enum {
 
 #define ELF32_ST_INFO(bind, type)	(((bind) << 4) + ((type) & 0xf))
 #define ELF32_R_INFO(s,t)		(((s)<<8)+(unsigned char)(t))
+
+#define ELF64_R_INFO(s,t)		(((s)<<32) + ((t) & 0xffffffffL))
 
 /* elf relocation type - index of semantics */
 typedef enum {
@@ -261,6 +283,8 @@ struct elf_symtab_entry {
 #endif /* defined(YASM_OBJFMT_ELF_INTERNAL) */
 
 
+
+int elf_set_arch(struct yasm_arch *arch, const char *machine);
 
 /* reloc functions */
 elf_reloc_entry *elf_reloc_entry_new(yasm_symrec *sym,

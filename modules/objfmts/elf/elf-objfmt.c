@@ -131,10 +131,7 @@ elf_objfmt_initialize(const char *in_filename,
     elf_symtab_entry *entry;
 
     cur_arch = a;
-
-    /* FIXME: only support x86 arch, x86 machine */
-    if (yasm__strcasecmp(cur_arch->keyword, "x86") != 0 ||
-	yasm__strcasecmp(machine, "x86") != 0)
+    if (!elf_set_arch(a, machine))
 	return 1;
 
     elf_objfmt_parse_scnum = 4;    /* section numbering starts at 0;
