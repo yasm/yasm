@@ -156,8 +156,6 @@ POT_Table_Init_Entry(POT_Entry *e, POT_Entry_Source *s, int dec_exp)
 
     /* Initialize mantissa */
     e->f.mantissa = BitVector_Create(MANT_BITS, FALSE);
-    if (!e->f.mantissa)
-	Fatal(FATAL_NOMEM);
     BitVector_Block_Store(e->f.mantissa, s->mantissa, MANT_BYTES);
 
     /* Initialize exponent */
@@ -255,16 +253,10 @@ floatnum_mul(floatnum *acc, const floatnum *op)
 
     /* Allocate space for the multiply result */
     product = BitVector_Create((MANT_BITS+1)*2, FALSE);
-    if (!product)
-	Fatal(FATAL_NOMEM);
 
     /* Allocate 1-bit-longer fields to force the operands to be unsigned */
     op1 = BitVector_Create(MANT_BITS+1, FALSE);
-    if (!op1)
-	Fatal(FATAL_NOMEM);
     op2 = BitVector_Create(MANT_BITS+1, FALSE);
-    if (!op2)
-	Fatal(FATAL_NOMEM);
 
     /* Make the operands unsigned after copying from original operands */
     BitVector_Copy(op1, acc->mantissa);
@@ -314,16 +306,10 @@ floatnum_new(const char *str)
     flt = xmalloc(sizeof(floatnum));
 
     flt->mantissa = BitVector_Create(MANT_BITS, TRUE);
-    if (!flt->mantissa)
-	Fatal(FATAL_NOMEM);
 
     /* allocate and initialize calculation variables */
     operand[0] = BitVector_Create(MANT_BITS, TRUE);
-    if (!operand[0])
-	Fatal(FATAL_NOMEM);
     operand[1] = BitVector_Create(MANT_BITS, TRUE);
-    if (!operand[1])
-	Fatal(FATAL_NOMEM);
     dec_exponent = 0;
     sig_digits = 0;
     decimal_pt = 1;
@@ -543,8 +529,6 @@ floatnum_get_common(unsigned char *ptr, const floatnum *flt, int byte_size,
     int exp_inf = (1<<exp_bits)-1;
 
     output = BitVector_Create(byte_size*8, TRUE);
-    if (!output)
-	Fatal(FATAL_NOMEM);
 
     /* copy mantissa */
     BitVector_Interval_Copy(output, flt->mantissa, 0,
@@ -596,8 +580,6 @@ floatnum_get_common(unsigned char *ptr, const floatnum *flt, int byte_size,
 
     /* get little-endian bytes */
     buf = BitVector_Block_Read(output, &len);
-    if (!buf)
-	Fatal(FATAL_NOMEM);
     if (len < byte_size)
 	InternalError(__LINE__, __FILE__,
 		      _("Byte length of BitVector does not match bit length"));
