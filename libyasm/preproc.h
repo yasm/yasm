@@ -51,6 +51,12 @@ struct yasm_preproc {
     /* Gets more preprocessed source code (up to max_size bytes) into buf.
      * Note that more than a single line may be returned in buf. */
     size_t (*input) (/*@out@*/ char *buf, size_t max_size);
+
+    /* Add a directory to the %include search path */
+    void (*add_include_path) (const char *path);
+
+    /* Pre-include a file */
+    void (*add_include_file) (const char *filename);
 };
 
 #endif

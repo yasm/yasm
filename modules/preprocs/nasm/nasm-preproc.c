@@ -174,6 +174,22 @@ nasm_preproc_input(char *buf, size_t max_size)
     return tot;
 }
 
+static void
+nasm_preproc_add_include_path (const char *path)
+{
+    char *p = yasm__xstrdup(path);
+    pp_include_path(p);
+    yasm_xfree(p);
+}
+
+static void
+nasm_preproc_add_include_file (const char *filename)
+{
+    char *f = yasm__xstrdup(filename);
+    pp_pre_include(f);
+    yasm_xfree(f);
+}
+
 
 /* Define preproc structure -- see preproc.h for details */
 yasm_preproc yasm_nasm_LTX_preproc = {
@@ -181,5 +197,7 @@ yasm_preproc yasm_nasm_LTX_preproc = {
     "nasm",
     nasm_preproc_initialize,
     nasm_preproc_cleanup,
-    nasm_preproc_input
+    nasm_preproc_input,
+    nasm_preproc_add_include_path,
+    nasm_preproc_add_include_file
 };

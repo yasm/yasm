@@ -70,6 +70,10 @@ static int opt_dbgfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_objfile_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int preproc_only_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_preproc_include_path(char *cmd, /*@null@*/ char *param,
+				    int extra);
+static int opt_preproc_include_file(char *cmd, /*@null@*/ char *param,
+				    int extra);
 
 static /*@only@*/ char *replace_extension(const char *orig, /*@null@*/
 					  const char *ext, const char *def);
@@ -84,6 +88,8 @@ static void print_yasm_error(const char *filename, unsigned long line,
 			     const char *msg);
 static void print_yasm_warning(const char *filename, unsigned long line,
 			       const char *msg);
+
+static void apply_preproc_saved_options(void);
 
 /* values for special_options */
 #define SPECIAL_SHOW_HELP 0x01
@@ -112,6 +118,10 @@ static opt_option options[] =
       N_("enables/disables warning"), NULL },
     { 'e', "preproc-only", 0, preproc_only_handler, 0,
       N_("preprocess only (writes output to stdout by default)"), NULL },
+    { 'I', NULL, 1, opt_preproc_include_path, 0,
+      N_("add include path"), N_("path") },
+    { 'P', NULL, 1, opt_preproc_include_file, 0,
+      N_("pre-include file"), N_("filename") },
 };
 
 /* version message */
@@ -140,6 +150,17 @@ static opt_option options[] =
     "   yasm -f elf -o object.o source.asm\n"
     "\n"
     "Report bugs to bug-yasm@tortall.net\n");
+
+/* parsed command line storage until appropriate modules have been loaded */
+typedef STAILQ_HEAD(constcharparam_head, constcharparam) constcharparam_head;
+
+typedef struct constcharparam {
+    STAILQ_ENTRY(constcharparam) link;
+    const char *param;
+} constcharparam;
+
+static constcharparam_head includepaths;
+static constcharparam_head includefiles;
 
 /* main function */
 /*@-globstate -unrecog@*/
@@ -194,6 +215,10 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 #endif
+
+    /* Initialize parameter storage */
+    STAILQ_INIT(&includepaths);
+    STAILQ_INIT(&includefiles);
 
     if (parse_cmdline(argc, argv, options, NELEMS(options), print_error))
 	return EXIT_FAILURE;
@@ -269,6 +294,8 @@ main(int argc, char *argv[])
 	    cleanup(NULL);
 	    return EXIT_FAILURE;
 	}
+
+	apply_preproc_saved_options();
 
 	/* Pre-process until done */
 	cur_preproc->initialize(in, in_filename, &yasm_std_linemgr);
@@ -400,6 +427,7 @@ main(int argc, char *argv[])
 	    return EXIT_FAILURE;
 	}
     }
+    apply_preproc_saved_options();
 
     /* Get initial x86 BITS setting from object format */
     if (strcmp(cur_arch->keyword, "x86") == 0) {
@@ -661,6 +689,63 @@ preproc_only_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
 		     /*@unused@*/ int extra)
 {
     preproc_only = 1;
+    return 0;
+}
+
+static int
+opt_preproc_include_path(/*@unused@*/ char *cmd, char *param,
+			 /*@unused@*/ int extra)
+{
+    constcharparam *cp;
+    cp = yasm_xmalloc(sizeof(constcharparam));
+    cp->param = param;
+    STAILQ_INSERT_TAIL(&includepaths, cp, link);
+    return 0;
+}
+
+static void
+apply_preproc_saved_options()
+{
+    constcharparam *cp;
+    constcharparam *cpnext;
+
+    if (cur_preproc->add_include_path != NULL) {
+	STAILQ_FOREACH(cp, &includepaths, link) {
+	    cur_preproc->add_include_path(cp->param);
+	}
+    }
+
+    cp = STAILQ_FIRST(&includepaths);
+    while (cp != NULL) {
+	cpnext = STAILQ_NEXT(cp, link);
+	yasm_xfree(cp);
+	cp = cpnext;
+    }
+    STAILQ_INIT(&includepaths);
+
+    if (cur_preproc->add_include_file != NULL) {
+	STAILQ_FOREACH(cp, &includefiles, link) {
+	    cur_preproc->add_include_file(cp->param);
+	}
+    }
+
+    cp = STAILQ_FIRST(&includepaths);
+    while (cp != NULL) {
+	cpnext = STAILQ_NEXT(cp, link);
+	yasm_xfree(cp);
+	cp = cpnext;
+    }
+    STAILQ_INIT(&includepaths);
+}
+
+static int
+opt_preproc_include_file(/*@unused@*/ char *cmd, char *param,
+			 /*@unused@*/ int extra)
+{
+    constcharparam *cp;
+    cp = yasm_xmalloc(sizeof(constcharparam));
+    cp->param = param;
+    STAILQ_INSERT_TAIL(&includefiles, cp, link);
     return 0;
 }
 
