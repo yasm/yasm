@@ -28,15 +28,15 @@
 #define YASM_MODULE_H
 
 void unload_modules(void);
-/*@dependent@*/ /*@null@*/ void *get_module_data(const char *keyword,
-						 const char *symbol);
+/*@dependent@*/ /*@null@*/ void *get_module_data
+    (const char *type, const char *keyword, const char *symbol);
 
-#define load_arch(keyword)	get_module_data(keyword, "arch")
-#define load_dbgfmt(keyword)	get_module_data(keyword, "dbgfmt")
-#define load_objfmt(keyword)	get_module_data(keyword, "objfmt")
-#define load_optimizer(keyword)	get_module_data(keyword, "optimizer")
-#define load_parser(keyword)	get_module_data(keyword, "parser")
-#define load_preproc(keyword)	get_module_data(keyword, "preproc")
+#define load_arch(keyword)	get_module_data("arch", keyword, "arch")
+#define load_dbgfmt(keyword)	get_module_data("dbgfmt", keyword, "dbgfmt")
+#define load_objfmt(keyword)	get_module_data("objfmt", keyword, "objfmt")
+#define load_optimizer(keyword)	get_module_data("optimizer", keyword, "optimizer")
+#define load_parser(keyword)	get_module_data("parser", keyword, "parser")
+#define load_preproc(keyword)	get_module_data("preproc", keyword, "preproc")
 
 /* Lists all available object formats.  Calls printfunc with the name and
  * keyword of each available format.

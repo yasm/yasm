@@ -1,9 +1,9 @@
 # $IdPath$
 
-lib_LTLIBRARIES += yasm_dbg.la
+pkglib_LTLIBRARIES += objfmt_dbg.la
 
-yasm_dbg_la_SOURCES = \
+objfmt_dbg_la_SOURCES = \
 	modules/objfmts/dbg/dbg-objfmt.c
-yasm_dbg_la_LDFLAGS = -module -avoid-version -no-undefined
-yasm_dbg_la_LIBADD = libyasm.la
-YASM_MODULES += -dlopen yasm_dbg.la
+objfmt_dbg_la_LDFLAGS = -module -avoid-version -no-undefined
+objfmt_dbg_la_LIBADD = libyasm.la
+YASM_MODULES += -dlopen objfmt_dbg.la

@@ -35,6 +35,7 @@
 
 typedef struct module {
     SLIST_ENTRY(module) link;
+    /*@only@*/ char *type;	    /* module type */
     /*@only@*/ char *keyword;	    /* module keyword */
     lt_dlhandle handle;		    /* dlopen handle */
 } module;
@@ -85,21 +86,25 @@ const char *preprocs[] = {
 /*@=nullassign@*/
 
 static /*@dependent@*/ /*@null@*/ module *
-load_module(const char *keyword)
+load_module(const char *type, const char *keyword)
 {
     module *m;
     char *name;
     lt_dlhandle handle;
+    size_t typelen;
 
     /* See if the module has already been loaded. */
     SLIST_FOREACH(m, &modules, link) {
-	if (yasm__strcasecmp(m->keyword, keyword) == 0)
+	if (yasm__strcasecmp(m->type, type) == 0 &&
+	    yasm__strcasecmp(m->keyword, keyword) == 0)
 	    return m;
     }
 
     /* Look for dynamic module.  First build full module name from keyword. */
-    name = yasm_xmalloc(5+strlen(keyword)+1);
-    strcpy(name, "yasm_");
+    typelen = strlen(type);
+    name = yasm_xmalloc(typelen+strlen(keyword)+2);
+    strcpy(name, type);
+    strcat(name, "_");
     strcat(name, keyword);
     handle = lt_dlopenext(name);
 
@@ -109,8 +114,9 @@ load_module(const char *keyword)
     }
 
     m = yasm_xmalloc(sizeof(module));
-    m->keyword = name;
-    strcpy(m->keyword, keyword);
+    m->type = name;
+    name[typelen] = '\0';
+    m->keyword = &name[typelen+1];
     m->handle = handle;
     SLIST_INSERT_HEAD(&modules, m, link);
     return m;
@@ -124,24 +130,36 @@ unload_modules(void)
     while (!SLIST_EMPTY(&modules)) {
 	m = SLIST_FIRST(&modules);
 	SLIST_REMOVE_HEAD(&modules, link);
-	yasm_xfree(m->keyword);
+	yasm_xfree(m->type);
 	lt_dlclose(m->handle);
 	yasm_xfree(m);
     }
 }
 
 void *
-get_module_data(const char *keyword, const char *symbol)
+get_module_data(const char *type, const char *keyword, const char *symbol)
 {
+    char *name;
     /*@dependent@*/ module *m;
+    void *data;
 
     /* Load module */
-    m = load_module(keyword);
+    m = load_module(type, keyword);
     if (!m)
 	return NULL;
 
+    name = yasm_xmalloc(strlen(keyword)+strlen(symbol)+11);
+
+    strcpy(name, "yasm_");
+    strcat(name, keyword);
+    strcat(name, "_LTX_");
+    strcat(name, symbol);
+
     /* Find and return data pointer: NULL if it doesn't exist */
-    return lt_dlsym(m->handle, symbol);
+    data = lt_dlsym(m->handle, name);
+
+    yasm_xfree(name);
+    return data;
 }
 
 void

@@ -1,12 +1,12 @@
 # $IdPath$
 
-lib_LTLIBRARIES += yasm_coff.la
+pkglib_LTLIBRARIES += objfmt_coff.la
 
-yasm_coff_la_SOURCES = \
+objfmt_coff_la_SOURCES = \
 	modules/objfmts/coff/coff-objfmt.c
-yasm_coff_la_LDFLAGS = -module -avoid-version -no-undefined
-yasm_coff_la_LIBADD = libyasm.la
-YASM_MODULES += -dlopen yasm_coff.la
+objfmt_coff_la_LDFLAGS = -module -avoid-version -no-undefined
+objfmt_coff_la_LIBADD = libyasm.la
+YASM_MODULES += -dlopen objfmt_coff.la
 
 EXTRA_DIST += \
 	modules/objfmts/coff/tests/Makefile.inc

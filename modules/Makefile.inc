@@ -7,14 +7,6 @@ EXTRA_DIST += \
 	modules/optimizers/Makefile.inc	\
 	modules/objfmts/Makefile.inc
 
-# Modules with more than one type of interface
-
-lib_LTLIBRARIES += yasm_nasm.la
-yasm_nasm_la_SOURCES =
-yasm_nasm_la_LDFLAGS = -module -avoid-version -no-undefined
-yasm_nasm_la_LIBADD = libyasm.la
-YASM_MODULES += -dlopen yasm_nasm.la
-
 include modules/arch/Makefile.inc
 include modules/parsers/Makefile.inc
 include modules/preprocs/Makefile.inc

@@ -1,20 +1,20 @@
 # $IdPath$
 
-#lib_LTLIBRARIES += yasm_nasm.la
+pkglib_LTLIBRARIES += parser_nasm.la
 
-yasm_nasm_la_SOURCES += \
+parser_nasm_la_SOURCES = \
 	modules/parsers/nasm/nasm-parser.h	\
 	modules/parsers/nasm/nasm-parser.c	\
 	modules/parsers/nasm/nasm-defs.h	\
 	modules/parsers/nasm/nasm-bison.y	\
 	nasm-bison.h				\
 	nasm-token.c
-#yasm_nasm_la_LDFLAGS = -module -avoid-version -no-undefined
-#yasm_nasm_la_LIBADD = libyasm.la
-#YASM_MODULES += -dlopen yasm_nasm.la
+parser_nasm_la_LDFLAGS = -module -avoid-version -no-undefined
+parser_nasm_la_LIBADD = libyasm.la
+YASM_MODULES += -dlopen parser_nasm.la
 
-nasm-token.c: $(srcdir)/modules/parsers/nasm/nasm-token.re re2c$(EXEEXT) $(srcdir)/tools/re2c/cleanup.pl
-	$(top_builddir)/re2c$(EXEEXT) -b $(srcdir)/modules/parsers/nasm/nasm-token.re | $(PERL) $(srcdir)/tools/re2c/cleanup.pl | sed "/^#l/ s,re2c-out\.c,$@," > $@
+nasm-token.c: $(srcdir)/modules/parsers/nasm/nasm-token.re $(top_builddir)/re2c$(EXEEXT) $(srcdir)/tools/re2c/cleanup.pl
+	$(top_builddir)/re2c$(EXEEXT) -b $(srcdir)/modules/parsers/nasm/nasm-token.re | $(PERL) $(top_srcdir)/tools/re2c/cleanup.pl | sed "/^#l/ s,re2c-out\.c,$@," > $@
 
 BUILT_SOURCES += \
 	nasm-bison.c				\

@@ -6,7 +6,7 @@ AM_YFLAGS = -d
 AM_CFLAGS = @MORE_CFLAGS@
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/check \
-	-DYASM_MODULEDIR="\"${libdir}\"" \
+	-DYASM_MODULEDIR="\"${pkglibdir}\"" \
 	@INCLTDL@
 
 bin_PROGRAMS =
@@ -16,6 +16,7 @@ noinst_PROGRAMS =
 include_HEADERS = libyasm.h
 
 lib_LTLIBRARIES =
+pkglib_LTLIBRARIES =
 
 YASM_MODULES = 
 

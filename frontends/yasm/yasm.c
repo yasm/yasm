@@ -436,12 +436,20 @@ main(int argc, char *argv[])
 	    return EXIT_FAILURE;
 	}
     }
+
+    if (!cur_preproc) {
+	print_error(_("Could not load default preprocessor"));
+	cleanup(NULL);
+	return EXIT_FAILURE;
+    }
+
     apply_preproc_saved_options();
 
     /* Get initial x86 BITS setting from object format */
     if (strcmp(cur_arch->keyword, "x86") == 0) {
 	unsigned char *x86_mode_bits;
-	x86_mode_bits = (unsigned char *)get_module_data("x86", "mode_bits");
+	x86_mode_bits = (unsigned char *)get_module_data("arch", "x86",
+							 "mode_bits");
 	if (x86_mode_bits)
 	    *x86_mode_bits = cur_objfmt->default_x86_mode_bits;
     }
