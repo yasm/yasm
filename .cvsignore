@@ -3,7 +3,11 @@ nasm-bison.c
 nasm-bison.h
 nasm-token.c
 yapp-token.c
+x86id.c
+re2c-parser.c
+re2c-parser.h
 yasm
+re2c
 *_test
 configure
 configure.scan
@@ -17,3 +21,4 @@ aclocal.m4
 *.la
 *.lo
 .libs
+libtool
