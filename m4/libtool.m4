@@ -4723,6 +4723,9 @@ $echo "local: *; };" >> $output_objdir/$libname.ver~
 AC_MSG_RESULT([$_LT_AC_TAGVAR(ld_shlibs, $1)])
 test "$_LT_AC_TAGVAR(ld_shlibs, $1)" = no && can_build_shared=no
 
+AC_DEFINE_UNQUOTED(LIBTOOL_LIBEXT, ".$libext",
+  [Define to the extension used for static libraries, say, ".a".])
+
 variables_saved_for_relink="PATH $shlibpath_var $runpath_var"
 if test "$GCC" = yes; then
   variables_saved_for_relink="$variables_saved_for_relink GCC_EXEC_PREFIX COMPILER_PATH LIBRARY_PATH"

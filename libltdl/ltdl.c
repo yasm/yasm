@@ -855,6 +855,9 @@ static	const char	archive_ext[]		= LTDL_ARCHIVE_EXT;
 #ifdef	LTDL_SHLIB_EXT
 static	const char	shlib_ext[]		= LTDL_SHLIB_EXT;
 #endif
+#ifdef	LIBTOOL_LIBEXT
+static	const char	lib_ext[]		= LIBTOOL_LIBEXT;
+#endif
 #ifdef	LTDL_SYSSEARCHPATH
 static	const char	sys_search_path[]	= LTDL_SYSSEARCHPATH;
 #endif
@@ -3142,6 +3145,21 @@ lt_dlopenext (filename)
     {
       return lt_dlopen (filename);
     }
+
+#ifdef LIBTOOL_LIBEXT
+  /* Try appending LIBTOOL_LIBEXT.   */
+  tmp = LT_EMALLOC (char, len + LT_STRLEN (lib_ext) + 1);
+  if (!tmp)
+    return 0;
+
+  strcpy (tmp, filename);
+  strcat (tmp, lib_ext);
+  errors = try_dlopen (&handle, tmp);
+
+  LT_DLFREE (tmp);
+  if (handle)
+    return handle;
+#endif
 
   /* First try appending ARCHIVE_EXT.  */
   tmp = LT_EMALLOC (char, len + LT_STRLEN (archive_ext) + 1);
