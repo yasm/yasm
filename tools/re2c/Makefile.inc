@@ -26,7 +26,7 @@ EXTRA_DIST += tools/re2c/translate.c
 re2c_LDADD  = re2c-main.$(OBJEXT)
 re2c_LDADD += re2c-code.$(OBJEXT)
 re2c_LDADD += re2c-dfa.$(OBJEXT)
-re2c_LDADD += re2c-re2c-parser.$(OBJEXT)
+re2c_LDADD += re2c-parser.$(OBJEXT)
 re2c_LDADD += re2c-actions.$(OBJEXT)
 re2c_LDADD += re2c-scanner.$(OBJEXT)
 re2c_LDADD += re2c-substr.$(OBJEXT)
@@ -42,7 +42,7 @@ re2c-code.$(OBJEXT): tools/re2c/code.c
 re2c-dfa.$(OBJEXT): tools/re2c/dfa.c
 	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/dfa.c || echo '$(srcdir)/'`tools/re2c/dfa.c
 
-re2c-re2c-parser.$(OBJEXT): re2c-parser.c
+re2c-parser.$(OBJEXT): re2c-parser.c
 	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f re2c-parser.c || echo '$(srcdir)/'`re2c-parser.c
 
 re2c-actions.$(OBJEXT): tools/re2c/actions.c
@@ -58,15 +58,30 @@ re2c-translate.$(OBJEXT): tools/re2c/translate.c
 	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/translate.c || echo '$(srcdir)/'`tools/re2c/translate.c
 
 re2c-parser.c: tools/re2c/re2c-parser.y
-	$(YACCCOMPILE) $< && mv y.tab.c $@
+	$(YACC) $(YFLAGS) $(AM_YFLAGS) `test -f 'tools/re2c/re2c-parser.y' || echo '$(srcdir)/'`tools/re2c/re2c-parser.y
 	if test -f y.tab.h; then \
-	  if cmp -s y.tab.h $*.h; then \
-	    rm -f y.tab.h; \
+	  to=`echo "re2c-parser_H" | sed \
+                -e 'y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/' \
+                -e 's/[^ABCDEFGHIJKLMNOPQRSTUVWXYZ]/_/g'`; \
+	  sed "/^#/ s/Y_TAB_H/$$to/g" y.tab.h >re2c-parser.ht; \
+	  rm -f y.tab.h; \
+	  if cmp -s re2c-parser.ht re2c-parser.h; then \
+	    rm -f re2c-parser.ht ;\
 	  else \
-	    mv y.tab.h $*.h; \
+	    mv re2c-parser.ht re2c-parser.h; \
 	  fi; \
 	fi
+	if test -f y.output; then \
+	  mv y.output re2c-parser.output; \
+	fi
+	sed '/^#/ s|y\.tab\.c|re2c-parser.c|' y.tab.c >re2c-parser.ct && mv re2c-parser.ct re2c-parser.c
+	rm -f y.tab.c
+
 re2c-parser.h: re2c-parser.c
+	@if test ! -f $@; then \
+	  rm -f re2c-parser.c; \
+	  $(MAKE) re2c-parser.c; \
+	else :; fi
 
 cleanup_SOURCES =
 EXTRA_DIST += tools/re2c/cleanup.c
@@ -81,6 +96,9 @@ BUILT_SOURCES += re2c-parser.h
 
 CLEANFILES += re2c-parser.c
 CLEANFILES += re2c-parser.h
+
+EXTRA_DIST += re2c-parser.c
+EXTRA_DIST += re2c-parser.h
 
 EXTRA_DIST += tools/re2c/CHANGELOG
 EXTRA_DIST += tools/re2c/NO_WARRANTY
