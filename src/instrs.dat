@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.15 2001/07/04 20:22:34 peter Exp $
+; $Id: instrs.dat,v 1.16 2001/07/04 21:22:23 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -91,9 +91,8 @@
 !arith	REG_AL,imm8		nil	$0.1+4		nil		$2,8	8086
 !arith	REG_AX,imm16		16	$0.1+5		nil		$2,16	8086
 !arith	REG_EAX,imm32		32	$0.1+5		nil		$2,32	386
-!arith	reg8,imm		nil	80		$1r,$0.2	$2,8	8086
+!arith	reg8,imm8		nil	80		$1r,$0.2	$2,8	8086
 !arith	mem8x,imm		nil	80		$1,$0.2		$2,8	8086
-!arith	reg8,imm8x		nil	80		$1r,$0.2	$2,8	8086
 !arith	mem,imm8x		nil	80		$1,$0.2		$2,8	8086
 !arith	reg16,imm		16	81		$1r,$0.2	$2,16	8086
 !arith	mem16x,imm		16	81		$1,$0.2		$2,16	8086
@@ -860,17 +859,14 @@ sysexit!twobyte		0F,35		P6,PRIV
 test	REG_AL,imm8		nil	A8		nil	$2,8	8086
 test	REG_AX,imm16		16	A9		nil	$2,16	8086
 test	REG_EAX,imm32		32	A9		nil	$2,32	386
-test	reg8,imm		nil	F6		$1r,0	$2,8	8086
+test	reg8,imm8		nil	F6		$1r,0	$2,8	8086
 test	mem8x,imm		nil	F6		$1,0	$2,8	8086
-test	reg8,imm8x		nil	F6		$1r,0	$2,8	8086
 test	mem,imm8x		nil	F6		$1,0	$2,8	8086
-test	reg16,imm		16	F7		$1r,0	$2,16	8086
+test	reg16,imm16		16	F7		$1r,0	$2,16	8086
 test	mem16x,imm		16	F7		$1,0	$2,16	8086
-test	reg16,imm16x		16	F7		$1r,0	$2,16	8086
 test	mem,imm16x		16	F7		$1,0	$2,16	8086
-test	reg32,imm		32	F7		$1r,0	$2,32	386
+test	reg32,imm32		32	F7		$1r,0	$2,32	386
 test	mem32x,imm		32	F7		$1,0	$2,32	386
-test	reg32,imm32x		32	F7		$1r,0	$2,32	386
 test	mem,imm32x		32	F7		$1,0	$2,32	386
 ; opcode arbitrarily picked for next 3 (could be 32/33 instead of 30/31).
 test	reg8,reg8		nil	84		$1r,$2	nil	8086
