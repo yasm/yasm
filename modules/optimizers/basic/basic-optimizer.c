@@ -77,8 +77,10 @@ basic_optimize_resolve_label(symrec *sym, int withstart)
 	assert(startexpr != NULL);
 	expr_expand_labelequ(startexpr, sect, 1, basic_optimize_resolve_label);
 	start = expr_get_intnum(&startexpr);
-	if (!start)
+	if (!start) {
+	    expr_delete(startexpr);
 	    return NULL;
+	}
 	startval = intnum_get_uint(start);
 	expr_delete(startexpr);
     }
@@ -121,8 +123,10 @@ basic_optimize_resolve_label_2(symrec *sym, int withstart)
 	expr_expand_labelequ(startexpr, sect, 1,
 			     basic_optimize_resolve_label_2);
 	start = expr_get_intnum(&startexpr);
-	if (!start)
+	if (!start) {
+	    expr_delete(startexpr);
 	    return NULL;
+	}
 	startval = intnum_get_uint(start);
 	expr_delete(startexpr);
     }
@@ -137,12 +141,12 @@ basic_optimize_resolve_label_2(symrec *sym, int withstart)
 }
 
 typedef struct basic_optimize_data {
-    bytecode *precbc;
-    const section *sect;
+    /*@observer@*/ bytecode *precbc;
+    /*@observer@*/ const section *sect;
 } basic_optimize_data;
 
 static int
-basic_optimize_bytecode_1(bytecode *bc, void *d)
+basic_optimize_bytecode_1(/*@observer@*/ bytecode *bc, void *d)
 {
     basic_optimize_data *data = (basic_optimize_data *)d;
 
@@ -204,16 +208,14 @@ basic_optimize_section_1(section *sect, /*@unused@*/ /*@null@*/ void *d)
 }
 
 static int
-basic_optimize_bytecode_2(bytecode *bc, /*@null@*/ void *d)
+basic_optimize_bytecode_2(/*@observer@*/ bytecode *bc, /*@null@*/ void *d)
 {
     basic_optimize_data *data = (basic_optimize_data *)d;
 
     assert(data != NULL);
 
-    if (bc->opt_flags != BCFLAG_DONE) {
+    if (bc->opt_flags != BCFLAG_DONE)
 	InternalError(_("Optimizer pass 1 missed a bytecode!"));
-	return -1;
-    }
 
     if (!data->precbc)
 	bc->offset = 0;
@@ -234,10 +236,9 @@ basic_optimize_section_2(section *sect, /*@unused@*/ /*@null@*/ void *d)
     data.precbc = NULL;
     data.sect = sect;
 
-    if (section_get_opt_flags(sect) != SECTFLAG_DONE) {
+    if (section_get_opt_flags(sect) != SECTFLAG_DONE)
 	InternalError(_("Optimizer pass 1 missed a section!"));
-	return -1;
-    }
+
     return bcs_traverse(section_get_bytecodes(sect), &data,
 			basic_optimize_bytecode_2);
 }
