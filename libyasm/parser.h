@@ -1,4 +1,4 @@
-/* $IdPath$
+/* $IdPath: yasm/libyasm/parser.h,v 1.21 2003/03/13 06:54:19 peter Exp $
  * Parser module interface header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -58,7 +58,7 @@ struct yasm_parser {
      * This function returns the starting section of a linked list of sections
      * (whatever was in the file).
      */
-    yasm_sectionhead *(*do_parse)
+    /*@only@*/ yasm_sectionhead *(*do_parse)
 	(yasm_preproc *pp, yasm_arch *a, yasm_objfmt *of, yasm_linemgr *lm,
 	 FILE *f, const char *in_filename, int save_input);
 };

@@ -26,7 +26,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath: yasm/libyasm/section.c,v 1.35 2003/03/15 05:07:48 peter Exp $");
+/*@unused@*/ RCSID("$IdPath: yasm/libyasm/section.c,v 1.36 2003/05/04 20:31:57 peter Exp $");
 
 #include "errwarn.h"
 #include "intnum.h"
@@ -59,30 +59,34 @@ struct yasm_section {
 
     int res_only;		/* allow only resb family of bytecodes? */
 
-    yasm_bytecodehead bc;	/* the bytecodes for the section's contents */
+    /* the bytecodes for the section's contents */
+    /*@only@*/ yasm_bytecodehead *bc;
 };
+
+/*@reldef@*/ STAILQ_HEAD(yasm_sectionhead, yasm_section);
 
 static void yasm_section_delete(/*@only@*/ yasm_section *sect);
 
 /*@-compdestroy@*/
-yasm_section *
-yasm_sections_initialize(yasm_sectionhead *headp, yasm_objfmt *of)
+yasm_sectionhead *
+yasm_sections_new(yasm_section **def, yasm_objfmt *of)
 {
-    yasm_section *s;
+    yasm_sectionhead *headp;
     yasm_valparamhead vps;
     yasm_valparam *vp;
 
     /* Initialize linked list */
+    headp = yasm_xmalloc(sizeof(yasm_sectionhead));
     STAILQ_INIT(headp);
 
     /* Add an initial "default" section */
     vp = yasm_vp_new(yasm__xstrdup(of->default_section_name), NULL);
     yasm_vps_initialize(&vps);
     yasm_vps_append(&vps, vp);
-    s = of->sections_switch(headp, &vps, NULL, 0);
+    *def = of->sections_switch(headp, &vps, NULL, 0);
     yasm_vps_delete(&vps);
 
-    return s;
+    return headp;
 }
 /*@=compdestroy@*/
 
@@ -117,7 +121,7 @@ yasm_sections_switch_general(yasm_sectionhead *headp, const char *name,
     s->data.general.of_data = NULL;
     s->start = yasm_expr_new_ident(yasm_expr_int(yasm_intnum_new_uint(start)),
 				   lindex);
-    yasm_bcs_initialize(&s->bc);
+    s->bc = yasm_bcs_new();
 
     s->opt_flags = 0;
     s->res_only = res_only;
@@ -138,7 +142,7 @@ yasm_sections_switch_absolute(yasm_sectionhead *headp, yasm_expr *start)
 
     s->type = SECTION_ABSOLUTE;
     s->start = start;
-    yasm_bcs_initialize(&s->bc);
+    s->bc = yasm_bcs_new();
 
     s->opt_flags = 0;
     s->res_only = 1;
@@ -214,6 +218,7 @@ yasm_sections_delete(yasm_sectionhead *headp)
 	cur = next;
     }
     STAILQ_INIT(headp);
+    yasm_xfree(headp);
 }
 
 void
@@ -259,7 +264,7 @@ yasm_sections_find_general(yasm_sectionhead *headp, const char *name)
 yasm_bytecodehead *
 yasm_section_get_bytecodes(yasm_section *sect)
 {
-    return &sect->bc;
+    return sect->bc;
 }
 
 const char *
@@ -304,7 +309,7 @@ yasm_section_delete(yasm_section *sect)
 	}
     }
     yasm_expr_delete(sect->start);
-    yasm_bcs_delete(&sect->bc);
+    yasm_bcs_delete(sect->bc);
     yasm_xfree(sect);
 }
 
@@ -345,6 +350,6 @@ yasm_section_print(FILE *f, int indent_level, const yasm_section *sect,
 
     if (print_bcs) {
 	fprintf(f, "%*sBytecodes:\n", indent_level, "");
-	yasm_bcs_print(f, indent_level+1, &sect->bc);
+	yasm_bcs_print(f, indent_level+1, sect->bc);
     }
 }

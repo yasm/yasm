@@ -28,7 +28,7 @@
 #define YASM_LIB_INTERNAL
 #define YASM_EXPR_INTERNAL
 #include <libyasm.h>
-RCSID("$IdPath$");
+RCSID("$IdPath: yasm/modules/parsers/nasm/nasm-bison.y,v 1.92 2003/03/31 05:36:30 peter Exp $");
 
 #ifdef STDC_HEADERS
 # include <math.h>
@@ -584,7 +584,7 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
     } else if (yasm__strcasecmp(name, "section") == 0 ||
 	       yasm__strcasecmp(name, "segment") == 0) {
 	yasm_section *new_section =
-	    nasm_parser_objfmt->sections_switch(&nasm_parser_sections,
+	    nasm_parser_objfmt->sections_switch(nasm_parser_sections,
 						valparams, objext_valparams,
 						lindex);
 	if (new_section) {
@@ -598,12 +598,12 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
 	vp = yasm_vps_first(valparams);
 	if (vp->val)
 	    nasm_parser_cur_section =
-		yasm_sections_switch_absolute(&nasm_parser_sections,
+		yasm_sections_switch_absolute(nasm_parser_sections,
 		    p_expr_new_ident(yasm_expr_sym(
 			yasm_symrec_use(vp->val, lindex))));
 	else if (vp->param) {
 	    nasm_parser_cur_section =
-		yasm_sections_switch_absolute(&nasm_parser_sections,
+		yasm_sections_switch_absolute(nasm_parser_sections,
 					      vp->param);
 	    vp->param = NULL;
 	}
@@ -626,11 +626,11 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
 	}
     } else if (!nasm_parser_arch->parse_directive(name, valparams,
 						  objext_valparams,
-						  &nasm_parser_sections,
+						  nasm_parser_sections,
 						  lindex)) {
 	;
     } else if (nasm_parser_objfmt->directive(name, valparams, objext_valparams,
-					     &nasm_parser_sections, lindex)) {
+					     nasm_parser_sections, lindex)) {
 	yasm__error(lindex, N_("unrecognized directive [%s]"), name);
     }
 

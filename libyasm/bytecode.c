@@ -26,7 +26,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath: yasm/libyasm/bytecode.c,v 1.93 2003/03/31 05:36:29 peter Exp $");
 
 #include "file.h"
 
@@ -865,6 +865,7 @@ yasm_bcs_delete(yasm_bytecodehead *headp)
 	cur = next;
     }
     STAILQ_INIT(headp);
+    yasm_xfree(headp);
 }
 
 yasm_bytecode *
@@ -985,12 +986,13 @@ yasm_dvs_print(FILE *f, int indent_level, const yasm_datavalhead *head)
     }
 }
 
-/* Non-macro yasm_bcs_initialize() for non-YASM_INTERNAL users. */
-#undef yasm_bcs_initialize
-void
-yasm_bcs_initialize(yasm_bytecodehead *headp)
+yasm_bytecodehead *
+yasm_bcs_new(void)
 {
+    yasm_bytecodehead *headp;
+    headp = yasm_xmalloc(sizeof(yasm_bytecodehead));
     STAILQ_INIT(headp);
+    return headp;
 }
 
 /* Non-macro yasm_bcs_first() for non-YASM_INTERNAL users. */

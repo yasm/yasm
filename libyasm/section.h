@@ -2,7 +2,7 @@
  * \file section.h
  * \brief YASM section interface.
  *
- * $IdPath: yasm/libyasm/section.h,v 1.37 2003/05/04 20:28:28 peter Exp $
+ * $IdPath: yasm/libyasm/section.h,v 1.38 2003/05/04 20:31:57 peter Exp $
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -30,18 +30,14 @@
 #ifndef YASM_SECTION_H
 #define YASM_SECTION_H
 
-#ifdef YASM_INTERNAL
-/*@reldef@*/ STAILQ_HEAD(yasm_sectionhead, yasm_section);
-#endif
-
 /** Create a new section list.  A default section is created as the
  * first section.
- * \param headp	    pre-allocated section list head
+ * \param def	    returned; default section
  * \param of	    object format in use
- * \return Default section.
+ * \return Newly allocated section list.
  */
-/*@dependent@*/ yasm_section *yasm_sections_initialize(yasm_sectionhead *headp,
-						       yasm_objfmt *of);
+/*@only@*/ yasm_sectionhead *yasm_sections_new
+    (/*@out@*/ /*@dependent@*/ yasm_section **def, yasm_objfmt *of);
 
 /** Create a new, or continue an existing, general section.  The section is
  * added to a section list if there's not already a section by that name.
@@ -105,7 +101,7 @@ void yasm_section_set_of_data(yasm_section *sect, yasm_objfmt *of,
  * section list and all bytecodes within those sections are also deleted.
  * \param headp	    section list
  */
-void yasm_sections_delete(yasm_sectionhead *headp);
+void yasm_sections_delete(/*@only@*/ yasm_sectionhead *headp);
 
 /** Print a section list.  For debugging purposes.
  * \param f		file

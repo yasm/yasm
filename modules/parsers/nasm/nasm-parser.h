@@ -1,4 +1,4 @@
-/* $IdPath$
+/* $IdPath: yasm/modules/parsers/nasm/nasm-parser.h,v 1.6 2003/03/13 06:54:19 peter Exp $
  * NASM-compatible parser header file
  *
  *  Copyright (C) 2002  Peter Johnson
@@ -36,7 +36,7 @@ extern FILE *nasm_parser_in;
 extern int nasm_parser_debug;
 extern size_t (*nasm_parser_input) (char *buf, size_t max_size);
 
-extern yasm_sectionhead nasm_parser_sections;
+extern yasm_sectionhead *nasm_parser_sections;
 extern /*@dependent@*/ yasm_section *nasm_parser_cur_section;
 
 extern char *nasm_parser_locallabel_base;

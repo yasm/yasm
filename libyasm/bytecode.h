@@ -2,7 +2,7 @@
  * \file bytecode.h
  * \brief YASM bytecode interface.
  *
- * $IdPath: yasm/libyasm/bytecode.h,v 1.71 2003/03/31 08:22:05 peter Exp $
+ * $IdPath: yasm/libyasm/bytecode.h,v 1.72 2003/05/04 08:40:35 peter Exp $
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -265,13 +265,10 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
      /*@null@*/ yasm_output_bc_objfmt_data_func output_bc_objfmt_data)
     /*@sets *buf@*/;
 
-/** Initialize list of bytecodes.
- * \param headp		bytecode list
+/** Create list of bytecodes.
+ * \return Newly allocated bytecode list.
  */
-void yasm_bcs_initialize(yasm_bytecodehead *headp);
-#ifdef YASM_INTERNAL
-#define	yasm_bcs_initialize(headp)	STAILQ_INIT(headp)
-#endif
+/*@only@*/ yasm_bytecodehead *yasm_bcs_new(void);
 
 /** Get the first bytecode in a list of bytecodes.
  * \param headp		bytecode list
@@ -291,7 +288,7 @@ void yasm_bcs_initialize(yasm_bytecodehead *headp);
 /** Delete (free allocated memory for) a list of bytecodes.
  * \param headp		bytecode list
  */
-void yasm_bcs_delete(yasm_bytecodehead *headp);
+void yasm_bcs_delete(/*@only@*/ yasm_bytecodehead *headp);
 
 /** Add bytecode to the end of a list of bytecodes.
  * \note Does not make a copy of bc; so don't pass this function static or
