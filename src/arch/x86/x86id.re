@@ -2041,7 +2041,7 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	    return ARCH_CHECK_ID_REG;
 	}
 	X M M [0-7]	{
-	    data[0] = X86_XMMREG | (oid[2]-'0');
+	    data[0] = X86_XMMREG | (oid[3]-'0');
 	    return ARCH_CHECK_ID_REG;
 	}
 
