@@ -69,7 +69,8 @@ x86_bc_new_insn(x86_new_insn_data *d)
     insn->addrsize = 0;
     insn->opersize = d->opersize;
     insn->lockrep_pre = 0;
-    insn->shift_op = 0;
+    insn->shift_op = d->shift_op;
+    insn->signext_imm8_op = d->signext_imm8_op;
 
     insn->mode_bits = x86_mode_bits;
 
@@ -281,22 +282,6 @@ x86_bc_insn_set_lockrep_prefix(bytecode *bc, unsigned char prefix)
 	Warning(_("multiple LOCK or REP prefixes, using leftmost"));
 
     *lockrep_pre = prefix;
-}
-
-void
-x86_bc_insn_set_shift_flag(bytecode *bc)
-{
-    x86_insn *insn;
-
-    if (!bc)
-	return;
-
-    if ((x86_bytecode_type)bc->type != X86_BC_INSN)
-	InternalError(_("Attempted to set shift flag on non-instruction"));
-
-    insn = bc_get_data(bc);
-
-    insn->shift_op = 1;
 }
 
 void

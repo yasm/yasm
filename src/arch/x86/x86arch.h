@@ -77,7 +77,6 @@ effaddr *x86_ea_new_expr(/*@keep@*/ expr *e);
 void x86_bc_insn_opersize_override(bytecode *bc, unsigned char opersize);
 void x86_bc_insn_addrsize_override(bytecode *bc, unsigned char addrsize);
 void x86_bc_insn_set_lockrep_prefix(bytecode *bc, unsigned char prefix);
-void x86_bc_insn_set_shift_flag(bytecode *bc);
 
 void x86_set_jmprel_opcode_sel(x86_jmprel_opcode_sel *old_sel,
 			       x86_jmprel_opcode_sel new_sel);
@@ -95,6 +94,8 @@ typedef struct x86_new_insn_data {
     unsigned char spare;	/* bits to go in 'spare' field of ModRM */
     unsigned char im_len;
     unsigned char im_sign;
+    unsigned char shift_op;
+    unsigned char signext_imm8_op;
 } x86_new_insn_data;
 
 bytecode *x86_bc_new_insn(x86_new_insn_data *d);

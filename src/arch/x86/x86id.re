@@ -132,6 +132,15 @@ static unsigned long cpu_enabled = ~CPU_Any;
  *             5 = operand data is added to opcode byte 0
  *             6 = operand data goes into BOTH ea and spare
  *                 [special case for imul opcode]
+ * The below describes postponed actions: actions which can't be completed at
+ * parse-time due to things like EQU and complex expressions.  For these, some
+ * additional data (stored in the second byte of the opcode with a one-byte
+ * opcode) is passed to later stages of the assembler with flags set to
+ * indicate postponed actions.
+ *  - 2 bits = postponed action:
+ *             0 = none
+ *             1 = shift operation with a ,1 short form (instead of imm8).
+ *             2 = large imm16/32 that can become a sign-extended imm8.
  */
 #define OPT_Imm		0x0
 #define OPT_Reg		0x1
@@ -176,6 +185,11 @@ static unsigned long cpu_enabled = ~CPU_Any;
 #define OPA_Op0Add	(5<<9)
 #define OPA_SpareEA	(6<<9)
 #define OPA_MASK	0x0E00
+
+#define OPAP_None	(0<<12)
+#define OPAP_ShiftOp	(1<<12)
+#define OPAP_SImm8Avail	(2<<12)
+#define OPAP_MASK	0x3000
 
 typedef struct x86_insn_info {
     /* The CPU feature flags needed to execute this instruction.  This is OR'ed
@@ -441,9 +455,9 @@ static const x86_insn_info ldes_insn[] = {
       {OPT_Reg|OPS_32|OPA_Spare, OPT_Mem|OPS_Any|OPS_Relaxed|OPA_EA, 0} }
 };
 static const x86_insn_info lfgss_insn[] = {
-    { CPU_386, MOD_Op1Add, 16, 1, {0x0F, 0, 0}, 0, 2,
+    { CPU_386, MOD_Op1Add, 16, 2, {0x0F, 0x00, 0}, 0, 2,
       {OPT_Reg|OPS_16|OPA_Spare, OPT_Mem|OPS_Any|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_386, MOD_Op1Add, 32, 1, {0x0F, 0, 0}, 0, 2,
+    { CPU_386, MOD_Op1Add, 32, 2, {0x0F, 0x00, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_Spare, OPT_Mem|OPS_Any|OPS_Relaxed|OPA_EA, 0} }
 };
 
@@ -461,14 +475,16 @@ static const x86_insn_info arith_insn[] = {
       {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_8|OPA_Imm, 0} },
     { CPU_Any, MOD_Gap0|MOD_SpAdd, 16, 1, {0x83, 0, 0}, 0, 2,
       {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_8|OPA_SImm, 0} },
-    { CPU_Any, MOD_Gap0|MOD_SpAdd, 16, 1, {0x81, 0, 0}, 0, 2,
-      {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_Any, MOD_Gap0|MOD_SpAdd, 16, 1, {0x81, 0x83, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPA_EA,
+       OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
     { CPU_Any, MOD_Gap0|MOD_SpAdd, 16, 1, {0x81, 0, 0}, 0, 2,
       {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_16|OPA_Imm, 0} },
     { CPU_386, MOD_Gap0|MOD_SpAdd, 32, 1, {0x83, 0, 0}, 0, 2,
       {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_8|OPA_SImm, 0} },
-    { CPU_386, MOD_Gap0|MOD_SpAdd, 32, 1, {0x81, 0, 0}, 0, 2,
-      {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_386, MOD_Gap0|MOD_SpAdd, 32, 1, {0x81, 0x83, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPA_EA,
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
     { CPU_386, MOD_Gap0|MOD_SpAdd, 32, 1, {0x81, 0, 0}, 0, 2,
       {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_32|OPA_Imm, 0} },
     { CPU_Any, MOD_Op0Add, 0, 1, {0x00, 0, 0}, 0, 2,
@@ -569,16 +585,57 @@ static const x86_insn_info imul_insn[] = {
       {OPT_Reg|OPS_16|OPA_SpareEA, OPT_Imm|OPS_8|OPA_SImm, 0} },
     { CPU_386, 0, 32, 1, {0x6B, 0, 0}, 0, 3,
       {OPT_Reg|OPS_32|OPA_SpareEA, OPT_Imm|OPS_8|OPA_SImm, 0} },
-    { CPU_186, 0, 16, 1, {0x69, 0, 0}, 0, 3,
+    { CPU_186, 0, 16, 1, {0x69, 0x6B, 0}, 0, 3,
       {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA,
-       OPT_Imm|OPS_16|OPS_Relaxed|OPA_SImm} },
-    { CPU_386, 0, 32, 1, {0x69, 0, 0}, 0, 3,
+       OPT_Imm|OPS_16|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail} },
+    { CPU_386, 0, 32, 1, {0x69, 0x6B, 0}, 0, 3,
       {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA,
-       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm} },
-    { CPU_186, 0, 16, 1, {0x69, 0, 0}, 0, 2,
-      {OPT_Reg|OPS_16|OPA_SpareEA, OPT_Imm|OPS_16|OPS_Relaxed|OPA_SImm, 0} },
-    { CPU_386, 0, 32, 1, {0x69, 0, 0}, 0, 3,
-      {OPT_Reg|OPS_32|OPA_SpareEA, OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm, 0} }
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail} },
+    { CPU_186, 0, 16, 1, {0x69, 0x6B, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_SpareEA,
+       OPT_Imm|OPS_16|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail, 0} },
+    { CPU_386, 0, 32, 1, {0x69, 0x6B, 0}, 0, 3,
+      {OPT_Reg|OPS_32|OPA_SpareEA,
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail, 0} }
+};
+
+/* Shifts - standard */
+static const x86_insn_info shift_insn[] = {
+    { CPU_Any, MOD_SpAdd, 0, 1, {0xD2, 0, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPA_EA, OPT_Creg|OPS_8|OPA_None, 0} },
+    /* FIXME: imm8 is only avail on 186+, but we use imm8 to get to postponed
+     * ,1 form, so it has to be marked as Any.  We need to store the active
+     * CPU flags somewhere to pass that parse-time info down the line.
+     */
+    { CPU_Any, MOD_SpAdd, 0, 1, {0xC0, 0xD0, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm|OPAP_ShiftOp,
+       0} },
+    { CPU_Any, MOD_SpAdd, 16, 1, {0xD3, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPA_EA, OPT_Creg|OPS_8|OPA_None, 0} },
+    { CPU_Any, MOD_SpAdd, 16, 1, {0xC1, 0xD1, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm|OPAP_ShiftOp,
+       0} },
+    { CPU_Any, MOD_SpAdd, 32, 1, {0xD3, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPA_EA, OPT_Creg|OPS_8|OPA_None, 0} },
+    { CPU_Any, MOD_SpAdd, 32, 1, {0xC1, 0xD1, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm|OPAP_ShiftOp,
+       0} }
+};
+
+/* Shifts - doubleword */
+static const x86_insn_info shlrd_insn[] = {
+    { CPU_386, MOD_Op1Add, 16, 2, {0x0F, 0x00, 0}, 0, 3,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare,
+       OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm} },
+    { CPU_386, MOD_Op1Add, 16, 2, {0x0F, 0x01, 0}, 0, 3,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare,
+       OPT_Creg|OPS_8|OPA_None} },
+    { CPU_386, MOD_Op1Add, 32, 2, {0x0F, 0x00, 0}, 0, 3,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare,
+       OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm} },
+    { CPU_386, MOD_Op1Add, 32, 2, {0x0F, 0x01, 0}, 0, 3,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare,
+       OPT_Creg|OPS_8|OPA_None} }
 };
 
 
@@ -795,6 +852,8 @@ x86_new_insn(const unsigned long data[4], int num_operands,
     d.spare = info->spare;
     d.im_len = 0;
     d.im_sign = 0;
+    d.shift_op = 0;
+    d.signext_imm8_op = 0;
 
     /* Apply modifiers */
     if (info->modifiers & MOD_Op2Add) {
@@ -910,6 +969,19 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 		    break;
 		default:
 		    InternalError(_("unknown operand action"));
+	    }
+
+	    switch (info->operands[i] & OPAP_MASK) {
+		case OPAP_None:
+		    break;
+		case OPAP_ShiftOp:
+		    d.shift_op = 1;
+		    break;
+		case OPAP_SImm8Avail:
+		    d.signext_imm8_op = 1;
+		    break;
+		default:
+		    InternalError(_("unknown operand postponed action"));
 	    }
 	}
     }
@@ -1292,16 +1364,16 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	D I V { RET_INSN(f6, 0x06, CPU_Any); }
 	I D I V { RET_INSN(f6, 0x07, CPU_Any); }
 	/* Shifts */
-	/* R O L */
-	/* R O R */
-	/* R C L */
-	/* R C R */
-	/* S A L */
-	/* S H L */
-	/* S H R */
-	/* S A R */
-	/* S H L D */
-	/* S H R D */
+	R O L { RET_INSN(shift, 0x00, CPU_Any); }
+	R O R { RET_INSN(shift, 0x01, CPU_Any); }
+	R C L { RET_INSN(shift, 0x02, CPU_Any); }
+	R C R { RET_INSN(shift, 0x03, CPU_Any); }
+	S A L { RET_INSN(shift, 0x04, CPU_Any); }
+	S H L { RET_INSN(shift, 0x04, CPU_Any); }
+	S H R { RET_INSN(shift, 0x05, CPU_Any); }
+	S A R { RET_INSN(shift, 0x07, CPU_Any); }
+	S H L D { RET_INSN(shlrd, 0xA4, CPU_386); }
+	S H R D { RET_INSN(shlrd, 0xAC, CPU_386); }
 	/* Control transfer instructions (unconditional) */
 	/* C A L L */
 	/* J M P */
