@@ -45,6 +45,8 @@ static void nasm_parser_directive
      /*@null@*/ yasm_valparamhead *objext_valparams);
 static int fix_directive_symrec(/*@null@*/ yasm_expr__item *ei,
 				/*@null@*/ void *d);
+static void define_label(yasm_parser_nasm *parser_nasm, /*@only@*/ char *name,
+			 int local);
 
 #define nasm_parser_error(s)	yasm__parser_error(cur_line, s)
 #define YYPARSE_PARAM	parser_nasm_arg
@@ -76,6 +78,10 @@ static int fix_directive_symrec(/*@null@*/ yasm_expr__item *ei,
 	int num_operands;
     } insn_operands;
     yasm_insn_operand *insn_operand;
+    struct {
+	char *name;
+	int local;
+    } label;
 }
 
 %token <intn> INTNUM
@@ -96,7 +102,7 @@ static int fix_directive_symrec(/*@null@*/ yasm_expr__item *ei,
 %type <ea> memaddr
 %type <exp> dvexpr expr direxpr
 %type <sym> explabel
-%type <str_val> label_id label_id_equ
+%type <label> label_id label
 %type <data> dataval
 %type <datahead> datavals
 %type <dir_valparams> directive_valparams
@@ -152,13 +158,23 @@ line: '\n'		{ $$ = (yasm_bytecode *)NULL; }
 
 lineexp: exp
     | TIMES expr exp		{ $$ = $3; yasm_bc_set_multiple($$, $2); }
-    | label			{ $$ = (yasm_bytecode *)NULL; }
-    | label exp			{ $$ = $2; }
-    | label TIMES expr exp	{ $$ = $4; yasm_bc_set_multiple($$, $3); }
-    | label_id_equ EQU expr	{
-	yasm_symtab_define_equ(p_symtab, $1, $3, cur_line);
-	yasm_xfree($1);
+    | label			{
 	$$ = (yasm_bytecode *)NULL;
+	define_label(parser_nasm, $1.name, $1.local);
+    }
+    | label exp			{
+	$$ = $2;
+	define_label(parser_nasm, $1.name, $1.local);
+    }
+    | label TIMES expr exp	{
+	$$ = $4;
+	yasm_bc_set_multiple($$, $3);
+	define_label(parser_nasm, $1.name, $1.local);
+    }
+    | label EQU expr		{
+	$$ = (yasm_bytecode *)NULL;
+	yasm_symtab_define_equ(p_symtab, $1.name, $3, cur_line);
+	yasm_xfree($1.name);
     }
 ;
 
@@ -225,34 +241,13 @@ dataval: dvexpr		{ $$ = yasm_dv_create_expr($1); }
     }
 ;
 
-label: label_id	    {
-	yasm_symtab_define_label(p_symtab, $1, parser_nasm->prev_bc, 1,
-				 cur_line);
-	yasm_xfree($1);
-    }
-    | label_id ':'  {
-	yasm_symtab_define_label(p_symtab, $1, parser_nasm->prev_bc, 1,
-				 cur_line);
-	yasm_xfree($1);
-    }
+label: label_id
+    | label_id ':'	{ $$ = $1; }
 ;
 
-label_id: ID	    {
-	$$ = $1;
-	if (parser_nasm->locallabel_base)
-	    yasm_xfree(parser_nasm->locallabel_base);
-	parser_nasm->locallabel_base_len = strlen($1);
-	parser_nasm->locallabel_base =
-	    yasm_xmalloc(parser_nasm->locallabel_base_len+1);
-	strcpy(parser_nasm->locallabel_base, $1);
-    }
-    | SPECIAL_ID
-    | LOCAL_ID
-;
-
-label_id_equ: ID
-    | SPECIAL_ID
-    | LOCAL_ID
+label_id: ID		{ $$.name = $1; $$.local = 0; }
+    | SPECIAL_ID	{ $$.name = $1; $$.local = 1; }
+    | LOCAL_ID		{ $$.name = $1; $$.local = 1; }
 ;
 
 /* directives */
@@ -482,6 +477,23 @@ explabel: ID		{
 /*@=usedef =nullassign =memtrans =usereleased =compdef =mustfree@*/
 
 #undef parser_nasm
+
+static void
+define_label(yasm_parser_nasm *parser_nasm, char *name, int local)
+{
+    if (!local) {
+	if (parser_nasm->locallabel_base)
+	    yasm_xfree(parser_nasm->locallabel_base);
+	parser_nasm->locallabel_base_len = strlen(name);
+	parser_nasm->locallabel_base =
+	    yasm_xmalloc(parser_nasm->locallabel_base_len+1);
+	strcpy(parser_nasm->locallabel_base, name);
+    }
+
+    yasm_symtab_define_label(p_symtab, name, parser_nasm->prev_bc, 1,
+			     cur_line);
+    yasm_xfree(name);
+}
 
 static int
 fix_directive_symrec(yasm_expr__item *ei, void *d)
