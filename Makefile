@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.2 2001/05/18 21:40:02 peter Exp $
+# $Id: Makefile,v 1.3 2001/05/20 08:30:04 peter Exp $
 # Makefile
 #
 #    Copyright (C) 2001  Peter Johnson
@@ -31,6 +31,7 @@ OBJS_BASE = \
 	lex.yy.o \
 	symrec.o \
 	bytecode.o \
+	errwarn.o \
 	main.o \
 	$E
 OBJS = $(addprefix obj/, $(OBJS_BASE))
