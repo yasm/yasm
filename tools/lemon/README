@@ -1,5 +1,5 @@
 $IdPath$
-$Id: README,v 1.2 2002/04/07 19:58:57 peter Exp $
+$Id: README,v 1.3 2002/04/12 04:12:11 peter Exp $
 
 The Lemon Parser Generator's home page is:
 
@@ -9,8 +9,6 @@ The file in this directory, lemon.html, was obtained from:
 
 http://www.hwaci.com/sw/lemon/lemon.html
 
-lemon.c has been modified to include the t= and d= command-line
-arguments. The changes were submitted to the Lemon maintainer,
-but have not appeared in the official Lemon distribution.
-
-
+lemon.c has been modified to include the t= and o= command-line
+arguments.  These changes are thanks to the FreeBSD project ports
+collection.
