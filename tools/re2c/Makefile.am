@@ -52,4 +52,5 @@ EXTRA_DIST = \
 	examples/simple.re	\
 	examples/rexx/README	\
 	examples/rexx/rexx.l	\
-	examples/rexx/scanio.c
+	examples/rexx/scanio.c	\
+	cleanup.pl
