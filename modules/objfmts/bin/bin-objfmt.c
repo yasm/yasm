@@ -86,7 +86,7 @@ bin_objfmt_align_section(section *sect, section *prevsect, unsigned long base,
     else
 	align = def_align;	/* No alignment: use default */
 
-    if (start & ~(align-1))
+    if (start & (align-1))
 	start = (start & ~(align-1)) + align;
 
     *padamt = start - (base + *prevsectlen);
@@ -100,6 +100,33 @@ typedef struct bin_objfmt_output_info {
     /*@observer@*/ const section *sect;
     unsigned long start;
 } bin_objfmt_output_info;
+
+static /*@only@*/ expr *
+bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ expr *e,
+		      /*@unused@*/ /*@null@*/ void *d)
+{
+    int i;
+    /*@dependent@*/ section *sect;
+    /*@dependent@*/ /*@null@*/ bytecode *precbc;
+    /*@null@*/ intnum *dist;
+
+    for (i=0; i<e->numterms; i++) {
+	/* Transform symrecs that reference sections into
+	 * start expr + intnum(dist).
+	 */
+	if (e->terms[i].type == EXPR_SYM &&
+	    symrec_get_label(e->terms[i].data.sym, &sect, &precbc) &&
+	    (dist = common_calc_bc_dist(sect, NULL, precbc))) {
+	    e->terms[i].type = EXPR_EXPR;
+	    e->terms[i].data.expn =
+		expr_new(EXPR_ADD,
+			 ExprExpr(expr_copy(section_get_start(sect))),
+			 ExprInt(dist));
+	}
+    }
+
+    return e;
+}
 
 static int
 bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
@@ -117,7 +144,8 @@ bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
      * Other object formats need to generate their relocation list from here!
      */
 
-    *ep = expr_simplify(*ep, common_calc_bc_dist);
+    *ep = expr_xform_neg_tree(*ep);
+    *ep = expr_level_tree(*ep, 1, 1, NULL, bin_objfmt_expr_xform, NULL, NULL);
 
     /* Handle floating point expressions */
     flt = expr_get_floatnum(ep);
