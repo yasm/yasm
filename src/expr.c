@@ -158,7 +158,7 @@ expr_xform_neg_item(expr *e, ExprItem *ei)
     sube->line = e->line;
     sube->numterms = 2;
     sube->terms[0].type = EXPR_INT;
-    sube->terms[0].data.intn = intnum_new_int((unsigned long)-1);
+    sube->terms[0].data.intn = intnum_new_int(-1);
     sube->terms[1] = *ei;	/* structure copy */
 
     /* Replace original ExprItem with subexp */
@@ -215,7 +215,7 @@ expr_xform_neg_helper(/*@returned@*/ /*@only@*/ expr *e)
 		e->op = EXPR_MUL;
 		e->numterms = 2;
 		e->terms[1].type = EXPR_INT;
-		e->terms[1].data.intn = intnum_new_int((unsigned long)-1);
+		e->terms[1].data.intn = intnum_new_int(-1);
 	    }
 	    break;
 	default:
@@ -227,7 +227,7 @@ expr_xform_neg_helper(/*@returned@*/ /*@only@*/ expr *e)
 	    ne->line = e->line;
 	    ne->numterms = 2;
 	    ne->terms[0].type = EXPR_INT;
-	    ne->terms[0].data.intn = intnum_new_int((unsigned long)-1);
+	    ne->terms[0].data.intn = intnum_new_int(-1);
 	    ne->terms[1].type = EXPR_EXPR;
 	    ne->terms[1].data.expn = e;
 	    return ne;

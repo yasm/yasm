@@ -55,7 +55,7 @@ x86_expr_checkea_get_reg32(ExprItem *ei, /*returned*/ void *d)
 
     /* overwrite with 0 to eliminate register from displacement expr */
     ei->type = EXPR_INT;
-    ei->data.intn = intnum_new_int(0);
+    ei->data.intn = intnum_new_uint(0);
 
     /* we're okay */
     return ret;
@@ -96,7 +96,7 @@ x86_expr_checkea_get_reg16(ExprItem *ei, void *d)
 
     /* overwrite with 0 to eliminate register from displacement expr */
     ei->type = EXPR_INT;
-    ei->data.intn = intnum_new_int(0);
+    ei->data.intn = intnum_new_uint(0);
 
     /* we're okay */
     return ret;

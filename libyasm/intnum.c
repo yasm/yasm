@@ -194,7 +194,7 @@ intnum_new_charconst_nasm(const char *str)
 /*@=usedef =compdef =uniondef@*/
 
 intnum *
-intnum_new_int(unsigned long i)
+intnum_new_uint(unsigned long i)
 {
     intnum *intn = xmalloc(sizeof(intnum));
 
@@ -203,6 +203,13 @@ intnum_new_int(unsigned long i)
     intn->origsize = 0;
 
     return intn;
+}
+
+intnum *
+intnum_new_int(long i)
+{
+    /* FIXME: Better way of handling signed numbers? */
+    return intnum_new_uint((unsigned long)i);
 }
 
 intnum *

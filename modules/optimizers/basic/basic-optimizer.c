@@ -64,11 +64,11 @@ basic_optimize_resolve_label(symrec *sym, section *sect,
      * progress, this will fail if the bytecode comes AFTER the current one.
      */
     if (precbc && precbc->opt_flags == BCFLAG_DONE)
-	return intnum_new_int(startval + precbc->offset + precbc->len);
+	return intnum_new_uint(startval + precbc->offset + precbc->len);
     if (bc && bc->opt_flags == BCFLAG_DONE)
-	return intnum_new_int(startval + bc->offset);
+	return intnum_new_uint(startval + bc->offset);
     if (section_get_opt_flags(sect) == SECTFLAG_DONE)
-	return intnum_new_int(startval);
+	return intnum_new_uint(startval);
 
     return NULL;
 }
@@ -82,11 +82,11 @@ basic_optimize_resolve_label_2(symrec *sym, section *sect,
      * progress, this will fail if the bytecode comes AFTER the current one.
      */
     if (precbc)
-	return intnum_new_int(startval + precbc->offset + precbc->len);
+	return intnum_new_uint(startval + precbc->offset + precbc->len);
     else if (bc)
-	return intnum_new_int(startval + bc->offset);
+	return intnum_new_uint(startval + bc->offset);
     else
-	return intnum_new_int(startval);
+	return intnum_new_uint(startval);
 }
 
 typedef struct basic_optimize_data {

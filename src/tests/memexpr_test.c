@@ -54,7 +54,7 @@ typedef enum {
 static expr *
 gen_5_in(void)
 {
-    return expr_new_ident(ExprInt(intnum_new_int(5)));
+    return expr_new_ident(ExprInt(intnum_new_uint(5)));
 }
 #define gen_5_out	gen_5_in
 /* [1.2] */
@@ -91,7 +91,7 @@ gen_dimsipsip126_in(void)
 	    EXPR_ADD,
 	    expr_new_ident(ExprReg(REG_SI, 16))),
 	EXPR_ADD,
-	expr_new_ident(ExprInt(intnum_new_int(126))));
+	expr_new_ident(ExprInt(intnum_new_uint(126))));
 }
 #define gen_dimsipsip126_out	NULL
 /* [bx-(bx-di)+bx-2] */
@@ -110,7 +110,7 @@ gen_bxmqbxmdiqpbxm2_in(void)
 	    EXPR_ADD,
 	    expr_new_ident(ExprReg(REG_BX, 16))),
 	EXPR_SUB,
-	expr_new_ident(ExprInt(intnum_new_int(2))));
+	expr_new_ident(ExprInt(intnum_new_uint(2))));
 }
 static expr *
 gen_bxmqbxmdiqpbxm2_out(void)
@@ -132,14 +132,14 @@ gen_bpx1p500_in(void)
 	expr_new_tree(
 	    expr_new_ident(ExprReg(REG_BP, 16)),
 	    EXPR_MUL,
-	    expr_new_ident(ExprInt(intnum_new_int(1)))),
+	    expr_new_ident(ExprInt(intnum_new_uint(1)))),
 	EXPR_ADD,
-	expr_new_ident(ExprInt(intnum_new_int(500))));
+	expr_new_ident(ExprInt(intnum_new_uint(500))));
 }
 static expr *
 gen_bpx1p500_out(void)
 {
-    return expr_new_ident(ExprInt(intnum_new_int(500)));
+    return expr_new_ident(ExprInt(intnum_new_uint(500)));
 }
 
 typedef struct CheckEA_InOut {

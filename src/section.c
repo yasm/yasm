@@ -115,7 +115,7 @@ sections_switch_general(sectionhead *headp, const char *name,
     s->type = SECTION_GENERAL;
     s->data.general.name = xstrdup(name);
     s->data.general.of_data = of_data;
-    s->start = expr_new_ident(ExprInt(intnum_new_int(start)));
+    s->start = expr_new_ident(ExprInt(intnum_new_uint(start)));
     bcs_initialize(&s->bc);
 
     s->opt_flags = 0;
@@ -247,7 +247,7 @@ void
 section_set_start(section *sect, unsigned long start)
 {
     expr_delete(sect->start);
-    sect->start = expr_new_ident(ExprInt(intnum_new_int(start)));
+    sect->start = expr_new_ident(ExprInt(intnum_new_uint(start)));
 }
 
 const expr *

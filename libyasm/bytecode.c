@@ -88,7 +88,7 @@ unsigned char bytes_static[16];
 immval *
 imm_new_int(unsigned long int_val)
 {
-    return imm_new_expr(expr_new_ident(ExprInt(intnum_new_int(int_val))));
+    return imm_new_expr(expr_new_ident(ExprInt(intnum_new_uint(int_val))));
 }
 
 immval *

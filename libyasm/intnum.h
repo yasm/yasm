@@ -31,7 +31,8 @@ void intnum_shutdown(void);
 /*@only@*/ intnum *intnum_new_hex(char *str);
 /* convert character constant to integer value, using NASM rules */
 /*@only@*/ intnum *intnum_new_charconst_nasm(const char *str);
-/*@only@*/ intnum *intnum_new_int(unsigned long i);
+/*@only@*/ intnum *intnum_new_uint(unsigned long i);
+/*@only@*/ intnum *intnum_new_int(long i);
 /*@only@*/ intnum *intnum_copy(const intnum *intn);
 void intnum_delete(/*@only@*/ intnum *intn);
 

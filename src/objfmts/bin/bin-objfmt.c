@@ -128,9 +128,9 @@ bin_objfmt_resolve_label2(symrec *sym, section *sect,
     }
 
     if (precbc)
-	return intnum_new_int(startval + precbc->offset + precbc->len);
+	return intnum_new_uint(startval + precbc->offset + precbc->len);
     else
-	return intnum_new_int(startval + bc->offset);
+	return intnum_new_uint(startval + bc->offset);
 }
 
 static intnum *
