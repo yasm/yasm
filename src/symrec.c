@@ -27,7 +27,7 @@
 # include <limits.h>
 #endif
 
-#include "ternary.h"
+#include "hamt.h"
 
 #include "globals.h"
 #include "errwarn.h"
@@ -78,27 +78,38 @@ struct symrec {
 };
 
 /* The symbol table: a ternary tree. */
-static /*@only@*/ /*@null@*/ ternary_tree sym_table = (ternary_tree)NULL;
+static /*@only@*/ /*@null@*/ HAMT *sym_table = NULL;
+
+static void
+symrec_delete_one(/*@only@*/ void *d)
+{
+    symrec *sym = d;
+    xfree(sym->name);
+    if (sym->type == SYM_EQU)
+	expr_delete(sym->value.expn);
+    assert(cur_objfmt != NULL);
+    if (sym->of_data_vis_g && (sym->visibility & SYM_GLOBAL))
+	cur_objfmt->declare_data_delete(SYM_GLOBAL, sym->of_data_vis_g);
+    if (sym->of_data_vis_ce && (sym->visibility & SYM_COMMON)) {
+	cur_objfmt->declare_data_delete(SYM_COMMON, sym->of_data_vis_ce);
+	sym->of_data_vis_ce = NULL;
+    }
+    if (sym->of_data_vis_ce && (sym->visibility & SYM_EXTERN))
+	cur_objfmt->declare_data_delete(SYM_EXTERN, sym->of_data_vis_ce);
+    xfree(sym);
+}
 
 /* create a new symrec */
+/*@-freshtrans -mustfree@*/
 static /*@partial@*/ /*@dependent@*/ symrec *
 symrec_get_or_new(const char *name, int in_table)
 {
-    symrec *rec, *rec2;
+    symrec *rec;
+    int replace = 0;
+    char *symname = xstrdup(name);
 
     rec = xmalloc(sizeof(symrec));
-    if (in_table) {
-	rec2 = ternary_insert(&sym_table, name, rec, 0);
-
-	if (rec2 != rec) {
-	    xfree(rec);
-	    return rec2;
-	}
-	rec->status = SYM_NOSTATUS;
-    } else
-	rec->status = SYM_NOTINTABLE;
-
-    rec->name = xstrdup(name);
+    rec->name = symname;
     rec->type = SYM_UNKNOWN;
     rec->filename = in_filename;
     rec->line = line_number;
@@ -106,17 +117,28 @@ symrec_get_or_new(const char *name, int in_table)
     rec->of_data_vis_ce = NULL;
     rec->of_data_vis_g = NULL;
 
-    /*@-freshtrans -mustfree@*/
+    if (in_table) {
+	rec->status = SYM_NOSTATUS;
+	if (!sym_table)
+	    sym_table = HAMT_new();
+	return HAMT_insert(sym_table, symname, rec, &replace,
+			   symrec_delete_one);
+    }
+
+    rec->status = SYM_NOTINTABLE;
     return rec;
-    /*@=freshtrans =mustfree@*/
 }
+/*@=freshtrans =mustfree@*/
 
 /* Call a function with each symrec.  Stops early if 0 returned by func.
    Returns 0 if stopped early. */
 int
 symrec_traverse(void *d, int (*func) (symrec *sym, void *d))
 {
-    return ternary_traverse(sym_table, d, (int (*) (void *, void *))func);
+    if (sym_table)
+	return HAMT_traverse(sym_table, d, (int (*) (void *, void *))func);
+    else
+	return 1;
 }
 
 symrec *
@@ -289,30 +311,13 @@ symrec_parser_finalize(void)
 		_(" (Each undefined symbol is reported only once.)"));
 }
 
-static void
-symrec_delete_one(/*@only@*/ void *d)
-{
-    symrec *sym = d;
-    xfree(sym->name);
-    if (sym->type == SYM_EQU)
-	expr_delete(sym->value.expn);
-    assert(cur_objfmt != NULL);
-    if (sym->of_data_vis_g && (sym->visibility & SYM_GLOBAL))
-	cur_objfmt->declare_data_delete(SYM_GLOBAL, sym->of_data_vis_g);
-    if (sym->of_data_vis_ce && (sym->visibility & SYM_COMMON)) {
-	cur_objfmt->declare_data_delete(SYM_COMMON, sym->of_data_vis_ce);
-	sym->of_data_vis_ce = NULL;
-    }
-    if (sym->of_data_vis_ce && (sym->visibility & SYM_EXTERN))
-	cur_objfmt->declare_data_delete(SYM_EXTERN, sym->of_data_vis_ce);
-    xfree(sym);
-}
-
 void
 symrec_delete_all(void)
 {
-    ternary_cleanup(sym_table, symrec_delete_one);
-    sym_table = NULL;
+    if (sym_table) {
+	HAMT_delete(sym_table, symrec_delete_one);
+	sym_table = NULL;
+    }
 }
 
 void

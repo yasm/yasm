@@ -54,8 +54,8 @@ libyasm_a_SOURCES = \
 	intnum.h		\
 	floatnum.c		\
 	floatnum.h		\
-	ternary.c		\
-	ternary.h		\
+	hamt.c			\
+	hamt.h			\
 	bitvect.c		\
 	bitvect.h		\
 	valparam.c		\

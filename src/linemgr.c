@@ -22,7 +22,7 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
-#include "ternary.h"
+#include "hamt.h"
 
 #include "globals.h"
 
@@ -39,18 +39,7 @@ unsigned int asm_options = 0;
 
 int indent_level = 0;
 
-static /*@only@*/ /*@null@*/ ternary_tree filename_table = (ternary_tree)NULL;
-
-void
-switch_filename(const char *filename)
-{
-    char *copy = xstrdup(filename);
-    in_filename = ternary_insert(&filename_table, filename, copy, 0);
-    /*@-branchstate@*/
-    if (in_filename != copy)
-	xfree(copy);
-    /*@=branchstate@*/
-}
+static /*@only@*/ /*@null@*/ HAMT *filename_table = NULL;
 
 static void
 filename_delete_one(/*@only@*/ void *d)
@@ -59,9 +48,24 @@ filename_delete_one(/*@only@*/ void *d)
 }
 
 void
+switch_filename(const char *filename)
+{
+    char *copy = xstrdup(filename);
+    int replace = 0;
+    if (!filename_table)
+	filename_table = HAMT_new();
+    /*@-aliasunique@*/
+    in_filename = HAMT_insert(filename_table, copy, copy, &replace,
+			      filename_delete_one);
+    /*@=aliasunique@*/
+}
+
+void
 filename_delete_all(void)
 {
     in_filename = NULL;
-    ternary_cleanup(filename_table, filename_delete_one);
-    filename_table = NULL;
+    if (filename_table) {
+	HAMT_delete(filename_table, filename_delete_one);
+	filename_table = NULL;
+    }
 }
