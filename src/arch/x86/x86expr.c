@@ -618,11 +618,12 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 
 	/* First determine R/M (Mod is later determined from disp size) */
 	*n_modrm = 1;	/* we always need ModRM */
-	if (basereg == REG32_NONE) {
-	    /* disp32[index] */
+	if (basereg == REG32_NONE && indexreg == REG32_NONE) {
+	    /* just a disp32 */
 	    *modrm |= 5;
-	    /* we must have a SIB */
-	    *n_sib = 1;
+	    *sib = 0;
+	    *v_sib = 0;
+	    *n_sib = 0;
 	} else if (indexreg == REG32_NONE) {
 	    /* basereg only */
 	    *modrm |= basereg;
@@ -635,7 +636,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 		*n_sib = 0;
 	    }
 	} else {
-	    /* both base AND index */
+	    /* index or both base and index */
 	    *modrm |= 4;
 	    *n_sib = 1;
 	}
