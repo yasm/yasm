@@ -180,7 +180,7 @@ sub read_instructions ($)
 		die "Invalid Address Size\n"
 			if $size !~ m/^(nil|16|32|\$0\.\d)$/oi;
 		die "Invalid Short Opcode\n"
-			if $shortopcode !~ m/^(nil|(?:$valid_opcodes)(,(?:$valid_opcodes)){0,2}(\+(\$\d|\$0\.\d|\d))?)$/oi;
+			if $shortopcode !~ m/^(\$0\.\d\?)?(nil|(?:$valid_opcodes)(,(?:$valid_opcodes)){0,2}(\+(\$\d|\$0\.\d|\d))?)$/oi;
 		die "Invalid Near Opcode\n"
 			if $nearopcode !~ m/^(nil|(?:$valid_opcodes)(,(?:$valid_opcodes)){0,2}(\+(\$\d|\$0\.\d|\d))?)$/oi;
 		die "Invalid Short CPU\n"
@@ -538,10 +538,23 @@ sub output_yacc ($@)
 			}
 			else
 			{
-			    # opcode piece 1 (and 2 and 3 if attached)
-			    my @opcodes = split ",", $inst->[SHORTOPCODE];
-			    # number of bytes of short opcode
-			    push @args, "short_op_len=".@opcodes.";";
+			    my @opcodes;
+			    print $inst->[SHORTOPCODE]."\n";
+			    # Check for possible length parameter
+			    if($inst->[SHORTOPCODE] =~ m/\?/)
+			    {
+				my @pieces = split /\?/, $inst->[SHORTOPCODE];
+				push @args, "short_op_len=".$pieces[0].";";
+			    	# opcode piece 1 (and 2 and 3 if attached)
+			    	@opcodes = split ",", $pieces[1];
+			    }
+			    else
+			    {
+			        # opcode piece 1 (and 2 and 3 if attached)
+			        @opcodes = split ",", $inst->[SHORTOPCODE];
+			        # number of bytes of short opcode
+			        push @args, "short_op_len=".@opcodes.";";
+			    }
 			    for (my $i=0; $i < @opcodes; ++$i)
 			    {
 				$opcodes[$i] =~ s/([0-9A-Fa-f]{2})/0x$1/g;

@@ -71,7 +71,7 @@ static bytecode *nasm_parser_temp_bc;
     intnum *intn;
     floatnum *flt;
     symrec *sym;
-    unsigned char groupdata[4];
+    unsigned char groupdata[5];
     effaddr *ea;
     expr *exp;
     immval *im_val;
