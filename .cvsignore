@@ -7,6 +7,7 @@ nasm-token.c
 nasm-macros.c
 yapp-token.c
 x86id.c
+lc3bid.c
 re2c-parser.c
 re2c-parser.h
 yasm

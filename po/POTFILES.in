@@ -6,6 +6,7 @@
 
 frontends/yasm/yasm-options.c
 frontends/yasm/yasm.c
+lc3bid.c
 libyasm/bitvect.c
 libyasm/bytecode.c
 libyasm/errwarn.c
@@ -17,6 +18,8 @@ libyasm/linemgr.c
 libyasm/section.c
 libyasm/symrec.c
 libyasm/xmalloc.c
+modules/arch/lc3b/lc3barch.c
+modules/arch/lc3b/lc3bbc.c
 modules/arch/x86/x86arch.c
 modules/arch/x86/x86bc.c
 modules/arch/x86/x86expr.c
