@@ -18,7 +18,7 @@
  */
 #define nasm_malloc xmalloc
 #define nasm_realloc xrealloc
-#define nasm_free xfree
+#define nasm_free(p) if (p) xfree(p)
 #define nasm_strdup xstrdup
 #define nasm_strndup xstrndup
 #define nasm_stricmp strcasecmp
