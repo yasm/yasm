@@ -647,7 +647,11 @@ explabel: ID		{
     }
 ;
 
-instr: instrbase
+instr: /* empty */	{
+	idata.opersize=0; idata.op_len=0; idata.ea=NULL; idata.imm=NULL;
+	$$ = x86_bc_new_insn(&idata);
+    }
+    | instrbase
     | OPERSIZE instr	{ $$ = $2; x86_bc_insn_opersize_override($$, $1); }
     | ADDRSIZE instr	{ $$ = $2; x86_bc_insn_addrsize_override($$, $1); }
     | REG_CS instr	{
