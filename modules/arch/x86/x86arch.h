@@ -69,7 +69,8 @@ typedef enum {
     JR_SHORT,
     JR_NEAR,
     JR_SHORT_FORCED,
-    JR_NEAR_FORCED
+    JR_NEAR_FORCED,
+    JR_FAR		    /* not really relative, but fits here */
 } x86_jmprel_opcode_sel;
 
 typedef enum {
@@ -135,11 +136,14 @@ yasm_bytecode *yasm_x86__bc_new_insn(x86_new_insn_data *d);
 typedef struct x86_new_jmprel_data {
     unsigned long lindex;
     /*@keep@*/ yasm_expr *target;
+    /*@dependent@*/ yasm_symrec *origin;
     x86_jmprel_opcode_sel op_sel;
     unsigned char short_op_len;
     unsigned char short_op[3];
     unsigned char near_op_len;
     unsigned char near_op[3];
+    unsigned char far_op_len;
+    unsigned char far_op[3];
     unsigned char addrsize;
     unsigned char opersize;
 } x86_new_jmprel_data;

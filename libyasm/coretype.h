@@ -2,7 +2,7 @@
  * \file coretype.h
  * \brief YASM core types and utility functions.
  *
- * $IdPath: yasm/libyasm/coretype.h,v 1.23 2003/03/31 08:22:05 peter Exp $
+ * $IdPath$
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -85,6 +85,7 @@ typedef struct yasm_valparamhead yasm_valparamhead;
 
 /** Expression operators usable in #yasm_expr expressions. */
 typedef enum {
+    YASM_EXPR_IDENT,	/**< No operation, just a value. */
     YASM_EXPR_ADD,	/**< Arithmetic addition (+). */
     YASM_EXPR_SUB,	/**< Arithmetic subtraction (-). */
     YASM_EXPR_MUL,	/**< Arithmetic multiplication (*). */
@@ -108,11 +109,11 @@ typedef enum {
     YASM_EXPR_LE,	/**< Less than or equal to comparison. */
     YASM_EXPR_GE,	/**< Greater than or equal to comparison. */
     YASM_EXPR_NE,	/**< Not equal comparison. */
+    YASM_EXPR_NONNUM,	/**< Start of non-numeric operations (not an op). */
     YASM_EXPR_SEG,	/**< SEG operator (gets segment portion of address). */
     YASM_EXPR_WRT,	/**< WRT operator (gets offset of address relative to
 			 *   some other segment). */
-    YASM_EXPR_SEGOFF,	/**< The ':' in segment:offset. */
-    YASM_EXPR_IDENT	/**< No operation, just a value. */
+    YASM_EXPR_SEGOFF	/**< The ':' in segment:offset. */
 } yasm_expr_op;
 
 /** Symbol record visibility.

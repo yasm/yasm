@@ -519,6 +519,11 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
 	yasm_xfree(e);
 	e = sube;
     }
+
+    /* If non-numeric expression, don't fold constants. */
+    if (e->op > YASM_EXPR_NONNUM)
+	fold_const = 0;
+
     level_numterms = e->numterms;
     level_fold_numterms = 0;
     for (i=0; i<e->numterms; i++) {
@@ -880,6 +885,12 @@ yasm_expr_delete(yasm_expr *e)
 }
 /*@=mustfree@*/
 
+int
+yasm_expr_is_op(const yasm_expr *e, yasm_expr_op op)
+{
+    return (e->op == op);
+}
+
 static int
 expr_contains_callback(const yasm_expr__item *ei, void *d)
 {
@@ -1015,6 +1026,35 @@ yasm_expr_extract_symrec(yasm_expr **ep, yasm_calc_bc_dist_func calc_bc_dist)
 	(*ep)->terms[symterm].data.intn = intn;
     }
     return sym;
+}
+
+yasm_expr *
+yasm_expr_extract_segment(yasm_expr **ep)
+{
+    yasm_expr *retval;
+    yasm_expr *e = *ep;
+
+    /* If not SEG:OFF, we can't do this transformation */
+    if (e->op != YASM_EXPR_SEGOFF)
+	return NULL;
+
+    /* Extract the SEG portion out to its own expression */
+    if (e->terms[0].type == YASM_EXPR_EXPR)
+	retval = e->terms[0].data.expn;
+    else {
+	/* Need to build IDENT expression to hold non-expression contents */
+	retval = yasm_xmalloc(sizeof(yasm_expr));
+	retval->op = YASM_EXPR_IDENT;
+	retval->numterms = 1;
+	retval->terms[0] = e->terms[0];	/* structure copy */
+    }
+
+    /* Delete the SEG: portion by changing the expression into an IDENT */
+    e->op = YASM_EXPR_IDENT;
+    e->numterms = 1;
+    e->terms[0] = e->terms[1];	/* structure copy */
+
+    return retval;
 }
 
 /*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
@@ -1167,6 +1207,9 @@ yasm_expr_print(FILE *f, const yasm_expr *e)
 	    break;
 	case YASM_EXPR_IDENT:
 	    opstr[0] = 0;
+	    break;
+	default:
+	    strcpy(opstr, " !UNK! ");
 	    break;
     }
     for (i=0; i<e->numterms; i++) {

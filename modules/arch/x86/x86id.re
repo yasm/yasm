@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-RCSID("$IdPath: yasm/modules/arch/x86/x86id.re,v 1.46 2003/03/31 05:36:29 peter Exp $");
+RCSID("$IdPath$");
 
 #define YASM_LIB_INTERNAL
 #define YASM_BC_INTERNAL
@@ -166,6 +166,7 @@ static unsigned long cpu_enabled = ~CPU_Any;
  *             0 = none
  *             1 = shift operation with a ,1 short form (instead of imm8).
  *             2 = large imm16/32 that can become a sign-extended imm8.
+ *             3 = can be far jump
  */
 #define OPT_Imm		0x0
 #define OPT_Reg		0x1
@@ -226,6 +227,7 @@ static unsigned long cpu_enabled = ~CPU_Any;
 #define OPAP_None	(0UL<<16)
 #define OPAP_ShiftOp	(1UL<<16)
 #define OPAP_SImm8Avail	(2UL<<16)
+#define OPAP_JmpFar	(3UL<<16)
 #define OPAP_MASK	(3UL<<16)
 
 typedef struct x86_insn_info {
@@ -857,12 +859,12 @@ static const x86_insn_info call_insn[] = {
     { CPU_Any, 0, 16, 0, {0, 0, 0}, 0, 1, {OPT_Imm|OPS_16|OPA_JmpRel, 0, 0} },
     { CPU_386, 0, 32, 0, {0, 0, 0}, 0, 1, {OPT_Imm|OPS_32|OPA_JmpRel, 0, 0} },
 
-    { CPU_Any, 0, 16, 1, {0xE8, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_16|OPTM_Near|OPA_JmpRel, 0, 0} },
-    { CPU_386, 0, 32, 1, {0xE8, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel, 0, 0} },
-    { CPU_Any, 0, 0, 1, {0xE8, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_Any|OPTM_Near|OPA_JmpRel, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0xE8, 0x9A, 0}, 0, 1,
+      {OPT_Imm|OPS_16|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xE8, 0x9A, 0}, 0, 1,
+      {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0xE8, 0x9A, 0}, 0, 1,
+      {OPT_Imm|OPS_Any|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
 
     { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 2, 1, {OPT_RM|OPS_16|OPA_EA, 0, 0} },
     { CPU_386|CPU_Not64, 0, 32, 1, {0xFF, 0, 0}, 2, 1,
@@ -879,7 +881,12 @@ static const x86_insn_info call_insn[] = {
     { CPU_Any, 0, 0, 1, {0xFF, 0, 0}, 2, 1,
       {OPT_Mem|OPS_Any|OPTM_Near|OPA_EA, 0, 0} },
 
-    /* TODO: Far Imm 16:16/32 */
+    { CPU_Any, 0, 16, 1, {0x9A, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_16|OPTM_Far|OPA_JmpRel, 0, 0} },
+    { CPU_386, 0, 32, 1, {0x9A, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_32|OPTM_Far|OPA_JmpRel, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0x9A, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_Any|OPTM_Far|OPA_JmpRel, 0, 0} },
 
     { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 3, 1,
       {OPT_Mem|OPS_16|OPTM_Far|OPA_EA, 0, 0} },
@@ -895,12 +902,12 @@ static const x86_insn_info jmp_insn[] = {
 
     { CPU_Any, 0, 0, 1, {0xEB, 0, 0}, 0, 1,
       {OPT_Imm|OPS_Any|OPTM_Short|OPA_JmpRel, 0, 0} },
-    { CPU_Any, 0, 16, 1, {0xE9, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_16|OPTM_Near|OPA_JmpRel, 0, 0} },
-    { CPU_386, 0, 32, 1, {0xE9, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel, 0, 0} },
-    { CPU_Any, 0, 0, 1, {0xE9, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_Any|OPTM_Near|OPA_JmpRel, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0xE9, 0xEA, 0}, 0, 1,
+      {OPT_Imm|OPS_16|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xE9, 0xEA, 0}, 0, 1,
+      {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0xE9, 0xEA, 0}, 0, 1,
+      {OPT_Imm|OPS_Any|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
 
     { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 4, 1, {OPT_RM|OPS_16|OPA_EA, 0, 0} },
     { CPU_386|CPU_Not64, 0, 32, 1, {0xFF, 0, 0}, 4, 1,
@@ -917,7 +924,12 @@ static const x86_insn_info jmp_insn[] = {
     { CPU_Any, 0, 0, 1, {0xFF, 0, 0}, 4, 1,
       {OPT_Mem|OPS_Any|OPTM_Near|OPA_EA, 0, 0} },
 
-    /* TODO: Far Imm 16:16/32 */
+    { CPU_Any, 0, 16, 1, {0xEA, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_16|OPTM_Far|OPA_JmpRel, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xEA, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_32|OPTM_Far|OPA_JmpRel, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0xEA, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_Any|OPTM_Far|OPA_JmpRel, 0, 0} },
 
     { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 5, 1,
       {OPT_Mem|OPS_16|OPTM_Far|OPA_EA, 0, 0} },
@@ -1529,17 +1541,35 @@ x86_new_jmprel(const unsigned long data[4], int num_operands,
     op = yasm_ops_first(operands);
     if (op->type != YASM_INSN__OPERAND_IMM)
 	yasm_internal_error(N_("invalid operand conversion"));
-    d.target = yasm_expr_new(YASM_EXPR_SUB, yasm_expr_expr(op->data.val),
-	yasm_expr_sym(yasm_symrec_define_label("$", cur_section, prev_bc,
-					       0, lindex)), lindex);
 
-    /* See if the user explicitly specified short/near. */
+    /* Far target needs to become "seg imm:imm". */
+    if ((jrinfo->operands[0] & OPTM_MASK) == OPTM_Far)
+	d.target = yasm_expr_new_tree(
+	    yasm_expr_new_branch(YASM_EXPR_SEG, op->data.val, lindex),
+	    YASM_EXPR_SEGOFF, yasm_expr_copy(op->data.val), lindex);
+    else
+	d.target = op->data.val;
+
+    /* Need to save jump origin for relative jumps. */
+    d.origin = yasm_symrec_define_label("$", cur_section, prev_bc, 0, lindex);
+
+    /* Initially assume no far opcode is available. */
+    d.far_op_len = 0;
+
+    /* See if the user explicitly specified short/near/far. */
     switch ((int)(jrinfo->operands[0] & OPTM_MASK)) {
 	case OPTM_Short:
 	    d.op_sel = JR_SHORT_FORCED;
 	    break;
 	case OPTM_Near:
 	    d.op_sel = JR_NEAR_FORCED;
+	    break;
+	case OPTM_Far:
+	    d.op_sel = JR_FAR;
+	    d.far_op_len = info->opcode_len;
+	    d.far_op[0] = info->opcode[0];
+	    d.far_op[1] = info->opcode[1];
+	    d.far_op[2] = info->opcode[2];
 	    break;
 	default:
 	    d.op_sel = JR_NONE;
@@ -1603,6 +1633,10 @@ x86_new_jmprel(const unsigned long data[4], int num_operands,
 		d.near_op[2] = info->opcode[2];
 		if (info->modifiers & MOD_Op1Add)
 		    d.near_op[1] += (unsigned char)(mod_data & 0xFF);
+		if ((info->operands[0] & OPAP_MASK) == OPAP_JmpFar) {
+		    d.far_op_len = 1;
+		    d.far_op[0] = info->opcode[info->opcode_len];
+		}
 		break;
 	}
     }

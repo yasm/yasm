@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$IdPath: yasm/modules/arch/x86/x86bc.c,v 1.52 2003/03/26 05:07:55 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #define YASM_LIB_INTERNAL
 #define YASM_BC_INTERNAL
@@ -98,11 +98,12 @@ typedef struct x86_jmprel {
     yasm_bytecode bc;		/* base structure */
 
     yasm_expr *target;		/* target location */
+    /*@dependent@*/ yasm_symrec *origin;    /* jump origin */
 
     struct {
 	unsigned char opcode[3];
 	unsigned char opcode_len;   /* 0 = no opc for this version */
-    } shortop, nearop;
+    } shortop, nearop, farop;
 
     /* which opcode are we using? */
     /* The *FORCED forms are specified in the source as such */
@@ -192,6 +193,7 @@ yasm_x86__bc_new_jmprel(x86_new_jmprel_data *d)
 			   sizeof(x86_jmprel), d->lindex);
 
     jmprel->target = d->target;
+    jmprel->origin = d->origin;
     jmprel->op_sel = d->op_sel;
 
     if ((d->op_sel == JR_SHORT_FORCED) && (d->near_op_len == 0))
@@ -210,6 +212,11 @@ yasm_x86__bc_new_jmprel(x86_new_jmprel_data *d)
     jmprel->nearop.opcode[1] = d->near_op[1];
     jmprel->nearop.opcode[2] = d->near_op[2];
     jmprel->nearop.opcode_len = d->near_op_len;
+
+    jmprel->farop.opcode[0] = d->far_op[0];
+    jmprel->farop.opcode[1] = d->far_op[1];
+    jmprel->farop.opcode[2] = d->far_op[2];
+    jmprel->farop.opcode_len = d->far_op_len;
 
     jmprel->addrsize = d->addrsize;
     jmprel->opersize = d->opersize;
@@ -539,6 +546,9 @@ yasm_x86__bc_print(FILE *f, int indent_level, const yasm_bytecode *bc)
 		case JR_NEAR_FORCED:
 		    fprintf(f, "Forced Near");
 		    break;
+		case JR_FAR:
+		    fprintf(f, "Far");
+		    break;
 		default:
 		    fprintf(f, "UNKNOWN!!");
 		    break;
@@ -677,7 +687,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
     /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
     long rel;
     unsigned char opersize;
-    int jrshort = 0;
+    x86_jmprel_opcode_sel jrtype = JR_NONE;
 
     /* As opersize may be 0, figure out its "real" value. */
     opersize = (jmprel->opersize == 0) ? jmprel->mode_bits :
@@ -689,9 +699,11 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
     switch (jmprel->op_sel) {
 	case JR_SHORT_FORCED:
 	    /* 1 byte relative displacement */
-	    jrshort = 1;
+	    jrtype = JR_SHORT;
 	    if (save) {
 		temp = yasm_expr_copy(jmprel->target);
+		temp = yasm_expr_new(YASM_EXPR_SUB, yasm_expr_expr(temp),
+				     yasm_expr_sym(jmprel->origin), bc->line);
 		num = yasm_expr_get_intnum(&temp, calc_bc_dist);
 		if (!num) {
 		    yasm__error(bc->line,
@@ -719,7 +731,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 	    break;
 	case JR_NEAR_FORCED:
 	    /* 2/4 byte relative displacement (depending on operand size) */
-	    jrshort = 0;
+	    jrtype = JR_NEAR;
 	    if (save) {
 		if (jmprel->nearop.opcode_len == 0) {
 		    yasm__error(bc->line, N_("near jump does not exist"));
@@ -728,12 +740,26 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 	    }
 	    break;
 	default:
+	    temp = yasm_expr_copy(jmprel->target);
+	    temp = yasm_expr_simplify(temp, NULL);
+
+	    /* Check for far displacement (seg:off). */
+	    if (yasm_expr_is_op(temp, YASM_EXPR_SEGOFF)) {
+		jrtype = JR_FAR;
+		break;	    /* length handled below */
+	    } else if (jmprel->op_sel == JR_FAR) {
+		yasm__error(bc->line,
+			    N_("far jump does not have a far displacement"));
+		return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
+	    }
+
 	    /* Try to find shortest displacement based on difference between
 	     * target expr value and our (this bytecode's) offset.  Note this
 	     * requires offset to be set BEFORE calling calc_len in order for
 	     * this test to be valid.
 	     */
-	    temp = yasm_expr_copy(jmprel->target);
+	    temp = yasm_expr_new(YASM_EXPR_SUB, yasm_expr_expr(temp),
+				 yasm_expr_sym(jmprel->origin), bc->line);
 	    num = yasm_expr_get_intnum(&temp, calc_bc_dist);
 	    if (num) {
 		rel = yasm_intnum_get_int(num);
@@ -742,12 +768,12 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		if (jmprel->shortop.opcode_len != 0 && rel >= -128 &&
 		    rel <= 127) {
 		    /* It fits into a short displacement. */
-		    jrshort = 1;
+		    jrtype = JR_SHORT;
 		} else if (jmprel->nearop.opcode_len != 0) {
 		    /* Near for now, but could get shorter in the future if
 		     * there's a short form available.
 		     */
-		    jrshort = 0;
+		    jrtype = JR_NEAR;
 		    if (jmprel->shortop.opcode_len != 0)
 			retval = YASM_BC_RESOLVE_NONE;
 		} else {
@@ -762,7 +788,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 			return YASM_BC_RESOLVE_ERROR |
 			    YASM_BC_RESOLVE_UNKNOWN_LEN;
 		    }
-		    jrshort = 1;
+		    jrtype = JR_SHORT;
 		}
 	    } else {
 		/* It's unknown.  Thus, assume near displacement.  If a near
@@ -772,7 +798,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		if (jmprel->nearop.opcode_len != 0) {
 		    if (jmprel->shortop.opcode_len != 0)
 			retval = YASM_BC_RESOLVE_NONE;
-		    jrshort = 0;
+		    jrtype = JR_NEAR;
 		} else {
 		    if (save) {
 			yasm__error(bc->line,
@@ -780,28 +806,43 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 			return YASM_BC_RESOLVE_ERROR |
 			    YASM_BC_RESOLVE_UNKNOWN_LEN;
 		    }
-		    jrshort = 1;
+		    jrtype = JR_SHORT;
 		}
 	    }
 	    yasm_expr_delete(temp);
 	    break;
     }
 
-    if (jrshort) {
-	if (save)
-	    jmprel->op_sel = JR_SHORT;
-	if (jmprel->shortop.opcode_len == 0)
-	    return YASM_BC_RESOLVE_UNKNOWN_LEN; /* that size not available */
+    switch (jrtype) {
+	case JR_SHORT:
+	    if (save)
+		jmprel->op_sel = JR_SHORT;
+	    if (jmprel->shortop.opcode_len == 0)
+		return YASM_BC_RESOLVE_UNKNOWN_LEN; /* size not available */
 
-	*len += jmprel->shortop.opcode_len + 1;
-    } else {
-	if (save)
-	    jmprel->op_sel = JR_NEAR;
-	if (jmprel->nearop.opcode_len == 0)
-	    return YASM_BC_RESOLVE_UNKNOWN_LEN; /* that size not available */
+	    *len += jmprel->shortop.opcode_len + 1;
+	    break;
+	case JR_NEAR:
+	    if (save)
+		jmprel->op_sel = JR_NEAR;
+	    if (jmprel->nearop.opcode_len == 0)
+		return YASM_BC_RESOLVE_UNKNOWN_LEN; /* size not available */
 
-	*len += jmprel->nearop.opcode_len;
-	*len += (opersize == 32) ? 4 : 2;
+	    *len += jmprel->nearop.opcode_len;
+	    *len += (opersize == 32) ? 4 : 2;
+	    break;
+	case JR_FAR:
+	    if (save)
+		jmprel->op_sel = JR_FAR;
+	    if (jmprel->farop.opcode_len == 0)
+		return YASM_BC_RESOLVE_UNKNOWN_LEN; /* size not available */
+
+	    *len += jmprel->farop.opcode_len;
+	    *len += 2;	/* segment */
+	    *len += (opersize == 32) ? 4 : 2;
+	    break;
+	default:
+	    yasm_internal_error(N_("unknown jump type"));
     }
     *len += (jmprel->addrsize != 0 && jmprel->addrsize != jmprel->mode_bits) ?
 	1:0;
@@ -933,6 +974,7 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
     unsigned char opersize;
     unsigned int i;
     unsigned char *bufp_orig = *bufp;
+    /*@null@*/ yasm_expr *targetseg;
 
     /* Prefixes */
     if (jmprel->lockrep_pre != 0)
@@ -960,6 +1002,9 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 		YASM_WRITE_8(*bufp, jmprel->shortop.opcode[i]);
 
 	    /* Relative displacement */
+	    jmprel->target =
+		yasm_expr_new(YASM_EXPR_SUB, yasm_expr_expr(jmprel->target),
+			      yasm_expr_sym(jmprel->origin), bc->line);
 	    if (output_expr(&jmprel->target, bufp, 1,
 			    (unsigned long)(*bufp-bufp_orig), sect, bc, 1, d))
 		return 1;
@@ -977,10 +1022,38 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 		YASM_WRITE_8(*bufp, jmprel->nearop.opcode[i]);
 
 	    /* Relative displacement */
+	    jmprel->target =
+		yasm_expr_new(YASM_EXPR_SUB, yasm_expr_expr(jmprel->target),
+			      yasm_expr_sym(jmprel->origin), bc->line);
 	    if (output_expr(&jmprel->target, bufp,
 			    (opersize == 32) ? 4UL : 2UL,
 			    (unsigned long)(*bufp-bufp_orig), sect, bc, 1, d))
 		return 1;
+	    break;
+	case JR_FAR:
+	    /* far absolute (4/6 byte depending on operand size) */
+	    if (jmprel->farop.opcode_len == 0) {
+		yasm__error(bc->line, N_("far jump does not exist"));
+		return 1;
+	    }
+
+	    /* Opcode */
+	    for (i=0; i<jmprel->farop.opcode_len; i++)
+		YASM_WRITE_8(*bufp, jmprel->farop.opcode[i]);
+
+	    /* Absolute displacement: segment and offset */
+	    jmprel->target = yasm_expr_simplify(jmprel->target, NULL);
+	    targetseg = yasm_expr_extract_segment(&jmprel->target);
+	    if (!targetseg)
+		yasm_internal_error(N_("could not extract segment for far jump"));
+	    if (output_expr(&jmprel->target, bufp,
+			    (opersize == 32) ? 4UL : 2UL,
+			    (unsigned long)(*bufp-bufp_orig), sect, bc, 0, d))
+		return 1;
+	    if (output_expr(&targetseg, bufp, 2UL,
+			    (unsigned long)(*bufp-bufp_orig), sect, bc, 0, d))
+		return 1;
+
 	    break;
 	default:
 	    yasm_internal_error(N_("unrecognized relative jump op_sel"));

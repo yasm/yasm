@@ -2,7 +2,7 @@
  * \file expr.h
  * \brief YASM expression interface
  *
- * $IdPath: yasm/libyasm/expr.h,v 1.40 2003/05/04 20:28:28 peter Exp $
+ * $IdPath$
  *
  *  Copyright (C) 2001  Michael Urman, Peter Johnson
  *
@@ -117,6 +117,14 @@ yasm_expr *yasm_expr_copy(const yasm_expr *e);
  */
 void yasm_expr_delete(/*@only@*/ /*@null@*/ yasm_expr *e);
 
+/** Determine if an expression is a specified operation (at the top level).
+ * \param e		expression
+ * \param op		operator
+ * \return Nonzero if the expression was the specified operation at the top
+ *         level, zero otherwise.
+ */
+int yasm_expr_is_op(const yasm_expr *e, yasm_expr_op op);
+
 /** Extra transformation function for yasm_expr__level_tree().
  * \param e	expression being simplified
  * \param d	data provided as expr_xform_extra_data to
@@ -171,6 +179,15 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
  */
 /*@dependent@*/ /*@null@*/ yasm_symrec *yasm_expr_extract_symrec
     (yasm_expr **ep, yasm_calc_bc_dist_func calc_bc_dist);
+
+/** Extract the segment portion of a SEG:OFF expression, leaving the offset.
+ * \param ep		expression (pointer to)
+ * \return NULL if unable to extract a segment (YASM_EXPR_SEGOFF not the
+ *         top-level operator), otherwise the segment expression.  The input
+ *         expression is modified such that on return, it's the offset
+ *         expression.
+ */
+/*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_segment(yasm_expr **e);
 
 /** Get the integer value of an expression if it's just an integer.
  * \param ep		expression (pointer to)

@@ -2,7 +2,7 @@
  * \file bytecode.h
  * \brief YASM bytecode interface.
  *
- * $IdPath: yasm/libyasm/bytecode.h,v 1.73 2003/05/04 22:15:09 peter Exp $
+ * $IdPath$
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -257,6 +257,8 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
  * \return Newly allocated buffer that should be used instead of buf for
  *	   reading the byte representation, or NULL if buf was big enough to
  *	   hold the entire byte representation.
+ * \caution Essentially destroys contents of bytecode, so it's NOT safe to call
+ *          twice on the same bytecode.
  */
 /*@null@*/ /*@only@*/ unsigned char *yasm_bc_tobytes
     (yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
