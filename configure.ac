@@ -8,12 +8,12 @@ PERL_VERSION=5.004
 # autoconf setup
 #
 AC_PREREQ(2.50)
-AC_INIT([yasm], [0.1.0], [bug-yasm@tortall.net])
+AC_INIT([yasm], `date "+%Y%m%d"`, [bug-yasm@tortall.net])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_AUX_DIR(config)
 AM_CONFIG_HEADER([config.h])
 
-AM_INIT_AUTOMAKE(yasm, 0.1.0)
+AM_INIT_AUTOMAKE(yasm, `date "+%Y%m%d"`)
 AM_MAINTAINER_MODE
 
 #
