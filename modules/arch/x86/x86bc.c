@@ -617,7 +617,7 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 
 		/* Handle unknown case, make displen word-sized */
 		if (displen == 0xff)
-		    displen = (insn->addrsize == 32) ? 4U : 2U;
+		    displen = (insn->addrsize == 16) ? 2U : 4U;
 	    }
 
 	    if (save) {
@@ -631,7 +631,7 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 	}
 
 	/* Compute length of ea and add to total */
-	*len += eat.need_modrm + eat.need_sib + displen;
+	*len += eat.need_modrm + (eat.need_sib ? 1:0) + displen;
 	*len += (eat.segment != 0) ? 1 : 0;
     }
 
@@ -839,7 +839,7 @@ x86_bc_resolve_jmp(x86_jmp *jmp, unsigned long *len, int save,
 		return YASM_BC_RESOLVE_UNKNOWN_LEN; /* size not available */
 
 	    *len += jmp->nearop.opcode_len;
-	    *len += (opersize == 32) ? 4 : 2;
+	    *len += (opersize == 16) ? 2 : 4;
 	    break;
 	case JMP_FAR:
 	    if (save)
@@ -849,7 +849,7 @@ x86_bc_resolve_jmp(x86_jmp *jmp, unsigned long *len, int save,
 
 	    *len += jmp->farop.opcode_len;
 	    *len += 2;	/* segment */
-	    *len += (opersize == 32) ? 4 : 2;
+	    *len += (opersize == 16) ? 2 : 4;
 	    break;
 	default:
 	    yasm_internal_error(N_("unknown jump type"));
@@ -1032,7 +1032,7 @@ x86_bc_tobytes_jmp(x86_jmp *jmp, unsigned char **bufp,
 	    jmp->target =
 		yasm_expr_new(YASM_EXPR_SUB, yasm_expr_expr(jmp->target),
 			      yasm_expr_sym(jmp->origin), bc->line);
-	    if (output_expr(&jmp->target, bufp, (opersize == 32) ? 4UL : 2UL,
+	    if (output_expr(&jmp->target, bufp, (opersize == 16) ? 2UL : 4UL,
 			    (unsigned long)(*bufp-bufp_orig), sect, bc, 1, d))
 		return 1;
 	    break;
@@ -1053,7 +1053,7 @@ x86_bc_tobytes_jmp(x86_jmp *jmp, unsigned char **bufp,
 	    if (!targetseg)
 		yasm_internal_error(N_("could not extract segment for far jump"));
 	    if (output_expr(&jmp->target, bufp,
-			    (opersize == 32) ? 4UL : 2UL,
+			    (opersize == 16) ? 2UL : 4UL,
 			    (unsigned long)(*bufp-bufp_orig), sect, bc, 0, d))
 		return 1;
 	    if (output_expr(&targetseg, bufp, 2UL,

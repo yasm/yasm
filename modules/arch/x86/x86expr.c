@@ -270,7 +270,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 
     switch (e->op) {
 	case YASM_EXPR_ADD:
-	    /* Prescan for non-int multipliers.
+	    /* Prescan for non-int multipliers against a reg.
 	     * This is because if any of the terms is a more complex
 	     * expr (eg, undetermined value), we don't want to try to
 	     * figure out *any* of the expression, because each register
@@ -280,11 +280,15 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 	     */
 	    for (i=0; i<e->numterms; i++)
 		if (e->terms[i].type == YASM_EXPR_EXPR) {
-		    if (e->terms[i].data.expn->numterms > 2)
-			return 1;
 		    yasm_expr__order_terms(e->terms[i].data.expn);
-		    if (e->terms[i].data.expn->terms[1].type != YASM_EXPR_INT)
-			return 1;
+		    if (e->terms[i].data.expn->terms[0].type ==
+			YASM_EXPR_REG) {
+			if (e->terms[i].data.expn->numterms > 2)
+			    return 1;
+			if (e->terms[i].data.expn->terms[1].type !=
+			    YASM_EXPR_INT)
+			    return 1;
+		    }
 		}
 
 	    /*@fallthrough@*/
@@ -302,37 +306,39 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 		    /* Already ordered from ADD above, just grab the value.
 		     * Sanity check for EXPR_INT.
 		     */
-		    if (e->terms[i].data.expn->terms[0].type != YASM_EXPR_REG)
-			yasm_internal_error(
-			    N_("Register not found in reg expn"));
-		    if (e->terms[i].data.expn->terms[1].type != YASM_EXPR_INT)
-			yasm_internal_error(
-			    N_("Non-integer value in reg expn"));
-		    reg = get_reg(&e->terms[i].data.expn->terms[0], &regnum,
-				  data);
-		    if (!reg)
-			return 0;
-		    (*reg) +=
-			yasm_intnum_get_int(
+		    if (e->terms[i].data.expn->terms[0].type ==
+			YASM_EXPR_REG) {
+			if (e->terms[i].data.expn->terms[1].type !=
+			    YASM_EXPR_INT)
+			    yasm_internal_error(
+				N_("Non-integer value in reg expn"));
+			reg = get_reg(&e->terms[i].data.expn->terms[0],
+				      &regnum, data);
+			if (!reg)
+			    return 0;
+			(*reg) += yasm_intnum_get_int(
 			    e->terms[i].data.expn->terms[1].data.intn);
-		    if (indexreg && *reg > 0)
-			*indexreg = regnum;
+			if (indexreg && *reg > 0)
+			    *indexreg = regnum;
+		    }
 		}
 	    }
 	    break;
 	case YASM_EXPR_MUL:
-	    /* Here, too, check for non-int multipliers. */
-	    if (e->numterms > 2)
-		return 1;
+	    /* Here, too, check for non-int multipliers against a reg. */
 	    yasm_expr__order_terms(e);
-	    if (e->terms[1].type != YASM_EXPR_INT)
-		return 1;
-	    reg = get_reg(&e->terms[0], &regnum, data);
-	    if (!reg)
-		return 0;
-	    (*reg) += yasm_intnum_get_int(e->terms[1].data.intn);
-	    if (indexreg)
-		*indexreg = regnum;
+	    if (e->terms[0].type == YASM_EXPR_REG) {
+		if (e->numterms > 2)
+		    return 1;
+		if (e->terms[1].type != YASM_EXPR_INT)
+		    return 1;
+		reg = get_reg(&e->terms[0], &regnum, data);
+		if (!reg)
+		    return 0;
+		(*reg) += yasm_intnum_get_int(e->terms[1].data.intn);
+		if (indexreg)
+		    *indexreg = regnum;
+	    }
 	    break;
 	default:
 	    /* Should never get here! */
