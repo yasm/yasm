@@ -33,6 +33,7 @@
 #endif
 
 #include "globals.h"
+#include "errwarn.h"
 
 #include "bytecode.h"
 #include "section.h"
@@ -63,6 +64,9 @@ main(int argc, char *argv[])
     mode_bits = dbg_objfmt.default_mode_bits;
 
     nasm_parser.do_parse(&nasm_parser, &dbg_objfmt, in);
+
+    if (OutputAllErrorWarning() > 0)
+	return EXIT_FAILURE;
 
     if (filename)
 	free(filename);

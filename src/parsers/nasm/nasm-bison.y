@@ -130,8 +130,6 @@ extern char *nasm_parser_locallabel_base;
 %%
 input: /* empty */
     | input line    {
-	OutputError();
-	OutputWarning();
 	bytecodes_append(&nasm_parser_cur_section->bc, $2);
 	line_number++;
     }

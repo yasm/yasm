@@ -49,11 +49,11 @@ RCSID("$IdPath$");
 
 /* Total error count for entire assembler run.
  * Assembler should exit with EXIT_FAILURE if this is >= 0 on finish. */
-unsigned int error_count = 0;
+static unsigned int error_count = 0;
 
 /* Total warning count for entire assembler run.
  * Should not affect exit value of assembler. */
-unsigned int warning_count = 0;
+static unsigned int warning_count = 0;
 
 /* See errwarn.h for constants that match up to these strings.
  * When adding a string here, keep errwarn.h in sync! */
@@ -64,27 +64,30 @@ static char *fatal_msgs[] = {
     N_("out of memory")
 };
 
-/* I hate to define these strings as static buffers; a better solution would be
- * to use vasprintf() to dynamically allocate, but that's not ANSI C.
- * FIXME! */
+typedef STAILQ_HEAD(errwarnhead_s, errwarn_s) errwarnhead;
+errwarnhead *errwarns = (errwarnhead *)NULL;
 
-/* Last error message string.  Set by Error(), read by OutputError(). */
-static char last_err[1024];
+typedef struct errwarn_s {
+    STAILQ_ENTRY(errwarn_s) link;
 
-/* Last warning message string.  Set by Warning(), read by OutputWarning(). */
-static char last_warn[1024];
+    enum { WE_ERROR, WE_WARNING } type;
 
-/* Has there been an error since the last time we output one?  Set by Error(),
- * read and reset by OutputError(). */
-static int new_error = 0;
+    char *filename;
+    unsigned long line;
+    /* FIXME: This should not be a fixed size.  But we don't have vasprintf()
+     * right now. */
+    char msg[1024];
+} errwarn;
+
+/* Line number of the previous error.  Set and checked by Error(). */
+static unsigned long previous_error_line = 0;
 
 /* Is the last error a parser error?  Error() lets other errors override parser
  * errors. Set by yyerror(), read and reset by Error(). */
-static int parser_error = 0;
+static int previous_error_parser = 0;
 
-/* Has there been a warning since the last time we output one?  Set by
- * Warning(), read and reset by OutputWarning(). */
-static int new_warning = 0;
+/* Line number of the previous warning. Set and checked by Warning(). */
+static unsigned long previous_warning_line = 0;
 
 /* Static buffer for use by conv_unprint(). */
 static char unprint[5];
@@ -116,7 +119,7 @@ void
 ParserError(char *s)
 {
     Error("%s %s", _("parser error:"), s);
-    parser_error = 1;
+    previous_error_parser = 1;
 }
 
 /* Report an internal error.  Essentially a fatal error with trace info.
@@ -153,16 +156,42 @@ void
 Error(char *fmt, ...)
 {
     va_list ap;
+    errwarn *we;
 
-    if (new_error && !parser_error)
+    if ((previous_error_line == line_number) && !previous_error_parser)
 	return;
 
-    new_error = 1;
-    parser_error = 0;
+    if (!errwarns) {
+	errwarns = malloc(sizeof(errwarnhead));
+	if (!errwarns)
+	    Fatal(FATAL_NOMEM);
+	STAILQ_INIT(errwarns);
+    }
+
+    if (previous_error_parser) {
+	/* overwrite last (parser) error */	
+	we = STAILQ_LAST(errwarns, errwarn_s, link);
+    } else {
+	we = malloc(sizeof(errwarn));
+	if (!we)
+	    Fatal(FATAL_NOMEM);
+
+	we->type = WE_ERROR;
+	we->filename = strdup(filename);
+	if (!we->filename)
+	    Fatal(FATAL_NOMEM);
+	we->line = line_number;
+    }
 
     va_start(ap, fmt);
-    vsprintf(last_err, fmt, ap);
+    vsprintf(we->msg, fmt, ap);
     va_end(ap);
+
+    if (!previous_error_parser)
+	STAILQ_INSERT_TAIL(errwarns, we, link);
+
+    previous_error_line = line_number;
+    previous_error_parser = 0;
 
     error_count++;
 }
@@ -174,34 +203,63 @@ void
 Warning(char *fmt, ...)
 {
     va_list ap;
+    errwarn *we;
 
-    if (new_warning)
+    if (previous_warning_line == line_number)
 	return;
 
-    new_warning = 1;
+    previous_warning_line = line_number;
 
+    we = malloc(sizeof(errwarn));
+    if (!we)
+	Fatal(FATAL_NOMEM);
+
+    we->type = WE_WARNING;
+    we->filename = strdup(filename);
+    if (!we->filename)
+	Fatal(FATAL_NOMEM);
+    we->line = line_number;
     va_start(ap, fmt);
-    vsprintf(last_warn, fmt, ap);
+    vsprintf(we->msg, fmt, ap);
     va_end(ap);
 
+    if (!errwarns) {
+	errwarns = malloc(sizeof(errwarnhead));
+	if (!errwarns)
+	    Fatal(FATAL_NOMEM);
+	STAILQ_INIT(errwarns);
+    }
+    STAILQ_INSERT_TAIL(errwarns, we, link);
     warning_count++;
 }
 
-/* Output a previously stored error (if any) to stderr. */
-void
-OutputError(void)
+/* Output all previously stored errors and warnings to stderr. */
+unsigned int
+OutputAllErrorWarning(void)
 {
-    if (new_error)
-	fprintf(stderr, "%s:%u: %s\n", filename, line_number, last_err);
-    new_error = 0;
-}
+    errwarn *we, *we2;
 
-/* Output a previously stored warning (if any) to stderr. */
-void
-OutputWarning(void)
-{
-    if (new_warning)
-	fprintf(stderr, "%s:%u: %s %s\n", filename, line_number,
-		_("warning:"), last_warn);
-    new_warning = 0;
+    /* If errwarns hasn't been initialized, there are no messages. */
+    if (!errwarns)
+	return error_count;
+
+    /* Output error and warning messages. */
+    STAILQ_FOREACH(we, errwarns, link) {
+	if (we->type == WE_ERROR)
+	    fprintf(stderr, "%s:%lu: %s\n", we->filename, we->line, we->msg);
+	else
+	    fprintf(stderr, "%s:%lu: %s %s\n", we->filename, we->line,
+		    _("warning:"), we->msg);
+    }
+
+    /* Delete messages. */
+    we = STAILQ_FIRST(errwarns);
+    while (we) {
+	we2 = STAILQ_NEXT(we, link);
+	free(we);
+	we = we2;
+    }
+
+    /* Return the total error count up to this point. */
+    return error_count;
 }

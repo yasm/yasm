@@ -40,7 +40,7 @@ void Fatal(fatal_num);
 void Error(char *, ...);
 void Warning(char *, ...);
 
-void OutputError(void);
-void OutputWarning(void);
+/* Returns total number of errors to this point in assembly. */
+unsigned int OutputAllErrorWarning(void);
 
 #endif
