@@ -45,9 +45,11 @@ x86_cleanup(void)
 }
 
 int
-yasm_x86__directive(const char *name, yasm_valparamhead *valparams,
-		    /*@unused@*/ /*@null@*/ yasm_valparamhead *objext_valparams,
-		    /*@unused@*/ yasm_sectionhead *headp, unsigned long lindex)
+yasm_x86__parse_directive(const char *name, yasm_valparamhead *valparams,
+			  /*@unused@*/ /*@null@*/
+			  yasm_valparamhead *objext_valparams,
+			  /*@unused@*/ yasm_sectionhead *headp,
+			  unsigned long lindex)
 {
     yasm_valparam *vp;
     const yasm_intnum *intn;
@@ -162,8 +164,8 @@ yasm_x86__segreg_print(FILE *f, unsigned long segreg)
 }
 
 void
-yasm_x86__handle_prefix(yasm_bytecode *bc, const unsigned long data[4],
-			unsigned long lindex)
+yasm_x86__parse_prefix(yasm_bytecode *bc, const unsigned long data[4],
+		       unsigned long lindex)
 {
     switch((x86_parse_insn_prefix)data[0]) {
 	case X86_LOCKREP:
@@ -180,16 +182,16 @@ yasm_x86__handle_prefix(yasm_bytecode *bc, const unsigned long data[4],
 }
 
 void
-yasm_x86__handle_seg_prefix(yasm_bytecode *bc, unsigned long segreg,
-			    unsigned long lindex)
+yasm_x86__parse_seg_prefix(yasm_bytecode *bc, unsigned long segreg,
+			   unsigned long lindex)
 {
     yasm_x86__ea_set_segment(yasm_x86__bc_insn_get_ea(bc),
 			     (unsigned char)(segreg>>8), lindex);
 }
 
 void
-yasm_x86__handle_seg_override(yasm_effaddr *ea, unsigned long segreg,
-			      unsigned long lindex)
+yasm_x86__parse_seg_override(yasm_effaddr *ea, unsigned long segreg,
+			     unsigned long lindex)
 {
     yasm_x86__ea_set_segment(ea, (unsigned char)(segreg>>8), lindex);
 }
@@ -200,28 +202,24 @@ yasm_arch yasm_x86_LTX_arch = {
     "x86",
     x86_initialize,
     x86_cleanup,
-    {
-	yasm_x86__switch_cpu,
-	yasm_x86__check_identifier,
-	yasm_x86__directive,
-	yasm_x86__new_insn,
-	yasm_x86__handle_prefix,
-	yasm_x86__handle_seg_prefix,
-	yasm_x86__handle_seg_override,
-	yasm_x86__ea_new_expr
-    },
-    {
-	X86_BYTECODE_TYPE_MAX,
-	yasm_x86__bc_delete,
-	yasm_x86__bc_print,
-	yasm_x86__bc_resolve,
-	yasm_x86__bc_tobytes
-    },
+    yasm_x86__parse_cpu,
+    yasm_x86__parse_check_id,
+    yasm_x86__parse_directive,
+    yasm_x86__parse_insn,
+    yasm_x86__parse_prefix,
+    yasm_x86__parse_seg_prefix,
+    yasm_x86__parse_seg_override,
+    X86_BYTECODE_TYPE_MAX,
+    yasm_x86__bc_delete,
+    yasm_x86__bc_print,
+    yasm_x86__bc_resolve,
+    yasm_x86__bc_tobytes,
     yasm_x86__floatnum_tobytes,
     yasm_x86__intnum_tobytes,
     yasm_x86__get_reg_size,
     yasm_x86__reg_print,
     yasm_x86__segreg_print,
+    yasm_x86__ea_new_expr,
     NULL,	/* x86_ea_data_delete */
     yasm_x86__ea_data_print
 };

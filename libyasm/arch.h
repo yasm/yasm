@@ -27,7 +27,7 @@
 #ifndef YASM_ARCH_H
 #define YASM_ARCH_H
 
-typedef enum yasm_arch_check_id_retval {
+typedef enum {
     YASM_ARCH_CHECK_ID_NONE = 0,	/* just a normal identifier */
     YASM_ARCH_CHECK_ID_INSN,		/* an instruction */
     YASM_ARCH_CHECK_ID_PREFIX,		/* an instruction prefix */ 
@@ -52,7 +52,7 @@ typedef struct yasm_insn_operandhead yasm_insn_operandhead;
  * probably not even use this, but it's required for some (x86 in particular)
  * for correct behavior on all parsers.
  */
-typedef enum yasm_arch_syntax_flavor {
+typedef enum {
     YASM_ARCH_SYNTAX_FLAVOR_NASM = 1,	/* like NASM */
     YASM_ARCH_SYNTAX_FLAVOR_GAS		/* like GAS */
 } yasm_arch_syntax_flavor;
@@ -67,91 +67,84 @@ struct yasm_arch {
     void (*initialize) (void);
     void (*cleanup) (void);
 
-    struct {
-	/* All "data" below starts the parse initialized to 0.  Thus, it is
-	 * okay for a funtion to use/check previously stored data to see if
-	 * it's been called before on the same piece of data.
-	 */
+    /* All "data" below starts the parse initialized to 0.  Thus, it is
+     * okay for a funtion to use/check previously stored data to see if
+     * it's been called before on the same piece of data.
+     */
 
-	/* Switches available instructions/registers/etc. based on a
-	 * user-specified CPU identifier.  Should modify behavior ONLY of
-	 * parse functions!  The bytecode and output functions should be able
-	 * to handle any CPU.
-	 */
-	void (*switch_cpu) (const char *cpuid, unsigned long lindex);
+    /* Switches available instructions/registers/etc. based on a
+     * user-specified CPU identifier.  Should modify behavior ONLY of
+     * parse_* functions!  The bytecode and output functions should be able
+     * to handle any CPU.
+     */
+    void (*parse_cpu) (const char *cpuid, unsigned long lindex);
 
-	/* Checks an generic identifier to see if it matches architecture
-	 * specific names for instructions, registers, etc (see the
-	 * arch_check_id_retval enum above for the various types this function
-	 * can detect & return.  Unrecognized identifiers should be returned
-	 * as NONE so they can be treated as normal symbols.  Any additional
-	 * data beyond just the type (almost always necessary) should be
-	 * returned into the space provided by the data parameter.
-	 * Note: even though this is passed a data[4], only data[0] should be
-	 * used for TARGETMOD, REG, and SEGREG return values.
-	 */
-	yasm_arch_check_id_retval (*check_identifier)
-	    (unsigned long data[4], const char *id, unsigned long lindex);
+    /* Checks an generic identifier to see if it matches architecture
+     * specific names for instructions, registers, etc (see the
+     * arch_check_id_retval enum above for the various types this function
+     * can detect & return.  Unrecognized identifiers should be returned
+     * as NONE so they can be treated as normal symbols.  Any additional
+     * data beyond just the type (almost always necessary) should be
+     * returned into the space provided by the data parameter.
+     * Note: even though this is passed a data[4], only data[0] should be
+     * used for TARGETMOD, REG, and SEGREG return values.
+     */
+    yasm_arch_check_id_retval (*parse_check_id)
+	(unsigned long data[4], const char *id, unsigned long lindex);
 
-	/* Architecture-specific directive support.  Returns 1 if directive was
-	 * not recognized.  Returns 0 if directive was recognized, even if it
-	 * wasn't valid.  Should modify behavior ONLY of parse functions, much
-	 * like switch_cpu() above.
-	 */
-	int (*directive) (const char *name, yasm_valparamhead *valparams,
-			  /*@null@*/ yasm_valparamhead *objext_valparams,
-			  yasm_sectionhead *headp, unsigned long lindex);
+    /* Architecture-specific directive support.  Returns 1 if directive was
+     * not recognized.  Returns 0 if directive was recognized, even if it
+     * wasn't valid.  Should modify behavior ONLY of parse functions, much
+     * like switch_cpu() above.
+     */
+    int (*parse_directive) (const char *name, yasm_valparamhead *valparams,
+			    /*@null@*/ yasm_valparamhead *objext_valparams,
+			    yasm_sectionhead *headp, unsigned long lindex);
 
-	/* Creates an instruction.  Creates a bytecode by matching the
-	 * instruction data and the parameters given with a valid instruction.
-	 * If no match is found (the instruction is invalid), returns NULL.
-	 * All zero data indicates an empty instruction should be created.
-	 */
-	/*@null@*/ yasm_bytecode * (*new_insn)
-	    (const unsigned long data[4], int num_operands,
-	     /*@null@*/ yasm_insn_operandhead *operands,
-	     yasm_section *cur_section, /*@null@*/ yasm_bytecode *prev_bc,
-	     unsigned long lindex);
+    /* Creates an instruction.  Creates a bytecode by matching the
+     * instruction data and the parameters given with a valid instruction.
+     * If no match is found (the instruction is invalid), returns NULL.
+     * All zero data indicates an empty instruction should be created.
+     */
+    /*@null@*/ yasm_bytecode * (*parse_insn)
+	(const unsigned long data[4], int num_operands,
+	 /*@null@*/ yasm_insn_operandhead *operands,
+	 yasm_section *cur_section, /*@null@*/ yasm_bytecode *prev_bc,
+	 unsigned long lindex);
 
-	/* Handle an instruction prefix by modifying bc as necessary. */
-	void (*handle_prefix) (yasm_bytecode *bc, const unsigned long data[4],
-			       unsigned long lindex);
+    /* Handle an instruction prefix by modifying bc as necessary. */
+    void (*parse_prefix) (yasm_bytecode *bc, const unsigned long data[4],
+			  unsigned long lindex);
 
-	/* Handle an segment register instruction prefix by modifying bc as
-	 * necessary.
-	 */
-	void (*handle_seg_prefix) (yasm_bytecode *bc, unsigned long segreg,
-				   unsigned long lindex);
+    /* Handle an segment register instruction prefix by modifying bc as
+     * necessary.
+     */
+    void (*parse_seg_prefix) (yasm_bytecode *bc, unsigned long segreg,
+			      unsigned long lindex);
 
-	/* Handle memory expression segment overrides by modifying ea as
-	 * necessary.
-	 */
-	void (*handle_seg_override) (yasm_effaddr *ea, unsigned long segreg,
-				     unsigned long lindex);
+    /* Handle memory expression segment overrides by modifying ea as
+     * necessary.
+     */
+    void (*parse_seg_override) (yasm_effaddr *ea, unsigned long segreg,
+				unsigned long lindex);
 
-	/* Convert an expression into an effective address. */
-	yasm_effaddr * (*ea_new_expr) (/*@keep@*/ yasm_expr *e);
-    } parse;
+    /* Maximum used bytecode type value+1.  Should be set to
+     * BYTECODE_TYPE_BASE if no additional bytecode types are defined by
+     * the architecture.
+     */
+    const int bc_type_max;
 
-    struct {
-	/* Maximum used bytecode type value+1.  Should be set to
-	 * BYTECODE_TYPE_BASE if no additional bytecode types are defined by
-	 * the architecture.
-	 */
-	const int type_max;
+    void (*bc_delete) (yasm_bytecode *bc);
+    void (*bc_print) (FILE *f, int indent_level, const yasm_bytecode *bc);
 
-	void (*bc_delete) (yasm_bytecode *bc);
-	void (*bc_print) (FILE *f, int indent_level, const yasm_bytecode *bc);
-
-	/* See bytecode.h comments on bc_resolve() */
-	yasm_bc_resolve_flags (*bc_resolve)
-	    (yasm_bytecode *bc, int save, const yasm_section *sect,
-	     yasm_calc_bc_dist_func calc_bc_dist);
-	/* See bytecode.h comments on bc_tobytes() */
-	int (*bc_tobytes) (yasm_bytecode *bc, unsigned char **bufp,
-			   const yasm_section *sect, void *d,
-			   yasm_output_expr_func output_expr);
-    } bc;
+    /* See bytecode.h comments on bc_resolve() */
+    yasm_bc_resolve_flags (*bc_resolve)
+	(yasm_bytecode *bc, int save, const yasm_section *sect,
+	 yasm_calc_bc_dist_func calc_bc_dist);
+    /* See bytecode.h comments on bc_tobytes() */
+    int (*bc_tobytes) (yasm_bytecode *bc, unsigned char **bufp,
+		       const yasm_section *sect, void *d,
+		       yasm_output_expr_func output_expr);
 
     /* Functions to output floats and integers, architecture-specific because
      * of endianness.  Returns nonzero on error, otherwise updates bufp by
@@ -171,6 +164,9 @@ struct yasm_arch {
 
     void (*reg_print) (FILE *f, unsigned long reg);
     void (*segreg_print) (FILE *f, unsigned long segreg);
+
+    /* Convert an expression into an effective address. */
+    yasm_effaddr * (*ea_new_expr) (/*@keep@*/ yasm_expr *e);
 
     /* Deletes the arch-specific data in ea.  May be NULL if no special
      * deletion is required (e.g. there's no dynamically allocated pointers

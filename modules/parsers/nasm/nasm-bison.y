@@ -179,15 +179,13 @@ exp: instr
 ;
 
 instr: INSN		{
-	$$ = nasm_parser_arch->parse.new_insn($1, 0, NULL,
-					      nasm_parser_cur_section,
-					      nasm_parser_prev_bc, cur_lindex);
+	$$ = nasm_parser_arch->parse_insn($1, 0, NULL, nasm_parser_cur_section,
+					  nasm_parser_prev_bc, cur_lindex);
     }
     | INSN operands	{
-	$$ = nasm_parser_arch->parse.new_insn($1, $2.num_operands,
-					      &$2.operands,
-					      nasm_parser_cur_section,
-					      nasm_parser_prev_bc, cur_lindex);
+	$$ = nasm_parser_arch->parse_insn($1, $2.num_operands, &$2.operands,
+					  nasm_parser_cur_section,
+					  nasm_parser_prev_bc, cur_lindex);
 	yasm_ops_delete(&$2.operands, 0);
     }
     | INSN error	{
@@ -196,11 +194,11 @@ instr: INSN		{
     }
     | PREFIX instr	{
 	$$ = $2;
-	nasm_parser_arch->parse.handle_prefix($$, $1, cur_lindex);
+	nasm_parser_arch->parse_prefix($$, $1, cur_lindex);
     }
     | SEGREG instr	{
 	$$ = $2;
-	nasm_parser_arch->parse.handle_seg_prefix($$, $1[0], cur_lindex);
+	nasm_parser_arch->parse_seg_prefix($$, $1[0], cur_lindex);
     }
 ;
 
@@ -307,11 +305,11 @@ directive_valparam: direxpr	{
 
 /* memory addresses */
 memaddr: expr		    {
-	$$ = nasm_parser_arch->parse.ea_new_expr($1);
+	$$ = nasm_parser_arch->ea_new_expr($1);
     }
     | SEGREG ':' memaddr    {
 	$$ = $3;
-	nasm_parser_arch->parse.handle_seg_override($$, $1[0], cur_lindex);
+	nasm_parser_arch->parse_seg_override($$, $1[0], cur_lindex);
     }
     | BYTE memaddr	    { $$ = $2; yasm_ea_set_len($$, 1); }
     | WORD memaddr	    { $$ = $2; yasm_ea_set_len($$, 2); }
@@ -613,7 +611,7 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
     } else if (yasm__strcasecmp(name, "cpu") == 0) {
 	yasm_vps_foreach(vp, valparams) {
 	    if (vp->val)
-		nasm_parser_arch->parse.switch_cpu(vp->val, lindex);
+		nasm_parser_arch->parse_cpu(vp->val, lindex);
 	    else if (vp->param) {
 		const yasm_intnum *intcpu;
 		intcpu = yasm_expr_get_intnum(&vp->param, NULL);
@@ -622,11 +620,11 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
 		else {
 		    char strcpu[16];
 		    sprintf(strcpu, "%lu", yasm_intnum_get_uint(intcpu));
-		    nasm_parser_arch->parse.switch_cpu(strcpu, lindex);
+		    nasm_parser_arch->parse_cpu(strcpu, lindex);
 		}
 	    }
 	}
-    } else if (!nasm_parser_arch->parse.directive(name, valparams,
+    } else if (!nasm_parser_arch->parse_directive(name, valparams,
 						  objext_valparams,
 						  &nasm_parser_sections,
 						  lindex)) {

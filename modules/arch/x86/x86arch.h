@@ -85,8 +85,8 @@ typedef enum {
  * in 64-bit mode or if it wasn't needed to express reg.
  */
 int yasm_x86__set_rex_from_reg(unsigned char *rex, unsigned char *low3,
-			 unsigned long reg, unsigned int bits,
-			 x86_rex_bit_pos rexbit);
+			       unsigned long reg, unsigned int bits,
+			       x86_rex_bit_pos rexbit);
 
 void yasm_x86__ea_set_segment(/*@null@*/ yasm_effaddr *ea,
 			      unsigned int segment, unsigned long lindex);
@@ -164,28 +164,28 @@ int yasm_x86__expr_checkea
      unsigned char *v_sib, unsigned char *n_sib, unsigned char *rex,
      yasm_calc_bc_dist_func calc_bc_dist);
 
-void yasm_x86__switch_cpu(const char *cpuid, unsigned long lindex);
+void yasm_x86__parse_cpu(const char *cpuid, unsigned long lindex);
 
-yasm_arch_check_id_retval yasm_x86__check_identifier
+yasm_arch_check_id_retval yasm_x86__parse_check_id
     (unsigned long data[2], const char *id, unsigned long lindex);
 
-int yasm_x86__directive(const char *name, yasm_valparamhead *valparams,
-			/*@null@*/ yasm_valparamhead *objext_valparams,
-			yasm_sectionhead *headp, unsigned long lindex);
+int yasm_x86__parse_directive(const char *name, yasm_valparamhead *valparams,
+			      /*@null@*/ yasm_valparamhead *objext_valparams,
+			      yasm_sectionhead *headp, unsigned long lindex);
 
-/*@null@*/ yasm_bytecode *yasm_x86__new_insn
+/*@null@*/ yasm_bytecode *yasm_x86__parse_insn
     (const unsigned long data[2], int num_operands,
      /*@null@*/ yasm_insn_operandhead *operands, yasm_section *cur_section,
      /*@null@*/ yasm_bytecode *prev_bc, unsigned long lindex);
 
-void yasm_x86__handle_prefix(yasm_bytecode *bc, const unsigned long data[4],
-			     unsigned long lindex);
+void yasm_x86__parse_prefix(yasm_bytecode *bc, const unsigned long data[4],
+			    unsigned long lindex);
 
-void yasm_x86__handle_seg_prefix(yasm_bytecode *bc, unsigned long segreg,
-				 unsigned long lindex);
+void yasm_x86__parse_seg_prefix(yasm_bytecode *bc, unsigned long segreg,
+				unsigned long lindex);
 
-void yasm_x86__handle_seg_override(yasm_effaddr *ea, unsigned long segreg,
-				   unsigned long lindex);
+void yasm_x86__parse_seg_override(yasm_effaddr *ea, unsigned long segreg,
+				  unsigned long lindex);
 
 int yasm_x86__floatnum_tobytes(const yasm_floatnum *flt, unsigned char **bufp,
 			       unsigned long valsize, const yasm_expr *e);

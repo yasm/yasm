@@ -340,8 +340,8 @@ yasm_bc_delete(yasm_bytecode *bc)
 		    N_("objfmt can't handle its own objfmt data bytecode"));
 	    break;
 	default:
-	    if ((unsigned int)bc->type < (unsigned int)cur_arch->bc.type_max)
-		cur_arch->bc.bc_delete(bc);
+	    if ((unsigned int)bc->type < (unsigned int)cur_arch->bc_type_max)
+		cur_arch->bc_delete(bc);
 	    else
 		yasm_internal_error(N_("Unknown bytecode type"));
 	    break;
@@ -414,8 +414,8 @@ yasm_bc_print(FILE *f, int indent_level, const yasm_bytecode *bc)
 		fprintf(f, "%*sUNKNOWN\n", indent_level, "");
 	    break;
 	default:
-	    if ((unsigned int)bc->type < (unsigned int)cur_arch->bc.type_max)
-		cur_arch->bc.bc_print(f, indent_level, bc);
+	    if ((unsigned int)bc->type < (unsigned int)cur_arch->bc_type_max)
+		cur_arch->bc_print(f, indent_level, bc);
 	    else
 		fprintf(f, "%*s_Unknown_\n", indent_level, "");
 	    break;
@@ -637,9 +637,8 @@ yasm_bc_resolve(yasm_bytecode *bc, int save, const yasm_section *sect,
 	    yasm_internal_error(N_("resolving objfmt data bytecode?"));
 	    /*break;*/
 	default:
-	    if ((unsigned int)bc->type < (unsigned int)cur_arch->bc.type_max)
-		retval = cur_arch->bc.bc_resolve(bc, save, sect,
-						 calc_bc_dist);
+	    if ((unsigned int)bc->type < (unsigned int)cur_arch->bc_type_max)
+		retval = cur_arch->bc_resolve(bc, save, sect, calc_bc_dist);
 	    else
 		yasm_internal_error(N_("Unknown bytecode type"));
     }
@@ -835,9 +834,9 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 		    N_("Have objfmt data bytecode but no way to output it"));
 	    break;
 	default:
-	    if ((unsigned int)bc->type < (unsigned int)cur_arch->bc.type_max)
-		error = cur_arch->bc.bc_tobytes(bc, &destbuf, sect, d,
-						output_expr);
+	    if ((unsigned int)bc->type < (unsigned int)cur_arch->bc_type_max)
+		error = cur_arch->bc_tobytes(bc, &destbuf, sect, d,
+					     output_expr);
 	    else
 		yasm_internal_error(N_("Unknown bytecode type"));
     }

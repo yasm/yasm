@@ -1609,9 +1609,10 @@ x86_new_jmprel(const unsigned long data[4], int num_operands,
 }
 
 yasm_bytecode *
-yasm_x86__new_insn(const unsigned long data[4], int num_operands,
-		   yasm_insn_operandhead *operands, yasm_section *cur_section,
-		   /*@null@*/ yasm_bytecode *prev_bc, unsigned long lindex)
+yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
+		     yasm_insn_operandhead *operands,
+		     yasm_section *cur_section,
+		     /*@null@*/ yasm_bytecode *prev_bc, unsigned long lindex)
 {
     x86_new_insn_data d;
     int num_info = (int)(data[1]&0xFF);
@@ -2130,7 +2131,7 @@ yasm_x86__new_insn(const unsigned long data[4], int num_operands,
 */
 
 void
-yasm_x86__switch_cpu(const char *id, unsigned long lindex)
+yasm_x86__parse_cpu(const char *id, unsigned long lindex)
 {
     /*const char *marker;*/
 
@@ -2253,8 +2254,8 @@ yasm_x86__switch_cpu(const char *id, unsigned long lindex)
 }
 
 yasm_arch_check_id_retval
-yasm_x86__check_identifier(unsigned long data[4], const char *id,
-			   unsigned long lindex)
+yasm_x86__parse_check_id(unsigned long data[4], const char *id,
+			 unsigned long lindex)
 {
     const char *oid = id;
     /*const char *marker;*/

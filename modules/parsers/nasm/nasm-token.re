@@ -378,8 +378,8 @@ scan:
 	[a-zA-Z_?][a-zA-Z0-9_$#@~.?]* {
 	    savech = s.tok[TOKLEN];
 	    s.tok[TOKLEN] = '\0';
-	    check_id_ret = nasm_parser_arch->parse.check_identifier(
-		yylval.arch_data, s.tok, cur_lindex);
+	    check_id_ret = nasm_parser_arch->parse_check_id(yylval.arch_data,
+							    s.tok, cur_lindex);
 	    s.tok[TOKLEN] = savech;
 	    switch (check_id_ret) {
 		case YASM_ARCH_CHECK_ID_NONE:
