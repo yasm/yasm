@@ -30,7 +30,7 @@ START_TEST(test_effaddr_new_reg)
     /* Exhaustively test generated Mod/RM byte with register values */
     for(i=0; i<8; i++) {
 	ea = effaddr_new_reg(i);
-	fail_unless(ea->modrm == 0xC0 | (i & 0x07),
+	fail_unless(ea->modrm == (0xC0 | (i & 0x07)),
 		    "Invalid Mod/RM byte generated");
 	free(ea);
     }
