@@ -1,15 +1,83 @@
-#ifndef MODULE_BIT_VECTOR
-#define MODULE_BIT_VECTOR
+/* $IdPath$ */
+
+#ifndef YASM_BITVECT_H
+#define YASM_BITVECT_H
 /*****************************************************************************/
 /*  MODULE NAME:  BitVector.h                           MODULE TYPE:  (adt)  */
 /*****************************************************************************/
 /*  MODULE IMPORTS:                                                          */
 /*****************************************************************************/
-#include <stdlib.h>                                 /*  MODULE TYPE:  (sys)  */
-#include <limits.h>                                 /*  MODULE TYPE:  (sys)  */
-#include <string.h>                                 /*  MODULE TYPE:  (sys)  */
-#include <ctype.h>                                  /*  MODULE TYPE:  (sys)  */
-#include "ToolBox.h"                                /*  MODULE TYPE:  (dat)  */
+
+/* ToolBox.h */
+/*****************************************************************************/
+/*  NOTE: The type names that have been chosen here are somewhat weird on    */
+/*        purpose, in order to avoid name clashes with system header files   */
+/*        and your own application(s) which might - directly or indirectly - */
+/*        include this definitions file.                                     */
+/*****************************************************************************/
+
+typedef  unsigned   char    N_char;
+typedef  unsigned   char    N_byte;
+typedef  unsigned   short   N_short;
+typedef  unsigned   short   N_shortword;
+typedef  unsigned   int     N_int;
+typedef  unsigned   int     N_word;
+typedef  unsigned   long    N_long;
+typedef  unsigned   long    N_longword;
+
+/*  Mnemonic 1:  The natural numbers,  N = { 0, 1, 2, 3, ... }               */
+/*  Mnemonic 2:  Nnnn = u_N_signed,  _N_ot signed                            */
+
+typedef  signed     char    Z_char;
+typedef  signed     char    Z_byte;
+typedef  signed     short   Z_short;
+typedef  signed     short   Z_shortword;
+typedef  signed     int     Z_int;
+typedef  signed     int     Z_word;
+typedef  signed     long    Z_long;
+typedef  signed     long    Z_longword;
+
+/*  Mnemonic 1:  The whole numbers,  Z = { 0, -1, 1, -2, 2, -3, 3, ... }     */
+/*  Mnemonic 2:  Zzzz = Ssss_igned                                           */
+
+typedef  void               *voidptr;
+typedef  N_char             *charptr;
+typedef  N_byte             *byteptr;
+typedef  N_short            *shortptr;
+typedef  N_shortword        *shortwordptr;
+typedef  N_int              *intptr;
+typedef  N_word             *wordptr;
+typedef  N_long             *longptr;
+typedef  N_longword         *longwordptr;
+
+typedef  N_char             *N_charptr;
+typedef  N_byte             *N_byteptr;
+typedef  N_short            *N_shortptr;
+typedef  N_shortword        *N_shortwordptr;
+typedef  N_int              *N_intptr;
+typedef  N_word             *N_wordptr;
+typedef  N_long             *N_longptr;
+typedef  N_longword         *N_longwordptr;
+
+typedef  Z_char             *Z_charptr;
+typedef  Z_byte             *Z_byteptr;
+typedef  Z_short            *Z_shortptr;
+typedef  Z_shortword        *Z_shortwordptr;
+typedef  Z_int              *Z_intptr;
+typedef  Z_word             *Z_wordptr;
+typedef  Z_long             *Z_longptr;
+typedef  Z_longword         *Z_longwordptr;
+
+#ifndef FALSE
+#define FALSE       (0!=0)
+#endif
+
+#ifndef TRUE
+#define TRUE        (0==0)
+#endif
+
+typedef int boolean;
+
 /*****************************************************************************/
 /*  MODULE INTERFACE:                                                        */
 /*****************************************************************************/

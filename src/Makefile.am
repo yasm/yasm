@@ -43,6 +43,8 @@ libyasm_a_SOURCES = \
 	floatnum.h		\
 	ternary.c		\
 	ternary.h		\
+	bitvect.c		\
+	bitvect.h		\
 	strcasecmp.c
 
 CFLAGS = @ANSI_CFLAGS@
