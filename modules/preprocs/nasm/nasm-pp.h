@@ -13,6 +13,7 @@ void pp_include_path (const char *);
 void pp_pre_include (const char *);
 void pp_pre_define (char *);
 void pp_pre_undefine (char *);
+void pp_builtin_define (char *);
 void pp_extra_stdmac (const char **);
 
 extern Preproc nasmpp;

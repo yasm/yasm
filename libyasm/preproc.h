@@ -97,6 +97,11 @@ typedef struct yasm_preproc_module {
      * Call yasm_preproc_undefine_macro() instead of calling this function.
      */
     void (*undefine_macro) (yasm_preproc *preproc, const char *macroname);
+
+    /** Module-level implementation of yasm_preproc_builtin_define().
+     * Call yasm_preproc_builtin_define() instead of calling this function.
+     */
+    void (*define_builtin) (yasm_preproc *preproc, const char *macronameval);
 } yasm_preproc_module;
 
 /** Initialize preprocessor.
@@ -153,6 +158,13 @@ void yasm_preproc_predefine_macro(yasm_preproc *preproc,
  */
 void yasm_preproc_undefine_macro(yasm_preproc *preproc, const char *macroname);
 
+/** Define a builtin macro, preprocessed before the "standard" macros.
+ * \param preproc	preprocessor
+ * \param macronameval	"name=value" string
+ */
+void yasm_preproc_builtin_define(yasm_preproc *preproc,
+				 const char *macronameval);
+
 #ifndef YASM_DOXYGEN
 
 /* Inline macro implementations for preproc functions */
@@ -173,6 +185,9 @@ void yasm_preproc_undefine_macro(yasm_preproc *preproc, const char *macroname);
 							    macronameval)
 #define yasm_preproc_undefine_macro(preproc, macroname) \
     ((yasm_preproc_base *)preproc)->module->undefine_macro(preproc, macroname)
+#define yasm_preproc_define_builtin(preproc, macronameval) \
+    ((yasm_preproc_base *)preproc)->module->define_builtin(preproc, \
+							   macronameval)
 
 #endif
 

@@ -107,7 +107,15 @@ __SECT__
 [cpu %1]
 %endmacro
 
+%ifidn __YASM_OBJFMT__,bin
 %imacro org 1+.nolist
 [org %1]
 %endmacro
+%endif
+
+%ifidn __YASM_OBJFMT__,win32
+%imacro export 1+.nolist
+[export %1]
+%endmacro
+%endif
 

@@ -38,6 +38,8 @@
 #include "yasm-options.h"
 
 
+#define DEFAULT_OBJFMT_MODULE	"bin"
+
 /* Preprocess-only buffer size */
 #define PREPROC_BUF_SIZE    16384
 
@@ -105,6 +107,7 @@ static void print_yasm_error(const char *filename, unsigned long line,
 static void print_yasm_warning(const char *filename, unsigned long line,
 			       const char *msg);
 
+static void apply_preproc_builtins(void);
 static void apply_preproc_saved_options(void);
 static void print_list_keyword_desc(const char *name, const char *keyword);
 
@@ -320,6 +323,7 @@ main(int argc, char *argv[])
 	    return EXIT_FAILURE;
 	}
 
+	apply_preproc_builtins();
 	apply_preproc_saved_options();
 
 	/* Pre-process until done */
@@ -406,7 +410,7 @@ main(int argc, char *argv[])
 
     /* If not already specified, default to bin as the object format. */
     if (!cur_objfmt_module)
-	cur_objfmt_module = yasm_load_objfmt("bin");
+	cur_objfmt_module = yasm_load_objfmt(DEFAULT_OBJFMT_MODULE);
 
     if (!cur_objfmt_module) {
 	print_error(_("%s: could not load default %s"), _("FATAL"),
@@ -531,6 +535,7 @@ main(int argc, char *argv[])
     cur_preproc = cur_preproc_module->create(in, in_filename,
 					     yasm_object_get_linemap(object));
 
+    apply_preproc_builtins();
     apply_preproc_saved_options();
 
     /* Get initial x86 BITS setting from object format */
@@ -944,6 +949,24 @@ opt_ewmsg_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 	print_error(_("warning: unrecognized message style `%s'"), param);
 
     return 0;
+}
+
+static void
+apply_preproc_builtins()
+{
+    char *predef;
+    const char *objfmt_keyword = DEFAULT_OBJFMT_MODULE;
+
+    if (cur_objfmt_module)
+	objfmt_keyword = cur_objfmt_module->keyword;
+
+    /* Define standard YASM assembly-time macro constants */
+    predef = yasm_xmalloc(strlen("__YASM_OBJFMT__=")
+			  + strlen(objfmt_keyword) + 1);
+    strcpy(predef, "__YASM_OBJFMT__=");
+    strcat(predef, objfmt_keyword);
+    yasm_preproc_define_builtin(cur_preproc, predef);
+    yasm_xfree(predef);
 }
 
 static void

@@ -222,6 +222,13 @@ nasm_preproc_undefine_macro(yasm_preproc *preproc, const char *macroname)
     yasm_xfree(mn);
 }
 
+static void
+nasm_preproc_define_builtin(yasm_preproc *preproc, const char *macronameval)
+{
+    char *mnv = yasm__xstrdup(macronameval);
+    pp_builtin_define(mnv);
+    yasm_xfree(mnv);
+}
 
 /* Define preproc structure -- see preproc.h for details */
 yasm_preproc_module yasm_nasm_LTX_preproc = {
@@ -233,5 +240,6 @@ yasm_preproc_module yasm_nasm_LTX_preproc = {
     nasm_preproc_add_include_path,
     nasm_preproc_add_include_file,
     nasm_preproc_predefine_macro,
-    nasm_preproc_undefine_macro
+    nasm_preproc_undefine_macro,
+    nasm_preproc_define_builtin
 };

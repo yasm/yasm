@@ -918,6 +918,32 @@ coff_objfmt_destroy(yasm_objfmt *objfmt)
     yasm_xfree(objfmt);
 }
 
+static void 
+coff_objfmt_init_new_section(yasm_objfmt_coff *objfmt_coff,
+			     yasm_section *sect, const char *sectname,
+			     unsigned long flags, unsigned long line)
+{
+    coff_section_data *data;
+    yasm_symrec *sym;
+
+    data = yasm_xmalloc(sizeof(coff_section_data));
+    data->scnum = objfmt_coff->parse_scnum++;
+    data->flags = flags;
+    data->addr = 0;
+    data->scnptr = 0;
+    data->size = 0;
+    data->relptr = 0;
+    data->nreloc = 0;
+    yasm_section_add_data(sect, &coff_section_data_cb, data);
+
+    sym = yasm_symtab_define_label(objfmt_coff->symtab, sectname,
+				   yasm_section_bcs_first(sect), 1, line);
+    yasm_symrec_declare(sym, YASM_SYM_GLOBAL, line);
+    coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, NULL, 1,
+			     COFF_SYMTAB_AUX_SECT);
+    data->sym = sym;
+}
+
 static /*@observer@*/ /*@null@*/ yasm_section *
 coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			    /*@unused@*/ /*@null@*/
@@ -999,6 +1025,10 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	else
 	    yasm__warning(YASM_WARN_GENERAL, line,
 		N_("Standard COFF does not support read-only data sections"));
+    } else if (strcmp(sectname, ".drectve") == 0) {
+	flags = COFF_STYP_INFO;
+	if (objfmt_coff->win32)
+	    flags |= COFF_STYP_DISCARD | COFF_STYP_READ;
     } else {
 	/* Default to code */
 	flags = COFF_STYP_TEXT;
@@ -1097,28 +1127,10 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     retval = yasm_object_get_general(objfmt_coff->object, sectname, 0, resonly,
 				     &isnew, line);
 
-    if (isnew) {
-	coff_section_data *data;
-	yasm_symrec *sym;
-
-	data = yasm_xmalloc(sizeof(coff_section_data));
-	data->scnum = objfmt_coff->parse_scnum++;
-	data->flags = flags;
-	data->addr = 0;
-	data->scnptr = 0;
-	data->size = 0;
-	data->relptr = 0;
-	data->nreloc = 0;
-	yasm_section_add_data(retval, &coff_section_data_cb, data);
-
-	sym =
-	    yasm_symtab_define_label(objfmt_coff->symtab, sectname,
-				     yasm_section_bcs_first(retval), 1, line);
-	yasm_symrec_declare(sym, YASM_SYM_GLOBAL, line);
-	coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, NULL, 1,
-				 COFF_SYMTAB_AUX_SECT);
-	data->sym = sym;
-    } else if (flags_override)
+    if (isnew)
+	coff_objfmt_init_new_section(objfmt_coff, retval, sectname, flags,
+				     line);
+    else if (flags_override)
 	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("section flags ignored on section redeclaration"));
     return retval;
@@ -1245,6 +1257,53 @@ coff_objfmt_directive(/*@unused@*/ yasm_objfmt *objfmt,
     return 1;	/* no objfmt directives */
 }
 
+static int
+win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
+		       yasm_valparamhead *valparams,
+		       /*@unused@*/ /*@null@*/
+		       yasm_valparamhead *objext_valparams,
+		       unsigned long line)
+{
+    yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
+
+    if (yasm__strcasecmp(name, "export") == 0) {
+	yasm_valparam *vp = yasm_vps_first(valparams);
+	int isnew;
+	yasm_section *sect;
+	yasm_datavalhead dvs;
+
+	/* Reference exported symbol (to generate error if not declared) */
+	if (vp->val)
+	    yasm_symtab_use(objfmt_coff->symtab, vp->val, line);
+	else {
+	    yasm__error(line, N_("argument to EXPORT must be symbol name"));
+	    return 0;
+	}
+
+	/* Add to end of linker directives */
+	sect = yasm_object_get_general(objfmt_coff->object, ".drectve", 0, 0,
+				       &isnew, line);
+
+	/* Initialize directive section if needed */
+	if (isnew)
+	    coff_objfmt_init_new_section(objfmt_coff, sect,
+					 yasm_section_get_name(sect),
+					 COFF_STYP_INFO | COFF_STYP_DISCARD
+					 | COFF_STYP_READ, line);
+
+	/* Add text as data bytecode */
+	yasm_dvs_initialize(&dvs);
+	yasm_dvs_append(&dvs,
+			yasm_dv_create_string(yasm__xstrdup("-export:")));
+	yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(vp->val)));
+	yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(" ")));
+	yasm_section_bcs_append(sect, yasm_bc_create_data(&dvs, 1, line));
+
+	return 0;
+    } else
+	return 1;
+}
+
 
 /* Define valid debug formats to use with this object format */
 static const char *coff_objfmt_dbgfmt_keywords[] = {
@@ -1287,5 +1346,5 @@ yasm_objfmt_module yasm_win32_LTX_objfmt = {
     coff_objfmt_extern_declare,
     coff_objfmt_global_declare,
     coff_objfmt_common_declare,
-    coff_objfmt_directive
+    win32_objfmt_directive
 };

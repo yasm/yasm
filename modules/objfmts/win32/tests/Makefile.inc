@@ -2,6 +2,9 @@
 
 TESTS += modules/objfmts/win32/tests/win32_test.sh
 
+EXTRA_DIST += modules/objfmts/win32/tests/export.asm
+EXTRA_DIST += modules/objfmts/win32/tests/export.hex
+EXTRA_DIST += modules/objfmts/win32/tests/export.errwarn
 EXTRA_DIST += modules/objfmts/win32/tests/win32_test.sh
 EXTRA_DIST += modules/objfmts/win32/tests/win32test.c
 EXTRA_DIST += modules/objfmts/win32/tests/win32test.asm

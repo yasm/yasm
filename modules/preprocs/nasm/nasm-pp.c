@@ -359,6 +359,7 @@ static int pass;		/* HACK: pass 0 = generate dependencies only */
 
 static unsigned long unique;	/* unique identifier numbers */
 
+static Line *builtindef = NULL;
 static Line *predef = NULL;
 
 static ListGen *list;
@@ -646,6 +647,26 @@ read_line(void)
     char *buffer, *p, *q;
     int bufsize, continued_count;
 
+    Line *pd, *l;
+    Token *head, **tail, *t;
+
+    /* Nasty hack for builtin defines */
+    for (pd = builtindef; pd; pd = pd->next)
+    {
+	head = NULL;
+	tail = &head;
+	for (t = pd->first; t; t = t->next)
+	{
+	    *tail = new_Token(NULL, t->type, t->text, 0);
+	    tail = &(*tail)->next;
+	}
+	l = nasm_malloc(sizeof(Line));
+	l->next = istk->expansion;
+	l->first = head;
+	l->finishes = FALSE;
+	istk->expansion = l;
+    }
+
     if (stdmacpos)
     {
 	if (*stdmacpos)
@@ -665,9 +686,6 @@ read_line(void)
 	     */
 	    if (!*stdmacpos)
 	    {
-		Line *pd, *l;
-		Token *head, **tail, *t;
-
 		for (pd = predef; pd; pd = pd->next)
 		{
 		    head = NULL;
@@ -4422,6 +4440,7 @@ pp_cleanup(int pass_)
 	ctx_pop();
     if (pass_ == 0)
 	{
+		free_llist(builtindef);
 		free_llist(predef);
 		delete_Blocks();
 	}
@@ -4504,6 +4523,29 @@ pp_pre_undefine(char *definition)
     l->first = def;
     l->finishes = FALSE;
     predef = l;
+}
+
+void
+pp_builtin_define(char *definition)
+{
+    Token *def, *space;
+    Line *l;
+    char *equals;
+
+    equals = strchr(definition, '=');
+    space = new_Token(NULL, TOK_WHITESPACE, NULL, 0);
+    def = new_Token(space, TOK_PREPROC_ID, "%define", 0);
+    if (equals)
+	*equals = ' ';
+    space->next = tokenise(definition);
+    if (equals)
+	*equals = '=';
+
+    l = nasm_malloc(sizeof(Line));
+    l->next = builtindef;
+    l->first = def;
+    l->finishes = FALSE;
+    builtindef = l;
 }
 
 void
