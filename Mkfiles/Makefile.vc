@@ -10,12 +10,13 @@
 #  copy Mkfiles/config.h.vc config.h
 #  nmake -fMkfiles/Makefile.vc
 
-CFLAGS=/DHAVE_CONFIG_H /I. /Isrc /Inointl
+CFLAGS=/DHAVE_CONFIG_H /I. /Isrc /Isrc/arch/x86 /Inointl
 CC=cl
 
 all: src\yasm.exe
 
 SRC_OBJS= \
+ src\arch.obj \
  src\bytecode.obj \
  src\errwarn.obj \
  src\expr.obj \
@@ -33,6 +34,13 @@ SRC_OBJS= \
  src\xmalloc.obj \
  src\xstrdup.obj \
  src\strcasecmp.obj
+
+SRC_ARCH_X86_OBJS= \
+ src\arch\x86\arch.obj \
+ src\arch\x86\bytecode.obj
+
+SRC_ARCH_OBJS= \
+ $(SRC_ARCH_X86_OBJS)
 
 SRC_PREPROCS_RAW_OBJS= \
  src\preprocs\raw\preproc.obj
@@ -66,7 +74,8 @@ YASM_OBJS= \
  $(SRC_PREPROCS_OBJS) \
  $(SRC_PARSERS_OBJS) \
  $(SRC_OPTIMIZERS_OBJS) \
- $(SRC_OBJFMTS_OBJS)
+ $(SRC_OBJFMTS_OBJS) \
+ $(SRC_ARCH_OBJS)
 
 src\yasm.exe: $(YASM_OBJS)
 	$(CC) /Fesrc\yasm.exe $(YASM_OBJS)
