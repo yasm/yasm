@@ -13,7 +13,7 @@ yasm_x86_la_LIBADD = libyasm.la
 YASM_MODULES += -dlopen yasm-x86.la
 
 x86id.c: $(srcdir)/modules/arch/x86/x86id.re re2c$(EXEEXT) $(srcdir)/tools/re2c/cleanup.pl
-	$(top_builddir)/re2c$(EXEEXT) -b $(srcdir)/modules/arch/x86/x86id.re | $(PERL) $(srcdir)/tools/re2c/cleanup.pl | sed "/^#l/ s,re2c-out\.c,$@," > $@
+	$(top_builddir)/re2c$(EXEEXT) -s $(srcdir)/modules/arch/x86/x86id.re | $(PERL) $(srcdir)/tools/re2c/cleanup.pl | sed "/^#l/ s,re2c-out\.c,$@," > $@
 
 BUILT_SOURCES += \
 	x86id.c
