@@ -36,7 +36,11 @@
 # include <string.h>
 #endif
 
+#if defined(lint)
+/*@dependent@*/ const char *gettext(const char *s);
+#else
 #include <libintl.h>
+#endif
 #define _(String)	gettext(String)
 
 #if !defined(HAVE_MERGESORT)
