@@ -423,6 +423,9 @@ yasm_symrec_print(const yasm_symrec *sym, FILE *f, int indent_level)
 	    fprintf(f, "%*sPreceding bytecode:\n", indent_level, "");
 	    yasm_bc_print(sym->value.precbc, f, indent_level+1);
 	    break;
+	case SYM_SPECIAL:
+	    fprintf(f, "%*s-Special-\n", indent_level, "");
+	    break;
     }
 
     fprintf(f, "%*sStatus=", indent_level, "");
