@@ -118,7 +118,6 @@ AC_TYPE_SIZE_T
 # Checks for library functions.
 #
 AC_FUNC_FORK
-AC_FUNC_MALLOC
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([abort memcpy memmove strrchr toascii vsnprintf])
 AC_CHECK_FUNCS([strsep mergesort])
