@@ -76,5 +76,7 @@ yasm_preproc yasm_raw_LTX_preproc = {
     "raw",
     raw_preproc_initialize,
     raw_preproc_cleanup,
-    raw_preproc_input
+    raw_preproc_input,
+    /* no include paths */ NULL,
+    /* no pre-include files */ NULL
 };

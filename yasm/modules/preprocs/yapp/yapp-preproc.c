@@ -946,5 +946,7 @@ yasm_preproc yasm_yapp_LTX_preproc = {
     "yapp",
     yapp_preproc_initialize,
     yapp_preproc_cleanup,
-    yapp_preproc_input
+    yapp_preproc_input,
+    NULL,
+    NULL
 };
