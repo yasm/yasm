@@ -524,6 +524,8 @@ fix_directive_symrec(ExprItem *ei, /*@unused@*/ void *d)
 
     /* FIXME: Delete current symrec */
     ei->data.sym = symrec_use(symrec_get_name(ei->data.sym), cur_lindex);
+
+    return 0;
 }
 
 static void
