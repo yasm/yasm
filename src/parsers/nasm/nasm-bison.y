@@ -284,6 +284,7 @@ directive_valparam: direxpr	{
 	} else
 	    vp_new($$, NULL, $1);
     }
+    | STRING			{ vp_new($$, $1, NULL); }
     | ID '=' direxpr		{ vp_new($$, $1, $3); }
 ;
 
