@@ -495,8 +495,10 @@ x86_bc_calc_len_insn(x86_insn *insn, unsigned long *len,
 				  ea->nosplit, &displen, &ead_t.modrm,
 				  &ead_t.valid_modrm, &ead_t.need_modrm,
 				  &ead_t.sib, &ead_t.valid_sib,
-				  &ead_t.need_sib))
+				  &ead_t.need_sib)) {
+		expr_delete(temp);
 		return -1;   /* failed, don't bother checking rest of insn */
+	    }
 
 	    if (!temp) {
 		/* If the expression was deleted (temp=NULL), then make the
@@ -538,6 +540,7 @@ x86_bc_calc_len_insn(x86_insn *insn, unsigned long *len,
 
 	if (imm->val) {
 	    temp = expr_copy(imm->val);
+	    assert(temp != NULL);
 	    expr_expand_labelequ(temp, resolve_label);
 
 	    /* TODO: check imm->len vs. sized len from expr? */
