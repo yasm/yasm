@@ -57,6 +57,7 @@ nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
     parser_nasm.prev_bc = yasm_section_bcs_first(def_sect);
 
     parser_nasm.save_input = save_input;
+    parser_nasm.save_last = 0;
 
     /* initialize scanner structure */
     parser_nasm.s.bot = NULL;

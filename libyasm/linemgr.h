@@ -50,28 +50,30 @@ void yasm_linemap_destroy(yasm_linemap *linemap);
  */
 unsigned long yasm_linemap_get_current(yasm_linemap *linemap);
 
-/** Get associated data for a virtual line and data callback.
+/** Get bytecode and source line information, if any, for a virtual line.
  * \param linemap	line mapping repository
  * \param line		virtual line
- * \param callback	callback used when adding data
- * \return Associated data (NULL if none).
+ * \param bcp		pointer to return bytecode into
+ * \param sourcep	pointer to return source code line pointer into
+ * \return Zero if source line information available for line, nonzero if not.
+ * \note If source line information is not available, bcp and sourcep targets
+ * are set to NULL.
  */
-/*@dependent@*/ /*@null@*/ void *yasm_linemap_get_data
-    (yasm_linemap *linemap, unsigned long line,
-     const yasm_assoc_data_callback *callback);
+int yasm_linemap_get_source(yasm_linemap *linemap, unsigned long line,
+			    /*@null@*/ yasm_bytecode **bcp,
+			    const char **sourcep);
 
-/** Add associated data to the current virtual line.
- * \attention Deletes any existing associated data for that data callback for
- *	      the current virtual line.
+/** Add bytecode and source line information to the current virtual line.
+ * \attention Deletes any existing bytecode and source line information for
+ *            the current virtual line.
  * \param linemap	line mapping repository
- * \param callback	callback
- * \param data		data to associate
- * \param every_hint	non-zero if data is likely to be associated with every
- *			line; zero if not.
+ * \param bc		bytecode (if any)
+ * \param source	source code line
+ * \note The source code line pointer is NOT kept, it is strdup'ed.
  */
-void yasm_linemap_add_data(yasm_linemap *linemap,
-			   const yasm_assoc_data_callback *callback,
-			   /*@only@*/ /*@null@*/ void *data, int every_hint);
+void yasm_linemap_add_source(yasm_linemap *linemap,
+			     /*@null@*/ yasm_bytecode *bc,
+			     const char *source);
 
 /** Go to the next line (increments the current virtual line)l
  * \param linemap	line mapping repository

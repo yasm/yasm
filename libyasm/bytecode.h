@@ -226,8 +226,9 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
  * \return Newly allocated buffer that should be used instead of buf for
  *	   reading the byte representation, or NULL if buf was big enough to
  *	   hold the entire byte representation.
- * \note Essentially destroys contents of bytecode, so it's \em not safe to
- *       call twice on the same bytecode.
+ * \note Calling twice on the same bytecode may \em not produce the same
+ *       results on the second call, as calling this function may result in
+ *       non-reversible changes to the bytecode.
  */
 /*@null@*/ /*@only@*/ unsigned char *yasm_bc_tobytes
     (yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,

@@ -40,6 +40,7 @@ modinclude_HEADERS += libyasm/section.h
 modinclude_HEADERS += libyasm/arch.h
 modinclude_HEADERS += libyasm/dbgfmt.h
 modinclude_HEADERS += libyasm/objfmt.h
+modinclude_HEADERS += libyasm/listfmt.h
 modinclude_HEADERS += libyasm/optimizer.h
 modinclude_HEADERS += libyasm/parser.h
 modinclude_HEADERS += libyasm/preproc.h

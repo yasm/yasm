@@ -46,6 +46,8 @@ typedef struct yasm_optimizer yasm_optimizer;
 typedef struct yasm_objfmt yasm_objfmt;
 /** Debug format interface.  \see dbgfmt.h for details. */
 typedef struct yasm_dbgfmt yasm_dbgfmt;
+/** List format interface.  \see listfmt.h for details. */
+typedef struct yasm_listfmt yasm_listfmt;
 
 /** YASM associated data callback structure.  Many data structures can have
  * arbitrary data associated with them.

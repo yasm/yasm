@@ -68,6 +68,7 @@
 #include <libyasm/arch.h>
 #include <libyasm/dbgfmt.h>
 #include <libyasm/objfmt.h>
+#include <libyasm/listfmt.h>
 #include <libyasm/optimizer.h>
 #include <libyasm/parser.h>
 #include <libyasm/preproc.h>

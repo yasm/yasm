@@ -127,6 +127,10 @@ input: /* empty */
 	    yasm_section_bcs_append(parser_nasm->cur_section, $2);
 	if (parser_nasm->temp_bc)
 	    parser_nasm->prev_bc = parser_nasm->temp_bc;
+	if (parser_nasm->save_input)
+	    yasm_linemap_add_source(parser_nasm->linemap,
+		parser_nasm->temp_bc,
+		parser_nasm->save_line[parser_nasm->save_last ^ 1]);
 	yasm_linemap_goto_next(parser_nasm->linemap);
     }
 ;

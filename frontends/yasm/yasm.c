@@ -65,6 +65,7 @@ do { \
 } while (0)
 
 /*@null@*/ /*@only@*/ static char *obj_filename = NULL, *in_filename = NULL;
+/*@null@*/ /*@only@*/ static char *list_filename = NULL;
 /*@null@*/ /*@only@*/ static char *machine_name = NULL;
 static int special_options = 0;
 /*@null@*/ /*@dependent@*/ static yasm_arch *cur_arch = NULL;
@@ -83,6 +84,9 @@ static int special_options = 0;
 /*@null@*/ /*@dependent@*/ static yasm_dbgfmt *cur_dbgfmt = NULL;
 /*@null@*/ /*@dependent@*/ static const yasm_dbgfmt_module *
     cur_dbgfmt_module = NULL;
+/*@null@*/ /*@dependent@*/ static yasm_listfmt *cur_listfmt = NULL;
+/*@null@*/ /*@dependent@*/ static const yasm_listfmt_module *
+    cur_listfmt_module = NULL;
 static int preproc_only = 0;
 static int warning_error = 0;	/* warnings being treated as errors */
 static enum {
@@ -90,7 +94,8 @@ static enum {
     EWSTYLE_VC
 } ewmsg_style = EWSTYLE_GNU;
 
-/*@null@*/ /*@dependent@*/ static FILE *open_obj(const char *mode);
+/*@null@*/ /*@dependent@*/ static FILE *open_file(const char *filename,
+						  const char *mode);
 static void cleanup(/*@null@*/ yasm_object *object);
 
 /* Forward declarations: cmd line parser handlers */
@@ -100,6 +105,8 @@ static int opt_parser_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_preproc_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_objfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_dbgfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_listfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_listfile_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_objfile_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_machine_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
@@ -146,6 +153,10 @@ static opt_option options[] =
       N_("select object format (list with -f help)"), N_("format") },
     { 'g', "dformat", 1, opt_dbgfmt_handler, 0,
       N_("select debugging format (list with -g help)"), N_("debug") },
+    { 'L', "lformat", 1, opt_listfmt_handler, 0,
+      N_("select list format (list with -L help)"), N_("list") },
+    { 'l', "list", 1, opt_listfile_handler, 0,
+      N_("name of list-file output"), N_("listfile") },
     { 'o', "objfile", 1, opt_objfile_handler, 0,
       N_("name of object-file output"), N_("filename") },
     { 'm', "machine", 1, opt_machine_handler, 0,
@@ -351,7 +362,7 @@ main(int argc, char *argv[])
 	    obj = stdout;
 	else {
 	    /* Open output (object) file */
-	    obj = open_obj("wt");
+	    obj = open_file(obj_filename, "wt");
 	    if (!obj) {
 		yasm_xfree(preproc_buf);
 		return EXIT_FAILURE;
@@ -448,6 +459,13 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
     check_module_version(cur_optimizer_module, OPTIMIZER, optimizer);
+
+    /* If list file enabled, make sure we have a list format loaded. */
+    if (list_filename) {
+	/* If not already specified, default to nasm as the list format. */
+	if (!cur_listfmt_module)
+	    cur_listfmt_module = load_listfmt_module("nasm");
+    }
 
     /* If not already specified, default to bin as the object format. */
     if (!cur_objfmt_module)
@@ -590,7 +608,7 @@ main(int argc, char *argv[])
 
     /* Parse! */
     cur_parser_module->do_parse(object, cur_preproc, cur_arch, cur_objfmt, in,
-				in_filename, 0, def_sect);
+				in_filename, list_filename != NULL, def_sect);
 
     /* Close input file */
     if (in != stdin)
@@ -618,7 +636,7 @@ main(int argc, char *argv[])
 
     /* open the object file for output (if not already opened by dbg objfmt) */
     if (!obj && strcmp(cur_objfmt_module->keyword, "dbg") != 0) {
-	obj = open_obj("wb");
+	obj = open_file(obj_filename, "wb");
 	if (!obj) {
 	    cleanup(object);
 	    return EXIT_FAILURE;
@@ -644,6 +662,21 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 
+    /* Open and write the list file */
+    if (list_filename) {
+	FILE *list = open_file(list_filename, "wt");
+	if (!list) {
+	    cleanup(object);
+	    return EXIT_FAILURE;
+	}
+	/* Initialize the list format */
+	cur_listfmt = yasm_listfmt_create(cur_listfmt_module, in_filename,
+					  obj_filename);
+	yasm_listfmt_output(cur_listfmt, list,
+			    yasm_object_get_linemap(object), cur_arch);
+	fclose(list);
+    }
+
     yasm_errwarn_output_all(yasm_object_get_linemap(object), warning_error,
 			    print_yasm_error, print_yasm_warning);
 
@@ -654,16 +687,14 @@ main(int argc, char *argv[])
 
 /* Open the object file.  Returns 0 on failure. */
 static FILE *
-open_obj(const char *mode)
+open_file(const char *filename, const char *mode)
 {
-    FILE *obj;
+    FILE *f;
 
-    assert(obj_filename != NULL);
-
-    obj = fopen(obj_filename, mode);
-    if (!obj)
-	print_error(_("could not open file `%s'"), obj_filename);
-    return obj;
+    f = fopen(filename, mode);
+    if (!f)
+	print_error(_("could not open file `%s'"), filename);
+    return f;
 }
 
 /* Define DO_FREE to 1 to enable deallocation of all data structures.
@@ -681,6 +712,8 @@ cleanup(yasm_object *object)
 	    yasm_objfmt_destroy(cur_objfmt);
 	if (cur_dbgfmt)
 	    yasm_dbgfmt_destroy(cur_dbgfmt);
+	if (cur_listfmt)
+	    yasm_listfmt_destroy(cur_listfmt);
 	if (cur_preproc)
 	    yasm_preproc_destroy(cur_preproc);
 	if (object)
@@ -708,6 +741,8 @@ cleanup(yasm_object *object)
 	    yasm_xfree(in_filename);
 	if (obj_filename)
 	    yasm_xfree(obj_filename);
+	if (list_filename)
+	    yasm_xfree(list_filename);
 	if (machine_name)
 	    yasm_xfree(machine_name);
     }
@@ -830,6 +865,42 @@ opt_dbgfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 		    _("debug format"), param);
 	exit(EXIT_FAILURE);
     }
+    return 0;
+}
+
+static int
+opt_listfmt_handler(/*@unused@*/ char *cmd, char *param,
+		    /*@unused@*/ int extra)
+{
+    assert(param != NULL);
+    cur_listfmt_module = load_listfmt_module(param);
+    if (!cur_listfmt_module) {
+	if (!strcmp("help", param)) {
+	    printf(_("Available yasm %s:\n"), _("list formats"));
+	    list_listfmts(print_list_keyword_desc);
+	    special_options = SPECIAL_LISTED;
+	    return 0;
+	}
+	print_error(_("%s: unrecognized %s `%s'"), _("FATAL"),
+		    _("list format"), param);
+	exit(EXIT_FAILURE);
+    }
+    return 0;
+}
+
+static int
+opt_listfile_handler(/*@unused@*/ char *cmd, char *param,
+		     /*@unused@*/ int extra)
+{
+    if (list_filename) {
+	print_error(
+	    _("warning: can output to only one list file, last specified used"));
+	yasm_xfree(list_filename);
+    }
+
+    assert(param != NULL);
+    list_filename = yasm__xstrdup(param);
+
     return 0;
 }
 

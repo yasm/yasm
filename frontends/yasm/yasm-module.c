@@ -53,6 +53,7 @@ static const char *module_type_str[] = {
     "arch",
     "dbgfmt",
     "objfmt",
+    "listfmt",
     "optimizer",
     "parser",
     "preproc"
@@ -158,6 +159,7 @@ list_module_load(const char *filename, lt_ptr data)
     yasm_arch_module *arch_module;
     yasm_dbgfmt_module *dbgfmt_module;
     yasm_objfmt_module *objfmt_module;
+    yasm_listfmt_module *listfmt_module;
     yasm_optimizer_module *optimizer_module;
     yasm_parser_module *parser_module;
     yasm_preproc_module *preproc_module;
@@ -217,6 +219,14 @@ list_module_load(const char *filename, lt_ptr data)
 	    if (objfmt_module) {
 		module_keyword = objfmt_module->keyword;
 		module_name = objfmt_module->name;
+	    }
+	    break;
+	case MODULE_LISTFMT:
+	    strncpy(name+3, "yasm", 4);
+	    listfmt_module = lt_dlsym(handle, name+3);
+	    if (listfmt_module) {
+		module_keyword = listfmt_module->keyword;
+		module_name = listfmt_module->name;
 	    }
 	    break;
 	case MODULE_OPTIMIZER:

@@ -31,6 +31,7 @@ typedef enum module_type {
     MODULE_ARCH = 0,
     MODULE_DBGFMT,
     MODULE_OBJFMT,
+    MODULE_LISTFMT,
     MODULE_OPTIMIZER,
     MODULE_PARSER,
     MODULE_PREPROC
@@ -46,6 +47,8 @@ void unload_modules(void);
     get_module_data(MODULE_DBGFMT, keyword, "dbgfmt")
 #define load_objfmt_module(keyword)	\
     get_module_data(MODULE_OBJFMT, keyword, "objfmt")
+#define load_listfmt_module(keyword)	\
+    get_module_data(MODULE_LISTFMT, keyword, "listfmt")
 #define load_optimizer_module(keyword)	\
     get_module_data(MODULE_OPTIMIZER, keyword, "optimizer")
 #define load_parser_module(keyword)	\
@@ -59,6 +62,7 @@ void list_modules(module_type type,
 #define list_archs(func)	list_modules(MODULE_ARCH, func)
 #define list_dbgfmts(func)	list_modules(MODULE_DBGFMT, func)
 #define list_objfmts(func)	list_modules(MODULE_OBJFMT, func)
+#define list_listfmts(func)	list_modules(MODULE_LISTFMT, func)
 #define list_optimizers(func)	list_modules(MODULE_OPTIMIZER, func)
 #define list_parsers(func)	list_modules(MODULE_PARSER, func)
 #define list_preprocs(func)	list_modules(MODULE_PREPROC, func)

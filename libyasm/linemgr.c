@@ -55,16 +55,13 @@ typedef struct line_mapping {
     unsigned long line_inc;
 } line_mapping;
 
-typedef struct line_assoc_data_raw_head {
-    /*@only@*/ void **vector;
-    const yasm_assoc_data_callback *callback;
-    size_t size;
-} line_assoc_data_raw_head;
+typedef struct line_source_info {
+    /* first bytecode on line; NULL if no bytecodes on line */
+    /*@null@*/ /*@dependent@*/ yasm_bytecode *bc;
 
-typedef struct line_assoc_data {
-    /*@only@*/ void *data;
-    const yasm_assoc_data_callback *callback;
-} line_assoc_data;
+    /* source code line */
+    /*@owned@*/ char *source;
+} line_source_info;
 
 struct yasm_linemap {
     /* Shared storage for filenames */
@@ -76,12 +73,9 @@ struct yasm_linemap {
     /* Mappings from virtual to physical line numbers */
     /*@only@*/ /*@null@*/ line_mapping_head *map;
 
-    /* Associated data arrays for odd data types (those likely to have data
-     * associated for every line).
-     */
-    /*@null@*/ /*@only@*/ line_assoc_data_raw_head *assoc_data_array;
-    size_t assoc_data_array_size;
-    size_t assoc_data_array_alloc;
+    /* Bytecode and source line information */
+    /*@only@*/ line_source_info *source_info;
+    size_t source_info_size;
 };
 
 static void
@@ -138,11 +132,10 @@ yasm_linemap_create(void)
     linemap->map->size = 0;
     linemap->map->allocated = 8;
     
-    /* initialize associated data arrays */
-    linemap->assoc_data_array_size = 0;
-    linemap->assoc_data_array_alloc = 2;
-    linemap->assoc_data_array = yasm_xmalloc(linemap->assoc_data_array_alloc *
-					     sizeof(line_assoc_data_raw_head));
+    /* initialize source line information array */
+    linemap->source_info_size = 2;
+    linemap->source_info = yasm_xmalloc(linemap->source_info_size *
+					sizeof(line_source_info));
 
     return linemap;
 }
@@ -150,21 +143,12 @@ yasm_linemap_create(void)
 void
 yasm_linemap_destroy(yasm_linemap *linemap)
 {
-    if (linemap->assoc_data_array) {
-	size_t i;
-	for (i=0; i<linemap->assoc_data_array_size; i++) {
-	    line_assoc_data_raw_head *adrh = &linemap->assoc_data_array[i];
-	    if (adrh->vector) {
-		size_t j;
-		for (j=0; j<adrh->size; j++) {
-		    if (adrh->vector[j])
-			adrh->callback->destroy(adrh->vector[j]);
-		}
-		yasm_xfree(adrh->vector);
-	    }
-	}
-	yasm_xfree(linemap->assoc_data_array);
+    size_t i;
+    for (i=0; i<linemap->source_info_size; i++) {
+	if (linemap->source_info[i].source)
+	    yasm_xfree(linemap->source_info[i].source);
     }
+    yasm_xfree(linemap->source_info);
 
     if (linemap->map) {
 	yasm_xfree(linemap->map->vector);
@@ -184,54 +168,28 @@ yasm_linemap_get_current(yasm_linemap *linemap)
 }
 
 void
-yasm_linemap_add_data(yasm_linemap *linemap,
-		      const yasm_assoc_data_callback *callback, void *data,
-		      /*@unused@*/ int every_hint)
+yasm_linemap_add_source(yasm_linemap *linemap, yasm_bytecode *bc,
+			const char *source)
 {
-    /* FIXME: Hint not supported yet. */
-
-    line_assoc_data_raw_head *adrh = NULL;
     size_t i;
 
-    /* See if there's already associated data for this callback */
-    for (i=0; !adrh && i<linemap->assoc_data_array_size; i++) {
-	if (linemap->assoc_data_array[i].callback == callback)
-	    adrh = &linemap->assoc_data_array[i];
-    }
-
-    /* No?  Then append a new one */
-    if (!adrh) {
-	linemap->assoc_data_array_size++;
-	if (linemap->assoc_data_array_size > linemap->assoc_data_array_alloc) {
-	    linemap->assoc_data_array_alloc *= 2;
-	    linemap->assoc_data_array =
-		yasm_xrealloc(linemap->assoc_data_array,
-			      linemap->assoc_data_array_alloc *
-			      sizeof(line_assoc_data_raw_head));
-	}
-	adrh = &linemap->assoc_data_array[linemap->assoc_data_array_size-1];
-
-	adrh->size = 4;
-	adrh->vector = yasm_xmalloc(adrh->size*sizeof(void *));
-	adrh->callback = callback;
-	for (i=0; i<adrh->size; i++)
-	    adrh->vector[i] = NULL;
-    }
-
-    while (linemap->current > adrh->size) {
+    while (linemap->current > linemap->source_info_size) {
 	/* allocate another size bins when full for 2x space */
-	adrh->vector = yasm_xrealloc(adrh->vector,
-				     2*adrh->size*sizeof(void *));
-	for (i=adrh->size; i<adrh->size*2; i++)
-	    adrh->vector[i] = NULL;
-	adrh->size *= 2;
+	linemap->source_info = yasm_xrealloc(linemap->source_info,
+	    2*linemap->source_info_size*sizeof(line_source_info));
+	for (i=linemap->source_info_size; i<linemap->source_info_size*2; i++) {
+	    linemap->source_info[i].bc = NULL;
+	    linemap->source_info[i].source = NULL;
+	}
+	linemap->source_info_size *= 2;
     }
 
-    /* Delete existing data for that line (if any) */
-    if (adrh->vector[linemap->current-1])
-	adrh->callback->destroy(adrh->vector[linemap->current-1]);
+    /* Delete existing info for that line (if any) */
+    if (linemap->source_info[linemap->current-1].source)
+	yasm_xfree(linemap->source_info[linemap->current-1].source);
 
-    adrh->vector[linemap->current-1] = data;
+    linemap->source_info[linemap->current-1].bc = bc;
+    linemap->source_info[linemap->current-1].source = yasm__xstrdup(source);
 }
 
 unsigned long
@@ -268,24 +226,18 @@ yasm_linemap_lookup(yasm_linemap *linemap, unsigned long line,
     *file_line = mapping->file_line + mapping->line_inc*(line-mapping->line);
 }
 
-void *
-yasm_linemap_get_data(yasm_linemap *linemap, unsigned long line,
-		      const yasm_assoc_data_callback *callback)
+int
+yasm_linemap_get_source(yasm_linemap *linemap, unsigned long line,
+			yasm_bytecode **bcp, const char **sourcep)
 {
-    line_assoc_data_raw_head *adrh = NULL;
-    size_t i;
-
-    /* Linear search through data array */
-    for (i=0; !adrh && i<linemap->assoc_data_array_size; i++) {
-	if (linemap->assoc_data_array[i].callback == callback)
-	    adrh = &linemap->assoc_data_array[i];
+    if (line > linemap->source_info_size) {
+	*bcp = NULL;
+	*sourcep = NULL;
+	return 1;
     }
 
-    if (!adrh)
-	return NULL;
-    
-    if (line > adrh->size)
-	return NULL;
+    *bcp = linemap->source_info[line-1].bc;
+    *sourcep = linemap->source_info[line-1].source;
 
-    return adrh->vector[line-1];
+    return (!(*sourcep));
 }

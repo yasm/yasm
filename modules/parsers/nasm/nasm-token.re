@@ -91,47 +91,34 @@ fill(yasm_parser_nasm *parser_nasm, YYCTYPE *cursor)
 	s->lim += cnt;
 	if (first && parser_nasm->save_input) {
 	    int i;
+	    char *saveline;
+	    parser_nasm->save_last ^= 1;
+	    saveline = parser_nasm->save_line[parser_nasm->save_last];
 	    /* save next line into cur_line */
 	    for (i=0; i<79 && &s->tok[i] < s->lim && s->tok[i] != '\n'; i++)
-		parser_nasm->save_line[i] = s->tok[i];
-	    parser_nasm->save_line[i] = '\0';
+		saveline[i] = s->tok[i];
+	    saveline[i] = '\0';
 	}
     }
     return cursor;
 }
-
-static void
-destroy_line(/*@only@*/ void *data)
-{
-    yasm_xfree(data);
-}
-
-static void
-print_line(void *data, FILE *f, int indent_level)
-{
-    fprintf(f, "%*s\"%s\"\n", indent_level, "", (char *)data);
-}
-
-static const yasm_assoc_data_callback line_assoc_data = {
-    destroy_line,
-    print_line
-};
 
 static YYCTYPE *
 save_line(yasm_parser_nasm *parser_nasm, YYCTYPE *cursor)
 {
     Scanner *s = &parser_nasm->s;
     int i = 0;
+    char *saveline;
 
-    /* save previous line using assoc_data */
-    yasm_linemap_add_data(parser_nasm->linemap, &line_assoc_data,
-			  yasm__xstrdup(parser_nasm->save_line), 1);
+    parser_nasm->save_last ^= 1;
+    saveline = parser_nasm->save_line[parser_nasm->save_last];
+
     /* save next line into cur_line */
     if ((YYLIMIT - YYCURSOR) < 80)
 	YYFILL(80);
     for (i=0; i<79 && &cursor[i] < s->lim && cursor[i] != '\n'; i++)
-	parser_nasm->save_line[i] = cursor[i];
-    parser_nasm->save_line[i] = '\0';
+	saveline[i] = cursor[i];
+    saveline[i] = '\0';
     return cursor;
 }
 

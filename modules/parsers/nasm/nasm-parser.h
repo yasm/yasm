@@ -59,7 +59,8 @@ typedef struct yasm_parser_nasm {
     yasm_bytecode *temp_bc;
 
     int save_input;
-    YYCTYPE save_line[MAX_SAVED_LINE_LEN];
+    YYCTYPE save_line[2][MAX_SAVED_LINE_LEN];
+    int save_last;
 
     Scanner s;
     enum {
