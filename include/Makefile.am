@@ -3,7 +3,6 @@ EXTRA_DIST = \
 	bytecode.h  \
 	config.h    \
 	errwarn.h   \
-	expr.h	    \
 	globals.h   \
 	section.h   \
 	symrec.h    \
