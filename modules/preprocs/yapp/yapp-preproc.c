@@ -408,23 +408,21 @@ expand_macro(YAPP_Macro *ym)
 
     if (ym->type == YAPP_DEFINE) {
 	if (ym->args == -1) {
-	    source *src;
+	    source *mac;
 	    /* no parens to deal with */
-	    src = SLIST_FIRST(&ym->macro_head);
-	    while (src != NULL) {
-		if (src->token.type == IDENT) {
-		    YAPP_Macro *imacro = yapp_macro_get(src->token.str);
+	    SLIST_FOREACH (mac, &ym->macro_head, next) {
+		if (mac->token.type == IDENT) {
+		    YAPP_Macro *imacro = yapp_macro_get(mac->token.str);
 		    if (imacro != NULL && !imacro->expanding) {
 			expand_macro(imacro);
 		    }
 		    else {
-			copy_token(&src->token);
+			copy_token(&mac->token);
 		    }
 		}
 		else {
-		    copy_token(&src->token);
+		    copy_token(&mac->token);
 		}
-		src = SLIST_NEXT(src, next);
 	    }
 	}
 	else
