@@ -211,6 +211,7 @@ sections_traverse(sectionhead *headp, /*@null@*/ void *d,
     return 0;
 }
 
+/*@-onlytrans@*/
 section *
 sections_find_general(sectionhead *headp, const char *name)
 {
@@ -223,6 +224,7 @@ sections_find_general(sectionhead *headp, const char *name)
     }
     return NULL;
 }
+/*@=onlytrans@*/
 
 bytecodehead *
 section_get_bytecodes(section *sect)
