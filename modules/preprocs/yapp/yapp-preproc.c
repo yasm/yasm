@@ -834,7 +834,9 @@ yapp_preproc_input(char *buf, size_t max_size)
 			    if (token == ')') {
 				/* after paramlist and ')' */
 				/* everything is what it's defined to be */
-				if(append_to_return(&macro_head, &macro_tail)==0) state=YAPP_STATE_EOF;
+				token = yapp_preproc_lex();
+				if (token != WHITESPACE) append_token(token, &macro_head, &macro_tail);
+				if (append_to_return(&macro_head, &macro_tail)==0) state=YAPP_STATE_EOF;
 				else {
 				    ydebug(("YAPP: Inserting define macro %s (%d)\n", s, param_count));
 				    yapp_define_insert(s, param_count, 0);
