@@ -1,6 +1,12 @@
-/* $IdPath$
- * YASM virtual line mapping management functions
+/**
+ * \file libyasm/linemgr.h
+ * \brief YASM virtual line mapping management interface.
  *
+ * \rcs
+ * $IdPath$
+ * \endrcs
+ *
+ * \license
  *  Copyright (C) 2002  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,23 +29,31 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ * \endlicense
  */
 #ifndef YASM_LINEMGR_H
 #define YASM_LINEMGR_H
 
-/* Create a new line mapping repository. */
+/** Create a new line mapping repository.
+ * \return New repository.
+ */
 yasm_linemap *yasm_linemap_create(void);
 
-/* Cleans up any memory allocated. */
+/** Clean up any memory allocated for a repository.
+ * \param linemap	line mapping repository
+ */
 void yasm_linemap_destroy(yasm_linemap *linemap);
 
-/* Returns the current line index. */
+/** Get the current line position in a repository.
+ * \param linemap	line mapping repository
+ * \return Current virtual line.
+ */
 unsigned long yasm_linemap_get_current(yasm_linemap *linemap);
 
 /** Get associated data for a virtual line and data callback.
- * \param linemap   linemap
- * \param line	    virtual line
- * \param callback  callback used when adding data
+ * \param linemap	line mapping repository
+ * \param line		virtual line
+ * \param callback	callback used when adding data
  * \return Associated data (NULL if none).
  */
 /*@dependent@*/ /*@null@*/ void *yasm_linemap_get_data
@@ -49,7 +63,7 @@ unsigned long yasm_linemap_get_current(yasm_linemap *linemap);
 /** Add associated data to the current virtual line.
  * \attention Deletes any existing associated data for that data callback for
  *	      the current virtual line.
- * \param linemap	linemap
+ * \param linemap	line mapping repository
  * \param callback	callback
  * \param data		data to associate
  * \param every_hint	non-zero if data is likely to be associated with every
@@ -59,19 +73,29 @@ void yasm_linemap_add_data(yasm_linemap *linemap,
 			   const yasm_assoc_data_callback *callback,
 			   /*@only@*/ /*@null@*/ void *data, int every_hint);
 
-/* Goes to the next line (increments the current virtual line), returns
- * the current (new) virtual line.
+/** Go to the next line (increments the current virtual line)l
+ * \param linemap	line mapping repository
+ * \return The current (new) virtual line.
  */
 unsigned long yasm_linemap_goto_next(yasm_linemap *linemap);
 
-/* Sets a new file/line physical association starting point at the current
+/** Set a new file/line physical association starting point at the current
  * virtual line.  line_inc indicates how much the "real" line is incremented
  * by for each virtual line increment (0 is perfectly legal).
+ * \param linemap	line mapping repository
+ * \param filename	physical file name
+ * \param file_line	physical line number
+ * \param line_inc	line increment
  */
 void yasm_linemap_set(yasm_linemap *linemap, const char *filename,
 		      unsigned long file_line, unsigned long line_inc);
 
-/* Look up the associated physical file and line for a virtual line. */
+/** Look up the associated physical file and line for a virtual line.
+ * \param linemap	line mapping repository
+ * \param line		virtual line
+ * \param filename	physical file name (output)
+ * \param file_line	physical line number (output)
+ */
 void yasm_linemap_lookup(yasm_linemap *linemap, unsigned long line,
 			 /*@out@*/ const char **filename,
 			 /*@out@*/ unsigned long *file_line);

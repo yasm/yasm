@@ -40,7 +40,6 @@ typedef struct Scanner {
 typedef struct yasm_parser_nasm {
     FILE *in;
     int debug;
-    size_t (*input) (char *buf, size_t max_size);
 
     /*@only@*/ yasm_object *object;
     /*@dependent@*/ yasm_section *cur_section;
@@ -49,6 +48,7 @@ typedef struct yasm_parser_nasm {
     /*@null@*/ char *locallabel_base;
     size_t locallabel_base_len;
 
+    /*@dependent@*/ yasm_preproc *preproc;
     /*@dependent@*/ yasm_arch *arch;
     /*@dependent@*/ yasm_objfmt *objfmt;
 

@@ -1,6 +1,12 @@
-/* $IdPath$
- * YASM preprocessor module interface header file
+/**
+ * \file libyasm/preproc.h
+ * \brief YASM preprocessor module interface.
  *
+ * \rcs
+ * $IdPath$
+ * \endrcs
+ *
+ * \license
  *  Copyright (C) 2001  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,63 +29,168 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ * \endlicense
  */
 #ifndef YASM_PREPROC_H
 #define YASM_PREPROC_H
 
-/** Version number of #yasm_preproc interface.  Any functional change to the
- * #yasm_preproc interface should simultaneously increment this number.  This
- * version should be checked by #yasm_preproc loaders to verify that the
- * expected version (the version defined by its libyasm header files) matches
- * the loaded module version (the version defined by the module's libyasm
- * header files).  Doing this will ensure that the module version's function
- * definitions match the module loader's function definitions.  The version
- * number must never be decreased.
+#ifndef YASM_DOXYGEN
+/** Base #yasm_preproc structure.  Must be present as the first element in any
+ * #yasm_preproc implementation.
+ */
+typedef struct yasm_preproc_base {
+    /** #yasm_preproc_module implementation for this preprocessor. */
+    const struct yasm_preproc_module *module;
+} yasm_preproc_base;
+#endif
+
+/** Version number of #yasm_preproc_module interface.  Any functional change to
+ * the #yasm_preproc_module interface should simultaneously increment this
+ * number.  This version should be checked by #yasm_preproc loaders to verify
+ * that the expected version (the version defined by its libyasm header files)
+ * matches the loaded module version (the version defined by the module's
+ * libyasm header files).  Doing this will ensure that the module version's
+ * function definitions match the module loader's function definitions.  The
+ * version number must never be decreased.
  */
 #define YASM_PREPROC_VERSION	2
 
-/* Interface to the preprocesor module(s) */
-struct yasm_preproc {
+/** YASM preprocesor module interface. */
+typedef struct yasm_preproc_module {
     /** Version (see #YASM_PREPROC_VERSION).  Should always be set to
      * #YASM_PREPROC_VERSION by the module source and checked against
      * #YASM_PREPROC_VERSION by the module loader.
      */
     unsigned int version;
 
-    /* one-line description of the preprocessor */
+    /** One-line description of the preprocessor. */
     const char *name;
 
-    /* keyword used to select preprocessor on the command line */
+    /** Keyword used to select preprocessor on the command line. */
     const char *keyword;
 
-    /* Initializes preprocessor.
+    /** Create preprocessor.
+     * Module-level implementation of yasm_preproc_create().
+     * Call yasm_preproc_create() instead of calling this function.
      *
      * The preprocessor needs access to the object format module to find out
      * any output format specific macros.
      *
-     * This function also takes the FILE * to the initial starting file and
-     * the filename.
+     * \param f			initial starting file
+     * \param in_filename	initial starting filename
+     * \param lm		line mapping repository
+     * \return New preprocessor.
      */
-    void (*initialize) (FILE *f, const char *in_filename, yasm_linemap *lm);
+    /*@only@*/ yasm_preproc * (*create) (FILE *f, const char *in_filename,
+					 yasm_linemap *lm);
 
-    /* Cleans up any allocated memory. */
-    void (*cleanup) (void);
+    /** Module-level implementation of yasm_preproc_destroy().
+     * Call yasm_preproc_destroy() instead of calling this function.
+     */
+    void (*destroy) (/*@only@*/ yasm_preproc *preproc);
 
-    /* Gets more preprocessed source code (up to max_size bytes) into buf.
-     * Note that more than a single line may be returned in buf. */
-    size_t (*input) (/*@out@*/ char *buf, size_t max_size);
+    /** Module-level implementation of yasm_preproc_input().
+     * Call yasm_preproc_input() instead of calling this function.
+     */
+    size_t (*input) (yasm_preproc *preproc, /*@out@*/ char *buf,
+		     size_t max_size);
 
-    /* Add a directory to the %include search path */
-    void (*add_include_path) (const char *path);
+    /** Module-level implementation of yasm_preproc_add_include_path().
+     * Call yasm_preproc_add_include_path() instead of calling this function.
+     */
+    void (*add_include_path) (yasm_preproc *preproc, const char *path);
 
-    /* Pre-include a file */
-    void (*add_include_file) (const char *filename);
+    /** Module-level implementation of yasm_preproc_add_include_file().
+     * Call yasm_preproc_add_include_file() instead of calling this function.
+     */
+    void (*add_include_file) (yasm_preproc *preproc, const char *filename);
 
-    /* Pre-define a macro */
-    void (*predefine_macro) (const char *macronameval);
+    /** Module-level implementation of yasm_preproc_predefine_macro().
+     * Call yasm_preproc_predefine_macro() instead of calling this function.
+     */
+    void (*predefine_macro) (yasm_preproc *preproc, const char *macronameval);
 
-    /* Un-define a macro */
-    void (*undefine_macro) (const char *macroname);
-};
+    /** Module-level implementation of yasm_preproc_undefine_macro().
+     * Call yasm_preproc_undefine_macro() instead of calling this function.
+     */
+    void (*undefine_macro) (yasm_preproc *preproc, const char *macroname);
+} yasm_preproc_module;
+
+/** Initialize preprocessor.
+ * The preprocessor needs access to the object format module to find out
+ * any output format specific macros.
+ * \param module	preprocessor module
+ * \param f		initial starting file
+ * \param in_filename	initial starting file filename
+ * \param lm		line mapping repository
+ * \return New preprocessor.
+ */
+/*@only@*/ yasm_preproc *yasm_preproc_create
+    (yasm_preproc_module *module, FILE *f, const char *in_filename,
+     yasm_linemap *lm);
+
+/** Cleans up any allocated preproc memory.
+ * \param preproc	preprocessor
+ */
+void yasm_preproc_destroy(/*@only@*/ yasm_preproc *preproc);
+
+/** Gets more preprocessed source code (up to max_size bytes) into buf.
+ * More than a single line may be returned in buf.
+ * \param preproc	preprocessor
+ * \param buf		destination buffer for preprocessed source
+ * \param max_size	maximum number of bytes that can be returned in buf
+ * \return Actual number of bytes returned in buf.
+ */
+size_t yasm_preproc_input(yasm_preproc *preproc, /*@out@*/ char *buf,
+			  size_t max_size);
+
+/** Add a directory to the include search path.
+ * \param preproc	preprocessor
+ * \param path		pathname
+ */
+void yasm_preproc_add_include_path(yasm_preproc *preproc, const char *path);
+
+/** Pre-include a file.
+ * \param preproc	preprocessor
+ * \param filename	filename
+ */
+void yasm_preproc_add_include_file(yasm_preproc *preproc,
+				   const char *filename);
+
+/** Pre-define a macro.
+ * \param preproc	preprocessor
+ * \param macronameval	"name=value" string
+ */
+void yasm_preproc_predefine_macro(yasm_preproc *preproc,
+				  const char *macronameval);
+
+/** Un-define a macro.
+ * \param preproc	preprocessor
+ * \param macroname	macro name
+ */
+void yasm_preproc_undefine_macro(yasm_preproc *preproc, const char *macroname);
+
+#ifndef YASM_DOXYGEN
+
+/* Inline macro implementations for preproc functions */
+
+#define yasm_preproc_create(module, f, in_filename, lm) \
+    module->create(f, in_filename, lm)
+
+#define yasm_preproc_destroy(preproc) \
+    ((yasm_preproc_base *)preproc)->module->destroy(preproc)
+#define yasm_preproc_input(preproc, buf, max_size) \
+    ((yasm_preproc_base *)preproc)->module->input(preproc, buf, max_size)
+#define yasm_preproc_add_include_path(preproc, path) \
+    ((yasm_preproc_base *)preproc)->module->add_include_path(preproc, path)
+#define yasm_preproc_add_include_file(preproc, filename) \
+    ((yasm_preproc_base *)preproc)->module->add_include_file(preproc, filename)
+#define yasm_preproc_predefine_macro(preproc, macronameval) \
+    ((yasm_preproc_base *)preproc)->module->predefine_macro(preproc, \
+							    macronameval)
+#define yasm_preproc_undefine_macro(preproc, macroname) \
+    ((yasm_preproc_base *)preproc)->module->undefine_macro(preproc, macroname)
+
+#endif
 
 #endif

@@ -38,14 +38,16 @@
 yasm_section *
 yasm_objfmt_add_default_section(yasm_objfmt *objfmt, yasm_object *object)
 {
+    yasm_objfmt_base *of_base = (yasm_objfmt_base *)objfmt;
     yasm_section *retval;
     yasm_valparamhead vps;
     yasm_valparam *vp;
 
-    vp = yasm_vp_create(yasm__xstrdup(objfmt->default_section_name), NULL);
+    vp = yasm_vp_create(yasm__xstrdup(of_base->module->default_section_name),
+			NULL);
     yasm_vps_initialize(&vps);
     yasm_vps_append(&vps, vp);
-    retval = objfmt->section_switch(object, &vps, NULL, 0);
+    retval = yasm_objfmt_section_switch(objfmt, &vps, NULL, 0);
     yasm_vps_delete(&vps);
 
     return retval;

@@ -39,19 +39,19 @@ typedef struct module {
     void *data;			    /* associated data */
 } module;
 
-extern yasm_arch yasm_x86_LTX_arch;
-extern yasm_arch yasm_lc3b_LTX_arch;
-extern yasm_dbgfmt yasm_null_LTX_dbgfmt;
-extern yasm_objfmt yasm_bin_LTX_objfmt;
-extern yasm_objfmt yasm_coff_LTX_objfmt;
-extern yasm_objfmt yasm_win32_LTX_objfmt;
-extern yasm_objfmt yasm_dbg_LTX_objfmt;
-extern yasm_objfmt yasm_elf_LTX_objfmt;
-extern yasm_optimizer yasm_basic_LTX_optimizer;
-extern yasm_parser yasm_nasm_LTX_parser;
-extern yasm_preproc yasm_nasm_LTX_preproc;
-extern yasm_preproc yasm_raw_LTX_preproc;
-extern yasm_preproc yasm_yapp_LTX_preproc;
+extern yasm_arch_module yasm_x86_LTX_arch;
+extern yasm_arch_module yasm_lc3b_LTX_arch;
+extern yasm_dbgfmt_module yasm_null_LTX_dbgfmt;
+extern yasm_objfmt_module yasm_bin_LTX_objfmt;
+extern yasm_objfmt_module yasm_coff_LTX_objfmt;
+extern yasm_objfmt_module yasm_win32_LTX_objfmt;
+extern yasm_objfmt_module yasm_dbg_LTX_objfmt;
+extern yasm_objfmt_module yasm_elf_LTX_objfmt;
+extern yasm_optimizer_module yasm_basic_LTX_optimizer;
+extern yasm_parser_module yasm_nasm_LTX_parser;
+extern yasm_preproc_module yasm_nasm_LTX_preproc;
+extern yasm_preproc_module yasm_raw_LTX_preproc;
+extern yasm_preproc_module yasm_yapp_LTX_preproc;
 
 static module modules[] = {
     {MODULE_ARCH, "x86", "arch", &yasm_x86_LTX_arch},
@@ -111,11 +111,11 @@ list_modules(module_type type,
 {
     int i;
     yasm_arch_module *arch;
-    yasm_dbgfmt *dbgfmt;
-    yasm_objfmt *objfmt;
-    yasm_optimizer *optimizer;
+    yasm_dbgfmt_module *dbgfmt;
+    yasm_objfmt_module *objfmt;
+    yasm_optimizer_module *optimizer;
     yasm_parser_module *parser;
-    yasm_preproc *preproc;
+    yasm_preproc_module *preproc;
 
     /* Go through available list, and try to load each one */
     for (i=0; i<sizeof(modules)/sizeof(modules[0]); i++) {

@@ -34,19 +34,29 @@
 #ifndef YASM_DBGFMT_H
 #define YASM_DBGFMT_H
 
-/** Version number of #yasm_dbgfmt interface.  Any functional change to the
- * #yasm_dbgfmt interface should simultaneously increment this number.  This
- * version should be checked by #yasm_dbgfmt loaders to verify that the
- * expected version (the version defined by its libyasm header files) matches
- * the loaded module version (the version defined by the module's libyasm
- * header files).  Doing this will ensure that the module version's function
- * definitions match the module loader's function definitions.  The version
- * number must never be decreased.
+#ifndef YASM_DOXYGEN
+/** Base #yasm_dbgfmt structure.  Must be present as the first element in any
+ * #yasm_dbgfmt implementation.
  */
-#define YASM_DBGFMT_VERSION	2
+typedef struct yasm_dbgfmt_base {
+    /** #yasm_dbgfmt_module implementation for this debug format. */
+    const struct yasm_dbgfmt_module *module;
+} yasm_dbgfmt_base;
+#endif
 
-/** YASM debug format interface. */
-struct yasm_dbgfmt {
+/** Version number of #yasm_dbgfmt_module interface.  Any functional change to
+ * the #yasm_dbgfmt_module interface should simultaneously increment this
+ * number.  This version should be checked by #yasm_dbgfmt loaders to verify
+ * that the expected version (the version defined by its libyasm header files)
+ * matches the loaded module version (the version defined by the module's
+ * libyasm header files).  Doing this will ensure that the module version's
+ * function definitions match the module loader's function definitions.  The
+ * version number must never be decreased.
+ */
+#define YASM_DBGFMT_VERSION	3
+
+/** YASM debug format module interface. */
+typedef struct yasm_dbgfmt_module {
     /** Version (see #YASM_DBGFMT_VERSION).  Should always be set to
      * #YASM_DBGFMT_VERSION by the module source and checked against
      * #YASM_DBGFMT_VERSION by the module loader.
@@ -59,37 +69,98 @@ struct yasm_dbgfmt {
     /** Keyword used to select debug format. */
     const char *keyword;
 
-    /** Initialize debug output for use.  Must call before any other debug
-     * format functions.  The filenames are provided solely for informational
-     * purposes.  Function may be unimplemented (NULL) if not needed by the
-     * debug format.
+    /** Create debug format.
+     * Module-level implementation of yasm_dbgfmt_create().
+     * The filenames are provided solely for informational purposes.
      * \param in_filename   primary input filename
      * \param obj_filename  object filename
-     * \param of	    object format in use
-     * \return Nonzero if object format does not provide needed support.
-     */
-    int (*initialize) (const char *in_filename, const char *obj_filename,
-		       yasm_object *object, yasm_objfmt *of, yasm_arch *a);
-
-    /** Clean up anything allocated by initialize().  Function may be
-     * unimplemented (NULL) if not needed by the debug format.
-     */
-    void (*cleanup) (void);
-
-    /** DEBUG directive support.
-     * \param name	    directive name
-     * \param valparams	    value/parameters
-     * \param line	    virtual line (from yasm_linemap)
-     * \return Nonzero if directive was not recognized; 0 if directive was
-     *	       recognized even if it wasn't valid.
-     */
-    int (*directive) (const char *name, yasm_valparamhead *valparams,
-		      unsigned long line);
-
-    /** Generate debugging information bytecodes
      * \param object	    object
+     * \param of	    object format in use
+     * \param a		    architecture in use
+     * \return NULL if object format does not provide needed support.
      */
-    void (*generate) (yasm_object *object);
-};
+    /*@null@*/ /*@only@*/ yasm_dbgfmt * (*create)
+	(const char *in_filename, const char *obj_filename,
+	 yasm_object *object, yasm_objfmt *of, yasm_arch *a);
+
+    /** Module-level implementation of yasm_dbgfmt_destroy().
+     * Call yasm_dbgfmt_destroy() instead of calling this function.
+     */
+    void (*destroy) (/*@only@*/ yasm_dbgfmt *dbgfmt);
+
+    /** Module-level implementation of yasm_dbgfmt_directive().
+     * Call yasm_dbgfmt_directive() instead of calling this function.
+     */
+    int (*directive) (yasm_dbgfmt *dbgfmt, const char *name,
+		      yasm_valparamhead *valparams, unsigned long line);
+
+    /** Module-level implementation of yasm_dbgfmt_generate().
+     * Call yasm_dbgfmt_generate() instead of calling this function.
+     */
+    void (*generate) (yasm_dbgfmt *dbgfmt);
+} yasm_dbgfmt_module;
+
+/** Get the keyword used to select a debug format.
+ * \param dbgfmt    debug format
+ * \return keyword
+ */
+const char *yasm_dbgfmt_keyword(const yasm_dbgfmt *dbgfmt);
+
+/** Initialize debug output for use.  Must call before any other debug
+ * format functions.  The filenames are provided solely for informational
+ * purposes.
+ * \param module	debug format module
+ * \param in_filename   primary input filename
+ * \param obj_filename  object filename
+ * \param object	object to generate debugging information for
+ * \param of		object format in use
+ * \param a		architecture in use
+ * \return NULL if object format does not provide needed support.
+ */
+/*@null@*/ /*@only@*/ yasm_dbgfmt *yasm_dbgfmt_create
+    (const yasm_dbgfmt_module *module, const char *in_filename,
+     const char *obj_filename, yasm_object *object, yasm_objfmt *of,
+     yasm_arch *a);
+
+/** Cleans up any allocated debug format memory.
+ * \param dbgfmt	debug format
+ */
+void yasm_dbgfmt_destroy(/*@only@*/ yasm_dbgfmt *dbgfmt);
+
+/** DEBUG directive support.
+ * \param dbgfmt	debug format
+ * \param name		directive name
+ * \param valparams	value/parameters
+ * \param line		virtual line (from yasm_linemap)
+ * \return Nonzero if directive was not recognized; 0 if directive was
+ *	       recognized even if it wasn't valid.
+ */
+int yasm_dbgfmt_directive(yasm_dbgfmt *dbgfmt, const char *name,
+			  yasm_valparamhead *valparams, unsigned long line);
+
+/** Generate debugging information bytecodes.
+ * \param dbgfmt	debug format
+ */
+void yasm_dbgfmt_generate(yasm_dbgfmt *dbgfmt);
+
+#ifndef YASM_DOXYGEN
+
+/* Inline macro implementations for dbgfmt functions */
+
+#define yasm_dbgfmt_keyword(dbgfmt) \
+    (((yasm_dbgfmt_base *)dbgfmt)->module->keyword)
+
+#define yasm_dbgfmt_create(module, in_filename, obj_filename, object, of, a) \
+    module->create(in_filename, obj_filename, object, of, a)
+
+#define yasm_dbgfmt_destroy(dbgfmt) \
+    ((yasm_dbgfmt_base *)dbgfmt)->module->destroy(dbgfmt)
+#define yasm_dbgfmt_directive(dbgfmt, name, valparams, line) \
+    ((yasm_dbgfmt_base *)dbgfmt)->module->directive(dbgfmt, name, valparams, \
+						    line)
+#define yasm_dbgfmt_generate(dbgfmt) \
+    ((yasm_dbgfmt_base *)dbgfmt)->module->generate(dbgfmt)
+
+#endif
 
 #endif

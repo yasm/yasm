@@ -31,164 +31,177 @@
 #include <libyasm.h>
 
 
-static void symrec_data_destroy(/*@only@*/ void *data);
-static void symrec_data_print(void *data, FILE *f, int indent_level);
+typedef struct yasm_objfmt_dbg {
+    yasm_objfmt_base objfmt;	    /* base structure */
 
-static const yasm_assoc_data_callback symrec_data_callback = {
-    symrec_data_destroy,
-    symrec_data_print
-};
+    yasm_object *object;
+    yasm_symtab *symtab;
+    FILE *dbgfile;
+} yasm_objfmt_dbg;
 
-/* Output file for debugging-type formats.  This is so that functions that are
- * called before the object file is usually opened can still write data out to
- * it (whereas for "normal" formats the object file is not opened until later
- * in the assembly process).  Opening the file early is done in initialize().
- *
- * Note that the functions here write to dbg_objfmt_file.  This is NOT legal
- * for other object formats to do--only the output() function can write to a
- * file, and only the file it's passed in its f parameter!
- */
-static FILE *dbg_objfmt_file;
+yasm_objfmt_module yasm_dbg_LTX_objfmt;
 
 
-static int
-dbg_objfmt_initialize(const char *in_filename, const char *obj_filename,
-		      yasm_object *object, yasm_dbgfmt *df, yasm_arch *a)
+static yasm_objfmt *
+dbg_objfmt_create(const char *in_filename, yasm_object *object,
+		  yasm_arch *a)
 {
-    dbg_objfmt_file = fopen(obj_filename, "wt");
-    if (!dbg_objfmt_file) {
-	fprintf(stderr, N_("could not open file `%s'"), obj_filename);
+    yasm_objfmt_dbg *objfmt_dbg = yasm_xmalloc(sizeof(yasm_objfmt_dbg));
+
+    objfmt_dbg->objfmt.module = &yasm_dbg_LTX_objfmt;
+
+    objfmt_dbg->object = object;
+    objfmt_dbg->symtab = yasm_object_get_symtab(object);
+    objfmt_dbg->dbgfile = tmpfile();
+    if (!objfmt_dbg->dbgfile) {
+	fprintf(stderr, N_("could not open temporary file"));
 	return 0;
     }
-    fprintf(dbg_objfmt_file,
-	    "initialize(\"%s\", \"%s\", %s dbgfmt, %s arch)\n",
-	    in_filename, obj_filename, df->keyword, yasm_arch_keyword(a));
-    return 0;
+    fprintf(objfmt_dbg->dbgfile, "create(\"%s\", %s arch)\n",
+	    in_filename, yasm_arch_keyword(a));
+    return (yasm_objfmt *)objfmt_dbg;
 }
 
 static void
-dbg_objfmt_output(/*@unused@*/ FILE *f, yasm_object *object, int all_syms)
+dbg_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
+		  int all_syms, yasm_dbgfmt *df)
 {
-    fprintf(dbg_objfmt_file, "output(f, object->\n");
-    yasm_object_print(object, dbg_objfmt_file, 1);
-    fprintf(dbg_objfmt_file, "%d)\n", all_syms);
-    fprintf(dbg_objfmt_file, " Symbol Table:\n");
-    yasm_symtab_print(yasm_object_get_symtab(object), dbg_objfmt_file, 1);
+    yasm_objfmt_dbg *objfmt_dbg = (yasm_objfmt_dbg *)objfmt;
+    char buf[1024];
+    unsigned int i;
+
+    /* Copy temp file to real output file */
+    rewind(objfmt_dbg->dbgfile);
+    while ((i = fread(buf, 1, 1024, objfmt_dbg->dbgfile))) {
+	if (fwrite(buf, 1, i, f) != i)
+	    break;
+    }
+
+    /* Reassign objfmt debug file to output file */
+    fclose(objfmt_dbg->dbgfile);
+    objfmt_dbg->dbgfile = f;
+
+    fprintf(objfmt_dbg->dbgfile, "output(f, object->\n");
+    yasm_object_print(objfmt_dbg->object, objfmt_dbg->dbgfile, 1);
+    fprintf(objfmt_dbg->dbgfile, "%d, %s dbgfmt)\n", all_syms,
+	    yasm_dbgfmt_keyword(df));
+    fprintf(objfmt_dbg->dbgfile, " Symbol Table:\n");
+    yasm_symtab_print(yasm_object_get_symtab(objfmt_dbg->object),
+		      objfmt_dbg->dbgfile, 1);
 }
 
 static void
-dbg_objfmt_cleanup(void)
+dbg_objfmt_destroy(yasm_objfmt *objfmt)
 {
-    fprintf(dbg_objfmt_file, "cleanup()\n");
+    yasm_objfmt_dbg *objfmt_dbg = (yasm_objfmt_dbg *)objfmt;
+    fprintf(objfmt_dbg->dbgfile, "destroy()\n");
+    yasm_xfree(objfmt);
 }
 
 static /*@observer@*/ /*@null@*/ yasm_section *
-dbg_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
+dbg_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			  /*@unused@*/ /*@null@*/
 			  yasm_valparamhead *objext_valparams,
 			  unsigned long line)
 {
+    yasm_objfmt_dbg *objfmt_dbg = (yasm_objfmt_dbg *)objfmt;
     yasm_valparam *vp;
     yasm_section *retval;
     int isnew;
 
-    fprintf(dbg_objfmt_file, "sections_switch(headp, ");
-    yasm_vps_print(valparams, dbg_objfmt_file);
-    fprintf(dbg_objfmt_file, ", ");
-    yasm_vps_print(objext_valparams, dbg_objfmt_file);
-    fprintf(dbg_objfmt_file, ", %lu), returning ", line);
+    fprintf(objfmt_dbg->dbgfile, "section_switch(headp, ");
+    yasm_vps_print(valparams, objfmt_dbg->dbgfile);
+    fprintf(objfmt_dbg->dbgfile, ", ");
+    yasm_vps_print(objext_valparams, objfmt_dbg->dbgfile);
+    fprintf(objfmt_dbg->dbgfile, ", %lu), returning ", line);
 
     if ((vp = yasm_vps_first(valparams)) && !vp->param && vp->val != NULL) {
-	retval = yasm_object_get_general(object, vp->val,
+	retval = yasm_object_get_general(objfmt_dbg->object, vp->val,
 	    yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(200)),
 				   line), 0, &isnew, line);
 	if (isnew) {
-	    fprintf(dbg_objfmt_file, "(new) ");
-	    yasm_symtab_define_label(yasm_object_get_symtab(object), vp->val,
-				     yasm_section_bcs_first(retval), 1, line);
+	    fprintf(objfmt_dbg->dbgfile, "(new) ");
+	    yasm_symtab_define_label(
+		yasm_object_get_symtab(objfmt_dbg->object), vp->val,
+		yasm_section_bcs_first(retval), 1, line);
 	}
-	fprintf(dbg_objfmt_file, "\"%s\" section\n", vp->val);
+	fprintf(objfmt_dbg->dbgfile, "\"%s\" section\n", vp->val);
 	return retval;
     } else {
-	fprintf(dbg_objfmt_file, "NULL\n");
+	fprintf(objfmt_dbg->dbgfile, "NULL\n");
 	return NULL;
     }
 }
 
-static void
-dbg_objfmt_extern_declare(yasm_symrec *sym, /*@unused@*/ /*@null@*/
-			  yasm_valparamhead *objext_valparams,
-			  unsigned long line)
-{
-    fprintf(dbg_objfmt_file, "extern_declare(\"%s\", ",
-	    yasm_symrec_get_name(sym));
-    yasm_vps_print(objext_valparams, dbg_objfmt_file);
-    fprintf(dbg_objfmt_file, ", %lu)\n", line);
-}
-
-static void
-dbg_objfmt_global_declare(yasm_symrec *sym, /*@unused@*/ /*@null@*/
-			  yasm_valparamhead *objext_valparams,
-			  unsigned long line)
-{
-    fprintf(dbg_objfmt_file, "global_declare(\"%s\", ",
-	    yasm_symrec_get_name(sym));
-    yasm_vps_print(objext_valparams, dbg_objfmt_file);
-    fprintf(dbg_objfmt_file, ", %lu)\n", line);
-}
-
-static void
-dbg_objfmt_common_declare(yasm_symrec *sym, /*@only@*/ yasm_expr *size,
+static yasm_symrec *
+dbg_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name,
 			  /*@unused@*/ /*@null@*/
 			  yasm_valparamhead *objext_valparams,
 			  unsigned long line)
 {
-    assert(dbg_objfmt_file != NULL);
-    fprintf(dbg_objfmt_file, "common_declare(\"%s\", ",
-	    yasm_symrec_get_name(sym));
-    yasm_expr_print(size, dbg_objfmt_file);
-    fprintf(dbg_objfmt_file, ", ");
-    yasm_vps_print(objext_valparams, dbg_objfmt_file);
-    fprintf(dbg_objfmt_file, ", %lu), setting of_data=", line);
-    yasm_expr_print(size, dbg_objfmt_file);
-    yasm_symrec_add_data(sym, &symrec_data_callback, size);
-    fprintf(dbg_objfmt_file, "\n");
+    yasm_objfmt_dbg *objfmt_dbg = (yasm_objfmt_dbg *)objfmt;
+    yasm_symrec *sym;
+
+    fprintf(objfmt_dbg->dbgfile, "extern_declare(\"%s\", ", name);
+    yasm_vps_print(objext_valparams, objfmt_dbg->dbgfile);
+    fprintf(objfmt_dbg->dbgfile, ", %lu), returning sym\n", line);
+
+    sym = yasm_symtab_declare(objfmt_dbg->symtab, name, YASM_SYM_EXTERN, line);
+    return sym;
 }
 
-static void
-symrec_data_destroy(void *data)
+static yasm_symrec *
+dbg_objfmt_global_declare(yasm_objfmt *objfmt, const char *name,
+			  /*@unused@*/ /*@null@*/
+			  yasm_valparamhead *objext_valparams,
+			  unsigned long line)
 {
-    fprintf(dbg_objfmt_file, "symrec_data_delete(");
-    if (data) {
-	yasm_expr_print((yasm_expr *)data, dbg_objfmt_file);
-	yasm_expr_destroy((yasm_expr *)data);
-    }
-    fprintf(dbg_objfmt_file, ")\n");
+    yasm_objfmt_dbg *objfmt_dbg = (yasm_objfmt_dbg *)objfmt;
+    yasm_symrec *sym;
+
+    fprintf(objfmt_dbg->dbgfile, "global_declare(\"%s\", ", name);
+    yasm_vps_print(objext_valparams, objfmt_dbg->dbgfile);
+    fprintf(objfmt_dbg->dbgfile, ", %lu), returning sym\n", line);
+
+    sym = yasm_symtab_declare(objfmt_dbg->symtab, name, YASM_SYM_GLOBAL, line);
+    return sym;
 }
 
-static void
-symrec_data_print(void *data, FILE *f, int indent_level)
+static yasm_symrec *
+dbg_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
+			  /*@only@*/ yasm_expr *size,
+			  /*@unused@*/ /*@null@*/
+			  yasm_valparamhead *objext_valparams,
+			  unsigned long line)
 {
-    if (data) {
-	fprintf(f, "%*sSize=", indent_level, "");
-	yasm_expr_print((yasm_expr *)data, f);
-	fprintf(f, "\n");
-    } else {
-	fprintf(f, "%*s(none)\n", indent_level, "");
-    }
+    yasm_objfmt_dbg *objfmt_dbg = (yasm_objfmt_dbg *)objfmt;
+    yasm_symrec *sym;
+
+    assert(objfmt_dbg->dbgfile != NULL);
+    fprintf(objfmt_dbg->dbgfile, "common_declare(\"%s\", ", name);
+    yasm_expr_print(size, objfmt_dbg->dbgfile);
+    fprintf(objfmt_dbg->dbgfile, ", ");
+    yasm_vps_print(objext_valparams, objfmt_dbg->dbgfile);
+    fprintf(objfmt_dbg->dbgfile, ", %lu), returning sym\n", line);
+    yasm_expr_destroy(size);
+
+
+    sym = yasm_symtab_declare(objfmt_dbg->symtab, name, YASM_SYM_COMMON, line);
+    return sym;
 }
 
 static int
-dbg_objfmt_directive(const char *name, yasm_valparamhead *valparams,
+dbg_objfmt_directive(yasm_objfmt *objfmt, const char *name,
+		     yasm_valparamhead *valparams,
 		     /*@null@*/ yasm_valparamhead *objext_valparams,
-		     /*@unused@*/ yasm_object *object,
 		     unsigned long line)
 {
-    fprintf(dbg_objfmt_file, "directive(\"%s\", ", name);
-    yasm_vps_print(valparams, dbg_objfmt_file);
-    fprintf(dbg_objfmt_file, ", ");
-    yasm_vps_print(objext_valparams, dbg_objfmt_file);
-    fprintf(dbg_objfmt_file, ", %lu), returning 0 (recognized)\n", line);
+    yasm_objfmt_dbg *objfmt_dbg = (yasm_objfmt_dbg *)objfmt;
+    fprintf(objfmt_dbg->dbgfile, "directive(\"%s\", ", name);
+    yasm_vps_print(valparams, objfmt_dbg->dbgfile);
+    fprintf(objfmt_dbg->dbgfile, ", ");
+    yasm_vps_print(objext_valparams, objfmt_dbg->dbgfile);
+    fprintf(objfmt_dbg->dbgfile, ", %lu), returning 0 (recognized)\n", line);
     return 0;	    /* dbg format "recognizes" all directives */
 }
 
@@ -200,7 +213,7 @@ static const char *dbg_objfmt_dbgfmt_keywords[] = {
 };
 
 /* Define objfmt structure -- see objfmt.h for details */
-yasm_objfmt yasm_dbg_LTX_objfmt = {
+yasm_objfmt_module yasm_dbg_LTX_objfmt = {
     YASM_OBJFMT_VERSION,
     "Trace of all info passed to object format module",
     "dbg",
@@ -209,9 +222,9 @@ yasm_objfmt yasm_dbg_LTX_objfmt = {
     32,
     dbg_objfmt_dbgfmt_keywords,
     "null",
-    dbg_objfmt_initialize,
+    dbg_objfmt_create,
     dbg_objfmt_output,
-    dbg_objfmt_cleanup,
+    dbg_objfmt_destroy,
     dbg_objfmt_section_switch,
     dbg_objfmt_extern_declare,
     dbg_objfmt_global_declare,

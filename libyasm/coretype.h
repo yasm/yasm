@@ -51,7 +51,16 @@ typedef struct yasm_dbgfmt yasm_dbgfmt;
  * arbitrary data associated with them.
  */
 typedef struct yasm_assoc_data_callback {
+    /** Free memory allocated for associated data.
+     * \param data	associated data
+     */
     void (*destroy) (/*@only@*/ void *data);
+
+    /** Print a description of allocated data.  For debugging purposes.
+     * \param data		associated data
+     * \param f			output file
+     * \param indent_level	indentation level
+     */
     void (*print) (void *data, FILE *f, int indent_level);
 } yasm_assoc_data_callback;
 
@@ -181,6 +190,24 @@ typedef int (*yasm_output_expr_func)
      size_t valsize, int shift, unsigned long offset, yasm_bytecode *bc,
      int rel, int warn, /*@null@*/ void *d) /*@uses *ep@*/;
 
+/** Convert a symbol reference to its byte representation.  Usually implemented
+ * by object formats and debug formats to keep track of relocations generated
+ * by themselves.
+ * \param sym		symbol
+ * \param bc		current bytecode (usually passed into higher-level
+ *			calling function)
+ * \param buf		buffer for byte representation
+ * \param destsize	destination size (in bytes)
+ * \param valsize	size (in bits)
+ * \param rel		if nonzero, expr should be treated as PC/IP-relative
+ * \param warn		enables standard warnings: zero for none;
+ *			nonzero for overflow/underflow floating point warnings;
+ *			negative for signed integer warnings,
+ *			positive for unsigned integer warnings
+ * \param d		objfmt-specific data (passed into higher-level calling
+ *			function)
+ * \return Nonzero if an error occurred, 0 otherwise.
+ */
 typedef int (*yasm_output_reloc_func)
     (yasm_symrec *sym, yasm_bytecode *bc, unsigned char *buf, size_t destsize,
      size_t valsize, int rel, int warn, void *d);

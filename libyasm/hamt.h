@@ -1,6 +1,12 @@
-/* $IdPath$
- * Hash Array Mapped Trie (HAMT) header file.
+/**
+ * \file libyasm/hamt.h
+ * \brief Hash Array Mapped Trie (HAMT) functions.
  *
+ * \rcs
+ * $IdPath$
+ * \endrcs
+ *
+ * \license
  *  Copyright (C) 2001  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,25 +29,31 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ * \endlicense
  */
 #ifndef YASM_HAMT_H
 #define YASM_HAMT_H
 
+/** Hash array mapped trie data structure (opaque type). */
 typedef struct HAMT HAMT;
 
-/* Creates new, empty, HAMT.  error_func() is called when an internal error is
+/** Create new, empty, HAMT.  error_func() is called when an internal error is
  * encountered--it should NOT return to the calling function.
+ * \param   error_func	    function called on internal error
+ * \return New, empty, hash array mapped trie.
  */
 HAMT *HAMT_create(/*@exits@*/ void (*error_func)
     (const char *file, unsigned int line, const char *message));
 
-/* Deletes HAMT and all data associated with it using deletefunc() on each data
- * item.
+/** Delete HAMT and all data associated with it.  Uses deletefunc() to delete
+ * each data item.
+ * \param hamt		Hash array mapped trie
+ * \param deletefunc	Data deletion function
  */
 void HAMT_destroy(/*@only@*/ HAMT *hamt,
 		  void (*deletefunc) (/*@only@*/ void *data));
 
-/* Inserts key into HAMT, associating it with data. 
+/** Insert key into HAMT, associating it with data. 
  * If the key is not present in the HAMT, inserts it, sets *replace to 1, and
  *  returns the data passed in.
  * If the key is already present and *replace is 0, deletes the data passed
@@ -50,18 +62,30 @@ void HAMT_destroy(/*@only@*/ HAMT *hamt,
  * If the key is already present and *replace is 1, deletes the data currently
  *  associated with the key using deletefunc() and replaces it with the data
  *  passed in.
+ * \param hamt		Hash array mapped trie
+ * \param str		Key
+ * \param data		Data to associate with key
+ * \param replace	See above description
+ * \param deletefunc	Data deletion function if data is replaced
+ * \return Data now associated with key.
  */
 /*@dependent@*/ void *HAMT_insert(HAMT *hamt, /*@dependent@*/ const char *str,
 				  /*@only@*/ void *data, int *replace,
 				  void (*deletefunc) (/*@only@*/ void *data));
 
-/* Searches for the data associated with a key in the HAMT.  If the key is not
- * present, returns NULL.
+/** Search for the data associated with a key in the HAMT.
+ * \param hamt		Hash array mapped trie
+ * \param str		Key
+ * \return NULL if key/data not present in HAMT, otherwise associated data.
  */
 /*@dependent@*/ /*@null@*/ void *HAMT_search(HAMT *hamt, const char *str);
 
-/* Traverse over all keys in HAMT, calling func() for each data item. 
+/** Traverse over all keys in HAMT, calling function on each data item. 
  * Stops early if func returns 0.
+ * \param hamt		Hash array mapped trie
+ * \param d		Data to pass to each call to func.
+ * \param func		Function to call
+ * \return 0 if stopped early, 1 if all data items were traversed.
  */
 int HAMT_traverse(HAMT *hamt, /*@null@*/ void *d,
 		  int (*func) (/*@dependent@*/ /*@null@*/ void *node,

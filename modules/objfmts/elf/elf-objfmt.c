@@ -51,7 +51,21 @@
 
 #include "elf.h"
 
+typedef struct yasm_objfmt_elf {
+    yasm_objfmt_base objfmt;		/* base structure */
+
+    unsigned int parse_scnum;		/* sect numbering in parser */
+    elf_symtab_head* elf_symtab;	/* symbol table of indexed syms */
+    elf_strtab_head* shstrtab;		/* section name strtab */
+    elf_strtab_head* strtab;		/* strtab entries */
+
+    yasm_object *object;
+    yasm_symtab *symtab;
+    /*@dependent@*/ yasm_arch *arch;
+} yasm_objfmt_elf;
+
 typedef struct {
+    yasm_objfmt_elf *objfmt_elf;
     FILE *f;
     elf_secthead *shead;
     yasm_section *sect;
@@ -59,23 +73,23 @@ typedef struct {
     unsigned long sindex;
 } elf_objfmt_output_info;
 
-static unsigned int elf_objfmt_parse_scnum;	/* sect numbering in parser */
-static elf_symtab_head* elf_symtab;	    /* symbol table of indexed syms */
-static elf_strtab_head* elf_shstrtab;		/* section name strtab */
-static elf_strtab_head* elf_strtab;		/* strtab entries */
+typedef struct {
+    yasm_objfmt_elf *objfmt_elf;
+    int local_names;
+} append_local_sym_info;
 
-static /*@dependent@*/ yasm_arch *cur_arch;
-static /*@dependent@*/ yasm_dbgfmt *cur_dbgfmt;
+yasm_objfmt_module yasm_elf_LTX_objfmt;
 
 
 static elf_symtab_entry *
-elf_objfmt_symtab_append(yasm_symrec *sym, elf_symbol_binding bind,
-			 elf_section_index sectidx, yasm_expr *size)
+elf_objfmt_symtab_append(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym,
+			 elf_symbol_binding bind, elf_section_index sectidx,
+			 yasm_expr *size)
 {
-    elf_strtab_entry *name = elf_strtab_append_str(elf_strtab,
+    elf_strtab_entry *name = elf_strtab_append_str(objfmt_elf->strtab,
 						   yasm_symrec_get_name(sym));
     elf_symtab_entry *entry = elf_symtab_entry_create(name, sym);
-    elf_symtab_append_entry(elf_symtab, entry);
+    elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
 
     elf_symtab_set_nonzero(entry, NULL, sectidx, bind, STT_NOTYPE, size, 00);
     yasm_symrec_add_data(sym, &elf_symrec_data, entry);
@@ -84,24 +98,28 @@ elf_objfmt_symtab_append(yasm_symrec *sym, elf_symbol_binding bind,
 }
 
 static int
-elf_objfmt_append_local_sym(yasm_symrec *sym, /*@unused@*/ /*@null@*/ void *d)
+elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
 {
-    int local_names = *(int *)d;
+    append_local_sym_info *info = (append_local_sym_info *)d;
     elf_symtab_entry *entry;
     elf_address value=0;
     yasm_section *sect=NULL;
     yasm_bytecode *precbc=NULL;
+
+    assert(info != NULL);
 
     if (!yasm_symrec_get_data(sym, &elf_symrec_data)) {
 	int is_sect = 0;
 	if (!yasm_symrec_get_label(sym, &precbc))
 	    return 1;
 	sect = yasm_bc_get_section(precbc);
-	is_sect = strcmp(yasm_symrec_get_name(sym), yasm_section_get_name(sect))==0;
+	is_sect = strcmp(yasm_symrec_get_name(sym),
+			 yasm_section_get_name(sect))==0;
 
 	/* neither sections nor locals (except when debugging) need names */
-	entry = elf_symtab_insert_local_sym(elf_symtab,
-		    local_names && !is_sect ? elf_strtab : NULL, sym);
+	entry = elf_symtab_insert_local_sym(info->objfmt_elf->elf_symtab,
+		    info->local_names && !is_sect ?
+		    info->objfmt_elf->strtab : NULL, sym);
 	elf_symtab_set_nonzero(entry, sect, 0, STB_LOCAL,
 			       is_sect ? STT_SECTION : STT_NOTYPE, NULL, 0);
 	yasm_symrec_add_data(sym, &elf_symrec_data, entry);
@@ -123,36 +141,38 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@unused@*/ /*@null@*/ void *d)
     return 1;
 }
 
-static int
-elf_objfmt_initialize(const char *in_filename,
-		       /*@unused@*/ const char *obj_filename,
-		       yasm_object *object, /*@unused@*/ yasm_dbgfmt *df,
-		       yasm_arch *a)
+static yasm_objfmt *
+elf_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
 {
+    yasm_objfmt_elf *objfmt_elf = yasm_xmalloc(sizeof(yasm_objfmt_elf));
     yasm_symrec *filesym;
     elf_symtab_entry *entry;
 
-    cur_arch = a;
-    cur_dbgfmt = df;
-    if (!elf_set_arch(a))
-	return 1;
+    objfmt_elf->objfmt.module = &yasm_elf_LTX_objfmt;
+    objfmt_elf->object = object;
+    objfmt_elf->symtab = yasm_object_get_symtab(object);
+    objfmt_elf->arch = a;
+    if (!elf_set_arch(a)) {
+	yasm_xfree(objfmt_elf);
+	return NULL;
+    }
 
-    elf_objfmt_parse_scnum = 4;    /* section numbering starts at 0;
-				      4 predefined sections. */
-    elf_shstrtab = elf_strtab_create();
-    elf_strtab = elf_strtab_create();
-    elf_symtab = elf_symtab_create();
+    objfmt_elf->parse_scnum = 4;    /* section numbering starts at 0;
+				       4 predefined sections. */
+    objfmt_elf->shstrtab = elf_strtab_create();
+    objfmt_elf->strtab = elf_strtab_create();
+    objfmt_elf->elf_symtab = elf_symtab_create();
 
     /* FIXME: misuse of NULL bytecode here; it works, but only barely. */
     filesym = yasm_symtab_define_label(yasm_object_get_symtab(object), ".file",
 				       NULL, 0, 0);
     entry = elf_symtab_entry_create(
-	elf_strtab_append_str(elf_strtab, in_filename), filesym);
+	elf_strtab_append_str(objfmt_elf->strtab, in_filename), filesym);
     yasm_symrec_add_data(filesym, &elf_symrec_data, entry);
     elf_symtab_set_nonzero(entry, NULL, SHN_ABS, STB_LOCAL, STT_FILE, NULL, 0);
-    elf_symtab_append_entry(elf_symtab, entry);
+    elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
 
-    return 0;
+    return (yasm_objfmt *)objfmt_elf;
 }
 
 static long
@@ -197,10 +217,11 @@ elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
     }
     /* allocate .rel sections on a need-basis */
     if (elf_secthead_append_reloc(info->shead, reloc))
-	elf_objfmt_parse_scnum++;
+	info->objfmt_elf->parse_scnum++;
 
-    retval = yasm_arch_intnum_tobytes(cur_arch, zero, buf, destsize, valsize,
-				      0, bc, rel, warn, bc->line);
+    retval = yasm_arch_intnum_tobytes(info->objfmt_elf->arch, zero, buf,
+				      destsize, valsize, 0, bc, rel, warn,
+				      bc->line);
     yasm_intnum_destroy(zero);
     return retval;
 }
@@ -226,9 +247,9 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     if (flt) {
 	if (shift < 0)
 	    yasm_internal_error(N_("attempting to negative shift a float"));
-	return yasm_arch_floatnum_tobytes(cur_arch, flt, buf, destsize,
-					  valsize, (unsigned int)shift, warn,
-					  bc->line);
+	return yasm_arch_floatnum_tobytes(info->objfmt_elf->arch, flt, buf,
+					  destsize, valsize,
+					  (unsigned int)shift, warn, bc->line);
     }
 
     /* Handle integer expressions, with relocation if necessary */
@@ -273,13 +294,14 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	}
 	/* allocate .rel sections on a need-basis */
 	if (elf_secthead_append_reloc(info->shead, reloc))
-	    elf_objfmt_parse_scnum++;
+	    info->objfmt_elf->parse_scnum++;
     }
 
     intn = yasm_expr_get_intnum(ep, NULL);
     if (intn)
-	return yasm_arch_intnum_tobytes(cur_arch, intn, buf, destsize, valsize,
-					shift, bc, rel, warn, bc->line);
+	return yasm_arch_intnum_tobytes(info->objfmt_elf->arch, intn, buf,
+					destsize, valsize, shift, bc, rel,
+					warn, bc->line);
 
     /* Check for complex float expressions */
     if (yasm_expr__contains(*ep, YASM_EXPR_FLOAT)) {
@@ -360,7 +382,8 @@ elf_objfmt_create_dbg_secthead(yasm_section *sect,
     yasm_intnum *align=NULL;
     elf_size entsize=0;
     const char *sectname = yasm_section_get_name(sect);
-    elf_strtab_entry *name = elf_strtab_append_str(elf_shstrtab, sectname);
+    elf_strtab_entry *name = elf_strtab_append_str(info->objfmt_elf->shstrtab,
+						   sectname);
 
     if (yasm__strcasecmp(sectname, ".stab")==0) {
 	align = yasm_intnum_create_uint(4);
@@ -372,7 +395,8 @@ elf_objfmt_create_dbg_secthead(yasm_section *sect,
     else
 	yasm_internal_error(N_("Unrecognized section without data"));
 
-    shead = elf_secthead_create(name, type, 0, elf_objfmt_parse_scnum++, 0, 0);
+    shead = elf_secthead_create(name, type, 0, info->objfmt_elf->parse_scnum++,
+				0, 0);
     elf_secthead_set_align(shead, align);
     elf_secthead_set_entsize(shead, entsize);
 
@@ -447,7 +471,8 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     relname = yasm_xmalloc(relname_len);
     snprintf(relname, relname_len, ".rel%s", sectname);
     elf_secthead_set_rel_name(shead,
-			      elf_strtab_append_str(elf_shstrtab, relname));
+			      elf_strtab_append_str(info->objfmt_elf->shstrtab,
+						    relname));
     yasm_xfree(relname);
 
     return 0;
@@ -482,9 +507,12 @@ elf_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 }
 
 static void
-elf_objfmt_output(FILE *f, yasm_object *object, int all_syms)
+elf_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
+		  int all_syms, yasm_dbgfmt *df)
 {
+    yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
     elf_objfmt_output_info info;
+    append_local_sym_info localsym_info;
     long pos;
     unsigned long elf_shead_addr;
     elf_secthead *esdn;
@@ -493,6 +521,7 @@ elf_objfmt_output(FILE *f, yasm_object *object, int all_syms)
     elf_strtab_entry *elf_strtab_name, *elf_shstrtab_name, *elf_symtab_name;
     unsigned long elf_symtab_nlocal;
 
+    info.objfmt_elf = objfmt_elf;
     info.f = f;
 
     /* Allocate space for Ehdr by seeking forward */
@@ -503,39 +532,42 @@ elf_objfmt_output(FILE *f, yasm_object *object, int all_syms)
 
     /* add all (local) syms to symtab because relocation needs a symtab index
      * if all_syms, register them by name.  if not, use strtab entry 0 */
-    yasm_symtab_traverse(yasm_object_get_symtab(object), (void *)&all_syms,
-			 elf_objfmt_append_local_sym);
-    elf_symtab_nlocal = elf_symtab_assign_indices(elf_symtab);
+    localsym_info.local_names = all_syms;
+    localsym_info.objfmt_elf = objfmt_elf;
+    yasm_symtab_traverse(yasm_object_get_symtab(objfmt_elf->object),
+			 &localsym_info, elf_objfmt_append_local_sym);
+    elf_symtab_nlocal = elf_symtab_assign_indices(objfmt_elf->elf_symtab);
 
     /* output known sections - includes reloc sections which aren't in yasm's
      * list.  Assign indices as we go. */
     info.sindex = 3;
-    if (yasm_object_sections_traverse(object, &info,
+    if (yasm_object_sections_traverse(objfmt_elf->object, &info,
 				      elf_objfmt_output_section))
 	return;
 
     /* add final sections to the shstrtab */
-    elf_strtab_name = elf_strtab_append_str(elf_shstrtab, ".strtab");
-    elf_symtab_name = elf_strtab_append_str(elf_shstrtab, ".symtab");
-    elf_shstrtab_name = elf_strtab_append_str(elf_shstrtab, ".shstrtab");
+    elf_strtab_name = elf_strtab_append_str(objfmt_elf->shstrtab, ".strtab");
+    elf_symtab_name = elf_strtab_append_str(objfmt_elf->shstrtab, ".symtab");
+    elf_shstrtab_name = elf_strtab_append_str(objfmt_elf->shstrtab,
+					      ".shstrtab");
 
     /* output .shstrtab */
     if ((pos = elf_objfmt_output_align(f, 4)) == -1)
 	return;
     elf_shstrtab_offset = (unsigned long) pos;
-    elf_shstrtab_size = elf_strtab_output_to_file(f, elf_shstrtab);
+    elf_shstrtab_size = elf_strtab_output_to_file(f, objfmt_elf->shstrtab);
 
     /* output .strtab */
     if ((pos = elf_objfmt_output_align(f, 4)) == -1)
 	return;
     elf_strtab_offset = (unsigned long) pos;
-    elf_strtab_size = elf_strtab_output_to_file(f, elf_strtab);
+    elf_strtab_size = elf_strtab_output_to_file(f, objfmt_elf->strtab);
 
     /* output .symtab - last section so all others have indexes */
     if ((pos = elf_objfmt_output_align(f, 4)) == -1)
 	return;
     elf_symtab_offset = (unsigned long) pos;
-    elf_symtab_size = elf_symtab_write_to_file(f, elf_symtab);
+    elf_symtab_size = elf_symtab_write_to_file(f, objfmt_elf->elf_symtab);
 
     /* output section header table */
     if ((pos = elf_objfmt_output_align(f, 16)) == -1)
@@ -543,10 +575,11 @@ elf_objfmt_output(FILE *f, yasm_object *object, int all_syms)
     elf_shead_addr = (unsigned long) pos;
 
     /* stabs debugging support */
-    if (strcmp(cur_dbgfmt->keyword, "stabs")==0) {
-	yasm_section *stabsect = yasm_object_find_general(object, ".stab");
+    if (strcmp(yasm_dbgfmt_keyword(df), "stabs")==0) {
+	yasm_section *stabsect = yasm_object_find_general(objfmt_elf->object,
+							  ".stab");
 	yasm_section *stabstrsect =
-	    yasm_object_find_general(object, ".stabstr");
+	    yasm_object_find_general(objfmt_elf->object, ".stabstr");
 	if (stabsect && stabstrsect) {
 	    elf_secthead *stab =
 		yasm_section_get_data(stabsect, &elf_section_data);
@@ -586,7 +619,8 @@ elf_objfmt_output(FILE *f, yasm_object *object, int all_syms)
 
     info.sindex = 3;
     /* output remaining section headers */
-    yasm_object_sections_traverse(object, &info, elf_objfmt_output_secthead);
+    yasm_object_sections_traverse(objfmt_elf->object, &info,
+				  elf_objfmt_output_secthead);
 
     /* output Ehdr */
     if (fseek(f, 0, SEEK_SET) < 0) {
@@ -598,19 +632,22 @@ elf_objfmt_output(FILE *f, yasm_object *object, int all_syms)
 }
 
 static void
-elf_objfmt_cleanup(void)
+elf_objfmt_destroy(yasm_objfmt *objfmt)
 {
-    elf_symtab_destroy(elf_symtab);
-    elf_strtab_destroy(elf_shstrtab);
-    elf_strtab_destroy(elf_strtab);
+    yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
+    elf_symtab_destroy(objfmt_elf->elf_symtab);
+    elf_strtab_destroy(objfmt_elf->shstrtab);
+    elf_strtab_destroy(objfmt_elf->strtab);
+    yasm_xfree(objfmt);
 }
 
 static /*@observer@*/ /*@null@*/ yasm_section *
-elf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
+elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			  /*@unused@*/ /*@null@*/
 			  yasm_valparamhead *objext_valparams,
 			  unsigned long line)
 {
+    yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
     yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_section *retval;
     int isnew;
@@ -710,24 +747,25 @@ elf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
 			  N_("Unrecognized qualifier `%s'"), vp->val);
     }
 
-    retval = yasm_object_get_general(object, sectname, 0, resonly, &isnew,
-				     line);
+    retval = yasm_object_get_general(objfmt_elf->object, sectname, 0, resonly,
+				     &isnew, line);
 
     if (isnew) {
 	elf_secthead *esd;
 	yasm_symrec *sym;
-	elf_strtab_entry *name = elf_strtab_append_str(elf_shstrtab, sectname);
+	elf_strtab_entry *name = elf_strtab_append_str(objfmt_elf->shstrtab,
+						       sectname);
 
-	esd = elf_secthead_create(name, type, flags, elf_objfmt_parse_scnum++,
+	esd = elf_secthead_create(name, type, flags, objfmt_elf->parse_scnum++,
 				  0, 0);
 	if (!align_intn)
 	    align_intn = yasm_intnum_create_uint(align);
 	if (align_intn)
 	    elf_secthead_set_align(esd, align_intn);
 	yasm_section_add_data(retval, &elf_section_data, esd);
-	sym =
-	    yasm_symtab_define_label(yasm_object_get_symtab(object), sectname,
-				     yasm_section_bcs_first(retval), 1, line);
+	sym = yasm_symtab_define_label(
+	    yasm_object_get_symtab(objfmt_elf->object), sectname,
+	    yasm_section_bcs_first(retval), 1, line);
 
 	elf_secthead_set_sym(esd, sym);
     } else if (flags_override)
@@ -736,30 +774,56 @@ elf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     return retval;
 }
 
-static void
-elf_objfmt_extglob_declare(yasm_symrec *sym, /*@unused@*/
-			    /*@null@*/ yasm_valparamhead *objext_valparams,
-			    /*@unused@*/ unsigned long line)
+static yasm_symrec *
+elf_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
+			  /*@null@*/ yasm_valparamhead *objext_valparams,
+			  unsigned long line)
 {
-    elf_objfmt_symtab_append(sym, STB_GLOBAL, SHN_UNDEF, NULL);
+    yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
+    yasm_symrec *sym;
+
+    sym = yasm_symtab_declare(objfmt_elf->symtab, name, YASM_SYM_EXTERN, line);
+    elf_objfmt_symtab_append(objfmt_elf, sym, STB_GLOBAL, SHN_UNDEF, NULL);
+
+    return sym;
 }
 
-static void
-elf_objfmt_common_declare(yasm_symrec *sym, /*@only@*/ yasm_expr *size,
-			   /*@unused@*/ /*@null@*/
-			   yasm_valparamhead *objext_valparams,
-			   /*@unused@*/ unsigned long line)
+static yasm_symrec *
+elf_objfmt_global_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
+			  /*@null@*/ yasm_valparamhead *objext_valparams,
+			  unsigned long line)
 {
-    elf_objfmt_symtab_append(sym, STB_GLOBAL, SHN_COMMON, size);
+    yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
+    yasm_symrec *sym;
+
+    sym = yasm_symtab_declare(objfmt_elf->symtab, name, YASM_SYM_GLOBAL, line);
+    elf_objfmt_symtab_append(objfmt_elf, sym, STB_GLOBAL, SHN_UNDEF, NULL);
+
+    return sym;
+}
+
+static yasm_symrec *
+elf_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
+			  /*@only@*/ yasm_expr *size, /*@unused@*/ /*@null@*/
+			  yasm_valparamhead *objext_valparams,
+			  unsigned long line)
+{
+    yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
+    yasm_symrec *sym;
+
+    sym = yasm_symtab_declare(objfmt_elf->symtab, name, YASM_SYM_COMMON, line);
+    elf_objfmt_symtab_append(objfmt_elf, sym, STB_GLOBAL, SHN_COMMON, size);
+
+    return sym;
 }
 
 static int
-elf_objfmt_directive(/*@unused@*/ const char *name,
-		      /*@unused@*/ yasm_valparamhead *valparams,
-		      /*@unused@*/ /*@null@*/
-		      yasm_valparamhead *objext_valparams,
-		      /*@unused@*/ yasm_object *object,
-		      /*@unused@*/ unsigned long line)
+elf_objfmt_directive(/*@unused@*/ yasm_objfmt *objfmt,
+		     /*@unused@*/ const char *name,
+		     /*@unused@*/ yasm_valparamhead *valparams,
+		     /*@unused@*/ /*@null@*/
+		     yasm_valparamhead *objext_valparams,
+		     /*@unused@*/ unsigned long line)
 {
     return 1;	/* no objfmt directives */
 }
@@ -773,7 +837,7 @@ static const char *elf_objfmt_dbgfmt_keywords[] = {
 };
 
 /* Define objfmt structure -- see objfmt.h for details */
-yasm_objfmt yasm_elf_LTX_objfmt = {
+yasm_objfmt_module yasm_elf_LTX_objfmt = {
     YASM_OBJFMT_VERSION,
     "ELF",
     "elf",
@@ -782,12 +846,12 @@ yasm_objfmt yasm_elf_LTX_objfmt = {
     32,
     elf_objfmt_dbgfmt_keywords,
     "null",
-    elf_objfmt_initialize,
+    elf_objfmt_create,
     elf_objfmt_output,
-    elf_objfmt_cleanup,
+    elf_objfmt_destroy,
     elf_objfmt_section_switch,
-    elf_objfmt_extglob_declare,
-    elf_objfmt_extglob_declare,
+    elf_objfmt_extern_declare,
+    elf_objfmt_global_declare,
     elf_objfmt_common_declare,
     elf_objfmt_directive
 };

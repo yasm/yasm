@@ -31,13 +31,44 @@
 #include <libyasm.h>
 
 
+yasm_dbgfmt_module yasm_null_LTX_dbgfmt;
+
+
+static /*@null@*/ /*@only@*/ yasm_dbgfmt *
+null_dbgfmt_create(const char *in_filename, const char *obj_filename,
+		   yasm_object *object, yasm_objfmt *of, yasm_arch *a)
+{
+    yasm_dbgfmt_base *dbgfmt = yasm_xmalloc(sizeof(yasm_dbgfmt_base));
+    dbgfmt->module = &yasm_null_LTX_dbgfmt;
+    return (yasm_dbgfmt *)dbgfmt;
+}
+
+static void
+null_dbgfmt_destroy(/*@only@*/ yasm_dbgfmt *dbgfmt)
+{
+    yasm_xfree(dbgfmt);
+}
+
+static int
+null_dbgfmt_directive(yasm_dbgfmt *dbgfmt, const char *name,
+		      yasm_valparamhead *valparams, unsigned long line)
+{
+    return 1;
+}
+
+static void
+null_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
+{
+}
+
+
 /* Define dbgfmt structure -- see dbgfmt.h for details */
-yasm_dbgfmt yasm_null_LTX_dbgfmt = {
+yasm_dbgfmt_module yasm_null_LTX_dbgfmt = {
     YASM_DBGFMT_VERSION,
     "No debugging info",
     "null",
-    NULL,   /*null_dbgfmt_initialize*/
-    NULL,   /*null_dbgfmt_cleanup*/
-    NULL,   /*null_dbgfmt_directive*/
-    NULL    /*null_dbgfmt_generate*/
+    null_dbgfmt_create,
+    null_dbgfmt_destroy,
+    null_dbgfmt_directive,
+    null_dbgfmt_generate
 };

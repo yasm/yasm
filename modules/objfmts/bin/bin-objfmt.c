@@ -42,17 +42,28 @@ static const yasm_assoc_data_callback bin_section_data_callback = {
     bin_section_data_destroy,
     bin_section_data_print
 };
-static /*@dependent@*/ yasm_arch *cur_arch;
+
+typedef struct yasm_objfmt_bin {
+    yasm_objfmt_base objfmt;		/* base structure */
+
+    yasm_object *object;
+    yasm_symtab *symtab;
+    /*@dependent@*/ yasm_arch *arch;
+} yasm_objfmt_bin;
+
+yasm_objfmt_module yasm_bin_LTX_objfmt;
 
 
-static int
-bin_objfmt_initialize(/*@unused@*/ const char *in_filename,
-		      /*@unused@*/ const char *obj_filename,
-		      /*@unused@*/ yasm_object *object,
-		      /*@unused@*/ yasm_dbgfmt *df, yasm_arch *a)
+static yasm_objfmt *
+bin_objfmt_create(/*@unused@*/ const char *in_filename, yasm_object *object,
+		  yasm_arch *a)
 {
-    cur_arch = a;
-    return 0;
+    yasm_objfmt_bin *objfmt_bin = yasm_xmalloc(sizeof(yasm_objfmt_bin));
+    objfmt_bin->objfmt.module = &yasm_bin_LTX_objfmt;
+    objfmt_bin->object = object;
+    objfmt_bin->symtab = yasm_object_get_symtab(object);
+    objfmt_bin->arch = a;
+    return (yasm_objfmt *)objfmt_bin;
 }
 
 /* Aligns sect to either its specified alignment (in its objfmt-specific data)
@@ -100,6 +111,7 @@ bin_objfmt_align_section(yasm_section *sect, yasm_section *prevsect,
 }
 
 typedef struct bin_objfmt_output_info {
+    yasm_objfmt_bin *objfmt_bin;
     /*@dependent@*/ FILE *f;
     /*@only@*/ unsigned char *buf;
     /*@observer@*/ const yasm_section *sect;
@@ -140,10 +152,13 @@ static int
 bin_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 		       size_t valsize, int shift,
 		       /*@unused@*/ unsigned long offset, yasm_bytecode *bc,
-		       int rel, int warn, /*@unused@*/ /*@null@*/ void *d)
+		       int rel, int warn, /*@null@*/ void *d)
 {
+    /*@null@*/ bin_objfmt_output_info *info = (bin_objfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *intn;
     /*@dependent@*/ /*@null@*/ const yasm_floatnum *flt;
+
+    assert(info != NULL);
 
     /* For binary output, this is trivial: any expression that doesn't simplify
      * to an integer is an error (references something external).
@@ -158,16 +173,17 @@ bin_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     if (flt) {
 	if (shift < 0)
 	    yasm_internal_error(N_("attempting to negative shift a float"));
-	return yasm_arch_floatnum_tobytes(cur_arch, flt, buf, destsize,
-					  valsize, (unsigned int)shift, warn,
-					  bc->line);
+	return yasm_arch_floatnum_tobytes(info->objfmt_bin->arch, flt, buf,
+					  destsize, valsize,
+					  (unsigned int)shift, warn, bc->line);
     }
 
     /* Handle integer expressions */
     intn = yasm_expr_get_intnum(ep, NULL);
     if (intn)
-	return yasm_arch_intnum_tobytes(cur_arch, intn, buf, destsize, valsize,
-					shift, bc, rel, warn, bc->line);
+	return yasm_arch_intnum_tobytes(info->objfmt_bin->arch, intn, buf,
+					destsize, valsize, shift, bc, rel,
+					warn, bc->line);
 
     /* Check for complex float expressions */
     if (yasm_expr__contains(*ep, YASM_EXPR_FLOAT)) {
@@ -230,8 +246,10 @@ bin_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 }
 
 static void
-bin_objfmt_output(FILE *f, yasm_object *object, /*@unused@*/ int all_syms)
+bin_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
+		  /*@unused@*/ int all_syms, /*@unused@*/ yasm_dbgfmt *df)
 {
+    yasm_objfmt_bin *objfmt_bin = (yasm_objfmt_bin *)objfmt;
     /*@observer@*/ /*@null@*/ yasm_section *text, *data, *bss, *prevsect;
     /*@null@*/ yasm_expr *startexpr;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *startnum;
@@ -241,12 +259,13 @@ bin_objfmt_output(FILE *f, yasm_object *object, /*@unused@*/ int all_syms)
     unsigned long i;
     bin_objfmt_output_info info;
 
+    info.objfmt_bin = objfmt_bin;
     info.f = f;
     info.buf = yasm_xmalloc(REGULAR_OUTBUF_SIZE);
 
-    text = yasm_object_find_general(object, ".text");
-    data = yasm_object_find_general(object, ".data");
-    bss = yasm_object_find_general(object, ".bss");
+    text = yasm_object_find_general(objfmt_bin->object, ".text");
+    data = yasm_object_find_general(objfmt_bin->object, ".data");
+    bss = yasm_object_find_general(objfmt_bin->object, ".bss");
 
     if (!text)
 	yasm_internal_error(N_("No `.text' section in bin objfmt output"));
@@ -317,16 +336,18 @@ bin_objfmt_output(FILE *f, yasm_object *object, /*@unused@*/ int all_syms)
 }
 
 static void
-bin_objfmt_cleanup(void)
+bin_objfmt_destroy(yasm_objfmt *objfmt)
 {
+    yasm_xfree(objfmt);
 }
 
 static /*@observer@*/ /*@null@*/ yasm_section *
-bin_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
+bin_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			  /*@unused@*/ /*@null@*/
 			  yasm_valparamhead *objext_valparams,
 			  unsigned long line)
 {
+    yasm_objfmt_bin *objfmt_bin = (yasm_objfmt_bin *)objfmt;
     yasm_valparam *vp;
     yasm_section *retval;
     int isnew;
@@ -392,7 +413,7 @@ bin_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
 	    }
 	}
 
-	retval = yasm_object_get_general(object, sectname,
+	retval = yasm_object_get_general(objfmt_bin->object, sectname,
 	    yasm_expr_create_ident(
 		yasm_expr_int(yasm_intnum_create_uint(start)), line), resonly,
 	    &isnew, line);
@@ -405,8 +426,9 @@ bin_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
 				      data);
 	    }
 
-	    yasm_symtab_define_label(yasm_object_get_symtab(object), sectname,
-				     yasm_section_bcs_first(retval), 1, line);
+	    yasm_symtab_define_label(
+		yasm_object_get_symtab(objfmt_bin->object), sectname,
+		yasm_section_bcs_first(retval), 1, line);
 	} else if (have_alignval)
 	    yasm__warning(YASM_WARN_GENERAL, line,
 		N_("alignment value ignored on section redeclaration"));
@@ -422,23 +444,62 @@ bin_section_data_destroy(/*@only@*/ void *d)
     yasm_xfree(d);
 }
 
-static void
-bin_objfmt_common_declare(/*@unused@*/ yasm_symrec *sym,
+static yasm_symrec *
+bin_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name,
+			  /*@unused@*/ /*@null@*/
+			  yasm_valparamhead *objext_valparams,
+			  unsigned long line)
+{
+    yasm_objfmt_bin *objfmt_bin = (yasm_objfmt_bin *)objfmt;
+    yasm_symrec *sym;
+
+    yasm__warning(YASM_WARN_GENERAL, line,
+		  N_("binary object format does not support extern variables"));
+
+    sym = yasm_symtab_declare(objfmt_bin->symtab, name, YASM_SYM_EXTERN, line);
+    return sym;
+}
+
+static yasm_symrec *
+bin_objfmt_global_declare(yasm_objfmt *objfmt, const char *name,
+			  /*@unused@*/ /*@null@*/
+			  yasm_valparamhead *objext_valparams,
+			  unsigned long line)
+{
+    yasm_objfmt_bin *objfmt_bin = (yasm_objfmt_bin *)objfmt;
+    yasm_symrec *sym;
+
+    yasm__warning(YASM_WARN_GENERAL, line,
+		  N_("binary object format does not support global variables"));
+
+    sym = yasm_symtab_declare(objfmt_bin->symtab, name, YASM_SYM_GLOBAL, line);
+    return sym;
+}
+
+static yasm_symrec *
+bin_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
 			  /*@only@*/ yasm_expr *size, /*@unused@*/ /*@null@*/
 			  yasm_valparamhead *objext_valparams,
 			  unsigned long line)
 {
+    yasm_objfmt_bin *objfmt_bin = (yasm_objfmt_bin *)objfmt;
+    yasm_symrec *sym;
+
     yasm_expr_destroy(size);
     yasm__error(line,
 	N_("binary object format does not support common variables"));
+
+    sym = yasm_symtab_declare(objfmt_bin->symtab, name, YASM_SYM_COMMON, line);
+    return sym;
 }
 
 static int
-bin_objfmt_directive(const char *name, yasm_valparamhead *valparams,
+bin_objfmt_directive(yasm_objfmt *objfmt, const char *name,
+		     yasm_valparamhead *valparams,
 		     /*@unused@*/ /*@null@*/
-		     yasm_valparamhead *objext_valparams,
-		     yasm_object *object, unsigned long line)
+		     yasm_valparamhead *objext_valparams, unsigned long line)
 {
+    yasm_objfmt_bin *objfmt_bin = (yasm_objfmt_bin *)objfmt;
     yasm_section *sect;
     yasm_valparam *vp;
 
@@ -449,7 +510,8 @@ bin_objfmt_directive(const char *name, yasm_valparamhead *valparams,
 	vp = yasm_vps_first(valparams);
 	if (vp->val)
 	    start = yasm_expr_create_ident(yasm_expr_sym(yasm_symtab_use(
-		yasm_object_get_symtab(object), vp->val, line)), line);
+		yasm_object_get_symtab(objfmt_bin->object), vp->val, line)),
+					   line);
 	else if (vp->param) {
 	    start = vp->param;
 	    vp->param = NULL;	/* Don't let valparams delete it */
@@ -461,7 +523,7 @@ bin_objfmt_directive(const char *name, yasm_valparamhead *valparams,
 	}
 
 	/* ORG changes the start of the .text section */
-	sect = yasm_object_find_general(object, ".text");
+	sect = yasm_object_find_general(objfmt_bin->object, ".text");
 	if (!sect)
 	    yasm_internal_error(
 		N_("bin objfmt: .text section does not exist before ORG is called?"));
@@ -486,7 +548,7 @@ static const char *bin_objfmt_dbgfmt_keywords[] = {
 };
 
 /* Define objfmt structure -- see objfmt.h for details */
-yasm_objfmt yasm_bin_LTX_objfmt = {
+yasm_objfmt_module yasm_bin_LTX_objfmt = {
     YASM_OBJFMT_VERSION,
     "Flat format binary",
     "bin",
@@ -495,12 +557,12 @@ yasm_objfmt yasm_bin_LTX_objfmt = {
     16,
     bin_objfmt_dbgfmt_keywords,
     "null",
-    bin_objfmt_initialize,
+    bin_objfmt_create,
     bin_objfmt_output,
-    bin_objfmt_cleanup,
+    bin_objfmt_destroy,
     bin_objfmt_section_switch,
-    NULL /*bin_objfmt_extern_declare*/,
-    NULL /*bin_objfmt_global_declare*/,
+    bin_objfmt_extern_declare,
+    bin_objfmt_global_declare,
     bin_objfmt_common_declare,
     bin_objfmt_directive
 };

@@ -107,113 +107,156 @@ typedef struct yasm_arch_machine {
 #define YASM_ARCH_VERSION	2
 
 /** YASM architecture module interface.
- * \note All "data" in parser-related functions (parse_*) needs to start the
- *	 parse initialized to 0 to make it okay for a parser-related function
- *	 to use/check previously stored data to see if it's been called before
- *	 on the same piece of data.
+ * \note All "data" in parser-related functions (yasm_arch_parse_*) needs to
+ *	 start the parse initialized to 0 to make it okay for a parser-related
+ *	 function to use/check previously stored data to see if it's been
+ *	 called before on the same piece of data.
  */
-typedef struct yasm_arch_module yasm_arch_module;
-
-#ifndef YASM_DOXYGEN
-struct yasm_arch_module {
+typedef struct yasm_arch_module {
     /** Version (see #YASM_ARCH_VERSION).  Should always be set to
      * #YASM_ARCH_VERSION by the module source and checked against
      * #YASM_ARCH_VERSION by the module loader.
      */
     unsigned int version;
 
-    /** One-line description of the architecture. */
+    /** One-line description of the architecture.
+     * Call yasm_arch_name() to get the name of a particular #yasm_arch.
+     */
     const char *name;
 
-    /** Keyword used to select architecture. */
+    /** Keyword used to select architecture.
+     * Call yasm_arch_keyword() to get the keyword of a particular #yasm_arch.
+     */
     const char *keyword;
 
-    /** Initialize architecture for use.
+    /** Create architecture.
+     * Module-level implementation of yasm_arch_create().
+     * Call yasm_arch_create() instead of calling this function.
      * \param machine	keyword of machine in use (must be one listed in
      *			#machines)
      * \return NULL if machine not recognized.
      */
     /*@only@*/ yasm_arch * (*create) (const char *machine);
 
-    /** \copydoc yasm_arch_destroy() */
+    /** Module-level implementation of yasm_arch_destroy().
+     * Call yasm_arch_destroy() instead of calling this function.
+     */
     void (*destroy) (/*@only@*/ yasm_arch *arch);
 
-    /** \copydoc yasm_arch_get_machine() */
+    /** Module-level implementation of yasm_arch_get_machine().
+     * Call yasm_arch_get_machine() instead of calling this function.
+     */
     const char * (*get_machine) (const yasm_arch *arch);
 
-    /** \copydoc yasm_arch_set_var() */
+    /** Module-level implementation of yasm_arch_set_var().
+     * Call yasm_arch_set_var() instead of calling this function.
+     */
     int (*set_var) (yasm_arch *arch, const char *var, unsigned long val);
 
-    /** \copydoc yasm_arch_parse_cpu() */
+    /** Module-level implementation of yasm_arch_parse_cpu().
+     * Call yasm_arch_parse_cpu() instead of calling this function.
+     */
     void (*parse_cpu) (yasm_arch *arch, const char *cpuid,
 		       unsigned long line);
 
-    /** \copydoc yasm_arch_parse_check_id() */
+    /** Module-level implementation of yasm_arch_parse_check_id().
+     * Call yasm_arch_parse_check_id() instead of calling this function.
+     */
     yasm_arch_check_id_retval (*parse_check_id)
 	(yasm_arch *arch, unsigned long data[4], const char *id,
 	 unsigned long line);
 
-    /** \copydoc yasm_arch_parse_directive() */
+    /** Module-level implementation of yasm_arch_parse_directive().
+     * Call yasm_arch_parse_directive() instead of calling this function.
+     */
     int (*parse_directive) (yasm_arch *arch, const char *name,
 			    yasm_valparamhead *valparams,
 			    /*@null@*/ yasm_valparamhead *objext_valparams,
 			    yasm_object *object, unsigned long line);
 
-    /** \copydoc yasm_arch_parse_insn() */
+    /** Module-level implementation of yasm_arch_parse_insn().
+     * Call yasm_arch_parse_insn() instead of calling this function.
+     */
     /*@null@*/ yasm_bytecode * (*parse_insn)
 	(yasm_arch *arch, const unsigned long data[4], int num_operands,
 	 /*@null@*/ yasm_insn_operands *operands, yasm_bytecode *prev_bc,
 	 unsigned long line);
 
-    /** \copydoc yasm_arch_parse_prefix() */
+    /** Module-level implementation of yasm_arch_parse_prefix().
+     * Call yasm_arch_parse_prefix() instead of calling this function.
+     */
     void (*parse_prefix) (yasm_arch *arch, yasm_bytecode *bc,
 			  const unsigned long data[4], unsigned long line);
 
-    /** \copydoc yasm_arch_parse_seg_prefix() */
+    /** Module-level implementation of yasm_arch_parse_seg_prefix().
+     * Call yasm_arch_parse_seg_prefix() instead of calling this function.
+     */
     void (*parse_seg_prefix) (yasm_arch *arch, yasm_bytecode *bc,
 			      unsigned long segreg, unsigned long line);
 
-    /** \copydoc yasm_arch_parse_seg_override() */
+    /** Module-level implementation of yasm_arch_parse_seg_override().
+     * Call yasm_arch_parse_seg_override() instead of calling this function.
+     */
     void (*parse_seg_override) (yasm_arch *arch, yasm_effaddr *ea,
 				unsigned long segreg, unsigned long line);
 
-    /** \copydoc yasm_arch_floatnum_tobytes() */
+    /** Module-level implementation of yasm_arch_floatnum_tobytes().
+     * Call yasm_arch_floatnum_tobytes() instead of calling this function.
+     */
     int (*floatnum_tobytes) (yasm_arch *arch, const yasm_floatnum *flt,
 			     unsigned char *buf, size_t destsize,
 			     size_t valsize, size_t shift, int warn,
 			     unsigned long line);
 
-    /** \copydoc yasm_arch_intnum_tobytes() */
+    /** Module-level implementation of yasm_arch_intnum_tobytes().
+     * Call yasm_arch_intnum_tobytes() instead of calling this function.
+     */
     int (*intnum_tobytes) (yasm_arch *arch, const yasm_intnum *intn,
 			   unsigned char *buf, size_t destsize, size_t valsize,
 			   int shift, const yasm_bytecode *bc, int rel,
 			   int warn, unsigned long line);
 
-    /** \copydoc yasm_arch_get_reg_size() */
+    /** Module-level implementation of yasm_arch_get_reg_size().
+     * Call yasm_arch_get_reg_size() instead of calling this function.
+     */
     unsigned int (*get_reg_size) (yasm_arch *arch, unsigned long reg);
 
-    /** \copydoc yasm_arch_reg_print() */
+    /** Module-level implementation of yasm_arch_reg_print().
+     * Call yasm_arch_reg_print() instead of calling this function.
+     */
     void (*reg_print) (yasm_arch *arch, unsigned long reg, FILE *f);
 
-    /** \copydoc yasm_arch_segreg_print() */
+    /** Module-level implementation of yasm_arch_segreg_print().
+     * Call yasm_arch_segreg_print() instead of calling this function.
+     */
     void (*segreg_print) (yasm_arch *arch, unsigned long segreg, FILE *f);
 
-    /** \copydoc yasm_arch_ea_create() */
+    /** Module-level implementation of yasm_arch_ea_create().
+     * Call yasm_arch_ea_create() instead of calling this function.
+     */
     yasm_effaddr * (*ea_create) (yasm_arch *arch, /*@keep@*/ yasm_expr *e);
 
-    /** NULL-terminated list of machines for this architecture. */
+    /** NULL-terminated list of machines for this architecture.
+     * Call yasm_arch_get_machine() to get the active machine of a particular
+     * #yasm_arch.
+     */
     yasm_arch_machine *machines;
 
-    /** Default machine keyword. */
+    /** Default machine keyword.
+     * Call yasm_arch_get_machine() to get the active machine of a particular
+     * #yasm_arch.
+     */
     const char *default_machine_keyword;
 
-    /** Canonical "word" size in bytes. */
+    /** Canonical "word" size in bytes.
+     * Call yasm_arch_wordsize() to get the word size of a particular
+     * #yasm_arch.
+     */
     unsigned int wordsize;
-};
-#endif
+} yasm_arch_module;
 
 #ifdef YASM_LIB_INTERNAL
-/** An instruction operand. */
+/** An instruction operand.  \internal */
 struct yasm_insn_operand {
     /** Link for building linked list of operands.  \internal */
     /*@reldef@*/ STAILQ_ENTRY(yasm_insn_operand) link;
@@ -241,40 +284,21 @@ struct yasm_insn_operand {
 };
 #endif
 
-/** Get the version number of an architecture module.
- * \param module	architecture module
- * \return Version number (see #YASM_ARCH_VERSION).
- */
-unsigned int yasm_arch_module_version(const yasm_arch_module *module);
-
-/** Get the machines usable with an architecture module.
- * \param module	architecture module
- * \return NULL-terminated list of machines.
- */
-const yasm_arch_machine *yasm_arch_module_machines
-    (const yasm_arch_module *module);
-
-/** Get the default machine keyword for an architecture module.
- * \param module	architecture module
- * \return Default machine keyword.
- */
-const char *yasm_arch_module_def_machine(const yasm_arch_module *module);
-
 /** Get the one-line description of an architecture.
  * \param arch	    architecture
- * \return keyword
+ * \return One-line description of architecture.
  */
 const char *yasm_arch_name(const yasm_arch *arch);
 
 /** Get the keyword used to select an architecture.
  * \param arch	    architecture
- * \return keyword
+ * \return Architecture keyword.
  */
 const char *yasm_arch_keyword(const yasm_arch *arch);
 
 /** Get the word size of an architecture.
  * \param arch	    architecture
- * \return word size
+ * \return Word size (in bits).
  */
 unsigned int yasm_arch_wordsize(const yasm_arch *arch);
 
@@ -478,10 +502,6 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
 #ifndef YASM_DOXYGEN
 
 /* Inline macro implementations for arch functions */
-
-#define yasm_arch_module_version(module)	    (module->version)
-#define yasm_arch_module_machines(module, machine)  (module->machines)
-#define yasm_arch_module_def_machine(module) (module->default_machine_keyword)
 
 #define yasm_arch_name(arch) \
     (((yasm_arch_base *)arch)->module->name)

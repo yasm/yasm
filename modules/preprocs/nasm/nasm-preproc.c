@@ -35,14 +35,20 @@
 #include "nasm-pp.h"
 #include "nasm-eval.h"
 
-static FILE *in;
+typedef struct yasm_preproc_nasm {
+    yasm_preproc_base preproc;   /* Base structure */
+
+    FILE *in;
+    char *line, *linepos;
+    size_t lineleft;
+    char *file_name;
+    long prior_linnum;
+    int lineinc;
+} yasm_preproc_nasm;
 static yasm_linemap *cur_lm;
-static char *line, *linepos;
-static size_t lineleft;
-static char *file_name;
-static long prior_linnum;
-static int lineinc;
 int tasm_compatible_mode = 0;
+
+yasm_preproc_module yasm_nasm_LTX_preproc;
 
 
 static void
@@ -112,86 +118,96 @@ nasm_efunc(int severity, const char *fmt, ...)
     va_end(va);
 }
 
-static void
-nasm_preproc_initialize(FILE *f, const char *in_filename, yasm_linemap *lm)
+static yasm_preproc *
+nasm_preproc_create(FILE *f, const char *in_filename, yasm_linemap *lm)
 {
-    in = f;
+    yasm_preproc_nasm *preproc_nasm = yasm_xmalloc(sizeof(yasm_preproc_nasm));
+
+    preproc_nasm->preproc.module = &yasm_nasm_LTX_preproc;
+
+    preproc_nasm->in = f;
     cur_lm = lm;
-    line = NULL;
-    file_name = NULL;
-    prior_linnum = 0;
-    lineinc = 0;
+    preproc_nasm->line = NULL;
+    preproc_nasm->file_name = NULL;
+    preproc_nasm->prior_linnum = 0;
+    preproc_nasm->lineinc = 0;
     nasmpp.reset(f, in_filename, 2, nasm_efunc, nasm_evaluate, &nil_list);
+
+    return (yasm_preproc *)preproc_nasm;
 }
 
 static void
-nasm_preproc_cleanup(void)
+nasm_preproc_destroy(yasm_preproc *preproc)
 {
     nasmpp.cleanup(0);
     nasm_eval_cleanup();
+    yasm_xfree(preproc);
 }
 
 static size_t
-nasm_preproc_input(char *buf, size_t max_size)
+nasm_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
 {
+    yasm_preproc_nasm *preproc_nasm = (yasm_preproc_nasm *)preproc;
     size_t tot = 0, n;
-    long linnum = prior_linnum += lineinc;
+    long linnum = preproc_nasm->prior_linnum += preproc_nasm->lineinc;
     int altline;
 
-    if (!line) {
-	line = nasmpp.getline();
-	if (!line)
+    if (!preproc_nasm->line) {
+	preproc_nasm->line = nasmpp.getline();
+	if (!preproc_nasm->line)
 	    return 0;
-	linepos = line;
-	lineleft = strlen(line) + 1;
-	line[lineleft-1] = '\n';
+	preproc_nasm->linepos = preproc_nasm->line;
+	preproc_nasm->lineleft = strlen(preproc_nasm->line) + 1;
+	preproc_nasm->line[preproc_nasm->lineleft-1] = '\n';
     }
 
-    altline = nasm_src_get(&linnum, &file_name);
+    altline = nasm_src_get(&linnum, &preproc_nasm->file_name);
     if (altline) {
-	if (altline == 1 && lineinc == 1) {
+	if (altline == 1 && preproc_nasm->lineinc == 1) {
 	    *buf++ = '\n';
 	    max_size--;
 	    tot++;
 	} else {
-	    lineinc = (altline != -1 || lineinc != 1);
-	    n = sprintf(buf, "%%line %ld+%d %s\n", linnum, lineinc, file_name);
+	    preproc_nasm->lineinc =
+		(altline != -1 || preproc_nasm->lineinc != 1);
+	    n = sprintf(buf, "%%line %ld+%d %s\n", linnum,
+			preproc_nasm->lineinc, preproc_nasm->file_name);
 	    buf += n;
 	    max_size -= n;
 	    tot += n;
 	}
-	prior_linnum = linnum;
+	preproc_nasm->prior_linnum = linnum;
     }
 
-    n = lineleft<max_size?lineleft:max_size;
-    strncpy(buf, linepos, n);
+    n = preproc_nasm->lineleft<max_size?preproc_nasm->lineleft:max_size;
+    strncpy(buf, preproc_nasm->linepos, n);
     tot += n;
 
-    if (n == lineleft) {
-	yasm_xfree(line);
-	line = NULL;
+    if (n == preproc_nasm->lineleft) {
+	yasm_xfree(preproc_nasm->line);
+	preproc_nasm->line = NULL;
     } else {
-	lineleft -= n;
-	linepos += n;
+	preproc_nasm->lineleft -= n;
+	preproc_nasm->linepos += n;
     }
 
     return tot;
 }
 
 static void
-nasm_preproc_add_include_path (const char *path)
+nasm_preproc_add_include_path(yasm_preproc *preproc, const char *path)
 {
     pp_include_path(path);
 }
 
 static void
-nasm_preproc_add_include_file (const char *filename)
+nasm_preproc_add_include_file(yasm_preproc *preproc, const char *filename)
 {
     pp_pre_include(filename);
 }
 
 static void
-nasm_preproc_predefine_macro (const char *macronameval)
+nasm_preproc_predefine_macro(yasm_preproc *preproc, const char *macronameval)
 {
     char *mnv = yasm__xstrdup(macronameval);
     pp_pre_define(mnv);
@@ -199,7 +215,7 @@ nasm_preproc_predefine_macro (const char *macronameval)
 }
 
 static void
-nasm_preproc_undefine_macro (const char *macroname)
+nasm_preproc_undefine_macro(yasm_preproc *preproc, const char *macroname)
 {
     char *mn = yasm__xstrdup(macroname);
     pp_pre_undefine(mn);
@@ -208,12 +224,12 @@ nasm_preproc_undefine_macro (const char *macroname)
 
 
 /* Define preproc structure -- see preproc.h for details */
-yasm_preproc yasm_nasm_LTX_preproc = {
+yasm_preproc_module yasm_nasm_LTX_preproc = {
     YASM_PREPROC_VERSION,
     "Real NASM Preprocessor",
     "nasm",
-    nasm_preproc_initialize,
-    nasm_preproc_cleanup,
+    nasm_preproc_create,
+    nasm_preproc_destroy,
     nasm_preproc_input,
     nasm_preproc_add_include_path,
     nasm_preproc_add_include_file,

@@ -170,11 +170,11 @@ list_module_load(const char *filename, lt_ptr data)
     char *name;
 
     yasm_arch_module *arch_module;
-    yasm_dbgfmt *dbgfmt;
-    yasm_objfmt *objfmt;
-    yasm_optimizer *optimizer;
+    yasm_dbgfmt_module *dbgfmt_module;
+    yasm_objfmt_module *objfmt_module;
+    yasm_optimizer_module *optimizer_module;
     yasm_parser_module *parser_module;
-    yasm_preproc *preproc;
+    yasm_preproc_module *preproc_module;
 
     lt_dlhandle handle;
 
@@ -219,26 +219,26 @@ list_module_load(const char *filename, lt_ptr data)
 	    break;
 	case MODULE_DBGFMT:
 	    strncpy(name+2, "yasm", 4);
-	    dbgfmt = lt_dlsym(handle, name+2);
-	    if (dbgfmt) {
-		module_keyword = dbgfmt->keyword;
-		module_name = dbgfmt->name;
+	    dbgfmt_module = lt_dlsym(handle, name+2);
+	    if (dbgfmt_module) {
+		module_keyword = dbgfmt_module->keyword;
+		module_name = dbgfmt_module->name;
 	    }
 	    break;
 	case MODULE_OBJFMT:
 	    strncpy(name+2, "yasm", 4);
-	    objfmt = lt_dlsym(handle, name+2);
-	    if (objfmt) {
-		module_keyword = objfmt->keyword;
-		module_name = objfmt->name;
+	    objfmt_module = lt_dlsym(handle, name+2);
+	    if (objfmt_module) {
+		module_keyword = objfmt_module->keyword;
+		module_name = objfmt_module->name;
 	    }
 	    break;
 	case MODULE_OPTIMIZER:
 	    strncpy(name+5, "yasm", 4);
-	    optimizer = lt_dlsym(handle, name+5);
-	    if (optimizer) {
-		module_keyword = optimizer->keyword;
-		module_name = optimizer->name;
+	    optimizer_module = lt_dlsym(handle, name+5);
+	    if (optimizer_module) {
+		module_keyword = optimizer_module->keyword;
+		module_name = optimizer_module->name;
 	    }
 	    break;
 	case MODULE_PARSER:
@@ -251,10 +251,10 @@ list_module_load(const char *filename, lt_ptr data)
 	    break;
 	case MODULE_PREPROC:
 	    strncpy(name+3, "yasm", 4);
-	    preproc = lt_dlsym(handle, name+3);
-	    if (preproc) {
-		module_keyword = preproc->keyword;
-		module_name = preproc->name;
+	    preproc_module = lt_dlsym(handle, name+3);
+	    if (preproc_module) {
+		module_keyword = preproc_module->keyword;
+		module_name = preproc_module->name;
 	    }
 	    break;
     }

@@ -1,6 +1,12 @@
-/* $IdPath$
- * Parser module interface header file
+/**
+ * \file libyasm/parser.h
+ * \brief YASM parser module interface.
  *
+ * \rcs
+ * $IdPath$
+ * \endrcs
+ *
+ * \license
  *  Copyright (C) 2001  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,6 +29,7 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ * \endlicense
  */
 #ifndef YASM_PARSER_H
 #define YASM_PARSER_H
@@ -38,7 +45,7 @@
  */
 #define YASM_PARSER_VERSION	1
 
-/* Interface to the parser module(s) -- the "front end" of the assembler */
+/** YASM parser module interface.  The "front end" of the assembler. */
 typedef struct yasm_parser_module {
     /** Version (see #YASM_PARSER_VERSION).  Should always be set to
      * #YASM_PARSER_VERSION by the module source and checked against
@@ -46,34 +53,40 @@ typedef struct yasm_parser_module {
      */
     unsigned int version;
 
-    /* one-line description of the parser */
+    /** One-line description of the parser */
     const char *name;
 
-    /* keyword used to select parser on the command line */
+    /** Keyword used to select parser on the command line */
     const char *keyword;
 
-    /* NULL-terminated list of preprocessors that are valid to use with this
+    /** NULL-terminated list of preprocessors that are valid to use with this
      * parser.  The raw preprocessor (raw_preproc) should always be in this
      * list so it's always possible to have no preprocessing done.
      */
     const char **preproc_keywords;
 
-    /* Default preprocessor. */
+    /** Default preprocessor. */
     const char *default_preproc_keyword;
 
-    /* Main entrance point for the parser.
-     *
-     * The parser needs access to both the object format module (for format-
-     * specific directives and segment names), and the preprocessor.
-     *
-     * This function also takes the FILE * to the initial starting file and
-     * the input filename.
-     *
-     * save_input is nonzero if the parser needs to save the original lines of
-     * source in the input file into the linemap via yasm_linemap_add_data().
+    /** Parse a source file into an object.
+     * \param object	object to parse into (already created)
+     * \param pp	preprocessor
+     * \param a		architecture; architecture-specific directives are
+     *			obtained from this.
+     * \param of	object format; objfmt-specific directives and segment
+     *			names are obtained from this.
+     * \param f		initial starting file
+     * \param in_filename	initial starting file's filename
+     * \param save_input	nonzero if the parser should save the original
+     *				lines of source into the object's linemap (via
+     *				yasm_linemap_add_data()).
+     * \param def_sect	default (starting) section in the object
+     * \note Parse failures are indicated by this function calling
+     *       yasm__error(); see errwarn.h for details.
      */
     void (*do_parse) (yasm_object *object, yasm_preproc *pp, yasm_arch *a,
 		      yasm_objfmt *of, FILE *f, const char *in_filename,
 		      int save_input, yasm_section *def_sect);
 } yasm_parser_module;
+
 #endif

@@ -1,6 +1,12 @@
-/* $IdPath$
- * YASM optimizer module interface header file
+/**
+ * \file libyasm/optimizer.h
+ * \brief YASM optimizer module interface.
  *
+ * \rcs
+ * $IdPath$
+ * \endrcs
+ *
+ * \license
  *  Copyright (C) 2001  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,43 +29,43 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ * \endlicense
  */
 #ifndef YASM_OPTIMIZER_H
 #define YASM_OPTIMIZER_H
 
-/** Version number of #yasm_optimizer interface.  Any functional change to the
- * #yasm_optimizer interface should simultaneously increment this number.  This
- * version should be checked by #yasm_optimizer loaders to verify that the
- * expected version (the version defined by its libyasm header files) matches
- * the loaded module version (the version defined by the module's libyasm
- * header files).  Doing this will ensure that the module version's function
- * definitions match the module loader's function definitions.  The version
- * number must never be decreased.
+/** Version number of #yasm_optimizer_module interface.  Any functional change
+ * to the #yasm_optimizer_module interface should simultaneously increment this
+ * number.  This version should be checked by #yasm_optimizer loaders to verify
+ * that the expected version (the version defined by its libyasm header files)
+ * matches the loaded module version (the version defined by the module's
+ * libyasm header files).  Doing this will ensure that the module version's
+ * function definitions match the module loader's function definitions.  The
+ * version number must never be decreased.
  */
 #define YASM_OPTIMIZER_VERSION	1
 
-/* Interface to the optimizer module(s) */
-struct yasm_optimizer {
+/** YASM optimizer module interface. */
+typedef struct yasm_optimizer_module {
     /** Version (see #YASM_OPTIMIZER_VERSION).  Should always be set to
      * #YASM_OPTIMIZER_VERSION by the module source and checked against
      * #YASM_OPTIMIZER_VERSION by the module loader.
      */
     unsigned int version;
 
-    /* one-line description of the optimizer */
+    /** One-line description of the optimizer */
     const char *name;
 
-    /* keyword used to select optimizer on the command line */
+    /** Keyword used to select optimizer on the command line */
     const char *keyword;
 
-    /* Main entrance point for the optimizer.
-     *
-     * This function takes the unoptimized linked list of sections and
-     * optimizes it.  If successful, the sections are ready for output to an
-     * object file.  (A failure is indicated by calling ErrorAt() from within
-     * this function).
+    /** Optimize an object.  Takes the unoptimized object and optimizes it.
+     * If successful, the object is ready for output to an object file.
+     * \param object	object
+     * \note Optimization failures are indicated by this function calling
+     *       yasm__error_at(); see errwarn.h for details.
      */
     void (*optimize) (yasm_object *object);
-};
+} yasm_optimizer_module;
 
 #endif

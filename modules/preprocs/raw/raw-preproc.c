@@ -31,58 +31,98 @@
 #include <libyasm.h>
 
 
-static int is_interactive;
-static FILE *in;
-static yasm_linemap *cur_lm;
+typedef struct yasm_preproc_raw {
+    yasm_preproc_base preproc;   /* base structure */
+
+    int is_interactive;
+    FILE *in;
+    yasm_linemap *cur_lm;
+} yasm_preproc_raw;
+
+yasm_preproc_module yasm_raw_LTX_preproc;
 
 int isatty(int);
 
-static void
-raw_preproc_initialize(FILE *f, const char *in_filename, yasm_linemap *lm)
+static yasm_preproc *
+raw_preproc_create(FILE *f, const char *in_filename, yasm_linemap *lm)
 {
-    in = f;
-    cur_lm = lm;
+    yasm_preproc_raw *preproc_raw = yasm_xmalloc(sizeof(yasm_preproc_raw));
+
+    preproc_raw->preproc.module = &yasm_raw_LTX_preproc;
+    preproc_raw->in = f;
+    preproc_raw->cur_lm = lm;
     /*@-unrecog@*/
-    is_interactive = f ? (isatty(fileno(f)) > 0) : 0;
+    preproc_raw->is_interactive = f ? (isatty(fileno(f)) > 0) : 0;
     /*@=unrecog@*/
+
+    return (yasm_preproc *)preproc_raw;
 }
 
 static void
-raw_preproc_cleanup(void)
+raw_preproc_destroy(yasm_preproc *preproc)
 {
+    yasm_xfree(preproc);
 }
 
 static size_t
-raw_preproc_input(char *buf, size_t max_size)
+raw_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
 {
+    yasm_preproc_raw *preproc_raw = (yasm_preproc_raw *)preproc;
     int c = '*';
     size_t n;
 
-    if (is_interactive) {
-	for (n = 0; n < max_size && (c = getc(in)) != EOF && c != '\n'; n++)
+    if (preproc_raw->is_interactive) {
+	for (n = 0; n < max_size && (c = getc(preproc_raw->in)) != EOF &&
+	     c != '\n'; n++)
 	    buf[n] = (char)c;
 	if (c == '\n')
 	    buf[n++] = (char)c;
-	if (c == EOF && ferror(in))
-	    yasm__error(yasm_linemap_get_current(cur_lm),
+	if (c == EOF && ferror(preproc_raw->in))
+	    yasm__error(yasm_linemap_get_current(preproc_raw->cur_lm),
 			N_("error when reading from file"));
-    } else if (((n = fread(buf, 1, max_size, in)) == 0) && ferror(in))
-	yasm__error(yasm_linemap_get_current(cur_lm),
+    } else if (((n = fread(buf, 1, max_size, preproc_raw->in)) == 0) &&
+	       ferror(preproc_raw->in))
+	yasm__error(yasm_linemap_get_current(preproc_raw->cur_lm),
 		    N_("error when reading from file"));
 
     return n;
 }
 
+static void
+raw_preproc_add_include_path(yasm_preproc *preproc, const char *path)
+{
+    /* no include paths */
+}
+
+static void
+raw_preproc_add_include_file(yasm_preproc *preproc, const char *filename)
+{
+    /* no pre-include files */
+}
+
+static void
+raw_preproc_predefine_macro(yasm_preproc *preproc, const char *macronameval)
+{
+    /* no pre-defining macros */
+}
+
+static void
+raw_preproc_undefine_macro(yasm_preproc *preproc, const char *macroname)
+{
+    /* no undefining macros */
+}
+
+
 /* Define preproc structure -- see preproc.h for details */
-yasm_preproc yasm_raw_LTX_preproc = {
+yasm_preproc_module yasm_raw_LTX_preproc = {
     YASM_PREPROC_VERSION,
     "Disable preprocessing",
     "raw",
-    raw_preproc_initialize,
-    raw_preproc_cleanup,
+    raw_preproc_create,
+    raw_preproc_destroy,
     raw_preproc_input,
-    /* no include paths */ NULL,
-    /* no pre-include files */ NULL,
-    /* no predefining macros */ NULL,
-    /* no undefining macros */ NULL
+    raw_preproc_add_include_path,
+    raw_preproc_add_include_file,
+    raw_preproc_predefine_macro,
+    raw_preproc_undefine_macro
 };

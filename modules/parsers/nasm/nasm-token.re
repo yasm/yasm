@@ -84,7 +84,8 @@ fill(yasm_parser_nasm *parser_nasm, YYCTYPE *cursor)
 		yasm_xfree(s->bot);
 	    s->bot = buf;
 	}
-	if((cnt = parser_nasm->input(s->lim, BSIZE)) == 0){
+	if((cnt = yasm_preproc_input(parser_nasm->preproc, s->lim,
+				     BSIZE)) == 0) {
 	    s->eof = &s->lim[cnt]; *s->eof++ = '\n';
 	}
 	s->lim += cnt;

@@ -40,16 +40,17 @@ void unload_modules(void);
 /*@dependent@*/ /*@null@*/ void *get_module_data
     (module_type type, const char *keyword, const char *symbol);
 
-#define load_arch_module(keyword)	get_module_data(MODULE_ARCH, keyword, "arch")
-#define load_dbgfmt(keyword)	\
+#define load_arch_module(keyword)	\
+    get_module_data(MODULE_ARCH, keyword, "arch")
+#define load_dbgfmt_module(keyword)	\
     get_module_data(MODULE_DBGFMT, keyword, "dbgfmt")
-#define load_objfmt(keyword)	\
+#define load_objfmt_module(keyword)	\
     get_module_data(MODULE_OBJFMT, keyword, "objfmt")
-#define load_optimizer(keyword)	\
+#define load_optimizer_module(keyword)	\
     get_module_data(MODULE_OPTIMIZER, keyword, "optimizer")
 #define load_parser_module(keyword)	\
     get_module_data(MODULE_PARSER, keyword, "parser")
-#define load_preproc(keyword)	\
+#define load_preproc_module(keyword)	\
     get_module_data(MODULE_PREPROC, keyword, "preproc")
 
 void list_modules(module_type type,

@@ -44,15 +44,12 @@ nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
     parser_nasm.linemap = yasm_object_get_linemap(parser_nasm.object);
     parser_nasm.symtab = yasm_object_get_symtab(parser_nasm.object);
 
-    yasm_linemap_set(parser_nasm.linemap, in_filename, 1, 1);
-
-    pp->initialize(f, in_filename, parser_nasm.linemap);
     parser_nasm.in = f;
-    parser_nasm.input = pp->input;
 
     parser_nasm.locallabel_base = (char *)NULL;
     parser_nasm.locallabel_base_len = 0;
 
+    parser_nasm.preproc = pp;
     parser_nasm.arch = a;
     parser_nasm.objfmt = of;
 

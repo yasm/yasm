@@ -51,12 +51,12 @@ extern const lt_dlsymlist lt_preloaded_symbols[];
 #define PREPROC_BUF_SIZE    16384
 
 /* Check the module version */
-#define check_module_version(d, TYPE, desc)	\
+#define check_module_version(d, TYPE, type)	\
 do { \
     if (d && d->version != YASM_##TYPE##_VERSION) { \
 	print_error( \
 	    _("%s: module version mismatch: %s `%s' (need %d, module %d)"), \
-	    _("FATAL"), _(desc), d->keyword, YASM_##TYPE##_VERSION, \
+	    _("FATAL"), _(#type), d->keyword, YASM_##TYPE##_VERSION, \
 	    d->version); \
 	exit(EXIT_FAILURE); \
     } \
@@ -71,9 +71,16 @@ static int special_options = 0;
 /*@null@*/ /*@dependent@*/ static const yasm_parser_module *
     cur_parser_module = NULL;
 /*@null@*/ /*@dependent@*/ static yasm_preproc *cur_preproc = NULL;
+/*@null@*/ /*@dependent@*/ static const yasm_preproc_module *
+    cur_preproc_module = NULL;
 /*@null@*/ /*@dependent@*/ static yasm_objfmt *cur_objfmt = NULL;
-/*@null@*/ /*@dependent@*/ static yasm_optimizer *cur_optimizer = NULL;
+/*@null@*/ /*@dependent@*/ static const yasm_objfmt_module *
+    cur_objfmt_module = NULL;
+/*@null@*/ /*@dependent@*/ static const yasm_optimizer_module *
+    cur_optimizer_module = NULL;
 /*@null@*/ /*@dependent@*/ static yasm_dbgfmt *cur_dbgfmt = NULL;
+/*@null@*/ /*@dependent@*/ static const yasm_dbgfmt_module *
+    cur_dbgfmt_module = NULL;
 static int preproc_only = 0;
 static int warning_error = 0;	/* warnings being treated as errors */
 static enum {
@@ -346,22 +353,24 @@ main(int argc, char *argv[])
 	}
 
 	/* If not already specified, default to nasm preproc. */
-	if (!cur_preproc)
-	    cur_preproc = load_preproc("nasm");
+	if (!cur_preproc_module)
+	    cur_preproc_module = load_preproc_module("nasm");
 
-	if (!cur_preproc) {
+	if (!cur_preproc_module) {
 	    print_error(_("%s: could not load default %s"), _("FATAL"),
 			_("preprocessor"));
 	    cleanup(NULL);
 	    return EXIT_FAILURE;
 	}
-	check_module_version(cur_preproc, PREPROC, "preproc");
+	check_module_version(cur_preproc_module, PREPROC, preproc);
 
 	apply_preproc_saved_options();
 
 	/* Pre-process until done */
-	cur_preproc->initialize(in, in_filename, linemap);
-	while ((got = cur_preproc->input(preproc_buf, PREPROC_BUF_SIZE)) != 0)
+	cur_preproc = yasm_preproc_create(cur_preproc_module, in, in_filename,
+					  linemap);
+	while ((got = yasm_preproc_input(cur_preproc, preproc_buf,
+					 PREPROC_BUF_SIZE)) != 0)
 	    fwrite(preproc_buf, got, 1, obj);
 
 	if (in != stdin)
@@ -388,6 +397,7 @@ main(int argc, char *argv[])
 
     /* Create object */
     object = yasm_object_create();
+    yasm_linemap_set(yasm_object_get_linemap(object), in_filename, 1, 1);
 
     /* Default to x86 as the architecture */
     if (!cur_arch_module) {
@@ -398,7 +408,7 @@ main(int argc, char *argv[])
 	    return EXIT_FAILURE;
 	}
     }
-    check_module_version(cur_arch_module, ARCH, "arch");
+    check_module_version(cur_arch_module, ARCH, arch);
 
     /* Set up architecture using the selected (or default) machine */
     if (!machine_name)
@@ -424,42 +434,42 @@ main(int argc, char *argv[])
     }
 
     /* Set basic as the optimizer (TODO: user choice) */
-    cur_optimizer = load_optimizer("basic");
+    cur_optimizer_module = load_optimizer_module("basic");
 
-    if (!cur_optimizer) {
+    if (!cur_optimizer_module) {
 	print_error(_("%s: could not load default %s"), _("FATAL"),
 		    _("optimizer"));
 	return EXIT_FAILURE;
     }
-    check_module_version(cur_optimizer, OPTIMIZER, "optimizer");
+    check_module_version(cur_optimizer_module, OPTIMIZER, optimizer);
 
     /* If not already specified, default to bin as the object format. */
-    if (!cur_objfmt)
-	cur_objfmt = load_objfmt("bin");
+    if (!cur_objfmt_module)
+	cur_objfmt_module = load_objfmt_module("bin");
 
-    if (!cur_objfmt) {
+    if (!cur_objfmt_module) {
 	print_error(_("%s: could not load default %s"), _("FATAL"),
 		    _("object format"));
 	return EXIT_FAILURE;
     }
-    check_module_version(cur_objfmt, OBJFMT, "objfmt");
+    check_module_version(cur_objfmt_module, OBJFMT, objfmt);
 
     /* If not already specified, default to null as the debug format. */
-    if (!cur_dbgfmt)
-	cur_dbgfmt = load_dbgfmt("null");
+    if (!cur_dbgfmt_module)
+	cur_dbgfmt_module = load_dbgfmt_module("null");
     else {
 	int matched_dbgfmt = 0;
 	/* Check to see if the requested debug format is in the allowed list
 	 * for the active object format.
 	 */
-	for (i=0; cur_objfmt->dbgfmt_keywords[i]; i++)
-	    if (yasm__strcasecmp(cur_objfmt->dbgfmt_keywords[i],
-				 cur_dbgfmt->keyword) == 0)
+	for (i=0; cur_objfmt_module->dbgfmt_keywords[i]; i++)
+	    if (yasm__strcasecmp(cur_objfmt_module->dbgfmt_keywords[i],
+				 cur_dbgfmt_module->keyword) == 0)
 		matched_dbgfmt = 1;
 	if (!matched_dbgfmt) {
 	    print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
-		_("FATAL"), cur_dbgfmt->keyword, _("debug format"),
-		_("object format"), cur_objfmt->keyword);
+		_("FATAL"), cur_dbgfmt_module->keyword, _("debug format"),
+		_("object format"), cur_objfmt_module->keyword);
 	    if (in != stdin)
 		fclose(in);
 	    /*cleanup(NULL);*/
@@ -467,12 +477,12 @@ main(int argc, char *argv[])
 	}
     }
 
-    if (!cur_dbgfmt) {
+    if (!cur_dbgfmt_module) {
 	print_error(_("%s: could not load default %s"), _("FATAL"),
 		    _("debug format"));
 	return EXIT_FAILURE;
     }
-    check_module_version(cur_dbgfmt, DBGFMT, "dbgfmt");
+    check_module_version(cur_dbgfmt_module, DBGFMT, dbgfmt);
 
     /* determine the object filename if not specified */
     if (!obj_filename) {
@@ -482,40 +492,39 @@ main(int argc, char *argv[])
 	else
 	    /* replace (or add) extension */
 	    obj_filename = replace_extension(in_filename,
-					     cur_objfmt->extension,
+					     cur_objfmt_module->extension,
 					     "yasm.out");
     }
 
-    /* Initialize the debug format */
-    if (cur_dbgfmt->initialize) {
-	if (cur_dbgfmt->initialize(in_filename, obj_filename, object,
-				   cur_objfmt, cur_arch))
-	{
-	    print_error(
-		_("%s: debug format `%s' does not work with object format `%s'"),
-		_("FATAL"), cur_dbgfmt->keyword, cur_objfmt->keyword);
-	    if (in != stdin)
-		fclose(in);
-	    return EXIT_FAILURE;
-	}
-    }
-
     /* Initialize the object format */
-    if (cur_objfmt->initialize) {
-	if (cur_objfmt->initialize(in_filename, obj_filename, object,
-				   cur_dbgfmt, cur_arch)) {
-	    print_error(
-		_("%s: object format `%s' does not support architecture `%s' machine `%s'"),
-		_("FATAL"), cur_objfmt->keyword, cur_arch_module->keyword,
-		machine_name);
-	    if (in != stdin)
-		fclose(in);
-	    return EXIT_FAILURE;
-	}
+    cur_objfmt = yasm_objfmt_create(cur_objfmt_module, in_filename, object,
+				    cur_arch);
+    if (!cur_objfmt) {
+	print_error(
+	    _("%s: object format `%s' does not support architecture `%s' machine `%s'"),
+	    _("FATAL"), cur_objfmt_module->keyword, cur_arch_module->keyword,
+	    machine_name);
+	if (in != stdin)
+	    fclose(in);
+	return EXIT_FAILURE;
     }
 
     /* Add an initial "default" section to object */
     def_sect = yasm_objfmt_add_default_section(cur_objfmt, object);
+
+    /* Initialize the debug format */
+    cur_dbgfmt = yasm_dbgfmt_create(cur_dbgfmt_module, in_filename,
+				    obj_filename, object, cur_objfmt,
+				    cur_arch);
+    if (!cur_dbgfmt) {
+	print_error(
+	    _("%s: debug format `%s' does not work with object format `%s'"),
+	    _("FATAL"), cur_dbgfmt_module->keyword,
+	    cur_objfmt_module->keyword);
+	if (in != stdin)
+	    fclose(in);
+	return EXIT_FAILURE;
+    }
 
     /* Default to NASM as the parser */
     if (!cur_parser_module) {
@@ -527,11 +536,12 @@ main(int argc, char *argv[])
 	    return EXIT_FAILURE;
 	}
     }
-    check_module_version(cur_parser_module, PARSER, "parser");
+    check_module_version(cur_parser_module, PARSER, parser);
 
     /* If not already specified, default to the parser's default preproc. */
-    if (!cur_preproc)
-	cur_preproc = load_preproc(cur_parser_module->default_preproc_keyword);
+    if (!cur_preproc_module)
+	cur_preproc_module =
+	    load_preproc_module(cur_parser_module->default_preproc_keyword);
     else {
 	int matched_preproc = 0;
 	/* Check to see if the requested preprocessor is in the allowed list
@@ -539,12 +549,13 @@ main(int argc, char *argv[])
 	 */
 	for (i=0; cur_parser_module->preproc_keywords[i]; i++)
 	    if (yasm__strcasecmp(cur_parser_module->preproc_keywords[i],
-			   cur_preproc->keyword) == 0)
+				 cur_preproc_module->keyword) == 0)
 		matched_preproc = 1;
 	if (!matched_preproc) {
 	    print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
-			_("FATAL"), cur_preproc->keyword, _("preprocessor"),
-			_("parser"), cur_parser_module->keyword);
+			_("FATAL"), cur_preproc_module->keyword,
+			_("preprocessor"), _("parser"),
+			cur_parser_module->keyword);
 	    if (in != stdin)
 		fclose(in);
 	    cleanup(NULL);
@@ -552,20 +563,23 @@ main(int argc, char *argv[])
 	}
     }
 
-    if (!cur_preproc) {
+    if (!cur_preproc_module) {
 	print_error(_("%s: could not load default %s"), _("FATAL"),
 		    _("preprocessor"));
 	cleanup(NULL);
 	return EXIT_FAILURE;
     }
-    check_module_version(cur_preproc, PREPROC, "preproc");
+    check_module_version(cur_preproc_module, PREPROC, preproc);
+
+    cur_preproc = cur_preproc_module->create(in, in_filename,
+					     yasm_object_get_linemap(object));
 
     apply_preproc_saved_options();
 
     /* Get initial x86 BITS setting from object format */
     if (strcmp(cur_arch_module->keyword, "x86") == 0) {
-	cur_arch_module->set_var(cur_arch, "mode_bits",
-				 cur_objfmt->default_x86_mode_bits);
+	yasm_arch_set_var(cur_arch, "mode_bits",
+			  cur_objfmt_module->default_x86_mode_bits);
     }
 
     /* Parse! */
@@ -584,7 +598,7 @@ main(int argc, char *argv[])
     }
 
     yasm_symtab_parser_finalize(yasm_object_get_symtab(object));
-    cur_optimizer->optimize(object);
+    cur_optimizer_module->optimize(object);
 
     if (yasm_get_num_errors(warning_error) > 0) {
 	yasm_errwarn_output_all(yasm_object_get_linemap(object), warning_error,
@@ -594,12 +608,10 @@ main(int argc, char *argv[])
     }
 
     /* generate any debugging information */
-    if (cur_dbgfmt->generate) {
-	cur_dbgfmt->generate(object);
-    }
+    yasm_dbgfmt_generate(cur_dbgfmt);
 
     /* open the object file for output (if not already opened by dbg objfmt) */
-    if (!obj && strcmp(cur_objfmt->keyword, "dbg") != 0) {
+    if (!obj && strcmp(cur_objfmt_module->keyword, "dbg") != 0) {
 	obj = open_obj("wb");
 	if (!obj) {
 	    cleanup(object);
@@ -608,8 +620,8 @@ main(int argc, char *argv[])
     }
 
     /* Write the object file */
-    cur_objfmt->output(obj?obj:stderr, object,
-		       strcmp(cur_dbgfmt->keyword, "null"));
+    yasm_objfmt_output(cur_objfmt, obj?obj:stderr, obj_filename,
+		       strcmp(cur_dbgfmt_module->keyword, "null"), cur_dbgfmt);
 
     /* Close object file */
     if (obj)
@@ -659,16 +671,16 @@ static void
 cleanup(yasm_object *object)
 {
     if (DO_FREE) {
-	if (cur_objfmt && cur_objfmt->cleanup)
-	    cur_objfmt->cleanup();
-	if (cur_dbgfmt && cur_dbgfmt->cleanup)
-	    cur_dbgfmt->cleanup();
+	if (cur_objfmt)
+	    yasm_objfmt_destroy(cur_objfmt);
+	if (cur_dbgfmt)
+	    yasm_dbgfmt_destroy(cur_dbgfmt);
 	if (cur_preproc)
-	    cur_preproc->cleanup();
+	    yasm_preproc_destroy(cur_preproc);
 	if (object)
 	    yasm_object_destroy(object);
 	if (cur_arch)
-	    cur_arch_module->destroy(cur_arch);
+	    yasm_arch_destroy(cur_arch);
 
 	yasm_floatnum_cleanup();
 	yasm_intnum_cleanup();
@@ -762,8 +774,8 @@ static int
 opt_preproc_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     assert(param != NULL);
-    cur_preproc = load_preproc(param);
-    if (!cur_preproc) {
+    cur_preproc_module = load_preproc_module(param);
+    if (!cur_preproc_module) {
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm %s:\n"), _("preprocessors"));
 	    list_preprocs(print_list_keyword_desc);
@@ -781,8 +793,8 @@ static int
 opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     assert(param != NULL);
-    cur_objfmt = load_objfmt(param);
-    if (!cur_objfmt) {
+    cur_objfmt_module = load_objfmt_module(param);
+    if (!cur_objfmt_module) {
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm %s:\n"), _("object formats"));
 	    list_objfmts(print_list_keyword_desc);
@@ -800,8 +812,8 @@ static int
 opt_dbgfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     assert(param != NULL);
-    cur_dbgfmt = load_dbgfmt(param);
-    if (!cur_dbgfmt) {
+    cur_dbgfmt_module = load_dbgfmt_module(param);
+    if (!cur_dbgfmt_module) {
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm %s:\n"), _("debug formats"));
 	    list_dbgfmts(print_list_keyword_desc);
@@ -918,15 +930,15 @@ apply_preproc_saved_options()
 {
     constcharparam *cp, *cpnext;
 
-    void (*funcs[4])(const char *);
-    funcs[0] = cur_preproc->add_include_path;
-    funcs[1] = cur_preproc->add_include_file;
-    funcs[2] = cur_preproc->predefine_macro;
-    funcs[3] = cur_preproc->undefine_macro;
+    void (*funcs[4])(yasm_preproc *, const char *);
+    funcs[0] = cur_preproc_module->add_include_path;
+    funcs[1] = cur_preproc_module->add_include_file;
+    funcs[2] = cur_preproc_module->predefine_macro;
+    funcs[3] = cur_preproc_module->undefine_macro;
 
     STAILQ_FOREACH(cp, &preproc_options, link) {
 	if (0 <= cp->id && cp->id < 4 && funcs[cp->id])
-	    funcs[cp->id](cp->param);
+	    funcs[cp->id](cur_preproc, cp->param);
     }
 
     cp = STAILQ_FIRST(&preproc_options);

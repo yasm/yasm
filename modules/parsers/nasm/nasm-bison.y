@@ -517,28 +517,21 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 		      yasm_valparamhead *objext_valparams)
 {
     yasm_valparam *vp, *vp2;
-    yasm_symrec *sym;
     unsigned long line = cur_line;
 
     /* Handle (mostly) output-format independent directives here */
     if (yasm__strcasecmp(name, "extern") == 0) {
 	vp = yasm_vps_first(valparams);
 	if (vp->val) {
-	    sym = yasm_symtab_declare(p_symtab, vp->val, YASM_SYM_EXTERN,
-				      line);
-	    if (parser_nasm->objfmt->extern_declare)
-		parser_nasm->objfmt->extern_declare(sym, objext_valparams,
-						    line);
+	    yasm_objfmt_extern_declare(parser_nasm->objfmt, vp->val,
+				       objext_valparams, line);
 	} else
 	    yasm__error(line, N_("invalid argument to [%s]"), "EXTERN");
     } else if (yasm__strcasecmp(name, "global") == 0) {
 	vp = yasm_vps_first(valparams);
 	if (vp->val) {
-	    sym = yasm_symtab_declare(p_symtab, vp->val, YASM_SYM_GLOBAL,
-				      line);
-	    if (parser_nasm->objfmt->global_declare)
-		parser_nasm->objfmt->global_declare(sym, objext_valparams,
-						    line);
+	    yasm_objfmt_global_declare(parser_nasm->objfmt, vp->val,
+				       objext_valparams, line);
 	} else
 	    yasm__error(line, N_("invalid argument to [%s]"), "GLOBAL");
     } else if (yasm__strcasecmp(name, "common") == 0) {
@@ -550,20 +543,14 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 			    "COMMON");
 	    else {
 		if (vp2->val) {
-		    sym = yasm_symtab_declare(p_symtab, vp->val,
-					      YASM_SYM_COMMON, line);
-		    if (parser_nasm->objfmt->common_declare)
-			parser_nasm->objfmt->common_declare(sym,
-			    p_expr_new_ident(yasm_expr_sym(
-				yasm_symtab_use(p_symtab, vp2->val, line))),
-			    objext_valparams, line);
+		    yasm_objfmt_common_declare(parser_nasm->objfmt, vp->val,
+			p_expr_new_ident(yasm_expr_sym(
+			    yasm_symtab_use(p_symtab, vp2->val, line))),
+			objext_valparams, line);
 		} else if (vp2->param) {
-		    sym = yasm_symtab_declare(p_symtab, vp->val,
-					      YASM_SYM_COMMON, line);
-		    if (parser_nasm->objfmt->common_declare)
-			parser_nasm->objfmt->common_declare(sym, vp2->param,
-							    objext_valparams,
-							    line);
+		    yasm_objfmt_common_declare(parser_nasm->objfmt, vp->val,
+					       vp2->param, objext_valparams,
+					       line);
 		    vp2->param = NULL;
 		}
 	    }
@@ -572,9 +559,8 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
     } else if (yasm__strcasecmp(name, "section") == 0 ||
 	       yasm__strcasecmp(name, "segment") == 0) {
 	yasm_section *new_section =
-	    parser_nasm->objfmt->section_switch(parser_nasm->object,
-						valparams, objext_valparams,
-						line);
+	    yasm_objfmt_section_switch(parser_nasm->objfmt, valparams,
+				       objext_valparams, line);
 	if (new_section) {
 	    parser_nasm->cur_section = new_section;
 	    parser_nasm->prev_bc = yasm_section_bcs_last(new_section);
@@ -614,8 +600,8 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
     } else if (!yasm_arch_parse_directive(parser_nasm->arch, name, valparams,
 		    objext_valparams, parser_nasm->object, line)) {
 	;
-    } else if (parser_nasm->objfmt->directive(name, valparams,
-		    objext_valparams, parser_nasm->object, line)) {
+    } else if (yasm_objfmt_directive(parser_nasm->objfmt, name, valparams,
+				     objext_valparams, line)) {
 	yasm__error(line, N_("unrecognized directive [%s]"), name);
     }
 
