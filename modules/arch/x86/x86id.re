@@ -85,6 +85,18 @@ static unsigned long cpu_enabled = ~CPU_Any;
 #define MOD_Imm8    (1UL<<7)	/* Parameter is included as immediate byte */
 #define MOD_AdSizeR (1UL<<8)	/* Parameter replaces addrsize (jmprel only) */
 
+/* Modifiers that aren't actually used as modifiers.  Rather, if set, bits
+ * 20-27 in the modifier are used as an index into an array.
+ * Obviously, only one of these may be set at a time.
+ */
+#define MOD_ExtNone (0UL<<28)	/* No extended modifier */
+#define MOD_ExtErr  (1UL<<28)	/* Extended error: index into error strings */
+#define MOD_ExtWarn (2UL<<28)	/* Extended warning: index into warning strs */
+#define MOD_Ext_MASK (0xFUL<<28)
+#define MOD_ExtIndex_SHIFT	20
+#define MOD_ExtIndex(indx)	(((unsigned long)(indx))<<MOD_ExtIndex_SHIFT)
+#define MOD_ExtIndex_MASK	(0xFFUL<<MOD_ExtIndex_SHIFT)
+
 /* Operand types.  These are more detailed than the "general" types for all
  * architectures, as they include the size, for instance.
  * Bit Breakdown (from LSB to MSB):
@@ -1615,15 +1627,35 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 
     if (!found) {
 	/* Didn't find a matching one */
-	/* FIXME: This needs to be more descriptive of certain reasons for a
-	 * mismatch.  E.g.:
-	 *  "mismatch in operand sizes"
-	 *  "operand size not specified"
-	 * etc.  This will probably require adding dummy error catchers in the
-	 * insn list which are only looked at if we get here.
-	 */
 	Error(_("invalid combination of opcode and operands"));
 	return NULL;
+    }
+
+    /* Extended error/warning handling */
+    switch (info->modifiers & MOD_Ext_MASK) {
+	case MOD_ExtNone:
+	    /* No extended modifier, so just continue */
+	    break;
+	case MOD_ExtErr:
+	    switch ((info->modifiers & MOD_ExtIndex_MASK)>>MOD_ExtIndex_SHIFT) {
+		case 0:
+		    Error(_("mismatch in operand sizes"));
+		    break;
+		case 1:
+		    Error(_("operand size not specified"));
+		    break;
+		default:
+		    InternalError(_("unrecognized x86 ext mod index"));
+	    }
+	    return NULL;    /* It was an error */
+	case MOD_ExtWarn:
+	    switch ((info->modifiers & MOD_ExtIndex_MASK)>>MOD_ExtIndex_SHIFT) {
+		default:
+		    InternalError(_("unrecognized x86 ext mod index"));
+	    }
+	    break;
+	default:
+	    InternalError(_("unrecognized x86 extended modifier"));
     }
 
     /* Shortcut to JmpRel */
