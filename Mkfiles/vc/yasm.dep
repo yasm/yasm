@@ -1,0 +1,504 @@
+# Microsoft Developer Studio Generated Dependency File, included by yasm.mak
+
+..\..\src\arch\x86\x86arch.c : \
+	"..\..\src\arch.h"\
+	"..\..\src\arch\x86\x86arch.h"\
+	"..\..\src\bytecode.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\file.h"\
+	"..\..\src\floatnum.h"\
+	"..\..\src\intnum.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\arch\x86\x86bc.c : \
+	"..\..\src\arch.h"\
+	"..\..\src\arch\x86\x86arch.h"\
+	"..\..\src\bc-int.h"\
+	"..\..\src\bytecode.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\file.h"\
+	"..\..\src\intnum.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\arch\x86\x86expr.c : \
+	"..\..\src\arch.h"\
+	"..\..\src\arch\x86\x86arch.h"\
+	"..\..\src\bitvect.h"\
+	"..\..\src\bytecode.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\expr-int.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\floatnum.h"\
+	"..\..\src\intnum.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+"..\..\src\dbgfmts\null\null-dbgfmt.c" : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\dbgfmt.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+"..\..\src\objfmts\bin\bin-objfmt.c" : \
+	"..\..\src\arch.h"\
+	"..\..\src\bc-int.h"\
+	"..\..\src\bytecode.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\expr-int.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\file.h"\
+	"..\..\src\floatnum.h"\
+	"..\..\src\intnum.h"\
+	"..\..\src\objfmt.h"\
+	"..\..\src\section.h"\
+	"..\..\src\symrec.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+"..\..\src\objfmts\coff\coff-objfmt.c" : \
+	"..\..\src\arch.h"\
+	"..\..\src\bc-int.h"\
+	"..\..\src\bytecode.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\expr-int.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\file.h"\
+	"..\..\src\floatnum.h"\
+	"..\..\src\intnum.h"\
+	"..\..\src\objfmt.h"\
+	"..\..\src\section.h"\
+	"..\..\src\symrec.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+"..\..\src\objfmts\dbg\dbg-objfmt.c" : \
+	"..\..\src\arch.h"\
+	"..\..\src\bytecode.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\dbgfmt.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\objfmt.h"\
+	"..\..\src\section.h"\
+	"..\..\src\symrec.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+"..\..\src\optimizers\basic\basic-optimizer.c" : \
+	"..\..\src\bc-int.h"\
+	"..\..\src\bytecode.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\intnum.h"\
+	"..\..\src\optimizer.h"\
+	"..\..\src\section.h"\
+	"..\..\src\symrec.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+"..\..\src\parsers\nasm\nasm-parser.c" : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\objfmt.h"\
+	"..\..\src\parsers\nasm\nasm-parser.h"\
+	"..\..\src\preproc.h"\
+	"..\..\src\section.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+"..\..\src\preprocs\nasm\nasm-eval.c" : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\preprocs\nasm\nasm-eval.h"\
+	"..\..\src\preprocs\nasm\nasm.h"\
+	"..\..\src\preprocs\nasm\nasmlib.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+"..\..\src\preprocs\nasm\nasm-pp.c" : \
+	"..\..\nasm-macros.c"\
+	"..\..\src\preprocs\nasm\nasm-pp.h"\
+	"..\..\src\preprocs\nasm\nasm.h"\
+	"..\..\src\preprocs\nasm\nasmlib.h"\
+	"..\..\src\valparam.h"\
+	
+
+"..\..\src\preprocs\nasm\nasm-preproc.c" : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\linemgr.h"\
+	"..\..\src\preproc.h"\
+	"..\..\src\preprocs\nasm\nasm-eval.h"\
+	"..\..\src\preprocs\nasm\nasm-pp.h"\
+	"..\..\src\preprocs\nasm\nasm.h"\
+	"..\..\src\preprocs\nasm\nasmlib.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\preprocs\nasm\nasmlib.c : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\preprocs\nasm\nasm.h"\
+	"..\..\src\preprocs\nasm\nasmlib.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+"..\..\src\preprocs\raw\raw-preproc.c" : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\linemgr.h"\
+	"..\..\src\preproc.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+"..\..\src\preprocs\yapp\yapp-preproc.c" : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\hamt.h"\
+	"..\..\src\linemgr.h"\
+	"..\..\src\preproc.h"\
+	"..\..\src\preprocs\yapp\yapp-preproc.h"\
+	"..\..\src\preprocs\yapp\yapp-token.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+"..\..\nasm-bison.c" : \
+	"..\..\src\arch.h"\
+	"..\..\src\bitvect.h"\
+	"..\..\src\bytecode.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\expr-int.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\floatnum.h"\
+	"..\..\src\intnum.h"\
+	"..\..\src\linemgr.h"\
+	"..\..\src\objfmt.h"\
+	"..\..\src\parsers\nasm\nasm-defs.h"\
+	"..\..\src\parsers\nasm\nasm-parser.h"\
+	"..\..\src\section.h"\
+	"..\..\src\symrec.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+"..\..\nasm-token.c" : \
+	"..\..\nasm-bison.h"\
+	"..\..\src\arch.h"\
+	"..\..\src\bitvect.h"\
+	"..\..\src\bytecode.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\floatnum.h"\
+	"..\..\src\intnum.h"\
+	"..\..\src\linemgr.h"\
+	"..\..\src\parsers\nasm\nasm-defs.h"\
+	"..\..\src\parsers\nasm\nasm-parser.h"\
+	"..\..\src\symrec.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\x86id.c : \
+	"..\..\src\arch.h"\
+	"..\..\src\arch\x86\x86arch.h"\
+	"..\..\src\bc-int.h"\
+	"..\..\src\bitvect.h"\
+	"..\..\src\bytecode.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\expr-int.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\floatnum.h"\
+	"..\..\src\intnum.h"\
+	"..\..\src\symrec.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+"..\..\yapp-token.c" : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\linemgr.h"\
+	"..\..\src\preprocs\yapp\yapp-preproc.h"\
+	"..\..\src\preprocs\yapp\yapp-token.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\arch.c : \
+	"..\..\src\arch.h"\
+	"..\..\src\bytecode.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\bitvect.c : \
+	"..\..\src\bitvect.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\bytecode.c : \
+	"..\..\src\arch.h"\
+	"..\..\src\bc-int.h"\
+	"..\..\src\bytecode.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\expr-int.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\file.h"\
+	"..\..\src\intnum.h"\
+	"..\..\src\objfmt.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\errwarn.c : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\linemgr.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\expr.c : \
+	"..\..\src\arch.h"\
+	"..\..\src\bitvect.h"\
+	"..\..\src\bytecode.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\expr-int.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\floatnum.h"\
+	"..\..\src\intnum.h"\
+	"..\..\src\section.h"\
+	"..\..\src\symrec.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\file.c : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\file.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\floatnum.c : \
+	"..\..\src\bitvect.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\file.h"\
+	"..\..\src\floatnum.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\hamt.c : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\hamt.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\intnum.c : \
+	"..\..\src\bitvect.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\file.h"\
+	"..\..\src\intnum.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\linemgr.c : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\hamt.h"\
+	"..\..\src\linemgr.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\main.c : \
+	"..\..\src\arch.h"\
+	"..\..\src\bitvect.h"\
+	"..\..\src\bytecode.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\dbgfmt.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\file.h"\
+	"..\..\src\floatnum.h"\
+	"..\..\src\intnum.h"\
+	"..\..\src\linemgr.h"\
+	"..\..\src\module.h"\
+	"..\..\src\objfmt.h"\
+	"..\..\src\optimizer.h"\
+	"..\..\src\options.h"\
+	"..\..\src\preproc.h"\
+	"..\..\src\section.h"\
+	"..\..\src\symrec.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\mergesort.c : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+.\module.c : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\module.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\objfmt.c : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\module.h"\
+	"..\..\src\objfmt.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\options.c : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\options.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\parser.c : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\module.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\section.c : \
+	"..\..\src\bytecode.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\intnum.h"\
+	"..\..\src\objfmt.h"\
+	"..\..\src\section.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\strcasecmp.c : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\strsep.c : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\symrec.c : \
+	"..\..\src\bytecode.h"\
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\errwarn.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\floatnum.h"\
+	"..\..\src\hamt.h"\
+	"..\..\src\objfmt.h"\
+	"..\..\src\section.h"\
+	"..\..\src\symrec.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\valparam.c : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\expr.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\xmalloc.c : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	
+
+..\..\src\xstrdup.c : \
+	"..\..\src\compat-queue.h"\
+	"..\..\src\coretype.h"\
+	"..\..\src\valparam.h"\
+	".\config.h"\
+	

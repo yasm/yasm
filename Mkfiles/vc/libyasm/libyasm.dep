@@ -1,0 +1,181 @@
+# Microsoft Developer Studio Generated Dependency File, included by libyasm.mak
+
+..\..\..\libyasm\arch.c : \
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\bitvect.c : \
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\bytecode.c : \
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bc-int.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr-int.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\errwarn.c : \
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\expr.c : \
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr-int.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\file.c : \
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\floatnum.c : \
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\hamt.c : \
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\intnum.c : \
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\linemgr.c : \
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\mergesort.c : \
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\section.c : \
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\strcasecmp.c : \
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\strsep.c : \
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\symrec.c : \
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\valparam.c : \
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\xmalloc.c : \
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	
+
+..\..\..\libyasm\xstrdup.c : \
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\valparam.h"\
+	".\config.h"\
+	

@@ -1,0 +1,443 @@
+# Microsoft Developer Studio Generated Dependency File, included by modules.mak
+
+..\..\..\modules\arch\x86\x86arch.c : \
+	"..\..\..\libyasm.h"\
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\dbgfmt.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\optimizer.h"\
+	"..\..\..\libyasm\preproc.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\..\..\modules\arch\x86\x86arch.h"\
+	"..\libyasm\config.h"\
+	
+
+..\..\..\modules\arch\x86\x86bc.c : \
+	"..\..\..\libyasm.h"\
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bc-int.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\dbgfmt.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\optimizer.h"\
+	"..\..\..\libyasm\preproc.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\..\..\modules\arch\x86\x86arch.h"\
+	"..\libyasm\config.h"\
+	
+
+..\..\..\modules\arch\x86\x86expr.c : \
+	"..\..\..\libyasm.h"\
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\dbgfmt.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr-int.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\optimizer.h"\
+	"..\..\..\libyasm\preproc.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\..\..\modules\arch\x86\x86arch.h"\
+	"..\libyasm\config.h"\
+	
+
+..\..\..\x86id.c : \
+	"..\..\..\libyasm.h"\
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bc-int.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\dbgfmt.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr-int.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\optimizer.h"\
+	"..\..\..\libyasm\preproc.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\..\..\modules\arch\x86\x86arch.h"\
+	"..\libyasm\config.h"\
+	
+
+"..\..\..\modules\dbgfmts\null\null-dbgfmt.c" : \
+	"..\..\..\libyasm.h"\
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\dbgfmt.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\optimizer.h"\
+	"..\..\..\libyasm\preproc.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\libyasm\config.h"\
+	
+
+"..\..\..\modules\objfmts\bin\bin-objfmt.c" : \
+	"..\..\..\libyasm.h"\
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bc-int.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\dbgfmt.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr-int.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\optimizer.h"\
+	"..\..\..\libyasm\preproc.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\libyasm\config.h"\
+	
+
+"..\..\..\modules\objfmts\coff\coff-objfmt.c" : \
+	"..\..\..\libyasm.h"\
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bc-int.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\dbgfmt.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr-int.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\optimizer.h"\
+	"..\..\..\libyasm\preproc.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\libyasm\config.h"\
+	
+
+"..\..\..\modules\objfmts\dbg\dbg-objfmt.c" : \
+	"..\..\..\libyasm.h"\
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\dbgfmt.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\optimizer.h"\
+	"..\..\..\libyasm\preproc.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\libyasm\config.h"\
+	
+
+"..\..\..\modules\optimizers\basic\basic-optimizer.c" : \
+	"..\..\..\libyasm.h"\
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bc-int.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\dbgfmt.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\optimizer.h"\
+	"..\..\..\libyasm\preproc.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\libyasm\config.h"\
+	
+
+"..\..\..\nasm-bison.c" : \
+	"..\..\..\libyasm.h"\
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\dbgfmt.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr-int.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\optimizer.h"\
+	"..\..\..\libyasm\preproc.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\..\..\modules\parsers\nasm\nasm-defs.h"\
+	"..\..\..\modules\parsers\nasm\nasm-parser.h"\
+	"..\libyasm\config.h"\
+	
+
+"..\..\..\modules\parsers\nasm\nasm-parser.c" : \
+	"..\..\..\libyasm.h"\
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\dbgfmt.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\optimizer.h"\
+	"..\..\..\libyasm\preproc.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\..\..\modules\parsers\nasm\nasm-parser.h"\
+	"..\libyasm\config.h"\
+	
+
+"..\..\..\nasm-token.c" : \
+	"..\..\..\libyasm.h"\
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\dbgfmt.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\optimizer.h"\
+	"..\..\..\libyasm\preproc.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\..\..\modules\parsers\nasm\nasm-defs.h"\
+	"..\..\..\modules\parsers\nasm\nasm-parser.h"\
+	"..\..\..\nasm-bison.h"\
+	"..\libyasm\config.h"\
+	
+
+"..\..\..\modules\preprocs\nasm\nasm-eval.c" : \
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\..\..\modules\preprocs\nasm\nasm-eval.h"\
+	"..\..\..\modules\preprocs\nasm\nasm.h"\
+	"..\..\..\modules\preprocs\nasm\nasmlib.h"\
+	"..\libyasm\config.h"\
+	
+
+"..\..\..\modules\preprocs\nasm\nasm-pp.c" : \
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\..\..\modules\preprocs\nasm\nasm-pp.h"\
+	"..\..\..\modules\preprocs\nasm\nasm.h"\
+	"..\..\..\modules\preprocs\nasm\nasmlib.h"\
+	"..\..\..\nasm-macros.c"\
+	"..\libyasm\config.h"\
+	
+
+"..\..\..\modules\preprocs\nasm\nasm-preproc.c" : \
+	"..\..\..\libyasm.h"\
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\dbgfmt.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\optimizer.h"\
+	"..\..\..\libyasm\preproc.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\..\..\modules\preprocs\nasm\nasm-eval.h"\
+	"..\..\..\modules\preprocs\nasm\nasm-pp.h"\
+	"..\..\..\modules\preprocs\nasm\nasm.h"\
+	"..\..\..\modules\preprocs\nasm\nasmlib.h"\
+	"..\libyasm\config.h"\
+	
+
+..\..\..\modules\preprocs\nasm\nasmlib.c : \
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\..\..\modules\preprocs\nasm\nasm.h"\
+	"..\..\..\modules\preprocs\nasm\nasmlib.h"\
+	"..\libyasm\config.h"\
+	
+
+"..\..\..\modules\preprocs\yapp\yapp-preproc.c" : \
+	"..\..\..\libyasm.h"\
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\dbgfmt.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\optimizer.h"\
+	"..\..\..\libyasm\preproc.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\..\..\modules\preprocs\yapp\yapp-preproc.h"\
+	"..\..\..\modules\preprocs\yapp\yapp-token.h"\
+	"..\libyasm\config.h"\
+	
+
+"..\..\..\yapp-token.c" : \
+	"..\..\..\libyasm.h"\
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\dbgfmt.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\optimizer.h"\
+	"..\..\..\libyasm\preproc.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\..\..\modules\preprocs\yapp\yapp-preproc.h"\
+	"..\..\..\modules\preprocs\yapp\yapp-token.h"\
+	"..\libyasm\config.h"\
+	
+
+"..\..\..\modules\preprocs\raw\raw-preproc.c" : \
+	"..\..\..\libyasm.h"\
+	"..\..\..\libyasm\arch.h"\
+	"..\..\..\libyasm\bitvect.h"\
+	"..\..\..\libyasm\bytecode.h"\
+	"..\..\..\libyasm\compat-queue.h"\
+	"..\..\..\libyasm\coretype.h"\
+	"..\..\..\libyasm\dbgfmt.h"\
+	"..\..\..\libyasm\errwarn.h"\
+	"..\..\..\libyasm\expr.h"\
+	"..\..\..\libyasm\file.h"\
+	"..\..\..\libyasm\floatnum.h"\
+	"..\..\..\libyasm\hamt.h"\
+	"..\..\..\libyasm\intnum.h"\
+	"..\..\..\libyasm\linemgr.h"\
+	"..\..\..\libyasm\objfmt.h"\
+	"..\..\..\libyasm\optimizer.h"\
+	"..\..\..\libyasm\preproc.h"\
+	"..\..\..\libyasm\section.h"\
+	"..\..\..\libyasm\symrec.h"\
+	"..\..\..\libyasm\valparam.h"\
+	"..\libyasm\config.h"\
+	
