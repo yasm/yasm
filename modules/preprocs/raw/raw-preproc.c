@@ -82,5 +82,7 @@ yasm_preproc yasm_raw_LTX_preproc = {
     raw_preproc_cleanup,
     raw_preproc_input,
     /* no include paths */ NULL,
-    /* no pre-include files */ NULL
+    /* no pre-include files */ NULL,
+    /* no predefining macros */ NULL,
+    /* no undefining macros */ NULL
 };

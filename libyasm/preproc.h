@@ -36,7 +36,7 @@
  * definitions match the module loader's function definitions.  The version
  * number must never be decreased.
  */
-#define YASM_PREPROC_VERSION	1
+#define YASM_PREPROC_VERSION	2
 
 /* Interface to the preprocesor module(s) */
 struct yasm_preproc {
@@ -74,6 +74,12 @@ struct yasm_preproc {
 
     /* Pre-include a file */
     void (*add_include_file) (const char *filename);
+
+    /* Pre-define a macro */
+    void (*predefine_macro) (const char *macronameval);
+
+    /* Un-define a macro */
+    void (*undefine_macro) (const char *macroname);
 };
 
 #endif

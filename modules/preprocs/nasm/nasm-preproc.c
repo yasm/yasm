@@ -189,6 +189,22 @@ nasm_preproc_add_include_file (const char *filename)
     pp_pre_include(filename);
 }
 
+static void
+nasm_preproc_predefine_macro (const char *macronameval)
+{
+    char *mnv = yasm__xstrdup(macronameval);
+    pp_pre_define(mnv);
+    yasm_xfree(mnv);
+}
+
+static void
+nasm_preproc_undefine_macro (const char *macroname)
+{
+    char *mn = yasm__xstrdup(macroname);
+    pp_pre_undefine(mn);
+    yasm_xfree(mn);
+}
+
 
 /* Define preproc structure -- see preproc.h for details */
 yasm_preproc yasm_nasm_LTX_preproc = {
@@ -199,5 +215,7 @@ yasm_preproc yasm_nasm_LTX_preproc = {
     nasm_preproc_cleanup,
     nasm_preproc_input,
     nasm_preproc_add_include_path,
-    nasm_preproc_add_include_file
+    nasm_preproc_add_include_file,
+    nasm_preproc_predefine_macro,
+    nasm_preproc_undefine_macro
 };

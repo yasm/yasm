@@ -91,10 +91,7 @@ static int opt_objfile_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_machine_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int preproc_only_handler(char *cmd, /*@null@*/ char *param, int extra);
-static int opt_preproc_include_path(char *cmd, /*@null@*/ char *param,
-				    int extra);
-static int opt_preproc_include_file(char *cmd, /*@null@*/ char *param,
-				    int extra);
+static int opt_preproc_option(char *cmd, /*@null@*/ char *param, int extra);
 
 static /*@only@*/ char *replace_extension(const char *orig, /*@null@*/
 					  const char *ext, const char *def);
@@ -145,10 +142,14 @@ static opt_option options[] =
       N_("enables/disables warning"), NULL },
     { 'e', "preproc-only", 0, preproc_only_handler, 0,
       N_("preprocess only (writes output to stdout by default)"), NULL },
-    { 'I', NULL, 1, opt_preproc_include_path, 0,
+    { 'I', NULL, 1, opt_preproc_option, 0,
       N_("add include path"), N_("path") },
-    { 'P', NULL, 1, opt_preproc_include_file, 0,
+    { 'P', NULL, 1, opt_preproc_option, 1,
       N_("pre-include file"), N_("filename") },
+    { 'D', NULL, 1, opt_preproc_option, 2,
+      N_("pre-define a macro, optionally to value"), N_("macro[=value]") },
+    { 'U', NULL, 1, opt_preproc_option, 3,
+      N_("undefine a macro"), N_("macro") },
 };
 
 /* version message */
@@ -203,10 +204,10 @@ typedef STAILQ_HEAD(constcharparam_head, constcharparam) constcharparam_head;
 typedef struct constcharparam {
     STAILQ_ENTRY(constcharparam) link;
     const char *param;
+    int id;
 } constcharparam;
 
-static constcharparam_head includepaths;
-static constcharparam_head includefiles;
+static constcharparam_head preproc_options;
 
 /* main function */
 /*@-globstate -unrecog@*/
@@ -268,8 +269,7 @@ main(int argc, char *argv[])
 #endif
 
     /* Initialize parameter storage */
-    STAILQ_INIT(&includepaths);
-    STAILQ_INIT(&includefiles);
+    STAILQ_INIT(&preproc_options);
 
     if (parse_cmdline(argc, argv, options, NELEMS(options), print_error))
 	return EXIT_FAILURE;
@@ -882,60 +882,39 @@ preproc_only_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
 }
 
 static int
-opt_preproc_include_path(/*@unused@*/ char *cmd, char *param,
-			 /*@unused@*/ int extra)
+opt_preproc_option(/*@unused@*/ char *cmd, char *param, int extra)
 {
     constcharparam *cp;
     cp = yasm_xmalloc(sizeof(constcharparam));
     cp->param = param;
-    STAILQ_INSERT_TAIL(&includepaths, cp, link);
+    cp->id = extra;
+    STAILQ_INSERT_TAIL(&preproc_options, cp, link);
     return 0;
 }
 
 static void
 apply_preproc_saved_options()
 {
-    constcharparam *cp;
-    constcharparam *cpnext;
+    constcharparam *cp, *cpnext;
 
-    if (cur_preproc->add_include_path != NULL) {
-	STAILQ_FOREACH(cp, &includepaths, link) {
-	    cur_preproc->add_include_path(cp->param);
-	}
+    void (*funcs[4])(const char *);
+    funcs[0] = cur_preproc->add_include_path;
+    funcs[1] = cur_preproc->add_include_file;
+    funcs[2] = cur_preproc->predefine_macro;
+    funcs[3] = cur_preproc->undefine_macro;
+
+    STAILQ_FOREACH(cp, &preproc_options, link) {
+	if (0 <= cp->id && cp->id < 4 && funcs[cp->id])
+	    funcs[cp->id](cp->param);
     }
 
-    cp = STAILQ_FIRST(&includepaths);
+    cp = STAILQ_FIRST(&preproc_options);
     while (cp != NULL) {
 	cpnext = STAILQ_NEXT(cp, link);
 	yasm_xfree(cp);
 	cp = cpnext;
     }
-    STAILQ_INIT(&includepaths);
-
-    if (cur_preproc->add_include_file != NULL) {
-	STAILQ_FOREACH(cp, &includefiles, link) {
-	    cur_preproc->add_include_file(cp->param);
-	}
-    }
-
-    cp = STAILQ_FIRST(&includepaths);
-    while (cp != NULL) {
-	cpnext = STAILQ_NEXT(cp, link);
-	yasm_xfree(cp);
-	cp = cpnext;
-    }
-    STAILQ_INIT(&includepaths);
-}
-
-static int
-opt_preproc_include_file(/*@unused@*/ char *cmd, char *param,
-			 /*@unused@*/ int extra)
-{
-    constcharparam *cp;
-    cp = yasm_xmalloc(sizeof(constcharparam));
-    cp->param = param;
-    STAILQ_INSERT_TAIL(&includefiles, cp, link);
-    return 0;
+    STAILQ_INIT(&preproc_options);
 }
 
 /* Replace extension on a filename (or append one if none is present).
