@@ -247,7 +247,7 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
 {
     wordptr result = (wordptr)NULL, op1 = (wordptr)NULL, op2 = (wordptr)NULL;
     wordptr spare = (wordptr)NULL;
-    boolean carry;
+    boolean carry = 0;
 
     /* upsize to bitvector op if one of two parameters is bitvector already.
      * BitVector results must be calculated through intermediate storage.
