@@ -1,4 +1,4 @@
-/* $Id: nasm-bison.y,v 1.24 2001/08/19 05:41:01 peter Exp $
+/* $Id: nasm-bison.y,v 1.25 2001/08/19 05:44:53 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -117,8 +117,6 @@ input: /* empty */
 
 line: '\n'	{ $$.type = BC_EMPTY; }
     | exp '\n' { DebugPrintBC(&$1); $$ = $1; }
-    | label exp '\n' { DebugPrintBC(&$2); $$ = $2; }
-    | label '\n'
     | directive '\n' { $$.type = BC_EMPTY; }
     | error '\n' {
 	Error(ERR_INVALID_LINE, (char *)NULL);
@@ -130,6 +128,8 @@ line: '\n'	{ $$.type = BC_EMPTY; }
 exp: instr
     | DECLARE_DATA datavals	{ BuildBC_Data(&$$, &$2, $1); }
     | RESERVE_SPACE expr	{ BuildBC_Reserve(&$$, $2, $1); }
+    | label exp			{ $$ = $2; }
+    | label			{ $$.type = BC_EMPTY; }
 ;
 
 datavals: dataval		{
