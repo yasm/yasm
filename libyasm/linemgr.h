@@ -25,5 +25,6 @@
 extern char *filename;
 extern unsigned int line_number;
 extern unsigned char mode_bits;
+extern unsigned int asm_options;
 
 #endif

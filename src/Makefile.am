@@ -35,6 +35,8 @@ libyasm_a_SOURCES = \
 	section.c		\
 	section.h		\
 	objfmt.h		\
+	options.h		\
+	options.c		\
 	preproc.h		\
 	parser.c		\
 	parser.h		\

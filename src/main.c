@@ -43,6 +43,7 @@
 #include "bitvect.h"
 
 #include "globals.h"
+#include "options.h"
 #include "errwarn.h"
 
 #include "bytecode.h"
@@ -53,25 +54,69 @@
 
 RCSID("$IdPath$");
 
+#ifndef countof
+#define countof(x,y)	(sizeof(x)/sizeof(y))
+#endif
+
+static int files_open = 0;
+static FILE *in;
+
+/* Forward declarations: cmd line parser handlers */
+int not_an_option_handler(char *param);
+int opt_option_handler(char *cmd, char *param, int extra);
+int opt_format_handler(char *cmd, char *param, int extra);
+/* Fake handlers: remove them */
+int boo_boo_handler(char *cmd, char *param, int extra);
+int b_handler(char *cmd, char *param, int extra);
+
+/* values for asm_options */
+#define OPT_SHOW_HELP 0x01
+
+/* command line options */
+opt_option options[] =
+{
+    { 'h', "help",    0, opt_option_handler, OPT_SHOW_HELP, "show help text" },
+    { 'f', "oformat", 1, opt_format_handler, 0, "select output format", "<format>" },
+    /* Fake handlers: remove them */
+    { 'b', NULL,      0, b_handler, 0, "says boom!" },
+    {  0,  "boo-boo", 0, boo_boo_handler, 0, "says boo-boo!" },
+};
+
+/* help messages */
+char help_head[] = "yasm version 0.1 compiled " __DATE__ "\n"
+		   "copyright (c) 2001 Peter Johnson and Yasm developers\n"
+		   "mailto: asm-devel@bilogic.org\n"
+		   "\n"
+		   "usage: yasm [options|files]+\n"
+		   "where options are:\n";
+char help_tail[] = "\n"
+		   "   files are asm sources to be assembled\n"
+		   "\n"
+		   "sample invocation:\n"
+		   "   yasm -b --boo-boo -f elf -o test.o impl.asm\n"
+		   "\n";
+
+/* main function */
 int
 main(int argc, char *argv[])
 {
-    FILE *in;
+    if (parse_cmdline(argc, argv, options, countof(options, opt_option)))
+	return EXIT_FAILURE;
 
-    /* Initialize BitVector (needed for floating point). */
-    if (BitVector_Boot() != ErrCode_Ok) {
-	fprintf(stderr, _("Could not initialize BitVector"));
+    if (asm_options & OPT_SHOW_HELP) {
+	help_msg(help_head, help_tail, options, countof(options, opt_option));
 	return EXIT_FAILURE;
     }
 
-    if (argc == 2) {
-	in = fopen(argv[1], "rt");
-	if (!in) {
-	    fprintf(stderr, "could not open file `%s'\n", argv[1]);
-	    return EXIT_FAILURE;
-	}
-	filename = strdup(argv[1]);
-    } else {
+    /* Initialize BitVector (needed for floating point). */
+    if (BitVector_Boot() != ErrCode_Ok) {
+	ErrorNow(_("Could not initialize BitVector"));
+	return EXIT_FAILURE;
+    }
+
+    /* if no files were specified, fallback to reading stdin */
+    if (!files_open)
+    {
 	in = stdin;
 	filename = strdup("<STDIN>");
     }
@@ -87,4 +132,56 @@ main(int argc, char *argv[])
     if (filename)
 	free(filename);
     return EXIT_SUCCESS;
+}
+
+/*
+ *  Command line options handlers
+ */
+int
+not_an_option_handler(char *param)
+{
+    if (files_open > 0) {
+	WarningNow("can open only one input file, only latest file will be processed");
+	free(filename);
+	fclose(in);
+    }
+
+    in = fopen(param, "rt");
+    if (!in) {
+	ErrorNow(_("could not open file `%s'"), param);
+	return 1;
+    }
+    filename = strdup(param);
+
+    files_open++;
+    return 0;
+}
+
+int
+opt_option_handler(char *cmd, char *param, int extra)
+{
+    asm_options |= extra;
+    return 0;
+}
+
+int
+opt_format_handler(char *cmd, char *param, int extra)
+{
+    printf("selected format: %s\n", param);
+    return 0;
+}
+
+/* Fake handlers: remove them */
+int
+boo_boo_handler(char *cmd, char *param, int extra)
+{
+    printf("boo-boo!\n");
+    return 0;
+}
+
+int
+b_handler(char *cmd, char *param, int extra)
+{
+    fprintf(stdout, "boom!\n");
+    return 0;
 }
