@@ -311,7 +311,7 @@ static const x86_insn_info onebytemem_insn[] = {
 
 /* Two byte opcode instructions with general memory operand */
 static const x86_insn_info twobytemem_insn[] = {
-    { CPU_Any, MOD_Op1Add|MOD_Op0Add|MOD_SpAdd, 0, 1, {0, 0, 0}, 0, 1,
+    { CPU_Any, MOD_Op1Add|MOD_Op0Add|MOD_SpAdd, 0, 2, {0, 0, 0}, 0, 1,
       {OPT_Mem|OPS_Any|OPA_EA, 0, 0} }
 };
 
