@@ -1,3 +1,3 @@
-%line 4+1 ./src/preprocs/yapp/tests/rinclude.asm
+%line 4+1 -
 	mov ax, 5 
 

@@ -1,5 +1,5 @@
-%line 9+1 ./src/preprocs/yapp/tests/ifdef.asm
+%line 9+1 -
 	mov	ax, 5
 
 
-%line 14+1 ./src/preprocs/yapp/tests/ifdef.asm
+%line 14+1 -

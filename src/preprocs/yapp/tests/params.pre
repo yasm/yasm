@@ -1,2 +1,2 @@
-%line 2+1 ./src/preprocs/yapp/tests/params.asm
+%line 2+1 -
     ((a+b,c))+((d*e,f))

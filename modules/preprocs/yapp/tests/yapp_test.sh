@@ -22,7 +22,8 @@ do
     p=`echo ${asm} | sed -e 's,.asm$,.pre,'`
 
     echo -n "$YT: Testing yapp for ${a} ..."
-    if ./yasm -e ${asm} > ${y}; then
+    if sed -e "s,\./,${srcdir}/," ${asm} | ./yasm -e |
+	sed -e "s,${srcdir}/,./," > ${y}; then
 	if diff -w ${p} ${y} > /dev/null; then
 	    echo " PASS."
 	    passedct=`expr $passedct + 1`
