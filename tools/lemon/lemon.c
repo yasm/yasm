@@ -26,7 +26,7 @@
 **   http://www.hwaci.com/drh/
 **
 ** $IdPath$
-** $Id: lemon.c,v 1.4 2002/04/07 19:58:57 peter Exp $
+** $Id: lemon.c,v 1.5 2002/04/07 20:57:52 peter Exp $
 */
 #include <stdio.h>
 #include <stdarg.h>
@@ -220,10 +220,10 @@ struct lemon {
 };
 
 #define MemoryCheck(X) if((X)==0){ \
-  extern void memory_error(void); \
   memory_error(); \
 }
 
+void memory_error(void);
 char *msort(char *, char **, int (*)(const void *, const void *));
 
 /******** From the file "action.h" *************************************/
@@ -232,7 +232,7 @@ struct action *Action_sort(struct action *);
 void Action_add(struct action **, enum e_action, struct symbol *, void *);
 
 /********* From the file "assert.h" ************************************/
-void myassert(char *, int);
+void myassert(const char *, int);
 #ifndef NDEBUG
 #  define assert(X) if(!(X))myassert(__FILE__,__LINE__)
 #else
@@ -261,19 +261,25 @@ void Configlist_reset(void);
 
 /********* From the file "error.h" ***************************************/
 #if __GNUC__ >= 2
-void ErrorMsg( char *, int, char *, ... )
+void ErrorMsg( const char *, int, const char *, ... )
   __attribute__((format (printf, 3, 4)));
 #else
-void ErrorMsg( char *, int, char *, ... );
+void ErrorMsg( const char *, int, const char *, ... );
 #endif
 
 /****** From the file "option.h" ******************************************/
 struct s_options {
   enum { OPT_FLAG=1,  OPT_INT,  OPT_DBL,  OPT_STR,
          OPT_FFLAG, OPT_FINT, OPT_FDBL, OPT_FSTR} type;
-  char *label;
-  char *arg;
-  char *message;
+  const char *label;
+  union {
+    void *val;
+    void (*fflag)(int);
+    void (*fint)(int);
+    void (*fdbl)(double);
+    void (*fstr)(const char *);
+  } arg;
+  const char *message;
 };
 int    OptInit(char**,struct s_options*,FILE*);
 int    OptNArgs(void);
@@ -321,19 +327,19 @@ int SetUnion(char *A,char *B);    /* A <- A U B, thru element N */
 
 /* Routines for handling a strings */
 
-char *Strsafe(char *);
+char *Strsafe(const char *);
 
 void Strsafe_init(void);
 int Strsafe_insert(char *);
-char *Strsafe_find(char *);
+char *Strsafe_find(const char *);
 
 /* Routines for handling symbols of the grammar */
 
-struct symbol *Symbol_new(char *x);
+struct symbol *Symbol_new(const char *x);
 int Symbolcmpp(const void *, const void *);
 void Symbol_init(void);
 int Symbol_insert(struct symbol *, char *);
-struct symbol *Symbol_find(char *);
+struct symbol *Symbol_find(const char *);
 struct symbol *Symbol_Nth(int);
 int Symbol_count(void);
 struct symbol **Symbol_arrayof(void);
@@ -420,7 +426,7 @@ void Action_add(struct action **app, enum e_action type, struct symbol *sp,
 /*
 ** A more efficient way of handling assertions.
 */
-void myassert(char *file, int line)
+void myassert(const char *file, int line)
 {
   fprintf(stderr,"Assertion failed on line %d of file \"%s\"\n",line,file);
   exit(1);
@@ -782,11 +788,11 @@ void FindActions(struct lemon *lemp)
   /* Resolve conflicts */
   for(i=0; i<lemp->nstate; i++){
     struct action *ap, *nap;
-    struct state *stp;
-    stp = lemp->sorted[i];
-    assert( stp->ap );
-    stp->ap = Action_sort(stp->ap);
-    for(ap=stp->ap; ap && ap->next; ap=nap){
+    struct state *stp2;
+    stp2 = lemp->sorted[i];
+    assert( stp2->ap );
+    stp2->ap = Action_sort(stp2->ap);
+    for(ap=stp2->ap; ap && ap->next; ap=nap){
       for(nap=ap->next; nap && nap->sp==ap->sp; nap=nap->next){
          /* The two actions "ap" and "nap" have the same lookahead.
          ** Figure out which one should be used */
@@ -881,6 +887,9 @@ static struct config *current = 0;       /* Top of list of configurations */
 static struct config **currentend = 0;   /* Last on list of configs */
 static struct config *basis = 0;         /* Top of list of basis configs */
 static struct config **basisend = 0;     /* End of list of basis configs */
+
+struct config *newconfig(void);
+void deleteconfig(struct config *);
 
 /* Return a pointer to a new configuration */
 PRIVATE struct config *newconfig(void){
@@ -1100,7 +1109,7 @@ static int findbreak(char *msg, int min, int max)
 #define ERRMSGSIZE  10000 /* Hope this is big enough.  No way to error check */
 #define LINEWIDTH      79 /* Max width of any output line */
 #define PREFIXLIMIT    30 /* Max width of the prefix on each line */
-void ErrorMsg(char *filename, int lineno, char *format, ...)
+void ErrorMsg(const char *filename, int lineno, const char *format, ...)
 {
   char errmsg[ERRMSGSIZE];
   char prefix[PREFIXLIMIT+10];
@@ -1164,14 +1173,14 @@ int main(int argc, char **argv)
   static int statistics = 0;
   static int mhflag = 0;
   static struct s_options options[] = {
-    {OPT_FLAG, "b", (char*)&basisflag, "Print only the basis in report."},
-    {OPT_FLAG, "c", (char*)&compress, "Don't compress the action table."},
-    {OPT_FLAG, "g", (char*)&rpflag, "Print grammar without actions."},
-    {OPT_FLAG, "m", (char*)&mhflag, "Output a makeheaders compatible file"},
-    {OPT_FLAG, "q", (char*)&quiet, "(Quiet) Don't print the report file."},
-    {OPT_FLAG, "s", (char*)&statistics, "Print parser stats to standard output."},
-    {OPT_FLAG, "x", (char*)&version, "Print the version number."},
-    {OPT_FLAG,0,0,0}
+    {OPT_FLAG, "b", {&basisflag}, "Print only the basis in report."},
+    {OPT_FLAG, "c", {&compress}, "Don't compress the action table."},
+    {OPT_FLAG, "g", {&rpflag}, "Print grammar without actions."},
+    {OPT_FLAG, "m", {&mhflag}, "Output a makeheaders compatible file"},
+    {OPT_FLAG, "q", {&quiet}, "(Quiet) Don't print the report file."},
+    {OPT_FLAG, "s", {&statistics}, "Print parser stats to standard output."},
+    {OPT_FLAG, "x", {&version}, "Print the version number."},
+    {OPT_FLAG,0,{0},0}
   };
   int i;
   struct lemon lem;
@@ -1463,9 +1472,9 @@ static int handleflags(int i, FILE *err)
     }
     errcnt++;
   }else if( op[j].type==OPT_FLAG ){
-    *((int*)op[j].arg) = v;
+    *((int*)op[j].arg.val) = v;
   }else if( op[j].type==OPT_FFLAG ){
-    (*(void(*)())(op[j].arg))(v);
+    op[j].arg.fflag(v);
   }else{
     if( err ){
       fprintf(err,"%smissing argument on switch.\n",emsg);
@@ -1542,22 +1551,22 @@ static int handleswitch(int i, FILE *err)
       case OPT_FFLAG:
         break;
       case OPT_DBL:
-        *(double*)(op[j].arg) = dv;
+        *(double*)(op[j].arg.val) = dv;
         break;
       case OPT_FDBL:
-        (*(void(*)())(op[j].arg))(dv);
+        op[j].arg.fdbl(dv);
         break;
       case OPT_INT:
-        *(int*)(op[j].arg) = lv;
+        *(int*)(op[j].arg.val) = lv;
         break;
       case OPT_FINT:
-        (*(void(*)())(op[j].arg))((int)lv);
+        op[j].arg.fint(lv);
         break;
       case OPT_STR:
-        *(char**)(op[j].arg) = sv;
+        *(char**)(op[j].arg.val) = sv;
         break;
       case OPT_FSTR:
-        (*(void(*)())(op[j].arg))(sv);
+        op[j].arg.fstr(sv);
         break;
     }
   }
@@ -2266,11 +2275,25 @@ void Plink_delete(struct plink *plp)
 ** Procedures for generating reports and tables in the LEMON parser generator.
 */
 
+PRIVATE char *file_makename(struct lemon *, const char *);
+PRIVATE FILE *file_open(struct lemon *, const char *, const char *);
+void ConfigPrint(FILE *, struct config *);
+int PrintAction(struct action *, FILE *, int);
+PRIVATE char *pathsearch(char *, char *, int);
+PRIVATE int compute_action(struct lemon *, struct action *);
+PRIVATE void tplt_xfer(char *, FILE *, FILE *, int *);
+PRIVATE FILE *tplt_open(struct lemon *);
+PRIVATE void tplt_print(FILE *, struct lemon *, char *, int, int *);
+void emit_destructor_code(FILE *, struct symbol *, struct lemon *, int *);
+int has_destructor(struct symbol *, struct lemon *);
+PRIVATE void emit_code(FILE *, struct rule *, struct lemon *, int *);
+void print_stack_union(FILE *, struct lemon *, int *, int);
+
 /* Generate a filename with the given suffix.  Space to hold the
 ** name comes from malloc() and must be freed by the calling
 ** function.
 */
-PRIVATE char *file_makename(struct lemon *lemp, char *suffix)
+PRIVATE char *file_makename(struct lemon *lemp, const char *suffix)
 {
   char *name;
   char *cp;
@@ -2290,7 +2313,8 @@ PRIVATE char *file_makename(struct lemon *lemp, char *suffix)
 /* Open a file with a name based on the name of the input file,
 ** but with a different (specified) suffix, and return a pointer
 ** to the stream */
-PRIVATE FILE *file_open(struct lemon *lemp, char *suffix, char *mode)
+PRIVATE FILE *file_open(struct lemon *lemp, const char *suffix,
+    const char *mode)
 {
   FILE *fp;
 
@@ -2470,6 +2494,8 @@ void ReportOutput(struct lemon *lemp)
 PRIVATE char *pathsearch(char *argv0, char *name, int modemask)
 {
   char *pathlist;
+  char stdpathlist[] = ".:/bin:/usr/bin";
+  char emptypathlist[] = "";
   char *path,*cp;
   char c;
 
@@ -2485,9 +2511,8 @@ PRIVATE char *pathsearch(char *argv0, char *name, int modemask)
     if( path ) sprintf(path,"%s/%s",argv0,name);
     *cp = c;
   }else{
-    extern char *getenv();
     pathlist = getenv("PATH");
-    if( pathlist==0 ) pathlist = ".:/bin:/usr/bin";
+    if( pathlist==0 ) pathlist = stdpathlist;
     path = (char *)malloc( strlen(pathlist)+strlen(name)+2 );
     if( path!=0 ){
       while( *pathlist ){
@@ -2497,7 +2522,7 @@ PRIVATE char *pathsearch(char *argv0, char *name, int modemask)
         *cp = 0;
         sprintf(path,"%s/%s",pathlist,name);
         *cp = c;
-        if( c==0 ) pathlist = "";
+        if( c==0 ) pathlist = emptypathlist;
         else pathlist = &cp[1];
         if( access(path,modemask)==0 ) break;
       }
@@ -2752,7 +2777,7 @@ void print_stack_union(
   char *stddt;              /* Standardized name for a datatype */
   int i,j;                  /* Loop counters */
   int hash;                 /* For hashing the name of a type */
-  char *name;               /* Name of the parser */
+  const char *name;         /* Name of the parser */
 
   /* Allocate and initialize types[] and allocate stddt[] */
   arraysize = lemp->nsymbol * 2;
@@ -2839,6 +2864,8 @@ void print_stack_union(
   *plineno = lineno;
 }
 
+char def_stacksize[] = "100";
+
 /* Generate C source code for the parser */
 void ReportTable(
     struct lemon *lemp,
@@ -2852,7 +2879,7 @@ void ReportTable(
   struct rule *rp;
   int i;
   int tablecnt;
-  char *name;
+  const char *name;
 
   in = tplt_open(lemp);
   if( in==0 ) return;
@@ -2867,15 +2894,15 @@ void ReportTable(
   /* Generate the include code, if any */
   tplt_print(out,lemp,lemp->include,lemp->includeln,&lineno);
   if( mhflag ){
-    char *name = file_makename(lemp, ".h");
+    char *name2 = file_makename(lemp, ".h");
     fprintf(out,"#include \"%s\"\n", name); lineno++;
-    free(name);
+    free(name2);
   }
   tplt_xfer(lemp->name,in,out,&lineno);
 
   /* Generate #defines for all tokens */
   if( mhflag ){
-    char *prefix;
+    const char *prefix;
     fprintf(out,"#if INTERFACE\n"); lineno++;
     if( lemp->tokenprefix ) prefix = lemp->tokenprefix;
     else                    prefix = "";
@@ -2901,7 +2928,7 @@ void ReportTable(
 "Illegal stack size: [%s].  The stack size should be an integer constant.",
         lemp->stacksize);
       lemp->errorcnt++;
-      lemp->stacksize = "100";
+      lemp->stacksize = def_stacksize;
     }
     fprintf(out,"#define YYSTACKDEPTH %s\n",lemp->stacksize);  lineno++;
   }else{
@@ -2912,11 +2939,11 @@ void ReportTable(
   }
   name = lemp->name ? lemp->name : "Parse";
   if( lemp->arg && lemp->arg[0] ){
-    int i;
-    i = strlen(lemp->arg);
-    while( i>=1 && safe_isspace(lemp->arg[i-1]) ) i--;
-    while( i>=1 && (safe_isalnum(lemp->arg[i-1]) || lemp->arg[i-1]=='_') ) i--;
-    fprintf(out,"#define %sARGDECL ,%s\n",name,&lemp->arg[i]);  lineno++;
+    int j;
+    j = strlen(lemp->arg);
+    while( j>=1 && safe_isspace(lemp->arg[j-1]) ) j--;
+    while( j>=1 && (safe_isalnum(lemp->arg[j-1]) || lemp->arg[j-1]=='_') ) j--;
+    fprintf(out,"#define %sARGDECL ,%s\n",name,&lemp->arg[j]);  lineno++;
     fprintf(out,"#define %sXARGDECL %s;\n",name,lemp->arg);  lineno++;
     fprintf(out,"#define %sANSIARGDECL ,%s\n",name,lemp->arg);  lineno++;
   }else{
@@ -3129,7 +3156,7 @@ void ReportTable(
 void ReportHeader(struct lemon *lemp)
 {
   FILE *out, *in;
-  char *prefix;
+  const char *prefix;
   char line[LINESIZE];
   char pattern[LINESIZE];
   int i;
@@ -3221,7 +3248,6 @@ char *SetNew(void){
   int i;
   s = (char*)malloc( size );
   if( s==0 ){
-    extern void memory_error();
     memory_error();
   }
   for(i=0; i<size; i++) s[i] = 0;
@@ -3270,8 +3296,12 @@ int SetUnion(char *s1, char *s2)
 /*
 ** Code for processing tables in the LEMON parser generator.
 */
+PRIVATE int strhash(const char *);
+PRIVATE int statecmp(struct config *, struct config *);
+PRIVATE int statehash(struct config *);
+PRIVATE int confighash(struct config *);
 
-PRIVATE int strhash(char *x)
+PRIVATE int strhash(const char *x)
 {
   int h = 0;
   while( *x) h = h*13 + *(x++);
@@ -3282,7 +3312,7 @@ PRIVATE int strhash(char *x)
 ** keep strings in a table so that the same string is not in more
 ** than one place.
 */
-char *Strsafe(char *y)
+char *Strsafe(const char *y)
 {
   char *z;
 
@@ -3360,19 +3390,19 @@ int Strsafe_insert(char *data)
   }
   if( x1a->count>=x1a->size ){
     /* Need to make the hash table bigger */
-    int i,size;
+    int i,mysize;
     struct s_x1 array;
-    array.size = size = x1a->size*2;
+    array.size = mysize = x1a->size*2;
     array.count = x1a->count;
     array.tbl = (x1node*)malloc(
-      (sizeof(x1node) + sizeof(x1node*))*size );
+      (sizeof(x1node) + sizeof(x1node*))*mysize );
     if( array.tbl==0 ) return 0;  /* Fail due to malloc failure */
-    array.ht = (x1node**)&(array.tbl[size]);
-    for(i=0; i<size; i++) array.ht[i] = 0;
+    array.ht = (x1node**)&(array.tbl[mysize]);
+    for(i=0; i<mysize; i++) array.ht[i] = 0;
     for(i=0; i<x1a->count; i++){
       x1node *oldnp, *newnp;
       oldnp = &(x1a->tbl[i]);
-      h = strhash(oldnp->data) & (size-1);
+      h = strhash(oldnp->data) & (mysize-1);
       newnp = &(array.tbl[i]);
       if( array.ht[h] ) array.ht[h]->from = &(newnp->next);
       newnp->next = array.ht[h];
@@ -3396,7 +3426,7 @@ int Strsafe_insert(char *data)
 
 /* Return a pointer to data assigned to the given key.  Return NULL
 ** if no such key. */
-char *Strsafe_find(char *key)
+char *Strsafe_find(const char *key)
 {
   int h;
   x1node *np;
@@ -3414,7 +3444,7 @@ char *Strsafe_find(char *key)
 /* Return a pointer to the (terminal or nonterminal) symbol "x".
 ** Create a new symbol if this is the first time "x" has been seen.
 */
-struct symbol *Symbol_new(char *x)
+struct symbol *Symbol_new(const char *x)
 {
   struct symbol *sp;
 
@@ -3521,19 +3551,19 @@ int Symbol_insert(struct symbol *data, char *key)
   }
   if( x2a->count>=x2a->size ){
     /* Need to make the hash table bigger */
-    int i,size;
+    int i,mysize;
     struct s_x2 array;
-    array.size = size = x2a->size*2;
+    array.size = mysize = x2a->size*2;
     array.count = x2a->count;
     array.tbl = (x2node*)malloc(
-      (sizeof(x2node) + sizeof(x2node*))*size );
+      (sizeof(x2node) + sizeof(x2node*))*mysize );
     if( array.tbl==0 ) return 0;  /* Fail due to malloc failure */
-    array.ht = (x2node**)&(array.tbl[size]);
-    for(i=0; i<size; i++) array.ht[i] = 0;
+    array.ht = (x2node**)&(array.tbl[mysize]);
+    for(i=0; i<mysize; i++) array.ht[i] = 0;
     for(i=0; i<x2a->count; i++){
       x2node *oldnp, *newnp;
       oldnp = &(x2a->tbl[i]);
-      h = strhash(oldnp->key) & (size-1);
+      h = strhash(oldnp->key) & (mysize-1);
       newnp = &(array.tbl[i]);
       if( array.ht[h] ) array.ht[h]->from = &(newnp->next);
       newnp->next = array.ht[h];
@@ -3559,7 +3589,7 @@ int Symbol_insert(struct symbol *data, char *key)
 
 /* Return a pointer to data assigned to the given key.  Return NULL
 ** if no such key. */
-struct symbol *Symbol_find(char *key)
+struct symbol *Symbol_find(const char *key)
 {
   int h;
   x2node *np;
@@ -3598,12 +3628,12 @@ int Symbol_count(void)
 struct symbol **Symbol_arrayof(void)
 {
   struct symbol **array;
-  int i,size;
+  int i,mysize;
   if( x2a==0 ) return 0;
-  size = x2a->count;
-  array = (struct symbol **)malloc( sizeof(struct symbol *)*size );
+  mysize = x2a->count;
+  array = (struct symbol **)malloc( sizeof(struct symbol *)*mysize );
   if( array ){
-    for(i=0; i<size; i++) array[i] = x2a->tbl[i].data;
+    for(i=0; i<mysize; i++) array[i] = x2a->tbl[i].data;
   }
   return array;
 }
@@ -3719,19 +3749,19 @@ int State_insert(struct state *data, struct config *key)
   }
   if( x3a->count>=x3a->size ){
     /* Need to make the hash table bigger */
-    int i,size;
+    int i,mysize;
     struct s_x3 array;
-    array.size = size = x3a->size*2;
+    array.size = mysize = x3a->size*2;
     array.count = x3a->count;
     array.tbl = (x3node*)malloc(
-      (sizeof(x3node) + sizeof(x3node*))*size );
+      (sizeof(x3node) + sizeof(x3node*))*mysize );
     if( array.tbl==0 ) return 0;  /* Fail due to malloc failure */
-    array.ht = (x3node**)&(array.tbl[size]);
-    for(i=0; i<size; i++) array.ht[i] = 0;
+    array.ht = (x3node**)&(array.tbl[mysize]);
+    for(i=0; i<mysize; i++) array.ht[i] = 0;
     for(i=0; i<x3a->count; i++){
       x3node *oldnp, *newnp;
       oldnp = &(x3a->tbl[i]);
-      h = statehash(oldnp->key) & (size-1);
+      h = statehash(oldnp->key) & (mysize-1);
       newnp = &(array.tbl[i]);
       if( array.ht[h] ) array.ht[h]->from = &(newnp->next);
       newnp->next = array.ht[h];
@@ -3778,12 +3808,12 @@ struct state *State_find(struct config *key)
 struct state **State_arrayof(void)
 {
   struct state **array;
-  int i,size;
+  int i,mysize;
   if( x3a==0 ) return 0;
-  size = x3a->count;
-  array = (struct state **)malloc( sizeof(struct state *)*size );
+  mysize = x3a->count;
+  array = (struct state **)malloc( sizeof(struct state *)*mysize );
   if( array ){
-    for(i=0; i<size; i++) array[i] = x3a->tbl[i].data;
+    for(i=0; i<mysize; i++) array[i] = x3a->tbl[i].data;
   }
   return array;
 }
@@ -3861,19 +3891,19 @@ int Configtable_insert(struct config *data)
   }
   if( x4a->count>=x4a->size ){
     /* Need to make the hash table bigger */
-    int i,size;
+    int i,mysize;
     struct s_x4 array;
-    array.size = size = x4a->size*2;
+    array.size = mysize = x4a->size*2;
     array.count = x4a->count;
     array.tbl = (x4node*)malloc(
-      (sizeof(x4node) + sizeof(x4node*))*size );
+      (sizeof(x4node) + sizeof(x4node*))*mysize );
     if( array.tbl==0 ) return 0;  /* Fail due to malloc failure */
-    array.ht = (x4node**)&(array.tbl[size]);
-    for(i=0; i<size; i++) array.ht[i] = 0;
+    array.ht = (x4node**)&(array.tbl[mysize]);
+    for(i=0; i<mysize; i++) array.ht[i] = 0;
     for(i=0; i<x4a->count; i++){
       x4node *oldnp, *newnp;
       oldnp = &(x4a->tbl[i]);
-      h = confighash(oldnp->data) & (size-1);
+      h = confighash(oldnp->data) & (mysize-1);
       newnp = &(array.tbl[i]);
       if( array.ht[h] ) array.ht[h]->from = &(newnp->next);
       newnp->next = array.ht[h];
