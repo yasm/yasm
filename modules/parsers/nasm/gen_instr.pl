@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.8 2001/07/05 03:56:14 mu Exp $
+# $Id: gen_instr.pl,v 1.9 2001/07/05 04:17:52 mu Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -125,14 +125,14 @@ EOF
 # read in instructions, and verify they're valid (well, mostly)
 sub read_instructions ($)
 {
-    our $instrfile = shift || die;
+    my $instrfile = shift || die;
     open INPUT, "< $instrfile" or die "Cannot open '$instrfile' for reading: $!\n";
-    our %instr;
-    our %groups;
+    my %instr;
+    my %groups;
 
-    sub add_group_rule ($$)
+    sub add_group_rule ($$$$)
     {
-	my ($inst, $args) = splice @_;
+	my ($inst, $args, $groups, $instrfile) = splice @_;
 
 	my ($op, $size, $opcode, $eff, $imm, $cpu) = split /\t+/, $args;
 	eval {
@@ -157,12 +157,12 @@ sub read_instructions ($)
 #	    if exists $instr{$inst} and not ref $instr{$inst};
 	# knock the ! off of $inst for the groupname
 	$inst = substr $inst, 1;
-	push @{$groups{$inst}{rules}}, [$inst, $op, $size, $opcode, $eff, $imm, $cpu];
+	push @{$groups->{$inst}{rules}}, [$inst, $op, $size, $opcode, $eff, $imm, $cpu];
     }
 
-    sub add_group_member ($$)
+    sub add_group_member ($$$$$)
     {
-	my ($handle, $fullargs) = splice @_;
+	my ($handle, $fullargs, $groups, $instr, $instrfile) = splice @_;
 
 	my ($inst, $group) = split /!/, $handle;
 	my ($args, $cpu) = split /\t+/, $fullargs;
@@ -174,14 +174,14 @@ sub read_instructions ($)
 	    die "Invalid CPU\n"
 		    if $cpu and $cpu !~ m/^(?:$valid_cpus)(?:,(?:$valid_cpus))*$/o;
 	    warn "Malformed Instruction at $instrfile line $.: Group $group not yet defined\n"
-		    unless exists $groups{$group};
+		    unless exists $groups->{$group};
 	};
 	die "Malformed Instruction at $instrfile line $.: $@" if $@;
 	# only allow multiple instances of instructions that aren't of a group
 	die "Multiple Definiton for instruction $inst at $instrfile line $.\n"
-		if exists $instr{$inst} and not exists $groups{$inst};
-	push @{$groups{$group}{members}}, [$inst, $group, $args, $cpu];
-	$instr{$inst} = 1;
+		if exists $instr->{$inst} and not exists $groups->{$inst};
+	push @{$groups->{$group}{members}}, [$inst, $group, $args, $cpu];
+	$instr->{$inst} = 1;
     }
 
     while (<INPUT>)
@@ -197,16 +197,18 @@ sub read_instructions ($)
 	    # TODO: this has some long ranging effects, as the eventual
 	    # bison rules get tagged <groupdata> when they don't need
 	    # to, etc.  Fix this sometime.
-	    add_group_rule ("!$handle", $args);
-	    add_group_member ("$handle!$handle", "");
+	    add_group_rule ("!$handle", $args, \%groups, $instrfile);
+	    add_group_member ("$handle!$handle", "", \%groups, \%instr,
+			      \$instrfile);
 	}
 	elsif ($handle =~ m/^!\w+$/)
 	{
-	    add_group_rule ($handle, $args);
+	    add_group_rule ($handle, $args, \%groups, $instrfile);
 	}
 	elsif ($handle =~ m/^\w+!\w+$/)
 	{
-	    add_group_member ($handle, $args);
+	    add_group_member ($handle, $args, \%groups, \%instr,
+			      \$instrfile);
 	}
 	# TODO: consider if this is necessary: Pete?
 	# (add_group_member_synonym is -not- implemented)
