@@ -11,7 +11,12 @@ AC_PROG_YACC
 AC_PROG_INSTALL
 
 AC_HEADER_STDC
-AC_CHECK_FUNCS(memcpy)
-AC_REPLACE_FUNCS(strdup)
+
+AC_C_CONST
+AC_TYPE_SIZE_T
+
+AC_FUNC_VPRINTF
+AC_CHECK_FUNCS(memcpy toascii)
+AC_REPLACE_FUNCS(strdup strtoul)
 
 AC_OUTPUT(Makefile src/Makefile	include/Makefile)
