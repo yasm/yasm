@@ -1,4 +1,4 @@
-/* $Id: util.h,v 1.5 2001/08/19 04:32:02 peter Exp $
+/* $Id: util.h,v 1.6 2001/08/19 07:32:39 peter Exp $
  * Defines prototypes for replacement functions if needed.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -35,9 +35,19 @@ unsigned long strtoul(const char *nptr, char **endptr, int base);
 #endif
 
 #if defined(HAVE_SYS_QUEUE_H) && !defined(HAVE_BOGUS_SYS_QUEUE_H)
-#include <sys/queue.h>
+# include <sys/queue.h>
 #else
-#include "compat-queue.h"
+# include "compat-queue.h"
+#endif
+
+#ifdef HAVE_SYS_CDEFS_H
+# include <sys/cdefs.h>
+#endif
+
+#ifdef __RCSID
+# define RCSID(s)	__RCSID(s)
+#else
+# define RCSID(s)	static const char rcsid[] = s;
 #endif
 
 #endif
