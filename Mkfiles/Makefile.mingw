@@ -1,0 +1,106 @@
+# $IdPath$
+#
+# Ultra-flat Makefile for MINGW (cross-compile for Win32).
+# Does NOT depend on or use configure.
+#
+# Works for simple build but *not* for development (no clean, dist, etc).
+# Also, WARNING, no header dependencies are included!
+#
+# How to compile:
+#  make -fMkfiles/Makefile.mingw
+
+CFLAGS=-DHAVE_CONFIG_H -DWIN32 -IMkfiles/mingw -O2 -I. -Ifrontends/yasm
+CC=i386-mingw32msvc-gcc
+
+all: yasm.exe
+
+LIBYASM_OBJS= \
+ libyasm/arch.o \
+ libyasm/assocdat.o \
+ libyasm/bitvect.o \
+ libyasm/bytecode.o \
+ libyasm/errwarn.o \
+ libyasm/expr.o \
+ libyasm/file.o \
+ libyasm/floatnum.o \
+ libyasm/hamt.o \
+ libyasm/intnum.o \
+ libyasm/linemgr.o \
+ libyasm/mergesort.o \
+ libyasm/objfmt.o \
+ libyasm/section.o \
+ libyasm/strcasecmp.o \
+ libyasm/strsep.o \
+ libyasm/symrec.o \
+ libyasm/valparam.o \
+ libyasm/xmalloc.o \
+ libyasm/xstrdup.o
+
+MODULES_ARCH_X86_OBJS= \
+ modules/arch/x86/x86arch.o \
+ modules/arch/x86/x86bc.o \
+ modules/arch/x86/x86expr.o \
+ x86id.o
+
+MODULES_ARCH_LC3B_OBJS= \
+ modules/arch/lc3b/lc3barch.o \
+ modules/arch/lc3b/lc3bbc.o \
+ lc3bid.o
+
+MODULES_ARCH_OBJS= \
+ $(MODULES_ARCH_X86_OBJS) \
+ $(MODULES_ARCH_LC3B_OBJS)
+
+MODULES_DBGFMTS_OBJS= \
+ modules/dbgfmts/null/null-dbgfmt.o
+
+MODULES_OBJFMTS_OBJS= \
+ modules/objfmts/dbg/dbg-objfmt.o \
+ modules/objfmts/bin/bin-objfmt.o \
+ modules/objfmts/coff/coff-objfmt.o \
+ modules/objfmts/elf/elf.o \
+ modules/objfmts/elf/elf-objfmt.o
+
+MODULES_OPTIMIZERS_OBJS= \
+ modules/optimizers/basic/basic-optimizer.o
+
+MODULES_PARSERS_OBJS= \
+ modules/parsers/nasm/nasm-parser.o \
+ nasm-bison.o \
+ nasm-token.o
+
+MODULES_PREPROCS_NASM_OBJS= \
+ modules/preprocs/nasm/nasm-eval.o \
+ modules/preprocs/nasm/nasm-pp.o \
+ modules/preprocs/nasm/nasm-preproc.o \
+ modules/preprocs/nasm/nasmlib.o \
+ nasm-macros.o
+
+MODULES_PREPROCS_RAW_OBJS = \
+ modules/preprocs/raw/raw-preproc.o \
+
+MODULES_PREPROCS_OBJS = \
+ $(MODULES_PREPROCS_NASM_OBJS) \
+ $(MODULES_PREPROCS_RAW_OBJS)
+
+MODULES_OBJS = \
+ $(MODULES_ARCH_OBJS) \
+ $(MODULES_DBGFMTS_OBJS) \
+ $(MODULES_OBJFMTS_OBJS) \
+ $(MODULES_OPTIMIZERS_OBJS) \
+ $(MODULES_PARSERS_OBJS) \
+ $(MODULES_PREPROCS_OBJS)
+
+YASM_OBJS= \
+ frontends/yasm/yasm.o \
+ Mkfiles/vc/yasm-module.o \
+ frontends/yasm/yasm-options.o \
+ $(LIBYASM_OBJS) \
+ $(MODULES_OBJS)
+
+yasm.exe: $(YASM_OBJS)
+	$(CC) -o yasm.exe $(YASM_OBJS)
+
+.c.o:
+	$(CC) -c $(CFLAGS) -o $@ $<
+
