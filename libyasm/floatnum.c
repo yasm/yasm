@@ -525,7 +525,7 @@ yasm_floatnum_get_int(const yasm_floatnum *flt, unsigned long *ret_val)
 {
     unsigned char t[4];
 
-    if (yasm_floatnum_get_sized(flt, t, 4)) {
+    if (yasm_floatnum_get_sized(flt, t, 4, 32, 0, 0, 0, 0)) {
 	*ret_val = 0xDEADBEEFUL;    /* Obviously incorrect return value */
 	return 1;
     }
@@ -659,20 +659,38 @@ floatnum_get_common(const yasm_floatnum *flt, /*@out@*/ unsigned char *ptr,
  */
 int
 yasm_floatnum_get_sized(const yasm_floatnum *flt, unsigned char *ptr,
-			size_t size)
+			size_t destsize, size_t valsize, size_t shift,
+			int bigendian, int warn, unsigned long lindex)
 {
-    switch (size) {
+    int retval;
+    if (destsize*8 != valsize || shift>0 || bigendian) {
+	/* TODO */
+	yasm_internal_error(N_("unsupported floatnum functionality"));
+    }
+    switch (destsize) {
 	case 4:
-	    return floatnum_get_common(flt, ptr, 4, 23, 1, 8);
+	    retval = floatnum_get_common(flt, ptr, 4, 23, 1, 8);
+	    break;
 	case 8:
-	    return floatnum_get_common(flt, ptr, 8, 52, 1, 11);
+	    retval = floatnum_get_common(flt, ptr, 8, 52, 1, 11);
+	    break;
 	case 10:
-	    return floatnum_get_common(flt, ptr, 10, 64, 0, 15);
+	    retval = floatnum_get_common(flt, ptr, 10, 64, 0, 15);
+	    break;
 	default:
 	    yasm_internal_error(N_("Invalid float conversion size"));
 	    /*@notreached@*/
-	    return 1;	    /* never reached, but silence GCC warning */
+	    return 1;
     }
+    if (warn) {
+	if (retval < 0)
+	    yasm__warning(YASM_WARN_GENERAL, lindex,
+			  N_("underflow in floating point expression"));
+	else if (retval > 0)
+	    yasm__warning(YASM_WARN_GENERAL, lindex,
+			  N_("overflow in floating point expression"));
+    }
+    return retval;
 }
 
 /* 1 if the size is valid, 0 if it isn't */
@@ -680,9 +698,9 @@ int
 yasm_floatnum_check_size(/*@unused@*/ const yasm_floatnum *flt, size_t size)
 {
     switch (size) {
-	case 4:
-	case 8:
-	case 10:
+	case 32:
+	case 64:
+	case 80:
 	    return 1;
 	default:
 	    return 0;
@@ -703,19 +721,22 @@ yasm_floatnum_print(FILE *f, const yasm_floatnum *flt)
     yasm_xfree(str);
 
     /* 32-bit (single precision) format */
-    fprintf(f, "32-bit: %d: ", yasm_floatnum_get_sized(flt, out, 4));
+    fprintf(f, "32-bit: %d: ",
+	    yasm_floatnum_get_sized(flt, out, 4, 32, 0, 0, 0, 0));
     for (i=0; i<4; i++)
 	fprintf(f, "%02x ", out[i]);
     fprintf(f, "\n");
 
     /* 64-bit (double precision) format */
-    fprintf(f, "64-bit: %d: ", yasm_floatnum_get_sized(flt, out, 8));
+    fprintf(f, "64-bit: %d: ",
+	    yasm_floatnum_get_sized(flt, out, 8, 64, 0, 0, 0, 0));
     for (i=0; i<8; i++)
 	fprintf(f, "%02x ", out[i]);
     fprintf(f, "\n");
 
     /* 80-bit (extended precision) format */
-    fprintf(f, "80-bit: %d: ", yasm_floatnum_get_sized(flt, out, 10));
+    fprintf(f, "80-bit: %d: ",
+	    yasm_floatnum_get_sized(flt, out, 10, 80, 0, 0, 0, 0));
     for (i=0; i<10; i++)
 	fprintf(f, "%02x ", out[i]);
     fprintf(f, "\n");

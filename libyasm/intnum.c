@@ -488,17 +488,14 @@ yasm_intnum_get_int(const yasm_intnum *intn)
 		/* it's negative: negate the bitvector to get a positive
 		 * number, then negate the positive number.
 		 */
-		wordptr abs_bv = BitVector_Create(BITVECT_NATIVE_SIZE, FALSE);
 		unsigned long ul;
 
-		BitVector_Negate(abs_bv, intn->val.bv);
-		if (Set_Max(abs_bv) >= 32) {
+		BitVector_Negate(conv_bv, intn->val.bv);
+		if (Set_Max(conv_bv) >= 32) {
 		    /* too negative */
-		    BitVector_Destroy(abs_bv);
 		    return LONG_MIN;
 		}
-		ul = BitVector_Chunk_Read(abs_bv, 32, 0);
-		BitVector_Destroy(abs_bv);
+		ul = BitVector_Chunk_Read(conv_bv, 32, 0);
 		/* check for too negative */
 		return (ul & 0x80000000) ? LONG_MIN : -((long)ul);
 	    }
@@ -513,92 +510,116 @@ yasm_intnum_get_int(const yasm_intnum *intn)
 }
 
 void
-yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr, size_t size)
+yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
+		      size_t destsize, size_t valsize, int shift,
+		      int bigendian, int warn, unsigned long lindex)
 {
-    unsigned long ul;
+    wordptr op1 = op1static, op2;
     unsigned char *buf;
     unsigned int len;
+    size_t rshift = shift < 0 ? (size_t)(-shift) : 0;
+    int carry_in;
 
-    switch (intn->type) {
-	case INTNUM_UL:
-	    ul = intn->val.ul;
-	    while (size-- > 0) {
-		YASM_WRITE_8(ptr, ul);
-		if (ul != 0)
-		    ul >>= 8;
-	    }
-	    break;
-	case INTNUM_BV:
-	    buf = BitVector_Block_Read(intn->val.bv, &len);
-	    if (len < (unsigned int)size)
-		yasm_internal_error(N_("Invalid size specified (too large)"));
-	    memcpy(ptr, buf, size);
-	    yasm_xfree(buf);
-	    break;
+    /* Currently don't support destinations larger than our native size */
+    if (destsize*8 > BITVECT_NATIVE_SIZE)
+	yasm_internal_error(N_("destination too large"));
+
+    /* General size warnings */
+    if (warn && !yasm_intnum_check_size(intn, valsize, rshift, 2))
+	yasm__warning(YASM_WARN_GENERAL, lindex,
+		      N_("value does not fit in %d bit field"), valsize);
+
+    /* Read the original data into a bitvect */
+    if (bigendian) {
+	/* TODO */
+	yasm_internal_error(N_("big endian not implemented"));
+    } else
+	BitVector_Block_Store(op1, ptr, destsize);
+
+    /* If not already a bitvect, convert value to be written to a bitvect */
+    if (intn->type == INTNUM_BV)
+	op2 = intn->val.bv;
+    else {
+	op2 = op2static;
+	BitVector_Empty(op2);
+	BitVector_Chunk_Store(op2, 32, 0, intn->val.ul);
     }
+
+    /* Check low bits if right shifting and warnings enabled */
+    if (warn && rshift > 0) {
+	BitVector_Copy(conv_bv, op2);
+	BitVector_Move_Left(conv_bv, BITVECT_NATIVE_SIZE-rshift);
+	if (!BitVector_is_empty(conv_bv))
+	    yasm__warning(YASM_WARN_GENERAL, lindex,
+			  N_("misaligned value, truncating to boundary"));
+    }
+
+    /* Shift right if needed */
+    if (rshift > 0) {
+	carry_in = BitVector_msb_(op2);
+	while (rshift-- > 0)
+	    BitVector_shift_right(op2, carry_in);
+	shift = 0;
+    }
+
+    /* Write the new value into the destination bitvect */
+    BitVector_Interval_Copy(op1, op2, shift, 0, valsize);
+
+    /* Write out the new data */
+    buf = BitVector_Block_Read(op1, &len);
+    if (bigendian) {
+	/* TODO */
+	yasm_internal_error(N_("big endian not implemented"));
+    } else
+	memcpy(ptr, buf, destsize);
+    yasm_xfree(buf);
 }
 
 /* Return 1 if okay size, 0 if not */
 int
-yasm_intnum_check_size(const yasm_intnum *intn, size_t size, int is_signed)
+yasm_intnum_check_size(const yasm_intnum *intn, size_t size, size_t rshift,
+		       int rangetype)
 {
-    if (is_signed) {
-	switch (intn->type) {
-	    case INTNUM_UL:
-		if (size >= 4)
-		    return 1;
+    wordptr val;
 
-		/* INTNUM_UL is always positive */
-		switch (size) {
-		    case 4:
-			return (intn->val.ul <= 0x7FFFFFFF);
-		    case 3:
-			return (intn->val.ul <= 0x007FFFFF);
-		    case 2:
-			return (intn->val.ul <= 0x00007FFF);
-		    case 1:
-			return (intn->val.ul <= 0x0000007F);
-		}
-		break;
-	    case INTNUM_BV:
-		if (size >= BITVECT_NATIVE_SIZE/8)
-		    return 1;
-		if (BitVector_msb_(intn->val.bv)) {
-		    /* it's negative */
-		    wordptr abs_bv = BitVector_Create(BITVECT_NATIVE_SIZE,
-						      FALSE);
-		    int retval;
-
-		    BitVector_Negate(abs_bv, intn->val.bv);
-		    retval = Set_Max(abs_bv) < (long)(size*8);
-
-		    BitVector_Destroy(abs_bv);
-		    return retval;
-		} else
-		    return (Set_Max(intn->val.bv) < (long)(size*8));
-	}
+    /* If not already a bitvect, convert value to a bitvect */
+    if (intn->type == INTNUM_BV) {
+	if (rshift > 0) {
+	    val = conv_bv;
+	    BitVector_Copy(val, intn->val.bv);
+	} else
+	    val = intn->val.bv;
     } else {
-	switch (intn->type) {
-	    case INTNUM_UL:
-		if (size >= 4)
-		    return 1;
-		switch (size) {
-		    case 3:
-			return ((intn->val.ul & 0x00FFFFFF) == intn->val.ul);
-		    case 2:
-			return ((intn->val.ul & 0x0000FFFF) == intn->val.ul);
-		    case 1:
-			return ((intn->val.ul & 0x000000FF) == intn->val.ul);
-		}
-		break;
-	    case INTNUM_BV:
-		if (size >= BITVECT_NATIVE_SIZE/8)
-		    return 1;
-		else
-		    return (Set_Max(intn->val.bv) < (long)(size*8));
-	}
+	val = conv_bv;
+	BitVector_Empty(val);
+	BitVector_Chunk_Store(val, 32, 0, intn->val.ul);
     }
-    return 0;
+
+    if (size >= BITVECT_NATIVE_SIZE)
+	return 1;
+
+    if (rshift > 0) {
+	int carry_in = BitVector_msb_(val);
+	while (rshift-- > 0)
+	    BitVector_shift_right(val, carry_in);
+    }
+
+    if (rangetype > 0) {
+	if (BitVector_msb_(val)) {
+	    /* it's negative */
+	    int retval;
+
+	    BitVector_Negate(conv_bv, val);
+	    BitVector_dec(conv_bv, conv_bv);
+	    retval = Set_Max(conv_bv) < (long)size-1;
+
+	    return retval;
+	}
+	
+	if (rangetype == 1)
+	    size--;
+    }
+    return (Set_Max(val) < (long)size);
 }
 
 void

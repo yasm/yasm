@@ -127,11 +127,11 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
 }
 
 static int
-bin_objfmt_output_expr(yasm_expr **ep, unsigned char **bufp,
-		       unsigned long valsize,
+bin_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
+		       size_t valsize, int shift,
 		       /*@unused@*/ unsigned long offset,
 		       /*@observer@*/ const yasm_section *sect,
-		       yasm_bytecode *bc, int rel,
+		       yasm_bytecode *bc, int rel, int warn,
 		       /*@unused@*/ /*@null@*/ void *d)
 {
     /*@dependent@*/ /*@null@*/ const yasm_intnum *intn;
@@ -145,26 +145,28 @@ bin_objfmt_output_expr(yasm_expr **ep, unsigned char **bufp,
      */
 
     *ep = yasm_expr__level_tree(*ep, 1, 1, NULL, bin_objfmt_expr_xform, NULL,
-			       NULL);
+				NULL);
 
     /* Handle floating point expressions */
     flt = yasm_expr_get_floatnum(ep);
     if (flt)
-	return cur_arch->floatnum_tobytes(flt, bufp, valsize, *ep);
+	return cur_arch->floatnum_tobytes(flt, buf, destsize, valsize, shift,
+					  warn, bc->line);
 
     /* Handle integer expressions */
     intn = yasm_expr_get_intnum(ep, NULL);
     if (intn)
-	return cur_arch->intnum_tobytes(intn, bufp, valsize, *ep, bc, rel);
+	return cur_arch->intnum_tobytes(intn, buf, destsize, valsize, shift,
+					bc, rel, warn, bc->line);
 
     /* Check for complex float expressions */
     if (yasm_expr__contains(*ep, YASM_EXPR_FLOAT)) {
-	yasm__error((*ep)->line, N_("floating point expression too complex"));
+	yasm__error(bc->line, N_("floating point expression too complex"));
 	return 1;
     }
 
     /* Couldn't output, assume it contains an external reference. */
-    yasm__error((*ep)->line,
+    yasm__error(bc->line,
 	N_("binary object format does not support external references"));
     return 1;
 }

@@ -956,10 +956,11 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp,
 		yasm_internal_error(N_("checkea failed"));
 
 	    if (ea->disp) {
-		if (output_expr(&ea->disp, bufp, ea->len,
+		if (output_expr(&ea->disp, *bufp, ea->len, ea->len*8, 0,
 				(unsigned long)(*bufp-bufp_orig), sect, bc, 0,
-				d))
+				1, d))
 		    return 1;
+		*bufp += ea->len;
 	    } else {
 		/* 0 displacement, but we didn't know it before, so we have to
 		 * write out 0 value.
@@ -972,10 +973,10 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp,
 
     /* Immediate (if required) */
     if (imm && imm->val) {
-	/* TODO: check imm->len vs. sized len from expr? */
-	if (output_expr(&imm->val, bufp, imm->len,
-			(unsigned long)(*bufp-bufp_orig), sect, bc, 0, d))
+	if (output_expr(&imm->val, *bufp, imm->len, imm->len*8, 0,
+			(unsigned long)(*bufp-bufp_orig), sect, bc, 0, 1, d))
 	    return 1;
+	*bufp += imm->len;
     }
 
     return 0;
@@ -1019,9 +1020,11 @@ x86_bc_tobytes_jmp(x86_jmp *jmp, unsigned char **bufp,
 	    jmp->target =
 		yasm_expr_new(YASM_EXPR_SUB, yasm_expr_expr(jmp->target),
 			      yasm_expr_sym(jmp->origin), bc->line);
-	    if (output_expr(&jmp->target, bufp, 1,
-			    (unsigned long)(*bufp-bufp_orig), sect, bc, 1, d))
+	    if (output_expr(&jmp->target, *bufp, 1, 8, 0,
+			    (unsigned long)(*bufp-bufp_orig), sect, bc, 1, 1,
+			    d))
 		return 1;
+	    *bufp += 1;
 	    break;
 	case JMP_NEAR_FORCED:
 	case JMP_NEAR:
@@ -1039,9 +1042,12 @@ x86_bc_tobytes_jmp(x86_jmp *jmp, unsigned char **bufp,
 	    jmp->target =
 		yasm_expr_new(YASM_EXPR_SUB, yasm_expr_expr(jmp->target),
 			      yasm_expr_sym(jmp->origin), bc->line);
-	    if (output_expr(&jmp->target, bufp, (opersize == 16) ? 2UL : 4UL,
-			    (unsigned long)(*bufp-bufp_orig), sect, bc, 1, d))
+	    i = (opersize == 16) ? 2 : 4;
+	    if (output_expr(&jmp->target, *bufp, i, i*8, 0,
+			    (unsigned long)(*bufp-bufp_orig), sect, bc, 1, 1,
+			    d))
 		return 1;
+	    *bufp += i;
 	    break;
 	case JMP_FAR:
 	    /* far absolute (4/6 byte depending on operand size) */
@@ -1059,13 +1065,17 @@ x86_bc_tobytes_jmp(x86_jmp *jmp, unsigned char **bufp,
 	    targetseg = yasm_expr_extract_segment(&jmp->target);
 	    if (!targetseg)
 		yasm_internal_error(N_("could not extract segment for far jump"));
-	    if (output_expr(&jmp->target, bufp,
-			    (opersize == 16) ? 2UL : 4UL,
-			    (unsigned long)(*bufp-bufp_orig), sect, bc, 0, d))
+	    i = (opersize == 16) ? 2 : 4;
+	    if (output_expr(&jmp->target, *bufp, i, i*8, 0,
+			    (unsigned long)(*bufp-bufp_orig), sect, bc, 0, 1,
+			    d))
 		return 1;
-	    if (output_expr(&targetseg, bufp, 2UL,
-			    (unsigned long)(*bufp-bufp_orig), sect, bc, 0, d))
+	    *bufp += i;
+	    if (output_expr(&targetseg, *bufp, 2, 2*8, 0,
+			    (unsigned long)(*bufp-bufp_orig), sect, bc, 0, 1,
+			    d))
 		return 1;
+	    *bufp += 2;
 
 	    break;
 	default:
@@ -1093,32 +1103,27 @@ yasm_x86__bc_tobytes(yasm_bytecode *bc, unsigned char **bufp,
 }
 
 int
-yasm_x86__intnum_tobytes(const yasm_intnum *intn, unsigned char **bufp,
-			 unsigned long valsize, const yasm_expr *e,
-			 const yasm_bytecode *bc, int rel)
+yasm_x86__intnum_tobytes(const yasm_intnum *intn, unsigned char *buf,
+			 size_t destsize, size_t valsize, int shift,
+			 const yasm_bytecode *bc, int rel, int warn,
+			 unsigned long lindex)
 {
     if (rel) {
-	long val;
-	if (valsize != 1 && valsize != 2 && valsize != 4)
+	yasm_intnum *relnum, *delta;
+	if (valsize != 8 && valsize != 16 && valsize != 32)
 	    yasm_internal_error(
 		N_("tried to do PC-relative offset from invalid sized value"));
-	val = yasm_intnum_get_uint(intn);
-	val -= bc->len;
-	switch ((unsigned int)valsize) {
-	    case 1:
-		YASM_WRITE_8(*bufp, val);
-		break;
-	    case 2:
-		YASM_WRITE_16_L(*bufp, val);
-		break;
-	    case 4:
-		YASM_WRITE_32_L(*bufp, val);
-		break;
-	}
+	relnum = yasm_intnum_copy(intn);
+	delta = yasm_intnum_new_uint(bc->len);
+	yasm_intnum_calc(relnum, YASM_EXPR_SUB, delta, lindex);
+	yasm_intnum_delete(delta);
+	yasm_intnum_get_sized(relnum, buf, destsize, valsize, shift, 0, warn,
+			      lindex);
+	yasm_intnum_delete(relnum);
     } else {
 	/* Write value out. */
-	yasm_intnum_get_sized(intn, *bufp, (size_t)valsize);
-	*bufp += valsize;
+	yasm_intnum_get_sized(intn, buf, destsize, valsize, shift, 0, warn,
+			      lindex);
     }
     return 0;
 }

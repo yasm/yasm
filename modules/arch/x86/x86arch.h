@@ -231,11 +231,13 @@ void yasm_x86__parse_seg_prefix(yasm_bytecode *bc, unsigned long segreg,
 void yasm_x86__parse_seg_override(yasm_effaddr *ea, unsigned long segreg,
 				  unsigned long lindex);
 
-int yasm_x86__floatnum_tobytes(const yasm_floatnum *flt, unsigned char **bufp,
-			       unsigned long valsize, const yasm_expr *e);
-int yasm_x86__intnum_tobytes(const yasm_intnum *intn, unsigned char **bufp,
-			     unsigned long valsize, const yasm_expr *e,
-			     const yasm_bytecode *bc, int rel);
+int yasm_x86__floatnum_tobytes(const yasm_floatnum *flt, unsigned char *buf,
+			       size_t destsize, size_t valsize, size_t shift,
+			       int warn, unsigned long lindex);
+int yasm_x86__intnum_tobytes(const yasm_intnum *intn, unsigned char *buf,
+			     size_t destsize, size_t valsize, int shift,
+			     const yasm_bytecode *bc, int rel, int warn,
+			     unsigned long lindex);
 
 unsigned int yasm_x86__get_reg_size(unsigned long reg);
 

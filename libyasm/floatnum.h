@@ -81,26 +81,34 @@ void yasm_floatnum_calc(yasm_floatnum *acc, yasm_expr_op op,
 int yasm_floatnum_get_int(const yasm_floatnum *flt,
 			  /*@out@*/ unsigned long *ret_val);
 
-/** Convert a floatnum to Intel-format little-endian byte string.
- * [0] should be the first byte output to an Intel-format file.
- * \note Not all sizes are valid.  Currently, only 4 (single-precision), 8
- *       (double-precision), and 10 (extended-precision) are valid sizes.
+/** Output a #yasm_floatnum to buffer in little-endian or big-endian.  Puts the
+ * value into the least significant bits of the destination, or may be shifted
+ * into more significant bits by the shift parameter.  The destination bits are
+ * cleared before being set.  [0] should be the first byte output to the file.
+ * \note Not all sizes are valid.  Currently, only 32 (single-precision), 64
+ *       (double-precision), and 80 (extended-precision) are valid sizes.
  *       Use yasm_floatnum_check_size() to check for supported sizes.
  * \param flt	    floatnum
  * \param ptr	    pointer to storage for size bytes of output
- * \param size	    size (in bytes) of desired output.
+ * \param destsize  destination size (in bytes)
+ * \param valsize   size (in bits)
+ * \param shift	    left shift (in bits)
+ * \param bigendian endianness (nonzero=big, zero=little)
+ * \param warn	    enables standard overflow/underflow warnings
+ * \param lindex    line index; may be 0 if warn is 0.
  * \return Nonzero if flt can't fit into the specified precision: -1 if
  *         underflow occurred, 1 if overflow occurred.
  */
-int yasm_floatnum_get_sized(const yasm_floatnum *flt,
-			    /*@out@*/ unsigned char *ptr, size_t size);
+int yasm_floatnum_get_sized(const yasm_floatnum *flt, unsigned char *ptr,
+			    size_t destsize, size_t valsize, size_t shift,
+			    int bigendian, int warn, unsigned long lindex);
 
 /** Basic check to see if size is valid for flt conversion (using
  * yasm_floatnum_get_sized()).  Doesn't actually check for underflow/overflow
- * but rather checks for size=4,8,10
+ * but rather checks for size=32,64,80
  * (at present).
  * \param flt	    floatnum
- * \param size	    size (in bytes) of desired conversion output
+ * \param size	    number of bits of output space
  * \return 1 if valid size, 0 if invalid size.
  */
 int yasm_floatnum_check_size(const yasm_floatnum *flt, size_t size);

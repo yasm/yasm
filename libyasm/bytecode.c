@@ -690,10 +690,12 @@ bc_tobytes_data(bytecode_data *bc_data, unsigned char **bufp,
 	    case DV_EMPTY:
 		break;
 	    case DV_EXPR:
-		if (output_expr(&dv->data.expn, bufp, bc_data->size,
+		if (output_expr(&dv->data.expn, *bufp, bc_data->size,
+				bc_data->size*8, 0,
 				(unsigned long)(*bufp-bufp_orig), sect, bc, 0,
-				d))
+				1, d))
 		    return 1;
+		*bufp += bc_data->size;
 		break;
 	    case DV_STRING:
 		slen = strlen(dv->data.str_val);

@@ -148,26 +148,38 @@ unsigned long yasm_intnum_get_uint(const yasm_intnum *intn);
  */
 long yasm_intnum_get_int(const yasm_intnum *intn);
 
-/** Convert an intnum to Intel-format little-endian byte string.
- * [0] should be the first byte output to an Intel-format file.
- * \note Parameter intnum is truncated to fit into specified size.  Use
- *       intnum_check_size() to check for overflow.
+/** Output #yasm_intnum to buffer in little-endian or big-endian.  Puts the
+ * value into the least significant bits of the destination, or may be shifted
+ * into more significant bits by the shift parameter.  The destination bits are
+ * cleared before being set.  [0] should be the first byte output to the file.
  * \param intn	    intnum
  * \param ptr	    pointer to storage for size bytes of output
- * \param size	    size (in bytes) of desired output.
+ * \param destsize  destination size (in bytes)
+ * \param valsize   size (in bits)
+ * \param shift	    left shift (in bits); may be negative to specify right
+ *		    shift (standard warnings include truncation to boundary)
+ * \param bigendian endianness (nonzero=big, zero=little)
+ * \param warn	    enables standard warnings (value doesn't fit into valsize
+ *		    bits)
+ * \param lindex    line index; may be 0 if warn is 0
  */
 void yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
-			   size_t size);
+			   size_t destsize, size_t valsize, int shift,
+			   int bigendian, int warn, unsigned long lindex);
 
-/** Check to see if intnum will fit without overflow into size bytes.
+/** Check to see if intnum will fit without overflow into size bits.
  * If is_signed is 1, intnum is treated as a signed number.
  * \param intn	    intnum
- * \param size	    number of bytes of output space
- * \param is_signed nonzero, intnum should be treated as signed
+ * \param size	    number of bits of output space
+ * \param rshift    right shift
+ * \param rangetype signed/unsigned range selection:
+ *		    0 => (0, unsigned max);
+ *		    1 => (signed min, signed max);
+ *		    2 => (signed min, unsigned max)
  * \return Nonzero if intnum will fit.
  */
 int yasm_intnum_check_size(const yasm_intnum *intn, size_t size,
-			   int is_signed);
+			   size_t rshift, int rangetype);
 
 /** Print an intnum.  For debugging purposes.
  * \param f	file

@@ -28,7 +28,6 @@
 /*@unused@*/ RCSID("$IdPath$");
 
 #define YASM_LIB_INTERNAL
-#define YASM_EXPR_INTERNAL
 #include <libyasm.h>
 
 #include "lc3barch.h"
@@ -68,10 +67,11 @@ yasm_lc3b__reg_print(FILE *f, unsigned long reg)
 }
 
 static int
-yasm_lc3b__floatnum_tobytes(const yasm_floatnum *flt, unsigned char **bufp,
-			    unsigned long valsize, const yasm_expr *e)
+yasm_lc3b__floatnum_tobytes(const yasm_floatnum *flt, unsigned char *buf,
+			    size_t destsize, size_t valsize, size_t shift,
+			    int warn, unsigned long lindex)
 {
-    yasm__error(e->line, N_("LC-3b does not support floating point"));
+    yasm__error(lindex, N_("LC-3b does not support floating point"));
     return 1;
 }
 

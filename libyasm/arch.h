@@ -215,31 +215,45 @@ struct yasm_arch {
 		       const yasm_section *sect, void *d,
 		       yasm_output_expr_func output_expr);
 
-    /** Output #yasm_floatnum to buffer.
+    /** Output #yasm_floatnum to buffer.  Puts the value into the least
+     * significant bits of the destination, or may be shifted into more
+     * significant bits by the shift parameter.  The destination bits are
+     * cleared before being set.
      * Architecture-specific because of endianness.
      * \param flt	floating point value
-     * \param bufp	buffer to write into
-     * \param valsize	length (in bytes)
-     * \param e		expression containing value
-     * \return Nonzero on error, otherwise updates *bufp by valsize (number of
-     * bytes saved to bufp).
+     * \param buf	buffer to write into
+     * \param destsize	destination size (in bytes)
+     * \param valsize	size (in bits)
+     * \param shift	left shift (in bits)
+     * \param warn	enables standard overflow/underflow warnings
+     * \param lindex	line index; may be 0 if warn is 0.
+     * \return Nonzero on error.
      */
-    int (*floatnum_tobytes) (const yasm_floatnum *flt, unsigned char **bufp,
-			     unsigned long valsize, const yasm_expr *e);
+    int (*floatnum_tobytes) (const yasm_floatnum *flt, unsigned char *buf,
+			     size_t destsize, size_t valsize, size_t shift,
+			     int warn, unsigned long lindex);
 
-    /** Output #yasm_intnum to buffer.
+    /** Output #yasm_intnum to buffer.  Puts the value into the least
+     * significant bits of the destination, or may be shifted into more
+     * significant bits by the shift parameter.  The destination bits are
+     * cleared before being set.
      * \param intn	integer value
-     * \param bufp	buffer to write into
-     * \param valsize	length (in bytes)
-     * \param e		expression containing value
+     * \param buf	buffer to write into
+     * \param destsize	destination size (in bytes)
+     * \param valsize	size (in bits)
+     * \param shift	left shift (in bits); may be negative to specify right
+     *			shift (standard warnings include truncation to boundary)
      * \param bc	bytecode being output ("parent" of value)
      * \param rel	value is a relative displacement from bc
-     * \return Nonzero on error, otherwise updates *bufp by valsize (number of
-     * bytes saved to bufp).
+     * \param warn	enables standard warnings (value doesn't fit into
+     *			valsize bits)
+     * \param lindex	line index; may be 0 if warn is 0
+     * \return Nonzero on error.
      */
-    int (*intnum_tobytes) (const yasm_intnum *intn, unsigned char **bufp,
-			   unsigned long valsize, const yasm_expr *e,
-			   const yasm_bytecode *bc, int rel);
+    int (*intnum_tobytes) (const yasm_intnum *intn, unsigned char *buf,
+			   size_t destsize, size_t valsize, int shift,
+			   const yasm_bytecode *bc, int rel, int warn,
+			   unsigned long lindex);
 
     /** Get the equivalent byte size of a register.
      * \param reg	register

@@ -408,8 +408,8 @@ x86_checkea_calc_displen(yasm_expr **ep, unsigned int wordsize, int noreg,
 	    /* make sure the displacement will fit in 16/32 bits if unsigned,
 	     * and 8 bits if signed.
 	     */
-	    if (!yasm_intnum_check_size(intn, (size_t)wordsize, 0) &&
-		!yasm_intnum_check_size(intn, 1, 1)) {
+	    if (!yasm_intnum_check_size(intn, (size_t)wordsize*8, 0, 0) &&
+		!yasm_intnum_check_size(intn, 8, 0, 1)) {
 		yasm__error(e->line, N_("invalid effective address"));
 		return 1;
 	    }
@@ -930,25 +930,16 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 }
 
 int
-yasm_x86__floatnum_tobytes(const yasm_floatnum *flt, unsigned char **bufp,
-			   unsigned long valsize, const yasm_expr *e)
+yasm_x86__floatnum_tobytes(const yasm_floatnum *flt, unsigned char *buf,
+			   size_t destsize, size_t valsize, size_t shift,
+			   int warn, unsigned long lindex)
 {
-    int fltret;
-
-    if (!yasm_floatnum_check_size(flt, (size_t)valsize)) {
-	yasm__error(e->line, N_("invalid floating point constant size"));
+    if (!yasm_floatnum_check_size(flt, valsize)) {
+	yasm__error(lindex, N_("invalid floating point constant size"));
 	return 1;
     }
 
-    fltret = yasm_floatnum_get_sized(flt, *bufp, (size_t)valsize);
-    if (fltret < 0) {
-	yasm__error(e->line, N_("underflow in floating point expression"));
-	return 1;
-    }
-    if (fltret > 0) {
-	yasm__error(e->line, N_("overflow in floating point expression"));
-	return 1;
-    }
-    *bufp += valsize;
+    yasm_floatnum_get_sized(flt, buf, destsize, valsize, shift, 0, warn,
+			    lindex);
     return 0;
 }

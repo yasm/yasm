@@ -81,9 +81,10 @@ int yasm_lc3b__parse_directive(const char *name, yasm_valparamhead *valparams,
      /*@null@*/ yasm_insn_operandhead *operands, yasm_section *cur_section,
      /*@null@*/ yasm_bytecode *prev_bc, unsigned long lindex);
 
-int yasm_lc3b__intnum_tobytes(const yasm_intnum *intn, unsigned char **bufp,
-			      unsigned long valsize, const yasm_expr *e,
-			      const yasm_bytecode *bc, int rel);
+int yasm_lc3b__intnum_tobytes(const yasm_intnum *intn, unsigned char *buf,
+			      size_t destsize, size_t valsize, int shift,
+			      const yasm_bytecode *bc, int rel, int warn,
+			      unsigned long lindex);
 
 unsigned int yasm_lc3b__get_reg_size(unsigned long reg);
 

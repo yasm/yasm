@@ -292,8 +292,8 @@ START_TEST(test_get_single_normalized)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(yasm_floatnum_get_sized(flt, outval, 4) == vals[i].ret32,
-		    ret_msg);
+	fail_unless(yasm_floatnum_get_sized(flt, outval, 4, 32, 0, 0, 0, 0) ==
+		    vals[i].ret32, ret_msg);
 	fail_unless(get_common_check_result(4, outval, vals[i].result32) == 0,
 		    result_msg);
     }
@@ -308,8 +308,8 @@ START_TEST(test_get_single_normalized_edgecase)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(yasm_floatnum_get_sized(flt, outval, 4) == vals[i].ret32,
-		    ret_msg);
+	fail_unless(yasm_floatnum_get_sized(flt, outval, 4, 32, 0, 0, 0, 0) ==
+		    vals[i].ret32, ret_msg);
 	fail_unless(get_common_check_result(4, outval, vals[i].result32) == 0,
 		    result_msg);
     }
@@ -328,8 +328,8 @@ START_TEST(test_get_double_normalized)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(yasm_floatnum_get_sized(flt, outval, 8) == vals[i].ret64,
-		    ret_msg);
+	fail_unless(yasm_floatnum_get_sized(flt, outval, 8, 64, 0, 0, 0, 0) ==
+		    vals[i].ret64, ret_msg);
 	fail_unless(get_common_check_result(8, outval, vals[i].result64) == 0,
 		    result_msg);
     }
@@ -344,8 +344,8 @@ START_TEST(test_get_double_normalized_edgecase)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(yasm_floatnum_get_sized(flt, outval, 8) == vals[i].ret64,
-		    ret_msg);
+	fail_unless(yasm_floatnum_get_sized(flt, outval, 8, 64, 0, 0, 0, 0) ==
+		    vals[i].ret64, ret_msg);
 	fail_unless(get_common_check_result(8, outval, vals[i].result64) == 0,
 		    result_msg);
     }
@@ -364,8 +364,8 @@ START_TEST(test_get_extended_normalized)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(yasm_floatnum_get_sized(flt, outval, 10) == vals[i].ret80,
-		    ret_msg);
+	fail_unless(yasm_floatnum_get_sized(flt, outval, 10, 80, 0, 0, 0, 0) ==
+		    vals[i].ret80, ret_msg);
 	fail_unless(get_common_check_result(10, outval, vals[i].result80) == 0,
 		    result_msg);
     }
@@ -380,8 +380,8 @@ START_TEST(test_get_extended_normalized_edgecase)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(yasm_floatnum_get_sized(flt, outval, 10) == vals[i].ret80,
-		    ret_msg);
+	fail_unless(yasm_floatnum_get_sized(flt, outval, 10, 80, 0, 0, 0, 0) ==
+		    vals[i].ret80, ret_msg);
 	fail_unless(get_common_check_result(10, outval, vals[i].result80) == 0,
 		    result_msg);
     }

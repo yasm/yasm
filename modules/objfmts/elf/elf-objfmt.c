@@ -171,10 +171,11 @@ elf_objfmt_output_align(FILE *f, unsigned int align)
 
 /* PASS1 */
 static int
-elf_objfmt_output_expr(yasm_expr **ep, unsigned char **bufp,
-			unsigned long valsize, unsigned long offset,
+elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
+			size_t valsize, int shift, unsigned long offset,
 			/*@observer@*/ const yasm_section *sect,
-			yasm_bytecode *bc, int rel, /*@null@*/ void *d)
+			yasm_bytecode *bc, int rel, int warn,
+			/*@null@*/ void *d)
 {
     /*@null@*/ elf_objfmt_output_info *info = (elf_objfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *intn;
@@ -189,7 +190,8 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char **bufp,
     /* Handle floating point expressions */
     flt = yasm_expr_get_floatnum(ep);
     if (flt)
-	return cur_arch->floatnum_tobytes(flt, bufp, valsize, *ep);
+	return cur_arch->floatnum_tobytes(flt, buf, destsize, valsize, shift,
+					  warn, bc->line);
 
     /* Handle integer expressions, with relocation if necessary */
     sym = yasm_expr_extract_symrec(ep, yasm_common_calc_bc_dist);
@@ -198,8 +200,8 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char **bufp,
 	yasm_sym_vis vis;
 
 	/* XXX: this can't be platform portable */
-	if (valsize != 4) {
-	    yasm__error((*ep)->line, N_("elf: invalid relocation size"));
+	if (valsize != 32) {
+	    yasm__error(bc->line, N_("elf: invalid relocation size"));
 	    return 1;
 	}
 
@@ -240,15 +242,16 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char **bufp,
 
     intn = yasm_expr_get_intnum(ep, NULL);
     if (intn)
-	return cur_arch->intnum_tobytes(intn, bufp, valsize, *ep, bc, rel);
+	return cur_arch->intnum_tobytes(intn, buf, destsize, valsize, shift,
+					bc, rel, warn, bc->line);
 
     /* Check for complex float expressions */
     if (yasm_expr__contains(*ep, YASM_EXPR_FLOAT)) {
-	yasm__error((*ep)->line, N_("floating point expression too complex"));
+	yasm__error(bc->line, N_("floating point expression too complex"));
 	return 1;
     }
 
-    yasm__error((*ep)->line, N_("elf: relocation too complex"));
+    yasm__error(bc->line, N_("elf: relocation too complex"));
     return 1;
 }
 

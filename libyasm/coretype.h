@@ -147,9 +147,15 @@ typedef /*@null@*/ yasm_intnum * (*yasm_calc_bc_dist_func)
 
 /** Convert yasm_expr to its byte representation.  Usually implemented by
  * object formats to keep track of relocations and verify legal expressions.
+ * Must put the value into the least significant bits of the destination,
+ * unless shifted into more significant bits by the shift parameter.  The
+ * destination bits must be cleared before being set.
  * \param ep		(double) pointer to expression
- * \param bufp		(double) pointer to buffer for byte representation
- * \param valsize	size (in bytes) of the byte representation
+ * \param buf		buffer for byte representation
+ * \param destsize	destination size (in bytes)
+ * \param valsize	size (in bits)
+ * \param shift		left shift (in bits); may be negative to specify right
+ *			shift (standard warnings include truncation to boundary)
  * \param offset	offset (in bytes) of the expr contents from the start
  *			of the bytecode (sometimes needed for conditional jumps)
  * \param sect		current section (usually passed into higher-level
@@ -157,15 +163,19 @@ typedef /*@null@*/ yasm_intnum * (*yasm_calc_bc_dist_func)
  * \param bc		current bytecode (usually passed into higher-level
  *			calling function)
  * \param rel		if nonzero, expr should be treated as PC/IP-relative
+ * \param warn		enables standard warnings: zero for none;
+ *			nonzero for overflow/underflow floating point warnings;
+ *			negative for signed integer warnings,
+ *			positive for unsigned integer warnings
  * \param d		objfmt-specific data (passed into higher-level calling
  *			function)
  * \return Nonzero if an error occurred, 0 otherwise.
  */
 typedef int (*yasm_output_expr_func)
-    (yasm_expr **ep, unsigned char **bufp, unsigned long valsize,
-     unsigned long offset, /*@observer@*/ const yasm_section *sect,
-     yasm_bytecode *bc, int rel, /*@null@*/ void *d)
-    /*@uses *ep@*/ /*@sets **bufp@*/;
+    (yasm_expr **ep, /*@out@*/ unsigned char *buf, size_t destsize,
+     size_t valsize, int shift, unsigned long offset,
+     /*@observer@*/ const yasm_section *sect, yasm_bytecode *bc, int rel,
+     int warn, /*@null@*/ void *d) /*@uses *ep@*/;
 
 /** Convert a yasm_objfmt-specific data bytecode into its byte representation.
  * Usually implemented by object formats to output their own generated data.

@@ -126,7 +126,7 @@ yasm_lc3b__bc_print(FILE *f, int indent_level, const yasm_bytecode *bc)
 	}
 	indent_level--;
     }
-    fprintf(f, "%*sOrigin=", indent_level, "");
+    fprintf(f, "\n%*sOrigin=", indent_level, "");
     if (insn->origin) {
 	fprintf(f, "\n");
 	yasm_symrec_print(f, indent_level+1, insn->origin);
@@ -172,7 +172,7 @@ yasm_lc3b__bc_resolve(yasm_bytecode *bc, int save, const yasm_section *sect,
     rel -= 2;
     yasm_expr_delete(temp);
     /* 9-bit signed, word-multiple displacement */
-    if (rel < -512 || rel > 512) {
+    if (rel < -512 || rel > 511) {
 	yasm__error(bc->line, N_("target out of range"));
 	return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
     }
@@ -185,86 +185,79 @@ yasm_lc3b__bc_tobytes(yasm_bytecode *bc, unsigned char **bufp,
 		      yasm_output_expr_func output_expr)
 {
     lc3b_insn *insn;
-    unsigned int opcode;
-    unsigned int val;
-    int rel = 0;
 
     if ((lc3b_bytecode_type)bc->type != LC3B_BC_INSN)
 	return 0;
 
     insn = (lc3b_insn *)bc;
 
-    /* Change into PC-relative if necessary */
-    if (insn->imm_type == LC3B_IMM_9_PC) {
-	insn->imm = yasm_expr_new(YASM_EXPR_SUB, yasm_expr_expr(insn->imm),
-				  yasm_expr_sym(insn->origin), bc->line);
-	rel = 1;
-    }
+    /* Output opcode */
+    YASM_SAVE_16_L(*bufp, insn->opcode);
 
-    /* Get immediate value */
-    if (output_expr(&insn->imm, bufp, 2, 0, sect, bc, rel, d))
-	return 1;
-    *bufp -= 2;
-    YASM_LOAD_16_L(val, *bufp);
-
-    opcode = insn->opcode;
-
-    /* Insert immediate into opcode.  Warn on overflow? */
+    /* Insert immediate into opcode. */
     switch (insn->imm_type) {
 	case LC3B_IMM_NONE:
 	    break;
 	case LC3B_IMM_4:
-	    opcode &= ~0xF;
-	    opcode |= (val & 0xF);
+	    if (output_expr(&insn->imm, *bufp, 2, 4, 0, 0, sect, bc, 0, 1, d))
+		return 1;
 	    break;
 	case LC3B_IMM_5:
-	    opcode &= ~0x1F;
-	    opcode |= (val & 0x1F);
+	    if (output_expr(&insn->imm, *bufp, 2, 5, 0, 0, sect, bc, 0, 1, d))
+		return 1;
 	    break;
 	case LC3B_IMM_6_WORD:
-	    if (val & 1)
-		yasm__warning(YASM_WARN_GENERAL, bc->line,
-			      N_("Misaligned access, truncating to boundary"));
-	    val >>= 1;
-	    /*@fallthrough@*/
+	    if (output_expr(&insn->imm, *bufp, 2, 6, -1, 0, sect, bc, 0, 1, d))
+		return 1;
+	    break;
 	case LC3B_IMM_6_BYTE:
-	    opcode &= ~0x3F;
-	    opcode |= (val & 0x3F);
+	    if (output_expr(&insn->imm, *bufp, 2, 6, 0, 0, sect, bc, 0, 1, d))
+		return 1;
 	    break;
 	case LC3B_IMM_8:
-	    if (val & 1)
-		yasm__warning(YASM_WARN_GENERAL, bc->line,
-			      N_("Misaligned access, truncating to boundary"));
-	    opcode &= ~0xFF;
-	    opcode |= ((val>>1) & 0xFF);
+	    if (output_expr(&insn->imm, *bufp, 2, 8, -1, 0, sect, bc, 0, 1, d))
+		return 1;
 	    break;
 	case LC3B_IMM_9_PC:
-	    val -= 2;
-	    /*@fallthrough@*/
+	    insn->imm = yasm_expr_new(YASM_EXPR_SUB, yasm_expr_expr(insn->imm),
+				      yasm_expr_sym(insn->origin), bc->line);
+	    if (output_expr(&insn->imm, *bufp, 2, 9, -1, 0, sect, bc, 1, 1, d))
+		return 1;
+	    break;
 	case LC3B_IMM_9:
-	    if (val & 1)
-		yasm__warning(YASM_WARN_GENERAL, bc->line,
-			      N_("Misaligned access, truncating to boundary"));
-	    opcode &= ~0x1FF;
-	    opcode |= ((val>>1) & 0x1FF);
+	    if (output_expr(&insn->imm, *bufp, 2, 9, -1, 0, sect, bc, 0, 1, d))
+		return 1;
 	    break;
 	default:
 	    yasm_internal_error(N_("Unrecognized immediate type"));
     }
 
-    /* Output it */
-    YASM_WRITE_16_L(*bufp, opcode);
-
+    *bufp += 2;	    /* all instructions are 2 bytes in size */
     return 0;
 }
 
 int
-yasm_lc3b__intnum_tobytes(const yasm_intnum *intn, unsigned char **bufp,
-			  unsigned long valsize, const yasm_expr *e,
-			  const yasm_bytecode *bc, int rel)
+yasm_lc3b__intnum_tobytes(const yasm_intnum *intn, unsigned char *buf,
+			  size_t destsize, size_t valsize, int shift,
+			  const yasm_bytecode *bc, int rel, int warn,
+			  unsigned long lindex)
 {
-    /* Write value out. */
-    yasm_intnum_get_sized(intn, *bufp, (size_t)valsize);
-    *bufp += valsize;
+    if (rel) {
+	yasm_intnum *relnum, *delta;
+	if (valsize != 9)
+	    yasm_internal_error(
+		N_("tried to do PC-relative offset from invalid sized value"));
+	relnum = yasm_intnum_copy(intn);
+	delta = yasm_intnum_new_uint(bc->len);
+	yasm_intnum_calc(relnum, YASM_EXPR_SUB, delta, lindex);
+	yasm_intnum_delete(delta);
+	yasm_intnum_get_sized(relnum, buf, destsize, valsize, shift, 0, warn,
+			      lindex);
+	yasm_intnum_delete(relnum);
+    } else {
+	/* Write value out. */
+	yasm_intnum_get_sized(intn, buf, destsize, valsize, shift, 0, warn,
+			      lindex);
+    }
     return 0;
 }

@@ -1,13 +1,15 @@
+; Need to update for multi-segment someday.
+
 ;.SEGMENT        CodeSegment:	
 DONTBR:	LEA R0, AA	       
 	LEA R1, BB		
 	LEA R2, CC             						
-	LD R7, R0, ADATA3F    	
+	LD R7, R0, ADATA3F-AA
 
-	LD R6, R2, CDATA3F	
-	ST R7, R1, BDATA3D	
-	ST R7, R1, BDATA3F     
-	ST R7, R1, BDATA3C     
+	LD R6, R2, CDATA3F-CC
+	ST R7, R1, BDATA3D-BB
+	ST R7, R1, BDATA3F-BB
+	ST R7, R1, BDATA3C-BB
 	
 	
 	ADD R3, R2, -3        
@@ -16,48 +18,48 @@ DONTBR:	LEA R0, AA
 	STB R7, R4, 0         
 	
 	STB R6, R3, 0		
-	LD R5, R1, BDATA3A     
-	LD R7, R0, ADATA39     
-	ST R7, R1, BDATA38	
+	LD R5, R1, BDATA3A-BB
+	LD R7, R0, ADATA39-AA
+	ST R7, R1, BDATA38-BB
 	
-	ST R7, R1, BDATA39	
-	ST R7, R1, BDATA3A
+	ST R7, R1, BDATA39-BB
+	ST R7, R1, BDATA3A-BB
         ADD R3, R2, -9
 	ADD R4, R2, -10
 	
 	STB R6, R3, 0 							
 	STB R7, R4, 0	        
-        ST  R7, R2, CDATA3B    
-	LD  R7, R2, CDATA37    
+        ST  R7, R2, CDATA3B-CC
+	LD  R7, R2, CDATA37-CC
 	  
-	LD  R6, R1, BDATA35	
-	ST  R6, R2, CDATA37   
-	LD  R5, R2, CDATA36	
-	LD  R7, R0, ADATA36    
+	LD  R6, R1, BDATA35-BB
+	ST  R6, R2, CDATA37-CC
+	LD  R5, R2, CDATA36-CC
+	LD  R7, R0, ADATA36-AA
 	
-        LD  R7, R1, BDATA35	
-	LD  R6, R2, CDATA35     
-	LD  R7, R0, ADATA37	
-	ST  R7, R1, BDATA37   
+        LD  R7, R1, BDATA35-BB
+	LD  R6, R2, CDATA35-CC
+	LD  R7, R0, ADATA37-AA
+	ST  R7, R1, BDATA37-BB
 				
 	AND R3, R3, 0 		
 	AND R4, R4, 0		
 	ADD R3, R3, 11		
 	ADD R4, R4, -1		
 
-LOOP:	LD R7, R0, ADATA32			
-	LD R7, R1, BDATA32
-        LD R7, R2, CDATA31
+LOOP:	LD R7, R0, ADATA32-AA
+	LD R7, R1, BDATA32-BB
+        LD R7, R2, CDATA31-CC
 	ADD R3, R3, R4
 	  
 	BRp LOOP  		
-	LD R6, R1, BDATA0      
- 	LD R6, R1, BDATA4	
-	LD R6, R1, BDATA10     
+	LD R6, R1, BDATA0-BB
+ 	LD R6, R1, BDATA4-BB
+	LD R6, R1, BDATA10-BB
 	
-	ST R7, R1, BDATA4	
-	ST R7, R1, BDATA11    
-	ST R7, R0, ADATA8	
+	ST R7, R1, BDATA4-BB
+	ST R7, R1, BDATA11-BB
+	ST R7, R0, ADATA8-AA
 STOP:	BRnzp STOP		
 
 	
