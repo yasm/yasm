@@ -3,3 +3,5 @@ bison.tab.c
 lex.yy.c
 bison.y
 token.l
+Makefile.in
+Makefile

@@ -1,2 +1,6 @@
 .*.sw?
 bison.tab.h
+*.in
+Makefile
+stamp-h
+config.h
