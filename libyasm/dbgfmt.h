@@ -1,14 +1,20 @@
-/* $IdPath$
- * YASM debug format module interface header file
+/**
+ * \file libyasm/dbgfmt.h
+ * \brief YASM debug format interface.
  *
+ * \rcs
+ * $IdPath$
+ * \endrcs
+ *
+ * \license
  *  Copyright (C) 2002  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 1. Redistributions of source code must retain the above copyright
+ *  - Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
+ *  - Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
@@ -23,31 +29,39 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ * \endlicense
  */
 #ifndef YASM_DBGFMT_H
 #define YASM_DBGFMT_H
 
-/* Interface to the object format module(s) */
+/** YASM debug format interface. */
 struct yasm_dbgfmt {
-    /* one-line description of the format */
+    /** One-line description of the debug format. */
     const char *name;
 
-    /* keyword used to select format on the command line */
+    /** Keyword used to select debug format. */
     const char *keyword;
 
-    /* Initializes debug output.  Must be called before any other debug
+    /** Initialize debug output for use.  Must call before any other debug
      * format functions.  The filenames are provided solely for informational
-     * purposes.  May be NULL if not needed by the debug format.
+     * purposes.  Function may be unimplemented (NULL) if not needed by the
+     * debug format.
+     * \param in_filename   primary input filename
+     * \param obj_filename  object filename
+     * \param of	    object format in use
      */
     void (*initialize) (const char *in_filename, const char *obj_filename,
 			yasm_objfmt *of);
 
-    /* Cleans up anything allocated by initialize.
-     * May be NULL if not needed by the debug format.
+    /** Clean up anything allocated by initialize().  Function may be
+     * unimplemented (NULL) if not needed by the debug format.
      */
     void (*cleanup) (void);
 
-    /* DEBUG directive support. */
+    /** DEBUG directive support.
+     * \param valparams	    value/parameters
+     * \param lindex	    line index (as from yasm_linemgr)
+     */
     void (*directive) (yasm_valparamhead *valparams, unsigned long lindex);
 };
 
