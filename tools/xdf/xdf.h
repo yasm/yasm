@@ -1,5 +1,5 @@
 /* XDF - Extended Dynamic Object Format */
-/* Version 1.3 */
+/* Version 1.4 */
 /* $Id$ */
 
 /* FILE HEADER        */
@@ -52,11 +52,10 @@ typedef enum {
 
 typedef enum {
 
-  XDF_RELOC_FLAT = 1,  /* DISP = ADDRESS - 0                 (Relative to 0)                     */
-  XDF_RELOC_REL  = 2,  /* DISP = ADDRESS - SEGMENT           (Relative to a segment)             */
-  XDF_RELOC_WRT  = 4,  /* DISP = ADDRESS - SYMBOL            (Relative to a symbol)              */
-  XDF_RELOC_RIP  = 8,  /* DISP = ADDRESS - RIP - RELOC_SIZE  (Relative to end of an instruction) */
-  XDF_RELOC_SEG  = 16, /* DISP = SEGMENT/SELECTOR OF SYMBOL  (Not symbol itself, but which segment it's in) */
+  XDF_RELOC_REL  = 1,  /* DISP = ADDRESS - SEGMENT           (Relative to a segment)             */
+  XDF_RELOC_WRT  = 2,  /* DISP = ADDRESS - SYMBOL            (Relative to a symbol)              */
+  XDF_RELOC_RIP  = 4,  /* DISP = ADDRESS - RIP - RELOC_SIZE  (Relative to end of an instruction) */
+  XDF_RELOC_SEG  = 8,  /* DISP = SEGMENT/SELECTOR OF SYMBOL  (Not symbol itself, but which segment it's in) */
 
 } xdf_rtype;
 

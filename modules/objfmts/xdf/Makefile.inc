@@ -7,6 +7,6 @@ objfmt_xdf_la_LDFLAGS = -module -avoid-version -no-undefined
 objfmt_xdf_la_LIBADD = libyasm.la
 YASM_MODULES += -dlopen objfmt_xdf.la
 
-#EXTRA_DIST += modules/objfmts/xdf/tests/Makefile.inc
+EXTRA_DIST += modules/objfmts/xdf/tests/Makefile.inc
 
-#include modules/objfmts/xdf/tests/Makefile.inc
+include modules/objfmts/xdf/tests/Makefile.inc

@@ -49,11 +49,10 @@ typedef struct xdf_reloc {
     yasm_symrec *sym;		    /* relocated symbol */
     /*@null@*/ yasm_symrec *base;   /* base symbol (for WRT) */
     enum {
-	XDF_RELOC_FLAT = 1,	    /* relative to 0 */
-	XDF_RELOC_REL = 2,	    /* relative to segment */
-	XDF_RELOC_WRT = 4,	    /* relative to symbol */
-	XDF_RELOC_RIP = 8,	    /* RIP-relative */
-	XDF_RELOC_SEG = 16	    /* segment containing symbol */
+	XDF_RELOC_REL = 1,	    /* relative to segment */
+	XDF_RELOC_WRT = 2,	    /* relative to symbol */
+	XDF_RELOC_RIP = 4,	    /* RIP-relative */
+	XDF_RELOC_SEG = 8	    /* segment containing symbol */
     } type;			    /* type of relocation */
     enum {
 	XDF_RELOC_8  = 1,         
@@ -281,9 +280,7 @@ xdf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 		    yasm_section_bcs_first(info->sect), 0, (*ep)->line)),
 		(*ep)->line);
 	    *ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
-	} else if (info->xsd->flags & XDF_SECT_FLAT)
-	    reloc->type = XDF_RELOC_FLAT;
-	else
+	} else
 	    reloc->type = XDF_RELOC_REL;
 	info->xsd->nreloc++;
 	STAILQ_INSERT_TAIL(&info->xsd->relocs, reloc, link);
@@ -820,9 +817,6 @@ xdf_section_data_print(void *data, FILE *f, int indent_level)
 	yasm_symrec_print(reloc->sym, f, indent_level+3);
 	fprintf(f, "%*stype=", indent_level+2, "");
 	switch (reloc->type) {
-	    case XDF_RELOC_FLAT:
-		printf("Flat");
-		break;
 	    case XDF_RELOC_REL:
 		printf("Rel");
 		break;

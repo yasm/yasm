@@ -101,9 +101,6 @@ print_reloc(const RELOCATION_ENTRY *relocent, FILE *f, size_t symtab_off)
 {
     const char *type = "UNK";
     switch (relocent->r_type) {
-	case XDF_RELOC_FLAT:
-	    type = "FLT";
-	    break;
 	case XDF_RELOC_REL:
 	    type = "REL";
 	    break;
