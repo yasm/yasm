@@ -27,10 +27,6 @@
 
 #include <stdio.h>
 
-#ifdef STDC_HEADERS
-# include <stdlib.h>
-#endif
-
 #include "errwarn.h"
 
 #include "bytecode.h"

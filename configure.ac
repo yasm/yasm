@@ -41,6 +41,14 @@ AC_ARG_ENABLE(profiling,
   *) AC_MSG_ERROR(bad value ${enableval} for --enable-profiling) ;;
 esac],[profiling=false])
 
+AC_ARG_ENABLE(dmalloc,
+[  --enable-dmalloc    Enable debug malloc (requires dmalloc library)],
+[case "${enableval}" in
+  yes) dmalloc=true ;;
+  no)  dmalloc=false ;;
+  *) AC_MSG_ERROR(bad value ${enableval} for --enable-dmalloc) ;;
+esac],[dmalloc=false])
+
 AC_ARG_ENABLE(check,
 [  --disable-check     Disable building of test suite and make check],
 [case "${enableval}" in
@@ -53,23 +61,36 @@ AM_CONDITIONAL(CHECK, test x$check = xtrue)
 AM_PROG_CC_STDC
 
 if ${dev}; then
-	DEVFLAGS="-g"
+	DEVFLAGS=" -g"
 fi
 
 if ${morewarn}; then
-	MOREWARNFLAGS="-Wbad-function-cast -Wcast-align -Wcast-qual -Wchar-subscripts -Winline -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wredundant-decls -Wshadow -Wstrict-prototypes -Wwrite-strings"
+	MOREWARNFLAGS=" -Wbad-function-cast -Wcast-align -Wcast-qual -Wchar-subscripts -Winline -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wshadow -Wstrict-prototypes -Wwrite-strings"
 fi
 
 if ${warnerror}; then
-	WARNERRORFLAGS="-Werror"
+	WARNERRORFLAGS=" -Werror"
 fi
 
 if ${profiling}; then
-	PROFILINGFLAGS="-pg"
+	PROFILINGFLAGS=" -pg"
+fi
+
+if ${dmalloc}; then
+	AC_CHECK_HEADERS(dmalloc.h)
+	AC_CHECK_LIB(dmalloc, main)
+	if test "$ac_cv_header_dmalloc_h" != yes ||
+	   test "$ac_cv_lib_dmalloc_main" != yes; then
+	    AC_MSG_ERROR([dmalloc required for --enable-dmalloc.])
+	else
+	    DMALLOCFLAGS=" -DDMALLOC"
+	fi
+else
+    DMALLOCFLAGS=" -Wredundant-decls"
 fi
 
 if test "$GCC" = yes; then
-	ANSI_CFLAGS="-ansi -pedantic -Wall $MOREWARNFLAGS $WARNERRORFLAGS $DEVFLAGS $PROFILINGFLAGS"
+	ANSI_CFLAGS="-ansi -pedantic -Wall$MOREWARNFLAGS$WARNERRORFLAGS$DEVFLAGS$PROFILINGFLAGS$DMALLOCFLAGS"
 else
 	ANSI_CFLAGS="$DEVFLAGS"
 fi

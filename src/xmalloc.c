@@ -31,6 +31,8 @@
 
 #include "errwarn.h"
 
+#ifndef DMALLOC
+
 RCSID("$IdPath$");
 
 void *
@@ -78,3 +80,4 @@ xrealloc(void *oldmem, size_t size)
 
     return newmem;
 }
+#endif

@@ -45,6 +45,10 @@
 #include "globals.h"
 #include "errwarn.h"
 
+#ifdef DMALLOC
+# include <dmalloc.h>
+#endif
+
 RCSID("$IdPath$");
 
 /* Total error count for entire assembler run.

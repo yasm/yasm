@@ -46,6 +46,10 @@
 
 #include "bison.h"
 
+#ifdef DMALLOC
+# include <dmalloc.h>
+#endif
+
 RCSID("$IdPath$");
 
 #define YY_NEVER_INTERACTIVE	1

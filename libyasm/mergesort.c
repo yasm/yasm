@@ -38,6 +38,10 @@
 
 #include "util.h"
 
+#ifdef DMALLOC
+# include <dmalloc.h>
+#endif
+
 RCSID("$IdPath$");
 
 #if defined(LIBC_SCCS) && !defined(lint)
@@ -60,7 +64,6 @@ static char sccsid[] = "@(#)merge.c	8.2 (Berkeley) 2/14/94";
 
 #ifdef STDC_HEADERS
 # include <errno.h>
-# include <stdlib.h>
 # include <string.h>
 #endif
 

@@ -41,7 +41,6 @@ static char sccsid[] = "@(#)strdup.c	8.1 (Berkeley) 6/4/93";
 
 #ifdef STDC_HEADERS
 # include <stddef.h>
-# include <stdlib.h>
 # include <string.h>
 #else
 size_t strlen(const char *);
@@ -52,6 +51,8 @@ void bcopy(const void *, void *, size_t);
 void memcpy(void *, const void *, size_t);
 # endif
 #endif
+
+#ifndef DMALLOC
 
 RCSID("$IdPath$");
 
@@ -66,3 +67,4 @@ xstrdup(const char *str)
 	memcpy(copy, str, len);
 	return (copy);
 }
+#endif

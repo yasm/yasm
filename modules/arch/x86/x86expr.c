@@ -49,6 +49,10 @@
 #include "expr.h"
 #include "symrec.h"
 
+#ifdef DMALLOC
+# include <dmalloc.h>
+#endif
+
 RCSID("$IdPath$");
 
 /* Types listed in canonical sorting order.  See expr_order_terms(). */

@@ -28,7 +28,6 @@
 #include <stdio.h>
 
 #ifdef STDC_HEADERS
-# include <stdlib.h>
 # include <string.h>
 #endif
 
@@ -43,6 +42,10 @@
 
 #include "bytecode.h"
 #include "section.h"
+
+#ifdef DMALLOC
+# include <dmalloc.h>
+#endif
 
 RCSID("$IdPath$");
 

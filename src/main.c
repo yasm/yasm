@@ -53,6 +53,10 @@
 #include "preproc.h"
 #include "parser.h"
 
+#ifdef DMALLOC
+# include <dmalloc.h>
+#endif
+
 RCSID("$IdPath$");
 
 #ifndef countof

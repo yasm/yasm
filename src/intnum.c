@@ -29,7 +29,6 @@
 #include <ctype.h>
 
 #ifdef STDC_HEADERS
-# include <stdlib.h>
 # include <string.h>
 #endif
 
@@ -41,6 +40,10 @@
 
 #include "errwarn.h"
 #include "intnum.h"
+
+#ifdef DMALLOC
+# include <dmalloc.h>
+#endif
 
 RCSID("$IdPath$");
 

@@ -28,13 +28,13 @@
 
 #include <stdio.h>
 
-#ifdef STDC_HEADERS
-#include <stdlib.h>
-#endif
-
 #include "errwarn.h"
 
 #include "ternary.h"
+
+#ifdef DMALLOC
+# include <dmalloc.h>
+#endif
 
 RCSID("$IdPath$");
 

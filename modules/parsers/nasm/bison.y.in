@@ -48,6 +48,10 @@
 #include "section.h"
 #include "objfmt.h"
 
+#ifdef DMALLOC
+# include <dmalloc.h>
+#endif
+
 RCSID("$IdPath$");
 
 #define YYDEBUG 1

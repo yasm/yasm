@@ -11,7 +11,6 @@
 /*  MODULE IMPORTS:                                                          */
 /*****************************************************************************/
 #ifdef STDC_HEADERS
-#include <stdlib.h>                                 /*  MODULE TYPE:  (sys)  */
 #include <limits.h>                                 /*  MODULE TYPE:  (sys)  */
 #include <string.h>                                 /*  MODULE TYPE:  (sys)  */
 #include <ctype.h>                                  /*  MODULE TYPE:  (sys)  */
@@ -20,6 +19,10 @@
 /*  MODULE INTERFACE:                                                        */
 /*****************************************************************************/
 #include "bitvect.h"
+
+#ifdef DMALLOC
+# include <dmalloc.h>
+#endif
 
 RCSID("$IdPath$");
 
