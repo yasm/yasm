@@ -400,7 +400,7 @@ x86_bc_print(const bytecode *bc)
 	    printf("Target=");
 	    expr_print(jmprel->target);
 	    printf("\nShort Form:\n");
-	    if (!jmprel->shortop.opcode_len == 0)
+	    if (jmprel->shortop.opcode_len == 0)
 		printf(" None\n");
 	    else
 		printf(" Opcode: %02x %02x %02x OpLen=%u\n",
@@ -408,7 +408,7 @@ x86_bc_print(const bytecode *bc)
 		       (unsigned int)jmprel->shortop.opcode[1],
 		       (unsigned int)jmprel->shortop.opcode[2],
 		       (unsigned int)jmprel->shortop.opcode_len);
-	    if (!jmprel->nearop.opcode_len == 0)
+	    if (jmprel->nearop.opcode_len == 0)
 		printf(" None\n");
 	    else
 		printf(" Opcode: %02x %02x %02x OpLen=%u\n",
@@ -437,7 +437,7 @@ x86_bc_print(const bytecode *bc)
 		    printf("UNKNOWN!!");
 		    break;
 	    }
-	    printf("BITS=%u\nAddrSize=%u OperSize=%u LockRepPre=%02x\n",
+	    printf(" BITS=%u\nAddrSize=%u OperSize=%u LockRepPre=%02x\n",
 		   (unsigned int)jmprel->mode_bits,
 		   (unsigned int)jmprel->addrsize,
 		   (unsigned int)jmprel->opersize,
