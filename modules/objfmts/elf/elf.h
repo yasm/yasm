@@ -1,4 +1,4 @@
-/*
+/* $IdPath$
  * ELF object format helpers
  *
  *  Copyright (C) 2003  Michael Urman
@@ -166,6 +166,13 @@ typedef enum {
     STN_UNDEF = 0
 } elf_symbol_index;
 
+
+/* internal only object definitions */
+#ifdef YASM_OBJFMT_ELF_INTERNAL
+
+#define ELF32_ST_INFO(bind, type)	(((bind) << 4) + ((type) & 0xf))
+#define ELF32_R_INFO(s,t)		(((s)<<8)+(unsigned char)(t))
+
 /* elf relocation type - index of semantics */
 typedef enum {
     R_386_NONE = 0,		/* none */
@@ -180,13 +187,6 @@ typedef enum {
     R_386_GOTOFF = 9,		/* word, S + A - GOT */
     R_386_GOTPC = 10		/* word, GOT + A - P */
 } elf_relocation_type;
-
-
-/* internal only object definitions */
-#ifdef YASM_OBJFMT_ELF_INTERNAL
-
-#define ELF32_ST_INFO(bind, type)	(((bind) << 4) + ((type) & 0xf))
-#define ELF32_R_INFO(s,t)		(((s)<<8)+(unsigned char)(t))
 
 struct elf_secthead {
     elf_section_type	 type;
@@ -265,7 +265,7 @@ struct elf_symtab_entry {
 /* reloc functions */
 elf_reloc_entry *elf_reloc_entry_new(yasm_symrec *sym,
 				     elf_address addr,
-				     elf_relocation_type rtype);
+				     int rel);
 void elf_reloc_entry_delete(elf_reloc_entry *entry);
 elf_reloc_head *elf_relocs_new(void);
 void elf_reloc_delete(elf_reloc_head *head);

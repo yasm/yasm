@@ -38,7 +38,7 @@
 elf_reloc_entry *
 elf_reloc_entry_new(yasm_symrec *sym,
 		    elf_address addr,
-		    elf_relocation_type rtype)
+		    int rel)
 {
     elf_reloc_entry *entry = yasm_xmalloc(sizeof(elf_reloc_entry));
 
@@ -47,7 +47,7 @@ elf_reloc_entry_new(yasm_symrec *sym,
 
     entry->sym = sym;
     entry->addr = addr;
-    entry->rtype = rtype;
+    entry->rtype = rel ? R_386_PC32 : R_386_32;
 
     return entry;
 }

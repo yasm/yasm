@@ -231,8 +231,6 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	}
 
 	if (rel) {
-	    reloc = elf_reloc_entry_new(sym, bc->offset + offset, R_386_PC32);
-
 	    /* Need to reference to start of section, so add $$ in. */
 	    *ep = yasm_expr_new(YASM_EXPR_ADD, yasm_expr_expr(*ep),
 		yasm_expr_sym(yasm_symrec_define_label("$$", info->sect,
@@ -243,9 +241,9 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 		yasm_expr_int(yasm_intnum_new_uint(bc->offset + offset)),
 		(*ep)->line);
 	    *ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
-	} else
-	    reloc = elf_reloc_entry_new(sym, bc->offset + offset, R_386_32);
+	}
 
+	reloc = elf_reloc_entry_new(sym, bc->offset + offset, rel);
 	/* allocate .rel sections on a need-basis */
 	if (elf_secthead_append_reloc(info->shead, reloc))
 	    elf_objfmt_parse_scnum++;
