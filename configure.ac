@@ -19,46 +19,38 @@ AM_MAINTAINER_MODE
 #
 # autoconf command-line options
 #
-AC_ARG_ENABLE(dev,
-AC_HELP_STRING([--enable-dev],[Enable full development build capability]),
+AC_ARG_ENABLE(debug,
+AC_HELP_STRING([--enable-debug],
+	       [Turn on debugging and compile time warnings]),
 [case "${enableval}" in
-  yes) dev=true ;;
-  no)  dev=false ;;
-  *) AC_MSG_ERROR([bad value ${enableval} for --enable-dev]) ;;
-esac],[dev=false])
-AM_CONDITIONAL(DEV, test x$dev = xtrue)
-
-AC_ARG_ENABLE(morewarn,
-AC_HELP_STRING([--enable-morewarn],[Enable lots of extra GCC warnings]),
-[case "${enableval}" in
-  yes) morewarn=true ;;
-  no)  morewarn=false ;;
-  *) AC_MSG_ERROR([bad value ${enableval} for --enable-morewarn]) ;;
-esac],[morewarn=false])
+  yes) debugging="yes" ;;
+  no)  debugging="no" ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-debug]) ;;
+esac])
 
 AC_ARG_ENABLE(warnerror,
 AC_HELP_STRING([--enable-warnerror],[Treat GCC warnings as errors]),
 [case "${enableval}" in
-  yes) warnerror=true ;;
-  no)  warnerror=false ;;
+  yes) warnerror="yes" ;;
+  no)  warnerror="no" ;;
   *) AC_MSG_ERROR([bad value ${enableval} for --enable-warnerror]) ;;
-esac],[warnerror=false])
+esac])
 
 AC_ARG_ENABLE(profiling,
 AC_HELP_STRING([--enable-profiling],[Enable profiling (requires GCC)]),
 [case "${enableval}" in
-  yes) profiling=true ;;
-  no)  profiling=false ;;
+  yes) profiling="yes" ;;
+  no)  profiling="no" ;;
   *) AC_MSG_ERROR([bad value ${enableval} for --enable-profiling]) ;;
-esac],[profiling=false])
+esac])
 
 AC_ARG_ENABLE(gcov,
 AC_HELP_STRING([--enable-gcov],[Enable gcov code coverage (requires GCC)]),
 [case "${enableval}" in
-  yes) gcov=true ;;
-  no)  gcov=false ;;
+  yes) gcov="yes" ;;
+  no)  gcov="no" ;;
   *) AC_MSG_ERROR([bad value ${enableval} for --enable-gcov]) ;;
-esac],[gcov=false])
+esac])
 
 #
 # Checks for programs.
@@ -159,27 +151,37 @@ fi
 ARCH=x86
 AC_SUBST([ARCH])
 
-# Require things for --enable-dev option.
-if ${dev}; then
-	# Require Perl
-	if test -z "$PERL" || test "$PERL" = ":"; then
-		AC_MSG_ERROR([Perl not found in \$PATH])
-	fi
+# Require things for --enable-maintainer-mode option.
+if test "$USE_MAINTAINER_MODE" = "yes"; then
+  # Enable debugging
+  if test "$debugging" != "no"; then
+    debugging=yes
+  fi
 
-	# Require Perl >= PERL_VERSION
-	AC_MSG_CHECKING([for minimum required perl version >= $PERL_VERSION])
-	_perl_version=`PERL_VERSION=$PERL_VERSION $PERL -e 'print "$]"; if ($] >= $ENV{PERL_VERSION}) { exit(0); } else { exit(1); }' 2>&5`
-	_perl_res=$?
-	AC_MSG_RESULT([$_perl_version])
+  # Enable more warnings
+  if test "$GCC" = "yes"; then
+    MORE_CFLAGS="$MORE_CFLAGS -Wbad-function-cast -Wcast-align -Wcast-qual -Wchar-subscripts -Winline -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wshadow -Wstrict-prototypes -Wwrite-strings"
+  fi
 
-	if test "$_perl_res" != 0; then
-		AC_MSG_ERROR([Perl $PERL_VERSION or higher is required.])
-	fi
+  # Require Perl
+  if test -z "$PERL" || test "$PERL" = ":"; then
+    AC_MSG_ERROR([Perl not found in \$PATH])
+  fi
 
-	# Require groff
-	if test -z "$GROFF" || test "$GROFF" = ":"; then
-		AC_MSG_ERROR([groff not found in \$PATH])
-	fi
+  # Require Perl >= PERL_VERSION
+  AC_MSG_CHECKING([for minimum required perl version >= $PERL_VERSION])
+  _perl_version=`PERL_VERSION=$PERL_VERSION $PERL -e 'print "$]"; if ($] >= $ENV{PERL_VERSION}) { exit(0); } else { exit(1); }' 2>&5`
+  _perl_res=$?
+  AC_MSG_RESULT([$_perl_version])
+
+  if test "$_perl_res" != 0; then
+    AC_MSG_ERROR([Perl $PERL_VERSION or higher is required.])
+  fi
+
+  # Require groff
+  if test -z "$GROFF" || test "$GROFF" = ":"; then
+    AC_MSG_ERROR([groff not found in \$PATH])
+  fi
 fi
 
 #
@@ -189,55 +191,52 @@ fi
 # "Check" tests can use fork/wait/msg* if ALL are available.
 AH_TEMPLATE([USE_FORKWAITMSG], [Combined test for fork/wait/msg*])
 if ${check}; then
-	if test "$ac_cv_func_fork" = yes &&
-	   test "$ac_cv_func_wait" = yes &&
-	   test "$ac_cv_func_msgctl" = yes &&
-	   test "$ac_cv_func_msgget" = yes &&
-	   test "$ac_cv_func_msgrcv" = yes &&
-	   test "$ac_cv_func_msgsnd" = yes; then
-		AC_DEFINE([USE_FORKWAITMSG])
-		AC_DEFINE([_GNU_SOURCE], 1,
-			  [Make sure we see all GNU extensions.])
-		AC_DEFINE([_SVID_SOURCE], 1,
-			  [Make sure we see all SVID extensions.])
-	fi
+  if test "$ac_cv_func_fork" = yes &&
+     test "$ac_cv_func_wait" = yes &&
+     test "$ac_cv_func_msgctl" = yes &&
+     test "$ac_cv_func_msgget" = yes &&
+     test "$ac_cv_func_msgrcv" = yes &&
+     test "$ac_cv_func_msgsnd" = yes; then
+    AC_DEFINE([USE_FORKWAITMSG])
+    AC_DEFINE([_GNU_SOURCE], 1,
+	      [Make sure we see all GNU extensions.])
+    AC_DEFINE([_SVID_SOURCE], 1,
+	      [Make sure we see all SVID extensions.])
+  fi
 fi
 
-# Enable debugging if --enable-dev, otherwise optimize
-if ${dev}; then
-	DEVFLAGS=" -g"
-else
-	DEVFLAGS=" -O"
-fi
-
-# More warnings to help write clean code
-if ${morewarn}; then
-	MOREWARNFLAGS="-Wbad-function-cast -Wcast-align -Wcast-qual -Wchar-subscripts -Winline -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wshadow -Wstrict-prototypes -Wwrite-strings"
+if test "$debugging" = "no" ; then
+  changequote(,)
+  CFLAGS="`echo $CFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"
+  changequote([,])
 fi
 
 # Turn warnings into errors
-if ${warnerror}; then
-	WARNERRORFLAGS="-Werror"
+if test "$warnerror" = "yes"; then
+  if test "$GCC" = "yes"; then
+    MORE_CFLAGS="$MORE_CFLAGS -Werror"
+  fi
 fi
 
 # Enable output of profiling information
-if ${profiling}; then
-	PROFILINGFLAGS="-pg"
+if test "$profiling" = "yes"; then
+  if test "$GCC" = "yes"; then
+    MORE_CFLAGS="$MORE_CFLAGS -pg"
+  fi
 fi
 
 # Enable output of gcov information
-if ${gcov}; then
-	GCOVFLAGS="-fprofile-arcs -ftest-coverage"
+if test "$gcov" = "yes"; then
+  if test "$GCC" = "yes"; then
+    MORE_CFLAGS="$MORE_CFLAGS -fprofile-arcs -ftest-coverage"
+  fi
 fi
 
-# If we're using GCC, then we can enable the above CFLAGS as well as turn on
-# -ansi -pedantic -Wall.
+# If we're using GCC, then we can turn on -ansi -pedantic -Wall too.
 if test "$GCC" = yes; then
-	ANSI_CFLAGS="-ansi -pedantic -Wall $MOREWARNFLAGS $WARNERRORFLAGS $DEVFLAGS $PROFILINGFLAGS $GCOVFLAGS"
-else
-	ANSI_CFLAGS=""
+  MORE_CFLAGS="-ansi -pedantic -Wall $MORE_CFLAGS"
 fi
-AC_SUBST(ANSI_CFLAGS)
+AC_SUBST(MORE_CFLAGS)
 
 # Substitutions for libltdl
 AC_SUBST(INCLTDL)

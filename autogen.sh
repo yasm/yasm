@@ -63,9 +63,9 @@ if test "$DIE" -eq 1; then
 fi
 
 if test -z "$*"; then
-        echo "I am going to run ./configure with --enable-dev - if you wish "
-        echo "to pass any other args to it, please specify them on the $0"
-	echo "command line."
+        echo "I am going to run ./configure with --enable-maintainer-mode"
+        echo "If you wish to pass any other args to it, please specify them"
+	echo "on the $0 command line."
 fi
 
 echo "Generating configuration files for $package, please wait...."
@@ -85,6 +85,6 @@ echo "  automake -a"
 automake -a # || exit 1
 echo "  autoconf"
 autoconf || exit 1
-echo "  configure --enable-dev $@"
-$srcdir/configure --enable-dev "$@" || exit 1
+echo "  configure --enable-maintainer-mode $@"
+$srcdir/configure --enable-maintainer-mode "$@" || exit 1
 

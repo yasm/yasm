@@ -3,7 +3,7 @@
 SUBDIRS = libltdl m4 po .
 
 AM_YFLAGS = -d
-AM_CFLAGS = @ANSI_CFLAGS@
+AM_CFLAGS = @MORE_CFLAGS@
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/check \
