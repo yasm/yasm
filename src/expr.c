@@ -512,6 +512,11 @@ expr_level_op(/*@returned@*/ /*@only@*/ expr *e, int fold_const,
     /* Determine how many operands will need to be brought up (for leveling).
      * Go ahead and bring up any IDENT'ed values.
      */
+    while (e->op == EXPR_IDENT && e->terms[0].type == EXPR_EXPR) {
+	expr *sube = e->terms[0].data.expn;
+	xfree(e);
+	e = sube;
+    }
     level_numterms = e->numterms;
     level_fold_numterms = 0;
     for (i=0; i<e->numterms; i++) {
@@ -730,7 +735,7 @@ expr_level_tree(expr *e, int fold_const, int simplify_ident,
     e = expr_level_op(e, fold_const, simplify_ident);
     if (calc_bc_dist) {
 	e = expr_xform_bc_dist(e, calc_bc_dist);
-	e = expr_level_op(e, fold_const, simplify_ident);
+	e = expr_level_tree(e, fold_const, simplify_ident, NULL, NULL);
     }
     return e;
 }
