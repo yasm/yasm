@@ -1,4 +1,4 @@
-/* $Id: nasm-bison.y,v 1.28 2001/08/30 03:45:26 peter Exp $
+/* $Id: nasm-bison.y,v 1.29 2001/09/16 18:53:47 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -40,8 +40,9 @@
 #include "symrec.h"
 
 #include "bytecode.h"
+#include "section.h"
 
-RCSID("$Id: nasm-bison.y,v 1.28 2001/08/30 03:45:26 peter Exp $");
+RCSID("$Id: nasm-bison.y,v 1.29 2001/09/16 18:53:47 peter Exp $");
 
 #define YYDEBUG 1
 
@@ -49,6 +50,10 @@ void init_table(void);
 extern int nasm_parser_lex(void);
 static unsigned long ConvertCharConstToInt(char *);
 void nasm_parser_error(char *);
+
+extern section *nasm_parser_cur_section;
+
+static bytecode *new_bc;
 
 %}
 
@@ -121,11 +126,22 @@ void nasm_parser_error(char *);
 
 %%
 input: /* empty */
-    | input line { OutputError(); OutputWarning(); line_number++; }
+    | input line {
+	OutputError();
+	OutputWarning();
+	if ($2.type != BC_EMPTY) {
+	    new_bc = malloc(sizeof(bytecode));
+	    if(!new_bc)
+		Fatal(FATAL_NOMEM);
+	    memcpy(new_bc, &$2, sizeof(bytecode));
+	    STAILQ_INSERT_TAIL(&nasm_parser_cur_section->bc, new_bc, link);
+	}
+	line_number++;
+    }
 ;
 
 line: '\n'	{ $$.type = BC_EMPTY; }
-    | exp '\n' { DebugPrintBC(&$1); $$ = $1; }
+    | exp '\n'
     | directive '\n' { $$.type = BC_EMPTY; }
     | error '\n' {
 	Error(_("label or instruction expected at start of line"));

@@ -1,4 +1,4 @@
-/* $Id: section.h,v 1.6 2001/09/16 04:49:46 peter Exp $
+/* $Id: section.h,v 1.7 2001/09/16 18:53:47 peter Exp $
  * Section header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -27,14 +27,15 @@ typedef STAILQ_HEAD(sectionhead_s, section_s) sectionhead;
 typedef struct section_s {
     STAILQ_ENTRY(section_s) link;
 
-    enum { SECTION, ABSOLUTE } type;
+    enum { SECTION_DEFAULT, SECTION_GENERAL, SECTION_ABSOLUTE } type;
 
     char *name;
     unsigned int id;
 
     union {
-	/* SECTION data */
-	/* ABSOLUTE data */
+	/* SECTION_DEFAULT data */
+	/* SECTION_GENERAL data */
+	/* SECTION_ABSOLUTE data */
 	unsigned long start;
     } data;
 
