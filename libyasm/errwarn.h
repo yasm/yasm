@@ -2,7 +2,7 @@
  * \file errwarn.h
  * \brief YASM error and warning reporting interface.
  *
- * $IdPath: yasm/libyasm/errwarn.h,v 1.37 2003/05/04 08:40:35 peter Exp $
+ * $IdPath$
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -67,8 +67,9 @@ extern /*@exits@*/ void (*yasm_internal_error_)
  * \warning This function must NOT return to calling code; exit or longjmp
  *          instead.
  * \param message   fatal error message
+ * \param ...	    argument list for message
  */
-extern /*@exits@*/ void (*yasm_fatal) (const char *message);
+extern /*@exits@*/ void (*yasm_fatal) (const char *message, ...);
 
 /** Log an error.  va_list version of yasm__error().
  * \internal

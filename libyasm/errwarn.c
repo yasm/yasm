@@ -26,7 +26,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath: yasm/libyasm/errwarn.c,v 1.56 2003/05/04 01:39:10 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include <ctype.h>
 
@@ -45,14 +45,14 @@
 /* Default handlers for replacable functions */
 static /*@exits@*/ void def_internal_error_
     (const char *file, unsigned int line, const char *message);
-static /*@exits@*/ void def_fatal(const char *message);
+static /*@exits@*/ void def_fatal(const char *message, ...);
 static const char *def_gettext_hook(const char *msgid);
 
 /* Storage for errwarn's "extern" functions */
 /*@exits@*/ void (*yasm_internal_error_)
     (const char *file, unsigned int line, const char *message)
     = def_internal_error_;
-/*@exits@*/ void (*yasm_fatal) (const char *message) = def_fatal;
+/*@exits@*/ void (*yasm_fatal) (const char *message, ...) = def_fatal;
 const char * (*yasm_gettext_hook) (const char *msgid) = def_gettext_hook;
 
 /* Enabled warnings.  See errwarn.h for a list. */
@@ -163,15 +163,15 @@ def_internal_error_(const char *file, unsigned int line, const char *message)
  * memory), so just exit immediately.
  */
 static void
-def_fatal(const char *message)
+def_fatal(const char *fmt, ...)
 {
-    fprintf(stderr, yasm_gettext_hook(N_("FATAL: %s\n")),
-	    yasm_gettext_hook(message));
-#ifdef HAVE_ABORT
-    abort();
-#else
+    va_list va;
+    fprintf(stderr, "%s: ", yasm_gettext_hook(N_("FATAL")));
+    va_start(va, fmt);
+    vfprintf(stderr, yasm_gettext_hook(fmt), va);
+    va_end(va);
+    fputc('\n', stderr);
     exit(EXIT_FAILURE);
-#endif
 }
 
 /* Create an errwarn structure in the correct linked list location.
