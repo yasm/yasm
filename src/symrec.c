@@ -227,43 +227,7 @@ symrec_declare(const char *name, SymVisibility vis, void *of_data)
     }
     return rec;
 }
-#if 0
-int
-symrec_get_int_value(const symrec *sym, unsigned long *ret_val,
-		     int resolve_label)
-{
-    /* If we already know the value, just return it. */
-    if (sym->status & SYM_VALUED) {
-	switch (sym->type) {
-	    case SYM_CONSTANT_INT:
-		*ret_val = sym->value.int_val;
-		break;
-	    case SYM_CONSTANT_FLOAT:
-		/* FIXME: Line number on this error will be incorrect. */
-		if (floatnum_get_int(ret_val, sym->value.flt))
-		    Error(_("Floating point value cannot fit in 32-bit single precision"));
-		break;
-	    case SYM_LABEL:
-		if (!bytecode_get_offset(sym->value.label.sect,
-					 sym->value.label.bc, ret_val))
-		    InternalError(__LINE__, __FILE__,
-				  _("Label symbol is valued but cannot get offset"));
-	    case SYM_UNKNOWN:
-		InternalError(__LINE__, __FILE__,
-			      _("Have a valued symbol but of unknown type"));
-	}
-	return 1;
-    }
 
-    /* Try to get offset of unvalued label */
-    if (resolve_label && sym->type == SYM_LABEL)
-	return bytecode_get_offset(sym->value.label.sect, sym->value.label.bc,
-				   ret_val);
-
-    /* We can't get the value right now. */
-    return 0;
-}
-#endif
 const char *
 symrec_get_name(const symrec *sym)
 {
@@ -282,6 +246,17 @@ symrec_get_equ(const symrec *sym)
     if (sym->type == SYM_EQU)
 	return sym->value.expn;
     return (const expr *)NULL;
+}
+
+int
+symrec_get_label(const symrec *sym, symrec_get_label_sectionp *sect,
+		 symrec_get_label_bytecodep *precbc)
+{
+    if (sym->type != SYM_LABEL)
+	return 0;
+    *sect = sym->value.label.sect;
+    *precbc = sym->value.label.bc;
+    return 1;
 }
 
 unsigned long

@@ -34,18 +34,16 @@
 /*@dependent@*/ symrec *symrec_declare(const char *name, SymVisibility vis,
 				       /*@only@*/ /*@null@*/ void *of_data);
 
-/* Get the numeric 32-bit value of a symbol if possible.
- * Return value is IF POSSIBLE, not the value.
- * If resolve_label is true, tries to get offset of labels, otherwise it
- * returns not possible.
- */
-int symrec_get_int_value(const symrec *sym, unsigned long *ret_val,
-			 int resolve_label);
-
 /*@observer@*/ const char *symrec_get_name(const symrec *sym);
 SymVisibility symrec_get_visibility(const symrec *sym);
 
 /*@observer@*/ /*@null@*/ const expr *symrec_get_equ(const symrec *sym);
+/* Returns 0 if not a label or if EXTERN/COMMON (not defined in the file) */
+typedef /*@dependent@*/ section *symrec_get_label_sectionp;
+typedef /*@dependent@*/ /*@null@*/ bytecode *symrec_get_label_bytecodep;
+int symrec_get_label(const symrec *sym,
+		     /*@out@*/ symrec_get_label_sectionp *sect,
+		     /*@out@*/ symrec_get_label_bytecodep *precbc);
 
 /* Get and set optimizer flags */
 unsigned long symrec_get_opt_flags(const symrec *sym);
