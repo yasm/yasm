@@ -28,7 +28,7 @@
 # include <stdarg.h>
 #endif
 
-#include "globals.h"
+#include "linemgr.h"
 #include "errwarn.h"
 
 
@@ -235,29 +235,17 @@ warning_common(unsigned long lindex, const char *fmt, va_list va)
  * system.
  */
 void
-ParserError(const char *s)
+ParserError(unsigned long lindex, const char *s)
 {
-    Error("%s %s", _("parser error:"), s);
+    Error(lindex, "%s %s", _("parser error:"), s);
     previous_we->type = WE_PARSERERROR;
-}
-
-/* Register an error during the parser stage (uses global line_index).  Does
- * not print the error, only stores it for OutputAllErrorWarning() to print.
- */
-void
-Error(const char *fmt, ...)
-{
-    va_list va;
-    va_start(va, fmt);
-    error_common(line_index, fmt, va);
-    va_end(va);
 }
 
 /* Register an error at line lindex.  Does not print the error, only stores it
  * for OutputAllErrorWarning() to print.
  */
 void
-ErrorAt(unsigned long lindex, const char *fmt, ...)
+Error(unsigned long lindex, const char *fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
@@ -265,23 +253,11 @@ ErrorAt(unsigned long lindex, const char *fmt, ...)
     va_end(va);
 }
 
-/* Register a warning during the parser stage (uses global line_index).  Does
- * not print the warning, only stores it for OutputAllErrorWarning() to print.
- */
-void
-Warning(const char *fmt, ...)
-{
-    va_list va;
-    va_start(va, fmt);
-    warning_common(line_index, fmt, va);
-    va_end(va);
-}
-
 /* Register an warning at line lindex.  Does not print the warning, only stores
  * it for OutputAllErrorWarning() to print.
  */
 void
-WarningAt(unsigned long lindex, const char *fmt, ...)
+Warning(unsigned long lindex, const char *fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
@@ -329,7 +305,7 @@ GetNumErrors(void)
 
 /* Output all previously stored errors and warnings to stderr. */
 void
-OutputAllErrorWarning(void)
+OutputAllErrorWarning(linemgr *lm)
 {
     errwarn *we;
     const char *filename;
@@ -345,7 +321,7 @@ OutputAllErrorWarning(void)
     while (!SLIST_EMPTY(&errwarns)) {
 	we = SLIST_FIRST(&errwarns);
 	/* Output error/warning */
-	line_lookup(we->line, &filename, &line);
+	lm->lookup(we->line, &filename, &line);
 	if (we->type == WE_ERROR)
 	    fprintf(stderr, "%s:%lu: %s\n", filename, line, we->msg);
 	else

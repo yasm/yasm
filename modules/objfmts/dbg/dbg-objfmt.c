@@ -22,7 +22,6 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
-#include "globals.h"
 #include "errwarn.h"
 #include "expr.h"
 #include "symrec.h"
@@ -81,7 +80,8 @@ dbg_objfmt_cleanup(void)
 static /*@observer@*/ /*@null@*/ section *
 dbg_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 			   /*@unused@*/ /*@null@*/
-			   valparamhead *objext_valparams)
+			   valparamhead *objext_valparams,
+			   unsigned long lindex)
 {
     valparam *vp;
     section *retval;
@@ -91,13 +91,14 @@ dbg_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
     vps_print(dbg_objfmt_file, valparams);
     fprintf(dbg_objfmt_file, ", ");
     vps_print(dbg_objfmt_file, objext_valparams);
-    fprintf(dbg_objfmt_file, "), returning ");
+    fprintf(dbg_objfmt_file, ", %lu), returning ", lindex);
 
     if ((vp = vps_first(valparams)) && !vp->param && vp->val != NULL) {
-	retval = sections_switch_general(headp, vp->val, 200, 0, &isnew);
+	retval = sections_switch_general(headp, vp->val, 200, 0, &isnew,
+					 lindex);
 	if (isnew) {
 	    fprintf(dbg_objfmt_file, "(new) ");
-	    symrec_define_label(vp->val, retval, (bytecode *)NULL, 1);
+	    symrec_define_label(vp->val, retval, (bytecode *)NULL, 1, lindex);
 	}
 	fprintf(dbg_objfmt_file, "\"%s\" section\n", vp->val);
 	return retval;
@@ -125,34 +126,35 @@ dbg_objfmt_section_data_print(FILE *f, int indent_level, /*@null@*/ void *data)
 
 static void
 dbg_objfmt_extern_declare(symrec *sym, /*@unused@*/ /*@null@*/
-			  valparamhead *objext_valparams)
+			  valparamhead *objext_valparams, unsigned long lindex)
 {
     fprintf(dbg_objfmt_file, "extern_declare(\"%s\", ", symrec_get_name(sym));
     vps_print(dbg_objfmt_file, objext_valparams);
-    fprintf(dbg_objfmt_file, "), setting of_data=NULL\n");
+    fprintf(dbg_objfmt_file, ", %lu), setting of_data=NULL\n", lindex);
     symrec_set_of_data(sym, &yasm_dbg_LTX_objfmt, NULL);
 }
 
 static void
 dbg_objfmt_global_declare(symrec *sym, /*@unused@*/ /*@null@*/
-			  valparamhead *objext_valparams)
+			  valparamhead *objext_valparams, unsigned long lindex)
 {
     fprintf(dbg_objfmt_file, "global_declare(\"%s\", ", symrec_get_name(sym));
     vps_print(dbg_objfmt_file, objext_valparams);
-    fprintf(dbg_objfmt_file, "), setting of_data=NULL\n");
+    fprintf(dbg_objfmt_file, ", %lu), setting of_data=NULL\n", lindex);
     symrec_set_of_data(sym, &yasm_dbg_LTX_objfmt, NULL);
 }
 
 static void
 dbg_objfmt_common_declare(symrec *sym, /*@only@*/ expr *size, /*@unused@*/
-			  /*@null@*/ valparamhead *objext_valparams)
+			  /*@null@*/ valparamhead *objext_valparams,
+			  unsigned long lindex)
 {
     assert(dbg_objfmt_file != NULL);
     fprintf(dbg_objfmt_file, "common_declare(\"%s\", ", symrec_get_name(sym));
     expr_print(dbg_objfmt_file, size);
     fprintf(dbg_objfmt_file, ", ");
     vps_print(dbg_objfmt_file, objext_valparams);
-    fprintf(dbg_objfmt_file, "), setting of_data=");
+    fprintf(dbg_objfmt_file, ", %lu), setting of_data=", lindex);
     expr_print(dbg_objfmt_file, size);
     symrec_set_of_data(sym, &yasm_dbg_LTX_objfmt, size);
     fprintf(dbg_objfmt_file, "\n");
@@ -184,13 +186,13 @@ dbg_objfmt_symrec_data_print(FILE *f, int indent_level, /*@null@*/ void *data)
 static int
 dbg_objfmt_directive(const char *name, valparamhead *valparams,
 		     /*@null@*/ valparamhead *objext_valparams,
-		     /*@unused@*/ sectionhead *headp)
+		     /*@unused@*/ sectionhead *headp, unsigned long lindex)
 {
     fprintf(dbg_objfmt_file, "directive(\"%s\", ", name);
     vps_print(dbg_objfmt_file, valparams);
     fprintf(dbg_objfmt_file, ", ");
     vps_print(dbg_objfmt_file, objext_valparams);
-    fprintf(dbg_objfmt_file, "), returning 0 (recognized)\n");
+    fprintf(dbg_objfmt_file, ", %lu), returning 0 (recognized)\n", lindex);
     return 0;	    /* dbg format "recognizes" all directives */
 }
 

@@ -28,7 +28,6 @@
 
 #include "hamt.h"
 
-#include "globals.h"
 #include "errwarn.h"
 #include "floatnum.h"
 #include "expr.h"
@@ -177,27 +176,29 @@ symrec_traverse(void *d, int (*func) (symrec *sym, void *d))
 }
 
 symrec *
-symrec_use(const char *name)
+symrec_use(const char *name, unsigned long lindex)
 {
     symrec *rec = symrec_get_or_new(name, 1);
     if (rec->line == 0)
-	rec->line = line_index;	/* set line number of first use */
+	rec->line = lindex;	/* set line number of first use */
     rec->status |= SYM_USED;
     return rec;
 }
 
 static /*@dependent@*/ symrec *
-symrec_define(const char *name, SymType type, int in_table)
+symrec_define(const char *name, SymType type, int in_table,
+	      unsigned long lindex)
 {
     symrec *rec = symrec_get_or_new(name, in_table);
 
     /* Has it been defined before (either by DEFINED or COMMON/EXTERN)? */
     if ((rec->status & SYM_DEFINED) ||
 	(rec->visibility & (SYM_COMMON | SYM_EXTERN))) {
-	Error(_("duplicate definition of `%s'; first defined on line %lu"),
+	Error(lindex,
+	      _("duplicate definition of `%s'; first defined on line %lu"),
 	      name, rec->line);
     } else {
-	rec->line = line_index;	/* set line number of definition */
+	rec->line = lindex;	/* set line number of definition */
 	rec->type = type;
 	rec->status |= SYM_DEFINED;
     }
@@ -205,9 +206,9 @@ symrec_define(const char *name, SymType type, int in_table)
 }
 
 symrec *
-symrec_define_equ(const char *name, expr *e)
+symrec_define_equ(const char *name, expr *e, unsigned long lindex)
 {
-    symrec *rec = symrec_define(name, SYM_EQU, 1);
+    symrec *rec = symrec_define(name, SYM_EQU, 1, lindex);
     rec->value.expn = e;
     rec->status |= SYM_VALUED;
     return rec;
@@ -215,16 +216,16 @@ symrec_define_equ(const char *name, expr *e)
 
 symrec *
 symrec_define_label(const char *name, section *sect, bytecode *precbc,
-		    int in_table)
+		    int in_table, unsigned long lindex)
 {
-    symrec *rec = symrec_define(name, SYM_LABEL, in_table);
+    symrec *rec = symrec_define(name, SYM_LABEL, in_table, lindex);
     rec->value.label.sect = sect;
     rec->value.label.bc = precbc;
     return rec;
 }
 
 symrec *
-symrec_declare(const char *name, SymVisibility vis)
+symrec_declare(const char *name, SymVisibility vis, unsigned long lindex)
 {
     symrec *rec = symrec_get_or_new(name, 1);
 
@@ -246,7 +247,8 @@ symrec_declare(const char *name, SymVisibility vis)
 	  ((rec->visibility & SYM_EXTERN) && (vis == SYM_EXTERN)))))
 	rec->visibility |= vis;
     else
-	Error(_("duplicate definition of `%s'; first defined on line %lu"),
+	Error(lindex,
+	      _("duplicate definition of `%s'; first defined on line %lu"),
 	      name, rec->line);
     return rec;
 }
@@ -323,7 +325,7 @@ symrec_parser_finalize_checksym(symrec *sym, /*@unused@*/ /*@null@*/ void *d)
     /* error if a symbol is used but never defined or extern/common declared */
     if ((sym->status & SYM_USED) && !(sym->status & SYM_DEFINED) &&
 	!(sym->visibility & (SYM_EXTERN | SYM_COMMON))) {
-	ErrorAt(sym->line, _("undefined symbol `%s' (first use)"), sym->name);
+	Error(sym->line, _("undefined symbol `%s' (first use)"), sym->name);
 	if (sym->line < firstundef_line)
 	    firstundef_line = sym->line;
     }
@@ -337,8 +339,8 @@ symrec_parser_finalize(void)
     firstundef_line = ULONG_MAX;
     symrec_traverse(NULL, symrec_parser_finalize_checksym);
     if (firstundef_line < ULONG_MAX)
-	ErrorAt(firstundef_line,
-		_(" (Each undefined symbol is reported only once.)"));
+	Error(firstundef_line,
+	      _(" (Each undefined symbol is reported only once.)"));
 }
 
 void
@@ -389,9 +391,6 @@ symrec_print_all(FILE *f, int indent_level)
 void
 symrec_print(FILE *f, int indent_level, const symrec *sym)
 {
-    const char *filename;
-    unsigned long line;
-
     switch (sym->type) {
 	case SYM_UNKNOWN:
 	    fprintf(f, "%*s-Unknown (Common/Extern)-\n", indent_level, "");
@@ -451,7 +450,5 @@ symrec_print(FILE *f, int indent_level, const symrec *sym)
 	    fprintf(f, "%*sUNKNOWN\n", indent_level+1, "");
     }
 
-    line_lookup(sym->line, &filename, &line);
-    fprintf(f, "%*sFilename=\"%s\" Line Number=%lu\n", indent_level, "",
-	   filename, line);
+    fprintf(f, "%*sLine Index=%lu\n", indent_level, "", sym->line);
 }

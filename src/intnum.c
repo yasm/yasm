@@ -56,7 +56,7 @@ intnum_shutdown(void)
 }
 
 intnum *
-intnum_new_dec(char *str)
+intnum_new_dec(char *str, unsigned long lindex)
 {
     intnum *intn = xmalloc(sizeof(intnum));
 
@@ -68,7 +68,7 @@ intnum_new_dec(char *str)
     }
     if (BitVector_from_Dec_static(conv_bv,
 				  (unsigned char *)str) == ErrCode_Ovfl)
-	Warning(_("Numeric constant too large for internal format"));
+	Warning(lindex, _("Numeric constant too large for internal format"));
     if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
 	intn->val.ul = BitVector_Chunk_Read(conv_bv, 32, 0);
@@ -81,14 +81,14 @@ intnum_new_dec(char *str)
 }
 
 intnum *
-intnum_new_bin(char *str)
+intnum_new_bin(char *str, unsigned long lindex)
 {
     intnum *intn = xmalloc(sizeof(intnum));
 
     intn->origsize = (unsigned char)strlen(str);
 
     if(intn->origsize > BITVECT_ALLOC_SIZE)
-	Warning(_("Numeric constant too large for internal format"));
+	Warning(lindex, _("Numeric constant too large for internal format"));
 
     if (!conv_bv) {
 	conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
@@ -107,14 +107,14 @@ intnum_new_bin(char *str)
 }
 
 intnum *
-intnum_new_oct(char *str)
+intnum_new_oct(char *str, unsigned long lindex)
 {
     intnum *intn = xmalloc(sizeof(intnum));
 
     intn->origsize = strlen(str)*3;
 
     if(intn->origsize > BITVECT_ALLOC_SIZE)
-	Warning(_("Numeric constant too large for internal format"));
+	Warning(lindex, _("Numeric constant too large for internal format"));
 
     if (!conv_bv) {
 	conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
@@ -133,14 +133,14 @@ intnum_new_oct(char *str)
 }
 
 intnum *
-intnum_new_hex(char *str)
+intnum_new_hex(char *str, unsigned long lindex)
 {
     intnum *intn = xmalloc(sizeof(intnum));
 
     intn->origsize = strlen(str)*4;
 
     if(intn->origsize > BITVECT_ALLOC_SIZE)
-	Warning(_("Numeric constant too large for internal format"));
+	Warning(lindex, _("Numeric constant too large for internal format"));
 
     if (!conv_bv) {
 	conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
@@ -160,13 +160,14 @@ intnum_new_hex(char *str)
 
 /*@-usedef -compdef -uniondef@*/
 intnum *
-intnum_new_charconst_nasm(const char *str)
+intnum_new_charconst_nasm(const char *str, unsigned long lindex)
 {
     intnum *intn = xmalloc(sizeof(intnum));
     size_t len = strlen(str);
 
     if (len > 4)
-	Warning(_("character constant too large, ignoring trailing characters"));
+	Warning(lindex,
+		_("character constant too large, ignoring trailing characters"));
 
     intn->val.ul = 0;
     intn->type = INTNUM_UL;

@@ -42,6 +42,8 @@ typedef struct expr expr;
 typedef struct intnum intnum;
 typedef struct floatnum floatnum;
 
+typedef struct linemgr linemgr;
+
 typedef enum {
     EXPR_ADD,
     EXPR_SUB,

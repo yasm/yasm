@@ -11,8 +11,7 @@ libyasm_la_SOURCES = \
 	src/expr-int.h		\
 	src/symrec.c		\
 	src/symrec.h		\
-	src/globals.c		\
-	src/globals.h		\
+	src/linemgr.h		\
 	src/util.h		\
 	src/coretype.h		\
 	src/file.c		\
@@ -47,7 +46,8 @@ yasm_SOURCES += \
 	src/objfmt.c		\
 	src/parser.c		\
 	src/module.h		\
-	src/module.c
+	src/module.c		\
+	src/linemgr.c
 
 
 EXTRA_DIST += \

@@ -1,7 +1,7 @@
 /* $IdPath$
- * Globals header file
+ * Line manager (for parse stage) header file
  *
- *  Copyright (C) 2001  Peter Johnson
+ *  Copyright (C) 2002  Peter Johnson
  *
  *  This file is part of YASM.
  *
@@ -19,19 +19,34 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef YASM_GLOBALS_H
-#define YASM_GLOBALS_H
+#ifndef YASM_LINEMGR_H
+#define YASM_LINEMGR_H
 
-/* Virtual line number.  Uniquely specifies every line read by the parser. */
-extern unsigned long line_index;
+struct linemgr {
+    /* Initialize cur_lindex and any manager internal data structures. */
+    void (*initialize) (void);
 
-/* Global assembler options. */
-extern unsigned int asm_options;
+    /* Cleans up any memory allocated by initialize. */
+    void (*cleanup) (void);
 
-void line_set(const char *filename, unsigned long line,
-	      unsigned long line_inc);
-void line_shutdown(void);
-void line_lookup(unsigned long lindex, /*@out@*/ const char **filename,
-		 /*@out@*/ unsigned long *line);
+    /* Returns the current line index. */
+    unsigned long (*get_current) (void);
+
+    /* Goes to the next line (increments the current line index), returns
+     * the current (new) line index.
+     */
+    unsigned long (*goto_next) (void);
+
+    /* Sets a new file/line association starting point at the current line
+     * index.  line_inc indicates how much the "real" line is incremented by
+     * for each line index increment (0 is perfectly legal).
+     */
+    void (*set) (const char *filename, unsigned long line,
+		 unsigned long line_inc);
+
+    /* Look up the associated actual file and line for a line index. */
+    void (*lookup) (unsigned long lindex, /*@out@*/ const char **filename,
+		    /*@out@*/ unsigned long *line);
+};
 
 #endif

@@ -24,7 +24,6 @@
 
 #include "file.h"
 
-#include "globals.h"
 #include "errwarn.h"
 #include "intnum.h"
 #include "floatnum.h"
@@ -122,11 +121,11 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ expr *e,
 	if (e->terms[i].type == EXPR_SYM &&
 	    symrec_get_label(e->terms[i].data.sym, &sect, &precbc) &&
 	    (dist = common_calc_bc_dist(sect, NULL, precbc))) {
+	    const expr *start = section_get_start(sect);
 	    e->terms[i].type = EXPR_EXPR;
 	    e->terms[i].data.expn =
-		expr_new(EXPR_ADD,
-			 ExprExpr(expr_copy(section_get_start(sect))),
-			 ExprInt(dist));
+		expr_new(EXPR_ADD, ExprExpr(expr_copy(start)), ExprInt(dist),
+			 start->line);
 	}
     }
 
@@ -164,13 +163,13 @@ bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
 
     /* Check for complex float expressions */
     if (expr_contains(*ep, EXPR_FLOAT)) {
-	ErrorAt((*ep)->line, _("floating point expression too complex"));
+	Error((*ep)->line, _("floating point expression too complex"));
 	return 1;
     }
 
     /* Couldn't output, assume it contains an external reference. */
-    ErrorAt((*ep)->line,
-	    _("binary object format does not support external references"));
+    Error((*ep)->line,
+	  _("binary object format does not support external references"));
     return 1;
 }
 
@@ -199,8 +198,8 @@ bin_objfmt_output_bytecode(bytecode *bc, /*@null@*/ void *d)
     /* Warn that gaps are converted to 0 and write out the 0's. */
     if (gap) {
 	unsigned long left;
-	WarningAt(bc->line,
-		  _("uninitialized space declared in code/data section: zeroing"));
+	Warning(bc->line,
+		_("uninitialized space declared in code/data section: zeroing"));
 	/* Write out in chunks */
 	memset(info->buf, 0, REGULAR_OUTBUF_SIZE);
 	left = multiple*size;
@@ -268,7 +267,7 @@ bin_objfmt_output(FILE *f, sectionhead *sections)
     if (data) {
 	start = bin_objfmt_align_section(data, prevsect, start, 4,
 					 prevsectlenptr, prevsectpadptr);
-	section_set_start(data, start);
+	section_set_start(data, start, 0);
 	datastart = start;
 	prevsect = data;
 	prevsectlenptr = &datalen;
@@ -277,7 +276,7 @@ bin_objfmt_output(FILE *f, sectionhead *sections)
     if (bss) {
 	start = bin_objfmt_align_section(bss, prevsect, start, 4,
 					 prevsectlenptr, prevsectpadptr);
-	section_set_start(bss, start);
+	section_set_start(bss, start, 0);
     }
 
     /* Output .text first. */
@@ -315,7 +314,8 @@ bin_objfmt_cleanup(void)
 static /*@observer@*/ /*@null@*/ section *
 bin_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 			   /*@unused@*/ /*@null@*/
-			   valparamhead *objext_valparams)
+			   valparamhead *objext_valparams,
+			   unsigned long lindex)
 {
     valparam *vp;
     section *retval;
@@ -340,7 +340,7 @@ bin_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 	    resonly = 1;
 	} else {
 	    /* other section names not recognized. */
-	    Error(_("segment name `%s' not recognized"), sectname);
+	    Error(lindex, _("segment name `%s' not recognized"), sectname);
 	    return NULL;
 	}
 
@@ -351,14 +351,15 @@ bin_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 		unsigned long bitcnt;
 
 		if (strcmp(sectname, ".text") == 0) {
-		    Error(_("cannot specify an alignment to the `%s' section"),
+		    Error(lindex,
+			  _("cannot specify an alignment to the `%s' section"),
 			  sectname);
 		    return NULL;
 		}
 		
 		align = expr_get_intnum(&vp->param, NULL);
 		if (!align) {
-		    Error(_("argument to `%s' is not a power of two"),
+		    Error(lindex, _("argument to `%s' is not a power of two"),
 			  vp->val);
 		    return NULL;
 		}
@@ -369,7 +370,7 @@ bin_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 		 */
 		BitCount(bitcnt, alignval);
 		if (bitcnt > 1) {
-		    Error(_("argument to `%s' is not a power of two"),
+		    Error(lindex, _("argument to `%s' is not a power of two"),
 			  vp->val);
 		    return NULL;
 		}
@@ -379,7 +380,7 @@ bin_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 	}
 
 	retval = sections_switch_general(headp, sectname, start, resonly,
-					 &isnew);
+					 &isnew, lindex);
 
 	if (isnew) {
 	    if (have_alignval) {
@@ -388,9 +389,10 @@ bin_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 		section_set_of_data(retval, &yasm_bin_LTX_objfmt, data);
 	    }
 
-	    symrec_define_label(sectname, retval, (bytecode *)NULL, 1);
+	    symrec_define_label(sectname, retval, (bytecode *)NULL, 1, lindex);
 	} else if (have_alignval)
-	    Warning(_("alignment value ignored on section redeclaration"));
+	    Warning(lindex,
+		    _("alignment value ignored on section redeclaration"));
 
 	return retval;
     } else
@@ -406,16 +408,16 @@ bin_objfmt_section_data_delete(/*@only@*/ void *d)
 static void
 bin_objfmt_common_declare(/*@unused@*/ symrec *sym, /*@only@*/ expr *size,
 			  /*@unused@*/ /*@null@*/
-			  valparamhead *objext_valparams)
+			  valparamhead *objext_valparams, unsigned long lindex)
 {
     expr_delete(size);
-    Error(_("binary object format does not support common variables"));
+    Error(lindex, _("binary object format does not support common variables"));
 }
 
 static int
 bin_objfmt_directive(const char *name, valparamhead *valparams,
 		     /*@unused@*/ /*@null@*/ valparamhead *objext_valparams,
-		     sectionhead *headp)
+		     sectionhead *headp, unsigned long lindex)
 {
     section *sect;
     valparam *vp;
@@ -426,13 +428,13 @@ bin_objfmt_directive(const char *name, valparamhead *valparams,
 	/* ORG takes just a simple integer as param */
 	vp = vps_first(valparams);
 	if (vp->val) {
-	    Error(_("argument to ORG should be numeric"));
+	    Error(lindex, _("argument to ORG should be numeric"));
 	    return 0;
 	} else if (vp->param)
 	    start = expr_get_intnum(&vp->param, NULL);
 
 	if (!start) {
-	    Error(_("argument to ORG should be numeric"));
+	    Error(lindex, _("argument to ORG should be numeric"));
 	    return 0;
 	}
 
@@ -440,7 +442,7 @@ bin_objfmt_directive(const char *name, valparamhead *valparams,
 	sect = sections_find_general(headp, ".text");
 	if (!sect)
 	    InternalError(_("bin objfmt: .text section does not exist before ORG is called?"));
-	section_set_start(sect, intnum_get_uint(start));
+	section_set_start(sect, intnum_get_uint(start), lindex);
 
 	return 0;	    /* directive recognized */
     } else

@@ -28,8 +28,8 @@
 #include "bitvect.h"
 #include "file.h"
 
-#include "globals.h"
 #include "options.h"
+#include "linemgr.h"
 #include "errwarn.h"
 #include "intnum.h"
 #include "floatnum.h"
@@ -46,6 +46,9 @@
 
 #include "arch.h"
 
+
+/* YASM's line manager (for parse stage). */
+extern linemgr yasm_linemgr;
 
 /* Extra path to search for our modules. */
 #ifndef YASM_MODULE_PATH_ENV
@@ -204,8 +207,9 @@ main(int argc, char *argv[])
 	    in_filename = xstrdup("-");
     }
 
-    /* Initialize line info */
-    line_set(in_filename, 1, 1);
+    /* Initialize line manager */
+    yasm_linemgr.initialize();
+    yasm_linemgr.set(in_filename, 1, 1);
 
     /* handle preproc-only case here */
     if (preproc_only) {
@@ -236,7 +240,8 @@ main(int argc, char *argv[])
 
 	/* Pre-process until done */
 	cur_preproc->initialize(in, in_filename);
-	while ((got = cur_preproc->input(preproc_buf, PREPROC_BUF_SIZE)) != 0)
+	while ((got = cur_preproc->input(preproc_buf, PREPROC_BUF_SIZE,
+					 &yasm_linemgr)) != 0)
 	    fwrite(preproc_buf, got, 1, obj);
 
 	if (in != stdin)
@@ -246,7 +251,7 @@ main(int argc, char *argv[])
 	    fclose(obj);
 
 	if (GetNumErrors() > 0) {
-	    OutputAllErrorWarning();
+	    OutputAllErrorWarning(&yasm_linemgr);
 	    if (obj != stdout)
 		remove(obj_filename);
 	    xfree(preproc_buf);
@@ -370,15 +375,15 @@ main(int argc, char *argv[])
     }
 
     /* Parse! */
-    sections = cur_parser->do_parse(cur_preproc, cur_arch, cur_objfmt, in,
-				    in_filename);
+    sections = cur_parser->do_parse(cur_preproc, cur_arch, cur_objfmt,
+				    &yasm_linemgr, in, in_filename);
 
     /* Close input file */
     if (in != stdin)
 	fclose(in);
 
     if (GetNumErrors() > 0) {
-	OutputAllErrorWarning();
+	OutputAllErrorWarning(&yasm_linemgr);
 	cleanup(sections);
 	return EXIT_FAILURE;
     }
@@ -387,7 +392,7 @@ main(int argc, char *argv[])
     cur_optimizer->optimize(sections);
 
     if (GetNumErrors() > 0) {
-	OutputAllErrorWarning();
+	OutputAllErrorWarning(&yasm_linemgr);
 	cleanup(sections);
 	return EXIT_FAILURE;
     }
@@ -412,13 +417,13 @@ main(int argc, char *argv[])
      * object file (to make sure it's not left newer than the source).
      */
     if (GetNumErrors() > 0) {
-	OutputAllErrorWarning();
+	OutputAllErrorWarning(&yasm_linemgr);
 	remove(obj_filename);
 	cleanup(sections);
 	return EXIT_FAILURE;
     }
 
-    OutputAllErrorWarning();
+    OutputAllErrorWarning(&yasm_linemgr);
 
     cleanup(sections);
     return EXIT_SUCCESS;
@@ -448,7 +453,7 @@ cleanup(sectionhead *sections)
     if (sections)
 	sections_delete(sections);
     symrec_delete_all();
-    line_shutdown();
+    yasm_linemgr.cleanup();
 
     floatnum_shutdown();
     intnum_shutdown();

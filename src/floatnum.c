@@ -511,10 +511,11 @@ floatnum_delete(floatnum *flt)
 }
 
 void
-floatnum_calc(floatnum *acc, ExprOp op, /*@unused@*/ floatnum *operand)
+floatnum_calc(floatnum *acc, ExprOp op, /*@unused@*/ floatnum *operand,
+	      unsigned long lindex)
 {
     if (op != EXPR_NEG)
-	Error(_("Unsupported floating-point arithmetic operation"));
+	Error(lindex, _("Unsupported floating-point arithmetic operation"));
     else
 	acc->sign ^= 1;
 }

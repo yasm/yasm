@@ -60,21 +60,16 @@ typedef enum {
 
 /*@shared@*/ char *conv_unprint(char ch);
 
-void ParserError(const char *);
+void ParserError(unsigned long lindex, const char *);
 
 /*@exits@*/ void InternalError_(const char *file, unsigned int line,
 				const char *message);
 #define InternalError(msg)	InternalError_(__FILE__, __LINE__, msg)
 
 /*@exits@*/ void Fatal(fatal_num);
-void Error(const char *, ...) /*@printflike@*/;
-void Warning(const char *, ...) /*@printflike@*/;
 
-/* Use Error() and Warning() instead of ErrorAt() and WarningAt() when being
- * called in line order from a parser.
- */
-void ErrorAt(unsigned long lindex, const char *, ...) /*@printflike@*/;
-void WarningAt(unsigned long lindex, const char *, ...) /*@printflike@*/;
+void Error(unsigned long lindex, const char *, ...) /*@printflike@*/;
+void Warning(unsigned long lindex, const char *, ...) /*@printflike@*/;
 
 /* These two functions immediately output the error or warning, with no file
  * or line information.  They should be used for errors and warnings outside
@@ -87,6 +82,6 @@ void WarningNow(const char *, ...) /*@printflike@*/;
 unsigned int GetNumErrors(void);
 
 /* Outputs all errors/warnings to standard error. */
-void OutputAllErrorWarning(void);
+void OutputAllErrorWarning(linemgr *lm);
 
 #endif

@@ -24,7 +24,6 @@
 
 #include "file.h"
 
-#include "globals.h"
 #include "errwarn.h"
 #include "intnum.h"
 #include "floatnum.h"
@@ -42,7 +41,7 @@ unsigned char yasm_x86_LTX_mode_bits = 0;
 int
 x86_directive(const char *name, valparamhead *valparams,
 	      /*@unused@*/ /*@null@*/ valparamhead *objext_valparams,
-	      /*@unused@*/ sectionhead *headp)
+	      /*@unused@*/ sectionhead *headp, unsigned long lindex)
 {
     valparam *vp;
     const intnum *intn;
@@ -54,7 +53,7 @@ x86_directive(const char *name, valparamhead *valparams,
 	    (lval = intnum_get_int(intn)) && (lval == 16 || lval == 32))
 	    yasm_x86_LTX_mode_bits = (unsigned char)lval;
 	else
-	    Error(_("invalid argument to [%s]"), "BITS");
+	    Error(lindex, _("invalid argument to [%s]"), "BITS");
 	return 0;
     } else
 	return 1;
@@ -132,11 +131,12 @@ x86_segreg_print(FILE *f, unsigned long segreg)
 }
 
 void
-x86_handle_prefix(bytecode *bc, const unsigned long data[4])
+x86_handle_prefix(bytecode *bc, const unsigned long data[4],
+		  unsigned long lindex)
 {
     switch((x86_parse_insn_prefix)data[0]) {
 	case X86_LOCKREP:
-	    x86_bc_insn_set_lockrep_prefix(bc, (unsigned char)data[1]);
+	    x86_bc_insn_set_lockrep_prefix(bc, (unsigned char)data[1], lindex);
 	    break;
 	case X86_ADDRSIZE:
 	    x86_bc_insn_addrsize_override(bc, (unsigned char)data[1]);
@@ -148,15 +148,17 @@ x86_handle_prefix(bytecode *bc, const unsigned long data[4])
 }
 
 void
-x86_handle_seg_prefix(bytecode *bc, unsigned long segreg)
+x86_handle_seg_prefix(bytecode *bc, unsigned long segreg, unsigned long lindex)
 {
-    x86_ea_set_segment(x86_bc_insn_get_ea(bc), (unsigned char)(segreg>>8));
+    x86_ea_set_segment(x86_bc_insn_get_ea(bc), (unsigned char)(segreg>>8),
+		       lindex);
 }
 
 void
-x86_handle_seg_override(effaddr *ea, unsigned long segreg)
+x86_handle_seg_override(effaddr *ea, unsigned long segreg,
+			unsigned long lindex)
 {
-    x86_ea_set_segment(ea, (unsigned char)(segreg>>8));
+    x86_ea_set_segment(ea, (unsigned char)(segreg>>8), lindex);
 }
 
 /* Define arch structure -- see arch.h for details */

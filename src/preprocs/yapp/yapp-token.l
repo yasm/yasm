@@ -25,6 +25,7 @@
 
 #include <errno.h>
 
+#include "linemgr.h"
 #include "errwarn.h"
 
 #include "src/preprocs/yapp/yapp-preproc.h"
@@ -52,8 +53,8 @@ struct include_s {
 };
 typedef struct include_s include;
 
-char *current_file;
-int line_number;
+char *yapp_preproc_current_file;
+int yapp_preproc_line_number;
 
 %}
 %option noyywrap
@@ -142,9 +143,9 @@ DIR	 %[ \t]*
     }
 
     if(inch == '\n')
-	Error(_("unterminated string"));
+	Error(p_line_index, _("unterminated string"));
     else if(inch == EOF)
-	Error(_("unexpected end of file in string"));
+	Error(p_line_index, _("unexpected end of file in string"));
 
     strbuf[count] = '\0';
 
@@ -175,18 +176,18 @@ DIR	 %[ \t]*
     /* FIXME: handle includes that aren't relative */
     incfile = fopen (yytext, "r");
     if(!incfile) {
-	Error(_("include file `%s': %s"),
+	Error(p_line_index, _("include file `%s': %s"),
 		yytext, strerror(errno));
 	free(inc);
     }
     else {
 	yyin = incfile;
-	inc->filename = current_file;
-	inc->line_number = line_number;
+	inc->filename = yapp_preproc_current_file;
+	inc->line_number = yapp_preproc_line_number;
 	SLIST_INSERT_HEAD(&includes_head, inc, next);
 
-	line_number = 1;
-	current_file = xstrdup(yytext);
+	yapp_preproc_line_number = 1;
+	yapp_preproc_current_file = xstrdup(yytext);
 	BEGIN(INITIAL);
 	yy_switch_to_buffer(yy_create_buffer(yyin, YY_BUF_SIZE));
     }
@@ -203,9 +204,9 @@ DIR	 %[ \t]*
 	inc = SLIST_FIRST(&includes_head);
 	yy_delete_buffer (YY_CURRENT_BUFFER);
 	yy_switch_to_buffer (inc->include_state);
-	free(current_file);
-	current_file = inc->filename;
-	line_number = inc->line_number + 1;
+	free(yapp_preproc_current_file);
+	yapp_preproc_current_file = inc->filename;
+	yapp_preproc_line_number = inc->line_number + 1;
 	SLIST_REMOVE_HEAD(&includes_head, next);
 	free(inc);
 
@@ -223,16 +224,16 @@ DIR	 %[ \t]*
 
 <inhibit>{DIR}line[^\n]    ;
 {DIR}line     BEGIN(line);
-<line>{DIGIT}+	    line_number = strtoul(yytext, (char **)NULL, 10);
+<line>{DIGIT}+	    yapp_preproc_line_number = strtoul(yytext, (char **)NULL, 10);
 <line>{DIGIT}+{WS}*\n	{
-    line_number = strtoul(yytext, (char **)NULL, 10);
+    yapp_preproc_line_number = strtoul(yytext, (char **)NULL, 10);
     BEGIN(INITIAL);
     return LINE;
 }
 <line>{WS}+["]	    ;	/* eat space before file */
 <line>[^ \t\n"]*    { /* have the filename */
-    free(current_file);
-    current_file = xstrdup(yytext);
+    free(yapp_preproc_current_file);
+    yapp_preproc_current_file = xstrdup(yytext);
 }
 <line>["]{WS}*\n    {
     BEGIN(INITIAL);
@@ -321,23 +322,23 @@ DIR	 %[ \t]*
 <inhibit>{DIR}pop[^\n]*  ;
 <inhibit>{DIR}repl[^\n]*  ;
 
-<inhibit>[^%\n]*\n { line_number++; return '\n'; }
+<inhibit>[^%\n]*\n { yapp_preproc_line_number++; return '\n'; }
 
-;.*\n	{ line_number++; return '\n'; }
+;.*\n	{ yapp_preproc_line_number++; return '\n'; }
 
 {WS}+	{ yylval.str_val = yytext; return WHITESPACE; }
 
-{WS}*\n	{ line_number++; return '\n'; }
+{WS}*\n	{ yapp_preproc_line_number++; return '\n'; }
 
 
 [][+*/,()-] { return yytext[0]; }
 
 <inhibit>.  {
-    Warning(_("Unhandled character in <inhibit> `%s'"), conv_unprint(yytext[0]));
+    Warning(p_line_index, _("Unhandled character in <inhibit> `%s'"), conv_unprint(yytext[0]));
 }
 
 .	{
-    Warning(_("ignoring unrecognized character `%s'"),
+    Warning(p_line_index, _("ignoring unrecognized character `%s'"),
 	    conv_unprint(yytext[0]));
 }
 

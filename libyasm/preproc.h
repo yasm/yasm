@@ -43,7 +43,7 @@ struct preproc {
 
     /* Gets more preprocessed source code (up to max_size bytes) into buf.
      * Note that more than a single line may be returned in buf. */
-    size_t (*input) (/*@out@*/ char *buf, size_t max_size);
+    size_t (*input) (/*@out@*/ char *buf, size_t max_size, linemgr *lm);
 };
 
 #endif

@@ -42,7 +42,7 @@ raw_preproc_initialize(FILE *f, const char *in_filename)
 }
 
 static size_t
-raw_preproc_input(char *buf, size_t max_size)
+raw_preproc_input(char *buf, size_t max_size, unsigned long lindex)
 {
     int c = '*';
     size_t n;
@@ -53,9 +53,9 @@ raw_preproc_input(char *buf, size_t max_size)
 	if (c == '\n')
 	    buf[n++] = (char)c;
 	if (c == EOF && ferror(in))
-	    Error(_("error when reading from file"));
+	    Error(lindex, _("error when reading from file"));
     } else if (((n = fread(buf, 1, max_size, in)) == 0) && ferror(in))
-	Error(_("error when reading from file"));
+	Error(lindex, _("error when reading from file"));
 
     return n;
 }

@@ -28,7 +28,8 @@
 						 const char *name,
 						 unsigned long start,
 						 int res_only,
-						 /*@out@*/ int *isnew);
+						 /*@out@*/ int *isnew,
+						 unsigned long lindex);
 
 /*@dependent@*/ section *sections_switch_absolute(sectionhead *headp,
 						  /*@keep@*/ expr *start);
@@ -63,7 +64,8 @@ int sections_traverse(sectionhead *headp, /*@null@*/ void *d,
 
 /*@observer@*/ /*@null@*/ const char *section_get_name(const section *sect);
 
-void section_set_start(section *sect, unsigned long start);
+void section_set_start(section *sect, unsigned long start,
+		       unsigned long lindex);
 /*@observer@*/ const expr *section_get_start(const section *sect);
 
 void section_delete(/*@only@*/ section *sect);

@@ -27,7 +27,8 @@ typedef struct ExprItem ExprItem;
 void expr_initialize(arch *a);
 
 /*@only@*/ expr *expr_new(ExprOp, /*@only@*/ ExprItem *,
-			  /*@only@*/ /*@null@*/ ExprItem *);
+			  /*@only@*/ /*@null@*/ ExprItem *,
+			  unsigned long lindex);
 
 /*@only@*/ ExprItem *ExprSym(/*@keep@*/ symrec *);
 /*@only@*/ ExprItem *ExprExpr(/*@keep@*/ expr *);
@@ -35,12 +36,12 @@ void expr_initialize(arch *a);
 /*@only@*/ ExprItem *ExprFloat(/*@keep@*/ floatnum *);
 /*@only@*/ ExprItem *ExprReg(unsigned long reg);
 
-#define expr_new_tree(l,o,r) \
-    expr_new ((o), ExprExpr(l), ExprExpr(r))
-#define expr_new_branch(o,r) \
-    expr_new ((o), ExprExpr(r), (ExprItem *)NULL)
-#define expr_new_ident(r) \
-    expr_new (EXPR_IDENT, (r), (ExprItem *)NULL)
+#define expr_new_tree(l,o,r,i) \
+    expr_new ((o), ExprExpr(l), ExprExpr(r), i)
+#define expr_new_branch(o,r,i) \
+    expr_new ((o), ExprExpr(r), (ExprItem *)NULL, i)
+#define expr_new_ident(r,i) \
+    expr_new (EXPR_IDENT, (r), (ExprItem *)NULL, i)
 
 /* allocates and makes an exact duplicate of e */
 expr *expr_copy(const expr *e);

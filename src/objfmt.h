@@ -76,7 +76,8 @@ struct objfmt {
      */
     /*@observer@*/ /*@null@*/ section *
 	(*sections_switch)(sectionhead *headp, valparamhead *valparams,
-			   /*@null@*/ valparamhead *objext_valparams);
+			   /*@null@*/ valparamhead *objext_valparams,
+			   unsigned long lindex);
 
     /* Object format-specific data handling functions for sections.
      * May be NULL if no data is ever allocated in sections_switch().
@@ -88,11 +89,14 @@ struct objfmt {
      * May be NULL if objfmt doesn't care about such declarations.
      */
     void (*extern_declare)(symrec *sym,
-			   /*@null@*/ valparamhead *objext_valparams);
+			   /*@null@*/ valparamhead *objext_valparams,
+			   unsigned long lindex);
     void (*global_declare)(symrec *sym,
-			   /*@null@*/ valparamhead *objext_valparams);
+			   /*@null@*/ valparamhead *objext_valparams,
+			   unsigned long lindex);
     void (*common_declare)(symrec *sym, /*@only@*/ expr *size,
-			   /*@null@*/ valparamhead *objext_valparams);
+			   /*@null@*/ valparamhead *objext_valparams,
+			   unsigned long lindex);
 
     /* May be NULL if symrec_set_of_data() is never called. */
     void (*symrec_data_delete)(/*@only@*/ void *data);
@@ -104,7 +108,7 @@ struct objfmt {
      */
     int (*directive)(const char *name, valparamhead *valparams,
 		     /*@null@*/ valparamhead *objext_valparams,
-		     sectionhead *headp);
+		     sectionhead *headp, unsigned long lindex);
 
     /* Bytecode objfmt data (BC_OBJFMT_DATA) handling functions.
      * May be NULL if no BC_OBJFMT_DATA is ever allocated by the object format.

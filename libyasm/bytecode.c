@@ -24,7 +24,6 @@
 
 #include "file.h"
 
-#include "globals.h"
 #include "errwarn.h"
 #include "intnum.h"
 #include "expr.h"
@@ -106,9 +105,10 @@ bc_initialize(arch *a)
 }
 
 immval *
-imm_new_int(unsigned long int_val)
+imm_new_int(unsigned long int_val, unsigned long lindex)
 {
-    return imm_new_expr(expr_new_ident(ExprInt(intnum_new_uint(int_val))));
+    return imm_new_expr(expr_new_ident(ExprInt(intnum_new_uint(int_val)),
+				       lindex));
 }
 
 immval *
@@ -179,13 +179,13 @@ void
 bc_set_multiple(bytecode *bc, expr *e)
 {
     if (bc->multiple)
-	bc->multiple = expr_new_tree(bc->multiple, EXPR_MUL, e);
+	bc->multiple = expr_new_tree(bc->multiple, EXPR_MUL, e, e->line);
     else
 	bc->multiple = e;
 }
 
 bytecode *
-bc_new_common(bytecode_type type, size_t size)
+bc_new_common(bytecode_type type, size_t size, unsigned long lindex)
 {
     bytecode *bc = xmalloc(size);
 
@@ -194,7 +194,7 @@ bc_new_common(bytecode_type type, size_t size)
     bc->multiple = (expr *)NULL;
     bc->len = 0;
 
-    bc->line = line_index;
+    bc->line = lindex;
 
     bc->offset = 0;
 
@@ -204,11 +204,12 @@ bc_new_common(bytecode_type type, size_t size)
 }
 
 bytecode *
-bc_new_data(datavalhead *datahead, unsigned char size)
+bc_new_data(datavalhead *datahead, unsigned char size, unsigned long lindex)
 {
     bytecode_data *data;
 
-    data = (bytecode_data *)bc_new_common(BC_DATA, sizeof(bytecode_data));
+    data = (bytecode_data *)bc_new_common(BC_DATA, sizeof(bytecode_data),
+					  lindex);
 
     data->datahead = *datahead;
     data->size = size;
@@ -217,12 +218,13 @@ bc_new_data(datavalhead *datahead, unsigned char size)
 }
 
 bytecode *
-bc_new_reserve(expr *numitems, unsigned char itemsize)
+bc_new_reserve(expr *numitems, unsigned char itemsize, unsigned long lindex)
 {
     bytecode_reserve *reserve;
 
     reserve = (bytecode_reserve *)bc_new_common(BC_RESERVE,
-						sizeof(bytecode_reserve));
+						sizeof(bytecode_reserve),
+						lindex);
 
     /*@-mustfree@*/
     reserve->numitems = numitems;
@@ -233,12 +235,13 @@ bc_new_reserve(expr *numitems, unsigned char itemsize)
 }
 
 bytecode *
-bc_new_incbin(char *filename, expr *start, expr *maxlen)
+bc_new_incbin(char *filename, expr *start, expr *maxlen, unsigned long lindex)
 {
     bytecode_incbin *incbin;
 
     incbin = (bytecode_incbin *)bc_new_common(BC_INCBIN,
-					      sizeof(bytecode_incbin));
+					      sizeof(bytecode_incbin),
+					      lindex);
 
     /*@-mustfree@*/
     incbin->filename = filename;
@@ -250,11 +253,12 @@ bc_new_incbin(char *filename, expr *start, expr *maxlen)
 }
 
 bytecode *
-bc_new_align(unsigned long boundary)
+bc_new_align(unsigned long boundary, unsigned long lindex)
 {
     bytecode_align *align;
 
-    align = (bytecode_align *)bc_new_common(BC_ALIGN, sizeof(bytecode_align));
+    align = (bytecode_align *)bc_new_common(BC_ALIGN, sizeof(bytecode_align),
+					    lindex);
 
     align->boundary = boundary;
 
@@ -263,13 +267,14 @@ bc_new_align(unsigned long boundary)
 
 bytecode *
 bc_new_objfmt_data(unsigned int type, unsigned long len, objfmt *of,
-		   void *data)
+		   void *data, unsigned long lindex)
 {
     bytecode_objfmt_data *objfmt_data;
 
     objfmt_data =
 	(bytecode_objfmt_data *)bc_new_common(BC_ALIGN,
-					      sizeof(bytecode_objfmt_data));
+					      sizeof(bytecode_objfmt_data),
+					      lindex);
 
     objfmt_data->type = type;
     objfmt_data->of = of;
@@ -346,8 +351,6 @@ bc_print(FILE *f, int indent_level, const bytecode *bc)
     const bytecode_incbin *incbin;
     const bytecode_align *align;
     const bytecode_objfmt_data *objfmt_data;
-    const char *filename;
-    unsigned long line;
 
     switch (bc->type) {
 	case BC_EMPTY:
@@ -414,9 +417,7 @@ bc_print(FILE *f, int indent_level, const bytecode *bc)
     else
 	expr_print(f, bc->multiple);
     fprintf(f, "\n%*sLength=%lu\n", indent_level, "", bc->len);
-    line_lookup(bc->line, &filename, &line);
-    fprintf(f, "%*sFilename=\"%s\" Line Number=%lu\n", indent_level, "",
-	    filename, line);
+    fprintf(f, "%*sLine Index=%lu\n", indent_level, "", bc->line);
     fprintf(f, "%*sOffset=%lx\n", indent_level, "", bc->offset);
 }
 
@@ -499,11 +500,10 @@ bc_resolve_reserve(bytecode_reserve *reserve, unsigned long *len, int save,
 	 * the circular reference error to filter through.
 	 */
 	if (temp && expr_contains(temp, EXPR_FLOAT))
-	    ErrorAt(line,
-		    _("expression must not contain floating point value"));
+	    Error(line, _("expression must not contain floating point value"));
 	else
-	    ErrorAt(line,
-		    _("attempt to reserve non-constant quantity of space"));
+	    Error(line,
+		  _("attempt to reserve non-constant quantity of space"));
 	retval = BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
     } else
 	*len += intnum_get_uint(num)*reserve->itemsize;
@@ -565,13 +565,12 @@ bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
     /* Open file and determine its length */
     f = fopen(incbin->filename, "rb");
     if (!f) {
-	ErrorAt(line, _("`incbin': unable to open file `%s'"),
-		incbin->filename);
+	Error(line, _("`incbin': unable to open file `%s'"), incbin->filename);
 	return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
     }
     if (fseek(f, 0L, SEEK_END) < 0) {
-	ErrorAt(line, _("`incbin': unable to seek on file `%s'"),
-		incbin->filename);
+	Error(line, _("`incbin': unable to seek on file `%s'"),
+	      incbin->filename);
 	return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
     }
     flen = (unsigned long)ftell(f);
@@ -579,8 +578,8 @@ bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
 
     /* Compute length of incbin from start, maxlen, and len */
     if (start > flen) {
-	WarningAt(line, _("`incbin': start past end of file `%s'"),
-		  incbin->filename);
+	Warning(line, _("`incbin': start past end of file `%s'"),
+		incbin->filename);
 	start = flen;
     }
     flen -= start;
@@ -645,8 +644,8 @@ bc_resolve(bytecode *bc, int save, const section *sect,
 	if (!num) {
 	    retval = BC_RESOLVE_UNKNOWN_LEN;
 	    if (temp && expr_contains(temp, EXPR_FLOAT)) {
-		ErrorAt(bc->line,
-			_("expression must not contain floating point value"));
+		Error(bc->line,
+		      _("expression must not contain floating point value"));
 		retval |= BC_RESOLVE_ERROR;
 	    }
 	} else
@@ -719,23 +718,22 @@ bc_tobytes_incbin(bytecode_incbin *incbin, unsigned char **bufp,
     /* Open file */
     f = fopen(incbin->filename, "rb");
     if (!f) {
-	ErrorAt(line, _("`incbin': unable to open file `%s'"),
-		incbin->filename);
+	Error(line, _("`incbin': unable to open file `%s'"), incbin->filename);
 	return 1;
     }
 
     /* Seek to start of data */
     if (fseek(f, (long)start, SEEK_SET) < 0) {
-	ErrorAt(line, _("`incbin': unable to seek on file `%s'"),
-		incbin->filename);
+	Error(line, _("`incbin': unable to seek on file `%s'"),
+	      incbin->filename);
 	fclose(f);
 	return 1;
     }
 
     /* Read len bytes */
     if (fread(*bufp, (size_t)len, 1, f) < (size_t)len) {
-	ErrorAt(line, _("`incbin': unable to read %lu bytes from file `%s'"),
-		len, incbin->filename);
+	Error(line, _("`incbin': unable to read %lu bytes from file `%s'"),
+	      len, incbin->filename);
 	fclose(f);
 	return 1;
     }

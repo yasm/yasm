@@ -22,7 +22,6 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
-#include "globals.h"
 #include "errwarn.h"
 #include "intnum.h"
 #include "expr.h"
@@ -72,7 +71,7 @@ sections_initialize(sectionhead *headp, objfmt *of)
     vp_new(vp, xstrdup(of->default_section_name), NULL);
     vps_initialize(&vps);
     vps_append(&vps, vp);
-    s = of->sections_switch(headp, &vps, NULL);
+    s = of->sections_switch(headp, &vps, NULL, 0);
     vps_delete(&vps);
 
     return s;
@@ -82,7 +81,8 @@ sections_initialize(sectionhead *headp, objfmt *of)
 /*@-onlytrans@*/
 section *
 sections_switch_general(sectionhead *headp, const char *name,
-			unsigned long start, int res_only, int *isnew)
+			unsigned long start, int res_only, int *isnew,
+			unsigned long lindex)
 {
     section *s;
 
@@ -107,7 +107,7 @@ sections_switch_general(sectionhead *headp, const char *name,
     s->data.general.name = xstrdup(name);
     s->data.general.of = NULL;
     s->data.general.of_data = NULL;
-    s->start = expr_new_ident(ExprInt(intnum_new_uint(start)));
+    s->start = expr_new_ident(ExprInt(intnum_new_uint(start)), lindex);
     bcs_initialize(&s->bc);
 
     s->opt_flags = 0;
@@ -260,10 +260,10 @@ section_get_name(const section *sect)
 }
 
 void
-section_set_start(section *sect, unsigned long start)
+section_set_start(section *sect, unsigned long start, unsigned long lindex)
 {
     expr_delete(sect->start);
-    sect->start = expr_new_ident(ExprInt(intnum_new_uint(start)));
+    sect->start = expr_new_ident(ExprInt(intnum_new_uint(start)), lindex);
 }
 
 const expr *

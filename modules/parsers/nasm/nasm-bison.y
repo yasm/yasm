@@ -29,7 +29,7 @@ RCSID("$IdPath$");
 
 #include "bitvect.h"
 
-#include "globals.h"
+#include "linemgr.h"
 #include "errwarn.h"
 #include "intnum.h"
 #include "floatnum.h"
@@ -60,6 +60,13 @@ extern char *nasm_parser_locallabel_base;
 extern size_t nasm_parser_locallabel_base_len;
 extern /*@dependent@*/ arch *nasm_parser_arch;
 extern /*@dependent@*/ objfmt *nasm_parser_objfmt;
+extern /*@dependent@*/ linemgr *nasm_parser_linemgr;
+
+#define p_line_index	(nasm_parser_linemgr->get_current())
+
+#define p_expr_new_tree(l,o,r)	expr_new_tree(l,o,r,p_line_index)
+#define p_expr_new_branch(o,r)	expr_new_branch(o,r,p_line_index)
+#define p_expr_new_ident(r)	expr_new_ident(r,p_line_index)
 
 static /*@null@*/ bytecode *nasm_parser_prev_bc = (bytecode *)NULL;
 static bytecode *nasm_parser_temp_bc;
@@ -134,7 +141,7 @@ input: /* empty */
 					       $2);
 	if (nasm_parser_temp_bc)
 	    nasm_parser_prev_bc = nasm_parser_temp_bc;
-	line_index++;
+	nasm_parser_linemgr->goto_next();
     }
 ;
 
@@ -144,8 +151,8 @@ line: '\n'		{ $$ = (bytecode *)NULL; }
 	/* %line indicates the line number of the *next* line, so subtract out
 	 * the increment when setting the line number.
 	 */
-	line_set($5, intnum_get_uint($2)-intnum_get_uint($4),
-		 intnum_get_uint($4));
+	nasm_parser_linemgr->set($5, intnum_get_uint($2)-intnum_get_uint($4),
+				 intnum_get_uint($4));
 	intnum_delete($2);
 	intnum_delete($4);
 	xfree($5);
@@ -155,7 +162,8 @@ line: '\n'		{ $$ = (bytecode *)NULL; }
 	$$ = (bytecode *)NULL;
     }
     | error '\n'	{
-	Error(_("label or instruction expected at start of line"));
+	Error(p_line_index,
+	      _("label or instruction expected at start of line"));
 	$$ = (bytecode *)NULL;
 	yyerrok;
     }
@@ -167,43 +175,55 @@ lineexp: exp
     | label exp				{ $$ = $2; }
     | label TIMES expr exp		{ $$ = $4; bc_set_multiple($$, $3); }
     | label_id_equ EQU expr		{
-	symrec_define_equ($1, $3);
+	symrec_define_equ($1, $3, p_line_index);
 	xfree($1);
 	$$ = (bytecode *)NULL;
     }
 ;
 
 exp: instr
-    | DECLARE_DATA datavals		{ $$ = bc_new_data(&$2, $1); }
-    | RESERVE_SPACE expr		{ $$ = bc_new_reserve($2, $1); }
-    | INCBIN STRING			{ $$ = bc_new_incbin($2, NULL, NULL); }
-    | INCBIN STRING ',' expr		{ $$ = bc_new_incbin($2, $4, NULL); }
-    | INCBIN STRING ',' expr ',' expr	{ $$ = bc_new_incbin($2, $4, $6); }
+    | DECLARE_DATA datavals		{
+	$$ = bc_new_data(&$2, $1, p_line_index);
+    }
+    | RESERVE_SPACE expr		{
+	$$ = bc_new_reserve($2, $1, p_line_index);
+    }
+    | INCBIN STRING			{
+	$$ = bc_new_incbin($2, NULL, NULL, p_line_index);
+    }
+    | INCBIN STRING ',' expr		{
+	$$ = bc_new_incbin($2, $4, NULL, p_line_index);
+    }
+    | INCBIN STRING ',' expr ',' expr	{
+	$$ = bc_new_incbin($2, $4, $6, p_line_index);
+    }
 ;
 
 instr: INSN		{
 	$$ = nasm_parser_arch->parse.new_insn($1, 0, NULL,
 					      nasm_parser_cur_section,
-					      nasm_parser_prev_bc);
+					      nasm_parser_prev_bc,
+					      p_line_index);
     }
     | INSN operands	{
 	$$ = nasm_parser_arch->parse.new_insn($1, $2.num_operands,
 					      &$2.operands,
 					      nasm_parser_cur_section,
-					      nasm_parser_prev_bc);
+					      nasm_parser_prev_bc,
+					      p_line_index);
 	ops_delete(&$2.operands, 0);
     }
     | INSN error	{
-	Error(_("expression syntax error"));
+	Error(p_line_index, _("expression syntax error"));
 	$$ = NULL;
     }
     | PREFIX instr	{
 	$$ = $2;
-	nasm_parser_arch->parse.handle_prefix($$, $1);
+	nasm_parser_arch->parse.handle_prefix($$, $1, p_line_index);
     }
     | SEGREG instr	{
 	$$ = $2;
-	nasm_parser_arch->parse.handle_seg_prefix($$, $1[0]);
+	nasm_parser_arch->parse.handle_seg_prefix($$, $1[0], p_line_index);
     }
 ;
 
@@ -214,19 +234,19 @@ datavals: dataval	    { dvs_initialize(&$$); dvs_append(&$$, $1); }
 dataval: dvexpr		{ $$ = dv_new_expr($1); }
     | STRING		{ $$ = dv_new_string($1); }
     | error		{
-	Error(_("expression syntax error"));
+	Error(p_line_index, _("expression syntax error"));
 	$$ = (dataval *)NULL;
     }
 ;
 
 label: label_id	    {
 	symrec_define_label($1, nasm_parser_cur_section, nasm_parser_prev_bc,
-			    1);
+			    1, p_line_index);
 	xfree($1);
     }
     | label_id ':'  {
 	symrec_define_label($1, nasm_parser_cur_section, nasm_parser_prev_bc,
-			    1);
+			    1, p_line_index);
 	xfree($1);
     }
 ;
@@ -254,7 +274,7 @@ directive: DIRECTIVE_NAME directive_val	{
 	xfree($1);
     }
     | DIRECTIVE_NAME error		{
-	Error(_("invalid arguments to [%s]"), $1);
+	Error(p_line_index, _("invalid arguments to [%s]"), $1);
 	xfree($1);
     }
 ;
@@ -298,7 +318,7 @@ memaddr: expr		    {
     }
     | SEGREG ':' memaddr    {
 	$$ = $3;
-	nasm_parser_arch->parse.handle_seg_override($$, $1[0]);
+	nasm_parser_arch->parse.handle_seg_override($$, $1[0], p_line_index);
     }
     | BYTE memaddr	    { $$ = $2; ea_set_len($$, 1); }
     | WORD memaddr	    { $$ = $2; ea_set_len($$, 2); }
@@ -326,7 +346,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 1)
-	    Error(_("cannot override register size"));
+	    Error(p_line_index, _("cannot override register size"));
 	else
 	    $$->size = 1;
     }
@@ -334,7 +354,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 2)
-	    Error(_("cannot override register size"));
+	    Error(p_line_index, _("cannot override register size"));
 	else
 	    $$->size = 2;
     }
@@ -342,7 +362,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 4)
-	    Error(_("cannot override register size"));
+	    Error(p_line_index, _("cannot override register size"));
 	else
 	    $$->size = 4;
     }
@@ -350,7 +370,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 8)
-	    Error(_("cannot override register size"));
+	    Error(p_line_index, _("cannot override register size"));
 	else
 	    $$->size = 8;
     }
@@ -358,7 +378,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 10)
-	    Error(_("cannot override register size"));
+	    Error(p_line_index, _("cannot override register size"));
 	else
 	    $$->size = 10;
     }
@@ -366,7 +386,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 16)
-	    Error(_("cannot override register size"));
+	    Error(p_line_index, _("cannot override register size"));
 	else
 	    $$->size = 16;
     }
@@ -376,57 +396,58 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
 /* expression trees */
 
 /* expr w/o FLTNUM and unary + and -, for use in directives */
-direxpr: INTNUM			{ $$ = expr_new_ident(ExprInt($1)); }
+direxpr: INTNUM			{ $$ = p_expr_new_ident(ExprInt($1)); }
     | ID			{
-	$$ = expr_new_ident(ExprSym(symrec_define_label($1, NULL, NULL, 0)));
+	$$ = p_expr_new_ident(ExprSym(symrec_define_label($1, NULL, NULL, 0,
+							  p_line_index)));
 	xfree($1);
     }
-    | direxpr '|' direxpr	{ $$ = expr_new_tree($1, EXPR_OR, $3); }
-    | direxpr '^' direxpr	{ $$ = expr_new_tree($1, EXPR_XOR, $3); }
-    | direxpr '&' direxpr	{ $$ = expr_new_tree($1, EXPR_AND, $3); }
-    | direxpr LEFT_OP direxpr	{ $$ = expr_new_tree($1, EXPR_SHL, $3); }
-    | direxpr RIGHT_OP direxpr	{ $$ = expr_new_tree($1, EXPR_SHR, $3); }
-    | direxpr '+' direxpr	{ $$ = expr_new_tree($1, EXPR_ADD, $3); }
-    | direxpr '-' direxpr	{ $$ = expr_new_tree($1, EXPR_SUB, $3); }
-    | direxpr '*' direxpr	{ $$ = expr_new_tree($1, EXPR_MUL, $3); }
-    | direxpr '/' direxpr	{ $$ = expr_new_tree($1, EXPR_DIV, $3); }
-    | direxpr SIGNDIV direxpr	{ $$ = expr_new_tree($1, EXPR_SIGNDIV, $3); }
-    | direxpr '%' direxpr	{ $$ = expr_new_tree($1, EXPR_MOD, $3); }
-    | direxpr SIGNMOD direxpr	{ $$ = expr_new_tree($1, EXPR_SIGNMOD, $3); }
-    /*| '!' expr		{ $$ = expr_new_branch(EXPR_LNOT, $2); }*/
-    | '~' direxpr %prec UNARYOP	{ $$ = expr_new_branch(EXPR_NOT, $2); }
+    | direxpr '|' direxpr	{ $$ = p_expr_new_tree($1, EXPR_OR, $3); }
+    | direxpr '^' direxpr	{ $$ = p_expr_new_tree($1, EXPR_XOR, $3); }
+    | direxpr '&' direxpr	{ $$ = p_expr_new_tree($1, EXPR_AND, $3); }
+    | direxpr LEFT_OP direxpr	{ $$ = p_expr_new_tree($1, EXPR_SHL, $3); }
+    | direxpr RIGHT_OP direxpr	{ $$ = p_expr_new_tree($1, EXPR_SHR, $3); }
+    | direxpr '+' direxpr	{ $$ = p_expr_new_tree($1, EXPR_ADD, $3); }
+    | direxpr '-' direxpr	{ $$ = p_expr_new_tree($1, EXPR_SUB, $3); }
+    | direxpr '*' direxpr	{ $$ = p_expr_new_tree($1, EXPR_MUL, $3); }
+    | direxpr '/' direxpr	{ $$ = p_expr_new_tree($1, EXPR_DIV, $3); }
+    | direxpr SIGNDIV direxpr	{ $$ = p_expr_new_tree($1, EXPR_SIGNDIV, $3); }
+    | direxpr '%' direxpr	{ $$ = p_expr_new_tree($1, EXPR_MOD, $3); }
+    | direxpr SIGNMOD direxpr	{ $$ = p_expr_new_tree($1, EXPR_SIGNMOD, $3); }
+    /*| '!' expr		{ $$ = p_expr_new_branch(EXPR_LNOT, $2); }*/
+    | '~' direxpr %prec UNARYOP	{ $$ = p_expr_new_branch(EXPR_NOT, $2); }
     | '(' direxpr ')'		{ $$ = $2; }
 ;
 
-dvexpr: INTNUM			{ $$ = expr_new_ident(ExprInt($1)); }
-    | FLTNUM			{ $$ = expr_new_ident(ExprFloat($1)); }
-    | explabel			{ $$ = expr_new_ident(ExprSym($1)); }
-    /*| dvexpr '||' dvexpr	{ $$ = expr_new_tree($1, EXPR_LOR, $3); }*/
-    | dvexpr '|' dvexpr		{ $$ = expr_new_tree($1, EXPR_OR, $3); }
-    | dvexpr '^' dvexpr		{ $$ = expr_new_tree($1, EXPR_XOR, $3); }
-    /*| dvexpr '&&' dvexpr	{ $$ = expr_new_tree($1, EXPR_LAND, $3); }*/
-    | dvexpr '&' dvexpr		{ $$ = expr_new_tree($1, EXPR_AND, $3); }
-    /*| dvexpr '==' dvexpr	{ $$ = expr_new_tree($1, EXPR_EQUALS, $3); }*/
-    /*| dvexpr '>' dvexpr	{ $$ = expr_new_tree($1, EXPR_GT, $3); }*/
-    /*| dvexpr '<' dvexpr	{ $$ = expr_new_tree($1, EXPR_GT, $3); }*/
-    /*| dvexpr '>=' dvexpr	{ $$ = expr_new_tree($1, EXPR_GE, $3); }*/
-    /*| dvexpr '<=' dvexpr	{ $$ = expr_new_tree($1, EXPR_GE, $3); }*/
-    /*| dvexpr '!=' dvexpr	{ $$ = expr_new_tree($1, EXPR_NE, $3); }*/
-    | dvexpr LEFT_OP dvexpr	{ $$ = expr_new_tree($1, EXPR_SHL, $3); }
-    | dvexpr RIGHT_OP dvexpr	{ $$ = expr_new_tree($1, EXPR_SHR, $3); }
-    | dvexpr '+' dvexpr		{ $$ = expr_new_tree($1, EXPR_ADD, $3); }
-    | dvexpr '-' dvexpr		{ $$ = expr_new_tree($1, EXPR_SUB, $3); }
-    | dvexpr '*' dvexpr		{ $$ = expr_new_tree($1, EXPR_MUL, $3); }
-    | dvexpr '/' dvexpr		{ $$ = expr_new_tree($1, EXPR_DIV, $3); }
-    | dvexpr SIGNDIV dvexpr	{ $$ = expr_new_tree($1, EXPR_SIGNDIV, $3); }
-    | dvexpr '%' dvexpr		{ $$ = expr_new_tree($1, EXPR_MOD, $3); }
-    | dvexpr SIGNMOD dvexpr	{ $$ = expr_new_tree($1, EXPR_SIGNMOD, $3); }
+dvexpr: INTNUM			{ $$ = p_expr_new_ident(ExprInt($1)); }
+    | FLTNUM			{ $$ = p_expr_new_ident(ExprFloat($1)); }
+    | explabel			{ $$ = p_expr_new_ident(ExprSym($1)); }
+    /*| dvexpr '||' dvexpr	{ $$ = p_expr_new_tree($1, EXPR_LOR, $3); }*/
+    | dvexpr '|' dvexpr		{ $$ = p_expr_new_tree($1, EXPR_OR, $3); }
+    | dvexpr '^' dvexpr		{ $$ = p_expr_new_tree($1, EXPR_XOR, $3); }
+    /*| dvexpr '&&' dvexpr	{ $$ = p_expr_new_tree($1, EXPR_LAND, $3); }*/
+    | dvexpr '&' dvexpr		{ $$ = p_expr_new_tree($1, EXPR_AND, $3); }
+    /*| dvexpr '==' dvexpr	{ $$ = p_expr_new_tree($1, EXPR_EQUALS, $3); }*/
+    /*| dvexpr '>' dvexpr	{ $$ = p_expr_new_tree($1, EXPR_GT, $3); }*/
+    /*| dvexpr '<' dvexpr	{ $$ = p_expr_new_tree($1, EXPR_GT, $3); }*/
+    /*| dvexpr '>=' dvexpr	{ $$ = p_expr_new_tree($1, EXPR_GE, $3); }*/
+    /*| dvexpr '<=' dvexpr	{ $$ = p_expr_new_tree($1, EXPR_GE, $3); }*/
+    /*| dvexpr '!=' dvexpr	{ $$ = p_expr_new_tree($1, EXPR_NE, $3); }*/
+    | dvexpr LEFT_OP dvexpr	{ $$ = p_expr_new_tree($1, EXPR_SHL, $3); }
+    | dvexpr RIGHT_OP dvexpr	{ $$ = p_expr_new_tree($1, EXPR_SHR, $3); }
+    | dvexpr '+' dvexpr		{ $$ = p_expr_new_tree($1, EXPR_ADD, $3); }
+    | dvexpr '-' dvexpr		{ $$ = p_expr_new_tree($1, EXPR_SUB, $3); }
+    | dvexpr '*' dvexpr		{ $$ = p_expr_new_tree($1, EXPR_MUL, $3); }
+    | dvexpr '/' dvexpr		{ $$ = p_expr_new_tree($1, EXPR_DIV, $3); }
+    | dvexpr SIGNDIV dvexpr	{ $$ = p_expr_new_tree($1, EXPR_SIGNDIV, $3); }
+    | dvexpr '%' dvexpr		{ $$ = p_expr_new_tree($1, EXPR_MOD, $3); }
+    | dvexpr SIGNMOD dvexpr	{ $$ = p_expr_new_tree($1, EXPR_SIGNMOD, $3); }
     | '+' dvexpr %prec UNARYOP  { $$ = $2; }
-    | '-' dvexpr %prec UNARYOP  { $$ = expr_new_branch(EXPR_NEG, $2); }
-    /*| '!' dvexpr		{ $$ = expr_new_branch(EXPR_LNOT, $2); }*/
-    | '~' dvexpr %prec UNARYOP  { $$ = expr_new_branch(EXPR_NOT, $2); }
-    | SEG dvexpr		{ $$ = expr_new_branch(EXPR_SEG, $2); }
-    | WRT dvexpr		{ $$ = expr_new_branch(EXPR_WRT, $2); }
+    | '-' dvexpr %prec UNARYOP  { $$ = p_expr_new_branch(EXPR_NEG, $2); }
+    /*| '!' dvexpr		{ $$ = p_expr_new_branch(EXPR_LNOT, $2); }*/
+    | '~' dvexpr %prec UNARYOP  { $$ = p_expr_new_branch(EXPR_NOT, $2); }
+    | SEG dvexpr		{ $$ = p_expr_new_branch(EXPR_SEG, $2); }
+    | WRT dvexpr		{ $$ = p_expr_new_branch(EXPR_WRT, $2); }
     | '(' dvexpr ')'		{ $$ = $2; }
 ;
 
@@ -434,64 +455,66 @@ dvexpr: INTNUM			{ $$ = expr_new_ident(ExprInt($1)); }
  * We don't attempt to check memory expressions for validity here.
  * Essentially the same as expr_no_string above but adds REG and STRING.
  */
-expr: INTNUM			{ $$ = expr_new_ident(ExprInt($1)); }
-    | FLTNUM			{ $$ = expr_new_ident(ExprFloat($1)); }
-    | REG			{ $$ = expr_new_ident(ExprReg($1[0])); }
+expr: INTNUM			{ $$ = p_expr_new_ident(ExprInt($1)); }
+    | FLTNUM			{ $$ = p_expr_new_ident(ExprFloat($1)); }
+    | REG			{ $$ = p_expr_new_ident(ExprReg($1[0])); }
     | STRING			{
-	$$ = expr_new_ident(ExprInt(intnum_new_charconst_nasm($1)));
+	$$ = p_expr_new_ident(ExprInt(intnum_new_charconst_nasm($1,
+								p_line_index)));
 	xfree($1);
     }
-    | explabel			{ $$ = expr_new_ident(ExprSym($1)); }
-    /*| expr '||' expr		{ $$ = expr_new_tree($1, EXPR_LOR, $3); }*/
-    | expr '|' expr		{ $$ = expr_new_tree($1, EXPR_OR, $3); }
-    | expr '^' expr		{ $$ = expr_new_tree($1, EXPR_XOR, $3); }
-    /*| expr '&&' expr		{ $$ = expr_new_tree($1, EXPR_LAND, $3); }*/
-    | expr '&' expr		{ $$ = expr_new_tree($1, EXPR_AND, $3); }
-    /*| expr '==' expr		{ $$ = expr_new_tree($1, EXPR_EQUALS, $3); }*/
-    /*| expr '>' expr		{ $$ = expr_new_tree($1, EXPR_GT, $3); }*/
-    /*| expr '<' expr		{ $$ = expr_new_tree($1, EXPR_GT, $3); }*/
-    /*| expr '>=' expr		{ $$ = expr_new_tree($1, EXPR_GE, $3); }*/
-    /*| expr '<=' expr		{ $$ = expr_new_tree($1, EXPR_GE, $3); }*/
-    /*| expr '!=' expr		{ $$ = expr_new_tree($1, EXPR_NE, $3); }*/
-    | expr LEFT_OP expr		{ $$ = expr_new_tree($1, EXPR_SHL, $3); }
-    | expr RIGHT_OP expr	{ $$ = expr_new_tree($1, EXPR_SHR, $3); }
-    | expr '+' expr		{ $$ = expr_new_tree($1, EXPR_ADD, $3); }
-    | expr '-' expr		{ $$ = expr_new_tree($1, EXPR_SUB, $3); }
-    | expr '*' expr		{ $$ = expr_new_tree($1, EXPR_MUL, $3); }
-    | expr '/' expr		{ $$ = expr_new_tree($1, EXPR_DIV, $3); }
-    | expr SIGNDIV expr		{ $$ = expr_new_tree($1, EXPR_SIGNDIV, $3); }
-    | expr '%' expr		{ $$ = expr_new_tree($1, EXPR_MOD, $3); }
-    | expr SIGNMOD expr		{ $$ = expr_new_tree($1, EXPR_SIGNMOD, $3); }
+    | explabel			{ $$ = p_expr_new_ident(ExprSym($1)); }
+    /*| expr '||' expr		{ $$ = p_expr_new_tree($1, EXPR_LOR, $3); }*/
+    | expr '|' expr		{ $$ = p_expr_new_tree($1, EXPR_OR, $3); }
+    | expr '^' expr		{ $$ = p_expr_new_tree($1, EXPR_XOR, $3); }
+    /*| expr '&&' expr		{ $$ = p_expr_new_tree($1, EXPR_LAND, $3); }*/
+    | expr '&' expr		{ $$ = p_expr_new_tree($1, EXPR_AND, $3); }
+    /*| expr '==' expr		{ $$ = p_expr_new_tree($1, EXPR_EQUALS, $3); }*/
+    /*| expr '>' expr		{ $$ = p_expr_new_tree($1, EXPR_GT, $3); }*/
+    /*| expr '<' expr		{ $$ = p_expr_new_tree($1, EXPR_GT, $3); }*/
+    /*| expr '>=' expr		{ $$ = p_expr_new_tree($1, EXPR_GE, $3); }*/
+    /*| expr '<=' expr		{ $$ = p_expr_new_tree($1, EXPR_GE, $3); }*/
+    /*| expr '!=' expr		{ $$ = p_expr_new_tree($1, EXPR_NE, $3); }*/
+    | expr LEFT_OP expr		{ $$ = p_expr_new_tree($1, EXPR_SHL, $3); }
+    | expr RIGHT_OP expr	{ $$ = p_expr_new_tree($1, EXPR_SHR, $3); }
+    | expr '+' expr		{ $$ = p_expr_new_tree($1, EXPR_ADD, $3); }
+    | expr '-' expr		{ $$ = p_expr_new_tree($1, EXPR_SUB, $3); }
+    | expr '*' expr		{ $$ = p_expr_new_tree($1, EXPR_MUL, $3); }
+    | expr '/' expr		{ $$ = p_expr_new_tree($1, EXPR_DIV, $3); }
+    | expr SIGNDIV expr		{ $$ = p_expr_new_tree($1, EXPR_SIGNDIV, $3); }
+    | expr '%' expr		{ $$ = p_expr_new_tree($1, EXPR_MOD, $3); }
+    | expr SIGNMOD expr		{ $$ = p_expr_new_tree($1, EXPR_SIGNMOD, $3); }
     | '+' expr %prec UNARYOP	{ $$ = $2; }
-    | '-' expr %prec UNARYOP	{ $$ = expr_new_branch(EXPR_NEG, $2); }
-    /*| '!' expr		{ $$ = expr_new_branch(EXPR_LNOT, $2); }*/
-    | '~' expr %prec UNARYOP	{ $$ = expr_new_branch(EXPR_NOT, $2); }
-    | SEG expr			{ $$ = expr_new_branch(EXPR_SEG, $2); }
-    | WRT expr			{ $$ = expr_new_branch(EXPR_WRT, $2); }
-    | expr ':' expr		{ $$ = expr_new_tree($1, EXPR_SEGOFF, $3); }
+    | '-' expr %prec UNARYOP	{ $$ = p_expr_new_branch(EXPR_NEG, $2); }
+    /*| '!' expr		{ $$ = p_expr_new_branch(EXPR_LNOT, $2); }*/
+    | '~' expr %prec UNARYOP	{ $$ = p_expr_new_branch(EXPR_NOT, $2); }
+    | SEG expr			{ $$ = p_expr_new_branch(EXPR_SEG, $2); }
+    | WRT expr			{ $$ = p_expr_new_branch(EXPR_WRT, $2); }
+    | expr ':' expr		{ $$ = p_expr_new_tree($1, EXPR_SEGOFF, $3); }
     | '(' expr ')'		{ $$ = $2; }
 ;
 
 explabel: ID		{
-	$$ = symrec_use($1);
+	$$ = symrec_use($1, p_line_index);
 	xfree($1);
     }
     | SPECIAL_ID	{
-	$$ = symrec_use($1);
+	$$ = symrec_use($1, p_line_index);
 	xfree($1);
     }
     | LOCAL_ID		{
-	$$ = symrec_use($1);
+	$$ = symrec_use($1, p_line_index);
 	xfree($1);
     }
     | '$'		{
 	/* "$" references the current assembly position */
 	$$ = symrec_define_label("$", nasm_parser_cur_section,
-				 nasm_parser_prev_bc, 0);
+				 nasm_parser_prev_bc, 0, p_line_index);
     }
     | START_SECTION_ID	{
 	/* "$$" references the start of the current section */
-	$$ = symrec_define_label("$$", nasm_parser_cur_section, NULL, 0);
+	$$ = symrec_define_label("$$", nasm_parser_cur_section, NULL, 0,
+				 p_line_index);
     }
 ;
 
@@ -504,64 +527,71 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 {
     valparam *vp, *vp2;
     symrec *sym;
+    unsigned long lindex = p_line_index;
 
     /* Handle (mostly) output-format independent directives here */
     if (strcasecmp(name, "extern") == 0) {
 	vp = vps_first(valparams);
 	if (vp->val) {
-	    sym = symrec_declare(vp->val, SYM_EXTERN);
+	    sym = symrec_declare(vp->val, SYM_EXTERN, lindex);
 	    if (nasm_parser_objfmt->extern_declare)
-		nasm_parser_objfmt->extern_declare(sym, objext_valparams);
+		nasm_parser_objfmt->extern_declare(sym, objext_valparams,
+						   lindex);
 	} else
-	    Error(_("invalid argument to [%s]"), "EXTERN");
+	    Error(lindex, _("invalid argument to [%s]"), "EXTERN");
     } else if (strcasecmp(name, "global") == 0) {
 	vp = vps_first(valparams);
 	if (vp->val) {
-	    sym = symrec_declare(vp->val, SYM_GLOBAL);
+	    sym = symrec_declare(vp->val, SYM_GLOBAL, lindex);
 	    if (nasm_parser_objfmt->global_declare)
-		nasm_parser_objfmt->global_declare(sym, objext_valparams);
+		nasm_parser_objfmt->global_declare(sym, objext_valparams,
+						   lindex);
 	} else
-	    Error(_("invalid argument to [%s]"), "GLOBAL");
+	    Error(lindex, _("invalid argument to [%s]"), "GLOBAL");
     } else if (strcasecmp(name, "common") == 0) {
 	vp = vps_first(valparams);
 	if (vp->val) {
 	    vp2 = vps_next(vp);
 	    if (!vp2 || (!vp2->val && !vp2->param))
-		Error(_("no size specified in %s declaration"), "COMMON");
+		Error(lindex, _("no size specified in %s declaration"),
+		      "COMMON");
 	    else {
 		if (vp2->val) {
-		    sym = symrec_declare(vp->val, SYM_COMMON);
+		    sym = symrec_declare(vp->val, SYM_COMMON, lindex);
 		    if (nasm_parser_objfmt->common_declare)
 			nasm_parser_objfmt->common_declare(sym,
-			    expr_new_ident(ExprSym(symrec_use(vp2->val))),
-			    objext_valparams);
+			    p_expr_new_ident(ExprSym(symrec_use(vp2->val,
+								lindex))),
+			    objext_valparams, lindex);
 		} else if (vp2->param) {
-		    sym = symrec_declare(vp->val, SYM_COMMON);
+		    sym = symrec_declare(vp->val, SYM_COMMON, lindex);
 		    if (nasm_parser_objfmt->common_declare)
 			nasm_parser_objfmt->common_declare(sym, vp2->param,
-							   objext_valparams);
+							   objext_valparams,
+							   lindex);
 		    vp2->param = NULL;
 		}
 	    }
 	} else
-	    Error(_("invalid argument to [%s]"), "COMMON");
+	    Error(lindex, _("invalid argument to [%s]"), "COMMON");
     } else if (strcasecmp(name, "section") == 0 ||
 	       strcasecmp(name, "segment") == 0) {
 	section *new_section =
 	    nasm_parser_objfmt->sections_switch(&nasm_parser_sections,
-						valparams, objext_valparams);
+						valparams, objext_valparams,
+						lindex);
 	if (new_section) {
 	    nasm_parser_cur_section = new_section;
 	    nasm_parser_prev_bc = bcs_last(section_get_bytecodes(new_section));
 	} else
-	    Error(_("invalid argument to [%s]"), "SECTION");
+	    Error(lindex, _("invalid argument to [%s]"), "SECTION");
     } else if (strcasecmp(name, "absolute") == 0) {
 	/* it can be just an ID or a complete expression, so handle both. */
 	vp = vps_first(valparams);
 	if (vp->val)
 	    nasm_parser_cur_section =
 		sections_switch_absolute(&nasm_parser_sections,
-		    expr_new_ident(ExprSym(symrec_use(vp->val))));
+		    p_expr_new_ident(ExprSym(symrec_use(vp->val, lindex))));
 	else if (vp->param) {
 	    nasm_parser_cur_section =
 		sections_switch_absolute(&nasm_parser_sections, vp->param);
@@ -571,26 +601,27 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
     } else if (strcasecmp(name, "cpu") == 0) {
 	vps_foreach(vp, valparams) {
 	    if (vp->val)
-		nasm_parser_arch->parse.switch_cpu(vp->val);
+		nasm_parser_arch->parse.switch_cpu(vp->val, lindex);
 	    else if (vp->param) {
 		const intnum *intcpu;
 		intcpu = expr_get_intnum(&vp->param, NULL);
 		if (!intcpu)
-		    Error(_("invalid argument to [%s]"), "CPU");
+		    Error(lindex, _("invalid argument to [%s]"), "CPU");
 		else {
 		    char strcpu[16];
 		    sprintf(strcpu, "%lu", intnum_get_uint(intcpu));
-		    nasm_parser_arch->parse.switch_cpu(strcpu);
+		    nasm_parser_arch->parse.switch_cpu(strcpu, lindex);
 		}
 	    }
 	}
     } else if (!nasm_parser_arch->parse.directive(name, valparams,
 						  objext_valparams,
-						  &nasm_parser_sections)) {
+						  &nasm_parser_sections,
+						  lindex)) {
 	;
     } else if (nasm_parser_objfmt->directive(name, valparams, objext_valparams,
-					     &nasm_parser_sections)) {
-	Error(_("unrecognized directive [%s]"), name);
+					     &nasm_parser_sections, lindex)) {
+	Error(lindex, _("unrecognized directive [%s]"), name);
     }
 
     vps_delete(valparams);
@@ -601,6 +632,6 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 void
 nasm_parser_error(const char *s)
 {
-    ParserError(s);
+    ParserError(p_line_index, s);
 }
 

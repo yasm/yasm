@@ -22,7 +22,6 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
-#include "globals.h"
 #include "expr.h"
 
 

@@ -58,7 +58,9 @@ typedef union {
 
 
 extern YYSTYPE yapp_preproc_lval;
-extern char *current_file;
-extern int line_number;
+extern char *yapp_preproc_current_file;
+extern int yapp_preproc_line_number;
+extern /*@dependent@*/ linemgr *yapp_preproc_linemgr;
+#define p_line_index	(yapp_preproc_linemgr->get_current())
 
 int yapp_preproc_lex(void);

@@ -129,7 +129,7 @@ basic_optimize_bytecode_1(/*@observer@*/ bytecode *bc, void *d)
     bcr_retval = bc_resolve(bc, 0, data->sect, basic_optimize_calc_bc_dist_1);
     if (bcr_retval & BC_RESOLVE_UNKNOWN_LEN) {
 	if (!(bcr_retval & BC_RESOLVE_ERROR))
-	    ErrorAt(bc->line, _("circular reference detected."));
+	    Error(bc->line, _("circular reference detected."));
 	data->saw_unknown = -1;
 	return 0;
     }

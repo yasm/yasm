@@ -24,7 +24,6 @@
 
 #include "file.h"
 
-#include "globals.h"
 #include "errwarn.h"
 #include "intnum.h"
 #include "floatnum.h"
@@ -210,7 +209,7 @@ coff_objfmt_initialize(const char *in_filename,
     data->index = 0;
     data->sclass = COFF_SCL_FILE;
     data->size = NULL;
-    filesym = symrec_define_label(".file", NULL, NULL, 0);
+    filesym = symrec_define_label(".file", NULL, NULL, 0, 0);
     symrec_set_of_data(filesym, &yasm_coff_LTX_objfmt, data);
 
     entry = xmalloc(sizeof(coff_symtab_entry));
@@ -274,7 +273,7 @@ coff_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
 	SymVisibility vis;
 
 	if (valsize != 4) {
-	    ErrorAt((*ep)->line, _("coff: invalid relocation size"));
+	    Error((*ep)->line, _("coff: invalid relocation size"));
 	    return 1;
 	}
 
@@ -291,7 +290,8 @@ coff_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
 	    csymd = symrec_get_of_data(sym);
 	    assert(csymd != NULL);
 	    *ep = expr_new(EXPR_ADD, ExprExpr(*ep),
-			   ExprExpr(expr_copy(csymd->size)));
+			   ExprExpr(expr_copy(csymd->size)),
+			   csymd->size->line);
 	    *ep = expr_simplify(*ep, common_calc_bc_dist);
 	} else if (!(vis & SYM_EXTERN)) {
 	    /* Local symbols need relocation to their section's start */
@@ -302,7 +302,8 @@ coff_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
 		reloc->sym = label_csd->sym;
 		if (COFF_SET_VMA)
 		    *ep = expr_new(EXPR_ADD, ExprExpr(*ep),
-				   ExprInt(intnum_new_uint(label_csd->addr)));
+				   ExprInt(intnum_new_uint(label_csd->addr)),
+				   (*ep)->line);
 	    }
 	}
 
@@ -311,7 +312,8 @@ coff_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
 	    /* Need to reference to start of section, so add $$ in. */
 	    *ep = expr_new(EXPR_ADD, ExprExpr(*ep),
 			   ExprSym(symrec_define_label("$$", info->sect, NULL,
-						       0)));
+						       0, (*ep)->line)),
+			   (*ep)->line);
 	    *ep = expr_simplify(*ep, common_calc_bc_dist);
 	} else
 	    reloc->type = COFF_RELOC_ADDR32;
@@ -324,11 +326,11 @@ coff_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
 
     /* Check for complex float expressions */
     if (expr_contains(*ep, EXPR_FLOAT)) {
-	ErrorAt((*ep)->line, _("floating point expression too complex"));
+	Error((*ep)->line, _("floating point expression too complex"));
 	return 1;
     }
 
-    ErrorAt((*ep)->line, _("coff: relocation too complex"));
+    Error((*ep)->line, _("coff: relocation too complex"));
     return 1;
 }
 
@@ -359,8 +361,8 @@ coff_objfmt_output_bytecode(bytecode *bc, /*@null@*/ void *d)
     /* Warn that gaps are converted to 0 and write out the 0's. */
     if (gap) {
 	unsigned long left;
-	WarningAt(bc->line,
-		  _("uninitialized space declared in code/data section: zeroing"));
+	Warning(bc->line,
+		_("uninitialized space declared in code/data section: zeroing"));
 	/* Write out in chunks */
 	memset(info->buf, 0, REGULAR_OUTBUF_SIZE);
 	left = multiple*size;
@@ -578,8 +580,8 @@ coff_objfmt_output(FILE *f, sectionhead *sections)
 		const intnum *intn;
 		intn = expr_get_intnum(&csymd->size, common_calc_bc_dist);
 		if (!intn)
-		    ErrorAt(csymd->size->line,
-			    _("COMMON data size not an integer expression"));
+		    Error(csymd->size->line,
+			  _("COMMON data size not an integer expression"));
 		else
 		    value = intnum_get_uint(intn);
 		scnum = 0;
@@ -695,7 +697,8 @@ coff_objfmt_cleanup(void)
 static /*@observer@*/ /*@null@*/ section *
 coff_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 			    /*@unused@*/ /*@null@*/
-			    valparamhead *objext_valparams)
+			    valparamhead *objext_valparams,
+			    unsigned long lindex)
 {
     valparam *vp = vps_first(valparams);
     section *retval;
@@ -710,7 +713,8 @@ coff_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 
     sectname = vp->val;
     if (strlen(sectname) > 8) {
-	Warning(_("COFF section names limited to 8 characters: truncating"));
+	Warning(lindex,
+		_("COFF section names limited to 8 characters: truncating"));
 	sectname[8] = '\0';
     }
 
@@ -737,7 +741,8 @@ coff_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 	}
     }
 
-    retval = sections_switch_general(headp, sectname, 0, resonly, &isnew);
+    retval = sections_switch_general(headp, sectname, 0, resonly, &isnew,
+				     lindex);
 
     if (isnew) {
 	coff_section_data *data;
@@ -754,12 +759,13 @@ coff_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 	STAILQ_INIT(&data->relocs);
 	section_set_of_data(retval, &yasm_coff_LTX_objfmt, data);
 
-	sym = symrec_define_label(sectname, retval, (bytecode *)NULL, 1);
+	sym = symrec_define_label(sectname, retval, (bytecode *)NULL, 1,
+				  lindex);
 	coff_objfmt_symtab_append(sym, COFF_SCL_STAT, NULL, 1,
 				  COFF_SYMTAB_AUX_SECT);
 	data->sym = sym;
     } else if (flags_override)
-	Warning(_("section flags ignored on section redeclaration"));
+	Warning(lindex, _("section flags ignored on section redeclaration"));
     return retval;
 }
 
@@ -826,7 +832,8 @@ coff_objfmt_section_data_print(FILE *f, int indent_level, void *data)
 
 static void
 coff_objfmt_extglob_declare(symrec *sym, /*@unused@*/
-			    /*@null@*/ valparamhead *objext_valparams)
+			    /*@null@*/ valparamhead *objext_valparams,
+			    /*@unused@*/ unsigned long lindex)
 {
     coff_objfmt_symtab_append(sym, COFF_SCL_EXT, NULL, 0,
 			      COFF_SYMTAB_AUX_NONE);
@@ -834,7 +841,8 @@ coff_objfmt_extglob_declare(symrec *sym, /*@unused@*/
 
 static void
 coff_objfmt_common_declare(symrec *sym, /*@only@*/ expr *size, /*@unused@*/
-			   /*@null@*/ valparamhead *objext_valparams)
+			   /*@null@*/ valparamhead *objext_valparams,
+			   /*@unused@*/ unsigned long lindex)
 {
     coff_objfmt_symtab_append(sym, COFF_SCL_EXT, size, 0,
 			      COFF_SYMTAB_AUX_NONE);
@@ -868,7 +876,8 @@ static int
 coff_objfmt_directive(/*@unused@*/ const char *name,
 		      /*@unused@*/ valparamhead *valparams,
 		      /*@unused@*/ /*@null@*/ valparamhead *objext_valparams,
-		      /*@unused@*/ sectionhead *headp)
+		      /*@unused@*/ sectionhead *headp,
+		      /*@unused@*/ unsigned long lindex)
 {
     return 1;	/* no objfmt directives */
 }

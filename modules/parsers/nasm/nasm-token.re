@@ -26,6 +26,7 @@ RCSID("$IdPath$");
 
 #include "bitvect.h"
 
+#include "linemgr.h"
 #include "errwarn.h"
 #include "intnum.h"
 #include "floatnum.h"
@@ -62,8 +63,11 @@ void nasm_parser_cleanup(void);
 void nasm_parser_set_directive_state(void);
 int nasm_parser_lex(void);
 
-extern size_t (*nasm_parser_input) (char *buf, size_t max_size);
+extern size_t (*nasm_parser_input) (char *buf, size_t max_size, linemgr *lm);
 extern /*@dependent@*/ arch *nasm_parser_arch;
+extern /*@dependent@*/ linemgr *nasm_parser_linemgr;
+
+#define p_line_index	(nasm_parser_linemgr->get_current())
 
 
 typedef struct Scanner {
@@ -101,7 +105,8 @@ fill(YYCTYPE *cursor)
 		xfree(s.bot);
 	    s.bot = buf;
 	}
-	if((cnt = nasm_parser_input(s.lim, BSIZE)) != BSIZE){
+	if((cnt = nasm_parser_input(s.lim, BSIZE,
+				    nasm_parser_linemgr)) != BSIZE){
 	    s.eof = &s.lim[cnt]; *s.eof++ = '\n';
 	}
 	s.lim += cnt;
@@ -215,7 +220,7 @@ scan:
 	digit+ {
 	    savech = s.tok[TOKLEN];
 	    s.tok[TOKLEN] = '\0';
-	    yylval.intn = intnum_new_dec(s.tok);
+	    yylval.intn = intnum_new_dec(s.tok, p_line_index);
 	    s.tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -223,21 +228,21 @@ scan:
 
 	bindigit+ "b" {
 	    s.tok[TOKLEN-1] = '\0'; /* strip off 'b' */
-	    yylval.intn = intnum_new_bin(s.tok);
+	    yylval.intn = intnum_new_bin(s.tok, p_line_index);
 	    RETURN(INTNUM);
 	}
 
 	/* 777q - octal number */
 	octdigit+ "q" {
 	    s.tok[TOKLEN-1] = '\0'; /* strip off 'q' */
-	    yylval.intn = intnum_new_oct(s.tok);
+	    yylval.intn = intnum_new_oct(s.tok, p_line_index);
 	    RETURN(INTNUM);
 	}
 
 	/* 0AAh form of hexidecimal number */
 	digit hexdigit* "h" {
 	    s.tok[TOKLEN-1] = '\0'; /* strip off 'h' */
-	    yylval.intn = intnum_new_hex(s.tok);
+	    yylval.intn = intnum_new_hex(s.tok, p_line_index);
 	    RETURN(INTNUM);
 	}
 
@@ -246,9 +251,11 @@ scan:
 	    savech = s.tok[TOKLEN];
 	    s.tok[TOKLEN] = '\0';
 	    if (s.tok[1] == 'x')
-		yylval.intn = intnum_new_hex(s.tok+2);	/* skip 0 and x */
+		/* skip 0 and x */
+		yylval.intn = intnum_new_hex(s.tok+2, p_line_index);
 	    else
-		yylval.intn = intnum_new_hex(s.tok+1);	/* don't skip 0 */
+		/* don't skip 0 */
+		yylval.intn = intnum_new_hex(s.tok+1, p_line_index);
 	    s.tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -335,7 +342,8 @@ scan:
 		yylval.str_val = xstrndup(s.tok, TOKLEN);
 		RETURN(ID);
 	    } else if (!nasm_parser_locallabel_base) {
-		Warning(_("no non-local label before `%s'"), s.tok[0]);
+		Warning(p_line_index, _("no non-local label before `%s'"),
+			s.tok[0]);
 		yylval.str_val = xstrndup(s.tok, TOKLEN);
 	    } else {
 		len = TOKLEN + nasm_parser_locallabel_base_len;
@@ -359,7 +367,7 @@ scan:
 	    savech = s.tok[TOKLEN];
 	    s.tok[TOKLEN] = '\0';
 	    check_id_ret = nasm_parser_arch->parse.check_identifier(
-		yylval.arch_data, s.tok);
+		yylval.arch_data, s.tok, p_line_index);
 	    s.tok[TOKLEN] = savech;
 	    switch (check_id_ret) {
 		case ARCH_CHECK_ID_NONE:
@@ -377,7 +385,8 @@ scan:
 		case ARCH_CHECK_ID_TARGETMOD:
 		    RETURN(TARGETMOD);
 		default:
-		    Warning(_("Arch feature not supported, treating as identifier"));
+		    Warning(p_line_index,
+			    _("Arch feature not supported, treating as identifier"));
 		    yylval.str_val = xstrndup(s.tok, TOKLEN);
 		    RETURN(ID);
 	    }
@@ -391,7 +400,8 @@ scan:
 
 	any {
 	    if (WARN_ENABLED(WARN_UNRECOGNIZED_CHAR))
-		Warning(_("ignoring unrecognized character `%s'"),
+		Warning(p_line_index,
+			_("ignoring unrecognized character `%s'"),
 			conv_unprint(s.tok[0]));
 	    goto scan;
 	}
@@ -406,7 +416,7 @@ linechg:
 	    linechg_numcount++;
 	    savech = s.tok[TOKLEN];
 	    s.tok[TOKLEN] = '\0';
-	    yylval.intn = intnum_new_dec(s.tok);
+	    yylval.intn = intnum_new_dec(s.tok, p_line_index);
 	    s.tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -430,7 +440,8 @@ linechg:
 
 	any {
 	    if (WARN_ENABLED(WARN_UNRECOGNIZED_CHAR))
-		Warning(_("ignoring unrecognized character `%s'"),
+		Warning(p_line_index,
+			_("ignoring unrecognized character `%s'"),
 			conv_unprint(s.tok[0]));
 	    goto linechg;
 	}
@@ -472,7 +483,8 @@ directive:
 
 	any {
 	    if (WARN_ENABLED(WARN_UNRECOGNIZED_CHAR))
-		Warning(_("ignoring unrecognized character `%s'"),
+		Warning(p_line_index,
+			_("ignoring unrecognized character `%s'"),
 			conv_unprint(s.tok[0]));
 	    goto directive;
 	}
@@ -490,9 +502,9 @@ stringconst_scan:
     /*!re2c
 	"\n"	{
 	    if (cursor == s.eof)
-		Error(_("unexpected end of file in string"));
+		Error(p_line_index, _("unexpected end of file in string"));
 	    else
-		Error(_("unterminated string"));
+		Error(p_line_index, _("unterminated string"));
 	    strbuf[count] = '\0';
 	    yylval.str_val = strbuf;
 	    RETURN(STRING);

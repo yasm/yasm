@@ -22,9 +22,9 @@
 #ifndef YASM_SYMREC_H
 #define YASM_SYMREC_H
 
-/*@dependent@*/ symrec *symrec_use(const char *name);
-/*@dependent@*/ symrec *symrec_define_equ(const char *name,
-					  /*@keep@*/ expr *e);
+/*@dependent@*/ symrec *symrec_use(const char *name, unsigned long lindex);
+/*@dependent@*/ symrec *symrec_define_equ(const char *name, /*@keep@*/ expr *e,
+					  unsigned long lindex);
 /* in_table specifies if the label should be inserted into the symbol table.
  * All labels are memory managed internally.
  */
@@ -32,8 +32,10 @@
 					    /*@dependent@*/ /*@null@*/
 					    section *sect,
 					    /*@dependent@*/ /*@null@*/
-					    bytecode *precbc, int in_table);
-/*@dependent@*/ symrec *symrec_declare(const char *name, SymVisibility vis);
+					    bytecode *precbc, int in_table,
+					    unsigned long lindex);
+/*@dependent@*/ symrec *symrec_declare(const char *name, SymVisibility vis,
+				       unsigned long lindex);
 
 /*@observer@*/ const char *symrec_get_name(const symrec *sym);
 SymVisibility symrec_get_visibility(const symrec *sym);

@@ -42,7 +42,7 @@ typedef enum {
 
 void bc_initialize(arch *a);
 
-/*@only@*/ immval *imm_new_int(unsigned long int_val);
+/*@only@*/ immval *imm_new_int(unsigned long int_val, unsigned long lindex);
 /*@only@*/ immval *imm_new_expr(/*@keep@*/ expr *e);
 
 /*@observer@*/ const expr *ea_get_disp(const effaddr *ea);
@@ -53,16 +53,22 @@ void ea_print(FILE *f, int indent_level, const effaddr *ea);
 
 void bc_set_multiple(bytecode *bc, /*@keep@*/ expr *e);
 
-/*@only@*/ bytecode *bc_new_common(bytecode_type type, size_t datasize);
-/*@only@*/ bytecode *bc_new_data(datavalhead *datahead, unsigned char size);
+/*@only@*/ bytecode *bc_new_common(bytecode_type type, size_t datasize,
+				   unsigned long lindex);
+/*@only@*/ bytecode *bc_new_data(datavalhead *datahead, unsigned char size,
+				 unsigned long lindex);
 /*@only@*/ bytecode *bc_new_reserve(/*@only@*/ expr *numitems,
-				    unsigned char itemsize);
+				    unsigned char itemsize,
+				    unsigned long lindex);
 /*@only@*/ bytecode *bc_new_incbin(/*@only@*/ char *filename,
 				   /*@only@*/ /*@null@*/ expr *start,
-				   /*@only@*/ /*@null@*/ expr *maxlen);
-/*@only@*/ bytecode *bc_new_align(unsigned long boundary);
+				   /*@only@*/ /*@null@*/ expr *maxlen,
+				   unsigned long lindex);
+/*@only@*/ bytecode *bc_new_align(unsigned long boundary,
+				  unsigned long lindex);
 /*@only@*/ bytecode *bc_new_objfmt_data(unsigned int type, unsigned long len,
-					objfmt *of, /*@only@*/ void *data);
+					objfmt *of, /*@only@*/ void *data,
+					unsigned long lindex);
 
 void bc_delete(/*@only@*/ /*@null@*/ bytecode *bc);
 

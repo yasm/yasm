@@ -1,7 +1,7 @@
 /*
- * Global variables
+ * YASM assembler line manager (for parse stage)
  *
- *  Copyright (C) 2001  Peter Johnson
+ *  Copyright (C) 2002  Peter Johnson
  *
  *  This file is part of YASM.
  *
@@ -24,7 +24,7 @@
 
 #include "hamt.h"
 
-#include "globals.h"
+#include "linemgr.h"
 
 
 /* Source lines tracking */
@@ -48,14 +48,11 @@ typedef struct line_index_mapping {
 } line_index_mapping;
 
 /* Shared storage for filenames */
-static /*@only@*/ /*@null@*/ HAMT *filename_table = NULL;
+static /*@only@*/ /*@null@*/ HAMT *filename_table;
 
 /* Virtual line number.  Uniquely specifies every line read by the parser. */
-unsigned long line_index = 1;
-static /*@only@*/ /*@null@*/ line_index_mapping_head *line_index_map = NULL;
-
-/* Global assembler options. */
-unsigned int asm_options = 0;
+static unsigned long line_index;
+static /*@only@*/ /*@null@*/ line_index_mapping_head *line_index_map;
 
 static void
 filename_delete_one(/*@only@*/ void *d)
@@ -63,21 +60,15 @@ filename_delete_one(/*@only@*/ void *d)
     xfree(d);
 }
 
-void
-line_set(const char *filename, unsigned long line, unsigned long line_inc)
+static void
+yasm_linemgr_set(const char *filename, unsigned long line,
+		 unsigned long line_inc)
 {
     char *copy;
     int replace = 0;
     line_index_mapping *mapping;
 
     /* Create a new mapping in the map */
-    if (!line_index_map) {
-	/* initialize vector */
-	line_index_map = xmalloc(sizeof(line_index_mapping_head));
-	line_index_map->vector = xmalloc(8*sizeof(line_index_mapping));
-	line_index_map->size = 0;
-	line_index_map->allocated = 8;
-    }
     if (line_index_map->size >= line_index_map->allocated) {
 	/* allocate another size bins when full for 2x space */
 	line_index_map->vector = xrealloc(line_index_map->vector,
@@ -91,8 +82,6 @@ line_set(const char *filename, unsigned long line, unsigned long line_inc)
 
     /* Copy the filename (via shared storage) */
     copy = xstrdup(filename);
-    if (!filename_table)
-	filename_table = HAMT_new();
     /*@-aliasunique@*/
     mapping->filename = HAMT_insert(filename_table, copy, copy, &replace,
 				    filename_delete_one);
@@ -103,8 +92,22 @@ line_set(const char *filename, unsigned long line, unsigned long line_inc)
     mapping->line_inc = line_inc;
 }
 
-void
-line_shutdown(void)
+static void
+yasm_linemgr_initialize(void)
+{
+    filename_table = HAMT_new();
+
+    line_index = 1;
+
+    /* initialize mapping vector */
+    line_index_map = xmalloc(sizeof(line_index_mapping_head));
+    line_index_map->vector = xmalloc(8*sizeof(line_index_mapping));
+    line_index_map->size = 0;
+    line_index_map->allocated = 8;
+}
+
+static void
+yasm_linemgr_cleanup(void)
 {
     if (line_index_map) {
 	xfree(line_index_map->vector);
@@ -118,8 +121,21 @@ line_shutdown(void)
     }
 }
 
-void
-line_lookup(unsigned long lindex, const char **filename, unsigned long *line)
+static unsigned long
+yasm_linemgr_get_current(void)
+{
+    return line_index;
+}
+
+static unsigned long
+yasm_linemgr_goto_next(void)
+{
+    return ++line_index;
+}
+
+static void
+yasm_linemgr_lookup(unsigned long lindex, const char **filename,
+		    unsigned long *line)
 {
     line_index_mapping *mapping;
     unsigned long vindex, step;
@@ -144,3 +160,12 @@ line_lookup(unsigned long lindex, const char **filename, unsigned long *line)
     *filename = mapping->filename;
     *line = mapping->line+mapping->line_inc*(lindex-mapping->index);
 }
+
+linemgr yasm_linemgr = {
+    yasm_linemgr_initialize,
+    yasm_linemgr_cleanup,
+    yasm_linemgr_get_current,
+    yasm_linemgr_goto_next,
+    yasm_linemgr_set,
+    yasm_linemgr_lookup
+};

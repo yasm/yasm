@@ -32,7 +32,8 @@ void floatnum_shutdown(void);
 void floatnum_delete(/*@only@*/ floatnum *flt);
 
 /* calculation function: acc = acc op operand */
-void floatnum_calc(floatnum *acc, ExprOp op, floatnum *operand);
+void floatnum_calc(floatnum *acc, ExprOp op, floatnum *operand,
+		   unsigned long lindex);
 
 /* The get functions return nonzero if flt can't fit into that size format:
  * -1 if underflow occurred, 1 if overflow occurred.

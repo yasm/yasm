@@ -24,7 +24,6 @@
 
 #include "file.h"
 
-#include "globals.h"
 #include "errwarn.h"
 #include "intnum.h"
 #include "expr.h"
@@ -125,7 +124,7 @@ x86_bc_new_insn(x86_new_insn_data *d)
     x86_insn *insn;
    
     insn = (x86_insn *)bc_new_common((bytecode_type)X86_BC_INSN,
-				     sizeof(x86_insn));
+				     sizeof(x86_insn), d->lindex);
 
     insn->ea = (x86_effaddr *)d->ea;
     if (d->ea) {
@@ -165,15 +164,15 @@ x86_bc_new_jmprel(x86_new_jmprel_data *d)
     x86_jmprel *jmprel;
 
     jmprel = (x86_jmprel *)bc_new_common((bytecode_type)X86_BC_JMPREL,
-					 sizeof(x86_jmprel));
+					 sizeof(x86_jmprel), d->lindex);
 
     jmprel->target = d->target;
     jmprel->op_sel = d->op_sel;
 
     if ((d->op_sel == JR_SHORT_FORCED) && (d->near_op_len == 0))
-	Error(_("no SHORT form of that jump instruction exists"));
+	Error(d->lindex, _("no SHORT form of that jump instruction exists"));
     if ((d->op_sel == JR_NEAR_FORCED) && (d->short_op_len == 0))
-	Error(_("no NEAR form of that jump instruction exists"));
+	Error(d->lindex, _("no NEAR form of that jump instruction exists"));
 
     jmprel->shortop.opcode[0] = d->short_op[0];
     jmprel->shortop.opcode[1] = d->short_op[1];
@@ -196,7 +195,7 @@ x86_bc_new_jmprel(x86_new_jmprel_data *d)
 /*@=compmempass =mustfree@*/
 
 void
-x86_ea_set_segment(effaddr *ea, unsigned char segment)
+x86_ea_set_segment(effaddr *ea, unsigned char segment, unsigned long lindex)
 {
     x86_effaddr *x86_ea = (x86_effaddr *)ea;
 
@@ -204,7 +203,7 @@ x86_ea_set_segment(effaddr *ea, unsigned char segment)
 	return;
 
     if (segment != 0 && x86_ea->segment != 0)
-	Warning(_("multiple segment overrides, using leftmost"));
+	Warning(lindex, _("multiple segment overrides, using leftmost"));
 
     x86_ea->segment = segment;
 }
@@ -347,7 +346,8 @@ x86_bc_insn_addrsize_override(bytecode *bc, unsigned char addrsize)
 }
 
 void
-x86_bc_insn_set_lockrep_prefix(bytecode *bc, unsigned char prefix)
+x86_bc_insn_set_lockrep_prefix(bytecode *bc, unsigned char prefix,
+			       unsigned long lindex)
 {
     x86_insn *insn;
     x86_jmprel *jmprel;
@@ -370,22 +370,9 @@ x86_bc_insn_set_lockrep_prefix(bytecode *bc, unsigned char prefix)
     }
 
     if (*lockrep_pre != 0)
-	Warning(_("multiple LOCK or REP prefixes, using leftmost"));
+	Warning(lindex, _("multiple LOCK or REP prefixes, using leftmost"));
 
     *lockrep_pre = prefix;
-}
-
-void
-x86_set_jmprel_opcode_sel(x86_jmprel_opcode_sel *old_sel,
-			  x86_jmprel_opcode_sel new_sel)
-{
-    if (!old_sel)
-	return;
-
-    if (new_sel != JR_NONE && ((*old_sel == JR_SHORT_FORCED) ||
-			       (*old_sel == JR_NEAR_FORCED)))
-	Warning(_("multiple SHORT or NEAR specifiers, using leftmost"));
-    *old_sel = new_sel;
 }
 
 void
@@ -667,20 +654,20 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		temp = expr_copy(jmprel->target);
 		num = expr_get_intnum(&temp, calc_bc_dist);
 		if (!num) {
-		    ErrorAt(bc->line,
-			    _("short jump target external or out of segment"));
+		    Error(bc->line,
+			  _("short jump target external or out of segment"));
 		    return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		} else {
 		    rel = intnum_get_int(num);
 		    rel -= jmprel->shortop.opcode_len+1;
 		    /* does a short form exist? */
 		    if (jmprel->shortop.opcode_len == 0) {
-			ErrorAt(bc->line, _("short jump does not exist"));
+			Error(bc->line, _("short jump does not exist"));
 			return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		    }
 		    /* short displacement must fit in -128 <= rel <= +127 */
 		    if (rel < -128 || rel > 127) {
-			ErrorAt(bc->line, _("short jump out of range"));
+			Error(bc->line, _("short jump out of range"));
 			return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		    }
 		}
@@ -691,7 +678,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 	    jrshort = 0;
 	    if (save) {
 		if (jmprel->nearop.opcode_len == 0) {
-		    ErrorAt(bc->line, _("near jump does not exist"));
+		    Error(bc->line, _("near jump does not exist"));
 		    return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		}
 	    }
@@ -726,7 +713,8 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		     * it to actually be within short range).
 		     */
 		    if (save) {
-			ErrorAt(bc->line, _("short jump out of range (near jump does not exist)"));
+			Error(bc->line,
+			      _("short jump out of range (near jump does not exist)"));
 			return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		    }
 		    jrshort = 1;
@@ -742,8 +730,8 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		    jrshort = 0;
 		} else {
 		    if (save) {
-			ErrorAt(bc->line,
-				_("short jump out of range (near jump does not exist)"));
+			Error(bc->line,
+			      _("short jump out of range (near jump does not exist)"));
 			return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		    }
 		    jrshort = 1;
@@ -928,7 +916,7 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 	case JR_NEAR:
 	    /* 2/4 byte relative displacement (depending on operand size) */
 	    if (jmprel->nearop.opcode_len == 0) {
-		ErrorAt(bc->line, _("near jump does not exist"));
+		Error(bc->line, _("near jump does not exist"));
 		return 1;
 	    }
 

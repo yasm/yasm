@@ -22,6 +22,7 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
+#include "linemgr.h"
 #include "errwarn.h"
 #include "preproc.h"
 #include "hamt.h"
@@ -36,8 +37,11 @@ static int saved_length;
 
 static HAMT *macro_table;
 
-YAPP_Output current_output;
+static YAPP_Output current_output;
 YYSTYPE yapp_preproc_lval;
+
+/*@dependent@*/ linemgr *yapp_preproc_linemgr;
+#define p_line_index	(yapp_preproc_linemgr->get_current())
 
 int isatty(int);
 
@@ -116,13 +120,13 @@ yapp_macro_insert (char *name, int argc, int fillargs)
 void
 yapp_macro_error_exists (YAPP_Macro *v)
 {
-    if (v) Error(_("Redefining macro of the same name %d:%d"), v->type, v->args);
+    if (v) Error(p_line_index, _("Redefining macro of the same name %d:%d"), v->type, v->args);
 }
 
 void
 yapp_macro_error_sameargname (YAPP_Macro *v)
 {
-    if (v) Error(_("Duplicate argument names in macro"));
+    if (v) Error(p_line_index, _("Duplicate argument names in macro"));
 }
 
 YAPP_Macro *
@@ -137,7 +141,7 @@ yapp_define_insert (char *name, int argc, int fillargs)
 	if ((argc >= 0 && ym->args < 0)
 	    || (argc < 0 && ym->args >= 0))
 	{
-	    Warning(_("Attempted %%define both with and without parameters"));
+	    Warning(p_line_index, _("Attempted %%define both with and without parameters"));
 	    return NULL;
 	}
     }
@@ -236,8 +240,8 @@ static void
 yapp_preproc_initialize(FILE *f, const char *in_filename)
 {
     is_interactive = f ? (isatty(fileno(f)) > 0) : 0;
-    current_file = xstrdup(in_filename);
-    line_number = 1;
+    yapp_preproc_current_file = xstrdup(in_filename);
+    yapp_preproc_line_number = 1;
     yapp_lex_initialize(f);
     SLIST_INIT(&output_head);
     SLIST_INIT(&source_head);
@@ -364,8 +368,8 @@ append_token(int token, struct source_head *to_head, source **to_tail)
 	&& (token == '\n' || token == LINE))
     {
 	free ((*to_tail)->token.str);
-	(*to_tail)->token.str = xmalloc(23+strlen(current_file));
-	sprintf((*to_tail)->token.str, "%%line %d+1 %s\n", line_number, current_file);
+	(*to_tail)->token.str = xmalloc(23+strlen(yapp_preproc_current_file));
+	sprintf((*to_tail)->token.str, "%%line %d+1 %s\n", yapp_preproc_line_number, yapp_preproc_current_file);
     }
     else {
 	src = xmalloc(sizeof(source));
@@ -400,8 +404,8 @@ append_token(int token, struct source_head *to_head, source **to_tail)
 
 	    case LINE:
 		/* TODO: consider removing any trailing newline or LINE tokens */
-		src->token.str = xmalloc(23+strlen(current_file));
-		sprintf(src->token.str, "%%line %d+1 %s\n", line_number, current_file);
+		src->token.str = xmalloc(23+strlen(yapp_preproc_current_file));
+		sprintf(src->token.str, "%%line %d+1 %s\n", yapp_preproc_line_number, yapp_preproc_current_file);
 		break;
 
 	    default:
@@ -457,7 +461,7 @@ eat_through_return(struct source_head *to_head, source **to_tail)
     while ((token = yapp_preproc_lex()) != '\n') {
 	if (token == 0)
 	    return 0;
-	Error(_("Skipping possibly valid %%define stuff"));
+	Error(p_line_index, _("Skipping possibly valid %%define stuff"));
     }
     append_token('\n', to_head, to_tail);
     return '\n';
@@ -470,7 +474,7 @@ yapp_get_ident(const char *synlvl)
     if (token == WHITESPACE)
 	token = yapp_preproc_lex();
     if (token != IDENT) {
-	Error(_("Identifier expected after %%%s"), synlvl);
+	Error(p_line_index, _("Identifier expected after %%%s"), synlvl);
     }
     return token;
 }
@@ -579,7 +583,7 @@ expand_macro(char *name,
 			if (token < 256)
 			    InternalError(_("Unexpected character token in parameter expansion"));
 			else
-			    Error(_("Cannot handle preprocessor items inside possible macro invocation"));
+			    Error(p_line_index, _("Cannot handle preprocessor items inside possible macro invocation"));
 		}
 	    }
 
@@ -739,12 +743,14 @@ expand_token_list(struct source_head *paramexp, struct source_head *to_head, sou
 }
 
 static size_t
-yapp_preproc_input(char *buf, size_t max_size)
+yapp_preproc_input(char *buf, size_t max_size, linemgr *lm)
 {
     static YAPP_State state = YAPP_STATE_INITIAL;
     int n = 0;
     int token;
     int need_line_directive = 0;
+
+    yapp_preproc_linemgr = lm;
 
     while (saved_length < max_size && state != YAPP_STATE_EOF)
     {
@@ -759,7 +765,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 			append_token(token, &source_head, &source_tail);
 			/*if (append_to_return()==0) state=YAPP_STATE_EOF;*/
 			ydebug(("YAPP: default: '%c' \"%s\"\n", token, yapp_preproc_lval.str_val));
-			/*Error(_("YAPP got an unhandled token."));*/
+			/*Error(p_line_index, _("YAPP got an unhandled token."));*/
 			break;
 
 		    case IDENT:
@@ -828,7 +834,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 				    break;
 				}
 				else if (last_token == ',' || token != ',')
-				    Error(_("Unexpected token in %%define parameters"));
+				    Error(p_line_index, _("Unexpected token in %%define parameters"));
 				last_token = token;
 			    }
 			    if (token == ')') {
@@ -908,7 +914,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 		}
 		break;
 	    default:
-		Error(_("YAPP got into a bad state"));
+		Error(p_line_index, _("YAPP got into a bad state"));
 	}
 	if (need_line_directive) {
 	    append_token(LINE, &source_head, &source_tail);

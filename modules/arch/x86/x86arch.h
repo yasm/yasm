@@ -62,7 +62,8 @@ typedef enum {
     JR_NEAR_FORCED
 } x86_jmprel_opcode_sel;
 
-void x86_ea_set_segment(/*@null@*/ effaddr *ea, unsigned char segment);
+void x86_ea_set_segment(/*@null@*/ effaddr *ea, unsigned char segment,
+			unsigned long lindex);
 void x86_ea_set_disponly(effaddr *ea);
 effaddr *x86_ea_new_reg(unsigned char reg);
 effaddr *x86_ea_new_imm(/*@keep@*/expr *imm, unsigned char im_len);
@@ -72,16 +73,15 @@ effaddr *x86_ea_new_expr(/*@keep@*/ expr *e);
 
 void x86_bc_insn_opersize_override(bytecode *bc, unsigned char opersize);
 void x86_bc_insn_addrsize_override(bytecode *bc, unsigned char addrsize);
-void x86_bc_insn_set_lockrep_prefix(bytecode *bc, unsigned char prefix);
-
-void x86_set_jmprel_opcode_sel(x86_jmprel_opcode_sel *old_sel,
-			       x86_jmprel_opcode_sel new_sel);
+void x86_bc_insn_set_lockrep_prefix(bytecode *bc, unsigned char prefix,
+				    unsigned long lindex);
 
 /* Structure with *all* inputs passed to x86_bytecode_new_insn().
  * IMPORTANT: ea_ptr and im_ptr cannot be reused or freed after calling the
  * function (it doesn't make a copy).
  */
 typedef struct x86_new_insn_data {
+    unsigned long lindex;
     /*@keep@*/ /*@null@*/ effaddr *ea;
     /*@keep@*/ /*@null@*/ expr *imm;
     unsigned char opersize;
@@ -100,6 +100,7 @@ bytecode *x86_bc_new_insn(x86_new_insn_data *d);
  * Pass 0 for the opcode_len if that version of the opcode doesn't exist.
  */
 typedef struct x86_new_jmprel_data {
+    unsigned long lindex;
     /*@keep@*/ expr *target;
     x86_jmprel_opcode_sel op_sel;
     unsigned char short_op_len;
@@ -128,26 +129,31 @@ int x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 		     unsigned char *v_sib, unsigned char *n_sib,
 		     calc_bc_dist_func calc_bc_dist);
 
-void x86_switch_cpu(const char *cpuid);
+void x86_switch_cpu(const char *cpuid, unsigned long lindex);
 
 arch_check_id_retval x86_check_identifier(unsigned long data[2],
-					  const char *id);
+					  const char *id,
+					  unsigned long lindex);
 
 int x86_directive(const char *name, valparamhead *valparams,
 		  /*@null@*/ valparamhead *objext_valparams,
-		  sectionhead *headp);
+		  sectionhead *headp, unsigned long lindex);
 
 /*@null@*/ bytecode *x86_new_insn(const unsigned long data[2],
 				  int num_operands,
 				  /*@null@*/ insn_operandhead *operands,
 				  section *cur_section,
-				  /*@null@*/ bytecode *prev_bc);
+				  /*@null@*/ bytecode *prev_bc,
+				  unsigned long lindex);
 
-void x86_handle_prefix(bytecode *bc, const unsigned long data[4]);
+void x86_handle_prefix(bytecode *bc, const unsigned long data[4],
+		       unsigned long lindex);
 
-void x86_handle_seg_prefix(bytecode *bc, unsigned long segreg);
+void x86_handle_seg_prefix(bytecode *bc, unsigned long segreg,
+			   unsigned long lindex);
 
-void x86_handle_seg_override(effaddr *ea, unsigned long segreg);
+void x86_handle_seg_override(effaddr *ea, unsigned long segreg,
+			     unsigned long lindex);
 
 int x86_floatnum_tobytes(const floatnum *flt, unsigned char **bufp,
 			 unsigned long valsize, const expr *e);

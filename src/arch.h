@@ -69,7 +69,7 @@ struct arch {
 	 * parse functions!  The bytecode and output functions should be able
 	 * to handle any CPU.
 	 */
-	void (*switch_cpu) (const char *cpuid);
+	void (*switch_cpu) (const char *cpuid, unsigned long lindex);
 
 	/* Checks an generic identifier to see if it matches architecture
 	 * specific names for instructions, registers, etc (see the
@@ -82,7 +82,8 @@ struct arch {
 	 * used for TARGETMOD, REG, and SEGREG return values.
 	 */
 	arch_check_id_retval (*check_identifier) (unsigned long data[4],
-						  const char *id);
+						  const char *id,
+						  unsigned long lindex);
 
 	/* Architecture-specific directive support.  Returns 1 if directive was
 	 * not recognized.  Returns 0 if directive was recognized, even if it
@@ -91,7 +92,7 @@ struct arch {
 	 */
 	int (*directive) (const char *name, valparamhead *valparams,
 			  /*@null@*/ valparamhead *objext_valparams,
-			  sectionhead *headp);
+			  sectionhead *headp, unsigned long lindex);
 
 	/* Creates an instruction.  Creates a bytecode by matching the
 	 * instruction data and the parameters given with a valid instruction.
@@ -102,20 +103,24 @@ struct arch {
 					   int num_operands, /*@null@*/
 					   insn_operandhead *operands,
 					   section *cur_section,
-					   /*@null@*/ bytecode *prev_bc);
+					   /*@null@*/ bytecode *prev_bc,
+					   unsigned long lindex);
 
 	/* Handle an instruction prefix by modifying bc as necessary. */
-	void (*handle_prefix) (bytecode *bc, const unsigned long data[4]);
+	void (*handle_prefix) (bytecode *bc, const unsigned long data[4],
+			       unsigned long lindex);
 
 	/* Handle an segment register instruction prefix by modifying bc as
 	 * necessary.
 	 */
-	void (*handle_seg_prefix) (bytecode *bc, unsigned long segreg);
+	void (*handle_seg_prefix) (bytecode *bc, unsigned long segreg,
+				   unsigned long lindex);
 
 	/* Handle memory expression segment overrides by modifying ea as
 	 * necessary.
 	 */
-	void (*handle_seg_override) (effaddr *ea, unsigned long segreg);
+	void (*handle_seg_override) (effaddr *ea, unsigned long segreg,
+				     unsigned long lindex);
 
 	/* Convert an expression into an effective address. */
 	effaddr * (*ea_new_expr) (/*@keep@*/ expr *e);

@@ -36,7 +36,7 @@ extern int nasm_parser_debug;
 extern int nasm_parser_parse(void);
 extern void nasm_parser_cleanup(void);
 
-size_t (*nasm_parser_input) (char *buf, size_t max_size);
+size_t (*nasm_parser_input) (char *buf, size_t max_size, linemgr *lm);
 
 sectionhead nasm_parser_sections;
 /*@dependent@*/ section *nasm_parser_cur_section;
@@ -45,9 +45,10 @@ extern /*@only@*/ char *nasm_parser_locallabel_base;
 
 /*@dependent@*/ arch *nasm_parser_arch;
 /*@dependent@*/ objfmt *nasm_parser_objfmt;
+/*@dependent@*/ linemgr *nasm_parser_linemgr;
 
 static /*@dependent@*/ sectionhead *
-nasm_parser_do_parse(preproc *pp, arch *a, objfmt *of, FILE *f,
+nasm_parser_do_parse(preproc *pp, arch *a, objfmt *of, linemgr *lm, FILE *f,
 		     const char *in_filename)
     /*@globals killed nasm_parser_locallabel_base @*/
 {
@@ -56,6 +57,7 @@ nasm_parser_do_parse(preproc *pp, arch *a, objfmt *of, FILE *f,
     nasm_parser_input = pp->input;
     nasm_parser_arch = a;
     nasm_parser_objfmt = of;
+    nasm_parser_linemgr = lm;
 
     /* Initialize section list */
     nasm_parser_cur_section = sections_initialize(&nasm_parser_sections, of);

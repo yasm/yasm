@@ -25,12 +25,13 @@
 /* Clean up internal allocations */
 void intnum_shutdown(void);
 
-/*@only@*/ intnum *intnum_new_dec(char *str);
-/*@only@*/ intnum *intnum_new_bin(char *str);
-/*@only@*/ intnum *intnum_new_oct(char *str);
-/*@only@*/ intnum *intnum_new_hex(char *str);
+/*@only@*/ intnum *intnum_new_dec(char *str, unsigned long lindex);
+/*@only@*/ intnum *intnum_new_bin(char *str, unsigned long lindex);
+/*@only@*/ intnum *intnum_new_oct(char *str, unsigned long lindex);
+/*@only@*/ intnum *intnum_new_hex(char *str, unsigned long lindex);
 /* convert character constant to integer value, using NASM rules */
-/*@only@*/ intnum *intnum_new_charconst_nasm(const char *str);
+/*@only@*/ intnum *intnum_new_charconst_nasm(const char *str,
+					     unsigned long lindex);
 /*@only@*/ intnum *intnum_new_uint(unsigned long i);
 /*@only@*/ intnum *intnum_new_int(long i);
 /*@only@*/ intnum *intnum_copy(const intnum *intn);

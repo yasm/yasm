@@ -25,7 +25,6 @@
 #include "ltdl.h"
 
 #include "module.h"
-#include "globals.h"
 
 
 typedef struct module {

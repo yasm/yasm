@@ -24,7 +24,6 @@
 
 #include "bitvect.h"
 
-#include "globals.h"
 #include "errwarn.h"
 #include "intnum.h"
 #include "floatnum.h"
@@ -56,7 +55,7 @@ expr_initialize(arch *a)
  * If it's a unary operator, put the element in left and set right=NULL. */
 /*@-compmempass@*/
 expr *
-expr_new(ExprOp op, ExprItem *left, ExprItem *right)
+expr_new(ExprOp op, ExprItem *left, ExprItem *right, unsigned long lindex)
 {
     expr *ptr, *sube;
     ptr = xmalloc(sizeof(expr));
@@ -103,7 +102,7 @@ expr_new(ExprOp op, ExprItem *left, ExprItem *right)
 	}
     }
 
-    ptr->line = line_index;
+    ptr->line = lindex;
 
     return ptr;
 }
@@ -177,11 +176,11 @@ expr_xform_bc_dist(/*@returned@*/ /*@only@*/ expr *e,
 	    symrec_get_label(e->terms[i].data.sym, &sect, &precbc) &&
 	    section_is_absolute(sect) &&
 	    (dist = calc_bc_dist(sect, NULL, precbc))) {
+	    const expr *start = section_get_start(sect);
 	    e->terms[i].type = EXPR_EXPR;
 	    e->terms[i].data.expn =
-		expr_new(EXPR_ADD,
-			 ExprExpr(expr_copy(section_get_start(sect))),
-			 ExprInt(dist));
+		expr_new(EXPR_ADD, ExprExpr(expr_copy(start)), ExprInt(dist),
+			 start->line);
 	}
     }
 
@@ -316,7 +315,7 @@ expr_xform_neg_helper(/*@returned@*/ /*@only@*/ expr *e)
 	     * floatnums present below; if there ARE floatnums, recurse.
 	     */
 	    if (e->terms[0].type == EXPR_FLOAT)
-		floatnum_calc(e->terms[0].data.flt, EXPR_NEG, NULL);
+		floatnum_calc(e->terms[0].data.flt, EXPR_NEG, NULL, e->line);
 	    else if (e->terms[0].type == EXPR_EXPR &&
 		expr_contains(e->terms[0].data.expn, EXPR_FLOAT))
 		    expr_xform_neg_helper(e->terms[0].data.expn);
@@ -701,7 +700,7 @@ expr_level_tree(expr *e, int fold_const, int simplify_ident,
 		/* Check for circular reference */
 		SLIST_FOREACH(np, eh, next) {
 		    if (np->e == equ_expr) {
-			ErrorAt(e->line, _("circular reference detected."));
+			Error(e->line, _("circular reference detected."));
 			return e;
 		    }
 		}

@@ -24,7 +24,6 @@ RCSID("$IdPath$");
 
 #include "bitvect.h"
 
-#include "globals.h"
 #include "errwarn.h"
 #include "intnum.h"
 #include "floatnum.h"
@@ -1308,7 +1307,8 @@ static const x86_insn_info xbts_insn[] = {
 static bytecode *
 x86_new_jmprel(const unsigned long data[4], int num_operands,
 	       insn_operandhead *operands, x86_insn_info *jrinfo,
-	       section *cur_section, /*@null@*/ bytecode *prev_bc)
+	       section *cur_section, /*@null@*/ bytecode *prev_bc,
+	       unsigned long lindex)
 {
     x86_new_jmprel_data d;
     int num_info = (int)(data[1]&0xFF);
@@ -1317,13 +1317,15 @@ x86_new_jmprel(const unsigned long data[4], int num_operands,
     insn_operand *op;
     static const unsigned char size_lookup[] = {0, 8, 16, 32, 64, 80, 128, 0};
 
+    d.lindex = lindex;
+
     /* We know the target is in operand 0, but sanity check for Imm. */
     op = ops_first(operands);
     if (op->type != INSN_OPERAND_IMM)
 	InternalError(_("invalid operand conversion"));
     d.target = expr_new(EXPR_SUB, ExprExpr(op->data.val),
 			ExprSym(symrec_define_label("$", cur_section, prev_bc,
-						    0)));
+						    0, lindex)), lindex);
 
     /* See if the user explicitly specified short/near. */
     switch (jrinfo->operands[0] & OPTM_MASK) {
@@ -1398,7 +1400,7 @@ x86_new_jmprel(const unsigned long data[4], int num_operands,
 bytecode *
 x86_new_insn(const unsigned long data[4], int num_operands,
 	     insn_operandhead *operands, section *cur_section,
-	     /*@null@*/ bytecode *prev_bc)
+	     /*@null@*/ bytecode *prev_bc, unsigned long lindex)
 {
     x86_new_insn_data d;
     int num_info = (int)(data[1]&0xFF);
@@ -1616,7 +1618,7 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 
     if (!found) {
 	/* Didn't find a matching one */
-	Error(_("invalid combination of opcode and operands"));
+	Error(lindex, _("invalid combination of opcode and operands"));
 	return NULL;
     }
 
@@ -1628,10 +1630,10 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 	case MOD_ExtErr:
 	    switch ((info->modifiers & MOD_ExtIndex_MASK)>>MOD_ExtIndex_SHIFT) {
 		case 0:
-		    Error(_("mismatch in operand sizes"));
+		    Error(lindex, _("mismatch in operand sizes"));
 		    break;
 		case 1:
-		    Error(_("operand size not specified"));
+		    Error(lindex, _("operand size not specified"));
 		    break;
 		default:
 		    InternalError(_("unrecognized x86 ext mod index"));
@@ -1650,9 +1652,10 @@ x86_new_insn(const unsigned long data[4], int num_operands,
     /* Shortcut to JmpRel */
     if (operands && (info->operands[0] & OPA_MASK) == OPA_JmpRel)
 	return x86_new_jmprel(data, num_operands, operands, info, cur_section,
-			      prev_bc);
+			      prev_bc, lindex);
 
     /* Copy what we can from info */
+    d.lindex = lindex;
     d.ea = NULL;
     d.imm = NULL;
     d.opersize = info->opersize;
@@ -1692,7 +1695,8 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 	mod_data >>= 8;
     }
     if (info->modifiers & MOD_Imm8) {
-	d.imm = expr_new_ident(ExprInt(intnum_new_int(mod_data & 0xFF)));
+	d.imm = expr_new_ident(ExprInt(intnum_new_int(mod_data & 0xFF)),
+			       lindex);
 	d.im_len = 1;
 	/*mod_data >>= 8;*/
     }
@@ -1840,7 +1844,7 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 */
 
 void
-x86_switch_cpu(const char *id)
+x86_switch_cpu(const char *id, unsigned long lindex)
 {
     /*const char *marker;*/
 
@@ -1949,18 +1953,19 @@ x86_switch_cpu(const char *id)
 
 	/* catchalls */
 	[\001-\377]+	{
-	    Warning(_("unrecognized CPU identifier `%s'"), id);
+	    Warning(lindex, _("unrecognized CPU identifier `%s'"), id);
 	    return;
 	}
 	[\000]		{
-	    Warning(_("unrecognized CPU identifier `%s'"), id);
+	    Warning(lindex, _("unrecognized CPU identifier `%s'"), id);
 	    return;
 	}
     */
 }
 
 arch_check_id_retval
-x86_check_identifier(unsigned long data[4], const char *id)
+x86_check_identifier(unsigned long data[4], const char *id,
+		     /*@unused@*/ unsigned long lindex)
 {
     const char *oid = id;
     /*const char *marker;*/

@@ -50,8 +50,8 @@ struct parser {
      * This function returns the starting section of a linked list of sections
      * (whatever was in the file).
      */
-    sectionhead *(*do_parse) (preproc *pp, arch *a, objfmt *of, FILE *f,
-			      const char *in_filename);
+    sectionhead *(*do_parse) (preproc *pp, arch *a, objfmt *of, linemgr *lm,
+			      FILE *f, const char *in_filename);
 };
 
 /* Generic functions for all parsers - implemented in src/parser.c */

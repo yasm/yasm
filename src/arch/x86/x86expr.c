@@ -24,7 +24,6 @@
 
 #include "bitvect.h"
 
-#include "globals.h"
 #include "errwarn.h"
 #include "intnum.h"
 #include "floatnum.h"
@@ -379,7 +378,7 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 	     */
 	    if (!intnum_check_size(intn, (size_t)wordsize, 0) &&
 		!intnum_check_size(intn, 1, 1)) {
-		ErrorAt(e->line, _("invalid effective address"));
+		Error(e->line, _("invalid effective address"));
 		return 0;
 	    }
 
@@ -443,8 +442,8 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 	case 2:
 	case 4:
 	    if (wordsize != *displen) {
-		ErrorAt(e->line,
-			_("invalid effective address (displacement size)"));
+		Error(e->line,
+		      _("invalid effective address (displacement size)"));
 		return 0;
 	    }
 	    /* TODO: Add optional warning here about 2/4 not being valid
@@ -536,7 +535,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 					     calc_bc_dist)) {
 	    case 0:
 		e = *ep;
-		ErrorAt(e->line, _("invalid effective address"));
+		Error(e->line, _("invalid effective address"));
 		return 0;
 	    case 1:
 		return 1;
@@ -558,7 +557,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	 */
 	for (i=0; i<8; i++) {
 	    if (reg32mult[i] < 0) {
-		ErrorAt(e->line, _("invalid effective address"));
+		Error(e->line, _("invalid effective address"));
 		return 0;
 	    }
 	    if (i != indexreg && reg32mult[i] == 1 && basereg == REG32_NONE)
@@ -599,7 +598,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	 */
 	for (i=0; i<8; i++)
 	    if (i != basereg && i != indexreg && reg32mult[i] != 0) {
-		ErrorAt(e->line, _("invalid effective address"));
+		Error(e->line, _("invalid effective address"));
 		return 0;
 	    }
 
@@ -607,7 +606,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	if (indexreg != REG32_NONE && reg32mult[indexreg] != 1 &&
 	    reg32mult[indexreg] != 2 && reg32mult[indexreg] != 4 &&
 	    reg32mult[indexreg] != 8) {
-	    ErrorAt(e->line, _("invalid effective address"));
+	    Error(e->line, _("invalid effective address"));
 	    return 0;
 	}
 
@@ -617,7 +616,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	     * legal.
 	     */
 	    if (reg32mult[REG32_ESP] > 1 || basereg == REG32_ESP) {
-		ErrorAt(e->line, _("invalid effective address"));
+		Error(e->line, _("invalid effective address"));
 		return 0;
 	    }
 	    /* If mult==1 and basereg is not ESP, swap indexreg w/basereg. */
@@ -721,7 +720,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 					     calc_bc_dist)) {
 	    case 0:
 		e = *ep;
-		ErrorAt(e->line, _("invalid effective address"));
+		Error(e->line, _("invalid effective address"));
 		return 0;
 	    case 1:
 		return 1;
@@ -733,7 +732,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	/* reg multipliers not 0 or 1 are illegal. */
 	if (reg16mult.bx & ~1 || reg16mult.si & ~1 || reg16mult.di & ~1 ||
 	    reg16mult.bp & ~1) {
-	    ErrorAt(e->line, _("invalid effective address"));
+	    Error(e->line, _("invalid effective address"));
 	    return 0;
 	}
 
@@ -749,7 +748,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 
 	/* Check the modrm value for invalid combinations. */
 	if (modrm16[havereg] & 0070) {
-	    ErrorAt(e->line, _("invalid effective address"));
+	    Error(e->line, _("invalid effective address"));
 	    return 0;
 	}
 
@@ -777,17 +776,17 @@ x86_floatnum_tobytes(const floatnum *flt, unsigned char **bufp,
     int fltret;
 
     if (!floatnum_check_size(flt, (size_t)valsize)) {
-	ErrorAt(e->line, _("invalid floating point constant size"));
+	Error(e->line, _("invalid floating point constant size"));
 	return 1;
     }
 
     fltret = floatnum_get_sized(flt, *bufp, (size_t)valsize);
     if (fltret < 0) {
-	ErrorAt(e->line, _("underflow in floating point expression"));
+	Error(e->line, _("underflow in floating point expression"));
 	return 1;
     }
     if (fltret > 0) {
-	ErrorAt(e->line, _("overflow in floating point expression"));
+	Error(e->line, _("overflow in floating point expression"));
 	return 1;
     }
     *bufp += valsize;
