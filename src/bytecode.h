@@ -49,7 +49,7 @@ void bc_initialize(arch *a);
 void ea_set_len(effaddr *ea, unsigned char len);
 void ea_set_nosplit(effaddr *ea, unsigned char nosplit);
 void ea_delete(/*@only@*/ effaddr *ea);
-void ea_print(FILE *f, const effaddr *ea);
+void ea_print(FILE *f, int indent_level, const effaddr *ea);
 
 void bc_set_multiple(bytecode *bc, /*@keep@*/ expr *e);
 
@@ -66,7 +66,7 @@ void bc_set_multiple(bytecode *bc, /*@keep@*/ expr *e);
 
 void bc_delete(/*@only@*/ /*@null@*/ bytecode *bc);
 
-void bc_print(FILE *f, const bytecode *bc);
+void bc_print(FILE *f, int indent_level, const bytecode *bc);
 
 /* A common version of a calc_bc_dist function that should work for the final
  * stages of optimizers as well as in objfmt expr output functions.  It takes
@@ -146,7 +146,7 @@ void bcs_delete(bytecodehead *headp);
 					   /*@returned@*/ /*@only@*/ /*@null@*/
 					   bytecode *bc);
 
-void bcs_print(FILE *f, const bytecodehead *headp);
+void bcs_print(FILE *f, int indent_level, const bytecodehead *headp);
 
 /* Calls func for each bytecode in the linked list of bytecodes pointed to by
  * headp.  The data pointer d is passed to each func call.
@@ -175,6 +175,6 @@ void dvs_delete(datavalhead *headp);
 /*@null@*/ dataval *dvs_append(datavalhead *headp,
 			       /*@returned@*/ /*@null@*/ dataval *dv);
 
-void dvs_print(FILE *f, const datavalhead *head);
+void dvs_print(FILE *f, int indent_level, const datavalhead *head);
 
 #endif

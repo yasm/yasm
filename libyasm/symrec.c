@@ -360,29 +360,34 @@ symrec_delete_all(void)
     }
 }
 
+typedef struct symrec_print_data {
+    FILE *f;
+    int indent_level;
+} symrec_print_data;
+
 /*@+voidabstract@*/
 static int
 symrec_print_wrapper(symrec *sym, /*@null@*/ void *d)
 {
-    FILE *f;
-    assert(d != NULL);
-    f = (FILE *)d;
-    fprintf(f, "%*sSymbol `%s'\n", indent_level, "", sym->name);
-    indent_level++;
-    symrec_print(f, sym);
-    indent_level--;
+    symrec_print_data *data = (symrec_print_data *)d;
+    assert(data != NULL);
+    fprintf(data->f, "%*sSymbol `%s'\n", data->indent_level, "", sym->name);
+    symrec_print(data->f, data->indent_level+1, sym);
     return 1;
 }
 
 void
-symrec_print_all(FILE *f)
+symrec_print_all(FILE *f, int indent_level)
 {
-    symrec_traverse(f, symrec_print_wrapper);
+    symrec_print_data data;
+    data.f = f;
+    data.indent_level = indent_level;
+    symrec_traverse(&data, symrec_print_wrapper);
 }
 /*@=voidabstract@*/
 
 void
-symrec_print(FILE *f, const symrec *sym)
+symrec_print(FILE *f, int indent_level, const symrec *sym)
 {
     const char *filename;
     unsigned long line;
@@ -400,16 +405,12 @@ symrec_print(FILE *f, const symrec *sym)
 	case SYM_LABEL:
 	    fprintf(f, "%*s_Label_\n%*sSection:\n", indent_level, "",
 		    indent_level, "");
-	    indent_level++;
-	    section_print(f, sym->value.label.sect, 0);
-	    indent_level--;
+	    section_print(f, indent_level+1, sym->value.label.sect, 0);
 	    if (!sym->value.label.bc)
 		fprintf(f, "%*sFirst bytecode\n", indent_level, "");
 	    else {
 		fprintf(f, "%*sPreceding bytecode:\n", indent_level, "");
-		indent_level++;
-		bc_print(f, sym->value.label.bc);
-		indent_level--;
+		bc_print(f, indent_level+1, sym->value.label.bc);
 	    }
 	    break;
     }
@@ -444,12 +445,10 @@ symrec_print(FILE *f, const symrec *sym)
 
     if (sym->of_data && sym->of) {
 	fprintf(f, "%*sObject format-specific data:\n", indent_level, "");
-	indent_level++;
 	if (sym->of->symrec_data_print)
-	    sym->of->symrec_data_print(f, sym->of_data);
+	    sym->of->symrec_data_print(f, indent_level+1, sym->of_data);
 	else
-	    fprintf(f, "%*sUNKNOWN\n", indent_level, "");
-	indent_level--;
+	    fprintf(f, "%*sUNKNOWN\n", indent_level+1, "");
     }
 
     line_lookup(sym->line, &filename, &line);

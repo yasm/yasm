@@ -53,31 +53,29 @@ dbg_objfmt_initialize(const char *in_filename, const char *obj_filename,
 		      dbgfmt *df, arch *a)
 {
     dbg_objfmt_file = fopen(obj_filename, "wt");
-    if (!dbg_objfmt_file)
+    if (!dbg_objfmt_file) {
 	ErrorNow(_("could not open file `%s'"), obj_filename);
+	return;
+    }
     fprintf(dbg_objfmt_file,
-	    "%*sinitialize(\"%s\", \"%s\", %s dbgfmt, %s arch)\n", indent_level,
-	    "", in_filename, obj_filename, df->keyword, a->keyword);
+	    "initialize(\"%s\", \"%s\", %s dbgfmt, %s arch)\n",
+	    in_filename, obj_filename, df->keyword, a->keyword);
 }
 
 static void
 dbg_objfmt_output(/*@unused@*/ FILE *f, sectionhead *sections)
 {
-    fprintf(dbg_objfmt_file, "%*soutput(f, sections->\n", indent_level, "");
-    indent_level++;
-    sections_print(dbg_objfmt_file, sections);
-    indent_level--;
-    fprintf(dbg_objfmt_file, "%*s)\n", indent_level, "");
-    indent_level++;
-    fprintf(dbg_objfmt_file, "%*sSymbol Table:\n", indent_level, "");
-    symrec_print_all(dbg_objfmt_file);
-    indent_level--;
+    fprintf(dbg_objfmt_file, "output(f, sections->\n");
+    sections_print(dbg_objfmt_file, 1, sections);
+    fprintf(dbg_objfmt_file, ")\n");
+    fprintf(dbg_objfmt_file, " Symbol Table:\n");
+    symrec_print_all(dbg_objfmt_file, 1);
 }
 
 static void
 dbg_objfmt_cleanup(void)
 {
-    fprintf(dbg_objfmt_file, "%*scleanup()\n", indent_level, "");
+    fprintf(dbg_objfmt_file, "cleanup()\n");
 }
 
 static /*@observer@*/ /*@null@*/ section *
@@ -89,7 +87,7 @@ dbg_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
     section *retval;
     int isnew;
 
-    fprintf(dbg_objfmt_file, "%*ssections_switch(headp, ", indent_level, "");
+    fprintf(dbg_objfmt_file, "sections_switch(headp, ");
     vps_print(dbg_objfmt_file, valparams);
     fprintf(dbg_objfmt_file, ", ");
     vps_print(dbg_objfmt_file, objext_valparams);
@@ -112,13 +110,12 @@ dbg_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 static void
 dbg_objfmt_section_data_delete(/*@only@*/ void *data)
 {
-    fprintf(dbg_objfmt_file, "%*ssection_data_delete(%p)\n", indent_level, "",
-	    data);
+    fprintf(dbg_objfmt_file, "section_data_delete(%p)\n", data);
     xfree(data);
 }
 
 static void
-dbg_objfmt_section_data_print(FILE *f, /*@null@*/ void *data)
+dbg_objfmt_section_data_print(FILE *f, int indent_level, /*@null@*/ void *data)
 {
     if (data)
 	fprintf(f, "%*s%p\n", indent_level, "", data);
@@ -130,8 +127,7 @@ static void
 dbg_objfmt_extern_declare(symrec *sym, /*@unused@*/ /*@null@*/
 			  valparamhead *objext_valparams)
 {
-    fprintf(dbg_objfmt_file, "%*sextern_declare(\"%s\", ", indent_level, "",
-	    symrec_get_name(sym));
+    fprintf(dbg_objfmt_file, "extern_declare(\"%s\", ", symrec_get_name(sym));
     vps_print(dbg_objfmt_file, objext_valparams);
     fprintf(dbg_objfmt_file, "), setting of_data=NULL\n");
     symrec_set_of_data(sym, &yasm_dbg_LTX_objfmt, NULL);
@@ -141,8 +137,7 @@ static void
 dbg_objfmt_global_declare(symrec *sym, /*@unused@*/ /*@null@*/
 			  valparamhead *objext_valparams)
 {
-    fprintf(dbg_objfmt_file, "%*sglobal_declare(\"%s\", ", indent_level, "",
-	    symrec_get_name(sym));
+    fprintf(dbg_objfmt_file, "global_declare(\"%s\", ", symrec_get_name(sym));
     vps_print(dbg_objfmt_file, objext_valparams);
     fprintf(dbg_objfmt_file, "), setting of_data=NULL\n");
     symrec_set_of_data(sym, &yasm_dbg_LTX_objfmt, NULL);
@@ -153,8 +148,7 @@ dbg_objfmt_common_declare(symrec *sym, /*@only@*/ expr *size, /*@unused@*/
 			  /*@null@*/ valparamhead *objext_valparams)
 {
     assert(dbg_objfmt_file != NULL);
-    fprintf(dbg_objfmt_file, "%*scommon_declare(\"%s\", ", indent_level, "",
-	    symrec_get_name(sym));
+    fprintf(dbg_objfmt_file, "common_declare(\"%s\", ", symrec_get_name(sym));
     expr_print(dbg_objfmt_file, size);
     fprintf(dbg_objfmt_file, ", ");
     vps_print(dbg_objfmt_file, objext_valparams);
@@ -167,7 +161,7 @@ dbg_objfmt_common_declare(symrec *sym, /*@only@*/ expr *size, /*@unused@*/
 static void
 dbg_objfmt_symrec_data_delete(/*@only@*/ void *data)
 {
-    fprintf(dbg_objfmt_file, "%*ssymrec_data_delete(", indent_level, "");
+    fprintf(dbg_objfmt_file, "symrec_data_delete(");
     if (data) {
 	expr_print(dbg_objfmt_file, data);
 	expr_delete(data);
@@ -176,7 +170,7 @@ dbg_objfmt_symrec_data_delete(/*@only@*/ void *data)
 }
 
 static void
-dbg_objfmt_symrec_data_print(FILE *f, /*@null@*/ void *data)
+dbg_objfmt_symrec_data_print(FILE *f, int indent_level, /*@null@*/ void *data)
 {
     if (data) {
 	fprintf(f, "%*sSize=", indent_level, "");
@@ -192,7 +186,7 @@ dbg_objfmt_directive(const char *name, valparamhead *valparams,
 		     /*@null@*/ valparamhead *objext_valparams,
 		     /*@unused@*/ sectionhead *headp)
 {
-    fprintf(dbg_objfmt_file, "%*sdirective(\"%s\", ", indent_level, "", name);
+    fprintf(dbg_objfmt_file, "directive(\"%s\", ", name);
     vps_print(dbg_objfmt_file, valparams);
     fprintf(dbg_objfmt_file, ", ");
     vps_print(dbg_objfmt_file, objext_valparams);
@@ -203,13 +197,13 @@ dbg_objfmt_directive(const char *name, valparamhead *valparams,
 static void
 dbg_objfmt_bc_objfmt_data_delete(unsigned int type, /*@only@*/ void *data)
 {
-    fprintf(dbg_objfmt_file, "%*ssymrec_data_delete(%u, %p)\n", indent_level,
-	    "", type, data);
+    fprintf(dbg_objfmt_file, "symrec_data_delete(%u, %p)\n", type, data);
     xfree(data);
 }
 
 static void
-dbg_objfmt_bc_objfmt_data_print(FILE *f, unsigned int type, const void *data)
+dbg_objfmt_bc_objfmt_data_print(FILE *f, int indent_level, unsigned int type,
+				const void *data)
 {
     fprintf(f, "%*sType=%u\n", indent_level, "", type);
     fprintf(f, "%*sData=%p\n", indent_level, "", data);

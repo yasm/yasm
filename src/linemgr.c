@@ -57,9 +57,6 @@ static /*@only@*/ /*@null@*/ line_index_mapping_head *line_index_map = NULL;
 /* Global assembler options. */
 unsigned int asm_options = 0;
 
-/* Indentation level for assembler *_print() routines */
-int indent_level = 0;
-
 static void
 filename_delete_one(/*@only@*/ void *d)
 {

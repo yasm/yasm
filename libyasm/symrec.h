@@ -64,7 +64,7 @@ void symrec_parser_finalize(void);
 
 void symrec_delete_all(void);
 
-void symrec_print_all(FILE *f);
+void symrec_print_all(FILE *f, int indent_level);
 
-void symrec_print(FILE *f, const symrec *sym);
+void symrec_print(FILE *f, int indent_level, const symrec *sym);
 #endif

@@ -129,7 +129,7 @@ struct arch {
 	const int type_max;
 
 	void (*bc_delete) (bytecode *bc);
-	void (*bc_print) (FILE *f, const bytecode *bc);
+	void (*bc_print) (FILE *f, int indent_level, const bytecode *bc);
 
 	/* See bytecode.h comments on bc_resolve() */
 	bc_resolve_flags (*bc_resolve) (bytecode *bc, int save,
@@ -166,7 +166,7 @@ struct arch {
      */
     void (*ea_data_delete) (effaddr *ea);
 
-    void (*ea_data_print) (FILE *f, const effaddr *ea);
+    void (*ea_data_print) (FILE *f, int indent_level, const effaddr *ea);
 };
 
 struct insn_operand {
@@ -201,7 +201,7 @@ insn_operand *operand_new_segreg(unsigned long segreg);
 insn_operand *operand_new_mem(/*@only@*/ effaddr *ea);
 insn_operand *operand_new_imm(/*@only@*/ expr *val);
 
-void operand_print(FILE *f, const insn_operand *op);
+void operand_print(FILE *f, int indent_level, const insn_operand *op);
 
 #define ops_initialize(headp)	STAILQ_INIT(headp)
 #define ops_first(headp)	STAILQ_FIRST(headp)
@@ -221,6 +221,6 @@ void ops_delete(insn_operandhead *headp, int content);
 /*@null@*/ insn_operand *ops_append(insn_operandhead *headp,
 				    /*@returned@*/ /*@null@*/ insn_operand *op);
 
-void ops_print(FILE *f, const insn_operandhead *headp);
+void ops_print(FILE *f, int indent_level, const insn_operandhead *headp);
 
 #endif

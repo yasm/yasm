@@ -82,7 +82,7 @@ struct objfmt {
      * May be NULL if no data is ever allocated in sections_switch().
      */
     void (*section_data_delete)(/*@only@*/ void *data);
-    void (*section_data_print)(FILE *f, void *data);
+    void (*section_data_print)(FILE *f, int indent_level, void *data);
 
     /* These functions should call symrec_set_of_data() to store data.
      * May be NULL if objfmt doesn't care about such declarations.
@@ -96,7 +96,7 @@ struct objfmt {
 
     /* May be NULL if symrec_set_of_data() is never called. */
     void (*symrec_data_delete)(/*@only@*/ void *data);
-    void (*symrec_data_print)(FILE *f, void *data);
+    void (*symrec_data_print)(FILE *f, int indent_level, void *data);
 
     /* Object format-specific directive support.  Returns 1 if directive was
      * not recognized.  Returns 0 if directive was recognized, even if it
@@ -110,7 +110,8 @@ struct objfmt {
      * May be NULL if no BC_OBJFMT_DATA is ever allocated by the object format.
      */
     void (*bc_objfmt_data_delete)(unsigned int type, /*@only@*/ void *data);
-    void (*bc_objfmt_data_print)(FILE *f, unsigned int type, const void *data);
+    void (*bc_objfmt_data_print)(FILE *f, int indent_level, unsigned int type,
+				 const void *data);
 };
 
 /* Generic functions for all object formats - implemented in src/objfmt.c */

@@ -164,14 +164,14 @@ ea_delete(effaddr *ea)
 
 /*@-nullstate@*/
 void
-ea_print(FILE *f, const effaddr *ea)
+ea_print(FILE *f, int indent_level, const effaddr *ea)
 {
     fprintf(f, "%*sDisp=", indent_level, "");
     expr_print(f, ea->disp);
     fprintf(f, "\n%*sLen=%u\n", indent_level, "", (unsigned int)ea->len);
     fprintf(f, "%*sNoSplit=%u\n", indent_level, "", (unsigned int)ea->nosplit);
     if (cur_arch->ea_data_print)
-	cur_arch->ea_data_print(f, ea);
+	cur_arch->ea_data_print(f, indent_level, ea);
 }
 /*@=nullstate@*/
 
@@ -339,7 +339,7 @@ bc_delete(bytecode *bc)
 }
 
 void
-bc_print(FILE *f, const bytecode *bc)
+bc_print(FILE *f, int indent_level, const bytecode *bc)
 {
     const bytecode_data *data;
     const bytecode_reserve *reserve;
@@ -356,13 +356,10 @@ bc_print(FILE *f, const bytecode *bc)
 	case BC_DATA:
 	    data = (const bytecode_data *)bc;
 	    fprintf(f, "%*s_Data_\n", indent_level, "");
-	    indent_level++;
-	    fprintf(f, "%*sFinal Element Size=%u\n", indent_level, "",
+	    fprintf(f, "%*sFinal Element Size=%u\n", indent_level+1, "",
 		    (unsigned int)data->size);
-	    fprintf(f, "%*sElements:\n", indent_level, "");
-	    indent_level++;
-	    dvs_print(f, &data->datahead);
-	    indent_level-=2;
+	    fprintf(f, "%*sElements:\n", indent_level+1, "");
+	    dvs_print(f, indent_level+2, &data->datahead);
 	    break;
 	case BC_RESERVE:
 	    reserve = (const bytecode_reserve *)bc;
@@ -398,14 +395,15 @@ bc_print(FILE *f, const bytecode *bc)
 	    objfmt_data = (const bytecode_objfmt_data *)bc;
 	    fprintf(f, "%*s_ObjFmt_Data_\n", indent_level, "");
 	    if (objfmt_data->of->bc_objfmt_data_print)
-		objfmt_data->of->bc_objfmt_data_print(f, objfmt_data->type,
+		objfmt_data->of->bc_objfmt_data_print(f, indent_level,
+						      objfmt_data->type,
 						      objfmt_data->data);
 	    else
 		fprintf(f, "%*sUNKNOWN\n", indent_level, "");
 	    break;
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
-		cur_arch->bc.bc_print(f, bc);
+		cur_arch->bc.bc_print(f, indent_level, bc);
 	    else
 		fprintf(f, "%*s_Unknown_\n", indent_level, "");
 	    break;
@@ -863,15 +861,13 @@ bcs_append(bytecodehead *headp, bytecode *bc)
 }
 
 void
-bcs_print(FILE *f, const bytecodehead *headp)
+bcs_print(FILE *f, int indent_level, const bytecodehead *headp)
 {
     bytecode *cur;
 
     STAILQ_FOREACH(cur, headp, link) {
 	fprintf(f, "%*sNext Bytecode:\n", indent_level, "");
-	indent_level++;
-	bc_print(f, cur);
-	indent_level--;
+	bc_print(f, indent_level+1, cur);
     }
 }
 
@@ -946,7 +942,7 @@ dvs_append(datavalhead *headp, dataval *dv)
 }
 
 void
-dvs_print(FILE *f, const datavalhead *head)
+dvs_print(FILE *f, int indent_level, const datavalhead *head)
 {
     dataval *cur;
 

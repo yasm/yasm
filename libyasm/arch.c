@@ -99,7 +99,7 @@ operand_new_imm(/*@only@*/ expr *val)
 }
 
 void
-operand_print(FILE *f, const insn_operand *op)
+operand_print(FILE *f, int indent_level, const insn_operand *op)
 {
     switch (op->type) {
 	case INSN_OPERAND_REG:
@@ -114,9 +114,7 @@ operand_print(FILE *f, const insn_operand *op)
 	    break;
 	case INSN_OPERAND_MEMORY:
 	    fprintf(f, "%*sMemory=\n", indent_level, "");
-	    indent_level++;
-	    ea_print(f, op->data.ea);
-	    indent_level--;
+	    ea_print(f, indent_level, op->data.ea);
 	    break;
 	case INSN_OPERAND_IMM:
 	    fprintf(f, "%*sImm=", indent_level, "");
@@ -164,10 +162,10 @@ ops_append(insn_operandhead *headp, /*@returned@*/ /*@null@*/ insn_operand *op)
 }
 
 void
-ops_print(FILE *f, const insn_operandhead *headp)
+ops_print(FILE *f, int indent_level, const insn_operandhead *headp)
 {
     insn_operand *cur;
 
     STAILQ_FOREACH (cur, headp, link)
-	operand_print(f, cur);
+	operand_print(f, indent_level, cur);
 }

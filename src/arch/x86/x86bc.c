@@ -412,7 +412,7 @@ x86_bc_delete(bytecode *bc)
 }
 
 void
-x86_ea_data_print(FILE *f, const effaddr *ea)
+x86_ea_data_print(FILE *f, int indent_level, const effaddr *ea)
 {
     const x86_effaddr *x86_ea = (const x86_effaddr *)ea;
     fprintf(f, "%*sSegmentOv=%02x\n", indent_level, "",
@@ -426,7 +426,7 @@ x86_ea_data_print(FILE *f, const effaddr *ea)
 }
 
 void
-x86_bc_print(FILE *f, const bytecode *bc)
+x86_bc_print(FILE *f, int indent_level, const bytecode *bc)
 {
     const x86_insn *insn;
     const x86_jmprel *jmprel;
@@ -438,9 +438,7 @@ x86_bc_print(FILE *f, const bytecode *bc)
 	    fprintf(f, "%*sEffective Address:", indent_level, "");
 	    if (insn->ea) {
 		fprintf(f, "\n");
-		indent_level++;
-		ea_print(f, (effaddr *)insn->ea);
-		indent_level--;
+		ea_print(f, indent_level+1, (effaddr *)insn->ea);
 	    } else
 		fprintf(f, " (nil)\n");
 	    fprintf(f, "%*sImmediate Value:", indent_level, "");
@@ -481,29 +479,25 @@ x86_bc_print(FILE *f, const bytecode *bc)
 	    fprintf(f, "%*sTarget=", indent_level, "");
 	    expr_print(f, jmprel->target);
 	    fprintf(f, "\n%*sShort Form:\n", indent_level, "");
-	    indent_level++;
 	    if (jmprel->shortop.opcode_len == 0)
-		fprintf(f, "%*sNone\n", indent_level, "");
+		fprintf(f, "%*sNone\n", indent_level+1, "");
 	    else
 		fprintf(f, "%*sOpcode: %02x %02x %02x OpLen=%u\n",
-			indent_level, "",
+			indent_level+1, "",
 			(unsigned int)jmprel->shortop.opcode[0],
 			(unsigned int)jmprel->shortop.opcode[1],
 			(unsigned int)jmprel->shortop.opcode[2],
 			(unsigned int)jmprel->shortop.opcode_len);
-	    indent_level--;
 	    fprintf(f, "%*sNear Form:\n", indent_level, "");
-	    indent_level++;
 	    if (jmprel->nearop.opcode_len == 0)
-		fprintf(f, "%*sNone\n", indent_level, "");
+		fprintf(f, "%*sNone\n", indent_level+1, "");
 	    else
 		fprintf(f, "%*sOpcode: %02x %02x %02x OpLen=%u\n",
-			indent_level, "",
+			indent_level+1, "",
 			(unsigned int)jmprel->nearop.opcode[0],
 			(unsigned int)jmprel->nearop.opcode[1],
 			(unsigned int)jmprel->nearop.opcode[2],
 			(unsigned int)jmprel->nearop.opcode_len);
-	    indent_level--;
 	    fprintf(f, "%*sOpSel=", indent_level, "");
 	    switch (jmprel->op_sel) {
 		case JR_NONE:

@@ -28,9 +28,6 @@ extern unsigned long line_index;
 /* Global assembler options. */
 extern unsigned int asm_options;
 
-/* Indentation level for assembler *_print() routines */
-extern int indent_level;
-
 void line_set(const char *filename, unsigned long line,
 	      unsigned long line_inc);
 void line_shutdown(void);

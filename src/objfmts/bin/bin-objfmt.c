@@ -448,7 +448,7 @@ bin_objfmt_directive(const char *name, valparamhead *valparams,
 }
 
 static void
-bin_objfmt_section_data_print(FILE *f, void *data)
+bin_objfmt_section_data_print(FILE *f, int indent_level, void *data)
 {
     fprintf(f, "%*salign=%ld\n", indent_level, "", *((unsigned long *)data));
 }

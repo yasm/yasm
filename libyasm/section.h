@@ -45,7 +45,7 @@ void section_set_of_data(section *sect, objfmt *of,
 
 void sections_delete(sectionhead *headp);
 
-void sections_print(FILE *f, const sectionhead *headp);
+void sections_print(FILE *f, int indent_level, const sectionhead *headp);
 
 /* Calls func for each section in the linked list of sections pointed to by
  * headp.  The data pointer d is passed to each func call.
@@ -68,5 +68,6 @@ void section_set_start(section *sect, unsigned long start);
 
 void section_delete(/*@only@*/ section *sect);
 
-void section_print(FILE *f, /*@null@*/ const section *sect, int print_bcs);
+void section_print(FILE *f, int indent_level, /*@null@*/ const section *sect,
+		   int print_bcs);
 #endif

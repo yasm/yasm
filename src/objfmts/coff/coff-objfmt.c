@@ -778,16 +778,14 @@ coff_objfmt_section_data_delete(/*@only@*/ void *data)
 }
 
 static void
-coff_objfmt_section_data_print(FILE *f, void *data)
+coff_objfmt_section_data_print(FILE *f, int indent_level, void *data)
 {
     coff_section_data *csd = (coff_section_data *)data;
     coff_reloc *reloc;
     unsigned long relocnum = 0;
 
     fprintf(f, "%*ssym=\n", indent_level, "");
-    indent_level++;
-    symrec_print(f, csd->sym);
-    indent_level--;
+    symrec_print(f, indent_level+1, csd->sym);
     fprintf(f, "%*sscnum=%d\n", indent_level, "", csd->scnum);
     fprintf(f, "%*sflags=", indent_level, "");
     switch (csd->flags) {
@@ -810,15 +808,11 @@ coff_objfmt_section_data_print(FILE *f, void *data)
     fprintf(f, "%*srelptr=0x%lx\n", indent_level, "", csd->relptr);
     fprintf(f, "%*snreloc=%ld\n", indent_level, "", csd->nreloc);
     fprintf(f, "%*srelocs:\n", indent_level, "");
-    indent_level++;
     STAILQ_FOREACH(reloc, &csd->relocs, link) {
-	fprintf(f, "%*sReloc %lu:\n", indent_level, "", relocnum++);
-	indent_level++;
-	fprintf(f, "%*ssym=\n", indent_level, "");
-	indent_level++;
-	symrec_print(f, reloc->sym);
-	indent_level--;
-	fprintf(f, "%*stype=", indent_level, "");
+	fprintf(f, "%*sReloc %lu:\n", indent_level+1, "", relocnum++);
+	fprintf(f, "%*ssym=\n", indent_level+2, "");
+	symrec_print(f, indent_level+3, reloc->sym);
+	fprintf(f, "%*stype=", indent_level+2, "");
 	switch (reloc->type) {
 	    case COFF_RELOC_ADDR32:
 		printf("Addr32\n");
@@ -827,9 +821,7 @@ coff_objfmt_section_data_print(FILE *f, void *data)
 		printf("Rel32\n");
 		break;
 	}
-	indent_level--;
     }
-    indent_level--;
 }
 
 static void
@@ -858,7 +850,7 @@ coff_objfmt_symrec_data_delete(/*@only@*/ void *data)
 }
 
 static void
-coff_objfmt_symrec_data_print(FILE *f, void *data)
+coff_objfmt_symrec_data_print(FILE *f, int indent_level, void *data)
 {
     coff_symrec_data *csd = (coff_symrec_data *)data;
 

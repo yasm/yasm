@@ -115,7 +115,7 @@ bytecode *x86_bc_new_jmprel(x86_new_jmprel_data *d);
 extern unsigned char yasm_x86_LTX_mode_bits;
 
 void x86_bc_delete(bytecode *bc);
-void x86_bc_print(FILE *f, const bytecode *bc);
+void x86_bc_print(FILE *f, int indent_level, const bytecode *bc);
 bc_resolve_flags x86_bc_resolve(bytecode *bc, int save, const section *sect,
 				calc_bc_dist_func calc_bc_dist);
 int x86_bc_tobytes(bytecode *bc, unsigned char **bufp, const section *sect,
@@ -161,6 +161,6 @@ void x86_reg_print(FILE *f, unsigned long reg);
 
 void x86_segreg_print(FILE *f, unsigned long segreg);
 
-void x86_ea_data_print(FILE *f, const effaddr *ea);
+void x86_ea_data_print(FILE *f, int indent_level, const effaddr *ea);
 
 #endif

@@ -206,15 +206,13 @@ sections_delete(sectionhead *headp)
 }
 
 void
-sections_print(FILE *f, const sectionhead *headp)
+sections_print(FILE *f, int indent_level, const sectionhead *headp)
 {
     section *cur;
     
     STAILQ_FOREACH(cur, headp, link) {
 	fprintf(f, "%*sSection:\n", indent_level, "");
-	indent_level++;
-	section_print(f, cur, 1);
-	indent_level--;
+	section_print(f, indent_level+1, cur, 1);
     }
 }
 
@@ -296,7 +294,7 @@ section_delete(section *sect)
 }
 
 void
-section_print(FILE *f, const section *sect, int print_bcs)
+section_print(FILE *f, int indent_level, const section *sect, int print_bcs)
 {
     if (!sect) {
 	fprintf(f, "%*s(none)\n", indent_level, "");
@@ -312,7 +310,8 @@ section_print(FILE *f, const section *sect, int print_bcs)
 	    if (sect->data.general.of_data && sect->data.general.of) {
 		objfmt *of = sect->data.general.of;
 		if (of->section_data_print)
-		    of->section_data_print(f, sect->data.general.of_data);
+		    of->section_data_print(f, indent_level,
+					   sect->data.general.of_data);
 		else
 		    fprintf(f, "%*sUNKNOWN\n", indent_level, "");
 	    } else
@@ -330,8 +329,6 @@ section_print(FILE *f, const section *sect, int print_bcs)
 
     if (print_bcs) {
 	fprintf(f, "%*sBytecodes:\n", indent_level, "");
-	indent_level++;
-	bcs_print(f, &sect->bc);
-	indent_level--;
+	bcs_print(f, indent_level+1, &sect->bc);
     }
 }
