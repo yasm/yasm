@@ -420,9 +420,11 @@ linechg:
 	}
 
 	ws+ {
-	    if (linechg_numcount == 2)
-	    state = LINECHG2;
-	    goto linechg2;
+	    if (linechg_numcount == 2) {
+		state = LINECHG2;
+		goto linechg2;
+	    }
+	    goto linechg;
 	}
 
 	any {
