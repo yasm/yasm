@@ -55,3 +55,4 @@
 -TSymType
 -Tsymrec
 -Tsymtab
+-TFILE
