@@ -223,11 +223,11 @@ typedef enum {
  *       possible.  In this case, this function returns that the length is NOT
  *       the minimum.
  * \param bc		bytecode
- * \param save		when zero, this function does <em>not</em> modify bc
- *			other than the length/size values (i.e. it doesn't keep
- *			the values returned by calc_bc_dist except temporarily
- *			to try to minimize the length); when nonzero, all
- *			fields in bc may be modified by this function
+ * \param save		when zero, this function does \em not modify bc other
+ *			than the length/size values (i.e. it doesn't keep the
+ *			values returned by calc_bc_dist except temporarily to
+ *			try to minimize the length); when nonzero, all fields
+ *			in bc may be modified by this function
  * \param sect		section containing the bytecode
  * \param calc_bc_dist	function used to determine bytecode distance
  * \return Flags indicating whether the length is the minimum possible,
@@ -257,8 +257,8 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
  * \return Newly allocated buffer that should be used instead of buf for
  *	   reading the byte representation, or NULL if buf was big enough to
  *	   hold the entire byte representation.
- * \caution Essentially destroys contents of bytecode, so it's NOT safe to call
- *          twice on the same bytecode.
+ * \note Essentially destroys contents of bytecode, so it's \em not safe to
+ *       call twice on the same bytecode.
  */
 /*@null@*/ /*@only@*/ unsigned char *yasm_bc_tobytes
     (yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
