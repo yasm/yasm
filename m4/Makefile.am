@@ -13,8 +13,8 @@ EXTRA_DIST = Makefile.am \
 	lib-link.m4 \
 	lib-prefix.m4 \
 	libtool.m4 \
+	longlong.m4 \
 	ltdl.m4 \
 	progtest.m4 \
 	stdint_h.m4 \
-	uintmax_t.m4 \
-	ulonglong.m4
+	uintmax_t.m4
