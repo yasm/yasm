@@ -1,4 +1,4 @@
-/* $Id: nasm-bison.y,v 1.17 2001/07/05 09:32:58 mu Exp $
+/* $Id: nasm-bison.y,v 1.18 2001/07/05 09:50:51 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -90,8 +90,13 @@ extern void yyerror(char *);
 %type <syminfo> immlabel
 %type <sym> label_id
 
+%left '|'
+%left '^'
+%left '&'
+%left LEFT_OP RIGHT_OP
 %left '-' '+'
-%left '*' '/'
+%left '*' '/' '%'
+%nonassoc '~'
 
 %%
 input: /* empty */
