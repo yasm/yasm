@@ -108,7 +108,7 @@ static bytecode *nasm_parser_temp_bc;
 
 /* @TYPES@ */
 
-%type <bc> line exp instr instrbase
+%type <bc> line lineexp exp instr instrbase
 
 %type <int_info> fpureg reg32 reg16 reg8 segreg
 %type <ea> mem memaddr memexp memfar
@@ -144,18 +144,21 @@ input: /* empty */
 ;
 
 line: '\n'		{ $$ = (bytecode *)NULL; }
-    | exp '\n'
-    | label		{ $$ = (bytecode *)NULL; }
-    | label exp		{ $$ = $2; }
-    | label_id EQU expr	{
-	symrec_define_equ($1, $3);
-	$$ = (bytecode *)NULL;
-    }
+    | lineexp '\n'
     | directive '\n'	{ $$ = (bytecode *)NULL; }
     | error '\n'	{
 	Error(_("label or instruction expected at start of line"));
 	$$ = (bytecode *)NULL;
 	yyerrok;
+    }
+;
+
+lineexp: exp
+    | label		{ $$ = (bytecode *)NULL; }
+    | label exp		{ $$ = $2; }
+    | label_id EQU expr	{
+	symrec_define_equ($1, $3);
+	$$ = (bytecode *)NULL;
     }
 ;
 
