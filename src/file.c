@@ -28,12 +28,13 @@
 
 
 char *
-replace_extension(const char *orig, const char *ext, const char *def)
+replace_extension(const char *orig, /*@null@*/ const char *ext,
+		  const char *def)
 {
     char *out, *outext;
 
     /* allocate enough space for full existing name + extension */
-    out = xmalloc(strlen(orig)+strlen(ext)+2);
+    out = xmalloc(strlen(orig)+(ext ? (strlen(ext)+2) : 1));
     strcpy(out, orig);
     outext = strrchr(out, '.');
     if (outext) {
@@ -41,7 +42,7 @@ replace_extension(const char *orig, const char *ext, const char *def)
 	 * (as we don't want to overwrite the source file).
 	 */
 	outext++;   /* advance past '.' */
-	if (strcmp(outext, ext) == 0) {
+	if (ext && strcmp(outext, ext) == 0) {
 	    outext = NULL;  /* indicate default should be used */
 	    WarningNow(_("file name already ends in `.%s': output will be in `%s'"),
 		       ext, def);
@@ -50,7 +51,7 @@ replace_extension(const char *orig, const char *ext, const char *def)
 	/* No extension: make sure the output extension is not empty
 	 * (again, we don't want to overwrite the source file).
 	 */
-	if (*ext == '\0')
+	if (!ext)
 	    WarningNow(_("file name already has no extension: output will be in `%s'"),
 		       def);
 	else {
@@ -60,9 +61,14 @@ replace_extension(const char *orig, const char *ext, const char *def)
     }
 
     /* replace extension or use default name */
-    if (outext)
-	strcpy(outext, ext);
-    else
+    if (outext) {
+	if (!ext) {
+	    /* Back up and replace '.' with string terminator */
+	    outext--;
+	    *outext = '\0';
+	} else
+	    strcpy(outext, ext);
+    } else
 	strcpy(out, def);
 
     return out;
