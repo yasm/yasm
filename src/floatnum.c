@@ -421,16 +421,17 @@ floatnum_new(const char *str)
 	dec_exponent += dec_exp_add;
     }
 
+    /* Free calculation variables. */
+    BitVector_Destroy(operand[1]);
+    BitVector_Destroy(operand[0]);
+
     /* Normalize the number, checking for 0 first. */
     if (BitVector_is_empty(flt->mantissa)) {
 	/* Mantissa is 0, zero exponent too. */
 	flt->exponent = 0;
 	/* Set zero flag so output functions don't see 0 value as underflow. */
 	flt->flags |= FLAG_ISZERO;
-	/* Free calculation variables and return. */
-	BitVector_Destroy(operand[1]);
-	BitVector_Destroy(operand[0]);
-
+	/* Return 0 value. */
 	return flt;
     }
     /* Exponent if already norm. */
