@@ -13,6 +13,13 @@ SubStr_eq(const SubStr *s1, const SubStr *s2)
     return (s1->len == s2->len && memcmp(s1->str, s2->str, s1->len) == 0);
 }
 
+void
+Str_init(Str *r, const SubStr* s)
+{
+    SubStr_init(r, malloc(sizeof(char)*s->len), s->len);
+    memcpy(r->str, s->str, s->len);
+}
+
 Str *
 Str_new(const SubStr* s)
 {
@@ -21,8 +28,16 @@ Str_new(const SubStr* s)
     return r;
 }
 
+void
+Str_copy(Str *r, Str* s)
+{
+    SubStr_init(r, s->str, s->len);
+    s->str = NULL;
+    s->len = 0;
+}
+
 Str *
-Str_copy(Str* s)
+Str_new_copy(Str* s)
 {
     Str *r = SubStr_new(s->str, s->len);
     s->str = NULL;
