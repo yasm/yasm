@@ -1,4 +1,4 @@
-/* $Id: errwarn.h,v 1.6 2001/06/13 05:56:06 mu Exp $
+/* $Id: errwarn.h,v 1.7 2001/06/28 21:22:01 peter Exp $
  * Error and warning reporting and related functions header file.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,8 +19,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef _ERRWARN_H_
-#define _ERRWARN_H_
+#ifndef YASM_ERRWARN_H
+#define YASM_ERRWARN_H
 
 char *conv_unprint(char ch);
 

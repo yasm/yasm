@@ -1,4 +1,4 @@
-/* $Id: symrec.h,v 1.3 2001/06/13 05:43:59 mu Exp $
+/* $Id: symrec.h,v 1.4 2001/06/28 21:22:01 peter Exp $
  * Symbol table handling header file
  *
  *  Copyright (C) 2001  Michael Urman
@@ -19,8 +19,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef _SYMREC_H_
-#define _SYMREC_H_
+#ifndef YASM_SYMREC_H
+#define YASM_SYMREC_H
 
 typedef enum {
     SYM_NOSTATUS = 0,

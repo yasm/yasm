@@ -1,4 +1,4 @@
-/* $Id: linemgr.h,v 1.2 2001/06/13 05:43:59 mu Exp $
+/* $Id: linemgr.h,v 1.3 2001/06/28 21:22:01 peter Exp $
  * Globals header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,8 +19,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef _GLOBALS_H_
-#define _GLOBALS_H_
+#ifndef YASM_GLOBALS_H
+#define YASM_GLOBALS_H
 
 extern unsigned int line_number;
 extern unsigned int mode_bits;

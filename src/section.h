@@ -1,4 +1,4 @@
-/* $Id: section.h,v 1.1 2001/05/15 05:28:44 peter Exp $
+/* $Id: section.h,v 1.2 2001/06/28 21:22:01 peter Exp $
  * Section header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,8 +19,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef _SECTION_H_
-#define _SECTION_H_
+#ifndef YASM_SECTION_H
+#define YASM_SECTION_H
 
 typedef struct section_s {
     struct section_s *next;

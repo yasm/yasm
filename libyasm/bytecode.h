@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.7 2001/05/30 07:41:03 peter Exp $
+/* $Id: bytecode.h,v 1.8 2001/06/28 21:22:01 peter Exp $
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,8 +19,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef _BYTECODE_H_
-#define _BYTECODE_H_
+#ifndef YASM_BYTECODE_H
+#define YASM_BYTECODE_H
 
 typedef struct effaddr_s {
     unsigned long disp;		/* address displacement */

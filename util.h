@@ -1,4 +1,4 @@
-/* $Id: util.h,v 1.2 2001/06/28 08:48:32 peter Exp $
+/* $Id: util.h,v 1.3 2001/06/28 21:22:01 peter Exp $
  * Defines prototypes for replacement functions if needed.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,8 +19,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef _UTIL_H_
-#define _UTIL_H_
+#ifndef YASM_UTIL_H
+#define YASM_UTIL_H
 
 #ifndef HAVE_STRDUP
 char *strdup(const char *str);
