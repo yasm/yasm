@@ -390,12 +390,12 @@ static const x86_insn_info movszx_insn[] = {
 
 /* Push instructions */
 static const x86_insn_info push_insn[] = {
-    { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 6, 1, {OPT_RM|OPS_16|OPA_EA, 0, 0} },
-    { CPU_386, 0, 32, 1, {0xFF, 0, 0}, 6, 1, {OPT_RM|OPS_32|OPA_EA, 0, 0} },
     { CPU_Any, 0, 16, 1, {0x50, 0, 0}, 0, 1,
       {OPT_Reg|OPS_16|OPA_Op0Add, 0, 0} },
     { CPU_386, 0, 32, 1, {0x50, 0, 0}, 0, 1,
       {OPT_Reg|OPS_32|OPA_Op0Add, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 6, 1, {OPT_RM|OPS_16|OPA_EA, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xFF, 0, 0}, 6, 1, {OPT_RM|OPS_32|OPA_EA, 0, 0} },
     { CPU_Any, 0, 0, 1, {0x6A, 0, 0}, 0, 1, {OPT_Imm|OPS_8|OPA_Imm, 0, 0} },
     { CPU_Any, 0, 16, 1, {0x68, 0, 0}, 0, 1, {OPT_Imm|OPS_16|OPA_Imm, 0, 0} },
     { CPU_386, 0, 32, 1, {0x68, 0, 0}, 0, 1, {OPT_Imm|OPS_32|OPA_Imm, 0, 0} },
@@ -427,12 +427,12 @@ static const x86_insn_info push_insn[] = {
 
 /* Pop instructions */
 static const x86_insn_info pop_insn[] = {
-    { CPU_Any, 0, 16, 1, {0x8F, 0, 0}, 0, 1, {OPT_RM|OPS_16|OPA_EA, 0, 0} },
-    { CPU_386, 0, 32, 1, {0x8F, 0, 0}, 0, 1, {OPT_RM|OPS_32|OPA_EA, 0, 0} },
     { CPU_Any, 0, 16, 1, {0x58, 0, 0}, 0, 1,
       {OPT_Reg|OPS_16|OPA_Op0Add, 0, 0} },
     { CPU_386, 0, 32, 1, {0x58, 0, 0}, 0, 1,
       {OPT_Reg|OPS_32|OPA_Op0Add, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0x8F, 0, 0}, 0, 1, {OPT_RM|OPS_16|OPA_EA, 0, 0} },
+    { CPU_386, 0, 32, 1, {0x8F, 0, 0}, 0, 1, {OPT_RM|OPS_32|OPA_EA, 0, 0} },
     /* POP CS is debateably valid on the 8086, if obsolete and undocumented.
      * We don't include it because it's VERY unlikely it will ever be used
      * anywhere.  If someone really wants it they can db 0x0F it.
