@@ -479,10 +479,9 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
 
 /* Inline macro implementations for arch functions */
 
-#define yasm_arch_module_version(module, machine)   (module->version)
+#define yasm_arch_module_version(module)	    (module->version)
 #define yasm_arch_module_machines(module, machine)  (module->machines)
-#define yasm_arch_module_def_machine(module, machine) \
-    (module->default_machine_keyword)
+#define yasm_arch_module_def_machine(module) (module->default_machine_keyword)
 
 #define yasm_arch_name(arch) \
     (((yasm_arch_base *)arch)->module->name)
