@@ -8,3 +8,8 @@ EXTRA_DIST += \
 	src/objfmts/bin/tests/reserve.asm		\
 	src/objfmts/bin/tests/reserve.bin.hx		\
 	src/objfmts/bin/tests/reserve.errwarn
+
+CLEANFILES += \
+	reserve \
+	reserve.ew \
+	reserve.hx
