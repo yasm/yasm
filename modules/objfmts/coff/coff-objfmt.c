@@ -463,6 +463,9 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 	if (last)
 	    csd->size = last->offset + last->len;
     } else {
+	/*@null@*/ yasm_bytecode *last =
+	    yasm_bcs_last(yasm_section_get_bytecodes(sect));
+
 	pos = ftell(info->f);
 	if (pos == -1) {
 	    yasm_fatal(N_("could not get file position on output file"));
@@ -474,6 +477,11 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 	info->csd = csd;
 	yasm_bcs_traverse(yasm_section_get_bytecodes(sect), info,
 			  coff_objfmt_output_bytecode);
+
+	/* Sanity check final section size */
+	if (csd->size != (last->offset + last->len))
+	    yasm_internal_error(
+		N_("coff: section computed size did not match actual size"));
     }
 
     /* Empty?  Go on to next section */
