@@ -1,4 +1,4 @@
-/* $Id: nasm-bison.y,v 1.14 2001/07/05 05:04:37 peter Exp $
+/* $Id: nasm-bison.y,v 1.15 2001/07/05 07:21:35 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -44,11 +44,7 @@ extern void yyerror(char *);
 	char *name;
 	int line;
     } syminfo;
-    struct {
-	unsigned char d1;
-	unsigned char d2;
-	unsigned char d3;
-    } groupdata;
+    unsigned char groupdata[3];
     effaddr ea_val;
     immval im_val;
     bytecode bc;

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.13 2001/07/05 07:00:01 peter Exp $
+# $Id: gen_instr.pl,v 1.14 2001/07/05 07:21:35 peter Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -84,7 +84,7 @@ my $valid_regs = join '|', qw(
 );
 my $valid_opcodes = join '|', qw(
     [0-9A-F]{2}
-    \\$0\\.1 \\$0\\.2 \\$0\\.3
+    \\$0\\.0 \\$0\\.1 \\$0\\.2
 );
 my $valid_cpus = join '|', qw(
     8086 186 286 386 486 P4 P5 P6
@@ -153,6 +153,12 @@ sub read_instructions ($)
     sub add_group_rule ($$$$)
     {
 	my ($inst, $args, $groups, $instrfile) = splice @_;
+
+	# yes, this is a kludge, to slide $0.\d down by one.
+	# is there a better way? (other than changing instrs.dat :)
+	$args =~ s/\$0\.1/\$0\.0/g;
+	$args =~ s/\$0\.2/\$0\.1/g;
+	$args =~ s/\$0\.3/\$0\.2/g;
 
 	my ($op, $size, $opcode, $eff, $imm, $cpu) = split /\t+/, $args;
 	eval {
@@ -269,12 +275,10 @@ sub output_lex ($@)
 			if ($grp->[2])
 			{
 			    @groupdata = split ",", $grp->[2];
-			    # choke.  gasp.  yes, the .d\d array starts
-			    # at 1 not 0.  *glares*
-			    for (my $i=1; $i <= @groupdata; ++$i)
+			    for (my $i=0; $i < @groupdata; ++$i)
 			    {
-				$groupdata[$i-1] =~ s/nil/0/;
-				$groupdata[$i-1] = " yylval.groupdata.d$i = 0x$groupdata[$i-1];";
+				$groupdata[$i] =~ s/nil/0/;
+				$groupdata[$i] = " yylval.groupdata[$i] = 0x$groupdata[$i];";
 			    }
 			    $groupdata[-1] .= "\n\t     ";
 			}
@@ -476,7 +480,7 @@ sub output_yacc ($@)
 		    $args[-1] =~ s[^([0-9A-Fa-f]+),]
 			[ConvertIntToImm((immval *)NULL, 0x$1),];
 		    $args[-1] =~ s[^\$0.(\d+),]
-			[ConvertIntToImm((immval *)NULL, \$1.d$1),];
+			[ConvertIntToImm((immval *)NULL, \$1\[$1\]),];
 
 		    # divide the second, and only the second, by 8 bits/byte
 		    $args[-1] =~ s#(,\s*)(\d+)(s)?#$1 . ($2/8)#eg;
@@ -488,7 +492,7 @@ sub output_yacc ($@)
 		    die $args[-1] if $args[-1] =~ m/\d+[ris]/;
 
 		    # now that we've constructed the arglist, subst $0.\d
-		    s/\$0\.(\d+)/\$1.d$1/g foreach (@args);
+		    s/\$0\.(\d+)/\$1\[$1\]/g foreach (@args);
 		    
 		    # see if we match one of the cases to defer
 		    if (($inst->[OPERANDS]||"") =~ m/,ONE/)
