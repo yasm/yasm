@@ -1,4 +1,4 @@
-/* $Id: bison.y.in,v 1.31 2001/09/16 19:47:21 peter Exp $
+/* $Id: bison.y.in,v 1.32 2001/09/16 20:17:51 peter Exp $
  * NASM-compatible bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -42,7 +42,7 @@
 #include "bytecode.h"
 #include "section.h"
 
-RCSID("$Id: bison.y.in,v 1.31 2001/09/16 19:47:21 peter Exp $");
+RCSID("$Id: bison.y.in,v 1.32 2001/09/16 20:17:51 peter Exp $");
 
 #define YYDEBUG 1
 
@@ -124,7 +124,7 @@ extern section *nasm_parser_cur_section;
 
 %%
 input: /* empty */
-    | input line {
+    | input line    {
 	OutputError();
 	OutputWarning();
 	if ($2) {
@@ -138,10 +138,10 @@ input: /* empty */
     }
 ;
 
-line: '\n'	{ $$ = (bytecode *)NULL; }
+line: '\n'		{ $$ = (bytecode *)NULL; }
     | exp '\n'
-    | directive '\n' { $$ = (bytecode *)NULL; }
-    | error '\n' {
+    | directive '\n'	{ $$ = (bytecode *)NULL; }
+    | error '\n'	{
 	Error(_("label or instruction expected at start of line"));
 	$$ = (bytecode *)NULL;
 	yyerrok;
@@ -149,48 +149,48 @@ line: '\n'	{ $$ = (bytecode *)NULL; }
 ;
 
 exp: instr
-    | DECLARE_DATA datavals	{ $$ = bytecode_new_data(&$2, $1); }
-    | RESERVE_SPACE expr	{ $$ = bytecode_new_reserve($2, $1); }
-    | label exp			{ $$ = $2; }
-    | label			{ $$ = (bytecode *)NULL; }
+    | DECLARE_DATA datavals { $$ = bytecode_new_data(&$2, $1); }
+    | RESERVE_SPACE expr    { $$ = bytecode_new_reserve($2, $1); }
+    | label exp		    { $$ = $2; }
+    | label		    { $$ = (bytecode *)NULL; }
 ;
 
-datavals: dataval		{
+datavals: dataval	    {
 	STAILQ_INIT(&$$);
 	STAILQ_INSERT_TAIL(&$$, $1, link);
     }
-    | datavals ',' dataval	{
+    | datavals ',' dataval  {
 	STAILQ_INSERT_TAIL(&$1, $3, link);
 	$$ = $1;
     }
 ;
 
-dataval: expr_no_string		{ $$ = dataval_new_expr($1); }
-    | FLTNUM			{ $$ = dataval_new_float($1); }
-    | STRING			{ $$ = dataval_new_string($1); }
-    | error			{
+dataval: expr_no_string	{ $$ = dataval_new_expr($1); }
+    | FLTNUM		{ $$ = dataval_new_float($1); }
+    | STRING		{ $$ = dataval_new_string($1); }
+    | error		{
 	Error(_("expression syntax error"));
 	$$ = (dataval *)NULL;
     }
 ;
 
-label: label_id { $1->value = 0; } /* TODO: calculate offset */
-    | label_id ':' { $1->value = 0; } /* TODO: calculate offset */
+label: label_id	    { $1->value = 0; } /* TODO: add pointer to bytecode */
+    | label_id ':'  { $1->value = 0; } /* TODO: add pointer to bytecode */
 ;
 
-label_id: ID { $$ = locallabel_base = sym_def_get ($1.name, SYM_LABEL); }
-    | SPECIAL_ID { $$ = sym_def_get ($1.name, SYM_LABEL); }
-    | LOCAL_ID { $$ = sym_def_get ($1.name, SYM_LABEL); }
+label_id: ID	    { $$ = locallabel_base = sym_def_get($1.name, SYM_LABEL); }
+    | SPECIAL_ID    { $$ = sym_def_get($1.name, SYM_LABEL); }
+    | LOCAL_ID	    { $$ = sym_def_get($1.name, SYM_LABEL); }
 ;
 
 /* directives */
-directive: '[' DIRECTIVE_NAME DIRECTIVE_VAL ']' {
+directive: '[' DIRECTIVE_NAME DIRECTIVE_VAL ']'	{
 	printf("Directive: Name='%s' Value='%s'\n", $2, $3);
     }
-    | '[' DIRECTIVE_NAME DIRECTIVE_VAL error {
+    | '[' DIRECTIVE_NAME DIRECTIVE_VAL error	{
 	Error(_("missing `%c'"), ']');
     }
-    | '[' DIRECTIVE_NAME error {
+    | '[' DIRECTIVE_NAME error			{
 	Error(_("missing argument to `%s'"), $2);
     }
 ;
@@ -243,22 +243,22 @@ segreg:  REG_ES
 ;
 
 /* memory addresses */
-memexp: expr		{ expr_simplify ($1); ConvertExprToEA (&$$, $1); }
+memexp: expr	{ expr_simplify ($1); ConvertExprToEA (&$$, $1); }
 ;
 
-memaddr: memexp			{ $$ = $1; $$.segment = 0; }
-    | REG_CS ':' memaddr	{ $$ = $3; SetEASegment(&$$, 0x2E); }
-    | REG_SS ':' memaddr	{ $$ = $3; SetEASegment(&$$, 0x36); }
-    | REG_DS ':' memaddr	{ $$ = $3; SetEASegment(&$$, 0x3E); }
-    | REG_ES ':' memaddr	{ $$ = $3; SetEASegment(&$$, 0x26); }
-    | REG_FS ':' memaddr	{ $$ = $3; SetEASegment(&$$, 0x64); }
-    | REG_GS ':' memaddr	{ $$ = $3; SetEASegment(&$$, 0x65); }
-    | BYTE memaddr		{ $$ = $2; SetEALen(&$$, 1); }
-    | WORD memaddr		{ $$ = $2; SetEALen(&$$, 2); }
-    | DWORD memaddr		{ $$ = $2; SetEALen(&$$, 4); }
+memaddr: memexp		    { $$ = $1; $$.segment = 0; }
+    | REG_CS ':' memaddr    { $$ = $3; SetEASegment(&$$, 0x2E); }
+    | REG_SS ':' memaddr    { $$ = $3; SetEASegment(&$$, 0x36); }
+    | REG_DS ':' memaddr    { $$ = $3; SetEASegment(&$$, 0x3E); }
+    | REG_ES ':' memaddr    { $$ = $3; SetEASegment(&$$, 0x26); }
+    | REG_FS ':' memaddr    { $$ = $3; SetEASegment(&$$, 0x64); }
+    | REG_GS ':' memaddr    { $$ = $3; SetEASegment(&$$, 0x65); }
+    | BYTE memaddr	    { $$ = $2; SetEALen(&$$, 1); }
+    | WORD memaddr	    { $$ = $2; SetEALen(&$$, 2); }
+    | DWORD memaddr	    { $$ = $2; SetEALen(&$$, 4); }
 ;
 
-mem: '[' memaddr ']' { $$ = $2; }
+mem: '[' memaddr ']'	{ $$ = $2; }
 ;
 
 /* explicit memory */
@@ -342,15 +342,15 @@ rm128: XMMREG	{ (void)ConvertRegToEA(&$$, $1); }
 ;
 
 /* immediate values */
-imm: expr		{ expr_simplify ($1); ConvertExprToImm (&$$, $1); }
+imm: expr   { expr_simplify ($1); ConvertExprToImm (&$$, $1); }
 ;
 
 /* explicit immediates */
-imm8x: BYTE imm	{ $$ = $2; }
+imm8x: BYTE imm	    { $$ = $2; }
 ;
-imm16x: WORD imm	{ $$ = $2; }
+imm16x: WORD imm    { $$ = $2; }
 ;
-imm32x: DWORD imm	{ $$ = $2; }
+imm32x: DWORD imm   { $$ = $2; }
 ;
 
 /* implicit immediates */
@@ -365,44 +365,52 @@ imm32: imm
 ;
 
 /* jump targets */
-target: expr		{ $$.val = $1; $$.op_sel = JR_NONE; }
-    | SHORT target	{ $$ = $2; SetOpcodeSel(&$$.op_sel, JR_SHORT_FORCED); }
-    | NEAR target	{ $$ = $2; SetOpcodeSel(&$$.op_sel, JR_NEAR_FORCED); }
+target: expr	    { $$.val = $1; $$.op_sel = JR_NONE; }
+    | SHORT target  { $$ = $2; SetOpcodeSel(&$$.op_sel, JR_SHORT_FORCED); }
+    | NEAR target   { $$ = $2; SetOpcodeSel(&$$.op_sel, JR_NEAR_FORCED); }
 ;
 
 /* expression trees */
-expr_no_string: INTNUM	{ $$ = expr_new_ident (EXPR_NUM, ExprNum($1)); }
-    | explabel		{ $$ = expr_new_ident (EXPR_SYM, ExprSym(sym_use_get ($1.name, SYM_LABEL))); }
-    /*| expr '||' expr	{ $$ = expr_new_tree ($1, EXPR_LOR, $3); }*/
-    | expr '|' expr	{ $$ = expr_new_tree ($1, EXPR_OR, $3); }
-    | expr '^' expr	{ $$ = expr_new_tree ($1, EXPR_XOR, $3); }
-    /*| expr '&&' expr	{ $$ = expr_new_tree ($1, EXPR_LAND, $3); }*/
-    | expr '&' expr	{ $$ = expr_new_tree ($1, EXPR_AND, $3); }
-    /*| expr '==' expr	{ $$ = expr_new_tree ($1, EXPR_EQUALS, $3); }*/
-    /*| expr '>' expr	{ $$ = expr_new_tree ($1, EXPR_GT, $3); }*/
-    /*| expr '<' expr	{ $$ = expr_new_tree ($1, EXPR_GT, $3); }*/
-    /*| expr '>=' expr	{ $$ = expr_new_tree ($1, EXPR_GE, $3); }*/
-    /*| expr '<=' expr	{ $$ = expr_new_tree ($1, EXPR_GE, $3); }*/
-    /*| expr '!=' expr	{ $$ = expr_new_tree ($1, EXPR_NE, $3); }*/
-    | expr LEFT_OP expr	{ $$ = expr_new_tree ($1, EXPR_SHL, $3); }
-    | expr RIGHT_OP expr	{ $$ = expr_new_tree ($1, EXPR_SHR, $3); }
-    | expr '+' expr	{ $$ = expr_new_tree ($1, EXPR_ADD, $3); }
-    | expr '-' expr	{ $$ = expr_new_tree ($1, EXPR_SUB, $3); }
-    | expr '*' expr	{ $$ = expr_new_tree ($1, EXPR_MUL, $3); }
-    | expr '/' expr	{ $$ = expr_new_tree ($1, EXPR_DIV, $3); }
-    | expr '%' expr	{ $$ = expr_new_tree ($1, EXPR_MOD, $3); }
+expr_no_string: INTNUM		{ $$ = expr_new_ident(EXPR_NUM, ExprNum($1)); }
+    | explabel			{
+	$$ = expr_new_ident(EXPR_SYM,
+			    ExprSym(sym_use_get($1.name, SYM_LABEL)));
+    }
+    /*| expr '||' expr		{ $$ = expr_new_tree($1, EXPR_LOR, $3); }*/
+    | expr '|' expr		{ $$ = expr_new_tree($1, EXPR_OR, $3); }
+    | expr '^' expr		{ $$ = expr_new_tree($1, EXPR_XOR, $3); }
+    /*| expr '&&' expr		{ $$ = expr_new_tree($1, EXPR_LAND, $3); }*/
+    | expr '&' expr		{ $$ = expr_new_tree($1, EXPR_AND, $3); }
+    /*| expr '==' expr		{ $$ = expr_new_tree($1, EXPR_EQUALS, $3); }*/
+    /*| expr '>' expr		{ $$ = expr_new_tree($1, EXPR_GT, $3); }*/
+    /*| expr '<' expr		{ $$ = expr_new_tree($1, EXPR_GT, $3); }*/
+    /*| expr '>=' expr		{ $$ = expr_new_tree($1, EXPR_GE, $3); }*/
+    /*| expr '<=' expr		{ $$ = expr_new_tree($1, EXPR_GE, $3); }*/
+    /*| expr '!=' expr		{ $$ = expr_new_tree($1, EXPR_NE, $3); }*/
+    | expr LEFT_OP expr		{ $$ = expr_new_tree($1, EXPR_SHL, $3); }
+    | expr RIGHT_OP expr	{ $$ = expr_new_tree($1, EXPR_SHR, $3); }
+    | expr '+' expr		{ $$ = expr_new_tree($1, EXPR_ADD, $3); }
+    | expr '-' expr		{ $$ = expr_new_tree($1, EXPR_SUB, $3); }
+    | expr '*' expr		{ $$ = expr_new_tree($1, EXPR_MUL, $3); }
+    | expr '/' expr		{ $$ = expr_new_tree($1, EXPR_DIV, $3); }
+    | expr '%' expr		{ $$ = expr_new_tree($1, EXPR_MOD, $3); }
     | '+' expr %prec UNARYOP	{ $$ = $2; }
-    | '-' expr %prec UNARYOP	{ $$ = expr_new_branch (EXPR_NEG, $2); }
-    /*| '!' expr		{ $$ = expr_new_branch (EXPR_LNOT, $2); }*/
-    | '~' expr %prec UNARYOP	{ $$ = expr_new_branch (EXPR_NOT, $2); }
-    | '(' expr ')'	{ $$ = $2; }
+    | '-' expr %prec UNARYOP	{ $$ = expr_new_branch(EXPR_NEG, $2); }
+    /*| '!' expr		{ $$ = expr_new_branch(EXPR_LNOT, $2); }*/
+    | '~' expr %prec UNARYOP	{ $$ = expr_new_branch(EXPR_NOT, $2); }
+    | '(' expr ')'		{ $$ = $2; }
 ;
 
 expr: expr_no_string
-    | STRING		{ $$ = expr_new_ident (EXPR_NUM, ExprNum(ConvertCharConstToInt($1))); }
+    | STRING		{
+	$$ = expr_new_ident (EXPR_NUM, ExprNum(ConvertCharConstToInt($1)));
+    }
 ;
 
-explabel: ID | SPECIAL_ID | LOCAL_ID ;
+explabel: ID
+    | SPECIAL_ID
+    | LOCAL_ID
+;
 
 instr: instrbase
     | OPERSIZE instr	{ $$ = $2; SetInsnOperSizeOverride($$, $1); }
@@ -430,10 +438,10 @@ ConvertCharConstToInt(char *cc)
     unsigned long retval = 0;
     size_t len = strlen(cc);
 
-    if(len > 4)
+    if (len > 4)
 	Warning(_("character constant too large, ignoring trailing characters"));
 
-    switch(len) {
+    switch (len) {
 	case 4:
 	    retval |= (unsigned long)cc[3];
 	    retval <<= 8;

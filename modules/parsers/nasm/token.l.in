@@ -1,4 +1,4 @@
-/* $Id: token.l.in,v 1.18 2001/09/16 19:47:21 peter Exp $
+/* $Id: token.l.in,v 1.19 2001/09/16 20:17:51 peter Exp $
  * NASM-compatible lex lexer
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -42,7 +42,7 @@
 
 #include "bison.h"
 
-RCSID("$Id: token.l.in,v 1.18 2001/09/16 19:47:21 peter Exp $");
+RCSID("$Id: token.l.in,v 1.19 2001/09/16 20:17:51 peter Exp $");
 
 #define yylval	nasm_parser_lval
 
@@ -59,12 +59,16 @@ static char *strbuf = (char *)NULL;
 /* length of strbuf (including terminating NULL character) */
 static size_t strbuf_size = 0;
 
+/* last "base" label for local (.) labels */
+symrec *locallabel_base = (symrec *)NULL;
+
+/* current line number */
+int line_number;
+
 %}
 %option noyywrap
 %option nounput
 %option case-insensitive
-    symrec *locallabel_base = (symrec *)NULL;
-    int line_number;
 
 %x DIRECTIVE DIRECTIVE2
 
@@ -118,26 +122,26 @@ WS       [ \t\r]
     char endch = yytext[0];
 
     strbuf = malloc(STRBUF_ALLOC_SIZE);
-    if(!strbuf)
+    if (!strbuf)
 	Fatal(FATAL_NOMEM);
 
     strbuf_size = STRBUF_ALLOC_SIZE;
     inch = input();
     count = 0;
-    while(inch != EOF && inch != endch && inch != '\n') {
+    while (inch != EOF && inch != endch && inch != '\n') {
 	strbuf[count++] = inch;
-	if(count >= strbuf_size) {
+	if (count >= strbuf_size) {
 	    strbuf = realloc(strbuf, strbuf_size + STRBUF_ALLOC_SIZE);
-	    if(!strbuf)
+	    if (!strbuf)
 		Fatal(FATAL_NOMEM);
 	    strbuf_size += STRBUF_ALLOC_SIZE;
 	}
 	inch = input();
     }
 
-    if(inch == '\n')
+    if (inch == '\n')
 	Error(_("unterminated string"));
-    else if(inch == EOF)
+    else if (inch == EOF)
 	Error(_("unexpected end of file in string"));
 
     strbuf[count] = '\0';
@@ -154,17 +158,18 @@ WS       [ \t\r]
 <DIRECTIVE2>\n	    { BEGIN INITIAL; return '\n'; }
 <DIRECTIVE>{WS}+    ;
 <DIRECTIVE2>{WS}+   ;
+
 <DIRECTIVE>[a-z]+   {
     BEGIN DIRECTIVE2;
     yylval.str_val = strdup(yytext);
-    if(!yylval.str_val)
+    if (!yylval.str_val)
 	Fatal(FATAL_NOMEM);
     return DIRECTIVE_NAME;
 }
     /* everything printable except for ' ', '[' and ']'. */
 <DIRECTIVE2>[!-@a-z\\^-`{|}~]+ {
     yylval.str_val = strdup(yytext);
-    if(!yylval.str_val)
+    if (!yylval.str_val)
 	Fatal(FATAL_NOMEM);
     return DIRECTIVE_VAL;
 }
@@ -238,10 +243,10 @@ dr[0-367]	{ yylval.int_val = yytext[2]-'0'; return DRREG; }
 tr[3-7]		{ yylval.int_val = yytext[2]-'0'; return TRREG; }
 
     /* floating point, MMX, and SSE registers */
-st0	{ yylval.int_val = 0; return ST0; }
-st[1-7]	{ yylval.int_val = yytext[2]-'0'; return FPUREG_NOTST0; }
-mm[0-7]	{ yylval.int_val = yytext[2]-'0'; return MMXREG; }
-xmm[0-7]	{ yylval.int_val = yytext[3]-'0'; return XMMREG; }
+st0	    { yylval.int_val = 0; return ST0; }
+st[1-7]	    { yylval.int_val = yytext[2]-'0'; return FPUREG_NOTST0; }
+mm[0-7]	    { yylval.int_val = yytext[2]-'0'; return MMXREG; }
+xmm[0-7]    { yylval.int_val = yytext[3]-'0'; return XMMREG; }
 
     /* integer registers */
 eax	{ yylval.int_val = 0; return REG_EAX; }
@@ -279,16 +284,18 @@ ds	{ yylval.int_val = 3; return REG_DS; }
 fs	{ yylval.int_val = 4; return REG_FS; }
 gs	{ yylval.int_val = 5; return REG_GS; }
 
-"<<"	{ return LEFT_OP; }
-">>"	{ return RIGHT_OP; }
-"//"	{ return SIGNDIV; }
-"%%"	{ return SIGNMOD; }
+    /* operators */
+"<<"			{ return LEFT_OP; }
+">>"			{ return RIGHT_OP; }
+"//"			{ return SIGNDIV; }
+"%%"			{ return SIGNMOD; }
 [-+|^&*/%~():[\],]	{ return yytext[0]; }
 
     /* special non-local ..@label and labels like ..start */
 $$|$|\.\.[a-z0-9_$#@~.?]+ {
-    yylval.syminfo.name = strdup (yytext);
-    if (yylval.syminfo.name == NULL) Fatal (FATAL_NOMEM);
+    yylval.syminfo.name = strdup(yytext);
+    if (!yylval.syminfo.name)
+	Fatal(FATAL_NOMEM);
     yylval.syminfo.line = line_number;
 
     return SPECIAL_ID;
@@ -296,20 +303,18 @@ $$|$|\.\.[a-z0-9_$#@~.?]+ {
 
     /* local label (.label) */
 \.[a-z0-9_$#@~?][a-z0-9_$#@~.?]* {
-    if (locallabel_base == NULL) 
-    {
-	Warning (_("no non-local label before `%s'"), yytext);
-	yylval.syminfo.name = strdup (yytext);
-	if (yylval.syminfo.name == NULL) Fatal (FATAL_NOMEM);
-    }
-    else
-    {
-	yylval.syminfo.name = malloc (strlen (yytext)
-				  + strlen (locallabel_base->name)
-				  + 1);
-	if (yylval.syminfo.name == NULL) Fatal (FATAL_NOMEM);
-	strcpy (yylval.syminfo.name, locallabel_base->name);
-	strcat (yylval.syminfo.name, yytext);
+    if (!locallabel_base) {
+	Warning(_("no non-local label before `%s'"), yytext);
+	yylval.syminfo.name = strdup(yytext);
+	if (!yylval.syminfo.name)
+	    Fatal(FATAL_NOMEM);
+    } else {
+	yylval.syminfo.name = malloc(strlen(yytext) +
+				     strlen(locallabel_base->name) + 1);
+	if (!yylval.syminfo.name)
+	    Fatal(FATAL_NOMEM);
+	strcpy(yylval.syminfo.name, locallabel_base->name);
+	strcat(yylval.syminfo.name, yytext);
     }
     yylval.syminfo.line = line_number;
 
@@ -321,8 +326,9 @@ $$|$|\.\.[a-z0-9_$#@~.?]+ {
 
     /* label */
 [a-z_?][a-z0-9_$#@~.?]* {
-    yylval.syminfo.name = strdup (yytext);
-    if (yylval.syminfo.name == NULL) Fatal (FATAL_NOMEM);
+    yylval.syminfo.name = strdup(yytext);
+    if (!yylval.syminfo.name)
+	Fatal(FATAL_NOMEM);
     yylval.syminfo.line = line_number;
 
     return ID;
