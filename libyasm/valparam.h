@@ -1,8 +1,8 @@
 /**
  * \file valparam.h
- * \brief YASM Value/Parameter type interface.
+ * \brief YASM value/parameter interface.
  *
- * $IdPath: yasm/libyasm/valparam.h,v 1.13 2003/05/04 20:28:28 peter Exp $
+ * $IdPath: yasm/libyasm/valparam.h,v 1.14 2003/05/05 03:42:10 peter Exp $
  *
  *  Copyright (C) 2001  Peter Johnson
  *
