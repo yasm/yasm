@@ -373,13 +373,29 @@ static const x86_insn_info push_insn[] = {
     { CPU_Any, 0, 16, 1, {0x68, 0, 0}, 0, 1, {OPT_Imm|OPS_16|OPA_Imm, 0, 0} },
     { CPU_386, 0, 32, 1, {0x68, 0, 0}, 0, 1, {OPT_Imm|OPS_32|OPA_Imm, 0, 0} },
     { CPU_Any, 0, 0, 1, {0x0E, 0, 0}, 0, 1, {OPT_CS|OPS_Any|OPA_None, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0x0E, 0, 0}, 0, 1, {OPT_CS|OPS_16|OPA_None, 0, 0} },
+    { CPU_Any, 0, 32, 1, {0x0E, 0, 0}, 0, 1, {OPT_CS|OPS_32|OPA_None, 0, 0} },
     { CPU_Any, 0, 0, 1, {0x16, 0, 0}, 0, 1, {OPT_SS|OPS_Any|OPA_None, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0x16, 0, 0}, 0, 1, {OPT_SS|OPS_16|OPA_None, 0, 0} },
+    { CPU_Any, 0, 32, 1, {0x16, 0, 0}, 0, 1, {OPT_SS|OPS_32|OPA_None, 0, 0} },
     { CPU_Any, 0, 0, 1, {0x1E, 0, 0}, 0, 1, {OPT_DS|OPS_Any|OPA_None, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0x1E, 0, 0}, 0, 1, {OPT_DS|OPS_16|OPA_None, 0, 0} },
+    { CPU_Any, 0, 32, 1, {0x1E, 0, 0}, 0, 1, {OPT_DS|OPS_32|OPA_None, 0, 0} },
     { CPU_Any, 0, 0, 1, {0x06, 0, 0}, 0, 1, {OPT_ES|OPS_Any|OPA_None, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0x06, 0, 0}, 0, 1, {OPT_ES|OPS_16|OPA_None, 0, 0} },
+    { CPU_Any, 0, 32, 1, {0x06, 0, 0}, 0, 1, {OPT_ES|OPS_32|OPA_None, 0, 0} },
     { CPU_386, 0, 0, 2, {0x0F, 0xA0, 0}, 0, 1,
       {OPT_FS|OPS_Any|OPA_None, 0, 0} },
+    { CPU_386, 0, 16, 2, {0x0F, 0xA0, 0}, 0, 1,
+      {OPT_FS|OPS_16|OPA_None, 0, 0} },
+    { CPU_386, 0, 32, 2, {0x0F, 0xA0, 0}, 0, 1,
+      {OPT_FS|OPS_32|OPA_None, 0, 0} },
     { CPU_386, 0, 0, 2, {0x0F, 0xA8, 0}, 0, 1,
-      {OPT_GS|OPS_Any|OPA_None, 0, 0} }
+      {OPT_GS|OPS_Any|OPA_None, 0, 0} },
+    { CPU_386, 0, 16, 2, {0x0F, 0xA8, 0}, 0, 1,
+      {OPT_GS|OPS_16|OPA_None, 0, 0} },
+    { CPU_386, 0, 32, 2, {0x0F, 0xA8, 0}, 0, 1,
+      {OPT_GS|OPS_32|OPA_None, 0, 0} }
 };
 
 /* Pop instructions */
@@ -397,12 +413,26 @@ static const x86_insn_info pop_insn[] = {
     /*{ CPU_Any|CPU_Undoc|CPU_Obs, 0, 0, 1, {0x0F, 0, 0}, 0, 1,
         {OPT_CS|OPS_Any|OPA_None, 0, 0} },*/
     { CPU_Any, 0, 0, 1, {0x17, 0, 0}, 0, 1, {OPT_SS|OPS_Any|OPA_None, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0x17, 0, 0}, 0, 1, {OPT_SS|OPS_16|OPA_None, 0, 0} },
+    { CPU_Any, 0, 32, 1, {0x17, 0, 0}, 0, 1, {OPT_SS|OPS_32|OPA_None, 0, 0} },
     { CPU_Any, 0, 0, 1, {0x1F, 0, 0}, 0, 1, {OPT_DS|OPS_Any|OPA_None, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0x1F, 0, 0}, 0, 1, {OPT_DS|OPS_16|OPA_None, 0, 0} },
+    { CPU_Any, 0, 32, 1, {0x1F, 0, 0}, 0, 1, {OPT_DS|OPS_32|OPA_None, 0, 0} },
     { CPU_Any, 0, 0, 1, {0x07, 0, 0}, 0, 1, {OPT_ES|OPS_Any|OPA_None, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0x07, 0, 0}, 0, 1, {OPT_ES|OPS_16|OPA_None, 0, 0} },
+    { CPU_Any, 0, 32, 1, {0x07, 0, 0}, 0, 1, {OPT_ES|OPS_32|OPA_None, 0, 0} },
     { CPU_386, 0, 0, 2, {0x0F, 0xA1, 0}, 0, 1,
       {OPT_FS|OPS_Any|OPA_None, 0, 0} },
+    { CPU_386, 0, 16, 2, {0x0F, 0xA1, 0}, 0, 1,
+      {OPT_FS|OPS_16|OPA_None, 0, 0} },
+    { CPU_386, 0, 32, 2, {0x0F, 0xA1, 0}, 0, 1,
+      {OPT_FS|OPS_32|OPA_None, 0, 0} },
     { CPU_386, 0, 0, 2, {0x0F, 0xA9, 0}, 0, 1,
-      {OPT_GS|OPS_Any|OPA_None, 0, 0} }
+      {OPT_GS|OPS_Any|OPA_None, 0, 0} },
+    { CPU_386, 0, 16, 2, {0x0F, 0xA9, 0}, 0, 1,
+      {OPT_GS|OPS_16|OPA_None, 0, 0} },
+    { CPU_386, 0, 32, 2, {0x0F, 0xA9, 0}, 0, 1,
+      {OPT_GS|OPS_32|OPA_None, 0, 0} }
 };
 
 /* Exchange instructions */
@@ -603,7 +633,7 @@ static const x86_insn_info imul_insn[] = {
        OPT_Imm|OPS_8|OPA_SImm} },
     { CPU_186, 0, 16, 1, {0x6B, 0, 0}, 0, 2,
       {OPT_Reg|OPS_16|OPA_SpareEA, OPT_Imm|OPS_8|OPA_SImm, 0} },
-    { CPU_386, 0, 32, 1, {0x6B, 0, 0}, 0, 3,
+    { CPU_386, 0, 32, 1, {0x6B, 0, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_SpareEA, OPT_Imm|OPS_8|OPA_SImm, 0} },
     { CPU_186, 0, 16, 1, {0x69, 0x6B, 0}, 0, 3,
       {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA,
@@ -614,7 +644,7 @@ static const x86_insn_info imul_insn[] = {
     { CPU_186, 0, 16, 1, {0x69, 0x6B, 0}, 0, 2,
       {OPT_Reg|OPS_16|OPA_SpareEA,
        OPT_Imm|OPS_16|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail, 0} },
-    { CPU_386, 0, 32, 1, {0x69, 0x6B, 0}, 0, 3,
+    { CPU_386, 0, 32, 1, {0x69, 0x6B, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_SpareEA,
        OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail, 0} }
 };
