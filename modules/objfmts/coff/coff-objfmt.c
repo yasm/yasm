@@ -40,7 +40,7 @@
  * with VMA=0.  Who's right?  This is #defined as changing this setting affects
  * several places in the code.
  */
-#define COFF_SET_VMA	1
+#define COFF_SET_VMA	(!win32)
 
 #define COFF_I386MAGIC	0x14C
 
@@ -60,16 +60,26 @@ typedef struct coff_reloc {
     } type;			    /* type of relocation */
 } coff_reloc;
 
-typedef enum coff_section_data_flags {
-    COFF_STYP_TEXT = 0x0020,
-    COFF_STYP_DATA = 0x0040,
-    COFF_STYP_BSS = 0x0080
-} coff_section_data_flags;
+#define COFF_STYP_TEXT		0x00000020UL
+#define COFF_STYP_DATA		0x00000040UL
+#define COFF_STYP_BSS		0x00000080UL
+#define COFF_STYP_INFO		0x00000200UL
+#define COFF_STYP_STD_MASK	0x000003FFUL
+#define COFF_STYP_ALIGN_MASK	0x00F00000UL
+#define COFF_STYP_ALIGN_SHIFT	20
+#define COFF_STYP_DISCARD	0x02000000UL
+#define COFF_STYP_NOCACHE	0x04000000UL
+#define COFF_STYP_NOPAGE	0x08000000UL
+#define COFF_STYP_SHARED	0x10000000UL
+#define COFF_STYP_EXECUTE	0x20000000UL
+#define COFF_STYP_READ		0x40000000UL
+#define COFF_STYP_WRITE		0x80000000UL
+#define COFF_STYP_WIN32_MASK	0xFE000000UL
 
 typedef struct coff_section_data {
     /*@dependent@*/ yasm_symrec *sym;	/* symbol created for this section */
     unsigned int scnum;	    /* section number (1=first section) */
-    coff_section_data_flags flags;
+    unsigned long flags;    /* section flags (see COFF_STYP_* above) */
     unsigned long addr;	    /* starting memory address (first section -> 0) */
     unsigned long scnptr;   /* file ptr to raw data */
     unsigned long size;	    /* size of raw data (section data) in bytes */
@@ -150,6 +160,9 @@ static coff_symtab_head coff_symtab;	    /* symbol table of indexed syms */
 yasm_objfmt yasm_coff_LTX_objfmt;
 static /*@dependent@*/ yasm_arch *cur_arch;
 
+/* Set nonzero for win32 output. */
+static int win32;
+
 
 static /*@dependent@*/ coff_symtab_entry *
 coff_objfmt_symtab_append(yasm_symrec *sym, coff_symrec_sclass sclass,
@@ -192,7 +205,7 @@ coff_objfmt_append_local_sym(yasm_symrec *sym, /*@unused@*/ /*@null@*/ void *d)
 }
 
 static void
-coff_objfmt_initialize(const char *in_filename,
+coff_common_initialize(const char *in_filename,
 		       /*@unused@*/ const char *obj_filename,
 		       /*@unused@*/ yasm_dbgfmt *df, yasm_arch *a)
 {
@@ -218,6 +231,22 @@ coff_objfmt_initialize(const char *in_filename,
     entry->auxtype = COFF_SYMTAB_AUX_FILE;
     entry->aux[0].fname = yasm__xstrdup(in_filename);
     STAILQ_INSERT_TAIL(&coff_symtab, entry, link);
+}
+
+static void
+coff_objfmt_initialize(const char *in_filename, const char *obj_filename,
+		       yasm_dbgfmt *df, yasm_arch *a)
+{
+    win32 = 0;
+    coff_common_initialize(in_filename, obj_filename, df, a);
+}
+
+static void
+win32_objfmt_initialize(const char *in_filename, const char *obj_filename,
+			yasm_dbgfmt *df, yasm_arch *a)
+{
+    win32 = 1;
+    coff_common_initialize(in_filename, obj_filename, df, a);
 }
 
 static int
@@ -283,15 +312,17 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char **bufp,
 	reloc->sym = sym;
 	vis = yasm_symrec_get_visibility(sym);
 	if (vis & YASM_SYM_COMMON) {
-	    /*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
+	    /* In standard COFF, COMMON symbols have their length added in */
+	    if (!win32) {
+		/*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
 
-	    /* COMMON symbols have their length added in */
-	    csymd = yasm_symrec_get_of_data(sym);
-	    assert(csymd != NULL);
-	    *ep = yasm_expr_new(YASM_EXPR_ADD, yasm_expr_expr(*ep),
-				yasm_expr_expr(yasm_expr_copy(csymd->size)),
-				csymd->size->line);
-	    *ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
+		csymd = yasm_symrec_get_of_data(sym);
+		assert(csymd != NULL);
+		*ep = yasm_expr_new(YASM_EXPR_ADD, yasm_expr_expr(*ep),
+				    yasm_expr_expr(yasm_expr_copy(csymd->size)),
+				    csymd->size->line);
+		*ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
+	    }
 	} else if (!(vis & YASM_SYM_EXTERN)) {
 	    /* Local symbols need relocation to their section's start */
 	    if (yasm_symrec_get_label(sym, &label_sect, &label_precbc)) {
@@ -308,11 +339,22 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char **bufp,
 
 	if (rel) {
 	    reloc->type = COFF_RELOC_REL32;
-	    /* Need to reference to start of section, so add $$ in. */
-	    *ep = yasm_expr_new(YASM_EXPR_ADD, yasm_expr_expr(*ep),
-		yasm_expr_sym(yasm_symrec_define_label("$$", info->sect, NULL,
-						       0, (*ep)->line)),
-		(*ep)->line);
+	    /* For standard COFF, need to reference to start of section, so add
+	     * $$ in.
+	     * For Win32 COFF, need to reference to next bytecode, so add '$'
+	     * (really $+$.len) in.
+	     */
+	    if (win32)
+		*ep = yasm_expr_new(YASM_EXPR_ADD, yasm_expr_expr(*ep),
+		    yasm_expr_sym(yasm_symrec_define_label("$", info->sect, bc,
+							   0, (*ep)->line)),
+		    (*ep)->line);
+	    else
+		*ep = yasm_expr_new(YASM_EXPR_ADD, yasm_expr_expr(*ep),
+		    yasm_expr_sym(yasm_symrec_define_label("$$", info->sect,
+							   NULL, 0,
+							   (*ep)->line)),
+		    (*ep)->line);
 	    *ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
 	} else
 	    reloc->type = COFF_RELOC_ADDR32;
@@ -401,7 +443,7 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 
     csd->addr = info->addr;
 
-    if (csd->flags == COFF_STYP_BSS) {
+    if ((csd->flags & COFF_STYP_STD_MASK) == COFF_STYP_BSS) {
 	/*@null@*/ yasm_bytecode *last =
 	    yasm_bcs_last(yasm_section_get_bytecodes(sect));
 
@@ -747,42 +789,170 @@ coff_objfmt_sections_switch(yasm_sectionhead *headp,
     yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_section *retval;
     int isnew;
-    coff_section_data_flags flags;
+    unsigned long flags;
     int flags_override = 0;
     char *sectname;
     int resonly = 0;
+    static const struct {
+	const char *name;
+	unsigned long stdflags;	/* if 0, win32 only qualifier */
+	unsigned long win32flags;
+	/* Mode: 0 => clear specified bits
+	 *       1 => set specified bits
+	 *       2 => clear all bits, then set specified bits
+	 */
+	int mode;
+    } flagquals[] = {
+	{ "code", COFF_STYP_TEXT, COFF_STYP_EXECUTE | COFF_STYP_READ, 2 },
+	{ "text", COFF_STYP_TEXT, COFF_STYP_EXECUTE | COFF_STYP_READ, 2 },
+	{ "data", COFF_STYP_DATA, COFF_STYP_READ | COFF_STYP_WRITE, 2 },
+	{ "bss", COFF_STYP_BSS, COFF_STYP_READ | COFF_STYP_WRITE, 2 },
+	{ "info", COFF_STYP_INFO, COFF_STYP_DISCARD | COFF_STYP_READ, 2 },
+	{ "discard", 0, COFF_STYP_DISCARD, 1 },
+	{ "nodiscard", 0, COFF_STYP_DISCARD, 0 },
+	{ "cache", 0, COFF_STYP_NOCACHE, 0 },
+	{ "nocache", 0, COFF_STYP_NOCACHE, 1 },
+	{ "page", 0, COFF_STYP_NOPAGE, 0 },
+	{ "nopage", 0, COFF_STYP_NOPAGE, 1 },
+	{ "share", 0, COFF_STYP_SHARED, 1 },
+	{ "noshare", 0, COFF_STYP_SHARED, 0 },
+	{ "execute", 0, COFF_STYP_EXECUTE, 1 },
+	{ "noexecute", 0, COFF_STYP_EXECUTE, 0 },
+	{ "read", 0, COFF_STYP_READ, 1 },
+	{ "noread", 0, COFF_STYP_READ, 0 },
+	{ "write", 0, COFF_STYP_WRITE, 1 },
+	{ "nowrite", 0, COFF_STYP_WRITE, 0 },
+    };
 
     if (!vp || vp->param || !vp->val)
 	return NULL;
 
     sectname = vp->val;
     if (strlen(sectname) > 8) {
+	/* TODO: win32 format supports >8 character section names in object
+	 * files via "/nnnn" (where nnnn is decimal offset into string table).
+	 */
 	yasm__warning(YASM_WARN_GENERAL, lindex,
 	    N_("COFF section names limited to 8 characters: truncating"));
 	sectname[8] = '\0';
     }
 
-    if (strcmp(sectname, ".data") == 0)
+    if (strcmp(sectname, ".data") == 0) {
 	flags = COFF_STYP_DATA;
-    else if (strcmp(sectname, ".bss") == 0) {
+	if (win32)
+	    flags |= COFF_STYP_READ | COFF_STYP_WRITE |
+		(3<<COFF_STYP_ALIGN_SHIFT);	/* align=4 */
+    } else if (strcmp(sectname, ".bss") == 0) {
 	flags = COFF_STYP_BSS;
+	if (win32)
+	    flags |= COFF_STYP_READ | COFF_STYP_WRITE |
+		(3<<COFF_STYP_ALIGN_SHIFT);	/* align=4 */
 	resonly = 1;
-    } else
+    } else if (strcmp(sectname, ".text") == 0) {
 	flags = COFF_STYP_TEXT;
+	if (win32)
+	    flags |= COFF_STYP_EXECUTE | COFF_STYP_READ |
+		(5<<COFF_STYP_ALIGN_SHIFT);	/* align=16 */
+    } else if (strcmp(sectname, ".rdata") == 0) {
+	flags = COFF_STYP_DATA;
+	if (win32)
+	    flags |= COFF_STYP_READ | (4<<COFF_STYP_ALIGN_SHIFT); /* align=8 */
+	else
+	    yasm__warning(YASM_WARN_GENERAL, lindex,
+		N_("Standard COFF does not support read-only data sections"));
+    } else {
+	/* Default to code */
+	flags = COFF_STYP_TEXT;
+	if (win32)
+	    flags |= COFF_STYP_EXECUTE | COFF_STYP_READ;
+    }
 
     while ((vp = yasm_vps_next(vp))) {
-	if (yasm__strcasecmp(vp->val, "code") == 0 ||
-	    yasm__strcasecmp(vp->val, "text") == 0) {
-	    flags = COFF_STYP_TEXT;
-	    flags_override = 1;
-	} else if (yasm__strcasecmp(vp->val, "data") == 0) {
-	    flags = COFF_STYP_DATA;
-	    flags_override = 1;
-	} else if (yasm__strcasecmp(vp->val, "bss") == 0) {
-	    flags = COFF_STYP_BSS;
-	    flags_override = 1;
-	    resonly = 1;
+	size_t i;
+	int match, win32warn;
+
+	win32warn = 0;
+
+	match = 0;
+	for (i=0; i<NELEMS(flagquals) && !match; i++) {
+	    if (yasm__strcasecmp(vp->val, flagquals[i].name) == 0) {
+		if (!win32 && flagquals[i].stdflags == 0)
+		    win32warn = 1;
+		else switch (flagquals[i].mode) {
+		    case 0:
+			flags &= ~flagquals[i].stdflags;
+			if (win32)
+			    flags &= ~flagquals[i].win32flags;
+			break;
+		    case 1:
+			flags |= flagquals[i].stdflags;
+			if (win32)
+			    flags |= flagquals[i].win32flags;
+			break;
+		    case 2:
+			flags &= ~COFF_STYP_STD_MASK;
+			flags |= flagquals[i].stdflags;
+			if (win32) {
+			    flags &= ~COFF_STYP_WIN32_MASK;
+			    flags |= flagquals[i].win32flags;
+			}
+			break;
+		}
+		flags_override = 1;
+		match = 1;
+	    }
 	}
+
+	if (match)
+	    ;
+	else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
+	    if (win32) {
+		/*@dependent@*/ /*@null@*/ const yasm_intnum *align;
+		unsigned long bitcnt;
+		unsigned long addralign;
+
+		align = yasm_expr_get_intnum(&vp->param, NULL);
+		if (!align) {
+		    yasm__error(lindex,
+				N_("argument to `%s' is not a power of two"),
+				vp->val);
+		    return NULL;
+		}
+		addralign = yasm_intnum_get_uint(align);
+
+		/* Check to see if alignment is a power of two.
+		 * This can be checked by seeing if only one bit is set.
+		 */
+		BitCount(bitcnt, addralign);
+		if (bitcnt > 1) {
+		    yasm__error(lindex,
+				N_("argument to `%s' is not a power of two"),
+				vp->val);
+		    return NULL;
+		}
+
+		/* Check to see if alignment is supported size */
+		if (addralign > 8192) {
+		    yasm__error(lindex,
+			N_("Win32 does not support alignments > 8192"));
+		    return NULL;
+		}
+
+		/* Convert alignment into flags setting */
+		flags &= ~COFF_STYP_ALIGN_MASK;
+		while (addralign != 0) {
+		    flags += 1<<COFF_STYP_ALIGN_SHIFT;
+		    addralign >>= 1;
+		}
+	    } else
+		win32warn = 1;
+	} else
+	    yasm__warning(YASM_WARN_GENERAL, lindex,
+			  N_("Unrecognized qualifier `%s'"), vp->val);
+
+	if (win32warn)
+	    yasm__warning(YASM_WARN_GENERAL, lindex,
+		N_("Standard COFF does not support qualifier `%s'"), vp->val);
     }
 
     retval = yasm_sections_switch_general(headp, sectname, 0, resonly, &isnew,
@@ -839,7 +1009,7 @@ coff_objfmt_section_data_print(FILE *f, int indent_level, void *data)
     yasm_symrec_print(f, indent_level+1, csd->sym);
     fprintf(f, "%*sscnum=%d\n", indent_level, "", csd->scnum);
     fprintf(f, "%*sflags=", indent_level, "");
-    switch (csd->flags) {
+    switch (csd->flags & COFF_STYP_STD_MASK) {
 	case COFF_STYP_TEXT:
 	    fprintf(f, "TEXT");
 	    break;
@@ -946,6 +1116,31 @@ yasm_objfmt yasm_coff_LTX_objfmt = {
     coff_objfmt_dbgfmt_keywords,
     "null",
     coff_objfmt_initialize,
+    coff_objfmt_output,
+    coff_objfmt_cleanup,
+    coff_objfmt_sections_switch,
+    coff_objfmt_section_data_delete,
+    coff_objfmt_section_data_print,
+    coff_objfmt_extglob_declare,
+    coff_objfmt_extglob_declare,
+    coff_objfmt_common_declare,
+    coff_objfmt_symrec_data_delete,
+    coff_objfmt_symrec_data_print,
+    coff_objfmt_directive,
+    NULL /*coff_objfmt_bc_objfmt_data_delete*/,
+    NULL /*coff_objfmt_bc_objfmt_data_print*/
+};
+
+/* Define objfmt structure -- see objfmt.h for details */
+yasm_objfmt yasm_win32_LTX_objfmt = {
+    "Win32",
+    "win32",
+    "obj",
+    ".text",
+    32,
+    coff_objfmt_dbgfmt_keywords,
+    "null",
+    win32_objfmt_initialize,
     coff_objfmt_output,
     coff_objfmt_cleanup,
     coff_objfmt_sections_switch,
