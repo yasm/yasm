@@ -70,7 +70,7 @@ struct objfmt {
      * be the section name.  Returns NULL if something's wrong, otherwise
      * returns the new section.
      */
-    /*@dependent@*/ /*@null@*/ section *
+    /*@observer@*/ /*@null@*/ section *
 	(*sections_switch)(sectionhead *headp, valparamhead *valparams,
 			   /*@null@*/ valparamhead *objext_valparams);
 
@@ -89,7 +89,7 @@ struct objfmt {
      * is an enum not a bitmask).
      */
     /*@only@*/ void *
-	(*declare_data_copy)(SymVisibility vis, /*@only@*/ void *data);
+	(*declare_data_copy)(SymVisibility vis, const void *data);
     void (*declare_data_delete)(SymVisibility vis, /*@only@*/ void *data);
     void (*declare_data_print)(FILE *f, SymVisibility vis,
 			       /*@null@*/ void *data);
