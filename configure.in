@@ -17,6 +17,15 @@ AC_ARG_ENABLE(dev,
 esac],[dev=false])
 AM_CONDITIONAL(DEV, test x$dev = xtrue)
 
+AC_ARG_ENABLE(check,
+[  --disable-check Disable building of test suite and make check],
+[case "${enableval}" in
+  yes) check=true ;;
+  no)  check=false ;;
+  *) AC_MSG_ERROR(bad value ${enableval} for --enable-check) ;;
+esac],[check=true])
+AM_CONDITIONAL(CHECK, test x$check = xtrue)
+
 AM_PROG_CC_STDC
 
 ALL_LINGUAS=""

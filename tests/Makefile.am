@@ -1,8 +1,13 @@
 # $IdPath$
 
+if CHECK
 #TESTS = \
 
 #noinst_PROGRAMS = \
+else
+#TESTS =
+#noinst_PROGRAMS =
+endif
 
 INCLUDES= -I$(top_srcdir) -I$(top_srcdir)/src -I$(top_srcdir)/check
 LDADD = \

@@ -1,10 +1,15 @@
 # $IdPath$
 
+if CHECK
 TESTS = \
 	bytecode_test
 
 noinst_PROGRAMS = \
 	bytecode_test
+else
+TESTS =
+noinst_PROGRAMS =
+endif
 
 bytecode_test_SOURCES = \
 	bytecode_test.c

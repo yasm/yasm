@@ -1,6 +1,12 @@
 # $IdPath$
 
+if CHECK
 noinst_LIBRARIES=libcheck.a
+TESTS =
+else
+noinst_LIBRARIES=
+TESTS = nocheck_error
+endif
 
 libcheck_a_SOURCES = \
 	check.c		\
@@ -17,6 +23,10 @@ libcheck_a_SOURCES = \
 	error.h		\
 	list.c		\
 	list.h
+
+nocheck_error:
+	@echo "Run configure with --enable-check before running make check"
+	@exit 1
 
 if DEV
 CFLAGS = -ansi -pedantic -Wall -g
