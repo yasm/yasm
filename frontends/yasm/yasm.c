@@ -380,10 +380,10 @@ open_obj(void)
 static void
 cleanup(sectionhead *sections)
 {
-    sections_delete(sections);
-    symrec_delete_all();
     if (cur_objfmt && cur_objfmt->cleanup)
 	cur_objfmt->cleanup();
+    sections_delete(sections);
+    symrec_delete_all();
     line_shutdown();
 
     floatnum_shutdown();
