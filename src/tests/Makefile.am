@@ -25,7 +25,7 @@ LDADD = \
 	$(top_builddir)/check/libcheck.a			\
 	$(top_builddir)/src/parsers/nasm/libparser.a		\
 	$(top_builddir)/src/preprocs/raw/libpreproc.a		\
-	$(top_builddir)/src/optimizers/dbg/liboptimizer.a	\
+	$(top_builddir)/src/optimizers/basic/liboptimizer.a	\
 	$(top_builddir)/src/objfmts/dbg/libobjfmt.a		\
 	$(top_builddir)/src/arch/@ARCH@/libarch.a		\
 	$(top_builddir)/src/libyasm.a				\

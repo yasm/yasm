@@ -16,7 +16,7 @@ yasm_LDADD = \
 	arch/@ARCH@/libarch.a		\
 	parsers/nasm/libparser.a	\
 	preprocs/raw/libpreproc.a	\
-	optimizers/dbg/liboptimizer.a	\
+	optimizers/basic/liboptimizer.a	\
 	objfmts/dbg/libobjfmt.a		\
 	libyasm.a			\
 	$(INTLLIBS)
