@@ -4428,7 +4428,7 @@ pp_cleanup(int pass_)
 }
 
 void
-pp_include_path(char *path)
+pp_include_path(const char *path)
 {
     IncPath *i;
 /*  by alexfru: order of path inclusion fixed (was reverse order) */
@@ -4450,7 +4450,7 @@ pp_include_path(char *path)
 } 
 
 void
-pp_pre_include(char *fname)
+pp_pre_include(const char *fname)
 {
     Token *inc, *space, *name;
     Line *l;

@@ -180,17 +180,13 @@ nasm_preproc_input(char *buf, size_t max_size)
 static void
 nasm_preproc_add_include_path (const char *path)
 {
-    char *p = yasm__xstrdup(path);
-    pp_include_path(p);
-    yasm_xfree(p);
+    pp_include_path(path);
 }
 
 static void
 nasm_preproc_add_include_file (const char *filename)
 {
-    char *f = yasm__xstrdup(filename);
-    pp_pre_include(f);
-    yasm_xfree(f);
+    pp_pre_include(filename);
 }
 
 
