@@ -48,7 +48,7 @@ typedef enum {
 } x86_parse_insn_prefix;
 
 typedef enum {
-    X86_NEAR,
+    X86_NEAR = 1,
     X86_SHORT,
     X86_FAR,
     X86_TO
