@@ -441,7 +441,6 @@ stabs_bc_stab_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     YASM_WRITE_16_L(buf, stab->desc);
 
     if (stab->symvalue != NULL) {
-	printf("DBG: ");
 	bc->offset += 8;
 	output_reloc(stab->symvalue, bc, buf, stabs_relocsize_bytes,
 		     stabs_relocsize_bits, 0, 0, d);
