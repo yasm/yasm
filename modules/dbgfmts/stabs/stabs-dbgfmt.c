@@ -431,6 +431,10 @@ stabs_bc_stab_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		      yasm_output_expr_func output_expr,
 		      yasm_output_reloc_func output_reloc)
 {
+    /* This entire function, essentially the core of rendering stabs to a file,
+     * needs to become endian aware and more size agnostic.  Right now it works
+     * only for little-endian 32 and 64-bit systems */
+
     stabs_bc_stab *bc_stab = (stabs_bc_stab *)bc;
     unsigned char *buf = *bufp;
     const stabs_stab *stab = bc_stab->stab;
@@ -449,9 +453,13 @@ stabs_bc_stab_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     }
     else if (stab->bcvalue != NULL) {
 	YASM_WRITE_32_L(buf, stab->bcvalue->offset);
+        if (stabs_relocsize_bytes == 8)     /* Conditionally output the extra */
+	    YASM_WRITE_32_L(buf, 0);        /* bytes a 64 bit system uses */
     }
     else {
 	YASM_WRITE_32_L(buf, stab->value);
+        if (stabs_relocsize_bytes == 8)     /* Ditto for 64 bit systems */
+	    YASM_WRITE_32_L(buf, 0);
     }
 
     *bufp = buf;
