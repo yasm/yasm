@@ -53,13 +53,19 @@ EXTRA_DIST += Mkfiles/vc/yasm.dep
 EXTRA_DIST += Mkfiles/vc/yasm.dsp
 EXTRA_DIST += Mkfiles/vc/yasm.dsw
 EXTRA_DIST += Mkfiles/vc/yasm.mak
+EXTRA_DIST += Mkfiles/vc/yasm.sln
+EXTRA_DIST += Mkfiles/vc/yasm.suo
+EXTRA_DIST += Mkfiles/vc/yasm.vcproj
 EXTRA_DIST += Mkfiles/vc/config.h
 EXTRA_DIST += Mkfiles/vc/libyasm/libyasm.dep
 EXTRA_DIST += Mkfiles/vc/libyasm/libyasm.dsp
 EXTRA_DIST += Mkfiles/vc/libyasm/libyasm.mak
+EXTRA_DIST += Mkfiles/vc/libyasm/libyasm.vcproj
+EXTRA_DIST += Mkfiles/vc/modules/build.bat
 EXTRA_DIST += Mkfiles/vc/modules/modules.dep
 EXTRA_DIST += Mkfiles/vc/modules/modules.dsp
 EXTRA_DIST += Mkfiles/vc/modules/modules.mak
+EXTRA_DIST += Mkfiles/vc/modules/modules.vcproj
 
 # Until this gets fixed in automake
 DISTCLEANFILES = libyasm/stamp-h libyasm/stamp-h[0-9]*
