@@ -1,30 +1,44 @@
 #ifndef _scanner_h
 #define	_scanner_h
 
+#include <stdio.h>
 #include "token.h"
 
-class Scanner {
-  private:
-    int			in;
+typedef struct Scanner {
+    FILE		*in;
     uchar		*bot, *tok, *ptr, *cur, *pos, *lim, *top, *eof;
     uint		tchar, tline, cline;
-  private:
-    uchar *fill(uchar*);
-  public:
-    Scanner(int);
-    int echo(ostream&);
-    int scan();
-    void fatal(char*);
-    SubStr token();
-    uint line();
-};
+} Scanner;
 
-inline SubStr Scanner::token(){
-    return SubStr(tok, cur - tok);
+void Scanner_init(Scanner*, FILE *);
+static inline Scanner *Scanner_new(FILE *);
+
+int Scanner_echo(Scanner*, FILE *);
+int Scanner_scan(Scanner*);
+void Scanner_fatal(Scanner*, char*);
+SubStr Scanner_token(Scanner*);
+static inline uint Scanner_line(Scanner*);
+
+inline SubStr
+Scanner_token(Scanner *s)
+{
+    SubStr r;
+    SubStr_init_u(&r, s->tok, s->cur - s->tok);
+    return r;
 }
 
-inline uint Scanner::line(){
-    return cline;
+static inline uint
+Scanner_line(Scanner *s)
+{
+    return s->cline;
+}
+
+static inline Scanner *
+Scanner_new(FILE *i)
+{
+    Scanner *r = malloc(sizeof(Scanner));
+    Scanner_init(r, i);
+    return r;
 }
 
 #endif

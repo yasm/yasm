@@ -5,77 +5,91 @@
 #include "substr.h"
 #include "dfa.h"
 
-inline char octCh(uint c){
-    return '0' + c%8;
-}
+#define octCh(c) ('0' + c%8)
 
-void prtCh(ostream &o, uchar c){
+void prtCh(FILE *o, uchar c){
     uchar oc = talx[c];
     switch(oc){
-    case '\'': o << "\\'"; break;
-    case '\n': o << "\\n"; break;
-    case '\t': o << "\\t"; break;
-    case '\v': o << "\\v"; break;
-    case '\b': o << "\\b"; break;
-    case '\r': o << "\\r"; break;
-    case '\f': o << "\\f"; break;
-    case '\a': o << "\\a"; break;
-    case '\\': o << "\\\\"; break;
+    case '\'': fputs("\\'", o); break;
+    case '\n': fputs("\\n", o); break;
+    case '\t': fputs("\\t", o); break;
+    case '\v': fputs("\\v", o); break;
+    case '\b': fputs("\\b", o); break;
+    case '\r': fputs("\\r", o); break;
+    case '\f': fputs("\\f", o); break;
+    case '\a': fputs("\\a", o); break;
+    case '\\': fputs("\\\\", o); break;
     default:
 	if(isprint(oc))
-	    o << (char) oc;
+	    fputc(oc, o);
 	else
-	    o << '\\' << octCh(c/64) << octCh(c/8) << octCh(c);
+	    fprintf(o, "\\%c%c%c", octCh(c/64), octCh(c/8), octCh(c));
     }
 }
 
-void printSpan(ostream &o, uint lb, uint ub){
+void printSpan(FILE *o, uint lb, uint ub){
     if(lb > ub)
-	o << "*";
-    o << "[";
+	fputc('*', o);
+    fputc('[', o);
     if((ub - lb) == 1){
 	prtCh(o, lb);
     } else {
 	prtCh(o, lb);
-	o << "-";
+	fputc('-', o);
 	prtCh(o, ub-1);
     }
-    o << "]";
+    fputc(']', o);
 }
 
-uint Span::show(ostream &o, uint lb){
-    if(to){
-	printSpan(o, lb, ub);
-	o << " " << to->label << "; ";
+uint
+Span_show(Span *s, FILE *o, uint lb)
+{
+    if(s->to){
+	printSpan(o, lb, s->ub);
+	fprintf(o, " %u; ", s->to->label);
     }
     return ub;
 }
 
-ostream& operator<<(ostream &o, const State &s){
-    o << "state " << s.label;
-    if(s.rule)
-	o << " accepts " << s.rule->accept;
-    o << "\n";
-    uint lb = 0;
-    for(uint i = 0; i < s.go.nSpans; ++i)
-	lb = s.go.span[i].show(o, lb);
-    return o;
+void
+State_out(FILE *o, const State *s){
+    uint lb, i;
+    fprintf(o, "state %u", s->label);
+    if(s->rule)
+	fprintf(o, " accepts %u", s->rule->d.RuleOp.accept);
+    fputs("\n", o);
+    lb = 0;
+    for(i = 0; i < s->go.nSpans; ++i)
+	lb = s->go.span[i].show(o, lb);
 }
 
-ostream& operator<<(ostream &o, const DFA &dfa){
-    for(State *s = dfa.head; s; s = s->next)
-	o << s << "\n\n";
-    return o;
+void
+DFA_out(FILE *o, const DFA *dfa){
+    State *s;
+    for(s = dfa->head; s; s = s->next) {
+	State_out(o, s);
+	fputs("\n\n", o);
+    }
 }
 
-State::State() : rule(NULL), link(NULL), kCount(0), kernel(NULL), action(NULL) {
-    go.nSpans = 0;
-    go.span = NULL;
+State *
+State_new(void)
+{
+    State *s = malloc(sizeof(State));
+    s->rule = s->link = NULL;
+    s->kCount = 0;
+    s->kernel = s->action = NULL;
+    s->go.nSpans = 0;
+    s->go.span = NULL;
+    return s;
 }
 
-State::~State(){
-    delete [] kernel;
-    delete [] go.span;
+void
+State_delete(State *s)
+{
+    free(s->kernel);
+    free(s->go.span);
+    free(s);
 }
 
 static Ins **closure(Ins **cP, Ins *i){

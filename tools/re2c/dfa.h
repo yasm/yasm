@@ -1,149 +1,154 @@
-#ifndef _dfa_h
-#define _dfa_h
+#ifndef re2c_dfa_h
+#define re2c_dfa_h
 
-#include <iostream.h>
+#include <stdio.h>
 #include "re.h"
 
-extern void prtCh(ostream&, uchar);
-extern void printSpan(ostream&, uint, uint);
+extern void prtCh(FILE *, uchar);
+extern void printSpan(FILE *, uint, uint);
 
-class DFA;
-class State;
+struct DFA;
+struct State;
 
-class Action {
-public:
-    State		*state;
-public:
-    Action(State*);
-    virtual void emit(ostream&) = 0;
-};
+typedef enum {
+    MATCHACT = 1,
+    ENTERACT,
+    SAVEMATCHACT,
+    MOVEACT,
+    ACCEPTACT,
+    RULEACT
+} ActionType;
 
-class Match: public Action {
-public:
-    Match(State*);
-    void emit(ostream&);
-};
+typedef struct Action {
+    struct State	*state;
+    ActionType		type;
+    union {
+	/* data for Enter */
+	uint		label;
+	/* data for SaveMatch */
+	uint		selector;
+	/* data for Accept */
+	struct {
+	    uint		nRules;
+	    uint		*saves;
+	    struct State	**rules;
+	} Accept;
+	/* data for Rule */
+	RegExp		*rule;	/* RuleOp */
+    } d;
+} Action;
 
-class Enter: public Action {
-public:
-    uint		label;
-public:
-    Enter(State*, uint);
-    void emit(ostream&);
-};
+void Action_emit(Action*, FILE *);
 
-class Save: public Match {
-public:
-    uint		selector;
-public:
-    Save(State*, uint);
-    void emit(ostream&);
-};
-
-class Move: public Action {
-public:
-    Move(State*);
-    void emit(ostream&);
-};
-
-class Accept: public Action {
-public:
-    uint		nRules;
-    uint		*saves;
-    State		**rules;
-public:
-    Accept(State*, uint, uint*, State**);
-    void emit(ostream&);
-};
-
-class Rule: public Action {
-public:
-    RuleOp		*rule;
-public:
-    Rule(State*, RuleOp*);
-    void emit(ostream&);
-};
-
-class Span {
-public:
+typedef struct Span {
     uint		ub;
-    State		*to;
-public:
-    uint show(ostream&, uint);
-};
+    struct State	*to;
+} Span;
 
-class Go {
-public:
+uint Span_show(Span*, FILE *, uint);
+
+typedef struct Go {
     uint		nSpans;
     Span		*span;
-public:
-    void genGoto(ostream&, State*);
-    void genBase(ostream&, State*);
-    void genLinear(ostream&, State*);
-    void genBinary(ostream&, State*);
-    void genSwitch(ostream&, State*);
-    void compact();
-    void unmap(Go*, State*);
-};
+} Go;
 
-class State {
-public:
+typedef struct State {
     uint		label;
-    RuleOp		*rule;
-    State		*next;
-    State		*link;
-    uint		depth;		// for finding SCCs
+    RegExp		*rule;	/* RuleOp */
+    struct State	*next;
+    struct State	*link;
+    uint		depth;		/* for finding SCCs */
     uint		kCount;
     Ins			**kernel;
-    bool		isBase:1;
+    uint		isBase:1;
     Go			go;
     Action		*action;
-public:
-    State();
-    ~State();
-    void emit(ostream&);
-    friend ostream& operator<<(ostream&, const State&);
-    friend ostream& operator<<(ostream&, const State*);
-};
+} State;
 
-class DFA {
-public:
+void Go_genGoto(Go*, FILE *, State*);
+void Go_genBase(Go*, FILE *, State*);
+void Go_genLinear(Go*, FILE *, State*);
+void Go_genBinary(Go*, FILE *, State*);
+void Go_genSwitch(Go*, FILE *, State*);
+void Go_compact(Go*);
+void Go_unmap(Go*, Go*, State*);
+
+State *State_new(void);
+void State_delete(State*);
+void State_emit(State*, FILE *);
+void State_out(FILE *, const State*);
+
+typedef struct DFA {
     uint		lbChar;
     uint		ubChar;
     uint		nStates;
     State		*head, **tail;
     State		*toDo;
-public:
-    DFA(Ins*, uint, uint, uint, Char*);
-    ~DFA();
-    void addState(State**, State*);
-    State *findState(Ins**, uint);
-    void split(State*);
+} DFA;
 
-    void findSCCs();
-    void emit(ostream&);
+DFA *DFA_new(Ins*, uint, uint, uint, Char*);
+void DFA_delete(DFA*);
+void DFA_addState(DFA*, State**, State*);
+State *DFA_findState(DFA*, Ins**, uint);
+void DFA_split(DFA*, State*);
 
-    friend ostream& operator<<(ostream&, const DFA&);
-    friend ostream& operator<<(ostream&, const DFA*);
-};
+void DFA_findSCCs(DFA*);
+void DFA_emit(DFA*, FILE *);
+void DFA_out(FILE *, const DFA*);
 
-inline Action::Action(State *s) : state(s) {
-    s->action = this;
+static inline Action *
+Action_new_Match(State *s)
+{
+    Action *a = malloc(sizeof(Action));
+    a->type = MATCHACT;
+    a->state = s;
+    s->action = a;
+    return a;
 }
 
-inline Match::Match(State *s) : Action(s)
-    { }
+static inline Action *
+Action_new_Enter(State *s, uint l)
+{
+    Action *a = malloc(sizeof(Action));
+    a->type = ENTERACT;
+    a->state = s;
+    a->d.label = l;
+    s->action = a;
+    return a;
+}
 
-inline Enter::Enter(State *s, uint l) : Action(s), label(l)
-    { }
+static inline Action *
+Action_new_Save(State *s, uint i)
+{
+    Action *a = malloc(sizeof(Action));
+    a->type = SAVEMATCHACT;
+    a->state = s;
+    a->d.selector = i;
+    s->action = a;
+    return a;
+}
 
-inline Save::Save(State *s, uint i) : Match(s), selector(i)
-    { }
+static inline Action *
+Action_new_Move(State *s)
+{
+    Action *a = malloc(sizeof(Action));
+    a->type = MOVEACT;
+    a->state = s;
+    s->action = a;
+    return a;
+}
 
-inline ostream& operator<<(ostream &o, const State *s)
-    { return o << *s; }
+Action *Action_new_Accept(State*, uint, uint*, State**);
 
-inline ostream& operator<<(ostream &o, const DFA *dfa)
-    { return o << *dfa; }
+static inline Action *
+Action_new_Rule(State *s, RegExp *r) /* RuleOp */
+{
+    Action *a = malloc(sizeof(Action));
+    a->type = RULEACT;
+    a->state = s;
+    a->d.rule = r;
+    s->action = a;
+    return a;
+}
 
 #endif

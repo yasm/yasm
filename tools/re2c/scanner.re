@@ -1,7 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <iostream.h>
-#include <unistd.h>
 #include "scanner.h"
 #include "parser.h"
 #include "y.tab.h"
@@ -12,46 +10,53 @@ extern YYSTYPE yylval;
 
 #define	YYCTYPE		uchar
 #define	YYCURSOR	cursor
-#define	YYLIMIT		lim
-#define	YYMARKER	ptr
-#define	YYFILL(n)	{cursor = fill(cursor);}
+#define	YYLIMIT		s->lim
+#define	YYMARKER	s->ptr
+#define	YYFILL(n)	{cursor = fill(s, cursor);}
 
-#define	RETURN(i)	{cur = cursor; return i;}
+#define	RETURN(i)	{s->cur = cursor; return i;}
 
+static uchar *fill(Scanner*, uchar*);
 
-Scanner::Scanner(int i) : in(i),
-	bot(NULL), tok(NULL), ptr(NULL), cur(NULL), pos(NULL), lim(NULL),
-	top(NULL), eof(NULL), tchar(0), tline(0), cline(1) {
-    ;
+void
+Scanner_init(Scanner *s, FILE *i)
+{
+    s->in = i;
+    s->bot = s->tok = s->ptr = s->cur = s->pos = s->lim = s->top =
+	     s->eof = NULL;
+    s->tchar = s->tline = 0;
+    s->cline = 1;
 }
 
-uchar *Scanner::fill(uchar *cursor){
-    if(!eof){
-	uint cnt = tok - bot;
+static uchar *
+fill(Scanner *s, uchar *cursor)
+{
+    if(!s->eof){
+	uint cnt = s->tok - s->bot;
 	if(cnt){
-	    memcpy(bot, tok, lim - tok);
-	    tok = bot;
-	    ptr -= cnt;
+	    memcpy(s->bot, s->tok, s->lim - s->tok);
+	    s->tok = s->bot;
+	    s->ptr -= cnt;
 	    cursor -= cnt;
-	    pos -= cnt;
-	    lim -= cnt;
+	    s->pos -= cnt;
+	    s->lim -= cnt;
 	}
-	if((top - lim) < BSIZE){
-	    uchar *buf = new uchar[(lim - bot) + BSIZE];
-	    memcpy(buf, tok, lim - tok);
-	    tok = buf;
-	    ptr = &buf[ptr - bot];
-	    cursor = &buf[cursor - bot];
-	    pos = &buf[pos - bot];
-	    lim = &buf[lim - bot];
-	    top = &lim[BSIZE];
-	    delete [] bot;
-	    bot = buf;
+	if((s->top - s->lim) < BSIZE){
+	    uchar *buf = malloc(sizeof(uchar)*((s->lim - s->bot) + BSIZE));
+	    memcpy(buf, s->tok, s->lim - s->tok);
+	    s->tok = buf;
+	    s->ptr = &buf[s->ptr - s->bot];
+	    cursor = &buf[cursor - s->bot];
+	    s->pos = &buf[s->pos - s->bot];
+	    s->lim = &buf[s->lim - s->bot];
+	    s->top = &s->lim[BSIZE];
+	    free(s->bot);
+	    s->bot = buf;
 	}
-	if((cnt = read(in, (char*) lim, BSIZE)) != BSIZE){
-	    eof = &lim[cnt]; *eof++ = '\n';
+	if((cnt = fread(s->lim, sizeof(uchar), BSIZE, s->in)) != BSIZE){
+	    s->eof = &s->lim[cnt]; *s->eof++ = '\n';
 	}
-	lim += cnt;
+	s->lim += cnt;
     }
     return cursor;
 }
@@ -67,31 +72,35 @@ letter		= [a-zA-Z];
 digit		= [0-9];
 */
 
-int Scanner::echo(ostream &out){
-    uchar *cursor = cur;
-    tok = cursor;
+int
+Scanner_echo(Scanner *s, FILE *out)
+{
+    uchar *cursor = s->cur;
+    s->tok = cursor;
 echo:
 /*!re2c
-	"/*!re2c"		{ out.write(tok, &cursor[-7] - tok);
-				  tok = cursor;
+	"/*!re2c"		{ fwrite(s->tok, 1, &cursor[-7] - s->tok, out);
+				  s->tok = cursor;
 				  RETURN(1); }
-	"\n"			{ if(cursor == eof) RETURN(0);
-				  out.write(tok, cursor - tok);
-				  tok = pos = cursor; cline++;
+	"\n"			{ if(cursor == s->eof) RETURN(0);
+				  fwrite(s->tok, 1, cursor - s->tok, out);
+				  s->tok = s->pos = cursor; s->cline++;
 				  goto echo; }
         any			{ goto echo; }
 */
 }
 
 
-int Scanner::scan(){
-    uchar *cursor = cur;
+int
+Scanner_scan(Scanner *s)
+{
+    uchar *cursor = s->cur;
     uint depth;
 
 scan:
-    tchar = cursor - pos;
-    tline = cline;
-    tok = cursor;
+    s->tchar = cursor - s->pos;
+    s->tline = s->cline;
+    s->tok = cursor;
 /*!re2c
 	"{"			{ depth = 1;
 				  goto code;
@@ -99,36 +108,37 @@ scan:
 	"/*"			{ depth = 1;
 				  goto comment; }
 
-	"*/"			{ tok = cursor;
+	"*/"			{ s->tok = cursor;
 				  RETURN(0); }
 
-	dstring			{ cur = cursor;
-				  yylval.regexp = strToRE(token());
+	dstring			{ s->cur = cursor;
+				  yylval.regexp = strToRE(Scanner_token(s));
 				  return STRING; }
-	"\""			{ fatal("bad string"); }
+	"\""			{ Scanner_fatal(s, "bad string"); }
 
-	cstring			{ cur = cursor;
-				  yylval.regexp = ranToRE(token());
+	cstring			{ s->cur = cursor;
+				  yylval.regexp = ranToRE(Scanner_token(s));
 				  return RANGE; }
-	"["			{ fatal("bad character constant"); }
+	"["			{ Scanner_fatal(s, "bad character constant"); }
 
-	[()|=;/\\]		{ RETURN(*tok); }
+	[()|=;/\\]		{ RETURN(*s->tok); }
 
-	[*+?]			{ yylval.op = *tok;
+	[*+?]			{ yylval.op = *s->tok;
 				  RETURN(CLOSE); }
 
-	letter (letter|digit)*	{ cur = cursor;
-				  yylval.symbol = Symbol::find(token());
+	letter (letter|digit)*	{ SubStr substr = Scanner_token(s);
+				  s->cur = cursor;
+				  yylval.symbol = Symbol_find(&substr);
 				  return ID; }
 
 	[ \t]+			{ goto scan; }
 
-	"\n"			{ if(cursor == eof) RETURN(0);
-				  pos = cursor; cline++;
+	"\n"			{ if(cursor == s->eof) RETURN(0);
+				  s->pos = cursor; s->cline++;
 				  goto scan;
 	    			}
 
-	any			{ cerr << "unexpected character: " << *tok << endl;
+	any			{ fprintf(stderr, "unexpected character: '%c'\n", *s->tok);
 				  goto scan;
 				}
 */
@@ -136,15 +146,15 @@ scan:
 code:
 /*!re2c
 	"}"			{ if(--depth == 0){
-					cur = cursor;
-					yylval.token = new Token(token(), tline);
+					s->cur = cursor;
+					yylval.token = Token_new(Scanner_token(s), s->tline);
 					return CODE;
 				  }
 				  goto code; }
 	"{"			{ ++depth;
 				  goto code; }
-	"\n"			{ if(cursor == eof) fatal("missing '}'");
-				  pos = cursor; cline++;
+	"\n"			{ if(cursor == s->eof) Scanner_fatal(s, "missing '}'");
+				  s->pos = cursor; s->cline++;
 				  goto code;
 				}
 	dstring | sstring | any	{ goto code; }
@@ -158,16 +168,17 @@ comment:
 					goto comment; }
 	"/*"			{ ++depth;
 				  goto comment; }
-	"\n"			{ if(cursor == eof) RETURN(0);
-				  tok = pos = cursor; cline++;
+	"\n"			{ if(cursor == s->eof) RETURN(0);
+				  s->tok = s->pos = cursor; s->cline++;
 				  goto comment;
 				}
         any			{ goto comment; }
 */
 }
 
-void Scanner::fatal(char *msg){
-    cerr << "line " << tline << ", column " << (tchar + 1) << ": "
-	<< msg << endl;
+void
+Scanner_fatal(Scanner *s, char *msg)
+{
+    fprintf(stderr, "line %d, column %d: %s\n", s->tline, s->tchar + 1, msg);
     exit(1);
 }

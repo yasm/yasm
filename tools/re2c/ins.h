@@ -1,19 +1,18 @@
-#ifndef _ins_h
-#define _ins_h
+#ifndef re2c_ins_h
+#define re2c_ins_h
 
-#include <iostream.h>
 #include "basics.h"
 
-const uint nChars = 256;
+#define nChars 256
 typedef uchar Char;
 
-const uint CHAR = 0;
-const uint GOTO = 1;
-const uint FORK = 2;
-const uint TERM = 3;
-const uint CTXT = 4;
+#define CHAR 0
+#define GOTO 1
+#define FORK 2
+#define TERM 3
+#define CTXT 4
 
-union Ins {
+typedef union Ins {
     struct {
 	byte	tag;
 	byte	marked;
@@ -24,18 +23,18 @@ union Ins {
 	ushort	bump;
 	void	*link;
     }			c;
-};
+} Ins;
 
-inline bool isMarked(Ins *i){
+static inline int isMarked(Ins *i){
     return i->i.marked != 0;
 }
 
-inline void mark(Ins *i){
-    i->i.marked = true;
+static inline void mark(Ins *i){
+    i->i.marked = 1;
 }
 
-inline void unmark(Ins *i){
-    i->i.marked = false;
+static inline void unmark(Ins *i){
+    i->i.marked = 0;
 }
 
 #endif

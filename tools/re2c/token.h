@@ -1,18 +1,30 @@
-#ifndef _token_h
-#define	_token_h
+#ifndef re2c_token_h
+#define	re2c_token_h
 
 #include "substr.h"
 
-class Token {
-  public:
+typedef struct Token {
     Str			text;
     uint		line;
-  public:
-    Token(SubStr, uint);
-};
+} Token;
 
-inline Token::Token(SubStr t, uint l) : text(t), line(l) {
-    ;
+static inline void Token_init(Token *, SubStr, uint);
+static inline Token *Token_new(SubStr, uint);
+
+static inline void
+Token_init(Token *r, SubStr t, uint l)
+{
+    Str_copy(&r->text, &t);
+    r->line = l;
+}
+
+static inline Token *
+Token_new(SubStr t, uint l)
+{
+    Token *r = malloc(sizeof(Token));
+    Str_copy(&r->text, &t);
+    r->line = l;
+    return r;
 }
 
 #endif

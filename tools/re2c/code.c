@@ -148,14 +148,14 @@ prt(cerr, b->go, b->on); cerr << endl;
     first = NULL;
 }
 
-void genGoTo(ostream &o, State *to){
-    o  << "\tgoto yy" << to->label << ";\n";
+void genGoTo(FILE *o, State *to){
+    fprintf(o, "\tgoto yy%u;\n", to->label);
 }
 
-void genIf(ostream &o, char *cmp, uint v){
-    o << "\tif(yych " << cmp << " '";
+void genIf(FILE *o, const char *cmp, uint v){
+    fprintf(o, "\tif(yych %s '", cmp);
     prtCh(o, v);
-    o << "')";
+    fputs("')", o);
 }
 
 void indent(ostream &o, uint i){
@@ -171,78 +171,82 @@ static void need(ostream &o, uint n){
     o << "\tyych = *YYCURSOR;\n";
 }
 
-void Match::emit(ostream &o){
-    if(state->link){
-	o << "\t++YYCURSOR;\n";
-	need(o, state->depth);
-    } else {
-	o << "\tyych = *++YYCURSOR;\n";
-    }
-}
+void
+Action_emit(Action *a, FILE *o)
+{
+    int first = 1;
+    uint i;
+    uint back;
 
-void Enter::emit(ostream &o){
-    if(state->link){
-	o << "\t++YYCURSOR;\n";
-	o << "yy" << label << ":\n";
-	need(o, state->depth);
-    } else {
-	o << "\tyych = *++YYCURSOR;\n";
-	o << "yy" << label << ":\n";
-    }
-}
-
-void Save::emit(ostream &o){
-    o << "\tyyaccept = " << selector << ";\n";
-    if(state->link){
-	o << "\tYYMARKER = ++YYCURSOR;\n";
-	need(o, state->depth);
-    } else {
-	o << "\tyych = *(YYMARKER = ++YYCURSOR);\n";
-    }
-}
-
-Move::Move(State *s) : Action(s) {
-    ;
-}
-
-void Move::emit(ostream &o){
-    ;
-}
-
-Accept::Accept(State *x, uint n, uint *s, State **r)
-    : Action(x), nRules(n), saves(s), rules(r){
-    ;
-}
-
-void Accept::emit(ostream &o){
-    bool first = true;
-    for(uint i = 0; i < nRules; ++i)
-	if(saves[i] != ~0u){
-	    if(first){
-		first = false;
-		o << "\tYYCURSOR = YYMARKER;\n";
-		o << "\tswitch(yyaccept){\n";
+    switch (a->type) {
+	case MATCHACT:
+	    if(a->state->link){
+		fputs("\t++YYCURSOR;\n", o);
+		need(o, a->state->depth);
+	    } else {
+		fputs("\tyych = *++YYCURSOR;\n", o);
 	    }
-	    o << "\tcase " << saves[i] << ":";
-	    genGoTo(o, rules[i]);
-	}
-    if(!first)
-	o << "\t}\n";
+	    break;
+	case ENTERACT:
+	    if(a->state->link){
+		fputs("\t++YYCURSOR;\n", o);
+		fprintf(o, "yy%u:\n", a->d.label);
+		need(o, a->state->depth);
+	    } else {
+		fputs("\tyych = *++YYCURSOR;\n", o);
+		fprintf(o, "yy%u:\n", a->d.label);
+	    }
+	    break;
+	case SAVEMATCHACT:
+	    fprintf(o, "\tyyaccept = %u;\n", selector);
+	    if(a->state->link){
+		fputs("\tYYMARKER = ++YYCURSOR;\n", o);
+		need(o, a->state->depth);
+	    } else {
+		fputs("\tyych = *(YYMARKER = ++YYCURSOR);\n", o);
+	    }
+	    break;
+	case MOVEACT:
+	    break;
+	case ACCEPTACT:
+	    for(i = 0; i < a->d.Accept.nRules; ++i)
+		if(a->d.Accept.saves[i] != ~0u){
+		    if(first){
+			first = 0;
+			fputs("\tYYCURSOR = YYMARKER;\n", o);
+			fputs("\tswitch(yyaccept){\n", o);
+		    }
+		    fprintf(o, "\tcase %u:", a->d.Accept.saves[i]);
+		    genGoTo(o, a->d.Accept.rules[i]);
+		}
+	    if(!first)
+		fputs("\t}\n", o);
+	    break;
+	case RULEACT:
+	    back = RegExp_fixedLength(a->d.rule->d.RuleOp.ctx);
+	    if(back != ~0u && back > 0u)
+		fprintf(o, "\tYYCURSOR -= %u;", back);
+	    fprintf(o, "\n#line %u\n\t", a->d.rule->d.RuleOp.code->line);
+	    Str_out(o, a->d.rule->d.RuleOp.code->text);
+	    fprintf(o, "\n");
+	    break;
+    }
 }
 
-Rule::Rule(State *s, RuleOp *r) : Action(s), rule(r) {
-    ;
+Action *
+Action_new_Accept(State *x, uint n, uint *s, State **r)
+{
+    Action *a = malloc(sizeof(Action));
+    a->type = ACCEPTACT;
+    a->state = x;
+    a->d.Accept.nRules = n;
+    a->d.Accept.saves = s;
+    a->d.Accept.rules = r;
+    x->action = a;
+    return a;
 }
 
-void Rule::emit(ostream &o){
-    uint back = rule->ctx->fixedLength();
-    if(back != ~0u && back > 0u)
-	o << "\tYYCURSOR -= " << back << ";";
-    o << "\n#line " << rule->code->line
-      << "\n\t" << rule->code->text << "\n";
-}
-
-void doLinear(ostream &o, uint i, Span *s, uint n, State *next){
+void doLinear(FILE *o, uint i, Span *s, uint n, State *next){
     for(;;){
 	State *bg = s[0].to;
 	while(n >= 3 && s[2].to == bg && (s[1].ub - s[0].ub) == 1){
@@ -269,8 +273,9 @@ void doLinear(ostream &o, uint i, Span *s, uint n, State *next){
     }
 }
 
-void Go::genLinear(ostream &o, State *next){
-    doLinear(o, 0, span, nSpans, next);
+void
+Go_genLinear(Go *g, FILE *o, State *next){
+    doLinear(o, 0, g->span, g->nSpans, next);
 }
 
 void genCases(ostream &o, uint lb, Span *s){
@@ -284,111 +289,118 @@ void genCases(ostream &o, uint lb, Span *s){
     }
 }
 
-void Go::genSwitch(ostream &o, State *next){
-    if(nSpans <= 2){
+void
+Go_genSwitch(Go *g, FILE *o, State *next){
+    if(g->nSpans <= 2){
 	genLinear(o, next);
     } else {
-	State *def = span[nSpans-1].to;
-	Span **sP = new Span*[nSpans-1], **r, **s, **t;
+	State *def = g->span[g->nSpans-1].to;
+	Span **sP = malloc(sizeof(Span*)*(g->nSpans-1)), **r, **s, **t;
+	uint i;
 
 	t = &sP[0];
-	for(uint i = 0; i < nSpans; ++i)
-	    if(span[i].to != def)
-		*(t++) = &span[i];
+	for(i = 0; i < g->nSpans; ++i)
+	    if(g->span[i].to != def)
+		*(t++) = &g->span[i];
 
-	o << "\tswitch(yych){\n";
+	fputs("\tswitch(yych){\n", o);
 	while(t != &sP[0]){
+	    State *to;
 	    r = s = &sP[0];
-	    if(*s == &span[0])
+	    if(*s == &g->span[0])
 		genCases(o, 0, *s);
 	    else
 		genCases(o, (*s)[-1].ub, *s);
-	    State *to = (*s)->to;
+	    to = (*s)->to;
 	    while(++s < t){
-		if((*s)->to == to)
+		if((*s)->to == g->to)
 		    genCases(o, (*s)[-1].ub, *s);
 		else
 		    *(r++) = *s;
 	    }
-	    genGoTo(o, to);
+	    genGoTo(o, g->to);
 	    t = r;
 	}
-	o << "\tdefault:";
+	fputs("\tdefault:", o);
 	genGoTo(o, def);
-	o << "\t}\n";
+	fputs("\t}\n", o);
 
-	delete [] sP;
+	free(sP);
     }
 }
 
-void doBinary(ostream &o, uint i, Span *s, uint n, State *next){
+void doBinary(FILE *o, uint i, Span *s, uint n, State *next){
     if(n <= 4){
 	doLinear(o, i, s, n, next);
     } else {
 	uint h = n/2;
-	indent(o, i); genIf(o, "<=", s[h-1].ub - 1); o << "{\n";
+	indent(o, i); genIf(o, "<=", s[h-1].ub - 1); fputs("{\n", o);
 	doBinary(o, i+1, &s[0], h, next);
-	indent(o, i); o << "\t} else {\n";
+	indent(o, i); fputs("\t} else {\n", o);
 	doBinary(o, i+1, &s[h], n - h, next);
-	indent(o, i); o << "\t}\n";
+	indent(o, i); fputs("\t}\n", o);
     }
 }
 
-void Go::genBinary(ostream &o, State *next){
-    doBinary(o, 0, span, nSpans, next);
+void
+Go_genBinary(Go *g, FILE *o, State *next){
+    doBinary(o, 0, g->span, g->nSpans, next);
 }
 
-void Go::genBase(ostream &o, State *next){
-    if(nSpans == 0)
+void
+Go_genBase(Go *g, FILE *o, State *next){
+    if(g->nSpans == 0)
 	return;
     if(!sFlag){
-	genSwitch(o, next);
+	Go_genSwitch(g, o, next);
 	return;
     }
-    if(nSpans > 8){
-	Span *bot = &span[0], *top = &span[nSpans-1];
+    if(g->nSpans > 8){
+	Span *bot = &g->span[0], *top = &g->span[g->nSpans-1];
 	uint util;
 	if(bot[0].to == top[0].to){
-	    util = (top[-1].ub - bot[0].ub)/(nSpans - 2);
+	    util = (top[-1].ub - bot[0].ub)/(g->nSpans - 2);
 	} else {
 	    if(bot[0].ub > (top[0].ub - top[-1].ub)){
-		util = (top[0].ub - bot[0].ub)/(nSpans - 1);
+		util = (top[0].ub - bot[0].ub)/(g->nSpans - 1);
 	    } else {
-		util = top[-1].ub/(nSpans - 1);
+		util = top[-1].ub/(g->nSpans - 1);
 	    }
 	}
 	if(util <= 2){
-	    genSwitch(o, next);
+	    Go_genSwitch(g, o, next);
 	    return;
 	}
     }
     if(nSpans > 5){
-	genBinary(o, next);
+	Go_genBinary(g, o, next);
     } else {
-	genLinear(o, next);
+	Go_genLinear(g, o, next);
     }
 }
 
-void Go::genGoto(ostream &o, State *next){
+void
+Go_genGoto(Go *g, FILE *o, State *next){
+    uint i;
     if(bFlag){
-	for(uint i = 0; i < nSpans; ++i){
-	    State *to = span[i].to;
+	for(i = 0; i < g->nSpans; ++i){
+	    State *to = g->span[i].to;
 	    if(to && to->isBase){
 		BitMap *b = BitMap::find(to);
-		if(b && matches(b->go, b->on, this, to)){
+		if(b && matches(b->go, b->on, g, to)){
 		    Go go;
-		    go.span = new Span[nSpans];
-		    go.unmap(this, to);
+		    go.span = malloc(sizeof(Span)*g->nSpans);
+		    go.unmap(g, to);
 		    o << "\tif(yybm[" << b->i << "+yych] & " << (uint) b->m << ")";
 		    genGoTo(o, to);
-		    go.genBase(o, next);
-		    delete [] go.span;
+		    Go_genBase(go, o, next);
+		    free(go.span);
 		    return;
 		}
 	    }
 	}
     }
-    genBase(o, next);
+    Go_genBase(g, o, next);
 }
 
 void State::emit(ostream &o){

@@ -1,20 +1,27 @@
-#ifndef _parser_h
-#define _parser_h
+#ifndef re2c_parser_h
+#define re2c_parser_h
 
 #include "scanner.h"
 #include "re.h"
 
-class Symbol {
-public:
-    static Symbol	*first;
-    Symbol		*next;
+typedef struct Symbol {
+    struct Symbol		*next;
     Str			name;
     RegExp		*re;
-public:
-    Symbol(const SubStr&);
-    static Symbol *find(const SubStr&);
-};
+} Symbol;
 
-void parse(int, ostream&);
+void Symbol_init(Symbol *, const SubStr*);
+static inline Symbol *Symbol_new(const SubStr*);
+Symbol *Symbol_find(const SubStr*);
+
+void parse(int, FILE *);
+
+static inline Symbol *
+Symbol_new(const SubStr *str)
+{
+    Symbol *r = malloc(sizeof(Symbol));
+    Symbol_init(r, str);
+    return r;
+}
 
 #endif
