@@ -1,0 +1,78 @@
+# $IdPath$
+#
+# Ultra-flat Makefile for DJGPP.
+# Does NOT depend on or use configure.
+#
+# Works for simple build but *not* for development (no clean, dist, etc).
+# Also, WARNING, no header dependencies are included!
+#
+# How to compile:
+#  copy Mkfiles/config.h.dj config.h
+#  make -fMkfiles/Makefile.dj
+
+CFLAGS=-DHAVE_CONFIG_H -I. -Isrc -Inointl
+CC=gcc
+
+all: src/yasm
+
+SRC_OBJS= \
+ src/bytecode.o \
+ src/errwarn.o \
+ src/expr.o \
+ src/symrec.o \
+ src/globals.o \
+ src/file.o \
+ src/section.o \
+ src/options.o \
+ src/parser.o \
+ src/intnum.o \
+ src/floatnum.o \
+ src/ternary.o \
+ src/bitvect.o \
+ src/xmalloc.o \
+ src/xstrdup.o \
+ src/strcasecmp.o
+
+SRC_PREPROCS_RAW_OBJS= \
+ src/preprocs/raw/preproc.o
+
+SRC_PREPROCS_OBJS= \
+ $(SRC_PREPROCS_RAW_OBJS)
+
+SRC_PARSERS_NASM_OBJS= \
+ src/parsers/nasm/parser.o \
+ src/parsers/nasm/bison.o \
+ src/parsers/nasm/token.o
+
+SRC_PARSERS_OBJS= \
+ $(SRC_PARSERS_NASM_OBJS)
+
+SRC_OPTIMIZERS_DBG_OBJS= \
+ src/optimizers/dbg/optimizer.o
+
+SRC_OPTIMIZERS_OBJS= \
+ $(SRC_OPTIMIZERS_DBG_OBJS)
+
+SRC_OBJFMTS_DBG_OBJS= \
+ src/objfmts/dbg/objfmt.o
+
+SRC_OBJFMTS_OBJS= \
+ $(SRC_OBJFMTS_DBG_OBJS)
+
+YASM_OBJS= \
+ src/main.o \
+ $(SRC_OBJS) \
+ $(SRC_PREPROCS_OBJS) \
+ $(SRC_PARSERS_OBJS) \
+ $(SRC_OPTIMIZERS_OBJS) \
+ $(SRC_OBJFMTS_OBJS)
+
+src/yasm: $(YASM_OBJS)
+	$(CC) -o src/yasm $(YASM_OBJS)
+
+src/parsers/nasm/token.o: src/parsers/nasm/token.c
+	$(CC) -c $(CFLAGS) -Isrc/parsers/nasm -o $@ $<
+
+.c.o:
+	$(CC) -c $(CFLAGS) -o $@ $<
+

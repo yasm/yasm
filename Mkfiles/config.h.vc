@@ -1,0 +1,215 @@
+/* $IdPath$ */
+
+#ifndef YASM_CONFIG_H
+#define YASM_CONFIG_H
+
+/* Define if using alloca.c.  */
+/* #undef C_ALLOCA */
+
+/* Define to empty if the keyword does not work.  */
+/* #undef const */
+
+/* Define to one of _getb67, GETB67, getb67 for Cray-2 and Cray-YMP systems.
+   This function is required for alloca.c support on those systems.  */
+/* #undef CRAY_STACKSEG_END */
+
+/* Define if you have alloca, as a function or macro.  */
+/* #undef HAVE_ALLOCA */
+
+/* Define if you have <alloca.h> and it should be used (not on Ultrix).  */
+/* #undef HAVE_ALLOCA_H */
+
+/* Define if you don't have vprintf but do have _doprnt.  */
+/* #undef HAVE_DOPRNT */
+
+/* Define if you have a working `mmap' system call.  */
+/* #undef HAVE_MMAP */
+
+/* Define if you have <sys/wait.h> that is POSIX.1 compatible.  */
+/* #undef HAVE_SYS_WAIT_H */
+
+/* Define if you have the vprintf function.  */
+#define HAVE_VPRINTF
+
+/* Define as __inline if that's what the C compiler calls it.  */
+/* #undef inline */
+
+/* Define to `long' if <sys/types.h> doesn't define.  */
+/* #undef off_t */
+
+/* Define to `int' if <sys/types.h> doesn't define.  */
+#define pid_t int
+
+/* Define to `unsigned' if <sys/types.h> doesn't define.  */
+/* #undef size_t */
+
+/* If using the C implementation of alloca, define if you know the
+   direction of stack growth for your system; otherwise it will be
+   automatically deduced at run-time.
+ STACK_DIRECTION > 0 => grows toward higher addresses
+ STACK_DIRECTION < 0 => grows toward lower addresses
+ STACK_DIRECTION = 0 => direction of growth unknown
+ */
+/* #undef STACK_DIRECTION */
+
+/* Define if you have the ANSI C header files.  */
+#define STDC_HEADERS
+
+/* Define if lex declares yytext as a char * by default, not a char[].  */
+#define YYTEXT_POINTER
+
+/* Workaround for bad <sys/queue.h> implementations. */
+#define HAVE_BOGUS_SYS_QUEUE_H
+
+/* gettext tests */
+/* #undef ENABLE_NLS */
+/* #undef HAVE_CATGETS */
+/* #undef HAVE_GETTEXT */
+/* #undef HAVE_LC_MESSAGES */
+/* #undef HAVE_STPCPY */
+
+/* combined test for fork/way/msg* */
+/* #undef USE_FORKWAITMSG */
+
+/* Check for GNU C Library */
+/* #undef HAVE_GNU_C_LIBRARY */
+
+/* Define if you have the __argz_count function.  */
+/* #undef HAVE___ARGZ_COUNT */
+
+/* Define if you have the __argz_next function.  */
+/* #undef HAVE___ARGZ_NEXT */
+
+/* Define if you have the __argz_stringify function.  */
+/* #undef HAVE___ARGZ_STRINGIFY */
+
+/* Define if you have the abort function.  */
+#define HAVE_ABORT
+
+/* Define if you have the dcgettext function.  */
+/* #undef HAVE_DCGETTEXT */
+
+/* Define if you have the fork function.  */
+/* #undef HAVE_FORK */
+
+/* Define if you have the getcwd function.  */
+/* #undef HAVE_GETCWD */
+
+/* Define if you have the getpagesize function.  */
+/* #undef HAVE_GETPAGESIZE */
+
+/* Define if you have the memcpy function.  */
+#define HAVE_MEMCPY
+
+/* Define if you have the msgctl function.  */
+/* #undef HAVE_MSGCTL */
+
+/* Define if you have the msgget function.  */
+/* #undef HAVE_MSGGET */
+
+/* Define if you have the msgrcv function.  */
+/* #undef HAVE_MSGRCV */
+
+/* Define if you have the msgsnd function.  */
+/* #undef HAVE_MSGSND */
+
+/* Define if you have the munmap function.  */
+/* #undef HAVE_MUNMAP */
+
+/* Define if you have the putenv function.  */
+/* #undef HAVE_PUTENV */
+
+/* Define if you have the setenv function.  */
+/* #undef HAVE_SETENV */
+
+/* Define if you have the setlocale function.  */
+/* #undef HAVE_SETLOCALE */
+
+/* Define if you have the snprintf function.  */
+#define HAVE_SNPRINTF
+#define snprintf _snprintf
+
+/* Define if you have the stpcpy function.  */
+/* #undef HAVE_STPCPY */
+
+/* Define if you have the strcasecmp function.  */
+/* #undef HAVE_STRCASECMP */
+
+/* Define if you have the strchr function.  */
+#define HAVE_STRCHR
+
+/* Define if you have the strcmpi function.  */
+#define HAVE_STRCMPI
+#define strcmpi _strcmpi
+
+/* Define if you have the strdup function.  */
+#define HAVE_STRDUP
+#define strdup _strdup
+
+/* Define if you have the strerror function.  */
+#define HAVE_STRERROR
+
+/* Define if you have the stricmp function.  */
+#define HAVE_STRICMP
+#define stricmp _stricmp
+
+/* Define if you have the strsep function.  */
+/* #undef HAVE_STRSEP */
+
+/* Define if you have the toascii function.  */
+#define HAVE_TOASCII
+#define toascii __toascii
+
+/* Define if you have the wait function.  */
+/* #undef HAVE_WAIT */
+
+/* Define if you have the <argz.h> header file.  */
+/* #undef HAVE_ARGZ_H */
+
+/* Define if you have the <limits.h> header file.  */
+#define HAVE_LIMITS_H
+
+/* Define if you have the <locale.h> header file.  */
+#define HAVE_LOCALE_H
+
+/* Define if you have the <malloc.h> header file.  */
+#define HAVE_MALLOC_H
+
+/* Define if you have the <nl_types.h> header file.  */
+/* #undef HAVE_NL_TYPES_H */
+
+/* Define if you have the <string.h> header file.  */
+#define HAVE_STRING_H
+
+/* Define if you have the <sys/cdefs.h> header file.  */
+/* #undef HAVE_SYS_CDEFS_H */
+
+/* Define if you have the <sys/ipc.h> header file.  */
+/* #undef HAVE_SYS_IPC_H */
+
+/* Define if you have the <sys/msg.h> header file.  */
+/* #undef HAVE_SYS_MSG_H */
+
+/* Define if you have the <sys/param.h> header file.  */
+/* #undef HAVE_SYS_PARAM_H */
+
+/* Define if you have the <sys/queue.h> header file.  */
+/* #undef HAVE_SYS_QUEUE_H */
+
+/* Define if you have the <sys/types.h> header file.  */
+#define HAVE_SYS_TYPES_H
+
+/* Define if you have the <unistd.h> header file.  */
+/* #undef HAVE_UNISTD_H */
+
+/* Define if you have the i library (-li).  */
+/* #undef HAVE_LIBI */
+
+/* Name of package */
+#define PACKAGE "yasm"
+
+/* Version number of package */
+#define VERSION "0.0.1"
+
+
+#endif /* YASM_CONFIG_H */

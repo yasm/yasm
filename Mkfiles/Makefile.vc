@@ -1,0 +1,78 @@
+# $IdPath$
+#
+# Ultra-flat Makefile for Visual C++.
+# Does NOT depend on or use configure.
+#
+# Works for simple build but *not* for development (no clean, dist, etc).
+# Also, WARNING, no header dependencies are included!
+#
+# How to compile:
+#  copy Mkfiles/config.h.vc config.h
+#  nmake -fMkfiles/Makefile.vc
+
+CFLAGS=/DHAVE_CONFIG_H /I. /Isrc /Inointl
+CC=cl
+
+all: src\yasm.exe
+
+SRC_OBJS= \
+ src\bytecode.obj \
+ src\errwarn.obj \
+ src\expr.obj \
+ src\symrec.obj \
+ src\globals.obj \
+ src\file.obj \
+ src\section.obj \
+ src\options.obj \
+ src\parser.obj \
+ src\intnum.obj \
+ src\floatnum.obj \
+ src\ternary.obj \
+ src\bitvect.obj \
+ src\xmalloc.obj \
+ src\xstrdup.obj \
+ src\strcasecmp.obj
+
+SRC_PREPROCS_RAW_OBJS= \
+ src\preprocs\raw\preproc.obj
+
+SRC_PREPROCS_OBJS= \
+ $(SRC_PREPROCS_RAW_OBJS)
+
+SRC_PARSERS_NASM_OBJS= \
+ src\parsers\nasm\parser.obj \
+ src\parsers\nasm\bison.obj \
+ src\parsers\nasm\token.obj
+
+SRC_PARSERS_OBJS= \
+ $(SRC_PARSERS_NASM_OBJS)
+
+SRC_OPTIMIZERS_DBG_OBJS= \
+ src\optimizers\dbg\optimizer.obj
+
+SRC_OPTIMIZERS_OBJS= \
+ $(SRC_OPTIMIZERS_DBG_OBJS)
+
+SRC_OBJFMTS_DBG_OBJS= \
+ src\objfmts\dbg\objfmt.obj
+
+SRC_OBJFMTS_OBJS= \
+ $(SRC_OBJFMTS_DBG_OBJS)
+
+YASM_OBJS= \
+ src\main.obj \
+ $(SRC_OBJS) \
+ $(SRC_PREPROCS_OBJS) \
+ $(SRC_PARSERS_OBJS) \
+ $(SRC_OPTIMIZERS_OBJS) \
+ $(SRC_OBJFMTS_OBJS)
+
+src\yasm.exe: $(YASM_OBJS)
+	$(CC) /Fesrc\yasm.exe $(YASM_OBJS)
+
+src\parsers\nasm\token.o: src\parsers\nasm\token.c
+	$(CC) /c $(CFLAGS) /Isrc/parsers/nasm /Fo$@ $<
+
+.c.obj:
+	$(CC) /c $(CFLAGS) /Fo$@ $<
+
