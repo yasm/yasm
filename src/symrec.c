@@ -273,7 +273,7 @@ symrec_delete_one(void *d)
     xfree(sym->name);
     if (sym->type == SYM_EQU)
 	expr_delete(sym->value.expn);
-    free(sym);
+    xfree(sym);
 }
 
 void
