@@ -279,7 +279,7 @@ bc_new_objfmt_data(unsigned int type, unsigned long len, objfmt *of,
     bytecode_objfmt_data *objfmt_data;
 
     objfmt_data =
-	(bytecode_objfmt_data *)bc_new_common(BC_ALIGN,
+	(bytecode_objfmt_data *)bc_new_common(BC_OBJFMT_DATA,
 					      sizeof(bytecode_objfmt_data),
 					      lindex);
 
