@@ -142,30 +142,3 @@ sym_def_get(char *name, SymType type)
     tab->rec.status |= SYM_DECLARED;
     return &(tab->rec);
 }
-
-#if 0
-symrec *
-putsym(char *sym_name, int sym_type)
-{
-    symrec *ptr;
-    ptr = malloc(sizeof(symrec));
-    ptr->name = malloc(strlen(sym_name) + 1);
-    strcpy(ptr->name, sym_name);
-    ptr->type = sym_type;
-    ptr->value.var = 0;		/* set value to 0 even if fctn.  */
-    ptr->next = (symrec *)sym_table;
-    sym_table = ptr;
-    return ptr;
-}
-
-symrec *
-getsym(char *sym_name)
-{
-    symrec *ptr;
-
-    for (ptr = sym_table; ptr != (symrec *)NULL; ptr = (symrec *)ptr->next)
-	if (strcmp(ptr->name, sym_name) == 0)
-	    return ptr;
-    return 0;
-}
-#endif				/* 0 */

@@ -49,9 +49,6 @@ typedef struct symtab_s {
 
 extern symtab *sym_table;
 
-/*symrec *putsym(char *, SymType);*/
-/*symrec *getsym(char *);*/
-
 symrec *sym_use_get(char *, SymType);
 symrec *sym_def_get(char *, SymType);
 void sym_foreach(int (*)(symrec *));
