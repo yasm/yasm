@@ -1,4 +1,15 @@
 EXTRA_DIST = Makefile.am \
+	intmax.m4 \
+	longdouble.m4 \
+	nls.m4 \
+	po.m4 \
+	printf-posix.m4 \
+	signed.m4 \
+	size_max.m4 \
+	ulonglong.m4 \
+	wchar_t.m4 \
+	wint_t.m4 \
+	xsize.m4 \
 	codeset.m4 \
 	gettext.m4 \
 	glibc21.m4 \

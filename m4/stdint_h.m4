@@ -1,5 +1,5 @@
-# stdint_h.m4 serial 2 (gettext-0.11.4)
-dnl Copyright (C) 1997-2002 Free Software Foundation, Inc.
+# stdint_h.m4 serial 3 (gettext-0.12)
+dnl Copyright (C) 1997-2003 Free Software Foundation, Inc.
 dnl This file is free software, distributed under the terms of the GNU
 dnl General Public License.  As a special exception to the GNU General
 dnl Public License, this file may be distributed as part of a program
@@ -22,7 +22,7 @@ AC_DEFUN([jm_AC_HEADER_STDINT_H],
     jm_ac_cv_header_stdint_h=no)])
   if test $jm_ac_cv_header_stdint_h = yes; then
     AC_DEFINE_UNQUOTED(HAVE_STDINT_H_WITH_UINTMAX, 1,
-[Define if <stdint.h> exists, doesn't clash with <sys/types.h>,
-   and declares uintmax_t. ])
+      [Define if <stdint.h> exists, doesn't clash with <sys/types.h>,
+       and declares uintmax_t. ])
   fi
 ])

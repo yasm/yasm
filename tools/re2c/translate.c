@@ -1,5 +1,3 @@
-#include <config.h>
-
 #include "tools/re2c/globals.h"
 
 unsigned char asc2asc[256] = {

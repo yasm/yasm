@@ -95,7 +95,7 @@ AC_REQUIRE([AC_LTDL_FUNC_ARGZ])
 
 AC_CHECK_HEADERS([assert.h ctype.h errno.h malloc.h memory.h stdlib.h \
 		  stdio.h unistd.h])
-AC_CHECK_HEADERS([dl.h sys/dl.h dld.h])
+AC_CHECK_HEADERS([dl.h sys/dl.h dld.h mach-o/dyld.h])
 AC_CHECK_HEADERS([string.h strings.h], [break])
 
 AC_CHECK_FUNCS([strchr index], [break])
@@ -137,7 +137,13 @@ AC_CACHE_CHECK([whether deplibs are loaded by dlopen],
   aix[[45]]*)
     libltdl_cv_sys_dlopen_deplibs=yes
     ;;
-  gnu*)
+  darwin*)
+    # Assuming the user has installed a libdl from somewhere, this is true
+    # If you are looking for one http://www.opendarwin.org/projects/dlcompat
+    libltdl_cv_sys_dlopen_deplibs=yes
+    ;;   
+  gnu* | linux* | kfreebsd*-gnu | knetbsd*-gnu)
+    # GNU and its variants, using gnu ld.so (Glibc)
     libltdl_cv_sys_dlopen_deplibs=yes
     ;;
   hpux10*|hpux11*)
@@ -151,9 +157,6 @@ AC_CACHE_CHECK([whether deplibs are loaded by dlopen],
   irix*)
     # The case above catches anything before 6.2, and it's known that
     # at 6.2 and later dlopen does load deplibs.
-    libltdl_cv_sys_dlopen_deplibs=yes
-    ;;
-  linux*)
     libltdl_cv_sys_dlopen_deplibs=yes
     ;;
   netbsd*)
@@ -200,15 +203,11 @@ fi
 # ----------------
 AC_DEFUN([AC_LTDL_SHLIBEXT],
 [AC_REQUIRE([AC_LIBTOOL_SYS_DYNAMIC_LINKER])
-AC_CACHE_CHECK([which extension is used for shared libraries],
+AC_CACHE_CHECK([which extension is used for loadable modules],
   [libltdl_cv_shlibext],
-  [ac_last=
-  for ac_spec in $library_names_spec; do
-    ac_last="$ac_spec"
-  done
-  echo "$ac_last" | [sed 's/\[.*\]//;s/^[^.]*//;s/\$.*$//;s/\.$//'] > conftest
-  libltdl_cv_shlibext=`cat conftest`
-  rm -f conftest
+[
+module=yes
+eval libltdl_cv_shlibext=$shrext_cmds
   ])
 if test -n "$libltdl_cv_shlibext"; then
   AC_DEFINE_UNQUOTED(LTDL_SHLIB_EXT, "$libltdl_cv_shlibext",
@@ -328,7 +327,10 @@ AC_CHECK_FUNC([shl_load],
 	  [AC_CHECK_LIB([dld], [dld_link],
 	        [AC_DEFINE([HAVE_DLD], [1],
 			   [Define if you have the GNU dld library.])
-	 	LIBADD_DL="$LIBADD_DL -ldld"
+	 	LIBADD_DL="$LIBADD_DL -ldld"],
+	 	[AC_CHECK_FUNC([_dyld_func_lookup],
+	 	       [AC_DEFINE([HAVE_DYLD], [1],
+	 	          [Define if you have the _dyld_func_lookup function.])])
           ])
         ])
       ])

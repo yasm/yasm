@@ -1,5 +1,5 @@
-# uintmax_t.m4 serial 6 (gettext-0.11)
-dnl Copyright (C) 1997-2002 Free Software Foundation, Inc.
+# uintmax_t.m4 serial 7 (gettext-0.12)
+dnl Copyright (C) 1997-2003 Free Software Foundation, Inc.
 dnl This file is free software, distributed under the terms of the GNU
 dnl General Public License.  As a special exception to the GNU General
 dnl Public License, this file may be distributed as part of a program
@@ -10,8 +10,8 @@ dnl From Paul Eggert.
 
 AC_PREREQ(2.13)
 
-# Define uintmax_t to `unsigned long' or `unsigned long long'
-# if <inttypes.h> does not exist.
+# Define uintmax_t to 'unsigned long' or 'unsigned long long'
+# if it is not already defined in <stdint.h> or <inttypes.h>.
 
 AC_DEFUN([jm_AC_TYPE_UINTMAX_T],
 [
@@ -23,7 +23,10 @@ AC_DEFUN([jm_AC_TYPE_UINTMAX_T],
       && ac_type='unsigned long long' \
       || ac_type='unsigned long'
     AC_DEFINE_UNQUOTED(uintmax_t, $ac_type,
-  [Define to unsigned long or unsigned long long
-   if <inttypes.h> and <stdint.h> don't define.])
+      [Define to unsigned long or unsigned long long
+       if <stdint.h> and <inttypes.h> don't define.])
+  else
+    AC_DEFINE(HAVE_UINTMAX_T, 1,
+      [Define if you have the 'uintmax_t' type in <stdint.h> or <inttypes.h>.])
   fi
 ])

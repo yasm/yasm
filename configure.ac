@@ -4,7 +4,7 @@
 #
 # autoconf setup
 #
-AC_PREREQ(2.50)
+AC_PREREQ(2.53)
 AC_INIT([yasm], `date "+%Y%m%d"`, [bug-yasm@tortall.net])
 #AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_AUX_DIR(config)
@@ -232,6 +232,30 @@ AC_SUBST(MORE_CFLAGS)
 # Substitutions for libltdl
 AC_SUBST(INCLTDL)
 AC_SUBST(LIBLTDL)
+
+#
+# Cross-building
+#
+if test "$cross_compiling" = "yes"; then
+    AC_MSG_CHECKING([cc for build])
+    CC_FOR_BUILD="${CC_FOR_BUILD-PATH=/usr/bin:$PATH cc}"
+    AC_MSG_RESULT($CC_FOR_BUILD)
+    CCLD_FOR_BUILD="$CC_FOR_BUILD"
+else
+    CC_FOR_BUILD="${CC_FOR_BUILD-$CC}"
+    CCLD_FOR_BUILD="${CCLD_FOR_BUILD-$CC}"
+fi
+
+AC_ARG_VAR(CC_FOR_BUILD,[build system C compiler])
+AC_ARG_VAR(CCLD_FOR_BUILD,[build system C linker frontend])
+AC_SUBST(CC_FOR_BUILD)
+AC_SUBST(CCLD_FOR_BUILD)
+
+# libtool erroneously calls CC_FOR_BUILD HOST_CC;
+# --host is the platform that the package is compiled for.
+HOST_CC="$CC_FOR_BUILD"
+AC_SUBST(HOST_CC)
+
 
 AC_CONFIG_FILES([Makefile
 	libltdl/Makefile

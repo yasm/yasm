@@ -1,27 +1,80 @@
 # $IdPath$
 
+# These utility programs have to be built for BUILD host in cross-build.
+# This makes things rather non-standard automake
+
 noinst_PROGRAMS += re2c cleanup
 
-re2c_CFLAGS =
-re2c_SOURCES  = tools/re2c/main.c
-re2c_SOURCES += tools/re2c/basics.h
-re2c_SOURCES += tools/re2c/globals.h
-re2c_SOURCES += tools/re2c/ins.h
-re2c_SOURCES += tools/re2c/re.h
-re2c_SOURCES += tools/re2c/token.h
-re2c_SOURCES += tools/re2c/code.c
-re2c_SOURCES += tools/re2c/dfa.h
-re2c_SOURCES += tools/re2c/dfa.c
-re2c_SOURCES += tools/re2c/parse.h
-re2c_SOURCES += tools/re2c/re2c-parser.y
-re2c_SOURCES += tools/re2c/actions.c
-re2c_SOURCES += tools/re2c/scanner.h
-re2c_SOURCES += tools/re2c/scanner.c
-re2c_SOURCES += tools/re2c/substr.h
-re2c_SOURCES += tools/re2c/substr.c
-re2c_SOURCES += tools/re2c/translate.c
+re2c_SOURCES =
+EXTRA_DIST += tools/re2c/main.c
+EXTRA_DIST += tools/re2c/basics.h
+EXTRA_DIST += tools/re2c/globals.h
+EXTRA_DIST += tools/re2c/ins.h
+EXTRA_DIST += tools/re2c/re.h
+EXTRA_DIST += tools/re2c/token.h
+EXTRA_DIST += tools/re2c/code.c
+EXTRA_DIST += tools/re2c/dfa.h
+EXTRA_DIST += tools/re2c/dfa.c
+EXTRA_DIST += tools/re2c/parse.h
+EXTRA_DIST += tools/re2c/re2c-parser.y
+EXTRA_DIST += tools/re2c/actions.c
+EXTRA_DIST += tools/re2c/scanner.h
+EXTRA_DIST += tools/re2c/scanner.c
+EXTRA_DIST += tools/re2c/substr.h
+EXTRA_DIST += tools/re2c/substr.c
+EXTRA_DIST += tools/re2c/translate.c
+re2c_LDADD  = re2c-main.$(OBJEXT)
+re2c_LDADD += re2c-code.$(OBJEXT)
+re2c_LDADD += re2c-dfa.$(OBJEXT)
+re2c_LDADD += re2c-re2c-parser.$(OBJEXT)
+re2c_LDADD += re2c-actions.$(OBJEXT)
+re2c_LDADD += re2c-scanner.$(OBJEXT)
+re2c_LDADD += re2c-substr.$(OBJEXT)
+re2c_LDADD += re2c-translate.$(OBJEXT)
+re2c_LINK = $(CCLD_FOR_BUILD) -o $@
 
-cleanup_SOURCES = tools/re2c/cleanup.c
+re2c-main.$(OBJEXT): tools/re2c/main.c
+	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/main.c || echo '$(srcdir)/'`tools/re2c/main.c
+
+re2c-code.$(OBJEXT): tools/re2c/code.c
+	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/code.c || echo '$(srcdir)/'`tools/re2c/code.c
+
+re2c-dfa.$(OBJEXT): tools/re2c/dfa.c
+	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/dfa.c || echo '$(srcdir)/'`tools/re2c/dfa.c
+
+re2c-re2c-parser.$(OBJEXT): re2c-parser.c
+	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f re2c-parser.c || echo '$(srcdir)/'`re2c-parser.c
+
+re2c-actions.$(OBJEXT): tools/re2c/actions.c
+	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/actions.c || echo '$(srcdir)/'`tools/re2c/actions.c
+
+re2c-scanner.$(OBJEXT): tools/re2c/scanner.c
+	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/scanner.c || echo '$(srcdir)/'`tools/re2c/scanner.c
+
+re2c-substr.$(OBJEXT): tools/re2c/substr.c
+	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/substr.c || echo '$(srcdir)/'`tools/re2c/substr.c
+
+re2c-translate.$(OBJEXT): tools/re2c/translate.c
+	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/translate.c || echo '$(srcdir)/'`tools/re2c/translate.c
+
+re2c-parser.c: tools/re2c/re2c-parser.y
+	$(YACCCOMPILE) $< && mv y.tab.c $@
+	if test -f y.tab.h; then \
+	  if cmp -s y.tab.h $*.h; then \
+	    rm -f y.tab.h; \
+	  else \
+	    mv y.tab.h $*.h; \
+	  fi; \
+	fi
+re2c-parser.h: re2c-parser.c
+
+cleanup_SOURCES =
+EXTRA_DIST += tools/re2c/cleanup.c
+cleanup_LDADD = cleanup.$(OBJEXT)
+cleanup_LINK = $(CCLD_FOR_BUILD) -o $@
+
+cleanup.$(OBJEXT): tools/re2c/cleanup.c
+	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/cleanup.c || echo '$(srcdir)/'`tools/re2c/cleanup.c
 
 BUILT_SOURCES += re2c-parser.c
 BUILT_SOURCES += re2c-parser.h
