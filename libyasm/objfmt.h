@@ -123,13 +123,4 @@ struct yasm_objfmt {
     void (*bc_objfmt_data_print)(FILE *f, int indent_level, unsigned int type,
 				 const void *data);
 };
-
-/* Generic functions for all object formats - implemented in src/objfmt.c */
-
-/* Lists all available object formats.  Calls printfunc with the name and
- * keyword of each available format.
- */
-void yasm_list_objfmts(void (*printfunc) (const char *name,
-					  const char *keyword));
-
 #endif

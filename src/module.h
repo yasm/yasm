@@ -38,4 +38,14 @@ void unload_modules(void);
 #define load_parser(keyword)	get_module_data(keyword, "parser")
 #define load_preproc(keyword)	get_module_data(keyword, "preproc")
 
+/* Lists all available object formats.  Calls printfunc with the name and
+ * keyword of each available format.
+ */
+void list_objfmts(void (*printfunc) (const char *name, const char *keyword));
+
+/* Lists all available parsers.  Calls printfunc with the name and keyword
+ * of each available parser.
+ */
+void list_parsers(void (*printfunc) (const char *name, const char *keyword));
+
 #endif

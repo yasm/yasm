@@ -30,6 +30,8 @@
 #include "ltdl.h"
 
 #include "module.h"
+#include "objfmt.h"
+#include "parser.h"
 
 
 typedef struct module {
@@ -39,6 +41,28 @@ typedef struct module {
 } module;
 
 SLIST_HEAD(modulehead, module) modules = SLIST_HEAD_INITIALIZER(modules);
+
+/* NULL-terminated list of all possibly available object format keywords.
+ * Could improve this a little by generating automatically at build-time.
+ */
+/*@-nullassign@*/
+const char *objfmts[] = {
+    "dbg",
+    "bin",
+    "coff",
+    NULL
+};
+/*@=nullassign@*/
+
+/* NULL-terminated list of all possibly available parser keywords.
+ * Could improve this a little by generating automatically at build-time.
+ */
+/*@-nullassign@*/
+const char *parsers[] = {
+    "nasm",
+    NULL
+};
+/*@=nullassign@*/
 
 
 static /*@dependent@*/ /*@null@*/ module *
@@ -99,4 +123,32 @@ get_module_data(const char *keyword, const char *symbol)
 
     /* Find and return data pointer: NULL if it doesn't exist */
     return lt_dlsym(m->handle, symbol);
+}
+
+void
+list_objfmts(void (*printfunc) (const char *name, const char *keyword))
+{
+    int i;
+    yasm_objfmt *of;
+
+    /* Go through available list, and try to load each one */
+    for (i = 0; objfmts[i]; i++) {
+	of = load_objfmt(objfmts[i]);
+	if (of)
+	    printfunc(of->name, of->keyword);
+    }
+}
+
+void
+list_parsers(void (*printfunc) (const char *name, const char *keyword))
+{
+    int i;
+    yasm_parser *p;
+
+    /* Go through available list, and try to load each one */
+    for (i = 0; parsers[i]; i++) {
+	p = load_parser(parsers[i]);
+	if (p)
+	    printfunc(p->name, p->keyword);
+    }
 }

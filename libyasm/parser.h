@@ -62,13 +62,4 @@ struct yasm_parser {
 	(yasm_preproc *pp, yasm_arch *a, yasm_objfmt *of, yasm_linemgr *lm,
 	 yasm_errwarn *we, FILE *f, const char *in_filename, int save_input);
 };
-
-/* Generic functions for all parsers - implemented in src/parser.c */
-
-/* Lists all available parsers.  Calls printfunc with the name and keyword
- * of each available parser.
- */
-void yasm_list_parsers(void (*printfunc) (const char *name,
-					  const char *keyword));
-
 #endif

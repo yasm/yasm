@@ -42,8 +42,6 @@ yasm_SOURCES += \
 	src/main.c		\
 	src/options.c		\
 	src/options.h		\
-	src/objfmt.c		\
-	src/parser.c		\
 	src/module.h		\
 	src/module.c		\
 	src/errwarn.c		\
