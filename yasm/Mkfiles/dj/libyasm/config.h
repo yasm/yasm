@@ -280,13 +280,13 @@
 #define PACKAGE_NAME "yasm"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "yasm 0.2.1"
+#define PACKAGE_STRING "yasm 0.2.2"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "yasm"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "0.2.1"
+#define PACKAGE_VERSION "0.2.2"
 
 /* Define if the C compiler supports function prototypes. */
 #define PROTOTYPES 1
@@ -298,7 +298,7 @@
 /* #undef USE_FORKWAITMSG */
 
 /* Version number of package */
-#define VERSION "0.2.1"
+#define VERSION "0.2.2"
 
 /* Define if using the dmalloc debugging malloc package */
 /* #undef WITH_DMALLOC */
