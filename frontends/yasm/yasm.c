@@ -46,22 +46,25 @@
 #define countof(x,y)	(sizeof(x)/sizeof(y))
 #endif
 
-static int files_open = 0;
-/*@null@*/ /*@only@*/ static char *obj_filename = NULL, *in_filename = NULL;
-/*@null@*/ static FILE *in = NULL, *obj = NULL;
-static int special_options = 0;
+/* Preprocess-only buffer size */
+#define PREPROC_BUF_SIZE    16384
 
-static int open_obj(void);
+/*@null@*/ /*@only@*/ static char *obj_filename = NULL, *in_filename = NULL;
+static int special_options = 0;
+static preproc *cur_preproc = NULL;
+static int preproc_only = 0;
+
+static FILE *open_obj(void);
 static void cleanup(sectionhead *sections);
 
 /* Forward declarations: cmd line parser handlers */
 static int opt_special_handler(char *cmd, /*@null@*/ char *param, int extra);
-static int opt_format_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_parser_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_preproc_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_objfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_objfile_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
-/* Fake handlers: remove them */
-static int boo_boo_handler(char *cmd, /*@null@*/ char *param, int extra);
-static int b_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int preproc_only_handler(char *cmd, /*@null@*/ char *param, int extra);
 
 /* values for special_options */
 #define SPECIAL_SHOW_HELP 0x01
@@ -72,13 +75,13 @@ static opt_option options[] =
 {
     {  0,  "version", 0, opt_special_handler, SPECIAL_SHOW_VERSION, N_("show version text"), NULL },
     { 'h', "help",    0, opt_special_handler, SPECIAL_SHOW_HELP, N_("show help text"), NULL },
-    { 'f', "oformat", 1, opt_format_handler, 0, N_("select output format"), N_("<format>") },
-    { 'o', "objfile", 1, opt_objfile_handler, 0, N_("name of object-file output"), N_("<filename>") },
+    { 'p', "parser", 1, opt_parser_handler, 0, N_("select parser"), N_("parser") },
+    { 'r', "preproc", 1, opt_preproc_handler, 0, N_("select preprocessor"), N_("preproc") },
+    { 'f', "oformat", 1, opt_objfmt_handler, 0, N_("select object format"), N_("format") },
+    { 'o', "objfile", 1, opt_objfile_handler, 0, N_("name of object-file output"), N_("filename") },
     { 'w', NULL,      0, opt_warning_handler, 1, N_("inhibits warning messages"), NULL },
     { 'W', NULL,      0, opt_warning_handler, 0, N_("enables/disables warning"), NULL },
-    /* Fake handlers: remove them */
-    { 'b', NULL,      0, b_handler, 0, "says boom!", NULL },
-    {  0,  "boo-boo", 0, boo_boo_handler, 0, "says boo-boo!", NULL },
+    { 'e', "preproc-only", 0, preproc_only_handler, 0, N_("preprocess only (writes output to stdout by default)"), NULL },
 };
 
 /* version message */
@@ -95,7 +98,7 @@ static const char version_msg[] = N_(
 
 /* help messages */
 static const char help_head[] = N_(
-    "usage: yasm [options|files]+\n"
+    "usage: yasm [option]* file\n"
     "Options:\n");
 static const char help_tail[] = N_(
     "\n"
@@ -111,6 +114,7 @@ static const char help_tail[] = N_(
 int
 main(int argc, char *argv[])
 {
+    /*@null@*/ FILE *in = NULL, *obj = NULL;
     sectionhead *sections;
 
 #if defined(HAVE_SETLOCALE) && defined(HAVE_LC_MESSAGES)
@@ -141,14 +145,21 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 
-    /* if no files were specified, fallback to reading stdin */
-    if (!in || !in_filename) {
+    if (in_filename && strcmp(in_filename, "-") != 0) {
+	/* Open the input file (if not standard input) */
+	in = fopen(in_filename, "rt");
+	if (!in) {
+	    ErrorNow(_("could not open file `%s'"), in_filename);
+	    return EXIT_FAILURE;
+	}
+    } else {
+	/* If no files were specified, fallback to reading stdin */
 	in = stdin;
-	if (in_filename)
-	    xfree(in_filename);
-	in_filename = xstrdup("<STDIN>");
-	if (!obj)
-	    obj = stdout;
+	if (!in_filename)
+	    in_filename = xstrdup("-");
+	/* Default to stdout if no obj filename specified */
+	if (!obj_filename)
+	    obj_filename = xstrdup("-");
     }
 
     /* Initialize line info */
@@ -162,22 +173,59 @@ main(int argc, char *argv[])
 	cur_objfmt = find_objfmt("dbg");
     assert(cur_objfmt != NULL);
 
-    /* open the object file if not specified */
-    if (!obj) {
-	/* build the object filename */
-	if (obj_filename)
-	    xfree(obj_filename);
-	assert(in_filename != NULL);
+    /* handle preproc-only case here */
+    if (preproc_only) {
+	char *preproc_buf = xmalloc(PREPROC_BUF_SIZE);
+	size_t got;
+
+	/* Default output to stdout if not specified */
+	if (!obj_filename)
+	    obj_filename = xstrdup("-");
+
+	/* Open output (object) file */
+	obj = open_obj();
+	if (!obj)
+	    return EXIT_FAILURE;
+
+	/* If not already specified, default to raw preproc. */
+	if (!cur_preproc)
+	    cur_preproc = find_preproc("raw");
+	assert(cur_preproc != NULL);
+
+	/* Pre-process until done */
+	cur_preproc->initialize(in);
+	while ((got = cur_preproc->input(preproc_buf, PREPROC_BUF_SIZE)) != 0)
+	    fwrite(preproc_buf, got, 1, obj);
+
+	if (in != stdin)
+	    fclose(in);
+	xfree(in_filename);
+
+	if (obj != stdout)
+	    fclose(obj);
+
+	if (OutputAllErrorWarning() > 0) {
+	    if (obj != stdout)
+		remove(obj_filename);
+	    return EXIT_FAILURE;
+	}
+	xfree(obj_filename);
+
+	return EXIT_SUCCESS;
+    }
+
+    /* determine the object filename if not specified or stdout defaulted */
+    if (!obj_filename)
 	/* replace (or add) extension */
 	obj_filename = replace_extension(in_filename, cur_objfmt->extension,
 					 "yasm.out");
-    }
 
     /* Pre-open the object file as debug_file if we're using a debug-type
      * format.  (This is so the format can output ALL function call info).
      */
     if (strcmp(cur_objfmt->keyword, "dbg") == 0) {
-	if (!open_obj())
+	obj = open_obj();
+	if (!obj)
 	    return EXIT_FAILURE;
 	debug_file = obj;
     }
@@ -192,15 +240,26 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 
+    /* (Try to) set a preprocessor, if requested */
+    if (cur_preproc) {
+	if (parser_setpp(cur_parser, cur_preproc->keyword)) {
+	    if (in != stdin)
+		fclose(in);
+	    xfree(in_filename);
+	    return EXIT_FAILURE;
+	}
+    }
+
     /* Get initial BITS setting from object format */
     x86_mode_bits = cur_objfmt->default_mode_bits;
 
+    /* Parse! */
     sections = cur_parser->do_parse(cur_parser, in);
 
+    /* Close input file */
     if (in != stdin)
 	fclose(in);
-    if (in_filename)
-	xfree(in_filename);
+    xfree(in_filename);
 
     if (OutputAllErrorWarning() > 0) {
 	cleanup(sections);
@@ -216,17 +275,18 @@ main(int argc, char *argv[])
     }
 
     /* open the object file for output (if not already opened above) */
-    if (!debug_file) {
-	if (!open_obj())
+    if (!obj) {
+	obj = open_obj();
+	if (!obj) {
+	    cleanup(sections);
 	    return EXIT_FAILURE;
+	}
     }
 
     /* Write the object file */
     cur_objfmt->output(obj, sections);
 
-    /* Finalize the object output */
-    cur_objfmt->cleanup();
-
+    /* Close object file */
     if (obj != stdout)
 	fclose(obj);
 
@@ -240,8 +300,7 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 
-    if (obj_filename)
-	xfree(obj_filename);
+    xfree(obj_filename);
 
     cleanup(sections);
     return EXIT_SUCCESS;
@@ -249,17 +308,21 @@ main(int argc, char *argv[])
 /*@=globstate =unrecog@*/
 
 /* Open the object file.  Returns 0 on failure. */
-static int
+static FILE *
 open_obj(void)
 {
-    if (obj != stdout) {
+    FILE *obj;
+
+    assert(obj_filename != NULL);
+
+    if (strcmp(obj_filename, "-") == 0)
+	obj = stdout;
+    else {
 	obj = fopen(obj_filename, "wb");
-	if (!obj) {
+	if (!obj)
 	    ErrorNow(_("could not open file `%s'"), obj_filename);
-	    return 0;
-	}
     }
-    return 1;
+    return obj;
 }
 
 /* Cleans up all allocated structures. */
@@ -268,6 +331,8 @@ cleanup(sectionhead *sections)
 {
     sections_delete(sections);
     symrec_delete_all();
+    if (cur_objfmt)
+	cur_objfmt->cleanup();
     line_shutdown();
 
     floatnum_shutdown();
@@ -282,22 +347,13 @@ cleanup(sectionhead *sections)
 int
 not_an_option_handler(char *param)
 {
-    if (in) {
-	WarningNow("can open only one input file, only latest file will be processed");
-	if (fclose(in))
-	    ErrorNow("could not close old input file");
+    if (in_filename) {
+	WarningNow("can open only one input file, only the last file will be processed");
+	xfree(in_filename);
     }
 
-    in = fopen(param, "rt");
-    if (!in) {
-	ErrorNow(_("could not open file `%s'"), param);
-	return 1;
-    }
-    if (in_filename)
-	xfree(in_filename);
     in_filename = xstrdup(param);
 
-    files_open++;
     return 0;
 }
 
@@ -310,7 +366,31 @@ opt_special_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param, int extra)
 }
 
 static int
-opt_format_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
+opt_parser_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
+{
+    assert(param != NULL);
+    cur_parser = find_parser(param);
+    if (!cur_parser) {
+	ErrorNow(_("unrecognized parser `%s'"), param);
+	return 1;
+    }
+    return 0;
+}
+
+static int
+opt_preproc_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
+{
+    assert(param != NULL);
+    cur_preproc = find_preproc(param);
+    if (!cur_preproc) {
+	ErrorNow(_("unrecognized preprocessor `%s'"), param);
+	return 1;
+    }
+    return 0;
+}
+
+static int
+opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     assert(param != NULL);
     cur_objfmt = find_objfmt(param);
@@ -325,27 +405,12 @@ static int
 opt_objfile_handler(/*@unused@*/ char *cmd, char *param,
 		    /*@unused@*/ int extra)
 {
-    assert(param != NULL);
-    if (strcmp(param, "-") == 0)
-	obj = stdout;
-    else {
-	if (obj) {
-	    WarningNow("can open only one output file, last specified used");
-	    if (obj != stdout && fclose(obj))
-		ErrorNow("could not close old output file");
-	}
-    }
-
-    if (obj != stdout) {
-	obj = fopen(param, "wb");
-	if (!obj) {
-	    ErrorNow(_("could not open file `%s'"), param);
-	    return 1;
-	}
-    }
-
-    if (obj_filename)
+    if (obj_filename) {
+	WarningNow(_("can output to only one object file, last specified used"));
 	xfree(obj_filename);
+    }
+
+    assert(param != NULL);
     obj_filename = xstrdup(param);
 
     return 0;
@@ -384,19 +449,10 @@ opt_warning_handler(char *cmd, /*@unused@*/ char *param, int extra)
     return 0;
 }
 
-/* Fake handlers: remove them */
 static int
-boo_boo_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
-		/*@unused@*/ int extra)
+preproc_only_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
+		     /*@unused@*/ int extra)
 {
-    printf("boo-boo!\n");
-    return 0;
-}
-
-static int
-b_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
-	  /*@unused@*/ int extra)
-{
-    fprintf(stdout, "boom!\n");
+    preproc_only = 1;
     return 0;
 }

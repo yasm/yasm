@@ -49,4 +49,13 @@ struct preproc {
 /* Available preprocessors */
 extern preproc raw_preproc;
 
+/* Finds a preproc based on its keyword.  Returns NULL if no match was found.
+ */
+/*@null@*/ preproc *find_preproc(const char *keyword);
+
+/* Lists all available preprocs.  Calls printfunc with the name and keyword
+ * of each available preprocessor.
+ */
+void list_preprocs(void (*printfunc) (const char *name, const char *keyword));
+
 #endif

@@ -21,6 +21,7 @@ YASMBASEFILES = \
 	src/arch.h		\
 	src/objfmt.c		\
 	src/objfmt.h		\
+	src/preproc.c		\
 	src/preproc.h		\
 	src/parser.c		\
 	src/parser.h		\
