@@ -5,6 +5,7 @@ yasm_SOURCES = \
 	token.l			\
 	bytecode.c		\
 	errwarn.c		\
+	expr.c			\
 	main.c			\
 	symrec.c
 
