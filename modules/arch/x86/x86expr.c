@@ -224,7 +224,8 @@ x86_expr_checkea_distcheck_reg(expr **ep)
  */
 static int
 x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
-			     int *(*get_reg)(ExprItem *ei, void *d))
+			     int *(*get_reg)(ExprItem *ei, void *d),
+			     calc_bc_dist_func calc_bc_dist)
 {
     int i;
     int *reg;
@@ -232,7 +233,7 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
 
     /*@-unqualifiedtrans@*/
     *ep = expr_xform_neg_tree(*ep);
-    *ep = expr_level_tree(*ep, 1, indexreg == 0, NULL, NULL);
+    *ep = expr_level_tree(*ep, 1, indexreg == 0, calc_bc_dist, NULL);
     /*@=unqualifiedtrans@*/
     assert(*ep != NULL);
     e = *ep;
@@ -481,7 +482,8 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 		 unsigned char nosplit, unsigned char *displen,
 		 unsigned char *modrm, unsigned char *v_modrm,
 		 unsigned char *n_modrm, unsigned char *sib,
-		 unsigned char *v_sib, unsigned char *n_sib)
+		 unsigned char *v_sib, unsigned char *n_sib,
+		 calc_bc_dist_func calc_bc_dist)
 {
     expr *e = *ep;
 
@@ -532,7 +534,8 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	int indexreg = REG32_NONE;	/* "index" register (for SIB) */
 	
 	switch (x86_expr_checkea_getregusage(ep, &indexreg, reg32mult,
-					     x86_expr_checkea_get_reg32)) {
+					     x86_expr_checkea_get_reg32,
+					     calc_bc_dist)) {
 	    case 0:
 		e = *ep;
 		ErrorAt(e->line, _("invalid effective address"));
@@ -716,7 +719,8 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	*n_sib = 0;
 
 	switch (x86_expr_checkea_getregusage(ep, (int *)NULL, &reg16mult,
-					     x86_expr_checkea_get_reg16)) {
+					     x86_expr_checkea_get_reg16,
+					     calc_bc_dist)) {
 	    case 0:
 		e = *ep;
 		ErrorAt(e->line, _("invalid effective address"));

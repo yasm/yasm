@@ -463,9 +463,6 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 	    temp = expr_copy(ea->disp);
 	    assert(temp != NULL);
 
-	    /* Expand equ's and labels */
-	    temp = expr_simplify(temp, calc_bc_dist);
-
 	    /* Check validity of effective address and calc R/M bits of
 	     * Mod/RM byte and SIB byte.  We won't know the Mod field
 	     * of the Mod/RM byte until we know more about the
@@ -475,7 +472,7 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 				  ea->nosplit, &displen, &ead_t.modrm,
 				  &ead_t.valid_modrm, &ead_t.need_modrm,
 				  &ead_t.sib, &ead_t.valid_sib,
-				  &ead_t.need_sib)) {
+				  &ead_t.need_sib, calc_bc_dist)) {
 		expr_delete(temp);
 		/* failed, don't bother checking rest of insn */
 		return BC_RESOLVE_UNKNOWN_LEN;
@@ -772,7 +769,7 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
 				  ea->nosplit, &displen, &ead_t.modrm,
 				  &ead_t.valid_modrm, &ead_t.need_modrm,
 				  &ead_t.sib, &ead_t.valid_sib,
-				  &ead_t.need_sib))
+				  &ead_t.need_sib, common_calc_bc_dist))
 		InternalError(_("checkea failed"));
 
 	    if (ea->disp) {

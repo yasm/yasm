@@ -196,7 +196,8 @@ int x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 		     unsigned char nosplit, unsigned char *displen,
 		     unsigned char *modrm, unsigned char *v_modrm,
 		     unsigned char *n_modrm, unsigned char *sib,
-		     unsigned char *v_sib, unsigned char *n_sib);
+		     unsigned char *v_sib, unsigned char *n_sib,
+		     calc_bc_dist_func calc_bc_dist);
 
 void x86_switch_cpu(const char *cpuid);
 
