@@ -18,8 +18,8 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
    USA.  */
-#ifndef TERNARY_H_
-#define TERNARY_H_
+#ifndef YASM_TERNARY_H
+#define YASM_TERNARY_H
 /* Ternary search trees */
 
 typedef struct ternary_node_def *ternary_tree;

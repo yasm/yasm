@@ -21,14 +21,19 @@
 #include "config.h"
 #endif
 
-#ifdef HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
+#include "util.h"
 
 #include <stdio.h>
 
-#include "libiberty.h"
+#ifdef STDC_HEADERS
+#include <stdlib.h>
+#endif
+
+#include "errwarn.h"
+
 #include "ternary.h"
+
+RCSID("$IdPath$");
 
 /* Non-recursive so we don't waste stack space/time on large
    insertions. */
@@ -74,7 +79,9 @@ ternary_insert (ternary_tree * root, char *s, void *data, int replace)
   for (;;)
     {
       /* Allocate the memory for the node, and fill it in */
-      *pcurr = (ternary_tree) xmalloc (sizeof (ternary_node));
+      *pcurr = (ternary_tree) malloc (sizeof (ternary_node));
+      if (!*pcurr)
+	Fatal(FATAL_NOMEM);
       curr = *pcurr;
       curr->splitchar = *s;
       curr->lokid = curr->hikid = curr->eqkid = 0;

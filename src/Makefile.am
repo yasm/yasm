@@ -39,6 +39,8 @@ libyasm_a_SOURCES = \
 	parser.c		\
 	parser.h		\
 	optimizer.h		\
+	ternary.c		\
+	ternary.h		\
 	strcasecmp.c
 
 CFLAGS = @ANSI_CFLAGS@
