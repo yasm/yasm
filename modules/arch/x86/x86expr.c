@@ -293,7 +293,7 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
 			return 0;
 		    (*reg) +=
 			intnum_get_int(e->terms[i].data.expn->terms[1].data.intn);
-		    if (indexreg)
+		    if (indexreg && *reg > 0)
 			*indexreg = reg-(int *)data;
 		}
 	    }
@@ -563,7 +563,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 		ErrorAt(e->line, _("invalid effective address"));
 		return 0;
 	    }
-	    if (i != indexreg && reg32mult[i] == 1)
+	    if (i != indexreg && reg32mult[i] == 1 && basereg == REG32_NONE)
 		basereg = i;
 	    else if (indexreg == REG32_NONE && reg32mult[i] > 0)
 		indexreg = i;
