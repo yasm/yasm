@@ -30,8 +30,9 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-RCSID("$IdPath$");
+RCSID("$IdPath: yasm/libyasm/xstrdup.c,v 1.13 2003/03/15 05:07:48 peter Exp $");
 
+#include "coretype.h"
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)strdup.c	8.1 (Berkeley) 6/4/93";

@@ -27,9 +27,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#define YASM_LIB_INTERNAL
-#include <libyasm.h>
-/*@unused@*/ RCSID("$IdPath$");
+#include <util.h>
+/*@unused@*/ RCSID("$IdPath: yasm/frontends/yasm/yasm-options.c,v 1.13 2003/04/01 19:53:30 mu Exp $");
 
 #include "yasm-options.h"
 

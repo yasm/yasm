@@ -26,8 +26,9 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath: yasm/libyasm/linemgr.c,v 1.33 2003/03/16 23:52:23 peter Exp $");
 
+#include "coretype.h"
 #include "hamt.h"
 
 #include "errwarn.h"

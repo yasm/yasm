@@ -1,6 +1,8 @@
 #define YASM_LIB_INTERNAL
 #include "util.h"
-RCSID("$IdPath$");
+RCSID("$IdPath: yasm/libyasm/bitvect.c,v 1.19 2003/05/03 08:01:09 peter Exp $");
+
+#include "coretype.h"
 
 /*****************************************************************************/
 /*  MODULE NAME:  BitVector.c                           MODULE TYPE:  (adt)  */

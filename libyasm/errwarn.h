@@ -2,7 +2,7 @@
  * \file errwarn.h
  * \brief YASM error and warning reporting interface.
  *
- * $IdPath: yasm/libyasm/errwarn.h,v 1.36 2003/05/04 01:39:10 peter Exp $
+ * $IdPath: yasm/libyasm/errwarn.h,v 1.37 2003/05/04 08:40:35 peter Exp $
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -70,8 +70,6 @@ extern /*@exits@*/ void (*yasm_internal_error_)
  */
 extern /*@exits@*/ void (*yasm_fatal) (const char *message);
 
-#ifdef YASM_INTERNAL
-
 /** Log an error.  va_list version of yasm__error().
  * \internal
  * \param lindex    line index
@@ -108,8 +106,8 @@ void yasm__error(unsigned long lindex, const char *message, ...)
  * \param message   printf-like-format message
  * \param ...	    argument list for message
  */
-void yasm__warning(yasm_warn_class, unsigned long lindex, const char *message,
-		   ...) /*@printflike@*/;
+void yasm__warning(yasm_warn_class wclass, unsigned long lindex,
+		   const char *message, ...) /*@printflike@*/;
 
 /** Log a parser error.  Parser errors can be overwritten by non-parser errors
  * on the same line.
@@ -118,8 +116,6 @@ void yasm__warning(yasm_warn_class, unsigned long lindex, const char *message,
  * \param message   parser error message
  */
 void yasm__parser_error(unsigned long lindex, const char *message);
-
-#endif
 
 /** Enable a class of warnings.
  * \param wclass    warning class
@@ -166,14 +162,12 @@ void yasm_errwarn_output_all
     (yasm_linemgr *lm, int warning_as_error, yasm_print_error_func print_error,
      yasm_print_warning_func print_warning);
 
-#ifdef YASM_INTERNAL
 /** Convert a possibly unprintable character into a printable string.
  * \internal
  * \param ch	possibly unprintable character
  * \return Printable string representation (static buffer).
  */
 char *yasm__conv_unprint(int ch);
-#endif
 
 /** Hook for library users to map to gettext() if GNU gettext is being used.
  * \param msgid	    message catalog identifier

@@ -26,12 +26,13 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath: yasm/libyasm/symrec.c,v 1.60 2003/03/15 05:07:48 peter Exp $");
 
 #ifdef STDC_HEADERS
 # include <limits.h>
 #endif
 
+#include "coretype.h"
 #include "hamt.h"
 
 #include "errwarn.h"

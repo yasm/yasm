@@ -33,8 +33,8 @@
  *
  * detoken is used to convert the line back to text
  */
-#define YASM_LIB_INTERNAL
-#include "libyasm/util.h"
+#include <util.h>
+#include <libyasm/coretype.h>
 #include <stdarg.h>
 #include <ctype.h>
 #include <limits.h>

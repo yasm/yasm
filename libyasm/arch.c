@@ -26,7 +26,9 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath: yasm/libyasm/arch.c,v 1.11 2003/03/15 05:07:48 peter Exp $");
+
+#include "coretype.h"
 
 #include "expr.h"
 
@@ -176,7 +178,7 @@ yasm_ops_print(FILE *f, int indent_level, const yasm_insn_operandhead *headp)
 	yasm_operand_print(f, indent_level, cur);
 }
 
-/* Non-macro yasm_ops_initialize() for non-YASM_INTERNAL users. */
+/* Non-macro yasm_ops_initialize() for non-YASM_LIB_INTERNAL users. */
 #undef yasm_ops_initialize
 void
 yasm_ops_initialize(yasm_insn_operandhead *headp)
@@ -184,7 +186,7 @@ yasm_ops_initialize(yasm_insn_operandhead *headp)
     STAILQ_INIT(headp);
 }
 
-/* Non-macro yasm_ops_first() for non-YASM_INTERNAL users. */
+/* Non-macro yasm_ops_first() for non-YASM_LIB_INTERNAL users. */
 #undef yasm_ops_first
 yasm_insn_operand *
 yasm_ops_first(yasm_insn_operandhead *headp)
@@ -192,7 +194,7 @@ yasm_ops_first(yasm_insn_operandhead *headp)
     return STAILQ_FIRST(headp);
 }
 
-/* Non-macro yasm_ops_next() for non-YASM_INTERNAL users. */
+/* Non-macro yasm_ops_next() for non-YASM_LIB_INTERNAL users. */
 #undef yasm_ops_next
 yasm_insn_operand *
 yasm_ops_next(yasm_insn_operand *cur)

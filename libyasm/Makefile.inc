@@ -1,4 +1,4 @@
-# $IdPath$
+# $IdPath: yasm/libyasm/Makefile.inc,v 1.17 2003/03/15 05:07:47 peter Exp $
 
 lib_LTLIBRARIES += libyasm.la
 libyasm_la_SOURCES = \
@@ -24,7 +24,6 @@ libyasm_la_LDFLAGS = -no-undefined
 
 modincludedir = $(includedir)/libyasm
 modinclude_HEADERS = \
-	libyasm/util.h		\
 	libyasm/bytecode.h	\
 	libyasm/bc-int.h	\
 	libyasm/errwarn.h	\
@@ -47,9 +46,6 @@ modinclude_HEADERS = \
 	libyasm/bitvect.h	\
 	libyasm/valparam.h	\
 	libyasm/compat-queue.h
-
-# Generated at configure time, so must be DATA instead of HEADERS
-modinclude_DATA = libyasm/config.h
 
 EXTRA_DIST += \
 	libyasm/tests/Makefile.inc

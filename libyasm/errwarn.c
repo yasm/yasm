@@ -26,13 +26,15 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath: yasm/libyasm/errwarn.c,v 1.55 2003/03/16 23:52:54 peter Exp $");
+/*@unused@*/ RCSID("$IdPath: yasm/libyasm/errwarn.c,v 1.56 2003/05/04 01:39:10 peter Exp $");
 
 #include <ctype.h>
 
 #ifdef STDC_HEADERS
 # include <stdarg.h>
 #endif
+
+#include "coretype.h"
 
 #include "linemgr.h"
 #include "errwarn.h"

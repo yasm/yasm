@@ -25,7 +25,7 @@ libltdlc_la_SOURCES = ltdl.c
 libltdlc_la_LIBADD = $(LIBADD_DL)
 
 ## Because we do not have automatic dependency tracking:
-ltdl.lo: ltdl.h ../libyasm/config.h
+ltdl.lo: ltdl.h ../config.h
 
 $(libltdl_la_OBJECTS) $(libltdlc_la_OBJECTS): $(top_builddir)/libtool
 #libtool: $(LIBTOOL_DEPS)

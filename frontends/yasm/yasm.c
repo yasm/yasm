@@ -24,9 +24,12 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#define YASM_LIB_INTERNAL
+#include <util.h>
+/*@unused@*/ RCSID("$IdPath: yasm/frontends/yasm/yasm.c,v 1.96 2003/05/03 06:26:15 peter Exp $");
+
+#include <libyasm/compat-queue.h>
+#include <libyasm/bitvect.h>
 #include <libyasm.h>
-/*@unused@*/ RCSID("$IdPath$");
 
 #ifndef WIN32
 #include "ltdl.h"

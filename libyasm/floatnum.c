@@ -28,10 +28,11 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath: yasm/libyasm/floatnum.c,v 1.33 2003/03/15 05:07:48 peter Exp $");
 
 #include <ctype.h>
 
+#include "coretype.h"
 #include "bitvect.h"
 #include "file.h"
 

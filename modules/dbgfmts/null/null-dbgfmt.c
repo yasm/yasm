@@ -24,9 +24,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include <util.h>
+/*@unused@*/ RCSID("$IdPath: yasm/modules/dbgfmts/null/null-dbgfmt.c,v 1.8 2003/03/26 05:07:56 peter Exp $");
+
 #define YASM_LIB_INTERNAL
 #include <libyasm.h>
-/*@unused@*/ RCSID("$IdPath$");
 
 
 /* Define dbgfmt structure -- see dbgfmt.h for details */

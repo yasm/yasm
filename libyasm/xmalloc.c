@@ -26,8 +26,9 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-RCSID("$IdPath$");
+RCSID("$IdPath: yasm/libyasm/xmalloc.c,v 1.13 2003/03/15 05:07:48 peter Exp $");
 
+#include "coretype.h"
 #include "errwarn.h"
 
 

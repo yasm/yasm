@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-# $IdPath$
+# $IdPath: yasm/configure.ac,v 1.70 2003/03/18 05:00:54 peter Exp $
 
 # Minimum required perl version for development
 PERL_VERSION=5.004
@@ -11,7 +11,7 @@ AC_PREREQ(2.50)
 AC_INIT([yasm], `date "+%Y%m%d"`, [bug-yasm@tortall.net])
 #AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_AUX_DIR(config)
-AM_CONFIG_HEADER([libyasm/config.h])
+AM_CONFIG_HEADER([config.h])
 
 AM_INIT_AUTOMAKE(yasm, `date "+%Y%m%d"`)
 AM_MAINTAINER_MODE

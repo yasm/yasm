@@ -24,9 +24,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include <util.h>
+/*@unused@*/ RCSID("$IdPath: yasm/modules/preprocs/nasm/nasm-preproc.c,v 1.8 2003/04/01 04:06:47 mu Exp $");
+
 #define YASM_LIB_INTERNAL
-#include "libyasm.h"
-/*@unused@*/ RCSID("$IdPath$");
+#include <libyasm.h>
 
 #include "nasm.h"
 #include "nasmlib.h"

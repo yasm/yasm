@@ -1,4 +1,4 @@
-/* $IdPath$
+/* $IdPath: yasm/modules/preprocs/yapp/yapp-preproc.c,v 1.23 2003/03/17 00:03:02 peter Exp $
  * YAPP preprocessor (mimics NASM's preprocessor)
  *
  *  Copyright (C) 2001  Michael Urman
@@ -19,9 +19,11 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#include <util.h>
+/*@unused@*/ RCSID("$IdPath: yasm/modules/preprocs/yapp/yapp-preproc.c,v 1.23 2003/03/17 00:03:02 peter Exp $");
+
 #define YASM_LIB_INTERNAL
-#include "libyasm.h"
-/*@unused@*/ RCSID("$IdPath$");
+#include <libyasm.h>
 
 #include "yapp-preproc.h"
 #include "yapp-token.h"

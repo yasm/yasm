@@ -24,10 +24,12 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include <util.h>
+/*@unused@*/ RCSID("$IdPath: yasm/modules/optimizers/basic/basic-optimizer.c,v 1.33 2003/03/26 05:07:57 peter Exp $");
+
 #define YASM_LIB_INTERNAL
 #define YASM_BC_INTERNAL
 #include <libyasm.h>
-/*@unused@*/ RCSID("$IdPath$");
 
 
 #define SECTFLAG_NONE		0UL

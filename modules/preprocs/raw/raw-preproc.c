@@ -24,9 +24,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include <util.h>
+/*@unused@*/ RCSID("$IdPath: yasm/modules/preprocs/raw/raw-preproc.c,v 1.23 2003/04/01 04:06:47 mu Exp $");
+
 #define YASM_LIB_INTERNAL
-#include "libyasm.h"
-/*@unused@*/ RCSID("$IdPath$");
+#include <libyasm.h>
 
 
 static int is_interactive;

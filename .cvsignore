@@ -1,4 +1,6 @@
 autom4te.cache
+stamp-h*
+config.*
 nasm-bison.c
 nasm-bison.h
 nasm-token.c

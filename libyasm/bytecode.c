@@ -26,8 +26,9 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath: yasm/libyasm/bytecode.c,v 1.93 2003/03/31 05:36:29 peter Exp $");
+/*@unused@*/ RCSID("$IdPath: yasm/libyasm/bytecode.c,v 1.94 2003/05/04 22:15:09 peter Exp $");
 
+#include "coretype.h"
 #include "file.h"
 
 #include "errwarn.h"
@@ -995,7 +996,7 @@ yasm_bcs_new(void)
     return headp;
 }
 
-/* Non-macro yasm_bcs_first() for non-YASM_INTERNAL users. */
+/* Non-macro yasm_bcs_first() for non-YASM_LIB_INTERNAL users. */
 #undef yasm_bcs_first
 yasm_bytecode *
 yasm_bcs_first(yasm_bytecodehead *headp)
@@ -1003,7 +1004,7 @@ yasm_bcs_first(yasm_bytecodehead *headp)
     return STAILQ_FIRST(headp);
 }
 
-/* Non-macro yasm_dvs_initialize() for non-YASM_INTERNAL users. */
+/* Non-macro yasm_dvs_initialize() for non-YASM_LIB_INTERNAL users. */
 #undef yasm_dvs_initialize
 void
 yasm_dvs_initialize(yasm_datavalhead *headp)

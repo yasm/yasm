@@ -1,4 +1,4 @@
-/* $IdPath$
+/* $IdPath: yasm/libyasm.h,v 1.3 2003/03/30 21:27:25 peter Exp $
  * Libyasm interface primary header file.
  *
  *  Copyright (C) 2003  Peter Johnson
@@ -27,25 +27,25 @@
 #ifndef YASM_LIB_H
 #define YASM_LIB_H
 
-/* Define YASM_INTERNAL to include many internal function and variable defs.
- * This includes compat-queue.h, bitvect.h, hamt.h, and util.h, which violate
- * the yasm_* namespace (see individual files for details)!
+/* Define YASM_LIB_INTERNAL to include many internal function and variable
+ * definitions that violate the yasm_* namespace.  This includes
+ * compat-queue.h, bitvect.h, and hamt.h.
  *
- * Additional parts may be included via YASM_*_INTERNAL inclusion flags:
+ * Additional parts may be included via:
  * YASM_BC_INTERNAL: reveal bytecode internal structures via bc-int.h inclusion
  * YASM_EXPR_INTERNAL: reveal expr internal structures via expr-int.h inclusion
- * YASM_AUTOCONF_INTERNAL: include parts of util.h that depend on certain
- *                         autoconfig settings.. see util.h for more details
- * YASM_LIB_AC_INTERNAL: include libyasm/config.h if HAVE_CONFIG_H is defined
- * YASM_GETTEXT_INTERNAL: define typical gettext _() and N_().  Requires
- *                        YASM_AUTOCONF_INTERNAL define.
- *
- * YASM_LIB_INTERNAL: defines YASM_INTERNAL, YASM_AUTOCONF_INTERNAL,
- *                    YASM_LIB_AC_INTERNAL, and YASM_GETTEXT_INTERNAL
- *                    (used when compiling the library itself)
  */
 
-#include <libyasm/util.h>
+#include <stdio.h>
+#include <stdarg.h>
+
+#ifdef YASM_LIB_INTERNAL
+# include <libyasm/compat-queue.h>
+#endif
+
+#include <libyasm/coretype.h>
+#include <libyasm/valparam.h>
+
 #include <libyasm/linemgr.h>
 
 #include <libyasm/errwarn.h>
@@ -66,7 +66,7 @@
 
 #include <libyasm/file.h>
 
-#ifdef YASM_INTERNAL
+#ifdef YASM_LIB_INTERNAL
 #ifdef YASM_BC_INTERNAL
 #include <libyasm/bc-int.h>
 #endif

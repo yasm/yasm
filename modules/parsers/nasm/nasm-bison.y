@@ -25,10 +25,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 %{
+#include <util.h>
+RCSID("$IdPath: yasm/modules/parsers/nasm/nasm-bison.y,v 1.93 2003/05/04 22:15:09 peter Exp $");
+
 #define YASM_LIB_INTERNAL
 #define YASM_EXPR_INTERNAL
 #include <libyasm.h>
-RCSID("$IdPath: yasm/modules/parsers/nasm/nasm-bison.y,v 1.92 2003/03/31 05:36:30 peter Exp $");
 
 #ifdef STDC_HEADERS
 # include <math.h>

@@ -2,7 +2,7 @@
  * \file arch.h
  * \brief YASM architecture interface.
  *
- * $IdPath$
+ * $IdPath: yasm/libyasm/arch.h,v 1.28 2003/03/31 08:22:05 peter Exp $
  *
  *  Copyright (C) 2002  Peter Johnson
  *
@@ -46,7 +46,7 @@ typedef struct yasm_insn_operand yasm_insn_operand;
  * The list goes from left-to-right as parsed.
  */
 typedef struct yasm_insn_operandhead yasm_insn_operandhead;
-#ifdef YASM_INTERNAL
+#ifdef YASM_LIB_INTERNAL
 /*@reldef@*/ STAILQ_HEAD(yasm_insn_operandhead, yasm_insn_operand);
 #endif
 
@@ -280,7 +280,7 @@ struct yasm_arch {
     void (*ea_data_print) (FILE *f, int indent_level, const yasm_effaddr *ea);
 };
 
-#ifdef YASM_INTERNAL
+#ifdef YASM_LIB_INTERNAL
 /** An instruction operand. */
 struct yasm_insn_operand {
     /** Link for building linked list of operands.  \internal */
@@ -365,7 +365,7 @@ yasm_insn_operand *yasm_ops_first(yasm_insn_operandhead *headp);
  */
 yasm_insn_operand *yasm_ops_next(yasm_insn_operand *cur);
 
-#ifdef YASM_INTERNAL
+#ifdef YASM_LIB_INTERNAL
 #define yasm_ops_initialize(headp)	STAILQ_INIT(headp)
 #define yasm_ops_first(headp)		STAILQ_FIRST(headp)
 #define yasm_ops_next(cur)		STAILQ_NEXT(cur, link)

@@ -24,9 +24,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include <util.h>
+/*@unused@*/ RCSID("$IdPath: yasm/modules/objfmts/dbg/dbg-objfmt.c,v 1.34 2003/03/26 05:07:57 peter Exp $");
+
 #define YASM_LIB_INTERNAL
 #include <libyasm.h>
-/*@unused@*/ RCSID("$IdPath$");
 
 
 yasm_objfmt yasm_dbg_LTX_objfmt;

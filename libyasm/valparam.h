@@ -2,7 +2,7 @@
  * \file valparam.h
  * \brief YASM Value/Parameter type interface.
  *
- * $IdPath: yasm/libyasm/valparam.h,v 1.12 2003/03/16 23:53:31 peter Exp $
+ * $IdPath: yasm/libyasm/valparam.h,v 1.13 2003/05/04 20:28:28 peter Exp $
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -30,7 +30,7 @@
 #ifndef YASM_VALPARAM_H
 #define YASM_VALPARAM_H
 
-#ifdef YASM_INTERNAL
+#ifdef YASM_LIB_INTERNAL
 /** Value/parameter pair.  \internal */
 struct yasm_valparam {
     /*@reldef@*/ STAILQ_ENTRY(yasm_valparam) link;  /**< Next pair in list */
@@ -53,7 +53,7 @@ yasm_valparam *yasm_vp_new(/*@keep@*/ char *v, /*@keep@*/ yasm_expr *p);
  * \param headp	linked list
  */
 void yasm_vps_initialize(/*@out@*/ yasm_valparamhead *headp);
-#ifdef YASM_INTERNAL
+#ifdef YASM_LIB_INTERNAL
 #define yasm_vps_initialize(headp)	STAILQ_INIT(headp)
 #endif
 
@@ -67,7 +67,7 @@ void yasm_vps_delete(yasm_valparamhead *headp);
  * \param vp	valparam
  */
 void yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp);
-#ifdef YASM_INTERNAL
+#ifdef YASM_LIB_INTERNAL
 #define yasm_vps_append(headp, vp)	do {	    \
 	if (vp)					    \
 	    STAILQ_INSERT_TAIL(headp, vp, link);    \
@@ -80,7 +80,7 @@ void yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp);
  */
 /*@null@*/ /*@dependent@*/ yasm_valparam *yasm_vps_first
     (yasm_valparamhead *headp);
-#ifdef YASM_INTERNAL
+#ifdef YASM_LIB_INTERNAL
 #define yasm_vps_first(headp)	    STAILQ_FIRST(headp)
 #endif
 
@@ -89,7 +89,7 @@ void yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp);
  * \return Next valparam in linked list.
  */
 /*@null@*/ /*@dependent@*/ yasm_valparam *yasm_vps_next(yasm_valparam *cur);
-#ifdef YASM_INTERNAL
+#ifdef YASM_LIB_INTERNAL
 #define yasm_vps_next(cur)	    STAILQ_NEXT(cur, link)
 
 /** Iterate through linked list of valparams.

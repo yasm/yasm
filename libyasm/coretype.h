@@ -1,8 +1,8 @@
 /**
  * \file coretype.h
- * \brief YASM core type definitions.
+ * \brief YASM core types and utility functions.
  *
- * $IdPath$
+ * $IdPath: yasm/libyasm/coretype.h,v 1.23 2003/03/31 08:22:05 peter Exp $
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -174,4 +174,90 @@ typedef int (*yasm_output_expr_func)
 typedef int (*yasm_output_bc_objfmt_data_func)
     (unsigned int type, /*@observer@*/ void *data, unsigned char **bufp)
     /*@sets **bufp@*/;
+
+/** Sort an array using merge sort algorithm.
+ * \internal
+ * \param base	    base of array
+ * \param nmemb	    number of elements in array
+ * \param size	    size of each array element
+ * \param compar    element comparison function
+ */
+int yasm__mergesort(void *base, size_t nmemb, size_t size,
+		    int (*compar)(const void *, const void *));
+
+/** Separate string by delimiters.
+ * \internal
+ * \param stringp   string
+ * \param delim	    set of 1 or more delimiters
+ * \return First/next substring.
+ */
+/*@null@*/ char *yasm__strsep(char **stringp, const char *delim);
+
+/** Compare two strings, ignoring case differences.
+ * \internal
+ * \param s1	string 1
+ * \param s2	string 2
+ * \return 0 if strings are equal, -1 if s1<s2, 1 if s1>s2.
+ */
+int yasm__strcasecmp(const char *s1, const char *s2);
+
+/** Compare portion of two strings, ignoring case differences.
+ * \internal
+ * \param s1	string 1
+ * \param s2	string 2
+ * \param n	maximum number of characters to compare
+ * \return 0 if strings are equal, -1 if s1<s2, 1 if s1>s2.
+ */
+int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
+
+/** strdup() implementation using yasm_xmalloc().
+ * \internal
+ * \param str	string
+ * \return Newly allocated duplicate string.
+ */
+/*@only@*/ char *yasm__xstrdup(const char *str);
+
+/** strndup() implementation using yasm_xmalloc().
+ * \internal
+ * \param str	string
+ * \param len	maximum number of characters to copy
+ * \return Newly allocated duplicate string.
+ */
+/*@only@*/ char *yasm__xstrndup(const char *str, size_t len);
+
+/** Error-checking memory allocation.  A default implementation is provided
+ * that calls yasm_fatal() on allocation errors.
+ * A replacement should \em never return NULL.
+ * \param size	    number of bytes to allocate
+ * \return Allocated memory block.
+ */
+extern /*@only@*/ /*@out@*/ void * (*yasm_xmalloc) (size_t size);
+
+/** Error-checking memory allocation (with clear-to-0).  A default
+ * implementation is provided that calls yasm_fatal() on allocation errors.
+ * A replacement should \em never return NULL.
+ * \param size	    number of elements to allocate
+ * \param elsize    size (in bytes) of each element
+ * \return Allocated and cleared memory block.
+ */
+extern /*@only@*/ void * (*yasm_xcalloc) (size_t nelem, size_t elsize);
+
+/** Error-checking memory reallocation.  A default implementation is provided
+ * that calls yasm_fatal() on allocation errors.  A replacement should
+ * \em never return NULL.
+ * \param oldmem    memory block to resize
+ * \param elsize    new size, in bytes
+ * \return Re-allocated memory block.
+ */
+extern /*@only@*/ void * (*yasm_xrealloc)
+    (/*@only@*/ /*@out@*/ /*@returned@*/ /*@null@*/ void *oldmem, size_t size)
+    /*@modifies oldmem@*/;
+
+/** Error-checking memory deallocation.  A default implementation is provided
+ * that calls yasm_fatal() on allocation errors.
+ * \param p	memory block to free
+ */
+extern void (*yasm_xfree) (/*@only@*/ /*@out@*/ /*@null@*/ void *p)
+    /*@modifies p@*/;
+
 #endif

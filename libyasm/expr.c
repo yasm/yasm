@@ -26,8 +26,9 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath: yasm/libyasm/expr.c,v 1.64 2003/03/15 21:59:55 peter Exp $");
 
+#include "coretype.h"
 #include "bitvect.h"
 
 #include "errwarn.h"

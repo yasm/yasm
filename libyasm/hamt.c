@@ -31,8 +31,9 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath: yasm/libyasm/hamt.c,v 1.9 2003/03/15 05:07:48 peter Exp $");
 
+#include "coretype.h"
 #include "hamt.h"
 
 typedef struct HAMTEntry {

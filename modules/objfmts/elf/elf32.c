@@ -24,9 +24,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include <util.h>
+/*@unused@*/ RCSID("$IdPath: yasm/modules/objfmts/elf/elf32.c,v 1.2 2003/03/28 07:06:46 peter Exp $");
+
 #define YASM_LIB_INTERNAL
-#include "libyasm.h"
-/*@unused@*/ RCSID("$IdPath$");
+#include <libyasm.h>
 
 #include "elf32.h"
 

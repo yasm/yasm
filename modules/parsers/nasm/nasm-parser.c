@@ -24,9 +24,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include <util.h>
+/*@unused@*/ RCSID("$IdPath: yasm/modules/parsers/nasm/nasm-parser.c,v 1.34 2003/05/04 22:15:09 peter Exp $");
+
 #define YASM_LIB_INTERNAL
 #include <libyasm.h>
-/*@unused@*/ RCSID("$IdPath: yasm/modules/parsers/nasm/nasm-parser.c,v 1.33 2003/04/01 07:26:33 peter Exp $");
 
 #include "nasm-parser.h"
 

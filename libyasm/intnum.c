@@ -26,10 +26,11 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath: yasm/libyasm/intnum.c,v 1.25 2003/03/17 00:03:02 peter Exp $");
 
 #include <ctype.h>
 
+#include "coretype.h"
 #include "bitvect.h"
 #include "file.h"
 

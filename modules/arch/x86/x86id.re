@@ -24,11 +24,13 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include <util.h>
+RCSID("$IdPath: yasm/modules/arch/x86/x86id.re,v 1.46 2003/03/31 05:36:29 peter Exp $");
+
 #define YASM_LIB_INTERNAL
 #define YASM_BC_INTERNAL
 #define YASM_EXPR_INTERNAL
 #include <libyasm.h>
-RCSID("$IdPath$");
 
 #include "modules/arch/x86/x86arch.h"
 

@@ -2,7 +2,7 @@
  * \file bytecode.h
  * \brief YASM bytecode interface.
  *
- * $IdPath: yasm/libyasm/bytecode.h,v 1.72 2003/05/04 08:40:35 peter Exp $
+ * $IdPath: yasm/libyasm/bytecode.h,v 1.73 2003/05/04 22:15:09 peter Exp $
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -39,7 +39,7 @@ typedef struct yasm_dataval yasm_dataval;
 /** A list of data values (opaque type). */
 typedef struct yasm_datavalhead yasm_datavalhead;
 
-#ifdef YASM_INTERNAL
+#ifdef YASM_LIB_INTERNAL
 /*@reldef@*/ STAILQ_HEAD(yasm_bytecodehead, yasm_bytecode);
 /*@reldef@*/ STAILQ_HEAD(yasm_datavalhead, yasm_dataval);
 
@@ -123,7 +123,7 @@ void yasm_ea_print(FILE *f, int indent_level, const yasm_effaddr *ea);
  */
 void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
 
-#ifdef YASM_INTERNAL
+#ifdef YASM_LIB_INTERNAL
 /** Create a bytecode of any specified type.
  * \param type		bytecode type
  * \param datasize	size of type-specific data (in bytes)
@@ -275,7 +275,7 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
  * \return First bytecode in list (NULL if list is empty).
  */
 /*@null@*/ yasm_bytecode *yasm_bcs_first(yasm_bytecodehead *headp);
-#ifdef YASM_INTERNAL
+#ifdef YASM_LIB_INTERNAL
 #define yasm_bcs_first(headp)	STAILQ_FIRST(headp)
 #endif
 
@@ -342,7 +342,7 @@ yasm_dataval *yasm_dv_new_string(/*@keep@*/ char *str_val);
  * \param headp	list of data values
  */
 void yasm_dvs_initialize(yasm_datavalhead *headp);
-#ifdef YASM_INTERNAL
+#ifdef YASM_LIB_INTERNAL
 #define	yasm_dvs_initialize(headp)	STAILQ_INIT(headp)
 #endif
 

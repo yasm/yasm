@@ -26,7 +26,10 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath: yasm/libyasm/valparam.c,v 1.13 2003/03/16 23:53:31 peter Exp $");
+
+#include "coretype.h"
+#include "valparam.h"
 
 #include "expr.h"
 
@@ -83,7 +86,7 @@ yasm_vps_print(FILE *f, const yasm_valparamhead *headp)
     }
 }
 
-/* Non-macro yasm_vps_initialize() for non-YASM_INTERNAL users. */
+/* Non-macro yasm_vps_initialize() for non-YASM_LIB_INTERNAL users. */
 #undef yasm_vps_initialize
 void
 yasm_vps_initialize(/*@out@*/ yasm_valparamhead *headp)
@@ -91,7 +94,7 @@ yasm_vps_initialize(/*@out@*/ yasm_valparamhead *headp)
     STAILQ_INIT(headp);
 }
 
-/* Non-macro yasm_vps_append() for non-YASM_INTERNAL users. */
+/* Non-macro yasm_vps_append() for non-YASM_LIB_INTERNAL users. */
 #undef yasm_vps_append
 void
 yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp)
@@ -100,7 +103,7 @@ yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp)
 	STAILQ_INSERT_TAIL(headp, vp, link);
 }
 
-/* Non-macro yasm_vps_first() for non-YASM_INTERNAL users. */
+/* Non-macro yasm_vps_first() for non-YASM_LIB_INTERNAL users. */
 #undef yasm_vps_first
 /*@null@*/ /*@dependent@*/ yasm_valparam *
 yasm_vps_first(yasm_valparamhead *headp)
@@ -108,7 +111,7 @@ yasm_vps_first(yasm_valparamhead *headp)
     return STAILQ_FIRST(headp);
 }
 
-/* Non-macro yasm_vps_next() for non-YASM_INTERNAL users. */
+/* Non-macro yasm_vps_next() for non-YASM_LIB_INTERNAL users. */
 #undef yasm_vps_next
 /*@null@*/ /*@dependent@*/ yasm_valparam *
 yasm_vps_next(yasm_valparam *cur)

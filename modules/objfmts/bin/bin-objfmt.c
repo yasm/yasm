@@ -24,11 +24,13 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include <util.h>
+/*@unused@*/ RCSID("$IdPath: yasm/modules/objfmts/bin/bin-objfmt.c,v 1.39 2003/03/26 05:07:56 peter Exp $");
+
 #define YASM_LIB_INTERNAL
 #define YASM_BC_INTERNAL
 #define YASM_EXPR_INTERNAL
 #include <libyasm.h>
-/*@unused@*/ RCSID("$IdPath$");
 
 
 #define REGULAR_OUTBUF_SIZE	1024

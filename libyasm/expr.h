@@ -2,7 +2,7 @@
  * \file expr.h
  * \brief YASM expression interface
  *
- * $IdPath: yasm/libyasm/expr.h,v 1.39 2003/03/15 05:07:48 peter Exp $
+ * $IdPath: yasm/libyasm/expr.h,v 1.40 2003/05/04 20:28:28 peter Exp $
  *
  *  Copyright (C) 2001  Michael Urman, Peter Johnson
  *
@@ -131,7 +131,7 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
  * Used internally by yasm_expr__level_tree().
  */
 typedef struct yasm__exprhead yasm__exprhead;
-#ifdef YASM_INTERNAL
+#ifdef YASM_LIB_INTERNAL
 SLIST_HEAD(yasm__exprhead, yasm__exprentry);
 #endif
 

@@ -1,4 +1,4 @@
-# $IdPath$
+# $IdPath: yasm/Makefile.am,v 1.48 2003/05/03 06:26:15 peter Exp $
 
 SUBDIRS = libltdl m4 po .
 
@@ -14,6 +14,8 @@ TESTS =
 noinst_PROGRAMS =
 
 include_HEADERS = libyasm.h
+
+noinst_HEADERS = util.h
 
 lib_LTLIBRARIES =
 pkglib_LTLIBRARIES =
