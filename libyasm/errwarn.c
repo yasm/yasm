@@ -26,7 +26,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath: yasm/libyasm/errwarn.c,v 1.55 2003/03/16 23:52:54 peter Exp $");
 
 #include <ctype.h>
 
@@ -336,9 +336,7 @@ yasm_get_num_errors(int warning_as_error)
 
 void
 yasm_errwarn_output_all(yasm_linemgr *lm, int warning_as_error,
-     void (*print_error) (const char *fn, unsigned long line, const char *msg),
-     void (*print_warning) (const char *fn, unsigned long line,
-			    const char *msg))
+     yasm_print_error_func print_error, yasm_print_warning_func print_warning)
 {
     errwarn_data *we;
     const char *filename;
