@@ -1,3 +1,5 @@
+# $Id: configure.ac,v 1.17 2001/09/16 22:01:46 peter Exp $
+
 AC_INIT(src/main.c)
 AC_CONFIG_AUX_DIR(config)
 AM_CONFIG_HEADER(config.h)
@@ -55,4 +57,16 @@ case "$host" in
 	;;
 esac
 
-AC_OUTPUT(Makefile intl/Makefile po/Makefile.in src/Makefile src/parsers/Makefile src/parsers/nasm/Makefile src/preprocs/Makefile src/preprocs/raw/Makefile src/objfmts/Makefile src/objfmts/dbg/Makefile src/optimizers/Makefile src/optimizers/dbg/Makefile)
+AC_OUTPUT(Makefile
+	intl/Makefile
+	po/Makefile.in
+	src/Makefile
+	src/parsers/Makefile
+	src/parsers/nasm/Makefile
+	src/preprocs/Makefile
+	src/preprocs/raw/Makefile
+	src/objfmts/Makefile
+	src/objfmts/dbg/Makefile
+	src/optimizers/Makefile
+	src/optimizers/dbg/Makefile
+)
