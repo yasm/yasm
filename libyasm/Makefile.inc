@@ -63,5 +63,5 @@ include src/optimizers/Makefile.inc
 include src/objfmts/Makefile.inc
 include src/tests/Makefile.inc
 
-EXTRA_DIST += \
+EXTRA_yasm_SOURCES += \
 	src/compat-queue.h
