@@ -848,8 +848,8 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 
 	/* Calculate displacement length (if possible) */
 	return x86_checkea_calc_displen(ep, 4, basereg == REG3264_NONE,
-		    (basereg == REG3264_EBP || basereg == REG64_R13) &&
-			indexreg == REG3264_NONE, displen, modrm, v_modrm);
+	    basereg == REG3264_EBP || basereg == REG64_R13, displen, modrm,
+	    v_modrm);
     } else if (*addrsize == 16 && *n_modrm && !*v_modrm) {
 	static const unsigned char modrm16[16] = {
 	    0006 /* disp16  */, 0007 /* [BX]    */, 0004 /* [SI]    */,
