@@ -61,7 +61,9 @@ static const elf_machine_handler *elf_machine_handlers[] =
     &elf_machine_handler_x86_amd64,
     NULL
 };
-static const elf_machine_handler elf_null_machine = {0};
+static const elf_machine_handler elf_null_machine = {0, 0, 0, 0, 0, 0, 0, 0,
+						     0, 0, 0, 0, 0, 0, 0, 0,
+						     0, 0};
 static elf_machine_handler const *elf_march = &elf_null_machine;
 static yasm_symrec **elf_ssyms;
 

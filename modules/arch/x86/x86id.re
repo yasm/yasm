@@ -2436,7 +2436,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 #define YYCURSOR	id
 #define YYLIMIT		id
 #define YYMARKER	marker
-#define YYFILL(n)
+#define YYFILL(n)	(void)(n)
 
 /*!re2c
   any = [\000-\377];

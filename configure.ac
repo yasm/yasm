@@ -157,7 +157,28 @@ if test "$USE_MAINTAINER_MODE" = "yes"; then
 
   # Enable more warnings
   if test "$GCC" = "yes"; then
-    MORE_CFLAGS="$MORE_CFLAGS -Waggregate-return -Wbad-function-cast -Wcast-align -Wcast-qual -Wconversion -Winline -Wmissing-declarations -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wshadow -Wsign-compare -Wstrict-prototypes -Wwrite-strings"
+    MORE_CFLAGS="$MORE_CFLAGS -W"
+    MORE_CFLAGS="$MORE_CFLAGS -Waggregate-return"
+    MORE_CFLAGS="$MORE_CFLAGS -Wbad-function-cast"
+    MORE_CFLAGS="$MORE_CFLAGS -Wcast-align"
+    MORE_CFLAGS="$MORE_CFLAGS -Wcast-qual"
+    MORE_CFLAGS="$MORE_CFLAGS -Wchar-subscripts"
+    MORE_CFLAGS="$MORE_CFLAGS -Wconversion"
+    MORE_CFLAGS="$MORE_CFLAGS -Wdeclaration-after-statement"
+    MORE_CFLAGS="$MORE_CFLAGS -Wendif-labels"
+    MORE_CFLAGS="$MORE_CFLAGS -Winline"
+    MORE_CFLAGS="$MORE_CFLAGS -Wmissing-declarations"
+    MORE_CFLAGS="$MORE_CFLAGS -Wmissing-prototypes"
+    MORE_CFLAGS="$MORE_CFLAGS -Wnested-externs"
+    MORE_CFLAGS="$MORE_CFLAGS -Wpointer-arith"
+    MORE_CFLAGS="$MORE_CFLAGS -Wreturn-type"
+    MORE_CFLAGS="$MORE_CFLAGS -Wshadow"
+    MORE_CFLAGS="$MORE_CFLAGS -Wsign-compare"
+    MORE_CFLAGS="$MORE_CFLAGS -Wstrict-prototypes"
+    MORE_CFLAGS="$MORE_CFLAGS -Wswitch"
+    MORE_CFLAGS="$MORE_CFLAGS -Wwrite-strings"
+    MORE_CFLAGS="$MORE_CFLAGS -Wno-undef"
+    MORE_CFLAGS="$MORE_CFLAGS -Wno-unused-parameter"
   fi
 fi
 
