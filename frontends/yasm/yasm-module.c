@@ -151,9 +151,7 @@ list_module_load(const char *filename, lt_ptr data)
     list_module_data *lmdata = data;
     const char *basename;
     const char *module_keyword = NULL, *module_name = NULL;
-    int dota = 0;
     char *name;
-    char *dot;
 
     yasm_arch *arch;
     yasm_dbgfmt *dbgfmt;
@@ -185,14 +183,8 @@ list_module_load(const char *filename, lt_ptr data)
 		strlen(module_type_str[lmdata->type])) != 0)
 	return 0;
 
-    if (!strcmp(&filename[strlen(filename)-2], ".a"))
-	dota = 1;
-
     /* Load it */
-    if (dota)
-	handle = lt_dlopen(filename);
-    else
-	handle = lt_dlopenext(filename);
+    handle = lt_dlopenext(filename);
     if (!handle)
 	return 0;
 
@@ -200,11 +192,6 @@ list_module_load(const char *filename, lt_ptr data)
     name = yasm_xmalloc(strlen(basename)+5+
 			strlen(module_type_str[lmdata->type])+1);
     strcpy(name, basename);
-    if (dota) {
-	dot = strrchr(name, '.');
-	if (dot)
-	    *dot = '\0';
-    }
     strcat(name, "_LTX_");
     strcat(name, module_type_str[lmdata->type]);
 
@@ -296,6 +283,8 @@ list_modules(module_type type,
 {
     size_t i;
     const lt_dlsymlist *preloaded;
+    char name[100];
+    char *dot;
     list_module_data lmdata;
     char *prev_keyword = NULL;
 
@@ -308,7 +297,15 @@ list_modules(module_type type,
     /* Search preloaded symbols */
     preloaded = lt_preloaded_symbols;
     while (preloaded->name) {
-	list_module_load(preloaded->name, &lmdata);
+	/* Strip out any library extension */
+	strncpy(name, preloaded->name, sizeof(name) - 1);
+	name[sizeof(name) - 1] = '\0';
+	dot = strrchr(name, '.');
+	if (dot)
+	    *dot = '\0';
+
+	/* Search it */
+	list_module_load(name, &lmdata);
 	preloaded++;
     }
     /* Search external module path */
