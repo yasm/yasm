@@ -1,4 +1,4 @@
-BITS 16
+[BITS 16]
 
 label:
 jmp 1
