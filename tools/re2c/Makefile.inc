@@ -2,6 +2,7 @@
 
 noinst_PROGRAMS += re2c
 
+re2c_CFLAGS =
 re2c_SOURCES = \
 	tools/re2c/basics.h		\
 	tools/re2c/globals.h		\
@@ -11,7 +12,7 @@ re2c_SOURCES = \
 	tools/re2c/code.c		\
 	tools/re2c/dfa.h		\
 	tools/re2c/dfa.c		\
-	tools/re2c/re2c.c		\
+	tools/re2c/main.c		\
 	tools/re2c/parse.h		\
 	tools/re2c/re2c-parser.y	\
 	tools/re2c/actions.c		\

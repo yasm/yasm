@@ -2,10 +2,9 @@
 
 SUBDIRS = libltdl m4 po .
 
-CFLAGS = @ANSI_CFLAGS@
 AM_YFLAGS = -d
-INCLUDES = \
-	-I$(top_srcdir) \
+AM_CFLAGS = @ANSI_CFLAGS@
+AM_CPPFLAGS = \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/check \
 	@INCLTDL@
@@ -17,6 +16,8 @@ noinst_PROGRAMS =
 yasm_SOURCES =
 yasm_LDFLAGS =
 yasm_LDADD = libyasm.la @LIBLTDL@ $(INTLLIBS) @LIBADD_DL@
+#EXTRA_yasm_SOURCES = \
+#	strsep.c mergesort.c
 
 lib_LTLIBRARIES = libyasm.la
 libyasm_la_LIBADD = @LTLIBOBJS@
@@ -36,7 +37,6 @@ include src/Makefile.inc
 EXTRA_DIST += \
 	out_test.sh \
 	test_hd.pl \
-	strsep.c mergesort.c \
 	COPYING.LIB-2.0 \
 	splint.sh \
 	Mkfiles/Makefile.flat \
