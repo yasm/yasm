@@ -35,70 +35,29 @@
 #include "yasm-module.h"
 
 
+extern const lt_dlsymlist lt_preloaded_symbols[];
+
 typedef struct module {
     SLIST_ENTRY(module) link;
-    /*@only@*/ char *type;	    /* module type */
-    /*@only@*/ char *keyword;	    /* module keyword */
+    module_type type;		    /* module type */
+    /*@only@*/ char *type_str;
+    char *keyword;		    /* module keyword */
     lt_dlhandle handle;		    /* dlopen handle */
 } module;
 
-SLIST_HEAD(modulehead, module) modules = SLIST_HEAD_INITIALIZER(modules);
+static SLIST_HEAD(modulehead, module) modules = SLIST_HEAD_INITIALIZER(modules);
 
-/* NULL-terminated list of all possibly available architecture keywords.
- * Could improve this a little by generating automatically at build-time.
- */
-/*@-nullassign@*/
-const char *archs[] = {
-    "x86",
-    NULL
+static const char *module_type_str[] = {
+    "arch",
+    "dbgfmt",
+    "objfmt",
+    "optimizer",
+    "parser",
+    "preproc"
 };
-/*@=nullassign@*/
-
-/* NULL-terminated list of all possibly available object format keywords.
- * Could improve this a little by generating automatically at build-time.
- */
-/*@-nullassign@*/
-const char *dbgfmts[] = {
-    "null",
-    NULL
-};
-/*@=nullassign@*/
-
-/* NULL-terminated list of all possibly available object format keywords.
- * Could improve this a little by generating automatically at build-time.
- */
-/*@-nullassign@*/
-const char *objfmts[] = {
-    "dbg",
-    "bin",
-    "coff",
-    NULL
-};
-/*@=nullassign@*/
-
-/* NULL-terminated list of all possibly available parser keywords.
- * Could improve this a little by generating automatically at build-time.
- */
-/*@-nullassign@*/
-const char *parsers[] = {
-    "nasm",
-    NULL
-};
-/*@=nullassign@*/
-
-/* NULL-terminated list of all possibly available preproc keywords.
- * Could improve this a little by generating automatically at build-time.
- */
-/*@-nullassign@*/
-const char *preprocs[] = {
-    "nasm",
-    "raw",
-    NULL
-};
-/*@=nullassign@*/
 
 static /*@dependent@*/ /*@null@*/ module *
-load_module(const char *type, const char *keyword)
+load_module(module_type type, const char *keyword)
 {
     module *m;
     char *name;
@@ -107,15 +66,14 @@ load_module(const char *type, const char *keyword)
 
     /* See if the module has already been loaded. */
     SLIST_FOREACH(m, &modules, link) {
-	if (yasm__strcasecmp(m->type, type) == 0 &&
-	    yasm__strcasecmp(m->keyword, keyword) == 0)
+	if (m->type == type && yasm__strcasecmp(m->keyword, keyword) == 0)
 	    return m;
     }
 
     /* Look for dynamic module.  First build full module name from keyword. */
-    typelen = strlen(type);
+    typelen = strlen(module_type_str[type]);
     name = yasm_xmalloc(typelen+strlen(keyword)+2);
-    strcpy(name, type);
+    strcpy(name, module_type_str[type]);
     strcat(name, "_");
     strcat(name, keyword);
     handle = lt_dlopenext(name);
@@ -126,7 +84,8 @@ load_module(const char *type, const char *keyword)
     }
 
     m = yasm_xmalloc(sizeof(module));
-    m->type = name;
+    m->type = type;
+    m->type_str = name;
     name[typelen] = '\0';
     m->keyword = &name[typelen+1];
     m->handle = handle;
@@ -142,14 +101,14 @@ unload_modules(void)
     while (!SLIST_EMPTY(&modules)) {
 	m = SLIST_FIRST(&modules);
 	SLIST_REMOVE_HEAD(&modules, link);
-	yasm_xfree(m->type);
+	yasm_xfree(m->type_str);
 	lt_dlclose(m->handle);
 	yasm_xfree(m);
     }
 }
 
 void *
-get_module_data(const char *type, const char *keyword, const char *symbol)
+get_module_data(module_type type, const char *keyword, const char *symbol)
 {
     char *name;
     /*@dependent@*/ module *m;
@@ -174,72 +133,196 @@ get_module_data(const char *type, const char *keyword, const char *symbol)
     return data;
 }
 
-void
-list_objfmts(void (*printfunc) (const char *name, const char *keyword))
-{
-    int i;
-    yasm_objfmt *of;
+typedef struct list_module_info {
+    SLIST_ENTRY(list_module_info) link;
+    char keyword[20];
+    char name[60];
+} list_module_info;
 
-    /* Go through available list, and try to load each one */
-    for (i = 0; objfmts[i]; i++) {
-	of = load_objfmt(objfmts[i]);
-	if (of)
-	    printfunc(of->name, of->keyword);
+typedef struct list_module_data {
+    module_type type;
+    list_module_info *matches;
+    size_t matches_num, matches_alloc;
+} list_module_data;
+
+static int
+list_module_load(const char *filename, lt_ptr data)
+{
+    list_module_data *lmdata = data;
+    const char *basename;
+    const char *module_keyword = NULL, *module_name = NULL;
+    int dota = 0;
+    char *name;
+    char *dot;
+
+    yasm_arch *arch;
+    yasm_dbgfmt *dbgfmt;
+    yasm_objfmt *objfmt;
+    yasm_optimizer *optimizer;
+    yasm_parser *parser;
+    yasm_preproc *preproc;
+
+    lt_dlhandle handle;
+
+    /* All modules have '_' in them; early check */
+    if (!strchr(filename, '_'))
+	return 0;
+
+    /* Strip off path components, if any */
+    basename = strrchr(filename, '/');
+    if (!basename)
+	basename = strrchr(filename, '\\');
+    if (!basename)
+	basename = filename;
+    else
+	basename++;
+
+    /* Check to see if module is of the type we're looking for.
+     * Even though this check is also implicitly performed below, there's a
+     * massive speedup in avoiding the dlopen() call.
+     */
+    if (strncmp(basename, module_type_str[lmdata->type],
+		strlen(module_type_str[lmdata->type])) != 0)
+	return 0;
+
+    if (!strcmp(&filename[strlen(filename)-2], ".a"))
+	dota = 1;
+
+    /* Load it */
+    if (dota)
+	handle = lt_dlopen(filename);
+    else
+	handle = lt_dlopenext(filename);
+    if (!handle)
+	return 0;
+
+    /* Build base symbol name */
+    name = yasm_xmalloc(strlen(basename)+5+
+			strlen(module_type_str[lmdata->type])+1);
+    strcpy(name, basename);
+    if (dota) {
+	dot = strrchr(name, '.');
+	if (dot)
+	    *dot = '\0';
     }
+    strcat(name, "_LTX_");
+    strcat(name, module_type_str[lmdata->type]);
+
+    /* Prefix with yasm in the right place and get name/keyword */
+    switch (lmdata->type) {
+	case MODULE_ARCH:
+	    strncpy(name, "yasm", 4);
+	    arch = lt_dlsym(handle, name);
+	    if (arch) {
+		module_keyword = arch->keyword;
+		module_name = arch->name;
+	    }
+	    break;
+	case MODULE_DBGFMT:
+	    strncpy(name+2, "yasm", 4);
+	    dbgfmt = lt_dlsym(handle, name+2);
+	    if (dbgfmt) {
+		module_keyword = dbgfmt->keyword;
+		module_name = dbgfmt->name;
+	    }
+	    break;
+	case MODULE_OBJFMT:
+	    strncpy(name+2, "yasm", 4);
+	    objfmt = lt_dlsym(handle, name+2);
+	    if (objfmt) {
+		module_keyword = objfmt->keyword;
+		module_name = objfmt->name;
+	    }
+	    break;
+	case MODULE_OPTIMIZER:
+	    strncpy(name+5, "yasm", 4);
+	    optimizer = lt_dlsym(handle, name+5);
+	    if (optimizer) {
+		module_keyword = optimizer->keyword;
+		module_name = optimizer->name;
+	    }
+	    break;
+	case MODULE_PARSER:
+	    strncpy(name+2, "yasm", 4);
+	    parser = lt_dlsym(handle, name+2);
+	    if (parser) {
+		module_keyword = parser->keyword;
+		module_name = parser->name;
+	    }
+	    break;
+	case MODULE_PREPROC:
+	    strncpy(name+3, "yasm", 4);
+	    preproc = lt_dlsym(handle, name+3);
+	    if (preproc) {
+		module_keyword = preproc->keyword;
+		module_name = preproc->name;
+	    }
+	    break;
+    }
+
+    if (module_keyword && module_name) {
+	list_module_info *lminfo;
+	/* Find empty location in array */
+	if (lmdata->matches_num >= lmdata->matches_alloc) {
+	    lmdata->matches_alloc *= 2;
+	    lmdata->matches =
+		yasm_xrealloc(lmdata->matches,
+			      sizeof(list_module_info)*lmdata->matches_alloc);
+	}
+	lminfo = &lmdata->matches[lmdata->matches_num++];
+	/* Build lminfo structure */
+	strncpy(lminfo->keyword, module_keyword, sizeof(lminfo->keyword) - 1);
+	lminfo->keyword[sizeof(lminfo->keyword) - 1] = '\0';
+	strncpy(lminfo->name, module_name, sizeof(lminfo->name) - 1);
+	lminfo->name[sizeof(lminfo->name) - 1] = '\0';
+    }
+
+    /* Clean up */
+    yasm_xfree(name);
+    lt_dlclose(handle);
+    return 0;
+}
+
+static int
+list_module_compare(const void *n1, const void *n2)
+{
+    const list_module_info *i1 = n1, *i2 = n2;
+    return strcmp(i1->keyword, i2->keyword);
 }
 
 void
-list_parsers(void (*printfunc) (const char *name, const char *keyword))
+list_modules(module_type type,
+	     void (*printfunc) (const char *name, const char *keyword))
 {
-    int i;
-    yasm_parser *p;
+    size_t i;
+    const lt_dlsymlist *preloaded;
+    list_module_data lmdata;
+    char *prev_keyword = NULL;
 
-    /* Go through available list, and try to load each one */
-    for (i = 0; parsers[i]; i++) {
-	p = load_parser(parsers[i]);
-	if (p)
-	    printfunc(p->name, p->keyword);
+    lmdata.type = type;
+    lmdata.matches_num = 0;
+    lmdata.matches_alloc = 10;
+    lmdata.matches =
+	yasm_xmalloc(sizeof(list_module_info)*lmdata.matches_alloc);
+
+    /* Search preloaded symbols */
+    preloaded = lt_preloaded_symbols;
+    while (preloaded->name) {
+	list_module_load(preloaded->name, &lmdata);
+	preloaded++;
     }
-}
+    /* Search external module path */
+    lt_dlforeachfile(NULL, list_module_load, &lmdata);
+    lt_dlforeachfile(".", list_module_load, &lmdata);
 
-void
-list_preprocs(void (*printfunc) (const char *name, const char *keyword))
-{
-    int i;
-    yasm_preproc *p;
-
-    /* Go through available list, and try to load each one */
-    for (i = 0; preprocs[i]; i++) {
-	p = load_preproc(preprocs[i]);
-	if (p)
-	    printfunc(p->name, p->keyword);
+    /* Sort, print, and cleanup */
+    yasm__mergesort(lmdata.matches, lmdata.matches_num,
+		    sizeof(list_module_info), list_module_compare);
+    for (i=0; i<lmdata.matches_num; i++) {
+	/* Don't print duplicates */
+	if (!prev_keyword || strcmp(prev_keyword, lmdata.matches[i].keyword))
+	    printfunc(lmdata.matches[i].name, lmdata.matches[i].keyword);
+	prev_keyword = lmdata.matches[i].keyword;
     }
-}
-
-void
-list_dbgfmts(void (*printfunc) (const char *name, const char *keyword))
-{
-    int i;
-    yasm_dbgfmt *p;
-
-    /* Go through available list, and try to load each one */
-    for (i = 0; dbgfmts[i]; i++) {
-	p = load_dbgfmt(dbgfmts[i]);
-	if (p)
-	    printfunc(p->name, p->keyword);
-    }
-}
-
-void
-list_archs(void (*printfunc) (const char *name, const char *keyword))
-{
-    int i;
-    yasm_arch *p;
-
-    /* Go through available list, and try to load each one */
-    for (i = 0; archs[i]; i++) {
-	p = load_arch(archs[i]);
-	if (p)
-	    printfunc(p->name, p->keyword);
-    }
+    yasm_xfree(lmdata.matches);
 }

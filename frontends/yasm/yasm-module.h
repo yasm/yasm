@@ -27,29 +27,39 @@
 #ifndef YASM_MODULE_H
 #define YASM_MODULE_H
 
+typedef enum module_type {
+    MODULE_ARCH = 0,
+    MODULE_DBGFMT,
+    MODULE_OBJFMT,
+    MODULE_OPTIMIZER,
+    MODULE_PARSER,
+    MODULE_PREPROC
+} module_type;
+
 void unload_modules(void);
 /*@dependent@*/ /*@null@*/ void *get_module_data
-    (const char *type, const char *keyword, const char *symbol);
+    (module_type type, const char *keyword, const char *symbol);
 
-#define load_arch(keyword)	get_module_data("arch", keyword, "arch")
-#define load_dbgfmt(keyword)	get_module_data("dbgfmt", keyword, "dbgfmt")
-#define load_objfmt(keyword)	get_module_data("objfmt", keyword, "objfmt")
-#define load_optimizer(keyword)	get_module_data("optimizer", keyword, "optimizer")
-#define load_parser(keyword)	get_module_data("parser", keyword, "parser")
-#define load_preproc(keyword)	get_module_data("preproc", keyword, "preproc")
+#define load_arch(keyword)	get_module_data(MODULE_ARCH, keyword, "arch")
+#define load_dbgfmt(keyword)	\
+    get_module_data(MODULE_DBGFMT, keyword, "dbgfmt")
+#define load_objfmt(keyword)	\
+    get_module_data(MODULE_OBJFMT, keyword, "objfmt")
+#define load_optimizer(keyword)	\
+    get_module_data(MODULE_OPTIMIZER, keyword, "optimizer")
+#define load_parser(keyword)	\
+    get_module_data(MODULE_PARSER, keyword, "parser")
+#define load_preproc(keyword)	\
+    get_module_data(MODULE_PREPROC, keyword, "preproc")
 
-/* Lists all available object formats.  Calls printfunc with the name and
- * keyword of each available format.
- */
-void list_objfmts(void (*printfunc) (const char *name, const char *keyword));
+void list_modules(module_type type,
+		  void (*printfunc) (const char *name, const char *keyword));
 
-/* Lists all available parsers.  Calls printfunc with the name and keyword
- * of each available parser.
- */
-void list_parsers(void (*printfunc) (const char *name, const char *keyword));
-
-void list_preprocs(void (*printfunc) (const char *name, const char *keyword));
-void list_dbgfmts(void (*printfunc) (const char *name, const char *keyword));
-void list_archs(void (*printfunc) (const char *name, const char *keyword));
+#define list_archs(func)	list_modules(MODULE_ARCH, func)
+#define list_dbgfmts(func)	list_modules(MODULE_DBGFMT, func)
+#define list_objfmts(func)	list_modules(MODULE_OBJFMT, func)
+#define list_optimizers(func)	list_modules(MODULE_OPTIMIZER, func)
+#define list_parsers(func)	list_modules(MODULE_PARSER, func)
+#define list_preprocs(func)	list_modules(MODULE_PREPROC, func)
 
 #endif

@@ -457,7 +457,7 @@ main(int argc, char *argv[])
     /* Get initial x86 BITS setting from object format */
     if (strcmp(cur_arch->keyword, "x86") == 0) {
 	unsigned char *x86_mode_bits;
-	x86_mode_bits = (unsigned char *)get_module_data("arch", "x86",
+	x86_mode_bits = (unsigned char *)get_module_data(MODULE_ARCH, "x86",
 							 "mode_bits");
 	if (x86_mode_bits)
 	    *x86_mode_bits = cur_objfmt->default_x86_mode_bits;
