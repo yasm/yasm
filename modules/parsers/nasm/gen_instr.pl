@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.5 2001/05/30 07:25:13 mu Exp $
+# $Id: gen_instr.pl,v 1.6 2001/05/30 07:26:28 mu Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -342,6 +342,8 @@ sub output_yacc ($@)
 
 		    # opcode piece 2 (if not attached)
 		    push @args, "0," if $inst->[OPCODE] !~ m/,/o;
+		    # opcode piece 3 (if not attached)
+		    push @args, "0," if $inst->[OPCODE] !~ m/,.*,/o;
 
 		    # effective addresses
 		    push @args, $inst->[EFFADDR];
