@@ -20,7 +20,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "symrec.h"
 
@@ -32,18 +32,23 @@ RCSID("$IdPath$");
 #include "optimizer.h"
 
 
-#define SECTFLAG_NONE		0
-#define SECTFLAG_INPROGRESS	(1<<0)
-#define SECTFLAG_DONE		(1<<1)
+#define SECTFLAG_NONE		0UL
+#define SECTFLAG_INPROGRESS	(1UL<<0)
+#define SECTFLAG_DONE		(1UL<<1)
 
-#define BCFLAG_NONE		0
-#define BCFLAG_INPROGRESS	(1<<0)
-#define BCFLAG_DONE		(1<<1)
+#define BCFLAG_NONE		0UL
+#define BCFLAG_INPROGRESS	(1UL<<0)
+#define BCFLAG_DONE		(1UL<<1)
 
 static /*@only@*/ /*@null@*/ intnum *
 basic_optimize_resolve_label(symrec *sym)
 {
     unsigned long flags;
+    /*@dependent@*/ section *sect;
+    /*@dependent@*/ /*@null@*/ bytecode *bc;
+
+    if (!symrec_get_label(sym, &sect, &bc))
+	return NULL;
 
     flags = symrec_get_opt_flags(sym);
 
@@ -74,7 +79,7 @@ basic_optimize_section(section *sect, /*@unused@*/ /*@null@*/ void *d)
     return 1;
 }
 
-static sectionhead *
+static void
 basic_optimize(sectionhead *sections)
 {
     /* Optimization process: (essentially NASM's pass 1)
@@ -90,7 +95,6 @@ basic_optimize(sectionhead *sections)
     sections_traverse(sections, NULL, basic_optimize_section);
 
     /* NASM's pass 2 is output, so we just return. */
-    return sections;
 }
 
 /* Define optimizer structure -- see optimizer.h for details */
