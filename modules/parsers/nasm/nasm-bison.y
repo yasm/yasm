@@ -498,25 +498,26 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 		      valparamhead *objext_valparams)
 {
     valparam *vp, *vp2;
+    symrec *sym;
 
     assert(cur_objfmt != NULL);
 
     /* Handle (mostly) output-format independent directives here */
     if (strcasecmp(name, "extern") == 0) {
 	vp = vps_first(valparams);
-	if (vp->val)
-	    symrec_declare(vp->val, SYM_EXTERN,
-			   cur_objfmt->extern_data_new(vp->val,
-						       objext_valparams));
-	else
+	if (vp->val) {
+	    sym = symrec_declare(vp->val, SYM_EXTERN);
+	    if (cur_objfmt->extern_declare)
+		cur_objfmt->extern_declare(sym, objext_valparams);
+	} else
 	    Error(_("invalid argument to [%s]"), "EXTERN");
     } else if (strcasecmp(name, "global") == 0) {
 	vp = vps_first(valparams);
-	if (vp->val)
-	    symrec_declare(vp->val, SYM_GLOBAL,
-			   cur_objfmt->global_data_new(vp->val,
-						       objext_valparams));
-	else
+	if (vp->val) {
+	    sym = symrec_declare(vp->val, SYM_GLOBAL);
+	    if (cur_objfmt->global_declare)
+		cur_objfmt->global_declare(sym, objext_valparams);
+	} else
 	    Error(_("invalid argument to [%s]"), "GLOBAL");
     } else if (strcasecmp(name, "common") == 0) {
 	vp = vps_first(valparams);
@@ -525,15 +526,17 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 	    if (!vp2 || (!vp2->val && !vp2->param))
 		Error(_("no size specified in %s declaration"), "COMMON");
 	    else {
-		if (vp2->val)
-		    symrec_declare(vp->val, SYM_COMMON,
-			cur_objfmt->common_data_new(vp->val,
+		if (vp2->val) {
+		    sym = symrec_declare(vp->val, SYM_COMMON);
+		    if (cur_objfmt->common_declare)
+			cur_objfmt->common_declare(sym,
 			    expr_new_ident(ExprSym(symrec_use(vp2->val))),
-			    objext_valparams));
-		else if (vp2->param) {
-		    symrec_declare(vp->val, SYM_COMMON,
-			cur_objfmt->common_data_new(vp->val, vp2->param,
-						    objext_valparams));
+			    objext_valparams);
+		} else if (vp2->param) {
+		    sym = symrec_declare(vp->val, SYM_COMMON);
+		    if (cur_objfmt->common_declare)
+			cur_objfmt->common_declare(sym, vp2->param,
+						   objext_valparams);
 		    vp2->param = NULL;
 		}
 	    }

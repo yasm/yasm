@@ -33,15 +33,14 @@
 					    section *sect,
 					    /*@dependent@*/ /*@null@*/
 					    bytecode *precbc, int in_table);
-/*@dependent@*/ symrec *symrec_declare(const char *name, SymVisibility vis,
-				       /*@only@*/ /*@null@*/ void *of_data);
+/*@dependent@*/ symrec *symrec_declare(const char *name, SymVisibility vis);
 
 /*@observer@*/ const char *symrec_get_name(const symrec *sym);
 SymVisibility symrec_get_visibility(const symrec *sym);
 
 /*@observer@*/ /*@null@*/ const expr *symrec_get_equ(const symrec *sym);
 /* Returns 0 if not a label or if EXTERN/COMMON (not defined in the file) */
-typedef /*@dependent@*/ section *symrec_get_label_sectionp;
+typedef /*@dependent@*/ /*@null@*/ section *symrec_get_label_sectionp;
 typedef /*@dependent@*/ /*@null@*/ bytecode *symrec_get_label_bytecodep;
 int symrec_get_label(const symrec *sym,
 		     /*@out@*/ symrec_get_label_sectionp *sect,

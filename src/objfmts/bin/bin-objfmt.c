@@ -392,28 +392,13 @@ bin_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 	return NULL;
 }
 
-static /*@null@*/ void *
-bin_objfmt_extern_data_new(/*@unused@*/ const char *name, /*@unused@*/
-			   /*@null@*/ valparamhead *objext_valparams)
-{
-    return NULL;
-}
-
-static /*@null@*/ void *
-bin_objfmt_global_data_new(/*@unused@*/ const char *name, /*@unused@*/
-			   /*@null@*/ valparamhead *objext_valparams)
-{
-    return NULL;
-}
-
-static /*@null@*/ void *
-bin_objfmt_common_data_new(/*@unused@*/ const char *name,
-			   /*@only@*/ expr *size, /*@unused@*/ /*@null@*/
-			   valparamhead *objext_valparams)
+static void
+bin_objfmt_common_declare(/*@unused@*/ symrec *sym, /*@only@*/ expr *size,
+			  /*@unused@*/ /*@null@*/
+			  valparamhead *objext_valparams)
 {
     expr_delete(size);
     Error(_("binary object format does not support common variables"));
-    return NULL;
 }
 
 static int
@@ -470,12 +455,11 @@ objfmt yasm_bin_LTX_objfmt = {
     bin_objfmt_sections_switch,
     xfree,
     bin_objfmt_section_data_print,
-    bin_objfmt_extern_data_new,
-    bin_objfmt_global_data_new,
-    bin_objfmt_common_data_new,
-    NULL /*bin_objfmt_declare_data_delete*/,
-    NULL /*bin_objfmt_declare_data_print*/,
+    NULL /*bin_objfmt_extern_declare*/,
+    NULL /*bin_objfmt_global_declare*/,
+    bin_objfmt_common_declare,
     NULL /*bin_objfmt_symrec_data_delete*/,
+    NULL /*bin_objfmt_symrec_data_print*/,
     bin_objfmt_directive,
     NULL /*bin_objfmt_bc_objfmt_data_delete*/,
     NULL /*bin_objfmt_bc_objfmt_data_print*/

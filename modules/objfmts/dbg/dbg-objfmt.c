@@ -113,92 +113,68 @@ dbg_objfmt_section_data_print(FILE *f, /*@null@*/ void *data)
 	fprintf(f, "%*s(none)\n", indent_level, "");
 }
 
-static /*@null@*/ void *
-dbg_objfmt_extern_data_new(const char *name, /*@unused@*/ /*@null@*/
-			   valparamhead *objext_valparams)
+static void
+dbg_objfmt_extern_declare(symrec *sym, /*@unused@*/ /*@null@*/
+			  valparamhead *objext_valparams)
 {
     assert(debug_file != NULL);
-    fprintf(debug_file, "%*sextern_data_new(\"%s\", ", indent_level, "", name);
+    fprintf(debug_file, "%*sextern_declare(\"%s\", ", indent_level, "",
+	    symrec_get_name(sym));
     vps_print(debug_file, objext_valparams);
-    fprintf(debug_file, "), returning NULL\n");
-    return NULL;
+    fprintf(debug_file, "), setting of_data=NULL\n");
+    symrec_set_of_data(sym, NULL);
 }
 
-static /*@null@*/ void *
-dbg_objfmt_global_data_new(const char *name, /*@unused@*/ /*@null@*/
-			   valparamhead *objext_valparams)
+static void
+dbg_objfmt_global_declare(symrec *sym, /*@unused@*/ /*@null@*/
+			  valparamhead *objext_valparams)
 {
     assert(debug_file != NULL);
-    fprintf(debug_file, "%*sglobal_data_new(\"%s\", ", indent_level, "", name);
+    fprintf(debug_file, "%*sglobal_declare(\"%s\", ", indent_level, "",
+	    symrec_get_name(sym));
     vps_print(debug_file, objext_valparams);
-    fprintf(debug_file, "), returning NULL\n");
-    return NULL;
+    fprintf(debug_file, "), setting of_data=NULL\n");
+    symrec_set_of_data(sym, NULL);
 }
 
-static /*@null@*/ void *
-dbg_objfmt_common_data_new(const char *name, /*@only@*/ expr *size,
-			   /*@unused@*/ /*@null@*/
-			   valparamhead *objext_valparams)
+static void
+dbg_objfmt_common_declare(symrec *sym, /*@only@*/ expr *size, /*@unused@*/
+			  /*@null@*/ valparamhead *objext_valparams)
 {
     assert(debug_file != NULL);
-    fprintf(debug_file, "%*scommon_data_new(\"%s\", ", indent_level, "", name);
+    fprintf(debug_file, "%*scommon_declare(\"%s\", ", indent_level, "",
+	    symrec_get_name(sym));
     expr_print(debug_file, size);
     fprintf(debug_file, ", ");
     vps_print(debug_file, objext_valparams);
-    fprintf(debug_file, "), returning ");
+    fprintf(debug_file, "), setting of_data=");
     expr_print(debug_file, size);
+    symrec_set_of_data(sym, size);
     fprintf(debug_file, "\n");
-    return size;
-}
-
-static void
-dbg_objfmt_declare_data_delete(SymVisibility vis, /*@only@*/ void *data)
-{
-    assert(debug_file != NULL);
-    fprintf(debug_file, "%*sdeclare_data_delete(", indent_level, "");
-    switch (vis) {
-	case SYM_LOCAL:
-	    fprintf(debug_file, "Local, ");
-	    break;
-	case SYM_GLOBAL:
-	    fprintf(debug_file, "Global, ");
-	    break;
-	case SYM_COMMON:
-	    fprintf(debug_file, "Common, ");
-	    break;
-	case SYM_EXTERN:
-	    fprintf(debug_file, "Extern, ");
-	    break;
-    }
-    if (vis == SYM_COMMON) {
-	expr_print(debug_file, data);
-	expr_delete(data);
-    } else {
-	fprintf(debug_file, "%p", data);
-	xfree(data);
-    }
-    fprintf(debug_file, ")\n");
-}
-
-static void
-dbg_objfmt_declare_data_print(FILE *f, SymVisibility vis,
-			      /*@null@*/ void *data)
-{
-    if (vis == SYM_COMMON) {
-	fprintf(f, "%*sSize=", indent_level, "");
-	expr_print(f, data);
-	fprintf(f, "\n");
-    } else {
-	fprintf(f, "%*s(none)\n", indent_level, "");
-    }
 }
 
 static void
 dbg_objfmt_symrec_data_delete(/*@only@*/ void *data)
 {
     assert(debug_file != NULL);
-    fprintf(debug_file, "%*ssymrec_data_delete(%p)\n", indent_level, "", data);
-    xfree(data);
+    fprintf(debug_file, "%*ssymrec_data_delete(", indent_level, "");
+    if (data) {
+	expr_print(debug_file, data);
+	expr_delete(data);
+    }
+    fprintf(debug_file, ")\n");
+}
+
+static void
+dbg_objfmt_symrec_data_print(FILE *f, /*@null@*/ void *data)
+{
+    if (data) {
+	fprintf(f, "%*sSize=", indent_level, "");
+	expr_print(f, data);
+	fprintf(f, "\n");
+    } else {
+	fprintf(f, "%*s(none)\n", indent_level, "");
+    }
 }
 
 static int
@@ -244,12 +220,11 @@ objfmt yasm_dbg_LTX_objfmt = {
     dbg_objfmt_sections_switch,
     dbg_objfmt_section_data_delete,
     dbg_objfmt_section_data_print,
-    dbg_objfmt_extern_data_new,
-    dbg_objfmt_global_data_new,
-    dbg_objfmt_common_data_new,
-    dbg_objfmt_declare_data_delete,
-    dbg_objfmt_declare_data_print,
+    dbg_objfmt_extern_declare,
+    dbg_objfmt_global_declare,
+    dbg_objfmt_common_declare,
     dbg_objfmt_symrec_data_delete,
+    dbg_objfmt_symrec_data_print,
     dbg_objfmt_directive,
     dbg_objfmt_bc_objfmt_data_delete,
     dbg_objfmt_bc_objfmt_data_print

@@ -83,25 +83,19 @@ struct objfmt {
     void (*section_data_delete)(/*@only@*/ void *data);
     void (*section_data_print)(FILE *f, void *data);
 
-    /*@null@*/ void *(*extern_data_new)(const char *name, /*@null@*/
-					valparamhead *objext_valparams);
-    /*@null@*/ void *(*global_data_new)(const char *name, /*@null@*/
-					valparamhead *objext_valparams);
-    /*@null@*/ void *(*common_data_new)(const char *name,
-					/*@only@*/ expr *size, /*@null@*/
-					valparamhead *objext_valparams);
-
-    /* It's only valid to pass these functions *one* SymVisibility (eg, vis
-     * is an enum not a bitmask).
-     * These functions may be NULL if no data is ever returned by the above
-     * *_data_new() functions.
+    /* These functions should call symrec_set_of_data() to store data.
+     * May be NULL if objfmt doesn't care about such declarations.
      */
-    void (*declare_data_delete)(SymVisibility vis, /*@only@*/ void *data);
-    void (*declare_data_print)(FILE *f, SymVisibility vis,
-			       /*@null@*/ void *data);
+    void (*extern_declare)(symrec *sym,
+			   /*@null@*/ valparamhead *objext_valparams);
+    void (*global_declare)(symrec *sym,
+			   /*@null@*/ valparamhead *objext_valparams);
+    void (*common_declare)(symrec *sym, /*@only@*/ expr *size,
+			   /*@null@*/ valparamhead *objext_valparams);
 
     /* May be NULL if symrec_set_of_data() is never called. */
     void (*symrec_data_delete)(/*@only@*/ void *data);
+    void (*symrec_data_print)(FILE *f, /*@null@*/ void *data);
 
     /* Object format-specific directive support.  Returns 1 if directive was
      * not recognized.  Returns 0 if directive was recognized, even if it
