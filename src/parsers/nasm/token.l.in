@@ -96,21 +96,21 @@ WS       [ \t\r]
 
     /* 10010011b - binary number */
 {BINDIGIT}+b {
-    yytext[strlen(yytext)] = '\0';  /* strip off 'b' */
+    yytext[strlen(yytext)-1] = '\0';  /* strip off 'b' */
     yylval.intn = intnum_new_bin(yytext);
     return INTNUM;
 }
 
     /* 777q - octal number */
 {OCTDIGIT}+q {
-    yytext[strlen(yytext)] = '\0';  /* strip off 'q' */
+    yytext[strlen(yytext)-1] = '\0';  /* strip off 'q' */
     yylval.intn = intnum_new_oct(yytext);
     return INTNUM;
 }
 
     /* 0AAh form of hexidecimal number */
 0{HEXDIGIT}+h {
-    yytext[strlen(yytext)] = '\0';  /* strip off 'h' */
+    yytext[strlen(yytext)-1] = '\0';  /* strip off 'h' */
     yylval.intn = intnum_new_hex(yytext);
     return INTNUM;
 }
