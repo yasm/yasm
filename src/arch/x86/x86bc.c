@@ -475,7 +475,7 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 				  &ead_t.need_sib, calc_bc_dist)) {
 		expr_delete(temp);
 		/* failed, don't bother checking rest of insn */
-		return BC_RESOLVE_UNKNOWN_LEN;
+		return BC_RESOLVE_UNKNOWN_LEN|BC_RESOLVE_ERROR;
 	    }
 
 	    expr_delete(temp);
