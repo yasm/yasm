@@ -1932,11 +1932,11 @@ x86_switch_cpu(const char *id)
 	N O P R I V	{ cpu_enabled &= ~CPU_Priv; return; }
 
 	/* catchalls */
-	[A-Za-z0-9]+	{
+	[\001-\377]+	{
 	    Warning(_("unrecognized CPU identifier `%s'"), id);
 	    return;
 	}
-	any		{
+	[\000]		{
 	    Warning(_("unrecognized CPU identifier `%s'"), id);
 	    return;
 	}
@@ -2743,10 +2743,10 @@ x86_check_identifier(unsigned long data[4], const char *id)
 
 
 	/* catchalls */
-	[A-Za-z0-9]+	{
+	[\001-\377]+	{
 	    return ARCH_CHECK_ID_NONE;
 	}
-	any	{
+	[\000]	{
 	    return ARCH_CHECK_ID_NONE;
 	}
     */
