@@ -68,6 +68,9 @@ int bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym));
 /* void bcs_initialize(bytecodehead *headp); */
 #define	bcs_initialize(headp)	STAILQ_INIT(headp)
 
+/* bytecode *bcs_first(bytecodehead *headp); */
+#define bcs_first(headp)	STAILQ_FIRST(headp)
+
 void bcs_delete(bytecodehead *headp);
 
 /* Adds bc to the list of bytecodes headp.
