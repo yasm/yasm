@@ -18,6 +18,9 @@
 #undef HAVE_LC_MESSAGES
 #undef HAVE_STPCPY
 
+/* combined test for fork/way/msg* */
+#undef USE_FORKWAITMSG
+
 @BOTTOM@
 
 #endif /* YASM_CONFIG_H */

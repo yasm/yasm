@@ -16,13 +16,43 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <stdlib.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+
+#ifdef HAVE_SYS_WAIT_H
+# include <sys/wait.h>
+#endif
+#ifndef WIFSIGNALED
+# define WIFSIGNALED(stat_val)	\
+	(((stat_val) & 255) != 255 && \
+	 ((stat_val) & 255) != 0)
+#endif
+#ifndef WTERMSIG
+# define WTERMSIG(stat_val)	((stat_val) & 255)
+#endif
+#ifndef WIFEXITED
+# define WIFEXITED(stat_val)	(((stat_val) & 255) == 0)
+#endif
+#ifndef WEXITSTATUS
+# define WEXITSTATUS(stat_val)	((unsigned)(stat_val) >> 8)
+#endif
+
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+
 #include <stdio.h>
-#include <stdarg.h>
+
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+# include <stdarg.h>
+#endif
+
 #include "error.h"
 #include "list.h"
 #include "check.h"
@@ -30,6 +60,9 @@
 #include "check_msg.h"
 #include "check_log.h"
 
+#ifndef USE_FORKWAITMSG
+int nofork_exit_status;
+#endif
 
 static void srunner_run_tcase (SRunner *sr, TCase *tc);
 static void srunner_add_failure (SRunner *sr, TestResult *tf);
@@ -41,7 +74,9 @@ static void receive_failure_info (int msqid, int status, TestResult *tr);
 static List *srunner_resultlst (SRunner *sr);
 
 
+#ifdef USE_FORKWAITMSG
 static char *signal_msg (int sig);
+#endif
 static char *exit_msg (int exitstatus);
 static int non_pass (int val);
 
@@ -176,7 +211,7 @@ static void receive_last_loc_info (int msqid, TestResult *tr)
 static void receive_failure_info (int msqid, int status, TestResult *tr)
 {
   FailureMsg *fmsg;
-
+#ifdef USE_FORKWAITMSG
   if (WIFSIGNALED(status)) {
     tr->rtype = CRERROR;
     tr->msg = signal_msg (WTERMSIG(status));
@@ -208,6 +243,25 @@ static void receive_failure_info (int msqid, int status, TestResult *tr)
   } else {
     eprintf ("Bad status from wait() call\n");
   }
+#else
+  if (status == 0) {
+    tr->rtype = CRPASS;
+    tr->msg = "Test passed";
+  }
+  else {
+    fmsg = receive_failure_msg (msqid);
+    if (fmsg == NULL) { /* implies early exit */
+      tr->rtype = CRERROR;
+      tr->msg =  exit_msg (status);
+    }
+    else {
+      tr->rtype = CRFAILURE;
+      tr->msg = emalloc(strlen(fmsg->msg) + 1);
+      strcpy (tr->msg, fmsg->msg);
+      free (fmsg);
+    }
+  }
+#endif
 }
 
 static TestResult *receive_result_info (int msqid, int status, char *tcname,
@@ -224,9 +278,12 @@ static TestResult *receive_result_info (int msqid, int status, char *tcname,
 
 static TestResult *tfun_run (int msqid, char *tcname, TF *tfun)
 {
+#ifdef USE_FORKWAITMSG
   pid_t pid;
+#endif
   int status = 0;
 
+#ifdef USE_FORKWAITMSG
   pid = fork();
   if (pid == -1)
      eprintf ("Unable to fork:");
@@ -235,6 +292,11 @@ static TestResult *tfun_run (int msqid, char *tcname, TF *tfun)
     _exit(EXIT_SUCCESS);
   }
   (void) wait(&status);
+#else
+  nofork_exit_status = 0;
+  tfun->fn(msqid);
+  status = nofork_exit_status;
+#endif
   return receive_result_info(msqid, status, tcname, tfun->name);
 }
 
@@ -313,13 +375,14 @@ char *tr_tcname (TestResult *tr)
   return tr->tcname;
 }
 
-
+#ifdef USE_FORKWAITMSG
 static char *signal_msg (int signal)
 {
   char *msg = emalloc (CMAXMSG); /* free'd by caller */
   snprintf(msg, CMAXMSG, "Received signal %d", signal);
   return msg;
 }
+#endif
 
 static char *exit_msg (int exitval)
 {

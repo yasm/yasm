@@ -1,4 +1,11 @@
-#include <stdlib.h>
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+#endif
+
 #include <stdio.h>
 #include <check.h>
 #include "list.h"

@@ -68,10 +68,27 @@ AC_C_CONST
 AC_TYPE_SIZE_T
 
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS(memcpy toascii abort strcasecmp stricmp strcmpi)
+AC_CHECK_FUNCS(memcpy toascii abort)
+AC_CHECK_FUNCS(strcasecmp stricmp strcmpi, break)
 AC_REPLACE_FUNCS(strdup strtoul)
 
 AC_CHECK_HEADERS(limits.h sys/queue.h sys/cdefs.h)
+
+# Check for stuff wanted by the test suite.  None of this is required.
+if ${check}; then
+	AC_CHECK_FUNCS(fork wait msgctl msgget msgrcv msgsnd strerror)
+	if test "$ac_cv_func_fork" = yes &&
+	   test "$ac_cv_func_wait" = yes &&
+	   test "$ac_cv_func_msgctl" = yes &&
+	   test "$ac_cv_func_msgget" = yes &&
+	   test "$ac_cv_func_msgrcv" = yes &&
+	   test "$ac_cv_func_msgsnd" = yes; then
+		AC_DEFINE(USE_FORKWAITMSG)
+	fi
+	AC_TYPE_PID_T
+	AC_HEADER_SYS_WAIT
+	AC_CHECK_HEADERS(sys/types.h sys/ipc.h sys/msg.h unistd.h)
+fi
 
 # Check for some target-specific stuff
 case "$host" in

@@ -1,8 +1,16 @@
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#include <stdio.h>
+
+#ifdef STDC_HEADERS
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 #include <errno.h>
+#endif
+
 #include "error.h"
 
 /*
@@ -34,8 +42,10 @@ void eprintf (char *fmt, ...)
   va_end(args);
 
   /*include system error information if format ends in colon */
+#ifdef HAVE_STRERROR
   if (fmt[0] != '\0' && fmt[strlen(fmt)-1] == ':')
     fprintf(stderr, " %s", strerror(errno));
+#endif
   fprintf(stderr, "\n");
 
   exit(2);

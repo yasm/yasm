@@ -16,15 +16,26 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
-#include <string.h>
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <stdio.h>
-#include <stdlib.h>
+
+#ifdef STDC_HEADERS
+# include <string.h>
+# include <stdlib.h>
+#endif
+
 #include "error.h"
 #include "list.h"
 #include "check.h"
 #include "check_impl.h"
 #include "check_msg.h"
 
+#ifndef USE_FORKWAITMSG
+extern int nofork_exit_status;
+#endif
 
 Suite *suite_create (char *name)
 {
@@ -82,7 +93,7 @@ void suite_add_tcase (Suite *s, TCase *tc)
   list_add_end (s->tclst, tc);
 }
 
-void _tcase_add_test (TCase *tc, TFun fn, char *name)
+void tcase_add_test_ (TCase *tc, TFun fn, char *name)
 {
   TF * tf;
   if (tc == NULL || fn == NULL || name == NULL)
@@ -105,12 +116,12 @@ void tcase_fn_start (int msqid, char *fname, char *file, int line)
   send_last_loc_msg (msqid, file, line);
 }
 
-void _mark_point (int msqid, char *file, int line)
+void mark_point_ (int msqid, char *file, int line)
 {
   send_last_loc_msg (msqid, file, line);
 }
 
-void _fail_unless (int msqid, int result, char *file, int line, char * msg)
+int fail_unless_ (int msqid, int result, char *file, int line, char * msg)
 {
   if (line > MAXLINE)
     eprintf ("Line number %d too large to use", line);
@@ -118,6 +129,12 @@ void _fail_unless (int msqid, int result, char *file, int line, char * msg)
   send_last_loc_msg (msqid, file, line);
   if (!result) {
     send_failure_msg (msqid, msg);
+#ifdef USE_FORKWAITMSG
     exit(1);
+#else
+    nofork_exit_status = 1;
+    return 1;
+#endif
   }
+  return 0;
 }

@@ -1,5 +1,5 @@
-#ifndef LIST_H
-#define LIST_H
+#ifndef CHECK_LIST_H
+#define CHECK_LIST_H
 
 /*
   Check: a unit test framework for C
@@ -48,4 +48,4 @@ void list_free (List * lp);
 /* Free a list, freeing values using a freeing function */
 /* void list_vfree (List * lp, void (*fp) (void *)); */
 
-#endif /*LIST_H*/
+#endif /*CHECK_LIST_H*/

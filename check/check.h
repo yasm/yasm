@@ -123,10 +123,10 @@ void suite_add_tcase (Suite *s, TCase *tc);
 
 /*! Add a test function to a test case
   (macro version) */
-#define tcase_add_test(tc,tf) _tcase_add_test(tc,tf,"" # tf "")
+#define tcase_add_test(tc,tf) tcase_add_test_(tc,tf,"" # tf "")
 /*! Add a test function to a test case
   (function version -- use this when the macro won't work */
-void _tcase_add_test (TCase *tc, TFun tf, char *fname);
+void tcase_add_test_ (TCase *tc, TFun tf, char *fname);
 
 /*!
 
@@ -142,29 +142,30 @@ void tcase_fn_start (int msqid, char *fname, char *file, int line);
 
 /*! Start a unit test with START_TEST(unit_name), end with END_TEST
   One must use braces within a START_/END_ pair to declare new variables */
-#define START_TEST(__testname)\
-static void __testname (int __msqid)\
+#define START_TEST(testname__)\
+static void testname__ (int msqid__)\
 {\
-  tcase_fn_start (__msqid,""# __testname, __FILE__, __LINE__);
+  tcase_fn_start (msqid__,""# testname__, __FILE__, __LINE__);
 
 /*! End a unit test */
 #define END_TEST }
 
 
 /*! Fail the test case unless result is true */
-#define fail_unless(result,msg) _fail_unless(__msqid,result,__FILE__,__LINE__,msg)
+#define fail_unless(result,msg) \
+  if(fail_unless_(msqid__,result,__FILE__,__LINE__,msg)) return;
   
 /*! Non macro version of #fail_unless, with more complicated interface */
-void _fail_unless (int msqid, int result, char *file, int line, char *msg);
+int fail_unless_ (int msqid, int result, char *file, int line, char *msg);
 
 /*! Always fail */
-#define fail(msg) _fail_unless(__msqid,0,__FILE__,__LINE__,msg)
+#define fail(msg) fail_unless_(msqid__,0,__FILE__,__LINE__,msg)
 
 /*! Mark the last point reached in a unit test
    (useful for tracking down where a segfault, etc. occurs */
-#define mark_point() _mark_point(__msqid,__FILE__,__LINE__)
+#define mark_point() mark_point_(msqid__,__FILE__,__LINE__)
 /*! Non macro version of #mark_point */
-void _mark_point (int msqid, char *file, int line);
+void mark_point_ (int msqid, char *file, int line);
 
 /*! @} */
 

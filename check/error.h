@@ -1,5 +1,5 @@
-#ifndef ERROR_H
-#define ERROR_H
+#ifndef CHECK_ERROR_H
+#define CHECK_ERROR_H
 
 /*
   Check: a unit test framework for C
@@ -29,4 +29,4 @@ void eprintf (char *fmt, ...);
 void *emalloc(size_t n);
 void *erealloc(void *, size_t n);
 
-#endif /*ERROR_H*/
+#endif /*CHECK_ERROR_H*/
