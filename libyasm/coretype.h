@@ -68,4 +68,12 @@ typedef enum {
     EXPR_IDENT	    /* no operation, just a value */
 } ExprOp;
 
+/* EXTERN and COMMON are mutually exclusive */
+typedef enum {
+    SYM_LOCAL = 0,		/* default, local only */
+    SYM_GLOBAL = 1 << 0,	/* if it's declared GLOBAL */
+    SYM_COMMON = 1 << 1,	/* if it's declared COMMON */
+    SYM_EXTERN = 1 << 2		/* if it's declared EXTERN */
+} SymVisibility;
+
 #endif

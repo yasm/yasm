@@ -37,6 +37,7 @@
 
 #include "bytecode.h"
 #include "section.h"
+#include "objfmt.h"
 
 
 /* DEFINED is set with EXTERN and COMMON below */
@@ -68,6 +69,12 @@ struct symrec {
 	    /*@dependent@*/ /*@null@*/ bytecode *bc;
 	} label;
     } value;
+
+    /* objfmt-specific data (related to visibility, so common/extern share
+     * a pointer, and global has its own pointer).
+     */
+    /*@null@*/ /*@owned@*/ void *of_data_vis_ce;
+    /*@null@*/ /*@owned@*/ void *of_data_vis_g;
 };
 
 /* The symbol table: a ternary tree. */
@@ -96,6 +103,8 @@ symrec_get_or_new(const char *name, int in_table)
     rec->filename = in_filename;
     rec->line = line_number;
     rec->visibility = SYM_LOCAL;
+    rec->of_data_vis_ce = NULL;
+    rec->of_data_vis_g = NULL;
 
     /*@-freshtrans -mustfree@*/
     return rec;
@@ -156,9 +165,11 @@ symrec_define_label(const char *name, section *sect, bytecode *precbc,
 }
 
 symrec *
-symrec_declare(const char *name, SymVisibility vis)
+symrec_declare(const char *name, SymVisibility vis, void *of_data)
 {
     symrec *rec = symrec_get_or_new(name, 1);
+
+    assert(cur_objfmt != NULL);
 
     /* Don't allow EXTERN and COMMON if symbol has already been DEFINED. */
     /* Also, EXTERN and COMMON are mutually exclusive. */
@@ -167,6 +178,8 @@ symrec_declare(const char *name, SymVisibility vis)
 	((rec->visibility & SYM_EXTERN) && (vis == SYM_COMMON))) {
 	Error(_("duplicate definition of `%s'; first defined on line %d"),
 	      name, rec->line);
+	if (of_data)
+	    cur_objfmt->declare_data_delete(vis, of_data);
     } else {
 	rec->line = line_number;	/* set line number of declaration */
 	rec->visibility |= vis;
@@ -174,6 +187,20 @@ symrec_declare(const char *name, SymVisibility vis)
 	/* If declared as COMMON or EXTERN, set as DEFINED. */
 	if ((vis == SYM_COMMON) || (vis == SYM_EXTERN))
 	    rec->status |= SYM_DEFINED;
+
+	if (of_data) {
+	    switch (vis) {
+		case SYM_GLOBAL:
+		    rec->of_data_vis_g = of_data;
+		    break;
+		case SYM_COMMON:
+		case SYM_EXTERN:
+		    rec->of_data_vis_ce = of_data;
+		    break;
+		default:
+		    InternalError(_("Unexpected vis value"));
+	    }
+	}
     }
     return rec;
 }
@@ -269,6 +296,15 @@ symrec_delete_one(/*@only@*/ void *d)
     xfree(sym->name);
     if (sym->type == SYM_EQU)
 	expr_delete(sym->value.expn);
+    assert(cur_objfmt != NULL);
+    if (sym->of_data_vis_g && (sym->visibility & SYM_GLOBAL))
+	cur_objfmt->declare_data_delete(SYM_GLOBAL, sym->of_data_vis_g);
+    if (sym->of_data_vis_ce && (sym->visibility & SYM_COMMON)) {
+	cur_objfmt->declare_data_delete(SYM_COMMON, sym->of_data_vis_ce);
+	sym->of_data_vis_ce = NULL;
+    }
+    if (sym->of_data_vis_ce && (sym->visibility & SYM_EXTERN))
+	cur_objfmt->declare_data_delete(SYM_EXTERN, sym->of_data_vis_ce);
     xfree(sym);
 }
 

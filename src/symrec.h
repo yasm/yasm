@@ -22,14 +22,6 @@
 #ifndef YASM_SYMREC_H
 #define YASM_SYMREC_H
 
-/* EXTERN and COMMON are mutually exclusive */
-typedef enum {
-    SYM_LOCAL = 0,		/* default, local only */
-    SYM_GLOBAL = 1 << 0,	/* if it's declared GLOBAL */
-    SYM_COMMON = 1 << 1,	/* if it's declared COMMON */
-    SYM_EXTERN = 1 << 2		/* if it's declared EXTERN */
-} SymVisibility;
-
 /*@dependent@*/ symrec *symrec_use(const char *name);
 /*@dependent@*/ symrec *symrec_define_equ(const char *name,
 					  /*@keep@*/ expr *e);
@@ -39,7 +31,8 @@ typedef enum {
 					    section *sect,
 					    /*@dependent@*/ /*@null@*/
 					    bytecode *precbc, int in_table);
-/*@dependent@*/ symrec *symrec_declare(const char *name, SymVisibility vis);
+/*@dependent@*/ symrec *symrec_declare(const char *name, SymVisibility vis,
+				       /*@only@*/ /*@null@*/ void *of_data);
 
 /* Get the numeric 32-bit value of a symbol if possible.
  * Return value is IF POSSIBLE, not the value.

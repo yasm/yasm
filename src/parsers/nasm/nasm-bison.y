@@ -235,8 +235,15 @@ directive_valparams: directive_valparam		{
     }
 ;
 
-directive_valparam: ID		{ vp_new($$, $1, NULL); }
-    | direxpr			{ vp_new($$, NULL, $1); }
+directive_valparam: direxpr	{
+	/* If direxpr is just an ID, put it in val and delete the expr */
+	const /*@null@*/ symrec *vp_symrec;
+	if ((vp_symrec = expr_get_symrec(&$1, 0))) {
+	    vp_new($$, xstrdup(symrec_get_name(vp_symrec)), NULL);
+	    expr_delete($1);
+	} else
+	    vp_new($$, NULL, $1);
+    }
     | ID '=' direxpr		{ vp_new($$, $1, $3); }
 ;
 
@@ -480,6 +487,10 @@ target: expr		{
 
 /* expr w/o FLTNUM and unary + and -, for use in directives */
 direxpr: INTNUM			{ $$ = expr_new_ident(ExprInt($1)); }
+    | ID			{
+	$$ = expr_new_ident(ExprSym(symrec_define_label($1, NULL, NULL, 0)));
+	xfree($1);
+    }
     | direxpr '|' direxpr	{ $$ = expr_new_tree($1, EXPR_OR, $3); }
     | direxpr '^' direxpr	{ $$ = expr_new_tree($1, EXPR_XOR, $3); }
     | direxpr '&' direxpr	{ $$ = expr_new_tree($1, EXPR_AND, $3); }
@@ -605,12 +616,52 @@ static void
 nasm_parser_directive(const char *name, valparamhead *valparams,
 		      valparamhead *objext_valparams)
 {
-    valparam *vp;
+    valparam *vp, *vp2;
     const intnum *intn;
     long lval;
 
     assert(cur_objfmt != NULL);
-    if (strcasecmp(name, "section") == 0) {
+
+    /* Handle (mostly) output-format independent directives here */
+    if (strcasecmp(name, "extern") == 0) {
+	vp = vps_first(valparams);
+	if (vp->val)
+	    symrec_declare(vp->val, SYM_EXTERN,
+			   cur_objfmt->extern_data_new(vp->val,
+						       objext_valparams));
+	else
+	    Error(_("invalid argument to [%s]"), "EXTERN");
+    } else if (strcasecmp(name, "global") == 0) {
+	vp = vps_first(valparams);
+	if (vp->val)
+	    symrec_declare(vp->val, SYM_GLOBAL,
+			   cur_objfmt->global_data_new(vp->val,
+						       objext_valparams));
+	else
+	    Error(_("invalid argument to [%s]"), "GLOBAL");
+    } else if (strcasecmp(name, "common") == 0) {
+	vp = vps_first(valparams);
+	if (vp->val) {
+	    vp2 = vps_next(vp);
+	    if (!vp2 || (!vp2->val && !vp2->param))
+		Error(_("no size specified in %s declaration"), "COMMON");
+	    else {
+		if (vp2->val)
+		    symrec_declare(vp->val, SYM_COMMON,
+			cur_objfmt->common_data_new(vp->val,
+			    expr_new_ident(ExprSym(symrec_use(vp2->val))),
+			    objext_valparams));
+		else if (vp2->param) {
+		    symrec_declare(vp->val, SYM_COMMON,
+			cur_objfmt->common_data_new(vp->val, vp2->param,
+						    objext_valparams));
+		    vp2->param = NULL;
+		}
+	    }
+	} else
+	    Error(_("invalid argument to [%s]"), "COMMON");
+    } else if (strcasecmp(name, "section") == 0 ||
+	       strcasecmp(name, "segment") == 0) {
 	section *new_section =
 	    cur_objfmt->sections_switch(&nasm_parser_sections, valparams,
 					objext_valparams);
@@ -620,6 +671,7 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 	} else
 	    Error(_("invalid argument to [%s]"), "SECTION");
     } else if (strcasecmp(name, "absolute") == 0) {
+	/* it can be just an ID or a complete expression, so handle both. */
 	vp = vps_first(valparams);
 	if (vp->val)
 	    nasm_parser_cur_section =
@@ -638,31 +690,8 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 	    x86_mode_bits = (unsigned char)lval;
 	else
 	    Error(_("invalid argument to [%s]"), "BITS");
-    } else {
+    } else if (cur_objfmt->directive(name, valparams, objext_valparams)) {
 	Error(_("unrecognized directive [%s]"), name);
-#if 0
-	printf("Directive: Name=`%s'\n Val/Params:\n", name);
-	vps_foreach(vp, valparams) {
-	    printf("  (%s,", vp->val?vp->val:"(nil)");
-	    if (vp->param)
-		expr_print(vp->param);
-	    else
-		printf("(nil)");
-	    printf(")\n");
-	}
-	printf(" Obj Ext Val/Params:\n");
-	if (!objext_valparams)
-	    printf("  (none)\n");
-	else
-	    vps_foreach(vp, objext_valparams) {
-		printf("  (%s,", vp->val?vp->val:"(nil)");
-		if (vp->param)
-		    expr_print(vp->param);
-		else
-		    printf("(nil)");
-		printf(")\n");
-	    }
-#endif
     }
 
     vps_delete(valparams);

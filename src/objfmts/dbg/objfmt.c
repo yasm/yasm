@@ -82,6 +82,75 @@ dbg_objfmt_section_data_print(/*@unused@*/ void *data)
 {
 }
 
+static /*@null@*/ void *
+dbg_objfmt_extern_data_new(const char *name, /*@unused@*/ /*@null@*/
+			   valparamhead *objext_valparams)
+{
+    printf("extern_data_new(\"%s\")\n", name);
+    return NULL;
+}
+
+static /*@null@*/ void *
+dbg_objfmt_global_data_new(const char *name, /*@unused@*/ /*@null@*/
+			   valparamhead *objext_valparams)
+{
+    printf("global_data_new(\"%s\")\n", name);
+    return NULL;
+}
+
+static /*@null@*/ void *
+dbg_objfmt_common_data_new(const char *name, /*@only@*/ expr *size,
+			   /*@unused@*/ /*@null@*/
+			   valparamhead *objext_valparams)
+{
+    printf("common_data_new(\"%s\",", name);
+    expr_print(size);
+    printf(")\n");
+    return size;
+}
+
+static void
+dbg_objfmt_declare_data_delete(/*@unused@*/ SymVisibility vis,
+			       /*@unused@*/ /*@only@*/ void *data)
+{
+    printf("declare_data_delete()\n");
+    if (vis == SYM_COMMON)
+	expr_delete(data);
+    else
+	xfree(data);
+}
+
+static int
+dbg_objfmt_directive(const char *name, valparamhead *valparams,
+		     /*@null@*/ valparamhead *objext_valparams)
+{
+    valparam *vp;
+
+    printf("directive(\"%s\", valparams:\n", name);
+    vps_foreach(vp, valparams) {
+	printf("  (%s,", vp->val?vp->val:"(nil)");
+	if (vp->param)
+	    expr_print(vp->param);
+	else
+	    printf("(nil)");
+	printf(")\n");
+    }
+    printf(" objext_valparams:\n");
+    if (!objext_valparams)
+	printf("  (none)\n");
+    else
+	vps_foreach(vp, objext_valparams) {
+	    printf("  (%s,", vp->val?vp->val:"(nil)");
+	    if (vp->param)
+		expr_print(vp->param);
+	    else
+		printf("(nil)");
+	    printf(")\n");
+	}
+
+    return 0;	    /* dbg format "recognizes" all directives */
+}
+
 /* Define objfmt structure -- see objfmt.h for details */
 objfmt dbg_objfmt = {
     "Trace of all info passed to object format module",
@@ -90,5 +159,10 @@ objfmt dbg_objfmt = {
     32,
     dbg_objfmt_sections_switch,
     dbg_objfmt_section_data_delete,
-    dbg_objfmt_section_data_print
+    dbg_objfmt_section_data_print,
+    dbg_objfmt_extern_data_new,
+    dbg_objfmt_global_data_new,
+    dbg_objfmt_common_data_new,
+    dbg_objfmt_declare_data_delete,
+    dbg_objfmt_directive
 };

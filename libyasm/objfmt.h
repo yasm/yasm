@@ -55,6 +55,26 @@ struct objfmt {
 
     void (*section_data_delete)(/*@only@*/ void *data);
     void (*section_data_print)(void *data);
+
+    /*@null@*/ void *(*extern_data_new)(const char *name, /*@null@*/
+					valparamhead *objext_valparams);
+    /*@null@*/ void *(*global_data_new)(const char *name, /*@null@*/
+					valparamhead *objext_valparams);
+    /*@null@*/ void *(*common_data_new)(const char *name,
+					/*@only@*/ expr *size, /*@null@*/
+					valparamhead *objext_valparams);
+
+    /* It's only valid to pass this *one* SymVisibility (eg, vis is an enum not
+     * a bitmask).
+     */
+    void (*declare_data_delete)(SymVisibility vis, /*@only@*/ void *data);
+
+    /* Object format-specific directive support.  Returns 1 if directive was
+     * not recognized.  Returns 0 if directive was recognized, even if it
+     * wasn't valid.
+     */
+    int (*directive)(const char *name, valparamhead *valparams,
+		     /*@null@*/ valparamhead *objext_valparams);
 };
 
 /* Generic functions for all object formats - implemented in src/objfmt.c */
