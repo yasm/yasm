@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.6 2001/05/30 08:00:26 peter Exp $
+; $Id: instrs.dat,v 1.7 2001/05/30 08:02:47 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -973,8 +973,8 @@ ror	rm16x,imm8		16	C1		$1,1	$2,8	186
 ror	rm32x,ONE		32	D1		$1,1	nil	386
 ror	rm32x,REG_CL		32	D3		$1,1	nil	386
 ror	rm32x,imm8		32	C1		$1,1	$2,8	386
-rcpps	XMMREG,rm128		nil	0F,F3		$2,$1	nil	KATMAI,SSE
-; rcpss
+rcpps	XMMREG,rm128		nil	0F,53		$2,$1	nil	KATMAI,SSE
+rcpss	XMMREG,rm128		nil	F3,0F,53	$2,$1	nil	P4,SSE2
 rdmsr	nil			nil	0F,32		nil	nil	P5,PRIV
 rdpmc	nil			nil	0F,33		nil	nil	P6
 rdtsc	nil			nil	0F,31		nil	nil	P5
