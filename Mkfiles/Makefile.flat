@@ -12,7 +12,7 @@
 #  CFLAGS appropriately, along with writing a config.h for the platform and
 #  placing it in a libyasm subdirectory.
 
-CFLAGS=-DHAVE_CONFIG_H -DWIN32 -IMkfiles -I. -Ifrontends/yasm
+CFLAGS=-DHAVE_CONFIG_H -IMkfiles -I. -Ifrontends/yasm
 CC=gcc
 
 all: yasm
@@ -37,7 +37,8 @@ LIBYASM_OBJS= \
  libyasm/symrec.o \
  libyasm/valparam.o \
  libyasm/xmalloc.o \
- libyasm/xstrdup.o
+ libyasm/xstrdup.o \
+ module.o
 
 MODULES_ARCH_X86_OBJS= \
  modules/arch/x86/x86arch.o \
@@ -55,7 +56,8 @@ MODULES_ARCH_OBJS= \
  $(MODULES_ARCH_LC3B_OBJS)
 
 MODULES_DBGFMTS_OBJS= \
- modules/dbgfmts/null/null-dbgfmt.o
+ modules/dbgfmts/null/null-dbgfmt.o \
+ modules/dbgfmts/stabs/stabs-dbgfmt.o
 
 MODULES_LISTFMTS_OBJS= \
  modules/listfmts/nasm/nasm-listfmt.o
@@ -103,7 +105,6 @@ MODULES_OBJS = \
 
 YASM_OBJS= \
  frontends/yasm/yasm.o \
- Mkfiles/vc/yasm-module.o \
  frontends/yasm/yasm-options.o \
  $(LIBYASM_OBJS) \
  $(MODULES_OBJS)

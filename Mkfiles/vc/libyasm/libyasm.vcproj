@@ -344,6 +344,9 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\module.c">
+			</File>
+			<File
 				RelativePath="..\..\..\libyasm\objfmt.c">
 			</File>
 			<File
