@@ -28,7 +28,9 @@
 #include "libyasm.h"
 /*@unused@*/ RCSID("$IdPath$");
 
+#ifndef WIN32
 #include "ltdl.h"
+#endif
 #include "yasm-module.h"
 #include "yasm-options.h"
 
@@ -133,7 +135,9 @@ main(int argc, char *argv[])
     /*@null@*/ FILE *in = NULL, *obj = NULL;
     yasm_sectionhead *sections;
     size_t i;
+#ifndef WIN32
     int errors;
+#endif
 
 #if defined(HAVE_SETLOCALE) && defined(HAVE_LC_MESSAGES)
     setlocale(LC_MESSAGES, "");
@@ -149,6 +153,7 @@ main(int argc, char *argv[])
     yasm_gettext_hook = handle_yasm_gettext;
     yasm_errwarn_initialize();
 
+#ifndef WIN32
     /* Set libltdl malloc/free functions. */
 #ifdef WITH_DMALLOC
     lt_dlmalloc = malloc;
@@ -174,6 +179,7 @@ main(int argc, char *argv[])
 	print_error(_("Module loader initialization failed"));
 	return EXIT_FAILURE;
     }
+#endif
 
     if (parse_cmdline(argc, argv, options, NELEMS(options), print_error))
 	return EXIT_FAILURE;
@@ -497,8 +503,10 @@ cleanup(yasm_sectionhead *sections)
 
     unload_modules();
 
+#ifndef WIN32
     /* Finish with libltdl. */
     lt_dlexit();
+#endif
 
     if (DO_FREE) {
 	if (in_filename)
