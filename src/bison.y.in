@@ -1,4 +1,4 @@
-/* $Id: bison.y.in,v 1.6 2001/05/21 22:10:27 peter Exp $
+/* $Id: bison.y.in,v 1.7 2001/05/22 07:17:04 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -72,13 +72,13 @@ extern void yyerror(char *);
 
 %type <bc> line exp instr instrbase
 
-%type <int_val> fpureg reg32 reg16 reg8 reg_dess reg_fsgs reg_notcs segreg
+%type <int_val> fpureg reg32 reg16 reg8 segreg
 %type <ea_val> mem memaddr memexp
 %type <ea_val> mem8x mem16x mem32x mem64x mem80x mem128x
 %type <ea_val> mem8 mem16 mem32 mem64 mem80 mem128 mem1632
-%type <ea_val> rm8x rm16x rm32x /*rm64x xrm64x rm128x*/
-%type <ea_val> rm8 rm16 rm32 rm64 rm128 xrm64
-%type <im_val> immexp imm8x imm16x imm32x imm8 imm16 imm32 imm1632
+%type <ea_val> rm8x rm16x rm32x /*rm64x rm128x*/
+%type <ea_val> rm8 rm16 rm32 rm64 rm128
+%type <im_val> immexp imm imm8x imm16x imm32x imm8 imm16 imm32
 
 %left '-' '+'
 %left '*' '/'
@@ -147,23 +147,11 @@ reg8: REG_AL
     | BYTE reg8
 ;
 
-reg_dess: REG_ES
+segreg:  REG_ES
     | REG_SS
     | REG_DS
-    | WORD reg_dess
-;
-
-reg_fsgs: REG_FS
+    | REG_FS
     | REG_GS
-    | WORD reg_fsgs
-;
-
-reg_notcs: reg_dess
-    | reg_fsgs
-    | WORD reg_notcs
-;
-
-segreg: reg_notcs
     | REG_CS
     | WORD segreg
 ;
@@ -242,9 +230,6 @@ rm32x: reg32	{ (void)ConvertRegToEA(&$$, $1); }
 rm64x: MMXREG	{ (void)ConvertRegToEA(&$$, $1); }
     | mem64x
 ;
-xrm64x: XMMREG	{ (void)ConvertRegToEA(&$$, $1); }
-    | mem64x
-;
 rm128x: XMMREG	{ (void)ConvertRegToEA(&$$, $1); }
     | mem128x
 ;
@@ -263,9 +248,6 @@ rm32: reg32	{ (void)ConvertRegToEA(&$$, $1); }
 rm64: MMXREG	{ (void)ConvertRegToEA(&$$, $1); }
     | mem64
 ;
-xrm64: XMMREG	{ (void)ConvertRegToEA(&$$, $1); }
-    | mem64
-;
 rm128: XMMREG	{ (void)ConvertRegToEA(&$$, $1); }
     | mem128
 ;
@@ -275,28 +257,25 @@ rm128: XMMREG	{ (void)ConvertRegToEA(&$$, $1); }
 immexp: INTNUM	{ (void)ConvertIntToImm(&$$, $1); }
 ;
 
+imm: immexp
+;
+
 /* explicit immediates */
-imm8x: BYTE immexp	{ $$ = $2; }
+imm8x: BYTE imm	{ $$ = $2; }
 ;
-imm16x: WORD immexp	{ $$ = $2; }
+imm16x: WORD imm	{ $$ = $2; }
 ;
-imm32x: DWORD immexp	{ $$ = $2; }
+imm32x: DWORD imm	{ $$ = $2; }
 ;
 
 /* implicit immediates */
-imm8: immexp
+imm8: imm
     | imm8x
 ;
-imm16: immexp
+imm16: imm
     | imm16x
 ;
-imm32: immexp
-    | imm32x
-;
-
-/* both 16 and 32 bit immediates */
-imm1632: immexp
-    | imm16x
+imm32: imm
     | imm32x
 ;
 
