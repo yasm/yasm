@@ -104,7 +104,6 @@ line_set(const char *filename, unsigned long line, unsigned long line_inc)
     }
     if (line_index_map->size >= line_index_map->allocated) {
 	/* allocate another size bins when full for 2x space */
-	struct line_index_mapping_s *realloc_index;
 	line_index_map->vector = xrealloc(line_index_map->vector,
 		2*line_index_map->allocated*sizeof(line_index_mapping));
 	line_index_map->allocated *= 2;
