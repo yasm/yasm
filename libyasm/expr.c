@@ -190,7 +190,7 @@ expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e,
 	    e->terms[i].data.expn =
 		yasm_expr_new(YASM_EXPR_ADD,
 			      yasm_expr_expr(yasm_expr_copy(start)),
-			      yasm_expr_int(dist), start->line);
+			      yasm_expr_int(dist), e->line);
 	}
     }
 
