@@ -53,7 +53,7 @@ x86_expr_checkea_get_reg3264(yasm_expr__item *ei, int *regnum,
 	case X86_REG32:
 	    if (data->addrsize != 32)
 		return 0;
-	    *regnum = ei->data.reg & 0x7;
+	    *regnum = ei->data.reg & 0xF;
 	    break;
 	case X86_REG64:
 	    if (data->addrsize != 64)
