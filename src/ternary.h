@@ -38,7 +38,7 @@ ternary_node;
    already there, and replace is 0.
    Otherwise, replaces if it it exists, inserts if it doesn't, and
    returns the data you passed in. */
-void *ternary_insert (ternary_tree *p, char *s, void *data, int replace);
+void *ternary_insert (ternary_tree *p, const char *s, void *data, int replace);
 
 /* Delete the ternary search tree rooted at P. 
    Does NOT delete the data you associated with the strings. */
@@ -46,5 +46,5 @@ void ternary_cleanup (ternary_tree p);
 
 /* Search the ternary tree for string S, returning the data associated
    with it if found. */
-void *ternary_search (ternary_tree p, char *s);
+void *ternary_search (ternary_tree p, const char *s);
 #endif

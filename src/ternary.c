@@ -39,7 +39,7 @@ RCSID("$IdPath$");
    insertions. */
 
 void *
-ternary_insert (ternary_tree * root, char *s, void *data, int replace)
+ternary_insert (ternary_tree * root, const char *s, void *data, int replace)
 {
   int diff;
   ternary_tree curr, *pcurr;
@@ -115,7 +115,7 @@ ternary_cleanup (ternary_tree p)
 
 /* Non-recursive find of a string in the ternary tree */
 void *
-ternary_search (ternary_tree p, char *s)
+ternary_search (ternary_tree p, const char *s)
 {
   ternary_tree curr;
   int diff, spchar;
@@ -147,7 +147,7 @@ ternary_search (ternary_tree p, char *s)
 /* For those who care, the recursive version of the search. Useful if
    you want a starting point for pmsearch or nearsearch. */
 static void *
-ternary_recursivesearch (ternary_tree p, char *s)
+ternary_recursivesearch (ternary_tree p, const char *s)
 {
   if (!p)
     return 0;
