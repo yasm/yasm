@@ -274,56 +274,70 @@ yapp_defined(const char *key)
 void
 append_token(int token)
 {
-    if (current_output != YAPP_OUTPUT) return;
-
-    src = xmalloc(sizeof(source));
-    src->token.type = token;
-    switch (token)
-    {
-	case INTNUM:
-	    src->token.str = xstrdup(yapp_preproc_lval.int_str_val.str);
-	    src->token.val.int_val = yapp_preproc_lval.int_str_val.val;
-	    break;
-
-	case FLTNUM:
-	    src->token.str = xstrdup(yapp_preproc_lval.double_str_val.str);
-	    src->token.val.double_val = yapp_preproc_lval.double_str_val.val;
-	    break;
-
-	case STRING:
-	    src->token.str = xstrdup(yapp_preproc_lval.str_val);
-	    break;
-
-	case IDENT:
-	    src->token.str = xstrdup(yapp_preproc_lval.str_val);
-	    break;
-
-	case '+': case '-': case '*': case '/': case '%': case ',': case '\n':
-	case '[': case ']':
-	    src->token.str = xmalloc(2);
-	    src->token.str[0] = (char)token;
-	    src->token.str[1] = '\0';
-	    break;
-
-	case LINE:
-	    /* TODO: consider removing any trailing newline or LINE tokens */
-	    src->token.str = xmalloc(23+strlen(current_file));
-	    sprintf(src->token.str, "%%line %d+1 %s\n", line_number, current_file);
-	    break;
-
-	default:
-	    free(src);
-	    return;
+    if (current_output != YAPP_OUTPUT) {
+	ydebug(("YAPP: append_token while not YAPP_OUTPUT\n"));
+	return;
     }
-    if (*current_tail) {
-	SLIST_INSERT_AFTER(*current_tail, src, next);
+
+    /* attempt to condense LINES together or newlines onto LINES */
+    if ((*current_tail) && (*current_tail)->token.type == LINE
+	&& (token == '\n' || token == LINE))
+    {
+	free ((*current_tail)->token.str);
+	(*current_tail)->token.str = xmalloc(23+strlen(current_file));
+	sprintf((*current_tail)->token.str, "%%line %d+1 %s\n", line_number, current_file);
     }
     else {
-	SLIST_INSERT_HEAD(current_head, src, next);
+	src = xmalloc(sizeof(source));
+	src->token.type = token;
+	switch (token)
+	{
+	    case INTNUM:
+		src->token.str = xstrdup(yapp_preproc_lval.int_str_val.str);
+		src->token.val.int_val = yapp_preproc_lval.int_str_val.val;
+		break;
+
+	    case FLTNUM:
+		src->token.str = xstrdup(yapp_preproc_lval.double_str_val.str);
+		src->token.val.double_val = yapp_preproc_lval.double_str_val.val;
+		break;
+
+	    case STRING:
+	    case WHITESPACE:
+		src->token.str = xstrdup(yapp_preproc_lval.str_val);
+		break;
+
+	    case IDENT:
+		src->token.str = xstrdup(yapp_preproc_lval.str_val);
+		break;
+
+	    case '+': case '-': case '*': case '/': case '%': case ',': case '\n':
+	    case '[': case ']':
+		src->token.str = xmalloc(2);
+		src->token.str[0] = (char)token;
+		src->token.str[1] = '\0';
+		break;
+
+	    case LINE:
+		/* TODO: consider removing any trailing newline or LINE tokens */
+		src->token.str = xmalloc(23+strlen(current_file));
+		sprintf(src->token.str, "%%line %d+1 %s\n", line_number, current_file);
+		break;
+
+	    default:
+		free(src);
+		return;
+	}
+	if (*current_tail) {
+	    SLIST_INSERT_AFTER(*current_tail, src, next);
+	}
+	else {
+	    SLIST_INSERT_HEAD(current_head, src, next);
+	}
+	*current_tail = src;
+	if (current_head == &source_head)
+	    saved_length += strlen(src->token.str);
     }
-    *current_tail = src;
-    if (current_head == &source_head)
-	saved_length += strlen(src->token.str) + 1;
 }
 
 int
@@ -332,7 +346,7 @@ append_through_return(void)
     int token;
     do {
 	token = yapp_preproc_lex();
-	ydebug(("YAPP: ATR: %c %s\n", token, yapp_preproc_lval.str_val));
+	ydebug(("YAPP: ATR: '%c' \"%s\"\n", token, yapp_preproc_lval.str_val));
 	if (token == 0)
 	    return 0;
 	append_token(token);
@@ -357,6 +371,8 @@ int
 yapp_get_ident(const char *synlvl)
 {
     int token = yapp_preproc_lex();
+    if (token == WHITESPACE)
+	token = yapp_preproc_lex();
     if (token != IDENT) {
 	Error(_("Identifier expected after %%%s"), synlvl);
     }
@@ -378,7 +394,7 @@ copy_token(YAPP_Token *tok)
     }
     *current_tail = src;
     if (current_head == &source_head)
-	saved_length += strlen(src->token.str) + 1;
+	saved_length += strlen(src->token.str);
 }
 
 void
@@ -430,12 +446,12 @@ yapp_preproc_input(char *buf, size_t max_size)
 		    default:
 			append_token(token);
 			/*if (append_through_return()==0) state=YAPP_STATE_EOF;*/
-			ydebug(("YAPP: default: %c %s\n", token, yapp_preproc_lval.str_val));
+			ydebug(("YAPP: default: '%c' \"%s\"\n", token, yapp_preproc_lval.str_val));
 			/*Error(_("YAPP got an unhandled token."));*/
 			break;
 
 		    case IDENT:
-			ydebug(("YAPP: ident: %s\n", yapp_preproc_lval.str_val));
+			ydebug(("YAPP: ident: \"%s\"\n", yapp_preproc_lval.str_val));
 			if (yapp_defined(yapp_preproc_lval.str_val)) {
 			    expand_macro(yapp_macro_get(yapp_preproc_lval.str_val));
 			}
@@ -460,7 +476,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 		    case DEFINE:
 			ydebug(("YAPP: define: "));
 			token = yapp_get_ident("define");
-			    ydebug((" %s\n", yapp_preproc_lval.str_val));
+			    ydebug((" \"%s\"\n", yapp_preproc_lval.str_val));
 			s = xstrdup(yapp_preproc_lval.str_val);
 
 			/* three cases: newline or stuff or left paren */
@@ -468,6 +484,18 @@ yapp_preproc_input(char *buf, size_t max_size)
 			if (token == '\n') {
 			    /* no args or content - just insert it */
 			    yapp_define_insert(s, -1, 0);
+			    append_token('\n');
+			}
+			else if (token == WHITESPACE) {
+			    /* no parens */
+			    current_head = &macro_head;
+			    current_tail = &macro_tail;
+			    if(append_through_return()==0) state=YAPP_STATE_EOF;
+			    else {
+				yapp_define_insert(s, -1, 0);
+			    }
+			    current_head = &source_head;
+			    current_tail = &source_tail;
 			    append_token('\n');
 			}
 			else if (token == '(') {
@@ -506,17 +534,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 			    append_token('\n');
 			}
 			else {
-			    /* no parens */
-			    current_head = &macro_head;
-			    current_tail = &macro_tail;
-			    append_token(token);
-			    if(append_through_return()==0) state=YAPP_STATE_EOF;
-			    else {
-				yapp_define_insert(s, -1, 0);
-			    }
-			    current_head = &source_head;
-			    current_tail = &source_tail;
-			    append_token('\n');
+			    InternalError(_("%%define ... failed miserably - neither \\n, WS, or ( followed ident"));
 			}
 			break;
 
@@ -593,29 +611,11 @@ yapp_preproc_input(char *buf, size_t max_size)
 	source *next;
 	src = SLIST_FIRST(&source_head);
 	next = SLIST_NEXT(src, next);
-	if (max_size - n - 1 >= strlen(src->token.str)) {
+	if (max_size - n /* - 1 */ >= strlen(src->token.str)) {
 	    strcpy(buf+n, src->token.str);
 	    n += strlen(src->token.str);
-	    switch (src->token.type) {
-		default:
-		    buf[n++] = ' ';
-		    break;
 
-		case IDENT:
-		    /* don't space before commas, etc */
-		    if (next && next->token.type == IDENT)
-			buf[n++] = ' ';
-		    break;
-
-		    /* don't space after operators, parens */
-		case '+': case '-': case '/': case '*': case '(': case ')':
-		case '\n':
-		case LINE:
-		case INCLUDE:
-		    break;
-	    }
-
-	    saved_length -= strlen(src->token.str) + 1;
+	    saved_length -= strlen(src->token.str);
 	    SLIST_REMOVE_HEAD(&source_head, next);
 	    free(src->token.str);
 	    free(src);

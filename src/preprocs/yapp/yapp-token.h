@@ -54,6 +54,7 @@ typedef union {
 #define	SIGNDIV	299
 #define	SIGNMOD	300
 #define	UNARYOP	301
+#define	WHITESPACE	302
 
 
 extern YYSTYPE yapp_preproc_lval;

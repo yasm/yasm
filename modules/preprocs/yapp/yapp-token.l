@@ -69,7 +69,7 @@ DIGIT    [0-9]
 BINDIGIT [01]
 OCTDIGIT [0-7]
 HEXDIGIT [0-9a-f]
-WS       [ \t\r]
+WS       [ \t]
 DIR	 %[ \t]*
 
 %%
@@ -303,20 +303,25 @@ DIR	 %[ \t]*
 <inhibit>{DIR}elifstr  { BEGIN(INITIAL); return ELIFSTR; }
 
     /* error reporting */
+<inhibit>{DIR}error[^\n]*  ;
 {DIR}error[ ]+.*    { yylval.str_val = yytext; return ERROR; }
 
     /* context stack management */
 {DIR}push     return PUSH;
 {DIR}pop      return POP;
 {DIR}repl     return REPL;
-
-;.*	;
-
-{WS}+	;
+<inhibit>{DIR}push[^\n]*  ;
+<inhibit>{DIR}pop[^\n]*  ;
+<inhibit>{DIR}repl[^\n]*  ;
 
 <inhibit>[^%\n]*\n { line_number++; return '\n'; }
 
-\n	{ line_number++; return '\n'; }
+;.*\n	{ line_number++; return '\n'; }
+
+{WS}+	{ yylval.str_val = yytext; return WHITESPACE; }
+
+{WS}*\n	{ line_number++; return '\n'; }
+
 
 [][+*/,()-] { return yytext[0]; }
 

@@ -1,3 +1,2 @@
-%line 1+1 ./src/preprocs/yapp/tests/comment.asm
-
+%line 2+1 ./src/preprocs/yapp/tests/comment.asm
 	mov	ax, 4 
