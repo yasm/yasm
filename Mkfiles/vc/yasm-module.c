@@ -42,6 +42,7 @@ extern int yasm_x86_LTX_mode_bits;
 extern yasm_dbgfmt yasm_null_LTX_dbgfmt;
 extern yasm_objfmt yasm_bin_LTX_objfmt;
 extern yasm_objfmt yasm_coff_LTX_objfmt;
+extern yasm_objfmt yasm_win32_LTX_objfmt;
 extern yasm_objfmt yasm_dbg_LTX_objfmt;
 extern yasm_optimizer yasm_basic_LTX_optimizer;
 extern yasm_parser yasm_nasm_LTX_parser;
@@ -55,6 +56,7 @@ static module modules[] = {
     {"null", "dbgfmt", &yasm_null_LTX_dbgfmt},
     {"bin",  "objfmt", &yasm_bin_LTX_objfmt},
     {"coff", "objfmt", &yasm_coff_LTX_objfmt},
+    {"win32", "objfmt", &yasm_win32_LTX_objfmt},
     {"dbg", "objfmt", &yasm_dbg_LTX_objfmt},
     {"basic", "optimizer", &yasm_basic_LTX_optimizer},
     {"nasm", "parser", &yasm_nasm_LTX_parser},
