@@ -101,6 +101,9 @@
 /* Define if you have the memcpy function.  */
 #define HAVE_MEMCPY
 
+/* Define if you have the mergesort function.  */
+/* #undef HAVE_MERGESORT */
+
 /* Define if you have the msgctl function.  */
 /* #undef HAVE_MSGCTL */
 
@@ -166,6 +169,9 @@
 /* Define if you have the <argz.h> header file.  */
 /* #undef HAVE_ARGZ_H */
 
+/* Define if you have the <dmalloc.h> header file.  */
+/* #undef HAVE_DMALLOC_H */
+
 /* Define if you have the <limits.h> header file.  */
 #define HAVE_LIMITS_H
 
@@ -201,6 +207,9 @@
 
 /* Define if you have the <unistd.h> header file.  */
 /* #undef HAVE_UNISTD_H */
+
+/* Define if you have the dmalloc library (-ldmalloc).  */
+/* #undef HAVE_LIBDMALLOC */
 
 /* Define if you have the i library (-li).  */
 /* #undef HAVE_LIBI */

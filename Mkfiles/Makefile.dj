@@ -27,6 +27,7 @@ SRC_OBJS= \
  src/parser.o \
  src/intnum.o \
  src/floatnum.o \
+ src/mergesort.o \
  src/ternary.o \
  src/bitvect.o \
  src/xmalloc.o \
