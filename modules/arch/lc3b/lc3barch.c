@@ -33,9 +33,12 @@
 #include "lc3barch.h"
 
 
-static void
-lc3b_initialize(void)
+static int
+lc3b_initialize(/*@unused@*/ const char *machine)
 {
+    if (yasm__strcasecmp(machine, "lc3b") != 0)
+	return 1;
+    return 0;
 }
 
 static void
@@ -82,6 +85,12 @@ yasm_lc3b__ea_new_expr(yasm_expr *e)
     return NULL;
 }
 
+/* Define lc3b machines -- see arch.h for details */
+static yasm_arch_machine lc3b_machines[] = {
+    { "LC-3b", "lc3b" },
+    { NULL, NULL }
+};
+
 /* Define arch structure -- see arch.h for details */
 yasm_arch yasm_lc3b_LTX_arch = {
     "LC-3b",
@@ -107,5 +116,7 @@ yasm_arch yasm_lc3b_LTX_arch = {
     NULL,	/*yasm_lc3b__segreg_print*/
     yasm_lc3b__ea_new_expr,
     NULL,	/*yasm_lc3b__ea_data_delete*/
-    NULL	/*yasm_lc3b__ea_data_print*/
+    NULL,	/*yasm_lc3b__ea_data_print*/
+    lc3b_machines,
+    "lc3b"
 };

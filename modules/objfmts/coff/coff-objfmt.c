@@ -206,10 +206,11 @@ coff_objfmt_append_local_sym(yasm_symrec *sym, /*@unused@*/ /*@null@*/ void *d)
     return 1;
 }
 
-static void
+static int
 coff_common_initialize(const char *in_filename,
 		       /*@unused@*/ const char *obj_filename,
-		       /*@unused@*/ yasm_dbgfmt *df, yasm_arch *a)
+		       /*@unused@*/ yasm_dbgfmt *df, yasm_arch *a,
+		       const char *machine)
 {
     yasm_symrec *filesym;
     coff_symrec_data *data;
@@ -217,12 +218,10 @@ coff_common_initialize(const char *in_filename,
 
     cur_arch = a;
 
-    if (strcasecmp(cur_arch->keyword, "x86") != 0) {
-	yasm_fatal(N_("%s: Unsupported architecture `%s'"), "COFF",
-		   cur_arch->keyword);
-	/*@notreached@*/
-	return;
-    }
+    /* Only support x86 arch, x86 machine */
+    if (yasm__strcasecmp(cur_arch->keyword, "x86") != 0 ||
+	yasm__strcasecmp(machine, "x86") != 0)
+	return 1;
 
     coff_objfmt_parse_scnum = 1;    /* section numbering starts at 1 */
     STAILQ_INIT(&coff_symtab);
@@ -240,22 +239,24 @@ coff_common_initialize(const char *in_filename,
     entry->auxtype = COFF_SYMTAB_AUX_FILE;
     entry->aux[0].fname = yasm__xstrdup(in_filename);
     STAILQ_INSERT_TAIL(&coff_symtab, entry, link);
+
+    return 0;
 }
 
-static void
+static int
 coff_objfmt_initialize(const char *in_filename, const char *obj_filename,
-		       yasm_dbgfmt *df, yasm_arch *a)
+		       yasm_dbgfmt *df, yasm_arch *a, const char *machine)
 {
     win32 = 0;
-    coff_common_initialize(in_filename, obj_filename, df, a);
+    return coff_common_initialize(in_filename, obj_filename, df, a, machine);
 }
 
-static void
+static int
 win32_objfmt_initialize(const char *in_filename, const char *obj_filename,
-			yasm_dbgfmt *df, yasm_arch *a)
+			yasm_dbgfmt *df, yasm_arch *a, const char *machine)
 {
     win32 = 1;
-    coff_common_initialize(in_filename, obj_filename, df, a);
+    return coff_common_initialize(in_filename, obj_filename, df, a, machine);
 }
 
 static int

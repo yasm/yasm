@@ -74,9 +74,11 @@ struct yasm_objfmt {
      * \param obj_filename	object filename (e.g. "file.o")
      * \param df		debug format in use
      * \param a			architecture in use
+     * \param machine		machine (of architecture) in use
+     * \return Nonzero if architecture/machine combination not supported.
      */
-    void (*initialize) (const char *in_filename, const char *obj_filename,
-			yasm_dbgfmt *df, yasm_arch *a);
+    int (*initialize) (const char *in_filename, const char *obj_filename,
+		       yasm_dbgfmt *df, yasm_arch *a, const char *machine);
 
     /** Write out (post-optimized) sections to the object file.
      * This function may call yasm_symrec_* functions as necessary (including

@@ -35,12 +35,20 @@
 
 unsigned char yasm_x86_LTX_mode_bits = 0;
 unsigned long yasm_x86__cpu_enabled;
+unsigned int yasm_x86_amd64_machine;
 
-
-static void
-x86_initialize(void)
+static int
+x86_initialize(const char *machine)
 {
+    if (yasm__strcasecmp(machine, "x86") == 0)
+	yasm_x86_amd64_machine = 0;
+    else if (yasm__strcasecmp(machine, "amd64") == 0)
+	yasm_x86_amd64_machine = 1;
+    else
+	return 1;
+
     yasm_x86__cpu_enabled = ~CPU_Any;
+    return 0;
 }
 
 static void
@@ -200,6 +208,13 @@ yasm_x86__parse_seg_override(yasm_effaddr *ea, unsigned long segreg,
     yasm_x86__ea_set_segment(ea, (unsigned char)(segreg>>8), lindex);
 }
 
+/* Define x86 machines -- see arch.h for details */
+static yasm_arch_machine x86_machines[] = {
+    { "IA-32 and derivatives", "x86" },
+    { "AMD64", "amd64" },
+    { NULL, NULL }
+};
+
 /* Define arch structure -- see arch.h for details */
 yasm_arch yasm_x86_LTX_arch = {
     "x86 (IA-32 and derivatives), AMD64",
@@ -225,5 +240,7 @@ yasm_arch yasm_x86_LTX_arch = {
     yasm_x86__segreg_print,
     yasm_x86__ea_new_expr,
     NULL,	/* x86_ea_data_delete */
-    yasm_x86__ea_data_print
+    yasm_x86__ea_data_print,
+    x86_machines,
+    "x86"
 };

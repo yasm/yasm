@@ -121,15 +121,22 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@unused@*/ /*@null@*/ void *d)
     return 1;
 }
 
-static void
+static int
 elf_objfmt_initialize(const char *in_filename,
 		       /*@unused@*/ const char *obj_filename,
-		       /*@unused@*/ yasm_dbgfmt *df, yasm_arch *a)
+		       /*@unused@*/ yasm_dbgfmt *df, yasm_arch *a,
+		       const char *machine)
 {
     yasm_symrec *filesym;
     elf_symtab_entry *entry;
 
     cur_arch = a;
+
+    /* FIXME: only support x86 arch, x86 machine */
+    if (yasm__strcasecmp(cur_arch->keyword, "x86") != 0 ||
+	yasm__strcasecmp(machine, "x86") != 0)
+	return 1;
+
     elf_objfmt_parse_scnum = 4;    /* section numbering starts at 0;
 				      4 predefined sections. */
     elf_shstrtab = elf_strtab_new();
@@ -143,6 +150,7 @@ elf_objfmt_initialize(const char *in_filename,
     elf_symtab_set_nonzero(entry, NULL, SHN_ABS, STB_LOCAL, STT_FILE, NULL, 0);
     elf_symtab_append_entry(elf_symtab, entry);
 
+    return 0;
 }
 
 static long

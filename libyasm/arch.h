@@ -70,6 +70,20 @@ typedef enum {
     YASM_ARCH_SYNTAX_FLAVOR_GAS		/**< Like GAS */
 } yasm_arch_syntax_flavor;
 
+/** YASM machine subtype.  A number of different machine types may be
+ * associated with a single architecture.  These may be specific CPU's, but
+ * the ABI used to interface with the architecture should be the primary
+ * differentiator between machines.  Some object formats (ELF) use the machine
+ * to determine parameters within the generated output.
+ */
+typedef struct yasm_arch_machine {
+    /** One-line description of the machine. */
+    const char *name;
+
+    /** Keyword used to select machine. */
+    const char *keyword;
+} yasm_arch_machine;
+
 /** YASM architecture interface.
  * \note All "data" in parser-related functions (parse_*) needs to start the
  *	 parse initialized to 0 to make it okay for a parser-related function
@@ -83,8 +97,12 @@ struct yasm_arch {
     /** Keyword used to select architecture. */
     const char *keyword;
 
-    /** Initialize architecture for use. */
-    void (*initialize) (void);
+    /** Initialize architecture for use.
+     * \param machine	keyword of machine in use (must be one listed in
+     *			#machines)
+     * \return Nonzero if machine not recognized.
+     */
+    int (*initialize) (const char *machine);
 
     /** Clean up, free any architecture-allocated memory. */
     void (*cleanup) (void);
@@ -296,6 +314,12 @@ struct yasm_arch {
      * \copydoc yasm_ea_print()
      */
     void (*ea_data_print) (FILE *f, int indent_level, const yasm_effaddr *ea);
+
+    /** NULL-terminated list of machines for this architecture. */
+    yasm_arch_machine *machines;
+
+    /** Default machine keyword. */
+    const char *default_machine_keyword;
 };
 
 #ifdef YASM_LIB_INTERNAL

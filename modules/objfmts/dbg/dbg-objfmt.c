@@ -45,18 +45,19 @@ yasm_objfmt yasm_dbg_LTX_objfmt;
 static FILE *dbg_objfmt_file;
 
 
-static void
+static int
 dbg_objfmt_initialize(const char *in_filename, const char *obj_filename,
-		      yasm_dbgfmt *df, yasm_arch *a)
+		      yasm_dbgfmt *df, yasm_arch *a, const char *machine)
 {
     dbg_objfmt_file = fopen(obj_filename, "wt");
     if (!dbg_objfmt_file) {
 	fprintf(stderr, N_("could not open file `%s'"), obj_filename);
-	return;
+	return 0;
     }
     fprintf(dbg_objfmt_file,
-	    "initialize(\"%s\", \"%s\", %s dbgfmt, %s arch)\n",
-	    in_filename, obj_filename, df->keyword, a->keyword);
+	    "initialize(\"%s\", \"%s\", %s dbgfmt, %s arch, \"%s\")\n",
+	    in_filename, obj_filename, df->keyword, a->keyword, machine);
+    return 0;
 }
 
 static void

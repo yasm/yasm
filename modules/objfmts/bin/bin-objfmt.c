@@ -39,12 +39,14 @@ yasm_objfmt yasm_bin_LTX_objfmt;
 static /*@dependent@*/ yasm_arch *cur_arch;
 
 
-static void
+static int
 bin_objfmt_initialize(/*@unused@*/ const char *in_filename,
 		      /*@unused@*/ const char *obj_filename,
-		      /*@unused@*/ yasm_dbgfmt *df, yasm_arch *a)
+		      /*@unused@*/ yasm_dbgfmt *df, yasm_arch *a,
+		      /*@unused@*/ const char *machine)
 {
     cur_arch = a;
+    return 0;
 }
 
 /* Aligns sect to either its specified alignment (in its objfmt-specific data)

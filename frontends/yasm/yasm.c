@@ -51,6 +51,7 @@ extern const lt_dlsymlist lt_preloaded_symbols[];
 #define PREPROC_BUF_SIZE    16384
 
 /*@null@*/ /*@only@*/ static char *obj_filename = NULL, *in_filename = NULL;
+/*@null@*/ /*@only@*/ static char *machine_name = NULL;
 static int special_options = 0;
 /*@null@*/ /*@dependent@*/ static yasm_arch *cur_arch = NULL;
 /*@null@*/ /*@dependent@*/ static yasm_parser *cur_parser = NULL;
@@ -72,6 +73,7 @@ static int opt_preproc_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_objfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_dbgfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_objfile_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_machine_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int preproc_only_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_preproc_include_path(char *cmd, /*@null@*/ char *param,
@@ -120,6 +122,8 @@ static opt_option options[] =
       N_("select debugging format (list with -g help)"), N_("debug") },
     { 'o', "objfile", 1, opt_objfile_handler, 0,
       N_("name of object-file output"), N_("filename") },
+    { 'm', "machine", 1, opt_machine_handler, 0,
+      N_("select machine (list with -m help)"), N_("machine") },
     { 'w', NULL, 0, opt_warning_handler, 1,
       N_("inhibits warning messages"), NULL },
     { 'W', NULL, 0, opt_warning_handler, 0,
@@ -349,7 +353,27 @@ main(int argc, char *argv[])
 	}
     }
 
-    cur_arch->initialize();
+    /* Set up architecture using the selected (or default) machine */
+    if (!machine_name)
+	machine_name = yasm__xstrdup(cur_arch->default_machine_keyword);
+    
+    if (cur_arch->initialize(machine_name)) {
+	if (strcmp(machine_name, "help") == 0) {
+	    yasm_arch_machine *m = cur_arch->machines;
+	    printf(_("Available %s for %s `%s':\n"), _("machines"),
+		   _("architecture"), cur_arch->keyword);
+	    while (m->keyword && m->name) {
+		print_list_keyword_desc(m->name, m->keyword);
+		m++;
+	    }
+	    return EXIT_SUCCESS;
+	}
+
+	print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
+		    _("FATAL"), machine_name, _("machine"),
+		    _("architecture"), cur_arch->keyword);
+	return EXIT_FAILURE;
+    }
 
     /* Set basic as the optimizer (TODO: user choice) */
     cur_optimizer = load_optimizer("basic");
@@ -416,9 +440,18 @@ main(int argc, char *argv[])
     }
 
     /* Initialize the object format */
-    if (cur_objfmt->initialize)
-	cur_objfmt->initialize(in_filename, obj_filename, cur_dbgfmt,
-			       cur_arch);
+    if (cur_objfmt->initialize) {
+	if (cur_objfmt->initialize(in_filename, obj_filename, cur_dbgfmt,
+				   cur_arch, machine_name)) {
+	    print_error(
+		_("%s: object format `%s' does not support architecture `%s' machine `%s'"),
+		_("FATAL"), cur_objfmt->keyword, cur_arch->keyword,
+		machine_name);
+	    if (in != stdin)
+		fclose(in);
+	    return EXIT_FAILURE;
+	}
+    }
 
     /* Default to NASM as the parser */
     if (!cur_parser) {
@@ -591,6 +624,8 @@ cleanup(yasm_sectionhead *sections)
 	    yasm_xfree(in_filename);
 	if (obj_filename)
 	    yasm_xfree(obj_filename);
+	if (machine_name)
+	    yasm_xfree(machine_name);
     }
 }
 
@@ -626,7 +661,7 @@ opt_arch_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     cur_arch = load_arch(param);
     if (!cur_arch) {
 	if (!strcmp("help", param)) {
-	    printf(_("Available yasm architectures:\n"));
+	    printf(_("Available yasm %s:\n"), _("architectures"));
 	    list_archs(print_list_keyword_desc);
 	    special_options = SPECIAL_LISTED;
 	    return 0;
@@ -645,7 +680,7 @@ opt_parser_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     cur_parser = load_parser(param);
     if (!cur_parser) {
 	if (!strcmp("help", param)) {
-	    printf(_("Available yasm parsers:\n"));
+	    printf(_("Available yasm %s:\n"), _("parsers"));
 	    list_parsers(print_list_keyword_desc);
 	    special_options = SPECIAL_LISTED;
 	    return 0;
@@ -664,7 +699,7 @@ opt_preproc_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     cur_preproc = load_preproc(param);
     if (!cur_preproc) {
 	if (!strcmp("help", param)) {
-	    printf(_("Available yasm preprocessors:\n"));
+	    printf(_("Available yasm %s:\n"), _("preprocessors"));
 	    list_preprocs(print_list_keyword_desc);
 	    special_options = SPECIAL_LISTED;
 	    return 0;
@@ -683,7 +718,7 @@ opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     cur_objfmt = load_objfmt(param);
     if (!cur_objfmt) {
 	if (!strcmp("help", param)) {
-	    printf(_("Available yasm object formats:\n"));
+	    printf(_("Available yasm %s:\n"), _("object formats"));
 	    list_objfmts(print_list_keyword_desc);
 	    special_options = SPECIAL_LISTED;
 	    return 0;
@@ -702,7 +737,7 @@ opt_dbgfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     cur_dbgfmt = load_dbgfmt(param);
     if (!cur_dbgfmt) {
 	if (!strcmp("help", param)) {
-	    printf(_("Available yasm debug formats:\n"));
+	    printf(_("Available yasm %s:\n"), _("debug formats"));
 	    list_dbgfmts(print_list_keyword_desc);
 	    special_options = SPECIAL_LISTED;
 	    return 0;
@@ -726,6 +761,19 @@ opt_objfile_handler(/*@unused@*/ char *cmd, char *param,
 
     assert(param != NULL);
     obj_filename = yasm__xstrdup(param);
+
+    return 0;
+}
+
+static int
+opt_machine_handler(/*@unused@*/ char *cmd, char *param,
+		    /*@unused@*/ int extra)
+{
+    if (machine_name)
+	yasm_xfree(machine_name);
+
+    assert(param != NULL);
+    machine_name = yasm__xstrdup(param);
 
     return 0;
 }
