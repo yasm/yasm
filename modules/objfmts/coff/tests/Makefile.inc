@@ -1,11 +1,11 @@
 # $IdPath$
 
 TESTS += \
-	src/objfmts/coff/tests/coff_test.sh
+	modules/objfmts/coff/tests/coff_test.sh
 
 EXTRA_DIST += \
-	src/objfmts/coff/tests/coff_test.sh		\
-	src/objfmts/coff/tests/cofftest.c		\
-	src/objfmts/coff/tests/cofftest.asm		\
-	src/objfmts/coff/tests/cofftest.hex		\
-	src/objfmts/coff/tests/cofftest.errwarn
+	modules/objfmts/coff/tests/coff_test.sh		\
+	modules/objfmts/coff/tests/cofftest.c		\
+	modules/objfmts/coff/tests/cofftest.asm		\
+	modules/objfmts/coff/tests/cofftest.hex		\
+	modules/objfmts/coff/tests/cofftest.errwarn

@@ -25,7 +25,7 @@ errorlist=''
 YT="yapp_test"
 
 
-for asm in ${srcdir}/src/preprocs/yapp/tests/*.asm
+for asm in ${srcdir}/modules/preprocs/yapp/tests/*.asm
 do
     a=`echo ${asm} | sed 's,^.*/,,;s,.asm$,,'`
     y=${a}.yp

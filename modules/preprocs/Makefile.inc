@@ -1,10 +1,10 @@
 # $IdPath$
 
 EXTRA_DIST += \
-	src/preprocs/nasm/Makefile.inc \
-	src/preprocs/raw/Makefile.inc \
-	src/preprocs/yapp/Makefile.inc
+	modules/preprocs/nasm/Makefile.inc	\
+	modules/preprocs/raw/Makefile.inc	\
+	modules/preprocs/yapp/Makefile.inc
 
-include src/preprocs/nasm/Makefile.inc
-include src/preprocs/raw/Makefile.inc
-include src/preprocs/yapp/Makefile.inc
+include modules/preprocs/nasm/Makefile.inc
+include modules/preprocs/raw/Makefile.inc
+include modules/preprocs/yapp/Makefile.inc

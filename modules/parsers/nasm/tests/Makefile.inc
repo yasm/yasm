@@ -1,13 +1,13 @@
 # $IdPath$
 
 TESTS += \
-	src/parsers/nasm/tests/nasm_test.sh
+	modules/parsers/nasm/tests/nasm_test.sh
 
 EXTRA_DIST += \
-	src/parsers/nasm/tests/nasm_test.sh	\
-	src/parsers/nasm/tests/equlocal.asm	\
-	src/parsers/nasm/tests/equlocal.errwarn	\
-	src/parsers/nasm/tests/equlocal.hex	\
-	src/parsers/nasm/tests/newsect.asm	\
-	src/parsers/nasm/tests/newsect.errwarn	\
-	src/parsers/nasm/tests/newsect.hex
+	modules/parsers/nasm/tests/nasm_test.sh		\
+	modules/parsers/nasm/tests/equlocal.asm		\
+	modules/parsers/nasm/tests/equlocal.errwarn	\
+	modules/parsers/nasm/tests/equlocal.hex		\
+	modules/parsers/nasm/tests/newsect.asm		\
+	modules/parsers/nasm/tests/newsect.errwarn	\
+	modules/parsers/nasm/tests/newsect.hex

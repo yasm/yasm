@@ -1,10 +1,10 @@
 # $IdPath$
 
 EXTRA_DIST += \
-	src/objfmts/dbg/Makefile.inc \
-	src/objfmts/bin/Makefile.inc \
-	src/objfmts/coff/Makefile.inc
+	modules/objfmts/dbg/Makefile.inc \
+	modules/objfmts/bin/Makefile.inc \
+	modules/objfmts/coff/Makefile.inc
 
-include src/objfmts/dbg/Makefile.inc
-include src/objfmts/bin/Makefile.inc
-include src/objfmts/coff/Makefile.inc
+include modules/objfmts/dbg/Makefile.inc
+include modules/objfmts/bin/Makefile.inc
+include modules/objfmts/coff/Makefile.inc

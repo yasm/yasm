@@ -30,7 +30,7 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
-#include "options.h"
+#include "yasm-options.h"
 #include "errwarn.h"
 
 

@@ -5,7 +5,7 @@ SUBDIRS = libltdl m4 po .
 AM_YFLAGS = -d
 AM_CFLAGS = @MORE_CFLAGS@
 AM_CPPFLAGS = \
-	-I$(top_srcdir)/src \
+	-I$(top_srcdir)/libyasm \
 	-I$(top_srcdir)/check \
 	@INCLTDL@
 
@@ -27,11 +27,15 @@ CLEANFILES = configure.lineno
 EXTRA_DIST = config/config.rpath  \
 	check/Makefile.inc	\
 	tools/Makefile.inc	\
-	src/Makefile.inc
+	libyasm/Makefile.inc	\
+	modules/Makefile.inc	\
+	frontends/Makefile.inc
 
 include check/Makefile.inc
 include tools/Makefile.inc
-include src/Makefile.inc
+include libyasm/Makefile.inc
+include modules/Makefile.inc
+include frontends/Makefile.inc
 
 EXTRA_DIST += \
 	out_test.sh \

@@ -28,12 +28,12 @@
 /*@unused@*/ RCSID("$IdPath$");
 
 #include "ltdl.h"
-#include "module.h"
+#include "yasm-module.h"
 
 #include "bitvect.h"
 #include "file.h"
 
-#include "options.h"
+#include "yasm-options.h"
 #include "linemgr.h"
 #include "errwarn.h"
 #include "intnum.h"

@@ -27,8 +27,8 @@
 #include "preproc.h"
 #include "hamt.h"
 
-#include "src/preprocs/yapp/yapp-preproc.h"
-#include "src/preprocs/yapp/yapp-token.h"
+#include "yapp-preproc.h"
+#include "yapp-token.h"
 
 #define ydebug(x) /* printf x */
 

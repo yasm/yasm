@@ -10,7 +10,7 @@ noinst_PROGRAMS += \
 
 bitvect_test_CFLAGS =
 bitvect_test_SOURCES = \
-	src/tests/bitvect_test.c	\
+	libyasm/tests/bitvect_test.c	\
 	$(CHECKFILES)
 bitvect_test_LDFLAGS =
 bitvect_test_LDADD = libyasm.la @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@
@@ -29,7 +29,7 @@ bitvect_test_LDADD = libyasm.la @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@
 
 floatnum_test_CFLAGS =
 floatnum_test_SOURCES = \
-	src/tests/floatnum_test.c	\
+	libyasm/tests/floatnum_test.c	\
 	$(CHECKFILES)
 floatnum_test_LDFLAGS =
 floatnum_test_LDADD = libyasm.la @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@

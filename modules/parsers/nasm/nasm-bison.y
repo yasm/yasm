@@ -48,8 +48,8 @@ RCSID("$IdPath$");
 
 #include "arch.h"
 
-#include "src/parsers/nasm/nasm-parser.h"
-#include "src/parsers/nasm/nasm-defs.h"
+#include "modules/parsers/nasm/nasm-parser.h"
+#include "modules/parsers/nasm/nasm-defs.h"
 
 
 static void nasm_parser_error(const char *);

@@ -28,8 +28,8 @@
 #include "linemgr.h"
 #include "errwarn.h"
 
-#include "src/preprocs/yapp/yapp-preproc.h"
-#include "src/preprocs/yapp/yapp-token.h"
+#include "modules/preprocs/yapp/yapp-preproc.h"
+#include "modules/preprocs/yapp/yapp-token.h"
 
 
 #define yylval	yapp_preproc_lval

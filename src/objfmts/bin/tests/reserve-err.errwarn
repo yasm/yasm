@@ -1,6 +1,0 @@
--:4: expression must not contain floating point value
--:5: expression must not contain floating point value
--:7: attempt to reserve non-constant quantity of space
--:11: expression must not contain floating point value
--:12: expression must not contain floating point value
--:14: attempt to reserve non-constant quantity of space

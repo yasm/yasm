@@ -38,7 +38,7 @@ RCSID("$IdPath$");
 #include "bytecode.h"
 
 #include "arch.h"
-#include "src/arch/x86/x86arch.h"
+#include "modules/arch/x86/x86arch.h"
 
 #include "expr-int.h"
 #include "bc-int.h"

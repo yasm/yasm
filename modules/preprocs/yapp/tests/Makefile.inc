@@ -1,28 +1,28 @@
 # $IdPath$
 
 TESTS += \
-	src/preprocs/yapp/tests/yapp_test.sh
+	modules/preprocs/yapp/tests/yapp_test.sh
 
 EXTRA_DIST += \
-	src/preprocs/yapp/tests/Makefile.inc \
-	src/preprocs/yapp/tests/yapp_test.sh \
-	src/preprocs/yapp/tests/raw.asm \
-	src/preprocs/yapp/tests/raw.pre \
-	src/preprocs/yapp/tests/comment.asm \
-	src/preprocs/yapp/tests/comment.pre \
-	src/preprocs/yapp/tests/define.asm \
-	src/preprocs/yapp/tests/define.pre \
-	src/preprocs/yapp/tests/ddefine.asm \
-	src/preprocs/yapp/tests/ddefine.pre \
-	src/preprocs/yapp/tests/rdefine.asm \
-	src/preprocs/yapp/tests/rdefine.pre \
-	src/preprocs/yapp/tests/pdefine.asm \
-	src/preprocs/yapp/tests/pdefine.pre \
-	src/preprocs/yapp/tests/ifdef.asm \
-	src/preprocs/yapp/tests/ifdef.pre \
-	src/preprocs/yapp/tests/include.asm \
-	src/preprocs/yapp/tests/include.pre \
-	src/preprocs/yapp/tests/rinclude.asm \
-	src/preprocs/yapp/tests/rinclude.pre \
-	src/preprocs/yapp/tests/params.asm \
-	src/preprocs/yapp/tests/params.pre
+	modules/preprocs/yapp/tests/Makefile.inc	\
+	modules/preprocs/yapp/tests/yapp_test.sh	\
+	modules/preprocs/yapp/tests/raw.asm		\
+	modules/preprocs/yapp/tests/raw.pre		\
+	modules/preprocs/yapp/tests/comment.asm		\
+	modules/preprocs/yapp/tests/comment.pre		\
+	modules/preprocs/yapp/tests/define.asm		\
+	modules/preprocs/yapp/tests/define.pre		\
+	modules/preprocs/yapp/tests/ddefine.asm		\
+	modules/preprocs/yapp/tests/ddefine.pre		\
+	modules/preprocs/yapp/tests/rdefine.asm		\
+	modules/preprocs/yapp/tests/rdefine.pre		\
+	modules/preprocs/yapp/tests/pdefine.asm		\
+	modules/preprocs/yapp/tests/pdefine.pre		\
+	modules/preprocs/yapp/tests/ifdef.asm		\
+	modules/preprocs/yapp/tests/ifdef.pre		\
+	modules/preprocs/yapp/tests/include.asm		\
+	modules/preprocs/yapp/tests/include.pre		\
+	modules/preprocs/yapp/tests/rinclude.asm	\
+	modules/preprocs/yapp/tests/rinclude.pre	\
+	modules/preprocs/yapp/tests/params.asm		\
+	modules/preprocs/yapp/tests/params.pre

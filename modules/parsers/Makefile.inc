@@ -1,6 +1,6 @@
 # $IdPath$
 
 EXTRA_DIST += \
-	src/parsers/nasm/Makefile.inc
+	modules/parsers/nasm/Makefile.inc
 
-include src/parsers/nasm/Makefile.inc
+include modules/parsers/nasm/Makefile.inc

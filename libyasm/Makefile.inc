@@ -1,77 +1,50 @@
 # $IdPath$
 
 libyasm_la_SOURCES = \
-	src/bytecode.c		\
-	src/bytecode.h		\
-	src/bc-int.h		\
-	src/errwarn.h		\
-	src/expr.c		\
-	src/expr.h		\
-	src/expr-int.h		\
-	src/symrec.c		\
-	src/symrec.h		\
-	src/linemgr.h		\
-	src/util.h		\
-	src/coretype.h		\
-	src/file.c		\
-	src/file.h		\
-	src/section.c		\
-	src/section.h		\
-	src/arch.c		\
-	src/arch.h		\
-	src/dbgfmt.h		\
-	src/objfmt.h		\
-	src/optimizer.h		\
-	src/parser.h		\
-	src/preproc.h		\
-	src/intnum.c		\
-	src/intnum.h		\
-	src/floatnum.c		\
-	src/floatnum.h		\
-	src/hamt.c		\
-	src/hamt.h		\
-	src/bitvect.c		\
-	src/bitvect.h		\
-	src/valparam.c		\
-	src/valparam.h		\
-	src/errwarn.c		\
-	src/linemgr.c		\
-	src/xmalloc.c		\
-	src/xstrdup.c		\
-	src/strcasecmp.c
+	libyasm/bytecode.c	\
+	libyasm/bytecode.h	\
+	libyasm/bc-int.h	\
+	libyasm/errwarn.h	\
+	libyasm/expr.c		\
+	libyasm/expr.h		\
+	libyasm/expr-int.h	\
+	libyasm/symrec.c	\
+	libyasm/symrec.h	\
+	libyasm/linemgr.h	\
+	libyasm/util.h		\
+	libyasm/coretype.h	\
+	libyasm/file.c		\
+	libyasm/file.h		\
+	libyasm/section.c	\
+	libyasm/section.h	\
+	libyasm/arch.c		\
+	libyasm/arch.h		\
+	libyasm/dbgfmt.h	\
+	libyasm/objfmt.h	\
+	libyasm/optimizer.h	\
+	libyasm/parser.h	\
+	libyasm/preproc.h	\
+	libyasm/intnum.c	\
+	libyasm/intnum.h	\
+	libyasm/floatnum.c	\
+	libyasm/floatnum.h	\
+	libyasm/hamt.c		\
+	libyasm/hamt.h		\
+	libyasm/bitvect.c	\
+	libyasm/bitvect.h	\
+	libyasm/valparam.c	\
+	libyasm/valparam.h	\
+	libyasm/errwarn.c	\
+	libyasm/linemgr.c	\
+	libyasm/xmalloc.c	\
+	libyasm/xstrdup.c	\
+	libyasm/strcasecmp.c
 libyasm_la_LDFLAGS = -no-undefined
 
-yasm_SOURCES += \
-	src/main.c		\
-	src/options.c		\
-	src/options.h		\
-	src/module.h		\
-	src/module.c
-
-
 EXTRA_DIST += \
-	src/arch/Makefile.inc		\
-	src/parsers/Makefile.inc	\
-	src/preprocs/Makefile.inc	\
-	src/optimizers/Makefile.inc	\
-	src/objfmts/Makefile.inc	\
-	src/tests/Makefile.inc
+	libyasm/tests/Makefile.inc
 
-# Modules with more than one type of interface
+include libyasm/tests/Makefile.inc
 
-lib_LTLIBRARIES += yasm-nasm.la
-yasm_nasm_la_SOURCES =
-yasm_nasm_la_LDFLAGS = -module -avoid-version
-yasm_nasm_la_LIBADD = libyasm.la
-yasm_LDADD += -dlopen yasm-nasm.la
-
-include src/arch/Makefile.inc
-include src/parsers/Makefile.inc
-include src/preprocs/Makefile.inc
-include src/optimizers/Makefile.inc
-include src/dbgfmts/Makefile.inc
-include src/objfmts/Makefile.inc
-include src/tests/Makefile.inc
-
-EXTRA_yasm_SOURCES += \
-	src/compat-queue.h
+EXTRA_libyasm_la_SOURCES = \
+	libyasm/compat-queue.h

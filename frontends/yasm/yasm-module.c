@@ -29,7 +29,7 @@
 
 #include "ltdl.h"
 
-#include "module.h"
+#include "yasm-module.h"
 #include "objfmt.h"
 #include "parser.h"
 
