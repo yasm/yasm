@@ -621,9 +621,15 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 	    Error(_("invalid argument to [%s]"), "SECTION");
     } else if (strcasecmp(name, "absolute") == 0) {
 	vp = vps_first(valparams);
-	nasm_parser_cur_section =
-	    sections_switch_absolute(&nasm_parser_sections, vp->val ?
-		expr_new_ident(ExprSym(symrec_use(vp->val))) : vp->param);
+	if (vp->val)
+	    nasm_parser_cur_section =
+		sections_switch_absolute(&nasm_parser_sections,
+		    expr_new_ident(ExprSym(symrec_use(vp->val))));
+	else if (vp->param) {
+	    nasm_parser_cur_section =
+		sections_switch_absolute(&nasm_parser_sections, vp->param);
+	    vp->param = NULL;
+	}
 	nasm_parser_prev_bc = (bytecode *)NULL;
     } else if (strcasecmp(name, "bits") == 0) {
 	if ((vp = vps_first(valparams)) && !vp->val && vp->param != NULL &&
