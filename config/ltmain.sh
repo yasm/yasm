@@ -1373,12 +1373,6 @@ EOF
 
       -module)
 	module=yes
-	case $host in
-	*-*-freebsd*)
-	  # Do not build the useless static library
-	  build_old_libs=no
-	  ;;
-	esac
 	continue
 	;;
 
