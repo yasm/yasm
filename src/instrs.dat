@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.19 2001/07/05 02:57:56 peter Exp $
+; $Id: instrs.dat,v 1.20 2001/07/05 03:00:26 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -822,8 +822,11 @@ pxor!mmxsse		EF		P5		P4,SSE2
 ;
 ; PIII (Katmai) new instructions / SIMD instructions
 ;
+;  Standard
 !sseps	XMMREG,rm128		nil	0F,$0.1		$2,$1		nil	#0
 !sse2ss	XMMREG,rm128		nil	F3,0F,$0.1	$2,$1		nil	P4,SSE2
+;  With immediate
+!ssepsimm	XMMREG,rm128,imm8	nil	0F,$0.1		$2,$1	$3,8	KATMAI,SSE
 addps!sseps		58		KATMAI,SSE
 addss!sse2ss		58
 andnps!sseps		55		KATMAI,SSE
@@ -929,7 +932,6 @@ xorps!sseps		57		KATMAI,SSE
 !sse2sd	XMMREG,rm128		nil	F2,0F,$0.1	$2,$1		nil	P4,SSE2
 ;  With immediate
 !sse2pdimm	XMMREG,rm128,imm8	nil	66,0F,$0.1	$2,$1	$3,8	P4,SSE2
-!ssepsimm	XMMREG,rm128,imm8	nil	0F,$0.1		$2,$1	$3,8	KATMAI,SSE
 addpd!sse2pd		58
 addsd!sse2sd		58
 andnpd!sse2pd		55
