@@ -1181,7 +1181,7 @@ static const x86_insn_info pmovmskb_insn[] = {
       {OPT_Reg|OPS_32|OPA_EA, OPT_Reg|OPS_128|OPA_Spare, 0} }
 };
 static const x86_insn_info pshufw_insn[] = {
-    { CPU_P3|CPU_MMX, 0, 0, 2, {0x0F, 0x70, 0}, 0, 2,
+    { CPU_P3|CPU_MMX, 0, 0, 2, {0x0F, 0x70, 0}, 0, 3,
       {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA,
        OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm} }
 };
