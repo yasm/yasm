@@ -152,4 +152,10 @@ typedef struct {
 /* Macro for constructing st_info from field values. */
 #define ELF32_ST_INFO(bind, type)	(((bind) << 4) + ((type) & 0xf))
 
+void elf32_write_elf_header(unsigned char **bufp, Elf32_Ehdr *ehdr);
+void elf32_write_sect_header(unsigned char **bufp, Elf32_Shdr *shdr);
+void elf32_print_sect_header(FILE *f, int indent_level, Elf32_Shdr *shdr);
+void elf32_write_rel(unsigned char **bufp, Elf32_Rel *rel);
+void elf32_write_sym(unsigned char **bufp, Elf32_Sym *sym);
+
 #endif /* !YASM_ELF32_H */
