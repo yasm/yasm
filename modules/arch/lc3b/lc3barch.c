@@ -39,14 +39,14 @@ yasm_arch_module yasm_lc3b_LTX_arch;
 static /*@only@*/ yasm_arch *
 lc3b_create(const char *machine)
 {
-    yasm_arch *arch;
+    yasm_arch_base *arch;
 
     if (yasm__strcasecmp(machine, "lc3b") != 0)
 	return NULL;
 
-    arch = yasm_xmalloc(sizeof(yasm_arch));
+    arch = yasm_xmalloc(sizeof(yasm_arch_base));
     arch->module = &yasm_lc3b_LTX_arch;
-    return arch;
+    return (yasm_arch *)arch;
 }
 
 static void

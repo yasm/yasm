@@ -1520,7 +1520,7 @@ static const x86_insn_info xbts_insn[] = {
 
 static yasm_bytecode *
 x86_new_jmp(yasm_arch *arch, const unsigned long data[4], int num_operands,
-	    yasm_insn_operandhead *operands, x86_insn_info *jinfo,
+	    yasm_insn_operands *operands, x86_insn_info *jinfo,
 	    yasm_bytecode *prev_bc, unsigned long line)
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
@@ -1642,7 +1642,7 @@ x86_new_jmp(yasm_arch *arch, const unsigned long data[4], int num_operands,
 
 yasm_bytecode *
 yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
-		     int num_operands, yasm_insn_operandhead *operands,
+		     int num_operands, yasm_insn_operands *operands,
 		     yasm_bytecode *prev_bc, unsigned long line)
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;

@@ -1258,7 +1258,7 @@ yasm_expr_print(const yasm_expr *e, FILE *f)
 		break;
 	    case YASM_EXPR_REG:
 		/* FIXME */
-		/*arch->module->reg_print(arch, e->terms[i].data.reg, f);*/
+		/*yasm_arch_reg_print(arch, e->terms[i].data.reg, f);*/
 		break;
 	    case YASM_EXPR_NONE:
 		break;

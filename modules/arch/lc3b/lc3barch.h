@@ -62,7 +62,7 @@ yasm_arch_check_id_retval yasm_lc3b__parse_check_id
 
 /*@null@*/ yasm_bytecode *yasm_lc3b__parse_insn
     (yasm_arch *arch, const unsigned long data[2], int num_operands,
-     /*@null@*/ yasm_insn_operandhead *operands, yasm_bytecode *prev_bc,
+     /*@null@*/ yasm_insn_operands *operands, yasm_bytecode *prev_bc,
      unsigned long line);
 
 int yasm_lc3b__intnum_tobytes

@@ -62,7 +62,7 @@ dbg_objfmt_initialize(const char *in_filename, const char *obj_filename,
     }
     fprintf(dbg_objfmt_file,
 	    "initialize(\"%s\", \"%s\", %s dbgfmt, %s arch)\n",
-	    in_filename, obj_filename, df->keyword, a->module->keyword);
+	    in_filename, obj_filename, df->keyword, yasm_arch_keyword(a));
     return 0;
 }
 

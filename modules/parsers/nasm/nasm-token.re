@@ -289,71 +289,71 @@ scan:
 	/* size specifiers */
 	B Y T E		{ lvalp->int_info = 1; RETURN(SIZE_OVERRIDE); }
 	H W O R D	{
-	    lvalp->int_info = p_arch->module->wordsize/2;
+	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)/2;
 	    RETURN(SIZE_OVERRIDE);
 	}
 	W O R D		{
-	    lvalp->int_info = p_arch->module->wordsize;
+	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch);
 	    RETURN(SIZE_OVERRIDE);
 	}
 	D W O R D	{
-	    lvalp->int_info = p_arch->module->wordsize*2;
+	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*2;
 	    RETURN(SIZE_OVERRIDE);
 	}
 	Q W O R D	{
-	    lvalp->int_info = p_arch->module->wordsize*4;
+	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*4;
 	    RETURN(SIZE_OVERRIDE);
 	}
 	T W O R D	{ lvalp->int_info = 10; RETURN(SIZE_OVERRIDE); }
 	D Q W O R D	{
-	    lvalp->int_info = p_arch->module->wordsize*8;
+	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*8;
 	    RETURN(SIZE_OVERRIDE);
 	}
 
 	/* pseudo-instructions */
 	D B		{ lvalp->int_info = 1; RETURN(DECLARE_DATA); }
 	D H W		{
-	    lvalp->int_info = p_arch->module->wordsize/2;
+	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)/2;
 	    RETURN(DECLARE_DATA);
 	}
 	D W		{
-	    lvalp->int_info = p_arch->module->wordsize;
+	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch);
 	    RETURN(DECLARE_DATA);
 	}
 	D D		{
-	    lvalp->int_info = p_arch->module->wordsize*2;
+	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*2;
 	    RETURN(DECLARE_DATA);
 	}
 	D Q		{
-	    lvalp->int_info = p_arch->module->wordsize*4;
+	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*4;
 	    RETURN(DECLARE_DATA);
 	}
 	D T		{ lvalp->int_info = 10; RETURN(DECLARE_DATA); }
 	D D Q		{
-	    lvalp->int_info = p_arch->module->wordsize*8;
+	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*8;
 	    RETURN(DECLARE_DATA);
 	}
 
 	R E S B		{ lvalp->int_info = 1; RETURN(RESERVE_SPACE); }
 	R E S H W	{
-	    lvalp->int_info = p_arch->module->wordsize/2;
+	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)/2;
 	    RETURN(RESERVE_SPACE);
 	}
 	R E S W		{
-	    lvalp->int_info = p_arch->module->wordsize;
+	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch);
 	    RETURN(RESERVE_SPACE);
 	}
 	R E S D		{
-	    lvalp->int_info = p_arch->module->wordsize*2;
+	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*2;
 	    RETURN(RESERVE_SPACE);
 	}
 	R E S Q		{
-	    lvalp->int_info = p_arch->module->wordsize*4;
+	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*4;
 	    RETURN(RESERVE_SPACE);
 	}
 	R E S T		{ lvalp->int_info = 10; RETURN(RESERVE_SPACE); }
 	R E S D Q	{
-	    lvalp->int_info = p_arch->module->wordsize*8;
+	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*8;
 	    RETURN(RESERVE_SPACE);
 	}
 
@@ -421,9 +421,9 @@ scan:
 	[a-zA-Z_?][a-zA-Z0-9_$#@~.?]* {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    check_id_ret = p_arch->module->parse_check_id(p_arch,
-							  lvalp->arch_data,
-							  s->tok, cur_line);
+	    check_id_ret = yasm_arch_parse_check_id(parser_nasm->arch,
+						    lvalp->arch_data, s->tok,
+						    cur_line);
 	    s->tok[TOKLEN] = savech;
 	    switch (check_id_ret) {
 		case YASM_ARCH_CHECK_ID_NONE:

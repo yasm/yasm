@@ -38,12 +38,6 @@
 #include "arch.h"
 
 
-const yasm_arch_module *
-yasm_arch_get_module(yasm_arch *arch)
-{
-    return arch->module;
-}
-
 yasm_insn_operand *
 yasm_operand_create_reg(unsigned long reg)
 {
@@ -111,12 +105,12 @@ yasm_operand_print(const yasm_insn_operand *op, FILE *f, int indent_level,
     switch (op->type) {
 	case YASM_INSN__OPERAND_REG:
 	    fprintf(f, "%*sReg=", indent_level, "");
-	    arch->module->reg_print(arch, op->data.reg, f);
+	    yasm_arch_reg_print(arch, op->data.reg, f);
 	    fprintf(f, "\n");
 	    break;
 	case YASM_INSN__OPERAND_SEGREG:
 	    fprintf(f, "%*sSegReg=", indent_level, "");
-	    arch->module->segreg_print(arch, op->data.reg, f);
+	    yasm_arch_segreg_print(arch, op->data.reg, f);
 	    fprintf(f, "\n");
 	    break;
 	case YASM_INSN__OPERAND_MEMORY:
@@ -134,7 +128,7 @@ yasm_operand_print(const yasm_insn_operand *op, FILE *f, int indent_level,
 }
 
 void
-yasm_ops_delete(yasm_insn_operandhead *headp, int content)
+yasm_ops_delete(yasm_insn_operands *headp, int content)
 {
     yasm_insn_operand *cur, *next;
 
@@ -159,7 +153,7 @@ yasm_ops_delete(yasm_insn_operandhead *headp, int content)
 }
 
 /*@null@*/ yasm_insn_operand *
-yasm_ops_append(yasm_insn_operandhead *headp,
+yasm_ops_append(yasm_insn_operands *headp,
 		/*@returned@*/ /*@null@*/ yasm_insn_operand *op)
 {
     if (op) {
@@ -170,7 +164,7 @@ yasm_ops_append(yasm_insn_operandhead *headp,
 }
 
 void
-yasm_ops_print(const yasm_insn_operandhead *headp, FILE *f, int indent_level,
+yasm_ops_print(const yasm_insn_operands *headp, FILE *f, int indent_level,
 	       yasm_arch *arch)
 {
     yasm_insn_operand *cur;
@@ -179,16 +173,16 @@ yasm_ops_print(const yasm_insn_operandhead *headp, FILE *f, int indent_level,
 	yasm_operand_print(cur, f, indent_level, arch);
 }
 
-yasm_insn_operandhead *
+yasm_insn_operands *
 yasm_ops_create(void)
 {
-    yasm_insn_operandhead *headp = yasm_xmalloc(sizeof(yasm_insn_operandhead));
+    yasm_insn_operands *headp = yasm_xmalloc(sizeof(yasm_insn_operands));
     yasm_ops_initialize(headp);
     return headp;
 }
 
 void
-yasm_ops_destroy(yasm_insn_operandhead *headp, int content)
+yasm_ops_destroy(yasm_insn_operands *headp, int content)
 {
     yasm_ops_delete(headp, content);
     yasm_xfree(headp);
@@ -197,7 +191,7 @@ yasm_ops_destroy(yasm_insn_operandhead *headp, int content)
 /* Non-macro yasm_ops_first() for non-YASM_LIB_INTERNAL users. */
 #undef yasm_ops_first
 yasm_insn_operand *
-yasm_ops_first(yasm_insn_operandhead *headp)
+yasm_ops_first(yasm_insn_operands *headp)
 {
     return STAILQ_FIRST(headp);
 }

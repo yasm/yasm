@@ -199,9 +199,8 @@ elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
     if (elf_secthead_append_reloc(info->shead, reloc))
 	elf_objfmt_parse_scnum++;
 
-    retval = cur_arch->module->intnum_tobytes(cur_arch, zero, buf, destsize,
-					      valsize, 0, bc, rel, warn,
-					      bc->line);
+    retval = yasm_arch_intnum_tobytes(cur_arch, zero, buf, destsize, valsize,
+				      0, bc, rel, warn, bc->line);
     yasm_intnum_destroy(zero);
     return retval;
 }
@@ -227,9 +226,9 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     if (flt) {
 	if (shift < 0)
 	    yasm_internal_error(N_("attempting to negative shift a float"));
-	return cur_arch->module->floatnum_tobytes(cur_arch, flt, buf, destsize,
-						  valsize, (unsigned int)shift,
-						  warn, bc->line);
+	return yasm_arch_floatnum_tobytes(cur_arch, flt, buf, destsize,
+					  valsize, (unsigned int)shift, warn,
+					  bc->line);
     }
 
     /* Handle integer expressions, with relocation if necessary */
@@ -279,9 +278,8 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 
     intn = yasm_expr_get_intnum(ep, NULL);
     if (intn)
-	return cur_arch->module->intnum_tobytes(cur_arch, intn, buf, destsize,
-						valsize, shift, bc, rel, warn,
-						bc->line);
+	return yasm_arch_intnum_tobytes(cur_arch, intn, buf, destsize, valsize,
+					shift, bc, rel, warn, bc->line);
 
     /* Check for complex float expressions */
     if (yasm_expr__contains(*ep, YASM_EXPR_FLOAT)) {

@@ -79,11 +79,11 @@ static enum {
 int
 elf_set_arch(yasm_arch *arch)
 {
-    const char *machine = arch->module->get_machine(arch);
+    const char *machine = yasm_arch_get_machine(arch);
     cur_arch = arch;
 
     /* TODO: support more than x86:x86, x86:amd64 */
-    if (yasm__strcasecmp(cur_arch->module->keyword, "x86") == 0) {
+    if (yasm__strcasecmp(yasm_arch_keyword(cur_arch), "x86") == 0) {
 	if (yasm__strcasecmp(machine, "x86") == 0) {
 	    cur_machine = M_X86_32;
 	    cur_elf = ELF32;

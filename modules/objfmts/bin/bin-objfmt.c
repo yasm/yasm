@@ -158,17 +158,16 @@ bin_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     if (flt) {
 	if (shift < 0)
 	    yasm_internal_error(N_("attempting to negative shift a float"));
-	return cur_arch->module->floatnum_tobytes(cur_arch, flt, buf, destsize,
-						  valsize, (unsigned int)shift,
-						  warn, bc->line);
+	return yasm_arch_floatnum_tobytes(cur_arch, flt, buf, destsize,
+					  valsize, (unsigned int)shift, warn,
+					  bc->line);
     }
 
     /* Handle integer expressions */
     intn = yasm_expr_get_intnum(ep, NULL);
     if (intn)
-	return cur_arch->module->intnum_tobytes(cur_arch, intn, buf, destsize,
-						valsize, shift, bc, rel, warn,
-						bc->line);
+	return yasm_arch_intnum_tobytes(cur_arch, intn, buf, destsize, valsize,
+					shift, bc, rel, warn, bc->line);
 
     /* Check for complex float expressions */
     if (yasm_expr__contains(*ep, YASM_EXPR_FLOAT)) {

@@ -72,7 +72,6 @@ typedef struct yasm_parser_nasm {
 } yasm_parser_nasm;
 
 /* shorter access names to commonly used parser_nasm fields */
-#define p_arch		(parser_nasm->arch)
 #define p_symtab	(parser_nasm->symtab)
 
 #define cur_line	(yasm_linemap_get_current(parser_nasm->linemap))

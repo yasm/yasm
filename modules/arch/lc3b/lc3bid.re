@@ -174,7 +174,7 @@ static const lc3b_insn_info trap_insn[] = {
 
 yasm_bytecode *
 yasm_lc3b__parse_insn(yasm_arch *arch, const unsigned long data[4],
-		      int num_operands, yasm_insn_operandhead *operands,
+		      int num_operands, yasm_insn_operands *operands,
 		      yasm_bytecode *prev_bc, unsigned long line)
 {
     lc3b_new_insn_data d;

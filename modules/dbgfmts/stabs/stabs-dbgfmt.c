@@ -342,10 +342,10 @@ stabs_dbgfmt_generate(yasm_object *object)
     stabs_stab *stab;
     yasm_bytecode *filebc, *nullbc, *laststr;
     yasm_section *stext;
-    const char *machine = cur_arch->module->get_machine(cur_arch);
+    const char *machine = yasm_arch_get_machine(cur_arch);
 
     /* Stablen is determined by arch/machine */
-    if (yasm__strcasecmp(cur_arch->module->keyword, "x86") == 0) {
+    if (yasm__strcasecmp(yasm_arch_keyword(cur_arch), "x86") == 0) {
 	if (yasm__strcasecmp(machine, "x86") == 0) {
 	    info.stablen = 12;
 	}

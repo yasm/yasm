@@ -62,7 +62,7 @@
 #define CPU_Not64   (1UL<<25)	/* Not available (invalid) in 64-bit mode */
 
 typedef struct yasm_arch_x86 {
-    yasm_arch arch;	/* base structure */
+    yasm_arch_base arch;	/* base structure */
 
     /* What instructions/features are enabled? */
     unsigned long cpu_enabled;
@@ -209,7 +209,7 @@ yasm_arch_check_id_retval yasm_x86__parse_check_id
 
 /*@null@*/ yasm_bytecode *yasm_x86__parse_insn
     (yasm_arch *arch, const unsigned long data[2], int num_operands,
-     /*@null@*/ yasm_insn_operandhead *operands, yasm_bytecode *prev_bc,
+     /*@null@*/ yasm_insn_operands *operands, yasm_bytecode *prev_bc,
      unsigned long line);
 
 int yasm_x86__floatnum_tobytes

@@ -234,8 +234,8 @@ coff_common_initialize(const char *in_filename,
     cur_arch = a;
 
     /* Only support x86 arch, x86 machine */
-    if (yasm__strcasecmp(cur_arch->module->keyword, "x86") != 0 ||
-	yasm__strcasecmp(cur_arch->module->get_machine(cur_arch), "x86") != 0)
+    if (yasm__strcasecmp(yasm_arch_keyword(cur_arch), "x86") != 0 ||
+	yasm__strcasecmp(yasm_arch_get_machine(cur_arch), "x86") != 0)
 	return 1;
 
     coff_objfmt_parse_scnum = 1;    /* section numbering starts at 1 */
@@ -321,9 +321,9 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     if (flt) {
 	if (shift < 0)
 	    yasm_internal_error(N_("attempting to negative shift a float"));
-	return cur_arch->module->floatnum_tobytes(cur_arch, flt, buf, destsize,
-						  valsize, (unsigned int)shift,
-						  warn, bc->line);
+	return yasm_arch_floatnum_tobytes(cur_arch, flt, buf, destsize,
+					  valsize, (unsigned int)shift, warn,
+					  bc->line);
     }
 
     /* Handle integer expressions, with relocation if necessary */
@@ -396,9 +396,8 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     }
     intn = yasm_expr_get_intnum(ep, NULL);
     if (intn)
-	return cur_arch->module->intnum_tobytes(cur_arch, intn, buf, destsize,
-						valsize, shift, bc, rel, warn,
-						bc->line);
+	return yasm_arch_intnum_tobytes(cur_arch, intn, buf, destsize, valsize,
+					shift, bc, rel, warn, bc->line);
 
     /* Check for complex float expressions */
     if (yasm_expr__contains(*ep, YASM_EXPR_FLOAT)) {

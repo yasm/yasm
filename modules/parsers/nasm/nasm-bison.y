@@ -74,7 +74,7 @@ static void define_label(yasm_parser_nasm *parser_nasm, /*@only@*/ char *name,
     yasm_valparamhead dir_valparams;
     yasm_valparam *dir_valparam;
     struct {
-	yasm_insn_operandhead operands;
+	yasm_insn_operands operands;
 	int num_operands;
     } insn_operands;
     yasm_insn_operand *insn_operand;
@@ -203,12 +203,13 @@ exp: instr
 ;
 
 instr: INSN		{
-	$$ = p_arch->module->parse_insn(p_arch, $1, 0, NULL,
-					parser_nasm->prev_bc, cur_line);
+	$$ = yasm_arch_parse_insn(parser_nasm->arch, $1, 0, NULL,
+				  parser_nasm->prev_bc, cur_line);
     }
     | INSN operands	{
-	$$ = p_arch->module->parse_insn(p_arch, $1, $2.num_operands,
-	    &$2.operands, parser_nasm->prev_bc, cur_line);
+	$$ = yasm_arch_parse_insn(parser_nasm->arch, $1, $2.num_operands,
+				  &$2.operands, parser_nasm->prev_bc,
+				  cur_line);
 	yasm_ops_delete(&$2.operands, 0);
     }
     | INSN error	{
@@ -217,11 +218,11 @@ instr: INSN		{
     }
     | PREFIX instr	{
 	$$ = $2;
-	p_arch->module->parse_prefix(p_arch, $$, $1, cur_line);
+	yasm_arch_parse_prefix(parser_nasm->arch, $$, $1, cur_line);
     }
     | SEGREG instr	{
 	$$ = $2;
-	p_arch->module->parse_seg_prefix(p_arch, $$, $1[0], cur_line);
+	yasm_arch_parse_seg_prefix(parser_nasm->arch, $$, $1[0], cur_line);
     }
 ;
 
@@ -309,11 +310,11 @@ directive_valparam: direxpr	{
 
 /* memory addresses */
 memaddr: expr		    {
-	$$ = p_arch->module->ea_create(p_arch, $1);
+	$$ = yasm_arch_ea_create(parser_nasm->arch, $1);
     }
     | SEGREG ':' memaddr    {
 	$$ = $3;
-	p_arch->module->parse_seg_override(p_arch, $$, $1[0], cur_line);
+	yasm_arch_parse_seg_override(parser_nasm->arch, $$, $1[0], cur_line);
     }
     | SIZE_OVERRIDE memaddr { $$ = $2; yasm_ea_set_len($$, $1); }
     | NOSPLIT memaddr	    { $$ = $2; yasm_ea_set_nosplit($$, 1); }
@@ -338,7 +339,7 @@ operand: '[' memaddr ']'    { $$ = yasm_operand_create_mem($2); }
     | SIZE_OVERRIDE operand {
 	$$ = $2;
 	if ($$->type == YASM_INSN__OPERAND_REG &&
-	    p_arch->module->get_reg_size(p_arch, $$->data.reg) != $1)
+	    yasm_arch_get_reg_size(parser_nasm->arch, $$->data.reg) != $1)
 	    yasm__error(cur_line, N_("cannot override register size"));
 	else
 	    $$->size = $1;
@@ -597,7 +598,7 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
     } else if (yasm__strcasecmp(name, "cpu") == 0) {
 	yasm_vps_foreach(vp, valparams) {
 	    if (vp->val)
-		p_arch->module->parse_cpu(p_arch, vp->val, line);
+		yasm_arch_parse_cpu(parser_nasm->arch, vp->val, line);
 	    else if (vp->param) {
 		const yasm_intnum *intcpu;
 		intcpu = yasm_expr_get_intnum(&vp->param, NULL);
@@ -606,11 +607,11 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 		else {
 		    char strcpu[16];
 		    sprintf(strcpu, "%lu", yasm_intnum_get_uint(intcpu));
-		    p_arch->module->parse_cpu(p_arch, strcpu, line);
+		    yasm_arch_parse_cpu(parser_nasm->arch, strcpu, line);
 		}
 	    }
 	}
-    } else if (!p_arch->module->parse_directive(p_arch, name, valparams,
+    } else if (!yasm_arch_parse_directive(parser_nasm->arch, name, valparams,
 		    objext_valparams, parser_nasm->object, line)) {
 	;
     } else if (parser_nasm->objfmt->directive(name, valparams,
