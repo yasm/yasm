@@ -30,6 +30,13 @@ extern /*@null@*/ objfmt *cur_objfmt;
 
 /*@null@*/ /*@dependent@*/ extern const char *in_filename;
 extern unsigned int line_number;
+
+/* Amount to increase line_number by after each line.  Should be 0 or 1, set by
+ * %line (in NASM syntax).  Initialized to 1 at startup.
+ * (0 is for 1-line macros that expand to multiple lines).
+ */
+extern unsigned int line_number_inc;
+
 extern unsigned int asm_options;
 
 extern int indent_level;

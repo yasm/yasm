@@ -60,12 +60,14 @@ static size_t strbuf_size = 0;
 /* last "base" label for local (.) labels */
 char *nasm_parser_locallabel_base = (char *)NULL;
 
+static int linechg_numcount;
+
 %}
 %option noyywrap
 %option nounput
 %option case-insensitive
 
-%x DIRECTIVE
+%x DIRECTIVE LINECHG LINECHG2
 %s DIRECTIVE2
 
 DIGIT    [0-9]
@@ -148,6 +150,27 @@ WS       [ \t\r]
 
     yylval.str_val = strbuf;
     return STRING;
+}
+
+    /* %line linenum+lineinc filename */
+^%line			{ BEGIN LINECHG; linechg_numcount = 0; return LINE; }
+<LINECHG>{DIGIT}+	{
+    linechg_numcount++;
+    yylval.intn = intnum_new_dec(yytext);
+    return INTNUM;
+}
+<LINECHG>\n		{ BEGIN INITIAL; return '\n'; }
+<LINECHG>[+]		{ return yytext[0]; }
+<LINECHG>{WS}+		{
+    if (linechg_numcount == 2)
+	BEGIN LINECHG2;
+}
+<LINECHG2>\n		{ BEGIN INITIAL; return '\n'; }
+<LINECHG2>\r		;
+<LINECHG2>[^\r\n]+	{
+    BEGIN LINECHG;
+    yylval.str_val = xstrdup(yytext);
+    return FILENAME;
 }
 
     /* directive: [name value] */

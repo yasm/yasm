@@ -84,7 +84,7 @@ static bytecode *nasm_parser_temp_bc;
 
 %token <intn> INTNUM
 %token <flt> FLTNUM
-%token <str_val> DIRECTIVE_NAME STRING
+%token <str_val> DIRECTIVE_NAME STRING FILENAME
 %token <int_info> BYTE WORD DWORD QWORD TWORD DQWORD
 %token <int_info> DECLARE_DATA
 %token <int_info> RESERVE_SPACE
@@ -101,6 +101,7 @@ static bytecode *nasm_parser_temp_bc;
 %token <int_info> REG_ES REG_CS REG_SS REG_DS REG_FS REG_GS
 %token LEFT_OP RIGHT_OP SIGNDIV SIGNMOD START_SECTION_ID
 %token <str_val> ID LOCAL_ID SPECIAL_ID
+%token LINE
 
 /* instruction tokens (dynamically generated) */
 /* @TOKENS@ */
@@ -144,12 +145,22 @@ input: /* empty */
 					       $2);
 	if (nasm_parser_temp_bc)
 	    nasm_parser_prev_bc = nasm_parser_temp_bc;
-	line_number++;
+	line_number += line_number_inc;
     }
 ;
 
 line: '\n'		{ $$ = (bytecode *)NULL; }
     | lineexp '\n'
+    | LINE INTNUM '+' INTNUM FILENAME '\n' {
+	line_number = intnum_get_uint($2);
+	line_number_inc = intnum_get_uint($4);
+	line_number -= line_number_inc;	/* as we'll add it back in */
+	switch_filename($5);
+	intnum_delete($2);
+	intnum_delete($4);
+	xfree($5);
+	$$ = (bytecode *)NULL;
+    }
     | directive '\n'	{ $$ = (bytecode *)NULL; }
     | error '\n'	{
 	Error(_("label or instruction expected at start of line"));

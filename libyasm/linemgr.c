@@ -35,6 +35,7 @@
 
 /*@null@*/ /*@dependent@*/ const char *in_filename = (const char *)NULL;
 unsigned int line_number = 1;
+unsigned int line_number_inc = 1;
 unsigned int asm_options = 0;
 
 int indent_level = 0;
