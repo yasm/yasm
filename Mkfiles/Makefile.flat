@@ -16,7 +16,7 @@
 # This file should be customized to particular platforms by changing CC and
 #  CFLAGS appropriately, along with writing a config.h for the platform.
 
-CFLAGS=-DHAVE_CONFIG_H -I. -Isrc -Isrc/arch/x86 -Inointl
+CFLAGS=-DHAVE_CONFIG_H -I. -Isrc -Isrc/arch/x86
 CC=gcc
 BISON=bison
 FLEX=flex

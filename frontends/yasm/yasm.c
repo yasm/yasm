@@ -26,12 +26,6 @@
 # include <assert.h>
 #endif
 
-#ifdef gettext_noop
-#define N_(String)	gettext_noop(String)
-#else
-#define N_(String)	(String)
-#endif
-
 #include "bitvect.h"
 
 #include "globals.h"
@@ -101,6 +95,14 @@ int
 main(int argc, char *argv[])
 {
     sectionhead *sections;
+
+#if defined(HAVE_SETLOCALE) && defined(HAVE_LC_MESSAGES)
+    setlocale(LC_MESSAGES, "");
+#endif
+#if defined(LOCALEDIR)
+    bindtextdomain(PACKAGE, LOCALEDIR);
+#endif
+    textdomain(PACKAGE);
 
     if (parse_cmdline(argc, argv, options, countof(options, opt_option)))
 	return EXIT_FAILURE;
