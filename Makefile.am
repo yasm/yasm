@@ -19,7 +19,8 @@ yasm_LDADD = @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@
 
 lib_LTLIBRARIES =
 BUILT_SOURCES =
-CLEANFILES =
+# configure.lineno doesn't clean up after itself?
+CLEANFILES = configure.lineno
 EXTRA_DIST = config/config.rpath  \
 	check/Makefile.inc	\
 	src/Makefile.inc
