@@ -12,3 +12,6 @@ EXTRA_DIST += modules/objfmts/xdf/tests/xdfprotect.errwarn
 EXTRA_DIST += modules/objfmts/xdf/tests/xdfother.asm
 EXTRA_DIST += modules/objfmts/xdf/tests/xdfother.hex
 EXTRA_DIST += modules/objfmts/xdf/tests/xdfother.errwarn
+EXTRA_DIST += modules/objfmts/xdf/tests/xdfvirtual.asm
+EXTRA_DIST += modules/objfmts/xdf/tests/xdfvirtual.hex
+EXTRA_DIST += modules/objfmts/xdf/tests/xdfvirtual.errwarn

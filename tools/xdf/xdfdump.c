@@ -134,6 +134,7 @@ print_section(const SECTION_HEADER *secthead, FILE *f, size_t symtab_off)
 	   get_sym_name(secthead->s_name_idx, f, symtab_off),
 	   secthead->s_name_idx);
     printf("\tPhysical Address=0x%016llX\n", secthead->s_addr);
+    printf("\tVirtual Address=0x%016llX\n", secthead->s_vaddr);
     printf("\tAlign=%d\n", secthead->s_align);
     printf("\tFlags=");
     if (secthead->s_flags & XDF_SECT_ABSOLUTE)

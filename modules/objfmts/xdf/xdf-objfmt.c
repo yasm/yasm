@@ -35,7 +35,7 @@
 
 #define REGULAR_OUTBUF_SIZE	1024
 
-#define XDF_MAGIC	0x87654321
+#define XDF_MAGIC	0x87654322
 
 #define XDF_SYM_EXTERN	1
 #define XDF_SYM_GLOBAL	2
@@ -64,6 +64,7 @@ typedef struct xdf_reloc {
 typedef struct xdf_section_data {
     /*@dependent@*/ yasm_symrec *sym;	/* symbol created for this section */
     yasm_intnum *addr;	    /* starting memory address */
+    yasm_intnum *vaddr;	    /* starting virtual address */
     long scnum;		    /* section number (0=first section) */
     unsigned int align;	    /* section alignment (0-4096) */
     enum {
@@ -440,13 +441,23 @@ xdf_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 	YASM_WRITE_32_L(localbuf, 0);
 	YASM_WRITE_32_L(localbuf, 0);
     }
+    if (xsd->vaddr) {
+	yasm_intnum_get_sized(xsd->vaddr, localbuf, 8, 64, 0, 0, 0, 0);
+	localbuf += 8;				/* virtual address */
+    } else if (xsd->addr) {
+	yasm_intnum_get_sized(xsd->addr, localbuf, 8, 64, 0, 0, 0, 0);
+	localbuf += 8;				/* VA=PA */
+    } else {
+	YASM_WRITE_32_L(localbuf, 0);
+	YASM_WRITE_32_L(localbuf, 0);
+    }
     YASM_WRITE_16_L(localbuf, xsd->align);	/* alignment */
     YASM_WRITE_16_L(localbuf, xsd->flags);	/* flags */
     YASM_WRITE_32_L(localbuf, xsd->scnptr);	/* file ptr to data */
     YASM_WRITE_32_L(localbuf, xsd->size);	/* section size */
     YASM_WRITE_32_L(localbuf, xsd->relptr);	/* file ptr to relocs */
     YASM_WRITE_32_L(localbuf, xsd->nreloc); /* num of relocation entries */
-    fwrite(info->buf, 32, 1, info->f);
+    fwrite(info->buf, 40, 1, info->f);
 
     return 0;
 }
@@ -586,7 +597,7 @@ xdf_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
     info.buf = yasm_xmalloc(REGULAR_OUTBUF_SIZE);
 
     /* Allocate space for headers by seeking forward */
-    if (fseek(f, (long)(16+32*(objfmt_xdf->parse_scnum)), SEEK_SET) < 0) {
+    if (fseek(f, (long)(16+40*(objfmt_xdf->parse_scnum)), SEEK_SET) < 0) {
 	yasm__fatal(N_("could not seek on output file"));
 	/*@notreached@*/
 	return;
@@ -599,7 +610,7 @@ xdf_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
     symtab_count = info.indx;
 
     /* Get file offset of start of string table */
-    info.strtab_offset = 16+32*(objfmt_xdf->parse_scnum)+16*symtab_count;
+    info.strtab_offset = 16+40*(objfmt_xdf->parse_scnum)+16*symtab_count;
 
     /* Output symbol table */
     yasm_symtab_traverse(objfmt_xdf->symtab, &info, xdf_objfmt_output_sym);
@@ -650,6 +661,7 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     yasm_section *retval;
     int isnew;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *absaddr = NULL;
+    /*@dependent@*/ /*@null@*/ const yasm_intnum *vaddr = NULL;
     unsigned int addralign = 0;
     unsigned long flags = 0;
     int flags_override = 0;
@@ -683,6 +695,13 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	    flags |= XDF_SECT_ABSOLUTE;
 	    absaddr = yasm_expr_get_intnum(&vp->param, NULL);
 	    if (!absaddr) {
+		yasm__error(line, N_("argument to `%s' is not an integer"),
+			    vp->val);
+		return NULL;
+	    }
+	} else if (yasm__strcasecmp(vp->val, "virtual") == 0 && vp->param) {
+	    vaddr = yasm_expr_get_intnum(&vp->param, NULL);
+	    if (!vaddr) {
 		yasm__error(line, N_("argument to `%s' is not an integer"),
 			    vp->val);
 		return NULL;
@@ -735,6 +754,10 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	    data->addr = yasm_intnum_copy(absaddr);
 	else
 	    data->addr = NULL;
+	if (vaddr)
+	    data->vaddr = yasm_intnum_copy(vaddr);
+	else
+	    data->vaddr = NULL;
 	data->scnptr = 0;
 	data->size = 0;
 	data->relptr = 0;
@@ -758,6 +781,8 @@ xdf_section_data_destroy(void *data)
     xdf_section_data *xsd = (xdf_section_data *)data;
     if (xsd->addr)
 	yasm_intnum_destroy(xsd->addr);
+    if (xsd->vaddr)
+	yasm_intnum_destroy(xsd->vaddr);
     yasm_xfree(data);
 }
 
@@ -772,6 +797,8 @@ xdf_section_data_print(void *data, FILE *f, int indent_level)
     fprintf(f, "%*sflags=0x%x\n", indent_level, "", xsd->flags);
     fprintf(f, "%*saddr=", indent_level, "");
     yasm_intnum_print(xsd->addr, f);
+    fprintf(f, "%*svaddr=", indent_level, "");
+    yasm_intnum_print(xsd->vaddr, f);
     fprintf(f, "%*sscnptr=0x%lx\n", indent_level, "", xsd->scnptr);
     fprintf(f, "%*ssize=%ld\n", indent_level, "", xsd->size);
     fprintf(f, "%*srelptr=0x%lx\n", indent_level, "", xsd->relptr);

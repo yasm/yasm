@@ -1,5 +1,5 @@
 /* XDF - Extended Dynamic Object Format */
-/* Version 1.4 */
+/* Version 2.0 */
 /* $Id$ */
 
 /* FILE HEADER        */
@@ -25,7 +25,7 @@ typedef unsigned long long u64;
 
 typedef enum {
 
-  XDF_MAGIC = 0x87654321
+  XDF_MAGIC = 0x87654322
 
 } xdf_magic;
 
@@ -79,10 +79,11 @@ typedef struct {      /* 16 bytes */
 } FILE_HEADER;
 
 
-typedef struct {     /* 32 bytes */
+typedef struct {     /* 40 bytes */
 
   u32 s_name_idx;    /* section name in symtab          */
   u64 s_addr;        /* physical address                */
+  u64 s_vaddr;       /* virtual address                 */
   u16 s_align;       /* section alignment (0 ... 4096)  */
   u16 s_flags;       /* flags                           */
 
