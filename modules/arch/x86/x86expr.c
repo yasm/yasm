@@ -355,6 +355,7 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 		 */
 		*displen = wordsize;
 		*v_modrm = 1;
+		break;
 	    } else if (isbpreg) {
 		/* for BP/EBP, there *must* be a displacement value, but we
 		 * may not know the size (8 or 16/32) for sure right now.
@@ -365,8 +366,13 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 	    }
 
 	    intn = expr_get_intnum(ep);
-	    if (!intn)
-		break;		/* expr still has unknown values */
+	    if (!intn) {
+		/* expr still has unknown values: assume 16/32-bit disp */
+		*displen = wordsize;
+		*modrm |= 0200;
+		*v_modrm = 1;
+		break;
+	    }	
 
 	    /* make sure the displacement will fit in 16/32 bits if unsigned,
 	     * and 8 bits if signed.
@@ -380,8 +386,14 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 	    /* don't try to find out what size displacement we have if
 	     * displen is known.
 	     */
-	    if (*displen != 0 && *displen != 0xff)
+	    if (*displen != 0 && *displen != 0xff) {
+		if (*displen == 1)
+		    *modrm |= 0100;
+		else
+		    *modrm |= 0200;
+		*v_modrm = 1;
 		break;
+	    }
 
 	    /* Don't worry about overflows here (it's already guaranteed
 	     * to be 16/32 or 8 bits).
