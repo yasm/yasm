@@ -20,7 +20,8 @@ yasm_SOURCES = \
 	objfmt.h		\
 	preproc.h		\
 	parser.c		\
-	parser.h
+	parser.h		\
+	strcasecmp.c
 
 yasm_LDADD = \
 	parsers/nasm/libparser.a	\
