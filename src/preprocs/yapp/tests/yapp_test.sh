@@ -9,8 +9,10 @@ passedct=0
 passedlist=''
 failedct=0
 failedlist=''
+errorct=0
+errorlist=''
 
-YT=" - YAPP_TEST"
+YT="yapp_test"
 
 
 for asm in ${srcdir}/src/preprocs/yapp/tests/*.asm
@@ -19,19 +21,29 @@ do
     y=${a}.yp
     p=`echo ${asm} | sed -e 's,.asm$,.pre,'`
 
-    echo "$YT: Testing yapp for ${a}"
-    ./yasm -e ${asm} > ${y}
-    if diff -w ${p} ${y} > /dev/null; then
-	passedct=`expr $passedct + 1`
-	passedlist="${passedlist}${a} "
+    echo -n "$YT: Testing yapp for ${a} ..."
+    if ./yasm -e ${asm} > ${y}; then
+	if diff -w ${p} ${y} > /dev/null; then
+	    echo " PASS."
+	    passedct=`expr $passedct + 1`
+	    passedlist="${passedlist}${a} "
+	else
+	    echo " FAIL."
+	    failedct=`expr $failedct + 1`
+	    failedlist="${failedlist}${a} "
+	fi
     else
-	failedct=`expr $failedct + 1`
-	failedlist="${failedlist}${a} "
+	errorct=`expr $errorct + 1`
+	errorlist="${errorlist}${a} "
     fi
-    #rm ${y}
 done
 
-test $passedct -gt 0 && echo "$YT: PASSED $passedct: $passedlist"
-test $failedct -gt 0 && echo "$YT: FAILED $failedct: $failedlist"
+ct=`expr $failedct + $passedct + $errorct`
+per=`expr 100 \* $passedct / $ct`
 
-exit $failedct
+echo "$YT: $per%: Checks: $ct, Failures $failedct, Errors: $errorct"
+#test $passedct -gt 0 && echo "$YT: PASSED $passedct: $passedlist"
+#test $failedct -gt 0 && echo "$YT: FAILED $failedct: $failedlist"
+#test $errorct -gt 0 && echo "$YT: ERRORED $errorct: $errorlist"
+
+exit `expr $failedct + $errorct`
