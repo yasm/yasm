@@ -24,10 +24,6 @@
 /*@unused@*/ RCSID("$IdPath$");
 
 #include "errwarn.h"
-#include "expr.h"
-#include "symrec.h"
-
-#include "bytecode.h"
 
 #include "src/preprocs/yapp/yapp-preproc.h"
 #include "src/preprocs/yapp/yapp-token.h"
