@@ -844,11 +844,11 @@ static const x86_insn_info call_insn[] = {
     { CPU_Any, 0, 0, 1, {0xFF, 0, 0}, 2, 1,
       {OPT_Mem|OPS_Any|OPTM_Near|OPA_EA, 0, 0} },
 
-    { CPU_Any, 0, 16, 1, {0x9A, 0, 0}, 3, 1,
+    { CPU_Not64, 0, 16, 1, {0x9A, 0, 0}, 3, 1,
       {OPT_Imm|OPS_16|OPTM_Far|OPA_JmpRel, 0, 0} },
-    { CPU_386, 0, 32, 1, {0x9A, 0, 0}, 3, 1,
+    { CPU_386|CPU_Not64, 0, 32, 1, {0x9A, 0, 0}, 3, 1,
       {OPT_Imm|OPS_32|OPTM_Far|OPA_JmpRel, 0, 0} },
-    { CPU_Any, 0, 0, 1, {0x9A, 0, 0}, 3, 1,
+    { CPU_Not64, 0, 0, 1, {0x9A, 0, 0}, 3, 1,
       {OPT_Imm|OPS_Any|OPTM_Far|OPA_JmpRel, 0, 0} },
 
     { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 3, 1,
@@ -887,11 +887,11 @@ static const x86_insn_info jmp_insn[] = {
     { CPU_Any, 0, 0, 1, {0xFF, 0, 0}, 4, 1,
       {OPT_Mem|OPS_Any|OPTM_Near|OPA_EA, 0, 0} },
 
-    { CPU_Any, 0, 16, 1, {0xEA, 0, 0}, 3, 1,
+    { CPU_Not64, 0, 16, 1, {0xEA, 0, 0}, 3, 1,
       {OPT_Imm|OPS_16|OPTM_Far|OPA_JmpRel, 0, 0} },
-    { CPU_386, 0, 32, 1, {0xEA, 0, 0}, 3, 1,
+    { CPU_386|CPU_Not64, 0, 32, 1, {0xEA, 0, 0}, 3, 1,
       {OPT_Imm|OPS_32|OPTM_Far|OPA_JmpRel, 0, 0} },
-    { CPU_Any, 0, 0, 1, {0xEA, 0, 0}, 3, 1,
+    { CPU_Not64, 0, 0, 1, {0xEA, 0, 0}, 3, 1,
       {OPT_Imm|OPS_Any|OPTM_Far|OPA_JmpRel, 0, 0} },
 
     { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 5, 1,
