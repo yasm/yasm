@@ -44,7 +44,8 @@
  */
 #define COFF_SET_VMA	(!objfmt_coff->win32)
 
-#define COFF_I386MAGIC	0x14C
+#define COFF_MACHINE_I386	0x014C
+#define COFF_MACHINE_AMD64	0x8664
 
 #define COFF_F_LNNO	0x0004	    /* line number info NOT present */
 #define COFF_F_LSYMS	0x0008	    /* local symbols NOT present */
@@ -57,8 +58,34 @@ typedef struct coff_reloc {
     unsigned long addr;		    /* address of relocation */
     yasm_symrec *sym;		    /* relocated symbol */
     enum {
-	COFF_RELOC_ADDR32 = 6,	    /* 32-bit absolute reference */
-	COFF_RELOC_REL32 = 20	    /* 32-bit relative reference */
+	COFF_RELOC_ABSOLUTE = 0,	    /* absolute, no reloc needed */
+
+	/* I386 relocations */
+	COFF_RELOC_I386_ADDR16 = 0x1,	    /* 16-bit absolute reference */
+	COFF_RELOC_I386_REL16 = 0x2,	    /* 16-bit PC-relative reference */
+	COFF_RELOC_I386_ADDR32 = 0x6,	    /* 32-bit absolute reference */
+	COFF_RELOC_I386_ADDR32NB = 0x7,	    /* 32-bit absolute ref w/o base */
+	COFF_RELOC_I386_SEG12 = 0x9,	    /* 16-bit absolute segment ref */
+	COFF_RELOC_I386_SECTION = 0xA,	    /* section index */
+	COFF_RELOC_I386_SECREL = 0xB,	    /* offset from start of segment */
+	COFF_RELOC_I386_TOKEN = 0xC,	    /* CLR metadata token */
+	COFF_RELOC_I386_SECREL7 = 0xD,	/* 7-bit offset from base of sect */
+	COFF_RELOC_I386_REL32 = 0x14,	    /* 32-bit PC-relative reference */
+
+	/* AMD64 relocations */
+	COFF_RELOC_AMD64_ADDR64 = 0x1,	    /* 64-bit address (VA) */
+	COFF_RELOC_AMD64_ADDR32 = 0x2,	    /* 32-bit address (VA) */
+	COFF_RELOC_AMD64_ADDR32NB = 0x3,    /* 32-bit address w/o base (RVA) */
+	COFF_RELOC_AMD64_REL32 = 0x4,	    /* 32-bit relative (0 byte dist) */
+	COFF_RELOC_AMD64_REL32_1 = 0x5,	    /* 32-bit relative (1 byte dist) */
+	COFF_RELOC_AMD64_REL32_2 = 0x6,	    /* 32-bit relative (2 byte dist) */
+	COFF_RELOC_AMD64_REL32_3 = 0x7,	    /* 32-bit relative (3 byte dist) */
+	COFF_RELOC_AMD64_REL32_4 = 0x8,	    /* 32-bit relative (4 byte dist) */
+	COFF_RELOC_AMD64_REL32_5 = 0x9,	    /* 32-bit relative (5 byte dist) */
+	COFF_RELOC_AMD64_SECTION = 0xA,	    /* section index */
+	COFF_RELOC_AMD64_SECREL = 0xB,	/* 32-bit offset from base of sect */
+	COFF_RELOC_AMD64_SECREL7 = 0xC,	/* 7-bit offset from base of sect */
+	COFF_RELOC_AMD64_TOKEN = 0xD	    /* CLR metadata token */
     } type;			    /* type of relocation */
 } coff_reloc;
 
@@ -155,6 +182,8 @@ typedef struct yasm_objfmt_coff {
     coff_symtab_head coff_symtab;	    /* symbol table of indexed syms */
     int win32;				    /* nonzero for win32 output */
 
+    unsigned int machine;		    /* COFF machine to use */
+
     yasm_object *object;
     yasm_symtab *symtab;
     /*@dependent@*/ yasm_arch *arch;
@@ -244,9 +273,18 @@ coff_common_create(const char *in_filename, yasm_object *object, yasm_arch *a)
     objfmt_coff->symtab = yasm_object_get_symtab(object);
     objfmt_coff->arch = a;
 
-    /* Only support x86 arch, x86 machine */
-    if (yasm__strcasecmp(yasm_arch_keyword(a), "x86") != 0 ||
-	yasm__strcasecmp(yasm_arch_get_machine(a), "x86") != 0) {
+    /* Only support x86 arch */
+    if (yasm__strcasecmp(yasm_arch_keyword(a), "x86") != 0) {
+	yasm_xfree(objfmt_coff);
+	return NULL;
+    }
+
+    /* Support x86 and amd64 machines of x86 arch */
+    if (yasm__strcasecmp(yasm_arch_get_machine(a), "x86") == 0) {
+	objfmt_coff->machine = COFF_MACHINE_I386;
+    } else if (yasm__strcasecmp(yasm_arch_get_machine(a), "amd64") == 0) {
+	objfmt_coff->machine = COFF_MACHINE_AMD64;
+    } else {
 	yasm_xfree(objfmt_coff);
 	return NULL;
     }
@@ -395,7 +433,12 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	}
 
 	if (rel) {
-	    reloc->type = COFF_RELOC_REL32;
+	    if (objfmt_coff->machine == COFF_MACHINE_I386)
+		reloc->type = COFF_RELOC_I386_REL32;
+	    else if (objfmt_coff->machine == COFF_MACHINE_AMD64)
+		reloc->type = COFF_RELOC_AMD64_REL32;
+	    else
+		yasm_internal_error(N_("coff objfmt: unrecognized machine"));
 	    /* For standard COFF, need to reference to start of section, so add
 	     * $$ in.
 	     * For Win32 COFF, need to reference to next bytecode, so add '$'
@@ -412,8 +455,14 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 			yasm_section_bcs_first(info->sect), 0, (*ep)->line)),
 		    (*ep)->line);
 	    *ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
-	} else
-	    reloc->type = COFF_RELOC_ADDR32;
+	} else {
+	    if (objfmt_coff->machine == COFF_MACHINE_I386)
+		reloc->type = COFF_RELOC_I386_ADDR32;
+	    else if (objfmt_coff->machine == COFF_MACHINE_AMD64)
+		reloc->type = COFF_RELOC_AMD64_ADDR32;
+	    else
+		yasm_internal_error(N_("coff objfmt: unrecognized machine"));
+	}
 	info->csd->nreloc++;
 	STAILQ_INSERT_TAIL(&info->csd->relocs, reloc, link);
     }
@@ -825,7 +874,7 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
     }
 
     localbuf = info.buf;
-    YASM_WRITE_16_L(localbuf, COFF_I386MAGIC);		/* magic number */
+    YASM_WRITE_16_L(localbuf, objfmt_coff->machine);	/* magic number */
     YASM_WRITE_16_L(localbuf, objfmt_coff->parse_scnum-1);/* number of sects */
     YASM_WRITE_32_L(localbuf, 0);			/* time/date stamp */
     YASM_WRITE_32_L(localbuf, symtab_pos);		/* file ptr to symtab */
@@ -1117,11 +1166,20 @@ coff_section_data_print(void *data, FILE *f, int indent_level)
 	yasm_symrec_print(reloc->sym, f, indent_level+3);
 	fprintf(f, "%*stype=", indent_level+2, "");
 	switch (reloc->type) {
-	    case COFF_RELOC_ADDR32:
-		printf("Addr32\n");
+	    case COFF_RELOC_I386_ADDR32:
+		printf("I386/Addr32\n");
 		break;
-	    case COFF_RELOC_REL32:
-		printf("Rel32\n");
+	    case COFF_RELOC_I386_REL32:
+		printf("I386/Rel32\n");
+		break;
+	    case COFF_RELOC_AMD64_ADDR32:
+		printf("AMD64/Addr32\n");
+		break;
+	    case COFF_RELOC_AMD64_REL32:
+		printf("AMD64/Rel32\n");
+		break;
+	    default:
+		printf("Other\n");
 		break;
 	}
     }
