@@ -159,7 +159,6 @@ DIR	 %[ \t]*
 }
 
     /* includes - based on flex manual handling of include files */
-    /* FIXME: stop includes inside non-output zones from happening */
 <inhibit>{DIR}include[^\n]* ;
 {DIR}include  BEGIN(incl);
     /* note the " handling here is a hack that doesn't accept useful
@@ -167,22 +166,28 @@ DIR	 %[ \t]*
 <incl>[ \t"]*	/* eat whitespace */
 <incl>[^ \t\n"]* { /* have the filename */
     include *inc;
+    YY_BUFFER_STATE *incfile;
     inc = xmalloc(sizeof(include));
     inc->include_state = YY_CURRENT_BUFFER;
-    inc->filename = current_file;
-    inc->line_number = line_number;
-    current_file = xstrdup(yytext);
-    SLIST_INSERT_HEAD(&includes_head, inc, next);
 
     /* FIXME: handle includes that aren't relative */
-    yyin = fopen (yytext, "r");
-    if(!yyin)
-	Error(_("File `%s' included from %s:%d cannot be opened"),
-		yytext, current_file, line_number);
+    incfile = fopen (yytext, "r");
+    if(!incfile) {
+	Error(_("include file `%s': %s"),
+		yytext, strerror(errno));
+	free(inc);
+    }
+    else {
+	yyin = incfile;
+	inc->filename = current_file;
+	inc->line_number = line_number;
+	SLIST_INSERT_HEAD(&includes_head, inc, next);
 
-    yy_switch_to_buffer(yy_create_buffer(yyin, YY_BUF_SIZE));
-    BEGIN(INITIAL);
-    line_number = 1;
+	line_number = 1;
+	current_file = xstrdup(yytext);
+	BEGIN(INITIAL);
+	yy_switch_to_buffer(yy_create_buffer(yyin, YY_BUF_SIZE));
+    }
     return INCLUDE;
 }
 
