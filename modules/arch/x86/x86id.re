@@ -127,8 +127,11 @@ static unsigned long cpu_enabled = ~CPU_Any;
  *             0 = does nothing (operand data is discarded)
  *             1 = operand data goes into ea field
  *             2 = operand data goes into imm field
- *             3 = operand data goes into "spare" field
- *             4 = operand data is added to opcode byte 0
+ *             3 = operand data goes into sign-extended imm field
+ *             4 = operand data goes into "spare" field
+ *             5 = operand data is added to opcode byte 0
+ *             6 = operand data goes into BOTH ea and spare
+ *                 [special case for imul opcode]
  */
 #define OPT_Imm		0x0
 #define OPT_Reg		0x1
@@ -168,8 +171,10 @@ static unsigned long cpu_enabled = ~CPU_Any;
 #define OPA_None	(0<<9)
 #define OPA_EA		(1<<9)
 #define OPA_Imm		(2<<9)
-#define OPA_Spare	(3<<9)
-#define OPA_Op0Add	(4<<9)
+#define OPA_SImm	(3<<9)
+#define OPA_Spare	(4<<9)
+#define OPA_Op0Add	(5<<9)
+#define OPA_SpareEA	(6<<9)
 #define OPA_MASK	0x0E00
 
 typedef struct x86_insn_info {
@@ -419,6 +424,163 @@ static const x86_insn_info out_insn[] = {
     { CPU_386, 0, 32, 1, {0xEF, 0, 0}, 0, 2,
       {OPT_Dreg|OPS_16|OPA_None, OPT_Areg|OPS_32|OPA_None, 0} }
 };
+
+/* Load effective address */
+static const x86_insn_info lea_insn[] = {
+    { CPU_Any, 0, 16, 1, {0x8D, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_Mem|OPS_16|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_386, 0, 32, 1, {0x8D, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_Mem|OPS_32|OPS_Relaxed|OPA_EA, 0} }
+};
+
+/* Load segment registers from memory */
+static const x86_insn_info ldes_insn[] = {
+    { CPU_Any, MOD_Op0Add, 16, 1, {0, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_Mem|OPS_Any|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_386, MOD_Op0Add, 32, 1, {0, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_Mem|OPS_Any|OPS_Relaxed|OPA_EA, 0} }
+};
+static const x86_insn_info lfgss_insn[] = {
+    { CPU_386, MOD_Op1Add, 16, 1, {0x0F, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_Mem|OPS_Any|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_386, MOD_Op1Add, 32, 1, {0x0F, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_Mem|OPS_Any|OPS_Relaxed|OPA_EA, 0} }
+};
+
+/* Arithmetic - general */
+static const x86_insn_info arith_insn[] = {
+    { CPU_Any, MOD_Op0Add, 0, 1, {0x04, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_8|OPA_None, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_Any, MOD_Op0Add, 16, 1, {0x05, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_16|OPA_None, OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_386, MOD_Op0Add, 32, 1, {0x05, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_32|OPA_None, OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_Any, MOD_Gap0|MOD_SpAdd, 0, 1, {0x80, 0, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_Any, MOD_Gap0|MOD_SpAdd, 0, 1, {0x80, 0, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_8|OPA_Imm, 0} },
+    { CPU_Any, MOD_Gap0|MOD_SpAdd, 16, 1, {0x83, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_8|OPA_SImm, 0} },
+    { CPU_Any, MOD_Gap0|MOD_SpAdd, 16, 1, {0x81, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_Any, MOD_Gap0|MOD_SpAdd, 16, 1, {0x81, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_16|OPA_Imm, 0} },
+    { CPU_386, MOD_Gap0|MOD_SpAdd, 32, 1, {0x83, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_8|OPA_SImm, 0} },
+    { CPU_386, MOD_Gap0|MOD_SpAdd, 32, 1, {0x81, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_386, MOD_Gap0|MOD_SpAdd, 32, 1, {0x81, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_32|OPA_Imm, 0} },
+    { CPU_Any, MOD_Op0Add, 0, 1, {0x00, 0, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_8|OPA_Spare, 0} },
+    { CPU_Any, MOD_Op0Add, 16, 1, {0x01, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare, 0} },
+    { CPU_386, MOD_Op0Add, 32, 1, {0x01, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} },
+    { CPU_Any, MOD_Op0Add, 0, 1, {0x02, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_8|OPA_Spare, OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_Any, MOD_Op0Add, 16, 1, {0x03, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_386, MOD_Op0Add, 32, 1, {0x03, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} }
+};
+
+/* Arithmetic - inc/dec */
+static const x86_insn_info incdec_insn[] = {
+    { CPU_Any, MOD_Gap0|MOD_SpAdd, 0, 1, {0xFE, 0, 0}, 0, 1,
+      {OPT_RM|OPS_8|OPA_EA, 0, 0} },
+    { CPU_Any, MOD_Op0Add, 16, 1, {0, 0, 0}, 0, 1,
+      {OPT_Reg|OPS_16|OPA_Op0Add, 0, 0} },
+    { CPU_Any, MOD_Gap0|MOD_SpAdd, 16, 1, {0xFF, 0, 0}, 0, 1,
+      {OPT_RM|OPS_16|OPA_EA, 0, 0} },
+    { CPU_386, MOD_Op0Add, 32, 1, {0, 0, 0}, 0, 1,
+      {OPT_Reg|OPS_32|OPA_Op0Add, 0, 0} },
+    { CPU_386, MOD_Gap0|MOD_SpAdd, 32, 1, {0xFF, 0, 0}, 0, 1,
+      {OPT_RM|OPS_32|OPA_EA, 0, 0} },
+};
+
+/* Arithmetic - "F6" opcodes (div/idiv/mul/neg/not) */
+static const x86_insn_info f6_insn[] = {
+    { CPU_Any, MOD_SpAdd, 0, 1, {0xF6, 0, 0}, 0, 1,
+      {OPT_RM|OPS_8|OPA_EA, 0, 0} },
+    { CPU_Any, MOD_SpAdd, 16, 1, {0xF7, 0, 0}, 0, 1,
+      {OPT_RM|OPS_16|OPA_EA, 0, 0} },
+    { CPU_386, MOD_SpAdd, 32, 1, {0xF7, 0, 0}, 0, 1,
+      {OPT_RM|OPS_32|OPA_EA, 0, 0} },
+};
+
+/* Arithmetic - test instruction */
+static const x86_insn_info test_insn[] = {
+    { CPU_Any, 0, 0, 1, {0xA8, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_8|OPA_None, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_Any, 0, 16, 1, {0xA9, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_16|OPA_None, OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_386, 0, 32, 1, {0xA9, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_32|OPA_None, OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_Any, 0, 0, 1, {0xF6, 0, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_Any, 0, 0, 1, {0xF6, 0, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_8|OPA_Imm, 0} },
+    { CPU_Any, 0, 16, 1, {0xF7, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_Any, 0, 16, 1, {0xF7, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_16|OPA_Imm, 0} },
+    { CPU_386, 0, 32, 1, {0xF7, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_386, 0, 32, 1, {0xF7, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_32|OPA_Imm, 0} },
+    { CPU_Any, 0, 0, 1, {0x84, 0, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_8|OPA_Spare, 0} },
+    { CPU_Any, 0, 16, 1, {0x85, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare, 0} },
+    { CPU_386, 0, 32, 1, {0x85, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} },
+    { CPU_Any, 0, 0, 1, {0x84, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_8|OPA_Spare, OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_Any, 0, 16, 1, {0x85, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_386, 0, 32, 1, {0x85, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} }
+};
+
+/* Arithmetic - aad/aam */
+static const x86_insn_info aadm_insn[] = {
+    { CPU_Any, MOD_Op0Add, 0, 2, {0xD4, 0x0A, 0}, 0, 0, {0, 0, 0} },
+    { CPU_Any, MOD_Op0Add, 0, 1, {0xD4, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0, 0} }
+};
+
+/* Arithmetic - imul */
+static const x86_insn_info imul_insn[] = {
+    { CPU_Any, 0, 0, 1, {0xF6, 0, 0}, 5, 1, {OPT_RM|OPS_8|OPA_EA, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0xF7, 0, 0}, 5, 1, {OPT_RM|OPS_16|OPA_EA, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xF7, 0, 0}, 5, 1, {OPT_RM|OPS_32|OPA_EA, 0, 0} },
+    { CPU_386, 0, 16, 2, {0x0F, 0xAF, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_386, 0, 32, 2, {0x0F, 0xAF, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_186, 0, 16, 1, {0x6B, 0, 0}, 0, 3,
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA,
+       OPT_Imm|OPS_8|OPA_SImm} },
+    { CPU_386, 0, 32, 1, {0x6B, 0, 0}, 0, 3,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA,
+       OPT_Imm|OPS_8|OPA_SImm} },
+    { CPU_186, 0, 16, 1, {0x6B, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_SpareEA, OPT_Imm|OPS_8|OPA_SImm, 0} },
+    { CPU_386, 0, 32, 1, {0x6B, 0, 0}, 0, 3,
+      {OPT_Reg|OPS_32|OPA_SpareEA, OPT_Imm|OPS_8|OPA_SImm, 0} },
+    { CPU_186, 0, 16, 1, {0x69, 0, 0}, 0, 3,
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA,
+       OPT_Imm|OPS_16|OPS_Relaxed|OPA_SImm} },
+    { CPU_386, 0, 32, 1, {0x69, 0, 0}, 0, 3,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA,
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm} },
+    { CPU_186, 0, 16, 1, {0x69, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_SpareEA, OPT_Imm|OPS_16|OPS_Relaxed|OPA_SImm, 0} },
+    { CPU_386, 0, 32, 1, {0x69, 0, 0}, 0, 3,
+      {OPT_Reg|OPS_32|OPA_SpareEA, OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm, 0} }
+};
+
 
 bytecode *
 x86_new_insn(const unsigned long data[4], int num_operands,
@@ -717,6 +879,15 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 		    } else
 			InternalError(_("invalid operand conversion"));
 		    break;
+		case OPA_SImm:
+		    if (op->type == INSN_OPERAND_IMM) {
+			d.imm = op->data.val;
+			d.im_len = size_lookup[(info->operands[i] &
+						OPS_MASK)>>OPS_SHIFT];
+			d.im_sign = 1;
+		    } else
+			InternalError(_("invalid operand conversion"));
+		    break;
 		case OPA_Spare:
 		    if (op->type == INSN_OPERAND_REG ||
 			op->type == INSN_OPERAND_SEGREG)
@@ -728,6 +899,13 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 		    if (op->type == INSN_OPERAND_REG)
 			d.op[0] += (unsigned char)(op->data.reg&7);
 		    else
+			InternalError(_("invalid operand conversion"));
+		    break;
+		case OPA_SpareEA:
+		    if (op->type == INSN_OPERAND_REG) {
+			d.spare = (unsigned char)(op->data.reg&7);
+			d.ea = x86_ea_new_reg((unsigned char)op->data.reg);
+		    } else
 			InternalError(_("invalid operand conversion"));
 		    break;
 		default:
@@ -1059,13 +1237,13 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	I N { RET_INSN(in, 0, CPU_Any); }
 	O U T { RET_INSN(out, 0, CPU_Any); }
 	/* Load effective address */
-	/* L E A */
+	L E A { RET_INSN(lea, 0, CPU_Any); }
 	/* Load segment registers from memory */
-	/* L D S */
-	/* L E S */
-	/* L F S */
-	/* L G S */
-	/* L S S */
+	L D S { RET_INSN(ldes, 0xC5, CPU_Any); }
+	L E S { RET_INSN(ldes, 0xC4, CPU_Any); }
+	L F S { RET_INSN(lfgss, 0xB4, CPU_386); }
+	L G S { RET_INSN(lfgss, 0xB5, CPU_386); }
+	L S S { RET_INSN(lfgss, 0xB6, CPU_386); }
 	/* Flags register instructions */
 	C L C { RET_INSN(onebyte, 0x00F8, CPU_Any); }
 	C L D { RET_INSN(onebyte, 0x00FC, CPU_Any); }
@@ -1084,35 +1262,35 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	S T D { RET_INSN(onebyte, 0x00FD, CPU_Any); }
 	S T I { RET_INSN(onebyte, 0x00FB, CPU_Any); }
 	/* Arithmetic */
-	/* A D D */
-	/* I N C */
-	/* S U B */
-	/* D E C */
-	/* S B B */
-	/* C M P */
-	/* T E S T */
-	/* A N D */
-	/* O R */
-	/* X O R */
-	/* A D C */
-	/* N E G */
-	/* N O T */
+	A D D { RET_INSN(arith, 0x0000, CPU_Any); }
+	I N C { RET_INSN(incdec, 0x0040, CPU_Any); }
+	S U B { RET_INSN(arith, 0x0528, CPU_Any); }
+	D E C { RET_INSN(incdec, 0x0148, CPU_Any); }
+	S B B { RET_INSN(arith, 0x0318, CPU_Any); }
+	C M P { RET_INSN(arith, 0x0738, CPU_Any); }
+	T E S T { RET_INSN(test, 0, CPU_Any); }
+	A N D { RET_INSN(arith, 0x0420, CPU_Any); }
+	O R { RET_INSN(arith, 0x0108, CPU_Any); }
+	X O R { RET_INSN(arith, 0x0630, CPU_Any); }
+	A D C { RET_INSN(arith, 0x0210, CPU_Any); }
+	N E G { RET_INSN(f6, 0x03, CPU_Any); }
+	N O T { RET_INSN(f6, 0x02, CPU_Any); }
 	A A A { RET_INSN(onebyte, 0x0037, CPU_Any); }
 	A A S { RET_INSN(onebyte, 0x003F, CPU_Any); }
 	D A A { RET_INSN(onebyte, 0x0027, CPU_Any); }
 	D A S { RET_INSN(onebyte, 0x002F, CPU_Any); }
-	/* A A D */
-	/* A A M */
+	A A D { RET_INSN(aadm, 0x01, CPU_Any); }
+	A A M { RET_INSN(aadm, 0x00, CPU_Any); }
 	/* Conversion instructions */
 	C B W { RET_INSN(onebyte, 0x1098, CPU_Any); }
 	C W D E { RET_INSN(onebyte, 0x2098, CPU_386); }
 	C W D { RET_INSN(onebyte, 0x1099, CPU_Any); }
 	C D Q { RET_INSN(onebyte, 0x2099, CPU_386); }
 	/* Multiplication and division */
-	/* M U L */
-	/* I M U L */
-	/* D I V */
-	/* I D I V */
+	M U L { RET_INSN(f6, 0x04, CPU_Any); }
+	I M U L { RET_INSN(imul, 0, CPU_Any); }
+	D I V { RET_INSN(f6, 0x06, CPU_Any); }
+	I D I V { RET_INSN(f6, 0x07, CPU_Any); }
 	/* Shifts */
 	/* R O L */
 	/* R O R */
