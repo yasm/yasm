@@ -37,14 +37,6 @@ typedef struct section section;
 typedef struct bytecode bytecode;
 #endif
 
-/* DEFINED is set with EXTERN and COMMON below */
-typedef enum {
-    SYM_NOSTATUS = 0,
-    SYM_USED = 1 << 0,		/* for using variables before definition */
-    SYM_DEFINED = 1 << 1,	/* once it's been defined in the file */
-    SYM_VALUED = 1 << 2		/* once its value has been determined */
-} SymStatus;
-
 /* EXTERN and COMMON are mutually exclusive */
 typedef enum {
     SYM_LOCAL = 0,		/* default, local only */
@@ -52,13 +44,6 @@ typedef enum {
     SYM_COMMON = 1 << 1,	/* if it's declared COMMON */
     SYM_EXTERN = 1 << 2		/* if it's declared EXTERN */
 } SymVisibility;
-
-typedef enum {
-    SYM_UNKNOWN,		/* for unknown type (COMMON/EXTERN) */
-    SYM_CONSTANT_INT,		/* for EQU defined symbols (integers) */
-    SYM_CONSTANT_FLOAT,		/*  (floating point) */
-    SYM_LABEL			/* for labels */
-} SymType;
 
 #ifndef YASM_SYMREC
 #define YASM_SYMREC

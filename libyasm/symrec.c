@@ -43,6 +43,21 @@
 
 RCSID("$IdPath$");
 
+/* DEFINED is set with EXTERN and COMMON below */
+typedef enum {
+    SYM_NOSTATUS = 0,
+    SYM_USED = 1 << 0,		/* for using variables before definition */
+    SYM_DEFINED = 1 << 1,	/* once it's been defined in the file */
+    SYM_VALUED = 1 << 2		/* once its value has been determined */
+} SymStatus;
+
+typedef enum {
+    SYM_UNKNOWN,		/* for unknown type (COMMON/EXTERN) */
+    SYM_CONSTANT_INT,		/* for EQU defined symbols (integers) */
+    SYM_CONSTANT_FLOAT,		/*  (floating point) */
+    SYM_LABEL			/* for labels */
+} SymType;
+
 struct symrec {
     char *name;
     SymType type;
