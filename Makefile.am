@@ -3,6 +3,7 @@
 SUBDIRS = intl po doc
 
 CFLAGS = @ANSI_CFLAGS@
+AM_YFLAGS = -d
 INCLUDES = \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/src \
