@@ -421,7 +421,7 @@ expr_simplify_identity(expr *e, int numterms, int int_term)
  * Returns a possibly reallocated e.
  */
 static expr *
-expr_level_op(expr *e, int fold_const)
+expr_level_op(expr *e, int fold_const, int simplify_ident)
 {
     int i, j, o, fold_numterms, level_numterms, level_fold_numterms;
     int first_int_term = -1;
@@ -486,9 +486,12 @@ expr_level_op(expr *e, int fold_const)
 	    }
 	}
 
-	/* Simplify identities and make IDENT if possible. */
-	fold_numterms = expr_simplify_identity(e, fold_numterms,
-					       first_int_term);
+	if (simplify_ident)
+	    /* Simplify identities and make IDENT if possible. */
+	    fold_numterms = expr_simplify_identity(e, fold_numterms,
+						   first_int_term);
+	else if (fold_numterms == 1)
+	    e->op = EXPR_IDENT;
     }
 
     /* Only level operators that allow more than two operand terms.
@@ -561,7 +564,7 @@ expr_level_op(expr *e, int fold_const)
     }
 
     /* Simplify identities, make IDENT if possible, and save to e->numterms. */
-    if (first_int_term != -1) {
+    if (simplify_ident && first_int_term != -1) {
 	e->numterms = expr_simplify_identity(e, level_numterms,
 					     first_int_term);
     } else {
@@ -575,7 +578,7 @@ expr_level_op(expr *e, int fold_const)
 
 /* Level an entire expn tree */
 static expr *
-expr_level_tree(expr *e, int fold_const)
+expr_level_tree(expr *e, int fold_const, int simplify_ident)
 {
     int i;
 
@@ -586,11 +589,12 @@ expr_level_tree(expr *e, int fold_const)
     for (i=0; i<e->numterms; i++) {
 	if (e->terms[i].type == EXPR_EXPR)
 	    e->terms[i].data.expn = expr_level_tree(e->terms[i].data.expn,
-						    fold_const);
+						    fold_const,
+						    simplify_ident);
     }
 
     /* do callback */
-    return expr_level_op(e, fold_const);
+    return expr_level_op(e, fold_const, simplify_ident);
 }
 
 /* Comparison function for expr_order_terms().
@@ -730,6 +734,29 @@ expr_contains(expr *e, ExprType t)
     return expr_traverse_leaves_in(e, &t, expr_contains_callback);
 }
 
+/* Only works if ei->type == EXPR_REG (doesn't check).
+ * Overwrites ei with intnum of 0 (to eliminate regs from the final expr).
+ */
+static int *
+expr_checkea_get_reg32(ExprItem *ei, void *d)
+{
+    int *data = d;
+    int *ret;
+
+    /* don't allow 16-bit registers */
+    if (ei->data.reg.size != 32)
+	return 0;
+
+    ret = &data[ei->data.reg.num & 7];	/* & 7 for sanity check */
+
+    /* overwrite with 0 to eliminate register from displacement expr */
+    ei->type = EXPR_INT;
+    ei->data.intn = intnum_new_int(0);
+
+    /* we're okay */
+    return ret;
+}
+
 typedef struct checkea_invalid16_data {
     int bx, si, di, bp;		/* total multiplier for each reg */
 } checkea_invalid16_data;
@@ -738,8 +765,9 @@ typedef struct checkea_invalid16_data {
  * Overwrites ei with intnum of 0 (to eliminate regs from the final expr).
  */
 static int *
-expr_checkea_get_reg16(ExprItem *ei, checkea_invalid16_data *data)
+expr_checkea_get_reg16(ExprItem *ei, void *d)
 {
+    checkea_invalid16_data *data = d;
     /* in order: ax,cx,dx,bx,sp,bp,si,di */
     static int *reg16[8] = {0,0,0,0,0,0,0,0};
     int *ret;
@@ -874,6 +902,116 @@ expr_checkea_distcheck_reg(expr **ep)
     return retval;
 }
 
+/* Simplify and determine if expression is superficially valid:
+ * Valid expr should be [(int-equiv expn)]+[reg*(int-equiv expn)+...]
+ * where the [...] parts are optional.
+ *
+ * Don't simplify out constant identities if we're looking for an indexreg: we
+ * need the multiplier for determining what the indexreg is!
+ *
+ * Returns 0 if invalid register usage, 1 if unable to determine all values,
+ * and 2 if all values successfully determined and saved in data.
+ */
+static int
+expr_checkea_getregusage(expr **ep, int *indexreg, void *data,
+			 int *(*get_reg)(ExprItem *ei, void *d))
+{
+    int i;
+    int *reg;
+    expr *e;
+
+    *ep = expr_xform_neg_tree(*ep);
+    *ep = expr_level_tree(*ep, 1, indexreg == 0);
+    e = *ep;
+    switch (expr_checkea_distcheck_reg(ep)) {
+	case 0:
+	    ErrorAt(e->filename, e->line, _("invalid effective address"));
+	    return 0;
+	case 2:
+	    /* Need to simplify again */
+	    *ep = expr_xform_neg_tree(*ep);
+	    *ep = expr_level_tree(*ep, 1, indexreg == 0);
+	    e = *ep;
+	    break;
+	default:
+	    break;
+    }
+
+    switch (e->op) {
+	case EXPR_ADD:
+	    /* Prescan for non-int multipliers.
+	     * This is because if any of the terms is a more complex
+	     * expr (eg, undetermined value), we don't want to try to
+	     * figure out *any* of the expression, because each register
+	     * lookup overwrites the register with a 0 value!  And storing
+	     * the state of this routine from one excution to the next
+	     * would be a major chore.
+	     */
+	    for (i=0; i<e->numterms; i++)
+		if (e->terms[i].type == EXPR_EXPR) {
+		    if (e->terms[i].data.expn->numterms > 2)
+			return 1;
+		    expr_order_terms(e->terms[i].data.expn);
+		    if (e->terms[i].data.expn->terms[1].type != EXPR_INT)
+			return 1;
+		}
+
+	    /* FALLTHROUGH */
+	case EXPR_IDENT:
+	    /* Check each term for register (and possible multiplier). */
+	    for (i=0; i<e->numterms; i++) {
+		if (e->terms[i].type == EXPR_REG) {
+		    reg = get_reg(&e->terms[i], data);
+		    if (!reg)
+			return 0;
+		    (*reg)++;
+		} else if (e->terms[i].type == EXPR_EXPR) {
+		    /* Already ordered from ADD above, just grab the value.
+		     * Sanity check for EXPR_INT.
+		     */
+		    if (e->terms[i].data.expn->terms[0].type != EXPR_REG)
+			InternalError(__LINE__, __FILE__,
+				      _("Register not found in reg expn"));
+		    if (e->terms[i].data.expn->terms[1].type != EXPR_INT)
+			InternalError(__LINE__, __FILE__,
+				      _("Non-integer value in reg expn"));
+		    reg = get_reg(&e->terms[i].data.expn->terms[0], data);
+		    if (!reg)
+			return 0;
+		    (*reg) +=
+			intnum_get_int(e->terms[i].data.expn->terms[1].data.intn);
+		    if (indexreg)
+			*indexreg =
+			    e->terms[i].data.expn->terms[0].data.reg.num;
+		}
+	    }
+	    break;
+	case EXPR_MUL:
+	    /* Here, too, check for non-int multipliers. */
+	    if (e->numterms > 2)
+		return 1;
+	    expr_order_terms(e);
+	    if (e->terms[1].type != EXPR_INT)
+		return 1;
+	    reg = get_reg(&e->terms[0], data);
+	    if (!reg)
+		return 0;
+	    (*reg) += intnum_get_int(e->terms[1].data.intn);
+	    break;
+	default:
+	    /* Should never get here! */
+	    break;
+    }
+
+    /* Simplify expr, which is now really just the displacement. This
+     * should get rid of the 0's we put in for registers in the callback.
+     */
+    *ep = expr_simplify(*ep);
+    /* e = *ep; */
+
+    return 2;
+}
+
 static int
 expr_checkea_getregsize_callback(ExprItem *ei, void *d)
 {
@@ -888,15 +1026,14 @@ expr_checkea_getregsize_callback(ExprItem *ei, void *d)
 
 int
 expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
-	     unsigned char *displen, unsigned char *modrm,
-	     unsigned char *v_modrm, unsigned char *n_modrm,
-	     unsigned char *sib, unsigned char *v_sib, unsigned char *n_sib)
+	     unsigned char nosplit, unsigned char *displen,
+	     unsigned char *modrm, unsigned char *v_modrm,
+	     unsigned char *n_modrm, unsigned char *sib, unsigned char *v_sib,
+	     unsigned char *n_sib)
 {
     expr *e = *ep;
     const intnum *intn;
     long dispval;
-    int i;
-    int *reg;
 
     if (*addrsize == 0) {
 	/* we need to figure out the address size from what we know about:
@@ -927,8 +1064,25 @@ expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	}
     }
 
-    if (*addrsize == 32 && (*n_modrm || *n_sib)) {
-    } else if (*addrsize == 16 && *n_modrm) {
+    if (*addrsize == 32 && ((*n_modrm && !*v_modrm) || (*n_sib && !*v_sib))) {
+	int reg32mult[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+	/*int basereg = 0;*/    /* "base" register (for SIB) */
+	int indexreg = 0;   /* "index" register (for SIB) */
+	
+	switch (expr_checkea_getregusage(ep, &indexreg, reg32mult,
+					 expr_checkea_get_reg32)) {
+	    case 0:
+		e = *ep;
+		ErrorAt(e->filename, e->line, _("invalid effective address"));
+		return 0;
+	    case 1:
+		return 1;
+	    default:
+		e = *ep;
+		break;
+	}
+
+    } else if (*addrsize == 16 && *n_modrm && !*v_modrm) {
 	static const unsigned char modrm16[16] = {
 	    0006 /* disp16  */, 0007 /* [BX]    */, 0004 /* [SI]    */,
 	    0000 /* [BX+SI] */, 0005 /* [DI]    */, 0001 /* [BX+DI] */,
@@ -937,7 +1091,7 @@ expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	    0003 /* [BP+DI] */, 0377 /* invalid */, 0377 /* invalid */,
 	    0377 /* invalid */
 	};
-	checkea_invalid16_data data;
+	checkea_invalid16_data reg16mult = {0, 0, 0, 0};
 	enum {
 	    HAVE_NONE = 0,
 	    HAVE_BX = 1<<0,
@@ -946,132 +1100,40 @@ expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	    HAVE_BP = 1<<3
 	} havereg = HAVE_NONE;
 
-	data.bx = 0;
-	data.si = 0;
-	data.di = 0;
-	data.bp = 0;
-
 	/* 16-bit cannot have SIB */
 	*sib = 0;
 	*v_sib = 0;
 	*n_sib = 0;
 
-	/* Determine if expression is superficially valid:
-	 * Valid expr should be [(int-equiv expn)]+[reg*(int-equiv expn)+...]
-	 * where the [...] parts are optional.
-	 * To check this, first look at top expn operator.. if it's not ADD or
-	 * MUL, then no registers are valid for use.
-	 */
-	*ep = expr_simplify(*ep);
-	e = *ep;
-	switch (expr_checkea_distcheck_reg(ep)) {
+	switch (expr_checkea_getregusage(ep, (int *)NULL, &reg16mult,
+					 expr_checkea_get_reg16)) {
 	    case 0:
+		e = *ep;
 		ErrorAt(e->filename, e->line, _("invalid effective address"));
 		return 0;
-	    case 2:
-		/* Need to simplify again */
-		*ep = expr_simplify(*ep);
+	    case 1:
+		return 1;
+	    default:
 		e = *ep;
 		break;
-	    default:
-		break;
 	}
 
-	switch (e->op) {
-	    case EXPR_ADD:
-		/* Prescan for non-int multipliers.
-		 * This is because if any of the terms is a more complex
-		 * expr (eg, undetermined value), we don't want to try to
-		 * figure out *any* of the expression, because each register
-		 * lookup overwrites the register with a 0 value!  And storing
-		 * the state of this routine from one excution to the next
-		 * would be a major chore.
-		 */
-		for (i=0; i<e->numterms; i++)
-		    if (e->terms[i].type == EXPR_EXPR) {
-			if (e->terms[i].data.expn->numterms > 2)
-			    return 1;
-			expr_order_terms(e->terms[i].data.expn);
-			if (e->terms[i].data.expn->terms[1].type != EXPR_INT)
-			    return 1;
-		    }
-
-		/* FALLTHROUGH */
-	    case EXPR_IDENT:
-		/* Check each term for register (and possible multiplier). */
-		for (i=0; i<e->numterms; i++) {
-		    if (e->terms[i].type == EXPR_REG) {
-			reg = expr_checkea_get_reg16(&e->terms[i], &data);
-			if (!reg) {
-			    ErrorAt(e->filename, e->line,
-				    _("invalid effective address"));
-			    return 0;
-			}
-			(*reg)++;
-		    } else if (e->terms[i].type == EXPR_EXPR) {
-			/* Already ordered from ADD above, just grab the value.
-			 * Sanity check for EXPR_INT.
-			 */
-			if (e->terms[i].data.expn->terms[0].type != EXPR_REG)
-			    InternalError(__LINE__, __FILE__,
-					  _("Register not found in reg expn"));
-			if (e->terms[i].data.expn->terms[1].type != EXPR_INT)
-			    InternalError(__LINE__, __FILE__,
-					  _("Non-integer value in reg expn"));
-			reg =
-			    expr_checkea_get_reg16(&e->terms[i].data.expn->terms[0],
-						   &data);
-			if (!reg) {
-			    ErrorAt(e->filename, e->line,
-				    _("invalid effective address"));
-			    return 0;
-			}
-			(*reg) +=
-			    intnum_get_int(e->terms[i].data.expn->terms[1].data.intn);
-		    }
-		}
-		break;
-	    case EXPR_MUL:
-		/* Here, too, check for non-int multipliers. */
-		if (e->numterms > 2)
-		    return 1;
-		expr_order_terms(e);
-		if (e->terms[1].type != EXPR_INT)
-		    return 1;
-		reg = expr_checkea_get_reg16(&e->terms[0], &data);
-		if (!reg) {
-		    ErrorAt(e->filename, e->line,
-			    _("invalid effective address"));
-		    return 0;
-		}
-		(*reg) += intnum_get_int(e->terms[1].data.intn);
-		break;
-	    default:
-		/* Should never get here! */
-		break;
-	}
-
-	/* negative reg multipliers are illegal. */
-	if (data.bx < 0 || data.si < 0 || data.di < 0 || data.bp < 0) {
+	/* reg multipliers not 0 or 1 are illegal. */
+	if (reg16mult.bx & ~1 || reg16mult.si & ~1 || reg16mult.di & ~1 ||
+	    reg16mult.bp & ~1) {
 	    ErrorAt(e->filename, e->line, _("invalid effective address"));
 	    return 0;
 	}
 
 	/* Set havereg appropriately */
-	if (data.bx > 0)
+	if (reg16mult.bx > 0)
 	    havereg |= HAVE_BX;
-	if (data.si > 0)
+	if (reg16mult.si > 0)
 	    havereg |= HAVE_SI;
-	if (data.di > 0)
+	if (reg16mult.di > 0)
 	    havereg |= HAVE_DI;
-	if (data.bp > 0)
+	if (reg16mult.bp > 0)
 	    havereg |= HAVE_BP;
-
-	/* Simplify expr, which is now really just the displacement. This
-	 * should get rid of the 0's we put in for registers in the callback.
-	 */
-	*ep = expr_simplify(*ep);
-	e = *ep;
 
 	/* Check the modrm value for invalid combinations. */
 	if (modrm16[havereg] & 0070) {
@@ -1260,7 +1322,7 @@ expr *
 expr_simplify(expr *e)
 {
     e = expr_xform_neg_tree(e);
-    e = expr_level_tree(e, 1);
+    e = expr_level_tree(e, 1, 1);
     return e;
 }
 

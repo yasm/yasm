@@ -325,6 +325,7 @@ memaddr: memexpr	    { $$ = effaddr_new_expr($1); SetEASegment($$, 0); }
     | BYTE memaddr	    { $$ = $2; SetEALen($$, 1); }
     | WORD memaddr	    { $$ = $2; SetEALen($$, 2); }
     | DWORD memaddr	    { $$ = $2; SetEALen($$, 4); }
+    | NOSPLIT memaddr	    { $$ = $2; SetEANosplit($$, 1); }
 ;
 
 mem: '[' memaddr ']'	{ $$ = $2; }

@@ -66,6 +66,8 @@ struct effaddr {
     unsigned char valid_sib;	/* 1 if SIB byte currently valid, 0 if not */
     unsigned char need_sib;	/* 1 if SIB byte needed, 0 if not,
 				   0xff if unknown */
+    unsigned char nosplit;	/* 1 if reg*2 should not be split into
+				   reg+reg. (0 if not) */
 };
 
 struct immval {
@@ -197,6 +199,7 @@ effaddr_new_reg(unsigned long reg)
     ea->need_modrm = 1;
     ea->valid_sib = 0;
     ea->need_sib = 0;
+    ea->nosplit = 0;
 
     return ea;
 }
@@ -215,6 +218,7 @@ effaddr_new_expr(expr *expr_ptr)
     ea->valid_sib = 0;
     ea->need_sib = 0xff;    /* we won't know until we know more about expr and
 			       the BITS/address override setting */
+    ea->nosplit = 0;
 
     return ea;
 }
@@ -232,6 +236,7 @@ effaddr_new_imm(immval *im_ptr, unsigned char im_len)
     ea->need_modrm = 0;
     ea->valid_sib = 0;
     ea->need_sib = 0;
+    ea->nosplit = 0;
 
     return ea;
 }
@@ -290,6 +295,15 @@ SetEALen(effaddr *ptr, unsigned char len)
      */
 
     ptr->len = len;
+}
+
+void
+SetEANosplit(effaddr *ptr, unsigned char nosplit)
+{
+    if (!ptr)
+	return;
+
+    ptr->nosplit = nosplit;
 }
 
 effaddr *
@@ -556,9 +570,10 @@ bytecode_print(const bytecode *bc)
 		else
 		    printf("(nil)");
 		printf("\n");
-		printf(" Len=%u SegmentOv=%02x\n",
+		printf(" Len=%u SegmentOv=%02x NoSplit=%u\n",
 		       (unsigned int)bc->data.insn.ea->len,
-		       (unsigned int)bc->data.insn.ea->segment);
+		       (unsigned int)bc->data.insn.ea->segment,
+		       (unsigned int)bc->data.insn.ea->nosplit);
 		printf(" ModRM=%03o ValidRM=%u NeedRM=%u\n",
 		       (unsigned int)bc->data.insn.ea->modrm,
 		       (unsigned int)bc->data.insn.ea->valid_modrm,
@@ -686,7 +701,7 @@ bytecode_parser_finalize_insn(bytecode *bc)
 	     * displacement.
 	     */
 	    if (!expr_checkea(&ea->disp, &bc->data.insn.addrsize,
-			      bc->mode_bits, &ea->len, &ea->modrm,
+			      bc->mode_bits, ea->nosplit, &ea->len, &ea->modrm,
 			      &ea->valid_modrm, &ea->need_modrm, &ea->sib,
 			      &ea->valid_sib, &ea->need_sib))
 		return;	    /* failed, don't bother checking rest of insn */

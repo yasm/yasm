@@ -71,6 +71,7 @@ immval *immval_new_expr(expr *expr_ptr);
 
 void SetEASegment(effaddr *ptr, unsigned char segment);
 void SetEALen(effaddr *ptr, unsigned char len);
+void SetEANosplit(effaddr *ptr, unsigned char nosplit);
 
 effaddr *GetInsnEA(bytecode *bc);
 
