@@ -80,12 +80,14 @@ typedef enum {
  * in 64-bit mode or if it wasn't needed to express reg.
  */
 int x86_set_rex_from_reg(unsigned char *rex, unsigned char *low3,
-			 unsigned long reg, x86_rex_bit_pos rexbit);
+			 unsigned long reg, unsigned char bits,
+			 x86_rex_bit_pos rexbit);
 
 void x86_ea_set_segment(/*@null@*/ effaddr *ea, unsigned char segment,
 			unsigned long lindex);
 void x86_ea_set_disponly(effaddr *ea);
-effaddr *x86_ea_new_reg(unsigned long reg, unsigned char *rex);
+effaddr *x86_ea_new_reg(unsigned long reg, unsigned char *rex,
+			unsigned char bits);
 effaddr *x86_ea_new_imm(/*@keep@*/expr *imm, unsigned char im_len);
 effaddr *x86_ea_new_expr(/*@keep@*/ expr *e);
 
@@ -150,7 +152,7 @@ int x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 		     unsigned char *modrm, unsigned char *v_modrm,
 		     unsigned char *n_modrm, unsigned char *sib,
 		     unsigned char *v_sib, unsigned char *n_sib,
-		     calc_bc_dist_func calc_bc_dist);
+		     unsigned char *rex, calc_bc_dist_func calc_bc_dist);
 
 void x86_switch_cpu(const char *cpuid, unsigned long lindex);
 

@@ -37,27 +37,46 @@
 #include "expr-int.h"
 
 
+typedef struct x86_checkea_reg3264_data {
+    int *regs;		/* total multiplier for each reg */
+    unsigned char bits;
+    unsigned char addrsize;
+} x86_checkea_reg3264_data;
+
 /* Only works if ei->type == EXPR_REG (doesn't check).
  * Overwrites ei with intnum of 0 (to eliminate regs from the final expr).
  */
 static /*@null@*/ /*@dependent@*/ int *
-x86_expr_checkea_get_reg32(ExprItem *ei, /*returned*/ void *d)
+x86_expr_checkea_get_reg3264(ExprItem *ei, int *regnum, /*returned*/ void *d)
 {
-    int *data = d;
-    int *ret;
+    x86_checkea_reg3264_data *data = d;
 
-    /* don't allow 16-bit registers */
-    if ((ei->data.reg & ~0xF) != X86_REG32)
-	return 0;
-
-    ret = &data[ei->data.reg & 0xF];
+    switch ((x86_expritem_reg_size)(ei->data.reg & ~0xF)) {
+	case X86_REG32:
+	    if (data->addrsize != 32)
+		return 0;
+	    *regnum = ei->data.reg & 0x7;
+	    break;
+	case X86_REG64:
+	    if (data->addrsize != 64)
+		return 0;
+	    *regnum = ei->data.reg & 0xF;
+	    break;
+	case X86_RIP:
+	    if (data->bits != 64)
+		return 0;
+	    *regnum = 16;
+	    break;
+	default:
+	    return 0;
+    }
 
     /* overwrite with 0 to eliminate register from displacement expr */
     ei->type = EXPR_INT;
     ei->data.intn = intnum_new_uint(0);
 
     /* we're okay */
-    return ret;
+    return &data->regs[*regnum];
 }
 
 typedef struct x86_checkea_reg16_data {
@@ -68,14 +87,13 @@ typedef struct x86_checkea_reg16_data {
  * Overwrites ei with intnum of 0 (to eliminate regs from the final expr).
  */
 static /*@null@*/ int *
-x86_expr_checkea_get_reg16(ExprItem *ei, void *d)
+x86_expr_checkea_get_reg16(ExprItem *ei, int *regnum, void *d)
 {
     x86_checkea_reg16_data *data = d;
     /* in order: ax,cx,dx,bx,sp,bp,si,di */
     /*@-nullassign@*/
     static int *reg16[8] = {0,0,0,0,0,0,0,0};
     /*@=nullassign@*/
-    int *ret;
 
     reg16[3] = &data->bx;
     reg16[5] = &data->bp;
@@ -87,10 +105,10 @@ x86_expr_checkea_get_reg16(ExprItem *ei, void *d)
 	return 0;
 
     /* & 7 for sanity check */
-    ret = reg16[ei->data.reg & 0xF];
+    *regnum = ei->data.reg & 0x7;
 
     /* only allow BX, SI, DI, BP */
-    if (!ret)
+    if (!reg16[*regnum])
 	return 0;
 
     /* overwrite with 0 to eliminate register from displacement expr */
@@ -98,7 +116,7 @@ x86_expr_checkea_get_reg16(ExprItem *ei, void *d)
     ei->data.intn = intnum_new_uint(0);
 
     /* we're okay */
-    return ret;
+    return reg16[*regnum];
 }
 
 /* Distribute over registers to help bring them to the topmost level of e.
@@ -223,11 +241,13 @@ x86_expr_checkea_distcheck_reg(expr **ep)
  */
 static int
 x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
-			     int *(*get_reg)(ExprItem *ei, void *d),
+			     int *(*get_reg)(ExprItem *ei, int *regnum,
+					     void *d),
 			     calc_bc_dist_func calc_bc_dist)
 {
     int i;
     int *reg;
+    int regnum;
     expr *e;
 
     /*@-unqualifiedtrans@*/
@@ -271,12 +291,12 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
 	    /* Check each term for register (and possible multiplier). */
 	    for (i=0; i<e->numterms; i++) {
 		if (e->terms[i].type == EXPR_REG) {
-		    reg = get_reg(&e->terms[i], data);
+		    reg = get_reg(&e->terms[i], &regnum, data);
 		    if (!reg)
 			return 0;
 		    (*reg)++;
 		    if (indexreg)
-			*indexreg = reg-(int *)data;
+			*indexreg = regnum;
 		} else if (e->terms[i].type == EXPR_EXPR) {
 		    /* Already ordered from ADD above, just grab the value.
 		     * Sanity check for EXPR_INT.
@@ -287,13 +307,14 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
 		    if (e->terms[i].data.expn->terms[1].type != EXPR_INT)
 			cur_we->internal_error(
 			    N_("Non-integer value in reg expn"));
-		    reg = get_reg(&e->terms[i].data.expn->terms[0], data);
+		    reg = get_reg(&e->terms[i].data.expn->terms[0], &regnum,
+				  data);
 		    if (!reg)
 			return 0;
 		    (*reg) +=
 			intnum_get_int(e->terms[i].data.expn->terms[1].data.intn);
 		    if (indexreg && *reg > 0)
-			*indexreg = reg-(int *)data;
+			*indexreg = regnum;
 		}
 	    }
 	    break;
@@ -304,12 +325,12 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
 	    expr_order_terms(e);
 	    if (e->terms[1].type != EXPR_INT)
 		return 1;
-	    reg = get_reg(&e->terms[0], data);
+	    reg = get_reg(&e->terms[0], &regnum, data);
 	    if (!reg)
 		return 0;
 	    (*reg) += intnum_get_int(e->terms[1].data.intn);
 	    if (indexreg)
-		*indexreg = reg-(int *)data;
+		*indexreg = regnum;
 	    break;
 	default:
 	    /* Should never get here! */
@@ -330,12 +351,12 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
  * expressions:
  *  wordsize=2 for 16-bit, =4 for 32-bit.
  *  noreg=1 if the *ModRM byte* has no registers used.
- *  isbpreg=1 if BP/EBP is the *only* register used within the *ModRM byte*.
+ *  dispreq=1 if a displacement value is *required* (even if =0).
  */
 /*@-nullstate@*/
 static int
 x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
-			 int isbpreg, unsigned char *displen,
+			 int dispreq, unsigned char *displen,
 			 unsigned char *modrm, unsigned char *v_modrm)
 {
     expr *e = *ep;
@@ -357,7 +378,7 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 		*displen = wordsize;
 		*v_modrm = 1;
 		break;
-	    } else if (isbpreg) {
+	    } else if (dispreq) {
 		/* for BP/EBP, there *must* be a displacement value, but we
 		 * may not know the size (8 or 16/32) for sure right now.
 		 * We can't leave displen at 0, because that just means
@@ -409,7 +430,7 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 		 * The Mod bits of ModRM are set to 0 above, and
 		 * we're done with the ModRM byte!
 		 *
-		 * Don't do this if we came from isbpreg check above, so
+		 * Don't do this if we came from dispreq check above, so
 		 * check *displen.
 		 */
 		expr_delete(e);
@@ -478,6 +499,7 @@ x86_expr_checkea_getregsize_callback(ExprItem *ei, void *d)
 		*addrsize = 32;
 		break;
 	    case X86_REG64:
+	    case X86_RIP:
 		*addrsize = 64;
 		break;
 	    default:
@@ -494,7 +516,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 		 unsigned char *modrm, unsigned char *v_modrm,
 		 unsigned char *n_modrm, unsigned char *sib,
 		 unsigned char *v_sib, unsigned char *n_sib,
-		 calc_bc_dist_func calc_bc_dist)
+		 unsigned char *rex, calc_bc_dist_func calc_bc_dist)
 {
     expr *e = *ep;
 
@@ -505,14 +527,31 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	 * - the bits setting
 	 */
 	switch (*displen) {
-	    case 4:
-		/* must be 32-bit */
-		*addrsize = 32;
-		break;
 	    case 2:
 		/* must be 16-bit */
 		*addrsize = 16;
 		break;
+	    case 8:
+		/* We have to support this for the MemOffs case, but it's
+		 * otherwise illegal.  It's also illegal in non-64-bit mode.
+		 */
+		if (*n_modrm || *n_sib) {
+		    cur_we->error(e->line,
+			N_("invalid effective address (displacement size)"));
+		    return 0;
+		}
+		*addrsize = 64;
+		break;
+	    case 4:
+		/* Must be 32-bit in 16-bit or 32-bit modes.  In 64-bit mode,
+		 * we don't know unless we look at the registers, except in the
+		 * MemOffs case (see the end of this function).
+		 */
+		if (bits != 64 || (!*n_modrm && !*n_sib)) {
+		    *addrsize = 32;
+		    break;
+		}
+		/*@fallthrough@*/
 	    default:
 		/* check for use of 16 or 32-bit registers; if none are used
 		 * default to bits setting.
@@ -527,25 +566,48 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	}
     }
 
-    if (*addrsize == 32 && ((*n_modrm && !*v_modrm) || (*n_sib && !*v_sib))) {
+    if ((*addrsize == 32 || *addrsize == 64) &&
+	((*n_modrm && !*v_modrm) || (*n_sib && !*v_sib))) {
 	int i;
+	unsigned char low3;
 	typedef enum {
-	    REG32_NONE = -1,
-	    REG32_EAX = 0,
-	    REG32_ECX = 1,
-	    REG32_EDX = 2,
-	    REG32_EBX = 3,
-	    REG32_ESP = 4,
-	    REG32_EBP = 5,
-	    REG32_ESI = 6,
-	    REG32_EDI = 7
-	} reg32type;
-	int reg32mult[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-	int basereg = REG32_NONE;	/* "base" register (for SIB) */
-	int indexreg = REG32_NONE;	/* "index" register (for SIB) */
-	
-	switch (x86_expr_checkea_getregusage(ep, &indexreg, reg32mult,
-					     x86_expr_checkea_get_reg32,
+	    REG3264_NONE = -1,
+	    REG3264_EAX = 0,
+	    REG3264_ECX,
+	    REG3264_EDX,
+	    REG3264_EBX,
+	    REG3264_ESP,
+	    REG3264_EBP,
+	    REG3264_ESI,
+	    REG3264_EDI,
+	    REG64_R8,
+	    REG64_R9,
+	    REG64_R10,
+	    REG64_R11,
+	    REG64_R12,
+	    REG64_R13,
+	    REG64_R14,
+	    REG64_R15,
+	    REG64_RIP
+	} reg3264type;
+	int reg3264mult[17] = {0, 0, 0, 0, 0, 0, 0, 0,
+			       0, 0, 0, 0, 0, 0, 0, 0, 0};
+	x86_checkea_reg3264_data reg3264_data;
+	int basereg = REG3264_NONE;	/* "base" register (for SIB) */
+	int indexreg = REG3264_NONE;	/* "index" register (for SIB) */
+
+	/* We can only do 64-bit addresses in 64-bit mode. */
+	if (*addrsize == 64 && bits != 64) {
+	    cur_we->error(e->line,
+		N_("invalid effective address (64-bit in non-64-bit mode)"));
+	    return 0;
+	}
+
+	reg3264_data.regs = reg3264mult;
+	reg3264_data.bits = bits;
+	reg3264_data.addrsize = *addrsize;
+	switch (x86_expr_checkea_getregusage(ep, &indexreg, &reg3264_data,
+					     x86_expr_checkea_get_reg3264,
 					     calc_bc_dist)) {
 	    case 0:
 		e = *ep;
@@ -562,29 +624,30 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	 * This is possible because of the way indexreg is found in
 	 * expr_checkea_getregusage().
 	 */
-	if (indexreg != REG32_NONE && reg32mult[indexreg] == 0)
-	    indexreg = REG32_NONE;
+	if (indexreg != REG3264_NONE && reg3264mult[indexreg] == 0)
+	    indexreg = REG3264_NONE;
 
 	/* Find a basereg (*1, but not indexreg), if there is one.
 	 * Also, if an indexreg hasn't been assigned, try to find one.
 	 * Meanwhile, check to make sure there's no negative register mults.
 	 */
-	for (i=0; i<8; i++) {
-	    if (reg32mult[i] < 0) {
+	for (i=0; i<17; i++) {
+	    if (reg3264mult[i] < 0) {
 		cur_we->error(e->line, N_("invalid effective address"));
 		return 0;
 	    }
-	    if (i != indexreg && reg32mult[i] == 1 && basereg == REG32_NONE)
+	    if (i != indexreg && reg3264mult[i] == 1 &&
+		basereg == REG3264_NONE)
 		basereg = i;
-	    else if (indexreg == REG32_NONE && reg32mult[i] > 0)
+	    else if (indexreg == REG3264_NONE && reg3264mult[i] > 0)
 		indexreg = i;
 	}
 
 	/* Handle certain special cases of indexreg mults when basereg is
 	 * empty.
 	 */
-	if (indexreg != REG32_NONE && basereg == REG32_NONE)
-	    switch (reg32mult[indexreg]) {
+	if (indexreg != REG3264_NONE && basereg == REG3264_NONE)
+	    switch (reg3264mult[indexreg]) {
 		case 1:
 		    /* Only optimize this way if nosplit wasn't specified */
 		    if (!nosplit) {
@@ -596,46 +659,53 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 		    /* Only split if nosplit wasn't specified */
 		    if (!nosplit) {
 			basereg = indexreg;
-			reg32mult[indexreg] = 1;
+			reg3264mult[indexreg] = 1;
 		    }
 		    break;
 		case 3:
 		case 5:
 		case 9:
 		    basereg = indexreg;
-		    reg32mult[indexreg]--;
+		    reg3264mult[indexreg]--;
 		    break;
 	    }
 
 	/* Make sure there's no other registers than the basereg and indexreg
 	 * we just found.
 	 */
-	for (i=0; i<8; i++)
-	    if (i != basereg && i != indexreg && reg32mult[i] != 0) {
+	for (i=0; i<17; i++)
+	    if (i != basereg && i != indexreg && reg3264mult[i] != 0) {
 		cur_we->error(e->line, N_("invalid effective address"));
 		return 0;
 	    }
 
 	/* Check the index multiplier value for validity if present. */
-	if (indexreg != REG32_NONE && reg32mult[indexreg] != 1 &&
-	    reg32mult[indexreg] != 2 && reg32mult[indexreg] != 4 &&
-	    reg32mult[indexreg] != 8) {
+	if (indexreg != REG3264_NONE && reg3264mult[indexreg] != 1 &&
+	    reg3264mult[indexreg] != 2 && reg3264mult[indexreg] != 4 &&
+	    reg3264mult[indexreg] != 8) {
 	    cur_we->error(e->line, N_("invalid effective address"));
 	    return 0;
 	}
 
 	/* ESP is not a legal indexreg. */
-	if (indexreg == REG32_ESP) {
+	if (indexreg == REG3264_ESP) {
 	    /* If mult>1 or basereg is ESP also, there's no way to make it
 	     * legal.
 	     */
-	    if (reg32mult[REG32_ESP] > 1 || basereg == REG32_ESP) {
+	    if (reg3264mult[REG3264_ESP] > 1 || basereg == REG3264_ESP) {
 		cur_we->error(e->line, N_("invalid effective address"));
 		return 0;
 	    }
 	    /* If mult==1 and basereg is not ESP, swap indexreg w/basereg. */
 	    indexreg = basereg;
-	    basereg = REG32_ESP;
+	    basereg = REG3264_ESP;
+	}
+
+	/* RIP is only legal if it's the ONLY register used. */
+	if (indexreg == REG64_RIP ||
+	    (basereg == REG64_RIP && indexreg != REG3264_NONE)) {
+	    cur_we->error(e->line, N_("invalid effective address"));
+	    return 0;
 	}
 
 	/* At this point, we know the base and index registers and that the
@@ -645,17 +715,39 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 
 	/* First determine R/M (Mod is later determined from disp size) */
 	*n_modrm = 1;	/* we always need ModRM */
-	if (basereg == REG32_NONE && indexreg == REG32_NONE) {
-	    /* just a disp32 */
+	if (basereg == REG3264_NONE && indexreg == REG3264_NONE) {
+	    /* Just a disp32: in 64-bit mode the RM encoding is used for RIP
+	     * offset addressing, so we need to use the SIB form instead.
+	     */
+	    if (bits == 64) {
+		*modrm |= 4;
+		*n_sib = 1;
+	    } else {
+		*modrm |= 5;
+		*sib = 0;
+		*v_sib = 0;
+		*n_sib = 0;
+	    }
+	} else if (basereg == REG64_RIP) {
 	    *modrm |= 5;
 	    *sib = 0;
 	    *v_sib = 0;
 	    *n_sib = 0;
-	} else if (indexreg == REG32_NONE) {
+	} else if (indexreg == REG3264_NONE) {
 	    /* basereg only */
-	    *modrm |= basereg;
-	    /* we don't need an SIB *unless* basereg is ESP */
-	    if (basereg == REG32_ESP)
+	    /* Don't need to go to the full effort of determining what type
+	     * of register basereg is, as x86_set_rex_from_reg doesn't pay
+	     * much attention.
+	     */
+	    if (x86_set_rex_from_reg(rex, &low3, X86_REG64 | basereg,
+				     bits, X86_REX_B)) {
+		cur_we->error(e->line,
+		    N_("invalid combination of operands and effective address"));
+		return 0;
+	    }
+	    *modrm |= low3;
+	    /* we don't need an SIB *unless* basereg is ESP or R12 */
+	    if (basereg == REG3264_ESP || basereg == REG64_R12)
 		*n_sib = 1;
 	    else {
 		*sib = 0;
@@ -672,20 +764,33 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	if (*n_sib == 1) {
 	    *sib = 0;	/* start with 0 */
 
-	    /* Special case: no basereg (only happens in disp32[index] case) */
-	    if (basereg == REG32_NONE)
+	    /* Special case: no basereg */
+	    if (basereg == REG3264_NONE)
 		*sib |= 5;
-	    else
-		*sib |= basereg & 7;	/* &7 to sanity check */
+	    else {
+		if (x86_set_rex_from_reg(rex, &low3, X86_REG64 | basereg,
+					 bits, X86_REX_B)) {
+		    cur_we->error(e->line,
+			N_("invalid combination of operands and effective address"));
+		    return 0;
+		}
+		*sib |= low3;
+	    }
 	    
 	    /* Put in indexreg, checking for none case */
-	    if (indexreg == REG32_NONE)
+	    if (indexreg == REG3264_NONE)
 		*sib |= 040;
 		/* Any scale field is valid, just leave at 0. */
 	    else {
-		*sib |= ((unsigned int)indexreg & 7) << 3;
+		if (x86_set_rex_from_reg(rex, &low3, X86_REG64 | indexreg,
+					 bits, X86_REX_X)) {
+		    cur_we->error(e->line,
+			N_("invalid combination of operands and effective address"));
+		    return 0;
+		}
+		*sib |= low3 << 3;
 		/* Set scale field, 1 case -> 0, so don't bother. */
-		switch (reg32mult[indexreg]) {
+		switch (reg3264mult[indexreg]) {
 		    case 2:
 			*sib |= 0100;
 			break;
@@ -702,10 +807,9 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	}
 
 	/* Calculate displacement length (if possible) */
-	return x86_checkea_calc_displen(ep, 4, basereg == REG32_NONE,
-					basereg == REG32_EBP &&
-					    indexreg == REG32_NONE, displen,
-					modrm, v_modrm);
+	return x86_checkea_calc_displen(ep, 4, basereg == REG3264_NONE,
+		    (basereg == REG3264_EBP || basereg == REG64_R13) &&
+			indexreg == REG3264_NONE, displen, modrm, v_modrm);
     } else if (*addrsize == 16 && *n_modrm && !*v_modrm) {
 	static const unsigned char modrm16[16] = {
 	    0006 /* disp16  */, 0007 /* [BX]    */, 0004 /* [SI]    */,
@@ -723,6 +827,13 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	    HAVE_DI = 1<<2,
 	    HAVE_BP = 1<<3
 	} havereg = HAVE_NONE;
+
+	/* 64-bit mode does not allow 16-bit addresses */
+	if (bits == 64) {
+	    cur_we->error(e->line,
+		N_("16-bit addresses not supported in 64-bit mode"));
+	    return 0;
+	}
 
 	/* 16-bit cannot have SIB */
 	*sib = 0;
@@ -775,10 +886,28 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 					v_modrm);
     } else if (!*n_modrm && !*n_sib) {
 	/* Special case for MOV MemOffs opcode: displacement but no modrm. */
-	if (*addrsize == 32)
-	    *displen = 4;
-	else if (*addrsize == 16)
-	    *displen = 2;
+	switch (*addrsize) {
+	    case 64:
+		if (bits != 64) {
+		    cur_we->error(e->line,
+			N_("invalid effective address (64-bit in non-64-bit mode)"));
+		    return 0;
+		}
+		*displen = 8;
+		break;
+	    case 32:
+		*displen = 4;
+		break;
+	    case 16:
+		/* 64-bit mode does not allow 16-bit addresses */
+		if (bits == 64) {
+		    cur_we->error(e->line,
+			N_("16-bit addresses not supported in 64-bit mode"));
+		    return 0;
+		}
+		*displen = 2;
+		break;
+	}
     }
     return 1;
 }

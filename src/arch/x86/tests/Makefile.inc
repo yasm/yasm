@@ -28,6 +28,11 @@ EXTRA_DIST += \
 	src/arch/x86/tests/loopadsz.asm		\
 	src/arch/x86/tests/loopadsz.errwarn	\
 	src/arch/x86/tests/loopadsz.hex		\
+	src/arch/x86/tests/mem64-err.asm	\
+	src/arch/x86/tests/mem64-err.errwarn	\
+	src/arch/x86/tests/mem64.asm		\
+	src/arch/x86/tests/mem64.errwarn	\
+	src/arch/x86/tests/mem64.hex		\
 	src/arch/x86/tests/negequ.asm		\
 	src/arch/x86/tests/negequ.errwarn	\
 	src/arch/x86/tests/negequ.hex		\

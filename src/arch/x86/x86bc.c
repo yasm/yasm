@@ -120,11 +120,12 @@ typedef struct x86_jmprel {
 
 int
 x86_set_rex_from_reg(unsigned char *rex, unsigned char *low3,
-		     unsigned long reg, x86_rex_bit_pos rexbit)
+		     unsigned long reg, unsigned char bits,
+		     x86_rex_bit_pos rexbit)
 {
     *low3 = (unsigned char)(reg&7);
 
-    if (yasm_x86_LTX_mode_bits == 64) {
+    if (bits == 64) {
 	x86_expritem_reg_size size = (x86_expritem_reg_size)(reg & ~0xF);
 
 	if (size == X86_REG8X || (reg & 0xF) >= 8) {
@@ -248,12 +249,12 @@ x86_ea_set_disponly(effaddr *ea)
 }
 
 effaddr *
-x86_ea_new_reg(unsigned long reg, unsigned char *rex)
+x86_ea_new_reg(unsigned long reg, unsigned char *rex, unsigned char bits)
 {
     x86_effaddr *x86_ea;
     unsigned char rm;
 
-    if (x86_set_rex_from_reg(rex, &rm, reg, X86_REX_B))
+    if (x86_set_rex_from_reg(rex, &rm, reg, bits, X86_REX_B))
 	return NULL;
 
     x86_ea = xmalloc(sizeof(x86_effaddr));
@@ -581,7 +582,7 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 				  ea->nosplit, &displen, &eat.modrm,
 				  &eat.valid_modrm, &eat.need_modrm,
 				  &eat.sib, &eat.valid_sib,
-				  &eat.need_sib, calc_bc_dist)) {
+				  &eat.need_sib, &insn->rex, calc_bc_dist)) {
 		expr_delete(temp);
 		/* failed, don't bother checking rest of insn */
 		return BC_RESOLVE_UNKNOWN_LEN|BC_RESOLVE_ERROR;
@@ -890,8 +891,8 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
 	    if (!x86_expr_checkea(&ea->disp, &addrsize, insn->mode_bits,
 				  ea->nosplit, &displen, &eat.modrm,
 				  &eat.valid_modrm, &eat.need_modrm,
-				  &eat.sib, &eat.valid_sib,
-				  &eat.need_sib, common_calc_bc_dist))
+				  &eat.sib, &eat.valid_sib, &eat.need_sib,
+				  &insn->rex,common_calc_bc_dist))
 		cur_we->internal_error(N_("checkea failed"));
 
 	    if (ea->disp) {

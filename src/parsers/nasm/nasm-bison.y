@@ -307,6 +307,7 @@ memaddr: expr		    {
     | BYTE memaddr	    { $$ = $2; ea_set_len($$, 1); }
     | WORD memaddr	    { $$ = $2; ea_set_len($$, 2); }
     | DWORD memaddr	    { $$ = $2; ea_set_len($$, 4); }
+    | QWORD memaddr	    { $$ = $2; ea_set_len($$, 8); }
     | NOSPLIT memaddr	    { $$ = $2; ea_set_nosplit($$, 1); }
 ;
 

@@ -1985,7 +1985,8 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 		case OPA_EA:
 		    switch (op->type) {
 			case INSN_OPERAND_REG:
-			    d.ea = x86_ea_new_reg(op->data.reg, &d.rex);
+			    d.ea = x86_ea_new_reg(op->data.reg, &d.rex,
+						  yasm_x86_LTX_mode_bits);
 			    break;
 			case INSN_OPERAND_SEGREG:
 			    cur_we->internal_error(
@@ -2027,7 +2028,9 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 			d.spare = (unsigned char)(op->data.reg&7);
 		    else if (op->type == INSN_OPERAND_REG) {
 			if (x86_set_rex_from_reg(&d.rex, &d.spare,
-						 op->data.reg, X86_REX_R)) {
+						 op->data.reg,
+						 yasm_x86_LTX_mode_bits,
+						 X86_REX_R)) {
 			    cur_we->error(lindex,
 				N_("invalid combination of opcode and operands"));
 			    return NULL;
@@ -2040,6 +2043,7 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 		    if (op->type == INSN_OPERAND_REG) {
 			unsigned char opadd;
 			if (x86_set_rex_from_reg(&d.rex, &opadd, op->data.reg,
+						 yasm_x86_LTX_mode_bits,
 						 X86_REX_B)) {
 			    cur_we->error(lindex,
 				N_("invalid combination of opcode and operands"));
@@ -2060,10 +2064,13 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 		    break;
 		case OPA_SpareEA:
 		    if (op->type == INSN_OPERAND_REG) {
-			d.ea = x86_ea_new_reg(op->data.reg, &d.rex);
+			d.ea = x86_ea_new_reg(op->data.reg, &d.rex,
+					      yasm_x86_LTX_mode_bits);
 			if (!d.ea ||
 			    x86_set_rex_from_reg(&d.rex, &d.spare,
-						 op->data.reg, X86_REX_R)) {
+						 op->data.reg,
+						 yasm_x86_LTX_mode_bits,
+						 X86_REX_R)) {
 			    cur_we->error(lindex,
 				N_("invalid combination of opcode and operands"));
 			    if (d.ea)

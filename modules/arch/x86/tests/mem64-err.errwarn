@@ -1,0 +1,5 @@
+-:2: 16-bit addresses not supported in 64-bit mode
+-:4: 16-bit addresses not supported in 64-bit mode
+-:5: invalid effective address
+-:6: invalid effective address
+-:7: invalid combination of operands and effective address
