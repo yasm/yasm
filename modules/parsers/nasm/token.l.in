@@ -100,7 +100,7 @@ WS       [ \t\r]
 }
 
     /* 0AAh form of hexidecimal number */
-{DIGIT}{HEXDIGIT}+h {
+{DIGIT}{HEXDIGIT}*h {
     yytext[strlen(yytext)-1] = '\0';  /* strip off 'h' */
     yylval.intn = intnum_new_hex(yytext);
     return INTNUM;
