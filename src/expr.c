@@ -872,7 +872,7 @@ expr_get_symrec(expr **ep, int simplify)
 /*@=unqualifiedtrans =nullderef -nullstate -onlytrans@*/
 
 void
-expr_print(FILE *f, expr *e)
+expr_print(FILE *f, const expr *e)
 {
     static const char *regs[] = {"ax","cx","dx","bx","sp","bp","si","di"};
     char opstr[3];

@@ -79,6 +79,6 @@ void expr_expand_labelequ(expr *e, const section *srcsect, int withstart,
 /*@dependent@*/ /*@null@*/ const symrec *expr_get_symrec(expr **ep,
 							 int simplify);
 
-void expr_print(FILE *f, /*@null@*/ expr *);
+void expr_print(FILE *f, /*@null@*/ const expr *);
 
 #endif
