@@ -69,4 +69,6 @@ AC_OUTPUT(Makefile
 	src/optimizers/dbg/Makefile
 	src/objfmts/Makefile
 	src/objfmts/dbg/Makefile
+	doc/Makefile
+	doc/contrib/Makefile
 )
