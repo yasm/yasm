@@ -1,4 +1,4 @@
-/* $Id: compat-queue.h,v 1.1 2001/08/19 04:32:02 peter Exp $
+/* $Id: compat-queue.h,v 1.2 2001/08/19 04:33:19 peter Exp $
  * <sys/queue.h> implementation for systems that don't have it.
  */
 /*	$OpenBSD: queue.h,v 1.16 2000/09/07 19:47:59 art Exp $	*/
@@ -35,8 +35,8 @@
  *	@(#)queue.h	8.5 (Berkeley) 8/20/94
  */
 
-#ifndef	_SYS_QUEUE_H_
-#define	_SYS_QUEUE_H_
+#ifndef	SYS_QUEUE_H
+#define	SYS_QUEUE_H
 
 /*
  * This file defines five types of data structures: singly-linked lists, 
@@ -486,4 +486,4 @@ struct {								\
 		(elm2)->field.cqe_prev->field.cqe_next = (elm2);	\
 } while (0)
 
-#endif	/* !_SYS_QUEUE_H_ */
+#endif	/* !SYS_QUEUE_H */
