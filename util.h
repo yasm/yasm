@@ -112,16 +112,10 @@
 
 #ifdef __RCSID
 # define RCSID(s)	__RCSID(s)
+#elif defined(__GNUC__) && defined(__ELF__)
+# define RCSID(s)	__asm__(".ident\t\"" s "\"")
 #else
-# ifdef __GNUC__
-#  ifdef __ELF__
-#   define RCSID(s)	__asm__(".ident\t\"" s "\"")
-#  else
-#   define RCSID(s)	static const char rcsid[] = s
-#  endif
-# else
-#  define RCSID(s)	static const char rcsid[] = s
-# endif
+# define RCSID(s)	static const char rcsid[] = s
 #endif
 
 #ifdef WITH_DMALLOC
