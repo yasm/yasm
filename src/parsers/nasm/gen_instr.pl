@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.20 2001/09/16 19:44:49 peter Exp $
-# Generates bison.y and token.l from instrs.dat for YASM
+# $Id: gen_instr.pl,v 1.21 2001/09/16 19:47:21 peter Exp $
+# Generates NASM-compatible bison.y and token.l from instrs.dat.
 #
 #    Copyright (C) 2001  Michael Urman
 #
