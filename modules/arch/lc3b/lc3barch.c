@@ -125,10 +125,7 @@ yasm_arch_module yasm_lc3b_LTX_arch = {
     yasm_lc3b__parse_cpu,
     yasm_lc3b__parse_check_id,
     lc3b_parse_directive,
-    yasm_lc3b__parse_insn,
-    NULL,	/*yasm_lc3b__parse_prefix*/
-    NULL,	/*yasm_lc3b__parse_seg_prefix*/
-    NULL,	/*yasm_lc3b__parse_seg_override*/
+    yasm_lc3b__finalize_insn,
     lc3b_floatnum_tobytes,
     yasm_lc3b__intnum_fixup_rel,
     yasm_lc3b__intnum_tobytes,

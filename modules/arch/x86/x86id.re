@@ -259,6 +259,7 @@ typedef struct x86_insn_info {
     data[1] = ((mod)<<8) | \
     	      ((unsigned char)(sizeof(group##_insn)/sizeof(x86_insn_info))); \
     data[2] = cpu; \
+    data[3] = arch_x86->mode_bits; \
     } while (0)
 
 #define RET_INSN(group, mod, cpu)	do { \
@@ -1701,20 +1702,25 @@ static const x86_insn_info xbts_insn[] = {
 };
 
 
-static yasm_bytecode *
-x86_new_jmp(yasm_arch *arch, const unsigned long data[4], int num_operands,
-	    yasm_insn_operands *operands, x86_insn_info *jinfo,
-	    yasm_bytecode *prev_bc, unsigned long line)
+static void
+x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
+		 const unsigned long data[4], int num_operands,
+		 yasm_insn_operands *operands, int num_prefixes,
+		 unsigned long **prefixes, int num_segregs,
+		 const unsigned long *segregs, x86_insn_info *jinfo)
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
-    x86_new_jmp_data d;
+    x86_jmp *jmp;
     int num_info = (int)(data[1]&0xFF);
     x86_insn_info *info = (x86_insn_info *)data[0];
     unsigned long mod_data = data[1] >> 8;
+    unsigned char mode_bits = (unsigned char)data[3];
     yasm_insn_operand *op;
     static const unsigned char size_lookup[] = {0, 8, 16, 32, 64, 80, 128, 0};
 
-    d.line = line;
+    jmp = yasm_xmalloc(sizeof(x86_jmp));
+    jmp->mode_bits = mode_bits;
+    jmp->lockrep_pre = 0;
 
     /* We know the target is in operand 0, but sanity check for Imm. */
     op = yasm_ops_first(operands);
@@ -1724,64 +1730,65 @@ x86_new_jmp(yasm_arch *arch, const unsigned long data[4], int num_operands,
     /* Far target needs to become "seg imm:imm". */
     if ((jinfo->operands[0] & OPTM_MASK) == OPTM_Far) {
 	yasm_expr *copy = yasm_expr_copy(op->data.val);
-	d.target = yasm_expr_create_tree(
-	    yasm_expr_create_branch(YASM_EXPR_SEG, op->data.val, line),
-	    YASM_EXPR_SEGOFF, copy, line);
+	jmp->target = yasm_expr_create_tree(
+	    yasm_expr_create_branch(YASM_EXPR_SEG, op->data.val, bc->line),
+	    YASM_EXPR_SEGOFF, copy, bc->line);
     } else
-	d.target = op->data.val;
+	jmp->target = op->data.val;
 
     /* Need to save jump origin for relative jumps. */
-    d.origin = yasm_symtab_define_label2("$", prev_bc, 0, line);
+    jmp->origin = yasm_symtab_define_label2("$", prev_bc, 0, bc->line);
 
     /* Initially assume no far opcode is available. */
-    d.far_op_len = 0;
+    jmp->farop.opcode_len = 0;
 
     /* See if the user explicitly specified short/near/far. */
     switch ((int)(jinfo->operands[0] & OPTM_MASK)) {
 	case OPTM_Short:
-	    d.op_sel = JMP_SHORT_FORCED;
+	    jmp->op_sel = JMP_SHORT_FORCED;
 	    break;
 	case OPTM_Near:
-	    d.op_sel = JMP_NEAR_FORCED;
+	    jmp->op_sel = JMP_NEAR_FORCED;
 	    break;
 	case OPTM_Far:
-	    d.op_sel = JMP_FAR;
-	    d.far_op_len = info->opcode_len;
-	    d.far_op[0] = info->opcode[0];
-	    d.far_op[1] = info->opcode[1];
-	    d.far_op[2] = info->opcode[2];
+	    jmp->op_sel = JMP_FAR;
+	    jmp->farop.opcode_len = info->opcode_len;
+	    jmp->farop.opcode[0] = info->opcode[0];
+	    jmp->farop.opcode[1] = info->opcode[1];
+	    jmp->farop.opcode[2] = info->opcode[2];
 	    break;
 	default:
-	    d.op_sel = JMP_NONE;
+	    jmp->op_sel = JMP_NONE;
     }
 
     /* Set operand size */
-    d.opersize = jinfo->opersize;
+    jmp->opersize = jinfo->opersize;
 
     /* Check for address size setting in second operand, if present */
     if (jinfo->num_operands > 1 &&
 	(jinfo->operands[1] & OPA_MASK) == OPA_AdSizeR)
-	d.addrsize = (unsigned char)size_lookup[(jinfo->operands[1] &
+	jmp->addrsize = (unsigned char)size_lookup[(jinfo->operands[1] &
 						 OPS_MASK)>>OPS_SHIFT];
     else
-	d.addrsize = 0;
+	jmp->addrsize = 0;
 
     /* Check for address size override */
     if (jinfo->modifiers & MOD_AdSizeR)
-	d.addrsize = (unsigned char)(mod_data & 0xFF);
+	jmp->addrsize = (unsigned char)(mod_data & 0xFF);
 
     /* Scan through other infos for this insn looking for short/near versions.
      * Needs to match opersize and number of operands, also be within CPU.
      */
-    d.short_op_len = 0;
-    d.near_op_len = 0;
-    for (; num_info>0 && (d.short_op_len == 0 || d.near_op_len == 0);
+    jmp->shortop.opcode_len = 0;
+    jmp->nearop.opcode_len = 0;
+    for (; num_info>0 && (jmp->shortop.opcode_len == 0 ||
+			  jmp->nearop.opcode_len == 0);
 	 num_info--, info++) {
 	unsigned long cpu = info->cpu | data[2];
 
-	if ((cpu & CPU_64) && arch_x86->mode_bits != 64)
+	if ((cpu & CPU_64) && mode_bits != 64)
 	    continue;
-	if ((cpu & CPU_Not64) && arch_x86->mode_bits == 64)
+	if ((cpu & CPU_Not64) && mode_bits == 64)
 	    continue;
 	cpu &= ~(CPU_64 | CPU_Not64);
 
@@ -1794,48 +1801,67 @@ x86_new_jmp(yasm_arch *arch, const unsigned long data[4], int num_operands,
 	if ((info->operands[0] & OPA_MASK) != OPA_JmpRel)
 	    continue;
 
-	if (info->opersize != d.opersize)
+	if (info->opersize != jmp->opersize)
 	    continue;
 
 	switch ((int)(info->operands[0] & OPTM_MASK)) {
 	    case OPTM_Short:
-		d.short_op_len = info->opcode_len;
-		d.short_op[0] = info->opcode[0];
-		d.short_op[1] = info->opcode[1];
-		d.short_op[2] = info->opcode[2];
+		jmp->shortop.opcode_len = info->opcode_len;
+		jmp->shortop.opcode[0] = info->opcode[0];
+		jmp->shortop.opcode[1] = info->opcode[1];
+		jmp->shortop.opcode[2] = info->opcode[2];
 		if (info->modifiers & MOD_Op0Add)
-		    d.short_op[0] += (unsigned char)(mod_data & 0xFF);
+		    jmp->shortop.opcode[0] += (unsigned char)(mod_data & 0xFF);
 		break;
 	    case OPTM_Near:
-		d.near_op_len = info->opcode_len;
-		d.near_op[0] = info->opcode[0];
-		d.near_op[1] = info->opcode[1];
-		d.near_op[2] = info->opcode[2];
+		jmp->nearop.opcode_len = info->opcode_len;
+		jmp->nearop.opcode[0] = info->opcode[0];
+		jmp->nearop.opcode[1] = info->opcode[1];
+		jmp->nearop.opcode[2] = info->opcode[2];
 		if (info->modifiers & MOD_Op1Add)
-		    d.near_op[1] += (unsigned char)(mod_data & 0xFF);
+		    jmp->nearop.opcode[1] += (unsigned char)(mod_data & 0xFF);
 		if ((info->operands[0] & OPAP_MASK) == OPAP_JmpFar) {
-		    d.far_op_len = 1;
-		    d.far_op[0] = info->opcode[info->opcode_len];
+		    jmp->farop.opcode_len = 1;
+		    jmp->farop.opcode[0] = info->opcode[info->opcode_len];
 		}
 		break;
 	}
     }
 
-    return yasm_x86__bc_create_jmp(arch, &d);
+    if ((jmp->op_sel == JMP_SHORT_FORCED) && (jmp->nearop.opcode_len == 0))
+	yasm__error(bc->line,
+		    N_("no SHORT form of that jump instruction exists"));
+    if ((jmp->op_sel == JMP_NEAR_FORCED) && (jmp->shortop.opcode_len == 0))
+	yasm__error(bc->line,
+		    N_("no NEAR form of that jump instruction exists"));
+
+    /* Transform the bytecode */
+    yasm_x86__bc_transform_jmp(bc, jmp);
+    yasm_x86__bc_apply_prefixes(bc, num_prefixes, prefixes, num_segregs,
+				segregs);
 }
 
-yasm_bytecode *
-yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
-		     int num_operands, yasm_insn_operands *operands,
-		     yasm_bytecode *prev_bc, unsigned long line)
+void
+yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
+			yasm_bytecode *prev_bc, const unsigned long data[4],
+			int num_operands,
+			/*@null@*/ yasm_insn_operands *operands,
+			int num_prefixes, unsigned long **prefixes,
+			int num_segregs, const unsigned long *segregs)
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
-    x86_new_insn_data d;
+    x86_insn *insn;
     int num_info = (int)(data[1]&0xFF);
     x86_insn_info *info = (x86_insn_info *)data[0];
     unsigned long mod_data = data[1] >> 8;
+    unsigned char mode_bits = (unsigned char)data[3];
     int found = 0;
     yasm_insn_operand *op;
+    /*@null@*/ yasm_symrec *origin;
+    /*@null@*/ yasm_expr *imm;
+    unsigned char im_len;
+    unsigned char im_sign;
+    unsigned char spare;
     int i;
     static const unsigned int size_lookup[] = {0, 1, 2, 4, 8, 10, 16, 0};
 
@@ -1850,9 +1876,9 @@ yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
 	/* Match CPU */
 	cpu = info->cpu | data[2];
 
-	if ((cpu & CPU_64) && arch_x86->mode_bits != 64)
+	if ((cpu & CPU_64) && mode_bits != 64)
 	    continue;
-	if ((cpu & CPU_Not64) && arch_x86->mode_bits == 64)
+	if ((cpu & CPU_Not64) && mode_bits == 64)
 	    continue;
 	cpu &= ~(CPU_64 | CPU_Not64);
 
@@ -2100,8 +2126,9 @@ yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
 
     if (!found) {
 	/* Didn't find a matching one */
-	yasm__error(line, N_("invalid combination of opcode and operands"));
-	return NULL;
+	yasm__error(bc->line,
+		    N_("invalid combination of opcode and operands"));
+	return;
     }
 
     /* Extended error/warning handling */
@@ -2113,15 +2140,15 @@ yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
 	    switch ((int)((info->modifiers & MOD_ExtIndex_MASK)
 			  >> MOD_ExtIndex_SHIFT)) {
 		case 0:
-		    yasm__error(line, N_("mismatch in operand sizes"));
+		    yasm__error(bc->line, N_("mismatch in operand sizes"));
 		    break;
 		case 1:
-		    yasm__error(line, N_("operand size not specified"));
+		    yasm__error(bc->line, N_("operand size not specified"));
 		    break;
 		default:
 		    yasm_internal_error(N_("unrecognized x86 ext mod index"));
 	    }
-	    return NULL;    /* It was an error */
+	    return;	/* It was an error */
 	case MOD_ExtWarn:
 	    switch ((int)((info->modifiers & MOD_ExtIndex_MASK)
 			  >> MOD_ExtIndex_SHIFT)) {
@@ -2134,69 +2161,74 @@ yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
     }
 
     /* Shortcut to JmpRel */
-    if (operands && (info->operands[0] & OPA_MASK) == OPA_JmpRel)
-	return x86_new_jmp(arch, data, num_operands, operands, info, prev_bc,
-			   line);
+    if (operands && (info->operands[0] & OPA_MASK) == OPA_JmpRel) {
+	x86_finalize_jmp(arch, bc, prev_bc, data, num_operands, operands,
+			 num_prefixes, prefixes, num_segregs, segregs, info);
+	return;
+    }
 
     /* Copy what we can from info */
-    d.line = line;
-    d.ea = NULL;
-    d.ea_origin = NULL;
-    d.imm = NULL;
-    d.opersize = info->opersize;
-    d.def_opersize_64 = info->def_opersize_64;
-    d.special_prefix = info->special_prefix;
-    d.op_len = info->opcode_len;
-    d.op[0] = info->opcode[0];
-    d.op[1] = info->opcode[1];
-    d.op[2] = info->opcode[2];
-    d.spare = info->spare;
-    d.im_len = 0;
-    d.im_sign = 0;
-    d.shift_op = 0;
-    d.signext_imm8_op = 0;
-    d.shortmov_op = 0;
-    d.rex = 0;
+    insn = yasm_xmalloc(sizeof(x86_insn));
+    insn->mode_bits = mode_bits;
+    insn->ea = NULL;
+    origin = NULL;
+    imm = NULL;
+    insn->addrsize = 0;
+    insn->opersize = info->opersize;
+    insn->lockrep_pre = 0;
+    insn->def_opersize_64 = info->def_opersize_64;
+    insn->special_prefix = info->special_prefix;
+    insn->opcode_len = info->opcode_len;
+    insn->opcode[0] = info->opcode[0];
+    insn->opcode[1] = info->opcode[1];
+    insn->opcode[2] = info->opcode[2];
+    spare = info->spare;
+    im_len = 0;
+    im_sign = 0;
+    insn->shift_op = 0;
+    insn->signext_imm8_op = 0;
+    insn->shortmov_op = 0;
+    insn->rex = 0;
 
     /* Apply modifiers */
     if (info->modifiers & MOD_Gap0)
 	mod_data >>= 8;
     if (info->modifiers & MOD_Op2Add) {
-	d.op[2] += (unsigned char)(mod_data & 0xFF);
+	insn->opcode[2] += (unsigned char)(mod_data & 0xFF);
 	mod_data >>= 8;
     }
     if (info->modifiers & MOD_Gap1)
 	mod_data >>= 8;
     if (info->modifiers & MOD_Op1Add) {
-	d.op[1] += (unsigned char)(mod_data & 0xFF);
+	insn->opcode[1] += (unsigned char)(mod_data & 0xFF);
 	mod_data >>= 8;
     }
     if (info->modifiers & MOD_Gap2)
 	mod_data >>= 8;
     if (info->modifiers & MOD_Op0Add) {
-	d.op[0] += (unsigned char)(mod_data & 0xFF);
+	insn->opcode[0] += (unsigned char)(mod_data & 0xFF);
 	mod_data >>= 8;
     }
     if (info->modifiers & MOD_PreAdd) {
-	d.special_prefix += (unsigned char)(mod_data & 0xFF);
+	insn->special_prefix += (unsigned char)(mod_data & 0xFF);
 	mod_data >>= 8;
     }
     if (info->modifiers & MOD_SpAdd) {
-	d.spare += (unsigned char)(mod_data & 0xFF);
+	spare += (unsigned char)(mod_data & 0xFF);
 	mod_data >>= 8;
     }
     if (info->modifiers & MOD_OpSizeR) {
-	d.opersize = (unsigned char)(mod_data & 0xFF);
+	insn->opersize = (unsigned char)(mod_data & 0xFF);
 	mod_data >>= 8;
     }
     if (info->modifiers & MOD_Imm8) {
-	d.imm = yasm_expr_create_ident(yasm_expr_int(
-	    yasm_intnum_create_uint(mod_data & 0xFF)), line);
-	d.im_len = 1;
+	imm = yasm_expr_create_ident(yasm_expr_int(
+	    yasm_intnum_create_uint(mod_data & 0xFF)), bc->line);
+	im_len = 1;
 	mod_data >>= 8;
     }
     if (info->modifiers & MOD_DOpS64R) {
-	d.def_opersize_64 = (unsigned char)(mod_data & 0xFF);
+	insn->def_opersize_64 = (unsigned char)(mod_data & 0xFF);
 	/*mod_data >>= 8;*/
     }
 
@@ -2222,25 +2254,27 @@ yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
 		case OPA_EA:
 		    switch (op->type) {
 			case YASM_INSN__OPERAND_REG:
-			    d.ea =
-				yasm_x86__ea_create_reg(op->data.reg, &d.rex,
-							arch_x86->mode_bits);
+			    insn->ea =
+				yasm_x86__ea_create_reg(op->data.reg,
+							&insn->rex,
+							mode_bits);
 			    break;
 			case YASM_INSN__OPERAND_SEGREG:
 			    yasm_internal_error(
 				N_("invalid operand conversion"));
 			case YASM_INSN__OPERAND_MEMORY:
-			    d.ea = op->data.ea;
+			    insn->ea = op->data.ea;
 			    if ((info->operands[i] & OPT_MASK) == OPT_MemOffs)
 				/* Special-case for MOV MemOffs instruction */
-				yasm_x86__ea_set_disponly(d.ea);
-			    else if (arch_x86->mode_bits == 64)
+				yasm_x86__ea_set_disponly(insn->ea);
+			    else if (mode_bits == 64)
 				/* Save origin for possible RIP-relative */
-				d.ea_origin = yasm_symtab_define_label2("$",
-				    prev_bc, 0, line);
+				origin =
+				    yasm_symtab_define_label2("$", prev_bc, 0,
+							      bc->line);
 			    break;
 			case YASM_INSN__OPERAND_IMM:
-			    d.ea = yasm_x86__ea_create_imm(op->data.val,
+			    insn->ea = yasm_x86__ea_create_imm(op->data.val,
 				size_lookup[(info->operands[i] &
 					     OPS_MASK)>>OPS_SHIFT]);
 			    break;
@@ -2248,31 +2282,30 @@ yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
 		    break;
 		case OPA_Imm:
 		    if (op->type == YASM_INSN__OPERAND_IMM) {
-			d.imm = op->data.val;
-			d.im_len = size_lookup[(info->operands[i] &
-						OPS_MASK)>>OPS_SHIFT];
+			imm = op->data.val;
+			im_len = size_lookup[(info->operands[i] &
+					      OPS_MASK)>>OPS_SHIFT];
 		    } else
 			yasm_internal_error(N_("invalid operand conversion"));
 		    break;
 		case OPA_SImm:
 		    if (op->type == YASM_INSN__OPERAND_IMM) {
-			d.imm = op->data.val;
-			d.im_len = size_lookup[(info->operands[i] &
-						OPS_MASK)>>OPS_SHIFT];
-			d.im_sign = 1;
+			imm = op->data.val;
+			im_len = size_lookup[(info->operands[i] &
+					      OPS_MASK)>>OPS_SHIFT];
+			im_sign = 1;
 		    } else
 			yasm_internal_error(N_("invalid operand conversion"));
 		    break;
 		case OPA_Spare:
 		    if (op->type == YASM_INSN__OPERAND_SEGREG)
-			d.spare = (unsigned char)(op->data.reg&7);
+			spare = (unsigned char)(op->data.reg&7);
 		    else if (op->type == YASM_INSN__OPERAND_REG) {
-			if (yasm_x86__set_rex_from_reg(&d.rex, &d.spare,
-				op->data.reg, arch_x86->mode_bits,
-				X86_REX_R)) {
-			    yasm__error(line,
+			if (yasm_x86__set_rex_from_reg(&insn->rex, &spare,
+				op->data.reg, mode_bits, X86_REX_R)) {
+			    yasm__error(bc->line,
 				N_("invalid combination of opcode and operands"));
-			    return NULL;
+			    return;
 			}
 		    } else
 			yasm_internal_error(N_("invalid operand conversion"));
@@ -2280,44 +2313,43 @@ yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
 		case OPA_Op0Add:
 		    if (op->type == YASM_INSN__OPERAND_REG) {
 			unsigned char opadd;
-			if (yasm_x86__set_rex_from_reg(&d.rex, &opadd,
-				op->data.reg, arch_x86->mode_bits,
-				X86_REX_B)) {
-			    yasm__error(line,
+			if (yasm_x86__set_rex_from_reg(&insn->rex, &opadd,
+				op->data.reg, mode_bits, X86_REX_B)) {
+			    yasm__error(bc->line,
 				N_("invalid combination of opcode and operands"));
-			    return NULL;
+			    return;
 			}
-			d.op[0] += opadd;
+			insn->opcode[0] += opadd;
 		    } else
 			yasm_internal_error(N_("invalid operand conversion"));
 		    break;
 		case OPA_Op1Add:
 		    if (op->type == YASM_INSN__OPERAND_REG) {
 			unsigned char opadd;
-			if (yasm_x86__set_rex_from_reg(&d.rex, &opadd,
-				op->data.reg, arch_x86->mode_bits,
-				X86_REX_B)) {
-			    yasm__error(line,
+			if (yasm_x86__set_rex_from_reg(&insn->rex, &opadd,
+				op->data.reg, mode_bits, X86_REX_B)) {
+			    yasm__error(bc->line,
 				N_("invalid combination of opcode and operands"));
-			    return NULL;
+			    return;
 			}
-			d.op[1] += opadd;
+			insn->opcode[1] += opadd;
 		    } else
 			yasm_internal_error(N_("invalid operand conversion"));
 		    break;
 		case OPA_SpareEA:
 		    if (op->type == YASM_INSN__OPERAND_REG) {
-			d.ea = yasm_x86__ea_create_reg(op->data.reg, &d.rex,
-						       arch_x86->mode_bits);
-			if (!d.ea ||
-			    yasm_x86__set_rex_from_reg(&d.rex, &d.spare,
-				op->data.reg, arch_x86->mode_bits,
-				X86_REX_R)) {
-			    yasm__error(line,
+			insn->ea = yasm_x86__ea_create_reg(op->data.reg,
+							   &insn->rex,
+							   mode_bits);
+			if (!insn->ea ||
+			    yasm_x86__set_rex_from_reg(&insn->rex, &spare,
+				op->data.reg, mode_bits, X86_REX_R)) {
+			    yasm__error(bc->line,
 				N_("invalid combination of opcode and operands"));
-			    if (d.ea)
-				yasm_xfree(d.ea);
-			    return NULL;
+			    if (insn->ea)
+				yasm_xfree(insn->ea);
+			    yasm_xfree(insn);
+			    return;
 			}
 		    } else
 			yasm_internal_error(N_("invalid operand conversion"));
@@ -2330,13 +2362,13 @@ yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
 		case OPAP_None:
 		    break;
 		case OPAP_ShiftOp:
-		    d.shift_op = 1;
+		    insn->shift_op = 1;
 		    break;
 		case OPAP_SImm8Avail:
-		    d.signext_imm8_op = 1;
+		    insn->signext_imm8_op = 1;
 		    break;
 		case OPAP_ShortMov:
-		    d.shortmov_op = 1;
+		    insn->shortmov_op = 1;
 		    break;
 		default:
 		    yasm_internal_error(
@@ -2345,8 +2377,19 @@ yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
 	}
     }
 
-    /* Create the bytecode and return it */
-    return yasm_x86__bc_create_insn(arch, &d);
+    if (insn->ea)
+	yasm_x86__ea_init(insn->ea, spare, origin);
+    if (imm) {
+	insn->imm = yasm_imm_create_expr(imm);
+	insn->imm->len = im_len;
+	insn->imm->sign = im_sign;
+    } else
+	insn->imm = NULL;
+
+    /* Transform the bytecode */
+    yasm_x86__bc_transform_insn(bc, insn);
+    yasm_x86__bc_apply_prefixes(bc, num_prefixes, prefixes, num_segregs,
+				segregs);
 }
 
 

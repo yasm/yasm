@@ -145,7 +145,7 @@ yasm_object_get_general(yasm_object *object, const char *name,
      * real bytecode in section.
      */
     STAILQ_INIT(&s->bcs);
-    bc = yasm_bc_create_common(NULL, sizeof(yasm_bytecode), 0);
+    bc = yasm_bc_create_common(NULL, NULL, 0);
     bc->section = s;
     STAILQ_INSERT_TAIL(&s->bcs, bc, link);
 
@@ -179,7 +179,7 @@ yasm_object_create_absolute(yasm_object *object, yasm_expr *start,
      * real bytecode in section.
      */
     STAILQ_INIT(&s->bcs);
-    bc = yasm_bc_create_common(NULL, sizeof(yasm_bytecode), 0);
+    bc = yasm_bc_create_common(NULL, NULL, 0);
     bc->section = s;
     STAILQ_INSERT_TAIL(&s->bcs, bc, link);
 
@@ -276,6 +276,30 @@ yasm_object_print(const yasm_object *object, FILE *f, int indent_level)
     STAILQ_FOREACH(cur, &object->sections, link) {
 	fprintf(f, "%*sSection:\n", indent_level, "");
 	yasm_section_print(cur, f, indent_level+1, 1);
+    }
+}
+
+void
+yasm_object_finalize(yasm_object *object)
+{
+    yasm_section *sect;
+
+    /* Iterate through sections */
+    STAILQ_FOREACH(sect, &object->sections, link) {
+	yasm_bytecode *cur = STAILQ_FIRST(&sect->bcs);
+	yasm_bytecode *prev;
+
+	/* Skip our locally created empty bytecode first. */
+	prev = cur;
+	cur = STAILQ_NEXT(cur, link);
+
+	/* Iterate through the remainder, if any. */
+	while (cur) {
+	    /* Finalize */
+	    yasm_bc_finalize(cur, prev);
+	    prev = cur;
+	    cur = STAILQ_NEXT(cur, link);
+	}
     }
 }
 

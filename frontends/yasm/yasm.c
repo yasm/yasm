@@ -616,6 +616,9 @@ main(int argc, char *argv[])
     if (in != stdin)
 	fclose(in);
 
+    /* Finalize parse */
+    yasm_object_finalize(object);
+
     if (yasm_get_num_errors(warning_error) > 0) {
 	yasm_errwarn_output_all(yasm_object_get_linemap(object), warning_error,
 				print_yasm_error, print_yasm_warning);

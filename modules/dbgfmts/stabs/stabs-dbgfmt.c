@@ -117,22 +117,10 @@ typedef struct {
     unsigned long value;		/* fallthrough value if above NULL */
 } stabs_stab;
 
-/* Bytecode types */
-
-typedef struct {
-    yasm_bytecode bc;	/* base structure */
-    /*@only@*/ char *str;
-} stabs_bc_str;
-
-typedef struct {
-    yasm_bytecode bc;	/* base structure */
-    stabs_stab *stab;
-} stabs_bc_stab;
-
 /* Bytecode callback function prototypes */
 
-static void stabs_bc_str_destroy(yasm_bytecode *bc);
-static void stabs_bc_str_print(const yasm_bytecode *bc, FILE *f, int
+static void stabs_bc_str_destroy(void *contents);
+static void stabs_bc_str_print(const void *contents, FILE *f, int
 			       indent_level);
 static yasm_bc_resolve_flags stabs_bc_str_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
@@ -141,8 +129,8 @@ static int stabs_bc_str_tobytes
      yasm_output_expr_func output_expr,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
-static void stabs_bc_stab_destroy(yasm_bytecode *bc);
-static void stabs_bc_stab_print(const yasm_bytecode *bc, FILE *f, int
+static void stabs_bc_stab_destroy(void *contents);
+static void stabs_bc_stab_print(const void *contents, FILE *f, int
 				indent_level);
 static yasm_bc_resolve_flags stabs_bc_stab_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
@@ -156,6 +144,7 @@ static int stabs_bc_stab_tobytes
 static const yasm_bytecode_callback stabs_bc_str_callback = {
     stabs_bc_str_destroy,
     stabs_bc_str_print,
+    yasm_bc_finalize_common,
     stabs_bc_str_resolve,
     stabs_bc_str_tobytes
 };
@@ -163,6 +152,7 @@ static const yasm_bytecode_callback stabs_bc_str_callback = {
 static const yasm_bytecode_callback stabs_bc_stab_callback = {
     stabs_bc_stab_destroy,
     stabs_bc_stab_print,
+    yasm_bc_finalize_common,
     stabs_bc_stab_resolve,
     stabs_bc_stab_tobytes
 };
@@ -197,15 +187,9 @@ static yasm_bytecode *
 stabs_dbgfmt_append_bcstr(yasm_section *sect, const char *str)
 {
     yasm_bytecode *bc, *precbc;
-    stabs_bc_str *bc_str;
    
     precbc = yasm_section_bcs_last(sect);
-    bc = yasm_bc_create_common(&stabs_bc_str_callback, sizeof(stabs_bc_str),
-			       0);
-    bc_str = (stabs_bc_str *)bc;
-
-    bc_str->str = yasm__xstrdup(str);
-
+    bc = yasm_bc_create_common(&stabs_bc_str_callback, yasm__xstrdup(str), 0);
     bc->len = strlen(str)+1;
     bc->offset = precbc ? precbc->offset + precbc->len : 0;
 
@@ -224,7 +208,6 @@ stabs_dbgfmt_append_stab(stabs_info *info, yasm_section *sect,
 			 /*@null@*/ yasm_bytecode *bcvalue, unsigned long value)
 {
     yasm_bytecode *bc, *precbc;
-    stabs_bc_stab *bc_stab;
     stabs_stab *stab = yasm_xmalloc(sizeof(stabs_stab));
 
     stab->other = 0;
@@ -236,12 +219,8 @@ stabs_dbgfmt_append_stab(stabs_info *info, yasm_section *sect,
     stab->value = value;
 
     precbc = yasm_section_bcs_last(sect);
-    bc = yasm_bc_create_common(&stabs_bc_stab_callback, sizeof(stabs_bc_stab),
+    bc = yasm_bc_create_common(&stabs_bc_stab_callback, stab,
 			       bcvalue ? bcvalue->line : 0);
-    bc_stab = (stabs_bc_stab *)bc;
-
-    bc_stab->stab = stab;
-
     bc->len = info->stablen;
     bc->offset = precbc ? precbc->offset + precbc->len : 0;
 
@@ -342,7 +321,6 @@ stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
     stabs_info info;
     int new;
     yasm_bytecode *dbgbc;
-    stabs_bc_stab *dbgbc_stab;
     stabs_stab *stab;
     yasm_bytecode *filebc, *nullbc, *laststr, *firstbc;
     yasm_symrec *firstsym;
@@ -386,13 +364,8 @@ stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
 
     /* initial pseudo-stab */
     stab = yasm_xmalloc(sizeof(stabs_stab));
-    dbgbc = yasm_bc_create_common(&stabs_bc_stab_callback,
-				  sizeof(stabs_bc_stab), 0);
-    dbgbc_stab = (stabs_bc_stab *)dbgbc;
-
+    dbgbc = yasm_bc_create_common(&stabs_bc_stab_callback, stab, 0);
     dbgbc->len = info.stablen;
-    dbgbc_stab->stab = stab;
-
     yasm_section_bcs_append(info.stab, dbgbc);
 
     /* initial strtab bytecodes */
@@ -432,9 +405,8 @@ stabs_bc_stab_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
      * needs to become endian aware.  Size appears not to be an issue, as known
      * 64-bit systems use truncated values in 32-bit fields. */
 
-    stabs_bc_stab *bc_stab = (stabs_bc_stab *)bc;
+    const stabs_stab *stab = (const stabs_stab *)bc->contents;
     unsigned char *buf = *bufp;
-    const stabs_stab *stab = bc_stab->stab;
 
     YASM_WRITE_32_L(buf, stab->bcstr ? stab->bcstr->offset : 0);
     YASM_WRITE_8(buf, stab->type);
@@ -463,9 +435,8 @@ stabs_bc_str_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		     yasm_output_expr_func output_expr,
 		     yasm_output_reloc_func output_reloc)
 {
-    stabs_bc_str *bc_str = (stabs_bc_str *)bc;
+    const char *str = (const char *)bc->contents;
     unsigned char *buf = *bufp;
-    const char *str = bc_str->str;
 
     strcpy((char *)buf, str);
     buf += strlen(str)+1;
@@ -475,24 +446,21 @@ stabs_bc_str_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 }
 
 static void
-stabs_bc_stab_destroy(yasm_bytecode *bc)
+stabs_bc_stab_destroy(void *contents)
 {
-    stabs_bc_stab *bc_stab = (stabs_bc_stab *)bc;
-    yasm_xfree(bc_stab->stab);
+    yasm_xfree(contents);
 }
 
 static void
-stabs_bc_str_destroy(yasm_bytecode *bc)
+stabs_bc_str_destroy(void *contents)
 {
-    stabs_bc_str *bc_str = (stabs_bc_str *)bc;
-    yasm_xfree(bc_str->str);
+    yasm_xfree(contents);
 }
 
 static void
-stabs_bc_stab_print(const yasm_bytecode *bc, FILE *f, int indent_level)
+stabs_bc_stab_print(const void *contents, FILE *f, int indent_level)
 {
-    const stabs_bc_stab *bc_stab = (const stabs_bc_stab *)bc;
-    const stabs_stab *stab = bc_stab->stab;
+    const stabs_stab *stab = (const stabs_stab *)contents;
     const char *str = "";
     fprintf(f, "%*s.stabs \"%s\", 0x%x, 0x%x, 0x%x, 0x%lx\n",
 	    indent_level, "", str, stab->type, stab->other, stab->desc,
@@ -500,10 +468,9 @@ stabs_bc_stab_print(const yasm_bytecode *bc, FILE *f, int indent_level)
 }
 
 static void
-stabs_bc_str_print(const yasm_bytecode *bc, FILE *f, int indent_level)
+stabs_bc_str_print(const void *contents, FILE *f, int indent_level)
 {
-    const stabs_bc_str *bc_str = (const stabs_bc_str *)bc;
-    fprintf(f, "%*s\"%s\"\n", indent_level, "", bc_str->str);
+    fprintf(f, "%*s\"%s\"\n", indent_level, "", (const char *)contents);
 }
 
 static yasm_bc_resolve_flags

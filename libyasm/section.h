@@ -95,6 +95,11 @@ void yasm_object_destroy(/*@only@*/ yasm_object *object);
  */
 void yasm_object_print(const yasm_object *object, FILE *f, int indent_level);
 
+/** Finalize an object after parsing.
+ * \param object	object
+ */
+void yasm_object_finalize(yasm_object *object);
+
 /** Traverses all sections in an object, calling a function on each section.
  * \param object	object
  * \param d		data pointer passed to func on each call

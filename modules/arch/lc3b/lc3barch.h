@@ -39,19 +39,18 @@ typedef enum lc3b_imm_type {
     LC3B_IMM_9_PC	/* 9-bit, signed, word-multiple, PC relative */
 } lc3b_imm_type;
 
-/* Structure with *all* inputs passed to lc3b_bytecode_new_insn().
- * IMPORTANT: im_ptr cannot be reused or freed after calling the function
- * (it doesn't make a copy).
- */
-typedef struct lc3b_new_insn_data {
-    unsigned long line;
-    /*@keep@*/ /*@null@*/ yasm_expr *imm;
-    lc3b_imm_type imm_type;
-    /*@null@*/ /*@dependent@*/ yasm_symrec *origin;
-    unsigned int opcode;
-} lc3b_new_insn_data;
+/* Bytecode types */
 
-yasm_bytecode *yasm_lc3b__bc_create_insn(lc3b_new_insn_data *d);
+typedef struct lc3b_insn {
+    /*@null@*/ yasm_expr *imm;	/* immediate or relative value */
+    lc3b_imm_type imm_type;	/* size of the immediate */
+
+    /*@null@*/ /*@dependent@*/ yasm_symrec *origin; /* PC origin if needed */
+
+    unsigned int opcode;	/* opcode */
+} lc3b_insn;
+
+void yasm_lc3b__bc_transform_insn(yasm_bytecode *bc, lc3b_insn *insn);
 
 void yasm_lc3b__parse_cpu(yasm_arch *arch, const char *cpuid,
 			  unsigned long line);
@@ -60,10 +59,11 @@ yasm_arch_check_id_retval yasm_lc3b__parse_check_id
     (yasm_arch *arch, unsigned long data[2], const char *id,
      unsigned long line);
 
-/*@null@*/ yasm_bytecode *yasm_lc3b__parse_insn
-    (yasm_arch *arch, const unsigned long data[2], int num_operands,
-     /*@null@*/ yasm_insn_operands *operands, yasm_bytecode *prev_bc,
-     unsigned long line);
+void yasm_lc3b__finalize_insn
+    (yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
+     const unsigned long data[4], int num_operands,
+     /*@null@*/ yasm_insn_operands *operands, int num_prefixes,
+     unsigned long **prefixes, int num_segregs, const unsigned long *segregs);
 
 int yasm_lc3b__intnum_fixup_rel
     (yasm_arch *arch, yasm_intnum *intn, size_t valsize,

@@ -92,6 +92,15 @@ void yasm_ea_set_len(yasm_effaddr *ea, unsigned int len);
  */
 void yasm_ea_set_nosplit(yasm_effaddr *ea, unsigned int nosplit);
 
+/** Set segment override for an effective address.
+ * Some architectures (such as x86) support segment overrides on effective
+ * addresses.  A override of an override will result in a warning.
+ * \param ea		effective address
+ * \param segreg	segment register (0 if none)
+ */
+void yasm_ea_set_segreg(yasm_effaddr *ea, unsigned long segreg,
+			unsigned long line);
+
 /** Delete (free allocated memory for) an effective address.
  * \param ea	effective address (only pointer to it).
  */
@@ -152,6 +161,33 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
 /*@only@*/ yasm_bytecode *yasm_bc_create_align
     (unsigned long boundary, unsigned long line);
 
+/** Create a bytecode that represents a single instruction.
+ * \param arch		instruction's architecture
+ * \param insn_data	data that identifies the type of instruction
+ * \param num_operands	number of operands
+ * \param operands	instruction operands (may be NULL if no operands)
+ * \param line		virtual line (from yasm_linemap)
+ * \return Newly allocated bytecode.
+ * \note Keeps the list of operands; do not call yasm_ops_delete() after
+ *       giving operands to this function.
+ */
+/*@only@*/ yasm_bytecode *yasm_bc_create_insn
+    (yasm_arch *arch, const unsigned long insn_data[4], int num_operands,
+     /*@null@*/ yasm_insn_operands *operands, unsigned long line);
+
+/** Associate a prefix with an instruction bytecode.
+ * \param bc		instruction bytecode
+ * \param prefix_data	data the identifies the prefix
+ */
+void yasm_bc_insn_add_prefix(yasm_bytecode *bc,
+			     const unsigned long prefix_data[4]);
+
+/** Associate a segment prefix with an instruction bytecode.
+ * \param bc		instruction bytecode
+ * \param prefix_data	data the identifies the prefix
+ */
+void yasm_bc_insn_add_seg_prefix(yasm_bytecode *bc, unsigned long segreg);
+
 /** Get the section that contains a particular bytecode.
  * \param bc	bytecode
  * \return Section containing bc (can be NULL if bytecode is not part of a
@@ -180,6 +216,12 @@ void yasm_bc_destroy(/*@only@*/ /*@null@*/ yasm_bytecode *bc);
  * \param bc		bytecode
  */
 void yasm_bc_print(const yasm_bytecode *bc, FILE *f, int indent_level);
+
+/** Finalize a bytecode after parsing.
+ * \param bc		bytecode
+ * \param prev_bc	bytecode directly preceding bc in a list of bytecodes
+ */
+void yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 
 /** Common version of calc_bc_dist that takes offsets from bytecodes.
  * Should be used for the final stages of optimizers as well as in yasm_objfmt

@@ -207,38 +207,6 @@ x86_segreg_print(yasm_arch *arch, unsigned long segreg, FILE *f)
     fprintf(f, "%s", name[segreg&7]);
 }
 
-static void
-x86_parse_prefix(yasm_arch *arch, yasm_bytecode *bc,
-		 const unsigned long data[4], unsigned long line)
-{
-    switch((x86_parse_insn_prefix)data[0]) {
-	case X86_LOCKREP:
-	    yasm_x86__bc_insn_set_lockrep_prefix(bc, data[1] & 0xff, line);
-	    break;
-	case X86_ADDRSIZE:
-	    yasm_x86__bc_insn_addrsize_override(bc, data[1]);
-	    break;
-	case X86_OPERSIZE:
-	    yasm_x86__bc_insn_opersize_override(bc, data[1]);
-	    break;
-    }
-}
-
-static void
-x86_parse_seg_prefix(yasm_arch *arch, yasm_bytecode *bc, unsigned long segreg,
-		     unsigned long line)
-{
-    yasm_x86__ea_set_segment(yasm_x86__bc_insn_get_ea(bc),
-			     (unsigned char)(segreg>>8), line);
-}
-
-static void
-x86_parse_seg_override(yasm_arch *arch, yasm_effaddr *ea,
-		       unsigned long segreg, unsigned long line)
-{
-    yasm_x86__ea_set_segment(ea, (unsigned char)(segreg>>8), line);
-}
-
 /* Define x86 machines -- see arch.h for details */
 static yasm_arch_machine x86_machines[] = {
     { "IA-32 and derivatives", "x86" },
@@ -258,10 +226,7 @@ yasm_arch_module yasm_x86_LTX_arch = {
     yasm_x86__parse_cpu,
     yasm_x86__parse_check_id,
     x86_parse_directive,
-    yasm_x86__parse_insn,
-    x86_parse_prefix,
-    x86_parse_seg_prefix,
-    x86_parse_seg_override,
+    yasm_x86__finalize_insn,
     yasm_x86__floatnum_tobytes,
     yasm_x86__intnum_fixup_rel,
     yasm_x86__intnum_tobytes,

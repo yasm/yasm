@@ -172,12 +172,15 @@ static const lc3b_insn_info trap_insn[] = {
     { 0, 0xF000, 1, {OPT_Imm|OPA_Imm|OPI_8, 0, 0} }
 };
 
-yasm_bytecode *
-yasm_lc3b__parse_insn(yasm_arch *arch, const unsigned long data[4],
-		      int num_operands, yasm_insn_operands *operands,
-		      yasm_bytecode *prev_bc, unsigned long line)
+void
+yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
+			 yasm_bytecode *prev_bc, const unsigned long data[4],
+			 int num_operands,
+			 /*@null@*/ yasm_insn_operands *operands,
+			 int num_prefixes, unsigned long **prefixes,
+			 int num_segregs, const unsigned long *segregs)
 {
-    lc3b_new_insn_data d;
+    lc3b_insn *insn;
     int num_info = (int)(data[1]&0xFF);
     lc3b_insn_info *info = (lc3b_insn_info *)data[0];
     unsigned long mod_data = data[1] >> 8;
@@ -229,24 +232,25 @@ yasm_lc3b__parse_insn(yasm_arch *arch, const unsigned long data[4],
 
     if (!found) {
 	/* Didn't find a matching one */
-	yasm__error(line, N_("invalid combination of opcode and operands"));
-	return NULL;
+	yasm__error(bc->line,
+		    N_("invalid combination of opcode and operands"));
+	return;
     }
 
     /* Copy what we can from info */
-    d.line = line;
-    d.imm = NULL;
-    d.imm_type = LC3B_IMM_NONE;
-    d.origin = NULL;
-    d.opcode = info->opcode;
+    insn = yasm_xmalloc(sizeof(lc3b_insn));
+    insn->imm = NULL;
+    insn->imm_type = LC3B_IMM_NONE;
+    insn->origin = NULL;
+    insn->opcode = info->opcode;
 
     /* Apply modifiers */
     if (info->modifiers & MOD_OpHAdd) {
-	d.opcode += ((unsigned int)(mod_data & 0xFF))<<8;
+	insn->opcode += ((unsigned int)(mod_data & 0xFF))<<8;
 	mod_data >>= 8;
     }
     if (info->modifiers & MOD_OpLAdd) {
-	d.opcode += (unsigned int)(mod_data & 0xFF);
+	insn->opcode += (unsigned int)(mod_data & 0xFF);
 	/*mod_data >>= 8;*/
     }
 
@@ -263,22 +267,22 @@ yasm_lc3b__parse_insn(yasm_arch *arch, const unsigned long data[4],
 		case OPA_DR:
 		    if (op->type != YASM_INSN__OPERAND_REG)
 			yasm_internal_error(N_("invalid operand conversion"));
-		    d.opcode |= ((unsigned int)(op->data.reg & 0x7)) << 9;
+		    insn->opcode |= ((unsigned int)(op->data.reg & 0x7)) << 9;
 		    break;
 		case OPA_SR:
 		    if (op->type != YASM_INSN__OPERAND_REG)
 			yasm_internal_error(N_("invalid operand conversion"));
-		    d.opcode |= ((unsigned int)(op->data.reg & 0x7)) << 6;
+		    insn->opcode |= ((unsigned int)(op->data.reg & 0x7)) << 6;
 		    break;
 		case OPA_Imm:
 		    switch (op->type) {
 			case YASM_INSN__OPERAND_IMM:
-			    d.imm = op->data.val;
+			    insn->imm = op->data.val;
 			    break;
 			case YASM_INSN__OPERAND_REG:
-			    d.imm = yasm_expr_create_ident(yasm_expr_int(
+			    insn->imm = yasm_expr_create_ident(yasm_expr_int(
 				yasm_intnum_create_uint(op->data.reg & 0x7)),
-				line);
+				bc->line);
 			    break;
 			default:
 			    yasm_internal_error(N_("invalid operand conversion"));
@@ -288,14 +292,18 @@ yasm_lc3b__parse_insn(yasm_arch *arch, const unsigned long data[4],
 		    yasm_internal_error(N_("unknown operand action"));
 	    }
 
-	    d.imm_type = (info->operands[i] & OPI_MASK)>>3;
-	    if (d.imm_type == LC3B_IMM_9_PC)
-		d.origin = yasm_symtab_define_label2("$", prev_bc, 0, line);
+	    insn->imm_type = (info->operands[i] & OPI_MASK)>>3;
+	    if (insn->imm_type == LC3B_IMM_9_PC)
+		insn->origin = yasm_symtab_define_label2("$", prev_bc, 0,
+							 bc->line);
 	}
     }
 
-    /* Create the bytecode and return it */
-    return yasm_lc3b__bc_create_insn(&d);
+    if (!insn->imm)
+	insn->imm_type = LC3B_IMM_NONE;
+
+    /* Transform the bytecode */
+    yasm_lc3b__bc_transform_insn(bc, insn);
 }
 
 

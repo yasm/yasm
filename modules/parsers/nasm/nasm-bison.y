@@ -214,14 +214,11 @@ exp: instr
 ;
 
 instr: INSN		{
-	$$ = yasm_arch_parse_insn(parser_nasm->arch, $1, 0, NULL,
-				  parser_nasm->prev_bc, cur_line);
+	$$ = yasm_bc_create_insn(parser_nasm->arch, $1, 0, NULL, cur_line);
     }
     | INSN operands	{
-	$$ = yasm_arch_parse_insn(parser_nasm->arch, $1, $2.num_operands,
-				  &$2.operands, parser_nasm->prev_bc,
-				  cur_line);
-	yasm_ops_delete(&$2.operands, 0);
+	$$ = yasm_bc_create_insn(parser_nasm->arch, $1, $2.num_operands,
+				 &$2.operands, cur_line);
     }
     | INSN error	{
 	yasm__error(cur_line, N_("expression syntax error"));
@@ -229,11 +226,11 @@ instr: INSN		{
     }
     | PREFIX instr	{
 	$$ = $2;
-	yasm_arch_parse_prefix(parser_nasm->arch, $$, $1, cur_line);
+	yasm_bc_insn_add_prefix($$, $1);
     }
     | SEGREG instr	{
 	$$ = $2;
-	yasm_arch_parse_seg_prefix(parser_nasm->arch, $$, $1[0], cur_line);
+	yasm_bc_insn_add_seg_prefix($$, $1[0]);
     }
 ;
 
@@ -325,7 +322,7 @@ memaddr: expr		    {
     }
     | SEGREG ':' memaddr    {
 	$$ = $3;
-	yasm_arch_parse_seg_override(parser_nasm->arch, $$, $1[0], cur_line);
+	yasm_ea_set_segreg($$, $1[0], cur_line);
     }
     | SIZE_OVERRIDE memaddr { $$ = $2; yasm_ea_set_len($$, $1); }
     | NOSPLIT memaddr	    { $$ = $2; yasm_ea_set_nosplit($$, 1); }

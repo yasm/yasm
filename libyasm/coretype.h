@@ -110,6 +110,12 @@ typedef struct yasm_valparam yasm_valparam;
  */
 typedef struct yasm_valparamhead yasm_valparamhead;
 
+/** A list of instruction operands (opaque type).
+ * The list goes from left-to-right as parsed.
+ * \see arch.h for related functions.
+ */
+typedef struct yasm_insn_operands yasm_insn_operands;
+
 /** Expression operators usable in #yasm_expr expressions. */
 typedef enum {
     YASM_EXPR_IDENT,	/**< No operation, just a value. */

@@ -36,6 +36,7 @@
 #include "expr.h"
 
 #include "bytecode.h"
+#include "arch.h"
 #include "objfmt.h"
 #include "dbgfmt.h"
 
@@ -57,8 +58,6 @@ struct yasm_dataval {
 /* Standard bytecode types */
 
 typedef struct bytecode_data {
-    yasm_bytecode bc;	/* base structure */
-
     /* non-converted data (linked list) */
     yasm_datavalhead datahead;
 
@@ -67,15 +66,11 @@ typedef struct bytecode_data {
 } bytecode_data;
 
 typedef struct bytecode_reserve {
-    yasm_bytecode bc;   /* base structure */
-
     /*@only@*/ yasm_expr *numitems; /* number of items to reserve */
     unsigned char itemsize;	    /* size of each item (in bytes) */
 } bytecode_reserve;
 
 typedef struct bytecode_incbin {
-    yasm_bytecode bc;   /* base structure */
-
     /*@only@*/ char *filename;		/* file to include data from */
 
     /* starting offset to read from (NULL=0) */
@@ -86,52 +81,74 @@ typedef struct bytecode_incbin {
 } bytecode_incbin;
 
 typedef struct bytecode_align {
-    yasm_bytecode bc;   /* base structure */
-
     unsigned long boundary;	/* alignment boundary */
 } bytecode_align;
 
+typedef struct bytecode_insn {
+    /*@dependent@*/ yasm_arch *arch;
+    unsigned long insn_data[4];
+
+    int num_operands;
+    /*@null@*/ yasm_insn_operands operands;
+
+    /* array of 4-element prefix_data arrays */
+    int num_prefixes;
+    /*@null@*/ unsigned long **prefixes;
+
+    /* array of segment prefixes */
+    int num_segregs;
+    /*@null@*/ unsigned long *segregs;
+} bytecode_insn;
+
 /* Standard bytecode callback function prototypes */
 
-static void bc_data_destroy(yasm_bytecode *bc);
-static void bc_data_print(const yasm_bytecode *bc, FILE *f, int indent_level);
+static void bc_data_destroy(void *contents);
+static void bc_data_print(const void *contents, FILE *f, int indent_level);
 static yasm_bc_resolve_flags bc_data_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			   yasm_output_expr_func output_expr,
 			   /*@null@*/ yasm_output_reloc_func output_reloc);
 
-static void bc_reserve_destroy(yasm_bytecode *bc);
-static void bc_reserve_print(const yasm_bytecode *bc, FILE *f,
-			     int indent_level);
+static void bc_reserve_destroy(void *contents);
+static void bc_reserve_print(const void *contents, FILE *f, int indent_level);
 static yasm_bc_resolve_flags bc_reserve_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int bc_reserve_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			      yasm_output_expr_func output_expr,
 			      /*@null@*/ yasm_output_reloc_func output_reloc);
 
-static void bc_incbin_destroy(yasm_bytecode *bc);
-static void bc_incbin_print(const yasm_bytecode *bc, FILE *f,
-			    int indent_level);
+static void bc_incbin_destroy(void *contents);
+static void bc_incbin_print(const void *contents, FILE *f, int indent_level);
 static yasm_bc_resolve_flags bc_incbin_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int bc_incbin_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			     yasm_output_expr_func output_expr,
 			     /*@null@*/ yasm_output_reloc_func output_reloc);
 
-static void bc_align_destroy(yasm_bytecode *bc);
-static void bc_align_print(const yasm_bytecode *bc, FILE *f, int indent_level);
+static void bc_align_destroy(void *contents);
+static void bc_align_print(const void *contents, FILE *f, int indent_level);
 static yasm_bc_resolve_flags bc_align_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			    yasm_output_expr_func output_expr,
 			    /*@null@*/ yasm_output_reloc_func output_reloc);
 
+static void bc_insn_destroy(void *contents);
+static void bc_insn_print(const void *contents, FILE *f, int indent_level);
+static void bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
+static yasm_bc_resolve_flags bc_insn_resolve
+    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+			   yasm_output_expr_func output_expr,
+			   /*@null@*/ yasm_output_reloc_func output_reloc);
+
 /* Standard bytecode callback structures */
 
 static const yasm_bytecode_callback bc_data_callback = {
     bc_data_destroy,
     bc_data_print,
+    yasm_bc_finalize_common,
     bc_data_resolve,
     bc_data_tobytes
 };
@@ -139,6 +156,7 @@ static const yasm_bytecode_callback bc_data_callback = {
 static const yasm_bytecode_callback bc_reserve_callback = {
     bc_reserve_destroy,
     bc_reserve_print,
+    yasm_bc_finalize_common,
     bc_reserve_resolve,
     bc_reserve_tobytes
 };
@@ -146,6 +164,7 @@ static const yasm_bytecode_callback bc_reserve_callback = {
 static const yasm_bytecode_callback bc_incbin_callback = {
     bc_incbin_destroy,
     bc_incbin_print,
+    yasm_bc_finalize_common,
     bc_incbin_resolve,
     bc_incbin_tobytes
 };
@@ -153,8 +172,17 @@ static const yasm_bytecode_callback bc_incbin_callback = {
 static const yasm_bytecode_callback bc_align_callback = {
     bc_align_destroy,
     bc_align_print,
+    yasm_bc_finalize_common,
     bc_align_resolve,
     bc_align_tobytes
+};
+
+static const yasm_bytecode_callback bc_insn_callback = {
+    bc_insn_destroy,
+    bc_insn_print,
+    bc_insn_finalize,
+    bc_insn_resolve,
+    bc_insn_tobytes
 };
 
 /* Static structures for when NULL is passed to conversion functions. */
@@ -210,6 +238,19 @@ yasm_ea_set_nosplit(yasm_effaddr *ptr, unsigned int nosplit)
     ptr->nosplit = (unsigned char)nosplit;
 }
 
+void
+yasm_ea_set_segreg(yasm_effaddr *ea, unsigned long segreg, unsigned long line)
+{
+    if (!ea)
+	return;
+
+    if (segreg != 0 && ea->segreg != 0)
+	yasm__warning(YASM_WARN_GENERAL, line,
+		      N_("multiple segment overrides, using leftmost"));
+
+    ea->segreg = segreg;
+}
+
 /*@-nullstate@*/
 void
 yasm_ea_destroy(yasm_effaddr *ea)
@@ -242,11 +283,26 @@ yasm_bc_set_multiple(yasm_bytecode *bc, yasm_expr *e)
 	bc->multiple = e;
 }
 
+void
+yasm_bc_finalize_common(yasm_bytecode *bc, yasm_bytecode *prev_bc)
+{
+}
+
+void
+yasm_bc_transform(yasm_bytecode *bc, const yasm_bytecode_callback *callback,
+		  void *contents)
+{
+    if (bc->callback)
+	bc->callback->destroy(bc->contents);
+    bc->callback = callback;
+    bc->contents = contents;
+}
+
 yasm_bytecode *
-yasm_bc_create_common(const yasm_bytecode_callback *callback, size_t size,
+yasm_bc_create_common(const yasm_bytecode_callback *callback, void *contents,
 		      unsigned long line)
 {
-    yasm_bytecode *bc = yasm_xmalloc(size);
+    yasm_bytecode *bc = yasm_xmalloc(sizeof(yasm_bytecode));
 
     bc->callback = callback;
 
@@ -263,20 +319,23 @@ yasm_bc_create_common(const yasm_bytecode_callback *callback, size_t size,
 
     bc->symrecs = NULL;
 
+    bc->contents = contents;
+
     return bc;
 }
 
 static void
-bc_data_destroy(yasm_bytecode *bc)
+bc_data_destroy(void *contents)
 {
-    bytecode_data *bc_data = (bytecode_data *)bc;
+    bytecode_data *bc_data = (bytecode_data *)contents;
     yasm_dvs_destroy(&bc_data->datahead);
+    yasm_xfree(contents);
 }
 
 static void
-bc_data_print(const yasm_bytecode *bc, FILE *f, int indent_level)
+bc_data_print(const void *contents, FILE *f, int indent_level)
 {
-    const bytecode_data *bc_data = (const bytecode_data *)bc;
+    const bytecode_data *bc_data = (const bytecode_data *)contents;
     fprintf(f, "%*s_Data_\n", indent_level, "");
     fprintf(f, "%*sFinal Element Size=%u\n", indent_level+1, "",
 	    (unsigned int)bc_data->size);
@@ -288,7 +347,7 @@ static yasm_bc_resolve_flags
 bc_data_resolve(yasm_bytecode *bc, int save,
 		yasm_calc_bc_dist_func calc_bc_dist)
 {
-    bytecode_data *bc_data = (bytecode_data *)bc;
+    bytecode_data *bc_data = (bytecode_data *)bc->contents;
     yasm_dataval *dv;
     size_t slen;
 
@@ -317,7 +376,7 @@ bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		yasm_output_expr_func output_expr,
 		/*@unused@*/ yasm_output_reloc_func output_reloc)
 {
-    bytecode_data *bc_data = (bytecode_data *)bc;
+    bytecode_data *bc_data = (bytecode_data *)bc->contents;
     yasm_dataval *dv;
     size_t slen;
     size_t i;
@@ -356,28 +415,26 @@ yasm_bytecode *
 yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
 		    unsigned long line)
 {
-    bytecode_data *data;
-
-    data = (bytecode_data *)
-	yasm_bc_create_common(&bc_data_callback, sizeof(bytecode_data), line);
+    bytecode_data *data = yasm_xmalloc(sizeof(bytecode_data));
 
     data->datahead = *datahead;
     data->size = (unsigned char)size;
 
-    return (yasm_bytecode *)data;
+    return yasm_bc_create_common(&bc_data_callback, data, line);
 }
 
 static void
-bc_reserve_destroy(yasm_bytecode *bc)
+bc_reserve_destroy(void *contents)
 {
-    bytecode_reserve *reserve = (bytecode_reserve *)bc;
+    bytecode_reserve *reserve = (bytecode_reserve *)contents;
     yasm_expr_destroy(reserve->numitems);
+    yasm_xfree(contents);
 }
 
 static void
-bc_reserve_print(const yasm_bytecode *bc, FILE *f, int indent_level)
+bc_reserve_print(const void *contents, FILE *f, int indent_level)
 {
-    const bytecode_reserve *reserve = (const bytecode_reserve *)bc;
+    const bytecode_reserve *reserve = (const bytecode_reserve *)contents;
     fprintf(f, "%*s_Reserve_\n", indent_level, "");
     fprintf(f, "%*sNum Items=", indent_level, "");
     yasm_expr_print(reserve->numitems, f);
@@ -389,7 +446,7 @@ static yasm_bc_resolve_flags
 bc_reserve_resolve(yasm_bytecode *bc, int save,
 		   yasm_calc_bc_dist_func calc_bc_dist)
 {
-    bytecode_reserve *reserve = (bytecode_reserve *)bc;
+    bytecode_reserve *reserve = (bytecode_reserve *)bc->contents;
     yasm_bc_resolve_flags retval = YASM_BC_RESOLVE_MIN_LEN;
     /*@null@*/ yasm_expr *temp;
     yasm_expr **tempp;
@@ -435,33 +492,30 @@ yasm_bytecode *
 yasm_bc_create_reserve(yasm_expr *numitems, unsigned int itemsize,
 		       unsigned long line)
 {
-    bytecode_reserve *reserve;
-
-    reserve = (bytecode_reserve *)
-	yasm_bc_create_common(&bc_reserve_callback, sizeof(bytecode_reserve),
-			      line);
+    bytecode_reserve *reserve = yasm_xmalloc(sizeof(bytecode_reserve));
 
     /*@-mustfree@*/
     reserve->numitems = numitems;
     /*@=mustfree@*/
     reserve->itemsize = (unsigned char)itemsize;
 
-    return (yasm_bytecode *)reserve;
+    return yasm_bc_create_common(&bc_reserve_callback, reserve, line);
 }
 
 static void
-bc_incbin_destroy(yasm_bytecode *bc)
+bc_incbin_destroy(void *contents)
 {
-    bytecode_incbin *incbin = (bytecode_incbin *)bc;
+    bytecode_incbin *incbin = (bytecode_incbin *)contents;
     yasm_xfree(incbin->filename);
     yasm_expr_destroy(incbin->start);
     yasm_expr_destroy(incbin->maxlen);
+    yasm_xfree(contents);
 }
 
 static void
-bc_incbin_print(const yasm_bytecode *bc, FILE *f, int indent_level)
+bc_incbin_print(const void *contents, FILE *f, int indent_level)
 {
-    const bytecode_incbin *incbin = (const bytecode_incbin *)bc;
+    const bytecode_incbin *incbin = (const bytecode_incbin *)contents;
     fprintf(f, "%*s_IncBin_\n", indent_level, "");
     fprintf(f, "%*sFilename=`%s'\n", indent_level, "",
 	    incbin->filename);
@@ -482,7 +536,7 @@ static yasm_bc_resolve_flags
 bc_incbin_resolve(yasm_bytecode *bc, int save,
 		  yasm_calc_bc_dist_func calc_bc_dist)
 {
-    bytecode_incbin *incbin = (bytecode_incbin *)bc;
+    bytecode_incbin *incbin = (bytecode_incbin *)bc->contents;
     FILE *f;
     /*@null@*/ yasm_expr *temp;
     yasm_expr **tempp;
@@ -564,7 +618,7 @@ bc_incbin_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		  yasm_output_expr_func output_expr,
 		  /*@unused@*/ yasm_output_reloc_func output_reloc)
 {
-    bytecode_incbin *incbin = (bytecode_incbin *)bc;
+    bytecode_incbin *incbin = (bytecode_incbin *)bc->contents;
     FILE *f;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
     unsigned long start = 0;
@@ -612,11 +666,7 @@ yasm_bytecode *
 yasm_bc_create_incbin(char *filename, yasm_expr *start, yasm_expr *maxlen,
 		      unsigned long line)
 {
-    bytecode_incbin *incbin;
-
-    incbin = (bytecode_incbin *)
-	yasm_bc_create_common(&bc_incbin_callback, sizeof(bytecode_incbin),
-			      line);
+    bytecode_incbin *incbin = yasm_xmalloc(sizeof(bytecode_incbin));
 
     /*@-mustfree@*/
     incbin->filename = filename;
@@ -624,18 +674,19 @@ yasm_bc_create_incbin(char *filename, yasm_expr *start, yasm_expr *maxlen,
     incbin->maxlen = maxlen;
     /*@=mustfree@*/
 
-    return (yasm_bytecode *)incbin;
+    return yasm_bc_create_common(&bc_incbin_callback, incbin, line);
 }
 
 static void
-bc_align_destroy(yasm_bytecode *bc)
+bc_align_destroy(void *contents)
 {
+    yasm_xfree(contents);
 }
 
 static void
-bc_align_print(const yasm_bytecode *bc, FILE *f, int indent_level)
+bc_align_print(const void *contents, FILE *f, int indent_level)
 {
-    const bytecode_align *align = (const bytecode_align *)bc;
+    const bytecode_align *align = (const bytecode_align *)contents;
     fprintf(f, "%*s_Align_\n", indent_level, "");
     fprintf(f, "%*sBoundary=%lu\n", indent_level, "", align->boundary);
 }
@@ -662,15 +713,119 @@ bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 yasm_bytecode *
 yasm_bc_create_align(unsigned long boundary, unsigned long line)
 {
-    bytecode_align *align;
-
-    align = (bytecode_align *)
-	yasm_bc_create_common(&bc_align_callback, sizeof(bytecode_align),
-			      line);
+    bytecode_align *align = yasm_xmalloc(sizeof(bytecode_align));
 
     align->boundary = boundary;
 
-    return (yasm_bytecode *)align;
+    return yasm_bc_create_common(&bc_align_callback, align, line);
+}
+
+static void
+bc_insn_destroy(void *contents)
+{
+    bytecode_insn *insn = (bytecode_insn *)contents;
+    if (insn->num_operands > 0)
+	yasm_ops_delete(&insn->operands, 0);
+    if (insn->num_prefixes > 0) {
+	int i;
+	for (i=0; i<insn->num_prefixes; i++)
+	    yasm_xfree(insn->prefixes[i]);
+	yasm_xfree(insn->prefixes);
+    }
+    if (insn->num_segregs > 0)
+	yasm_xfree(insn->segregs);
+    yasm_xfree(contents);
+}
+
+static void
+bc_insn_print(const void *contents, FILE *f, int indent_level)
+{
+}
+
+static void
+bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
+{
+    bytecode_insn *insn = (bytecode_insn *)bc->contents;
+
+    yasm_arch_finalize_insn(insn->arch, bc, prev_bc, insn->insn_data,
+			    insn->num_operands, &insn->operands,
+			    insn->num_prefixes, insn->prefixes,
+			    insn->num_segregs, insn->segregs);
+}
+
+static yasm_bc_resolve_flags
+bc_insn_resolve(yasm_bytecode *bc, int save,
+		yasm_calc_bc_dist_func calc_bc_dist)
+{
+    yasm_internal_error(N_("bc_insn_resolve() is not implemented"));
+    /*@notreached@*/
+    return YASM_BC_RESOLVE_ERROR;
+}
+
+static int
+bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+		yasm_output_expr_func output_expr,
+		/*@unused@*/ yasm_output_reloc_func output_reloc)
+{
+    yasm_internal_error(N_("bc_insn_tobytes() is not implemented"));
+    /*@notreached@*/
+    return 1;
+}
+
+yasm_bytecode *
+yasm_bc_create_insn(yasm_arch *arch, const unsigned long insn_data[4],
+		    int num_operands, /*@null@*/ yasm_insn_operands *operands,
+		    unsigned long line)
+{
+    bytecode_insn *insn = yasm_xmalloc(sizeof(bytecode_insn));
+
+    insn->arch = arch;
+    insn->insn_data[0] = insn_data[0];
+    insn->insn_data[1] = insn_data[1];
+    insn->insn_data[2] = insn_data[2];
+    insn->insn_data[3] = insn_data[3];
+    insn->num_operands = num_operands;
+    if (operands)
+	insn->operands = *operands;	/* structure copy */
+    insn->num_prefixes = 0;
+    insn->prefixes = NULL;
+    insn->num_segregs = 0;
+    insn->segregs = NULL;
+
+    return yasm_bc_create_common(&bc_insn_callback, insn, line);
+}
+
+void
+yasm_bc_insn_add_prefix(yasm_bytecode *bc, const unsigned long prefix_data[4])
+{
+    bytecode_insn *insn = (bytecode_insn *)bc->contents;
+
+    assert(bc->callback == bc_insn_callback);
+
+    insn->prefixes =
+	yasm_xrealloc(insn->prefixes,
+		      (insn->num_prefixes+1)*sizeof(unsigned long *));
+    insn->prefixes[insn->num_prefixes] =
+	yasm_xmalloc(4*sizeof(unsigned long));
+    insn->prefixes[insn->num_prefixes][0] = prefix_data[0];
+    insn->prefixes[insn->num_prefixes][1] = prefix_data[1];
+    insn->prefixes[insn->num_prefixes][2] = prefix_data[2];
+    insn->prefixes[insn->num_prefixes][3] = prefix_data[3];
+    insn->num_prefixes++;
+}
+
+void
+yasm_bc_insn_add_seg_prefix(yasm_bytecode *bc, unsigned long segreg)
+{
+    bytecode_insn *insn = (bytecode_insn *)bc->contents;
+
+    assert(bc->callback == bc_insn_callback);
+
+    insn->segregs =
+	yasm_xrealloc(insn->segregs,
+		      (insn->num_segregs+1)*sizeof(unsigned long));
+    insn->segregs[insn->num_segregs] = segreg;
+    insn->num_segregs++;
 }
 
 yasm_section *
@@ -707,7 +862,7 @@ yasm_bc_destroy(yasm_bytecode *bc)
 	return;
 
     if (bc->callback)
-	bc->callback->destroy(bc);
+	bc->callback->destroy(bc->contents);
     yasm_expr_destroy(bc->multiple);
     yasm_xfree(bc->symrecs);
     yasm_xfree(bc);
@@ -719,7 +874,7 @@ yasm_bc_print(const yasm_bytecode *bc, FILE *f, int indent_level)
     if (!bc->callback)
 	fprintf(f, "%*s_Empty_\n", indent_level, "");
     else
-	bc->callback->print(bc, f, indent_level);
+	bc->callback->print(bc->contents, f, indent_level);
     fprintf(f, "%*sMultiple=", indent_level, "");
     if (!bc->multiple)
 	fprintf(f, "nil (1)");
@@ -728,6 +883,13 @@ yasm_bc_print(const yasm_bytecode *bc, FILE *f, int indent_level)
     fprintf(f, "\n%*sLength=%lu\n", indent_level, "", bc->len);
     fprintf(f, "%*sLine Index=%lu\n", indent_level, "", bc->line);
     fprintf(f, "%*sOffset=%lx\n", indent_level, "", bc->offset);
+}
+
+void
+yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
+{
+    if (bc->callback)
+	bc->callback->finalize(bc, prev_bc);
 }
 
 /*@null@*/ yasm_intnum *

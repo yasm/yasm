@@ -34,23 +34,10 @@
 #include "lc3barch.h"
 
 
-/* Bytecode types */
-
-typedef struct lc3b_insn {
-    yasm_bytecode bc;		/* base structure */
-
-    /*@null@*/ yasm_expr *imm;	/* immediate or relative value */
-    lc3b_imm_type imm_type;	/* size of the immediate */
-
-    /*@null@*/ /*@dependent@*/ yasm_symrec *origin; /* PC origin if needed */
-
-    unsigned int opcode;	/* opcode */
-} lc3b_insn;
-
 /* Bytecode callback function prototypes */
 
-static void lc3b_bc_insn_destroy(yasm_bytecode *bc);
-static void lc3b_bc_insn_print(const yasm_bytecode *bc, FILE *f,
+static void lc3b_bc_insn_destroy(void *contents);
+static void lc3b_bc_insn_print(const void *contents, FILE *f,
 			       int indent_level);
 static yasm_bc_resolve_flags lc3b_bc_insn_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
@@ -63,44 +50,31 @@ static int lc3b_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp,
 static const yasm_bytecode_callback lc3b_bc_callback_insn = {
     lc3b_bc_insn_destroy,
     lc3b_bc_insn_print,
+    yasm_bc_finalize_common,
     lc3b_bc_insn_resolve,
     lc3b_bc_insn_tobytes
 };
 
 
-/*@-compmempass -mustfree@*/
-yasm_bytecode *
-yasm_lc3b__bc_create_insn(lc3b_new_insn_data *d)
+void
+yasm_lc3b__bc_transform_insn(yasm_bytecode *bc, lc3b_insn *insn)
 {
-    lc3b_insn *insn;
-   
-    insn = (lc3b_insn *)yasm_bc_create_common(&lc3b_bc_callback_insn,
-					      sizeof(lc3b_insn), d->line);
-
-    insn->imm = d->imm;
-    if (d->imm)
-	insn->imm_type = d->imm_type;
-    else
-	insn->imm_type = LC3B_IMM_NONE;
-    insn->origin = d->origin;
-    insn->opcode = d->opcode;
-
-    return (yasm_bytecode *)insn;
+    yasm_bc_transform(bc, &lc3b_bc_callback_insn, insn);
 }
-/*@=compmempass =mustfree@*/
 
 static void
-lc3b_bc_insn_destroy(yasm_bytecode *bc)
+lc3b_bc_insn_destroy(void *contents)
 {
-    lc3b_insn *insn = (lc3b_insn *)bc;
+    lc3b_insn *insn = (lc3b_insn *)contents;
     if (insn->imm)
 	yasm_expr_destroy(insn->imm);
+    yasm_xfree(contents);
 }
 
 static void
-lc3b_bc_insn_print(const yasm_bytecode *bc, FILE *f, int indent_level)
+lc3b_bc_insn_print(const void *contents, FILE *f, int indent_level)
 {
-    const lc3b_insn *insn = (const lc3b_insn *)bc;
+    const lc3b_insn *insn = (const lc3b_insn *)contents;
 
     fprintf(f, "%*s_Instruction_\n", indent_level, "");
     fprintf(f, "%*sImmediate Value:", indent_level, "");
@@ -153,7 +127,7 @@ static yasm_bc_resolve_flags
 lc3b_bc_insn_resolve(yasm_bytecode *bc, int save,
 		     yasm_calc_bc_dist_func calc_bc_dist)
 {
-    lc3b_insn *insn = (lc3b_insn *)bc;
+    lc3b_insn *insn = (lc3b_insn *)bc->contents;
     /*@null@*/ yasm_expr *temp;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
     long rel;
@@ -192,7 +166,7 @@ lc3b_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		     yasm_output_expr_func output_expr,
 		     /*@unused@*/ yasm_output_reloc_func output_reloc)
 {
-    lc3b_insn *insn = (lc3b_insn *)bc;
+    lc3b_insn *insn = (lc3b_insn *)bc->contents;
 
     /* Output opcode */
     YASM_SAVE_16_L(*bufp, insn->opcode);

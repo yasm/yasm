@@ -36,6 +36,7 @@ struct yasm_effaddr {
     const yasm_effaddr_callback *callback;	/* callback functions */
 
     /*@only@*/ /*@null@*/ yasm_expr *disp;	/* address displacement */
+    unsigned long segreg;	/* segment register override (0 if none) */
     unsigned char len;		/* length of disp (in bytes), 0 if unknown,
 				 * 0xff if unknown and required to be >0.
 				 */
@@ -51,8 +52,9 @@ struct yasm_immval {
 };
 
 typedef struct yasm_bytecode_callback {
-    void (*destroy) (yasm_bytecode *bc);
-    void (*print) (const yasm_bytecode *bc, FILE *f, int indent_level);
+    void (*destroy) (/*@only@*/ void *contents);
+    void (*print) (const void *contents, FILE *f, int indent_level);
+    void (*finalize) (yasm_bytecode *bc, yasm_bytecode *prev_bc);
     yasm_bc_resolve_flags (*resolve)
 	(yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
     int (*tobytes) (yasm_bytecode *bc, unsigned char **bufp, void *d,
@@ -86,18 +88,35 @@ struct yasm_bytecode {
     /* NULL-terminated array of labels that point to this bytecode (as the
      * bytecode previous to the label).  NULL if no labels point here. */
     /*@null@*/ yasm_symrec **symrecs;
+
+    /* bytecode-type-specific data (type identified by callback) */
+    void *contents;
 };
 
 /** Create a bytecode of any specified type.
  * \param callback	bytecode callback functions, if NULL, creates empty
  *			bytecode (may not be resolved or output)
- * \param datasize	size of type-specific data (in bytes)
+ * \param contents	type-specific data
  * \param line		virtual line (from yasm_linemap)
  * \return Newly allocated bytecode of the specified type.
  */
 /*@only@*/ yasm_bytecode *yasm_bc_create_common
-    (/*@null@*/ const yasm_bytecode_callback *callback, size_t datasize,
-     unsigned long line);
+    (/*@null@*/ const yasm_bytecode_callback *callback,
+     /*@only@*/ /*@null@*/ void *contents, unsigned long line);
+
+/** Transform a bytecode of any type into a different type.
+ * \param bc		bytecode to transform
+ * \param callback	new bytecode callback function
+ * \param contents	new type-specific data
+ */
+void yasm_bc_transform(yasm_bytecode *bc,
+		       const yasm_bytecode_callback *callback,
+		       void *contents);
+
+/** Common bytecode callback finalize function, for where no finalization
+ * is ever required for this type of bytecode.
+ */
+void yasm_bc_finalize_common(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 
 #define yasm_bc__next(x)		STAILQ_NEXT(x, link)
 

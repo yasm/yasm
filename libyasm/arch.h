@@ -46,10 +46,6 @@ typedef enum {
 
 /** An instruction operand (opaque type). */
 typedef struct yasm_insn_operand yasm_insn_operand;
-/** A list of instruction operands (opaque type).
- * The list goes from left-to-right as parsed.
- */
-typedef struct yasm_insn_operands yasm_insn_operands;
 #ifdef YASM_LIB_INTERNAL
 /*@reldef@*/ STAILQ_HEAD(yasm_insn_operands, yasm_insn_operand);
 #endif
@@ -104,7 +100,7 @@ typedef struct yasm_arch_machine {
  * module loader's function definitions.  The version number must never be
  * decreased.
  */
-#define YASM_ARCH_VERSION	3
+#define YASM_ARCH_VERSION	4
 
 /** YASM architecture module interface.
  * \note All "data" in parser-related functions (yasm_arch_parse_*) needs to
@@ -174,31 +170,15 @@ typedef struct yasm_arch_module {
 			    /*@null@*/ yasm_valparamhead *objext_valparams,
 			    yasm_object *object, unsigned long line);
 
-    /** Module-level implementation of yasm_arch_parse_insn().
-     * Call yasm_arch_parse_insn() instead of calling this function.
+    /** Module-level implementation of yasm_arch_finalize_insn().
+     * Call yasm_arch_finalize_insn() instead of calling this function.
      */
-    /*@null@*/ yasm_bytecode * (*parse_insn)
-	(yasm_arch *arch, const unsigned long data[4], int num_operands,
-	 /*@null@*/ yasm_insn_operands *operands, yasm_bytecode *prev_bc,
-	 unsigned long line);
-
-    /** Module-level implementation of yasm_arch_parse_prefix().
-     * Call yasm_arch_parse_prefix() instead of calling this function.
-     */
-    void (*parse_prefix) (yasm_arch *arch, yasm_bytecode *bc,
-			  const unsigned long data[4], unsigned long line);
-
-    /** Module-level implementation of yasm_arch_parse_seg_prefix().
-     * Call yasm_arch_parse_seg_prefix() instead of calling this function.
-     */
-    void (*parse_seg_prefix) (yasm_arch *arch, yasm_bytecode *bc,
-			      unsigned long segreg, unsigned long line);
-
-    /** Module-level implementation of yasm_arch_parse_seg_override().
-     * Call yasm_arch_parse_seg_override() instead of calling this function.
-     */
-    void (*parse_seg_override) (yasm_arch *arch, yasm_effaddr *ea,
-				unsigned long segreg, unsigned long line);
+    void (*finalize_insn)
+	(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
+	 const unsigned long data[4], int num_operands,
+	 /*@null@*/ yasm_insn_operands *operands, int num_prefixes,
+	 unsigned long **prefixes, int num_segregs,
+	 const unsigned long *segregs);
 
     /** Module-level implementation of yasm_arch_floatnum_tobytes().
      * Call yasm_arch_floatnum_tobytes() instead of calling this function.
@@ -384,54 +364,28 @@ int yasm_arch_parse_directive(yasm_arch *arch, const char *name,
 			      /*@null@*/ yasm_valparamhead *objext_valparams,
 			      yasm_object *object, unsigned long line);
 
-/** Create an instruction.  Creates a bytecode by matching the
- * instruction data and the parameters given with a valid instruction.
+/** Finalize an instruction from a semi-generic insn description.  Note an
+ * existing bytecode is required.
  * \param arch		architecture
+ * \param bc		bytecode to finalize
+ * \param prev_bc	previous bytecode in section
  * \param data		instruction data (from parse_check_id()); all
  *				zero indicates an empty instruction
- * \param num_operands	number of operands parsed
+ * \param num_operands	number of operands
  * \param operands	list of operands (in parse order)
- * \param prev_bc	previously parsed bytecode in section (NULL if
- *			first bytecode in section)
- * \param line		virtual line (from yasm_linemap)
- * \return If no match is found (the instruction is invalid), NULL,
- *	       otherwise newly allocated bytecode containing instruction.
+ * \param num_prefixes	number of prefixes
+ * \param prefixes	array of 4-element prefix data
+ * \param num_segregs	number of segment register prefixes
+ * \param segregs	array of segment register data
+ * \return If no match is found (the instruction is invalid), no action is
+ *         performed and an error is recorded.
  */
-/*@null@*/ yasm_bytecode *yasm_arch_parse_insn
-    (yasm_arch *arch, const unsigned long data[4], int num_operands,
-     /*@null@*/ yasm_insn_operands *operands, yasm_bytecode *prev_bc,
-     unsigned long line);
-
-/** Handle an instruction prefix.
- * Modifies an instruction bytecode based on the prefix in data.
- * \param arch	architecture
- * \param bc	bytecode (must be instruction bytecode)
- * \param data	prefix (from parse_check_id())
- * \param line	virtual line (from yasm_linemap)
- */
-void yasm_arch_parse_prefix(yasm_arch *arch, yasm_bytecode *bc,
-			    const unsigned long data[4], unsigned long line);
-
-/** Handle an segment register instruction prefix.
- * Modifies an instruction bytecode based on a segment register prefix.
- * \param arch		architecture
- * \param bc		bytecode (must be instruction bytecode)
- * \param segreg	segment register (from parse_check_id())
- * \param line		virtual line (from yasm_linemap)
- */
-void yasm_arch_parse_seg_prefix(yasm_arch *arch, yasm_bytecode *bc,
-				unsigned long segreg, unsigned long line);
-
-/** Handle a memory expression segment override.
- * Modifies an instruction bytecode based on a segment override in a
- * memory expression.
- * \param arch		architecture
- * \param ea		effective address
- * \param segreg	segment register (from parse_check_id())
- * \param line		virtual line (from yasm_linemap)
- */
-void yasm_arch_parse_seg_override(yasm_arch *arch, yasm_effaddr *ea,
-				  unsigned long segreg, unsigned long line);
+void yasm_arch_finalize_insn
+    (yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
+     const unsigned long data[4], int num_operands,
+     /*@null@*/ yasm_insn_operands *operands, int num_prefixes,
+     const unsigned long **prefixes, int num_segregs,
+     const unsigned long *segregs);
 
 /** Output #yasm_floatnum to buffer.  Puts the value into the least
  * significant bits of the destination, or may be shifted into more
@@ -545,17 +499,12 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
 				  object, line) \
     ((yasm_arch_base *)arch)->module->parse_directive \
 	(arch, name, valparams, objext_valparams, object, line)
-#define yasm_arch_parse_insn(arch, data, num_operands, operands, prev_bc, \
-			     line) \
-    ((yasm_arch_base *)arch)->module->parse_insn \
-	(arch, data, num_operands, operands, prev_bc, line)
-#define yasm_arch_parse_prefix(arch, bc, data, line) \
-    ((yasm_arch_base *)arch)->module->parse_prefix(arch, bc, data, line)
-#define yasm_arch_parse_seg_prefix(arch, bc, segreg, line) \
-    ((yasm_arch_base *)arch)->module->parse_seg_prefix(arch, bc, segreg, line)
-#define yasm_arch_parse_seg_override(arch, ea, segreg, line) \
-    ((yasm_arch_base *)arch)->module->parse_seg_override \
-	(arch, ea, segreg, line)
+#define yasm_arch_finalize_insn(arch, bc, prev_bc, data, num_operands, \
+				operands, num_prefixes, prefixes, \
+				num_segregs, segregs) \
+    ((yasm_arch_base *)arch)->module->finalize_insn \
+	(arch, bc, prev_bc, data, num_operands, operands, num_prefixes, \
+	 prefixes, num_segregs, segregs)
 #define yasm_arch_floatnum_tobytes(arch, flt, buf, destsize, valsize, shift, \
 				   warn, line) \
     ((yasm_arch_base *)arch)->module->floatnum_tobytes \

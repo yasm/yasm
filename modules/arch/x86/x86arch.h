@@ -126,8 +126,6 @@ int yasm_x86__set_rex_from_reg(unsigned char *rex, unsigned char *low3,
 			       unsigned long reg, unsigned int bits,
 			       x86_rex_bit_pos rexbit);
 
-void yasm_x86__ea_set_segment(/*@null@*/ yasm_effaddr *ea,
-			      unsigned int segment, unsigned long line);
 void yasm_x86__ea_set_disponly(yasm_effaddr *ea);
 yasm_effaddr *yasm_x86__ea_create_reg(unsigned long reg, unsigned char *rex,
 				      unsigned int bits);
@@ -147,50 +145,86 @@ void yasm_x86__bc_insn_set_lockrep_prefix(yasm_bytecode *bc,
 					  unsigned int prefix,
 					  unsigned long line);
 
-/* Structure with *all* inputs passed to x86_bytecode_new_insn().
- * IMPORTANT: ea_ptr and im_ptr cannot be reused or freed after calling the
- * function (it doesn't make a copy).
- */
-typedef struct x86_new_insn_data {
-    unsigned long line;
-    /*@keep@*/ /*@null@*/ yasm_effaddr *ea;
-    /*@null@*/ /*@dependent@*/ yasm_symrec *ea_origin;
-    /*@keep@*/ /*@null@*/ yasm_expr *imm;
-    unsigned char opersize;
-    unsigned char def_opersize_64;
-    unsigned char special_prefix;
-    unsigned char op_len;
-    unsigned char op[3];
-    unsigned char spare;	/* bits to go in 'spare' field of ModRM */
-    unsigned char rex;
-    unsigned char im_len;
-    unsigned char im_sign;
+/* Bytecode types */
+
+typedef struct x86_insn {
+    /*@null@*/ yasm_effaddr *ea;    /* effective address */
+
+    /*@null@*/ yasm_immval *imm;    /* immediate or relative value */
+
+    unsigned char opcode[3];	    /* opcode */
+    unsigned char opcode_len;
+
+    unsigned char addrsize;	    /* 0 or =mode_bits => no override */
+    unsigned char opersize;	    /* 0 or =mode_bits => no override */
+    unsigned char lockrep_pre;	    /* 0 indicates no prefix */
+
+    unsigned char def_opersize_64;  /* default operand size in 64-bit mode */
+    unsigned char special_prefix;   /* "special" prefix (0=none) */
+
+    unsigned char rex;		/* REX AMD64 extension, 0 if none,
+				   0xff if not allowed (high 8 bit reg used) */
+
+    /* HACK, but a space-saving one: shift opcodes have an immediate
+     * form and a ,1 form (with no immediate).  In the parser, we
+     * set this and opcode_len=1, but store the ,1 version in the
+     * second byte of the opcode array.  We then choose between the
+     * two versions once we know the actual value of imm (because we
+     * don't know it in the parser module).
+     *
+     * A override to force the imm version should just leave this at
+     * 0.  Then later code won't know the ,1 version even exists.
+     * TODO: Figure out how this affects CPU flags processing.
+     *
+     * Call x86_SetInsnShiftFlag() to set this flag to 1.
+     */
     unsigned char shift_op;
+
+    /* HACK, similar to that for shift_op above, for optimizing instructions
+     * that take a sign-extended imm8 as well as imm values (eg, the arith
+     * instructions and a subset of the imul instructions).
+     */
     unsigned char signext_imm8_op;
+
+    /* HACK, similar to those above, for optimizing long (modrm+sib) mov
+     * instructions in amd64 into short mov instructions if a 32-bit address
+     * override is applied in 64-bit mode to an EA of just an offset (no
+     * registers) and the target register is al/ax/eax/rax.
+     */
     unsigned char shortmov_op;
-} x86_new_insn_data;
 
-yasm_bytecode *yasm_x86__bc_create_insn(yasm_arch *arch, x86_new_insn_data *d);
+    unsigned char mode_bits;
+} x86_insn;
 
-/* Structure with *all* inputs passed to x86_bytecode_new_jmp().
- * Pass 0 for the opcode_len if that version of the opcode doesn't exist.
- */
-typedef struct x86_new_jmp_data {
-    unsigned long line;
-    /*@keep@*/ yasm_expr *target;
-    /*@dependent@*/ yasm_symrec *origin;
+typedef struct x86_jmp {
+    yasm_expr *target;		/* target location */
+    /*@dependent@*/ yasm_symrec *origin;    /* jump origin */
+
+    struct {
+	unsigned char opcode[3];
+	unsigned char opcode_len;   /* 0 = no opc for this version */
+    } shortop, nearop, farop;
+
+    /* which opcode are we using? */
+    /* The *FORCED forms are specified in the source as such */
     x86_jmp_opcode_sel op_sel;
-    unsigned char short_op_len;
-    unsigned char short_op[3];
-    unsigned char near_op_len;
-    unsigned char near_op[3];
-    unsigned char far_op_len;
-    unsigned char far_op[3];
-    unsigned char addrsize;
-    unsigned char opersize;
-} x86_new_jmp_data;
 
-yasm_bytecode *yasm_x86__bc_create_jmp(yasm_arch *arch, x86_new_jmp_data *d);
+    unsigned char addrsize;	/* 0 or =mode_bits => no override */
+    unsigned char opersize;	/* 0 indicates no override */
+    unsigned char lockrep_pre;	/* 0 indicates no prefix */
+
+    unsigned char mode_bits;
+} x86_jmp;
+
+void yasm_x86__bc_transform_jmp(yasm_bytecode *bc, x86_jmp *jmp);
+void yasm_x86__bc_transform_insn(yasm_bytecode *bc, x86_insn *insn);
+
+void yasm_x86__bc_apply_prefixes
+    (yasm_bytecode *bc, int num_prefixes, unsigned long **prefixes,
+     int num_segregs, const unsigned long *segregs);
+
+void yasm_x86__ea_init(yasm_effaddr *ea, unsigned int spare,
+		       /*@null@*/ yasm_symrec *origin);
 
 /* Check an effective address.  Returns 0 if EA was successfully determined,
  * 1 if invalid EA, or 2 if indeterminate EA.
@@ -206,13 +240,14 @@ void yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid,
 			 unsigned long line);
 
 yasm_arch_check_id_retval yasm_x86__parse_check_id
-    (yasm_arch *arch, unsigned long data[2], const char *id,
+    (yasm_arch *arch, unsigned long data[4], const char *id,
      unsigned long line);
 
-/*@null@*/ yasm_bytecode *yasm_x86__parse_insn
-    (yasm_arch *arch, const unsigned long data[2], int num_operands,
-     /*@null@*/ yasm_insn_operands *operands, yasm_bytecode *prev_bc,
-     unsigned long line);
+void yasm_x86__finalize_insn
+    (yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
+     const unsigned long data[4], int num_operands,
+     /*@null@*/ yasm_insn_operands *operands, int num_prefixes,
+     unsigned long **prefixes, int num_segregs, const unsigned long *segregs);
 
 int yasm_x86__floatnum_tobytes
     (yasm_arch *arch, const yasm_floatnum *flt, unsigned char *buf,
