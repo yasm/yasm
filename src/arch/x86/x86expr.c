@@ -1,4 +1,4 @@
-/* $Id: x86expr.c,v 1.3 2001/07/05 09:32:58 mu Exp $
+/* $Id: x86expr.c,v 1.4 2001/07/11 23:16:50 peter Exp $
  * Expression handling
  *
  *  Copyright (C) 2001  Michael Urman
@@ -29,11 +29,12 @@
 
 /* allocate a new expression node, with children as defined.
  * If it's a unary operator, put the element on the right */
-expr *expr_new (ExprType ltype,
-		ExprItem left,
-		ExprOp op,
-		ExprType rtype,
-		ExprItem right)
+expr *
+expr_new (ExprType ltype,
+	  ExprItem left,
+	  ExprOp   op,
+	  ExprType rtype,
+	  ExprItem right)
 {
     expr *ptr;
     ptr = malloc (sizeof (expr));
@@ -65,13 +66,41 @@ expr *expr_new (ExprType ltype,
 }
 
 /* helpers */
-ExprItem ExprSym (struct symrec_s *s) { ExprItem e; e.sym = s; return e; }
-ExprItem ExprExpr (expr *x) { ExprItem e; e.expr = x; return e; }
-ExprItem ExprNum (unsigned long n) { ExprItem e; e.num = n; return e; }
-ExprItem ExprNone () { ExprItem e; e.num = 0; return e; }
+ExprItem
+ExprSym (struct symrec_s *s)
+{
+    ExprItem e;
+    e.sym = s;
+    return e;
+}
+
+ExprItem
+ExprExpr (expr *x)
+{
+    ExprItem e;
+    e.expr = x;
+    return e;
+}
+
+ExprItem
+ExprNum (unsigned long n)
+{
+    ExprItem e;
+    e.num = n;
+    return e;
+}
+
+ExprItem
+ExprNone (void)
+{
+    ExprItem e;
+    e.num = 0;
+    return e;
+}
 
 /* get rid of unnecessary branches if possible.  report. */
-int expr_simplify (expr *e)
+int
+expr_simplify (expr *e)
 {
     int simplified = 0;
 
@@ -197,7 +226,8 @@ int expr_simplify (expr *e)
     return simplified;
 }
 
-int expr_get_value (expr *e, unsigned long *retval)
+int
+expr_get_value (expr *e, unsigned long *retval)
 {
     while (!(e->op == EXPR_IDENT && e->rtype == EXPR_NUM)
 	   && expr_simplify (e));
@@ -211,7 +241,8 @@ int expr_get_value (expr *e, unsigned long *retval)
 	return 0;
 }
 
-void expr_print (expr *e)
+void
+expr_print (expr *e)
 {
     if (e->op != EXPR_IDENT) {
 	switch (e->ltype) {

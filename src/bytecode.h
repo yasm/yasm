@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.13 2001/07/11 04:07:10 peter Exp $
+/* $Id: bytecode.h,v 1.14 2001/07/11 23:16:50 peter Exp $
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -112,7 +112,6 @@ typedef struct bytecode_s {
     unsigned int mode_bits;
 } bytecode;
 
-effaddr *ConvertIntToEA(effaddr *ptr, unsigned long int_val);
 effaddr *ConvertRegToEA(effaddr *ptr, unsigned long reg);
 effaddr *ConvertImmToEA(effaddr *ptr, immval *im_ptr, unsigned char im_len);
 effaddr *ConvertExprToEA(effaddr *ptr, struct expr_s *expr_ptr);

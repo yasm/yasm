@@ -1,4 +1,4 @@
-/* $Id: symrec.c,v 1.4 2001/07/04 20:57:53 peter Exp $
+/* $Id: symrec.c,v 1.5 2001/07/11 23:16:50 peter Exp $
  * Symbol table handling
  *
  *  Copyright (C) 2001  Michael Urman
@@ -35,14 +35,16 @@ static void symtab_insert (symtab *);
 symtab *sym_table = (symtab *)NULL;
 
 /* insert a symtab into the global sym_table */
-void symtab_insert (symtab *tab)
+void
+symtab_insert (symtab *tab)
 {
     tab->next = (symtab *)sym_table;
     sym_table = tab;
 }
 
 /* find a symtab in the global sym_table */
-symtab *symtab_get (char *name)
+symtab *
+symtab_get (char *name)
 {
     symtab *tab;
     for (tab = sym_table; tab != NULL; tab = tab->next)
@@ -56,7 +58,8 @@ symtab *symtab_get (char *name)
 }
 
 /* call a function with each symrec.  stop early if 0 returned */
-void sym_foreach (int(*mapfunc)(symrec *))
+void
+sym_foreach (int(*mapfunc)(symrec *))
 {
     symtab *tab;
     for (tab = sym_table; tab != NULL; tab = tab->next)
@@ -69,7 +72,8 @@ void sym_foreach (int(*mapfunc)(symrec *))
 }
 
 /* create a new symtab */
-symtab *symtab_new (char *name, SymType type)
+symtab *
+symtab_new (char *name, SymType type)
 {
     symtab *tab;
     tab = malloc(sizeof(symtab));
@@ -89,7 +93,8 @@ symtab *symtab_new (char *name, SymType type)
     return tab;
 }
 
-symtab *symtab_get_or_new (char *name, SymType type)
+symtab *
+symtab_get_or_new (char *name, SymType type)
 {
     symtab *tab;
     tab = symtab_get (name);
@@ -104,7 +109,8 @@ symtab *symtab_get_or_new (char *name, SymType type)
     return tab;
 }
 
-symrec *sym_use_get (char *name, SymType type)
+symrec *
+sym_use_get (char *name, SymType type)
 {
     symtab *tab;
     tab = symtab_get_or_new (name, type);
@@ -112,7 +118,8 @@ symrec *sym_use_get (char *name, SymType type)
     return &(tab->rec);
 }
 
-symrec *sym_def_get (char *name, SymType type)
+symrec *
+sym_def_get (char *name, SymType type)
 {
     symtab *tab;
     tab = symtab_get_or_new (name, type);
@@ -123,7 +130,8 @@ symrec *sym_def_get (char *name, SymType type)
 }
 
 #if 0
-symrec *putsym(char *sym_name, int sym_type)
+symrec *
+putsym (char *sym_name, int sym_type)
 {
     symrec *ptr;
     ptr = malloc(sizeof(symrec));
@@ -136,7 +144,8 @@ symrec *putsym(char *sym_name, int sym_type)
     return ptr;
 }
 
-symrec *getsym(char *sym_name)
+symrec *
+getsym (char *sym_name)
 {
     symrec *ptr;
     for(ptr=sym_table; ptr != (symrec *)NULL; ptr=(symrec *)ptr->next)

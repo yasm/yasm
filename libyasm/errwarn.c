@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.15 2001/07/11 04:07:10 peter Exp $
+/* $Id: errwarn.c,v 1.16 2001/07/11 23:16:50 peter Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -38,14 +38,24 @@
 #include "errwarn.h"
 #include "globals.h"
 
+/* Total error count for entire assembler run.
+ * Assembler should exit with EXIT_FAILURE if this is >= 0 on finish. */
 unsigned int error_count = 0;
+
+/* Total warning count for entire assembler run.
+ * Should not affect exit value of assembler. */
 unsigned int warning_count = 0;
 
+/* See errwarn.h for constants that match up to these strings.
+ * When adding a string here, keep errwarn.h in sync! */
+
+/* Fatal error messages.  Match up with fatal_num enum in errwarn.h. */
 static char *fatal_msgs[] = {
     "unknown",
     "out of memory"
 };
 
+/* Error messages.  Match up with err_num enum in errwarn.h. */
 static char *err_msgs[] = {
     "",
     "parser error: %s",
@@ -60,6 +70,7 @@ static char *err_msgs[] = {
     "no %s form of that jump instruction exists"
 };
 
+/* Warning messages.  Match up with warn_num enum in errwarn.h. */
 static char *warn_msgs[] = {
     "",
     "ignoring unrecognized character '%s'",
@@ -70,17 +81,30 @@ static char *warn_msgs[] = {
     "multiple SHORT or NEAR specifiers, using leftmost"
 };
 
-/* hate to define these as static buffers; better solution would be to use
- * vasprintf() to dynamically allocate, but that's not ANSI C */
+/* I hate to define these strings as static buffers; a better solution would be
+ * to use vasprintf() to dynamically allocate, but that's not ANSI C.
+ * FIXME! */
+
+/* Last error message string.  Set by Error(), read by OutputError(). */
 static char last_err[1024];
+
+/* Last warning message string.  Set by Warning(), read by OutputWarning(). */
 static char last_warn[1024];
+
+/* Last error number.  Set by Error(), read and reset by OutputError(). */
 static err_num last_err_num = ERR_NONE;
+
+/* Last warning number.  Set by Warning(), read and reset by
+ * OutputWarning(). */
 static warn_num last_warn_num = WARN_NONE;
 
-/* conv_unprint: convert a possibly unprintable character into a printable
- * string, using standard cat(1) convention for unprintable characters. */
+/* Static buffer for use by conv_unprint(). */
 static char unprint[5];
-char *conv_unprint(char ch)
+
+/* Convert a possibly unprintable character into a printable string, using
+ * standard cat(1) convention for unprintable characters. */
+char *
+conv_unprint (char ch)
 {
     int pos=0;
 
@@ -99,28 +123,59 @@ char *conv_unprint(char ch)
     return unprint;
 }
 
-/* yyerror: parser error handler */
-void yyerror(char *s)
+/* Parser error handler.  Moves error into our error handling system. */
+void
+yyerror (char *s)
 {
     Error(ERR_PARSER, (char *)NULL, s);
 }
 
-void InternalError(unsigned int line, char *file, char *message)
+/* Report an internal error.  Essentially a fatal error with trace info.
+ * Exit immediately because it's essentially an assert() trap. */
+void
+InternalError (unsigned int line, char *file, char *message)
 {
     fprintf(stderr, "INTERNAL ERROR at %s, line %d: %s\n", file, line,
 	message);
     exit(EXIT_FAILURE);
 }
 
-void Fatal(fatal_num num)
+/* Report a fatal error.  These are unrecoverable (such as running out of
+ * memory), so just exit immediately. */
+void
+Fatal (fatal_num num)
 {
     fprintf(stderr, "FATAL: %s\n", fatal_msgs[num]);
     exit(EXIT_FAILURE);
 }
 
-/* replace %1, %2, etc in src with %c, %s, etc. in argtypes. */
-/* currently limits maximum number of args to 9 (%1-%9). */
-static char *process_argtypes(char *src, char *argtypes)
+/* Argument replacement function for use in error messages.
+ * Replaces %1, %2, etc in src with %c, %s, etc. in argtypes.
+ * Currently limits maximum number of args to 9 (%1-%9).
+ *
+ * We need this because messages that take multiple arguments become dependent
+ * on the order and type of the arguments passed to Error()/Warning().
+ *
+ * i.e. an error string "'%d' is not a valid specifier for '%s'" would require
+ * that the arguments passed to Error() always be an int and a char *, in that
+ * order.  If the string was changed to be "'%s': invalid specifier '%d'", all
+ * the times Error() was called for that string would need to be changed to
+ * reorder the arguments.  Or if the %d was not right in some circumstances,
+ * we'd have to add another string for that type.
+ *
+ * This function fixes this problem by allowing the string to be specified as
+ * "'%1' is not a valid specifier for '%2'" and then specifying at the time of
+ * the Error() call what the types of %1 and %2 are by passing a argtype string
+ * "%d%s" (to emulate the first behavior).  If the string was changed to be
+ * "'%2': invalid specifier '%1'", no change would need to be made to the
+ * Error calls using that string.  And as the type is specified with the
+ * argument list, mismatches are far less likely.
+ *
+ * For strings that only have one argument of a fixed type, it can be directly
+ * specified and NULL passed for the argtypes parameter when Error() is
+ * called. */
+static char *
+process_argtypes (char *src, char *argtypes)
 {
     char *dest;
     char *argtype[9];
@@ -159,7 +214,11 @@ static char *process_argtypes(char *src, char *argtypes)
     return dest;
 }
 
-void Error(err_num num, char *argtypes, ...)
+/* Register an error.  Uses argtypes as described above to specify the
+ * argument types.  Does not print the error, only stores it for
+ * OutputError() to print. */
+void
+Error (err_num num, char *argtypes, ...)
 {
     va_list ap;
     char *printf_str;
@@ -180,7 +239,11 @@ void Error(err_num num, char *argtypes, ...)
     error_count++;
 }
 
-void Warning(warn_num num, char *argtypes, ...)
+/* Register a warning.  Uses argtypes as described above to specify the
+ * argument types.  Does not print the warning, only stores it for
+ * OutputWarning() to print. */
+void
+Warning (warn_num num, char *argtypes, ...)
 {
     va_list ap;
     char *printf_str;
@@ -201,14 +264,18 @@ void Warning(warn_num num, char *argtypes, ...)
     warning_count++;
 }
 
-void OutputError(void)
+/* Output a previously stored error (if any) to stderr. */
+void
+OutputError (void)
 {
     if(last_err_num != ERR_NONE)
 	fprintf(stderr, "filename:%u: %s\n", line_number, last_err);
     last_err_num = ERR_NONE;
 }
 
-void OutputWarning(void)
+/* Output a previously stored warning (if any) to stderr. */
+void
+OutputWarning (void)
 {
     if(last_warn_num != WARN_NONE)
 	fprintf(stderr, "filename:%u: warning: %s\n", line_number, last_warn);

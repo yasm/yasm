@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.12 2001/07/11 04:07:10 peter Exp $
+/* $Id: bytecode.c,v 1.13 2001/07/11 23:16:50 peter Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -25,36 +25,18 @@
 #include "errwarn.h"
 #include "expr.h"
 
+/* Static structures for when NULL is passed to conversion functions. */
+/*  for Convert*ToEA() */
 static effaddr eff_static;
+/*  for Convert*ToImm() */
 static immval im_static;
+/*  for Convert*ToBytes() */
 unsigned char bytes_static[16];
 
-effaddr *ConvertIntToEA(effaddr *ptr, unsigned long int_val)
-{
-    if(!ptr)
-	ptr = &eff_static;
+static void BuildBC_Common(bytecode *bc);
 
-    ptr->segment = 0;
-
-    ptr->valid_modrm = 0;
-    ptr->need_modrm = 1;
-    ptr->valid_sib = 0;
-    ptr->need_sib = 0;
-
-    /* FIXME: this will leak expr's if static is used */
-    ptr->disp = expr_new_ident(EXPR_NUM, ExprNum(int_val));
-
-    if((int_val & 0xFF) == int_val)
-	ptr->len = 1;
-    else if((int_val & 0xFFFF) == int_val)
-	ptr->len = 2;
-    else
-	ptr->len = 4;
-
-    return ptr;
-}
-
-effaddr *ConvertRegToEA(effaddr *ptr, unsigned long reg)
+effaddr *
+ConvertRegToEA (effaddr *ptr, unsigned long reg)
 {
     if(!ptr)
 	ptr = &eff_static;
@@ -70,7 +52,8 @@ effaddr *ConvertRegToEA(effaddr *ptr, unsigned long reg)
     return ptr;
 }
 
-effaddr *ConvertExprToEA(effaddr *ptr, expr *expr_ptr)
+effaddr *
+ConvertExprToEA (effaddr *ptr, expr *expr_ptr)
 {
     if(!ptr)
 	ptr = &eff_static;
@@ -87,7 +70,8 @@ effaddr *ConvertExprToEA(effaddr *ptr, expr *expr_ptr)
     return ptr;
 }
 
-effaddr *ConvertImmToEA(effaddr *ptr, immval *im_ptr, unsigned char im_len)
+effaddr *
+ConvertImmToEA (effaddr *ptr, immval *im_ptr, unsigned char im_len)
 {
     if(!ptr)
 	ptr = &eff_static;
@@ -105,7 +89,8 @@ effaddr *ConvertImmToEA(effaddr *ptr, immval *im_ptr, unsigned char im_len)
     return ptr;
 }
 
-immval *ConvertIntToImm(immval *ptr, unsigned long int_val)
+immval *
+ConvertIntToImm (immval *ptr, unsigned long int_val)
 {
     if(!ptr)
 	ptr = &im_static;
@@ -125,7 +110,8 @@ immval *ConvertIntToImm(immval *ptr, unsigned long int_val)
     return ptr;
 }
 
-immval *ConvertExprToImm(immval *ptr, expr *expr_ptr)
+immval *
+ConvertExprToImm (immval *ptr, expr *expr_ptr)
 {
     if(!ptr)
 	ptr = &im_static;
@@ -137,7 +123,8 @@ immval *ConvertExprToImm(immval *ptr, expr *expr_ptr)
     return ptr;
 }
 
-void SetEASegment(effaddr *ptr, unsigned char segment)
+void
+SetEASegment (effaddr *ptr, unsigned char segment)
 {
     if(!ptr)
 	return;
@@ -148,7 +135,8 @@ void SetEASegment(effaddr *ptr, unsigned char segment)
     ptr->segment = segment;
 }
 
-void SetEALen(effaddr *ptr, unsigned char len)
+void
+SetEALen (effaddr *ptr, unsigned char len)
 {
     if(!ptr)
 	return;
@@ -160,7 +148,8 @@ void SetEALen(effaddr *ptr, unsigned char len)
     ptr->len = len;
 }
 
-void SetInsnOperSizeOverride(bytecode *bc, unsigned char opersize)
+void
+SetInsnOperSizeOverride (bytecode *bc, unsigned char opersize)
 {
     if(!bc)
 	return;
@@ -179,7 +168,8 @@ void SetInsnOperSizeOverride(bytecode *bc, unsigned char opersize)
     }
 }
 
-void SetInsnAddrSizeOverride(bytecode *bc, unsigned char addrsize)
+void
+SetInsnAddrSizeOverride (bytecode *bc, unsigned char addrsize)
 {
     if(!bc)
 	return;
@@ -198,7 +188,8 @@ void SetInsnAddrSizeOverride(bytecode *bc, unsigned char addrsize)
     }
 }
 
-void SetInsnLockRepPrefix(bytecode *bc, unsigned char prefix)
+void
+SetInsnLockRepPrefix (bytecode *bc, unsigned char prefix)
 {
     unsigned char *lockrep_pre = (unsigned char *)NULL;
 
@@ -224,7 +215,8 @@ void SetInsnLockRepPrefix(bytecode *bc, unsigned char prefix)
     *lockrep_pre = prefix;
 }
 
-void SetOpcodeSel(jmprel_opcode_sel *old_sel, jmprel_opcode_sel new_sel)
+void
+SetOpcodeSel (jmprel_opcode_sel *old_sel, jmprel_opcode_sel new_sel)
 {
     if(!old_sel)
 	return;
@@ -234,7 +226,8 @@ void SetOpcodeSel(jmprel_opcode_sel *old_sel, jmprel_opcode_sel new_sel)
     *old_sel = new_sel;
 }
 
-static void BuildBC_Common(bytecode *bc)
+static void
+BuildBC_Common (bytecode *bc)
 {
     bc->len = 0;
 
@@ -245,17 +238,18 @@ static void BuildBC_Common(bytecode *bc)
     bc->mode_bits = mode_bits;
 }
 
-void BuildBC_Insn(bytecode      *bc,
-		  unsigned char  opersize,
-		  unsigned char  opcode_len,
-		  unsigned char  op0,
-		  unsigned char  op1,
-		  unsigned char  op2,
-		  effaddr       *ea_ptr,
-		  unsigned char  spare,
-		  immval        *im_ptr,
-		  unsigned char  im_len,
-		  unsigned char  im_sign)
+void
+BuildBC_Insn (bytecode      *bc,
+	      unsigned char  opersize,
+	      unsigned char  opcode_len,
+	      unsigned char  op0,
+	      unsigned char  op1,
+	      unsigned char  op2,
+	      effaddr       *ea_ptr,
+	      unsigned char  spare,
+	      immval        *im_ptr,
+	      unsigned char  im_len,
+	      unsigned char  im_sign)
 {
     bc->next = (bytecode *)NULL;
     bc->type = BC_INSN;
@@ -293,19 +287,20 @@ void BuildBC_Insn(bytecode      *bc,
     BuildBC_Common(bc);
 }
 
-void BuildBC_JmpRel(bytecode      *bc,
-		    targetval     *target,
-		    unsigned char  short_valid,
-		    unsigned char  short_opcode_len,
-		    unsigned char  short_op0,
-		    unsigned char  short_op1,
-		    unsigned char  short_op2,
-		    unsigned char  near_valid,
-		    unsigned char  near_opcode_len,
-		    unsigned char  near_op0,
-		    unsigned char  near_op1,
-		    unsigned char  near_op2,
-		    unsigned char  addrsize)
+void
+BuildBC_JmpRel (bytecode      *bc,
+	        targetval     *target,
+	        unsigned char  short_valid,
+	        unsigned char  short_opcode_len,
+	        unsigned char  short_op0,
+	        unsigned char  short_op1,
+	        unsigned char  short_op2,
+	        unsigned char  near_valid,
+	        unsigned char  near_opcode_len,
+	        unsigned char  near_op0,
+	        unsigned char  near_op1,
+	        unsigned char  near_op2,
+	        unsigned char  addrsize)
 {
     bc->next = (bytecode *)NULL;
     bc->type = BC_JMPREL;
@@ -342,14 +337,16 @@ void BuildBC_JmpRel(bytecode      *bc,
 }
 
 /* TODO: implement.  Shouldn't be difficult. */
-unsigned char *ConvertBCInsnToBytes(unsigned char *ptr, bytecode *bc, int *len)
+unsigned char *
+ConvertBCInsnToBytes (unsigned char *ptr, bytecode *bc, int *len)
 {
     if(bc->type != BC_INSN)
 	return (unsigned char *)NULL;
     return (unsigned char *)NULL;
 }
 
-void DebugPrintBC(bytecode *bc)
+void
+DebugPrintBC (bytecode *bc)
 {
     unsigned long i;
 
@@ -451,4 +448,3 @@ void DebugPrintBC(bytecode *bc)
 	bc->filename ? bc->filename : "<UNKNOWN>", bc->lineno);
     printf("Offset=%lx BITS=%u\n", bc->offset, bc->mode_bits);
 }
-

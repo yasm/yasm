@@ -1,4 +1,4 @@
-/* $Id: errwarn.h,v 1.9 2001/07/11 04:07:10 peter Exp $
+/* $Id: errwarn.h,v 1.10 2001/07/11 23:16:50 peter Exp $
  * Error and warning reporting and related functions header file.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -22,16 +22,18 @@
 #ifndef YASM_ERRWARN_H
 #define YASM_ERRWARN_H
 
-char *conv_unprint(char ch);
+/* See errwarn.c for strings that match up to these constants.
+ * When adding a constant here, keep errwarn.c in sync! */
 
+/* Fatal error constants.  Match up with fatal_msgs in errwarn.c. */
 typedef enum {
     FATAL_UNKNOWN = 0,
     FATAL_NOMEM
 } fatal_num;
 
-void InternalError(unsigned int line, char *file, char *message);
-void Fatal(fatal_num);
-
+/* Error constants.  Match up with err_msgs in errwarn.c. */
+/* FIXME: These shouldn't be ERR_* because they'll violate namespace
+ * constraints if errno.h is included. */
 typedef enum {
     ERR_NONE = 0,
     ERR_PARSER,
@@ -46,8 +48,7 @@ typedef enum {
     ERR_NO_JMPREL_FORM
 } err_num;
 
-void Error(err_num, char *, ...);
-
+/* Warning constants.  Match up with warn_msgs in errwarn.c. */
 typedef enum {
     WARN_NONE = 0,
     WARN_UNREC_CHAR,
@@ -58,6 +59,12 @@ typedef enum {
     WARN_MULT_SHORTNEAR
 } warn_num;
 
+char *conv_unprint(char ch);
+
+void InternalError(unsigned int line, char *file, char *message);
+
+void Fatal(fatal_num);
+void Error(err_num, char *, ...);
 void Warning(warn_num, char *, ...);
 
 void OutputError(void);

@@ -1,4 +1,4 @@
-/* $Id: expr.h,v 1.3 2001/07/05 09:32:58 mu Exp $
+/* $Id: expr.h,v 1.4 2001/07/11 23:16:50 peter Exp $
  * Expression handling header file
  *
  *  Copyright (C) 2001  Michael Urman
@@ -19,8 +19,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef _EXPR_H_
-#define _EXPR_H_
+#ifndef YASM_EXPR_H
+#define YASM_EXPR_H
 
 typedef enum {
     EXPR_ADD,
@@ -71,7 +71,7 @@ expr *expr_new (ExprType, ExprItem, ExprOp, ExprType, ExprItem);
 ExprItem ExprSym (struct symrec_s *);
 ExprItem ExprExpr (expr *);
 ExprItem ExprNum (unsigned long);
-ExprItem ExprNone ();
+ExprItem ExprNone (void);
 
 #define expr_new_tree(l,o,r) \
     expr_new (EXPR_EXPR, ExprExpr(l), (o), EXPR_EXPR, ExprExpr(r))

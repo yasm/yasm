@@ -1,4 +1,4 @@
-/* $Id: main.c,v 1.3 2001/05/21 02:15:53 peter Exp $
+/* $Id: main.c,v 1.4 2001/07/11 23:16:50 peter Exp $
  * Program entry point, command line parsing
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -29,7 +29,8 @@ extern int yyparse(void);
 unsigned int line_number = 1;
 unsigned int mode_bits = 32;
 
-int main(void)
+int
+main (void)
 {
     yydebug = 1;
     yyparse();
