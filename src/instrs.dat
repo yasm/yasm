@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.20 2001/07/05 03:00:26 peter Exp $
+; $Id: instrs.dat,v 1.21 2001/07/05 03:43:13 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -93,17 +93,17 @@
 ;
 ; Groupings used throughout
 ;
-; One byte opcode instructions with no operands:
+;  One byte opcode instructions with no operands:
 !onebyte	nil		nil 	$0.1		nil		nil	#0
 !onebyte16	nil		16	$0.1		nil		nil	8086
 !onebyte32	nil		32	$0.1		nil		nil	386
-; Two byte opcode instructions with no operands:
+;  Two byte opcode instructions with no operands:
 !twobyte	nil		nil	$0.1,$0.2	nil		nil	#0
-; Three byte opcode instructions with no operands:
+;  Three byte opcode instructions with no operands:
 !threebyte	nil		nil	$0.1,$0.2,$0.3	nil		nil	#0
-; One byte opcode instructions with general memory operand:
+;  One byte opcode instructions with general memory operand:
 !onebytemem	mem		nil	$0.1		$1,$0.2		nil	#0
-; Two byte opcode instructions with general memory operand:
+;  Two byte opcode instructions with general memory operand:
 !twobytemem	mem		nil	$0.1,$0.2	$1,$0.3		nil	#0
 ;
 ; Move instructions
