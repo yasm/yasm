@@ -7,3 +7,6 @@ EXTRA_DIST += modules/objfmts/coff/tests/cofftest.c
 EXTRA_DIST += modules/objfmts/coff/tests/cofftest.asm
 EXTRA_DIST += modules/objfmts/coff/tests/cofftest.hex
 EXTRA_DIST += modules/objfmts/coff/tests/cofftest.errwarn
+EXTRA_DIST += modules/objfmts/coff/tests/x86id.asm
+EXTRA_DIST += modules/objfmts/coff/tests/x86id.hex
+EXTRA_DIST += modules/objfmts/coff/tests/x86id.errwarn

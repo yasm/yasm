@@ -31,7 +31,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath: yasm/libyasm/hamt.c,v 1.9 2003/03/15 05:07:48 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "coretype.h"
 #include "hamt.h"
@@ -271,7 +271,9 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 
 	    /* Count total number of bits in bitmap to determine new size */
 	    BitCount(Size, node->BitMapKey);
-	    Size &= 0x1F;	/* Clamp to <32 */
+	    Size &= 0x1F;	/* Clamp to <=32 */
+	    if (Size == 0)
+		Size = 32;
 	    newnodes = yasm_xmalloc(Size*sizeof(HAMTNode));
 
 	    /* Count bits below to find where to insert new node at */
