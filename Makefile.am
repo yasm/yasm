@@ -30,5 +30,5 @@ EXTRA_DIST += \
 	strsep.c mergesort.c \
 	COPYING.LIB-2.0 \
 	Mkfiles/Makefile.flat \
-	Mkfiles/Makefile.dj Mkfiles/config.h.dj \
-	Mkfiles/Makefile.vc Mkfiles/config.h.vc
+	Mkfiles/Makefile.dj Mkfiles/dj/config.h \
+	Mkfiles/Makefile.vc Mkfiles/vc/config.h
