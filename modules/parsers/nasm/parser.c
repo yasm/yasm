@@ -56,8 +56,8 @@ nasm_parser_do_parse(parser *p, objfmt *of, FILE *f)
     /* Initialize section list */
     nasm_parser_cur_section = sections_initialize(&nasm_parser_sections, of);
 
-    /* only temporary */
-    nasm_parser_debug = 0;
+    /* yacc debugging, needs YYDEBUG set in bison.y.in to work */
+    /* nasm_parser_debug = 1; */
 
     nasm_parser_parse();
 
