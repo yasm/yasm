@@ -17,6 +17,7 @@ noinst_PROGRAMS =
 yasm_SOURCES =
 yasm_LDADD = @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@
 
+lib_LTLIBRARIES =
 BUILT_SOURCES =
 CLEANFILES =
 EXTRA_DIST = config/config.rpath  \
