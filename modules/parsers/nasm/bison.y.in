@@ -1,4 +1,4 @@
-/* $Id: bison.y.in,v 1.8 2001/05/22 20:48:21 peter Exp $
+/* $Id: bison.y.in,v 1.9 2001/05/30 07:41:27 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -168,8 +168,9 @@ memaddr: memexp			{ $$ = $1; $$.segment = 0; }
     | REG_ES ':' memaddr	{ $$ = $3; SetEASegment(&$$, 0x26); }
     | REG_FS ':' memaddr	{ $$ = $3; SetEASegment(&$$, 0x64); }
     | REG_GS ':' memaddr	{ $$ = $3; SetEASegment(&$$, 0x65); }
-    | WORD memaddr		{ $$ = $2; $$.addrsize = 16; $$.len = 2; }
-    | DWORD memaddr		{ $$ = $2; $$.addrsize = 32; $$.len = 4; }
+    | BYTE memaddr		{ $$ = $2; SetEALen(&$$, 1); }
+    | WORD memaddr		{ $$ = $2; SetEALen(&$$, 2); }
+    | DWORD memaddr		{ $$ = $2; SetEALen(&$$, 4); }
 ;
 
 mem: '[' memaddr ']' { $$ = $2; }
@@ -279,18 +280,18 @@ imm32: imm
 ;
 
 instr: instrbase
-    | OPERSIZE instr	{ $$ = $2; $$.data.insn.opersize = $1; }
-    | ADDRSIZE instr	{ $$ = $2; $$.data.insn.ea.addrsize = $1; }
-    | REG_CS instr	{ $$ = $2; $$.data.insn.ea.segment = 0x2E; }
-    | REG_SS instr	{ $$ = $2; $$.data.insn.ea.segment = 0x36; }
-    | REG_DS instr	{ $$ = $2; $$.data.insn.ea.segment = 0x3E; }
-    | REG_ES instr	{ $$ = $2; $$.data.insn.ea.segment = 0x26; }
-    | REG_FS instr	{ $$ = $2; $$.data.insn.ea.segment = 0x64; }
-    | REG_GS instr	{ $$ = $2; $$.data.insn.ea.segment = 0x65; }
-    | LOCK instr	{ $$ = $2; $$.data.insn.lockrep_pre = 0xF0; }
-    | REPNZ instr	{ $$ = $2; $$.data.insn.lockrep_pre = 0xF2; }
-    | REP instr		{ $$ = $2; $$.data.insn.lockrep_pre = 0xF3; }
-    | REPZ instr	{ $$ = $2; $$.data.insn.lockrep_pre = 0xF4; }
+    | OPERSIZE instr	{ $$ = $2; SetInsnOperSizeOverride(&$$, $1); }
+    | ADDRSIZE instr	{ $$ = $2; SetInsnAddrSizeOverride(&$$, $1); }
+    | REG_CS instr	{ $$ = $2; SetEASegment(&$$.data.insn.ea, 0x2E); }
+    | REG_SS instr	{ $$ = $2; SetEASegment(&$$.data.insn.ea, 0x36); }
+    | REG_DS instr	{ $$ = $2; SetEASegment(&$$.data.insn.ea, 0x3E); }
+    | REG_ES instr	{ $$ = $2; SetEASegment(&$$.data.insn.ea, 0x26); }
+    | REG_FS instr	{ $$ = $2; SetEASegment(&$$.data.insn.ea, 0x64); }
+    | REG_GS instr	{ $$ = $2; SetEASegment(&$$.data.insn.ea, 0x65); }
+    | LOCK instr	{ $$ = $2; SetInsnLockRepPrefix(&$$, 0xF0); }
+    | REPNZ instr	{ $$ = $2; SetInsnLockRepPrefix(&$$, 0xF2); }
+    | REP instr		{ $$ = $2; SetInsnLockRepPrefix(&$$, 0xF3); }
+    | REPZ instr	{ $$ = $2; SetInsnLockRepPrefix(&$$, 0xF4); }
 ;
 
 /* instruction grammars (dynamically generated) */
