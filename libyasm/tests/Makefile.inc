@@ -7,6 +7,9 @@ TESTS += libyasm/tests/libyasm_test.sh
 EXTRA_DIST += libyasm/tests/libyasm_test.sh
 EXTRA_DIST += libyasm/tests/duplabel-err.asm
 EXTRA_DIST += libyasm/tests/duplabel-err.errwarn
+EXTRA_DIST += libyasm/tests/unary.asm
+EXTRA_DIST += libyasm/tests/unary.errwarn
+EXTRA_DIST += libyasm/tests/unary.hex
 
 noinst_PROGRAMS += bitvect_test
 noinst_PROGRAMS += floatnum_test

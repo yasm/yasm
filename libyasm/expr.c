@@ -478,6 +478,11 @@ expr_simplify_identity(yasm_expr *e, int numterms, int int_term)
 	numterms = 1;
     }
 
+    /* Compute NOT and NEG on single intnum. */
+    if (numterms == 1 && int_term == 0 &&
+	(e->op == YASM_EXPR_NOT || e->op == YASM_EXPR_NEG))
+	yasm_intnum_calc(e->terms[0].data.intn, e->op, NULL, e->line);
+
     /* Change expression to IDENT if possible. */
     if (numterms == 1)
 	e->op = YASM_EXPR_IDENT;
