@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.6 2001/05/30 07:07:16 peter Exp $
+/* $Id: bytecode.h,v 1.7 2001/05/30 07:41:03 peter Exp $
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -23,21 +23,30 @@
 #define _BYTECODE_H_
 
 typedef struct effaddr_s {
-    unsigned long offset;
-    unsigned char len;		/* length of offset (in bytes), 0 if none */
-    unsigned char addrsize;	/* 16 or 32, 0 indicates no override */
+    unsigned long disp;		/* address displacement */
+    unsigned char len;		/* length of disp (in bytes), 0 if none */
+
     unsigned char segment;	/* segment override, 0 if none */
+
     unsigned char modrm;
+    unsigned char valid_modrm;	/* 1 if Mod/RM byte currently valid, 0 if not */
     unsigned char need_modrm;	/* 1 if Mod/RM byte needed, 0 if not */
+
     unsigned char sib;
+    unsigned char valid_sib;	/* 1 if SIB byte currently valid, 0 if not */
     unsigned char need_sib;	/* 1 if SIB byte needed, 0 if not */
 } effaddr;
 
 typedef struct immval_s {
     unsigned long val;
+
     unsigned char len;		/* length of val (in bytes), 0 if none */
     unsigned char isrel;
     unsigned char isneg;	/* the value has been explicitly negated */
+
+    unsigned char f_len;	/* final imm length */
+    unsigned char f_rel;	/* 1 if final imm should be rel */
+    unsigned char f_sign;	/* 1 if final imm should be signed */
 } immval;
 
 typedef struct bytecode_s {
@@ -50,13 +59,11 @@ typedef struct bytecode_s {
 	    effaddr ea;			/* effective address */
 
 	    immval imm;			/* immediate or relative value */
-	    unsigned char f_len_imm;	/* final imm length */
-	    unsigned char f_rel_imm;	/* 1 if final imm should be rel */
-	    unsigned char f_sign_imm;	/* 1 if final imm should be signed */
 
 	    unsigned char opcode[3];	/* opcode */
 	    unsigned char opcode_len;
 
+	    unsigned char addrsize;	/* 0 indicates no override */
 	    unsigned char opersize;	/* 0 indicates no override */
 	    unsigned char lockrep_pre;	/* 0 indicates no prefix */
 	} insn;
@@ -83,7 +90,11 @@ effaddr *ConvertImmToEA(effaddr *ptr, immval *im_ptr, unsigned char im_len);
 immval *ConvertIntToImm(immval *ptr, unsigned long int_val);
 
 void SetEASegment(effaddr *ptr, unsigned char segment);
-void SetEAAddressSize(effaddr *ptr, unsigned char addrsize, unsigned char len);
+void SetEALen(effaddr *ptr, unsigned char len);
+
+void SetInsnOperSizeOverride(bytecode *bc, unsigned char opersize);
+void SetInsnAddrSizeOverride(bytecode *bc, unsigned char addrsize);
+void SetInsnLockRepPrefix(bytecode *bc, unsigned char prefix);
 
 void BuildBC_Insn(bytecode      *bc,
 		  unsigned char  opersize,

@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.7 2001/05/30 07:07:16 peter Exp $
+/* $Id: bytecode.c,v 1.8 2001/05/30 07:41:03 peter Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -28,32 +28,26 @@ static effaddr eff_static;
 static immval im_static;
 unsigned char bytes_static[16];
 
-/* FIXME: converting int to EA, but we don't know addrsize yet? 
-   currently assumes BITS setting.. probably better to always do calculations
-   in 32 bits in case BITS 16 is going to be overridden later in parsing. */
-
 effaddr *ConvertIntToEA(effaddr *ptr, unsigned long int_val)
 {
     if(!ptr)
 	ptr = &eff_static;
 
-    ptr->addrsize = 0;
     ptr->segment = 0;
 
-    if(mode_bits == 32) {
-	ptr->offset = int_val;
-	ptr->len = 4;
-	ptr->modrm = 0x05;		    /* Mod=00 R/M=disp32, Reg=0 */
-	ptr->need_modrm = 1;
-	ptr->need_sib = 0;
-    } else if(mode_bits == 16) {
-	ptr->offset = int_val & 0xFFFF;
+    ptr->valid_modrm = 0;
+    ptr->need_modrm = 1;
+    ptr->valid_sib = 0;
+    ptr->need_sib = 0;
+
+    ptr->disp = int_val;
+
+    if((int_val & 0xFF) == int_val)
+	ptr->len = 1;
+    else if((int_val & 0xFFFF) == int_val)
 	ptr->len = 2;
-	ptr->modrm = 0x06;		    /* Mod=00 R/M=disp16, Reg=0 */
-	ptr->need_modrm = 1;
-	ptr->need_sib = 0;
-    } else
-	return (effaddr *)NULL;
+    else
+	ptr->len = 4;
 
     return ptr;
 }
@@ -64,10 +58,11 @@ effaddr *ConvertRegToEA(effaddr *ptr, unsigned long reg)
 	ptr = &eff_static;
 
     ptr->len = 0;
-    ptr->addrsize = 0;
     ptr->segment = 0;
     ptr->modrm = 0xC0 | (reg & 0x07);	    /* Mod=11, R/M=Reg, Reg=0 */
+    ptr->valid_modrm = 1;
     ptr->need_modrm = 1;
+    ptr->valid_sib = 0;
     ptr->need_sib = 0;
 
     return ptr;
@@ -78,13 +73,14 @@ effaddr *ConvertImmToEA(effaddr *ptr, immval *im_ptr, unsigned char im_len)
     if(!ptr)
 	ptr = &eff_static;
 
-    ptr->offset = im_ptr->val;
+    ptr->disp = im_ptr->val;
     if(im_ptr->len > im_len)
 	Warning(WARN_VALUE_EXCEEDS_BOUNDS, (char *)NULL, "word");
     ptr->len = im_len;
-    ptr->addrsize = 0;
     ptr->segment = 0;
+    ptr->valid_modrm = 0;
     ptr->need_modrm = 0;
+    ptr->valid_sib = 0;
     ptr->need_sib = 0;
 
     return ptr;
@@ -115,16 +111,49 @@ void SetEASegment(effaddr *ptr, unsigned char segment)
     if(!ptr)
 	return;
 
-    if(ptr->segment != 0) {
-	Error(ERR_INVALID_EA, (char *)NULL);
-	return;
-    }
+    if(ptr->segment != 0)
+	Warning(WARN_MULT_SEG_OVERRIDE, (char *)NULL);
 
     ptr->segment = segment;
 }
 
-void SetEAAddressSize(effaddr *ptr, unsigned char addrsize, unsigned char len)
+void SetEALen(effaddr *ptr, unsigned char len)
 {
+    if(!ptr)
+	return;
+
+    /* Currently don't warn if length truncated, as this is called only from
+     * an explicit override, where we expect the user knows what they're doing.
+     */
+
+    ptr->len = len;
+}
+
+void SetInsnOperSizeOverride(bytecode *bc, unsigned char opersize)
+{
+    if(!bc)
+	return;
+
+    bc->data.insn.opersize = opersize;
+}
+
+void SetInsnAddrSizeOverride(bytecode *bc, unsigned char addrsize)
+{
+    if(!bc)
+	return;
+
+    bc->data.insn.addrsize = addrsize;
+}
+
+void SetInsnLockRepPrefix(bytecode *bc, unsigned char prefix)
+{
+    if(!bc)
+	return;
+
+    if(bc->data.insn.lockrep_pre != 0)
+	Warning(WARN_MULT_LOCKREP_PREFIX, (char *)NULL);
+
+    bc->data.insn.lockrep_pre = prefix;
 }
 
 void BuildBC_Insn(bytecode      *bc,
@@ -149,7 +178,6 @@ void BuildBC_Insn(bytecode      *bc,
 	bc->data.insn.ea.modrm |= (spare << 3) & 0x38;	/* plug in provided bits */
     } else {
 	bc->data.insn.ea.len = 0;
-	bc->data.insn.ea.addrsize = 0;
 	bc->data.insn.ea.segment = 0;
 	bc->data.insn.ea.need_modrm = 0;
 	bc->data.insn.ea.need_sib = 0;
@@ -157,18 +185,22 @@ void BuildBC_Insn(bytecode      *bc,
 
     if(im_ptr) {
 	bc->data.insn.imm = *im_ptr;
+	bc->data.insn.imm.f_rel = im_rel;
+	bc->data.insn.imm.f_sign = im_sign;
+	bc->data.insn.imm.f_len = im_len;
     } else {
 	bc->data.insn.imm.len = 0;
+	bc->data.insn.imm.f_rel = 0;
+	bc->data.insn.imm.f_sign = 0;
+	bc->data.insn.imm.f_len = 0;
     }
-    bc->data.insn.f_rel_imm = im_rel;
-    bc->data.insn.f_sign_imm = im_sign;
-    bc->data.insn.f_len_imm = im_len;
 
     bc->data.insn.opcode[0] = op0;
     bc->data.insn.opcode[1] = op1;
     bc->data.insn.opcode[2] = op2;
     bc->data.insn.opcode_len = opcode_len;
 
+    bc->data.insn.addrsize = 0;
     bc->data.insn.opersize = opersize;
 
     bc->len = 0;
@@ -196,24 +228,27 @@ void DebugPrintBC(bytecode *bc)
 	case BC_INSN:
 	    printf("_Instruction_\n");
 	    printf("Effective Address:\n");
-	    printf(" Offset=%lx Len=%u\n", bc->data.insn.ea.offset,
-		(unsigned int)bc->data.insn.ea.len);
-	    printf(" AddrSize=%u SegmentOv=%2x\n",
-		(unsigned int)bc->data.insn.ea.addrsize,
+	    printf(" Disp=%lx Len=%u SegmentOv=%2x\n", bc->data.insn.ea.disp,
+		(unsigned int)bc->data.insn.ea.len,
 		(unsigned int)bc->data.insn.ea.segment);
-	    printf(" ModRM=%2x NeedRM=%u SIB=%2x NeedSIB=%u\n",
+	    printf(" ModRM=%2x ValidRM=%u NeedRM=%u\n",
 		(unsigned int)bc->data.insn.ea.modrm,
-		(unsigned int)bc->data.insn.ea.need_modrm,
+		(unsigned int)bc->data.insn.ea.valid_modrm,
+		(unsigned int)bc->data.insn.ea.need_modrm);
+	    printf(" SIB=%2x ValidSIB=%u NeedSIB=%u\n",
 		(unsigned int)bc->data.insn.ea.sib,
+		(unsigned int)bc->data.insn.ea.valid_sib,
 		(unsigned int)bc->data.insn.ea.need_sib);
 	    printf("Immediate/Relative Value:\n");
-	    printf(" Val=%lx Len=%u, IsRel=%u\n", bc->data.insn.imm.val,
+	    printf(" Val=%lx\n", bc->data.insn.imm.val);
+	    printf(" Len=%u, IsRel=%u, IsNeg=%u\n",
 		(unsigned int)bc->data.insn.imm.len,
-		(unsigned int)bc->data.insn.imm.isrel);
+		(unsigned int)bc->data.insn.imm.isrel,
+		(unsigned int)bc->data.insn.imm.isneg);
 	    printf(" FLen=%u, FRel=%u, FSign=%u\n",
-		(unsigned int)bc->data.insn.f_len_imm,
-		(unsigned int)bc->data.insn.f_rel_imm,
-		(unsigned int)bc->data.insn.f_sign_imm);
+		(unsigned int)bc->data.insn.imm.f_len,
+		(unsigned int)bc->data.insn.imm.f_rel,
+		(unsigned int)bc->data.insn.imm.f_sign);
 	    printf("Opcode: %2x %2x OpLen=%u\n",
 		(unsigned int)bc->data.insn.opcode[0],
 		(unsigned int)bc->data.insn.opcode[1],
