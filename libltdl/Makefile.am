@@ -27,9 +27,9 @@ libltdlc_la_LIBADD = $(LIBADD_DL)
 ## Because we do not have automatic dependency tracking:
 ltdl.lo: ltdl.h ../libyasm/config.h
 
-$(OBJECTS): libtool
-libtool: $(LIBTOOL_DEPS)
-	$(SHELL) ./config.status --recheck
+$(libltdl_la_OBJECTS) $(libltdlc_la_OBJECTS): $(top_builddir)/libtool
+#libtool: $(LIBTOOL_DEPS)
+#	$(SHELL) $(top_builddir)/config.status --recheck
 
 ## This allows us to install libltdl without using ln and without creating
 ## a world writeable directory.
