@@ -104,3 +104,6 @@ EXTRA_DIST += modules/arch/x86/tests/twobytemem.hex
 EXTRA_DIST += modules/arch/x86/tests/x86label.asm
 EXTRA_DIST += modules/arch/x86/tests/x86label.errwarn
 EXTRA_DIST += modules/arch/x86/tests/x86label.hex
+EXTRA_DIST += modules/arch/x86/tests/xmm64.asm
+EXTRA_DIST += modules/arch/x86/tests/xmm64.errwarn
+EXTRA_DIST += modules/arch/x86/tests/xmm64.hex

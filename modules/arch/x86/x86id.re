@@ -2453,7 +2453,7 @@ yasm_x86__parse_check_id(yasm_arch *arch, unsigned long data[4],
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
-	    data[0] = X86_REG64 | (10+oid[4]-'0');
+	    data[0] = X86_XMMREG | (10+oid[4]-'0');
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 
