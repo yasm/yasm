@@ -1,4 +1,4 @@
-# $Id: configure.in,v 1.17 2001/09/16 22:01:46 peter Exp $
+# $Id: configure.in,v 1.18 2001/09/16 22:04:02 peter Exp $
 
 AC_INIT(src/main.c)
 AC_CONFIG_AUX_DIR(config)
@@ -65,8 +65,8 @@ AC_OUTPUT(Makefile
 	src/parsers/nasm/Makefile
 	src/preprocs/Makefile
 	src/preprocs/raw/Makefile
-	src/objfmts/Makefile
-	src/objfmts/dbg/Makefile
 	src/optimizers/Makefile
 	src/optimizers/dbg/Makefile
+	src/objfmts/Makefile
+	src/objfmts/dbg/Makefile
 )
