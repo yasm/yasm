@@ -7,83 +7,69 @@
 # Also, WARNING, no header dependencies are included!
 #
 # How to compile:
-#  copy Mkfiles/config.h.dj config.h
 #  make -fMkfiles/Makefile.dj
 
-CFLAGS=-DHAVE_CONFIG_H -I. -Isrc -Isrc/arch/x86
+CFLAGS=-DHAVE_CONFIG_H -IMkfiles/dj -I. -Isrc -Isrc/arch/x86
 CC=gcc
 
-all: src/yasm
+all: yasm
 
-SRC_OBJS= \
- src/arch.o \
+YASM_BASE_OBJS= \
  src/bytecode.o \
- src/errwarn.o \
  src/expr.o \
  src/symrec.o \
  src/globals.o \
  src/file.o \
  src/section.o \
- src/options.o \
+ src/arch.o \
+ src/objfmt.o \
+ src/preproc.o \
  src/parser.o \
  src/intnum.o \
  src/floatnum.o \
- src/mergesort.o \
- src/ternary.o \
+ src/hamt.o \
  src/bitvect.o \
  src/valparam.o \
  src/xmalloc.o \
  src/xstrdup.o \
  src/strcasecmp.o
 
-SRC_ARCH_X86_OBJS= \
- src/arch/x86/arch.o \
- src/arch/x86/bytecode.o \
- src/arch/x86/expr.o
+YASM_ARCH_OBJS= \
+ src/arch/x86/x86arch.o \
+ src/arch/x86/x86bc.o \
+ src/arch/x86/x86expr.o
 
-SRC_ARCH_OBJS= \
- $(SRC_ARCH_X86_OBJS)
+YASM_PARSER_OBJS= \
+ src/parsers/nasm/nasm-parser.o \
+ nasm-bison.o \
+ nasm-token.o
 
-SRC_PREPROCS_RAW_OBJS= \
- src/preprocs/raw/preproc.o
+YASM_PREPROC_OBJS= \
+ src/preprocs/raw/raw-preproc.o \
+ src/preprocs/yapp/yapp-preproc.o \
+ yapp-token.o
 
-SRC_PREPROCS_OBJS= \
- $(SRC_PREPROCS_RAW_OBJS)
+YASM_OPTIMIZER_OBJS= \
+ src/optimizers/basic/basic-optimizer.o
 
-SRC_PARSERS_NASM_OBJS= \
- src/parsers/nasm/parser.o \
- src/parsers/nasm/bison.o \
- src/parsers/nasm/token.o
-
-SRC_PARSERS_OBJS= \
- $(SRC_PARSERS_NASM_OBJS)
-
-SRC_OPTIMIZERS_DBG_OBJS= \
- src/optimizers/dbg/optimizer.o
-
-SRC_OPTIMIZERS_OBJS= \
- $(SRC_OPTIMIZERS_DBG_OBJS)
-
-SRC_OBJFMTS_DBG_OBJS= \
- src/objfmts/dbg/objfmt.o
-
-SRC_OBJFMTS_OBJS= \
- $(SRC_OBJFMTS_DBG_OBJS)
+YASM_OBJFMT_OBJS= \
+ src/objfmts/dbg/dbg-objfmt.o \
+ src/objfmts/bin/bin-objfmt.o
 
 YASM_OBJS= \
  src/main.o \
- $(SRC_OBJS) \
- $(SRC_PREPROCS_OBJS) \
- $(SRC_PARSERS_OBJS) \
- $(SRC_OPTIMIZERS_OBJS) \
- $(SRC_OBJFMTS_OBJS) \
- $(SRC_ARCH_OBJS)
+ src/errwarn.o \
+ src/options.o \
+ $(YASM_BASE_OBJS) \
+ $(YASM_ARCH_OBJS) \
+ $(YASM_PARSER_OBJS) \
+ $(YASM_PREPROC_OBJS) \
+ $(YASM_OPTIMIZER_OBJS) \
+ $(YASM_OBJFMT_OBJS) \
+ mergesort.o
 
-src/yasm: $(YASM_OBJS)
-	$(CC) -o src/yasm $(YASM_OBJS)
-
-src/parsers/nasm/token.o: src/parsers/nasm/token.c
-	$(CC) -c $(CFLAGS) -Isrc/parsers/nasm -o $@ $<
+yasm: $(YASM_OBJS)
+	$(CC) -o yasm $(YASM_OBJS)
 
 .c.o:
 	$(CC) -c $(CFLAGS) -o $@ $<

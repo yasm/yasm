@@ -7,83 +7,69 @@
 # Also, WARNING, no header dependencies are included!
 #
 # How to compile:
-#  copy Mkfiles/config.h.vc config.h
 #  nmake -fMkfiles/Makefile.vc
 
-CFLAGS=/DHAVE_CONFIG_H /I. /Isrc /Isrc/arch/x86
+CFLAGS=/DHAVE_CONFIG_H /IMkfiles/vc /I. /Isrc /Isrc/arch/x86
 CC=cl
 
-all: src\yasm.exe
+all: yasm.exe
 
-SRC_OBJS= \
- src\arch.obj \
- src\bytecode.obj \
- src\errwarn.obj \
- src\expr.obj \
- src\symrec.obj \
- src\globals.obj \
- src\file.obj \
- src\section.obj \
- src\options.obj \
- src\parser.obj \
- src\intnum.obj \
- src\floatnum.obj \
- src\mergesort.obj \
- src\ternary.obj \
- src\bitvect.obj \
- src\valparam.obj \
- src\xmalloc.obj \
- src\xstrdup.obj \
- src\strcasecmp.obj
+YASM_BASE_OBJS= \
+ src/bytecode.obj \
+ src/expr.obj \
+ src/symrec.obj \
+ src/globals.obj \
+ src/file.obj \
+ src/section.obj \
+ src/arch.obj \
+ src/objfmt.obj \
+ src/preproc.obj \
+ src/parser.obj \
+ src/intnum.obj \
+ src/floatnum.obj \
+ src/hamt.obj \
+ src/bitvect.obj \
+ src/valparam.obj \
+ src/xmalloc.obj \
+ src/xstrdup.obj \
+ src/strcasecmp.obj
 
-SRC_ARCH_X86_OBJS= \
- src\arch\x86\arch.obj \
- src\arch\x86\bytecode.obj \
- src\arch\x86\expr.obj
+YASM_ARCH_OBJS= \
+ src/arch/x86/x86arch.obj \
+ src/arch/x86/x86bc.obj \
+ src/arch/x86/x86expr.obj
 
-SRC_ARCH_OBJS= \
- $(SRC_ARCH_X86_OBJS)
+YASM_PARSER_OBJS= \
+ src/parsers/nasm/nasm-parser.obj \
+ nasm-bison.obj \
+ nasm-token.obj
 
-SRC_PREPROCS_RAW_OBJS= \
- src\preprocs\raw\preproc.obj
+YASM_PREPROC_OBJS= \
+ src/preprocs/raw/raw-preproc.obj \
+ src/preprocs/yapp/yapp-preproc.obj \
+ yapp-token.obj
 
-SRC_PREPROCS_OBJS= \
- $(SRC_PREPROCS_RAW_OBJS)
+YASM_OPTIMIZER_OBJS= \
+ src/optimizers/basic/basic-optimizer.obj
 
-SRC_PARSERS_NASM_OBJS= \
- src\parsers\nasm\parser.obj \
- src\parsers\nasm\bison.obj \
- src\parsers\nasm\token.obj
-
-SRC_PARSERS_OBJS= \
- $(SRC_PARSERS_NASM_OBJS)
-
-SRC_OPTIMIZERS_DBG_OBJS= \
- src\optimizers\dbg\optimizer.obj
-
-SRC_OPTIMIZERS_OBJS= \
- $(SRC_OPTIMIZERS_DBG_OBJS)
-
-SRC_OBJFMTS_DBG_OBJS= \
- src\objfmts\dbg\objfmt.obj
-
-SRC_OBJFMTS_OBJS= \
- $(SRC_OBJFMTS_DBG_OBJS)
+YASM_OBJFMT_OBJS= \
+ src/objfmts/dbg/dbg-objfmt.obj \
+ src/objfmts/bin/bin-objfmt.obj
 
 YASM_OBJS= \
- src\main.obj \
- $(SRC_OBJS) \
- $(SRC_PREPROCS_OBJS) \
- $(SRC_PARSERS_OBJS) \
- $(SRC_OPTIMIZERS_OBJS) \
- $(SRC_OBJFMTS_OBJS) \
- $(SRC_ARCH_OBJS)
+ src/main.obj \
+ src/errwarn.obj \
+ src/options.obj \
+ $(YASM_BASE_OBJS) \
+ $(YASM_ARCH_OBJS) \
+ $(YASM_PARSER_OBJS) \
+ $(YASM_PREPROC_OBJS) \
+ $(YASM_OPTIMIZER_OBJS) \
+ $(YASM_OBJFMT_OBJS) \
+ mergesort.obj
 
-src\yasm.exe: $(YASM_OBJS)
-	$(CC) /Fesrc\yasm.exe $(YASM_OBJS)
-
-src\parsers\nasm\token.o: src\parsers\nasm\token.c
-	$(CC) /c $(CFLAGS) /Isrc/parsers/nasm /Fo$@ $<
+yasm.exe: $(YASM_OBJS)
+	$(CC) /Feyasm.exe $(YASM_OBJS)
 
 .c.obj:
 	$(CC) /c $(CFLAGS) /Fo$@ $<
