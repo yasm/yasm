@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$IdPath: yasm/modules/preprocs/raw/raw-preproc.c,v 1.23 2003/04/01 04:06:47 mu Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #define YASM_LIB_INTERNAL
 #include <libyasm.h>
@@ -74,6 +74,7 @@ raw_preproc_input(char *buf, size_t max_size)
 
 /* Define preproc structure -- see preproc.h for details */
 yasm_preproc yasm_raw_LTX_preproc = {
+    YASM_PREPROC_VERSION,
     "Disable preprocessing",
     "raw",
     raw_preproc_initialize,

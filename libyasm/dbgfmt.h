@@ -34,8 +34,25 @@
 #ifndef YASM_DBGFMT_H
 #define YASM_DBGFMT_H
 
+/** Version number of #yasm_dbgfmt interface.  Any functional change to the
+ * #yasm_dbgfmt interface should simultaneously increment this number.  This
+ * version should be checked by #yasm_dbgfmt loaders to verify that the
+ * expected version (the version defined by its libyasm header files) matches
+ * the loaded module version (the version defined by the module's libyasm
+ * header files).  Doing this will ensure that the module version's function
+ * definitions match the module loader's function definitions.  The version
+ * number must never be decreased.
+ */
+#define YASM_DBGFMT_VERSION	0
+
 /** YASM debug format interface. */
 struct yasm_dbgfmt {
+    /** Version (see #YASM_DBGFMT_VERSION).  Should always be set to
+     * #YASM_DBGFMT_VERSION by the module source and checked against
+     * #YASM_DBGFMT_VERSION by the module loader.
+     */
+    unsigned int version;
+
     /** One-line description of the debug format. */
     const char *name;
 

@@ -1,4 +1,4 @@
-/* $IdPath: yasm/libyasm/parser.h,v 1.21 2003/03/13 06:54:19 peter Exp $
+/* $IdPath$
  * Parser module interface header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -27,8 +27,25 @@
 #ifndef YASM_PARSER_H
 #define YASM_PARSER_H
 
+/** Version number of #yasm_parser interface.  Any functional change to the
+ * #yasm_parser interface should simultaneously increment this number.  This
+ * version should be checked by #yasm_parser loaders to verify that the
+ * expected version (the version defined by its libyasm header files) matches
+ * the loaded module version (the version defined by the module's libyasm
+ * header files).  Doing this will ensure that the module version's function
+ * definitions match the module loader's function definitions.  The version
+ * number must never be decreased.
+ */
+#define YASM_PARSER_VERSION	0
+
 /* Interface to the parser module(s) -- the "front end" of the assembler */
 struct yasm_parser {
+    /** Version (see #YASM_PARSER_VERSION).  Should always be set to
+     * #YASM_PARSER_VERSION by the module source and checked against
+     * #YASM_PARSER_VERSION by the module loader.
+     */
+    unsigned int version;
+
     /* one-line description of the parser */
     const char *name;
 

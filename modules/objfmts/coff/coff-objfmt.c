@@ -1137,6 +1137,7 @@ static const char *coff_objfmt_dbgfmt_keywords[] = {
 
 /* Define objfmt structure -- see objfmt.h for details */
 yasm_objfmt yasm_coff_LTX_objfmt = {
+    YASM_OBJFMT_VERSION,
     "COFF (DJGPP)",
     "coff",
     "o",
@@ -1162,6 +1163,7 @@ yasm_objfmt yasm_coff_LTX_objfmt = {
 
 /* Define objfmt structure -- see objfmt.h for details */
 yasm_objfmt yasm_win32_LTX_objfmt = {
+    YASM_OBJFMT_VERSION,
     "Win32",
     "win32",
     "obj",

@@ -27,8 +27,25 @@
 #ifndef YASM_OPTIMIZER_H
 #define YASM_OPTIMIZER_H
 
+/** Version number of #yasm_optimizer interface.  Any functional change to the
+ * #yasm_optimizer interface should simultaneously increment this number.  This
+ * version should be checked by #yasm_optimizer loaders to verify that the
+ * expected version (the version defined by its libyasm header files) matches
+ * the loaded module version (the version defined by the module's libyasm
+ * header files).  Doing this will ensure that the module version's function
+ * definitions match the module loader's function definitions.  The version
+ * number must never be decreased.
+ */
+#define YASM_OPTIMIZER_VERSION	0
+
 /* Interface to the optimizer module(s) */
 struct yasm_optimizer {
+    /** Version (see #YASM_OPTIMIZER_VERSION).  Should always be set to
+     * #YASM_OPTIMIZER_VERSION by the module source and checked against
+     * #YASM_OPTIMIZER_VERSION by the module loader.
+     */
+    unsigned int version;
+
     /* one-line description of the optimizer */
     const char *name;
 

@@ -50,6 +50,18 @@ extern const lt_dlsymlist lt_preloaded_symbols[];
 /* Preprocess-only buffer size */
 #define PREPROC_BUF_SIZE    16384
 
+/* Check the module version */
+#define check_module_version(d, TYPE, desc)	\
+do { \
+    if (d && d->version != YASM_##TYPE##_VERSION) { \
+	print_error( \
+	    _("%s: module version mismatch: %s `%s' (need %d, module %d)"), \
+	    _("FATAL"), _(desc), d->keyword, YASM_##TYPE##_VERSION, \
+	    d->version); \
+	exit(EXIT_FAILURE); \
+    } \
+} while (0)
+
 /*@null@*/ /*@only@*/ static char *obj_filename = NULL, *in_filename = NULL;
 /*@null@*/ /*@only@*/ static char *machine_name = NULL;
 static int special_options = 0;
@@ -315,6 +327,7 @@ main(int argc, char *argv[])
 	    cleanup(NULL);
 	    return EXIT_FAILURE;
 	}
+	check_module_version(cur_preproc, PREPROC, "preproc");
 
 	apply_preproc_saved_options();
 
@@ -352,6 +365,7 @@ main(int argc, char *argv[])
 	    return EXIT_FAILURE;
 	}
     }
+    check_module_version(cur_arch, ARCH, "arch");
 
     /* Set up architecture using the selected (or default) machine */
     if (!machine_name)
@@ -383,6 +397,7 @@ main(int argc, char *argv[])
 		    _("optimizer"));
 	return EXIT_FAILURE;
     }
+    check_module_version(cur_optimizer, OPTIMIZER, "optimizer");
 
     yasm_arch_common_initialize(cur_arch);
     yasm_expr_initialize(cur_arch);
@@ -397,6 +412,7 @@ main(int argc, char *argv[])
 		    _("object format"));
 	return EXIT_FAILURE;
     }
+    check_module_version(cur_objfmt, OBJFMT, "objfmt");
 
     /* If not already specified, default to null as the debug format. */
     if (!cur_dbgfmt)
@@ -426,6 +442,7 @@ main(int argc, char *argv[])
 		    _("debug format"));
 	return EXIT_FAILURE;
     }
+    check_module_version(cur_dbgfmt, DBGFMT, "dbgfmt");
 
     /* determine the object filename if not specified */
     if (!obj_filename) {
@@ -463,6 +480,7 @@ main(int argc, char *argv[])
 	    return EXIT_FAILURE;
 	}
     }
+    check_module_version(cur_parser, PARSER, "parser");
 
     /* If not already specified, default to the parser's default preproc. */
     if (!cur_preproc)
@@ -493,6 +511,7 @@ main(int argc, char *argv[])
 	cleanup(NULL);
 	return EXIT_FAILURE;
     }
+    check_module_version(cur_preproc, PREPROC, "preproc");
 
     apply_preproc_saved_options();
 

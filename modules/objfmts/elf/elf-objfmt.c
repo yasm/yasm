@@ -724,6 +724,7 @@ static const char *elf_objfmt_dbgfmt_keywords[] = {
 
 /* Define objfmt structure -- see objfmt.h for details */
 yasm_objfmt yasm_elf_LTX_objfmt = {
+    YASM_OBJFMT_VERSION,
     "ELF",
     "elf",
     "o",

@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$IdPath: yasm/modules/parsers/nasm/nasm-parser.c,v 1.34 2003/05/04 22:15:09 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #define YASM_LIB_INTERNAL
 #include <libyasm.h>
@@ -89,6 +89,7 @@ static const char *nasm_parser_preproc_keywords[] = {
 
 /* Define parser structure -- see parser.h for details */
 yasm_parser yasm_nasm_LTX_parser = {
+    YASM_PARSER_VERSION,
     "NASM-compatible parser",
     "nasm",
     nasm_parser_preproc_keywords,

@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$IdPath: yasm/modules/preprocs/nasm/nasm-preproc.c,v 1.8 2003/04/01 04:06:47 mu Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #define YASM_LIB_INTERNAL
 #include <libyasm.h>
@@ -195,6 +195,7 @@ nasm_preproc_add_include_file (const char *filename)
 
 /* Define preproc structure -- see preproc.h for details */
 yasm_preproc yasm_nasm_LTX_preproc = {
+    YASM_PREPROC_VERSION,
     "Real NASM Preprocessor",
     "nasm",
     nasm_preproc_initialize,

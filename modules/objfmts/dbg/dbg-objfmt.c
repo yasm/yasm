@@ -230,6 +230,7 @@ static const char *dbg_objfmt_dbgfmt_keywords[] = {
 
 /* Define objfmt structure -- see objfmt.h for details */
 yasm_objfmt yasm_dbg_LTX_objfmt = {
+    YASM_OBJFMT_VERSION,
     "Trace of all info passed to object format module",
     "dbg",
     "dbg",

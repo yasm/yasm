@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$IdPath: yasm/modules/dbgfmts/null/null-dbgfmt.c,v 1.8 2003/03/26 05:07:56 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #define YASM_LIB_INTERNAL
 #include <libyasm.h>
@@ -33,6 +33,7 @@
 
 /* Define dbgfmt structure -- see dbgfmt.h for details */
 yasm_dbgfmt yasm_null_LTX_dbgfmt = {
+    YASM_DBGFMT_VERSION,
     "No debugging info",
     "null",
     NULL,   /*null_dbgfmt_initialize*/
