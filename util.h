@@ -1,4 +1,9 @@
-/* $IdPath$
+/**
+ * \file util.h
+ * \brief YASM utility functions.
+ *
+ * $IdPath: yasm/libyasm/util.h,v 1.50 2003/05/03 08:02:15 peter Exp $
+ *
  * Includes standard headers and defines prototypes for replacement functions
  * if needed.  This is the *only* header file which should include other
  * header files!
@@ -8,9 +13,9 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 1. Redistributions of source code must retain the above copyright
+ *  - Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
+ *  - Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
@@ -101,6 +106,13 @@
 
 #endif	/*YASM_AUTOCONF_INTERNAL*/
 
+/** Sort an array using merge sort algorithm.
+ * \internal
+ * \param base	    base of array
+ * \param nmemb	    number of elements in array
+ * \param size	    size of each array element
+ * \param compar    element comparison function
+ */
 int yasm__mergesort(void *base, size_t nmemb, size_t size,
 		    int (*compar)(const void *, const void *));
 
@@ -108,13 +120,33 @@ int yasm__mergesort(void *base, size_t nmemb, size_t size,
 #define yasm__mergesort(a, b, c, d)	mergesort(a, b, c, d)
 #endif
 
+/** Separate string by delimiters.
+ * \internal
+ * \param stringp   string
+ * \param delim	    set of 1 or more delimiters
+ * \return First/next substring.
+ */
 /*@null@*/ char *yasm__strsep(char **stringp, const char *delim);
 
 #if defined(YASM_AUTOCONF_INTERNAL) && defined(HAVE_STRSEP)
 #define yasm__strsep(a, b)		strsep(a, b)
 #endif
 
+/** Compare two strings, ignoring case differences.
+ * \internal
+ * \param s1	string 1
+ * \param s2	string 2
+ * \return 0 if strings are equal, -1 if s1<s2, 1 if s1>s2.
+ */
 int yasm__strcasecmp(const char *s1, const char *s2);
+
+/** Compare portion of two strings, ignoring case differences.
+ * \internal
+ * \param s1	string 1
+ * \param s2	string 2
+ * \param n	maximum number of characters to compare
+ * \return 0 if strings are equal, -1 if s1<s2, 1 if s1>s2.
+ */
 int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
 
 #ifdef YASM_AUTOCONF_INTERNAL
@@ -158,20 +190,55 @@ int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
 # endif
 #endif
 
-/* strdup() implementation with error checking (using xmalloc). */
+/** strdup() implementation using yasm_xmalloc().
+ * \internal
+ * \param str	string
+ * \return Newly allocated duplicate string.
+ */
 /*@only@*/ char *yasm__xstrdup(const char *str);
+
+/** strndup() implementation using yasm_xmalloc().
+ * \internal
+ * \param str	string
+ * \param len	maximum number of characters to copy
+ * \return Newly allocated duplicate string.
+ */
 /*@only@*/ char *yasm__xstrndup(const char *str, size_t len);
 
 #endif	/*YASM_INTERNAL*/
 
-/* Error-checking memory allocation routines.  Default implementations in
- * xmalloc.c.
+/** Error-checking memory allocation.  A default implementation is provided
+ * that calls yasm_fatal() on allocation errors.
+ * A replacement should \em never return NULL.
+ * \param size	    number of bytes to allocate
+ * \return Allocated memory block.
  */
 extern /*@only@*/ /*@out@*/ void * (*yasm_xmalloc) (size_t size);
+
+/** Error-checking memory allocation (with clear-to-0).  A default
+ * implementation is provided that calls yasm_fatal() on allocation errors.
+ * A replacement should \em never return NULL.
+ * \param size	    number of elements to allocate
+ * \param elsize    size (in bytes) of each element
+ * \return Allocated and cleared memory block.
+ */
 extern /*@only@*/ void * (*yasm_xcalloc) (size_t nelem, size_t elsize);
+
+/** Error-checking memory reallocation.  A default implementation is provided
+ * that calls yasm_fatal() on allocation errors.  A replacement should
+ * \em never return NULL.
+ * \param oldmem    memory block to resize
+ * \param elsize    new size, in bytes
+ * \return Re-allocated memory block.
+ */
 extern /*@only@*/ void * (*yasm_xrealloc)
     (/*@only@*/ /*@out@*/ /*@returned@*/ /*@null@*/ void *oldmem, size_t size)
     /*@modifies oldmem@*/;
+
+/** Error-checking memory deallocation.  A default implementation is provided
+ * that calls yasm_fatal() on allocation errors.
+ * \param p	memory block to free
+ */
 extern void (*yasm_xfree) (/*@only@*/ /*@out@*/ /*@null@*/ void *p)
     /*@modifies p@*/;
 
@@ -200,8 +267,12 @@ extern void (*yasm_xfree) (/*@only@*/ /*@out@*/ /*@null@*/ void *p)
 	d += d>>8;				\
     } while (0)
 
-/* Get the number of elements in an array. */
 #ifndef NELEMS
+/** Get the number of elements in an array.
+ * \internal
+ * \param array	    array
+ * \return Number of elements.
+ */
 #define NELEMS(array)	(sizeof(array) / sizeof(array[0]))
 #endif
 

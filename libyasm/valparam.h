@@ -1,14 +1,17 @@
-/* $IdPath$
- * Value/Parameter type definition
+/**
+ * \file valparam.h
+ * \brief YASM Value/Parameter type interface.
+ *
+ * $IdPath: yasm/libyasm/valparam.h,v 1.12 2003/03/16 23:53:31 peter Exp $
  *
  *  Copyright (C) 2001  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 1. Redistributions of source code must retain the above copyright
+ *  - Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
+ *  - Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
@@ -28,21 +31,41 @@
 #define YASM_VALPARAM_H
 
 #ifdef YASM_INTERNAL
+/** Value/parameter pair.  \internal */
 struct yasm_valparam {
-    /*@reldef@*/ STAILQ_ENTRY(yasm_valparam) link;
-    /*@owned@*/ /*@null@*/ char *val;
-    /*@owned@*/ /*@null@*/ yasm_expr *param;
+    /*@reldef@*/ STAILQ_ENTRY(yasm_valparam) link;  /**< Next pair in list */
+    /*@owned@*/ /*@null@*/ char *val;		/**< Value */
+    /*@owned@*/ /*@null@*/ yasm_expr *param;	/**< Parameter */
 };
+
+/** Linked list of value/parameter pairs.  \internal */
 /*@reldef@*/ STAILQ_HEAD(yasm_valparamhead, yasm_valparam);
 #endif
 
+/** Create a new valparam.
+ * \param v	value
+ * \param p	parameter
+ * \return Newly allocated valparam.
+ */
 yasm_valparam *yasm_vp_new(/*@keep@*/ char *v, /*@keep@*/ yasm_expr *p);
 
+/** Initialize linked list of valparams.
+ * \param headp	linked list
+ */
 void yasm_vps_initialize(/*@out@*/ yasm_valparamhead *headp);
 #ifdef YASM_INTERNAL
 #define yasm_vps_initialize(headp)	STAILQ_INIT(headp)
 #endif
+
+/** Destroy (free allocated memory for) linked list of valparams.
+ * \param headp	linked list
+ */
 void yasm_vps_delete(yasm_valparamhead *headp);
+
+/** Append valparam to tail of linked list.
+ * \param headp	linked list
+ * \param vp	valparam
+ */
 void yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp);
 #ifdef YASM_INTERNAL
 #define yasm_vps_append(headp, vp)	do {	    \
@@ -51,19 +74,36 @@ void yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp);
     } while(0)
 #endif
 
+/** Get first valparam in linked list.
+ * \param headp	linked list
+ * \return First valparam in linked list.
+ */
 /*@null@*/ /*@dependent@*/ yasm_valparam *yasm_vps_first
     (yasm_valparamhead *headp);
 #ifdef YASM_INTERNAL
 #define yasm_vps_first(headp)	    STAILQ_FIRST(headp)
 #endif
 
+/** Get next valparam in linked list.
+ * \param cur	previous valparam in linked list
+ * \return Next valparam in linked list.
+ */
 /*@null@*/ /*@dependent@*/ yasm_valparam *yasm_vps_next(yasm_valparam *cur);
 #ifdef YASM_INTERNAL
 #define yasm_vps_next(cur)	    STAILQ_NEXT(cur, link)
 
+/** Iterate through linked list of valparams.
+ * \internal
+ * \param iter	    iterator variable
+ * \param headp	    linked list
+ */
 #define yasm_vps_foreach(iter, headp)	STAILQ_FOREACH(iter, headp, link)
 #endif
 
+/** Print linked list of valparams.  For debugging purposes.
+ * \param f	file
+ * \param headp	linked list
+ */
 void yasm_vps_print(FILE *f, /*@null@*/ const yasm_valparamhead *headp);
 
 #endif
