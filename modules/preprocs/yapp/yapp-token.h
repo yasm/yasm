@@ -60,4 +60,4 @@ extern YYSTYPE yapp_preproc_lval;
 extern char *current_file;
 extern int line_number;
 
-int yapp_preproc_lex ();
+int yapp_preproc_lex(void);

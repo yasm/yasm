@@ -43,11 +43,9 @@ YYSTYPE yapp_preproc_lval;
 int isatty(int);
 void yapp_lex_initialize(FILE *f);
 
-
 /*****************************************************************************/
 /* macro support - to be moved to a separate file later (?)                  */
 /*****************************************************************************/
-
 typedef struct YAPP_Macro_s {
     SLIST_HEAD(macro_head, source_s) macro_head, param_head;
     enum {
@@ -58,6 +56,17 @@ typedef struct YAPP_Macro_s {
     int fillargs;
 } YAPP_Macro;
 
+YAPP_Macro *
+yapp_macro_insert (char *name, int argc, int fillargs);
+
+void
+yapp_macro_error_exists (YAPP_Macro *v);
+
+YAPP_Macro *
+yapp_define_insert (char *name, int argc, int fillargs);
+
+void
+yapp_macro_delete (YAPP_Macro *ym);
 
 YAPP_Macro *
 yapp_macro_insert (char *name, int argc, int fillargs)
@@ -125,13 +134,29 @@ yapp_macro_get (const char *key)
 
 /*****************************************************************************/
 
+void
+append_token(int token);
 
+int
+append_through_return(void);
+
+int
+eat_through_return(void);
+
+int
+yapp_get_ident(const char *synlvl);
+
+void
+copy_token(YAPP_Token *tok);
+
+void
+expand_macro(YAPP_Macro *ym);
 
 static void
 yapp_preproc_initialize(FILE *f, const char *in_filename)
 {
     is_interactive = f ? (isatty(fileno(f)) > 0) : 0;
-    current_file = (char *)in_filename;
+    current_file = xstrdup(in_filename);
     yapp_lex_initialize(f);
     SLIST_INIT(&output_head);
     SLIST_INIT(&source_head);
@@ -205,7 +230,7 @@ push_else(int val)
 
 /* Clear the curent if* context level */
 static void
-pop_if()
+pop_if(void)
 {
     out = SLIST_FIRST(&output_head);
     current_output = out->out;
@@ -282,7 +307,7 @@ append_token(int token)
 }
 
 int
-append_through_return()
+append_through_return(void)
 {
     int token;
     do {
@@ -295,7 +320,7 @@ append_through_return()
 }
 
 int
-eat_through_return()
+eat_through_return(void)
 {
     int token;
     while ((token = yapp_preproc_lex()) != '\n') {
@@ -308,7 +333,7 @@ eat_through_return()
 }
 
 int
-yapp_get_ident(char *synlvl)
+yapp_get_ident(const char *synlvl)
 {
     int token = yapp_preproc_lex();
     if (token != IDENT) {
