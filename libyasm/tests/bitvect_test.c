@@ -147,19 +147,22 @@ test_oct_large_num(void)
     return 0;
 }
 
+char failed[1000];
+
 static int
 runtest_(const char *testname, int (*testfunc)(void), void (*setup)(void),
 	 void (*teardown)(void))
 {
     int nf;
-    printf("bitvect_test: Testing libyasm bitvect for %s ... ", testname);
-    fflush(stdout);
     if (setup)
 	setup();
     nf = testfunc();
     if (teardown)
 	teardown();
-    printf("%s.\n", nf>0 ? "FAIL":"PASS");
+    printf("%c", nf>0 ? 'F':'.');
+    fflush(stdout);
+    if (nf > 0)
+	sprintf(failed, "%s ** F: %s failed!\n", failed, testname);
     return nf;
 }
 #define runtest(x,y,z)	runtest_(#x,test_##x,y,z)
@@ -168,10 +171,13 @@ int
 main(void)
 {
     int nf = 0;
+
+    failed[0] = '\0';
+    printf("Test bitvect_test: ");
     nf += runtest(boot, NULL, NULL);
     nf += runtest(oct_small_num, num_family_setup, num_family_teardown);
     nf += runtest(oct_large_num, num_family_setup, num_family_teardown);
-    printf("bitvect_test: %d%%: Checks: 3, Failures: %d\n",
-	   100*(3-nf)/3, nf);
+    printf(" +%d-%d/3 %d%%\n%s",
+	   3-nf, nf, 100*(3-nf)/3, failed);
     return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -402,19 +402,22 @@ test_get_extended_normalized_edgecase(void)
     return 0;
 }
 
+char failed[1000];
+
 static int
 runtest_(const char *testname, int (*testfunc)(void), void (*setup)(void),
 	 void (*teardown)(void))
 {
     int nf;
-    printf("floatnum_test: Testing for %s ... ", testname);
-    fflush(stdout);
     if (setup)
 	setup();
     nf = testfunc();
     if (teardown)
 	teardown();
-    printf("%s.\n", nf>0 ? "FAIL":"PASS");
+    printf("%c", nf>0 ? 'F':'.');
+    fflush(stdout);
+    if (nf > 0)
+	sprintf(failed, "%s ** F: %s failed!\n", failed, testname);
     return nf;
 }
 #define runtest(x,y,z)	runtest_(#x,test_##x,y,z)
@@ -426,6 +429,9 @@ main(void)
     if (BitVector_Boot() != ErrCode_Ok)
 	return EXIT_FAILURE;
     yasm_floatnum_initialize();
+
+    failed[0] = '\0';
+    printf("Test floatnum_test: ");
     nf += runtest(new_normalized, NULL, NULL);
     nf += runtest(new_normalized_edgecase, NULL, NULL);
     nf += runtest(get_single_normalized, get_family_setup, get_family_teardown);
@@ -434,7 +440,7 @@ main(void)
     nf += runtest(get_double_normalized_edgecase, get_family_setup, get_family_teardown);
     nf += runtest(get_extended_normalized, get_family_setup, get_family_teardown);
     nf += runtest(get_extended_normalized_edgecase, get_family_setup, get_family_teardown);
-    printf("floatnum_test: %d%%: Checks: 8, Failures: %d\n",
-	   100*(3-nf)/3, nf);
+    printf(" +%d-%d/8 %d%%\n%s",
+	   8-nf, nf, 100*(8-nf)/8, failed);
     return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -16,8 +16,8 @@ mkdir results >/dev/null 2>&1
 
 passedct=0
 failedct=0
-errorct=0
 
+echo $ECHO_N "Test $1: "
 for asm in ${srcdir}/$2/*.asm
 do
     a=`echo ${asm} | sed 's,^.*/,,;s,.asm$,,'`
@@ -27,35 +27,32 @@ do
     e=${a}.ew
     eg=`echo ${asm} | sed 's,.asm$,.errwarn,'`
 
-    echo $ECHO_N "$1: Testing $3 for ${a} return value ... $ECHO_C"
     # Run within a subshell to prevent signal messages from displaying.
-    sh -c "cat ${asm} | ./yasm $4 -o results/${o} 2>results/${e}" 2>/dev/null
+    sh -c "cat ${asm} | ./yasm $4 -o results/${o} 2>results/${e}" >/dev/null 2>/dev/null
     status=$?
     if test $status -gt 128; then
 	# We should never get a coredump!
-	echo "FAIL (crashed)."
+	echo $ECHO_N "C"
+        eval "failed$failedct='C: ${a} crashed!'"
 	failedct=`expr $failedct + 1`
     elif test $status -gt 0; then
 	echo ${asm} | grep err >/dev/null
        	if test $? -gt 0; then
 	    # YASM detected errors but shouldn't have!
-	    echo "FAIL."
+	    echo $ECHO_N "E"
+            eval "failed$failedct='E: ${a} returned an error code!'"
 	    failedct=`expr $failedct + 1`
 	else
-	    echo "PASS."
-	    passedct=`expr $passedct + 1`
-	    echo $ECHO_N "$1: Testing $3 for ${a} error/warnings ... $ECHO_C"
 	    # We got errors, check to see if they match:
-    	    #cat ${e} | sed "s,${srcdir}/,./," >${e}.2
-    	    #mv ${e}.2 ${e}
 	    diff -w ${eg} results/${e} > /dev/null
 	    if test $? -eq 0; then
 		# Error/warnings match, it passes!
-		echo "PASS."
+		echo $ECHO_N "."
 		passedct=`expr $passedct + 1`
 	    else
 		# Error/warnings don't match.
-		echo "FAIL."
+		echo $ECHO_N "W"
+                eval "failed$failedct='W: ${a} did not match errors and warnings!'"
 		failedct=`expr $failedct + 1`
 	    fi
 	fi
@@ -63,42 +60,43 @@ do
 	echo ${asm} | grep -v err >/dev/null
        	if test $? -gt 0; then
 	    # YASM detected errors but shouldn't have!
-	    echo "FAIL."
+	    echo $ECHO_N "E"
+            eval "failed$failedct='E: ${a} returned an error code!'"
 	    failedct=`expr $failedct + 1`
 	else
-	    echo "PASS."
-	    passedct=`expr $passedct + 1`
-	    echo $ECHO_N "$1: Testing $3 for ${a} output file ... $ECHO_C"
 	    ./test_hd results/${o} > results/${oh}
 	    diff ${og} results/${oh} > /dev/null
 	    if test $? -eq 0; then
-		echo "PASS."
-		passedct=`expr $passedct + 1`
-		echo $ECHO_N "$1: Testing $3 for ${a} error/warnings ... $ECHO_C"
-		#cat ${e} | sed "s,${srcdir}/,./," >${e}.2
-		#mv ${e}.2 ${e}
 		diff -w ${eg} results/${e} > /dev/null
 		if test $? -eq 0; then
 		    # Both object file and error/warnings match, it passes!
-		    echo "PASS."
+		    echo $ECHO_N "."
 		    passedct=`expr $passedct + 1`
 		else
 		    # Error/warnings don't match.
-		    echo "FAIL."
+		    echo $ECHO_N "W"
+                    eval "failed$failedct='W: ${a} did not match errors and warnings!'"
 		    failedct=`expr $failedct + 1`
 		fi
 	    else
 		# Object file doesn't match.
-		echo "FAIL."
+		echo $ECHO_N "O"
+                eval "failed$failedct='O: ${a} did not match object file!'"
 		failedct=`expr $failedct + 1`
 	    fi
 	fi
     fi
 done
 
-ct=`expr $failedct + $passedct + $errorct`
+ct=`expr $failedct + $passedct`
 per=`expr 100 \* $passedct / $ct`
 
-echo "$1: $per%: Checks: $ct, Failures $failedct, Errors: $errorct"
+echo " +$passedct-$failedct/$ct $per%"
+i=0
+while test $i -lt $failedct; do
+    eval "failure=\$failed$i"
+    echo " ** $failure"
+    i=`expr $i + 1`
+done
 
-exit `expr $failedct + $errorct`
+exit $failedct
