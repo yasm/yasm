@@ -1,0 +1,3381 @@
+.rn '' }`
+''' $RCSfile: bitvect.3,v $$Revision: 1.1 $$Date: 2001/09/27 02:36:26 $
+'''
+''' $Log: bitvect.3,v $
+''' Revision 1.1  2001/09/27 02:36:26  peter
+''' Add BitVector documentation.  These docs are really for the Perl side, but
+''' are certainly better than nothing.
+'''
+'''
+.de Sh
+.br
+.if t .Sp
+.ne 5
+.PP
+\fB\\$1\fR
+.PP
+..
+.de Sp
+.if t .sp .5v
+.if n .sp
+..
+.de Ip
+.br
+.ie \\n(.$>=3 .ne \\$3
+.el .ne 3
+.IP "\\$1" \\$2
+..
+.de Vb
+.ft CW
+.nf
+.ne \\$1
+..
+.de Ve
+.ft R
+
+.fi
+..
+'''
+'''
+'''     Set up \*(-- to give an unbreakable dash;
+'''     string Tr holds user defined translation string.
+'''     Bell System Logo is used as a dummy character.
+'''
+.tr \(*W-|\(bv\*(Tr
+.ie n \{\
+.ds -- \(*W-
+.ds PI pi
+.if (\n(.H=4u)&(1m=24u) .ds -- \(*W\h'-12u'\(*W\h'-12u'-\" diablo 10 pitch
+.if (\n(.H=4u)&(1m=20u) .ds -- \(*W\h'-12u'\(*W\h'-8u'-\" diablo 12 pitch
+.ds L" ""
+.ds R" ""
+'''   \*(M", \*(S", \*(N" and \*(T" are the equivalent of
+'''   \*(L" and \*(R", except that they are used on ".xx" lines,
+'''   such as .IP and .SH, which do another additional levels of
+'''   double-quote interpretation
+.ds M" """
+.ds S" """
+.ds N" """""
+.ds T" """""
+.ds L' '
+.ds R' '
+.ds M' '
+.ds S' '
+.ds N' '
+.ds T' '
+'br\}
+.el\{\
+.ds -- \(em\|
+.tr \*(Tr
+.ds L" ``
+.ds R" ''
+.ds M" ``
+.ds S" ''
+.ds N" ``
+.ds T" ''
+.ds L' `
+.ds R' '
+.ds M' `
+.ds S' '
+.ds N' `
+.ds T' '
+.ds PI \(*p
+'br\}
+.\"	If the F register is turned on, we'll generate
+.\"	index entries out stderr for the following things:
+.\"		TH	Title 
+.\"		SH	Header
+.\"		Sh	Subsection 
+.\"		Ip	Item
+.\"		X<>	Xref  (embedded
+.\"	Of course, you have to process the output yourself
+.\"	in some meaninful fashion.
+.if \nF \{
+.de IX
+.tm Index:\\$1\t\\n%\t"\\$2"
+..
+.nr % 0
+.rr F
+.\}
+.TH VECTOR 1 "perl 5.005, patch 03" "8/Oct/2000" "User Contributed Perl Documentation"
+.UC
+.if n .hy 0
+.if n .na
+.ds C+ C\v'-.1v'\h'-1p'\s-2+\h'-1p'+\s0\v'.1v'\h'-1p'
+.de CQ          \" put $1 in typewriter font
+.ft CW
+'if n "\c
+'if t \\&\\$1\c
+'if n \\&\\$1\c
+'if n \&"
+\\&\\$2 \\$3 \\$4 \\$5 \\$6 \\$7
+'.ft R
+..
+.\" @(#)ms.acc 1.5 88/02/08 SMI; from UCB 4.2
+.	\" AM - accent mark definitions
+.bd B 3
+.	\" fudge factors for nroff and troff
+.if n \{\
+.	ds #H 0
+.	ds #V .8m
+.	ds #F .3m
+.	ds #[ \f1
+.	ds #] \fP
+.\}
+.if t \{\
+.	ds #H ((1u-(\\\\n(.fu%2u))*.13m)
+.	ds #V .6m
+.	ds #F 0
+.	ds #[ \&
+.	ds #] \&
+.\}
+.	\" simple accents for nroff and troff
+.if n \{\
+.	ds ' \&
+.	ds ` \&
+.	ds ^ \&
+.	ds , \&
+.	ds ~ ~
+.	ds ? ?
+.	ds ! !
+.	ds /
+.	ds q
+.\}
+.if t \{\
+.	ds ' \\k:\h'-(\\n(.wu*8/10-\*(#H)'\'\h"|\\n:u"
+.	ds ` \\k:\h'-(\\n(.wu*8/10-\*(#H)'\`\h'|\\n:u'
+.	ds ^ \\k:\h'-(\\n(.wu*10/11-\*(#H)'^\h'|\\n:u'
+.	ds , \\k:\h'-(\\n(.wu*8/10)',\h'|\\n:u'
+.	ds ~ \\k:\h'-(\\n(.wu-\*(#H-.1m)'~\h'|\\n:u'
+.	ds ? \s-2c\h'-\w'c'u*7/10'\u\h'\*(#H'\zi\d\s+2\h'\w'c'u*8/10'
+.	ds ! \s-2\(or\s+2\h'-\w'\(or'u'\v'-.8m'.\v'.8m'
+.	ds / \\k:\h'-(\\n(.wu*8/10-\*(#H)'\z\(sl\h'|\\n:u'
+.	ds q o\h'-\w'o'u*8/10'\s-4\v'.4m'\z\(*i\v'-.4m'\s+4\h'\w'o'u*8/10'
+.\}
+.	\" troff and (daisy-wheel) nroff accents
+.ds : \\k:\h'-(\\n(.wu*8/10-\*(#H+.1m+\*(#F)'\v'-\*(#V'\z.\h'.2m+\*(#F'.\h'|\\n:u'\v'\*(#V'
+.ds 8 \h'\*(#H'\(*b\h'-\*(#H'
+.ds v \\k:\h'-(\\n(.wu*9/10-\*(#H)'\v'-\*(#V'\*(#[\s-4v\s0\v'\*(#V'\h'|\\n:u'\*(#]
+.ds _ \\k:\h'-(\\n(.wu*9/10-\*(#H+(\*(#F*2/3))'\v'-.4m'\z\(hy\v'.4m'\h'|\\n:u'
+.ds . \\k:\h'-(\\n(.wu*8/10)'\v'\*(#V*4/10'\z.\v'-\*(#V*4/10'\h'|\\n:u'
+.ds 3 \*(#[\v'.2m'\s-2\&3\s0\v'-.2m'\*(#]
+.ds o \\k:\h'-(\\n(.wu+\w'\(de'u-\*(#H)/2u'\v'-.3n'\*(#[\z\(de\v'.3n'\h'|\\n:u'\*(#]
+.ds d- \h'\*(#H'\(pd\h'-\w'~'u'\v'-.25m'\f2\(hy\fP\v'.25m'\h'-\*(#H'
+.ds D- D\\k:\h'-\w'D'u'\v'-.11m'\z\(hy\v'.11m'\h'|\\n:u'
+.ds th \*(#[\v'.3m'\s+1I\s-1\v'-.3m'\h'-(\w'I'u*2/3)'\s-1o\s+1\*(#]
+.ds Th \*(#[\s+2I\s-2\h'-\w'I'u*3/5'\v'-.3m'o\v'.3m'\*(#]
+.ds ae a\h'-(\w'a'u*4/10)'e
+.ds Ae A\h'-(\w'A'u*4/10)'E
+.ds oe o\h'-(\w'o'u*4/10)'e
+.ds Oe O\h'-(\w'O'u*4/10)'E
+.	\" corrections for vroff
+.if v .ds ~ \\k:\h'-(\\n(.wu*9/10-\*(#H)'\s-2\u~\d\s+2\h'|\\n:u'
+.if v .ds ^ \\k:\h'-(\\n(.wu*10/11-\*(#H)'\v'-.4m'^\v'.4m'\h'|\\n:u'
+.	\" for low resolution devices (crt and lpr)
+.if \n(.H>23 .if \n(.V>19 \
+\{\
+.	ds : e
+.	ds 8 ss
+.	ds v \h'-1'\o'\(aa\(ga'
+.	ds _ \h'-1'^
+.	ds . \h'-1'.
+.	ds 3 3
+.	ds o a
+.	ds d- d\h'-1'\(ga
+.	ds D- D\h'-1'\(hy
+.	ds th \o'bp'
+.	ds Th \o'LP'
+.	ds ae ae
+.	ds Ae AE
+.	ds oe oe
+.	ds Oe OE
+.\}
+.rm #[ #] #H #V #F C
+.SH "NAME"
+Bit::Vector \- Efficient bit vector, set of integers and \*(L"big int\*(R" math library
+.SH "SYNOPSIS"
+.Sh "\s-1OVERLOADED\s0 \s-1OPERATORS\s0"
+See the \fIBit::Vector::Overload(3)\fR manpage.
+.Sh "\s-1CLASS\s0 \s-1METHODS\s0"
+.PP
+.Vb 2
+\&  Version
+\&      $version = Bit::Vector->Version();
+.Ve
+.Vb 2
+\&  Word_Bits
+\&      $bits = Bit::Vector->Word_Bits();  #  bits in a machine word
+.Ve
+.Vb 2
+\&  Long_Bits
+\&      $bits = Bit::Vector->Long_Bits();  #  bits in an unsigned long
+.Ve
+.Vb 2
+\&  new
+\&      $vector = Bit::Vector->new($bits);  #  bit vector constructor
+.Ve
+.Vb 2
+\&  new_Hex
+\&      $vector = Bit::Vector->new_Hex($bits,$string);
+.Ve
+.Vb 2
+\&  new_Bin
+\&      $vector = Bit::Vector->new_Bin($bits,$string);
+.Ve
+.Vb 2
+\&  new_Dec
+\&      $vector = Bit::Vector->new_Dec($bits,$string);
+.Ve
+.Vb 2
+\&  new_Enum
+\&      $vector = Bit::Vector->new_Enum($bits,$string);
+.Ve
+.Vb 2
+\&  Concat_List
+\&      $vector = Bit::Vector->Concat_List(@vectors);
+.Ve
+.Sh "\s-1OBJECT\s0 \s-1METHODS\s0"
+.PP
+.Vb 2
+\&  new
+\&      $vec2 = $vec1->new($bits);  #  alternative call of constructor
+.Ve
+.Vb 2
+\&  Shadow
+\&      $vec2 = $vec1->Shadow();  #  new vector, same size but empty
+.Ve
+.Vb 2
+\&  Clone
+\&      $vec2 = $vec1->Clone();  #  new vector, exact duplicate
+.Ve
+.Vb 2
+\&  Concat
+\&      $vector = $vec1->Concat($vec2);
+.Ve
+.Vb 2
+\&  Concat_List
+\&      $vector = $vec1->Concat_List($vec2,$vec3,...);
+.Ve
+.Vb 2
+\&  Size
+\&      $bits = $vector->Size();
+.Ve
+.Vb 4
+\&  Resize
+\&      $vector->Resize($bits);
+\&      $vector->Resize($vector->Size()+5);
+\&      $vector->Resize($vector->Size()-5);
+.Ve
+.Vb 2
+\&  Copy
+\&      $vec2->Copy($vec1);
+.Ve
+.Vb 2
+\&  Empty
+\&      $vector->Empty();
+.Ve
+.Vb 2
+\&  Fill
+\&      $vector->Fill();
+.Ve
+.Vb 2
+\&  Flip
+\&      $vector->Flip();
+.Ve
+.Vb 2
+\&  Primes
+\&      $vector->Primes();  #  Sieve of Erathostenes
+.Ve
+.Vb 2
+\&  Reverse
+\&      $vec2->Reverse($vec1);
+.Ve
+.Vb 2
+\&  Interval_Empty
+\&      $vector->Interval_Empty($min,$max);
+.Ve
+.Vb 2
+\&  Interval_Fill
+\&      $vector->Interval_Fill($min,$max);
+.Ve
+.Vb 2
+\&  Interval_Flip
+\&      $vector->Interval_Flip($min,$max);
+.Ve
+.Vb 2
+\&  Interval_Reverse
+\&      $vector->Interval_Reverse($min,$max);
+.Ve
+.Vb 2
+\&  Interval_Scan_inc
+\&      if (($min,$max) = $vector->Interval_Scan_inc($start))
+.Ve
+.Vb 2
+\&  Interval_Scan_dec
+\&      if (($min,$max) = $vector->Interval_Scan_dec($start))
+.Ve
+.Vb 2
+\&  Interval_Copy
+\&      $vec2->Interval_Copy($vec1,$offset2,$offset1,$length);
+.Ve
+.Vb 2
+\&  Interval_Substitute
+\&      $vec2->Interval_Substitute($vec1,$off2,$len2,$off1,$len1);
+.Ve
+.Vb 2
+\&  is_empty
+\&      if ($vector->is_empty())
+.Ve
+.Vb 2
+\&  is_full
+\&      if ($vector->is_full())
+.Ve
+.Vb 2
+\&  equal
+\&      if ($vec1->equal($vec2))
+.Ve
+.Vb 7
+\&  Lexicompare (unsigned)
+\&      if ($vec1->Lexicompare($vec2) == 0)
+\&      if ($vec1->Lexicompare($vec2) != 0)
+\&      if ($vec1->Lexicompare($vec2) <  0)
+\&      if ($vec1->Lexicompare($vec2) <= 0)
+\&      if ($vec1->Lexicompare($vec2) >  0)
+\&      if ($vec1->Lexicompare($vec2) >= 0)
+.Ve
+.Vb 7
+\&  Compare (signed)
+\&      if ($vec1->Compare($vec2) == 0)
+\&      if ($vec1->Compare($vec2) != 0)
+\&      if ($vec1->Compare($vec2) <  0)
+\&      if ($vec1->Compare($vec2) <= 0)
+\&      if ($vec1->Compare($vec2) >  0)
+\&      if ($vec1->Compare($vec2) >= 0)
+.Ve
+.Vb 2
+\&  to_Hex
+\&      $string = $vector->to_Hex();
+.Ve
+.Vb 2
+\&  from_Hex
+\&      $vector->from_Hex($string);
+.Ve
+.Vb 2
+\&  to_Bin
+\&      $string = $vector->to_Bin();
+.Ve
+.Vb 2
+\&  from_Bin
+\&      $vector->from_Bin($string);
+.Ve
+.Vb 2
+\&  to_Dec
+\&      $string = $vector->to_Dec();
+.Ve
+.Vb 2
+\&  from_Dec
+\&      $vector->from_Dec($string);
+.Ve
+.Vb 2
+\&  to_Enum
+\&      $string = $vector->to_Enum();  #  e.g. "2,3,5-7,11,13-19"
+.Ve
+.Vb 2
+\&  from_Enum
+\&      $vector->from_Enum($string);
+.Ve
+.Vb 2
+\&  Bit_Off
+\&      $vector->Bit_Off($index);
+.Ve
+.Vb 2
+\&  Bit_On
+\&      $vector->Bit_On($index);
+.Ve
+.Vb 2
+\&  bit_flip
+\&      $bit = $vector->bit_flip($index);
+.Ve
+.Vb 5
+\&  bit_test, contains
+\&      $bit = $vector->bit_test($index);
+\&      $bit = $vector->contains($index);
+\&      if ($vector->bit_test($index))
+\&      if ($vector->contains($index))
+.Ve
+.Vb 2
+\&  Bit_Copy
+\&      $vector->Bit_Copy($index,$bit);
+.Ve
+.Vb 2
+\&  LSB (least significant bit)
+\&      $vector->LSB($bit);
+.Ve
+.Vb 2
+\&  MSB (most significant bit)
+\&      $vector->MSB($bit);
+.Ve
+.Vb 2
+\&  lsb (least significant bit)
+\&      $bit = $vector->lsb();
+.Ve
+.Vb 2
+\&  msb (most significant bit)
+\&      $bit = $vector->msb();
+.Ve
+.Vb 2
+\&  rotate_left
+\&      $carry = $vector->rotate_left();
+.Ve
+.Vb 2
+\&  rotate_right
+\&      $carry = $vector->rotate_right();
+.Ve
+.Vb 2
+\&  shift_left
+\&      $carry = $vector->shift_left($carry);
+.Ve
+.Vb 2
+\&  shift_right
+\&      $carry = $vector->shift_right($carry);
+.Ve
+.Vb 2
+\&  Move_Left
+\&      $vector->Move_Left($bits);  #  shift left "$bits" positions
+.Ve
+.Vb 2
+\&  Move_Right
+\&      $vector->Move_Right($bits);  #  shift right "$bits" positions
+.Ve
+.Vb 2
+\&  Insert
+\&      $vector->Insert($offset,$bits);
+.Ve
+.Vb 2
+\&  Delete
+\&      $vector->Delete($offset,$bits);
+.Ve
+.Vb 2
+\&  increment
+\&      $carry = $vector->increment();
+.Ve
+.Vb 2
+\&  decrement
+\&      $carry = $vector->decrement();
+.Ve
+.Vb 2
+\&  inc
+\&      $overflow = $vec2->inc($vec1);
+.Ve
+.Vb 2
+\&  dec
+\&      $overflow = $vec2->dec($vec1);
+.Ve
+.Vb 3
+\&  add
+\&      $carry = $vec3->add($vec1,$vec2,$carry);
+\&      ($carry,$overflow) = $vec3->add($vec1,$vec2,$carry);
+.Ve
+.Vb 3
+\&  subtract
+\&      $carry = $vec3->subtract($vec1,$vec2,$carry);
+\&      ($carry,$overflow) = $vec3->subtract($vec1,$vec2,$carry);
+.Ve
+.Vb 2
+\&  Negate
+\&      $vec2->Negate($vec1);
+.Ve
+.Vb 2
+\&  Absolute
+\&      $vec2->Absolute($vec1);
+.Ve
+.Vb 7
+\&  Sign
+\&      if ($vector->Sign() == 0)
+\&      if ($vector->Sign() != 0)
+\&      if ($vector->Sign() <  0)
+\&      if ($vector->Sign() <= 0)
+\&      if ($vector->Sign() >  0)
+\&      if ($vector->Sign() >= 0)
+.Ve
+.Vb 2
+\&  Multiply
+\&      $vec3->Multiply($vec1,$vec2);
+.Ve
+.Vb 2
+\&  Divide
+\&      $quot->Divide($vec1,$vec2,$rest);
+.Ve
+.Vb 2
+\&  GCD (Greatest Common Divisor)
+\&      $vec3->GCD($vec1,$vec2);
+.Ve
+.Vb 2
+\&  Power
+\&      $vec3->Power($vec1,$vec2);
+.Ve
+.Vb 2
+\&  Block_Store
+\&      $vector->Block_Store($buffer);
+.Ve
+.Vb 2
+\&  Block_Read
+\&      $buffer = $vector->Block_Read();
+.Ve
+.Vb 2
+\&  Word_Size
+\&      $size = $vector->Word_Size();  #  number of words in "$vector"
+.Ve
+.Vb 2
+\&  Word_Store
+\&      $vector->Word_Store($offset,$word);
+.Ve
+.Vb 2
+\&  Word_Read
+\&      $word = $vector->Word_Read($offset);
+.Ve
+.Vb 2
+\&  Word_List_Store
+\&      $vector->Word_List_Store(@words);
+.Ve
+.Vb 2
+\&  Word_List_Read
+\&      @words = $vector->Word_List_Read();
+.Ve
+.Vb 2
+\&  Word_Insert
+\&      $vector->Word_Insert($offset,$count);
+.Ve
+.Vb 2
+\&  Word_Delete
+\&      $vector->Word_Delete($offset,$count);
+.Ve
+.Vb 2
+\&  Chunk_Store
+\&      $vector->Chunk_Store($chunksize,$offset,$chunk);
+.Ve
+.Vb 2
+\&  Chunk_Read
+\&      $chunk = $vector->Chunk_Read($chunksize,$offset);
+.Ve
+.Vb 2
+\&  Chunk_List_Store
+\&      $vector->Chunk_List_Store($chunksize,@chunks);
+.Ve
+.Vb 2
+\&  Chunk_List_Read
+\&      @chunks = $vector->Chunk_List_Read($chunksize);
+.Ve
+.Vb 2
+\&  Index_List_Remove
+\&      $vector->Index_List_Remove(@indices);
+.Ve
+.Vb 2
+\&  Index_List_Store
+\&      $vector->Index_List_Store(@indices);
+.Ve
+.Vb 2
+\&  Index_List_Read
+\&      @indices = $vector->Index_List_Read();
+.Ve
+.Vb 2
+\&  Union
+\&      $set3->Union($set1,$set2);
+.Ve
+.Vb 2
+\&  Intersection
+\&      $set3->Intersection($set1,$set2);
+.Ve
+.Vb 2
+\&  Difference
+\&      $set3->Difference($set1,$set2);
+.Ve
+.Vb 2
+\&  ExclusiveOr
+\&      $set3->ExclusiveOr($set1,$set2);
+.Ve
+.Vb 2
+\&  Complement
+\&      $set2->Complement($set1);
+.Ve
+.Vb 2
+\&  subset
+\&      if ($set1->subset($set2))  #  true if $set1 is subset of $set2
+.Ve
+.Vb 2
+\&  Norm
+\&      $norm = $set->Norm();
+.Ve
+.Vb 2
+\&  Min
+\&      $min = $set->Min();
+.Ve
+.Vb 2
+\&  Max
+\&      $max = $set->Max();
+.Ve
+.Vb 4
+\&  Multiplication
+\&      $matrix3->Multiplication($rows3,$cols3,
+\&                      $matrix1,$rows1,$cols1,
+\&                      $matrix2,$rows2,$cols2);
+.Ve
+.Vb 4
+\&  Product
+\&      $matrix3->Product($rows3,$cols3,
+\&               $matrix1,$rows1,$cols1,
+\&               $matrix2,$rows2,$cols2);
+.Ve
+.Vb 2
+\&  Closure
+\&      $matrix->Closure($rows,$cols);
+.Ve
+.Vb 2
+\&  Transpose
+\&      $matrix2->Transpose($rows2,$cols2,$matrix1,$rows1,$cols1);
+.Ve
+.SH "IMPORTANT NOTES"
+.Ip "\(bu" 2
+Method naming conventions
+.Sp
+Method names completely in lower case indicate a boolean return value.
+.Sp
+(Except for the bit vector constructor method \*(L"\f(CWnew()\fR\*(R", of course.)
+.Ip "\(bu" 2
+Boolean values
+.Sp
+Boolean values in this module are always a numeric zero ("\f(CW0\fR") for
+\*(L"false\*(R" and a numeric one ("\f(CW1\fR") for \*(L"true\*(R".
+.Ip "\(bu" 2
+Negative numbers
+.Sp
+All numeric input parameters passed to any of the methods in this module
+are regarded as being \fB\s-1UNSIGNED\s0\fR (as opposed to the contents of the
+bit vectors themselves, which are usually considered to be \fB\s-1SIGNED\s0\fR).
+.Sp
+As a consequence, whenever you pass a negative number as an argument to
+some method of this module, it will be treated as a (usually very large)
+positive number due to its internal two's complement binary representation,
+usually resulting in an \*(L"index out of range\*(R" error message and program
+abortion.
+.Ip "\(bu" 2
+Bit order
+.Sp
+Note that bit vectors are stored least order bit and least order word first
+internally.
+.Sp
+I.e., bit #0 of any given bit vector corresponds to bit #0 of word #0 in the
+array of machine words representing the bit vector.
+.Sp
+(Where word #0 comes first in memory, i.e., it is stored at the least memory
+address in the allocated block of memory holding the given bit vector.)
+.Sp
+Note however that machine words can be stored least order byte first or last,
+depending on your system's implementation.
+.Sp
+When you are exporting or importing a whole bit vector at once using the
+methods \*(L"\f(CWBlock_Read()\fR\*(R" and \*(L"\f(CWBlock_Store()\fR\*(R" (the only time in this
+module where this could make any difference), however, a conversion to and
+from \*(L"least order byte first\*(R" order is automatically supplied.
+.Sp
+In other words, what \*(L"\f(CWBlock_Read()\fR\*(R" provides and what \*(L"\f(CWBlock_Store()\fR\*(R"
+expects is always in \*(L"least order byte first\*(R" order, regardless of the order
+in which words are stored internally on your machine.
+.Sp
+This is to make sure that what you export on one machine using \*(L"\f(CWBlock_Read()\fR\*(R"
+can always be read in correctly with \*(L"\f(CWBlock_Store()\fR\*(R" on a different machine.
+.Sp
+Note further that whenever bit vectors are converted to and from (binary or
+hexadecimal) strings, the \fB\s-1RIGHTMOST\s0\fR bit is always the \fB\s-1LEAST\s0 \s-1SIGNIFICANT\s0\fR
+one, and the \fB\s-1LEFTMOST\s0\fR bit is always the \fB\s-1MOST\s0 \s-1SIGNIFICANT\s0\fR bit.
+.Sp
+This is because in our western culture, numbers are always represented in this
+way (least significant to most significant digits go from right to left).
+.Sp
+Of course this requires an internal reversion of order, which the corresponding
+conversion methods perform automatically (without any additional overhead, it's
+just a matter of starting the internal loop at the bottom or the top end).
+.Ip "\(bu" 2
+\*(L"Word\*(R" related methods
+.Sp
+Note that all methods whose names begin with \*(L"\f(CWWord_\fR\*(R" are
+\fB\s-1MACHINE\s0\-\s-1DEPENDENT\s0\fR!
+.Sp
+They depend on the size (number of bits) of an \*(L"unsigned int\*(R" (C type) on
+your machine.
+.Sp
+Therefore, you should only use these methods if you are \fB\s-1ABSOLUTELY\s0 \s-1CERTAIN\s0\fR
+that portability of your code is not an issue!
+.Sp
+Note that you can use arbitrarily large chunks (i.e., fragments of bit vectors)
+of up to 32 bits \fB\s-1IN\s0 A \s-1PORTABLE\s0 \s-1WAY\s0\fR using the methods whose names begin with
+\*(L"\f(CWChunk_\fR\*(R".
+.Ip "\(bu" 2
+Chunk sizes
+.Sp
+Note that legal chunk sizes for all methods whose names begin with \*(L"\f(CWChunk_\fR\*(R"
+range from \*(L"\f(CW1\fR\*(R" to \*(L"\f(CWBit::Vector->Long_Bits();\fR\*(R" bits ("\f(CW0\fR\*(R" is \fB\s-1NOT\s0\fR
+allowed!).
+.Sp
+In order to make your programs portable, however, you shouldn't use chunk sizes
+larger than 32 bits, since this is the minimum size of an \*(L"unsigned long\*(R"
+(C type) on all systems, as prescribed by \s-1ANSI\s0\ C.
+.Ip "\(bu" 2
+Matching sizes
+.Sp
+In general, for methods involving several bit vectors at the same time, all
+bit vector arguments must have identical sizes (number of bits), or a fatal
+\*(L"size mismatch\*(R" error will occur.
+.Sp
+Exceptions from this rule are the methods \*(L"\f(CWConcat()\fR\*(R", \*(L"\f(CWConcat_List()\fR\*(R",
+\*(L"\f(CWCopy()\fR\*(R", \*(L"\f(CWInterval_Copy()\fR\*(R" and \*(L"\f(CWInterval_Substitute()\fR\*(R", where no
+conditions at all are imposed on the size of their bit vector arguments.
+.Sp
+In method \*(L"\f(CWMultiply()\fR\*(R", all three bit vector arguments must in principle
+obey the rule of matching sizes, but the bit vector in which the result of
+the multiplication is to be stored may be larger than the two bit vector
+arguments containing the factors for the multiplication.
+.Sp
+In method \*(L"\f(CWPower()\fR\*(R", the bit vector for the result must be the same
+size or greater than the base of the exponentiation term. The exponent
+can be any size.
+.Ip "\(bu" 2
+Index ranges
+.Sp
+All indices for any given bits must lie between \*(L"\f(CW0\fR\*(R" and
+\*(L"\f(CW$vector->Size()-1\fR\*(R", or a fatal \*(L"index out of range\*(R"
+error will occur.
+.SH "DESCRIPTION"
+.Sh "\s-1OVERLOADED\s0 \s-1OPERATORS\s0"
+See the \fIBit::Vector::Overload(3)\fR manpage.
+.Sh "\s-1CLASS\s0 \s-1METHODS\s0"
+.Ip "\(bu" 2
+\f(CW$version = Bit::Vector->Version();\fR
+.Sp
+Returns the current version number of this module.
+.Ip "\(bu" 2
+\f(CW$bits = Bit::Vector->Word_Bits();\fR
+.Sp
+Returns the number of bits of an \*(L"unsigned int\*(R" (C type)
+on your machine.
+.Sp
+(An \*(L"unsigned int\*(R" is also called a \*(L"machine word\*(R",
+hence the name of this method.)
+.Ip "\(bu" 2
+\f(CW$bits = Bit::Vector->Long_Bits();\fR
+.Sp
+Returns the number of bits of an \*(L"unsigned long\*(R" (C type)
+on your machine.
+.Ip "\(bu" 2
+\f(CW$vector = Bit::Vector->new($bits);\fR
+.Sp
+This is the bit vector constructor method.
+.Sp
+Call this method to create a new bit vector containing \*(L"\f(CW$bits\fR\*(R"
+bits (with indices ranging from \*(L"\f(CW0\fR\*(R" to \*(L"\f(CW$bits-1\fR").
+.Sp
+Note that \- in contrast to previous versions \- bit vectors
+of length zero (i.e., with \f(CW$bits = 0\fR) are permitted now.
+.Sp
+The method returns a reference to the newly created bit vector.
+.Sp
+A new bit vector is always initialized so that all bits are cleared
+(turned off).
+.Sp
+An exception will be raised if the method is unable to allocate the
+necessary memory.
+.Sp
+Note that if you specify a negative number for \*(L"\f(CW$bits\fR\*(R" it will be
+interpreted as a large positive number due to its internal two's
+complement binary representation.
+.Sp
+In such a case, the bit vector constructor method will obediently attempt
+to create a bit vector of that size, probably resulting in an exception,
+as explained above.
+.Ip "\(bu" 2
+\f(CW$vector = Bit::Vector->new_Hex($bits,$string);\fR
+.Sp
+This method is an alternative constructor which allows you to create
+a new bit vector object (with \*(L"\f(CW$bits\fR\*(R" bits) and to initialize it
+all in one go.
+.Sp
+The method is more efficient than performing these two steps separately
+first because in this method, the memory area occupied by the new bit
+vector is not initialized to zeros (which is pointless in this case),
+and second because it saves you from the associated overhead of one
+additional method invocation.
+.Sp
+The method first calls the bit vector constructor method \*(L"\f(CWnew()\fR\*(R"
+internally, and then passes the given string to the method \*(L"\f(CWfrom_Hex()\fR\*(R".
+.Sp
+An exception will be raised if the necessary memory cannot be allocated
+(see the description of the method \*(L"\f(CWnew()\fR\*(R" immediately above for
+possible causes) or if the given string cannot be converted successfully
+(see the description of the method \*(L"\f(CWfrom_Hex()\fR\*(R" further below for
+details).
+.Sp
+In the latter case, the memory occupied by the new bit vector is
+released first (i.e., \*(L"free"d) before the exception is actually
+raised.
+.Ip "\(bu" 2
+\f(CW$vector = Bit::Vector->new_Bin($bits,$string);\fR
+.Sp
+This method is an alternative constructor which allows you to create
+a new bit vector object (with \*(L"\f(CW$bits\fR\*(R" bits) and to initialize it
+all in one go.
+.Sp
+The method is more efficient than performing these two steps separately
+first because in this method, the memory area occupied by the new bit
+vector is not initialized to zeros (which is pointless in this case),
+and second because it saves you from the associated overhead of one
+additional method invocation.
+.Sp
+The method first calls the bit vector constructor method \*(L"\f(CWnew()\fR\*(R"
+internally, and then passes the given string to the method \*(L"\f(CWfrom_Bin()\fR\*(R".
+.Sp
+An exception will be raised if the necessary memory cannot be allocated
+(see the description of the method \*(L"\f(CWnew()\fR\*(R" above for possible causes)
+or if the given string cannot be converted successfully (see the
+description of the method \*(L"\f(CWfrom_Bin()\fR\*(R" further below for details).
+.Sp
+In the latter case, the memory occupied by the new bit vector is
+released first (i.e., \*(L"free"d) before the exception is actually
+raised.
+.Ip "\(bu" 2
+\f(CW$vector = Bit::Vector->new_Dec($bits,$string);\fR
+.Sp
+This method is an alternative constructor which allows you to create
+a new bit vector object (with \*(L"\f(CW$bits\fR\*(R" bits) and to initialize it
+all in one go.
+.Sp
+The method is more efficient than performing these two steps separately
+first because in this method, the memory area occupied by the new bit
+vector is not initialized to zeros (which is pointless in this case),
+and second because it saves you from the associated overhead of one
+additional method invocation.
+.Sp
+The method first calls the bit vector constructor method \*(L"\f(CWnew()\fR\*(R"
+internally, and then passes the given string to the method \*(L"\f(CWfrom_Dec()\fR\*(R".
+.Sp
+An exception will be raised if the necessary memory cannot be allocated
+(see the description of the method \*(L"\f(CWnew()\fR\*(R" above for possible causes)
+or if the given string cannot be converted successfully (see the
+description of the method \*(L"\f(CWfrom_Dec()\fR\*(R" further below for details).
+.Sp
+In the latter case, the memory occupied by the new bit vector is
+released first (i.e., \*(L"free"d) before the exception is actually
+raised.
+.Ip "\(bu" 2
+\f(CW$vector = Bit::Vector->new_Enum($bits,$string);\fR
+.Sp
+This method is an alternative constructor which allows you to create
+a new bit vector object (with \*(L"\f(CW$bits\fR\*(R" bits) and to initialize it
+all in one go.
+.Sp
+The method is more efficient than performing these two steps separately
+first because in this method, the memory area occupied by the new bit
+vector is not initialized to zeros (which is pointless in this case),
+and second because it saves you from the associated overhead of one
+additional method invocation.
+.Sp
+The method first calls the bit vector constructor method \*(L"\f(CWnew()\fR\*(R"
+internally, and then passes the given string to the method \*(L"\f(CWfrom_Enum()\fR\*(R".
+.Sp
+An exception will be raised if the necessary memory cannot be allocated
+(see the description of the method \*(L"\f(CWnew()\fR\*(R" above for possible causes)
+or if the given string cannot be converted successfully (see the
+description of the method \*(L"\f(CWfrom_Enum()\fR\*(R" further below for details).
+.Sp
+In the latter case, the memory occupied by the new bit vector is
+released first (i.e., \*(L"free"d) before the exception is actually
+raised.
+.Ip "\(bu" 2
+\f(CW$vector = Bit::Vector->Concat_List(@vectors);\fR
+.Sp
+This method creates a new vector containing all bit vectors from the
+argument list in concatenated form.
+.Sp
+The argument list may contain any number of arguments (including
+zero); the only condition is that all arguments must be bit vectors.
+.Sp
+There is no condition concerning the length (in number of bits) of
+these arguments.
+.Sp
+The vectors from the argument list are not changed in any way.
+.Sp
+If the argument list is empty or if all arguments have length zero,
+the resulting bit vector will also have length zero.
+.Sp
+Note that the \fB\s-1RIGHTMOST\s0\fR bit vector from the argument list will
+become the \fB\s-1LEAST\s0\fR significant part of the resulting bit vector,
+and the \fB\s-1LEFTMOST\s0\fR bit vector from the argument list will
+become the \fB\s-1MOST\s0\fR significant part of the resulting bit vector.
+.Sh "\s-1OBJECT\s0 \s-1METHODS\s0"
+.Ip "\(bu" 2
+\f(CW$vec2 = $vec1->new($bits);\fR
+.Sp
+This is an alternative way of calling the bit vector constructor method.
+.Sp
+Vector \*(L"\f(CW$vec1\fR\*(R" is not affected by this, it just serves as an anchor
+for the method invocation mechanism.
+.Sp
+In fact \fB\s-1ALL\s0\fR class methods in this module can be called this way,
+even though this is probably considered to be \*(L"politically incorrect\*(R"
+by \s-1OO\s0 ("object-orientation") aficionados. ;\-)
+.Sp
+So even if you are too lazy to type \*(L"\f(CWBit::Vector->\fR\*(R" instead of
+\*(L"\f(CW$vec1->\fR\*(R" (and even though laziness is \- allegedly \- a programmer's
+virtue \f(CW:-)\fR), maybe it is better not to use this feature if you don't
+want to get booed at. ;\-)
+.Ip "\(bu" 2
+\f(CW$vec2 = $vec1->Shadow();\fR
+.Sp
+Creates a \fB\s-1NEW\s0\fR bit vector \*(L"\f(CW$vec2\fR\*(R" of the \fB\s-1SAME\s0 \s-1SIZE\s0\fR as \*(L"\f(CW$vec1\fR\*(R"
+but which is \fB\s-1EMPTY\s0\fR.
+.Sp
+Just like a shadow that has the same shape as the object it
+originates from, but is flat and has no volume, i.e., contains
+nothing.
+.Ip "\(bu" 2
+\f(CW$vec2 = $vec1->Clone();\fR
+.Sp
+Creates a \fB\s-1NEW\s0\fR bit vector \*(L"\f(CW$vec2\fR\*(R" of the \fB\s-1SAME\s0 \s-1SIZE\s0\fR as \*(L"\f(CW$vec1\fR\*(R"
+which is an \fB\s-1EXACT\s0 \s-1COPY\s0\fR of \*(L"\f(CW$vec1\fR\*(R".
+.Ip "\(bu" 2
+\f(CW$vector = $vec1->Concat($vec2);\fR
+.Sp
+This method returns a new bit vector object which is the result of the
+concatenation of the contents of \*(L"\f(CW$vec1\fR\*(R" and \*(L"\f(CW$vec2\fR\*(R".
+.Sp
+Note that the contents of \*(L"\f(CW$vec1\fR\*(R" become the \fB\s-1MOST\s0\fR significant part
+of the resulting bit vector, and \*(L"\f(CW$vec2\fR\*(R" the \fB\s-1LEAST\s0\fR significant part.
+.Sp
+If both bit vector arguments have length zero, the resulting bit vector
+will also have length zero.
+.Ip "\(bu" 2
+\f(CW$vector = $vec1->Concat_List($vec2,$vec3,...);\fR
+.Sp
+This is an alternative way of calling this (class) method as an
+object method.
+.Sp
+The method returns a new bit vector object which is the result of
+the concatenation of the contents of \f(CW$vec1 . $vec2 . $vec3 . ...\fR
+.Sp
+See the section \*(L"class methods\*(R" above for a detailed description of
+this method.
+.Sp
+Note that the argument list may be empty and that all arguments
+must be bit vectors if it isn't.
+.Ip "\(bu" 2
+\f(CW$bits = $vector->Size();\fR
+.Sp
+Returns the size (number of bits) the given vector was created with
+(or \*(L"\f(CWResize()\fR"d to).
+.Ip "\(bu" 2
+\f(CW$vector->Resize($bits);\fR
+.Sp
+Changes the size of the given vector to the specified number of bits.
+.Sp
+This method allows you to change the size of an existing bit vector,
+preserving as many bits from the old vector as will fit into the
+new one (i.e., all bits with indices smaller than the minimum of the
+sizes of both vectors, old and new).
+.Sp
+If the number of machine words needed to store the new vector is smaller
+than or equal to the number of words needed to store the old vector, the
+memory allocated for the old vector is reused for the new one, and only
+the relevant book-keeping information is adjusted accordingly.
+.Sp
+This means that even if the number of bits increases, new memory is not
+necessarily being allocated (i.e., if the old and the new number of bits
+fit into the same number of machine words).
+.Sp
+If the number of machine words needed to store the new vector is greater
+than the number of words needed to store the old vector, new memory is
+allocated for the new vector, the old vector is copied to the new one,
+the remaining bits in the new vector are cleared (turned off) and the old
+vector is deleted, i.e., the memory that was allocated for it is released.
+.Sp
+(An exception will be raised if the method is unable to allocate the
+necessary memory for the new vector.)
+.Sp
+As a consequence, if you decrease the size of a given vector so that
+it will use fewer machine words, and increase it again later so that it
+will use more words than immediately before but still less than the
+original vector, new memory will be allocated anyway because the
+information about the size of the original vector is lost whenever
+you resize it.
+.Sp
+Note also that if you specify a negative number for \*(L"\f(CW$bits\fR\*(R" it will
+be interpreted as a large positive number due to its internal two's
+complement binary representation.
+.Sp
+In such a case, \*(L"\fIResize()\fR\*(R" will obediently attempt to create a bit
+vector of that size, probably resulting in an exception, as explained
+above.
+.Sp
+Finally, note that \- in contrast to previous versions \- resizing a bit
+vector to a size of zero bits (length zero) is now permitted.
+.Ip "\(bu" 2
+\f(CW$vec2->Copy($vec1);\fR
+.Sp
+Copies the contents of bit vector \*(L"\f(CW$vec1\fR\*(R" to bit vector \*(L"\f(CW$vec2\fR\*(R".
+.Sp
+The previous contents of bit vector \*(L"\f(CW$vec2\fR\*(R" get overwritten, i.e.,
+are lost.
+.Sp
+Both vectors must exist beforehand, i.e., this method does not \fB\s-1CREATE\s0\fR
+any new bit vector object.
+.Sp
+The two vectors may be of any size.
+.Sp
+If the source bit vector is larger than the target, this method will copy
+as much of the least significant bits of the source vector as will fit into
+the target vector, thereby discarding any extraneous most significant bits.
+.Sp
+\s-1BEWARE\s0 that this causes a brutal cutoff in the middle of your data, and it
+will also leave you with an almost unpredictable sign if subsequently the
+number in the target vector is going to be interpreted as a number! (You
+have been warned!)
+.Sp
+If the target bit vector is larger than the source, this method fills up
+the remaining most significant bits in the target bit vector with either
+0's or 1's, depending on the sign (= the most significant bit) of the
+source bit vector.
+.Sp
+This makes it possible to copy numbers from a smaller bit vector into
+a larger one while preserving the number's absolute value as well as
+its sign (due to the two's complement binary representation of numbers).
+.Ip "\(bu" 2
+\f(CW$vector->Empty();\fR
+.Sp
+Clears all bits in the given vector.
+.Ip "\(bu" 2
+\f(CW$vector->Fill();\fR
+.Sp
+Sets all bits in the given vector.
+.Ip "\(bu" 2
+\f(CW$vector->Flip();\fR
+.Sp
+Flips (i.e., complements) all bits in the given vector.
+.Ip "\(bu" 2
+\f(CW$vector->Primes();\fR
+.Sp
+Clears the given bit vector and sets all bits whose
+indices are prime numbers.
+.Sp
+This method uses the algorithm known as the \*(L"Sieve of
+Erathostenes\*(R" internally.
+.Ip "\(bu" 2
+\f(CW$vec2->Reverse($vec1);\fR
+.Sp
+This method copies the given vector \*(L"\f(CW$vec1\fR\*(R" to
+the vector \*(L"\f(CW$vec2\fR\*(R", thereby reversing the order
+of all bits.
+.Sp
+I.e., the least significant bit of \*(L"\f(CW$vec1\fR\*(R" becomes the
+most significant bit of \*(L"\f(CW$vec2\fR\*(R", whereas the most
+significant bit of \*(L"\f(CW$vec1\fR\*(R" becomes the least
+significant bit of \*(L"\f(CW$vec2\fR\*(R", and so forth
+for all bits in between.
+.Sp
+Note that in-place processing is also possible, i.e.,
+\*(L"\f(CW$vec1\fR\*(R" and \*(L"\f(CW$vec2\fR\*(R" may be identical.
+.Sp
+(Internally, this is the same as
+\f(CW$vec1->Interval_Reverse(0,$vec1->Size()-1);\fR.)
+.Ip "\(bu" 2
+\f(CW$vector->Interval_Empty($min,$max);\fR
+.Sp
+Clears all bits in the interval \f(CW[$min..$max]\fR (including both limits)
+in the given vector.
+.Sp
+\*(L"\f(CW$min\fR\*(R" and \*(L"\f(CW$max\fR\*(R" may have the same value; this is the same
+as clearing a single bit with \*(L"\f(CWBit_Off()\fR\*(R" (but less efficient).
+.Sp
+Note that \f(CW$vector->Interval_Empty(0,$vector->Size()-1);\fR
+is the same as \f(CW$vector->Empty();\fR (but less efficient).
+.Ip "\(bu" 2
+\f(CW$vector->Interval_Fill($min,$max);\fR
+.Sp
+Sets all bits in the interval \f(CW[$min..$max]\fR (including both limits)
+in the given vector.
+.Sp
+\*(L"\f(CW$min\fR\*(R" and \*(L"\f(CW$max\fR\*(R" may have the same value; this is the same
+as setting a single bit with \*(L"\f(CWBit_On()\fR\*(R" (but less efficient).
+.Sp
+Note that \f(CW$vector->Interval_Fill(0,$vector->Size()-1);\fR
+is the same as \f(CW$vector->Fill();\fR (but less efficient).
+.Ip "\(bu" 2
+\f(CW$vector->Interval_Flip($min,$max);\fR
+.Sp
+Flips (i.e., complements) all bits in the interval \f(CW[$min..$max]\fR
+(including both limits) in the given vector.
+.Sp
+\*(L"\f(CW$min\fR\*(R" and \*(L"\f(CW$max\fR\*(R" may have the same value; this is the same
+as flipping a single bit with \*(L"\f(CWbit_flip()\fR\*(R" (but less efficient).
+.Sp
+Note that \f(CW$vector->Interval_Flip(0,$vector->Size()-1);\fR
+is the same as \f(CW$vector->Flip();\fR and
+\f(CW$vector->Complement($vector);\fR
+(but less efficient).
+.Ip "\(bu" 2
+\f(CW$vector->Interval_Reverse($min,$max);\fR
+.Sp
+Reverses the order of all bits in the interval \f(CW[$min..$max]\fR
+(including both limits) in the given vector.
+.Sp
+I.e., bits \*(L"\f(CW$min\fR\*(R" and \*(L"\f(CW$max\fR\*(R" swap places, and so forth
+for all bits in between.
+.Sp
+\*(L"\f(CW$min\fR\*(R" and \*(L"\f(CW$max\fR\*(R" may have the same value; this has no
+effect whatsoever, though.
+.Ip "\(bu" 2
+\f(CWif (($min,$max) = $vector->Interval_Scan_inc($start))\fR
+.Sp
+Returns the minimum and maximum indices of the next contiguous block
+of set bits (i.e., bits in the \*(L"on\*(R" state).
+.Sp
+The search starts at index \*(L"\f(CW$start\fR\*(R" (i.e., \f(CW"$min" >= "$start"\fR)
+and proceeds upwards (i.e., \f(CW"$max" >= "$min"\fR), thus repeatedly
+increments the search pointer \*(L"\f(CW$start\fR\*(R" (internally).
+.Sp
+Note though that the contents of the variable (or scalar literal value)
+\*(L"\f(CW$start\fR\*(R" is \fB\s-1NOT\s0\fR altered. I.e., you have to set it to the desired
+value yourself prior to each call to \*(L"\f(CWInterval_Scan_inc()\fR\*(R" (see also
+the example given below).
+.Sp
+Actually, the bit vector is not searched bit by bit, but one machine
+word at a time, in order to speed up execution (which means that this
+method is quite efficient).
+.Sp
+An empty list is returned if no such block can be found.
+.Sp
+Note that a single set bit (surrounded by cleared bits) is a valid
+block by this definition. In that case the return values for \*(L"\f(CW$min\fR\*(R"
+and \*(L"\f(CW$max\fR\*(R" are the same.
+.Sp
+Typical use:
+.Sp
+.Vb 5
+\&    $start = 0;
+\&    while (($start < $vector->Size()) &&
+\&        (($min,$max) = $vector->Interval_Scan_inc($start)))
+\&    {
+\&        $start = $max + 2;
+.Ve
+.Vb 2
+\&        # do something with $min and $max
+\&    }
+.Ve
+.Ip "\(bu" 2
+\f(CWif (($min,$max) = $vector->Interval_Scan_dec($start))\fR
+.Sp
+Returns the minimum and maximum indices of the next contiguous block
+of set bits (i.e., bits in the \*(L"on\*(R" state).
+.Sp
+The search starts at index \*(L"\f(CW$start\fR\*(R" (i.e., \f(CW"$max" <= "$start"\fR)
+and proceeds downwards (i.e., \f(CW"$min" <= "$max"\fR), thus repeatedly
+decrements the search pointer \*(L"\f(CW$start\fR\*(R" (internally).
+.Sp
+Note though that the contents of the variable (or scalar literal value)
+\*(L"\f(CW$start\fR\*(R" is \fB\s-1NOT\s0\fR altered. I.e., you have to set it to the desired
+value yourself prior to each call to \*(L"\f(CWInterval_Scan_dec()\fR\*(R" (see also
+the example given below).
+.Sp
+Actually, the bit vector is not searched bit by bit, but one machine
+word at a time, in order to speed up execution (which means that this
+method is quite efficient).
+.Sp
+An empty list is returned if no such block can be found.
+.Sp
+Note that a single set bit (surrounded by cleared bits) is a valid
+block by this definition. In that case the return values for \*(L"\f(CW$min\fR\*(R"
+and \*(L"\f(CW$max\fR\*(R" are the same.
+.Sp
+Typical use:
+.Sp
+.Vb 5
+\&    $start = $vector->Size() - 1;
+\&    while (($start >= 0) &&
+\&        (($min,$max) = $vector->Interval_Scan_dec($start)))
+\&    {
+\&        $start = $min - 2;
+.Ve
+.Vb 2
+\&        # do something with $min and $max
+\&    }
+.Ve
+.Ip "\(bu" 2
+\f(CW$vec2->Interval_Copy($vec1,$offset2,$offset1,$length);\fR
+.Sp
+This method allows you to copy a stretch of contiguous bits (starting
+at any position \*(L"\f(CW$offset1\fR\*(R" you choose, with a length of \*(L"\f(CW$length\fR\*(R"
+bits) from a given \*(L"source\*(R" bit vector \*(L"\f(CW$vec1\fR\*(R" to another position
+\*(L"\f(CW$offset2\fR\*(R" in a \*(L"target\*(R" bit vector \*(L"\f(CW$vec2\fR\*(R".
+.Sp
+Note that the two bit vectors \*(L"\f(CW$vec1\fR\*(R" and \*(L"\f(CW$vec2\fR\*(R" do \fB\s-1NOT\s0\fR
+need to have the same (matching) size!
+.Sp
+Consequently, any of the two terms \*(L"\f(CW$offset1 + $length\fR\*(R" and
+\*(L"\f(CW$offset2 + $length\fR\*(R" (or both) may exceed the actual length
+of its corresponding bit vector ("\f(CW$vec1->Size()\fR\*(R" and
+\*(L"\f(CW$vec2->Size()\fR\*(R", respectively).
+.Sp
+In such a case, the \*(L"\f(CW$length\fR\*(R" parameter is automatically reduced
+internally so that both terms above are bounded by the number of bits
+of their corresponding bit vector.
+.Sp
+This may even result in a length of zero, in which case nothing is
+copied at all.
+.Sp
+(Of course the value of the \*(L"\f(CW$length\fR\*(R" parameter, supplied by you
+in the initial method call, may also be zero right from the start!)
+.Sp
+Note also that \*(L"\f(CW$offset1\fR\*(R" and \*(L"\f(CW$offset2\fR\*(R" must lie within the
+range \*(L"\f(CW0\fR\*(R" and, respectively, \*(L"\f(CW$vec1->Size()-1\fR\*(R" or
+\*(L"\f(CW$vec2->Size()-1\fR\*(R", or a fatal \*(L"offset out of range\*(R" error
+will occur.
+.Sp
+Note further that \*(L"\f(CW$vec1\fR\*(R" and \*(L"\f(CW$vec2\fR\*(R" may be identical, i.e.,
+you may copy a stretch of contiguous bits from one part of a given
+bit vector to another part.
+.Sp
+The source and the target interval may even overlap, in which case
+the copying is automatically performed in ascending or descending
+order (depending on the direction of the copy \- downwards or upwards
+in the bit vector, respectively) to handle this situation correctly,
+i.e., so that no bits are being overwritten before they have been
+copied themselves.
+.Ip "\(bu" 2
+\f(CW$vec2->Interval_Substitute($vec1,$off2,$len2,$off1,$len1);\fR
+.Sp
+This method is (roughly) the same for bit vectors (i.e., arrays
+of booleans) as what the \*(L"splice\*(R" function in Perl is for lists
+(i.e., arrays of scalars).
+.Sp
+(See the \f(CWsplice\fR entry in the \fIperlfunc\fR manpage for more details about this function.)
+.Sp
+The method allows you to substitute a stretch of contiguous bits
+(defined by a position (offset) \*(L"\f(CW$off1\fR\*(R" and a length of \*(L"\f(CW$len1\fR\*(R"
+bits) from a given \*(L"source\*(R" bit vector \*(L"\f(CW$vec1\fR\*(R" for a different
+stretch of contiguous bits (defined by a position (offset) \*(L"\f(CW$off2\fR\*(R"
+and a length of \*(L"\f(CW$len2\fR\*(R" bits) in another, \*(L"target\*(R" bit vector
+\*(L"\f(CW$vec2\fR\*(R".
+.Sp
+Note that the two bit vectors \*(L"\f(CW$vec1\fR\*(R" and \*(L"\f(CW$vec2\fR\*(R" do \fB\s-1NOT\s0\fR
+need to have the same (matching) size!
+.Sp
+Note further that \*(L"\f(CW$off1\fR\*(R" and \*(L"\f(CW$off2\fR\*(R" must lie within the
+range \*(L"\f(CW0\fR\*(R" and, respectively, \*(L"\f(CW$vec1->Size()\fR\*(R" or
+\*(L"\f(CW$vec2->Size()\fR\*(R", or a fatal \*(L"offset out of range\*(R" error
+will occur.
+.Sp
+Alert readers will have noticed that these upper limits are \fB\s-1NOT\s0\fR
+\*(L"\f(CW$vec1->Size()-1\fR\*(R" and \*(L"\f(CW$vec2->Size()-1\fR\*(R", as they would
+be for any other method in this module, but that these offsets may
+actually point to one position \fB\s-1PAST\s0 \s-1THE\s0 \s-1END\s0\fR of the corresponding
+bit vector.
+.Sp
+This is necessary in order to make it possible to \fB\s-1APPEND\s0\fR a given
+stretch of bits to the target bit vector instead of \fB\s-1REPLACING\s0\fR
+something in it.
+.Sp
+For reasons of symmetry and generality, the same applies to the offset
+in the source bit vector, even though such an offset (one position past
+the end of the bit vector) does not serve any practical purpose there
+(but does not cause any harm either).
+.Sp
+(Actually this saves you from the need of testing for this special case,
+in certain circumstances.)
+.Sp
+Note that whenever the term \*(L"\f(CW$off1 + $len1\fR\*(R" exceeds the size
+\*(L"\f(CW$vec1->Size()\fR\*(R" of bit vector \*(L"\f(CW$vec1\fR\*(R" (or if \*(L"\f(CW$off2 + $len2\fR\*(R"
+exceeds \*(L"\f(CW$vec2->Size()\fR"), the corresponding length ("\f(CW$len1\fR\*(R"
+or \*(L"\f(CW$len2\fR\*(R", respectively) is automatically reduced internally
+so that \*(L"\f(CW$off1 + $len1 <= $vec1->Size()\fR\*(R" (and
+\*(L"\f(CW$off2 + $len2 <= $vec2->Size()\fR") holds.
+.Sp
+(Note that this does \fB\s-1NOT\s0\fR alter the intended result, even though
+this may seem counter-intuitive at first!)
+.Sp
+This may even result in a length ("\f(CW$len1\fR\*(R" or \*(L"\f(CW$len2\fR") of zero.
+.Sp
+A length of zero for the interval in the \fB\s-1SOURCE\s0\fR bit vector
+("\f(CW$len1 == 0\fR") means that the indicated stretch of bits in
+the target bit vector (starting at position \*(L"\f(CW$off2\fR") is to
+be replaced by \fB\s-1NOTHING\s0\fR, i.e., is to be \fB\s-1DELETED\s0\fR.
+.Sp
+A length of zero for the interval in the \fB\s-1TARGET\s0\fR bit vector
+("\f(CW$len2\fR == 0") means that \fB\s-1NOTHING\s0\fR is replaced, and that the
+stretch of bits from the source bit vector is simply \fB\s-1INSERTED\s0\fR
+into the target bit vector at the indicated position ("\f(CW$off2\fR").
+.Sp
+If both length parameters are zero, nothing is done at all.
+.Sp
+Note that in contrast to any other method in this module (especially
+\*(L"\f(CWInterval_Copy()\fR\*(R", \*(L"\f(CWInsert()\fR\*(R" and \*(L"\f(CWDelete()\fR"), this method
+\fB\s-1IMPLICITLY\s0\fR and \fB\s-1AUTOMATICALLY\s0\fR adapts the length of the resulting
+bit vector as needed, as given by
+.Sp
+.Vb 2
+\&        $size = $vec2->Size();   #  before
+\&        $size += $len1 - $len2;  #  after
+.Ve
+(The only other method in this module that changes the size of a bit
+vector is the method \*(L"\f(CWResize()\fR\*(R".)
+.Sp
+In other words, replacing a given interval of bits in the target bit
+vector with a longer or shorter stretch of bits from the source bit
+vector, or simply inserting ("\f(CW$len2 == 0\fR") a stretch of bits into
+or deleting ("\f(CW$len1 == 0\fR") an interval of bits from the target bit
+vector will automatically increase or decrease, respectively, the size
+of the target bit vector accordingly.
+.Sp
+For the sake of generality, this may even result in a bit vector with
+a size of zero (containing no bits at all).
+.Sp
+This is also the reason why bit vectors of length zero are permitted
+in this module in the first place, starting with version 5.0.
+.Sp
+Finally, note that \*(L"\f(CW$vec1\fR\*(R" and \*(L"\f(CW$vec2\fR\*(R" may be identical, i.e.,
+in-place processing is possible.
+.Sp
+(If you think about that for a while or if you look at the code,
+you will see that this is far from trivial!)
+.Ip "\(bu" 2
+\f(CWif ($vector->is_empty())\fR
+.Sp
+Tests whether the given bit vector is empty, i.e., whether \fB\s-1ALL\s0\fR of
+its bits are cleared (in the \*(L"off\*(R" state).
+.Sp
+In \*(L"big integer\*(R" arithmetic, this is equivalent to testing whether
+the number stored in the bit vector is zero ("\f(CW0\fR").
+.Sp
+Returns \*(L"true\*(R" ("\f(CW1\fR") if the bit vector is empty and \*(L"false\*(R" ("\f(CW0\fR")
+otherwise.
+.Sp
+Note that this method also returns \*(L"true\*(R" ("\f(CW1\fR") if the given bit
+vector has a length of zero, i.e., if it contains no bits at all.
+.Ip "\(bu" 2
+\f(CWif ($vector->is_full())\fR
+.Sp
+Tests whether the given bit vector is full, i.e., whether \fB\s-1ALL\s0\fR of
+its bits are set (in the \*(L"on\*(R" state).
+.Sp
+In \*(L"big integer\*(R" arithmetic, this is equivalent to testing whether
+the number stored in the bit vector is minus one (\*(R"\-1").
+.Sp
+Returns \*(L"true\*(R" ("\f(CW1\fR") if the bit vector is full and \*(L"false\*(R" ("\f(CW0\fR")
+otherwise.
+.Sp
+If the given bit vector has a length of zero (i.e., if it contains
+no bits at all), this method returns \*(L"false\*(R" ("\f(CW0\fR").
+.Ip "\(bu" 2
+\f(CWif ($vec1->equal($vec2))\fR
+.Sp
+Tests the two given bit vectors for equality.
+.Sp
+Returns \*(L"true\*(R" ("\f(CW1\fR") if the two bit vectors are exact
+copies of one another and \*(L"false\*(R" ("\f(CW0\fR") otherwise.
+.Ip "\(bu" 2
+\f(CW$cmp = $vec1->Lexicompare($vec2);\fR
+.Sp
+Compares the two given bit vectors, which are
+regarded as \fB\s-1UNSIGNED\s0\fR numbers in binary representation.
+.Sp
+The method returns \*(L"\f(CW-1\fR\*(R" if the first bit vector is smaller
+than the second bit vector, \*(L"\f(CW0\fR\*(R" if the two bit vectors are
+exact copies of one another and \*(L"\f(CW1\fR\*(R" if the first bit vector
+is greater than the second bit vector.
+.Ip "\(bu" 2
+\f(CW$cmp = $vec1->Compare($vec2);\fR
+.Sp
+Compares the two given bit vectors, which are
+regarded as \fB\s-1SIGNED\s0\fR numbers in binary representation.
+.Sp
+The method returns \*(L"\f(CW-1\fR\*(R" if the first bit vector is smaller
+than the second bit vector, \*(L"\f(CW0\fR\*(R" if the two bit vectors are
+exact copies of one another and \*(L"\f(CW1\fR\*(R" if the first bit vector
+is greater than the second bit vector.
+.Ip "\(bu" 2
+\f(CW$string = $vector->to_Hex();\fR
+.Sp
+Returns a hexadecimal string representing the given bit vector.
+.Sp
+Note that this representation is quite compact, in that it only
+needs at most twice the number of bytes needed to store the bit
+vector itself, internally.
+.Sp
+Note also that since a hexadecimal digit is always worth four bits,
+the length of the resulting string is always a multiple of four bits,
+regardless of the true length (in bits) of the given bit vector.
+.Sp
+Finally, note that the \fB\s-1LEAST\s0\fR significant hexadecimal digit is
+located at the \fB\s-1RIGHT\s0\fR end of the resulting string, and the \fB\s-1MOST\s0\fR
+significant digit at the \fB\s-1LEFT\s0\fR end.
+.Ip "\(bu" 2
+\f(CW$vector->from_Hex($string);\fR
+.Sp
+Allows to read in the contents of a bit vector from a hexadecimal
+string, such as returned by the method \*(L"\f(CWto_Hex()\fR\*(R" (see above).
+.Sp
+Remember that the least significant bits are always to the right of a
+hexadecimal string, and the most significant bits to the left. Therefore,
+the string is actually read in from right to left while the bit vector
+is filled accordingly, 4 bits at a time, starting with the least significant
+bits and going upward to the most significant bits.
+.Sp
+If the given string contains less hexadecimal digits than are needed
+to completely fill the given bit vector, the remaining (most significant)
+bits are all cleared.
+.Sp
+This also means that, even if the given string does not contain enough digits
+to completely fill the given bit vector, the previous contents of the
+bit vector are erased completely.
+.Sp
+If the given string is longer than it needs to fill the given bit vector,
+the superfluous characters are simply ignored.
+.Sp
+(In fact they are ignored completely \- they are not even checked for
+proper syntax. See also below for more about that.)
+.Sp
+This behaviour is intentional so that you may read in the string
+representing one bit vector into another bit vector of different
+size, i.e., as much of it as will fit.
+.Sp
+If during the process of reading the given string any character is
+encountered which is not a hexadecimal digit, a fatal syntax error
+ensues ("input string syntax error").
+.Ip "\(bu" 2
+\f(CW$string = $vector->to_Bin();\fR
+.Sp
+Returns a binary string representing the given bit vector.
+.Sp
+Example:
+.Sp
+.Vb 4
+\&  $vector = Bit::Vector->new(8);
+\&  $vector->Primes();
+\&  $string = $vector->to_Bin();
+\&  print "'$string'\en";
+.Ve
+This prints:
+.Sp
+.Vb 1
+\&  '10101100'
+.Ve
+(Bits #7, #5, #3 and #2 are set.)
+.Sp
+Note that the \fB\s-1LEAST\s0\fR significant bit is located at the \fB\s-1RIGHT\s0\fR
+end of the resulting string, and the \fB\s-1MOST\s0\fR significant bit at
+the \fB\s-1LEFT\s0\fR end.
+.Ip "\(bu" 2
+\f(CW$vector->from_Bin($string);\fR
+.Sp
+This method allows you to read in the contents of a bit vector from a
+binary string, such as returned by the method \*(L"\f(CWto_Bin()\fR\*(R" (see above).
+.Sp
+Note that this method assumes that the \fB\s-1LEAST\s0\fR significant bit is located at
+the \fB\s-1RIGHT\s0\fR end of the binary string, and the \fB\s-1MOST\s0\fR significant bit at the
+\fB\s-1LEFT\s0\fR end. Therefore, the string is actually read in from right to left
+while the bit vector is filled accordingly, one bit at a time, starting with
+the least significant bit and going upward to the most significant bit.
+.Sp
+If the given string contains less binary digits ("\f(CW0\fR\*(R" and \*(L"\f(CW1\fR") than are
+needed to completely fill the given bit vector, the remaining (most significant)
+bits are all cleared.
+.Sp
+This also means that, even if the given string does not contain enough digits
+to completely fill the given bit vector, the previous contents of the
+bit vector are erased completely.
+.Sp
+If the given string is longer than it needs to fill the given bit vector,
+the superfluous characters are simply ignored.
+.Sp
+(In fact they are ignored completely \- they are not even checked for
+proper syntax. See also below for more about that.)
+.Sp
+This behaviour is intentional so that you may read in the string
+representing one bit vector into another bit vector of different
+size, i.e., as much of it as will fit.
+.Sp
+If during the process of reading the given string any character is
+encountered which is not either \*(L"\f(CW0\fR\*(R" or \*(L"\f(CW1\fR\*(R", a fatal syntax error
+ensues ("input string syntax error").
+.Ip "\(bu" 2
+\f(CW$string = $vector->to_Dec();\fR
+.Sp
+This method returns a string representing the contents of the given bit
+vector converted to decimal (base \f(CW10\fR).
+.Sp
+Note that this method assumes the given bit vector to be \fB\s-1SIGNED\s0\fR (and
+to contain a number in two's complement binary representation).
+.Sp
+Consequently, whenever the most significant bit of the given bit vector
+is set, the number stored in it is regarded as being \fB\s-1NEGATIVE\s0\fR.
+.Sp
+The resulting string can be fed into \*(L"\f(CWfrom_Dec()\fR\*(R" (see below) in order
+to copy the contents of this bit vector to another one (or to restore the
+contents of this one). This is not advisable, though, since this would be
+very inefficient (there are much more efficient methods for storing and
+copying bit vectors in this module).
+.Sp
+Note that such conversion from binary to decimal is inherently slow
+since the bit vector has to be repeatedly divided by \f(CW10\fR with remainder
+until the quotient becomes \f(CW0\fR (each remainder in turn represents a single
+decimal digit of the resulting string).
+.Sp
+This is also true for the implementation of this method in this module,
+even though a considerable effort has been made to speed it up: instead of
+repeatedly dividing by \f(CW10\fR, the bit vector is repeatedly divided by the
+largest power of \f(CW10\fR that will fit into a machine word. The remainder is
+then repeatedly divided by \f(CW10\fR using only machine word arithmetics, which
+is much faster than dividing the whole bit vector ("divide and rule\*(R" principle).
+.Sp
+According to my own measurements, this resulted in an 8-fold speed increase
+over the straightforward approach.
+.Sp
+Still, conversion to decimal should be used only where absolutely necessary.
+.Sp
+Keep the resulting string stored in some variable if you need it again,
+instead of converting the bit vector all over again.
+.Sp
+Beware that if you set the configuration for overloaded operators to
+\*(L"output=decimal\*(R", this method will be called for every bit vector
+enclosed in double quotes!
+.Ip "\(bu" 2
+\f(CW$vector->from_Dec($string);\fR
+.Sp
+This method allows you to convert a given decimal number, which may be
+positive or negative, into two's complement binary representation, which
+is then stored in the given bit vector.
+.Sp
+The decimal number should always be provided as a string, to avoid possible
+truncation (due to the limited precision of integers in Perl) or formatting
+(due to Perl's use of scientific notation for large numbers), which would
+lead to errors.
+.Sp
+If the binary representation of the given decimal number is too big to fit
+into the given bit vector (if the given bit vector does not contain enough
+bits to hold it), a fatal \*(L"numeric overflow error\*(R" occurs.
+.Sp
+If the input string contains other characters than decimal digits (\f(CW0-9\fR)
+and an optional leading sign ("\f(CW+\fR\*(R" or \*(L"\f(CW-\fR"), a fatal \*(L"input string
+syntax error\*(R" occurs.
+.Sp
+Beware that large positive numbers which cause the most significant bit to
+be set (e.g. \*(L"255\*(R" in a bit vector with 8 bits) will be printed as negative
+numbers when converted back to decimal using the method \*(L"\fIto_Dec()\fR\*(R" (e.g.
+\*(L"\-1\*(R", in our example), because numbers with the most significant bit set
+are considered to be negative in two's complement binary representation.
+.Sp
+Note also that while it is possible to thusly enter negative numbers as
+large positive numbers (e.g. \*(L"255\*(R" for \*(L"\-1\*(R" in a bit vector with 8 bits),
+the contrary isn't, i.e., you cannot enter \*(L"\-255\*(R" for \*(L"+1\*(R", in our example.
+A fatal \*(L"numeric overflow error\*(R" will occur if you try to do so.
+.Sp
+If possible program abortion is unwanted or intolerable, use
+\*(L"\f(CWeval\fR\*(R", like this:
+.Sp
+.Vb 5
+\&  eval { $vector->from_Dec("1152921504606846976"); };
+\&  if ($@)
+\&  {
+\&      # an error occurred
+\&  }
+.Ve
+There are four possible error messages:
+.Sp
+.Vb 1
+\&  if ($@ =~ /item is not a string/)
+.Ve
+.Vb 1
+\&  if ($@ =~ /input string syntax error/)
+.Ve
+.Vb 1
+\&  if ($@ =~ /numeric overflow error/)
+.Ve
+.Vb 1
+\&  if ($@ =~ /unable to allocate memory/)
+.Ve
+Note that the conversion from decimal to binary is costly in terms of
+processing time, since a lot of multiplications have to be carried out
+(in principle, each decimal digit must be multiplied with the binary
+representation of the power of \f(CW10\fR corresponding to its position in
+the decimal number, i.e., 1, 10, 100, 1000, 10000 and so on).
+.Sp
+This is not as time consuming as the opposite conversion, from binary
+to decimal (where successive divisions have to be carried out, which
+are even more expensive than multiplications), but still noticeable.
+.Sp
+Again (as in the case of \*(L"\f(CWto_Dec()\fR"), the implementation of this
+method in this module uses the principle of \*(L"divide and rule\*(R" in order
+to speed up the conversion, i.e., as many decimal digits as possible
+are first accumulated (converted) in a machine word and only then
+stored in the given bit vector.
+.Sp
+Even so, use this method only where absolutely necessary if speed is
+an important consideration in your application.
+.Sp
+Beware that if you set the configuration for overloaded operators to
+\*(L"input=decimal\*(R", this method will be called for every scalar operand
+you use!
+.Ip "\(bu" 2
+\f(CW$string = $vector->to_Enum();\fR
+.Sp
+Converts the given bit vector or set into an enumeration of single
+indices and ranges of indices (\*(R".newsrc\*(R" style), representing the
+bits that are set ("\f(CW1\fR") in the bit vector.
+.Sp
+Example:
+.Sp
+.Vb 7
+\&  $vector = Bit::Vector->new(20);
+\&  $vector->Bit_On(2);
+\&  $vector->Bit_On(3);
+\&  $vector->Bit_On(11);
+\&  $vector->Interval_Fill(5,7);
+\&  $vector->Interval_Fill(13,19);
+\&  print "'", $vector->to_Enum(), "'\en";
+.Ve
+which prints
+.Sp
+.Vb 1
+\&  '2,3,5-7,11,13-19'
+.Ve
+If the given bit vector is empty, the resulting string will
+also be empty.
+.Sp
+Note, by the way, that the above example can also be written
+a little handier, perhaps, as follows:
+.Sp
+.Vb 4
+\&  Bit::Vector->Configuration("out=enum");
+\&  $vector = Bit::Vector->new(20);
+\&  $vector->Index_List_Store(2,3,5,6,7,11,13,14,15,16,17,18,19);
+\&  print "'$vector'\en";
+.Ve
+.Ip "\(bu" 2
+\f(CW$vector->from_Enum($string);\fR
+.Sp
+This method first empties the given bit vector and then tries to
+set the bits and ranges of bits specified in the given string.
+.Sp
+The string \*(L"\f(CW$string\fR\*(R" must only contain unsigned integers
+or ranges of integers (two unsigned integers separated by a
+dash \*(L"\-"), separated by commas (\*(R",").
+.Sp
+All other characters are disallowed (including white space!)
+and will lead to a fatal \*(L"input string syntax error\*(R".
+.Sp
+In each range, the first integer (the lower limit of the range)
+must always be less than or equal to the second integer (the
+upper limit), or a fatal \*(L"minimum > maximum index\*(R" error occurs.
+.Sp
+All integers must lie in the permitted range for the given
+bit vector, i.e., they must lie between \*(L"\f(CW0\fR\*(R" and
+\*(L"\f(CW$vector->Size()-1\fR\*(R".
+.Sp
+If this condition is not met, a fatal \*(L"index out of range\*(R"
+error occurs.
+.Sp
+If possible program abortion is unwanted or intolerable, use
+\*(L"\f(CWeval\fR\*(R", like this:
+.Sp
+.Vb 5
+\&  eval { $vector->from_Enum("2,3,5-7,11,13-19"); };
+\&  if ($@)
+\&  {
+\&      # an error occurred
+\&  }
+.Ve
+There are four possible error messages:
+.Sp
+.Vb 1
+\&  if ($@ =~ /item is not a string/)
+.Ve
+.Vb 1
+\&  if ($@ =~ /input string syntax error/)
+.Ve
+.Vb 1
+\&  if ($@ =~ /index out of range/)
+.Ve
+.Vb 1
+\&  if ($@ =~ /minimum > maximum index/)
+.Ve
+Note that the order of the indices and ranges is irrelevant,
+i.e.,
+.Sp
+.Vb 1
+\&  eval { $vector->from_Enum("11,5-7,3,13-19,2"); };
+.Ve
+results in the same vector as in the example above.
+.Sp
+Ranges and indices may also overlap.
+.Sp
+This is because each (single) index in the string is passed
+to the method \*(L"\f(CWBit_On()\fR\*(R", internally, and each range to
+the method \*(L"\f(CWInterval_Fill()\fR\*(R".
+.Sp
+This means that the resulting bit vector is just the union
+of all the indices and ranges specified in the given string.
+.Ip "\(bu" 2
+\f(CW$vector->Bit_Off($index);\fR
+.Sp
+Clears the bit with index \*(L"\f(CW$index\fR\*(R" in the given vector.
+.Ip "\(bu" 2
+\f(CW$vector->Bit_On($index);\fR
+.Sp
+Sets the bit with index \*(L"\f(CW$index\fR\*(R" in the given vector.
+.Ip "\(bu" 2
+\f(CW$vector->bit_flip($index)\fR
+.Sp
+Flips (i.e., complements) the bit with index \*(L"\f(CW$index\fR\*(R"
+in the given vector.
+.Sp
+Moreover, this method returns the \fB\s-1NEW\s0\fR state of the
+bit in question, i.e., it returns \*(L"\f(CW0\fR\*(R" if the bit is
+cleared or \*(L"\f(CW1\fR\*(R" if the bit is set (\fB\s-1AFTER\s0\fR flipping it).
+.Ip "\(bu" 2
+\f(CWif ($vector->bit_test($index))\fR
+.Sp
+Returns the current state of the bit with index \*(L"\f(CW$index\fR\*(R"
+in the given vector, i.e., returns \*(L"\f(CW0\fR\*(R" if it is cleared
+(in the \*(L"off\*(R" state) or \*(L"\f(CW1\fR\*(R" if it is set (in the \*(L"on\*(R" state).
+.Ip "\(bu" 2
+\f(CW$vector->Bit_Copy($index,$bit);\fR
+.Sp
+Sets the bit with index \*(L"\f(CW$index\fR\*(R" in the given vector either
+to \*(L"\f(CW0\fR\*(R" or \*(L"\f(CW1\fR\*(R" depending on the boolean value \*(L"\f(CW$bit\fR\*(R".
+.Ip "\(bu" 2
+\f(CW$vector->LSB($bit);\fR
+.Sp
+Allows you to set the least significant bit in the given bit
+vector to the value given by the boolean parameter \*(L"\f(CW$bit\fR\*(R".
+.Sp
+This is a (faster) shortcut for \*(L"\f(CW$vector->Bit_Copy(0,$bit);\fR\*(R".
+.Ip "\(bu" 2
+\f(CW$vector->MSB($bit);\fR
+.Sp
+Allows you to set the most significant bit in the given bit
+vector to the value given by the boolean parameter \*(L"\f(CW$bit\fR\*(R".
+.Sp
+This is a (faster) shortcut for
+\*(L"\f(CW$vector->Bit_Copy($vector->Size()-1,$bit);\fR\*(R".
+.Ip "\(bu" 2
+\f(CW$bit = $vector->lsb();\fR
+.Sp
+Returns the least significant bit of the given bit vector.
+.Sp
+This is a (faster) shortcut for \*(L"\f(CW$bit = $vector->bit_test(0);\fR\*(R".
+.Ip "\(bu" 2
+\f(CW$bit = $vector->msb();\fR
+.Sp
+Returns the most significant bit of the given bit vector.
+.Sp
+This is a (faster) shortcut for
+\*(L"\f(CW$bit = $vector->bit_test($vector->Size()-1);\fR\*(R".
+.Ip "\(bu" 2
+\f(CW$carry_out = $vector->rotate_left();\fR
+.Sp
+.Vb 7
+\&  carry             MSB           vector:           LSB
+\&   out:
+\&  +---+            +---+---+---+---     ---+---+---+---+
+\&  |   |  <---+---  |   |   |   |    ...    |   |   |   |  <---+
+\&  +---+      |     +---+---+---+---     ---+---+---+---+      |
+\&             |                                                |
+\&             +------------------------------------------------+
+.Ve
+The least significant bit (\s-1LSB\s0) is the bit with index \*(L"\f(CW0\fR\*(R", the most
+significant bit (\s-1MSB\s0) is the bit with index \*(L"\f(CW$vector->Size()-1\fR\*(R".
+.Ip "\(bu" 2
+\f(CW$carry_out = $vector->rotate_right();\fR
+.Sp
+.Vb 7
+\&          MSB           vector:           LSB            carry
+\&                                                          out:
+\&         +---+---+---+---     ---+---+---+---+           +---+
+\&  +--->  |   |   |   |    ...    |   |   |   |  ---+---> |   |
+\&  |      +---+---+---+---     ---+---+---+---+     |     +---+
+\&  |                                                |
+\&  +------------------------------------------------+
+.Ve
+The least significant bit (\s-1LSB\s0) is the bit with index \*(L"\f(CW0\fR\*(R", the most
+significant bit (\s-1MSB\s0) is the bit with index \*(L"\f(CW$vector->Size()-1\fR\*(R".
+.Ip "\(bu" 2
+\f(CW$carry_out = $vector->shift_left($carry_in);\fR
+.Sp
+.Vb 5
+\&  carry         MSB           vector:           LSB         carry
+\&   out:                                                      in:
+\&  +---+        +---+---+---+---     ---+---+---+---+        +---+
+\&  |   |  <---  |   |   |   |    ...    |   |   |   |  <---  |   |
+\&  +---+        +---+---+---+---     ---+---+---+---+        +---+
+.Ve
+The least significant bit (\s-1LSB\s0) is the bit with index \*(L"\f(CW0\fR\*(R", the most
+significant bit (\s-1MSB\s0) is the bit with index \*(L"\f(CW$vector->Size()-1\fR\*(R".
+.Ip "\(bu" 2
+\f(CW$carry_out = $vector->shift_right($carry_in);\fR
+.Sp
+.Vb 5
+\&  carry         MSB           vector:           LSB         carry
+\&   in:                                                       out:
+\&  +---+        +---+---+---+---     ---+---+---+---+        +---+
+\&  |   |  --->  |   |   |   |    ...    |   |   |   |  --->  |   |
+\&  +---+        +---+---+---+---     ---+---+---+---+        +---+
+.Ve
+The least significant bit (\s-1LSB\s0) is the bit with index \*(L"\f(CW0\fR\*(R", the most
+significant bit (\s-1MSB\s0) is the bit with index \*(L"\f(CW$vector->Size()-1\fR\*(R".
+.Ip "\(bu" 2
+\f(CW$vector->Move_Left($bits);\fR
+.Sp
+Shifts the given bit vector left by \*(L"\f(CW$bits\fR\*(R" bits, i.e., inserts \*(L"\f(CW$bits\fR\*(R"
+new bits at the lower end (least significant bit) of the bit vector, moving
+all other bits up by \*(L"\f(CW$bits\fR\*(R" places, thereby losing the \*(L"\f(CW$bits\fR\*(R" most
+significant bits.
+.Sp
+The inserted new bits are all cleared (set to the \*(L"off\*(R" state).
+.Sp
+This method does nothing if \*(L"\f(CW$bits\fR\*(R" is equal to zero.
+.Sp
+Beware that the whole bit vector is cleared \fB\s-1WITHOUT\s0 \s-1WARNING\s0\fR if
+\*(L"\f(CW$bits\fR\*(R" is greater than or equal to the size of the given bit vector!
+.Sp
+In fact this method is equivalent to
+.Sp
+.Vb 1
+\&  for ( $i = 0; $i < $bits; $i++ ) { $vector->shift_left(0); }
+.Ve
+except that it is much more efficient (for \*(L"\f(CW$bits\fR\*(R" greater than or
+equal to the number of bits in a machine word on your system) than
+this straightforward approach.
+.Ip "\(bu" 2
+\f(CW$vector->Move_Right($bits);\fR
+.Sp
+Shifts the given bit vector right by \*(L"\f(CW$bits\fR\*(R" bits, i.e., deletes the
+\*(L"\f(CW$bits\fR\*(R" least significant bits of the bit vector, moving all other bits
+down by \*(L"\f(CW$bits\fR\*(R" places, thereby creating \*(L"\f(CW$bits\fR\*(R" new bits at the upper
+end (most significant bit) of the bit vector.
+.Sp
+These new bits are all cleared (set to the \*(L"off\*(R" state).
+.Sp
+This method does nothing if \*(L"\f(CW$bits\fR\*(R" is equal to zero.
+.Sp
+Beware that the whole bit vector is cleared \fB\s-1WITHOUT\s0 \s-1WARNING\s0\fR if
+\*(L"\f(CW$bits\fR\*(R" is greater than or equal to the size of the given bit vector!
+.Sp
+In fact this method is equivalent to
+.Sp
+.Vb 1
+\&  for ( $i = 0; $i < $bits; $i++ ) { $vector->shift_right(0); }
+.Ve
+except that it is much more efficient (for \*(L"\f(CW$bits\fR\*(R" greater than or
+equal to the number of bits in a machine word on your system) than
+this straightforward approach.
+.Ip "\(bu" 2
+\f(CW$vector->Insert($offset,$bits);\fR
+.Sp
+This method inserts \*(L"\f(CW$bits\fR\*(R" fresh new bits at position \*(L"\f(CW$offset\fR\*(R"
+in the given bit vector.
+.Sp
+The \*(L"\f(CW$bits\fR\*(R" most significant bits are lost, and all bits starting
+with bit number \*(L"\f(CW$offset\fR\*(R" up to and including bit number
+\*(L"\f(CW$vector->Size()-$bits-1\fR\*(R" are moved up by \*(L"\f(CW$bits\fR\*(R" places.
+.Sp
+The now vacant \*(L"\f(CW$bits\fR\*(R" bits starting at bit number \*(L"\f(CW$offset\fR\*(R"
+(up to and including bit number \*(L"\f(CW$offset+$bits-1\fR") are then set
+to zero (cleared).
+.Sp
+Note that this method does \fB\s-1NOT\s0\fR increase the size of the given bit
+vector, i.e., the bit vector is \fB\s-1NOT\s0\fR extended at its upper end to
+\*(L"rescue\*(R" the \*(L"\f(CW$bits\fR\*(R" uppermost (most significant) bits \- instead,
+these bits are lost forever.
+.Sp
+If you don't want this to happen, you have to increase the size of the
+given bit vector \fB\s-1EXPLICITLY\s0\fR and \fB\s-1BEFORE\s0\fR you perform the \*(L"Insert\*(R"
+operation, with a statement such as the following:
+.Sp
+.Vb 1
+\&  $vector->Resize($vector->Size() + $bits);
+.Ve
+Or use the method \*(L"\f(CWInterval_Substitute()\fR\*(R" instead of \*(L"\f(CWInsert()\fR\*(R",
+which performs automatic growing and shrinking of its target bit vector.
+.Sp
+Note also that \*(L"\f(CW$offset\fR\*(R" must lie in the permitted range between
+\*(L"\f(CW0\fR\*(R" and \*(L"\f(CW$vector->Size()-1\fR\*(R", or a fatal \*(L"offset out of range\*(R"
+error will occur.
+.Sp
+If the term \*(L"\f(CW$offset + $bits\fR\*(R" exceeds \*(L"\f(CW$vector->Size()-1\fR\*(R",
+all the bits starting with bit number \*(L"\f(CW$offset\fR\*(R" up to bit number
+\*(L"\f(CW$vector->Size()-1\fR\*(R" are simply cleared.
+.Ip "\(bu" 2
+\f(CW$vector->Delete($offset,$bits);\fR
+.Sp
+This method deletes, i.e., removes the bits starting at position
+\*(L"\f(CW$offset\fR\*(R" up to and including bit number \*(L"\f(CW$offset+$bits-1\fR\*(R"
+from the given bit vector.
+.Sp
+The remaining uppermost bits (starting at position \*(L"\f(CW$offset+$bits\fR\*(R"
+up to and including bit number \*(L"\f(CW$vector->Size()-1\fR") are moved
+down by \*(L"\f(CW$bits\fR\*(R" places.
+.Sp
+The now vacant uppermost (most significant) \*(L"\f(CW$bits\fR\*(R" bits are then
+set to zero (cleared).
+.Sp
+Note that this method does \fB\s-1NOT\s0\fR decrease the size of the given bit
+vector, i.e., the bit vector is \fB\s-1NOT\s0\fR clipped at its upper end to
+\*(L"get rid of\*(R" the vacant \*(L"\f(CW$bits\fR\*(R" uppermost bits.
+.Sp
+If you don't want this, i.e., if you want the bit vector to shrink
+accordingly, you have to do so \fB\s-1EXPLICITLY\s0\fR and \fB\s-1AFTER\s0\fR the \*(L"Delete\*(R"
+operation, with a couple of statements such as these:
+.Sp
+.Vb 3
+\&  $size = $vector->Size();
+\&  if ($bits > $size) { $bits = $size; }
+\&  $vector->Resize($size - $bits);
+.Ve
+Or use the method \*(L"\f(CWInterval_Substitute()\fR\*(R" instead of \*(L"\f(CWDelete()\fR\*(R",
+which performs automatic growing and shrinking of its target bit vector.
+.Sp
+Note also that \*(L"\f(CW$offset\fR\*(R" must lie in the permitted range between
+\*(L"\f(CW0\fR\*(R" and \*(L"\f(CW$vector->Size()-1\fR\*(R", or a fatal \*(L"offset out of range\*(R"
+error will occur.
+.Sp
+If the term \*(L"\f(CW$offset + $bits\fR\*(R" exceeds \*(L"\f(CW$vector->Size()-1\fR\*(R",
+all the bits starting with bit number \*(L"\f(CW$offset\fR\*(R" up to bit number
+\*(L"\f(CW$vector->Size()-1\fR\*(R" are simply cleared.
+.Ip "\(bu" 2
+\f(CW$carry = $vector->increment();\fR
+.Sp
+This method increments the given bit vector.
+.Sp
+Note that this method regards bit vectors as being unsigned,
+i.e., the largest possible positive number is directly
+followed by the smallest possible (or greatest possible,
+speaking in absolute terms) negative number:
+.Sp
+.Vb 2
+\&  before:  2 ^ (b-1) - 1    (= "0111...1111")
+\&  after:   2 ^ (b-1)        (= "1000...0000")
+.Ve
+where \*(L"\f(CWb\fR\*(R" is the number of bits of the given bit vector.
+.Sp
+The method returns \*(L"false\*(R" ("\f(CW0\fR") in all cases except when a
+carry over occurs (in which case it returns \*(L"true\*(R", i.e., \*(L"\f(CW1\fR"),
+which happens when the number \*(L"1111...1111\*(R" is incremented,
+which gives \*(L"0000...0000\*(R" plus a carry over to the next higher
+(binary) digit.
+.Sp
+This can be used for the terminating condition of a \*(L"while\*(R" loop,
+for instance, in order to cycle through all possible values the
+bit vector can assume.
+.Ip "\(bu" 2
+\f(CW$carry = $vector->decrement();\fR
+.Sp
+This method decrements the given bit vector.
+.Sp
+Note that this method regards bit vectors as being unsigned,
+i.e., the smallest possible (or greatest possible, speaking
+in absolute terms) negative number is directly followed by
+the largest possible positive number:
+.Sp
+.Vb 2
+\&  before:  2 ^ (b-1)        (= "1000...0000")
+\&  after:   2 ^ (b-1) - 1    (= "0111...1111")
+.Ve
+where \*(L"\f(CWb\fR\*(R" is the number of bits of the given bit vector.
+.Sp
+The method returns \*(L"false\*(R" ("\f(CW0\fR") in all cases except when a
+carry over occurs (in which case it returns \*(L"true\*(R", i.e., \*(L"\f(CW1\fR"),
+which happens when the number \*(L"0000...0000\*(R" is decremented,
+which gives \*(L"1111...1111\*(R" minus a carry over to the next higher
+(binary) digit.
+.Sp
+This can be used for the terminating condition of a \*(L"while\*(R" loop,
+for instance, in order to cycle through all possible values the
+bit vector can assume.
+.Ip "\(bu" 2
+\f(CW$overflow = $vec2->inc($vec1);\fR
+.Sp
+This method copies the contents of bit vector \*(L"\f(CW$vec1\fR\*(R" to bit
+vector \*(L"\f(CW$vec2\fR\*(R" and increments the copy (not the original).
+.Sp
+If by incrementing the number its sign becomes invalid, the return
+value ("overflow\*(R" flag) will be true ("\f(CW1\fR"), or false ("\f(CW0\fR")
+if not. (See the description of the method \*(L"\fIadd()\fR\*(R" below for
+a more in-depth explanation of what \*(L"overflow\*(R" means).
+.Sp
+Note that in-place operation is also possible, i.e., \*(L"\f(CW$vec1\fR\*(R"
+and \*(L"\f(CW$vec2\fR\*(R" may be identical.
+.Ip "\(bu" 2
+\f(CW$overflow = $vec2->dec($vec1);\fR
+.Sp
+This method copies the contents of bit vector \*(L"\f(CW$vec1\fR\*(R" to bit
+vector \*(L"\f(CW$vec2\fR\*(R" and decrements the copy (not the original).
+.Sp
+If by decrementing the number its sign becomes invalid, the return
+value ("overflow\*(R" flag) will be true ("\f(CW1\fR"), or false ("\f(CW0\fR")
+if not. (See the description of the method \*(L"\fIsubtract()\fR\*(R" below
+for a more in-depth explanation of what \*(L"overflow\*(R" means).
+.Sp
+Note that in-place operation is also possible, i.e., \*(L"\f(CW$vec1\fR\*(R"
+and \*(L"\f(CW$vec2\fR\*(R" may be identical.
+.Ip "\(bu" 2
+\f(CW$carry = $vec3->add($vec1,$vec2,$carry);\fR
+.Sp
+\f(CW($carry,$overflow) = $vec3->add($vec1,$vec2,$carry);\fR
+.Sp
+This method adds the two numbers contained in bit vector \*(L"\f(CW$vec1\fR\*(R"
+and \*(L"\f(CW$vec2\fR\*(R" with carry \*(L"\f(CW$carry\fR\*(R" and stores the result in
+bit vector \*(L"\f(CW$vec3\fR\*(R".
+.Sp
+I.e.,
+            \f(CW$vec3\fR = \f(CW$vec1\fR + \f(CW$vec2\fR + \f(CW$carry\fR
+.Sp
+Note that the \*(L"\f(CW$carry\fR\*(R" parameter is a boolean value, i.e.,
+only its least significant bit is taken into account. (Think of
+it as though \*(L"\f(CW$carry &= 1;\fR\*(R" was always executed internally.)
+.Sp
+In scalar context, the method returns a boolean value which
+indicates if a carry over (to the next higher bit position)
+has occured. In list context, the method returns the carry
+and the overflow flag (in this order).
+.Sp
+The overflow flag is true ("\f(CW1\fR") if the sign (i.e., the most
+significant bit) of the result is wrong. This can happen when
+adding two very large positive numbers or when adding two (by
+their absolute value) very large negative numbers. See also
+further below.
+.Sp
+The carry in- and output is needed mainly for cascading, i.e.,
+to add numbers that are fragmented into several pieces.
+.Sp
+Example:
+.Sp
+.Vb 1
+\&  # initialize
+.Ve
+.Vb 6
+\&  for ( $i = 0; $i < $n; $i++ )
+\&  {
+\&      $a[$i] = Bit::Vector->new($bits);
+\&      $b[$i] = Bit::Vector->new($bits);
+\&      $c[$i] = Bit::Vector->new($bits);
+\&  }
+.Ve
+.Vb 1
+\&  # fill @a and @b
+.Ve
+.Vb 3
+\&  # $a[  0 ] is low order part,
+\&  # $a[$n-1] is high order part,
+\&  # and same for @b
+.Ve
+.Vb 1
+\&  # add
+.Ve
+.Vb 5
+\&  $carry = 0;
+\&  for ( $i = 0; $i < $n; $i++ )
+\&  {
+\&      $carry = $c[$i]->add($a[$i],$b[$i],$carry);
+\&  }
+.Ve
+Note that it makes no difference to this method whether the numbers
+in \*(L"\f(CW$vec1\fR\*(R" and \*(L"\f(CW$vec2\fR\*(R" are unsigned or signed (i.e., in two's
+complement binary representation).
+.Sp
+Note however that the return value (carry flag) is not meaningful
+when the numbers are \fB\s-1SIGNED\s0\fR.
+.Sp
+Moreover, when the numbers are signed, a special type of error can
+occur which is commonly called an \*(L"overflow error\*(R".
+.Sp
+An overflow error occurs when the sign of the result (its most
+significant bit) is flipped (i.e., falsified) by a carry over
+from the next-lower bit position ("\s-1MSB\s0\-1").
+.Sp
+In fact matters are a bit more complicated than that: the overflow
+flag is set to \*(L"true\*(R" whenever there is a carry over from bit
+position \s-1MSB\s0\-1 to the most significant bit (\s-1MSB\s0) but no carry
+over from the \s-1MSB\s0 to the output carry flag, or vice-versa, i.e.,
+when there is no carry over from bit position \s-1MSB\s0\-1 to the most
+significant bit (\s-1MSB\s0) but a carry over to the output carry flag.
+.Sp
+Thus the overflow flag is the result of an exclusive-or operation
+between incoming and outgoing carry over at the most significant
+bit position.
+.Ip "\(bu" 2
+\f(CW$carry = $vec3->subtract($vec1,$vec2,$carry);\fR
+.Sp
+\f(CW($carry,$overflow) = $vec3->subtract($vec1,$vec2,$carry);\fR
+.Sp
+This method subtracts the two numbers contained in bit vector
+\*(L"\f(CW$vec1\fR\*(R" and \*(L"\f(CW$vec2\fR\*(R" with carry \*(L"\f(CW$carry\fR\*(R" and stores the
+result in bit vector \*(L"\f(CW$vec3\fR\*(R".
+.Sp
+I.e.,
+            \f(CW$vec3\fR = \f(CW$vec1\fR \- \f(CW$vec2\fR \- \f(CW$carry\fR
+.Sp
+Note that the \*(L"\f(CW$carry\fR\*(R" parameter is a boolean value, i.e.,
+only its least significant bit is taken into account. (Think of
+it as though \*(L"\f(CW$carry &= 1;\fR\*(R" was always executed internally.)
+.Sp
+In scalar context, the method returns a boolean value which
+indicates if a carry over (to the next higher bit position)
+has occured. In list context, the method returns the carry
+and the overflow flag (in this order).
+.Sp
+The overflow flag is true ("\f(CW1\fR") if the sign (i.e., the most
+significant bit) of the result is wrong. This can happen when
+subtracting a very large negative number from a very large
+positive number or vice-versa. See also further below.
+.Sp
+The carry in- and output is needed mainly for cascading, i.e.,
+to subtract numbers that are fragmented into several pieces.
+.Sp
+Example:
+.Sp
+.Vb 1
+\&  # initialize
+.Ve
+.Vb 6
+\&  for ( $i = 0; $i < $n; $i++ )
+\&  {
+\&      $a[$i] = Bit::Vector->new($bits);
+\&      $b[$i] = Bit::Vector->new($bits);
+\&      $c[$i] = Bit::Vector->new($bits);
+\&  }
+.Ve
+.Vb 1
+\&  # fill @a and @b
+.Ve
+.Vb 3
+\&  # $a[  0 ] is low order part,
+\&  # $a[$n-1] is high order part,
+\&  # and same for @b
+.Ve
+.Vb 1
+\&  # subtract
+.Ve
+.Vb 5
+\&  $carry = 0;
+\&  for ( $i = 0; $i < $n; $i++ )
+\&  {
+\&      $carry = $c[$i]->subtract($a[$i],$b[$i],$carry);
+\&  }
+.Ve
+Note that it makes no difference to this method whether the numbers
+in \*(L"\f(CW$vec1\fR\*(R" and \*(L"\f(CW$vec2\fR\*(R" are unsigned or signed (i.e., in two's
+complement binary representation).
+.Sp
+Note however that the return value (carry flag) is not meaningful
+when the numbers are \fB\s-1SIGNED\s0\fR.
+.Sp
+Moreover, when the numbers are signed, a special type of error can
+occur which is commonly called an \*(L"overflow error\*(R".
+.Sp
+An overflow error occurs when the sign of the result (its most
+significant bit) is flipped (i.e., falsified) by a carry over
+from the next-lower bit position ("\s-1MSB\s0\-1").
+.Sp
+In fact matters are a bit more complicated than that: the overflow
+flag is set to \*(L"true\*(R" whenever there is a carry over from bit
+position \s-1MSB\s0\-1 to the most significant bit (\s-1MSB\s0) but no carry
+over from the \s-1MSB\s0 to the output carry flag, or vice-versa, i.e.,
+when there is no carry over from bit position \s-1MSB\s0\-1 to the most
+significant bit (\s-1MSB\s0) but a carry over to the output carry flag.
+.Sp
+Thus the overflow flag is the result of an exclusive-or operation
+between incoming and outgoing carry over at the most significant
+bit position.
+.Ip "\(bu" 2
+\f(CW$vec2->Negate($vec1);\fR
+.Sp
+This method calculates the two's complement of the number in bit
+vector \*(L"\f(CW$vec1\fR\*(R" and stores the result in bit vector \*(L"\f(CW$vec2\fR\*(R".
+.Sp
+Calculating the two's complement of a given number in binary representation
+consists of inverting all bits and incrementing the result by one.
+.Sp
+This is the same as changing the sign of the given number from \*(L"\f(CW+\fR\*(R" to
+\*(L"\f(CW-\fR\*(R" or vice-versa. In other words, applying this method twice on a given
+number yields the original number again.
+.Sp
+Note that in-place processing is also possible, i.e., \*(L"\f(CW$vec1\fR\*(R" and
+\*(L"\f(CW$vec2\fR\*(R" may be identical.
+.Sp
+Most importantly, beware that this method produces a counter-intuitive
+result if the number contained in bit vector \*(L"\f(CW$vec1\fR\*(R" is \f(CW2 ^ (n-1)\fR
+(i.e., \*(L"1000...0000"), where \*(L"\f(CWn\fR\*(R" is the number of bits the given bit
+vector contains: The negated value of this number is the number itself!
+.Ip "\(bu" 2
+\f(CW$vec2->Absolute($vec1);\fR
+.Sp
+Depending on the sign (i.e., the most significant bit) of the number in
+bit vector \*(L"\f(CW$vec1\fR\*(R", the contents of bit vector \*(L"\f(CW$vec1\fR\*(R" are copied
+to bit vector \*(L"\f(CW$vec2\fR\*(R" either with the method \*(L"\f(CWCopy()\fR\*(R" (if the number
+in bit vector \*(L"\f(CW$vec1\fR\*(R" is positive), or with \*(L"\f(CWNegate()\fR\*(R" (if the number
+in bit vector \*(L"\f(CW$vec1\fR\*(R" is negative).
+.Sp
+In other words, this method calculates the absolute value of the number
+in bit vector \*(L"\f(CW$vec1\fR\*(R" and stores the result in bit vector \*(L"\f(CW$vec2\fR\*(R".
+.Sp
+Note that in-place processing is also possible, i.e., \*(L"\f(CW$vec1\fR\*(R" and
+\*(L"\f(CW$vec2\fR\*(R" may be identical.
+.Sp
+Most importantly, beware that this method produces a counter-intuitive
+result if the number contained in bit vector \*(L"\f(CW$vec1\fR\*(R" is \f(CW2 ^ (n-1)\fR
+(i.e., \*(L"1000...0000"), where \*(L"\f(CWn\fR\*(R" is the number of bits the given bit
+vector contains: The absolute value of this number is the number itself,
+even though this number is still negative by definition (the most
+significant bit is still set)!
+.Ip "\(bu" 2
+\f(CW$sign = $vector->Sign();\fR
+.Sp
+This method returns \*(L"\f(CW0\fR\*(R" if all bits in the given bit vector are cleared,
+i.e., if the given bit vector contains the number \*(L"\f(CW0\fR\*(R", or if the given
+bit vector has a length of zero (contains no bits at all).
+.Sp
+If not all bits are cleared, this method returns \*(L"\f(CW-1\fR\*(R" if the most
+significant bit is set (i.e., if the bit vector contains a negative
+number), or \*(L"\f(CW1\fR\*(R" otherwise (i.e., if the bit vector contains a
+positive number).
+.Ip "\(bu" 2
+\f(CW$vec3->Multiply($vec1,$vec2);\fR
+.Sp
+This method multiplies the two numbers contained in bit vector \*(L"\f(CW$vec1\fR\*(R"
+and \*(L"\f(CW$vec2\fR\*(R" and stores the result in bit vector \*(L"\f(CW$vec3\fR\*(R".
+.Sp
+Note that this method regards its arguments as \fB\s-1SIGNED\s0\fR.
+.Sp
+If you want to make sure that a large number can never be treated as being
+negative by mistake, make your bit vectors at least one bit longer than the
+largest number you wish to represent, right from the start, or proceed as
+follows:
+.Sp
+.Vb 8
+\&    $msb1 = $vec1->msb();
+\&    $msb2 = $vec2->msb();
+\&    $vec1->Resize($vec1->Size()+1);
+\&    $vec2->Resize($vec2->Size()+1);
+\&    $vec3->Resize($vec3->Size()+1);
+\&    $vec1->MSB($msb1);
+\&    $vec2->MSB($msb2);
+\&    $vec3->Multiply($vec1,$vec2);
+.Ve
+Note also that all three bit vector arguments must in principle obey the
+rule of matching sizes, but that the bit vector \*(L"\f(CW$vec3\fR\*(R" may be larger
+than the two factors \*(L"\f(CW$vec1\fR\*(R" and \*(L"\f(CW$vec2\fR\*(R".
+.Sp
+In fact multiplying two binary numbers with \*(L"\f(CWn\fR\*(R" bits may yield a result
+which is at most \*(L"\f(CW2n\fR\*(R" bits long.
+.Sp
+Therefore, it is usually a good idea to let bit vector \*(L"\f(CW$vec3\fR\*(R" have
+twice the size of bit vector \*(L"\f(CW$vec1\fR\*(R" and \*(L"\f(CW$vec2\fR\*(R", unless you are
+absolutely sure that the result will fit into a bit vector of the same
+size as the two factors.
+.Sp
+If you are wrong, a fatal \*(L"numeric overflow error\*(R" will occur.
+.Sp
+Finally, note that in-place processing is possible, i.e., \*(L"\f(CW$vec3\fR\*(R"
+may be identical with \*(L"\f(CW$vec1\fR\*(R" or \*(L"\f(CW$vec2\fR\*(R", or both.
+.Ip "\(bu" 2
+\f(CW$quot->Divide($vec1,$vec2,$rest);\fR
+.Sp
+This method divides the two numbers contained in bit vector \*(L"\f(CW$vec1\fR\*(R"
+and \*(L"\f(CW$vec2\fR\*(R" and stores the quotient in bit vector \*(L"\f(CW$quot\fR\*(R" and
+the remainder in bit vector \*(L"\f(CW$rest\fR\*(R".
+.Sp
+I.e.,
+            \f(CW$quot\fR = \f(CW$vec1\fR / \f(CW$vec2\fR;  #  div
+            \f(CW$rest\fR = \f(CW$vec1\fR % \f(CW$vec2\fR;  #  mod
+.Sp
+Therefore, \*(L"\f(CW$quot\fR\*(R" and \*(L"\f(CW$rest\fR\*(R" must be two \fB\s-1DISTINCT\s0\fR bit vectors,
+or a fatal \*(L"result \fIvector\fR\|(s) must be distinct\*(R" error will occur.
+.Sp
+Note also that a fatal \*(L"division by zero error\*(R" will occur if \*(L"\f(CW$vec2\fR\*(R"
+is equal to zero.
+.Sp
+Note further that this method regards its arguments as \fB\s-1SIGNED\s0\fR.
+.Sp
+If you want to make sure that a large number can never be treated as being
+negative by mistake, make your bit vectors at least one bit longer than the
+largest number you wish to represent, right from the start, or proceed as
+follows:
+.Sp
+.Vb 9
+\&    $msb1 = $vec1->msb();
+\&    $msb2 = $vec2->msb();
+\&    $vec1->Resize($vec1->Size()+1);
+\&    $vec2->Resize($vec2->Size()+1);
+\&    $quot->Resize($quot->Size()+1);
+\&    $rest->Resize($rest->Size()+1);
+\&    $vec1->MSB($msb1);
+\&    $vec2->MSB($msb2);
+\&    $quot->Divide($vec1,$vec2,$rest);
+.Ve
+Finally, note that in-place processing is possible, i.e., \*(L"\f(CW$quot\fR\*(R"
+may be identical with \*(L"\f(CW$vec1\fR\*(R" or \*(L"\f(CW$vec2\fR\*(R" or both, and \*(L"\f(CW$rest\fR\*(R"
+may also be identical with \*(L"\f(CW$vec1\fR\*(R" or \*(L"\f(CW$vec2\fR\*(R" or both, as long
+as \*(L"\f(CW$quot\fR\*(R" and \*(L"\f(CW$rest\fR\*(R" are distinct. (!)
+.Ip "\(bu" 2
+\f(CW$vec3->GCD($vec1,$vec2);\fR
+.Sp
+This method calculates the \*(L"Greatest Common Divisor\*(R" of the two numbers
+contained in bit vector \*(L"\f(CW$vec1\fR\*(R" and \*(L"\f(CW$vec2\fR\*(R" and stores the result
+in bit vector \*(L"\f(CW$vec3\fR\*(R".
+.Sp
+The method uses Euklid's algorithm internally:
+.Sp
+.Vb 3
+\&    int GCD(int a, int b)
+\&    {
+\&        int t;
+.Ve
+.Vb 8
+\&        while (b != 0)
+\&        {
+\&            t = a % b; /* = remainder of (a div b) */
+\&            a = b;
+\&            b = t;
+\&        }
+\&        return(a);
+\&    }
+.Ve
+Note that a fatal \*(L"division by zero error\*(R" will occur if any of the two
+numbers is equal to zero.
+.Sp
+Note also that this method regards its two arguments as \fB\s-1SIGNED\s0\fR but
+that it actually uses the \fB\s-1ABSOLUTE\s0 \s-1VALUE\s0\fR of its two arguments internally,
+i.e., the \fB\s-1RESULT\s0\fR of this method will \fB\s-1ALWAYS\s0\fR be \fB\s-1POSITIVE\s0\fR.
+.Ip "\(bu" 2
+\f(CW$vec3->Power($vec1,$vec2);\fR
+.Sp
+This method calculates the exponentiation of base \*(L"\f(CW$vec1\fR\*(R" elevated to
+the \*(L"\f(CW$vec2\fR\*(R" power, i.e., \*(L"\f(CW$vec1 ** $vec2\fR\*(R", and stores the result
+in bit vector \*(L"\f(CW$vec3\fR\*(R".
+.Sp
+The method uses an efficient divide-and-conquer algorithm:
+.Sp
+Suppose the exponent is (decimal) 13, for example. The binary
+representation of this exponent is \*(L"1101\*(R".
+.Sp
+This means we want to calculate
+.Sp
+.Vb 3
+\&  $vec1 * $vec1 * $vec1 * $vec1 * $vec1 * $vec1 * $vec1 * $vec1 *
+\&  $vec1 * $vec1 * $vec1 * $vec1 *
+\&  $vec1
+.Ve
+That is, \*(L"\f(CW$vec1\fR\*(R" multiplied with itself 13 times. The grouping
+into lines above is no coincidence. The first line comprises 8
+factors, the second contains 4, and the last line just one. This
+just happens to be the binary representation of 13. \f(CW;-)\fR
+.Sp
+We then calculate a series of squares (of squares of squares...) of
+the base, i.e.,
+.Sp
+.Vb 5
+\&  $power[0] = $vec1;
+\&  $power[1] = $vec1 * $vec1;
+\&  $power[2] = $power[1] * $power[1];
+\&  $power[3] = $power[2] * $power[2];
+\&  etc.
+.Ve
+To calculate the power of our example, we simply initialize our result
+with 1 and consecutively multiply it with the items of the series of
+powers we just calculated, if the corresponding bit of the binary
+representation of the exponent is set:
+.Sp
+.Vb 6
+\&  $result = 1;
+\&  $result *= $power[0] if ($vec2 & 1);
+\&  $result *= $power[1] if ($vec2 & 2);
+\&  $result *= $power[2] if ($vec2 & 4);
+\&  $result *= $power[3] if ($vec2 & 8);
+\&  etc.
+.Ve
+The bit vector \*(L"\f(CW$vec3\fR\*(R" must be of the same size as the base
+\*(L"\f(CW$vec1\fR\*(R" or greater. \*(L"\f(CW$vec3\fR\*(R" and \*(L"\f(CW$vec1\fR\*(R" may be the same
+vector (i.e., in-place calculation as in \*(L"\f(CW$vec1 **= $vec2;\fR\*(R" is
+possible), but \*(L"\f(CW$vec3\fR\*(R" and \*(L"\f(CW$vec2\fR\*(R" must be distinct. Finally,
+the exponent \*(L"\f(CW$vec2\fR\*(R" must be positive. A fatal error occurs if
+any of these conditions is not met.
+.Ip "\(bu" 2
+\f(CW$vector->Block_Store($buffer);\fR
+.Sp
+This method allows you to load the contents of a given bit vector in
+one go.
+.Sp
+This is useful when you store the contents of a bit vector in a file,
+for instance (using method \*(L"\f(CWBlock_Read()\fR"), and when you want to
+restore the previously saved bit vector.
+.Sp
+For this, \*(L"\f(CW$buffer\fR\*(R" \fB\s-1MUST\s0\fR be a string (\fB\s-1NO\s0\fR automatic conversion
+from numeric to string is provided here as would normally in Perl!)
+containing the bit vector in \*(L"low order byte first\*(R" order.
+.Sp
+If the given string is shorter than what is needed to completely fill
+the given bit vector, the remaining (most significant) bytes of the
+bit vector are filled with zeros, i.e., the previous contents of the
+bit vector are always erased completely.
+.Sp
+If the given string is longer than what is needed to completely fill
+the given bit vector, the superfluous bytes are simply ignored.
+.Sp
+See the \f(CWsysread\fR entry in the \fIperlfunc\fR manpage for how to read in the contents of \*(L"\f(CW$buffer\fR\*(R"
+from a file prior to passing it to this method.
+.Ip "\(bu" 2
+\f(CW$buffer = $vector->Block_Read();\fR
+.Sp
+This method allows you to export the contents of a given bit vector in
+one block.
+.Sp
+This is useful when you want to save the contents of a bit vector for
+later, for instance in a file.
+.Sp
+The advantage of this method is that it allows you to do so in the
+compactest possible format, in binary.
+.Sp
+The method returns a Perl string which contains an exact copy of the
+contents of the given bit vector in \*(L"low order byte first\*(R" order.
+.Sp
+See the \f(CWsyswrite\fR entry in the \fIperlfunc\fR manpage for how to write the data from this string
+to a file.
+.Ip "\(bu" 2
+\f(CW$size = $vector->Word_Size();\fR
+.Sp
+Each bit vector is internally organized as an array of machine words.
+.Sp
+The methods whose names begin with \*(L"Word_\*(R" allow you to access this
+internal array of machine words.
+.Sp
+Note that because the size of a machine word may vary from system to
+system, these methods are inherently \fB\s-1MACHINE\s0\-\s-1DEPENDENT\s0\fR!
+.Sp
+Therefore, \fB\s-1DO\s0 \s-1NOT\s0 \s-1USE\s0\fR these methods unless you are absolutely certain
+that portability of your code is not an issue!
+.Sp
+You have been warned!
+.Sp
+To be machine-independent, use the methods whose names begin with \*(L"\f(CWChunk_\fR\*(R"
+instead, with chunk sizes no greater than 32 bits.
+.Sp
+The method \*(L"\f(CWWord_Size()\fR\*(R" returns the number of machine words that the
+internal array of words of the given bit vector contains.
+.Sp
+This is similar in function to the term \*(L"\f(CWscalar(@array)\fR\*(R" for a Perl array.
+.Ip "\(bu" 2
+\f(CW$vector->Word_Store($offset,$word);\fR
+.Sp
+This method allows you to store a given value \*(L"\f(CW$word\fR\*(R" at a given
+position \*(L"\f(CW$offset\fR\*(R" in the internal array of words of the given
+bit vector.
+.Sp
+Note that \*(L"\f(CW$offset\fR\*(R" must lie in the permitted range between \*(L"\f(CW0\fR\*(R"
+and \*(L"\f(CW$vector->Word_Size()-1\fR\*(R", or a fatal \*(L"offset out of range\*(R"
+error will occur.
+.Sp
+This method is similar in function to the expression
+\*(L"\f(CW$array[$offset] = $word;\fR\*(R" for a Perl array.
+.Ip "\(bu" 2
+\f(CW$word = $vector->Word_Read($offset);\fR
+.Sp
+This method allows you to access the value of a given machine word
+at position \*(L"\f(CW$offset\fR\*(R" in the internal array of words of the given
+bit vector.
+.Sp
+Note that \*(L"\f(CW$offset\fR\*(R" must lie in the permitted range between \*(L"\f(CW0\fR\*(R"
+and \*(L"\f(CW$vector->Word_Size()-1\fR\*(R", or a fatal \*(L"offset out of range\*(R"
+error will occur.
+.Sp
+This method is similar in function to the expression
+\*(L"\f(CW$word = $array[$offset];\fR\*(R" for a Perl array.
+.Ip "\(bu" 2
+\f(CW$vector->Word_List_Store(@words);\fR
+.Sp
+This method allows you to store a list of values \*(L"\f(CW@words\fR\*(R" in the
+internal array of machine words of the given bit vector.
+.Sp
+Thereby the \fB\s-1LEFTMOST\s0\fR value in the list ("\f(CW$words[0]\fR") is stored
+in the \fB\s-1LEAST\s0\fR significant word of the internal array of words (the
+one with offset \*(L"\f(CW0\fR"), the next value from the list ("\f(CW$words[1]\fR")
+is stored in the word with offset \*(L"\f(CW1\fR\*(R", and so on, as intuitively
+expected.
+.Sp
+If the list \*(L"\f(CW@words\fR\*(R" contains fewer elements than the internal
+array of words of the given bit vector contains machine words,
+the remaining (most significant) words are filled with zeros.
+.Sp
+If the list \*(L"\f(CW@words\fR\*(R" contains more elements than the internal
+array of words of the given bit vector contains machine words,
+the superfluous values are simply ignored.
+.Sp
+This method is comparable in function to the expression
+\*(L"\f(CW@array = @words;\fR\*(R" for a Perl array.
+.Ip "\(bu" 2
+\f(CW@words = $vector->Word_List_Read();\fR
+.Sp
+This method allows you to retrieve the internal array of machine
+words of the given bit vector all at once.
+.Sp
+Thereby the \fB\s-1LEFTMOST\s0\fR value in the returned list ("\f(CW$words[0]\fR")
+is the \fB\s-1LEAST\s0\fR significant word from the given bit vector, and the
+\fB\s-1RIGHTMOST\s0\fR value in the returned list ("\f(CW$words[$#words]\fR") is
+the \fB\s-1MOST\s0\fR significant word of the given bit vector.
+.Sp
+This method is similar in function to the expression
+\*(L"\f(CW@words = @array;\fR\*(R" for a Perl array.
+.Ip "\(bu" 2
+\f(CW$vector->Word_Insert($offset,$count);\fR
+.Sp
+This method inserts \*(L"\f(CW$count\fR\*(R" empty new machine words at position
+\*(L"\f(CW$offset\fR\*(R" in the internal array of words of the given bit vector.
+.Sp
+The \*(L"\f(CW$count\fR\*(R" most significant words are lost, and all words starting
+with word number \*(L"\f(CW$offset\fR\*(R" up to and including word number
+\*(L"\f(CW$vector->Word_Size()-$count-1\fR\*(R" are moved up by \*(L"\f(CW$count\fR\*(R" places.
+.Sp
+The now vacant \*(L"\f(CW$count\fR\*(R" words starting at word number \*(L"\f(CW$offset\fR\*(R"
+(up to and including word number \*(L"\f(CW$offset+$count-1\fR") are then set
+to zero (cleared).
+.Sp
+Note that this method does \fB\s-1NOT\s0\fR increase the size of the given bit
+vector, i.e., the bit vector is \fB\s-1NOT\s0\fR extended at its upper end to
+\*(L"rescue\*(R" the \*(L"\f(CW$count\fR\*(R" uppermost (most significant) words \- instead,
+these words are lost forever.
+.Sp
+If you don't want this to happen, you have to increase the size of the
+given bit vector \fB\s-1EXPLICITLY\s0\fR and \fB\s-1BEFORE\s0\fR you perform the \*(L"Insert\*(R"
+operation, with a statement such as the following:
+.Sp
+.Vb 1
+\&  $vector->Resize($vector->Size() + $count * Bit::Vector->Word_Bits());
+.Ve
+Note also that \*(L"\f(CW$offset\fR\*(R" must lie in the permitted range between
+\*(L"\f(CW0\fR\*(R" and \*(L"\f(CW$vector->Word_Size()-1\fR\*(R", or a fatal \*(L"offset out
+of range\*(R" error will occur.
+.Sp
+If the term \*(L"\f(CW$offset + $count\fR\*(R" exceeds \*(L"\f(CW$vector->Word_Size()-1\fR\*(R",
+all the words starting with word number \*(L"\f(CW$offset\fR\*(R" up to word number
+\*(L"\f(CW$vector->Word_Size()-1\fR\*(R" are simply cleared.
+.Ip "\(bu" 2
+\f(CW$vector->Word_Delete($offset,$count);\fR
+.Sp
+This method deletes, i.e., removes the words starting at position
+\*(L"\f(CW$offset\fR\*(R" up to and including word number \*(L"\f(CW$offset+$count-1\fR\*(R"
+from the internal array of machine words of the given bit vector.
+.Sp
+The remaining uppermost words (starting at position \*(L"\f(CW$offset+$count\fR\*(R"
+up to and including word number \*(L"\f(CW$vector->Word_Size()-1\fR") are
+moved down by \*(L"\f(CW$count\fR\*(R" places.
+.Sp
+The now vacant uppermost (most significant) \*(L"\f(CW$count\fR\*(R" words are then
+set to zero (cleared).
+.Sp
+Note that this method does \fB\s-1NOT\s0\fR decrease the size of the given bit
+vector, i.e., the bit vector is \fB\s-1NOT\s0\fR clipped at its upper end to
+\*(L"get rid of\*(R" the vacant \*(L"\f(CW$count\fR\*(R" uppermost words.
+.Sp
+If you don't want this, i.e., if you want the bit vector to shrink
+accordingly, you have to do so \fB\s-1EXPLICITLY\s0\fR and \fB\s-1AFTER\s0\fR the \*(L"Delete\*(R"
+operation, with a couple of statements such as these:
+.Sp
+.Vb 4
+\&  $bits = $vector->Size();
+\&  $count *= Bit::Vector->Word_Bits();
+\&  if ($count > $bits) { $count = $bits; }
+\&  $vector->Resize($bits - $count);
+.Ve
+Note also that \*(L"\f(CW$offset\fR\*(R" must lie in the permitted range between
+\*(L"\f(CW0\fR\*(R" and \*(L"\f(CW$vector->Word_Size()-1\fR\*(R", or a fatal \*(L"offset out
+of range\*(R" error will occur.
+.Sp
+If the term \*(L"\f(CW$offset + $count\fR\*(R" exceeds \*(L"\f(CW$vector->Word_Size()-1\fR\*(R",
+all the words starting with word number \*(L"\f(CW$offset\fR\*(R" up to word number
+\*(L"\f(CW$vector->Word_Size()-1\fR\*(R" are simply cleared.
+.Ip "\(bu" 2
+\f(CW$vector->Chunk_Store($chunksize,$offset,$chunk);\fR
+.Sp
+This method allows you to set more than one bit at a time with
+different values.
+.Sp
+You can access chunks (i.e., ranges of contiguous bits) between
+one and at most \*(L"\f(CWBit::Vector->Long_Bits()\fR\*(R" bits wide.
+.Sp
+In order to be portable, though, you should never use chunk sizes
+larger than 32 bits.
+.Sp
+If the given \*(L"\f(CW$chunksize\fR\*(R" does not lie between \*(L"\f(CW1\fR\*(R" and
+\*(L"\f(CWBit::Vector->Long_Bits()\fR\*(R", a fatal \*(L"chunk size out of range\*(R"
+error will occur.
+.Sp
+The method copies the \*(L"\f(CW$chunksize\fR\*(R" least significant bits
+from the value \*(L"\f(CW$chunk\fR\*(R" to the given bit vector, starting at
+bit position \*(L"\f(CW$offset\fR\*(R" and proceeding upwards until bit number
+\*(L"\f(CW$offset+$chunksize-1\fR\*(R".
+.Sp
+(I.e., bit number \*(L"\f(CW0\fR\*(R" of \*(L"\f(CW$chunk\fR\*(R" becomes bit number \*(L"\f(CW$offset\fR\*(R"
+in the given bit vector, and bit number \*(L"\f(CW$chunksize-1\fR\*(R" becomes
+bit number \*(L"\f(CW$offset+$chunksize-1\fR\*(R".)
+.Sp
+If the term \*(L"\f(CW$offset+$chunksize-1\fR\*(R" exceeds \*(L"\f(CW$vector->Size()-1\fR\*(R",
+the corresponding superfluous (most significant) bits from \*(L"\f(CW$chunk\fR\*(R"
+are simply ignored.
+.Sp
+Note that \*(L"\f(CW$offset\fR\*(R" itself must lie in the permitted range between
+\*(L"\f(CW0\fR\*(R" and \*(L"\f(CW$vector->Size()-1\fR\*(R", or a fatal \*(L"offset out of range\*(R"
+error will occur.
+.Sp
+This method (as well as the other \*(L"\f(CWChunk_\fR\*(R" methods) is useful, for
+example, when you are reading in data in chunks of, say, 8 bits, which
+you need to access later, say, using 16 bits at a time (like audio \s-1CD\s0
+wave files, for instance).
+.Ip "\(bu" 2
+\f(CW$chunk = $vector->Chunk_Read($chunksize,$offset);\fR
+.Sp
+This method allows you to read the values of more than one bit at
+a time.
+.Sp
+You can read chunks (i.e., ranges of contiguous bits) between
+one and at most \*(L"\f(CWBit::Vector->Long_Bits()\fR\*(R" bits wide.
+.Sp
+In order to be portable, though, you should never use chunk sizes
+larger than 32 bits.
+.Sp
+If the given \*(L"\f(CW$chunksize\fR\*(R" does not lie between \*(L"\f(CW1\fR\*(R" and
+\*(L"\f(CWBit::Vector->Long_Bits()\fR\*(R", a fatal \*(L"chunk size out of range\*(R"
+error will occur.
+.Sp
+The method returns the \*(L"\f(CW$chunksize\fR\*(R" bits from the given bit vector
+starting at bit position \*(L"\f(CW$offset\fR\*(R" and proceeding upwards until
+bit number \*(L"\f(CW$offset+$chunksize-1\fR\*(R".
+.Sp
+(I.e., bit number \*(L"\f(CW$offset\fR\*(R" of the given bit vector becomes bit number
+\*(L"\f(CW0\fR\*(R" of the returned value, and bit number \*(L"\f(CW$offset+$chunksize-1\fR\*(R"
+becomes bit number \*(L"\f(CW$chunksize-1\fR\*(R".)
+.Sp
+If the term \*(L"\f(CW$offset+$chunksize-1\fR\*(R" exceeds \*(L"\f(CW$vector->Size()-1\fR\*(R",
+the non-existent bits are simply not returned.
+.Sp
+Note that \*(L"\f(CW$offset\fR\*(R" itself must lie in the permitted range between
+\*(L"\f(CW0\fR\*(R" and \*(L"\f(CW$vector->Size()-1\fR\*(R", or a fatal \*(L"offset out of range\*(R"
+error will occur.
+.Ip "\(bu" 2
+\f(CW$vector->Chunk_List_Store($chunksize,@chunks);\fR
+.Sp
+This method allows you to fill the given bit vector with a list of
+data packets ("chunks") of any size ("\f(CW$chunksize\fR") you like
+(within certain limits).
+.Sp
+In fact the given \*(L"\f(CW$chunksize\fR\*(R" must lie in the range between \*(L"\f(CW1\fR\*(R"
+and \*(L"\f(CWBit::Vector->Long_Bits()\fR\*(R", or a fatal \*(L"chunk size out of
+range\*(R" error will occur.
+.Sp
+In order to be portable, though, you should never use chunk sizes
+larger than 32 bits.
+.Sp
+The given bit vector is thereby filled in ascending order: The first
+chunk from the list (i.e., \*(L"\f(CW$chunks[0]\fR") fills the \*(L"\f(CW$chunksize\fR\*(R"
+least significant bits, the next chunk from the list ("\f(CW$chunks[1]\fR")
+fills the bits number \*(L"\f(CW$chunksize\fR\*(R" to number \*(L"\f(CW2*$chunksize-1\fR\*(R",
+the third chunk ("\f(CW$chunks[2]\fR") fills the bits number \*(L"\f(CW2*$chunksize\fR\*(R",
+to number \*(L"\f(CW3*$chunksize-1\fR\*(R", and so on.
+.Sp
+If there a less chunks in the list than are needed to fill the entire
+bit vector, the remaining (most significant) bits are cleared, i.e.,
+the previous contents of the given bit vector are always erased completely.
+.Sp
+If there are more chunks in the list than are needed to fill the entire
+bit vector, and/or if a chunk extends beyond \*(L"\f(CW$vector->Size()-1\fR\*(R"
+(which happens whenever \*(L"\f(CW$vector->Size()\fR\*(R" is not a multiple of
+\*(L"\f(CW$chunksize\fR"), the superfluous chunks and/or bits are simply ignored.
+.Sp
+The method is useful, for example (and among many other applications),
+for the conversion of packet sizes in a data stream.
+.Sp
+This method can also be used to store an octal string in a given
+bit vector:
+.Sp
+.Vb 1
+\&  $vector->Chunk_List_Store(3, split(//, reverse $string));
+.Ve
+Note however that unlike the conversion methods \*(L"\f(CWfrom_Hex()\fR\*(R",
+\*(L"\f(CWfrom_Bin()\fR\*(R", \*(L"\f(CWfrom_Dec()\fR\*(R" and \*(L"\f(CWfrom_Enum()\fR\*(R",
+this statement does not include any syntax checking, i.e.,
+it may fail silently, without warning.
+.Sp
+To perform syntax checking, add the following statements:
+.Sp
+.Vb 8
+\&  if ($string =~ /^[0-7]+$/)
+\&  {
+\&      # okay, go ahead with conversion as shown above
+\&  }
+\&  else
+\&  {
+\&      # error, string contains other than octal characters
+\&  }
+.Ve
+Another application is to store a repetitive pattern in a given
+bit vector:
+.Sp
+.Vb 6
+\&  $pattern = 0xDEADBEEF;
+\&  $length = 32;            # = length of $pattern in bits
+\&  $size = $vector->Size();
+\&  $factor = int($size / $length);
+\&  if ($size % $length) { $factor++; }
+\&  $vector->Chunk_List_Store($length, ($pattern) x $factor);
+.Ve
+.Ip "\(bu" 2
+\f(CW@chunks = $vector->Chunk_List_Read($chunksize);\fR
+.Sp
+This method allows you to access the contents of the given bit vector in
+form of a list of data packets ("chunks") of a size ("\f(CW$chunksize\fR")
+of your choosing (within certain limits).
+.Sp
+In fact the given \*(L"\f(CW$chunksize\fR\*(R" must lie in the range between \*(L"\f(CW1\fR\*(R"
+and \*(L"\f(CWBit::Vector->Long_Bits()\fR\*(R", or a fatal \*(L"chunk size out of
+range\*(R" error will occur.
+.Sp
+In order to be portable, though, you should never use chunk sizes
+larger than 32 bits.
+.Sp
+The given bit vector is thereby read in ascending order: The
+\*(L"\f(CW$chunksize\fR\*(R" least significant bits (bits number \*(L"\f(CW0\fR\*(R" to
+\*(L"\f(CW$chunksize-1\fR") become the first chunk in the returned list
+(i.e., \*(L"\f(CW$chunks[0]\fR"). The bits number \*(L"\f(CW$chunksize\fR\*(R" to
+\*(L"\f(CW2*$chunksize-1\fR\*(R" become the next chunk in the list
+("\f(CW$chunks[1]\fR"), and so on.
+.Sp
+If \*(L"\f(CW$vector->Size()\fR\*(R" is not a multiple of \*(L"\f(CW$chunksize\fR\*(R",
+the last chunk in the list will contain fewer bits than \*(L"\f(CW$chunksize\fR\*(R".
+.Sp
+\fB\s-1BEWARE\s0\fR that for large bit vectors and/or small values of \*(L"\f(CW$chunksize\fR\*(R",
+the number of returned list elements can be extremely large! \fB\s-1BE\s0 \s-1CAREFUL\s0!\fR
+.Sp
+You could blow up your application with lack of memory (each list element
+is a full-grown Perl scalar, internally, with an associated memory overhead
+for its administration!) or at least cause a noticeable, more or less
+long-lasting \*(L"freeze\*(R" of your application!
+.Sp
+Possible applications:
+.Sp
+The method is especially useful in the conversion of packet sizes in
+a data stream.
+.Sp
+This method can also be used to convert a given bit vector to a string
+of octal numbers:
+.Sp
+.Vb 1
+\&  $string = reverse join('', $vector->Chunk_List_Read(3));
+.Ve
+.Ip "\(bu" 2
+\f(CW$vector->Index_List_Remove(@indices);\fR
+.Sp
+This method allows you to specify a list of indices of bits which
+should be turned off in the given bit vector.
+.Sp
+In fact this method is a shortcut for
+.Sp
+.Vb 4
+\&    foreach $index (@indices)
+\&    {
+\&        $vector->Bit_Off($index);
+\&    }
+.Ve
+In contrast to all other import methods in this module, this method
+does \fB\s-1NOT\s0\fR clear the given bit vector before processing its list
+of arguments.
+.Sp
+Instead, this method allows you to accumulate the results of various
+consecutive calls.
+.Sp
+(The same holds for the method \*(L"\f(CWIndex_List_Store()\fR\*(R". As a
+consequence, you can \*(L"wipe out\*(R" what you did using the method
+\*(L"\f(CWIndex_List_Remove()\fR\*(R" by passing the identical argument list
+to the method \*(L"\f(CWIndex_List_Store()\fR\*(R".)
+.Ip "\(bu" 2
+\f(CW$vector->Index_List_Store(@indices);\fR
+.Sp
+This method allows you to specify a list of indices of bits which
+should be turned on in the given bit vector.
+.Sp
+In fact this method is a shortcut for
+.Sp
+.Vb 4
+\&    foreach $index (@indices)
+\&    {
+\&        $vector->Bit_On($index);
+\&    }
+.Ve
+In contrast to all other import methods in this module, this method
+does \fB\s-1NOT\s0\fR clear the given bit vector before processing its list
+of arguments.
+.Sp
+Instead, this method allows you to accumulate the results of various
+consecutive calls.
+.Sp
+(The same holds for the method \*(L"\f(CWIndex_List_Remove()\fR\*(R". As a
+consequence, you can \*(L"wipe out\*(R" what you did using the method
+\*(L"\f(CWIndex_List_Store()\fR\*(R" by passing the identical argument list
+to the method \*(L"\f(CWIndex_List_Remove()\fR\*(R".)
+.Ip "\(bu" 2
+\f(CW@indices = $vector->Index_List_Read();\fR
+.Sp
+This method returns a list of Perl scalars.
+.Sp
+The list contains one scalar for each set bit in the given
+bit vector.
+.Sp
+\fB\s-1BEWARE\s0\fR that for large bit vectors, this can result in a literally
+overwhelming number of list elements! \fB\s-1BE\s0 \s-1CAREFUL\s0!\fR You could run
+out of memory or slow down your application considerably!
+.Sp
+Each scalar contains the number of the index corresponding to
+the bit in question.
+.Sp
+These indices are always returned in ascending order.
+.Sp
+If the given bit vector is empty (contains only cleared bits)
+or if it has a length of zero (if it contains no bits at all),
+the method returns an empty list.
+.Sp
+This method can be useful, for instance, to obtain a list of
+prime numbers:
+.Sp
+.Vb 4
+\&    $limit = 1000; # or whatever
+\&    $vector = Bit::Vector->new($limit+1);
+\&    $vector->Primes();
+\&    @primes = $vector->Index_List_Read();
+.Ve
+.Ip "\(bu" 2
+\f(CW$set3->Union($set1,$set2);\fR
+.Sp
+This method calculates the union of \*(L"\f(CW$set1\fR\*(R" and \*(L"\f(CW$set2\fR\*(R" and stores
+the result in \*(L"\f(CW$set3\fR\*(R".
+.Sp
+This is usually written as \*(L"\f(CW$set3 = $set1 u $set2\fR\*(R" in set theory
+(where \*(L"u\*(R" is the \*(L"cup\*(R" operator).
+.Sp
+(On systems where the \*(L"cup\*(R" character is unavailable this operator
+is often denoted by a plus sign \*(L"+\*(R".)
+.Sp
+In-place calculation is also possible, i.e., \*(L"\f(CW$set3\fR\*(R" may be identical
+with \*(L"\f(CW$set1\fR\*(R" or \*(L"\f(CW$set2\fR\*(R" or both.
+.Ip "\(bu" 2
+\f(CW$set3->Intersection($set1,$set2);\fR
+.Sp
+This method calculates the intersection of \*(L"\f(CW$set1\fR\*(R" and \*(L"\f(CW$set2\fR\*(R" and
+stores the result in \*(L"\f(CW$set3\fR\*(R".
+.Sp
+This is usually written as \*(L"\f(CW$set3 = $set1 n $set2\fR\*(R" in set theory
+(where \*(L"n\*(R" is the \*(L"cap\*(R" operator).
+.Sp
+(On systems where the \*(L"cap\*(R" character is unavailable this operator
+is often denoted by an asterisk \*(L"*\*(R".)
+.Sp
+In-place calculation is also possible, i.e., \*(L"\f(CW$set3\fR\*(R" may be identical
+with \*(L"\f(CW$set1\fR\*(R" or \*(L"\f(CW$set2\fR\*(R" or both.
+.Ip "\(bu" 2
+\f(CW$set3->Difference($set1,$set2);\fR
+.Sp
+This method calculates the difference of \*(L"\f(CW$set1\fR\*(R" less \*(L"\f(CW$set2\fR\*(R" and
+stores the result in \*(L"\f(CW$set3\fR\*(R".
+.Sp
+This is usually written as \*(L"\f(CW$set3 = $set1 \e $set2\fR\*(R" in set theory
+(where \*(L"\e\*(R" is the \*(L"less\*(R" operator).
+.Sp
+In-place calculation is also possible, i.e., \*(L"\f(CW$set3\fR\*(R" may be identical
+with \*(L"\f(CW$set1\fR\*(R" or \*(L"\f(CW$set2\fR\*(R" or both.
+.Ip "\(bu" 2
+\f(CW$set3->ExclusiveOr($set1,$set2);\fR
+.Sp
+This method calculates the symmetric difference of \*(L"\f(CW$set1\fR\*(R" and \*(L"\f(CW$set2\fR\*(R"
+and stores the result in \*(L"\f(CW$set3\fR\*(R".
+.Sp
+This can be written as \*(L"\f(CW$set3 = ($set1 u $set2) \e ($set1 n $set2)\fR\*(R" in set
+theory (the union of the two sets less their intersection).
+.Sp
+When sets are implemented as bit vectors then the above formula is
+equivalent to the exclusive-or between corresponding bits of the two
+bit vectors (hence the name of this method).
+.Sp
+Note that this method is also much more efficient than evaluating the
+above formula explicitly since it uses a built-in machine language
+instruction internally.
+.Sp
+In-place calculation is also possible, i.e., \*(L"\f(CW$set3\fR\*(R" may be identical
+with \*(L"\f(CW$set1\fR\*(R" or \*(L"\f(CW$set2\fR\*(R" or both.
+.Ip "\(bu" 2
+\f(CW$set2->Complement($set1);\fR
+.Sp
+This method calculates the complement of \*(L"\f(CW$set1\fR\*(R" and stores the result
+in \*(L"\f(CW$set2\fR\*(R".
+.Sp
+In \*(L"big integer\*(R" arithmetic, this is equivalent to calculating the one's
+complement of the number stored in the bit vector \*(L"\f(CW$set1\fR\*(R" in binary
+representation.
+.Sp
+In-place calculation is also possible, i.e., \*(L"\f(CW$set2\fR\*(R" may be identical
+with \*(L"\f(CW$set1\fR\*(R".
+.Ip "\(bu" 2
+\f(CWif ($set1->subset($set2))\fR
+.Sp
+Returns \*(L"true\*(R" ("\f(CW1\fR") if \*(L"\f(CW$set1\fR\*(R" is a subset of \*(L"\f(CW$set2\fR\*(R"
+(i.e., completely contained in \*(L"\f(CW$set2\fR") and \*(L"false\*(R" ("\f(CW0\fR")
+otherwise.
+.Sp
+This means that any bit which is set ("\f(CW1\fR") in \*(L"\f(CW$set1\fR\*(R" must
+also be set in \*(L"\f(CW$set2\fR\*(R", but \*(L"\f(CW$set2\fR\*(R" may contain set bits
+which are not set in \*(L"\f(CW$set1\fR\*(R", in order for the condition
+of subset relationship to be true between these two sets.
+.Sp
+Note that by definition, if two sets are identical, they are
+also subsets (and also supersets) of each other.
+.Ip "\(bu" 2
+\f(CW$norm = $set->Norm();\fR
+.Sp
+Returns the norm (number of bits which are set) of the given vector.
+.Sp
+This is equivalent to the number of elements contained in the given
+set.
+.Ip "\(bu" 2
+\f(CW$min = $set->Min();\fR
+.Sp
+Returns the minimum of the given set, i.e., the minimum of all
+indices of all set bits in the given bit vector \*(L"\f(CW$set\fR\*(R".
+.Sp
+If the set is empty (no set bits), plus infinity (represented
+by the constant \*(L"\s-1MAX_LONG\s0\*(R" on your system) is returned.
+.Sp
+(This constant is usually 2\ ^\ (n-1)\ \-\ 1, where \*(L"\f(CWn\fR\*(R" is the
+number of bits of an unsigned long on your machine.)
+.Ip "\(bu" 2
+\f(CW$max = $set->Max();\fR
+.Sp
+Returns the maximum of the given set, i.e., the maximum of all
+indices of all set bits in the given bit vector \*(L"\f(CW$set\fR\*(R".
+.Sp
+If the set is empty (no set bits), minus infinity (represented
+by the constant \*(L"\s-1MIN_LONG\s0\*(R" on your system) is returned.
+.Sp
+(This constant is usually \-(2\ ^\ (n-1)\ \-\ 1) or \-(2\ ^\ (n-1)),
+where \*(L"\f(CWn\fR\*(R" is the number of bits of an unsigned long on your machine.)
+.Ip "\(bu" 2
+\f(CW$m3->Multiplication($r3,$c3,$m1,$r1,$c1,$m2,$r2,$c2);\fR
+.Sp
+This method multiplies two boolean matrices (stored as bit vectors)
+\*(L"\f(CW$m1\fR\*(R" and \*(L"\f(CW$m2\fR\*(R" and stores the result in matrix \*(L"\f(CW$m3\fR\*(R".
+.Sp
+The method uses the binary \*(L"xor\*(R" operation ("\f(CW^\fR") as the boolean
+addition operator ("\f(CW+\fR").
+.Sp
+An exception is raised if the product of the number of rows and
+columns of any of the three matrices differs from the actual size
+of their underlying bit vector.
+.Sp
+An exception is also raised if the numbers of rows and columns
+of the three matrices do not harmonize in the required manner:
+.Sp
+.Vb 3
+\&  rows3 == rows1
+\&  cols3 == cols2
+\&  cols1 == rows2
+.Ve
+This method is used by the module \*(L"Math::MatrixBool\*(R".
+.Sp
+See the \fIMath::MatrixBool(3)\fR manpage for details.
+.Ip "\(bu" 2
+\f(CW$m3->Product($r3,$c3,$m1,$r1,$c1,$m2,$r2,$c2);\fR
+.Sp
+This method multiplies two boolean matrices (stored as bit vectors)
+\*(L"\f(CW$m1\fR\*(R" and \*(L"\f(CW$m2\fR\*(R" and stores the result in matrix \*(L"\f(CW$m3\fR\*(R".
+.Sp
+This special method uses the binary \*(L"or\*(R" operation ("\f(CW|\fR") as the
+boolean addition operator ("\f(CW+\fR").
+.Sp
+An exception is raised if the product of the number of rows and
+columns of any of the three matrices differs from the actual size
+of their underlying bit vector.
+.Sp
+An exception is also raised if the numbers of rows and columns
+of the three matrices do not harmonize in the required manner:
+.Sp
+.Vb 3
+\&  rows3 == rows1
+\&  cols3 == cols2
+\&  cols1 == rows2
+.Ve
+This method is used by the module \*(L"Math::MatrixBool\*(R".
+.Sp
+See the \fIMath::MatrixBool(3)\fR manpage for details.
+.Ip "\(bu" 2
+\f(CW$matrix->Closure($rows,$cols);\fR
+.Sp
+This method calculates the reflexive transitive closure of the
+given boolean matrix (stored as a bit vector) using Kleene's
+algoritm.
+.Sp
+(See the \fIMath::Kleene(3)\fR manpage for a brief introduction into the
+theory behind Kleene's algorithm.)
+.Sp
+The reflexive transitive closure answers the question whether
+a path exists between any two vertices of a graph whose edges
+are given as a matrix:
+.Sp
+If a (directed) edge exists going from vertex \*(L"i\*(R" to vertex \*(L"j\*(R",
+then the element in the matrix with coordinates (i,j) is set to
+\*(L"\f(CW1\fR\*(R" (otherwise it remains set to \*(L"\f(CW0\fR").
+.Sp
+If the edges are undirected, the resulting matrix is symmetric,
+i.e., elements (i,j) and (j,i) always contain the same value.
+.Sp
+The matrix representing the edges of the graph only answers the
+question whether an \fB\s-1EDGE\s0\fR exists between any two vertices of
+the graph or not, whereas the reflexive transitive closure
+answers the question whether a \fB\s-1PATH\s0\fR (a series of adjacent
+edges) exists between any two vertices of the graph!
+.Sp
+Note that the contents of the given matrix are modified by
+this method, so make a copy of the initial matrix in time
+if you are going to need it again later.
+.Sp
+An exception is raised if the given matrix is not quadratic,
+i.e., if the number of rows and columns of the given matrix
+is not identical.
+.Sp
+An exception is also raised if the product of the number of
+rows and columns of the given matrix differs from the actual
+size of its underlying bit vector.
+.Sp
+This method is used by the module \*(L"Math::MatrixBool\*(R".
+.Sp
+See the \fIMath::MatrixBool(3)\fR manpage for details.
+.Ip "\(bu" 2
+\f(CW$matrix2->Transpose($rows2,$cols2,$matrix1,$rows1,$cols1);\fR
+.Sp
+This method calculates the transpose of a boolean matrix \*(L"\f(CW$matrix1\fR\*(R"
+(stored as a bit vector) and stores the result in matrix \*(L"\f(CW$matrix2\fR\*(R".
+.Sp
+The transpose of a boolean matrix, representing the edges of a graph,
+can be used for finding the strongly connected components of that graph.
+.Sp
+An exception is raised if the product of the number of rows and
+columns of any of the two matrices differs from the actual size
+of its underlying bit vector.
+.Sp
+An exception is also raised if the following conditions are not
+met:
+.Sp
+.Vb 2
+\&  rows2 == cols1
+\&  cols2 == rows1
+.Ve
+Note that in-place processing ("\f(CW$matrix1\fR\*(R" and \*(L"\f(CW$matrix2\fR\*(R" are
+identical) is only possible if the matrix is quadratic. Otherwise,
+a fatal \*(L"matrix is not quadratic\*(R" error will occur.
+.Sp
+This method is used by the module \*(L"Math::MatrixBool\*(R".
+.Sp
+See the \fIMath::MatrixBool(3)\fR manpage for details.
+.SH "SEE ALSO"
+\fIBit::Vector::Overload\fR\|(3), \fISet::IntRange\fR\|(3),
+\fIMath::MatrixBool\fR\|(3), \fIMath::MatrixReal\fR\|(3),
+\fIDFA::Kleene\fR\|(3), \fIMath::Kleene\fR\|(3),
+\fIGraph::Kruskal\fR\|(3).
+.PP
+\fIperl\fR\|(1), \fIperlsub\fR\|(1), \fIperlmod\fR\|(1), \fIperlref\fR\|(1),
+\fIperlobj\fR\|(1), \fIperlbot\fR\|(1), \fIperltoot\fR\|(1), \fIperlxs\fR\|(1),
+\fIperlxstut\fR\|(1), \fIperlguts\fR\|(1), \fIoverload\fR\|(3).
+.SH "VERSION"
+This man page documents \*(L"Bit::Vector\*(R" version 6.0.
+.SH "AUTHOR"
+.PP
+.Vb 3
+\&  Steffen Beyer
+\&  mailto:sb@engelschall.com
+\&  http://www.engelschall.com/u/sb/download/
+.Ve
+.SH "COPYRIGHT"
+Copyright (c) 1995 \- 2000 by Steffen Beyer. All rights reserved.
+.SH "LICENSE"
+This package is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself, i.e., under the
+terms of the \*(L"Artistic License\*(R" or the \*(L"GNU General Public License\*(R".
+.PP
+The C library at the core of this Perl module can additionally
+be redistributed and/or modified under the terms of the \*(L"GNU
+Library General Public License\*(R".
+.PP
+Please refer to the files \*(L"Artistic.txt\*(R", \*(L"GNU_GPL.txt\*(R" and
+\*(L"GNU_LGPL.txt\*(R" in this distribution for details!
+.SH "DISCLAIMER"
+This package is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.PP
+See the \*(L"GNU General Public License\*(R" for more details.
+
+.rn }` ''
+.IX Title "VECTOR 1"
+.IX Name "Bit::Vector - Efficient bit vector, set of integers and "big int" math library"
+
+.IX Header "NAME"
+
+.IX Header "SYNOPSIS"
+
+.IX Subsection "\s-1OVERLOADED\s0 \s-1OPERATORS\s0"
+
+.IX Subsection "\s-1CLASS\s0 \s-1METHODS\s0"
+
+.IX Subsection "\s-1OBJECT\s0 \s-1METHODS\s0"
+
+.IX Header "IMPORTANT NOTES"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Header "DESCRIPTION"
+
+.IX Subsection "\s-1OVERLOADED\s0 \s-1OPERATORS\s0"
+
+.IX Subsection "\s-1CLASS\s0 \s-1METHODS\s0"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Subsection "\s-1OBJECT\s0 \s-1METHODS\s0"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Item "\(bu"
+
+.IX Header "SEE ALSO"
+
+.IX Header "VERSION"
+
+.IX Header "AUTHOR"
+
+.IX Header "COPYRIGHT"
+
+.IX Header "LICENSE"
+
+.IX Header "DISCLAIMER"
+

@@ -153,5 +153,6 @@ AC_OUTPUT(Makefile
 	doc/user/Makefile
 	doc/programmer/Makefile
 	doc/programmer/queue/Makefile
+	doc/programmer/bitvect/Makefile
 	tests/Makefile
 )

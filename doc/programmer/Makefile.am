@@ -1,3 +1,3 @@
 # $IdPath$
 
-SUBDIRS = queue
+SUBDIRS = queue bitvect
