@@ -32,8 +32,10 @@ struct optimizer {
 
     /* Main entrance point for the optimizer.
      *
-     * This function takes the unoptimized linked list of sections and returns
-     * an optimized linked list of sections ready for output to an object file.
+     * This function takes the unoptimized linked list of sections and
+     * optimizes it.  If successful, the sections are ready for output to an
+     * object file.  (A failure is indicated by calling ErrorAt() from within
+     * this function).
      */
     void (*optimize) (sectionhead *sections);
 };
