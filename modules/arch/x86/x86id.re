@@ -39,16 +39,17 @@ RCSID("$IdPath$");
  * parameters are read from the arch-specific data in LSB->MSB order.
  * (only for asthetic reasons in the lexer code below, no practical reason).
  */
-#define MOD_Op2Add  (1UL<<0)	/* Parameter adds to opcode byte 2 */
-#define MOD_Gap0    (1UL<<1)	/* Eats a parameter */
-#define MOD_Op1Add  (1UL<<2)	/* Parameter adds to opcode byte 1 */
-#define MOD_Gap1    (1UL<<3)	/* Eats a parameter */
-#define MOD_Op0Add  (1UL<<4)	/* Parameter adds to opcode byte 0 */
-#define MOD_SpAdd   (1UL<<5)	/* Parameter adds to "spare" value */
-#define MOD_OpSizeR (1UL<<6)	/* Parameter replaces opersize */
-#define MOD_Imm8    (1UL<<7)	/* Parameter is included as immediate byte */
-#define MOD_AdSizeR (1UL<<8)	/* Parameter replaces addrsize (jmp only) */
-#define MOD_DOpS64R (1UL<<9)	/* Parameter replaces default 64-bit opersize */
+#define MOD_Gap0    (1UL<<0)	/* Eats a parameter */
+#define MOD_Op2Add  (1UL<<1)	/* Parameter adds to opcode byte 2 */
+#define MOD_Gap1    (1UL<<2)	/* Eats a parameter */
+#define MOD_Op1Add  (1UL<<3)	/* Parameter adds to opcode byte 1 */
+#define MOD_Gap2    (1UL<<4)	/* Eats a parameter */
+#define MOD_Op0Add  (1UL<<5)	/* Parameter adds to opcode byte 0 */
+#define MOD_SpAdd   (1UL<<6)	/* Parameter adds to "spare" value */
+#define MOD_OpSizeR (1UL<<7)	/* Parameter replaces opersize */
+#define MOD_Imm8    (1UL<<8)	/* Parameter is included as immediate byte */
+#define MOD_AdSizeR (1UL<<9)	/* Parameter replaces addrsize (jmp only) */
+#define MOD_DOpS64R (1UL<<10)	/* Parameter replaces default 64-bit opersize */
 
 /* Modifiers that aren't actually used as modifiers.  Rather, if set, bits
  * 20-27 in the modifier are used as an index into an array.
@@ -1960,17 +1961,19 @@ yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
     d.rex = 0;
 
     /* Apply modifiers */
+    if (info->modifiers & MOD_Gap0)
+	mod_data >>= 8;
     if (info->modifiers & MOD_Op2Add) {
 	d.op[2] += (unsigned char)(mod_data & 0xFF);
 	mod_data >>= 8;
     }
-    if (info->modifiers & MOD_Gap0)
+    if (info->modifiers & MOD_Gap1)
 	mod_data >>= 8;
     if (info->modifiers & MOD_Op1Add) {
 	d.op[1] += (unsigned char)(mod_data & 0xFF);
 	mod_data >>= 8;
     }
-    if (info->modifiers & MOD_Gap1)
+    if (info->modifiers & MOD_Gap2)
 	mod_data >>= 8;
     if (info->modifiers & MOD_Op0Add) {
 	d.op[0] += (unsigned char)(mod_data & 0xFF);
