@@ -216,6 +216,29 @@ coff_objfmt_initialize(const char *in_filename,
 }
 
 static int
+coff_objfmt_set_section_addr(section *sect, /*@null@*/ void *d)
+{
+    /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
+    /*@dependent@*/ /*@null@*/ coff_section_data *csd;
+    /*@null@*/ bytecode *last;
+
+    /* Don't output absolute sections */
+    if (section_is_absolute(sect))
+	return 0;
+
+    assert(info != NULL);
+    csd = section_get_of_data(sect);
+    assert(csd != NULL);
+
+    csd->addr = info->addr;
+    last = bcs_last(section_get_bytecodes(sect));
+    if (last)
+	info->addr += last->offset + last->len;
+
+    return 0;
+}
+
+static int
 coff_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
 			unsigned long offset,
 			/*@observer@*/ const section *sect,
@@ -271,6 +294,9 @@ coff_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
 		label_csd = section_get_of_data(label_sect);
 		assert(label_csd != NULL);
 		reloc->sym = label_csd->sym;
+		if (COFF_SET_VMA)
+		    *ep = expr_new(EXPR_ADD, ExprExpr(*ep),
+				   ExprInt(intnum_new_uint(label_csd->addr)));
 	    }
 	}
 
@@ -486,6 +512,16 @@ coff_objfmt_output(FILE *f, sectionhead *sections)
     }
 
     /* Section data/relocs */
+    if (COFF_SET_VMA) {
+	/* If we're setting the VMA, we need to do a first section pass to
+	 * determine each section's addr value before actually outputting
+	 * relocations, as a relocation's section address is added into the
+	 * addends in the generated code.
+	 */
+	info.addr = 0;
+	if (sections_traverse(sections, &info, coff_objfmt_set_section_addr))
+	    return;
+    }
     info.addr = 0;
     if (sections_traverse(sections, &info, coff_objfmt_output_section))
 	return;
