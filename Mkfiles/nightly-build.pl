@@ -12,6 +12,11 @@ my $build_dir = '/home/yasm/build';
 
 # Create snapshot directory
 system('mkdir', $snapshot_dir);
+# Relink "latest" symlink
+system('rm', "$snapshot_dir/../latest");
+system('ln', '-s', $snapshot_dir, "$snapshot_dir/../latest");
+system('rm', "$snapshot_dir/../../latest");
+system('ln', '-s', $snapshot_dir, "$snapshot_dir/../../latest");
 
 # Build CVS tree tarball
 chdir("$cvs_dir/..") || die "Could not change to CVS directory";
@@ -20,6 +25,8 @@ system('tar', '-czf', "$snapshot_dir/yasm-cvstree.tar.gz", 'cvs') == 0
 
 # Build CVS checkout tarball
 chdir($build_dir) || die "Could not change to build directory";
+system('chmod', '-R', 'u+w', 'yasm') == 0
+    or die "Could not chmod old CVS checkout directory: $?.";
 system('rm', '-Rf', 'yasm') == 0
     or die "Could not remove old CVS checkout directory: $?.";
 system('mkdir', 'yasm') == 0
@@ -33,15 +40,9 @@ system('tar', '-czf', "$snapshot_dir/yasm-cvs.tar.gz", 'yasm') == 0
 chdir('yasm');
 
 # Update and build distribution tarball
-system("./autogen.sh >$snapshot_dir/autogen-log.txt") == 0
+system("./autogen.sh >$snapshot_dir/autogen-log.txt 2>$snapshot_dir/autogen-errwarn.txt") == 0
     or die "autogen.sh failed: $?.";
-system("gmake distcheck >$snapshot_dir/make-log.txt") == 0
+system("gmake distcheck >$snapshot_dir/make-log.txt 2>$snapshot_dir/make-errwarn.txt") == 0
     or die "build failed: $?.";
 system("cp *.tar.gz $snapshot_dir/") == 0
     or die "dist tarball copy failed.";
-
-# Relink "latest" symlink
-chdir("$snapshot_dir/..");
-system('rm', 'latest');
-system('ln', '-s', $todaydate, 'latest');
-
