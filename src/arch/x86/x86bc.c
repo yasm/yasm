@@ -507,7 +507,7 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 
 		/* Handle unknown case, make displen word-sized */
 		if (displen == 0xff)
-		    displen = (insn->addrsize == 32) ? 4 : 2;
+		    displen = (insn->addrsize == 32) ? 4U : 2U;
 	    }
 
 	    if (save) {
@@ -527,6 +527,7 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 
     if (imm) {
 	const intnum *num;
+	unsigned int immlen = imm->len;
 
 	if (imm->val) {
 	    temp = expr_copy(imm->val);
@@ -562,7 +563,7 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 	    expr_delete(temp);
 	}
 
-	*len += imm->len;
+	*len += immlen;
     }
 
     *len += insn->opcode_len;
@@ -598,6 +599,9 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 	    /* 1 byte relative displacement */
 	    jrshort = 1;
 	    if (save) {
+		temp = expr_copy(jmprel->target);
+		expr_expand_labelequ(temp, sect, 0, resolve_label);
+		num = expr_get_intnum(&temp);
 		if (!num) {
 		    ErrorAt(bc->line,
 			    _("short jump target external or out of segment"));
@@ -636,7 +640,6 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 	     * this test to be valid.
 	     */
 	    temp = expr_copy(jmprel->target);
-	    assert(temp != NULL);
 	    expr_expand_labelequ(temp, sect, 0, resolve_label);
 	    num = expr_get_intnum(&temp);
 	    if (num) {
@@ -865,8 +868,8 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 		WRITE_BYTE(*bufp, jmprel->nearop.opcode[i]);
 
 	    /* Relative displacement */
-	    if (output_expr(&jmprel->target, bufp, (opersize == 32) ? 4 : 2,
-			    sect, bc, 1, d))
+	    if (output_expr(&jmprel->target, bufp,
+			    (opersize == 32) ? 4UL : 2UL, sect, bc, 1, d))
 		return 1;
 	    break;
 	default:
@@ -886,7 +889,6 @@ x86_bc_tobytes(bytecode *bc, unsigned char **bufp, const section *sect,
 	case X86_BC_INSN:
 	    insn = bc_get_data(bc);
 	    return x86_bc_tobytes_insn(insn, bufp, sect, bc, d, output_expr);
-	    break;
 	case X86_BC_JMPREL:
 	    jmprel = bc_get_data(bc);
 	    return x86_bc_tobytes_jmprel(jmprel, bufp, sect, bc, d,
