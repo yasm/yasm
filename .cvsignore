@@ -1,4 +1,5 @@
 configure
+configure.scan
 Makefile.in
 Makefile
 config.*
@@ -6,3 +7,4 @@ stamp-h*
 aclocal.m4
 intl
 ABOUT-NLS
+*.tar.gz
