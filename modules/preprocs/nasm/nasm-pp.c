@@ -835,6 +835,7 @@ tokenise(char *line)
 	    type = TOK_STRING;
 	    while (*p && *p != c)
 		p++;
+
 	    if (*p)
 	    {
 		p++;
@@ -842,6 +843,7 @@ tokenise(char *line)
 	    else
 	    {
 		error(ERR_WARNING, "unterminated string");
+		type = -1;
 	    }
 	}
 	else if (isnumstart(*p))
@@ -903,7 +905,15 @@ tokenise(char *line)
 	    }
 	    p++;
 	}
-	if (type != TOK_COMMENT)
+
+	/* Handle unterminated string */
+	if (type == -1)
+	{
+	    *tail = t = new_Token(NULL, TOK_STRING, line, p-line+1);
+	    t->text[p-line] = *line;
+	    tail = &t->next;
+	}
+	else if (type != TOK_COMMENT)
 	{
 	    *tail = t = new_Token(NULL, type, line, p - line);
 	    tail = &t->next;
@@ -1539,23 +1549,30 @@ if_condition(Token * tline, int i)
 		    t = t->next;
 		    continue;
 		}
-		else if (tt->type == TOK_WHITESPACE)
+		if (tt->type == TOK_WHITESPACE)
 		{
 		    tt = tt->next;
 		    continue;
 		}
-		else if (tt->type != t->type ||
-			mstrcmp(tt->text, t->text, casesense))
+		if (tt->type != t->type)
 		{
 		    j = FALSE;	/* found mismatching tokens */
 		    break;
 		}
-		else
+		/* Unify surrounding quotes for strings */
+		if (t->type == TOK_STRING)
 		{
-		    t = t->next;
-		    tt = tt->next;
-		    continue;
+		    tt->text[0] = t->text[0];
+		    tt->text[strlen(tt->text) - 1] = t->text[0];
 		}
+		if (mstrcmp(tt->text, t->text, casesense) != 0)
+		{
+		    j = FALSE;	/* found mismatching tokens */
+		    break;
+		}
+
+		t = t->next;
+		tt = tt->next;
 	    }
 	    if ((t->type != TOK_OTHER || strcmp(t->text, ",")) || tt)
 		j = FALSE;	/* trailing gunk on one end or other */
@@ -2498,41 +2515,55 @@ do_directive(Token * tline)
 
 	case PP_REP:
 	    nolist = FALSE;
-	    tline = tline->next;
-	    if (tline->next && tline->next->type == TOK_WHITESPACE)
+	    do {
 		tline = tline->next;
-	    if (tline->next && tline->next->type == TOK_ID &&
-		    !nasm_stricmp(tline->next->text, ".nolist"))
+	    } while (tok_type_(tline, TOK_WHITESPACE));
+
+	    if (tok_type_(tline, TOK_ID) &&
+		nasm_stricmp(tline->text, ".nolist") == 0)
 	    {
-		tline = tline->next;
 		nolist = TRUE;
+		do {
+		    tline = tline->next;
+		} while (tok_type_(tline, TOK_WHITESPACE));
 	    }
-	    t = expand_smacro(tline->next);
-	    tline->next = NULL;
-	    free_tlist(origline);
-	    tline = t;
-	    tptr = &t;
-	    tokval.t_type = TOKEN_INVALID;
-	    evalresult =
-		    evaluate(ppscan, tptr, &tokval, NULL, pass, error, NULL);
-	    free_tlist(tline);
-	    if (!evalresult)
-		return DIRECTIVE_FOUND;
-	    if (tokval.t_type)
-		error(ERR_WARNING,
-			"trailing garbage after expression ignored");
-	    if (!nasm_is_simple(evalresult))
+
+	    if (tline)
 	    {
-		error(ERR_NONFATAL, "non-constant value given to `%%rep'");
-		return DIRECTIVE_FOUND;
+		t = expand_smacro(tline);
+		tptr = &t;
+		tokval.t_type = TOKEN_INVALID;
+		evalresult =
+		    evaluate(ppscan, tptr, &tokval, NULL, pass, error, NULL);
+		if (!evalresult)
+		{
+		    free_tlist(origline);
+		    return DIRECTIVE_FOUND;
+		}
+		if (tokval.t_type)
+		    error(ERR_WARNING,
+			  "trailing garbage after expression ignored");
+		if (!nasm_is_simple(evalresult))
+		{
+		    error(ERR_NONFATAL, "non-constant value given to `%%rep'");
+		    return DIRECTIVE_FOUND;
+		}
+		i = (int)nasm_reloc_value(evalresult) + 1;
 	    }
+	    else
+	    {
+		error(ERR_NONFATAL, "`%%rep' expects a repeat count");
+		i = 0;
+	    }
+	    free_tlist(origline);
+
 	    tmp_defining = defining;
 	    defining = nasm_malloc(sizeof(MMacro));
 	    defining->name = NULL;	/* flags this macro as a %rep block */
 	    defining->casesense = 0;
 	    defining->plus = FALSE;
 	    defining->nolist = nolist;
-	    defining->in_progress = nasm_reloc_value(evalresult) + 1;
+	    defining->in_progress = i;
 	    defining->nparam_min = defining->nparam_max = 0;
 	    defining->defaults = NULL;
 	    defining->dlist = NULL;
@@ -3437,8 +3468,18 @@ expand_smacro(Token * tline)
 		     * substitute for the parameters when we expand. What a
 		     * pain.
 		     */
-		    tline = tline->next;
-		    skip_white_(tline);
+		    /*tline = tline->next;
+		    skip_white_(tline);*/
+		    do {
+			t = tline->next;
+			while (tok_type_(t, TOK_SMAC_END))
+			{
+			    t->mac->in_progress = FALSE;
+			    t->text = NULL;
+			    t = tline->next = delete_Token(t);
+			}
+			tline = t;
+		    } while (tok_type_(tline, TOK_WHITESPACE));
 		    if (!tok_is_(tline, "("))
 		    {
 			/*
@@ -3454,14 +3495,26 @@ expand_smacro(Token * tline)
 			int white = 0;
 			brackets = 0;
 			nparam = 0;
-			tline = tline->next;
 			sparam = PARAM_DELTA;
 			params = nasm_malloc(sparam * sizeof(Token *));
-			params[0] = tline;
+			params[0] = tline->next;
 			paramsize = nasm_malloc(sparam * sizeof(int));
 			paramsize[0] = 0;
-			for (;; tline = tline->next)
+			while (TRUE)
 			{	/* parameter loop */
+			    /*
+			     * For some unusual expansions
+			     * which concatenates function call
+			     */
+			    t = tline->next;
+			    while (tok_type_(t, TOK_SMAC_END))
+			    {
+				t->mac->in_progress = FALSE;
+				t->text = NULL;
+				t = tline->next = delete_Token(t);
+			    }
+			    tline = t;
+
 			    if (!tline)
 			    {
 				error(ERR_NONFATAL,
@@ -4378,12 +4431,23 @@ void
 pp_include_path(char *path)
 {
     IncPath *i;
-
+/*  by alexfru: order of path inclusion fixed (was reverse order) */
     i = nasm_malloc(sizeof(IncPath));
     i->path = nasm_strdup(path);
-    i->next = ipath;
-    ipath = i;
-}
+    i->next = NULL;
+
+    if (ipath != NULL)
+    { 
+        IncPath *j = ipath; 
+        while (j->next != NULL)
+            j = j->next; 
+        j->next = i; 
+    }
+    else
+    {
+	ipath = i;
+    }
+} 
 
 void
 pp_pre_include(char *fname)
@@ -4433,6 +4497,7 @@ pp_pre_undefine(char *definition)
 
     space = new_Token(NULL, TOK_WHITESPACE, NULL, 0);
     def = new_Token(space, TOK_PREPROC_ID, "%undef", 0);
+    space->next = tokenise(definition);
 
     l = nasm_malloc(sizeof(Line));
     l->next = predef;

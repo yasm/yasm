@@ -36,7 +36,7 @@
 #define POSTFIX_MAX 10
 #endif
 
-
+#define IDLEN_MAX 4096
 
 /*
  * Name pollution problems: <time.h> on Digital UNIX pulls in some
@@ -406,7 +406,9 @@ enum {
 #define REG_CL    0x00221001L	       /* REG_COUNT | BITSxx */
 #define REG_CX    0x00221002L	       /* ditto */
 #define REG_ECX   0x00221004L	       /* another one */
+#define REG_DL    0x00241001L
 #define REG_DX    0x00241002L
+#define REG_EDX   0x00241004L
 #define REG_SREG  0x00081002L	       /* any segment register */
 #define REG_CS    0x01081002L	       /* CS */
 #define REG_DESS  0x02081002L	       /* DS, ES, SS (non-CS 86 registers) */
