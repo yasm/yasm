@@ -1,5 +1,5 @@
-/* $Id: yasm.c,v 1.1 2001/05/15 05:24:04 peter Exp $
- * Program entry point, command line parsing, error/warning output functions
+/* $Id: yasm.c,v 1.2 2001/05/20 08:32:08 peter Exp $
+ * Program entry point, command line parsing
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -28,10 +28,6 @@ extern int yyparse(void);
 
 unsigned int line_number = 1;
 unsigned int mode_bits = 32;
-
-void yyerror(char *s) {
-    fprintf(stderr, "%d: %s\n", line_number, s);
-}
 
 int main(void) {
     yydebug = 1;
