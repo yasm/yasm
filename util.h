@@ -61,7 +61,7 @@ int strncasecmp(const char *s1, const char *s2, size_t n);
 #ifdef __RCSID
 # define RCSID(s)	__RCSID(s)
 #else
-# define RCSID(s)	static const char rcsid[] = s;
+# define RCSID(s)	static const char rcsid[] = s
 #endif
 
 #endif

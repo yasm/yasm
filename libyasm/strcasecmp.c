@@ -36,6 +36,8 @@
 
 #include "util.h"
 
+RCSID("$IdPath$");
+
 #ifdef USE_OUR_OWN_STRCASECMP
 
 #if defined(LIBC_SCCS) && !defined(lint)
@@ -46,8 +48,6 @@ static char sccsid[] = "@(#)strcasecmp.c	8.1 (Berkeley) 6/4/93";
 # include <string.h>
 # include <ctype.h>
 #endif
-
-RCSID("$IdPath$");
 
 int
 strcasecmp(const char *s1, const char *s2)
