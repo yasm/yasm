@@ -86,19 +86,15 @@ AC_REPLACE_FUNCS(strdup strsep strtoul)
 AC_CHECK_HEADERS(limits.h sys/queue.h sys/cdefs.h)
 
 # Check for GNU C Library
-AC_CHECK_HEADERS(features.h)
-if test "$ac_cv_header_features_h" = yes; then
-	AC_MSG_CHECKING([for GNU C Library])
+AC_CACHE_CHECK([for GNU C Library], yasm_cv_header_gnulib,
 	AC_EGREP_CPP(gnulib,
 	[#include <features.h>
 	#ifdef __GNU_LIBRARY__
 	  gnulib
 	#endif
-	], have_gnulib=yes, have_gnulib=no)
-	AC_MSG_RESULT([$have_gnulib])
-	if test "$have_gnulib" = yes; then
-		AC_DEFINE(HAVE_GNU_C_LIBRARY)
-	fi
+	], yasm_cv_header_gnulib=yes, yasm_cv_header_gnulib=no))
+if test "$yasm_cv_header_gnulib" = yes; then
+	AC_DEFINE(HAVE_GNU_C_LIBRARY)
 fi
 
 # Check for stuff wanted by the test suite.  None of this is required.
