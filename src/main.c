@@ -187,13 +187,13 @@ main(int argc, char *argv[])
 	if (!obj)
 	    return EXIT_FAILURE;
 
-	/* If not already specified, default to raw preproc. */
+	/* If not already specified, default to yapp preproc. */
 	if (!cur_preproc)
 	    cur_preproc = find_preproc("yapp");
 	assert(cur_preproc != NULL);
 
 	/* Pre-process until done */
-	cur_preproc->initialize(in);
+	cur_preproc->initialize(in, in_filename);
 	while ((got = cur_preproc->input(preproc_buf, PREPROC_BUF_SIZE)) != 0)
 	    fwrite(preproc_buf, got, 1, obj);
 
@@ -254,7 +254,7 @@ main(int argc, char *argv[])
     x86_mode_bits = cur_objfmt->default_mode_bits;
 
     /* Parse! */
-    sections = cur_parser->do_parse(cur_parser, in);
+    sections = cur_parser->do_parse(cur_parser, in, in_filename);
 
     /* Close input file */
     if (in != stdin)

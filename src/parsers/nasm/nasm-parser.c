@@ -43,10 +43,10 @@ sectionhead nasm_parser_sections;
 extern /*@only@*/ char *nasm_parser_locallabel_base;
 
 static /*@dependent@*/ sectionhead *
-nasm_parser_do_parse(parser *p, FILE *f)
+nasm_parser_do_parse(parser *p, FILE *f, const char *in_filename)
     /*@globals killed nasm_parser_locallabel_base @*/
 {
-    p->current_pp->initialize(f);
+    p->current_pp->initialize(f, in_filename);
     nasm_parser_in = f;
     nasm_parser_input = p->current_pp->input;
 

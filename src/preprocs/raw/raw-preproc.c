@@ -33,7 +33,7 @@ static FILE *in;
 int isatty(int);
 
 static void
-raw_preproc_initialize(FILE *f)
+raw_preproc_initialize(FILE *f, const char *in_filename)
 {
     in = f;
     /*@-unrecog@*/

@@ -128,11 +128,10 @@ yapp_macro_get (const char *key)
 
 
 static void
-yapp_preproc_initialize(FILE *f)
+yapp_preproc_initialize(FILE *f, const char *in_filename)
 {
     is_interactive = f ? (isatty(fileno(f)) > 0) : 0;
-    if (is_interactive) current_file = "<STDIN>";
-    else if (!current_file) current_file = "<?>"; /* FIXME */
+    current_file = (char *)in_filename;
     yapp_lex_initialize(f);
     SLIST_INIT(&output_head);
     SLIST_INIT(&source_head);

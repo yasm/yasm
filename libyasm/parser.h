@@ -52,7 +52,7 @@ struct parser {
      * This function returns the starting section of a linked list of sections
      * (whatever was in the file).
      */
-    sectionhead *(*do_parse) (parser *p, FILE *f);
+    sectionhead *(*do_parse) (parser *p, FILE *f, const char *in_filename);
 };
 
 /* Generic functions for all parsers - implemented in src/parser.c */
