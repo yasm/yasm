@@ -1,4 +1,4 @@
-/* $Id: token.l.in,v 1.4 2001/05/21 21:44:47 mu Exp $
+/* $Id: token.l.in,v 1.5 2001/05/21 22:10:02 peter Exp $
  * Main lexer
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -143,6 +143,8 @@ far	{ return FAR; }
 nosplit	{ return NOSPLIT; }
 
 org	{ return ORG; }
+
+to	{ return TO; }
 
     /* operand size overrides */
 o16	{ yylval.int_val = 16; return OPERSIZE; }
