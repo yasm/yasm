@@ -807,6 +807,12 @@ bc_tobytes(bytecode *bc, unsigned char *buf, unsigned long *bufsize,
     return mybuf;
 }
 
+bytecode *
+bcs_last(bytecodehead *headp)
+{
+    return STAILQ_LAST(headp, bytecode, link);
+}
+
 void
 bcs_delete(bytecodehead *headp)
 {

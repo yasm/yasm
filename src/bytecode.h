@@ -131,6 +131,7 @@ bc_resolve_flags bc_resolve(bytecode *bc, int save, const section *sect,
 /* bytecode *bcs_first(bytecodehead *headp); */
 #define bcs_first(headp)	STAILQ_FIRST(headp)
 
+/*@null@*/ bytecode *bcs_last(bytecodehead *headp);
 void bcs_delete(bytecodehead *headp);
 
 /* Adds bc to the list of bytecodes headp.
