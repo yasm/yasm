@@ -2,8 +2,11 @@
  * \file libyasm.h
  * \brief YASM library primary header file.
  *
+ * \rcs
  * $IdPath$
+ * \endrcs
  *
+ * \license
  *  Copyright (C) 2003  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,6 +29,7 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ * \endlicense
  *
  * Define YASM_LIB_INTERNAL to include many internal function and variable
  * definitions that violate the yasm_* namespace.  This includes

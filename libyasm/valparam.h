@@ -1,9 +1,12 @@
 /**
- * \file valparam.h
+ * \file libyasm/valparam.h
  * \brief YASM value/parameter interface.
  *
- * $IdPath: yasm/libyasm/valparam.h,v 1.14 2003/05/05 03:42:10 peter Exp $
+ * \rcs
+ * $IdPath$
+ * \endrcs
  *
+ * \license
  *  Copyright (C) 2001  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,6 +29,7 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ * \endlicense
  */
 #ifndef YASM_VALPARAM_H
 #define YASM_VALPARAM_H

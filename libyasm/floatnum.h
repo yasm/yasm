@@ -1,9 +1,12 @@
 /**
- * \file floatnum.h
+ * \file libyasm/floatnum.h
  * \brief YASM floating point (IEEE) interface.
  *
- * $IdPath: yasm/libyasm/floatnum.h,v 1.20 2003/03/13 06:54:19 peter Exp $
+ * \rcs
+ * $IdPath$
+ * \endrcs
  *
+ * \license
  *  Copyright (C) 2001  Peter Johnson
  *
  *  Based on public-domain x86 assembly code by Randall Hyde (8/28/91).
@@ -28,6 +31,7 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ * \endlicense
  */
 #ifndef YASM_FLOATNUM_H
 #define YASM_FLOATNUM_H

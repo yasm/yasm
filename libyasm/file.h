@@ -1,9 +1,12 @@
 /**
- * \file file.h
+ * \file libyasm/file.h
  * \brief YASM big and little endian file interface.
  *
- * $IdPath: yasm/libyasm/file.h,v 1.12 2003/03/13 06:54:19 peter Exp $
+ * \rcs
+ * $IdPath$
+ * \endrcs
  *
+ * \license
  *  Copyright (C) 2001  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,6 +29,7 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ * \endlicense
  */
 #ifndef YASM_FILE_H
 #define YASM_FILE_H

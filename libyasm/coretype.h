@@ -1,9 +1,12 @@
 /**
- * \file coretype.h
+ * \file libyasm/coretype.h
  * \brief YASM core types and utility functions.
  *
+ * \rcs
  * $IdPath$
+ * \endrcs
  *
+ * \license
  *  Copyright (C) 2001  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,6 +29,7 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ * \endlicense
  */
 #ifndef YASM_CORETYPE_H
 #define YASM_CORETYPE_H

@@ -1,9 +1,12 @@
 /**
- * \file expr.h
- * \brief YASM expression interface
+ * \file libyasm/expr.h
+ * \brief YASM expression interface.
  *
+ * \rcs
  * $IdPath$
+ * \endrcs
  *
+ * \license
  *  Copyright (C) 2001  Michael Urman, Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,6 +29,7 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ * \endlicense
  */
 #ifndef YASM_EXPR_H
 #define YASM_EXPR_H
