@@ -280,7 +280,7 @@ scan:
 	}
 
 	/* floating point value */
-	digit+ "." digit* ("e" [-+]? digit+)? {
+	digit+ "." digit* (E [-+]? digit+)? {
 	    savech = s.tok[TOKLEN];
 	    s.tok[TOKLEN] = '\0';
 	    yylval.flt = floatnum_new(s.tok);
