@@ -666,15 +666,29 @@ expr_level_op(/*@returned@*/ /*@only@*/ expr *e, int fold_const,
 }
 /*@=mustfree@*/
 
+typedef struct exprentry {
+    /*@reldef@*/ SLIST_ENTRY(exprentry) next;
+    /*@null@*/ const expr *e;
+} exprentry;
+
 /* Level an entire expn tree, expanding equ's as we go */
 expr *
 expr_level_tree(expr *e, int fold_const, int simplify_ident,
-		calc_bc_dist_func calc_bc_dist)
+		calc_bc_dist_func calc_bc_dist, /*@null@*/ exprhead *eh)
 {
     int i;
+    exprhead eh_local;
+    exprentry ee;
 
     if (!e)
 	return 0;
+
+    if (!eh) {
+	eh = &eh_local;
+	SLIST_INIT(eh);
+    }
+
+    ee.e = NULL;
 
     /* traverse terms */
     for (i=0; i<e->numterms; i++) {
@@ -682,8 +696,21 @@ expr_level_tree(expr *e, int fold_const, int simplify_ident,
 	if (e->terms[i].type == EXPR_SYM) {
 	    const expr *equ_expr = symrec_get_equ(e->terms[i].data.sym);
 	    if (equ_expr) {
+		exprentry *np;
+
+		/* Check for circular reference */
+		SLIST_FOREACH(np, eh, next) {
+		    if (np->e == equ_expr) {
+			ErrorAt(e->line, _("circular reference detected."));
+			return e;
+		    }
+		}
+
 		e->terms[i].type = EXPR_EXPR;
 		e->terms[i].data.expn = expr_copy(equ_expr);
+
+		ee.e = equ_expr;
+		SLIST_INSERT_HEAD(eh, &ee, next);
 	    }
 	}
 
@@ -691,7 +718,12 @@ expr_level_tree(expr *e, int fold_const, int simplify_ident,
 	    e->terms[i].data.expn = expr_level_tree(e->terms[i].data.expn,
 						    fold_const,
 						    simplify_ident,
-						    calc_bc_dist);
+						    calc_bc_dist, eh);
+
+	if (ee.e) {
+	    SLIST_REMOVE_HEAD(eh, next);
+	    ee.e = NULL;
+	}
     }
 
     /* do callback */
@@ -922,7 +954,7 @@ expr *
 expr_simplify(expr *e, calc_bc_dist_func calc_bc_dist)
 {
     e = expr_xform_neg_tree(e);
-    return expr_level_tree(e, 1, 1, calc_bc_dist);
+    return expr_level_tree(e, 1, 1, calc_bc_dist, NULL);
 }
 
 /*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/

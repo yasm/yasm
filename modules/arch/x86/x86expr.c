@@ -232,7 +232,7 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
 
     /*@-unqualifiedtrans@*/
     *ep = expr_xform_neg_tree(*ep);
-    *ep = expr_level_tree(*ep, 1, indexreg == 0, NULL);
+    *ep = expr_level_tree(*ep, 1, indexreg == 0, NULL, NULL);
     /*@=unqualifiedtrans@*/
     assert(*ep != NULL);
     e = *ep;
@@ -242,7 +242,7 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
 	case 2:
 	    /* Need to simplify again */
 	    *ep = expr_xform_neg_tree(*ep);
-	    *ep = expr_level_tree(*ep, 1, indexreg == 0, NULL);
+	    *ep = expr_level_tree(*ep, 1, indexreg == 0, NULL, NULL);
 	    e = *ep;
 	    break;
 	default:

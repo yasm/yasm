@@ -69,12 +69,14 @@ int expr_traverse_leaves_in(expr *e, /*@null@*/ void *d,
 /*@only@*/ /*@null@*/ expr *expr_xform_neg_tree(/*@returned@*/ /*@only@*/
 						/*@null@*/ expr *e);
 
-/* Level an entire expn tree */
+typedef SLIST_HEAD(exprhead, exprentry) exprhead;
+/* Level an entire expn tree.  Call with eh = NULL */
 /*@only@*/ /*@null@*/ expr *expr_level_tree(/*@returned@*/ /*@only@*/
 					    /*@null@*/ expr *e,
 					    int fold_const,
 					    int simplify_ident, /*@null@*/
-					    calc_bc_dist_func calc_bc_dist);
+					    calc_bc_dist_func calc_bc_dist,
+					    /*@null@*/ exprhead *eh);
 
 /* Reorder terms of e into canonical order.  Only reorders if reordering
  * doesn't change meaning of expression.  (eg, doesn't reorder SUB).
