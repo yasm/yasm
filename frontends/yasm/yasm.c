@@ -1,4 +1,4 @@
-/* $Id: yasm.c,v 1.2 2001/05/20 08:32:08 peter Exp $
+/* $Id: yasm.c,v 1.3 2001/05/21 02:15:53 peter Exp $
  * Program entry point, command line parsing
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -29,9 +29,10 @@ extern int yyparse(void);
 unsigned int line_number = 1;
 unsigned int mode_bits = 32;
 
-int main(void) {
+int main(void)
+{
     yydebug = 1;
     yyparse();
-    return 0;
+    return EXIT_SUCCESS;
 }
 
