@@ -663,10 +663,12 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		if (!num) {
 		    cur_we->error(bc->line,
 			N_("short jump target external or out of segment"));
+		    expr_delete(temp);
 		    return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		} else {
 		    rel = intnum_get_int(num);
 		    rel -= jmprel->shortop.opcode_len+1;
+		    expr_delete(temp);
 		    /* does a short form exist? */
 		    if (jmprel->shortop.opcode_len == 0) {
 			cur_we->error(bc->line,
