@@ -97,7 +97,6 @@ static bytecode *nasm_parser_temp_bc;
 %token <int_info> RESERVE_SPACE
 %token INCBIN EQU TIMES
 %token SEG WRT NOSPLIT
-%token TO
 %token <arch_data> INSN PREFIX REG SEGREG TARGETMOD
 %token LEFT_OP RIGHT_OP SIGNDIV SIGNMOD START_SECTION_ID
 %token <str_val> ID LOCAL_ID SPECIAL_ID

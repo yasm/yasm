@@ -50,7 +50,8 @@ typedef enum {
 typedef enum {
     X86_NEAR,
     X86_SHORT,
-    X86_FAR
+    X86_FAR,
+    X86_TO
 } x86_parse_targetmod;
 
 typedef enum {

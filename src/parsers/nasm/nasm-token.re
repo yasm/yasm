@@ -306,8 +306,6 @@ scan:
 
 	N O S P L I T	{ RETURN(NOSPLIT); }
 
-	T O		{ RETURN(TO); }
-
 	/* operators */
 	"<<"			{ RETURN(LEFT_OP); }
 	">>"			{ RETURN(RIGHT_OP); }

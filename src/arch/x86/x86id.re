@@ -1241,6 +1241,10 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	    data[0] = X86_FAR;
 	    return ARCH_CHECK_ID_TARGETMOD;
 	}
+	T O		{
+	    data[0] = X86_TO;
+	    return ARCH_CHECK_ID_TARGETMOD;
+	}
 
 	/* operand size overrides */
 	O "16"	{
