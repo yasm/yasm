@@ -8,7 +8,7 @@ YASMPARSERFILES += \
 	nasm-token.c
 
 nasm-token.c: $(srcdir)/src/parsers/nasm/nasm-token.re re2c$(EXEEXT) $(srcdir)/tools/re2c/cleanup.pl
-	$(top_builddir)/re2c$(EXEEXT) -b $(srcdir)/src/parsers/nasm/nasm-token.re | $(PERL) $(srcdir)/tools/re2c/cleanup.pl > $@
+	$(top_builddir)/re2c$(EXEEXT) -b $(srcdir)/src/parsers/nasm/nasm-token.re | $(PERL) $(srcdir)/tools/re2c/cleanup.pl | sed "/^#l/ s,re2c-out\.c,$@," > $@
 
 BUILT_SOURCES += \
 	nasm-bison.c				\
