@@ -202,7 +202,6 @@ elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
     return retval;
 }
 
-/* PASS1 */
 static int
 elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 			size_t valsize, int shift, unsigned long offset,
@@ -288,7 +287,6 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     return 1;
 }
 
-/* PASS1 */
 static int
 elf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 {
@@ -379,7 +377,6 @@ elf_objfmt_new_dbg_secthead(yasm_section *sect, elf_objfmt_output_info *info)
     return shead;
 }
 
-/* PASS1 */
 static int
 elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 {
@@ -453,8 +450,6 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     return 0;
 }
 
-
-/* PASS1 */
 static int
 elf_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 {
@@ -559,7 +554,6 @@ elf_objfmt_output(FILE *f, yasm_sectionhead *sections, int all_syms)
     
     /* output dummy section header - 0 */
     info.sindex = 0;
-
 
     esdn = elf_secthead_new(NULL, SHT_NULL, 0, 0, 0, 0);
     elf_secthead_write_to_file(f, esdn, 0);
