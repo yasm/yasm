@@ -52,6 +52,14 @@ AC_ARG_ENABLE(profiling,
   *) AC_MSG_ERROR([bad value ${enableval} for --enable-profiling]) ;;
 esac],[profiling=false])
 
+AC_ARG_ENABLE(gcov,
+[  --enable-gcov  Enable gcov code coverage (requires GCC)],
+[case "${enableval}" in
+  yes) gcov=true ;;
+  no)  gcov=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-gcov]) ;;
+esac],[gcov=false])
+
 AC_ARG_ENABLE(dmalloc,
 [  --enable-dmalloc    Enable debug malloc (requires dmalloc library)],
 [case "${enableval}" in
@@ -249,10 +257,15 @@ if ${profiling}; then
 	PROFILINGFLAGS="-pg"
 fi
 
+# Enable output of gcov information
+if ${gcov}; then
+	GCOVFLAGS="-fprofile-arcs -ftest-coverage"
+fi
+
 # If we're using GCC, then we can enable the above CFLAGS as well as turn on
 # -ansi -pedantic -Wall.
 if test "$GCC" = yes; then
-	ANSI_CFLAGS="-ansi -pedantic -Wall $MOREWARNFLAGS $WARNERRORFLAGS $DEVFLAGS $PROFILINGFLAGS $DMALLOCFLAGS"
+	ANSI_CFLAGS="-ansi -pedantic -Wall $MOREWARNFLAGS $WARNERRORFLAGS $DEVFLAGS $PROFILINGFLAGS $GCOVFLAGS $DMALLOCFLAGS"
 else
 	ANSI_CFLAGS=""
 fi
