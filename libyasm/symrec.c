@@ -112,7 +112,7 @@ symrec_get_or_new(const char *name, int in_table)
     rec = xmalloc(sizeof(symrec));
     rec->name = symname;
     rec->type = SYM_UNKNOWN;
-    rec->line = line_index;
+    rec->line = 0;
     rec->visibility = SYM_LOCAL;
     rec->of_data_vis_ce = NULL;
     rec->of_data_vis_g = NULL;
@@ -146,7 +146,8 @@ symrec *
 symrec_use(const char *name)
 {
     symrec *rec = symrec_get_or_new(name, 1);
-
+    if (rec->line == 0)
+	rec->line = line_index;	/* set line number of first use */
     rec->status |= SYM_USED;
     return rec;
 }
@@ -157,7 +158,8 @@ symrec_define(const char *name, SymType type, int in_table)
     symrec *rec = symrec_get_or_new(name, in_table);
 
     /* Has it been defined before (either by DEFINED or COMMON/EXTERN)? */
-    if (rec->status & SYM_DEFINED) {
+    if ((rec->status & SYM_DEFINED) ||
+	(rec->visibility & (SYM_COMMON | SYM_EXTERN))) {
 	Error(_("duplicate definition of `%s'; first defined on line %d"),
 	      name, rec->line);
     } else {
@@ -194,37 +196,52 @@ symrec_declare(const char *name, SymVisibility vis, void *of_data)
 
     assert(cur_objfmt != NULL);
 
-    /* Don't allow EXTERN and COMMON if symbol has already been DEFINED. */
-    /* Also, EXTERN and COMMON are mutually exclusive. */
-    if (((rec->status & SYM_DEFINED) && !(rec->visibility & SYM_EXTERN)) ||
-	((rec->visibility & SYM_COMMON) && (vis == SYM_EXTERN)) ||
-	((rec->visibility & SYM_EXTERN) && (vis == SYM_COMMON))) {
-	Error(_("duplicate definition of `%s'; first defined on line %d"),
-	      name, rec->line);
-	if (of_data)
-	    cur_objfmt->declare_data_delete(vis, of_data);
-    } else {
-	rec->line = line_index;	/* set line number of declaration */
+    /* Allowable combinations:
+     *  Existing State--------------  vis  New State-------------------
+     *  DEFINED GLOBAL COMMON EXTERN  GCE  DEFINED GLOBAL COMMON EXTERN
+     *     0      -      0      0     GCE     0      G      C      E
+     *     0      -      0      1     GE      0      G      0      E
+     *     0      -      1      0     GC      0      G      C      0
+     * X   0      -      1      1
+     *     1      -      0      0      G      1      G      0      0
+     * X   1      -      -      1
+     * X   1      -      1      -
+     */
+    if ((vis == SYM_GLOBAL) ||
+	(!(rec->status & SYM_DEFINED) &&
+	 (!(rec->visibility & (SYM_COMMON | SYM_EXTERN)) ||
+	  ((rec->visibility & SYM_COMMON) && (vis == SYM_COMMON)) ||
+	  ((rec->visibility & SYM_EXTERN) && (vis == SYM_EXTERN))))) {
 	rec->visibility |= vis;
-
-	/* If declared as COMMON or EXTERN, set as DEFINED. */
-	if ((vis == SYM_COMMON) || (vis == SYM_EXTERN))
-	    rec->status |= SYM_DEFINED;
 
 	if (of_data) {
 	    switch (vis) {
 		case SYM_GLOBAL:
+		    if (rec->of_data_vis_g)
+			cur_objfmt->declare_data_delete(vis,
+							rec->of_data_vis_g);
 		    rec->of_data_vis_g = of_data;
 		    break;
 		case SYM_COMMON:
 		case SYM_EXTERN:
+		    /* set line number of declaration */
+		    if (rec->line == 0)
+			rec->line = line_index;
+		    if (rec->of_data_vis_ce)
+			cur_objfmt->declare_data_delete(vis,
+							rec->of_data_vis_ce);
 		    rec->of_data_vis_ce = of_data;
 		    break;
 		default:
 		    InternalError(_("Unexpected vis value"));
 	    }
 	}
-    }
+    } else {
+	Error(_("duplicate definition of `%s'; first defined on line %d"),
+	      name, rec->line);
+	if (of_data)
+	    cur_objfmt->declare_data_delete(vis, of_data);
+    } 
     return rec;
 }
 
@@ -275,8 +292,9 @@ static unsigned long firstundef_line;
 static int
 symrec_parser_finalize_checksym(symrec *sym, /*@unused@*/ /*@null@*/ void *d)
 {
-    /* error if a symbol is used but never defined */
-    if ((sym->status & SYM_USED) && !(sym->status & SYM_DEFINED)) {
+    /* error if a symbol is used but never defined or extern/common declared */
+    if ((sym->status & SYM_USED) && !(sym->status & SYM_DEFINED) &&
+	!(sym->visibility & (SYM_EXTERN | SYM_COMMON))) {
 	ErrorAt(sym->line, _("undefined symbol `%s' (first use)"), sym->name);
 	if (sym->line < firstundef_line)
 	    firstundef_line = sym->line;
