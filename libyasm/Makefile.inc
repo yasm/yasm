@@ -1,9 +1,11 @@
 # $IdPath$
 
-YASMBASEFILES = \
+libyasm_la_SOURCES = \
 	src/bytecode.c		\
 	src/bytecode.h		\
 	src/bc-int.h		\
+	src/errwarn.c		\
+	src/errwarn.h		\
 	src/expr.c		\
 	src/expr.h		\
 	src/expr-int.h		\
@@ -19,13 +21,10 @@ YASMBASEFILES = \
 	src/section.h		\
 	src/arch.c		\
 	src/arch.h		\
-	src/objfmt.c		\
 	src/objfmt.h		\
-	src/preproc.c		\
-	src/preproc.h		\
-	src/parser.c		\
-	src/parser.h		\
 	src/optimizer.h		\
+	src/parser.h		\
+	src/preproc.h		\
 	src/intnum.c		\
 	src/intnum.h		\
 	src/floatnum.c		\
@@ -42,11 +41,11 @@ YASMBASEFILES = \
 
 yasm_SOURCES += \
 	src/main.c		\
-	src/errwarn.c		\
-	src/errwarn.h		\
 	src/options.c		\
 	src/options.h		\
-	$(YASMBASEFILES)
+	src/objfmt.c		\
+	src/preproc.c		\
+	src/parser.c
 
 
 EXTRA_DIST += \

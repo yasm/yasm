@@ -1,6 +1,6 @@
 # $IdPath$
 
-SUBDIRS = libltdl m4 po
+SUBDIRS = libltdl m4 po .
 
 CFLAGS = @ANSI_CFLAGS@
 AM_YFLAGS = -d
@@ -15,10 +15,10 @@ TESTS =
 noinst_PROGRAMS =
 
 yasm_SOURCES =
-yasm_LDFLAGS = -export-dynamic
-yasm_LDADD = @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@
+yasm_LDFLAGS =
+yasm_LDADD = libyasm.la @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@
 
-lib_LTLIBRARIES =
+lib_LTLIBRARIES = libyasm.la
 BUILT_SOURCES =
 # configure.lineno doesn't clean up after itself?
 CLEANFILES = configure.lineno
