@@ -18,7 +18,9 @@ EXTRA_DIST += \
 	src/objfmts/bin/tests/integer.errwarn		\
 	src/objfmts/bin/tests/reserve.asm		\
 	src/objfmts/bin/tests/reserve.bin.hx		\
-	src/objfmts/bin/tests/reserve.errwarn
+	src/objfmts/bin/tests/reserve.errwarn		\
+	src/objfmts/bin/tests/reserve-err.asm		\
+	src/objfmts/bin/tests/reserve-err.errwarn
 
 CLEANFILES += \
 	float-err.ew \
@@ -33,4 +35,5 @@ CLEANFILES += \
 	integer.ew \
 	reserve \
 	reserve.ew \
-	reserve.hx
+	reserve.hx \
+	reserve-err.ew

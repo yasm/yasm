@@ -462,7 +462,7 @@ x86_bc_print(FILE *f, const bytecode *bc)
     }
 }
 
-static int
+static bc_resolve_flags
 x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 		    const section *sect, resolve_label_func resolve_label)
 {
@@ -470,7 +470,7 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
     effaddr *ea = insn->ea;
     x86_effaddr_data *ead = ea_get_data(ea);
     immval *imm = insn->imm;
-    int retval = 1;		/* may turn into 0 at some point */
+    bc_resolve_flags retval = BC_RESOLVE_MIN_LEN;
 
     if (ea) {
 	/* Create temp copy of disp, etc. */
@@ -496,14 +496,15 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 				  &ead_t.sib, &ead_t.valid_sib,
 				  &ead_t.need_sib)) {
 		expr_delete(temp);
-		return -1;   /* failed, don't bother checking rest of insn */
+		/* failed, don't bother checking rest of insn */
+		return BC_RESOLVE_UNKNOWN_LEN;
 	    }
 
 	    expr_delete(temp);
 
 	    if (displen != 1) {
 		/* Fits into a word/dword, or unknown. */
-		retval = 0;	    /* may not be smallest size */
+		retval = BC_RESOLVE_NONE;    /* may not be smallest size */
 
 		/* Handle unknown case, make displen word-sized */
 		if (displen == 0xff)
@@ -553,7 +554,7 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 			insn->imm = (immval *)NULL;
 		    }
 		} else
-		    retval = 0;	    /* we could still get ,1 */
+		    retval = BC_RESOLVE_NONE;	    /* we could still get ,1 */
 
 		/* Not really necessary, but saves confusion over it. */
 		if (save)
@@ -574,12 +575,12 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
     return retval;
 }
 
-static int
+static bc_resolve_flags
 x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		      const bytecode *bc, const section *sect,
 		      resolve_label_func resolve_label)
 {
-    int retval = 1;
+    bc_resolve_flags retval = BC_RESOLVE_MIN_LEN;
     /*@null@*/ expr *temp;
     /*@dependent@*/ /*@null@*/ const intnum *num;
     unsigned long target;
@@ -605,7 +606,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		if (!num) {
 		    ErrorAt(bc->line,
 			    _("short jump target external or out of segment"));
-		    return -1;
+		    return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		} else {
 		    target = intnum_get_uint(num);
 		    rel = (long)(target -
@@ -613,12 +614,12 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		    /* does a short form exist? */
 		    if (jmprel->shortop.opcode_len == 0) {
 			ErrorAt(bc->line, _("short jump does not exist"));
-			return -1;
+			return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		    }
 		    /* short displacement must fit in -128 <= rel <= +127 */
 		    if (rel < -128 || rel > 127) {
 			ErrorAt(bc->line, _("short jump out of range"));
-			return -1;
+			return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		    }
 		}
 	    }
@@ -629,7 +630,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 	    if (save) {
 		if (jmprel->nearop.opcode_len == 0) {
 		    ErrorAt(bc->line, _("near jump does not exist"));
-		    return -1;
+		    return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		}
 	    }
 	    break;
@@ -656,7 +657,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		     */
 		    jrshort = 0;
 		    if (jmprel->shortop.opcode_len != 0)
-			retval = 0;
+			retval = BC_RESOLVE_NONE;
 		} else {
 		    /* Doesn't fit into short, and there's no near opcode.
 		     * Error out if saving, otherwise just make it a short
@@ -665,7 +666,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		     */
 		    if (save) {
 			ErrorAt(bc->line, _("short jump out of range"));
-			return -1;
+			return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		    }
 		    jrshort = 1;
 		}
@@ -676,13 +677,13 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		 */
 		if (jmprel->nearop.opcode_len != 0) {
 		    if (jmprel->shortop.opcode_len != 0)
-			retval = 0;
+			retval = BC_RESOLVE_NONE;
 		    jrshort = 0;
 		} else {
 		    if (save) {
 			ErrorAt(bc->line,
 				_("short jump target or out of segment"));
-			return -1;
+			return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		    }
 		    jrshort = 1;
 		}
@@ -695,14 +696,14 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 	if (save)
 	    jmprel->op_sel = JR_SHORT;
 	if (jmprel->shortop.opcode_len == 0)
-	    return -1;	    /* uh-oh, that size not available */
+	    return BC_RESOLVE_UNKNOWN_LEN; /* uh-oh, that size not available */
 
 	*len += jmprel->shortop.opcode_len + 1;
     } else {
 	if (save)
 	    jmprel->op_sel = JR_NEAR;
 	if (jmprel->nearop.opcode_len == 0)
-	    return -1;	    /* uh-oh, that size not available */
+	    return BC_RESOLVE_UNKNOWN_LEN; /* uh-oh, that size not available */
 
 	*len += jmprel->nearop.opcode_len;
 	*len += (opersize == 32) ? 4 : 2;
@@ -716,7 +717,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
     return retval;
 }
 
-int
+bc_resolve_flags
 x86_bc_resolve(bytecode *bc, int save, const section *sect,
 	       resolve_label_func resolve_label)
 {
@@ -735,7 +736,9 @@ x86_bc_resolve(bytecode *bc, int save, const section *sect,
 	default:
 	    break;
     }
-    return 0;
+    InternalError(_("Didn't handle bytecode type in x86 arch"));
+    /*@notreached@*/
+    return BC_RESOLVE_UNKNOWN_LEN;
 }
 
 static int

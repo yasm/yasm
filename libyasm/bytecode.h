@@ -58,10 +58,19 @@ void bc_delete(/*@only@*/ /*@null@*/ bytecode *bc);
 
 void bc_print(FILE *f, const bytecode *bc);
 
+/* Return value flags for bc_resolve() */
+typedef enum {
+    BC_RESOLVE_NONE = 0,		/* Ok, but length is not minimum */
+    BC_RESOLVE_ERROR = 1<<0,		/* Error found, output */
+    BC_RESOLVE_MIN_LEN = 1<<1,		/* Length is minimum possible */
+    BC_RESOLVE_UNKNOWN_LEN = 1<<2	/* Length indeterminate */
+} bc_resolve_flags;
+
 /* Resolves labels in bytecode, and calculates its length.
  * Tries to minimize the length as much as possible.
- * Returns whether the length is the minimum possible (1=yes, 0=no).
- * Returns -1 if the length was indeterminate.
+ * Returns whether the length is the minimum possible, indeterminate, and
+ *  if there was an error recognized and output during execution (see above
+ *  for return flags).
  * Note: sometimes it's impossible to determine if a length is the minimum
  *       possible.  In this case, this function returns that the length is NOT
  *       the minimum.
@@ -72,8 +81,8 @@ void bc_print(FILE *f, const bytecode *bc);
  * resolve_label except temporarily to try to minimize the length).
  * When save is nonzero, all fields in bc may be modified by this function.
  */
-int bc_resolve(bytecode *bc, int save, const section *sect,
-	       resolve_label_func resolve_label);
+bc_resolve_flags bc_resolve(bytecode *bc, int save, const section *sect,
+			    resolve_label_func resolve_label);
 
 /* Converts the bytecode bc into its byte representation.
  * Inputs:

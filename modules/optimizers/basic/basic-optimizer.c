@@ -150,6 +150,7 @@ static int
 basic_optimize_bytecode_1(/*@observer@*/ bytecode *bc, void *d)
 {
     basic_optimize_data *data = (basic_optimize_data *)d;
+    bc_resolve_flags bcr_retval;
 
     /* Don't even bother if we're in-progress or done. */
     if (bc->opt_flags == BCFLAG_INPROGRESS)
@@ -169,8 +170,10 @@ basic_optimize_bytecode_1(/*@observer@*/ bytecode *bc, void *d)
      * is minimum or not, and just check for indeterminate length (indicative
      * of circular reference).
      */
-    if (bc_resolve(bc, 0, data->sect, basic_optimize_resolve_label) < 0) {
-	ErrorAt(bc->line, _("Circular reference detected."));
+    bcr_retval = bc_resolve(bc, 0, data->sect, basic_optimize_resolve_label);
+    if (bcr_retval & BC_RESOLVE_UNKNOWN_LEN) {
+	if (!(bcr_retval & BC_RESOLVE_ERROR))
+	    ErrorAt(bc->line, _("Circular reference detected."));
 	data->saw_unknown = -1;
 	return 0;
     }
@@ -181,8 +184,9 @@ basic_optimize_bytecode_1(/*@observer@*/ bytecode *bc, void *d)
 }
 
 static int
-basic_optimize_section_1(section *sect, /*@unused@*/ /*@null@*/ void *d)
+basic_optimize_section_1(section *sect, void *d)
 {
+    int *saw_unknown = (int *)d;
     basic_optimize_data data;
     unsigned long flags;
     int retval;
@@ -206,7 +210,7 @@ basic_optimize_section_1(section *sect, /*@unused@*/ /*@null@*/ void *d)
 	return retval;
 
     if (data.saw_unknown != 0)
-	return data.saw_unknown;
+	*saw_unknown = data.saw_unknown;
 
     section_set_opt_flags(sect, SECTFLAG_DONE);
 
@@ -252,6 +256,8 @@ basic_optimize_section_2(section *sect, /*@unused@*/ /*@null@*/ void *d)
 static void
 basic_optimize(sectionhead *sections)
 {
+    int saw_unknown = 0;
+
     /* Optimization process: (essentially NASM's pass 1)
      *  Determine the size of all bytecodes.
      *  Forward references are /not/ resolved (only backward references are
@@ -264,7 +270,9 @@ basic_optimize(sectionhead *sections)
      *   - not strictly top->bottom scanning; we scan through a section and
      *     hop to other sections as necessary.
      */
-    if (sections_traverse(sections, NULL, basic_optimize_section_1) < 0)
+    if (sections_traverse(sections, &saw_unknown,
+			  basic_optimize_section_1) < 0 ||
+	saw_unknown != 0)
 	return;
 
     /* Check completion of all sections and save bytecode changes */

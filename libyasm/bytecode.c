@@ -293,7 +293,7 @@ bc_print(FILE *f, const bytecode *bc)
     fprintf(f, "%*sOffset=%lx\n", indent_level, "", bc->offset);
 }
 
-static int
+static bc_resolve_flags
 bc_resolve_data(bytecode_data *bc_data, unsigned long *len)
 {
     dataval *dv;
@@ -316,15 +316,15 @@ bc_resolve_data(bytecode_data *bc_data, unsigned long *len)
 	}
     }
 
-    return 1;
+    return BC_RESOLVE_MIN_LEN;
 }
 
-static int
+static bc_resolve_flags
 bc_resolve_reserve(bytecode_reserve *reserve, unsigned long *len, int save,
 		   unsigned long line, const section *sect,
 		   resolve_label_func resolve_label)
 {
-    int retval = 1;
+    bc_resolve_flags retval = BC_RESOLVE_MIN_LEN;
     /*@null@*/ expr *temp;
     expr **tempp;
     /*@dependent@*/ /*@null@*/ const intnum *num;
@@ -343,14 +343,14 @@ bc_resolve_reserve(bytecode_reserve *reserve, unsigned long *len, int save,
 	if (expr_contains(temp, EXPR_FLOAT))
 	    ErrorAt(line,
 		    _("expression must not contain floating point value"));
-	retval = -1;
+	retval = BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
     } else
 	*len += intnum_get_uint(num)*reserve->itemsize;
     expr_delete(temp);
     return retval;
 }
 
-static int
+static bc_resolve_flags
 bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
 		  unsigned long line, const section *sect,
 		  resolve_label_func resolve_label)
@@ -377,7 +377,7 @@ bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
 	    start = intnum_get_uint(num);
 	expr_delete(temp);
 	if (!num)
-	    return -1;
+	    return BC_RESOLVE_UNKNOWN_LEN;
     }
 
     /* Try to convert maxlen to integer value */
@@ -396,7 +396,7 @@ bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
 	    maxlen = intnum_get_uint(num);
 	expr_delete(temp);
 	if (!num)
-	    return -1;
+	    return BC_RESOLVE_UNKNOWN_LEN;
     }
 
     /* FIXME: Search include path for filename.  Save full path back into
@@ -408,12 +408,12 @@ bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
     if (!f) {
 	ErrorAt(line, _("`incbin': unable to open file `%s'"),
 		incbin->filename);
-	return -1;
+	return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
     }
     if (fseek(f, 0L, SEEK_END) < 0) {
 	ErrorAt(line, _("`incbin': unable to seek on file `%s'"),
 		incbin->filename);
-	return -1;
+	return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
     }
     flen = (unsigned long)ftell(f);
     fclose(f);
@@ -429,14 +429,14 @@ bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
 	if (maxlen < flen)
 	    flen = maxlen;
     *len += flen;
-    return 1;
+    return BC_RESOLVE_MIN_LEN;
 }
 
-int
+bc_resolve_flags
 bc_resolve(bytecode *bc, int save, const section *sect,
 	   resolve_label_func resolve_label)
 {
-    int retval = 1;
+    bc_resolve_flags retval = BC_RESOLVE_MIN_LEN;
     bytecode_data *bc_data;
     bytecode_reserve *reserve;
     bytecode_incbin *incbin;
@@ -487,14 +487,14 @@ bc_resolve(bytecode *bc, int save, const section *sect,
 	    if (expr_contains(temp, EXPR_FLOAT))
 		ErrorAt(bc->line,
 			_("expression must not contain floating point value"));
-	    retval = -1;
+	    retval = BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 	} else
 	    bc->len *= intnum_get_uint(num);
 	expr_delete(temp);
     }
 
     /* If we got an error somewhere along the line, clear out any calc len */
-    if (retval < 0)
+    if (retval & BC_RESOLVE_UNKNOWN_LEN)
 	bc->len = 0;
 
     return retval;

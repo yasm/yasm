@@ -1,0 +1,4 @@
+./src/objfmts/bin/tests/reserve-err.asm:4: expression must not contain floating point value
+./src/objfmts/bin/tests/reserve-err.asm:5: expression must not contain floating point value
+./src/objfmts/bin/tests/reserve-err.asm:11: expression must not contain floating point value
+./src/objfmts/bin/tests/reserve-err.asm:12: expression must not contain floating point value
