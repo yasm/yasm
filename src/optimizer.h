@@ -25,10 +25,10 @@
 /* Interface to the optimizer module(s) */
 typedef struct optimizer_s {
     /* one-line description of the optimizer */
-    char *name;
+    const char *name;
 
     /* keyword used to select optimizer on the command line */
-    char *keyword;
+    const char *keyword;
 
     /* Main entrance point for the optimizer.
      *

@@ -25,10 +25,10 @@
 /* Interface to the object format module(s) */
 typedef struct objfmt_s {
     /* one-line description of the format */
-    char *name;
+    const char *name;
 
     /* keyword used to select format on the command line */
-    char *keyword;
+    const char *keyword;
 
     /* default (starting) section name */
     const char *default_section_name;

@@ -25,10 +25,10 @@
 /* Interface to the preprocesor module(s) */
 typedef struct preproc_s {
     /* one-line description of the preprocessor */
-    char *name;
+    const char *name;
 
     /* keyword used to select preprocessor on the command line */
-    char *keyword;
+    const char *keyword;
 
     /* Initializes preprocessor.
      *

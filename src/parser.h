@@ -25,10 +25,10 @@
 /* Interface to the parser module(s) -- the "front end" of the assembler */
 typedef struct parser_s {
     /* one-line description of the parser */
-    char *name;
+    const char *name;
 
     /* keyword used to select parser on the command line */
-    char *keyword;
+    const char *keyword;
 
     /* NULL-terminated list of preprocessors that are valid to use with this
      * parser.  The raw preprocessor (raw_preproc) should always be in this
