@@ -1,4 +1,4 @@
-/* $Id: bison.y.in,v 1.10 2001/06/13 05:43:59 mu Exp $
+/* $Id: bison.y.in,v 1.11 2001/07/04 04:24:52 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -44,6 +44,11 @@ extern void yyerror(char *);
 	char *name;
 	int line;
     } syminfo;
+    struct {
+	unsigned char d1;
+	unsigned char d2;
+	unsigned char d3;
+    } groupdata;
     effaddr ea_val;
     immval im_val;
     bytecode bc;

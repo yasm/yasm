@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.7 2001/05/30 08:02:47 peter Exp $
+; $Id: instrs.dat,v 1.8 2001/07/04 04:24:52 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -58,219 +58,245 @@
 ;  Doublecheck AMD and Cyrix instructions.
 ;  Doublecheck the segreg mov instructions.
 ;
+; !Grp	Operands		OpSize	Opcode		EffAddr		Imm	CPU
+;
+; Instruction Groupings (to shorten parser code).
+;  The $0.1, $0.2, and $0.3 will get replaced with the parameters given for
+;   the instruction using the group during lexing & parsing.  These parameters
+;   may be in the opcode, effaddr, or immediate.
+;  The first CPU grouping for the instruction is OR'ed with the CPU value in
+;   the group CPU fields with #0 in their list.  This allows one grouping to
+;   be used for instructions with different CPU values.
+;  Restrictions on groupings:
+;   - $0.? may not appear in the operand, the opsize, the first part of the
+;     effaddr, the second part of the imm, or the CPU fields.
+;   - #0, #1 may only appear in the CPU field.
+;  Restrictions on instructions based on groupings:
+;   - no other operand combinations are allowed (eg, if an instruction uses a
+;     group, that must be the ONLY line for the instruction)
+;
+; Notes on code generation:
+;  Each group generates a lex token of the group name (sans !).  Bison rules
+;   are generated for each of the operand combinations for the group just as
+;   with a regular instruction, except for the addition of the $0.? fields.
+;   Each $0.? field is replaced by $1.d? in the generated code (eg,
+;   $0.1->$1.d1, etc).
+;  When an instruction that uses a group is encountered, eg:
+;   inst!grpname  parm1[,parm2[,parm3]]
+;  The following lex code is generated:
+;   inst { yylval.groupdata.d1=0xparm1; return GRPNAME; }
+;  (and additional yylval.groupdata.d#=0xparm#; if needed)
+;
+; Arithmetic instructions:
+!arith	REG_AL,imm8		nil	$0.1+4		nil		$2,8	8086
+!arith	REG_AX,imm16		16	$0.1+5		nil		$2,16	8086
+!arith	REG_EAX,imm32		32	$0.1+5		nil		$2,32	386
+!arith	reg8,imm		nil	80		$1r,$0.2	$2,8	8086
+!arith	mem8x,imm		nil	80		$1,$0.2		$2,8	8086
+!arith	reg8,imm8x		nil	80		$1r,$0.2	$2,8	8086
+!arith	mem,imm8x		nil	80		$1,$0.2		$2,8	8086
+!arith	reg16,imm		16	81		$1r,$0.2	$2,16	8086
+!arith	mem16x,imm		16	81		$1,$0.2		$2,16	8086
+!arith	reg16,imm16x		16	81		$1r,$0.2	$2,16	8086
+!arith	mem,imm16x		16	81		$1,$0.2		$2,16	8086
+!arith	reg32,imm		32	81		$1r,$0.2	$2,32	386
+!arith	mem32x,imm		32	81		$1,$0.2		$2,32	386
+!arith	reg32,imm32x		32	81		$1r,$0.2	$2,32	386
+!arith	mem,imm32x		32	81		$1,$0.2		$2,32	386
+!arith	reg16,imm8x		16	83		$1r,$0.2	$2,8s	8086
+!arith	mem16x,imm8x		16	83		$1,$0.2		$2,8s	8086
+!arith	reg32,imm8x		32	83		$1r,$0.2	$2,8s	386
+!arith	mem32x,imm8x		32	83		$1,$0.2		$2,8s	386
+; opcode arbitrarily picked for next 3 (could be $0.1+2/3 instead of $0.1+0/1).
+!arith	reg8,reg8		nil	$0.1		$1r,$2		nil	8086
+!arith	reg16,reg16		16	$0.1+1		$1r,$2		nil	8086
+!arith	reg32,reg32		32	$0.1+1		$1r,$2		nil	386
+!arith	mem,reg8		nil	$0.1		$1,$2		nil	8086
+!arith	mem8x,reg8		nil	$0.1		$1,$2		nil	8086
+!arith	mem,reg16		16	$0.1+1		$1,$2		nil	8086
+!arith	mem16x,reg16		16	$0.1+1		$1,$2		nil	8086
+!arith	mem,reg32		32	$0.1+1		$1,$2		nil	386
+!arith	mem32x,reg32		32	$0.1+1		$1,$2		nil	386
+!arith	reg8,mem8		nil	$0.1+2		$2,$1		nil	8086
+!arith	reg16,mem16		16	$0.1+3		$2,$1		nil	8086
+!arith	reg32,mem32		32	$0.1+3		$2,$1		nil	386
+;
+; Bit Test (BT/BTC/BTR/BTS) group:
+; arbitrary encoding, picked $1r,$2 instead of $2r,$1
+!bittest	reg16,reg16	16	0F,$0.1		$1r,$2		nil	386
+!bittest	mem,reg16	16	0F,$0.1		$1,$2		nil	386
+!bittest	mem16x,reg16	16	0F,$0.1		$1,$2		nil	386
+; arbitrary encoding, picked $1r,$2 instead of $2r,$1
+!bittest	reg32,reg32	32	0F,$0.1		$1r,$2		nil	386
+!bittest	mem,reg32	32	0F,$0.1		$1,$2		nil	386
+!bittest	mem32x,reg32	32	0F,$0.1		$1,$2		nil	386
+!bittest	reg16,imm8	16	0F,BA		$1r,$0.2	$2,8	386
+!bittest	mem16x,imm8	16	0F,BA		$1,$0.2		$2,8	386
+!bittest	reg32,imm8	32	0F,BA		$1r,$0.2	$2,8	386
+!bittest	mem32x,imm8	32	0F,BA		$1,$0.2		$2,8	386
+;
+; BSF/BSR:
+!bsfr	reg16,rm16		16	0F,BC+$0.1	$2,$1		nil	386
+!bsfr	reg32,rm32		32	0F,BC+$0.1	$2,$1		nil	386
+;
+; Cyrix MMX instructions:
+!cyrixmmx	MMXREG,rm64	nil	0F,$0.1		$2,$1		nil	P5,MMX,CYRIX
+;
+; Cyrix System Manaagement Mode instructions:
+!cyrixsmm	mem80		nil	0F,$0.1		$1,0		nil	486,CYRIX,SMM
+;
+; FPU reversible arithmetic instructions (with TO):
+!farith	mem32x			nil	D8		$1,$0.1		nil	8086,FPU
+!farith	mem64x			nil	DC		$1,$0.1		nil	8086,FPU
+!farith	fpureg			nil	D8,$0.2+$1	nil		nil	8086,FPU
+!farith	ST0,ST0			nil	D8,$0.2		nil		nil	8086,FPU
+!farith	ST0,FPUREG_NOTST0	nil	D8,$0.2+$2	nil		nil	8086,FPU
+!farith	TO fpureg		nil	DC,$0.3+$1	nil		nil	8086,FPU
+!farith	FPUREG_NOTST0,ST0	nil	DC,$0.3+$1	nil		nil	8086,FPU
+!farithp	fpureg		nil	DE,$0.1+$1	nil		nil	8086,FPU
+!farithp	fpureg,ST0	nil	DE,$0.1+$1	nil		nil	8086,FPU
+;
+; FPU compare group 1 (FCOM/FCOMP):
+!fcomg	mem32x			nil	D8		$1,$0.1		nil	8086,FPU
+!fcomg	mem64x			nil	DC		$1,$0.1		nil	8086,FPU
+!fcomg	fpureg			nil	D8,$0.2+$1	nil		nil	8086,FPU
+!fcomg	ST0,fpureg		nil	D8,$0.2+$2	nil		nil	8086,FPU
+;
+; FPU compare group 2 (FCOMI/FCOMIP/FUCOMI/FUCOMIP/FUCOM/FUCOMP):
+!fcomg2	fpureg			nil	$0.1,$0.2+$1	nil		nil	8086,FPU
+!fcomg2	ST0,fpureg		nil	$0.1,$0.2+$2	nil		nil	8086,FPU
+;
+; FPU integer arithmetic instructions:
+!fiarith	mem32x		nil	DA		$1,$0.1		nil	8086,FPU
+!fiarith	mem16x		nil	DE		$1,$0.1		nil	8086,FPU
+;
+; "F6" opcode group (DIV/IDIV/MUL/NEG/NOT):
+!groupf6	rm8x		nil	F6		$1,$0.1		nil	8086
+!groupf6	rm16x		16	F7		$1,$0.1		nil	8086
+!groupf6	rm32x		32	F7		$1,$0.1		nil	386
+;
+; INC/DEC:
+!incdec	rm8x			nil	FE		$1,$0.1		nil	8086
+!incdec	mem16x			16	FF		$1,$0.1		nil	8086
+!incdec	mem32x			32	FF		$1,$0.1		nil	386
+!incdec	reg16			16	$0.2+$1		nil		nil	8086
+!incdec	reg32			32	$0.2+$1		nil		nil	386
+;
+; Extension moves (MOVSX/MOVZX):
+!movszx	reg16,rm8		16	0F,$0.1		$2,$1		nil	386
+!movszx	reg32,rm8x		32	0F,$0.1		$2,$1		nil	386
+!movszx	reg32,rm16x		nil	0F,$0.1+1	$2,$1		nil	386
+;
+; AMD 3DNow! general instructions:
+!now3d	MMXREG,rm64		nil	0F,0F		$2,$1		$0.1,8	#0,3DNOW,AMD
+;
+; One byte opcode instructions with no operands:
+!onebyte	nil		nil 	$0.1		nil		nil	#0
+!onebyte16	nil		16	$0.1		nil		nil	8086
+!onebyte32	nil		32	$0.1		nil		nil	386
+;
+; 286 rm16 protected mode group (LLDT/LTR/STR/VERR/VERW):
+!prot286	rm16		nil	0F,00		$1,$0.1		nil	286,PROT,#0
+;
+; MMX/SSE2 shifts (PSLLW/PSLLD/PSLLQ/PSRAW/PSRAD/PSRLW/PSRLD/PSRLQ):
+!pshift	MMXREG,rm64		nil	0F,$0.1		$2,$1		nil	P5,MMX
+!pshift	XMMREG,rm128		nil	66,0F,$0.1	$2,$1		nil	P4,SSE2
+!pshift	MMXREG,imm8		nil	0F,$0.2		$1r,$0.3	$2,8	P5,MMX
+!pshift	XMMREG,imm8		nil	66,0F,$0.2	$1r,$0.3	$2,8	P4,SSE2
+;
+; Shift instructions (RCL/RCR/ROL/ROR/SAL/SAR/SHL/SHR):
+!shift	rm8x,ONE		nil	D0		$1,$0.1		nil	8086
+!shift	rm8x,REG_CL		nil	D2		$1,$0.1		nil	8086
+!shift	rm8x,imm8		nil	C0		$1,$0.1		$2,8	186
+!shift	rm16x,ONE		16	D1		$1,$0.1		nil	8086
+!shift	rm16x,REG_CL		16	D3		$1,$0.1		nil	8086
+!shift	rm16x,imm8		16	C1		$1,$0.1		$2,8	186
+!shift	rm32x,ONE		32	D1		$1,$0.1		nil	386
+!shift	rm32x,REG_CL		32	D3		$1,$0.1		nil	386
+!shift	rm32x,imm8		32	C1		$1,$0.1		$2,8	386
+;
+; Doubleword shifts (SHLD/SHRD):
+; arbitrary encoding, picked $1r,$2 instead of $2r,$1
+!shlrd	reg16,reg16,imm8	16	0F,$0.1		$1r,$2		$3,8	386
+!shlrd	mem,reg16,imm8		16	0F,$0.1		$1,$2		$3,8	386
+!shlrd	mem16x,reg16,imm8	16	0F,$0.1		$1,$2		$3,8	386
+; arbitrary encoding, picked $1r,$2 instead of $2r,$1
+!shlrd	reg16,reg16,REG_CL	16	0F,$0.1+1	$1r,$2		nil	386
+!shlrd	mem,reg16,REG_CL	16	0F,$0.1+1	$1,$2		nil	386
+!shlrd	mem16x,reg16,REG_CL	16	0F,$0.1+1	$1,$2		nil	386
+; arbitrary encoding, picked $1r,$2 instead of $2r,$1
+!shlrd	reg32,reg32,imm8	32	0F,$0.1		$1r,$2		$3,8	386
+!shlrd	mem,reg32,imm8		32	0F,$0.1		$1,$2		$3,8	386
+!shlrd	mem32x,reg32,imm8	32	0F,$0.1		$1,$2		$3,8	386
+; arbitrary encoding, picked $1r,$2 instead of $2r,$1
+!shlrd	reg32,reg32,REG_CL	32	0F,$0.1+1	$1r,$2		nil	386
+!shlrd	mem,reg32,REG_CL	32	0F,$0.1+1	$1,$2		nil	386
+!shlrd	mem32x,reg32,REG_CL	32	0F,$0.1+1	$1,$2		nil	386
+;
+; SSE/SSE2 standard variations:
+!sse2pd	XMMREG,rm128		nil	66,0F,$0.1	$2,$1		nil	P4,SSE2
+!sseps	XMMREG,rm128		nil	0F,$0.1		$2,$1		nil	KATMAI,SSE
+!sse2ps	XMMREG,rm128		nil	0F,$0.1		$2,$1		nil	P4,SSE2
+!sse2sd	XMMREG,rm128		nil	F2,0F,$0.1	$2,$1		nil	P4,SSE2
+!sse2ss	XMMREG,rm128		nil	F3,0F,$0.1	$2,$1		nil	P4,SSE2
+;
+; SSE2/P5 MMX shared instructions:
+!sse2mmx	MMXREG,rm64	nil	0F,$0.1		$2,$1		nil	#0,MMX
+!sse2mmx	XMMREG,rm128	nil	66,0F,$0.1	$2,$1		nil	P4,SSE2
+;
+; Two byte opcode instructions with no operands:
+!twobyte	nil		nil	$0.1,$0.2	nil		nil	#0
+;
+; Three byte opcode instructions with no operands:
+!threebyte	nil		nil	$0.1,$0.2,$0.3	nil		nil	#0
+;
+;
+; Instruction Lines:
 ; Inst	Operands		OpSize	Opcode		EffAddr	Imm	CPU
-aaa	nil			nil 	37		nil	nil	8086
+;  *or*
+; Inst!Group		Parameters	CPU #0
+aaa!onebyte		37		8086
 aad	nil			nil	D5,0A		nil	nil	8086
 aad	imm8			nil	D5		nil	$1,8	8086
 aam	nil			nil	D4,0A		nil	nil	8086
 aam	imm8			nil	D4		nil	$1,8	8086
-aas	nil			nil	3F		nil	nil	8086
-adc	REG_AL,imm8		nil	14		nil	$2,8	8086
-adc	REG_AX,imm16		16	15		nil	$2,16	8086
-adc	REG_EAX,imm32		32	15		nil	$2,32	386
-adc	reg8,imm		nil	80		$1r,2	$2,8	8086
-adc	mem8x,imm		nil	80		$1,2	$2,8	8086
-adc	reg8,imm8x		nil	80		$1r,2	$2,8	8086
-adc	mem,imm8x		nil	80		$1,2	$2,8	8086
-adc	reg16,imm		16	81		$1r,2	$2,16	8086
-adc	mem16x,imm		16	81		$1,2	$2,16	8086
-adc	reg16,imm16x		16	81		$1r,2	$2,16	8086
-adc	mem,imm16x		16	81		$1,2	$2,16	8086
-adc	reg32,imm		32	81		$1r,2	$2,32	386
-adc	mem32x,imm		32	81		$1,2	$2,32	386
-adc	reg32,imm32x		32	81		$1r,2	$2,32	386
-adc	mem,imm32x		32	81		$1,2	$2,32	386
-adc	reg16,imm8x		16	83		$1r,2	$2,8s	8086
-adc	mem16x,imm8x		16	83		$1,2	$2,8s	8086
-adc	reg32,imm8x		32	83		$1r,2	$2,8s	386
-adc	mem32x,imm8x		32	83		$1,2	$2,8s	386
-; opcode arbitrarily picked for next 3 (could be 12/13 instead of 10/11).
-adc	reg8,reg8		nil	10		$1r,$2	nil	8086
-adc	reg16,reg16		16	11		$1r,$2	nil	8086
-adc	reg32,reg32		32	11		$1r,$2	nil	386
-adc	mem,reg8		nil	10		$1,$2	nil	8086
-adc	mem8x,reg8		nil	10		$1,$2	nil	8086
-adc	mem,reg16		16	11		$1,$2	nil	8086
-adc	mem16x,reg16		16	11		$1,$2	nil	8086
-adc	mem,reg32		32	11		$1,$2	nil	386
-adc	mem32x,reg32		32	11		$1,$2	nil	386
-adc	reg8,mem8		nil	12		$2,$1	nil	8086
-adc	reg16,mem16		16	13		$2,$1	nil	8086
-adc	reg32,mem32		32	13		$2,$1	nil	386
-add	REG_AL,imm8		nil	04		nil	$2,8	8086
-add	REG_AX,imm16		16	05		nil	$2,16	8086
-add	REG_EAX,imm32		32	05		nil	$2,32	386
-add	reg8,imm		nil	80		$1r,0	$2,8	8086
-add	mem8x,imm		nil	80		$1,0	$2,8	8086
-add	reg8,imm8x		nil	80		$1r,0	$2,8	8086
-add	mem,imm8x		nil	80		$1,0	$2,8	8086
-add	reg16,imm		16	81		$1r,0	$2,16	8086
-add	mem16x,imm		16	81		$1,0	$2,16	8086
-add	reg16,imm16x		16	81		$1r,0	$2,16	8086
-add	mem,imm16x		16	81		$1,0	$2,16	8086
-add	reg32,imm		32	81		$1r,0	$2,32	386
-add	mem32x,imm		32	81		$1,0	$2,32	386
-add	reg32,imm32x		32	81		$1r,0	$2,32	386
-add	mem,imm32x		32	81		$1,0	$2,32	386
-add	reg16,imm8x		16	83		$1r,0	$2,8s	8086
-add	mem16x,imm8x		16	83		$1,0	$2,8s	8086
-add	reg32,imm8x		32	83		$1r,0	$2,8s	386
-add	mem32x,imm8x		32	83		$1,0	$2,8s	386
-; opcode arbitrarily picked for next 3 (could be 02/03 instead of 00/01).
-add	reg8,reg8		nil	00		$1r,$2	nil	8086
-add	reg16,reg16		16	01		$1r,$2	nil	8086
-add	reg32,reg32		32	01		$1r,$2	nil	386
-add	mem,reg8		nil	00		$1,$2	nil	8086
-add	mem8x,reg8		nil	00		$1,$2	nil	8086
-add	mem,reg16		16	01		$1,$2	nil	8086
-add	mem16x,reg16		16	01		$1,$2	nil	8086
-add	mem,reg32		32	01		$1,$2	nil	386
-add	mem32x,reg32		32	01		$1,$2	nil	386
-add	reg8,mem8		nil	02		$2,$1	nil	8086
-add	reg16,mem16		16	03		$2,$1	nil	8086
-add	reg32,mem32		32	03		$2,$1	nil	386
-addpd	XMMREG,rm128		nil	66,0F,58	$2,$1	nil	P4,SSE2
-addps	XMMREG,rm128		nil	0F,58		$2,$1	nil	KATMAI,SSE
-addsd	XMMREG,rm128		nil	F2,0F,58	$2,$1	nil	P4,SSE2
-addss	XMMREG,rm128		nil	F3,0F,58	$2,$1	nil	P4,SSE2
-and	REG_AL,imm8		nil	24		nil	$2,8	8086
-and	REG_AX,imm16		16	25		nil	$2,16	8086
-and	REG_EAX,imm32		32	25		nil	$2,32	386
-and	reg8,imm		nil	80		$1r,4	$2,8	8086
-and	mem8x,imm		nil	80		$1,4	$2,8	8086
-and	reg8,imm8x		nil	80		$1r,4	$2,8	8086
-and	mem,imm8x		nil	80		$1,4	$2,8	8086
-and	reg16,imm		16	81		$1r,4	$2,16	8086
-and	mem16x,imm		16	81		$1,4	$2,16	8086
-and	reg16,imm16x		16	81		$1r,4	$2,16	8086
-and	mem,imm16x		16	81		$1,4	$2,16	8086
-and	reg32,imm		32	81		$1r,4	$2,32	386
-and	mem32x,imm		32	81		$1,4	$2,32	386
-and	reg32,imm32x		32	81		$1r,4	$2,32	386
-and	mem,imm32x		32	81		$1,4	$2,32	386
-and	reg16,imm8x		16	83		$1r,4	$2,8s	8086
-and	mem16x,imm8x		16	83		$1,4	$2,8s	8086
-and	reg32,imm8x		32	83		$1r,4	$2,8s	386
-and	mem32x,imm8x		32	83		$1,4	$2,8s	386
-; opcode arbitrarily picked for next 3 (could be 22/23 instead of 20/21).
-and	reg8,reg8		nil	20		$1r,$2	nil	8086
-and	reg16,reg16		16	21		$1r,$2	nil	8086
-and	reg32,reg32		32	21		$1r,$2	nil	386
-and	mem,reg8		nil	20		$1,$2	nil	8086
-and	mem8x,reg8		nil	20		$1,$2	nil	8086
-and	mem,reg16		16	21		$1,$2	nil	8086
-and	mem16x,reg16		16	21		$1,$2	nil	8086
-and	mem,reg32		32	21		$1,$2	nil	386
-and	mem32x,reg32		32	21		$1,$2	nil	386
-and	reg8,mem8		nil	22		$2,$1	nil	8086
-and	reg16,mem16		16	23		$2,$1	nil	8086
-and	reg32,mem32		32	23		$2,$1	nil	386
-andpd	XMMREG,rm128		nil	66,0F,54	$2,$1	nil	P4,SSE2
-andps	XMMREG,rm128		nil	0F,54		$2,$1	nil	KATMAI,SSE
-andnpd	XMMREG,rm128		nil	66,0F,55	$2,$1	nil	P4,SSE2
-andnps	XMMREG,rm128		nil	0F,55		$2,$1	nil	KATMAI,SSE
+aas!onebyte		3F		8086
+adc!arith		10,2
+add!arith		00,0
+addpd!sse2pd		58
+addps!sseps		58
+addsd!sse2sd		58
+addss!sse2ss		58
+and!arith		20,4
+andpd!sse2pd		54
+andps!sse2ps		54
+andnpd!sse2pd		55
+andnps!sse2ps		55
 arpl	rm16,reg16		nil	63		$1,$2	nil	286,PROT
 bound	reg16,mem16		16	62		$2,$1	nil	186
 bound	reg32,mem32		32	62		$2,$1	nil	386
-bsf	reg16,rm16		16	0F,BC		$2,$1	nil	386
-bsf	reg32,rm32		32	0F,BC		$2,$1	nil	386
-bsr	reg16,rm16		16	0F,BD		$2,$1	nil	386
-bsr	reg32,rm32		32	0F,BD		$2,$1	nil	386
+bsf!bsfr		0
+bsr!bsfr		1
 bswap	reg32			32	0F,C8+$1	nil	nil	486
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-bt	reg16,reg16		16	0F,A3		$1r,$2	nil	386
-bt	mem,reg16		16	0F,A3		$1,$2	nil	386
-bt	mem16x,reg16		16	0F,A3		$1,$2	nil	386
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-bt	reg32,reg32		32	0F,A3		$1r,$2	nil	386
-bt	mem,reg32		32	0F,A3		$1,$2	nil	386
-bt	mem32x,reg32		32	0F,A3		$1,$2	nil	386
-bt	reg16,imm8		16	0F,BA		$1r,4	$2,8	386
-bt	mem16x,imm8		16	0F,BA		$1,4	$2,8	386
-bt	reg32,imm8		32	0F,BA		$1r,4	$2,8	386
-bt	mem32x,imm8		32	0F,BA		$1,4	$2,8	386
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-btc	reg16,reg16		16	0F,BB		$1r,$2	nil	386
-btc	mem,reg16		16	0F,BB		$1,$2	nil	386
-btc	mem16x,reg16		16	0F,BB		$1,$2	nil	386
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-btc	reg32,reg32		32	0F,BB		$1r,$2	nil	386
-btc	mem,reg32		32	0F,BB		$1,$2	nil	386
-btc	mem32x,reg32		32	0F,BB		$1,$2	nil	386
-btc	reg16,imm8		16	0F,BA		$1r,7	$2,8	386
-btc	mem16x,imm8		16	0F,BA		$1,7	$2,8	386
-btc	reg32,imm8		32	0F,BA		$1r,7	$2,8	386
-btc	mem32x,imm8		32	0F,BA		$1,7	$2,8	386
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-btr	reg16,reg16		16	0F,B3		$1r,$2	nil	386
-btr	mem,reg16		16	0F,B3		$1,$2	nil	386
-btr	mem16x,reg16		16	0F,B3		$1,$2	nil	386
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-btr	reg32,reg32		32	0F,B3		$1r,$2	nil	386
-btr	mem,reg32		32	0F,B3		$1,$2	nil	386
-btr	mem32x,reg32		32	0F,B3		$1,$2	nil	386
-btr	reg16,imm8		16	0F,BA		$1r,6	$2,8	386
-btr	mem16x,imm8		16	0F,BA		$1,6	$2,8	386
-btr	reg32,imm8		32	0F,BA		$1r,6	$2,8	386
-btr	mem32x,imm8		32	0F,BA		$1,6	$2,8	386
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-bts	reg16,reg16		16	0F,AB		$1r,$2	nil	386
-bts	mem,reg16		16	0F,AB		$1,$2	nil	386
-bts	mem16x,reg16		16	0F,AB		$1,$2	nil	386
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-bts	reg32,reg32		32	0F,AB		$1r,$2	nil	386
-bts	mem,reg32		32	0F,AB		$1,$2	nil	386
-bts	mem32x,reg32		32	0F,AB		$1,$2	nil	386
-bts	reg16,imm8		16	0F,BA		$1r,5	$2,8	386
-bts	mem16x,imm8		16	0F,BA		$1,5	$2,8	386
-bts	reg32,imm8		32	0F,BA		$1r,5	$2,8	386
-bts	mem32x,imm8		32	0F,BA		$1,5	$2,8	386
+bt!bittest		A3,4
+btc!bittest		BB,7
+btr!bittest		B3,6
+bts!bittest		AB,5
 ; call
-cbw	nil			16	98		nil	nil	8086
-cwde	nil			32	98		nil	nil	386
-clc	nil			nil	F8		nil	nil	8086
-cld	nil			nil	FC		nil	nil	8086
+cbw!onebyte16		98
+cwde!onebyte32		98
+clc!onebyte		F8		8086
+cld!onebyte		FC		8086
 clflush	mem8			nil	0F,AE		$1,7	nil	KATMAI
-cli	nil			nil	FA		nil	nil	8086
-clts	nil			nil	0F,06		nil	nil	286,PRIV
-cmc	nil			nil	F5		nil	nil	8086
+cli!onebyte		FA		8086
+clts!twobyte		0F,06		286,PRIV
+cmc!onebyte		F5		8086
 ; cmov
-cmp	REG_AL,imm8		nil	3C		nil	$2,8	8086
-cmp	REG_AX,imm16		16	3D		nil	$2,16	8086
-cmp	REG_EAX,imm32		32	3D		nil	$2,32	386
-cmp	reg8,imm		nil	80		$1r,7	$2,8	8086
-cmp	mem8x,imm		nil	80		$1,7	$2,8	8086
-cmp	reg8,imm8x		nil	80		$1r,7	$2,8	8086
-cmp	mem,imm8x		nil	80		$1,7	$2,8	8086
-cmp	reg16,imm		16	81		$1r,7	$2,16	8086
-cmp	mem16x,imm		16	81		$1,7	$2,16	8086
-cmp	reg16,imm16x		16	81		$1r,7	$2,16	8086
-cmp	mem,imm16x		16	81		$1,7	$2,16	8086
-cmp	reg32,imm		32	81		$1r,7	$2,32	386
-cmp	mem32x,imm		32	81		$1,7	$2,32	386
-cmp	reg32,imm32x		32	81		$1r,7	$2,32	386
-cmp	mem,imm32x		32	81		$1,7	$2,32	386
-cmp	reg16,imm8x		16	83		$1r,7	$2,8s	8086
-cmp	mem16x,imm8x		16	83		$1,7	$2,8s	8086
-cmp	reg32,imm8x		32	83		$1r,7	$2,8s	386
-cmp	mem32x,imm8x		32	83		$1,7	$2,8s	386
-; opcode arbitrarily picked for next 3 (could be 3A/3B instead of 38/39).
-cmp	reg8,reg8		nil	38		$1r,$2	nil	8086
-cmp	reg16,reg16		16	39		$1r,$2	nil	8086
-cmp	reg32,reg32		32	39		$1r,$2	nil	386
-cmp	mem,reg8		nil	38		$1,$2	nil	8086
-cmp	mem8x,reg8		nil	38		$1,$2	nil	8086
-cmp	mem,reg16		16	39		$1,$2	nil	8086
-cmp	mem16x,reg16		16	39		$1,$2	nil	8086
-cmp	mem,reg32		32	39		$1,$2	nil	386
-cmp	mem32x,reg32		32	39		$1,$2	nil	386
-cmp	reg8,mem8		nil	3A		$2,$1	nil	8086
-cmp	reg16,mem16		16	3B		$2,$1	nil	8086
-cmp	reg32,mem32		32	3B		$2,$1	nil	386
+cmp!arith		38,7
 cmppd	XMMREG,rm128,imm8	nil	66,0F,C2	$2,$1	$3,8	P4,SSE2
 cmpps	XMMREG,rm128,imm8	nil	0F,C2		$2,$1	$3,8	KATMAI,SSE
-cmpsb	nil			nil	A6		nil	nil	8086
-cmpsw	nil			16	A7		nil	nil	8086
+cmpsb!onebyte		A6		8086
+cmpsw!onebyte16		A7
 cmpsd	nil			32	A7		nil	nil	386
 cmpsd	XMMREG,rm128,imm8	nil	F2,0F,C2	$2,$1	$3,8	P4,SSE2
 cmpss	XMMREG,rm128,imm8	nil	F3,0F,C2	$2,$1	$3,8	P4,SSE2
@@ -287,109 +313,69 @@ cmpxchg	reg32,reg32		32	0F,B1		$1r,$2	nil	486
 cmpxchg	mem,reg32		32	0F,B1		$1,$2	nil	486
 cmpxchg	mem32x,reg32		32	0F,B1		$1,$2	nil	486
 cmpxchg8b	mem64		nil	0F,C7		$1,1	nil	P5
-comisd	XMMREG,rm128		nil	66,0F,2F	$2,$1	nil	P4,SSE2
+comisd!sse2pd		2F
 comiss	XMMREG,rm128		nil	0F,2F		$2,$1	nil	KATMAI,SSE
-cpuid	nil			nil	0F,A2		nil	nil	P5
-cvtdq2pd	XMMREG,rm128	nil	F3,0F,E6	$2,$1	nil	P4,SSE2
-cvtdq2ps	XMMREG,rm128	nil	0F,5B		$2,$1	nil	P4,SSE2
-cvtpd2dq	XMMREG,rm128	nil	F2,0F,E6	$2,$1	nil	P4,SSE2
-cvtpd2pi	XMMREG,rm128	nil	66,0F,2D	$2,$1	nil	P4,SSE2
-cvtpd2ps	XMMREG,rm128	nil	66,0F,5A	$2,$1	nil	P4,SSE2
-cvtpi2pd	XMMREG,rm128	nil	66,0F,2A	$2,$1	nil	P4,SSE2
-cvtpi2ps	XMMREG,rm128	nil	0F,2A		$2,$1	nil	P4,SSE2
-cvtps2dq	XMMREG,rm128	nil	66,0F,5B	$2,$1	nil	P4,SSE2
-cvtps2pd	XMMREG,rm128	nil	0F,5A		$2,$1	nil	P4,SSE2
-cvtps2pi	XMMREG,rm128	nil	0F,2D		$2,$1	nil	P4,SSE2
-cvtsd2si	XMMREG,rm128	nil	F2,0F,2D	$2,$1	nil	P4,SSE2
-cvtsd2ss	XMMREG,rm128	nil	F2,0F,5A	$2,$1	nil	P4,SSE2
-cvtsi2sd	XMMREG,rm128	nil	F2,0F,2A	$2,$1	nil	P4,SSE2
-cvtsi2ss	XMMREG,rm128	nil	F3,0F,2A	$2,$1	nil	P4,SSE2
-cvtss2sd	XMMREG,rm128	nil	F3,0F,5A	$2,$1	nil	P4,SSE2
-cvtss2si	XMMREG,rm128	nil	F3,0F,2D	$2,$1	nil	P4,SSE2
-cvttpd2pi	XMMREG,rm128	nil	66,0F,2C	$2,$1	nil	P4,SSE2
-cvttpd2dq	XMMREG,rm128	nil	66,0F,E6	$2,$1	nil	P4,SSE2
-cvttps2dq	XMMREG,rm128	nil	F3,0F,5B	$2,$1	nil	P4,SSE2
-cvttps2pi	XMMREG,rm128	nil	0F,2C		$2,$1	nil	P4,SSE2
-cvttsd2si	XMMREG,rm128	nil	F2,0F,2C	$2,$1	nil	P4,SSE2
-cvttss2si	XMMREG,rm128	nil	F3,0F,2C	$2,$1	nil	P4,SSE2
-cwd	nil			16	99		nil	nil	8086
-cdq	nil			32	99		nil	nil	386
-daa	nil			nil	27		nil	nil	8086
-das	nil			nil	2F		nil	nil	8086
-dec	rm8x			nil	FE		$1,1	nil	8086
-dec	mem16x			16	FF		$1,1	nil	8086
-dec	mem32x			32	FF		$1,1	nil	386
-dec	reg16			16	48+$1		nil	nil	8086
-dec	reg32			32	48+$1		nil	nil	386
-div	rm8x			nil	F6		$1,6	nil	8086
-div	rm16x			16	F7		$1,6	nil	8086
-div	rm32x			32	F7		$1,6	nil	386
-divpd	XMMREG,rm128		nil	66,0F,5E	$2,$1	nil	P4,SSE2
-divps	XMMREG,rm128		nil	0F,5E		$2,$1	nil	KATMAI,SSE
-divsd	XMMREG,rm128		nil	F2,0F,5E	$2,$1	nil	P4,SSE2
-divss	XMMREG,rm128		nil	F3,0F,5E	$2,$1	nil	P4,SSE2
-emms	nil			nil	0F,77		nil	nil	P5,MMX
+cpuid!twobyte		0F,A2		P5
+cvtdq2pd!sse2ss		E6
+cvtdq2ps!sse2ps		5B
+cvtpd2dq!sse2sd		E6
+cvtpd2pi!sse2pd		2D
+cvtpd2ps!sse2pd		5A
+cvtpi2pd!sse2pd		2A
+cvtpi2ps!sse2ps		2A
+cvtps2dq!sse2pd		5B
+cvtps2pd!sse2ps		5A
+cvtps2pi!sse2ps		2D
+cvtsd2si!sse2sd		2D
+cvtsd2ss!sse2sd		5A
+cvtsi2sd!sse2sd		2A
+cvtsi2ss!sse2ss		2A
+cvtss2sd!sse2ss		5A
+cvtss2si!sse2ss		2D
+cvttpd2pi!sse2pd	2C
+cvttpd2dq!sse2pd	E6
+cvttps2dq!sse2ss	5B
+cvttps2pi!sse2ps	2C
+cvttsd2si!sse2sd	2C
+cvttss2si!sse2ss	2C
+cwd!onebyte16		99
+cdq!onebyte32		99
+daa!onebyte		27		8086
+das!onebyte		2F		8086
+dec!incdec		1,48
+div!groupf6		6
+divpd!sse2pd		5E
+divps!sseps		5E
+divsd!sse2sd		5E
+divss!sse2ss		5E
+emms!twobyte		0F,77		P5,MMX
 enter	imm16,imm8		nil	C8		$1i,16	$2,8	186
-f2xm1	nil			nil	D9,F0		nil	nil	8086,FPU
-fabs	nil			nil	D9,E1		nil	nil	8086,FPU
-fadd	mem32x			nil	D8		$1,0	nil	8086,FPU
-fadd	mem64x			nil	DC		$1,0	nil	8086,FPU
-fadd	fpureg			nil	D8,C0+$1	nil	nil	8086,FPU
-fadd	ST0,ST0			nil	D8,C0		nil	nil	8086,FPU
-fadd	ST0,FPUREG_NOTST0	nil	D8,C0+$2	nil	nil	8086,FPU
-fadd	TO fpureg		nil	DC,C0+$1	nil	nil	8086,FPU
-fadd	FPUREG_NOTST0,ST0	nil	DC,C0+$1	nil	nil	8086,FPU
-faddp	fpureg			nil	DE,C0+$1	nil	nil	8086,FPU
-faddp	fpureg,ST0		nil	DE,C0+$1	nil	nil	8086,FPU
-fiadd	mem32x			nil	DA		$1,0	nil	8086,FPU
-fiadd	mem16x			nil	DE		$1,0	nil	8086,FPU
+f2xm1!twobyte		D9,F0		8086,FPU
+fabs!twobyte		D9,E1		8086,FPU
+fadd!farith		0,C0,C0
+faddp!farithp		C0
+fiadd!fiarith		0
 fbld	mem80			nil	DF		$1,4	nil	8086,FPU
 fbstp	mem80			nil	DF		$1,6	nil	8086,FPU
-fchs	nil			nil	D9,E0		nil	nil	8086,FPU
-fclex	nil			nil	9B,DB,E2	nil	nil	8086,FPU
-fnclex	nil			nil	DB,E2		nil	nil	8086,FPU
+fchs!twobyte		D9,E0		8086,FPU
+fclex!threebyte		9B,DB,E2	8086,FPU
+fnclex!twobyte		DB,E2		8086,FPU
 ; fcmov
-fcom	mem32x			nil	D8		$1,2	nil	8086,FPU
-fcom	mem64x			nil	DC		$1,2	nil	8086,FPU
-fcom	fpureg			nil	D8,D0+$1	nil	nil	8086,FPU
-fcom	ST0,fpureg		nil	D8,D0+$2	nil	nil	8086,FPU
-fcomp	mem32x			nil	D8		$1,3	nil	8086,FPU
-fcomp	mem64x			nil	DC		$1,3	nil	8086,FPU
-fcomp	fpureg			nil	D8,D8+$1	nil	nil	8086,FPU
-fcomp	ST0,fpureg		nil	D8,D8+$2	nil	nil	8086,FPU
-fcompp	nil			nil	DE,D9		nil	nil	8086,FPU
-fcomi	fpureg			nil	DB,F0+$1	nil	nil	8086,FPU
-fcomi	ST0,fpureg		nil	DB,F0+$2	nil	nil	8086,FPU
-fcomip	fpureg			nil	DF,F0+$1	nil	nil	8086,FPU
-fcomip	ST0,fpureg		nil	DF,F0+$2	nil	nil	8086,FPU
-fucomi	fpureg			nil	DB,E8+$1	nil	nil	8086,FPU
-fucomi	ST0,fpureg		nil	DB,E8+$2	nil	nil	8086,FPU
-fucomip	fpureg			nil	DF,E8+$1	nil	nil	8086,FPU
-fucomip	ST0,fpureg		nil	DF,E8+$2	nil	nil	8086,FPU
-fcos	nil			nil	D9,FF		nil	nil	8086,FPU
-fdecstp	nil			nil	D9,F6		nil	nil	8086,FPU
-fdiv	mem32x			nil	D8		$1,6	nil	8086,FPU
-fdiv	mem64x			nil	DC		$1,6	nil	8086,FPU
-fdiv	fpureg			nil	D8,F0+$1	nil	nil	8086,FPU
-fdiv	ST0,ST0			nil	D8,F0		nil	nil	8086,FPU
-fdiv	ST0,FPUREG_NOTST0	nil	D8,F0+$2	nil	nil	8086,FPU
-fdiv	TO fpureg		nil	DC,F8+$1	nil	nil	8086,FPU
-fdiv	FPUREG_NOTST0,ST0	nil	DC,F8+$1	nil	nil	8086,FPU
-fdivp	fpureg			nil	DE,F8+$1	nil	nil	8086,FPU
-fdivp	fpureg,ST0		nil	DE,F8+$1	nil	nil	8086,FPU
-fidiv	mem32x			nil	DA		$1,6	nil	8086,FPU
-fidiv	mem16x			nil	DE		$1,6	nil	8086,FPU
-fdivr	mem32x			nil	D8		$1,7	nil	8086,FPU
-fdivr	mem64x			nil	DC		$1,7	nil	8086,FPU
-fdivr	fpureg			nil	D8,F8+$1	nil	nil	8086,FPU
-fdivr	ST0,ST0			nil	D8,F8		nil	nil	8086,FPU
-fdivr	ST0,FPUREG_NOTST0	nil	D8,F8+$2	nil	nil	8086,FPU
-fdivr	TO fpureg		nil	DC,F0+$1	nil	nil	8086,FPU
-fdivr	FPUREG_NOTST0,ST0	nil	DC,F0+$1	nil	nil	8086,FPU
-fdivrp	fpureg			nil	DE,F0+$1	nil	nil	8086,FPU
-fdivrp	fpureg,ST0		nil	DE,F0+$1	nil	nil	8086,FPU
-fidivr	mem32x			nil	DA		$1,7	nil	8086,FPU
-fidivr	mem16x			nil	DE		$1,7	nil	8086,FPU
+fcom!fcomg		2,D0
+fcomp!fcomg		3,D8
+fcompp!twobyte		DE,D9		8086,FPU
+fcomi!fcomg2		DB,F0
+fcomip!fcomg2		DF,F0
+fucomi!fcomg2		DB,E8
+fucomip!fcomg2		DF,E8
+fcos!twobyte		D9,FF		8086,FPU
+fdecstp!twobyte		D9,F6		8086,FPU
+fdiv!farith		6,F0,F8
+fdivp!farithp		F8
+fidiv!fiarith		6
+fdivr!farith		7,F8,F0
+fdivrp!farithp		F0
+fidivr!fiarith		7
 ffree	fpureg			nil	DD,C0+$1	nil	nil	8086,FPU
 ficom	mem16x			nil	DE		$1,2	nil	8086,FPU
 ficom	mem32x			nil	DA		$1,2	nil	8086,FPU
@@ -398,9 +384,9 @@ ficomp	mem32x			nil	DA		$1,3	nil	8086,FPU
 fild	mem16x			nil	DF		$1,0	nil	8086,FPU
 fild	mem32x			nil	DB		$1,0	nil	8086,FPU
 fild	mem64x			nil	DF		$1,5	nil	8086,FPU
-fincstp	nil			nil	D9,F7		nil	nil	8086,FPU
-finit	nil			nil	9B,DB,E3	nil	nil	8086,FPU
-fninit	nil			nil	DB,E3		nil	nil	8086,FPU
+fincstp!twobyte		D9,F7		8086,FPU
+finit!threebyte		9B,DB,E3	8086,FPU
+fninit!twobyte		DB,E3		8086,FPU
 fist	mem16x			nil	DF		$1,2	nil	8086,FPU
 fist	mem32x			nil	DB		$1,2	nil	8086,FPU
 fistp	mem16x			nil	DF		$1,3	nil	8086,FPU
@@ -410,39 +396,31 @@ fld	mem32x			nil	D9		$1,0	nil	8086,FPU
 fld	mem64x			nil	DD		$1,0	nil	8086,FPU
 fld	mem80x			nil	DB		$1,5	nil	8086,FPU
 fld	fpureg			nil	D9,C0+$1	nil	nil	8086,FPU
-fld1	nil			nil	D9,E8		nil	nil	8086,FPU
-fldl2t	nil			nil	D9,E9		nil	nil	8086,FPU
-fldl2e	nil			nil	D9,EA		nil	nil	8086,FPU
-fldpi	nil			nil	D9,EB		nil	nil	8086,FPU
-fldlg2	nil			nil	D9,EC		nil	nil	8086,FPU
-fldln2	nil			nil	D9,ED		nil	nil	8086,FPU
-fldz	nil			nil	D9,EE		nil	nil	8086,FPU
+fld1!twobyte		D9,E8		8086,FPU
+fldl2t!twobyte		D9,E9		8086,FPU
+fldl2e!twobyte		D9,EA		8086,FPU
+fldpi!twobyte		D9,EB		8086,FPU
+fldlg2!twobyte		D9,EC		8086,FPU
+fldln2!twobyte		D9,ED		8086,FPU
+fldz!twobyte		D9,EE		8086,FPU
 fldcw	mem16			nil	D9		$1,5	nil	8086,FPU
 fldenv	mem			nil	D9		$1,4	nil	8086,FPU
-fmul	mem32x			nil	D8		$1,1	nil	8086,FPU
-fmul	mem64x			nil	DC		$1,1	nil	8086,FPU
-fmul	fpureg			nil	D8,C8+$1	nil	nil	8086,FPU
-fmul	ST0,ST0			nil	D8,C8		nil	nil	8086,FPU
-fmul	ST0,FPUREG_NOTST0	nil	D8,C8+$2	nil	nil	8086,FPU
-fmul	TO fpureg		nil	DC,C8+$1	nil	nil	8086,FPU
-fmul	FPUREG_NOTST0,ST0	nil	DC,C8+$1	nil	nil	8086,FPU
-fmulp	fpureg			nil	DE,C8+$1	nil	nil	8086,FPU
-fmulp	fpureg,ST0		nil	DE,C8+$1	nil	nil	8086,FPU
-fimul	mem32x			nil	DA		$1,1	nil	8086,FPU
-fimul	mem16x			nil	DE		$1,1	nil	8086,FPU
-fnop	nil			nil	D9,D0		nil	nil	8086,FPU
-fpatan	nil			nil	D9,F3		nil	nil	8086,FPU
-fprem	nil			nil	D9,F8		nil	nil	8086,FPU
-fprem1	nil			nil	D9,F5		nil	nil	8086,FPU
-fptan	nil			nil	D9,F2		nil	nil	8086,FPU
-frndint	nil			nil	D9,FC		nil	nil	8086,FPU
+fmul!farith		1,C8,C8
+fmulp!farithp		C8
+fimul!fiarith		1
+fnop!twobyte		D9,D0		8086,FPU
+fpatan!twobyte		D9,F3		8086,FPU
+fprem!twobyte		D9,F8		8086,FPU
+fprem1!twobyte		D9,F5		8086,FPU
+fptan!twobyte		D9,F2		8086,FPU
+frndint!twobyte		D9,FC		8086,FPU
 frstor	mem			nil	DD		$1,4	nil	8086,FPU
 fsave	mem			nil	9B,DD		$1,6	nil	8086,FPU
 fnsave	mem			nil	DD		$1,6	nil	8086,FPU
-fscale	nil			nil	D9,FD		nil	nil	8086,FPU
-fsin	nil			nil	D9,FE		nil	nil	8086,FPU
-fsincos	nil			nil	D9,FB		nil	nil	8086,FPU
-fsqrt	nil			nil	D9,FA		nil	nil	8086,FPU
+fscale!twobyte		D9,FD		8086,FPU
+fsin!twobyte		D9,FE		8086,FPU
+fsincos!twobyte		D9,FB		8086,FPU
+fsqrt!twobyte		D9,FA		8086,FPU
 fst	mem32x			nil	D9		$1,2	nil	8086,FPU
 fst	mem64x			nil	DD		$1,2	nil	8086,FPU
 fst	fpureg			nil	DD,D0+$1	nil	nil	8086,FPU
@@ -458,35 +436,17 @@ fstsw	mem16			nil	9B,DD		$1,7	nil	8086,FPU
 fstsw	REG_AX			nil	9B,DF,E0	nil	nil	8086,FPU
 fnstsw	mem16			nil	DD		$1,7	nil	8086,FPU
 fnstsw	REG_AX			nil	DF,E0		nil	nil	8086,FPU
-fsub	mem32x			nil	D8		$1,4	nil	8086,FPU
-fsub	mem64x			nil	DC		$1,4	nil	8086,FPU
-fsub	fpureg			nil	D8,E0+$1	nil	nil	8086,FPU
-fsub	ST0,ST0			nil	D8,E0		nil	nil	8086,FPU
-fsub	ST0,FPUREG_NOTST0	nil	D8,E0+$2	nil	nil	8086,FPU
-fsub	TO fpureg		nil	DC,E8+$1	nil	nil	8086,FPU
-fsub	FPUREG_NOTST0,ST0	nil	DC,E8+$1	nil	nil	8086,FPU
-fsubp	fpureg			nil	DE,E8+$1	nil	nil	8086,FPU
-fsubp	fpureg,ST0		nil	DE,E8+$1	nil	nil	8086,FPU
-fisub	mem32x			nil	DA		$1,4	nil	8086,FPU
-fisub	mem16x			nil	DE		$1,4	nil	8086,FPU
-fsubr	mem32x			nil	D8		$1,5	nil	8086,FPU
-fsubr	mem64x			nil	DC		$1,5	nil	8086,FPU
-fsubr	fpureg			nil	D8,E8+$1	nil	nil	8086,FPU
-fsubr	ST0,ST0			nil	D8,E8		nil	nil	8086,FPU
-fsubr	ST0,FPUREG_NOTST0	nil	D8,E8+$2	nil	nil	8086,FPU
-fsubr	TO fpureg		nil	DC,E0+$1	nil	nil	8086,FPU
-fsubr	FPUREG_NOTST0,ST0	nil	DC,E0+$1	nil	nil	8086,FPU
-fsubrp	fpureg			nil	DE,E0+$1	nil	nil	8086,FPU
-fsubrp	fpureg,ST0		nil	DE,E0+$1	nil	nil	8086,FPU
-fisubr	mem32x			nil	DA		$1,5	nil	8086,FPU
-fisubr	mem16x			nil	DE		$1,5	nil	8086,FPU
-ftst	nil			nil	D9,E4		nil	nil	8086,FPU
-fucom	fpureg			nil	DD,E0+$1	nil	nil	8086,FPU
-fucom	ST0,fpureg		nil	DD,E0+$2	nil	nil	8086,FPU
-fucomp	fpureg			nil	DD,E8+$1	nil	nil	8086,FPU
-fucomp	ST0,fpureg		nil	DD,E8+$2	nil	nil	8086,FPU
-fucompp	nil			nil	DA,E9		nil	nil	8086,FPU
-fxam	nil			nil	D9,E5		nil	nil	8086,FPU
+fsub!farith		4,E0,E8
+fsubp!farithp		E8
+fisub!fiarith		4
+fsubr!farith		5,E8,E0
+fsubrp!farithp		E0
+fisubr!fiarith		5
+ftst!twobyte		D9,E4		8086,FPU
+fucom!fcomg2		DD,E0
+fucomp!fcomg2		DD,E8
+fucompp!twobyte		DA,E9		8086,FPU
+fxam!twobyte		D9,E5		8086,FPU
 fxch	fpureg			nil	D9,C8+$1	nil	nil	8086,FPU
 fxch	ST0,ST0			nil	D9,C8		nil	nil	8086,FPU
 fxch	ST0,FPUREG_NOTST0	nil	D9,C8+$2	nil	nil	8086,FPU
@@ -494,13 +454,11 @@ fxch	FPUREG_NOTST0,ST0	nil	D9,C8+$1	nil	nil	8086,FPU
 fxch	nil			nil	D9,C9		nil	nil	8086,FPU
 fxrstor	mem			nil	0F,AE		$1,1	nil	P6,SSE,FPU
 fxsave	mem			nil	0F,AE		$1,0	nil	P6,SSE,FPU
-fxtract	nil			nil	D9,F4		nil	nil	8086,FPU
-fyl2x	nil			nil	D9,F1		nil	nil	8086,FPU
-fyl2xp1	nil			nil	D9,F9		nil	nil	8086,FPU
-hlt	nil			nil	F4		nil	nil	8086,PRIV
-idiv	rm8x			nil	F6		$1,7	nil	8086
-idiv	rm16x			16	F7		$1,7	nil	8086
-idiv	rm32x			32	F7		$1,7	nil	386
+fxtract!twobyte		D9,F4		8086,FPU
+fyl2x!twobyte		D9,F1		8086,FPU
+fyl2xp1!twobyte		D9,F9		8086,FPU
+hlt!onebyte		F4		8086,PRIV
+idiv!groupf6		7
 imul	rm8x			nil	F6		$1,5	nil	8086
 imul	rm16x			16	F7		$1,5	nil	8086
 imul	rm32x			32	F7		$1,5	nil	386
@@ -520,26 +478,22 @@ in	REG_EAX,imm8		32	E5		nil	$2,8	386
 in	REG_AL,REG_DX		nil	EC		nil	nil	8086
 in	REG_AX,REG_DX		16	ED		nil	nil	8086
 in	REG_EAX,REG_DX		32	ED		nil	nil	386
-inc	rm8x			nil	FE		$1,0	nil	8086
-inc	mem16x			16	FF		$1,0	nil	8086
-inc	mem32x			32	FF		$1,0	nil	386
-inc	reg16			16	40+$1		nil	nil	8086
-inc	reg32			32	40+$1		nil	nil	386
-insb	nil			nil	6C		nil	nil	8086
-insw	nil			16	6D		nil	nil	8086
-insd	nil			32	6D		nil	nil	386
-int3	nil			nil	CC		nil	nil	8086
-int03	nil			nil	CC		nil	nil	8086
+inc!incdec		0,40
+insb!onebyte		6C		8086
+insw!onebyte16		6D
+insd!onebyte32		6D
+int3!onebyte		CC		8086
+int03!onebyte		CC		8086
 int	imm8			nil	CD		nil	$1,8	8086
-into	nil			nil	CE		nil	nil	8086
-invd	nil			nil	0F,08		nil	nil	486,PRIV
+into!onebyte		CE		8086
+invd!twobyte		0F,08		486,PRIV
 invlpg	mem			nil	0F,01		$1,7	nil	486,PRIV
-iret	nil			nil	CF		nil	nil	8086
-iretd	nil			32	CF		nil	nil	386
-iretw	nil			16	CF		nil	nil	8086
+iret!onebyte		CF		8086
+iretw!onebyte16		CF
+iretd!onebyte32		CF
 ; jcc
 ; jmp
-lahf	nil			nil	9F		nil	nil	8086
+lahf!onebyte		9F		8086
 lar	reg16,rm16		16	0F,02		$2,$1	nil	286,PROT
 lar	reg32,rm32		32	0F,02		$2,$1	nil	386,PROT
 ldmxcsr	mem32			nil	0F,AE		$1,2	nil	KATMAI,SSE
@@ -555,15 +509,15 @@ lgs	reg16,mem		16	0F,B5		$2,$1	nil	386
 lgs	reg32,mem		32	0F,B5		$2,$1	nil	386
 lea	reg16,mem16		16	8D		$2,$1	nil	8086
 lea	reg32,mem32		32	8D		$2,$1	nil	386
-leave	nil			nil	C9		nil	nil	186
+leave!onebyte		C9		186
 ; lfence
 lgdt	mem			nil	0F,01		$1,2	nil	286,PRIV
 lidt	mem			nil	0F,01		$1,3	nil	286,PRIV
-lldt	rm16			nil	0F,00		$1,2	nil	286,PROT,PRIV
+lldt!prot286		2		PRIV
 lmsw	rm16			nil	0F,01		$1,6	nil	286,PRIV
-lodsb	nil			nil	AC		nil	nil	8086
-lodsw	nil			16	AD		nil	nil	8086
-lodsd	nil			32	AD		nil	nil	386
+lodsb!onebyte		AC		8086
+lodsw!onebyte16		AD
+lodsd!onebyte32		AD
 ; loop
 ; loopcc:
 ;:loope	loopz
@@ -576,13 +530,13 @@ lodsd	nil			32	AD		nil	nil	386
 ;loopnz	imm1632,REG_ECX		32	E1		nil	$1r,8s	386
 lsl	reg16,rm16		16	0F,03		$2,$1	nil	286,PROT
 lsl	reg32,rm32		32	0F,03		$2,$1	nil	286,PROT
-ltr	rm16			nil	0F,00		$1,3	nil	286,PROT,PRIV
+ltr!prot286		3		PRIV
 maskmovdqu	XMMREG,XMMREG	nil	66,0F,F7	$2r,$1	nil	P4,SSE2
 maskmovq	MMXREG,MMXREG	nil	0F,F7		$2r,$1	nil	KATMAI,MMX
-maxpd	XMMREG,rm128		nil	66,0F,5F	$2,$1	nil	P4,SSE2
-maxps	XMMREG,rm128		nil	0F,5F		$2,$1	nil	KATMAI,SSE
-maxsd	XMMREG,rm128		nil	F2,0F,5F	$2,$1	nil	P4,SSE2
-maxss	XMMREG,rm128		nil	F3,0F,5F	$2,$1	nil	P4,SSE2
+maxpd!sse2pd		5F
+maxps!sseps		5F
+maxsd!sse2sd		5F
+maxss!sse2ss		5F
 ; opcode arbitrarily picked for next 3 (could be 8A/8B instead of 88/89).
 mov	reg8,reg8		nil	88		$1r,$2	nil	8086
 mov	reg16,reg16		16	89		$1r,$2	nil	8086
@@ -674,8 +628,8 @@ movq	XMMREG,mem64		nil	F3,0F,7E	$2,$1	nil	P4,SSE2
 movq	mem64,XMMREG		nil	66,0F,D6	$1,$2	nil	P4,SSE2
 ; TODO: not sure if this encoding (movq2dq) is correct
 movq2dq	XMMREG,MMXREG		nil	F3,0F,D6	$1r,$2	nil	P4,SSE2
-movsb	nil			nil	A4		nil	nil	8086
-movsw	nil			16	A5		nil	nil	8086
+movsb!onebyte		A4		8086
+movsw!onebyte16		A5
 movsd	nil			32	A5		nil	nil	386
 ; arbitrary encoding, picked $2r,$1 instead of $1r,$2
 movsd	XMMREG,XMMREG		nil	F2,0F,10	$2r,$1	nil	P4,SSE2
@@ -685,9 +639,7 @@ movsd	mem64,XMMREG		nil	F2,0F,11	$1,$2	nil	P4,SSE2
 movss	XMMREG,XMMREG		nil	F3,0F,10	$2r,$1	nil	P4,SSE2
 movss	XMMREG,mem64		nil	F3,0F,10	$2,$1	nil	P4,SSE2
 movss	mem64,XMMREG		nil	F3,0F,11	$1,$2	nil	P4,SSE2
-movsx	reg16,rm8		16	0F,BE		$2,$1	nil	386
-movsx	reg32,rm8x		32	0F,BE		$2,$1	nil	386
-movsx	reg32,rm16x		nil	0F,BF		$2,$1	nil	386
+movsx!movszx		BE
 ; arbitrary encoding, picked $2r,$1 instead of $1r,$2
 movupd	XMMREG,XMMREG		nil	66,0F,10	$2r,$1	nil	P4,SSE2
 movupd	XMMREG,mem64		nil	66,0F,10	$2,$1	nil	P4,SSE2
@@ -696,133 +648,65 @@ movupd	mem64,XMMREG		nil	66,0F,11	$1,$2	nil	P4,SSE2
 movups	XMMREG,XMMREG		nil	0F,10		$2r,$1	nil	P4,SSE2
 movups	XMMREG,mem64		nil	0F,10		$2,$1	nil	P4,SSE2
 movups	mem64,XMMREG		nil	0F,11		$1,$2	nil	P4,SSE2
-movzx	reg16,rm8		16	0F,B6		$2,$1	nil	386
-movzx	reg32,rm8x		32	0F,B6		$2,$1	nil	386
-movzx	reg32,rm16x		nil	0F,B7		$2,$1	nil	386
-mul	rm8x			nil	F6		$1,4	nil	8086
-mul	rm16x			16	F7		$1,4	nil	8086
-mul	rm32x			32	F7		$1,4	nil	386
-mulpd	XMMREG,rm128		nil	66,0F,59	$2,$1	nil	P4,SSE2
-mulps	XMMREG,rm128		nil	0F,59		$2,$1	nil	KATMAI,SSE
-mulsd	XMMREG,rm128		nil	F2,0F,59	$2,$1	nil	P4,SSE2
-mulss	XMMREG,rm128		nil	F3,0F,59	$2,$1	nil	P4,SSE2
-neg	rm8x			nil	F6		$1,3	nil	8086
-neg	rm16x			16	F7		$1,3	nil	8086
-neg	rm32x			32	F7		$1,3	nil	386
-nop	nil			nil	90		nil	nil	8086
-not	rm8x			nil	F6		$1,2	nil	8086
-not	rm16x			16	F7		$1,2	nil	8086
-not	rm32x			32	F7		$1,2	nil	386
-or	REG_AL,imm8		nil	0C		nil	$2,8	8086
-or	REG_AX,imm16		16	0D		nil	$2,16	8086
-or	REG_EAX,imm32		32	0D		nil	$2,32	386
-or	reg8,imm		nil	80		$1r,1	$2,8	8086
-or	mem8x,imm		nil	80		$1,1	$2,8	8086
-or	reg8,imm8x		nil	80		$1r,1	$2,8	8086
-or	mem,imm8x		nil	80		$1,1	$2,8	8086
-or	reg16,imm		16	81		$1r,1	$2,16	8086
-or	mem16x,imm		16	81		$1,1	$2,16	8086
-or	reg16,imm16x		16	81		$1r,1	$2,16	8086
-or	mem,imm16x		16	81		$1,1	$2,16	8086
-or	reg32,imm		32	81		$1r,1	$2,32	386
-or	mem32x,imm		32	81		$1,1	$2,32	386
-or	reg32,imm32x		32	81		$1r,1	$2,32	386
-or	mem,imm32x		32	81		$1,1	$2,32	386
-or	reg16,imm8x		16	83		$1r,1	$2,8s	8086
-or	mem16x,imm8x		16	83		$1,1	$2,8s	8086
-or	reg32,imm8x		32	83		$1r,1	$2,8s	386
-or	mem32x,imm8x		32	83		$1,1	$2,8s	386
-; opcode arbitrarily picked for next 3 (could be 0A/0B instead of 08/09).
-or	reg8,reg8		nil	08		$1r,$2	nil	8086
-or	reg16,reg16		16	09		$1r,$2	nil	8086
-or	reg32,reg32		32	09		$1r,$2	nil	386
-or	mem,reg8		nil	08		$1,$2	nil	8086
-or	mem8x,reg8		nil	08		$1,$2	nil	8086
-or	mem,reg16		16	09		$1,$2	nil	8086
-or	mem16x,reg16		16	09		$1,$2	nil	8086
-or	mem,reg32		32	09		$1,$2	nil	386
-or	mem32x,reg32		32	09		$1,$2	nil	386
-or	reg8,mem8		nil	0A		$2,$1	nil	8086
-or	reg16,mem16		16	0B		$2,$1	nil	8086
-or	reg32,mem32		32	0B		$2,$1	nil	386
-orpd	XMMREG,rm128		nil	66,0F,56	$2,$1	nil	P4,SSE2
-orps	XMMREG,rm128		nil	0F,56		$2,$1	nil	KATMAI,SSE
+movzx!movszx		B6
+mul!groupf6		4
+mulpd!sse2pd		59
+mulps!sseps		59
+mulsd!sse2sd		59
+mulss!sse2ss		59
+neg!groupf6		3
+nop!onebyte		90		8086
+not!groupf6		2
+or!arith		08,1
+orpd!sse2pd		56
+orps!sseps		56
 out	imm8,REG_AL		nil	E6		nil	$1,8	8086
 out	imm8,REG_AX		16	E7		nil	$1,8	8086
 out	imm8,REG_EAX		32	E7		nil	$1,8	386
 out	REG_DX,REG_AL		nil	EE		nil	nil	8086
 out	REG_DX,REG_AX		16	EF		nil	nil	8086
 out	REG_DX,REG_EAX		32	EF		nil	nil	386
-outsb	nil			nil	6E		nil	nil	8086
-outsw	nil			16	6F		nil	nil	8086
-outsd	nil			32	6F		nil	nil	386
-packsswb	MMXREG,rm64	nil	0F,63		$2,$1	nil	P5,MMX
-packsswb	XMMREG,rm128	nil	66,0F,63	$2,$1	nil	P4,SSE2
-packssdw	MMXREG,rm64	nil	0F,6B		$2,$1	nil	P5,MMX
-packssdw	XMMREG,rm128	nil	66,0F,6B	$2,$1	nil	P4,SSE2
-packuswb	MMXREG,rm64	nil	0F,67		$2,$1	nil	P5,MMX
-packuswb	XMMREG,rm128	nil	66,0F,67	$2,$1	nil	P4,SSE2
-paddb	MMXREG,rm64		nil	0F,FC		$2,$1	nil	P5,MMX
-paddb	XMMREG,rm128		nil	66,0F,FC	$2,$1	nil	P4,SSE2
-paddw	MMXREG,rm64		nil	0F,FD		$2,$1	nil	P5,MMX
-paddw	XMMREG,rm128		nil	66,0F,FD	$2,$1	nil	P4,SSE2
-paddd	MMXREG,rm64		nil	0F,FE		$2,$1	nil	P5,MMX
-paddd	XMMREG,rm128		nil	66,0F,FE	$2,$1	nil	P4,SSE2
-paddq	MMXREG,rm64		nil	0F,D4		$2,$1	nil	P5,MMX
-paddq	XMMREG,rm128		nil	66,0F,D4	$2,$1	nil	P4,SSE2
-paddsb	MMXREG,rm64		nil	0F,EC		$2,$1	nil	P5,MMX
-paddsb	XMMREG,rm128		nil	66,0F,EC	$2,$1	nil	P4,SSE2
-paddsw	MMXREG,rm64		nil	0F,ED		$2,$1	nil	P5,MMX
-paddsw	XMMREG,rm128		nil	66,0F,ED	$2,$1	nil	P4,SSE2
-paddusb	MMXREG,rm64		nil	0F,DC		$2,$1	nil	P5,MMX
-paddusb	XMMREG,rm128		nil	66,0F,DC	$2,$1	nil	P4,SSE2
-paddusw	MMXREG,rm64		nil	0F,DD		$2,$1	nil	P5,MMX
-paddusw	XMMREG,rm128		nil	66,0F,DD	$2,$1	nil	P4,SSE2
-pand	MMXREG,rm64		nil	0F,DB		$2,$1	nil	P5,MMX
-pand	XMMREG,rm128		nil	66,0F,DB	$2,$1	nil	P4,SSE2
-pandn	MMXREG,rm64		nil	0F,DF		$2,$1	nil	P5,MMX
-pandn	XMMREG,rm128		nil	66,0F,DF	$2,$1	nil	P4,SSE2
-pause	nil			nil	F3,90		nil	nil	P4
-pavgb	MMXREG,rm64		nil	0F,E0		$2,$1	nil	KATMAI,MMX
-pavgb	XMMREG,rm128		nil	66,0F,E0	$2,$1	nil	P4,SSE2
-pavgw	MMXREG,rm64		nil	0F,E3		$2,$1	nil	KATMAI,MMX
-pavgw	XMMREG,rm128		nil	66,0F,E3	$2,$1	nil	P4,SSE2
-pcmpeqb	MMXREG,rm64		nil	0F,74		$2,$1	nil	P5,MMX
-pcmpeqb	XMMREG,rm128		nil	66,0F,74	$2,$1	nil	P4,SSE2
-pcmpeqw	MMXREG,rm64		nil	0F,75		$2,$1	nil	P5,MMX
-pcmpeqw	XMMREG,rm128		nil	66,0F,75	$2,$1	nil	P4,SSE2
-pcmpeqd	MMXREG,rm64		nil	0F,76		$2,$1	nil	P5,MMX
-pcmpeqd	XMMREG,rm128		nil	66,0F,76	$2,$1	nil	P4,SSE2
-pcmpgtb	MMXREG,rm64		nil	0F,64		$2,$1	nil	P5,MMX
-pcmpgtb	XMMREG,rm128		nil	66,0F,64	$2,$1	nil	P4,SSE2
-pcmpgtw	MMXREG,rm64		nil	0F,65		$2,$1	nil	P5,MMX
-pcmpgtw	XMMREG,rm128		nil	66,0F,65	$2,$1	nil	P4,SSE2
-pcmpgtd	MMXREG,rm64		nil	0F,66		$2,$1	nil	P5,MMX
-pcmpgtd	XMMREG,rm128		nil	66,0F,66	$2,$1	nil	P4,SSE2
+outsb!onebyte		6E		8086
+outsw!onebyte16		6F
+outsd!onebyte32		6F
+packsswb!sse2mmx	63		P5
+packssdw!sse2mmx	6B		P5
+packuswb!sse2mmx	67		P5
+paddb!sse2mmx		FC		P5
+paddw!sse2mmx		FD		P5
+paddd!sse2mmx		FE		P5
+paddq!sse2mmx		D4		P5
+paddsb!sse2mmx		EC		P5
+paddsw!sse2mmx		ED		P5
+paddusb!sse2mmx		DC		P5
+paddusw!sse2mmx		DD		P5
+pand!sse2mmx		DB		P5
+pandn!sse2mmx		DF		P5
+pause!twobyte		F3,90		P4
+pavgb!sse2mmx		E0		KATMAI
+pavgw!sse2mmx		E3		KATMAI
+pcmpeqb!sse2mmx		74		P5
+pcmpeqw!sse2mmx		75		P5
+pcmpeqd!sse2mmx		76		P5
+pcmpgtb!sse2mmx		64		P5
+pcmpgtw!sse2mmx		65		P5
+pcmpgtd!sse2mmx		66		P5
 pextrw	reg32,MMXREG,imm8	nil	0F,C5		$1r,$2	$3,8	KATMAI,MMX
 pextrw	reg32,XMMREG,imm8	nil	66,0F,C5	$1r,$2	$3,8	P4,SSE2
 pinsrw	MMXREG,reg32,imm8	nil	0F,C4		$2r,$1	$3,8	KATMAI,MMX
 pinsrw	MMXREG,rm16,imm8	nil	0F,C4		$2,$1	$3,8	KATMAI,MMX
 pinsrw	XMMREG,reg32,imm8	nil	66,0F,C4	$2r,$1	$3,8	P4,SSE2
 pinsrw	XMMREG,rm16,imm8	nil	66,0F,C4	$2,$1	$3,8	P4,SSE2
-pmaddwd	MMXREG,rm64		nil	0F,F5		$2,$1	nil	P5,MMX
-pmaddwd	XMMREG,rm128		nil	66,0F,F5	$2,$1	nil	P4,SSE2
-pmaxsw	MMXREG,rm64		nil	0F,EE		$2,$1	nil	KATMAI,MMX
-pmaxsw	XMMREG,rm128		nil	66,0F,EE	$2,$1	nil	P4,SSE2
-pmaxub	MMXREG,rm64		nil	0F,DE		$2,$1	nil	KATMAI,MMX
-pmaxub	XMMREG,rm128		nil	66,0F,DE	$2,$1	nil	P4,SSE2
-pminsw	MMXREG,rm64		nil	0F,EA		$2,$1	nil	KATMAI,MMX
-pminsw	XMMREG,rm128		nil	66,0F,EA	$2,$1	nil	P4,SSE2
-pminub	MMXREG,rm64		nil	0F,DA		$2,$1	nil	KATMAI,MMX
-pminub	XMMREG,rm128		nil	66,0F,DA	$2,$1	nil	P4,SSE2
+pmaddwd!sse2mmx		F5		P5
+pmaxsw!sse2mmx		EE		KATMAI
+pmaxub!sse2mmx		DE		KATMAI
+pminsw!sse2mmx		EA		KATMAI
+pminub!sse2mmx		DA		KATMAI
 pmovmskb	reg32,MMXREG	nil	0F,D7		$1r,$2	nil	KATMAI,MMX
 pmovmskb	reg32,XMMREG	nil	66,0F,D7	$1r,$2	nil	P4,SSE2
-pmulhuw	MMXREG,rm64		nil	0F,E4		$2,$1	nil	KATMAI,MMX
-pmulhuw	XMMREG,rm128		nil	66,0F,E4	$2,$1	nil	P4,SSE2
-pmulhw	MMXREG,rm64		nil	0F,E5		$2,$1	nil	P5,MMX
-pmulhw	XMMREG,rm128		nil	66,0F,E5	$2,$1	nil	P4,SSE2
-pmullw	MMXREG,rm64		nil	0F,D5		$2,$1	nil	P5,MMX
-pmullw	XMMREG,rm128		nil	66,0F,D5	$2,$1	nil	P4,SSE2
+pmulhuw!sse2mmx		E4		KATMAI
+pmulhw!sse2mmx		E5		P5
+pmullw!sse2mmx		D5		P5
 pmuludq	MMXREG,rm64		nil	0F,F4		$2,$1	nil	P4,MMX
 pmuludq	XMMREG,rm128		nil	66,0F,F4	$2,$1	nil	P4,SSE2
 pop	mem16x			16	8F		$1,0	nil	8086
@@ -834,12 +718,12 @@ pop	REG_ES			nil	07		nil	nil	8086
 pop	REG_SS			nil	17		nil	nil	8086
 pop	REG_FS			nil	0F,A1		nil	nil	386
 pop	REG_GS			nil	0F,A9		nil	nil	386
-popa	nil			nil	61		nil	nil	8086
-popad	nil			32	61		nil	nil	386
-popaw	nil			16	61		nil	nil	8086
-popf	nil			nil	9D		nil	nil	8086
-popfd	nil			32	9D		nil	nil	386
-popfw	nil			16	9D		nil	nil	8086
+popa!onebyte		61		8086
+popad!onebyte32		61
+popaw!onebyte16		61
+popf!onebyte		9D		8086
+popfd!onebyte32		9D
+popfw!onebyte16		9D
 por	MMXREG,rm64		nil	0F,EB		$2,$1	nil	P5,MMX
 por	XMMREG,rm128		nil	66,0F,EB	$2,$1	nil	KATMAI,SSE
 prefetcht0	mem		nil	0F,18		$1,1	nil	KATMAI
@@ -853,68 +737,35 @@ pshufhw	XMMREG,rm128,imm8	nil	F3,0F,70	$2,$1	$3,8	P4,SSE2
 pshuflw	XMMREG,rm128,imm8	nil	F2,0F,70	$2,$1	$3,8	P4,SSE2
 pshufw	MMXREG,rm64,imm8	nil	0F,70		$2,$1	$3,8	KATMAI,MMX
 pslldq	XMMREG,imm8		nil	66,0F,73	$1r,7	$2,8	P4,SSE2
-psllw	MMXREG,rm64		nil	0F,F1		$2,$1	nil	P5,MMX
-psllw	XMMREG,rm128		nil	66,0F,F1	$2,$1	nil	P4,SSE2
-psllw	MMXREG,imm8		nil	0F,71		$1r,6	$2,8	P5,MMX
-psllw	XMMREG,imm8		nil	66,0F,71	$1r,6	$2,8	P4,SSE2
-pslld	MMXREG,rm64		nil	0F,F2		$2,$1	nil	P5,MMX
-pslld	XMMREG,rm128		nil	66,0F,F2	$2,$1	nil	P4,SSE2
-pslld	MMXREG,imm8		nil	0F,72		$1r,6	$2,8	P5,MMX
-pslld	XMMREG,imm8		nil	66,0F,72	$1r,6	$2,8	P4,SSE2
-psllq	MMXREG,rm64		nil	0F,F3		$2,$1	nil	P5,MMX
-psllq	XMMREG,rm128		nil	66,0F,F3	$2,$1	nil	P4,SSE2
-psllq	MMXREG,imm8		nil	0F,73		$1r,6	$2,8	P5,MMX
-psllq	XMMREG,imm8		nil	66,0F,73	$1r,6	$2,8	P4,SSE2
-psraw	MMXREG,rm64		nil	0F,E1		$2,$1	nil	P5,MMX
-psraw	XMMREG,rm128		nil	66,0F,E1	$2,$1	nil	P4,SSE2
-psraw	MMXREG,imm8		nil	0F,71		$1r,4	$2,8	P5,MMX
-psraw	XMMREG,imm8		nil	66,0F,71	$1r,4	$2,8	P4,SSE2
-psrad	MMXREG,rm64		nil	0F,E2		$2,$1	nil	P5,MMX
-psrad	XMMREG,rm128		nil	66,0F,E2	$2,$1	nil	P4,SSE2
-psrad	MMXREG,imm8		nil	0F,72		$1r,4	$2,8	P5,MMX
-psrad	XMMREG,imm8		nil	66,0F,72	$1r,4	$2,8	P4,SSE2
+psllw!pshift		F1,71,6
+pslld!pshift		F2,72,6
+psllq!pshift		F3,73,6
+psraw!pshift		E1,71,4
+psrad!pshift		E2,72,4
 psrldq	XMMREG,imm8		nil	66,0F,73	$1r,3	$2,8	P4,SSE2
-psrlw	MMXREG,rm64		nil	0F,D1		$2,$1	nil	P5,MMX
-psrlw	XMMREG,rm128		nil	66,0F,D1	$2,$1	nil	P4,SSE2
-psrlw	MMXREG,imm8		nil	0F,71		$1r,2	$2,8	P5,MMX
-psrlw	XMMREG,imm8		nil	66,0F,71	$1r,2	$2,8	P4,SSE2
-psrld	MMXREG,rm64		nil	0F,D2		$2,$1	nil	P5,MMX
-psrld	XMMREG,rm128		nil	66,0F,D2	$2,$1	nil	P4,SSE2
-psrld	MMXREG,imm8		nil	0F,72		$1r,2	$2,8	P5,MMX
-psrld	XMMREG,imm8		nil	66,0F,72	$1r,2	$2,8	P4,SSE2
-psrlq	MMXREG,rm64		nil	0F,D3		$2,$1	nil	P5,MMX
-psrlq	XMMREG,rm128		nil	66,0F,D3	$2,$1	nil	P4,SSE2
-psrlq	MMXREG,imm8		nil	0F,73		$1r,2	$2,8	P5,MMX
-psrlq	XMMREG,imm8		nil	66,0F,73	$1r,2	$2,8	P4,SSE2
+psrlw!pshift		D1,71,2
+psrld!pshift		D2,72,2
+psrlq!pshift		D3,73,2
+
 psubb	MMXREG,imm8		nil	0F,F8		$1r,2	$2,8	P5,MMX
 psubb	XMMREG,imm8		nil	66,0F,F8	$1r,2	$2,8	P4,SSE2
+
 psubw	MMXREG,imm8		nil	0F,F9		$1r,2	$2,8	P5,MMX
 psubw	XMMREG,imm8		nil	66,0F,F9	$1r,2	$2,8	P4,SSE2
-psubd	MMXREG,rm64		nil	0F,FA		$2,$1	nil	P5,MMX
-psubd	XMMREG,rm128		nil	66,0F,FA	$2,$1	nil	P4,SSE2
-psubq	MMXREG,rm64		nil	0F,FB		$2,$1	nil	P4,MMX
-psubq	XMMREG,rm128		nil	66,0F,FB	$2,$1	nil	P4,SSE2
-psubsb	MMXREG,rm64		nil	0F,E8		$2,$1	nil	P5,MMX
-psubsb	XMMREG,rm128		nil	66,0F,E8	$2,$1	nil	P4,SSE2
-psubsw	MMXREG,rm64		nil	0F,E9		$2,$1	nil	P5,MMX
-psubsw	XMMREG,rm128		nil	66,0F,E9	$2,$1	nil	P4,SSE2
-psubusb	MMXREG,rm64		nil	0F,D8		$2,$1	nil	P5,MMX
-psubusb	XMMREG,rm128		nil	66,0F,D8	$2,$1	nil	P4,SSE2
-psubusw	MMXREG,rm64		nil	0F,D9		$2,$1	nil	P5,MMX
-psubusw	XMMREG,rm128		nil	66,0F,D9	$2,$1	nil	P4,SSE2
-punpckhbw	MMXREG,rm64	nil	0F,68		$2,$1	nil	P5,MMX
-punpckhbw	XMMREG,rm128	nil	66,0F,68	$2,$1	nil	P4,SSE2
-punpckhwd	MMXREG,rm64	nil	0F,69		$2,$1	nil	P5,MMX
-punpckhwd	XMMREG,rm128	nil	66,0F,69	$2,$1	nil	P4,SSE2
-punpckhdq	MMXREG,rm64	nil	0F,6A		$2,$1	nil	P5,MMX
-punpckhdq	XMMREG,rm128	nil	66,0F,6A	$2,$1	nil	P4,SSE2
+
+psubd!sse2mmx		FA		P5
+psubq!sse2mmx		FB		P5
+psubsb!sse2mmx		E8		P5
+psubsw!sse2mmx		E9		P5
+psubusb!sse2mmx		D8		P5
+psubusw!sse2mmx		D9		P5
+punpckhbw!sse2mmx	68		P5
+punpckhwd!sse2mmx	69		P5
+punpckhdq!sse2mmx	6A		P5
 punpckhqdq	XMMREG,rm128	nil	66,0F,6D	$2,$1	nil	P4,SSE2
-punpcklbw	MMXREG,rm64	nil	0F,60		$2,$1	nil	P5,MMX
-punpcklbw	XMMREG,rm128	nil	66,0F,60	$2,$1	nil	P4,SSE2
-punpcklwd	MMXREG,rm64	nil	0F,61		$2,$1	nil	P5,MMX
-punpcklwd	XMMREG,rm128	nil	66,0F,61	$2,$1	nil	P4,SSE2
-punpckldq	MMXREG,rm64	nil	0F,62		$2,$1	nil	P5,MMX
-punpckldq	XMMREG,rm128	nil	66,0F,62	$2,$1	nil	P4,SSE2
+punpcklbw!sse2mmx	60		P5
+punpcklwd!sse2mmx	61		P5
+punpckldq!sse2mmx	62		P5
 punpcklqdq	XMMREG,rm128	nil	66,0F,6C	$2,$1	nil	P4,SSE2
 push	mem16x			16	FF		$1,6	nil	8086
 push	mem32x			32	FF		$1,6	nil	386
@@ -929,229 +780,75 @@ push	REG_DS			nil	1E		nil	nil	8086
 push	REG_ES			nil	06		nil	nil	8086
 push	REG_FS			nil	0F,A0		nil	nil	386
 push	REG_GS			nil	0F,A8		nil	nil	386
-pusha	nil			nil	60		nil	nil	8086
-pushad	nil			32	60		nil	nil	386
-pushaw	nil			16	60		nil	nil	8086
-pushf	nil			nil	9C		nil	nil	8086
-pushfd	nil			32	9C		nil	nil	386
-pushfw	nil			16	9C		nil	nil	8086
-pxor	MMXREG,rm64		nil	0F,EF		$2,$1	nil	P5,MMX
-pxor	XMMREG,rm128		nil	66,0F,EF	$2,$1	nil	P4,SSE2
-rcl	rm8x,ONE		nil	D0		$1,2	nil	8086
-rcl	rm8x,REG_CL		nil	D2		$1,2	nil	8086
-rcl	rm8x,imm8		nil	C0		$1,2	$2,8	186
-rcl	rm16x,ONE		16	D1		$1,2	nil	8086
-rcl	rm16x,REG_CL		16	D3		$1,2	nil	8086
-rcl	rm16x,imm8		16	C1		$1,2	$2,8	186
-rcl	rm32x,ONE		32	D1		$1,2	nil	386
-rcl	rm32x,REG_CL		32	D3		$1,2	nil	386
-rcl	rm32x,imm8		32	C1		$1,2	$2,8	386
-rcr	rm8x,ONE		nil	D0		$1,3	nil	8086
-rcr	rm8x,REG_CL		nil	D2		$1,3	nil	8086
-rcr	rm8x,imm8		nil	C0		$1,3	$2,8	186
-rcr	rm16x,ONE		16	D1		$1,3	nil	8086
-rcr	rm16x,REG_CL		16	D3		$1,3	nil	8086
-rcr	rm16x,imm8		16	C1		$1,3	$2,8	186
-rcr	rm32x,ONE		32	D1		$1,3	nil	386
-rcr	rm32x,REG_CL		32	D3		$1,3	nil	386
-rcr	rm32x,imm8		32	C1		$1,3	$2,8	386
-rol	rm8x,ONE		nil	D0		$1,0	nil	8086
-rol	rm8x,REG_CL		nil	D2		$1,0	nil	8086
-rol	rm8x,imm8		nil	C0		$1,0	$2,8	186
-rol	rm16x,ONE		16	D1		$1,0	nil	8086
-rol	rm16x,REG_CL		16	D3		$1,0	nil	8086
-rol	rm16x,imm8		16	C1		$1,0	$2,8	186
-rol	rm32x,ONE		32	D1		$1,0	nil	386
-rol	rm32x,REG_CL		32	D3		$1,0	nil	386
-rol	rm32x,imm8		32	C1		$1,0	$2,8	386
-ror	rm8x,ONE		nil	D0		$1,1	nil	8086
-ror	rm8x,REG_CL		nil	D2		$1,1	nil	8086
-ror	rm8x,imm8		nil	C0		$1,1	$2,8	186
-ror	rm16x,ONE		16	D1		$1,1	nil	8086
-ror	rm16x,REG_CL		16	D3		$1,1	nil	8086
-ror	rm16x,imm8		16	C1		$1,1	$2,8	186
-ror	rm32x,ONE		32	D1		$1,1	nil	386
-ror	rm32x,REG_CL		32	D3		$1,1	nil	386
-ror	rm32x,imm8		32	C1		$1,1	$2,8	386
-rcpps	XMMREG,rm128		nil	0F,53		$2,$1	nil	KATMAI,SSE
-rcpss	XMMREG,rm128		nil	F3,0F,53	$2,$1	nil	P4,SSE2
-rdmsr	nil			nil	0F,32		nil	nil	P5,PRIV
-rdpmc	nil			nil	0F,33		nil	nil	P6
-rdtsc	nil			nil	0F,31		nil	nil	P5
+pusha!onebyte		60		8086
+pushad!onebyte32	60
+pushaw!onebyte16	60
+pushf!onebyte		9C		8086
+pushfd!onebyte32	9C
+pushfw!onebyte16	9C
+pxor!sse2mmx		EF		P5
+rcl!shift		2
+rcr!shift		3
+rol!shift		0
+ror!shift		1
+rcpps!sseps		53
+rcpss!sse2ss		53
+rdmsr!twobyte		0F,32		P5,PRIV
+rdpmc!twobyte		0F,33		P6
+rdtsc!twobyte		0F,31		P5
 :ret	retn
 retn	nil			nil	C3		nil	nil	8086
 retf	nil			nil	CB		nil	nil	8086
 retn	imm16			nil	C2		nil	$1,16	8086
 retf	imm16			nil	CA		nil	$1,16	8086
 rsm	nil			nil	0F,AA		nil	nil	P5,SMM
-rsqrtps	XMMREG,rm128		nil	0F,52		$2,$1	nil	KATMAI,SSE
-rsqrtss	XMMREG,rm128		nil	F3,0F,52	$2,$1	nil	KATMAI,SSE
-sahf	nil			nil	9E		nil	nil	8086
-sal	rm8x,ONE		nil	D0		$1,4	nil	8086
-sal	rm8x,REG_CL		nil	D2		$1,4	nil	8086
-sal	rm8x,imm8		nil	C0		$1,4	$2,8	186
-sal	rm16x,ONE		16	D1		$1,4	nil	8086
-sal	rm16x,REG_CL		16	D3		$1,4	nil	8086
-sal	rm16x,imm8		16	C1		$1,4	$2,8	186
-sal	rm32x,ONE		32	D1		$1,4	nil	386
-sal	rm32x,REG_CL		32	D3		$1,4	nil	386
-sal	rm32x,imm8		32	C1		$1,4	$2,8	386
-sar	rm8x,ONE		nil	D0		$1,7	nil	8086
-sar	rm8x,REG_CL		nil	D2		$1,7	nil	8086
-sar	rm8x,imm8		nil	C0		$1,7	$2,8	186
-sar	rm16x,ONE		16	D1		$1,7	nil	8086
-sar	rm16x,REG_CL		16	D3		$1,7	nil	8086
-sar	rm16x,imm8		16	C1		$1,7	$2,8	186
-sar	rm32x,ONE		32	D1		$1,7	nil	386
-sar	rm32x,REG_CL		32	D3		$1,7	nil	386
-sar	rm32x,imm8		32	C1		$1,7	$2,8	386
-shl	rm8x,ONE		nil	D0		$1,4	nil	8086
-shl	rm8x,REG_CL		nil	D2		$1,4	nil	8086
-shl	rm8x,imm8		nil	C0		$1,4	$2,8	186
-shl	rm16x,ONE		16	D1		$1,4	nil	8086
-shl	rm16x,REG_CL		16	D3		$1,4	nil	8086
-shl	rm16x,imm8		16	C1		$1,4	$2,8	186
-shl	rm32x,ONE		32	D1		$1,4	nil	386
-shl	rm32x,REG_CL		32	D3		$1,4	nil	386
-shl	rm32x,imm8		32	C1		$1,4	$2,8	386
-shr	rm8x,ONE		nil	D0		$1,5	nil	8086
-shr	rm8x,REG_CL		nil	D2		$1,5	nil	8086
-shr	rm8x,imm8		nil	C0		$1,5	$2,8	186
-shr	rm16x,ONE		16	D1		$1,5	nil	8086
-shr	rm16x,REG_CL		16	D3		$1,5	nil	8086
-shr	rm16x,imm8		16	C1		$1,5	$2,8	186
-shr	rm32x,ONE		32	D1		$1,5	nil	386
-shr	rm32x,REG_CL		32	D3		$1,5	nil	386
-shr	rm32x,imm8		32	C1		$1,5	$2,8	386
-sbb	REG_AL,imm8		nil	1C		nil	$2,8	8086
-sbb	REG_AX,imm16		16	1D		nil	$2,16	8086
-sbb	REG_EAX,imm32		32	1D		nil	$2,32	386
-sbb	reg8,imm		nil	80		$1r,3	$2,8	8086
-sbb	mem8x,imm		nil	80		$1,3	$2,8	8086
-sbb	reg8,imm8x		nil	80		$1r,3	$2,8	8086
-sbb	mem,imm8x		nil	80		$1,3	$2,8	8086
-sbb	reg16,imm		16	81		$1r,3	$2,16	8086
-sbb	mem16x,imm		16	81		$1,3	$2,16	8086
-sbb	reg16,imm16x		16	81		$1r,3	$2,16	8086
-sbb	mem,imm16x		16	81		$1,3	$2,16	8086
-sbb	reg32,imm		32	81		$1r,3	$2,32	386
-sbb	mem32x,imm		32	81		$1,3	$2,32	386
-sbb	reg32,imm32x		32	81		$1r,3	$2,32	386
-sbb	mem,imm32x		32	81		$1,3	$2,32	386
-sbb	reg16,imm8x		16	83		$1r,3	$2,8s	8086
-sbb	mem16x,imm8x		16	83		$1,3	$2,8s	8086
-sbb	reg32,imm8x		32	83		$1r,3	$2,8s	386
-sbb	mem32x,imm8x		32	83		$1,3	$2,8s	386
-; opcode arbitrarily picked for next 3 (could be 1A/1B instead of 18/19).
-sbb	reg8,reg8		nil	18		$1r,$2	nil	8086
-sbb	reg16,reg16		16	19		$1r,$2	nil	8086
-sbb	reg32,reg32		32	19		$1r,$2	nil	386
-sbb	mem,reg8		nil	18		$1,$2	nil	8086
-sbb	mem8x,reg8		nil	18		$1,$2	nil	8086
-sbb	mem,reg16		16	19		$1,$2	nil	8086
-sbb	mem16x,reg16		16	19		$1,$2	nil	8086
-sbb	mem,reg32		32	19		$1,$2	nil	386
-sbb	mem32x,reg32		32	19		$1,$2	nil	386
-sbb	reg8,mem8		nil	1A		$2,$1	nil	8086
-sbb	reg16,mem16		16	1B		$2,$1	nil	8086
-sbb	reg32,mem32		32	1B		$2,$1	nil	386
-scasb	nil			nil	AE		nil	nil	8086
-scasw	nil			16	AF		nil	nil	8086
-scasd	nil			32	AF		nil	nil	386
+rsqrtps!sseps		52
+rsqrtss!sse2ss		52
+sahf!onebyte		9E		8086
+sal!shift		4
+sar!shift		7
+shl!shift		4
+shr!shift		5
+sbb!arith		18,3
+scasb!onebyte		AE		8086
+scasw!onebyte16		AF
+scasd!onebyte32		AF
 ; setcc
 ;sfence	nil			nil	0F,AE		,7?
 sgdt	mem			nil	0F,01		$1,0	nil	286
 sidt	mem			nil	0F,01		$1,1	nil	286
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-shld	reg16,reg16,imm8	16	0F,A4		$1r,$2	$3,8	386
-shld	mem,reg16,imm8		16	0F,A4		$1,$2	$3,8	386
-shld	mem16x,reg16,imm8	16	0F,A4		$1,$2	$3,8	386
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-shld	reg16,reg16,REG_CL	16	0F,A5		$1r,$2	nil	386
-shld	mem,reg16,REG_CL	16	0F,A5		$1,$2	nil	386
-shld	mem16x,reg16,REG_CL	16	0F,A5		$1,$2	nil	386
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-shld	reg32,reg32,imm8	32	0F,A4		$1r,$2	$3,8	386
-shld	mem,reg32,imm8		32	0F,A4		$1,$2	$3,8	386
-shld	mem32x,reg32,imm8	32	0F,A4		$1,$2	$3,8	386
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-shld	reg32,reg32,REG_CL	32	0F,A5		$1r,$2	nil	386
-shld	mem,reg32,REG_CL	32	0F,A5		$1,$2	nil	386
-shld	mem32x,reg32,REG_CL	32	0F,A5		$1,$2	nil	386
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-shrd	reg16,reg16,imm8	16	0F,AC		$1r,$2	$3,8	386
-shrd	mem,reg16,imm8		16	0F,AC		$1,$2	$3,8	386
-shrd	mem16x,reg16,imm8	16	0F,AC		$1,$2	$3,8	386
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-shrd	reg16,reg16,REG_CL	16	0F,AD		$1r,$2	nil	386
-shrd	mem,reg16,REG_CL	16	0F,AD		$1,$2	nil	386
-shrd	mem16x,reg16,REG_CL	16	0F,AD		$1,$2	nil	386
-; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-shrd	reg32,reg32,imm8	32	0F,AC		$1r,$2	$3,8	386
-shrd	mem,reg32,imm8		32	0F,AC		$1,$2	$3,8	386
-shrd	mem32x,reg32,imm8	32	0F,AC		$1,$2	$3,8	386
-; arbitrary encoding, picked $1r,$2 instead of $2r, $1
-shrd	reg32,reg32,REG_CL	32	0F,AD		$1r,$2	nil	386
-shrd	mem,reg32,REG_CL	32	0F,AD		$1,$2	nil	386
-shrd	mem32x,reg32,REG_CL	32	0F,AD		$1,$2	nil	386
+shld!shlrd		A4
+shrd!shlrd		AC
 shufpd	XMMREG,rm128,imm8	nil	66,0F,C6	$2,$1	$3,8	P4,SSE2
 shufps	XMMREG,rm128,imm8	nil	0F,C6		$2,$1	$3,8	KATMAI,SSE
+
 sldt	mem1632			nil	0F,00		$1,0	nil	286
 sldt	reg16			16	0F,00		$1r,0	nil	286
 sldt	reg32			32	0F,00		$1r,0	nil	386
+
 smsw	mem1632			nil	0F,01		$1,4	nil	286
 smsw	reg16			16	0F,01		$1r,4	nil	286
 smsw	reg32			32	0F,01		$1r,4	nil	386
-sqrtpd	XMMREG,rm128		nil	66,0F,51	$2,$1	nil	P4,SSE2
-sqrtps	XMMREG,rm128		nil	0F,51		$2,$1	nil	KATMAI,SSE
-sqrtsd	XMMREG,rm128		nil	F2,0F,51	$2,$1	nil	P4,SSE2
-sqrtss	XMMREG,rm128		nil	F3,0F,51	$2,$1	nil	P4,SSE2
-stc	nil			nil	F9		nil	nil	8086
-std	nil			nil	FD		nil	nil	8086
-sti	nil			nil	FB		nil	nil	8086
+
+sqrtpd!sse2pd		51
+sqrtps!sseps		51
+sqrtsd!sse2sd		51
+sqrtss!sse2ss		51
+stc!onebyte		F9		8086
+std!onebyte		FD		8086
+sti!onebyte		FB		8086
 stmxcsr	mem32			nil	0F,AE		$1,3	nil	KATMAI,SSE
-stosb	nil			nil	AA		nil	nil	8086
-stosw	nil			16	AB		nil	nil	8086
-stosd	nil			32	AB		nil	nil	386
-str	rm16			nil	0F,00		$1,1	nil	286,PROT
-sub	REG_AL,imm8		nil	2C		nil	$2,8	8086
-sub	REG_AX,imm16		16	2D		nil	$2,16	8086
-sub	REG_EAX,imm32		32	2D		nil	$2,32	386
-sub	reg8,imm		nil	80		$1r,5	$2,8	8086
-sub	mem8x,imm		nil	80		$1,5	$2,8	8086
-sub	reg8,imm8x		nil	80		$1r,5	$2,8	8086
-sub	mem,imm8x		nil	80		$1,5	$2,8	8086
-sub	reg16,imm		16	81		$1r,5	$2,16	8086
-sub	mem16x,imm		16	81		$1,5	$2,16	8086
-sub	reg16,imm16x		16	81		$1r,5	$2,16	8086
-sub	mem,imm16x		16	81		$1,5	$2,16	8086
-sub	reg32,imm		32	81		$1r,5	$2,32	386
-sub	mem32x,imm		32	81		$1,5	$2,32	386
-sub	reg32,imm32x		32	81		$1r,5	$2,32	386
-sub	mem,imm32x		32	81		$1,5	$2,32	386
-sub	reg16,imm8x		16	83		$1r,5	$2,8s	8086
-sub	mem16x,imm8x		16	83		$1,5	$2,8s	8086
-sub	reg32,imm8x		32	83		$1r,5	$2,8s	386
-sub	mem32x,imm8x		32	83		$1,5	$2,8s	386
-; opcode arbitrarily picked for next 3 (could be 2A/2B instead of 28/29).
-sub	reg8,reg8		nil	28		$1r,$2	nil	8086
-sub	reg16,reg16		16	29		$1r,$2	nil	8086
-sub	reg32,reg32		32	29		$1r,$2	nil	386
-sub	mem,reg8		nil	28		$1,$2	nil	8086
-sub	mem8x,reg8		nil	28		$1,$2	nil	8086
-sub	mem,reg16		16	29		$1,$2	nil	8086
-sub	mem16x,reg16		16	29		$1,$2	nil	8086
-sub	mem,reg32		32	29		$1,$2	nil	386
-sub	mem32x,reg32		32	29		$1,$2	nil	386
-sub	reg8,mem8		nil	2A		$2,$1	nil	8086
-sub	reg16,mem16		16	2B		$2,$1	nil	8086
-sub	reg32,mem32		32	2B		$2,$1	nil	386
-subpd	XMMREG,rm128		nil	66,0F,5C	$2,$1	nil	P4,SSE2
-subps	XMMREG,rm128		nil	0F,5C		$2,$1	nil	KATMAI,SSE
-subsd	XMMREG,rm128		nil	F2,0F,5C	$2,$1	nil	P4,SSE2
-subss	XMMREG,rm128		nil	F3,0F,5C	$2,$1	nil	P4,SSE2
-sysenter	nil		nil	0F,34		nil	nil	P6
-sysexit	nil			nil	0F,35		nil	nil	P6,PRIV
+stosb!onebyte		AA		8086
+stosw!onebyte16		AB
+stosd!onebyte32		AB
+str!prot286		1
+sub!arith		28,5
+subpd!sse2pd		5C
+subps!sseps		5C
+subsd!sse2sd		5C
+subss!sse2ss		5C
+sysenter!twobyte	0F,34		P6
+sysexit!twobyte		0F,35		P6,PRIV
 test	REG_AL,imm8		nil	A8		nil	$2,8	8086
 test	REG_AX,imm16		16	A9		nil	$2,16	8086
 test	REG_EAX,imm32		32	A9		nil	$2,32	386
@@ -1180,19 +877,19 @@ test	mem32x,reg32		32	85		$1,$2	nil	386
 test	reg8,mem8		nil	84		$2,$1	nil	8086
 test	reg16,mem16		16	85		$2,$1	nil	8086
 test	reg32,mem32		32	85		$2,$1	nil	386
-ucomisd	XMMREG,rm128		nil	66,0F,2E	$2,$1	nil	P4,SSE2
-ucomiss	XMMREG,rm128		nil	0F,2E		$2,$1	nil	KATMAI,SSE
-ud2	nil			nil	0F,0B		nil	nil	286
-unpckhpd	XMMREG,rm128	nil	66,0F,15	$2,$1	nil	P4,SSE2
-unpckhps	XMMREG,rm128	nil	0F,15		$2,$1	nil	KATMAI,SSE
-unpcklpd	XMMREG,rm128	nil	66,0F,14	$2,$1	nil	P4,SSE2
-unpcklps	XMMREG,rm128	nil	0F,14		$2,$1	nil	KATMAI,SSE
-verr	rm16			nil	0F,00		$1,4	nil	286,PROT
-verw	rm16			nil	0F,00		$1,5	nil	286,PROT
-wait	nil			nil	9B		nil	nil	8086
-:fwait	wait
-wbinvd	nil			nil	0F,09		nil	nil	486,PRIV
-wrmsr	nil			nil	0F,30		nil	nil	P5,PRIV
+ucomisd!sse2sd		2E
+ucomiss!sse2ss		2E
+ud2!twobyte		0F,0B		286
+unpckhpd!sse2pd		15
+unpckhps!sseps		15
+unpcklpd!sse2pd		14
+unpcklps!sseps		14
+verr!prot286		4
+verw!prot286		5
+wait!onebyte		9B		8086
+fwait!onebyte		9B		8086,FPU
+wbinvd!twobyte		0F,09		486,PRIV
+wrmsr!twobyte		0F,30		P5,PRIV
 ; arbitrary encoding, picked $1r,$2 instead of $2r,$1
 xadd	reg8,reg8		nil	0F,C0		$1r,$2	nil	486
 xadd	mem,reg8		nil	0F,C0		$1,$2	nil	486
@@ -1227,42 +924,11 @@ xchg	reg32,reg32		32	87		$1r,$2	nil	386
 xchg	mem,reg32		32	87		$1,$2	nil	386
 xchg	mem32x,reg32		32	87		$1,$2	nil	386
 xchg	reg32,mem32		32	87		$2,$1	nil	386
-:xlat	xlatb
-xlatb	nil			nil	D7		nil	nil	8086
-xor	REG_AL,imm8		nil	34		nil	$2,8	8086
-xor	REG_AX,imm16		16	35		nil	$2,16	8086
-xor	REG_EAX,imm32		32	35		nil	$2,32	386
-xor	reg8,imm		nil	80		$1r,6	$2,8	8086
-xor	mem8x,imm		nil	80		$1,6	$2,8	8086
-xor	reg8,imm8x		nil	80		$1r,6	$2,8	8086
-xor	mem,imm8x		nil	80		$1,6	$2,8	8086
-xor	reg16,imm		16	81		$1r,6	$2,16	8086
-xor	mem16x,imm		16	81		$1,6	$2,16	8086
-xor	reg16,imm16x		16	81		$1r,6	$2,16	8086
-xor	mem,imm16x		16	81		$1,6	$2,16	8086
-xor	reg32,imm		32	81		$1r,6	$2,32	386
-xor	mem32x,imm		32	81		$1,6	$2,32	386
-xor	reg32,imm32x		32	81		$1r,6	$2,32	386
-xor	mem,imm32x		32	81		$1,6	$2,32	386
-xor	reg16,imm8x		16	83		$1r,6	$2,8s	8086
-xor	mem16x,imm8x		16	83		$1,6	$2,8s	8086
-xor	reg32,imm8x		32	83		$1r,6	$2,8s	386
-xor	mem32x,imm8x		32	83		$1,6	$2,8s	386
-; opcode arbitrarily picked for next 3 (could be 32/33 instead of 30/31).
-xor	reg8,reg8		nil	30		$1r,$2	nil	8086
-xor	reg16,reg16		16	31		$1r,$2	nil	8086
-xor	reg32,reg32		32	31		$1r,$2	nil	386
-xor	mem,reg8		nil	30		$1,$2	nil	8086
-xor	mem8x,reg8		nil	30		$1,$2	nil	8086
-xor	mem,reg16		16	31		$1,$2	nil	8086
-xor	mem16x,reg16		16	31		$1,$2	nil	8086
-xor	mem,reg32		32	31		$1,$2	nil	386
-xor	mem32x,reg32		32	31		$1,$2	nil	386
-xor	reg8,mem8		nil	32		$2,$1	nil	8086
-xor	reg16,mem16		16	33		$2,$1	nil	8086
-xor	reg32,mem32		32	33		$2,$1	nil	386
-xorpd	XMMREG,rm128		nil	66,0F,57	$2,$1	nil	P4,SSE2
-xorps	XMMREG,rm128		nil	0F,57		$2,$1	nil	KATMAI,SSE
+xlat!onebyte		D7		8086
+xlatb!onebyte		D7		8086
+xor!arith		30,6
+xorpd!sse2pd		57
+xorps!sseps		57
 ;
 ; Obsolete/Undocumented Instructions
 ;
@@ -1279,7 +945,7 @@ cmpxchg486	reg32,reg32	32	0F,A7		$1r,$2	nil	486,UNDOC
 cmpxchg486	mem,reg32	32	0F,A7		$1,$2	nil	486,UNDOC
 cmpxchg486	mem32x,reg32	32	0F,A7		$1,$2	nil	486,UNDOC
 ffreep	fpureg			nil	DF,C0+$1	nil	nil	P6,FPU,UNDOC
-fsetpm	nil			nil	DB,E4		nil	nil	286,FPU,OBS
+fsetpm!twobyte		DB,E4		286,FPU,OBS
 ; arbitrary encoding, picked $1r,$2 instead of $2r,$1
 ibts	reg16,reg16		16	0F,A7		$1r,$2	nil	386,UNDOC,OBS
 ibts	mem,reg16		16	0F,A7		$1,$2	nil	386,UNDOC,OBS
@@ -1288,12 +954,12 @@ ibts	mem16x,reg16		16	0F,A7		$1,$2	nil	386,UNDOC,OBS
 ibts	reg32,reg32		32	0F,A7		$1r,$2	nil	386,UNDOC,OBS
 ibts	mem,reg32		32	0F,A7		$1,$2	nil	386,UNDOC,OBS
 ibts	mem32x,reg32		32	0F,A7		$1,$2	nil	386,UNDOC,OBS
-loadall	nil			nil	0F,07		nil	nil	386,UNDOC
-loadall286	nil		nil	0F,05		nil	nil	286,UNDOC
+loadall!twobyte		0F,07		386,UNDOC
+loadall286!twobyte	0F,05		286,UNDOC
 ;pop	REG_CS			nil	0F		nil	nil	8086,UNDOC,OBS
-salc	nil			nil	D6		nil	nil	8086,UNDOC
-smi	nil			nil	F1		nil	nil	386,UNDOC
-ud1	nil			nil	0F,B9		nil	nil	286,UNDOC
+salc!onebyte		D6		8086,UNDOC
+smi!onebyte		F1		386,UNDOC
+ud1!twobyte		0F,B9		286,UNDOC
 ; opcode arbitrarily picked for next 3 (could be 12/13 instead of 10/11).
 umov	reg8,reg8		nil	0F,10		$1r,$2	nil	386,UNDOC
 umov	reg16,reg16		16	0F,11		$1r,$2	nil	386,UNDOC
@@ -1312,60 +978,60 @@ xbts	reg32,mem32		32	0F,A6		$2,$1	nil	386,UNDOC,OBS
 ;
 ; AMD 3DNow! Instructions
 ;
-femms	nil			nil	0F,0E		nil	nil	P5,3DNOW,AMD
-pavgusb	MMXREG,rm64		nil	0F,0F		$2,$1	BF,8	P5,3DNOW,AMD
-pf2id	MMXREG,rm64		nil	0F,0F		$2,$1	1D,8	P5,3DNOW,AMD
-pf2iw	MMXREG,rm64		nil	0F,0F		$2,$1	1C,8	ATHLON,3DNOW,AMD
-pfacc	MMXREG,rm64		nil	0F,0F		$2,$1	AE,8	P5,3DNOW,AMD
-pfadd	MMXREG,rm64		nil	0F,0F		$2,$1	9E,8	P5,3DNOW,AMD
-pfcmpeq	MMXREG,rm64		nil	0F,0F		$2,$1	B0,8	P5,3DNOW,AMD
-pfcmpge	MMXREG,rm64		nil	0F,0F		$2,$1	90,8	P5,3DNOW,AMD
-pfcmpgt	MMXREG,rm64		nil	0F,0F		$2,$1	A0,8	P5,3DNOW,AMD
-pfmax	MMXREG,rm64		nil	0F,0F		$2,$1	A4,8	P5,3DNOW,AMD
-pfmin	MMXREG,rm64		nil	0F,0F		$2,$1	94,8	P5,3DNOW,AMD
-pfmul	MMXREG,rm64		nil	0F,0F		$2,$1	B4,8	P5,3DNOW,AMD
-pfnacc	MMXREG,rm64		nil	0F,0F		$2,$1	8A,8	ATHLON,3DNOW,AMD
-pfpnacc	MMXREG,rm64		nil	0F,0F		$2,$1	8E,8	ATHLON,3DNOW,AMD
-pfrcp	MMXREG,rm64		nil	0F,0F		$2,$1	96,8	P5,3DNOW,AMD
-pfrcpit1	MMXREG,rm64	nil	0F,0F		$2,$1	A6,8	P5,3DNOW,AMD
-pfrcpit2	MMXREG,rm64	nil	0F,0F		$2,$1	B6,8	P5,3DNOW,AMD
-pfrsqit1	MMXREG,rm64	nil	0F,0F		$2,$1	A7,8	P5,3DNOW,AMD
-pfrsqrt	MMXREG,rm64		nil	0F,0F		$2,$1	97,8	P5,3DNOW,AMD
-pfsub	MMXREG,rm64		nil	0F,0F		$2,$1	9A,8	P5,3DNOW,AMD
-pfsubr	MMXREG,rm64		nil	0F,0F		$2,$1	AA,8	P5,3DNOW,AMD
-pi2fd	MMXREG,rm64		nil	0F,0F		$2,$1	0D,8	P5,3DNOW,AMD
-pi2fw	MMXREG,rm64		nil	0F,0F		$2,$1	0C,8	ATHLON,3DNOW,AMD
-pmulhrwa	MMXREG,rm64	nil	0F,0F		$2,$1	B7,8	P5,3DNOW,AMD
+femms!twobyte		0F,0E		P5,3DNOW,AMD
+pavgusb!now3d		BF		P5
+pf2id!now3d		1D		P5
+pf2iw!now3d		1C		ATHLON
+pfacc!now3d		AE		P5
+pfadd!now3d		9E		P5
+pfcmpeq!now3d		B0		P5
+pfcmpge!now3d		90		P5
+pfcmpgt!now3d		A0		P5
+pfmax!now3d		A4		P5
+pfmin!now3d		94		P5
+pfmul!now3d		B4		P5
+pfnacc!now3d		8A		ATHLON
+pfpnacc!now3d		8E		ATHLON
+pfrcp!now3d		96		P5
+pfrcpit1!now3d		A6		P5
+pfrcpit2!now3d		B6		P5
+pfrsqit1!now3d		A7		P5
+pfrsqrt!now3d		97		P5
+pfsub!now3d		9A		P5
+pfsubr!now3d		AA		P5
+pi2fd!now3d		0D		P5
+pi2fw!now3d		0C		ATHLON
+pmulhrwa!now3d		B7		P5
 prefetch	mem		nil	0F,0D		$1,0	nil	P5,3DNOW,AMD
 prefetchw	mem		nil	0F,0D		$1,1	nil	P5,3DNOW,AMD
-pswapd	MMXREG,rm64		nil	0F,0F		$2,$1	BB,8	ATHLON,3DNOW,AMD
+pswapd!now3d		BB		ATHLON
 ;
 ; Other AMD Instructions
 ;
-syscall	nil			nil	0F,05		nil	nil	P6,AMD
-sysret	nil			nil	0F,07		nil	nil	P6,PRIV,AMD
+syscall!twobyte		0F,05		P6,AMD
+sysret!twobyte		0F,07		P6,PRIV,AMD
 ;
 ; Cyrix Instructions
 ;
-paddsiw	MMXREG,rm64		nil	0F,51		$2,$1	nil	P5,MMX,CYRIX
-paveb	MMXREG,rm64		nil	0F,50		$2,$1	nil	P5,MMX,CYRIX
-pdistib	MMXREG,rm64		nil	0F,54		$2,$1	nil	P5,MMX,CYRIX
+paddsiw!cyrixmmx	51
+paveb!cyrixmmx		50
+pdistib!cyrixmmx	54
 pmachriw	MMXREG,mem64	nil	0F,5E		$2,$1	nil	P5,MMX,CYRIX
-pmagw	MMXREG,rm64		nil	0F,52		$2,$1	nil	P5,MMX,CYRIX
-pmulhriw	MMXREG,rm64	nil	0F,5D		$2,$1	nil	P5,MMX,CYRIX
-pmulhrwc	MMXREG,rm64	nil	0F,59		$2,$1	nil	P5,MMX,CYRIX
-pmvgezb	MMXREG,mem64		nil	0F,5C		$2,$1	nil	P5,MMX,CYRIX
-pmvlzb	MMXREG,mem64		nil	0F,5B		$2,$1	nil	P5,MMX,CYRIX
-pmvnzb	MMXREG,mem64		nil	0F,5A		$2,$1	nil	P5,MMX,CYRIX
-pmvzb	MMXREG,mem64		nil	0F,58		$2,$1	nil	P5,MMX,CYRIX
-psubsiw	MMXREG,rm64		nil	0F,55		$2,$1	nil	P5,MMX,CYRIX
-rdshr	nil			nil	0F,36		nil	nil	P6,CYRIX,SMM
+pmagw!cyrixmmx		52
+pmulhriw!cyrixmmx	5D
+pmulhrwc!cyrixmmx	59
+pmvgezb!cyrixmmx	5C
+pmvlzb!cyrixmmx		5B
+pmvnzb!cyrixmmx		5A
+pmvzb!cyrixmmx		58
+psubsiw!cyrixmmx	55
+rdshr!twobyte		0F,36		P6,CYRIX,SMM
 rsdc	segreg,mem80		nil	0F,79		$2,$1	nil	486,CYRIX,SMM
-rsldt	mem80			nil	0F,7B		$1,0	nil	486,CYRIX,SMM
-rsts	mem80			nil	0F,7D		$1,0	nil	486,CYRIX,SMM
-smint	nil			nil	0F,38		nil	nil	P6,CYRIX
-smintold	nil		nil	0F,7E		nil	nil	486,CYRIX,OBS
+rsldt!cyrixsmm		7B
+rsts!cyrixsmm		7D
+smint!twobyte		0F,38		P6,CYRIX
+smintold!twobyte	0F,7E		486,CYRIX,OBS
 svdc	mem80,segreg		nil	0F,78		$1,$2	nil	486,CYRIX,SMM
-svldt	mem80			nil	0F,7A		$1,0	nil	486,CYRIX,SMM
-svts	mem80			nil	0F,7C		$1,0	nil	486,CYRIX,SMM
-wrshr	nil			nil	0F,37		nil	nil	P6,CYRIX,SMM
+svldt!cyrixsmm		7A
+svts!cyrixsmm		7C
+wrshr!twobyte		0F,37		P6,CYRIX,SMM
