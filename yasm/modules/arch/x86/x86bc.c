@@ -69,10 +69,12 @@ typedef struct x86_insn {
     unsigned char opcode_len;
 
     unsigned char addrsize;	/* 0 or =mode_bits => no override */
-    unsigned char opersize;	/* 0 indicates no override */
+    unsigned char opersize;	/* 0 or =mode_bits => no override */
     unsigned char lockrep_pre;	/* 0 indicates no prefix */
 
-    unsigned char rex;		/* REX x86-64 extension, 0 if none,
+    unsigned char def_opersize_64;  /* default operand size in 64-bit mode */
+
+    unsigned char rex;		/* REX AMD64 extension, 0 if none,
 				   0xff if not allowed (high 8 bit reg used) */
 
     /* HACK, but a space-saving one: shift opcodes have an immediate
@@ -177,6 +179,7 @@ yasm_x86__bc_new_insn(x86_new_insn_data *d)
 
     insn->addrsize = 0;
     insn->opersize = d->opersize;
+    insn->def_opersize_64 = d->def_opersize_64;
     insn->lockrep_pre = 0;
     insn->rex = d->rex;
     insn->shift_op = d->shift_op;
@@ -701,7 +704,11 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 	 (insn->mode_bits == 64 && insn->opersize == 16)))
 	(*len)++;
     *len += (insn->lockrep_pre != 0) ? 1:0;
-    *len += (insn->rex != 0 && insn->rex != 0xff) ? 1:0;
+    if (insn->rex != 0xff &&
+	(insn->rex != 0 ||
+	 (insn->mode_bits == 64 && insn->opersize == 64 &&
+	  insn->def_opersize_64 != 64)))
+	(*len)++;
 
     return retval;
 }
@@ -920,11 +927,16 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp,
 	YASM_WRITE_8(*bufp, 0x66);
     if (insn->addrsize != 0 && insn->addrsize != insn->mode_bits)
 	YASM_WRITE_8(*bufp, 0x67);
-    if (insn->rex != 0 && insn->rex != 0xff) {
-	if (insn->mode_bits != 64)
-	    yasm_internal_error(
-		N_("x86: got a REX prefix in non-64-bit mode"));
-	YASM_WRITE_8(*bufp, insn->rex);
+    if (insn->rex != 0xff) {
+	if (insn->mode_bits == 64 && insn->opersize == 64 &&
+	    insn->def_opersize_64 != 64)
+	    insn->rex |= 0x48;
+	if (insn->rex != 0) {
+	    if (insn->mode_bits != 64)
+		yasm_internal_error(
+		    N_("x86: got a REX prefix in non-64-bit mode"));
+	    YASM_WRITE_8(*bufp, insn->rex);
+	}
     }
 
     /* Opcode */
