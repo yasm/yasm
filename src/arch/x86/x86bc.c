@@ -463,8 +463,8 @@ x86_bc_print(FILE *f, const bytecode *bc)
 }
 
 static int
-x86_bc_calc_len_insn(x86_insn *insn, unsigned long *len, const section *sect,
-		     resolve_label_func resolve_label)
+x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
+		    const section *sect, resolve_label_func resolve_label)
 {
     /*@null@*/ expr *temp;
     effaddr *ea = insn->ea;
@@ -499,34 +499,24 @@ x86_bc_calc_len_insn(x86_insn *insn, unsigned long *len, const section *sect,
 		return -1;   /* failed, don't bother checking rest of insn */
 	    }
 
-	    if (!temp) {
-		/* If the expression was deleted (temp=NULL), then make the
-		 * temp info permanent.
-		 */
+	    expr_delete(temp);
 
-		/* Delete the "real" expression */
-		expr_delete(ea->disp);
-		ea->disp = NULL;
-		*ead = ead_t;	/* structure copy */
-		ea->len = displen;
-	    } else if (displen == 1) {
-		/* Fits into a byte.  We'll assume it never gets bigger, so
-		 * make temp info permanent, but NOT the expr itself (as that
-		 * may change).
-		 */
-		expr_delete(temp);
-		*ead = ead_t;	/* structure copy */
-		ea->len = displen;
-	    } else {
-		/* Fits into a word/dword, or unknown.  As this /may/ change in
-		 * a future pass, so discard temp info.
-		 */
-		expr_delete(temp);
+	    if (displen != 1) {
+		/* Fits into a word/dword, or unknown. */
 		retval = 0;	    /* may not be smallest size */
 
 		/* Handle unknown case, make displen word-sized */
 		if (displen == 0xff)
 		    displen = (insn->addrsize == 32) ? 4 : 2;
+	    }
+
+	    if (save) {
+		*ead = ead_t;	/* structure copy */
+		ea->len = displen;
+		if (displen == 0 && ea->disp) {
+		    expr_delete(ea->disp);
+		    ea->disp = NULL;
+		}
 	    }
 	}
 
@@ -552,8 +542,21 @@ x86_bc_calc_len_insn(x86_insn *insn, unsigned long *len, const section *sect,
 		     * (as we add it back in below).
 		     */
 		    *len -= imm->len;
+
+		    if (save) {
+			/* Make the ,1 form permanent. */
+			insn->opcode[0] = insn->opcode[1];
+			/* Delete imm, as it's not needed. */
+			expr_delete(imm->val);
+			xfree(imm);
+			insn->imm = (immval *)NULL;
+		    }
 		} else
 		    retval = 0;	    /* we could still get ,1 */
+
+		/* Not really necessary, but saves confusion over it. */
+		if (save)
+		    insn->shift_op = 0;
 	    }
 
 	    expr_delete(temp);
@@ -571,9 +574,9 @@ x86_bc_calc_len_insn(x86_insn *insn, unsigned long *len, const section *sect,
 }
 
 static int
-x86_bc_calc_len_jmprel(x86_jmprel *jmprel, unsigned long *len,
-		       unsigned long offset, const section *sect,
-		       resolve_label_func resolve_label)
+x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
+		      const bytecode *bc, const section *sect,
+		      resolve_label_func resolve_label)
 {
     int retval = 1;
     /*@null@*/ expr *temp;
@@ -587,17 +590,44 @@ x86_bc_calc_len_jmprel(x86_jmprel *jmprel, unsigned long *len,
     opersize = (jmprel->opersize == 0) ? jmprel->mode_bits :
 	jmprel->opersize;
 
-    /* We don't check here to see if forced forms are actually legal; we
-     * assume that they are, and only check it in x86_bc_tobytes_jmprel().
+    /* We only check to see if forced forms are actually legal if we're in
+     * save mode.  Otherwise we assume that they are legal.
      */
     switch (jmprel->op_sel) {
 	case JR_SHORT_FORCED:
 	    /* 1 byte relative displacement */
 	    jrshort = 1;
+	    if (save) {
+		if (!num) {
+		    ErrorAt(bc->line,
+			    _("short jump target external or out of segment"));
+		    return -1;
+		} else {
+		    target = intnum_get_uint(num);
+		    rel = (long)(target -
+				 (bc->offset+jmprel->shortop.opcode_len+1));
+		    /* does a short form exist? */
+		    if (jmprel->shortop.opcode_len == 0) {
+			ErrorAt(bc->line, _("short jump does not exist"));
+			return -1;
+		    }
+		    /* short displacement must fit in -128 <= rel <= +127 */
+		    if (rel < -128 || rel > 127) {
+			ErrorAt(bc->line, _("short jump out of range"));
+			return -1;
+		    }
+		}
+	    }
 	    break;
 	case JR_NEAR_FORCED:
 	    /* 2/4 byte relative displacement (depending on operand size) */
 	    jrshort = 0;
+	    if (save) {
+		if (jmprel->nearop.opcode_len == 0) {
+		    ErrorAt(bc->line, _("near jump does not exist"));
+		    return -1;
+		}
+	    }
 	    break;
 	default:
 	    /* Try to find shortest displacement based on difference between
@@ -611,42 +641,63 @@ x86_bc_calc_len_jmprel(x86_jmprel *jmprel, unsigned long *len,
 	    num = expr_get_intnum(&temp);
 	    if (num) {
 		target = intnum_get_uint(num);
-		rel = (long)(target-(offset+jmprel->shortop.opcode_len+1));
+		rel = (long)(target-(bc->offset+jmprel->shortop.opcode_len+1));
 		/* short displacement must fit within -128 <= rel <= +127 */
 		if (jmprel->shortop.opcode_len != 0 && rel >= -128 &&
 		    rel <= 127) {
 		    /* It fits into a short displacement. */
 		    jrshort = 1;
-		} else {
+		} else if (jmprel->nearop.opcode_len != 0) {
 		    /* Near for now, but could get shorter in the future if
 		     * there's a short form available.
 		     */
 		    jrshort = 0;
 		    if (jmprel->shortop.opcode_len != 0)
 			retval = 0;
+		} else {
+		    /* Doesn't fit into short, and there's no near opcode.
+		     * Error out if saving, otherwise just make it a short
+		     * (in the hopes that a short might make it possible for
+		     * it to actually be within short range).
+		     */
+		    if (save) {
+			ErrorAt(bc->line, _("short jump out of range"));
+			return -1;
+		    }
+		    jrshort = 1;
 		}
 	    } else {
-		/* It's unknown (e.g. out of this segment or external).
-		 * Thus, assume near displacement.  If a near opcode is not
-		 * available, use a short opcode instead.
+		/* It's unknown.  Thus, assume near displacement.  If a near
+		 * opcode is not available, use a short opcode instead.
+		 * If we're saving, error if a near opcode is not available.
 		 */
 		if (jmprel->nearop.opcode_len != 0) {
 		    if (jmprel->shortop.opcode_len != 0)
 			retval = 0;
 		    jrshort = 0;
-		} else
+		} else {
+		    if (save) {
+			ErrorAt(bc->line,
+				_("short jump target or out of segment"));
+			return -1;
+		    }
 		    jrshort = 1;
+		}
 	    }
 	    expr_delete(temp);
 	    break;
     }
 
     if (jrshort) {
+	if (save)
+	    jmprel->op_sel = JR_SHORT;
 	if (jmprel->shortop.opcode_len == 0)
 	    return -1;	    /* uh-oh, that size not available */
 
 	*len += jmprel->shortop.opcode_len + 1;
     } else {
+	if (save)
+	    jmprel->op_sel = JR_NEAR;
 	if (jmprel->nearop.opcode_len == 0)
 	    return -1;	    /* uh-oh, that size not available */
 
@@ -663,8 +714,8 @@ x86_bc_calc_len_jmprel(x86_jmprel *jmprel, unsigned long *len,
 }
 
 int
-x86_bc_calc_len(bytecode *bc, const section *sect,
-		resolve_label_func resolve_label)
+x86_bc_resolve(bytecode *bc, int save, const section *sect,
+	       resolve_label_func resolve_label)
 {
     x86_insn *insn;
     x86_jmprel *jmprel;
@@ -672,11 +723,12 @@ x86_bc_calc_len(bytecode *bc, const section *sect,
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
 	    insn = bc_get_data(bc);
-	    return x86_bc_calc_len_insn(insn, &bc->len, sect, resolve_label);
+	    return x86_bc_resolve_insn(insn, &bc->len, save, sect,
+				       resolve_label);
 	case X86_BC_JMPREL:
 	    jmprel = bc_get_data(bc);
-	    return x86_bc_calc_len_jmprel(jmprel, &bc->len, bc->offset, sect,
-					  resolve_label);
+	    return x86_bc_resolve_jmprel(jmprel, &bc->len, save, bc, sect,
+					 resolve_label);
 	default:
 	    break;
     }
@@ -685,56 +737,12 @@ x86_bc_calc_len(bytecode *bc, const section *sect,
 
 static int
 x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
-		    const bytecode *bc, void *d, output_expr_func output_expr,
-		    resolve_label_func resolve_label)
+		    const bytecode *bc, void *d, output_expr_func output_expr)
 {
     /*@null@*/ effaddr *ea = insn->ea;
     x86_effaddr_data *ead = ea_get_data(ea);
     immval *imm = insn->imm;
     unsigned int i;
-
-    /* We need to figure out the EA first to determine the addrsize.
-     * Of course, the ModR/M, SIB, and displacement are not output until later.
-     */
-    if (ea) {
-	if ((ea->disp) && ((!ead->valid_sib && ead->need_sib) ||
-			   (!ead->valid_modrm && ead->need_modrm))) {
-	    /* Expand equ's and labels */
-	    expr_expand_labelequ(ea->disp, sect, 1, resolve_label);
-
-	    /* Check validity of effective address and calc R/M bits of
-	     * Mod/RM byte and SIB byte.  We won't know the Mod field
-	     * of the Mod/RM byte until we know more about the
-	     * displacement.
-	     */
-	    if (!x86_expr_checkea(&ea->disp, &insn->addrsize, insn->mode_bits,
-				  ea->nosplit, &ea->len, &ead->modrm,
-				  &ead->valid_modrm, &ead->need_modrm,
-				  &ead->sib, &ead->valid_sib,
-				  &ead->need_sib))
-		InternalError(_("expr_checkea failed from x86 tobytes_insn"));
-	}
-    }
-
-    /* Also check for shift_op special-casing (affects imm). */
-    if (insn->shift_op && imm && imm->val) {
-	/*@dependent@*/ /*@null@*/ const intnum *num;
-
-	expr_expand_labelequ(imm->val, sect, 1, resolve_label);
-
-	num = expr_get_intnum(&imm->val);
-	if (num) {
-	    if (intnum_get_uint(num) == 1) {
-		/* Use ,1 form: first copy ,1 opcode. */
-		insn->opcode[0] = insn->opcode[1];
-		/* Delete imm, as it's not needed. */
-		expr_delete(imm->val);
-		xfree(imm);
-		insn->imm = (immval *)NULL;
-	    }
-	    insn->shift_op = 0;
-	}
-    }
 
     /* Prefixes */
     if (insn->lockrep_pre != 0)
@@ -766,9 +774,35 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
 	    WRITE_BYTE(*bufp, ead->sib);
 	}
 
-	if (ea->disp)
-	    if (output_expr(&ea->disp, bufp, ea->len, sect, bc, 0, d))
-		return 1;
+	if (ea->disp) {
+	    x86_effaddr_data ead_t = *ead;  /* structure copy */
+	    unsigned char displen = ea->len;
+	    unsigned char addrsize = insn->addrsize;
+
+	    ead_t.valid_modrm = 0;  /* force checkea to actually run */
+
+	    /* Call checkea() to simplify the registers out of the
+	     * displacement.  Throw away all of the return values except for
+	     * the modified expr.
+	     */
+	    if (!x86_expr_checkea(&ea->disp, &addrsize, insn->mode_bits,
+				  ea->nosplit, &displen, &ead_t.modrm,
+				  &ead_t.valid_modrm, &ead_t.need_modrm,
+				  &ead_t.sib, &ead_t.valid_sib,
+				  &ead_t.need_sib))
+		InternalError(_("checkea failed"));
+
+	    if (ea->disp) {
+		if (output_expr(&ea->disp, bufp, ea->len, sect, bc, 0, d))
+		    return 1;
+	    } else {
+		/* 0 displacement, but we didn't know it before, so we have to
+		 * write out 0 value.
+		 */
+		for (i=0; i<ea->len; i++)
+		    WRITE_BYTE(*bufp, 0);
+	    }
+	}
     }
 
     /* Immediate (if required) */
@@ -784,14 +818,9 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
 static int
 x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 		      const section *sect, const bytecode *bc, void *d,
-		      output_expr_func output_expr,
-		      resolve_label_func resolve_label)
+		      output_expr_func output_expr)
 {
-    /*@dependent@*/ /*@null@*/ const intnum *num;
-    unsigned long target;
-    long rel;
     unsigned char opersize;
-    int jrshort = 0;
     unsigned int i;
 
     /* Prefixes */
@@ -807,100 +836,48 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
     opersize = (jmprel->opersize == 0) ? jmprel->mode_bits :
 	jmprel->opersize;
 
-    /* Get displacement value here so that forced forms can be checked. */
-    expr_expand_labelequ(jmprel->target, sect, 0, resolve_label);
-    num = expr_get_intnum(&jmprel->target);
-
     /* Check here to see if forced forms are actually legal. */
     switch (jmprel->op_sel) {
 	case JR_SHORT_FORCED:
+	case JR_SHORT:
 	    /* 1 byte relative displacement */
-	    jrshort = 1;
-	    if (!num) {
-		ErrorAt(bc->line,
-			_("short jump target external or out of segment"));
+	    if (jmprel->shortop.opcode_len == 0)
+		InternalError(_("short jump does not exist"));
+
+	    /* Opcode */
+	    for (i=0; i<jmprel->shortop.opcode_len; i++)
+		WRITE_BYTE(*bufp, jmprel->shortop.opcode[i]);
+
+	    /* Relative displacement */
+	    if (output_expr(&jmprel->target, bufp, 1, sect, bc, 1, d))
 		return 1;
-	    } else {
-		target = intnum_get_uint(num);
-		rel = (long)(target-(bc->offset+jmprel->shortop.opcode_len+1));
-		/* does a short form exist? */
-		if (jmprel->shortop.opcode_len == 0) {
-		    ErrorAt(bc->line, _("short jump does not exist"));
-		    return 1;
-		}
-		/* short displacement must fit within -128 <= rel <= +127 */
-		if (rel < -128 || rel > 127) {
-		    ErrorAt(bc->line, _("short jump out of range"));
-		    return 1;
-		}
-	    }
 	    break;
 	case JR_NEAR_FORCED:
+	case JR_NEAR:
 	    /* 2/4 byte relative displacement (depending on operand size) */
-	    jrshort = 0;
 	    if (jmprel->nearop.opcode_len == 0) {
 		ErrorAt(bc->line, _("near jump does not exist"));
 		return 1;
 	    }
+
+	    /* Opcode */
+	    for (i=0; i<jmprel->nearop.opcode_len; i++)
+		WRITE_BYTE(*bufp, jmprel->nearop.opcode[i]);
+
+	    /* Relative displacement */
+	    if (output_expr(&jmprel->target, bufp, (opersize == 32) ? 4 : 2,
+			    sect, bc, 1, d))
+		return 1;
 	    break;
 	default:
-	    /* Try to find shortest displacement based on difference between
-	     * target expr value and our (this bytecode's) offset.
-	     */
-	    if (num) {
-		target = intnum_get_uint(num);
-		rel = (long)(target-(bc->offset+jmprel->shortop.opcode_len+1));
-		/* short displacement must fit within -128 <= rel <= +127 */
-		if (jmprel->shortop.opcode_len != 0 && rel >= -128 &&
-		    rel <= 127) {
-		    /* It fits into a short displacement. */
-		    jrshort = 1;
-		} else {
-		    /* It's near. */
-		    jrshort = 0;
-		    if (jmprel->nearop.opcode_len == 0) {
-			InternalError(_("near jump does not exist"));
-			return 1;
-		    }
-		}
-	    } else {
-		/* It's unknown (e.g. out of this segment or external).
-		 * Thus, assume near displacement.  If a near opcode is not
-		 * available, error out.
-		 */
-		jrshort = 0;
-		if (jmprel->nearop.opcode_len == 0) {
-		    ErrorAt(bc->line,
-			    _("short jump target or out of segment"));
-		    return 1;
-		}
-	    }
-	    break;
-    }
-
-    if (jrshort) {
-	/* Opcode */
-	for (i=0; i<jmprel->shortop.opcode_len; i++)
-	    WRITE_BYTE(*bufp, jmprel->shortop.opcode[i]);
-
-	/* Relative displacement */
-	output_expr(&jmprel->target, bufp, 1, sect, bc, 1, d);
-    } else {
-	/* Opcode */
-	for (i=0; i<jmprel->nearop.opcode_len; i++)
-	    WRITE_BYTE(*bufp, jmprel->nearop.opcode[i]);
-
-	/* Relative displacement */
-	output_expr(&jmprel->target, bufp, (opersize == 32) ? 4 : 2, sect, bc,
-		    1, d);
+	    InternalError(_("unrecognized relative jump op_sel"));
     }
     return 0;
 }
 
 int
 x86_bc_tobytes(bytecode *bc, unsigned char **bufp, const section *sect,
-	       void *d, output_expr_func output_expr,
-	       resolve_label_func resolve_label)
+	       void *d, output_expr_func output_expr)
 {
     x86_insn *insn;
     x86_jmprel *jmprel;
@@ -908,16 +885,15 @@ x86_bc_tobytes(bytecode *bc, unsigned char **bufp, const section *sect,
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
 	    insn = bc_get_data(bc);
-	    return x86_bc_tobytes_insn(insn, bufp, sect, bc, d, output_expr,
-				       resolve_label);
+	    return x86_bc_tobytes_insn(insn, bufp, sect, bc, d, output_expr);
 	    break;
 	case X86_BC_JMPREL:
 	    jmprel = bc_get_data(bc);
 	    return x86_bc_tobytes_jmprel(jmprel, bufp, sect, bc, d,
-					 output_expr, resolve_label);
+					 output_expr);
 	default:
 	    break;
     }
-    return 1;
+    return 0;
 }
 

@@ -39,14 +39,13 @@ struct arch {
 	void (*bc_delete) (bytecode *bc);
 	void (*bc_print) (FILE *f, const bytecode *bc);
 
-	/* See bytecode.h comments on bc_calc_len() */
-	int (*bc_calc_len) (bytecode *bc, const section *sect,
-			    resolve_label_func resolve_label);
+	/* See bytecode.h comments on bc_resolve() */
+	int (*bc_resolve) (bytecode *bc, int save, const section *sect,
+			   resolve_label_func resolve_label);
 	/* See bytecode.h comments on bc_tobytes() */
 	int (*bc_tobytes) (bytecode *bc, unsigned char **bufp,
 			   const section *sect, void *d,
-			   output_expr_func output_expr,
-			   resolve_label_func resolve_label);
+			   output_expr_func output_expr);
     } bc;
 };
 

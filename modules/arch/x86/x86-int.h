@@ -96,11 +96,10 @@ typedef struct x86_jmprel {
 
 void x86_bc_delete(bytecode *bc);
 void x86_bc_print(FILE *f, const bytecode *bc);
-int x86_bc_calc_len(bytecode *bc, const section *sect,
-		    resolve_label_func resolve_label);
-int x86_bc_tobytes(bytecode *bc, unsigned char **bufp, const section *sect,
-		   void *d, output_expr_func output_expr,
+int x86_bc_resolve(bytecode *bc, int save, const section *sect,
 		   resolve_label_func resolve_label);
+int x86_bc_tobytes(bytecode *bc, unsigned char **bufp, const section *sect,
+		   void *d, output_expr_func output_expr);
 
 int x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 		     unsigned char nosplit, unsigned char *displen,

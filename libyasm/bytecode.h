@@ -58,18 +58,22 @@ void bc_delete(/*@only@*/ /*@null@*/ bytecode *bc);
 
 void bc_print(FILE *f, const bytecode *bc);
 
-/* Calculates length of bytecode, saving in bc structure.
+/* Resolves labels in bytecode, and calculates its length.
+ * Tries to minimize the length as much as possible.
  * Returns whether the length is the minimum possible (1=yes, 0=no).
  * Returns -1 if the length was indeterminate.
+ * Note: sometimes it's impossible to determine if a length is the minimum
+ *       possible.  In this case, this function returns that the length is NOT
+ *       the minimum.
  * resolve_label is the function used to determine the value (offset) of a
  *  in-file label (eg, not an EXTERN variable, which is indeterminate).
- * This function does *not* modify bc other than the length/size values (eg
- *  it doesn't keep the values returned by resolve_label except temporarily to
- *  try to minimize the length).
- * sect is passed along to resolve_label.
+ * When save is zero, this function does *not* modify bc other than the
+ * length/size values (i.e. it doesn't keep the values returned by
+ * resolve_label except temporarily to try to minimize the length).
+ * When save is nonzero, all fields in bc may be modified by this function.
  */
-int bc_calc_len(bytecode *bc, const section *sect,
-		resolve_label_func resolve_label);
+int bc_resolve(bytecode *bc, int save, const section *sect,
+	       resolve_label_func resolve_label);
 
 /* Converts the bytecode bc into its byte representation.
  * Inputs:
@@ -78,17 +82,6 @@ int bc_calc_len(bytecode *bc, const section *sect,
  *  bufsize       - the size of buf
  *  d             - the data to pass to each call to output_expr()
  *  output_expr   - the function to call to convert expressions to byte rep
- *   output_expr inputs:
- *    bc      - the bytecode containing the expr that is being output
- *    ep      - a pointer to the expression to output
- *    bufp    - pointer to pointer to buffer to contain byte representation
- *    valsize - the size (in bytes) to be used for the byte rep
- *    d       - the data passed into bc_tobytes
- *   output_expr returns nonzero if an error occurred, 0 otherwise
- *  resolve_label - the function to call to determine the values of
- *                  expressions that are *not* output to the file
- *   resolve_label inputs:
- *    sym - the symbol to resolve
  * Outputs:
  *  bufsize       - the size of the generated data.
  *  multiple      - the number of times the data should be dup'ed when output
@@ -102,7 +95,7 @@ int bc_calc_len(bytecode *bc, const section *sect,
 /*@null@*/ /*@only@*/ unsigned char *bc_tobytes(bytecode *bc,
     unsigned char *buf, unsigned long *bufsize,
     /*@out@*/ unsigned long *multiple, /*@out@*/ int *gap, const section *sect,
-    void *d, output_expr_func output_expr, resolve_label_func resolve_label);
+    void *d, output_expr_func output_expr);
 
 /* void bcs_initialize(bytecodehead *headp); */
 #define	bcs_initialize(headp)	STAILQ_INIT(headp)
