@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.15 2001/07/05 09:30:04 peter Exp $
+# $Id: gen_instr.pl,v 1.16 2001/07/06 04:42:59 peter Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -84,7 +84,7 @@ my $valid_regs = join '|', qw(
 );
 my $valid_opcodes = join '|', qw(
     [0-9A-F]{2}
-    \\$0\\.0 \\$0\\.1 \\$0\\.2
+    \\$0\\.\\d
 );
 my $valid_cpus = join '|', qw(
     8086 186 286 386 486 P4 P5 P6
@@ -159,21 +159,22 @@ sub read_instructions ($)
 	$args =~ s/\$0\.1/\$0\.0/g;
 	$args =~ s/\$0\.2/\$0\.1/g;
 	$args =~ s/\$0\.3/\$0\.2/g;
+	$args =~ s/\$0\.4/\$0\.3/g;
 
 	my ($op, $size, $opcode, $eff, $imm, $cpu) = split /\t+/, $args;
 	eval {
 	    die "Invalid group name\n"
 		    if $inst !~ m/^!\w+$/o;
 	    die "Invalid Operands\n"
-		    if $op !~ m/^(?:TO\s)?nil|(?:$valid_regs)(?:,(?:$valid_regs)){0,2}$/oi;
+		    if $op !~ m/^(nil|(TO\s)?(?:$valid_regs)(,(?:$valid_regs)){0,2})$/oi;
 	    die "Invalid Operation Size\n"
-		    if $size !~ m/^nil|16|32|\$0\.\d$/oi;
+		    if $size !~ m/^(nil|16|32|\$0\.\d)$/oi;
 	    die "Invalid Opcode\n"
-		    if $opcode !~ m/(?:$valid_opcodes)(?:,$valid_opcodes)?(\+\$\d)?/oi;
+		    if $opcode !~ m/^(?:$valid_opcodes)(,(?:$valid_opcodes)){0,2}(\+(\$\d|\$0\.\d|\d))?$/oi;
 	    die "Invalid Effective Address\n"
-		    if $eff !~ m/nil|(\$?\d[ir]?(,\$?\d|,\$0.\d))/oi;
+		    if $eff !~ m/^(nil|\$?\d(r?,(\$?\d|\$0.\d)(\+\d)?|i,(nil|16|32)))$/oi;
 	    die "Invalid Immediate Operand\n"
-		    if $imm !~ m/nil|((\$\d[r]?|8|16|32|[0-9A-F]{2}|\$0\.\d)(,\$\d|(8|16|32[s]?))?)/oi;
+		    if $imm !~ m/^(nil|((\$\d|[0-9A-F]{2}|\$0\.\d),(((8|16|32)s?))?))$/oi;
 	    die "Invalid CPU\n"
 		    if $cpu !~ m/^(?:$valid_cpus)(?:,(?:$valid_cpus))*$/o;
 	};
