@@ -82,8 +82,8 @@ opt_option options[] =
 };
 
 /* help messages */
-char help_head[] = "yasm version 0.1 compiled " __DATE__ "\n"
-		   "copyright (c) 2001 Peter Johnson and Yasm developers\n"
+char help_head[] = "yasm version " VERSION " compiled " __DATE__ "\n"
+		   "copyright (c) 2001 Peter Johnson and " PACKAGE " developers\n"
 		   "mailto: asm-devel@bilogic.org\n"
 		   "\n"
 		   "usage: yasm [options|files]+\n"
