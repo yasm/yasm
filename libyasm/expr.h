@@ -66,6 +66,12 @@ void expr_expand_labelequ(expr *e, const section *srcsect, int withstart,
  */
 /*@dependent@*/ /*@null@*/ const intnum *expr_get_intnum(expr **ep);
 
+/* Gets the float value of e if the expression is just an float.  If the
+ * expression is more complex (contains anything other than floats, ie
+ * integers, non-valued labels, registers), returns NULL.
+ */
+/*@dependent@*/ /*@null@*/ const floatnum *expr_get_floatnum(expr **ep);
+
 /* Gets the symrec value of e if the expression is just an symbol.  If the
  * expression is more complex, returns NULL.  Simplifies the expr first if
  * simplify is nonzero.

@@ -846,6 +846,19 @@ expr_get_intnum(expr **ep)
 /*@=unqualifiedtrans =nullderef -nullstate -onlytrans@*/
 
 /*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
+const floatnum *
+expr_get_floatnum(expr **ep)
+{
+    *ep = expr_simplify(*ep);
+
+    if ((*ep)->op == EXPR_IDENT && (*ep)->terms[0].type == EXPR_FLOAT)
+	return (*ep)->terms[0].data.flt;
+    else
+	return (floatnum *)NULL;
+}
+/*@=unqualifiedtrans =nullderef -nullstate -onlytrans@*/
+
+/*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
 const symrec *
 expr_get_symrec(expr **ep, int simplify)
 {
