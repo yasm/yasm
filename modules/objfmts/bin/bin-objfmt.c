@@ -70,7 +70,10 @@ bin_objfmt_align_section(section *sect, section *prevsect, unsigned long base,
      * plus its length.  Add the start and size together to get the new start.
      */
     last = bcs_last(section_get_bytecodes(prevsect));
-    *prevsectlen = last->offset + last->len;
+    if (last)
+	*prevsectlen = last->offset + last->len;
+    else
+	*prevsectlen = 0;
     start = base + *prevsectlen;
 
     /* Round new start up to alignment of .data section, and adjust textlen to
