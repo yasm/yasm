@@ -89,9 +89,27 @@ ExprItem *ExprReg(unsigned char reg, unsigned char size);
 #define expr_new_ident(r) \
     expr_new ((ExprItem *)NULL, EXPR_IDENT, (r))
 
+void expr_delete(expr *e);
+
 int expr_contains_float(const expr *);
 
+int expr_checkea(expr **e, unsigned char *addrsize, unsigned char bits,
+		 unsigned char *displen, unsigned char *modrm,
+		 unsigned char *v_modrm, unsigned char *n_modrm,
+		 unsigned char *sib, unsigned char *v_sib,
+		 unsigned char *n_sib);
+
+/* Simplifies the expression e as much as possible, eliminating extraneous
+ * branches and simplifying integer-only subexpressions.
+ */
 int expr_simplify(expr *);
+
+/* Gets the integer value of e if the expression is just an integer.  If the
+ * expression is more complex (contains anything other than integers, ie
+ * floats, non-valued labels, registers), returns NULL.
+ */
+const intnum *expr_get_intnum(expr *e);
+
 void expr_print(expr *);
 
 #endif
