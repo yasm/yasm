@@ -42,7 +42,7 @@ int main(int argc, char *argv[]){
 	fileName = "<stdin>";
 	f = stdin;
     } else {
-	if((f = fopen(fileName, "rt")) < 0){
+	if((f = fopen(fileName, "rt")) == NULL){
 	    fprintf(stderr, "can't open %s\n", fileName);
 	    return 1;
 	}
