@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.16 2001/07/04 21:22:23 peter Exp $
+; $Id: instrs.dat,v 1.17 2001/07/04 21:28:22 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -868,7 +868,7 @@ test	mem,imm16x		16	F7		$1,0	$2,16	8086
 test	reg32,imm32		32	F7		$1r,0	$2,32	386
 test	mem32x,imm		32	F7		$1,0	$2,32	386
 test	mem,imm32x		32	F7		$1,0	$2,32	386
-; opcode arbitrarily picked for next 3 (could be 32/33 instead of 30/31).
+; arbitrary encoding for next 3, picked $1r,$2 instead of $2r,$1
 test	reg8,reg8		nil	84		$1r,$2	nil	8086
 test	reg16,reg16		16	85		$1r,$2	nil	8086
 test	reg32,reg32		32	85		$1r,$2	nil	386
