@@ -32,6 +32,8 @@
 # include <string.h>
 #endif
 
+#include "globals.h"
+
 #include "bytecode.h"
 #include "section.h"
 #include "objfmt.h"
@@ -39,10 +41,6 @@
 #include "parser.h"
 
 RCSID("$IdPath$");
-
-char *filename = (char *)NULL;
-unsigned int line_number = 1;
-unsigned int mode_bits = 32;
 
 int
 main(int argc, char *argv[])

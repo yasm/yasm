@@ -1,5 +1,5 @@
 /* $IdPath$
- * Program entry point, command line parsing
+ * Global variables
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -27,41 +27,8 @@
 
 #include <stdio.h>
 
-#ifdef STDC_HEADERS
-# include <stdlib.h>
-# include <string.h>
-#endif
-
-#include "globals.h"
-
-#include "bytecode.h"
-#include "section.h"
-#include "objfmt.h"
-#include "preproc.h"
-#include "parser.h"
-
 RCSID("$IdPath$");
 
-int
-main(int argc, char *argv[])
-{
-    FILE *in;
-
-    if (argc == 2) {
-	in = fopen(argv[1], "rt");
-	if (!in) {
-	    fprintf(stderr, "could not open file `%s'\n", argv[1]);
-	    return EXIT_FAILURE;
-	}
-	filename = strdup(argv[1]);
-    } else {
-	in = stdin;
-	filename = strdup("<STDIN>");
-    }
-
-    nasm_parser.doparse(&nasm_parser, &dbg_objfmt, in);
-
-    if (filename)
-	free(filename);
-    return EXIT_SUCCESS;
-}
+char *filename = (char *)NULL;
+unsigned int line_number = 1;
+unsigned int mode_bits = 32;

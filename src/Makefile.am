@@ -1,21 +1,33 @@
 # $IdPath$
 
-SUBDIRS = parsers preprocs optimizers objfmts
+SUBDIRS = parsers preprocs optimizers objfmts . tests
 
 INCLUDES = -I$(top_builddir)/intl
 
 bin_PROGRAMS = yasm
 
-yasm_SOURCES = \
+yasm_SOURCES = main.c
+
+yasm_LDADD = \
+	parsers/nasm/libparser.a	\
+	preprocs/raw/libpreproc.a	\
+	optimizers/dbg/liboptimizer.a	\
+	objfmts/dbg/libobjfmt.a		\
+	libyasm.a			\
+	$(INTLLIBS)
+
+noinst_LIBRARIES = libyasm.a
+
+libyasm_a_SOURCES = \
 	bytecode.c		\
 	bytecode.h		\
 	errwarn.c		\
 	errwarn.h		\
 	expr.c			\
 	expr.h			\
-	main.c			\
 	symrec.c		\
 	symrec.h		\
+	globals.c		\
 	globals.h		\
 	util.h			\
 	section.h		\
@@ -25,13 +37,6 @@ yasm_SOURCES = \
 	parser.h		\
 	optimizer.h		\
 	strcasecmp.c
-
-yasm_LDADD = \
-	parsers/nasm/libparser.a	\
-	preprocs/raw/libpreproc.a	\
-	optimizers/dbg/liboptimizer.a	\
-	objfmts/dbg/libobjfmt.a		\
-	$(INTLLIBS)
 
 if DEV
 CFLAGS = -ansi -pedantic -Wall -g

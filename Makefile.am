@@ -1,5 +1,5 @@
 # $IdPath$
 
-SUBDIRS = intl src po doc
+SUBDIRS = check intl src po doc tests
 EXTRA_DIST = config/install-sh config/missing config/mkinstalldirs \
 	config/config.guess config/config.sub

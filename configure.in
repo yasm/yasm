@@ -86,6 +86,7 @@ case "$host" in
 esac
 
 AC_OUTPUT(Makefile
+	check/Makefile
 	intl/Makefile
 	po/Makefile.in
 	src/Makefile
@@ -97,8 +98,10 @@ AC_OUTPUT(Makefile
 	src/optimizers/dbg/Makefile
 	src/objfmts/Makefile
 	src/objfmts/dbg/Makefile
+	src/tests/Makefile
 	doc/Makefile
 	doc/user/Makefile
 	doc/programmer/Makefile
 	doc/programmer/queue/Makefile
+	tests/Makefile
 )
