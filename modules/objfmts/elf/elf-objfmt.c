@@ -684,29 +684,27 @@ elf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
 	    type &= ~SHT_PROGBITS;
 	}
 	else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
-	    if (0 /* win32 */) {
-		/*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
-		unsigned long addralign;
+            /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
+            unsigned long addralign;
 
-		align_expr = yasm_expr_get_intnum(&vp->param, NULL);
-		if (!align_expr) {
-		    yasm__error(line,
-				N_("argument to `%s' is not a power of two"),
-				vp->val);
-		    return NULL;
-		}
-		addralign = yasm_intnum_get_uint(align_expr);
+            align_expr = yasm_expr_get_intnum(&vp->param, NULL);
+            if (!align_expr) {
+                yasm__error(line,
+                            N_("argument to `%s' is not a power of two"),
+                            vp->val);
+                return NULL;
+            }
+            addralign = yasm_intnum_get_uint(align_expr);
 
-		/* Alignments must be a power of two. */
-		if ((addralign & (addralign - 1)) != 0) {
-		    yasm__error(line,
-				N_("argument to `%s' is not a power of two"),
-				vp->val);
-		    return NULL;
-		}
+            /* Alignments must be a power of two. */
+            if ((addralign & (addralign - 1)) != 0) {
+                yasm__error(line,
+                            N_("argument to `%s' is not a power of two"),
+                            vp->val);
+                return NULL;
+            }
 
-		align_intn = yasm_intnum_copy(align_expr);
-	    } 
+            align_intn = yasm_intnum_copy(align_expr);
 	} else
 	    yasm__warning(YASM_WARN_GENERAL, line,
 			  N_("Unrecognized qualifier `%s'"), vp->val);
