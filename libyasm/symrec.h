@@ -120,7 +120,7 @@ void yasm_symtab_destroy(/*@only@*/ yasm_symtab *symtab);
  * \param vis	    visibility
  * \param line      virtual line of visibility-setting
  */
-void yasm_symrec_declare(yasm_symrec *rec, yasm_sym_vis vis,
+void yasm_symrec_declare(yasm_symrec *symrec, yasm_sym_vis vis,
 			 unsigned long line);
 
 /** Callback function for yasm_symrec_traverse().
