@@ -43,16 +43,22 @@ sectionhead nasm_parser_sections;
 
 extern /*@only@*/ char *nasm_parser_locallabel_base;
 
+/*@dependent@*/ arch *nasm_parser_arch;
+/*@dependent@*/ objfmt *nasm_parser_objfmt;
+
 static /*@dependent@*/ sectionhead *
-nasm_parser_do_parse(parser *p, FILE *f, const char *in_filename)
+nasm_parser_do_parse(preproc *pp, arch *a, objfmt *of, FILE *f,
+		     const char *in_filename)
     /*@globals killed nasm_parser_locallabel_base @*/
 {
-    p->current_pp->initialize(f, in_filename);
+    pp->initialize(f, in_filename);
     nasm_parser_in = f;
-    nasm_parser_input = p->current_pp->input;
+    nasm_parser_input = pp->input;
+    nasm_parser_arch = a;
+    nasm_parser_objfmt = of;
 
     /* Initialize section list */
-    nasm_parser_cur_section = sections_initialize(&nasm_parser_sections);
+    nasm_parser_cur_section = sections_initialize(&nasm_parser_sections, of);
 
     /* yacc debugging, needs YYDEBUG set in bison.y.in to work */
     /* nasm_parser_debug = 1; */
@@ -69,18 +75,16 @@ nasm_parser_do_parse(parser *p, FILE *f, const char *in_filename)
 }
 
 /* Define valid preprocessors to use with this parser */
-/*@-nullassign@*/
-static preproc *nasm_parser_preprocs[] = {
-    &raw_preproc,
+static const char *nasm_parser_preproc_keywords[] = {
+    "raw",
     NULL
 };
-/*@=nullassign@*/
 
 /* Define parser structure -- see parser.h for details */
-parser nasm_parser = {
+parser yasm_nasm_LTX_parser = {
     "NASM-compatible parser",
     "nasm",
-    nasm_parser_preprocs,
-    &raw_preproc,
+    nasm_parser_preproc_keywords,
+    "raw",
     nasm_parser_do_parse
 };

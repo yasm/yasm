@@ -22,15 +22,10 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
-#include "ltdl.h"
-
-#include "globals.h"
+#include "module.h"
 
 #include "objfmt.h"
 
-
-static objfmt *dyn_objfmt = NULL;
-static lt_dlhandle objfmt_module = NULL;
 
 /* NULL-terminated list of all possibly available object format keywords.
  * Could improve this a little by generating automatically at build-time.
@@ -39,36 +34,11 @@ static lt_dlhandle objfmt_module = NULL;
 const char *objfmts[] = {
     "dbg",
     "bin",
+    "coff",
     NULL
 };
 /*@=nullassign@*/
 
-objfmt *
-find_objfmt(const char *keyword)
-{
-    char *modulename;
-
-    /* Look for dynamic module.  First build full module name from keyword. */
-    modulename = xmalloc(5+strlen(keyword)+1);
-    strcpy(modulename, "yasm-");
-    strcat(modulename, keyword);
-    objfmt_module = lt_dlopenext(modulename);
-    xfree(modulename);
-
-    if (!objfmt_module)
-	return NULL;
-
-    /* Find objfmt structure */
-    dyn_objfmt = (objfmt *)lt_dlsym(objfmt_module, "objfmt");
-
-    if (!dyn_objfmt) {
-	lt_dlclose(objfmt_module);
-	return NULL;
-    }
-
-    /* found it */
-    return dyn_objfmt;
-}
 
 void
 list_objfmts(void (*printfunc) (const char *name, const char *keyword))
@@ -78,11 +48,8 @@ list_objfmts(void (*printfunc) (const char *name, const char *keyword))
 
     /* Go through available list, and try to load each one */
     for (i = 0; objfmts[i]; i++) {
-	of = find_objfmt(objfmts[i]);
-	if (of) {
+	of = load_objfmt(objfmts[i]);
+	if (of)
 	    printfunc(of->name, of->keyword);
-	    dyn_objfmt = NULL;
-	    lt_dlclose(objfmt_module);
-	}
     }
 }

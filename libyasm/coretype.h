@@ -28,6 +28,7 @@ typedef struct preproc preproc;
 typedef struct parser parser;
 typedef struct optimizer optimizer;
 typedef struct objfmt objfmt;
+typedef struct dbgfmt dbgfmt;
 
 typedef struct bytecode bytecode;
 typedef /*@reldef@*/ STAILQ_HEAD(bytecodehead, bytecode) bytecodehead;

@@ -22,79 +22,32 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
-#include "globals.h"
+#include "module.h"
 
-#include "preproc.h"
 #include "parser.h"
 
 
-/* Available parsers */
-extern parser nasm_parser;
-
-/* NULL-terminated list of all available parsers.
- * Someday change this if we dynamically load parsers at runtime.
+/* NULL-terminated list of all possibly available parser keywords.
  * Could improve this a little by generating automatically at build-time.
  */
 /*@-nullassign@*/
-static parser *parsers[] = {
-    &nasm_parser,
+const char *parsers[] = {
+    "nasm",
     NULL
 };
 /*@=nullassign@*/
 
-int
-parser_setpp(parser *p, const char *pp_keyword)
-{
-    int i;
-
-    /* We're just doing a linear search, as preprocs should be short */
-    for (i = 0; p->preprocs[i]; i++) {
-	if (strcasecmp(p->preprocs[i]->keyword, pp_keyword) == 0) {
-	    /*@-unqualifiedtrans@*/
-	    p->current_pp = p->preprocs[i];
-	    /*@=unqualifiedtrans@*/
-	    return 0;
-	}
-    }
-
-    /* no match found */
-    return 1;
-}
-
-void
-parser_listpp(parser *p,
-	      void (*printfunc) (const char *name, const char *keyword))
-{
-    int i;
-
-    for (i = 0; p->preprocs[i]; i++) {
-	printfunc(p->preprocs[i]->name, p->preprocs[i]->keyword);
-    }
-}
-
-parser *
-find_parser(const char *keyword)
-{
-    int i;
-
-    /* We're just doing a linear search, as there aren't many parsers */
-    for (i = 0; parsers[i]; i++) {
-	if (strcasecmp(parsers[i]->keyword, keyword) == 0)
-	    /*@-unqualifiedtrans@*/
-	    return parsers[i];
-	    /*@=unqualifiedtrans@*/
-    }
-
-    /* no match found */
-    return NULL;
-}
 
 void
 list_parsers(void (*printfunc) (const char *name, const char *keyword))
 {
     int i;
+    parser *p;
 
+    /* Go through available list, and try to load each one */
     for (i = 0; parsers[i]; i++) {
-	printfunc(parsers[i]->name, parsers[i]->keyword);
+	p = load_parser(parsers[i]);
+	if (p)
+	    printfunc(p->name, p->keyword);
     }
 }

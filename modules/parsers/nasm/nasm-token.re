@@ -63,6 +63,7 @@ void nasm_parser_set_directive_state(void);
 int nasm_parser_lex(void);
 
 extern size_t (*nasm_parser_input) (char *buf, size_t max_size);
+extern /*@dependent@*/ arch *nasm_parser_arch;
 
 
 typedef struct Scanner {
@@ -357,8 +358,8 @@ scan:
 	[a-zA-Z_?][a-zA-Z0-9_$#@~.?]* {
 	    savech = s.tok[TOKLEN];
 	    s.tok[TOKLEN] = '\0';
-	    check_id_ret = cur_arch->parse.check_identifier(yylval.arch_data,
-							    s.tok);
+	    check_id_ret = nasm_parser_arch->parse.check_identifier(
+		yylval.arch_data, s.tok);
 	    s.tok[TOKLEN] = savech;
 	    switch (check_id_ret) {
 		case ARCH_CHECK_ID_NONE:

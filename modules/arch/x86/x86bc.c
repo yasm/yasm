@@ -152,7 +152,7 @@ x86_bc_new_insn(x86_new_insn_data *d)
     insn->shift_op = d->shift_op;
     insn->signext_imm8_op = d->signext_imm8_op;
 
-    insn->mode_bits = x86_mode_bits;
+    insn->mode_bits = yasm_x86_LTX_mode_bits;
 
     return (bytecode *)insn;
 }
@@ -189,7 +189,7 @@ x86_bc_new_jmprel(x86_new_jmprel_data *d)
     jmprel->opersize = d->opersize;
     jmprel->lockrep_pre = 0;
 
-    jmprel->mode_bits = x86_mode_bits;
+    jmprel->mode_bits = yasm_x86_LTX_mode_bits;
 
     return (bytecode *)jmprel;
 }

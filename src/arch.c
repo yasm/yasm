@@ -30,7 +30,13 @@
 #include "arch.h"
 
 
-arch *cur_arch;
+static /*@dependent@*/ arch *cur_arch;
+
+void
+arch_common_initialize(arch *a)
+{
+    cur_arch = a;
+}
 
 insn_operand *
 operand_new_reg(unsigned long reg)

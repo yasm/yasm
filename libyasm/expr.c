@@ -43,6 +43,15 @@ static int expr_traverse_nodes_post(/*@null@*/ expr *e, /*@null@*/ void *d,
 				    int (*func) (/*@null@*/ expr *e,
 						 /*@null@*/ void *d));
 
+static /*@dependent@*/ arch *cur_arch;
+
+
+void
+expr_initialize(arch *a)
+{
+    cur_arch = a;
+}
+
 /* allocate a new expression node, with children as defined.
  * If it's a unary operator, put the element in left and set right=NULL. */
 /*@-compmempass@*/

@@ -191,6 +191,8 @@ struct insn_operand {
     unsigned int size;
 };
 
+void arch_common_initialize(arch *a);
+
 /* insn_operand constructors.  operand_new_imm() will look for cases of a
  * single register and create an INSN_OPERAND_REG variant of insn_operand.
  */
@@ -220,10 +222,5 @@ void ops_delete(insn_operandhead *headp, int content);
 				    /*@returned@*/ /*@null@*/ insn_operand *op);
 
 void ops_print(FILE *f, const insn_operandhead *headp);
-
-/* Available architectures */
-extern arch x86_arch;
-
-extern arch *cur_arch;
 
 #endif

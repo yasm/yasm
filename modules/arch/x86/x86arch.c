@@ -37,7 +37,7 @@
 #include "x86arch.h"
 
 
-unsigned char x86_mode_bits = 0;
+unsigned char yasm_x86_LTX_mode_bits = 0;
 
 int
 x86_directive(const char *name, valparamhead *valparams,
@@ -52,7 +52,7 @@ x86_directive(const char *name, valparamhead *valparams,
 	if ((vp = vps_first(valparams)) && !vp->val && vp->param != NULL &&
 	    (intn = expr_get_intnum(&vp->param, NULL)) != NULL &&
 	    (lval = intnum_get_int(intn)) && (lval == 16 || lval == 32))
-	    x86_mode_bits = (unsigned char)lval;
+	    yasm_x86_LTX_mode_bits = (unsigned char)lval;
 	else
 	    Error(_("invalid argument to [%s]"), "BITS");
 	return 0;
@@ -160,7 +160,7 @@ x86_handle_seg_override(effaddr *ea, unsigned long segreg)
 }
 
 /* Define arch structure -- see arch.h for details */
-arch x86_arch = {
+arch yasm_x86_LTX_arch = {
     "x86 (IA-32, x86-64)",
     "x86",
     {

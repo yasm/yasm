@@ -42,21 +42,22 @@ struct objfmt {
     const unsigned char default_x86_mode_bits;
 
     /* NULL-terminated list of debugging formats that are valid to use with
-     * this object format.
+     * this object format.  The null debugging format (null_dbgfmt) should
+     * always be in this list so it's possible to have no debugging output.
      */
-/*    debugfmt **debugfmts;*/
+    const char **dbgfmt_keywords;
 
     /* Default debugging format (set even if there's only one available to
-     * use)
+     * use).
      */
-/*    debugfmt *default_df;*/
+    const char *default_dbgfmt_keyword;
 
     /* Initializes object output.  Must be called before any other object
      * format functions.  Should NOT open the object file; the filenames are
      * provided solely for informational purposes.
-     * May be NULL if not needed by the object format.
      */
-    void (*initialize) (const char *in_filename, const char *obj_filename);
+    void (*initialize) (const char *in_filename, const char *obj_filename,
+			dbgfmt *df, arch *a);
 
     /* Write out (post-optimized) sections to the object file.
      * This function may call symrec functions as necessary (including
@@ -113,11 +114,6 @@ struct objfmt {
 };
 
 /* Generic functions for all object formats - implemented in src/objfmt.c */
-
-/* Finds an object format based on its keyword.  Returns NULL if no match was
- * found.
- */
-/*@null@*/ objfmt *find_objfmt(const char *keyword);
 
 /* Lists all available object formats.  Calls printfunc with the name and
  * keyword of each available format.

@@ -69,6 +69,7 @@ struct symrec {
     } value;
 
     /* objfmt-specific data */
+    /*@null@*/ /*@dependent@*/ objfmt *of;
     /*@null@*/ /*@owned@*/ void *of_data;
 
     /* storage for optimizer flags */
@@ -87,6 +88,7 @@ typedef /*@reldef@*/ SLIST_HEAD(nontablesymhead_s, non_table_symrec_s)
 	nontablesymhead;
 static /*@only@*/ /*@null@*/ nontablesymhead *non_table_syms = NULL;
 
+
 static void
 symrec_delete_one(/*@only@*/ void *d)
 {
@@ -94,10 +96,9 @@ symrec_delete_one(/*@only@*/ void *d)
     xfree(sym->name);
     if (sym->type == SYM_EQU)
 	expr_delete(sym->value.expn);
-    assert(cur_objfmt != NULL);
-    if (sym->of_data) {
-	if (cur_objfmt->symrec_data_delete)
-	    cur_objfmt->symrec_data_delete(sym->of_data);
+    if (sym->of_data && sym->of) {
+	if (sym->of->symrec_data_delete)
+	    sym->of->symrec_data_delete(sym->of_data);
 	else
 	    InternalError(_("don't know how to delete objfmt-specific data"));
     }
@@ -112,6 +113,7 @@ symrec_new_common(/*@keep@*/ char *name)
     rec->type = SYM_UNKNOWN;
     rec->line = 0;
     rec->visibility = SYM_LOCAL;
+    rec->of = NULL;
     rec->of_data = NULL;
     rec->opt_flags = 0;
     return rec;
@@ -226,8 +228,6 @@ symrec_declare(const char *name, SymVisibility vis)
 {
     symrec *rec = symrec_get_or_new(name, 1);
 
-    assert(cur_objfmt != NULL);
-
     /* Allowable combinations:
      *  Existing State--------------  vis  New State-------------------
      *  DEFINED GLOBAL COMMON EXTERN  GCE  DEFINED GLOBAL COMMON EXTERN
@@ -304,14 +304,15 @@ symrec_get_of_data(symrec *sym)
 }
 
 void
-symrec_set_of_data(symrec *sym, void *of_data)
+symrec_set_of_data(symrec *sym, objfmt *of, void *of_data)
 {
-    if (sym->of_data) {
-	if (cur_objfmt->symrec_data_delete)
-	    cur_objfmt->symrec_data_delete(sym->of_data);
+    if (sym->of_data && sym->of) {
+	if (sym->of->symrec_data_delete)
+	    sym->of->symrec_data_delete(sym->of_data);
 	else
 	    InternalError(_("don't know how to delete objfmt-specific data"));
     }
+    sym->of = of;
     sym->of_data = of_data;
 }
 
@@ -441,12 +442,11 @@ symrec_print(FILE *f, const symrec *sym)
 	fprintf(f, "\n");
     }
 
-    if (sym->of_data) {
+    if (sym->of_data && sym->of) {
 	fprintf(f, "%*sObject format-specific data:\n", indent_level, "");
 	indent_level++;
-	assert(cur_objfmt != NULL);
-	if (cur_objfmt->symrec_data_print)
-	    cur_objfmt->symrec_data_print(f, sym->of_data);
+	if (sym->of->symrec_data_print)
+	    sym->of->symrec_data_print(f, sym->of_data);
 	else
 	    fprintf(f, "%*sUNKNOWN\n", indent_level, "");
 	indent_level--;

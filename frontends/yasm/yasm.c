@@ -23,6 +23,7 @@
 /*@unused@*/ RCSID("$IdPath$");
 
 #include "ltdl.h"
+#include "module.h"
 
 #include "bitvect.h"
 #include "file.h"
@@ -32,20 +33,19 @@
 #include "errwarn.h"
 #include "intnum.h"
 #include "floatnum.h"
+#include "expr.h"
 #include "symrec.h"
 
 #include "bytecode.h"
 #include "section.h"
 #include "objfmt.h"
+#include "dbgfmt.h"
 #include "preproc.h"
 #include "parser.h"
 #include "optimizer.h"
 
 #include "arch.h"
 
-
-/* FIXME: figure out a better way to handle this */
-extern unsigned char x86_mode_bits;
 
 /* Extra path to search for our modules. */
 #ifndef YASM_MODULE_PATH_ENV
@@ -57,18 +57,23 @@ extern unsigned char x86_mode_bits;
 
 /*@null@*/ /*@only@*/ static char *obj_filename = NULL, *in_filename = NULL;
 static int special_options = 0;
-/*@null@*/ static parser *cur_parser = NULL;
+/*@null@*/ /*@dependent@*/ static arch *cur_arch = NULL;
+/*@null@*/ /*@dependent@*/ static parser *cur_parser = NULL;
 /*@null@*/ /*@dependent@*/ static preproc *cur_preproc = NULL;
+/*@null@*/ /*@dependent@*/ static objfmt *cur_objfmt = NULL;
+/*@null@*/ /*@dependent@*/ static optimizer *cur_optimizer = NULL;
+/*@null@*/ /*@dependent@*/ static dbgfmt *cur_dbgfmt = NULL;
 static int preproc_only = 0;
 
-/*@null@*/ /*@dependent@*/ static FILE *open_obj(void);
-static void cleanup(sectionhead *sections);
+/*@null@*/ /*@dependent@*/ static FILE *open_obj(const char *mode);
+static void cleanup(/*@null@*/ sectionhead *sections);
 
 /* Forward declarations: cmd line parser handlers */
 static int opt_special_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_parser_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_preproc_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_objfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_dbgfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_objfile_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int preproc_only_handler(char *cmd, /*@null@*/ char *param, int extra);
@@ -85,6 +90,7 @@ static opt_option options[] =
     { 'p', "parser", 1, opt_parser_handler, 0, N_("select parser"), N_("parser") },
     { 'r', "preproc", 1, opt_preproc_handler, 0, N_("select preprocessor"), N_("preproc") },
     { 'f', "oformat", 1, opt_objfmt_handler, 0, N_("select object format"), N_("format") },
+    { 'g', "dformat", 1, opt_dbgfmt_handler, 0, N_("select debugging format"), N_("debug") },
     { 'o', "objfile", 1, opt_objfile_handler, 0, N_("name of object-file output"), N_("filename") },
     { 'w', NULL,      0, opt_warning_handler, 1, N_("inhibits warning messages"), NULL },
     { 'W', NULL,      0, opt_warning_handler, 0, N_("enables/disables warning"), NULL },
@@ -186,32 +192,20 @@ main(int argc, char *argv[])
 	in = fopen(in_filename, "rt");
 	if (!in) {
 	    ErrorNow(_("could not open file `%s'"), in_filename);
+	    xfree(in_filename);
+	    if (obj_filename)
+		xfree(obj_filename);
 	    return EXIT_FAILURE;
 	}
     } else {
-	/* If no files were specified, fallback to reading stdin */
+	/* If no files were specified or filename was "-", read stdin */
 	in = stdin;
 	if (!in_filename)
 	    in_filename = xstrdup("-");
-	/* Default to stdout if no obj filename specified */
-	if (!obj_filename)
-	    obj_filename = xstrdup("-");
     }
 
     /* Initialize line info */
     line_set(in_filename, 1, 1);
-
-    /* Set x86 as the architecture */
-    cur_arch = &x86_arch;
-
-    /* If not already specified, default to dbg as the object format. */
-    if (!cur_objfmt)
-	cur_objfmt = find_objfmt("dbg");
-
-    if (!cur_objfmt) {
-	ErrorNow(_("Could not load default object format"));
-	return EXIT_FAILURE;
-    }
 
     /* handle preproc-only case here */
     if (preproc_only) {
@@ -220,19 +214,25 @@ main(int argc, char *argv[])
 
 	/* Default output to stdout if not specified */
 	if (!obj_filename)
-	    obj_filename = xstrdup("-");
-
-	/* Open output (object) file */
-	obj = open_obj();
-	if (!obj) {
-	    xfree(preproc_buf);
-	    return EXIT_FAILURE;
+	    obj = stdout;
+	else {
+	    /* Open output (object) file */
+	    obj = open_obj("wt");
+	    if (!obj) {
+		xfree(preproc_buf);
+		return EXIT_FAILURE;
+	    }
 	}
 
 	/* If not already specified, default to yapp preproc. */
 	if (!cur_preproc)
-	    cur_preproc = find_preproc("yapp");
-	assert(cur_preproc != NULL);
+	    cur_preproc = load_preproc("yapp");
+
+	if (!cur_preproc) {
+	    ErrorNow(_("Could not load default preprocessor"));
+	    cleanup(NULL);
+	    return EXIT_FAILURE;
+	}
 
 	/* Pre-process until done */
 	cur_preproc->initialize(in, in_filename);
@@ -241,7 +241,6 @@ main(int argc, char *argv[])
 
 	if (in != stdin)
 	    fclose(in);
-	xfree(in_filename);
 
 	if (obj != stdout)
 	    fclose(obj);
@@ -251,62 +250,132 @@ main(int argc, char *argv[])
 	    if (obj != stdout)
 		remove(obj_filename);
 	    xfree(preproc_buf);
+	    cleanup(NULL);
 	    return EXIT_FAILURE;
 	}
-	xfree(obj_filename);
 	xfree(preproc_buf);
-
+	cleanup(NULL);
 	return EXIT_SUCCESS;
     }
 
-    /* determine the object filename if not specified or stdout defaulted */
-    if (!obj_filename)
-	/* replace (or add) extension */
-	obj_filename = replace_extension(in_filename, cur_objfmt->extension,
-					 "yasm.out");
+    /* Set x86 as the architecture (TODO: user choice) */
+    cur_arch = load_arch("x86");
 
-    /* Pre-open the object file as debug_file if we're using a debug-type
-     * format.  (This is so the format can output ALL function call info).
-     */
-    if (strcmp(cur_objfmt->keyword, "dbg") == 0) {
-	obj = open_obj();
-	if (!obj)
+    if (!cur_arch) {
+	ErrorNow(_("Could not load default architecture"));
+	return EXIT_FAILURE;
+    }
+
+    /* Set basic as the optimizer (TODO: user choice) */
+    cur_optimizer = load_optimizer("basic");
+
+    if (!cur_optimizer) {
+	ErrorNow(_("Could not load default optimizer"));
+	return EXIT_FAILURE;
+    }
+
+    arch_common_initialize(cur_arch);
+    expr_initialize(cur_arch);
+    bc_initialize(cur_arch);
+
+    /* If not already specified, default to bin as the object format. */
+    if (!cur_objfmt)
+	cur_objfmt = load_objfmt("bin");
+
+    if (!cur_objfmt) {
+	ErrorNow(_("Could not load default object format"));
+	return EXIT_FAILURE;
+    }
+
+    /* If not already specified, default to null as the debug format. */
+    if (!cur_dbgfmt)
+	cur_dbgfmt = load_objfmt("null");
+    else {
+	int matched_dbgfmt = 0;
+	/* Check to see if the requested debug format is in the allowed list
+	 * for the active object format.
+	 */
+	for (i=0; cur_objfmt->dbgfmt_keywords[i]; i++)
+	    if (strcasecmp(cur_objfmt->dbgfmt_keywords[i],
+			   cur_dbgfmt->keyword) == 0)
+		matched_dbgfmt = 1;
+	if (!matched_dbgfmt) {
+	    ErrorNow(_("`%s' is not a valid debug format for object format `%s'"),
+		     cur_dbgfmt->keyword, cur_objfmt->keyword);
+	    if (in != stdin)
+		fclose(in);
+	    cleanup(NULL);
 	    return EXIT_FAILURE;
-	debug_file = obj;
+	}
+    }
+
+    if (!cur_objfmt) {
+	ErrorNow(_("Could not load default object format"));
+	return EXIT_FAILURE;
+    }
+
+    /* determine the object filename if not specified */
+    if (!obj_filename) {
+	if (in == stdin)
+	    /* Default to yasm.out if no obj filename specified */
+	    obj_filename = xstrdup("yasm.out");
+	else
+	    /* replace (or add) extension */
+	    obj_filename = replace_extension(in_filename,
+					     cur_objfmt->extension,
+					     "yasm.out");
     }
 
     /* Initialize the object format */
     if (cur_objfmt->initialize)
-	cur_objfmt->initialize(in_filename, obj_filename);
+	cur_objfmt->initialize(in_filename, obj_filename, cur_dbgfmt,
+			       cur_arch);
 
     /* Set NASM as the parser */
-    cur_parser = find_parser("nasm");
+    cur_parser = load_parser("nasm");
     if (!cur_parser) {
 	ErrorNow(_("unrecognized parser `%s'"), "nasm");
+	cleanup(NULL);
 	return EXIT_FAILURE;
     }
 
-    /* (Try to) set a preprocessor, if requested */
-    if (cur_preproc) {
-	if (parser_setpp(cur_parser, cur_preproc->keyword)) {
+    /* If not already specified, default to the parser's default preproc. */
+    if (!cur_preproc)
+	cur_preproc = load_preproc(cur_parser->default_preproc_keyword);
+    else {
+	int matched_preproc = 0;
+	/* Check to see if the requested preprocessor is in the allowed list
+	 * for the active parser.
+	 */
+	for (i=0; cur_parser->preproc_keywords[i]; i++)
+	    if (strcasecmp(cur_parser->preproc_keywords[i],
+			   cur_preproc->keyword) == 0)
+		matched_preproc = 1;
+	if (!matched_preproc) {
+	    ErrorNow(_("`%s' is not a valid preprocessor for parser `%s'"),
+		     cur_preproc->keyword, cur_parser->keyword);
 	    if (in != stdin)
 		fclose(in);
-	    xfree(in_filename);
+	    cleanup(NULL);
 	    return EXIT_FAILURE;
 	}
     }
 
     /* Get initial x86 BITS setting from object format */
-    if (cur_arch == &x86_arch)
-	x86_mode_bits = cur_objfmt->default_x86_mode_bits;
+    if (strcmp(cur_arch->keyword, "x86") == 0) {
+	unsigned char *x86_mode_bits;
+	x86_mode_bits = (unsigned char *)get_module_data("x86", "mode_bits");
+	if (x86_mode_bits)
+	    *x86_mode_bits = cur_objfmt->default_x86_mode_bits;
+    }
 
     /* Parse! */
-    sections = cur_parser->do_parse(cur_parser, in, in_filename);
+    sections = cur_parser->do_parse(cur_preproc, cur_arch, cur_objfmt, in,
+				    in_filename);
 
     /* Close input file */
     if (in != stdin)
 	fclose(in);
-    xfree(in_filename);
 
     if (GetNumErrors() > 0) {
 	OutputAllErrorWarning();
@@ -315,7 +384,7 @@ main(int argc, char *argv[])
     }
 
     symrec_parser_finalize();
-    basic_optimizer.optimize(sections);
+    cur_optimizer->optimize(sections);
 
     if (GetNumErrors() > 0) {
 	OutputAllErrorWarning();
@@ -323,9 +392,9 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 
-    /* open the object file for output (if not already opened above) */
-    if (!obj) {
-	obj = open_obj();
+    /* open the object file for output (if not already opened by dbg objfmt) */
+    if (!obj && strcmp(cur_objfmt->keyword, "dbg") != 0) {
+	obj = open_obj("wb");
 	if (!obj) {
 	    cleanup(sections);
 	    return EXIT_FAILURE;
@@ -333,10 +402,10 @@ main(int argc, char *argv[])
     }
 
     /* Write the object file */
-    cur_objfmt->output(obj, sections);
+    cur_objfmt->output(obj?obj:stderr, sections);
 
     /* Close object file */
-    if (obj != stdout)
+    if (obj)
 	fclose(obj);
 
     /* If we had an error at this point, we also need to delete the output
@@ -344,14 +413,12 @@ main(int argc, char *argv[])
      */
     if (GetNumErrors() > 0) {
 	OutputAllErrorWarning();
+	remove(obj_filename);
 	cleanup(sections);
-	if (obj != stdout)
-	    remove(obj_filename);
 	return EXIT_FAILURE;
     }
 
     OutputAllErrorWarning();
-    xfree(obj_filename);
 
     cleanup(sections);
     return EXIT_SUCCESS;
@@ -360,19 +427,15 @@ main(int argc, char *argv[])
 
 /* Open the object file.  Returns 0 on failure. */
 static FILE *
-open_obj(void)
+open_obj(const char *mode)
 {
     FILE *obj;
 
     assert(obj_filename != NULL);
 
-    if (strcmp(obj_filename, "-") == 0)
-	obj = stdout;
-    else {
-	obj = fopen(obj_filename, "wb");
-	if (!obj)
-	    ErrorNow(_("could not open file `%s'"), obj_filename);
-    }
+    obj = fopen(obj_filename, mode);
+    if (!obj)
+	ErrorNow(_("could not open file `%s'"), obj_filename);
     return obj;
 }
 
@@ -382,7 +445,8 @@ cleanup(sectionhead *sections)
 {
     if (cur_objfmt && cur_objfmt->cleanup)
 	cur_objfmt->cleanup();
-    sections_delete(sections);
+    if (sections)
+	sections_delete(sections);
     symrec_delete_all();
     line_shutdown();
 
@@ -391,8 +455,15 @@ cleanup(sectionhead *sections)
 
     BitVector_Shutdown();
 
+    unload_modules();
+
     /* Finish with libltdl. */
     lt_dlexit();
+
+    if (in_filename)
+	xfree(in_filename);
+    if (obj_filename)
+	xfree(obj_filename);
 }
 
 /*
@@ -423,7 +494,7 @@ static int
 opt_parser_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     assert(param != NULL);
-    cur_parser = find_parser(param);
+    cur_parser = load_parser(param);
     if (!cur_parser) {
 	ErrorNow(_("unrecognized parser `%s'"), param);
 	return 1;
@@ -435,7 +506,7 @@ static int
 opt_preproc_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     assert(param != NULL);
-    cur_preproc = find_preproc(param);
+    cur_preproc = load_preproc(param);
     if (!cur_preproc) {
 	ErrorNow(_("unrecognized preprocessor `%s'"), param);
 	return 1;
@@ -447,9 +518,21 @@ static int
 opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     assert(param != NULL);
-    cur_objfmt = find_objfmt(param);
+    cur_objfmt = load_objfmt(param);
     if (!cur_objfmt) {
 	ErrorNow(_("unrecognized object format `%s'"), param);
+	return 1;
+    }
+    return 0;
+}
+
+static int
+opt_dbgfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
+{
+    assert(param != NULL);
+    cur_dbgfmt = load_objfmt(param);
+    if (!cur_dbgfmt) {
+	ErrorNow(_("unrecognized debugging format `%s'"), param);
 	return 1;
     }
     return 0;

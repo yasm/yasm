@@ -157,6 +157,9 @@ typedef struct coff_objfmt_output_info {
 static unsigned int coff_objfmt_parse_scnum;	/* sect numbering in parser */
 static coff_symtab_head coff_symtab;	    /* symbol table of indexed syms */
 
+objfmt yasm_coff_LTX_objfmt;
+static /*@dependent@*/ arch *cur_arch;
+
 
 static /*@dependent@*/ coff_symtab_entry *
 coff_objfmt_symtab_append(symrec *sym, coff_symrec_sclass sclass,
@@ -177,7 +180,7 @@ coff_objfmt_symtab_append(symrec *sym, coff_symrec_sclass sclass,
     sym_data->index = sym_data_prev->index + entry->numaux + 1;
     sym_data->sclass = sclass;
     sym_data->size = size;
-    symrec_set_of_data(sym, sym_data);
+    symrec_set_of_data(sym, &yasm_coff_LTX_objfmt, sym_data);
 
     entry = xmalloc(sizeof(coff_symtab_entry) +
 		    (numaux-1)*sizeof(coff_symtab_auxent));
@@ -191,11 +194,14 @@ coff_objfmt_symtab_append(symrec *sym, coff_symrec_sclass sclass,
 
 static void
 coff_objfmt_initialize(const char *in_filename,
-		       /*@unused@*/ const char *obj_filename)
+		       /*@unused@*/ const char *obj_filename,
+		       /*@unused@*/ dbgfmt *df, arch *a)
 {
     symrec *filesym;
     coff_symrec_data *data;
     coff_symtab_entry *entry;
+
+    cur_arch = a;
 
     coff_objfmt_parse_scnum = 1;    /* section numbering starts at 1 */
     STAILQ_INIT(&coff_symtab);
@@ -205,7 +211,7 @@ coff_objfmt_initialize(const char *in_filename,
     data->sclass = COFF_SCL_FILE;
     data->size = NULL;
     filesym = symrec_define_label(".file", NULL, NULL, 0);
-    symrec_set_of_data(filesym, data);
+    symrec_set_of_data(filesym, &yasm_coff_LTX_objfmt, data);
 
     entry = xmalloc(sizeof(coff_symtab_entry));
     entry->sym = filesym;
@@ -746,7 +752,7 @@ coff_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 	data->relptr = 0;
 	data->nreloc = 0;
 	STAILQ_INIT(&data->relocs);
-	section_set_of_data(retval, data);
+	section_set_of_data(retval, &yasm_coff_LTX_objfmt, data);
 
 	sym = symrec_define_label(sectname, retval, (bytecode *)NULL, 1);
 	coff_objfmt_symtab_append(sym, COFF_SCL_STAT, NULL, 1,
@@ -876,6 +882,12 @@ coff_objfmt_directive(/*@unused@*/ const char *name,
 }
 
 
+/* Define valid debug formats to use with this object format */
+static const char *coff_objfmt_dbgfmt_keywords[] = {
+    "null",
+    NULL
+};
+
 /* Define objfmt structure -- see objfmt.h for details */
 objfmt yasm_coff_LTX_objfmt = {
     "COFF (DJGPP)",
@@ -883,6 +895,8 @@ objfmt yasm_coff_LTX_objfmt = {
     "o",
     ".text",
     32,
+    coff_objfmt_dbgfmt_keywords,
+    "null",
     coff_objfmt_initialize,
     coff_objfmt_output,
     coff_objfmt_cleanup,

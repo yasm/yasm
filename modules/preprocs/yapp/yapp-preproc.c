@@ -935,7 +935,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 }
 
 /* Define preproc structure -- see preproc.h for details */
-preproc yapp_preproc = {
+preproc yasm_yapp_LTX_preproc = {
     "YAPP preprocessing (NASM style)",
     "yapp",
     yapp_preproc_initialize,

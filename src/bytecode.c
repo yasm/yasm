@@ -88,12 +88,22 @@ typedef struct bytecode_objfmt_data {
     bytecode bc;    /* base structure */
 
     unsigned int type;		/* objfmt-specific type */
+    /*@dependent@*/ objfmt *of;	/* objfmt that created the data */
     /*@only@*/ void *data;	/* objfmt-specific data */
 } bytecode_objfmt_data;
 
 /* Static structures for when NULL is passed to conversion functions. */
 /*  for Convert*ToBytes() */
 unsigned char bytes_static[16];
+
+/*@dependent@*/ static arch *cur_arch;
+
+
+void
+bc_initialize(arch *a)
+{
+    cur_arch = a;
+}
 
 immval *
 imm_new_int(unsigned long int_val)
@@ -252,7 +262,8 @@ bc_new_align(unsigned long boundary)
 }
 
 bytecode *
-bc_new_objfmt_data(unsigned int type, unsigned long len, void *data)
+bc_new_objfmt_data(unsigned int type, unsigned long len, objfmt *of,
+		   void *data)
 {
     bytecode_objfmt_data *objfmt_data;
 
@@ -261,6 +272,7 @@ bc_new_objfmt_data(unsigned int type, unsigned long len, void *data)
 					      sizeof(bytecode_objfmt_data));
 
     objfmt_data->type = type;
+    objfmt_data->of = of;
     /*@-mustfree@*/
     objfmt_data->data = data;
     /*@=mustfree@*/
@@ -307,10 +319,9 @@ bc_delete(bytecode *bc)
 	    break;
 	case BC_OBJFMT_DATA:
 	    objfmt_data = (bytecode_objfmt_data *)bc;
-	    assert(cur_objfmt != NULL);
-	    if (cur_objfmt->bc_objfmt_data_delete)
-		cur_objfmt->bc_objfmt_data_delete(objfmt_data->type,
-						  objfmt_data->data);
+	    if (objfmt_data->of->bc_objfmt_data_delete)
+		objfmt_data->of->bc_objfmt_data_delete(objfmt_data->type,
+						       objfmt_data->data);
 	    else
 		InternalError(_("objfmt can't handle its own objfmt data bytecode"));
 	    break;
@@ -386,10 +397,9 @@ bc_print(FILE *f, const bytecode *bc)
 	case BC_OBJFMT_DATA:
 	    objfmt_data = (const bytecode_objfmt_data *)bc;
 	    fprintf(f, "%*s_ObjFmt_Data_\n", indent_level, "");
-	    assert(cur_objfmt != NULL);
-	    if (cur_objfmt->bc_objfmt_data_print)
-		cur_objfmt->bc_objfmt_data_print(f, objfmt_data->type,
-						 objfmt_data->data);
+	    if (objfmt_data->of->bc_objfmt_data_print)
+		objfmt_data->of->bc_objfmt_data_print(f, objfmt_data->type,
+						      objfmt_data->data);
 	    else
 		fprintf(f, "%*sUNKNOWN\n", indent_level, "");
 	    break;

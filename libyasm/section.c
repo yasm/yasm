@@ -42,7 +42,8 @@ struct section {
 	struct general {
 	    /*@owned@*/ char *name;	/* strdup()'ed name (given by user) */
 
-	    /* object-format-specific data */ 
+	    /* object-format-specific data */
+	    /*@null@*/ /*@dependent@*/ objfmt *of;
 	    /*@null@*/ /*@owned@*/ void *of_data;
 	} general;
     } data;
@@ -58,7 +59,7 @@ struct section {
 
 /*@-compdestroy@*/
 section *
-sections_initialize(sectionhead *headp)
+sections_initialize(sectionhead *headp, objfmt *of)
 {
     section *s;
     valparamhead vps;
@@ -68,11 +69,10 @@ sections_initialize(sectionhead *headp)
     STAILQ_INIT(headp);
 
     /* Add an initial "default" section */
-    assert(cur_objfmt != NULL);
-    vp_new(vp, xstrdup(cur_objfmt->default_section_name), NULL);
+    vp_new(vp, xstrdup(of->default_section_name), NULL);
     vps_initialize(&vps);
     vps_append(&vps, vp);
-    s = cur_objfmt->sections_switch(headp, &vps, NULL);
+    s = of->sections_switch(headp, &vps, NULL);
     vps_delete(&vps);
 
     return s;
@@ -105,6 +105,7 @@ sections_switch_general(sectionhead *headp, const char *name,
 
     s->type = SECTION_GENERAL;
     s->data.general.name = xstrdup(name);
+    s->data.general.of = NULL;
     s->data.general.of_data = NULL;
     s->start = expr_new_ident(ExprInt(intnum_new_uint(start)));
     bcs_initialize(&s->bc);
@@ -156,28 +157,28 @@ section_set_opt_flags(section *sect, unsigned long opt_flags)
 }
 
 void
-section_set_of_data(section *sect, void *of_data)
+section_set_of_data(section *sect, objfmt *of, void *of_data)
 {
     /* Check to see if section type supports of_data */
     if (sect->type != SECTION_GENERAL) {
-	assert(cur_objfmt != NULL);
-	if (cur_objfmt->section_data_delete)
-	    cur_objfmt->section_data_delete(of_data);
+	if (of->section_data_delete)
+	    of->section_data_delete(of_data);
 	else
 	    InternalError(_("don't know how to delete objfmt-specific section data"));
 	return;
     }
 
     /* Delete current of_data if present */
-    if (sect->data.general.of_data) {
-	assert(cur_objfmt != NULL);
-	if (cur_objfmt->section_data_delete)
-	    cur_objfmt->section_data_delete(sect->data.general.of_data);
+    if (sect->data.general.of_data && sect->data.general.of) {
+	objfmt *of2 = sect->data.general.of;
+	if (of2->section_data_delete)
+	    of2->section_data_delete(sect->data.general.of_data);
 	else
 	    InternalError(_("don't know how to delete objfmt-specific section data"));
     }
 
     /* Assign new of_data */
+    sect->data.general.of = of;
     sect->data.general.of_data = of_data;
 }
 
@@ -281,10 +282,10 @@ section_delete(section *sect)
 
     if (sect->type == SECTION_GENERAL) {
 	xfree(sect->data.general.name);
-	assert(cur_objfmt != NULL);
-	if (sect->data.general.of_data) {
-	    if (cur_objfmt->section_data_delete)
-		cur_objfmt->section_data_delete(sect->data.general.of_data);
+	if (sect->data.general.of_data && sect->data.general.of) {
+	    objfmt *of = sect->data.general.of;
+	    if (of->section_data_delete)
+		of->section_data_delete(sect->data.general.of_data);
 	    else
 		InternalError(_("don't know how to delete objfmt-specific section data"));
 	}
@@ -307,12 +308,11 @@ section_print(FILE *f, const section *sect, int print_bcs)
 	case SECTION_GENERAL:
 	    fprintf(f, "general\n%*sname=%s\n%*sobjfmt data:\n", indent_level,
 		    "", sect->data.general.name, indent_level, "");
-	    assert(cur_objfmt != NULL);
 	    indent_level++;
-	    if (sect->data.general.of_data) {
-		if (cur_objfmt->section_data_print)
-		    cur_objfmt->section_data_print(f,
-						   sect->data.general.of_data);
+	    if (sect->data.general.of_data && sect->data.general.of) {
+		objfmt *of = sect->data.general.of;
+		if (of->section_data_print)
+		    of->section_data_print(f, sect->data.general.of_data);
 		else
 		    fprintf(f, "%*sUNKNOWN\n", indent_level, "");
 	    } else

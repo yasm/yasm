@@ -46,17 +46,4 @@ struct preproc {
     size_t (*input) (/*@out@*/ char *buf, size_t max_size);
 };
 
-/* Available preprocessors */
-extern preproc raw_preproc;
-extern preproc yapp_preproc;
-
-/* Finds a preproc based on its keyword.  Returns NULL if no match was found.
- */
-/*@null@*/ /*@dependent@*/ preproc *find_preproc(const char *keyword);
-
-/* Lists all available preprocs.  Calls printfunc with the name and keyword
- * of each available preprocessor.
- */
-void list_preprocs(void (*printfunc) (const char *name, const char *keyword));
-
 #endif

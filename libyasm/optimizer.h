@@ -40,7 +40,4 @@ struct optimizer {
     void (*optimize) (sectionhead *sections);
 };
 
-/* Available optimizers */
-extern optimizer basic_optimizer;
-
 #endif

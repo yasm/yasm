@@ -27,42 +27,57 @@
 #include "expr.h"
 #include "symrec.h"
 
+#include "bytecode.h"
+#include "arch.h"
 #include "section.h"
 #include "objfmt.h"
+#include "dbgfmt.h"
 
 
-/* Note that the functions here write to debug_file.  This is NOT legal for
- * other object formats to do--only the output() function can write to a file,
- * and only the file it's passed in its f parameter!
+objfmt yasm_dbg_LTX_objfmt;
+
+/* Output file for debugging-type formats.  This is so that functions that are
+ * called before the object file is usually opened can still write data out to
+ * it (whereas for "normal" formats the object file is not opened until later
+ * in the assembly process).  Opening the file early is done in initialize().
+ *
+ * Note that the functions here write to dbg_objfmt_file.  This is NOT legal
+ * for other object formats to do--only the output() function can write to a
+ * file, and only the file it's passed in its f parameter!
  */
+static FILE *dbg_objfmt_file;
+
 
 static void
-dbg_objfmt_initialize(const char *in_filename, const char *obj_filename)
+dbg_objfmt_initialize(const char *in_filename, const char *obj_filename,
+		      dbgfmt *df, arch *a)
 {
-    assert(debug_file != NULL);
-    fprintf(debug_file, "%*sinitialize(\"%s\", \"%s\")\n", indent_level, "",
-	    in_filename, obj_filename);
+    dbg_objfmt_file = fopen(obj_filename, "wt");
+    if (!dbg_objfmt_file)
+	ErrorNow(_("could not open file `%s'"), obj_filename);
+    fprintf(dbg_objfmt_file,
+	    "%*sinitialize(\"%s\", \"%s\", %s dbgfmt, %s arch)\n", indent_level,
+	    "", in_filename, obj_filename, df->keyword, a->keyword);
 }
 
 static void
-dbg_objfmt_output(FILE *f, sectionhead *sections)
+dbg_objfmt_output(/*@unused@*/ FILE *f, sectionhead *sections)
 {
-    fprintf(f, "%*soutput(f, sections->\n", indent_level, "");
+    fprintf(dbg_objfmt_file, "%*soutput(f, sections->\n", indent_level, "");
     indent_level++;
-    sections_print(f, sections);
+    sections_print(dbg_objfmt_file, sections);
     indent_level--;
-    fprintf(f, "%*s)\n", indent_level, "");
+    fprintf(dbg_objfmt_file, "%*s)\n", indent_level, "");
     indent_level++;
-    fprintf(f, "%*sSymbol Table:\n", indent_level, "");
-    symrec_print_all(f);
+    fprintf(dbg_objfmt_file, "%*sSymbol Table:\n", indent_level, "");
+    symrec_print_all(dbg_objfmt_file);
     indent_level--;
 }
 
 static void
 dbg_objfmt_cleanup(void)
 {
-    assert(debug_file != NULL);
-    fprintf(debug_file, "%*scleanup()\n", indent_level, "");
+    fprintf(dbg_objfmt_file, "%*scleanup()\n", indent_level, "");
 }
 
 static /*@observer@*/ /*@null@*/ section *
@@ -74,24 +89,22 @@ dbg_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
     section *retval;
     int isnew;
 
-    assert(debug_file != NULL);
-
-    fprintf(debug_file, "%*ssections_switch(headp, ", indent_level, "");
-    vps_print(debug_file, valparams);
-    fprintf(debug_file, ", ");
-    vps_print(debug_file, objext_valparams);
-    fprintf(debug_file, "), returning ");
+    fprintf(dbg_objfmt_file, "%*ssections_switch(headp, ", indent_level, "");
+    vps_print(dbg_objfmt_file, valparams);
+    fprintf(dbg_objfmt_file, ", ");
+    vps_print(dbg_objfmt_file, objext_valparams);
+    fprintf(dbg_objfmt_file, "), returning ");
 
     if ((vp = vps_first(valparams)) && !vp->param && vp->val != NULL) {
 	retval = sections_switch_general(headp, vp->val, 200, 0, &isnew);
 	if (isnew) {
-	    fprintf(debug_file, "(new) ");
+	    fprintf(dbg_objfmt_file, "(new) ");
 	    symrec_define_label(vp->val, retval, (bytecode *)NULL, 1);
 	}
-	fprintf(debug_file, "\"%s\" section\n", vp->val);
+	fprintf(dbg_objfmt_file, "\"%s\" section\n", vp->val);
 	return retval;
     } else {
-	fprintf(debug_file, "NULL\n");
+	fprintf(dbg_objfmt_file, "NULL\n");
 	return NULL;
     }
 }
@@ -99,8 +112,8 @@ dbg_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 static void
 dbg_objfmt_section_data_delete(/*@only@*/ void *data)
 {
-    assert(debug_file != NULL);
-    fprintf(debug_file, "%*ssection_data_delete(%p)\n", indent_level, "", data);
+    fprintf(dbg_objfmt_file, "%*ssection_data_delete(%p)\n", indent_level, "",
+	    data);
     xfree(data);
 }
 
@@ -117,52 +130,49 @@ static void
 dbg_objfmt_extern_declare(symrec *sym, /*@unused@*/ /*@null@*/
 			  valparamhead *objext_valparams)
 {
-    assert(debug_file != NULL);
-    fprintf(debug_file, "%*sextern_declare(\"%s\", ", indent_level, "",
+    fprintf(dbg_objfmt_file, "%*sextern_declare(\"%s\", ", indent_level, "",
 	    symrec_get_name(sym));
-    vps_print(debug_file, objext_valparams);
-    fprintf(debug_file, "), setting of_data=NULL\n");
-    symrec_set_of_data(sym, NULL);
+    vps_print(dbg_objfmt_file, objext_valparams);
+    fprintf(dbg_objfmt_file, "), setting of_data=NULL\n");
+    symrec_set_of_data(sym, &yasm_dbg_LTX_objfmt, NULL);
 }
 
 static void
 dbg_objfmt_global_declare(symrec *sym, /*@unused@*/ /*@null@*/
 			  valparamhead *objext_valparams)
 {
-    assert(debug_file != NULL);
-    fprintf(debug_file, "%*sglobal_declare(\"%s\", ", indent_level, "",
+    fprintf(dbg_objfmt_file, "%*sglobal_declare(\"%s\", ", indent_level, "",
 	    symrec_get_name(sym));
-    vps_print(debug_file, objext_valparams);
-    fprintf(debug_file, "), setting of_data=NULL\n");
-    symrec_set_of_data(sym, NULL);
+    vps_print(dbg_objfmt_file, objext_valparams);
+    fprintf(dbg_objfmt_file, "), setting of_data=NULL\n");
+    symrec_set_of_data(sym, &yasm_dbg_LTX_objfmt, NULL);
 }
 
 static void
 dbg_objfmt_common_declare(symrec *sym, /*@only@*/ expr *size, /*@unused@*/
 			  /*@null@*/ valparamhead *objext_valparams)
 {
-    assert(debug_file != NULL);
-    fprintf(debug_file, "%*scommon_declare(\"%s\", ", indent_level, "",
+    assert(dbg_objfmt_file != NULL);
+    fprintf(dbg_objfmt_file, "%*scommon_declare(\"%s\", ", indent_level, "",
 	    symrec_get_name(sym));
-    expr_print(debug_file, size);
-    fprintf(debug_file, ", ");
-    vps_print(debug_file, objext_valparams);
-    fprintf(debug_file, "), setting of_data=");
-    expr_print(debug_file, size);
-    symrec_set_of_data(sym, size);
-    fprintf(debug_file, "\n");
+    expr_print(dbg_objfmt_file, size);
+    fprintf(dbg_objfmt_file, ", ");
+    vps_print(dbg_objfmt_file, objext_valparams);
+    fprintf(dbg_objfmt_file, "), setting of_data=");
+    expr_print(dbg_objfmt_file, size);
+    symrec_set_of_data(sym, &yasm_dbg_LTX_objfmt, size);
+    fprintf(dbg_objfmt_file, "\n");
 }
 
 static void
 dbg_objfmt_symrec_data_delete(/*@only@*/ void *data)
 {
-    assert(debug_file != NULL);
-    fprintf(debug_file, "%*ssymrec_data_delete(", indent_level, "");
+    fprintf(dbg_objfmt_file, "%*ssymrec_data_delete(", indent_level, "");
     if (data) {
-	expr_print(debug_file, data);
+	expr_print(dbg_objfmt_file, data);
 	expr_delete(data);
     }
-    fprintf(debug_file, ")\n");
+    fprintf(dbg_objfmt_file, ")\n");
 }
 
 static void
@@ -182,21 +192,19 @@ dbg_objfmt_directive(const char *name, valparamhead *valparams,
 		     /*@null@*/ valparamhead *objext_valparams,
 		     /*@unused@*/ sectionhead *headp)
 {
-    assert(debug_file != NULL);
-    fprintf(debug_file, "%*sdirective(\"%s\", ", indent_level, "", name);
-    vps_print(debug_file, valparams);
-    fprintf(debug_file, ", ");
-    vps_print(debug_file, objext_valparams);
-    fprintf(debug_file, "), returning 0 (recognized)\n");
+    fprintf(dbg_objfmt_file, "%*sdirective(\"%s\", ", indent_level, "", name);
+    vps_print(dbg_objfmt_file, valparams);
+    fprintf(dbg_objfmt_file, ", ");
+    vps_print(dbg_objfmt_file, objext_valparams);
+    fprintf(dbg_objfmt_file, "), returning 0 (recognized)\n");
     return 0;	    /* dbg format "recognizes" all directives */
 }
 
 static void
 dbg_objfmt_bc_objfmt_data_delete(unsigned int type, /*@only@*/ void *data)
 {
-    assert(debug_file != NULL);
-    fprintf(debug_file, "%*ssymrec_data_delete(%u, %p)\n", indent_level, "",
-	    type, data);
+    fprintf(dbg_objfmt_file, "%*ssymrec_data_delete(%u, %p)\n", indent_level,
+	    "", type, data);
     xfree(data);
 }
 
@@ -207,6 +215,13 @@ dbg_objfmt_bc_objfmt_data_print(FILE *f, unsigned int type, const void *data)
     fprintf(f, "%*sData=%p\n", indent_level, "", data);
 }
 
+
+/* Define valid debug formats to use with this object format */
+static const char *dbg_objfmt_dbgfmt_keywords[] = {
+    "null",
+    NULL
+};
+
 /* Define objfmt structure -- see objfmt.h for details */
 objfmt yasm_dbg_LTX_objfmt = {
     "Trace of all info passed to object format module",
@@ -214,6 +229,8 @@ objfmt yasm_dbg_LTX_objfmt = {
     "dbg",
     ".text",
     32,
+    dbg_objfmt_dbgfmt_keywords,
+    "null",
     dbg_objfmt_initialize,
     dbg_objfmt_output,
     dbg_objfmt_cleanup,

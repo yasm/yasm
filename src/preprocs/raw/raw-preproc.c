@@ -61,7 +61,7 @@ raw_preproc_input(char *buf, size_t max_size)
 }
 
 /* Define preproc structure -- see preproc.h for details */
-preproc raw_preproc = {
+preproc yasm_raw_LTX_preproc = {
     "Disable preprocessing",
     "raw",
     raw_preproc_initialize,

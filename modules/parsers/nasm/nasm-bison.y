@@ -58,6 +58,8 @@ extern sectionhead nasm_parser_sections;
 extern section *nasm_parser_cur_section;
 extern char *nasm_parser_locallabel_base;
 extern size_t nasm_parser_locallabel_base_len;
+extern /*@dependent@*/ arch *nasm_parser_arch;
+extern /*@dependent@*/ objfmt *nasm_parser_objfmt;
 
 static /*@null@*/ bytecode *nasm_parser_prev_bc = (bytecode *)NULL;
 static bytecode *nasm_parser_temp_bc;
@@ -180,13 +182,15 @@ exp: instr
 ;
 
 instr: INSN		{
-	$$ = cur_arch->parse.new_insn($1, 0, NULL, nasm_parser_cur_section,
-				      nasm_parser_prev_bc);
+	$$ = nasm_parser_arch->parse.new_insn($1, 0, NULL,
+					      nasm_parser_cur_section,
+					      nasm_parser_prev_bc);
     }
     | INSN operands	{
-	$$ = cur_arch->parse.new_insn($1, $2.num_operands, &$2.operands,
-				      nasm_parser_cur_section,
-				      nasm_parser_prev_bc);
+	$$ = nasm_parser_arch->parse.new_insn($1, $2.num_operands,
+					      &$2.operands,
+					      nasm_parser_cur_section,
+					      nasm_parser_prev_bc);
 	ops_delete(&$2.operands, 0);
     }
     | INSN error	{
@@ -195,11 +199,11 @@ instr: INSN		{
     }
     | PREFIX instr	{
 	$$ = $2;
-	cur_arch->parse.handle_prefix($$, $1);
+	nasm_parser_arch->parse.handle_prefix($$, $1);
     }
     | SEGREG instr	{
 	$$ = $2;
-	cur_arch->parse.handle_seg_prefix($$, $1[0]);
+	nasm_parser_arch->parse.handle_seg_prefix($$, $1[0]);
     }
 ;
 
@@ -290,11 +294,11 @@ directive_valparam: direxpr	{
 
 /* memory addresses */
 memaddr: expr		    {
-	$$ = cur_arch->parse.ea_new_expr($1);
+	$$ = nasm_parser_arch->parse.ea_new_expr($1);
     }
     | SEGREG ':' memaddr    {
 	$$ = $3;
-	cur_arch->parse.handle_seg_override($$, $1[0]);
+	nasm_parser_arch->parse.handle_seg_override($$, $1[0]);
     }
     | BYTE memaddr	    { $$ = $2; ea_set_len($$, 1); }
     | WORD memaddr	    { $$ = $2; ea_set_len($$, 2); }
@@ -321,7 +325,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
     | BYTE operand	    {
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
-	    cur_arch->get_reg_size($$->data.reg) != 1)
+	    nasm_parser_arch->get_reg_size($$->data.reg) != 1)
 	    Error(_("cannot override register size"));
 	else
 	    $$->size = 1;
@@ -329,7 +333,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
     | WORD operand	    {
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
-	    cur_arch->get_reg_size($$->data.reg) != 2)
+	    nasm_parser_arch->get_reg_size($$->data.reg) != 2)
 	    Error(_("cannot override register size"));
 	else
 	    $$->size = 2;
@@ -337,7 +341,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
     | DWORD operand	    {
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
-	    cur_arch->get_reg_size($$->data.reg) != 4)
+	    nasm_parser_arch->get_reg_size($$->data.reg) != 4)
 	    Error(_("cannot override register size"));
 	else
 	    $$->size = 4;
@@ -345,7 +349,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
     | QWORD operand	    {
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
-	    cur_arch->get_reg_size($$->data.reg) != 8)
+	    nasm_parser_arch->get_reg_size($$->data.reg) != 8)
 	    Error(_("cannot override register size"));
 	else
 	    $$->size = 8;
@@ -353,7 +357,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
     | TWORD operand	    {
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
-	    cur_arch->get_reg_size($$->data.reg) != 10)
+	    nasm_parser_arch->get_reg_size($$->data.reg) != 10)
 	    Error(_("cannot override register size"));
 	else
 	    $$->size = 10;
@@ -361,7 +365,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
     | DQWORD operand	    {
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
-	    cur_arch->get_reg_size($$->data.reg) != 16)
+	    nasm_parser_arch->get_reg_size($$->data.reg) != 16)
 	    Error(_("cannot override register size"));
 	else
 	    $$->size = 16;
@@ -501,23 +505,21 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
     valparam *vp, *vp2;
     symrec *sym;
 
-    assert(cur_objfmt != NULL);
-
     /* Handle (mostly) output-format independent directives here */
     if (strcasecmp(name, "extern") == 0) {
 	vp = vps_first(valparams);
 	if (vp->val) {
 	    sym = symrec_declare(vp->val, SYM_EXTERN);
-	    if (cur_objfmt->extern_declare)
-		cur_objfmt->extern_declare(sym, objext_valparams);
+	    if (nasm_parser_objfmt->extern_declare)
+		nasm_parser_objfmt->extern_declare(sym, objext_valparams);
 	} else
 	    Error(_("invalid argument to [%s]"), "EXTERN");
     } else if (strcasecmp(name, "global") == 0) {
 	vp = vps_first(valparams);
 	if (vp->val) {
 	    sym = symrec_declare(vp->val, SYM_GLOBAL);
-	    if (cur_objfmt->global_declare)
-		cur_objfmt->global_declare(sym, objext_valparams);
+	    if (nasm_parser_objfmt->global_declare)
+		nasm_parser_objfmt->global_declare(sym, objext_valparams);
 	} else
 	    Error(_("invalid argument to [%s]"), "GLOBAL");
     } else if (strcasecmp(name, "common") == 0) {
@@ -529,15 +531,15 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 	    else {
 		if (vp2->val) {
 		    sym = symrec_declare(vp->val, SYM_COMMON);
-		    if (cur_objfmt->common_declare)
-			cur_objfmt->common_declare(sym,
+		    if (nasm_parser_objfmt->common_declare)
+			nasm_parser_objfmt->common_declare(sym,
 			    expr_new_ident(ExprSym(symrec_use(vp2->val))),
 			    objext_valparams);
 		} else if (vp2->param) {
 		    sym = symrec_declare(vp->val, SYM_COMMON);
-		    if (cur_objfmt->common_declare)
-			cur_objfmt->common_declare(sym, vp2->param,
-						   objext_valparams);
+		    if (nasm_parser_objfmt->common_declare)
+			nasm_parser_objfmt->common_declare(sym, vp2->param,
+							   objext_valparams);
 		    vp2->param = NULL;
 		}
 	    }
@@ -546,8 +548,8 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
     } else if (strcasecmp(name, "section") == 0 ||
 	       strcasecmp(name, "segment") == 0) {
 	section *new_section =
-	    cur_objfmt->sections_switch(&nasm_parser_sections, valparams,
-					objext_valparams);
+	    nasm_parser_objfmt->sections_switch(&nasm_parser_sections,
+						valparams, objext_valparams);
 	if (new_section) {
 	    nasm_parser_cur_section = new_section;
 	    nasm_parser_prev_bc = bcs_last(section_get_bytecodes(new_section));
@@ -569,7 +571,7 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
     } else if (strcasecmp(name, "cpu") == 0) {
 	vps_foreach(vp, valparams) {
 	    if (vp->val)
-		cur_arch->parse.switch_cpu(vp->val);
+		nasm_parser_arch->parse.switch_cpu(vp->val);
 	    else if (vp->param) {
 		const intnum *intcpu;
 		intcpu = expr_get_intnum(&vp->param, NULL);
@@ -578,15 +580,16 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 		else {
 		    char strcpu[16];
 		    sprintf(strcpu, "%lu", intnum_get_uint(intcpu));
-		    cur_arch->parse.switch_cpu(strcpu);
+		    nasm_parser_arch->parse.switch_cpu(strcpu);
 		}
 	    }
 	}
-    } else if (!cur_arch->parse.directive(name, valparams, objext_valparams,
-					  &nasm_parser_sections)) {
+    } else if (!nasm_parser_arch->parse.directive(name, valparams,
+						  objext_valparams,
+						  &nasm_parser_sections)) {
 	;
-    } else if (cur_objfmt->directive(name, valparams, objext_valparams,
-				     &nasm_parser_sections)) {
+    } else if (nasm_parser_objfmt->directive(name, valparams, objext_valparams,
+					     &nasm_parser_sections)) {
 	Error(_("unrecognized directive [%s]"), name);
     }
 

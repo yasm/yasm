@@ -21,6 +21,7 @@ libyasm_la_SOURCES = \
 	src/section.h		\
 	src/arch.c		\
 	src/arch.h		\
+	src/dbgfmt.h		\
 	src/objfmt.h		\
 	src/optimizer.h		\
 	src/parser.h		\
@@ -44,8 +45,9 @@ yasm_SOURCES += \
 	src/options.c		\
 	src/options.h		\
 	src/objfmt.c		\
-	src/preproc.c		\
-	src/parser.c
+	src/parser.c		\
+	src/module.h		\
+	src/module.c
 
 
 EXTRA_DIST += \
@@ -60,6 +62,7 @@ include src/arch/Makefile.inc
 include src/parsers/Makefile.inc
 include src/preprocs/Makefile.inc
 include src/optimizers/Makefile.inc
+include src/dbgfmts/Makefile.inc
 include src/objfmts/Makefile.inc
 include src/tests/Makefile.inc
 

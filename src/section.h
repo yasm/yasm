@@ -22,9 +22,7 @@
 #ifndef YASM_SECTION_H
 #define YASM_SECTION_H
 
-struct objfmt;
-
-/*@dependent@*/ section *sections_initialize(sectionhead *headp);
+/*@dependent@*/ section *sections_initialize(sectionhead *headp, objfmt *of);
 
 /*@dependent@*/ section *sections_switch_general(sectionhead *headp,
 						 const char *name,
@@ -41,7 +39,8 @@ int section_is_absolute(section *sect);
 unsigned long section_get_opt_flags(const section *sect);
 void section_set_opt_flags(section *sect, unsigned long opt_flags);
 
-void section_set_of_data(section *sect, /*@null@*/ /*@only@*/ void *of_data);
+void section_set_of_data(section *sect, objfmt *of,
+			 /*@null@*/ /*@only@*/ void *of_data);
 /*@dependent@*/ /*@null@*/ void *section_get_of_data(section *sect);
 
 void sections_delete(sectionhead *headp);

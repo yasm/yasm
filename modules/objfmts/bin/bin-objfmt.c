@@ -43,11 +43,16 @@
 
 #define REGULAR_OUTBUF_SIZE	1024
 
+objfmt yasm_bin_LTX_objfmt;
+static /*@dependent@*/ arch *cur_arch;
+
 
 static void
 bin_objfmt_initialize(/*@unused@*/ const char *in_filename,
-		      /*@unused@*/ const char *obj_filename)
+		      /*@unused@*/ const char *obj_filename,
+		      /*@unused@*/ dbgfmt *df, arch *a)
 {
+    cur_arch = a;
 }
 
 /* Aligns sect to either its specified alignment (in its objfmt-specific data)
@@ -380,7 +385,7 @@ bin_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 	    if (have_alignval) {
 		unsigned long *data = xmalloc(sizeof(unsigned long));
 		*data = alignval;
-		section_set_of_data(retval, data);
+		section_set_of_data(retval, &yasm_bin_LTX_objfmt, data);
 	    }
 
 	    symrec_define_label(sectname, retval, (bytecode *)NULL, 1);
@@ -448,6 +453,13 @@ bin_objfmt_section_data_print(FILE *f, void *data)
     fprintf(f, "%*salign=%ld\n", indent_level, "", *((unsigned long *)data));
 }
 
+
+/* Define valid debug formats to use with this object format */
+static const char *bin_objfmt_dbgfmt_keywords[] = {
+    "null",
+    NULL
+};
+
 /* Define objfmt structure -- see objfmt.h for details */
 objfmt yasm_bin_LTX_objfmt = {
     "Flat format binary",
@@ -455,6 +467,8 @@ objfmt yasm_bin_LTX_objfmt = {
     NULL,
     ".text",
     16,
+    bin_objfmt_dbgfmt_keywords,
+    "null",
     bin_objfmt_initialize,
     bin_objfmt_output,
     bin_objfmt_cleanup,

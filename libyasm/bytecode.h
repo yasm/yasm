@@ -40,6 +40,8 @@ typedef enum {
 } bytecode_type;
 #define BYTECODE_TYPE_BASE  BC_OBJFMT_DATA+1
 
+void bc_initialize(arch *a);
+
 /*@only@*/ immval *imm_new_int(unsigned long int_val);
 /*@only@*/ immval *imm_new_expr(/*@keep@*/ expr *e);
 
@@ -60,7 +62,7 @@ void bc_set_multiple(bytecode *bc, /*@keep@*/ expr *e);
 				   /*@only@*/ /*@null@*/ expr *maxlen);
 /*@only@*/ bytecode *bc_new_align(unsigned long boundary);
 /*@only@*/ bytecode *bc_new_objfmt_data(unsigned int type, unsigned long len,
-					/*@only@*/ void *data);
+					objfmt *of, /*@only@*/ void *data);
 
 void bc_delete(/*@only@*/ /*@null@*/ bytecode *bc);
 

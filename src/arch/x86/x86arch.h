@@ -112,7 +112,7 @@ typedef struct x86_new_jmprel_data {
 
 bytecode *x86_bc_new_jmprel(x86_new_jmprel_data *d);
 
-extern unsigned char x86_mode_bits;
+extern unsigned char yasm_x86_LTX_mode_bits;
 
 void x86_bc_delete(bytecode *bc);
 void x86_bc_print(FILE *f, const bytecode *bc);

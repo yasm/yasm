@@ -236,7 +236,7 @@ basic_optimize(sectionhead *sections)
 }
 
 /* Define optimizer structure -- see optimizer.h for details */
-optimizer basic_optimizer = {
+optimizer yasm_basic_LTX_optimizer = {
     "Only the most basic optimizations",
     "basic",
     basic_optimize

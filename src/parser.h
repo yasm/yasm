@@ -34,43 +34,27 @@ struct parser {
      * parser.  The raw preprocessor (raw_preproc) should always be in this
      * list so it's always possible to have no preprocessing done.
      */
-    preproc **preprocs;
+    const char **preproc_keywords;
 
-    /* Current preprocessor (set to the default at compile time) */
-    /*@dependent@*/ preproc *current_pp;
+    /* Default preprocessor. */
+    const char *default_preproc_keyword;
 
     /* Main entrance point for the parser.
      *
      * The parser needs access to both the object format module (for format-
-     * specific directives and segment names), and the preprocessor
-     * (it uses current_pp as set either at compile-time or by parser_setpp).
+     * specific directives and segment names), and the preprocessor.
      *
-     * This function also takes the FILE * to the initial starting file, but
-     * not the filename (which is in a global variable and is not
-     * parser-specific).
+     * This function also takes the FILE * to the initial starting file and
+     * the input filename.
      *
      * This function returns the starting section of a linked list of sections
      * (whatever was in the file).
      */
-    sectionhead *(*do_parse) (parser *p, FILE *f, const char *in_filename);
+    sectionhead *(*do_parse) (preproc *pp, arch *a, objfmt *of, FILE *f,
+			      const char *in_filename);
 };
 
 /* Generic functions for all parsers - implemented in src/parser.c */
-
-/* Sets current_pp within p by searching the preprocs list for a preproc
- * matching pp_keyword.  Returns nonzero if no match was found.
- */
-int parser_setpp(/*@partial@*/ parser *p, const char *pp_keyword);
-
-/* Lists preprocessors available for p.  Calls printfunc with the name
- * and keyword of each available preprocessor.
- */
-void parser_listpp(parser *p,
-		   void (*printfunc) (const char *name, const char *keyword));
-
-/* Finds a parser based on its keyword.  Returns NULL if no match was found.
- */
-/*@null@*/ parser *find_parser(const char *keyword);
 
 /* Lists all available parsers.  Calls printfunc with the name and keyword
  * of each available parser.

@@ -27,17 +27,6 @@
 #include "globals.h"
 
 
-/* Output file for debugging-type formats.  This is so that functions that are
- * called before the object file is usually opened can still write data out to
- * it (whereas for "normal" formats the object file is not opened until later
- * in the assembly process).  Opening the file early is special-cased in
- * main().
- */
-/*@null@*/ FILE *debug_file = NULL;
-
-/* Current (selected) object format) */
-/*@null@*/ objfmt *cur_objfmt = NULL;
-
 /* Source lines tracking */
 typedef struct {
     struct line_index_mapping *vector;
