@@ -78,6 +78,11 @@ int
 Scanner_echo(Scanner *s, FILE *out)
 {
     unsigned char *cursor = s->cur;
+
+    /* Catch EOF */
+    if (s->eof && cursor == s->eof)
+	return 0;
+
     s->tok = cursor;
 echo:
 /*!re2c
