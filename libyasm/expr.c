@@ -31,6 +31,8 @@
 #include "expr.h"
 #include "symrec.h"
 
+#include "section.h"
+
 #include "expr-int.h"
 
 
@@ -716,26 +718,41 @@ expr_contains(expr *e, ExprType t)
     return expr_traverse_leaves_in(e, &t, expr_contains_callback);
 }
 
-/* NOTE: This can't be passed through *d because of data/function pointer
- * portability issues.
+/* FIXME: expand_labelequ needs to allow resolves of the symbols in exprs like
+ * diffsectsymbol - diffsectsymbol (where the diffsect's are the same).
+ * Currently symbols in different non-absolute sections are NOT expanded.
+ * This will NOT be easy to fix.
  */
-static intnum *(*labelequ_resolve_label) (symrec *sym);
+
+typedef struct labelequ_data {
+    resolve_label_func resolve_label;
+    const section *sect;
+    int withstart;
+} labelequ_data;
 
 static int
-expr_expand_labelequ_callback(ExprItem *ei, /*@unused@*/ void *d)
+expr_expand_labelequ_callback(ExprItem *ei, void *d)
 {
+    labelequ_data *data = (labelequ_data *)d;
     const expr *equ_expr;
-    intnum *intn;
+
     if (ei->type == EXPR_SYM) {
 	equ_expr = symrec_get_equ(ei->data.sym);
 	if (equ_expr) {
 	    ei->type = EXPR_EXPR;
 	    ei->data.expn = expr_copy(equ_expr);
 	} else {
-	    intn = labelequ_resolve_label(ei->data.sym);
-	    if (intn) {
-		ei->type = EXPR_INT;
-		ei->data.intn = intn;
+	    /*@dependent@*/ section *sect;
+	    /*@dependent@*/ /*@null@*/ bytecode *precbc;
+	    intnum *intn;
+
+	    if (symrec_get_label(ei->data.sym, &sect, &precbc) &&
+		(sect == data->sect || section_is_absolute(sect))) {
+		intn = data->resolve_label(ei->data.sym, data->withstart);
+		if (intn) {
+		    ei->type = EXPR_INT;
+		    ei->data.intn = intn;
+		}
 	    }
 	}
     }
@@ -743,10 +760,14 @@ expr_expand_labelequ_callback(ExprItem *ei, /*@unused@*/ void *d)
 }
 
 void
-expr_expand_labelequ(expr *e, intnum *(*resolve_label) (symrec *sym))
+expr_expand_labelequ(expr *e, const section *sect, int withstart,
+		     resolve_label_func resolve_label)
 {
-    labelequ_resolve_label = resolve_label;
-    expr_traverse_leaves_in(e, NULL, expr_expand_labelequ_callback);
+    labelequ_data data;
+    data.resolve_label = resolve_label;
+    data.sect = sect;
+    data.withstart = withstart;
+    expr_traverse_leaves_in(e, &data, expr_expand_labelequ_callback);
 }
 
 /* Traverse over expression tree, calling func for each operation AFTER the

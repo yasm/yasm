@@ -22,6 +22,8 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
+#include "file.h"
+
 #include "globals.h"
 #include "errwarn.h"
 #include "intnum.h"
@@ -318,7 +320,7 @@ bc_calc_len_data(bytecode_data *bc_data, unsigned long *len)
 
 static int
 bc_calc_len_reserve(bytecode_reserve *reserve, unsigned long *len,
-		    intnum *(*resolve_label) (symrec *sym))
+		    const section *sect, resolve_label_func resolve_label)
 {
     int retval = 1;
     /*@null@*/ expr *temp;
@@ -326,7 +328,7 @@ bc_calc_len_reserve(bytecode_reserve *reserve, unsigned long *len,
 
     temp = expr_copy(reserve->numitems);
     assert(temp != NULL);
-    expr_expand_labelequ(temp, resolve_label);
+    expr_expand_labelequ(temp, sect, 1, resolve_label);
     num = expr_get_intnum(&temp);
     if (!num)
 	retval = -1;
@@ -338,7 +340,8 @@ bc_calc_len_reserve(bytecode_reserve *reserve, unsigned long *len,
 
 static int
 bc_calc_len_incbin(bytecode_incbin *incbin, unsigned long *len,
-		   unsigned long line, intnum *(*resolve_label) (symrec *sym))
+		   unsigned long line, const section *sect,
+		   resolve_label_func resolve_label)
 {
     FILE *f;
     /*@null@*/ expr *temp;
@@ -349,7 +352,7 @@ bc_calc_len_incbin(bytecode_incbin *incbin, unsigned long *len,
     if (incbin->start) {
 	temp = expr_copy(incbin->start);
 	assert(temp != NULL);
-	expr_expand_labelequ(temp, resolve_label);
+	expr_expand_labelequ(temp, sect, 1, resolve_label);
 	num = expr_get_intnum(&temp);
 	if (num)
 	    start = intnum_get_uint(num);
@@ -362,7 +365,7 @@ bc_calc_len_incbin(bytecode_incbin *incbin, unsigned long *len,
     if (incbin->maxlen) {
 	temp = expr_copy(incbin->maxlen);
 	assert(temp != NULL);
-	expr_expand_labelequ(temp, resolve_label);
+	expr_expand_labelequ(temp, sect, 1, resolve_label);
 	num = expr_get_intnum(&temp);
 	if (num)
 	    maxlen = intnum_get_uint(num);
@@ -403,7 +406,8 @@ bc_calc_len_incbin(bytecode_incbin *incbin, unsigned long *len,
 }
 
 int
-bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
+bc_calc_len(bytecode *bc, const section *sect,
+	    resolve_label_func resolve_label)
 {
     int retval = 1;
     bytecode_data *bc_data;
@@ -423,16 +427,17 @@ bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
 	    break;
 	case BC_RESERVE:
 	    reserve = bc_get_data(bc);
-	    retval = bc_calc_len_reserve(reserve, &bc->len, resolve_label);
+	    retval = bc_calc_len_reserve(reserve, &bc->len, sect,
+					 resolve_label);
 	    break;
 	case BC_INCBIN:
 	    incbin = bc_get_data(bc);
-	    retval = bc_calc_len_incbin(incbin, &bc->len, bc->line,
+	    retval = bc_calc_len_incbin(incbin, &bc->len, bc->line, sect,
 					resolve_label);
 	    break;
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
-		retval = cur_arch->bc.bc_calc_len(bc, resolve_label);
+		retval = cur_arch->bc.bc_calc_len(bc, sect, resolve_label);
 	    else
 		InternalError(_("Unknown bytecode type"));
     }
@@ -441,7 +446,7 @@ bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
     if (bc->multiple) {
 	temp = expr_copy(bc->multiple);
 	assert(temp != NULL);
-	expr_expand_labelequ(temp, resolve_label);
+	expr_expand_labelequ(temp, sect, 1, resolve_label);
 	num = expr_get_intnum(&temp);
 	if (!num)
 	    retval = -1;
@@ -453,41 +458,173 @@ bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
     return retval;
 }
 
-void
-bc_resolve(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
+static int
+bc_tobytes_data(bytecode_data *bc_data, unsigned char **bufp,
+		const section *sect, const bytecode *bc, void *d,
+		output_expr_func output_expr)
 {
-#if 0
+    dataval *dv;
+    size_t slen;
+    size_t i;
+
+    STAILQ_FOREACH(dv, &bc_data->datahead, link) {
+	switch (dv->type) {
+	    case DV_EMPTY:
+		break;
+	    case DV_EXPR:
+		if (output_expr(&dv->data.expn, bufp, bc_data->size, sect, bc,
+				0, d))
+		    return 1;
+		break;
+	    case DV_STRING:
+		slen = strlen(dv->data.str_val);
+		strncpy((char *)*bufp, dv->data.str_val, slen);
+		*bufp += slen;
+		/* pad with 0's to nearest multiple of size */
+		slen %= bc_data->size;
+		if (slen > 0) {
+		    slen = bc_data->size-slen;
+		    for (i=0; i<slen; i++)
+			WRITE_BYTE(*bufp, 0);
+		}
+		break;
+	}
+    }
+
+    return 0;
+}
+
+static int
+bc_tobytes_reserve(bytecode_reserve *reserve, unsigned char **bufp,
+		   const section *sect, resolve_label_func resolve_label)
+{
+    /*@dependent@*/ /*@null@*/ const intnum *num;
+    unsigned long numitems, i;
+
+    expr_expand_labelequ(reserve->numitems, sect, 1, resolve_label);
+    num = expr_get_intnum(&reserve->numitems);
+    if (!num)
+	InternalError(_("could not determine number of items in bc_tobytes_reserve"));
+    numitems = intnum_get_uint(num)*reserve->itemsize;
+
+    /* Go ahead and zero the bytes.  Probably most objfmts will want it
+     * zero'd if they're actually going to output it.
+     */
+    for (i=0; i<numitems; i++)
+	WRITE_BYTE(*bufp, 0);
+
+    return 0;
+}
+
+static int
+bc_tobytes_incbin(bytecode_incbin *incbin, unsigned char **bufp,
+		  unsigned long buflen, unsigned long line,
+		  const section *sect, resolve_label_func resolve_label)
+{
+    FILE *f;
+    /*@dependent@*/ /*@null@*/ const intnum *num;
+    unsigned long start = 0;
+
+    /* Try to convert start to integer value */
+    if (incbin->start) {
+	expr_expand_labelequ(incbin->start, sect, 1, resolve_label);
+	num = expr_get_intnum(&incbin->start);
+	if (!num)
+	    InternalError(_("could not determine start in bc_tobytes_incbin"));
+	start = intnum_get_uint(num);
+    }
+
+    /* FIXME: Search include path for filename */
+
+    /* Open file */
+    f = fopen(incbin->filename, "rb");
+    if (!f) {
+	ErrorAt(line, _("`incbin': unable to open file `%s'"),
+		incbin->filename);
+	return 1;
+    }
+
+    /* Seek to start of data */
+    if (fseek(f, start, SEEK_SET) < 0) {
+	ErrorAt(line, _("`incbin': unable to seek on file `%s'"),
+		incbin->filename);
+	fclose(f);
+	return 1;
+    }
+
+    /* Read buflen bytes */
+    if (fread(*bufp, buflen, 1, f) < buflen) {
+	ErrorAt(line, _("`incbin': unable to read %lu bytes from file `%s'"),
+		buflen, incbin->filename);
+	fclose(f);
+	return 1;
+    }
+
+    *bufp += buflen;
+    fclose(f);
+    return 0;
+}
+
+/*@null@*/ /*@only@*/ unsigned char *
+bc_tobytes(bytecode *bc, unsigned char *buf, unsigned long *bufsize,
+	   /*@out@*/ unsigned long *multiple, /*@out@*/ int *gap,
+	   const section *sect, void *d, output_expr_func output_expr,
+	   resolve_label_func resolve_label)
+{
+    /*@only@*/ /*@null@*/ unsigned char *mybuf = NULL;
+    unsigned char *destbuf;
+    /*@dependent@*/ /*@null@*/ const intnum *num;
     bytecode_data *bc_data;
     bytecode_reserve *reserve;
     bytecode_incbin *incbin;
+    int error = 0;
+
+    if (*bufsize < bc->len) {
+	mybuf = xmalloc(sizeof(bc->len));
+	destbuf = mybuf;
+    } else
+	destbuf = buf;
+
+    *gap = 0;
 
     switch (bc->type) {
 	case BC_EMPTY:
-	    InternalError(_("got empty bytecode in bc_resolve"));
+	    InternalError(_("got empty bytecode in bc_tobytes"));
 	case BC_DATA:
 	    bc_data = bc_get_data(bc);
-	    bc_resolve_data(bc_data, &bc->len);
+	    error = bc_tobytes_data(bc_data, &destbuf, sect, bc, d,
+				    output_expr);
 	    break;
 	case BC_RESERVE:
 	    reserve = bc_get_data(bc);
-	    bc_resolve_reserve(reserve, &bc->len, resolve_label);
+	    error = bc_tobytes_reserve(reserve, &destbuf, sect, resolve_label);
+	    *gap = 1;
 	    break;
 	case BC_INCBIN:
 	    incbin = bc_get_data(bc);
-	    bc_resolve_incbin(incbin, &bc->len, bc->line, resolve_label);
+	    error = bc_tobytes_incbin(incbin, &destbuf, bc->len, bc->line,
+				      sect, resolve_label);
 	    break;
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
-		cur_arch->bc.bc_resolve(bc, resolve_label);
+		error = cur_arch->bc.bc_tobytes(bc, &destbuf, sect, d,
+						output_expr, resolve_label);
 	    else
 		InternalError(_("Unknown bytecode type"));
     }
 
     if (bc->multiple) {
-	expr_expand_labelequ(bc->multiple, resolve_label);
-	bc->multiple = expr_simplify(bc->multiple);
-    }
-#endif
+	expr_expand_labelequ(bc->multiple, sect, 1, resolve_label);
+	num = expr_get_intnum(&bc->multiple);
+	if (!num)
+	    InternalError(_("could not determine multiple in bc_tobytes"));
+	*multiple = intnum_get_uint(num);
+    } else
+	*multiple = 1;
+    if (!error && ((destbuf - buf) != bc->len))
+	InternalError(_("written length does not match optimized length"));
+    *bufsize = bc->len;
+    return mybuf;
 }
 
 void

@@ -39,6 +39,6 @@ arch x86_arch = {
 	x86_bc_delete,
 	x86_bc_print,
 	x86_bc_calc_len,
-	x86_bc_resolve
+	x86_bc_tobytes
     }
 };

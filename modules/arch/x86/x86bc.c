@@ -22,6 +22,8 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
+#include "file.h"
+
 #include "globals.h"
 #include "errwarn.h"
 #include "intnum.h"
@@ -461,8 +463,8 @@ x86_bc_print(FILE *f, const bytecode *bc)
 }
 
 static int
-x86_bc_calc_len_insn(x86_insn *insn, unsigned long *len,
-		     intnum *(*resolve_label) (symrec *sym))
+x86_bc_calc_len_insn(x86_insn *insn, unsigned long *len, const section *sect,
+		     resolve_label_func resolve_label)
 {
     /*@null@*/ expr *temp;
     effaddr *ea = insn->ea;
@@ -481,7 +483,7 @@ x86_bc_calc_len_insn(x86_insn *insn, unsigned long *len,
 	    assert(temp != NULL);
 
 	    /* Expand equ's and labels */
-	    expr_expand_labelequ(temp, resolve_label);
+	    expr_expand_labelequ(temp, sect, 1, resolve_label);
 
 	    /* Check validity of effective address and calc R/M bits of
 	     * Mod/RM byte and SIB byte.  We won't know the Mod field
@@ -539,7 +541,7 @@ x86_bc_calc_len_insn(x86_insn *insn, unsigned long *len,
 	if (imm->val) {
 	    temp = expr_copy(imm->val);
 	    assert(temp != NULL);
-	    expr_expand_labelequ(temp, resolve_label);
+	    expr_expand_labelequ(temp, sect, 1, resolve_label);
 
 	    /* TODO: check imm->len vs. sized len from expr? */
 
@@ -570,8 +572,8 @@ x86_bc_calc_len_insn(x86_insn *insn, unsigned long *len,
 
 static int
 x86_bc_calc_len_jmprel(x86_jmprel *jmprel, unsigned long *len,
-		       unsigned long offset,
-		       intnum *(*resolve_label) (symrec *sym))
+		       unsigned long offset, const section *sect,
+		       resolve_label_func resolve_label)
 {
     int retval = 1;
     /*@null@*/ expr *temp;
@@ -586,7 +588,7 @@ x86_bc_calc_len_jmprel(x86_jmprel *jmprel, unsigned long *len,
 	jmprel->opersize;
 
     /* We don't check here to see if forced forms are actually legal; we
-     * assume that they are, and only check it in x86_bc_resolve_jmprel().
+     * assume that they are, and only check it in x86_bc_tobytes_jmprel().
      */
     switch (jmprel->op_sel) {
 	case JR_SHORT_FORCED:
@@ -605,11 +607,11 @@ x86_bc_calc_len_jmprel(x86_jmprel *jmprel, unsigned long *len,
 	     */
 	    temp = expr_copy(jmprel->target);
 	    assert(temp != NULL);
-	    expr_expand_labelequ(temp, resolve_label);
+	    expr_expand_labelequ(temp, sect, 0, resolve_label);
 	    num = expr_get_intnum(&temp);
 	    if (num) {
 		target = intnum_get_uint(num);
-		rel = (long)(target-offset);
+		rel = (long)(target-(offset+jmprel->shortop.opcode_len+1));
 		/* short displacement must fit within -128 <= rel <= +127 */
 		if (jmprel->shortop.opcode_len != 0 && rel >= -128 &&
 		    rel <= 127) {
@@ -624,12 +626,16 @@ x86_bc_calc_len_jmprel(x86_jmprel *jmprel, unsigned long *len,
 			retval = 0;
 		}
 	    } else {
-		/* Assume whichever size is claimed as default by op_sel */
-		if (jmprel->op_sel == JR_SHORT)
-		    jrshort = 1;
-		else
+		/* It's unknown (e.g. out of this segment or external).
+		 * Thus, assume near displacement.  If a near opcode is not
+		 * available, use a short opcode instead.
+		 */
+		if (jmprel->nearop.opcode_len != 0) {
+		    if (jmprel->shortop.opcode_len != 0)
+			retval = 0;
 		    jrshort = 0;
-		retval = 0;
+		} else
+		    jrshort = 1;
 	    }
 	    expr_delete(temp);
 	    break;
@@ -657,7 +663,8 @@ x86_bc_calc_len_jmprel(x86_jmprel *jmprel, unsigned long *len,
 }
 
 int
-x86_bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
+x86_bc_calc_len(bytecode *bc, const section *sect,
+		resolve_label_func resolve_label)
 {
     x86_insn *insn;
     x86_jmprel *jmprel;
@@ -665,29 +672,35 @@ x86_bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
 	    insn = bc_get_data(bc);
-	    return x86_bc_calc_len_insn(insn, &bc->len, resolve_label);
+	    return x86_bc_calc_len_insn(insn, &bc->len, sect, resolve_label);
 	case X86_BC_JMPREL:
 	    jmprel = bc_get_data(bc);
-	    return x86_bc_calc_len_jmprel(jmprel, &bc->len, bc->offset,
+	    return x86_bc_calc_len_jmprel(jmprel, &bc->len, bc->offset, sect,
 					  resolve_label);
 	default:
 	    break;
     }
     return 0;
 }
-#if 0
+
 static int
-x86_bc_resolve_insn(x86_insn *insn, intnum *(*resolve_label) (symrec *sym))
+x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
+		    const bytecode *bc, void *d, output_expr_func output_expr,
+		    resolve_label_func resolve_label)
 {
-    effaddr *ea = insn->ea;
+    /*@null@*/ effaddr *ea = insn->ea;
     x86_effaddr_data *ead = ea_get_data(ea);
     immval *imm = insn->imm;
+    unsigned int i;
 
+    /* We need to figure out the EA first to determine the addrsize.
+     * Of course, the ModR/M, SIB, and displacement are not output until later.
+     */
     if (ea) {
 	if ((ea->disp) && ((!ead->valid_sib && ead->need_sib) ||
 			   (!ead->valid_modrm && ead->need_modrm))) {
-	    /* First expand equ's */
-	    expr_expand_labelequ(ea->disp, resolve_label);
+	    /* Expand equ's and labels */
+	    expr_expand_labelequ(ea->disp, sect, 1, resolve_label);
 
 	    /* Check validity of effective address and calc R/M bits of
 	     * Mod/RM byte and SIB byte.  We won't know the Mod field
@@ -697,53 +710,214 @@ x86_bc_resolve_insn(x86_insn *insn, intnum *(*resolve_label) (symrec *sym))
 	    if (!x86_expr_checkea(&ea->disp, &insn->addrsize, insn->mode_bits,
 				  ea->nosplit, &ea->len, &ead->modrm,
 				  &ead->valid_modrm, &ead->need_modrm,
-				  &ead->sib, &ead->valid_sib, &ead->need_sib))
-		return -1;   /* failed, don't bother checking rest of insn */
+				  &ead->sib, &ead->valid_sib,
+				  &ead->need_sib))
+		InternalError(_("expr_checkea failed from x86 tobytes_insn"));
 	}
     }
 
-    if (imm) {
-	const intnum *num;
+    /* Also check for shift_op special-casing (affects imm). */
+    if (insn->shift_op && imm && imm->val) {
+	/*@dependent@*/ /*@null@*/ const intnum *num;
 
-	if (imm->val) {
-	    expr_expand_labelequ(imm->val, resolve_label);
-	    imm->val = expr_simplify(imm->val);
-	}
-	/* TODO: check imm f_len vs. len? */
+	expr_expand_labelequ(imm->val, sect, 1, resolve_label);
 
-	/* Handle shift_op special-casing */
-	/*@-nullstate@*/
-	if (insn->shift_op && (num = expr_get_intnum(&imm->val))) {
-	/*@=nullstate@*/
-	    if (num) {
-		if (intnum_get_uint(num) == 1) {
-		    /* Use ,1 form: first copy ,1 opcode. */
-		    insn->opcode[0] = insn->opcode[1];
-		    /* Delete Imm, as it's not needed */
-		    expr_delete(imm->val);
-		    xfree(imm);
-		    insn->imm = (immval *)NULL;
-		}
-		insn->shift_op = 0;
+	num = expr_get_intnum(&imm->val);
+	if (num) {
+	    if (intnum_get_uint(num) == 1) {
+		/* Use ,1 form: first copy ,1 opcode. */
+		insn->opcode[0] = insn->opcode[1];
+		/* Delete imm, as it's not needed. */
+		expr_delete(imm->val);
+		xfree(imm);
+		insn->imm = (immval *)NULL;
 	    }
+	    insn->shift_op = 0;
 	}
+    }
+
+    /* Prefixes */
+    if (insn->lockrep_pre != 0)
+	WRITE_BYTE(*bufp, insn->lockrep_pre);
+    if (ea && ead->segment != 0)
+	WRITE_BYTE(*bufp, ead->segment);
+    if (insn->opersize != 0 && insn->opersize != insn->mode_bits)
+	WRITE_BYTE(*bufp, 0x66);
+    if (insn->addrsize != 0 && insn->addrsize != insn->mode_bits)
+	WRITE_BYTE(*bufp, 0x67);
+
+    /* Opcode */
+    for (i=0; i<insn->opcode_len; i++)
+	WRITE_BYTE(*bufp, insn->opcode[i]);
+
+    /* Effective address: ModR/M (if required), SIB (if required), and
+     * displacement (if required).
+     */
+    if (ea) {
+	if (ead->need_modrm) {
+	    if (!ead->valid_modrm)
+		InternalError(_("invalid Mod/RM in x86 tobytes_insn"));
+	    WRITE_BYTE(*bufp, ead->modrm);
+	}
+
+	if (ead->need_sib) {
+	    if (!ead->valid_sib)
+		InternalError(_("invalid SIB in x86 tobytes_insn"));
+	    WRITE_BYTE(*bufp, ead->sib);
+	}
+
+	if (ea->disp)
+	    if (output_expr(&ea->disp, bufp, ea->len, sect, bc, 0, d))
+		return 1;
+    }
+
+    /* Immediate (if required) */
+    if (imm && imm->val) {
+	/* TODO: check imm->len vs. sized len from expr? */
+	if (output_expr(&imm->val, bufp, imm->len, sect, bc, 0, d))
+	    return 1;
     }
 
     return 0;
 }
-#endif
-void
-x86_bc_resolve(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
+
+static int
+x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
+		      const section *sect, const bytecode *bc, void *d,
+		      output_expr_func output_expr,
+		      resolve_label_func resolve_label)
+{
+    /*@dependent@*/ /*@null@*/ const intnum *num;
+    unsigned long target;
+    long rel;
+    unsigned char opersize;
+    int jrshort = 0;
+    unsigned int i;
+
+    /* Prefixes */
+    if (jmprel->lockrep_pre != 0)
+	WRITE_BYTE(*bufp, jmprel->lockrep_pre);
+    /* FIXME: branch hints! */
+    if (jmprel->opersize != 0 && jmprel->opersize != jmprel->mode_bits)
+	WRITE_BYTE(*bufp, 0x66);
+    if (jmprel->addrsize != 0 && jmprel->addrsize != jmprel->mode_bits)
+	WRITE_BYTE(*bufp, 0x67);
+
+    /* As opersize may be 0, figure out its "real" value. */
+    opersize = (jmprel->opersize == 0) ? jmprel->mode_bits :
+	jmprel->opersize;
+
+    /* Get displacement value here so that forced forms can be checked. */
+    expr_expand_labelequ(jmprel->target, sect, 0, resolve_label);
+    num = expr_get_intnum(&jmprel->target);
+
+    /* Check here to see if forced forms are actually legal. */
+    switch (jmprel->op_sel) {
+	case JR_SHORT_FORCED:
+	    /* 1 byte relative displacement */
+	    jrshort = 1;
+	    if (!num) {
+		ErrorAt(bc->line,
+			_("short jump target external or out of segment"));
+		return 1;
+	    } else {
+		target = intnum_get_uint(num);
+		rel = (long)(target-(bc->offset+jmprel->shortop.opcode_len+1));
+		/* does a short form exist? */
+		if (jmprel->shortop.opcode_len == 0) {
+		    ErrorAt(bc->line, _("short jump does not exist"));
+		    return 1;
+		}
+		/* short displacement must fit within -128 <= rel <= +127 */
+		if (rel < -128 || rel > 127) {
+		    ErrorAt(bc->line, _("short jump out of range"));
+		    return 1;
+		}
+	    }
+	    break;
+	case JR_NEAR_FORCED:
+	    /* 2/4 byte relative displacement (depending on operand size) */
+	    jrshort = 0;
+	    if (jmprel->nearop.opcode_len == 0) {
+		ErrorAt(bc->line, _("near jump does not exist"));
+		return 1;
+	    }
+	    break;
+	default:
+	    /* Try to find shortest displacement based on difference between
+	     * target expr value and our (this bytecode's) offset.
+	     */
+	    if (num) {
+		target = intnum_get_uint(num);
+		rel = (long)(target-(bc->offset+jmprel->shortop.opcode_len+1));
+		/* short displacement must fit within -128 <= rel <= +127 */
+		if (jmprel->shortop.opcode_len != 0 && rel >= -128 &&
+		    rel <= 127) {
+		    /* It fits into a short displacement. */
+		    jrshort = 1;
+		} else {
+		    /* It's near. */
+		    jrshort = 0;
+		    if (jmprel->nearop.opcode_len == 0) {
+			InternalError(_("near jump does not exist"));
+			return 1;
+		    }
+		}
+	    } else {
+		/* It's unknown (e.g. out of this segment or external).
+		 * Thus, assume near displacement.  If a near opcode is not
+		 * available, error out.
+		 */
+		jrshort = 0;
+		if (jmprel->nearop.opcode_len == 0) {
+		    ErrorAt(bc->line,
+			    _("short jump target or out of segment"));
+		    return 1;
+		}
+	    }
+	    break;
+    }
+
+    if (jrshort) {
+	/* Opcode */
+	for (i=0; i<jmprel->shortop.opcode_len; i++)
+	    WRITE_BYTE(*bufp, jmprel->shortop.opcode[i]);
+
+	/* Relative displacement */
+	output_expr(&jmprel->target, bufp, 1, sect, bc, 1, d);
+    } else {
+	/* Opcode */
+	for (i=0; i<jmprel->nearop.opcode_len; i++)
+	    WRITE_BYTE(*bufp, jmprel->nearop.opcode[i]);
+
+	/* Relative displacement */
+	output_expr(&jmprel->target, bufp, (opersize == 32) ? 4 : 2, sect, bc,
+		    1, d);
+    }
+    return 0;
+}
+
+int
+x86_bc_tobytes(bytecode *bc, unsigned char **bufp, const section *sect,
+	       void *d, output_expr_func output_expr,
+	       resolve_label_func resolve_label)
 {
     x86_insn *insn;
+    x86_jmprel *jmprel;
 
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
 	    insn = bc_get_data(bc);
-	    /*x86_bc_resolve_insn(insn, resolve_label);*/
+	    return x86_bc_tobytes_insn(insn, bufp, sect, bc, d, output_expr,
+				       resolve_label);
 	    break;
+	case X86_BC_JMPREL:
+	    jmprel = bc_get_data(bc);
+	    return x86_bc_tobytes_jmprel(jmprel, bufp, sect, bc, d,
+					 output_expr, resolve_label);
 	default:
 	    break;
     }
+    return 1;
 }
 

@@ -66,14 +66,43 @@ void bc_print(FILE *f, const bytecode *bc);
  * This function does *not* modify bc other than the length/size values (eg
  *  it doesn't keep the values returned by resolve_label except temporarily to
  *  try to minimize the length).
+ * sect is passed along to resolve_label.
  */
-int bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym));
+int bc_calc_len(bytecode *bc, const section *sect,
+		resolve_label_func resolve_label);
 
-/* Resolves all labels in bytecode.  It does essentially the opposite of
- * the above bc_calc_len(): it doesn't modify the length/size values, instead
- * it saves the values returned by resolve_label to simplify expressions.
+/* Converts the bytecode bc into its byte representation.
+ * Inputs:
+ *  bc            - the bytecode to convert
+ *  buf           - where to put the byte representation
+ *  bufsize       - the size of buf
+ *  d             - the data to pass to each call to output_expr()
+ *  output_expr   - the function to call to convert expressions to byte rep
+ *   output_expr inputs:
+ *    bc      - the bytecode containing the expr that is being output
+ *    ep      - a pointer to the expression to output
+ *    bufp    - pointer to pointer to buffer to contain byte representation
+ *    valsize - the size (in bytes) to be used for the byte rep
+ *    d       - the data passed into bc_tobytes
+ *   output_expr returns nonzero if an error occurred, 0 otherwise
+ *  resolve_label - the function to call to determine the values of
+ *                  expressions that are *not* output to the file
+ *   resolve_label inputs:
+ *    sym - the symbol to resolve
+ * Outputs:
+ *  bufsize       - the size of the generated data.
+ *  multiple      - the number of times the data should be dup'ed when output
+ *  gap           - indicates the data does not really need to exist in the
+ *                  object file (eg res*-generated).  buf is filled with
+ *                  bufsize 0 bytes.
+ * Returns either NULL (if buf was big enough to hold the entire byte
+ * representation), or a newly allocated buffer that should be used instead
+ * of buf for reading the byte representation.
  */
-void bc_resolve(bytecode *bc, intnum *(*resolve_label) (symrec *sym));
+/*@null@*/ /*@only@*/ unsigned char *bc_tobytes(bytecode *bc,
+    unsigned char *buf, unsigned long *bufsize,
+    /*@out@*/ unsigned long *multiple, /*@out@*/ int *gap, const section *sect,
+    void *d, output_expr_func output_expr, resolve_label_func resolve_label);
 
 /* void bcs_initialize(bytecodehead *headp); */
 #define	bcs_initialize(headp)	STAILQ_INIT(headp)

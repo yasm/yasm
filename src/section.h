@@ -42,6 +42,8 @@ int section_is_absolute(section *sect);
 unsigned long section_get_opt_flags(const section *sect);
 void section_set_opt_flags(section *sect, unsigned long opt_flags);
 
+/*@dependent@*/ /*@null@*/ void *section_get_of_data(section *sect);
+
 void sections_delete(sectionhead *headp);
 
 void sections_print(FILE *f, const sectionhead *headp);

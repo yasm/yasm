@@ -47,8 +47,12 @@ void expr_delete(/*@only@*/ /*@null@*/ expr *e);
 
 /* Expands all (symrec) equ's in the expression into full expression
  * instances.  Also resolves labels, if possible.
+ * Srcsect and withstart are passed along to resolve_label and specify the
+ * referencing section and whether the section start should be included in
+ * the resolved address, respectively.
  */
-void expr_expand_labelequ(expr *e, intnum *(*resolve_label) (symrec *sym));
+void expr_expand_labelequ(expr *e, const section *srcsect, int withstart,
+			  resolve_label_func resolve_label);
 
 /* Simplifies the expression e as much as possible, eliminating extraneous
  * branches and simplifying integer-only subexpressions.

@@ -76,4 +76,8 @@ typedef enum {
     SYM_EXTERN = 1 << 2		/* if it's declared EXTERN */
 } SymVisibility;
 
+typedef intnum *(*resolve_label_func) (symrec *sym, int withstart);
+typedef int (*output_expr_func) (expr **ep, unsigned char **bufp,
+				 unsigned long valsize, const section *sect,
+				 const bytecode *bc, int rel, void *d);
 #endif

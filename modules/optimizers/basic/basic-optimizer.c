@@ -47,14 +47,14 @@ static int basic_optimize_section_1(section *sect,
 				    /*@unused@*/ /*@null@*/ void *d);
 
 static /*@only@*/ /*@null@*/ intnum *
-basic_optimize_resolve_label(symrec *sym)
+basic_optimize_resolve_label(symrec *sym, int withstart)
 {
     /*@dependent@*/ section *sect;
     /*@dependent@*/ /*@null@*/ bytecode *precbc;
     /*@null@*/ bytecode *bc;
     /*@null@*/ expr *startexpr;
     /*@dependent@*/ /*@null@*/ const intnum *start;
-    unsigned long startval;
+    unsigned long startval = 0;
 
     if (!symrec_get_label(sym, &sect, &precbc))
 	return NULL;
@@ -72,14 +72,16 @@ basic_optimize_resolve_label(symrec *sym)
     }
 
     /* Figure out the starting offset of the entire section */
-    startexpr = expr_copy(section_get_start(sect));
-    assert(startexpr != NULL);
-    expr_expand_labelequ(startexpr, basic_optimize_resolve_label);
-    start = expr_get_intnum(&startexpr);
-    if (!start)
-	return NULL;
-    startval = intnum_get_uint(start);
-    expr_delete(startexpr);
+    if (withstart || section_is_absolute(sect)) {
+	startexpr = expr_copy(section_get_start(sect));
+	assert(startexpr != NULL);
+	expr_expand_labelequ(startexpr, sect, 1, basic_optimize_resolve_label);
+	start = expr_get_intnum(&startexpr);
+	if (!start)
+	    return NULL;
+	startval = intnum_get_uint(start);
+	expr_delete(startexpr);
+    }
 
     /* If a section is done, the following will always succeed.  If it's in-
      * progress, this will fail if the bytecode comes AFTER the current one.
@@ -92,10 +94,15 @@ basic_optimize_resolve_label(symrec *sym)
     return NULL;
 }
 
+typedef struct basic_optimize_data {
+    bytecode *precbc;
+    const section *sect;
+} basic_optimize_data;
+
 static int
 basic_optimize_bytecode_1(bytecode *bc, void *d)
 {
-    bytecode **precbc = (bytecode **)d;
+    basic_optimize_data *data = (basic_optimize_data *)d;
 
     /* Don't even bother if we're in-progress or done. */
     if (bc->opt_flags == BCFLAG_INPROGRESS)
@@ -105,17 +112,17 @@ basic_optimize_bytecode_1(bytecode *bc, void *d)
 
     bc->opt_flags = BCFLAG_INPROGRESS;
 
-    if (!*precbc)
+    if (!data->precbc)
 	bc->offset = 0;
     else
-	bc->offset = (*precbc)->offset + (*precbc)->len;
-    *precbc = bc;
+	bc->offset = data->precbc->offset + data->precbc->len;
+    data->precbc = bc;
 
     /* We're doing just a single pass, so essentially ignore whether the size
      * is minimum or not, and just check for indeterminate length (indicative
      * of circular reference).
      */
-    if (bc_calc_len(bc, basic_optimize_resolve_label) < 0) {
+    if (bc_calc_len(bc, data->sect, basic_optimize_resolve_label) < 0) {
 	ErrorAt(bc->line, _("Circular reference detected."));
 	return -1;
     }
@@ -128,9 +135,12 @@ basic_optimize_bytecode_1(bytecode *bc, void *d)
 static int
 basic_optimize_section_1(section *sect, /*@unused@*/ /*@null@*/ void *d)
 {
-    bytecode *precbc = NULL;
+    basic_optimize_data data;
     unsigned long flags;
     int retval;
+
+    data.precbc = NULL;
+    data.sect = sect;
 
     /* Don't even bother if we're in-progress or done. */
     flags = section_get_opt_flags(sect);
@@ -141,8 +151,8 @@ basic_optimize_section_1(section *sect, /*@unused@*/ /*@null@*/ void *d)
 
     section_set_opt_flags(sect, SECTFLAG_INPROGRESS);
 
-    retval = bcs_traverse(section_get_bytecodes(sect), &precbc,
-		     basic_optimize_bytecode_1);
+    retval = bcs_traverse(section_get_bytecodes(sect), &data,
+			  basic_optimize_bytecode_1);
     if (retval != 0)
 	return retval;
 

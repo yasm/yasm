@@ -161,6 +161,15 @@ section_set_opt_flags(section *sect, unsigned long opt_flags)
     sect->opt_flags = opt_flags;
 }
 
+void *
+section_get_of_data(section *sect)
+{
+    if (sect->type == SECTION_GENERAL)
+	return sect->data.general.of_data;
+    else
+	return NULL;
+}
+
 void
 sections_delete(sectionhead *headp)
 {
