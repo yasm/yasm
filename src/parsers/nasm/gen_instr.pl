@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.3 2001/05/22 07:17:50 peter Exp $
+# $Id: gen_instr.pl,v 1.4 2001/05/30 06:43:02 mu Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -191,6 +191,43 @@ sub output_lex ($@)
     close TOKEN;
 }
 
+# helper functions for yacc output
+sub rule_header ($ $ $)
+{
+    my ($rule, $tokens, $count) = splice (@_);
+    $count ? "    | $tokens {\n" : "$rule: $tokens {\n"; 
+}
+
+sub cond_action ( $ $ $ $ $ )
+{
+    my ($regarg, $val, $func, $a_eax, $a_args) = splice (@_);
+    return <<"EOF";
+        if (\$$regarg == $val) {
+            $func(@$a_eax);
+        }
+        else {
+            $func (@$a_args);
+        }
+    }
+EOF
+}
+
+sub afterthought_action ( $ $ )
+{
+    my ($stuff, $count) = splice @_;
+    return rule_header ($stuff->[0], $stuff->[1], $count)
+	. "        $stuff->[2] (@{$stuff->[3]});\n"
+	. "    }\n";
+}
+
+sub get_token_number ( $ $ )
+{
+    my ($tokens, $str) = splice @_;
+    $tokens =~ s/$str.*/x/; # hold its place
+    my @f = split /\s+/, $tokens;
+    return scalar @f;
+}
+
 sub output_yacc ($@)
 {
     my $grammarfile = shift or die;
@@ -248,9 +285,20 @@ sub output_yacc ($@)
 	    print GRAMMAR "instrbase:    ",
 		    join( "\n    | ", sort grep {ref $instrlist->{$_}} keys %$instrlist), "\n;\n";
 
+	    my ($ONE, $AL, $AX, $EAX);	# need the outer scope
+
 	    # list the arguments and actions (buildbc)
 	    foreach my $instrname (sort keys %$instrlist)
 	    {
+		# I'm still convinced this is a hack.  The idea is if
+		# within an instruction we see certain versions of the
+		# opcodes with ONE, or REG_E?A[LX],imm(8|16|32).  If we
+		# do, defer generation of the action, as we may need to
+		# fold it into another version with a conditional to
+		# generate the more efficient variant of the opcode
+		# BUT, if we don't fold it in, we have to generate the
+		# original version we would have otherwise.
+		($ONE, $AL, $AX, $EAX) = (0, 0, 0, 0);
 		my $count = 0;
 		next unless ref $instrlist->{$instrname};
 		foreach my $inst (@{$instrlist->{$instrname}}) {
@@ -321,19 +369,91 @@ sub output_yacc ($@)
 		    $args[-1] .= ($2||'') eq 'r' ? ', 1' : ', 0';
 
 		    die $args[-1] if $args[-1] =~ m/\d+[ris]/;
-
-		    unless ($count)
+		    
+		    # see if we match one of the cases to defer
+		    if (($inst->[OPERANDS]||"") =~ m/,ONE/)
 		    {
-			print GRAMMAR "$rule: $tokens {\n"; 
+			$ONE = [ $rule, $tokens, $func, [@args]];
 		    }
+		    elsif (($inst->[OPERANDS]||"") =~ m/REG_AL,imm8/)
+		    {
+			$AL = [ $rule, $tokens, $func, [@args]];
+		    }
+		    elsif (($inst->[OPERANDS]||"") =~ m/REG_AX,imm16/)
+		    {
+			$AX = [ $rule, $tokens, $func, [@args]];
+		    }
+		    elsif (($inst->[OPERANDS]||"") =~ m/REG_EAX,imm32/)
+		    {
+			$EAX = [ $rule, $tokens, $func, [@args]];
+		    }
+
+		    # or if we've deferred and we match the folding version
+		    elsif ($ONE and ($inst->[OPERANDS]||"") =~ m/imm8/)
+		    {
+			my $immarg = get_token_number ($tokens, "imm8");
+
+			$ONE->[4] = 1;
+			print GRAMMAR rule_header ($rule, $tokens, $count);
+			print GRAMMAR cond_action ("$immarg.val", 1, $func, $ONE->[3], \@args);
+			++$count;
+		    }
+		    elsif ($AL and ($inst->[OPERANDS]||"") =~ m/reg8,imm/)
+		    {
+			$AL->[4] = 1;
+			my $regarg = get_token_number ($tokens, "reg8");
+
+			print GRAMMAR rule_header ($rule, $tokens, $count);
+			print GRAMMAR cond_action ($regarg, 0, $func, $AL->[3], \@args);
+			++$count;
+		    }
+		    elsif ($AX and ($inst->[OPERANDS]||"") =~ m/reg16,imm/)
+		    {
+			$AX->[4] = 1;
+			my $regarg = get_token_number ($tokens, "reg16");
+
+			print GRAMMAR rule_header ($rule, $tokens, $count);
+			print GRAMMAR cond_action ($regarg, 0, $func, $AX->[3], \@args);
+			++$count;
+		    }
+		    elsif ($EAX and ($inst->[OPERANDS]||"") =~ m/reg32,imm/)
+		    {
+			$EAX->[4] = 1;
+			my $regarg = get_token_number ($tokens, "reg32");
+
+			print GRAMMAR rule_header ($rule, $tokens, $count);
+			print GRAMMAR cond_action ($regarg, 0, $func, $EAX->[3], \@args);
+			++$count;
+		    }
+
+		    # otherwise, generate the normal version
 		    else
 		    {
-			print GRAMMAR "    | $tokens {\n"; 
+			print GRAMMAR rule_header ($rule, $tokens, $count);
+			print GRAMMAR "        $func (@args);\n";
+			print GRAMMAR "    }\n";
+			++$count;
 		    }
-		    print GRAMMAR "        $func (@args);\n";
-		    print GRAMMAR "    }\n";
-		    ++$count;
 		}
+
+		# catch deferreds that haven't been folded in.
+		if ($ONE and not $ONE->[4])
+		{
+		    print GRAMMAR afterthought_action ($ONE, $count++);
+		}
+		if ($AL and not $AL->[4])
+		{
+		    print GRAMMAR afterthought_action ($AL, $count++);
+		}
+		if ($AX and not $AL->[4])
+		{
+		    print GRAMMAR afterthought_action ($AX, $count++);
+		}
+		if ($EAX and not $AL->[4])
+		{
+		    print GRAMMAR afterthought_action ($EAX, $count++);
+		}
+		
 		print GRAMMAR ";\n";
 	    }
 	}
