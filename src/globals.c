@@ -141,7 +141,7 @@ void
 line_lookup(unsigned long lindex, const char **filename, unsigned long *line)
 {
     line_index_mapping *mapping/*, *mapping2*/;
-    int vindex, step;
+    unsigned long vindex, step;
 
     assert(lindex <= line_index);
 
@@ -150,6 +150,7 @@ line_lookup(unsigned long lindex, const char **filename, unsigned long *line)
     mapping = line_index_map->vector;
     vindex = 0;
     /* start step as the greatest power of 2 <= size */
+    step = 1;
     while (step*2<=line_index_map->size) step*=2;
     while (step>0) {
 	if (vindex+step < line_index_map->size
