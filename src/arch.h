@@ -38,7 +38,11 @@ struct arch {
 
 	void (*bc_delete) (bytecode *bc);
 	void (*bc_print) (FILE *f, const bytecode *bc);
-	void (*bc_parser_finalize) (bytecode *bc);
+
+	/* See bytecode.h comments on bc_calc_len() */
+	int (*bc_calc_len) (bytecode *bc, /*@only@*/ /*@null@*/
+			    intnum *(*resolve_label) (section *sect, /*@null@*/
+						      bytecode *bc));
     } bc;
 };
 

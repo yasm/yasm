@@ -36,6 +36,7 @@
 #include "objfmt.h"
 #include "preproc.h"
 #include "parser.h"
+#include "optimizer.h"
 
 #include "arch.h"
 
@@ -189,9 +190,9 @@ main(int argc, char *argv[])
     indent_level--;
 
     symrec_parser_finalize();
-    sections_parser_finalize(sections);
+    basic_optimizer.optimize(sections);
 
-    fprintf(obj, "\nSections after post-parser-finalization:\n");
+    fprintf(obj, "\nSections after optimization:\n");
     indent_level++;
     sections_print(obj, sections);
     indent_level--;

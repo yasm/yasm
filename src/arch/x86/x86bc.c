@@ -460,8 +460,10 @@ x86_bc_print(FILE *f, const bytecode *bc)
     }
 }
 
-static void
-x86_bc_parser_finalize_insn(x86_insn *insn)
+static int
+x86_bc_calc_len_insn(x86_insn *insn, /*@only@*/ /*@null@*/
+		     intnum *(*resolve_label) (section *sect,
+					       /*@null@*/ bytecode *bc))
 {
     effaddr *ea = insn->ea;
     x86_effaddr_data *ead = ea_get_data(ea);
@@ -482,7 +484,7 @@ x86_bc_parser_finalize_insn(x86_insn *insn)
 				  ea->nosplit, &ea->len, &ead->modrm,
 				  &ead->valid_modrm, &ead->need_modrm,
 				  &ead->sib, &ead->valid_sib, &ead->need_sib))
-		return;	    /* failed, don't bother checking rest of insn */
+		return 0;   /* failed, don't bother checking rest of insn */
 	}
     }
 
@@ -513,21 +515,23 @@ x86_bc_parser_finalize_insn(x86_insn *insn)
 	}
     }
 
-    
+    return 0;
 }
 
-void
-x86_bc_parser_finalize(bytecode *bc)
+int
+x86_bc_calc_len(bytecode *bc,
+		intnum *(*resolve_label) (section *sect,
+					  /*@null@*/ bytecode *bc))
 {
     x86_insn *insn;
 
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
 	    insn = bc_get_data(bc);
-	    x86_bc_parser_finalize_insn(insn);
-	    break;
+	    return x86_bc_calc_len_insn(insn, resolve_label);
 	default:
 	    break;
     }
+    return 0;
 }
 

@@ -45,7 +45,8 @@ void sections_delete(sectionhead *headp);
 
 void sections_print(FILE *f, const sectionhead *headp);
 
-void sections_parser_finalize(sectionhead *headp);
+int sections_traverse(sectionhead *headp, /*@null@*/ void *d,
+		      int (*func) (section *sect, /*@null@*/ void *d));
 
 /*@dependent@*/ bytecodehead *section_get_bytecodes(section *sect);
 

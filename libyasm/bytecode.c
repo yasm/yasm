@@ -240,13 +240,6 @@ bc_delete(bytecode *bc)
     xfree(bc);
 }
 
-int
-bc_get_offset(/*@unused@*/ section *sect, /*@unused@*/ bytecode *bc,
-	      /*@unused@*/ unsigned long *ret_val)
-{
-    return 0;	/* TODO */
-}
-
 void
 bc_print(FILE *f, const bytecode *bc)
 {
@@ -312,20 +305,26 @@ bc_print(FILE *f, const bytecode *bc)
     fprintf(f, "%*sOffset=%lx\n", indent_level, "", bc->offset);
 }
 
-void
-bc_parser_finalize(bytecode *bc)
+int
+bc_calc_len(bytecode *bc,
+	    intnum *(*resolve_label) (section *sect, /*@null@*/ bytecode *bc))
 {
     switch (bc->type) {
 	case BC_EMPTY:
-	    /* FIXME: delete it (probably in bytecodes_ level, not here */
-	    InternalError(_("got empty bytecode in parser_finalize"));
+	    InternalError(_("got empty bytecode in bc_calc_len"));
+	case BC_DATA:
+	    break;
+	case BC_RESERVE:
+	    break;
+	case BC_INCBIN:
+	    break;
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
-		cur_arch->bc.bc_parser_finalize(bc);
+		return cur_arch->bc.bc_calc_len(bc, resolve_label);
 	    else
 		InternalError(_("Unknown bytecode type"));
-	    break;
     }
+    return 0;
 }
 
 void
@@ -369,13 +368,16 @@ bcs_print(FILE *f, const bytecodehead *headp)
     }
 }
 
-void
-bcs_parser_finalize(bytecodehead *headp)
+int
+bcs_traverse(bytecodehead *headp, void *d,
+	     int (*func) (bytecode *bc, /*@null@*/ void *d))
 {
     bytecode *cur;
 
     STAILQ_FOREACH(cur, headp, link)
-	bc_parser_finalize(cur);
+	if (func(cur, d) == 0)
+	    return 0;
+    return 1;
 }
 
 dataval *

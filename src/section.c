@@ -112,7 +112,7 @@ sections_switch_general(sectionhead *headp, const char *name, void *of_data,
     s->type = SECTION_GENERAL;
     s->data.general.name = xstrdup(name);
     s->data.general.of_data = of_data;
-    bytecodes_initialize(&s->bc);
+    bcs_initialize(&s->bc);
 
     s->opt_flags = 0;
     s->res_only = res_only;
@@ -133,7 +133,7 @@ sections_switch_absolute(sectionhead *headp, expr *start)
 
     s->type = SECTION_ABSOLUTE;
     s->data.start = start;
-    bytecodes_initialize(&s->bc);
+    bcs_initialize(&s->bc);
 
     s->opt_flags = 0;
     s->res_only = 1;
@@ -187,13 +187,16 @@ sections_print(FILE *f, const sectionhead *headp)
     }
 }
 
-void
-sections_parser_finalize(sectionhead *headp)
+int
+sections_traverse(sectionhead *headp, /*@null@*/ void *d,
+		  int (*func) (section *sect, /*@null@*/ void *d))
 {
     section *cur;
     
     STAILQ_FOREACH(cur, headp, link)
-	bcs_parser_finalize(&cur->bc);
+	if (func(cur, d) == 0)
+	    return 0;
+    return 1;
 }
 
 bytecodehead *

@@ -35,6 +35,7 @@ struct optimizer {
      * This function takes the unoptimized linked list of sections and returns
      * an optimized linked list of sections ready for output to an object file.
      */
+    sectionhead *(*optimize) (sectionhead *sections);
 };
 
 /* Available optimizers */

@@ -22,11 +22,78 @@
 #include "util.h"
 RCSID("$IdPath$");
 
+#include "bytecode.h"
+#include "section.h"
+
+#include "bc-int.h"
+
 #include "optimizer.h"
 
+
+#define SECTFLAG_NONE		0
+#define SECTFLAG_INPROGRESS	(1<<0)
+#define SECTFLAG_DONE		(1<<1)
+
+#define BCFLAG_NONE		0
+#define BCFLAG_INPROGRESS	(1<<0)
+#define BCFLAG_DONE		(1<<1)
+
+static /*@only@*/ /*@null@*/ intnum *
+basic_optimize_resolve_label(section *sect, bytecode *bc)
+{
+    unsigned long flags;
+
+    flags = section_get_opt_flags(sect);
+
+    return NULL;
+}
+
+static int
+basic_optimize_bytecode(bytecode *bc, /*@unused@*/ /*@null@*/ void *d)
+{
+    bc->opt_flags = BCFLAG_INPROGRESS;
+
+    bc_calc_len(bc, basic_optimize_resolve_label);
+
+    bc->opt_flags = BCFLAG_DONE;
+
+    return 1;
+}
+
+static int
+basic_optimize_section(section *sect, /*@unused@*/ /*@null@*/ void *d)
+{
+    section_set_opt_flags(sect, SECTFLAG_INPROGRESS);
+
+    bcs_traverse(section_get_bytecodes(sect), NULL, basic_optimize_bytecode);
+
+    section_set_opt_flags(sect, SECTFLAG_DONE);
+
+    return 1;
+}
+
+static sectionhead *
+basic_optimize(sectionhead *sections)
+{
+    /* Optimization process: (essentially NASM's pass 1)
+     *  Determine the size of all bytecodes.
+     *  Check "critical" expressions (must be computable on the first pass,
+     *   i.e. depend only on symbols before it).
+     *  Differences from NASM:
+     *   - right-hand side of EQU is /not/ a critical expr (as the entire file
+     *     has already been parsed, we know all their values at this point).
+     *   - not strictly top->bottom scanning; we scan through a section and
+     *     hop to other sections as necessary.
+     */
+    sections_traverse(sections, NULL, basic_optimize_section);
+
+    /* NASM's pass 2 is output, so we just return. */
+    return sections;
+}
 
 /* Define optimizer structure -- see optimizer.h for details */
 optimizer basic_optimizer = {
     "Only the most basic optimizations",
-    "basic"
+    "basic",
+    basic_optimize
 };

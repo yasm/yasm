@@ -56,18 +56,19 @@ void bc_set_multiple(bytecode *bc, /*@keep@*/ expr *e);
 
 void bc_delete(/*@only@*/ /*@null@*/ bytecode *bc);
 
-/* Gets the offset of the bytecode specified by bc if possible.
- * Return value is IF POSSIBLE, not the value.
- */
-int bc_get_offset(section *sect, bytecode *bc,
-		  /*@out@*/ unsigned long *ret_val);
-
 void bc_print(FILE *f, const bytecode *bc);
 
-void bc_parser_finalize(bytecode *bc);
+/* Calculates length of bytecode, saving in bc structure.
+ * Returns whether the length is the minimum possible (1=yes, 0=no).
+ * resolve_label is the function used to determine the value (offset) of a
+ *  in-file label (eg, not an EXTERN variable, which is indeterminate).
+ */
+int bc_calc_len(bytecode *bc, /*@only@*/ /*@null@*/
+		intnum *(*resolve_label) (section *sect,
+					  /*@null@*/ bytecode *bc));
 
-/* void bytecodes_initialize(bytecodehead *headp); */
-#define	bytecodes_initialize(headp)	STAILQ_INIT(headp)
+/* void bcs_initialize(bytecodehead *headp); */
+#define	bcs_initialize(headp)	STAILQ_INIT(headp)
 
 void bcs_delete(bytecodehead *headp);
 
@@ -83,7 +84,8 @@ void bcs_delete(bytecodehead *headp);
 
 void bcs_print(FILE *f, const bytecodehead *headp);
 
-void bcs_parser_finalize(bytecodehead *headp);
+int bcs_traverse(bytecodehead *headp, /*@null@*/ void *d,
+		 int (*func) (bytecode *bc, /*@null@*/ void *d));
 
 dataval *dv_new_expr(/*@keep@*/ expr *expn);
 dataval *dv_new_float(/*@keep@*/ floatnum *flt);
