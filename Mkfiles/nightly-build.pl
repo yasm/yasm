@@ -40,3 +40,8 @@ system("gmake distcheck >$snapshot_dir/make-log.txt") == 0
 system("cp *.tar.gz $snapshot_dir/") == 0
     or die "dist tarball copy failed.";
 
+# Relink "latest" symlink
+chdir("$snapshot_dir/..");
+system('rm', 'latest');
+system('ln', '-s', $todaydate, 'latest');
+
