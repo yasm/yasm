@@ -4,6 +4,7 @@ TESTS += \
 	src/preprocs/yapp/tests/yapp_test.sh
 
 EXTRA_DIST += \
+	src/preprocs/yapp/tests/Makefile.inc \
 	src/preprocs/yapp/tests/yapp_test.sh \
 	src/preprocs/yapp/tests/raw.asm \
 	src/preprocs/yapp/tests/raw.pre \
