@@ -10,6 +10,7 @@ preproc_nasm_la_SOURCES += modules/preprocs/nasm/nasmlib.h
 preproc_nasm_la_SOURCES += modules/preprocs/nasm/nasmlib.c
 preproc_nasm_la_SOURCES += modules/preprocs/nasm/nasm-eval.h
 preproc_nasm_la_SOURCES += modules/preprocs/nasm/nasm-eval.c
+preproc_nasm_la_SOURCES += nasm-macros.c
 
 preproc_nasm_la_LDFLAGS = -module -avoid-version -no-undefined
 preproc_nasm_la_LIBADD = libyasm.la
