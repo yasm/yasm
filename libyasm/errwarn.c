@@ -140,7 +140,7 @@ Fatal(fatal_num num)
  * If replace_parser_error is nonzero, overwrites the last error if its
  * type is WE_PARSERERROR.
  */
-errwarn *
+static errwarn *
 errwarn_new(unsigned long lindex, int replace_parser_error)
 {
     errwarn *first, *next, *ins_we, *we;
@@ -194,7 +194,7 @@ errwarn_new(unsigned long lindex, int replace_parser_error)
 /* Register an error.  Does not print the error, only stores it for
  * OutputAllErrorWarning() to print.
  */
-void
+static void
 error_common(unsigned long lindex, const char *fmt, va_list ap)
 {
     errwarn *we = errwarn_new(lindex, 1);
@@ -213,7 +213,7 @@ error_common(unsigned long lindex, const char *fmt, va_list ap)
 /* Register an warning.  Does not print the warning, only stores it for
  * OutputAllErrorWarning() to print.
  */
-void
+static void
 warning_common(unsigned long lindex, const char *fmt, va_list va)
 {
     errwarn *we = errwarn_new(lindex, 0);
