@@ -260,6 +260,8 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
     int i;
     int *reg;
     int regnum;
+    int indexval = 0;
+    int indexmult = 0;
     yasm_expr *e;
 
     /*@-unqualifiedtrans@*/
@@ -333,8 +335,12 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 		    if (!reg)
 			return 1;
 		    (*reg)++;
-		    if (indexreg)
+		    /* Let last, largest multipler win indexreg */
+		    if (indexreg && *reg > 0 && indexval <= *reg &&
+			!indexmult) {
 			*indexreg = regnum;
+			indexval = *reg;
+		    }
 		} else if (e->terms[i].type == YASM_EXPR_EXPR) {
 		    /* Already ordered from ADD above, just grab the value.
 		     * Sanity check for EXPR_INT.
@@ -351,8 +357,12 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 			    return 1;
 			(*reg) += yasm_intnum_get_int(
 			    e->terms[i].data.expn->terms[1].data.intn);
-			if (indexreg && *reg > 0)
+			/* Let last, largest multipler win indexreg */
+			if (indexreg && *reg > 0 && indexval <= *reg) {
 			    *indexreg = regnum;
+			    indexval = *reg;
+			    indexmult = 1;
+			}
 		    }
 		}
 	    }
