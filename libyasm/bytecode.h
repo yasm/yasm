@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.18 2001/09/16 04:49:46 peter Exp $
+/* $Id: bytecode.h,v 1.19 2001/09/16 19:44:49 peter Exp $
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -152,39 +152,36 @@ void SetInsnLockRepPrefix(bytecode *bc, unsigned char prefix);
 
 void SetOpcodeSel(jmprel_opcode_sel *old_sel, jmprel_opcode_sel new_sel);
 
-void BuildBC_Insn(bytecode      *bc,
-		  unsigned char  opersize,
-		  unsigned char  opcode_len,
-		  unsigned char  op0,
-		  unsigned char  op1,
-		  unsigned char  op2,
-		  effaddr       *ea_ptr,
-		  unsigned char  spare,
-		  immval        *im_ptr,
-		  unsigned char  im_len,
-		  unsigned char  im_sign);
+bytecode *bytecode_new_insn(unsigned char  opersize,
+			    unsigned char  opcode_len,
+			    unsigned char  op0,
+			    unsigned char  op1,
+			    unsigned char  op2,
+			    effaddr       *ea_ptr,
+			    unsigned char  spare,
+			    immval        *im_ptr,
+			    unsigned char  im_len,
+			    unsigned char  im_sign);
 
-void BuildBC_JmpRel(bytecode      *bc,
-		    targetval     *target,
-		    unsigned char  short_valid,
-		    unsigned char  short_opcode_len,
-		    unsigned char  short_op0,
-		    unsigned char  short_op1,
-		    unsigned char  short_op2,
-		    unsigned char  near_valid,
-		    unsigned char  near_opcode_len,
-		    unsigned char  near_op0,
-		    unsigned char  near_op1,
-		    unsigned char  near_op2,
-		    unsigned char  addrsize);
+bytecode *bytecode_new_jmprel(targetval     *target,
+			      unsigned char  short_valid,
+			      unsigned char  short_opcode_len,
+			      unsigned char  short_op0,
+			      unsigned char  short_op1,
+			      unsigned char  short_op2,
+			      unsigned char  near_valid,
+			      unsigned char  near_opcode_len,
+			      unsigned char  near_op0,
+			      unsigned char  near_op1,
+			      unsigned char  near_op2,
+			      unsigned char  addrsize);
 
-void BuildBC_Data(bytecode *bc, datavalhead *datahead, unsigned long size);
+bytecode *bytecode_new_data(datavalhead *datahead, unsigned long size);
 
-void BuildBC_Reserve(bytecode      *bc,
-		     struct expr_s *numitems,
-		     unsigned long  itemsize);
+bytecode *bytecode_new_reserve(struct expr_s *numitems,
+			       unsigned long  itemsize);
 
-void DebugPrintBC(bytecode *bc);
+void bytecode_print(bytecode *bc);
 
 dataval *dataval_new_expr(struct expr_s *exp);
 dataval *dataval_new_float(double float_val);

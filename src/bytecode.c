@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.20 2001/08/30 03:45:26 peter Exp $
+/* $Id: bytecode.c,v 1.21 2001/09/16 19:44:49 peter Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -41,7 +41,7 @@
 
 #include "bytecode.h"
 
-RCSID("$Id: bytecode.c,v 1.20 2001/08/30 03:45:26 peter Exp $");
+RCSID("$Id: bytecode.c,v 1.21 2001/09/16 19:44:49 peter Exp $");
 
 /* Static structures for when NULL is passed to conversion functions. */
 /*  for Convert*ToEA() */
@@ -53,7 +53,7 @@ static immval im_static;
 /*  for Convert*ToBytes() */
 unsigned char bytes_static[16];
 
-static void BuildBC_Common(bytecode *bc);
+static bytecode *bytecode_new_common(void);
 
 effaddr *
 ConvertRegToEA(effaddr *ptr, unsigned long reg)
@@ -246,9 +246,14 @@ SetOpcodeSel(jmprel_opcode_sel *old_sel, jmprel_opcode_sel new_sel)
     *old_sel = new_sel;
 }
 
-static void
-BuildBC_Common(bytecode *bc)
+static bytecode *
+bytecode_new_common(void)
 {
+    bytecode *bc = malloc(sizeof(bytecode));
+
+    if (!bc)
+	Fatal(FATAL_NOMEM);
+
     bc->len = 0;
 
     bc->filename = strdup(filename);
@@ -258,19 +263,20 @@ BuildBC_Common(bytecode *bc)
     bc->mode_bits = mode_bits;
 }
 
-void
-BuildBC_Insn(bytecode      *bc,
-	     unsigned char  opersize,
-	     unsigned char  opcode_len,
-	     unsigned char  op0,
-	     unsigned char  op1,
-	     unsigned char  op2,
-	     effaddr       *ea_ptr,
-	     unsigned char  spare,
-	     immval        *im_ptr,
-	     unsigned char  im_len,
-	     unsigned char  im_sign)
+bytecode *
+bytecode_new_insn(unsigned char  opersize,
+		  unsigned char  opcode_len,
+		  unsigned char  op0,
+		  unsigned char  op1,
+		  unsigned char  op2,
+		  effaddr       *ea_ptr,
+		  unsigned char  spare,
+		  immval        *im_ptr,
+		  unsigned char  im_len,
+		  unsigned char  im_sign)
 {
+    bytecode *bc = bytecode_new_common();
+
     bc->type = BC_INSN;
 
     if (ea_ptr) {
@@ -303,24 +309,25 @@ BuildBC_Insn(bytecode      *bc,
     bc->data.insn.opersize = opersize;
     bc->data.insn.lockrep_pre = 0;
 
-    BuildBC_Common(bc);
+    return bc;
 }
 
-void
-BuildBC_JmpRel(bytecode      *bc,
-	       targetval     *target,
-	       unsigned char  short_valid,
-	       unsigned char  short_opcode_len,
-	       unsigned char  short_op0,
-	       unsigned char  short_op1,
-	       unsigned char  short_op2,
-	       unsigned char  near_valid,
-	       unsigned char  near_opcode_len,
-	       unsigned char  near_op0,
-	       unsigned char  near_op1,
-	       unsigned char  near_op2,
-	       unsigned char  addrsize)
+bytecode *
+bytecode_new_jmprel(targetval     *target,
+		    unsigned char  short_valid,
+		    unsigned char  short_opcode_len,
+		    unsigned char  short_op0,
+		    unsigned char  short_op1,
+		    unsigned char  short_op2,
+		    unsigned char  near_valid,
+		    unsigned char  near_opcode_len,
+		    unsigned char  near_op0,
+		    unsigned char  near_op1,
+		    unsigned char  near_op2,
+		    unsigned char  addrsize)
 {
+    bytecode *bc = bytecode_new_common();
+
     bc->type = BC_JMPREL;
 
     bc->data.jmprel.target = target->val;
@@ -351,12 +358,13 @@ BuildBC_JmpRel(bytecode      *bc,
     bc->data.jmprel.opersize = 0;
     bc->data.jmprel.lockrep_pre = 0;
 
-    BuildBC_Common(bc);
+    return bc;
 }
 
-void
-BuildBC_Data(bytecode *bc, datavalhead *datahead, unsigned long size)
+bytecode *
+bytecode_new_data(datavalhead *datahead, unsigned long size)
 {
+    bytecode *bc;
     dataval *cur;
 
     /* First check to see if all the data elements are valid for the size
@@ -395,27 +403,31 @@ BuildBC_Data(bytecode *bc, datavalhead *datahead, unsigned long size)
 	}
     }
 
+    bc = bytecode_new_common();
+
     bc->type = BC_DATA;
 
     bc->data.data.datahead = *datahead;
     bc->data.data.size = size;
 
-    BuildBC_Common(bc);
+    return bc;
 }
 
-void
-BuildBC_Reserve(bytecode *bc, expr *numitems, unsigned long itemsize)
+bytecode *
+bytecode_new_reserve(expr *numitems, unsigned long itemsize)
 {
+    bytecode *bc = bytecode_new_common();
+
     bc->type = BC_RESERVE;
 
     bc->data.reserve.numitems = numitems;
     bc->data.reserve.itemsize = itemsize;
 
-    BuildBC_Common(bc);
+    return bc;
 }
 
 void
-DebugPrintBC(bytecode *bc)
+bytecode_print(bytecode *bc)
 {
     switch (bc->type) {
 	case BC_EMPTY:

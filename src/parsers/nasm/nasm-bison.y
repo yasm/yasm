@@ -1,4 +1,4 @@
-/* $Id: nasm-bison.y,v 1.29 2001/09/16 18:53:47 peter Exp $
+/* $Id: nasm-bison.y,v 1.30 2001/09/16 19:44:49 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -42,7 +42,7 @@
 #include "bytecode.h"
 #include "section.h"
 
-RCSID("$Id: nasm-bison.y,v 1.29 2001/09/16 18:53:47 peter Exp $");
+RCSID("$Id: nasm-bison.y,v 1.30 2001/09/16 19:44:49 peter Exp $");
 
 #define YYDEBUG 1
 
@@ -52,8 +52,6 @@ static unsigned long ConvertCharConstToInt(char *);
 void nasm_parser_error(char *);
 
 extern section *nasm_parser_cur_section;
-
-static bytecode *new_bc;
 
 %}
 
@@ -73,7 +71,7 @@ static bytecode *new_bc;
     targetval tgt_val;
     datavalhead datahead;
     dataval *data;
-    bytecode bc;
+    bytecode *bc;
 }
 
 %token <int_val> INTNUM
@@ -129,32 +127,32 @@ input: /* empty */
     | input line {
 	OutputError();
 	OutputWarning();
-	if ($2.type != BC_EMPTY) {
-	    new_bc = malloc(sizeof(bytecode));
-	    if(!new_bc)
-		Fatal(FATAL_NOMEM);
-	    memcpy(new_bc, &$2, sizeof(bytecode));
-	    STAILQ_INSERT_TAIL(&nasm_parser_cur_section->bc, new_bc, link);
+	if ($2) {
+	    if ($2->type != BC_EMPTY) {
+		STAILQ_INSERT_TAIL(&nasm_parser_cur_section->bc, $2, link);
+	    } else {
+		free($2);
+	    }
 	}
 	line_number++;
     }
 ;
 
-line: '\n'	{ $$.type = BC_EMPTY; }
+line: '\n'	{ $$ = (bytecode *)NULL; }
     | exp '\n'
-    | directive '\n' { $$.type = BC_EMPTY; }
+    | directive '\n' { $$ = (bytecode *)NULL; }
     | error '\n' {
 	Error(_("label or instruction expected at start of line"));
-	$$.type = BC_EMPTY;
+	$$ = (bytecode *)NULL;
 	yyerrok;
     }
 ;
 
 exp: instr
-    | DECLARE_DATA datavals	{ BuildBC_Data(&$$, &$2, $1); }
-    | RESERVE_SPACE expr	{ BuildBC_Reserve(&$$, $2, $1); }
+    | DECLARE_DATA datavals	{ $$ = bytecode_new_data(&$2, $1); }
+    | RESERVE_SPACE expr	{ $$ = bytecode_new_reserve($2, $1); }
     | label exp			{ $$ = $2; }
-    | label			{ $$.type = BC_EMPTY; }
+    | label			{ $$ = (bytecode *)NULL; }
 ;
 
 datavals: dataval		{
@@ -407,18 +405,18 @@ expr: expr_no_string
 explabel: ID | SPECIAL_ID | LOCAL_ID ;
 
 instr: instrbase
-    | OPERSIZE instr	{ $$ = $2; SetInsnOperSizeOverride(&$$, $1); }
-    | ADDRSIZE instr	{ $$ = $2; SetInsnAddrSizeOverride(&$$, $1); }
-    | REG_CS instr	{ $$ = $2; SetEASegment(&$$.data.insn.ea, 0x2E); }
-    | REG_SS instr	{ $$ = $2; SetEASegment(&$$.data.insn.ea, 0x36); }
-    | REG_DS instr	{ $$ = $2; SetEASegment(&$$.data.insn.ea, 0x3E); }
-    | REG_ES instr	{ $$ = $2; SetEASegment(&$$.data.insn.ea, 0x26); }
-    | REG_FS instr	{ $$ = $2; SetEASegment(&$$.data.insn.ea, 0x64); }
-    | REG_GS instr	{ $$ = $2; SetEASegment(&$$.data.insn.ea, 0x65); }
-    | LOCK instr	{ $$ = $2; SetInsnLockRepPrefix(&$$, 0xF0); }
-    | REPNZ instr	{ $$ = $2; SetInsnLockRepPrefix(&$$, 0xF2); }
-    | REP instr		{ $$ = $2; SetInsnLockRepPrefix(&$$, 0xF3); }
-    | REPZ instr	{ $$ = $2; SetInsnLockRepPrefix(&$$, 0xF4); }
+    | OPERSIZE instr	{ $$ = $2; SetInsnOperSizeOverride($$, $1); }
+    | ADDRSIZE instr	{ $$ = $2; SetInsnAddrSizeOverride($$, $1); }
+    | REG_CS instr	{ $$ = $2; SetEASegment(&$$->data.insn.ea, 0x2E); }
+    | REG_SS instr	{ $$ = $2; SetEASegment(&$$->data.insn.ea, 0x36); }
+    | REG_DS instr	{ $$ = $2; SetEASegment(&$$->data.insn.ea, 0x3E); }
+    | REG_ES instr	{ $$ = $2; SetEASegment(&$$->data.insn.ea, 0x26); }
+    | REG_FS instr	{ $$ = $2; SetEASegment(&$$->data.insn.ea, 0x64); }
+    | REG_GS instr	{ $$ = $2; SetEASegment(&$$->data.insn.ea, 0x65); }
+    | LOCK instr	{ $$ = $2; SetInsnLockRepPrefix($$, 0xF0); }
+    | REPNZ instr	{ $$ = $2; SetInsnLockRepPrefix($$, 0xF2); }
+    | REP instr		{ $$ = $2; SetInsnLockRepPrefix($$, 0xF3); }
+    | REPZ instr	{ $$ = $2; SetInsnLockRepPrefix($$, 0xF4); }
 ;
 
 /* instruction grammars (dynamically generated) */

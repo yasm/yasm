@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.19 2001/08/30 03:45:26 peter Exp $
+# $Id: gen_instr.pl,v 1.20 2001/09/16 19:44:49 peter Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -353,7 +353,7 @@ sub cond_action_if ( $ $ $ $ $ $ $ )
     my ($rule, $tokens, $count, $regarg, $val, $func, $a_eax) = splice (@_);
     return rule_header ($rule, $tokens, $count) . <<"EOF";
         if (\$$regarg == $val) {
-            $func(@$a_eax);
+            \$\$ = $func(@$a_eax);
         }
 EOF
 }
@@ -362,7 +362,7 @@ sub cond_action_elsif ( $ $ $ $ )
     my ($regarg, $val, $func, $a_eax) = splice (@_);
     return <<"EOF";
         else if (\$$regarg == $val) {
-            $func(@$a_eax);
+            \$\$ = $func(@$a_eax);
         }
 EOF
 }
@@ -371,7 +371,7 @@ sub cond_action_else ( $ $ )
     my ($func, $a_args) = splice (@_);
     return <<"EOF" . rule_footer;
         else {
-            $func (@$a_args);
+            \$\$ = $func (@$a_args);
         }
 EOF
 }
@@ -388,7 +388,7 @@ sub action ( @ $ )
 {
     my ($rule, $tokens, $func, $a_args, $count) = splice @_;
     return rule_header ($rule, $tokens, $count)
-	. "        $func (@$a_args);\n"
+	. "        \$\$ = $func (@$a_args);\n"
 	. rule_footer; 
 }
 
@@ -491,13 +491,10 @@ sub output_yacc ($@)
 			    if $inst->[OPERANDS] ne 'nil';
 			$tokens =~ s/,/ ',' /g;
 			$tokens =~ s/:/ ':' /g;
-			my $func = "BuildBC_JmpRel";
+			my $func = "bytecode_new_jmprel";
 
-			# Create the argument list for BuildBC
+			# Create the argument list for bytecode_new
 			my @args;
-
-			# First argument is always &$$
-			push @args, '&$$,';
 
 			# Target argument: HACK: Always assumed to be arg 1.
 			push @args, '&$2,';
@@ -583,13 +580,10 @@ sub output_yacc ($@)
 			$tokens =~ s/:/ ':' /g;
 			# offset args
 			my $to = $tokens =~ m/\b(TO|WORD|DWORD)\b/ ? 1 : 0;
-			my $func = "BuildBC_Insn";
+			my $func = "bytecode_new_insn";
 
-			# Create the argument list for BuildBC
+			# Create the argument list for bytecode_new
 			my @args;
-
-			# First argument is always &$$
-			push @args, '&$$,';
 
 			# operand size
 			push @args, "$inst->[OPSIZE],";
