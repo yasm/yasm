@@ -464,7 +464,126 @@ x86_bc_print(FILE *f, const bytecode *bc)
 }
 
 static int
-x86_bc_calc_len_insn(x86_insn *insn, intnum *(*resolve_label) (symrec *sym))
+x86_bc_calc_len_insn(x86_insn *insn, unsigned long *len,
+		     intnum *(*resolve_label) (symrec *sym))
+{
+    /*@null@*/ expr *temp;
+    effaddr *ea = insn->ea;
+    x86_effaddr_data *ead = ea_get_data(ea);
+    immval *imm = insn->imm;
+    int retval = 1;		/* may turn into 0 at some point */
+
+    if (ea) {
+	if ((ea->disp) && ((!ead->valid_sib && ead->need_sib) ||
+			   (!ead->valid_modrm && ead->need_modrm))) {
+	    /* Create temp copy of disp, etc. */
+	    x86_effaddr_data ead_t = *ead;  /* structure copy */
+	    unsigned char displen = ea->len;
+
+	    temp = expr_copy(ea->disp);
+	    assert(temp != NULL);
+
+	    /* Expand equ's and labels */
+	    expr_expand_labelequ(temp, resolve_label);
+
+	    /* Check validity of effective address and calc R/M bits of
+	     * Mod/RM byte and SIB byte.  We won't know the Mod field
+	     * of the Mod/RM byte until we know more about the
+	     * displacement.
+	     */
+	    if (!x86_expr_checkea(&temp, &insn->addrsize, insn->mode_bits,
+				  ea->nosplit, &displen, &ead_t.modrm,
+				  &ead_t.valid_modrm, &ead_t.need_modrm,
+				  &ead_t.sib, &ead_t.valid_sib,
+				  &ead_t.need_sib))
+		return -1;   /* failed, don't bother checking rest of insn */
+
+	    if (!temp) {
+		/* If the expression was deleted (temp=NULL), then make the
+		 * temp info permanent.
+		 */
+
+		/* Delete the "real" expression */
+		expr_delete(ea->disp);
+		ea->disp = NULL;
+		*ead = ead_t;	/* structure copy */
+		ea->len = displen;
+	    } else if (displen == 1) {
+		/* Fits into a byte.  We'll assume it never gets bigger, so
+		 * make temp info permanent, but NOT the expr itself (as that
+		 * may change).
+		 */
+		expr_delete(temp);
+		*ead = ead_t;	/* structure copy */
+		ea->len = displen;
+	    } else {
+		/* Fits into a word/dword, or unknown.  As this /may/ change in
+		 * a future pass, so discard temp info.
+		 */
+		expr_delete(temp);
+		retval = 0;	    /* may not be smallest size */
+
+		/* Handle unknown case, make displen word-sized */
+		if (displen == 0xff)
+		    displen = (insn->addrsize == 32) ? 4 : 2;
+	    }
+
+	    /* Compute length of ea and add to total */
+	    *len += ead_t.need_modrm + ead_t.need_sib + displen;
+	}
+    }
+
+    if (imm) {
+	const intnum *num;
+
+	if (imm->val) {
+	    temp = expr_copy(imm->val);
+	    expr_expand_labelequ(temp, resolve_label);
+
+	    /* TODO: check imm->len vs. sized len from expr? */
+
+	    /* Handle shift_op special-casing */
+	    if (insn->shift_op && temp && (num = expr_get_intnum(&temp))) {
+		if (num && intnum_get_uint(num) == 1) {
+		    /* We can use the ,1 form: subtract out the imm len
+		     * (as we add it back in below).
+		     */
+		    *len -= imm->len;
+		} else
+		    retval = 0;	    /* we could still get ,1 */
+	    }
+
+	    expr_delete(temp);
+	}
+
+	*len += imm->len;
+    }
+
+    *len += insn->opcode_len;
+    *len += (insn->addrsize != 0 && insn->addrsize != insn->mode_bits) ? 1:0;
+    *len += (insn->opersize != 0 && insn->opersize != insn->mode_bits) ? 1:0;
+    *len += (insn->lockrep_pre != 0) ? 1:0;
+
+    return 0;
+}
+
+int
+x86_bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
+{
+    x86_insn *insn;
+
+    switch ((x86_bytecode_type)bc->type) {
+	case X86_BC_INSN:
+	    insn = bc_get_data(bc);
+	    return x86_bc_calc_len_insn(insn, &bc->len, resolve_label);
+	default:
+	    break;
+    }
+    return 0;
+}
+#if 0
+static int
+x86_bc_resolve_insn(x86_insn *insn, intnum *(*resolve_label) (symrec *sym))
 {
     effaddr *ea = insn->ea;
     x86_effaddr_data *ead = ea_get_data(ea);
@@ -485,7 +604,7 @@ x86_bc_calc_len_insn(x86_insn *insn, intnum *(*resolve_label) (symrec *sym))
 				  ea->nosplit, &ea->len, &ead->modrm,
 				  &ead->valid_modrm, &ead->need_modrm,
 				  &ead->sib, &ead->valid_sib, &ead->need_sib))
-		return 0;   /* failed, don't bother checking rest of insn */
+		return -1;   /* failed, don't bother checking rest of insn */
 	}
     }
 
@@ -518,20 +637,19 @@ x86_bc_calc_len_insn(x86_insn *insn, intnum *(*resolve_label) (symrec *sym))
 
     return 0;
 }
-
-int
-x86_bc_calc_len(bytecode *bc,
-		intnum *(*resolve_label) (symrec *sym))
+#endif
+void
+x86_bc_resolve(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
 {
     x86_insn *insn;
 
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
 	    insn = bc_get_data(bc);
-	    return x86_bc_calc_len_insn(insn, resolve_label);
+	    /*x86_bc_resolve_insn(insn, resolve_label);*/
+	    break;
 	default:
 	    break;
     }
-    return 0;
 }
 

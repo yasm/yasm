@@ -42,6 +42,9 @@ struct arch {
 	/* See bytecode.h comments on bc_calc_len() */
 	int (*bc_calc_len) (bytecode *bc,
 			    intnum *(*resolve_label) (symrec *sym));
+	/* See bytecode.h comments on bc_resolve() */
+	void (*bc_resolve) (bytecode *bc,
+			    intnum *(*resolve_label) (symrec *sym));
     } bc;
 };
 

@@ -97,6 +97,7 @@ typedef struct x86_jmprel {
 void x86_bc_delete(bytecode *bc);
 void x86_bc_print(FILE *f, const bytecode *bc);
 int x86_bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym));
+void x86_bc_resolve(bytecode *bc, intnum *(*resolve_label) (symrec *sym));
 
 int x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 		     unsigned char nosplit, unsigned char *displen,

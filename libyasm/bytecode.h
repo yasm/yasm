@@ -62,8 +62,17 @@ void bc_print(FILE *f, const bytecode *bc);
  * Returns whether the length is the minimum possible (1=yes, 0=no).
  * resolve_label is the function used to determine the value (offset) of a
  *  in-file label (eg, not an EXTERN variable, which is indeterminate).
+ * This function does *not* modify bc other than the length/size values (eg
+ *  it doesn't keep the values returned by resolve_label except temporarily to
+ *  try to minimize the length).
  */
 int bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym));
+
+/* Resolves all labels in bytecode.  It does essentially the opposite of
+ * the above bc_calc_len(): it doesn't modify the length/size values, instead
+ * it saves the values returned by resolve_label to simplify expressions.
+ */
+void bc_resolve(bytecode *bc, intnum *(*resolve_label) (symrec *sym));
 
 /* void bcs_initialize(bytecodehead *headp); */
 #define	bcs_initialize(headp)	STAILQ_INIT(headp)

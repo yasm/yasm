@@ -310,6 +310,8 @@ bc_print(FILE *f, const bytecode *bc)
 int
 bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
 {
+    bc->len = 0;	/* start at 0 */
+
     switch (bc->type) {
 	case BC_EMPTY:
 	    InternalError(_("got empty bytecode in bc_calc_len"));
@@ -326,6 +328,26 @@ bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
 		InternalError(_("Unknown bytecode type"));
     }
     return 0;
+}
+
+void
+bc_resolve(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
+{
+    switch (bc->type) {
+	case BC_EMPTY:
+	    InternalError(_("got empty bytecode in bc_resolve"));
+	case BC_DATA:
+	    break;
+	case BC_RESERVE:
+	    break;
+	case BC_INCBIN:
+	    break;
+	default:
+	    if (bc->type < cur_arch->bc.type_max)
+		cur_arch->bc.bc_resolve(bc, resolve_label);
+	    else
+		InternalError(_("Unknown bytecode type"));
+    }
 }
 
 void
