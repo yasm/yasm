@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.11 2001/07/05 04:53:13 mu Exp $
+# $Id: gen_instr.pl,v 1.12 2001/07/05 05:41:45 peter Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -93,7 +93,7 @@ my $valid_cpus = join '|', qw(
     SMM
     CYRIX
     UNDOC OBS PRIV PROT
-    #0 #1
+    @0 @1
 );
 
 # track errors and warnings rather than die'ing on the first.
