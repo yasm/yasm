@@ -48,23 +48,28 @@ RCSID("$IdPath$");
 
 struct effaddr {
     expr *disp;			/* address displacement */
-    unsigned char len;		/* length of disp (in bytes), 0 if none */
+    unsigned char len;		/* length of disp (in bytes), 0 if unknown */
 
     unsigned char segment;	/* segment override, 0 if none */
 
+    /* How the spare (register) bits in Mod/RM are handled:
+     * Even if valid_modrm=0, the spare bits are still valid (don't overwrite!)
+     * They're set in bytecode_new_insn().
+     */
     unsigned char modrm;
     unsigned char valid_modrm;	/* 1 if Mod/RM byte currently valid, 0 if not */
     unsigned char need_modrm;	/* 1 if Mod/RM byte needed, 0 if not */
 
     unsigned char sib;
     unsigned char valid_sib;	/* 1 if SIB byte currently valid, 0 if not */
-    unsigned char need_sib;	/* 1 if SIB byte needed, 0 if not */
+    unsigned char need_sib;	/* 1 if SIB byte needed, 0 if not,
+				   0xff if unknown */
 };
 
 struct immval {
     expr *val;
 
-    unsigned char len;		/* length of val (in bytes), 0 if none */
+    unsigned char len;		/* length of val (in bytes), 0 if unknown */
     unsigned char isneg;	/* the value has been explicitly negated */
 
     unsigned char f_len;	/* final imm length */
@@ -156,17 +161,18 @@ struct bytecode {
 	} reserve;
     } data;
 
-    expr *multiple;		/* number of times bytecode is repeated */
+    expr *multiple;		/* number of times bytecode is repeated,
+				   NULL=1 */
 
     unsigned long len;		/* total length of entire bytecode (including
-				   multiple copies) */
+				   multiple copies), 0 if unknown */
 
     /* where it came from */
     char *filename;
     unsigned int lineno;
 
     /* other assembler state info */
-    unsigned long offset;
+    unsigned long offset;	/* 0 if unknown */
     unsigned char mode_bits;
 };
 
@@ -181,6 +187,7 @@ effaddr_new_reg(unsigned long reg)
 {
     effaddr *ea = xmalloc(sizeof(effaddr));
 
+    ea->disp = (expr *)NULL;
     ea->len = 0;
     ea->segment = 0;
     ea->modrm = 0xC0 | (reg & 0x07);	/* Mod=11, R/M=Reg, Reg=0 */
@@ -197,14 +204,15 @@ effaddr_new_expr(expr *expr_ptr)
 {
     effaddr *ea = xmalloc(sizeof(effaddr));
 
+    ea->disp = expr_ptr;
+    ea->len = 0;
     ea->segment = 0;
-
+    ea->modrm = 0;
     ea->valid_modrm = 0;
     ea->need_modrm = 1;
     ea->valid_sib = 0;
-    ea->need_sib = 0;
-
-    ea->disp = expr_ptr;
+    ea->need_sib = 0xff;    /* we won't know until we know more about expr and
+			       the BITS/address override setting */
 
     return ea;
 }
@@ -215,10 +223,9 @@ effaddr_new_imm(immval *im_ptr, unsigned char im_len)
     effaddr *ea = xmalloc(sizeof(effaddr));
 
     ea->disp = im_ptr->val;
-    if (im_ptr->len > im_len)
-	Warning(_("%s value exceeds bounds"), "word");
     ea->len = im_len;
     ea->segment = 0;
+    ea->modrm = 0;
     ea->valid_modrm = 0;
     ea->need_modrm = 0;
     ea->valid_sib = 0;
@@ -542,16 +549,19 @@ bytecode_print(bytecode *bc)
 		printf(" (nil)\n");
 	    else {
 		printf("\n Disp=");
-		expr_print(bc->data.insn.ea->disp);
+		if (bc->data.insn.ea->disp)
+		    expr_print(bc->data.insn.ea->disp);
+		else
+		    printf("(nil)");
 		printf("\n");
 		printf(" Len=%u SegmentOv=%02x\n",
 		       (unsigned int)bc->data.insn.ea->len,
 		       (unsigned int)bc->data.insn.ea->segment);
-		printf(" ModRM=%02x ValidRM=%u NeedRM=%u\n",
+		printf(" ModRM=%03o ValidRM=%u NeedRM=%u\n",
 		       (unsigned int)bc->data.insn.ea->modrm,
 		       (unsigned int)bc->data.insn.ea->valid_modrm,
 		       (unsigned int)bc->data.insn.ea->need_modrm);
-		printf(" SIB=%02x ValidSIB=%u NeedSIB=%u\n",
+		printf(" SIB=%03o ValidSIB=%u NeedSIB=%u\n",
 		       (unsigned int)bc->data.insn.ea->sib,
 		       (unsigned int)bc->data.insn.ea->valid_sib,
 		       (unsigned int)bc->data.insn.ea->need_sib);
