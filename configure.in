@@ -158,7 +158,7 @@ if ${dmalloc}; then
 	   test "$ac_cv_lib_dmalloc_main" != yes; then
 		AC_MSG_ERROR([dmalloc required for --enable-dmalloc.])
 	else
-	    	AC_DEFINE([DDMALLOC], 1, [Enable dmalloc library debugging.])
+	    	AC_DEFINE([DMALLOC], 1, [Enable dmalloc library debugging.])
 	fi
 else
 	if ${morewarn}; then
