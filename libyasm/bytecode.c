@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.4 2001/05/21 20:17:51 peter Exp $
+/* $Id: bytecode.c,v 1.5 2001/05/21 21:04:54 peter Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -133,6 +133,7 @@ void BuildBC_Insn(bytecode      *bc,
 	bc->data.insn.ea.len = 0;
 	bc->data.insn.ea.addrsize = 0;
 	bc->data.insn.ea.segment = 0;
+	bc->data.insn.ea.need_modrm = 0;
 	bc->data.insn.ea.need_sib = 0;
     }
 
