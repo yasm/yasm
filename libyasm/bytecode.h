@@ -64,9 +64,12 @@ void yasm_ea_print(FILE *f, int indent_level, const yasm_effaddr *ea);
 
 void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
 
+#ifdef YASM_INTERNAL
 /*@only@*/ yasm_bytecode *yasm_bc_new_common(yasm_bytecode_type type,
 					     size_t datasize,
 					     unsigned long lindex);
+#endif
+
 /*@only@*/ yasm_bytecode *yasm_bc_new_data(yasm_datavalhead *datahead,
 					   unsigned int size,
 					   unsigned long lindex);
