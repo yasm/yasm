@@ -118,7 +118,9 @@ bytecode *bytecode_new_reserve(expr *numitems, unsigned long itemsize);
  */
 int bytecode_get_offset(section *sect, bytecode *bc, unsigned long *ret_val);
 
-void bytecode_print(bytecode *bc);
+void bytecode_print(const bytecode *bc);
+
+void bytecode_parser_finalize(bytecode *bc);
 
 /* void bytecodes_initialize(bytecodehead *headp); */
 #define	bytecodes_initialize(headp)	STAILQ_INIT(headp)
@@ -132,6 +134,8 @@ void bytecode_print(bytecode *bc);
 bytecode *bytecodes_append(bytecodehead *headp, bytecode *bc);
 
 void bytecodes_print(const bytecodehead *headp);
+
+void bytecodes_parser_finalize(bytecodehead *headp);
 
 dataval *dataval_new_expr(expr *expn);
 dataval *dataval_new_float(floatnum *flt);
@@ -148,6 +152,6 @@ dataval *dataval_new_string(char *str_val);
  */
 dataval *datavals_append(datavalhead *headp, dataval *dv);
 
-void dataval_print(datavalhead *head);
+void dataval_print(const datavalhead *head);
 
 #endif

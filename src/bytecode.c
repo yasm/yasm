@@ -113,7 +113,7 @@ struct bytecode {
 	    unsigned char opcode[3];	/* opcode */
 	    unsigned char opcode_len;
 
-	    unsigned char addrsize;	/* 0 indicates no override */
+	    unsigned char addrsize;	/* 0 or =mode_bits => no override */
 	    unsigned char opersize;	/* 0 indicates no override */
 	    unsigned char lockrep_pre;	/* 0 indicates no prefix */
 
@@ -144,7 +144,7 @@ struct bytecode {
 	    /* The *FORCED forms are specified in the source as such */
 	    jmprel_opcode_sel op_sel;
 
-	    unsigned char addrsize;	/* 0 indicates no override */
+	    unsigned char addrsize;	/* 0 or =mode_bits => no override */
 	    unsigned char opersize;	/* 0 indicates no override */
 	    unsigned char lockrep_pre;	/* 0 indicates no prefix */
 	} jmprel;
@@ -536,7 +536,7 @@ bytecode_get_offset(section *sect, bytecode *bc, unsigned long *ret_val)
 }
 
 void
-bytecode_print(bytecode *bc)
+bytecode_print(const bytecode *bc)
 {
     switch (bc->type) {
 	case BC_EMPTY:
@@ -569,7 +569,7 @@ bytecode_print(bytecode *bc)
 	    printf("Immediate Value:\n");
 	    printf(" Val=");
 	    if (!bc->data.insn.imm)
-		printf("(nil)");
+		printf("(nil)\n");
 	    else {
 		expr_print(bc->data.insn.imm->val);
 		printf("\n");
@@ -667,6 +667,48 @@ bytecode_print(bytecode *bc)
     printf("Offset=%lx BITS=%u\n", bc->offset, bc->mode_bits);
 }
 
+static void
+bytecode_parser_finalize_insn(bytecode *bc)
+{
+    effaddr *ea = bc->data.insn.ea;
+
+    if (ea) {
+	if ((ea->disp) && ((!ea->valid_sib && ea->need_sib) ||
+			   (!ea->valid_modrm && ea->need_modrm))) {
+	    /* First simplify expression to minimize check cost */
+	    expr_simplify(ea->disp);
+
+	    /* Check validity of effective address and calc R/M bits of
+	     * Mod/RM byte and SIB byte.  We won't know the Mod field
+	     * of the Mod/RM byte until we know more about the
+	     * displacement.
+	     */
+	    if (!expr_checkea(&ea->disp, &bc->data.insn.addrsize,
+			      bc->mode_bits, &ea->len, &ea->modrm,
+			      &ea->valid_modrm, &ea->need_modrm, &ea->sib,
+			      &ea->valid_sib, &ea->need_sib))
+		return;	    /* failed, don't bother checking rest of insn */
+	}
+    }
+}
+
+void
+bytecode_parser_finalize(bytecode *bc)
+{
+    switch (bc->type) {
+	case BC_EMPTY:
+	    /* FIXME: delete it (probably in bytecodes_ level, not here */
+	    InternalError(__LINE__, __FILE__,
+			  _("got empty bytecode in parser_finalize"));
+	    break;
+	case BC_INSN:
+	    bytecode_parser_finalize_insn(bc);
+	    break;
+	default:
+	    break;
+    }
+}
+
 bytecode *
 bytecodes_append(bytecodehead *headp, bytecode *bc)
 {
@@ -690,6 +732,15 @@ bytecodes_print(const bytecodehead *headp)
 	printf("---Next Bytecode---\n");
 	bytecode_print(cur);
     }
+}
+
+void
+bytecodes_parser_finalize(bytecodehead *headp)
+{
+    bytecode *cur;
+
+    STAILQ_FOREACH(cur, headp, link)
+	bytecode_parser_finalize(cur);
 }
 
 dataval *
@@ -725,7 +776,7 @@ datavals_append(datavalhead *headp, dataval *dv)
 }
 
 void
-dataval_print(datavalhead *head)
+dataval_print(const datavalhead *head)
 {
     dataval *cur;
 

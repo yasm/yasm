@@ -125,12 +125,21 @@ sections_switch(sectionhead *headp, objfmt *of, const char *name)
 }
 
 void
-sections_print(sectionhead *headp)
+sections_print(const sectionhead *headp)
 {
     section *cur;
     
     STAILQ_FOREACH(cur, headp, link)
 	section_print(cur);
+}
+
+void
+sections_parser_finalize(sectionhead *headp)
+{
+    section *cur;
+    
+    STAILQ_FOREACH(cur, headp, link)
+	bytecodes_parser_finalize(&cur->bc);
 }
 
 bytecodehead *

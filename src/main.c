@@ -135,6 +135,11 @@ main(int argc, char *argv[])
     printf("\n***Symbol Table***\n");
     symrec_foreach((int (*) (symrec *))symrec_print);
 
+    sections_parser_finalize(sections);
+
+    printf("Post-parser-finalization:\n");
+    sections_print(sections);
+
     if (in_filename)
 	free(in_filename);
     return EXIT_SUCCESS;
