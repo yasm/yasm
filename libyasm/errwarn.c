@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.12 2001/06/29 02:12:15 peter Exp $
+/* $Id: errwarn.c,v 1.13 2001/07/04 20:53:21 peter Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -55,7 +55,8 @@ static char *err_msgs[] = {
     "invalid effective address",
     "label or instruction expected at start of line",
     "expression syntax error",
-    "duplicate definition of `%s'; previously defined line %d"
+    "duplicate definition of `%s'; previously defined line %d",
+    "mismatch in operand sizes"
 };
 
 static char *warn_msgs[] = {
