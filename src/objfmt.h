@@ -81,7 +81,7 @@ struct objfmt {
      * May be NULL if no data is ever allocated in sections_switch().
      */
     void (*section_data_delete)(/*@only@*/ void *data);
-    void (*section_data_print)(FILE *f, /*@null@*/ void *data);
+    void (*section_data_print)(FILE *f, void *data);
 
     /*@null@*/ void *(*extern_data_new)(const char *name, /*@null@*/
 					valparamhead *objext_valparams);
