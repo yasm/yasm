@@ -304,6 +304,46 @@ symrec_delete_all(void)
     }
 }
 
+symrec *
+symrec_copy(symrec *sym)
+{
+    if (sym->status & SYM_NOTINTABLE) {
+	/* create an allocated duplicate of the symbol */
+	symrec *rec = xmalloc(sizeof(symrec));
+	rec->name = xstrdup(sym->name);
+	rec->type = sym->type;
+	rec->status = sym->status;
+	rec->visibility = sym->visibility;
+	rec->line = sym->line;
+	if (sym->type == SYM_EQU)
+	    rec->value.expn = expr_copy(sym->value.expn);
+	else {
+	    rec->value.label.sect = sym->value.label.sect;
+	    rec->value.label.bc = sym->value.label.bc;
+	}
+	assert(cur_objfmt != NULL);
+	if (sym->of_data_vis_g && (sym->visibility & SYM_GLOBAL))
+	    rec->of_data_vis_g =
+		cur_objfmt->declare_data_copy(SYM_GLOBAL, sym->of_data_vis_g);
+	else
+	    rec->of_data_vis_g = NULL;
+	if (sym->of_data_vis_ce) {
+	    if (sym->visibility & SYM_COMMON)
+		rec->of_data_vis_ce =
+		    cur_objfmt->declare_data_copy(SYM_COMMON,
+						  sym->of_data_vis_ce);
+	    else if (sym->visibility & SYM_EXTERN)
+		rec->of_data_vis_ce =
+		    cur_objfmt->declare_data_copy(SYM_EXTERN,
+						  sym->of_data_vis_ce);
+	} else
+	    rec->of_data_vis_ce = NULL;
+	rec->opt_flags = sym->opt_flags;
+	return rec;
+    } else
+	return sym;
+}
+
 void
 symrec_delete(symrec *sym)
 {

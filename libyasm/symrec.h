@@ -57,6 +57,11 @@ void symrec_parser_finalize(void);
 
 void symrec_delete_all(void);
 
+/* Copies symrec if it isn't in the symbol table.  If it *is* in the symbol
+ * table, simply returns sym.
+ */
+symrec *symrec_copy(symrec *sym);
+
 /* Deletes symrec if it isn't in the symbol table.  If it *is* in the symbol
  * table, does nothing.
  */

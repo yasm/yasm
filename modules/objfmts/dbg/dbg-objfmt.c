@@ -23,6 +23,7 @@
 /*@unused@*/ RCSID("$IdPath$");
 
 #include "globals.h"
+#include "errwarn.h"
 #include "expr.h"
 #include "symrec.h"
 
@@ -125,6 +126,38 @@ dbg_objfmt_common_data_new(const char *name, /*@only@*/ expr *size,
     return size;
 }
 
+static void *
+dbg_objfmt_declare_data_copy(SymVisibility vis, /*@only@*/ void *data)
+{
+    void *retval;
+
+    fprintf(dbg_f, "%*sdeclare_data_copy(", indent_level, "");
+    switch (vis) {
+	case SYM_LOCAL:
+	    fprintf(dbg_f, "Local, ");
+	    break;
+	case SYM_GLOBAL:
+	    fprintf(dbg_f, "Global, ");
+	    break;
+	case SYM_COMMON:
+	    fprintf(dbg_f, "Common, ");
+	    break;
+	case SYM_EXTERN:
+	    fprintf(dbg_f, "Extern, ");
+	    break;
+    }
+    if (vis == SYM_COMMON) {
+	expr_print(dbg_f, data);
+	retval = expr_copy(data);
+    } else {
+	fprintf(dbg_f, "%p", data);
+	InternalError(_("Trying to copy unrecognized objfmt data"));
+    }
+    fprintf(dbg_f, "), returning copy\n");
+
+    return retval;
+}
+
 static void
 dbg_objfmt_declare_data_delete(SymVisibility vis, /*@only@*/ void *data)
 {
@@ -193,6 +226,7 @@ objfmt dbg_objfmt = {
     dbg_objfmt_extern_data_new,
     dbg_objfmt_global_data_new,
     dbg_objfmt_common_data_new,
+    dbg_objfmt_declare_data_copy,
     dbg_objfmt_declare_data_delete,
     dbg_objfmt_declare_data_print,
     dbg_objfmt_directive

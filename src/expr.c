@@ -641,7 +641,7 @@ expr_copy_except(const expr *e, int except)
 	    dest->type = src->type;
 	    switch (src->type) {
 		case EXPR_SYM:
-		    dest->data.sym = src->data.sym;
+		    dest->data.sym = symrec_copy(src->data.sym);
 		    break;
 		case EXPR_EXPR:
 		    dest->data.expn = expr_copy_except(src->data.expn, -1);

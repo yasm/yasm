@@ -76,9 +76,11 @@ struct objfmt {
 					/*@only@*/ expr *size, /*@null@*/
 					valparamhead *objext_valparams);
 
-    /* It's only valid to pass these two functions *one* SymVisibility (eg, vis
+    /* It's only valid to pass these functions *one* SymVisibility (eg, vis
      * is an enum not a bitmask).
      */
+    /*@only@*/ void *
+	(*declare_data_copy)(SymVisibility vis, /*@only@*/ void *data);
     void (*declare_data_delete)(SymVisibility vis, /*@only@*/ void *data);
     void (*declare_data_print)(FILE *f, SymVisibility vis,
 			       /*@null@*/ void *data);
