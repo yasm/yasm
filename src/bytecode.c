@@ -548,6 +548,17 @@ bytecode_print(bytecode *bc)
     printf("Offset=%lx BITS=%u\n", bc->offset, bc->mode_bits);
 }
 
+void
+bytecodes_append(bytecodehead *headp, bytecode *bc)
+{
+    if (bc) {
+	if (bc->type != BC_EMPTY)
+	    STAILQ_INSERT_TAIL(headp, bc, link);
+	else
+	    free(bc);
+    }
+}
+
 dataval *
 dataval_new_expr(expr *exp)
 {

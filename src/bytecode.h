@@ -183,6 +183,16 @@ bytecode *bytecode_new_reserve(struct expr_s *numitems,
 
 void bytecode_print(bytecode *bc);
 
+/* void bytecodes_initialize(bytecodehead *headp); */
+#define	bytecodes_initialize(headp)	STAILQ_INIT(headp)
+
+/* Adds bc to the list of bytecodes headp.
+ * NOTE: Does not make a copy of bc; so don't pass this function
+ * static or local variables, and discard the bc pointer after calling
+ * this function.
+ */
+void bytecodes_append(bytecodehead *headp, bytecode *bc);
+
 dataval *dataval_new_expr(struct expr_s *exp);
 dataval *dataval_new_float(double float_val);
 dataval *dataval_new_string(char *str_val);

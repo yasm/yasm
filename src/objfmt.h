@@ -39,6 +39,14 @@ typedef struct objfmt_s {
      * use)
      */
 /*    struct debugfmt_s *default_df;*/
+
+    /* Get the default (starting) section name. */
+    const char *(*get_default_section_name) (void);
+
+    /* Is the specified section name valid?
+     * Return is a boolean value.
+     */
+    int (*is_valid_section) (const char *name);
 } objfmt;
 
 /* Available object formats */

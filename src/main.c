@@ -59,7 +59,7 @@ main(int argc, char *argv[])
 	filename = strdup("<STDIN>");
     }
 
-    nasm_parser.doparse(&nasm_parser, &dbg_objfmt, in);
+    nasm_parser.do_parse(&nasm_parser, &dbg_objfmt, in);
 
     if (filename)
 	free(filename);

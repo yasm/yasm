@@ -30,6 +30,7 @@ libyasm_a_SOURCES = \
 	globals.c		\
 	globals.h		\
 	util.h			\
+	section.c		\
 	section.h		\
 	objfmt.h		\
 	preproc.h		\

@@ -52,7 +52,7 @@ typedef struct parser_s {
      * This function returns the starting section of a linked list of sections
      * (whatever was in the file).
      */
-    sectionhead *(*doparse) (struct parser_s *p, objfmt *of, FILE *f);
+    sectionhead *(*do_parse) (struct parser_s *p, objfmt *of, FILE *f);
 } parser;
 
 /* Generic functions for all parsers - implemented in src/parser.c */

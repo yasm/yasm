@@ -28,6 +28,7 @@
 
 #ifdef STDC_HEADERS
 # include <stdlib.h>
+# include <string.h>
 # include <math.h>
 #endif
 
@@ -41,6 +42,7 @@
 
 #include "bytecode.h"
 #include "section.h"
+#include "objfmt.h"
 
 RCSID("$IdPath$");
 
@@ -51,6 +53,8 @@ extern int nasm_parser_lex(void);
 static unsigned long ConvertCharConstToInt(char *);
 void nasm_parser_error(char *);
 
+extern objfmt *nasm_parser_objfmt;
+extern sectionhead nasm_parser_sections;
 extern section *nasm_parser_cur_section;
 
 %}
@@ -127,13 +131,7 @@ input: /* empty */
     | input line    {
 	OutputError();
 	OutputWarning();
-	if ($2) {
-	    if ($2->type != BC_EMPTY) {
-		STAILQ_INSERT_TAIL(&nasm_parser_cur_section->bc, $2, link);
-	    } else {
-		free($2);
-	    }
-	}
+	bytecodes_append(&nasm_parser_cur_section->bc, $2);
 	line_number++;
     }
 ;
@@ -185,7 +183,11 @@ label_id: ID	    { $$ = locallabel_base = sym_def_get($1.name, SYM_LABEL); }
 
 /* directives */
 directive: '[' DIRECTIVE_NAME DIRECTIVE_VAL ']'	{
-	printf("Directive: Name='%s' Value='%s'\n", $2, $3);
+	if (strcasecmp($2, "section") == 0)
+	    nasm_parser_cur_section = sections_switch(&nasm_parser_sections,
+						      nasm_parser_objfmt, $3);
+	else
+	    printf("Directive: Name='%s' Value='%s'\n", $2, $3);
     }
     | '[' DIRECTIVE_NAME DIRECTIVE_VAL error	{
 	Error(_("missing `%c'"), ']');

@@ -25,12 +25,30 @@
 
 #include "util.h"
 
+#include <stdio.h>
+
 #include "objfmt.h"
 
 RCSID("$IdPath$");
 
+static const char *
+dbg_objfmt_get_default_section_name(void)
+{
+    fprintf(stderr, "-dbg_objfmt_get_default_section_name()\n");
+    return ".text";
+}
+
+static int
+dbg_objfmt_is_valid_section(const char *name)
+{
+    fprintf(stderr, "-dbg_objfmt_is_valid_section(\"%s\")\n", name);
+    return 1;
+}
+
 /* Define objfmt structure -- see objfmt.h for details */
 objfmt dbg_objfmt = {
     "Trace of all info passed to object format module",
-    "dbg"
+    "dbg",
+    dbg_objfmt_get_default_section_name,
+    dbg_objfmt_is_valid_section
 };

@@ -22,18 +22,18 @@
 #ifndef YASM_SECTION_H
 #define YASM_SECTION_H
 
+struct objfmt_s;
+
 typedef STAILQ_HEAD(sectionhead_s, section_s) sectionhead;
 
 typedef struct section_s {
     STAILQ_ENTRY(section_s) link;
 
-    enum { SECTION_DEFAULT, SECTION_GENERAL, SECTION_ABSOLUTE } type;
+    enum { SECTION_GENERAL, SECTION_ABSOLUTE } type;
 
-    char *name;
-    unsigned int id;
+    char *name;			/* strdup()'ed name (given by user) */
 
     union {
-	/* SECTION_DEFAULT data */
 	/* SECTION_GENERAL data */
 	/* SECTION_ABSOLUTE data */
 	unsigned long start;
@@ -41,5 +41,10 @@ typedef struct section_s {
 
     bytecodehead bc;		/* the bytecodes for the section's contents */
 } section;
+
+section *sections_initialize(sectionhead *headp, struct objfmt_s *of);
+
+section *sections_switch(sectionhead *headp, struct objfmt_s *of,
+			 const char *name);
 
 #endif
