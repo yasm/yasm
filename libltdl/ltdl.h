@@ -153,7 +153,7 @@ extern	int	    lt_dlexit		LT_PARAMS((void));
 
 /* Module search path manipulation.  */
 extern	int	    lt_dladdsearchdir	 LT_PARAMS((const char *search_dir));
-extern	int	    lt_dlinsertsearchdir LT_PARAMS((const char *before,
+extern	int	    lt_dlinsertsearchdir LT_PARAMS((char *before,
 						    const char *search_dir));
 extern	int 	    lt_dlsetsearchpath	 LT_PARAMS((const char *search_path));
 extern	const char *lt_dlgetsearchpath	 LT_PARAMS((void));

@@ -573,13 +573,13 @@ argz_insert (pargz, pargz_len, before, entry)
 #  define argz_next rpl_argz_next
 
 static char *argz_next LT_PARAMS((char *argz, size_t argz_len,
-				    const char *entry));
+				    char *entry));
 
 char *
 argz_next (argz, argz_len, entry)
      char *argz;
      size_t argz_len;
-     const char *entry;
+     char *entry;
 {
   assert ((argz && argz_len) || (!argz && !argz_len));
 
@@ -881,10 +881,10 @@ char *
 lt_estrdup (str)
      const char *str;
 {
-  char *dup = strdup (str);
-  if (LT_STRLEN (str) && !dup)
+  char *dupl = strdup (str);
+  if (LT_STRLEN (str) && !dupl)
     LT_DLMUTEX_SETERROR (LT_DLSTRERROR (NO_MEMORY));
-  return dup;
+  return dupl;
 }
 
 
@@ -950,7 +950,10 @@ lt_estrdup (str)
 #  define DLERROR(arg)	LT_DLSTRERROR (arg)
 #endif
 
-static lt_module
+static lt_module sys_dl_open LT_PARAMS((lt_user_data loader_data,
+					const char *filename));
+
+lt_module
 sys_dl_open (loader_data, filename)
      lt_user_data loader_data;
      const char *filename;
@@ -965,7 +968,9 @@ sys_dl_open (loader_data, filename)
   return module;
 }
 
-static int
+static int sys_dl_close LT_PARAMS((lt_user_data loader_data, lt_module module));
+
+int
 sys_dl_close (loader_data, module)
      lt_user_data loader_data;
      lt_module module;
@@ -981,7 +986,10 @@ sys_dl_close (loader_data, module)
   return errors;
 }
 
-static lt_ptr
+static lt_ptr sys_dl_sym LT_PARAMS((lt_user_data loader_data, lt_module module,
+				    const char *symbol));
+
+lt_ptr
 sys_dl_sym (loader_data, module, symbol)
      lt_user_data loader_data;
      lt_module module;
@@ -1451,7 +1459,9 @@ typedef struct lt_dlsymlists_t
 static	const lt_dlsymlist     *default_preloaded_symbols	= 0;
 static	lt_dlsymlists_t	       *preloaded_symbols		= 0;
 
-static int
+static int presym_init LT_PARAMS((lt_user_data loader_data));
+
+int
 presym_init (loader_data)
      lt_user_data loader_data;
 {
@@ -1470,7 +1480,9 @@ presym_init (loader_data)
   return errors;
 }
 
-static int
+static int presym_free_symlists LT_PARAMS((void));
+
+int
 presym_free_symlists ()
 {
   lt_dlsymlists_t *lists;
@@ -1492,7 +1504,9 @@ presym_free_symlists ()
   return 0;
 }
 
-static int
+static int presym_exit LT_PARAMS((lt_user_data loader_data));
+
+int
 presym_exit (loader_data)
      lt_user_data loader_data;
 {
@@ -1500,7 +1514,9 @@ presym_exit (loader_data)
   return 0;
 }
 
-static int
+static int presym_add_symlist LT_PARAMS((const lt_dlsymlist *preloaded));
+
+int
 presym_add_symlist (preloaded)
      const lt_dlsymlist *preloaded;
 {
@@ -1538,7 +1554,10 @@ presym_add_symlist (preloaded)
   return errors;
 }
 
-static lt_module
+static lt_module presym_open LT_PARAMS((lt_user_data loader_data,
+					const char *filename));
+
+lt_module
 presym_open (loader_data, filename)
      lt_user_data loader_data;
      const char *filename;
@@ -1588,7 +1607,9 @@ presym_open (loader_data, filename)
   return module;
 }
 
-static int
+static int presym_close LT_PARAMS((lt_user_data loader_data, lt_module module));
+
+int
 presym_close (loader_data, module)
      lt_user_data loader_data;
      lt_module module;
@@ -1598,7 +1619,10 @@ presym_close (loader_data, module)
   return 0;
 }
 
-static lt_ptr
+static lt_ptr presym_sym LT_PARAMS((lt_user_data loader_data, lt_module module,
+				    const char *symbol));
+
+lt_ptr
 presym_sym (loader_data, module, symbol)
      lt_user_data loader_data;
      lt_module module;
@@ -1934,7 +1958,12 @@ tryall_dlopen (handle, filename)
   return errors;
 }
 
-static int
+static int tryall_dlopen_module LT_PARAMS((lt_dlhandle *handle,
+					   const char *prefix,
+					   const char *dirname,
+					   const char *dlname));
+
+int
 tryall_dlopen_module (handle, prefix, dirname, dlname)
      lt_dlhandle *handle;
      const char *prefix;
@@ -2898,6 +2927,8 @@ lt_dlopen (filename)
 
 /* If the last error messge store was `FILE_NOT_FOUND', then return
    non-zero.  */
+static int file_not_found LT_PARAMS((void));
+
 int
 file_not_found ()
 {
@@ -2923,7 +2954,6 @@ lt_dlopenext (filename)
   char *	ext		= 0;
   int		len;
   int		errors		= 0;
-  int		file_found	= 1; /* until proven otherwise */
 
   if (!filename)
     {
@@ -3052,6 +3082,9 @@ lt_argz_insertinorder (pargz, pargz_len, entry)
   return lt_argz_insert (pargz, pargz_len, before, entry);
 }
 
+int lt_argz_insertdir LT_PARAMS((char **pargz, size_t *pargz_len,
+				 const char *dirnam, struct dirent *dp));
+
 int
 lt_argz_insertdir (pargz, pargz_len, dirnam, dp)
      char **pargz;
@@ -3118,6 +3151,9 @@ lt_argz_insertdir (pargz, pargz_len, dirnam, dp)
   return errors;
 }
 
+static int list_files_by_dir LT_PARAMS((const char *dirnam, char **pargz,
+					size_t *pargz_len));
+
 int
 list_files_by_dir (dirnam, pargz, pargz_len)
      const char *dirnam;
@@ -3163,7 +3199,7 @@ foreachfile_callback (dirname, data1, data2)
      lt_ptr data2;
 {
   int (*func) LT_PARAMS((const char *filename, lt_ptr data))
-	= (int (*) LT_PARAMS((const char *filename, lt_ptr data))) data1;
+	= *((int (**) LT_PARAMS((const char *filename, lt_ptr data))) data1);
 
   int	  is_done  = 0;
   char   *argz     = 0;
@@ -3207,31 +3243,31 @@ lt_dlforeachfile (search_path, func, data)
       /* If a specific path was passed, search only the directories
 	 listed in it.  */
       is_done = foreach_dirinpath (search_path, 0,
-				   foreachfile_callback, func, data);
+				   foreachfile_callback, &func, data);
     }
   else
     {
       /* Otherwise search the default paths.  */
       is_done = foreach_dirinpath (user_search_path, 0,
-				   foreachfile_callback, func, data);
+				   foreachfile_callback, &func, data);
       if (!is_done)
 	{
 	  is_done = foreach_dirinpath (getenv("LTDL_LIBRARY_PATH"), 0,
-				       foreachfile_callback, func, data);
+				       foreachfile_callback, &func, data);
 	}
 
 #ifdef LTDL_SHLIBPATH_VAR
       if (!is_done)
 	{
 	  is_done = foreach_dirinpath (getenv(LTDL_SHLIBPATH_VAR), 0,
-				       foreachfile_callback, func, data);
+				       foreachfile_callback, &func, data);
 	}
 #endif
 #ifdef LTDL_SYSSEARCHPATH
       if (!is_done)
 	{
 	  is_done = foreach_dirinpath (getenv(LTDL_SYSSEARCHPATH), 0,
-				       foreachfile_callback, func, data);
+				       foreachfile_callback, &func, data);
 	}
 #endif
     }
@@ -3500,7 +3536,7 @@ lt_dladdsearchdir (search_dir)
 
 int
 lt_dlinsertsearchdir (before, search_dir)
-     const char *before;
+     char *before;
      const char *search_dir;
 {
   int errors = 0;
@@ -3522,7 +3558,7 @@ lt_dlinsertsearchdir (before, search_dir)
     {
       LT_DLMUTEX_LOCK ();
       if (lt_dlpath_insertdir (&user_search_path,
-			       (char *) before, search_dir) != 0)
+			       before, search_dir) != 0)
 	{
 	  ++errors;
 	}
