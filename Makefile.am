@@ -34,6 +34,7 @@ include tools/Makefile.inc
 include src/Makefile.inc
 
 EXTRA_DIST += \
+	out_test.sh \
 	strsep.c mergesort.c \
 	COPYING.LIB-2.0 \
 	splint.sh \

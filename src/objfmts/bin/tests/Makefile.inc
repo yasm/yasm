@@ -1,23 +1,23 @@
 # $IdPath$
 
 TESTS += \
-	src/objfmts/bin/tests/objfmt_test.sh
+	src/objfmts/bin/tests/bin_test.sh
 
 EXTRA_DIST += \
-	src/objfmts/bin/tests/objfmt_test.sh		\
+	src/objfmts/bin/tests/bin_test.sh		\
 	src/objfmts/bin/tests/float-err.asm		\
 	src/objfmts/bin/tests/float-err.errwarn		\
 	src/objfmts/bin/tests/float.asm			\
-	src/objfmts/bin/tests/float.bin.hx		\
+	src/objfmts/bin/tests/float.hex			\
 	src/objfmts/bin/tests/float.errwarn		\
 	src/objfmts/bin/tests/integer-warn.asm		\
-	src/objfmts/bin/tests/integer-warn.bin.hx	\
+	src/objfmts/bin/tests/integer-warn.hex		\
 	src/objfmts/bin/tests/integer-warn.errwarn	\
 	src/objfmts/bin/tests/integer.asm		\
-	src/objfmts/bin/tests/integer.bin.hx		\
+	src/objfmts/bin/tests/integer.hex		\
 	src/objfmts/bin/tests/integer.errwarn		\
 	src/objfmts/bin/tests/reserve.asm		\
-	src/objfmts/bin/tests/reserve.bin.hx		\
+	src/objfmts/bin/tests/reserve.hex		\
 	src/objfmts/bin/tests/reserve.errwarn		\
 	src/objfmts/bin/tests/reserve-err.asm		\
 	src/objfmts/bin/tests/reserve-err.errwarn

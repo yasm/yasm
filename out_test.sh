@@ -9,21 +9,21 @@ passedct=0
 failedct=0
 errorct=0
 
-OT="objfmt_test"
+OT=$1
 
 
-for asm in ${srcdir}/src/objfmts/bin/tests/*.asm
+for asm in ${srcdir}/$2/*.asm
 do
     a=`echo ${asm} | sed -e 's,^.*/,,' | sed -e 's,.asm$,,'`
-    o=${a}
+    o=${a}$5
     oh=${o}.hx
-    og=`echo ${asm} | sed -e 's,.asm$,.bin.hx,'`
+    og=`echo ${asm} | sed -e 's,.asm$,.hex,'`
     e=${a}.ew
     eg=`echo ${asm} | sed -e 's,.asm$,.errwarn,'`
 
-    echo -n "$OT: Testing bin objfmt for ${a} return value ..."
+    echo -n "$OT: Testing $3 for ${a} return value ..."
     # Run within a subshell to prevent signal messages from displaying.
-    sh -c "./yasm -f bin ${asm} -o ${o} 2>${e}" 2>/dev/null
+    sh -c "./yasm $4 ${asm} -o ${o} 2>${e}" 2>/dev/null
     status=$?
     if test $status -gt 128; then
 	# We should never get a coredump!
@@ -38,7 +38,7 @@ do
 	else
 	    echo " PASS."
 	    passedct=`expr $passedct + 1`
-	    echo -n "$OT: Testing bin objfmt for ${a} error/warnings ..."
+	    echo -n "$OT: Testing $3 for ${a} error/warnings ..."
 	    # We got errors, check to see if they match:
     	    cat ${e} | sed -e "s,${srcdir}/,./," >${e}.2
     	    mv ${e}.2 ${e}
@@ -61,12 +61,12 @@ do
 	else
 	    echo " PASS."
 	    passedct=`expr $passedct + 1`
-	    echo -n "$OT: Testing bin objfmt for ${a} output file ..."
+	    echo -n "$OT: Testing $3 for ${a} output file ..."
 	    hexdump -e '1/1 "%02x " "\n"' ${o} > ${oh}
 	    if diff -w ${og} ${oh} > /dev/null; then
 		echo " PASS."
 		passedct=`expr $passedct + 1`
-		echo -n "$OT: Testing bin objfmt for ${a} error/warnings ..."
+		echo -n "$OT: Testing $3 for ${a} error/warnings ..."
 		cat ${e} | sed -e "s,${srcdir}/,./," >${e}.2
 		mv ${e}.2 ${e}
 		if diff -w ${eg} ${e} > /dev/null; then
