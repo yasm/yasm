@@ -150,8 +150,9 @@ ExprReg(unsigned long reg)
  * possible.  Also transforms single symrec's that reference absolute sections.
  * Uses a simple n^2 algorithm because n is usually quite small.
  */
-static expr *
-expr_xform_bc_dist(expr *e, calc_bc_dist_func calc_bc_dist)
+static /*@only@*/ expr *
+expr_xform_bc_dist(/*@returned@*/ /*@only@*/ expr *e,
+		   calc_bc_dist_func calc_bc_dist)
 {
     int i;
     /*@dependent@*/ section *sect;
@@ -679,7 +680,8 @@ typedef struct exprentry {
 /* Level an entire expn tree, expanding equ's as we go */
 expr *
 expr_level_tree(expr *e, int fold_const, int simplify_ident,
-		calc_bc_dist_func calc_bc_dist, /*@null@*/ exprhead *eh)
+		calc_bc_dist_func calc_bc_dist, expr_xform_func expr_xform_extra,
+		void *expr_xform_extra_data, exprhead *eh)
 {
     int i;
     exprhead eh_local;
@@ -720,10 +722,10 @@ expr_level_tree(expr *e, int fold_const, int simplify_ident,
 	}
 
 	if (e->terms[i].type == EXPR_EXPR)
-	    e->terms[i].data.expn = expr_level_tree(e->terms[i].data.expn,
-						    fold_const,
-						    simplify_ident,
-						    calc_bc_dist, eh);
+	    e->terms[i].data.expn =
+		expr_level_tree(e->terms[i].data.expn, fold_const,
+				simplify_ident, calc_bc_dist, expr_xform_extra,
+				expr_xform_extra_data, eh);
 
 	if (ee.e) {
 	    SLIST_REMOVE_HEAD(eh, next);
@@ -733,9 +735,13 @@ expr_level_tree(expr *e, int fold_const, int simplify_ident,
 
     /* do callback */
     e = expr_level_op(e, fold_const, simplify_ident);
-    if (calc_bc_dist) {
-	e = expr_xform_bc_dist(e, calc_bc_dist);
-	e = expr_level_tree(e, fold_const, simplify_ident, NULL, NULL);
+    if (calc_bc_dist || expr_xform_extra) {
+	if (calc_bc_dist)
+	    e = expr_xform_bc_dist(e, calc_bc_dist);
+	if (expr_xform_extra)
+	    e = expr_xform_extra(e, expr_xform_extra_data);
+	e = expr_level_tree(e, fold_const, simplify_ident, NULL, NULL, NULL,
+			    NULL);
     }
     return e;
 }
@@ -959,7 +965,7 @@ expr *
 expr_simplify(expr *e, calc_bc_dist_func calc_bc_dist)
 {
     e = expr_xform_neg_tree(e);
-    return expr_level_tree(e, 1, 1, calc_bc_dist, NULL);
+    return expr_level_tree(e, 1, 1, calc_bc_dist, NULL, NULL, NULL);
 }
 
 /*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
