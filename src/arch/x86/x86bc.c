@@ -564,7 +564,6 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
     bc_resolve_flags retval = BC_RESOLVE_MIN_LEN;
     /*@null@*/ expr *temp;
     /*@dependent@*/ /*@null@*/ const intnum *num;
-    unsigned long target;
     long rel;
     unsigned char opersize;
     int jrshort = 0;
