@@ -81,7 +81,7 @@ AC_TYPE_SIZE_T
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(memcpy toascii abort)
 AC_CHECK_FUNCS(strcasecmp stricmp strcmpi, break)
-AC_REPLACE_FUNCS(strdup strtoul)
+AC_REPLACE_FUNCS(strdup strsep strtoul)
 
 AC_CHECK_HEADERS(limits.h sys/queue.h sys/cdefs.h)
 

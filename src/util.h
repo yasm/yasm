@@ -30,6 +30,10 @@
 char *strdup(const char *str);
 #endif
 
+#if !defined(HAVE_STRSEP) || defined(HAVE_GNU_C_LIBRARY)
+char *strsep(char **stringp, const char *delim);
+#endif
+
 #if !defined(HAVE_STRTOUL) || defined(HAVE_GNU_C_LIBRARY)
 unsigned long strtoul(const char *nptr, char **endptr, int base);
 #endif
@@ -60,6 +64,8 @@ int strncasecmp(const char *s1, const char *s2, size_t n);
 #else
 # include "compat-queue.h"
 #endif
+
+#include "ternary.h"
 
 #ifdef HAVE_SYS_CDEFS_H
 # include <sys/cdefs.h>
