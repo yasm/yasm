@@ -1,8 +1,6 @@
 autom4te.cache
-nasm-bison.y
 nasm-bison.c
 nasm-bison.h
-nasm-token.l
 nasm-token.c
 yapp-token.c
 yasm

@@ -33,7 +33,7 @@
 #include "bytecode.h"
 #include "arch.h"
 
-#include "x86-int.h"
+#include "x86arch.h"
 
 #include "expr-int.h"
 
@@ -48,10 +48,10 @@ x86_expr_checkea_get_reg32(ExprItem *ei, /*returned*/ void *d)
     int *ret;
 
     /* don't allow 16-bit registers */
-    if (ei->data.reg.size != 32)
+    if ((ei->data.reg & ~7) != X86_REG32)
 	return 0;
 
-    ret = &data[ei->data.reg.num & 7];	/* & 7 for sanity check */
+    ret = &data[ei->data.reg & 7];
 
     /* overwrite with 0 to eliminate register from displacement expr */
     ei->type = EXPR_INT;
@@ -84,10 +84,11 @@ x86_expr_checkea_get_reg16(ExprItem *ei, void *d)
     reg16[7] = &data->di;
 
     /* don't allow 32-bit registers */
-    if (ei->data.reg.size != 16)
+    if ((ei->data.reg & ~7) != X86_REG16)
 	return 0;
 
-    ret = reg16[ei->data.reg.num & 7];	/* & 7 for sanity check */
+    /* & 7 for sanity check */
+    ret = reg16[ei->data.reg & 7];
 
     /* only allow BX, SI, DI, BP */
     if (!ret)
@@ -469,7 +470,7 @@ x86_expr_checkea_getregsize_callback(ExprItem *ei, void *d)
     unsigned char *addrsize = (unsigned char *)d;
 
     if (ei->type == EXPR_REG) {
-	*addrsize = ei->data.reg.size;
+	*addrsize = (unsigned char)ei->data.reg & ~7;
 	return 1;
     } else
 	return 0;
@@ -757,6 +758,12 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	return x86_checkea_calc_displen(ep, 2, havereg == HAVE_NONE,
 					havereg == HAVE_BP, displen, modrm,
 					v_modrm);
+    } else if (!*n_modrm && !*n_sib) {
+	/* Special case for MOV MemOffs opcode: displacement but no modrm. */
+	if (*addrsize == 32)
+	    *displen = 4;
+	else if (*addrsize == 16)
+	    *displen = 2;
     }
     return 1;
 }

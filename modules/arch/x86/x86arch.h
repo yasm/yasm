@@ -28,6 +28,31 @@ typedef enum {
 } x86_bytecode_type;
 #define X86_BYTECODE_TYPE_MAX	X86_BC_JMPREL+1
 
+/* 0-7 (low 3 bits) used for register number, stored in same data area */
+typedef enum {
+    X86_REG8 = 0x8,
+    X86_REG16 = 0x10,
+    X86_REG32 = 0x20,
+    X86_MMXREG = 0x40,
+    X86_XMMREG = 0x80,
+    X86_CRREG = 0xC0,
+    X86_DRREG = 0xC8,
+    X86_TRREG = 0xF0,
+    X86_FPUREG = 0xF8
+} x86_expritem_reg_size;
+
+typedef enum {
+    X86_LOCKREP = 1,
+    X86_ADDRSIZE,
+    X86_OPERSIZE
+} x86_parse_insn_prefix;
+
+typedef enum {
+    X86_NEAR,
+    X86_SHORT,
+    X86_FAR
+} x86_parse_targetmod;
+
 typedef enum {
     JR_NONE,
     JR_SHORT,
@@ -44,7 +69,7 @@ typedef struct x86_targetval {
 
 void x86_ea_set_segment(/*@null@*/ effaddr *ea, unsigned char segment);
 effaddr *x86_ea_new_reg(unsigned char reg);
-effaddr *x86_ea_new_imm(immval *imm, unsigned char im_len);
+effaddr *x86_ea_new_imm(/*@keep@*/expr *imm, unsigned char im_len);
 effaddr *x86_ea_new_expr(/*@keep@*/ expr *e);
 
 /*@observer@*/ /*@null@*/ effaddr *x86_bc_insn_get_ea(/*@null@*/ bytecode *bc);
@@ -63,7 +88,7 @@ void x86_set_jmprel_opcode_sel(x86_jmprel_opcode_sel *old_sel,
  */
 typedef struct x86_new_insn_data {
     /*@keep@*/ /*@null@*/ effaddr *ea;
-    /*@keep@*/ /*@null@*/ immval *imm;
+    /*@keep@*/ /*@null@*/ expr *imm;
     unsigned char opersize;
     unsigned char op_len;
     unsigned char op[3];
@@ -89,5 +114,117 @@ typedef struct x86_new_jmprel_data {
 bytecode *x86_bc_new_jmprel(x86_new_jmprel_data *d);
 
 extern unsigned char x86_mode_bits;
+
+typedef struct x86_effaddr_data {
+    unsigned char segment;	/* segment override, 0 if none */
+
+    /* How the spare (register) bits in Mod/RM are handled:
+     * Even if valid_modrm=0, the spare bits are still valid (don't overwrite!)
+     * They're set in bytecode_new_insn().
+     */
+    unsigned char modrm;
+    unsigned char valid_modrm;	/* 1 if Mod/RM byte currently valid, 0 if not */
+    unsigned char need_modrm;	/* 1 if Mod/RM byte needed, 0 if not */
+
+    unsigned char sib;
+    unsigned char valid_sib;	/* 1 if SIB byte currently valid, 0 if not */
+    unsigned char need_sib;	/* 1 if SIB byte needed, 0 if not,
+				   0xff if unknown */
+} x86_effaddr_data;
+
+typedef struct x86_insn {
+    /*@null@*/ effaddr *ea;	/* effective address */
+
+    /*@null@*/ immval *imm;	/* immediate or relative value */
+
+    unsigned char opcode[3];	/* opcode */
+    unsigned char opcode_len;
+
+    unsigned char addrsize;	/* 0 or =mode_bits => no override */
+    unsigned char opersize;	/* 0 indicates no override */
+    unsigned char lockrep_pre;	/* 0 indicates no prefix */
+
+    /* HACK, but a space-saving one: shift opcodes have an immediate
+     * form and a ,1 form (with no immediate).  In the parser, we
+     * set this and opcode_len=1, but store the ,1 version in the
+     * second byte of the opcode array.  We then choose between the
+     * two versions once we know the actual value of imm (because we
+     * don't know it in the parser module).
+     *
+     * A override to force the imm version should just leave this at
+     * 0.  Then later code won't know the ,1 version even exists.
+     * TODO: Figure out how this affects CPU flags processing.
+     *
+     * Call x86_SetInsnShiftFlag() to set this flag to 1.
+     */
+    unsigned char shift_op;
+
+    /* HACK, similar to that for shift_op above, for optimizing instructions
+     * that take a sign-extended imm8 as well as imm values (eg, the arith
+     * instructions and a subset of the imul instructions).
+     */
+    unsigned char signext_imm8_op;
+
+    unsigned char mode_bits;
+} x86_insn;
+
+typedef struct x86_jmprel {
+    expr *target;		/* target location */
+
+    struct {
+	unsigned char opcode[3];
+	unsigned char opcode_len;   /* 0 = no opc for this version */
+    } shortop, nearop;
+
+    /* which opcode are we using? */
+    /* The *FORCED forms are specified in the source as such */
+    x86_jmprel_opcode_sel op_sel;
+
+    unsigned char addrsize;	/* 0 or =mode_bits => no override */
+    unsigned char opersize;	/* 0 indicates no override */
+    unsigned char lockrep_pre;	/* 0 indicates no prefix */
+
+    unsigned char mode_bits;
+} x86_jmprel;
+
+void x86_bc_delete(bytecode *bc);
+void x86_bc_print(FILE *f, const bytecode *bc);
+bc_resolve_flags x86_bc_resolve(bytecode *bc, int save, const section *sect,
+				resolve_label_func resolve_label);
+int x86_bc_tobytes(bytecode *bc, unsigned char **bufp, const section *sect,
+		   void *d, output_expr_func output_expr);
+
+int x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
+		     unsigned char nosplit, unsigned char *displen,
+		     unsigned char *modrm, unsigned char *v_modrm,
+		     unsigned char *n_modrm, unsigned char *sib,
+		     unsigned char *v_sib, unsigned char *n_sib);
+
+void x86_switch_cpu(const char *cpuid);
+
+arch_check_id_retval x86_check_identifier(unsigned long data[2],
+					  const char *id);
+
+int x86_directive(const char *name, valparamhead *valparams,
+		  /*@null@*/ valparamhead *objext_valparams,
+		  sectionhead *headp);
+
+/*@null@*/ bytecode *x86_new_insn(const unsigned long data[2],
+				  int num_operands,
+				  /*@null@*/ insn_operandhead *operands);
+
+void x86_handle_prefix(bytecode *bc, const unsigned long data[4]);
+
+void x86_handle_seg_prefix(bytecode *bc, unsigned long segreg);
+
+void x86_handle_seg_override(effaddr *ea, unsigned long segreg);
+
+unsigned int x86_get_reg_size(unsigned long reg);
+
+void x86_reg_print(FILE *f, unsigned long reg);
+
+void x86_segreg_print(FILE *f, unsigned long segreg);
+
+void x86_ea_data_print(FILE *f, const effaddr *ea);
 
 #endif

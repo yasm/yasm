@@ -31,7 +31,7 @@ typedef struct ExprItem ExprItem;
 /*@only@*/ ExprItem *ExprExpr(/*@keep@*/ expr *);
 /*@only@*/ ExprItem *ExprInt(/*@keep@*/ intnum *);
 /*@only@*/ ExprItem *ExprFloat(/*@keep@*/ floatnum *);
-/*@only@*/ ExprItem *ExprReg(unsigned char reg, unsigned char size);
+/*@only@*/ ExprItem *ExprReg(unsigned long reg);
 
 #define expr_new_tree(l,o,r) \
     expr_new ((o), ExprExpr(l), ExprExpr(r))
@@ -78,6 +78,13 @@ void expr_expand_labelequ(expr *e, const section *srcsect, int withstart,
  */
 /*@dependent@*/ /*@null@*/ const symrec *expr_get_symrec(expr **ep,
 							 int simplify);
+
+/* Gets the register value of e if the expression is just a register.  If the
+ * expression is more complex, returns NULL.  Simplifies the expr first if
+ * simplify is nonzero.
+ */
+/*@dependent@*/ /*@null@*/ const unsigned long *expr_get_reg(expr **ep,
+							     int simplify);
 
 void expr_print(FILE *f, /*@null@*/ const expr *);
 

@@ -34,6 +34,7 @@ extern FILE *nasm_parser_in;
 extern int nasm_parser_debug;
 
 extern int nasm_parser_parse(void);
+extern void nasm_parser_cleanup(void);
 
 size_t (*nasm_parser_input) (char *buf, size_t max_size);
 
@@ -57,6 +58,8 @@ nasm_parser_do_parse(parser *p, FILE *f, const char *in_filename)
     /* nasm_parser_debug = 1; */
 
     nasm_parser_parse();
+
+    nasm_parser_cleanup();
 
     /* Free locallabel base if necessary */
     if (nasm_parser_locallabel_base)

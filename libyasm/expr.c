@@ -31,7 +31,10 @@
 #include "expr.h"
 #include "symrec.h"
 
+#include "bytecode.h"
 #include "section.h"
+
+#include "arch.h"
 
 #include "expr-int.h"
 
@@ -135,12 +138,11 @@ ExprFloat(floatnum *f)
 }
 
 ExprItem *
-ExprReg(unsigned char reg, unsigned char size)
+ExprReg(unsigned long reg)
 {
     ExprItem *e = xmalloc(sizeof(ExprItem));
     e->type = EXPR_REG;
-    e->data.reg.num = reg;
-    e->data.reg.size = size;
+    e->data.reg = reg;
     return e;
 }
 
@@ -662,8 +664,7 @@ expr_copy_except(const expr *e, int except)
 		    dest->data.flt = floatnum_copy(src->data.flt);
 		    break;
 		case EXPR_REG:
-		    dest->data.reg.num = src->data.reg.num;
-		    dest->data.reg.size = src->data.reg.size;
+		    dest->data.reg = src->data.reg;
 		    break;
 		default:
 		    break;
@@ -709,16 +710,16 @@ expr_delete(expr *e)
 /*@=mustfree@*/
 
 static int
-expr_contains_callback(ExprItem *ei, void *d)
+expr_contains_callback(const ExprItem *ei, void *d)
 {
     ExprType *t = d;
     return (ei->type & *t);
 }
 
 int
-expr_contains(expr *e, ExprType t)
+expr_contains(const expr *e, ExprType t)
 {
-    return expr_traverse_leaves_in(e, &t, expr_contains_callback);
+    return expr_traverse_leaves_in_const(e, &t, expr_contains_callback);
 }
 
 /* FIXME: expand_labelequ needs to allow resolves of the symbols in exprs like
@@ -807,6 +808,33 @@ expr_traverse_nodes_post(expr *e, void *d,
  * Stops early (and returns 1) if func returns 1.  Otherwise returns 0.
  */
 int
+expr_traverse_leaves_in_const(const expr *e, void *d,
+			      int (*func) (/*@null@*/ const ExprItem *ei,
+					   /*@null@*/ void *d))
+{
+    int i;
+
+    if (!e)
+	return 0;
+
+    for (i=0; i<e->numterms; i++) {
+	if (e->terms[i].type == EXPR_EXPR) {
+	    if (expr_traverse_leaves_in_const(e->terms[i].data.expn, d, func))
+		return 1;
+	} else {
+	    if (func(&e->terms[i], d))
+		return 1;
+	}
+    }
+    return 0;
+}
+
+/* Traverse over expression tree in order, calling func for each leaf
+ * (non-operation).  The data pointer d is passed to each func call.
+ *
+ * Stops early (and returns 1) if func returns 1.  Otherwise returns 0.
+ */
+int
 expr_traverse_leaves_in(expr *e, void *d,
 			int (*func) (/*@null@*/ ExprItem *ei,
 				     /*@null@*/ void *d))
@@ -877,10 +905,23 @@ expr_get_symrec(expr **ep, int simplify)
 }
 /*@=unqualifiedtrans =nullderef -nullstate -onlytrans@*/
 
+/*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
+const unsigned long *
+expr_get_reg(expr **ep, int simplify)
+{
+    if (simplify)
+	*ep = expr_simplify(*ep);
+
+    if ((*ep)->op == EXPR_IDENT && (*ep)->terms[0].type == EXPR_REG)
+	return &((*ep)->terms[0].data.reg);
+    else
+	return NULL;
+}
+/*@=unqualifiedtrans =nullderef -nullstate -onlytrans@*/
+
 void
 expr_print(FILE *f, const expr *e)
 {
-    static const char *regs[] = {"ax","cx","dx","bx","sp","bp","si","di"};
     char opstr[3];
     int i;
 
@@ -982,9 +1023,7 @@ expr_print(FILE *f, const expr *e)
 		floatnum_print(f, e->terms[i].data.flt);
 		break;
 	    case EXPR_REG:
-		if (e->terms[i].data.reg.size == 32)
-		    fprintf(f, "e");
-		fprintf(f, "%s", regs[e->terms[i].data.reg.num&7]);
+		cur_arch->reg_print(f, e->terms[i].data.reg);
 		break;
 	    case EXPR_NONE:
 		break;

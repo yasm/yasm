@@ -25,7 +25,7 @@
 #include "bytecode.h"
 #include "bc-int.h"
 #include "arch.h"
-#include "x86-int.h"
+#include "x86arch.h"
 
 START_TEST(test_x86_ea_new_reg)
 {

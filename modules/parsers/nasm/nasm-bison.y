@@ -44,8 +44,10 @@ RCSID("$IdPath$");
 
 #include "src/parsers/nasm/nasm-defs.h"
 
+
 void init_table(void);
 extern int nasm_parser_lex(void);
+extern void nasm_parser_set_directive_state(void);
 void nasm_parser_error(const char *);
 static void nasm_parser_directive(const char *name,
 				  valparamhead *valparams,
@@ -55,6 +57,7 @@ extern objfmt *nasm_parser_objfmt;
 extern sectionhead nasm_parser_sections;
 extern section *nasm_parser_cur_section;
 extern char *nasm_parser_locallabel_base;
+extern size_t nasm_parser_locallabel_base_len;
 
 static /*@null@*/ bytecode *nasm_parser_prev_bc = (bytecode *)NULL;
 static bytecode *nasm_parser_temp_bc;
@@ -71,16 +74,19 @@ static bytecode *nasm_parser_temp_bc;
     intnum *intn;
     floatnum *flt;
     symrec *sym;
-    unsigned char groupdata[5];
+    unsigned long arch_data[4];
     effaddr *ea;
     expr *exp;
-    immval *im_val;
-    x86_targetval tgt_val;
     datavalhead datahead;
     dataval *data;
     bytecode *bc;
     valparamhead dir_valparams;
     valparam *dir_valparam;
+    struct {
+	insn_operandhead operands;
+	int num_operands;
+    } insn_operands;
+    insn_operand *insn_operand;
 }
 
 %token <intn> INTNUM
@@ -90,46 +96,25 @@ static bytecode *nasm_parser_temp_bc;
 %token <int_info> DECLARE_DATA
 %token <int_info> RESERVE_SPACE
 %token INCBIN EQU TIMES
-%token SEG WRT NEAR SHORT FAR NOSPLIT ORG
+%token SEG WRT NOSPLIT
 %token TO
-%token LOCK REPNZ REP REPZ
-%token <int_info> OPERSIZE ADDRSIZE
-%token <int_info> CR4 CRREG_NOTCR4 DRREG TRREG ST0 FPUREG_NOTST0 MMXREG XMMREG
-%token <int_info> REG_EAX REG_ECX REG_EDX REG_EBX
-%token <int_info> REG_ESP REG_EBP REG_ESI REG_EDI
-%token <int_info> REG_AX REG_CX REG_DX REG_BX REG_SP REG_BP REG_SI REG_DI
-%token <int_info> REG_AL REG_CL REG_DL REG_BL REG_AH REG_CH REG_DH REG_BH
-%token <int_info> REG_ES REG_CS REG_SS REG_DS REG_FS REG_GS
+%token <arch_data> INSN PREFIX REG SEGREG TARGETMOD
 %token LEFT_OP RIGHT_OP SIGNDIV SIGNMOD START_SECTION_ID
 %token <str_val> ID LOCAL_ID SPECIAL_ID
 %token LINE
 
-/* instruction tokens (dynamically generated) */
-/* @TOKENS@ */
+%type <bc> line lineexp exp instr
 
-/* @TYPES@ */
-
-%type <bc> line lineexp exp instr instrbase
-
-%type <int_info> reg_eax reg_ecx
-%type <int_info> reg_ax reg_cx reg_dx
-%type <int_info> reg_al reg_cl
-%type <int_info> reg_es reg_cs reg_ss reg_ds reg_fs reg_gs
-%type <int_info> fpureg rawreg32 reg32 rawreg16 reg16 reg8 segreg
-%type <ea> mem memaddr memfar
-%type <ea> mem8x mem16x mem32x mem64x mem80x mem128x
-%type <ea> mem8 mem16 mem32 mem64 mem80 mem128 mem1632
-%type <ea> rm8x rm16x rm32x /*rm64x rm128x*/
-%type <ea> rm8 rm16 rm32 rm64 rm128
-%type <im_val> imm imm8x imm16x imm32x imm8 imm16 imm32
-%type <exp> expr expr_no_string memexpr direxpr
+%type <ea> memaddr
+%type <exp> dvexpr expr direxpr
 %type <sym> explabel
 %type <str_val> label_id
-%type <tgt_val> target
 %type <data> dataval
 %type <datahead> datavals
 %type <dir_valparams> directive_valparams
 %type <dir_valparam> directive_valparam
+%type <insn_operands> operands
+%type <insn_operand> operand
 
 %left '|'
 %left '^'
@@ -163,7 +148,9 @@ line: '\n'		{ $$ = (bytecode *)NULL; }
 	xfree($5);
 	$$ = (bytecode *)NULL;
     }
-    | directive '\n'	{ $$ = (bytecode *)NULL; }
+    | '[' { nasm_parser_set_directive_state(); } directive ']' '\n' {
+	$$ = (bytecode *)NULL;
+    }
     | error '\n'	{
 	Error(_("label or instruction expected at start of line"));
 	$$ = (bytecode *)NULL;
@@ -191,11 +178,32 @@ exp: instr
     | INCBIN STRING ',' expr ',' expr	{ $$ = bc_new_incbin($2, $4, $6); }
 ;
 
+instr: INSN		{
+	$$ = cur_arch->parse.new_insn($1, 0, NULL);
+    }
+    | INSN operands	{
+	$$ = cur_arch->parse.new_insn($1, $2.num_operands, &$2.operands);
+	ops_delete(&$2.operands, 0);
+    }
+    | INSN error	{
+	Error(_("expression syntax error"));
+	$$ = NULL;
+    }
+    | PREFIX instr	{
+	$$ = $2;
+	cur_arch->parse.handle_prefix($$, $1);
+    }
+    | SEGREG instr	{
+	$$ = $2;
+	cur_arch->parse.handle_seg_prefix($$, $1[0]);
+    }
+;
+
 datavals: dataval	    { dvs_initialize(&$$); dvs_append(&$$, $1); }
     | datavals ',' dataval  { dvs_append(&$1, $3); $$ = $1; }
 ;
 
-dataval: expr_no_string	{ $$ = dv_new_expr($1); }
+dataval: dvexpr		{ $$ = dv_new_expr($1); }
     | STRING		{ $$ = dv_new_string($1); }
     | error		{
 	Error(_("expression syntax error"));
@@ -219,19 +227,22 @@ label_id: ID	    {
 	$$ = $1;
 	if (nasm_parser_locallabel_base)
 	    xfree(nasm_parser_locallabel_base);
-	nasm_parser_locallabel_base = xstrdup($1);
+	nasm_parser_locallabel_base_len = strlen($1);
+	nasm_parser_locallabel_base =
+	    xmalloc(nasm_parser_locallabel_base_len+1);
+	strcpy(nasm_parser_locallabel_base, $1);
     }
     | SPECIAL_ID
     | LOCAL_ID
 ;
 
 /* directives */
-directive: '[' DIRECTIVE_NAME directive_val ']'	{
-	xfree($2);
+directive: DIRECTIVE_NAME directive_val	{
+	xfree($1);
     }
-    | '[' DIRECTIVE_NAME error ']'		{
-	Error(_("invalid arguments to [%s]"), $2);
-	xfree($2);
+    | DIRECTIVE_NAME error		{
+	Error(_("invalid arguments to [%s]"), $1);
+	xfree($1);
     }
 ;
 
@@ -267,299 +278,85 @@ directive_valparam: direxpr	{
     | ID '=' direxpr		{ vp_new($$, $1, $3); }
 ;
 
-/* register groupings */
-fpureg: ST0
-    | FPUREG_NOTST0
-;
-
-reg_eax: REG_EAX
-    | DWORD reg_eax	{ $$ = $2; }
-;
-
-reg_ecx: REG_ECX
-    | DWORD reg_ecx	{ $$ = $2; }
-;
-
-rawreg32: REG_EAX
-    | REG_ECX
-    | REG_EDX
-    | REG_EBX
-    | REG_ESP
-    | REG_EBP
-    | REG_ESI
-    | REG_EDI
-;
-
-reg32: rawreg32
-    | DWORD reg32	{ $$ = $2; }
-;
-
-reg_ax: REG_AX
-    | WORD reg_ax	{ $$ = $2; }
-;
-
-reg_cx: REG_CX
-    | WORD reg_cx	{ $$ = $2; }
-;
-
-reg_dx: REG_DX
-    | WORD reg_dx	{ $$ = $2; }
-;
-
-rawreg16: REG_AX
-    | REG_CX
-    | REG_DX
-    | REG_BX
-    | REG_SP
-    | REG_BP
-    | REG_SI
-    | REG_DI
-;
-
-reg16: rawreg16
-    | WORD reg16	{ $$ = $2; }
-;
-
-reg_al: REG_AL
-    | BYTE reg_al	{ $$ = $2; }
-;
-
-reg_cl: REG_CL
-    | BYTE reg_cl	{ $$ = $2; }
-;
-
-reg8: REG_AL
-    | REG_CL
-    | REG_DL
-    | REG_BL
-    | REG_AH
-    | REG_CH
-    | REG_DH
-    | REG_BH
-    | BYTE reg8		{ $$ = $2; }
-;
-
-reg_es: REG_ES
-    | WORD reg_es	{ $$ = $2; }
-;
-
-reg_ss: REG_SS
-    | WORD reg_ss	{ $$ = $2; }
-;
-
-reg_ds: REG_DS
-    | WORD reg_ds	{ $$ = $2; }
-;
-
-reg_fs: REG_FS
-    | WORD reg_fs	{ $$ = $2; }
-;
-
-reg_gs: REG_GS
-    | WORD reg_gs	{ $$ = $2; }
-;
-
-reg_cs: REG_CS
-    | WORD reg_cs	{ $$ = $2; }
-;
-
-segreg: REG_ES
-    | REG_SS
-    | REG_DS
-    | REG_FS
-    | REG_GS
-    | REG_CS
-    | WORD segreg	{ $$ = $2; }
-;
-
 /* memory addresses */
-/* FIXME: Is there any way this redundancy can be eliminated?  This is almost
- * identical to expr: the only difference is that FLTNUM is replaced by
- * rawreg16 and rawreg32.
- *
- * Note that the two can't be just combined because of conflicts caused by imm
- * vs. reg.  I don't see a simple solution right now to this.
- *
- * We don't attempt to check memory expressions for validity here.
- */
-memexpr: INTNUM			{ $$ = expr_new_ident(ExprInt($1)); }
-    | rawreg16			{ $$ = expr_new_ident(ExprReg($1, 16)); }
-    | rawreg32			{ $$ = expr_new_ident(ExprReg($1, 32)); }
-    | explabel			{ $$ = expr_new_ident(ExprSym($1)); }
-    /*| memexpr '||' memexpr	{ $$ = expr_new_tree($1, EXPR_LOR, $3); }*/
-    | memexpr '|' memexpr	{ $$ = expr_new_tree($1, EXPR_OR, $3); }
-    | memexpr '^' memexpr	{ $$ = expr_new_tree($1, EXPR_XOR, $3); }
-    /*| expr '&&' memexpr	{ $$ = expr_new_tree($1, EXPR_LAND, $3); }*/
-    | memexpr '&' memexpr	{ $$ = expr_new_tree($1, EXPR_AND, $3); }
-    /*| memexpr '==' memexpr	{ $$ = expr_new_tree($1, EXPR_EQUALS, $3); }*/
-    /*| memexpr '>' memexpr	{ $$ = expr_new_tree($1, EXPR_GT, $3); }*/
-    /*| memexpr '<' memexpr	{ $$ = expr_new_tree($1, EXPR_GT, $3); }*/
-    /*| memexpr '>=' memexpr	{ $$ = expr_new_tree($1, EXPR_GE, $3); }*/
-    /*| memexpr '<=' memexpr	{ $$ = expr_new_tree($1, EXPR_GE, $3); }*/
-    /*| memexpr '!=' memexpr	{ $$ = expr_new_tree($1, EXPR_NE, $3); }*/
-    | memexpr LEFT_OP memexpr	{ $$ = expr_new_tree($1, EXPR_SHL, $3); }
-    | memexpr RIGHT_OP memexpr	{ $$ = expr_new_tree($1, EXPR_SHR, $3); }
-    | memexpr '+' memexpr	{ $$ = expr_new_tree($1, EXPR_ADD, $3); }
-    | memexpr '-' memexpr	{ $$ = expr_new_tree($1, EXPR_SUB, $3); }
-    | memexpr '*' memexpr	{ $$ = expr_new_tree($1, EXPR_MUL, $3); }
-    | memexpr '/' memexpr	{ $$ = expr_new_tree($1, EXPR_DIV, $3); }
-    | memexpr SIGNDIV memexpr	{ $$ = expr_new_tree($1, EXPR_SIGNDIV, $3); }
-    | memexpr '%' memexpr	{ $$ = expr_new_tree($1, EXPR_MOD, $3); }
-    | memexpr SIGNMOD memexpr	{ $$ = expr_new_tree($1, EXPR_SIGNMOD, $3); }
-    | '+' memexpr %prec UNARYOP	{ $$ = $2; }
-    | '-' memexpr %prec UNARYOP	{ $$ = expr_new_branch(EXPR_NEG, $2); }
-    /*| '!' memexpr		{ $$ = expr_new_branch(EXPR_LNOT, $2); }*/
-    | '~' memexpr %prec UNARYOP	{ $$ = expr_new_branch(EXPR_NOT, $2); }
-    | '(' memexpr ')'		{ $$ = $2; }
-    | STRING			{
-	$$ = expr_new_ident(ExprInt(intnum_new_charconst_nasm($1)));
-	xfree($1);
+memaddr: expr		    {
+	$$ = cur_arch->parse.ea_new_expr($1);
     }
-    | error			{ Error(_("invalid effective address")); }
-;
-
-memaddr: memexpr	    {
-	$$ = x86_ea_new_expr($1);
-	x86_ea_set_segment($$, 0);
+    | SEGREG ':' memaddr    {
+	$$ = $3;
+	cur_arch->parse.handle_seg_override($$, $1[0]);
     }
-    | REG_CS ':' memaddr    { $$ = $3; x86_ea_set_segment($$, 0x2E); }
-    | REG_SS ':' memaddr    { $$ = $3; x86_ea_set_segment($$, 0x36); }
-    | REG_DS ':' memaddr    { $$ = $3; x86_ea_set_segment($$, 0x3E); }
-    | REG_ES ':' memaddr    { $$ = $3; x86_ea_set_segment($$, 0x26); }
-    | REG_FS ':' memaddr    { $$ = $3; x86_ea_set_segment($$, 0x64); }
-    | REG_GS ':' memaddr    { $$ = $3; x86_ea_set_segment($$, 0x65); }
     | BYTE memaddr	    { $$ = $2; ea_set_len($$, 1); }
     | WORD memaddr	    { $$ = $2; ea_set_len($$, 2); }
     | DWORD memaddr	    { $$ = $2; ea_set_len($$, 4); }
     | NOSPLIT memaddr	    { $$ = $2; ea_set_nosplit($$, 1); }
 ;
 
-mem: '[' memaddr ']'	{ $$ = $2; }
-;
-
-/* explicit memory */
-mem8x: BYTE mem		{ $$ = $2; }
-    | BYTE mem8x	{ $$ = $2; }
-;
-mem16x: WORD mem	{ $$ = $2; }
-    | WORD mem16x	{ $$ = $2; }
-;
-mem32x: DWORD mem	{ $$ = $2; }
-    | DWORD mem32x	{ $$ = $2; }
-;
-mem64x: QWORD mem	{ $$ = $2; }
-    | QWORD mem64x	{ $$ = $2; }
-;
-mem80x: TWORD mem	{ $$ = $2; }
-    | TWORD mem80x	{ $$ = $2; }
-;
-mem128x: DQWORD mem	{ $$ = $2; }
-    | DQWORD mem128x	{ $$ = $2; }
-;
-
-/* FAR memory, for jmp and call */
-memfar: FAR mem		{ $$ = $2; }
-    | FAR memfar	{ $$ = $2; }
-;
-
-/* implicit memory */
-mem8: mem
-    | mem8x
-;
-mem16: mem
-    | mem16x
-;
-mem32: mem
-    | mem32x
-;
-mem64: mem
-    | mem64x
-;
-mem80: mem
-    | mem80x
-;
-mem128: mem
-    | mem128x
-;
-
-/* both 16 and 32 bit memory */
-mem1632: mem
-    | mem16x
-    | mem32x
-;
-
-/* explicit register or memory */
-rm8x: reg8	{ $$ = x86_ea_new_reg($1); }
-    | mem8x
-;
-rm16x: reg16	{ $$ = x86_ea_new_reg($1); }
-    | mem16x
-;
-rm32x: reg32	{ $$ = x86_ea_new_reg($1); }
-    | mem32x
-;
-/* not needed:
-rm64x: MMXREG	{ $$ = x86_ea_new_reg($1); }
-    | mem64x
-;
-rm128x: XMMREG	{ $$ = x86_ea_new_reg($1); }
-    | mem128x
-;
-*/
-
-/* implicit register or memory */
-rm8: reg8	{ $$ = x86_ea_new_reg($1); }
-    | mem8
-;
-rm16: reg16	{ $$ = x86_ea_new_reg($1); }
-    | mem16
-;
-rm32: reg32	{ $$ = x86_ea_new_reg($1); }
-    | mem32
-;
-rm64: MMXREG	{ $$ = x86_ea_new_reg($1); }
-    | mem64
-;
-rm128: XMMREG	{ $$ = x86_ea_new_reg($1); }
-    | mem128
-;
-
-/* immediate values */
-imm: expr   { $$ = imm_new_expr($1); }
-;
-
-/* explicit immediates */
-imm8x: BYTE imm	    { $$ = $2; }
-;
-imm16x: WORD imm    { $$ = $2; }
-;
-imm32x: DWORD imm   { $$ = $2; }
-;
-
-/* implicit immediates */
-imm8: imm
-    | imm8x
-;
-imm16: imm
-    | imm16x
-;
-imm32: imm
-    | imm32x
-;
-
-/* jump targets */
-target: expr		{
-	$$.val = $1;
-	x86_set_jmprel_opcode_sel(&$$.op_sel, JR_NONE);
+/* instruction operands */
+operands: operand	    {
+	ops_initialize(&$$.operands);
+	ops_append(&$$.operands, $1);
+	$$.num_operands = 1;
     }
-    | SHORT target	{
+    | operands ',' operand  {
+	ops_append(&$1.operands, $3);
+	$$.operands = $1.operands;
+	$$.num_operands = $1.num_operands+1;
+    }
+;
+
+operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
+    | expr		    { $$ = operand_new_imm($1); }
+    | SEGREG		    { $$ = operand_new_segreg($1[0]); }
+    | BYTE operand	    {
 	$$ = $2;
-	x86_set_jmprel_opcode_sel(&$$.op_sel, JR_SHORT_FORCED);
+	if ($$->type == INSN_OPERAND_REG &&
+	    cur_arch->get_reg_size($$->data.reg) != 1)
+	    Error(_("cannot override register size"));
+	else
+	    $$->size = 1;
     }
-    | NEAR target	{
+    | WORD operand	    {
 	$$ = $2;
-	x86_set_jmprel_opcode_sel(&$$.op_sel, JR_NEAR_FORCED);
+	if ($$->type == INSN_OPERAND_REG &&
+	    cur_arch->get_reg_size($$->data.reg) != 2)
+	    Error(_("cannot override register size"));
+	else
+	    $$->size = 2;
     }
+    | DWORD operand	    {
+	$$ = $2;
+	if ($$->type == INSN_OPERAND_REG &&
+	    cur_arch->get_reg_size($$->data.reg) != 4)
+	    Error(_("cannot override register size"));
+	else
+	    $$->size = 4;
+    }
+    | QWORD operand	    {
+	$$ = $2;
+	if ($$->type == INSN_OPERAND_REG &&
+	    cur_arch->get_reg_size($$->data.reg) != 8)
+	    Error(_("cannot override register size"));
+	else
+	    $$->size = 8;
+    }
+    | TWORD operand	    {
+	$$ = $2;
+	if ($$->type == INSN_OPERAND_REG &&
+	    cur_arch->get_reg_size($$->data.reg) != 10)
+	    Error(_("cannot override register size"));
+	else
+	    $$->size = 10;
+    }
+    | DQWORD operand	    {
+	$$ = $2;
+	if ($$->type == INSN_OPERAND_REG &&
+	    cur_arch->get_reg_size($$->data.reg) != 16)
+	    Error(_("cannot override register size"));
+	else
+	    $$->size = 16;
+    }
+    | TARGETMOD operand	    { $$ = $2; $$->targetmod = $1[0]; }
 ;
 
 /* expression trees */
@@ -587,8 +384,47 @@ direxpr: INTNUM			{ $$ = expr_new_ident(ExprInt($1)); }
     | '(' direxpr ')'		{ $$ = $2; }
 ;
 
-expr_no_string: INTNUM		{ $$ = expr_new_ident(ExprInt($1)); }
+dvexpr: INTNUM			{ $$ = expr_new_ident(ExprInt($1)); }
     | FLTNUM			{ $$ = expr_new_ident(ExprFloat($1)); }
+    | explabel			{ $$ = expr_new_ident(ExprSym($1)); }
+    /*| dvexpr '||' dvexpr	{ $$ = expr_new_tree($1, EXPR_LOR, $3); }*/
+    | dvexpr '|' dvexpr		{ $$ = expr_new_tree($1, EXPR_OR, $3); }
+    | dvexpr '^' dvexpr		{ $$ = expr_new_tree($1, EXPR_XOR, $3); }
+    /*| dvexpr '&&' dvexpr	{ $$ = expr_new_tree($1, EXPR_LAND, $3); }*/
+    | dvexpr '&' dvexpr		{ $$ = expr_new_tree($1, EXPR_AND, $3); }
+    /*| dvexpr '==' dvexpr	{ $$ = expr_new_tree($1, EXPR_EQUALS, $3); }*/
+    /*| dvexpr '>' dvexpr	{ $$ = expr_new_tree($1, EXPR_GT, $3); }*/
+    /*| dvexpr '<' dvexpr	{ $$ = expr_new_tree($1, EXPR_GT, $3); }*/
+    /*| dvexpr '>=' dvexpr	{ $$ = expr_new_tree($1, EXPR_GE, $3); }*/
+    /*| dvexpr '<=' dvexpr	{ $$ = expr_new_tree($1, EXPR_GE, $3); }*/
+    /*| dvexpr '!=' dvexpr	{ $$ = expr_new_tree($1, EXPR_NE, $3); }*/
+    | dvexpr LEFT_OP dvexpr	{ $$ = expr_new_tree($1, EXPR_SHL, $3); }
+    | dvexpr RIGHT_OP dvexpr	{ $$ = expr_new_tree($1, EXPR_SHR, $3); }
+    | dvexpr '+' dvexpr		{ $$ = expr_new_tree($1, EXPR_ADD, $3); }
+    | dvexpr '-' dvexpr		{ $$ = expr_new_tree($1, EXPR_SUB, $3); }
+    | dvexpr '*' dvexpr		{ $$ = expr_new_tree($1, EXPR_MUL, $3); }
+    | dvexpr '/' dvexpr		{ $$ = expr_new_tree($1, EXPR_DIV, $3); }
+    | dvexpr SIGNDIV dvexpr	{ $$ = expr_new_tree($1, EXPR_SIGNDIV, $3); }
+    | dvexpr '%' dvexpr		{ $$ = expr_new_tree($1, EXPR_MOD, $3); }
+    | dvexpr SIGNMOD dvexpr	{ $$ = expr_new_tree($1, EXPR_SIGNMOD, $3); }
+    | '+' dvexpr %prec UNARYOP  { $$ = $2; }
+    | '-' dvexpr %prec UNARYOP  { $$ = expr_new_branch(EXPR_NEG, $2); }
+    /*| '!' dvexpr		{ $$ = expr_new_branch(EXPR_LNOT, $2); }*/
+    | '~' dvexpr %prec UNARYOP  { $$ = expr_new_branch(EXPR_NOT, $2); }
+    | '(' dvexpr ')'		{ $$ = $2; }
+;
+
+/* Expressions for operands and memory expressions.
+ * We don't attempt to check memory expressions for validity here.
+ * Essentially the same as expr_no_string above but adds REG and STRING.
+ */
+expr: INTNUM			{ $$ = expr_new_ident(ExprInt($1)); }
+    | FLTNUM			{ $$ = expr_new_ident(ExprFloat($1)); }
+    | REG			{ $$ = expr_new_ident(ExprReg($1[0])); }
+    | STRING			{
+	$$ = expr_new_ident(ExprInt(intnum_new_charconst_nasm($1)));
+	xfree($1);
+    }
     | explabel			{ $$ = expr_new_ident(ExprSym($1)); }
     /*| expr '||' expr		{ $$ = expr_new_tree($1, EXPR_LOR, $3); }*/
     | expr '|' expr		{ $$ = expr_new_tree($1, EXPR_OR, $3); }
@@ -615,13 +451,6 @@ expr_no_string: INTNUM		{ $$ = expr_new_ident(ExprInt($1)); }
     /*| '!' expr		{ $$ = expr_new_branch(EXPR_LNOT, $2); }*/
     | '~' expr %prec UNARYOP	{ $$ = expr_new_branch(EXPR_NOT, $2); }
     | '(' expr ')'		{ $$ = $2; }
-;
-
-expr: expr_no_string
-    | STRING		{
-	$$ = expr_new_ident(ExprInt(intnum_new_charconst_nasm($1)));
-	xfree($1);
-    }
 ;
 
 explabel: ID		{
@@ -652,46 +481,6 @@ explabel: ID		{
     }
 ;
 
-instr: /* empty */	{
-	idata.opersize=0; idata.op_len=0; idata.ea=NULL; idata.imm=NULL;
-	$$ = x86_bc_new_insn(&idata);
-    }
-    | instrbase
-    | OPERSIZE instr	{ $$ = $2; x86_bc_insn_opersize_override($$, $1); }
-    | ADDRSIZE instr	{ $$ = $2; x86_bc_insn_addrsize_override($$, $1); }
-    | REG_CS instr	{
-	$$ = $2;
-	x86_ea_set_segment(x86_bc_insn_get_ea($$), 0x2E);
-    }
-    | REG_SS instr	{
-	$$ = $2;
-	x86_ea_set_segment(x86_bc_insn_get_ea($$), 0x36);
-    }
-    | REG_DS instr	{
-	$$ = $2;
-	x86_ea_set_segment(x86_bc_insn_get_ea($$), 0x3E);
-    }
-    | REG_ES instr	{
-	$$ = $2;
-	x86_ea_set_segment(x86_bc_insn_get_ea($$), 0x26);
-    }
-    | REG_FS instr	{
-	$$ = $2;
-	x86_ea_set_segment(x86_bc_insn_get_ea($$), 0x64);
-    }
-    | REG_GS instr	{
-	$$ = $2;
-	x86_ea_set_segment(x86_bc_insn_get_ea($$), 0x65);
-    }
-    | LOCK instr	{ $$ = $2; x86_bc_insn_set_lockrep_prefix($$, 0xF0); }
-    | REPNZ instr	{ $$ = $2; x86_bc_insn_set_lockrep_prefix($$, 0xF2); }
-    | REP instr		{ $$ = $2; x86_bc_insn_set_lockrep_prefix($$, 0xF3); }
-    | REPZ instr	{ $$ = $2; x86_bc_insn_set_lockrep_prefix($$, 0xF4); }
-;
-
-/* instruction grammars (dynamically generated) */
-/* @INSTRUCTIONS@ */
-
 %%
 /*@=usedef =nullassign =memtrans =usereleased =compdef =mustfree@*/
 
@@ -700,8 +489,6 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 		      valparamhead *objext_valparams)
 {
     valparam *vp, *vp2;
-    const intnum *intn;
-    long lval;
 
     assert(cur_objfmt != NULL);
 
@@ -766,13 +553,25 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 	    vp->param = NULL;
 	}
 	nasm_parser_prev_bc = (bytecode *)NULL;
-    } else if (strcasecmp(name, "bits") == 0) {
-	if ((vp = vps_first(valparams)) && !vp->val && vp->param != NULL &&
-	    (intn = expr_get_intnum(&vp->param)) != NULL &&
-	    (lval = intnum_get_int(intn)) && (lval == 16 || lval == 32))
-	    x86_mode_bits = (unsigned char)lval;
-	else
-	    Error(_("invalid argument to [%s]"), "BITS");
+    } else if (strcasecmp(name, "cpu") == 0) {
+	vps_foreach(vp, valparams) {
+	    if (vp->val)
+		cur_arch->parse.switch_cpu(vp->val);
+	    else if (vp->param) {
+		const intnum *intcpu;
+		intcpu = expr_get_intnum(&vp->param);
+		if (!intcpu)
+		    Error(_("invalid argument to [%s]"), "CPU");
+		else {
+		    char strcpu[16];
+		    sprintf(strcpu, "%lu", intnum_get_uint(intcpu));
+		    cur_arch->parse.switch_cpu(strcpu);
+		}
+	    }
+	}
+    } else if (!cur_arch->parse.directive(name, valparams, objext_valparams,
+					  &nasm_parser_sections)) {
+	;
     } else if (cur_objfmt->directive(name, valparams, objext_valparams,
 				     &nasm_parser_sections)) {
 	Error(_("unrecognized directive [%s]"), name);

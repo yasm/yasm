@@ -1,0 +1,1282 @@
+/*
+ * x86 identifier recognition and instruction handling
+ *
+ *  Copyright (C) 2002  Peter Johnson
+ *
+ *  This file is part of YASM.
+ *
+ *  YASM is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  YASM is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+#include "util.h"
+RCSID("$IdPath$");
+
+#include "bitvect.h"
+
+#include "globals.h"
+#include "errwarn.h"
+#include "intnum.h"
+#include "floatnum.h"
+#include "expr.h"
+#include "symrec.h"
+
+#include "bytecode.h"
+
+#include "arch.h"
+#include "src/arch/x86/x86arch.h"
+
+#include "expr-int.h"
+#include "bc-int.h"
+
+
+/* Available CPU feature flags */
+#define CPU_Any	    (0)		/* Any old cpu will do */
+#define CPU_086	    CPU_Any
+#define CPU_186	    (1<<0)	/* i186 or better required */
+#define CPU_286	    (1<<1)	/* i286 or better required */
+#define CPU_386	    (1<<2)	/* i386 or better required */
+#define CPU_486	    (1<<3)	/* i486 or better required */
+#define CPU_586	    (1<<4)	/* i585 or better required */
+#define CPU_686	    (1<<5)	/* i686 or better required */
+#define CPU_P3	    (1<<6)	/* Pentium3 or better required */
+#define CPU_P4	    (1<<7)	/* Pentium4 or better required */
+#define CPU_IA64    (1<<8)	/* IA-64 or better required */
+#define CPU_K6	    (1<<9)	/* AMD K6 or better required */
+#define CPU_Athlon  (1<<10)	/* AMD Athlon or better required */
+#define CPU_Hammer  (1<<11)	/* AMD Sledgehammer or better required */
+#define CPU_FPU	    (1<<12)	/* FPU support required */
+#define CPU_MMX	    (1<<13)	/* MMX support required */
+#define CPU_SSE	    (1<<14)	/* Streaming SIMD extensions required */
+#define CPU_SSE2    (1<<15)	/* Streaming SIMD extensions 2 required */
+#define CPU_3DNow   (1<<16)	/* 3DNow! support required */
+#define CPU_Cyrix   (1<<17)	/* Cyrix-specific instruction */
+#define CPU_AMD	    (1<<18)	/* AMD-specific inst. (older than K6) */
+#define CPU_SMM	    (1<<19)	/* System Management Mode instruction */
+#define CPU_Prot    (1<<20)	/* Protected mode only instruction */
+#define CPU_Undoc   (1<<21)	/* Undocumented instruction */
+#define CPU_Obs	    (1<<22)	/* Obsolete instruction */
+#define CPU_Priv    (1<<23)	/* Priveleged instruction */
+
+/* What instructions/features are enabled?  Defaults to all. */
+static unsigned long cpu_enabled = ~CPU_Any;
+
+/* Opcode modifiers.  The opcode bytes are in "reverse" order because the
+ * parameters are read from the arch-specific data in LSB->MSB order.
+ * (only for asthetic reasons in the lexer code below, no practical reason).
+ */
+#define MOD_Op2Add  (1<<0)	/* Parameter adds to opcode byte 2 */
+#define MOD_Gap0    (1<<1)	/* Eats a parameter */
+#define MOD_Op1Add  (1<<2)	/* Parameter adds to opcode byte 1 */
+#define MOD_Gap1    (1<<3)	/* Eats a parameter */
+#define MOD_Op0Add  (1<<4)	/* Parameter adds to opcode byte 0 */
+#define MOD_SpAdd   (1<<5)	/* Parameter adds to "spare" value */
+#define MOD_OpSizeR (1<<6)	/* Parameter replaces opersize */
+#define MOD_Imm8    (1<<7)	/* Parameter is included as immediate byte */
+
+/* Operand types.  These are more detailed than the "general" types for all
+ * architectures, as they include the size, for instance.
+ * Bit Breakdown (from LSB to MSB):
+ *  - 4 bits = general type (must be exact match, except for =3):
+ *             0 = immediate
+ *             1 = any general purpose, MMX, XMM, or FPU register
+ *             2 = memory
+ *             3 = any general purpose, MMX, XMM, or FPU register OR memory
+ *             4 = segreg
+ *             5 = any CR register
+ *             6 = any DR register
+ *             7 = any TR register
+ *             8 = ST0
+ *             9 = AL/AX/EAX (depending on size)
+ *             A = CL/CX/ECX (depending on size)
+ *             B = CR4
+ *             C = memory offset (an EA, but with no registers allowed)
+ *                 [special case for MOV opcode]
+ *  - 3 bits = size (user-specified, or from register size):
+ *             0 = any size acceptable
+ *             1/2/3/4 = 8/16/32/64 bits (from user or reg size)
+ *             5/6 = 80/128 bits (from user)
+ *  - 1 bit = size implicit or explicit ("strictness" of size matching on
+ *            non-registers -- registers are always strictly matched):
+ *            0 = user size must exactly match size above.
+ *            1 = user size either unspecified or exactly match size above.
+ *
+ * MSBs than the above are actions: what to do with the operand if the
+ * instruction matches.  Essentially describes what part of the output bytecode
+ * gets the operand.  This may require conversion (e.g. a register going into
+ * an ea field).  Naturally, only one of each of these may be contained in the
+ * operands of a single insn_info structure.
+ *  - 3 bits = action:
+ *             0 = does nothing (operand data is discarded)
+ *             1 = operand data goes into ea field
+ *             2 = operand data goes into imm field
+ *             3 = operand data goes into "spare" field
+ *             4 = operand data is added to opcode byte 0
+ */
+#define OPT_Imm		0x0
+#define OPT_Reg		0x1
+#define OPT_Mem		0x2
+#define OPT_RM		0x3
+#define OPT_SegReg	0x4
+#define OPT_CRReg	0x5
+#define OPT_DRReg	0x6
+#define OPT_TRReg	0x7
+#define OPT_ST0		0x8
+#define OPT_Areg	0x9
+#define OPT_Creg	0xA
+#define OPT_CR4		0xB
+#define OPT_MemOffs	0xC
+#define OPT_MASK	0x000F
+
+#define OPS_Any		(0<<4)
+#define OPS_8		(1<<4)
+#define OPS_16		(2<<4)
+#define OPS_32		(3<<4)
+#define OPS_64		(4<<4)
+#define OPS_80		(5<<4)
+#define OPS_128		(6<<4)
+#define OPS_MASK	0x0070
+#define OPS_SHIFT	4
+
+#define OPS_Relaxed	(1<<7)
+#define OPS_RMASK	0x0080
+
+#define OPA_None	(0<<8)
+#define OPA_EA		(1<<8)
+#define OPA_Imm		(2<<8)
+#define OPA_Spare	(3<<8)
+#define OPA_Op0Add	(4<<8)
+#define OPA_MASK	0x0700
+
+typedef struct x86_insn_info {
+    /* The CPU feature flags needed to execute this instruction.  This is OR'ed
+     * with arch-specific data[2].  This combined value is compared with
+     * cpu_enabled to see if all bits set here are set in cpu_enabled--if so,
+     * the instruction is available on this CPU.
+     */
+    unsigned long cpu;
+
+    /* Opcode modifiers for variations of instruction.  As each modifier reads
+     * its parameter in LSB->MSB order from the arch-specific data[1] from the
+     * lexer data, and the LSB of the arch-specific data[1] is reserved for the
+     * count of insn_info structures in the instruction grouping, there can
+     * only be a maximum of 3 modifiers.
+     */
+    unsigned long modifiers;
+
+    /* Operand Size */
+    unsigned char opersize;
+
+    /* The length of the basic opcode */
+    unsigned char opcode_len;
+
+    /* The basic 1-3 byte opcode */
+    unsigned char opcode[3];
+
+    /* The 3-bit "spare" value (extended opcode) for the R/M byte field */
+    unsigned char spare;
+
+    /* The number of operands this form of the instruction takes */
+    unsigned char num_operands;
+
+    /* The types of each operand, see above */
+    unsigned int operands[3];
+} x86_insn_info;
+
+/* Define lexer arch-specific data with 0-3 modifiers. */
+#define DEF_INSN_DATA(group, mod, cpu)	do { \
+    data[0] = (unsigned long)group##_insn; \
+    data[1] = ((mod)<<8) | \
+    	      ((unsigned char)(sizeof(group##_insn)/sizeof(x86_insn_info))); \
+    data[2] = cpu; \
+    } while (0)
+
+#define RET_INSN(group, mod, cpu)	do { \
+    DEF_INSN_DATA(group, mod, cpu); \
+    return ARCH_CHECK_ID_INSN; \
+    } while (0)
+
+/*
+ * General instruction groupings
+ */
+
+/* One byte opcode instructions with no operands */
+static const x86_insn_info onebyte_insn[] = {
+    { CPU_Any, MOD_Op0Add|MOD_OpSizeR, 0, 1, {0, 0, 0}, 0, 0, {0, 0, 0} }
+};
+
+/* Two byte opcode instructions with no operands */
+static const x86_insn_info twobyte_insn[] = {
+    { CPU_Any, MOD_Op1Add|MOD_Op0Add, 0, 2, {0, 0, 0}, 0, 0, {0, 0, 0} }
+};
+
+/* Three byte opcode instructions with no operands */
+static const x86_insn_info threebyte_insn[] = {
+    { CPU_Any, MOD_Op2Add|MOD_Op1Add|MOD_Op0Add, 0, 3, {0, 0, 0}, 0, 0,
+      {0, 0, 0} }
+};
+
+/* One byte opcode instructions with general memory operand */
+static const x86_insn_info onebytemem_insn[] = {
+    { CPU_Any, MOD_Op0Add|MOD_SpAdd, 0, 1, {0, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_Any|OPA_EA, 0, 0} }
+};
+
+/* Two byte opcode instructions with general memory operand */
+static const x86_insn_info twobytemem_insn[] = {
+    { CPU_Any, MOD_Op1Add|MOD_Op0Add|MOD_SpAdd, 0, 1, {0, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_Any|OPA_EA, 0, 0} }
+};
+
+/* Move instructions */
+static const x86_insn_info mov_insn[] = {
+    { CPU_Any, 0, 0, 1, {0xA0, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_8|OPA_None, OPT_MemOffs|OPS_8|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_Any, 0, 16, 1, {0xA1, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_16|OPA_None, OPT_MemOffs|OPS_16|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_Any, 0, 32, 1, {0xA1, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_32|OPA_None, OPT_MemOffs|OPS_32|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_Any, 0, 0, 1, {0xA2, 0, 0}, 0, 2,
+      {OPT_MemOffs|OPS_8|OPS_Relaxed|OPA_EA, OPT_Areg|OPS_8|OPA_None, 0} },
+    { CPU_Any, 0, 16, 1, {0xA3, 0, 0}, 0, 2,
+      {OPT_MemOffs|OPS_16|OPS_Relaxed|OPA_EA, OPT_Areg|OPS_16|OPA_None, 0} },
+    { CPU_Any, 0, 32, 1, {0xA3, 0, 0}, 0, 2,
+      {OPT_MemOffs|OPS_32|OPS_Relaxed|OPA_EA, OPT_Areg|OPS_32|OPA_None, 0} },
+    { CPU_Any, 0, 0, 1, {0x88, 0, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_8|OPA_Spare, 0} },
+    { CPU_Any, 0, 16, 1, {0x89, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare, 0} },
+    { CPU_386, 0, 32, 1, {0x89, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} },
+    { CPU_Any, 0, 0, 1, {0x8A, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_8|OPA_Spare, OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_Any, 0, 16, 1, {0x8B, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_386, 0, 32, 1, {0x8B, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} },
+    /* TODO: segreg here */
+    { CPU_Any, 0, 0, 1, {0xB0, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_8|OPA_Op0Add, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_Any, 0, 16, 1, {0xB8, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_Op0Add, OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_386, 0, 32, 1, {0xB8, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Op0Add, OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm, 0} },
+    /* Need two sets here, one for strictness on left side, one for right. */
+    { CPU_Any, 0, 0, 1, {0xC6, 0, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_8|OPA_Imm, 0} },
+    { CPU_Any, 0, 16, 1, {0xC7, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_16|OPA_Imm, 0} },
+    { CPU_386, 0, 32, 1, {0xC7, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_32|OPA_Imm, 0} },
+    { CPU_Any, 0, 0, 1, {0xC6, 0, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_Any, 0, 16, 1, {0xC7, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_386, 0, 32, 1, {0xC7, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_586|CPU_Priv, 0, 0, 2, {0x0F, 0x22, 0}, 0, 2,
+      {OPT_CR4|OPS_32|OPA_Spare, OPT_Reg|OPS_32|OPA_EA, 0} },
+    { CPU_386|CPU_Priv, 0, 0, 2, {0x0F, 0x22, 0}, 0, 2,
+      {OPT_CRReg|OPS_32|OPA_Spare, OPT_Reg|OPS_32|OPA_EA, 0} },
+    { CPU_586|CPU_Priv, 0, 0, 2, {0x0F, 0x20, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_EA, OPT_CR4|OPS_32|OPA_Spare, 0} },
+    { CPU_386|CPU_Priv, 0, 0, 2, {0x0F, 0x20, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_EA, OPT_CRReg|OPS_32|OPA_Spare, 0} },
+    { CPU_386|CPU_Priv, 0, 0, 2, {0x0F, 0x23, 0}, 0, 2,
+      {OPT_DRReg|OPS_32|OPA_Spare, OPT_Reg|OPS_32|OPA_EA, 0} },
+    { CPU_386|CPU_Priv, 0, 0, 2, {0x0F, 0x21, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_EA, OPT_DRReg|OPS_32|OPA_Spare, 0} }
+};
+
+/* Move with sign/zero extend */
+static const x86_insn_info movszx_insn[] = {
+    { CPU_386, MOD_Op1Add, 16, 2, {0x0F, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_386, MOD_Op1Add, 32, 2, {0x0F, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_8|OPA_EA, 0} },
+    { CPU_386, MOD_Op1Add, 32, 2, {0x0F, 1, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_16|OPA_EA, 0} }
+};
+
+
+bytecode *
+x86_new_insn(const unsigned long data[4], int num_operands,
+	     insn_operandhead *operands)
+{
+    x86_new_insn_data d;
+    int num_info = (int)(data[1]&0xFF);
+    x86_insn_info *info = (x86_insn_info *)data[0];
+    unsigned long mod_data = data[1] >> 8;
+    int found = 0;
+    insn_operand *op;
+    int i;
+    static const unsigned int size_lookup[] = {0, 1, 2, 4, 8, 10, 16, 0};
+
+    /* Just do a simple linear search through the info array for a match.
+     * First match wins.
+     */
+    for (; num_info>0 && !found; num_info--, info++) {
+	unsigned long cpu;
+	unsigned int size;
+	int mismatch = 0;
+
+	/* Match CPU */
+	cpu = info->cpu | data[2];
+	if ((cpu_enabled & cpu) != cpu)
+	    continue;
+
+	/* Match # of operands */
+	if (num_operands != info->num_operands)
+	    continue;
+
+	if (!operands) {
+	    found = 1;	    /* no operands -> must have a match here. */
+	    break;
+	}
+
+	/* Match each operand type and size */
+	for(i = 0, op = ops_first(operands); op && i<info->num_operands &&
+	    !mismatch; op = ops_next(op), i++) {
+	    /* Check operand type */
+	    switch (info->operands[i] & OPT_MASK) {
+		case OPT_Imm:
+		    if (op->type != INSN_OPERAND_IMM)
+			mismatch = 1;
+		    break;
+		case OPT_Reg:
+		    if (op->type != INSN_OPERAND_REG)
+			mismatch = 1;
+		    else {
+			size = op->data.reg & ~7;
+			if (size == X86_CRREG || size == X86_DRREG ||
+			    size == X86_TRREG)
+			    mismatch = 1;
+		    }
+		    break;
+		case OPT_Mem:
+		    if (op->type != INSN_OPERAND_MEMORY)
+			mismatch = 1;
+		    break;
+		case OPT_RM:
+		    if (op->type != INSN_OPERAND_REG &&
+			op->type != INSN_OPERAND_MEMORY)
+			mismatch = 1;
+		    break;
+		case OPT_SegReg:
+		    if (op->type != INSN_OPERAND_SEGREG)
+			mismatch = 1;
+		    break;
+		case OPT_CRReg:
+		    if (op->type != INSN_OPERAND_REG ||
+			(op->data.reg & ~7) != X86_CRREG)
+			mismatch = 1;
+		    break;
+		case OPT_DRReg:
+		    if (op->type != INSN_OPERAND_REG ||
+			(op->data.reg & ~7) != X86_DRREG)
+			mismatch = 1;
+		    break;
+		case OPT_TRReg:
+		    if (op->type != INSN_OPERAND_REG ||
+			(op->data.reg & ~7) != X86_TRREG)
+			mismatch = 1;
+		    break;
+		case OPT_ST0:
+		    if (op->type != INSN_OPERAND_REG ||
+			op->data.reg != X86_FPUREG)
+			mismatch = 1;
+		    break;
+		case OPT_Areg:
+		    if (op->type != INSN_OPERAND_REG ||
+			((info->operands[i] & OPS_MASK) == OPS_8 &&
+			 op->data.reg != (X86_REG8 | 0)) ||
+			((info->operands[i] & OPS_MASK) == OPS_16 &&
+			 op->data.reg != (X86_REG16 | 0)) ||
+			((info->operands[i] & OPS_MASK) == OPS_32 &&
+			 op->data.reg != (X86_REG32 | 0)))
+			mismatch = 1;
+		    break;
+		case OPT_Creg:
+		    if (op->type != INSN_OPERAND_REG ||
+			((info->operands[i] & OPS_MASK) == OPS_8 &&
+			 op->data.reg != (X86_REG8 | 1)) ||
+			((info->operands[i] & OPS_MASK) == OPS_16 &&
+			 op->data.reg != (X86_REG16 | 1)) ||
+			((info->operands[i] & OPS_MASK) == OPS_32 &&
+			 op->data.reg != (X86_REG32 | 1)))
+			mismatch = 1;
+		    break;
+		case OPT_CR4:
+		    if (op->type != INSN_OPERAND_REG ||
+			op->data.reg != (X86_CRREG | 4))
+			mismatch = 1;
+		    break;
+		case OPT_MemOffs:
+		    if (op->type != INSN_OPERAND_MEMORY ||
+			expr_contains(ea_get_disp(op->data.ea), EXPR_REG))
+			mismatch = 1;
+		    break;
+		default:
+		    InternalError(_("invalid operand type"));
+	    }
+
+	    if (mismatch)
+		break;
+
+	    /* Check operand size */
+	    size = size_lookup[(info->operands[i] & OPS_MASK)>>OPS_SHIFT];
+	    if (op->type == INSN_OPERAND_REG && op->size == 0) {
+		/* Register size must exactly match */
+		if (x86_get_reg_size(op->data.reg) != size)
+		    mismatch = 1;
+	    } else {
+		if ((info->operands[i] & OPS_RMASK) == OPS_Relaxed) {
+		    /* Relaxed checking */
+		    if (size != 0 && op->size != size && op->size != 0)
+			mismatch = 1;
+		} else {
+		    /* Strict checking */
+		    if (op->size != size)
+			mismatch = 1;
+		}
+	    }
+	}
+
+	if (!mismatch) {
+	    found = 1;
+	    break;
+	}
+    }
+
+    if (!found) {
+	/* Didn't find a matching one */
+	/* FIXME: This needs to be more descriptive of certain reasons for a
+	 * mismatch.  E.g.:
+	 *  "mismatch in operand sizes"
+	 *  "operand size not specified"
+	 * etc.  This will probably require adding dummy error catchers in the
+	 * insn list which are only looked at if we get here.
+	 */
+	Error(_("invalid combination of opcode and operands"));
+	return NULL;
+    }
+
+    /* Copy what we can from info */
+    d.ea = NULL;
+    d.imm = NULL;
+    d.opersize = info->opersize;
+    d.op_len = info->opcode_len;
+    d.op[0] = info->opcode[0];
+    d.op[1] = info->opcode[1];
+    d.op[2] = info->opcode[2];
+    d.spare = info->spare;
+    d.im_len = 0;
+    d.im_sign = 0;
+
+    /* Apply modifiers */
+    if (info->modifiers & MOD_Op2Add) {
+	d.op[2] += (unsigned char)(mod_data & 0xFF);
+	mod_data >>= 8;
+    }
+    if (info->modifiers & MOD_Gap0)
+	mod_data >>= 8;
+    if (info->modifiers & MOD_Op1Add) {
+	d.op[1] += (unsigned char)(mod_data & 0xFF);
+	mod_data >>= 8;
+    }
+    if (info->modifiers & MOD_Gap1)
+	mod_data >>= 8;
+    if (info->modifiers & MOD_Op0Add) {
+	d.op[0] += (unsigned char)(mod_data & 0xFF);
+	mod_data >>= 8;
+    }
+    if (info->modifiers & MOD_SpAdd) {
+	d.spare += (unsigned char)(mod_data & 0xFF);
+	mod_data >>= 8;
+    }
+    if (info->modifiers & MOD_OpSizeR) {
+	d.opersize = (unsigned char)(mod_data & 0xFF);
+	mod_data >>= 8;
+    }
+    if (info->modifiers & MOD_Imm8) {
+	d.imm = expr_new_ident(ExprInt(intnum_new_int(mod_data & 0xFF)));
+	d.im_len = 1;
+	/*mod_data >>= 8;*/
+    }
+
+    /* Go through operands and assign */
+    if (operands) {
+	for(i = 0, op = ops_first(operands); op && i<info->num_operands;
+	    op = ops_next(op), i++) {
+	    switch (info->operands[i] & OPA_MASK) {
+		case OPA_None:
+		    /* Throw away the operand contents */
+		    switch (op->type) {
+			case INSN_OPERAND_REG:
+			case INSN_OPERAND_SEGREG:
+			    break;
+			case INSN_OPERAND_MEMORY:
+			    ea_delete(op->data.ea);
+			    break;
+			case INSN_OPERAND_IMM:
+			    expr_delete(op->data.val);
+			    break;
+		    }
+		    break;
+		case OPA_EA:
+		    switch (op->type) {
+			case INSN_OPERAND_REG:
+			    d.ea = x86_ea_new_reg((unsigned char)op->data.reg);
+			    break;
+			case INSN_OPERAND_SEGREG:
+			    InternalError(_("invalid operand conversion"));
+			case INSN_OPERAND_MEMORY:
+			    d.ea = op->data.ea;
+			    if ((info->operands[i] & OPT_MASK) == OPT_MemOffs) {
+				/* Special-case for MOV MemOffs instruction */
+				x86_effaddr_data *ead = ea_get_data(d.ea);
+				ead->valid_modrm = 0;
+				ead->need_modrm = 0;
+				ead->valid_sib = 0;
+				ead->need_sib = 0;
+			    }
+			    break;
+			case INSN_OPERAND_IMM:
+			    d.ea = x86_ea_new_imm(op->data.val,
+				size_lookup[(info->operands[i] &
+					     OPS_MASK)>>OPS_SHIFT]);
+			    break;
+		    }
+		    break;
+		case OPA_Imm:
+		    if (op->type == INSN_OPERAND_IMM) {
+			d.imm = op->data.val;
+			d.im_len = size_lookup[(info->operands[i] &
+						OPS_MASK)>>OPS_SHIFT];
+		    } else
+			InternalError(_("invalid operand conversion"));
+		    break;
+		case OPA_Spare:
+		    if (op->type == INSN_OPERAND_REG ||
+			op->type == INSN_OPERAND_SEGREG)
+			d.spare = (unsigned char)(op->data.reg&7);
+		    else
+			InternalError(_("invalid operand conversion"));
+		    break;
+		case OPA_Op0Add:
+		    if (op->type == INSN_OPERAND_REG)
+			d.op[0] += (unsigned char)(op->data.reg&7);
+		    else
+			InternalError(_("invalid operand conversion"));
+		    break;
+		default:
+		    InternalError(_("unknown operand action"));
+	    }
+	}
+    }
+
+    /* Create the bytecode and return it */
+    return x86_bc_new_insn(&d);
+}
+
+
+#define YYCTYPE		char
+#define YYCURSOR	id
+#define YYLIMIT		id
+#define YYMARKER	marker
+#define YYFILL(n)
+
+/*!re2c
+  any = [\000-\377];
+  A = [aA];
+  B = [bB];
+  C = [cC];
+  D = [dD];
+  E = [eE];
+  F = [fF];
+  G = [gG];
+  H = [hH];
+  I = [iI];
+  J = [jJ];
+  K = [kK];
+  L = [lL];
+  M = [mM];
+  N = [nN];
+  O = [oO];
+  P = [pP];
+  Q = [qQ];
+  R = [rR];
+  S = [sS];
+  T = [tT];
+  U = [uU];
+  V = [vV];
+  W = [wW];
+  X = [xX];
+  Y = [yY];
+  Z = [zZ];
+*/
+
+void
+x86_switch_cpu(const char *id)
+{
+    const char *marker;
+
+    /*!re2c
+	/* The standard CPU names /set/ cpu_enabled. */
+	"8086" {
+	    cpu_enabled = CPU_Priv;
+	    return;
+	}
+	("80" | I)? "186" {
+	    cpu_enabled = CPU_186|CPU_Priv;
+	    return;
+	}
+	("80" | I)? "286" {
+	    cpu_enabled = CPU_186|CPU_286|CPU_Priv;
+	    return;
+	}
+	("80" | I)? "386" {
+	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_SMM|CPU_Prot|CPU_Priv;
+	    return;
+	}
+	("80" | I)? "486" {
+	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_FPU|CPU_SMM|
+			  CPU_Prot|CPU_Priv;
+	    return;
+	}
+	(I? "586") | (P E N T I U M) | (P "5") {
+	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_FPU|
+			  CPU_SMM|CPU_Prot|CPU_Priv;
+	    return;
+	}
+	(I? "686") | (P "6") | (P P R O) | (P E N T I U M P R O) {
+	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
+			  CPU_FPU|CPU_SMM|CPU_Prot|CPU_Priv;
+	    return;
+	}
+	(P "2") | (P E N T I U M "-"? ("2" | (I I))) {
+	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
+			  CPU_FPU|CPU_MMX|CPU_SMM|CPU_Prot|CPU_Priv;
+	    return;
+	}
+	(P "3") | (P E N T I U M "-"? ("3" | (I I I))) | (K A T M A I) {
+	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
+			  CPU_P3|CPU_FPU|CPU_MMX|CPU_SSE|CPU_SMM|CPU_Prot|
+			  CPU_Priv;
+	    return;
+	}
+	(P "4") | (P E N T I U M "-"? ("4" | (I V))) | (W I L L I A M E T T E) {
+	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
+			  CPU_P3|CPU_P4|CPU_FPU|CPU_MMX|CPU_SSE|CPU_SSE2|
+			  CPU_SMM|CPU_Prot|CPU_Priv;
+	    return;
+	}
+	(I A "-"? "64") | (I T A N I U M) {
+	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
+			  CPU_P3|CPU_P4|CPU_IA64|CPU_FPU|CPU_MMX|CPU_SSE|
+			  CPU_SSE2|CPU_SMM|CPU_Prot|CPU_Priv;
+	    return;
+	}
+	K "6" {
+	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
+			  CPU_K6|CPU_FPU|CPU_MMX|CPU_3DNow|CPU_SMM|CPU_Prot|
+			  CPU_Priv;
+	    return;
+	}
+	A T H L O N {
+	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
+			  CPU_K6|CPU_Athlon|CPU_FPU|CPU_MMX|CPU_SSE|CPU_3DNow|
+			  CPU_SMM|CPU_Prot|CPU_Priv;
+	    return;
+	}
+	(S L E D G E)? (H A M M E R) {
+	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
+			  CPU_K6|CPU_Athlon|CPU_Hammer|CPU_FPU|CPU_MMX|CPU_SSE|
+			  CPU_3DNow|CPU_SMM|CPU_Prot|CPU_Priv;
+	    return;
+	}
+
+	/* Features have "no" versions to disable them, and only set/reset the
+	 * specific feature being changed.  All other bits are left alone.
+	 */
+	F P U		{ cpu_enabled |= CPU_FPU; return; }
+	N O F P U	{ cpu_enabled &= ~CPU_FPU; return; }
+	M M X		{ cpu_enabled |= CPU_MMX; return; }
+	N O M M X	{ cpu_enabled &= ~CPU_MMX; return; }
+	S S E		{ cpu_enabled |= CPU_SSE; return; }
+	N O S S E	{ cpu_enabled &= ~CPU_SSE; return; }
+	S S E "2"	{ cpu_enabled |= CPU_SSE2; return; }
+	N O S S E "2"	{ cpu_enabled &= ~CPU_SSE2; return; }
+	"3" D N O W	{ cpu_enabled |= CPU_3DNow; return; }
+	N O "3" D N O W	{ cpu_enabled &= ~CPU_3DNow; return; }
+	C Y R I X	{ cpu_enabled |= CPU_Cyrix; return; }
+	N O C Y R I X	{ cpu_enabled &= ~CPU_Cyrix; return; }
+	A M D		{ cpu_enabled |= CPU_AMD; return; }
+	N O A M D	{ cpu_enabled &= ~CPU_AMD; return; }
+	S M M		{ cpu_enabled |= CPU_SMM; return; }
+	N O S M M	{ cpu_enabled &= ~CPU_SMM; return; }
+	P R O T		{ cpu_enabled |= CPU_Prot; return; }
+	N O P R O T	{ cpu_enabled &= ~CPU_Prot; return; }
+	U N D O C	{ cpu_enabled |= CPU_Undoc; return; }
+	N O U N D O C	{ cpu_enabled &= ~CPU_Undoc; return; }
+	O B S		{ cpu_enabled |= CPU_Obs; return; }
+	N O O B S	{ cpu_enabled &= ~CPU_Obs; return; }
+	P R I V		{ cpu_enabled |= CPU_Priv; return; }
+	N O P R I V	{ cpu_enabled &= ~CPU_Priv; return; }
+
+	/* catchalls */
+	[A-Za-z0-9]+	{
+	    Warning(_("unrecognized CPU identifier `%s'"), id);
+	    return;
+	}
+	any		{
+	    Warning(_("unrecognized CPU identifier `%s'"), id);
+	    return;
+	}
+    */
+}
+
+arch_check_id_retval
+x86_check_identifier(unsigned long data[4], const char *id)
+{
+    const char *oid = id;
+    const char *marker;
+    /*!re2c
+	/* target modifiers */
+	N E A R		{
+	    data[0] = X86_NEAR;
+	    return ARCH_CHECK_ID_TARGETMOD;
+	}
+	S H O R T	{
+	    data[0] = X86_SHORT;
+	    return ARCH_CHECK_ID_TARGETMOD;
+	}
+	F A R		{
+	    data[0] = X86_FAR;
+	    return ARCH_CHECK_ID_TARGETMOD;
+	}
+
+	/* operand size overrides */
+	O "16"	{
+	    data[0] = X86_OPERSIZE;
+	    data[1] = 16;
+	    return ARCH_CHECK_ID_PREFIX;
+	}
+	O "32"	{
+	    data[0] = X86_OPERSIZE;
+	    data[1] = 32;
+	    return ARCH_CHECK_ID_PREFIX;
+	}
+	/* address size overrides */
+	A "16"	{
+	    data[0] = X86_ADDRSIZE;
+	    data[1] = 16;
+	    return ARCH_CHECK_ID_PREFIX;
+	}
+	A "32"	{
+	    data[0] = X86_ADDRSIZE;
+	    data[1] = 32;
+	    return ARCH_CHECK_ID_PREFIX;
+	}
+
+	/* instruction prefixes */
+	L O C K		{
+	    data[0] = X86_LOCKREP; 
+	    data[1] = 0xF0;
+	    return ARCH_CHECK_ID_PREFIX;
+	}
+	R E P N E	{
+	    data[0] = X86_LOCKREP;
+	    data[1] = 0xF2;
+	    return ARCH_CHECK_ID_PREFIX;
+	}
+	R E P N Z	{
+	    data[0] = X86_LOCKREP;
+	    data[1] = 0xF2;
+	    return ARCH_CHECK_ID_PREFIX;
+	}
+	R E P		{
+	    data[0] = X86_LOCKREP;
+	    data[1] = 0xF3;
+	    return ARCH_CHECK_ID_PREFIX;
+	}
+	R E P E		{
+	    data[0] = X86_LOCKREP;
+	    data[1] = 0xF4;
+	    return ARCH_CHECK_ID_PREFIX;
+	}
+	R E P Z		{
+	    data[0] = X86_LOCKREP;
+	    data[1] = 0xF4;
+	    return ARCH_CHECK_ID_PREFIX;
+	}
+
+	/* control, debug, and test registers */
+	C R [02-4]	{
+	    data[0] = X86_CRREG | (oid[2]-'0');
+	    return ARCH_CHECK_ID_REG;
+	}
+	D R [0-7]	{
+	    data[0] = X86_DRREG | (oid[2]-'0');
+	    return ARCH_CHECK_ID_REG;
+	}
+	T R [0-7]	{
+	    data[0] = X86_TRREG | (oid[2]-'0');
+	    return ARCH_CHECK_ID_REG;
+	}
+
+	/* floating point, MMX, and SSE/SSE2 registers */
+	S T [0-7]	{
+	    data[0] = X86_FPUREG | (oid[2]-'0');
+	    return ARCH_CHECK_ID_REG;
+	}
+	M M [0-7]	{
+	    data[0] = X86_MMXREG | (oid[2]-'0');
+	    return ARCH_CHECK_ID_REG;
+	}
+	X M M [0-7]	{
+	    data[0] = X86_XMMREG | (oid[2]-'0');
+	    return ARCH_CHECK_ID_REG;
+	}
+
+	/* integer registers */
+	E A X	{ data[0] = X86_REG32 | 0; return ARCH_CHECK_ID_REG; }
+	E C X	{ data[0] = X86_REG32 | 1; return ARCH_CHECK_ID_REG; }
+	E D X	{ data[0] = X86_REG32 | 2; return ARCH_CHECK_ID_REG; }
+	E B X	{ data[0] = X86_REG32 | 3; return ARCH_CHECK_ID_REG; }
+	E S P	{ data[0] = X86_REG32 | 4; return ARCH_CHECK_ID_REG; }
+	E B P	{ data[0] = X86_REG32 | 5; return ARCH_CHECK_ID_REG; }
+	E S I	{ data[0] = X86_REG32 | 6; return ARCH_CHECK_ID_REG; }
+	E D I	{ data[0] = X86_REG32 | 7; return ARCH_CHECK_ID_REG; }
+
+	A X	{ data[0] = X86_REG16 | 0; return ARCH_CHECK_ID_REG; }
+	C X	{ data[0] = X86_REG16 | 1; return ARCH_CHECK_ID_REG; }
+	D X	{ data[0] = X86_REG16 | 2; return ARCH_CHECK_ID_REG; }
+	B X	{ data[0] = X86_REG16 | 3; return ARCH_CHECK_ID_REG; }
+	S P	{ data[0] = X86_REG16 | 4; return ARCH_CHECK_ID_REG; }
+	B P	{ data[0] = X86_REG16 | 5; return ARCH_CHECK_ID_REG; }
+	S I	{ data[0] = X86_REG16 | 6; return ARCH_CHECK_ID_REG; }
+	D I	{ data[0] = X86_REG16 | 7; return ARCH_CHECK_ID_REG; }
+
+	A L	{ data[0] = X86_REG8 | 0; return ARCH_CHECK_ID_REG; }
+	C L	{ data[0] = X86_REG8 | 1; return ARCH_CHECK_ID_REG; }
+	D L	{ data[0] = X86_REG8 | 2; return ARCH_CHECK_ID_REG; }
+	B L	{ data[0] = X86_REG8 | 3; return ARCH_CHECK_ID_REG; }
+	A H	{ data[0] = X86_REG8 | 4; return ARCH_CHECK_ID_REG; }
+	C H	{ data[0] = X86_REG8 | 5; return ARCH_CHECK_ID_REG; }
+	D H	{ data[0] = X86_REG8 | 6; return ARCH_CHECK_ID_REG; }
+	B H	{ data[0] = X86_REG8 | 7; return ARCH_CHECK_ID_REG; }
+
+	/* segment registers */
+	E S	{ data[0] = 0x2600; return ARCH_CHECK_ID_SEGREG; }
+	C S	{ data[0] = 0x2e01; return ARCH_CHECK_ID_SEGREG; }
+	S S	{ data[0] = 0x3602; return ARCH_CHECK_ID_SEGREG; }
+	D S	{ data[0] = 0x3e03; return ARCH_CHECK_ID_SEGREG; }
+	F S	{ data[0] = 0x6404; return ARCH_CHECK_ID_SEGREG; }
+	G S	{ data[0] = 0x6505; return ARCH_CHECK_ID_SEGREG; }
+
+	/* instructions */
+
+	/* Move */
+	M O V { RET_INSN(mov, 0, CPU_Any); }
+	/* Move with sign/zero extend */
+	M O V S X { RET_INSN(movszx, 0xBE, CPU_386); }
+	M O V Z X { RET_INSN(movszx, 0xB6, CPU_386); }
+	/* Push instructions */
+	/* P U S H */
+	P U S H A { RET_INSN(onebyte, 0x0060, CPU_186); }
+	P U S H A D { RET_INSN(onebyte, 0x2060, CPU_386); }
+	P U S H A W { RET_INSN(onebyte, 0x1060, CPU_186); }
+	/* Pop instructions */
+	/* P O P */
+	P O P A { RET_INSN(onebyte, 0x0061, CPU_186); }
+	P O P A D { RET_INSN(onebyte, 0x2061, CPU_386); }
+	P O P A W { RET_INSN(onebyte, 0x1061, CPU_186); }
+	/* Exchange */
+	/* X C H G */
+	/* In/out from ports */
+	/* I N */
+	/* O U T */
+	/* Load effective address */
+	/* L E A */
+	/* Load segment registers from memory */
+	/* L D S */
+	/* L E S */
+	/* L F S */
+	/* L G S */
+	/* L S S */
+	/* Flags register instructions */
+	C L C { RET_INSN(onebyte, 0x00F8, CPU_Any); }
+	C L D { RET_INSN(onebyte, 0x00FC, CPU_Any); }
+	C L I { RET_INSN(onebyte, 0x00FA, CPU_Any); }
+	C L T S { RET_INSN(twobyte, 0x0F06, CPU_286|CPU_Priv); }
+	C M C { RET_INSN(onebyte, 0x00F5, CPU_Any); }
+	L A H F { RET_INSN(onebyte, 0x009F, CPU_Any); }
+	S A H F { RET_INSN(onebyte, 0x009E, CPU_Any); }
+	P U S H F { RET_INSN(onebyte, 0x009C, CPU_Any); }
+	P U S H F D { RET_INSN(onebyte, 0x209C, CPU_386); }
+	P U S H F W { RET_INSN(onebyte, 0x109C, CPU_Any); }
+	P O P F { RET_INSN(onebyte, 0x009D, CPU_Any); }
+	P O P F D { RET_INSN(onebyte, 0x209D, CPU_386); }
+	P O P F W { RET_INSN(onebyte, 0x109D, CPU_Any); }
+	S T C { RET_INSN(onebyte, 0x00F9, CPU_Any); }
+	S T D { RET_INSN(onebyte, 0x00FD, CPU_Any); }
+	S T I { RET_INSN(onebyte, 0x00FB, CPU_Any); }
+	/* Arithmetic */
+	/* A D D */
+	/* I N C */
+	/* S U B */
+	/* D E C */
+	/* S B B */
+	/* C M P */
+	/* T E S T */
+	/* A N D */
+	/* O R */
+	/* X O R */
+	/* A D C */
+	/* N E G */
+	/* N O T */
+	A A A { RET_INSN(onebyte, 0x0037, CPU_Any); }
+	A A S { RET_INSN(onebyte, 0x003F, CPU_Any); }
+	D A A { RET_INSN(onebyte, 0x0027, CPU_Any); }
+	D A S { RET_INSN(onebyte, 0x002F, CPU_Any); }
+	/* A A D */
+	/* A A M */
+	/* Conversion instructions */
+	C B W { RET_INSN(onebyte, 0x1098, CPU_Any); }
+	C W D E { RET_INSN(onebyte, 0x2098, CPU_386); }
+	C W D { RET_INSN(onebyte, 0x1099, CPU_Any); }
+	C D Q { RET_INSN(onebyte, 0x2099, CPU_386); }
+	/* Multiplication and division */
+	/* M U L */
+	/* I M U L */
+	/* D I V */
+	/* I D I V */
+	/* Shifts */
+	/* R O L */
+	/* R O R */
+	/* R C L */
+	/* R C R */
+	/* S A L */
+	/* S H L */
+	/* S H R */
+	/* S A R */
+	/* S H L D */
+	/* S H R D */
+	/* Control transfer instructions (unconditional) */
+	/* C A L L */
+	/* J M P */
+	R E T { RET_INSN(onebyte, 0x00C3, CPU_Any); }
+	/* R E T N */
+	/* R E T F */
+	/* E N T E R */
+	L E A V E { RET_INSN(onebyte, 0x00C9, CPU_186); }
+	/* Conditional jumps */
+	/* J O */
+	/* J N O */
+	/* J B */
+	/* JC */
+	/* J N A E */
+	/* J N B */
+	/* J N C */
+	/* J A E */
+	/* J E */
+	/* J Z */
+	/* J N E */
+	/* J N Z */
+	/* J B E */
+	/* J N A */
+	/* J N B E */
+	/* J A */
+	/* J S */
+	/* J N S */
+	/* J P */
+	/* J P E */
+	/* J N P */
+	/* J P O */
+	/* J L */
+	/* J N G E */
+	/* J N L */
+	/* J G E */
+	/* J L E */
+	/* J N G */
+	/* J N L E */
+	/* J G */
+	/* J C X Z */
+	/* J E C X Z */
+	/* Loop instructions */
+	/* L O O P */
+	/* L O O P Z */
+	/* L O O P E */
+	/* L O O P N Z */
+	/* L O O P N E */
+	/* Set byte on flag instructions */
+	/* S E T O */
+	/* S E T N O */
+	/* S E T B */
+	/* S E T C */
+	/* S E T N A E */
+	/* S E T N B */
+	/* S E T N C */
+	/* S E T A E */
+	/* S E T E */
+	/* S E T Z */
+	/* S E T N E */
+	/* S E T N Z */
+	/* S E T B E */
+	/* S E T N A */
+	/* S E T N B E */
+	/* S E T A */
+	/* S E T S */
+	/* S E T N S */
+	/* S E T P */
+	/* S E T P E */
+	/* S E T N P */
+	/* S E T P O */
+	/* S E T L */
+	/* S E T N G E */
+	/* S E T N L */
+	/* S E T G E */
+	/* S E T L E */
+	/* S E T N G */
+	/* S E T N L E */
+	/* S E T G */
+	/* String instructions. */
+	C M P S B { RET_INSN(onebyte, 0x00A6, CPU_Any); }
+	C M P S W { RET_INSN(onebyte, 0x10A7, CPU_Any); }
+	/* C M P S D */
+	I N S B { RET_INSN(onebyte, 0x006C, CPU_Any); }
+	I N S W { RET_INSN(onebyte, 0x106D, CPU_Any); }
+	I N S D { RET_INSN(onebyte, 0x206D, CPU_386); }
+	O U T S B { RET_INSN(onebyte, 0x006E, CPU_Any); }
+	O U T S W { RET_INSN(onebyte, 0x106F, CPU_Any); }
+	O U T S D { RET_INSN(onebyte, 0x206F, CPU_386); }
+	L O D S B { RET_INSN(onebyte, 0x00AC, CPU_Any); }
+	L O D S W { RET_INSN(onebyte, 0x10AD, CPU_Any); }
+	L O D S D { RET_INSN(onebyte, 0x20AD, CPU_386); }
+	M O V S B { RET_INSN(onebyte, 0x00A4, CPU_Any); }
+	M O V S W { RET_INSN(onebyte, 0x10A5, CPU_Any); }
+	/* M O V S D */
+	S C A S B { RET_INSN(onebyte, 0x00AE, CPU_Any); }
+	S C A S W { RET_INSN(onebyte, 0x10AF, CPU_Any); }
+	S C A S D { RET_INSN(onebyte, 0x20AF, CPU_386); }
+	S T O S B { RET_INSN(onebyte, 0x00AA, CPU_Any); }
+	S T O S W { RET_INSN(onebyte, 0x10AB, CPU_Any); }
+	S T O S D { RET_INSN(onebyte, 0x20AB, CPU_386); }
+	X L A T B? { RET_INSN(onebyte, 0x00D7, CPU_Any); }
+	/* Bit manipulation */
+	/* B S F */
+	/* B S R */
+	/* B T */
+	/* B T C */
+	/* B T R */
+	/* B T S */
+	/* Interrupts and operating system instructions */
+	/* I N T */
+	I N T "3" { RET_INSN(onebyte, 0x00CC, CPU_Any); }
+	I N T "03" { RET_INSN(onebyte, 0x00CC, CPU_Any); }
+	I N T O { RET_INSN(onebyte, 0x00CE, CPU_Any); }
+	I R E T { RET_INSN(onebyte, 0x00CF, CPU_Any); }
+	I R E T W { RET_INSN(onebyte, 0x10CF, CPU_Any); }
+	I R E T D { RET_INSN(onebyte, 0x20CF, CPU_386); }
+	R S M { RET_INSN(twobyte, 0x0FAA, CPU_586|CPU_SMM); }
+	/* B O U N D */
+	H L T { RET_INSN(onebyte, 0x00F4, CPU_Priv); }
+	N O P { RET_INSN(onebyte, 0x0090, CPU_Any); }
+	/* Protection control */
+	/* A R P L */
+	/* L A R */
+	L G D T { RET_INSN(twobytemem, 0x020F01, CPU_286|CPU_Priv); }
+	L I D T { RET_INSN(twobytemem, 0x030F01, CPU_286|CPU_Priv); }
+	/* L L D T */
+	/* L M S W */
+	/* L S L */
+	/* L T R */
+	S G D T { RET_INSN(twobytemem, 0x000F01, CPU_286|CPU_Priv); }
+	S I D T { RET_INSN(twobytemem, 0x010F01, CPU_286|CPU_Priv); }
+	/* S L D T */
+	/* S M S W */
+	/* S T R */
+	/* V E R R */
+	/* V E R W */
+	/* Floating point instructions */
+	/* F L D */
+	/* F I L D */
+	/* F B L D */
+	/* F S T */
+	/* F I S T */
+	/* F S T P */
+	/* F I S T P */
+	/* F B S T P */
+	/* F X C H */
+	/* F C O M */
+	/* F I C O M */
+	/* F C O M P */
+	/* F I C O M P */
+	F C O M P P { RET_INSN(twobyte, 0xDED9, CPU_FPU); }
+	/* F U C O M */
+	/* F U C O M P */
+	F U C O M P P { RET_INSN(twobyte, 0xDAE9, CPU_286|CPU_FPU); }
+	F T S T { RET_INSN(twobyte, 0xD9E4, CPU_FPU); }
+	F X A M { RET_INSN(twobyte, 0xD9E5, CPU_FPU); }
+	F L D "1" { RET_INSN(twobyte, 0xD9E8, CPU_FPU); }
+	F L D L "2" T { RET_INSN(twobyte, 0xD9E9, CPU_FPU); }
+	F L D L "2" E { RET_INSN(twobyte, 0xD9EA, CPU_FPU); }
+	F L D P I { RET_INSN(twobyte, 0xD9EB, CPU_FPU); }
+	F L D L G "2" { RET_INSN(twobyte, 0xD9EC, CPU_FPU); }
+	F L D L N "2" { RET_INSN(twobyte, 0xD9ED, CPU_FPU); }
+	F L D Z { RET_INSN(twobyte, 0xD9EE, CPU_FPU); }
+	/* F A D D */
+	/* F A D D P */
+	/* F I A D D */
+	/* F S U B */
+	/* F I S U B */
+	/* F S U B P */
+	/* F S U B R */
+	/* F I S U B R */
+	/* F S U B R P */
+	/* F M U L */
+	/* F I M U L */
+	/* F M U L P */
+	/* F D I V */
+	/* F I D I V */
+	/* F D I V P */
+	/* F D I V R */
+	/* F I D I V R */
+	/* F D I V R P */
+	F "2" X M "1" { RET_INSN(twobyte, 0xD9F0, CPU_FPU); }
+	F Y L "2" X { RET_INSN(twobyte, 0xD9F1, CPU_FPU); }
+	F P T A N { RET_INSN(twobyte, 0xD9F2, CPU_FPU); }
+	F P A T A N { RET_INSN(twobyte, 0xD9F3, CPU_FPU); }
+	F X T R A C T { RET_INSN(twobyte, 0xD9F4, CPU_FPU); }
+	F P R E M "1" { RET_INSN(twobyte, 0xD9F5, CPU_286|CPU_FPU); }
+	F D E C S T P { RET_INSN(twobyte, 0xD9F6, CPU_FPU); }
+	F I N C S T P { RET_INSN(twobyte, 0xD9F7, CPU_FPU); }
+	F P R E M { RET_INSN(twobyte, 0xD9F8, CPU_FPU); }
+	F Y L "2" X P "1" { RET_INSN(twobyte, 0xD9F9, CPU_FPU); }
+	F S Q R T { RET_INSN(twobyte, 0xD9FA, CPU_FPU); }
+	F S I N C O S { RET_INSN(twobyte, 0xD9FB, CPU_286|CPU_FPU); }
+	F R N D I N T { RET_INSN(twobyte, 0xD9FC, CPU_FPU); }
+	F S C A L E { RET_INSN(twobyte, 0xD9FD, CPU_FPU); }
+	F S I N { RET_INSN(twobyte, 0xD9FE, CPU_286|CPU_FPU); }
+	F C O S { RET_INSN(twobyte, 0xD9FF, CPU_286|CPU_FPU); }
+	F C H S { RET_INSN(twobyte, 0xD9E0, CPU_FPU); }
+	F A B S { RET_INSN(twobyte, 0xD9E1, CPU_FPU); }
+	F N I N I T { RET_INSN(twobyte, 0xDBE3, CPU_FPU); }
+	F I N I T { RET_INSN(threebyte, 0x98DBE3, CPU_FPU); }
+	/* F L D C W */
+	/* F N S T C W */
+	/* F S T C W */
+	/* F N S T S W */
+	/* F S T S W */
+	F N C L E X { RET_INSN(twobyte, 0xDBE2, CPU_FPU); }
+	F C L E X { RET_INSN(threebyte, 0x98DBE2, CPU_FPU); }
+	F N S T E N V { RET_INSN(onebytemem, 0x06D9, CPU_FPU); }
+	F S T E N V { RET_INSN(twobytemem, 0x069BD9, CPU_FPU); }
+	F L D E N V { RET_INSN(onebytemem, 0x04D9, CPU_FPU); }
+	F N S A V E { RET_INSN(onebytemem, 0x06DD, CPU_FPU); }
+	F S A V E { RET_INSN(twobytemem, 0x069BDD, CPU_FPU); }
+	F R S T O R { RET_INSN(onebytemem, 0x04DD, CPU_FPU); }
+	/* F F R E E */
+	/* F F R E E P */
+	F N O P { RET_INSN(twobyte, 0xD9D0, CPU_FPU); }
+	F W A I T { RET_INSN(onebyte, 0x009B, CPU_FPU); }
+	/* Prefixes (should the others be here too? should wait be a prefix? */
+	W A I T { RET_INSN(onebyte, 0x009B, CPU_Any); }
+	/* 486 extensions */
+	/* B S W A P */
+	/* X A D D */
+	/* C M P X C H G */
+	/* C M P X C H G 4 8 6 */
+	I N V D { RET_INSN(twobyte, 0x0F08, CPU_486|CPU_Priv); }
+	W B I N V D { RET_INSN(twobyte, 0x0F09, CPU_486|CPU_Priv); }
+	I N V L P G { RET_INSN(twobytemem, 0x070F01, CPU_486|CPU_Priv); }
+	/* 586+ and late 486 extensions */
+	C P U I D { RET_INSN(twobyte, 0x0FA2, CPU_486); }
+	/* Pentium extensions */
+	W R M S R { RET_INSN(twobyte, 0x0F30, CPU_586|CPU_Priv); }
+	R D T S C { RET_INSN(twobyte, 0x0F31, CPU_586); }
+	R D M S R { RET_INSN(twobyte, 0x0F32, CPU_586|CPU_Priv); }
+	/* C M P X C H G 8 B */
+	/* Pentium II/Pentium Pro extensions */
+	S Y S E N T E R { RET_INSN(twobyte, 0x0F34, CPU_686); }
+	S Y S E X I T { RET_INSN(twobyte, 0x0F35, CPU_686|CPU_Priv); }
+	F X S A V E { RET_INSN(twobytemem, 0x000FAE, CPU_686|CPU_FPU); }
+	F X R S T O R { RET_INSN(twobytemem, 0x010FAE, CPU_686|CPU_FPU); }
+	R D P M C { RET_INSN(twobyte, 0x0F33, CPU_686); }
+	U D "2" { RET_INSN(twobyte, 0x0F0B, CPU_286); }
+	U D "1" { RET_INSN(twobyte, 0x0FB9, CPU_286|CPU_Undoc); }
+	/* C M O V */
+	/* F C M O V */
+	/* F C O M I */
+	/* F U C O M I */
+	/* F C O M I P */
+	/* F U C O M I P */
+	/* Pentium4 extensions */
+	/* M O V N T I */
+	/* C L F L U S H */
+	L F E N C E { RET_INSN(threebyte, 0x0FAEE8, CPU_P3); }
+	M F E N C E { RET_INSN(threebyte, 0x0FAEF0, CPU_P3); }
+	P A U S E { RET_INSN(twobyte, 0xF390, CPU_P4); }
+	/* MMX/SSE2 instructions */
+	E M M S { RET_INSN(twobyte, 0x0F77, CPU_586|CPU_MMX); }
+	/* PIII (Katmai) new instructions / SIMD instructions */
+	/* ... */
+	P R E F E T C H N T A { RET_INSN(twobytemem, 0x000F18, CPU_P3); }
+	P R E F E T C H T "0" { RET_INSN(twobytemem, 0x010F18, CPU_P3); }
+	P R E F E T C H T "1" { RET_INSN(twobytemem, 0x020F18, CPU_P3); }
+	P R E F E T C H T "2" { RET_INSN(twobytemem, 0x030F18, CPU_P3); }
+	/* ... */
+	S F E N C E { RET_INSN(threebyte, 0x0FAEF8, CPU_P3); }
+	/* ... */
+	/* SSE2 instructions */
+	/* AMD 3DNow! instructions */
+	P R E F E T C H { RET_INSN(twobytemem, 0x000F0D, CPU_586|CPU_AMD|CPU_3DNow); }
+	P R E F E T C H W { RET_INSN(twobytemem, 0x010F0D, CPU_586|CPU_AMD|CPU_3DNow); }
+	F E M M S { RET_INSN(twobyte, 0x0F0E, CPU_586|CPU_AMD|CPU_3DNow); }
+	/* ... */
+	/* AMD extensions */
+	S Y S C A L L { RET_INSN(twobyte, 0x0F05, CPU_686|CPU_AMD); }
+	S Y S R E T { RET_INSN(twobyte, 0x0F07, CPU_686|CPU_AMD|CPU_Priv); }
+	/* Cyrix MMX instructions */
+	/* Cyrix extensions */
+	R D S H R { RET_INSN(twobyte, 0x0F36, CPU_686|CPU_Cyrix|CPU_SMM); }
+	/* R S D C */
+	/* R S L D T */
+	/* R S T S */
+	/* S V D C */
+	/* S V L D T */
+	/* S V T S */
+	S M I N T { RET_INSN(twobyte, 0x0F38, CPU_686|CPU_Cyrix); }
+	S M I N T O L D { RET_INSN(twobyte, 0x0F7E, CPU_486|CPU_Cyrix|CPU_Obs); }
+	W R S H R { RET_INSN(twobyte, 0x0F37, CPU_686|CPU_Cyrix|CPU_SMM); }
+	/* Obsolete/undocumented instructions */
+	F S E T P M { RET_INSN(twobyte, 0xDBE4, CPU_286|CPU_FPU|CPU_Obs); }
+	/* I B T S */
+	L O A D A L L { RET_INSN(twobyte, 0x0F07, CPU_386|CPU_Undoc); }
+	L O A D A L L "286" { RET_INSN(twobyte, 0x0F05, CPU_286|CPU_Undoc); }
+	S A L C { RET_INSN(onebyte, 0x00D6, CPU_Undoc); }
+	S M I { RET_INSN(onebyte, 0x00F1, CPU_386|CPU_Undoc); }
+	/* U M O V */
+	/* X B T S */
+
+
+	/* catchalls */
+	[A-Za-z0-9]+	{
+	    return ARCH_CHECK_ID_NONE;
+	}
+	any	{
+	    return ARCH_CHECK_ID_NONE;
+	}
+    */
+}

@@ -289,7 +289,7 @@ main(int argc, char *argv[])
     }
 
     /* Get initial BITS setting from object format */
-    x86_mode_bits = cur_objfmt->default_mode_bits;
+    /*x86_mode_bits = cur_objfmt->default_mode_bits;*/
 
     /* Parse! */
     sections = cur_parser->do_parse(cur_parser, in, in_filename);

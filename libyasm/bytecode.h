@@ -43,8 +43,11 @@ typedef enum {
 /*@only@*/ immval *imm_new_int(unsigned long int_val);
 /*@only@*/ immval *imm_new_expr(/*@keep@*/ expr *e);
 
+/*@observer@*/ const expr *ea_get_disp(const effaddr *ea);
 void ea_set_len(effaddr *ea, unsigned char len);
 void ea_set_nosplit(effaddr *ea, unsigned char nosplit);
+void ea_delete(/*@only@*/ effaddr *ea);
+void ea_print(FILE *f, const effaddr *ea);
 
 void bc_set_multiple(bytecode *bc, /*@keep@*/ expr *e);
 

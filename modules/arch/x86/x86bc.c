@@ -32,7 +32,7 @@
 #include "bytecode.h"
 #include "arch.h"
 
-#include "x86-int.h"
+#include "x86arch.h"
 
 #include "bc-int.h"
 
@@ -54,11 +54,12 @@ x86_bc_new_insn(x86_new_insn_data *d)
 	ead->modrm |= (d->spare << 3) & 0x38;	/* plug in provided bits */
     }
 
-    insn->imm = d->imm;
     if (d->imm) {
+	insn->imm = imm_new_expr(d->imm);
 	insn->imm->len = d->im_len;
 	insn->imm->sign = d->im_sign;
-    }
+    } else
+	insn->imm = NULL;
 
     insn->opcode[0] = d->op[0];
     insn->opcode[1] = d->op[1];
@@ -173,12 +174,12 @@ x86_ea_new_expr(expr *e)
 
 /*@-compmempass@*/
 effaddr *
-x86_ea_new_imm(immval *imm, unsigned char im_len)
+x86_ea_new_imm(expr *imm, unsigned char im_len)
 {
     effaddr *ea = xmalloc(sizeof(effaddr)+sizeof(x86_effaddr_data));
     x86_effaddr_data *ead = ea_get_data(ea);
 
-    ea->disp = imm->val;
+    ea->disp = imm;
     ea->len = im_len;
     ea->nosplit = 0;
     ead->segment = 0;
@@ -320,10 +321,8 @@ x86_bc_delete(bytecode *bc)
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
 	    insn = bc_get_data(bc);
-	    if (insn->ea) {
-		expr_delete(insn->ea->disp);
-		xfree(insn->ea);
-	    }
+	    if (insn->ea)
+		ea_delete(insn->ea);
 	    if (insn->imm) {
 		expr_delete(insn->imm->val);
 		xfree(insn->imm);
@@ -337,39 +336,37 @@ x86_bc_delete(bytecode *bc)
 }
 
 void
+x86_ea_data_print(FILE *f, const effaddr *ea)
+{
+    const x86_effaddr_data *ead = ea_get_const_data(ea);
+    fprintf(f, "%*sSegmentOv=%02x\n", indent_level, "",
+	    (unsigned int)ead->segment);
+    fprintf(f, "%*sModRM=%03o ValidRM=%u NeedRM=%u\n", indent_level, "",
+	    (unsigned int)ead->modrm, (unsigned int)ead->valid_modrm,
+	    (unsigned int)ead->need_modrm);
+    fprintf(f, "%*sSIB=%03o ValidSIB=%u NeedSIB=%u\n", indent_level, "",
+	    (unsigned int)ead->sib, (unsigned int)ead->valid_sib,
+	    (unsigned int)ead->need_sib);
+}
+
+void
 x86_bc_print(FILE *f, const bytecode *bc)
 {
     const x86_insn *insn;
     const x86_jmprel *jmprel;
-    x86_effaddr_data *ead;
 
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
 	    insn = bc_get_const_data(bc);
 	    fprintf(f, "%*s_Instruction_\n", indent_level, "");
 	    fprintf(f, "%*sEffective Address:", indent_level, "");
-	    if (!insn->ea)
-		fprintf(f, " (nil)\n");
-	    else {
-		indent_level++;
-		fprintf(f, "\n%*sDisp=", indent_level, "");
-		expr_print(f, insn->ea->disp);
+	    if (insn->ea) {
 		fprintf(f, "\n");
-		ead = ea_get_data(insn->ea);
-		fprintf(f, "%*sLen=%u SegmentOv=%02x NoSplit=%u\n",
-			indent_level, "", (unsigned int)insn->ea->len,
-			(unsigned int)ead->segment,
-			(unsigned int)insn->ea->nosplit);
-		fprintf(f, "%*sModRM=%03o ValidRM=%u NeedRM=%u\n",
-			indent_level, "", (unsigned int)ead->modrm,
-			(unsigned int)ead->valid_modrm,
-			(unsigned int)ead->need_modrm);
-		fprintf(f, "%*sSIB=%03o ValidSIB=%u NeedSIB=%u\n",
-			indent_level, "", (unsigned int)ead->sib,
-			(unsigned int)ead->valid_sib,
-			(unsigned int)ead->need_sib);
+		indent_level++;
+		ea_print(f, insn->ea);
 		indent_level--;
-	    }
+	    } else
+		fprintf(f, " (nil)\n");
 	    fprintf(f, "%*sImmediate Value:", indent_level, "");
 	    if (!insn->imm)
 		fprintf(f, " (nil)\n");
@@ -477,8 +474,7 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 	x86_effaddr_data ead_t = *ead;  /* structure copy */
 	unsigned char displen = ea->len;
 
-	if ((ea->disp) && ((!ead->valid_sib && ead->need_sib) ||
-			   (!ead->valid_modrm && ead->need_modrm))) {
+	if (ea->disp) {
 	    temp = expr_copy(ea->disp);
 	    assert(temp != NULL);
 

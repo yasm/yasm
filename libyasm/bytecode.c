@@ -103,6 +103,12 @@ imm_new_expr(expr *expr_ptr)
     return im;
 }
 
+const expr *
+ea_get_disp(const effaddr *ptr)
+{
+    return ptr->disp;
+}
+
 void
 ea_set_len(effaddr *ptr, unsigned char len)
 {
@@ -124,6 +130,30 @@ ea_set_nosplit(effaddr *ptr, unsigned char nosplit)
 
     ptr->nosplit = nosplit;
 }
+
+/*@-nullstate@*/
+void
+ea_delete(effaddr *ea)
+{
+    if (cur_arch->ea_data_delete)
+	cur_arch->ea_data_delete(ea);
+    expr_delete(ea->disp);
+    xfree(ea);
+}
+/*@=nullstate@*/
+
+/*@-nullstate@*/
+void
+ea_print(FILE *f, const effaddr *ea)
+{
+    fprintf(f, "%*sDisp=", indent_level, "");
+    expr_print(f, ea->disp);
+    fprintf(f, "\n%*sLen=%u\n", indent_level, "", (unsigned int)ea->len);
+    fprintf(f, "%*sNoSplit=%u\n", indent_level, "", (unsigned int)ea->nosplit);
+    if (cur_arch->ea_data_print)
+	cur_arch->ea_data_print(f, ea);
+}
+/*@=nullstate@*/
 
 void
 bc_set_multiple(bytecode *bc, expr *e)
@@ -258,6 +288,7 @@ bc_delete(bytecode *bc)
 	    break;
 	case BC_OBJFMT_DATA:
 	    objfmt_data = bc_get_data(bc);
+	    assert(cur_objfmt != NULL);
 	    if (cur_objfmt->bc_objfmt_data_delete)
 		cur_objfmt->bc_objfmt_data_delete(objfmt_data->type,
 						  objfmt_data->data);
@@ -336,6 +367,7 @@ bc_print(FILE *f, const bytecode *bc)
 	case BC_OBJFMT_DATA:
 	    objfmt_data = bc_get_const_data(bc);
 	    fprintf(f, "%*s_ObjFmt_Data_\n", indent_level, "");
+	    assert(cur_objfmt != NULL);
 	    if (cur_objfmt->bc_objfmt_data_print)
 		cur_objfmt->bc_objfmt_data_print(f, objfmt_data->type,
 						 objfmt_data->data);
@@ -408,7 +440,7 @@ bc_resolve_reserve(bytecode_reserve *reserve, unsigned long *len, int save,
     expr_expand_labelequ(*tempp, sect, 1, resolve_label);
     num = expr_get_intnum(tempp);
     if (!num) {
-	if (expr_contains(temp, EXPR_FLOAT))
+	if (temp && expr_contains(temp, EXPR_FLOAT))
 	    ErrorAt(line,
 		    _("expression must not contain floating point value"));
 	retval = BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
@@ -534,10 +566,10 @@ bc_resolve(bytecode *bc, int save, const section *sect,
 	case BC_ALIGN:
 	    /* TODO */
 	    InternalError(_("TODO: align bytecode not implemented!"));
-	    break;
+	    /*break;*/
 	case BC_OBJFMT_DATA:
 	    InternalError(_("resolving objfmt data bytecode?"));
-	    break;
+	    /*break;*/
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
 		retval = cur_arch->bc.bc_resolve(bc, save, sect,
@@ -559,7 +591,7 @@ bc_resolve(bytecode *bc, int save, const section *sect,
 	expr_expand_labelequ(*tempp, sect, 1, resolve_label);
 	num = expr_get_intnum(tempp);
 	if (!num) {
-	    if (expr_contains(temp, EXPR_FLOAT))
+	    if (temp && expr_contains(temp, EXPR_FLOAT))
 		ErrorAt(bc->line,
 			_("expression must not contain floating point value"));
 	    retval = BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
@@ -716,7 +748,7 @@ bc_tobytes(bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 	case BC_ALIGN:
 	    /* TODO */
 	    InternalError(_("TODO: align bytecode not implemented!"));
-	    break;
+	    /*break;*/
 	case BC_OBJFMT_DATA:
 	    objfmt_data = bc_get_data(bc);
 	    if (output_bc_objfmt_data)

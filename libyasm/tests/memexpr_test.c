@@ -32,7 +32,7 @@
 
 #include "bytecode.h"
 #include "arch.h"
-#include "x86-int.h"
+#include "x86arch.h"
 
 typedef enum {
     REG_AX = 0,

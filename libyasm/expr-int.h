@@ -39,11 +39,7 @@ struct ExprItem {
 	expr *expn;
 	intnum *intn;
 	floatnum *flt;
-	/* FIXME: reg structure is moderately x86-specific (namely size) */
-	struct reg {
-	    unsigned char num;
-	    unsigned char size;	/* in bits, eg AX=16, EAX=32 */
-	} reg;
+	unsigned long reg;
     } data;
 };
 
@@ -62,6 +58,9 @@ struct expr {
  *
  * Stops early (and returns 1) if func returns 1.  Otherwise returns 0.
  */
+int expr_traverse_leaves_in_const(const expr *e, /*@null@*/ void *d,
+				  int (*func) (/*@null@*/ const ExprItem *ei,
+					       /*@null@*/ void *d));
 int expr_traverse_leaves_in(expr *e, /*@null@*/ void *d,
 			    int (*func) (/*@null@*/ ExprItem *ei,
 					 /*@null@*/ void *d));
@@ -88,6 +87,6 @@ void expr_order_terms(expr *e);
 /* Copy entire expression EXCEPT for index "except" at *top level only*. */
 expr *expr_copy_except(const expr *e, int except);
 
-int expr_contains(expr *e, ExprType t);
+int expr_contains(const expr *e, ExprType t);
 
 #endif
