@@ -1043,51 +1043,223 @@ static const x86_insn_info clflush_insn[] = {
 
 /* MMX/SSE2 instructions */
 static const x86_insn_info movd_insn[] = {
-    { CPU_586|CPU_MMX, 0, 0, 2, {0x0F, 0x6E, 0}, 0, 2,
+    { CPU_MMX, 0, 0, 2, {0x0F, 0x6E, 0}, 0, 2,
       {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_586|CPU_MMX, 0, 0, 2, {0x0F, 0x7E, 0}, 0, 2,
+    { CPU_MMX, 0, 0, 2, {0x0F, 0x7E, 0}, 0, 2,
       {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_64|OPA_Spare, 0} },
-    { CPU_P4|CPU_SSE2, 0, 0, 3, {0x66, 0x0F, 0x6E}, 0, 2,
+    { CPU_SSE2, 0, 0, 3, {0x66, 0x0F, 0x6E}, 0, 2,
       {OPT_Reg|OPS_128|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_P4|CPU_SSE2, 0, 0, 3, {0x66, 0x0F, 0x7E}, 0, 2,
+    { CPU_SSE2, 0, 0, 3, {0x66, 0x0F, 0x7E}, 0, 2,
       {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_128|OPA_Spare, 0} }
 };
 static const x86_insn_info movq_insn[] = {
-    { CPU_586|CPU_MMX, 0, 0, 2, {0x0F, 0x6F, 0}, 0, 2,
+    { CPU_MMX, 0, 0, 2, {0x0F, 0x6F, 0}, 0, 2,
       {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_586|CPU_MMX, 0, 0, 2, {0x0F, 0x7F, 0}, 0, 2,
+    { CPU_MMX, 0, 0, 2, {0x0F, 0x7F, 0}, 0, 2,
       {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_64|OPA_Spare, 0} },
-    { CPU_P4|CPU_SSE2, 0, 0, 3, {0xF3, 0x0F, 0x7E}, 0, 2,
+    { CPU_SSE2, 0, 0, 3, {0xF3, 0x0F, 0x7E}, 0, 2,
       {OPT_Reg|OPS_128|OPA_Spare, OPT_Reg|OPS_128|OPA_EA, 0} },
-    { CPU_P4|CPU_SSE2, 0, 0, 3, {0xF3, 0x0F, 0x7E}, 0, 2,
+    { CPU_SSE2, 0, 0, 3, {0xF3, 0x0F, 0x7E}, 0, 2,
       {OPT_Reg|OPS_128|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_P4|CPU_SSE2, 0, 0, 3, {0x66, 0x0F, 0xD6}, 0, 2,
+    { CPU_SSE2, 0, 0, 3, {0x66, 0x0F, 0xD6}, 0, 2,
       {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_128|OPA_Spare, 0} }
 };
 static const x86_insn_info mmxsse2_insn[] = {
-    { CPU_586|CPU_MMX, MOD_Op1Add, 0, 2, {0x0F, 0x00, 0}, 0, 2,
+    { CPU_MMX, MOD_Op1Add, 0, 2, {0x0F, 0x00, 0}, 0, 2,
       {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_P4|CPU_SSE2, MOD_Op2Add, 0, 3, {0x66, 0x0F, 0x00}, 0, 2,
+    { CPU_SSE2, MOD_Op2Add, 0, 3, {0x66, 0x0F, 0x00}, 0, 2,
       {OPT_Reg|OPS_128|OPA_Spare, OPT_RM|OPS_128|OPS_Relaxed|OPA_EA, 0} }
 };
 static const x86_insn_info pshift_insn[] = {
-    { CPU_586|CPU_MMX, MOD_Op1Add, 0, 2, {0x0F, 0x00, 0}, 0, 2,
+    { CPU_MMX, MOD_Op1Add, 0, 2, {0x0F, 0x00, 0}, 0, 2,
       {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_586|CPU_MMX, MOD_Gap0|MOD_Op1Add|MOD_SpAdd, 0, 2, {0x0F, 0x00, 0}, 0,
+    { CPU_MMX, MOD_Gap0|MOD_Op1Add|MOD_SpAdd, 0, 2, {0x0F, 0x00, 0}, 0,
       2, {OPT_Reg|OPS_64|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
-    { CPU_P4|CPU_SSE2, MOD_Op2Add, 0, 3, {0x66, 0x0F, 0x00}, 0, 2,
+    { CPU_SSE2, MOD_Op2Add, 0, 3, {0x66, 0x0F, 0x00}, 0, 2,
       {OPT_Reg|OPS_128|OPA_Spare, OPT_RM|OPS_128|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_P4|CPU_SSE2, MOD_Gap0|MOD_Op2Add|MOD_SpAdd, 0, 3, {0x66, 0x0F, 0x00},
+    { CPU_SSE2, MOD_Gap0|MOD_Op2Add|MOD_SpAdd, 0, 3, {0x66, 0x0F, 0x00},
       0, 2, {OPT_Reg|OPS_128|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} }
 };
 
-/* TODO: PIII (Katmai) new instructions / SIMD instructiosn */
+/* PIII (Katmai) new instructions / SIMD instructiosn */
+static const x86_insn_info sseps_insn[] = {
+    { CPU_SSE, MOD_Op1Add, 0, 2, {0x0F, 0x00, 0}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_RM|OPS_128|OPS_Relaxed|OPA_EA, 0} }
+};
+static const x86_insn_info ssess_insn[] = {
+    { CPU_SSE, MOD_Op0Add|MOD_Op2Add, 0, 3, {0x00, 0x0F, 0x00}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_RM|OPS_128|OPS_Relaxed|OPA_EA, 0} }
+};
+static const x86_insn_info ssecmpps_insn[] = {
+    { CPU_SSE, MOD_Imm8, 0, 2, {0x0F, 0xC2, 0}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_RM|OPS_128|OPS_Relaxed|OPA_EA, 0} }
+};
+static const x86_insn_info ssecmpss_insn[] = {
+    { CPU_SSE, MOD_Op0Add|MOD_Imm8, 0, 3, {0x00, 0x0F, 0xC2}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_RM|OPS_128|OPS_Relaxed|OPA_EA, 0} }
+};
+static const x86_insn_info ssepsimm_insn[] = {
+    { CPU_SSE, MOD_Op1Add, 0, 2, {0x0F, 0x00, 0}, 0, 3,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_RM|OPS_128|OPS_Relaxed|OPA_EA,
+       OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm} }
+};
+static const x86_insn_info ssessimm_insn[] = {
+    { CPU_SSE, MOD_Op0Add|MOD_Op2Add, 0, 3, {0x00, 0x0F, 0x00}, 0, 3,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_RM|OPS_128|OPS_Relaxed|OPA_EA,
+       OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm} }
+};
+static const x86_insn_info ldstmxcsr_insn[] = {
+    { CPU_SSE, MOD_SpAdd, 0, 2, {0x0F, 0xAE, 0}, 0, 1,
+      {OPT_Mem|OPS_32|OPS_Relaxed|OPA_EA, 0, 0} }
+};
+static const x86_insn_info maskmovq_insn[] = {
+    { CPU_P3|CPU_MMX, 0, 0, 2, {0x0F, 0xF7, 0}, 0, 2,
+      {OPT_Reg|OPS_64|OPA_Spare, OPT_Reg|OPS_64|OPA_EA, 0} }
+};
+static const x86_insn_info movaups_insn[] = {
+    { CPU_SSE, MOD_Op1Add, 0, 2, {0x0F, 0x00, 0}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_RM|OPS_128|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_SSE, MOD_Op1Add, 0, 2, {0x0F, 0x01, 0}, 0, 2,
+      {OPT_RM|OPS_128|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_128|OPA_Spare, 0} }
+};
+static const x86_insn_info movhllhps_insn[] = {
+    { CPU_SSE, MOD_Op1Add, 0, 2, {0x0F, 0x00, 0}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_Reg|OPS_128|OPA_EA, 0} }
+};
+static const x86_insn_info movhlps_insn[] = {
+    { CPU_SSE, MOD_Op1Add, 0, 2, {0x0F, 0x00, 0}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_Mem|OPS_64|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_SSE, MOD_Op1Add, 0, 2, {0x0F, 0x01, 0}, 0, 2,
+      {OPT_Mem|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_128|OPA_Spare, 0} }
+};
+static const x86_insn_info movmskps_insn[] = {
+    { CPU_SSE, 0, 0, 2, {0x0F, 0x50, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_EA, OPT_Reg|OPS_128|OPA_Spare, 0} }
+};
+static const x86_insn_info movntps_insn[] = {
+    { CPU_SSE, 0, 0, 2, {0x0F, 0x2B, 0}, 0, 2,
+      {OPT_Mem|OPS_128|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_128|OPA_Spare, 0} }
+};
+static const x86_insn_info movntq_insn[] = {
+    { CPU_SSE, 0, 0, 2, {0x0F, 0xE7, 0}, 0, 2,
+      {OPT_Mem|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_128|OPA_Spare, 0} }
+};
+static const x86_insn_info movss_insn[] = {
+    { CPU_SSE, 0, 0, 3, {0xF3, 0x0F, 0x10}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_Reg|OPS_128|OPA_EA, 0} },
+    { CPU_SSE, 0, 0, 3, {0xF3, 0x0F, 0x10}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_Mem|OPS_64|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_SSE, 0, 0, 3, {0xF3, 0x0F, 0x11}, 0, 2,
+      {OPT_Mem|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_128|OPA_Spare, 0} }
+};
+static const x86_insn_info pextrw_insn[] = {
+    { CPU_P3|CPU_MMX, 0, 0, 2, {0x0F, 0xC5, 0}, 0, 3,
+      {OPT_Reg|OPS_32|OPA_EA, OPT_Reg|OPS_64|OPA_Spare,
+       OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm} },
+    { CPU_SSE2, 0, 0, 3, {0x66, 0x0F, 0xC5}, 0, 3,
+      {OPT_Reg|OPS_32|OPA_EA, OPT_Reg|OPS_128|OPA_Spare,
+       OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm} }
+};
+static const x86_insn_info pinsrw_insn[] = {
+    { CPU_P3|CPU_MMX, 0, 0, 2, {0x0F, 0xC4, 0}, 0, 3,
+      {OPT_Reg|OPS_64|OPA_Spare, OPT_Reg|OPS_32|OPA_EA,
+       OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm} },
+    { CPU_P3|CPU_MMX, 0, 0, 2, {0x0F, 0xC4, 0}, 0, 3,
+      {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA,
+       OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm} },
+    { CPU_SSE2, 0, 0, 3, {0x66, 0x0F, 0xC4}, 0, 3,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_Reg|OPS_32|OPA_EA,
+       OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm} },
+    { CPU_SSE2, 0, 0, 3, {0x66, 0x0F, 0xC4}, 0, 3,
+      {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA,
+       OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm} }
+};
+static const x86_insn_info pmovmskb_insn[] = {
+    { CPU_P3|CPU_MMX, 0, 0, 2, {0x0F, 0xD7, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_EA, OPT_Reg|OPS_64|OPA_Spare, 0} },
+    { CPU_SSE2, 0, 0, 3, {0x66, 0x0F, 0xD7}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_EA, OPT_Reg|OPS_128|OPA_Spare, 0} }
+};
+static const x86_insn_info pshufw_insn[] = {
+    { CPU_P3|CPU_MMX, 0, 0, 2, {0x0F, 0x70, 0}, 0, 2,
+      {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA,
+       OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm} }
+};
 
-/* TODO: SSE2 instructions */
+/* SSE2 instructions */
+static const x86_insn_info cmpsd_insn[] = {
+    { CPU_Any, 0, 32, 1, {0xA7, 0, 0}, 0, 0, {0, 0, 0} },
+    { CPU_SSE2, 0, 0, 3, {0xF2, 0x0F, 0xC2}, 0, 3,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_RM|OPS_128|OPS_Relaxed|OPA_EA,
+       OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm} }
+};
+static const x86_insn_info movaupd_insn[] = {
+    { CPU_SSE2, MOD_Op2Add, 0, 3, {0x66, 0x0F, 0x00}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_RM|OPS_128|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_SSE2, MOD_Op2Add, 0, 3, {0x66, 0x0F, 0x01}, 0, 2,
+      {OPT_RM|OPS_128|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_128|OPA_Spare, 0} }
+};
+static const x86_insn_info movhlpd_insn[] = {
+    { CPU_SSE2, MOD_Op2Add, 0, 3, {0x66, 0x0F, 0x00}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_Mem|OPS_64|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_SSE2, MOD_Op2Add, 0, 3, {0x66, 0x0F, 0x01}, 0, 2,
+      {OPT_Mem|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_128|OPA_Spare, 0} }
+};
+static const x86_insn_info movmskpd_insn[] = {
+    { CPU_SSE2, 0, 0, 3, {0x66, 0x0F, 0x50}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_EA, OPT_Reg|OPS_128|OPA_Spare, 0} }
+};
+static const x86_insn_info movntpddq_insn[] = {
+    { CPU_SSE2, MOD_Op2Add, 0, 3, {0x66, 0x0F, 0x00}, 0, 2,
+      {OPT_Mem|OPS_128|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_128|OPA_Spare, 0} }
+};
+static const x86_insn_info movsd_insn[] = {
+    { CPU_Any, 0, 32, 1, {0xA5, 0, 0}, 0, 0, {0, 0, 0} },
+    { CPU_SSE2, 0, 0, 3, {0xF2, 0x0F, 0x10}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_Reg|OPS_128|OPA_EA, 0} },
+    { CPU_SSE2, 0, 0, 3, {0xF2, 0x0F, 0x10}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_Mem|OPS_64|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_SSE2, 0, 0, 3, {0xF2, 0x0F, 0x11}, 0, 2,
+      {OPT_Mem|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_128|OPA_Spare, 0} }
+};
+static const x86_insn_info maskmovdqu_insn[] = {
+    { CPU_SSE2, 0, 0, 3, {0x66, 0x0F, 0xF7}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_Reg|OPS_128|OPA_EA, 0} }
+};
+static const x86_insn_info movdqau_insn[] = {
+    { CPU_SSE2, MOD_Op0Add, 0, 3, {0x00, 0x0F, 0x6F}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_RM|OPS_128|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_SSE2, MOD_Op0Add, 0, 3, {0x00, 0x0F, 0x7F}, 0, 2,
+      {OPT_RM|OPS_128|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_128|OPA_Spare, 0} }
+};
+static const x86_insn_info movdq2q_insn[] = {
+    { CPU_SSE2, 0, 0, 3, {0xF2, 0x0F, 0xD6}, 0, 2,
+      {OPT_Reg|OPS_64|OPA_Spare, OPT_Reg|OPS_128|OPA_EA, 0} }
+};
+static const x86_insn_info movq2dq_insn[] = {
+    { CPU_SSE2, 0, 0, 3, {0xF3, 0x0F, 0xD6}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_Spare, OPT_Reg|OPS_64|OPA_EA, 0} }
+};
+static const x86_insn_info pslrldq_insn[] = {
+    { CPU_SSE2, MOD_SpAdd, 0, 3, {0x66, 0x0F, 0x73}, 0, 2,
+      {OPT_Reg|OPS_128|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} }
+};
 
-/* TODO: AMD 3DNow! instructions */
+/* AMD 3DNow! instructions */
+static const x86_insn_info now3d_insn[] = {
+    { CPU_3DNow, MOD_Imm8, 0, 2, {0x0F, 0x0F, 0}, 0, 2,
+      {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} }
+};
 
-/* TODO: Cyrix MMX instructions */
+/* Cyrix MMX instructions */
+static const x86_insn_info cyrixmmx_insn[] = {
+    { CPU_Cyrix|CPU_MMX, MOD_Op1Add, 0, 2, {0x0F, 0x00, 0}, 0, 2,
+      {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} }
+};
+static const x86_insn_info pmachriw_insn[] = {
+    { CPU_Cyrix|CPU_MMX, 0, 0, 2, {0x0F, 0x5E, 0}, 0, 2,
+      {OPT_Reg|OPS_64|OPA_Spare, OPT_Mem|OPS_64|OPS_Relaxed|OPA_EA, 0} }
+};
 
 /* Cyrix extensions */
 static const x86_insn_info rsdc_insn[] = {
@@ -2078,7 +2250,7 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	/* String instructions. */
 	C M P S B { RET_INSN(onebyte, 0x00A6, CPU_Any); }
 	C M P S W { RET_INSN(onebyte, 0x10A7, CPU_Any); }
-	/* C M P S D */
+	C M P S D { RET_INSN(cmpsd, 0, CPU_Any); }
 	I N S B { RET_INSN(onebyte, 0x006C, CPU_Any); }
 	I N S W { RET_INSN(onebyte, 0x106D, CPU_Any); }
 	I N S D { RET_INSN(onebyte, 0x206D, CPU_386); }
@@ -2090,7 +2262,7 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	L O D S D { RET_INSN(onebyte, 0x20AD, CPU_386); }
 	M O V S B { RET_INSN(onebyte, 0x00A4, CPU_Any); }
 	M O V S W { RET_INSN(onebyte, 0x10A5, CPU_Any); }
-	/* M O V S D */
+	M O V S D { RET_INSN(movsd, 0, CPU_Any); }
 	S C A S B { RET_INSN(onebyte, 0x00AE, CPU_Any); }
 	S C A S W { RET_INSN(onebyte, 0x10AF, CPU_Any); }
 	S C A S D { RET_INSN(onebyte, 0x20AF, CPU_386); }
@@ -2289,74 +2461,260 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	M F E N C E { RET_INSN(threebyte, 0x0FAEF0, CPU_P3); }
 	P A U S E { RET_INSN(twobyte, 0xF390, CPU_P4); }
 	/* MMX/SSE2 instructions */
-	E M M S { RET_INSN(twobyte, 0x0F77, CPU_586|CPU_MMX); }
-	M O V D { RET_INSN(movd, 0, CPU_586|CPU_MMX); }
-	M O V Q { RET_INSN(movq, 0, CPU_586|CPU_MMX); }
-	P A C K S S D W { RET_INSN(mmxsse2, 0x6B, CPU_586|CPU_MMX); }
-	P A C K S S W B { RET_INSN(mmxsse2, 0x63, CPU_586|CPU_MMX); }
-	P A C K U S W B { RET_INSN(mmxsse2, 0x67, CPU_586|CPU_MMX); }
-	P A D D B { RET_INSN(mmxsse2, 0xFC, CPU_586|CPU_MMX); }
-	P A D D W { RET_INSN(mmxsse2, 0xFD, CPU_586|CPU_MMX); }
-	P A D D D { RET_INSN(mmxsse2, 0xFE, CPU_586|CPU_MMX); }
-	P A D D Q { RET_INSN(mmxsse2, 0xD4, CPU_586|CPU_MMX); }
-	P A D D S B { RET_INSN(mmxsse2, 0xEC, CPU_586|CPU_MMX); }
-	P A D D S W { RET_INSN(mmxsse2, 0xED, CPU_586|CPU_MMX); }
-	P A D D U S B { RET_INSN(mmxsse2, 0xDC, CPU_586|CPU_MMX); }
-	P A D D U S W { RET_INSN(mmxsse2, 0xDD, CPU_586|CPU_MMX); }
-	P A N D { RET_INSN(mmxsse2, 0xDB, CPU_586|CPU_MMX); }
-	P A N D N { RET_INSN(mmxsse2, 0xDF, CPU_586|CPU_MMX); }
-	P A C M P E Q B { RET_INSN(mmxsse2, 0x74, CPU_586|CPU_MMX); }
-	P A C M P E Q W { RET_INSN(mmxsse2, 0x75, CPU_586|CPU_MMX); }
-	P A C M P E Q D { RET_INSN(mmxsse2, 0x76, CPU_586|CPU_MMX); }
-	P A C M P G T B { RET_INSN(mmxsse2, 0x64, CPU_586|CPU_MMX); }
-	P A C M P G T W { RET_INSN(mmxsse2, 0x65, CPU_586|CPU_MMX); }
-	P A C M P G T D { RET_INSN(mmxsse2, 0x66, CPU_586|CPU_MMX); }
-	P M A D D W D { RET_INSN(mmxsse2, 0xF5, CPU_586|CPU_MMX); }
-	P M U L H W { RET_INSN(mmxsse2, 0xE5, CPU_586|CPU_MMX); }
-	P M U L L W { RET_INSN(mmxsse2, 0xD5, CPU_586|CPU_MMX); }
-	P O R { RET_INSN(mmxsse2, 0xEB, CPU_586|CPU_MMX); }
-	P S L L W { RET_INSN(pshift, 0x0671F1, CPU_586|CPU_MMX); }
-	P S L L D { RET_INSN(pshift, 0x0672F2, CPU_586|CPU_MMX); }
-	P S L L Q { RET_INSN(pshift, 0x0673F3, CPU_586|CPU_MMX); }
-	P S R A W { RET_INSN(pshift, 0x0471E1, CPU_586|CPU_MMX); }
-	P S R A D { RET_INSN(pshift, 0x0472E2, CPU_586|CPU_MMX); }
-	P S R L W { RET_INSN(pshift, 0x0271D1, CPU_586|CPU_MMX); }
-	P S R L D { RET_INSN(pshift, 0x0272D2, CPU_586|CPU_MMX); }
-	P S R L Q { RET_INSN(pshift, 0x0273D3, CPU_586|CPU_MMX); }
-	P S U B B { RET_INSN(mmxsse2, 0xF8, CPU_586|CPU_MMX); }
-	P S U B W { RET_INSN(mmxsse2, 0xF9, CPU_586|CPU_MMX); }
-	P S U B D { RET_INSN(mmxsse2, 0xFA, CPU_586|CPU_MMX); }
-	P S U B Q { RET_INSN(mmxsse2, 0xFB, CPU_586|CPU_MMX); }
-	P S U B S B { RET_INSN(mmxsse2, 0xE8, CPU_586|CPU_MMX); }
-	P S U B S W { RET_INSN(mmxsse2, 0xE9, CPU_586|CPU_MMX); }
-	P S U B U S B { RET_INSN(mmxsse2, 0xD8, CPU_586|CPU_MMX); }
-	P S U B U S W { RET_INSN(mmxsse2, 0xD9, CPU_586|CPU_MMX); }
-	P U N P C K H B W { RET_INSN(mmxsse2, 0x68, CPU_586|CPU_MMX); }
-	P U N P C K H W D { RET_INSN(mmxsse2, 0x69, CPU_586|CPU_MMX); }
-	P U N P C K H D Q { RET_INSN(mmxsse2, 0x6A, CPU_586|CPU_MMX); }
-	P U N P C K L B W { RET_INSN(mmxsse2, 0x60, CPU_586|CPU_MMX); }
-	P U N P C K L W D { RET_INSN(mmxsse2, 0x61, CPU_586|CPU_MMX); }
-	P U N P C K L D Q { RET_INSN(mmxsse2, 0x62, CPU_586|CPU_MMX); }
-	P X O R { RET_INSN(mmxsse2, 0xEF, CPU_586|CPU_MMX); }
+	E M M S { RET_INSN(twobyte, 0x0F77, CPU_MMX); }
+	M O V D { RET_INSN(movd, 0, CPU_MMX); }
+	M O V Q { RET_INSN(movq, 0, CPU_MMX); }
+	P A C K S S D W { RET_INSN(mmxsse2, 0x6B, CPU_MMX); }
+	P A C K S S W B { RET_INSN(mmxsse2, 0x63, CPU_MMX); }
+	P A C K U S W B { RET_INSN(mmxsse2, 0x67, CPU_MMX); }
+	P A D D B { RET_INSN(mmxsse2, 0xFC, CPU_MMX); }
+	P A D D W { RET_INSN(mmxsse2, 0xFD, CPU_MMX); }
+	P A D D D { RET_INSN(mmxsse2, 0xFE, CPU_MMX); }
+	P A D D Q { RET_INSN(mmxsse2, 0xD4, CPU_MMX); }
+	P A D D S B { RET_INSN(mmxsse2, 0xEC, CPU_MMX); }
+	P A D D S W { RET_INSN(mmxsse2, 0xED, CPU_MMX); }
+	P A D D U S B { RET_INSN(mmxsse2, 0xDC, CPU_MMX); }
+	P A D D U S W { RET_INSN(mmxsse2, 0xDD, CPU_MMX); }
+	P A N D { RET_INSN(mmxsse2, 0xDB, CPU_MMX); }
+	P A N D N { RET_INSN(mmxsse2, 0xDF, CPU_MMX); }
+	P A C M P E Q B { RET_INSN(mmxsse2, 0x74, CPU_MMX); }
+	P A C M P E Q W { RET_INSN(mmxsse2, 0x75, CPU_MMX); }
+	P A C M P E Q D { RET_INSN(mmxsse2, 0x76, CPU_MMX); }
+	P A C M P G T B { RET_INSN(mmxsse2, 0x64, CPU_MMX); }
+	P A C M P G T W { RET_INSN(mmxsse2, 0x65, CPU_MMX); }
+	P A C M P G T D { RET_INSN(mmxsse2, 0x66, CPU_MMX); }
+	P M A D D W D { RET_INSN(mmxsse2, 0xF5, CPU_MMX); }
+	P M U L H W { RET_INSN(mmxsse2, 0xE5, CPU_MMX); }
+	P M U L L W { RET_INSN(mmxsse2, 0xD5, CPU_MMX); }
+	P O R { RET_INSN(mmxsse2, 0xEB, CPU_MMX); }
+	P S L L W { RET_INSN(pshift, 0x0671F1, CPU_MMX); }
+	P S L L D { RET_INSN(pshift, 0x0672F2, CPU_MMX); }
+	P S L L Q { RET_INSN(pshift, 0x0673F3, CPU_MMX); }
+	P S R A W { RET_INSN(pshift, 0x0471E1, CPU_MMX); }
+	P S R A D { RET_INSN(pshift, 0x0472E2, CPU_MMX); }
+	P S R L W { RET_INSN(pshift, 0x0271D1, CPU_MMX); }
+	P S R L D { RET_INSN(pshift, 0x0272D2, CPU_MMX); }
+	P S R L Q { RET_INSN(pshift, 0x0273D3, CPU_MMX); }
+	P S U B B { RET_INSN(mmxsse2, 0xF8, CPU_MMX); }
+	P S U B W { RET_INSN(mmxsse2, 0xF9, CPU_MMX); }
+	P S U B D { RET_INSN(mmxsse2, 0xFA, CPU_MMX); }
+	P S U B Q { RET_INSN(mmxsse2, 0xFB, CPU_MMX); }
+	P S U B S B { RET_INSN(mmxsse2, 0xE8, CPU_MMX); }
+	P S U B S W { RET_INSN(mmxsse2, 0xE9, CPU_MMX); }
+	P S U B U S B { RET_INSN(mmxsse2, 0xD8, CPU_MMX); }
+	P S U B U S W { RET_INSN(mmxsse2, 0xD9, CPU_MMX); }
+	P U N P C K H B W { RET_INSN(mmxsse2, 0x68, CPU_MMX); }
+	P U N P C K H W D { RET_INSN(mmxsse2, 0x69, CPU_MMX); }
+	P U N P C K H D Q { RET_INSN(mmxsse2, 0x6A, CPU_MMX); }
+	P U N P C K L B W { RET_INSN(mmxsse2, 0x60, CPU_MMX); }
+	P U N P C K L W D { RET_INSN(mmxsse2, 0x61, CPU_MMX); }
+	P U N P C K L D Q { RET_INSN(mmxsse2, 0x62, CPU_MMX); }
+	P X O R { RET_INSN(mmxsse2, 0xEF, CPU_MMX); }
 	/* PIII (Katmai) new instructions / SIMD instructions */
-	/* ... */
+	A D D P S { RET_INSN(sseps, 0x58, CPU_SSE); }
+	A D D S S { RET_INSN(ssess, 0xF358, CPU_SSE); }
+	A N D N P S { RET_INSN(sseps, 0x55, CPU_SSE); }
+	A N D P S { RET_INSN(sseps, 0x54, CPU_SSE); }
+	C M P E Q P S { RET_INSN(ssecmpps, 0x00, CPU_SSE); }
+	C M P E Q S S { RET_INSN(ssecmpss, 0x00F3, CPU_SSE); }
+	C M P L E P S { RET_INSN(ssecmpps, 0x02, CPU_SSE); }
+	C M P L E S S { RET_INSN(ssecmpss, 0x02F3, CPU_SSE); }
+	C M P L T P S { RET_INSN(ssecmpps, 0x01, CPU_SSE); }
+	C M P L T S S { RET_INSN(ssecmpss, 0x01F3, CPU_SSE); }
+	C M P N E Q P S { RET_INSN(ssecmpps, 0x04, CPU_SSE); }
+	C M P N E Q S S { RET_INSN(ssecmpss, 0x04F3, CPU_SSE); }
+	C M P N L E P S { RET_INSN(ssecmpps, 0x06, CPU_SSE); }
+	C M P N L E S S { RET_INSN(ssecmpss, 0x06F3, CPU_SSE); }
+	C M P N L T P S { RET_INSN(ssecmpps, 0x05, CPU_SSE); }
+	C M P N L T S S { RET_INSN(ssecmpss, 0x05F3, CPU_SSE); }
+	C M P O R D P S { RET_INSN(ssecmpps, 0x07, CPU_SSE); }
+	C M P O R D S S { RET_INSN(ssecmpss, 0x07F3, CPU_SSE); }
+	C M P U N O R D P S { RET_INSN(ssecmpps, 0x03, CPU_SSE); }
+	C M P U N O R D S S { RET_INSN(ssecmpss, 0x03F3, CPU_SSE); }
+	C M P P S { RET_INSN(ssepsimm, 0xC2, CPU_SSE); }
+	C M P S S { RET_INSN(ssessimm, 0xF3C2, CPU_SSE); }
+	C O M I S S { RET_INSN(sseps, 0x2F, CPU_SSE); }
+	C V T P I "2" P S { RET_INSN(sseps, 0x2A, CPU_SSE); }
+	C V T P S "2" P I { RET_INSN(sseps, 0x2D, CPU_SSE); }
+	C V T S I "2" S S { RET_INSN(ssess, 0xF32A, CPU_SSE); }
+	C V T S S "2" S I { RET_INSN(ssess, 0xF32D, CPU_SSE); }
+	C V T T P S "2" P I { RET_INSN(sseps, 0x2C, CPU_SSE); }
+	C V T T S S "2" S I { RET_INSN(ssess, 0xF32C, CPU_SSE); }
+	D I V P S { RET_INSN(sseps, 0x5E, CPU_SSE); }
+	D I V S S { RET_INSN(ssess, 0xF35E, CPU_SSE); }
+	L D M X C S R { RET_INSN(ldstmxcsr, 0x02, CPU_SSE); }
+	M A S K M O V Q { RET_INSN(maskmovq, 0, CPU_P3|CPU_MMX); }
+	M A X P S { RET_INSN(sseps, 0x5F, CPU_SSE); }
+	M A X S S { RET_INSN(ssess, 0xF35F, CPU_SSE); }
+	M I N P S { RET_INSN(sseps, 0x5D, CPU_SSE); }
+	M I N S S { RET_INSN(ssess, 0xF35D, CPU_SSE); }
+	M O V A P S { RET_INSN(movaups, 0x28, CPU_SSE); }
+	M O V H L P S { RET_INSN(movhllhps, 0x12, CPU_SSE); }
+	M O V H P S { RET_INSN(movhlps, 0x16, CPU_SSE); }
+	M O V L H P S { RET_INSN(movhllhps, 0x16, CPU_SSE); }
+	M O V L P S { RET_INSN(movhlps, 0x12, CPU_SSE); }
+	M O V M S K P S { RET_INSN(movmskps, 0, CPU_SSE); }
+	M O V N T P S { RET_INSN(movntps, 0, CPU_SSE); }
+	M O V N T Q { RET_INSN(movntq, 0, CPU_SSE); }
+	M O V S S { RET_INSN(movss, 0, CPU_SSE); }
+	M O V U P S { RET_INSN(movaups, 0x10, CPU_SSE); }
+	M U L P S { RET_INSN(sseps, 0x59, CPU_SSE); }
+	M U L S S { RET_INSN(ssess, 0xF359, CPU_SSE); }
+	O R P S { RET_INSN(sseps, 0x56, CPU_SSE); }
+	P A V G B { RET_INSN(mmxsse2, 0xE0, CPU_P3|CPU_MMX); }
+	P A V G W { RET_INSN(mmxsse2, 0xE3, CPU_P3|CPU_MMX); }
+	P E X T R W { RET_INSN(pextrw, 0, CPU_P3|CPU_MMX); }
+	P I N S R W { RET_INSN(pinsrw, 0, CPU_P3|CPU_MMX); }
+	P M A X S W { RET_INSN(mmxsse2, 0xEE, CPU_P3|CPU_MMX); }
+	P M A X U B { RET_INSN(mmxsse2, 0xDE, CPU_P3|CPU_MMX); }
+	P M I N S W { RET_INSN(mmxsse2, 0xEA, CPU_P3|CPU_MMX); }
+	P M I N U B { RET_INSN(mmxsse2, 0xDA, CPU_P3|CPU_MMX); }
+	P M O V M S K B { RET_INSN(pmovmskb, 0, CPU_SSE); }
+	P M U L H U W { RET_INSN(mmxsse2, 0xE4, CPU_P3|CPU_MMX); }
 	P R E F E T C H N T A { RET_INSN(twobytemem, 0x000F18, CPU_P3); }
 	P R E F E T C H T "0" { RET_INSN(twobytemem, 0x010F18, CPU_P3); }
 	P R E F E T C H T "1" { RET_INSN(twobytemem, 0x020F18, CPU_P3); }
 	P R E F E T C H T "2" { RET_INSN(twobytemem, 0x030F18, CPU_P3); }
-	/* ... */
+	P S A D B W { RET_INSN(mmxsse2, 0xF6, CPU_P3|CPU_MMX); }
+	P S H U F W { RET_INSN(pshufw, 0, CPU_P3|CPU_MMX); }
+	R C P P S { RET_INSN(sseps, 0x53, CPU_SSE); }
+	R C P S S { RET_INSN(ssess, 0xF353, CPU_SSE); }
+	R S Q R T P S { RET_INSN(sseps, 0x52, CPU_SSE); }
+	R S Q R T S S { RET_INSN(ssess, 0xF352, CPU_SSE); }
 	S F E N C E { RET_INSN(threebyte, 0x0FAEF8, CPU_P3); }
-	/* ... */
+	S H U F P S { RET_INSN(ssepsimm, 0xC6, CPU_SSE); }
+	S Q R T P S { RET_INSN(sseps, 0x51, CPU_SSE); }
+	S Q R T S S { RET_INSN(ssess, 0xF351, CPU_SSE); }
+	S T M X C S R { RET_INSN(ldstmxcsr, 0x03, CPU_SSE); }
+	S U B P S { RET_INSN(sseps, 0x5C, CPU_SSE); }
+	S U B S S { RET_INSN(ssess, 0xF35C, CPU_SSE); }
+	U C O M I S S { RET_INSN(ssess, 0xF32E, CPU_SSE); }
+	U N P C K H P S { RET_INSN(sseps, 0x15, CPU_SSE); }
+	U N P C K L P S { RET_INSN(sseps, 0x14, CPU_SSE); }
+	X O R P S { RET_INSN(sseps, 0x57, CPU_SSE); }
 	/* SSE2 instructions */
+	A D D P D { RET_INSN(ssess, 0x6658, CPU_SSE2); }
+	A D D S D { RET_INSN(ssess, 0xF258, CPU_SSE2); }
+	A N D N P D { RET_INSN(ssess, 0x6655, CPU_SSE2); }
+	A N D P D { RET_INSN(ssess, 0x6654, CPU_SSE2); }
+	C M P E Q P D { RET_INSN(ssecmpss, 0x0066, CPU_SSE2); }
+	C M P E Q S D { RET_INSN(ssecmpss, 0x00F2, CPU_SSE2); }
+	C M P L E P D { RET_INSN(ssecmpss, 0x0266, CPU_SSE2); }
+	C M P L E S D { RET_INSN(ssecmpss, 0x02F2, CPU_SSE2); }
+	C M P L T P D { RET_INSN(ssecmpss, 0x0166, CPU_SSE2); }
+	C M P L T S D { RET_INSN(ssecmpss, 0x01F2, CPU_SSE2); }
+	C M P N E Q P D { RET_INSN(ssecmpss, 0x0466, CPU_SSE2); }
+	C M P N E Q S D { RET_INSN(ssecmpss, 0x04F2, CPU_SSE2); }
+	C M P N L E P D { RET_INSN(ssecmpss, 0x0666, CPU_SSE2); }
+	C M P N L E S D { RET_INSN(ssecmpss, 0x06F2, CPU_SSE2); }
+	C M P N L T P D { RET_INSN(ssecmpss, 0x0566, CPU_SSE2); }
+	C M P N L T S D { RET_INSN(ssecmpss, 0x05F2, CPU_SSE2); }
+	C M P O R D P D { RET_INSN(ssecmpss, 0x0766, CPU_SSE2); }
+	C M P O R D S D { RET_INSN(ssecmpss, 0x07F2, CPU_SSE2); }
+	C M P U N O R D P D { RET_INSN(ssecmpss, 0x0366, CPU_SSE2); }
+	C M P U N O R D S D { RET_INSN(ssecmpss, 0x03F2, CPU_SSE2); }
+	C M P P D { RET_INSN(ssessimm, 0x66C2, CPU_SSE2); }
+	/* C M P S D is in string instructions above */
+	C O M I S D { RET_INSN(ssess, 0x662F, CPU_SSE2); }
+	C V T P I "2" P D { RET_INSN(ssess, 0x662A, CPU_SSE2); }
+	C V T S I "2" S D { RET_INSN(ssess, 0xF22A, CPU_SSE2); }
+	D I V P D { RET_INSN(ssess, 0x665E, CPU_SSE2); }
+	D I V S D { RET_INSN(ssess, 0xF25E, CPU_SSE2); }
+	M A X P D { RET_INSN(ssess, 0x665F, CPU_SSE2); }
+	M A X S D { RET_INSN(ssess, 0xF25F, CPU_SSE2); }
+	M I N P D { RET_INSN(ssess, 0x665D, CPU_SSE2); }
+	M I N S D { RET_INSN(ssess, 0xF25D, CPU_SSE2); }
+	M O V A P D { RET_INSN(movaupd, 0x28, CPU_SSE2); }
+	M O V H P D { RET_INSN(movhlpd, 0x16, CPU_SSE2); }
+	M O V L P D { RET_INSN(movhlpd, 0x12, CPU_SSE2); }
+	M O V M S K P D { RET_INSN(movmskpd, 0, CPU_SSE2); }
+	M O V N T P D { RET_INSN(movntpddq, 0x2B, CPU_SSE2); }
+	M O V N T D Q { RET_INSN(movntpddq, 0xE7, CPU_SSE2); }
+	/* M O V S D is in string instructions above */
+	M O V U P D { RET_INSN(movaupd, 0x10, CPU_SSE2); }
+	M U L P D { RET_INSN(ssess, 0x6659, CPU_SSE2); }
+	M U L S D { RET_INSN(ssess, 0xF259, CPU_SSE2); }
+	O R P D { RET_INSN(ssess, 0x6656, CPU_SSE2); }
+	S H U F P D { RET_INSN(ssessimm, 0x66C6, CPU_SSE2); }
+	S Q R T P D { RET_INSN(ssess, 0x6651, CPU_SSE2); }
+	S Q R T S D { RET_INSN(ssess, 0xF251, CPU_SSE2); }
+	S U B P D { RET_INSN(ssess, 0x665C, CPU_SSE2); }
+	S U B S D { RET_INSN(ssess, 0xF25C, CPU_SSE2); }
+	U C O M I S D { RET_INSN(ssess, 0xF22E, CPU_SSE2); }
+	U N P C K H P D { RET_INSN(ssess, 0x6615, CPU_SSE2); }
+	U N P C K L P D { RET_INSN(ssess, 0x6614, CPU_SSE2); }
+	X O R P D { RET_INSN(ssess, 0x6657, CPU_SSE2); }
+	C V T D Q "2" P D { RET_INSN(ssess, 0xF3E6, CPU_SSE2); }
+	C V T P D "2" D Q { RET_INSN(ssess, 0xF2E6, CPU_SSE2); }
+	C V T D Q "2" P S { RET_INSN(sseps, 0x5B, CPU_SSE2); }
+	C V T P D "2" P I { RET_INSN(ssess, 0x662D, CPU_SSE2); }
+	C V T P D "2" P S { RET_INSN(ssess, 0x665A, CPU_SSE2); }
+	C V T P S "2" P D { RET_INSN(sseps, 0x5A, CPU_SSE2); }
+	C V T P S "2" D Q { RET_INSN(ssess, 0x665B, CPU_SSE2); }
+	C V T S D "2" S I { RET_INSN(ssess, 0xF22D, CPU_SSE2); }
+	C V T S D "2" S S { RET_INSN(ssess, 0xF25A, CPU_SSE2); }
+	C V T S S "2" S D { RET_INSN(ssess, 0xF35A, CPU_SSE2); }
+	C V T T P D "2" P I { RET_INSN(ssess, 0x662C, CPU_SSE2); }
+	C V T T S D "2" S I { RET_INSN(ssess, 0xF22C, CPU_SSE2); }
+	C V T T P D "2" D Q { RET_INSN(ssess, 0x66E6, CPU_SSE2); }
+	C V T T P S "2" D Q { RET_INSN(ssess, 0xF35B, CPU_SSE2); }
+	M A S K M O V D Q U { RET_INSN(maskmovdqu, 0, CPU_SSE2); }
+	M O V D Q A { RET_INSN(movdqau, 0x66, CPU_SSE2); }
+	M O V D Q U { RET_INSN(movdqau, 0xF3, CPU_SSE2); }
+	M O V D Q "2" Q { RET_INSN(movdq2q, 0, CPU_SSE2); }
+	M O V Q "2" D Q { RET_INSN(movq2dq, 0, CPU_SSE2); }
+	P M U L U D Q { RET_INSN(mmxsse2, 0xF4, CPU_SSE2); }
+	P S H U F D { RET_INSN(ssessimm, 0x6670, CPU_SSE2); }
+	P S H U F H W { RET_INSN(ssessimm, 0xF370, CPU_SSE2); }
+	P S H U F L W { RET_INSN(ssessimm, 0xF270, CPU_SSE2); }
+	P S L L D Q { RET_INSN(pslrldq, 0x07, CPU_SSE2); }
+	P S R L D Q { RET_INSN(pslrldq, 0x03, CPU_SSE2); }
+	P U N P C K H Q D Q { RET_INSN(ssess, 0x666D, CPU_SSE2); }
+	P U N P C K L Q D Q { RET_INSN(ssess, 0x666C, CPU_SSE2); }
 	/* AMD 3DNow! instructions */
-	P R E F E T C H { RET_INSN(twobytemem, 0x000F0D, CPU_586|CPU_AMD|CPU_3DNow); }
-	P R E F E T C H W { RET_INSN(twobytemem, 0x010F0D, CPU_586|CPU_AMD|CPU_3DNow); }
-	F E M M S { RET_INSN(twobyte, 0x0F0E, CPU_586|CPU_AMD|CPU_3DNow); }
-	/* ... */
+	P R E F E T C H { RET_INSN(twobytemem, 0x000F0D, CPU_3DNow); }
+	P R E F E T C H W { RET_INSN(twobytemem, 0x010F0D, CPU_3DNow); }
+	F E M M S { RET_INSN(twobyte, 0x0F0E, CPU_3DNow); }
+	P A V G U S B { RET_INSN(now3d, 0xBF, CPU_3DNow); }
+	P F "2" I D { RET_INSN(now3d, 0x1D, CPU_3DNow); }
+	P F "2" I W { RET_INSN(now3d, 0x1C, CPU_Athlon|CPU_3DNow); }
+	P F A C C { RET_INSN(now3d, 0xAE, CPU_3DNow); }
+	P F A D D { RET_INSN(now3d, 0x9E, CPU_3DNow); }
+	P F C M P E Q { RET_INSN(now3d, 0xB0, CPU_3DNow); }
+	P F C M P G E { RET_INSN(now3d, 0x90, CPU_3DNow); }
+	P F C M P G T { RET_INSN(now3d, 0xA0, CPU_3DNow); }
+	P F M A X { RET_INSN(now3d, 0xA4, CPU_3DNow); }
+	P F M I N { RET_INSN(now3d, 0x94, CPU_3DNow); }
+	P F M U L { RET_INSN(now3d, 0xB4, CPU_3DNow); }
+	P F N A C C { RET_INSN(now3d, 0x8A, CPU_Athlon|CPU_3DNow); }
+	P F P N A C C { RET_INSN(now3d, 0x8E, CPU_Athlon|CPU_3DNow); }
+	P F R C P { RET_INSN(now3d, 0x96, CPU_3DNow); }
+	P F R C P I T "1" { RET_INSN(now3d, 0xA6, CPU_3DNow); }
+	P F R C P I T "2" { RET_INSN(now3d, 0xB6, CPU_3DNow); }
+	P F R S Q I T "1" { RET_INSN(now3d, 0xA7, CPU_3DNow); }
+	P F R S Q R T { RET_INSN(now3d, 0x97, CPU_3DNow); }
+	P F S U B { RET_INSN(now3d, 0x9A, CPU_3DNow); }
+	P F S U B R { RET_INSN(now3d, 0xAA, CPU_3DNow); }
+	P I "2" F D { RET_INSN(now3d, 0x0D, CPU_3DNow); }
+	P I "2" F W { RET_INSN(now3d, 0x0C, CPU_Athlon|CPU_3DNow); }
+	P M U L H R W A { RET_INSN(now3d, 0xB7, CPU_3DNow); }
+	P S W A P D { RET_INSN(now3d, 0xBB, CPU_Athlon|CPU_3DNow); }
 	/* AMD extensions */
 	S Y S C A L L { RET_INSN(twobyte, 0x0F05, CPU_686|CPU_AMD); }
 	S Y S R E T { RET_INSN(twobyte, 0x0F07, CPU_686|CPU_AMD|CPU_Priv); }
 	/* Cyrix MMX instructions */
+	P A D D S I W { RET_INSN(cyrixmmx, 0x51, CPU_Cyrix|CPU_MMX); }
+	P A V E B { RET_INSN(cyrixmmx, 0x50, CPU_Cyrix|CPU_MMX); }
+	P D I S T I B { RET_INSN(cyrixmmx, 0x54, CPU_Cyrix|CPU_MMX); }
+	P M A C H R I W { RET_INSN(pmachriw, 0, CPU_Cyrix|CPU_MMX); }
+	P M A G W { RET_INSN(cyrixmmx, 0x52, CPU_Cyrix|CPU_MMX); }
+	P M U L H R I W { RET_INSN(cyrixmmx, 0x5D, CPU_Cyrix|CPU_MMX); }
+	P M U L H R W C { RET_INSN(cyrixmmx, 0x59, CPU_Cyrix|CPU_MMX); }
+	P M V G E Z B { RET_INSN(cyrixmmx, 0x5C, CPU_Cyrix|CPU_MMX); }
+	P M V L Z B { RET_INSN(cyrixmmx, 0x5B, CPU_Cyrix|CPU_MMX); }
+	P M V N Z B { RET_INSN(cyrixmmx, 0x5A, CPU_Cyrix|CPU_MMX); }
+	P M V Z B { RET_INSN(cyrixmmx, 0x58, CPU_Cyrix|CPU_MMX); }
+	P S U B S I W { RET_INSN(cyrixmmx, 0x55, CPU_Cyrix|CPU_MMX); }
 	/* Cyrix extensions */
 	R D S H R { RET_INSN(twobyte, 0x0F36, CPU_686|CPU_Cyrix|CPU_SMM); }
 	R S D C { RET_INSN(rsdc, 0, CPU_486|CPU_Cyrix|CPU_SMM); }
