@@ -9,3 +9,4 @@ yasm_SOURCES += frontends/yasm/yasm-module.h
 yasm_SOURCES += frontends/yasm/yasm-module.c
 
 yasm_LDADD = libyasm.la @LIBLTDL@ $(INTLLIBS) @LIBADD_DL@ $(YASM_MODULES)
+yasm_LDADD += @LIBOBJS@
