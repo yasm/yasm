@@ -12,6 +12,10 @@ noinst_SCRIPTS = gen_instr.pl
 
 AM_YFLAGS = -d
 
+if DEV
+CFLAGS = -ansi -pedantic -Wall -g
+endif
+
 token.l bison.y: instrs.dat token.l.in bison.y.in gen_instr.pl
 	$(PERL) $(srcdir)/gen_instr.pl -i $(srcdir)/instrs.dat -t $(srcdir)/token.l -g $(srcdir)/bison.y
 
