@@ -26,7 +26,13 @@ CLEANFILES += nasm-macros.c
 
 noinst_PROGRAMS += genmacro
 
-genmacro_SOURCES = modules/preprocs/nasm/genmacro.c
+genmacro_SOURCES =
+EXTRA_DIST += modules/preprocs/nasm/genmacro.c
+genmacro_LDADD = genmacro.$(OBJEXT)
+genmacro_LINK = $(CCLD_FOR_BUILD) -o $@
+
+genmacro.$(OBJEXT): modules/preprocs/nasm/genmacro.c
+	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f modules/preprocs/nasm/genmacro.c || echo '$(srcdir)/'`modules/preprocs/nasm/genmacro.c
 
 EXTRA_DIST += modules/preprocs/nasm/standard.mac
 EXTRA_DIST += modules/preprocs/nasm/tests/Makefile.inc
