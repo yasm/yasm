@@ -224,7 +224,7 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
  *         integers, ie floats, non-valued labels, registers); otherwise the
  *         intnum value of the expression.
  */
-/*@dependent@*/ /*@null@*/ const yasm_intnum *yasm_expr_get_intnum
+/*@dependent@*/ /*@null@*/ yasm_intnum *yasm_expr_get_intnum
     (yasm_expr **ep, /*@null@*/ yasm_calc_bc_dist_func calc_bc_dist);
 
 /** Get the floating point value of an expression if it's just an floatnum.

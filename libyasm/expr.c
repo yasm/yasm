@@ -1130,7 +1130,7 @@ yasm_expr_extract_shr(yasm_expr **ep)
 }
 
 /*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
-const yasm_intnum *
+yasm_intnum *
 yasm_expr_get_intnum(yasm_expr **ep, yasm_calc_bc_dist_func calc_bc_dist)
 {
     *ep = yasm_expr_simplify(*ep, calc_bc_dist);
