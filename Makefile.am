@@ -1,6 +1,6 @@
 # $IdPath$
 
-SUBDIRS = libltdl tools m4 po
+SUBDIRS = libltdl m4 po
 
 CFLAGS = @ANSI_CFLAGS@
 AM_YFLAGS = -d
@@ -23,9 +23,11 @@ BUILT_SOURCES =
 CLEANFILES = configure.lineno
 EXTRA_DIST = config/config.rpath  \
 	check/Makefile.inc	\
+	tools/Makefile.inc	\
 	src/Makefile.inc
 
 include check/Makefile.inc
+include tools/Makefile.inc
 include src/Makefile.inc
 
 EXTRA_DIST += \

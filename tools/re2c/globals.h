@@ -1,7 +1,7 @@
 #ifndef	re2c_globals_h
 #define	re2c_globals_h
 
-#include "basics.h"
+#include "tools/re2c/basics.h"
 
 extern char *fileName;
 extern int sFlag;

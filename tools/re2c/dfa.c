@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include "globals.h"
-#include "substr.h"
-#include "dfa.h"
+#include "tools/re2c/globals.h"
+#include "tools/re2c/substr.h"
+#include "tools/re2c/dfa.h"
 
 #define octCh(c) ('0' + c%8)
 

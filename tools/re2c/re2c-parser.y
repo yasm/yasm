@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "globals.h"
-#include "parse.h"
+#include "tools/re2c/globals.h"
+#include "tools/re2c/parse.h"
 int yyparse();
 int yylex();
 void yyerror(char*);

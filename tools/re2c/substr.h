@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "basics.h"
+#include "tools/re2c/basics.h"
 
 struct SubStr {
     char		*str;

@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "substr.h"
-#include "globals.h"
-#include "dfa.h"
+#include "tools/re2c/substr.h"
+#include "tools/re2c/globals.h"
+#include "tools/re2c/dfa.h"
 
 /* there must be at least one span in list;  all spans must cover
  * same range

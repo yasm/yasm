@@ -2,9 +2,9 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "scanner.h"
-#include "parse.h"
-#include "parser.h"
+#include "tools/re2c/scanner.h"
+#include "tools/re2c/parse.h"
+#include "re2c-parser.h"
 
 extern YYSTYPE yylval;
 

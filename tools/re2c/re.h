@@ -2,8 +2,8 @@
 #define re2c_re_h
 
 #include <stdio.h>
-#include "token.h"
-#include "ins.h"
+#include "tools/re2c/token.h"
+#include "tools/re2c/ins.h"
 
 typedef struct CharPtn {
     uint	card;

@@ -1,7 +1,7 @@
 #include <config.h>
 
 #include <string.h>
-#include "substr.h"
+#include "tools/re2c/substr.h"
 
 void
 SubStr_out(const SubStr *s, FILE *o)
