@@ -48,7 +48,9 @@ RCSID("$IdPath$");
 
 struct effaddr {
     expr *disp;			/* address displacement */
-    unsigned char len;		/* length of disp (in bytes), 0 if unknown */
+    unsigned char len;		/* length of disp (in bytes), 0 if unknown,
+				 * 0xff if unknown and required to be >0.
+				 */
 
     unsigned char segment;	/* segment override, 0 if none */
 
