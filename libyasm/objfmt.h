@@ -30,8 +30,10 @@ struct objfmt {
     /* keyword used to select format on the command line */
     const char *keyword;
 
-    /* default output file extension (without the '.') */
-    const char *extension;
+    /* default output file extension (without the '.').
+     * NULL means no extension, with no '.', while "" includes the '.'.
+     */
+    /*@null@*/ const char *extension;
 
     /* default (starting) section name */
     const char *default_section_name;
@@ -97,7 +99,8 @@ struct objfmt {
      * wasn't valid.
      */
     int (*directive)(const char *name, valparamhead *valparams,
-		     /*@null@*/ valparamhead *objext_valparams);
+		     /*@null@*/ valparamhead *objext_valparams,
+		     sectionhead *headp);
 };
 
 /* Generic functions for all object formats - implemented in src/objfmt.c */

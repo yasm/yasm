@@ -773,7 +773,8 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 	    x86_mode_bits = (unsigned char)lval;
 	else
 	    Error(_("invalid argument to [%s]"), "BITS");
-    } else if (cur_objfmt->directive(name, valparams, objext_valparams)) {
+    } else if (cur_objfmt->directive(name, valparams, objext_valparams,
+				     &nasm_parser_sections)) {
 	Error(_("unrecognized directive [%s]"), name);
     }
 

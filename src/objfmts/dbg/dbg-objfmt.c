@@ -79,7 +79,7 @@ dbg_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
     fprintf(debug_file, "), returning ");
 
     if ((vp = vps_first(valparams)) && !vp->param && vp->val != NULL) {
-	retval = sections_switch_general(headp, vp->val, NULL, 0, &isnew);
+	retval = sections_switch_general(headp, vp->val, 200, NULL, 0, &isnew);
 	if (isnew) {
 	    fprintf(debug_file, "(new) ");
 	    symrec_define_label(vp->val, retval, (bytecode *)NULL, 1);
@@ -218,7 +218,8 @@ dbg_objfmt_declare_data_print(FILE *f, SymVisibility vis,
 
 static int
 dbg_objfmt_directive(const char *name, valparamhead *valparams,
-		     /*@null@*/ valparamhead *objext_valparams)
+		     /*@null@*/ valparamhead *objext_valparams,
+		     sectionhead *headp)
 {
     fprintf(debug_file, "%*sdirective(\"%s\", ", indent_level, "", name);
     vps_print(debug_file, valparams);

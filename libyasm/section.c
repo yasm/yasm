@@ -24,6 +24,7 @@
 
 #include "globals.h"
 #include "errwarn.h"
+#include "intnum.h"
 #include "expr.h"
 
 #include "bytecode.h"
@@ -44,12 +45,10 @@ struct section {
 	    /* object-format-specific data */ 
 	    /*@null@*/ /*@owned@*/ void *of_data;
 	} general;
-
-	/* SECTION_ABSOLUTE data */
-	/*@owned@*/ expr *start;
     } data;
 
-    
+    /*@owned@*/ expr *start;	/* Starting address of section contents */
+
     unsigned long opt_flags;	/* storage for optimizer flags */
 
     int res_only;		/* allow only resb family of bytecodes? */
@@ -82,7 +81,8 @@ sections_initialize(sectionhead *headp)
 
 /*@-onlytrans@*/
 section *
-sections_switch_general(sectionhead *headp, const char *name, void *of_data,
+sections_switch_general(sectionhead *headp, const char *name,
+			unsigned long start, void *of_data,
 			int res_only, int *isnew)
 {
     section *s;
@@ -94,9 +94,9 @@ sections_switch_general(sectionhead *headp, const char *name, void *of_data,
 	if (s->type == SECTION_GENERAL &&
 	    strcmp(s->data.general.name, name) == 0) {
 	    if (of_data) {
-		Warning(_("segment attributes specified on redeclaration of segment: ignoring"));
 		assert(cur_objfmt != NULL);
-		cur_objfmt->section_data_delete(of_data);
+		cur_objfmt->section_data_delete(s->data.general.of_data);
+		s->data.general.of_data = of_data;
 	    }
 	    *isnew = 0;
 	    return s;
@@ -112,6 +112,7 @@ sections_switch_general(sectionhead *headp, const char *name, void *of_data,
     s->type = SECTION_GENERAL;
     s->data.general.name = xstrdup(name);
     s->data.general.of_data = of_data;
+    s->start = expr_new_ident(ExprInt(intnum_new_int(start)));
     bcs_initialize(&s->bc);
 
     s->opt_flags = 0;
@@ -132,7 +133,7 @@ sections_switch_absolute(sectionhead *headp, expr *start)
     STAILQ_INSERT_TAIL(headp, s, link);
 
     s->type = SECTION_ABSOLUTE;
-    s->data.start = start;
+    s->start = start;
     bcs_initialize(&s->bc);
 
     s->opt_flags = 0;
@@ -201,6 +202,19 @@ sections_traverse(sectionhead *headp, /*@null@*/ void *d,
     return 0;
 }
 
+section *
+sections_find_general(sectionhead *headp, const char *name)
+{
+    section *cur;
+
+    STAILQ_FOREACH(cur, headp, link) {
+	if (cur->type == SECTION_GENERAL &&
+	    strcmp(cur->data.general.name, name) == 0)
+	    return cur;
+    }
+    return NULL;
+}
+
 bytecodehead *
 section_get_bytecodes(section *sect)
 {
@@ -215,12 +229,17 @@ section_get_name(const section *sect)
     return NULL;
 }
 
+void
+section_set_start(section *sect, unsigned long start)
+{
+    expr_delete(sect->start);
+    sect->start = expr_new_ident(ExprInt(intnum_new_int(start)));
+}
+
 const expr *
 section_get_start(const section *sect)
 {
-    if (sect->type == SECTION_ABSOLUTE)
-	return sect->data.start;
-    return NULL;
+    return sect->start;
 }
 
 void
@@ -229,17 +248,13 @@ section_delete(section *sect)
     if (!sect)
 	return;
 
-    switch (sect->type) {
-	case SECTION_GENERAL:
-	    xfree(sect->data.general.name);
-	    assert(cur_objfmt != NULL);
-	    if (sect->data.general.of_data)
-		cur_objfmt->section_data_delete(sect->data.general.of_data);
-	    break;
-	case SECTION_ABSOLUTE:
-	    expr_delete(sect->data.start);
-	    break;
+    if (sect->type == SECTION_GENERAL) {
+	xfree(sect->data.general.name);
+	assert(cur_objfmt != NULL);
+	if (sect->data.general.of_data)
+	    cur_objfmt->section_data_delete(sect->data.general.of_data);
     }
+    expr_delete(sect->start);
     bcs_delete(&sect->bc);
     xfree(sect);
 }
@@ -266,11 +281,13 @@ section_print(FILE *f, const section *sect, int print_bcs)
 	    indent_level--;
 	    break;
 	case SECTION_ABSOLUTE:
-	    fprintf(f, "absolute\n%*sstart=", indent_level, "");
-	    expr_print(f, sect->data.start);
-	    fprintf(f, "\n");
+	    fprintf(f, "absolute\n");
 	    break;
     }
+
+    fprintf(f, "%*sstart=", indent_level, "");
+    expr_print(f, sect->start);
+    fprintf(f, "\n");
 
     if (print_bcs) {
 	fprintf(f, "%*sBytecodes:\n", indent_level, "");

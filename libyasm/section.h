@@ -28,6 +28,7 @@ struct objfmt;
 
 /*@dependent@*/ section *sections_switch_general(sectionhead *headp,
 						 const char *name,
+						 unsigned long start,
 						 /*@null@*/ /*@only@*/
 						 void *of_data, int res_only,
 						 /*@out@*/ int *isnew);
@@ -54,9 +55,14 @@ void sections_print(FILE *f, const sectionhead *headp);
 int sections_traverse(sectionhead *headp, /*@null@*/ void *d,
 		      int (*func) (section *sect, /*@null@*/ void *d));
 
+/*@null@*/ section *sections_find_general(sectionhead *headp,
+					  const char *name);
+
 /*@dependent@*/ bytecodehead *section_get_bytecodes(section *sect);
 
 /*@observer@*/ /*@null@*/ const char *section_get_name(const section *sect);
+
+void section_set_start(section *sect, unsigned long start);
 /*@observer@*/ /*@null@*/ const expr *section_get_start(const section *sect);
 
 void section_delete(/*@only@*/ section *sect);

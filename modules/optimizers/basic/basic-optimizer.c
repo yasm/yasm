@@ -24,6 +24,7 @@
 
 #include "errwarn.h"
 #include "intnum.h"
+#include "expr.h"
 #include "symrec.h"
 
 #include "bytecode.h"
@@ -51,6 +52,9 @@ basic_optimize_resolve_label(symrec *sym)
     /*@dependent@*/ section *sect;
     /*@dependent@*/ /*@null@*/ bytecode *precbc;
     /*@null@*/ bytecode *bc;
+    /*@null@*/ expr *startexpr;
+    /*@dependent@*/ /*@null@*/ const intnum *start;
+    unsigned long startval;
 
     if (!symrec_get_label(sym, &sect, &precbc))
 	return NULL;
@@ -66,13 +70,24 @@ basic_optimize_resolve_label(symrec *sym)
 	/* Section not started.  Optimize it (recursively). */
 	basic_optimize_section_1(sect, NULL);
     }
+
+    /* Figure out the starting offset of the entire section */
+    startexpr = expr_copy(section_get_start(sect));
+    assert(startexpr != NULL);
+    expr_expand_labelequ(startexpr, basic_optimize_resolve_label);
+    start = expr_get_intnum(&startexpr);
+    if (!start)
+	return NULL;
+    startval = intnum_get_uint(start);
+    expr_delete(startexpr);
+
     /* If a section is done, the following will always succeed.  If it's in-
      * progress, this will fail if the bytecode comes AFTER the current one.
      */
     if (precbc && precbc->opt_flags == BCFLAG_DONE)
-	return intnum_new_int(precbc->offset + precbc->len);
+	return intnum_new_int(startval + precbc->offset + precbc->len);
     if (bc->opt_flags == BCFLAG_DONE)
-	return intnum_new_int(bc->offset);
+	return intnum_new_int(startval + bc->offset);
 
     return NULL;
 }

@@ -29,6 +29,7 @@
 
 /* Available object formats */
 extern objfmt dbg_objfmt;
+extern objfmt bin_objfmt;
 
 /* NULL-terminated list of all available object formats.
  * Someday change this if we dynamically load object formats at runtime.
@@ -37,6 +38,7 @@ extern objfmt dbg_objfmt;
 /*@-nullassign@*/
 objfmt *objfmts[] = {
     &dbg_objfmt,
+    &bin_objfmt,
     NULL
 };
 /*@=nullassign@*/
