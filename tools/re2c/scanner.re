@@ -126,8 +126,9 @@ scan:
 	[*+?]			{ yylval.op = *s->tok;
 				  RETURN(CLOSE); }
 
-	letter (letter|digit)*	{ SubStr substr = Scanner_token(s);
+	letter (letter|digit)*	{ SubStr substr;
 				  s->cur = cursor;
+				  substr = Scanner_token(s);
 				  yylval.symbol = Symbol_find(&substr);
 				  return ID; }
 

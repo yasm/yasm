@@ -16,10 +16,10 @@ static inline Scanner *Scanner_new(FILE *);
 int Scanner_echo(Scanner*, FILE *);
 int Scanner_scan(Scanner*);
 void Scanner_fatal(Scanner*, char*);
-SubStr Scanner_token(Scanner*);
+static inline SubStr Scanner_token(Scanner*);
 static inline uint Scanner_line(Scanner*);
 
-inline SubStr
+static inline SubStr
 Scanner_token(Scanner *s)
 {
     SubStr r;

@@ -35,6 +35,7 @@ void Str_copy(Str*, Str*);
 Str *Str_new_copy(Str*);
 
 Str *Str_new_empty(void);
+void Str_destroy(Str *);
 void Str_delete(Str *);
 
 static inline void

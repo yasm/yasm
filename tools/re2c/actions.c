@@ -376,7 +376,7 @@ Range *doDiff(Range *r1, Range *r2){
     return r;
 }
 
-RegExp *merge(RegExp *m1, RegExp *m2){
+static RegExp *merge(RegExp *m1, RegExp *m2){
     if(!m1)
 	return m2;
     if(!m2)

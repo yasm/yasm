@@ -1,17 +1,17 @@
-#include <fstream.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
 
 #include "globals.h"
 #include "parser.h"
 #include "dfa.h"
 
 char *fileName;
-bool sFlag = false;
-bool bFlag = false;
+int sFlag = 0;
+int bFlag = 0;
 
-int main(unsigned argc, char *argv[]){
+int main(int argc, char *argv[]){
+    FILE *f;
+
     fileName = NULL;
     if(argc == 1)
 	goto usage;
@@ -24,11 +24,11 @@ int main(unsigned argc, char *argv[]){
 		talx = ebc2asc;
 		break;
 	    case 's':
-		sFlag = true;
+		sFlag = 1;
 		break;
 	    case 'b':
-		sFlag = true;
-		bFlag = true;
+		sFlag = 1;
+		bFlag = 1;
 		break;
 	    default:
 		goto usage;
@@ -36,19 +36,18 @@ int main(unsigned argc, char *argv[]){
 	}
     }
     fileName = *++argv;
-    int fd;
     if(fileName[0] == '-' && fileName[1] == '\0'){
 	fileName = "<stdin>";
-	fd = 0;
+	f = stdin;
     } else {
-	if((fd = open(fileName, O_RDONLY)) < 0){
-	    cerr << "can't open " << fileName << "\n";
+	if((f = fopen(fileName, "rt")) < 0){
+	    fprintf(stderr, "can't open %s\n", fileName);
 	    return 1;
 	}
     }
-    parse(fd, cout);
+    parse(f, stdout);
     return 0;
 usage:
-    cerr << "usage: re2c [-esb] name\n";
+    fputs("usage: re2c [-esb] name\n", stderr);
     return 2;
 }

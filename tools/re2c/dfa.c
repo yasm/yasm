@@ -48,7 +48,7 @@ Span_show(Span *s, FILE *o, uint lb)
 	printSpan(o, lb, s->ub);
 	fprintf(o, " %u; ", s->to->label);
     }
-    return ub;
+    return s->ub;
 }
 
 void
@@ -60,7 +60,7 @@ State_out(FILE *o, const State *s){
     fputs("\n", o);
     lb = 0;
     for(i = 0; i < s->go.nSpans; ++i)
-	lb = s->go.span[i].show(o, lb);
+	lb = Span_show(&s->go.span[i], o, lb);
 }
 
 void
@@ -76,9 +76,11 @@ State *
 State_new(void)
 {
     State *s = malloc(sizeof(State));
-    s->rule = s->link = NULL;
+    s->rule = NULL;
+    s->link = NULL;
     s->kCount = 0;
-    s->kernel = s->action = NULL;
+    s->kernel = NULL;
+    s->action = NULL;
     s->go.nSpans = 0;
     s->go.span = NULL;
     return s;
@@ -107,42 +109,48 @@ static Ins **closure(Ins **cP, Ins *i){
     return cP;
 }
 
-struct GoTo {
+typedef struct GoTo {
     Char	ch;
     void	*to;
-};
+} GoTo;
 
-DFA::DFA(Ins *ins, uint ni, uint lb, uint ub, Char *rep)
-    : lbChar(lb), ubChar(ub) {
-    Ins **work = new Ins*[ni+1];
+DFA *
+DFA_new(Ins *ins, uint ni, uint lb, uint ub, Char *rep)
+{
+    DFA *d = malloc(sizeof(DFA));
+    Ins **work = malloc(sizeof(Ins*)*(ni+1));
     uint nc = ub - lb;
-    GoTo *goTo = new GoTo[nc];
-    Span *span = new Span[nc];
+    GoTo *goTo = malloc(sizeof(GoTo)*nc);
+    Span *span = malloc(sizeof(Span)*nc);
+
+    d->lbChar = lb;
+    d->ubChar = ub;
     memset((char*) goTo, 0, nc*sizeof(GoTo));
-    tail = &head;
-    head = NULL;
-    nStates = 0;
-    toDo = NULL;
-    findState(work, closure(work, &ins[0]) - work);
-    while(toDo){
-	State *s = toDo;
-	toDo = s->link;
+    d->tail = &d->head;
+    d->head = NULL;
+    d->nStates = 0;
+    d->toDo = NULL;
+    DFA_findState(d, work, closure(work, &ins[0]) - work);
+    while(d->toDo){
+	State *s = d->toDo;
 
 	Ins **cP, **iP, *i;
 	uint nGoTos = 0;
 	uint j;
 
+	d->toDo = s->link;
 	s->rule = NULL;
 	for(iP = s->kernel; (i = *iP); ++iP){
 	    if(i->i.tag == CHAR){
-		for(Ins *j = i + 1; j < (Ins*) i->i.link; ++j){
+		Ins *j;
+		for(j = i + 1; j < (Ins*) i->i.link; ++j){
 		    if(!(j->c.link = goTo[j->c.value - lb].to))
 			goTo[nGoTos++].ch = j->c.value;
 		    goTo[j->c.value - lb].to = j;
 		}
 	    } else if(i->i.tag == TERM){
-		if(!s->rule || ((RuleOp*) i->i.link)->accept < s->rule->accept)
-		    s->rule = (RuleOp*) i->i.link;
+		if(!s->rule || ((RegExp *)i->i.link)->d.RuleOp.accept < s->rule->d.RuleOp.accept)
+		    s->rule = (RegExp *)i->i.link;
 	    }
 	}
 
@@ -151,7 +159,7 @@ DFA::DFA(Ins *ins, uint ni, uint lb, uint ub, Char *rep)
 	    i = (Ins*) go->to;
 	    for(cP = work; i; i = (Ins*) i->c.link)
 		cP = closure(cP, i + i->c.bump);
-	    go->to = findState(work, cP - work);
+	    go->to = DFA_findState(d, work, cP - work);
 	}
 
 	s->go.nSpans = 0;
@@ -166,34 +174,37 @@ DFA::DFA(Ins *ins, uint ni, uint lb, uint ub, Char *rep)
 	for(j = nGoTos; j-- > 0;)
 	    goTo[goTo[j].ch - lb].to = NULL;
 
-	s->go.span = new Span[s->go.nSpans];
+	s->go.span = malloc(sizeof(Span)*s->go.nSpans);
 	memcpy((char*) s->go.span, (char*) span, s->go.nSpans*sizeof(Span));
 
-	(void) new Match(s);
+	Action_new_Match(s);
 
     }
-    delete [] work;
-    delete [] goTo;
-    delete [] span;
+    free(work);
+    free(goTo);
+    free(span);
+
+    return d;
 }
 
-DFA::~DFA(){
+void
+DFA_delete(DFA *d){
     State *s;
-    while((s = head)){
-	head = s->next;
-	delete s;
+    while((s = d->head)){
+	d->head = s->next;
+	State_delete(s);
     }
 }
 
-void DFA::addState(State **a, State *s){
-    s->label = nStates++;
+void DFA_addState(DFA *d, State **a, State *s){
+    s->label = d->nStates++;
     s->next = *a;
     *a = s;
-    if(a == tail)
-	tail = &s->next;
+    if(a == d->tail)
+	d->tail = &s->next;
 }
 
-State *DFA::findState(Ins **kernel, uint kCount){
+State *DFA_findState(DFA *d, Ins **kernel, uint kCount){
     Ins **cP, **iP, *i;
     State *s;
 
@@ -210,7 +221,7 @@ State *DFA::findState(Ins **kernel, uint kCount){
     kCount = cP - kernel;
     kernel[kCount] = NULL;
 
-    for(s = head; s; s = s->next){
+    for(s = d->head; s; s = s->next){
 	 if(s->kCount == kCount){
 	     for(iP = s->kernel; (i = *iP); ++iP)
 		 if(!isMarked(i))
@@ -220,13 +231,13 @@ State *DFA::findState(Ins **kernel, uint kCount){
 	 nextState:;
     }
 
-    s = new State;
-    addState(tail, s);
+    s = State_new();
+    DFA_addState(d, d->tail, s);
     s->kCount = kCount;
-    s->kernel = new Ins*[kCount+1];
+    s->kernel = malloc(sizeof(Ins*)*(kCount+1));
     memcpy(s->kernel, kernel, (kCount+1)*sizeof(Ins*));
-    s->link = toDo;
-    toDo = s;
+    s->link = d->toDo;
+    d->toDo = s;
 
 unmarkAll:
     for(iP = kernel; (i = *iP); ++iP)

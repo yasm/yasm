@@ -1,6 +1,7 @@
 #ifndef re2c_parser_h
 #define re2c_parser_h
 
+#include <stdio.h>
 #include "scanner.h"
 #include "re.h"
 
@@ -14,7 +15,7 @@ void Symbol_init(Symbol *, const SubStr*);
 static inline Symbol *Symbol_new(const SubStr*);
 Symbol *Symbol_find(const SubStr*);
 
-void parse(int, FILE *);
+void parse(FILE *, FILE *);
 
 static inline Symbol *
 Symbol_new(const SubStr *str)
