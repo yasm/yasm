@@ -1,4 +1,4 @@
-/* $Id: util.h,v 1.7 2001/09/16 09:13:00 peter Exp $
+/* $Id: util.h,v 1.8 2001/09/16 09:15:27 peter Exp $
  * Defines prototypes for replacement functions if needed.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -39,6 +39,8 @@ unsigned long strtoul(const char *nptr, char **endptr, int base);
 #  define strcasecmp(x, y)	strncmpi(x, y)
 # else
 #  define USE_OUR_OWN_STRCASECMP
+int strcasecmp(const char *s1, const char *s2);
+int strncasecmp(const char *s1, const char *s2, size_t n);
 # endif
 #endif
 
