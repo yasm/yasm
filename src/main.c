@@ -469,39 +469,49 @@ open_obj(const char *mode)
     return obj;
 }
 
+/* Define DO_FREE to 1 to enable deallocation of all data structures.
+ * Useful for detecting memory leaks, but slows down execution unnecessarily
+ * (as the OS will free everything we miss here).
+ */
+#define DO_FREE		1
+
 /* Cleans up all allocated structures. */
 static void
 cleanup(sectionhead *sections)
 {
-    if (cur_objfmt && cur_objfmt->cleanup)
-	cur_objfmt->cleanup();
-    if (cur_dbgfmt && cur_dbgfmt->cleanup)
-	cur_dbgfmt->cleanup();
-    if (cur_preproc)
-	cur_preproc->cleanup();
-    if (sections)
-	sections_delete(sections);
-    symrec_cleanup();
-    if (cur_arch)
-	cur_arch->cleanup();
+    if (DO_FREE) {
+	if (cur_objfmt && cur_objfmt->cleanup)
+	    cur_objfmt->cleanup();
+	if (cur_dbgfmt && cur_dbgfmt->cleanup)
+	    cur_dbgfmt->cleanup();
+	if (cur_preproc)
+	    cur_preproc->cleanup();
+	if (sections)
+	    sections_delete(sections);
+	symrec_cleanup();
+	if (cur_arch)
+	    cur_arch->cleanup();
 
-    floatnum_cleanup();
-    intnum_cleanup();
+	floatnum_cleanup();
+	intnum_cleanup();
 
-    yasm_errwarn.cleanup();
-    yasm_linemgr.cleanup();
+	yasm_errwarn.cleanup();
+	yasm_linemgr.cleanup();
 
-    BitVector_Shutdown();
+	BitVector_Shutdown();
+    }
 
     unload_modules();
 
     /* Finish with libltdl. */
     lt_dlexit();
 
-    if (in_filename)
-	xfree(in_filename);
-    if (obj_filename)
-	xfree(obj_filename);
+    if (DO_FREE) {
+	if (in_filename)
+	    xfree(in_filename);
+	if (obj_filename)
+	    xfree(obj_filename);
+    }
 }
 
 /*
