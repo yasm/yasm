@@ -47,11 +47,15 @@ struct parser {
      * This function also takes the FILE * to the initial starting file and
      * the input filename.
      *
+     * save_input is nonzero if the parser needs to save the original lines of
+     * source in the input file into the linemgr via linemgr->add_assoc_data().
+     *
      * This function returns the starting section of a linked list of sections
      * (whatever was in the file).
      */
     sectionhead *(*do_parse) (preproc *pp, arch *a, objfmt *of, linemgr *lm,
-			      errwarn *we, FILE *f, const char *in_filename);
+			      errwarn *we, FILE *f, const char *in_filename,
+			      int save_input);
 };
 
 /* Generic functions for all parsers - implemented in src/parser.c */

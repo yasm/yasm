@@ -47,9 +47,12 @@ size_t nasm_parser_locallabel_base_len = 0;
 /*@dependent@*/ linemgr *nasm_parser_linemgr;
 /*@dependent@*/ errwarn *nasm_parser_errwarn;
 
+int nasm_parser_save_input;
+
 static /*@dependent@*/ sectionhead *
 nasm_parser_do_parse(preproc *pp, arch *a, objfmt *of, linemgr *lm,
-		     errwarn *we, FILE *f, const char *in_filename)
+		     errwarn *we, FILE *f, const char *in_filename,
+		     int save_input)
     /*@globals killed nasm_parser_locallabel_base @*/
 {
     pp->initialize(f, in_filename, lm, we);
@@ -59,6 +62,7 @@ nasm_parser_do_parse(preproc *pp, arch *a, objfmt *of, linemgr *lm,
     nasm_parser_objfmt = of;
     nasm_parser_linemgr = lm;
     nasm_parser_errwarn = we;
+    nasm_parser_save_input = save_input;
 
     /* Initialize section list */
     nasm_parser_cur_section = sections_initialize(&nasm_parser_sections, of);

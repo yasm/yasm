@@ -42,6 +42,8 @@ extern /*@dependent@*/ objfmt *nasm_parser_objfmt;
 extern /*@dependent@*/ linemgr *nasm_parser_linemgr;
 extern /*@dependent@*/ errwarn *nasm_parser_errwarn;
 
+extern int nasm_parser_save_input;
+
 #define cur_lindex	(nasm_parser_linemgr->get_current())
 
 #define p_expr_new_tree(l,o,r)	expr_new_tree(l,o,r,cur_lindex)

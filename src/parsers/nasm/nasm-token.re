@@ -65,11 +65,15 @@ typedef struct Scanner {
     unsigned int	tchar, tline, cline;
 } Scanner;
 
+#define MAX_SAVED_LINE_LEN  80
+static char cur_line[MAX_SAVED_LINE_LEN];
+
 static Scanner s = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 1 };
 
 static YYCTYPE *
 fill(YYCTYPE *cursor)
 {
+    int first = 0;
     if(!s.eof){
 	size_t cnt = s.tok - s.bot;
 	if(cnt){
@@ -80,6 +84,8 @@ fill(YYCTYPE *cursor)
 	    s.pos -= cnt;
 	    s.lim -= cnt;
 	}
+	if (!s.bot)
+	    first = 1;
 	if((s.top - s.lim) < BSIZE){
 	    char *buf = xmalloc((s.lim - s.bot) + BSIZE);
 	    memcpy(buf, s.tok, s.lim - s.tok);
@@ -97,7 +103,37 @@ fill(YYCTYPE *cursor)
 	    s.eof = &s.lim[cnt]; *s.eof++ = '\n';
 	}
 	s.lim += cnt;
+	if (first && nasm_parser_save_input) {
+	    int i;
+	    /* save next line into cur_line */
+	    for (i=0; i<79 && &s.tok[i] < s.lim && s.tok[i] != '\n'; i++)
+		cur_line[i] = s.tok[i];
+	    cur_line[i] = '\0';
+	}
     }
+    return cursor;
+}
+
+static void
+delete_line(/*@only@*/ void *data)
+{
+    xfree(data);
+}
+
+static YYCTYPE *
+save_line(YYCTYPE *cursor)
+{
+    int i = 0;
+
+    /* save previous line using assoc_data */
+    nasm_parser_linemgr->add_assoc_data(LINEMGR_STD_TYPE_SOURCE,
+					xstrdup(cur_line), delete_line);
+    /* save next line into cur_line */
+    if ((YYLIMIT - YYCURSOR) < 80)
+	YYFILL(80);
+    for (i=0; i<79 && &cursor[i] < s.lim && cursor[i] != '\n'; i++)
+	cur_line[i] = cursor[i];
+    cur_line[i] = '\0';
     return cursor;
 }
 
@@ -380,7 +416,12 @@ scan:
 
 	ws+			{ goto scan; }
 
-	"\n"			{ state = INITIAL; RETURN(s.tok[0]); }
+	"\n"			{
+	    if (nasm_parser_save_input && cursor != s.eof)
+		cursor = save_line(cursor);
+	    state = INITIAL;
+	    RETURN(s.tok[0]);
+	}
 
 	any {
 	    cur_we->warning(WARN_UNREC_CHAR, cur_lindex,
@@ -405,6 +446,8 @@ linechg:
 	}
 
 	"\n" {
+	    if (nasm_parser_save_input && cursor != s.eof)
+		cursor = save_line(cursor);
 	    state = INITIAL;
 	    RETURN(s.tok[0]);
 	}
@@ -434,6 +477,8 @@ linechg2:
 
     /*!re2c
 	"\n" {
+	    if (nasm_parser_save_input && cursor != s.eof)
+		cursor = save_line(cursor);
 	    state = INITIAL;
 	    RETURN(s.tok[0]);
 	}
@@ -453,6 +498,8 @@ directive:
 
     /*!re2c
 	[\]\n] {
+	    if (nasm_parser_save_input && cursor != s.eof)
+		cursor = save_line(cursor);
 	    state = INITIAL;
 	    RETURN(s.tok[0]);
 	}
@@ -489,6 +536,8 @@ stringconst_scan:
 		cur_we->error(cur_lindex, N_("unterminated string"));
 	    strbuf[count] = '\0';
 	    yylval.str_val = strbuf;
+	    if (nasm_parser_save_input && cursor != s.eof)
+		cursor = save_line(cursor);
 	    RETURN(STRING);
 	}
 

@@ -22,6 +22,16 @@
 #ifndef YASM_LINEMGR_H
 #define YASM_LINEMGR_H
 
+/* Standard data types appropriate for use with add_assoc_data(). */
+typedef enum linemgr_std_type {
+    /* Source line, a 0-terminated, allocated string. */
+    LINEMGR_STD_TYPE_SOURCE = 1,   
+    /* User-defined types start here.  Use odd numbers (low bit set) for types
+     * very likely to have data associated for every line.
+     */
+    LINEMGR_STD_TYPE_USER = 4
+} linemgr_std_type;
+
 struct linemgr {
     /* Initialize cur_lindex and any manager internal data structures. */
     void (*initialize) (/*@exits@*/
@@ -29,11 +39,20 @@ struct linemgr {
 					    unsigned int line,
 					    const char *message));
 
-    /* Cleans up any memory allocated by initialize. */
+    /* Cleans up any memory allocated. */
     void (*cleanup) (void);
 
     /* Returns the current line index. */
     unsigned long (*get_current) (void);
+
+    /* Associates data with the current line index.
+     * Deletes old data associated with type if present.
+     * The function delete_func is used to delete the data (if non-NULL).
+     * All data of a particular type needs to have the exact same deletion
+     * function specified to this function on every call.
+     */
+    void (*add_assoc_data) (int type, /*@only@*/ void *data,
+			    /*@null@*/ void (*delete_func) (void *));
 
     /* Goes to the next line (increments the current line index), returns
      * the current (new) line index.
@@ -50,6 +69,12 @@ struct linemgr {
     /* Look up the associated actual file and line for a line index. */
     void (*lookup) (unsigned long lindex, /*@out@*/ const char **filename,
 		    /*@out@*/ unsigned long *line);
+
+    /* Returns data associated with line index and type.
+     * Returns NULL if no data of that type was associated with that line.
+     */
+    /*@dependent@*/ /*@null@*/ void * (*lookup_data) (unsigned long lindex,
+						      int type);
 };
 
 #endif

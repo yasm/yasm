@@ -401,7 +401,7 @@ main(int argc, char *argv[])
     /* Parse! */
     sections = cur_parser->do_parse(cur_preproc, cur_arch, cur_objfmt,
 				    &yasm_linemgr, &yasm_errwarn, in,
-				    in_filename);
+				    in_filename, 0);
 
     /* Close input file */
     if (in != stdin)
