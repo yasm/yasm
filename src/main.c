@@ -49,9 +49,10 @@
 static int files_open = 0;
 /*@null@*/ /*@only@*/ static char *obj_filename = NULL, *in_filename = NULL;
 /*@null@*/ static FILE *in = NULL, *obj = NULL;
+static int special_options = 0;
 
 /* Forward declarations: cmd line parser handlers */
-static int opt_option_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_special_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_format_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_objfile_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
@@ -59,37 +60,48 @@ static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int boo_boo_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int b_handler(char *cmd, /*@null@*/ char *param, int extra);
 
-/* values for asm_options */
-#define OPT_SHOW_HELP 0x01
+/* values for special_options */
+#define SPECIAL_SHOW_HELP 0x01
+#define SPECIAL_SHOW_VERSION 0x02
 
 /* command line options */
 static opt_option options[] =
 {
-    { 'h', "help",    0, opt_option_handler, OPT_SHOW_HELP, "show help text", NULL },
-    { 'f', "oformat", 1, opt_format_handler, 0, "select output format", "<format>" },
-    { 'o', "objfile", 1, opt_objfile_handler, 0, "name of object-file output", "<filename>" },
-    { 'w', NULL,      0, opt_warning_handler, 1, "inhibits warning messages", NULL },
-    { 'W', NULL,      0, opt_warning_handler, 0, "enables/disables warning", NULL },
+    {  0,  "version", 0, opt_special_handler, SPECIAL_SHOW_VERSION, N_("show version text"), NULL },
+    { 'h', "help",    0, opt_special_handler, SPECIAL_SHOW_HELP, N_("show help text"), NULL },
+    { 'f', "oformat", 1, opt_format_handler, 0, N_("select output format"), N_("<format>") },
+    { 'o', "objfile", 1, opt_objfile_handler, 0, N_("name of object-file output"), N_("<filename>") },
+    { 'w', NULL,      0, opt_warning_handler, 1, N_("inhibits warning messages"), NULL },
+    { 'W', NULL,      0, opt_warning_handler, 0, N_("enables/disables warning"), NULL },
     /* Fake handlers: remove them */
     { 'b', NULL,      0, b_handler, 0, "says boom!", NULL },
     {  0,  "boo-boo", 0, boo_boo_handler, 0, "says boo-boo!", NULL },
 };
 
+/* version message */
+static const char version_msg[] = N_(
+    "yasm " VERSION "\n"
+    "Copyright (c) 2001-2002 Peter Johnson and other " PACKAGE " developers\n"
+    "This program is free software; you may redistribute it under the terms\n"
+    "of the GNU General Public License.  Portions of this program are\n"
+    "licensed under the GNU Lesser General Public License or the 3-clause\n"
+    "BSD license; see individual file comments for details.  This program\n"
+    "has absolutely no warranty; not even for merchantability or fitness for\n"
+    "a particular purpose.\n"
+    "Compiled on " __DATE__ ".\n");
+
 /* help messages */
-static const char *help_head =
-    "yasm version " VERSION " compiled " __DATE__ "\n"
-    "copyright (c) 2001 Peter Johnson and " PACKAGE " developers\n"
-    "mailto: asm-devel@bilogic.org\n"
-    "\n"
+static const char help_head[] = N_(
     "usage: yasm [options|files]+\n"
-    "where options are:\n";
-static const char *help_tail =
+    "Options:\n");
+static const char help_tail[] = N_(
     "\n"
-    "   files are asm sources to be assembled\n"
+    "Files are asm sources to be assembled.\n"
     "\n"
-    "sample invocation:\n"
-    "   yasm -b --boo-boo -f elf -o test.o impl.asm\n"
-    "\n";
+    "Sample invocation:\n"
+    "   yasm -f elf -o object.o source.asm\n"
+    "\n"
+    "Report bugs to bug-yasm@tortall.net\n");
 
 /* main function */
 /*@-globstate -unrecog@*/
@@ -109,9 +121,15 @@ main(int argc, char *argv[])
     if (parse_cmdline(argc, argv, options, countof(options, opt_option)))
 	return EXIT_FAILURE;
 
-    if (asm_options & OPT_SHOW_HELP) {
-	help_msg(help_head, help_tail, options, countof(options, opt_option));
-	return EXIT_FAILURE;
+    switch (special_options) {
+	case SPECIAL_SHOW_HELP:
+	    /* Does gettext calls internally */
+	    help_msg(help_head, help_tail, options,
+		     countof(options, opt_option));
+	    return EXIT_SUCCESS;
+	case SPECIAL_SHOW_VERSION:
+	    printf("%s", gettext(version_msg));
+	    return EXIT_SUCCESS;
     }
 
     /* Initialize BitVector (needed for floating point). */
@@ -257,9 +275,10 @@ not_an_option_handler(char *param)
 }
 
 static int
-opt_option_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param, int extra)
+opt_special_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param, int extra)
 {
-    asm_options |= extra;
+    if (special_options == 0)
+	special_options = extra;
     return 0;
 }
 

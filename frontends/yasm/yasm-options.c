@@ -137,7 +137,7 @@ help_msg(const char *msg, const char *tail, opt_option *options, size_t nopts)
     char optbuf[100], optopt[100];
     size_t i;
 
-    fprintf(stdout, msg);
+    printf(gettext(msg));
 
     for (i = 0; i < nopts; i++) {
 	optbuf[0] = 0;
@@ -147,14 +147,14 @@ help_msg(const char *msg, const char *tail, opt_option *options, size_t nopts)
 	    if (options[i].sopt) {
 		sprintf(optbuf, "-%c <%s>", options[i].sopt,
 			options[i].param_desc ? options[i].
-			param_desc : "param");
+			param_desc : _("param"));
 	    }
 	    if (options[i].sopt && options[i].lopt)
 		strcat(optbuf, ", ");
 	    if (options[i].lopt) {
 		sprintf(optopt, "--%s <%s>", options[i].lopt,
 			options[i].param_desc ? options[i].
-			param_desc : "param");
+			param_desc : _("param"));
 		strcat(optbuf, optopt);
 	    }
 	} else {
@@ -169,8 +169,8 @@ help_msg(const char *msg, const char *tail, opt_option *options, size_t nopts)
 	    }
 	}
 
-	fprintf(stdout, "    %-24s  %s\n", optbuf, options[i].description);
+	printf("    %-24s  %s\n", optbuf, gettext(options[i].description));
     }
 
-    fprintf(stdout, tail);
+    printf(gettext(tail));
 }
