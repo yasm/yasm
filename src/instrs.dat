@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.25 2001/07/05 06:18:19 peter Exp $
+; $Id: instrs.dat,v 1.26 2001/07/05 06:24:09 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -1025,10 +1025,8 @@ movdqa	mem128,XMMREG		nil	66,0F,7F	$1,$2	nil	P4,SSE2
 movdqu	XMMREG,XMMREG		nil	F3,0F,6F	$2r,$1	nil	P4,SSE2
 movdqu	XMMREG,mem128		nil	F3,0F,6F	$2,$1	nil	P4,SSE2
 movdqu	mem128,XMMREG		nil	F3,0F,7F	$1,$2	nil	P4,SSE2
-; TODO: not sure if this encoding (movdq2q) is correct
-movdq2q	MMXREG,XMMREG		nil	F2,0F,D6	$1r,$2	nil	P4,SSE2
-; TODO: not sure if this encoding (movq2dq) is correct
-movq2dq	XMMREG,MMXREG		nil	F3,0F,D6	$1r,$2	nil	P4,SSE2
+movdq2q	MMXREG,XMMREG		nil	F2,0F,D6	$2r,$1	nil	P4,SSE2
+movq2dq	XMMREG,MMXREG		nil	F3,0F,D6	$2r,$1	nil	P4,SSE2
 pmuludq!mmxsse		F4		P4		P4,SSE2
 pshufd!sse2pdimm	70
 pshufhw	XMMREG,rm128,imm8	nil	F3,0F,70	$2,$1	$3,8	P4,SSE2
