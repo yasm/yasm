@@ -116,13 +116,13 @@ typedef struct x86_jmprel {
 
 int
 yasm_x86__set_rex_from_reg(unsigned char *rex, unsigned char *low3,
-			   unsigned long reg, unsigned char bits,
+			   unsigned long reg, unsigned int bits,
 			   x86_rex_bit_pos rexbit)
 {
     *low3 = (unsigned char)(reg&7);
 
     if (bits == 64) {
-	x86_expritem_reg_size size = (x86_expritem_reg_size)(reg & ~0xF);
+	x86_expritem_reg_size size = (x86_expritem_reg_size)(reg & ~0xFUL);
 
 	if (size == X86_REG8X || (reg & 0xF) >= 8) {
 	    if (*rex == 0xff)
@@ -220,7 +220,7 @@ yasm_x86__bc_new_jmprel(x86_new_jmprel_data *d)
 /*@=compmempass =mustfree@*/
 
 void
-yasm_x86__ea_set_segment(yasm_effaddr *ea, unsigned char segment,
+yasm_x86__ea_set_segment(yasm_effaddr *ea, unsigned int segment,
 			 unsigned long lindex)
 {
     x86_effaddr *x86_ea = (x86_effaddr *)ea;
@@ -232,7 +232,7 @@ yasm_x86__ea_set_segment(yasm_effaddr *ea, unsigned char segment,
 	yasm__warning(YASM_WARN_GENERAL, lindex,
 		      N_("multiple segment overrides, using leftmost"));
 
-    x86_ea->segment = segment;
+    x86_ea->segment = (unsigned char)segment;
 }
 
 void
@@ -247,7 +247,7 @@ yasm_x86__ea_set_disponly(yasm_effaddr *ea)
 }
 
 yasm_effaddr *
-yasm_x86__ea_new_reg(unsigned long reg, unsigned char *rex, unsigned char bits)
+yasm_x86__ea_new_reg(unsigned long reg, unsigned char *rex, unsigned int bits)
 {
     x86_effaddr *x86_ea;
     unsigned char rm;
@@ -297,14 +297,14 @@ yasm_x86__ea_new_expr(yasm_expr *e)
 
 /*@-compmempass@*/
 yasm_effaddr *
-yasm_x86__ea_new_imm(yasm_expr *imm, unsigned char im_len)
+yasm_x86__ea_new_imm(yasm_expr *imm, unsigned int im_len)
 {
     x86_effaddr *x86_ea;
 
     x86_ea = yasm_xmalloc(sizeof(x86_effaddr));
 
     x86_ea->ea.disp = imm;
-    x86_ea->ea.len = im_len;
+    x86_ea->ea.len = (unsigned char)im_len;
     x86_ea->ea.nosplit = 0;
     x86_ea->segment = 0;
     x86_ea->modrm = 0;
@@ -331,7 +331,7 @@ yasm_x86__bc_insn_get_ea(yasm_bytecode *bc)
 }
 
 void
-yasm_x86__bc_insn_opersize_override(yasm_bytecode *bc, unsigned char opersize)
+yasm_x86__bc_insn_opersize_override(yasm_bytecode *bc, unsigned int opersize)
 {
     x86_insn *insn;
     x86_jmprel *jmprel;
@@ -342,11 +342,11 @@ yasm_x86__bc_insn_opersize_override(yasm_bytecode *bc, unsigned char opersize)
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
 	    insn = (x86_insn *)bc;
-	    insn->opersize = opersize;
+	    insn->opersize = (unsigned char)opersize;
 	    break;
 	case X86_BC_JMPREL:
 	    jmprel = (x86_jmprel *)bc;
-	    jmprel->opersize = opersize;
+	    jmprel->opersize = (unsigned char)opersize;
 	    break;
 	default:
 	    yasm_internal_error(
@@ -355,7 +355,7 @@ yasm_x86__bc_insn_opersize_override(yasm_bytecode *bc, unsigned char opersize)
 }
 
 void
-yasm_x86__bc_insn_addrsize_override(yasm_bytecode *bc, unsigned char addrsize)
+yasm_x86__bc_insn_addrsize_override(yasm_bytecode *bc, unsigned int addrsize)
 {
     x86_insn *insn;
     x86_jmprel *jmprel;
@@ -366,11 +366,11 @@ yasm_x86__bc_insn_addrsize_override(yasm_bytecode *bc, unsigned char addrsize)
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
 	    insn = (x86_insn *)bc;
-	    insn->addrsize = addrsize;
+	    insn->addrsize = (unsigned char)addrsize;
 	    break;
 	case X86_BC_JMPREL:
 	    jmprel = (x86_jmprel *)bc;
-	    jmprel->addrsize = addrsize;
+	    jmprel->addrsize = (unsigned char)addrsize;
 	    break;
 	default:
 	    yasm_internal_error(
@@ -379,7 +379,7 @@ yasm_x86__bc_insn_addrsize_override(yasm_bytecode *bc, unsigned char addrsize)
 }
 
 void
-yasm_x86__bc_insn_set_lockrep_prefix(yasm_bytecode *bc, unsigned char prefix,
+yasm_x86__bc_insn_set_lockrep_prefix(yasm_bytecode *bc, unsigned int prefix,
 				     unsigned long lindex)
 {
     x86_insn *insn;
@@ -407,7 +407,7 @@ yasm_x86__bc_insn_set_lockrep_prefix(yasm_bytecode *bc, unsigned char prefix,
 	yasm__warning(YASM_WARN_GENERAL, lindex,
 		      N_("multiple LOCK or REP prefixes, using leftmost"));
 
-    *lockrep_pre = prefix;
+    *lockrep_pre = (unsigned char)prefix;
 }
 
 void
@@ -898,8 +898,9 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp,
 		yasm_internal_error(N_("checkea failed"));
 
 	    if (ea->disp) {
-		if (output_expr(&ea->disp, bufp, ea->len, *bufp-bufp_orig,
-				sect, bc, 0, d))
+		if (output_expr(&ea->disp, bufp, ea->len,
+				(unsigned long)(*bufp-bufp_orig), sect, bc, 0,
+				d))
 		    return 1;
 	    } else {
 		/* 0 displacement, but we didn't know it before, so we have to
@@ -914,8 +915,8 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp,
     /* Immediate (if required) */
     if (imm && imm->val) {
 	/* TODO: check imm->len vs. sized len from expr? */
-	if (output_expr(&imm->val, bufp, imm->len, *bufp-bufp_orig, sect, bc,
-			0, d))
+	if (output_expr(&imm->val, bufp, imm->len,
+			(unsigned long)(*bufp-bufp_orig), sect, bc, 0, d))
 	    return 1;
     }
 
@@ -957,8 +958,8 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 		YASM_WRITE_8(*bufp, jmprel->shortop.opcode[i]);
 
 	    /* Relative displacement */
-	    if (output_expr(&jmprel->target, bufp, 1, *bufp-bufp_orig, sect,
-			    bc, 1, d))
+	    if (output_expr(&jmprel->target, bufp, 1,
+			    (unsigned long)(*bufp-bufp_orig), sect, bc, 1, d))
 		return 1;
 	    break;
 	case JR_NEAR_FORCED:
@@ -975,8 +976,8 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 
 	    /* Relative displacement */
 	    if (output_expr(&jmprel->target, bufp,
-			    (opersize == 32) ? 4UL : 2UL, *bufp-bufp_orig,
-			    sect, bc, 1, d))
+			    (opersize == 32) ? 4UL : 2UL,
+			    (unsigned long)(*bufp-bufp_orig), sect, bc, 1, d))
 		return 1;
 	    break;
 	default:
@@ -1015,7 +1016,7 @@ yasm_x86__intnum_tobytes(const yasm_intnum *intn, unsigned char **bufp,
 		N_("tried to do PC-relative offset from invalid sized value"));
 	val = yasm_intnum_get_uint(intn);
 	val -= bc->len;
-	switch (valsize) {
+	switch ((unsigned int)valsize) {
 	    case 1:
 		YASM_WRITE_8(*bufp, val);
 		break;

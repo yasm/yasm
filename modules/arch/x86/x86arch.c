@@ -70,7 +70,7 @@ yasm_x86__directive(const char *name, yasm_valparamhead *valparams,
 unsigned int
 yasm_x86__get_reg_size(unsigned long reg)
 {
-    switch ((x86_expritem_reg_size)(reg & ~0xF)) {
+    switch ((x86_expritem_reg_size)(reg & ~0xFUL)) {
 	case X86_REG8:
 	case X86_REG8X:
 	    return 1;
@@ -115,7 +115,7 @@ yasm_x86__reg_print(FILE *f, unsigned long reg)
 	"r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
     };
 
-    switch ((x86_expritem_reg_size)(reg&~0xF)) {
+    switch ((x86_expritem_reg_size)(reg & ~0xFUL)) {
 	case X86_REG8:
 	    fprintf(f, "%s", name8[reg&0xF]);
 	    break;
@@ -167,14 +167,14 @@ yasm_x86__handle_prefix(yasm_bytecode *bc, const unsigned long data[4],
 {
     switch((x86_parse_insn_prefix)data[0]) {
 	case X86_LOCKREP:
-	    yasm_x86__bc_insn_set_lockrep_prefix(bc, (unsigned char)data[1],
+	    yasm_x86__bc_insn_set_lockrep_prefix(bc, data[1] & 0xff,
 						 lindex);
 	    break;
 	case X86_ADDRSIZE:
-	    yasm_x86__bc_insn_addrsize_override(bc, (unsigned char)data[1]);
+	    yasm_x86__bc_insn_addrsize_override(bc, data[1]);
 	    break;
 	case X86_OPERSIZE:
-	    yasm_x86__bc_insn_opersize_override(bc, (unsigned char)data[1]);
+	    yasm_x86__bc_insn_opersize_override(bc, data[1]);
 	    break;
     }
 }

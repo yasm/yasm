@@ -418,7 +418,7 @@ append_token(int token, struct source_head *to_head, source **to_tail)
     }
 }
 
-void
+static void
 replay_saved_tokens(char *ident,
 		    struct source_head *from_head,
 		    struct source_head *to_head,
@@ -748,11 +748,11 @@ static size_t
 yapp_preproc_input(char *buf, size_t max_size)
 {
     static YAPP_State state = YAPP_STATE_INITIAL;
-    int n = 0;
+    size_t n = 0;
     int token;
     int need_line_directive = 0;
 
-    while (saved_length < max_size && state != YAPP_STATE_EOF)
+    while ((size_t)saved_length < max_size && state != YAPP_STATE_EOF)
     {
 	token = yapp_preproc_lex();
 

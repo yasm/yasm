@@ -511,8 +511,8 @@ static nasm_expr *expr3(int critical)
 	    e = scalarvect (nasm_reloc_value(e) << nasm_reloc_value(f));
 	    break;
 	  case TOKEN_SHR:
-	    e = scalarvect (((unsigned long)nasm_reloc_value(e)) >>
-			    nasm_reloc_value(f));
+	    e = scalarvect ((long)(((unsigned long)nasm_reloc_value(e)) >>
+			    nasm_reloc_value(f)));
 	    break;
 	}
     }
@@ -589,15 +589,15 @@ static nasm_expr *expr5(int critical)
 	    if (nasm_is_just_unknown(e) || nasm_is_just_unknown(f))
 		e = unknown_expr();
 	    else
-		e = scalarvect (((unsigned long)nasm_reloc_value(e)) /
-				((unsigned long)nasm_reloc_value(f)));
+		e = scalarvect ((long)(((unsigned long)nasm_reloc_value(e)) /
+				((unsigned long)nasm_reloc_value(f))));
 	    break;
 	  case '%':
 	    if (nasm_is_just_unknown(e) || nasm_is_just_unknown(f))
 		e = unknown_expr();
 	    else
-		e = scalarvect (((unsigned long)nasm_reloc_value(e)) %
-				((unsigned long)nasm_reloc_value(f)));
+		e = scalarvect ((long)(((unsigned long)nasm_reloc_value(e)) %
+				((unsigned long)nasm_reloc_value(f))));
 	    break;
 	  case TOKEN_SDIV:
 	    if (nasm_is_just_unknown(e) || nasm_is_just_unknown(f))

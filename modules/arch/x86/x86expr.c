@@ -47,7 +47,7 @@ x86_expr_checkea_get_reg3264(yasm_expr__item *ei, int *regnum,
 {
     x86_checkea_reg3264_data *data = d;
 
-    switch ((x86_expritem_reg_size)(ei->data.reg & ~0xF)) {
+    switch ((x86_expritem_reg_size)(ei->data.reg & ~0xFUL)) {
 	case X86_REG32:
 	    if (data->addrsize != 32)
 		return 0;
@@ -97,7 +97,7 @@ x86_expr_checkea_get_reg16(yasm_expr__item *ei, int *regnum, void *d)
     reg16[7] = &data->di;
 
     /* don't allow 32-bit registers */
-    if ((ei->data.reg & ~0xF) != X86_REG16)
+    if ((ei->data.reg & ~0xFUL) != X86_REG16)
 	return 0;
 
     /* & 7 for sanity check */
@@ -491,7 +491,7 @@ x86_expr_checkea_getregsize_callback(yasm_expr__item *ei, void *d)
     unsigned char *addrsize = (unsigned char *)d;
 
     if (ei->type == YASM_EXPR_REG) {
-	switch ((x86_expritem_reg_size)(ei->data.reg & ~0xF)) {
+	switch ((x86_expritem_reg_size)(ei->data.reg & ~0xFUL)) {
 	    case X86_REG16:
 		*addrsize = 16;
 		break;
@@ -512,7 +512,7 @@ x86_expr_checkea_getregsize_callback(yasm_expr__item *ei, void *d)
 
 int
 yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
-		       unsigned char bits, unsigned char nosplit,
+		       unsigned int bits, unsigned int nosplit,
 		       unsigned char *displen, unsigned char *modrm,
 		       unsigned char *v_modrm, unsigned char *n_modrm,
 		       unsigned char *sib, unsigned char *v_sib,
@@ -740,7 +740,8 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 	     * of register basereg is, as x86_set_rex_from_reg doesn't pay
 	     * much attention.
 	     */
-	    if (yasm_x86__set_rex_from_reg(rex, &low3, X86_REG64 | basereg,
+	    if (yasm_x86__set_rex_from_reg(rex, &low3,
+					   (unsigned int)(X86_REG64 | basereg),
 					   bits, X86_REX_B)) {
 		yasm__error(e->line,
 		    N_("invalid combination of operands and effective address"));
@@ -769,8 +770,9 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 	    if (basereg == REG3264_NONE)
 		*sib |= 5;
 	    else {
-		if (yasm_x86__set_rex_from_reg(rex, &low3, X86_REG64 | basereg,
-					       bits, X86_REX_B)) {
+		if (yasm_x86__set_rex_from_reg(rex, &low3, (unsigned int)
+					       (X86_REG64 | basereg), bits,
+					       X86_REX_B)) {
 		    yasm__error(e->line,
 			N_("invalid combination of operands and effective address"));
 		    return 0;
@@ -783,8 +785,8 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 		*sib |= 040;
 		/* Any scale field is valid, just leave at 0. */
 	    else {
-		if (yasm_x86__set_rex_from_reg(rex, &low3,
-					       X86_REG64 | indexreg, bits,
+		if (yasm_x86__set_rex_from_reg(rex, &low3, (unsigned int)
+					       (X86_REG64 | indexreg), bits,
 					       X86_REX_X)) {
 		    yasm__error(e->line,
 			N_("invalid combination of operands and effective address"));

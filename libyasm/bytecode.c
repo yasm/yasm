@@ -137,7 +137,7 @@ yasm_ea_get_disp(const yasm_effaddr *ptr)
 }
 
 void
-yasm_ea_set_len(yasm_effaddr *ptr, unsigned char len)
+yasm_ea_set_len(yasm_effaddr *ptr, unsigned int len)
 {
     if (!ptr)
 	return;
@@ -146,16 +146,16 @@ yasm_ea_set_len(yasm_effaddr *ptr, unsigned char len)
      * an explicit override, where we expect the user knows what they're doing.
      */
 
-    ptr->len = len;
+    ptr->len = (unsigned char)len;
 }
 
 void
-yasm_ea_set_nosplit(yasm_effaddr *ptr, unsigned char nosplit)
+yasm_ea_set_nosplit(yasm_effaddr *ptr, unsigned int nosplit)
 {
     if (!ptr)
 	return;
 
-    ptr->nosplit = nosplit;
+    ptr->nosplit = (unsigned char)nosplit;
 }
 
 /*@-nullstate@*/
@@ -212,7 +212,7 @@ yasm_bc_new_common(yasm_bytecode_type type, size_t size, unsigned long lindex)
 }
 
 yasm_bytecode *
-yasm_bc_new_data(yasm_datavalhead *datahead, unsigned char size,
+yasm_bc_new_data(yasm_datavalhead *datahead, unsigned int size,
 		 unsigned long lindex)
 {
     bytecode_data *data;
@@ -221,13 +221,13 @@ yasm_bc_new_data(yasm_datavalhead *datahead, unsigned char size,
 	yasm_bc_new_common(YASM_BC__DATA, sizeof(bytecode_data), lindex);
 
     data->datahead = *datahead;
-    data->size = size;
+    data->size = (unsigned char)size;
 
     return (yasm_bytecode *)data;
 }
 
 yasm_bytecode *
-yasm_bc_new_reserve(yasm_expr *numitems, unsigned char itemsize,
+yasm_bc_new_reserve(yasm_expr *numitems, unsigned int itemsize,
 		    unsigned long lindex)
 {
     bytecode_reserve *reserve;
@@ -238,7 +238,7 @@ yasm_bc_new_reserve(yasm_expr *numitems, unsigned char itemsize,
     /*@-mustfree@*/
     reserve->numitems = numitems;
     /*@=mustfree@*/
-    reserve->itemsize = itemsize;
+    reserve->itemsize = (unsigned char)itemsize;
 
     return (yasm_bytecode *)reserve;
 }
@@ -340,7 +340,7 @@ yasm_bc_delete(yasm_bytecode *bc)
 		    N_("objfmt can't handle its own objfmt data bytecode"));
 	    break;
 	default:
-	    if (bc->type < cur_arch->bc.type_max)
+	    if ((unsigned int)bc->type < (unsigned int)cur_arch->bc.type_max)
 		cur_arch->bc.bc_delete(bc);
 	    else
 		yasm_internal_error(N_("Unknown bytecode type"));
@@ -414,7 +414,7 @@ yasm_bc_print(FILE *f, int indent_level, const yasm_bytecode *bc)
 		fprintf(f, "%*sUNKNOWN\n", indent_level, "");
 	    break;
 	default:
-	    if (bc->type < cur_arch->bc.type_max)
+	    if ((unsigned int)bc->type < (unsigned int)cur_arch->bc.type_max)
 		cur_arch->bc.bc_print(f, indent_level, bc);
 	    else
 		fprintf(f, "%*s_Unknown_\n", indent_level, "");
@@ -637,7 +637,7 @@ yasm_bc_resolve(yasm_bytecode *bc, int save, const yasm_section *sect,
 	    yasm_internal_error(N_("resolving objfmt data bytecode?"));
 	    /*break;*/
 	default:
-	    if (bc->type < cur_arch->bc.type_max)
+	    if ((unsigned int)bc->type < (unsigned int)cur_arch->bc.type_max)
 		retval = cur_arch->bc.bc_resolve(bc, save, sect,
 						 calc_bc_dist);
 	    else
@@ -691,7 +691,8 @@ bc_tobytes_data(bytecode_data *bc_data, unsigned char **bufp,
 		break;
 	    case DV_EXPR:
 		if (output_expr(&dv->data.expn, bufp, bc_data->size,
-				*bufp-bufp_orig, sect, bc, 0, d))
+				(unsigned long)(*bufp-bufp_orig), sect, bc, 0,
+				d))
 		    return 1;
 		break;
 	    case DV_STRING:
@@ -834,7 +835,7 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 		    N_("Have objfmt data bytecode but no way to output it"));
 	    break;
 	default:
-	    if (bc->type < cur_arch->bc.type_max)
+	    if ((unsigned int)bc->type < (unsigned int)cur_arch->bc.type_max)
 		error = cur_arch->bc.bc_tobytes(bc, &destbuf, sect, d,
 						output_expr);
 	    else

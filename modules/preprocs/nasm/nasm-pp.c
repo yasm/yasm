@@ -445,7 +445,8 @@ static Token *delete_Token(Token * t);
 static char *
 check_tasm_directive(char *line)
 {
-    int i, j, k, m, len;
+    int i, j, k, m;
+    size_t len;
     char *p = line, *oldline, oldchar;
 
     /* Skip whitespace */
@@ -513,7 +514,8 @@ check_tasm_directive(char *line)
 static char *
 prepreproc(char *line)
 {
-    int lineno, fnlen;
+    int lineno;
+    size_t fnlen;
     char *fname, *oldline;
 
     if (line[0] == '#' && line[1] == ' ')
@@ -526,7 +528,7 @@ prepreproc(char *line)
 	    fname++;
 	fnlen = strcspn(fname, "\"");
 	line = nasm_malloc(20 + fnlen);
-	sprintf(line, "%%line %d %.*s", lineno, fnlen, fname);
+	sprintf(line, "%%line %d %.*s", lineno, (int)fnlen, fname);
 	nasm_free(oldline);
     }
     if (tasm_compatible_mode)
@@ -544,7 +546,7 @@ static int
 hash(char *s)
 {
     unsigned int h = 0;
-    int i = 0;
+    unsigned int i = 0;
     /*
      * Powers of three, mod 31.
      */
@@ -722,7 +724,7 @@ read_line(void)
 	{
 	    long offset = p - buffer;
 	    bufsize += BUF_DELTA;
-	    buffer = nasm_realloc(buffer, bufsize);
+	    buffer = nasm_realloc(buffer, (size_t)bufsize);
 	    p = buffer + offset;	/* prevent stale-pointer problems */
 	}
     }
@@ -988,8 +990,8 @@ new_Token(Token * next, int type, const char *text, int txtlen)
     {
 	if (txtlen == 0)
 	    txtlen = strlen(text);
-	t->text = nasm_malloc(1 + txtlen);
-	strncpy(t->text, text, txtlen);
+	t->text = nasm_malloc(1 + (size_t)txtlen);
+	strncpy(t->text, text, (size_t)txtlen);
 	t->text[txtlen] = '\0';
     }
     return t;
@@ -1056,7 +1058,7 @@ detoken(Token * tlist, int expand_locals)
 	    len += strlen(t->text);
 	}
     }
-    p = line = nasm_malloc(len + 1);
+    p = line = nasm_malloc((size_t)len + 1);
     for (t = tlist; t; t = t->next)
     {
 	if (t->type == TOK_WHITESPACE)
@@ -2812,7 +2814,7 @@ do_directive(Token * tline)
 
 	    macro_start = nasm_malloc(sizeof(*macro_start));
 	    macro_start->next = NULL;
-	    make_tok_num(macro_start, strlen(t->text) - 2);
+	    make_tok_num(macro_start, (int)strlen(t->text) - 2);
 	    macro_start->mac = NULL;
 
 	    /*
@@ -2912,7 +2914,7 @@ do_directive(Token * tline)
 	    macro_start->next = NULL;
 	    macro_start->text = nasm_strdup("'''");
 	    if (evalresult->value > 0
-		    && evalresult->value < strlen(t->text) - 1)
+		    && evalresult->value < (int)strlen(t->text) - 1)
 	    {
 		macro_start->text[1] = t->text[evalresult->value];
 	    }

@@ -508,7 +508,7 @@ coff_objfmt_output(FILE *f, yasm_sectionhead *sections)
     info.buf = yasm_xmalloc(REGULAR_OUTBUF_SIZE);
 
     /* Allocate space for headers by seeking forward */
-    if (fseek(f, 20+40*(coff_objfmt_parse_scnum-1), SEEK_SET) < 0) {
+    if (fseek(f, (long)(20+40*(coff_objfmt_parse_scnum-1)), SEEK_SET) < 0) {
 	yasm__error(0, N_("could not seek on output file"));
 	return;
     }

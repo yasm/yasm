@@ -57,8 +57,8 @@ void yasm_bc_initialize(yasm_arch *a);
 /*@only@*/ yasm_immval *yasm_imm_new_expr(/*@keep@*/ yasm_expr *e);
 
 /*@observer@*/ const yasm_expr *yasm_ea_get_disp(const yasm_effaddr *ea);
-void yasm_ea_set_len(yasm_effaddr *ea, unsigned char len);
-void yasm_ea_set_nosplit(yasm_effaddr *ea, unsigned char nosplit);
+void yasm_ea_set_len(yasm_effaddr *ea, unsigned int len);
+void yasm_ea_set_nosplit(yasm_effaddr *ea, unsigned int nosplit);
 void yasm_ea_delete(/*@only@*/ yasm_effaddr *ea);
 void yasm_ea_print(FILE *f, int indent_level, const yasm_effaddr *ea);
 
@@ -68,10 +68,10 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
 					     size_t datasize,
 					     unsigned long lindex);
 /*@only@*/ yasm_bytecode *yasm_bc_new_data(yasm_datavalhead *datahead,
-					   unsigned char size,
+					   unsigned int size,
 					   unsigned long lindex);
 /*@only@*/ yasm_bytecode *yasm_bc_new_reserve(/*@only@*/ yasm_expr *numitems,
-					      unsigned char itemsize,
+					      unsigned int itemsize,
 					      unsigned long lindex);
 /*@only@*/ yasm_bytecode *yasm_bc_new_incbin
     (/*@only@*/ char *filename, /*@only@*/ /*@null@*/ yasm_expr *start,

@@ -162,7 +162,7 @@ if test "$USE_MAINTAINER_MODE" = "yes"; then
 
   # Enable more warnings
   if test "$GCC" = "yes"; then
-    MORE_CFLAGS="$MORE_CFLAGS -Wbad-function-cast -Wcast-align -Wcast-qual -Wchar-subscripts -Winline -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wshadow -Wstrict-prototypes -Wwrite-strings"
+    MORE_CFLAGS="$MORE_CFLAGS -Waggregate-return -Wbad-function-cast -Wcast-align -Wcast-qual -Wconversion -Winline -Wmissing-declarations -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wshadow -Wsign-compare -Wstrict-prototypes -Wtraditional -Wwrite-strings"
   fi
 
   # Require Perl
@@ -216,7 +216,7 @@ fi
 # Turn warnings into errors
 if test "$warnerror" = "yes"; then
   if test "$GCC" = "yes"; then
-    MORE_CFLAGS="$MORE_CFLAGS -Werror"
+    MORE_CFLAGS="$MORE_CFLAGS -Wno-conversion -Werror"
   fi
 fi
 

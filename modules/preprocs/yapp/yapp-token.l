@@ -122,7 +122,8 @@ DIR	 %[ \t]*
 
     /* string/character constant values */
 ["']	{
-    int inch, count;
+    int inch;
+    size_t count;
     char endch = yytext[0];
 
     strbuf = yasm_xmalloc(STRBUF_ALLOC_SIZE);

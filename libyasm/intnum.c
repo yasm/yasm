@@ -602,12 +602,12 @@ yasm_intnum_check_size(const yasm_intnum *intn, size_t size, int is_signed)
 		    int retval;
 
 		    BitVector_Negate(abs_bv, intn->val.bv);
-		    retval = Set_Max(abs_bv) < size*8;
+		    retval = Set_Max(abs_bv) < (long)(size*8);
 
 		    BitVector_Destroy(abs_bv);
 		    return retval;
 		} else
-		    return (Set_Max(intn->val.bv) < size*8);
+		    return (Set_Max(intn->val.bv) < (long)(size*8));
 	}
     } else {
 	switch (intn->type) {
@@ -627,7 +627,7 @@ yasm_intnum_check_size(const yasm_intnum *intn, size_t size, int is_signed)
 		if (size >= 10)
 		    return 1;
 		else
-		    return (Set_Max(intn->val.bv) < size*8);
+		    return (Set_Max(intn->val.bv) < (long)(size*8));
 	}
     }
     return 0;

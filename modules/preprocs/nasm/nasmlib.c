@@ -344,7 +344,7 @@ int nasm_src_get(long *xline, char **xname)
 
 void nasm_quote(char **str) 
 {
-    int ln=strlen(*str);
+    size_t ln=strlen(*str);
     char q=(*str)[0];
     char *p;
     if (ln>1 && (*str)[ln-1]==q && (q=='"' || q=='\''))

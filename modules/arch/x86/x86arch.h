@@ -85,27 +85,27 @@ typedef enum {
  * in 64-bit mode or if it wasn't needed to express reg.
  */
 int yasm_x86__set_rex_from_reg(unsigned char *rex, unsigned char *low3,
-			 unsigned long reg, unsigned char bits,
+			 unsigned long reg, unsigned int bits,
 			 x86_rex_bit_pos rexbit);
 
 void yasm_x86__ea_set_segment(/*@null@*/ yasm_effaddr *ea,
-			      unsigned char segment, unsigned long lindex);
+			      unsigned int segment, unsigned long lindex);
 void yasm_x86__ea_set_disponly(yasm_effaddr *ea);
 yasm_effaddr *yasm_x86__ea_new_reg(unsigned long reg, unsigned char *rex,
-				   unsigned char bits);
+				   unsigned int bits);
 yasm_effaddr *yasm_x86__ea_new_imm(/*@keep@*/ yasm_expr *imm,
-				   unsigned char im_len);
+				   unsigned int im_len);
 yasm_effaddr *yasm_x86__ea_new_expr(/*@keep@*/ yasm_expr *e);
 
 /*@observer@*/ /*@null@*/ yasm_effaddr *yasm_x86__bc_insn_get_ea
     (/*@null@*/ yasm_bytecode *bc);
 
 void yasm_x86__bc_insn_opersize_override(yasm_bytecode *bc,
-					 unsigned char opersize);
+					 unsigned int opersize);
 void yasm_x86__bc_insn_addrsize_override(yasm_bytecode *bc,
-					 unsigned char addrsize);
+					 unsigned int addrsize);
 void yasm_x86__bc_insn_set_lockrep_prefix(yasm_bytecode *bc,
-					  unsigned char prefix,
+					  unsigned int prefix,
 					  unsigned long lindex);
 
 /* Structure with *all* inputs passed to x86_bytecode_new_insn().
@@ -158,8 +158,8 @@ int yasm_x86__bc_tobytes(yasm_bytecode *bc, unsigned char **bufp,
 			 yasm_output_expr_func output_expr);
 
 int yasm_x86__expr_checkea
-    (yasm_expr **ep, unsigned char *addrsize, unsigned char bits,
-     unsigned char nosplit, unsigned char *displen, unsigned char *modrm,
+    (yasm_expr **ep, unsigned char *addrsize, unsigned int bits,
+     unsigned int nosplit, unsigned char *displen, unsigned char *modrm,
      unsigned char *v_modrm, unsigned char *n_modrm, unsigned char *sib,
      unsigned char *v_sib, unsigned char *n_sib, unsigned char *rex,
      yasm_calc_bc_dist_func calc_bc_dist);

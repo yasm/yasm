@@ -1532,7 +1532,7 @@ x86_new_jmprel(const unsigned long data[4], int num_operands,
 					       0, lindex)), lindex);
 
     /* See if the user explicitly specified short/near. */
-    switch (jrinfo->operands[0] & OPTM_MASK) {
+    switch ((int)(jrinfo->operands[0] & OPTM_MASK)) {
 	case OPTM_Short:
 	    d.op_sel = JR_SHORT_FORCED;
 	    break;
@@ -1585,7 +1585,7 @@ x86_new_jmprel(const unsigned long data[4], int num_operands,
 	if (info->opersize != d.opersize)
 	    continue;
 
-	switch (info->operands[0] & OPTM_MASK) {
+	switch ((int)(info->operands[0] & OPTM_MASK)) {
 	    case OPTM_Short:
 		d.short_op_len = info->opcode_len;
 		d.short_op[0] = info->opcode[0];
@@ -1655,7 +1655,7 @@ yasm_x86__new_insn(const unsigned long data[4], int num_operands,
 	for(i = 0, op = yasm_ops_first(operands); op && i<info->num_operands &&
 	    !mismatch; op = yasm_ops_next(op), i++) {
 	    /* Check operand type */
-	    switch (info->operands[i] & OPT_MASK) {
+	    switch ((int)(info->operands[i] & OPT_MASK)) {
 		case OPT_Imm:
 		    if (op->type != YASM_INSN__OPERAND_IMM)
 			mismatch = 1;
@@ -1668,7 +1668,7 @@ yasm_x86__new_insn(const unsigned long data[4], int num_operands,
 		    if (op->type != YASM_INSN__OPERAND_REG)
 			mismatch = 1;
 		    else {
-			switch ((x86_expritem_reg_size)(op->data.reg & ~0xF)) {
+			switch ((x86_expritem_reg_size)(op->data.reg&~0xFUL)) {
 			    case X86_REG8:
 			    case X86_REG8X:
 			    case X86_REG16:
@@ -1694,7 +1694,7 @@ yasm_x86__new_insn(const unsigned long data[4], int num_operands,
 		    if (op->type != YASM_INSN__OPERAND_REG)
 			mismatch = 1;
 		    else {
-			switch ((x86_expritem_reg_size)(op->data.reg & ~0xF)) {
+			switch ((x86_expritem_reg_size)(op->data.reg&~0xFUL)) {
 			    case X86_MMXREG:
 			    case X86_XMMREG:
 				break;
@@ -1710,17 +1710,17 @@ yasm_x86__new_insn(const unsigned long data[4], int num_operands,
 		    break;
 		case OPT_CRReg:
 		    if (op->type != YASM_INSN__OPERAND_REG ||
-			(op->data.reg & ~0xF) != X86_CRREG)
+			(op->data.reg & ~0xFUL) != X86_CRREG)
 			mismatch = 1;
 		    break;
 		case OPT_DRReg:
 		    if (op->type != YASM_INSN__OPERAND_REG ||
-			(op->data.reg & ~0xF) != X86_DRREG)
+			(op->data.reg & ~0xFUL) != X86_DRREG)
 			mismatch = 1;
 		    break;
 		case OPT_TRReg:
 		    if (op->type != YASM_INSN__OPERAND_REG ||
-			(op->data.reg & ~0xF) != X86_TRREG)
+			(op->data.reg & ~0xFUL) != X86_TRREG)
 			mismatch = 1;
 		    break;
 		case OPT_ST0:
@@ -1837,7 +1837,7 @@ yasm_x86__new_insn(const unsigned long data[4], int num_operands,
 		break;
 
 	    /* Check target modifier */
-	    switch (info->operands[i] & OPTM_MASK) {
+	    switch ((int)(info->operands[i] & OPTM_MASK)) {
 		case OPTM_None:
 		    if (op->targetmod != 0)
 			mismatch = 1;
@@ -1876,12 +1876,13 @@ yasm_x86__new_insn(const unsigned long data[4], int num_operands,
     }
 
     /* Extended error/warning handling */
-    switch (info->modifiers & MOD_Ext_MASK) {
+    switch ((int)(info->modifiers & MOD_Ext_MASK)) {
 	case MOD_ExtNone:
 	    /* No extended modifier, so just continue */
 	    break;
 	case MOD_ExtErr:
-	    switch ((info->modifiers & MOD_ExtIndex_MASK)>>MOD_ExtIndex_SHIFT) {
+	    switch ((int)((info->modifiers & MOD_ExtIndex_MASK)
+			  >> MOD_ExtIndex_SHIFT)) {
 		case 0:
 		    yasm__error(lindex, N_("mismatch in operand sizes"));
 		    break;
@@ -1893,7 +1894,8 @@ yasm_x86__new_insn(const unsigned long data[4], int num_operands,
 	    }
 	    return NULL;    /* It was an error */
 	case MOD_ExtWarn:
-	    switch ((info->modifiers & MOD_ExtIndex_MASK)>>MOD_ExtIndex_SHIFT) {
+	    switch ((int)((info->modifiers & MOD_ExtIndex_MASK)
+			  >> MOD_ExtIndex_SHIFT)) {
 		default:
 		    yasm_internal_error(N_("unrecognized x86 ext mod index"));
 	    }
@@ -1950,7 +1952,7 @@ yasm_x86__new_insn(const unsigned long data[4], int num_operands,
     }
     if (info->modifiers & MOD_Imm8) {
 	d.imm = yasm_expr_new_ident(yasm_expr_int(
-	    yasm_intnum_new_int(mod_data & 0xFF)), lindex);
+	    yasm_intnum_new_uint(mod_data & 0xFF)), lindex);
 	d.im_len = 1;
 	/*mod_data >>= 8;*/
     }
@@ -1959,7 +1961,7 @@ yasm_x86__new_insn(const unsigned long data[4], int num_operands,
     if (operands) {
 	for(i = 0, op = yasm_ops_first(operands); op && i<info->num_operands;
 	    op = yasm_ops_next(op), i++) {
-	    switch (info->operands[i] & OPA_MASK) {
+	    switch ((int)(info->operands[i] & OPA_MASK)) {
 		case OPA_None:
 		    /* Throw away the operand contents */
 		    switch (op->type) {
@@ -2070,7 +2072,7 @@ yasm_x86__new_insn(const unsigned long data[4], int num_operands,
 		    yasm_internal_error(N_("unknown operand action"));
 	    }
 
-	    switch (info->operands[i] & OPAP_MASK) {
+	    switch ((int)(info->operands[i] & OPAP_MASK)) {
 		case OPAP_None:
 		    break;
 		case OPAP_ShiftOp:
@@ -3159,14 +3161,14 @@ yasm_x86__check_identifier(unsigned long data[4], const char *id,
 	F C H S { RET_INSN(twobyte, 0xD9E0, CPU_FPU); }
 	F A B S { RET_INSN(twobyte, 0xD9E1, CPU_FPU); }
 	F N I N I T { RET_INSN(twobyte, 0xDBE3, CPU_FPU); }
-	F I N I T { RET_INSN(threebyte, 0x98DBE3, CPU_FPU); }
+	F I N I T { RET_INSN(threebyte, 0x98DBE3UL, CPU_FPU); }
 	F L D C W { RET_INSN(fldnstcw, 0x05, CPU_FPU); }
 	F N S T C W { RET_INSN(fldnstcw, 0x07, CPU_FPU); }
 	F S T C W { RET_INSN(fstcw, 0, CPU_FPU); }
 	F N S T S W { RET_INSN(fnstsw, 0, CPU_FPU); }
 	F S T S W { RET_INSN(fstsw, 0, CPU_FPU); }
 	F N C L E X { RET_INSN(twobyte, 0xDBE2, CPU_FPU); }
-	F C L E X { RET_INSN(threebyte, 0x98DBE2, CPU_FPU); }
+	F C L E X { RET_INSN(threebyte, 0x98DBE2UL, CPU_FPU); }
 	F N S T E N V { RET_INSN(onebytemem, 0x06D9, CPU_FPU); }
 	F S T E N V { RET_INSN(twobytemem, 0x069BD9, CPU_FPU); }
 	F L D E N V { RET_INSN(onebytemem, 0x04D9, CPU_FPU); }

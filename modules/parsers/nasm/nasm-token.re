@@ -51,7 +51,7 @@ RCSID("$IdPath$");
 	s.tok = cursor; \
     }
 
-#define TOKLEN		(cursor-s.tok)
+#define TOKLEN		(size_t)(cursor-s.tok)
 
 typedef struct Scanner {
     YYCTYPE		*bot, *tok, *ptr, *cur, *pos, *lim, *top, *eof;
@@ -70,7 +70,7 @@ fill(YYCTYPE *cursor)
     if(!s.eof){
 	size_t cnt = s.tok - s.bot;
 	if(cnt){
-	    memcpy(s.bot, s.tok, s.lim - s.tok);
+	    memcpy(s.bot, s.tok, (size_t)(s.lim - s.tok));
 	    s.tok = s.bot;
 	    s.ptr -= cnt;
 	    cursor -= cnt;
@@ -80,8 +80,8 @@ fill(YYCTYPE *cursor)
 	if (!s.bot)
 	    first = 1;
 	if((s.top - s.lim) < BSIZE){
-	    char *buf = yasm_xmalloc((s.lim - s.bot) + BSIZE);
-	    memcpy(buf, s.tok, s.lim - s.tok);
+	    char *buf = yasm_xmalloc((size_t)(s.lim - s.bot) + BSIZE);
+	    memcpy(buf, s.tok, (size_t)(s.lim - s.tok));
 	    s.tok = buf;
 	    s.ptr = &buf[s.ptr - s.bot];
 	    cursor = &buf[cursor - s.bot];
