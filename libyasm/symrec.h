@@ -1,4 +1,4 @@
-/* $Id: symrec.h,v 1.4 2001/06/28 21:22:01 peter Exp $
+/* $Id: symrec.h,v 1.5 2001/07/11 21:16:22 peter Exp $
  * Symbol table handling header file
  *
  *  Copyright (C) 2001  Michael Urman
@@ -31,8 +31,7 @@ typedef enum {
 
 typedef enum {
     SYM_CONSTANT,	    /* for EQU defined symbols */
-    SYM_LABEL,		    /* for labels */
-    SYM_DATA		    /* for variables */
+    SYM_LABEL		    /* for labels */
 } SymType;
 
 typedef struct symrec_s {
