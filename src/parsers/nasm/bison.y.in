@@ -1,4 +1,4 @@
-/* $Id: bison.y.in,v 1.21 2001/07/11 21:04:58 peter Exp $
+/* $Id: bison.y.in,v 1.22 2001/07/25 00:33:10 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -33,6 +33,7 @@
 void init_table(void);
 extern int yylex(void);
 extern void yyerror(char *);
+static unsigned long ConvertCharConstToInt(char *);
 
 %}
 
@@ -50,12 +51,13 @@ extern void yyerror(char *);
     expr *exp;
     immval im_val;
     targetval tgt_val;
+    dataval *data;
     bytecode bc;
-} 
+}
 
 %token <int_val> INTNUM
 %token <double_val> FLTNUM
-%token <str_val> DIRECTIVE_NAME DIRECTIVE_VAL
+%token <str_val> DIRECTIVE_NAME DIRECTIVE_VAL STRING
 %token <int_val> BYTE WORD DWORD QWORD TWORD DQWORD
 %token <int_val> DECLARE_DATA
 %token <int_val> RESERVE_SPACE
@@ -86,10 +88,11 @@ extern void yyerror(char *);
 %type <ea_val> rm8x rm16x rm32x /*rm64x rm128x*/
 %type <ea_val> rm8 rm16 rm32 rm64 rm128
 %type <im_val> imm imm8x imm16x imm32x imm8 imm16 imm32
-%type <exp> expr
+%type <exp> expr expr_no_string
 %type <syminfo> explabel
 %type <sym> label_id
 %type <tgt_val> target
+%type <data> dataval datavals
 
 %left '|'
 %left '^'
@@ -104,15 +107,34 @@ input: /* empty */
     | input line { OutputError(); OutputWarning(); line_number++; }
 ;
 
-line: '\n'	{ $$.len = 0; }
+line: '\n'	{ $$.type = BC_EMPTY; }
     | exp '\n' { DebugPrintBC(&$1); $$ = $1; }
     | label exp '\n' { DebugPrintBC(&$2); $$ = $2; }
     | label '\n'
-    | directive '\n' { }
-    | error '\n' { Error(ERR_INVALID_LINE, (char *)NULL); yyerrok; }
+    | directive '\n' { $$.type = BC_EMPTY; }
+    | error '\n' {
+	Error(ERR_INVALID_LINE, (char *)NULL);
+	$$.type = BC_EMPTY;
+	yyerrok;
+    }
 ;
 
 exp: instr
+    | DECLARE_DATA datavals	{ BuildBC_Data(&$$, $2, $1); }
+    | RESERVE_SPACE expr	{ BuildBC_Reserve(&$$, $2, $1); }
+;
+
+datavals: dataval
+    | datavals ',' dataval	{ $$ = dataval_append($1, $3); }
+;
+
+dataval: expr_no_string		{ $$ = dataval_new_expr($1); }
+    | FLTNUM			{ $$ = dataval_new_float($1); }
+    | STRING			{ $$ = dataval_new_string($1); }
+    | error			{
+	Error(ERR_EXPR_SYNTAX, (char *)NULL);
+	$$ = (dataval *)NULL;
+    }
 ;
 
 label: label_id { $1->value = 0; } /* TODO: calculate offset */
@@ -312,8 +334,7 @@ target: expr		{ $$.val = $1; $$.op_sel = JR_NONE; }
 ;
 
 /* expression trees */
-expr:
-	INTNUM		{ $$ = expr_new_ident (EXPR_NUM, ExprNum($1)); }
+expr_no_string: INTNUM	{ $$ = expr_new_ident (EXPR_NUM, ExprNum($1)); }
     | explabel		{ $$ = expr_new_ident (EXPR_SYM, ExprSym(sym_use_get ($1.name, SYM_LABEL))); }
     /*| expr '||' expr	{ $$ = expr_new_tree ($1, EXPR_LOR, $3); }*/
     | expr '|' expr	{ $$ = expr_new_tree ($1, EXPR_OR, $3); }
@@ -340,6 +361,10 @@ expr:
     | '(' expr ')'	{ $$ = $2; }
 ;
 
+expr: expr_no_string
+    | STRING		{ $$ = expr_new_ident (EXPR_NUM, ExprNum(ConvertCharConstToInt($1))); }
+;
+
 explabel: ID | SPECIAL_ID | LOCAL_ID ;
 
 instr: instrbase
@@ -359,4 +384,32 @@ instr: instrbase
 
 /* instruction grammars (dynamically generated) */
 /* @INSTRUCTIONS@ */
+
+%%
+
+static unsigned long
+ConvertCharConstToInt(char *cc)
+{
+    unsigned long retval = 0;
+    size_t len = strlen(cc);
+
+    if(len > 4)
+	Warning(WARN_CHAR_CONST_TOO_BIG, (char *)NULL);
+
+    switch(len) {
+	case 4:
+	    retval |= (unsigned long)cc[3];
+	    retval <<= 8;
+	case 3:
+	    retval |= (unsigned long)cc[2];
+	    retval <<= 8;
+	case 2:
+	    retval |= (unsigned long)cc[1];
+	    retval <<= 8;
+	case 1:
+	    retval |= (unsigned long)cc[0];
+    }
+
+    return retval;
+}
 

@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.13 2001/07/11 23:16:50 peter Exp $
+/* $Id: bytecode.c,v 1.14 2001/07/25 00:33:10 peter Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -20,6 +20,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include "globals.h"
 #include "bytecode.h"
 #include "errwarn.h"
@@ -336,21 +337,77 @@ BuildBC_JmpRel (bytecode      *bc,
     BuildBC_Common(bc);
 }
 
-/* TODO: implement.  Shouldn't be difficult. */
-unsigned char *
-ConvertBCInsnToBytes (unsigned char *ptr, bytecode *bc, int *len)
+void
+BuildBC_Data (bytecode      *bc,
+	      dataval       *data,
+	      unsigned long  size)
 {
-    if(bc->type != BC_INSN)
-	return (unsigned char *)NULL;
-    return (unsigned char *)NULL;
+    dataval *cur = data;
+
+    /* First check to see if all the data elements are valid for the size
+     * being set.
+     * Validity table:
+     *  db (1)  -> expr, string
+     *  dw (2)  -> expr, string
+     *  dd (4)  -> expr, float, string
+     *  dq (8)  -> expr, float, string
+     *  dt (10) -> float, string
+     *
+     * Once we calculate expr we'll have to validate it against the size
+     * and warn/error appropriately (symbol constants versus labels:
+     * constants (equ's) should always be legal, but labels should raise
+     * warnings when used in db or dq context at the minimum).
+     */
+    while(cur) {
+	switch(cur->type) {
+	    case DV_EMPTY:
+	    case DV_STRING:
+		/* string is valid in every size */
+		break;
+	    case DV_FLOAT:
+		if(size == 1)
+		    Error(ERR_DECLDATA_FLOAT, (char *)NULL, "DB");
+		else if(size == 2)
+		    Error(ERR_DECLDATA_FLOAT, (char *)NULL, "DW");
+		break;
+	    case DV_EXPR:
+		if(size == 10)
+		    Error(ERR_DECLDATA_EXPR, (char *)NULL, "DT");
+		break;
+	}
+	cur = cur->next;
+    }
+
+    bc->next = (bytecode *)NULL;
+    bc->type = BC_DATA;
+
+    bc->data.data.data = data;
+    bc->data.data.size = size;
+
+    BuildBC_Common(bc);
+}
+
+void
+BuildBC_Reserve (bytecode      *bc,
+		 expr          *numitems,
+		 unsigned long  itemsize)
+{
+    bc->next = (bytecode *)NULL;
+    bc->type = BC_RESERVE;
+
+    bc->data.reserve.numitems = numitems;
+    bc->data.reserve.itemsize = itemsize;
+
+    BuildBC_Common(bc);
 }
 
 void
 DebugPrintBC (bytecode *bc)
 {
-    unsigned long i;
-
     switch(bc->type) {
+	case BC_EMPTY:
+	    printf("_Empty_\n");
+	    break;
 	case BC_INSN:
 	    printf("_Instruction_\n");
 	    printf("Effective Address:\n");
@@ -431,14 +488,17 @@ DebugPrintBC (bytecode *bc)
 	    break;
 	case BC_DATA:
 	    printf("_Data_\n");
-	    for(i=0; i<bc->len; i++) {
-		printf("%2x ", (unsigned int)bc->data.data.data[i]);
-		if((i & ~0xFFFF) == i)
-		    printf("\n");
-	    }
+	    printf("Final Element Size=%u\n",
+		(unsigned int)bc->data.data.size);
+	    printf("Elements:\n");
+	    dataval_print(bc->data.data.data);
 	    break;
 	case BC_RESERVE:
 	    printf("_Reserve_\n");
+	    printf("Num Items=");
+	    expr_print(bc->data.reserve.numitems);
+	    printf("\nItem Size=%u\n",
+		(unsigned int)bc->data.reserve.itemsize);
 	    break;
 	default:
 	    printf("_Unknown_\n");
@@ -448,3 +508,98 @@ DebugPrintBC (bytecode *bc)
 	bc->filename ? bc->filename : "<UNKNOWN>", bc->lineno);
     printf("Offset=%lx BITS=%u\n", bc->offset, bc->mode_bits);
 }
+
+dataval *
+dataval_new_expr (expr *exp)
+{
+    dataval *retval = malloc(sizeof(dataval));
+
+    if(!retval)
+	Fatal(FATAL_NOMEM);
+
+    retval->next = (dataval *)NULL;
+    retval->last = retval;
+    retval->type = DV_EXPR;
+    retval->data.exp = exp;
+
+    return retval;
+}
+
+dataval *
+dataval_new_float (double float_val)
+{
+    dataval *retval = malloc(sizeof(dataval));
+
+    if(!retval)
+	Fatal(FATAL_NOMEM);
+
+    retval->next = (dataval *)NULL;
+    retval->last = retval;
+    retval->type = DV_FLOAT;
+    retval->data.float_val = float_val;
+
+    return retval;
+}
+
+dataval *
+dataval_new_string (char *str_val)
+{
+    dataval *retval = malloc(sizeof(dataval));
+
+    if(!retval)
+	Fatal(FATAL_NOMEM);
+
+    retval->next = (dataval *)NULL;
+    retval->last = retval;
+    retval->type = DV_STRING;
+    retval->data.str_val = str_val;
+
+    return retval;
+}
+
+dataval *
+dataval_append (dataval *list, dataval *item)
+{
+    if(item)
+	item->next = (dataval *)NULL;
+
+    if(!list) {
+	item->last = item;
+	return item;
+    } else {
+	if(item) {
+	    list->last->next = item;
+	    list->last = item;
+	    item->last = (dataval *)NULL;
+	}
+	return list;
+    }
+}
+
+void
+dataval_print (dataval *start)
+{
+    dataval *cur = start;
+
+    while(cur) {
+	switch(cur->type) {
+	    case DV_EMPTY:
+		printf(" Empty\n");
+		break;
+	    case DV_EXPR:
+		printf(" Expr=");
+		expr_print(cur->data.exp);
+		printf("\n");
+		break;
+	    case DV_FLOAT:
+		printf(" Float=%e\n", cur->data.float_val);
+		break;
+	    case DV_STRING:
+		printf(" String=%s\n", cur->data.str_val);
+		break;
+	}
+
+	cur = cur->next;
+    }
+}
+

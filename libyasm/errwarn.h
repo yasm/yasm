@@ -1,4 +1,4 @@
-/* $Id: errwarn.h,v 1.10 2001/07/11 23:16:50 peter Exp $
+/* $Id: errwarn.h,v 1.11 2001/07/25 00:33:10 peter Exp $
  * Error and warning reporting and related functions header file.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -45,7 +45,12 @@ typedef enum {
     ERR_EXP_SYNTAX,
     ERR_DUPLICATE_DEF,
     ERR_OP_SIZE_MISMATCH,
-    ERR_NO_JMPREL_FORM
+    ERR_NO_JMPREL_FORM,
+    ERR_STRING_UNTERM,
+    ERR_STRING_EOF,
+    ERR_EXPR_SYNTAX,
+    ERR_DECLDATA_FLOAT,
+    ERR_DECLDATA_EXPR
 } err_num;
 
 /* Warning constants.  Match up with warn_msgs in errwarn.c. */
@@ -56,7 +61,8 @@ typedef enum {
     WARN_MULT_SEG_OVERRIDE,
     WARN_MULT_LOCKREP_PREFIX,
     WARN_NO_BASE_LABEL,
-    WARN_MULT_SHORTNEAR
+    WARN_MULT_SHORTNEAR,
+    WARN_CHAR_CONST_TOO_BIG
 } warn_num;
 
 char *conv_unprint(char ch);

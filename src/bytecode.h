@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.14 2001/07/11 23:16:50 peter Exp $
+/* $Id: bytecode.h,v 1.15 2001/07/25 00:33:10 peter Exp $
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -47,6 +47,18 @@ typedef struct immval_s {
     unsigned char f_sign;	/* 1 if final imm should be signed */
 } immval;
 
+typedef struct dataval_s {
+    struct dataval_s *next, *last;
+
+    enum { DV_EMPTY, DV_EXPR, DV_FLOAT, DV_STRING } type;
+
+    union {
+	struct expr_s *exp;
+	double float_val;
+	char *str_val;
+    } data;
+} dataval;
+
 typedef enum jmprel_opcode_sel_e {
     JR_NONE,
     JR_SHORT,
@@ -64,7 +76,7 @@ typedef struct targetval_s {
 typedef struct bytecode_s {
     struct bytecode_s *next;
 
-    enum { BC_INSN, BC_JMPREL, BC_DATA, BC_RESERVE } type;
+    enum { BC_EMPTY, BC_INSN, BC_JMPREL, BC_DATA, BC_RESERVE } type;
 
     union {
 	struct {
@@ -97,8 +109,15 @@ typedef struct bytecode_s {
 	    unsigned char lockrep_pre;	/* 0 indicates no prefix */
 	} jmprel;
 	struct {
-	    unsigned char *data;
+	    dataval *data;		/* non-converted data (linked list) */
+
+	    /* final (converted) size of each element (in bytes) */
+	    unsigned char size;
 	} data;
+	struct {
+	    struct expr_s *numitems;	/* number of items to reserve */
+	    unsigned char itemsize;	/* size of each item (in bytes) */
+	} reserve;
     } data;
 
     unsigned long len;	/* total length of entire bytecode */
@@ -154,8 +173,22 @@ void BuildBC_JmpRel(bytecode      *bc,
 		    unsigned char  near_op2,
 		    unsigned char  addrsize);
 
-unsigned char *ConvertBCInsnToBytes(unsigned char *ptr, bytecode *bc, int *len);
+void BuildBC_Data(bytecode      *bc,
+		  dataval       *data,
+		  unsigned long  size);
+
+void BuildBC_Reserve(bytecode      *bc,
+		     struct expr_s *numitems,
+		     unsigned long  itemsize);
 
 void DebugPrintBC(bytecode *bc);
+
+dataval *dataval_new_expr(struct expr_s *exp);
+dataval *dataval_new_float(double float_val);
+dataval *dataval_new_string(char *str_val);
+
+dataval *dataval_append(dataval *list, dataval *item);
+
+void dataval_print(dataval *start);
 
 #endif

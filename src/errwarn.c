@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.16 2001/07/11 23:16:50 peter Exp $
+/* $Id: errwarn.c,v 1.17 2001/07/25 00:33:10 peter Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -67,7 +67,12 @@ static char *err_msgs[] = {
     "expression syntax error",
     "duplicate definition of `%1'; previously defined line %2",
     "mismatch in operand sizes",
-    "no %s form of that jump instruction exists"
+    "no %s form of that jump instruction exists",
+    "unterminated string",
+    "unexpected end of file in string",
+    "expression syntax error",
+    "floating-point constant encountered in `%s'",
+    "non-floating-point value encountered in `%s'"
 };
 
 /* Warning messages.  Match up with warn_num enum in errwarn.h. */
@@ -78,7 +83,8 @@ static char *warn_msgs[] = {
     "multiple segment overrides, using leftmost",
     "multiple LOCK or REP prefixes, using leftmost",
     "no non-local label before '%s'",
-    "multiple SHORT or NEAR specifiers, using leftmost"
+    "multiple SHORT or NEAR specifiers, using leftmost",
+    "character constant too large, ignoring trailing characters"
 };
 
 /* I hate to define these strings as static buffers; a better solution would be
