@@ -1,4 +1,4 @@
-/* $Id: parser.c,v 1.1 2001/09/16 04:49:46 peter Exp $
+/* $Id: parser.c,v 1.2 2001/09/16 17:21:33 peter Exp $
  * Generic functions for all parsers
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -42,7 +42,7 @@
 #include "preproc.h"
 #include "parser.h"
 
-RCSID("$Id: parser.c,v 1.1 2001/09/16 04:49:46 peter Exp $");
+RCSID("$Id: parser.c,v 1.2 2001/09/16 17:21:33 peter Exp $");
 
 /* NULL-terminated list of all available parsers.
  * Someday change this if we dynamically load parsers at runtime.
@@ -60,7 +60,7 @@ parser_setpp(parser *p, const char *pp_keyword)
 
     /* We're just doing a linear search, as preprocs should be short */
     for (i = 0; p->preprocs[i]; i++) {
-	if (strcmp(p->preprocs[i]->keyword, pp_keyword) == 0) {
+	if (strcasecmp(p->preprocs[i]->keyword, pp_keyword) == 0) {
 	    p->current_pp = p->preprocs[i];
 	    return 0;
 	}
@@ -88,7 +88,7 @@ find_parser(const char *keyword)
 
     /* We're just doing a linear search, as there aren't many parsers */
     for (i = 0; parsers[i]; i++) {
-	if (strcmp(parsers[i]->keyword, keyword) == 0)
+	if (strcasecmp(parsers[i]->keyword, keyword) == 0)
 	    return parsers[i];
     }
 
