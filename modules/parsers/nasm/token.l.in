@@ -1,4 +1,4 @@
-/* $Id: token.l.in,v 1.15 2001/08/19 07:46:52 peter Exp $
+/* $Id: token.l.in,v 1.16 2001/08/30 03:45:26 peter Exp $
  * Main lexer
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -31,6 +31,9 @@
 # include <string.h>
 #endif
 
+#include <libintl.h>
+#define _(String)	gettext(String)
+
 #include "errwarn.h"
 #include "expr.h"
 #include "symrec.h"
@@ -39,7 +42,7 @@
 
 #include "bison.h"
 
-RCSID("$Id: token.l.in,v 1.15 2001/08/19 07:46:52 peter Exp $");
+RCSID("$Id: token.l.in,v 1.16 2001/08/30 03:45:26 peter Exp $");
 
 #define yylval	nasm_parser_lval
 
@@ -133,9 +136,9 @@ WS       [ \t\r]
     }
 
     if(inch == '\n')
-	Error(ERR_STRING_UNTERM, (char *)NULL);
+	Error(_("unterminated string"));
     else if(inch == EOF)
-	Error(ERR_STRING_EOF, (char *)NULL);
+	Error(_("unexpected end of file in string"));
 
     strbuf[count] = '\0';
 
@@ -166,10 +169,12 @@ WS       [ \t\r]
     return DIRECTIVE_VAL;
 }
 <DIRECTIVE>. {
-    Warning(WARN_UNREC_CHAR, (char *)NULL, conv_unprint(yytext[0]));
+    Warning(_("ignoring unrecognized character `%s'"),
+	    conv_unprint(yytext[0]));
 }
 <DIRECTIVE2>. {
-    Warning(WARN_UNREC_CHAR, (char *)NULL, conv_unprint(yytext[0]));
+    Warning(_("ignoring unrecognized character `%s'"),
+	    conv_unprint(yytext[0]));
 }
 
     /* size specifiers */
@@ -293,7 +298,7 @@ $$|$|\.\.[a-z0-9_$#@~.?]+ {
 \.[a-z0-9_$#@~?][a-z0-9_$#@~.?]* {
     if (locallabel_base == NULL) 
     {
-	Warning (WARN_NO_BASE_LABEL, (char *)NULL, yytext);
+	Warning (_("no non-local label before `%s'"), yytext);
 	yylval.syminfo.name = strdup (yytext);
 	if (yylval.syminfo.name == NULL) Fatal (FATAL_NOMEM);
     }
@@ -329,5 +334,8 @@ $$|$|\.\.[a-z0-9_$#@~.?]+ {
 
 \n	return '\n';
 
-.	{ Warning(WARN_UNREC_CHAR, (char *)NULL, conv_unprint(yytext[0])); }
+.	{
+    Warning(_("ignoring unrecognized character `%s'"),
+	    conv_unprint(yytext[0]));
+}
 

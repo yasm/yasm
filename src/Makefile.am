@@ -1,5 +1,7 @@
 SUBDIRS = parsers preprocs outfmts
 
+INCLUDES = -I$(top_srcdir)/intl
+
 bin_PROGRAMS = yasm
 
 yasm_SOURCES = \
@@ -22,7 +24,8 @@ yasm_SOURCES = \
 yasm_LDADD = \
 	parsers/nasm/libparser.a	\
 	preprocs/raw/libpreproc.a	\
-	outfmts/dbg/liboutfmt.a
+	outfmts/dbg/liboutfmt.a		\
+	$(INTLLIBS)
 
 if DEV
 CFLAGS = -ansi -pedantic -Wall -g

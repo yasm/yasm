@@ -1,4 +1,4 @@
-/* $Id: symrec.c,v 1.8 2001/08/19 07:46:52 peter Exp $
+/* $Id: symrec.c,v 1.9 2001/08/30 03:45:26 peter Exp $
  * Symbol table handling
  *
  *  Copyright (C) 2001  Michael Urman
@@ -30,11 +30,14 @@
 # include <string.h>
 #endif
 
+#include <libintl.h>
+#define _(String)	gettext(String)
+
 #include "globals.h"
 #include "errwarn.h"
 #include "symrec.h"
 
-RCSID("$Id: symrec.c,v 1.8 2001/08/19 07:46:52 peter Exp $");
+RCSID("$Id: symrec.c,v 1.9 2001/08/30 03:45:26 peter Exp $");
 
 /* private functions */
 static symtab *symtab_get(char *);
@@ -134,7 +137,8 @@ sym_def_get(char *name, SymType type)
 
     tab = symtab_get_or_new(name, type);
     if (tab->rec.status & SYM_DECLARED)
-	Error(ERR_DUPLICATE_DEF, "%s%d", tab->rec.name, tab->rec.line);
+	Error(_("duplicate definition of `%s'; previously defined on line %d"),
+	      tab->rec.name, tab->rec.line);
     tab->rec.status |= SYM_DECLARED;
     return &(tab->rec);
 }

@@ -1,4 +1,4 @@
-/* $Id: raw-preproc.c,v 1.5 2001/08/19 07:46:52 peter Exp $
+/* $Id: raw-preproc.c,v 1.6 2001/08/30 03:45:26 peter Exp $
  * Raw preprocessor (preforms NO preprocessing)
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -27,12 +27,15 @@
 
 #include <stdio.h>
 
+#include <libintl.h>
+#define _(String)	gettext(String)
+
 #include "errwarn.h"
 
 #include "outfmt.h"
 #include "preproc.h"
 
-RCSID("$Id: raw-preproc.c,v 1.5 2001/08/19 07:46:52 peter Exp $");
+RCSID("$Id: raw-preproc.c,v 1.6 2001/08/30 03:45:26 peter Exp $");
 
 static int is_interactive;
 static FILE *in;
@@ -57,9 +60,9 @@ input(char *buf, int max_size)
 	if (c == '\n')
 	    buf[n++] = (char)c;
 	if (c == EOF && ferror(in))
-	    Error(ERR_FILE_READ, (char *)NULL);
+	    Error(_("error when reading from file"));
     } else if (((n = fread(buf, 1, max_size, in)) == 0) && ferror(in))
-	Error(ERR_FILE_READ, (char *)NULL);
+	Error(_("error when reading from file"));
 
     return n;
 }

@@ -10,7 +10,9 @@ noinst_SCRIPTS = gen_instr.pl
 AM_YFLAGS = -d --name-prefix=nasm_parser_
 AM_LFLAGS = -Pnasm_parser_ -olex.yy.c
 
-INCLUDES=-I$(top_srcdir)/src
+INCLUDES = \
+	-I$(top_srcdir)/src	\
+	-I$(top_srcdir)/intl
 
 if DEV
 CFLAGS = -ansi -pedantic -Wall -g

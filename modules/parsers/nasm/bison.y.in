@@ -1,4 +1,4 @@
-/* $Id: bison.y.in,v 1.27 2001/08/19 07:46:52 peter Exp $
+/* $Id: bison.y.in,v 1.28 2001/08/30 03:45:26 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -31,6 +31,9 @@
 # include <math.h>
 #endif
 
+#include <libintl.h>
+#define _(String)	gettext(String)
+
 #include "globals.h"
 #include "errwarn.h"
 #include "expr.h"
@@ -38,13 +41,12 @@
 
 #include "bytecode.h"
 
-RCSID("$Id: bison.y.in,v 1.27 2001/08/19 07:46:52 peter Exp $");
+RCSID("$Id: bison.y.in,v 1.28 2001/08/30 03:45:26 peter Exp $");
 
 #define YYDEBUG 1
 
 void init_table(void);
 extern int nasm_parser_lex(void);
-extern void yyerror(char *);
 static unsigned long ConvertCharConstToInt(char *);
 void nasm_parser_error(char *);
 
@@ -126,7 +128,7 @@ line: '\n'	{ $$.type = BC_EMPTY; }
     | exp '\n' { DebugPrintBC(&$1); $$ = $1; }
     | directive '\n' { $$.type = BC_EMPTY; }
     | error '\n' {
-	Error(ERR_INVALID_LINE, (char *)NULL);
+	Error(_("label or instruction expected at start of line"));
 	$$.type = BC_EMPTY;
 	yyerrok;
     }
@@ -153,7 +155,7 @@ dataval: expr_no_string		{ $$ = dataval_new_expr($1); }
     | FLTNUM			{ $$ = dataval_new_float($1); }
     | STRING			{ $$ = dataval_new_string($1); }
     | error			{
-	Error(ERR_EXPR_SYNTAX, (char *)NULL);
+	Error(_("expression syntax error"));
 	$$ = (dataval *)NULL;
     }
 ;
@@ -172,10 +174,10 @@ directive: '[' DIRECTIVE_NAME DIRECTIVE_VAL ']' {
 	printf("Directive: Name='%s' Value='%s'\n", $2, $3);
     }
     | '[' DIRECTIVE_NAME DIRECTIVE_VAL error {
-	Error(ERR_MISSING, "%c", ']');
+	Error(_("missing `%c'"), ']');
     }
     | '[' DIRECTIVE_NAME error {
-	Error(ERR_MISSING_ARG, (char *)NULL, $2);
+	Error(_("missing argument to `%s'"), $2);
     }
 ;
 
@@ -415,7 +417,7 @@ ConvertCharConstToInt(char *cc)
     size_t len = strlen(cc);
 
     if(len > 4)
-	Warning(WARN_CHAR_CONST_TOO_BIG, (char *)NULL);
+	Warning(_("character constant too large, ignoring trailing characters"));
 
     switch(len) {
 	case 4:
@@ -437,6 +439,6 @@ ConvertCharConstToInt(char *cc)
 void
 nasm_parser_error(char *s)
 {
-    yyerror(s);
+    ParserError(s);
 }
 

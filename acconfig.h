@@ -1,4 +1,4 @@
-/* $Id: acconfig.h,v 1.1 2001/08/19 04:25:18 peter Exp $ */
+/* $Id: acconfig.h,v 1.2 2001/08/30 03:45:16 peter Exp $ */
 
 #ifndef YASM_CONFIG_H
 #define YASM_CONFIG_H
@@ -10,6 +10,13 @@
 
 /* Workaround for bad <sys/queue.h> implementations. */
 #undef HAVE_BOGUS_SYS_QUEUE_H
+
+/* gettext tests */
+#undef ENABLE_NLS
+#undef HAVE_CATGETS
+#undef HAVE_GETTEXT
+#undef HAVE_LC_MESSAGES
+#undef HAVE_STPCPY
 
 @BOTTOM@
 

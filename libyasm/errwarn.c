@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.22 2001/08/19 07:46:52 peter Exp $
+/* $Id: errwarn.c,v 1.23 2001/08/30 03:45:26 peter Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -34,10 +34,18 @@
 # include <string.h>
 #endif
 
+#include <libintl.h>
+#define _(String)	gettext(String)
+#ifdef gettext_noop
+#define N_(String)	gettext_noop(String)
+#else
+#define N_(String)	(String)
+#endif
+
 #include "globals.h"
 #include "errwarn.h"
 
-RCSID("$Id: errwarn.c,v 1.22 2001/08/19 07:46:52 peter Exp $");
+RCSID("$Id: errwarn.c,v 1.23 2001/08/30 03:45:26 peter Exp $");
 
 /* Total error count for entire assembler run.
  * Assembler should exit with EXIT_FAILURE if this is >= 0 on finish. */
@@ -52,42 +60,8 @@ unsigned int warning_count = 0;
 
 /* Fatal error messages.  Match up with fatal_num enum in errwarn.h. */
 static char *fatal_msgs[] = {
-    "unknown",
-    "out of memory"
-};
-
-/* Error messages.  Match up with err_num enum in errwarn.h. */
-static char *err_msgs[] = {
-    "",
-    "parser error: %s",
-    "missing '%1'",
-    "missing argument to %s",
-    "invalid argument to %s",
-    "invalid effective address",
-    "label or instruction expected at start of line",
-    "expression syntax error",
-    "duplicate definition of `%1'; previously defined line %2",
-    "mismatch in operand sizes",
-    "no %s form of that jump instruction exists",
-    "unterminated string",
-    "unexpected end of file in string",
-    "expression syntax error",
-    "floating-point constant encountered in `%s'",
-    "non-floating-point value encountered in `%s'",
-    "could not open file `%s'",
-    "error when reading from file"
-};
-
-/* Warning messages.  Match up with warn_num enum in errwarn.h. */
-static char *warn_msgs[] = {
-    "",
-    "ignoring unrecognized character '%s'",
-    "%s value exceeds bounds",
-    "multiple segment overrides, using leftmost",
-    "multiple LOCK or REP prefixes, using leftmost",
-    "no non-local label before '%s'",
-    "multiple SHORT or NEAR specifiers, using leftmost",
-    "character constant too large, ignoring trailing characters"
+    N_("unknown"),
+    N_("out of memory")
 };
 
 /* I hate to define these strings as static buffers; a better solution would be
@@ -100,12 +74,17 @@ static char last_err[1024];
 /* Last warning message string.  Set by Warning(), read by OutputWarning(). */
 static char last_warn[1024];
 
-/* Last error number.  Set by Error(), read and reset by OutputError(). */
-static err_num last_err_num = ERR_NONE;
+/* Has there been an error since the last time we output one?  Set by Error(),
+ * read and reset by OutputError(). */
+static int new_error = 0;
 
-/* Last warning number.  Set by Warning(), read and reset by
- * OutputWarning(). */
-static warn_num last_warn_num = WARN_NONE;
+/* Is the last error a parser error?  Error() lets other errors override parser
+ * errors. Set by yyerror(), read and reset by Error(). */
+static int parser_error = 0;
+
+/* Has there been a warning since the last time we output one?  Set by
+ * Warning(), read and reset by OutputWarning(). */
+static int new_warning = 0;
 
 /* Static buffer for use by conv_unprint(). */
 static char unprint[5];
@@ -134,9 +113,10 @@ conv_unprint(char ch)
 
 /* Parser error handler.  Moves error into our error handling system. */
 void
-yyerror(char *s)
+ParserError(char *s)
 {
-    Error(ERR_PARSER, (char *)NULL, s);
+    Error("%s %s", _("parser error:"), s);
+    parser_error = 1;
 }
 
 /* Report an internal error.  Essentially a fatal error with trace info.
@@ -144,7 +124,7 @@ yyerror(char *s)
 void
 InternalError(unsigned int line, char *file, char *message)
 {
-    fprintf(stderr, "INTERNAL ERROR at %s, line %d: %s\n", file, line,
+    fprintf(stderr, _("INTERNAL ERROR at %s, line %d: %s\n"), file, line,
 	    message);
     exit(EXIT_FAILURE);
 }
@@ -154,96 +134,27 @@ InternalError(unsigned int line, char *file, char *message)
 void
 Fatal(fatal_num num)
 {
-    fprintf(stderr, "FATAL: %s\n", fatal_msgs[num]);
+    fprintf(stderr, "%s %s\n", _("FATAL:"), gettext(fatal_msgs[num]));
     exit(EXIT_FAILURE);
-}
-
-/* Argument replacement function for use in error messages.
- * Replaces %1, %2, etc in src with %c, %s, etc. in argtypes.
- * Currently limits maximum number of args to 9 (%1-%9).
- *
- * We need this because messages that take multiple arguments become dependent
- * on the order and type of the arguments passed to Error()/Warning().
- *
- * i.e. an error string "'%d' is not a valid specifier for '%s'" would require
- * that the arguments passed to Error() always be an int and a char *, in that
- * order.  If the string was changed to be "'%s': invalid specifier '%d'", all
- * the times Error() was called for that string would need to be changed to
- * reorder the arguments.  Or if the %d was not right in some circumstances,
- * we'd have to add another string for that type.
- *
- * This function fixes this problem by allowing the string to be specified as
- * "'%1' is not a valid specifier for '%2'" and then specifying at the time of
- * the Error() call what the types of %1 and %2 are by passing a argtype string
- * "%d%s" (to emulate the first behavior).  If the string was changed to be
- * "'%2': invalid specifier '%1'", no change would need to be made to the
- * Error calls using that string.  And as the type is specified with the
- * argument list, mismatches are far less likely.
- *
- * For strings that only have one argument of a fixed type, it can be directly
- * specified and NULL passed for the argtypes parameter when Error() is
- * called. */
-static char *
-process_argtypes(char *src, char *argtypes)
-{
-    char *dest;
-    char *argtype[9];
-    int at_num;
-    char *destp, *srcp, *argtypep;
-
-    if (argtypes) {
-	dest = malloc(strlen(src) + strlen(argtypes));
-	if (!dest)
-	    Fatal(FATAL_NOMEM);
-	/* split argtypes by % */
-	at_num = 0;
-	while ((argtypes = strchr(argtypes, '%')) && at_num < 9)
-	    argtype[at_num++] = ++argtypes;
-	/* search through src for %, copying as we go */
-	destp = dest;
-	srcp = src;
-	while (*srcp != '\0') {
-	    *(destp++) = *srcp;
-	    if (*(srcp++) == '%') {
-		if (isdigit(*srcp)) {
-		    /* %1, %2, etc */
-		    argtypep = argtype[*srcp - '1'];
-		    while ((*argtypep != '%') && (*argtypep != '\0'))
-			*(destp++) = *(argtypep++);
-		} else
-		    *(destp++) = *srcp;
-		srcp++;
-	    }
-	}
-    } else {
-	dest = strdup(src);
-	if (!dest)
-	    Fatal(FATAL_NOMEM);
-    }
-    return dest;
 }
 
 /* Register an error.  Uses argtypes as described above to specify the
  * argument types.  Does not print the error, only stores it for
  * OutputError() to print. */
 void
-Error(err_num num, char *argtypes, ...)
+Error(char *fmt, ...)
 {
     va_list ap;
-    char *printf_str;
 
-    if ((last_err_num != ERR_NONE) && (last_err_num != ERR_PARSER))
+    if (new_error && !parser_error)
 	return;
 
-    last_err_num = num;
+    new_error = 1;
+    parser_error = 0;
 
-    printf_str = process_argtypes(err_msgs[num], argtypes);
-
-    va_start(ap, argtypes);
-    vsprintf(last_err, printf_str, ap);
+    va_start(ap, fmt);
+    vsprintf(last_err, fmt, ap);
     va_end(ap);
-
-    free(printf_str);
 
     error_count++;
 }
@@ -252,23 +163,18 @@ Error(err_num num, char *argtypes, ...)
  * argument types.  Does not print the warning, only stores it for
  * OutputWarning() to print. */
 void
-Warning(warn_num num, char *argtypes, ...)
+Warning(char *fmt, ...)
 {
     va_list ap;
-    char *printf_str;
 
-    if (last_warn_num != WARN_NONE)
+    if (new_warning)
 	return;
 
-    last_warn_num = num;
+    new_warning = 1;
 
-    printf_str = process_argtypes(warn_msgs[num], argtypes);
-
-    va_start(ap, argtypes);
-    vsprintf(last_warn, printf_str, ap);
+    va_start(ap, fmt);
+    vsprintf(last_warn, fmt, ap);
     va_end(ap);
-
-    free(printf_str);
 
     warning_count++;
 }
@@ -277,17 +183,17 @@ Warning(warn_num num, char *argtypes, ...)
 void
 OutputError(void)
 {
-    if (last_err_num != ERR_NONE)
+    if (new_error)
 	fprintf(stderr, "%s:%u: %s\n", filename, line_number, last_err);
-    last_err_num = ERR_NONE;
+    new_error = 0;
 }
 
 /* Output a previously stored warning (if any) to stderr. */
 void
 OutputWarning(void)
 {
-    if (last_warn_num != WARN_NONE)
-	fprintf(stderr, "%s:%u: warning: %s\n", filename, line_number,
-		last_warn);
-    last_warn_num = WARN_NONE;
+    if (new_warning)
+	fprintf(stderr, "%s:%u: %s %s\n", filename, line_number,
+		_("warning:"), last_warn);
+    new_warning = 0;
 }

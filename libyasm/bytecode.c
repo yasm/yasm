@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.19 2001/08/19 07:46:52 peter Exp $
+/* $Id: bytecode.c,v 1.20 2001/08/30 03:45:26 peter Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -32,13 +32,16 @@
 # include <string.h>
 #endif
 
+#include <libintl.h>
+#define _(String)	gettext(String)
+
 #include "globals.h"
 #include "errwarn.h"
 #include "expr.h"
 
 #include "bytecode.h"
 
-RCSID("$Id: bytecode.c,v 1.19 2001/08/19 07:46:52 peter Exp $");
+RCSID("$Id: bytecode.c,v 1.20 2001/08/30 03:45:26 peter Exp $");
 
 /* Static structures for when NULL is passed to conversion functions. */
 /*  for Convert*ToEA() */
@@ -95,7 +98,7 @@ ConvertImmToEA(effaddr *ptr, immval *im_ptr, unsigned char im_len)
 
     ptr->disp = im_ptr->val;
     if (im_ptr->len > im_len)
-	Warning(WARN_VALUE_EXCEEDS_BOUNDS, (char *)NULL, "word");
+	Warning(_("%s value exceeds bounds"), "word");
     ptr->len = im_len;
     ptr->segment = 0;
     ptr->valid_modrm = 0;
@@ -147,7 +150,7 @@ SetEASegment(effaddr *ptr, unsigned char segment)
 	return;
 
     if (ptr->segment != 0)
-	Warning(WARN_MULT_SEG_OVERRIDE, (char *)NULL);
+	Warning(_("multiple segment overrides, using leftmost"));
 
     ptr->segment = segment;
 }
@@ -180,7 +183,7 @@ SetInsnOperSizeOverride(bytecode *bc, unsigned char opersize)
 	    break;
 	default:
 	    InternalError(__LINE__, __FILE__,
-			  "OperSize override applied to non-instruction");
+			  _("OperSize override applied to non-instruction"));
 	    return;
     }
 }
@@ -200,7 +203,7 @@ SetInsnAddrSizeOverride(bytecode *bc, unsigned char addrsize)
 	    break;
 	default:
 	    InternalError(__LINE__, __FILE__,
-			  "AddrSize override applied to non-instruction");
+			  _("AddrSize override applied to non-instruction"));
 	    return;
     }
 }
@@ -222,12 +225,12 @@ SetInsnLockRepPrefix(bytecode *bc, unsigned char prefix)
 	    break;
 	default:
 	    InternalError(__LINE__, __FILE__,
-			  "LockRep prefix applied to non-instruction");
+			  _("LockRep prefix applied to non-instruction"));
 	    return;
     }
 
     if (*lockrep_pre != 0)
-	Warning(WARN_MULT_LOCKREP_PREFIX, (char *)NULL);
+	Warning(_("multiple LOCK or REP prefixes, using leftmost"));
 
     *lockrep_pre = prefix;
 }
@@ -239,7 +242,7 @@ SetOpcodeSel(jmprel_opcode_sel *old_sel, jmprel_opcode_sel new_sel)
 	return;
 
     if ((*old_sel == JR_SHORT_FORCED) || (*old_sel == JR_NEAR_FORCED))
-	Warning(WARN_MULT_SHORTNEAR, (char *)NULL);
+	Warning(_("multiple SHORT or NEAR specifiers, using leftmost"));
     *old_sel = new_sel;
 }
 
@@ -324,9 +327,9 @@ BuildBC_JmpRel(bytecode      *bc,
     bc->data.jmprel.op_sel = target->op_sel;
 
     if ((target->op_sel == JR_SHORT_FORCED) && (!short_valid))
-	Error(ERR_NO_JMPREL_FORM, (char *)NULL, "SHORT");
+	Error(_("no SHORT form of that jump instruction exists"));
     if ((target->op_sel == JR_NEAR_FORCED) && (!near_valid))
-	Error(ERR_NO_JMPREL_FORM, (char *)NULL, "NEAR");
+	Error(_("no NEAR form of that jump instruction exists"));
 
     bc->data.jmprel.shortop.valid = short_valid;
     if (short_valid) {
@@ -378,13 +381,16 @@ BuildBC_Data(bytecode *bc, datavalhead *datahead, unsigned long size)
 		break;
 	    case DV_FLOAT:
 		if (size == 1)
-		    Error(ERR_DECLDATA_FLOAT, (char *)NULL, "DB");
+		    Error(_("floating-point constant encountered in `%s'"),
+			  "DB");
 		else if (size == 2)
-		    Error(ERR_DECLDATA_FLOAT, (char *)NULL, "DW");
+		    Error(_("floating-point constant encountered in `%s'"),
+			  "DW");
 		break;
 	    case DV_EXPR:
 		if (size == 10)
-		    Error(ERR_DECLDATA_EXPR, (char *)NULL, "DT");
+		    Error(_("non-floating-point value encountered in `%s'"),
+			  "DT");
 		break;
 	}
     }

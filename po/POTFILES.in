@@ -1,0 +1,11 @@
+# List of source files containing translatable strings.
+# Copyright (c) 2001  Peter Johnson
+#
+# $Id: POTFILES.in,v 1.1 2001/08/30 03:45:16 peter Exp $
+
+src/errwarn.c
+src/bytecode.c
+src/symrec.c
+src/parsers/nasm/bison.c
+src/parsers/nasm/token.c
+src/preprocs/raw/preproc.c
