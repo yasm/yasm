@@ -22,6 +22,14 @@
 #ifndef YASM_GLOBALS_H
 #define YASM_GLOBALS_H
 
+/* Output file for debugging-type formats.  This is so that functions that are
+ * called before the object file is usually opened can still write data out to
+ * it (whereas for "normal" formats the object file is not opened until later
+ * in the assembly process).  Opening the file early is special-cased in
+ * main().
+ */
+extern /*@null@*/ FILE *debug_file;
+
 /* Current (selected) parser */
 extern /*@null@*/ parser *cur_parser;
 

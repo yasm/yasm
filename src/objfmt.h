@@ -50,12 +50,19 @@ struct objfmt {
 /*    debugfmt *default_df;*/
 
     /* Initializes object output.  Must be called before any other object
-     * format functions.
+     * format functions.  Should NOT open the object file; the filenames are
+     * provided solely for informational purposes.
      */
-    void (*initialize) (/*@dependent@*/ FILE *f);
+    void (*initialize) (const char *in_filename, const char *obj_filename);
 
-    /* Finishes object output, and cleans up anything created by initialize. */
-    void (*finalize) (void);
+    /* Write out (post-optimized) sections to the object file.
+     * This function may call symrec functions as necessary (including
+     * symrec_traverse) to retrieve symbolic information.
+     */
+    void (*output) (FILE *f, sectionhead *sections);
+
+    /* Cleans up anything allocated by initialize. */
+    void (*cleanup) (void);
 
     /* Switch object file sections.  The first val of the valparams should
      * be the section name.  Returns NULL if something's wrong, otherwise

@@ -51,6 +51,9 @@ static int files_open = 0;
 /*@null@*/ static FILE *in = NULL, *obj = NULL;
 static int special_options = 0;
 
+static int open_obj(void);
+static void cleanup(sectionhead *sections);
+
 /* Forward declarations: cmd line parser handlers */
 static int opt_special_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_format_handler(char *cmd, /*@null@*/ char *param, int extra);
@@ -154,12 +157,10 @@ main(int argc, char *argv[])
     /* Set x86 as the architecture */
     cur_arch = &x86_arch;
 
-    /* Set dbg as the object format */
-    cur_objfmt = find_objfmt("dbg");
-    if (!cur_objfmt) {
-	ErrorNow(_("unrecognized output format `%s'"), "dbg");
-	return EXIT_FAILURE;
-    }
+    /* If not already specified, default to dbg as the object format. */
+    if (!cur_objfmt)
+	cur_objfmt = find_objfmt("dbg");
+    assert(cur_objfmt != NULL);
 
     /* open the object file if not specified */
     if (!obj) {
@@ -170,17 +171,19 @@ main(int argc, char *argv[])
 	/* replace (or add) extension */
 	obj_filename = replace_extension(in_filename, cur_objfmt->extension,
 					 "yasm.out");
+    }
 
-	/* open the built filename */
-	obj = fopen(obj_filename, "wb");
-	if (!obj) {
-	    ErrorNow(_("could not open file `%s'"), obj_filename);
+    /* Pre-open the object file as debug_file if we're using a debug-type
+     * format.  (This is so the format can output ALL function call info).
+     */
+    if (strcmp(cur_objfmt->keyword, "dbg") == 0) {
+	if (!open_obj())
 	    return EXIT_FAILURE;
-	}
+	debug_file = obj;
     }
 
     /* Initialize the object format */
-    cur_objfmt->initialize(obj);
+    cur_objfmt->initialize(in_filename, obj_filename);
 
     /* Set NASM as the parser */
     cur_parser = find_parser("nasm");
@@ -200,53 +203,69 @@ main(int argc, char *argv[])
 	xfree(in_filename);
 
     if (OutputAllErrorWarning() > 0) {
-	sections_delete(sections);
-	symrec_delete_all();
-	line_shutdown();
-	floatnum_shutdown();
-	intnum_shutdown();
-	BitVector_Shutdown();
+	cleanup(sections);
 	return EXIT_FAILURE;
     }
-
-    /* XXX  Only for temporary debugging! */
-    fprintf(obj, "\nSections after parsing:\n");
-    indent_level++;
-    sections_print(obj, sections);
-    indent_level--;
-
-    fprintf(obj, "\nSymbol Table:\n");
-    indent_level++;
-    symrec_print_all(obj);
-    indent_level--;
 
     symrec_parser_finalize();
     basic_optimizer.optimize(sections);
 
     if (OutputAllErrorWarning() > 0) {
-	sections_delete(sections);
-	symrec_delete_all();
-	line_shutdown();
-	floatnum_shutdown();
-	intnum_shutdown();
-	BitVector_Shutdown();
+	cleanup(sections);
 	return EXIT_FAILURE;
     }
 
-    fprintf(obj, "\nSections after optimization:\n");
-    indent_level++;
-    sections_print(obj, sections);
-    indent_level--;
+    /* open the object file for output (if not already opened above) */
+    if (!debug_file) {
+	if (!open_obj())
+	    return EXIT_FAILURE;
+    }
+
+    /* Write the object file */
+    cur_objfmt->output(obj, sections);
 
     /* Finalize the object output */
-    cur_objfmt->finalize();
+    cur_objfmt->cleanup();
 
     if (obj != stdout)
 	fclose(obj);
 
+    /* If we had an error at this point, we also need to delete the output
+     * object file (to make sure it's not left newer than the source).
+     */
+    if (OutputAllErrorWarning() > 0) {
+	cleanup(sections);
+	if (obj != stdout)
+	    remove(obj_filename);
+	return EXIT_FAILURE;
+    }
+
     if (obj_filename)
 	xfree(obj_filename);
 
+    cleanup(sections);
+    return EXIT_SUCCESS;
+}
+/*@=globstate =unrecog@*/
+
+/* Open the object file.  Returns 0 on failure. */
+static int
+open_obj(void)
+{
+    if (obj != stdout) {
+	obj = fopen(obj_filename, "wb");
+	if (!obj) {
+	    ErrorNow(_("could not open file `%s'"), obj_filename);
+	    return 0;
+	}
+    }
+    return 1;
+}
+
+/* Cleans up all allocated structures. */
+static void
+cleanup(sectionhead *sections)
+{
     sections_delete(sections);
     symrec_delete_all();
     line_shutdown();
@@ -255,9 +274,7 @@ main(int argc, char *argv[])
     intnum_shutdown();
 
     BitVector_Shutdown();
-    return EXIT_SUCCESS;
 }
-/*@=globstate =unrecog@*/
 
 /*
  *  Command line options handlers
@@ -296,7 +313,11 @@ static int
 opt_format_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     assert(param != NULL);
-    printf("selected format: %s\n", param);
+    cur_objfmt = find_objfmt(param);
+    if (!cur_objfmt) {
+	ErrorNow(_("unrecognized object format `%s'"), param);
+	return 1;
+    }
     return 0;
 }
 
@@ -305,22 +326,22 @@ opt_objfile_handler(/*@unused@*/ char *cmd, char *param,
 		    /*@unused@*/ int extra)
 {
     assert(param != NULL);
-    if (strcasecmp(param, "stdout") == 0)
+    if (strcmp(param, "-") == 0)
 	obj = stdout;
-    else if (strcasecmp(param, "stderr") == 0)
-	obj = stderr;
     else {
 	if (obj) {
 	    WarningNow("can open only one output file, last specified used");
-	    if (obj != stdout && obj != stderr && fclose(obj))
+	    if (obj != stdout && fclose(obj))
 		ErrorNow("could not close old output file");
 	}
     }
 
-    obj = fopen(param, "wb");
-    if (!obj) {
-	ErrorNow(_("could not open file `%s'"), param);
-	return 1;
+    if (obj != stdout) {
+	obj = fopen(param, "wb");
+	if (!obj) {
+	    ErrorNow(_("could not open file `%s'"), param);
+	    return 1;
+	}
     }
 
     if (obj_filename)
