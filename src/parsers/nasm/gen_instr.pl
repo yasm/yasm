@@ -739,6 +739,7 @@ sub output_yacc ($@)
 			    $tokens =~ s/imm8x/imm/;
 			    die "no space for ONE?" if $args[3] !~ m/0;/;
 			    my $oneval = $ONE->[3]->[2];
+			    $oneval =~ s/(idata\.op\[\d\]=)|;//g;
 			    $args[3] =~ s/0/$oneval/;
 			    print GRAMMAR action_setshiftflag ($rule, $tokens, $func, \@args, $count++);
 			}
