@@ -1,14 +1,17 @@
-/* $IdPath: yasm/libyasm.h,v 1.3 2003/03/30 21:27:25 peter Exp $
- * Libyasm interface primary header file.
+/**
+ * \file libyasm.h
+ * \brief YASM library primary header file.
+ *
+ * $IdPath$
  *
  *  Copyright (C) 2003  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 1. Redistributions of source code must retain the above copyright
+ *  - Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
+ *  - Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
@@ -23,18 +26,19 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- */
-#ifndef YASM_LIB_H
-#define YASM_LIB_H
-
-/* Define YASM_LIB_INTERNAL to include many internal function and variable
+ *
+ * Define YASM_LIB_INTERNAL to include many internal function and variable
  * definitions that violate the yasm_* namespace.  This includes
  * compat-queue.h, bitvect.h, and hamt.h.
  *
  * Additional parts may be included via:
- * YASM_BC_INTERNAL: reveal bytecode internal structures via bc-int.h inclusion
- * YASM_EXPR_INTERNAL: reveal expr internal structures via expr-int.h inclusion
+ *  - YASM_BC_INTERNAL: reveal bytecode internal structures via bc-int.h
+ *                      inclusion
+ *  - YASM_EXPR_INTERNAL: reveal expr internal structures via expr-int.h
+ *                        inclusion
  */
+#ifndef YASM_LIB_H
+#define YASM_LIB_H
 
 #include <stdio.h>
 #include <stdarg.h>
