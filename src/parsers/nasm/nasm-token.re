@@ -93,7 +93,7 @@ fill(YYCTYPE *cursor)
 		xfree(s.bot);
 	    s.bot = buf;
 	}
-	if((cnt = nasm_parser_input(s.lim, BSIZE)) != BSIZE){
+	if((cnt = nasm_parser_input(s.lim, BSIZE)) == 0){
 	    s.eof = &s.lim[cnt]; *s.eof++ = '\n';
 	}
 	s.lim += cnt;
