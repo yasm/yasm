@@ -52,3 +52,9 @@ typedef enum {
 
 void yapp_lex_initialize(FILE *f);
 void set_inhibit(void);
+
+extern /*@dependent@*/ linemgr *yapp_preproc_linemgr;
+extern /*@dependent@*/ errwarn *yapp_preproc_errwarn;
+#define cur_lindex	(yapp_preproc_linemgr->get_current())
+#define cur_we		yapp_preproc_errwarn
+

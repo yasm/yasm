@@ -40,7 +40,7 @@ typedef enum {
 } bytecode_type;
 #define BYTECODE_TYPE_BASE  BC_OBJFMT_DATA+1
 
-void bc_initialize(arch *a);
+void bc_initialize(arch *a, errwarn *we);
 
 /*@only@*/ immval *imm_new_int(unsigned long int_val, unsigned long lindex);
 /*@only@*/ immval *imm_new_expr(/*@keep@*/ expr *e);

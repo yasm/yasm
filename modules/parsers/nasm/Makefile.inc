@@ -3,6 +3,7 @@
 lib_LTLIBRARIES += yasm-nasm.la
 
 yasm_nasm_la_SOURCES = \
+	src/parsers/nasm/nasm-parser.h		\
 	src/parsers/nasm/nasm-parser.c		\
 	src/parsers/nasm/nasm-defs.h		\
 	src/parsers/nasm/nasm-bison.y		\

@@ -22,15 +22,6 @@
 #ifndef YASM_FILE_H
 #define YASM_FILE_H
 
-/* Replace extension on a filename (or append one if none is present).
- * If output filename would be identical to input (same extension out as in),
- * returns (copy of) def.
- * A NULL ext means the trailing '.' should NOT be included, whereas a "" ext
- * means the trailing '.' should be included.
- */
-/*@only@*/ char *replace_extension(const char *orig, /*@null@*/
-				   const char *ext, const char *def);
-
 /* These functions only work properly if p is an (unsigned char *) */
 
 #define WRITE_8(ptr, val)			\

@@ -114,6 +114,8 @@ typedef struct x86_new_jmprel_data {
 bytecode *x86_bc_new_jmprel(x86_new_jmprel_data *d);
 
 extern unsigned char yasm_x86_LTX_mode_bits;
+extern /*@dependent@*/ errwarn *yasm_x86_errwarn;
+#define cur_we yasm_x86_errwarn
 
 void x86_bc_delete(bytecode *bc);
 void x86_bc_print(FILE *f, int indent_level, const bytecode *bc);

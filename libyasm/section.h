@@ -25,14 +25,15 @@
 /*@dependent@*/ section *sections_initialize(sectionhead *headp, objfmt *of);
 
 /*@dependent@*/ section *sections_switch_general(sectionhead *headp,
-						 const char *name,
-						 unsigned long start,
-						 int res_only,
-						 /*@out@*/ int *isnew,
-						 unsigned long lindex);
+    const char *name, unsigned long start, int res_only, /*@out@*/ int *isnew,
+    unsigned long lindex,
+    /*@exits@*/ void (*error_func) (const char *file, unsigned int line,
+				    const char *message));
 
 /*@dependent@*/ section *sections_switch_absolute(sectionhead *headp,
-						  /*@keep@*/ expr *start);
+    /*@keep@*/ expr *start,
+    /*@exits@*/ void (*error_func) (const char *file, unsigned int line,
+				    const char *message));
 
 int section_is_absolute(section *sect);
 

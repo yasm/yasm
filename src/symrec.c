@@ -76,7 +76,7 @@ struct symrec {
 };
 
 /* The symbol table: a hash array mapped trie (HAMT). */
-static /*@only@*/ /*@null@*/ HAMT *sym_table = NULL;
+static /*@only@*/ HAMT *sym_table;
 
 /* Linked list of symbols not in the symbol table. */
 typedef struct non_table_symrec_s {
@@ -85,8 +85,20 @@ typedef struct non_table_symrec_s {
 } non_table_symrec;
 typedef /*@reldef@*/ SLIST_HEAD(nontablesymhead_s, non_table_symrec_s)
 	nontablesymhead;
-static /*@only@*/ /*@null@*/ nontablesymhead *non_table_syms = NULL;
+static /*@only@*/ nontablesymhead *non_table_syms;
 
+static /*@dependent@*/ errwarn *cur_we;
+
+
+void
+symrec_initialize(errwarn *we)
+{
+    cur_we = we;
+
+    sym_table = HAMT_new(cur_we->internal_error_);
+    non_table_syms = xmalloc(sizeof(nontablesymhead));
+    SLIST_INIT(non_table_syms);
+}
 
 static void
 symrec_delete_one(/*@only@*/ void *d)
@@ -99,7 +111,8 @@ symrec_delete_one(/*@only@*/ void *d)
 	if (sym->of->symrec_data_delete)
 	    sym->of->symrec_data_delete(sym->of_data);
 	else
-	    InternalError(_("don't know how to delete objfmt-specific data"));
+	    cur_we->internal_error(
+		N_("don't know how to delete objfmt-specific data"));
     }
     xfree(sym);
 }
@@ -124,9 +137,6 @@ symrec_get_or_new_in_table(/*@only@*/ char *name)
     symrec *rec = symrec_new_common(name);
     int replace = 0;
 
-    if (!sym_table)
-	sym_table = HAMT_new();
-
     rec->status = SYM_NOSTATUS;
 
     return HAMT_insert(sym_table, name, rec, &replace, symrec_delete_one);
@@ -137,11 +147,6 @@ symrec_get_or_new_not_in_table(/*@only@*/ char *name)
 {
     non_table_symrec *sym = xmalloc(sizeof(non_table_symrec));
     sym->rec = symrec_new_common(name);
-
-    if (!non_table_syms) {
-	non_table_syms = xmalloc(sizeof(nontablesymhead));
-	SLIST_INIT(non_table_syms);
-    }
 
     sym->rec->status = SYM_NOTINTABLE;
 
@@ -169,10 +174,7 @@ symrec_get_or_new(const char *name, int in_table)
 int
 symrec_traverse(void *d, int (*func) (symrec *sym, void *d))
 {
-    if (sym_table)
-	return HAMT_traverse(sym_table, d, (int (*) (void *, void *))func);
-    else
-	return 1;
+    return HAMT_traverse(sym_table, d, (int (*) (void *, void *))func);
 }
 
 symrec *
@@ -194,9 +196,9 @@ symrec_define(const char *name, SymType type, int in_table,
     /* Has it been defined before (either by DEFINED or COMMON/EXTERN)? */
     if ((rec->status & SYM_DEFINED) ||
 	(rec->visibility & (SYM_COMMON | SYM_EXTERN))) {
-	Error(lindex,
-	      _("duplicate definition of `%s'; first defined on line %lu"),
-	      name, rec->line);
+	cur_we->error(lindex,
+	    N_("duplicate definition of `%s'; first defined on line %lu"),
+	    name, rec->line);
     } else {
 	rec->line = lindex;	/* set line number of definition */
 	rec->type = type;
@@ -247,9 +249,9 @@ symrec_declare(const char *name, SymVisibility vis, unsigned long lindex)
 	  ((rec->visibility & SYM_EXTERN) && (vis == SYM_EXTERN)))))
 	rec->visibility |= vis;
     else
-	Error(lindex,
-	      _("duplicate definition of `%s'; first defined on line %lu"),
-	      name, rec->line);
+	cur_we->error(lindex,
+	    N_("duplicate definition of `%s'; first defined on line %lu"),
+	    name, rec->line);
     return rec;
 }
 
@@ -312,7 +314,8 @@ symrec_set_of_data(symrec *sym, objfmt *of, void *of_data)
 	if (sym->of->symrec_data_delete)
 	    sym->of->symrec_data_delete(sym->of_data);
 	else
-	    InternalError(_("don't know how to delete objfmt-specific data"));
+	    cur_we->internal_error(
+		N_("don't know how to delete objfmt-specific data"));
     }
     sym->of = of;
     sym->of_data = of_data;
@@ -325,7 +328,8 @@ symrec_parser_finalize_checksym(symrec *sym, /*@unused@*/ /*@null@*/ void *d)
     /* error if a symbol is used but never defined or extern/common declared */
     if ((sym->status & SYM_USED) && !(sym->status & SYM_DEFINED) &&
 	!(sym->visibility & (SYM_EXTERN | SYM_COMMON))) {
-	Error(sym->line, _("undefined symbol `%s' (first use)"), sym->name);
+	cur_we->error(sym->line, N_("undefined symbol `%s' (first use)"),
+		      sym->name);
 	if (sym->line < firstundef_line)
 	    firstundef_line = sym->line;
     }
@@ -339,27 +343,22 @@ symrec_parser_finalize(void)
     firstundef_line = ULONG_MAX;
     symrec_traverse(NULL, symrec_parser_finalize_checksym);
     if (firstundef_line < ULONG_MAX)
-	Error(firstundef_line,
-	      _(" (Each undefined symbol is reported only once.)"));
+	cur_we->error(firstundef_line,
+	    N_(" (Each undefined symbol is reported only once.)"));
 }
 
 void
-symrec_delete_all(void)
+symrec_cleanup(void)
 {
-    if (sym_table) {
-	HAMT_delete(sym_table, symrec_delete_one);
-	sym_table = NULL;
+    HAMT_delete(sym_table, symrec_delete_one);
+
+    while (!SLIST_EMPTY(non_table_syms)) {
+	non_table_symrec *sym = SLIST_FIRST(non_table_syms);
+	SLIST_REMOVE_HEAD(non_table_syms, link);
+	symrec_delete_one(sym->rec);
+	xfree(sym);
     }
-    if (non_table_syms) {
-	while (!SLIST_EMPTY(non_table_syms)) {
-	    non_table_symrec *sym = SLIST_FIRST(non_table_syms);
-	    SLIST_REMOVE_HEAD(non_table_syms, link);
-	    symrec_delete_one(sym->rec);
-	    xfree(sym);
-	}
-	xfree(non_table_syms);
-	non_table_syms = NULL;
-    }
+    xfree(non_table_syms);
 }
 
 typedef struct symrec_print_data {

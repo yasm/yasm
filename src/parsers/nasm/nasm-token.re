@@ -37,6 +37,7 @@ RCSID("$IdPath$");
 
 #include "arch.h"
 
+#include "src/parsers/nasm/nasm-parser.h"
 #include "src/parsers/nasm/nasm-defs.h"
 #include "nasm-bison.h"
 
@@ -59,25 +60,12 @@ RCSID("$IdPath$");
 
 #define TOKLEN		(cursor-s.tok)
 
-void nasm_parser_cleanup(void);
-void nasm_parser_set_directive_state(void);
-int nasm_parser_lex(void);
-
-extern size_t (*nasm_parser_input) (char *buf, size_t max_size, linemgr *lm);
-extern /*@dependent@*/ arch *nasm_parser_arch;
-extern /*@dependent@*/ linemgr *nasm_parser_linemgr;
-
-#define p_line_index	(nasm_parser_linemgr->get_current())
-
-
 typedef struct Scanner {
     YYCTYPE		*bot, *tok, *ptr, *cur, *pos, *lim, *top, *eof;
     unsigned int	tchar, tline, cline;
 } Scanner;
 
 static Scanner s = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 1 };
-
-FILE *nasm_parser_in = NULL;
 
 static YYCTYPE *
 fill(YYCTYPE *cursor)
@@ -105,8 +93,7 @@ fill(YYCTYPE *cursor)
 		xfree(s.bot);
 	    s.bot = buf;
 	}
-	if((cnt = nasm_parser_input(s.lim, BSIZE,
-				    nasm_parser_linemgr)) != BSIZE){
+	if((cnt = nasm_parser_input(s.lim, BSIZE)) != BSIZE){
 	    s.eof = &s.lim[cnt]; *s.eof++ = '\n';
 	}
 	s.lim += cnt;
@@ -129,10 +116,6 @@ static char *strbuf = (char *)NULL;
 
 /* length of strbuf (including terminating NULL character) */
 static size_t strbuf_size = 0;
-
-/* last "base" label for local (.) labels */
-char *nasm_parser_locallabel_base = (char *)NULL;
-size_t nasm_parser_locallabel_base_len = 0;
 
 static int linechg_numcount;
 
@@ -220,7 +203,7 @@ scan:
 	digit+ {
 	    savech = s.tok[TOKLEN];
 	    s.tok[TOKLEN] = '\0';
-	    yylval.intn = intnum_new_dec(s.tok, p_line_index);
+	    yylval.intn = intnum_new_dec(s.tok, cur_lindex);
 	    s.tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -228,21 +211,21 @@ scan:
 
 	bindigit+ "b" {
 	    s.tok[TOKLEN-1] = '\0'; /* strip off 'b' */
-	    yylval.intn = intnum_new_bin(s.tok, p_line_index);
+	    yylval.intn = intnum_new_bin(s.tok, cur_lindex);
 	    RETURN(INTNUM);
 	}
 
 	/* 777q - octal number */
 	octdigit+ "q" {
 	    s.tok[TOKLEN-1] = '\0'; /* strip off 'q' */
-	    yylval.intn = intnum_new_oct(s.tok, p_line_index);
+	    yylval.intn = intnum_new_oct(s.tok, cur_lindex);
 	    RETURN(INTNUM);
 	}
 
 	/* 0AAh form of hexidecimal number */
 	digit hexdigit* "h" {
 	    s.tok[TOKLEN-1] = '\0'; /* strip off 'h' */
-	    yylval.intn = intnum_new_hex(s.tok, p_line_index);
+	    yylval.intn = intnum_new_hex(s.tok, cur_lindex);
 	    RETURN(INTNUM);
 	}
 
@@ -252,10 +235,10 @@ scan:
 	    s.tok[TOKLEN] = '\0';
 	    if (s.tok[1] == 'x')
 		/* skip 0 and x */
-		yylval.intn = intnum_new_hex(s.tok+2, p_line_index);
+		yylval.intn = intnum_new_hex(s.tok+2, cur_lindex);
 	    else
 		/* don't skip 0 */
-		yylval.intn = intnum_new_hex(s.tok+1, p_line_index);
+		yylval.intn = intnum_new_hex(s.tok+1, cur_lindex);
 	    s.tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -342,8 +325,9 @@ scan:
 		yylval.str_val = xstrndup(s.tok, TOKLEN);
 		RETURN(ID);
 	    } else if (!nasm_parser_locallabel_base) {
-		Warning(p_line_index, _("no non-local label before `%s'"),
-			s.tok[0]);
+		cur_we->warning(WARN_GENERAL, cur_lindex,
+				N_("no non-local label before `%s'"),
+				s.tok[0]);
 		yylval.str_val = xstrndup(s.tok, TOKLEN);
 	    } else {
 		len = TOKLEN + nasm_parser_locallabel_base_len;
@@ -367,7 +351,7 @@ scan:
 	    savech = s.tok[TOKLEN];
 	    s.tok[TOKLEN] = '\0';
 	    check_id_ret = nasm_parser_arch->parse.check_identifier(
-		yylval.arch_data, s.tok, p_line_index);
+		yylval.arch_data, s.tok, cur_lindex);
 	    s.tok[TOKLEN] = savech;
 	    switch (check_id_ret) {
 		case ARCH_CHECK_ID_NONE:
@@ -385,8 +369,8 @@ scan:
 		case ARCH_CHECK_ID_TARGETMOD:
 		    RETURN(TARGETMOD);
 		default:
-		    Warning(p_line_index,
-			    _("Arch feature not supported, treating as identifier"));
+		    cur_we->warning(WARN_GENERAL, cur_lindex,
+			N_("Arch feature not supported, treating as identifier"));
 		    yylval.str_val = xstrndup(s.tok, TOKLEN);
 		    RETURN(ID);
 	    }
@@ -399,10 +383,9 @@ scan:
 	"\n"			{ state = INITIAL; RETURN(s.tok[0]); }
 
 	any {
-	    if (WARN_ENABLED(WARN_UNRECOGNIZED_CHAR))
-		Warning(p_line_index,
-			_("ignoring unrecognized character `%s'"),
-			conv_unprint(s.tok[0]));
+	    cur_we->warning(WARN_UNREC_CHAR, cur_lindex,
+			    N_("ignoring unrecognized character `%s'"),
+			    cur_we->conv_unprint(s.tok[0]));
 	    goto scan;
 	}
     */
@@ -416,7 +399,7 @@ linechg:
 	    linechg_numcount++;
 	    savech = s.tok[TOKLEN];
 	    s.tok[TOKLEN] = '\0';
-	    yylval.intn = intnum_new_dec(s.tok, p_line_index);
+	    yylval.intn = intnum_new_dec(s.tok, cur_lindex);
 	    s.tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -439,10 +422,9 @@ linechg:
 	}
 
 	any {
-	    if (WARN_ENABLED(WARN_UNRECOGNIZED_CHAR))
-		Warning(p_line_index,
-			_("ignoring unrecognized character `%s'"),
-			conv_unprint(s.tok[0]));
+	    cur_we->warning(WARN_UNREC_CHAR, cur_lindex,
+			    N_("ignoring unrecognized character `%s'"),
+			    cur_we->conv_unprint(s.tok[0]));
 	    goto linechg;
 	}
     */
@@ -482,10 +464,9 @@ directive:
 	}
 
 	any {
-	    if (WARN_ENABLED(WARN_UNRECOGNIZED_CHAR))
-		Warning(p_line_index,
-			_("ignoring unrecognized character `%s'"),
-			conv_unprint(s.tok[0]));
+	    cur_we->warning(WARN_UNREC_CHAR, cur_lindex,
+			    N_("ignoring unrecognized character `%s'"),
+			    cur_we->conv_unprint(s.tok[0]));
 	    goto directive;
 	}
     */
@@ -502,9 +483,10 @@ stringconst_scan:
     /*!re2c
 	"\n"	{
 	    if (cursor == s.eof)
-		Error(p_line_index, _("unexpected end of file in string"));
+		cur_we->error(cur_lindex,
+			      N_("unexpected end of file in string"));
 	    else
-		Error(p_line_index, _("unterminated string"));
+		cur_we->error(cur_lindex, N_("unterminated string"));
 	    strbuf[count] = '\0';
 	    yylval.str_val = strbuf;
 	    RETURN(STRING);

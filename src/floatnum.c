@@ -84,9 +84,7 @@ typedef struct POT_Entry_Source_s {
  * entry[12-n] = 10 ** (-2 ** n) for 0 <= n <= 12.
  * entry[13] = 1.0
  */
-/*@-nullassign@*/
-static /*@only@*/ POT_Entry *POT_TableN = (POT_Entry *)NULL;
-/*@=nullassign@*/
+static /*@only@*/ POT_Entry *POT_TableN;
 static POT_Entry_Source POT_TableN_Source[] = {
     {{0xe3,0x2d,0xde,0x9f,0xce,0xd2,0xc8,0x04,0xdd,0xa6},0x4ad8}, /* 1e-4096 */
     {{0x25,0x49,0xe4,0x2d,0x36,0x34,0x4f,0x53,0xae,0xce},0x656b}, /* 1e-2048 */
@@ -132,6 +130,9 @@ static POT_Entry_Source POT_TableP_Source[] = {
     {{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x80},0x7fff}, /* 1e+0 */
 };
 
+static /*@dependent@*/ errwarn *cur_we;
+
+
 static void
 POT_Table_Init_Entry(/*@out@*/ POT_Entry *e, POT_Entry_Source *s, int dec_exp)
 {
@@ -153,13 +154,15 @@ POT_Table_Init_Entry(/*@out@*/ POT_Entry *e, POT_Entry_Source *s, int dec_exp)
 }
 
 /*@-compdef@*/
-static void
-POT_Table_Init(void)
+void
+floatnum_initialize(errwarn *we)
 /*@globals undef POT_TableN, undef POT_TableP, POT_TableP_Source,
    POT_TableN_Source @*/
 {
     int dec_exp = 1;
     int i;
+
+    cur_we = we;
 
     /* Allocate space for two POT tables */
     POT_TableN = xmalloc(14*sizeof(POT_Entry));
@@ -186,12 +189,9 @@ POT_Table_Init(void)
 
 /*@-globstate@*/
 void
-floatnum_shutdown(void)
+floatnum_cleanup(void)
 {
     int i;
-
-    if (!POT_TableN)
-	return;
 
     /* Un-offset POT_TableP */
     POT_TableP--;
@@ -309,10 +309,6 @@ floatnum_new(const char *str)
     int sig_digits;
     int decimal_pt;
     boolean carry;
-
-    /* Initialize POT tables if necessary */
-    if (!POT_TableN)
-	POT_Table_Init();
 
     flt = xmalloc(sizeof(floatnum));
 
@@ -515,7 +511,8 @@ floatnum_calc(floatnum *acc, ExprOp op, /*@unused@*/ floatnum *operand,
 	      unsigned long lindex)
 {
     if (op != EXPR_NEG)
-	Error(lindex, _("Unsupported floating-point arithmetic operation"));
+	cur_we->error(lindex,
+		      N_("Unsupported floating-point arithmetic operation"));
     else
 	acc->sign ^= 1;
 }
@@ -590,7 +587,7 @@ floatnum_get_common(const floatnum *flt, /*@out@*/ unsigned char *ptr,
 
     /* underflow and overflow both set!? */
     if (underflow && overflow)
-	InternalError(_("Both underflow and overflow set"));
+	cur_we->internal_error(N_("Both underflow and overflow set"));
 
     /* check for underflow or overflow and set up appropriate output */
     if (underflow) {
@@ -613,7 +610,8 @@ floatnum_get_common(const floatnum *flt, /*@out@*/ unsigned char *ptr,
     /* get little-endian bytes */
     buf = BitVector_Block_Read(output, &len);
     if (len < byte_size)
-	InternalError(_("Byte length of BitVector does not match bit length"));
+	cur_we->internal_error(
+	    N_("Byte length of BitVector does not match bit length"));
 
     /* copy to output */
     memcpy(ptr, buf, byte_size*sizeof(unsigned char));
@@ -667,7 +665,7 @@ floatnum_get_sized(const floatnum *flt, unsigned char *ptr, size_t size)
 	case 10:
 	    return floatnum_get_common(flt, ptr, 10, 64, 0, 15);
 	default:
-	    InternalError(_("Invalid float conversion size"));
+	    cur_we->internal_error(N_("Invalid float conversion size"));
 	    /*@notreached@*/
 	    return 1;	    /* never reached, but silence GCC warning */
     }

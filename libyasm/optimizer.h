@@ -37,7 +37,7 @@ struct optimizer {
      * object file.  (A failure is indicated by calling ErrorAt() from within
      * this function).
      */
-    void (*optimize) (sectionhead *sections);
+    void (*optimize) (sectionhead *sections, errwarn *we);
 };
 
 #endif

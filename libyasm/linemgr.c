@@ -93,9 +93,12 @@ yasm_linemgr_set(const char *filename, unsigned long line,
 }
 
 static void
-yasm_linemgr_initialize(void)
+yasm_linemgr_initialize(/*@exits@*/
+			void (*error_func) (const char *file,
+					    unsigned int line,
+					    const char *message))
 {
-    filename_table = HAMT_new();
+    filename_table = HAMT_new(error_func);
 
     line_index = 1;
 

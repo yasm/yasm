@@ -42,31 +42,13 @@ RCSID("$IdPath$");
 
 #include "arch.h"
 
+#include "src/parsers/nasm/nasm-parser.h"
 #include "src/parsers/nasm/nasm-defs.h"
 
 
-void init_table(void);
-extern int nasm_parser_lex(void);
-extern void nasm_parser_set_directive_state(void);
-void nasm_parser_error(const char *);
-static void nasm_parser_directive(const char *name,
-				  valparamhead *valparams,
+static void nasm_parser_error(const char *);
+static void nasm_parser_directive(const char *name, valparamhead *valparams,
 				  /*@null@*/ valparamhead *objext_valparams);
-
-extern objfmt *nasm_parser_objfmt;
-extern sectionhead nasm_parser_sections;
-extern section *nasm_parser_cur_section;
-extern char *nasm_parser_locallabel_base;
-extern size_t nasm_parser_locallabel_base_len;
-extern /*@dependent@*/ arch *nasm_parser_arch;
-extern /*@dependent@*/ objfmt *nasm_parser_objfmt;
-extern /*@dependent@*/ linemgr *nasm_parser_linemgr;
-
-#define p_line_index	(nasm_parser_linemgr->get_current())
-
-#define p_expr_new_tree(l,o,r)	expr_new_tree(l,o,r,p_line_index)
-#define p_expr_new_branch(o,r)	expr_new_branch(o,r,p_line_index)
-#define p_expr_new_ident(r)	expr_new_ident(r,p_line_index)
 
 static /*@null@*/ bytecode *nasm_parser_prev_bc = (bytecode *)NULL;
 static bytecode *nasm_parser_temp_bc;
@@ -162,8 +144,8 @@ line: '\n'		{ $$ = (bytecode *)NULL; }
 	$$ = (bytecode *)NULL;
     }
     | error '\n'	{
-	Error(p_line_index,
-	      _("label or instruction expected at start of line"));
+	cur_we->error(cur_lindex,
+		      N_("label or instruction expected at start of line"));
 	$$ = (bytecode *)NULL;
 	yyerrok;
     }
@@ -175,7 +157,7 @@ lineexp: exp
     | label exp				{ $$ = $2; }
     | label TIMES expr exp		{ $$ = $4; bc_set_multiple($$, $3); }
     | label_id_equ EQU expr		{
-	symrec_define_equ($1, $3, p_line_index);
+	symrec_define_equ($1, $3, cur_lindex);
 	xfree($1);
 	$$ = (bytecode *)NULL;
     }
@@ -183,47 +165,45 @@ lineexp: exp
 
 exp: instr
     | DECLARE_DATA datavals		{
-	$$ = bc_new_data(&$2, $1, p_line_index);
+	$$ = bc_new_data(&$2, $1, cur_lindex);
     }
     | RESERVE_SPACE expr		{
-	$$ = bc_new_reserve($2, $1, p_line_index);
+	$$ = bc_new_reserve($2, $1, cur_lindex);
     }
     | INCBIN STRING			{
-	$$ = bc_new_incbin($2, NULL, NULL, p_line_index);
+	$$ = bc_new_incbin($2, NULL, NULL, cur_lindex);
     }
     | INCBIN STRING ',' expr		{
-	$$ = bc_new_incbin($2, $4, NULL, p_line_index);
+	$$ = bc_new_incbin($2, $4, NULL, cur_lindex);
     }
     | INCBIN STRING ',' expr ',' expr	{
-	$$ = bc_new_incbin($2, $4, $6, p_line_index);
+	$$ = bc_new_incbin($2, $4, $6, cur_lindex);
     }
 ;
 
 instr: INSN		{
 	$$ = nasm_parser_arch->parse.new_insn($1, 0, NULL,
 					      nasm_parser_cur_section,
-					      nasm_parser_prev_bc,
-					      p_line_index);
+					      nasm_parser_prev_bc, cur_lindex);
     }
     | INSN operands	{
 	$$ = nasm_parser_arch->parse.new_insn($1, $2.num_operands,
 					      &$2.operands,
 					      nasm_parser_cur_section,
-					      nasm_parser_prev_bc,
-					      p_line_index);
+					      nasm_parser_prev_bc, cur_lindex);
 	ops_delete(&$2.operands, 0);
     }
     | INSN error	{
-	Error(p_line_index, _("expression syntax error"));
+	cur_we->error(cur_lindex, N_("expression syntax error"));
 	$$ = NULL;
     }
     | PREFIX instr	{
 	$$ = $2;
-	nasm_parser_arch->parse.handle_prefix($$, $1, p_line_index);
+	nasm_parser_arch->parse.handle_prefix($$, $1, cur_lindex);
     }
     | SEGREG instr	{
 	$$ = $2;
-	nasm_parser_arch->parse.handle_seg_prefix($$, $1[0], p_line_index);
+	nasm_parser_arch->parse.handle_seg_prefix($$, $1[0], cur_lindex);
     }
 ;
 
@@ -234,19 +214,19 @@ datavals: dataval	    { dvs_initialize(&$$); dvs_append(&$$, $1); }
 dataval: dvexpr		{ $$ = dv_new_expr($1); }
     | STRING		{ $$ = dv_new_string($1); }
     | error		{
-	Error(p_line_index, _("expression syntax error"));
+	cur_we->error(cur_lindex, N_("expression syntax error"));
 	$$ = (dataval *)NULL;
     }
 ;
 
 label: label_id	    {
 	symrec_define_label($1, nasm_parser_cur_section, nasm_parser_prev_bc,
-			    1, p_line_index);
+			    1, cur_lindex);
 	xfree($1);
     }
     | label_id ':'  {
 	symrec_define_label($1, nasm_parser_cur_section, nasm_parser_prev_bc,
-			    1, p_line_index);
+			    1, cur_lindex);
 	xfree($1);
     }
 ;
@@ -274,7 +254,7 @@ directive: DIRECTIVE_NAME directive_val	{
 	xfree($1);
     }
     | DIRECTIVE_NAME error		{
-	Error(p_line_index, _("invalid arguments to [%s]"), $1);
+	cur_we->error(cur_lindex, N_("invalid arguments to [%s]"), $1);
 	xfree($1);
     }
 ;
@@ -318,7 +298,7 @@ memaddr: expr		    {
     }
     | SEGREG ':' memaddr    {
 	$$ = $3;
-	nasm_parser_arch->parse.handle_seg_override($$, $1[0], p_line_index);
+	nasm_parser_arch->parse.handle_seg_override($$, $1[0], cur_lindex);
     }
     | BYTE memaddr	    { $$ = $2; ea_set_len($$, 1); }
     | WORD memaddr	    { $$ = $2; ea_set_len($$, 2); }
@@ -346,7 +326,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 1)
-	    Error(p_line_index, _("cannot override register size"));
+	    cur_we->error(cur_lindex, N_("cannot override register size"));
 	else
 	    $$->size = 1;
     }
@@ -354,7 +334,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 2)
-	    Error(p_line_index, _("cannot override register size"));
+	    cur_we->error(cur_lindex, N_("cannot override register size"));
 	else
 	    $$->size = 2;
     }
@@ -362,7 +342,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 4)
-	    Error(p_line_index, _("cannot override register size"));
+	    cur_we->error(cur_lindex, N_("cannot override register size"));
 	else
 	    $$->size = 4;
     }
@@ -370,7 +350,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 8)
-	    Error(p_line_index, _("cannot override register size"));
+	    cur_we->error(cur_lindex, N_("cannot override register size"));
 	else
 	    $$->size = 8;
     }
@@ -378,7 +358,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 10)
-	    Error(p_line_index, _("cannot override register size"));
+	    cur_we->error(cur_lindex, N_("cannot override register size"));
 	else
 	    $$->size = 10;
     }
@@ -386,7 +366,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == INSN_OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 16)
-	    Error(p_line_index, _("cannot override register size"));
+	    cur_we->error(cur_lindex, N_("cannot override register size"));
 	else
 	    $$->size = 16;
     }
@@ -399,7 +379,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
 direxpr: INTNUM			{ $$ = p_expr_new_ident(ExprInt($1)); }
     | ID			{
 	$$ = p_expr_new_ident(ExprSym(symrec_define_label($1, NULL, NULL, 0,
-							  p_line_index)));
+							  cur_lindex)));
 	xfree($1);
     }
     | direxpr '|' direxpr	{ $$ = p_expr_new_tree($1, EXPR_OR, $3); }
@@ -460,7 +440,7 @@ expr: INTNUM			{ $$ = p_expr_new_ident(ExprInt($1)); }
     | REG			{ $$ = p_expr_new_ident(ExprReg($1[0])); }
     | STRING			{
 	$$ = p_expr_new_ident(ExprInt(intnum_new_charconst_nasm($1,
-								p_line_index)));
+								cur_lindex)));
 	xfree($1);
     }
     | explabel			{ $$ = p_expr_new_ident(ExprSym($1)); }
@@ -495,26 +475,26 @@ expr: INTNUM			{ $$ = p_expr_new_ident(ExprInt($1)); }
 ;
 
 explabel: ID		{
-	$$ = symrec_use($1, p_line_index);
+	$$ = symrec_use($1, cur_lindex);
 	xfree($1);
     }
     | SPECIAL_ID	{
-	$$ = symrec_use($1, p_line_index);
+	$$ = symrec_use($1, cur_lindex);
 	xfree($1);
     }
     | LOCAL_ID		{
-	$$ = symrec_use($1, p_line_index);
+	$$ = symrec_use($1, cur_lindex);
 	xfree($1);
     }
     | '$'		{
 	/* "$" references the current assembly position */
 	$$ = symrec_define_label("$", nasm_parser_cur_section,
-				 nasm_parser_prev_bc, 0, p_line_index);
+				 nasm_parser_prev_bc, 0, cur_lindex);
     }
     | START_SECTION_ID	{
 	/* "$$" references the start of the current section */
 	$$ = symrec_define_label("$$", nasm_parser_cur_section, NULL, 0,
-				 p_line_index);
+				 cur_lindex);
     }
 ;
 
@@ -527,7 +507,7 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 {
     valparam *vp, *vp2;
     symrec *sym;
-    unsigned long lindex = p_line_index;
+    unsigned long lindex = cur_lindex;
 
     /* Handle (mostly) output-format independent directives here */
     if (strcasecmp(name, "extern") == 0) {
@@ -538,7 +518,7 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 		nasm_parser_objfmt->extern_declare(sym, objext_valparams,
 						   lindex);
 	} else
-	    Error(lindex, _("invalid argument to [%s]"), "EXTERN");
+	    cur_we->error(lindex, N_("invalid argument to [%s]"), "EXTERN");
     } else if (strcasecmp(name, "global") == 0) {
 	vp = vps_first(valparams);
 	if (vp->val) {
@@ -547,14 +527,15 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 		nasm_parser_objfmt->global_declare(sym, objext_valparams,
 						   lindex);
 	} else
-	    Error(lindex, _("invalid argument to [%s]"), "GLOBAL");
+	    cur_we->error(lindex, N_("invalid argument to [%s]"), "GLOBAL");
     } else if (strcasecmp(name, "common") == 0) {
 	vp = vps_first(valparams);
 	if (vp->val) {
 	    vp2 = vps_next(vp);
 	    if (!vp2 || (!vp2->val && !vp2->param))
-		Error(lindex, _("no size specified in %s declaration"),
-		      "COMMON");
+		cur_we->error(lindex,
+			      N_("no size specified in %s declaration"),
+			      "COMMON");
 	    else {
 		if (vp2->val) {
 		    sym = symrec_declare(vp->val, SYM_COMMON, lindex);
@@ -573,7 +554,7 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 		}
 	    }
 	} else
-	    Error(lindex, _("invalid argument to [%s]"), "COMMON");
+	    cur_we->error(lindex, N_("invalid argument to [%s]"), "COMMON");
     } else if (strcasecmp(name, "section") == 0 ||
 	       strcasecmp(name, "segment") == 0) {
 	section *new_section =
@@ -584,17 +565,19 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 	    nasm_parser_cur_section = new_section;
 	    nasm_parser_prev_bc = bcs_last(section_get_bytecodes(new_section));
 	} else
-	    Error(lindex, _("invalid argument to [%s]"), "SECTION");
+	    cur_we->error(lindex, N_("invalid argument to [%s]"), "SECTION");
     } else if (strcasecmp(name, "absolute") == 0) {
 	/* it can be just an ID or a complete expression, so handle both. */
 	vp = vps_first(valparams);
 	if (vp->val)
 	    nasm_parser_cur_section =
 		sections_switch_absolute(&nasm_parser_sections,
-		    p_expr_new_ident(ExprSym(symrec_use(vp->val, lindex))));
+		    p_expr_new_ident(ExprSym(symrec_use(vp->val, lindex))),
+		    cur_we->internal_error_);
 	else if (vp->param) {
 	    nasm_parser_cur_section =
-		sections_switch_absolute(&nasm_parser_sections, vp->param);
+		sections_switch_absolute(&nasm_parser_sections, vp->param,
+					 cur_we->internal_error_);
 	    vp->param = NULL;
 	}
 	nasm_parser_prev_bc = (bytecode *)NULL;
@@ -606,7 +589,8 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 		const intnum *intcpu;
 		intcpu = expr_get_intnum(&vp->param, NULL);
 		if (!intcpu)
-		    Error(lindex, _("invalid argument to [%s]"), "CPU");
+		    cur_we->error(lindex, N_("invalid argument to [%s]"),
+				  "CPU");
 		else {
 		    char strcpu[16];
 		    sprintf(strcpu, "%lu", intnum_get_uint(intcpu));
@@ -621,7 +605,7 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 	;
     } else if (nasm_parser_objfmt->directive(name, valparams, objext_valparams,
 					     &nasm_parser_sections, lindex)) {
-	Error(lindex, _("unrecognized directive [%s]"), name);
+	cur_we->error(lindex, N_("unrecognized directive [%s]"), name);
     }
 
     vps_delete(valparams);
@@ -629,9 +613,9 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 	vps_delete(objext_valparams);
 }
 
-void
+static void
 nasm_parser_error(const char *s)
 {
-    ParserError(p_line_index, s);
+    cur_we->parser_error(cur_lindex, s);
 }
 

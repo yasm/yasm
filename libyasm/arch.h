@@ -58,6 +58,9 @@ struct arch {
     /* keyword used to select architecture */
     const char *keyword;
 
+    void (*initialize) (errwarn *we);
+    void (*cleanup) (void);
+
     struct {
 	/* All "data" below starts the parse initialized to 0.  Thus, it is
 	 * okay for a funtion to use/check previously stored data to see if

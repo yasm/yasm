@@ -4,7 +4,6 @@ libyasm_la_SOURCES = \
 	src/bytecode.c		\
 	src/bytecode.h		\
 	src/bc-int.h		\
-	src/errwarn.c		\
 	src/errwarn.h		\
 	src/expr.c		\
 	src/expr.h		\
@@ -47,6 +46,7 @@ yasm_SOURCES += \
 	src/parser.c		\
 	src/module.h		\
 	src/module.c		\
+	src/errwarn.c		\
 	src/linemgr.c
 
 

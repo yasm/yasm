@@ -51,7 +51,7 @@ struct parser {
      * (whatever was in the file).
      */
     sectionhead *(*do_parse) (preproc *pp, arch *a, objfmt *of, linemgr *lm,
-			      FILE *f, const char *in_filename);
+			      errwarn *we, FILE *f, const char *in_filename);
 };
 
 /* Generic functions for all parsers - implemented in src/parser.c */

@@ -54,6 +54,9 @@ struct section {
     int res_only;		/* allow only resb family of bytecodes? */
 
     bytecodehead bc;		/* the bytecodes for the section's contents */
+
+    /*@exits@*/ void (*error_func) (const char *file, unsigned int line,
+				    const char *message);
 };
 
 /*@-compdestroy@*/
@@ -82,7 +85,10 @@ sections_initialize(sectionhead *headp, objfmt *of)
 section *
 sections_switch_general(sectionhead *headp, const char *name,
 			unsigned long start, int res_only, int *isnew,
-			unsigned long lindex)
+			unsigned long lindex,
+			/*@exits@*/ void (*error_func) (const char *file,
+							unsigned int line,
+							const char *message))
 {
     section *s;
 
@@ -113,6 +119,8 @@ sections_switch_general(sectionhead *headp, const char *name,
     s->opt_flags = 0;
     s->res_only = res_only;
 
+    s->error_func = error_func;
+
     *isnew = 1;
     return s;
 }
@@ -120,7 +128,10 @@ sections_switch_general(sectionhead *headp, const char *name,
 
 /*@-onlytrans@*/
 section *
-sections_switch_absolute(sectionhead *headp, expr *start)
+sections_switch_absolute(sectionhead *headp, expr *start,
+			 /*@exits@*/ void (*error_func) (const char *file,
+							 unsigned int line,
+							 const char *message))
 {
     section *s;
 
@@ -133,6 +144,8 @@ sections_switch_absolute(sectionhead *headp, expr *start)
 
     s->opt_flags = 0;
     s->res_only = 1;
+
+    s->error_func = error_func;
 
     return s;
 }
@@ -164,7 +177,8 @@ section_set_of_data(section *sect, objfmt *of, void *of_data)
 	if (of->section_data_delete)
 	    of->section_data_delete(of_data);
 	else
-	    InternalError(_("don't know how to delete objfmt-specific section data"));
+	    sect->error_func(__FILE__, __LINE__,
+		N_("don't know how to delete objfmt-specific section data"));
 	return;
     }
 
@@ -174,7 +188,8 @@ section_set_of_data(section *sect, objfmt *of, void *of_data)
 	if (of2->section_data_delete)
 	    of2->section_data_delete(sect->data.general.of_data);
 	else
-	    InternalError(_("don't know how to delete objfmt-specific section data"));
+	    sect->error_func(__FILE__, __LINE__,
+		N_("don't know how to delete objfmt-specific section data"));
     }
 
     /* Assign new of_data */
@@ -285,7 +300,8 @@ section_delete(section *sect)
 	    if (of->section_data_delete)
 		of->section_data_delete(sect->data.general.of_data);
 	    else
-		InternalError(_("don't know how to delete objfmt-specific section data"));
+		sect->error_func(__FILE__, __LINE__,
+		    N_("don't know how to delete objfmt-specific section data"));
 	}
     }
     expr_delete(sect->start);

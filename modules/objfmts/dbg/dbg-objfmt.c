@@ -46,14 +46,17 @@ objfmt yasm_dbg_LTX_objfmt;
  */
 static FILE *dbg_objfmt_file;
 
+static /*@dependent@*/ errwarn *cur_we;
 
 static void
 dbg_objfmt_initialize(const char *in_filename, const char *obj_filename,
-		      dbgfmt *df, arch *a)
+		      dbgfmt *df, arch *a, errwarn *we)
 {
+    cur_we = we;
+
     dbg_objfmt_file = fopen(obj_filename, "wt");
     if (!dbg_objfmt_file) {
-	ErrorNow(_("could not open file `%s'"), obj_filename);
+	fprintf(stderr, N_("could not open file `%s'"), obj_filename);
 	return;
     }
     fprintf(dbg_objfmt_file,
@@ -95,7 +98,7 @@ dbg_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 
     if ((vp = vps_first(valparams)) && !vp->param && vp->val != NULL) {
 	retval = sections_switch_general(headp, vp->val, 200, 0, &isnew,
-					 lindex);
+					 lindex, cur_we->internal_error_);
 	if (isnew) {
 	    fprintf(dbg_objfmt_file, "(new) ");
 	    symrec_define_label(vp->val, retval, (bytecode *)NULL, 1, lindex);

@@ -1322,7 +1322,7 @@ x86_new_jmprel(const unsigned long data[4], int num_operands,
     /* We know the target is in operand 0, but sanity check for Imm. */
     op = ops_first(operands);
     if (op->type != INSN_OPERAND_IMM)
-	InternalError(_("invalid operand conversion"));
+	cur_we->internal_error(N_("invalid operand conversion"));
     d.target = expr_new(EXPR_SUB, ExprExpr(op->data.val),
 			ExprSym(symrec_define_label("$", cur_section, prev_bc,
 						    0, lindex)), lindex);
@@ -1556,7 +1556,7 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 			mismatch = 1;
 		    break;
 		default:
-		    InternalError(_("invalid operand type"));
+		    cur_we->internal_error(N_("invalid operand type"));
 	    }
 
 	    if (mismatch)
@@ -1606,7 +1606,7 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 			mismatch = 1;
 		    break;
 		default:
-		    InternalError(_("invalid target modifier type"));
+		    cur_we->internal_error(N_("invalid target modifier type"));
 	    }
 	}
 
@@ -1618,7 +1618,8 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 
     if (!found) {
 	/* Didn't find a matching one */
-	Error(lindex, _("invalid combination of opcode and operands"));
+	cur_we->error(lindex,
+		      N_("invalid combination of opcode and operands"));
 	return NULL;
     }
 
@@ -1630,23 +1631,25 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 	case MOD_ExtErr:
 	    switch ((info->modifiers & MOD_ExtIndex_MASK)>>MOD_ExtIndex_SHIFT) {
 		case 0:
-		    Error(lindex, _("mismatch in operand sizes"));
+		    cur_we->error(lindex, N_("mismatch in operand sizes"));
 		    break;
 		case 1:
-		    Error(lindex, _("operand size not specified"));
+		    cur_we->error(lindex, N_("operand size not specified"));
 		    break;
 		default:
-		    InternalError(_("unrecognized x86 ext mod index"));
+		    cur_we->internal_error(
+			N_("unrecognized x86 ext mod index"));
 	    }
 	    return NULL;    /* It was an error */
 	case MOD_ExtWarn:
 	    switch ((info->modifiers & MOD_ExtIndex_MASK)>>MOD_ExtIndex_SHIFT) {
 		default:
-		    InternalError(_("unrecognized x86 ext mod index"));
+		    cur_we->internal_error(
+			N_("unrecognized x86 ext mod index"));
 	    }
 	    break;
 	default:
-	    InternalError(_("unrecognized x86 extended modifier"));
+	    cur_we->internal_error(N_("unrecognized x86 extended modifier"));
     }
 
     /* Shortcut to JmpRel */
@@ -1726,7 +1729,8 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 			    d.ea = x86_ea_new_reg((unsigned char)op->data.reg);
 			    break;
 			case INSN_OPERAND_SEGREG:
-			    InternalError(_("invalid operand conversion"));
+			    cur_we->internal_error(
+				N_("invalid operand conversion"));
 			case INSN_OPERAND_MEMORY:
 			    d.ea = op->data.ea;
 			    if ((info->operands[i] & OPT_MASK) == OPT_MemOffs)
@@ -1746,7 +1750,8 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 			d.im_len = size_lookup[(info->operands[i] &
 						OPS_MASK)>>OPS_SHIFT];
 		    } else
-			InternalError(_("invalid operand conversion"));
+			cur_we->internal_error(
+			    N_("invalid operand conversion"));
 		    break;
 		case OPA_SImm:
 		    if (op->type == INSN_OPERAND_IMM) {
@@ -1755,36 +1760,41 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 						OPS_MASK)>>OPS_SHIFT];
 			d.im_sign = 1;
 		    } else
-			InternalError(_("invalid operand conversion"));
+			cur_we->internal_error(
+			    N_("invalid operand conversion"));
 		    break;
 		case OPA_Spare:
 		    if (op->type == INSN_OPERAND_REG ||
 			op->type == INSN_OPERAND_SEGREG)
 			d.spare = (unsigned char)(op->data.reg&7);
 		    else
-			InternalError(_("invalid operand conversion"));
+			cur_we->internal_error(
+			    N_("invalid operand conversion"));
 		    break;
 		case OPA_Op0Add:
 		    if (op->type == INSN_OPERAND_REG)
 			d.op[0] += (unsigned char)(op->data.reg&7);
 		    else
-			InternalError(_("invalid operand conversion"));
+			cur_we->internal_error(
+			    N_("invalid operand conversion"));
 		    break;
 		case OPA_Op1Add:
 		    if (op->type == INSN_OPERAND_REG)
 			d.op[1] += (unsigned char)(op->data.reg&7);
 		    else
-			InternalError(_("invalid operand conversion"));
+			cur_we->internal_error(
+			    N_("invalid operand conversion"));
 		    break;
 		case OPA_SpareEA:
 		    if (op->type == INSN_OPERAND_REG) {
 			d.spare = (unsigned char)(op->data.reg&7);
 			d.ea = x86_ea_new_reg((unsigned char)op->data.reg);
 		    } else
-			InternalError(_("invalid operand conversion"));
+			cur_we->internal_error(
+			    N_("invalid operand conversion"));
 		    break;
 		default:
-		    InternalError(_("unknown operand action"));
+		    cur_we->internal_error(N_("unknown operand action"));
 	    }
 
 	    switch (info->operands[i] & OPAP_MASK) {
@@ -1797,7 +1807,8 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 		    d.signext_imm8_op = 1;
 		    break;
 		default:
-		    InternalError(_("unknown operand postponed action"));
+		    cur_we->internal_error(
+			N_("unknown operand postponed action"));
 	    }
 	}
     }
@@ -1953,11 +1964,13 @@ x86_switch_cpu(const char *id, unsigned long lindex)
 
 	/* catchalls */
 	[\001-\377]+	{
-	    Warning(lindex, _("unrecognized CPU identifier `%s'"), id);
+	    cur_we->warning(WARN_GENERAL, lindex,
+			    N_("unrecognized CPU identifier `%s'"), id);
 	    return;
 	}
 	[\000]		{
-	    Warning(lindex, _("unrecognized CPU identifier `%s'"), id);
+	    cur_we->warning(WARN_GENERAL, lindex,
+			    N_("unrecognized CPU identifier `%s'"), id);
 	    return;
 	}
     */

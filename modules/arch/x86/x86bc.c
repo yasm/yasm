@@ -170,9 +170,11 @@ x86_bc_new_jmprel(x86_new_jmprel_data *d)
     jmprel->op_sel = d->op_sel;
 
     if ((d->op_sel == JR_SHORT_FORCED) && (d->near_op_len == 0))
-	Error(d->lindex, _("no SHORT form of that jump instruction exists"));
+	cur_we->error(d->lindex,
+		      N_("no SHORT form of that jump instruction exists"));
     if ((d->op_sel == JR_NEAR_FORCED) && (d->short_op_len == 0))
-	Error(d->lindex, _("no NEAR form of that jump instruction exists"));
+	cur_we->error(d->lindex,
+		      N_("no NEAR form of that jump instruction exists"));
 
     jmprel->shortop.opcode[0] = d->short_op[0];
     jmprel->shortop.opcode[1] = d->short_op[1];
@@ -203,7 +205,8 @@ x86_ea_set_segment(effaddr *ea, unsigned char segment, unsigned long lindex)
 	return;
 
     if (segment != 0 && x86_ea->segment != 0)
-	Warning(lindex, _("multiple segment overrides, using leftmost"));
+	cur_we->warning(WARN_GENERAL, lindex,
+			N_("multiple segment overrides, using leftmost"));
 
     x86_ea->segment = segment;
 }
@@ -294,7 +297,7 @@ x86_bc_insn_get_ea(bytecode *bc)
 	return NULL;
 
     if ((x86_bytecode_type)bc->type != X86_BC_INSN)
-	InternalError(_("Trying to get EA of non-instruction"));
+	cur_we->internal_error(N_("Trying to get EA of non-instruction"));
 
     return (effaddr *)(((x86_insn *)bc)->ea);
 }
@@ -318,7 +321,8 @@ x86_bc_insn_opersize_override(bytecode *bc, unsigned char opersize)
 	    jmprel->opersize = opersize;
 	    break;
 	default:
-	    InternalError(_("OperSize override applied to non-instruction"));
+	    cur_we->internal_error(
+		N_("OperSize override applied to non-instruction"));
     }
 }
 
@@ -341,7 +345,8 @@ x86_bc_insn_addrsize_override(bytecode *bc, unsigned char addrsize)
 	    jmprel->addrsize = addrsize;
 	    break;
 	default:
-	    InternalError(_("AddrSize override applied to non-instruction"));
+	    cur_we->internal_error(
+		N_("AddrSize override applied to non-instruction"));
     }
 }
 
@@ -366,11 +371,13 @@ x86_bc_insn_set_lockrep_prefix(bytecode *bc, unsigned char prefix,
 	    lockrep_pre = &jmprel->lockrep_pre;
 	    break;
 	default:
-	    InternalError(_("LockRep prefix applied to non-instruction"));
+	    cur_we->internal_error(
+		N_("LockRep prefix applied to non-instruction"));
     }
 
     if (*lockrep_pre != 0)
-	Warning(lindex, _("multiple LOCK or REP prefixes, using leftmost"));
+	cur_we->warning(WARN_GENERAL, lindex,
+			N_("multiple LOCK or REP prefixes, using leftmost"));
 
     *lockrep_pre = prefix;
 }
@@ -654,20 +661,21 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		temp = expr_copy(jmprel->target);
 		num = expr_get_intnum(&temp, calc_bc_dist);
 		if (!num) {
-		    Error(bc->line,
-			  _("short jump target external or out of segment"));
+		    cur_we->error(bc->line,
+			N_("short jump target external or out of segment"));
 		    return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		} else {
 		    rel = intnum_get_int(num);
 		    rel -= jmprel->shortop.opcode_len+1;
 		    /* does a short form exist? */
 		    if (jmprel->shortop.opcode_len == 0) {
-			Error(bc->line, _("short jump does not exist"));
+			cur_we->error(bc->line,
+				      N_("short jump does not exist"));
 			return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		    }
 		    /* short displacement must fit in -128 <= rel <= +127 */
 		    if (rel < -128 || rel > 127) {
-			Error(bc->line, _("short jump out of range"));
+			cur_we->error(bc->line, N_("short jump out of range"));
 			return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		    }
 		}
@@ -678,7 +686,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 	    jrshort = 0;
 	    if (save) {
 		if (jmprel->nearop.opcode_len == 0) {
-		    Error(bc->line, _("near jump does not exist"));
+		    cur_we->error(bc->line, N_("near jump does not exist"));
 		    return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		}
 	    }
@@ -713,8 +721,8 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		     * it to actually be within short range).
 		     */
 		    if (save) {
-			Error(bc->line,
-			      _("short jump out of range (near jump does not exist)"));
+			cur_we->error(bc->line,
+			    N_("short jump out of range (near jump does not exist)"));
 			return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		    }
 		    jrshort = 1;
@@ -730,8 +738,8 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		    jrshort = 0;
 		} else {
 		    if (save) {
-			Error(bc->line,
-			      _("short jump out of range (near jump does not exist)"));
+			cur_we->error(bc->line,
+			    N_("short jump out of range (near jump does not exist)"));
 			return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		    }
 		    jrshort = 1;
@@ -780,7 +788,7 @@ x86_bc_resolve(bytecode *bc, int save, const section *sect,
 	default:
 	    break;
     }
-    InternalError(_("Didn't handle bytecode type in x86 arch"));
+    cur_we->internal_error(N_("Didn't handle bytecode type in x86 arch"));
     /*@notreached@*/
     return BC_RESOLVE_UNKNOWN_LEN;
 }
@@ -806,7 +814,8 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
 	WRITE_8(*bufp, 0x67);
     if (insn->rex != 0) {
 	if (insn->mode_bits != 64)
-	    InternalError(_("x86: got a REX prefix in non-64-bit mode"));
+	    cur_we->internal_error(
+		N_("x86: got a REX prefix in non-64-bit mode"));
 	WRITE_8(*bufp, insn->rex);
     }
 
@@ -820,13 +829,14 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
     if (ea) {
 	if (x86_ea->need_modrm) {
 	    if (!x86_ea->valid_modrm)
-		InternalError(_("invalid Mod/RM in x86 tobytes_insn"));
+		cur_we->internal_error(
+		    N_("invalid Mod/RM in x86 tobytes_insn"));
 	    WRITE_8(*bufp, x86_ea->modrm);
 	}
 
 	if (x86_ea->need_sib) {
 	    if (!x86_ea->valid_sib)
-		InternalError(_("invalid SIB in x86 tobytes_insn"));
+		cur_we->internal_error(N_("invalid SIB in x86 tobytes_insn"));
 	    WRITE_8(*bufp, x86_ea->sib);
 	}
 
@@ -846,7 +856,7 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
 				  &eat.valid_modrm, &eat.need_modrm,
 				  &eat.sib, &eat.valid_sib,
 				  &eat.need_sib, common_calc_bc_dist))
-		InternalError(_("checkea failed"));
+		cur_we->internal_error(N_("checkea failed"));
 
 	    if (ea->disp) {
 		if (output_expr(&ea->disp, bufp, ea->len, *bufp-bufp_orig,
@@ -901,7 +911,7 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 	case JR_SHORT:
 	    /* 1 byte relative displacement */
 	    if (jmprel->shortop.opcode_len == 0)
-		InternalError(_("short jump does not exist"));
+		cur_we->internal_error(N_("short jump does not exist"));
 
 	    /* Opcode */
 	    for (i=0; i<jmprel->shortop.opcode_len; i++)
@@ -916,7 +926,7 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 	case JR_NEAR:
 	    /* 2/4 byte relative displacement (depending on operand size) */
 	    if (jmprel->nearop.opcode_len == 0) {
-		Error(bc->line, _("near jump does not exist"));
+		cur_we->error(bc->line, N_("near jump does not exist"));
 		return 1;
 	    }
 
@@ -931,7 +941,7 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 		return 1;
 	    break;
 	default:
-	    InternalError(_("unrecognized relative jump op_sel"));
+	    cur_we->internal_error(N_("unrecognized relative jump op_sel"));
     }
     return 0;
 }
@@ -961,7 +971,8 @@ x86_intnum_tobytes(const intnum *intn, unsigned char **bufp,
     if (rel) {
 	long val;
 	if (valsize != 1 && valsize != 2 && valsize != 4)
-	    InternalError(_("tried to do PC-relative offset from invalid sized value"));
+	    cur_we->internal_error(
+		N_("tried to do PC-relative offset from invalid sized value"));
 	val = intnum_get_uint(intn);
 	val -= bc->len;
 	switch (valsize) {

@@ -50,6 +50,9 @@
 /* YASM's line manager (for parse stage). */
 extern linemgr yasm_linemgr;
 
+/* YASM's errwarn handlers. */
+extern errwarn yasm_errwarn;
+
 /* Extra path to search for our modules. */
 #ifndef YASM_MODULE_PATH_ENV
 # define YASM_MODULE_PATH_ENV	"YASM_MODULE_PATH"
@@ -67,6 +70,7 @@ static int special_options = 0;
 /*@null@*/ /*@dependent@*/ static optimizer *cur_optimizer = NULL;
 /*@null@*/ /*@dependent@*/ static dbgfmt *cur_dbgfmt = NULL;
 static int preproc_only = 0;
+static int warning_error = 0;	/* warnings being treated as errors */
 
 /*@null@*/ /*@dependent@*/ static FILE *open_obj(const char *mode);
 static void cleanup(/*@null@*/ sectionhead *sections);
@@ -80,6 +84,9 @@ static int opt_dbgfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_objfile_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int preproc_only_handler(char *cmd, /*@null@*/ char *param, int extra);
+
+static /*@only@*/ char *replace_extension(const char *orig, /*@null@*/
+					  const char *ext, const char *def);
 
 /* values for special_options */
 #define SPECIAL_SHOW_HELP 0x01
@@ -102,15 +109,16 @@ static opt_option options[] =
 
 /* version message */
 /*@observer@*/ static const char *version_msg[] = {
-    N_("yasm " VERSION "\n"),
-    N_("Copyright (c) 2001-2002 Peter Johnson and other " PACKAGE " developers\n"),
+    PACKAGE " " VERSION "\n",
+    N_("Copyright (c) 2001-2002 Peter Johnson and other"), " " PACKAGE " ",
+    N_("developers.\n"),
     N_("This program is free software; you may redistribute it under the\n"),
     N_("terms of the GNU General Public License.  Portions of this program\n"),
     N_("are licensed under the GNU Lesser General Public License or the\n"),
     N_("3-clause BSD license; see individual file comments for details.\n"),
     N_("This program has absolutely no warranty; not even for\n"),
     N_("merchantibility or fitness for a particular purpose.\n"),
-    N_("Compiled on " __DATE__ ".\n"),
+    N_("Compiled on"), " " __DATE__ ".\n",
 };
 
 /* help messages */
@@ -144,6 +152,12 @@ main(int argc, char *argv[])
 #endif
     textdomain(PACKAGE);
 
+    /* Initialize errwarn handling */
+    yasm_errwarn.initialize();
+
+    /* Initialize memory allocation */
+    xalloc_initialize((void (*) (int))yasm_errwarn.fatal, FATAL_NOMEM);
+
     /* Set libltdl malloc/free functions. */
 #ifdef WITH_DMALLOC
     lt_dlmalloc = malloc;
@@ -166,7 +180,7 @@ main(int argc, char *argv[])
 	    errors = lt_dladdsearchdir(path);
     }
     if (errors != 0) {
-	ErrorNow(_("Module loader initialization failed"));
+	fprintf(stderr, _("Module loader initialization failed"));
 	return EXIT_FAILURE;
     }
 
@@ -186,7 +200,7 @@ main(int argc, char *argv[])
 
     /* Initialize BitVector (needed for floating point). */
     if (BitVector_Boot() != ErrCode_Ok) {
-	ErrorNow(_("Could not initialize BitVector"));
+	fprintf(stderr, _("Could not initialize BitVector"));
 	return EXIT_FAILURE;
     }
 
@@ -194,7 +208,7 @@ main(int argc, char *argv[])
 	/* Open the input file (if not standard input) */
 	in = fopen(in_filename, "rt");
 	if (!in) {
-	    ErrorNow(_("could not open file `%s'"), in_filename);
+	    fprintf(stderr, _("could not open file `%s'"), in_filename);
 	    xfree(in_filename);
 	    if (obj_filename)
 		xfree(obj_filename);
@@ -208,8 +222,15 @@ main(int argc, char *argv[])
     }
 
     /* Initialize line manager */
-    yasm_linemgr.initialize();
+    yasm_linemgr.initialize(yasm_errwarn.internal_error_);
     yasm_linemgr.set(in_filename, 1, 1);
+
+    /* Initialize intnum and floatnum */
+    intnum_initialize(&yasm_errwarn);
+    floatnum_initialize(&yasm_errwarn);
+
+    /* Initialize symbol table */
+    symrec_initialize(&yasm_errwarn);
 
     /* handle preproc-only case here */
     if (preproc_only) {
@@ -233,15 +254,14 @@ main(int argc, char *argv[])
 	    cur_preproc = load_preproc("yapp");
 
 	if (!cur_preproc) {
-	    ErrorNow(_("Could not load default preprocessor"));
+	    fprintf(stderr, _("Could not load default preprocessor"));
 	    cleanup(NULL);
 	    return EXIT_FAILURE;
 	}
 
 	/* Pre-process until done */
-	cur_preproc->initialize(in, in_filename);
-	while ((got = cur_preproc->input(preproc_buf, PREPROC_BUF_SIZE,
-					 &yasm_linemgr)) != 0)
+	cur_preproc->initialize(in, in_filename, &yasm_linemgr, &yasm_errwarn);
+	while ((got = cur_preproc->input(preproc_buf, PREPROC_BUF_SIZE)) != 0)
 	    fwrite(preproc_buf, got, 1, obj);
 
 	if (in != stdin)
@@ -250,8 +270,8 @@ main(int argc, char *argv[])
 	if (obj != stdout)
 	    fclose(obj);
 
-	if (GetNumErrors() > 0) {
-	    OutputAllErrorWarning(&yasm_linemgr);
+	if (yasm_errwarn.get_num_errors(warning_error) > 0) {
+	    yasm_errwarn.output_all(&yasm_linemgr, warning_error);
 	    if (obj != stdout)
 		remove(obj_filename);
 	    xfree(preproc_buf);
@@ -267,28 +287,30 @@ main(int argc, char *argv[])
     cur_arch = load_arch("x86");
 
     if (!cur_arch) {
-	ErrorNow(_("Could not load default architecture"));
+	fprintf(stderr, _("Could not load default architecture"));
 	return EXIT_FAILURE;
     }
+
+    cur_arch->initialize(&yasm_errwarn);
 
     /* Set basic as the optimizer (TODO: user choice) */
     cur_optimizer = load_optimizer("basic");
 
     if (!cur_optimizer) {
-	ErrorNow(_("Could not load default optimizer"));
+	fprintf(stderr, _("Could not load default optimizer"));
 	return EXIT_FAILURE;
     }
 
     arch_common_initialize(cur_arch);
-    expr_initialize(cur_arch);
-    bc_initialize(cur_arch);
+    expr_initialize(cur_arch, &yasm_errwarn);
+    bc_initialize(cur_arch, &yasm_errwarn);
 
     /* If not already specified, default to bin as the object format. */
     if (!cur_objfmt)
 	cur_objfmt = load_objfmt("bin");
 
     if (!cur_objfmt) {
-	ErrorNow(_("Could not load default object format"));
+	fprintf(stderr, _("Could not load default object format"));
 	return EXIT_FAILURE;
     }
 
@@ -305,8 +327,9 @@ main(int argc, char *argv[])
 			   cur_dbgfmt->keyword) == 0)
 		matched_dbgfmt = 1;
 	if (!matched_dbgfmt) {
-	    ErrorNow(_("`%s' is not a valid debug format for object format `%s'"),
-		     cur_dbgfmt->keyword, cur_objfmt->keyword);
+	    fprintf(stderr,
+		_("`%s' is not a valid debug format for object format `%s'"),
+		cur_dbgfmt->keyword, cur_objfmt->keyword);
 	    if (in != stdin)
 		fclose(in);
 	    cleanup(NULL);
@@ -315,7 +338,7 @@ main(int argc, char *argv[])
     }
 
     if (!cur_dbgfmt) {
-	ErrorNow(_("Could not load default debug format"));
+	fprintf(stderr, _("Could not load default debug format"));
 	return EXIT_FAILURE;
     }
 
@@ -334,12 +357,12 @@ main(int argc, char *argv[])
     /* Initialize the object format */
     if (cur_objfmt->initialize)
 	cur_objfmt->initialize(in_filename, obj_filename, cur_dbgfmt,
-			       cur_arch);
+			       cur_arch, &yasm_errwarn);
 
     /* Set NASM as the parser */
     cur_parser = load_parser("nasm");
     if (!cur_parser) {
-	ErrorNow(_("unrecognized parser `%s'"), "nasm");
+	fprintf(stderr, _("unrecognized parser `%s'"), "nasm");
 	cleanup(NULL);
 	return EXIT_FAILURE;
     }
@@ -357,8 +380,9 @@ main(int argc, char *argv[])
 			   cur_preproc->keyword) == 0)
 		matched_preproc = 1;
 	if (!matched_preproc) {
-	    ErrorNow(_("`%s' is not a valid preprocessor for parser `%s'"),
-		     cur_preproc->keyword, cur_parser->keyword);
+	    fprintf(stderr,
+		    _("`%s' is not a valid preprocessor for parser `%s'"),
+		    cur_preproc->keyword, cur_parser->keyword);
 	    if (in != stdin)
 		fclose(in);
 	    cleanup(NULL);
@@ -376,23 +400,24 @@ main(int argc, char *argv[])
 
     /* Parse! */
     sections = cur_parser->do_parse(cur_preproc, cur_arch, cur_objfmt,
-				    &yasm_linemgr, in, in_filename);
+				    &yasm_linemgr, &yasm_errwarn, in,
+				    in_filename);
 
     /* Close input file */
     if (in != stdin)
 	fclose(in);
 
-    if (GetNumErrors() > 0) {
-	OutputAllErrorWarning(&yasm_linemgr);
+    if (yasm_errwarn.get_num_errors(warning_error) > 0) {
+	yasm_errwarn.output_all(&yasm_linemgr, warning_error);
 	cleanup(sections);
 	return EXIT_FAILURE;
     }
 
     symrec_parser_finalize();
-    cur_optimizer->optimize(sections);
+    cur_optimizer->optimize(sections, &yasm_errwarn);
 
-    if (GetNumErrors() > 0) {
-	OutputAllErrorWarning(&yasm_linemgr);
+    if (yasm_errwarn.get_num_errors(warning_error) > 0) {
+	yasm_errwarn.output_all(&yasm_linemgr, warning_error);
 	cleanup(sections);
 	return EXIT_FAILURE;
     }
@@ -416,14 +441,14 @@ main(int argc, char *argv[])
     /* If we had an error at this point, we also need to delete the output
      * object file (to make sure it's not left newer than the source).
      */
-    if (GetNumErrors() > 0) {
-	OutputAllErrorWarning(&yasm_linemgr);
+    if (yasm_errwarn.get_num_errors(warning_error) > 0) {
+	yasm_errwarn.output_all(&yasm_linemgr, warning_error);
 	remove(obj_filename);
 	cleanup(sections);
 	return EXIT_FAILURE;
     }
 
-    OutputAllErrorWarning(&yasm_linemgr);
+    yasm_errwarn.output_all(&yasm_linemgr, warning_error);
 
     cleanup(sections);
     return EXIT_SUCCESS;
@@ -440,7 +465,7 @@ open_obj(const char *mode)
 
     obj = fopen(obj_filename, mode);
     if (!obj)
-	ErrorNow(_("could not open file `%s'"), obj_filename);
+	fprintf(stderr, _("could not open file `%s'"), obj_filename);
     return obj;
 }
 
@@ -450,13 +475,21 @@ cleanup(sectionhead *sections)
 {
     if (cur_objfmt && cur_objfmt->cleanup)
 	cur_objfmt->cleanup();
+    if (cur_dbgfmt && cur_dbgfmt->cleanup)
+	cur_dbgfmt->cleanup();
+    if (cur_preproc)
+	cur_preproc->cleanup();
     if (sections)
 	sections_delete(sections);
-    symrec_delete_all();
-    yasm_linemgr.cleanup();
+    symrec_cleanup();
+    if (cur_arch)
+	cur_arch->cleanup();
 
-    floatnum_shutdown();
-    intnum_shutdown();
+    floatnum_cleanup();
+    intnum_cleanup();
+
+    yasm_errwarn.cleanup();
+    yasm_linemgr.cleanup();
 
     BitVector_Shutdown();
 
@@ -478,7 +511,8 @@ int
 not_an_option_handler(char *param)
 {
     if (in_filename) {
-	WarningNow(_("can open only one input file, only the last file will be processed"));
+	fprintf(stderr,
+	    _("warning: can open only one input file, only the last file will be processed"));
 	xfree(in_filename);
     }
 
@@ -501,7 +535,7 @@ opt_parser_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_parser = load_parser(param);
     if (!cur_parser) {
-	ErrorNow(_("unrecognized parser `%s'"), param);
+	fprintf(stderr, _("unrecognized parser `%s'"), param);
 	return 1;
     }
     return 0;
@@ -513,7 +547,7 @@ opt_preproc_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_preproc = load_preproc(param);
     if (!cur_preproc) {
-	ErrorNow(_("unrecognized preprocessor `%s'"), param);
+	fprintf(stderr, _("unrecognized preprocessor `%s'"), param);
 	return 1;
     }
     return 0;
@@ -525,7 +559,7 @@ opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_objfmt = load_objfmt(param);
     if (!cur_objfmt) {
-	ErrorNow(_("unrecognized object format `%s'"), param);
+	fprintf(stderr, _("unrecognized object format `%s'"), param);
 	return 1;
     }
     return 0;
@@ -537,7 +571,7 @@ opt_dbgfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_dbgfmt = load_objfmt(param);
     if (!cur_dbgfmt) {
-	ErrorNow(_("unrecognized debugging format `%s'"), param);
+	fprintf(stderr, _("unrecognized debugging format `%s'"), param);
 	return 1;
     }
     return 0;
@@ -548,7 +582,8 @@ opt_objfile_handler(/*@unused@*/ char *cmd, char *param,
 		    /*@unused@*/ int extra)
 {
     if (obj_filename) {
-	WarningNow(_("can output to only one object file, last specified used"));
+	fprintf(stderr,
+	    _("warning: can output to only one object file, last specified used"));
 	xfree(obj_filename);
     }
 
@@ -565,7 +600,7 @@ opt_warning_handler(char *cmd, /*@unused@*/ char *param, int extra)
 
     if (extra == 1) {
 	/* -w, disable warnings */
-	warnings_disabled = 1;
+	yasm_errwarn.warn_disable_all();
 	return 0;
     }
 
@@ -584,7 +619,10 @@ opt_warning_handler(char *cmd, /*@unused@*/ char *param, int extra)
     else if (strcmp(cmd, "error") == 0) {
 	warning_error = enable;
     } else if (strcmp(cmd, "unrecognized-char") == 0) {
-	WARN_ENABLE(WARN_UNRECOGNIZED_CHAR, enable);
+	if (enable)
+	    yasm_errwarn.warn_enable(WARN_UNREC_CHAR);
+	else
+	    yasm_errwarn.warn_disable(WARN_UNREC_CHAR);
     } else
 	return 1;
 
@@ -597,4 +635,59 @@ preproc_only_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
 {
     preproc_only = 1;
     return 0;
+}
+
+/* Replace extension on a filename (or append one if none is present).
+ * If output filename would be identical to input (same extension out as in),
+ * returns (copy of) def.
+ * A NULL ext means the trailing '.' should NOT be included, whereas a "" ext
+ * means the trailing '.' should be included.
+ */
+static char *
+replace_extension(const char *orig, /*@null@*/ const char *ext,
+		  const char *def)
+{
+    char *out, *outext;
+
+    /* allocate enough space for full existing name + extension */
+    out = xmalloc(strlen(orig)+(ext ? (strlen(ext)+2) : 1));
+    strcpy(out, orig);
+    outext = strrchr(out, '.');
+    if (outext) {
+	/* Existing extension: make sure it's not the same as the replacement
+	 * (as we don't want to overwrite the source file).
+	 */
+	outext++;   /* advance past '.' */
+	if (ext && strcmp(outext, ext) == 0) {
+	    outext = NULL;  /* indicate default should be used */
+	    fprintf(stderr,
+		_("file name already ends in `.%s': output will be in `%s'"),
+		ext, def);
+	}
+    } else {
+	/* No extension: make sure the output extension is not empty
+	 * (again, we don't want to overwrite the source file).
+	 */
+	if (!ext)
+	    fprintf(stderr,
+		_("file name already has no extension: output will be in `%s'"),
+		def);
+	else {
+	    outext = strrchr(out, '\0');    /* point to end of the string */
+	    *outext++ = '.';		    /* append '.' */
+	}
+    }
+
+    /* replace extension or use default name */
+    if (outext) {
+	if (!ext) {
+	    /* Back up and replace '.' with string terminator */
+	    outext--;
+	    *outext = '\0';
+	} else
+	    strcpy(outext, ext);
+    } else
+	strcpy(out, def);
+
+    return out;
 }

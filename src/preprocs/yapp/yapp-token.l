@@ -124,9 +124,7 @@ DIR	 %[ \t]*
     int inch, count;
     char endch = yytext[0];
 
-    strbuf = malloc(STRBUF_ALLOC_SIZE);
-    if(!strbuf)
-	Fatal(FATAL_NOMEM);
+    strbuf = xmalloc(STRBUF_ALLOC_SIZE);
 
     strbuf_size = STRBUF_ALLOC_SIZE;
     inch = input();
@@ -134,18 +132,16 @@ DIR	 %[ \t]*
     while(inch != EOF && inch != endch && inch != '\n') {
 	strbuf[count++] = inch;
 	if(count >= strbuf_size) {
-	    strbuf = realloc(strbuf, strbuf_size + STRBUF_ALLOC_SIZE);
-	    if(!strbuf)
-		Fatal(FATAL_NOMEM);
+	    strbuf = xrealloc(strbuf, strbuf_size + STRBUF_ALLOC_SIZE);
 	    strbuf_size += STRBUF_ALLOC_SIZE;
 	}
 	inch = input();
     }
 
     if(inch == '\n')
-	Error(p_line_index, _("unterminated string"));
+	cur_we->error(cur_lindex, _("unterminated string"));
     else if(inch == EOF)
-	Error(p_line_index, _("unexpected end of file in string"));
+	cur_we->error(cur_lindex, _("unexpected end of file in string"));
 
     strbuf[count] = '\0';
 
@@ -176,9 +172,9 @@ DIR	 %[ \t]*
     /* FIXME: handle includes that aren't relative */
     incfile = fopen (yytext, "r");
     if(!incfile) {
-	Error(p_line_index, _("include file `%s': %s"),
+	cur_we->error(cur_lindex, _("include file `%s': %s"),
 		yytext, strerror(errno));
-	free(inc);
+	xfree(inc);
     }
     else {
 	yyin = incfile;
@@ -204,11 +200,11 @@ DIR	 %[ \t]*
 	inc = SLIST_FIRST(&includes_head);
 	yy_delete_buffer (YY_CURRENT_BUFFER);
 	yy_switch_to_buffer (inc->include_state);
-	free(yapp_preproc_current_file);
+	xfree(yapp_preproc_current_file);
 	yapp_preproc_current_file = inc->filename;
 	yapp_preproc_line_number = inc->line_number + 1;
 	SLIST_REMOVE_HEAD(&includes_head, next);
-	free(inc);
+	xfree(inc);
 
 	BEGIN(incl);
 	return INCLUDE;
@@ -232,7 +228,7 @@ DIR	 %[ \t]*
 }
 <line>{WS}+["]	    ;	/* eat space before file */
 <line>[^ \t\n"]*    { /* have the filename */
-    free(yapp_preproc_current_file);
+    xfree(yapp_preproc_current_file);
     yapp_preproc_current_file = xstrdup(yytext);
 }
 <line>["]{WS}*\n    {
@@ -334,12 +330,12 @@ DIR	 %[ \t]*
 [][+*/,()-] { return yytext[0]; }
 
 <inhibit>.  {
-    Warning(p_line_index, _("Unhandled character in <inhibit> `%s'"), conv_unprint(yytext[0]));
+    cur_we->warning(WARN_PREPROC, cur_lindex, _("Unhandled character in <inhibit> `%s'"), cur_we->conv_unprint(yytext[0]));
 }
 
 .	{
-    Warning(p_line_index, _("ignoring unrecognized character `%s'"),
-	    conv_unprint(yytext[0]));
+    cur_we->warning(WARN_PREPROC, cur_lindex, _("ignoring unrecognized character `%s'"),
+	    	    cur_we->conv_unprint(yytext[0]));
 }
 
 %%

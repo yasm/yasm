@@ -24,8 +24,9 @@
 #ifndef YASM_FLOATNUM_H
 #define YASM_FLOATNUM_H
 
+void floatnum_initialize(errwarn *we);
 /* Clean up internal allocations */
-void floatnum_shutdown(void);
+void floatnum_cleanup(void);
 
 /*@only@*/ floatnum *floatnum_new(const char *str);
 /*@only@*/ floatnum *floatnum_copy(const floatnum *flt);

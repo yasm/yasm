@@ -158,6 +158,7 @@ static coff_symtab_head coff_symtab;	    /* symbol table of indexed syms */
 
 objfmt yasm_coff_LTX_objfmt;
 static /*@dependent@*/ arch *cur_arch;
+static /*@dependent@*/ errwarn *cur_we;
 
 
 static /*@dependent@*/ coff_symtab_entry *
@@ -170,7 +171,7 @@ coff_objfmt_symtab_append(symrec *sym, coff_symrec_sclass sclass,
     coff_symtab_entry *entry;
 
     if (STAILQ_EMPTY(&coff_symtab))
-	InternalError(_("empty COFF symbol table"));
+	cur_we->internal_error(N_("empty COFF symbol table"));
     entry = STAILQ_LAST(&coff_symtab, coff_symtab_entry, link);
     sym_data_prev = symrec_get_of_data(entry->sym);
     assert(sym_data_prev != NULL);
@@ -194,13 +195,14 @@ coff_objfmt_symtab_append(symrec *sym, coff_symrec_sclass sclass,
 static void
 coff_objfmt_initialize(const char *in_filename,
 		       /*@unused@*/ const char *obj_filename,
-		       /*@unused@*/ dbgfmt *df, arch *a)
+		       /*@unused@*/ dbgfmt *df, arch *a, errwarn *we)
 {
     symrec *filesym;
     coff_symrec_data *data;
     coff_symtab_entry *entry;
 
     cur_arch = a;
+    cur_we = we;
 
     coff_objfmt_parse_scnum = 1;    /* section numbering starts at 1 */
     STAILQ_INIT(&coff_symtab);
@@ -273,7 +275,7 @@ coff_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
 	SymVisibility vis;
 
 	if (valsize != 4) {
-	    Error((*ep)->line, _("coff: invalid relocation size"));
+	    cur_we->error((*ep)->line, N_("coff: invalid relocation size"));
 	    return 1;
 	}
 
@@ -326,11 +328,12 @@ coff_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
 
     /* Check for complex float expressions */
     if (expr_contains(*ep, EXPR_FLOAT)) {
-	Error((*ep)->line, _("floating point expression too complex"));
+	cur_we->error((*ep)->line,
+		      N_("floating point expression too complex"));
 	return 1;
     }
 
-    Error((*ep)->line, _("coff: relocation too complex"));
+    cur_we->error((*ep)->line, N_("coff: relocation too complex"));
     return 1;
 }
 
@@ -361,8 +364,8 @@ coff_objfmt_output_bytecode(bytecode *bc, /*@null@*/ void *d)
     /* Warn that gaps are converted to 0 and write out the 0's. */
     if (gap) {
 	unsigned long left;
-	Warning(bc->line,
-		_("uninitialized space declared in code/data section: zeroing"));
+	cur_we->warning(WARN_GENERAL, bc->line,
+	    N_("uninitialized space declared in code/data section: zeroing"));
 	/* Write out in chunks */
 	memset(info->buf, 0, REGULAR_OUTBUF_SIZE);
 	left = multiple*size;
@@ -414,7 +417,7 @@ coff_objfmt_output_section(section *sect, /*@null@*/ void *d)
     } else {
 	pos = ftell(info->f);
 	if (pos == -1) {
-	    ErrorNow(_("could not get file position on output file"));
+	    cur_we->error(0, N_("could not get file position on output file"));
 	    return 1;
 	}
 
@@ -437,7 +440,7 @@ coff_objfmt_output_section(section *sect, /*@null@*/ void *d)
 
     pos = ftell(info->f);
     if (pos == -1) {
-	ErrorNow(_("could not get file position on output file"));
+	cur_we->error(0, N_("could not get file position on output file"));
 	return 1;
     }
     csd->relptr = (unsigned long)pos;
@@ -448,7 +451,8 @@ coff_objfmt_output_section(section *sect, /*@null@*/ void *d)
 
 	csymd = symrec_get_of_data(reloc->sym);
 	if (!csymd)
-	    InternalError(_("coff: no symbol data for relocated symbol"));
+	    cur_we->internal_error(
+		N_("coff: no symbol data for relocated symbol"));
 
 	WRITE_32_L(localbuf, reloc->addr);  /* address of relocation */
 	WRITE_32_L(localbuf, csymd->index); /* relocated symbol */
@@ -487,8 +491,9 @@ coff_objfmt_output_secthead(section *sect, /*@null@*/ void *d)
     WRITE_32_L(localbuf, csd->relptr);	/* file ptr to relocs */
     WRITE_32_L(localbuf, 0);		/* file ptr to line nums */
     if (csd->nreloc >= 64*1024) {
-	WarningNow(_("too many relocations in section `%s'"),
-		   section_get_name(sect));
+	cur_we->warning(WARN_GENERAL, 0,
+			N_("too many relocations in section `%s'"),
+			section_get_name(sect));
 	WRITE_16_L(localbuf, 0xFFFF);	    /* max out */
     } else
 	WRITE_16_L(localbuf, csd->nreloc);  /* number of relocation entries */
@@ -515,7 +520,7 @@ coff_objfmt_output(FILE *f, sectionhead *sections)
 
     /* Allocate space for headers by seeking forward */
     if (fseek(f, 20+40*(coff_objfmt_parse_scnum-1), SEEK_SET) < 0) {
-	ErrorNow(_("could not seek on output file"));
+	cur_we->error(0, N_("could not seek on output file"));
 	return;
     }
 
@@ -537,7 +542,7 @@ coff_objfmt_output(FILE *f, sectionhead *sections)
     /* Symbol table */
     pos = ftell(f);
     if (pos == -1) {
-	ErrorNow(_("could not get file position on output file"));
+	cur_we->error(0, N_("could not get file position on output file"));
 	return;
     }
     symtab_pos = (unsigned long)pos;
@@ -556,7 +561,8 @@ coff_objfmt_output(FILE *f, sectionhead *sections)
 	/* Get symrec's of_data (needed for storage class) */
 	csymd = symrec_get_of_data(entry->sym);
 	if (!csymd)
-	    InternalError(_("coff: expected sym data to be present"));
+	    cur_we->internal_error(
+		N_("coff: expected sym data to be present"));
 
 	/* Look at symrec for value/scnum/etc. */
 	if (symrec_get_label(entry->sym, &sect, &precbc)) {
@@ -580,8 +586,8 @@ coff_objfmt_output(FILE *f, sectionhead *sections)
 		const intnum *intn;
 		intn = expr_get_intnum(&csymd->size, common_calc_bc_dist);
 		if (!intn)
-		    Error(csymd->size->line,
-			  _("COMMON data size not an integer expression"));
+		    cur_we->error(csymd->size->line,
+			N_("COMMON data size not an integer expression"));
 		else
 		    value = intnum_get_uint(intn);
 		scnum = 0;
@@ -627,7 +633,8 @@ coff_objfmt_output(FILE *f, sectionhead *sections)
 			strncpy((char *)localbuf, entry->aux[0].fname, 14);
 		    break;
 		default:
-		    InternalError(_("coff: unrecognized aux symtab type"));
+		    cur_we->internal_error(
+			N_("coff: unrecognized aux symtab type"));
 	    }
 	    fwrite(info.buf, 18, 1, f);
 	    symtab_count++;
@@ -659,7 +666,7 @@ coff_objfmt_output(FILE *f, sectionhead *sections)
 
     /* Write headers */
     if (fseek(f, 0, SEEK_SET) < 0) {
-	ErrorNow(_("could not seek on output file"));
+	cur_we->error(0, N_("could not seek on output file"));
 	return;
     }
 
@@ -713,8 +720,8 @@ coff_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 
     sectname = vp->val;
     if (strlen(sectname) > 8) {
-	Warning(lindex,
-		_("COFF section names limited to 8 characters: truncating"));
+	cur_we->warning(WARN_GENERAL, lindex,
+	    N_("COFF section names limited to 8 characters: truncating"));
 	sectname[8] = '\0';
     }
 
@@ -742,7 +749,7 @@ coff_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
     }
 
     retval = sections_switch_general(headp, sectname, 0, resonly, &isnew,
-				     lindex);
+				     lindex, cur_we->internal_error_);
 
     if (isnew) {
 	coff_section_data *data;
@@ -765,7 +772,8 @@ coff_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 				  COFF_SYMTAB_AUX_SECT);
 	data->sym = sym;
     } else if (flags_override)
-	Warning(lindex, _("section flags ignored on section redeclaration"));
+	cur_we->warning(WARN_GENERAL, lindex,
+			N_("section flags ignored on section redeclaration"));
     return retval;
 }
 

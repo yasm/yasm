@@ -183,7 +183,7 @@ x86_expr_checkea_distcheck_reg(expr **ep)
 	/* The reg expn *must* be EXPR_ADD at this point.  Sanity check. */
 	if (e->terms[havereg_expr].type != EXPR_EXPR ||
 	    e->terms[havereg_expr].data.expn->op != EXPR_ADD)
-	    InternalError(_("Register expression not ADD or EXPN"));
+	    cur_we->internal_error(N_("Register expression not ADD or EXPN"));
 
 	/* Iterate over each term in reg expn */
 	for (i=0; i<e->terms[havereg_expr].data.expn->numterms; i++) {
@@ -282,9 +282,11 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
 		     * Sanity check for EXPR_INT.
 		     */
 		    if (e->terms[i].data.expn->terms[0].type != EXPR_REG)
-			InternalError(_("Register not found in reg expn"));
+			cur_we->internal_error(
+			    N_("Register not found in reg expn"));
 		    if (e->terms[i].data.expn->terms[1].type != EXPR_INT)
-			InternalError(_("Non-integer value in reg expn"));
+			cur_we->internal_error(
+			    N_("Non-integer value in reg expn"));
 		    reg = get_reg(&e->terms[i].data.expn->terms[0], data);
 		    if (!reg)
 			return 0;
@@ -378,7 +380,7 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 	     */
 	    if (!intnum_check_size(intn, (size_t)wordsize, 0) &&
 		!intnum_check_size(intn, 1, 1)) {
-		Error(e->line, _("invalid effective address"));
+		cur_we->error(e->line, N_("invalid effective address"));
 		return 0;
 	    }
 
@@ -442,8 +444,8 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 	case 2:
 	case 4:
 	    if (wordsize != *displen) {
-		Error(e->line,
-		      _("invalid effective address (displacement size)"));
+		cur_we->error(e->line,
+		    N_("invalid effective address (displacement size)"));
 		return 0;
 	    }
 	    /* TODO: Add optional warning here about 2/4 not being valid
@@ -455,7 +457,7 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 	    break;
 	default:
 	    /* we shouldn't ever get any other size! */
-	    InternalError(_("strange EA displacement size"));
+	    cur_we->internal_error(N_("strange EA displacement size"));
     }
 
     return 1;
@@ -535,7 +537,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 					     calc_bc_dist)) {
 	    case 0:
 		e = *ep;
-		Error(e->line, _("invalid effective address"));
+		cur_we->error(e->line, N_("invalid effective address"));
 		return 0;
 	    case 1:
 		return 1;
@@ -557,7 +559,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	 */
 	for (i=0; i<8; i++) {
 	    if (reg32mult[i] < 0) {
-		Error(e->line, _("invalid effective address"));
+		cur_we->error(e->line, N_("invalid effective address"));
 		return 0;
 	    }
 	    if (i != indexreg && reg32mult[i] == 1 && basereg == REG32_NONE)
@@ -598,7 +600,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	 */
 	for (i=0; i<8; i++)
 	    if (i != basereg && i != indexreg && reg32mult[i] != 0) {
-		Error(e->line, _("invalid effective address"));
+		cur_we->error(e->line, N_("invalid effective address"));
 		return 0;
 	    }
 
@@ -606,7 +608,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	if (indexreg != REG32_NONE && reg32mult[indexreg] != 1 &&
 	    reg32mult[indexreg] != 2 && reg32mult[indexreg] != 4 &&
 	    reg32mult[indexreg] != 8) {
-	    Error(e->line, _("invalid effective address"));
+	    cur_we->error(e->line, N_("invalid effective address"));
 	    return 0;
 	}
 
@@ -616,7 +618,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	     * legal.
 	     */
 	    if (reg32mult[REG32_ESP] > 1 || basereg == REG32_ESP) {
-		Error(e->line, _("invalid effective address"));
+		cur_we->error(e->line, N_("invalid effective address"));
 		return 0;
 	    }
 	    /* If mult==1 and basereg is not ESP, swap indexreg w/basereg. */
@@ -720,7 +722,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 					     calc_bc_dist)) {
 	    case 0:
 		e = *ep;
-		Error(e->line, _("invalid effective address"));
+		cur_we->error(e->line, N_("invalid effective address"));
 		return 0;
 	    case 1:
 		return 1;
@@ -732,7 +734,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	/* reg multipliers not 0 or 1 are illegal. */
 	if (reg16mult.bx & ~1 || reg16mult.si & ~1 || reg16mult.di & ~1 ||
 	    reg16mult.bp & ~1) {
-	    Error(e->line, _("invalid effective address"));
+	    cur_we->error(e->line, N_("invalid effective address"));
 	    return 0;
 	}
 
@@ -748,7 +750,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 
 	/* Check the modrm value for invalid combinations. */
 	if (modrm16[havereg] & 0070) {
-	    Error(e->line, _("invalid effective address"));
+	    cur_we->error(e->line, N_("invalid effective address"));
 	    return 0;
 	}
 
@@ -776,17 +778,17 @@ x86_floatnum_tobytes(const floatnum *flt, unsigned char **bufp,
     int fltret;
 
     if (!floatnum_check_size(flt, (size_t)valsize)) {
-	Error(e->line, _("invalid floating point constant size"));
+	cur_we->error(e->line, N_("invalid floating point constant size"));
 	return 1;
     }
 
     fltret = floatnum_get_sized(flt, *bufp, (size_t)valsize);
     if (fltret < 0) {
-	Error(e->line, _("underflow in floating point expression"));
+	cur_we->error(e->line, N_("underflow in floating point expression"));
 	return 1;
     }
     if (fltret > 0) {
-	Error(e->line, _("overflow in floating point expression"));
+	cur_we->error(e->line, N_("overflow in floating point expression"));
 	return 1;
     }
     *bufp += valsize;

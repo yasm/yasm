@@ -29,35 +29,36 @@
 #include "preproc.h"
 #include "parser.h"
 
+#include "nasm-parser.h"
 
-extern FILE *nasm_parser_in;
-extern int nasm_parser_debug;
 
-extern int nasm_parser_parse(void);
-extern void nasm_parser_cleanup(void);
-
-size_t (*nasm_parser_input) (char *buf, size_t max_size, linemgr *lm);
+FILE *nasm_parser_in = NULL;
+size_t (*nasm_parser_input) (char *buf, size_t max_size);
 
 sectionhead nasm_parser_sections;
 /*@dependent@*/ section *nasm_parser_cur_section;
 
-extern /*@only@*/ char *nasm_parser_locallabel_base;
+/* last "base" label for local (.) labels */
+char *nasm_parser_locallabel_base = (char *)NULL;
+size_t nasm_parser_locallabel_base_len = 0;
 
 /*@dependent@*/ arch *nasm_parser_arch;
 /*@dependent@*/ objfmt *nasm_parser_objfmt;
 /*@dependent@*/ linemgr *nasm_parser_linemgr;
+/*@dependent@*/ errwarn *nasm_parser_errwarn;
 
 static /*@dependent@*/ sectionhead *
-nasm_parser_do_parse(preproc *pp, arch *a, objfmt *of, linemgr *lm, FILE *f,
-		     const char *in_filename)
+nasm_parser_do_parse(preproc *pp, arch *a, objfmt *of, linemgr *lm,
+		     errwarn *we, FILE *f, const char *in_filename)
     /*@globals killed nasm_parser_locallabel_base @*/
 {
-    pp->initialize(f, in_filename);
+    pp->initialize(f, in_filename, lm, we);
     nasm_parser_in = f;
     nasm_parser_input = pp->input;
     nasm_parser_arch = a;
     nasm_parser_objfmt = of;
     nasm_parser_linemgr = lm;
+    nasm_parser_errwarn = we;
 
     /* Initialize section list */
     nasm_parser_cur_section = sections_initialize(&nasm_parser_sections, of);

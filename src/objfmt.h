@@ -57,7 +57,7 @@ struct objfmt {
      * provided solely for informational purposes.
      */
     void (*initialize) (const char *in_filename, const char *obj_filename,
-			dbgfmt *df, arch *a);
+			dbgfmt *df, arch *a, errwarn *we);
 
     /* Write out (post-optimized) sections to the object file.
      * This function may call symrec functions as necessary (including

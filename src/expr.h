@@ -24,7 +24,7 @@
 
 typedef struct ExprItem ExprItem;
 
-void expr_initialize(arch *a);
+void expr_initialize(arch *a, errwarn *we);
 
 /*@only@*/ expr *expr_new(ExprOp, /*@only@*/ ExprItem *,
 			  /*@only@*/ /*@null@*/ ExprItem *,

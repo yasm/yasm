@@ -43,12 +43,14 @@ static int expr_traverse_nodes_post(/*@null@*/ expr *e, /*@null@*/ void *d,
 						 /*@null@*/ void *d));
 
 static /*@dependent@*/ arch *cur_arch;
+static /*@dependent@*/ errwarn *cur_we;
 
 
 void
-expr_initialize(arch *a)
+expr_initialize(arch *a, errwarn *we)
 {
     cur_arch = a;
+    cur_we = we;
 }
 
 /* allocate a new expression node, with children as defined.
@@ -81,7 +83,7 @@ expr_new(ExprOp op, ExprItem *left, ExprItem *right, unsigned long lindex)
 	    /*@=usereleased@*/
 	}
     } else {
-	InternalError(_("Right side of expression must exist"));
+	cur_we->internal_error(N_("Right side of expression must exist"));
     }
 
     if (right) {
@@ -700,7 +702,8 @@ expr_level_tree(expr *e, int fold_const, int simplify_ident,
 		/* Check for circular reference */
 		SLIST_FOREACH(np, eh, next) {
 		    if (np->e == equ_expr) {
-			Error(e->line, _("circular reference detected."));
+			cur_we->error(e->line,
+				      N_("circular reference detected."));
 			return e;
 		    }
 		}

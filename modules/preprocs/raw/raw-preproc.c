@@ -30,20 +30,30 @@
 
 static int is_interactive;
 static FILE *in;
+static linemgr *cur_lm;
+static errwarn *cur_we;
 
 int isatty(int);
 
 static void
-raw_preproc_initialize(FILE *f, const char *in_filename)
+raw_preproc_initialize(FILE *f, const char *in_filename, linemgr *lm,
+		       errwarn *we)
 {
     in = f;
+    cur_lm = lm;
+    cur_we = we;
     /*@-unrecog@*/
     is_interactive = f ? (isatty(fileno(f)) > 0) : 0;
     /*@=unrecog@*/
 }
 
+static void
+raw_preproc_cleanup(void)
+{
+}
+
 static size_t
-raw_preproc_input(char *buf, size_t max_size, linemgr *lm)
+raw_preproc_input(char *buf, size_t max_size)
 {
     int c = '*';
     size_t n;
@@ -54,9 +64,11 @@ raw_preproc_input(char *buf, size_t max_size, linemgr *lm)
 	if (c == '\n')
 	    buf[n++] = (char)c;
 	if (c == EOF && ferror(in))
-	    Error(lm->get_current(), _("error when reading from file"));
+	    cur_we->error(cur_lm->get_current(),
+			  N_("error when reading from file"));
     } else if (((n = fread(buf, 1, max_size, in)) == 0) && ferror(in))
-	Error(lm->get_current(), _("error when reading from file"));
+	cur_we->error(cur_lm->get_current(),
+		      N_("error when reading from file"));
 
     return n;
 }
@@ -66,5 +78,6 @@ preproc yasm_raw_LTX_preproc = {
     "Disable preprocessing",
     "raw",
     raw_preproc_initialize,
+    raw_preproc_cleanup,
     raw_preproc_input
 };

@@ -129,6 +129,8 @@ int strncasecmp(const char *s1, const char *s2, size_t n);
 /*@only@*/ char *xstrdup(const char *str);
 
 /* Error-checking memory allocation routines in xmalloc.c. */
+void xalloc_initialize(/*@exits@*/ void (*fatal_func) (int type),
+		       int nomem_fatal_type);
 /*@only@*/ /*@out@*/ void *xmalloc(size_t size);
 /*@only@*/ void *xcalloc(size_t nelem, size_t elsize);
 /*@only@*/ void *xrealloc(/*@only@*/ /*@out@*/ /*@returned@*/ /*@null@*/

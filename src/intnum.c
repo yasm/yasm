@@ -43,15 +43,23 @@ struct intnum {
 };
 
 /* static bitvect used for conversions */
-static /*@only@*/ /*@null@*/ wordptr conv_bv = NULL;
+static /*@only@*/ wordptr conv_bv;
+static /*@dependent@*/ errwarn *cur_we;
+
 
 void
-intnum_shutdown(void)
+intnum_initialize(errwarn *we)
 {
-    if (conv_bv) {
-	BitVector_Destroy(conv_bv);
-	conv_bv = NULL;
-    }
+    cur_we = we;
+
+    conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
+    BitVector_from_Dec_static_Boot(BITVECT_ALLOC_SIZE);
+}
+
+void
+intnum_cleanup(void)
+{
+    BitVector_Destroy(conv_bv);
     BitVector_from_Dec_static_Shutdown();
 }
 
@@ -62,13 +70,10 @@ intnum_new_dec(char *str, unsigned long lindex)
 
     intn->origsize = 0;	    /* no reliable way to figure this out */
 
-    if (!conv_bv) {
-	conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
-	BitVector_from_Dec_static_Boot(BITVECT_ALLOC_SIZE);
-    }
     if (BitVector_from_Dec_static(conv_bv,
 				  (unsigned char *)str) == ErrCode_Ovfl)
-	Warning(lindex, _("Numeric constant too large for internal format"));
+	cur_we->warning(WARN_GENERAL, lindex,
+			N_("Numeric constant too large for internal format"));
     if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
 	intn->val.ul = BitVector_Chunk_Read(conv_bv, 32, 0);
@@ -88,12 +93,9 @@ intnum_new_bin(char *str, unsigned long lindex)
     intn->origsize = (unsigned char)strlen(str);
 
     if(intn->origsize > BITVECT_ALLOC_SIZE)
-	Warning(lindex, _("Numeric constant too large for internal format"));
+	cur_we->warning(WARN_GENERAL, lindex,
+			N_("Numeric constant too large for internal format"));
 
-    if (!conv_bv) {
-	conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
-	BitVector_from_Dec_static_Boot(BITVECT_ALLOC_SIZE);
-    }
     BitVector_from_Bin(conv_bv, (unsigned char *)str);
     if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
@@ -114,12 +116,9 @@ intnum_new_oct(char *str, unsigned long lindex)
     intn->origsize = strlen(str)*3;
 
     if(intn->origsize > BITVECT_ALLOC_SIZE)
-	Warning(lindex, _("Numeric constant too large for internal format"));
+	cur_we->warning(WARN_GENERAL, lindex,
+			N_("Numeric constant too large for internal format"));
 
-    if (!conv_bv) {
-	conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
-	BitVector_from_Dec_static_Boot(BITVECT_ALLOC_SIZE);
-    }
     BitVector_from_Oct(conv_bv, (unsigned char *)str);
     if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
@@ -140,12 +139,9 @@ intnum_new_hex(char *str, unsigned long lindex)
     intn->origsize = strlen(str)*4;
 
     if(intn->origsize > BITVECT_ALLOC_SIZE)
-	Warning(lindex, _("Numeric constant too large for internal format"));
+	cur_we->warning(WARN_GENERAL, lindex,
+			N_("Numeric constant too large for internal format"));
 
-    if (!conv_bv) {
-	conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
-	BitVector_from_Dec_static_Boot(BITVECT_ALLOC_SIZE);
-    }
     BitVector_from_Hex(conv_bv, (unsigned char *)str);
     if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
@@ -166,8 +162,8 @@ intnum_new_charconst_nasm(const char *str, unsigned long lindex)
     size_t len = strlen(str);
 
     if (len > 4)
-	Warning(lindex,
-		_("character constant too large, ignoring trailing characters"));
+	cur_we->warning(WARN_GENERAL, lindex,
+	    N_("character constant too large, ignoring trailing characters"));
 
     intn->val.ul = 0;
     intn->type = INTNUM_UL;
@@ -273,7 +269,7 @@ intnum_calc(intnum *acc, ExprOp op, intnum *operand)
     }
 
     if (!operand && op != EXPR_NEG && op != EXPR_NOT && op != EXPR_LNOT)
-	InternalError(_("Operation needs an operand"));
+	cur_we->internal_error(N_("Operation needs an operand"));
 
     /* A operation does a bitvector computation if result is allocated. */
     switch (op) {
@@ -444,7 +440,8 @@ intnum_calc(intnum *acc, ExprOp op, intnum *operand)
 		BitVector_Copy(result, op1);
 	    break;
 	default:
-	    InternalError(_("invalid operation in intnum calculation"));
+	    cur_we->internal_error(
+		N_("invalid operation in intnum calculation"));
     }
 
     /* If we were doing a bitvector computation... */
@@ -507,7 +504,7 @@ intnum_get_uint(const intnum *intn)
 	case INTNUM_BV:
 	    return BitVector_Chunk_Read(intn->val.bv, 32, 0);
 	default:
-	    InternalError(_("unknown intnum type"));
+	    cur_we->internal_error(N_("unknown intnum type"));
 	    /*@notreached@*/
 	    return 0;
     }
@@ -535,7 +532,7 @@ intnum_get_int(const intnum *intn)
 	    } else
 		return (long)BitVector_Chunk_Read(intn->val.bv, 32, 0);
 	default:
-	    InternalError(_("unknown intnum type"));
+	    cur_we->internal_error(N_("unknown intnum type"));
 	    /*@notreached@*/
 	    return 0;
     }
@@ -560,7 +557,8 @@ intnum_get_sized(const intnum *intn, unsigned char *ptr, size_t size)
 	case INTNUM_BV:
 	    buf = BitVector_Block_Read(intn->val.bv, &len);
 	    if (len < (unsigned int)size)
-		InternalError(_("Invalid size specified (too large)"));
+		cur_we->internal_error(
+		    N_("Invalid size specified (too large)"));
 	    memcpy(ptr, buf, size);
 	    xfree(buf);
 	    break;

@@ -22,6 +22,8 @@
 #ifndef YASM_SYMREC_H
 #define YASM_SYMREC_H
 
+void symrec_initialize(errwarn *we);
+
 /*@dependent@*/ symrec *symrec_use(const char *name, unsigned long lindex);
 /*@dependent@*/ symrec *symrec_define_equ(const char *name, /*@keep@*/ expr *e,
 					  unsigned long lindex);
@@ -64,7 +66,7 @@ int /*@alt void@*/ symrec_traverse(/*@null@*/ void *d,
 
 void symrec_parser_finalize(void);
 
-void symrec_delete_all(void);
+void symrec_cleanup(void);
 
 void symrec_print_all(FILE *f, int indent_level);
 

@@ -24,7 +24,10 @@
 
 struct linemgr {
     /* Initialize cur_lindex and any manager internal data structures. */
-    void (*initialize) (void);
+    void (*initialize) (/*@exits@*/
+			void (*error_func) (const char *file,
+					    unsigned int line,
+					    const char *message));
 
     /* Cleans up any memory allocated by initialize. */
     void (*cleanup) (void);

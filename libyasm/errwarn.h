@@ -22,66 +22,66 @@
 #ifndef YASM_ERRWARN_H
 #define YASM_ERRWARN_H
 
-/* ALL warnings disabled? */
-extern int warnings_disabled;
-
-/* Warnings treated as errors? */
-extern int warning_error;
-
-/* Warning flags.  Currently a maximum of 32 are allowed.  This can be
- * increased by making this an array and modifying the WARN_ macros to use the
- * proper array index based on the warning number.
- *
- * If a bit is 1, it means that particular warning is enabled.  The bit numbers
- * are assigned according to the warn_flag_num enum.
- *
- * See errwarn.c for what warnings are enabled by default.
- */
-extern unsigned long warning_flags;
+/* Warning classes (may be enabled/disabled). */
 typedef enum {
-    WARN_UNRECOGNIZED_CHAR = 0
-} warn_flag_num;
-
-/* Tests the warning flags to see if warning "warn" is enabled */
-#define WARN_ENABLED(warn)	(warning_flags & (1<<(warn)))
-/* Sets warning "warn" to be enabled or disabled based on "s" (1=en, 0=dis). */
-#define WARN_ENABLE(warn, s)	do { \
-	warning_flags &= ~(1<<(warn)); \
-	warning_flags |= (s)<<(warn); \
-    } while(0)
+    WARN_GENERAL = 0,	    /* non-specific warnings */
+    WARN_UNREC_CHAR,	    /* unrecognized characters (while tokenizing) */
+    WARN_PREPROC	    /* preprocessor warnings */
+} warn_class_num;
 
 /* Fatal error constants.
  * See fatal_msgs in errwarn.c for strings that match up to these constants.
- * When adding a constant here, keep errwarn.c in sync! */
+ * When adding a constant here, keep errwarn.c in sync!
+ */
 typedef enum {
     FATAL_UNKNOWN = 0,
     FATAL_NOMEM
 } fatal_num;
 
-/*@shared@*/ char *conv_unprint(char ch);
+struct errwarn {
+    /* Initialize any internal data structures. */
+    void (*initialize) (void);
 
-void ParserError(unsigned long lindex, const char *);
+    /* Cleans up any memory allocated by initialize or other functions. */
+    void (*cleanup) (void);
 
-/*@exits@*/ void InternalError_(const char *file, unsigned int line,
-				const char *message);
-#define InternalError(msg)	InternalError_(__FILE__, __LINE__, msg)
+    /* Reporting point of internal errors.  These are usually due to sanity
+     * check failures in the code.
+     * This function must NOT return to calling code.  Either exit or longjmp.
+     */
+    /*@exits@*/ void (*internal_error_) (const char *file, unsigned int line,
+					 const char *message);
+#define internal_error(msg)	internal_error_(__FILE__, __LINE__, msg)
 
-/*@exits@*/ void Fatal(fatal_num);
+    /* Reporting point of fatal errors.
+     * This function must NOT return to calling code.  Either exit or longjmp.
+     */
+    /*@exits@*/ void (*fatal) (fatal_num);
 
-void Error(unsigned long lindex, const char *, ...) /*@printflike@*/;
-void Warning(unsigned long lindex, const char *, ...) /*@printflike@*/;
+    void (*error) (unsigned long lindex, const char *, ...) /*@printflike@*/;
+    void (*warning) (warn_class_num, unsigned long lindex, const char *, ...)
+	/*@printflike@*/;
 
-/* These two functions immediately output the error or warning, with no file
- * or line information.  They should be used for errors and warnings outside
- * the parser stage (at program startup, for instance).
- */
-void ErrorNow(const char *, ...) /*@printflike@*/;
-void WarningNow(const char *, ...) /*@printflike@*/;
+    /* Logs a parser error.  These can be overwritten by non-parser errors on
+     * the same line.
+     */
+    void (*parser_error) (unsigned long lindex, const char *);
 
-/* Returns total number of errors to this point in assembly. */
-unsigned int GetNumErrors(void);
+    /* Enables/disables a class of warnings. */
+    void (*warn_enable) (warn_class_num);
+    void (*warn_disable) (warn_class_num);
+    void (*warn_disable_all) (void);
 
-/* Outputs all errors/warnings to standard error. */
-void OutputAllErrorWarning(linemgr *lm);
+    /* Returns total number of errors logged to this point.
+     * If warning_as_error is nonzero, warnings are treated as errors.
+     */
+    unsigned int (*get_num_errors) (int warning_as_error);
+
+    /* Outputs all errors/warnings (e.g. to stderr or elsewhere). */
+    void (*output_all) (linemgr *lm, int warning_as_error);
+
+    /* Convert a possibly unprintable character into a printable string. */
+    char * (*conv_unprint) (char ch);
+};
 
 #endif

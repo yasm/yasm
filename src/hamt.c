@@ -35,7 +35,6 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
-#include "errwarn.h"
 #include "hamt.h"
 
 typedef struct HAMTEntry {
@@ -52,6 +51,8 @@ typedef struct HAMTNode {
 struct HAMT {
     SLIST_HEAD(HAMTEntryHead, HAMTEntry) entries;
     HAMTNode *root;
+    /*@exits@*/ void (*error_func) (const char *file, unsigned int line,
+				    const char *message);
 };
 
 /* XXX make a portable version of this.  This depends on the pointer being
@@ -59,9 +60,10 @@ struct HAMT {
  * the subtrie flag!
  */
 #define IsSubTrie(n)		((unsigned long)((n)->BaseValue) & 1)
-#define SetSubTrie(n, v)	do {				\
+#define SetSubTrie(h, n, v)	do {				\
 	if ((unsigned long)(v) & 1)				\
-	    InternalError(_("Subtrie is seen as subtrie before flag is set (misaligned?)"));	\
+	    h->error_func(__FILE__, __LINE__,			\
+			  N_("Subtrie is seen as subtrie before flag is set (misaligned?)"));	\
 	(n)->BaseValue = (void *)((unsigned long)(v) | 1);	\
     } while (0)
 #define GetSubTrie(n)		(HAMTNode *)((unsigned long)((n)->BaseValue)&~1UL)
@@ -85,7 +87,8 @@ ReHashKey(const char *key, int Level)
 }
 
 HAMT *
-HAMT_new(void)
+HAMT_new(/*@exits@*/ void (*error_func) (const char *file, unsigned int line,
+					 const char *message))
 {
     /*@out@*/ HAMT *hamt = xmalloc(sizeof(HAMT));
     int i;
@@ -97,6 +100,8 @@ HAMT_new(void)
 	hamt->root[i].BitMapKey = 0;
 	hamt->root[i].BaseValue = NULL;
     }
+
+    hamt->error_func = error_func;
 
     return hamt;
 }
@@ -174,7 +179,8 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 	SLIST_INSERT_HEAD(&hamt->entries, entry, next);
 	node->BaseValue = entry;
 	if (IsSubTrie(node))
-	    InternalError(_("Data is seen as subtrie (misaligned?)"));
+	    hamt->error_func(__FILE__, __LINE__,
+			     N_("Data is seen as subtrie (misaligned?)"));
 	*replace = 1;
 	return data;
     }
@@ -216,7 +222,7 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 			newnodes = xmalloc(sizeof(HAMTNode));
 			newnodes[0] = *node;	/* structure copy */
 			node->BitMapKey = 1<<keypart;
-			SetSubTrie(node, newnodes);
+			SetSubTrie(hamt, node, newnodes);
 			node = &newnodes[0];
 			level++;
 		    } else {
@@ -241,7 +247,7 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 
 			/* Set bits in bitmap corresponding to keys */
 			node->BitMapKey = (1UL<<keypart) | (1UL<<keypart2);
-			SetSubTrie(node, newnodes);
+			SetSubTrie(hamt, node, newnodes);
 			*replace = 1;
 			return data;
 		    }
@@ -285,7 +291,7 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 	    entry->data = data;
 	    SLIST_INSERT_HEAD(&hamt->entries, entry, next);
 	    newnodes[Map].BaseValue = entry;
-	    SetSubTrie(node, newnodes);
+	    SetSubTrie(hamt, node, newnodes);
 
 	    *replace = 1;
 	    return data;

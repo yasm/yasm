@@ -38,11 +38,15 @@ struct preproc {
      * This function also takes the FILE * to the initial starting file and
      * the filename.
      */
-    void (*initialize) (FILE *f, const char *in_filename);
+    void (*initialize) (FILE *f, const char *in_filename, linemgr *lm,
+			errwarn *we);
+
+    /* Cleans up any allocated memory. */
+    void (*cleanup) (void);
 
     /* Gets more preprocessed source code (up to max_size bytes) into buf.
      * Note that more than a single line may be returned in buf. */
-    size_t (*input) (/*@out@*/ char *buf, size_t max_size, linemgr *lm);
+    size_t (*input) (/*@out@*/ char *buf, size_t max_size);
 };
 
 #endif
