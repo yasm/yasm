@@ -60,6 +60,7 @@ void bc_print(FILE *f, const bytecode *bc);
 
 /* Calculates length of bytecode, saving in bc structure.
  * Returns whether the length is the minimum possible (1=yes, 0=no).
+ * Returns -1 if the length was indeterminate.
  * resolve_label is the function used to determine the value (offset) of a
  *  in-file label (eg, not an EXTERN variable, which is indeterminate).
  * This function does *not* modify bc other than the length/size values (eg
