@@ -44,6 +44,8 @@
 
 RCSID("$IdPath$");
 
+#define YY_NEVER_INTERACTIVE	1
+
 #define yylval	nasm_parser_lval
 
 extern int (*nasm_parser_yyinput) (char *buf, int max_size);
