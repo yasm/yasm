@@ -8,7 +8,6 @@ libyasm_a_SOURCES += modules/preprocs/nasm/nasmlib.h
 libyasm_a_SOURCES += modules/preprocs/nasm/nasmlib.c
 libyasm_a_SOURCES += modules/preprocs/nasm/nasm-eval.h
 libyasm_a_SOURCES += modules/preprocs/nasm/nasm-eval.c
-libyasm_a_SOURCES += nasm-macros.c
 
 YASM_MODULES += preproc_nasm
 
