@@ -166,7 +166,7 @@ DIR	 %[ \t]*
 <incl>[ \t"]*	/* eat whitespace */
 <incl>[^ \t\n"]* { /* have the filename */
     include *inc;
-    YY_BUFFER_STATE *incfile;
+    FILE *incfile;
     inc = xmalloc(sizeof(include));
     inc->include_state = YY_CURRENT_BUFFER;
 
