@@ -62,4 +62,6 @@ libyasm_a_SOURCES = \
 CFLAGS = @ANSI_CFLAGS@
 
 EXTRA_DIST = \
+	strsep.c		\
+	mergesort.c		\
 	compat-queue.h
