@@ -117,6 +117,12 @@ static unsigned long cpu_enabled = ~CPU_Any;
  *            non-registers -- registers are always strictly matched):
  *            0 = user size must exactly match size above.
  *            1 = user size either unspecified or exactly match size above.
+ *  - 3 bits = target modification.
+ *            0 = no target mod acceptable
+ *            1 = NEAR
+ *            2 = SHORT
+ *            3 = FAR
+ *            4 = TO
  *
  * MSBs than the above are actions: what to do with the operand if the
  * instruction matches.  Essentially describes what part of the output bytecode
@@ -162,7 +168,7 @@ static unsigned long cpu_enabled = ~CPU_Any;
 #define OPT_SS		0x11
 #define OPT_CR4		0x12
 #define OPT_MemOffs	0x13
-#define OPT_MASK	0x001F
+#define OPT_MASK	0x1F
 
 #define OPS_Any		(0<<5)
 #define OPS_8		(1<<5)
@@ -171,25 +177,32 @@ static unsigned long cpu_enabled = ~CPU_Any;
 #define OPS_64		(4<<5)
 #define OPS_80		(5<<5)
 #define OPS_128		(6<<5)
-#define OPS_MASK	0x00E0
+#define OPS_MASK	(7<<5)
 #define OPS_SHIFT	5
 
 #define OPS_Relaxed	(1<<8)
-#define OPS_RMASK	0x0100
+#define OPS_RMASK	(1<<8)
 
-#define OPA_None	(0<<9)
-#define OPA_EA		(1<<9)
-#define OPA_Imm		(2<<9)
-#define OPA_SImm	(3<<9)
-#define OPA_Spare	(4<<9)
-#define OPA_Op0Add	(5<<9)
-#define OPA_SpareEA	(6<<9)
-#define OPA_MASK	0x0E00
+#define OPTM_None	(0<<9)
+#define OPTM_Near	(1<<9)
+#define OPTM_Short	(2<<9)
+#define OPTM_Far	(3<<9)
+#define OPTM_To		(4<<9)
+#define OPTM_MASK	(7<<9)
 
-#define OPAP_None	(0<<12)
-#define OPAP_ShiftOp	(1<<12)
-#define OPAP_SImm8Avail	(2<<12)
-#define OPAP_MASK	0x3000
+#define OPA_None	(0<<12)
+#define OPA_EA		(1<<12)
+#define OPA_Imm		(2<<12)
+#define OPA_SImm	(3<<12)
+#define OPA_Spare	(4<<12)
+#define OPA_Op0Add	(5<<12)
+#define OPA_SpareEA	(6<<12)
+#define OPA_MASK	(7<<12)
+
+#define OPAP_None	(0<<15)
+#define OPAP_ShiftOp	(1<<15)
+#define OPAP_SImm8Avail	(2<<15)
+#define OPAP_MASK	(3<<15)
 
 typedef struct x86_insn_info {
     /* The CPU feature flags needed to execute this instruction.  This is OR'ed
@@ -223,7 +236,7 @@ typedef struct x86_insn_info {
     unsigned char num_operands;
 
     /* The types of each operand, see above */
-    unsigned int operands[3];
+    unsigned long operands[3];
 } x86_insn_info;
 
 /* Define lexer arch-specific data with 0-3 modifiers. */
@@ -894,6 +907,32 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 		    if (op->size != size)
 			mismatch = 1;
 		}
+	    }
+
+	    /* Check target modifier */
+	    switch (info->operands[i] & OPTM_MASK) {
+		case OPTM_None:
+		    if (op->targetmod != 0)
+			mismatch = 1;
+		    break;
+		case OPTM_Near:
+		    if (op->targetmod != X86_NEAR)
+			mismatch = 1;
+		    break;
+		case OPTM_Short:
+		    if (op->targetmod != X86_SHORT)
+			mismatch = 1;
+		    break;
+		case OPTM_Far:
+		    if (op->targetmod != X86_FAR)
+			mismatch = 1;
+		    break;
+		case OPTM_To:
+		    if (op->targetmod != X86_TO)
+			mismatch = 1;
+		    break;
+		default:
+		    InternalError(_("invalid target modifier type"));
 	    }
 	}
 
