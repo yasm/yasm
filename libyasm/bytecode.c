@@ -744,6 +744,10 @@ bc_tobytes(bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 	if (!num)
 	    InternalError(_("could not determine multiple in bc_tobytes"));
 	*multiple = intnum_get_uint(num);
+	if (*multiple == 0) {
+	    *bufsize = 0;
+	    return NULL;
+	}
     } else
 	*multiple = 1;
 
