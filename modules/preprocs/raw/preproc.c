@@ -1,4 +1,4 @@
-/* $Id: preproc.c,v 1.7 2001/09/15 07:16:59 peter Exp $
+/* $Id: preproc.c,v 1.8 2001/09/16 21:07:22 peter Exp $
  * Raw preprocessor (preforms NO preprocessing)
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -35,7 +35,7 @@
 #include "objfmt.h"
 #include "preproc.h"
 
-RCSID("$Id: preproc.c,v 1.7 2001/09/15 07:16:59 peter Exp $");
+RCSID("$Id: preproc.c,v 1.8 2001/09/16 21:07:22 peter Exp $");
 
 static int is_interactive;
 static FILE *in;
@@ -43,14 +43,14 @@ static FILE *in;
 int isatty(int);
 
 static void
-initialize(objfmt *of, FILE *f)
+raw_preproc_initialize(objfmt *of, FILE *f)
 {
     in = f;
     is_interactive = f ? (isatty(fileno(f)) > 0) : 0;
 }
 
 static int
-input(char *buf, int max_size)
+raw_preproc_input(char *buf, int max_size)
 {
     int c = '*', n;
 
@@ -71,6 +71,6 @@ input(char *buf, int max_size)
 preproc raw_preproc = {
     "Disable preprocessing",
     "raw",
-    initialize,
-    input
+    raw_preproc_initialize,
+    raw_preproc_input
 };
