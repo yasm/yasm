@@ -28,7 +28,7 @@ static void srunner_fprint_summary (FILE *file, SRunner *sr, int print_mode);
 static void srunner_fprint_results (FILE *file, SRunner *sr, int print_mode);
 
 static int percent_passed (TestStats *t);
-static char *rtype_to_string (int rtype);
+static const char *rtype_to_string (int rtype);
 
 void srunner_print (SRunner *sr, int print_mode)
 {
@@ -67,7 +67,7 @@ static void srunner_fprint_results (FILE *file, SRunner *sr, int print_mode)
 
 void tr_fprint (FILE *file, TestResult *tr, int print_mode)
 {
-  char *exact_msg;
+  const char *exact_msg;
   exact_msg = (tr->rtype == CRERROR) ? "(after this point) ": "";
   if ((print_mode >= CRVERBOSE && tr->rtype == CRPASS) ||
       (tr->rtype != CRPASS && print_mode >= CRNORMAL)) {
@@ -88,7 +88,7 @@ static int percent_passed (TestStats *t)
 		   (float) t->n_checked * 100);
 }
 
-static char *rtype_to_string (int rtype)
+static const char *rtype_to_string (int rtype)
 {
   switch (rtype) {
   case CRPASS:

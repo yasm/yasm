@@ -114,7 +114,7 @@ N_word  BitVector_Mask  (N_int bits);       /* bit vector mask (unused bits) */
 
 /* ===> CLASS METHODS: <=== */
 
-charptr BitVector_Version    (void);               /* returns version string */
+const char * BitVector_Version    (void);          /* returns version string */
 
 N_int   BitVector_Word_Bits  (void);    /* returns # of bits in machine word */
 N_int   BitVector_Long_Bits  (void);   /* returns # of bits in unsigned long */
@@ -193,13 +193,13 @@ void    BitVector_Dispose (charptr string);
 
 /* ===> bit vector bit operations, functions & tests: */
 
-void    BitVector_Bit_Off (wordptr addr, N_int index);      /* X = X \ {x}   */
-void    BitVector_Bit_On  (wordptr addr, N_int index);      /* X = X + {x}   */
-boolean BitVector_bit_flip(wordptr addr, N_int index);  /* X=(X+{x})\(X*{x}) */
+void    BitVector_Bit_Off (wordptr addr, N_int indx);      /* X = X \ {x}   */
+void    BitVector_Bit_On  (wordptr addr, N_int indx);      /* X = X + {x}   */
+boolean BitVector_bit_flip(wordptr addr, N_int indx);  /* X=(X+{x})\(X*{x}) */
 
-boolean BitVector_bit_test(wordptr addr, N_int index);      /* {x} in X ?    */
+boolean BitVector_bit_test(wordptr addr, N_int indx);      /* {x} in X ?    */
 
-void    BitVector_Bit_Copy(wordptr addr, N_int index, boolean bit);
+void    BitVector_Bit_Copy(wordptr addr, N_int indx, boolean bit);
 
 /* ===> bit vector bit shift & rotate functions: */
 

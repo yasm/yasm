@@ -1,7 +1,14 @@
 /* $IdPath$
  *
  */
-#include <stdlib.h>
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+#endif
+
 #include "check.h"
 
 #include "util.h"
@@ -37,7 +44,8 @@ START_TEST(test_effaddr_new_reg)
 }
 END_TEST
 
-Suite *bytecode_suite(void)
+static Suite *
+bytecode_suite(void)
 {
     Suite *s = suite_create("bytecode");
     TCase *tc_conversion = tcase_create("Conversion");
@@ -48,7 +56,8 @@ Suite *bytecode_suite(void)
     return s;
 }
 
-int main(void)
+int
+main(void)
 {
     int nf;
     Suite *s = bytecode_suite();

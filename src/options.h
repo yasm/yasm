@@ -35,13 +35,13 @@
  */
 typedef struct opt_option_s
 {
-    char sopt;		/* short option letter if present, 0 otherwise */
-    char *lopt;		/* long option name if present, NULL otherwise */
-    int takes_param;	/* !=0 if option requires parameter, 0 if not */
+    char sopt;			/* short option letter if present, 0 otherwise */
+    const char *lopt;		/* long option name if present, NULL otherwise */
+    int takes_param;		/* !=0 if option requires parameter, 0 if not */
     int (*handler) (char *cmd, char *param, int extra);
-    int extra;		/* extra value for handler */
-    char *description;	/* description to use in help_msg() */
-    char *param_desc;	/* optional description for the param taken */
+    int extra;			/* extra value for handler */
+    const char *description;	/* description to use in help_msg() */
+    const char *param_desc;	/* optional description for the param taken */
 			/*  (short - will be printed after option sopt/lopt) */
 } opt_option;
 

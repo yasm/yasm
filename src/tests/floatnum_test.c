@@ -1,7 +1,14 @@
 /* $IdPath$
  *
  */
-#include <stdlib.h>
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+#endif
+
 #include "check.h"
 
 #include "bitvect.h"
@@ -9,20 +16,23 @@
 #include "floatnum.h"
 
 floatnum *flt;
-void get_family_setup(void)
+static void
+get_family_setup(void)
 {
 
     flt = malloc(sizeof(floatnum));
     flt->mantissa = BitVector_Create(80, TRUE);
 }
 
-void get_family_teardown(void)
+static void
+get_family_teardown(void)
 {
     BitVector_Destroy(flt->mantissa);
     free(flt);
 }
 
-void pi_setup(void)
+static void
+pi_setup(void)
 {
     /* test value: 3.141592653589793 */
     /* 80-bit little endian mantissa: C6 0D E9 BD 68 21 A2 DA 0F C9 */
@@ -86,7 +96,8 @@ START_TEST(test_get_extended_pi)
 }
 END_TEST
 
-Suite *bytecode_suite(void)
+static Suite *
+floatnum_suite(void)
 {
     Suite *s = suite_create("floatnum");
     TCase *tc_get_single = tcase_create("get_single");
@@ -108,10 +119,11 @@ Suite *bytecode_suite(void)
     return s;
 }
 
-int main(void)
+int
+main(void)
 {
     int nf;
-    Suite *s = bytecode_suite();
+    Suite *s = floatnum_suite();
     SRunner *sr = srunner_create(s);
     BitVector_Boot();
     srunner_run_all(sr, CRNORMAL);

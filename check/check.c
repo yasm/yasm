@@ -37,7 +37,7 @@
 extern int nofork_exit_status;
 #endif
 
-Suite *suite_create (char *name)
+Suite *suite_create (const char *name)
 {
   Suite *s;
   s = emalloc (sizeof(Suite)); /* freed in suite_free */
@@ -61,7 +61,7 @@ void suite_free (Suite *s)
   free(s);
 }
 
-TCase *tcase_create (char *name)
+TCase *tcase_create (const char *name)
 {
   TCase *tc = emalloc (sizeof(TCase)); /*freed in tcase_free */
   if (name == NULL)
@@ -93,7 +93,7 @@ void suite_add_tcase (Suite *s, TCase *tc)
   list_add_end (s->tclst, tc);
 }
 
-void tcase_add_test_ (TCase *tc, TFun fn, char *name)
+void tcase_add_test_ (TCase *tc, TFun fn, const char *name)
 {
   TF * tf;
   if (tc == NULL || fn == NULL || name == NULL)
@@ -111,7 +111,7 @@ void tcase_set_fixture (TCase *tc, SFun setup, SFun teardown)
 }
 
 
-void tcase_fn_start (int msqid, char *fname, char *file, int line)
+void tcase_fn_start (int msqid, const char *fname, const char *file, int line)
 {
   send_last_loc_msg (msqid, file, line);
 }
@@ -121,7 +121,8 @@ void mark_point_ (int msqid, char *file, int line)
   send_last_loc_msg (msqid, file, line);
 }
 
-int fail_unless_ (int msqid, int result, char *file, int line, char * msg)
+int fail_unless_ (int msqid, int result, const char *file, int line,
+		  const char * msg)
 {
   if (line > MAXLINE)
     eprintf ("Line number %d too large to use", line);

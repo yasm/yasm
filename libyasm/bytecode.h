@@ -57,7 +57,7 @@ typedef struct dataval_s {
     enum { DV_EMPTY, DV_EXPR, DV_FLOAT, DV_STRING } type;
 
     union {
-	struct expr_s *exp;
+	struct expr_s *expn;
 	struct floatnum_s *flt;
 	char *str_val;
     } data;
@@ -231,7 +231,7 @@ void bytecode_print(bytecode *bc);
  */
 bytecode *bytecodes_append(bytecodehead *headp, bytecode *bc);
 
-dataval *dataval_new_expr(struct expr_s *exp);
+dataval *dataval_new_expr(struct expr_s *expn);
 dataval *dataval_new_float(struct floatnum_s *flt);
 dataval *dataval_new_string(char *str_val);
 

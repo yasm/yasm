@@ -55,10 +55,10 @@ enum {
   LASTLOCMSG = 1,
   FAILUREMSG = 2
 };
-static LastLocMsg *create_last_loc_msg (char *file, int line);
-static FailureMsg *create_failure_msg (char *msg);
+static LastLocMsg *create_last_loc_msg (const char *file, int line);
+static FailureMsg *create_failure_msg (const char *msg);
 
-static FailureMsg *create_failure_msg (char *msg)
+static FailureMsg *create_failure_msg (const char *msg)
 {
   FailureMsg *m = emalloc (sizeof(FailureMsg));
   m->message_type = (long int) FAILUREMSG;
@@ -67,7 +67,7 @@ static FailureMsg *create_failure_msg (char *msg)
 }
 
 
-static LastLocMsg *create_last_loc_msg (char *file, int line)
+static LastLocMsg *create_last_loc_msg (const char *file, int line)
 {
   LastLocMsg *m = emalloc (sizeof(LastLocMsg));
   m->message_type = (long int) LASTLOCMSG;
@@ -112,7 +112,7 @@ int last_loc_line (LastLocMsg *msg)
 }
 
 
-void send_last_loc_msg (int msqid, char * file, int line)
+void send_last_loc_msg (int msqid, const char * file, int line)
 {
 #ifdef USE_FORKWAITMSG
   int rval;
@@ -148,7 +148,7 @@ void delete_msq (int msqid)
 }
 
 
-void send_failure_msg (int msqid, char *msg)
+void send_failure_msg (int msqid, const char *msg)
 {
 #ifdef USE_FORKWAITMSG
   int rval;

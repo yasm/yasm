@@ -59,7 +59,7 @@ static unsigned int warning_count = 0;
  * When adding a string here, keep errwarn.h in sync! */
 
 /* Fatal error messages.  Match up with fatal_num enum in errwarn.h. */
-static char *fatal_msgs[] = {
+static const char *fatal_msgs[] = {
     N_("unknown"),
     N_("out of memory")
 };
@@ -116,7 +116,7 @@ conv_unprint(char ch)
 
 /* Parser error handler.  Moves error into our error handling system. */
 void
-ParserError(char *s)
+ParserError(const char *s)
 {
     Error("%s %s", _("parser error:"), s);
     previous_error_parser = 1;
@@ -125,7 +125,7 @@ ParserError(char *s)
 /* Report an internal error.  Essentially a fatal error with trace info.
  * Exit immediately because it's essentially an assert() trap. */
 void
-InternalError(unsigned int line, char *file, char *message)
+InternalError(unsigned int line, const char *file, const char *message)
 {
     fprintf(stderr, _("INTERNAL ERROR at %s, line %d: %s\n"), file, line,
 	    message);
@@ -153,7 +153,7 @@ Fatal(fatal_num num)
  * argument types.  Does not print the error, only stores it for
  * OutputAllErrorWarning() to print. */
 void
-Error(char *fmt, ...)
+Error(const char *fmt, ...)
 {
     va_list ap;
     errwarn *we;
@@ -177,7 +177,7 @@ Error(char *fmt, ...)
 	    Fatal(FATAL_NOMEM);
 
 	we->type = WE_ERROR;
-	we->filename = strdup(filename);
+	we->filename = strdup(in_filename);
 	if (!we->filename)
 	    Fatal(FATAL_NOMEM);
 	we->line = line_number;
@@ -200,7 +200,7 @@ Error(char *fmt, ...)
  * argument types.  Does not print the warning, only stores it for
  * OutputAllErrorWarning() to print. */
 void
-Warning(char *fmt, ...)
+Warning(const char *fmt, ...)
 {
     va_list ap;
     errwarn *we;
@@ -215,7 +215,7 @@ Warning(char *fmt, ...)
 	Fatal(FATAL_NOMEM);
 
     we->type = WE_WARNING;
-    we->filename = strdup(filename);
+    we->filename = strdup(in_filename);
     if (!we->filename)
 	Fatal(FATAL_NOMEM);
     we->line = line_number;
@@ -234,7 +234,7 @@ Warning(char *fmt, ...)
 }
 
 void
-ErrorNow(char *fmt, ...)
+ErrorNow(const char *fmt, ...)
 {
     va_list ap;
 
@@ -245,7 +245,7 @@ ErrorNow(char *fmt, ...)
 }
 
 void
-WarningNow(char *fmt, ...)
+WarningNow(const char *fmt, ...)
 {
     va_list ap;
 
@@ -257,13 +257,13 @@ WarningNow(char *fmt, ...)
 }
 
 void
-ErrorAt(char *filename, unsigned long line, char *fmt, ...)
+ErrorAt(const char *filename, unsigned long line, const char *fmt, ...)
 {
     /* TODO */
 }
 
 void
-WarningAt(char *filename, unsigned long line, char *fmt, ...)
+WarningAt(const char *filename, unsigned long line, const char *fmt, ...)
 {
     /* TODO */
 }

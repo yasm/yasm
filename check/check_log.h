@@ -13,7 +13,7 @@ void stdout_lfun (SRunner *sr, FILE *file, enum print_verbosity,
 void lfile_lfun (SRunner *sr, FILE *file, enum print_verbosity,
 		  void *obj, enum cl_event evt);
 
-void srunner_register_lfun (SRunner *sr, FILE *lfile, int close,
+void srunner_register_lfun (SRunner *sr, FILE *lfile, int doclose,
 			    LFun lfun, enum print_verbosity);
 
 FILE *srunner_open_lfile (SRunner *sr);

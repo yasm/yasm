@@ -22,7 +22,7 @@
 #ifndef YASM_GLOBALS_H
 #define YASM_GLOBALS_H
 
-extern char *filename;
+extern char *in_filename;
 extern unsigned int line_number;
 extern unsigned char mode_bits;
 extern unsigned int asm_options;

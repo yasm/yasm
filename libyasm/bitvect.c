@@ -319,9 +319,9 @@ N_word BitVector_Mask(N_int bits)           /* bit vector mask (unused bits) */
     return(mask);
 }
 
-charptr BitVector_Version(void)
+const char * BitVector_Version(void)
 {
-    return((charptr)"6.0");
+    return("6.0");
 }
 
 N_int BitVector_Word_Bits(void)
@@ -1783,7 +1783,7 @@ ErrCode BitVector_from_Enum(wordptr addr, charptr string)
     N_word  bits = bits_(addr);
     N_word  state = 1;
     N_word  token;
-    N_word  index;
+    N_word  indx;
     N_word  start;
 
     if (bits > 0)
@@ -1795,8 +1795,8 @@ ErrCode BitVector_from_Enum(wordptr addr, charptr string)
             /* separate because isdigit() is likely a macro! */
             if (isdigit(token) != 0)
             {
-                string += BIT_VECTOR_str2int(string,&index);
-                if (index < bits) token = (N_word) '0';
+                string += BIT_VECTOR_str2int(string,&indx);
+                if (indx < bits) token = (N_word) '0';
                 else error = ErrCode_Indx;
             }
             else string++;
@@ -1821,15 +1821,15 @@ ErrCode BitVector_from_Enum(wordptr addr, charptr string)
                     switch (token)
                     {
                         case (N_word) '-':
-                            start = index;
+                            start = indx;
                             state = 3;
                             break;
                         case (N_word) ',':
-                            BIT_VECTOR_SET_BIT(addr,index)
+                            BIT_VECTOR_SET_BIT(addr,indx)
                             state = 5;
                             break;
                         case (N_word) '\0':
-                            BIT_VECTOR_SET_BIT(addr,index)
+                            BIT_VECTOR_SET_BIT(addr,indx)
                             state = 0;
                             break;
                         default:
@@ -1841,10 +1841,10 @@ ErrCode BitVector_from_Enum(wordptr addr, charptr string)
                     switch (token)
                     {
                         case (N_word) '0':
-                            if (start < index)
-                                BitVector_Interval_Fill(addr,start,index);
-                            else if (start == index)
-                                BIT_VECTOR_SET_BIT(addr,index)
+                            if (start < indx)
+                                BitVector_Interval_Fill(addr,start,indx);
+                            else if (start == indx)
+                                BIT_VECTOR_SET_BIT(addr,indx)
                             else error = ErrCode_Ordr;
                             state = 4;
                             break;
@@ -1889,36 +1889,36 @@ void BitVector_Dispose(charptr string)
     if (string != NULL) free((voidptr) string);
 }
 
-void BitVector_Bit_Off(wordptr addr, N_int index)           /* X = X \ {x}   */
+void BitVector_Bit_Off(wordptr addr, N_int indx)            /* X = X \ {x}   */
 {
-    if (index < bits_(addr)) BIT_VECTOR_CLR_BIT(addr,index)
+    if (indx < bits_(addr)) BIT_VECTOR_CLR_BIT(addr,indx)
 }
 
-void BitVector_Bit_On(wordptr addr, N_int index)            /* X = X + {x}   */
+void BitVector_Bit_On(wordptr addr, N_int indx)             /* X = X + {x}   */
 {
-    if (index < bits_(addr)) BIT_VECTOR_SET_BIT(addr,index)
+    if (indx < bits_(addr)) BIT_VECTOR_SET_BIT(addr,indx)
 }
 
-boolean BitVector_bit_flip(wordptr addr, N_int index)   /* X=(X+{x})\(X*{x}) */
+boolean BitVector_bit_flip(wordptr addr, N_int indx)    /* X=(X+{x})\(X*{x}) */
 {
     N_word mask;
 
-    if (index < bits_(addr)) return( BIT_VECTOR_FLP_BIT(addr,index,mask) );
-    else                     return( FALSE );
+    if (indx < bits_(addr)) return( BIT_VECTOR_FLP_BIT(addr,indx,mask) );
+    else                    return( FALSE );
 }
 
-boolean BitVector_bit_test(wordptr addr, N_int index)       /* {x} in X ?    */
+boolean BitVector_bit_test(wordptr addr, N_int indx)        /* {x} in X ?    */
 {
-    if (index < bits_(addr)) return( BIT_VECTOR_TST_BIT(addr,index) );
-    else                     return( FALSE );
+    if (indx < bits_(addr)) return( BIT_VECTOR_TST_BIT(addr,indx) );
+    else                    return( FALSE );
 }
 
-void BitVector_Bit_Copy(wordptr addr, N_int index, boolean bit)
+void BitVector_Bit_Copy(wordptr addr, N_int indx, boolean bit)
 {
-    if (index < bits_(addr))
+    if (indx < bits_(addr))
     {
-        if (bit) BIT_VECTOR_SET_BIT(addr,index)
-        else     BIT_VECTOR_CLR_BIT(addr,index)
+        if (bit) BIT_VECTOR_SET_BIT(addr,indx)
+        else     BIT_VECTOR_CLR_BIT(addr,indx)
     }
 }
 

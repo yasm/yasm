@@ -105,14 +105,14 @@ typedef void (*TFun) (int);
 typedef void (*SFun) (void);
 
 /*! Create a test suite */
-Suite *suite_create (char *name);
+Suite *suite_create (const char *name);
 
 /*! Free a test suite
   (For the moment, this also frees all contained test cases) */
 void suite_free (Suite *s);
 
 /*! Create a test case */
-TCase *tcase_create (char *name);
+TCase *tcase_create (const char *name);
 
 /*! Free a test case
   (Note that as it stands, one will normally free the contaning suite) */
@@ -126,7 +126,7 @@ void suite_add_tcase (Suite *s, TCase *tc);
 #define tcase_add_test(tc,tf) tcase_add_test_(tc,tf,"" # tf "")
 /*! Add a test function to a test case
   (function version -- use this when the macro won't work */
-void tcase_add_test_ (TCase *tc, TFun tf, char *fname);
+void tcase_add_test_ (TCase *tc, TFun tf, const char *fname);
 
 /*!
 
@@ -138,7 +138,7 @@ test functions, and so must not exit or signal (e.g., segfault)
 void tcase_set_fixture(TCase *tc, SFun setup, SFun teardown);
 
 /*! Internal function to mark the start of a test function */
-void tcase_fn_start (int msqid, char *fname, char *file, int line);
+void tcase_fn_start (int msqid, const char *fname, const char *file, int line);
 
 /*! Start a unit test with START_TEST(unit_name), end with END_TEST
   One must use braces within a START_/END_ pair to declare new variables */
@@ -156,7 +156,8 @@ static void testname__ (int msqid__)\
   if(fail_unless_(msqid__,result,__FILE__,__LINE__,msg)) return;
   
 /*! Non macro version of #fail_unless, with more complicated interface */
-int fail_unless_ (int msqid, int result, char *file, int line, char *msg);
+int fail_unless_ (int msqid, int result, const char *file, int line,
+		  const char *msg);
 
 /*! Always fail */
 #define fail(msg) fail_unless_(msqid__,0,__FILE__,__LINE__,msg)
@@ -208,7 +209,7 @@ int tr_lno (TestResult *tr);
 /*! File name at which failure occured */
 char *tr_lfile (TestResult *tr);
 /*! Test case in which unit test was run */
-char *tr_tcname (TestResult *tr);
+const char *tr_tcname (TestResult *tr);
 
 /*! Creates an SRunner for the given suite */
 SRunner *srunner_create (Suite *s);

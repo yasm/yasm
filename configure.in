@@ -9,7 +9,7 @@ AM_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE(yasm, 0.0.1)
 
 AC_ARG_ENABLE(dev,
-[  --enable-dev    Enable full development build capability],
+[  --enable-dev        Enable full development build capability],
 [case "${enableval}" in
   yes) dev=true ;;
   no)  dev=false ;;
@@ -17,8 +17,32 @@ AC_ARG_ENABLE(dev,
 esac],[dev=false])
 AM_CONDITIONAL(DEV, test x$dev = xtrue)
 
+AC_ARG_ENABLE(morewarn,
+[  --enable-morewarn   Enable lots of extra GCC warnings],
+[case "${enableval}" in
+  yes) morewarn=true ;;
+  no)  morewarn=false ;;
+  *) AC_MSG_ERROR(bad value ${enableval} for --enable-morewarn) ;;
+esac],[morewarn=false])
+
+AC_ARG_ENABLE(warnerror,
+[  --enable-warnerror  Treat GCC warnings as errors],
+[case "${enableval}" in
+  yes) warnerror=true ;;
+  no)  warnerror=false ;;
+  *) AC_MSG_ERROR(bad value ${enableval} for --enable-warnerror) ;;
+esac],[warnerror=false])
+
+AC_ARG_ENABLE(profiling,
+[  --enable-profiling  Enable profiling (requires GCC)],
+[case "${enableval}" in
+  yes) profiling=true ;;
+  no)  profiling=false ;;
+  *) AC_MSG_ERROR(bad value ${enableval} for --enable-profiling) ;;
+esac],[profiling=false])
+
 AC_ARG_ENABLE(check,
-[  --disable-check Disable building of test suite and make check],
+[  --disable-check     Disable building of test suite and make check],
 [case "${enableval}" in
   yes) check=true ;;
   no)  check=false ;;
@@ -32,8 +56,20 @@ if ${dev}; then
 	DEVFLAGS="-g"
 fi
 
+if ${morewarn}; then
+	MOREWARNFLAGS="-Wbad-function-cast -Wcast-align -Wcast-qual -Wchar-subscripts -Winline -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wredundant-decls -Wshadow -Wstrict-prototypes -Wwrite-strings"
+fi
+
+if ${warnerror}; then
+	WARNERRORFLAGS="-Werror"
+fi
+
+if ${profiling}; then
+	PROFILINGFLAGS="-pg"
+fi
+
 if test "$GCC" = yes; then
-	ANSI_CFLAGS="-ansi -pedantic -Wall $DEVFLAGS"
+	ANSI_CFLAGS="-ansi -pedantic -Wall $MOREWARNFLAGS $WARNERRORFLAGS $DEVFLAGS $PROFILINGFLAGS"
 else
 	ANSI_CFLAGS="$DEVFLAGS"
 fi

@@ -29,7 +29,7 @@
 
 RCSID("$IdPath$");
 
-char *filename = (char *)NULL;
+char *in_filename = (char *)NULL;
 unsigned int line_number = 1;
 unsigned char mode_bits = 0;
 unsigned int asm_options = 0;

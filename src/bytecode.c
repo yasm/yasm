@@ -274,7 +274,7 @@ bytecode_new_common(void)
 
     bc->len = 0;
 
-    bc->filename = strdup(filename);
+    bc->filename = strdup(in_filename);
     bc->lineno = line_number;
 
     bc->offset = 0;
@@ -576,7 +576,7 @@ bytecodes_append(bytecodehead *headp, bytecode *bc)
 }
 
 dataval *
-dataval_new_expr(expr *exp)
+dataval_new_expr(expr *expn)
 {
     dataval *retval = malloc(sizeof(dataval));
 
@@ -584,7 +584,7 @@ dataval_new_expr(expr *exp)
 	Fatal(FATAL_NOMEM);
 
     retval->type = DV_EXPR;
-    retval->data.exp = exp;
+    retval->data.expn = expn;
 
     return retval;
 }
@@ -629,7 +629,7 @@ dataval_print(datavalhead *head)
 		break;
 	    case DV_EXPR:
 		printf(" Expr=");
-		expr_print(cur->data.exp);
+		expr_print(cur->data.expn);
 		printf("\n");
 		break;
 	    case DV_FLOAT:

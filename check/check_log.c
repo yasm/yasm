@@ -52,13 +52,13 @@ char *srunner_log_fname (SRunner *sr)
   return sr->log_fname;
 }
 
-void srunner_register_lfun (SRunner *sr, FILE *lfile, int close,
+void srunner_register_lfun (SRunner *sr, FILE *lfile, int doclose,
 			    LFun lfun, enum print_verbosity printmode)
 {
   Log *l = emalloc (sizeof(Log));
   l->lfile = lfile;
   l->lfun = lfun;
-  l->close = close;
+  l->close = doclose;
   l->mode = printmode;
   list_add_end (sr->loglst, l);
   return;

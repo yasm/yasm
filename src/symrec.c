@@ -71,7 +71,7 @@ symrec_get_or_new(const char *name)
     if (!rec->name)
 	Fatal(FATAL_NOMEM);
     rec->type = SYM_UNKNOWN;
-    rec->filename = strdup(filename);
+    rec->filename = strdup(in_filename);
     rec->line = line_number;
     rec->status = SYM_NOSTATUS;
     rec->visibility = SYM_LOCAL;

@@ -33,16 +33,16 @@ enum {
 
 typedef struct TF {
   TFun fn;
-  char *name;
+  const char *name;
 } TF;
 
 struct Suite {
-  char *name;
+  const char *name;
   List *tclst; /* List of test cases */
 };
 
 struct TCase {
-  char *name;
+  const char *name;
   List *tflst; /* list of test functions */
   SFun setup;
   SFun teardown;
@@ -58,8 +58,8 @@ struct TestResult {
   int rtype;     /* Type of result */
   char *file;    /* File where the test occured */
   int line;      /* Line number where the test occurred */
-  char *tcname;  /* Test case that generated the result */
-  char *tfname;  /* Test function that generated the result */
+  const char *tcname;  /* Test case that generated the result */
+  const char *tfname;  /* Test function that generated the result */
   char *msg;     /* Failure message */
 };
 

@@ -32,7 +32,7 @@
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
-void eprintf (char *fmt, ...)
+void eprintf (const char *fmt, ...)
 {
   va_list args;
   fflush(stdout);

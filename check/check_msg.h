@@ -37,8 +37,8 @@ typedef struct FailureMsg {
 int create_msq (void);
 void delete_msq (int msqid);
 
-void send_failure_msg (int msqid, char *msg);
-void send_last_loc_msg (int msqid, char * file, int line);
+void send_failure_msg (int msqid, const char *msg);
+void send_last_loc_msg (int msqid, const char * file, int line);
 
 /* malloc'd return value which caller is responsible for
    freeing in each of the next two functions */

@@ -66,9 +66,10 @@ int nofork_exit_status;
 
 static void srunner_run_tcase (SRunner *sr, TCase *tc);
 static void srunner_add_failure (SRunner *sr, TestResult *tf);
-static TestResult *tfun_run (int msqid, char *tcname, TF *tf);
-static TestResult *receive_result_info (int msqid, int status, char *tcname,
-					char *tfname);
+static TestResult *tfun_run (int msqid, const char *tcname, TF *tf);
+static TestResult *receive_result_info (int msqid, int status,
+					const char *tcname,
+					const char *tfname);
 static void receive_last_loc_info (int msqid, TestResult *tr);
 static void receive_failure_info (int msqid, int status, TestResult *tr);
 static List *srunner_resultlst (SRunner *sr);
@@ -113,8 +114,7 @@ void srunner_free (SRunner *sr)
   for (list_front(l); !list_at_end(l); list_advance(l)) {
     tr = list_val(l);
     free(tr->file);
-    if (tr->rtype == CRFAILURE || tr->rtype == CRERROR)
-      free(tr->msg);
+    free(tr->msg);
     free(tr);
   }
   list_free (sr->resultlst);
@@ -222,9 +222,8 @@ static void receive_failure_info (int msqid, int status, TestResult *tr)
     
     if (WEXITSTATUS(status) == 0) {
       tr->rtype = CRPASS;
-      /* TODO: It would be cleaner to strdup this &
-	 not special case the free...*/
-      tr->msg = "Test passed";
+      tr->msg = emalloc(strlen("Test passed") + 1);
+      strcpy (tr->msg, "Test passed");
     }
     else {
       
@@ -246,7 +245,8 @@ static void receive_failure_info (int msqid, int status, TestResult *tr)
 #else
   if (status == 0) {
     tr->rtype = CRPASS;
-    tr->msg = "Test passed";
+    tr->msg = emalloc(strlen("Test passed") + 1);
+    strcpy (tr->msg, "Test passed");
   }
   else {
     fmsg = receive_failure_msg (msqid);
@@ -264,8 +264,8 @@ static void receive_failure_info (int msqid, int status, TestResult *tr)
 #endif
 }
 
-static TestResult *receive_result_info (int msqid, int status, char *tcname,
-					char *tfname)
+static TestResult *receive_result_info (int msqid, int status,
+					const char *tcname, const char *tfname)
 {
   TestResult *tr = emalloc (sizeof(TestResult));
 
@@ -276,7 +276,7 @@ static TestResult *receive_result_info (int msqid, int status, char *tcname,
   return tr;
 }
 
-static TestResult *tfun_run (int msqid, char *tcname, TF *tfun)
+static TestResult *tfun_run (int msqid, const char *tcname, TF *tfun)
 {
 #ifdef USE_FORKWAITMSG
   pid_t pid;
@@ -370,7 +370,7 @@ int tr_rtype (TestResult *tr)
   return tr->rtype;
 }
 
-char *tr_tcname (TestResult *tr)
+const char *tr_tcname (TestResult *tr)
 {
   return tr->tcname;
 }

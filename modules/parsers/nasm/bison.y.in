@@ -52,7 +52,7 @@ RCSID("$IdPath$");
 void init_table(void);
 extern int nasm_parser_lex(void);
 static unsigned long ConvertCharConstToInt(char *);
-void nasm_parser_error(char *);
+void nasm_parser_error(const char *);
 
 extern objfmt *nasm_parser_objfmt;
 extern sectionhead nasm_parser_sections;
@@ -471,7 +471,7 @@ ConvertCharConstToInt(char *cc)
 }
 
 void
-nasm_parser_error(char *s)
+nasm_parser_error(const char *s)
 {
     ParserError(s);
 }

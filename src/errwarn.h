@@ -32,27 +32,27 @@ typedef enum {
 
 char *conv_unprint(char ch);
 
-void ParserError(char *);
+void ParserError(const char *);
 
-void InternalError(unsigned int line, char *file, char *message);
+void InternalError(unsigned int line, const char *file, const char *message);
 
 void Fatal(fatal_num);
-void Error(char *, ...);
-void Warning(char *, ...);
+void Error(const char *, ...);
+void Warning(const char *, ...);
 
 /* Use Error() and Warning() instead of ErrorAt() and WarningAt() when being
  * called in line order from a parser.  The *At() functions are much slower,
  * at least in the current implementation.
  */
-void ErrorAt(char *filename, unsigned long line, char *, ...);
-void WarningAt(char *filename, unsigned long line, char *, ...);
+void ErrorAt(const char *filename, unsigned long line, const char *, ...);
+void WarningAt(const char *filename, unsigned long line, const char *, ...);
 
 /* These two functions immediately output the error or warning, with no file
  * or line information.  They should be used for errors and warnings outside
  * the parser stage (at program startup, for instance).
  */
-void ErrorNow(char *, ...);
-void WarningNow(char *, ...);
+void ErrorNow(const char *, ...);
+void WarningNow(const char *, ...);
 
 /* Returns total number of errors to this point in assembly. */
 unsigned int OutputAllErrorWarning(void);

@@ -62,7 +62,6 @@ static int files_open = 0;
 static FILE *in;
 
 /* Forward declarations: cmd line parser handlers */
-int not_an_option_handler(char *param);
 int opt_option_handler(char *cmd, char *param, int extra);
 int opt_format_handler(char *cmd, char *param, int extra);
 /* Fake handlers: remove them */
@@ -118,7 +117,7 @@ main(int argc, char *argv[])
     if (!files_open)
     {
 	in = stdin;
-	filename = strdup("<STDIN>");
+	in_filename = strdup("<STDIN>");
     }
 
     /* Get initial BITS setting from object format */
@@ -129,8 +128,8 @@ main(int argc, char *argv[])
     if (OutputAllErrorWarning() > 0)
 	return EXIT_FAILURE;
 
-    if (filename)
-	free(filename);
+    if (in_filename)
+	free(in_filename);
     return EXIT_SUCCESS;
 }
 
@@ -142,7 +141,7 @@ not_an_option_handler(char *param)
 {
     if (files_open > 0) {
 	WarningNow("can open only one input file, only latest file will be processed");
-	free(filename);
+	free(in_filename);
 	fclose(in);
     }
 
@@ -151,7 +150,7 @@ not_an_option_handler(char *param)
 	ErrorNow(_("could not open file `%s'"), param);
 	return 1;
     }
-    filename = strdup(param);
+    in_filename = strdup(param);
 
     files_open++;
     return 0;
