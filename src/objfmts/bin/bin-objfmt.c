@@ -27,6 +27,7 @@
 #include "globals.h"
 #include "errwarn.h"
 #include "intnum.h"
+#include "floatnum.h"
 #include "expr.h"
 #include "symrec.h"
 
@@ -185,6 +186,7 @@ bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
     /*@null@*/ bin_objfmt_output_info *info = (bin_objfmt_output_info *)d;
     bin_objfmt_expr_data data;
     /*@dependent@*/ /*@null@*/ const intnum *num;
+    /*@dependent@*/ /*@null@*/ const floatnum *flt;
     unsigned long val;
 
     assert(info != NULL);
@@ -205,6 +207,25 @@ bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
 	data.withstart = 1;
     }
     expr_traverse_leaves_in(*ep, &data, bin_objfmt_expr_traverse_callback);
+
+    /* Handle floating point expressions */
+    flt = expr_get_floatnum(ep);
+    if (flt) {
+	int fltret;
+	fltret = floatnum_get_sized(flt, *bufp, valsize);
+	if (fltret < 0) {
+	    ErrorAt((*ep)->line, _("underflow in floating point expression"));
+	    return 1;
+	}
+	if (fltret > 0) {
+	    ErrorAt((*ep)->line, _("overflow in floating point expression"));
+	    return 1;
+	}
+	*bufp += valsize;
+	return 0;
+    }
+
+    /* Handle integer expressions */
     num = expr_get_intnum(ep);
     if (!num) {
 	ErrorAt((*ep)->line,
