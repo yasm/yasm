@@ -2921,7 +2921,7 @@ yasm_x86__parse_check_id(yasm_arch *arch, unsigned long data[4],
 	}
 	L F S { RET_INSN(lfgss, 0xB4, CPU_386); }
 	L G S { RET_INSN(lfgss, 0xB5, CPU_386); }
-	L S S { RET_INSN(lfgss, 0xB6, CPU_386); }
+	L S S { RET_INSN(lfgss, 0xB2, CPU_386); }
 	/* Flags register instructions */
 	C L C { RET_INSN(onebyte, 0x00F8, CPU_Any); }
 	C L D { RET_INSN(onebyte, 0x00FC, CPU_Any); }
