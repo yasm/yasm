@@ -100,14 +100,21 @@ AC_EXEEXT
 #
 
 # dmalloc library (optional)
-AC_CHECK_LIB(dmalloc, main)
+if ${dmalloc}; then
+	AC_CHECK_LIB(dmalloc, dmalloc_shutdown)
+fi
 
 #
 # Checks for header files.
 #
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([alloca.h dmalloc.h limits.h sys/cdefs.h sys/ipc.h sys/msg.h sys/param.h sys/types.h sys/queue.h unistd.h])
+AC_CHECK_HEADERS([alloca.h limits.h sys/cdefs.h sys/ipc.h sys/msg.h sys/param.h sys/types.h sys/queue.h unistd.h])
+
+# dmalloc library (optional)
+if ${dmalloc}; then
+    	AC_CHECK_HEADERS(dmalloc.h)
+fi
 
 # REQUIRE standard C headers
 if test "$ac_cv_header_stdc" != yes; then
@@ -155,7 +162,7 @@ AC_SUBST([ARCH])
 DMALLOCFLAGS=
 if ${dmalloc}; then
 	if test "$ac_cv_header_dmalloc_h" != yes ||
-	   test "$ac_cv_lib_dmalloc_main" != yes; then
+	   test "$ac_cv_lib_dmalloc_dmalloc_shutdown" != yes; then
 		AC_MSG_ERROR([dmalloc required for --enable-dmalloc.])
 	else
 	    	AC_DEFINE([DMALLOC], 1, [Enable dmalloc library debugging.])
