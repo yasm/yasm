@@ -271,27 +271,6 @@ else
 fi
 AC_SUBST(ANSI_CFLAGS)
 
-# Check for target-specific bogus sys/queue.h
-AH_TEMPLATE([HAVE_BOGUS_SYS_QUEUE_H],
-	    [Workaround for bad <sys/queue.h> implementations.])
-case "$host" in
-*-*-sunos4*)
-	AC_DEFINE([HAVE_BOGUS_SYS_QUEUE_H])
-	;;
-*-sni-sysv*)
-	AC_DEFINE([HAVE_BOGUS_SYS_QUEUE_H])
-	;;
-*-*-sco3.2v4*)
-	AC_DEFINE([HAVE_BOGUS_SYS_QUEUE_H])
-	;;
-*-*-sco3.2v5*)
-	AC_DEFINE([HAVE_BOGUS_SYS_QUEUE_H])
-	;;
-*-*-linux*)
-	AC_DEFINE([HAVE_BOGUS_SYS_QUEUE_H])
-	;;
-esac
-
 # Substitutions for libltdl
 AC_SUBST(INCLTDL)
 AC_SUBST(LIBLTDL)

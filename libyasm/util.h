@@ -97,11 +97,7 @@ int strncasecmp(const char *s1, const char *s2, size_t n);
 # define toascii(c) ((c) & 0x7F)
 #endif
 
-#if defined(HAVE_SYS_QUEUE_H) && !defined(HAVE_BOGUS_SYS_QUEUE_H)
-# include <sys/queue.h>
-#else
-# include "compat-queue.h"
-#endif
+#include "compat-queue.h"
 
 #ifdef HAVE_SYS_CDEFS_H
 # include <sys/cdefs.h>
