@@ -30,6 +30,9 @@ BUILT_SOURCES =
 CLEANFILES = configure.lineno
 EXTRA_DIST = config/config.rpath
 
+# automake doesn't distribute mkinstalldirs?
+EXTRA_DIST += config/mkinstalldirs
+
 EXTRA_DIST += check/Makefile.inc
 EXTRA_DIST += tools/Makefile.inc
 EXTRA_DIST += libyasm/Makefile.inc
