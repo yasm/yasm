@@ -162,7 +162,8 @@ expr_xform_bc_dist(/*@returned@*/ /*@only@*/ expr *e,
 
     for (i=0; i<e->numterms; i++) {
 	/* Transform symrecs that reference absolute sections into
-	 * absolute start expr + intnum(dist). */
+	 * absolute start expr + intnum(dist).
+	 */
 	if (e->terms[i].type == EXPR_SYM &&
 	    symrec_get_label(e->terms[i].data.sym, &sect, &precbc) &&
 	    section_is_absolute(sect) &&
