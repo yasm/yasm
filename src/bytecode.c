@@ -649,7 +649,7 @@ bc_tobytes(bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 		InternalError(_("Unknown bytecode type"));
     }
 
-    if (!error && ((destbuf - origbuf) != datasize))
+    if (!error && ((unsigned long)(destbuf - origbuf) != datasize))
 	InternalError(_("written length does not match optimized length"));
     return mybuf;
 }
