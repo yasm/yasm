@@ -4,7 +4,7 @@ lib_LTLIBRARIES += yasm-coff.la
 
 yasm_coff_la_SOURCES = \
 	modules/objfmts/coff/coff-objfmt.c
-yasm_coff_la_LDFLAGS = -module -avoid-version
+yasm_coff_la_LDFLAGS = -module -avoid-version -no-undefined
 yasm_coff_la_LIBADD = libyasm.la
 YASM_MODULES += -dlopen yasm-coff.la
 

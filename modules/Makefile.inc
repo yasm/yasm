@@ -11,7 +11,7 @@ EXTRA_DIST += \
 
 lib_LTLIBRARIES += yasm-nasm.la
 yasm_nasm_la_SOURCES =
-yasm_nasm_la_LDFLAGS = -module -avoid-version
+yasm_nasm_la_LDFLAGS = -module -avoid-version -no-undefined
 yasm_nasm_la_LIBADD = libyasm.la
 YASM_MODULES += -dlopen yasm-nasm.la
 

@@ -8,7 +8,7 @@ yasm_x86_la_SOURCES = \
 	modules/arch/x86/x86bc.c	\
 	modules/arch/x86/x86expr.c	\
 	x86id.c
-yasm_x86_la_LDFLAGS = -module -avoid-version
+yasm_x86_la_LDFLAGS = -module -avoid-version -no-undefined
 yasm_x86_la_LIBADD = libyasm.la
 YASM_MODULES += -dlopen yasm-x86.la
 
