@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.26 2001/07/05 06:24:09 peter Exp $
+; $Id: instrs.dat,v 1.27 2001/07/05 07:00:01 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -61,13 +61,17 @@
 ; Instruction Groupings (to shorten parser code).
 ;  The $0.1, $0.2, and $0.3 will get replaced with the parameters given for
 ;   the instruction using the group during lexing & parsing.  These parameters
-;   may be in the opcode, effaddr, or immediate.
+;   may be in the opcode, opsize, effaddr, or immediate.
+;  When opsize is a parameter, its usage in instructions that use the group
+;   looks slightly different than normal, because the parameters are
+;   specified in hexidecimal while the normal opsize usage is in decimal.
+;   Thus 10 and 20 are used instead of 16 and 32 respectively.
 ;  The first CPU grouping for the instruction is OR'ed with the CPU value in
 ;   the group CPU fields with @0 in their list.  This allows one grouping to
 ;   be used for instructions with different CPU values.
 ;  Restrictions on groupings:
-;   - $0.? may not appear in the operand, the opsize, the first part of the
-;     effaddr, the second part of the imm, or the CPU fields.
+;   - $0.? may not appear in the operand, the first part of the effaddr, the
+;     second part of the imm, or the CPU fields.
 ;   - @0, @1 may only appear in the CPU field.
 ;  Restrictions on instructions based on groupings:
 ;   - no other operand combinations are allowed (eg, if an instruction uses a
@@ -94,9 +98,7 @@
 ; Groupings used throughout
 ;
 ;  One byte opcode instructions with no operands:
-!onebyte	nil		nil 	$0.1		nil		nil	@0
-!onebyte16	nil		16	$0.1		nil		nil	@0
-!onebyte32	nil		32	$0.1		nil		nil	386
+!onebyte	nil		$0.1	$0.2		nil		nil	@0
 ;  Two byte opcode instructions with no operands:
 !twobyte	nil		nil	$0.1,$0.2	nil		nil	@0
 ;  Three byte opcode instructions with no operands:
@@ -174,9 +176,9 @@ push	REG_DS			nil	1E		nil	nil	8086
 push	REG_ES			nil	06		nil	nil	8086
 push	REG_FS			nil	0F,A0		nil	nil	386
 push	REG_GS			nil	0F,A8		nil	nil	386
-pusha!onebyte		60		186
-pushad!onebyte32	60
-pushaw!onebyte16	60		186
+pusha!onebyte		nil,60		186
+pushad!onebyte		20,60		386
+pushaw!onebyte		10,60		186
 ;
 ; Pop instructions
 ;
@@ -189,9 +191,9 @@ pop	REG_ES			nil	07		nil	nil	8086
 pop	REG_SS			nil	17		nil	nil	8086
 pop	REG_FS			nil	0F,A1		nil	nil	386
 pop	REG_GS			nil	0F,A9		nil	nil	386
-popa!onebyte		61		186
-popad!onebyte32		61
-popaw!onebyte16		61		186
+popa!onebyte		nil,61		186
+popad!onebyte		20,61		386
+popaw!onebyte		10,61		186
 ;
 ; Exchange instructions
 ;
@@ -250,22 +252,22 @@ lss	reg32,mem		32	0F,B2		$2,$1	nil	386
 ;
 ; Flags register instructions
 ;
-clc!onebyte		F8		8086
-cld!onebyte		FC		8086
-cli!onebyte		FA		8086
-clts!twobyte		0F,06		286,PRIV
-cmc!onebyte		F5		8086
-lahf!onebyte		9F		8086
-sahf!onebyte		9E		8086
-pushf!onebyte		9C		8086
-pushfd!onebyte32	9C
-pushfw!onebyte16	9C		8086
-popf!onebyte		9D		8086
-popfd!onebyte32		9D
-popfw!onebyte16		9D		8086
-stc!onebyte		F9		8086
-std!onebyte		FD		8086
-sti!onebyte		FB		8086
+clc!onebyte		nil,F8		8086
+cld!onebyte		nil,FC		8086
+cli!onebyte		nil,FA		8086
+clts!twobyte		nil,0F,06	286,PRIV
+cmc!onebyte		nil,F5		8086
+lahf!onebyte		nil,9F		8086
+sahf!onebyte		nil,9E		8086
+pushf!onebyte		nil,9C		8086
+pushfd!onebyte		20,9C		386
+pushfw!onebyte		10,9C		8086
+popf!onebyte		nil,9D		8086
+popfd!onebyte		20,9D		386
+popfw!onebyte		10,9D		8086
+stc!onebyte		nil,F9		8086
+std!onebyte		nil,FD		8086
+sti!onebyte		nil,FB		8086
 ;
 ; Arithmetic
 ;
@@ -348,10 +350,10 @@ xor!arith		30,6
 adc!arith		10,2
 neg!groupf6		3
 not!groupf6		2
-aaa!onebyte		37		8086
-aas!onebyte		3F		8086
-daa!onebyte		27		8086
-das!onebyte		2F		8086
+aaa!onebyte		nil,37		8086
+aas!onebyte		nil,3F		8086
+daa!onebyte		nil,27		8086
+das!onebyte		nil,2F		8086
 aad	nil			nil	D5,0A		nil	nil	8086
 aad	imm8			nil	D5		nil	$1,8	8086
 aam	nil			nil	D4,0A		nil	nil	8086
@@ -359,10 +361,10 @@ aam	imm8			nil	D4		nil	$1,8	8086
 ;
 ; Conversion instructions
 ;
-cbw!onebyte16		98		8086
-cwde!onebyte32		98
-cwd!onebyte16		99		8086
-cdq!onebyte32		99
+cbw!onebyte		10,98		8086
+cwde!onebyte		20,98		386
+cwd!onebyte		10,99		8086
+cdq!onebyte		20,99		386
 ;
 ; Multiplication and division
 ;
@@ -427,13 +429,13 @@ shrd!shlrd		AC
 ;
 ; call
 ; jmp
-ret!onebyte		C3		8086
+ret!onebyte		nil,C3		8086
 retn	nil			nil	C3		nil	nil	8086
 retf	nil			nil	CB		nil	nil	8086
 retn	imm16			nil	C2		nil	$1,16	8086
 retf	imm16			nil	CA		nil	$1,16	8086
 enter	imm16,imm8		nil	C8		$1i,16	$2,8	186
-leave!onebyte		C9		186
+leave!onebyte		nil,C9		186
 ;
 ; Conditional jumps
 ;
@@ -460,30 +462,30 @@ leave!onebyte		C9		186
 ;
 ; String instructions
 ;
-;  NOTE: cmpsd,movsd can't go to !onebyte32 group because of other variations
-cmpsb!onebyte		A6		8086
-cmpsw!onebyte16		A7		8086
+;  NOTE: cmpsd,movsd can't go to !onebyte group because of other variations
+cmpsb!onebyte		nil,A6		8086
+cmpsw!onebyte		10,A7		8086
 cmpsd	nil			32	A7		nil	nil	386
-insb!onebyte		6C		8086
-insw!onebyte16		6D		8086
-insd!onebyte32		6D
-outsb!onebyte		6E		8086
-outsw!onebyte16		6F		8086
-outsd!onebyte32		6F
-lodsb!onebyte		AC		8086
-lodsw!onebyte16		AD		8086
-lodsd!onebyte32		AD
-movsb!onebyte		A4		8086
-movsw!onebyte16		A5
+insb!onebyte		nil,6C		8086
+insw!onebyte		10,6D		8086
+insd!onebyte		20,6D		386
+outsb!onebyte		nil,6E		8086
+outsw!onebyte		10,6F		8086
+outsd!onebyte		20,6F		386
+lodsb!onebyte		nil,AC		8086
+lodsw!onebyte		10,AD		8086
+lodsd!onebyte		20,AD		386
+movsb!onebyte		nil,A4		8086
+movsw!onebyte		10,A5		8086
 movsd	nil			32	A5		nil	nil	386
-scasb!onebyte		AE		8086
-scasw!onebyte16		AF		8086
-scasd!onebyte32		AF
-stosb!onebyte		AA		8086
-stosw!onebyte16		AB		8086
-stosd!onebyte32		AB
-xlat!onebyte		D7		8086
-xlatb!onebyte		D7		8086
+scasb!onebyte		nil,AE		8086
+scasw!onebyte		10,AF		8086
+scasd!onebyte		20,AF		386
+stosb!onebyte		nil,AA		8086
+stosw!onebyte		10,AB		8086
+stosd!onebyte		20,AB		386
+xlat!onebyte		nil,D7		8086
+xlatb!onebyte		nil,D7		8086
 ;
 ; Bit manipulation
 ;
@@ -513,17 +515,17 @@ bts!bittest		AB,5
 ; Interrupts and operating system instructions
 ;
 int	imm8			nil	CD		nil	$1,8	8086
-int3!onebyte		CC		8086
-int03!onebyte		CC		8086
-into!onebyte		CE		8086
-iret!onebyte		CF		8086
-iretw!onebyte16		CF		8086
-iretd!onebyte32		CF
+int3!onebyte		nil,CC		8086
+int03!onebyte		nil,CC		8086
+into!onebyte		nil,CE		8086
+iret!onebyte		nil,CF		8086
+iretw!onebyte		10,CF		8086
+iretd!onebyte		20,CF		386
 rsm!twobyte		0F,AA		P5,SMM
 bound	reg16,mem16		16	62		$2,$1	nil	186
 bound	reg32,mem32		32	62		$2,$1	nil	386
-hlt!onebyte		F4		8086,PRIV
-nop!onebyte		90		8086
+hlt!onebyte		nil,F4		8086,PRIV
+nop!onebyte		nil,90		8086
 ;
 ; Protection control
 ;
@@ -686,11 +688,11 @@ frstor!onebytemem	DD,4		8086,FPU
 ffree	fpureg			nil	DD,C0+$1	nil	nil	8086,FPU
 ffreep	fpureg			nil	DF,C0+$1	nil	nil	P6,FPU,UNDOC
 fnop!twobyte		D9,D0		8086,FPU
-fwait!onebyte		9B		8086,FPU
+fwait!onebyte		nil,9B		8086,FPU
 ;
 ; Prefixes (should the others be here too? should wait be a prefix?)
 ;
-wait!onebyte		9B		8086
+wait!onebyte		nil,9B		8086
 ;
 ; 486 extensions
 ;
@@ -1117,8 +1119,8 @@ ibts	mem32x,reg32		32	0F,A7		$1,$2	nil	386,UNDOC,OBS
 loadall!twobyte		0F,07		386,UNDOC
 loadall286!twobyte	0F,05		286,UNDOC
 ;pop	REG_CS			nil	0F		nil	nil	8086,UNDOC,OBS
-salc!onebyte		D6		8086,UNDOC
-smi!onebyte		F1		386,UNDOC
+salc!onebyte		nil,D6		8086,UNDOC
+smi!onebyte		nil,F1		386,UNDOC
 ; opcode arbitrarily picked for next 3 (could be 12/13 instead of 10/11).
 umov	reg8,reg8		nil	0F,10		$1r,$2	nil	386,UNDOC
 umov	reg16,reg16		16	0F,11		$1r,$2	nil	386,UNDOC

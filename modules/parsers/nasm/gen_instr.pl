@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.12 2001/07/05 05:41:45 peter Exp $
+# $Id: gen_instr.pl,v 1.13 2001/07/05 07:00:01 peter Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -161,7 +161,7 @@ sub read_instructions ($)
 	    die "Invalid Operands\n"
 		    if $op !~ m/^(?:TO\s)?nil|(?:$valid_regs)(?:,(?:$valid_regs)){0,2}$/oi;
 	    die "Invalid Operation Size\n"
-		    if $size !~ m/^nil|16|32|128$/oi;
+		    if $size !~ m/^nil|16|32|\$0\.\d$/oi;
 	    die "Invalid Opcode\n"
 		    if $opcode !~ m/(?:$valid_opcodes)(?:,$valid_opcodes)?(\+\$\d)?/oi;
 	    die "Invalid Effective Address\n"
@@ -273,6 +273,7 @@ sub output_lex ($@)
 			    # at 1 not 0.  *glares*
 			    for (my $i=1; $i <= @groupdata; ++$i)
 			    {
+				$groupdata[$i-1] =~ s/nil/0/;
 				$groupdata[$i-1] = " yylval.groupdata.d$i = 0x$groupdata[$i-1];";
 			    }
 			    $groupdata[-1] .= "\n\t     ";
