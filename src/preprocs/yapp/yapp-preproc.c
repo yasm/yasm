@@ -23,14 +23,13 @@
 /*@unused@*/ RCSID("$IdPath$");
 
 #include "errwarn.h"
-
-#include "objfmt.h"
 #include "preproc.h"
-
 #include "hamt.h"
 
 #include "src/preprocs/yapp/yapp-preproc.h"
 #include "src/preprocs/yapp/yapp-token.h"
+
+#define ydebug(x) /* printf x */
 
 static int is_interactive;
 static int saved_length;
@@ -113,7 +112,7 @@ yapp_define_insert (char *name, int argc, int fillargs)
     ym->args = argc;
     ym->fillargs = fillargs;
 
-    /*printf ("]]Inserting %s:%d:%d\n", name, argc, fillargs);*/
+    /*ydebug (("]]Inserting %s:%d:%d\n", name, argc, fillargs));*/
 
     memcpy(&ym->macro_head, &macro_head, sizeof(macro_head));
     memcpy(&ym->param_head, &param_head, sizeof(param_head));
@@ -295,6 +294,7 @@ append_token(int token)
 	    break;
 
 	case '+': case '-': case '*': case '/': case '%': case ',': case '\n':
+	case '[': case ']':
 	    src->token.str = xmalloc(2);
 	    src->token.str[0] = (char)token;
 	    src->token.str[1] = '\0';
@@ -326,6 +326,7 @@ append_through_return(void)
     int token;
     do {
 	token = yapp_preproc_lex();
+	ydebug(("YAPP: ATR: %c %s\n", token, yapp_preproc_lval.str_val));
 	if (token == 0)
 	    return 0;
 	append_token(token);
@@ -422,11 +423,13 @@ yapp_preproc_input(char *buf, size_t max_size)
 		    char *s;
 		    default:
 			append_token(token);
-			if (append_through_return()==0) state=YAPP_STATE_EOF;
+			/*if (append_through_return()==0) state=YAPP_STATE_EOF;*/
+			ydebug(("YAPP: default: %c %s\n", token, yapp_preproc_lval.str_val));
 			/*Error(_("YAPP got an unhandled token."));*/
 			break;
 
 		    case IDENT:
+			ydebug(("YAPP: ident: %s\n", yapp_preproc_lval.str_val));
 			if (yapp_defined(yapp_preproc_lval.str_val)) {
 			    expand_macro(yapp_macro_get(yapp_preproc_lval.str_val));
 			}
@@ -449,7 +452,9 @@ yapp_preproc_input(char *buf, size_t max_size)
 			break;
 
 		    case DEFINE:
+			ydebug(("YAPP: define: "));
 			token = yapp_get_ident("define");
+			    ydebug((" %s\n", yapp_preproc_lval.str_val));
 			s = xstrdup(yapp_preproc_lval.str_val);
 
 			/* three cases: newline or stuff or left paren */
