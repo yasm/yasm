@@ -1,18 +1,27 @@
 # List of source files containing translatable strings.
+# To update, try "find . -name \*.c | xargs grep -c _\( | grep -v :0 | sort"
 # Copyright (c) 2001  Peter Johnson
 #
 # $IdPath$
 
-src/errwarn.c
+nasm-bison.c
+nasm-token.c
+yapp-token.c
+src/bitvect.c
 src/bytecode.c
+src/errwarn.c
 src/expr.c
 src/file.c
 src/floatnum.c
+src/hamt.c
 src/intnum.c
 src/main.c
 src/options.c
 src/symrec.c
-nasm-bison.c
-nasm-token.c
 src/arch/x86/x86bc.c
+src/arch/x86/x86expr.c
+src/objfmts/dbg/dbg-objfmt.c
+src/objfmts/bin/bin-objfmt.c
+src/optimizers/basic/basic-optimizer.c
 src/preprocs/raw/raw-preproc.c
+src/preprocs/yapp/yapp-preproc.c
