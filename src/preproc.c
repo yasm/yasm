@@ -34,6 +34,7 @@
 /*@-nullassign@*/
 static preproc *preprocs[] = {
     &raw_preproc,
+    &yapp_preproc,
     NULL
 };
 /*@=nullassign@*/

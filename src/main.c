@@ -189,7 +189,7 @@ main(int argc, char *argv[])
 
 	/* If not already specified, default to raw preproc. */
 	if (!cur_preproc)
-	    cur_preproc = find_preproc("raw");
+	    cur_preproc = find_preproc("yapp");
 	assert(cur_preproc != NULL);
 
 	/* Pre-process until done */

@@ -48,6 +48,7 @@ struct preproc {
 
 /* Available preprocessors */
 extern preproc raw_preproc;
+extern preproc yapp_preproc;
 
 /* Finds a preproc based on its keyword.  Returns NULL if no match was found.
  */
