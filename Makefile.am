@@ -41,7 +41,18 @@ EXTRA_DIST += \
 	splint.sh \
 	Mkfiles/Makefile.flat \
 	Mkfiles/Makefile.dj Mkfiles/dj/config.h \
-	Mkfiles/Makefile.vc Mkfiles/vc/config.h
+	Mkfiles/vc/yasm-module.c \
+	Mkfiles/vc/yasm.dep \
+	Mkfiles/vc/yasm.dsp \
+	Mkfiles/vc/yasm.dsw \
+	Mkfiles/vc/yasm.mak \
+	Mkfiles/vc/libyasm/config.h \
+	Mkfiles/vc/libyasm/libyasm.dep \
+	Mkfiles/vc/libyasm/libyasm.dsp \
+	Mkfiles/vc/libyasm/libyasm.mak \
+	Mkfiles/vc/modules/modules.dep \
+	Mkfiles/vc/modules/modules.dsp \
+	Mkfiles/vc/modules/modules.mak
 
 # Until this gets fixed in automake
 DISTCLEANFILES = libyasm/stamp-h libyasm/stamp-h[0-9]*
