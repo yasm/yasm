@@ -82,7 +82,7 @@ static unsigned long cpu_enabled = ~CPU_Any;
 #define MOD_SpAdd   (1UL<<5)	/* Parameter adds to "spare" value */
 #define MOD_OpSizeR (1UL<<6)	/* Parameter replaces opersize */
 #define MOD_Imm8    (1UL<<7)	/* Parameter is included as immediate byte */
-#define MOD_AdSizeR (1UL<<8)	/* Parameter replaces addrsize (jmprel only) */
+#define MOD_AdSizeR (1UL<<8)	/* Parameter replaces addrsize (jmp only) */
 
 /* Modifiers that aren't actually used as modifiers.  Rather, if set, bits
  * 20-27 in the modifier are used as an index into an array.
@@ -153,8 +153,8 @@ static unsigned long cpu_enabled = ~CPU_Any;
  *             6 = operand data is added to opcode byte 1
  *             7 = operand data goes into BOTH ea and spare
  *                 [special case for imul opcode]
- *             8 = relative jump (outputs a jmprel instead of normal insn)
- *             9 = operand size goes into address size (jmprel only)
+ *             8 = relative jump (outputs a jmp instead of normal insn)
+ *             9 = operand size goes into address size (jmp only)
  * The below describes postponed actions: actions which can't be completed at
  * parse-time due to things like EQU and complex expressions.  For these, some
  * additional data (stored in the second byte of the opcode with a one-byte
@@ -164,6 +164,7 @@ static unsigned long cpu_enabled = ~CPU_Any;
  *             0 = none
  *             1 = shift operation with a ,1 short form (instead of imm8).
  *             2 = large imm16/32 that can become a sign-extended imm8.
+ *             3 = can be far jump
  */
 #define OPT_Imm		0x0
 #define OPT_Reg		0x1
@@ -224,6 +225,7 @@ static unsigned long cpu_enabled = ~CPU_Any;
 #define OPAP_None	(0UL<<16)
 #define OPAP_ShiftOp	(1UL<<16)
 #define OPAP_SImm8Avail	(2UL<<16)
+#define OPAP_JmpFar	(3UL<<16)
 #define OPAP_MASK	(3UL<<16)
 
 typedef struct x86_insn_info {
@@ -855,12 +857,12 @@ static const x86_insn_info call_insn[] = {
     { CPU_Any, 0, 16, 0, {0, 0, 0}, 0, 1, {OPT_Imm|OPS_16|OPA_JmpRel, 0, 0} },
     { CPU_386, 0, 32, 0, {0, 0, 0}, 0, 1, {OPT_Imm|OPS_32|OPA_JmpRel, 0, 0} },
 
-    { CPU_Any, 0, 16, 1, {0xE8, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_16|OPTM_Near|OPA_JmpRel, 0, 0} },
-    { CPU_386, 0, 32, 1, {0xE8, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel, 0, 0} },
-    { CPU_Any, 0, 0, 1, {0xE8, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_Any|OPTM_Near|OPA_JmpRel, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0xE8, 0x9A, 0}, 0, 1,
+      {OPT_Imm|OPS_16|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xE8, 0x9A, 0}, 0, 1,
+      {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0xE8, 0x9A, 0}, 0, 1,
+      {OPT_Imm|OPS_Any|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
 
     { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 2, 1, {OPT_RM|OPS_16|OPA_EA, 0, 0} },
     { CPU_386|CPU_Not64, 0, 32, 1, {0xFF, 0, 0}, 2, 1,
@@ -877,7 +879,12 @@ static const x86_insn_info call_insn[] = {
     { CPU_Any, 0, 0, 1, {0xFF, 0, 0}, 2, 1,
       {OPT_Mem|OPS_Any|OPTM_Near|OPA_EA, 0, 0} },
 
-    /* TODO: Far Imm 16:16/32 */
+    { CPU_Any, 0, 16, 1, {0x9A, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_16|OPTM_Far|OPA_JmpRel, 0, 0} },
+    { CPU_386, 0, 32, 1, {0x9A, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_32|OPTM_Far|OPA_JmpRel, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0x9A, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_Any|OPTM_Far|OPA_JmpRel, 0, 0} },
 
     { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 3, 1,
       {OPT_Mem|OPS_16|OPTM_Far|OPA_EA, 0, 0} },
@@ -893,12 +900,12 @@ static const x86_insn_info jmp_insn[] = {
 
     { CPU_Any, 0, 0, 1, {0xEB, 0, 0}, 0, 1,
       {OPT_Imm|OPS_Any|OPTM_Short|OPA_JmpRel, 0, 0} },
-    { CPU_Any, 0, 16, 1, {0xE9, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_16|OPTM_Near|OPA_JmpRel, 0, 0} },
-    { CPU_386, 0, 32, 1, {0xE9, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel, 0, 0} },
-    { CPU_Any, 0, 0, 1, {0xE9, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_Any|OPTM_Near|OPA_JmpRel, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0xE9, 0xEA, 0}, 0, 1,
+      {OPT_Imm|OPS_16|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xE9, 0xEA, 0}, 0, 1,
+      {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0xE9, 0xEA, 0}, 0, 1,
+      {OPT_Imm|OPS_Any|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
 
     { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 4, 1, {OPT_RM|OPS_16|OPA_EA, 0, 0} },
     { CPU_386|CPU_Not64, 0, 32, 1, {0xFF, 0, 0}, 4, 1,
@@ -915,7 +922,12 @@ static const x86_insn_info jmp_insn[] = {
     { CPU_Any, 0, 0, 1, {0xFF, 0, 0}, 4, 1,
       {OPT_Mem|OPS_Any|OPTM_Near|OPA_EA, 0, 0} },
 
-    /* TODO: Far Imm 16:16/32 */
+    { CPU_Any, 0, 16, 1, {0xEA, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_16|OPTM_Far|OPA_JmpRel, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xEA, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_32|OPTM_Far|OPA_JmpRel, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0xEA, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_Any|OPTM_Far|OPA_JmpRel, 0, 0} },
 
     { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 5, 1,
       {OPT_Mem|OPS_16|OPTM_Far|OPA_EA, 0, 0} },
@@ -1509,12 +1521,12 @@ static const x86_insn_info xbts_insn[] = {
 
 
 static yasm_bytecode *
-x86_new_jmprel(const unsigned long data[4], int num_operands,
-	       yasm_insn_operandhead *operands, x86_insn_info *jrinfo,
-	       yasm_section *cur_section, /*@null@*/ yasm_bytecode *prev_bc,
-	       unsigned long lindex)
+x86_new_jmp(const unsigned long data[4], int num_operands,
+	    yasm_insn_operandhead *operands, x86_insn_info *jinfo,
+	    yasm_section *cur_section, /*@null@*/ yasm_bytecode *prev_bc,
+	    unsigned long lindex)
 {
-    x86_new_jmprel_data d;
+    x86_new_jmp_data d;
     int num_info = (int)(data[1]&0xFF);
     x86_insn_info *info = (x86_insn_info *)data[0];
     unsigned long mod_data = data[1] >> 8;
@@ -1527,35 +1539,53 @@ x86_new_jmprel(const unsigned long data[4], int num_operands,
     op = yasm_ops_first(operands);
     if (op->type != YASM_INSN__OPERAND_IMM)
 	yasm_internal_error(N_("invalid operand conversion"));
-    d.target = yasm_expr_new(YASM_EXPR_SUB, yasm_expr_expr(op->data.val),
-	yasm_expr_sym(yasm_symrec_define_label("$", cur_section, prev_bc,
-					       0, lindex)), lindex);
 
-    /* See if the user explicitly specified short/near. */
-    switch ((int)(jrinfo->operands[0] & OPTM_MASK)) {
+    /* Far target needs to become "seg imm:imm". */
+    if ((jinfo->operands[0] & OPTM_MASK) == OPTM_Far)
+	d.target = yasm_expr_new_tree(
+	    yasm_expr_new_branch(YASM_EXPR_SEG, op->data.val, lindex),
+	    YASM_EXPR_SEGOFF, yasm_expr_copy(op->data.val), lindex);
+    else
+	d.target = op->data.val;
+
+    /* Need to save jump origin for relative jumps. */
+    d.origin = yasm_symrec_define_label("$", cur_section, prev_bc, 0, lindex);
+
+    /* Initially assume no far opcode is available. */
+    d.far_op_len = 0;
+
+    /* See if the user explicitly specified short/near/far. */
+    switch ((int)(jinfo->operands[0] & OPTM_MASK)) {
 	case OPTM_Short:
-	    d.op_sel = JR_SHORT_FORCED;
+	    d.op_sel = JMP_SHORT_FORCED;
 	    break;
 	case OPTM_Near:
-	    d.op_sel = JR_NEAR_FORCED;
+	    d.op_sel = JMP_NEAR_FORCED;
+	    break;
+	case OPTM_Far:
+	    d.op_sel = JMP_FAR;
+	    d.far_op_len = info->opcode_len;
+	    d.far_op[0] = info->opcode[0];
+	    d.far_op[1] = info->opcode[1];
+	    d.far_op[2] = info->opcode[2];
 	    break;
 	default:
-	    d.op_sel = JR_NONE;
+	    d.op_sel = JMP_NONE;
     }
 
     /* Set operand size */
-    d.opersize = jrinfo->opersize;
+    d.opersize = jinfo->opersize;
 
     /* Check for address size setting in second operand, if present */
-    if (jrinfo->num_operands > 1 &&
-	(jrinfo->operands[1] & OPA_MASK) == OPA_AdSizeR)
-	d.addrsize = (unsigned char)size_lookup[(jrinfo->operands[1] &
+    if (jinfo->num_operands > 1 &&
+	(jinfo->operands[1] & OPA_MASK) == OPA_AdSizeR)
+	d.addrsize = (unsigned char)size_lookup[(jinfo->operands[1] &
 						 OPS_MASK)>>OPS_SHIFT];
     else
 	d.addrsize = 0;
 
     /* Check for address size override */
-    if (jrinfo->modifiers & MOD_AdSizeR)
+    if (jinfo->modifiers & MOD_AdSizeR)
 	d.addrsize = (unsigned char)(mod_data & 0xFF);
 
     /* Scan through other infos for this insn looking for short/near versions.
@@ -1601,11 +1631,15 @@ x86_new_jmprel(const unsigned long data[4], int num_operands,
 		d.near_op[2] = info->opcode[2];
 		if (info->modifiers & MOD_Op1Add)
 		    d.near_op[1] += (unsigned char)(mod_data & 0xFF);
+		if ((info->operands[0] & OPAP_MASK) == OPAP_JmpFar) {
+		    d.far_op_len = 1;
+		    d.far_op[0] = info->opcode[info->opcode_len];
+		}
 		break;
 	}
     }
 
-    return yasm_x86__bc_new_jmprel(&d);
+    return yasm_x86__bc_new_jmp(&d);
 }
 
 yasm_bytecode *
@@ -1906,8 +1940,8 @@ yasm_x86__new_insn(const unsigned long data[4], int num_operands,
 
     /* Shortcut to JmpRel */
     if (operands && (info->operands[0] & OPA_MASK) == OPA_JmpRel)
-	return x86_new_jmprel(data, num_operands, operands, info, cur_section,
-			      prev_bc, lindex);
+	return x86_new_jmp(data, num_operands, operands, info, cur_section,
+			   prev_bc, lindex);
 
     /* Copy what we can from info */
     d.lindex = lindex;

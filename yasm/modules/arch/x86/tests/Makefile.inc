@@ -20,6 +20,9 @@ EXTRA_DIST += \
 	modules/arch/x86/tests/effaddr.asm		\
 	modules/arch/x86/tests/effaddr.errwarn		\
 	modules/arch/x86/tests/effaddr.hex		\
+	modules/arch/x86/tests/farbasic.asm		\
+	modules/arch/x86/tests/farbasic.errwarn		\
+	modules/arch/x86/tests/farbasic.hex		\
 	modules/arch/x86/tests/genopcode.asm		\
 	modules/arch/x86/tests/genopcode.errwarn	\
 	modules/arch/x86/tests/genopcode.hex		\

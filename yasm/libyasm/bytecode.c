@@ -443,7 +443,7 @@ yasm_common_calc_bc_dist(yasm_section *sect, /*@null@*/ yasm_bytecode *precbc1,
 	    if (dist < precbc1->offset + precbc1->len) {
 		intn = yasm_intnum_new_uint(precbc1->offset + precbc1->len
 					    - dist);
-		yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
+		yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL, precbc1->line);
 		return intn;
 	    }
 	    dist -= precbc1->offset + precbc1->len;
@@ -452,7 +452,7 @@ yasm_common_calc_bc_dist(yasm_section *sect, /*@null@*/ yasm_bytecode *precbc1,
     } else {
 	if (precbc1) {
 	    intn = yasm_intnum_new_uint(precbc1->offset + precbc1->len);
-	    yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
+	    yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL, precbc1->line);
 	    return intn;
 	} else {
 	    return yasm_intnum_new_uint(0);
