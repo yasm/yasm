@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.14 2001/07/04 20:16:43 peter Exp $
+; $Id: instrs.dat,v 1.15 2001/07/04 20:22:34 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -522,7 +522,7 @@ lgs	reg32,mem		32	0F,B5		$2,$1	nil	386
 lea	reg16,mem16		16	8D		$2,$1	nil	8086
 lea	reg32,mem32		32	8D		$2,$1	nil	386
 leave!onebyte		C9		186
-lfence!threebyte	0F,AE,E8
+lfence!threebyte	0F,AE,E8	KATMAI
 lgdt!twobytemem		0F,01,2		286,PRIV
 lidt!twobytemem		0F,01,3		286,PRIV
 lldt!prot286		2		PRIV
@@ -549,7 +549,7 @@ maxpd!sse2pd		5F
 maxps!sseps		5F		KATMAI,SSE
 maxsd!sse2sd		5F
 maxss!sse2ss		5F
-mfence!threebyte	0F,AE,F0
+mfence!threebyte	0F,AE,F0	KATMAI
 minpd!sse2pd		5D
 minps!sseps		5D		KATMAI,SSE
 minsd!sse2sd		5D
@@ -825,7 +825,7 @@ scasb!onebyte		AE		8086
 scasw!onebyte16		AF
 scasd!onebyte32		AF
 ; setcc
-sfence!threebyte	0F,AE,F8
+sfence!threebyte	0F,AE,F8	KATMAI
 sgdt!twobytemem		0F,01,0		286
 sidt!twobytemem		0F,01,1		286
 shld!shlrd		A4
