@@ -100,7 +100,8 @@ nasm_efunc(int severity, const char *fmt, ...)
 	    yasm__error_va(yasm_linemap_get_current(cur_lm), fmt, va);
 	    break;
 	case ERR_FATAL:
-	    yasm_fatal(N_("unknown"));	/* FIXME */
+	    yasm_fatal(fmt, va);
+	    /*@notreached@*/
 	    break;
 	case ERR_PANIC:
 	    yasm_internal_error(fmt);	/* FIXME */

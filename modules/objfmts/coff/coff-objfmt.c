@@ -490,7 +490,7 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 
 	pos = ftell(info->f);
 	if (pos == -1) {
-	    yasm_fatal(N_("could not get file position on output file"));
+	    yasm__fatal(N_("could not get file position on output file"));
 	    /*@notreached@*/
 	    return 1;
 	}
@@ -518,7 +518,7 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 
     pos = ftell(info->f);
     if (pos == -1) {
-	yasm_fatal(N_("could not get file position on output file"));
+	yasm__fatal(N_("could not get file position on output file"));
 	/*@notreached@*/
 	return 1;
     }
@@ -599,7 +599,7 @@ coff_objfmt_output(FILE *f, yasm_object *object, int all_syms)
 
     /* Allocate space for headers by seeking forward */
     if (fseek(f, (long)(20+40*(coff_objfmt_parse_scnum-1)), SEEK_SET) < 0) {
-	yasm_fatal(N_("could not seek on output file"));
+	yasm__fatal(N_("could not seek on output file"));
 	/*@notreached@*/
 	return;
     }
@@ -629,7 +629,7 @@ coff_objfmt_output(FILE *f, yasm_object *object, int all_syms)
     }
     pos = ftell(f);
     if (pos == -1) {
-	yasm_fatal(N_("could not get file position on output file"));
+	yasm__fatal(N_("could not get file position on output file"));
 	/*@notreached@*/
 	return;
     }
@@ -790,7 +790,7 @@ coff_objfmt_output(FILE *f, yasm_object *object, int all_syms)
 
     /* Write headers */
     if (fseek(f, 0, SEEK_SET) < 0) {
-	yasm_fatal(N_("could not seek on output file"));
+	yasm__fatal(N_("could not seek on output file"));
 	/*@notreached@*/
 	return;
     }

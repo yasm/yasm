@@ -26,7 +26,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-RCSID("$IdPath: yasm/libyasm/xmalloc.c,v 1.13 2003/03/15 05:07:48 peter Exp $");
+RCSID("$IdPath$");
 
 #include "coretype.h"
 #include "errwarn.h"
@@ -66,7 +66,7 @@ def_xmalloc(size_t size)
 	size = 1;
     newmem = malloc(size);
     if (!newmem)
-	yasm_fatal(N_("out of memory"));
+	yasm__fatal(N_("out of memory"));
 
     return newmem;
 }
@@ -81,7 +81,7 @@ def_xcalloc(size_t nelem, size_t elsize)
 
     newmem = calloc(nelem, elsize);
     if (!newmem)
-	yasm_fatal(N_("out of memory"));
+	yasm__fatal(N_("out of memory"));
 
     return newmem;
 }
@@ -98,7 +98,7 @@ def_xrealloc(void *oldmem, size_t size)
     else
 	newmem = realloc(oldmem, size);
     if (!newmem)
-	yasm_fatal(N_("out of memory"));
+	yasm__fatal(N_("out of memory"));
 
     return newmem;
 }

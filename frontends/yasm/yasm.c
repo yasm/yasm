@@ -100,7 +100,7 @@ static void print_error(const char *fmt, ...);
 static /*@exits@*/ void handle_yasm_int_error(const char *file,
 					      unsigned int line,
 					      const char *message);
-static /*@exits@*/ void handle_yasm_fatal(const char *message, ...);
+static /*@exits@*/ void handle_yasm_fatal(const char *message, va_list va);
 static const char *handle_yasm_gettext(const char *msgid);
 static void print_yasm_error(const char *filename, unsigned long line,
 			     const char *msg);
@@ -1002,13 +1002,10 @@ handle_yasm_int_error(const char *file, unsigned int line, const char *message)
 }
 
 static /*@exits@*/ void
-handle_yasm_fatal(const char *fmt, ...)
+handle_yasm_fatal(const char *fmt, va_list va)
 {
-    va_list va;
     fprintf(stderr, "yasm: %s: ", _("FATAL"));
-    va_start(va, fmt);
     vfprintf(stderr, gettext(fmt), va);
-    va_end(va);
     fputc('\n', stderr);
     exit(EXIT_FAILURE);
 }

@@ -71,9 +71,17 @@ extern /*@exits@*/ void (*yasm_internal_error_)
  * \warning This function must NOT return to calling code; exit or longjmp
  *          instead.
  * \param message   fatal error message
+ * \param va	    va_list argument list for message
+ */
+extern /*@exits@*/ void (*yasm_fatal) (const char *message, va_list va);
+
+/** Reporting point of fatal errors, with variable arguments (internal only).
+ * \warning This function calls #yasm_fatal, and thus does not return to the
+ *          calling code.
+ * \param message   fatal error message
  * \param ...	    argument list for message
  */
-extern /*@exits@*/ void (*yasm_fatal) (const char *message, ...);
+/*@exits@*/ void yasm__fatal(const char *message, ...);
 
 /** Log an error at a given line, displaying a different line.  va_list version
  * of yasm__error_at().

@@ -45,14 +45,14 @@
 /* Default handlers for replacable functions */
 static /*@exits@*/ void def_internal_error_
     (const char *file, unsigned int line, const char *message);
-static /*@exits@*/ void def_fatal(const char *message, ...);
+static /*@exits@*/ void def_fatal(const char *message, va_list va);
 static const char *def_gettext_hook(const char *msgid);
 
 /* Storage for errwarn's "extern" functions */
 /*@exits@*/ void (*yasm_internal_error_)
     (const char *file, unsigned int line, const char *message)
     = def_internal_error_;
-/*@exits@*/ void (*yasm_fatal) (const char *message, ...) = def_fatal;
+/*@exits@*/ void (*yasm_fatal) (const char *message, va_list va) = def_fatal;
 const char * (*yasm_gettext_hook) (const char *msgid) = def_gettext_hook;
 
 /* Enabled warnings.  See errwarn.h for a list. */
@@ -165,13 +165,10 @@ def_internal_error_(const char *file, unsigned int line, const char *message)
  * memory), so just exit immediately.
  */
 static void
-def_fatal(const char *fmt, ...)
+def_fatal(const char *fmt, va_list va)
 {
-    va_list va;
     fprintf(stderr, "%s: ", yasm_gettext_hook(N_("FATAL")));
-    va_start(va, fmt);
     vfprintf(stderr, yasm_gettext_hook(fmt), va);
-    va_end(va);
     fputc('\n', stderr);
     exit(EXIT_FAILURE);
 }
@@ -391,4 +388,14 @@ yasm_errwarn_output_all(yasm_linemap *lm, int warning_as_error,
 	else
 	    print_warning(filename, line, we->msg);
     }
+}
+
+void
+yasm__fatal(const char *message, ...)
+{
+    va_list va;
+    va_start(va, message);
+    yasm_fatal(message, va);
+    /*@notreached@*/
+    va_end(va);
 }
