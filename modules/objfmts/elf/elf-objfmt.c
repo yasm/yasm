@@ -412,7 +412,6 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     /*@dependent@*/ /*@null@*/ elf_secthead *shead;
     long pos;
     char *relname;
-    unsigned int relname_len;
     const char *sectname;
 
     /* Don't output absolute sections into the section table */
@@ -467,9 +466,9 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 
     /* name the relocation section .rel.foo */
     sectname = yasm_section_get_name(sect);
-    relname_len = strlen(sectname)+5;
-    relname = yasm_xmalloc(relname_len);
-    snprintf(relname, relname_len, ".rel%s", sectname);
+    relname = yasm_xmalloc(strlen(sectname)+5);
+    strcpy(relname, ".rel");
+    strcat(relname, sectname);
     elf_secthead_set_rel_name(shead,
 			      elf_strtab_append_str(info->objfmt_elf->shstrtab,
 						    relname));
