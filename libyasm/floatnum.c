@@ -524,8 +524,9 @@ floatnum_get_common(unsigned char *ptr, const floatnum *flt, int byte_size,
 	BitVector_increment(output);
 
     if (BitVector_bit_test(output, mant_bits)) {
-	/* overflowed, so divide mantissa by 2 (shift right) */
-	BitVector_shift_right(output, 0);
+	/* overflowed, so zero mantissa (and set explicit bit if necessary) */
+	BitVector_Empty(output);
+	BitVector_Bit_Copy(output, mant_bits-1, !implicit1);
 	/* and up the exponent (checking for overflow) */
 	if (exponent+1 >= EXP_INF)
 	    overflow = 1;
