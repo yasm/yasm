@@ -37,6 +37,7 @@
 #include "globals.h"
 #include "options.h"
 #include "errwarn.h"
+#include "floatnum.h"
 #include "symrec.h"
 
 #include "bytecode.h"
@@ -204,6 +205,8 @@ main(int argc, char *argv[])
     sections_delete(sections);
     symrec_delete_all();
     filename_delete_all();
+
+    floatnum_shutdown();
 
     BitVector_Shutdown();
     return EXIT_SUCCESS;

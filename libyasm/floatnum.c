@@ -183,6 +183,29 @@ POT_Table_Init(void)
 }
 /*@=compdef@*/
 
+/*@-globstate@*/
+void
+floatnum_shutdown(void)
+{
+    int i;
+
+    if (!POT_TableN)
+	return;
+
+    /* Un-offset POT_TableP */
+    POT_TableP--;
+
+    for (i=0; i<14; i++) {
+	BitVector_Destroy(POT_TableN[i].f.mantissa);
+	BitVector_Destroy(POT_TableP[i].f.mantissa);
+    }
+    BitVector_Destroy(POT_TableP[14].f.mantissa);
+
+    xfree(POT_TableN);
+    xfree(POT_TableP);
+}
+/*@=globstate@*/
+
 static void
 floatnum_normalize(floatnum *flt)
 {
