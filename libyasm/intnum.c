@@ -214,9 +214,9 @@ yasm_intnum_create_charconst_nasm(const char *str, unsigned long line)
 	default:
 	    /* >32 bit conversion */
 	    while (len) {
+		BitVector_Move_Left(conv_bv, 8);
 		BitVector_Chunk_Store(conv_bv, 8, 0,
 				      (unsigned long)str[--len]);
-		BitVector_Move_Left(conv_bv, 8);
 	    }
 	    intn->val.bv = BitVector_Clone(conv_bv);
     }

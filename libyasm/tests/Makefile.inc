@@ -5,6 +5,9 @@ TESTS += floatnum_test
 TESTS += libyasm/tests/libyasm_test.sh
 
 EXTRA_DIST += libyasm/tests/libyasm_test.sh
+EXTRA_DIST += libyasm/tests/charconst64.asm
+EXTRA_DIST += libyasm/tests/charconst64.errwarn
+EXTRA_DIST += libyasm/tests/charconst64.hex
 EXTRA_DIST += libyasm/tests/duplabel-err.asm
 EXTRA_DIST += libyasm/tests/duplabel-err.errwarn
 EXTRA_DIST += libyasm/tests/unary.asm
