@@ -209,6 +209,10 @@ main(int argc, char *argv[])
 	const char *path = getenv(YASM_MODULE_PATH_ENV);
 	if (path)
 	    errors = lt_dladdsearchdir(path);
+#if defined(YASM_MODULEDIR)
+	if (errors == 0)
+	    errors = lt_dladdsearchdir(YASM_MODULEDIR);
+#endif
     }
     if (errors != 0) {
 	print_error(_("Module loader initialization failed"));
