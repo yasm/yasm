@@ -78,7 +78,7 @@ void *xrealloc(void *oldmem, size_t size);
 #  ifdef __ELF__
 #   define RCSID(s)	__asm__(".ident\t\"" s "\"")
 #  else
-#   define RCSID(s)	static const char rcsid[] __unused = s
+#   define RCSID(s)	static const char rcsid[] = s
 #  endif
 # else
 #  define RCSID(s)	static const char rcsid[] = s
