@@ -2,11 +2,16 @@
 
 #include <string.h>
 #include "tools/re2c/substr.h"
+#include "tools/re2c/globals.h"
 
 void
 SubStr_out(const SubStr *s, FILE *o)
 {
+    int i;
     fwrite(s->str, s->len, 1, o);
+    for (i=0; i<s->len; i++)
+	if (s->str[i] == '\n')
+	    oline++;
 }
 
 int

@@ -4,6 +4,7 @@
 #include <string.h>
 #include "tools/re2c/scanner.h"
 #include "tools/re2c/parse.h"
+#include "tools/re2c/globals.h"
 #include "re2c-parser.h"
 
 #define	BSIZE	8192
@@ -85,7 +86,7 @@ echo:
 				  RETURN(1); }
 	"\n"			{ if(cursor == s->eof) RETURN(0);
 				  fwrite(s->tok, 1, cursor - s->tok, out);
-				  s->tok = s->pos = cursor; s->cline++;
+				  s->tok = s->pos = cursor; s->cline++; oline++;
 				  goto echo; }
         any			{ goto echo; }
 */

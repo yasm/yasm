@@ -6,6 +6,7 @@
 extern const char *fileName;
 extern int sFlag;
 extern int bFlag;
+extern unsigned int oline;
 
 extern uchar asc2ebc[256];
 extern uchar ebc2asc[256];

@@ -144,11 +144,11 @@ void BitMap_gen(FILE *o, uint lb, uint ub){
 		doGen(b->go, b->on, bm-lb, m);
 	    }
 	    for(j = 0; j < n; ++j){
-		if(j%8 == 0) fputs("\n\t", o);
+		if(j%8 == 0) {fputs("\n\t", o); oline++;}
 		fprintf(o, "%3u, ", (uint) bm[j]);
 	    }
 	}
-	fputs("\n\t};\n", o);
+	fputs("\n\t};\n", o); oline+=2;
     }
 }
 
@@ -166,7 +166,7 @@ void BitMap_stats(void){
 #endif
 
 static void genGoTo(FILE *o, State *to){
-    fprintf(o, "\tgoto yy%u;\n", to->label);
+    fprintf(o, "\tgoto yy%u;\n", to->label); oline++;
 }
 
 static void genIf(FILE *o, const char *cmp, uint v){
@@ -181,11 +181,13 @@ static void indent(FILE *o, uint i){
 }
 
 static void need(FILE *o, uint n){
-    if(n == 1)
-	fputs("\tif(YYLIMIT == YYCURSOR) YYFILL(1);\n", o);
-    else
+    if(n == 1) {
+	fputs("\tif(YYLIMIT == YYCURSOR) YYFILL(1);\n", o); oline++;
+    } else {
 	fprintf(o, "\tif((YYLIMIT - YYCURSOR) < %u) YYFILL(%u);\n", n, n);
-    fputs("\tyych = *YYCURSOR;\n", o);
+	oline++;
+    }
+    fputs("\tyych = *YYCURSOR;\n", o); oline++;
 }
 
 void
@@ -198,29 +200,29 @@ Action_emit(Action *a, FILE *o)
     switch (a->type) {
 	case MATCHACT:
 	    if(a->state->link){
-		fputs("\t++YYCURSOR;\n", o);
+		fputs("\t++YYCURSOR;\n", o); oline++;
 		need(o, a->state->depth);
 	    } else {
-		fputs("\tyych = *++YYCURSOR;\n", o);
+		fputs("\tyych = *++YYCURSOR;\n", o); oline++;
 	    }
 	    break;
 	case ENTERACT:
 	    if(a->state->link){
 		fputs("\t++YYCURSOR;\n", o);
-		fprintf(o, "yy%u:\n", a->d.label);
+		fprintf(o, "yy%u:\n", a->d.label); oline+=2;
 		need(o, a->state->depth);
 	    } else {
 		fputs("\tyych = *++YYCURSOR;\n", o);
-		fprintf(o, "yy%u:\n", a->d.label);
+		fprintf(o, "yy%u:\n", a->d.label); oline+=2;
 	    }
 	    break;
 	case SAVEMATCHACT:
-	    fprintf(o, "\tyyaccept = %u;\n", a->d.selector);
+	    fprintf(o, "\tyyaccept = %u;\n", a->d.selector); oline++;
 	    if(a->state->link){
-		fputs("\tYYMARKER = ++YYCURSOR;\n", o);
+		fputs("\tYYMARKER = ++YYCURSOR;\n", o); oline++;
 		need(o, a->state->depth);
 	    } else {
-		fputs("\tyych = *(YYMARKER = ++YYCURSOR);\n", o);
+		fputs("\tyych = *(YYMARKER = ++YYCURSOR);\n", o); oline++;
 	    }
 	    break;
 	case MOVEACT:
@@ -231,21 +233,24 @@ Action_emit(Action *a, FILE *o)
 		    if(first){
 			first = 0;
 			fputs("\tYYCURSOR = YYMARKER;\n", o);
-			fputs("\tswitch(yyaccept){\n", o);
+			fputs("\tswitch(yyaccept){\n", o); oline+=2;
 		    }
 		    fprintf(o, "\tcase %u:", a->d.Accept.saves[i]);
 		    genGoTo(o, a->d.Accept.rules[i]);
 		}
-	    if(!first)
-		fputs("\t}\n", o);
+	    if(!first) {
+		fputs("\t}\n", o); oline++;
+	    }
 	    break;
 	case RULEACT:
 	    back = RegExp_fixedLength(a->d.rule->d.RuleOp.ctx);
 	    if(back != ~0u && back > 0u)
 		fprintf(o, "\tYYCURSOR -= %u;", back);
-	    fprintf(o, "\n#line %u\n\t", a->d.rule->d.RuleOp.code->line);
+	    fprintf(o, "\n"); oline++;
+	    line_source(o, a->d.rule->d.RuleOp.code->line);
 	    SubStr_out(&a->d.rule->d.RuleOp.code->text, o);
-	    fprintf(o, "\n");
+	    fprintf(o, "\n"); oline++;
+	    fprintf(o, "#line %u \"-\"\n", ++oline);
 	    break;
     }
 }
@@ -301,7 +306,7 @@ static void genCases(FILE *o, uint lb, Span *s){
 	    fputs("\tcase '", o); prtCh(o, lb); fputs("':", o);
 	    if(++lb == s->ub)
 		break;
-	    fputs("\n", o);
+	    fputs("\n", o); oline++;
 	}
     }
 }
@@ -320,7 +325,7 @@ Go_genSwitch(Go *g, FILE *o, State *next){
 	    if(g->span[i].to != def)
 		*(t++) = &g->span[i];
 
-	fputs("\tswitch(yych){\n", o);
+	fputs("\tswitch(yych){\n", o); oline++;
 	while(t != &sP[0]){
 	    State *to;
 	    r = s = &sP[0];
@@ -340,7 +345,7 @@ Go_genSwitch(Go *g, FILE *o, State *next){
 	}
 	fputs("\tdefault:", o);
 	genGoTo(o, def);
-	fputs("\t}\n", o);
+	fputs("\t}\n", o); oline++;
 
 	free(sP);
     }
@@ -351,11 +356,11 @@ static void doBinary(FILE *o, uint i, Span *s, uint n, State *next){
 	doLinear(o, i, s, n, next);
     } else {
 	uint h = n/2;
-	indent(o, i); genIf(o, "<=", s[h-1].ub - 1); fputs("{\n", o);
+	indent(o, i); genIf(o, "<=", s[h-1].ub - 1); fputs("{\n", o); oline++;
 	doBinary(o, i+1, &s[0], h, next);
-	indent(o, i); fputs("\t} else {\n", o);
+	indent(o, i); fputs("\t} else {\n", o); oline++;
 	doBinary(o, i+1, &s[h], n - h, next);
-	indent(o, i); fputs("\t}\n", o);
+	indent(o, i); fputs("\t}\n", o); oline++;
     }
 }
 
@@ -697,12 +702,15 @@ void DFA_emit(DFA *d, FILE *o){
 
     free(d->head->action);
 
-    fputs("{\n\tYYCTYPE yych;\n\tunsigned int yyaccept;\n", o);
+    oline++;
+    fprintf(o, "\n#line %u \"-\"\n", ++oline);
+
+    fputs("{\n\tYYCTYPE yych;\n\tunsigned int yyaccept;\n", o); oline+=3;
 
     if(bFlag)
 	BitMap_gen(o, d->lbChar, d->ubChar);
 
-    fprintf(o, "\tgoto yy%u;\n", label);
+    fprintf(o, "\tgoto yy%u;\n", label); oline++;
     Action_new_Enter(d->head, label++);
 
     for(s = d->head; s; s = s->next)
@@ -712,7 +720,7 @@ void DFA_emit(DFA *d, FILE *o){
 	State_emit(s, o);
 	Go_genGoto(&s->go, o, s->next);
     }
-    fputs("}\n", o);
+    fputs("}\n", o); oline++;
 
     BitMap_first = NULL;
 

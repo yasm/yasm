@@ -59,7 +59,7 @@ State_out(FILE *o, const State *s){
     fprintf(o, "state %u", s->label);
     if(s->rule)
 	fprintf(o, " accepts %u", s->rule->d.RuleOp.accept);
-    fputs("\n", o);
+    fputs("\n", o); oline++;
     lb = 0;
     for(i = 0; i < s->go.nSpans; ++i)
 	lb = Span_show(&s->go.span[i], o, lb);
@@ -70,7 +70,7 @@ DFA_out(FILE *o, const DFA *dfa){
     State *s;
     for(s = dfa->head; s; s = s->next) {
 	State_out(o, s);
-	fputs("\n\n", o);
+	fputs("\n\n", o); oline+=2;
     }
 }
 

@@ -10,6 +10,7 @@
 const char *fileName;
 int sFlag = 0;
 int bFlag = 0;
+unsigned int oline = 1;
 
 int main(int argc, char *argv[]){
     FILE *f;
