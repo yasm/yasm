@@ -1,4 +1,4 @@
-/* $Id: symrec.c,v 1.2 2001/06/13 05:43:59 mu Exp $
+/* $Id: symrec.c,v 1.3 2001/06/13 05:56:06 mu Exp $
  * Symbol table handling
  *
  *  Copyright (C) 2001  Michael Urman
@@ -116,6 +116,8 @@ symrec *sym_def_get (char *name, SymType type)
 {
     symtab *tab;
     tab = symtab_get_or_new (name, type);
+    if (tab->rec.status & SYM_DECLARED)
+	Error (ERR_DUPLICATE_DEF, (char *)NULL, tab->rec.name, tab->rec.line);
     tab->rec.status |= SYM_DECLARED;
     return &(tab->rec);
 }

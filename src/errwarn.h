@@ -1,4 +1,4 @@
-/* $Id: errwarn.h,v 1.5 2001/06/13 05:43:59 mu Exp $
+/* $Id: errwarn.h,v 1.6 2001/06/13 05:56:06 mu Exp $
  * Error and warning reporting and related functions header file.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -39,7 +39,8 @@ typedef enum {
     ERR_INVALID_ARG,
     ERR_INVALID_EA,
     ERR_INVALID_LINE,
-    ERR_EXP_SYNTAX
+    ERR_EXP_SYNTAX,
+    ERR_DUPLICATE_DEF
 } err_num;
 
 void Error(err_num, char *, ...);

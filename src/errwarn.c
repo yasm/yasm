@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.7 2001/06/13 05:53:25 peter Exp $
+/* $Id: errwarn.c,v 1.8 2001/06/13 05:56:06 mu Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -43,7 +43,8 @@ static char *err_msgs[] = {
     "invalid argument to %s",
     "invalid effective address",
     "label or instruction expected at start of line",
-    "expression syntax error"
+    "expression syntax error",
+    "duplicate definition of `%s'; previously defined line %d"
 };
 
 static char *warn_msgs[] = {
@@ -130,7 +131,7 @@ static char *process_argtypes(char *src, char *argtypes)
 	    }
 	}
     } else {
-	dest = strdup(src);
+	dest = y_strdup(src);
 	if(!dest)
 	    Fatal(FATAL_NOMEM);
     }
