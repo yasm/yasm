@@ -26,16 +26,3 @@ EXTRA_DIST += \
 	src/preprocs/yapp/tests/rinclude.pre \
 	src/preprocs/yapp/tests/params.asm \
 	src/preprocs/yapp/tests/params.pre
-
-CLEANFILES += \
-	raw.yp \
-	comment.yp \
-	define.yp \
-	ddefine.yp \
-	rdefine.yp \
-	pdefine.yp \
-	ifdef.yp \
-	include.yp \
-	rinclude.yp \
-	params.yp
-

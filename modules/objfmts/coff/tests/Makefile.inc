@@ -9,8 +9,3 @@ EXTRA_DIST += \
 	src/objfmts/coff/tests/cofftest.asm		\
 	src/objfmts/coff/tests/cofftest.hex		\
 	src/objfmts/coff/tests/cofftest.errwarn
-
-CLEANFILES += \
-	cofftest.o \
-	cofftest.hx \
-	cofftest.ew

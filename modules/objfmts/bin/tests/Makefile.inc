@@ -24,22 +24,3 @@ EXTRA_DIST += \
 	src/objfmts/bin/tests/reserve.errwarn		\
 	src/objfmts/bin/tests/reserve-err.asm		\
 	src/objfmts/bin/tests/reserve-err.errwarn
-
-CLEANFILES += \
-	bintest \
-	bintest.hx \
-	bintest.ew \
-	float-err.ew \
-	float \
-	float.hx \
-	float.ew \
-	integer-warn \
-	integer-warn.hx \
-	integer-warn.ew \
-	integer \
-	integer.hx \
-	integer.ew \
-	reserve \
-	reserve.ew \
-	reserve.hx \
-	reserve-err.ew

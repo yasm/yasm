@@ -15,9 +15,6 @@ config.*
 stamp-h*
 aclocal.m4
 *.tar.gz
-*.yp
-*.hx
-*.ew
 *.la
 *.lo
 .libs
@@ -25,3 +22,4 @@ libtool
 *.bb
 *.bbg
 *.da
+results

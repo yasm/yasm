@@ -8,6 +8,8 @@ case `echo "testing\c"; echo 1,2,3`,`echo -n testing; echo 1,2,3` in
   *)       ECHO_N= ECHO_C='\c' ECHO_T= ;;
 esac
 
+mkdir results >/dev/null 2>&1
+
 #
 # Verify that all test cases match
 # (aside from whitespace for now)
@@ -31,8 +33,8 @@ do
 
     echo $ECHO_N "$YT: Testing yapp for ${a} ... $ECHO_C"
     if sed "s,\./,${srcdir}/," ${asm} | ./yasm -e -r yapp |
-	sed "s,${srcdir}/,./," > ${y}; then
-	if diff -w ${p} ${y} > /dev/null; then
+	sed "s,${srcdir}/,./," > results/${y}; then
+	if diff -w ${p} results/${y} > /dev/null; then
 	    echo "PASS."
 	    passedct=`expr $passedct + 1`
 	    passedlist="${passedlist}${a} "
