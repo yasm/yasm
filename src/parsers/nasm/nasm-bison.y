@@ -34,6 +34,7 @@ RCSID("$IdPath$");
 #include "intnum.h"
 #include "floatnum.h"
 #include "expr.h"
+#include "expr-int.h"
 #include "symrec.h"
 
 #include "bytecode.h"
@@ -49,6 +50,7 @@ RCSID("$IdPath$");
 static void nasm_parser_error(const char *);
 static void nasm_parser_directive(const char *name, valparamhead *valparams,
 				  /*@null@*/ valparamhead *objext_valparams);
+static int fix_directive_symrec(/*@null@*/ ExprItem *ei, /*@null@*/ void *d);
 
 static /*@null@*/ bytecode *nasm_parser_prev_bc = (bytecode *)NULL;
 static bytecode *nasm_parser_temp_bc;
@@ -284,16 +286,24 @@ directive_valparams: directive_valparam		{
 ;
 
 directive_valparam: direxpr	{
-	/* If direxpr is just an ID, put it in val and delete the expr */
+	/* If direxpr is just an ID, put it in val and delete the expr.
+	 * Otherwise, we need to go through the expr and replace the current
+	 * (local) symrecs with the use of global ones.
+	 */
 	const /*@null@*/ symrec *vp_symrec;
 	if ((vp_symrec = expr_get_symrec(&$1, 0))) {
 	    vp_new($$, xstrdup(symrec_get_name(vp_symrec)), NULL);
 	    expr_delete($1);
-	} else
+	} else {
+	    expr_traverse_leaves_in($1, NULL, fix_directive_symrec);
 	    vp_new($$, NULL, $1);
+	}
     }
     | STRING			{ vp_new($$, $1, NULL); }
-    | ID '=' direxpr		{ vp_new($$, $1, $3); }
+    | ID '=' direxpr		{
+	expr_traverse_leaves_in($3, NULL, fix_directive_symrec);
+	vp_new($$, $1, $3);
+    }
 ;
 
 /* memory addresses */
@@ -505,6 +515,16 @@ explabel: ID		{
 
 %%
 /*@=usedef =nullassign =memtrans =usereleased =compdef =mustfree@*/
+
+static int
+fix_directive_symrec(ExprItem *ei, /*@unused@*/ void *d)
+{
+    if (!ei || ei->type != EXPR_SYM)
+	return 0;
+
+    /* FIXME: Delete current symrec */
+    ei->data.sym = symrec_use(symrec_get_name(ei->data.sym), cur_lindex);
+}
 
 static void
 nasm_parser_directive(const char *name, valparamhead *valparams,
