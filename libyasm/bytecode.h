@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.3 2001/05/21 19:32:51 mu Exp $
+/* $Id: bytecode.h,v 1.4 2001/05/21 20:17:51 peter Exp $
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -24,12 +24,13 @@
 
 typedef struct effaddr_s {
     unsigned long offset;
-    unsigned char len;		/* length of offset + 1 (for RM) (in bytes) */
-    unsigned char addrsize;	/* 8, 16, or 32, 0 indicates no override */
+    unsigned char len;		/* length of offset (in bytes), 0 if none */
+    unsigned char addrsize;	/* 16 or 32, 0 indicates no override */
     unsigned char segment;	/* segment override, 0 if none */
     unsigned char modrm;
+    unsigned char need_modrm;	/* 1 if Mod/RM byte needed, 0 if not */
     unsigned char sib;
-    unsigned char need_sib;
+    unsigned char need_sib;	/* 1 if SIB byte needed, 0 if not */
 } effaddr;
 
 typedef struct immval_s {
@@ -77,6 +78,7 @@ typedef struct bytecode_s {
 
 effaddr *ConvertIntToEA(effaddr *ptr, unsigned long int_val);
 effaddr *ConvertRegToEA(effaddr *ptr, unsigned long reg);
+effaddr *ConvertImmToEA(effaddr *ptr, immval *im_ptr, unsigned char im_len);
 
 immval *ConvertIntToImm(immval *ptr, unsigned long int_val);
 

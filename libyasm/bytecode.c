@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.3 2001/05/21 19:32:51 mu Exp $
+/* $Id: bytecode.c,v 1.4 2001/05/21 20:17:51 peter Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include "globals.h"
 #include "bytecode.h"
+#include "errwarn.h"
 
 static effaddr eff_static;
 static immval im_static;
@@ -41,13 +42,15 @@ effaddr *ConvertIntToEA(effaddr *ptr, unsigned long int_val)
 
     if(mode_bits == 32) {
 	ptr->offset = int_val;
-	ptr->len = 5;
+	ptr->len = 4;
 	ptr->modrm = 0x05;		    /* Mod=00 R/M=disp32, Reg=0 */
+	ptr->need_modrm = 1;
 	ptr->need_sib = 0;
     } else if(mode_bits == 16) {
 	ptr->offset = int_val & 0xFFFF;
-	ptr->len = 3;
+	ptr->len = 2;
 	ptr->modrm = 0x06;		    /* Mod=00 R/M=disp16, Reg=0 */
+	ptr->need_modrm = 1;
 	ptr->need_sib = 0;
     } else
 	return (effaddr *)NULL;
@@ -60,10 +63,28 @@ effaddr *ConvertRegToEA(effaddr *ptr, unsigned long reg)
     if(!ptr)
 	ptr = &eff_static;
 
-    ptr->len = 1;
+    ptr->len = 0;
     ptr->addrsize = 0;
     ptr->segment = 0;
     ptr->modrm = 0xC0 | (reg & 0x07);	    /* Mod=11, R/M=Reg, Reg=0 */
+    ptr->need_modrm = 1;
+    ptr->need_sib = 0;
+
+    return ptr;
+}
+
+effaddr *ConvertImmToEA(effaddr *ptr, immval *im_ptr, unsigned char im_len)
+{
+    if(!ptr)
+	ptr = &eff_static;
+
+    ptr->offset = im_ptr->val;
+    if(im_ptr->len > im_len)
+	Warning(WARN_VALUE_EXCEEDS_BOUNDS, (char *)NULL, "word");
+    ptr->len = im_len;
+    ptr->addrsize = 0;
+    ptr->segment = 0;
+    ptr->need_modrm = 0;
     ptr->need_sib = 0;
 
     return ptr;
@@ -160,8 +181,9 @@ void DebugPrintBC(bytecode *bc)
 	    printf(" AddrSize=%u SegmentOv=%2x\n",
 		(unsigned int)bc->data.insn.ea.addrsize,
 		(unsigned int)bc->data.insn.ea.segment);
-	    printf(" ModRM=%2x SIB=%2x NeedSIB=%u\n",
+	    printf(" ModRM=%2x NeedRM=%u SIB=%2x NeedSIB=%u\n",
 		(unsigned int)bc->data.insn.ea.modrm,
+		(unsigned int)bc->data.insn.ea.need_modrm,
 		(unsigned int)bc->data.insn.ea.sib,
 		(unsigned int)bc->data.insn.ea.need_sib);
 	    printf("Immediate/Relative Value:\n");
