@@ -234,7 +234,7 @@ scan:
 	}
 
 	/* 0AAh form of hexidecimal number */
-	digit hexdigit+ "h" {
+	digit hexdigit* "h" {
 	    s.tok[TOKLEN-1] = '\0'; /* strip off 'h' */
 	    yylval.intn = intnum_new_hex(s.tok);
 	    RETURN(INTNUM);
