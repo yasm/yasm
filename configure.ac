@@ -55,4 +55,4 @@ case "$host" in
 	;;
 esac
 
-AC_OUTPUT(Makefile intl/Makefile po/Makefile.in src/Makefile src/parsers/Makefile src/parsers/nasm/Makefile src/preprocs/Makefile src/preprocs/raw/Makefile src/objfmts/Makefile src/objfmts/dbg/Makefile)
+AC_OUTPUT(Makefile intl/Makefile po/Makefile.in src/Makefile src/parsers/Makefile src/parsers/nasm/Makefile src/preprocs/Makefile src/preprocs/raw/Makefile src/objfmts/Makefile src/objfmts/dbg/Makefile src/optimizers/Makefile src/optimizers/dbg/Makefile)

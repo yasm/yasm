@@ -1,4 +1,4 @@
-SUBDIRS = parsers preprocs objfmts
+SUBDIRS = parsers preprocs optimizers objfmts
 
 INCLUDES = -I$(top_srcdir)/intl
 
@@ -26,6 +26,7 @@ yasm_SOURCES = \
 yasm_LDADD = \
 	parsers/nasm/libparser.a	\
 	preprocs/raw/libpreproc.a	\
+	optimizers/dbg/liboptimizer.a	\
 	objfmts/dbg/libobjfmt.a		\
 	$(INTLLIBS)
 

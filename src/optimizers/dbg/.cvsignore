@@ -1,0 +1,5 @@
+.*.sw?
+Makefile.in
+Makefile
+.deps
+liboptimizer.a
