@@ -77,24 +77,9 @@ line_set(const char *filename, unsigned long line, unsigned long line_inc)
 {
     char *copy;
     int replace = 0;
-    line_index_mapping mapping;
+    line_index_mapping *mapping;
 
-    /* Build a mapping */
-
-    /* Copy the filename (via shared storage) */
-    copy = xstrdup(filename);
-    if (!filename_table)
-	filename_table = HAMT_new();
-    /*@-aliasunique@*/
-    mapping.filename = HAMT_insert(filename_table, copy, copy, &replace,
-				    filename_delete_one);
-    /*@=aliasunique@*/
-
-    mapping.index = line_index;
-    mapping.line = line;
-    mapping.line_inc = line_inc;
-
-    /* Add the mapping to the map */
+    /* Create a new mapping in the map */
     if (!line_index_map) {
 	/* initialize vector */
 	line_index_map = xmalloc(sizeof(line_index_mapping_head));
@@ -108,24 +93,29 @@ line_set(const char *filename, unsigned long line, unsigned long line_inc)
 		2*line_index_map->allocated*sizeof(line_index_mapping));
 	line_index_map->allocated *= 2;
     }
-    memcpy(line_index_map->vector + line_index_map->size,
-	    &mapping, sizeof(line_index_mapping));
+    mapping = &line_index_map->vector[line_index_map->size];
     line_index_map->size++;
 
+    /* Fill it */
+
+    /* Copy the filename (via shared storage) */
+    copy = xstrdup(filename);
+    if (!filename_table)
+	filename_table = HAMT_new();
+    /*@-aliasunique@*/
+    mapping->filename = HAMT_insert(filename_table, copy, copy, &replace,
+				    filename_delete_one);
+    /*@=aliasunique@*/
+
+    mapping->index = line_index;
+    mapping->line = line;
+    mapping->line_inc = line_inc;
 }
 
 void
 line_shutdown(void)
 {
-    /*line_index_mapping *mapping, *mapping2; */
-
     if (line_index_map) {
-	/*(mapping = STAILQ_FIRST(line_index_map);
-	while (mapping) {
-	    mapping2 = STAILQ_NEXT(mapping, link);
-	    xfree(mapping);
-	    mapping = mapping2;
-	}*/
 	xfree(line_index_map->vector);
 	xfree(line_index_map);
 	line_index_map = NULL;
@@ -140,27 +130,25 @@ line_shutdown(void)
 void
 line_lookup(unsigned long lindex, const char **filename, unsigned long *line)
 {
-    line_index_mapping *mapping/*, *mapping2*/;
+    line_index_mapping *mapping;
     unsigned long vindex, step;
 
     assert(lindex <= line_index);
 
     /* Binary search through map to find highest line_index <= index */
     assert(line_index_map != NULL);
-    mapping = line_index_map->vector;
     vindex = 0;
     /* start step as the greatest power of 2 <= size */
     step = 1;
-    while (step*2<=line_index_map->size) step*=2;
+    while (step*2<=line_index_map->size)
+	step*=2;
     while (step>0) {
 	if (vindex+step < line_index_map->size
-		&& mapping[vindex+step].index <= lindex)
+		&& line_index_map->vector[vindex+step].index <= lindex)
 	    vindex += step;
 	step /= 2;
     }
-    mapping += vindex;
-
-    assert(mapping != NULL);
+    mapping = &line_index_map->vector[vindex];
 
     *filename = mapping->filename;
     *line = mapping->line+mapping->line_inc*(lindex-mapping->index);
