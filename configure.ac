@@ -60,44 +60,35 @@ AM_CONDITIONAL(CHECK, test x$check = xtrue)
 
 AM_PROG_CC_STDC
 
-if ${dev}; then
-	DEVFLAGS=" -g"
-fi
-
-if ${morewarn}; then
-	MOREWARNFLAGS=" -Wbad-function-cast -Wcast-align -Wcast-qual -Wchar-subscripts -Winline -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wshadow -Wstrict-prototypes -Wwrite-strings"
-fi
-
-if ${warnerror}; then
-	WARNERRORFLAGS=" -Werror"
-fi
-
-if ${profiling}; then
-	PROFILINGFLAGS=" -pg"
-fi
-
-if ${dmalloc}; then
-	AC_CHECK_HEADERS(dmalloc.h)
-	AC_CHECK_LIB(dmalloc, main)
-	if test "$ac_cv_header_dmalloc_h" != yes ||
-	   test "$ac_cv_lib_dmalloc_main" != yes; then
-	    AC_MSG_ERROR([dmalloc required for --enable-dmalloc.])
-	else
-	    DMALLOCFLAGS=" -DDMALLOC"
-	fi
-else
-    DMALLOCFLAGS=" -Wredundant-decls"
-fi
-
-if test "$GCC" = yes; then
-	ANSI_CFLAGS="-ansi -pedantic -Wall$MOREWARNFLAGS$WARNERRORFLAGS$DEVFLAGS$PROFILINGFLAGS$DMALLOCFLAGS"
-else
-	ANSI_CFLAGS="$DEVFLAGS"
-fi
-AC_SUBST(ANSI_CFLAGS)
-
 ALL_LINGUAS=""
 AM_GNU_GETTEXT
+
+AC_PROG_INSTALL
+AC_PROG_RANLIB
+
+AC_HEADER_STDC
+
+AC_C_CONST
+AC_TYPE_SIZE_T
+
+AC_FUNC_VPRINTF
+AC_CHECK_FUNCS(memcpy toascii abort)
+AC_CHECK_FUNCS(strcasecmp stricmp strcmpi, break)
+AC_REPLACE_FUNCS(strsep mergesort)
+
+# Check for GNU C Library
+AC_CACHE_CHECK([for GNU C Library], yasm_cv_header_gnulib,
+	AC_EGREP_CPP(gnulib,
+	[#include <features.h>
+	#ifdef __GNU_LIBRARY__
+	  gnulib
+	#endif
+	], yasm_cv_header_gnulib=yes, yasm_cv_header_gnulib=no))
+if test "$yasm_cv_header_gnulib" = yes; then
+	AC_DEFINE(HAVE_GNU_C_LIBRARY)
+fi
+
+AC_CHECK_HEADERS(limits.h sys/queue.h sys/cdefs.h)
 
 # Needed tools for building lexers and parsers from original source.
 # Only needed for development: generated .c's are included with distributions.
@@ -127,37 +118,14 @@ if ${dev}; then
 	fi
 fi
 
-AC_PROG_INSTALL
-AC_PROG_RANLIB
-
-AC_HEADER_STDC
-
-AC_C_CONST
-AC_TYPE_SIZE_T
-
-AC_FUNC_VPRINTF
-AC_CHECK_FUNCS(memcpy toascii abort)
-AC_CHECK_FUNCS(strcasecmp stricmp strcmpi, break)
-AC_REPLACE_FUNCS(strsep mergesort)
-
-AC_CHECK_HEADERS(limits.h sys/queue.h sys/cdefs.h)
-
-# Check for GNU C Library
-AC_CACHE_CHECK([for GNU C Library], yasm_cv_header_gnulib,
-	AC_EGREP_CPP(gnulib,
-	[#include <features.h>
-	#ifdef __GNU_LIBRARY__
-	  gnulib
-	#endif
-	], yasm_cv_header_gnulib=yes, yasm_cv_header_gnulib=no))
-if test "$yasm_cv_header_gnulib" = yes; then
-	AC_DEFINE(HAVE_GNU_C_LIBRARY)
-fi
-
 # Check for stuff wanted by the test suite.  None of this is required.
+AC_CHECK_FUNCS(fork wait msgctl msgget msgrcv msgsnd strerror snprintf)
+AC_TYPE_PID_T
+AC_HEADER_SYS_WAIT
+AC_CHECK_HEADERS(sys/types.h sys/ipc.h sys/msg.h unistd.h)
+
 CHECK_CFLAGS=
 if ${check}; then
-	AC_CHECK_FUNCS(fork wait msgctl msgget msgrcv msgsnd strerror snprintf)
 	if test "$ac_cv_func_fork" = yes &&
 	   test "$ac_cv_func_wait" = yes &&
 	   test "$ac_cv_func_msgctl" = yes &&
@@ -167,11 +135,46 @@ if ${check}; then
 		AC_DEFINE(USE_FORKWAITMSG)
 		CHECK_CFLAGS="-D_SVID_SOURCE -D_GNU_SOURCE"
 	fi
-	AC_TYPE_PID_T
-	AC_HEADER_SYS_WAIT
-	AC_CHECK_HEADERS(sys/types.h sys/ipc.h sys/msg.h unistd.h)
 fi
 AC_SUBST(CHECK_CFLAGS)
+
+if ${dev}; then
+	DEVFLAGS=" -g"
+fi
+
+if ${morewarn}; then
+	MOREWARNFLAGS="-Wbad-function-cast -Wcast-align -Wcast-qual -Wchar-subscripts -Winline -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wshadow -Wstrict-prototypes -Wwrite-strings"
+fi
+
+if ${warnerror}; then
+	WARNERRORFLAGS="-Werror"
+fi
+
+if ${profiling}; then
+	PROFILINGFLAGS="-pg"
+fi
+
+AC_CHECK_HEADERS(dmalloc.h)
+AC_CHECK_LIB(dmalloc, main)
+if ${dmalloc}; then
+	if test "$ac_cv_header_dmalloc_h" != yes ||
+	   test "$ac_cv_lib_dmalloc_main" != yes; then
+		AC_MSG_ERROR([dmalloc required for --enable-dmalloc.])
+	else
+		DMALLOCFLAGS="-DDMALLOC"
+	fi
+else
+	if ${morewarn}; then
+		DMALLOCFLAGS="-Wredundant-decls"
+	fi
+fi
+
+if test "$GCC" = yes; then
+	ANSI_CFLAGS="-ansi -pedantic -Wall $MOREWARNFLAGS $WARNERRORFLAGS $DEVFLAGS $PROFILINGFLAGS $DMALLOCFLAGS"
+else
+	ANSI_CFLAGS="$DEVFLAGS"
+fi
+AC_SUBST(ANSI_CFLAGS)
 
 # Check for some target-specific stuff
 case "$host" in
