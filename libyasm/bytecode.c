@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.21 2001/09/16 19:44:49 peter Exp $
+/* $Id: bytecode.c,v 1.22 2001/09/16 20:17:23 peter Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -41,7 +41,7 @@
 
 #include "bytecode.h"
 
-RCSID("$Id: bytecode.c,v 1.21 2001/09/16 19:44:49 peter Exp $");
+RCSID("$Id: bytecode.c,v 1.22 2001/09/16 20:17:23 peter Exp $");
 
 /* Static structures for when NULL is passed to conversion functions. */
 /*  for Convert*ToEA() */
@@ -261,6 +261,8 @@ bytecode_new_common(void)
 
     bc->offset = 0;
     bc->mode_bits = mode_bits;
+
+    return bc;
 }
 
 bytecode *
