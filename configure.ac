@@ -1,6 +1,6 @@
 AC_INIT(src/main.c)
 AC_CONFIG_AUX_DIR(config)
-AM_CONFIG_HEADER(include/config.h)
+AM_CONFIG_HEADER(config.h)
 
 AM_INIT_AUTOMAKE(yasm, 0.0.1)
 
@@ -30,4 +30,4 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(memcpy toascii)
 AC_REPLACE_FUNCS(strdup strtoul)
 
-AC_OUTPUT(Makefile src/Makefile	include/Makefile)
+AC_OUTPUT(Makefile src/Makefile)
