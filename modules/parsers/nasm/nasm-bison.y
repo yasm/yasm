@@ -172,7 +172,13 @@ exp: instr
     | INCBIN STRING			{
 	$$ = yasm_bc_create_incbin($2, NULL, NULL, cur_line);
     }
+    | INCBIN STRING ','			{
+	$$ = yasm_bc_create_incbin($2, NULL, NULL, cur_line);
+    }
     | INCBIN STRING ',' expr		{
+	$$ = yasm_bc_create_incbin($2, $4, NULL, cur_line);
+    }
+    | INCBIN STRING ',' expr ','	{
 	$$ = yasm_bc_create_incbin($2, $4, NULL, cur_line);
     }
     | INCBIN STRING ',' expr ',' expr	{
@@ -208,6 +214,7 @@ datavals: dataval	    {
 	yasm_dvs_append(&$$, $1);
     }
     | datavals ',' dataval  { yasm_dvs_append(&$1, $3); $$ = $1; }
+    | datavals ','	    { $$ = $1; }
 ;
 
 dataval: dvexpr		{ $$ = yasm_dv_create_expr($1); }
