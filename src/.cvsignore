@@ -1,6 +1,7 @@
 .*.sw?
-bison.tab.c
-lex.yy.c
+bison.c
+bison.h
+token.c
 bison.y
 token.l
 Makefile.in
