@@ -39,6 +39,7 @@
 static void
 dbg_objfmt_initialize(const char *in_filename, const char *obj_filename)
 {
+    assert(debug_file != NULL);
     fprintf(debug_file, "%*sinitialize(\"%s\", \"%s\")\n", indent_level, "",
 	    in_filename, obj_filename);
 }
@@ -60,10 +61,11 @@ dbg_objfmt_output(FILE *f, sectionhead *sections)
 static void
 dbg_objfmt_cleanup(void)
 {
+    assert(debug_file != NULL);
     fprintf(debug_file, "%*scleanup()\n", indent_level, "");
 }
 
-static /*@dependent@*/ /*@null@*/ section *
+static /*@observer@*/ /*@null@*/ section *
 dbg_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 			   /*@unused@*/ /*@null@*/
 			   valparamhead *objext_valparams)
@@ -71,6 +73,8 @@ dbg_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
     valparam *vp;
     section *retval;
     int isnew;
+
+    assert(debug_file != NULL);
 
     fprintf(debug_file, "%*ssections_switch(headp, ", indent_level, "");
     vps_print(debug_file, valparams);
@@ -95,6 +99,7 @@ dbg_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 static void
 dbg_objfmt_section_data_delete(/*@only@*/ void *data)
 {
+    assert(debug_file != NULL);
     fprintf(debug_file, "%*ssection_data_delete(%p)\n", indent_level, "", data);
     xfree(data);
 }
@@ -112,6 +117,7 @@ static /*@null@*/ void *
 dbg_objfmt_extern_data_new(const char *name, /*@unused@*/ /*@null@*/
 			   valparamhead *objext_valparams)
 {
+    assert(debug_file != NULL);
     fprintf(debug_file, "%*sextern_data_new(\"%s\", ", indent_level, "", name);
     vps_print(debug_file, objext_valparams);
     fprintf(debug_file, "), returning NULL\n");
@@ -122,6 +128,7 @@ static /*@null@*/ void *
 dbg_objfmt_global_data_new(const char *name, /*@unused@*/ /*@null@*/
 			   valparamhead *objext_valparams)
 {
+    assert(debug_file != NULL);
     fprintf(debug_file, "%*sglobal_data_new(\"%s\", ", indent_level, "", name);
     vps_print(debug_file, objext_valparams);
     fprintf(debug_file, "), returning NULL\n");
@@ -133,6 +140,7 @@ dbg_objfmt_common_data_new(const char *name, /*@only@*/ expr *size,
 			   /*@unused@*/ /*@null@*/
 			   valparamhead *objext_valparams)
 {
+    assert(debug_file != NULL);
     fprintf(debug_file, "%*scommon_data_new(\"%s\", ", indent_level, "", name);
     expr_print(debug_file, size);
     fprintf(debug_file, ", ");
@@ -144,10 +152,11 @@ dbg_objfmt_common_data_new(const char *name, /*@only@*/ expr *size,
 }
 
 static void *
-dbg_objfmt_declare_data_copy(SymVisibility vis, /*@only@*/ void *data)
+dbg_objfmt_declare_data_copy(SymVisibility vis, const void *data)
 {
     void *retval = NULL;
 
+    assert(debug_file != NULL);
     fprintf(debug_file, "%*sdeclare_data_copy(", indent_level, "");
     switch (vis) {
 	case SYM_LOCAL:
@@ -178,6 +187,7 @@ dbg_objfmt_declare_data_copy(SymVisibility vis, /*@only@*/ void *data)
 static void
 dbg_objfmt_declare_data_delete(SymVisibility vis, /*@only@*/ void *data)
 {
+    assert(debug_file != NULL);
     fprintf(debug_file, "%*sdeclare_data_delete(", indent_level, "");
     switch (vis) {
 	case SYM_LOCAL:
@@ -219,8 +229,9 @@ dbg_objfmt_declare_data_print(FILE *f, SymVisibility vis,
 static int
 dbg_objfmt_directive(const char *name, valparamhead *valparams,
 		     /*@null@*/ valparamhead *objext_valparams,
-		     sectionhead *headp)
+		     /*@unused@*/ sectionhead *headp)
 {
+    assert(debug_file != NULL);
     fprintf(debug_file, "%*sdirective(\"%s\", ", indent_level, "", name);
     vps_print(debug_file, valparams);
     fprintf(debug_file, ", ");

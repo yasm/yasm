@@ -42,7 +42,7 @@
 
 #define REGULAR_OUTBUF_SIZE	1024
 
-static intnum *bin_objfmt_resolve_label(symrec *sym, int withstart);
+static /*@null@*/ intnum *bin_objfmt_resolve_label(symrec *sym, int withstart);
 
 static void
 bin_objfmt_initialize(/*@unused@*/ const char *in_filename,
@@ -94,7 +94,7 @@ bin_objfmt_align_section(section *sect, section *prevsect, unsigned long base,
     return start;
 }
 
-static intnum *
+static /*@null@*/ intnum *
 bin_objfmt_resolve_label2(symrec *sym, /*@null@*/ const section *cursect,
 			  unsigned long cursectstart, int withstart)
 {
@@ -122,8 +122,10 @@ bin_objfmt_resolve_label2(symrec *sym, /*@null@*/ const section *cursect,
 	assert(startexpr != NULL);
 	expr_expand_labelequ(startexpr, sect, 1, bin_objfmt_resolve_label);
 	start = expr_get_intnum(&startexpr);
-	if (!start)
+	if (!start) {
+	    expr_delete(startexpr);
 	    return NULL;
+	}
 	startval = intnum_get_uint(start);
 	expr_delete(startexpr);
 
@@ -144,7 +146,7 @@ bin_objfmt_resolve_label(symrec *sym, int withstart)
 }
 
 typedef struct bin_objfmt_expr_data {
-    const section *sect;
+    /*@observer@*/ const section *sect;
     unsigned long start;
     int withstart;
 } bin_objfmt_expr_data;
@@ -177,19 +179,20 @@ bin_objfmt_expr_traverse_callback(ExprItem *ei, void *d)
 }
 
 typedef struct bin_objfmt_output_info {
-    FILE *f;
-    unsigned char *buf;
-    const section *sect;
+    /*@dependent@*/ FILE *f;
+    /*@only@*/ unsigned char *buf;
+    /*@observer@*/ const section *sect;
     unsigned long start;
 } bin_objfmt_output_info;
 
 static int
 bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
-		       const section *sect, const bytecode *bc, int rel,
+		       /*@observer@*/ const section *sect,
+		       /*@observer@*/ const bytecode *bc, int rel,
 		       /*@null@*/ void *d)
 {
     /*@null@*/ bin_objfmt_output_info *info = (bin_objfmt_output_info *)d;
-    bin_objfmt_expr_data data;
+    /*@observer@*/ bin_objfmt_expr_data data;
     /*@dependent@*/ /*@null@*/ const intnum *num;
     /*@dependent@*/ /*@null@*/ const floatnum *flt;
     unsigned long val;
@@ -217,7 +220,7 @@ bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
     flt = expr_get_floatnum(ep);
     if (flt) {
 	int fltret;
-	fltret = floatnum_get_sized(flt, *bufp, valsize);
+	fltret = floatnum_get_sized(flt, *bufp, (size_t)valsize);
 	if (fltret < 0) {
 	    ErrorAt((*ep)->line, _("underflow in floating point expression"));
 	    return 1;
@@ -271,6 +274,8 @@ bin_objfmt_output_bytecode(bytecode *bc, /*@null@*/ void *d)
     unsigned long i;
     int gap;
 
+    assert(info != NULL);
+
     bigbuf = bc_tobytes(bc, info->buf, &size, &multiple, &gap, info->sect,
 			info, bin_objfmt_output_expr);
 
@@ -280,11 +285,9 @@ bin_objfmt_output_bytecode(bytecode *bc, /*@null@*/ void *d)
     if (gap)
 	Warning(_("uninitialized space declared in code/data section: zeroing"));
 
-    assert(info != NULL);
-
     /* Output multiple copies of buf (or bigbuf if non-NULL) to file */
     for (i=0; i<multiple; i++)
-	fwrite(bigbuf ? bigbuf : info->buf, size, 1, info->f);
+	fwrite(bigbuf ? bigbuf : info->buf, (size_t)size, 1, info->f);
 
     /* If bigbuf was allocated, free it */
     if (bigbuf)
@@ -296,10 +299,10 @@ bin_objfmt_output_bytecode(bytecode *bc, /*@null@*/ void *d)
 static void
 bin_objfmt_output(FILE *f, sectionhead *sections)
 {
-    /*@null@*/ section *text, *data, *bss, *prevsect;
+    /*@observer@*/ /*@null@*/ section *text, *data, *bss, *prevsect;
     /*@null@*/ expr *startexpr;
     /*@dependent@*/ /*@null@*/ const intnum *startnum;
-    unsigned long start, textstart, datastart;
+    unsigned long start = 0, textstart = 0, datastart = 0;
     unsigned long textlen = 0, textpad = 0, datalen = 0, datapad = 0;
     unsigned long *prevsectlenptr, *prevsectpadptr;
     unsigned long i;
@@ -383,7 +386,7 @@ bin_objfmt_cleanup(void)
 {
 }
 
-static /*@dependent@*/ /*@null@*/ section *
+static /*@observer@*/ /*@null@*/ section *
 bin_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 			   /*@unused@*/ /*@null@*/
 			   valparamhead *objext_valparams)
@@ -476,49 +479,43 @@ bin_objfmt_section_data_print(FILE *f, /*@null@*/ void *data)
 }
 
 static /*@null@*/ void *
-bin_objfmt_extern_data_new(const char *name, /*@unused@*/ /*@null@*/
-			   valparamhead *objext_valparams)
+bin_objfmt_extern_data_new(/*@unused@*/ const char *name, /*@unused@*/
+			   /*@null@*/ valparamhead *objext_valparams)
 {
     return NULL;
 }
 
 static /*@null@*/ void *
-bin_objfmt_global_data_new(const char *name, /*@unused@*/ /*@null@*/
-			   valparamhead *objext_valparams)
+bin_objfmt_global_data_new(/*@unused@*/ const char *name, /*@unused@*/
+			   /*@null@*/ valparamhead *objext_valparams)
 {
     return NULL;
 }
 
 static /*@null@*/ void *
-bin_objfmt_common_data_new(const char *name,
-			   /*@unused@*/ /*@only@*/ expr *size,
-			   /*@unused@*/ /*@null@*/
+bin_objfmt_common_data_new(/*@unused@*/ const char *name,
+			   /*@only@*/ expr *size, /*@unused@*/ /*@null@*/
 			   valparamhead *objext_valparams)
 {
+    expr_delete(size);
     Error(_("binary object format does not support common variables"));
     return NULL;
 }
 
-static void *
-bin_objfmt_declare_data_copy(SymVisibility vis, /*@only@*/ void *data)
+static /*@only@*/ void *
+bin_objfmt_declare_data_copy(/*@unused@*/ SymVisibility vis,
+			     /*@unused@*/ const void *data)
 {
-    if (vis == SYM_COMMON) {
-	return expr_copy(data);
-    } else {
-	InternalError(_("Unrecognized data in bin objfmt declare_data_copy"));
-	return NULL;
-    }
+    InternalError(_("Unrecognized data in bin objfmt declare_data_copy"));
+    /*@notreached@*/
+    return xstrdup(data);
 }
 
 static void
-bin_objfmt_declare_data_delete(SymVisibility vis, /*@only@*/ void *data)
+bin_objfmt_declare_data_delete(/*@unused@*/ SymVisibility vis,
+			       /*@unused@*/ /*@only@*/ void *data)
 {
-    if (vis == SYM_COMMON) {
-	expr_delete(data);
-    } else {
-	InternalError(_("Unrecognized data in bin objfmt declare_data_delete"));
-	xfree(data);
-    }
+    InternalError(_("Unrecognized data in bin objfmt declare_data_delete"));
 }
 
 static void
@@ -536,7 +533,7 @@ bin_objfmt_declare_data_print(FILE *f, SymVisibility vis,
 
 static int
 bin_objfmt_directive(const char *name, valparamhead *valparams,
-		     /*@null@*/ valparamhead *objext_valparams,
+		     /*@unused@*/ /*@null@*/ valparamhead *objext_valparams,
 		     sectionhead *headp)
 {
     section *sect;

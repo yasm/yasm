@@ -98,7 +98,9 @@ typedef /*@null@*/ intnum *(*resolve_label_func) (symrec *sym, int withstart);
  * Returns nonzero if an error occurred, 0 otherwise
  */
 typedef int (*output_expr_func) (expr **ep, unsigned char **bufp,
-				 unsigned long valsize, const section *sect,
-				 const bytecode *bc, int rel, void *d)
+				 unsigned long valsize,
+				 /*@observer@*/ const section *sect,
+				 /*@observer@*/ const bytecode *bc, int rel,
+				 /*@null@*/ void *d)
     /*@uses *ep@*/ /*@sets **bufp@*/;
 #endif
