@@ -76,7 +76,27 @@ typedef enum {
     SYM_EXTERN = 1 << 2		/* if it's declared EXTERN */
 } SymVisibility;
 
-typedef intnum *(*resolve_label_func) (symrec *sym, int withstart);
+/* Resolves a label into an offset, if possible.
+ * Inputs: sym, the label to resolve.
+ *         withstart, should the returned offset include the section start
+ *                    offset?
+ * Returns an intnum value containing the offset, or NULL if it was not
+ * possible to resolve (such as an external value).
+ */
+typedef /*@null@*/ intnum *(*resolve_label_func) (symrec *sym, int withstart);
+
+/* Converts an expr to its byte representation.  Usually implemented by
+ * object formats to keep track of relocations and verify legal expressions.
+ * Inputs:
+ *  ep      - (double) pointer to the expression to output
+ *  bufp    - (double) pointer to buffer to contain byte representation
+ *  valsize - the size (in bytes) to be used for the byte rep
+ *  sect    - current section (usually passed into higher-level calling fct)
+ *  bc      - current bytecode (usually passed into higher-level callign fct)
+ *  rel     - should the expr be treated as PC/IP-relative? (nonzero=yes)
+ *  d       - objfmt-specific data (passed into higher-level calling fct)
+ * Returns nonzero if an error occurred, 0 otherwise
+ */
 typedef int (*output_expr_func) (expr **ep, unsigned char **bufp,
 				 unsigned long valsize, const section *sect,
 				 const bytecode *bc, int rel, void *d);
