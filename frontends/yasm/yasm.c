@@ -95,6 +95,7 @@ static void print_list_keword_desc(const char *name, const char *keyword);
 /* values for special_options */
 #define SPECIAL_SHOW_HELP 0x01
 #define SPECIAL_SHOW_VERSION 0x02
+#define SPECIAL_LISTED 0x04
 
 /* command line options */
 static opt_option options[] =
@@ -236,6 +237,9 @@ main(int argc, char *argv[])
 	case SPECIAL_SHOW_VERSION:
 	    for (i=0; i<sizeof(version_msg)/sizeof(char *); i++)
 		printf("%s", gettext(version_msg[i]));
+	    return EXIT_SUCCESS;
+	case SPECIAL_LISTED:
+	    /* Printed out earlier */
 	    return EXIT_SUCCESS;
     }
 
@@ -598,7 +602,8 @@ opt_parser_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm parsers:\n"));
 	    list_parsers(print_list_keword_desc);
-	    return 1;
+	    special_options = SPECIAL_LISTED;
+	    return 0;
 	}
 	print_error(_("unrecognized parser `%s'"), param);
 	return 1;
@@ -615,7 +620,8 @@ opt_preproc_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm preprocessors:\n"));
 	    list_preprocs(print_list_keword_desc);
-	    return 1;
+	    special_options = SPECIAL_LISTED;
+	    return 0;
 	}
 	print_error(_("unrecognized preprocessor `%s'"), param);
 	return 1;
@@ -632,7 +638,8 @@ opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm object formats:\n"));
 	    list_objfmts(print_list_keword_desc);
-	    return 1;
+	    special_options = SPECIAL_LISTED;
+	    return 0;
 	}
 	print_error(_("unrecognized object format `%s'"), param);
 	return 1;
@@ -649,7 +656,8 @@ opt_dbgfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm debug formats:\n"));
 	    list_dbgfmts(print_list_keword_desc);
-	    return 1;
+	    special_options = SPECIAL_LISTED;
+	    return 0;
 	}
 	print_error(_("unrecognized debugging format `%s'"), param);
 	return 1;
