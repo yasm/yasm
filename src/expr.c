@@ -200,11 +200,20 @@ expr_xform_neg_helper(/*@returned@*/ /*@only@*/ expr *e)
 	    e->op = EXPR_IDENT;
 	    break;
 	case EXPR_IDENT:
-	    /* Negating an ident?  Change it into a MUL w/ -1. */
-	    e->op = EXPR_MUL;
-	    e->numterms = 2;
-	    e->terms[1].type = EXPR_INT;
-	    e->terms[1].data.intn = intnum_new_int((unsigned long)-1);
+	    /* Negating an ident?  Change it into a MUL w/ -1 if there's no
+	     * floatnums present below; if there ARE floatnums, recurse.
+	     */
+	    if (e->terms[0].type == EXPR_FLOAT)
+		floatnum_calc(e->terms[0].data.flt, EXPR_NEG, NULL);
+	    else if (e->terms[0].type == EXPR_EXPR &&
+		expr_contains(e->terms[0].data.expn, EXPR_FLOAT))
+		    expr_xform_neg_helper(e->terms[0].data.expn);
+	    else {
+		e->op = EXPR_MUL;
+		e->numterms = 2;
+		e->terms[1].type = EXPR_INT;
+		e->terms[1].data.intn = intnum_new_int((unsigned long)-1);
+	    }
 	    break;
 	default:
 	    /* Everything else.  MUL will be combined when it's leveled.

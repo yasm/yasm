@@ -1,0 +1,8 @@
+./src/objfmts/bin/tests/float-err.asm:2: invalid floating point constant size
+./src/objfmts/bin/tests/float-err.asm:3: invalid floating point constant size
+./src/objfmts/bin/tests/float-err.asm:4: overflow in floating point expression
+./src/objfmts/bin/tests/float-err.asm:5: underflow in floating point expression
+./src/objfmts/bin/tests/float-err.asm:8: invalid floating point constant size
+./src/objfmts/bin/tests/float-err.asm:9: invalid floating point constant size
+./src/objfmts/bin/tests/float-err.asm:11: overflow in floating point expression
+./src/objfmts/bin/tests/float-err.asm:12: underflow in floating point expression

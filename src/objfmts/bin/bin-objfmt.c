@@ -195,7 +195,6 @@ bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
     /*@observer@*/ bin_objfmt_expr_data data;
     /*@dependent@*/ /*@null@*/ const intnum *num;
     /*@dependent@*/ /*@null@*/ const floatnum *flt;
-    unsigned long val;
 
     assert(info != NULL);
 
@@ -220,6 +219,12 @@ bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
     flt = expr_get_floatnum(ep);
     if (flt) {
 	int fltret;
+
+	if (!floatnum_check_size(flt, (size_t)valsize)) {
+	    ErrorAt((*ep)->line, _("invalid floating point constant size"));
+	    return 1;
+	}
+
 	fltret = floatnum_get_sized(flt, *bufp, (size_t)valsize);
 	if (fltret < 0) {
 	    ErrorAt((*ep)->line, _("underflow in floating point expression"));
@@ -235,33 +240,32 @@ bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
 
     /* Handle integer expressions */
     num = expr_get_intnum(ep);
-    if (!num) {
-	ErrorAt((*ep)->line,
-		_("binary object format does not support external references"));
+    if (num) {
+	if (rel) {
+	    unsigned long val;
+	    /* FIXME: Check against BITS setting on x86 */
+	    if (valsize != 2 && valsize != 4)
+		InternalError(_("tried to do PC-relative offset from invalid sized value"));
+	    val = intnum_get_uint(num);
+	    val = (unsigned long)((long)(val - (bc->offset + bc->len)));
+	}
+
+	/* Write value out. */
+	intnum_get_sized(num, *bufp, (size_t)valsize);
+	*bufp += valsize;
+	return 0;
+    }
+
+    /* Check for complex float expressions */
+    if (expr_contains(*ep, EXPR_FLOAT)) {
+	ErrorAt((*ep)->line, _("floating point expression too complex"));
 	return 1;
     }
-    val = intnum_get_uint(num);
 
-    if (rel)
-	val = (unsigned long)((long)(val - (bc->offset + bc->len)));
-
-    /* Write value out. */
-    /* FIXME: Should we warn here about truncation if it doesn't fit? */
-    switch (valsize) {
-	case 1:
-	    WRITE_BYTE(*bufp, val);
-	    break;
-	case 2:
-	    WRITE_SHORT(*bufp, val);
-	    break;
-	case 4:
-	    WRITE_LONG(*bufp, val);
-	    break;
-	default:
-	    InternalError(_("unexpected size in bin objfmt output expr"));
-    }
-
-    return 0;
+    /* Couldn't output, assume it contains an external reference. */
+    ErrorAt((*ep)->line,
+	    _("binary object format does not support external references"));
+    return 1;
 }
 
 static int
