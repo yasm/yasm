@@ -1,4 +1,4 @@
-/* $Id: bison.y,v 1.2 2001/05/18 21:42:31 peter Exp $
+/* $Id: bison.y,v 1.3 2001/05/20 08:35:18 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -25,6 +25,7 @@
 #include "symrec.h"
 #include "globals.h"
 #include "bytecode.h"
+#include "errwarn.h"
 
 #define YYDEBUG 1
 
@@ -36,6 +37,7 @@ extern void yyerror(char *);
 
 %union {
     unsigned long int_val;
+    char *str_val;
     double double_val;
     symrec *sym;
     effaddr ea_val;
@@ -45,7 +47,7 @@ extern void yyerror(char *);
 
 %token <int_val> INTNUM
 %token <double_val> FLTNUM
-%token BITS SECTION ABSOLUTE EXTERN GLOBAL COMMON
+%token <str_val> DIRECTIVE_NAME DIRECTIVE_VAL
 %token <int_val> BYTE WORD DWORD QWORD TWORD DQWORD
 %token <int_val> DECLARE_DATA
 %token <int_val> RESERVE_SPACE
@@ -68,6 +70,7 @@ extern void yyerror(char *);
 %type <bc> aaa aad idiv imul in loopz lsl
 
 %type <bc> line exp instr instrbase
+
 %type <int_val> fpureg reg32 reg16 reg8 reg_dess reg_fsgs reg_notcs
 %type <ea_val> mem memaddr memexp
 %type <ea_val> mem8x mem16x mem32x mem64x mem80x mem128x
@@ -86,6 +89,7 @@ input: /* empty */
 
 line: '\n'	{ $$.len = 0; line_number++; }
     | exp '\n' { DebugPrintBC(&$1); $$ = $1; line_number++; }
+    | directive '\n' { line_number++; }
     | error '\n' { yyerrok; line_number++; }
 ;
 
@@ -93,25 +97,16 @@ exp: instr
 ;
 
 /* directives */
-directive: bits
-    | section
-    | absolute
-    | extern
-    | global
-    | common
-;
-
-bits: '[' BITS INTNUM ']'   { }
-;
-section: '[' SECTION ']'    { }
-;
-absolute: '[' ABSOLUTE INTNUM ']'   { }
-;
-extern: '[' EXTERN ']'	    { }
-;
-global: '[' GLOBAL ']'	    { }
-;
-common: '[' COMMON ']'	    { }
+directive: '[' DIRECTIVE_NAME DIRECTIVE_VAL ']' {
+	printf("Directive: Name='%s' Value='%s'\n", $2, $3);
+    }
+    | '[' DIRECTIVE_NAME DIRECTIVE_VAL error {
+	/*Error(ERR_MISSING, "%c", ']');*/
+	fprintf(stderr, "missing ']'\n");
+    }
+    | '[' DIRECTIVE_NAME error {
+	Error(ERR_MISSING_ARG, (char *)NULL, $2);
+    }
 ;
 
 /* register groupings */

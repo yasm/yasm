@@ -1,4 +1,4 @@
-/* $Id: token.l.in,v 1.1 2001/05/15 05:20:39 peter Exp $
+/* $Id: token.l.in,v 1.2 2001/05/20 08:35:18 peter Exp $
  * Main lexer
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -24,12 +24,16 @@
 #include <string.h>
 #include "symrec.h"
 #include "bytecode.h"
+#include "errwarn.h"
 #include "bison.tab.h"
+
 %}
 %option noyywrap
 %option nounput
 %option case-insensitive
     static char *locallabel_base = (char *)NULL;
+
+%x DIRECTIVE DIRECTIVE2
 
 DIGIT    [0-9]
 BINDIGIT [01]
@@ -74,14 +78,34 @@ WS       [ \t\r]
     yylval.double_val = strtod(yytext, (char **)NULL);
     return FLTNUM;
 }
-    /* directives */
-bits	    { return BITS; }
-section	    { return SECTION; }
-segment	    { return SECTION; }
-absolute    { return ABSOLUTE; }
-extern	    { return EXTERN; }
-global	    { return GLOBAL; }
-common	    { return COMMON; }
+    /* directive: [name value] */
+^"["	{ BEGIN DIRECTIVE; return '['; }
+<DIRECTIVE>"]"	    { BEGIN INITIAL; return ']'; }
+<DIRECTIVE2>"]"	    { BEGIN INITIAL; return ']'; }
+<DIRECTIVE>\n	    { BEGIN INITIAL; return '\n'; }
+<DIRECTIVE2>\n	    { BEGIN INITIAL; return '\n'; }
+<DIRECTIVE>{WS}+    ;
+<DIRECTIVE2>{WS}+   ;
+<DIRECTIVE>[a-z]+   {
+    BEGIN DIRECTIVE2;
+    yylval.str_val = strdup(yytext);
+    if(!yylval.str_val)
+	Fatal(FATAL_NOMEM);
+    return DIRECTIVE_NAME;
+}
+    /* everything printable except for ' ', '[' and ']'. */
+<DIRECTIVE2>[!-Z\^-~]+ {
+    yylval.str_val = strdup(yytext);
+    if(!yylval.str_val)
+	Fatal(FATAL_NOMEM);
+    return DIRECTIVE_VAL;
+}
+<DIRECTIVE>. {
+    Warning(WARN_UNREC_CHAR, (char *)NULL, conv_unprint(yytext[0]));
+}
+<DIRECTIVE2>. {
+    Warning(WARN_UNREC_CHAR, (char *)NULL, conv_unprint(yytext[0]));
+}
 
     /* size specifiers */
 byte	{ yylval.int_val = 1; return BYTE; }
@@ -233,6 +257,8 @@ lsl	{ return INS_LSL; }
     if(locallabel_base)
 	free(locallabel_base);
     locallabel_base = strdup(yytext);
+    if(!locallabel_base)
+	Fatal(FATAL_NOMEM);
 
     return s->type;
 }
@@ -241,5 +267,7 @@ lsl	{ return INS_LSL; }
 
 {WS}+	;
 
-\n return '\n';
+\n	return '\n';
+
+.	{ Warning(WARN_UNREC_CHAR, (char *)NULL, conv_unprint(yytext[0])); }
 
