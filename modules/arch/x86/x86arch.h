@@ -142,6 +142,8 @@ typedef struct x86_insn {
     unsigned char opersize;	/* 0 indicates no override */
     unsigned char lockrep_pre;	/* 0 indicates no prefix */
 
+    unsigned char rex;		/* REX x86-64 extension, 0 if none */
+
     /* HACK, but a space-saving one: shift opcodes have an immediate
      * form and a ,1 form (with no immediate).  In the parser, we
      * set this and opcode_len=1, but store the ,1 version in the

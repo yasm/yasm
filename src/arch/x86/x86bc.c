@@ -69,6 +69,7 @@ x86_bc_new_insn(x86_new_insn_data *d)
     insn->addrsize = 0;
     insn->opersize = d->opersize;
     insn->lockrep_pre = 0;
+    insn->rex = 0;
     insn->shift_op = d->shift_op;
     insn->signext_imm8_op = d->signext_imm8_op;
 
@@ -374,13 +375,14 @@ x86_bc_print(FILE *f, const bytecode *bc)
 		    (unsigned int)insn->opcode[2],
 		    (unsigned int)insn->opcode_len);
 	    fprintf(f,
-		    "%*sAddrSize=%u OperSize=%u LockRepPre=%02x ShiftOp=%u\n",
+		    "%*sAddrSize=%u OperSize=%u LockRepPre=%02x REX=%03o\n",
 		    indent_level, "",
 		    (unsigned int)insn->addrsize,
 		    (unsigned int)insn->opersize,
 		    (unsigned int)insn->lockrep_pre,
-		    (unsigned int)insn->shift_op);
-	    fprintf(f, "%*sBITS=%u\n", indent_level, "",
+		    (unsigned int)insn->rex);
+	    fprintf(f, "%*sShiftOp=%u BITS=%u\n", indent_level, "",
+		    (unsigned int)insn->shift_op,
 		    (unsigned int)insn->mode_bits);
 	    break;
 	case X86_BC_JMPREL:
@@ -549,6 +551,7 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
     *len += (insn->addrsize != 0 && insn->addrsize != insn->mode_bits) ? 1:0;
     *len += (insn->opersize != 0 && insn->opersize != insn->mode_bits) ? 1:0;
     *len += (insn->lockrep_pre != 0) ? 1:0;
+    *len += (insn->rex != 0) ? 1:0;
 
     return retval;
 }
@@ -733,6 +736,11 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
 	WRITE_8(*bufp, 0x66);
     if (insn->addrsize != 0 && insn->addrsize != insn->mode_bits)
 	WRITE_8(*bufp, 0x67);
+    if (insn->rex != 0) {
+	if (insn->mode_bits != 64)
+	    InternalError(_("x86: got a REX prefix in non-64-bit mode"));
+	WRITE_8(*bufp, insn->rex);
+    }
 
     /* Opcode */
     for (i=0; i<insn->opcode_len; i++)
