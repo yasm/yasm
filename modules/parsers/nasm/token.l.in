@@ -60,9 +60,6 @@ static size_t strbuf_size = 0;
 /* last "base" label for local (.) labels */
 char *nasm_parser_locallabel_base = (char *)NULL;
 
-/* current line number */
-int line_number;
-
 %}
 %option noyywrap
 %option nounput
