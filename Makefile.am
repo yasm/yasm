@@ -86,5 +86,13 @@ distclean-local:
 
 if BUILD_MAN
 .xml.1:
-	xmlto -o $(@D) man $<
+	$(XMLTO) -o $(@D) man $<
+else
+.xml.1:
+	@echo "Not rebuilding man page from $<"
+	cp `test -f $*.1 || echo '$(srcdir)/'`$*.1 $@
 endif
+
+BUILT_SOURCES += $(man_MANS)
+DISTCLEANFILES += $(man_MANS)
+EXTRA_DIST += $(man_MANS)
