@@ -129,9 +129,10 @@ int strncasecmp(const char *s1, const char *s2, size_t n);
 
 /* Error-checking memory allocation routines in xmalloc.c. */
 /*@only@*/ /*@out@*/ void *xmalloc(size_t size);
-/*@only@*/ /*@out@*/ void *xcalloc(size_t nelem, size_t elsize);
-/*@out@*/ void *xrealloc(/*@returned@*/ /*@null@*/ void *oldmem, size_t size);
-void xfree(/*@only@*/ /*@out@*/ /*@null@*/ void *p);
+/*@only@*/ void *xcalloc(size_t nelem, size_t elsize);
+/*@only@*/ void *xrealloc(/*@only@*/ /*@out@*/ /*@returned@*/ /*@null@*/
+			  void *oldmem, size_t size) /*@modifies oldmem@*/;
+void xfree(/*@only@*/ /*@out@*/ /*@null@*/ void *p) /*@modifies p@*/;
 #endif
 
 /* Bit-counting: used primarily by HAMT but also in a few other places. */
