@@ -30,6 +30,10 @@
 #include "intnum.h"
 #include "floatnum.h"
 
+#include "bytecode.h"
+#include "arch.h"
+#include "x86-int.h"
+
 typedef enum {
     REG_AX = 0,
     REG_CX = 1,
@@ -294,7 +298,7 @@ WarningAt(const char *filename, unsigned long line, const char *fmt, ...)
 }
 
 static int
-checkea_check(CheckEA_Entry *val)
+x86_checkea_check(CheckEA_Entry *val)
 {
     CheckEA_InOut chk = val->in;    /* local structure copy of inputs */
     int retval;
@@ -302,9 +306,9 @@ checkea_check(CheckEA_Entry *val)
     error_triggered = 0;
 
     /* execute function and check return value */
-    retval = expr_checkea(&expn, &chk.addrsize, chk.bits, chk.nosplit,
-			  &chk.displen, &chk.modrm, &chk.v_modrm, &chk.n_modrm,
-			  &chk.sib, &chk.v_sib, &chk.n_sib);
+    retval = x86_expr_checkea(&expn, &chk.addrsize, chk.bits, chk.nosplit,
+			      &chk.displen, &chk.modrm, &chk.v_modrm,
+			      &chk.n_modrm, &chk.sib, &chk.v_sib, &chk.n_sib);
     if (retval != val->retval) {
 	sprintf(result_msg, "%s: incorrect %s (expected %d, got %d)",
 		val->ascii, "return value", val->retval, retval);
@@ -373,14 +377,14 @@ checkea_check(CheckEA_Entry *val)
     return 0;
 }
 
-START_TEST(test_checkea_bits16)
+START_TEST(test_x86_checkea_bits16)
 {
     CheckEA_Entry *vals = bits16_vals;
     int i, num = sizeof(bits16_vals)/sizeof(CheckEA_Entry);
 
     for (i=0; i<num; i++) {
 	expn = vals[i].in.expr_gen();
-	fail_unless(checkea_check(&vals[i]) == 0, result_msg);
+	fail_unless(x86_checkea_check(&vals[i]) == 0, result_msg);
 	expr_delete(expn);
     }
 }
@@ -390,10 +394,10 @@ static Suite *
 memexpr_suite(void)
 {
     Suite *s = suite_create("memexpr");
-    TCase *tc_checkea = tcase_create("checkea");
+    TCase *tc_x86_checkea = tcase_create("x86_checkea");
 
-    suite_add_tcase(s, tc_checkea);
-    tcase_add_test(tc_checkea, test_checkea_bits16);
+    suite_add_tcase(s, tc_x86_checkea);
+    tcase_add_test(tc_x86_checkea, test_x86_checkea_bits16);
 
     return s;
 }

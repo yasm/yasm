@@ -44,12 +44,6 @@ expr *expr_copy(const expr *e);
 
 void expr_delete(expr *e);
 
-int expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
-		 unsigned char nosplit, unsigned char *displen,
-		 unsigned char *modrm, unsigned char *v_modrm,
-		 unsigned char *n_modrm, unsigned char *sib,
-		 unsigned char *v_sib, unsigned char *n_sib);
-
 /* Expands all (symrec) equ's in the expression into full expression
  * instances.
  */

@@ -6,7 +6,8 @@ libarch_a_SOURCES = \
 	x86arch.h	\
 	x86-int.h	\
 	arch.c		\
-	bytecode.c
+	bytecode.c	\
+	expr.c
 
 INCLUDES = \
 	-I$(top_srcdir)/src	\

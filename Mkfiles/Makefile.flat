@@ -46,7 +46,8 @@ SRC_OBJS= \
 
 SRC_ARCH_X86_OBJS= \
  src/arch/x86/arch.o \
- src/arch/x86/bytecode.o
+ src/arch/x86/bytecode.o \
+ src/arch/x86/expr.o
 
 SRC_ARCH_OBJS= \
  $(SRC_ARCH_X86_OBJS)

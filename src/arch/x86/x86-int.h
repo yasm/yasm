@@ -92,4 +92,10 @@ void x86_bc_delete(bytecode *bc);
 void x86_bc_print(const bytecode *bc);
 void x86_bc_parser_finalize(bytecode *bc);
 
+int x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
+		     unsigned char nosplit, unsigned char *displen,
+		     unsigned char *modrm, unsigned char *v_modrm,
+		     unsigned char *n_modrm, unsigned char *sib,
+		     unsigned char *v_sib, unsigned char *n_sib);
+
 #endif

@@ -28,6 +28,7 @@ libyasm_a_SOURCES = \
 	bc-int.h		\
 	expr.c			\
 	expr.h			\
+	expr-int.h		\
 	symrec.c		\
 	symrec.h		\
 	globals.c		\

@@ -458,10 +458,10 @@ x86_bc_parser_finalize_insn(x86_insn *insn)
 	     * of the Mod/RM byte until we know more about the
 	     * displacement.
 	     */
-	    if (!expr_checkea(&ea->disp, &insn->addrsize, insn->mode_bits,
-			      ea->nosplit, &ea->len, &ead->modrm,
-			      &ead->valid_modrm, &ead->need_modrm, &ead->sib,
-			      &ead->valid_sib, &ead->need_sib))
+	    if (!x86_expr_checkea(&ea->disp, &insn->addrsize, insn->mode_bits,
+				  ea->nosplit, &ea->len, &ead->modrm,
+				  &ead->valid_modrm, &ead->need_modrm,
+				  &ead->sib, &ead->valid_sib, &ead->need_sib))
 		return;	    /* failed, don't bother checking rest of insn */
 	}
     }
