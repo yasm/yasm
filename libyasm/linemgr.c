@@ -34,12 +34,13 @@
 /*@null@*/ objfmt *cur_objfmt = NULL;
 
 /* Source lines tracking */
-/* FIXME: Need better data structure for this than a linked list. */
-typedef /*@reldef@*/ STAILQ_HEAD(line_index_mapping_head, line_index_mapping)
-    line_index_mapping_head;
-typedef struct line_index_mapping {
-    /*@reldef@*/ STAILQ_ENTRY(line_index_mapping) link;
+typedef struct {
+    struct line_index_mapping *vector;
+    unsigned long size;
+    unsigned long allocated;
+} line_index_mapping_head;
 
+typedef struct line_index_mapping {
     /* monotonically increasing line index */
     unsigned long index;
 
@@ -51,6 +52,7 @@ typedef struct line_index_mapping {
     /* "original" source line number increment (for following lines) */
     unsigned long line_inc;
 } line_index_mapping;
+
 /* Shared storage for filenames */
 static /*@only@*/ /*@null@*/ HAMT *filename_table = NULL;
 
@@ -75,44 +77,57 @@ line_set(const char *filename, unsigned long line, unsigned long line_inc)
 {
     char *copy;
     int replace = 0;
-    line_index_mapping *mapping;
+    line_index_mapping mapping;
 
     /* Build a mapping */
-    mapping = xmalloc(sizeof(line_index_mapping));
 
     /* Copy the filename (via shared storage) */
     copy = xstrdup(filename);
     if (!filename_table)
 	filename_table = HAMT_new();
     /*@-aliasunique@*/
-    mapping->filename = HAMT_insert(filename_table, copy, copy, &replace,
+    mapping.filename = HAMT_insert(filename_table, copy, copy, &replace,
 				    filename_delete_one);
     /*@=aliasunique@*/
 
-    mapping->index = line_index;
-    mapping->line = line;
-    mapping->line_inc = line_inc;
+    mapping.index = line_index;
+    mapping.line = line;
+    mapping.line_inc = line_inc;
 
     /* Add the mapping to the map */
     if (!line_index_map) {
+	/* initialize vector */
 	line_index_map = xmalloc(sizeof(line_index_mapping_head));
-	STAILQ_INIT(line_index_map);
+	line_index_map->vector = xmalloc(8*sizeof(line_index_mapping));
+	line_index_map->size = 0;
+	line_index_map->allocated = 8;
     }
-    STAILQ_INSERT_TAIL(line_index_map, mapping, link);
+    if (line_index_map->size >= line_index_map->allocated) {
+	/* allocate another size bins when full for 2x space */
+	struct line_index_mapping_s *realloc_index;
+	line_index_map->vector = xrealloc(line_index_map->vector,
+		2*line_index_map->allocated*sizeof(line_index_mapping));
+	line_index_map->allocated *= 2;
+    }
+    memcpy(line_index_map->vector + line_index_map->size,
+	    &mapping, sizeof(line_index_mapping));
+    line_index_map->size++;
+
 }
 
 void
 line_shutdown(void)
 {
-    line_index_mapping *mapping, *mapping2;
+    /*line_index_mapping *mapping, *mapping2; */
 
     if (line_index_map) {
-	mapping = STAILQ_FIRST(line_index_map);
+	/*(mapping = STAILQ_FIRST(line_index_map);
 	while (mapping) {
 	    mapping2 = STAILQ_NEXT(mapping, link);
 	    xfree(mapping);
 	    mapping = mapping2;
-	}
+	}*/
+	xfree(line_index_map->vector);
 	xfree(line_index_map);
 	line_index_map = NULL;
     }
@@ -126,19 +141,24 @@ line_shutdown(void)
 void
 line_lookup(unsigned long lindex, const char **filename, unsigned long *line)
 {
-    line_index_mapping *mapping, *mapping2;
+    line_index_mapping *mapping/*, *mapping2*/;
+    int vindex, step;
 
     assert(lindex <= line_index);
 
-    /* Linearly search through map to find highest line_index <= index */
+    /* Binary search through map to find highest line_index <= index */
     assert(line_index_map != NULL);
-    mapping = STAILQ_FIRST(line_index_map);
-    while (mapping) {
-	mapping2 = STAILQ_NEXT(mapping, link);
-	if (!mapping2 || mapping2->index > lindex)
-	    break;
-	mapping = mapping2;
+    mapping = line_index_map->vector;
+    vindex = 0;
+    /* start step as the greatest power of 2 <= size */
+    while (step*2<=line_index_map->size) step*=2;
+    while (step>0) {
+	if (vindex+step < line_index_map->size
+		&& mapping[vindex+step].index <= lindex)
+	    vindex += step;
+	step /= 2;
     }
+    mapping += vindex;
 
     assert(mapping != NULL);
 
