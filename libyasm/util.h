@@ -94,7 +94,7 @@ int strcasecmp(const char *s1, const char *s2);
 int strncasecmp(const char *s1, const char *s2, size_t n);
 #endif
 
-#if !defined(HAVE_TOASCII) || defined(HAVE_GNU_C_LIBRARY) || defined(lint)
+#if !defined(HAVE_TOASCII) || defined(lint)
 # define toascii(c) ((c) & 0x7F)
 #endif
 
