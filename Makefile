@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.1 2001/05/15 05:18:00 peter Exp $
+# $Id: Makefile,v 1.2 2001/05/18 21:40:02 peter Exp $
 # Makefile
 #
 #    Copyright (C) 2001  Peter Johnson
@@ -24,7 +24,7 @@
 #  Should use autoconf/automake.
 #  Distribution target (eventually :).
 #
-CFLAGS = -g -Wall -ansi -pedantic -Iinclude
+CFLAGS = -g -Wall -Wstrict-prototypes -ansi -pedantic -Iinclude
 
 OBJS_BASE = \
 	bison.tab.o \
