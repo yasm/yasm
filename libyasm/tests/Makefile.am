@@ -4,10 +4,12 @@ CFLAGS = @ANSI_CFLAGS@
 
 if CHECK
 TESTS = \
-	bytecode_test
+	bytecode_test	\
+	floatnum_test
 
 noinst_PROGRAMS = \
-	bytecode_test
+	bytecode_test	\
+	floatnum_test
 else
 TESTS =
 noinst_PROGRAMS =
@@ -15,6 +17,9 @@ endif
 
 bytecode_test_SOURCES = \
 	bytecode_test.c
+
+floatnum_test_SOURCES = \
+	floatnum_test.c
 
 INCLUDES= -I$(top_srcdir) -I$(top_srcdir)/src -I$(top_srcdir)/check
 LDADD = \

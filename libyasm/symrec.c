@@ -173,7 +173,9 @@ symrec_get_int_value(const symrec *sym, unsigned long *ret_val,
 		*ret_val = sym->value.int_val;
 		break;
 	    case SYM_CONSTANT_FLOAT:
-		*ret_val = floatnum_get_int(sym->value.flt);
+		/* FIXME: Line number on this error will be incorrect. */
+		if (floatnum_get_int(ret_val, sym->value.flt))
+		    Error(_("Floating point value cannot fit in 32-bit single precision"));
 		break;
 	    case SYM_LABEL:
 		if (!bytecode_get_offset(sym->value.label.sect,
