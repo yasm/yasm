@@ -101,8 +101,8 @@ typedef struct {
 
     yasm_section *stab;		/* sections to which stabs, stabstrs appended */
     yasm_section *stabstr;
-    yasm_symrec *firstsym;	/* track leading sym of section/function */
-    yasm_bytecode *firstbc;	/* and its bytecode */
+
+    yasm_bytecode *basebc;      /* base bytecode from which to track SLINEs */
 
     yasm_dbgfmt_stabs *dbgfmt_stabs;
 } stabs_info;
@@ -116,13 +116,6 @@ typedef struct {
     /*@null@*/yasm_bytecode *bcvalue;	/* relocated stab's bytecode */
     unsigned long value;		/* fallthrough value if above NULL */
 } stabs_stab;
-
-/* helper struct for finding first sym (and bytecode) of a section */
-typedef struct {
-    yasm_symrec *sym;
-    yasm_bytecode *precbc;
-    yasm_section *sect;
-} stabs_symsect;
 
 /* Bytecode types */
 
@@ -258,41 +251,33 @@ stabs_dbgfmt_append_stab(stabs_info *info, yasm_section *sect,
     return stab;
 }
 
-/* Update current first sym and bytecode if it's in the right section */
-static int
-stabs_dbgfmt_first_sym_traversal(yasm_symrec *sym, void *d)
-{
-    stabs_symsect *symsect = (stabs_symsect *)d;
-    yasm_bytecode *precbc;
-
-    if (!yasm_symrec_get_label(sym, &precbc))
-	return 1;
-    if ((precbc->section == symsect->sect)
-	&& ((symsect->sym == NULL)
-	    || precbc->offset < symsect->precbc->offset))
-    {
-	symsect->sym = sym;
-	symsect->precbc = precbc;
-    }
-    return 1;
-}
-
-/* Find the first sym and its preceding bytecode in a given section */
 static void
-stabs_dbgfmt_first_sym_by_sect(yasm_dbgfmt_stabs *dbgfmt_stabs,
-			       stabs_info *info, yasm_section *sect)
+stabs_dbgfmt_generate_n_fun(stabs_info *info, yasm_bytecode *bc)
 {
-    stabs_symsect symsect = { NULL, NULL, NULL };
-    if (sect == NULL) {
-	info->firstsym = NULL;
-	info->firstbc = NULL;
-    }
+    /* check all syms at this bc for potential function syms */
+    int bcsym;
+    for (bcsym=0; bc->symrecs && bc->symrecs[bcsym]; bcsym++)
+    {
+        char *str;
+        yasm_symrec *sym = bc->symrecs[bcsym];
+        const char *name = yasm_symrec_get_name(sym);
 
-    symsect.sect = sect;
-    yasm_symtab_traverse(dbgfmt_stabs->symtab, (void *)&symsect,
-			 stabs_dbgfmt_first_sym_traversal);
-    info->firstsym = symsect.sym;
-    info->firstbc = symsect.precbc;
+        /* best guess algorithm - ignore labels containing a . or $ */
+        if (strchr(name, '.') || strchr(name, '$'))
+            continue;
+
+        /* if a function, update basebc, and output a funcname:F1 stab */
+        info->basebc = bc;
+
+        str = yasm_xmalloc(strlen(name)+4);
+        strcpy(str, name);
+        strcat(str, ":F1");
+	stabs_dbgfmt_append_stab(info, info->stab,
+				 stabs_dbgfmt_append_bcstr(info->stabstr, str),
+				 N_FUN, 0, sym, info->basebc, 0);
+	yasm_xfree(str);
+        break;
+    }
 }
 
 static int
@@ -302,17 +287,22 @@ stabs_dbgfmt_generate_bcs(yasm_bytecode *bc, void *d)
     yasm_linemap_lookup(info->dbgfmt_stabs->linemap, bc->line, &info->curfile,
 			&info->curline);
 
+    /* check for new function */
+    stabs_dbgfmt_generate_n_fun(info, bc);
+
     if (info->lastfile != info->curfile) {
 	info->lastline = 0; /* new file, so line changes */
 	/*stabs_dbgfmt_append_stab(info, info->stab,
 	    stabs_dbgfmt_append_bcstr(info->stabstr, info->curfile),
 	    N_SOL, 0, NULL, bc, 0);*/
     }
-    if (info->curline != info->lastline) {
+
+    /* output new line stabs if there's a basebc (known function) */
+    if (info->basebc != NULL && info->curline != info->lastline) {
 	info->lastline = bc->line;
 	stabs_dbgfmt_append_stab(info, info->stab, NULL, N_SLINE,
 				 info->curline, NULL, NULL,
-				 bc->offset - info->firstbc->offset);
+				 bc->offset - info->basebc->offset);
     }
 
     info->lastline = info->curline;
@@ -327,18 +317,11 @@ stabs_dbgfmt_generate_sections(yasm_section *sect, /*@null@*/ void *d)
     stabs_info *info = (stabs_info *)d;
     const char *sectname=yasm_section_get_name(sect);
 
-    stabs_dbgfmt_first_sym_by_sect(info->dbgfmt_stabs, info, sect);
-    if (yasm__strcasecmp(sectname, ".text")==0) {
-	char *str;
-	const char *symname=yasm_symrec_get_name(info->firstsym);
-	str = yasm_xmalloc(strlen(symname)+4);
-	strcpy(str, symname);
-	strcat(str, ":F1");
-	stabs_dbgfmt_append_stab(info, info->stab,
-				 stabs_dbgfmt_append_bcstr(info->stabstr, str),
-				 N_FUN, 0, info->firstsym, info->firstbc, 0);
-	yasm_xfree(str);
-    }
+    /* each section has a different base symbol */
+    info->basebc = NULL;
+    
+    /* handle first (pseudo) bc separately */
+    stabs_dbgfmt_generate_n_fun(d, yasm_section_bcs_first(sect));
 
     yasm_section_bcs_traverse(sect, d, stabs_dbgfmt_generate_bcs);
 
@@ -361,7 +344,8 @@ stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
     yasm_bytecode *dbgbc;
     stabs_bc_stab *dbgbc_stab;
     stabs_stab *stab;
-    yasm_bytecode *filebc, *nullbc, *laststr;
+    yasm_bytecode *filebc, *nullbc, *laststr, *firstbc;
+    yasm_symrec *firstsym;
     yasm_section *stext;
 
     /* Stablen is determined by arch/machine */
@@ -416,11 +400,11 @@ stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
     filebc = stabs_dbgfmt_append_bcstr(info.stabstr, dbgfmt_stabs->filename);
 
     stext = yasm_object_find_general(dbgfmt_stabs->object, ".text");
-    info.firstsym = yasm_symtab_use(dbgfmt_stabs->symtab, ".text", 0);
-    info.firstbc = yasm_section_bcs_first(stext);
+    firstsym = yasm_symtab_use(dbgfmt_stabs->symtab, ".text", 0);
+    firstbc = yasm_section_bcs_first(stext);
     /* N_SO file stab */
     stabs_dbgfmt_append_stab(&info, info.stab, filebc, N_SO, 0,
-			     info.firstsym, info.firstbc, 0);
+			     firstsym, firstbc, 0);
 
     yasm_object_sections_traverse(dbgfmt_stabs->object, (void *)&info,
 				  stabs_dbgfmt_generate_sections);
