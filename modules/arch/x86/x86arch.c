@@ -33,7 +33,7 @@
 #include "x86arch.h"
 
 
-yasm_arch_module yasm_x86_LTX_arch;
+const yasm_arch_module yasm_x86_LTX_arch;
 
 
 static /*@only@*/ yasm_arch *
@@ -247,7 +247,7 @@ static yasm_arch_machine x86_machines[] = {
 };
 
 /* Define arch structure -- see arch.h for details */
-yasm_arch_module yasm_x86_LTX_arch = {
+const yasm_arch_module yasm_x86_LTX_arch = {
     YASM_ARCH_VERSION,
     "x86 (IA-32 and derivatives), AMD64",
     "x86",

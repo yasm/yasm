@@ -66,8 +66,10 @@ do { \
 /*@null@*/ /*@only@*/ static char *machine_name = NULL;
 static int special_options = 0;
 /*@null@*/ /*@dependent@*/ static yasm_arch *cur_arch = NULL;
-/*@null@*/ /*@dependent@*/ static yasm_arch_module *cur_arch_module = NULL;
-/*@null@*/ /*@dependent@*/ static yasm_parser_module *cur_parser_module = NULL;
+/*@null@*/ /*@dependent@*/ static const yasm_arch_module *
+    cur_arch_module = NULL;
+/*@null@*/ /*@dependent@*/ static const yasm_parser_module *
+    cur_parser_module = NULL;
 /*@null@*/ /*@dependent@*/ static yasm_preproc *cur_preproc = NULL;
 /*@null@*/ /*@dependent@*/ static yasm_objfmt *cur_objfmt = NULL;
 /*@null@*/ /*@dependent@*/ static yasm_optimizer *cur_optimizer = NULL;

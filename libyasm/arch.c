@@ -38,7 +38,7 @@
 #include "arch.h"
 
 
-yasm_arch_module *
+const yasm_arch_module *
 yasm_arch_get_module(yasm_arch *arch)
 {
     return arch->module;

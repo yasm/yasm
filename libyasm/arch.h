@@ -54,13 +54,15 @@ typedef struct yasm_insn_operandhead yasm_insn_operandhead;
 /*@reldef@*/ STAILQ_HEAD(yasm_insn_operandhead, yasm_insn_operand);
 #endif
 
+#ifdef YASM_LIB_INTERNAL
 /** Base #yasm_arch structure.  Must be present as the first element in any
  * #yasm_arch implementation.
  */
 struct yasm_arch {
     /** #yasm_arch_module implementation for this architecture. */
-    struct yasm_arch_module *module;
+    const struct yasm_arch_module *module;
 };
+#endif
 
 /** "Flavor" of the parser.
  * Different assemblers order instruction operands differently.  Also, some
@@ -340,7 +342,7 @@ struct yasm_insn_operand {
  * \param arch	architecture
  * \return Module implementation.
  */
-yasm_arch_module *yasm_arch_get_module(yasm_arch *arch);
+const yasm_arch_module *yasm_arch_get_module(yasm_arch *arch);
 
 /** Create an instruction operand from a register.
  * \param reg	register

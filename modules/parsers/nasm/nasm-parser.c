@@ -96,7 +96,7 @@ static const char *nasm_parser_preproc_keywords[] = {
 };
 
 /* Define parser structure -- see parser.h for details */
-yasm_parser_module yasm_nasm_LTX_parser = {
+const yasm_parser_module yasm_nasm_LTX_parser = {
     YASM_PARSER_VERSION,
     "NASM-compatible parser",
     "nasm",
