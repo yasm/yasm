@@ -144,6 +144,8 @@ static opt_option options[] =
       N_("enables/disables warning"), NULL },
     { 'e', "preproc-only", 0, preproc_only_handler, 0,
       N_("preprocess only (writes output to stdout by default)"), NULL },
+    { 'i', NULL, 1, opt_preproc_option, 0,
+      N_("add include path"), N_("path") },
     { 'I', NULL, 1, opt_preproc_option, 0,
       N_("add include path"), N_("path") },
     { 'P', NULL, 1, opt_preproc_option, 1,
