@@ -31,9 +31,7 @@ INCLUDES = \
 	-I$(top_srcdir)/src	\
 	-I$(top_builddir)/intl
 
-if DEV
-CFLAGS = -ansi -pedantic -Wall -g
-endif
+CFLAGS = @ANSI_CFLAGS@
 
 token.l bison.y: $(top_srcdir)/src/instrs.dat token.l.in bison.y.in gen_instr.pl
 if DEV

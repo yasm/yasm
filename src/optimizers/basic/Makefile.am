@@ -9,6 +9,4 @@ INCLUDES = \
 	-I$(top_srcdir)/src	\
 	-I$(top_builddir)/intl
 
-if DEV
-CFLAGS = -ansi -pedantic -Wall -g
-endif
+CFLAGS = @ANSI_CFLAGS@

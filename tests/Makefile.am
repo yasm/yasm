@@ -1,5 +1,7 @@
 # $IdPath$
 
+CFLAGS = @ANSI_CFLAGS@
+
 if CHECK
 #TESTS = \
 

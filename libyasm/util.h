@@ -22,11 +22,11 @@
 #ifndef YASM_UTIL_H
 #define YASM_UTIL_H
 
-#ifndef HAVE_STRDUP
+#if !defined(HAVE_STRDUP) || defined(HAVE_GNU_C_LIBRARY)
 char *strdup(const char *str);
 #endif
 
-#ifndef HAVE_STRTOUL
+#if !defined(HAVE_STRTOUL) || defined(HAVE_GNU_C_LIBRARY)
 unsigned long strtoul(const char *nptr, char **endptr, int base);
 #endif
 
@@ -39,12 +39,15 @@ unsigned long strtoul(const char *nptr, char **endptr, int base);
 #  define strcasecmp(x, y)	strncmpi(x, y)
 # else
 #  define USE_OUR_OWN_STRCASECMP
-int strcasecmp(const char *s1, const char *s2);
-int strncasecmp(const char *s1, const char *s2, size_t n);
 # endif
 #endif
 
-#ifndef HAVE_TOASCII
+#if defined(USE_OUR_OWN_STRCASECMP) || defined(HAVE_GNU_C_LIBRARY)
+int strcasecmp(const char *s1, const char *s2);
+int strncasecmp(const char *s1, const char *s2, size_t n);
+#endif
+
+#if !defined(HAVE_TOASCII) || defined(HAVE_GNU_C_LIBRARY)
 # define toascii(c) ((c) & 0x7F)
 #endif
 

@@ -28,6 +28,17 @@ AM_CONDITIONAL(CHECK, test x$check = xtrue)
 
 AM_PROG_CC_STDC
 
+if ${dev}; then
+	DEVFLAGS="-g"
+fi
+
+if test "$GCC" = yes; then
+	ANSI_CFLAGS="-ansi -pedantic -Wall $DEVFLAGS"
+else
+	ANSI_CFLAGS="$DEVFLAGS"
+fi
+AC_SUBST(ANSI_CFLAGS)
+
 ALL_LINGUAS=""
 AM_GNU_GETTEXT
 
@@ -74,7 +85,24 @@ AC_REPLACE_FUNCS(strdup strtoul)
 
 AC_CHECK_HEADERS(limits.h sys/queue.h sys/cdefs.h)
 
+# Check for GNU C Library
+AC_CHECK_HEADERS(features.h)
+if test "$ac_cv_header_features_h" = yes; then
+	AC_MSG_CHECKING([for GNU C Library])
+	AC_EGREP_CPP(gnulib,
+	[#include <features.h>
+	#ifdef __GNU_LIBRARY__
+	  gnulib
+	#endif
+	], have_gnulib=yes, have_gnulib=no)
+	AC_MSG_RESULT([$have_gnulib])
+	if test "$have_gnulib" = yes; then
+		AC_DEFINE(HAVE_GNU_C_LIBRARY)
+	fi
+fi
+
 # Check for stuff wanted by the test suite.  None of this is required.
+CHECK_CFLAGS=
 if ${check}; then
 	AC_CHECK_FUNCS(fork wait msgctl msgget msgrcv msgsnd strerror)
 	if test "$ac_cv_func_fork" = yes &&
@@ -84,11 +112,13 @@ if ${check}; then
 	   test "$ac_cv_func_msgrcv" = yes &&
 	   test "$ac_cv_func_msgsnd" = yes; then
 		AC_DEFINE(USE_FORKWAITMSG)
+		CHECK_CFLAGS="-D_SVID_SOURCE"
 	fi
 	AC_TYPE_PID_T
 	AC_HEADER_SYS_WAIT
 	AC_CHECK_HEADERS(sys/types.h sys/ipc.h sys/msg.h unistd.h)
 fi
+AC_SUBST(CHECK_CFLAGS)
 
 # Check for some target-specific stuff
 case "$host" in

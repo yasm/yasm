@@ -28,9 +28,7 @@ nocheck_error:
 	@echo "Run configure with --enable-check before running make check"
 	@exit 1
 
-if DEV
-CFLAGS = -ansi -pedantic -Wall -g
-endif
+CFLAGS = @ANSI_CFLAGS@ @CHECK_CFLAGS@
 
 EXTRA_DIST = \
 	NEWS	\

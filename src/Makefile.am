@@ -41,9 +41,7 @@ libyasm_a_SOURCES = \
 	optimizer.h		\
 	strcasecmp.c
 
-if DEV
-CFLAGS = -ansi -pedantic -Wall -g
-endif
+CFLAGS = @ANSI_CFLAGS@
 
 EXTRA_DIST = \
 	instrs.dat		\

@@ -21,6 +21,9 @@
 /* combined test for fork/way/msg* */
 #undef USE_FORKWAITMSG
 
+/* Check for GNU C Library */
+#undef HAVE_GNU_C_LIBRARY
+
 @BOTTOM@
 
 #endif /* YASM_CONFIG_H */
