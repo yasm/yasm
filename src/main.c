@@ -22,6 +22,8 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
+#include "ltdl.h"
+
 #include "bitvect.h"
 #include "file.h"
 
@@ -41,6 +43,11 @@
 
 #include "arch.h"
 
+
+/* Extra path to search for our modules. */
+#ifndef YASM_MODULE_PATH_ENV
+# define YASM_MODULE_PATH_ENV	"YASM_MODULE_PATH"
+#endif
 
 /* Preprocess-only buffer size */
 #define PREPROC_BUF_SIZE    16384
@@ -114,6 +121,7 @@ main(int argc, char *argv[])
     /*@null@*/ FILE *in = NULL, *obj = NULL;
     sectionhead *sections;
     size_t i;
+    int errors;
 
 #if defined(HAVE_SETLOCALE) && defined(HAVE_LC_MESSAGES)
     setlocale(LC_MESSAGES, "");
@@ -122,6 +130,32 @@ main(int argc, char *argv[])
     bindtextdomain(PACKAGE, LOCALEDIR);
 #endif
     textdomain(PACKAGE);
+
+    /* Set libltdl malloc/free functions. */
+#ifdef DMALLOC
+    lt_dlmalloc = malloc;
+    lt_dlfree = free;
+#else
+    lt_dlmalloc = xmalloc;
+    lt_dlfree = xfree;
+#endif
+
+    /* Initialize preloaded symbol lookup table. */
+    LTDL_SET_PRELOADED_SYMBOLS();
+
+    /* Initialize libltdl. */
+    errors = lt_dlinit();
+
+    /* Set up extra module search directories. */
+    if (errors == 0) {
+	const char *path = getenv(YASM_MODULE_PATH_ENV);
+	if (path)
+	    errors = lt_dladdsearchdir(path);
+    }
+    if (errors != 0) {
+	ErrorNow(_("Module loader initialization failed"));
+	return EXIT_FAILURE;
+    }
 
     if (parse_cmdline(argc, argv, options, NELEMS(options)))
 	return EXIT_FAILURE;
@@ -347,6 +381,9 @@ cleanup(sectionhead *sections)
     intnum_shutdown();
 
     BitVector_Shutdown();
+
+    /* Finish with libltdl. */
+    lt_dlexit();
 }
 
 /*
