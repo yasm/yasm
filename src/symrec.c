@@ -162,7 +162,7 @@ symrec_declare(const char *name, SymVisibility vis)
 
     /* Don't allow EXTERN and COMMON if symbol has already been DEFINED. */
     /* Also, EXTERN and COMMON are mutually exclusive. */
-    if ((rec->status & SYM_DEFINED) ||
+    if (((rec->status & SYM_DEFINED) && !(rec->visibility & SYM_EXTERN)) ||
 	((rec->visibility & SYM_COMMON) && (vis == SYM_EXTERN)) ||
 	((rec->visibility & SYM_EXTERN) && (vis == SYM_COMMON))) {
 	Error(_("duplicate definition of `%s'; first defined on line %d"),
