@@ -34,9 +34,11 @@ typedef enum {
     BC_EMPTY = 0,
     BC_DATA,
     BC_RESERVE,
-    BC_INCBIN
+    BC_INCBIN,
+    BC_ALIGN,
+    BC_OBJFMT_DATA
 } bytecode_type;
-#define BYTECODE_TYPE_BASE  BC_INCBIN+1
+#define BYTECODE_TYPE_BASE  BC_OBJFMT_DATA+1
 
 /*@only@*/ immval *imm_new_int(unsigned long int_val);
 /*@only@*/ immval *imm_new_expr(/*@keep@*/ expr *e);
@@ -53,6 +55,9 @@ void bc_set_multiple(bytecode *bc, /*@keep@*/ expr *e);
 /*@only@*/ bytecode *bc_new_incbin(/*@only@*/ char *filename,
 				   /*@only@*/ /*@null@*/ expr *start,
 				   /*@only@*/ /*@null@*/ expr *maxlen);
+/*@only@*/ bytecode *bc_new_align(unsigned long boundary);
+/*@only@*/ bytecode *bc_new_objfmt_data(unsigned int type, unsigned long len,
+					/*@only@*/ void *data);
 
 void bc_delete(/*@only@*/ /*@null@*/ bytecode *bc);
 
@@ -91,6 +96,8 @@ bc_resolve_flags bc_resolve(bytecode *bc, int save, const section *sect,
  *  bufsize       - the size of buf
  *  d             - the data to pass to each call to output_expr()
  *  output_expr   - the function to call to convert expressions to byte rep
+ *  output_bc_objfmt_data - the function to call to convert objfmt data
+ *                  bytecodes into their byte representation
  * Outputs:
  *  bufsize       - the size of the generated data.
  *  multiple      - the number of times the data should be dup'ed when output
@@ -103,7 +110,8 @@ bc_resolve_flags bc_resolve(bytecode *bc, int save, const section *sect,
 /*@null@*/ /*@only@*/ unsigned char *bc_tobytes(bytecode *bc,
     unsigned char *buf, unsigned long *bufsize,
     /*@out@*/ unsigned long *multiple, /*@out@*/ int *gap, const section *sect,
-    void *d, output_expr_func output_expr)
+    void *d, output_expr_func output_expr,
+    /*@null@*/ output_bc_objfmt_data_func output_bc_objfmt_data)
     /*@sets *buf@*/;
 
 /* void bcs_initialize(bytecodehead *headp); */

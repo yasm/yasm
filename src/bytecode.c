@@ -30,6 +30,7 @@
 #include "expr.h"
 
 #include "bytecode.h"
+#include "objfmt.h"
 
 #include "arch.h"
 
@@ -70,6 +71,15 @@ typedef struct bytecode_incbin {
     /* maximum number of bytes to read (NULL=no limit) */
     /*@only@*/ /*@null@*/ expr *maxlen;
 } bytecode_incbin;
+
+typedef struct bytecode_align {
+    unsigned long boundary;	/* alignment boundary */
+} bytecode_align;
+
+typedef struct bytecode_objfmt_data {
+    unsigned int type;		/* objfmt-specific type */
+    /*@only@*/ void *data;	/* objfmt-specific data */
+} bytecode_objfmt_data;
 
 /* Static structures for when NULL is passed to conversion functions. */
 /*  for Convert*ToBytes() */
@@ -184,12 +194,44 @@ bc_new_incbin(char *filename, expr *start, expr *maxlen)
     return bc;
 }
 
+bytecode *
+bc_new_align(unsigned long boundary)
+{
+    bytecode *bc = bc_new_common(BC_ALIGN, sizeof(bytecode_align));
+    bytecode_align *align = bc_get_data(bc);
+
+    align->boundary = boundary;
+
+    return bc;
+}
+
+bytecode *
+bc_new_objfmt_data(unsigned int type, unsigned long len, void *data)
+{
+    bytecode *bc = bc_new_common(BC_ALIGN, sizeof(bytecode_objfmt_data));
+    bytecode_objfmt_data *objfmt_data = bc_get_data(bc);
+
+    objfmt_data->type = type;
+    /*@-mustfree@*/
+    objfmt_data->data = data;
+    /*@=mustfree@*/
+
+    /* Yes, this breaks the paradigm just a little.  But this data is very
+     * unlike other bytecode data--it's internally generated after the
+     * other bytecodes have been resolved, and the length is ALWAYS known.
+     */
+    bc->len = len;
+
+    return bc;
+}
+
 void
 bc_delete(bytecode *bc)
 {
     bytecode_data *data;
     bytecode_reserve *reserve;
     bytecode_incbin *incbin;
+    bytecode_objfmt_data *objfmt_data;
 
     if (!bc)
 	return;
@@ -212,6 +254,16 @@ bc_delete(bytecode *bc)
 	    expr_delete(incbin->start);
 	    expr_delete(incbin->maxlen);
 	    break;
+	case BC_ALIGN:
+	    break;
+	case BC_OBJFMT_DATA:
+	    objfmt_data = bc_get_data(bc);
+	    if (cur_objfmt->bc_objfmt_data_delete)
+		cur_objfmt->bc_objfmt_data_delete(objfmt_data->type,
+						  objfmt_data->data);
+	    else
+		InternalError(_("objfmt can't handle its own objfmt data bytecode"));
+	    break;
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
 		cur_arch->bc.bc_delete(bc);
@@ -231,6 +283,8 @@ bc_print(FILE *f, const bytecode *bc)
     const bytecode_data *data;
     const bytecode_reserve *reserve;
     const bytecode_incbin *incbin;
+    const bytecode_align *align;
+    const bytecode_objfmt_data *objfmt_data;
     const char *filename;
     unsigned long line;
 
@@ -273,6 +327,20 @@ bc_print(FILE *f, const bytecode *bc)
 	    else
 		expr_print(f, incbin->maxlen);
 	    fprintf(f, "\n");
+	    break;
+	case BC_ALIGN:
+	    align = bc_get_const_data(bc);
+	    fprintf(f, "%*s_Align_\n", indent_level, "");
+	    fprintf(f, "%*sBoundary=%lu\n", indent_level, "", align->boundary);
+	    break;
+	case BC_OBJFMT_DATA:
+	    objfmt_data = bc_get_const_data(bc);
+	    fprintf(f, "%*s_ObjFmt_Data_\n", indent_level, "");
+	    if (cur_objfmt->bc_objfmt_data_print)
+		cur_objfmt->bc_objfmt_data_print(f, objfmt_data->type,
+						 objfmt_data->data);
+	    else
+		fprintf(f, "%*sUNKNOWN\n", indent_level, "");
 	    break;
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
@@ -463,6 +531,13 @@ bc_resolve(bytecode *bc, int save, const section *sect,
 	    retval = bc_resolve_incbin(incbin, &bc->len, save, bc->line, sect,
 				       resolve_label);
 	    break;
+	case BC_ALIGN:
+	    /* TODO */
+	    InternalError(_("TODO: align bytecode not implemented!"));
+	    break;
+	case BC_OBJFMT_DATA:
+	    InternalError(_("resolving objfmt data bytecode?"));
+	    break;
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
 		retval = cur_arch->bc.bc_resolve(bc, save, sect,
@@ -586,7 +661,8 @@ bc_tobytes_incbin(bytecode_incbin *incbin, unsigned char **bufp,
 /*@null@*/ /*@only@*/ unsigned char *
 bc_tobytes(bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 	   /*@out@*/ unsigned long *multiple, /*@out@*/ int *gap,
-	   const section *sect, void *d, output_expr_func output_expr)
+	   const section *sect, void *d, output_expr_func output_expr,
+	   /*@null@*/ output_bc_objfmt_data_func output_bc_objfmt_data)
     /*@sets *buf@*/
 {
     /*@only@*/ /*@null@*/ unsigned char *mybuf = NULL;
@@ -594,6 +670,7 @@ bc_tobytes(bytecode *bc, unsigned char *buf, unsigned long *bufsize,
     /*@dependent@*/ /*@null@*/ const intnum *num;
     bytecode_data *bc_data;
     bytecode_incbin *incbin;
+    bytecode_objfmt_data *objfmt_data;
     unsigned long datasize;
     int error = 0;
 
@@ -635,6 +712,18 @@ bc_tobytes(bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 	case BC_INCBIN:
 	    incbin = bc_get_data(bc);
 	    error = bc_tobytes_incbin(incbin, &destbuf, bc->len, bc->line);
+	    break;
+	case BC_ALIGN:
+	    /* TODO */
+	    InternalError(_("TODO: align bytecode not implemented!"));
+	    break;
+	case BC_OBJFMT_DATA:
+	    objfmt_data = bc_get_data(bc);
+	    if (output_bc_objfmt_data)
+		error = output_bc_objfmt_data(objfmt_data->type,
+					      objfmt_data->data, &destbuf);
+	    else
+		InternalError(_("Have objfmt data bytecode but no way to output it"));
 	    break;
 	default:
 	    if (bc->type < cur_arch->bc.type_max)

@@ -74,6 +74,9 @@ struct objfmt {
 	(*sections_switch)(sectionhead *headp, valparamhead *valparams,
 			   /*@null@*/ valparamhead *objext_valparams);
 
+    /* Object format-specific data handling functions for sections.
+     * May be NULL if no data is ever allocated in sections_switch().
+     */
     void (*section_data_delete)(/*@only@*/ void *data);
     void (*section_data_print)(FILE *f, /*@null@*/ void *data);
 
@@ -87,6 +90,8 @@ struct objfmt {
 
     /* It's only valid to pass these functions *one* SymVisibility (eg, vis
      * is an enum not a bitmask).
+     * These functions may be NULL if no data is ever returned by the above
+     * *_data_new() functions.
      */
     /*@only@*/ void *
 	(*declare_data_copy)(SymVisibility vis, const void *data);
@@ -101,6 +106,12 @@ struct objfmt {
     int (*directive)(const char *name, valparamhead *valparams,
 		     /*@null@*/ valparamhead *objext_valparams,
 		     sectionhead *headp);
+
+    /* Bytecode objfmt data (BC_OBJFMT_DATA) handling functions.
+     * May be NULL if no BC_OBJFMT_DATA is ever allocated by the object format.
+     */
+    void (*bc_objfmt_data_delete)(unsigned int type, /*@only@*/ void *data);
+    void (*bc_objfmt_data_print)(FILE *f, unsigned int type, const void *data);
 };
 
 /* Generic functions for all object formats - implemented in src/objfmt.c */

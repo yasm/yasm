@@ -95,7 +95,10 @@ sections_switch_general(sectionhead *headp, const char *name,
 	    strcmp(s->data.general.name, name) == 0) {
 	    if (of_data) {
 		assert(cur_objfmt != NULL);
-		cur_objfmt->section_data_delete(s->data.general.of_data);
+		if (cur_objfmt->section_data_delete)
+		    cur_objfmt->section_data_delete(s->data.general.of_data);
+		else
+		    InternalError(_("don't know how to delete objfmt-specific section data"));
 		s->data.general.of_data = of_data;
 	    }
 	    *isnew = 0;
@@ -262,8 +265,12 @@ section_delete(section *sect)
     if (sect->type == SECTION_GENERAL) {
 	xfree(sect->data.general.name);
 	assert(cur_objfmt != NULL);
-	if (sect->data.general.of_data)
-	    cur_objfmt->section_data_delete(sect->data.general.of_data);
+	if (sect->data.general.of_data) {
+	    if (cur_objfmt->section_data_delete)
+		cur_objfmt->section_data_delete(sect->data.general.of_data);
+	    else
+		InternalError(_("don't know how to delete objfmt-specific section data"));
+	}
     }
     expr_delete(sect->start);
     bcs_delete(&sect->bc);
@@ -285,9 +292,13 @@ section_print(FILE *f, const section *sect, int print_bcs)
 		    "", sect->data.general.name, indent_level, "");
 	    assert(cur_objfmt != NULL);
 	    indent_level++;
-	    if (sect->data.general.of_data)
-		cur_objfmt->section_data_print(f, sect->data.general.of_data);
-	    else
+	    if (sect->data.general.of_data) {
+		if (cur_objfmt->section_data_print)
+		    cur_objfmt->section_data_print(f,
+						   sect->data.general.of_data);
+		else
+		    fprintf(f, "%*sUNKNOWN\n", indent_level, "");
+	    } else
 		fprintf(f, "%*s(none)\n", indent_level, "");
 	    indent_level--;
 	    break;

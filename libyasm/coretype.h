@@ -103,4 +103,19 @@ typedef int (*output_expr_func) (expr **ep, unsigned char **bufp,
 				 /*@observer@*/ const bytecode *bc, int rel,
 				 /*@null@*/ void *d)
     /*@uses *ep@*/ /*@sets **bufp@*/;
+
+/* Converts a objfmt data bytecode into its byte representation.  Usually
+ * implemented by object formats to output their own generated data.
+ * Inputs:
+ *  type - objfmt-specific type
+ *  data - objfmt-specific data
+ *  bufp - (double) pointer to buffer to contain byte representation
+ * bufp is guaranteed to have enough space to store the data into (as given
+ * by the original bc_new_objfmt_data() call).
+ * Returns nonzero if an error occurred, 0 otherwise.
+ */
+typedef int (*output_bc_objfmt_data_func) (unsigned int type,
+					   /*@observer@*/ void *data,
+					   unsigned char **bufp)
+    /*@sets **bufp@*/;
 #endif

@@ -281,7 +281,7 @@ bin_objfmt_output_bytecode(bytecode *bc, /*@null@*/ void *d)
     assert(info != NULL);
 
     bigbuf = bc_tobytes(bc, info->buf, &size, &multiple, &gap, info->sect,
-			info, bin_objfmt_output_expr);
+			info, bin_objfmt_output_expr, NULL);
 
     /* Don't bother doing anything else if size ended up being 0. */
     if (size == 0) {
@@ -483,21 +483,6 @@ bin_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 	return NULL;
 }
 
-static void
-bin_objfmt_section_data_delete(/*@only@*/ void *data)
-{
-    xfree(data);
-}
-
-static void
-bin_objfmt_section_data_print(FILE *f, /*@null@*/ void *data)
-{
-    if (data)
-	fprintf(f, "%*s%p\n", indent_level, "", data);
-    else
-	fprintf(f, "%*s(none)\n", indent_level, "");
-}
-
 static /*@null@*/ void *
 bin_objfmt_extern_data_new(/*@unused@*/ const char *name, /*@unused@*/
 			   /*@null@*/ valparamhead *objext_valparams)
@@ -520,35 +505,6 @@ bin_objfmt_common_data_new(/*@unused@*/ const char *name,
     expr_delete(size);
     Error(_("binary object format does not support common variables"));
     return NULL;
-}
-
-static /*@only@*/ void *
-bin_objfmt_declare_data_copy(/*@unused@*/ SymVisibility vis,
-			     /*@unused@*/ const void *data)
-{
-    InternalError(_("Unrecognized data in bin objfmt declare_data_copy"));
-    /*@notreached@*/
-    return xstrdup(data);
-}
-
-static void
-bin_objfmt_declare_data_delete(/*@unused@*/ SymVisibility vis,
-			       /*@unused@*/ /*@only@*/ void *data)
-{
-    InternalError(_("Unrecognized data in bin objfmt declare_data_delete"));
-}
-
-static void
-bin_objfmt_declare_data_print(FILE *f, SymVisibility vis,
-			      /*@null@*/ void *data)
-{
-    if (vis == SYM_COMMON) {
-	fprintf(f, "%*sSize=", indent_level, "");
-	expr_print(f, data);
-	fprintf(f, "\n");
-    } else {
-	fprintf(f, "%*s(none)\n", indent_level, "");
-    }
 }
 
 static int
@@ -597,13 +553,15 @@ objfmt bin_objfmt = {
     bin_objfmt_output,
     bin_objfmt_cleanup,
     bin_objfmt_sections_switch,
-    bin_objfmt_section_data_delete,
-    bin_objfmt_section_data_print,
+    NULL /*bin_objfmt_section_data_delete*/,
+    NULL /*bin_objfmt_section_data_print*/,
     bin_objfmt_extern_data_new,
     bin_objfmt_global_data_new,
     bin_objfmt_common_data_new,
-    bin_objfmt_declare_data_copy,
-    bin_objfmt_declare_data_delete,
-    bin_objfmt_declare_data_print,
-    bin_objfmt_directive
+    NULL /*bin_objfmt_declare_data_copy*/,
+    NULL /*bin_objfmt_declare_data_delete*/,
+    NULL /*bin_objfmt_declare_data_print*/,
+    bin_objfmt_directive,
+    NULL /*bin_objfmt_bc_objfmt_data_delete*/,
+    NULL /*bin_objfmt_bc_objfmt_data_print*/
 };

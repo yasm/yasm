@@ -98,14 +98,25 @@ symrec_delete_one(/*@only@*/ void *d)
     if (sym->type == SYM_EQU)
 	expr_delete(sym->value.expn);
     assert(cur_objfmt != NULL);
-    if (sym->of_data_vis_g && (sym->visibility & SYM_GLOBAL))
-	cur_objfmt->declare_data_delete(SYM_GLOBAL, sym->of_data_vis_g);
+    if (sym->of_data_vis_g && (sym->visibility & SYM_GLOBAL)) {
+	if (cur_objfmt->declare_data_delete)
+	    cur_objfmt->declare_data_delete(SYM_GLOBAL, sym->of_data_vis_g);
+	else
+	    InternalError(_("don't know how to delete objfmt-specific declare data"));
+    }
     if (sym->of_data_vis_ce && (sym->visibility & SYM_COMMON)) {
-	cur_objfmt->declare_data_delete(SYM_COMMON, sym->of_data_vis_ce);
+	if (cur_objfmt->declare_data_delete)
+	    cur_objfmt->declare_data_delete(SYM_COMMON, sym->of_data_vis_ce);
+	else
+	    InternalError(_("don't know how to delete objfmt-specific declare data"));
 	sym->of_data_vis_ce = NULL;
     }
-    if (sym->of_data_vis_ce && (sym->visibility & SYM_EXTERN))
-	cur_objfmt->declare_data_delete(SYM_EXTERN, sym->of_data_vis_ce);
+    if (sym->of_data_vis_ce && (sym->visibility & SYM_EXTERN)) {
+	if (cur_objfmt->declare_data_delete)
+	    cur_objfmt->declare_data_delete(SYM_EXTERN, sym->of_data_vis_ce);
+	else
+	    InternalError(_("don't know how to delete objfmt-specific declare data"));
+    }
     xfree(sym);
 }
 
@@ -255,9 +266,13 @@ symrec_declare(const char *name, SymVisibility vis, void *of_data)
 	if (of_data) {
 	    switch (vis) {
 		case SYM_GLOBAL:
-		    if (rec->of_data_vis_g)
-			cur_objfmt->declare_data_delete(vis,
-							rec->of_data_vis_g);
+		    if (rec->of_data_vis_g) {
+			if (cur_objfmt->declare_data_delete)
+			    cur_objfmt->declare_data_delete(vis,
+				rec->of_data_vis_g);
+			else
+			    InternalError(_("don't know how to delete objfmt-specific declare data"));
+		    }
 		    rec->of_data_vis_g = of_data;
 		    break;
 		case SYM_COMMON:
@@ -265,9 +280,13 @@ symrec_declare(const char *name, SymVisibility vis, void *of_data)
 		    /* set line number of declaration */
 		    if (rec->line == 0)
 			rec->line = line_index;
-		    if (rec->of_data_vis_ce)
-			cur_objfmt->declare_data_delete(vis,
-							rec->of_data_vis_ce);
+		    if (rec->of_data_vis_ce) {
+			if (cur_objfmt->declare_data_delete)
+			    cur_objfmt->declare_data_delete(vis,
+				rec->of_data_vis_ce);
+			else
+			    InternalError(_("don't know how to delete objfmt-specific declare data"));
+		    }
 		    rec->of_data_vis_ce = of_data;
 		    break;
 		default:
@@ -277,8 +296,12 @@ symrec_declare(const char *name, SymVisibility vis, void *of_data)
     } else {
 	Error(_("duplicate definition of `%s'; first defined on line %lu"),
 	      name, rec->line);
-	if (of_data)
-	    cur_objfmt->declare_data_delete(vis, of_data);
+	if (of_data) {
+	    if (cur_objfmt->declare_data_delete)
+		cur_objfmt->declare_data_delete(vis, of_data);
+	    else
+		InternalError(_("don't know how to delete objfmt-specific declare data"));
+	}
     } 
     return rec;
 }
@@ -460,14 +483,20 @@ symrec_print(FILE *f, const symrec *sym)
 	fprintf(f, "%*sGlobal object format-specific data:\n", indent_level,
 		"");
 	indent_level++;
-	cur_objfmt->declare_data_print(f, SYM_GLOBAL, sym->of_data_vis_g);
+	if (cur_objfmt->declare_data_print)
+	    cur_objfmt->declare_data_print(f, SYM_GLOBAL, sym->of_data_vis_g);
+	else
+	    fprintf(f, "%*sUNKNOWN\n", indent_level, "");
 	indent_level--;
     }
     if (sym->visibility & SYM_COMMON) {
 	fprintf(f, "%*sCommon/Extern object format-specific data:\n",
 		indent_level, "");
 	indent_level++;
-	cur_objfmt->declare_data_print(f, SYM_COMMON, sym->of_data_vis_ce);
+	if (cur_objfmt->declare_data_print)
+	    cur_objfmt->declare_data_print(f, SYM_COMMON, sym->of_data_vis_ce);
+	else
+	    fprintf(f, "%*sUNKNOWN\n", indent_level, "");
 	indent_level--;
     }
 
