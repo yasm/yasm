@@ -74,8 +74,8 @@ echo "  gettextize -f"
 echo "N" | gettextize -f || exit 1
 echo "  autoheader"
 autoheader || exit 1
-echo "  automake"
-automake || exit 1
+echo "  automake -a"
+automake -a || exit 1
 echo "  autoconf"
 autoconf || exit 1
 echo "  configure --enable-dev $@"
