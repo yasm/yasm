@@ -23,6 +23,8 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
+#include <errno.h>
+
 #include "errwarn.h"
 
 #include "src/preprocs/yapp/yapp-preproc.h"
