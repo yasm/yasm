@@ -631,7 +631,7 @@ expr_copy_except(const expr *e, int except)
     if (!e)
 	return 0;
 
-    n = xmalloc(sizeof(expr)+sizeof(ExprItem)*(e->numterms-2));
+    n = xmalloc(sizeof(expr)+sizeof(ExprItem)*(e->numterms<2?0:e->numterms-2));
 
     n->op = e->op;
     n->filename = e->filename;
