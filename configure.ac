@@ -55,8 +55,18 @@ esac])
 #
 # Checks for programs.
 #
-# lex and yacc are only required for development.
 AC_PROG_YACC
+# check for Bison in particular
+if test "$YACC" != "bison -y"; then
+    	AC_MSG_WARN([You will need bison if you want to regenerate parsers.])
+else
+    	AC_MSG_CHECKING([bison version])
+	set `bison --version | sed -e 's/^@<:@A-Za-z() @:>@*//' -e 's/\./ /'`
+	if test "$1" = "1" -a "$2" -lt "25"; then
+	    	AC_MSG_WARN([You will need bison 1.25 or better if you want to regenerate parsers (found $1.$2).])
+	fi
+	AC_MSG_RESULT([$1.$2 (ok)])
+fi
 AC_PROG_CC_STDC
 AC_PROG_INSTALL
 AC_PROG_LN_S
