@@ -32,8 +32,7 @@
  * SUCH DAMAGE.
  */
 #include "util.h"
-RCSID("$IdPath$");
-
+/*@unused@*/ RCSID("$IdPath$");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)merge.c	8.2 (Berkeley) 2/14/94";
@@ -100,13 +99,16 @@ int
 mergesort(void *base, size_t nmemb, size_t size,
 	  int (*cmp)(const void *, const void *))
 {
-	int i, sense;
+	size_t i;
+	int sense;
 	int big, iflag;
 	unsigned char *f1, *f2, *t, *b, *tp2, *q, *l1, *l2;
 	unsigned char *list2, *list1, *p2, *p, *last, **p1;
 
 	if (size < PSIZE / 2) {		/* Pointers must fit into 2 * size. */
+#ifdef EINVAL
 		errno = EINVAL;
+#endif
 		return (-1);
 	}
 
@@ -127,7 +129,8 @@ mergesort(void *base, size_t nmemb, size_t size,
 	list1 = base;
 	setup(list1, list2, nmemb, size, cmp);
 	last = list2 + nmemb * size;
-	i = big = 0;
+	i = 0;
+	big = 0;
 	while (*EVAL(list2) != last) {
 	    l2 = list1;
 	    p1 = EVAL(list1);
@@ -260,7 +263,9 @@ void
 setup(unsigned char *list1, unsigned char *list2, size_t n, size_t size,
       int (*cmp)(const void *, const void *))
 {
-	int i, length, size2, tmp, sense;
+	size_t i;
+	unsigned int tmp;
+	int length, size2, sense;
 	unsigned char *f1, *f2, *s, *l2, *last, *p2;
 
 	size2 = size*2;
@@ -333,7 +338,7 @@ insertionsort(unsigned char *a, size_t n, size_t size,
 	      int (*cmp)(const void *, const void *))
 {
 	unsigned char *ai, *s, *t, *u, tmp;
-	int i;
+	size_t i;
 
 	for (ai = a+size; --n >= 1; ai += size)
 		for (t = ai; t > a; t -= size) {
