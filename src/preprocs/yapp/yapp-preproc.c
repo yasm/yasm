@@ -618,9 +618,7 @@ yapp_preproc_input(char *buf, size_t max_size)
     /* convert saved stuff into output.  we either have enough, or are EOF */
     while (n < max_size && saved_length)
     {
-	source *next;
 	src = SLIST_FIRST(&source_head);
-	next = SLIST_NEXT(src, next);
 	if (max_size - n /* - 1 */ >= strlen(src->token.str)) {
 	    strcpy(buf+n, src->token.str);
 	    n += strlen(src->token.str);
