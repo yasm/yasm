@@ -63,8 +63,8 @@ LIB32=link.exe -lib
 # PROP Output_Dir "Debug"
 # PROP Intermediate_Dir "Debug"
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ  /c
-# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I ".." /I "../../.." /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D "HAVE_CONFIG_H" /YX /FD /GZ  /c
+# ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
+# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I ".." /I "../../.." /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D "HAVE_CONFIG_H" /YX /FD /GZ /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -86,6 +86,22 @@ LIB32=link.exe -lib
 # Begin Group "arch"
 
 # PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\..\..\modules\arch\lc3b\lc3barch.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\modules\arch\lc3b\lc3barch.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\modules\arch\lc3b\lc3bbc.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\lc3bid.c
+# End Source File
 # Begin Source File
 
 SOURCE=..\..\..\modules\arch\x86\x86arch.c
@@ -129,6 +145,18 @@ SOURCE="..\..\..\modules\objfmts\coff\coff-objfmt.c"
 # Begin Source File
 
 SOURCE="..\..\..\modules\objfmts\dbg\dbg-objfmt.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\..\modules\objfmts\elf\elf-objfmt.c"
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\modules\objfmts\elf\elf.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\modules\objfmts\elf\elf.h
 # End Source File
 # End Group
 # Begin Group "optimizers"

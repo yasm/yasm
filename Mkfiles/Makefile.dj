@@ -9,7 +9,7 @@
 # How to compile:
 #  make -fMkfiles/Makefile.dj
 
-CFLAGS=-DHAVE_CONFIG_H -DWIN32 -IMkfiles/dj -I. -Ifrontends/yasm
+CFLAGS=-DHAVE_CONFIG_H -DWIN32 -IMkfiles/dj -O2 -I. -Ifrontends/yasm
 CC=gcc
 
 all: yasm
@@ -34,11 +34,20 @@ LIBYASM_OBJS= \
  libyasm/xmalloc.o \
  libyasm/xstrdup.o
 
-MODULES_ARCH_OBJS= \
+MODULES_ARCH_X86_OBJS= \
  modules/arch/x86/x86arch.o \
  modules/arch/x86/x86bc.o \
  modules/arch/x86/x86expr.o \
  x86id.o
+
+MODULES_ARCH_LC3B_OBJS= \
+ modules/arch/lc3b/lc3barch.o \
+ modules/arch/lc3b/lc3bbc.o \
+ lc3bid.o
+
+MODULES_ARCH_OBJS= \
+ $(MODULES_ARCH_X86_OBJS) \
+ $(MODULES_ARCH_LC3B_OBJS)
 
 MODULES_DBGFMTS_OBJS= \
  modules/dbgfmts/null/null-dbgfmt.o
@@ -46,7 +55,9 @@ MODULES_DBGFMTS_OBJS= \
 MODULES_OBJFMTS_OBJS= \
  modules/objfmts/dbg/dbg-objfmt.o \
  modules/objfmts/bin/bin-objfmt.o \
- modules/objfmts/coff/coff-objfmt.o
+ modules/objfmts/coff/coff-objfmt.o \
+ modules/objfmts/elf/elf.o \
+ modules/objfmts/elf/elf-objfmt.o
 
 MODULES_OPTIMIZERS_OBJS= \
  modules/optimizers/basic/basic-optimizer.o

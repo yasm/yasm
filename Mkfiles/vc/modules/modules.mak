@@ -52,6 +52,11 @@ CLEAN :
 	-@erase "$(INTDIR)\bin-objfmt.obj"
 	-@erase "$(INTDIR)\coff-objfmt.obj"
 	-@erase "$(INTDIR)\dbg-objfmt.obj"
+	-@erase "$(INTDIR)\elf-objfmt.obj"
+	-@erase "$(INTDIR)\elf.obj"
+	-@erase "$(INTDIR)\lc3barch.obj"
+	-@erase "$(INTDIR)\lc3bbc.obj"
+	-@erase "$(INTDIR)\lc3bid.obj"
 	-@erase "$(INTDIR)\nasm-bison.obj"
 	-@erase "$(INTDIR)\nasm-eval.obj"
 	-@erase "$(INTDIR)\nasm-macros.obj"
@@ -131,6 +136,11 @@ LIB32_OBJS= \
 	"$(INTDIR)\nasm-preproc.obj" \
 	"$(INTDIR)\nasmlib.obj" \
 	"$(INTDIR)\raw-preproc.obj" \
+	"$(INTDIR)\lc3bbc.obj" \
+	"$(INTDIR)\lc3barch.obj" \
+	"$(INTDIR)\lc3bid.obj" \
+	"$(INTDIR)\elf-objfmt.obj" \
+	"$(INTDIR)\elf.obj" \
 	"..\libyasm\Release\libyasm.lib"
 
 "$(OUTDIR)\modules.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
@@ -165,6 +175,11 @@ CLEAN :
 	-@erase "$(INTDIR)\bin-objfmt.obj"
 	-@erase "$(INTDIR)\coff-objfmt.obj"
 	-@erase "$(INTDIR)\dbg-objfmt.obj"
+	-@erase "$(INTDIR)\elf-objfmt.obj"
+	-@erase "$(INTDIR)\elf.obj"
+	-@erase "$(INTDIR)\lc3barch.obj"
+	-@erase "$(INTDIR)\lc3bbc.obj"
+	-@erase "$(INTDIR)\lc3bid.obj"
 	-@erase "$(INTDIR)\nasm-bison.obj"
 	-@erase "$(INTDIR)\nasm-eval.obj"
 	-@erase "$(INTDIR)\nasm-macros.obj"
@@ -245,6 +260,11 @@ LIB32_OBJS= \
 	"$(INTDIR)\nasm-preproc.obj" \
 	"$(INTDIR)\nasmlib.obj" \
 	"$(INTDIR)\raw-preproc.obj" \
+	"$(INTDIR)\lc3bbc.obj" \
+	"$(INTDIR)\lc3barch.obj" \
+	"$(INTDIR)\lc3bid.obj" \
+	"$(INTDIR)\elf-objfmt.obj" \
+	"$(INTDIR)\elf.obj" \
 	"..\libyasm\Debug\libyasm.lib"
 
 "$(OUTDIR)\modules.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
@@ -265,6 +285,24 @@ LIB32_OBJS= \
 
 
 !IF "$(CFG)" == "modules - Win32 Release" || "$(CFG)" == "modules - Win32 Debug"
+SOURCE=..\..\..\modules\arch\lc3b\lc3barch.c
+
+"$(INTDIR)\lc3barch.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\..\..\modules\arch\lc3b\lc3bbc.c
+
+"$(INTDIR)\lc3bbc.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\..\..\lc3bid.c
+
+"$(INTDIR)\lc3bid.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE=..\..\..\modules\arch\x86\x86arch.c
 
 "$(INTDIR)\x86arch.obj" : $(SOURCE) "$(INTDIR)"
@@ -310,6 +348,18 @@ SOURCE="..\..\..\modules\objfmts\coff\coff-objfmt.c"
 SOURCE="..\..\..\modules\objfmts\dbg\dbg-objfmt.c"
 
 "$(INTDIR)\dbg-objfmt.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\..\..\modules\objfmts\elf\elf-objfmt.c"
+
+"$(INTDIR)\elf-objfmt.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\..\..\modules\objfmts\elf\elf.c
+
+"$(INTDIR)\elf.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
