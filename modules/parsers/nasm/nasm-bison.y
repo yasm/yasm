@@ -81,7 +81,7 @@ static int fix_directive_symrec(/*@null@*/ yasm_expr__item *ei,
 %token <intn> INTNUM
 %token <flt> FLTNUM
 %token <str_val> DIRECTIVE_NAME STRING FILENAME
-%token <int_info> BYTE WORD HWORD DWORD QWORD TWORD DQWORD
+%token <int_info> SIZE_OVERRIDE
 %token <int_info> DECLARE_DATA
 %token <int_info> RESERVE_SPACE
 %token INCBIN EQU TIMES
@@ -313,26 +313,7 @@ memaddr: expr		    {
 	$$ = $3;
 	p_arch->module->parse_seg_override(p_arch, $$, $1[0], cur_line);
     }
-    | BYTE memaddr	    {
-	$$ = $2;
-	yasm_ea_set_len($$, 1);
-    }
-    | HWORD memaddr	    {
-	$$ = $2;
-	yasm_ea_set_len($$, p_arch->module->wordsize/2);
-    }
-    | WORD memaddr	    {
-	$$ = $2;
-	yasm_ea_set_len($$, p_arch->module->wordsize);
-    }
-    | DWORD memaddr	    {
-	$$ = $2;
-	yasm_ea_set_len($$, p_arch->module->wordsize*2);
-    }
-    | QWORD memaddr	    {
-	$$ = $2;
-	yasm_ea_set_len($$, p_arch->module->wordsize*4);
-    }
+    | SIZE_OVERRIDE memaddr { $$ = $2; yasm_ea_set_len($$, $1); }
     | NOSPLIT memaddr	    { $$ = $2; yasm_ea_set_nosplit($$, 1); }
 ;
 
@@ -352,67 +333,13 @@ operands: operand	    {
 operand: '[' memaddr ']'    { $$ = yasm_operand_create_mem($2); }
     | expr		    { $$ = yasm_operand_create_imm($1); }
     | SEGREG		    { $$ = yasm_operand_create_segreg($1[0]); }
-    | BYTE operand	    {
+    | SIZE_OVERRIDE operand {
 	$$ = $2;
 	if ($$->type == YASM_INSN__OPERAND_REG &&
-	    p_arch->module->get_reg_size(p_arch, $$->data.reg) != 1)
+	    p_arch->module->get_reg_size(p_arch, $$->data.reg) != $1)
 	    yasm__error(cur_line, N_("cannot override register size"));
 	else
-	    $$->size = 1;
-    }
-    | HWORD operand	    {
-	$$ = $2;
-	if ($$->type == YASM_INSN__OPERAND_REG &&
-	    p_arch->module->get_reg_size(p_arch, $$->data.reg) !=
-	    p_arch->module->wordsize/2)
-	    yasm__error(cur_line, N_("cannot override register size"));
-	else
-	    $$->size = p_arch->module->wordsize/2;
-    }
-    | WORD operand	    {
-	$$ = $2;
-	if ($$->type == YASM_INSN__OPERAND_REG &&
-	    p_arch->module->get_reg_size(p_arch, $$->data.reg) !=
-	    p_arch->module->wordsize)
-	    yasm__error(cur_line, N_("cannot override register size"));
-	else
-	    $$->size = p_arch->module->wordsize;
-    }
-    | DWORD operand	    {
-	$$ = $2;
-	if ($$->type == YASM_INSN__OPERAND_REG &&
-	    p_arch->module->get_reg_size(p_arch, $$->data.reg) !=
-	    p_arch->module->wordsize*2)
-	    yasm__error(cur_line, N_("cannot override register size"));
-	else
-	    $$->size = p_arch->module->wordsize*2;
-    }
-    | QWORD operand	    {
-	$$ = $2;
-	if ($$->type == YASM_INSN__OPERAND_REG &&
-	    p_arch->module->get_reg_size(p_arch, $$->data.reg) !=
-	    p_arch->module->wordsize*4)
-	    yasm__error(cur_line, N_("cannot override register size"));
-	else
-	    $$->size = p_arch->module->wordsize*4;
-    }
-    | TWORD operand	    {
-	$$ = $2;
-	if ($$->type == YASM_INSN__OPERAND_REG &&
-	    p_arch->module->get_reg_size(p_arch, $$->data.reg) !=
-	    p_arch->module->wordsize*5)
-	    yasm__error(cur_line, N_("cannot override register size"));
-	else
-	    $$->size = p_arch->module->wordsize*5;
-    }
-    | DQWORD operand	    {
-	$$ = $2;
-	if ($$->type == YASM_INSN__OPERAND_REG &&
-	    p_arch->module->get_reg_size(p_arch, $$->data.reg) !=
-	    p_arch->module->wordsize*8)
-	    yasm__error(cur_line, N_("cannot override register size"));
-	else
-	    $$->size = p_arch->module->wordsize*8;
+	    $$->size = $1;
     }
     | TARGETMOD operand	    { $$ = $2; $$->targetmod = $1[0]; }
 ;

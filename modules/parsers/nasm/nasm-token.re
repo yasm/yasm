@@ -287,25 +287,75 @@ scan:
 	}
 
 	/* size specifiers */
-	B Y T E		{ lvalp->int_info = 1; RETURN(BYTE); }
-	W O R D		{ lvalp->int_info = 2; RETURN(WORD); }
-	D W O R D	{ lvalp->int_info = 4; RETURN(DWORD); }
-	Q W O R D	{ lvalp->int_info = 8; RETURN(QWORD); }
-	T W O R D	{ lvalp->int_info = 10; RETURN(TWORD); }
-	D Q W O R D	{ lvalp->int_info = 16; RETURN(DQWORD); }
+	B Y T E		{ lvalp->int_info = 1; RETURN(SIZE_OVERRIDE); }
+	H W O R D	{
+	    lvalp->int_info = p_arch->module->wordsize/2;
+	    RETURN(SIZE_OVERRIDE);
+	}
+	W O R D		{
+	    lvalp->int_info = p_arch->module->wordsize;
+	    RETURN(SIZE_OVERRIDE);
+	}
+	D W O R D	{
+	    lvalp->int_info = p_arch->module->wordsize*2;
+	    RETURN(SIZE_OVERRIDE);
+	}
+	Q W O R D	{
+	    lvalp->int_info = p_arch->module->wordsize*4;
+	    RETURN(SIZE_OVERRIDE);
+	}
+	T W O R D	{ lvalp->int_info = 10; RETURN(SIZE_OVERRIDE); }
+	D Q W O R D	{
+	    lvalp->int_info = p_arch->module->wordsize*8;
+	    RETURN(SIZE_OVERRIDE);
+	}
 
 	/* pseudo-instructions */
 	D B		{ lvalp->int_info = 1; RETURN(DECLARE_DATA); }
-	D W		{ lvalp->int_info = 2; RETURN(DECLARE_DATA); }
-	D D		{ lvalp->int_info = 4; RETURN(DECLARE_DATA); }
-	D Q		{ lvalp->int_info = 8; RETURN(DECLARE_DATA); }
+	D H W		{
+	    lvalp->int_info = p_arch->module->wordsize/2;
+	    RETURN(DECLARE_DATA);
+	}
+	D W		{
+	    lvalp->int_info = p_arch->module->wordsize;
+	    RETURN(DECLARE_DATA);
+	}
+	D D		{
+	    lvalp->int_info = p_arch->module->wordsize*2;
+	    RETURN(DECLARE_DATA);
+	}
+	D Q		{
+	    lvalp->int_info = p_arch->module->wordsize*4;
+	    RETURN(DECLARE_DATA);
+	}
 	D T		{ lvalp->int_info = 10; RETURN(DECLARE_DATA); }
+	D D Q		{
+	    lvalp->int_info = p_arch->module->wordsize*8;
+	    RETURN(DECLARE_DATA);
+	}
 
 	R E S B		{ lvalp->int_info = 1; RETURN(RESERVE_SPACE); }
-	R E S W		{ lvalp->int_info = 2; RETURN(RESERVE_SPACE); }
-	R E S D		{ lvalp->int_info = 4; RETURN(RESERVE_SPACE); }
-	R E S Q		{ lvalp->int_info = 8; RETURN(RESERVE_SPACE); }
+	R E S H W	{
+	    lvalp->int_info = p_arch->module->wordsize/2;
+	    RETURN(RESERVE_SPACE);
+	}
+	R E S W		{
+	    lvalp->int_info = p_arch->module->wordsize;
+	    RETURN(RESERVE_SPACE);
+	}
+	R E S D		{
+	    lvalp->int_info = p_arch->module->wordsize*2;
+	    RETURN(RESERVE_SPACE);
+	}
+	R E S Q		{
+	    lvalp->int_info = p_arch->module->wordsize*4;
+	    RETURN(RESERVE_SPACE);
+	}
 	R E S T		{ lvalp->int_info = 10; RETURN(RESERVE_SPACE); }
+	R E S D Q	{
+	    lvalp->int_info = p_arch->module->wordsize*8;
+	    RETURN(RESERVE_SPACE);
+	}
 
 	I N C B I N	{ RETURN(INCBIN); }
 
