@@ -790,8 +790,8 @@ yasm_expr__order_terms(yasm_expr *e)
 	     * stable sort (multiple terms of same type are kept in the same
 	     * order).
 	     */
-	    mergesort(e->terms, (size_t)e->numterms, sizeof(yasm_expr__item),
-		      expr_order_terms_compare);
+	    yasm__mergesort(e->terms, (size_t)e->numterms,
+			    sizeof(yasm_expr__item), expr_order_terms_compare);
 	    break;
 	default:
 	    break;

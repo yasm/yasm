@@ -133,7 +133,7 @@ yasm__mergesort(void *base, size_t nmemb, size_t size,
 	if (!(size % ISIZE) && !(((char *)base - (char *)0) % ISIZE))
 		iflag = 1;
 
-	if ((list2 = xmalloc(nmemb * size + PSIZE)) == NULL)
+	if ((list2 = yasm_xmalloc(nmemb * size + PSIZE)) == NULL)
 		return (-1);
 
 	list1 = base;
@@ -240,7 +240,7 @@ COPY:	    			b = t;
 		memmove(list2, list1, nmemb*size);
 		list2 = list1;
 	}
-	xfree(list2);
+	yasm_xfree(list2);
 	return (0);
 #endif	/*HAVE_MERGESORT*/
 }
