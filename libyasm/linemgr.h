@@ -1,4 +1,4 @@
-/* $Id: linemgr.h,v 1.3 2001/06/28 21:22:01 peter Exp $
+/* $Id: linemgr.h,v 1.4 2001/08/18 22:15:12 peter Exp $
  * Globals header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -22,6 +22,7 @@
 #ifndef YASM_GLOBALS_H
 #define YASM_GLOBALS_H
 
+extern char *filename;
 extern unsigned int line_number;
 extern unsigned int mode_bits;
 extern struct symrec_s *locallabel_base;

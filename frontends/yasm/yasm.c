@@ -1,4 +1,4 @@
-/* $Id: yasm.c,v 1.4 2001/07/11 23:16:50 peter Exp $
+/* $Id: yasm.c,v 1.5 2001/08/18 22:15:12 peter Exp $
  * Program entry point, command line parsing
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -21,19 +21,39 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 extern int yydebug;
+extern FILE *yyin;
 
 extern int yyparse(void);
 
+char *filename = (char *)NULL;
 unsigned int line_number = 1;
 unsigned int mode_bits = 32;
 
 int
-main (void)
+main (int argc, char *argv[])
 {
+    FILE *in;
+
     yydebug = 1;
+
+    if(argc==2) {
+	in = fopen(argv[1], "rt");
+	if(!in) {
+	    fprintf(stderr, "could not open file `%s'\n", argv[1]);
+	    return EXIT_FAILURE;
+	}
+	filename = strdup(argv[1]);
+	yyin = in;
+    } else
+	filename = strdup("<UNKNOWN>");
+
     yyparse();
+
+    if(filename)
+	free(filename);
     return EXIT_SUCCESS;
 }
 

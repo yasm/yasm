@@ -1,4 +1,4 @@
-/* $Id: errwarn.h,v 1.11 2001/07/25 00:33:10 peter Exp $
+/* $Id: errwarn.h,v 1.12 2001/08/18 22:15:12 peter Exp $
  * Error and warning reporting and related functions header file.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -50,7 +50,8 @@ typedef enum {
     ERR_STRING_EOF,
     ERR_EXPR_SYNTAX,
     ERR_DECLDATA_FLOAT,
-    ERR_DECLDATA_EXPR
+    ERR_DECLDATA_EXPR,
+    ERR_FILE_OPEN
 } err_num;
 
 /* Warning constants.  Match up with warn_msgs in errwarn.c. */

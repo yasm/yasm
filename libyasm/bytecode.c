@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.14 2001/07/25 00:33:10 peter Exp $
+/* $Id: bytecode.c,v 1.15 2001/08/18 22:15:12 peter Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -21,6 +21,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "globals.h"
 #include "bytecode.h"
 #include "errwarn.h"
@@ -232,7 +233,7 @@ BuildBC_Common (bytecode *bc)
 {
     bc->len = 0;
 
-    bc->filename = (char *)NULL;
+    bc->filename = strdup(filename);
     bc->lineno = line_number;
 
     bc->offset = 0;

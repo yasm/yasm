@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.17 2001/07/25 00:33:10 peter Exp $
+/* $Id: errwarn.c,v 1.18 2001/08/18 22:15:12 peter Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -72,7 +72,8 @@ static char *err_msgs[] = {
     "unexpected end of file in string",
     "expression syntax error",
     "floating-point constant encountered in `%s'",
-    "non-floating-point value encountered in `%s'"
+    "non-floating-point value encountered in `%s'",
+    "could not open file `%s'"
 };
 
 /* Warning messages.  Match up with warn_num enum in errwarn.h. */
@@ -275,7 +276,7 @@ void
 OutputError (void)
 {
     if(last_err_num != ERR_NONE)
-	fprintf(stderr, "filename:%u: %s\n", line_number, last_err);
+	fprintf(stderr, "%s:%u: %s\n", filename, line_number, last_err);
     last_err_num = ERR_NONE;
 }
 
@@ -284,7 +285,8 @@ void
 OutputWarning (void)
 {
     if(last_warn_num != WARN_NONE)
-	fprintf(stderr, "filename:%u: warning: %s\n", line_number, last_warn);
+	fprintf(stderr, "%s:%u: warning: %s\n", filename, line_number,
+	    last_warn);
     last_warn_num = WARN_NONE;
 }
 
