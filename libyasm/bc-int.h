@@ -59,7 +59,7 @@ struct bytecode {
 				   multiple copies), 0 if unknown */
 
     /* where it came from */
-    unsigned int line;
+    unsigned long line;
 
     /* other assembler state info */
     unsigned long offset;	/* 0 if unknown */
