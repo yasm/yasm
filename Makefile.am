@@ -6,7 +6,7 @@ AM_YFLAGS = -d
 AM_CFLAGS = @MORE_CFLAGS@
 
 bin_PROGRAMS =
-man_MANS =
+dist_man_MANS =
 TESTS =
 noinst_PROGRAMS =
 
@@ -70,19 +70,6 @@ distclean-local:
 	-rm -rf results
 
 if BUILD_MAN
-.xml.1:
-	$(XMLTO) -o $(@D) man $<
-.xml.7:
-	$(XMLTO) -o $(@D) man $<
-else
-.xml.1:
-	@echo "Not rebuilding man page from $<"
-	cp `test -f $*.1 || echo '$(srcdir)/'`$*.1 $@
-.xml.7:
-	@echo "Not rebuilding man page from $<"
-	cp `test -f $*.7 || echo '$(srcdir)/'`$*.7 $@
+MAINTAINERCLEANFILES = $(dist_man_MANS)
 endif
 
-BUILT_SOURCES += $(man_MANS)
-DISTCLEANFILES += $(man_MANS)
-EXTRA_DIST += $(man_MANS)
