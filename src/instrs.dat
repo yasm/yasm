@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.24 2001/07/05 06:16:56 peter Exp $
+; $Id: instrs.dat,v 1.25 2001/07/05 06:18:19 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -952,7 +952,7 @@ cmplesd!sse2cmpsd	2
 cmpltpd!sse2cmppd	1
 cmpltsd!sse2cmpsd	1
 cmpneqpd!sse2cmppd	4
-cmpneqps!sse2cmpsd	4
+cmpneqsd!sse2cmpsd	4
 cmpnlepd!sse2cmppd	6
 cmpnlesd!sse2cmpsd	6
 cmpnltpd!sse2cmppd	5
