@@ -71,9 +71,10 @@ void tr_fprint (FILE *file, TestResult *tr, int print_mode)
   exact_msg = (tr->rtype == CRERROR) ? "(after this point) ": "";
   if ((print_mode >= CRVERBOSE && tr->rtype == CRPASS) ||
       (tr->rtype != CRPASS && print_mode >= CRNORMAL)) {
-    fprintf (file, "%s:%d:%s:%s: %s%s\n",
+    fprintf (file, "%s:%d:%s:%s:%s: %s%s\n",
 	     tr->file, tr->line,
 	     rtype_to_string(tr->rtype),  tr->tcname,
+	     tr->tfname,
 	     exact_msg, tr->msg);
   }
 }

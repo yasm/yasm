@@ -59,6 +59,7 @@ struct TestResult {
   char *file;    /* File where the test occured */
   int line;      /* Line number where the test occurred */
   char *tcname;  /* Test case that generated the result */
+  char *tfname;  /* Test function that generated the result */
   char *msg;     /* Failure message */
 };
 

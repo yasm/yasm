@@ -34,7 +34,8 @@
 static void srunner_run_tcase (SRunner *sr, TCase *tc);
 static void srunner_add_failure (SRunner *sr, TestResult *tf);
 static TestResult *tfun_run (int msqid, char *tcname, TF *tf);
-static TestResult *receive_result_info (int msqid, int status, char *tcname);
+static TestResult *receive_result_info (int msqid, int status, char *tcname,
+					char *tfname);
 static void receive_last_loc_info (int msqid, TestResult *tr);
 static void receive_failure_info (int msqid, int status, TestResult *tr);
 static List *srunner_resultlst (SRunner *sr);
@@ -209,11 +210,13 @@ static void receive_failure_info (int msqid, int status, TestResult *tr)
   }
 }
 
-static TestResult *receive_result_info (int msqid, int status, char *tcname)
+static TestResult *receive_result_info (int msqid, int status, char *tcname,
+					char *tfname)
 {
   TestResult *tr = emalloc (sizeof(TestResult));
 
   tr->tcname = tcname;
+  tr->tfname = tfname;
   receive_last_loc_info (msqid, tr);
   receive_failure_info (msqid, status, tr);
   return tr;
@@ -232,7 +235,7 @@ static TestResult *tfun_run (int msqid, char *tcname, TF *tfun)
     _exit(EXIT_SUCCESS);
   }
   (void) wait(&status);
-  return receive_result_info(msqid, status, tcname);
+  return receive_result_info(msqid, status, tcname, tfun->name);
 }
 
 
