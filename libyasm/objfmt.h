@@ -54,6 +54,7 @@ struct objfmt {
     /* Initializes object output.  Must be called before any other object
      * format functions.  Should NOT open the object file; the filenames are
      * provided solely for informational purposes.
+     * May be NULL if not needed by the object format.
      */
     void (*initialize) (const char *in_filename, const char *obj_filename);
 
@@ -63,7 +64,9 @@ struct objfmt {
      */
     void (*output) (FILE *f, sectionhead *sections);
 
-    /* Cleans up anything allocated by initialize. */
+    /* Cleans up anything allocated by initialize.
+     * May be NULL if not needed by the object format.
+     */
     void (*cleanup) (void);
 
     /* Switch object file sections.  The first val of the valparams should

@@ -234,7 +234,8 @@ main(int argc, char *argv[])
     }
 
     /* Initialize the object format */
-    cur_objfmt->initialize(in_filename, obj_filename);
+    if (cur_objfmt->initialize)
+	cur_objfmt->initialize(in_filename, obj_filename);
 
     /* Set NASM as the parser */
     cur_parser = find_parser("nasm");
@@ -338,7 +339,7 @@ cleanup(sectionhead *sections)
 {
     sections_delete(sections);
     symrec_delete_all();
-    if (cur_objfmt)
+    if (cur_objfmt && cur_objfmt->cleanup)
 	cur_objfmt->cleanup();
     line_shutdown();
 
