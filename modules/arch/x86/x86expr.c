@@ -438,15 +438,6 @@ x86_checkea_calc_displen(yasm_expr **ep, unsigned int wordsize, int noreg,
 		break;
 	    }	
 
-	    /* make sure the displacement will fit in 16/32 bits if unsigned,
-	     * and 8 bits if signed.
-	     */
-	    if (!yasm_intnum_check_size(intn, (size_t)wordsize*8, 0, 0) &&
-		!yasm_intnum_check_size(intn, 8, 0, 1)) {
-		yasm__error(e->line, N_("invalid effective address"));
-		return 1;
-	    }
-
 	    /* don't try to find out what size displacement we have if
 	     * displen is known.
 	     */
@@ -459,9 +450,6 @@ x86_checkea_calc_displen(yasm_expr **ep, unsigned int wordsize, int noreg,
 		break;
 	    }
 
-	    /* Don't worry about overflows here (it's already guaranteed
-	     * to be 16/32 or 8 bits).
-	     */
 	    dispval = yasm_intnum_get_int(intn);
 
 	    /* Figure out what size displacement we will have. */
