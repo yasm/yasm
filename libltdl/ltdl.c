@@ -53,7 +53,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
 #  include <ctype.h>
 #endif
 
-#if HAVE_MALLOC_H
+#if 0 && HAVE_MALLOC_H
 #  include <malloc.h>
 #endif
 
