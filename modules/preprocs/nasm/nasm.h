@@ -7,12 +7,8 @@
  *
  * initial version: 27/iii/95 by Simon Tatham
  */
-
-#ifndef NASM_NASM_H
-#define NASM_NASM_H
-
-#include <stdio.h>
-#include "version.h"		       /* generated NASM version macros */
+#ifndef YASM_NASM_H
+#define YASM_NASM_H
 
 #ifndef NULL
 #define NULL 0
@@ -237,7 +233,7 @@ typedef struct {
 typedef struct {
     long type;			       /* a register, or EXPR_xxx */
     long value;			       /* must be >= 32 bits */
-} expr;
+} nasm_expr;
 
 /*
  * The evaluator can also return hints about which of two registers
@@ -274,7 +270,7 @@ struct eval_hints {
  * the base register in complex effective addresses.
  */
 #define CRITICAL 0x100
-typedef expr *(*evalfunc) (scanner sc, void *scprivate, struct tokenval *tv,
+typedef nasm_expr *(*evalfunc) (scanner sc, void *scprivate, struct tokenval *tv,
 			   int *fwref, int critical, efunc error,
 			   struct eval_hints *hints);
 
@@ -300,7 +296,7 @@ typedef struct {
      * of the pass, an error reporting function, an evaluator
      * function, and a listing generator to talk to.
      */
-    void (*reset) (char *, int, efunc, evalfunc, ListGen *);
+    void (*reset) (FILE *, const char *, int, efunc, evalfunc, ListGen *);
 
     /*
      * Called to fetch a line of preprocessed source. The line
@@ -429,16 +425,17 @@ enum {
 #define UNITY     0x00802000L	       /* for shift/rotate instructions */
 #define BYTENESS  0x40000000L          /* so SBYTE == IMMEDIATE | BYTENESS */
 #define SBYTE 	  0x40002000L	       /* for op r16/32,immediate instrs. */
-		
+	
+
 /* Register names automatically generated from regs.dat */
-#include "regs.h"
+/*#include "regs.h"*/
 
 enum {				       /* condition code names */
     C_A, C_AE, C_B, C_BE, C_C, C_E, C_G, C_GE, C_L, C_LE, C_NA, C_NAE,
     C_NB, C_NBE, C_NC, C_NE, C_NG, C_NGE, C_NL, C_NLE, C_NO, C_NP,
     C_NS, C_NZ, C_O, C_P, C_PE, C_PO, C_S, C_Z
 };
-
+#if 0
 /*
  * Note that because segment registers may be used as instruction
  * prefixes, we must ensure the enumerations for prefixes and
@@ -449,7 +446,7 @@ enum {				       /* instruction prefixes */
     P_A16 = PREFIX_ENUM_START, P_A32, P_LOCK, P_O16, P_O32, P_REP, P_REPE,
     P_REPNE, P_REPNZ, P_REPZ, P_TIMES
 };
-
+#endif
 enum {				       /* extended operand types */
     EOT_NOTHING, EOT_DB_STRING, EOT_DB_NUMBER
 };

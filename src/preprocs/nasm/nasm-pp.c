@@ -33,17 +33,14 @@
  *
  * detoken is used to convert the line back to text
  */
-
-#include <stdio.h>
+#include "util.h"
 #include <stdarg.h>
-#include <stdlib.h>
-#include <stddef.h>
-#include <string.h>
 #include <ctype.h>
 #include <limits.h>
 
 #include "nasm.h"
 #include "nasmlib.h"
+#include "nasm-pp.h"
 
 typedef struct SMacro SMacro;
 typedef struct MMacro MMacro;
@@ -343,7 +340,7 @@ static const char *tasm_directives[] = {
 };
 
 static int StackSize = 4;
-static char *StackPointer = "ebp";
+static const char *StackPointer = "ebp";
 static int ArgOffset = 8;
 static int LocalOffset = 4;
 
@@ -395,7 +392,7 @@ static MMacro *defining;
  * The standard macro set: defined as `static char *stdmac[]'. Also
  * gives our position in the macro set, when we're processing it.
  */
-#include "macros.c"
+#include "nasm-macros.c"
 static const char **stdmacpos;
 
 /*
@@ -428,7 +425,7 @@ static void make_tok_num(Token * tok, long val);
 static void error(int severity, const char *fmt, ...);
 static void *new_Block(size_t size);
 static void delete_Blocks(void);
-static Token *new_Token(Token * next, int type, char *text, int txtlen);
+static Token *new_Token(Token * next, int type, const char *text, int txtlen);
 static Token *delete_Token(Token * t);
 
 /*
@@ -571,11 +568,11 @@ hash(char *s)
  * Free a linked list of tokens.
  */
 static void
-free_tlist(Token * list)
+free_tlist(Token * list_)
 {
-    while (list)
+    while (list_)
     {
-	list = delete_Token(list);
+	list_ = delete_Token(list_);
     }
 }
 
@@ -583,13 +580,13 @@ free_tlist(Token * list)
  * Free a linked list of lines.
  */
 static void
-free_llist(Line * list)
+free_llist(Line * list_)
 {
     Line *l;
-    while (list)
+    while (list_)
     {
-	l = list;
-	list = list->next;
+	l = list_;
+	list_ = list_->next;
 	free_tlist(l->first);
 	nasm_free(l);
     }
@@ -735,7 +732,7 @@ read_line(void)
 	return NULL;
     }
 
-    src_set_linnum(src_get_linnum() + istk->lineinc + (continued_count * istk->lineinc));
+    nasm_src_set_linnum(nasm_src_get_linnum() + istk->lineinc + (continued_count * istk->lineinc));
 
     /*
      * Play safe: remove CRs as well as LFs, if any of either are
@@ -765,8 +762,8 @@ tokenise(char *line)
 {
     char *p = line;
     int type;
-    Token *list = NULL;
-    Token *t, **tail = &list;
+    Token *list_ = NULL;
+    Token *t, **tail = &list_;
 
     while (*line)
     {
@@ -908,7 +905,7 @@ tokenise(char *line)
 	}
 	line = p;
     }
-    return list;
+    return list_;
 }
 
 /*
@@ -965,7 +962,7 @@ delete_Blocks(void)
  *  also the mac and next elements to NULL.
  */
 static Token *
-new_Token(Token * next, int type, char *text, int txtlen)
+new_Token(Token * next, int type, const char *text, int txtlen)
 {
     Token *t;
     int i;
@@ -1024,10 +1021,10 @@ detoken(Token * tlist, int expand_locals)
     {
 	if (t->type == TOK_PREPROC_ID && t->text[1] == '!')
 	{
-	    char *p = getenv(t->text + 2);
+	    char *p2 = getenv(t->text + 2);
 	    nasm_free(t->text);
-	    if (p)
-		t->text = nasm_strdup(p);
+	    if (p2)
+		t->text = nasm_strdup(p2);
 	    else
 		t->text = NULL;
 	}
@@ -1040,13 +1037,13 @@ detoken(Token * tlist, int expand_locals)
 	    if (ctx)
 	    {
 		char buffer[40];
-		char *p, *q = t->text + 2;
+		char *p2, *q = t->text + 2;
 
 		q += strspn(q, "$");
 		sprintf(buffer, "..@%lu.", ctx->number);
-		p = nasm_strcat(buffer, q);
+		p2 = nasm_strcat(buffer, q);
 		nasm_free(t->text);
-		t->text = p;
+		t->text = p2;
 	    }
 	}
 	if (t->type == TOK_WHITESPACE)
@@ -1128,7 +1125,7 @@ ppscan(void *private_data, struct tokenval *tokval)
     {
 	int rn_error;
 
-	tokval->t_integer = readnum(tline->text, &rn_error);
+	tokval->t_integer = nasm_readnum(tline->text, &rn_error);
 	if (rn_error)
 	    return tokval->t_type = TOKEN_ERRNUM;
 	tokval->t_charptr = NULL;
@@ -1147,7 +1144,7 @@ ppscan(void *private_data, struct tokenval *tokval)
 
 	if (l == 0 || r[l - 1] != q)
 	    return tokval->t_type = TOKEN_ERRNUM;
-	tokval->t_integer = readstrnum(r, l - 1, &rn_warn);
+	tokval->t_integer = nasm_readstrnum(r, l - 1, &rn_warn);
 	if (rn_warn)
 	    error(ERR_WARNING | ERR_PASS1, "character constant too long");
 	tokval->t_charptr = NULL;
@@ -1281,7 +1278,8 @@ static FILE *
 inc_fopen(char *file)
 {
     FILE *fp;
-    char *prefix = "", *combine;
+    const char *prefix = "";
+    char *combine;
     IncPath *ip = ipath;
     static int namelen = 0;
     int len = strlen(file);
@@ -1440,7 +1438,7 @@ if_condition(Token * tline, int i)
     int j, casesense;
     Token *t, *tt, **tptr, *origline;
     struct tokenval tokval;
-    expr *evalresult;
+    nasm_expr *evalresult;
 
     origline = tline;
 
@@ -1601,7 +1599,7 @@ if_condition(Token * tline, int i)
 	    else
 	    {
 		searching.nparam_min = searching.nparam_max =
-			readnum(tline->text, &j);
+			nasm_readnum(tline->text, &j);
 		if (j)
 		    error(ERR_NONFATAL,
 			  "unable to parse parameter count `%s'",
@@ -1618,7 +1616,7 @@ if_condition(Token * tline, int i)
 			  directives[i]);
 		else
 		{
-		    searching.nparam_max = readnum(tline->text, &j);
+		    searching.nparam_max = nasm_readnum(tline->text, &j);
 		    if (j)
 			error(ERR_NONFATAL,
 				"unable to parse parameter count `%s'",
@@ -1713,13 +1711,13 @@ if_condition(Token * tline, int i)
 	    if (tokval.t_type)
 		error(ERR_WARNING,
 			"trailing garbage after expression ignored");
-	    if (!is_simple(evalresult))
+	    if (!nasm_is_simple(evalresult))
 	    {
 		error(ERR_NONFATAL,
 			"non-constant value given to `%s'", directives[i]);
 		return -1;
 	    }
-	    return reloc_value(evalresult) != 0;
+	    return nasm_reloc_value(evalresult) != 0;
 
 	default:
 	    error(ERR_FATAL,
@@ -1735,7 +1733,7 @@ if_condition(Token * tline, int i)
  * First tokenise the string, apply "expand_smacro" and then de-tokenise back.
  * The returned variable should ALWAYS be freed after usage.
  */
-void
+static void
 expand_macros_in_string(char **p)
 {
     Token *line = tokenise(*p);
@@ -1769,7 +1767,7 @@ do_directive(Token * tline)
     Token *t, *tt, *param_start, *macro_start, *last, **tptr, *origline;
     Line *l;
     struct tokenval tokval;
-    expr *evalresult;
+    nasm_expr *evalresult;
     MMacro *tmp_defining;	/* Used when manipulating rep_nest */
 
     origline = tline;
@@ -2095,9 +2093,9 @@ do_directive(Token * tline)
 	    {
 		while (mmacros[j])
 		{
-		    MMacro *m = mmacros[j];
-		    mmacros[j] = m->next;
-		    free_mmacro(m);
+		    MMacro *m2 = mmacros[j];
+		    mmacros[j] = m2->next;
+		    free_mmacro(m2);
 		}
 		while (smacros[j])
 		{
@@ -2136,8 +2134,8 @@ do_directive(Token * tline)
 	    inc->next = istk;
 	    inc->conds = NULL;
 	    inc->fp = inc_fopen(p);
-	    inc->fname = src_set_fname(p);
-	    inc->lineno = src_set_linnum(0);
+	    inc->fname = nasm_src_set_fname(p);
+	    inc->lineno = nasm_src_set_linnum(0);
 	    inc->lineinc = 1;
 	    inc->expansion = NULL;
 	    inc->mstk = NULL;
@@ -2353,7 +2351,7 @@ do_directive(Token * tline)
 	    else
 	    {
 		defining->nparam_min = defining->nparam_max =
-			readnum(tline->text, &j);
+			nasm_readnum(tline->text, &j);
 		if (j)
 		    error(ERR_NONFATAL,
 			    "unable to parse parameter count `%s'",
@@ -2370,7 +2368,7 @@ do_directive(Token * tline)
 			    (i == PP_IMACRO ? "i" : ""));
 		else
 		{
-		    defining->nparam_max = readnum(tline->text, &j);
+		    defining->nparam_max = nasm_readnum(tline->text, &j);
 		    if (j)
 			error(ERR_NONFATAL,
 				"unable to parse parameter count `%s'",
@@ -2464,7 +2462,7 @@ do_directive(Token * tline)
 	    if (tokval.t_type)
 		error(ERR_WARNING,
 			"trailing garbage after expression ignored");
-	    if (!is_simple(evalresult))
+	    if (!nasm_is_simple(evalresult))
 	    {
 		error(ERR_NONFATAL, "non-constant value given to `%%rotate'");
 		return DIRECTIVE_FOUND;
@@ -2484,7 +2482,7 @@ do_directive(Token * tline)
 	    }
 	    else
 	    {
-		mmac->rotate = mmac->rotate + reloc_value(evalresult);
+		mmac->rotate = mmac->rotate + nasm_reloc_value(evalresult);
 		
 		if (mmac->rotate < 0)
 		    mmac->rotate = 
@@ -2518,7 +2516,7 @@ do_directive(Token * tline)
 	    if (tokval.t_type)
 		error(ERR_WARNING,
 			"trailing garbage after expression ignored");
-	    if (!is_simple(evalresult))
+	    if (!nasm_is_simple(evalresult))
 	    {
 		error(ERR_NONFATAL, "non-constant value given to `%%rep'");
 		return DIRECTIVE_FOUND;
@@ -2529,7 +2527,7 @@ do_directive(Token * tline)
 	    defining->casesense = 0;
 	    defining->plus = FALSE;
 	    defining->nolist = nolist;
-	    defining->in_progress = reloc_value(evalresult) + 1;
+	    defining->in_progress = nasm_reloc_value(evalresult) + 1;
 	    defining->nparam_min = defining->nparam_max = 0;
 	    defining->defaults = NULL;
 	    defining->dlist = NULL;
@@ -2901,7 +2899,7 @@ do_directive(Token * tline)
 		free_tlist(origline);
 		return DIRECTIVE_FOUND;
 	    }
-	    if (!is_simple(evalresult))
+	    if (!nasm_is_simple(evalresult))
 	    {
 		error(ERR_NONFATAL, "non-constant value given to `%%substr`");
 		free_tlist(tline);
@@ -3003,7 +3001,7 @@ do_directive(Token * tline)
 		error(ERR_WARNING,
 			"trailing garbage after expression ignored");
 
-	    if (!is_simple(evalresult))
+	    if (!nasm_is_simple(evalresult))
 	    {
 		error(ERR_NONFATAL,
 			"non-constant value given to `%%%sassign'",
@@ -3014,7 +3012,7 @@ do_directive(Token * tline)
 
 	    macro_start = nasm_malloc(sizeof(*macro_start));
 	    macro_start->next = NULL;
-	    make_tok_num(macro_start, reloc_value(evalresult));
+	    make_tok_num(macro_start, nasm_reloc_value(evalresult));
 	    macro_start->mac = NULL;
 
 	    /*
@@ -3065,7 +3063,7 @@ do_directive(Token * tline)
 		free_tlist(origline);
 		return DIRECTIVE_FOUND;
 	    }
-	    k = readnum(tline->text, &j);
+	    k = nasm_readnum(tline->text, &j);
 	    m = 1;
 	    tline = tline->next;
 	    if (tok_is_(tline, "+"))
@@ -3077,15 +3075,15 @@ do_directive(Token * tline)
 		    free_tlist(origline);
 		    return DIRECTIVE_FOUND;
 		}
-		m = readnum(tline->text, &j);
+		m = nasm_readnum(tline->text, &j);
 		tline = tline->next;
 	    }
 	    skip_white_(tline);
-	    src_set_linnum(k);
+	    nasm_src_set_linnum(k);
 	    istk->lineinc = m;
 	    if (tline)
 	    {
-		nasm_free(src_set_fname(detoken(tline, FALSE)));
+		nasm_free(nasm_src_set_fname(detoken(tline, FALSE)));
 	    }
 	    free_tlist(origline);
 	    return DIRECTIVE_FOUND;
@@ -3409,7 +3407,7 @@ expand_smacro(Token * tline)
 			if (!strcmp("__FILE__", m->name))
 			{
 			    long num = 0;
-			    src_get(&num, &(tline->text));
+			    nasm_src_get(&num, &(tline->text));
 			    nasm_quote(&(tline->text));
 			    tline->type = TOK_STRING;
 			    continue;
@@ -3417,7 +3415,7 @@ expand_smacro(Token * tline)
 			if (!strcmp("__LINE__", m->name))
 			{
 			    nasm_free(tline->text);
-			    make_tok_num(tline, src_get_linnum());
+			    make_tok_num(tline, nasm_src_get_linnum());
 			    continue;
 			}
 			tline = delete_Token(tline);
@@ -4058,7 +4056,7 @@ error(int severity, const char *fmt, ...)
 }
 
 static void
-pp_reset(char *file, int apass, efunc errfunc, evalfunc eval,
+pp_reset(FILE *f, const char *file, int apass, efunc errfunc, evalfunc eval,
 	ListGen * listgen)
 {
     int h;
@@ -4070,13 +4068,11 @@ pp_reset(char *file, int apass, efunc errfunc, evalfunc eval,
     istk->conds = NULL;
     istk->expansion = NULL;
     istk->mstk = NULL;
-    istk->fp = fopen(file, "r");
+    istk->fp = f;
     istk->fname = NULL;
-    src_set_fname(nasm_strdup(file));
-    src_set_linnum(0);
+    nasm_src_set_fname(nasm_strdup(file));
+    nasm_src_set_linnum(0);
     istk->lineinc = 1;
-    if (!istk->fp)
-	error(ERR_FATAL | ERR_NOFILE, "unable to open input file `%s'", file);
     defining = NULL;
     for (h = 0; h < NHASH; h++)
     {
@@ -4232,8 +4228,8 @@ pp_getline(void)
 		/* only set line and file name if there's a next node */
 		if (i->next) 
 		{
-		    src_set_linnum(i->lineno);
-		    nasm_free(src_set_fname(i->fname));
+		    nasm_src_set_linnum(i->lineno);
+		    nasm_free(nasm_src_set_fname(i->fname));
 		}
 		istk = i->next;
 		list->downlevel(LIST_INCLUDE);
@@ -4324,7 +4320,7 @@ pp_getline(void)
 }
 
 static void
-pp_cleanup(int pass)
+pp_cleanup(int pass_)
 {
     int h;
 
@@ -4363,7 +4359,7 @@ pp_cleanup(int pass)
     }
     while (cstk)
 	ctx_pop();
-    if (pass == 0)
+    if (pass_ == 0)
 	{
 		free_llist(predef);
 		delete_Blocks();

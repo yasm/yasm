@@ -7,17 +7,13 @@
  *
  * initial version 27/iii/95 by Simon Tatham
  */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <stddef.h>
-#include <string.h>
+#include "util.h"
 #include <ctype.h>
 
 #include "nasm.h"
 #include "nasmlib.h"
-#include "eval.h"
-#include "labels.h"
+#include "nasm-eval.h"
+/*#include "labels.h"*/
 
 #define TEMPEXPRS_DELTA 128
 #define TEMPEXPR_DELTA 8
@@ -28,11 +24,11 @@ static lfunc labelfunc;	/* Address of label routine */
 
 static struct ofmt *outfmt;  /* Structure of addresses of output routines */
 
-static expr **tempexprs = NULL;
+static nasm_expr **tempexprs = NULL;
 static int    ntempexprs;
 static int    tempexprs_size = 0;
 
-static expr  *tempexpr;
+static nasm_expr  *tempexpr;
 static int   ntempexpr;
 static int   tempexpr_size;
 
@@ -45,15 +41,15 @@ static int *opflags;
 
 static struct eval_hints *hint;
 
-extern int  in_abs_seg;		/* ABSOLUTE segment flag */
-extern long abs_seg;		/* ABSOLUTE segment */
-extern long abs_offset;		/* ABSOLUTE segment offset */
+static int  in_abs_seg = 0;		/* ABSOLUTE segment flag */
+static long abs_seg = 0;		/* ABSOLUTE segment */
+static long abs_offset = 0;		/* ABSOLUTE segment offset */
 
 /*
  * Unimportant cleanup is done to avoid confusing people who are trying
  * to debug real memory leaks
  */
-void eval_cleanup(void) 
+void nasm_eval_cleanup(void) 
 {
     while (ntempexprs)
 	nasm_free (tempexprs[--ntempexprs]);
@@ -80,7 +76,7 @@ static void addtotemp(long type, long value)
     tempexpr[ntempexpr++].value = value;
 }
 
-static expr *finishtemp(void) 
+static nasm_expr *finishtemp(void) 
 {
     addtotemp (0L, 0L);		       /* terminate */
     while (ntempexprs >= tempexprs_size) {
@@ -96,11 +92,11 @@ static expr *finishtemp(void)
  * absolute segment types: we preserve them during addition _only_
  * if one of the segments is a truly pure scalar.
  */
-static expr *add_vectors(expr *p, expr *q) 
+static nasm_expr *add_vectors(nasm_expr *p, nasm_expr *q) 
 {
     int preserve;
 
-    preserve = is_really_simple(p) || is_really_simple(q);
+    preserve = nasm_is_really_simple(p) || nasm_is_really_simple(q);
 
     begintemp();
 
@@ -155,9 +151,9 @@ static expr *add_vectors(expr *p, expr *q)
  * multiplied. This allows [eax*1+ebx] to hint EBX rather than EAX
  * as the base register.
  */
-static expr *scalar_mult(expr *vect, long scalar, int affect_hints) 
+static nasm_expr *scalar_mult(nasm_expr *vect, long scalar, int affect_hints) 
 {
-    expr *p = vect;
+    nasm_expr *p = vect;
 
     while (p->type && p->type < EXPR_SEGBASE+SEG_ABS) {
 	p->value = scalar * (p->value);
@@ -171,14 +167,14 @@ static expr *scalar_mult(expr *vect, long scalar, int affect_hints)
     return vect;
 }
 
-static expr *scalarvect (long scalar) 
+static nasm_expr *scalarvect (long scalar) 
 {
     begintemp();
     addtotemp(EXPR_SIMPLE, scalar);
     return finishtemp();
 }
 
-static expr *unknown_expr (void) 
+static nasm_expr *unknown_expr (void) 
 {
     begintemp();
     addtotemp(EXPR_UNKNOWN, 1L);
@@ -190,19 +186,19 @@ static expr *unknown_expr (void)
  * value. Return NULL, as usual, if an error occurs. Report the
  * error too.
  */
-static expr *segment_part (expr *e) 
+static nasm_expr *segment_part (nasm_expr *e) 
 {
     long seg;
 
-    if (is_unknown(e))
+    if (nasm_is_unknown(e))
 	return unknown_expr();
 
-    if (!is_reloc(e)) {
+    if (!nasm_is_reloc(e)) {
 	error(ERR_NONFATAL, "cannot apply SEG to a non-relocatable value");
 	return NULL;
     }
 
-    seg = reloc_seg(e);
+    seg = nasm_reloc_seg(e);
     if (seg == NO_SEG) {
 	error(ERR_NONFATAL, "cannot apply SEG to a non-relocatable value");
 	return NULL;
@@ -255,16 +251,16 @@ static expr *segment_part (expr *e)
  *       | number
  */
 
-static expr *rexp0(int), *rexp1(int), *rexp2(int), *rexp3(int);
+static nasm_expr *rexp0(int), *rexp1(int), *rexp2(int), *rexp3(int);
 
-static expr *expr0(int), *expr1(int), *expr2(int), *expr3(int);
-static expr *expr4(int), *expr5(int), *expr6(int);
+static nasm_expr *expr0(int), *expr1(int), *expr2(int), *expr3(int);
+static nasm_expr *expr4(int), *expr5(int), *expr6(int);
 
-static expr *(*bexpr)(int);
+static nasm_expr *(*bexpr)(int);
 
-static expr *rexp0(int critical) 
+static nasm_expr *rexp0(int critical) 
 {
-    expr *e, *f;
+    nasm_expr *e, *f;
 
     e = rexp1(critical);
     if (!e)
@@ -276,24 +272,24 @@ static expr *rexp0(int critical)
 	f = rexp1(critical);
 	if (!f)
 	    return NULL;
-	if (!(is_simple(e) || is_just_unknown(e)) ||
-	    !(is_simple(f) || is_just_unknown(f))) 
+	if (!(nasm_is_simple(e) || nasm_is_just_unknown(e)) ||
+	    !(nasm_is_simple(f) || nasm_is_just_unknown(f))) 
 	{
 	    error(ERR_NONFATAL, "`|' operator may only be applied to"
 		  " scalar values");
 	}
 
-	if (is_just_unknown(e) || is_just_unknown(f))
+	if (nasm_is_just_unknown(e) || nasm_is_just_unknown(f))
 	    e = unknown_expr();
 	else
-	    e = scalarvect ((long) (reloc_value(e) || reloc_value(f)));
+	    e = scalarvect ((long) (nasm_reloc_value(e) || nasm_reloc_value(f)));
     }
     return e;
 }
 
-static expr *rexp1(int critical) 
+static nasm_expr *rexp1(int critical) 
 {
-    expr *e, *f;
+    nasm_expr *e, *f;
 
     e = rexp2(critical);
     if (!e)
@@ -305,24 +301,24 @@ static expr *rexp1(int critical)
 	f = rexp2(critical);
 	if (!f)
 	    return NULL;
-	if (!(is_simple(e) || is_just_unknown(e)) ||
-	    !(is_simple(f) || is_just_unknown(f))) 
+	if (!(nasm_is_simple(e) || nasm_is_just_unknown(e)) ||
+	    !(nasm_is_simple(f) || nasm_is_just_unknown(f))) 
 	{
 	    error(ERR_NONFATAL, "`^' operator may only be applied to"
 		  " scalar values");
 	}
 
-	if (is_just_unknown(e) || is_just_unknown(f))
+	if (nasm_is_just_unknown(e) || nasm_is_just_unknown(f))
 	    e = unknown_expr();
 	else
-	    e = scalarvect ((long) (!reloc_value(e) ^ !reloc_value(f)));
+	    e = scalarvect ((long) (!nasm_reloc_value(e) ^ !nasm_reloc_value(f)));
     }
     return e;
 }
 
-static expr *rexp2(int critical) 
+static nasm_expr *rexp2(int critical) 
 {
-    expr *e, *f;
+    nasm_expr *e, *f;
 
     e = rexp3(critical);
     if (!e)
@@ -333,23 +329,23 @@ static expr *rexp2(int critical)
 	f = rexp3(critical);
 	if (!f)
 	    return NULL;
-	if (!(is_simple(e) || is_just_unknown(e)) ||
-	    !(is_simple(f) || is_just_unknown(f))) 
+	if (!(nasm_is_simple(e) || nasm_is_just_unknown(e)) ||
+	    !(nasm_is_simple(f) || nasm_is_just_unknown(f))) 
 	{
 	    error(ERR_NONFATAL, "`&' operator may only be applied to"
 		  " scalar values");
 	}
-	if (is_just_unknown(e) || is_just_unknown(f))
+	if (nasm_is_just_unknown(e) || nasm_is_just_unknown(f))
 	    e = unknown_expr();
 	else
-	    e = scalarvect ((long) (reloc_value(e) && reloc_value(f)));
+	    e = scalarvect ((long) (nasm_reloc_value(e) && nasm_reloc_value(f)));
     }
     return e;
 }
 
-static expr *rexp3(int critical) 
+static nasm_expr *rexp3(int critical) 
 {
-    expr *e, *f;
+    nasm_expr *e, *f;
     long v;
 
     e = expr0(critical);
@@ -370,23 +366,23 @@ static expr *rexp3(int critical)
 	switch (j) 
 	{
 	  case TOKEN_EQ: case TOKEN_NE:
-	    if (is_unknown(e))
+	    if (nasm_is_unknown(e))
 		v = -1;		       /* means unknown */
-	    else if (!is_really_simple(e) || reloc_value(e) != 0)
+	    else if (!nasm_is_really_simple(e) || nasm_reloc_value(e) != 0)
 		v = (j == TOKEN_NE);   /* unequal, so return TRUE if NE */
 	    else
 		v = (j == TOKEN_EQ);   /* equal, so return TRUE if EQ */
 	    break;
 	  default:
-	    if (is_unknown(e))
+	    if (nasm_is_unknown(e))
 		v = -1;		       /* means unknown */
-	    else if (!is_really_simple(e)) {
+	    else if (!nasm_is_really_simple(e)) {
 		error(ERR_NONFATAL, "`%s': operands differ by a non-scalar",
 		      (j == TOKEN_LE ? "<=" : j == TOKEN_LT ? "<" :
 		       j == TOKEN_GE ? ">=" : ">"));
 		v = 0;		       /* must set it to _something_ */
 	    } else {
-		int vv = reloc_value(e);
+		int vv = nasm_reloc_value(e);
 		if (vv == 0)
 		    v = (j == TOKEN_LE || j == TOKEN_GE);
 		else if (vv > 0)
@@ -405,9 +401,9 @@ static expr *rexp3(int critical)
     return e;
 }
 
-static expr *expr0(int critical) 
+static nasm_expr *expr0(int critical) 
 {
-    expr *e, *f;
+    nasm_expr *e, *f;
 
     e = expr1(critical);
     if (!e)
@@ -419,23 +415,23 @@ static expr *expr0(int critical)
 	f = expr1(critical);
 	if (!f)
 	    return NULL;
-	if (!(is_simple(e) || is_just_unknown(e)) ||
-	    !(is_simple(f) || is_just_unknown(f))) 
+	if (!(nasm_is_simple(e) || nasm_is_just_unknown(e)) ||
+	    !(nasm_is_simple(f) || nasm_is_just_unknown(f))) 
 	{
 	    error(ERR_NONFATAL, "`|' operator may only be applied to"
 		  " scalar values");
 	}
-	if (is_just_unknown(e) || is_just_unknown(f))
+	if (nasm_is_just_unknown(e) || nasm_is_just_unknown(f))
 	    e = unknown_expr();
 	else
-	    e = scalarvect (reloc_value(e) | reloc_value(f));
+	    e = scalarvect (nasm_reloc_value(e) | nasm_reloc_value(f));
     }
     return e;
 }
 
-static expr *expr1(int critical) 
+static nasm_expr *expr1(int critical) 
 {
-    expr *e, *f;
+    nasm_expr *e, *f;
 
     e = expr2(critical);
     if (!e)
@@ -446,23 +442,23 @@ static expr *expr1(int critical)
 	f = expr2(critical);
 	if (!f)
 	    return NULL;
-	if (!(is_simple(e) || is_just_unknown(e)) ||
-	    !(is_simple(f) || is_just_unknown(f))) 
+	if (!(nasm_is_simple(e) || nasm_is_just_unknown(e)) ||
+	    !(nasm_is_simple(f) || nasm_is_just_unknown(f))) 
 	{
 	    error(ERR_NONFATAL, "`^' operator may only be applied to"
 		  " scalar values");
 	}
-	if (is_just_unknown(e) || is_just_unknown(f))
+	if (nasm_is_just_unknown(e) || nasm_is_just_unknown(f))
 	    e = unknown_expr();
 	else
-	    e = scalarvect (reloc_value(e) ^ reloc_value(f));
+	    e = scalarvect (nasm_reloc_value(e) ^ nasm_reloc_value(f));
     }
     return e;
 }
 
-static expr *expr2(int critical) 
+static nasm_expr *expr2(int critical) 
 {
-    expr *e, *f;
+    nasm_expr *e, *f;
 
     e = expr3(critical);
     if (!e)
@@ -473,23 +469,23 @@ static expr *expr2(int critical)
 	f = expr3(critical);
 	if (!f)
 	    return NULL;
-	if (!(is_simple(e) || is_just_unknown(e)) ||
-	    !(is_simple(f) || is_just_unknown(f))) 
+	if (!(nasm_is_simple(e) || nasm_is_just_unknown(e)) ||
+	    !(nasm_is_simple(f) || nasm_is_just_unknown(f))) 
 	{
 	    error(ERR_NONFATAL, "`&' operator may only be applied to"
 		  " scalar values");
 	}
-	if (is_just_unknown(e) || is_just_unknown(f))
+	if (nasm_is_just_unknown(e) || nasm_is_just_unknown(f))
 	    e = unknown_expr();
 	else
-	    e = scalarvect (reloc_value(e) & reloc_value(f));
+	    e = scalarvect (nasm_reloc_value(e) & nasm_reloc_value(f));
     }
     return e;
 }
 
-static expr *expr3(int critical) 
+static nasm_expr *expr3(int critical) 
 {
-    expr *e, *f;
+    nasm_expr *e, *f;
 
     e = expr4(critical);
     if (!e)
@@ -502,29 +498,29 @@ static expr *expr3(int critical)
 	f = expr4(critical);
 	if (!f)
 	    return NULL;
-	if (!(is_simple(e) || is_just_unknown(e)) ||
-	    !(is_simple(f) || is_just_unknown(f))) 
+	if (!(nasm_is_simple(e) || nasm_is_just_unknown(e)) ||
+	    !(nasm_is_simple(f) || nasm_is_just_unknown(f))) 
 	{
 	    error(ERR_NONFATAL, "shift operator may only be applied to"
 		  " scalar values");
-	} else if (is_just_unknown(e) || is_just_unknown(f)) {
+	} else if (nasm_is_just_unknown(e) || nasm_is_just_unknown(f)) {
 	    e = unknown_expr();
 	} else switch (j) {
 	  case TOKEN_SHL:
-	    e = scalarvect (reloc_value(e) << reloc_value(f));
+	    e = scalarvect (nasm_reloc_value(e) << nasm_reloc_value(f));
 	    break;
 	  case TOKEN_SHR:
-	    e = scalarvect (((unsigned long)reloc_value(e)) >>
-			    reloc_value(f));
+	    e = scalarvect (((unsigned long)nasm_reloc_value(e)) >>
+			    nasm_reloc_value(f));
 	    break;
 	}
     }
     return e;
 }
 
-static expr *expr4(int critical) 
+static nasm_expr *expr4(int critical) 
 {
-    expr *e, *f;
+    nasm_expr *e, *f;
 
     e = expr5(critical);
     if (!e)
@@ -548,9 +544,9 @@ static expr *expr4(int critical)
     return e;
 }
 
-static expr *expr5(int critical) 
+static nasm_expr *expr5(int critical) 
 {
-    expr *e, *f;
+    nasm_expr *e, *f;
 
     e = expr6(critical);
     if (!e)
@@ -563,24 +559,24 @@ static expr *expr5(int critical)
 	f = expr6(critical);
 	if (!f)
 	    return NULL;
-	if (j != '*' && (!(is_simple(e) || is_just_unknown(e)) ||
-			 !(is_simple(f) || is_just_unknown(f)))) 
+	if (j != '*' && (!(nasm_is_simple(e) || nasm_is_just_unknown(e)) ||
+			 !(nasm_is_simple(f) || nasm_is_just_unknown(f)))) 
 	{
 	    error(ERR_NONFATAL, "division operator may only be applied to"
 		  " scalar values");
 	    return NULL;
 	}
-	if (j != '*' && !is_unknown(f) && reloc_value(f) == 0) {
+	if (j != '*' && !nasm_is_unknown(f) && nasm_reloc_value(f) == 0) {
 	    error(ERR_NONFATAL, "division by zero");
 	    return NULL;
 	}
 	switch (j) {
 	  case '*':
-	    if (is_simple(e))
-		e = scalar_mult (f, reloc_value(e), TRUE);
-	    else if (is_simple(f))
-		e = scalar_mult (e, reloc_value(f), TRUE);
-	    else if (is_just_unknown(e) && is_just_unknown(f))
+	    if (nasm_is_simple(e))
+		e = scalar_mult (f, nasm_reloc_value(e), TRUE);
+	    else if (nasm_is_simple(f))
+		e = scalar_mult (e, nasm_reloc_value(f), TRUE);
+	    else if (nasm_is_just_unknown(e) && nasm_is_just_unknown(f))
 		e = unknown_expr();
 	    else {
 		error(ERR_NONFATAL, "unable to multiply two "
@@ -589,42 +585,42 @@ static expr *expr5(int critical)
 	    }
 	    break;
 	  case '/':
-	    if (is_just_unknown(e) || is_just_unknown(f))
+	    if (nasm_is_just_unknown(e) || nasm_is_just_unknown(f))
 		e = unknown_expr();
 	    else
-		e = scalarvect (((unsigned long)reloc_value(e)) /
-				((unsigned long)reloc_value(f)));
+		e = scalarvect (((unsigned long)nasm_reloc_value(e)) /
+				((unsigned long)nasm_reloc_value(f)));
 	    break;
 	  case '%':
-	    if (is_just_unknown(e) || is_just_unknown(f))
+	    if (nasm_is_just_unknown(e) || nasm_is_just_unknown(f))
 		e = unknown_expr();
 	    else
-		e = scalarvect (((unsigned long)reloc_value(e)) %
-				((unsigned long)reloc_value(f)));
+		e = scalarvect (((unsigned long)nasm_reloc_value(e)) %
+				((unsigned long)nasm_reloc_value(f)));
 	    break;
 	  case TOKEN_SDIV:
-	    if (is_just_unknown(e) || is_just_unknown(f))
+	    if (nasm_is_just_unknown(e) || nasm_is_just_unknown(f))
 		e = unknown_expr();
 	    else
-		e = scalarvect (((signed long)reloc_value(e)) /
-				((signed long)reloc_value(f)));
+		e = scalarvect (((signed long)nasm_reloc_value(e)) /
+				((signed long)nasm_reloc_value(f)));
 	    break;
 	  case TOKEN_SMOD:
-	    if (is_just_unknown(e) || is_just_unknown(f))
+	    if (nasm_is_just_unknown(e) || nasm_is_just_unknown(f))
 		e = unknown_expr();
 	    else
-		e = scalarvect (((signed long)reloc_value(e)) %
-				((signed long)reloc_value(f)));
+		e = scalarvect (((signed long)nasm_reloc_value(e)) %
+				((signed long)nasm_reloc_value(f)));
 	    break;
 	}
     }
     return e;
 }
 
-static expr *expr6(int critical) 
+static nasm_expr *expr6(int critical) 
 {
     long type;
-    expr *e;
+    nasm_expr *e;
     long label_seg, label_ofs;
 
     if (i == '-') {
@@ -641,14 +637,14 @@ static expr *expr6(int critical)
 	e = expr6(critical);
 	if (!e)
 	    return NULL;
-	if (is_just_unknown(e))
+	if (nasm_is_just_unknown(e))
 	    return unknown_expr();
-	else if (!is_simple(e)) {
+	else if (!nasm_is_simple(e)) {
 	    error(ERR_NONFATAL, "`~' operator may only be applied to"
 		  " scalar values");
 	    return NULL;
 	}
-	return scalarvect(~reloc_value(e));
+	return scalarvect(~nasm_reloc_value(e));
     } else if (i == TOKEN_SEG) {
 	i = scan(scpriv, tokval);
 	e = expr6(critical);
@@ -657,7 +653,7 @@ static expr *expr6(int critical)
 	e = segment_part(e);
 	if (!e)
 	    return NULL;
-	if (is_unknown(e) && critical) {
+	if (nasm_is_unknown(e) && critical) {
 	    error(ERR_NONFATAL, "unable to determine segment base");
 	    return NULL;
 	}
@@ -732,8 +728,10 @@ static expr *expr6(int critical)
 		    label_ofs = 1;
 		}
 	    }
-		if (opflags && is_extern (tokval->t_charptr))
+#if 0
+		if (opflags && nasm_is_extern (tokval->t_charptr))
 		    *opflags |= OPFLAG_EXTERN;
+#endif
 	    }
 	    addtotemp(type, label_ofs);
 	    if (label_seg!=NO_SEG)
@@ -748,19 +746,19 @@ static expr *expr6(int critical)
     }
 }
 
-void eval_global_info (struct ofmt *output, lfunc lookup_label, loc_t *locp) 
+void nasm_eval_global_info (struct ofmt *output, lfunc lookup_label, loc_t *locp) 
 {
     outfmt = output;
     labelfunc = lookup_label;
     location = locp;
 }
 
-expr *evaluate (scanner sc, void *scprivate, struct tokenval *tv,
+nasm_expr *nasm_evaluate (scanner sc, void *scprivate, struct tokenval *tv,
 		int *fwref, int critical, efunc report_error,
 		struct eval_hints *hints) 
 {
-    expr *e;
-    expr *f = NULL;
+    nasm_expr *e;
+    nasm_expr *f = NULL;
 
     hint = hints;
     if (hint)
@@ -798,19 +796,19 @@ expr *evaluate (scanner sc, void *scprivate, struct tokenval *tv,
     }
     e = scalar_mult (e, 1L, FALSE);    /* strip far-absolute segment part */
     if (f) {
-	expr *g;
-	if (is_just_unknown(f))
+	nasm_expr *g;
+	if (nasm_is_just_unknown(f))
 	    g = unknown_expr();
 	else {
 	    long value;
 	    begintemp();
-	    if (!is_reloc(f)) {
+	    if (!nasm_is_reloc(f)) {
 		error(ERR_NONFATAL, "invalid right-hand operand to WRT");
 		return NULL;
 	    }
-	    value = reloc_seg(f);
+	    value = nasm_reloc_seg(f);
 	    if (value == NO_SEG)
-		value = reloc_value(f) | SEG_ABS;
+		value = nasm_reloc_value(f) | SEG_ABS;
 	    else if (!(value & SEG_ABS) && !(value % 2) && critical) 
 	    {
 		error(ERR_NONFATAL, "invalid right-hand operand to WRT");

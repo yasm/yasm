@@ -249,9 +249,9 @@ main(int argc, char *argv[])
 	    }
 	}
 
-	/* If not already specified, default to yapp preproc. */
+	/* If not already specified, default to nasm preproc. */
 	if (!cur_preproc)
-	    cur_preproc = load_preproc("yapp");
+	    cur_preproc = load_preproc("nasm");
 
 	if (!cur_preproc) {
 	    fprintf(stderr, _("Could not load default preprocessor"));

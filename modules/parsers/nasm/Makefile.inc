@@ -1,17 +1,17 @@
 # $IdPath$
 
-lib_LTLIBRARIES += yasm-nasm.la
+#lib_LTLIBRARIES += yasm-nasm.la
 
-yasm_nasm_la_SOURCES = \
+yasm_nasm_la_SOURCES += \
 	src/parsers/nasm/nasm-parser.h		\
 	src/parsers/nasm/nasm-parser.c		\
 	src/parsers/nasm/nasm-defs.h		\
 	src/parsers/nasm/nasm-bison.y		\
 	nasm-bison.h				\
 	nasm-token.c
-yasm_nasm_la_LDFLAGS = -module -avoid-version
-yasm_nasm_la_LIBADD = libyasm.la
-yasm_LDADD += -dlpreopen yasm-nasm.la
+#yasm_nasm_la_LDFLAGS = -module -avoid-version
+#yasm_nasm_la_LIBADD = libyasm.la
+#yasm_LDADD += -dlpreopen yasm-nasm.la
 
 nasm-token.c: $(srcdir)/src/parsers/nasm/nasm-token.re re2c$(EXEEXT) $(srcdir)/tools/re2c/cleanup.pl
 	$(top_builddir)/re2c$(EXEEXT) -b $(srcdir)/src/parsers/nasm/nasm-token.re | $(PERL) $(srcdir)/tools/re2c/cleanup.pl | sed "/^#l/ s,re2c-out\.c,$@," > $@

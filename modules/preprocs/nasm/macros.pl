@@ -16,7 +16,7 @@ my $tasm_count;
 
 undef $tasm_count;
 
-open(OUTPUT,">macros.c") or die "unable to open macros.c\n";
+open(OUTPUT,">nasm-macros.c") or die "unable to open nasm-macros.c\n";
     
 print OUTPUT "/* This file auto-generated from standard.mac by macros.pl" .
 " - don't edit it */\n\n#include <stddef.h>\n\nstatic const char *stdmac[] = {\n";

@@ -6,8 +6,8 @@
  * distributed in the NASM archive.
  */
 
-#ifndef NASM_PREPROC_H
-#define NASM_PREPROC_H
+#ifndef YASM_NASM_PREPROC_H
+#define YASM_NASM_PREPROC_H
 
 void pp_include_path (char *);
 void pp_pre_include (char *);
