@@ -33,4 +33,6 @@ EXTRA_DIST = \
 	token.l.in		\
 	bison.y.in		\
 	bison.h			\
-	gen_instr.pl
+	gen_instr.pl		\
+	strdup.c		\
+	strtoul.c
