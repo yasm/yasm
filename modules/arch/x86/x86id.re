@@ -2212,10 +2212,17 @@ yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
 			yasm_internal_error(N_("invalid operand conversion"));
 		    break;
 		case OPA_Op1Add:
-		    /* Op1Add is only used for FPU, so no need to do REX */
-		    if (op->type == YASM_INSN__OPERAND_REG)
-			d.op[1] += (unsigned char)(op->data.reg&7);
-		    else
+		    if (op->type == YASM_INSN__OPERAND_REG) {
+			unsigned char opadd;
+			if (yasm_x86__set_rex_from_reg(&d.rex, &opadd,
+				op->data.reg, arch_x86->mode_bits,
+				X86_REX_B)) {
+			    yasm__error(line,
+				N_("invalid combination of opcode and operands"));
+			    return NULL;
+			}
+			d.op[1] += opadd;
+		    } else
 			yasm_internal_error(N_("invalid operand conversion"));
 		    break;
 		case OPA_SpareEA:
