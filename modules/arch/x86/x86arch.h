@@ -47,7 +47,7 @@ effaddr *x86_ea_new_reg(unsigned char reg);
 effaddr *x86_ea_new_imm(immval *imm, unsigned char im_len);
 effaddr *x86_ea_new_expr(/*@keep@*/ expr *e);
 
-/*@null@*/ effaddr *x86_bc_insn_get_ea(bytecode *bc);
+/*@observer@*/ /*@null@*/ effaddr *x86_bc_insn_get_ea(/*@null@*/ bytecode *bc);
 
 void x86_bc_insn_opersize_override(bytecode *bc, unsigned char opersize);
 void x86_bc_insn_addrsize_override(bytecode *bc, unsigned char addrsize);
