@@ -223,6 +223,16 @@ main(int argc, char *argv[])
     symrec_parser_finalize();
     basic_optimizer.optimize(sections);
 
+    if (OutputAllErrorWarning() > 0) {
+	sections_delete(sections);
+	symrec_delete_all();
+	line_shutdown();
+	floatnum_shutdown();
+	intnum_shutdown();
+	BitVector_Shutdown();
+	return EXIT_FAILURE;
+    }
+
     fprintf(obj, "\nSections after optimization:\n");
     indent_level++;
     sections_print(obj, sections);
