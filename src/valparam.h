@@ -49,6 +49,9 @@ void vps_append(valparamhead *headp, /*@keep@*/ valparam *vp);
 /*@null@*/ /*@dependent@*/ valparam *vps_first(valparamhead *headp);
 #define vps_first(headp)	    STAILQ_FIRST(headp)
 
+/*@null@*/ /*@dependent@*/ valparam *vps_next(valparam *cur);
+#define vps_next(cur)		    STAILQ_NEXT(cur, link)
+
 #define vps_foreach(iter, headp)    STAILQ_FOREACH(iter, headp, link)
 
 #endif
