@@ -35,14 +35,22 @@
  */
 typedef struct opt_option_s
 {
-    char sopt;			/* short option letter if present, 0 otherwise */
-    const char *lopt;		/* long option name if present, NULL otherwise */
-    int takes_param;		/* !=0 if option requires parameter, 0 if not */
-    int (*handler) (char *cmd, char *param, int extra);
+    /* short option letter if present, 0 otherwise */
+    char sopt;
+
+    /* long option name if present, NULL otherwise */
+    /*@null@*/ const char *lopt;
+
+    /* !=0 if option requires parameter, 0 if not */
+    int takes_param;
+
+    int (*handler) (char *cmd, /*@null@*/ char *param, int extra);
     int extra;			/* extra value for handler */
     const char *description;	/* description to use in help_msg() */
-    const char *param_desc;	/* optional description for the param taken */
-			/*  (short - will be printed after option sopt/lopt) */
+
+    /* optional description for the param taken (NULL if not present) */
+    /*  (short - will be printed after option sopt/lopt) */
+    /*@null@*/ const char *param_desc;
 } opt_option;
 
 /* handle everything that is not an option */
@@ -53,11 +61,12 @@ int not_an_option_handler(char *param);
  * options - array of options
  * nopts - options count
  */
-int parse_cmdline(int argc, char **argv, opt_option *options, int nopts);
+int parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts);
 
 /* display help message msg followed by list of options in options and followed
  * by tail
  */
-void help_msg(char *msg, char *tail, opt_option *options, int nopts);
+void help_msg(const char *msg, const char *tail, opt_option *options,
+	      size_t nopts);
 
 #endif

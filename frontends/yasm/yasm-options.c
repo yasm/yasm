@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "options.h"
 #include "errwarn.h"
@@ -43,10 +43,10 @@ RCSID("$IdPath$");
 
 /* Options Parser */
 int
-parse_cmdline(int argc, char **argv, opt_option *options, int nopts)
+parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts)
 {
     int errors = 0;
-    int i;
+    size_t i;
     int got_it;
 
     DEBUG((stderr, "parse_cmdline: entered\n"));
@@ -132,10 +132,10 @@ parse_cmdline(int argc, char **argv, opt_option *options, int nopts)
 }
 
 void
-help_msg(char *msg, char *tail, opt_option *options, int nopts)
+help_msg(const char *msg, const char *tail, opt_option *options, size_t nopts)
 {
     char optbuf[100], optopt[100];
-    int i;
+    size_t i;
 
     fprintf(stdout, msg);
 

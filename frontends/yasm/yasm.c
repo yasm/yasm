@@ -20,7 +20,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 #ifdef gettext_noop
 #define N_(String)	gettext_noop(String)
@@ -49,41 +49,43 @@ RCSID("$IdPath$");
 #endif
 
 static int files_open = 0;
-static FILE *in;
+/*@null@*/ static FILE *in;
 
 /* Forward declarations: cmd line parser handlers */
-int opt_option_handler(char *cmd, char *param, int extra);
-int opt_format_handler(char *cmd, char *param, int extra);
+static int opt_option_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_format_handler(char *cmd, /*@null@*/ char *param, int extra);
 /* Fake handlers: remove them */
-int boo_boo_handler(char *cmd, char *param, int extra);
-int b_handler(char *cmd, char *param, int extra);
+static int boo_boo_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int b_handler(char *cmd, /*@null@*/ char *param, int extra);
 
 /* values for asm_options */
 #define OPT_SHOW_HELP 0x01
 
 /* command line options */
-opt_option options[] =
+static opt_option options[] =
 {
-    { 'h', "help",    0, opt_option_handler, OPT_SHOW_HELP, "show help text" },
+    { 'h', "help",    0, opt_option_handler, OPT_SHOW_HELP, "show help text", NULL },
     { 'f', "oformat", 1, opt_format_handler, 0, "select output format", "<format>" },
     /* Fake handlers: remove them */
-    { 'b', NULL,      0, b_handler, 0, "says boom!" },
-    {  0,  "boo-boo", 0, boo_boo_handler, 0, "says boo-boo!" },
+    { 'b', NULL,      0, b_handler, 0, "says boom!", NULL },
+    {  0,  "boo-boo", 0, boo_boo_handler, 0, "says boo-boo!", NULL },
 };
 
 /* help messages */
-char help_head[] = "yasm version " VERSION " compiled " __DATE__ "\n"
-		   "copyright (c) 2001 Peter Johnson and " PACKAGE " developers\n"
-		   "mailto: asm-devel@bilogic.org\n"
-		   "\n"
-		   "usage: yasm [options|files]+\n"
-		   "where options are:\n";
-char help_tail[] = "\n"
-		   "   files are asm sources to be assembled\n"
-		   "\n"
-		   "sample invocation:\n"
-		   "   yasm -b --boo-boo -f elf -o test.o impl.asm\n"
-		   "\n";
+static const char *help_head =
+    "yasm version " VERSION " compiled " __DATE__ "\n"
+    "copyright (c) 2001 Peter Johnson and " PACKAGE " developers\n"
+    "mailto: asm-devel@bilogic.org\n"
+    "\n"
+    "usage: yasm [options|files]+\n"
+    "where options are:\n";
+static const char *help_tail =
+    "\n"
+    "   files are asm sources to be assembled\n"
+    "\n"
+    "sample invocation:\n"
+    "   yasm -b --boo-boo -f elf -o test.o impl.asm\n"
+    "\n";
 
 /* main function */
 int
@@ -106,7 +108,7 @@ main(int argc, char *argv[])
     }
 
     /* if no files were specified, fallback to reading stdin */
-    if (!files_open)
+    if (!in)
     {
 	in = stdin;
 	switch_filename("<STDIN>");
@@ -151,9 +153,10 @@ main(int argc, char *argv[])
 int
 not_an_option_handler(char *param)
 {
-    if (files_open > 0) {
+    if (in) {
 	WarningNow("can open only one input file, only latest file will be processed");
-	fclose(in);
+	if(fclose(in))
+	    ErrorNow("could not close old input file");
     }
 
     in = fopen(param, "rt");
@@ -167,30 +170,32 @@ not_an_option_handler(char *param)
     return 0;
 }
 
-int
-opt_option_handler(char *cmd, char *param, int extra)
+static int
+opt_option_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param, int extra)
 {
     asm_options |= extra;
     return 0;
 }
 
-int
-opt_format_handler(char *cmd, char *param, int extra)
+static int
+opt_format_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
-    printf("selected format: %s\n", param);
+    printf("selected format: %s\n", param?param:"(NULL)");
     return 0;
 }
 
 /* Fake handlers: remove them */
-int
-boo_boo_handler(char *cmd, char *param, int extra)
+static int
+boo_boo_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
+		/*@unused@*/ int extra)
 {
     printf("boo-boo!\n");
     return 0;
 }
 
-int
-b_handler(char *cmd, char *param, int extra)
+static int
+b_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
+	  /*@unused@*/ int extra)
 {
     fprintf(stdout, "boom!\n");
     return 0;
