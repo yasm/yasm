@@ -38,7 +38,8 @@
 #include "intnum.h"
 
 
-#define BITVECT_ALLOC_SIZE	80
+/* "Native" "word" size for intnum calculations. */
+#define BITVECT_NATIVE_SIZE	128
 
 struct yasm_intnum {
     union val {
@@ -52,19 +53,30 @@ struct yasm_intnum {
 /* static bitvect used for conversions */
 static /*@only@*/ wordptr conv_bv;
 
+/* static bitvects used for computation */
+static /*@only@*/ wordptr result, spare, op1static, op2static;
+
 
 void
 yasm_intnum_initialize(void)
 {
-    conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
-    BitVector_from_Dec_static_Boot(BITVECT_ALLOC_SIZE);
+    conv_bv = BitVector_Create(BITVECT_NATIVE_SIZE, FALSE);
+    result = BitVector_Create(BITVECT_NATIVE_SIZE, FALSE);
+    spare = BitVector_Create(BITVECT_NATIVE_SIZE, FALSE);
+    op1static = BitVector_Create(BITVECT_NATIVE_SIZE, FALSE);
+    op2static = BitVector_Create(BITVECT_NATIVE_SIZE, FALSE);
+    BitVector_from_Dec_static_Boot(BITVECT_NATIVE_SIZE);
 }
 
 void
 yasm_intnum_cleanup(void)
 {
-    BitVector_Destroy(conv_bv);
     BitVector_from_Dec_static_Shutdown();
+    BitVector_Destroy(op2static);
+    BitVector_Destroy(op1static);
+    BitVector_Destroy(spare);
+    BitVector_Destroy(result);
+    BitVector_Destroy(conv_bv);
 }
 
 yasm_intnum *
@@ -96,7 +108,7 @@ yasm_intnum_new_bin(char *str, unsigned long lindex)
 
     intn->origsize = (unsigned char)strlen(str);
 
-    if(intn->origsize > BITVECT_ALLOC_SIZE)
+    if(intn->origsize > BITVECT_NATIVE_SIZE)
 	yasm__warning(YASM_WARN_GENERAL, lindex,
 		      N_("Numeric constant too large for internal format"));
 
@@ -119,7 +131,7 @@ yasm_intnum_new_oct(char *str, unsigned long lindex)
 
     intn->origsize = strlen(str)*3;
 
-    if(intn->origsize > BITVECT_ALLOC_SIZE)
+    if(intn->origsize > BITVECT_NATIVE_SIZE)
 	yasm__warning(YASM_WARN_GENERAL, lindex,
 		      N_("Numeric constant too large for internal format"));
 
@@ -142,7 +154,7 @@ yasm_intnum_new_hex(char *str, unsigned long lindex)
 
     intn->origsize = strlen(str)*4;
 
-    if(intn->origsize > BITVECT_ALLOC_SIZE)
+    if(intn->origsize > BITVECT_NATIVE_SIZE)
 	yasm__warning(YASM_WARN_GENERAL, lindex,
 		      N_("Numeric constant too large for internal format"));
 
@@ -165,13 +177,19 @@ yasm_intnum_new_charconst_nasm(const char *str, unsigned long lindex)
     yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
     size_t len = strlen(str);
 
-    if (len > 4)
-	yasm__warning(YASM_WARN_GENERAL, lindex,
-	    N_("character constant too large, ignoring trailing characters"));
-
-    intn->val.ul = 0;
-    intn->type = INTNUM_UL;
     intn->origsize = len*8;
+
+    if(intn->origsize > BITVECT_NATIVE_SIZE)
+	yasm__warning(YASM_WARN_GENERAL, lindex,
+		      N_("Character constant too large for internal format"));
+
+    if (len > 4) {
+	BitVector_Empty(conv_bv);
+	intn->type = INTNUM_BV;
+    } else {
+	intn->val.ul = 0;
+	intn->type = INTNUM_UL;
+    }
 
     switch (len) {
 	case 4:
@@ -188,6 +206,16 @@ yasm_intnum_new_charconst_nasm(const char *str, unsigned long lindex)
 	    /*@fallthrough@*/
 	case 1:
 	    intn->val.ul |= (unsigned long)str[0];
+	case 0:
+	    break;
+	default:
+	    /* >32 bit conversion */
+	    while (len) {
+		BitVector_Chunk_Store(conv_bv, 8, 0,
+				      (unsigned long)str[--len]);
+		BitVector_Move_Left(conv_bv, 8);
+	    }
+	    intn->val.bv = BitVector_Clone(conv_bv);
     }
 
     return intn;
@@ -209,8 +237,14 @@ yasm_intnum_new_uint(unsigned long i)
 yasm_intnum *
 yasm_intnum_new_int(long i)
 {
-    /* FIXME: Better way of handling signed numbers? */
-    return yasm_intnum_new_uint((unsigned long)i);
+    yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
+
+    BitVector_Fill(conv_bv);
+    intn->val.bv = BitVector_Clone(conv_bv);
+    intn->type = INTNUM_BV;
+    intn->origsize = 0;
+
+    return intn;
 }
 
 yasm_intnum *
@@ -245,31 +279,27 @@ void
 yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
 		 unsigned long lindex)
 {
-    wordptr result = (wordptr)NULL, op1 = (wordptr)NULL, op2 = (wordptr)NULL;
-    wordptr spare = (wordptr)NULL;
     boolean carry = 0;
+    wordptr op1, op2 = NULL;
 
-    /* upsize to bitvector op if one of two parameters is bitvector already.
-     * BitVector results must be calculated through intermediate storage.
+    /* Always do computations with in full bit vector.
+     * Bit vector results must be calculated through intermediate storage.
      */
-    if (acc->type == INTNUM_BV || (operand && operand->type == INTNUM_BV)) {
-	result = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
-	spare = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
+    if (acc->type == INTNUM_BV)
+	op1 = acc->val.bv;
+    else {
+	op1 = op1static;
+	BitVector_Empty(op1);
+	BitVector_Chunk_Store(op1, 32, 0, acc->val.ul);
+    }
 
-	if (acc->type == INTNUM_BV)
-	    op1 = acc->val.bv;
+    if (operand) {
+	if (operand->type == INTNUM_BV)
+	    op2 = operand->val.bv;
 	else {
-	    op1 = BitVector_Create(BITVECT_ALLOC_SIZE, TRUE);
-	    BitVector_Chunk_Store(op1, 32, 0, acc->val.ul);
-	}
-
-	if (operand) {
-	    if (operand->type == INTNUM_BV)
-		op2 = operand->val.bv;
-	    else {
-		op2 = BitVector_Create(BITVECT_ALLOC_SIZE, TRUE);
-		BitVector_Chunk_Store(op2, 32, 0, operand->val.ul);
-	    }
+	    op2 = op2static;
+	    BitVector_Empty(op2);
+	    BitVector_Chunk_Store(op2, 32, 0, operand->val.ul);
 	}
     }
 
@@ -280,166 +310,94 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
     /* A operation does a bitvector computation if result is allocated. */
     switch (op) {
 	case YASM_EXPR_ADD:
-	    if (result)
-		BitVector_add(result, op1, op2, &carry);
-	    else
-		acc->val.ul = acc->val.ul + operand->val.ul;
+	    BitVector_add(result, op1, op2, &carry);
 	    break;
 	case YASM_EXPR_SUB:
-	    if (result)
-		BitVector_sub(result, op1, op2, &carry);
-	    else
-		acc->val.ul = acc->val.ul - operand->val.ul;
+	    BitVector_sub(result, op1, op2, &carry);
 	    break;
 	case YASM_EXPR_MUL:
-	    if (result)
-		/* TODO: Make sure result size = op1+op2 */
-		BitVector_Multiply(result, op1, op2);
-	    else
-		acc->val.ul = acc->val.ul * operand->val.ul;
+	    BitVector_Multiply(result, op1, op2);
 	    break;
 	case YASM_EXPR_DIV:
-	    if (result) {
-		/* TODO: make sure op1 and op2 are unsigned */
-		BitVector_Divide(result, op1, op2, spare);
-	    } else
-		acc->val.ul = acc->val.ul / operand->val.ul;
+	    /* TODO: make sure op1 and op2 are unsigned */
+	    BitVector_Divide(result, op1, op2, spare);
 	    break;
 	case YASM_EXPR_SIGNDIV:
-	    if (result)
-		BitVector_Divide(result, op1, op2, spare);
-	    else
-		acc->val.ul = (unsigned long)((signed long)acc->val.ul /
-					      (signed long)operand->val.ul);
+	    BitVector_Divide(result, op1, op2, spare);
 	    break;
 	case YASM_EXPR_MOD:
-	    if (result) {
-		/* TODO: make sure op1 and op2 are unsigned */
-		BitVector_Divide(spare, op1, op2, result);
-	    } else
-		acc->val.ul = acc->val.ul % operand->val.ul;
+	    /* TODO: make sure op1 and op2 are unsigned */
+	    BitVector_Divide(spare, op1, op2, result);
 	    break;
 	case YASM_EXPR_SIGNMOD:
-	    if (result)
-		BitVector_Divide(spare, op1, op2, result);
-	    else
-		acc->val.ul = (unsigned long)((signed long)acc->val.ul %
-					      (signed long)operand->val.ul);
+	    BitVector_Divide(spare, op1, op2, result);
 	    break;
 	case YASM_EXPR_NEG:
-	    if (result)
-		BitVector_Negate(result, op1);
-	    else
-		acc->val.ul = -(acc->val.ul);
+	    BitVector_Negate(result, op1);
 	    break;
 	case YASM_EXPR_NOT:
-	    if (result)
-		Set_Complement(result, op1);
-	    else
-		acc->val.ul = ~(acc->val.ul);
+	    Set_Complement(result, op1);
 	    break;
 	case YASM_EXPR_OR:
-	    if (result)
-		Set_Union(result, op1, op2);
-	    else
-		acc->val.ul = acc->val.ul | operand->val.ul;
+	    Set_Union(result, op1, op2);
 	    break;
 	case YASM_EXPR_AND:
-	    if (result)
-		Set_Intersection(result, op1, op2);
-	    else
-		acc->val.ul = acc->val.ul & operand->val.ul;
+	    Set_Intersection(result, op1, op2);
 	    break;
 	case YASM_EXPR_XOR:
-	    if (result)
-		Set_ExclusiveOr(result, op1, op2);
-	    else
-		acc->val.ul = acc->val.ul ^ operand->val.ul;
+	    Set_ExclusiveOr(result, op1, op2);
 	    break;
 	case YASM_EXPR_SHL:
-	    if (result) {
-		if (operand->type == INTNUM_UL) {
-		    BitVector_Copy(result, op1);
-		    BitVector_Move_Left(result, (N_int)operand->val.ul);
-		} else	/* don't even bother, just zero result */
-		    BitVector_Empty(result);
-	    } else
-		acc->val.ul = acc->val.ul << operand->val.ul;
+	    if (operand->type == INTNUM_UL) {
+		BitVector_Copy(result, op1);
+		BitVector_Move_Left(result, (N_int)operand->val.ul);
+	    } else	/* don't even bother, just zero result */
+		BitVector_Empty(result);
 	    break;
 	case YASM_EXPR_SHR:
-	    if (result) {
-		if (operand->type == INTNUM_UL) {
-		    BitVector_Copy(result, op1);
-		    BitVector_Move_Right(result, (N_int)operand->val.ul);
-		} else	/* don't even bother, just zero result */
-		    BitVector_Empty(result);
-	    } else
-		acc->val.ul = acc->val.ul >> operand->val.ul;
+	    if (operand->type == INTNUM_UL) {
+		BitVector_Copy(result, op1);
+		BitVector_Move_Right(result, (N_int)operand->val.ul);
+	    } else	/* don't even bother, just zero result */
+		BitVector_Empty(result);
 	    break;
 	case YASM_EXPR_LOR:
-	    if (result) {
-		BitVector_Empty(result);
-		BitVector_LSB(result, !BitVector_is_empty(op1) ||
-			      !BitVector_is_empty(op2));
-	    } else
-		acc->val.ul = acc->val.ul || operand->val.ul;
+	    BitVector_Empty(result);
+	    BitVector_LSB(result, !BitVector_is_empty(op1) ||
+			  !BitVector_is_empty(op2));
 	    break;
 	case YASM_EXPR_LAND:
-	    if (result) {
-		BitVector_Empty(result);
-		BitVector_LSB(result, !BitVector_is_empty(op1) &&
-			      !BitVector_is_empty(op2));
-	    } else
-		acc->val.ul = acc->val.ul && operand->val.ul;
+	    BitVector_Empty(result);
+	    BitVector_LSB(result, !BitVector_is_empty(op1) &&
+			  !BitVector_is_empty(op2));
 	    break;
 	case YASM_EXPR_LNOT:
-	    if (result) {
-		BitVector_Empty(result);
-		BitVector_LSB(result, BitVector_is_empty(op1));
-	    } else
-		acc->val.ul = !acc->val.ul;
+	    BitVector_Empty(result);
+	    BitVector_LSB(result, BitVector_is_empty(op1));
 	    break;
 	case YASM_EXPR_EQ:
-	    if (result) {
-		BitVector_Empty(result);
-		BitVector_LSB(result, BitVector_equal(op1, op2));
-	    } else
-		acc->val.ul = acc->val.ul == operand->val.ul;
+	    BitVector_Empty(result);
+	    BitVector_LSB(result, BitVector_equal(op1, op2));
 	    break;
 	case YASM_EXPR_LT:
-	    if (result) {
-		BitVector_Empty(result);
-		BitVector_LSB(result, BitVector_Lexicompare(op1, op2) < 0);
-	    } else
-		acc->val.ul = acc->val.ul < operand->val.ul;
+	    BitVector_Empty(result);
+	    BitVector_LSB(result, BitVector_Lexicompare(op1, op2) < 0);
 	    break;
 	case YASM_EXPR_GT:
-	    if (result) {
-		BitVector_Empty(result);
-		BitVector_LSB(result, BitVector_Lexicompare(op1, op2) > 0);
-	    } else
-		acc->val.ul = acc->val.ul > operand->val.ul;
+	    BitVector_Empty(result);
+	    BitVector_LSB(result, BitVector_Lexicompare(op1, op2) > 0);
 	    break;
 	case YASM_EXPR_LE:
-	    if (result) {
-		BitVector_Empty(result);
-		BitVector_LSB(result, BitVector_Lexicompare(op1, op2) <= 0);
-	    } else
-		acc->val.ul = acc->val.ul <= operand->val.ul;
+	    BitVector_Empty(result);
+	    BitVector_LSB(result, BitVector_Lexicompare(op1, op2) <= 0);
 	    break;
 	case YASM_EXPR_GE:
-	    if (result) {
-		BitVector_Empty(result);
-		BitVector_LSB(result, BitVector_Lexicompare(op1, op2) >= 0);
-	    } else
-		acc->val.ul = acc->val.ul >= operand->val.ul;
+	    BitVector_Empty(result);
+	    BitVector_LSB(result, BitVector_Lexicompare(op1, op2) >= 0);
 	    break;
 	case YASM_EXPR_NE:
-	    if (result) {
-		BitVector_Empty(result);
-		BitVector_LSB(result, !BitVector_equal(op1, op2));
-	    } else
-		acc->val.ul = acc->val.ul != operand->val.ul;
+	    BitVector_Empty(result);
+	    BitVector_LSB(result, !BitVector_equal(op1, op2));
 	    break;
 	case YASM_EXPR_SEG:
 	    yasm__error(lindex, N_("invalid use of '%s'"), "SEG");
@@ -458,31 +416,19 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
 	    yasm_internal_error(N_("invalid operation in intnum calculation"));
     }
 
-    /* If we were doing a bitvector computation... */
-    if (result) {
-	BitVector_Destroy(spare);
-
-	if (op1 && acc->type != INTNUM_BV)
-	    BitVector_Destroy(op1);
-	if (op2 && operand && operand->type != INTNUM_BV)
-	    BitVector_Destroy(op2);
-
-	/* Try to fit the result into 32 bits if possible */
-	if (Set_Max(result) < 32) {
-	    if (acc->type == INTNUM_BV) {
-		BitVector_Destroy(acc->val.bv);
-		acc->type = INTNUM_UL;
-	    }
-	    acc->val.ul = BitVector_Chunk_Read(result, 32, 0);
-	    BitVector_Destroy(result);
+    /* Try to fit the result into 32 bits if possible */
+    if (Set_Max(result) < 32) {
+	if (acc->type == INTNUM_BV) {
+	    BitVector_Destroy(acc->val.bv);
+	    acc->type = INTNUM_UL;
+	}
+	acc->val.ul = BitVector_Chunk_Read(result, 32, 0);
+    } else {
+	if (acc->type == INTNUM_BV) {
+	    BitVector_Copy(acc->val.bv, result);
 	} else {
-	    if (acc->type == INTNUM_BV) {
-		BitVector_Copy(acc->val.bv, result);
-		BitVector_Destroy(result);
-	    } else {
-		acc->type = INTNUM_BV;
-		acc->val.bv = result;
-	    }
+	    acc->type = INTNUM_BV;
+	    acc->val.bv = BitVector_Clone(result);
 	}
     }
 }
@@ -535,7 +481,7 @@ yasm_intnum_get_int(const yasm_intnum *intn)
 		/* it's negative: negate the bitvector to get a positive
 		 * number, then negate the positive number.
 		 */
-		intptr abs_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
+		intptr abs_bv = BitVector_Create(BITVECT_NATIVE_SIZE, FALSE);
 		long retval;
 
 		BitVector_Negate(abs_bv, intn->val.bv);
@@ -583,32 +529,29 @@ int
 yasm_intnum_check_size(const yasm_intnum *intn, size_t size, int is_signed)
 {
     if (is_signed) {
-	long absl;
-
 	switch (intn->type) {
 	    case INTNUM_UL:
 		if (size >= 4)
 		    return 1;
-		/* absl = absolute value of (long)intn->val.ul */
-		absl = (long)intn->val.ul;
-		if (absl < 0)
-		    absl = -absl;
 
+		/* INTNUM_UL is always positive */
 		switch (size) {
+		    case 4:
+			return (intn->val.ul <= 0x7FFFFFFF);
 		    case 3:
-			return ((absl & 0x00FFFFFF) == absl);
+			return (intn->val.ul <= 0x007FFFFF);
 		    case 2:
-			return ((absl & 0x0000FFFF) == absl);
+			return (intn->val.ul <= 0x00007FFF);
 		    case 1:
-			return ((absl & 0x000000FF) == absl);
+			return (intn->val.ul <= 0x0000007F);
 		}
 		break;
 	    case INTNUM_BV:
-		if (size >= 10)
+		if (size >= BITVECT_NATIVE_SIZE/8)
 		    return 1;
 		if (BitVector_msb_(intn->val.bv)) {
 		    /* it's negative */
-		    intptr abs_bv = BitVector_Create(BITVECT_ALLOC_SIZE,
+		    intptr abs_bv = BitVector_Create(BITVECT_NATIVE_SIZE,
 						     FALSE);
 		    int retval;
 
@@ -635,7 +578,7 @@ yasm_intnum_check_size(const yasm_intnum *intn, size_t size, int is_signed)
 		}
 		break;
 	    case INTNUM_BV:
-		if (size >= 10)
+		if (size >= BITVECT_NATIVE_SIZE/8)
 		    return 1;
 		else
 		    return (Set_Max(intn->val.bv) < (long)(size*8));
