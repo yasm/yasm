@@ -96,7 +96,7 @@ static int expr_traverse_leaves_in(expr *e, void *d,
 				   int (*func) (ExprItem *ei, void *d));
 
 /* allocate a new expression node, with children as defined.
- * If it's a unary operator, put the element on the right */
+ * If it's a unary operator, put the element in left and set right=NULL. */
 expr *
 expr_new(ExprOp op, ExprItem *left, ExprItem *right)
 {
@@ -108,17 +108,37 @@ expr_new(ExprOp op, ExprItem *left, ExprItem *right)
     ptr->terms[0].type = EXPR_NONE;
     ptr->terms[1].type = EXPR_NONE;
     if (left) {
-	memcpy(&ptr->terms[0], left, sizeof(ExprItem));
+	ptr->terms[0] = *left;	/* structure copy */
 	xfree(left);
 	ptr->numterms++;
+
+	/* Search downward until we find something *other* than an
+	 * IDENT, then bring it up to the current level.
+	 */
+	while (ptr->terms[0].type == EXPR_EXPR &&
+	       ptr->terms[0].data.expn->op == EXPR_IDENT) {
+	    expr *sube = ptr->terms[0].data.expn;
+	    ptr->terms[0] = sube->terms[0];	/* structure copy */
+	    xfree(sube);
+	}
     } else {
 	InternalError(_("Right side of expression must exist"));
     }
 
     if (right) {
-	memcpy(&ptr->terms[1], right, sizeof(ExprItem));
+	ptr->terms[1] = *right;	/* structure copy */
 	xfree(right);
 	ptr->numterms++;
+
+	/* Search downward until we find something *other* than an
+	 * IDENT, then bring it up to the current level.
+	 */
+	while (ptr->terms[1].type == EXPR_EXPR &&
+	       ptr->terms[1].data.expn->op == EXPR_IDENT) {
+	    expr *sube = ptr->terms[1].data.expn;
+	    ptr->terms[1] = sube->terms[0];	/* structure copy */
+	    xfree(sube);
+	}
     }
 
     ptr->filename = in_filename;
