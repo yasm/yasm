@@ -254,7 +254,7 @@ lss	reg32,mem		32	0F,B2		$2,$1		nil	386
 clc!onebyte		nil,F8		8086
 cld!onebyte		nil,FC		8086
 cli!onebyte		nil,FA		8086
-clts!twobyte		nil,0F,06	286,PRIV
+clts!twobyte		0F,06		286,PRIV
 cmc!onebyte		nil,F5		8086
 lahf!onebyte		nil,9F		8086
 sahf!onebyte		nil,9E		8086
