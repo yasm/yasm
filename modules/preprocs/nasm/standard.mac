@@ -22,7 +22,7 @@
 %define __FILE__
 %define __LINE__
 
-%define __SECT__		; it ought to be defined, even if as nothing
+%define __SECT__ [section .text] ; it ought to be defined, even if as nothing
 
 %imacro section 1+.nolist
 %define __SECT__ [section %1]
@@ -107,4 +107,7 @@ __SECT__
 [cpu %1]
 %endmacro
 
+%imacro org 1+.nolist
+[org %1]
+%endmacro
 
