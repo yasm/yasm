@@ -44,46 +44,30 @@ typedef struct yasm_dataval yasm_dataval;
 typedef struct yasm_datavalhead yasm_datavalhead;
 
 #ifdef YASM_LIB_INTERNAL
-/*@reldef@*/ STAILQ_HEAD(yasm_bytecodehead, yasm_bytecode);
 /*@reldef@*/ STAILQ_HEAD(yasm_datavalhead, yasm_dataval);
-
-/** Built-in bytecode types.  Additional types may be #yasm_arch defined
- * starting at #YASM_BYTECODE_TYPE_BASE.
- * \internal
- */
-typedef enum {
-    YASM_BC__EMPTY = 0,	    /**< Empty; should not exist except temporarily. */
-    YASM_BC__DATA,	    /**< One or more data value(s). */
-    YASM_BC__RESERVE,	    /**< Reserved space. */
-    YASM_BC__INCBIN,	    /**< Included binary file. */
-    YASM_BC__ALIGN,	    /**< Alignment to a boundary. */
-    YASM_BC__DBGFMT_DATA,   /**< yasm_dbgfmt specific data. */
-    YASM_BC__OBJFMT_DATA    /**< yasm_objfmt specific data. */
-} yasm_bytecode_type;
-
-/** Starting yasm_bytecode_type numeric value available for yasm_arch use. */
-#define YASM_BYTECODE_TYPE_BASE		YASM_BC__OBJFMT_DATA+1
 #endif
 
-/** Initialize bytecode utility functions.
- * \param a	architecture used during bytecode operations.
- */
-void yasm_bc_initialize(yasm_arch *a);
+/** Return value flags for yasm_bc_resolve(). */
+typedef enum {
+    YASM_BC_RESOLVE_NONE = 0,		/**< Ok, but length is not minimum. */
+    YASM_BC_RESOLVE_ERROR = 1<<0,	/**< Error found, output. */
+    YASM_BC_RESOLVE_MIN_LEN = 1<<1,	/**< Length is minimum possible. */
+    YASM_BC_RESOLVE_UNKNOWN_LEN = 1<<2	/**< Length indeterminate. */
+} yasm_bc_resolve_flags;
 
 /** Create an immediate value from an unsigned integer.
  * \param int_val   unsigned integer
- * \param lindex    line index (as from yasm_linemgr) for error/warning
- *		    purposes.
+ * \param line	    virtual line (from yasm_linemap)
  * \return Newly allocated immediate value.
  */
-/*@only@*/ yasm_immval *yasm_imm_new_int(unsigned long int_val,
-					 unsigned long lindex);
+/*@only@*/ yasm_immval *yasm_imm_create_int(unsigned long int_val,
+					    unsigned long line);
 
 /** Create an immediate value from an expression.
  * \param e	expression (kept, do not free).
  * \return Newly allocated immediate value.
  */
-/*@only@*/ yasm_immval *yasm_imm_new_expr(/*@keep@*/ yasm_expr *e);
+/*@only@*/ yasm_immval *yasm_imm_create_expr(/*@keep@*/ yasm_expr *e);
 
 /** Get the displacement portion of an effective address.
  * \param ea	effective address
@@ -111,14 +95,14 @@ void yasm_ea_set_nosplit(yasm_effaddr *ea, unsigned int nosplit);
 /** Delete (free allocated memory for) an effective address.
  * \param ea	effective address (only pointer to it).
  */
-void yasm_ea_delete(/*@only@*/ yasm_effaddr *ea);
+void yasm_ea_destroy(/*@only@*/ yasm_effaddr *ea);
 
 /** Print an effective address.  For debugging purposes.
  * \param f		file
  * \param indent_level	indentation level
  * \param ea		effective address
  */
-void yasm_ea_print(FILE *f, int indent_level, const yasm_effaddr *ea);
+void yasm_ea_print(const yasm_effaddr *ea, FILE *f, int indent_level);
 
 /** Set multiple field of a bytecode.
  * A bytecode can be repeated a number of times when output.  This function
@@ -128,37 +112,24 @@ void yasm_ea_print(FILE *f, int indent_level, const yasm_effaddr *ea);
  */
 void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
 
-#ifdef YASM_LIB_INTERNAL
-/** Create a bytecode of any specified type.
- * \param type		bytecode type
- * \param datasize	size of type-specific data (in bytes)
- * \param lindex	line index (as from yasm_linemgr) for the bytecode
- * \return Newly allocated bytecode of the specified type.
- */
-/*@only@*/ yasm_bytecode *yasm_bc_new_common(yasm_bytecode_type type,
-					     size_t datasize,
-					     unsigned long lindex);
-#endif
-
 /** Create a bytecode containing data value(s).
  * \param datahead	list of data values (kept, do not free)
  * \param size		storage size (in bytes) for each data value
- * \param lindex	line index (as from yasm_linemgr) for the bytecode
+ * \param line		virtual line (from yasm_linemap)
  * \return Newly allocated bytecode.
  */
-/*@only@*/ yasm_bytecode *yasm_bc_new_data(yasm_datavalhead *datahead,
-					   unsigned int size,
-					   unsigned long lindex);
+/*@only@*/ yasm_bytecode *yasm_bc_create_data
+    (yasm_datavalhead *datahead, unsigned int size, unsigned long line);
 
 /** Create a bytecode reserving space.
  * \param numitems	number of reserve "items" (kept, do not free)
  * \param itemsize	reserved size (in bytes) for each item
- * \param lindex	line index (as from yasm_linemgr) for the bytecode
+ * \param line		virtual line (from yasm_linemap)
  * \return Newly allocated bytecode.
  */
-/*@only@*/ yasm_bytecode *yasm_bc_new_reserve(/*@only@*/ yasm_expr *numitems,
-					      unsigned int itemsize,
-					      unsigned long lindex);
+/*@only@*/ yasm_bytecode *yasm_bc_create_reserve
+    (/*@only@*/ yasm_expr *numitems, unsigned int itemsize,
+     unsigned long line);
 
 /** Create a bytecode that includes a binary file verbatim.
  * \param filename	full path to binary file (kept, do not free)
@@ -166,56 +137,40 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
  *			(kept, do not free); may be NULL to indicate 0
  * \param maxlen	maximum number of bytes to read from the file (kept, do
  *			do not free); may be NULL to indicate no maximum
- * \param lindex	line index (as from yasm_linemgr) for the bytecode
+ * \param line		virtual line (from yasm_linemap) for the bytecode
  * \return Newly allocated bytecode.
  */
-/*@only@*/ yasm_bytecode *yasm_bc_new_incbin
+/*@only@*/ yasm_bytecode *yasm_bc_create_incbin
     (/*@only@*/ char *filename, /*@only@*/ /*@null@*/ yasm_expr *start,
-     /*@only@*/ /*@null@*/ yasm_expr *maxlen, unsigned long lindex);
+     /*@only@*/ /*@null@*/ yasm_expr *maxlen, unsigned long line);
 
 /** Create a bytecode that aligns the following bytecode to a boundary.
  * \param boundary	byte alignment (must be a power of two)
- * \param lindex	line index (as from yasm_linemgr) for the bytecode
+ * \param line		virtual line (from yasm_linemap)
  * \return Newly allocated bytecode.
  */
-/*@only@*/ yasm_bytecode *yasm_bc_new_align(unsigned long boundary,
-					    unsigned long lindex);
+/*@only@*/ yasm_bytecode *yasm_bc_create_align
+    (unsigned long boundary, unsigned long line);
 
-/** Create a bytecode that includes yasm_objfmt-specific data.
- * \param type		yasm_objfmt-specific type
- * \param len		length (in bytes) of data
- * \param of		yasm_objfmt storing the data
- * \param data		data (kept, do not free)
- * \param lindex	line index (as from yasm_linemgr) for the bytecode
- * \return Newly allocated bytecode.
+/** Get the section that contains a particular bytecode.
+ * \param bc	bytecode
+ * \return Section containing bc (can be NULL if bytecode is not part of a
+ *	   section).
  */
-/*@only@*/ yasm_bytecode *yasm_bc_new_objfmt_data
-    (unsigned int type, unsigned long len, yasm_objfmt *of,
-     /*@only@*/ void *data, unsigned long lindex);
-
-/** Create a bytecode that includes yasm_dbgfmt-specific data.
- * \param type		yasm_dbgfmt-specific type
- * \param len		length (in bytes) of data
- * \param df		yasm_dbgfmt storing the data
- * \param data		data (kept, do not free)
- * \param lindex	line index (as from yasm_linemgr) for the bytecode
- * \return Newly allocated bytecode.
- */
-/*@only@*/ yasm_bytecode *yasm_bc_new_dbgfmt_data
-    (unsigned int type, unsigned long len, yasm_dbgfmt *df,
-     /*@only@*/ void *data, unsigned long lindex);
-
+/*@dependent@*/ /*@null@*/ yasm_section *yasm_bc_get_section
+    (yasm_bytecode *bc);
+    
 /** Delete (free allocated memory for) a bytecode.
  * \param bc	bytecode (only pointer to it); may be NULL
  */
-void yasm_bc_delete(/*@only@*/ /*@null@*/ yasm_bytecode *bc);
+void yasm_bc_destroy(/*@only@*/ /*@null@*/ yasm_bytecode *bc);
 
 /** Print a bytecode.  For debugging purposes.
  * \param f		file
  * \param indent_level	indentation level
  * \param bc		bytecode
  */
-void yasm_bc_print(FILE *f, int indent_level, const yasm_bytecode *bc);
+void yasm_bc_print(const yasm_bytecode *bc, FILE *f, int indent_level);
 
 /** Common version of calc_bc_dist that takes offsets from bytecodes.
  * Should be used for the final stages of optimizers as well as in yasm_objfmt
@@ -223,16 +178,7 @@ void yasm_bc_print(FILE *f, int indent_level, const yasm_bytecode *bc);
  * \see yasm_calc_bc_dist_func for parameter descriptions.
  */
 /*@null@*/ yasm_intnum *yasm_common_calc_bc_dist
-    (yasm_section *sect, /*@null@*/ yasm_bytecode *precbc1,
-     /*@null@*/ yasm_bytecode *precbc2);
-
-/** Return value flags for yasm_bc_resolve(). */
-typedef enum {
-    YASM_BC_RESOLVE_NONE = 0,		/**< Ok, but length is not minimum. */
-    YASM_BC_RESOLVE_ERROR = 1<<0,	/**< Error found, output. */
-    YASM_BC_RESOLVE_MIN_LEN = 1<<1,	/**< Length is minimum possible. */
-    YASM_BC_RESOLVE_UNKNOWN_LEN = 1<<2	/**< Length indeterminate. */
-} yasm_bc_resolve_flags;
+    (/*@null@*/ yasm_bytecode *precbc1, /*@null@*/ yasm_bytecode *precbc2);
 
 /** Resolve labels in a bytecode, and calculate its length.
  * Tries to minimize the length as much as possible.
@@ -245,14 +191,12 @@ typedef enum {
  *			values returned by calc_bc_dist except temporarily to
  *			try to minimize the length); when nonzero, all fields
  *			in bc may be modified by this function
- * \param sect		section containing the bytecode
  * \param calc_bc_dist	function used to determine bytecode distance
  * \return Flags indicating whether the length is the minimum possible,
  *	   indeterminate, and if there was an error recognized (and output)
  *	   during execution.
  */
 yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
-				      const yasm_section *sect,
 				      yasm_calc_bc_dist_func calc_bc_dist);
 
 /** Convert a bytecode into its byte representation.
@@ -265,12 +209,9 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
  * \param gap		if nonzero, indicates the data does not really need to
  *			exist in the object file; if nonzero, contents of buf
  *			are undefined [output]
- * \param sect		section containing the bytecode
- * \param d		data to pass to each call to output_expr
+ * \param d		data to pass to each call to output_expr/output_reloc
  * \param output_expr	function to call to convert expressions into their byte
  *			representation
- * \param output_bc_objfmt_data	function to call to convert yasm_objfmt data
- *				bytecodes into their byte representation
  * \param output_reloc	function to call to output relocation entries
  *			for a single sym
  * \return Newly allocated buffer that should be used instead of buf for
@@ -281,84 +222,28 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
  */
 /*@null@*/ /*@only@*/ unsigned char *yasm_bc_tobytes
     (yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
-     /*@out@*/ unsigned long *multiple, /*@out@*/ int *gap,
-     const yasm_section *sect, void *d, yasm_output_expr_func output_expr,
-     /*@null@*/ yasm_output_reloc_func output_reloc,
-     /*@null@*/ yasm_output_bc_objfmt_data_func output_bc_objfmt_data)
+     /*@out@*/ unsigned long *multiple, /*@out@*/ int *gap, void *d,
+     yasm_output_expr_func output_expr,
+     /*@null@*/ yasm_output_reloc_func output_reloc)
     /*@sets *buf@*/;
-
-/** Create list of bytecodes.
- * \return Newly allocated bytecode list.
- */
-/*@only@*/ yasm_bytecodehead *yasm_bcs_new(void);
-
-/** Get the first bytecode in a list of bytecodes.
- * \param headp		bytecode list
- * \return First bytecode in list (NULL if list is empty).
- */
-/*@null@*/ yasm_bytecode *yasm_bcs_first(yasm_bytecodehead *headp);
-#ifdef YASM_LIB_INTERNAL
-#define yasm_bcs_first(headp)	STAILQ_FIRST(headp)
-#endif
-
-/** Get the last bytecode in a list of bytecodes.
- * \param headp		bytecode list
- * \return Last bytecode in list (NULL if list is empty).
- */
-/*@null@*/ yasm_bytecode *yasm_bcs_last(yasm_bytecodehead *headp);
-
-/** Delete (free allocated memory for) a list of bytecodes.
- * \param headp		bytecode list
- */
-void yasm_bcs_delete(/*@only@*/ yasm_bytecodehead *headp);
-
-/** Add bytecode to the end of a list of bytecodes.
- * \note Does not make a copy of bc; so don't pass this function static or
- *	 local variables, and discard the bc pointer after calling this
- *	 function.
- * \param headp		bytecode list
- * \param bc		bytecode (may be NULL)
- * \return If bytecode was actually appended (it wasn't NULL or empty), the
- *	   bytecode; otherwise NULL.
- */
-/*@only@*/ /*@null@*/ yasm_bytecode *yasm_bcs_append
-    (yasm_bytecodehead *headp,
-     /*@returned@*/ /*@only@*/ /*@null@*/ yasm_bytecode *bc);
-
-/** Print a bytecode list.  For debugging purposes.
- * \param f		file
- * \param indent_level	indentation level
- * \param headp		bytecode list
- */
-void yasm_bcs_print(FILE *f, int indent_level, const yasm_bytecodehead *headp);
-
-/** Traverses a bytecode list, calling a function on each bytecode.
- * \param headp	bytecode list
- * \param d	data pointer passed to func on each call
- * \param func	function
- * \return Stops early (and returns func's return value) if func returns a
- *	   nonzero value; otherwise 0.
- */
-int yasm_bcs_traverse(yasm_bytecodehead *headp, /*@null@*/ void *d,
-		      int (*func) (yasm_bytecode *bc, /*@null@*/ void *d));
 
 /** Create a new data value from an expression.
  * \param expn	expression
  * \return Newly allocated data value.
  */
-yasm_dataval *yasm_dv_new_expr(/*@keep@*/ yasm_expr *expn);
+yasm_dataval *yasm_dv_create_expr(/*@keep@*/ yasm_expr *expn);
 
 /** Create a new data value from a float.
  * \param flt	floating point value
  * \return Newly allocated data value.
  */
-yasm_dataval *yasm_dv_new_float(/*@keep@*/ yasm_floatnum *flt);
+yasm_dataval *yasm_dv_create_float(/*@keep@*/ yasm_floatnum *flt);
 
 /** Create a new data value from a string.
  * \param str_val	string
  * \return Newly allocated data value.
  */
-yasm_dataval *yasm_dv_new_string(/*@keep@*/ char *str_val);
+yasm_dataval *yasm_dv_create_string(/*@keep@*/ char *str_val);
 
 /** Initialize a list of data values.
  * \param headp	list of data values
@@ -371,7 +256,7 @@ void yasm_dvs_initialize(yasm_datavalhead *headp);
 /** Delete (free allocated memory for) a list of data values.
  * \param headp	list of data values
  */
-void yasm_dvs_delete(yasm_datavalhead *headp);
+void yasm_dvs_destroy(yasm_datavalhead *headp);
 
 /** Add data value to the end of a list of data values.
  * \note Does not make a copy of the data value; so don't pass this function
@@ -390,6 +275,6 @@ void yasm_dvs_delete(yasm_datavalhead *headp);
  * \param indent_level	indentation level
  * \param headp		data value list
  */
-void yasm_dvs_print(FILE *f, int indent_level, const yasm_datavalhead *headp);
+void yasm_dvs_print(const yasm_datavalhead *headp, FILE *f, int indent_level);
 
 #endif

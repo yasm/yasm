@@ -36,7 +36,7 @@
 #include "nasm-eval.h"
 
 static FILE *in;
-static yasm_linemgr *cur_lm;
+static yasm_linemap *cur_lm;
 static char *line, *linepos;
 static size_t lineleft;
 static char *file_name;
@@ -93,11 +93,11 @@ nasm_efunc(int severity, const char *fmt, ...)
     va_start(va, fmt);
     switch (severity & ERR_MASK) {
 	case ERR_WARNING:
-	    yasm__warning_va(YASM_WARN_PREPROC, cur_lm->get_current(), fmt,
-			     va);
+	    yasm__warning_va(YASM_WARN_PREPROC,
+			     yasm_linemap_get_current(cur_lm), fmt, va);
 	    break;
 	case ERR_NONFATAL:
-	    yasm__error_va(cur_lm->get_current(), fmt, va);
+	    yasm__error_va(yasm_linemap_get_current(cur_lm), fmt, va);
 	    break;
 	case ERR_FATAL:
 	    yasm_fatal(N_("unknown"));	/* FIXME */
@@ -112,7 +112,7 @@ nasm_efunc(int severity, const char *fmt, ...)
 }
 
 static void
-nasm_preproc_initialize(FILE *f, const char *in_filename, yasm_linemgr *lm)
+nasm_preproc_initialize(FILE *f, const char *in_filename, yasm_linemap *lm)
 {
     in = f;
     cur_lm = lm;
@@ -127,6 +127,7 @@ static void
 nasm_preproc_cleanup(void)
 {
     nasmpp.cleanup(0);
+    nasm_eval_cleanup();
 }
 
 static size_t

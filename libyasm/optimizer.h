@@ -36,7 +36,7 @@
  * definitions match the module loader's function definitions.  The version
  * number must never be decreased.
  */
-#define YASM_OPTIMIZER_VERSION	0
+#define YASM_OPTIMIZER_VERSION	1
 
 /* Interface to the optimizer module(s) */
 struct yasm_optimizer {
@@ -59,7 +59,7 @@ struct yasm_optimizer {
      * object file.  (A failure is indicated by calling ErrorAt() from within
      * this function).
      */
-    void (*optimize) (yasm_sectionhead *sections);
+    void (*optimize) (yasm_object *object);
 };
 
 #endif

@@ -1721,71 +1721,51 @@ charptr BitVector_to_Dec(wordptr addr)
     return(result);
 }
 
-static wordptr from_Dec_term = NULL;
-static wordptr from_Dec_base = NULL;
-static wordptr from_Dec_prod = NULL;
-static wordptr from_Dec_rank = NULL;
-static wordptr from_Dec_temp = NULL;
+struct BitVector_from_Dec_static_data {
+    wordptr term;
+    wordptr base;
+    wordptr prod;
+    wordptr rank;
+    wordptr temp;
+};
 
-ErrCode BitVector_from_Dec_static_Boot(N_word bits)
+BitVector_from_Dec_static_data *BitVector_from_Dec_static_Boot(N_word bits)
 {
+    BitVector_from_Dec_static_data *data;
+
+    data = yasm_xmalloc(sizeof(BitVector_from_Dec_static_data));
+
     if (bits > 0)
     {
-	BitVector_from_Dec_static_Shutdown();
-        from_Dec_term = BitVector_Create(BITS,FALSE);
-        if (from_Dec_term == NULL)
-        {
-            return(ErrCode_Null);
-        }
-        from_Dec_base = BitVector_Create(BITS,FALSE);
-        if (from_Dec_base == NULL)
-        {
-            BitVector_Destroy(from_Dec_term);
-            return(ErrCode_Null);
-        }
-        from_Dec_prod = BitVector_Create(bits,FALSE);
-        if (from_Dec_prod == NULL)
-        {
-            BitVector_Destroy(from_Dec_term);
-            BitVector_Destroy(from_Dec_base);
-            return(ErrCode_Null);
-        }
-        from_Dec_rank = BitVector_Create(bits,FALSE);
-        if (from_Dec_rank == NULL)
-        {
-            BitVector_Destroy(from_Dec_term);
-            BitVector_Destroy(from_Dec_base);
-            BitVector_Destroy(from_Dec_prod);
-            return(ErrCode_Null);
-        }
-        from_Dec_temp = BitVector_Create(bits,FALSE);
-        if (from_Dec_temp == NULL)
-        {
-            BitVector_Destroy(from_Dec_term);
-            BitVector_Destroy(from_Dec_base);
-            BitVector_Destroy(from_Dec_prod);
-            BitVector_Destroy(from_Dec_rank);
-            return(ErrCode_Null);
-        }
+        data->term = BitVector_Create(BITS,FALSE);
+        data->base = BitVector_Create(BITS,FALSE);
+        data->prod = BitVector_Create(bits,FALSE);
+        data->rank = BitVector_Create(bits,FALSE);
+        data->temp = BitVector_Create(bits,FALSE);
+    } else {
+	data->term = NULL;
+	data->base = NULL;
+	data->prod = NULL;
+	data->rank = NULL;
+	data->temp = NULL;
     }
-    return(ErrCode_Ok);
+    return data;
 }
 
-void BitVector_from_Dec_static_Shutdown(void)
+void BitVector_from_Dec_static_Shutdown(BitVector_from_Dec_static_data *data)
 {
-    if (from_Dec_term != NULL)
-        BitVector_Destroy(from_Dec_term);
-    if (from_Dec_base != NULL)
-        BitVector_Destroy(from_Dec_base);
-    if (from_Dec_prod != NULL)
-        BitVector_Destroy(from_Dec_prod);
-    if (from_Dec_rank != NULL)
-        BitVector_Destroy(from_Dec_rank);
-    if (from_Dec_temp != NULL)
-        BitVector_Destroy(from_Dec_temp);
+    if (data) {
+        BitVector_Destroy(data->term);
+        BitVector_Destroy(data->base);
+        BitVector_Destroy(data->prod);
+        BitVector_Destroy(data->rank);
+        BitVector_Destroy(data->temp);
+    }
+    yasm_xfree(data);
 }
 
-ErrCode BitVector_from_Dec_static(wordptr addr, charptr string)
+ErrCode BitVector_from_Dec_static(BitVector_from_Dec_static_data *data,
+				  wordptr addr, charptr string)
 {
     ErrCode error = ErrCode_Ok;
     N_word  bits = bits_(addr);
@@ -1794,11 +1774,11 @@ ErrCode BitVector_from_Dec_static(wordptr addr, charptr string)
     boolean minus;
     boolean shift;
     boolean carry;
-    wordptr term = from_Dec_term;
-    wordptr base = from_Dec_base;
-    wordptr prod = from_Dec_prod;
-    wordptr rank = from_Dec_rank;
-    wordptr temp = from_Dec_temp;
+    wordptr term;
+    wordptr base;
+    wordptr prod;
+    wordptr rank;
+    wordptr temp;
     N_word  accu;
     N_word  powr;
     N_word  count;
@@ -1807,6 +1787,12 @@ ErrCode BitVector_from_Dec_static(wordptr addr, charptr string)
 
     if (bits > 0)
     {
+	term = data->term;
+	base = data->base;
+	prod = data->prod;
+	rank = data->rank;
+	temp = data->temp;
+
         length = strlen((char *) string);
         if (length == 0) return(ErrCode_Pars);
         digit = (int) *string;

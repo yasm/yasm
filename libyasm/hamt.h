@@ -32,15 +32,14 @@ typedef struct HAMT HAMT;
 /* Creates new, empty, HAMT.  error_func() is called when an internal error is
  * encountered--it should NOT return to the calling function.
  */
-HAMT *HAMT_new(/*@exits@*/ void (*error_func) (const char *file,
-					       unsigned int line,
-					       const char *message));
+HAMT *HAMT_create(/*@exits@*/ void (*error_func)
+    (const char *file, unsigned int line, const char *message));
 
 /* Deletes HAMT and all data associated with it using deletefunc() on each data
  * item.
  */
-void HAMT_delete(/*@only@*/ HAMT *hamt,
-		 void (*deletefunc) (/*@only@*/ void *data));
+void HAMT_destroy(/*@only@*/ HAMT *hamt,
+		  void (*deletefunc) (/*@only@*/ void *data));
 
 /* Inserts key into HAMT, associating it with data. 
  * If the key is not present in the HAMT, inserts it, sets *replace to 1, and

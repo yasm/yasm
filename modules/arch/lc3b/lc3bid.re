@@ -173,10 +173,9 @@ static const lc3b_insn_info trap_insn[] = {
 };
 
 yasm_bytecode *
-yasm_lc3b__parse_insn(const unsigned long data[4], int num_operands,
-		      yasm_insn_operandhead *operands,
-		      yasm_section *cur_section,
-		      /*@null@*/ yasm_bytecode *prev_bc, unsigned long lindex)
+yasm_lc3b__parse_insn(yasm_arch *arch, const unsigned long data[4],
+		      int num_operands, yasm_insn_operandhead *operands,
+		      yasm_bytecode *prev_bc, unsigned long line)
 {
     lc3b_new_insn_data d;
     int num_info = (int)(data[1]&0xFF);
@@ -203,7 +202,7 @@ yasm_lc3b__parse_insn(const unsigned long data[4], int num_operands,
 
 	/* Match each operand type and size */
 	for(i = 0, op = yasm_ops_first(operands); op && i<info->num_operands &&
-	    !mismatch; op = yasm_ops_next(op), i++) {
+	    !mismatch; op = yasm_operand_next(op), i++) {
 	    /* Check operand type */
 	    switch ((int)(info->operands[i] & OPT_MASK)) {
 		case OPT_Imm:
@@ -230,12 +229,12 @@ yasm_lc3b__parse_insn(const unsigned long data[4], int num_operands,
 
     if (!found) {
 	/* Didn't find a matching one */
-	yasm__error(lindex, N_("invalid combination of opcode and operands"));
+	yasm__error(line, N_("invalid combination of opcode and operands"));
 	return NULL;
     }
 
     /* Copy what we can from info */
-    d.lindex = lindex;
+    d.line = line;
     d.imm = NULL;
     d.imm_type = LC3B_IMM_NONE;
     d.origin = NULL;
@@ -254,12 +253,12 @@ yasm_lc3b__parse_insn(const unsigned long data[4], int num_operands,
     /* Go through operands and assign */
     if (operands) {
 	for(i = 0, op = yasm_ops_first(operands); op && i<info->num_operands;
-	    op = yasm_ops_next(op), i++) {
+	    op = yasm_operand_next(op), i++) {
 	    switch ((int)(info->operands[i] & OPA_MASK)) {
 		case OPA_None:
 		    /* Throw away the operand contents */
 		    if (op->type == YASM_INSN__OPERAND_IMM)
-			yasm_expr_delete(op->data.val);
+			yasm_expr_destroy(op->data.val);
 		    break;
 		case OPA_DR:
 		    if (op->type != YASM_INSN__OPERAND_REG)
@@ -277,9 +276,9 @@ yasm_lc3b__parse_insn(const unsigned long data[4], int num_operands,
 			    d.imm = op->data.val;
 			    break;
 			case YASM_INSN__OPERAND_REG:
-			    d.imm = yasm_expr_new_ident(yasm_expr_int(
-				yasm_intnum_new_uint(op->data.reg & 0x7)),
-				lindex);
+			    d.imm = yasm_expr_create_ident(yasm_expr_int(
+				yasm_intnum_create_uint(op->data.reg & 0x7)),
+				line);
 			    break;
 			default:
 			    yasm_internal_error(N_("invalid operand conversion"));
@@ -291,13 +290,12 @@ yasm_lc3b__parse_insn(const unsigned long data[4], int num_operands,
 
 	    d.imm_type = (info->operands[i] & OPI_MASK)>>3;
 	    if (d.imm_type == LC3B_IMM_9_PC)
-		d.origin = yasm_symrec_define_label("$", cur_section, prev_bc,
-						    0, lindex);
+		d.origin = yasm_symtab_define_label2("$", prev_bc, 0, line);
 	}
     }
 
     /* Create the bytecode and return it */
-    return yasm_lc3b__bc_new_insn(&d);
+    return yasm_lc3b__bc_create_insn(&d);
 }
 
 
@@ -338,13 +336,13 @@ yasm_lc3b__parse_insn(const unsigned long data[4], int num_operands,
 */
 
 void
-yasm_lc3b__parse_cpu(const char *id, unsigned long lindex)
+yasm_lc3b__parse_cpu(yasm_arch *arch, const char *id, unsigned long line)
 {
 }
 
 yasm_arch_check_id_retval
-yasm_lc3b__parse_check_id(unsigned long data[4], const char *id,
-			  unsigned long lindex)
+yasm_lc3b__parse_check_id(yasm_arch *arch, unsigned long data[4],
+			  const char *id, unsigned long line)
 {
     const char *oid = id;
     /*const char *marker;*/

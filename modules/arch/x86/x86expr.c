@@ -71,7 +71,7 @@ x86_expr_checkea_get_reg3264(yasm_expr__item *ei, int *regnum,
 
     /* overwrite with 0 to eliminate register from displacement expr */
     ei->type = YASM_EXPR_INT;
-    ei->data.intn = yasm_intnum_new_uint(0);
+    ei->data.intn = yasm_intnum_create_uint(0);
 
     /* we're okay */
     return &data->regs[*regnum];
@@ -111,7 +111,7 @@ x86_expr_checkea_get_reg16(yasm_expr__item *ei, int *regnum, void *d)
 
     /* overwrite with 0 to eliminate register from displacement expr */
     ei->type = YASM_EXPR_INT;
-    ei->data.intn = yasm_intnum_new_uint(0);
+    ei->data.intn = yasm_intnum_create_uint(0);
 
     /* we're okay */
     return reg16[*regnum];
@@ -231,7 +231,7 @@ x86_expr_checkea_distcheck_reg(yasm_expr **ep, unsigned int bits)
 	/* Replace e with expanded reg expn */
 	ne = e->terms[havereg_expr].data.expn;
 	e->terms[havereg_expr].type = YASM_EXPR_NONE;	/* don't delete it! */
-	yasm_expr_delete(e);			    /* but everything else */
+	yasm_expr_destroy(e);			    /* but everything else */
 	e = ne;
 	/*@-onlytrans@*/
 	*ep = ne;
@@ -299,7 +299,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 		e->op = YASM_EXPR_IDENT;
 		e->numterms = 1;
 		/* Delete the intnum created by get_reg(). */
-		yasm_intnum_delete(e->terms[1].data.intn);
+		yasm_intnum_destroy(e->terms[1].data.intn);
 	    }
 	    break;
 	case YASM_EXPR_ADD:
@@ -475,7 +475,7 @@ x86_checkea_calc_displen(yasm_expr **ep, unsigned int wordsize, int noreg,
 		 * Don't do this if we came from dispreq check above, so
 		 * check *displen.
 		 */
-		yasm_expr_delete(e);
+		yasm_expr_destroy(e);
 		*ep = (yasm_expr *)NULL;
 	    } else if (dispval >= -128 && dispval <= 127) {
 		/* It fits into a signed byte */
@@ -966,16 +966,15 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 }
 
 int
-yasm_x86__floatnum_tobytes(const yasm_floatnum *flt, unsigned char *buf,
-			   size_t destsize, size_t valsize, size_t shift,
-			   int warn, unsigned long lindex)
+yasm_x86__floatnum_tobytes(yasm_arch *arch, const yasm_floatnum *flt,
+			   unsigned char *buf, size_t destsize, size_t valsize,
+			   size_t shift, int warn, unsigned long line)
 {
     if (!yasm_floatnum_check_size(flt, valsize)) {
-	yasm__error(lindex, N_("invalid floating point constant size"));
+	yasm__error(line, N_("invalid floating point constant size"));
 	return 1;
     }
 
-    yasm_floatnum_get_sized(flt, buf, destsize, valsize, shift, 0, warn,
-			    lindex);
+    yasm_floatnum_get_sized(flt, buf, destsize, valsize, shift, 0, warn, line);
     return 0;
 }

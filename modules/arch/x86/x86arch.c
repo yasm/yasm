@@ -33,36 +33,68 @@
 #include "x86arch.h"
 
 
-unsigned char yasm_x86_LTX_mode_bits = 0;
-unsigned long yasm_x86__cpu_enabled;
-unsigned int yasm_x86_amd64_machine;
+yasm_arch_module yasm_x86_LTX_arch;
 
-static int
-x86_initialize(const char *machine)
+
+static /*@only@*/ yasm_arch *
+x86_create(const char *machine)
 {
-    if (yasm__strcasecmp(machine, "x86") == 0)
-	yasm_x86_amd64_machine = 0;
-    else if (yasm__strcasecmp(machine, "amd64") == 0)
-	yasm_x86_amd64_machine = 1;
-    else
-	return 1;
+    yasm_arch_x86 *arch_x86;
+    unsigned int amd64_machine;
 
-    yasm_x86__cpu_enabled = ~CPU_Any;
-    return 0;
+    if (yasm__strcasecmp(machine, "x86") == 0)
+	amd64_machine = 0;
+    else if (yasm__strcasecmp(machine, "amd64") == 0)
+	amd64_machine = 1;
+    else
+	return NULL;
+
+    arch_x86 = yasm_xmalloc(sizeof(yasm_arch_x86));
+
+    arch_x86->arch.module = &yasm_x86_LTX_arch;
+
+    arch_x86->cpu_enabled = ~CPU_Any;
+    arch_x86->amd64_machine = amd64_machine;
+    arch_x86->mode_bits = 0;
+
+    return (yasm_arch *)arch_x86;
 }
 
 static void
-x86_cleanup(void)
+x86_destroy(/*@only@*/ yasm_arch *arch)
 {
+    yasm_xfree(arch);
 }
 
-int
-yasm_x86__parse_directive(const char *name, yasm_valparamhead *valparams,
-			  /*@unused@*/ /*@null@*/
-			  yasm_valparamhead *objext_valparams,
-			  /*@unused@*/ yasm_sectionhead *headp,
-			  unsigned long lindex)
+static const char *
+x86_get_machine(const yasm_arch *arch)
 {
+    const yasm_arch_x86 *arch_x86 = (const yasm_arch_x86 *)arch;
+    if (arch_x86->amd64_machine)
+	return "amd64";
+    else
+	return "x86";
+}
+
+static int
+x86_set_var(yasm_arch *arch, const char *var, unsigned long val)
+{
+    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
+    if (yasm__strcasecmp(var, "mode_bits") == 0)
+	arch_x86->mode_bits = val;
+    else
+	return 1;
+    return 0;
+}
+
+static int
+x86_parse_directive(yasm_arch *arch, const char *name,
+		    yasm_valparamhead *valparams,
+		    /*@unused@*/ /*@null@*/
+		    yasm_valparamhead *objext_valparams,
+		    /*@unused@*/ yasm_object *object, unsigned long line)
+{
+    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     yasm_valparam *vp;
     const yasm_intnum *intn;
     long lval;
@@ -73,16 +105,16 @@ yasm_x86__parse_directive(const char *name, yasm_valparamhead *valparams,
 	    (intn = yasm_expr_get_intnum(&vp->param, NULL)) != NULL &&
 	    (lval = yasm_intnum_get_int(intn)) &&
 	    (lval == 16 || lval == 32 || lval == 64))
-	    yasm_x86_LTX_mode_bits = (unsigned char)lval;
+	    arch_x86->mode_bits = (unsigned char)lval;
 	else
-	    yasm__error(lindex, N_("invalid argument to [%s]"), "BITS");
+	    yasm__error(line, N_("invalid argument to [%s]"), "BITS");
 	return 0;
     } else
 	return 1;
 }
 
 unsigned int
-yasm_x86__get_reg_size(unsigned long reg)
+yasm_x86__get_reg_size(yasm_arch *arch, unsigned long reg)
 {
     switch ((x86_expritem_reg_size)(reg & ~0xFUL)) {
 	case X86_REG8:
@@ -108,8 +140,8 @@ yasm_x86__get_reg_size(unsigned long reg)
     return 0;
 }
 
-void
-yasm_x86__reg_print(FILE *f, unsigned long reg)
+static void
+x86_reg_print(yasm_arch *arch, unsigned long reg, FILE *f)
 {
     static const char *name8[] = {"al","cl","dl","bl","ah","ch","dh","bh"};
     static const char *name8x[] = {
@@ -168,21 +200,20 @@ yasm_x86__reg_print(FILE *f, unsigned long reg)
     }
 }
 
-void
-yasm_x86__segreg_print(FILE *f, unsigned long segreg)
+static void
+x86_segreg_print(yasm_arch *arch, unsigned long segreg, FILE *f)
 {
     static const char *name[] = {"es","cs","ss","ds","fs","gs"};
     fprintf(f, "%s", name[segreg&7]);
 }
 
-void
-yasm_x86__parse_prefix(yasm_bytecode *bc, const unsigned long data[4],
-		       unsigned long lindex)
+static void
+x86_parse_prefix(yasm_arch *arch, yasm_bytecode *bc,
+		 const unsigned long data[4], unsigned long line)
 {
     switch((x86_parse_insn_prefix)data[0]) {
 	case X86_LOCKREP:
-	    yasm_x86__bc_insn_set_lockrep_prefix(bc, data[1] & 0xff,
-						 lindex);
+	    yasm_x86__bc_insn_set_lockrep_prefix(bc, data[1] & 0xff, line);
 	    break;
 	case X86_ADDRSIZE:
 	    yasm_x86__bc_insn_addrsize_override(bc, data[1]);
@@ -193,19 +224,19 @@ yasm_x86__parse_prefix(yasm_bytecode *bc, const unsigned long data[4],
     }
 }
 
-void
-yasm_x86__parse_seg_prefix(yasm_bytecode *bc, unsigned long segreg,
-			   unsigned long lindex)
+static void
+x86_parse_seg_prefix(yasm_arch *arch, yasm_bytecode *bc, unsigned long segreg,
+		     unsigned long line)
 {
     yasm_x86__ea_set_segment(yasm_x86__bc_insn_get_ea(bc),
-			     (unsigned char)(segreg>>8), lindex);
+			     (unsigned char)(segreg>>8), line);
 }
 
-void
-yasm_x86__parse_seg_override(yasm_effaddr *ea, unsigned long segreg,
-			     unsigned long lindex)
+static void
+x86_parse_seg_override(yasm_arch *arch, yasm_effaddr *ea,
+		       unsigned long segreg, unsigned long line)
 {
-    yasm_x86__ea_set_segment(ea, (unsigned char)(segreg>>8), lindex);
+    yasm_x86__ea_set_segment(ea, (unsigned char)(segreg>>8), line);
 }
 
 /* Define x86 machines -- see arch.h for details */
@@ -216,32 +247,27 @@ static yasm_arch_machine x86_machines[] = {
 };
 
 /* Define arch structure -- see arch.h for details */
-yasm_arch yasm_x86_LTX_arch = {
+yasm_arch_module yasm_x86_LTX_arch = {
     YASM_ARCH_VERSION,
     "x86 (IA-32 and derivatives), AMD64",
     "x86",
-    x86_initialize,
-    x86_cleanup,
+    x86_create,
+    x86_destroy,
+    x86_get_machine,
+    x86_set_var,
     yasm_x86__parse_cpu,
     yasm_x86__parse_check_id,
-    yasm_x86__parse_directive,
+    x86_parse_directive,
     yasm_x86__parse_insn,
-    yasm_x86__parse_prefix,
-    yasm_x86__parse_seg_prefix,
-    yasm_x86__parse_seg_override,
-    X86_BYTECODE_TYPE_MAX,
-    yasm_x86__bc_delete,
-    yasm_x86__bc_print,
-    yasm_x86__bc_resolve,
-    yasm_x86__bc_tobytes,
+    x86_parse_prefix,
+    x86_parse_seg_prefix,
+    x86_parse_seg_override,
     yasm_x86__floatnum_tobytes,
     yasm_x86__intnum_tobytes,
     yasm_x86__get_reg_size,
-    yasm_x86__reg_print,
-    yasm_x86__segreg_print,
-    yasm_x86__ea_new_expr,
-    NULL,	/* x86_ea_data_delete */
-    yasm_x86__ea_data_print,
+    x86_reg_print,
+    x86_segreg_print,
+    yasm_x86__ea_create_expr,
     x86_machines,
     "x86",
     2

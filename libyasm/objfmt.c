@@ -1,7 +1,7 @@
 /*
- * Null debugging format (creates NO debugging information)
+ * Object format interface
  *
- *  Copyright (C) 2002  Peter Johnson
+ *  Copyright (C) 2003  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,20 +24,29 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include <util.h>
+#define YASM_LIB_INTERNAL
+#define YASM_ARCH_INTERNAL
+#include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
-#define YASM_LIB_INTERNAL
-#include <libyasm.h>
+#include "coretype.h"
+#include "valparam.h"
+
+#include "objfmt.h"
 
 
-/* Define dbgfmt structure -- see dbgfmt.h for details */
-yasm_dbgfmt yasm_null_LTX_dbgfmt = {
-    YASM_DBGFMT_VERSION,
-    "No debugging info",
-    "null",
-    NULL,   /*null_dbgfmt_initialize*/
-    NULL,   /*null_dbgfmt_cleanup*/
-    NULL,   /*null_dbgfmt_directive*/
-    NULL    /*null_dbgfmt_generate*/
-};
+yasm_section *
+yasm_objfmt_add_default_section(yasm_objfmt *objfmt, yasm_object *object)
+{
+    yasm_section *retval;
+    yasm_valparamhead vps;
+    yasm_valparam *vp;
+
+    vp = yasm_vp_create(yasm__xstrdup(objfmt->default_section_name), NULL);
+    yasm_vps_initialize(&vps);
+    yasm_vps_append(&vps, vp);
+    retval = objfmt->section_switch(object, &vps, NULL, 0);
+    yasm_vps_delete(&vps);
+
+    return retval;
+}

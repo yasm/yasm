@@ -86,8 +86,8 @@ ReHashKey(const char *key, int Level)
 }
 
 HAMT *
-HAMT_new(/*@exits@*/ void (*error_func) (const char *file, unsigned int line,
-					 const char *message))
+HAMT_create(/*@exits@*/ void (*error_func)
+    (const char *file, unsigned int line, const char *message))
 {
     /*@out@*/ HAMT *hamt = yasm_xmalloc(sizeof(HAMT));
     int i;
@@ -122,7 +122,7 @@ HAMT_delete_trie(HAMTNode *node)
 }
 
 void
-HAMT_delete(HAMT *hamt, void (*deletefunc) (/*@only@*/ void *data))
+HAMT_destroy(HAMT *hamt, void (*deletefunc) (/*@only@*/ void *data))
 {
     int i;
 

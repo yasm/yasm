@@ -169,11 +169,11 @@ list_module_load(const char *filename, lt_ptr data)
     const char *module_keyword = NULL, *module_name = NULL;
     char *name;
 
-    yasm_arch *arch;
+    yasm_arch_module *arch_module;
     yasm_dbgfmt *dbgfmt;
     yasm_objfmt *objfmt;
     yasm_optimizer *optimizer;
-    yasm_parser *parser;
+    yasm_parser_module *parser_module;
     yasm_preproc *preproc;
 
     lt_dlhandle handle;
@@ -211,10 +211,10 @@ list_module_load(const char *filename, lt_ptr data)
     switch (lmdata->type) {
 	case MODULE_ARCH:
 	    strncpy(name, "yasm", 4);
-	    arch = lt_dlsym(handle, name);
-	    if (arch) {
-		module_keyword = arch->keyword;
-		module_name = arch->name;
+	    arch_module = lt_dlsym(handle, name);
+	    if (arch_module) {
+		module_keyword = arch_module->keyword;
+		module_name = arch_module->name;
 	    }
 	    break;
 	case MODULE_DBGFMT:
@@ -243,10 +243,10 @@ list_module_load(const char *filename, lt_ptr data)
 	    break;
 	case MODULE_PARSER:
 	    strncpy(name+2, "yasm", 4);
-	    parser = lt_dlsym(handle, name+2);
-	    if (parser) {
-		module_keyword = parser->keyword;
-		module_name = parser->name;
+	    parser_module = lt_dlsym(handle, name+2);
+	    if (parser_module) {
+		module_keyword = parser_module->keyword;
+		module_name = parser_module->name;
 	    }
 	    break;
 	case MODULE_PREPROC:

@@ -27,11 +27,6 @@
 #ifndef YASM_LC3BARCH_H
 #define YASM_LC3BARCH_H
 
-typedef enum {
-    LC3B_BC_INSN = YASM_BYTECODE_TYPE_BASE
-} lc3b_bytecode_type;
-#define LC3B_BYTECODE_TYPE_MAX	LC3B_BC_INSN+1
-
 /* Types of immediate.  All immediates are stored in the LSBs of the insn. */
 typedef enum lc3b_imm_type {
     LC3B_IMM_NONE = 0,	/* no immediate */
@@ -49,45 +44,29 @@ typedef enum lc3b_imm_type {
  * (it doesn't make a copy).
  */
 typedef struct lc3b_new_insn_data {
-    unsigned long lindex;
+    unsigned long line;
     /*@keep@*/ /*@null@*/ yasm_expr *imm;
     lc3b_imm_type imm_type;
     /*@null@*/ /*@dependent@*/ yasm_symrec *origin;
     unsigned int opcode;
 } lc3b_new_insn_data;
 
-yasm_bytecode *yasm_lc3b__bc_new_insn(lc3b_new_insn_data *d);
+yasm_bytecode *yasm_lc3b__bc_create_insn(lc3b_new_insn_data *d);
 
-void yasm_lc3b__bc_delete(yasm_bytecode *bc);
-void yasm_lc3b__bc_print(FILE *f, int indent_level, const yasm_bytecode *bc);
-yasm_bc_resolve_flags yasm_lc3b__bc_resolve
-    (yasm_bytecode *bc, int save, const yasm_section *sect,
-     yasm_calc_bc_dist_func calc_bc_dist);
-int yasm_lc3b__bc_tobytes(yasm_bytecode *bc, unsigned char **bufp,
-			  const yasm_section *sect, void *d,
-			  yasm_output_expr_func output_expr);
-
-void yasm_lc3b__parse_cpu(const char *cpuid, unsigned long lindex);
+void yasm_lc3b__parse_cpu(yasm_arch *arch, const char *cpuid,
+			  unsigned long line);
 
 yasm_arch_check_id_retval yasm_lc3b__parse_check_id
-    (unsigned long data[2], const char *id, unsigned long lindex);
-
-int yasm_lc3b__parse_directive(const char *name, yasm_valparamhead *valparams,
-			       /*@null@*/ yasm_valparamhead *objext_valparams,
-			       yasm_sectionhead *headp, unsigned long lindex);
+    (yasm_arch *arch, unsigned long data[2], const char *id,
+     unsigned long line);
 
 /*@null@*/ yasm_bytecode *yasm_lc3b__parse_insn
-    (const unsigned long data[2], int num_operands,
-     /*@null@*/ yasm_insn_operandhead *operands, yasm_section *cur_section,
-     /*@null@*/ yasm_bytecode *prev_bc, unsigned long lindex);
+    (yasm_arch *arch, const unsigned long data[2], int num_operands,
+     /*@null@*/ yasm_insn_operandhead *operands, yasm_bytecode *prev_bc,
+     unsigned long line);
 
-int yasm_lc3b__intnum_tobytes(const yasm_intnum *intn, unsigned char *buf,
-			      size_t destsize, size_t valsize, int shift,
-			      const yasm_bytecode *bc, int rel, int warn,
-			      unsigned long lindex);
-
-unsigned int yasm_lc3b__get_reg_size(unsigned long reg);
-
-void yasm_lc3b__reg_print(FILE *f, unsigned long reg);
-
+int yasm_lc3b__intnum_tobytes
+    (yasm_arch *arch, const yasm_intnum *intn, unsigned char *buf,
+     size_t destsize, size_t valsize, int shift, const yasm_bytecode *bc,
+     int rel, int warn, unsigned long line);
 #endif

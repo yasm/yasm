@@ -34,11 +34,11 @@
 #ifndef YASM_CORETYPE_H
 #define YASM_CORETYPE_H
 
-/** Architecture interface.  \see arch.h for details. */
+/** Architecture instance (mostly opaque type).  \see arch.h for details. */
 typedef struct yasm_arch yasm_arch;
 /** Preprocessor interface.  \see preproc.h for details. */
 typedef struct yasm_preproc yasm_preproc;
-/** Parser interface.  \see parser.h for details. */
+/** Parser instance (mostly opaque type).  \see parser.h for details. */
 typedef struct yasm_parser yasm_parser;
 /** Optimizer interface.  \see optimizer.h for details. */
 typedef struct yasm_optimizer yasm_optimizer;
@@ -47,18 +47,28 @@ typedef struct yasm_objfmt yasm_objfmt;
 /** Debug format interface.  \see dbgfmt.h for details. */
 typedef struct yasm_dbgfmt yasm_dbgfmt;
 
+/** YASM associated data callback structure.  Many data structures can have
+ * arbitrary data associated with them.
+ */
+typedef struct yasm_assoc_data_callback {
+    void (*destroy) (/*@only@*/ void *data);
+    void (*print) (void *data, FILE *f, int indent_level);
+} yasm_assoc_data_callback;
+
 /** Bytecode (opaque type).
  * \see bytecode.h for related functions.
  * Define YASM_BC_INTERNAL to get visible internals.
  */
 typedef struct yasm_bytecode yasm_bytecode;
-/** List of bytecodes (opaque type).  \see bytecode.h for related functions. */
-typedef struct yasm_bytecodehead yasm_bytecodehead;
+
+/** Object (opaque type).  \see section.h for related functions. */
+typedef struct yasm_object yasm_object;
 
 /** Section (opaque type).  \see section.h for related functions. */
 typedef struct yasm_section yasm_section;
-/** List of sections (opaque type).  \see section.h for related functions. */
-typedef struct yasm_sectionhead yasm_sectionhead;
+
+/** Symbol table (opaque type).  \see symrec.h for related functions. */
+typedef struct yasm_symtab yasm_symtab;
 
 /** Symbol record (opaque type).  \see symrec.h for related functions. */
 typedef struct yasm_symrec yasm_symrec;
@@ -75,8 +85,10 @@ typedef struct yasm_intnum yasm_intnum;
  */
 typedef struct yasm_floatnum yasm_floatnum;
 
-/** Line number management interface.  \see linemgr.h for more details. */
-typedef struct yasm_linemgr yasm_linemgr;
+/** Line number mapping repository (opaque type).  \see linemgr.h for related
+ * functions.
+ */
+typedef struct yasm_linemap yasm_linemap;
 
 /** Value/parameter pair (opaque type).
  * \see valparam.h for related functions.
@@ -131,19 +143,14 @@ typedef enum {
     YASM_SYM_EXTERN = 1 << 2	/**< If symbol is declared EXTERN */
 } yasm_sym_vis;
 
-/** Determine the distance between the starting offsets of two bytecodes in a
- * section.
- * \param sect		section containing the two bytecodes
- * \param precbc1	preceding bytecode to the first bytecode (NULL
- *			indicates first bytecode in section)
- * \param precbc2	preceding bytecode to the second bytecode (NULL
- *			indicates first bytecode in section)
+/** Determine the distance between the starting offsets of two bytecodes.
+ * \param precbc1	preceding bytecode to the first bytecode
+ * \param precbc2	preceding bytecode to the second bytecode
  * \return Distance in bytes between the two bytecodes (bc2-bc1), or NULL if
  *	   the distance was indeterminate.
  */
 typedef /*@null@*/ yasm_intnum * (*yasm_calc_bc_dist_func)
-    (yasm_section *sect, /*@null@*/ yasm_bytecode *precbc1,
-     /*@null@*/ yasm_bytecode *precbc2);
+    (yasm_bytecode *precbc1, yasm_bytecode *precbc2);
 
 /** Convert yasm_expr to its byte representation.  Usually implemented by
  * object formats to keep track of relocations and verify legal expressions.
@@ -158,8 +165,6 @@ typedef /*@null@*/ yasm_intnum * (*yasm_calc_bc_dist_func)
  *			shift (standard warnings include truncation to boundary)
  * \param offset	offset (in bytes) of the expr contents from the start
  *			of the bytecode (sometimes needed for conditional jumps)
- * \param sect		current section (usually passed into higher-level
- *			calling function)
  * \param bc		current bytecode (usually passed into higher-level
  *			calling function)
  * \param rel		if nonzero, expr should be treated as PC/IP-relative
@@ -173,26 +178,12 @@ typedef /*@null@*/ yasm_intnum * (*yasm_calc_bc_dist_func)
  */
 typedef int (*yasm_output_expr_func)
     (yasm_expr **ep, /*@out@*/ unsigned char *buf, size_t destsize,
-     size_t valsize, int shift, unsigned long offset,
-     /*@observer@*/ const yasm_section *sect, yasm_bytecode *bc, int rel,
-     int warn, /*@null@*/ void *d) /*@uses *ep@*/;
+     size_t valsize, int shift, unsigned long offset, yasm_bytecode *bc,
+     int rel, int warn, /*@null@*/ void *d) /*@uses *ep@*/;
 
 typedef int (*yasm_output_reloc_func)
     (yasm_symrec *sym, yasm_bytecode *bc, unsigned char *buf, size_t destsize,
-     size_t valsize, int rel, int warn, const yasm_section *sect, void *d);
-
-/** Convert a yasm_objfmt-specific data bytecode into its byte representation.
- * Usually implemented by object formats to output their own generated data.
- * \param type		yasm_objfmt-specific type
- * \param data		data
- * \param bufp		(double) pointer to buffer for byte representation
- * \note bufp is guaranteed to have enough space to store the data into (as
- *	 given by the original yasm_bc_new_objfmt_data() call).
- * \return Nonzero if an error occurred, 0 otherwise.
- */
-typedef int (*yasm_output_bc_objfmt_data_func)
-    (unsigned int type, /*@observer@*/ void *data, unsigned char **bufp)
-    /*@sets **bufp@*/;
+     size_t valsize, int rel, int warn, void *d);
 
 /** Sort an array using merge sort algorithm.
  * \internal

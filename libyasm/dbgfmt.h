@@ -43,7 +43,7 @@
  * definitions match the module loader's function definitions.  The version
  * number must never be decreased.
  */
-#define YASM_DBGFMT_VERSION	1
+#define YASM_DBGFMT_VERSION	2
 
 /** YASM debug format interface. */
 struct yasm_dbgfmt {
@@ -69,8 +69,7 @@ struct yasm_dbgfmt {
      * \return Nonzero if object format does not provide needed support.
      */
     int (*initialize) (const char *in_filename, const char *obj_filename,
-		       yasm_linemgr *lm, yasm_objfmt *of, yasm_arch *a,
-		       const char *machine);
+		       yasm_object *object, yasm_objfmt *of, yasm_arch *a);
 
     /** Clean up anything allocated by initialize().  Function may be
      * unimplemented (NULL) if not needed by the debug format.
@@ -80,49 +79,17 @@ struct yasm_dbgfmt {
     /** DEBUG directive support.
      * \param name	    directive name
      * \param valparams	    value/parameters
-     * \param lindex	    line index (as from yasm_linemgr)
+     * \param line	    virtual line (from yasm_linemap)
      * \return Nonzero if directive was not recognized; 0 if directive was
      *	       recognized even if it wasn't valid.
      */
     int (*directive) (const char *name, yasm_valparamhead *valparams,
-		      unsigned long lindex);
+		      unsigned long line);
 
     /** Generate debugging information bytecodes
-     * \param sections	    list of sections
+     * \param object	    object
      */
-    void (*generate) (yasm_sectionhead *sections);
-
-    /** Output debug format-specific bytecode data (YASM_BC_DBGFMT_DATA).
-     * Function may be unimplemented (NULL) if no YASM_BC_DBGFMT_DATA is ever
-     * allocated by the debug format.
-     * \param type		debug format-specific bytecode type
-     * \param data		debug format-specific data
-     * \param buf		provided buffer, as long as registered length
-     */
-    int (*bc_dbgfmt_data_output)(yasm_bytecode *bc, unsigned int type,
-				 const void *data, unsigned char **buf,
-				 const yasm_section *sect,
-				 yasm_output_reloc_func output_reloc,
-				 void *objfmt_d);
-
-    /** Delete debug format-specific bytecode data (YASM_BC_DBGFMT_DATA).
-     * Funtion may be unimplemented (NULL) if no YASM_BC_DBGFMT_DATA is ever
-     * allocated by the debug format.
-     * \param type	debug format-specific bytecode type
-     * \param data	debug-format specific data
-     */
-    void (*bc_dbgfmt_data_delete)(unsigned int type, /*@only@*/ void *data);
-
-    /** Print debug format-specific bytecode data (YASM_BC_DBGFMT_DATA).  For
-     * debugging purposes.  Function may be unimplemented (NULL) if no
-     * YASM_BC_DBGFMT_DATA is ever allocated by the debug format.
-     * \param f			file
-     * \param indent_level	indentation level
-     * \param type		debug format-specific bytecode type
-     * \param data		debug format-specific data
-     */
-    void (*bc_dbgfmt_data_print)(FILE *f, int indent_level, unsigned int type,
-				 const void *data);
+    void (*generate) (yasm_object *object);
 };
 
 #endif

@@ -43,7 +43,7 @@
  * definitions match the module loader's function definitions.  The version
  * number must never be decreased.
  */
-#define YASM_OBJFMT_VERSION	0
+#define YASM_OBJFMT_VERSION	1
 
 /** YASM object format interface. */
 struct yasm_objfmt {
@@ -91,23 +91,22 @@ struct yasm_objfmt {
      * \param obj_filename	object filename (e.g. "file.o")
      * \param df		debug format in use
      * \param a			architecture in use
-     * \param machine		machine (of architecture) in use
      * \return Nonzero if architecture/machine combination not supported.
      */
     int (*initialize) (const char *in_filename, const char *obj_filename,
-		       yasm_dbgfmt *df, yasm_arch *a, const char *machine);
+		       yasm_object *object, yasm_dbgfmt *df, yasm_arch *a);
 
     /** Write out (post-optimized) sections to the object file.
      * This function may call yasm_symrec_* functions as necessary (including
      * yasm_symrec_traverse()) to retrieve symbolic information.
      * \param f		output object file
-     * \param sections	list of sections
+     * \param object	object
      * \param all_syms	if nonzero, all symbols should be included in the
      *                  object file
      * \note The list of sections may include sections that will not actually
      *       be output into the object file.
      */
-    void (*output) (FILE *f, yasm_sectionhead *sections, int all_syms);
+    void (*output) (FILE *f, yasm_object *object, int all_syms);
 
     /** Cleans up anything allocated by initialize().  Function may be
      * unimplemented (NULL) if not needed by the object format.
@@ -115,34 +114,18 @@ struct yasm_objfmt {
     void (*cleanup) (void);
 
     /** Switch object file sections.  The first val of the valparams should
-     * be the section name.  Calls yasm_section_switch() to actually change
-     * the active section.
-     * \param headp		list of sections
+     * be the section name.  Calls yasm_object_get_general() to actually get
+     * the section.
+     * \param object		object
      * \param valparams		value/parameters
      * \param objext_valparams	object format-specific value/parameters
-     * \param lindex		line index (as from yasm_linemgr)
+     * \param line		virtual line (from yasm_linemap)
      * \return NULL on error, otherwise new section.
      */
     /*@observer@*/ /*@null@*/ yasm_section *
-	(*sections_switch)(yasm_sectionhead *headp,
-			   yasm_valparamhead *valparams,
-			   /*@null@*/ yasm_valparamhead *objext_valparams,
-			   unsigned long lindex);
-
-    /** Delete yasm_section object format-specific data.  Function may be
-     * unimplemented (NULL) if no data is ever allocated in sections_switch().
-     * \param data	object format-specific data
-     */
-    void (*section_data_delete)(/*@only@*/ void *data);
-
-    /** Print yasm_section object format-specific data.  For debugging
-     * purposes.  Function may be unimplemented (NULL) if no data is ever
-     * allocated in sections_switch() by the object format.
-     * \param f			file
-     * \param indent_level	indentation level
-     * \param data		object format-specific data
-     */
-    void (*section_data_print)(FILE *f, int indent_level, void *data);
+	(*section_switch)(yasm_object *object, yasm_valparamhead *valparams,
+			  /*@null@*/ yasm_valparamhead *objext_valparams,
+			  unsigned long line);
 
     /** Declare an "extern" (importing from another module) symbol.  Should
      * call yasm_symrec_set_of_data() to store data.  Function may be
@@ -150,22 +133,22 @@ struct yasm_objfmt {
      * declaration.
      * \param sym		symbol
      * \param objext_valparams	object format-specific value/paramaters
-     * \param lindex		line index (from yasm_linemgr)
+     * \param line		virtual line (from yasm_linemap)
      */
     void (*extern_declare)(yasm_symrec *sym,
 			   /*@null@*/ yasm_valparamhead *objext_valparams,
-			   unsigned long lindex);
+			   unsigned long line);
 
     /** Declare a "global" (exporting to other modules) symbol.  Should call
      * yasm_symrec_set_of_data() to store data.  Function may be unimplemented
      * (NULL) if object format doesn't care about such a declaration.
      * \param sym		symbol
      * \param objext_valparams	object format-specific value/paramaters
-     * \param lindex		line index (from yasm_linemgr)
+     * \param line		virtual line (from yasm_linemap)
      */
     void (*global_declare)(yasm_symrec *sym,
 			   /*@null@*/ yasm_valparamhead *objext_valparams,
-			   unsigned long lindex);
+			   unsigned long line);
 
     /** Declare a "common" (shared space with other modules) symbol.  Should
      * call yasm_symrec_set_of_data() to store data.  Function may be
@@ -174,58 +157,31 @@ struct yasm_objfmt {
      * \param sym		symbol
      * \param size		common data size
      * \param objext_valparams	object format-specific value/paramaters
-     * \param lindex		line index (from yasm_linemgr)
+     * \param line		virtual line (from yasm_linemap)
      */
     void (*common_declare)(yasm_symrec *sym, /*@only@*/ yasm_expr *size,
 			   /*@null@*/ yasm_valparamhead *objext_valparams,
-			   unsigned long lindex);
-
-    /** Delete object format-specific symbol data.  Function may be
-     * unimplemented (NULL) if yasm_symrec_set_of_data() is never called by the
-     * object format.
-     * \param data	object format-specific data
-     */
-    void (*symrec_data_delete)(/*@only@*/ void *data);
-
-    /** Print object format-specific symbol data.  For debugging purposes.
-     * Function may be unimplemented (NULL) if yasm_symrec_set_of_data() is
-     * never called by the object format.
-     * \param f			file
-     * \param indent_level	indentation level
-     * \param data		object format-specific data
-     */
-    void (*symrec_data_print)(FILE *f, int indent_level, void *data);
+			   unsigned long line);
 
     /** Handle object format-specific directives.
      * \param name		directive name
      * \param valparams		value/parameters
      * \param objext_valparams	object format-specific value/parameters
-     * \param headp		list of sections
-     * \param lindex		line index (as from yasm_linemgr)
+     * \param object		object
+     * \param line		virtual line (from yasm_linemap)
      * \return Nonzero if directive was not recognized; 0 if directive was
      *         recognized, even if it wasn't valid.
      */
     int (*directive)(const char *name, yasm_valparamhead *valparams,
 		     /*@null@*/ yasm_valparamhead *objext_valparams,
-		     yasm_sectionhead *headp, unsigned long lindex);
-
-    /** Delete object format-specific bytecode data (YASM_BC_OBJFMT_DATA).
-     * Function may be unimplemented (NULL) if no YASM_BC_OBJFMT_DATA is ever
-     * allocated by the object format.
-     * \param type	object format-specific bytecode type
-     * \param data	object format-specific data
-     */
-    void (*bc_objfmt_data_delete)(unsigned int type, /*@only@*/ void *data);
-
-    /** Print object format-specific bytecode data (YASM_BC_OBJFMT_DATA).  For
-     * debugging purposes.  Function may be unimplemented (NULL) if no
-     * YASM_BC_OBJFMT_DATA is ever allocated by the object format.
-     * \param f			file
-     * \param indent_level	indentation level
-     * \param type		object format-specific bytecode type
-     * \param data		object format-specific data
-     */
-    void (*bc_objfmt_data_print)(FILE *f, int indent_level, unsigned int type,
-				 const void *data);
+		     yasm_object *object, unsigned long line);
 };
+
+/** Add a default section to an object.
+ * \param objfmt    object format
+ * \param object    object
+ * \return Default section.
+ */
+yasm_section *yasm_objfmt_add_default_section(yasm_objfmt *objfmt,
+					      yasm_object *object);
 #endif

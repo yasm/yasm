@@ -34,41 +34,85 @@
 #ifndef YASM_SECTION_H
 #define YASM_SECTION_H
 
-/** Create a new section list.  A default section is created as the
- * first section.
- * \param def	    returned; default section
- * \param of	    object format in use
- * \return Newly allocated section list.
+/** Create a new object.  A default section is created as the first section.
+ * An empty symbol table (yasm_symtab) and line mapping (yasm_linemap) are
+ * automatically created.
+ * \return Newly allocated object.
  */
-/*@only@*/ yasm_sectionhead *yasm_sections_new
-    (/*@out@*/ /*@dependent@*/ yasm_section **def, yasm_objfmt *of);
+/*@only@*/ yasm_object *yasm_object_create(void);
 
 /** Create a new, or continue an existing, general section.  The section is
- * added to a section list if there's not already a section by that name.
- * \param headp	    section list
+ * added to the object if there's not already a section by that name.
+ * \param object    object
  * \param name	    section name
  * \param start	    starting address (ignored if section already exists),
  *		    NULL if 0 or don't care.
  * \param res_only  if nonzero, only space-reserving bytecodes are allowed in
  *		    the section (ignored if section already exists)
  * \param isnew	    output; set to nonzero if section did not already exist
- * \param lindex    line index of section declaration (ignored if section
+ * \param line      virtual line of section declaration (ignored if section
  *		    already exists)
  * \return New section.
  */
-/*@dependent@*/ yasm_section *yasm_sections_switch_general
-    (yasm_sectionhead *headp, const char *name,
+/*@dependent@*/ yasm_section *yasm_object_get_general
+    (yasm_object *object, const char *name,
      /*@null@*/ /*@only@*/ yasm_expr *start, int res_only,
-     /*@out@*/ int *isnew, unsigned long lindex);
+     /*@out@*/ int *isnew, unsigned long line);
 
 /** Create a new absolute section.  No checking is performed at creation to
  * check for overlaps with other absolute sections.
- * \param headp	    section list
+ * \param object    object
  * \param start	    starting address (expression)
+ * \param line	    virtual line of section declaration
  * \return New section.
  */
-/*@dependent@*/ yasm_section *yasm_sections_switch_absolute
-    (yasm_sectionhead *headp, /*@keep@*/ yasm_expr *start);
+/*@dependent@*/ yasm_section *yasm_object_create_absolute
+    (yasm_object *object, /*@keep@*/ yasm_expr *start, unsigned long line);
+
+/** Delete (free allocated memory for) an object.  All sections in the
+ * object and all bytecodes within those sections are also deleted.
+ * \param object	object
+ */
+void yasm_object_destroy(/*@only@*/ yasm_object *object);
+
+/** Print an object.  For debugging purposes.
+ * \param object	object
+ * \param f		file
+ * \param indent_level	indentation level
+ */
+void yasm_object_print(const yasm_object *object, FILE *f, int indent_level);
+
+/** Traverses all sections in an object, calling a function on each section.
+ * \param object	object
+ * \param d		data pointer passed to func on each call
+ * \param func		function
+ * \return Stops early (and returns func's return value) if func returns a
+ *	   nonzero value; otherwise 0.
+ */
+int yasm_object_sections_traverse
+    (yasm_object *object, /*@null@*/ void *d,
+     int (*func) (yasm_section *sect, /*@null@*/ void *d));
+
+/** Find a general section in an object, based on its name.
+ * \param object	object
+ * \param name		section name
+ * \return Section matching name, or NULL if no match found.
+ */
+/*@dependent@*/ /*@null@*/ yasm_section *yasm_object_find_general
+    (yasm_object *object, const char *name);
+
+/** Get an object's symbol table (#yasm_symtab).
+ * \param object	object
+ * \return Symbol table.
+ */
+/*@dependent@*/ yasm_symtab *yasm_object_get_symtab(const yasm_object *object);
+
+/** Get an object's line mappings (#yasm_linemap).
+ * \param object	object
+ * \return Line mappings.
+ */
+/*@dependent@*/ yasm_linemap *yasm_object_get_linemap
+    (const yasm_object *object);
 
 /** Determine if a section is absolute or general.
  * \param sect	    section
@@ -88,60 +132,67 @@ unsigned long yasm_section_get_opt_flags(const yasm_section *sect);
  */
 void yasm_section_set_opt_flags(yasm_section *sect, unsigned long opt_flags);
 
-/** Get yasm_objfmt-specific data.  For yasm_objfmt use only.
+/** Get object owner of a section.
  * \param sect	    section
- * \return Object format-specific data.
+ * \return Object this section is a part of.
  */
-/*@dependent@*/ /*@null@*/ void *yasm_section_get_of_data(yasm_section *sect);
+yasm_object *yasm_section_get_object(const yasm_section *sect);
 
-/** Set yasm_objfmt-specific data.  For yasm_objfmt use only.
- * \attention Deletes any existing of_data.
+/** Get assocated data for a section and data callback.
  * \param sect	    section
- * \param of	    object format
- * \param of_data   object format-specific data.
+ * \param callback  callback used when adding data
+ * \return Associated data (NULL if none).
  */
-void yasm_section_set_of_data(yasm_section *sect, yasm_objfmt *of,
-			      /*@null@*/ /*@only@*/ void *of_data);
+/*@dependent@*/ /*@null@*/ void *yasm_section_get_data
+    (yasm_section *sect, const yasm_assoc_data_callback *callback);
 
-/** Delete (free allocated memory for) a section list.  All sections in the
- * section list and all bytecodes within those sections are also deleted.
- * \param headp	    section list
+/** Add associated data to a section.
+ * \attention Deletes any existing associated data for that data callback.
+ * \param sect	    section
+ * \param callback  callback
+ * \param data	    data to associate
  */
-void yasm_sections_delete(/*@only@*/ yasm_sectionhead *headp);
+void yasm_section_add_data(yasm_section *sect,
+			   const yasm_assoc_data_callback *callback,
+			   /*@null@*/ /*@only@*/ void *data);
 
-/** Print a section list.  For debugging purposes.
- * \param f		file
- * \param indent_level	indentation level
- * \param headp		section list
+/** Get the first bytecode in a section.
+ * \param sect		section
+ * \return First bytecode in section (at least one empty bytecode is always
+ *	   present).
  */
-void yasm_sections_print(FILE *f, int indent_level,
-			 const yasm_sectionhead *headp);
+yasm_bytecode *yasm_section_bcs_first(yasm_section *sect);
 
-/** Traverses a section list, calling a function on each bytecode.
- * \param headp	bytecode list
+/** Get the last bytecode in a section.
+ * \param sect		section
+ * \return Last bytecode in section (at least one empty bytecode is always
+ *	   present).
+ */
+yasm_bytecode *yasm_section_bcs_last(yasm_section *sect);
+
+/** Add bytecode to the end of a section.
+ * \note Does not make a copy of bc; so don't pass this function static or
+ *	 local variables, and discard the bc pointer after calling this
+ *	 function.
+ * \param sect		section
+ * \param bc		bytecode (may be NULL)
+ * \return If bytecode was actually appended (it wasn't NULL or empty), the
+ *	   bytecode; otherwise NULL.
+ */
+/*@only@*/ /*@null@*/ yasm_bytecode *yasm_section_bcs_append
+    (yasm_section *sect,
+     /*@returned@*/ /*@only@*/ /*@null@*/ yasm_bytecode *bc);
+
+/** Traverses all bytecodes in a section, calling a function on each bytecode.
+ * \param sect	section
  * \param d	data pointer passed to func on each call
  * \param func	function
  * \return Stops early (and returns func's return value) if func returns a
  *	   nonzero value; otherwise 0.
  */
-int yasm_sections_traverse(yasm_sectionhead *headp, /*@null@*/ void *d,
-			   int (*func) (yasm_section *sect,
-					/*@null@*/ void *d));
-
-/** Find a section based on its name.
- * \param   headp   section list
- * \param   name    section name
- * \return Section matching name, or NULL if no match found.
- */
-/*@dependent@*/ /*@null@*/ yasm_section *yasm_sections_find_general
-    (yasm_sectionhead *headp, const char *name);
-
-/** Get bytecode list of a section.
- * \param   sect    section
- * \return Bytecode list.
- */
-/*@dependent@*/ yasm_bytecodehead *yasm_section_get_bytecodes
-    (yasm_section *sect);
+int yasm_section_bcs_traverse
+    (yasm_section *sect, /*@null@*/ void *d,
+     int (*func) (yasm_bytecode *bc, /*@null@*/ void *d));
 
 /** Get name of a section.
  * \param   sect    section
@@ -153,10 +204,10 @@ int yasm_sections_traverse(yasm_sectionhead *headp, /*@null@*/ void *d,
 /** Change starting address of a section.
  * \param sect	    section
  * \param start	    starting address
- * \param lindex    line index
+ * \param line	    virtual line
  */
 void yasm_section_set_start(yasm_section *sect, /*@only@*/ yasm_expr *start,
-			    unsigned long lindex);
+			    unsigned long line);
 
 /** Get starting address of a section.
  * \param sect	    section
@@ -172,6 +223,7 @@ void yasm_section_set_start(yasm_section *sect, /*@only@*/ yasm_expr *start,
  * \param sect		section
  * \param print_bcs	if nonzero, print bytecodes within section
  */
-void yasm_section_print(FILE *f, int indent_level,
-			/*@null@*/ const yasm_section *sect, int print_bcs);
+void yasm_section_print(/*@null@*/ const yasm_section *sect, FILE *f,
+			int indent_level, int print_bcs);
+
 #endif

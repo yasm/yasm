@@ -34,54 +34,105 @@
 #ifndef YASM_SYMREC_H
 #define YASM_SYMREC_H
 
-/** Initialize symbol table internal data structures. */
-void yasm_symrec_initialize(void);
+/** Create a new symbol table. */
+yasm_symtab *yasm_symtab_create(void);
 
-/** Clean up internal symbol table allocations. */
-void yasm_symrec_cleanup(void);
+/** Destroy a symbol table and all internal symbols.
+ * \param symtab    symbol table
+ * \warning All yasm_symrec *'s into this symbol table become invalid after
+ * this is called!
+ */
+void yasm_symtab_destroy(/*@only@*/ yasm_symtab *symtab);
 
 /** Get a reference to (use) a symbol.  The symbol does not necessarily need to
  * be defined before it is used.
+ * \param symtab    symbol table
  * \param name	    symbol name
- * \param lindex    line index where referenced
+ * \param line      virtual line where referenced
  * \return Symbol (dependent pointer, do not free).
  */
-/*@dependent@*/ yasm_symrec *yasm_symrec_use(const char *name,
-					     unsigned long lindex);
+/*@dependent@*/ yasm_symrec *yasm_symtab_use
+    (yasm_symtab *symtab, const char *name, unsigned long line);
 
 /** Define a symbol as an EQU value.
+ * \param symtab    symbol table
  * \param name	    symbol (EQU) name
  * \param e	    EQU value (expression)
- * \param lindex    line index of EQU
+ * \param line      virtual line of EQU
  * \return Symbol (dependent pointer, do not free).
  */
-/*@dependent@*/ yasm_symrec *yasm_symrec_define_equ
-    (const char *name, /*@keep@*/ yasm_expr *e, unsigned long lindex);
+/*@dependent@*/ yasm_symrec *yasm_symtab_define_equ
+    (yasm_symtab *symtab, const char *name, /*@keep@*/ yasm_expr *e,
+     unsigned long line);
 
 /** Define a symbol as a label.
+ * \param symtab    symbol table
  * \param name	    symbol (label) name
- * \param sect	    section containing label
- * \param precbc    bytecode preceding label (NULL if label is before first
- *                  bytecode in section)
+ * \param precbc    bytecode preceding label
  * \param in_table  nonzero if the label should be inserted into the symbol
  *                  table (some specially-generated ones should not be)
- * \param lindex    line index of label
+ * \param line	    virtual line of label
  * \return Symbol (dependent pointer, do not free).
  */
-/*@dependent@*/ yasm_symrec *yasm_symrec_define_label
-    (const char *name, /*@dependent@*/ /*@null@*/ yasm_section *sect,
-     /*@dependent@*/ /*@null@*/ yasm_bytecode *precbc, int in_table,
-     unsigned long lindex);
+/*@dependent@*/ yasm_symrec *yasm_symtab_define_label
+    (yasm_symtab *symtab, const char *name,
+     /*@dependent@*/ yasm_bytecode *precbc, int in_table, unsigned long line);
+
+/** Define a symbol as a label, shortcut (no need to find out symtab, it's
+ * determined from precbc).
+ * \param name	    symbol (label) name
+ * \param precbc    bytecode preceding label
+ * \param in_table  nonzero if the label should be inserted into the symbol
+ *                  table (some specially-generated ones should not be)
+ * \param line	    virtual line of label
+ * \return Symbol (dependent pointer, do not free).
+ */
+/*@dependent@*/ yasm_symrec *yasm_symtab_define_label2
+    (const char *name, /*@dependent@*/ yasm_bytecode *precbc, int in_table,
+     unsigned long line);
 
 /** Declare external visibility of a symbol.
  * \note Not all visibility combinations are allowed.
+ * \param symtab    symbol table
  * \param name	    symbol name
  * \param vis	    visibility
- * \param lindex    line index of visibility-setting
+ * \param line      virtual line of visibility-setting
  * \return Symbol (dependent pointer, do not free).
  */
-/*@dependent@*/ yasm_symrec *yasm_symrec_declare
-    (const char *name, yasm_sym_vis vis, unsigned long lindex);
+/*@dependent@*/ yasm_symrec *yasm_symtab_declare
+    (yasm_symtab *symtab, const char *name, yasm_sym_vis vis,
+     unsigned long line);
+
+/** Callback function for yasm_symrec_traverse().
+ * \param sym	    symbol
+ * \param d	    data passed into yasm_symrec_traverse()
+ * \return Nonzero to stop symbol traversal.
+ */
+typedef int (*yasm_symtab_traverse_callback)
+    (yasm_symrec *sym, /*@null@*/ void *d);
+
+/** Traverse all symbols in the symbol table.
+ * \param symtab    symbol table
+ * \param d	    data to pass to each call of callback function
+ * \param func	    callback function called on each symbol
+ * \return Nonzero value returned by callback function if it ever returned
+ *         nonzero.
+ */
+int /*@alt void@*/ yasm_symtab_traverse
+    (yasm_symtab *symtab, /*@null@*/ void *d,
+     yasm_symtab_traverse_callback func);
+
+/** Finalize symbol table after parsing stage.  Checks for symbols that are
+ * used but never defined or declared #YASM_SYM_EXTERN or #YASM_SYM_COMMON.
+ */
+void yasm_symtab_parser_finalize(yasm_symtab *symtab);
+
+/** Print the symbol table.  For debugging purposes.
+ * \param symtab	symbol table
+ * \param f		file
+ * \param indent_level	indentation level
+ */
+void yasm_symtab_print(yasm_symtab *symtab, FILE *f, int indent_level);
 
 /** Get the name of a symbol.
  * \param sym	    symbol
@@ -102,86 +153,41 @@ yasm_sym_vis yasm_symrec_get_visibility(const yasm_symrec *sym);
 /*@observer@*/ /*@null@*/ const yasm_expr *yasm_symrec_get_equ
     (const yasm_symrec *sym);
 
-/** Dependent pointer to a section. */
-typedef /*@dependent@*/ /*@null@*/ yasm_section *
-    yasm_symrec_get_label_sectionp;
-
 /** Dependent pointer to a bytecode. */
-typedef /*@dependent@*/ /*@null@*/ yasm_bytecode *
-    yasm_symrec_get_label_bytecodep;
+typedef /*@dependent@*/ yasm_bytecode *yasm_symrec_get_label_bytecodep;
 
 /** Get the label location of a symbol.
  * \param sym	    symbol
- * \param sect	    section containing label (output)
- * \param precbc    bytecode preceding label (output); NULL if no preceding
- *                  bytecode in section.
+ * \param precbc    bytecode preceding label (output)
  * \return 0 if not symbol is not a label or if the symbol's visibility is
  *         #YASM_SYM_EXTERN or #YASM_SYM_COMMON (not defined in the file).
  */
 int yasm_symrec_get_label(const yasm_symrec *sym,
-			  /*@out@*/ yasm_symrec_get_label_sectionp *sect,
 			  /*@out@*/ yasm_symrec_get_label_bytecodep *precbc);
 
-/** Get yasm_optimizer-specific flags.  For yasm_optimizer use only.
+/** Get associated data for a symbol and data callback.
  * \param sym	    symbol
- * \return Optimizer-specific flags.
+ * \param callback  callback used when adding data
+ * \return Associated data (NULL if none).
  */
-unsigned long yasm_symrec_get_opt_flags(const yasm_symrec *sym);
+/*@dependent@*/ /*@null@*/ void *yasm_symrec_get_data
+    (yasm_symrec *sym, const yasm_assoc_data_callback *callback);
 
-/** Set yasm_optimizer-specific flags.  For yasm_optimizer use only.
+/** Add associated data to a symbol.
+ * \attention Deletes any existing associated data for that data callback.
  * \param sym	    symbol
- * \param opt_flags optimizer-specific flags.
+ * \param callback  callback
+ * \param data	    data to associate
  */
-void yasm_symrec_set_opt_flags(yasm_symrec *sym, unsigned long opt_flags);
-
-/** Get yasm_objfmt-specific data.  For yasm_objfmt use only.
- * \param sym	    symbol
- * \return Object format-specific data.
- */
-/*@dependent@*/ /*@null@*/ void *yasm_symrec_get_of_data(yasm_symrec *sym);
-
-/** Set yasm_objfmt-specific data.  For yasm_objfmt use only.
- * \attention Deletes any existing of_data.
- * \param sym	    symbol
- * \param of	    object format
- * \param of_data   object format-specific data.
- */
-void yasm_symrec_set_of_data(yasm_symrec *sym, yasm_objfmt *of,
-			     /*@only@*/ /*@null@*/ void *of_data);
-
-/** Callback function for yasm_symrec_traverse().
- * \param sym	    symbol
- * \param d	    data passed into yasm_symrec_traverse()
- * \return Nonzero to stop symbol traversal.
- */
-typedef int (*yasm_symrec_traverse_callback)
-    (yasm_symrec *sym, /*@null@*/ void *d);
-
-/** Traverse all symbols in the symbol table.
- * \param d	data to pass to each call of callback function
- * \param func	callback function called on each symbol
- * \return Nonzero value returned by callback function if it ever returned
- *         nonzero.
- */
-int /*@alt void@*/ yasm_symrec_traverse
-    (/*@null@*/ void *d, yasm_symrec_traverse_callback func);
-
-/** Finalize symbol table after parsing stage.  Checks for symbols that are
- * used but never defined or declared #YASM_SYM_EXTERN or #YASM_SYM_COMMON.
- */
-void yasm_symrec_parser_finalize(void);
-
-/** Print the symbol table.  For debugging purposes.
- * \param f		file
- * \param indent_level	indentation level
- */
-void yasm_symrec_print_all(FILE *f, int indent_level);
+void yasm_symrec_add_data(yasm_symrec *sym,
+			  const yasm_assoc_data_callback *callback,
+			  /*@only@*/ /*@null@*/ void *data);
 
 /** Print a symbol.  For debugging purposes.
  * \param f		file
  * \param indent_level	indentation level
  * \param sym		symbol
  */
-void yasm_symrec_print(FILE *f, int indent_level, const yasm_symrec *sym);
+void yasm_symrec_print(const yasm_symrec *sym, FILE *f, int indent_level);
 
 #endif

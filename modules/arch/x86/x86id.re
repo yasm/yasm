@@ -1518,11 +1518,11 @@ static const x86_insn_info xbts_insn[] = {
 
 
 static yasm_bytecode *
-x86_new_jmp(const unsigned long data[4], int num_operands,
+x86_new_jmp(yasm_arch *arch, const unsigned long data[4], int num_operands,
 	    yasm_insn_operandhead *operands, x86_insn_info *jinfo,
-	    yasm_section *cur_section, /*@null@*/ yasm_bytecode *prev_bc,
-	    unsigned long lindex)
+	    yasm_bytecode *prev_bc, unsigned long line)
 {
+    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     x86_new_jmp_data d;
     int num_info = (int)(data[1]&0xFF);
     x86_insn_info *info = (x86_insn_info *)data[0];
@@ -1530,7 +1530,7 @@ x86_new_jmp(const unsigned long data[4], int num_operands,
     yasm_insn_operand *op;
     static const unsigned char size_lookup[] = {0, 8, 16, 32, 64, 80, 128, 0};
 
-    d.lindex = lindex;
+    d.line = line;
 
     /* We know the target is in operand 0, but sanity check for Imm. */
     op = yasm_ops_first(operands);
@@ -1539,14 +1539,14 @@ x86_new_jmp(const unsigned long data[4], int num_operands,
 
     /* Far target needs to become "seg imm:imm". */
     if ((jinfo->operands[0] & OPTM_MASK) == OPTM_Far)
-	d.target = yasm_expr_new_tree(
-	    yasm_expr_new_branch(YASM_EXPR_SEG, op->data.val, lindex),
-	    YASM_EXPR_SEGOFF, yasm_expr_copy(op->data.val), lindex);
+	d.target = yasm_expr_create_tree(
+	    yasm_expr_create_branch(YASM_EXPR_SEG, op->data.val, line),
+	    YASM_EXPR_SEGOFF, yasm_expr_copy(op->data.val), line);
     else
 	d.target = op->data.val;
 
     /* Need to save jump origin for relative jumps. */
-    d.origin = yasm_symrec_define_label("$", cur_section, prev_bc, 0, lindex);
+    d.origin = yasm_symtab_define_label2("$", prev_bc, 0, line);
 
     /* Initially assume no far opcode is available. */
     d.far_op_len = 0;
@@ -1594,13 +1594,13 @@ x86_new_jmp(const unsigned long data[4], int num_operands,
 	 num_info--, info++) {
 	unsigned long cpu = info->cpu | data[2];
 
-	if ((cpu & CPU_64) && yasm_x86_LTX_mode_bits != 64)
+	if ((cpu & CPU_64) && arch_x86->mode_bits != 64)
 	    continue;
-	if ((cpu & CPU_Not64) && yasm_x86_LTX_mode_bits == 64)
+	if ((cpu & CPU_Not64) && arch_x86->mode_bits == 64)
 	    continue;
 	cpu &= ~(CPU_64 | CPU_Not64);
 
-	if ((yasm_x86__cpu_enabled & cpu) != cpu)
+	if ((arch_x86->cpu_enabled & cpu) != cpu)
 	    continue;
 
 	if (info->num_operands == 0)
@@ -1636,15 +1636,15 @@ x86_new_jmp(const unsigned long data[4], int num_operands,
 	}
     }
 
-    return yasm_x86__bc_new_jmp(&d);
+    return yasm_x86__bc_create_jmp(arch, &d);
 }
 
 yasm_bytecode *
-yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
-		     yasm_insn_operandhead *operands,
-		     yasm_section *cur_section,
-		     /*@null@*/ yasm_bytecode *prev_bc, unsigned long lindex)
+yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
+		     int num_operands, yasm_insn_operandhead *operands,
+		     yasm_bytecode *prev_bc, unsigned long line)
 {
+    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     x86_new_insn_data d;
     int num_info = (int)(data[1]&0xFF);
     x86_insn_info *info = (x86_insn_info *)data[0];
@@ -1665,13 +1665,13 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 	/* Match CPU */
 	cpu = info->cpu | data[2];
 
-	if ((cpu & CPU_64) && yasm_x86_LTX_mode_bits != 64)
+	if ((cpu & CPU_64) && arch_x86->mode_bits != 64)
 	    continue;
-	if ((cpu & CPU_Not64) && yasm_x86_LTX_mode_bits == 64)
+	if ((cpu & CPU_Not64) && arch_x86->mode_bits == 64)
 	    continue;
 	cpu &= ~(CPU_64 | CPU_Not64);
 
-	if ((yasm_x86__cpu_enabled & cpu) != cpu)
+	if ((arch_x86->cpu_enabled & cpu) != cpu)
 	    continue;
 
 	/* Match # of operands */
@@ -1685,7 +1685,7 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 
 	/* Match each operand type and size */
 	for(i = 0, op = yasm_ops_first(operands); op && i<info->num_operands &&
-	    !mismatch; op = yasm_ops_next(op), i++) {
+	    !mismatch; op = yasm_operand_next(op), i++) {
 	    /* Check operand type */
 	    switch ((int)(info->operands[i] & OPT_MASK)) {
 		case OPT_Imm:
@@ -1851,7 +1851,7 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 	    size = size_lookup[(info->operands[i] & OPS_MASK)>>OPS_SHIFT];
 	    if (op->type == YASM_INSN__OPERAND_REG && op->size == 0) {
 		/* Register size must exactly match */
-		if (yasm_x86__get_reg_size(op->data.reg) != size)
+		if (yasm_x86__get_reg_size(arch, op->data.reg) != size)
 		    mismatch = 1;
 	    } else {
 		if ((info->operands[i] & OPS_RMASK) == OPS_Relaxed) {
@@ -1903,7 +1903,7 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 
     if (!found) {
 	/* Didn't find a matching one */
-	yasm__error(lindex, N_("invalid combination of opcode and operands"));
+	yasm__error(line, N_("invalid combination of opcode and operands"));
 	return NULL;
     }
 
@@ -1916,10 +1916,10 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 	    switch ((int)((info->modifiers & MOD_ExtIndex_MASK)
 			  >> MOD_ExtIndex_SHIFT)) {
 		case 0:
-		    yasm__error(lindex, N_("mismatch in operand sizes"));
+		    yasm__error(line, N_("mismatch in operand sizes"));
 		    break;
 		case 1:
-		    yasm__error(lindex, N_("operand size not specified"));
+		    yasm__error(line, N_("operand size not specified"));
 		    break;
 		default:
 		    yasm_internal_error(N_("unrecognized x86 ext mod index"));
@@ -1938,11 +1938,11 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 
     /* Shortcut to JmpRel */
     if (operands && (info->operands[0] & OPA_MASK) == OPA_JmpRel)
-	return x86_new_jmp(data, num_operands, operands, info, cur_section,
-			   prev_bc, lindex);
+	return x86_new_jmp(arch, data, num_operands, operands, info, prev_bc,
+			   line);
 
     /* Copy what we can from info */
-    d.lindex = lindex;
+    d.line = line;
     d.ea = NULL;
     d.ea_origin = NULL;
     d.imm = NULL;
@@ -1985,8 +1985,8 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 	mod_data >>= 8;
     }
     if (info->modifiers & MOD_Imm8) {
-	d.imm = yasm_expr_new_ident(yasm_expr_int(
-	    yasm_intnum_new_uint(mod_data & 0xFF)), lindex);
+	d.imm = yasm_expr_create_ident(yasm_expr_int(
+	    yasm_intnum_create_uint(mod_data & 0xFF)), line);
 	d.im_len = 1;
 	mod_data >>= 8;
     }
@@ -1998,7 +1998,7 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
     /* Go through operands and assign */
     if (operands) {
 	for(i = 0, op = yasm_ops_first(operands); op && i<info->num_operands;
-	    op = yasm_ops_next(op), i++) {
+	    op = yasm_operand_next(op), i++) {
 	    switch ((int)(info->operands[i] & OPA_MASK)) {
 		case OPA_None:
 		    /* Throw away the operand contents */
@@ -2007,10 +2007,10 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 			case YASM_INSN__OPERAND_SEGREG:
 			    break;
 			case YASM_INSN__OPERAND_MEMORY:
-			    yasm_ea_delete(op->data.ea);
+			    yasm_ea_destroy(op->data.ea);
 			    break;
 			case YASM_INSN__OPERAND_IMM:
-			    yasm_expr_delete(op->data.val);
+			    yasm_expr_destroy(op->data.val);
 			    break;
 		    }
 		    break;
@@ -2018,8 +2018,8 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 		    switch (op->type) {
 			case YASM_INSN__OPERAND_REG:
 			    d.ea =
-				yasm_x86__ea_new_reg(op->data.reg, &d.rex,
-						     yasm_x86_LTX_mode_bits);
+				yasm_x86__ea_create_reg(op->data.reg, &d.rex,
+							arch_x86->mode_bits);
 			    break;
 			case YASM_INSN__OPERAND_SEGREG:
 			    yasm_internal_error(
@@ -2029,13 +2029,13 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 			    if ((info->operands[i] & OPT_MASK) == OPT_MemOffs)
 				/* Special-case for MOV MemOffs instruction */
 				yasm_x86__ea_set_disponly(d.ea);
-			    else if (yasm_x86_LTX_mode_bits == 64)
+			    else if (arch_x86->mode_bits == 64)
 				/* Save origin for possible RIP-relative */
-				d.ea_origin = yasm_symrec_define_label("$",
-				    cur_section, prev_bc, 0, lindex);
+				d.ea_origin = yasm_symtab_define_label2("$",
+				    prev_bc, 0, line);
 			    break;
 			case YASM_INSN__OPERAND_IMM:
-			    d.ea = yasm_x86__ea_new_imm(op->data.val,
+			    d.ea = yasm_x86__ea_create_imm(op->data.val,
 				size_lookup[(info->operands[i] &
 					     OPS_MASK)>>OPS_SHIFT]);
 			    break;
@@ -2063,9 +2063,9 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 			d.spare = (unsigned char)(op->data.reg&7);
 		    else if (op->type == YASM_INSN__OPERAND_REG) {
 			if (yasm_x86__set_rex_from_reg(&d.rex, &d.spare,
-				op->data.reg, yasm_x86_LTX_mode_bits,
+				op->data.reg, arch_x86->mode_bits,
 				X86_REX_R)) {
-			    yasm__error(lindex,
+			    yasm__error(line,
 				N_("invalid combination of opcode and operands"));
 			    return NULL;
 			}
@@ -2076,9 +2076,9 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 		    if (op->type == YASM_INSN__OPERAND_REG) {
 			unsigned char opadd;
 			if (yasm_x86__set_rex_from_reg(&d.rex, &opadd,
-				op->data.reg, yasm_x86_LTX_mode_bits,
+				op->data.reg, arch_x86->mode_bits,
 				X86_REX_B)) {
-			    yasm__error(lindex,
+			    yasm__error(line,
 				N_("invalid combination of opcode and operands"));
 			    return NULL;
 			}
@@ -2095,13 +2095,13 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 		    break;
 		case OPA_SpareEA:
 		    if (op->type == YASM_INSN__OPERAND_REG) {
-			d.ea = yasm_x86__ea_new_reg(op->data.reg, &d.rex,
-						    yasm_x86_LTX_mode_bits);
+			d.ea = yasm_x86__ea_create_reg(op->data.reg, &d.rex,
+						       arch_x86->mode_bits);
 			if (!d.ea ||
 			    yasm_x86__set_rex_from_reg(&d.rex, &d.spare,
-				op->data.reg, yasm_x86_LTX_mode_bits,
+				op->data.reg, arch_x86->mode_bits,
 				X86_REX_R)) {
-			    yasm__error(lindex,
+			    yasm__error(line,
 				N_("invalid combination of opcode and operands"));
 			    if (d.ea)
 				yasm_xfree(d.ea);
@@ -2131,7 +2131,7 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
     }
 
     /* Create the bytecode and return it */
-    return yasm_x86__bc_new_insn(&d);
+    return yasm_x86__bc_create_insn(arch, &d);
 }
 
 
@@ -2172,80 +2172,81 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 */
 
 void
-yasm_x86__parse_cpu(const char *id, unsigned long lindex)
+yasm_x86__parse_cpu(yasm_arch *arch, const char *id, unsigned long line)
 {
+    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     /*const char *marker;*/
 
     /*!re2c
 	/* The standard CPU names /set/ cpu_enabled. */
 	"8086" {
-	    yasm_x86__cpu_enabled = CPU_Priv;
+	    arch_x86->cpu_enabled = CPU_Priv;
 	    return;
 	}
 	("80" | I)? "186" {
-	    yasm_x86__cpu_enabled = CPU_186|CPU_Priv;
+	    arch_x86->cpu_enabled = CPU_186|CPU_Priv;
 	    return;
 	}
 	("80" | I)? "286" {
-	    yasm_x86__cpu_enabled = CPU_186|CPU_286|CPU_Priv;
+	    arch_x86->cpu_enabled = CPU_186|CPU_286|CPU_Priv;
 	    return;
 	}
 	("80" | I)? "386" {
-	    yasm_x86__cpu_enabled =
+	    arch_x86->cpu_enabled =
 		CPU_186|CPU_286|CPU_386|CPU_SMM|CPU_Prot|CPU_Priv;
 	    return;
 	}
 	("80" | I)? "486" {
-	    yasm_x86__cpu_enabled =
+	    arch_x86->cpu_enabled =
 		CPU_186|CPU_286|CPU_386|CPU_486|CPU_FPU|CPU_SMM|CPU_Prot|
 		CPU_Priv;
 	    return;
 	}
 	(I? "586") | (P E N T I U M) | (P "5") {
-	    yasm_x86__cpu_enabled =
+	    arch_x86->cpu_enabled =
 		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_FPU|CPU_SMM|
 		CPU_Prot|CPU_Priv;
 	    return;
 	}
 	(I? "686") | (P "6") | (P P R O) | (P E N T I U M P R O) {
-	    yasm_x86__cpu_enabled =
+	    arch_x86->cpu_enabled =
 		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_FPU|
 		CPU_SMM|CPU_Prot|CPU_Priv;
 	    return;
 	}
 	(P "2") | (P E N T I U M "-"? ("2" | (I I))) {
-	    yasm_x86__cpu_enabled =
+	    arch_x86->cpu_enabled =
 		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_FPU|
 		CPU_MMX|CPU_SMM|CPU_Prot|CPU_Priv;
 	    return;
 	}
 	(P "3") | (P E N T I U M "-"? ("3" | (I I I))) | (K A T M A I) {
-	    yasm_x86__cpu_enabled =
+	    arch_x86->cpu_enabled =
 		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_P3|CPU_FPU|
 		CPU_MMX|CPU_SSE|CPU_SMM|CPU_Prot|CPU_Priv;
 	    return;
 	}
 	(P "4") | (P E N T I U M "-"? ("4" | (I V))) | (W I L L I A M E T T E) {
-	    yasm_x86__cpu_enabled =
+	    arch_x86->cpu_enabled =
 		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_P3|CPU_P4|
 		CPU_FPU|CPU_MMX|CPU_SSE|CPU_SSE2|CPU_SMM|CPU_Prot|CPU_Priv;
 	    return;
 	}
 	(I A "-"? "64") | (I T A N I U M) {
-	    yasm_x86__cpu_enabled =
+	    arch_x86->cpu_enabled =
 		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_P3|CPU_P4|
 		CPU_IA64|CPU_FPU|CPU_MMX|CPU_SSE|CPU_SSE2|CPU_SMM|CPU_Prot|
 		CPU_Priv;
 	    return;
 	}
 	K "6" {
-	    yasm_x86__cpu_enabled =
+	    arch_x86->cpu_enabled =
 		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_K6|CPU_FPU|
 		CPU_MMX|CPU_3DNow|CPU_SMM|CPU_Prot|CPU_Priv;
 	    return;
 	}
 	(A T H L O N) | (K "7") {
-	    yasm_x86__cpu_enabled =
+	    arch_x86->cpu_enabled =
 		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_K6|
 		CPU_Athlon|CPU_FPU|CPU_MMX|CPU_SSE|CPU_3DNow|CPU_SMM|CPU_Prot|
 		CPU_Priv;
@@ -2253,7 +2254,7 @@ yasm_x86__parse_cpu(const char *id, unsigned long lindex)
 	}
 	((S L E D G E)? (H A M M E R)) | (O P T E R O N) |
 	(A T H L O N "-"? "64") {
-	    yasm_x86__cpu_enabled =
+	    arch_x86->cpu_enabled =
 		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_K6|
 		CPU_Athlon|CPU_Hammer|CPU_FPU|CPU_MMX|CPU_SSE|CPU_3DNow|
 		CPU_SMM|CPU_Prot|CPU_Priv;
@@ -2263,39 +2264,39 @@ yasm_x86__parse_cpu(const char *id, unsigned long lindex)
 	/* Features have "no" versions to disable them, and only set/reset the
 	 * specific feature being changed.  All other bits are left alone.
 	 */
-	F P U		{ yasm_x86__cpu_enabled |= CPU_FPU; return; }
-	N O F P U	{ yasm_x86__cpu_enabled &= ~CPU_FPU; return; }
-	M M X		{ yasm_x86__cpu_enabled |= CPU_MMX; return; }
-	N O M M X	{ yasm_x86__cpu_enabled &= ~CPU_MMX; return; }
-	S S E		{ yasm_x86__cpu_enabled |= CPU_SSE; return; }
-	N O S S E	{ yasm_x86__cpu_enabled &= ~CPU_SSE; return; }
-	S S E "2"	{ yasm_x86__cpu_enabled |= CPU_SSE2; return; }
-	N O S S E "2"	{ yasm_x86__cpu_enabled &= ~CPU_SSE2; return; }
-	"3" D N O W	{ yasm_x86__cpu_enabled |= CPU_3DNow; return; }
-	N O "3" D N O W	{ yasm_x86__cpu_enabled &= ~CPU_3DNow; return; }
-	C Y R I X	{ yasm_x86__cpu_enabled |= CPU_Cyrix; return; }
-	N O C Y R I X	{ yasm_x86__cpu_enabled &= ~CPU_Cyrix; return; }
-	A M D		{ yasm_x86__cpu_enabled |= CPU_AMD; return; }
-	N O A M D	{ yasm_x86__cpu_enabled &= ~CPU_AMD; return; }
-	S M M		{ yasm_x86__cpu_enabled |= CPU_SMM; return; }
-	N O S M M	{ yasm_x86__cpu_enabled &= ~CPU_SMM; return; }
-	P R O T		{ yasm_x86__cpu_enabled |= CPU_Prot; return; }
-	N O P R O T	{ yasm_x86__cpu_enabled &= ~CPU_Prot; return; }
-	U N D O C	{ yasm_x86__cpu_enabled |= CPU_Undoc; return; }
-	N O U N D O C	{ yasm_x86__cpu_enabled &= ~CPU_Undoc; return; }
-	O B S		{ yasm_x86__cpu_enabled |= CPU_Obs; return; }
-	N O O B S	{ yasm_x86__cpu_enabled &= ~CPU_Obs; return; }
-	P R I V		{ yasm_x86__cpu_enabled |= CPU_Priv; return; }
-	N O P R I V	{ yasm_x86__cpu_enabled &= ~CPU_Priv; return; }
+	F P U		{ arch_x86->cpu_enabled |= CPU_FPU; return; }
+	N O F P U	{ arch_x86->cpu_enabled &= ~CPU_FPU; return; }
+	M M X		{ arch_x86->cpu_enabled |= CPU_MMX; return; }
+	N O M M X	{ arch_x86->cpu_enabled &= ~CPU_MMX; return; }
+	S S E		{ arch_x86->cpu_enabled |= CPU_SSE; return; }
+	N O S S E	{ arch_x86->cpu_enabled &= ~CPU_SSE; return; }
+	S S E "2"	{ arch_x86->cpu_enabled |= CPU_SSE2; return; }
+	N O S S E "2"	{ arch_x86->cpu_enabled &= ~CPU_SSE2; return; }
+	"3" D N O W	{ arch_x86->cpu_enabled |= CPU_3DNow; return; }
+	N O "3" D N O W	{ arch_x86->cpu_enabled &= ~CPU_3DNow; return; }
+	C Y R I X	{ arch_x86->cpu_enabled |= CPU_Cyrix; return; }
+	N O C Y R I X	{ arch_x86->cpu_enabled &= ~CPU_Cyrix; return; }
+	A M D		{ arch_x86->cpu_enabled |= CPU_AMD; return; }
+	N O A M D	{ arch_x86->cpu_enabled &= ~CPU_AMD; return; }
+	S M M		{ arch_x86->cpu_enabled |= CPU_SMM; return; }
+	N O S M M	{ arch_x86->cpu_enabled &= ~CPU_SMM; return; }
+	P R O T		{ arch_x86->cpu_enabled |= CPU_Prot; return; }
+	N O P R O T	{ arch_x86->cpu_enabled &= ~CPU_Prot; return; }
+	U N D O C	{ arch_x86->cpu_enabled |= CPU_Undoc; return; }
+	N O U N D O C	{ arch_x86->cpu_enabled &= ~CPU_Undoc; return; }
+	O B S		{ arch_x86->cpu_enabled |= CPU_Obs; return; }
+	N O O B S	{ arch_x86->cpu_enabled &= ~CPU_Obs; return; }
+	P R I V		{ arch_x86->cpu_enabled |= CPU_Priv; return; }
+	N O P R I V	{ arch_x86->cpu_enabled &= ~CPU_Priv; return; }
 
 	/* catchalls */
 	[\001-\377]+	{
-	    yasm__warning(YASM_WARN_GENERAL, lindex,
+	    yasm__warning(YASM_WARN_GENERAL, line,
 			  N_("unrecognized CPU identifier `%s'"), id);
 	    return;
 	}
 	[\000]		{
-	    yasm__warning(YASM_WARN_GENERAL, lindex,
+	    yasm__warning(YASM_WARN_GENERAL, line,
 			  N_("unrecognized CPU identifier `%s'"), id);
 	    return;
 	}
@@ -2303,9 +2304,10 @@ yasm_x86__parse_cpu(const char *id, unsigned long lindex)
 }
 
 yasm_arch_check_id_retval
-yasm_x86__parse_check_id(unsigned long data[4], const char *id,
-			 unsigned long lindex)
+yasm_x86__parse_check_id(yasm_arch *arch, unsigned long data[4],
+			 const char *id, unsigned long line)
 {
+    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     const char *oid = id;
     /*const char *marker;*/
     /*!re2c
@@ -2339,8 +2341,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_PREFIX;
 	}
 	O "64"	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a prefix in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2350,8 +2352,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	}
 	/* address size overrides */
 	A "16"	{
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex,
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line,
 		    N_("Cannot override address size to 16 bits in 64-bit mode"));
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2365,8 +2367,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_PREFIX;
 	}
 	A "64"	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a prefix in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2409,8 +2411,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 
 	/* control, debug, and test registers */
 	C R [02-48]	{
-	    if (yasm_x86_LTX_mode_bits != 64 && oid[2] == '8') {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64 && oid[2] == '8') {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2436,9 +2438,9 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	X M M [0-9]	{
-	    if (yasm_x86_LTX_mode_bits != 64 &&
+	    if (arch_x86->mode_bits != 64 &&
 		(oid[3] == '8' || oid[3] == '9')) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2446,8 +2448,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	X M M "1" [0-5]	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2457,8 +2459,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 
 	/* integer registers */
 	R A X	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2466,8 +2468,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	R C X	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2475,8 +2477,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	R D X	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2484,8 +2486,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	R B X	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2493,8 +2495,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	R S P	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2502,8 +2504,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	R B P	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2511,8 +2513,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	R S I	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2520,8 +2522,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	R D I	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2529,8 +2531,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	R [8-9]	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2538,8 +2540,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	R "1" [0-5] {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2556,8 +2558,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	E S I	{ data[0] = X86_REG32 | 6; return YASM_ARCH_CHECK_ID_REG; }
 	E D I	{ data[0] = X86_REG32 | 7; return YASM_ARCH_CHECK_ID_REG; }
 	R [8-9]	D {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2565,8 +2567,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	R "1" [0-5] D {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2583,8 +2585,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	S I	{ data[0] = X86_REG16 | 6; return YASM_ARCH_CHECK_ID_REG; }
 	D I	{ data[0] = X86_REG16 | 7; return YASM_ARCH_CHECK_ID_REG; }
 	R [8-9]	W {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2592,8 +2594,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	R "1" [0-5] W {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2610,8 +2612,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	D H	{ data[0] = X86_REG8 | 6; return YASM_ARCH_CHECK_ID_REG; }
 	B H	{ data[0] = X86_REG8 | 7; return YASM_ARCH_CHECK_ID_REG; }
 	S P L	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2619,8 +2621,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	B P L	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2628,8 +2630,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	S I L	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2637,8 +2639,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	D I L	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2646,8 +2648,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	R [8-9]	B {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2655,8 +2657,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	    return YASM_ARCH_CHECK_ID_REG;
 	}
 	R "1" [0-5] B {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2666,23 +2668,23 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 
 	/* segment registers */
 	E S	{
-	    if (yasm_x86_LTX_mode_bits == 64)
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits == 64)
+		yasm__warning(YASM_WARN_GENERAL, line,
 		    N_("`%s' segment register ignored in 64-bit mode"), oid);
 	    data[0] = 0x2600;
 	    return YASM_ARCH_CHECK_ID_SEGREG;
 	}
 	C S	{ data[0] = 0x2e01; return YASM_ARCH_CHECK_ID_SEGREG; }
 	S S	{
-	    if (yasm_x86_LTX_mode_bits == 64)
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits == 64)
+		yasm__warning(YASM_WARN_GENERAL, line,
 		    N_("`%s' segment register ignored in 64-bit mode"), oid);
 	    data[0] = 0x3602;
 	    return YASM_ARCH_CHECK_ID_SEGREG;
 	}
 	D S	{
-	    if (yasm_x86_LTX_mode_bits == 64)
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits == 64)
+		yasm__warning(YASM_WARN_GENERAL, line,
 		    N_("`%s' segment register ignored in 64-bit mode"), oid);
 	    data[0] = 0x3e03;
 	    return YASM_ARCH_CHECK_ID_SEGREG;
@@ -2692,8 +2694,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 
 	/* RIP for 64-bit mode IP-relative offsets */
 	R I P	{
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a register in 64-bit mode"), oid);
 		return YASM_ARCH_CHECK_ID_NONE;
 	    }
@@ -2708,8 +2710,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	/* Move with sign/zero extend */
 	M O V S X { RET_INSN(movszx, 0xBE, CPU_386); }
 	M O V S X D {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is an instruction in 64-bit mode"),
 			      oid);
 		return YASM_ARCH_CHECK_ID_NONE;
@@ -2720,22 +2722,22 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	/* Push instructions */
 	P U S H { RET_INSN(push, 0, CPU_Any); }
 	P U S H A {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(onebyte, 0x0060, CPU_186);
 	}
 	P U S H A D {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(onebyte, 0x2060, CPU_386);
 	}
 	P U S H A W {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(onebyte, 0x1060, CPU_186);
@@ -2743,22 +2745,22 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	/* Pop instructions */
 	P O P { RET_INSN(pop, 0, CPU_Any); }
 	P O P A {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(onebyte, 0x0061, CPU_186);
 	}
 	P O P A D {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(onebyte, 0x2061, CPU_386);
 	}
 	P O P A W {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(onebyte, 0x1061, CPU_186);
@@ -2772,15 +2774,15 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	L E A { RET_INSN(lea, 0, CPU_Any); }
 	/* Load segment registers from memory */
 	L D S {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(ldes, 0xC5, CPU_Any);
 	}
 	L E S {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(ldes, 0xC4, CPU_Any);
@@ -2795,15 +2797,15 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	C L T S { RET_INSN(twobyte, 0x0F06, CPU_286|CPU_Priv); }
 	C M C { RET_INSN(onebyte, 0x00F5, CPU_Any); }
 	L A H F {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
  	    RET_INSN(onebyte, 0x009F, CPU_Any);
 	}
 	S A H F {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(onebyte, 0x009E, CPU_Any);
@@ -2812,8 +2814,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	P U S H F D { RET_INSN(onebyte, 0x209C, CPU_386); }
 	P U S H F W { RET_INSN(onebyte, 0x109C, CPU_Any); }
 	P U S H F Q {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is an instruction in 64-bit mode"),
 			      oid);
 		return YASM_ARCH_CHECK_ID_NONE;
@@ -2822,16 +2824,16 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	}
 	P O P F { RET_INSN(onebyte, 0x40009D, CPU_Any); }
 	P O P F D {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(onebyte, 0x00209D, CPU_386);
 	}
 	P O P F W { RET_INSN(onebyte, 0x40109D, CPU_Any); }
 	P O P F Q {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is an instruction in 64-bit mode"),
 			      oid);
 		return YASM_ARCH_CHECK_ID_NONE;
@@ -2856,43 +2858,43 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	N E G { RET_INSN(f6, 0x03, CPU_Any); }
 	N O T { RET_INSN(f6, 0x02, CPU_Any); }
 	A A A {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(onebyte, 0x0037, CPU_Any);
 	}
 	A A S {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(onebyte, 0x003F, CPU_Any);
 	}
 	D A A {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(onebyte, 0x0027, CPU_Any);
 	}
 	D A S {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(onebyte, 0x002F, CPU_Any);
 	}
 	A A D {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(aadm, 0x01, CPU_Any);
 	}
 	A A M {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(aadm, 0x00, CPU_Any);
@@ -2901,8 +2903,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	C B W { RET_INSN(onebyte, 0x1098, CPU_Any); }
 	C W D E { RET_INSN(onebyte, 0x2098, CPU_386); }
 	C D Q E {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is an instruction in 64-bit mode"),
 			      oid);
 		return YASM_ARCH_CHECK_ID_NONE;
@@ -2912,8 +2914,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	C W D { RET_INSN(onebyte, 0x1099, CPU_Any); }
 	C D Q { RET_INSN(onebyte, 0x2099, CPU_386); }
 	C D O {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is an instruction in 64-bit mode"),
 			      oid);
 		return YASM_ARCH_CHECK_ID_NONE;
@@ -2978,8 +2980,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	J C X Z { RET_INSN(jcxz, 16, CPU_Any); }
 	J E C X Z { RET_INSN(jcxz, 32, CPU_386); }
 	J R C X Z {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is an instruction in 64-bit mode"),
 			      oid);
 		return YASM_ARCH_CHECK_ID_NONE;
@@ -3028,8 +3030,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	C M P S W { RET_INSN(onebyte, 0x10A7, CPU_Any); }
 	C M P S D { RET_INSN(cmpsd, 0, CPU_Any); }
 	C M P S Q {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is an instruction in 64-bit mode"),
 			      oid);
 		return YASM_ARCH_CHECK_ID_NONE;
@@ -3046,8 +3048,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	L O D S W { RET_INSN(onebyte, 0x10AD, CPU_Any); }
 	L O D S D { RET_INSN(onebyte, 0x20AD, CPU_386); }
 	L O D S Q {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is an instruction in 64-bit mode"),
 			      oid);
 		return YASM_ARCH_CHECK_ID_NONE;
@@ -3058,8 +3060,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	M O V S W { RET_INSN(onebyte, 0x10A5, CPU_Any); }
 	M O V S D { RET_INSN(movsd, 0, CPU_Any); }
 	M O V S Q {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is an instruction in 64-bit mode"),
 			      oid);
 		return YASM_ARCH_CHECK_ID_NONE;
@@ -3070,8 +3072,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	S C A S W { RET_INSN(onebyte, 0x10AF, CPU_Any); }
 	S C A S D { RET_INSN(onebyte, 0x20AF, CPU_386); }
 	S C A S Q {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is an instruction in 64-bit mode"),
 			      oid);
 		return YASM_ARCH_CHECK_ID_NONE;
@@ -3082,8 +3084,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	S T O S W { RET_INSN(onebyte, 0x10AB, CPU_Any); }
 	S T O S D { RET_INSN(onebyte, 0x20AB, CPU_386); }
 	S T O S Q {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is an instruction in 64-bit mode"),
 			      oid);
 		return YASM_ARCH_CHECK_ID_NONE;
@@ -3103,8 +3105,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	I N T "3" { RET_INSN(onebyte, 0x00CC, CPU_Any); }
 	I N T "03" { RET_INSN(onebyte, 0x00CC, CPU_Any); }
 	I N T O {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(onebyte, 0x00CE, CPU_Any);
@@ -3113,8 +3115,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	I R E T W { RET_INSN(onebyte, 0x10CF, CPU_Any); }
 	I R E T D { RET_INSN(onebyte, 0x20CF, CPU_386); }
 	I R E T Q {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is an instruction in 64-bit mode"),
 			      oid);
 		return YASM_ARCH_CHECK_ID_NONE;
@@ -3123,8 +3125,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	}
 	R S M { RET_INSN(twobyte, 0x0FAA, CPU_586|CPU_SMM); }
 	B O U N D {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(bound, 0, CPU_186);
@@ -3133,8 +3135,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	N O P { RET_INSN(onebyte, 0x0090, CPU_Any); }
 	/* Protection control */
 	A R P L {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(arpl, 0, CPU_286|CPU_Prot);
@@ -3254,15 +3256,15 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	C M P X C H G "8" B { RET_INSN(cmpxchg8b, 0, CPU_586); }
 	/* Pentium II/Pentium Pro extensions */
 	S Y S E N T E R {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(twobyte, 0x0F34, CPU_686);
 	}
 	S Y S E X I T {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(twobyte, 0x0F35, CPU_686|CPU_Priv);
@@ -3564,8 +3566,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	S Y S R E T { RET_INSN(twobyte, 0x0F07, CPU_686|CPU_AMD|CPU_Priv); }
 	/* AMD x86-64 extensions */
 	S W A P G S {
-	    if (yasm_x86_LTX_mode_bits != 64) {
-		yasm__warning(YASM_WARN_GENERAL, lindex,
+	    if (arch_x86->mode_bits != 64) {
+		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is an instruction in 64-bit mode"),
 			      oid);
 		return YASM_ARCH_CHECK_ID_NONE;
@@ -3602,8 +3604,8 @@ yasm_x86__parse_check_id(unsigned long data[4], const char *id,
 	L O A D A L L { RET_INSN(twobyte, 0x0F07, CPU_386|CPU_Undoc); }
 	L O A D A L L "286" { RET_INSN(twobyte, 0x0F05, CPU_286|CPU_Undoc); }
 	S A L C {
-	    if (yasm_x86_LTX_mode_bits == 64) {
-		yasm__error(lindex, N_("`%s' invalid in 64-bit mode"), oid);
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line, N_("`%s' invalid in 64-bit mode"), oid);
 		RET_INSN(not64, 0, CPU_Not64);
 	    }
 	    RET_INSN(onebyte, 0x00D6, CPU_Undoc);

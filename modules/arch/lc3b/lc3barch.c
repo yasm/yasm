@@ -33,55 +33,77 @@
 #include "lc3barch.h"
 
 
-static int
-lc3b_initialize(/*@unused@*/ const char *machine)
+yasm_arch_module yasm_lc3b_LTX_arch;
+
+
+static /*@only@*/ yasm_arch *
+lc3b_create(const char *machine)
 {
+    yasm_arch *arch;
+
     if (yasm__strcasecmp(machine, "lc3b") != 0)
-	return 1;
-    return 0;
+	return NULL;
+
+    arch = yasm_xmalloc(sizeof(yasm_arch));
+    arch->module = &yasm_lc3b_LTX_arch;
+    return arch;
 }
 
 static void
-lc3b_cleanup(void)
+lc3b_destroy(/*@only@*/ yasm_arch *arch)
 {
+    yasm_xfree(arch);
 }
 
-int
-yasm_lc3b__parse_directive(/*@unused@*/ const char *name,
-			   /*@unused@*/ yasm_valparamhead *valparams,
-			   /*@unused@*/ /*@null@*/
-			   yasm_valparamhead *objext_valparams,
-			   /*@unused@*/ yasm_sectionhead *headp,
-			   /*@unused@*/ unsigned long lindex)
+static const char *
+lc3b_get_machine(/*@unused@*/ const yasm_arch *arch)
+{
+    return "lc3b";
+}
+
+static int
+lc3b_set_var(yasm_arch *arch, const char *var, unsigned long val)
 {
     return 1;
 }
 
-unsigned int
-yasm_lc3b__get_reg_size(unsigned long reg)
+static int
+lc3b_parse_directive(/*@unused@*/ yasm_arch *arch,
+		     /*@unused@*/ const char *name,
+		     /*@unused@*/ yasm_valparamhead *valparams,
+		     /*@unused@*/ /*@null@*/
+		     yasm_valparamhead *objext_valparams,
+		     /*@unused@*/ yasm_object *object,
+		     /*@unused@*/ unsigned long line)
+{
+    return 1;
+}
+
+static unsigned int
+lc3b_get_reg_size(/*@unused@*/ yasm_arch *arch, /*@unused@*/ unsigned long reg)
 {
     return 2;
 }
 
-void
-yasm_lc3b__reg_print(FILE *f, unsigned long reg)
+static void
+lc3b_reg_print(/*@unused@*/ yasm_arch *arch, unsigned long reg, FILE *f)
 {
     fprintf(f, "r%u", (unsigned int)(reg&7));
 }
 
 static int
-yasm_lc3b__floatnum_tobytes(const yasm_floatnum *flt, unsigned char *buf,
-			    size_t destsize, size_t valsize, size_t shift,
-			    int warn, unsigned long lindex)
+lc3b_floatnum_tobytes(yasm_arch *arch, const yasm_floatnum *flt,
+		      unsigned char *buf, size_t destsize, size_t valsize,
+		      size_t shift, int warn, unsigned long line)
 {
-    yasm__error(lindex, N_("LC-3b does not support floating point"));
+    yasm__error(line, N_("LC-3b does not support floating point"));
     return 1;
 }
 
 static yasm_effaddr *
-yasm_lc3b__ea_new_expr(yasm_expr *e)
+lc3b_ea_create_expr(yasm_arch *arch, yasm_expr *e)
 {
-    yasm_expr_delete(e);
+    yasm_expr_destroy(e);
     return NULL;
 }
 
@@ -92,32 +114,27 @@ static yasm_arch_machine lc3b_machines[] = {
 };
 
 /* Define arch structure -- see arch.h for details */
-yasm_arch yasm_lc3b_LTX_arch = {
+yasm_arch_module yasm_lc3b_LTX_arch = {
     YASM_ARCH_VERSION,
     "LC-3b",
     "lc3b",
-    lc3b_initialize,
-    lc3b_cleanup,
+    lc3b_create,
+    lc3b_destroy,
+    lc3b_get_machine,
+    lc3b_set_var,
     yasm_lc3b__parse_cpu,
     yasm_lc3b__parse_check_id,
-    yasm_lc3b__parse_directive,
+    lc3b_parse_directive,
     yasm_lc3b__parse_insn,
     NULL,	/*yasm_lc3b__parse_prefix*/
     NULL,	/*yasm_lc3b__parse_seg_prefix*/
     NULL,	/*yasm_lc3b__parse_seg_override*/
-    LC3B_BYTECODE_TYPE_MAX,
-    yasm_lc3b__bc_delete,
-    yasm_lc3b__bc_print,
-    yasm_lc3b__bc_resolve,
-    yasm_lc3b__bc_tobytes,
-    yasm_lc3b__floatnum_tobytes,
+    lc3b_floatnum_tobytes,
     yasm_lc3b__intnum_tobytes,
-    yasm_lc3b__get_reg_size,
-    yasm_lc3b__reg_print,
+    lc3b_get_reg_size,
+    lc3b_reg_print,
     NULL,	/*yasm_lc3b__segreg_print*/
-    yasm_lc3b__ea_new_expr,
-    NULL,	/*yasm_lc3b__ea_data_delete*/
-    NULL,	/*yasm_lc3b__ea_data_print*/
+    lc3b_ea_create_expr,
     lc3b_machines,
     "lc3b",
     2

@@ -45,29 +45,30 @@ static int basic_optimize_section_1(yasm_section *sect,
 				    /*@unused@*/ /*@null@*/ void *d);
 
 static /*@null@*/ yasm_intnum *
-basic_optimize_calc_bc_dist_1(yasm_section *sect,
-			      /*@null@*/ yasm_bytecode *precbc1,
-			      /*@null@*/ yasm_bytecode *precbc2)
+basic_optimize_calc_bc_dist_1(yasm_bytecode *precbc1, yasm_bytecode *precbc2)
 {
     unsigned int dist;
     yasm_intnum *intn;
 
-    if (yasm_section_get_opt_flags(sect) == SECTFLAG_NONE) {
+    if (precbc1->section != precbc2->section)
+	yasm_internal_error(N_("Trying to calc_bc_dist between sections"));
+
+    if (yasm_section_get_opt_flags(precbc1->section) == SECTFLAG_NONE) {
 	/* Section not started.  Optimize it (recursively). */
-	basic_optimize_section_1(sect, NULL);
+	basic_optimize_section_1(precbc1->section, NULL);
     }
 
     /* If a section is done, the following will always succeed.  If it's in-
      * progress, this will fail if the bytecode comes AFTER the current one.
      */
-    if (precbc2) {
+    if (precbc2 != yasm_section_bcs_first(precbc2->section)) {
 	if (precbc2->opt_flags == BCFLAG_DONE) {
 	    dist = precbc2->offset + precbc2->len;
-	    if (precbc1) {
+	    if (precbc1 != yasm_section_bcs_first(precbc1->section)) {
 		if (precbc1->opt_flags == BCFLAG_DONE) {
 		    if (dist < precbc1->offset + precbc1->len) {
-			intn = yasm_intnum_new_uint(precbc1->offset +
-						    precbc1->len - dist);
+			intn = yasm_intnum_create_uint(precbc1->offset +
+						       precbc1->len - dist);
 			yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL,
 					 precbc1->line);
 			return intn;
@@ -77,28 +78,27 @@ basic_optimize_calc_bc_dist_1(yasm_section *sect,
 		    return NULL;
 		}
 	    }
-	    return yasm_intnum_new_uint(dist);
+	    return yasm_intnum_create_uint(dist);
 	} else {
 	    return NULL;
 	}
     } else {
-	if (precbc1) {
+	if (precbc1 != yasm_section_bcs_first(precbc1->section)) {
 	    if (precbc1->opt_flags == BCFLAG_DONE) {
-		intn = yasm_intnum_new_uint(precbc1->offset + precbc1->len);
+		intn = yasm_intnum_create_uint(precbc1->offset + precbc1->len);
 		yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL, precbc1->line);
 		return intn;
 	    } else {
 		return NULL;
 	    }
 	} else {
-	    return yasm_intnum_new_uint(0);
+	    return yasm_intnum_create_uint(0);
 	}
     }
 }
 
 typedef struct basic_optimize_data {
     /*@observer@*/ yasm_bytecode *precbc;
-    /*@observer@*/ const yasm_section *sect;
     int saw_unknown;
 } basic_optimize_data;
 
@@ -116,18 +116,14 @@ basic_optimize_bytecode_1(/*@observer@*/ yasm_bytecode *bc, void *d)
 
     bc->opt_flags = BCFLAG_INPROGRESS;
 
-    if (!data->precbc)
-	bc->offset = 0;
-    else
-	bc->offset = data->precbc->offset + data->precbc->len;
+    bc->offset = data->precbc->offset + data->precbc->len;
     data->precbc = bc;
 
     /* We're doing just a single pass, so essentially ignore whether the size
      * is minimum or not, and just check for indeterminate length (indicative
      * of circular reference).
      */
-    bcr_retval = yasm_bc_resolve(bc, 0, data->sect,
-				 basic_optimize_calc_bc_dist_1);
+    bcr_retval = yasm_bc_resolve(bc, 0, basic_optimize_calc_bc_dist_1);
     if (bcr_retval & YASM_BC_RESOLVE_UNKNOWN_LEN) {
 	if (!(bcr_retval & YASM_BC_RESOLVE_ERROR))
 	    yasm__error(bc->line, N_("circular reference detected."));
@@ -148,8 +144,7 @@ basic_optimize_section_1(yasm_section *sect, /*@null@*/ void *d)
     unsigned long flags;
     int retval;
 
-    data.precbc = NULL;
-    data.sect = sect;
+    data.precbc = yasm_section_bcs_first(sect);
     data.saw_unknown = 0;
 
     /* Don't even bother if we're in-progress or done. */
@@ -161,8 +156,7 @@ basic_optimize_section_1(yasm_section *sect, /*@null@*/ void *d)
 
     yasm_section_set_opt_flags(sect, SECTFLAG_INPROGRESS);
 
-    retval = yasm_bcs_traverse(yasm_section_get_bytecodes(sect), &data,
-			       basic_optimize_bytecode_1);
+    retval = yasm_section_bcs_traverse(sect, &data, basic_optimize_bytecode_1);
     if (retval != 0)
 	return retval;
 
@@ -184,13 +178,10 @@ basic_optimize_bytecode_2(/*@observer@*/ yasm_bytecode *bc, /*@null@*/ void *d)
     if (bc->opt_flags != BCFLAG_DONE)
 	yasm_internal_error(N_("Optimizer pass 1 missed a bytecode!"));
 
-    if (!data->precbc)
-	bc->offset = 0;
-    else
-	bc->offset = data->precbc->offset + data->precbc->len;
+    bc->offset = data->precbc->offset + data->precbc->len;
     data->precbc = bc;
 
-    if (yasm_bc_resolve(bc, 1, data->sect, yasm_common_calc_bc_dist) < 0)
+    if (yasm_bc_resolve(bc, 1, yasm_common_calc_bc_dist) < 0)
 	return -1;
     return 0;
 }
@@ -200,18 +191,16 @@ basic_optimize_section_2(yasm_section *sect, /*@unused@*/ /*@null@*/ void *d)
 {
     basic_optimize_data data;
 
-    data.precbc = NULL;
-    data.sect = sect;
+    data.precbc = yasm_section_bcs_first(sect);
 
     if (yasm_section_get_opt_flags(sect) != SECTFLAG_DONE)
 	yasm_internal_error(N_("Optimizer pass 1 missed a section!"));
 
-    return yasm_bcs_traverse(yasm_section_get_bytecodes(sect), &data,
-			     basic_optimize_bytecode_2);
+    return yasm_section_bcs_traverse(sect, &data, basic_optimize_bytecode_2);
 }
 
 static void
-basic_optimize(yasm_sectionhead *sections)
+basic_optimize(yasm_object *object)
 {
     int saw_unknown = 0;
 
@@ -227,13 +216,13 @@ basic_optimize(yasm_sectionhead *sections)
      *   - not strictly top->bottom scanning; we scan through a section and
      *     hop to other sections as necessary.
      */
-    if (yasm_sections_traverse(sections, &saw_unknown,
-			       basic_optimize_section_1) < 0 ||
+    if (yasm_object_sections_traverse(object, &saw_unknown,
+				      basic_optimize_section_1) < 0 ||
 	saw_unknown != 0)
 	return;
 
     /* Check completion of all sections and save bytecode changes */
-    yasm_sections_traverse(sections, NULL, basic_optimize_section_2);
+    yasm_object_sections_traverse(object, NULL, basic_optimize_section_2);
 }
 
 /* Define optimizer structure -- see optimizer.h for details */

@@ -33,51 +33,59 @@
 #include "nasm-parser.h"
 
 
-FILE *nasm_parser_in = NULL;
-size_t (*nasm_parser_input) (char *buf, size_t max_size);
-
-/*@only@*/ yasm_sectionhead *nasm_parser_sections;
-/*@dependent@*/ yasm_section *nasm_parser_cur_section;
-
-/* last "base" label for local (.) labels */
-char *nasm_parser_locallabel_base = (char *)NULL;
-size_t nasm_parser_locallabel_base_len = 0;
-
-/*@dependent@*/ yasm_arch *nasm_parser_arch;
-/*@dependent@*/ yasm_objfmt *nasm_parser_objfmt;
-/*@dependent@*/ yasm_linemgr *nasm_parser_linemgr;
-
-int nasm_parser_save_input;
-
-static /*@only@*/ yasm_sectionhead *
-nasm_parser_do_parse(yasm_preproc *pp, yasm_arch *a, yasm_objfmt *of,
-		     yasm_linemgr *lm, FILE *f, const char *in_filename,
-		     int save_input)
-    /*@globals killed nasm_parser_locallabel_base @*/
+static void
+nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
+		     yasm_objfmt *of, FILE *f, const char *in_filename,
+		     int save_input, yasm_section *def_sect)
 {
-    pp->initialize(f, in_filename, lm);
-    nasm_parser_in = f;
-    nasm_parser_input = pp->input;
-    nasm_parser_arch = a;
-    nasm_parser_objfmt = of;
-    nasm_parser_linemgr = lm;
-    nasm_parser_save_input = save_input;
+    yasm_parser_nasm parser_nasm;
 
-    /* Initialize section list */
-    nasm_parser_sections = yasm_sections_new(&nasm_parser_cur_section, of);
+    parser_nasm.object = object;
+    parser_nasm.linemap = yasm_object_get_linemap(parser_nasm.object);
+    parser_nasm.symtab = yasm_object_get_symtab(parser_nasm.object);
+
+    yasm_linemap_set(parser_nasm.linemap, in_filename, 1, 1);
+
+    pp->initialize(f, in_filename, parser_nasm.linemap);
+    parser_nasm.in = f;
+    parser_nasm.input = pp->input;
+
+    parser_nasm.locallabel_base = (char *)NULL;
+    parser_nasm.locallabel_base_len = 0;
+
+    parser_nasm.arch = a;
+    parser_nasm.objfmt = of;
+
+    parser_nasm.cur_section = def_sect;
+    parser_nasm.prev_bc = yasm_section_bcs_first(def_sect);
+
+    parser_nasm.save_input = save_input;
+
+    /* initialize scanner structure */
+    parser_nasm.s.bot = NULL;
+    parser_nasm.s.tok = NULL;
+    parser_nasm.s.ptr = NULL;
+    parser_nasm.s.cur = NULL;
+    parser_nasm.s.pos = NULL;
+    parser_nasm.s.lim = NULL;
+    parser_nasm.s.top = NULL;
+    parser_nasm.s.eof = NULL;
+    parser_nasm.s.tchar = 0;
+    parser_nasm.s.tline = 0;
+    parser_nasm.s.cline = 1;
+
+    parser_nasm.state = INITIAL;
 
     /* yacc debugging, needs YYDEBUG set in bison.y.in to work */
     /* nasm_parser_debug = 1; */
 
-    nasm_parser_parse();
+    nasm_parser_parse(&parser_nasm);
 
-    nasm_parser_cleanup();
+    nasm_parser_cleanup(&parser_nasm);
 
     /* Free locallabel base if necessary */
-    if (nasm_parser_locallabel_base)
-	yasm_xfree(nasm_parser_locallabel_base);
-
-    return nasm_parser_sections;
+    if (parser_nasm.locallabel_base)
+	yasm_xfree(parser_nasm.locallabel_base);
 }
 
 /* Define valid preprocessors to use with this parser */
@@ -88,7 +96,7 @@ static const char *nasm_parser_preproc_keywords[] = {
 };
 
 /* Define parser structure -- see parser.h for details */
-yasm_parser yasm_nasm_LTX_parser = {
+yasm_parser_module yasm_nasm_LTX_parser = {
     YASM_PARSER_VERSION,
     "NASM-compatible parser",
     "nasm",

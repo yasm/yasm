@@ -33,12 +33,12 @@
 
 static int is_interactive;
 static FILE *in;
-static yasm_linemgr *cur_lm;
+static yasm_linemap *cur_lm;
 
 int isatty(int);
 
 static void
-raw_preproc_initialize(FILE *f, const char *in_filename, yasm_linemgr *lm)
+raw_preproc_initialize(FILE *f, const char *in_filename, yasm_linemap *lm)
 {
     in = f;
     cur_lm = lm;
@@ -64,10 +64,11 @@ raw_preproc_input(char *buf, size_t max_size)
 	if (c == '\n')
 	    buf[n++] = (char)c;
 	if (c == EOF && ferror(in))
-	    yasm__error(cur_lm->get_current(),
+	    yasm__error(yasm_linemap_get_current(cur_lm),
 			N_("error when reading from file"));
     } else if (((n = fread(buf, 1, max_size, in)) == 0) && ferror(in))
-	yasm__error(cur_lm->get_current(), N_("error when reading from file"));
+	yasm__error(yasm_linemap_get_current(cur_lm),
+		    N_("error when reading from file"));
 
     return n;
 }

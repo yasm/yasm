@@ -26,7 +26,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath: yasm/libyasm/valparam.c,v 1.13 2003/03/16 23:53:31 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "coretype.h"
 #include "valparam.h"
@@ -35,7 +35,7 @@
 
 
 yasm_valparam *
-yasm_vp_new(/*@keep@*/ char *v, /*@keep@*/ yasm_expr *p)
+yasm_vp_create(/*@keep@*/ char *v, /*@keep@*/ yasm_expr *p)
 {
     yasm_valparam *r = yasm_xmalloc(sizeof(yasm_valparam));
     r->val = v;
@@ -54,7 +54,7 @@ yasm_vps_delete(yasm_valparamhead *headp)
 	if (cur->val)
 	    yasm_xfree(cur->val);
 	if (cur->param)
-	    yasm_expr_delete(cur->param);
+	    yasm_expr_destroy(cur->param);
 	yasm_xfree(cur);
 	cur = next;
     }
@@ -62,7 +62,7 @@ yasm_vps_delete(yasm_valparamhead *headp)
 }
 
 void
-yasm_vps_print(FILE *f, const yasm_valparamhead *headp)
+yasm_vps_print(const yasm_valparamhead *headp, FILE *f)
 {
     const yasm_valparam *vp;
 
@@ -77,7 +77,7 @@ yasm_vps_print(FILE *f, const yasm_valparamhead *headp)
 	else
 	    fprintf(f, "((nil),");
 	if (vp->param)
-	    yasm_expr_print(f, vp->param);
+	    yasm_expr_print(vp->param, f);
 	else
 	    fprintf(f, "(nil)");
 	fprintf(f, ")");
@@ -86,12 +86,19 @@ yasm_vps_print(FILE *f, const yasm_valparamhead *headp)
     }
 }
 
-/* Non-macro yasm_vps_initialize() for non-YASM_LIB_INTERNAL users. */
-#undef yasm_vps_initialize
-void
-yasm_vps_initialize(/*@out@*/ yasm_valparamhead *headp)
+yasm_valparamhead *
+yasm_vps_create(void)
 {
-    STAILQ_INIT(headp);
+    yasm_valparamhead *headp = yasm_xmalloc(sizeof(yasm_valparamhead));
+    yasm_vps_initialize(headp);
+    return headp;
+}
+
+void
+yasm_vps_destroy(yasm_valparamhead *headp)
+{
+    yasm_vps_delete(headp);
+    yasm_xfree(headp);
 }
 
 /* Non-macro yasm_vps_append() for non-YASM_LIB_INTERNAL users. */

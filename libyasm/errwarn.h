@@ -77,50 +77,50 @@ extern /*@exits@*/ void (*yasm_fatal) (const char *message, ...);
 
 /** Log an error.  va_list version of yasm__error().
  * \internal
- * \param lindex    line index
+ * \param line      virtual line
  * \param message   printf-like-format message
  * \param va	    argument list for message
  */
-void yasm__error_va(unsigned long lindex, const char *message, va_list va);
+void yasm__error_va(unsigned long line, const char *message, va_list va);
 
 /** Log a warning.  va_list version of yasm__warning().
  * \internal
  * \param wclass    warning class
- * \param lindex    line index
+ * \param line      virtual line
  * \param message   printf-like-format message
  * \param va	    argument list for message
  */
-void yasm__warning_va(yasm_warn_class wclass, unsigned long lindex,
+void yasm__warning_va(yasm_warn_class wclass, unsigned long line,
 		      const char *message, va_list va);
 
 /** Log an error.  Does not print it out immediately; yasm_errwarn_output_all()
  * outputs errors and warnings.
  * \internal
- * \param lindex    line index
+ * \param line      virtual line
  * \param message   printf-like-format message
  * \param ...	    argument list for message
  */
-void yasm__error(unsigned long lindex, const char *message, ...)
+void yasm__error(unsigned long line, const char *message, ...)
     /*@printflike@*/;
 
 /** Log a warning.  Does not print it out immediately;
  * yasm_errwarn_output_all() outputs errors and warnings.
  * \internal
  * \param wclass    warning class
- * \param lindex    line index
+ * \param line      virtual line
  * \param message   printf-like-format message
  * \param ...	    argument list for message
  */
-void yasm__warning(yasm_warn_class wclass, unsigned long lindex,
+void yasm__warning(yasm_warn_class wclass, unsigned long line,
 		   const char *message, ...) /*@printflike@*/;
 
 /** Log a parser error.  Parser errors can be overwritten by non-parser errors
  * on the same line.
  * \internal
- * \param lindex    line index
+ * \param line      virtual line
  * \param message   parser error message
  */
-void yasm__parser_error(unsigned long lindex, const char *message);
+void yasm__parser_error(unsigned long line, const char *message);
 
 /** Enable a class of warnings.
  * \param wclass    warning class
@@ -158,13 +158,13 @@ typedef void (*yasm_print_warning_func)
     (const char *fn, unsigned long line, const char *msg);
 
 /** Outputs all errors and warnings.
- * \param lm	line manager (to convert line indexes into filename/line pairs)
+ * \param lm	line map (to convert virtual lines into filename/line pairs)
  * \param warning_as_error  if nonzero, treat warnings as errors
  * \param print_error	    function called to print out errors
  * \param print_warning	    function called to print out warnings
  */
 void yasm_errwarn_output_all
-    (yasm_linemgr *lm, int warning_as_error, yasm_print_error_func print_error,
+    (yasm_linemap *lm, int warning_as_error, yasm_print_error_func print_error,
      yasm_print_warning_func print_warning);
 
 /** Convert a possibly unprintable character into a printable string.

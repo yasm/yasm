@@ -1,5 +1,5 @@
 /* $IdPath$
- * YASM line manager (for parse stage) header file
+ * YASM virtual line mapping management functions
  *
  *  Copyright (C) 2002  Peter Johnson
  *
@@ -27,58 +27,52 @@
 #ifndef YASM_LINEMGR_H
 #define YASM_LINEMGR_H
 
-/* Standard data types appropriate for use with add_assoc_data(). */
-typedef enum yasm_linemgr_std_type {
-    /* Source line, a 0-terminated, allocated string. */
-    YASM_LINEMGR_STD_TYPE_SOURCE = 1,   
-    /* User-defined types start here.  Use odd numbers (low bit set) for types
-     * very likely to have data associated for every line.
-     */
-    YASM_LINEMGR_STD_TYPE_USER = 4
-} yasm_linemgr_std_type;
+/* Create a new line mapping repository. */
+yasm_linemap *yasm_linemap_create(void);
 
-struct yasm_linemgr {
-    /* Initialize cur_lindex and any manager internal data structures. */
-    void (*initialize) (void);
+/* Cleans up any memory allocated. */
+void yasm_linemap_destroy(yasm_linemap *linemap);
 
-    /* Cleans up any memory allocated. */
-    void (*cleanup) (void);
+/* Returns the current line index. */
+unsigned long yasm_linemap_get_current(yasm_linemap *linemap);
 
-    /* Returns the current line index. */
-    unsigned long (*get_current) (void);
+/** Get associated data for a virtual line and data callback.
+ * \param linemap   linemap
+ * \param line	    virtual line
+ * \param callback  callback used when adding data
+ * \return Associated data (NULL if none).
+ */
+/*@dependent@*/ /*@null@*/ void *yasm_linemap_get_data
+    (yasm_linemap *linemap, unsigned long line,
+     const yasm_assoc_data_callback *callback);
 
-    /* Associates data with the current line index.
-     * Deletes old data associated with type if present.
-     * The function delete_func is used to delete the data (if non-NULL).
-     * All data of a particular type needs to have the exact same deletion
-     * function specified to this function on every call.
-     */
-    void (*add_assoc_data) (int type, /*@only@*/ void *data,
-			    /*@null@*/ void (*delete_func) (void *));
+/** Add associated data to the current virtual line.
+ * \attention Deletes any existing associated data for that data callback for
+ *	      the current virtual line.
+ * \param linemap	linemap
+ * \param callback	callback
+ * \param data		data to associate
+ * \param every_hint	non-zero if data is likely to be associated with every
+ *			line; zero if not.
+ */
+void yasm_linemap_add_data(yasm_linemap *linemap,
+			   const yasm_assoc_data_callback *callback,
+			   /*@only@*/ /*@null@*/ void *data, int every_hint);
 
-    /* Goes to the next line (increments the current line index), returns
-     * the current (new) line index.
-     */
-    unsigned long (*goto_next) (void);
+/* Goes to the next line (increments the current virtual line), returns
+ * the current (new) virtual line.
+ */
+unsigned long yasm_linemap_goto_next(yasm_linemap *linemap);
 
-    /* Sets a new file/line association starting point at the current line
-     * index.  line_inc indicates how much the "real" line is incremented by
-     * for each line index increment (0 is perfectly legal).
-     */
-    void (*set) (const char *filename, unsigned long line,
-		 unsigned long line_inc);
+/* Sets a new file/line physical association starting point at the current
+ * virtual line.  line_inc indicates how much the "real" line is incremented
+ * by for each virtual line increment (0 is perfectly legal).
+ */
+void yasm_linemap_set(yasm_linemap *linemap, const char *filename,
+		      unsigned long file_line, unsigned long line_inc);
 
-    /* Look up the associated actual file and line for a line index. */
-    void (*lookup) (unsigned long lindex, /*@out@*/ const char **filename,
-		    /*@out@*/ unsigned long *line);
-
-    /* Returns data associated with line index and type.
-     * Returns NULL if no data of that type was associated with that line.
-     */
-    /*@dependent@*/ /*@null@*/ void * (*lookup_data) (unsigned long lindex,
-						      int type);
-};
-
-extern yasm_linemgr yasm_std_linemgr;
-
+/* Look up the associated physical file and line for a virtual line. */
+void yasm_linemap_lookup(yasm_linemap *linemap, unsigned long line,
+			 /*@out@*/ const char **filename,
+			 /*@out@*/ unsigned long *file_line);
 #endif

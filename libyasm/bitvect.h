@@ -209,9 +209,11 @@ ErrCode BitVector_from_Bin   (/*@out@*/ wordptr addr, charptr string);
 /*@only@*/ charptr BitVector_to_Dec     (wordptr addr);
 ErrCode BitVector_from_Dec   (/*@out@*/ wordptr addr, charptr string);
 
-ErrCode BitVector_from_Dec_static_Boot(N_word bits);
-void BitVector_from_Dec_static_Shutdown(void);
-ErrCode BitVector_from_Dec_static(/*@out@*/ wordptr addr, charptr string);
+typedef struct BitVector_from_Dec_static_data BitVector_from_Dec_static_data;
+BitVector_from_Dec_static_data *BitVector_from_Dec_static_Boot(N_word bits);
+void BitVector_from_Dec_static_Shutdown(/*@null@*/ BitVector_from_Dec_static_data *data);
+ErrCode BitVector_from_Dec_static(BitVector_from_Dec_static_data *data,
+				  /*@out@*/ wordptr addr, charptr string);
 
 /*@only@*/ charptr BitVector_to_Enum    (wordptr addr);
 ErrCode BitVector_from_Enum  (/*@out@*/ wordptr addr, charptr string);

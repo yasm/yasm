@@ -57,6 +57,8 @@ static /*@only@*/ wordptr conv_bv;
 /* static bitvects used for computation */
 static /*@only@*/ wordptr result, spare, op1static, op2static;
 
+static /*@only@*/ BitVector_from_Dec_static_data *from_dec_data;
+
 
 void
 yasm_intnum_initialize(void)
@@ -66,13 +68,13 @@ yasm_intnum_initialize(void)
     spare = BitVector_Create(BITVECT_NATIVE_SIZE, FALSE);
     op1static = BitVector_Create(BITVECT_NATIVE_SIZE, FALSE);
     op2static = BitVector_Create(BITVECT_NATIVE_SIZE, FALSE);
-    BitVector_from_Dec_static_Boot(BITVECT_NATIVE_SIZE);
+    from_dec_data = BitVector_from_Dec_static_Boot(BITVECT_NATIVE_SIZE);
 }
 
 void
 yasm_intnum_cleanup(void)
 {
-    BitVector_from_Dec_static_Shutdown();
+    BitVector_from_Dec_static_Shutdown(from_dec_data);
     BitVector_Destroy(op2static);
     BitVector_Destroy(op1static);
     BitVector_Destroy(spare);
@@ -81,15 +83,15 @@ yasm_intnum_cleanup(void)
 }
 
 yasm_intnum *
-yasm_intnum_new_dec(char *str, unsigned long lindex)
+yasm_intnum_create_dec(char *str, unsigned long line)
 {
     yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
 
     intn->origsize = 0;	    /* no reliable way to figure this out */
 
-    if (BitVector_from_Dec_static(conv_bv,
+    if (BitVector_from_Dec_static(from_dec_data, conv_bv,
 				  (unsigned char *)str) == ErrCode_Ovfl)
-	yasm__warning(YASM_WARN_GENERAL, lindex,
+	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("Numeric constant too large for internal format"));
     if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
@@ -103,14 +105,14 @@ yasm_intnum_new_dec(char *str, unsigned long lindex)
 }
 
 yasm_intnum *
-yasm_intnum_new_bin(char *str, unsigned long lindex)
+yasm_intnum_create_bin(char *str, unsigned long line)
 {
     yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
 
     intn->origsize = (unsigned char)strlen(str);
 
     if(intn->origsize > BITVECT_NATIVE_SIZE)
-	yasm__warning(YASM_WARN_GENERAL, lindex,
+	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("Numeric constant too large for internal format"));
 
     BitVector_from_Bin(conv_bv, (unsigned char *)str);
@@ -126,14 +128,14 @@ yasm_intnum_new_bin(char *str, unsigned long lindex)
 }
 
 yasm_intnum *
-yasm_intnum_new_oct(char *str, unsigned long lindex)
+yasm_intnum_create_oct(char *str, unsigned long line)
 {
     yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
 
     intn->origsize = strlen(str)*3;
 
     if(intn->origsize > BITVECT_NATIVE_SIZE)
-	yasm__warning(YASM_WARN_GENERAL, lindex,
+	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("Numeric constant too large for internal format"));
 
     BitVector_from_Oct(conv_bv, (unsigned char *)str);
@@ -149,14 +151,14 @@ yasm_intnum_new_oct(char *str, unsigned long lindex)
 }
 
 yasm_intnum *
-yasm_intnum_new_hex(char *str, unsigned long lindex)
+yasm_intnum_create_hex(char *str, unsigned long line)
 {
     yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
 
     intn->origsize = strlen(str)*4;
 
     if(intn->origsize > BITVECT_NATIVE_SIZE)
-	yasm__warning(YASM_WARN_GENERAL, lindex,
+	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("Numeric constant too large for internal format"));
 
     BitVector_from_Hex(conv_bv, (unsigned char *)str);
@@ -173,7 +175,7 @@ yasm_intnum_new_hex(char *str, unsigned long lindex)
 
 /*@-usedef -compdef -uniondef@*/
 yasm_intnum *
-yasm_intnum_new_charconst_nasm(const char *str, unsigned long lindex)
+yasm_intnum_create_charconst_nasm(const char *str, unsigned long line)
 {
     yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
     size_t len = strlen(str);
@@ -181,7 +183,7 @@ yasm_intnum_new_charconst_nasm(const char *str, unsigned long lindex)
     intn->origsize = len*8;
 
     if(intn->origsize > BITVECT_NATIVE_SIZE)
-	yasm__warning(YASM_WARN_GENERAL, lindex,
+	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("Character constant too large for internal format"));
 
     if (len > 4) {
@@ -224,7 +226,7 @@ yasm_intnum_new_charconst_nasm(const char *str, unsigned long lindex)
 /*@=usedef =compdef =uniondef@*/
 
 yasm_intnum *
-yasm_intnum_new_uint(unsigned long i)
+yasm_intnum_create_uint(unsigned long i)
 {
     yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
 
@@ -236,13 +238,13 @@ yasm_intnum_new_uint(unsigned long i)
 }
 
 yasm_intnum *
-yasm_intnum_new_int(long i)
+yasm_intnum_create_int(long i)
 {
     yasm_intnum *intn;
 
     /* positive numbers can go through the uint() function */
     if (i >= 0)
-	return yasm_intnum_new_uint((unsigned long)i);
+	return yasm_intnum_create_uint((unsigned long)i);
 
     BitVector_Empty(conv_bv);
     BitVector_Chunk_Store(conv_bv, 32, 0, (unsigned long)(-i));
@@ -276,7 +278,7 @@ yasm_intnum_copy(const yasm_intnum *intn)
 }
 
 void
-yasm_intnum_delete(yasm_intnum *intn)
+yasm_intnum_destroy(yasm_intnum *intn)
 {
     if (intn->type == INTNUM_BV)
 	BitVector_Destroy(intn->val.bv);
@@ -286,7 +288,7 @@ yasm_intnum_delete(yasm_intnum *intn)
 /*@-nullderef -nullpass -branchstate@*/
 void
 yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
-		 unsigned long lindex)
+		 unsigned long line)
 {
     boolean carry = 0;
     wordptr op1, op2 = NULL;
@@ -409,13 +411,13 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
 	    BitVector_LSB(result, !BitVector_equal(op1, op2));
 	    break;
 	case YASM_EXPR_SEG:
-	    yasm__error(lindex, N_("invalid use of '%s'"), "SEG");
+	    yasm__error(line, N_("invalid use of '%s'"), "SEG");
 	    break;
 	case YASM_EXPR_WRT:
-	    yasm__error(lindex, N_("invalid use of '%s'"), "WRT");
+	    yasm__error(line, N_("invalid use of '%s'"), "WRT");
 	    break;
 	case YASM_EXPR_SEGOFF:
-	    yasm__error(lindex, N_("invalid use of '%s'"), ":");
+	    yasm__error(line, N_("invalid use of '%s'"), ":");
 	    break;
 	case YASM_EXPR_IDENT:
 	    if (result)
@@ -512,7 +514,7 @@ yasm_intnum_get_int(const yasm_intnum *intn)
 void
 yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
 		      size_t destsize, size_t valsize, int shift,
-		      int bigendian, int warn, unsigned long lindex)
+		      int bigendian, int warn, unsigned long line)
 {
     wordptr op1 = op1static, op2;
     unsigned char *buf;
@@ -526,7 +528,7 @@ yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
 
     /* General size warnings */
     if (warn && !yasm_intnum_check_size(intn, valsize, rshift, 2))
-	yasm__warning(YASM_WARN_GENERAL, lindex,
+	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("value does not fit in %d bit field"), valsize);
 
     /* Read the original data into a bitvect */
@@ -550,7 +552,7 @@ yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
 	BitVector_Copy(conv_bv, op2);
 	BitVector_Move_Left(conv_bv, BITVECT_NATIVE_SIZE-rshift);
 	if (!BitVector_is_empty(conv_bv))
-	    yasm__warning(YASM_WARN_GENERAL, lindex,
+	    yasm__warning(YASM_WARN_GENERAL, line,
 			  N_("misaligned value, truncating to boundary"));
     }
 
@@ -623,7 +625,7 @@ yasm_intnum_check_size(const yasm_intnum *intn, size_t size, size_t rshift,
 }
 
 void
-yasm_intnum_print(FILE *f, const yasm_intnum *intn)
+yasm_intnum_print(const yasm_intnum *intn, FILE *f)
 {
     unsigned char *s;
 

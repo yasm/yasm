@@ -37,21 +37,16 @@
 /** Expression item (opaque type).  \internal */
 typedef struct yasm_expr__item yasm_expr__item;
 
-/** Initialize expression internal data structures.
- * \param a architecture in use
- */
-void yasm_expr_initialize(yasm_arch *a);
-
 /** Create a new expression e=a op b.
  * \param op	    operation
  * \param a	    expression item a
  * \param b	    expression item b (optional depending on op)
- * \param lindex    line index (where expression defined)
+ * \param line	    virtual line (where expression defined)
  * \return Newly allocated expression.
  */
-/*@only@*/ yasm_expr *yasm_expr_new
+/*@only@*/ yasm_expr *yasm_expr_create
     (yasm_expr_op op, /*@only@*/ yasm_expr__item *a,
-     /*@only@*/ /*@null@*/ yasm_expr__item *b, unsigned long lindex);
+     /*@only@*/ /*@null@*/ yasm_expr__item *b, unsigned long line);
 
 /** Create a new symbol expression item.
  * \param sym	    symbol
@@ -90,8 +85,8 @@ void yasm_expr_initialize(yasm_arch *a);
  * \param i	line index
  * \return Newly allocated expression.
  */
-#define yasm_expr_new_tree(l,o,r,i) \
-    yasm_expr_new ((o), yasm_expr_expr(l), yasm_expr_expr(r), i)
+#define yasm_expr_create_tree(l,o,r,i) \
+    yasm_expr_create ((o), yasm_expr_expr(l), yasm_expr_expr(r), i)
 
 /** Create a new expression branch e=op r.
  * \param o	operation
@@ -99,16 +94,16 @@ void yasm_expr_initialize(yasm_arch *a);
  * \param i	line index
  * \return Newly allocated expression.
  */
-#define yasm_expr_new_branch(o,r,i) \
-    yasm_expr_new ((o), yasm_expr_expr(r), (yasm_expr__item *)NULL, i)
+#define yasm_expr_create_branch(o,r,i) \
+    yasm_expr_create ((o), yasm_expr_expr(r), (yasm_expr__item *)NULL, i)
 
 /** Create a new expression identity e=r.
  * \param r	expression for identity within new expression
  * \param i	line index
  * \return Newly allocated expression.
  */
-#define yasm_expr_new_ident(r,i) \
-    yasm_expr_new (YASM_EXPR_IDENT, (r), (yasm_expr__item *)NULL, i)
+#define yasm_expr_create_ident(r,i) \
+    yasm_expr_create (YASM_EXPR_IDENT, (r), (yasm_expr__item *)NULL, i)
 
 /** Duplicate an expression.
  * \param e	expression
@@ -119,7 +114,7 @@ yasm_expr *yasm_expr_copy(const yasm_expr *e);
 /** Destroy (free allocated memory for) an expression.
  * \param e	expression
  */
-void yasm_expr_delete(/*@only@*/ /*@null@*/ yasm_expr *e);
+void yasm_expr_destroy(/*@only@*/ /*@null@*/ yasm_expr *e);
 
 /** Determine if an expression is a specified operation (at the top level).
  * \param e		expression
@@ -241,9 +236,9 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
     (yasm_expr **ep, int simplify);
 
 /** Print an expression.  For debugging purposes.
- * \param f	file
  * \param e	expression
+ * \param f	file
  */
-void yasm_expr_print(FILE *f, /*@null@*/ const yasm_expr *e);
+void yasm_expr_print(/*@null@*/ const yasm_expr *e, FILE *f);
 
 #endif

@@ -157,7 +157,7 @@ static char ret_msg[1024], result_msg[1024];
 static void
 new_setup(Init_Entry *vals, int i)
 {
-    flt = yasm_floatnum_new(vals[i].ascii);
+    flt = yasm_floatnum_create(vals[i].ascii);
     strcpy(result_msg, vals[i].ascii);
     strcat(result_msg, ": incorrect ");
 }
@@ -202,7 +202,7 @@ START_TEST(test_new_normalized)
     for (i=0; i<num; i++) {
 	new_setup(vals, i);
 	fail_unless(new_check_flt(&vals[i]) == 0, result_msg);
-	yasm_floatnum_delete(flt);
+	yasm_floatnum_destroy(flt);
     }
 }
 END_TEST
@@ -215,7 +215,7 @@ START_TEST(test_new_normalized_edgecase)
     for (i=0; i<num; i++) {
 	new_setup(vals, i);
 	fail_unless(new_check_flt(&vals[i]) == 0, result_msg);
-	yasm_floatnum_delete(flt);
+	yasm_floatnum_destroy(flt);
     }
 }
 END_TEST

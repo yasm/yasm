@@ -27,19 +27,19 @@
 #ifndef YASM_PARSER_H
 #define YASM_PARSER_H
 
-/** Version number of #yasm_parser interface.  Any functional change to the
- * #yasm_parser interface should simultaneously increment this number.  This
- * version should be checked by #yasm_parser loaders to verify that the
- * expected version (the version defined by its libyasm header files) matches
- * the loaded module version (the version defined by the module's libyasm
- * header files).  Doing this will ensure that the module version's function
- * definitions match the module loader's function definitions.  The version
- * number must never be decreased.
+/** Version number of #yasm_parser_module interface.  Any functional change to
+ * the #yasm_parser_module interface should simultaneously increment this
+ * number.  This version should be checked by #yasm_parser_module loaders to
+ * verify that the expected version (the version defined by its libyasm header
+ * files) matches the loaded module version (the version defined by the
+ * module's libyasm header files).  Doing this will ensure that the module
+ * version's function definitions match the module loader's function
+ * definitions.  The version number must never be decreased.
  */
-#define YASM_PARSER_VERSION	0
+#define YASM_PARSER_VERSION	1
 
 /* Interface to the parser module(s) -- the "front end" of the assembler */
-struct yasm_parser {
+typedef struct yasm_parser_module {
     /** Version (see #YASM_PARSER_VERSION).  Should always be set to
      * #YASM_PARSER_VERSION by the module source and checked against
      * #YASM_PARSER_VERSION by the module loader.
@@ -70,13 +70,10 @@ struct yasm_parser {
      * the input filename.
      *
      * save_input is nonzero if the parser needs to save the original lines of
-     * source in the input file into the linemgr via linemgr->add_assoc_data().
-     *
-     * This function returns the starting section of a linked list of sections
-     * (whatever was in the file).
+     * source in the input file into the linemap via yasm_linemap_add_data().
      */
-    /*@only@*/ yasm_sectionhead *(*do_parse)
-	(yasm_preproc *pp, yasm_arch *a, yasm_objfmt *of, yasm_linemgr *lm,
-	 FILE *f, const char *in_filename, int save_input);
-};
+    void (*do_parse) (yasm_object *object, yasm_preproc *pp, yasm_arch *a,
+		      yasm_objfmt *of, FILE *f, const char *in_filename,
+		      int save_input, yasm_section *def_sect);
+} yasm_parser_module;
 #endif

@@ -303,7 +303,7 @@ floatnum_mul(yasm_floatnum *acc, const yasm_floatnum *op)
 }
 
 yasm_floatnum *
-yasm_floatnum_new(const char *str)
+yasm_floatnum_create(const char *str)
 {
     yasm_floatnum *flt;
     int dec_exponent, dec_exp_add;	/* decimal (powers of 10) exponent */
@@ -503,7 +503,7 @@ yasm_floatnum_copy(const yasm_floatnum *flt)
 }
 
 void
-yasm_floatnum_delete(yasm_floatnum *flt)
+yasm_floatnum_destroy(yasm_floatnum *flt)
 {
     BitVector_Destroy(flt->mantissa);
     yasm_xfree(flt);
@@ -511,10 +511,10 @@ yasm_floatnum_delete(yasm_floatnum *flt)
 
 void
 yasm_floatnum_calc(yasm_floatnum *acc, yasm_expr_op op,
-		   /*@unused@*/ yasm_floatnum *operand, unsigned long lindex)
+		   /*@unused@*/ yasm_floatnum *operand, unsigned long line)
 {
     if (op != YASM_EXPR_NEG)
-	yasm__error(lindex,
+	yasm__error(line,
 		    N_("Unsupported floating-point arithmetic operation"));
     else
 	acc->sign ^= 1;
@@ -660,7 +660,7 @@ floatnum_get_common(const yasm_floatnum *flt, /*@out@*/ unsigned char *ptr,
 int
 yasm_floatnum_get_sized(const yasm_floatnum *flt, unsigned char *ptr,
 			size_t destsize, size_t valsize, size_t shift,
-			int bigendian, int warn, unsigned long lindex)
+			int bigendian, int warn, unsigned long line)
 {
     int retval;
     if (destsize*8 != valsize || shift>0 || bigendian) {
@@ -684,10 +684,10 @@ yasm_floatnum_get_sized(const yasm_floatnum *flt, unsigned char *ptr,
     }
     if (warn) {
 	if (retval < 0)
-	    yasm__warning(YASM_WARN_GENERAL, lindex,
+	    yasm__warning(YASM_WARN_GENERAL, line,
 			  N_("underflow in floating point expression"));
 	else if (retval > 0)
-	    yasm__warning(YASM_WARN_GENERAL, lindex,
+	    yasm__warning(YASM_WARN_GENERAL, line,
 			  N_("overflow in floating point expression"));
     }
     return retval;
@@ -708,7 +708,7 @@ yasm_floatnum_check_size(/*@unused@*/ const yasm_floatnum *flt, size_t size)
 }
 
 void
-yasm_floatnum_print(FILE *f, const yasm_floatnum *flt)
+yasm_floatnum_print(const yasm_floatnum *flt, FILE *f)
 {
     unsigned char out[10];
     unsigned char *str;

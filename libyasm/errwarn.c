@@ -179,12 +179,12 @@ def_fatal(const char *fmt, ...)
  * type is WE_PARSERERROR.
  */
 static errwarn_data *
-errwarn_data_new(unsigned long lindex, int replace_parser_error)
+errwarn_data_new(unsigned long line, int replace_parser_error)
 {
     errwarn_data *first, *next, *ins_we, *we;
     enum { INS_NONE, INS_HEAD, INS_AFTER } action = INS_NONE;
 
-    /* Find the entry with either line=lindex or the last one with line<lindex.
+    /* Find the entry with either line=line or the last one with line<line.
      * Start with the last entry added to speed the search.
      */
     ins_we = previous_we;
@@ -193,14 +193,14 @@ errwarn_data_new(unsigned long lindex, int replace_parser_error)
 	action = INS_HEAD;
     while (action == INS_NONE) {
 	next = SLIST_NEXT(ins_we, link);
-	if (lindex < ins_we->line) {
+	if (line < ins_we->line) {
 	    if (ins_we == first)
 		action = INS_HEAD;
 	    else
 		ins_we = first;
 	} else if (!next)
 	    action = INS_AFTER;
-	else if (lindex >= ins_we->line && lindex < next->line)
+	else if (line >= ins_we->line && line < next->line)
 	    action = INS_AFTER;
 	else
 	    ins_we = next;
@@ -214,7 +214,7 @@ errwarn_data_new(unsigned long lindex, int replace_parser_error)
 	we = yasm_xmalloc(sizeof(errwarn_data));
 
 	we->type = WE_UNKNOWN;
-	we->line = lindex;
+	we->line = line;
 
 	if (action == INS_HEAD)
 	    SLIST_INSERT_HEAD(&errwarns, we, link);
@@ -231,13 +231,13 @@ errwarn_data_new(unsigned long lindex, int replace_parser_error)
     return we;
 }
 
-/* Register an error at line lindex.  Does not print the error, only stores it
+/* Register an error at line line.  Does not print the error, only stores it
  * for output_all() to print.
  */
 void
-yasm__error_va(unsigned long lindex, const char *fmt, va_list va)
+yasm__error_va(unsigned long line, const char *fmt, va_list va)
 {
-    errwarn_data *we = errwarn_data_new(lindex, 1);
+    errwarn_data *we = errwarn_data_new(line, 1);
 
     we->type = WE_ERROR;
 
@@ -250,11 +250,11 @@ yasm__error_va(unsigned long lindex, const char *fmt, va_list va)
     error_count++;
 }
 
-/* Register an warning at line lindex.  Does not print the warning, only stores
+/* Register an warning at line line.  Does not print the warning, only stores
  * it for output_all() to print.
  */
 void
-yasm__warning_va(yasm_warn_class num, unsigned long lindex, const char *fmt,
+yasm__warning_va(yasm_warn_class num, unsigned long line, const char *fmt,
 		 va_list va)
 {
     errwarn_data *we;
@@ -262,7 +262,7 @@ yasm__warning_va(yasm_warn_class num, unsigned long lindex, const char *fmt,
     if (!(warn_class_enabled & (1UL<<num)))
 	return;	    /* warning is part of disabled class */
 
-    we = errwarn_data_new(lindex, 0);
+    we = errwarn_data_new(line, 0);
 
     we->type = WE_WARNING;
 
@@ -275,27 +275,27 @@ yasm__warning_va(yasm_warn_class num, unsigned long lindex, const char *fmt,
     warning_count++;
 }
 
-/* Register an error at line lindex.  Does not print the error, only stores it
+/* Register an error at line line.  Does not print the error, only stores it
  * for output_all() to print.
  */
 void
-yasm__error(unsigned long lindex, const char *fmt, ...)
+yasm__error(unsigned long line, const char *fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
-    yasm__error_va(lindex, fmt, va);
+    yasm__error_va(line, fmt, va);
     va_end(va);
 }
 
-/* Register an warning at line lindex.  Does not print the warning, only stores
+/* Register an warning at line line.  Does not print the warning, only stores
  * it for output_all() to print.
  */
 void
-yasm__warning(yasm_warn_class num, unsigned long lindex, const char *fmt, ...)
+yasm__warning(yasm_warn_class num, unsigned long line, const char *fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
-    yasm__warning_va(num, lindex, fmt, va);
+    yasm__warning_va(num, line, fmt, va);
     va_end(va);
 }
 
@@ -303,9 +303,9 @@ yasm__warning(yasm_warn_class num, unsigned long lindex, const char *fmt, ...)
  * system.
  */
 void
-yasm__parser_error(unsigned long lindex, const char *s)
+yasm__parser_error(unsigned long line, const char *s)
 {
-    yasm__error(lindex, N_("parser error: %s"), s);
+    yasm__error(line, N_("parser error: %s"), s);
     previous_we->type = WE_PARSERERROR;
 }
 
@@ -337,7 +337,7 @@ yasm_get_num_errors(int warning_as_error)
 }
 
 void
-yasm_errwarn_output_all(yasm_linemgr *lm, int warning_as_error,
+yasm_errwarn_output_all(yasm_linemap *lm, int warning_as_error,
      yasm_print_error_func print_error, yasm_print_warning_func print_warning)
 {
     errwarn_data *we;
@@ -354,7 +354,7 @@ yasm_errwarn_output_all(yasm_linemgr *lm, int warning_as_error,
     /* Output error/warnings. */
     SLIST_FOREACH(we, &errwarns, link) {
 	/* Output error/warning */
-	lm->lookup(we->line, &filename, &line);
+	yasm_linemap_lookup(lm, we->line, &filename, &line);
 	if (we->type == WE_ERROR)
 	    print_error(filename, line, we->msg);
 	else

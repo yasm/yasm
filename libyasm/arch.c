@@ -25,8 +25,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #define YASM_LIB_INTERNAL
+#define YASM_ARCH_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath: yasm/libyasm/arch.c,v 1.11 2003/03/15 05:07:48 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "coretype.h"
 
@@ -37,16 +38,14 @@
 #include "arch.h"
 
 
-static /*@dependent@*/ yasm_arch *cur_arch;
-
-void
-yasm_arch_common_initialize(yasm_arch *a)
+yasm_arch_module *
+yasm_arch_get_module(yasm_arch *arch)
 {
-    cur_arch = a;
+    return arch->module;
 }
 
 yasm_insn_operand *
-yasm_operand_new_reg(unsigned long reg)
+yasm_operand_create_reg(unsigned long reg)
 {
     yasm_insn_operand *retval = yasm_xmalloc(sizeof(yasm_insn_operand));
 
@@ -59,7 +58,7 @@ yasm_operand_new_reg(unsigned long reg)
 }
 
 yasm_insn_operand *
-yasm_operand_new_segreg(unsigned long segreg)
+yasm_operand_create_segreg(unsigned long segreg)
 {
     yasm_insn_operand *retval = yasm_xmalloc(sizeof(yasm_insn_operand));
 
@@ -72,7 +71,7 @@ yasm_operand_new_segreg(unsigned long segreg)
 }
 
 yasm_insn_operand *
-yasm_operand_new_mem(/*@only@*/ yasm_effaddr *ea)
+yasm_operand_create_mem(/*@only@*/ yasm_effaddr *ea)
 {
     yasm_insn_operand *retval = yasm_xmalloc(sizeof(yasm_insn_operand));
 
@@ -85,15 +84,15 @@ yasm_operand_new_mem(/*@only@*/ yasm_effaddr *ea)
 }
 
 yasm_insn_operand *
-yasm_operand_new_imm(/*@only@*/ yasm_expr *val)
+yasm_operand_create_imm(/*@only@*/ yasm_expr *val)
 {
     yasm_insn_operand *retval;
     const unsigned long *reg;
 
     reg = yasm_expr_get_reg(&val, 0);
     if (reg) {
-	retval = yasm_operand_new_reg(*reg);
-	yasm_expr_delete(val);
+	retval = yasm_operand_create_reg(*reg);
+	yasm_expr_destroy(val);
     } else {
 	retval = yasm_xmalloc(sizeof(yasm_insn_operand));
 	retval->type = YASM_INSN__OPERAND_IMM;
@@ -106,26 +105,27 @@ yasm_operand_new_imm(/*@only@*/ yasm_expr *val)
 }
 
 void
-yasm_operand_print(FILE *f, int indent_level, const yasm_insn_operand *op)
+yasm_operand_print(const yasm_insn_operand *op, FILE *f, int indent_level,
+		   yasm_arch *arch)
 {
     switch (op->type) {
 	case YASM_INSN__OPERAND_REG:
 	    fprintf(f, "%*sReg=", indent_level, "");
-	    cur_arch->reg_print(f, op->data.reg);
+	    arch->module->reg_print(arch, op->data.reg, f);
 	    fprintf(f, "\n");
 	    break;
 	case YASM_INSN__OPERAND_SEGREG:
 	    fprintf(f, "%*sSegReg=", indent_level, "");
-	    cur_arch->segreg_print(f, op->data.reg);
+	    arch->module->segreg_print(arch, op->data.reg, f);
 	    fprintf(f, "\n");
 	    break;
 	case YASM_INSN__OPERAND_MEMORY:
 	    fprintf(f, "%*sMemory=\n", indent_level, "");
-	    yasm_ea_print(f, indent_level, op->data.ea);
+	    yasm_ea_print(op->data.ea, f, indent_level);
 	    break;
 	case YASM_INSN__OPERAND_IMM:
 	    fprintf(f, "%*sImm=", indent_level, "");
-	    yasm_expr_print(f, op->data.val);
+	    yasm_expr_print(op->data.val, f);
 	    fprintf(f, "\n");
 	    break;
     }
@@ -144,10 +144,10 @@ yasm_ops_delete(yasm_insn_operandhead *headp, int content)
 	if (content)
 	    switch (cur->type) {
 		case YASM_INSN__OPERAND_MEMORY:
-		    yasm_ea_delete(cur->data.ea);
+		    yasm_ea_destroy(cur->data.ea);
 		    break;
 		case YASM_INSN__OPERAND_IMM:
-		    yasm_expr_delete(cur->data.val);
+		    yasm_expr_destroy(cur->data.val);
 		    break;
 		default:
 		    break;
@@ -170,20 +170,28 @@ yasm_ops_append(yasm_insn_operandhead *headp,
 }
 
 void
-yasm_ops_print(FILE *f, int indent_level, const yasm_insn_operandhead *headp)
+yasm_ops_print(const yasm_insn_operandhead *headp, FILE *f, int indent_level,
+	       yasm_arch *arch)
 {
     yasm_insn_operand *cur;
 
     STAILQ_FOREACH (cur, headp, link)
-	yasm_operand_print(f, indent_level, cur);
+	yasm_operand_print(cur, f, indent_level, arch);
 }
 
-/* Non-macro yasm_ops_initialize() for non-YASM_LIB_INTERNAL users. */
-#undef yasm_ops_initialize
-void
-yasm_ops_initialize(yasm_insn_operandhead *headp)
+yasm_insn_operandhead *
+yasm_ops_create(void)
 {
-    STAILQ_INIT(headp);
+    yasm_insn_operandhead *headp = yasm_xmalloc(sizeof(yasm_insn_operandhead));
+    yasm_ops_initialize(headp);
+    return headp;
+}
+
+void
+yasm_ops_destroy(yasm_insn_operandhead *headp, int content)
+{
+    yasm_ops_delete(headp, content);
+    yasm_xfree(headp);
 }
 
 /* Non-macro yasm_ops_first() for non-YASM_LIB_INTERNAL users. */
@@ -194,10 +202,10 @@ yasm_ops_first(yasm_insn_operandhead *headp)
     return STAILQ_FIRST(headp);
 }
 
-/* Non-macro yasm_ops_next() for non-YASM_LIB_INTERNAL users. */
-#undef yasm_ops_next
+/* Non-macro yasm_operand_next() for non-YASM_LIB_INTERNAL users. */
+#undef yasm_operand_next
 yasm_insn_operand *
-yasm_ops_next(yasm_insn_operand *cur)
+yasm_operand_next(yasm_insn_operand *cur)
 {
     return STAILQ_NEXT(cur, link);
 }

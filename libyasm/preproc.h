@@ -36,7 +36,7 @@
  * definitions match the module loader's function definitions.  The version
  * number must never be decreased.
  */
-#define YASM_PREPROC_VERSION	0
+#define YASM_PREPROC_VERSION	1
 
 /* Interface to the preprocesor module(s) */
 struct yasm_preproc {
@@ -60,7 +60,7 @@ struct yasm_preproc {
      * This function also takes the FILE * to the initial starting file and
      * the filename.
      */
-    void (*initialize) (FILE *f, const char *in_filename, yasm_linemgr *lm);
+    void (*initialize) (FILE *f, const char *in_filename, yasm_linemap *lm);
 
     /* Cleans up any allocated memory. */
     void (*cleanup) (void);

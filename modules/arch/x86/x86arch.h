@@ -61,14 +61,14 @@
 #define CPU_64	    (1UL<<24)	/* Only available in 64-bit mode */
 #define CPU_Not64   (1UL<<25)	/* Not available (invalid) in 64-bit mode */
 
-/* What instructions/features are enabled? */
-extern unsigned long yasm_x86__cpu_enabled;
+typedef struct yasm_arch_x86 {
+    yasm_arch arch;	/* base structure */
 
-typedef enum {
-    X86_BC_INSN = YASM_BYTECODE_TYPE_BASE,
-    X86_BC_JMP
-} x86_bytecode_type;
-#define X86_BYTECODE_TYPE_MAX	X86_BC_JMP+1
+    /* What instructions/features are enabled? */
+    unsigned long cpu_enabled;
+    unsigned int amd64_machine;
+    unsigned char mode_bits;
+} yasm_arch_x86;
 
 /* 0-15 (low 4 bits) used for register number, stored in same data area.
  * Note 8-15 are only valid for some registers, and only in 64-bit mode.
@@ -127,13 +127,14 @@ int yasm_x86__set_rex_from_reg(unsigned char *rex, unsigned char *low3,
 			       x86_rex_bit_pos rexbit);
 
 void yasm_x86__ea_set_segment(/*@null@*/ yasm_effaddr *ea,
-			      unsigned int segment, unsigned long lindex);
+			      unsigned int segment, unsigned long line);
 void yasm_x86__ea_set_disponly(yasm_effaddr *ea);
-yasm_effaddr *yasm_x86__ea_new_reg(unsigned long reg, unsigned char *rex,
-				   unsigned int bits);
-yasm_effaddr *yasm_x86__ea_new_imm(/*@keep@*/ yasm_expr *imm,
-				   unsigned int im_len);
-yasm_effaddr *yasm_x86__ea_new_expr(/*@keep@*/ yasm_expr *e);
+yasm_effaddr *yasm_x86__ea_create_reg(unsigned long reg, unsigned char *rex,
+				      unsigned int bits);
+yasm_effaddr *yasm_x86__ea_create_imm
+    (/*@keep@*/ yasm_expr *imm, unsigned int im_len);
+yasm_effaddr *yasm_x86__ea_create_expr(yasm_arch *arch,
+				       /*@keep@*/ yasm_expr *e);
 
 /*@observer@*/ /*@null@*/ yasm_effaddr *yasm_x86__bc_insn_get_ea
     (/*@null@*/ yasm_bytecode *bc);
@@ -144,14 +145,14 @@ void yasm_x86__bc_insn_addrsize_override(yasm_bytecode *bc,
 					 unsigned int addrsize);
 void yasm_x86__bc_insn_set_lockrep_prefix(yasm_bytecode *bc,
 					  unsigned int prefix,
-					  unsigned long lindex);
+					  unsigned long line);
 
 /* Structure with *all* inputs passed to x86_bytecode_new_insn().
  * IMPORTANT: ea_ptr and im_ptr cannot be reused or freed after calling the
  * function (it doesn't make a copy).
  */
 typedef struct x86_new_insn_data {
-    unsigned long lindex;
+    unsigned long line;
     /*@keep@*/ /*@null@*/ yasm_effaddr *ea;
     /*@null@*/ /*@dependent@*/ yasm_symrec *ea_origin;
     /*@keep@*/ /*@null@*/ yasm_expr *imm;
@@ -167,13 +168,13 @@ typedef struct x86_new_insn_data {
     unsigned char signext_imm8_op;
 } x86_new_insn_data;
 
-yasm_bytecode *yasm_x86__bc_new_insn(x86_new_insn_data *d);
+yasm_bytecode *yasm_x86__bc_create_insn(yasm_arch *arch, x86_new_insn_data *d);
 
 /* Structure with *all* inputs passed to x86_bytecode_new_jmp().
  * Pass 0 for the opcode_len if that version of the opcode doesn't exist.
  */
 typedef struct x86_new_jmp_data {
-    unsigned long lindex;
+    unsigned long line;
     /*@keep@*/ yasm_expr *target;
     /*@dependent@*/ yasm_symrec *origin;
     x86_jmp_opcode_sel op_sel;
@@ -187,18 +188,7 @@ typedef struct x86_new_jmp_data {
     unsigned char opersize;
 } x86_new_jmp_data;
 
-yasm_bytecode *yasm_x86__bc_new_jmp(x86_new_jmp_data *d);
-
-extern unsigned char yasm_x86_LTX_mode_bits;
-
-void yasm_x86__bc_delete(yasm_bytecode *bc);
-void yasm_x86__bc_print(FILE *f, int indent_level, const yasm_bytecode *bc);
-yasm_bc_resolve_flags yasm_x86__bc_resolve
-    (yasm_bytecode *bc, int save, const yasm_section *sect,
-     yasm_calc_bc_dist_func calc_bc_dist);
-int yasm_x86__bc_tobytes(yasm_bytecode *bc, unsigned char **bufp,
-			 const yasm_section *sect, void *d,
-			 yasm_output_expr_func output_expr);
+yasm_bytecode *yasm_x86__bc_create_jmp(yasm_arch *arch, x86_new_jmp_data *d);
 
 /* Check an effective address.  Returns 0 if EA was successfully determined,
  * 1 if invalid EA, or 2 if indeterminate EA.
@@ -210,44 +200,26 @@ int yasm_x86__expr_checkea
      unsigned char *v_sib, unsigned char *n_sib, unsigned char *pcrel,
      unsigned char *rex, yasm_calc_bc_dist_func calc_bc_dist);
 
-void yasm_x86__parse_cpu(const char *cpuid, unsigned long lindex);
+void yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid,
+			 unsigned long line);
 
 yasm_arch_check_id_retval yasm_x86__parse_check_id
-    (unsigned long data[2], const char *id, unsigned long lindex);
-
-int yasm_x86__parse_directive(const char *name, yasm_valparamhead *valparams,
-			      /*@null@*/ yasm_valparamhead *objext_valparams,
-			      yasm_sectionhead *headp, unsigned long lindex);
+    (yasm_arch *arch, unsigned long data[2], const char *id,
+     unsigned long line);
 
 /*@null@*/ yasm_bytecode *yasm_x86__parse_insn
-    (const unsigned long data[2], int num_operands,
-     /*@null@*/ yasm_insn_operandhead *operands, yasm_section *cur_section,
-     /*@null@*/ yasm_bytecode *prev_bc, unsigned long lindex);
+    (yasm_arch *arch, const unsigned long data[2], int num_operands,
+     /*@null@*/ yasm_insn_operandhead *operands, yasm_bytecode *prev_bc,
+     unsigned long line);
 
-void yasm_x86__parse_prefix(yasm_bytecode *bc, const unsigned long data[4],
-			    unsigned long lindex);
+int yasm_x86__floatnum_tobytes
+    (yasm_arch *arch, const yasm_floatnum *flt, unsigned char *buf,
+     size_t destsize, size_t valsize, size_t shift, int warn,
+     unsigned long line);
+int yasm_x86__intnum_tobytes
+    (yasm_arch *arch, const yasm_intnum *intn, unsigned char *buf,
+     size_t destsize, size_t valsize, int shift, const yasm_bytecode *bc,
+     int rel, int warn, unsigned long line);
 
-void yasm_x86__parse_seg_prefix(yasm_bytecode *bc, unsigned long segreg,
-				unsigned long lindex);
-
-void yasm_x86__parse_seg_override(yasm_effaddr *ea, unsigned long segreg,
-				  unsigned long lindex);
-
-int yasm_x86__floatnum_tobytes(const yasm_floatnum *flt, unsigned char *buf,
-			       size_t destsize, size_t valsize, size_t shift,
-			       int warn, unsigned long lindex);
-int yasm_x86__intnum_tobytes(const yasm_intnum *intn, unsigned char *buf,
-			     size_t destsize, size_t valsize, int shift,
-			     const yasm_bytecode *bc, int rel, int warn,
-			     unsigned long lindex);
-
-unsigned int yasm_x86__get_reg_size(unsigned long reg);
-
-void yasm_x86__reg_print(FILE *f, unsigned long reg);
-
-void yasm_x86__segreg_print(FILE *f, unsigned long segreg);
-
-void yasm_x86__ea_data_print(FILE *f, int indent_level,
-			     const yasm_effaddr *ea);
-
+unsigned int yasm_x86__get_reg_size(yasm_arch *arch, unsigned long reg);
 #endif

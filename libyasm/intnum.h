@@ -42,53 +42,53 @@ void yasm_intnum_cleanup(void);
 
 /** Create a new intnum from a decimal string.
  * \param str	    decimal string
- * \param lindex    line index (where the number came from)
+ * \param line	    virtual line (where the number came from)
  * \return Newly allocated intnum.
  */
-/*@only@*/ yasm_intnum *yasm_intnum_new_dec(char *str, unsigned long lindex);
+/*@only@*/ yasm_intnum *yasm_intnum_create_dec(char *str, unsigned long line);
 
 /** Create a new intnum from a binary string.
  * \param str	    binary string
- * \param lindex    line index (where the number came from)
+ * \param line	    virtual line (where the number came from)
  * \return Newly allocated intnum.
  */
-/*@only@*/ yasm_intnum *yasm_intnum_new_bin(char *str, unsigned long lindex);
+/*@only@*/ yasm_intnum *yasm_intnum_create_bin(char *str, unsigned long line);
 
 /** Create a new intnum from an octal string.
  * \param str	    octal string
- * \param lindex    line index (where the number came from)
+ * \param line	    virtual line (where the number came from)
  * \return Newly allocated intnum.
  */
-/*@only@*/ yasm_intnum *yasm_intnum_new_oct(char *str, unsigned long lindex);
+/*@only@*/ yasm_intnum *yasm_intnum_create_oct(char *str, unsigned long line);
 
 /** Create a new intnum from a hexidecimal string.
  * \param str	    hexidecimal string
- * \param lindex    line index (where the number came from)
+ * \param line	    virtual line (where the number came from)
  * \return Newly allocated intnum.
  */
-/*@only@*/ yasm_intnum *yasm_intnum_new_hex(char *str, unsigned long lindex);
+/*@only@*/ yasm_intnum *yasm_intnum_create_hex(char *str, unsigned long line);
 
 /** Convert character constant to integer value, using NASM rules.  NASM syntax
  * supports automatic conversion from strings such as 'abcd' to a 32-bit
  * integer value.  This function performs those conversions.
  * \param str	    character constant string
- * \param lindex    line index (where the number came from)
+ * \param line      virtual line (where the number came from)
  * \return Newly allocated intnum.
  */
-/*@only@*/ yasm_intnum *yasm_intnum_new_charconst_nasm(const char *str,
-						       unsigned long lindex);
+/*@only@*/ yasm_intnum *yasm_intnum_create_charconst_nasm(const char *str,
+							  unsigned long line);
 
 /** Create a new intnum from an unsigned integer value.
  * \param i	    unsigned integer value
  * \return Newly allocated intnum.
  */
-/*@only@*/ yasm_intnum *yasm_intnum_new_uint(unsigned long i);
+/*@only@*/ yasm_intnum *yasm_intnum_create_uint(unsigned long i);
 
 /** Create a new intnum from an signed integer value.
  * \param i	    signed integer value
  * \return Newly allocated intnum.
  */
-/*@only@*/ yasm_intnum *yasm_intnum_new_int(long i);
+/*@only@*/ yasm_intnum *yasm_intnum_create_int(long i);
 
 /** Duplicate an intnum.
  * \param intn	intnum
@@ -99,7 +99,7 @@ void yasm_intnum_cleanup(void);
 /** Destroy (free allocated memory for) an intnum.
  * \param intn	intnum
  */
-void yasm_intnum_delete(/*@only@*/ yasm_intnum *intn);
+void yasm_intnum_destroy(/*@only@*/ yasm_intnum *intn);
 
 /** Floating point calculation function: acc = acc op operand.
  * \note Not all operations in yasm_expr_op may be supported; unsupported
@@ -107,10 +107,10 @@ void yasm_intnum_delete(/*@only@*/ yasm_intnum *intn);
  * \param acc	    intnum accumulator
  * \param op	    operation
  * \param operand   intnum operand
- * \param lindex    line index (of expression)
+ * \param line      virtual line (of expression)
  */
 void yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
-		      unsigned long lindex);
+		      unsigned long line);
 
 /** Simple value check for 0.
  * \param acc	    intnum
@@ -161,11 +161,11 @@ long yasm_intnum_get_int(const yasm_intnum *intn);
  * \param bigendian endianness (nonzero=big, zero=little)
  * \param warn	    enables standard warnings (value doesn't fit into valsize
  *		    bits)
- * \param lindex    line index; may be 0 if warn is 0
+ * \param line      virtual line; may be 0 if warn is 0
  */
 void yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
 			   size_t destsize, size_t valsize, int shift,
-			   int bigendian, int warn, unsigned long lindex);
+			   int bigendian, int warn, unsigned long line);
 
 /** Check to see if intnum will fit without overflow into size bits.
  * If is_signed is 1, intnum is treated as a signed number.
@@ -185,6 +185,6 @@ int yasm_intnum_check_size(const yasm_intnum *intn, size_t size,
  * \param f	file
  * \param intn	intnum
  */
-void yasm_intnum_print(FILE *f, const yasm_intnum *intn);
+void yasm_intnum_print(const yasm_intnum *intn, FILE *f);
 
 #endif

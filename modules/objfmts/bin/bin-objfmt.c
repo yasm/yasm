@@ -35,15 +35,21 @@
 
 #define REGULAR_OUTBUF_SIZE	1024
 
-yasm_objfmt yasm_bin_LTX_objfmt;
+static void bin_section_data_destroy(/*@only@*/ void *d);
+static void bin_section_data_print(void *data, FILE *f, int indent_level);
+
+static const yasm_assoc_data_callback bin_section_data_callback = {
+    bin_section_data_destroy,
+    bin_section_data_print
+};
 static /*@dependent@*/ yasm_arch *cur_arch;
 
 
 static int
 bin_objfmt_initialize(/*@unused@*/ const char *in_filename,
 		      /*@unused@*/ const char *obj_filename,
-		      /*@unused@*/ yasm_dbgfmt *df, yasm_arch *a,
-		      /*@unused@*/ const char *machine)
+		      /*@unused@*/ yasm_object *object,
+		      /*@unused@*/ yasm_dbgfmt *df, yasm_arch *a)
 {
     cur_arch = a;
     return 0;
@@ -68,7 +74,7 @@ bin_objfmt_align_section(yasm_section *sect, yasm_section *prevsect,
     /* Figure out the size of .text by looking at the last bytecode's offset
      * plus its length.  Add the start and size together to get the new start.
      */
-    last = yasm_bcs_last(yasm_section_get_bytecodes(prevsect));
+    last = yasm_section_bcs_last(prevsect);
     if (last)
 	*prevsectlen = last->offset + last->len;
     else
@@ -79,7 +85,7 @@ bin_objfmt_align_section(yasm_section *sect, yasm_section *prevsect,
      * indicate padded size.  Because aignment is always a power of two, we
      * can use some bit trickery to do this easily.
      */
-    alignptr = yasm_section_get_of_data(sect);
+    alignptr = yasm_section_get_data(sect, &bin_section_data_callback);
     if (alignptr)
 	align = *alignptr;
     else
@@ -114,14 +120,16 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
 	 * start expr + intnum(dist).
 	 */
 	if (e->terms[i].type == YASM_EXPR_SYM &&
-	    yasm_symrec_get_label(e->terms[i].data.sym, &sect, &precbc) &&
-	    (dist = yasm_common_calc_bc_dist(sect, NULL, precbc))) {
+	    yasm_symrec_get_label(e->terms[i].data.sym, &precbc) &&
+	    (sect = yasm_bc_get_section(precbc)) &&
+	    (dist = yasm_common_calc_bc_dist(yasm_section_bcs_first(sect),
+					     precbc))) {
 	    const yasm_expr *start = yasm_section_get_start(sect);
 	    e->terms[i].type = YASM_EXPR_EXPR;
 	    e->terms[i].data.expn =
-		yasm_expr_new(YASM_EXPR_ADD,
-			      yasm_expr_expr(yasm_expr_copy(start)),
-			      yasm_expr_int(dist), e->line);
+		yasm_expr_create(YASM_EXPR_ADD,
+				 yasm_expr_expr(yasm_expr_copy(start)),
+				 yasm_expr_int(dist), e->line);
 	}
     }
 
@@ -131,15 +139,11 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
 static int
 bin_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 		       size_t valsize, int shift,
-		       /*@unused@*/ unsigned long offset,
-		       /*@observer@*/ const yasm_section *sect,
-		       yasm_bytecode *bc, int rel, int warn,
-		       /*@unused@*/ /*@null@*/ void *d)
+		       /*@unused@*/ unsigned long offset, yasm_bytecode *bc,
+		       int rel, int warn, /*@unused@*/ /*@null@*/ void *d)
 {
     /*@dependent@*/ /*@null@*/ const yasm_intnum *intn;
     /*@dependent@*/ /*@null@*/ const yasm_floatnum *flt;
-
-    assert(info != NULL);
 
     /* For binary output, this is trivial: any expression that doesn't simplify
      * to an integer is an error (references something external).
@@ -154,15 +158,17 @@ bin_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     if (flt) {
 	if (shift < 0)
 	    yasm_internal_error(N_("attempting to negative shift a float"));
-	return cur_arch->floatnum_tobytes(flt, buf, destsize, valsize,
-					  (unsigned int)shift, warn, bc->line);
+	return cur_arch->module->floatnum_tobytes(cur_arch, flt, buf, destsize,
+						  valsize, (unsigned int)shift,
+						  warn, bc->line);
     }
 
     /* Handle integer expressions */
     intn = yasm_expr_get_intnum(ep, NULL);
     if (intn)
-	return cur_arch->intnum_tobytes(intn, buf, destsize, valsize, shift,
-					bc, rel, warn, bc->line);
+	return cur_arch->module->intnum_tobytes(cur_arch, intn, buf, destsize,
+						valsize, shift, bc, rel, warn,
+						bc->line);
 
     /* Check for complex float expressions */
     if (yasm_expr__contains(*ep, YASM_EXPR_FLOAT)) {
@@ -188,8 +194,8 @@ bin_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 
     assert(info != NULL);
 
-    bigbuf = yasm_bc_tobytes(bc, info->buf, &size, &multiple, &gap, info->sect,
-			     info, bin_objfmt_output_expr, NULL, NULL);
+    bigbuf = yasm_bc_tobytes(bc, info->buf, &size, &multiple, &gap, info,
+			     bin_objfmt_output_expr, NULL);
 
     /* Don't bother doing anything else if size ended up being 0. */
     if (size == 0) {
@@ -225,8 +231,7 @@ bin_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 }
 
 static void
-bin_objfmt_output(FILE *f, yasm_sectionhead *sections,
-		  /*@unused@*/ int all_syms)
+bin_objfmt_output(FILE *f, yasm_object *object, /*@unused@*/ int all_syms)
 {
     /*@observer@*/ /*@null@*/ yasm_section *text, *data, *bss, *prevsect;
     /*@null@*/ yasm_expr *startexpr;
@@ -240,9 +245,9 @@ bin_objfmt_output(FILE *f, yasm_sectionhead *sections,
     info.f = f;
     info.buf = yasm_xmalloc(REGULAR_OUTBUF_SIZE);
 
-    text = yasm_sections_find_general(sections, ".text");
-    data = yasm_sections_find_general(sections, ".data");
-    bss = yasm_sections_find_general(sections, ".bss");
+    text = yasm_object_find_general(object, ".text");
+    data = yasm_object_find_general(object, ".data");
+    bss = yasm_object_find_general(object, ".bss");
 
     if (!text)
 	yasm_internal_error(N_("No `.text' section in bin objfmt output"));
@@ -263,7 +268,7 @@ bin_objfmt_output(FILE *f, yasm_sectionhead *sections,
 	return;
     }
     start = yasm_intnum_get_uint(startnum);
-    yasm_expr_delete(startexpr);
+    yasm_expr_destroy(startexpr);
     textstart = start;
 
     /* Align .data and .bss (if present) by adjusting their starts. */
@@ -273,9 +278,8 @@ bin_objfmt_output(FILE *f, yasm_sectionhead *sections,
     if (data) {
 	start = bin_objfmt_align_section(data, prevsect, start, 4,
 					 prevsectlenptr, prevsectpadptr);
-	yasm_section_set_start(data,
-	    yasm_expr_new_ident(yasm_expr_int(yasm_intnum_new_uint(start)), 0),
-	    0);
+	yasm_section_set_start(data, yasm_expr_create_ident(
+	    yasm_expr_int(yasm_intnum_create_uint(start)), 0), 0);
 	datastart = start;
 	prevsect = data;
 	prevsectlenptr = &datalen;
@@ -284,16 +288,14 @@ bin_objfmt_output(FILE *f, yasm_sectionhead *sections,
     if (bss) {
 	start = bin_objfmt_align_section(bss, prevsect, start, 4,
 					 prevsectlenptr, prevsectpadptr);
-	yasm_section_set_start(bss,
-	    yasm_expr_new_ident(yasm_expr_int(yasm_intnum_new_uint(start)), 0),
-	    0);
+	yasm_section_set_start(bss, yasm_expr_create_ident(
+	    yasm_expr_int(yasm_intnum_create_uint(start)), 0), 0);
     }
 
     /* Output .text first. */
     info.sect = text;
     info.start = textstart;
-    yasm_bcs_traverse(yasm_section_get_bytecodes(text), &info,
-		      bin_objfmt_output_bytecode);
+    yasm_section_bcs_traverse(text, &info, bin_objfmt_output_bytecode);
 
     /* If .data is present, output it */
     if (data) {
@@ -306,8 +308,7 @@ bin_objfmt_output(FILE *f, yasm_sectionhead *sections,
 	/* Output .data bytecodes */
 	info.sect = data;
 	info.start = datastart;
-	yasm_bcs_traverse(yasm_section_get_bytecodes(data), &info,
-			  bin_objfmt_output_bytecode);
+	yasm_section_bcs_traverse(data, &info, bin_objfmt_output_bytecode);
     }
 
     /* If .bss is present, check it for non-reserve bytecodes */
@@ -322,11 +323,10 @@ bin_objfmt_cleanup(void)
 }
 
 static /*@observer@*/ /*@null@*/ yasm_section *
-bin_objfmt_sections_switch(yasm_sectionhead *headp,
-			   yasm_valparamhead *valparams,
-			   /*@unused@*/ /*@null@*/
-			   yasm_valparamhead *objext_valparams,
-			   unsigned long lindex)
+bin_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
+			  /*@unused@*/ /*@null@*/
+			  yasm_valparamhead *objext_valparams,
+			  unsigned long line)
 {
     yasm_valparam *vp;
     yasm_section *retval;
@@ -351,7 +351,7 @@ bin_objfmt_sections_switch(yasm_sectionhead *headp,
 	    resonly = 1;
 	} else {
 	    /* other section names not recognized. */
-	    yasm__error(lindex, N_("segment name `%s' not recognized"),
+	    yasm__error(line, N_("segment name `%s' not recognized"),
 			sectname);
 	    return NULL;
 	}
@@ -363,7 +363,7 @@ bin_objfmt_sections_switch(yasm_sectionhead *headp,
 		unsigned long bitcnt;
 
 		if (strcmp(sectname, ".text") == 0) {
-		    yasm__error(lindex,
+		    yasm__error(line,
 			N_("cannot specify an alignment to the `%s' section"),
 			sectname);
 		    return NULL;
@@ -371,7 +371,7 @@ bin_objfmt_sections_switch(yasm_sectionhead *headp,
 		
 		align = yasm_expr_get_intnum(&vp->param, NULL);
 		if (!align) {
-		    yasm__error(lindex,
+		    yasm__error(line,
 				N_("argument to `%s' is not a power of two"),
 				vp->val);
 		    return NULL;
@@ -383,7 +383,7 @@ bin_objfmt_sections_switch(yasm_sectionhead *headp,
 		 */
 		BitCount(bitcnt, alignval);
 		if (bitcnt > 1) {
-		    yasm__error(lindex,
+		    yasm__error(line,
 				N_("argument to `%s' is not a power of two"),
 				vp->val);
 		    return NULL;
@@ -393,21 +393,23 @@ bin_objfmt_sections_switch(yasm_sectionhead *headp,
 	    }
 	}
 
-	retval = yasm_sections_switch_general(headp, sectname,
-	    yasm_expr_new_ident(yasm_expr_int(yasm_intnum_new_uint(start)),
-				lindex), resonly, &isnew, lindex);
+	retval = yasm_object_get_general(object, sectname,
+	    yasm_expr_create_ident(
+		yasm_expr_int(yasm_intnum_create_uint(start)), line), resonly,
+	    &isnew, line);
 
 	if (isnew) {
 	    if (have_alignval) {
 		unsigned long *data = yasm_xmalloc(sizeof(unsigned long));
 		*data = alignval;
-		yasm_section_set_of_data(retval, &yasm_bin_LTX_objfmt, data);
+		yasm_section_add_data(retval, &bin_section_data_callback,
+				      data);
 	    }
 
-	    yasm_symrec_define_label(sectname, retval, (yasm_bytecode *)NULL,
-				     1, lindex);
+	    yasm_symtab_define_label(yasm_object_get_symtab(object), sectname,
+				     yasm_section_bcs_first(retval), 1, line);
 	} else if (have_alignval)
-	    yasm__warning(YASM_WARN_GENERAL, lindex,
+	    yasm__warning(YASM_WARN_GENERAL, line,
 		N_("alignment value ignored on section redeclaration"));
 
 	return retval;
@@ -416,7 +418,7 @@ bin_objfmt_sections_switch(yasm_sectionhead *headp,
 }
 
 static void
-bin_objfmt_section_data_delete(/*@only@*/ void *d)
+bin_section_data_destroy(/*@only@*/ void *d)
 {
     yasm_xfree(d);
 }
@@ -425,10 +427,10 @@ static void
 bin_objfmt_common_declare(/*@unused@*/ yasm_symrec *sym,
 			  /*@only@*/ yasm_expr *size, /*@unused@*/ /*@null@*/
 			  yasm_valparamhead *objext_valparams,
-			  unsigned long lindex)
+			  unsigned long line)
 {
-    yasm_expr_delete(size);
-    yasm__error(lindex,
+    yasm_expr_destroy(size);
+    yasm__error(line,
 	N_("binary object format does not support common variables"));
 }
 
@@ -436,7 +438,7 @@ static int
 bin_objfmt_directive(const char *name, yasm_valparamhead *valparams,
 		     /*@unused@*/ /*@null@*/
 		     yasm_valparamhead *objext_valparams,
-		     yasm_sectionhead *headp, unsigned long lindex)
+		     yasm_object *object, unsigned long line)
 {
     yasm_section *sect;
     yasm_valparam *vp;
@@ -447,24 +449,24 @@ bin_objfmt_directive(const char *name, yasm_valparamhead *valparams,
 	/* ORG takes just a simple integer as param */
 	vp = yasm_vps_first(valparams);
 	if (vp->val)
-	    start = yasm_expr_new_ident(yasm_expr_sym(
-			yasm_symrec_use(vp->val, lindex)), lindex);
+	    start = yasm_expr_create_ident(yasm_expr_sym(yasm_symtab_use(
+		yasm_object_get_symtab(object), vp->val, line)), line);
 	else if (vp->param) {
 	    start = vp->param;
 	    vp->param = NULL;	/* Don't let valparams delete it */
 	}
 
 	if (!start) {
-	    yasm__error(lindex, N_("argument to ORG must be expression"));
+	    yasm__error(line, N_("argument to ORG must be expression"));
 	    return 0;
 	}
 
 	/* ORG changes the start of the .text section */
-	sect = yasm_sections_find_general(headp, ".text");
+	sect = yasm_object_find_general(object, ".text");
 	if (!sect)
 	    yasm_internal_error(
 		N_("bin objfmt: .text section does not exist before ORG is called?"));
-	yasm_section_set_start(sect, start, lindex);
+	yasm_section_set_start(sect, start, line);
 
 	return 0;	    /* directive recognized */
     } else
@@ -472,7 +474,7 @@ bin_objfmt_directive(const char *name, yasm_valparamhead *valparams,
 }
 
 static void
-bin_objfmt_section_data_print(FILE *f, int indent_level, void *data)
+bin_section_data_print(void *data, FILE *f, int indent_level)
 {
     fprintf(f, "%*salign=%ld\n", indent_level, "", *((unsigned long *)data));
 }
@@ -497,15 +499,9 @@ yasm_objfmt yasm_bin_LTX_objfmt = {
     bin_objfmt_initialize,
     bin_objfmt_output,
     bin_objfmt_cleanup,
-    bin_objfmt_sections_switch,
-    bin_objfmt_section_data_delete,
-    bin_objfmt_section_data_print,
+    bin_objfmt_section_switch,
     NULL /*bin_objfmt_extern_declare*/,
     NULL /*bin_objfmt_global_declare*/,
     bin_objfmt_common_declare,
-    NULL /*bin_objfmt_symrec_data_delete*/,
-    NULL /*bin_objfmt_symrec_data_print*/,
-    bin_objfmt_directive,
-    NULL /*bin_objfmt_bc_objfmt_data_delete*/,
-    NULL /*bin_objfmt_bc_objfmt_data_print*/
+    bin_objfmt_directive
 };

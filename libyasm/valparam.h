@@ -51,21 +51,31 @@ struct yasm_valparam {
  * \param p	parameter
  * \return Newly allocated valparam.
  */
-yasm_valparam *yasm_vp_new(/*@keep@*/ char *v, /*@keep@*/ yasm_expr *p);
+yasm_valparam *yasm_vp_create(/*@keep@*/ char *v, /*@keep@*/ yasm_expr *p);
 
+/** Create a new linked list of valparams.
+ * \return Newly allocated valparam list.
+ */
+yasm_valparamhead *yasm_vps_create(void);
+
+/** Destroy a list of instruction operands (created with yasm_vps_create).
+ * \param headp		list of instruction operands
+ */
+void yasm_vps_destroy(yasm_valparamhead *headp);
+
+#ifdef YASM_LIB_INTERNAL
 /** Initialize linked list of valparams.
  * \param headp	linked list
  */
-void yasm_vps_initialize(/*@out@*/ yasm_valparamhead *headp);
-#ifdef YASM_LIB_INTERNAL
 #define yasm_vps_initialize(headp)	STAILQ_INIT(headp)
-#endif
 
-/** Destroy (free allocated memory for) linked list of valparams.
+/** Destroy (free allocated memory for) linked list of valparams (created with
+ * yasm_vps_initialize).
  * \warning Deletes val/params.
  * \param headp	linked list
  */
 void yasm_vps_delete(yasm_valparamhead *headp);
+#endif
 
 /** Append valparam to tail of linked list.
  * \param headp	linked list
@@ -109,6 +119,6 @@ void yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp);
  * \param f	file
  * \param headp	linked list
  */
-void yasm_vps_print(FILE *f, /*@null@*/ const yasm_valparamhead *headp);
+void yasm_vps_print(/*@null@*/ const yasm_valparamhead *headp, FILE *f);
 
 #endif

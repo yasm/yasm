@@ -31,7 +31,13 @@
 #include <libyasm.h>
 
 
-yasm_objfmt yasm_dbg_LTX_objfmt;
+static void symrec_data_destroy(/*@only@*/ void *data);
+static void symrec_data_print(void *data, FILE *f, int indent_level);
+
+static const yasm_assoc_data_callback symrec_data_callback = {
+    symrec_data_destroy,
+    symrec_data_print
+};
 
 /* Output file for debugging-type formats.  This is so that functions that are
  * called before the object file is usually opened can still write data out to
@@ -47,7 +53,7 @@ static FILE *dbg_objfmt_file;
 
 static int
 dbg_objfmt_initialize(const char *in_filename, const char *obj_filename,
-		      yasm_dbgfmt *df, yasm_arch *a, const char *machine)
+		      yasm_object *object, yasm_dbgfmt *df, yasm_arch *a)
 {
     dbg_objfmt_file = fopen(obj_filename, "wt");
     if (!dbg_objfmt_file) {
@@ -55,20 +61,19 @@ dbg_objfmt_initialize(const char *in_filename, const char *obj_filename,
 	return 0;
     }
     fprintf(dbg_objfmt_file,
-	    "initialize(\"%s\", \"%s\", %s dbgfmt, %s arch, \"%s\")\n",
-	    in_filename, obj_filename, df->keyword, a->keyword, machine);
+	    "initialize(\"%s\", \"%s\", %s dbgfmt, %s arch)\n",
+	    in_filename, obj_filename, df->keyword, a->module->keyword);
     return 0;
 }
 
 static void
-dbg_objfmt_output(/*@unused@*/ FILE *f, yasm_sectionhead *sections,
-		  int all_syms)
+dbg_objfmt_output(/*@unused@*/ FILE *f, yasm_object *object, int all_syms)
 {
-    fprintf(dbg_objfmt_file, "output(f, sections->\n");
-    yasm_sections_print(dbg_objfmt_file, 1, sections);
+    fprintf(dbg_objfmt_file, "output(f, object->\n");
+    yasm_object_print(object, dbg_objfmt_file, 1);
     fprintf(dbg_objfmt_file, "%d)\n", all_syms);
     fprintf(dbg_objfmt_file, " Symbol Table:\n");
-    yasm_symrec_print_all(dbg_objfmt_file, 1);
+    yasm_symtab_print(yasm_object_get_symtab(object), dbg_objfmt_file, 1);
 }
 
 static void
@@ -78,30 +83,29 @@ dbg_objfmt_cleanup(void)
 }
 
 static /*@observer@*/ /*@null@*/ yasm_section *
-dbg_objfmt_sections_switch(yasm_sectionhead *headp,
-			   yasm_valparamhead *valparams,
-			   /*@unused@*/ /*@null@*/
-			   yasm_valparamhead *objext_valparams,
-			   unsigned long lindex)
+dbg_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
+			  /*@unused@*/ /*@null@*/
+			  yasm_valparamhead *objext_valparams,
+			  unsigned long line)
 {
     yasm_valparam *vp;
     yasm_section *retval;
     int isnew;
 
     fprintf(dbg_objfmt_file, "sections_switch(headp, ");
-    yasm_vps_print(dbg_objfmt_file, valparams);
+    yasm_vps_print(valparams, dbg_objfmt_file);
     fprintf(dbg_objfmt_file, ", ");
-    yasm_vps_print(dbg_objfmt_file, objext_valparams);
-    fprintf(dbg_objfmt_file, ", %lu), returning ", lindex);
+    yasm_vps_print(objext_valparams, dbg_objfmt_file);
+    fprintf(dbg_objfmt_file, ", %lu), returning ", line);
 
     if ((vp = yasm_vps_first(valparams)) && !vp->param && vp->val != NULL) {
-	retval = yasm_sections_switch_general(headp, vp->val,
-	    yasm_expr_new_ident(yasm_expr_int(yasm_intnum_new_uint(200)),
-				lindex), 0, &isnew, lindex);
+	retval = yasm_object_get_general(object, vp->val,
+	    yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(200)),
+				   line), 0, &isnew, line);
 	if (isnew) {
 	    fprintf(dbg_objfmt_file, "(new) ");
-	    yasm_symrec_define_label(vp->val, retval, (yasm_bytecode *)NULL, 1,
-				     lindex);
+	    yasm_symtab_define_label(yasm_object_get_symtab(object), vp->val,
+				     yasm_section_bcs_first(retval), 1, line);
 	}
 	fprintf(dbg_objfmt_file, "\"%s\" section\n", vp->val);
 	return retval;
@@ -112,80 +116,62 @@ dbg_objfmt_sections_switch(yasm_sectionhead *headp,
 }
 
 static void
-dbg_objfmt_section_data_delete(/*@only@*/ void *data)
-{
-    fprintf(dbg_objfmt_file, "section_data_delete(%p)\n", data);
-    yasm_xfree(data);
-}
-
-static void
-dbg_objfmt_section_data_print(FILE *f, int indent_level, /*@null@*/ void *data)
-{
-    if (data)
-	fprintf(f, "%*s%p\n", indent_level, "", data);
-    else
-	fprintf(f, "%*s(none)\n", indent_level, "");
-}
-
-static void
 dbg_objfmt_extern_declare(yasm_symrec *sym, /*@unused@*/ /*@null@*/
 			  yasm_valparamhead *objext_valparams,
-			  unsigned long lindex)
+			  unsigned long line)
 {
     fprintf(dbg_objfmt_file, "extern_declare(\"%s\", ",
 	    yasm_symrec_get_name(sym));
-    yasm_vps_print(dbg_objfmt_file, objext_valparams);
-    fprintf(dbg_objfmt_file, ", %lu), setting of_data=NULL\n", lindex);
-    yasm_symrec_set_of_data(sym, &yasm_dbg_LTX_objfmt, NULL);
+    yasm_vps_print(objext_valparams, dbg_objfmt_file);
+    fprintf(dbg_objfmt_file, ", %lu)\n", line);
 }
 
 static void
 dbg_objfmt_global_declare(yasm_symrec *sym, /*@unused@*/ /*@null@*/
 			  yasm_valparamhead *objext_valparams,
-			  unsigned long lindex)
+			  unsigned long line)
 {
     fprintf(dbg_objfmt_file, "global_declare(\"%s\", ",
 	    yasm_symrec_get_name(sym));
-    yasm_vps_print(dbg_objfmt_file, objext_valparams);
-    fprintf(dbg_objfmt_file, ", %lu), setting of_data=NULL\n", lindex);
-    yasm_symrec_set_of_data(sym, &yasm_dbg_LTX_objfmt, NULL);
+    yasm_vps_print(objext_valparams, dbg_objfmt_file);
+    fprintf(dbg_objfmt_file, ", %lu)\n", line);
 }
 
 static void
 dbg_objfmt_common_declare(yasm_symrec *sym, /*@only@*/ yasm_expr *size,
 			  /*@unused@*/ /*@null@*/
 			  yasm_valparamhead *objext_valparams,
-			  unsigned long lindex)
+			  unsigned long line)
 {
     assert(dbg_objfmt_file != NULL);
     fprintf(dbg_objfmt_file, "common_declare(\"%s\", ",
 	    yasm_symrec_get_name(sym));
-    yasm_expr_print(dbg_objfmt_file, size);
+    yasm_expr_print(size, dbg_objfmt_file);
     fprintf(dbg_objfmt_file, ", ");
-    yasm_vps_print(dbg_objfmt_file, objext_valparams);
-    fprintf(dbg_objfmt_file, ", %lu), setting of_data=", lindex);
-    yasm_expr_print(dbg_objfmt_file, size);
-    yasm_symrec_set_of_data(sym, &yasm_dbg_LTX_objfmt, size);
+    yasm_vps_print(objext_valparams, dbg_objfmt_file);
+    fprintf(dbg_objfmt_file, ", %lu), setting of_data=", line);
+    yasm_expr_print(size, dbg_objfmt_file);
+    yasm_symrec_add_data(sym, &symrec_data_callback, size);
     fprintf(dbg_objfmt_file, "\n");
 }
 
 static void
-dbg_objfmt_symrec_data_delete(/*@only@*/ void *data)
+symrec_data_destroy(void *data)
 {
     fprintf(dbg_objfmt_file, "symrec_data_delete(");
     if (data) {
-	yasm_expr_print(dbg_objfmt_file, data);
-	yasm_expr_delete(data);
+	yasm_expr_print((yasm_expr *)data, dbg_objfmt_file);
+	yasm_expr_destroy((yasm_expr *)data);
     }
     fprintf(dbg_objfmt_file, ")\n");
 }
 
 static void
-dbg_objfmt_symrec_data_print(FILE *f, int indent_level, /*@null@*/ void *data)
+symrec_data_print(void *data, FILE *f, int indent_level)
 {
     if (data) {
 	fprintf(f, "%*sSize=", indent_level, "");
-	yasm_expr_print(f, data);
+	yasm_expr_print((yasm_expr *)data, f);
 	fprintf(f, "\n");
     } else {
 	fprintf(f, "%*s(none)\n", indent_level, "");
@@ -195,30 +181,15 @@ dbg_objfmt_symrec_data_print(FILE *f, int indent_level, /*@null@*/ void *data)
 static int
 dbg_objfmt_directive(const char *name, yasm_valparamhead *valparams,
 		     /*@null@*/ yasm_valparamhead *objext_valparams,
-		     /*@unused@*/ yasm_sectionhead *headp,
-		     unsigned long lindex)
+		     /*@unused@*/ yasm_object *object,
+		     unsigned long line)
 {
     fprintf(dbg_objfmt_file, "directive(\"%s\", ", name);
-    yasm_vps_print(dbg_objfmt_file, valparams);
+    yasm_vps_print(valparams, dbg_objfmt_file);
     fprintf(dbg_objfmt_file, ", ");
-    yasm_vps_print(dbg_objfmt_file, objext_valparams);
-    fprintf(dbg_objfmt_file, ", %lu), returning 0 (recognized)\n", lindex);
+    yasm_vps_print(objext_valparams, dbg_objfmt_file);
+    fprintf(dbg_objfmt_file, ", %lu), returning 0 (recognized)\n", line);
     return 0;	    /* dbg format "recognizes" all directives */
-}
-
-static void
-dbg_objfmt_bc_objfmt_data_delete(unsigned int type, /*@only@*/ void *data)
-{
-    fprintf(dbg_objfmt_file, "symrec_data_delete(%u, %p)\n", type, data);
-    yasm_xfree(data);
-}
-
-static void
-dbg_objfmt_bc_objfmt_data_print(FILE *f, int indent_level, unsigned int type,
-				const void *data)
-{
-    fprintf(f, "%*sType=%u\n", indent_level, "", type);
-    fprintf(f, "%*sData=%p\n", indent_level, "", data);
 }
 
 
@@ -241,15 +212,9 @@ yasm_objfmt yasm_dbg_LTX_objfmt = {
     dbg_objfmt_initialize,
     dbg_objfmt_output,
     dbg_objfmt_cleanup,
-    dbg_objfmt_sections_switch,
-    dbg_objfmt_section_data_delete,
-    dbg_objfmt_section_data_print,
+    dbg_objfmt_section_switch,
     dbg_objfmt_extern_declare,
     dbg_objfmt_global_declare,
     dbg_objfmt_common_declare,
-    dbg_objfmt_symrec_data_delete,
-    dbg_objfmt_symrec_data_print,
-    dbg_objfmt_directive,
-    dbg_objfmt_bc_objfmt_data_delete,
-    dbg_objfmt_bc_objfmt_data_print
+    dbg_objfmt_directive
 };
