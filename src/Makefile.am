@@ -6,7 +6,10 @@ INCLUDES = -I$(top_builddir)/intl
 
 bin_PROGRAMS = yasm
 
-yasm_SOURCES = main.c
+yasm_SOURCES = \
+	main.c			\
+	errwarn.c		\
+	errwarn.h
 
 yasm_LDADD = \
 	parsers/nasm/libparser.a	\
@@ -21,8 +24,6 @@ noinst_LIBRARIES = libyasm.a
 libyasm_a_SOURCES = \
 	bytecode.c		\
 	bytecode.h		\
-	errwarn.c		\
-	errwarn.h		\
 	expr.c			\
 	expr.h			\
 	symrec.c		\
