@@ -5,7 +5,7 @@ liboptimizer_a_SOURCES = \
 
 INCLUDES = \
 	-I$(top_srcdir)/src	\
-	-I$(top_srcdir)/intl
+	-I../../../intl
 
 if DEV
 CFLAGS = -ansi -pedantic -Wall -g

@@ -1,6 +1,6 @@
 SUBDIRS = parsers preprocs optimizers objfmts
 
-INCLUDES = -I$(top_srcdir)/intl
+INCLUDES = -I../intl
 
 bin_PROGRAMS = yasm
 
