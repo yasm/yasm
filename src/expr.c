@@ -564,7 +564,11 @@ expr_level_op(expr *e, int fold_const, int simplify_ident)
 	    /* copy operand if it changed places */
 	    if (o == first_int_term)
 		o--;
-	    e->terms[o--] = e->terms[i];
+	    e->terms[o] = e->terms[i];
+	    /* If we moved the first_int_term, change first_int_num too */
+	    if (i == first_int_term)
+		first_int_term = o;
+	    o--;
 	}
     }
 
@@ -1111,7 +1115,11 @@ checkea_calc_displen(expr **ep, int wordsize, int noreg, int isbpreg,
 	 * when we output).
 	 */
 	case 1:
-	    *modrm |= 0100;
+	    /* TODO: Add optional warning here about byte not being valid
+	     * override in noreg case.
+	     */
+	    if (!noreg)
+		*modrm |= 0100;
 	    *v_modrm = 1;
 	    break;
 	case 2:
@@ -1121,7 +1129,11 @@ checkea_calc_displen(expr **ep, int wordsize, int noreg, int isbpreg,
 			_("invalid effective address (displacement size)"));
 		return 0;
 	    }
-	    *modrm |= 0200;
+	    /* TODO: Add optional warning here about 2/4 not being valid
+	     * override in noreg case.
+	     */
+	    if (!noreg)
+		*modrm |= 0200;
 	    *v_modrm = 1;
 	    break;
 	default:
