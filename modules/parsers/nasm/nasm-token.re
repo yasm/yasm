@@ -218,21 +218,21 @@ scan:
 	}
 	/* 10010011b - binary number */
 
-	bindigit+ "b" {
+	bindigit+ B {
 	    s->tok[TOKLEN-1] = '\0'; /* strip off 'b' */
 	    lvalp->intn = yasm_intnum_create_bin(s->tok, cur_line);
 	    RETURN(INTNUM);
 	}
 
 	/* 777q - octal number */
-	octdigit+ "q" {
+	octdigit+ Q {
 	    s->tok[TOKLEN-1] = '\0'; /* strip off 'q' */
 	    lvalp->intn = yasm_intnum_create_oct(s->tok, cur_line);
 	    RETURN(INTNUM);
 	}
 
 	/* 0AAh form of hexidecimal number */
-	digit hexdigit* "h" {
+	digit hexdigit* H {
 	    s->tok[TOKLEN-1] = '\0'; /* strip off 'h' */
 	    lvalp->intn = yasm_intnum_create_hex(s->tok, cur_line);
 	    RETURN(INTNUM);
