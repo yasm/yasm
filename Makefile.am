@@ -1,6 +1,6 @@
 # $IdPath$
 
-SUBDIRS = libltdl tools m4 po
+SUBDIRS = libltdl m4 po
 
 CFLAGS = @ANSI_CFLAGS@
 AM_YFLAGS = -d

@@ -285,9 +285,6 @@ AC_SUBST(LIBLTDL)
 
 AC_CONFIG_FILES([Makefile
 	libltdl/Makefile
-	tools/Makefile
-	tools/lemon/Makefile
-	tools/re2c/Makefile
 	m4/Makefile
 	po/Makefile.in
 ])
