@@ -174,6 +174,8 @@ main(int argc, char *argv[])
 
     if (in != stdin)
 	fclose(in);
+    if (in_filename)
+	xfree(in_filename);
 
     if (OutputAllErrorWarning() > 0) {
 	sections_delete(sections);
