@@ -60,14 +60,6 @@ AC_ARG_ENABLE(gcov,
   *) AC_MSG_ERROR([bad value ${enableval} for --enable-gcov]) ;;
 esac],[gcov=false])
 
-AC_ARG_ENABLE(dmalloc,
-[  --enable-dmalloc    Enable debug malloc (requires dmalloc library)],
-[case "${enableval}" in
-  yes) dmalloc=true ;;
-  no)  dmalloc=false ;;
-  *) AC_MSG_ERROR([bad value ${enableval} for --enable-dmalloc]) ;;
-esac],[dmalloc=false])
-
 #
 # Checks for programs.
 #
@@ -100,11 +92,7 @@ AC_EXEEXT
 #
 # Checks for libraries.
 #
-
-# dmalloc library (optional)
-if ${dmalloc}; then
-	AC_CHECK_LIB(dmalloc, dmalloc_shutdown)
-fi
+AM_WITH_DMALLOC
 
 #
 # Checks for header files.
@@ -112,11 +100,6 @@ fi
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([alloca.h limits.h sys/cdefs.h sys/ipc.h sys/msg.h sys/param.h sys/types.h sys/queue.h unistd.h])
-
-# dmalloc library (optional)
-if ${dmalloc}; then
-	AC_CHECK_HEADERS([dmalloc.h])
-fi
 
 # REQUIRE standard C headers
 if test "$ac_cv_header_stdc" != yes; then
@@ -175,21 +158,6 @@ fi
 # Force x86 architecture only for now.
 ARCH=x86
 AC_SUBST([ARCH])
-
-# Require things for --enable-dmalloc option.
-DMALLOCFLAGS=
-if ${dmalloc}; then
-	if test "$ac_cv_header_dmalloc_h" != yes ||
-	   test "$ac_cv_lib_dmalloc_dmalloc_shutdown" != yes; then
-		AC_MSG_ERROR([dmalloc required for --enable-dmalloc.])
-	else
-	    	AC_DEFINE([DMALLOC], 1, [Enable dmalloc library debugging.])
-	fi
-else
-	if ${morewarn}; then
-		DMALLOCFLAGS="-Wredundant-decls"
-	fi
-fi
 
 # Require things for --enable-dev option.
 if ${dev}; then
@@ -265,7 +233,7 @@ fi
 # If we're using GCC, then we can enable the above CFLAGS as well as turn on
 # -ansi -pedantic -Wall.
 if test "$GCC" = yes; then
-	ANSI_CFLAGS="-ansi -pedantic -Wall $MOREWARNFLAGS $WARNERRORFLAGS $DEVFLAGS $PROFILINGFLAGS $GCOVFLAGS $DMALLOCFLAGS"
+	ANSI_CFLAGS="-ansi -pedantic -Wall $MOREWARNFLAGS $WARNERRORFLAGS $DEVFLAGS $PROFILINGFLAGS $GCOVFLAGS"
 else
 	ANSI_CFLAGS=""
 fi

@@ -136,7 +136,7 @@ main(int argc, char *argv[])
     textdomain(PACKAGE);
 
     /* Set libltdl malloc/free functions. */
-#ifdef DMALLOC
+#ifdef WITH_DMALLOC
     lt_dlmalloc = malloc;
     lt_dlfree = free;
 #else

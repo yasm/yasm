@@ -25,7 +25,7 @@ RCSID("$IdPath$");
 #include "errwarn.h"
 
 
-#ifndef DMALLOC
+#ifndef WITH_DMALLOC
 
 void *
 xmalloc(size_t size)

@@ -117,9 +117,6 @@ int strncasecmp(const char *s1, const char *s2, size_t n);
 # endif
 #endif
 
-#ifdef DMALLOC
-# include <dmalloc.h>
-#else
 /* strdup() implementation with error checking (using xmalloc). */
 /*@only@*/ char *xstrdup(const char *str);
 
@@ -129,6 +126,9 @@ int strncasecmp(const char *s1, const char *s2, size_t n);
 /*@only@*/ void *xrealloc(/*@only@*/ /*@out@*/ /*@returned@*/ /*@null@*/
 			  void *oldmem, size_t size) /*@modifies oldmem@*/;
 void xfree(/*@only@*/ /*@out@*/ /*@null@*/ void *p) /*@modifies p@*/;
+
+#ifdef WITH_DMALLOC
+# include <dmalloc.h>
 #endif
 
 /*@only@*/ char *xstrndup(const char *str, size_t len);

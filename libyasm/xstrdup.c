@@ -47,7 +47,7 @@ void memcpy(void *, const void *, size_t);
 # endif
 #endif
 
-#ifndef DMALLOC
+#ifndef WITH_DMALLOC
 
 char *
 xstrdup(const char *str)
