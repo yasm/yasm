@@ -1,4 +1,4 @@
-/* $Id: nasm-bison.y,v 1.5 2001/05/21 21:44:47 mu Exp $
+/* $Id: nasm-bison.y,v 1.6 2001/05/21 22:10:27 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -53,6 +53,7 @@ extern void yyerror(char *);
 %token <int_val> RESERVE_SPACE
 %token INCBIN EQU TIMES
 %token SEG WRT NEAR SHORT FAR NOSPLIT ORG
+%token TO
 %token O16 O32 A16 A32 LOCK REPNZ REP REPZ
 %token <int_val> OPERSIZE ADDRSIZE
 %token <int_val> CR4 CRREG_NOTCR4 DRREG TRREG ST0 FPUREG_NOTST0 MMXREG XMMREG
@@ -71,7 +72,7 @@ extern void yyerror(char *);
 
 %type <bc> line exp instr instrbase
 
-%type <int_val> fpureg reg32 reg16 reg8 reg_dess reg_fsgs reg_notcs
+%type <int_val> fpureg reg32 reg16 reg8 reg_dess reg_fsgs reg_notcs segreg
 %type <ea_val> mem memaddr memexp
 %type <ea_val> mem8x mem16x mem32x mem64x mem80x mem128x
 %type <ea_val> mem8 mem16 mem32 mem64 mem80 mem128 mem1632
@@ -160,6 +161,11 @@ reg_fsgs: REG_FS
 reg_notcs: reg_dess
     | reg_fsgs
     | WORD reg_notcs
+;
+
+segreg: reg_notcs
+    | REG_CS
+    | WORD segreg
 ;
 
 /* memory addresses */
