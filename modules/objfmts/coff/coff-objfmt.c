@@ -406,7 +406,7 @@ coff_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 	return 0;
     }
 
-    info->csd->size += size;
+    info->csd->size += multiple*size;
 
     /* Warn that gaps are converted to 0 and write out the 0's. */
     if (gap) {
