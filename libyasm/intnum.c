@@ -265,7 +265,7 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
 
 	if (operand) {
 	    if (operand->type == INTNUM_BV)
-		op2 = acc->val.bv;
+		op2 = operand->val.bv;
 	    else {
 		op2 = BitVector_Create(BITVECT_ALLOC_SIZE, TRUE);
 		BitVector_Chunk_Store(op2, 32, 0, operand->val.ul);
