@@ -52,7 +52,8 @@ fill(Scanner *s, uchar *cursor)
 	    s->pos = &buf[s->pos - s->bot];
 	    s->lim = &buf[s->lim - s->bot];
 	    s->top = &s->lim[BSIZE];
-	    free(s->bot);
+	    if (s->bot)
+		free(s->bot);
 	    s->bot = buf;
 	}
 	if((cnt = fread(s->lim, sizeof(uchar), BSIZE, s->in)) != BSIZE){

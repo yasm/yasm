@@ -91,8 +91,10 @@ State_new(void)
 void
 State_delete(State *s)
 {
-    free(s->kernel);
-    free(s->go.span);
+    if (s->kernel)
+	free(s->kernel);
+    if (s->go.span)
+	free(s->go.span);
     free(s);
 }
 
