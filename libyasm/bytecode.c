@@ -34,6 +34,7 @@
 #include "arch.h"
 
 #include "bc-int.h"
+#include "expr-int.h"
 
 
 struct dataval {
@@ -320,7 +321,8 @@ bc_resolve_data(bytecode_data *bc_data, unsigned long *len)
 
 static int
 bc_resolve_reserve(bytecode_reserve *reserve, unsigned long *len, int save,
-		   const section *sect, resolve_label_func resolve_label)
+		   unsigned long line, const section *sect,
+		   resolve_label_func resolve_label)
 {
     int retval = 1;
     /*@null@*/ expr *temp;
@@ -337,9 +339,12 @@ bc_resolve_reserve(bytecode_reserve *reserve, unsigned long *len, int save,
     }
     expr_expand_labelequ(*tempp, sect, 1, resolve_label);
     num = expr_get_intnum(tempp);
-    if (!num)
+    if (!num) {
+	if (expr_contains(temp, EXPR_FLOAT))
+	    ErrorAt(line,
+		    _("expression must not contain floating point value"));
 	retval = -1;
-    else
+    } else
 	*len += intnum_get_uint(num)*reserve->itemsize;
     expr_delete(temp);
     return retval;
@@ -450,8 +455,8 @@ bc_resolve(bytecode *bc, int save, const section *sect,
 	    break;
 	case BC_RESERVE:
 	    reserve = bc_get_data(bc);
-	    retval = bc_resolve_reserve(reserve, &bc->len, save, sect,
-					resolve_label);
+	    retval = bc_resolve_reserve(reserve, &bc->len, save, bc->line,
+					sect, resolve_label);
 	    break;
 	case BC_INCBIN:
 	    incbin = bc_get_data(bc);
@@ -478,9 +483,12 @@ bc_resolve(bytecode *bc, int save, const section *sect,
 	}
 	expr_expand_labelequ(*tempp, sect, 1, resolve_label);
 	num = expr_get_intnum(tempp);
-	if (!num)
+	if (!num) {
+	    if (expr_contains(temp, EXPR_FLOAT))
+		ErrorAt(bc->line,
+			_("expression must not contain floating point value"));
 	    retval = -1;
-	else
+	} else
 	    bc->len *= intnum_get_uint(num);
 	expr_delete(temp);
     }
@@ -521,22 +529,6 @@ bc_tobytes_data(bytecode_data *bc_data, unsigned char **bufp,
 		break;
 	}
     }
-
-    return 0;
-}
-
-static int
-bc_tobytes_reserve(/*@unused@*/ bytecode_reserve *reserve,
-		   unsigned char **bufp, unsigned long len)
-    /*@sets **bufp@*/
-{
-    unsigned long i;
-
-    /* Go ahead and zero the bytes.  Probably most objfmts will want it
-     * zero'd if they're actually going to output it.
-     */
-    for (i=0; i<len; i++)
-	WRITE_BYTE(*bufp, 0);
 
     return 0;
 }
@@ -597,7 +589,6 @@ bc_tobytes(bytecode *bc, unsigned char *buf, unsigned long *bufsize,
     unsigned char *origbuf, *destbuf;
     /*@dependent@*/ /*@null@*/ const intnum *num;
     bytecode_data *bc_data;
-    bytecode_reserve *reserve;
     bytecode_incbin *incbin;
     unsigned long datasize;
     int error = 0;
@@ -611,6 +602,14 @@ bc_tobytes(bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 	*multiple = 1;
 
     datasize = bc->len / (*multiple);
+    *bufsize = datasize;
+
+    if (bc->type == BC_RESERVE) {
+	*gap = 1;
+	return NULL;	/* we didn't allocate a buffer */
+    }
+
+    *gap = 0;
 
     if (*bufsize < datasize) {
 	mybuf = xmalloc(sizeof(bc->len));
@@ -620,9 +619,6 @@ bc_tobytes(bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 	origbuf = buf;
 	destbuf = buf;
     }
-    *bufsize = datasize;
-
-    *gap = 0;
 
     switch (bc->type) {
 	case BC_EMPTY:
@@ -631,11 +627,6 @@ bc_tobytes(bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 	    bc_data = bc_get_data(bc);
 	    error = bc_tobytes_data(bc_data, &destbuf, sect, bc, d,
 				    output_expr);
-	    break;
-	case BC_RESERVE:
-	    reserve = bc_get_data(bc);
-	    error = bc_tobytes_reserve(reserve, &destbuf, bc->len);
-	    *gap = 1;
 	    break;
 	case BC_INCBIN:
 	    incbin = bc_get_data(bc);

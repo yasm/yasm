@@ -86,8 +86,7 @@ int bc_resolve(bytecode *bc, int save, const section *sect,
  *  bufsize       - the size of the generated data.
  *  multiple      - the number of times the data should be dup'ed when output
  *  gap           - indicates the data does not really need to exist in the
- *                  object file (eg res*-generated).  buf is filled with
- *                  bufsize 0 bytes.
+ *                  object file.  buf's contents are undefined if true.
  * Returns either NULL (if buf was big enough to hold the entire byte
  * representation), or a newly allocated buffer that should be used instead
  * of buf for reading the byte representation.
