@@ -99,13 +99,13 @@ elf_x86_amd64_write_secthead_rel(unsigned char *bufp,
     yasm_intnum *relocsize;
 
     YASM_WRITE_32_L(bufp, shead->rel_name ? shead->rel_name->index : 0);
-    YASM_WRITE_32_L(bufp, SHT_REL);
+    YASM_WRITE_32_L(bufp, SHT_RELA);
     YASM_WRITE_64Z_L(bufp, 0);
     YASM_WRITE_64Z_L(bufp, 0);
     YASM_WRITE_64Z_L(bufp, shead->rel_offset);
 
     nreloc = yasm_intnum_create_uint(shead->nreloc);
-    relocsize = yasm_intnum_create_uint(RELOC64_SIZE);
+    relocsize = yasm_intnum_create_uint(RELOC64A_SIZE);
     yasm_intnum_calc(relocsize, YASM_EXPR_MUL, nreloc, 0);
     YASM_WRITE_64I_L(bufp, relocsize);		/* size */
     yasm_intnum_destroy(nreloc);
@@ -114,7 +114,15 @@ elf_x86_amd64_write_secthead_rel(unsigned char *bufp,
     YASM_WRITE_32_L(bufp, symtab_idx);		/* link: symtab index */
     YASM_WRITE_32_L(bufp, shead->index);	/* info: relocated's index */
     YASM_WRITE_64Z_L(bufp, RELOC64_ALIGN);	/* align */
-    YASM_WRITE_64Z_L(bufp, RELOC64_SIZE);	/* entity size */
+    YASM_WRITE_64Z_L(bufp, RELOC64A_SIZE);	/* entity size */
+}
+
+static void
+elf_x86_amd64_handle_reloc_addend(yasm_intnum *intn, elf_reloc_entry *reloc)
+{
+    /* .rela: copy value out as addend, replace original with 0 */
+    reloc->addend = yasm_intnum_copy(intn);
+    yasm_intnum_zero(intn);
 }
 
 static unsigned int
@@ -146,6 +154,7 @@ elf_x86_amd64_write_reloc(unsigned char *bufp, elf_reloc_entry *reloc,
     YASM_WRITE_64I_L(bufp, reloc->reloc.addr);
     /*YASM_WRITE_64_L(bufp, ELF64_R_INFO(r_sym, r_type));*/
     YASM_WRITE_64C_L(bufp, r_sym, r_type);
+    YASM_WRITE_64I_L(bufp, reloc->addend);
 }
 
 static void
@@ -183,12 +192,13 @@ elf_x86_amd64_write_proghead(unsigned char **bufpp,
 
 const elf_machine_handler
 elf_machine_handler_x86_amd64 = {
-    "x86", "amd64",
-    SYMTAB64_SIZE, SYMTAB64_ALIGN, RELOC64_SIZE, SHDR64_SIZE, EHDR64_SIZE,
+    "x86", "amd64", ".rela",
+    SYMTAB64_SIZE, SYMTAB64_ALIGN, RELOC64A_SIZE, SHDR64_SIZE, EHDR64_SIZE,
     elf_x86_amd64_accepts_reloc_size,
     elf_x86_amd64_write_symtab_entry,
     elf_x86_amd64_write_secthead,
     elf_x86_amd64_write_secthead_rel,
+    elf_x86_amd64_handle_reloc_addend,
     elf_x86_amd64_map_reloc_info_to_type,
     elf_x86_amd64_write_reloc,
     elf_x86_amd64_write_proghead

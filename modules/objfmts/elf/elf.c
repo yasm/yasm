@@ -61,7 +61,8 @@ static const elf_machine_handler *elf_machine_handlers[] =
     &elf_machine_handler_x86_amd64,
     NULL
 };
-static elf_machine_handler const *elf_march;
+static const elf_machine_handler elf_null_machine = {0};
+static elf_machine_handler const *elf_march = &elf_null_machine;
 
 int
 elf_set_arch(yasm_arch *arch)
@@ -100,16 +101,25 @@ elf_reloc_entry_create(yasm_symrec *sym,
         return NULL;
     }
 
-    entry = yasm_xmalloc(sizeof(elf_reloc_entry));
     if (sym == NULL)
 	yasm_internal_error("sym is null");
 
+    entry = yasm_xmalloc(sizeof(elf_reloc_entry));
     entry->reloc.sym = sym;
     entry->reloc.addr = addr;
     entry->rtype_rel = rel;
     entry->valsize = valsize;
+    entry->addend = NULL;
 
     return entry;
+}
+
+void
+elf_reloc_entry_destroy(void *entry)
+{
+    if (((elf_reloc_entry*)entry)->addend)
+        yasm_intnum_destroy(((elf_reloc_entry*)entry)->addend);
+    yasm_xfree(entry);
 }
 
 /* strtab functions */
@@ -565,9 +575,35 @@ elf_secthead_append_reloc(yasm_section *sect, elf_secthead *shead,
 	yasm_internal_error("reloc is null");
 
     shead->nreloc++;
-    yasm_section_add_reloc(sect, (yasm_reloc *)reloc, yasm_xfree);
+    yasm_section_add_reloc(sect, (yasm_reloc *)reloc, elf_reloc_entry_destroy);
 
     return new_sect;
+}
+
+char *
+elf_secthead_name_reloc_section(const char *basesect)
+{
+    if (!elf_march->reloc_section_prefix)
+    {
+        yasm_internal_error(N_("Unsupported machine for ELF output"));
+        return NULL;
+    }
+    else
+    {
+        int prepend_length = strlen(elf_march->reloc_section_prefix);
+        char *sectname = yasm_xmalloc(prepend_length + strlen(basesect) + 1);
+        strcpy(sectname, elf_march->reloc_section_prefix);
+        strcat(sectname, basesect);
+        return sectname;
+    }
+}
+
+void
+elf_handle_reloc_addend(yasm_intnum *intn, elf_reloc_entry *reloc)
+{
+    if (!elf_march->handle_reloc_addend)
+        yasm_internal_error(N_("Unsupported machine for ELF output"));
+    elf_march->handle_reloc_addend(intn, reloc);
 }
 
 unsigned long

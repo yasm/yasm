@@ -222,8 +222,10 @@ typedef enum {
 #define SYMTAB64_ALIGN 8
 
 #define RELOC32_SIZE 8
+#define RELOC32A_SIZE 12
 #define RELOC64_SIZE 16
-#define RELOC_MAXSIZE 16
+#define RELOC64A_SIZE 24
+#define RELOC_MAXSIZE 24
 
 #define RELOC32_ALIGN 4
 #define RELOC64_ALIGN 8
@@ -305,6 +307,7 @@ struct elf_reloc_entry {
     yasm_reloc		 reloc;
     int			 rtype_rel;
     size_t		 valsize;
+    yasm_intnum         *addend;
 };
 
 STAILQ_HEAD(elf_strtab_head, elf_strtab_entry);
@@ -342,6 +345,7 @@ elf_reloc_entry *elf_reloc_entry_create(yasm_symrec *sym,
 					yasm_intnum *addr,
 					int rel,
 					size_t valsize);
+void elf_reloc_entry_destroy(void *entry);
 
 /* strtab functions */
 elf_strtab_entry *elf_strtab_entry_create(const char *str);
@@ -403,6 +407,8 @@ elf_size elf_secthead_set_entsize(elf_secthead *shead, elf_size size);
 struct yasm_symrec *elf_secthead_set_sym(elf_secthead *shead,
 					 struct yasm_symrec *sym);
 void elf_secthead_add_size(elf_secthead *shead, yasm_intnum *size);
+char *elf_secthead_name_reloc_section(const char *basesect);
+void elf_handle_reloc_addend(yasm_intnum *intn, elf_reloc_entry *reloc);
 unsigned long elf_secthead_write_rel_to_file(FILE *f, elf_section_index symtab,
 					     yasm_section *sect,
 					     elf_secthead *esd,

@@ -110,6 +110,12 @@ elf_x86_x86_write_secthead_rel(unsigned char *bufp,
     YASM_WRITE_32_L(bufp, RELOC32_SIZE);	/* entity size */
 }
 
+static void
+elf_x86_x86_handle_reloc_addend(yasm_intnum *intn, elf_reloc_entry *reloc)
+{
+    return; /* .rel: Leave addend in intn */
+}
+
 static unsigned int
 elf_x86_x86_map_reloc_info_to_type(elf_reloc_entry *reloc)
 {
@@ -156,12 +162,13 @@ elf_x86_x86_write_proghead(unsigned char **bufpp,
 
 const elf_machine_handler
 elf_machine_handler_x86_x86 = {
-    "x86", "x86",
+    "x86", "x86", ".rel",
     SYMTAB32_SIZE, SYMTAB32_ALIGN, RELOC32_SIZE, SHDR32_SIZE, EHDR32_SIZE,
     elf_x86_x86_accepts_reloc_size,
     elf_x86_x86_write_symtab_entry,
     elf_x86_x86_write_secthead,
     elf_x86_x86_write_secthead_rel,
+    elf_x86_x86_handle_reloc_addend,
     elf_x86_x86_map_reloc_info_to_type,
     elf_x86_x86_write_reloc,
     elf_x86_x86_write_proghead

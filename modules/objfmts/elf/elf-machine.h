@@ -55,6 +55,8 @@ typedef void(*func_write_secthead_rel)(unsigned char *bufp,
                                        elf_section_index symtab_idx,
                                        elf_section_index sindex);
 
+typedef void(*func_handle_reloc_addend)(yasm_intnum *intn,
+                                        elf_reloc_entry *reloc);
 typedef unsigned int(*func_map_reloc_info_to_type)(elf_reloc_entry *reloc);
 typedef void(*func_write_reloc)(unsigned char *bufp,
                                 elf_reloc_entry *reloc,
@@ -68,6 +70,7 @@ typedef void (*func_write_proghead)(unsigned char **bufpp,
 typedef struct {
     const char *arch;
     const char *machine;
+    const char *reloc_section_prefix;
     const unsigned long symtab_entry_size;
     const unsigned long symtab_entry_align;
     const unsigned long reloc_entry_size;
@@ -77,6 +80,7 @@ typedef struct {
     func_write_symtab_entry write_symtab_entry;
     func_write_secthead write_secthead;
     func_write_secthead_rel write_secthead_rel;
+    func_handle_reloc_addend handle_reloc_addend;
     func_map_reloc_info_to_type map_reloc_info_to_type;
     func_write_reloc write_reloc;
     func_write_proghead write_proghead;

@@ -208,7 +208,7 @@ elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
 {
     elf_reloc_entry *reloc;
     elf_objfmt_output_info *info = d;
-    yasm_intnum *zero = yasm_intnum_create_uint(0);
+    yasm_intnum *zero;
     int retval;
 
     reloc = elf_reloc_entry_create(sym,
@@ -217,10 +217,12 @@ elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
 	yasm__error(bc->line, N_("elf: invalid relocation size"));
 	return 1;
     }
-    /* allocate .rel sections on a need-basis */
+    /* allocate .rel[a] sections on a need-basis */
     if (elf_secthead_append_reloc(info->sect, info->shead, reloc))
 	info->objfmt_elf->parse_scnum++;
 
+    zero = yasm_intnum_create_uint(0);
+    elf_handle_reloc_addend(zero, reloc);
     retval = yasm_arch_intnum_tobytes(info->objfmt_elf->arch, zero, buf,
 				      destsize, valsize, 0, bc, rel, warn,
 				      bc->line);
@@ -235,9 +237,10 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 			/*@null@*/ void *d)
 {
     /*@null@*/ elf_objfmt_output_info *info = (elf_objfmt_output_info *)d;
-    /*@dependent@*/ /*@null@*/ const yasm_intnum *intn;
+    /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
     /*@dependent@*/ /*@null@*/ const yasm_floatnum *flt;
     /*@dependent@*/ /*@null@*/ yasm_symrec *sym;
+    /*@null@*/ elf_reloc_entry *reloc = NULL;
 
     if (info == NULL)
 	yasm_internal_error("null info struct");
@@ -257,7 +260,6 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     /* Handle integer expressions, with relocation if necessary */
     sym = yasm_expr_extract_symrec(ep, 1, yasm_common_calc_bc_dist);
     if (sym) {
-	elf_reloc_entry *reloc;
 	yasm_sym_vis vis;
 
 	vis = yasm_symrec_get_visibility(sym);
@@ -294,12 +296,14 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	    yasm__error(bc->line, N_("elf: invalid relocation size"));
 	    return 1;
 	}
-	/* allocate .rel sections on a need-basis */
+	/* allocate .rel[a] sections on a need-basis */
 	if (elf_secthead_append_reloc(info->sect, info->shead, reloc))
 	    info->objfmt_elf->parse_scnum++;
     }
 
     intn = yasm_expr_get_intnum(ep, NULL);
+    if (intn && reloc)
+        elf_handle_reloc_addend(intn, reloc);
     if (intn)
 	return yasm_arch_intnum_tobytes(info->objfmt_elf->arch, intn, buf,
 					destsize, valsize, shift, bc, rel,
@@ -466,14 +470,11 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 	return 0;
     elf_secthead_set_rel_index(shead, ++info->sindex);
 
-    /* name the relocation section .rel.foo */
+    /* name the relocation section .rel[a].foo */
     sectname = yasm_section_get_name(sect);
-    relname = yasm_xmalloc(strlen(sectname)+5);
-    strcpy(relname, ".rel");
-    strcat(relname, sectname);
+    relname = elf_secthead_name_reloc_section(sectname);
     elf_secthead_set_rel_name(shead,
-			      elf_strtab_append_str(info->objfmt_elf->shstrtab,
-						    relname));
+        elf_strtab_append_str(info->objfmt_elf->shstrtab, relname));
     yasm_xfree(relname);
 
     return 0;
@@ -500,7 +501,7 @@ elf_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 
     /* output strtab headers here? */
 
-    /* relocation entries for .foo are stored in section .rel.foo */
+    /* relocation entries for .foo are stored in section .rel[a].foo */
     if(elf_secthead_write_rel_to_file(info->f, 3, sect, shead,
 				      info->sindex+1))
 	info->sindex++;
