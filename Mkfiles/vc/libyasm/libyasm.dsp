@@ -63,8 +63,8 @@ LIB32=link.exe -lib
 # PROP Output_Dir "Debug"
 # PROP Intermediate_Dir "Debug"
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ  /c
-# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I ".." /I "../../.." /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D "HAVE_CONFIG_H" /YX /FD /GZ  /c
+# ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
+# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I ".." /I "../../.." /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D "HAVE_CONFIG_H" /YX /FD /GZ /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -86,6 +86,10 @@ LIB32=link.exe -lib
 # Begin Source File
 
 SOURCE=..\..\..\libyasm\arch.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\libyasm\assocdat.c
 # End Source File
 # Begin Source File
 
@@ -126,6 +130,10 @@ SOURCE=..\..\..\libyasm\linemgr.c
 # Begin Source File
 
 SOURCE=..\..\..\libyasm\mergesort.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\libyasm\objfmt.c
 # End Source File
 # Begin Source File
 
