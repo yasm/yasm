@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.4 2001/05/30 06:43:02 mu Exp $
+# $Id: gen_instr.pl,v 1.5 2001/05/30 07:25:13 mu Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -197,27 +197,31 @@ sub rule_header ($ $ $)
     my ($rule, $tokens, $count) = splice (@_);
     $count ? "    | $tokens {\n" : "$rule: $tokens {\n"; 
 }
-
-sub cond_action ( $ $ $ $ $ )
+sub rule_footer ()
 {
-    my ($regarg, $val, $func, $a_eax, $a_args) = splice (@_);
-    return <<"EOF";
+    return "    }\n";
+}
+sub cond_action ( $ $ $ $ $ $ $ $ )
+{
+    my ($rule, $tokens, $count, $regarg, $val, $func, $a_eax, $a_args)
+	= splice (@_);
+    return rule_header ($rule, $tokens, $count) . <<"EOF" . rule_footer;
         if (\$$regarg == $val) {
             $func(@$a_eax);
         }
         else {
             $func (@$a_args);
         }
-    }
 EOF
 }
 
-sub afterthought_action ( $ $ )
+#sub action ( $ $ $ $ $ )
+sub action ( @ $ )
 {
-    my ($stuff, $count) = splice @_;
-    return rule_header ($stuff->[0], $stuff->[1], $count)
-	. "        $stuff->[2] (@{$stuff->[3]});\n"
-	. "    }\n";
+    my ($rule, $tokens, $func, $a_args, $count) = splice @_;
+    return rule_header ($rule, $tokens, $count)
+	. "        $func (@$a_args);\n"
+	. rule_footer; 
 }
 
 sub get_token_number ( $ $ )
@@ -337,7 +341,7 @@ sub output_yacc ($@)
 		    $args[-1] .= ',';
 
 		    # opcode piece 2 (if not attached)
-		    push @args, "0," if $inst->[OPCODE] !~ m/,/;
+		    push @args, "0," if $inst->[OPCODE] !~ m/,/o;
 
 		    # effective addresses
 		    push @args, $inst->[EFFADDR];
@@ -373,19 +377,19 @@ sub output_yacc ($@)
 		    # see if we match one of the cases to defer
 		    if (($inst->[OPERANDS]||"") =~ m/,ONE/)
 		    {
-			$ONE = [ $rule, $tokens, $func, [@args]];
+			$ONE = [ $rule, $tokens, $func, \@args];
 		    }
 		    elsif (($inst->[OPERANDS]||"") =~ m/REG_AL,imm8/)
 		    {
-			$AL = [ $rule, $tokens, $func, [@args]];
+			$AL = [ $rule, $tokens, $func, \@args];
 		    }
 		    elsif (($inst->[OPERANDS]||"") =~ m/REG_AX,imm16/)
 		    {
-			$AX = [ $rule, $tokens, $func, [@args]];
+			$AX = [ $rule, $tokens, $func, \@args];
 		    }
 		    elsif (($inst->[OPERANDS]||"") =~ m/REG_EAX,imm32/)
 		    {
-			$EAX = [ $rule, $tokens, $func, [@args]];
+			$EAX = [ $rule, $tokens, $func, \@args];
 		    }
 
 		    # or if we've deferred and we match the folding version
@@ -394,64 +398,53 @@ sub output_yacc ($@)
 			my $immarg = get_token_number ($tokens, "imm8");
 
 			$ONE->[4] = 1;
-			print GRAMMAR rule_header ($rule, $tokens, $count);
-			print GRAMMAR cond_action ("$immarg.val", 1, $func, $ONE->[3], \@args);
-			++$count;
+			print GRAMMAR cond_action ($rule, $tokens, $count++, "$immarg.val", 1, $func, $ONE->[3], \@args);
 		    }
 		    elsif ($AL and ($inst->[OPERANDS]||"") =~ m/reg8,imm/)
 		    {
 			$AL->[4] = 1;
 			my $regarg = get_token_number ($tokens, "reg8");
 
-			print GRAMMAR rule_header ($rule, $tokens, $count);
-			print GRAMMAR cond_action ($regarg, 0, $func, $AL->[3], \@args);
-			++$count;
+			print GRAMMAR cond_action ($rule, $tokens, $count++, $regarg, 0, $func, $AL->[3], \@args);
 		    }
 		    elsif ($AX and ($inst->[OPERANDS]||"") =~ m/reg16,imm/)
 		    {
 			$AX->[4] = 1;
 			my $regarg = get_token_number ($tokens, "reg16");
 
-			print GRAMMAR rule_header ($rule, $tokens, $count);
-			print GRAMMAR cond_action ($regarg, 0, $func, $AX->[3], \@args);
-			++$count;
+			print GRAMMAR cond_action ($rule, $tokens, $count++, $regarg, 0, $func, $AX->[3], \@args);
 		    }
 		    elsif ($EAX and ($inst->[OPERANDS]||"") =~ m/reg32,imm/)
 		    {
 			$EAX->[4] = 1;
 			my $regarg = get_token_number ($tokens, "reg32");
 
-			print GRAMMAR rule_header ($rule, $tokens, $count);
-			print GRAMMAR cond_action ($regarg, 0, $func, $EAX->[3], \@args);
-			++$count;
+			print GRAMMAR cond_action ($rule, $tokens, $count++, $regarg, 0, $func, $EAX->[3], \@args);
 		    }
 
 		    # otherwise, generate the normal version
 		    else
 		    {
-			print GRAMMAR rule_header ($rule, $tokens, $count);
-			print GRAMMAR "        $func (@args);\n";
-			print GRAMMAR "    }\n";
-			++$count;
+			print GRAMMAR action ($rule, $tokens, $func, \@args, $count++);
 		    }
 		}
 
 		# catch deferreds that haven't been folded in.
 		if ($ONE and not $ONE->[4])
 		{
-		    print GRAMMAR afterthought_action ($ONE, $count++);
+		    print GRAMMAR action (@$ONE, $count++);
 		}
 		if ($AL and not $AL->[4])
 		{
-		    print GRAMMAR afterthought_action ($AL, $count++);
+		    print GRAMMAR action (@$AL, $count++);
 		}
 		if ($AX and not $AL->[4])
 		{
-		    print GRAMMAR afterthought_action ($AX, $count++);
+		    print GRAMMAR action (@$AX, $count++);
 		}
 		if ($EAX and not $AL->[4])
 		{
-		    print GRAMMAR afterthought_action ($EAX, $count++);
+		    print GRAMMAR action (@$EAX, $count++);
 		}
 		
 		print GRAMMAR ";\n";
