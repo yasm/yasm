@@ -2172,7 +2172,7 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	/* Control transfer instructions (unconditional) */
 	C A L L { RET_INSN(call, 0, CPU_Any); }
 	J M P { RET_INSN(jmp, 0, CPU_Any); }
-	R E T { RET_INSN(onebyte, 0x00C3, CPU_Any); }
+	R E T { RET_INSN(retnf, 0xC2, CPU_Any); }
 	R E T N { RET_INSN(retnf, 0xC2, CPU_Any); }
 	R E T F { RET_INSN(retnf, 0xCA, CPU_Any); }
 	E N T E R { RET_INSN(enter, 0, CPU_186); }
