@@ -23,6 +23,7 @@
 /*@unused@*/ RCSID("$IdPath$");
 
 #include "errwarn.h"
+#include "linemgr.h"
 
 #include "preproc.h"
 
@@ -42,7 +43,7 @@ raw_preproc_initialize(FILE *f, const char *in_filename)
 }
 
 static size_t
-raw_preproc_input(char *buf, size_t max_size, unsigned long lindex)
+raw_preproc_input(char *buf, size_t max_size, linemgr *lm)
 {
     int c = '*';
     size_t n;
@@ -53,9 +54,9 @@ raw_preproc_input(char *buf, size_t max_size, unsigned long lindex)
 	if (c == '\n')
 	    buf[n++] = (char)c;
 	if (c == EOF && ferror(in))
-	    Error(lindex, _("error when reading from file"));
+	    Error(lm->get_current(), _("error when reading from file"));
     } else if (((n = fread(buf, 1, max_size, in)) == 0) && ferror(in))
-	Error(lindex, _("error when reading from file"));
+	Error(lm->get_current(), _("error when reading from file"));
 
     return n;
 }
