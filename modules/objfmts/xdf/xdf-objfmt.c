@@ -44,9 +44,7 @@
 typedef STAILQ_HEAD(xdf_reloc_head, xdf_reloc) xdf_reloc_head;
 
 typedef struct xdf_reloc {
-    STAILQ_ENTRY(xdf_reloc) link;  /* internal link, not in file */
-    unsigned long addr;		    /* offset of relocation within section */
-    yasm_symrec *sym;		    /* relocated symbol */
+    yasm_reloc reloc;
     /*@null@*/ yasm_symrec *base;   /* base symbol (for WRT) */
     enum {
 	XDF_RELOC_REL = 1,	    /* relative to segment */
@@ -256,8 +254,8 @@ xdf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	xdf_reloc *reloc;
 
 	reloc = yasm_xmalloc(sizeof(xdf_reloc));
-	reloc->addr = bc->offset + offset;
-	reloc->sym = sym;
+	reloc->reloc.addr = yasm_intnum_create_uint(bc->offset + offset);
+	reloc->reloc.sym = sym;
 	reloc->base = NULL;
 	reloc->size = valsize/8;
 	reloc->shift = shr;
@@ -283,7 +281,7 @@ xdf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	} else
 	    reloc->type = XDF_RELOC_REL;
 	info->xsd->nreloc++;
-	STAILQ_INSERT_TAIL(&info->xsd->relocs, reloc, link);
+	yasm_section_add_reloc(info->sect, (yasm_reloc *)reloc, yasm_xfree);
     }
     intn = yasm_expr_get_intnum(ep, NULL);
     if (intn)
@@ -411,16 +409,18 @@ xdf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     }
     xsd->relptr = (unsigned long)pos;
 
-    STAILQ_FOREACH(reloc, &xsd->relocs, link) {
+    reloc = (xdf_reloc *)yasm_section_relocs_first(sect);
+    while (reloc) {
 	unsigned char *localbuf = info->buf;
 	/*@null@*/ xdf_symrec_data *xsymd;
 
-	xsymd = yasm_symrec_get_data(reloc->sym, &xdf_symrec_data_cb);
+	xsymd = yasm_symrec_get_data(reloc->reloc.sym, &xdf_symrec_data_cb);
 	if (!xsymd)
 	    yasm_internal_error(
 		N_("xdf: no symbol data for relocated symbol"));
 
-	YASM_WRITE_32_L(localbuf, reloc->addr);	    /* address of relocation */
+	yasm_intnum_get_sized(reloc->reloc.addr, localbuf, 4, 32, 0, 0, 0, 0);
+	localbuf += 4;				/* address of relocation */
 	YASM_WRITE_32_L(localbuf, xsymd->index);    /* relocated symbol */
 	if (reloc->base) {
 	    xsymd = yasm_symrec_get_data(reloc->base, &xdf_symrec_data_cb);
@@ -439,6 +439,8 @@ xdf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 	YASM_WRITE_8(localbuf, reloc->shift);	    /* relocation shift */
 	YASM_WRITE_8(localbuf, 0);		    /* flags */
 	fwrite(info->buf, 16, 1, info->f);
+
+	reloc = (xdf_reloc *)yasm_section_reloc_next((yasm_reloc *)reloc);
     }
 
     return 0;
@@ -781,15 +783,8 @@ static void
 xdf_section_data_destroy(void *data)
 {
     xdf_section_data *xsd = (xdf_section_data *)data;
-    xdf_reloc *r1, *r2;
     if (xsd->addr)
 	yasm_intnum_destroy(xsd->addr);
-    r1 = STAILQ_FIRST(&xsd->relocs);
-    while (r1 != NULL) {
-	r2 = STAILQ_NEXT(r1, link);
-	yasm_xfree(r1);
-	r1 = r2;
-    }
     yasm_xfree(data);
 }
 
@@ -797,8 +792,6 @@ static void
 xdf_section_data_print(void *data, FILE *f, int indent_level)
 {
     xdf_section_data *xsd = (xdf_section_data *)data;
-    xdf_reloc *reloc;
-    unsigned long relocnum = 0;
 
     fprintf(f, "%*ssym=\n", indent_level, "");
     yasm_symrec_print(xsd->sym, f, indent_level+1);
@@ -811,31 +804,6 @@ xdf_section_data_print(void *data, FILE *f, int indent_level)
     fprintf(f, "%*srelptr=0x%lx\n", indent_level, "", xsd->relptr);
     fprintf(f, "%*snreloc=%ld\n", indent_level, "", xsd->nreloc);
     fprintf(f, "%*srelocs:\n", indent_level, "");
-    STAILQ_FOREACH(reloc, &xsd->relocs, link) {
-	fprintf(f, "%*sReloc %lu:\n", indent_level+1, "", relocnum++);
-	fprintf(f, "%*ssym=\n", indent_level+2, "");
-	yasm_symrec_print(reloc->sym, f, indent_level+3);
-	fprintf(f, "%*stype=", indent_level+2, "");
-	switch (reloc->type) {
-	    case XDF_RELOC_REL:
-		printf("Rel");
-		break;
-	    case XDF_RELOC_WRT:
-		printf("WRT");
-		break;
-	    case XDF_RELOC_RIP:
-		printf("RIP");
-		break;
-	    case XDF_RELOC_SEG:
-		printf("Seg");
-		break;
-	    default:
-		printf("Other");
-		break;
-	}
-	fprintf(f, "\n%*ssize=%d\n", indent_level+2, "", reloc->size);
-	fprintf(f, "%*sshift=%d\n", indent_level+2, "", reloc->shift);
-    }
 }
 
 static yasm_symrec *

@@ -1070,6 +1070,7 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     unsigned int i;
     unsigned char *bufp_orig = *bufp;
     /*@null@*/ yasm_expr *targetseg;
+    yasm_expr *dup;
 
     /* Prefixes */
     if (jmp->lockrep_pre != 0)
@@ -1139,11 +1140,12 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
 	    /* Absolute displacement: segment and offset */
 	    jmp->target = yasm_expr_simplify(jmp->target, NULL);
-	    targetseg = yasm_expr_extract_segoff(&jmp->target);
+	    dup = yasm_expr_copy(jmp->target);
+	    targetseg = yasm_expr_extract_segoff(&dup);
 	    if (!targetseg)
 		yasm_internal_error(N_("could not extract segment for far jump"));
 	    i = (opersize == 16) ? 2 : 4;
-	    if (output_expr(&jmp->target, *bufp, i, i*8, 0,
+	    if (output_expr(&dup, *bufp, i, i*8, 0,
 			    (unsigned long)(*bufp-bufp_orig), bc, 0, 1, d))
 		return 1;
 	    *bufp += i;
@@ -1151,6 +1153,9 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			    (unsigned long)(*bufp-bufp_orig), bc, 0, 1, d))
 		return 1;
 	    *bufp += 2;
+
+	    yasm_expr_destroy(dup);
+	    yasm_expr_destroy(targetseg);
 
 	    break;
 	default:

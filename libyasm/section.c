@@ -77,6 +77,11 @@ struct yasm_section {
 
     /* the bytecodes for the section's contents */
     /*@reldef@*/ STAILQ_HEAD(yasm_bytecodehead, yasm_bytecode) bcs;
+
+    /* the relocations for the section */
+    /*@reldef@*/ STAILQ_HEAD(yasm_relochead, yasm_reloc) relocs;
+
+    void (*destroy_reloc) (/*@only@*/ void *reloc);
 };
 
 static void yasm_section_destroy(/*@only@*/ yasm_section *sect);
@@ -144,6 +149,10 @@ yasm_object_get_general(yasm_object *object, const char *name,
     bc->section = s;
     STAILQ_INSERT_TAIL(&s->bcs, bc, link);
 
+    /* Initialize relocs */
+    STAILQ_INIT(&s->relocs);
+    s->destroy_reloc = NULL;
+
     s->res_only = res_only;
 
     *isnew = 1;
@@ -173,6 +182,10 @@ yasm_object_create_absolute(yasm_object *object, yasm_expr *start,
     bc = yasm_bc_create_common(NULL, sizeof(yasm_bytecode), 0);
     bc->section = s;
     STAILQ_INSERT_TAIL(&s->bcs, bc, link);
+
+    /* Initialize relocs */
+    STAILQ_INIT(&s->relocs);
+    s->destroy_reloc = NULL;
 
     s->res_only = 1;
 
@@ -296,6 +309,39 @@ yasm_object_find_general(yasm_object *object, const char *name)
 }
 /*@=onlytrans@*/
 
+void
+yasm_section_add_reloc(yasm_section *sect, yasm_reloc *reloc,
+		       void (*destroy_func) (/*@only@*/ void *reloc))
+{
+    STAILQ_INSERT_TAIL(&sect->relocs, reloc, link);
+    if (!destroy_func)
+	yasm_internal_error(N_("NULL destroy function given to add_reloc"));
+    else if (sect->destroy_reloc && destroy_func != sect->destroy_reloc)
+	yasm_internal_error(N_("different destroy function given to add_reloc"));
+    sect->destroy_reloc = destroy_func;
+}
+
+/*@null@*/ yasm_reloc *
+yasm_section_relocs_first(yasm_section *sect)
+{
+    return STAILQ_FIRST(&sect->relocs);
+}
+
+#undef yasm_section_reloc_next
+/*@null@*/ yasm_reloc *
+yasm_section_reloc_next(yasm_reloc *reloc)
+{
+    return STAILQ_NEXT(reloc, link);
+}
+
+void
+yasm_reloc_get(yasm_reloc *reloc, yasm_intnum **addrp, yasm_symrec **symp)
+{
+    *addrp = reloc->addr;
+    *symp = reloc->sym;
+}
+
+
 yasm_bytecode *
 yasm_section_bcs_first(yasm_section *sect)
 {
@@ -367,6 +413,7 @@ static void
 yasm_section_destroy(yasm_section *sect)
 {
     yasm_bytecode *cur, *next;
+    yasm_reloc *r_cur, *r_next;
 
     if (!sect)
 	return;
@@ -383,6 +430,15 @@ yasm_section_destroy(yasm_section *sect)
 	next = STAILQ_NEXT(cur, link);
 	yasm_bc_destroy(cur);
 	cur = next;
+    }
+
+    /* Delete relocations */
+    r_cur = STAILQ_FIRST(&sect->relocs);
+    while (r_cur) {
+	r_next = STAILQ_NEXT(r_cur, link);
+	yasm_intnum_destroy(r_cur->addr);
+	sect->destroy_reloc(r_cur);
+	r_cur = r_next;
     }
 
     yasm_xfree(sect);

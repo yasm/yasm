@@ -218,7 +218,7 @@ elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
 	return 1;
     }
     /* allocate .rel sections on a need-basis */
-    if (elf_secthead_append_reloc(info->shead, reloc))
+    if (elf_secthead_append_reloc(info->sect, info->shead, reloc))
 	info->objfmt_elf->parse_scnum++;
 
     retval = yasm_arch_intnum_tobytes(info->objfmt_elf->arch, zero, buf,
@@ -295,7 +295,7 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	    return 1;
 	}
 	/* allocate .rel sections on a need-basis */
-	if (elf_secthead_append_reloc(info->shead, reloc))
+	if (elf_secthead_append_reloc(info->sect, info->shead, reloc))
 	    info->objfmt_elf->parse_scnum++;
     }
 
@@ -462,7 +462,7 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     elf_secthead_set_index(shead, ++info->sindex);
 
     /* No relocations to output?  Go on to next section */
-    if (elf_secthead_write_relocs_to_file(info->f, shead) == 0)
+    if (elf_secthead_write_relocs_to_file(info->f, sect, shead) == 0)
 	return 0;
     elf_secthead_set_rel_index(shead, ++info->sindex);
 
@@ -501,7 +501,8 @@ elf_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     /* output strtab headers here? */
 
     /* relocation entries for .foo are stored in section .rel.foo */
-    if(elf_secthead_write_rel_to_file(info->f, 3, shead, info->sindex+1))
+    if(elf_secthead_write_rel_to_file(info->f, 3, sect, shead,
+				      info->sindex+1))
 	info->sindex++;
 
     return 0;

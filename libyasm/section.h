@@ -34,6 +34,19 @@
 #ifndef YASM_SECTION_H
 #define YASM_SECTION_H
 
+/** Basic YASM relocation.  Object formats will need to extend this
+ * structure with additional fields for relocation type, etc.
+ */
+typedef struct yasm_reloc yasm_reloc;
+
+#ifdef YASM_LIB_INTERNAL
+struct yasm_reloc {
+    /*@reldef@*/ STAILQ_ENTRY(yasm_reloc) link;
+    yasm_intnum *addr;		/**< Offset (address) within section */
+    /*@dependent@*/ yasm_symrec *sym;	    /**< Relocated symbol */
+};
+#endif
+
 /** Create a new object.  A default section is created as the first section.
  * An empty symbol table (yasm_symtab) and line mapping (yasm_linemap) are
  * automatically created.
@@ -155,6 +168,42 @@ yasm_object *yasm_section_get_object(const yasm_section *sect);
 void yasm_section_add_data(yasm_section *sect,
 			   const yasm_assoc_data_callback *callback,
 			   /*@null@*/ /*@only@*/ void *data);
+
+/** Add a relocation to a section.
+ * \param sect		section
+ * \param reloc		relocation
+ * \param destroy_func	function that can destroy the relocation
+ * \note Does not make a copy of reloc.  The same destroy_func must be
+ * used for all relocations in a section or an internal error will occur.
+ * The section will destroy the relocation address; it is the caller's
+ * responsibility to destroy any other allocated data.
+ */
+void yasm_section_add_reloc(yasm_section *sect, yasm_reloc *reloc,
+    void (*destroy_func) (/*@only@*/ void *reloc));
+
+/** Get the first relocation for a section.
+ * \param sect		section
+ * \return First relocation for section.  NULL if no relocations.
+ */
+/*@null@*/ yasm_reloc *yasm_section_relocs_first(yasm_section *sect);
+
+/** Get the next relocation for a section.
+ * \param reloc		previous relocation
+ * \return Next relocation for section.  NULL if no more relocations.
+ */
+/*@null@*/ yasm_reloc *yasm_section_reloc_next(yasm_reloc *reloc);
+
+#ifdef YASM_LIB_INTERNAL
+#define yasm_section_reloc_next(x)	STAILQ_NEXT((x), link)
+#endif
+
+/** Get the basic relocation information for a relocation.
+ * \param reloc		relocation
+ * \param addrp		address of relocation within section (returned)
+ * \param symp		relocated symbol (returned)
+ */
+void yasm_reloc_get(yasm_reloc *reloc, yasm_intnum **addrp,
+		    /*@dependent@*/ yasm_symrec **symp);
 
 /** Get the first bytecode in a section.
  * \param sect		section

@@ -136,45 +136,12 @@ elf_reloc_entry_create(yasm_symrec *sym,
     if (sym == NULL)
 	yasm_internal_error("sym is null");
 
-    entry->sym = sym;
-    entry->addr = addr;
+    entry->reloc.sym = sym;
+    entry->reloc.addr = addr;
     entry->rtype_rel = rel;
     entry->valsize = valsize;
 
     return entry;
-}
-
-void
-elf_reloc_entry_destroy(elf_reloc_entry *entry)
-{
-    if (entry->addr)
-	yasm_intnum_destroy(entry->addr);
-    yasm_xfree(entry);
-}
-
-elf_reloc_head *
-elf_relocs_create()
-{
-    elf_reloc_head *head = yasm_xmalloc(sizeof(elf_reloc_head));
-    STAILQ_INIT(head);
-    return head;
-}
-
-void
-elf_reloc_destroy(elf_reloc_head *relocs)
-{
-    if (relocs == NULL)
-	yasm_internal_error("relocs is null");
-
-    if (!STAILQ_EMPTY(relocs)) {
-	elf_reloc_entry *e1, *e2;
-	e1 = STAILQ_FIRST(relocs);
-	while (e1 != NULL) {
-	    e2 = STAILQ_NEXT(e1, qlink);
-	    elf_reloc_entry_destroy(e1);
-	    e1 = e2;
-	}
-    }
 }
 
 /* strtab functions */
@@ -581,7 +548,6 @@ elf_secthead_create(elf_strtab_entry	*name,
     esd->sym = NULL;
     esd->name = name;
     esd->index = 0;
-    esd->relocs = NULL;
     esd->rel_name = NULL;
     esd->rel_index = idx;
     esd->rel_offset = 0;
@@ -615,9 +581,6 @@ elf_secthead_destroy(elf_secthead *shead)
 
     if (shead->align)
 	yasm_intnum_destroy(shead->align);
-
-    if (shead->relocs)
-	elf_reloc_destroy(shead->relocs);
 
     yasm_xfree(shead);
 }
@@ -653,20 +616,6 @@ elf_secthead_print(void *data, FILE *f, int indent_level)
     fprintf(f, "%*salign=%ld\n", indent_level, "",
 	    yasm_intnum_get_uint(sect->align));
     fprintf(f, "%*snreloc=%ld\n", indent_level, "", sect->nreloc);
-    if (sect->nreloc) {
-	elf_reloc_entry *reloc;
-
-	fprintf(f, "%*sreloc:\n", indent_level, "");
-	fprintf(f, "%*sname=%s\n", indent_level+1, "",
-		sect->rel_name ? sect->rel_name->str : "<undef>");
-	fprintf(f, "%*sindex=0x%x\n", indent_level+1, "", sect->rel_index);
-	fprintf(f, "%*soffset=0x%lx\n", indent_level+1, "", sect->rel_offset);
-	STAILQ_FOREACH(reloc, sect->relocs, qlink) {
-	    fprintf(f, "%*s%s at 0x%lx\n", indent_level+2, "",
-		    yasm_symrec_get_name(reloc->sym),
-		    yasm_intnum_get_uint(reloc->addr));
-	}
-    }
 }
 
 unsigned long
@@ -727,37 +676,36 @@ elf_secthead_write_to_file(FILE *f, elf_secthead *shead,
 }
 
 int
-elf_secthead_append_reloc(elf_secthead *shead, elf_reloc_entry *reloc)
+elf_secthead_append_reloc(yasm_section *sect, elf_secthead *shead,
+			  elf_reloc_entry *reloc)
 {
     int new_sect = 0;
 
+    if (sect == NULL)
+	yasm_internal_error("sect is null");
     if (shead == NULL)
 	yasm_internal_error("shead is null");
     if (reloc == NULL)
 	yasm_internal_error("reloc is null");
 
-    if (!shead->relocs)
-    {
-	shead->relocs = elf_relocs_create();
-	new_sect = 1;
-    }
     shead->nreloc++;
-    STAILQ_INSERT_TAIL(shead->relocs, reloc, qlink);
+    yasm_section_add_reloc(sect, (yasm_reloc *)reloc, yasm_xfree);
 
     return new_sect;
 }
 
 unsigned long
 elf_secthead_write_rel_to_file(FILE *f, elf_section_index symtab_idx,
-			       elf_secthead *shead, elf_section_index sindex)
+			       yasm_section *sect, elf_secthead *shead,
+			       elf_section_index sindex)
 {
     unsigned char buf[SHDR_MAXSIZE], *bufp = buf;
 
     if (shead == NULL)
 	yasm_internal_error("shead is null");
 
-    if (!shead->relocs)	/* no relocations, no .rel.* section header */
-	return 0;
+    if (!yasm_section_relocs_first(sect))
+	return 0;  	/* no relocations, no .rel.* section header */
 
     shead->rel_index = sindex;
 
@@ -811,7 +759,8 @@ elf_secthead_write_rel_to_file(FILE *f, elf_section_index symtab_idx,
 }
 
 unsigned long
-elf_secthead_write_relocs_to_file(FILE *f, elf_secthead *shead)
+elf_secthead_write_relocs_to_file(FILE *f, yasm_section *sect,
+				  elf_secthead *shead)
 {
     elf_reloc_entry *reloc;
     unsigned char buf[RELOC_MAXSIZE], *bufp;
@@ -821,7 +770,8 @@ elf_secthead_write_relocs_to_file(FILE *f, elf_secthead *shead)
     if (shead == NULL)
 	yasm_internal_error("shead is null");
 
-    if (shead->relocs == NULL || STAILQ_EMPTY(shead->relocs))
+    reloc = (elf_reloc_entry *)yasm_section_relocs_first(sect);
+    if (!reloc)
 	return 0;
 
     /* first align section to multiple of 4 */
@@ -834,18 +784,18 @@ elf_secthead_write_relocs_to_file(FILE *f, elf_secthead *shead)
     shead->rel_offset = (unsigned long)pos;
 
 
-    STAILQ_FOREACH(reloc, shead->relocs, qlink) {
+    while (reloc) {
 	yasm_sym_vis vis;
 	unsigned char r_type=0, r_sym;
 	elf_symtab_entry *esym;
 
-	esym = yasm_symrec_get_data(reloc->sym, &elf_symrec_data);
+	esym = yasm_symrec_get_data(reloc->reloc.sym, &elf_symrec_data);
 	if (esym)
 	    r_sym = esym->symindex;
 	else
 	    r_sym = STN_UNDEF;
 
-	vis = yasm_symrec_get_visibility(reloc->sym);
+	vis = yasm_symrec_get_visibility(reloc->reloc.sym);
 	switch (cur_machine) {
 	    case M_X86_32:
 		r_type = (unsigned char)
@@ -897,14 +847,14 @@ elf_secthead_write_relocs_to_file(FILE *f, elf_secthead *shead)
 	bufp = buf;
 	switch (cur_elf) {
 	    case ELF32:
-		YASM_WRITE_32I_L(bufp, reloc->addr);
+		YASM_WRITE_32I_L(bufp, reloc->reloc.addr);
 		YASM_WRITE_32_L(bufp, ELF32_R_INFO(r_sym, r_type));
 		fwrite(buf, RELOC32_SIZE, 1, f);
 		size += RELOC32_SIZE;
 		break;
 
 	    case ELF64:
-		YASM_WRITE_64I_L(bufp, reloc->addr);
+		YASM_WRITE_64I_L(bufp, reloc->reloc.addr);
 		/*YASM_WRITE_64_L(bufp, ELF64_R_INFO(r_sym, r_type));*/
 		YASM_WRITE_64C_L(bufp, r_sym, r_type);
 		fwrite(buf, RELOC64_SIZE, 1, f);
@@ -914,7 +864,9 @@ elf_secthead_write_relocs_to_file(FILE *f, elf_secthead *shead)
 	    default:
 		yasm_internal_error( N_("Unsupported elf format for output"));
 	}
-		
+	
+	reloc = (elf_reloc_entry *)
+	    yasm_section_reloc_next((yasm_reloc *)reloc);
     }
     return size;
 }

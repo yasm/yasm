@@ -51,12 +51,8 @@
 #define COFF_F_LSYMS	0x0008	    /* local symbols NOT present */
 #define COFF_F_AR32WR	0x0100	    /* 32-bit little endian file */
 
-typedef STAILQ_HEAD(coff_reloc_head, coff_reloc) coff_reloc_head;
-
 typedef struct coff_reloc {
-    STAILQ_ENTRY(coff_reloc) link;  /* internal link, not in file */
-    unsigned long addr;		    /* address of relocation */
-    yasm_symrec *sym;		    /* relocated symbol */
+    yasm_reloc reloc;
     enum {
 	COFF_RELOC_ABSOLUTE = 0,	    /* absolute, no reloc needed */
 
@@ -114,7 +110,6 @@ typedef struct coff_section_data {
     unsigned long size;	    /* size of raw data (section data) in bytes */
     unsigned long relptr;   /* file ptr to relocation */
     unsigned long nreloc;   /* number of relocation entries >64k -> error */
-    /*@owned@*/ coff_reloc_head relocs;
 } coff_section_data;
 
 typedef enum coff_symrec_sclass {
@@ -390,6 +385,7 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     /* Handle integer expressions, with relocation if necessary */
     sym = yasm_expr_extract_symrec(ep, 1, yasm_common_calc_bc_dist);
     if (sym) {
+	unsigned long addr;
 	coff_reloc *reloc;
 	yasm_sym_vis vis;
 
@@ -399,10 +395,11 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	}
 
 	reloc = yasm_xmalloc(sizeof(coff_reloc));
-	reloc->addr = bc->offset + offset;
+	addr = bc->offset + offset;
 	if (COFF_SET_VMA)
-	    reloc->addr += info->addr;
-	reloc->sym = sym;
+	    addr += info->addr;
+	reloc->reloc.addr = yasm_intnum_create_uint(addr);
+	reloc->reloc.sym = sym;
 	vis = yasm_symrec_get_visibility(sym);
 	if (vis & YASM_SYM_COMMON) {
 	    /* In standard COFF, COMMON symbols have their length added in */
@@ -424,7 +421,7 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 		label_csd = yasm_section_get_data(label_sect,
 						  &coff_section_data_cb);
 		assert(label_csd != NULL);
-		reloc->sym = label_csd->sym;
+		reloc->reloc.sym = label_csd->sym;
 		if (COFF_SET_VMA)
 		    *ep = yasm_expr_create(YASM_EXPR_ADD, yasm_expr_expr(*ep),
 			yasm_expr_int(yasm_intnum_create_uint(label_csd->addr)),
@@ -464,7 +461,7 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 		yasm_internal_error(N_("coff objfmt: unrecognized machine"));
 	}
 	info->csd->nreloc++;
-	STAILQ_INSERT_TAIL(&info->csd->relocs, reloc, link);
+	yasm_section_add_reloc(info->sect, (yasm_reloc *)reloc, yasm_xfree);
     }
     intn = yasm_expr_get_intnum(ep, NULL);
     if (intn)
@@ -597,19 +594,23 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     }
     csd->relptr = (unsigned long)pos;
 
-    STAILQ_FOREACH(reloc, &csd->relocs, link) {
+    reloc = (coff_reloc *)yasm_section_relocs_first(sect);
+    while (reloc) {
 	unsigned char *localbuf = info->buf;
 	/*@null@*/ coff_symrec_data *csymd;
 
-	csymd = yasm_symrec_get_data(reloc->sym, &coff_symrec_data_cb);
+	csymd = yasm_symrec_get_data(reloc->reloc.sym, &coff_symrec_data_cb);
 	if (!csymd)
 	    yasm_internal_error(
 		N_("coff: no symbol data for relocated symbol"));
 
-	YASM_WRITE_32_L(localbuf, reloc->addr);	    /* address of relocation */
+	yasm_intnum_get_sized(reloc->reloc.addr, localbuf, 4, 32, 0, 0, 0, 0);
+	localbuf += 4;				/* address of relocation */
 	YASM_WRITE_32_L(localbuf, csymd->index);    /* relocated symbol */
 	YASM_WRITE_16_L(localbuf, reloc->type);	    /* type of relocation */
 	fwrite(info->buf, 10, 1, info->f);
+
+	reloc = (coff_reloc *)yasm_section_reloc_next((yasm_reloc *)reloc);
     }
 
     return 0;
@@ -1100,7 +1101,6 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	data->size = 0;
 	data->relptr = 0;
 	data->nreloc = 0;
-	STAILQ_INIT(&data->relocs);
 	yasm_section_add_data(retval, &coff_section_data_cb, data);
 
 	sym =
@@ -1118,14 +1118,6 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 static void
 coff_section_data_destroy(void *data)
 {
-    coff_section_data *csd = (coff_section_data *)data;
-    coff_reloc *r1, *r2;
-    r1 = STAILQ_FIRST(&csd->relocs);
-    while (r1 != NULL) {
-	r2 = STAILQ_NEXT(r1, link);
-	yasm_xfree(r1);
-	r1 = r2;
-    }
     yasm_xfree(data);
 }
 
@@ -1133,8 +1125,6 @@ static void
 coff_section_data_print(void *data, FILE *f, int indent_level)
 {
     coff_section_data *csd = (coff_section_data *)data;
-    coff_reloc *reloc;
-    unsigned long relocnum = 0;
 
     fprintf(f, "%*ssym=\n", indent_level, "");
     yasm_symrec_print(csd->sym, f, indent_level+1);
@@ -1160,29 +1150,6 @@ coff_section_data_print(void *data, FILE *f, int indent_level)
     fprintf(f, "%*srelptr=0x%lx\n", indent_level, "", csd->relptr);
     fprintf(f, "%*snreloc=%ld\n", indent_level, "", csd->nreloc);
     fprintf(f, "%*srelocs:\n", indent_level, "");
-    STAILQ_FOREACH(reloc, &csd->relocs, link) {
-	fprintf(f, "%*sReloc %lu:\n", indent_level+1, "", relocnum++);
-	fprintf(f, "%*ssym=\n", indent_level+2, "");
-	yasm_symrec_print(reloc->sym, f, indent_level+3);
-	fprintf(f, "%*stype=", indent_level+2, "");
-	switch (reloc->type) {
-	    case COFF_RELOC_I386_ADDR32:
-		printf("I386/Addr32\n");
-		break;
-	    case COFF_RELOC_I386_REL32:
-		printf("I386/Rel32\n");
-		break;
-	    case COFF_RELOC_AMD64_ADDR32:
-		printf("AMD64/Addr32\n");
-		break;
-	    case COFF_RELOC_AMD64_REL32:
-		printf("AMD64/Rel32\n");
-		break;
-	    default:
-		printf("Other\n");
-		break;
-	}
-    }
 }
 
 static yasm_symrec *

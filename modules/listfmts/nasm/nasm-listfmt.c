@@ -31,14 +31,40 @@
 #define YASM_BC_INTERNAL
 #include <libyasm.h>
 
+/* NOTE: For this code to generate relocation information, the relocations
+ * have to be added by the object format to each section in program source
+ * order.
+ *
+ * This should not be an issue, as program source order == section bytecode
+ * order, so unless the object formats are very obtuse with their bytecode
+ * iteration, this should just happen.
+ */
 
 #define REGULAR_BUF_SIZE    1024
 
 yasm_listfmt_module yasm_nasm_LTX_listfmt;
 
+typedef struct sectreloc {
+    /*@reldef@*/ SLIST_ENTRY(sectreloc) link;
+    yasm_section *sect;
+    /*@null@*/ yasm_reloc *next_reloc;	/* next relocation in section */
+    unsigned long next_reloc_addr;
+} sectreloc;
+
+typedef struct bcreloc {
+    /*@reldef@*/ STAILQ_ENTRY(bcreloc) link;
+    unsigned long offset;	/* start of reloc from start of bytecode */
+    size_t size;		/* size of reloc in bytes */
+    int rel;			/* PC/IP-relative or "absolute" */
+} bcreloc;
+
 typedef struct nasm_listfmt_output_info {
     yasm_arch *arch;
+    /*@reldef@*/ STAILQ_HEAD(bcrelochead, bcreloc) bcrelocs;
+    /*@null@*/ yasm_reloc *next_reloc;	/* next relocation in section */
+    unsigned long next_reloc_addr;
 } nasm_listfmt_output_info;
+
 
 static /*@null@*/ /*@only@*/ yasm_listfmt *
 nasm_listfmt_create(const char *in_filename, const char *obj_filename)
@@ -65,6 +91,24 @@ nasm_listfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     /*@dependent@*/ /*@null@*/ const yasm_floatnum *flt;
 
     assert(info != NULL);
+
+    /* Generate reloc if needed */
+    if (info->next_reloc && info->next_reloc_addr == bc->offset+offset) {
+	bcreloc *reloc = yasm_xmalloc(sizeof(bcreloc));
+	reloc->offset = offset;
+	reloc->size = destsize;
+	reloc->rel = rel;
+	STAILQ_INSERT_TAIL(&info->bcrelocs, reloc, link);
+
+	/* Get next reloc's info */
+	info->next_reloc = yasm_section_reloc_next(info->next_reloc);
+	if (info->next_reloc) {
+	    yasm_intnum *addr;
+	    yasm_symrec *sym;
+	    yasm_reloc_get(info->next_reloc, &addr, &sym);
+	    info->next_reloc_addr = yasm_intnum_get_uint(addr);
+	}
+    }
 
     flt = yasm_expr_get_floatnum(ep);
     if (flt) {
@@ -94,6 +138,12 @@ nasm_listfmt_output(yasm_listfmt *listfmt, FILE *f, yasm_linemap *linemap,
     unsigned long listline = 1;
     /*@only@*/ unsigned char *buf;
     nasm_listfmt_output_info info;
+    /*@reldef@*/ SLIST_HEAD(sectrelochead, sectreloc) reloc_hist;
+    /*@null@*/ sectreloc *last_hist = NULL;
+    /*@null@*/ bcreloc *reloc = NULL;
+    yasm_section *sect;
+
+    SLIST_INIT(&reloc_hist);
 
     info.arch = arch;
 
@@ -101,48 +151,126 @@ nasm_listfmt_output(yasm_listfmt *listfmt, FILE *f, yasm_linemap *linemap,
 
     while (!yasm_linemap_get_source(linemap, line, &bc, &source)) {
 	if (!bc) {
-	    fprintf(f, "%6lu %*s     %s\n", listline++, 28, "", source);
-	} else while (bc && bc->line == line) {
-	    /*@null@*/ /*@only@*/ unsigned char *bigbuf;
-	    unsigned long size = REGULAR_BUF_SIZE;
-	    unsigned long multiple;
-	    unsigned long offset = bc->offset;
-	    unsigned char *p;
-	    int gap;
+	    fprintf(f, "%6lu %*s%s\n", listline++, 32, "", source);
+	} else {
+	    /* get the next relocation for the bytecode's section */
+	    sect = yasm_bc_get_section(bc);
+	    if (!last_hist || last_hist->sect != sect) {
+		int found = 0;
 
-	    bigbuf = yasm_bc_tobytes(bc, buf, &size, &multiple, &gap, &info,
-				     nasm_listfmt_output_expr, NULL);
-
-	    p = bigbuf ? bigbuf : buf;
-	    while (size > 0) {
-		int i;
-
-		fprintf(f, "%6lu %08lX ", listline++, offset);
-		for (i=0; i<18 && size > 0; i+=2, size--)
-		    fprintf(f, "%02X", *(p++));
-		if (size > 0)
-		    fprintf(f, "-");
-		else {
-		    if (multiple > 1) {
-			fprintf(f, "<rept>");
-			i += 6;
+		/* look through reloc_hist for matching section */
+		SLIST_FOREACH(last_hist, &reloc_hist, link) {
+		    if (last_hist->sect == sect) {
+			found = 1;
+			break;
 		    }
-		    for (; i<18; i+=2)
-			fprintf(f, "  ");
-		    fprintf(f, " ");
 		}
-		if (source) {
-		    fprintf(f, "    %s", source);
-		    source = NULL;
+
+		if (!found) {
+		    /* not found, add to list*/
+		    last_hist = yasm_xmalloc(sizeof(sectreloc));
+		    last_hist->sect = sect;
+		    last_hist->next_reloc = yasm_section_relocs_first(sect);
+
+		    if (last_hist->next_reloc) {
+			yasm_intnum *addr;
+			yasm_symrec *sym;
+			yasm_reloc_get(last_hist->next_reloc, &addr, &sym);
+			last_hist->next_reloc_addr =
+			    yasm_intnum_get_uint(addr);
+		    }
+
+		    SLIST_INSERT_HEAD(&reloc_hist, last_hist, link);
 		}
-		fprintf(f, "\n");
 	    }
-	    
-	    if (bigbuf)
-		yasm_xfree(bigbuf);
-	    bc = STAILQ_NEXT(bc, link);
+
+	    info.next_reloc = last_hist->next_reloc;
+	    info.next_reloc_addr = last_hist->next_reloc_addr;
+	    STAILQ_INIT(&info.bcrelocs);
+
+	    /* loop over bytecodes on this line (usually only one) */
+	    while (bc && bc->line == line) {
+		/*@null@*/ /*@only@*/ unsigned char *bigbuf;
+		unsigned long size = REGULAR_BUF_SIZE;
+		unsigned long multiple;
+		unsigned long offset = bc->offset;
+		unsigned char *origp, *p;
+		int gap;
+
+		/* convert bytecode into bytes, recording relocs along the
+		 * way
+		 */
+		bigbuf = yasm_bc_tobytes(bc, buf, &size, &multiple, &gap,
+					 &info, nasm_listfmt_output_expr,
+					 NULL);
+
+		/* output bytes with reloc information */
+		origp = bigbuf ? bigbuf : buf;
+		p = origp;
+		reloc = STAILQ_FIRST(&info.bcrelocs);
+		if (gap) {
+		    fprintf(f, "%6lu %08lX <gap>%*s%s\n", listline++, offset,
+			    18, "", source ? source : "");
+		} else while (size > 0) {
+		    int i;
+
+		    fprintf(f, "%6lu %08lX ", listline++, offset);
+		    for (i=0; i<18 && size > 0; size--) {
+			if (reloc && (unsigned long)(p-origp) ==
+				     reloc->offset) {
+			    fprintf(f, "%c", reloc->rel ? '(' : '[');
+			    i++;
+			}
+			fprintf(f, "%02X", *(p++));
+			i+=2;
+			if (reloc && (unsigned long)(p-origp) ==
+				     reloc->offset+reloc->size) {
+			    fprintf(f, "%c", reloc->rel ? ')' : ']');
+			    i++;
+			    reloc = STAILQ_NEXT(reloc, link);
+			}
+		    }
+		    if (size > 0)
+			fprintf(f, "-");
+		    else {
+			if (multiple > 1) {
+			    fprintf(f, "<rept>");
+			    i += 6;
+			}
+			fprintf(f, "%*s", 18-i+1, "");
+		    }
+		    if (source) {
+			fprintf(f, "    %s", source);
+			source = NULL;
+		    }
+		    fprintf(f, "\n");
+		}
+
+		if (bigbuf)
+		    yasm_xfree(bigbuf);
+		bc = STAILQ_NEXT(bc, link);
+	    }
+
+	    /* delete bcrelocs (newly generated next bytecode if any) */
+	    reloc = STAILQ_FIRST(&info.bcrelocs);
+	    while (reloc) {
+		bcreloc *reloc2 = STAILQ_NEXT(reloc, link);
+		yasm_xfree(reloc);
+		reloc = reloc2;
+	    }
+
+	    /* save reloc context */
+	    last_hist->next_reloc = info.next_reloc;
+	    last_hist->next_reloc_addr = info.next_reloc_addr;
 	}
 	line++;
+    }
+
+    /* delete reloc history */
+    while (!SLIST_EMPTY(&reloc_hist)) {
+	last_hist = SLIST_FIRST(&reloc_hist);
+	SLIST_REMOVE_HEAD(&reloc_hist, link);
+	yasm_xfree(last_hist);
     }
 
     yasm_xfree(buf);

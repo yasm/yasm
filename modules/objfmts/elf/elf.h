@@ -277,7 +277,6 @@ struct elf_secthead {
     elf_strtab_entry	*name;
     elf_section_index	 index;
 
-    elf_reloc_head	*relocs;
     elf_strtab_entry	*rel_name;
     elf_section_index	 rel_index;
     elf_address		 rel_offset;
@@ -302,11 +301,8 @@ struct elf_secthead {
  *     info -> 0
  */
 
-STAILQ_HEAD(elf_reloc_head, elf_reloc_entry);
 struct elf_reloc_entry {
-    STAILQ_ENTRY(elf_reloc_entry) qlink;
-    yasm_intnum		*addr;
-    yasm_symrec		*sym;
+    yasm_reloc		 reloc;
     int			 rtype_rel;
     size_t		 valsize;
 };
@@ -346,9 +342,6 @@ elf_reloc_entry *elf_reloc_entry_create(yasm_symrec *sym,
 					yasm_intnum *addr,
 					int rel,
 					size_t valsize);
-void elf_reloc_entry_destroy(elf_reloc_entry *entry);
-elf_reloc_head *elf_relocs_create(void);
-void elf_reloc_destroy(elf_reloc_head *head);
 
 /* strtab functions */
 elf_strtab_entry *elf_strtab_entry_create(const char *str);
@@ -388,7 +381,8 @@ elf_secthead *elf_secthead_create(elf_strtab_entry	*name,
 void elf_secthead_destroy(elf_secthead *esd);
 unsigned long elf_secthead_write_to_file(FILE *f, elf_secthead *esd,
 					 elf_section_index sindex);
-int elf_secthead_append_reloc(elf_secthead *shead, elf_reloc_entry *reloc);
+int elf_secthead_append_reloc(yasm_section *sect, elf_secthead *shead,
+			      elf_reloc_entry *reloc);
 elf_section_type elf_secthead_get_type(elf_secthead *shead);
 int elf_secthead_is_empty(elf_secthead *shead);
 struct yasm_symrec *elf_secthead_get_sym(elf_secthead *shead);
@@ -410,9 +404,11 @@ struct yasm_symrec *elf_secthead_set_sym(elf_secthead *shead,
 					 struct yasm_symrec *sym);
 void elf_secthead_add_size(elf_secthead *shead, yasm_intnum *size);
 unsigned long elf_secthead_write_rel_to_file(FILE *f, elf_section_index symtab,
+					     yasm_section *sect,
 					     elf_secthead *esd,
 					     elf_section_index sindex);
-unsigned long elf_secthead_write_relocs_to_file(FILE *f, elf_secthead *shead);
+unsigned long elf_secthead_write_relocs_to_file(FILE *f, yasm_section *sect,
+						elf_secthead *shead);
 long elf_secthead_set_file_offset(elf_secthead *shead, long pos);
 
 /* program header function */
