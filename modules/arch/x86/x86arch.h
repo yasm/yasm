@@ -158,6 +158,7 @@ typedef struct x86_new_insn_data {
     /*@keep@*/ /*@null@*/ yasm_expr *imm;
     unsigned char opersize;
     unsigned char def_opersize_64;
+    unsigned char special_prefix;
     unsigned char op_len;
     unsigned char op[3];
     unsigned char spare;	/* bits to go in 'spare' field of ModRM */

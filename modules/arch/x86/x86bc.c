@@ -77,6 +77,7 @@ typedef struct x86_insn {
     unsigned char lockrep_pre;	/* 0 indicates no prefix */
 
     unsigned char def_opersize_64;  /* default operand size in 64-bit mode */
+    unsigned char special_prefix;   /* "special" prefix (0=none) */
 
     unsigned char rex;		/* REX AMD64 extension, 0 if none,
 				   0xff if not allowed (high 8 bit reg used) */
@@ -232,6 +233,7 @@ yasm_x86__bc_create_insn(yasm_arch *arch, x86_new_insn_data *d)
     insn->addrsize = 0;
     insn->opersize = d->opersize;
     insn->def_opersize_64 = d->def_opersize_64;
+    insn->special_prefix = d->special_prefix;
     insn->lockrep_pre = 0;
     insn->rex = d->rex;
     insn->shift_op = d->shift_op;
@@ -537,11 +539,12 @@ x86_bc_insn_print(const yasm_bytecode *bc, FILE *f, int indent_level)
 	    (unsigned int)insn->opcode[2],
 	    (unsigned int)insn->opcode_len);
     fprintf(f,
-	    "%*sAddrSize=%u OperSize=%u LockRepPre=%02x REX=%03o\n",
+	    "%*sAddrSize=%u OperSize=%u LockRepPre=%02x SpPre=%02x REX=%03o\n",
 	    indent_level, "",
 	    (unsigned int)insn->addrsize,
 	    (unsigned int)insn->opersize,
 	    (unsigned int)insn->lockrep_pre,
+	    (unsigned int)insn->special_prefix,
 	    (unsigned int)insn->rex);
     fprintf(f, "%*sShiftOp=%u BITS=%u\n", indent_level, "",
 	    (unsigned int)insn->shift_op,
@@ -736,6 +739,7 @@ x86_bc_insn_resolve(yasm_bytecode *bc, int save,
 	((insn->mode_bits != 64 && insn->opersize != insn->mode_bits) ||
 	 (insn->mode_bits == 64 && insn->opersize == 16)))
 	bc->len++;
+    bc->len += (insn->special_prefix != 0) ? 1:0;
     bc->len += (insn->lockrep_pre != 0) ? 1:0;
     if (insn->rex != 0xff &&
 	(insn->rex != 0 ||
@@ -932,6 +936,8 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     unsigned char *bufp_orig = *bufp;
 
     /* Prefixes */
+    if (insn->special_prefix != 0)
+	YASM_WRITE_8(*bufp, insn->special_prefix);
     if (insn->lockrep_pre != 0)
 	YASM_WRITE_8(*bufp, insn->lockrep_pre);
     if (x86_ea && x86_ea->segment != 0)
