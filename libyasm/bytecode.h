@@ -97,6 +97,7 @@ void yasm_ea_set_nosplit(yasm_effaddr *ea, unsigned int nosplit);
  * addresses.  A override of an override will result in a warning.
  * \param ea		effective address
  * \param segreg	segment register (0 if none)
+ * \param line		virtual line number
  */
 void yasm_ea_set_segreg(yasm_effaddr *ea, unsigned long segreg,
 			unsigned long line);
@@ -184,7 +185,7 @@ void yasm_bc_insn_add_prefix(yasm_bytecode *bc,
 
 /** Associate a segment prefix with an instruction bytecode.
  * \param bc		instruction bytecode
- * \param prefix_data	data the identifies the prefix
+ * \param segreg	data the identifies the segment register
  */
 void yasm_bc_insn_add_seg_prefix(yasm_bytecode *bc, unsigned long segreg);
 
