@@ -7,7 +7,7 @@ noinst_DATA = queue.html queue.ps
 EXTRA_DIST = queue.3
 
 queue.html: queue.3
-	groff -mmandoc -Thtml queue.3 >queue.html
+	$(GROFF) -mmandoc -Thtml queue.3 >queue.html
 
 queue.ps: queue.3
-	groff -mmandoc -Tps queue.3 >queue.ps
+	$(GROFF) -mmandoc -Tps queue.3 >queue.ps
