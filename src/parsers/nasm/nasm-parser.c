@@ -1,4 +1,4 @@
-/* $Id: nasm-parser.c,v 1.2 2001/08/19 02:50:14 peter Exp $
+/* $Id: nasm-parser.c,v 1.3 2001/08/19 02:57:02 peter Exp $
  * NASM-compatible parser
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -28,6 +28,8 @@
 
 extern FILE *nasm_parser_in;
 extern int nasm_parser_debug;
+
+extern int nasm_parser_parse(void);
 
 int (*nasm_parser_yyinput) (char *buf, int max_size);
 
