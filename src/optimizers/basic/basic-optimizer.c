@@ -22,6 +22,7 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
+#include "intnum.h"
 #include "symrec.h"
 
 #include "bytecode.h"
@@ -40,27 +41,60 @@
 #define BCFLAG_INPROGRESS	(1UL<<0)
 #define BCFLAG_DONE		(1UL<<1)
 
+static int basic_optimize_section_1(section *sect,
+				    /*@unused@*/ /*@null@*/ void *d);
+
 static /*@only@*/ /*@null@*/ intnum *
 basic_optimize_resolve_label(symrec *sym)
 {
-    unsigned long flags;
     /*@dependent@*/ section *sect;
-    /*@dependent@*/ /*@null@*/ bytecode *bc;
+    /*@dependent@*/ /*@null@*/ bytecode *precbc;
+    /*@null@*/ bytecode *bc;
 
-    if (!symrec_get_label(sym, &sect, &bc))
+    if (!symrec_get_label(sym, &sect, &precbc))
 	return NULL;
 
-    flags = symrec_get_opt_flags(sym);
+    /* determine actual bc from preceding bc (how labels are stored) */
+    if (!precbc)
+	bc = bcs_first(section_get_bytecodes(sect));
+    else
+	bc = bcs_next(precbc);
+    assert(bc != NULL);
+
+    if (section_get_opt_flags(sect) == SECTFLAG_NONE) {
+	/* Section not started.  Optimize it (recursively). */
+	basic_optimize_section_1(sect, NULL);
+    }
+    /* If a section is done, the following will always succeed.  If it's in-
+     * progress, this will fail if the bytecode comes AFTER the current one.
+     */
+    if (precbc && precbc->opt_flags == BCFLAG_DONE)
+	return intnum_new_int(precbc->offset + precbc->len);
+    if (bc->opt_flags == BCFLAG_DONE)
+	return intnum_new_int(bc->offset);
 
     return NULL;
 }
 
 static int
-basic_optimize_bytecode(bytecode *bc, /*@unused@*/ /*@null@*/ void *d)
+basic_optimize_bytecode_1(bytecode *bc, void *d)
 {
+    bytecode **precbc = (bytecode **)d;
+
+    /* Don't even bother if we're in-progress or done. */
+    if (bc->opt_flags == BCFLAG_INPROGRESS)
+	return 0;
+    if (bc->opt_flags == BCFLAG_DONE)
+	return 1;
+
     bc->opt_flags = BCFLAG_INPROGRESS;
 
     bc_calc_len(bc, basic_optimize_resolve_label);
+    if (!*precbc)
+	bc->offset = 0;
+    else
+	bc->offset = (*precbc)->offset + (*precbc)->len;
+    *precbc = bc;
 
     bc->opt_flags = BCFLAG_DONE;
 
@@ -68,22 +102,54 @@ basic_optimize_bytecode(bytecode *bc, /*@unused@*/ /*@null@*/ void *d)
 }
 
 static int
-basic_optimize_section(section *sect, /*@unused@*/ /*@null@*/ void *d)
+basic_optimize_section_1(section *sect, /*@unused@*/ /*@null@*/ void *d)
 {
+    bytecode *precbc = NULL;
+    unsigned long flags;
+
+    /* Don't even bother if we're in-progress or done. */
+    flags = section_get_opt_flags(sect);
+    if (flags == SECTFLAG_INPROGRESS)
+	return 0;
+    if (flags == SECTFLAG_DONE)
+	return 1;
+
     section_set_opt_flags(sect, SECTFLAG_INPROGRESS);
 
-    bcs_traverse(section_get_bytecodes(sect), NULL, basic_optimize_bytecode);
+    if(!bcs_traverse(section_get_bytecodes(sect), &precbc,
+		     basic_optimize_bytecode_1))
+	return 0;
 
     section_set_opt_flags(sect, SECTFLAG_DONE);
 
     return 1;
 }
+#if 0
+static int
+basic_optimize_bytecode_2(bytecode *bc, /*@unused@*/ /*@null@*/ void *d)
+{
+    if (bc->opt_flags != BCFLAG_DONE)
+	return 0;
+    bc_resolve(bc, basic_optimize_resolve_label);
+    return 1;
+}
 
+static int
+basic_optimize_section_2(section *sect, /*@unused@*/ /*@null@*/ void *d)
+{
+    if (section_get_opt_flags(sect) != SECTFLAG_DONE)
+	return 0;
+    return bcs_traverse(section_get_bytecodes(sect), NULL,
+			basic_optimize_bytecode_2);
+}
+#endif
 static void
 basic_optimize(sectionhead *sections)
 {
     /* Optimization process: (essentially NASM's pass 1)
      *  Determine the size of all bytecodes.
+     *  Forward references are /not/ resolved (only backward references are
+     *   computed and sized).
      *  Check "critical" expressions (must be computable on the first pass,
      *   i.e. depend only on symbols before it).
      *  Differences from NASM:
@@ -92,9 +158,12 @@ basic_optimize(sectionhead *sections)
      *   - not strictly top->bottom scanning; we scan through a section and
      *     hop to other sections as necessary.
      */
-    sections_traverse(sections, NULL, basic_optimize_section);
+    sections_traverse(sections, NULL, basic_optimize_section_1);
 
-    /* NASM's pass 2 is output, so we just return. */
+    /* Pass 2:
+     *  Resolve (compute value of) forward references.
+     */
+    /*sections_traverse(sections, NULL, basic_optimize_section_2);*/
 }
 
 /* Define optimizer structure -- see optimizer.h for details */
