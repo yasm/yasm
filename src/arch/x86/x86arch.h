@@ -106,6 +106,7 @@ typedef struct x86_new_jmprel_data {
     unsigned char near_op_len;
     unsigned char near_op[3];
     unsigned char addrsize;
+    unsigned char opersize;
 } x86_new_jmprel_data;
 
 bytecode *x86_bc_new_jmprel(x86_new_jmprel_data *d);

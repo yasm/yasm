@@ -107,7 +107,7 @@ x86_bc_new_jmprel(x86_new_jmprel_data *d)
     jmprel->nearop.opcode_len = d->near_op_len;
 
     jmprel->addrsize = d->addrsize;
-    jmprel->opersize = 0;
+    jmprel->opersize = d->opersize;
     jmprel->lockrep_pre = 0;
 
     jmprel->mode_bits = x86_mode_bits;
