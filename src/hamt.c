@@ -58,19 +58,6 @@ struct HAMT {
     } while (0)
 #define GetSubTrie(n)		(HAMTNode *)((unsigned long)((n)->BaseValue)&~1UL)
 
-/* Bit-counting */
-#define SK5	0x55555555
-#define SK3	0x33333333
-#define SKF0	0x0F0F0F0F
-#define BitCount(d, s)		do {		\
-	d = s;					\
-	d -= (d>>1) & SK5;			\
-	d = (d & SK3) + ((d>>2) & SK3);		\
-	d = (d & SKF0) + ((d>>4) & SKF0);	\
-	d += d>>16;				\
-	d += d>>8;				\
-    } while (0)
-
 static unsigned long
 HashKey(const char *key)
 {
