@@ -83,9 +83,9 @@ basic_optimize_bytecode_1(bytecode *bc, void *d)
 
     /* Don't even bother if we're in-progress or done. */
     if (bc->opt_flags == BCFLAG_INPROGRESS)
-	return 0;
-    if (bc->opt_flags == BCFLAG_DONE)
 	return 1;
+    if (bc->opt_flags == BCFLAG_DONE)
+	return 0;
 
     bc->opt_flags = BCFLAG_INPROGRESS;
 
@@ -94,11 +94,17 @@ basic_optimize_bytecode_1(bytecode *bc, void *d)
     else
 	bc->offset = (*precbc)->offset + (*precbc)->len;
     *precbc = bc;
-    bc_calc_len(bc, basic_optimize_resolve_label);
+
+    /* We're doing just a single pass, so essentially ignore whether the size
+     * is minimum or not, and just check for indeterminate length (indicative
+     * of circular reference).
+     */
+    if (bc_calc_len(bc, basic_optimize_resolve_label) < 0)
+	return -1;
 
     bc->opt_flags = BCFLAG_DONE;
 
-    return 1;
+    return 0;
 }
 
 static int
@@ -106,23 +112,25 @@ basic_optimize_section_1(section *sect, /*@unused@*/ /*@null@*/ void *d)
 {
     bytecode *precbc = NULL;
     unsigned long flags;
+    int retval;
 
     /* Don't even bother if we're in-progress or done. */
     flags = section_get_opt_flags(sect);
     if (flags == SECTFLAG_INPROGRESS)
-	return 0;
-    if (flags == SECTFLAG_DONE)
 	return 1;
+    if (flags == SECTFLAG_DONE)
+	return 0;
 
     section_set_opt_flags(sect, SECTFLAG_INPROGRESS);
 
-    if(!bcs_traverse(section_get_bytecodes(sect), &precbc,
-		     basic_optimize_bytecode_1))
-	return 0;
+    retval = bcs_traverse(section_get_bytecodes(sect), &precbc,
+		     basic_optimize_bytecode_1);
+    if (retval != 0)
+	return retval;
 
     section_set_opt_flags(sect, SECTFLAG_DONE);
 
-    return 1;
+    return 0;
 }
 #if 0
 static int
@@ -158,12 +166,16 @@ basic_optimize(sectionhead *sections)
      *   - not strictly top->bottom scanning; we scan through a section and
      *     hop to other sections as necessary.
      */
-    sections_traverse(sections, NULL, basic_optimize_section_1);
+    if (sections_traverse(sections, NULL, basic_optimize_section_1) < 0) {
+	ErrorAt(1, "circular reference");
+	return;
+    }
 
     /* Pass 2:
      *  Resolve (compute value of) forward references.
      */
     /*sections_traverse(sections, NULL, basic_optimize_section_2);*/
+    return;
 }
 
 /* Define optimizer structure -- see optimizer.h for details */
