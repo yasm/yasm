@@ -26,7 +26,6 @@
 
 #ifdef STDC_HEADERS
 # include <stdarg.h>
-# include <assert.h>
 #endif
 
 #ifdef gettext_noop

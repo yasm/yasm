@@ -24,7 +24,6 @@
 RCSID("$IdPath$");
 
 #ifdef STDC_HEADERS
-# include <assert.h>
 # include <math.h>
 #endif
 

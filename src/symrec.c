@@ -23,7 +23,6 @@
 /*@unused@*/ RCSID("$IdPath$");
 
 #ifdef STDC_HEADERS
-# include <assert.h>
 # include <limits.h>
 #endif
 

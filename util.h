@@ -30,10 +30,15 @@
 
 #include <stdio.h>
 
+#if !defined(lint)
+# define NDEBUG
+#endif
+
 #ifdef STDC_HEADERS
 # include <stddef.h>
 # include <stdlib.h>
 # include <string.h>
+# include <assert.h>
 #endif
 
 #if defined(lint)

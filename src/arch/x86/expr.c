@@ -22,10 +22,6 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
-#ifdef STDC_HEADERS
-# include <assert.h>
-#endif
-
 #include "bitvect.h"
 
 #include "globals.h"
