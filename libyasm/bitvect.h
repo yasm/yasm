@@ -252,9 +252,9 @@ boolean /*@alt void@*/ BitVector_increment  (wordptr addr);                     
 boolean /*@alt void@*/ BitVector_decrement  (wordptr addr);                        /*  X--  */
 
 boolean /*@alt void@*/ BitVector_compute    (wordptr X, wordptr Y, wordptr Z, boolean minus,
-                                                               /*@out@*/ boolean *carry);
-boolean /*@alt void@*/ BitVector_add        (wordptr X, wordptr Y, wordptr Z, /*@out@*/ boolean *carry);
-boolean /*@alt void@*/ BitVector_sub        (wordptr X, wordptr Y, wordptr Z, /*@out@*/ boolean *carry);
+                                                               boolean *carry);
+boolean /*@alt void@*/ BitVector_add        (wordptr X, wordptr Y, wordptr Z, boolean *carry);
+boolean /*@alt void@*/ BitVector_sub        (wordptr X, wordptr Y, wordptr Z, boolean *carry);
 boolean /*@alt void@*/ BitVector_inc        (wordptr X, wordptr Y);
 boolean /*@alt void@*/ BitVector_dec        (wordptr X, wordptr Y);
 
