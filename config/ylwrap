@@ -113,12 +113,13 @@ if test $status -eq 0; then
 	   [\\/]* | ?:[\\/]*) target="$2";;
 	   *) target="../$2";;
 	 esac
+	 from_rx=`echo "$from" | sed -e 's,\\\\,\\\\\\\\,g' -e 's,\\.,\\\\.,g'`
 
 	 # Edit out `#line' or `#' directives.  We don't want the
 	 # resulting debug information to point at an absolute srcdir;
 	 # it is better for it to just mention the .y file with no
 	 # path.
-	 sed -e "/^#/ s,$input_rx,," "$from" > "$target" || status=$?
+	 sed -e "/^#/ s,$input_rx,," -e "/^#/ s,$from_rx,$2," "$from" > "$target" || status=$?
       else
 	 # A missing file is only an error for the first file.  This
 	 # is a blatant hack to let us support using "yacc -d".  If -d
