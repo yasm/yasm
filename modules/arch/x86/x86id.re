@@ -1826,7 +1826,7 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 void
 x86_switch_cpu(const char *id)
 {
-    const char *marker;
+    /*const char *marker;*/
 
     /*!re2c
 	/* The standard CPU names /set/ cpu_enabled. */
@@ -1947,7 +1947,7 @@ arch_check_id_retval
 x86_check_identifier(unsigned long data[4], const char *id)
 {
     const char *oid = id;
-    const char *marker;
+    /*const char *marker;*/
     /*!re2c
 	/* target modifiers */
 	N E A R		{
