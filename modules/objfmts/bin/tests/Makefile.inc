@@ -10,6 +10,9 @@ EXTRA_DIST += \
 	src/objfmts/bin/tests/float.asm			\
 	src/objfmts/bin/tests/float.bin.hx		\
 	src/objfmts/bin/tests/float.errwarn		\
+	src/objfmts/bin/tests/integer-warn.asm		\
+	src/objfmts/bin/tests/integer-warn.bin.hx	\
+	src/objfmts/bin/tests/integer-warn.errwarn	\
 	src/objfmts/bin/tests/integer.asm		\
 	src/objfmts/bin/tests/integer.bin.hx		\
 	src/objfmts/bin/tests/integer.errwarn		\
@@ -22,6 +25,9 @@ CLEANFILES += \
 	float \
 	float.hx \
 	float.ew \
+	integer-warn \
+	integer-warn.hx \
+	integer-warn.ew \
 	integer \
 	integer.hx \
 	integer.ew \
