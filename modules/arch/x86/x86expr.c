@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$IdPath: yasm/modules/arch/x86/x86expr.c,v 1.54 2003/03/26 05:07:55 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #define YASM_LIB_INTERNAL
 #define YASM_EXPR_INTERNAL
@@ -736,6 +736,10 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 	    *sib = 0;
 	    *v_sib = 0;
 	    *n_sib = 0;
+	    /* RIP always requires a 32-bit displacement */
+	    *v_modrm = 1;
+	    *displen = 4;
+	    return 1;
 	} else if (indexreg == REG3264_NONE) {
 	    /* basereg only */
 	    /* Don't need to go to the full effort of determining what type
