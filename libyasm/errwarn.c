@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.4 2001/05/22 20:44:32 peter Exp $
+/* $Id: errwarn.c,v 1.5 2001/05/30 07:38:42 peter Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -49,7 +49,9 @@ static char *err_msgs[] = {
 static char *warn_msgs[] = {
     "",
     "ignoring unrecognized character '%s'",
-    "%s value exceeds bounds"
+    "%s value exceeds bounds",
+    "multiple segment overrides, using leftmost",
+    "multiple LOCK or REP prefixes, using leftmost"
 };
 
 /* hate to define these as static buffers; better solution would be to use
