@@ -26,9 +26,6 @@
 # include <stddef.h>
 #endif
 
-/* strdup() implementation with error checking (using xmalloc). */
-char *xstrdup(const char *str);
-
 #if !defined(HAVE_MERGESORT)
 int mergesort(void *base, size_t nmemb, size_t size,
 	      int (*compar)(const void *, const void *));
@@ -67,11 +64,16 @@ int strncasecmp(const char *s1, const char *s2, size_t n);
 
 #include "ternary.h"
 
+#ifndef DMALLOC
+/* strdup() implementation with error checking (using xmalloc). */
+char *xstrdup(const char *str);
+
 /* Error-checking memory allocation routines in xmalloc.c. */
 void *xmalloc(size_t size);
 void *xcalloc(size_t nelem, size_t elsize);
 void *xrealloc(void *oldmem, size_t size);
 void xfree(void *p);
+#endif
 
 #ifdef HAVE_SYS_CDEFS_H
 # include <sys/cdefs.h>
