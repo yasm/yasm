@@ -22,6 +22,10 @@
 #ifndef YASM_UTIL_H
 #define YASM_UTIL_H
 
+#ifdef STDC_HEADERS
+# include <stddef.h>
+#endif
+
 #if !defined(HAVE_STRDUP) || defined(HAVE_GNU_C_LIBRARY)
 char *strdup(const char *str);
 #endif
