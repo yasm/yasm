@@ -40,7 +40,7 @@ typedef struct floatnum_s {
     unsigned char flags;
 } floatnum;
 
-floatnum *floatnum_new(char *str);
+floatnum *floatnum_new(const char *str);
 void floatnum_delete(floatnum *flt);
 
 /* The get functions return nonzero if flt can't fit into that size format. */

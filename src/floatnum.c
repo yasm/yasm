@@ -281,7 +281,7 @@ floatnum_mul(floatnum *acc, const floatnum *op)
 }
 
 floatnum *
-floatnum_new(char *str)
+floatnum_new(const char *str)
 {
     floatnum *flt;
     int dec_exponent, dec_exp_add;	/* decimal (powers of 10) exponent */
