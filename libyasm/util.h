@@ -45,7 +45,7 @@
 # include "libyasm/config.h"
 #endif
 
-#if !defined(lint)
+#if !defined(lint) && !defined(NDEBUG)
 # define NDEBUG
 #endif
 
