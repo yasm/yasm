@@ -1,6 +1,10 @@
 re2c
 ----
 
+YASM version
+------------
+- translated to C from C++ for portability reasons
+
 Version 0.9.1
 -------------
 
