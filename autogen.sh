@@ -68,6 +68,10 @@ fi
 
 echo "Generating configuration files for $package, please wait...."
 
+if test ! -d "config"; then
+	mkdir config
+fi
+
 rm -f stamp-h.in
 echo "  aclocal $ACLOCAL_FLAGS"
 aclocal $ACLOCAL_FLAGS || exit 1
