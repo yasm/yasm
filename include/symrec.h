@@ -1,4 +1,4 @@
-/* $Id: symrec.h,v 1.1 2001/05/15 05:28:06 peter Exp $
+/* $Id: symrec.h,v 1.2 2001/05/18 21:40:54 peter Exp $
  * Symbol table handling header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -27,7 +27,7 @@ typedef struct symrec_s {
     int type;
     union {
 	double var;
-	double (*fnctptr) ();
+	double (*fnctptr)(void);
     } value;
     struct symrec_s *next;
 } symrec;
