@@ -379,7 +379,11 @@ char *tr_tcname (TestResult *tr)
 static char *signal_msg (int signal)
 {
   char *msg = emalloc (CMAXMSG); /* free'd by caller */
+#ifdef HAVE_SNPRINTF
   snprintf(msg, CMAXMSG, "Received signal %d", signal);
+#else
+  sprintf(msg, "Received signal %d", signal);
+#endif
   return msg;
 }
 #endif
@@ -387,8 +391,12 @@ static char *signal_msg (int signal)
 static char *exit_msg (int exitval)
 {
   char *msg = emalloc(CMAXMSG); /* free'd by caller */
+#ifdef HAVE_SNPRINTF
   snprintf(msg, CMAXMSG,
 	   "Early exit with return value %d", exitval);
+#else
+  sprintf(msg, "Early exit with return value %d", exitval);
+#endif
   return msg;
 }
 

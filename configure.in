@@ -104,7 +104,7 @@ fi
 # Check for stuff wanted by the test suite.  None of this is required.
 CHECK_CFLAGS=
 if ${check}; then
-	AC_CHECK_FUNCS(fork wait msgctl msgget msgrcv msgsnd strerror)
+	AC_CHECK_FUNCS(fork wait msgctl msgget msgrcv msgsnd strerror snprintf)
 	if test "$ac_cv_func_fork" = yes &&
 	   test "$ac_cv_func_wait" = yes &&
 	   test "$ac_cv_func_msgctl" = yes &&
@@ -112,7 +112,7 @@ if ${check}; then
 	   test "$ac_cv_func_msgrcv" = yes &&
 	   test "$ac_cv_func_msgsnd" = yes; then
 		AC_DEFINE(USE_FORKWAITMSG)
-		CHECK_CFLAGS="-D_SVID_SOURCE"
+		CHECK_CFLAGS="-D_SVID_SOURCE -D_GNU_SOURCE"
 	fi
 	AC_TYPE_PID_T
 	AC_HEADER_SYS_WAIT

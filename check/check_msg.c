@@ -71,7 +71,11 @@ static LastLocMsg *create_last_loc_msg (char *file, int line)
 {
   LastLocMsg *m = emalloc (sizeof(LastLocMsg));
   m->message_type = (long int) LASTLOCMSG;
+#ifdef HAVE_SNPRINTF
   snprintf(m->msg, CMAXMSG, "%s\n%d", file, line);
+#else
+  sprintf(m->msg, "%s\n%d", file, line);
+#endif
 
   return m;
 }
