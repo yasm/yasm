@@ -87,21 +87,27 @@ static unsigned long cpu_enabled = ~CPU_Any;
 /* Operand types.  These are more detailed than the "general" types for all
  * architectures, as they include the size, for instance.
  * Bit Breakdown (from LSB to MSB):
- *  - 4 bits = general type (must be exact match, except for =3):
+ *  - 5 bits = general type (must be exact match, except for =3):
  *             0 = immediate
  *             1 = any general purpose, MMX, XMM, or FPU register
  *             2 = memory
  *             3 = any general purpose, MMX, XMM, or FPU register OR memory
- *             4 = segreg
+ *             4 = any segment register
  *             5 = any CR register
  *             6 = any DR register
  *             7 = any TR register
  *             8 = ST0
  *             9 = AL/AX/EAX (depending on size)
  *             A = CL/CX/ECX (depending on size)
- *             B = CR4
- *             C = memory offset (an EA, but with no registers allowed)
- *                 [special case for MOV opcode]
+ *             B = CS
+ *             C = DS
+ *             D = ES
+ *             E = FS
+ *             F = GS
+ *             10 = SS
+ *             11 = CR4
+ *             12 = memory offset (an EA, but with no registers allowed)
+ *                  [special case for MOV opcode]
  *  - 3 bits = size (user-specified, or from register size):
  *             0 = any size acceptable
  *             1/2/3/4 = 8/16/32/64 bits (from user or reg size)
@@ -134,29 +140,35 @@ static unsigned long cpu_enabled = ~CPU_Any;
 #define OPT_ST0		0x8
 #define OPT_Areg	0x9
 #define OPT_Creg	0xA
-#define OPT_CR4		0xB
-#define OPT_MemOffs	0xC
-#define OPT_MASK	0x000F
+#define OPT_CS		0xB
+#define OPT_DS		0xC
+#define OPT_ES		0xD
+#define OPT_FS		0xE
+#define OPT_GS		0xF
+#define OPT_SS		0x10
+#define OPT_CR4		0x11
+#define OPT_MemOffs	0x12
+#define OPT_MASK	0x001F
 
-#define OPS_Any		(0<<4)
-#define OPS_8		(1<<4)
-#define OPS_16		(2<<4)
-#define OPS_32		(3<<4)
-#define OPS_64		(4<<4)
-#define OPS_80		(5<<4)
-#define OPS_128		(6<<4)
-#define OPS_MASK	0x0070
-#define OPS_SHIFT	4
+#define OPS_Any		(0<<5)
+#define OPS_8		(1<<5)
+#define OPS_16		(2<<5)
+#define OPS_32		(3<<5)
+#define OPS_64		(4<<5)
+#define OPS_80		(5<<5)
+#define OPS_128		(6<<5)
+#define OPS_MASK	0x00E0
+#define OPS_SHIFT	5
 
-#define OPS_Relaxed	(1<<7)
-#define OPS_RMASK	0x0080
+#define OPS_Relaxed	(1<<8)
+#define OPS_RMASK	0x0100
 
-#define OPA_None	(0<<8)
-#define OPA_EA		(1<<8)
-#define OPA_Imm		(2<<8)
-#define OPA_Spare	(3<<8)
-#define OPA_Op0Add	(4<<8)
-#define OPA_MASK	0x0700
+#define OPA_None	(0<<9)
+#define OPA_EA		(1<<9)
+#define OPA_Imm		(2<<9)
+#define OPA_Spare	(3<<9)
+#define OPA_Op0Add	(4<<9)
+#define OPA_MASK	0x0E00
 
 typedef struct x86_insn_info {
     /* The CPU feature flags needed to execute this instruction.  This is OR'ed
@@ -308,6 +320,49 @@ static const x86_insn_info movszx_insn[] = {
       {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_16|OPA_EA, 0} }
 };
 
+/* Push instructions */
+static const x86_insn_info push_insn[] = {
+    { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 6, 1, {OPT_RM|OPS_16|OPA_EA, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xFF, 0, 0}, 6, 1, {OPT_RM|OPS_32|OPA_EA, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0x50, 0, 0}, 0, 1,
+      {OPT_Reg|OPS_16|OPA_Op0Add, 0, 0} },
+    { CPU_386, 0, 32, 1, {0x50, 0, 0}, 0, 1,
+      {OPT_Reg|OPS_32|OPA_Op0Add, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0x6A, 0, 0}, 0, 1, {OPT_Imm|OPS_8|OPA_Imm, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0x68, 0, 0}, 0, 1, {OPT_Imm|OPS_16|OPA_Imm, 0, 0} },
+    { CPU_386, 0, 32, 1, {0x68, 0, 0}, 0, 1, {OPT_Imm|OPS_32|OPA_Imm, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0x0E, 0, 0}, 0, 1, {OPT_CS|OPS_Any|OPA_None, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0x16, 0, 0}, 0, 1, {OPT_SS|OPS_Any|OPA_None, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0x1E, 0, 0}, 0, 1, {OPT_DS|OPS_Any|OPA_None, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0x06, 0, 0}, 0, 1, {OPT_ES|OPS_Any|OPA_None, 0, 0} },
+    { CPU_386, 0, 0, 2, {0x0F, 0xA0, 0}, 0, 1,
+      {OPT_FS|OPS_Any|OPA_None, 0, 0} },
+    { CPU_386, 0, 0, 2, {0x0F, 0xA8, 0}, 0, 1,
+      {OPT_GS|OPS_Any|OPA_None, 0, 0} }
+};
+
+/* Pop instructions */
+static const x86_insn_info pop_insn[] = {
+    { CPU_Any, 0, 16, 1, {0x8F, 0, 0}, 0, 1, {OPT_RM|OPS_16|OPA_EA, 0, 0} },
+    { CPU_386, 0, 32, 1, {0x8F, 0, 0}, 0, 1, {OPT_RM|OPS_32|OPA_EA, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0x58, 0, 0}, 0, 1,
+      {OPT_Reg|OPS_16|OPA_Op0Add, 0, 0} },
+    { CPU_386, 0, 32, 1, {0x58, 0, 0}, 0, 1,
+      {OPT_Reg|OPS_32|OPA_Op0Add, 0, 0} },
+    /* POP CS is debateably valid on the 8086, if obsolete and undocumented.
+     * We don't include it because it's VERY unlikely it will ever be used
+     * anywhere.  If someone really wants it they can db 0x0F it.
+     */
+    /*{ CPU_Any|CPU_Undoc|CPU_Obs, 0, 0, 1, {0x0F, 0, 0}, 0, 1,
+        {OPT_CS|OPS_Any|OPA_None, 0, 0} },*/
+    { CPU_Any, 0, 0, 1, {0x17, 0, 0}, 0, 1, {OPT_SS|OPS_Any|OPA_None, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0x1F, 0, 0}, 0, 1, {OPT_DS|OPS_Any|OPA_None, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0x07, 0, 0}, 0, 1, {OPT_ES|OPS_Any|OPA_None, 0, 0} },
+    { CPU_386, 0, 0, 2, {0x0F, 0xA1, 0}, 0, 1,
+      {OPT_FS|OPS_Any|OPA_None, 0, 0} },
+    { CPU_386, 0, 0, 2, {0x0F, 0xA9, 0}, 0, 1,
+      {OPT_GS|OPS_Any|OPA_None, 0, 0} }
+};
 
 bytecode *
 x86_new_insn(const unsigned long data[4], int num_operands,
@@ -414,6 +469,36 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 			 op->data.reg != (X86_REG16 | 1)) ||
 			((info->operands[i] & OPS_MASK) == OPS_32 &&
 			 op->data.reg != (X86_REG32 | 1)))
+			mismatch = 1;
+		    break;
+		case OPT_CS:
+		    if (op->type != INSN_OPERAND_SEGREG ||
+			(op->data.reg & 0x7) != 1)
+			mismatch = 1;
+		    break;
+		case OPT_DS:
+		    if (op->type != INSN_OPERAND_SEGREG ||
+			(op->data.reg & 0x7) != 3)
+			mismatch = 1;
+		    break;
+		case OPT_ES:
+		    if (op->type != INSN_OPERAND_SEGREG ||
+			(op->data.reg & 0x7) != 0)
+			mismatch = 1;
+		    break;
+		case OPT_FS:
+		    if (op->type != INSN_OPERAND_SEGREG ||
+			(op->data.reg & 0x7) != 4)
+			mismatch = 1;
+		    break;
+		case OPT_GS:
+		    if (op->type != INSN_OPERAND_SEGREG ||
+			(op->data.reg & 0x7) != 5)
+			mismatch = 1;
+		    break;
+		case OPT_SS:
+		    if (op->type != INSN_OPERAND_SEGREG ||
+			(op->data.reg & 0x7) != 2)
 			mismatch = 1;
 		    break;
 		case OPT_CR4:
@@ -893,12 +978,12 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	M O V S X { RET_INSN(movszx, 0xBE, CPU_386); }
 	M O V Z X { RET_INSN(movszx, 0xB6, CPU_386); }
 	/* Push instructions */
-	/* P U S H */
+	P U S H { RET_INSN(push, 0, CPU_Any); }
 	P U S H A { RET_INSN(onebyte, 0x0060, CPU_186); }
 	P U S H A D { RET_INSN(onebyte, 0x2060, CPU_386); }
 	P U S H A W { RET_INSN(onebyte, 0x1060, CPU_186); }
 	/* Pop instructions */
-	/* P O P */
+	P O P { RET_INSN(pop, 0, CPU_Any); }
 	P O P A { RET_INSN(onebyte, 0x0061, CPU_186); }
 	P O P A D { RET_INSN(onebyte, 0x2061, CPU_386); }
 	P O P A W { RET_INSN(onebyte, 0x1061, CPU_186); }
