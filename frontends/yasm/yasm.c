@@ -40,6 +40,10 @@
 # define YASM_MODULE_PATH_ENV	"YASM_MODULE_PATH"
 #endif
 
+#ifndef WIN32
+extern const lt_dlsymlist lt_preloaded_symbols[];
+#endif
+
 /* Preprocess-only buffer size */
 #define PREPROC_BUF_SIZE    16384
 
@@ -164,7 +168,7 @@ main(int argc, char *argv[])
 #endif
 
     /* Initialize preloaded symbol lookup table. */
-    LTDL_SET_PRELOADED_SYMBOLS();
+    lt_dlpreload_default(lt_preloaded_symbols);
 
     /* Initialize libltdl. */
     errors = lt_dlinit();
