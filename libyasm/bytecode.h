@@ -33,9 +33,10 @@ typedef struct dataval dataval;
 typedef enum {
     BC_EMPTY = 0,
     BC_DATA,
-    BC_RESERVE
+    BC_RESERVE,
+    BC_INCBIN
 } bytecode_type;
-#define BYTECODE_TYPE_BASE  BC_RESERVE+1
+#define BYTECODE_TYPE_BASE  BC_INCBIN+1
 
 /*@only@*/ immval *imm_new_int(unsigned long int_val);
 /*@only@*/ immval *imm_new_expr(/*@keep@*/ expr *e);
@@ -49,6 +50,9 @@ void bc_set_multiple(bytecode *bc, /*@keep@*/ expr *e);
 /*@only@*/ bytecode *bc_new_data(datavalhead *datahead, unsigned char size);
 /*@only@*/ bytecode *bc_new_reserve(/*@keep@*/ expr *numitems,
 				    unsigned char itemsize);
+/*@only@*/ bytecode *bc_new_incbin(/*@only@*/ char *filename,
+				   /*@only@*/ /*@null@*/ expr *start,
+				   /*@only@*/ /*@null@*/ expr *maxlen);
 
 void bc_delete(/*@only@*/ /*@null@*/ bytecode *bc);
 

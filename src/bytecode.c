@@ -58,6 +58,16 @@ typedef struct bytecode_reserve {
     unsigned char itemsize;	/* size of each item (in bytes) */
 } bytecode_reserve;
 
+typedef struct bytecode_incbin {
+    /*@only@*/ char *filename;		/* file to include data from */
+
+    /* starting offset to read from (NULL=0) */
+    /*@only@*/ /*@null@*/ expr *start;
+
+    /* maximum number of bytes to read (NULL=no limit) */
+    /*@only@*/ /*@null@*/ expr *maxlen;
+} bytecode_incbin;
+
 /* Static structures for when NULL is passed to conversion functions. */
 /*  for Convert*ToBytes() */
 unsigned char bytes_static[16];
@@ -174,11 +184,25 @@ bc_new_reserve(expr *numitems, unsigned char itemsize)
     return bc;
 }
 
+bytecode *
+bc_new_incbin(char *filename, expr *start, expr *maxlen)
+{
+    bytecode *bc = bc_new_common(BC_INCBIN, sizeof(bytecode_incbin));
+    bytecode_incbin *incbin = bc_get_data(bc);
+
+    incbin->filename = filename;
+    incbin->start = start;
+    incbin->maxlen = maxlen;
+
+    return bc;
+}
+
 void
 bc_delete(bytecode *bc)
 {
     bytecode_data *data;
     bytecode_reserve *reserve;
+    bytecode_incbin *incbin;
 
     if (!bc)
 	return;
@@ -193,6 +217,12 @@ bc_delete(bytecode *bc)
 	case BC_RESERVE:
 	    reserve = bc_get_data(bc);
 	    expr_delete(reserve->numitems);
+	    break;
+	case BC_INCBIN:
+	    incbin = bc_get_data(bc);
+	    xfree(incbin->filename);
+	    expr_delete(incbin->start);
+	    expr_delete(incbin->maxlen);
 	    break;
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
@@ -218,6 +248,7 @@ bc_print(FILE *f, const bytecode *bc)
 {
     const bytecode_data *data;
     const bytecode_reserve *reserve;
+    const bytecode_incbin *incbin;
 
     switch (bc->type) {
 	case BC_EMPTY:
@@ -241,6 +272,23 @@ bc_print(FILE *f, const bytecode *bc)
 	    expr_print(f, reserve->numitems);
 	    fprintf(f, "\n%*sItem Size=%u\n", indent_level, "",
 		    (unsigned int)reserve->itemsize);
+	    break;
+	case BC_INCBIN:
+	    incbin = bc_get_const_data(bc);
+	    fprintf(f, "%*s_IncBin_\n", indent_level, "");
+	    fprintf(f, "%*sFilename=`%s'\n", indent_level, "",
+		    incbin->filename);
+	    fprintf(f, "%*sStart=", indent_level, "");
+	    if (!incbin->start)
+		fprintf(f, "nil (0)");
+	    else
+		expr_print(f, incbin->start);
+	    fprintf(f, "%*sMax Len=", indent_level, "");
+	    if (!incbin->maxlen)
+		fprintf(f, "nil (unlimited)");
+	    else
+		expr_print(f, incbin->maxlen);
+	    fprintf(f, "\n");
 	    break;
 	default:
 	    if (bc->type < cur_arch->bc.type_max)

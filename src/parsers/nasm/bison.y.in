@@ -181,8 +181,11 @@ lineexp: exp
 ;
 
 exp: instr
-    | DECLARE_DATA datavals	    { $$ = bc_new_data(&$2, $1); }
-    | RESERVE_SPACE expr	    { $$ = bc_new_reserve($2, $1); }
+    | DECLARE_DATA datavals		{ $$ = bc_new_data(&$2, $1); }
+    | RESERVE_SPACE expr		{ $$ = bc_new_reserve($2, $1); }
+    | INCBIN STRING			{ $$ = bc_new_incbin($2, NULL, NULL); }
+    | INCBIN STRING ',' expr		{ $$ = bc_new_incbin($2, $4, NULL); }
+    | INCBIN STRING ',' expr ',' expr	{ $$ = bc_new_incbin($2, $4, $6); }
 ;
 
 datavals: dataval	    { dvs_initialize(&$$); dvs_append(&$$, $1); }
