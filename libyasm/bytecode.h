@@ -57,6 +57,7 @@ typedef enum {
     YASM_BC__RESERVE,	    /**< Reserved space. */
     YASM_BC__INCBIN,	    /**< Included binary file. */
     YASM_BC__ALIGN,	    /**< Alignment to a boundary. */
+    YASM_BC__DBGFMT_DATA,   /**< yasm_dbgfmt specific data. */
     YASM_BC__OBJFMT_DATA    /**< yasm_objfmt specific data. */
 } yasm_bytecode_type;
 
@@ -192,6 +193,18 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
     (unsigned int type, unsigned long len, yasm_objfmt *of,
      /*@only@*/ void *data, unsigned long lindex);
 
+/** Create a bytecode that includes yasm_dbgfmt-specific data.
+ * \param type		yasm_dbgfmt-specific type
+ * \param len		length (in bytes) of data
+ * \param df		yasm_dbgfmt storing the data
+ * \param data		data (kept, do not free)
+ * \param lindex	line index (as from yasm_linemgr) for the bytecode
+ * \return Newly allocated bytecode.
+ */
+/*@only@*/ yasm_bytecode *yasm_bc_new_dbgfmt_data
+    (unsigned int type, unsigned long len, yasm_dbgfmt *df,
+     /*@only@*/ void *data, unsigned long lindex);
+
 /** Delete (free allocated memory for) a bytecode.
  * \param bc	bytecode (only pointer to it); may be NULL
  */
@@ -258,6 +271,8 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
  *			representation
  * \param output_bc_objfmt_data	function to call to convert yasm_objfmt data
  *				bytecodes into their byte representation
+ * \param objfmt_output_reloc   function to call to output relocation entries
+ *				for a single sym
  * \return Newly allocated buffer that should be used instead of buf for
  *	   reading the byte representation, or NULL if buf was big enough to
  *	   hold the entire byte representation.
@@ -268,6 +283,7 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
     (yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
      /*@out@*/ unsigned long *multiple, /*@out@*/ int *gap,
      const yasm_section *sect, void *d, yasm_output_expr_func output_expr,
+     /*@null@*/ yasm_output_reloc_func output_reloc,
      /*@null@*/ yasm_output_bc_objfmt_data_func output_bc_objfmt_data)
     /*@sets *buf@*/;
 

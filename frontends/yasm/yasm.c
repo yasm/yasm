@@ -456,6 +456,20 @@ main(int argc, char *argv[])
 					     "yasm.out");
     }
 
+    /* Initialize the debug format */
+    if (cur_dbgfmt->initialize) {
+	if (cur_dbgfmt->initialize(in_filename, obj_filename, &yasm_std_linemgr,
+				   cur_objfmt, cur_arch, machine_name))
+	{
+	    print_error(
+		_("%s: debug format `%s' does not work with object format `%s'"),
+		_("FATAL"), cur_dbgfmt->keyword, cur_objfmt->keyword);
+	    if (in != stdin)
+		fclose(in);
+	    return EXIT_FAILURE;
+	}
+    }
+
     /* Initialize the object format */
     if (cur_objfmt->initialize) {
 	if (cur_objfmt->initialize(in_filename, obj_filename, cur_dbgfmt,
@@ -547,6 +561,11 @@ main(int argc, char *argv[])
 				print_yasm_error, print_yasm_warning);
 	cleanup(sections);
 	return EXIT_FAILURE;
+    }
+
+    /* generate any debugging information */
+    if (cur_dbgfmt->generate) {
+	cur_dbgfmt->generate(sections);
     }
 
     /* open the object file for output (if not already opened by dbg objfmt) */

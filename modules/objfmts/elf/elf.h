@@ -395,6 +395,7 @@ int elf_secthead_is_empty(elf_secthead *shead);
 struct yasm_symrec *elf_secthead_get_sym(elf_secthead *shead);
 const struct yasm_intnum *elf_secthead_set_align(elf_secthead *shead,
 						 struct yasm_intnum *align);
+elf_section_index elf_secthead_get_index(elf_secthead *shead);
 elf_section_info elf_secthead_set_info(elf_secthead *shead,
 				       elf_section_info info);
 elf_section_index elf_secthead_set_index(elf_secthead *shead,
@@ -405,6 +406,7 @@ elf_section_index elf_secthead_set_rel_index(elf_secthead *shead,
 					     elf_section_index sectidx);
 elf_strtab_entry *elf_secthead_set_rel_name(elf_secthead *shead,
 					    elf_strtab_entry *entry);
+elf_size elf_secthead_set_entsize(elf_secthead *shead, elf_size size);
 struct yasm_symrec *elf_secthead_set_sym(elf_secthead *shead,
 					 struct yasm_symrec *sym);
 void elf_secthead_add_size(elf_secthead *shead, yasm_intnum *size);

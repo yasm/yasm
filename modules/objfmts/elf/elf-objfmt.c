@@ -55,6 +55,7 @@ typedef struct {
     FILE *f;
     elf_secthead *shead;
     yasm_section *sect;
+    yasm_sectionhead *sections;
     unsigned long sindex;
 } elf_objfmt_output_info;
 
@@ -65,6 +66,7 @@ static elf_strtab_head* elf_strtab;		/* strtab entries */
 
 yasm_objfmt yasm_elf_LTX_objfmt;
 static /*@dependent@*/ yasm_arch *cur_arch;
+static /*@dependent@*/ yasm_dbgfmt *cur_dbgfmt;
 
 
 static elf_symtab_entry *
@@ -130,6 +132,7 @@ elf_objfmt_initialize(const char *in_filename,
     elf_symtab_entry *entry;
 
     cur_arch = a;
+    cur_dbgfmt = df;
     if (!elf_set_arch(a, machine))
 	return 1;
 
@@ -171,6 +174,32 @@ elf_objfmt_output_align(FILE *f, unsigned int align)
 	}
     }
     return pos;
+}
+
+static int
+elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
+			unsigned char *buf, size_t destsize, size_t valsize,
+			int rel, int warn, const yasm_section *sect, void *d)
+{
+    elf_reloc_entry *reloc;
+    elf_objfmt_output_info *info = d;
+    yasm_intnum *zero = yasm_intnum_new_uint(0);
+    int retval;
+
+    reloc = elf_reloc_entry_new(sym,
+	yasm_intnum_new_uint(bc->offset), rel, valsize);
+    if (reloc == NULL) {
+	yasm__error(bc->line, N_("elf: invalid relocation size"));
+	return 1;
+    }
+    /* allocate .rel sections on a need-basis */
+    if (elf_secthead_append_reloc(info->shead, reloc))
+	elf_objfmt_parse_scnum++;
+
+    retval = cur_arch->intnum_tobytes(zero, buf, destsize, valsize, 0,
+				      bc, rel, warn, bc->line);
+    yasm_intnum_delete(zero);
+    return retval;
 }
 
 /* PASS1 */
@@ -275,7 +304,8 @@ elf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 	yasm_internal_error("null info struct");
 
     bigbuf = yasm_bc_tobytes(bc, buf, &size, &multiple, &gap, info->sect,
-			     info, elf_objfmt_output_expr, NULL);
+			     info, elf_objfmt_output_expr, 
+			     elf_objfmt_output_reloc, NULL);
 
     /* Don't bother doing anything else if size ended up being 0. */
     if (size == 0) {
@@ -320,6 +350,35 @@ elf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     return 0;
 }
 
+static elf_secthead *
+elf_objfmt_new_dbg_secthead(yasm_section *sect, elf_objfmt_output_info *info)
+{
+    elf_secthead *shead;
+    elf_section_type type=SHT_PROGBITS;
+    yasm_intnum *align=NULL;
+    elf_size entsize=0;
+    const char *sectname = yasm_section_get_name(sect);
+    elf_strtab_entry *name = elf_strtab_append_str(elf_shstrtab, sectname);
+
+    if (yasm__strcasecmp(sectname, ".stab")==0) {
+	align = yasm_intnum_new_uint(4);
+	entsize = 12;
+    } else if (yasm__strcasecmp(sectname, ".stabstr")==0) {
+	type = SHT_STRTAB;
+	align = yasm_intnum_new_uint(1);
+    }
+    else
+	yasm_internal_error(N_("Unrecognized section without data"));
+
+    shead = elf_secthead_new(name, type, 0, elf_objfmt_parse_scnum++, 0, 0);
+    elf_secthead_set_align(shead, align);
+    elf_secthead_set_entsize(shead, entsize);
+
+    yasm_section_set_of_data(sect, &yasm_elf_LTX_objfmt, shead);
+
+    return shead;
+}
+
 /* PASS1 */
 static int
 elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
@@ -339,7 +398,7 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 	yasm_internal_error("null info struct");
     shead = yasm_section_get_of_data(sect);
     if (shead == NULL)
-	yasm_internal_error("no section header attached to section");
+	shead = elf_objfmt_new_dbg_secthead(sect, info);
 
     /* don't output header-only sections */
     if ((elf_secthead_get_type(shead) & SHT_NOBITS) == SHT_NOBITS)
@@ -448,7 +507,7 @@ elf_objfmt_output(FILE *f, yasm_sectionhead *sections, int all_syms)
      * if all_syms, register them by name.  if not, use strtab entry 0 */
     yasm_symrec_traverse((void *)&all_syms, elf_objfmt_append_local_sym);
     elf_symtab_nlocal = elf_symtab_assign_indices(elf_symtab);
-    
+
     /* output known sections - includes reloc sections which aren't in yasm's
      * list.  Assign indices as we go. */
     info.sindex = 3;
@@ -483,6 +542,21 @@ elf_objfmt_output(FILE *f, yasm_sectionhead *sections, int all_syms)
 	return;
     elf_shead_addr = (unsigned long) pos;
 
+    /* stabs debugging support */
+    if (strcmp(cur_dbgfmt->keyword, "stabs")==0) {
+	yasm_section *stabsect = yasm_sections_find_general(sections, ".stab");
+	yasm_section *stabstrsect = yasm_sections_find_general(sections, ".stabstr");
+	if (stabsect && stabstrsect) {
+	    elf_secthead *stab = yasm_section_get_of_data(stabsect);
+	    elf_secthead *stabstr = yasm_section_get_of_data(stabstrsect);
+	    if (stab && stabstr) {
+		elf_secthead_set_link(stab, elf_secthead_get_index(stabstr));
+	    }
+	    else
+		yasm_internal_error(N_("missing .stab or .stabstr section/data"));
+	}
+    }
+    
     /* output dummy section header - 0 */
     info.sindex = 0;
 
@@ -722,6 +796,7 @@ elf_objfmt_directive(/*@unused@*/ const char *name,
 /* Define valid debug formats to use with this object format */
 static const char *elf_objfmt_dbgfmt_keywords[] = {
     "null",
+    "stabs",
     NULL
 };
 

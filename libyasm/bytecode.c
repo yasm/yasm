@@ -37,6 +37,7 @@
 
 #include "bytecode.h"
 #include "objfmt.h"
+#include "dbgfmt.h"
 
 #include "arch.h"
 
@@ -97,6 +98,14 @@ typedef struct bytecode_objfmt_data {
     /*@dependent@*/ yasm_objfmt *of;	/* objfmt that created the data */
     /*@only@*/ void *data;		/* objfmt-specific data */
 } bytecode_objfmt_data;
+
+typedef struct bytecode_dbgfmt_data {
+    yasm_bytecode bc;   /* base structure */
+
+    unsigned int type;			/* dbgfmt-specific type */
+    /*@dependent@*/ yasm_dbgfmt *df;	/* dbgfmt that created the data */
+    /*@only@*/ void *data;		/* dbgfmt-specific data */
+} bytecode_dbgfmt_data;
 
 /* Static structures for when NULL is passed to conversion functions. */
 /*  for Convert*ToBytes() */
@@ -300,6 +309,31 @@ yasm_bc_new_objfmt_data(unsigned int type, unsigned long len, yasm_objfmt *of,
     return (yasm_bytecode *)objfmt_data;
 }
 
+yasm_bytecode *
+yasm_bc_new_dbgfmt_data(unsigned int type, unsigned long len, yasm_dbgfmt *df,
+			void *data, unsigned long lindex)
+{
+    bytecode_dbgfmt_data *dbgfmt_data;
+
+    dbgfmt_data = (bytecode_dbgfmt_data *)
+	yasm_bc_new_common(YASM_BC__DBGFMT_DATA, sizeof(bytecode_dbgfmt_data),
+			   lindex);
+
+    dbgfmt_data->type = type;
+    dbgfmt_data->df = df;
+    /*@-mustfree@*/
+    dbgfmt_data->data = data;
+    /*@=mustfree@*/
+
+    /* Yes, this breaks the paradigm just a little.  But this data is very
+     * unlike other bytecode data--it's internally generated after the
+     * other bytecodes have been resolved, and the length is ALWAYS known.
+     */
+    dbgfmt_data->bc.len = len;
+
+    return (yasm_bytecode *)dbgfmt_data;
+}
+
 void
 yasm_bc_delete(yasm_bytecode *bc)
 {
@@ -307,6 +341,7 @@ yasm_bc_delete(yasm_bytecode *bc)
     bytecode_reserve *reserve;
     bytecode_incbin *incbin;
     bytecode_objfmt_data *objfmt_data;
+    bytecode_dbgfmt_data *dbgfmt_data;
 
     if (!bc)
 	return;
@@ -340,6 +375,15 @@ yasm_bc_delete(yasm_bytecode *bc)
 		yasm_internal_error(
 		    N_("objfmt can't handle its own objfmt data bytecode"));
 	    break;
+	case YASM_BC__DBGFMT_DATA:
+	    dbgfmt_data = (bytecode_dbgfmt_data *)bc;
+	    if (dbgfmt_data->df->bc_dbgfmt_data_delete)
+		dbgfmt_data->df->bc_dbgfmt_data_delete(dbgfmt_data->type,
+						       dbgfmt_data->data);
+	    else
+		yasm_internal_error(
+		    N_("dbgfmt can't handle its own dbgfmt data bytecode"));
+	    break;
 	default:
 	    if ((unsigned int)bc->type < (unsigned int)cur_arch->bc_type_max)
 		cur_arch->bc_delete(bc);
@@ -361,6 +405,7 @@ yasm_bc_print(FILE *f, int indent_level, const yasm_bytecode *bc)
     const bytecode_incbin *incbin;
     const bytecode_align *align;
     const bytecode_objfmt_data *objfmt_data;
+    const bytecode_dbgfmt_data *dbgfmt_data;
 
     switch (bc->type) {
 	case YASM_BC__EMPTY:
@@ -411,6 +456,16 @@ yasm_bc_print(FILE *f, int indent_level, const yasm_bytecode *bc)
 		objfmt_data->of->bc_objfmt_data_print(f, indent_level,
 						      objfmt_data->type,
 						      objfmt_data->data);
+	    else
+		fprintf(f, "%*sUNKNOWN\n", indent_level, "");
+	    break;
+	case YASM_BC__DBGFMT_DATA:
+	    dbgfmt_data = (const bytecode_dbgfmt_data *)bc;
+	    fprintf(f, "%*s_DbgFmt_Data_\n", indent_level, "");
+	    if (dbgfmt_data->df->bc_dbgfmt_data_print)
+		dbgfmt_data->df->bc_dbgfmt_data_print(f, indent_level,
+						      dbgfmt_data->type,
+						      dbgfmt_data->data);
 	    else
 		fprintf(f, "%*sUNKNOWN\n", indent_level, "");
 	    break;
@@ -768,6 +823,7 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 		/*@out@*/ unsigned long *multiple, /*@out@*/ int *gap,
 		const yasm_section *sect, void *d,
 		yasm_output_expr_func output_expr,
+		/*@null@*/ yasm_output_reloc_func output_reloc,
 		/*@null@*/ yasm_output_bc_objfmt_data_func
 		    output_bc_objfmt_data)
     /*@sets *buf@*/
@@ -776,6 +832,7 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
     unsigned char *origbuf, *destbuf;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
     bytecode_objfmt_data *objfmt_data;
+    bytecode_dbgfmt_data *dbgfmt_data;
     unsigned long datasize;
     int error = 0;
 
@@ -835,6 +892,16 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 	    else
 		yasm_internal_error(
 		    N_("Have objfmt data bytecode but no way to output it"));
+	    break;
+	case YASM_BC__DBGFMT_DATA:
+	    dbgfmt_data = (bytecode_dbgfmt_data *)bc;
+	    if (dbgfmt_data->df->bc_dbgfmt_data_output)
+		error = dbgfmt_data->df->bc_dbgfmt_data_output(bc,
+			    dbgfmt_data->type, dbgfmt_data->data, &destbuf,
+			    sect, output_reloc, d);
+	    else
+		yasm_internal_error(
+		    N_("Have dbgfmt data bytecode but no way to output it"));
 	    break;
 	default:
 	    if ((unsigned int)bc->type < (unsigned int)cur_arch->bc_type_max)

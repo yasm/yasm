@@ -177,6 +177,10 @@ typedef int (*yasm_output_expr_func)
      /*@observer@*/ const yasm_section *sect, yasm_bytecode *bc, int rel,
      int warn, /*@null@*/ void *d) /*@uses *ep@*/;
 
+typedef int (*yasm_output_reloc_func)
+    (yasm_symrec *sym, yasm_bytecode *bc, unsigned char *buf, size_t destsize,
+     size_t valsize, int rel, int warn, const yasm_section *sect, void *d);
+
 /** Convert a yasm_objfmt-specific data bytecode into its byte representation.
  * Usually implemented by object formats to output their own generated data.
  * \param type		yasm_objfmt-specific type

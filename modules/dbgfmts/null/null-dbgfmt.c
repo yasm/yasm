@@ -38,5 +38,9 @@ yasm_dbgfmt yasm_null_LTX_dbgfmt = {
     "null",
     NULL,   /*null_dbgfmt_initialize*/
     NULL,   /*null_dbgfmt_cleanup*/
-    NULL    /*null_dbgfmt_directive*/
+    NULL,   /*null_dbgfmt_directive*/
+    NULL,   /*null_dbgfmt_generate*/
+    NULL,   /*null_dbgfmt_bc_data_output*/
+    NULL,   /*null_dbgfmt_bc_data_delete*/
+    NULL    /*null_dbgfmt_bc_data_print*/
 };

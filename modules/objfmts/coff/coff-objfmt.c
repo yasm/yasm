@@ -404,7 +404,7 @@ coff_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     assert(info != NULL);
 
     bigbuf = yasm_bc_tobytes(bc, info->buf, &size, &multiple, &gap, info->sect,
-			     info, coff_objfmt_output_expr, NULL);
+			     info, coff_objfmt_output_expr, NULL, NULL);
 
     /* Don't bother doing anything else if size ended up being 0. */
     if (size == 0) {

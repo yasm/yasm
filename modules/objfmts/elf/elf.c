@@ -891,6 +891,12 @@ elf_secthead_get_sym(elf_secthead *shead)
     return shead->sym;
 }
 
+elf_section_index
+elf_secthead_get_index(elf_secthead *shead)
+{
+    return shead->index;
+}
+
 const yasm_intnum *
 elf_secthead_set_align(elf_secthead *shead, yasm_intnum *align)
 {
@@ -928,6 +934,12 @@ elf_strtab_entry *
 elf_secthead_set_rel_name(elf_secthead *shead, elf_strtab_entry *entry)
 {
     return shead->rel_name = entry;
+}
+
+elf_size
+elf_secthead_set_entsize(elf_secthead *shead, elf_size size)
+{
+    return shead->entsize = size;
 }
 
 yasm_symrec *
