@@ -673,8 +673,8 @@ ficomp	mem16x			nil	DE		$1,3		nil	8086,FPU
 ficomp	mem32x			nil	DA		$1,3		nil	8086,FPU
 fcompp!twobyte		DE,D9		8086,FPU
 ;  Unordered comparison (with pop)
-fucom!fcomg2		DD,E0		286
-fucomp!fcomg2		DD,E8		286
+fucom!fcomg2		DD,E0		286,FPU
+fucomp!fcomg2		DD,E8		286,FPU
 fucompp!twobyte		DA,E9		286,FPU
 ftst!twobyte		D9,E4		8086,FPU
 fxam!twobyte		D9,E5		8086,FPU
