@@ -42,11 +42,6 @@
 
 #define REGULAR_OUTBUF_SIZE	1024
 
-static /*@null@*/ intnum *
-    bin_objfmt_resolve_label(symrec *sym, section *sect,
-			     /*@null@*/ bytecode *precbc,
-			     /*@null@*/ bytecode *bc,
-			     /*@unused@*/ unsigned long startval);
 
 static void
 bin_objfmt_initialize(/*@unused@*/ const char *in_filename,
@@ -98,93 +93,6 @@ bin_objfmt_align_section(section *sect, section *prevsect, unsigned long base,
     return start;
 }
 
-static /*@null@*/ intnum *
-bin_objfmt_resolve_label2(symrec *sym, section *sect,
-			  /*@null@*/ bytecode *precbc, /*@null@*/ bytecode *bc,
-			  /*@null@*/ const section *cursect,
-			  unsigned long cursectstart, int withstart)
-{
-    /*@null@*/ expr *startexpr;
-    /*@dependent@*/ /*@null@*/ const intnum *start;
-    unsigned long startval = 0;
-
-    /* Figure out the starting offset of the entire section */
-    if (withstart || (cursect && sect != cursect) ||
-	section_is_absolute(sect)) {
-	startexpr = expr_copy(section_get_start(sect));
-	assert(startexpr != NULL);
-	expr_expand_labelequ(startexpr, sect, 0, bin_objfmt_resolve_label,
-			     NULL);
-	start = expr_get_intnum(&startexpr);
-	if (!start) {
-	    expr_delete(startexpr);
-	    return NULL;
-	}
-	startval = intnum_get_uint(start);
-	expr_delete(startexpr);
-
-	/* Compensate for current section start */
-	startval -= cursectstart;
-    }
-
-    if (precbc)
-	return intnum_new_uint(startval + precbc->offset + precbc->len);
-    else
-	return intnum_new_uint(startval + bc->offset);
-}
-
-static intnum *
-bin_objfmt_resolve_label(symrec *sym, section *sect,
-			 /*@null@*/ bytecode *precbc, /*@null@*/ bytecode *bc,
-			 /*@unused@*/ unsigned long startval)
-{
-    return bin_objfmt_resolve_label2(sym, sect, precbc, bc, NULL, 0, 1);
-}
-
-typedef struct bin_objfmt_expr_data {
-    /*@observer@*/ const section *sect;
-    unsigned long start;
-    int withstart;
-} bin_objfmt_expr_data;
-
-static int
-bin_objfmt_expr_traverse_callback(ExprItem *ei, void *d)
-{
-    bin_objfmt_expr_data *data = (bin_objfmt_expr_data *)d;
-    const expr *equ_expr;
-
-    if (ei->type == EXPR_SYM) {
-	equ_expr = symrec_get_equ(ei->data.sym);
-	if (equ_expr) {
-	    ei->type = EXPR_EXPR;
-	    ei->data.expn = expr_copy(equ_expr);
-	    expr_traverse_leaves_in(ei->data.expn, data,
-				    bin_objfmt_expr_traverse_callback);
-	} else {
-	    /*@dependent@*/ section *sect;
-	    /*@dependent@*/ /*@null@*/ bytecode *precbc;
-	    /*@null@*/ bytecode *bc;
-	    intnum *intn;
-
-	    if (symrec_get_label(ei->data.sym, &sect, &precbc)) {
-		if (!precbc)
-		    bc = bcs_first(section_get_bytecodes(sect));
-		else
-		    bc = bcs_next(precbc);
-
-		intn = bin_objfmt_resolve_label2(ei->data.sym, sect, precbc,
-						 bc, data->sect, data->start,
-						 data->withstart);
-		if (intn) {
-		    ei->type = EXPR_INT;
-		    ei->data.intn = intn;
-		}
-	    }
-	}
-    }
-    return 0;
-}
-
 typedef struct bin_objfmt_output_info {
     /*@dependent@*/ FILE *f;
     /*@only@*/ unsigned char *buf;
@@ -196,10 +104,8 @@ static int
 bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
 		       /*@observer@*/ const section *sect,
 		       /*@observer@*/ const bytecode *bc, int rel,
-		       /*@null@*/ void *d)
+		       /*@unused@*/ /*@null@*/ void *d)
 {
-    /*@null@*/ bin_objfmt_output_info *info = (bin_objfmt_output_info *)d;
-    /*@observer@*/ bin_objfmt_expr_data data;
     /*@dependent@*/ /*@null@*/ const intnum *num;
     /*@dependent@*/ /*@null@*/ const floatnum *flt;
 
@@ -208,19 +114,9 @@ bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
     /* For binary output, this is trivial: any expression that doesn't simplify
      * to an integer is an error (references something external).
      * Other object formats need to generate their relocation list from here!
-     * Note: we can't just use expr_expand_labelequ() because it doesn't
-     *  resolve between different sections (on purpose).. but for bin we
-     *  WANT that.
      */
-    data.sect = sect;
-    if (rel) {
-	data.start = info->start;
-	data.withstart = 0;
-    } else {
-	data.start = 0;
-	data.withstart = 1;
-    }
-    expr_traverse_leaves_in(*ep, &data, bin_objfmt_expr_traverse_callback);
+
+    *ep = expr_simplify(*ep, common_calc_bc_dist);
 
     /* Handle floating point expressions */
     flt = expr_get_floatnum(ep);
@@ -246,15 +142,14 @@ bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
     }
 
     /* Handle integer expressions */
-    num = expr_get_intnum(ep);
+    num = expr_get_intnum(ep, NULL);
     if (num) {
 	if (rel) {
-	    unsigned long val;
-	    /* FIXME: Check against BITS setting on x86 */
+	    long val;
 	    if (valsize != 1 && valsize != 2 && valsize != 4)
 		InternalError(_("tried to do PC-relative offset from invalid sized value"));
 	    val = intnum_get_uint(num);
-	    val = (unsigned long)((long)(val - (bc->offset + bc->len)));
+	    val -= bc->len;
 	    switch (valsize) {
 		case 1:
 		    WRITE_BYTE(*bufp, val);
@@ -366,7 +261,7 @@ bin_objfmt_output(FILE *f, sectionhead *sections)
     /* Find out the start of .text */
     startexpr = expr_copy(section_get_start(text));
     assert(startexpr != NULL);
-    startnum = expr_get_intnum(&startexpr);
+    startnum = expr_get_intnum(&startexpr, NULL);
     if (!startnum)
 	InternalError(_("Complex expr for start in bin objfmt output"));
     start = intnum_get_uint(startnum);
@@ -468,7 +363,7 @@ bin_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 		    return NULL;
 		}
 		
-		align = expr_get_intnum(&vp->param);
+		align = expr_get_intnum(&vp->param, NULL);
 		if (!align) {
 		    Error(_("argument to `%s' is not a power of two"),
 			  vp->val);
@@ -542,7 +437,7 @@ bin_objfmt_directive(const char *name, valparamhead *valparams,
 	    Error(_("argument to ORG should be numeric"));
 	    return 0;
 	} else if (vp->param)
-	    start = expr_get_intnum(&vp->param);
+	    start = expr_get_intnum(&vp->param, NULL);
 
 	if (!start) {
 	    Error(_("argument to ORG should be numeric"));
@@ -560,6 +455,12 @@ bin_objfmt_directive(const char *name, valparamhead *valparams,
 	return 1;	    /* directive unrecognized */
 }
 
+static void
+bin_objfmt_section_data_print(FILE *f, void *data)
+{
+    fprintf(f, "%*salign=%d\n", *((unsigned long *)data));
+}
+
 /* Define objfmt structure -- see objfmt.h for details */
 objfmt yasm_bin_LTX_objfmt = {
     "Flat format binary",
@@ -571,8 +472,8 @@ objfmt yasm_bin_LTX_objfmt = {
     bin_objfmt_output,
     bin_objfmt_cleanup,
     bin_objfmt_sections_switch,
-    NULL /*bin_objfmt_section_data_delete*/,
-    NULL /*bin_objfmt_section_data_print*/,
+    xfree,
+    bin_objfmt_section_data_print,
     bin_objfmt_extern_data_new,
     bin_objfmt_global_data_new,
     bin_objfmt_common_data_new,

@@ -46,47 +46,54 @@
 static int basic_optimize_section_1(section *sect,
 				    /*@unused@*/ /*@null@*/ void *d);
 
-static void
-basic_optimize_resolve_precall(section *sect)
+static /*@null@*/ intnum *
+basic_optimize_calc_bc_dist_1(section *sect, /*@null@*/ bytecode *precbc1,
+			      /*@null@*/ bytecode *precbc2)
 {
+    unsigned int dist;
+    intnum *intn;
+
     if (section_get_opt_flags(sect) == SECTFLAG_NONE) {
 	/* Section not started.  Optimize it (recursively). */
 	basic_optimize_section_1(sect, NULL);
     }
-}
 
-static /*@only@*/ /*@null@*/ intnum *
-basic_optimize_resolve_label(symrec *sym, section *sect,
-			     /*@null@*/ bytecode *precbc,
-			     /*@null@*/ bytecode *bc, unsigned long startval)
-{
     /* If a section is done, the following will always succeed.  If it's in-
      * progress, this will fail if the bytecode comes AFTER the current one.
      */
-    if (precbc && precbc->opt_flags == BCFLAG_DONE)
-	return intnum_new_uint(startval + precbc->offset + precbc->len);
-    if (bc && bc->opt_flags == BCFLAG_DONE)
-	return intnum_new_uint(startval + bc->offset);
-    if (section_get_opt_flags(sect) == SECTFLAG_DONE)
-	return intnum_new_uint(startval);
-
-    return NULL;
-}
-
-static /*@only@*/ /*@null@*/ intnum *
-basic_optimize_resolve_label_2(symrec *sym, section *sect,
-			       /*@null@*/ bytecode *precbc,
-			       /*@null@*/ bytecode *bc, unsigned long startval)
-{
-    /* If a section is done, the following will always succeed.  If it's in-
-     * progress, this will fail if the bytecode comes AFTER the current one.
-     */
-    if (precbc)
-	return intnum_new_uint(startval + precbc->offset + precbc->len);
-    else if (bc)
-	return intnum_new_uint(startval + bc->offset);
-    else
-	return intnum_new_uint(startval);
+    if (precbc2) {
+	if (precbc2->opt_flags == BCFLAG_DONE) {
+	    dist = precbc2->offset + precbc2->len;
+	    if (precbc1) {
+		if (precbc1->opt_flags == BCFLAG_DONE) {
+		    if (dist < precbc1->offset + precbc1->len) {
+			intn = intnum_new_uint(precbc1->offset + precbc1->len -
+					       dist);
+			intnum_calc(intn, EXPR_NEG, NULL);
+			return intn;
+		    }
+		    dist -= precbc1->offset + precbc1->len;
+		} else {
+		    return NULL;
+		}
+	    }
+	    return intnum_new_uint(dist);
+	} else {
+	    return NULL;
+	}
+    } else {
+	if (precbc1) {
+	    if (precbc1->opt_flags == BCFLAG_DONE) {
+		intn = intnum_new_uint(precbc1->offset + precbc1->len);
+		intnum_calc(intn, EXPR_NEG, NULL);
+		return intn;
+	    } else {
+		return NULL;
+	    }
+	} else {
+	    return intnum_new_uint(0);
+	}
+    }
 }
 
 typedef struct basic_optimize_data {
@@ -119,11 +126,10 @@ basic_optimize_bytecode_1(/*@observer@*/ bytecode *bc, void *d)
      * is minimum or not, and just check for indeterminate length (indicative
      * of circular reference).
      */
-    bcr_retval = bc_resolve(bc, 0, data->sect, basic_optimize_resolve_label,
-			    basic_optimize_resolve_precall);
+    bcr_retval = bc_resolve(bc, 0, data->sect, basic_optimize_calc_bc_dist_1);
     if (bcr_retval & BC_RESOLVE_UNKNOWN_LEN) {
 	if (!(bcr_retval & BC_RESOLVE_ERROR))
-	    ErrorAt(bc->line, _("Circular reference detected."));
+	    ErrorAt(bc->line, _("circular reference detected."));
 	data->saw_unknown = -1;
 	return 0;
     }
@@ -183,7 +189,7 @@ basic_optimize_bytecode_2(/*@observer@*/ bytecode *bc, /*@null@*/ void *d)
 	bc->offset = data->precbc->offset + data->precbc->len;
     data->precbc = bc;
 
-    if (bc_resolve(bc, 1, data->sect, basic_optimize_resolve_label_2, NULL) < 0)
+    if (bc_resolve(bc, 1, data->sect, common_calc_bc_dist) < 0)
 	return -1;
     return 0;
 }

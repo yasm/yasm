@@ -37,7 +37,6 @@
 #include "arch.h"
 
 #include "expr-int.h"
-#include "bc-int.h"
 
 
 static int expr_traverse_nodes_post(/*@null@*/ expr *e, /*@null@*/ void *d,
@@ -144,6 +143,105 @@ ExprReg(unsigned long reg)
     ExprItem *e = xmalloc(sizeof(ExprItem));
     e->type = EXPR_REG;
     e->data.reg = reg;
+    return e;
+}
+
+/* Transforms instances of symrec-symrec [symrec+(-1*symrec)] into integers if
+ * possible.  Also transforms single symrec's that reference absolute sections.
+ * Uses a simple n^2 algorithm because n is usually quite small.
+ */
+static expr *
+expr_xform_bc_dist(expr *e, calc_bc_dist_func calc_bc_dist)
+{
+    int i;
+    /*@dependent@*/ section *sect;
+    /*@dependent@*/ /*@null@*/ bytecode *precbc;
+    /*@null@*/ intnum *dist;
+    int numterms;
+
+    for (i=0; i<e->numterms; i++) {
+	/* Transform symrecs that reference absolute sections into
+	 * absolute start expr + intnum(dist). */
+	if (e->terms[i].type == EXPR_SYM &&
+	    symrec_get_label(e->terms[i].data.sym, &sect, &precbc) &&
+	    section_is_absolute(sect) &&
+	    (dist = calc_bc_dist(sect, NULL, precbc))) {
+	    e->terms[i].type = EXPR_EXPR;
+	    e->terms[i].data.expn =
+		expr_new(EXPR_ADD,
+			 ExprExpr(expr_copy(section_get_start(sect))),
+			 ExprInt(dist));
+	}
+    }
+
+    /* Handle symrec-symrec in ADD exprs by looking for (-1*symrec) and
+     * symrec term pairs (where both symrecs are in the same segment).
+     */
+    if (e->op != EXPR_ADD)
+	return e;
+
+    for (i=0; i<e->numterms; i++) {
+	int j;
+	expr *sube;
+	intnum *intn;
+	symrec *sym;
+	/*@dependent@*/ section *sect2;
+	/*@dependent@*/ /*@null@*/ bytecode *precbc2;
+
+	/* First look for an (-1*symrec) term */
+	if (e->terms[i].type != EXPR_EXPR)
+	    continue;
+       	sube = e->terms[i].data.expn;
+	if (sube->op != EXPR_MUL || sube->numterms != 2)
+	    continue;
+
+	if (sube->terms[0].type == EXPR_INT &&
+	    sube->terms[1].type == EXPR_SYM) {
+	    intn = sube->terms[0].data.intn;
+	    sym = sube->terms[1].data.sym;
+	} else if (sube->terms[0].type == EXPR_SYM &&
+		   sube->terms[1].type == EXPR_INT) {
+	    sym = sube->terms[0].data.sym;
+	    intn = sube->terms[1].data.intn;
+	} else
+	    continue;
+
+	if (!intnum_is_neg1(intn))
+	    continue;
+
+	symrec_get_label(sym, &sect2, &precbc);
+
+	/* Now look for a symrec term in the same segment */
+	for (j=0; j<e->numterms; j++) {
+	    if (e->terms[j].type == EXPR_SYM &&
+		symrec_get_label(e->terms[j].data.sym, &sect, &precbc2) &&
+		sect == sect2 &&
+		(dist = calc_bc_dist(sect, precbc, precbc2))) {
+		/* Change the symrec term to an integer */
+		e->terms[j].type = EXPR_INT;
+		e->terms[j].data.intn = dist;
+		/* Delete the matching (-1*symrec) term */
+		expr_delete(sube);
+		e->terms[i].type = EXPR_NONE;
+		break;	/* stop looking for matching symrec term */
+	    }
+	}
+    }
+
+    /* Clean up any deleted (EXPR_NONE) terms */
+    numterms = 0;
+    for (i=0; i<e->numterms; i++) {
+	if (e->terms[i].type != EXPR_NONE)
+	    e->terms[numterms++] = e->terms[i];	/* structure copy */
+    }
+    if (e->numterms != numterms) {
+	e->numterms = numterms;
+	e = xrealloc(e, sizeof(expr)+((numterms<2) ? 0 :
+		     sizeof(ExprItem)*(numterms-2)));
+	if (numterms == 1)
+	    e->op = EXPR_IDENT;
+    }
+
     return e;
 }
 
@@ -568,9 +666,10 @@ expr_level_op(/*@returned@*/ /*@only@*/ expr *e, int fold_const,
 }
 /*@=mustfree@*/
 
-/* Level an entire expn tree */
+/* Level an entire expn tree, expanding equ's as we go */
 expr *
-expr_level_tree(expr *e, int fold_const, int simplify_ident)
+expr_level_tree(expr *e, int fold_const, int simplify_ident,
+		calc_bc_dist_func calc_bc_dist)
 {
     int i;
 
@@ -579,14 +678,29 @@ expr_level_tree(expr *e, int fold_const, int simplify_ident)
 
     /* traverse terms */
     for (i=0; i<e->numterms; i++) {
+	/* First expand equ's */
+	if (e->terms[i].type == EXPR_SYM) {
+	    const expr *equ_expr = symrec_get_equ(e->terms[i].data.sym);
+	    if (equ_expr) {
+		e->terms[i].type = EXPR_EXPR;
+		e->terms[i].data.expn = expr_copy(equ_expr);
+	    }
+	}
+
 	if (e->terms[i].type == EXPR_EXPR)
 	    e->terms[i].data.expn = expr_level_tree(e->terms[i].data.expn,
 						    fold_const,
-						    simplify_ident);
+						    simplify_ident,
+						    calc_bc_dist);
     }
 
     /* do callback */
-    return expr_level_op(e, fold_const, simplify_ident);
+    e = expr_level_op(e, fold_const, simplify_ident);
+    if (calc_bc_dist) {
+	e = expr_xform_bc_dist(e, calc_bc_dist);
+	e = expr_level_op(e, fold_const, simplify_ident);
+    }
+    return e;
 }
 
 /* Comparison function for expr_order_terms().
@@ -723,94 +837,6 @@ expr_contains(const expr *e, ExprType t)
     return expr_traverse_leaves_in_const(e, &t, expr_contains_callback);
 }
 
-/* FIXME: expand_labelequ needs to allow resolves of the symbols in exprs like
- * diffsectsymbol - diffsectsymbol (where the diffsect's are the same).
- * Currently symbols in different non-absolute sections are NOT expanded.
- * This will NOT be easy to fix.
- */
-
-typedef struct labelequ_data {
-    resolve_label_func resolve_label;
-    /*@null@*/ resolve_precall_func resolve_precall;
-    const section *sect;
-    int withstart;
-} labelequ_data;
-
-static int
-expr_expand_labelequ_callback(ExprItem *ei, void *d)
-{
-    labelequ_data *data = (labelequ_data *)d;
-    const expr *equ_expr;
-
-    if (ei->type == EXPR_SYM) {
-	equ_expr = symrec_get_equ(ei->data.sym);
-	if (equ_expr) {
-	    ei->type = EXPR_EXPR;
-	    ei->data.expn = expr_copy(equ_expr);
-	    expr_expand_labelequ(ei->data.expn, data->sect, data->withstart,
-				 data->resolve_label, data->resolve_precall);
-	} else {
-	    /*@dependent@*/ section *sect;
-	    /*@dependent@*/ /*@null@*/ bytecode *precbc;
-	    /*@null@*/ bytecode *bc;
-	    intnum *intn;
-
-	    if (symrec_get_label(ei->data.sym, &sect, &precbc) &&
-		sect == data->sect) {
-		unsigned long startval = 0;
-
-		if (!precbc)
-		    bc = bcs_first(section_get_bytecodes(sect));
-		else
-		    bc = bcs_next(precbc);
-
-		if (data->resolve_precall)
-		    data->resolve_precall(sect);
-
-		if (data->withstart || section_is_absolute(sect)) {
-		    /*@null@*/ expr *startexpr;
-		    /*@dependent@*/ /*@null@*/ const intnum *start;
-
-		    startexpr = expr_copy(section_get_start(sect));
-		    assert(startexpr != NULL);
-		    /* recurse */
-		    expr_expand_labelequ(startexpr, sect, 1,
-					 data->resolve_label,
-					 data->resolve_precall);
-		    start = expr_get_intnum(&startexpr);
-		    if (!start) {
-			expr_delete(startexpr);
-			return 0;
-		    }
-		    startval = intnum_get_uint(start);
-		    expr_delete(startexpr);
-		}
-
-		intn = data->resolve_label(ei->data.sym, sect, precbc, bc,
-					   startval);
-		if (intn) {
-		    ei->type = EXPR_INT;
-		    ei->data.intn = intn;
-		}
-	    }
-	}
-    }
-    return 0;
-}
-
-void
-expr_expand_labelequ(expr *e, const section *sect, int withstart,
-		     resolve_label_func resolve_label,
-		     resolve_precall_func resolve_precall)
-{
-    labelequ_data data;
-    data.resolve_label = resolve_label;
-    data.resolve_precall = resolve_precall;
-    data.sect = sect;
-    data.withstart = withstart;
-    expr_traverse_leaves_in(e, &data, expr_expand_labelequ_callback);
-}
-
 /* Traverse over expression tree, calling func for each operation AFTER the
  * branches (if expressions) have been traversed (eg, postorder
  * traversal).  The data pointer d is passed to each func call.
@@ -893,18 +919,17 @@ expr_traverse_leaves_in(expr *e, void *d,
 
 /* Simplify expression by getting rid of unnecessary branches. */
 expr *
-expr_simplify(expr *e)
+expr_simplify(expr *e, calc_bc_dist_func calc_bc_dist)
 {
     e = expr_xform_neg_tree(e);
-    e = expr_level_tree(e, 1, 1);
-    return e;
+    return expr_level_tree(e, 1, 1, calc_bc_dist);
 }
 
 /*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
 const intnum *
-expr_get_intnum(expr **ep)
+expr_get_intnum(expr **ep, calc_bc_dist_func calc_bc_dist)
 {
-    *ep = expr_simplify(*ep);
+    *ep = expr_simplify(*ep, calc_bc_dist);
 
     if ((*ep)->op == EXPR_IDENT && (*ep)->terms[0].type == EXPR_INT)
 	return (*ep)->terms[0].data.intn;
@@ -917,7 +942,7 @@ expr_get_intnum(expr **ep)
 const floatnum *
 expr_get_floatnum(expr **ep)
 {
-    *ep = expr_simplify(*ep);
+    *ep = expr_simplify(*ep, NULL);
 
     if ((*ep)->op == EXPR_IDENT && (*ep)->terms[0].type == EXPR_FLOAT)
 	return (*ep)->terms[0].data.flt;
@@ -931,7 +956,7 @@ const symrec *
 expr_get_symrec(expr **ep, int simplify)
 {
     if (simplify)
-	*ep = expr_simplify(*ep);
+	*ep = expr_simplify(*ep, NULL);
 
     if ((*ep)->op == EXPR_IDENT && (*ep)->terms[0].type == EXPR_SYM)
 	return (*ep)->terms[0].data.sym;
@@ -945,7 +970,7 @@ const unsigned long *
 expr_get_reg(expr **ep, int simplify)
 {
     if (simplify)
-	*ep = expr_simplify(*ep);
+	*ep = expr_simplify(*ep, NULL);
 
     if ((*ep)->op == EXPR_IDENT && (*ep)->terms[0].type == EXPR_REG)
 	return &((*ep)->terms[0].data.reg);
@@ -957,7 +982,7 @@ expr_get_reg(expr **ep, int simplify)
 void
 expr_print(FILE *f, const expr *e)
 {
-    char opstr[3];
+    char opstr[6];
     int i;
 
     if (!e) {
@@ -1036,6 +1061,16 @@ expr_print(FILE *f, const expr *e)
 	    break;
 	case EXPR_EQ:
 	    strcpy(opstr, "==");
+	    break;
+	case EXPR_SEG:
+	    fprintf(f, "SEG ");
+	    opstr[0] = 0;
+	    break;
+	case EXPR_WRT:
+	    strcpy(opstr, " WRT ");
+	    break;
+	case EXPR_SEGOFF:
+	    strcpy(opstr, ":");
 	    break;
 	case EXPR_IDENT:
 	    opstr[0] = 0;

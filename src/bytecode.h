@@ -66,6 +66,14 @@ void bc_delete(/*@only@*/ /*@null@*/ bytecode *bc);
 
 void bc_print(FILE *f, const bytecode *bc);
 
+/* A common version of a calc_bc_dist function that should work for the final
+ * stages of optimizers as well as in objfmt expr output functions.  It takes
+ * the offsets from the bytecodes.
+ */
+/*@null@*/ intnum *common_calc_bc_dist(section *sect,
+				       /*@null@*/ bytecode *precbc1,
+				       /*@null@*/ bytecode *precbc2);
+
 /* Return value flags for bc_resolve() */
 typedef enum {
     BC_RESOLVE_NONE = 0,		/* Ok, but length is not minimum */
@@ -90,8 +98,7 @@ typedef enum {
  * When save is nonzero, all fields in bc may be modified by this function.
  */
 bc_resolve_flags bc_resolve(bytecode *bc, int save, const section *sect,
-			    resolve_label_func resolve_label,
-			    resolve_precall_func resolve_precall);
+			    calc_bc_dist_func calc_bc_dist);
 
 /* Converts the bytecode bc into its byte representation.
  * Inputs:

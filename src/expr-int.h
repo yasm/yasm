@@ -73,7 +73,8 @@ int expr_traverse_leaves_in(expr *e, /*@null@*/ void *d,
 /*@only@*/ /*@null@*/ expr *expr_level_tree(/*@returned@*/ /*@only@*/
 					    /*@null@*/ expr *e,
 					    int fold_const,
-					    int simplify_ident);
+					    int simplify_ident, /*@null@*/
+					    calc_bc_dist_func calc_bc_dist);
 
 /* Reorder terms of e into canonical order.  Only reorders if reordering
  * doesn't change meaning of expression.  (eg, doesn't reorder SUB).

@@ -188,8 +188,7 @@ typedef struct x86_jmprel {
 void x86_bc_delete(bytecode *bc);
 void x86_bc_print(FILE *f, const bytecode *bc);
 bc_resolve_flags x86_bc_resolve(bytecode *bc, int save, const section *sect,
-				resolve_label_func resolve_label,
-				resolve_precall_func resolve_precall);
+				calc_bc_dist_func calc_bc_dist);
 int x86_bc_tobytes(bytecode *bc, unsigned char **bufp, const section *sect,
 		   void *d, output_expr_func output_expr);
 
@@ -210,7 +209,9 @@ int x86_directive(const char *name, valparamhead *valparams,
 
 /*@null@*/ bytecode *x86_new_insn(const unsigned long data[2],
 				  int num_operands,
-				  /*@null@*/ insn_operandhead *operands);
+				  /*@null@*/ insn_operandhead *operands,
+				  section *cur_section,
+				  /*@null@*/ bytecode *prev_bc);
 
 void x86_handle_prefix(bytecode *bc, const unsigned long data[4]);
 

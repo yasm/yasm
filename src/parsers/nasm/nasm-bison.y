@@ -122,6 +122,8 @@ static bytecode *nasm_parser_temp_bc;
 %left '-' '+'
 %left '*' '/' SIGNDIV '%' SIGNMOD
 %nonassoc UNARYOP
+%nonassoc SEG WRT
+%left ':'
 
 %%
 input: /* empty */
@@ -178,10 +180,13 @@ exp: instr
 ;
 
 instr: INSN		{
-	$$ = cur_arch->parse.new_insn($1, 0, NULL);
+	$$ = cur_arch->parse.new_insn($1, 0, NULL, nasm_parser_cur_section,
+				      nasm_parser_prev_bc);
     }
     | INSN operands	{
-	$$ = cur_arch->parse.new_insn($1, $2.num_operands, &$2.operands);
+	$$ = cur_arch->parse.new_insn($1, $2.num_operands, &$2.operands,
+				      nasm_parser_cur_section,
+				      nasm_parser_prev_bc);
 	ops_delete(&$2.operands, 0);
     }
     | INSN error	{
@@ -410,6 +415,8 @@ dvexpr: INTNUM			{ $$ = expr_new_ident(ExprInt($1)); }
     | '-' dvexpr %prec UNARYOP  { $$ = expr_new_branch(EXPR_NEG, $2); }
     /*| '!' dvexpr		{ $$ = expr_new_branch(EXPR_LNOT, $2); }*/
     | '~' dvexpr %prec UNARYOP  { $$ = expr_new_branch(EXPR_NOT, $2); }
+    | SEG dvexpr		{ $$ = expr_new_branch(EXPR_SEG, $2); }
+    | WRT dvexpr		{ $$ = expr_new_branch(EXPR_WRT, $2); }
     | '(' dvexpr ')'		{ $$ = $2; }
 ;
 
@@ -449,6 +456,9 @@ expr: INTNUM			{ $$ = expr_new_ident(ExprInt($1)); }
     | '-' expr %prec UNARYOP	{ $$ = expr_new_branch(EXPR_NEG, $2); }
     /*| '!' expr		{ $$ = expr_new_branch(EXPR_LNOT, $2); }*/
     | '~' expr %prec UNARYOP	{ $$ = expr_new_branch(EXPR_NOT, $2); }
+    | SEG expr			{ $$ = expr_new_branch(EXPR_SEG, $2); }
+    | WRT expr			{ $$ = expr_new_branch(EXPR_WRT, $2); }
+    | expr ':' expr		{ $$ = expr_new_tree($1, EXPR_SEGOFF, $3); }
     | '(' expr ')'		{ $$ = $2; }
 ;
 
@@ -465,18 +475,13 @@ explabel: ID		{
 	xfree($1);
     }
     | '$'		{
+	/* "$" references the current assembly position */
 	$$ = symrec_define_label("$", nasm_parser_cur_section,
 				 nasm_parser_prev_bc, 0);
     }
     | START_SECTION_ID	{
-	if (section_is_absolute(nasm_parser_cur_section)) {
-	    Error(_("`$$' is not valid within an ABSOLUTE section"));
-	    YYERROR;
-	} else {
-	    const char *ss_name = section_get_name(nasm_parser_cur_section);
-	    assert(ss_name != NULL);
-	    $$ = symrec_use(ss_name);
-	}
+	/* "$$" references the start of the current section */
+	$$ = symrec_define_label("$$", nasm_parser_cur_section, NULL, 0);
     }
 ;
 
@@ -558,7 +563,7 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 		cur_arch->parse.switch_cpu(vp->val);
 	    else if (vp->param) {
 		const intnum *intcpu;
-		intcpu = expr_get_intnum(&vp->param);
+		intcpu = expr_get_intnum(&vp->param, NULL);
 		if (!intcpu)
 		    Error(_("invalid argument to [%s]"), "CPU");
 		else {

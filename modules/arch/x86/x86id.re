@@ -1306,7 +1306,8 @@ static const x86_insn_info xbts_insn[] = {
 
 static bytecode *
 x86_new_jmprel(const unsigned long data[4], int num_operands,
-	       insn_operandhead *operands, x86_insn_info *jrinfo)
+	       insn_operandhead *operands, x86_insn_info *jrinfo,
+	       section *cur_section, /*@null@*/ bytecode *prev_bc)
 {
     x86_new_jmprel_data d;
     int num_info = (int)(data[1]&0xFF);
@@ -1319,7 +1320,9 @@ x86_new_jmprel(const unsigned long data[4], int num_operands,
     op = ops_first(operands);
     if (op->type != INSN_OPERAND_IMM)
 	InternalError(_("invalid operand conversion"));
-    d.target = op->data.val;
+    d.target = expr_new(EXPR_SUB, ExprExpr(op->data.val),
+			ExprSym(symrec_define_label("$", cur_section, prev_bc,
+						    0)));
 
     /* See if the user explicitly specified short/near. */
     switch (jrinfo->operands[0] & OPTM_MASK) {
@@ -1393,7 +1396,8 @@ x86_new_jmprel(const unsigned long data[4], int num_operands,
 
 bytecode *
 x86_new_insn(const unsigned long data[4], int num_operands,
-	     insn_operandhead *operands)
+	     insn_operandhead *operands, section *cur_section,
+	     /*@null@*/ bytecode *prev_bc)
 {
     x86_new_insn_data d;
     int num_info = (int)(data[1]&0xFF);
@@ -1624,7 +1628,8 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 
     /* Shortcut to JmpRel */
     if (operands && (info->operands[0] & OPA_MASK) == OPA_JmpRel)
-	return x86_new_jmprel(data, num_operands, operands, info);
+	return x86_new_jmprel(data, num_operands, operands, info, cur_section,
+			      prev_bc);
 
     /* Copy what we can from info */
     d.ea = NULL;

@@ -100,7 +100,9 @@ struct arch {
 	 */
 	/*@null@*/ bytecode * (*new_insn) (const unsigned long data[4],
 					   int num_operands, /*@null@*/
-					   insn_operandhead *operands);
+					   insn_operandhead *operands,
+					   section *cur_section,
+					   /*@null@*/ bytecode *prev_bc);
 
 	/* Handle an instruction prefix by modifying bc as necessary. */
 	void (*handle_prefix) (bytecode *bc, const unsigned long data[4]);
@@ -132,8 +134,7 @@ struct arch {
 	/* See bytecode.h comments on bc_resolve() */
 	bc_resolve_flags (*bc_resolve) (bytecode *bc, int save,
 					const section *sect,
-					resolve_label_func resolve_label,
-					resolve_precall_func resolve_precall);
+					calc_bc_dist_func calc_bc_dist);
 	/* See bytecode.h comments on bc_tobytes() */
 	int (*bc_tobytes) (bytecode *bc, unsigned char **bufp,
 			   const section *sect, void *d,

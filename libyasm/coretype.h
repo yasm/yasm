@@ -65,6 +65,9 @@ typedef enum {
     EXPR_LE,
     EXPR_GE,
     EXPR_NE,
+    EXPR_SEG,
+    EXPR_WRT,
+    EXPR_SEGOFF,    /* The ':' in SEG:OFF */
     EXPR_IDENT	    /* no operation, just a value */
 } ExprOp;
 
@@ -76,24 +79,18 @@ typedef enum {
     SYM_EXTERN = 1 << 2		/* if it's declared EXTERN */
 } SymVisibility;
 
-/* Resolves a label into an offset, if possible.
- * Inputs: sym, the label to resolve.
- *         sect, the section returned by symrec_get_label() on sym.
- *         precbc, the preceding bytecode returned by symrec_get_label() on sym.
- *         bc, the bytecode following precbc (if any).
- *         startval, the section start (should always be added to return value)
- * Returns an intnum value containing the offset, or NULL if it was not
- * possible to resolve (such as an external value).
+/* Determines the distance, in bytes, between the starting offsets of two
+ * bytecodes in a section.
+ * Inputs: sect, the section in which the bytecodes reside.
+ *         precbc1, preceding bytecode to the first bytecode
+ *         precbc2, preceding bytecode to the second bytecode
+ * Outputs: dist, the distance in bytes (bc2-bc1)
+ * Returns distance in bytes (bc2-bc1), or NULL if the distance was
+ *  indeterminate.
  */
-typedef /*@null@*/ intnum *
-    (*resolve_label_func) (symrec *sym, section *sect,
-			   /*@null@*/ bytecode *precbc,
-			   /*@null@*/ bytecode *bc, unsigned long startval);
-
-/* Called before attempted resolution of a label.
- * Inputs: sect, the section returned by symrec_get_label() on the label.
- */
-typedef void (*resolve_precall_func) (section *sect);
+typedef /*@null@*/ intnum * (*calc_bc_dist_func) (section *sect,
+						  /*@null@*/ bytecode *precbc1,
+						  /*@null@*/ bytecode *precbc2);
 
 /* Converts an expr to its byte representation.  Usually implemented by
  * object formats to keep track of relocations and verify legal expressions.

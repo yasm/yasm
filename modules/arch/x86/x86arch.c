@@ -47,7 +47,7 @@ x86_directive(const char *name, valparamhead *valparams,
 
     if (strcasecmp(name, "bits") == 0) {
 	if ((vp = vps_first(valparams)) && !vp->val && vp->param != NULL &&
-	    (intn = expr_get_intnum(&vp->param)) != NULL &&
+	    (intn = expr_get_intnum(&vp->param, NULL)) != NULL &&
 	    (lval = intnum_get_int(intn)) && (lval == 16 || lval == 32))
 	    x86_mode_bits = (unsigned char)lval;
 	else

@@ -393,6 +393,35 @@ bc_print(FILE *f, const bytecode *bc)
     fprintf(f, "%*sOffset=%lx\n", indent_level, "", bc->offset);
 }
 
+/*@null@*/ intnum *
+common_calc_bc_dist(section *sect, /*@null@*/ bytecode *precbc1,
+		    /*@null@*/ bytecode *precbc2)
+{
+    unsigned int dist;
+    intnum *intn;
+
+    if (precbc2) {
+	dist = precbc2->offset + precbc2->len;
+	if (precbc1) {
+	    if (dist < precbc1->offset + precbc1->len) {
+		intn = intnum_new_uint(precbc1->offset + precbc1->len - dist);
+		intnum_calc(intn, EXPR_NEG, NULL);
+		return intn;
+	    }
+	    dist -= precbc1->offset + precbc1->len;
+	}
+	return intnum_new_uint(dist);
+    } else {
+	if (precbc1) {
+	    intn = intnum_new_uint(precbc1->offset + precbc1->len);
+	    intnum_calc(intn, EXPR_NEG, NULL);
+	    return intn;
+	} else {
+	    return intnum_new_uint(0);
+	}
+    }
+}
+
 static bc_resolve_flags
 bc_resolve_data(bytecode_data *bc_data, unsigned long *len)
 {
@@ -422,8 +451,7 @@ bc_resolve_data(bytecode_data *bc_data, unsigned long *len)
 static bc_resolve_flags
 bc_resolve_reserve(bytecode_reserve *reserve, unsigned long *len, int save,
 		   unsigned long line, const section *sect,
-		   resolve_label_func resolve_label,
-		   resolve_precall_func resolve_precall)
+		   calc_bc_dist_func calc_bc_dist)
 {
     bc_resolve_flags retval = BC_RESOLVE_MIN_LEN;
     /*@null@*/ expr *temp;
@@ -438,12 +466,17 @@ bc_resolve_reserve(bytecode_reserve *reserve, unsigned long *len, int save,
 	assert(temp != NULL);
 	tempp = &temp;
     }
-    expr_expand_labelequ(*tempp, sect, 1, resolve_label, resolve_precall);
-    num = expr_get_intnum(tempp);
+    num = expr_get_intnum(tempp, calc_bc_dist);
     if (!num) {
+	/* For reserve, just say non-constant quantity instead of allowing
+	 * the circular reference error to filter through.
+	 */
 	if (temp && expr_contains(temp, EXPR_FLOAT))
 	    ErrorAt(line,
 		    _("expression must not contain floating point value"));
+	else
+	    ErrorAt(line,
+		    _("attempt to reserve non-constant quantity of space"));
 	retval = BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
     } else
 	*len += intnum_get_uint(num)*reserve->itemsize;
@@ -454,8 +487,7 @@ bc_resolve_reserve(bytecode_reserve *reserve, unsigned long *len, int save,
 static bc_resolve_flags
 bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
 		  unsigned long line, const section *sect,
-		  resolve_label_func resolve_label,
-		  resolve_precall_func resolve_precall)
+		  calc_bc_dist_func calc_bc_dist)
 {
     FILE *f;
     /*@null@*/ expr *temp;
@@ -473,8 +505,7 @@ bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
 	    assert(temp != NULL);
 	    tempp = &temp;
 	}
-	expr_expand_labelequ(*tempp, sect, 1, resolve_label, resolve_precall);
-	num = expr_get_intnum(tempp);
+	num = expr_get_intnum(tempp, calc_bc_dist);
 	if (num)
 	    start = intnum_get_uint(num);
 	expr_delete(temp);
@@ -492,8 +523,7 @@ bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
 	    assert(temp != NULL);
 	    tempp = &temp;
 	}
-	expr_expand_labelequ(*tempp, sect, 1, resolve_label, resolve_precall);
-	num = expr_get_intnum(tempp);
+	num = expr_get_intnum(tempp, calc_bc_dist);
 	if (num)
 	    maxlen = intnum_get_uint(num);
 	expr_delete(temp);
@@ -536,8 +566,7 @@ bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
 
 bc_resolve_flags
 bc_resolve(bytecode *bc, int save, const section *sect,
-	   resolve_label_func resolve_label,
-	   resolve_precall_func resolve_precall)
+	   calc_bc_dist_func calc_bc_dist)
 {
     bc_resolve_flags retval = BC_RESOLVE_MIN_LEN;
     bytecode_data *bc_data;
@@ -559,12 +588,12 @@ bc_resolve(bytecode *bc, int save, const section *sect,
 	case BC_RESERVE:
 	    reserve = bc_get_data(bc);
 	    retval = bc_resolve_reserve(reserve, &bc->len, save, bc->line,
-					sect, resolve_label, resolve_precall);
+					sect, calc_bc_dist);
 	    break;
 	case BC_INCBIN:
 	    incbin = bc_get_data(bc);
 	    retval = bc_resolve_incbin(incbin, &bc->len, save, bc->line, sect,
-				       resolve_label, resolve_precall);
+				       calc_bc_dist);
 	    break;
 	case BC_ALIGN:
 	    /* TODO */
@@ -576,8 +605,7 @@ bc_resolve(bytecode *bc, int save, const section *sect,
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
 		retval = cur_arch->bc.bc_resolve(bc, save, sect,
-						 resolve_label,
-						 resolve_precall);
+						 calc_bc_dist);
 	    else
 		InternalError(_("Unknown bytecode type"));
     }
@@ -592,13 +620,14 @@ bc_resolve(bytecode *bc, int save, const section *sect,
 	    assert(temp != NULL);
 	    tempp = &temp;
 	}
-	expr_expand_labelequ(*tempp, sect, 1, resolve_label, resolve_precall);
-	num = expr_get_intnum(tempp);
+	num = expr_get_intnum(tempp, calc_bc_dist);
 	if (!num) {
-	    if (temp && expr_contains(temp, EXPR_FLOAT))
+	    retval = BC_RESOLVE_UNKNOWN_LEN;
+	    if (temp && expr_contains(temp, EXPR_FLOAT)) {
 		ErrorAt(bc->line,
 			_("expression must not contain floating point value"));
-	    retval = BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
+		retval |= BC_RESOLVE_ERROR;
+	    }
 	} else
 	    bc->len *= intnum_get_uint(num);
 	expr_delete(temp);
@@ -659,7 +688,7 @@ bc_tobytes_incbin(bytecode_incbin *incbin, unsigned char **bufp,
 
     /* Convert start to integer value */
     if (incbin->start) {
-	num = expr_get_intnum(&incbin->start);
+	num = expr_get_intnum(&incbin->start, NULL);
 	if (!num)
 	    InternalError(_("could not determine start in bc_tobytes_incbin"));
 	start = intnum_get_uint(num);
@@ -711,7 +740,7 @@ bc_tobytes(bytecode *bc, unsigned char *buf, unsigned long *bufsize,
     int error = 0;
 
     if (bc->multiple) {
-	num = expr_get_intnum(&bc->multiple);
+	num = expr_get_intnum(&bc->multiple, NULL);
 	if (!num)
 	    InternalError(_("could not determine multiple in bc_tobytes"));
 	*multiple = intnum_get_uint(num);

@@ -232,7 +232,7 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
 
     /*@-unqualifiedtrans@*/
     *ep = expr_xform_neg_tree(*ep);
-    *ep = expr_level_tree(*ep, 1, indexreg == 0);
+    *ep = expr_level_tree(*ep, 1, indexreg == 0, NULL);
     /*@=unqualifiedtrans@*/
     assert(*ep != NULL);
     e = *ep;
@@ -242,7 +242,7 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
 	case 2:
 	    /* Need to simplify again */
 	    *ep = expr_xform_neg_tree(*ep);
-	    *ep = expr_level_tree(*ep, 1, indexreg == 0);
+	    *ep = expr_level_tree(*ep, 1, indexreg == 0, NULL);
 	    e = *ep;
 	    break;
 	default:
@@ -319,7 +319,7 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
     /* Simplify expr, which is now really just the displacement. This
      * should get rid of the 0's we put in for registers in the callback.
      */
-    *ep = expr_simplify(*ep);
+    *ep = expr_simplify(*ep, NULL);
     /* e = *ep; */
 
     return 2;
@@ -366,7 +366,7 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 		*displen = 0xff;
 	    }
 
-	    intn = expr_get_intnum(ep);
+	    intn = expr_get_intnum(ep, NULL);
 	    if (!intn) {
 		/* expr still has unknown values: assume 16/32-bit disp */
 		*displen = wordsize;

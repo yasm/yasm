@@ -446,8 +446,7 @@ x86_bc_print(FILE *f, const bytecode *bc)
 
 static bc_resolve_flags
 x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
-		    const section *sect, resolve_label_func resolve_label,
-		    resolve_precall_func resolve_precall)
+		    const section *sect, calc_bc_dist_func calc_bc_dist)
 {
     /*@null@*/ expr *temp;
     effaddr *ea = insn->ea;
@@ -465,7 +464,7 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 	    assert(temp != NULL);
 
 	    /* Expand equ's and labels */
-	    expr_expand_labelequ(temp, sect, 1, resolve_label, resolve_precall);
+	    temp = expr_simplify(temp, calc_bc_dist);
 
 	    /* Check validity of effective address and calc R/M bits of
 	     * Mod/RM byte and SIB byte.  We won't know the Mod field
@@ -515,12 +514,12 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 	if (imm->val) {
 	    temp = expr_copy(imm->val);
 	    assert(temp != NULL);
-	    expr_expand_labelequ(temp, sect, 1, resolve_label, resolve_precall);
 
 	    /* TODO: check imm->len vs. sized len from expr? */
 
 	    /* Handle shift_op special-casing */
-	    if (insn->shift_op && temp && (num = expr_get_intnum(&temp))) {
+	    if (insn->shift_op && temp &&
+		(num = expr_get_intnum(&temp, calc_bc_dist))) {
 		if (num && intnum_get_uint(num) == 1) {
 		    /* We can use the ,1 form: subtract out the imm len
 		     * (as we add it back in below).
@@ -560,8 +559,7 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 static bc_resolve_flags
 x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		      const bytecode *bc, const section *sect,
-		      resolve_label_func resolve_label,
-		      resolve_precall_func resolve_precall)
+		      calc_bc_dist_func calc_bc_dist)
 {
     bc_resolve_flags retval = BC_RESOLVE_MIN_LEN;
     /*@null@*/ expr *temp;
@@ -584,17 +582,14 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 	    jrshort = 1;
 	    if (save) {
 		temp = expr_copy(jmprel->target);
-		expr_expand_labelequ(temp, sect, 0, resolve_label,
-				     resolve_precall);
-		num = expr_get_intnum(&temp);
+		num = expr_get_intnum(&temp, calc_bc_dist);
 		if (!num) {
 		    ErrorAt(bc->line,
 			    _("short jump target external or out of segment"));
 		    return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		} else {
-		    target = intnum_get_uint(num);
-		    rel = (long)(target -
-				 (bc->offset+jmprel->shortop.opcode_len+1));
+		    rel = intnum_get_int(num);
+		    rel -= jmprel->shortop.opcode_len+1;
 		    /* does a short form exist? */
 		    if (jmprel->shortop.opcode_len == 0) {
 			ErrorAt(bc->line, _("short jump does not exist"));
@@ -625,11 +620,10 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 	     * this test to be valid.
 	     */
 	    temp = expr_copy(jmprel->target);
-	    expr_expand_labelequ(temp, sect, 0, resolve_label, resolve_precall);
-	    num = expr_get_intnum(&temp);
+	    num = expr_get_intnum(&temp, calc_bc_dist);
 	    if (num) {
-		target = intnum_get_uint(num);
-		rel = (long)(target-(bc->offset+jmprel->shortop.opcode_len+1));
+		rel = intnum_get_int(num);
+		rel -= jmprel->shortop.opcode_len+1;
 		/* short displacement must fit within -128 <= rel <= +127 */
 		if (jmprel->shortop.opcode_len != 0 && rel >= -128 &&
 		    rel <= 127) {
@@ -649,7 +643,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		     * it to actually be within short range).
 		     */
 		    if (save) {
-			ErrorAt(bc->line, _("short jump out of range"));
+			ErrorAt(bc->line, _("short jump out of range (near jump does not exist)"));
 			return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		    }
 		    jrshort = 1;
@@ -666,7 +660,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		} else {
 		    if (save) {
 			ErrorAt(bc->line,
-				_("short jump target or out of segment"));
+				_("short jump out of range (near jump does not exist)"));
 			return BC_RESOLVE_ERROR | BC_RESOLVE_UNKNOWN_LEN;
 		    }
 		    jrshort = 1;
@@ -703,8 +697,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 
 bc_resolve_flags
 x86_bc_resolve(bytecode *bc, int save, const section *sect,
-	       resolve_label_func resolve_label,
-	       resolve_precall_func resolve_precall)
+	       calc_bc_dist_func calc_bc_dist)
 {
     x86_insn *insn;
     x86_jmprel *jmprel;
@@ -713,11 +706,11 @@ x86_bc_resolve(bytecode *bc, int save, const section *sect,
 	case X86_BC_INSN:
 	    insn = bc_get_data(bc);
 	    return x86_bc_resolve_insn(insn, &bc->len, save, sect,
-				       resolve_label, resolve_precall);
+				       calc_bc_dist);
 	case X86_BC_JMPREL:
 	    jmprel = bc_get_data(bc);
 	    return x86_bc_resolve_jmprel(jmprel, &bc->len, save, bc, sect,
-					 resolve_label, resolve_precall);
+					 calc_bc_dist);
 	default:
 	    break;
     }

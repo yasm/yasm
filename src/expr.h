@@ -45,29 +45,20 @@ expr *expr_copy(const expr *e);
 
 void expr_delete(/*@only@*/ /*@null@*/ expr *e);
 
-/* Expands all (symrec) equ's in the expression into full expression
- * instances.  Also resolves labels, if possible.
- * resolve_precall is called before any resolution is done (either internally
- *  or by resolve_label).
- * withstart turns on including the section start in all label values if
- *  nonzero, otherwise only absolute sections section starts are added in.
- * Calls to resolve_label are made only when the label sect == srcsect.
- */
-void expr_expand_labelequ(expr *e, const section *srcsect, int withstart,
-			  resolve_label_func resolve_label,
-			  /*@null@*/ resolve_precall_func resolve_precall);
-
 /* Simplifies the expression e as much as possible, eliminating extraneous
  * branches and simplifying integer-only subexpressions.
  */
 /*@only@*/ /*@null@*/ expr *expr_simplify(/*@returned@*/ /*@only@*/ /*@null@*/
-					  expr *e);
+					  expr *e, /*@null@*/
+					  calc_bc_dist_func calc_bc_dist);
 
 /* Gets the integer value of e if the expression is just an integer.  If the
  * expression is more complex (contains anything other than integers, ie
  * floats, non-valued labels, registers), returns NULL.
  */
-/*@dependent@*/ /*@null@*/ const intnum *expr_get_intnum(expr **ep);
+/*@dependent@*/ /*@null@*/ const intnum *expr_get_intnum(expr **ep, /*@null@*/
+							 calc_bc_dist_func
+							 calc_bc_dist);
 
 /* Gets the float value of e if the expression is just an float.  If the
  * expression is more complex (contains anything other than floats, ie
