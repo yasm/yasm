@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * Architecture interface
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -20,6 +20,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "bytecode.h"
 
