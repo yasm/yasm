@@ -22,6 +22,7 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
+#include "errwarn.h"
 #include "intnum.h"
 #include "symrec.h"
 
