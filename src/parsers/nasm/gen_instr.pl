@@ -749,14 +749,14 @@ sub output_yacc ($@)
 
 			    print GRAMMAR cond_action ($rule, $tokens, $count++, $regarg, 0, $func, $AL->[3], \@args);
 			}
-			elsif ($AX and ($inst->[OPERANDS]||"") =~ m/reg16,imm/)
+			elsif ($AX and ($inst->[OPERANDS]||"") =~ m/reg16,imm(16|16x)?$/)
 			{
 			    $AX->[4] = 1;
 			    my $regarg = get_token_number ($tokens, "reg16");
 
 			    print GRAMMAR cond_action ($rule, $tokens, $count++, $regarg, 0, $func, $AX->[3], \@args);
 			}
-			elsif ($EAX and ($inst->[OPERANDS]||"") =~ m/reg32,imm/)
+			elsif ($EAX and ($inst->[OPERANDS]||"") =~ m/reg32,imm(32|32x)?$/)
 			{
 			    $EAX->[4] = 1;
 			    my $regarg = get_token_number ($tokens, "reg32");
