@@ -35,9 +35,8 @@ struct preproc {
      * The preprocessor needs access to the object format module to find out
      * any output format specific macros.
      *
-     * This function also takes the FILE * to the initial starting file, but
-     * not the filename (which is in a global variable and is not
-     * preprocessor-specific).
+     * This function also takes the FILE * to the initial starting file and
+     * the filename.
      */
     void (*initialize) (FILE *f, const char *in_filename);
 
