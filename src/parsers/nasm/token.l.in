@@ -100,14 +100,14 @@ WS       [ \t\r]
 }
 
     /* 0AAh form of hexidecimal number */
-0{HEXDIGIT}+h {
+{DIGIT}{HEXDIGIT}+h {
     yytext[strlen(yytext)-1] = '\0';  /* strip off 'h' */
     yylval.intn = intnum_new_hex(yytext);
     return INTNUM;
 }
 
     /* $0AA and 0xAA forms of hexidecimal number */
-(\$0|0x){HEXDIGIT}+ {
+(\${DIGIT}|0x){HEXDIGIT}+ {
     if (yytext[1] == 'x')
 	yylval.intn = intnum_new_hex(yytext+2);	/* 0x format, skip 0 and x */
     else
