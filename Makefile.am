@@ -7,7 +7,7 @@ INCLUDES = \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/check \
-	-I$(top_srcdir)/intl
+	-Iintl
 
 bin_PROGRAMS = yasm
 TESTS =
