@@ -20,14 +20,14 @@ for asm in ${srcdir}/$2/*.asm
 do
     a=`echo ${asm} | sed 's,^.*/,,;s,.asm$,,'`
     o=${a}$5
-    oh=${o}.hx
+    oh=${a}.hx
     og=`echo ${asm} | sed 's,.asm$,.hex,'`
     e=${a}.ew
     eg=`echo ${asm} | sed 's,.asm$,.errwarn,'`
 
     echo $ECHO_N "$1: Testing $3 for ${a} return value ... $ECHO_C"
     # Run within a subshell to prevent signal messages from displaying.
-    sh -c "./yasm $4 ${asm} -o ${o} 2>${e}" 2>/dev/null
+    sh -c "cat ${asm} | ./yasm $4 -o ${o} 2>${e}" 2>/dev/null
     status=$?
     if test $status -gt 128; then
 	# We should never get a coredump!
@@ -44,9 +44,10 @@ do
 	    passedct=`expr $passedct + 1`
 	    echo $ECHO_N "$1: Testing $3 for ${a} error/warnings ... $ECHO_C"
 	    # We got errors, check to see if they match:
-    	    cat ${e} | sed "s,${srcdir}/,./," >${e}.2
-    	    mv ${e}.2 ${e}
-	    if diff -w ${eg} ${e} > /dev/null; then
+    	    #cat ${e} | sed "s,${srcdir}/,./," >${e}.2
+    	    #mv ${e}.2 ${e}
+	    diff -w ${eg} ${e} > /dev/null
+	    if test $? -eq 0; then
 		# Error/warnings match, it passes!
 		echo "PASS."
 		passedct=`expr $passedct + 1`
@@ -67,13 +68,15 @@ do
 	    passedct=`expr $passedct + 1`
 	    echo $ECHO_N "$1: Testing $3 for ${a} output file ... $ECHO_C"
 	    ${PERL} ${srcdir}/test_hd.pl ${o} > ${oh}
-	    if diff ${og} ${oh} > /dev/null; then
+	    diff ${og} ${oh} > /dev/null
+	    if test $? -eq 0; then
 		echo "PASS."
 		passedct=`expr $passedct + 1`
 		echo $ECHO_N "$1: Testing $3 for ${a} error/warnings ... $ECHO_C"
-		cat ${e} | sed "s,${srcdir}/,./," >${e}.2
-		mv ${e}.2 ${e}
-		if diff -w ${eg} ${e} > /dev/null; then
+		#cat ${e} | sed "s,${srcdir}/,./," >${e}.2
+		#mv ${e}.2 ${e}
+		diff -w ${eg} ${e} > /dev/null
+		if test $? -eq 0; then
 		    # Both object file and error/warnings match, it passes!
 		    echo "PASS."
 		    passedct=`expr $passedct + 1`

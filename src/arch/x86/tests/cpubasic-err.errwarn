@@ -1,1 +1,1 @@
-./src/arch/x86/tests/cpubasic-err.asm:2: invalid combination of opcode and operands
+-:2: invalid combination of opcode and operands

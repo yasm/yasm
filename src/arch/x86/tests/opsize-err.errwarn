@@ -1,1 +1,1 @@
-./src/arch/x86/tests/opsize-err.asm:3: invalid combination of opcode and operands
+-:3: invalid combination of opcode and operands
