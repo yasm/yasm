@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.2 2001/05/18 21:42:31 peter Exp $
+/* $Id: bytecode.h,v 1.3 2001/05/21 19:32:51 mu Exp $
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -80,10 +80,17 @@ effaddr *ConvertRegToEA(effaddr *ptr, unsigned long reg);
 
 immval *ConvertIntToImm(immval *ptr, unsigned long int_val);
 
-void BuildBC_Insn(bytecode *bc, unsigned char opersize,
-    unsigned char opcode_len, unsigned char op0, unsigned char op1,
-    effaddr *ea_ptr, unsigned char spare, immval *im_ptr,
-    unsigned char im_len, unsigned char im_sign, unsigned char im_rel);
+void BuildBC_Insn(bytecode      *bc,
+		  unsigned char  opersize,
+		  unsigned char  opcode_len,
+		  unsigned char  op0,
+		  unsigned char  op1,
+		  effaddr       *ea_ptr,
+		  unsigned char  spare,
+		  immval        *im_ptr,
+		  unsigned char  im_len,
+		  unsigned char  im_sign,
+		  unsigned char  im_rel);
 
 unsigned char *ConvertBCInsnToBytes(unsigned char *ptr, bytecode *bc, int *len);
 
