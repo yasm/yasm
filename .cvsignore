@@ -22,3 +22,6 @@ aclocal.m4
 *.lo
 .libs
 libtool
+*.bb
+*.bbg
+*.da
