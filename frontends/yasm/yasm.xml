@@ -129,15 +129,15 @@
 
             <listitem>
 
-		<para>Selects the target architecture.  The default
-		    architecture is <quote>x86</quote>, which supports both
-		    the IA-32 and derivatives and AMD64 instruction sets.  To
-		    print a list of available architectures to standard
-		    output, use <quote>help</quote> as
-		    <replaceable>arch</replaceable>.  See <citerefentry>
-			<refentrytitle>yasm_arch</refentrytitle>
-			<manvolnum>7</manvolnum>
-		    </citerefentry> for more details.</para>
+                <para>Selects the target architecture.  The default
+                    architecture is <quote>x86</quote>, which supports both
+                    the IA-32 and derivatives and AMD64 instruction sets.  To
+                    print a list of available architectures to standard
+                    output, use <quote>help</quote> as
+                    <replaceable>arch</replaceable>.  See <citerefentry>
+                        <refentrytitle>yasm_arch</refentrytitle>
+                        <manvolnum>7</manvolnum>
+                    </citerefentry> for more details.</para>
 
             </listitem>
         </varlistentry>
@@ -234,25 +234,25 @@
 
             <listitem>
 
-		<para>Selects the target machine architecture.  Essentially a
-		    subtype of the selected architecture, the machine type
-		    selects between major subsets of an architecture.  For
-		    example, for the <quote>x86</quote> architecture, the two
-		    available machines are <quote>x86</quote>, which is used
-		    for the IA-32 and derivative 32-bit instruction set, and
-		    <quote>amd64</quote>, which is used for the 64-bit
-		    instruction set.  This differentiation is required to
-		    generate the proper object file for relocatable object
-		    formats such as COFF and ELF.  To print a list of
-		    available machines for a given architecture to standard
-		    output, use <quote>help</quote> as
-		    <replaceable>machine</replaceable> and the given
-		    architecture using <option>-a
-			<replaceable>arch</replaceable></option>.  See
-		    <citerefentry>
-			<refentrytitle>yasm_arch</refentrytitle>
-			<manvolnum>7</manvolnum>
-		    </citerefentry> for more details.</para>
+                <para>Selects the target machine architecture.  Essentially a
+                    subtype of the selected architecture, the machine type
+                    selects between major subsets of an architecture.  For
+                    example, for the <quote>x86</quote> architecture, the two
+                    available machines are <quote>x86</quote>, which is used
+                    for the IA-32 and derivative 32-bit instruction set, and
+                    <quote>amd64</quote>, which is used for the 64-bit
+                    instruction set.  This differentiation is required to
+                    generate the proper object file for relocatable object
+                    formats such as COFF and ELF.  To print a list of
+                    available machines for a given architecture to standard
+                    output, use <quote>help</quote> as
+                    <replaceable>machine</replaceable> and the given
+                    architecture using <option>-a
+                        <replaceable>arch</replaceable></option>.  See
+                    <citerefentry>
+                        <refentrytitle>yasm_arch</refentrytitle>
+                        <manvolnum>7</manvolnum>
+                    </citerefentry> for more details.</para>
 
             </listitem>
         </varlistentry>
@@ -468,11 +468,11 @@
 <refsect1><title>Bugs</title>
 
     <para>When using the <quote>x86</quote> architecture, it is overly easy to
-	generate AMD64 code (using the <userinput>BITS 64</userinput>
-	directive) and generate a 32-bit object file (by failing to specify
-	<option>-m amd64</option> on the command line).  Similarly, specifying
-	<option>-m amd64</option> does not default the BITS setting to
-	64.</para>
+        generate AMD64 code (using the <userinput>BITS 64</userinput>
+        directive) and generate a 32-bit object file (by failing to specify
+        <option>-m amd64</option> on the command line).  Similarly, specifying
+        <option>-m amd64</option> does not default the BITS setting to
+        64.</para>
 
 </refsect1>
 
