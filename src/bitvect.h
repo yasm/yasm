@@ -180,6 +180,8 @@ Z_int   BitVector_Compare          (wordptr X, wordptr Y);  /* X <,=,> Y ?   */
 charptr BitVector_to_Hex  (wordptr addr);
 ErrCode BitVector_from_Hex(wordptr addr, charptr string);
 
+ErrCode BitVector_from_Oct(wordptr addr, charptr string);
+
 charptr BitVector_to_Bin  (wordptr addr);
 ErrCode BitVector_from_Bin(wordptr addr, charptr string);
 

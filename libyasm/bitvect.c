@@ -1378,6 +1378,47 @@ ErrCode BitVector_from_Hex(wordptr addr, charptr string)
     else    return(ErrCode_Pars);
 }
 
+ErrCode BitVector_from_Oct(wordptr addr, charptr string)
+{
+    N_word  size = size_(addr);
+    N_word  mask = mask_(addr);
+    boolean ok = TRUE;
+    N_word  length;
+    N_word  value;
+    N_word  value_fill = 0;
+    N_word  count;
+    Z_word  count_fill = 0;
+    int     digit;
+
+    if (size > 0)
+    {
+        length = strlen((char *) string);
+        string += length;
+        while (size-- > 0)
+        {
+            value = value_fill;
+            for ( count = count_fill; (ok and (length > 0) and (count < BITS)); count += 3 )
+            {
+                digit = (int) *(--string); length--;
+                if ((ok = (isdigit(digit) && digit != '8' && digit != '9')) != 0)
+                {
+                    digit -= (int) '0';
+                    value |= (((N_word) digit) << count);
+                }
+            }
+            count_fill = (Z_word)count-(Z_word)BITS;
+            if (count_fill > 0)
+                value_fill = (((N_word) digit) >> (3-count_fill));
+            else
+                value_fill = 0;
+            *addr++ = value;
+        }
+        *(--addr) &= mask;
+    }
+    if (ok) return(ErrCode_Ok);
+    else    return(ErrCode_Pars);
+}
+
 charptr BitVector_to_Bin(wordptr addr)
 {
     N_word  size = size_(addr);

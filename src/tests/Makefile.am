@@ -4,16 +4,21 @@ CFLAGS = @ANSI_CFLAGS@
 
 if CHECK
 TESTS = \
+	bitvect_test	\
 	bytecode_test	\
 	floatnum_test
 
 noinst_PROGRAMS = \
+	bitvect_test	\
 	bytecode_test	\
 	floatnum_test
 else
 TESTS =
 noinst_PROGRAMS =
 endif
+
+bitvect_test_SOURCES = \
+	bitvect_test.c
 
 bytecode_test_SOURCES = \
 	bytecode_test.c
