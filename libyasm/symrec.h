@@ -3,7 +3,7 @@
  * \brief YASM symbol table interface.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

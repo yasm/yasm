@@ -1,5 +1,5 @@
 #!/bin/sh
-# $IdPath: yasm/autogen.sh,v 1.9 2003/03/13 04:03:59 peter Exp $
+# $Id$
 # Run this to set up the build system: configure, makefiles, etc.
 # (based on the version in enlightenment's cvs)
 

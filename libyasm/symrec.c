@@ -26,7 +26,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath$");
+/*@unused@*/ RCSID("$Id$");
 
 #ifdef STDC_HEADERS
 # include <limits.h>

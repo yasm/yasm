@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 TESTS += modules/arch/lc3b/tests/lc3b_test.sh
 

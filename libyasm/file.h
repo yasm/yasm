@@ -3,7 +3,7 @@
  * \brief YASM big and little endian file interface.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

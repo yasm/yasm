@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 EXTRA_DIST += frontends/yasm/Makefile.inc
 

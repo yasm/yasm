@@ -1,4 +1,4 @@
-/* $IdPath$
+/* $Id$
  * Variable name redefinitions for NASM-compatible parser
  *
  *  Copyright (C) 2001  Peter Johnson

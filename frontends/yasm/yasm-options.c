@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$IdPath: yasm/frontends/yasm/yasm-options.c,v 1.13 2003/04/01 19:53:30 mu Exp $");
+/*@unused@*/ RCSID("$Id$");
 
 #include "yasm-options.h"
 

@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 TESTS += modules/objfmts/elf/tests/amd64/elf_amd64_test.sh
 

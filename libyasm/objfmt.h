@@ -3,7 +3,7 @@
  * \brief YASM object format module interface.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

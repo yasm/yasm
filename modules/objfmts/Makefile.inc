@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 EXTRA_DIST += modules/objfmts/dbg/Makefile.inc
 EXTRA_DIST += modules/objfmts/bin/Makefile.inc

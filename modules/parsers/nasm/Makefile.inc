@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 pkglib_LTLIBRARIES += parser_nasm.la
 

@@ -3,7 +3,7 @@
  * \brief YASM core types and utility functions.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

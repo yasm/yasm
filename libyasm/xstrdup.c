@@ -30,7 +30,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-RCSID("$IdPath: yasm/libyasm/xstrdup.c,v 1.13 2003/03/15 05:07:48 peter Exp $");
+RCSID("$Id$");
 
 #include "coretype.h"
 

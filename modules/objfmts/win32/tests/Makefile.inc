@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 TESTS += modules/objfmts/win32/tests/win32_test.sh
 

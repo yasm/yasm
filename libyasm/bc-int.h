@@ -1,4 +1,4 @@
-/* $IdPath$
+/* $Id$
  * Bytecode internal structures header file
  *
  *  Copyright (C) 2001  Peter Johnson

@@ -3,7 +3,7 @@
  * \brief YASM library primary header file.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

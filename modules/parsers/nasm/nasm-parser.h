@@ -1,4 +1,4 @@
-/* $IdPath$
+/* $Id$
  * NASM-compatible parser header file
  *
  *  Copyright (C) 2002  Peter Johnson

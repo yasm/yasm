@@ -1,4 +1,4 @@
-/* $IdPath$ */
+/* $Id$ */
 
 #ifndef YASM_BITVECT_H
 #define YASM_BITVECT_H

@@ -3,7 +3,7 @@
  * \brief YASM integer number interface.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

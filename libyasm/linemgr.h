@@ -3,7 +3,7 @@
  * \brief YASM virtual line mapping management interface.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

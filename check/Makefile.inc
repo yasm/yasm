@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 CHECKFILES  = check/check.c
 CHECKFILES += check/check_run.c

@@ -3,7 +3,7 @@
  * \brief YASM optimizer module interface.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

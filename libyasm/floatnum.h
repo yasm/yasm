@@ -3,7 +3,7 @@
  * \brief YASM floating point (IEEE) interface.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

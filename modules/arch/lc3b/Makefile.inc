@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 pkglib_LTLIBRARIES += arch_lc3b.la
 

@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 EXTRA_DIST += tools/re2c/Makefile.inc
 

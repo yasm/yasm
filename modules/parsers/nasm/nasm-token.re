@@ -27,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-RCSID("$IdPath$");
+RCSID("$Id$");
 
 #define YASM_LIB_INTERNAL
 #include <libyasm.h>

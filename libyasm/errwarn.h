@@ -3,7 +3,7 @@
  * \brief YASM error and warning reporting interface.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

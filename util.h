@@ -1,4 +1,4 @@
-/* $IdPath$
+/* $Id$
  * YASM utility functions.
  *
  * Includes standard headers and defines prototypes for replacement functions

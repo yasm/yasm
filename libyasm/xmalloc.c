@@ -26,7 +26,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-RCSID("$IdPath$");
+RCSID("$Id$");
 
 #include "coretype.h"
 #include "errwarn.h"

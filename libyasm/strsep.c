@@ -31,7 +31,7 @@
 #define YASM_LIB_INTERNAL
 #define NO_STRING_INLINES
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath$");
+/*@unused@*/ RCSID("$Id$");
 
 
 #if defined(LIBC_SCCS) && !defined(lint)

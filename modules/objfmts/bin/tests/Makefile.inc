@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 TESTS += modules/objfmts/bin/tests/bin_test.sh
 

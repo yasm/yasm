@@ -3,7 +3,7 @@
  * \brief YASM bytecode interface.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

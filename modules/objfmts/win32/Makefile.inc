@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 pkglib_LTLIBRARIES += objfmt_win32.la
 

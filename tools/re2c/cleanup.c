@@ -1,4 +1,4 @@
-/* $IdPath$
+/* $Id$
  *
  * Clean up re2c output to avoid compiler warnings.
  *

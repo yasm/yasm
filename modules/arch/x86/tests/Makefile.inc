@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 TESTS += modules/arch/x86/tests/x86_test.sh
 

@@ -26,7 +26,7 @@
  */
 %{
 #include <util.h>
-RCSID("$IdPath$");
+RCSID("$Id$");
 
 #define YASM_LIB_INTERNAL
 #define YASM_EXPR_INTERNAL

@@ -3,7 +3,7 @@
 
 	;.file	"x86id.c"
 ;#APP
-	;.ident	"$IdPath$"
+	;.ident	"$Id$"
 ;#NO_APP
 extern yasm_internal_error_
 extern yasm_expr_copy

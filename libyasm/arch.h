@@ -3,7 +3,7 @@
  * \brief YASM architecture interface.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

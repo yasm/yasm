@@ -33,7 +33,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath$");
+/*@unused@*/ RCSID("$Id$");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)merge.c	8.2 (Berkeley) 2/14/94";

@@ -3,7 +3,7 @@
  * \brief YASM preprocessor module interface.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

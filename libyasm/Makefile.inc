@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 lib_LTLIBRARIES += libyasm.la
 

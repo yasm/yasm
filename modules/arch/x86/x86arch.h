@@ -1,4 +1,4 @@
-/* $IdPath$
+/* $Id$
  * x86 Architecture header file
  *
  *  Copyright (C) 2001  Peter Johnson

@@ -3,7 +3,7 @@
  * \brief YASM value/parameter interface.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

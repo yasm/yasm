@@ -1,4 +1,4 @@
-/* $IdPath$
+/* $Id$
  *
  * C version of NASM's macros.pl
  *

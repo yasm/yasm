@@ -31,7 +31,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath$");
+/*@unused@*/ RCSID("$Id$");
 
 
 #ifndef USE_OUR_OWN_STRCASECMP

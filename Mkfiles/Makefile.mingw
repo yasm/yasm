@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 #
 # Ultra-flat Makefile for MINGW (cross-compile for Win32).
 # Does NOT depend on or use configure.

@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 TESTS += modules/objfmts/coff/tests/coff_test.sh
 

@@ -3,7 +3,7 @@
  * \brief YASM debug format interface.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

@@ -1,4 +1,4 @@
-/* $IdPath$
+/* $Id$
  *
  *  Copyright (C) 2001  Peter Johnson
  *

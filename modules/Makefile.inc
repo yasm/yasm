@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 EXTRA_DIST += modules/arch/Makefile.inc
 EXTRA_DIST += modules/parsers/Makefile.inc

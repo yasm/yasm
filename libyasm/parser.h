@@ -3,7 +3,7 @@
  * \brief YASM parser module interface.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

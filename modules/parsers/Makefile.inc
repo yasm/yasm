@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 EXTRA_DIST += modules/parsers/nasm/Makefile.inc
 

@@ -1,4 +1,4 @@
-/* $IdPath$
+/* $Id$
  * Expressions internal structures header file
  *
  *  Copyright (C) 2001  Peter Johnson

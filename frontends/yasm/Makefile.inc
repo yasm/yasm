@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 bin_PROGRAMS += yasm
 

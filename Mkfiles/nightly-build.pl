@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $IdPath$
+# $Id$
 use POSIX qw(strftime);
 
 $|++;

@@ -3,7 +3,7 @@
  * \brief Hash Array Mapped Trie (HAMT) functions.
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

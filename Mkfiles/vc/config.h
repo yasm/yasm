@@ -1,4 +1,4 @@
-/* $IdPath$ */
+/* $Id$ */
 
 /* */
 /* #undef ENABLE_NLS */

@@ -3,7 +3,7 @@
  * \brief YASM associated data storage (libyasm internal use)
  *
  * \rcs
- * $IdPath$
+ * $Id$
  * \endrcs
  *
  * \license

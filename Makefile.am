@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 SUBDIRS = libltdl m4 po .
 

@@ -1,4 +1,4 @@
-# $IdPath$
+# $Id$
 
 TESTS += modules/objfmts/elf/tests/elf_test.sh
 
