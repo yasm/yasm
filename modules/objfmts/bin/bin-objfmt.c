@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$IdPath: yasm/modules/objfmts/bin/bin-objfmt.c,v 1.39 2003/03/26 05:07:56 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #define YASM_LIB_INTERNAL
 #define YASM_BC_INTERNAL
@@ -251,8 +251,10 @@ bin_objfmt_output(FILE *f, yasm_sectionhead *sections,
     startexpr = yasm_expr_copy(yasm_section_get_start(text));
     assert(startexpr != NULL);
     startnum = yasm_expr_get_intnum(&startexpr, NULL);
-    if (!startnum)
-	yasm_internal_error(N_("Complex expr for start in bin objfmt output"));
+    if (!startnum) {
+	yasm__error(startexpr->line, N_("ORG expression too complex"));
+	return;
+    }
     start = yasm_intnum_get_uint(startnum);
     yasm_expr_delete(startexpr);
     textstart = start;
@@ -264,7 +266,9 @@ bin_objfmt_output(FILE *f, yasm_sectionhead *sections,
     if (data) {
 	start = bin_objfmt_align_section(data, prevsect, start, 4,
 					 prevsectlenptr, prevsectpadptr);
-	yasm_section_set_start(data, start, 0);
+	yasm_section_set_start(data,
+	    yasm_expr_new_ident(yasm_expr_int(yasm_intnum_new_uint(start)), 0),
+	    0);
 	datastart = start;
 	prevsect = data;
 	prevsectlenptr = &datalen;
@@ -273,7 +277,9 @@ bin_objfmt_output(FILE *f, yasm_sectionhead *sections,
     if (bss) {
 	start = bin_objfmt_align_section(bss, prevsect, start, 4,
 					 prevsectlenptr, prevsectpadptr);
-	yasm_section_set_start(bss, start, 0);
+	yasm_section_set_start(bss,
+	    yasm_expr_new_ident(yasm_expr_int(yasm_intnum_new_uint(start)), 0),
+	    0);
     }
 
     /* Output .text first. */
@@ -380,8 +386,9 @@ bin_objfmt_sections_switch(yasm_sectionhead *headp,
 	    }
 	}
 
-	retval = yasm_sections_switch_general(headp, sectname, start, resonly,
-					      &isnew, lindex);
+	retval = yasm_sections_switch_general(headp, sectname,
+	    yasm_expr_new_ident(yasm_expr_int(yasm_intnum_new_uint(start)),
+				lindex), resonly, &isnew, lindex);
 
 	if (isnew) {
 	    if (have_alignval) {
@@ -428,18 +435,20 @@ bin_objfmt_directive(const char *name, yasm_valparamhead *valparams,
     yasm_valparam *vp;
 
     if (yasm__strcasecmp(name, "org") == 0) {
-	/*@dependent@*/ /*@null@*/ const yasm_intnum *start = NULL;
+	/*@null@*/ yasm_expr *start = NULL;
 
 	/* ORG takes just a simple integer as param */
 	vp = yasm_vps_first(valparams);
-	if (vp->val) {
-	    yasm__error(lindex, N_("argument to ORG should be numeric"));
-	    return 0;
-	} else if (vp->param)
-	    start = yasm_expr_get_intnum(&vp->param, NULL);
+	if (vp->val)
+	    start = yasm_expr_new_ident(yasm_expr_sym(
+			yasm_symrec_use(vp->val, lindex)), lindex);
+	else if (vp->param) {
+	    start = vp->param;
+	    vp->param = NULL;	/* Don't let valparams delete it */
+	}
 
 	if (!start) {
-	    yasm__error(lindex, N_("argument to ORG should be numeric"));
+	    yasm__error(lindex, N_("argument to ORG must be expression"));
 	    return 0;
 	}
 
@@ -448,7 +457,7 @@ bin_objfmt_directive(const char *name, yasm_valparamhead *valparams,
 	if (!sect)
 	    yasm_internal_error(
 		N_("bin objfmt: .text section does not exist before ORG is called?"));
-	yasm_section_set_start(sect, yasm_intnum_get_uint(start), lindex);
+	yasm_section_set_start(sect, start, lindex);
 
 	return 0;	    /* directive recognized */
     } else

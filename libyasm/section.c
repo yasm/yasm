@@ -26,7 +26,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath: yasm/libyasm/section.c,v 1.37 2003/05/04 22:15:09 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "coretype.h"
 #include "valparam.h"
@@ -96,7 +96,7 @@ yasm_sections_new(yasm_section **def, yasm_objfmt *of)
 /*@-onlytrans@*/
 yasm_section *
 yasm_sections_switch_general(yasm_sectionhead *headp, const char *name,
-			     unsigned long start, int res_only, int *isnew,
+			     yasm_expr *start, int res_only, int *isnew,
 			     unsigned long lindex)
 {
     yasm_section *s;
@@ -122,8 +122,11 @@ yasm_sections_switch_general(yasm_sectionhead *headp, const char *name,
     s->data.general.name = yasm__xstrdup(name);
     s->data.general.of = NULL;
     s->data.general.of_data = NULL;
-    s->start = yasm_expr_new_ident(yasm_expr_int(yasm_intnum_new_uint(start)),
-				   lindex);
+    if (start)
+	s->start = start;
+    else
+	s->start = yasm_expr_new_ident(yasm_expr_int(yasm_intnum_new_uint(0)),
+				       lindex);
     s->bc = yasm_bcs_new();
 
     s->opt_flags = 0;
@@ -279,13 +282,11 @@ yasm_section_get_name(const yasm_section *sect)
 }
 
 void
-yasm_section_set_start(yasm_section *sect, unsigned long start,
+yasm_section_set_start(yasm_section *sect, yasm_expr *start,
 		       unsigned long lindex)
 {
     yasm_expr_delete(sect->start);
-    sect->start =
-	yasm_expr_new_ident(yasm_expr_int(yasm_intnum_new_uint(start)),
-			    lindex);
+    sect->start = start;
 }
 
 const yasm_expr *

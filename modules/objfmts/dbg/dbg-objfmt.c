@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$IdPath: yasm/modules/objfmts/dbg/dbg-objfmt.c,v 1.34 2003/03/26 05:07:57 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #define YASM_LIB_INTERNAL
 #include <libyasm.h>
@@ -94,8 +94,9 @@ dbg_objfmt_sections_switch(yasm_sectionhead *headp,
     fprintf(dbg_objfmt_file, ", %lu), returning ", lindex);
 
     if ((vp = yasm_vps_first(valparams)) && !vp->param && vp->val != NULL) {
-	retval = yasm_sections_switch_general(headp, vp->val, 200, 0, &isnew,
-					      lindex);
+	retval = yasm_sections_switch_general(headp, vp->val,
+	    yasm_expr_new_ident(yasm_expr_int(yasm_intnum_new_uint(200)),
+				lindex), 0, &isnew, lindex);
 	if (isnew) {
 	    fprintf(dbg_objfmt_file, "(new) ");
 	    yasm_symrec_define_label(vp->val, retval, (yasm_bytecode *)NULL, 1,

@@ -47,7 +47,8 @@
  * added to a section list if there's not already a section by that name.
  * \param headp	    section list
  * \param name	    section name
- * \param start	    starting address (ignored if section already exists)
+ * \param start	    starting address (ignored if section already exists),
+ *		    NULL if 0 or don't care.
  * \param res_only  if nonzero, only space-reserving bytecodes are allowed in
  *		    the section (ignored if section already exists)
  * \param isnew	    output; set to nonzero if section did not already exist
@@ -56,8 +57,9 @@
  * \return New section.
  */
 /*@dependent@*/ yasm_section *yasm_sections_switch_general
-    (yasm_sectionhead *headp, const char *name, unsigned long start,
-     int res_only, /*@out@*/ int *isnew, unsigned long lindex);
+    (yasm_sectionhead *headp, const char *name,
+     /*@null@*/ /*@only@*/ yasm_expr *start, int res_only,
+     /*@out@*/ int *isnew, unsigned long lindex);
 
 /** Create a new absolute section.  No checking is performed at creation to
  * check for overlaps with other absolute sections.
@@ -153,7 +155,7 @@ int yasm_sections_traverse(yasm_sectionhead *headp, /*@null@*/ void *d,
  * \param start	    starting address
  * \param lindex    line index
  */
-void yasm_section_set_start(yasm_section *sect, unsigned long start,
+void yasm_section_set_start(yasm_section *sect, /*@only@*/ yasm_expr *start,
 			    unsigned long lindex);
 
 /** Get starting address of a section.
