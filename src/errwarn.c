@@ -164,6 +164,8 @@ errwarn_new(unsigned long lindex, int replace_parser_error)
 	    action = INS_AFTER;
 	else if (lindex >= ins_we->line && lindex < next->line)
 	    action = INS_AFTER;
+	else
+	    ins_we = next;
     }
 
     if (replace_parser_error && ins_we && ins_we->type == WE_PARSERERROR) {
