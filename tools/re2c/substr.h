@@ -14,14 +14,14 @@ typedef struct SubStr SubStr;
 
 int SubStr_eq(const SubStr *, const SubStr *);
 
-static inline void SubStr_init_u(SubStr*, unsigned char*, unsigned int);
-static inline SubStr *SubStr_new_u(unsigned char*, unsigned int);
+static void SubStr_init_u(SubStr*, unsigned char*, unsigned int);
+static SubStr *SubStr_new_u(unsigned char*, unsigned int);
 
-static inline void SubStr_init(SubStr*, char*, unsigned int);
-static inline SubStr *SubStr_new(char*, unsigned int);
+static void SubStr_init(SubStr*, char*, unsigned int);
+static SubStr *SubStr_new(char*, unsigned int);
 
-static inline void SubStr_copy(SubStr*, const SubStr*);
-static inline SubStr *SubStr_new_copy(const SubStr*);
+static void SubStr_copy(SubStr*, const SubStr*);
+static SubStr *SubStr_new_copy(const SubStr*);
 
 void SubStr_out(const SubStr*, FILE *);
 #define SubStr_delete(x)    free(x)
@@ -38,14 +38,14 @@ Str *Str_new_empty(void);
 void Str_destroy(Str *);
 void Str_delete(Str *);
 
-static inline void
+static void
 SubStr_init_u(SubStr *r, unsigned char *s, unsigned int l)
 {
     r->str = (char*)s;
     r->len = l;
 }
 
-static inline SubStr *
+static SubStr *
 SubStr_new_u(unsigned char *s, unsigned int l)
 {
     SubStr *r = malloc(sizeof(SubStr));
@@ -54,14 +54,14 @@ SubStr_new_u(unsigned char *s, unsigned int l)
     return r;
 }
 
-static inline void
+static void
 SubStr_init(SubStr *r, char *s, unsigned int l)
 {
     r->str = s;
     r->len = l;
 }
 
-static inline SubStr *
+static SubStr *
 SubStr_new(char *s, unsigned int l)
 {
     SubStr *r = malloc(sizeof(SubStr));
@@ -70,14 +70,14 @@ SubStr_new(char *s, unsigned int l)
     return r;
 }
 
-static inline void
+static void
 SubStr_copy(SubStr *r, const SubStr *s)
 {
     r->str = s->str;
     r->len = s->len;
 }
 
-static inline SubStr *
+static SubStr *
 SubStr_new_copy(const SubStr *s)
 {
     SubStr *r = malloc(sizeof(SubStr));

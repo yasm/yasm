@@ -23,7 +23,7 @@ typedef struct Range {
     unsigned int	lb, ub;		/* [lb,ub) */
 } Range;
 
-static inline void
+static void
 Range_init(Range *r, unsigned int l, unsigned int u)
 {
     r->next = NULL;
@@ -31,7 +31,7 @@ Range_init(Range *r, unsigned int l, unsigned int u)
     r->ub = u;
 }
 
-static inline Range *
+static Range *
 Range_new(unsigned int l, unsigned int u)
 {
     Range *r = malloc(sizeof(Range));
@@ -41,7 +41,7 @@ Range_new(unsigned int l, unsigned int u)
     return r;
 }
 
-static inline void
+static void
 Range_copy(Range *ro, const Range *r)
 {
     ro->next = NULL;
@@ -49,7 +49,7 @@ Range_copy(Range *ro, const Range *r)
     ro->ub = r->ub;
 }
 
-static inline Range *
+static Range *
 Range_new_copy(Range *r)
 {
     Range *ro = malloc(sizeof(Range));
@@ -94,7 +94,7 @@ typedef struct RegExp {
     } d;
 } RegExp;
 
-static inline RegExp *
+static RegExp *
 RegExp_isA(RegExp *r, RegExpType t)
 {
     return r->type == t ? r : NULL;
@@ -106,7 +106,7 @@ unsigned int RegExp_fixedLength(RegExp*);
 void RegExp_compile(RegExp*, Char*, Ins*);
 void RegExp_display(RegExp*, FILE *);
 
-static inline RegExp *
+static RegExp *
 RegExp_new_NullOp(void)
 {
     RegExp *r = malloc(sizeof(RegExp));
@@ -114,7 +114,7 @@ RegExp_new_NullOp(void)
     return r;
 }
 
-static inline RegExp *
+static RegExp *
 RegExp_new_MatchOp(Range *m)
 {
     RegExp *r = malloc(sizeof(RegExp));
@@ -125,7 +125,7 @@ RegExp_new_MatchOp(Range *m)
 
 RegExp *RegExp_new_RuleOp(RegExp*, RegExp*, Token*, unsigned int);
 
-static inline RegExp *
+static RegExp *
 RegExp_new_AltOp(RegExp *e1, RegExp *e2)
 {
     RegExp *r = malloc(sizeof(RegExp));
@@ -135,7 +135,7 @@ RegExp_new_AltOp(RegExp *e1, RegExp *e2)
     return r;
 }
 
-static inline RegExp *
+static RegExp *
 RegExp_new_CatOp(RegExp *e1, RegExp *e2)
 {
     RegExp *r = malloc(sizeof(RegExp));
@@ -145,7 +145,7 @@ RegExp_new_CatOp(RegExp *e1, RegExp *e2)
     return r;
 }
 
-static inline RegExp *
+static RegExp *
 RegExp_new_CloseOp(RegExp *e)
 {
     RegExp *r = malloc(sizeof(RegExp));

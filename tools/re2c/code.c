@@ -484,25 +484,25 @@ static void SCC_destroy(SCC*);
 static void SCC_delete(SCC*);
 static void SCC_traverse(SCC*, State*);
 
-static inline void
+static void
 SCC_init(SCC *s, unsigned int size)
 {
     s->top = s->stk = malloc(sizeof(State*)*size);
 }
 
-static inline SCC *
+static SCC *
 SCC_new(unsigned int size){
     SCC *s = malloc(sizeof(SCC));
     s->top = s->stk = malloc(sizeof(State*)*size);
     return s;
 }
 
-static inline void
+static void
 SCC_destroy(SCC *s){
     free(s->stk);
 }
 
-static inline void
+static void
 SCC_delete(SCC *s){
     free(s->stk);
     free(s);

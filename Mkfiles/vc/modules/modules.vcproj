@@ -3,6 +3,7 @@
 	ProjectType="Visual C++"
 	Version="7.10"
 	Name="modules"
+	RootNamespace="modules"
 	SccProjectName=""
 	SccLocalPath="">
 	<Platforms>
@@ -98,8 +99,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"/>
 			<Tool
-				Name="VCPreBuildEventTool"
-				CommandLine="cmd &lt;build.bat"/>
+				Name="VCPreBuildEventTool"/>
 			<Tool
 				Name="VCPreLinkEventTool"/>
 			<Tool
@@ -122,9 +122,6 @@
 		<Filter
 			Name="Source Files"
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
-			<File
-				RelativePath=".\build.bat">
-			</File>
 			<Filter
 				Name="arch"
 				Filter="">
@@ -536,7 +533,7 @@
 						RelativePath="..\..\..\modules\preprocs\nasm\nasm-eval.h">
 					</File>
 					<File
-						RelativePath="..\..\..\modules\preprocs\nasm\nasm-macros.c">
+						RelativePath="..\..\..\nasm-macros.c">
 					</File>
 					<File
 						RelativePath="..\..\..\modules\preprocs\nasm\nasm-pp.c">

@@ -96,7 +96,7 @@ void DFA_findSCCs(DFA*);
 void DFA_emit(DFA*, FILE *);
 void DFA_out(FILE *, const DFA*);
 
-static inline Action *
+static Action *
 Action_new_Match(State *s)
 {
     Action *a = malloc(sizeof(Action));
@@ -106,7 +106,7 @@ Action_new_Match(State *s)
     return a;
 }
 
-static inline Action *
+static Action *
 Action_new_Enter(State *s, unsigned int l)
 {
     Action *a = malloc(sizeof(Action));
@@ -117,7 +117,7 @@ Action_new_Enter(State *s, unsigned int l)
     return a;
 }
 
-static inline Action *
+static Action *
 Action_new_Save(State *s, unsigned int i)
 {
     Action *a = malloc(sizeof(Action));
@@ -128,7 +128,7 @@ Action_new_Save(State *s, unsigned int i)
     return a;
 }
 
-static inline Action *
+static Action *
 Action_new_Move(State *s)
 {
     Action *a = malloc(sizeof(Action));
@@ -140,7 +140,7 @@ Action_new_Move(State *s)
 
 Action *Action_new_Accept(State*, unsigned int, unsigned int*, State**);
 
-static inline Action *
+static Action *
 Action_new_Rule(State *s, RegExp *r) /* RuleOp */
 {
     Action *a = malloc(sizeof(Action));

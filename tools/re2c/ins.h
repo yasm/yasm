@@ -25,15 +25,15 @@ typedef union Ins {
     }			c;
 } Ins;
 
-static inline int isMarked(Ins *i){
+static int isMarked(Ins *i){
     return i->i.marked != 0;
 }
 
-static inline void mark(Ins *i){
+static void mark(Ins *i){
     i->i.marked = 1;
 }
 
-static inline void unmark(Ins *i){
+static void unmark(Ins *i){
     i->i.marked = 0;
 }
 

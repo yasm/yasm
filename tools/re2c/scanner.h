@@ -11,15 +11,15 @@ typedef struct Scanner {
 } Scanner;
 
 void Scanner_init(Scanner*, FILE *);
-static inline Scanner *Scanner_new(FILE *);
+static Scanner *Scanner_new(FILE *);
 
 int Scanner_echo(Scanner*, FILE *);
 int Scanner_scan(Scanner*);
 void Scanner_fatal(Scanner*, const char*);
-static inline SubStr Scanner_token(Scanner*);
-static inline unsigned int Scanner_line(Scanner*);
+static SubStr Scanner_token(Scanner*);
+static unsigned int Scanner_line(Scanner*);
 
-static inline SubStr
+static SubStr
 Scanner_token(Scanner *s)
 {
     SubStr r;
@@ -27,13 +27,13 @@ Scanner_token(Scanner *s)
     return r;
 }
 
-static inline unsigned int
+static unsigned int
 Scanner_line(Scanner *s)
 {
     return s->cline;
 }
 
-static inline Scanner *
+static Scanner *
 Scanner_new(FILE *i)
 {
     Scanner *r = malloc(sizeof(Scanner));
