@@ -71,10 +71,9 @@ AC_PROG_LN_S
 AM_PROG_LEX
 AC_LIBTOOL_DLOPEN
 AC_LIBLTDL_CONVENIENCE
-AC_LIBTOOL_WIN32_DLL
-AM_PROG_LIBTOOL
+#AC_LIBTOOL_WIN32_DLL
+AC_PROG_LIBTOOL
 AC_SUBST(LIBTOOL_DEPS)
-AC_LIB_LTDL
 
 # REQUIRE a standard (ANSI/ISO) C compiler
 if test "$ac_cv_prog_cc_stdc" = no; then
@@ -138,6 +137,7 @@ AC_CHECK_FUNCS([strcasecmp strncasecmp stricmp strcmpi])
 # Check for stuff wanted by the test suite.  None of this is required.
 AC_CHECK_FUNCS([msgctl msgget msgrcv msgsnd strerror snprintf wait])
 AC_REPLACE_FUNCS([strsep mergesort])
+AC_LIB_LTDL
 
 #
 # Check for gettext() and other i18n/l10n things.
