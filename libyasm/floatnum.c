@@ -28,7 +28,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath: yasm/libyasm/floatnum.c,v 1.33 2003/03/15 05:07:48 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include <ctype.h>
 
@@ -233,7 +233,7 @@ floatnum_normalize(yasm_floatnum *flt)
 static void
 floatnum_mul(yasm_floatnum *acc, const yasm_floatnum *op)
 {
-    long exp;
+    long expon;
     wordptr product, op1, op2;
     long norm_amt;
 
@@ -248,14 +248,14 @@ floatnum_mul(yasm_floatnum *acc, const yasm_floatnum *op)
     }
 
     /* Add exponents, checking for overflow/underflow. */
-    exp = (((int)acc->exponent)-EXP_BIAS) + (((int)op->exponent)-EXP_BIAS);
-    exp += EXP_BIAS;
-    if (exp > EXP_MAX) {
+    expon = (((int)acc->exponent)-EXP_BIAS) + (((int)op->exponent)-EXP_BIAS);
+    expon += EXP_BIAS;
+    if (expon > EXP_MAX) {
 	/* Overflow; return infinity. */
 	BitVector_Empty(acc->mantissa);
 	acc->exponent = EXP_INF;
 	return;
-    } else if (exp < EXP_MIN) {
+    } else if (expon < EXP_MIN) {
 	/* Underflow; return zero. */
 	BitVector_Empty(acc->mantissa);
 	acc->exponent = EXP_ZERO;
@@ -263,7 +263,7 @@ floatnum_mul(yasm_floatnum *acc, const yasm_floatnum *op)
     }
 
     /* Add one to the final exponent, as the multiply shifts one extra time. */
-    acc->exponent = (unsigned short)(exp+1);
+    acc->exponent = (unsigned short)(expon+1);
 
     /* Allocate space for the multiply result */
     product = BitVector_Create((N_int)((MANT_BITS+1)*2), FALSE);
