@@ -73,4 +73,7 @@ const void *bc_get_const_data(const bytecode *);
 
 #define bcs_next(x)		STAILQ_NEXT(x, link)
 
+/* @null@ bytecode *bcs_last(bytecodehead *headp); */
+#define bcs_last(headp)		STAILQ_LAST(headp, bytecode, link)
+
 #endif
