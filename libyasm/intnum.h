@@ -2,7 +2,7 @@
  * \file intnum.h
  * \brief YASM integer number interface.
  *
- * $IdPath: yasm/libyasm/intnum.h,v 1.15 2003/03/13 06:54:19 peter Exp $
+ * $IdPath$
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -103,8 +103,10 @@ void yasm_intnum_delete(/*@only@*/ yasm_intnum *intn);
  * \param acc	    intnum accumulator
  * \param op	    operation
  * \param operand   intnum operand
+ * \param lindex    line index (of expression)
  */
-void yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand);
+void yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
+		      unsigned long lindex);
 
 /** Simple value check for 0.
  * \param acc	    intnum

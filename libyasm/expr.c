@@ -26,7 +26,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath: yasm/libyasm/expr.c,v 1.64 2003/03/15 21:59:55 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "coretype.h"
 #include "bitvect.h"
@@ -566,7 +566,7 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
 	for (i=first_int_term+1, o=first_int_term+1; i<e->numterms; i++) {
 	    if (e->terms[i].type == YASM_EXPR_INT) {
 		yasm_intnum_calc(e->terms[first_int_term].data.intn, e->op,
-				 e->terms[i].data.intn);
+				 e->terms[i].data.intn, e->line);
 		fold_numterms--;
 		level_numterms--;
 		/* make sure to delete folded intnum */
@@ -635,7 +635,8 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
 			e->terms[first_int_term] = sube->terms[j];  /* struc */
 		    } else {
 			yasm_intnum_calc(e->terms[first_int_term].data.intn,
-					 e->op, sube->terms[j].data.intn);
+					 e->op, sube->terms[j].data.intn,
+					 e->line);
 			/* make sure to delete folded intnum */
 			yasm_intnum_delete(sube->terms[j].data.intn);
 		    }

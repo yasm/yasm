@@ -26,7 +26,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath: yasm/libyasm/intnum.c,v 1.25 2003/03/17 00:03:02 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include <ctype.h>
 
@@ -242,7 +242,8 @@ yasm_intnum_delete(yasm_intnum *intn)
 
 /*@-nullderef -nullpass -branchstate@*/
 void
-yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand)
+yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
+		 unsigned long lindex)
 {
     wordptr result = (wordptr)NULL, op1 = (wordptr)NULL, op2 = (wordptr)NULL;
     wordptr spare = (wordptr)NULL;
@@ -439,6 +440,15 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand)
 		BitVector_LSB(result, !BitVector_equal(op1, op2));
 	    } else
 		acc->val.ul = acc->val.ul != operand->val.ul;
+	    break;
+	case YASM_EXPR_SEG:
+	    yasm__error(lindex, N_("invalid use of '%s'"), "SEG");
+	    break;
+	case YASM_EXPR_WRT:
+	    yasm__error(lindex, N_("invalid use of '%s'"), "WRT");
+	    break;
+	case YASM_EXPR_SEGOFF:
+	    yasm__error(lindex, N_("invalid use of '%s'"), ":");
 	    break;
 	case YASM_EXPR_IDENT:
 	    if (result)

@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$IdPath: yasm/modules/optimizers/basic/basic-optimizer.c,v 1.33 2003/03/26 05:07:57 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #define YASM_LIB_INTERNAL
 #define YASM_BC_INTERNAL
@@ -68,7 +68,8 @@ basic_optimize_calc_bc_dist_1(yasm_section *sect,
 		    if (dist < precbc1->offset + precbc1->len) {
 			intn = yasm_intnum_new_uint(precbc1->offset +
 						    precbc1->len - dist);
-			yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
+			yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL,
+					 precbc1->line);
 			return intn;
 		    }
 		    dist -= precbc1->offset + precbc1->len;
@@ -84,7 +85,7 @@ basic_optimize_calc_bc_dist_1(yasm_section *sect,
 	if (precbc1) {
 	    if (precbc1->opt_flags == BCFLAG_DONE) {
 		intn = yasm_intnum_new_uint(precbc1->offset + precbc1->len);
-		yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
+		yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL, precbc1->line);
 		return intn;
 	    } else {
 		return NULL;

@@ -26,7 +26,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath: yasm/libyasm/bytecode.c,v 1.94 2003/05/04 22:15:09 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "coretype.h"
 #include "file.h"
@@ -444,7 +444,7 @@ yasm_common_calc_bc_dist(yasm_section *sect, /*@null@*/ yasm_bytecode *precbc1,
 	    if (dist < precbc1->offset + precbc1->len) {
 		intn = yasm_intnum_new_uint(precbc1->offset + precbc1->len
 					    - dist);
-		yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
+		yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL, precbc1->line);
 		return intn;
 	    }
 	    dist -= precbc1->offset + precbc1->len;
@@ -453,7 +453,7 @@ yasm_common_calc_bc_dist(yasm_section *sect, /*@null@*/ yasm_bytecode *precbc1,
     } else {
 	if (precbc1) {
 	    intn = yasm_intnum_new_uint(precbc1->offset + precbc1->len);
-	    yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
+	    yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL, precbc1->line);
 	    return intn;
 	} else {
 	    return yasm_intnum_new_uint(0);
