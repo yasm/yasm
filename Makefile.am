@@ -12,6 +12,10 @@ bin_PROGRAMS =
 TESTS =
 noinst_PROGRAMS =
 
+check_PROGRAMS = test_hd
+
+test_hd_SOURCES = test_hd.c
+
 include_HEADERS = libyasm.h
 
 noinst_HEADERS = util.h
@@ -41,7 +45,6 @@ include frontends/Makefile.inc
 EXTRA_DIST += basename.c
 EXTRA_DIST += dirname.c
 EXTRA_DIST += out_test.sh
-EXTRA_DIST += test_hd.pl
 EXTRA_DIST += Artistic.txt
 EXTRA_DIST += BSD.txt
 EXTRA_DIST += GNU_GPL-2.0

@@ -69,7 +69,7 @@ do
 	    echo "PASS."
 	    passedct=`expr $passedct + 1`
 	    echo $ECHO_N "$1: Testing $3 for ${a} output file ... $ECHO_C"
-	    ${PERL} ${srcdir}/test_hd.pl results/${o} > results/${oh}
+	    ./test_hd results/${o} > results/${oh}
 	    diff ${og} results/${oh} > /dev/null
 	    if test $? -eq 0; then
 		echo "PASS."
