@@ -17,6 +17,8 @@
 ** Boston, MA  02111-1307, USA.
 **
 ** Modified 1997 to make it suitable for use with makeheaders.
+**
+** $IdPath$
 */
 /* First off, code is include which follows the "include" declaration
 ** in the input file. */

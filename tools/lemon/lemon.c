@@ -25,7 +25,8 @@
 **   drh@acm.org
 **   http://www.hwaci.com/drh/
 **
-** $Id: lemon.c,v 1.3 2002/04/07 19:57:32 peter Exp $
+** $IdPath$
+** $Id: lemon.c,v 1.4 2002/04/07 19:58:57 peter Exp $
 */
 #include <stdio.h>
 #include <stdarg.h>
