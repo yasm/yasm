@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.10 2001/07/05 04:32:13 mu Exp $
+# $Id: gen_instr.pl,v 1.11 2001/07/05 04:53:13 mu Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -33,6 +33,8 @@ use constant OPCODE	=> 3;
 use constant EFFADDR	=> 4;
 use constant IMM	=> 5;
 use constant CPU	=> 6;
+
+use constant TOO_MANY_ERRORS => 20;
 
 # default options
 my $instrfile = 'instrs.dat';
@@ -94,7 +96,21 @@ my $valid_cpus = join '|', qw(
     #0 #1
 );
 
+# track errors and warnings rather than die'ing on the first.
+my (@messages, $errcount, $warncount);
+sub die_with_errors (@)
+{
+    foreach (@_) { print; };
+    if ($errcount)
+    {
+	print "Dying with errors\n";
+	exit -1;
+    }
+}
+
 my ($groups) = &read_instructions ($instrfile);
+
+die_with_errors @messages;
 
 exit 0 if $dry_run; # done with simple verification, so exit
 
@@ -155,7 +171,8 @@ sub read_instructions ($)
 	    die "Invalid CPU\n"
 		    if $cpu !~ m/^(?:$valid_cpus)(?:,(?:$valid_cpus))*$/o;
 	};
-	die "Malformed Instruction at $instrfile line $.: $@" if $@;
+	push @messages, "Malformed Instruction at $instrfile line $.: $@" and $errcount++ if $@;
+	die_with_errors @messages if $errcount and @messages>=TOO_MANY_ERRORS;
 	# knock the ! off of $inst for the groupname
 	$inst = substr $inst, 1;
 	push @{$groups->{$inst}{rules}}, [$inst, $op, $size, $opcode, $eff, $imm, $cpu];
@@ -174,13 +191,15 @@ sub read_instructions ($)
 		    if $group !~ m/^\w+$/o;
 	    die "Invalid CPU\n"
 		    if $cpu and $cpu !~ m/^(?:$valid_cpus)(?:,(?:$valid_cpus))*$/o;
-	    warn "Malformed Instruction at $instrfile line $.: Group $group not yet defined\n"
+	    push @messages, "Malformed Instruction at $instrfile line $.: Group $group not yet defined\n"
 		    unless exists $groups->{$group};
+	    $warncount++;
 	};
-	die "Malformed Instruction at $instrfile line $.: $@" if $@;
+	push @messages, "Malformed Instruction at $instrfile line $.: $@" and $errcount++ if $@;
 	# only allow multiple instances of instructions that aren't of a group
-	die "Multiple Definiton for instruction $inst at $instrfile line $.\n"
+	push @messages, "Multiple Definiton for instruction $inst at $instrfile line $.\n" and $errcount++
 		if exists $instr->{$inst} and not exists $groups->{$inst};
+	die_with_errors @messages if $errcount and @messages>=TOO_MANY_ERRORS;
 	push @{$groups->{$group}{members}}, [$inst, $group, $args, $cpu];
 	$instr->{$inst} = 1;
     }
@@ -200,7 +219,7 @@ sub read_instructions ($)
 	    # to, etc.  Fix this sometime.
 	    add_group_rule ("!$handle", $args, \%groups, $instrfile);
 	    add_group_member ("$handle!$handle", "", \%groups, \%instr,
-			      \$instrfile);
+			      $instrfile);
 	}
 	elsif ($handle =~ m/^!\w+$/)
 	{
@@ -209,7 +228,7 @@ sub read_instructions ($)
 	elsif ($handle =~ m/^\w+!\w+$/)
 	{
 	    add_group_member ($handle, $args, \%groups, \%instr,
-			      \$instrfile);
+			      $instrfile);
 	}
 	# TODO: consider if this is necessary: Pete?
 	# (add_group_member_synonym is -not- implemented)
