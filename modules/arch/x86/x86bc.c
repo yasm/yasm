@@ -141,6 +141,7 @@ x86_ea_new_reg(unsigned char reg)
     ead->modrm = 0xC0 | (reg & 0x07);	/* Mod=11, R/M=Reg, Reg=0 */
     ead->valid_modrm = 1;
     ead->need_modrm = 1;
+    ead->sib = 0;
     ead->valid_sib = 0;
     ead->need_sib = 0;
 
@@ -160,6 +161,7 @@ x86_ea_new_expr(expr *e)
     ead->modrm = 0;
     ead->valid_modrm = 0;
     ead->need_modrm = 1;
+    ead->sib = 0;
     ead->valid_sib = 0;
     ead->need_sib = 0xff;   /* we won't know until we know more about expr and
 			       the BITS/address override setting */
@@ -181,6 +183,7 @@ x86_ea_new_imm(immval *imm, unsigned char im_len)
     ead->modrm = 0;
     ead->valid_modrm = 0;
     ead->need_modrm = 0;
+    ead->sib = 0;
     ead->valid_sib = 0;
     ead->need_sib = 0;
 
