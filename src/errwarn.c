@@ -275,6 +275,8 @@ ErrorAt(unsigned long lindex, const char *fmt, ...)
     vfprintf(stderr, fmt, ap);
     va_end(ap);
     fprintf(stderr, "\n");
+
+    error_count++;
 }
 
 void
@@ -295,6 +297,8 @@ WarningAt(unsigned long lindex, const char *fmt, ...)
     vfprintf(stderr, fmt, ap);
     va_end(ap);
     fprintf(stderr, "\n");
+
+    warning_count++;
 }
 
 /* Output all previously stored errors and warnings to stderr. */
