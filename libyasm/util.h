@@ -1,4 +1,4 @@
-/* $Id: util.h,v 1.4 2001/06/29 02:11:36 peter Exp $
+/* $Id: util.h,v 1.5 2001/08/19 04:32:02 peter Exp $
  * Defines prototypes for replacement functions if needed.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -32,6 +32,12 @@ unsigned long strtoul(const char *nptr, char **endptr, int base);
 
 #ifndef HAVE_TOASCII
 # define toascii(c) ((c) & 0x7F)
+#endif
+
+#if defined(HAVE_SYS_QUEUE_H) && !defined(HAVE_BOGUS_SYS_QUEUE_H)
+#include <sys/queue.h>
+#else
+#include "compat-queue.h"
 #endif
 
 #endif
