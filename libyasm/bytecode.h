@@ -81,8 +81,8 @@ void SetInsnShiftFlag(bytecode *bc);
 
 void SetOpcodeSel(jmprel_opcode_sel *old_sel, jmprel_opcode_sel new_sel);
 
-/* IMPORTANT: ea_ptr cannot be reused or freed after calling this function
- * (it doesn't make a copy).  im_ptr, on the other hand, can be.
+/* IMPORTANT: ea_ptr and im_ptr cannot be reused or freed after calling this
+ * function (it doesn't make a copy).
  */
 bytecode *bytecode_new_insn(unsigned char  opersize,
 			    unsigned char  opcode_len,
