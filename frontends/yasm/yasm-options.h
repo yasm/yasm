@@ -46,11 +46,13 @@ typedef struct opt_option_s
 
     int (*handler) (char *cmd, /*@null@*/ char *param, int extra);
     int extra;			/* extra value for handler */
-    const char *description;	/* description to use in help_msg() */
+
+    /* description to use in help_msg() */
+    /*@observer@*/ const char *description;
 
     /* optional description for the param taken (NULL if not present) */
     /*  (short - will be printed after option sopt/lopt) */
-    /*@null@*/ const char *param_desc;
+    /*@observer@*/ /*@null@*/ const char *param_desc;
 } opt_option;
 
 /* handle everything that is not an option */

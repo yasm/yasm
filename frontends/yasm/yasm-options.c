@@ -139,7 +139,7 @@ help_msg(const char *msg, const char *tail, opt_option *options, size_t nopts)
     char optbuf[100], optopt[100];
     size_t i;
 
-    printf(gettext(msg));
+    printf("%s", gettext(msg));
 
     for (i = 0; i < nopts; i++) {
 	optbuf[0] = 0;
@@ -174,5 +174,5 @@ help_msg(const char *msg, const char *tail, opt_option *options, size_t nopts)
 	printf("    %-24s  %s\n", optbuf, gettext(options[i].description));
     }
 
-    printf(gettext(tail));
+    printf("%s", gettext(tail));
 }
