@@ -74,7 +74,7 @@ if test ! -d "config"; then
 	mkdir config
 fi
 
-rm -f stamp-h.in
+rm -f libyasm/stamp-h.in
 #echo "  gettextize -f --no-changelog"
 #echo "N" | gettextize -f --no-changelog || exit 1
 echo "  aclocal $ACLOCAL_FLAGS"
