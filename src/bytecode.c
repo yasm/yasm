@@ -456,14 +456,25 @@ bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
 void
 bc_resolve(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
 {
+#if 0
+    bytecode_data *bc_data;
+    bytecode_reserve *reserve;
+    bytecode_incbin *incbin;
+
     switch (bc->type) {
 	case BC_EMPTY:
 	    InternalError(_("got empty bytecode in bc_resolve"));
 	case BC_DATA:
+	    bc_data = bc_get_data(bc);
+	    bc_resolve_data(bc_data, &bc->len);
 	    break;
 	case BC_RESERVE:
+	    reserve = bc_get_data(bc);
+	    bc_resolve_reserve(reserve, &bc->len, resolve_label);
 	    break;
 	case BC_INCBIN:
+	    incbin = bc_get_data(bc);
+	    bc_resolve_incbin(incbin, &bc->len, bc->line, resolve_label);
 	    break;
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
@@ -471,6 +482,12 @@ bc_resolve(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
 	    else
 		InternalError(_("Unknown bytecode type"));
     }
+
+    if (bc->multiple) {
+	expr_expand_labelequ(bc->multiple, resolve_label);
+	bc->multiple = expr_simplify(bc->multiple);
+    }
+#endif
 }
 
 void
