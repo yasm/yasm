@@ -122,6 +122,8 @@ main(int argc, char *argv[])
     if (!in) {
 	in = stdin;
 	switch_filename("<STDIN>");
+	if (!obj)
+	    obj = stdout;
     }
 
     /* Set x86 as the architecture */
@@ -168,7 +170,8 @@ main(int argc, char *argv[])
 
     sections = cur_parser->do_parse(cur_parser, in);
 
-    fclose(in);
+    if (in != stdin)
+	fclose(in);
 
     if (OutputAllErrorWarning() > 0) {
 	sections_delete(sections);
@@ -200,7 +203,9 @@ main(int argc, char *argv[])
     /* Finalize the object output */
     cur_objfmt->finalize();
 
-    fclose(obj);
+    if (obj != stdout)
+	fclose(obj);
+
     if (obj_filename)
 	xfree(obj_filename);
 
