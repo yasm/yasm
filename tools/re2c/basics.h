@@ -1,5 +1,5 @@
-#ifndef _basics_h
-#define _basics_h
+#ifndef re2c_basics_h
+#define re2c_basics_h
 
 typedef unsigned int 	uint;
 typedef unsigned char 	uchar, byte;

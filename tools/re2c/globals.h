@@ -1,5 +1,5 @@
-#ifndef	_globals_h
-#define	_globals_h
+#ifndef	re2c_globals_h
+#define	re2c_globals_h
 
 #include "basics.h"
 
