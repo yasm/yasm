@@ -579,7 +579,8 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
 	    } else if (o != i) {
 		/* copy term if it changed places */
 		e->terms[o++] = e->terms[i];
-	    }
+	    } else
+		o++;
 	}
 
 	if (simplify_ident)
