@@ -51,6 +51,7 @@
 -Tpreproc
 -Tparser
 -Toutfmt
+-Tdataval
 -TSymStatus
 -TSymType
 -Tsymrec
