@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.3 2001/05/20 08:30:04 peter Exp $
+# $Id: Makefile,v 1.4 2001/05/21 21:43:47 mu Exp $
 # Makefile
 #
 #    Copyright (C) 2001  Peter Johnson
@@ -52,6 +52,14 @@ src/bison.tab.c: src/bison.y
 
 src/lex.yy.c: src/token.l
 	flex -o$@ $<
+
+src/bison.y: src/instrs.dat src/token.l.in src/bison.y.in src/gen_instr.pl
+	$(MAKE) gen_instrs
+src/token.l: src/instrs.dat src/token.l.in src/bison.y.in src/gen_instr.pl
+	$(MAKE) gen_instrs
+
+gen_instrs:
+	src/gen_instr.pl -i src/instrs.dat -t src/token.l -g src/bison.y
 
 clean:
 	rm -f obj/*.o
