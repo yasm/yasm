@@ -31,4 +31,22 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(memcpy toascii)
 AC_REPLACE_FUNCS(strdup strtoul)
 
+AC_CHECK_HEADERS(sys/queue.h)
+
+# Check for some target-specific stuff
+case "$host" in
+*-*-sunos4*)
+	AC_DEFINE(HAVE_BOGUS_SYS_QUEUE_H)
+	;;
+*-sni-sysv*)
+	AC_DEFINE(HAVE_BOGUS_SYS_QUEUE_H)
+	;;
+*-*-sco3.2v4*)
+	AC_DEFINE(HAVE_BOGUS_SYS_QUEUE_H)
+	;;
+*-*-sco3.2v5*)
+	AC_DEFINE(HAVE_BOGUS_SYS_QUEUE_H)
+	;;
+esac
+
 AC_OUTPUT(Makefile src/Makefile src/parsers/Makefile src/parsers/nasm/Makefile src/preprocs/Makefile src/preprocs/raw/Makefile src/outfmts/Makefile src/outfmts/dbg/Makefile)
