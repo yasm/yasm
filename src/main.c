@@ -144,7 +144,7 @@ main(int argc, char *argv[])
 #endif
 
     /* Initialize preloaded symbol lookup table. */
-    /*LTDL_SET_PRELOADED_SYMBOLS();*/
+    LTDL_SET_PRELOADED_SYMBOLS();
 
     /* Initialize libltdl. */
     errors = lt_dlinit();

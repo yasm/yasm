@@ -554,7 +554,7 @@ bin_objfmt_directive(const char *name, valparamhead *valparams,
 }
 
 /* Define objfmt structure -- see objfmt.h for details */
-objfmt bin_objfmt = {
+objfmt yasm_bin_LTX_objfmt = {
     "Flat format binary",
     "bin",
     NULL,

@@ -22,23 +22,23 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
+#include "ltdl.h"
+
 #include "globals.h"
 
 #include "objfmt.h"
 
 
-/* Available object formats */
-extern objfmt dbg_objfmt;
-extern objfmt bin_objfmt;
+static objfmt *dyn_objfmt = NULL;
+static lt_dlhandle objfmt_module = NULL;
 
-/* NULL-terminated list of all available object formats.
- * Someday change this if we dynamically load object formats at runtime.
+/* NULL-terminated list of all possibly available object format keywords.
  * Could improve this a little by generating automatically at build-time.
  */
 /*@-nullassign@*/
-objfmt *objfmts[] = {
-    &dbg_objfmt,
-    &bin_objfmt,
+const char *objfmts[] = {
+    "dbg",
+    "bin",
     NULL
 };
 /*@=nullassign@*/
@@ -46,25 +46,43 @@ objfmt *objfmts[] = {
 objfmt *
 find_objfmt(const char *keyword)
 {
-    int i;
+    char *modulename;
 
-    /* We're just doing a linear search, as there aren't many object formats */
-    for (i = 0; objfmts[i]; i++) {
-	if (strcasecmp(objfmts[i]->keyword, keyword) == 0)
-	    /*@-unqualifiedtrans@*/
-	    return objfmts[i];
-	    /*@=unqualifiedtrans@*/
+    /* Look for dynamic module.  First build full module name from keyword. */
+    modulename = xmalloc(5+strlen(keyword)+1);
+    strcpy(modulename, "yasm-");
+    strcat(modulename, keyword);
+    objfmt_module = lt_dlopenext(modulename);
+    xfree(modulename);
+
+    if (!objfmt_module)
+	return NULL;
+
+    /* Find objfmt structure */
+    dyn_objfmt = (objfmt *)lt_dlsym(objfmt_module, "objfmt");
+
+    if (!dyn_objfmt) {
+	lt_dlclose(objfmt_module);
+	return NULL;
     }
 
-    /* no match found */
-    return NULL;
+    /* found it */
+    return dyn_objfmt;
 }
 
 void
 list_objfmts(void (*printfunc) (const char *name, const char *keyword))
 {
     int i;
+    objfmt *of;
 
-    for (i = 0; objfmts[i]; i++)
-	printfunc(objfmts[i]->name, objfmts[i]->keyword);
+    /* Go through available list, and try to load each one */
+    for (i = 0; objfmts[i]; i++) {
+	of = find_objfmt(objfmts[i]);
+	if (of) {
+	    printfunc(of->name, of->keyword);
+	    dyn_objfmt = NULL;
+	    lt_dlclose(objfmt_module);
+	}
+    }
 }

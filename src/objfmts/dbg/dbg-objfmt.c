@@ -241,7 +241,7 @@ dbg_objfmt_directive(const char *name, valparamhead *valparams,
 }
 
 /* Define objfmt structure -- see objfmt.h for details */
-objfmt dbg_objfmt = {
+objfmt yasm_dbg_LTX_objfmt = {
     "Trace of all info passed to object format module",
     "dbg",
     "dbg",

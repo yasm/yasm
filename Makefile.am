@@ -15,6 +15,7 @@ TESTS =
 noinst_PROGRAMS =
 
 yasm_SOURCES =
+yasm_LDFLAGS = -export-dynamic
 yasm_LDADD = @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@
 
 lib_LTLIBRARIES =
