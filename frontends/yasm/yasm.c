@@ -90,7 +90,7 @@ static void print_yasm_warning(const char *filename, unsigned long line,
 			       const char *msg);
 
 static void apply_preproc_saved_options(void);
-static void print_list_keword_desc(const char *name, const char *keyword);
+static void print_list_keyword_desc(const char *name, const char *keyword);
 
 /* values for special_options */
 #define SPECIAL_SHOW_HELP 0x01
@@ -601,7 +601,7 @@ opt_parser_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     if (!cur_parser) {
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm parsers:\n"));
-	    list_parsers(print_list_keword_desc);
+	    list_parsers(print_list_keyword_desc);
 	    special_options = SPECIAL_LISTED;
 	    return 0;
 	}
@@ -619,7 +619,7 @@ opt_preproc_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     if (!cur_preproc) {
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm preprocessors:\n"));
-	    list_preprocs(print_list_keword_desc);
+	    list_preprocs(print_list_keyword_desc);
 	    special_options = SPECIAL_LISTED;
 	    return 0;
 	}
@@ -637,7 +637,7 @@ opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     if (!cur_objfmt) {
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm object formats:\n"));
-	    list_objfmts(print_list_keword_desc);
+	    list_objfmts(print_list_keyword_desc);
 	    special_options = SPECIAL_LISTED;
 	    return 0;
 	}
@@ -655,7 +655,7 @@ opt_dbgfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     if (!cur_dbgfmt) {
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm debug formats:\n"));
-	    list_dbgfmts(print_list_keword_desc);
+	    list_dbgfmts(print_list_keyword_desc);
 	    special_options = SPECIAL_LISTED;
 	    return 0;
 	}
@@ -838,7 +838,7 @@ replace_extension(const char *orig, /*@null@*/ const char *ext,
 }
 
 void
-print_list_keword_desc(const char *name, const char *keyword)
+print_list_keyword_desc(const char *name, const char *keyword)
 {
     printf("%4s%-12s%s\n", "", keyword, name);
 }
