@@ -200,7 +200,7 @@ yasm_x86__parse_seg_override(yasm_effaddr *ea, unsigned long segreg,
 
 /* Define arch structure -- see arch.h for details */
 yasm_arch yasm_x86_LTX_arch = {
-    "x86 (IA-32, AMD64)",
+    "x86 (IA-32 and derivatives), AMD64",
     "x86",
     x86_initialize,
     x86_cleanup,
