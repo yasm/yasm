@@ -10,12 +10,13 @@
 #  copy Mkfiles/config.h.dj config.h
 #  make -fMkfiles/Makefile.dj
 
-CFLAGS=-DHAVE_CONFIG_H -I. -Isrc -Inointl
+CFLAGS=-DHAVE_CONFIG_H -I. -Isrc -Isrc/arch/x86 -Inointl
 CC=gcc
 
 all: src/yasm
 
 SRC_OBJS= \
+ src/arch.o \
  src/bytecode.o \
  src/errwarn.o \
  src/expr.o \
@@ -33,6 +34,13 @@ SRC_OBJS= \
  src/xmalloc.o \
  src/xstrdup.o \
  src/strcasecmp.o
+
+SRC_ARCH_X86_OBJS= \
+ src/arch/x86/arch.o \
+ src/arch/x86/bytecode.o
+
+SRC_ARCH_OBJS= \
+ $(SRC_ARCH_X86_OBJS)
 
 SRC_PREPROCS_RAW_OBJS= \
  src/preprocs/raw/preproc.o
@@ -66,7 +74,8 @@ YASM_OBJS= \
  $(SRC_PREPROCS_OBJS) \
  $(SRC_PARSERS_OBJS) \
  $(SRC_OPTIMIZERS_OBJS) \
- $(SRC_OBJFMTS_OBJS)
+ $(SRC_OBJFMTS_OBJS) \
+ $(SRC_ARCH_OBJS)
 
 src/yasm: $(YASM_OBJS)
 	$(CC) -o src/yasm $(YASM_OBJS)
