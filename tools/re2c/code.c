@@ -100,7 +100,7 @@ static BitMap *BitMap_first = NULL;
 BitMap *
 BitMap_new(Go *g, State *x)
 {
-    BitMap *b;
+    BitMap *b = malloc(sizeof(BitMap));
     b->go = g;
     b->on = x;
     b->next = BitMap_first;
@@ -137,7 +137,8 @@ void BitMap_gen(FILE *o, uint lb, uint ub){
 	memset(bm, 0, n);
 	fputs("\tstatic unsigned char yybm[] = {", o);
 	for(i = 0; b; i += n){
-	    uchar m, j;
+	    uchar m;
+	    uint j;
 	    for(m = 0x80; b && m; b = b->next, m >>= 1){
 		b->i = i; b->m = m;
 		doGen(b->go, b->on, bm-lb, m);

@@ -22,7 +22,7 @@ static inline Token *
 Token_new(SubStr t, uint l)
 {
     Token *r = malloc(sizeof(Token));
-    Str_copy(&r->text, &t);
+    Str_init(&r->text, &t);
     r->line = l;
     return r;
 }
