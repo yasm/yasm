@@ -250,7 +250,7 @@ Action_emit(Action *a, FILE *o)
 	    line_source(o, a->d.rule->d.RuleOp.code->line);
 	    SubStr_out(&a->d.rule->d.RuleOp.code->text, o);
 	    fprintf(o, "\n"); oline++;
-	    fprintf(o, "#line %u \"-\"\n", ++oline);
+	    fprintf(o, "#line %u \"re2c-out.c\"\n", ++oline);
 	    break;
     }
 }
@@ -703,7 +703,7 @@ void DFA_emit(DFA *d, FILE *o){
     free(d->head->action);
 
     oline++;
-    fprintf(o, "\n#line %u \"-\"\n", ++oline);
+    fprintf(o, "\n#line %u \"re2c-out.c\"\n", ++oline);
 
     fputs("{\n\tYYCTYPE yych;\n\tunsigned int yyaccept;\n", o); oline+=3;
 
