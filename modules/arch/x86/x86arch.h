@@ -98,7 +98,8 @@ typedef enum {
     X86_NEAR = 1,
     X86_SHORT,
     X86_FAR,
-    X86_TO
+    X86_TO,
+    X86_FAR_SEGOFF	    /* FAR due to SEG:OFF immediate */
 } x86_parse_targetmod;
 
 typedef enum {
@@ -106,8 +107,7 @@ typedef enum {
     JMP_SHORT,
     JMP_NEAR,
     JMP_SHORT_FORCED,
-    JMP_NEAR_FORCED,
-    JMP_FAR		    /* not really relative, but fits here */
+    JMP_NEAR_FORCED
 } x86_jmp_opcode_sel;
 
 typedef enum {
@@ -146,18 +146,26 @@ void yasm_x86__bc_insn_set_lockrep_prefix(yasm_bytecode *bc,
 					  unsigned long line);
 
 /* Bytecode types */
-
-typedef struct x86_insn {
-    /*@null@*/ yasm_effaddr *ea;    /* effective address */
-
-    /*@null@*/ yasm_immval *imm;    /* immediate or relative value */
-
-    unsigned char opcode[3];	    /* opcode */
-    unsigned char opcode_len;
-
+typedef struct x86_common {
     unsigned char addrsize;	    /* 0 or =mode_bits => no override */
     unsigned char opersize;	    /* 0 or =mode_bits => no override */
     unsigned char lockrep_pre;	    /* 0 indicates no prefix */
+
+    unsigned char mode_bits;
+} x86_common;
+
+typedef struct x86_opcode {
+    unsigned char opcode[3];	    /* opcode */
+    unsigned char len;
+} x86_opcode;
+
+typedef struct x86_insn {
+    x86_common common;		    /* common x86 information */
+    x86_opcode opcode;
+
+    /*@null@*/ yasm_effaddr *ea;    /* effective address */
+
+    /*@null@*/ yasm_immval *imm;    /* immediate or relative value */
 
     unsigned char def_opersize_64;  /* default operand size in 64-bit mode */
     unsigned char special_prefix;   /* "special" prefix (0=none) */
@@ -192,36 +200,38 @@ typedef struct x86_insn {
      * registers) and the target register is al/ax/eax/rax.
      */
     unsigned char shortmov_op;
-
-    unsigned char mode_bits;
 } x86_insn;
 
 typedef struct x86_jmp {
+    x86_common common;		/* common x86 information */
+    x86_opcode shortop, nearop;
+
     yasm_expr *target;		/* target location */
     /*@dependent@*/ yasm_symrec *origin;    /* jump origin */
-
-    struct {
-	unsigned char opcode[3];
-	unsigned char opcode_len;   /* 0 = no opc for this version */
-    } shortop, nearop, farop;
 
     /* which opcode are we using? */
     /* The *FORCED forms are specified in the source as such */
     x86_jmp_opcode_sel op_sel;
-
-    unsigned char addrsize;	/* 0 or =mode_bits => no override */
-    unsigned char opersize;	/* 0 indicates no override */
-    unsigned char lockrep_pre;	/* 0 indicates no prefix */
-
-    unsigned char mode_bits;
 } x86_jmp;
 
-void yasm_x86__bc_transform_jmp(yasm_bytecode *bc, x86_jmp *jmp);
+/* Direct (immediate) FAR jumps ONLY; indirect FAR jumps get turned into
+ * x86_insn bytecodes; relative jumps turn into x86_jmp bytecodes.
+ * This bytecode is not legal in 64-bit mode.
+ */
+typedef struct x86_jmpfar {
+    x86_common common;		/* common x86 information */
+    x86_opcode opcode;
+
+    yasm_expr *segment;		/* target segment */
+    yasm_expr *offset;		/* target offset */
+} x86_jmpfar;
+
 void yasm_x86__bc_transform_insn(yasm_bytecode *bc, x86_insn *insn);
+void yasm_x86__bc_transform_jmp(yasm_bytecode *bc, x86_jmp *jmp);
+void yasm_x86__bc_transform_jmpfar(yasm_bytecode *bc, x86_jmpfar *jmpfar);
 
 void yasm_x86__bc_apply_prefixes
-    (yasm_bytecode *bc, int num_prefixes, unsigned long **prefixes,
-     int num_segregs, const unsigned long *segregs);
+    (yasm_bytecode *bc, int num_prefixes, unsigned long **prefixes);
 
 void yasm_x86__ea_init(yasm_effaddr *ea, unsigned int spare,
 		       /*@null@*/ yasm_symrec *origin);

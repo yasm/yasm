@@ -746,6 +746,31 @@ static void
 bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 {
     bytecode_insn *insn = (bytecode_insn *)bc->contents;
+    int i;
+    yasm_insn_operand *op;
+
+    /* Simplify the operands' expressions first. */
+    for (i = 0, op = yasm_ops_first(&insn->operands);
+	 op && i<insn->num_operands; op = yasm_operand_next(op), i++) {
+	/* Check operand type */
+	switch (op->type) {
+	    case YASM_INSN__OPERAND_MEMORY:
+		/* Don't get over-ambitious here; some archs' memory expr
+		 * parser are sensitive to the presence of *1, etc, so don't
+		 * simplify identities.
+		 */
+		if (op->data.ea)
+		    op->data.ea->disp =
+			yasm_expr__level_tree(op->data.ea->disp, 1, 0, NULL,
+					      NULL, NULL, NULL);
+		break;
+	    case YASM_INSN__OPERAND_IMM:
+		op->data.val = yasm_expr_simplify(op->data.val, NULL);
+		break;
+	    default:
+		break;
+	}
+    }
 
     yasm_arch_finalize_insn(insn->arch, bc, prev_bc, insn->insn_data,
 			    insn->num_operands, &insn->operands,

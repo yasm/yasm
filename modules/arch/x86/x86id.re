@@ -103,7 +103,7 @@ RCSID("$Id$");
  *            0 = no target mod acceptable
  *            1 = NEAR
  *            2 = SHORT
- *            3 = FAR
+ *            3 = FAR (or SEG:OFF immediate)
  *            4 = TO
  *  - 1 bit = effective address size
  *            0 = any address size allowed except for 64-bit
@@ -126,6 +126,7 @@ RCSID("$Id$");
  *                 [special case for imul opcode]
  *             8 = relative jump (outputs a jmp instead of normal insn)
  *             9 = operand size goes into address size (jmp only)
+ *             A = far jump (outputs a farjmp instead of normal insn)
  * The below describes postponed actions: actions which can't be completed at
  * parse-time due to things like EQU and complex expressions.  For these, some
  * additional data (stored in the second byte of the opcode with a one-byte
@@ -135,8 +136,7 @@ RCSID("$Id$");
  *             0 = none
  *             1 = shift operation with a ,1 short form (instead of imm8).
  *             2 = large imm16/32 that can become a sign-extended imm8.
- *             3 = can be far jump
- *             4 = could become a short opcode mov with bits=64 and a32 prefix
+ *             3 = could become a short opcode mov with bits=64 and a32 prefix
  */
 #define OPT_Imm		0x0
 #define OPT_Reg		0x1
@@ -196,13 +196,13 @@ RCSID("$Id$");
 #define OPA_SpareEA	(7UL<<13)
 #define OPA_JmpRel	(8UL<<13)
 #define OPA_AdSizeR	(9UL<<13)
+#define OPA_JmpFar	(0xAUL<<13)
 #define OPA_MASK	(0xFUL<<13)
 
 #define OPAP_None	(0UL<<17)
 #define OPAP_ShiftOp	(1UL<<17)
 #define OPAP_SImm8Avail	(2UL<<17)
-#define OPAP_JmpFar	(3UL<<17)
-#define OPAP_ShortMov	(4UL<<17)
+#define OPAP_ShortMov	(3UL<<17)
 #define OPAP_MASK	(7UL<<17)
 
 typedef struct x86_insn_info {
@@ -945,14 +945,14 @@ static const x86_insn_info call_insn[] = {
     { CPU_Hammer|CPU_64, 0, 64, 0, 0, 0, {0, 0, 0}, 0, 1,
       {OPT_Imm|OPS_32|OPA_JmpRel, 0, 0} },
 
-    { CPU_Any, 0, 16, 64, 0, 1, {0xE8, 0x9A, 0}, 0, 1,
-      {OPT_Imm|OPS_16|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
-    { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0xE8, 0x9A, 0}, 0, 1,
-      {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
+    { CPU_Any, 0, 16, 64, 0, 1, {0xE8, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_16|OPTM_Near|OPA_JmpRel, 0, 0} },
+    { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0xE8, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel, 0, 0} },
     { CPU_Hammer|CPU_64, 0, 64, 64, 0, 1, {0xE8, 0, 0}, 0, 1,
       {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel, 0, 0} },
-    { CPU_Any, 0, 0, 64, 0, 1, {0xE8, 0x9A, 0}, 0, 1,
-      {OPT_Imm|OPS_Any|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
+    { CPU_Any, 0, 0, 64, 0, 1, {0xE8, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_Any|OPTM_Near|OPA_JmpRel, 0, 0} },
 
     { CPU_Any, 0, 16, 0, 0, 1, {0xFF, 0, 0}, 2, 1,
       {OPT_RM|OPS_16|OPA_EA, 0, 0} },
@@ -972,11 +972,11 @@ static const x86_insn_info call_insn[] = {
       {OPT_Mem|OPS_Any|OPTM_Near|OPA_EA, 0, 0} },
 
     { CPU_Not64, 0, 16, 0, 0, 1, {0x9A, 0, 0}, 3, 1,
-      {OPT_Imm|OPS_16|OPTM_Far|OPA_JmpRel, 0, 0} },
+      {OPT_Imm|OPS_16|OPTM_Far|OPA_JmpFar, 0, 0} },
     { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0x9A, 0, 0}, 3, 1,
-      {OPT_Imm|OPS_32|OPTM_Far|OPA_JmpRel, 0, 0} },
+      {OPT_Imm|OPS_32|OPTM_Far|OPA_JmpFar, 0, 0} },
     { CPU_Not64, 0, 0, 0, 0, 1, {0x9A, 0, 0}, 3, 1,
-      {OPT_Imm|OPS_Any|OPTM_Far|OPA_JmpRel, 0, 0} },
+      {OPT_Imm|OPS_Any|OPTM_Far|OPA_JmpFar, 0, 0} },
 
     { CPU_Any, 0, 16, 0, 0, 1, {0xFF, 0, 0}, 3, 1,
       {OPT_Mem|OPS_16|OPTM_Far|OPA_EA, 0, 0} },
@@ -997,14 +997,14 @@ static const x86_insn_info jmp_insn[] = {
 
     { CPU_Any, 0, 0, 64, 0, 1, {0xEB, 0, 0}, 0, 1,
       {OPT_Imm|OPS_Any|OPTM_Short|OPA_JmpRel, 0, 0} },
-    { CPU_Any, 0, 16, 64, 0, 1, {0xE9, 0xEA, 0}, 0, 1,
-      {OPT_Imm|OPS_16|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
-    { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0xE9, 0xEA, 0}, 0, 1,
-      {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
+    { CPU_Any, 0, 16, 64, 0, 1, {0xE9, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_16|OPTM_Near|OPA_JmpRel, 0, 0} },
+    { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0xE9, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel, 0, 0} },
     { CPU_Hammer|CPU_64, 0, 64, 64, 0, 1, {0xE9, 0, 0}, 0, 1,
       {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel, 0, 0} },
-    { CPU_Any, 0, 0, 64, 0, 1, {0xE9, 0xEA, 0}, 0, 1,
-      {OPT_Imm|OPS_Any|OPTM_Near|OPA_JmpRel|OPAP_JmpFar, 0, 0} },
+    { CPU_Any, 0, 0, 64, 0, 1, {0xE9, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_Any|OPTM_Near|OPA_JmpRel, 0, 0} },
 
     { CPU_Any, 0, 16, 64, 0, 1, {0xFF, 0, 0}, 4, 1,
       {OPT_RM|OPS_16|OPA_EA, 0, 0} },
@@ -1024,11 +1024,11 @@ static const x86_insn_info jmp_insn[] = {
       {OPT_Mem|OPS_Any|OPTM_Near|OPA_EA, 0, 0} },
 
     { CPU_Not64, 0, 16, 0, 0, 1, {0xEA, 0, 0}, 3, 1,
-      {OPT_Imm|OPS_16|OPTM_Far|OPA_JmpRel, 0, 0} },
+      {OPT_Imm|OPS_16|OPTM_Far|OPA_JmpFar, 0, 0} },
     { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0xEA, 0, 0}, 3, 1,
-      {OPT_Imm|OPS_32|OPTM_Far|OPA_JmpRel, 0, 0} },
+      {OPT_Imm|OPS_32|OPTM_Far|OPA_JmpFar, 0, 0} },
     { CPU_Not64, 0, 0, 0, 0, 1, {0xEA, 0, 0}, 3, 1,
-      {OPT_Imm|OPS_Any|OPTM_Far|OPA_JmpRel, 0, 0} },
+      {OPT_Imm|OPS_Any|OPTM_Far|OPA_JmpFar, 0, 0} },
 
     { CPU_Any, 0, 16, 0, 0, 1, {0xFF, 0, 0}, 5, 1,
       {OPT_Mem|OPS_16|OPTM_Far|OPA_EA, 0, 0} },
@@ -1703,11 +1703,67 @@ static const x86_insn_info xbts_insn[] = {
 
 
 static void
+x86_finalize_common(x86_common *common, x86_insn_info *info,
+		    unsigned int mode_bits)
+{
+    common->addrsize = 0;
+    common->opersize = info->opersize;
+    common->lockrep_pre = 0;
+    common->mode_bits = (unsigned char)mode_bits;
+}
+
+static void
+x86_finalize_opcode(x86_opcode *opcode, x86_insn_info *info)
+{
+    opcode->len = info->opcode_len;
+    opcode->opcode[0] = info->opcode[0];
+    opcode->opcode[1] = info->opcode[1];
+    opcode->opcode[2] = info->opcode[2];
+}
+
+static void
+x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc,
+		    const unsigned long data[4], int num_operands,
+		    yasm_insn_operands *operands, int num_prefixes,
+		    unsigned long **prefixes, x86_insn_info *info)
+{
+    x86_jmpfar *jmpfar;
+    yasm_insn_operand *op;
+
+    jmpfar = yasm_xmalloc(sizeof(x86_jmpfar));
+    x86_finalize_common(&jmpfar->common, info, data[3]);
+    x86_finalize_opcode(&jmpfar->opcode, info);
+
+    op = yasm_ops_first(operands);
+
+    switch (op->targetmod) {
+	case X86_FAR:
+	    /* "FAR imm" target needs to become "seg imm:imm". */
+	    jmpfar->offset = yasm_expr_copy(op->data.val);
+	    jmpfar->segment = yasm_expr_create_branch(YASM_EXPR_SEG,
+						      op->data.val, bc->line);
+	    break;
+	case X86_FAR_SEGOFF:
+	    /* SEG:OFF expression; split it. */
+	    jmpfar->offset = op->data.val;
+	    jmpfar->segment = yasm_expr_extract_segoff(&jmpfar->offset);
+	    if (!jmpfar->segment)
+		yasm_internal_error(N_("didn't get SEG:OFF expression in jmpfar"));
+	    break;
+	default:
+	    yasm_internal_error(N_("didn't get FAR expression in jmpfar"));
+    }
+
+    /* Transform the bytecode */
+    yasm_x86__bc_transform_jmpfar(bc, jmpfar);
+    yasm_x86__bc_apply_prefixes(bc, num_prefixes, prefixes);
+}
+
+static void
 x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 		 const unsigned long data[4], int num_operands,
 		 yasm_insn_operands *operands, int num_prefixes,
-		 unsigned long **prefixes, int num_segregs,
-		 const unsigned long *segregs, x86_insn_info *jinfo)
+		 unsigned long **prefixes, x86_insn_info *jinfo)
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     x86_jmp *jmp;
@@ -1718,29 +1774,17 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
     yasm_insn_operand *op;
     static const unsigned char size_lookup[] = {0, 8, 16, 32, 64, 80, 128, 0};
 
-    jmp = yasm_xmalloc(sizeof(x86_jmp));
-    jmp->mode_bits = mode_bits;
-    jmp->lockrep_pre = 0;
-
     /* We know the target is in operand 0, but sanity check for Imm. */
     op = yasm_ops_first(operands);
     if (op->type != YASM_INSN__OPERAND_IMM)
 	yasm_internal_error(N_("invalid operand conversion"));
 
-    /* Far target needs to become "seg imm:imm". */
-    if ((jinfo->operands[0] & OPTM_MASK) == OPTM_Far) {
-	yasm_expr *copy = yasm_expr_copy(op->data.val);
-	jmp->target = yasm_expr_create_tree(
-	    yasm_expr_create_branch(YASM_EXPR_SEG, op->data.val, bc->line),
-	    YASM_EXPR_SEGOFF, copy, bc->line);
-    } else
-	jmp->target = op->data.val;
+    jmp = yasm_xmalloc(sizeof(x86_jmp));
+    x86_finalize_common(&jmp->common, jinfo, mode_bits);
+    jmp->target = op->data.val;
 
     /* Need to save jump origin for relative jumps. */
     jmp->origin = yasm_symtab_define_label2("$", prev_bc, 0, bc->line);
-
-    /* Initially assume no far opcode is available. */
-    jmp->farop.opcode_len = 0;
 
     /* See if the user explicitly specified short/near/far. */
     switch ((int)(jinfo->operands[0] & OPTM_MASK)) {
@@ -1750,39 +1794,26 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 	case OPTM_Near:
 	    jmp->op_sel = JMP_NEAR_FORCED;
 	    break;
-	case OPTM_Far:
-	    jmp->op_sel = JMP_FAR;
-	    jmp->farop.opcode_len = info->opcode_len;
-	    jmp->farop.opcode[0] = info->opcode[0];
-	    jmp->farop.opcode[1] = info->opcode[1];
-	    jmp->farop.opcode[2] = info->opcode[2];
-	    break;
 	default:
 	    jmp->op_sel = JMP_NONE;
     }
 
-    /* Set operand size */
-    jmp->opersize = jinfo->opersize;
-
     /* Check for address size setting in second operand, if present */
     if (jinfo->num_operands > 1 &&
 	(jinfo->operands[1] & OPA_MASK) == OPA_AdSizeR)
-	jmp->addrsize = (unsigned char)size_lookup[(jinfo->operands[1] &
-						 OPS_MASK)>>OPS_SHIFT];
-    else
-	jmp->addrsize = 0;
+	jmp->common.addrsize = (unsigned char)
+	    size_lookup[(jinfo->operands[1] & OPS_MASK)>>OPS_SHIFT];
 
     /* Check for address size override */
     if (jinfo->modifiers & MOD_AdSizeR)
-	jmp->addrsize = (unsigned char)(mod_data & 0xFF);
+	jmp->common.addrsize = (unsigned char)(mod_data & 0xFF);
 
     /* Scan through other infos for this insn looking for short/near versions.
      * Needs to match opersize and number of operands, also be within CPU.
      */
-    jmp->shortop.opcode_len = 0;
-    jmp->nearop.opcode_len = 0;
-    for (; num_info>0 && (jmp->shortop.opcode_len == 0 ||
-			  jmp->nearop.opcode_len == 0);
+    jmp->shortop.len = 0;
+    jmp->nearop.len = 0;
+    for (; num_info>0 && (jmp->shortop.len == 0 || jmp->nearop.len == 0);
 	 num_info--, info++) {
 	unsigned long cpu = info->cpu | data[2];
 
@@ -1801,44 +1832,33 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 	if ((info->operands[0] & OPA_MASK) != OPA_JmpRel)
 	    continue;
 
-	if (info->opersize != jmp->opersize)
+	if (info->opersize != jmp->common.opersize)
 	    continue;
 
 	switch ((int)(info->operands[0] & OPTM_MASK)) {
 	    case OPTM_Short:
-		jmp->shortop.opcode_len = info->opcode_len;
-		jmp->shortop.opcode[0] = info->opcode[0];
-		jmp->shortop.opcode[1] = info->opcode[1];
-		jmp->shortop.opcode[2] = info->opcode[2];
+		x86_finalize_opcode(&jmp->shortop, info);
 		if (info->modifiers & MOD_Op0Add)
 		    jmp->shortop.opcode[0] += (unsigned char)(mod_data & 0xFF);
 		break;
 	    case OPTM_Near:
-		jmp->nearop.opcode_len = info->opcode_len;
-		jmp->nearop.opcode[0] = info->opcode[0];
-		jmp->nearop.opcode[1] = info->opcode[1];
-		jmp->nearop.opcode[2] = info->opcode[2];
+		x86_finalize_opcode(&jmp->nearop, info);
 		if (info->modifiers & MOD_Op1Add)
 		    jmp->nearop.opcode[1] += (unsigned char)(mod_data & 0xFF);
-		if ((info->operands[0] & OPAP_MASK) == OPAP_JmpFar) {
-		    jmp->farop.opcode_len = 1;
-		    jmp->farop.opcode[0] = info->opcode[info->opcode_len];
-		}
 		break;
 	}
     }
 
-    if ((jmp->op_sel == JMP_SHORT_FORCED) && (jmp->nearop.opcode_len == 0))
+    if ((jmp->op_sel == JMP_SHORT_FORCED) && (jmp->nearop.len == 0))
 	yasm__error(bc->line,
 		    N_("no SHORT form of that jump instruction exists"));
-    if ((jmp->op_sel == JMP_NEAR_FORCED) && (jmp->shortop.opcode_len == 0))
+    if ((jmp->op_sel == JMP_NEAR_FORCED) && (jmp->shortop.len == 0))
 	yasm__error(bc->line,
 		    N_("no NEAR form of that jump instruction exists"));
 
     /* Transform the bytecode */
     yasm_x86__bc_transform_jmp(bc, jmp);
-    yasm_x86__bc_apply_prefixes(bc, num_prefixes, prefixes, num_segregs,
-				segregs);
+    yasm_x86__bc_apply_prefixes(bc, num_prefixes, prefixes);
 }
 
 void
@@ -1864,6 +1884,14 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     unsigned char spare;
     int i;
     static const unsigned int size_lookup[] = {0, 1, 2, 4, 8, 10, 16, 0};
+
+    /* First look for SEG:OFF operands and apply X86_FAR_SEGOFF targetmod. */
+    for (i = 0, op = yasm_ops_first(operands); op && i<info->num_operands;
+	 op = yasm_operand_next(op), i++) {
+	if (op->type == YASM_INSN__OPERAND_IMM && op->targetmod == 0 &&
+	    yasm_expr_is_op(op->data.val, YASM_EXPR_SEGOFF))
+	    op->targetmod = X86_FAR_SEGOFF;
+    }
 
     /* Just do a simple linear search through the info array for a match.
      * First match wins.
@@ -2106,7 +2134,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 			mismatch = 1;
 		    break;
 		case OPTM_Far:
-		    if (op->targetmod != X86_FAR)
+		    if (op->targetmod != X86_FAR &&
+			op->targetmod != X86_FAR_SEGOFF)
 			mismatch = 1;
 		    break;
 		case OPTM_To:
@@ -2160,28 +2189,30 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	    yasm_internal_error(N_("unrecognized x86 extended modifier"));
     }
 
-    /* Shortcut to JmpRel */
-    if (operands && (info->operands[0] & OPA_MASK) == OPA_JmpRel) {
-	x86_finalize_jmp(arch, bc, prev_bc, data, num_operands, operands,
-			 num_prefixes, prefixes, num_segregs, segregs, info);
-	return;
+    if (operands) {
+	switch (info->operands[0] & OPA_MASK) {
+	    case OPA_JmpRel:
+		/* Shortcut to JmpRel */
+		x86_finalize_jmp(arch, bc, prev_bc, data, num_operands,
+				 operands, num_prefixes, prefixes, info);
+		return;
+	    case OPA_JmpFar:
+		/* Shortcut to JmpFar */
+		x86_finalize_jmpfar(arch, bc, data, num_operands, operands,
+				    num_prefixes, prefixes, info);
+		return;
+	}
     }
 
     /* Copy what we can from info */
     insn = yasm_xmalloc(sizeof(x86_insn));
-    insn->mode_bits = mode_bits;
+    x86_finalize_common(&insn->common, info, mode_bits);
+    x86_finalize_opcode(&insn->opcode, info);
     insn->ea = NULL;
     origin = NULL;
     imm = NULL;
-    insn->addrsize = 0;
-    insn->opersize = info->opersize;
-    insn->lockrep_pre = 0;
     insn->def_opersize_64 = info->def_opersize_64;
     insn->special_prefix = info->special_prefix;
-    insn->opcode_len = info->opcode_len;
-    insn->opcode[0] = info->opcode[0];
-    insn->opcode[1] = info->opcode[1];
-    insn->opcode[2] = info->opcode[2];
     spare = info->spare;
     im_len = 0;
     im_sign = 0;
@@ -2194,19 +2225,19 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     if (info->modifiers & MOD_Gap0)
 	mod_data >>= 8;
     if (info->modifiers & MOD_Op2Add) {
-	insn->opcode[2] += (unsigned char)(mod_data & 0xFF);
+	insn->opcode.opcode[2] += (unsigned char)(mod_data & 0xFF);
 	mod_data >>= 8;
     }
     if (info->modifiers & MOD_Gap1)
 	mod_data >>= 8;
     if (info->modifiers & MOD_Op1Add) {
-	insn->opcode[1] += (unsigned char)(mod_data & 0xFF);
+	insn->opcode.opcode[1] += (unsigned char)(mod_data & 0xFF);
 	mod_data >>= 8;
     }
     if (info->modifiers & MOD_Gap2)
 	mod_data >>= 8;
     if (info->modifiers & MOD_Op0Add) {
-	insn->opcode[0] += (unsigned char)(mod_data & 0xFF);
+	insn->opcode.opcode[0] += (unsigned char)(mod_data & 0xFF);
 	mod_data >>= 8;
     }
     if (info->modifiers & MOD_PreAdd) {
@@ -2218,7 +2249,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	mod_data >>= 8;
     }
     if (info->modifiers & MOD_OpSizeR) {
-	insn->opersize = (unsigned char)(mod_data & 0xFF);
+	insn->common.opersize = (unsigned char)(mod_data & 0xFF);
 	mod_data >>= 8;
     }
     if (info->modifiers & MOD_Imm8) {
@@ -2319,7 +2350,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 				N_("invalid combination of opcode and operands"));
 			    return;
 			}
-			insn->opcode[0] += opadd;
+			insn->opcode.opcode[0] += opadd;
 		    } else
 			yasm_internal_error(N_("invalid operand conversion"));
 		    break;
@@ -2332,7 +2363,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 				N_("invalid combination of opcode and operands"));
 			    return;
 			}
-			insn->opcode[1] += opadd;
+			insn->opcode.opcode[1] += opadd;
 		    } else
 			yasm_internal_error(N_("invalid operand conversion"));
 		    break;
@@ -2377,8 +2408,11 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	}
     }
 
-    if (insn->ea)
+    if (insn->ea) {
 	yasm_x86__ea_init(insn->ea, spare, origin);
+	for (i=0; i<num_segregs; i++)
+	    yasm_ea_set_segreg(insn->ea, segregs[i], bc->line);
+    }
     if (imm) {
 	insn->imm = yasm_imm_create_expr(imm);
 	insn->imm->len = im_len;
@@ -2388,8 +2422,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 
     /* Transform the bytecode */
     yasm_x86__bc_transform_insn(bc, insn);
-    yasm_x86__bc_apply_prefixes(bc, num_prefixes, prefixes, num_segregs,
-				segregs);
+    yasm_x86__bc_apply_prefixes(bc, num_prefixes, prefixes);
 }
 
 
