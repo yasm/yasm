@@ -55,6 +55,7 @@ RCSID("$IdPath$");
 void init_table(void);
 extern int nasm_parser_lex(void);
 void nasm_parser_error(const char *);
+static void nasm_parser_directive(const char *name, const char *val);
 
 extern objfmt *nasm_parser_objfmt;
 extern sectionhead nasm_parser_sections;
@@ -144,6 +145,12 @@ input: /* empty */
 
 line: '\n'		{ $$ = (bytecode *)NULL; }
     | exp '\n'
+    | label		{ $$ = (bytecode *)NULL; }
+    | label exp		{ $$ = $2; }
+    | label_id EQU expr	{
+	symrec_define_equ($1, $3);
+	$$ = (bytecode *)NULL;
+    }
     | directive '\n'	{ $$ = (bytecode *)NULL; }
     | error '\n'	{
 	Error(_("label or instruction expected at start of line"));
@@ -155,8 +162,6 @@ line: '\n'		{ $$ = (bytecode *)NULL; }
 exp: instr
     | DECLARE_DATA datavals { $$ = bytecode_new_data(&$2, $1); }
     | RESERVE_SPACE expr    { $$ = bytecode_new_reserve($2, $1); }
-    | label exp		    { $$ = $2; }
-    | label		    { $$ = (bytecode *)NULL; }
 ;
 
 datavals: dataval	    {
@@ -197,15 +202,7 @@ label_id: ID	    {
 
 /* directives */
 directive: '[' DIRECTIVE_NAME DIRECTIVE_VAL ']'	{
-	if (strcasecmp($2, "section") == 0) {
-	    nasm_parser_cur_section = sections_switch(&nasm_parser_sections,
-						      nasm_parser_objfmt, $3);
-	    nasm_parser_prev_bc = (bytecode *)NULL;
-	    symrec_define_label($3, nasm_parser_cur_section, (bytecode *)NULL,
-				1);
-	} else {
-	    printf("Directive: Name='%s' Value='%s'\n", $2, $3);
-	}
+	nasm_parser_directive($2, $3);
     }
     | '[' DIRECTIVE_NAME DIRECTIVE_VAL error	{
 	Error(_("missing `%c'"), ']');
@@ -458,6 +455,28 @@ instr: instrbase
 /* @INSTRUCTIONS@ */
 
 %%
+
+static void
+nasm_parser_directive(const char *name, const char *val)
+{
+    long lval;
+    char *end;
+
+    if (strcasecmp(name, "section") == 0) {
+	nasm_parser_cur_section = sections_switch(&nasm_parser_sections,
+						  nasm_parser_objfmt, val);
+	nasm_parser_prev_bc = (bytecode *)NULL;
+	symrec_define_label(val, nasm_parser_cur_section, (bytecode *)NULL, 1);
+    } else if (strcasecmp(name, "bits") == 0) {
+	lval = strtol(val, &end, 10);
+	if (*val == '\0' || *end != '\0' || (lval != 16 && lval != 32))
+	    Error(_("`%s' is not a valid argument to [BITS]"), val);
+	else
+	    mode_bits = (unsigned char)lval;
+    } else {
+	printf("Directive: Name=`%s' Value=`%s'\n", name, val);
+    }
+}
 
 void
 nasm_parser_error(const char *s)
