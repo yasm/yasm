@@ -62,6 +62,7 @@ void yasm_vps_initialize(/*@out@*/ yasm_valparamhead *headp);
 #endif
 
 /** Destroy (free allocated memory for) linked list of valparams.
+ * \warning Deletes val/params.
  * \param headp	linked list
  */
 void yasm_vps_delete(yasm_valparamhead *headp);
