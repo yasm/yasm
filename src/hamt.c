@@ -76,23 +76,22 @@ ReHashKey(const char *key, int Level)
     return vHash;
 }
 
-/*@-compdef -nullret@*/
 HAMT *
 HAMT_new(void)
 {
-    HAMT *hamt;
+    /*@out@*/ HAMT *hamt = xmalloc(sizeof(HAMT));
     int i;
 
-    hamt = xmalloc(sizeof(HAMT));
     SLIST_INIT(&hamt->entries);
     hamt->root = xmalloc(32*sizeof(HAMTNode));
 
-    for (i=0; i<32; i++)
+    for (i=0; i<32; i++) {
+	hamt->root[i].BitMapKey = 0;
 	hamt->root[i].BaseValue = NULL;
+    }
 
     return hamt;
 }
-/*@=compdef =nullret@*/
 
 static void
 HAMT_delete_trie(HAMTNode *node)
@@ -111,7 +110,7 @@ HAMT_delete_trie(HAMTNode *node)
 }
 
 void
-HAMT_delete(HAMT *hamt, void (*deletefunc) (/*@keep@*/ void *data))
+HAMT_delete(HAMT *hamt, void (*deletefunc) (/*@only@*/ void *data))
 {
     int i;
 
