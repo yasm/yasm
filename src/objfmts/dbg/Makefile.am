@@ -7,7 +7,7 @@ libobjfmt_a_SOURCES = \
 
 INCLUDES = \
 	-I$(top_srcdir)/src	\
-	-I../../../intl
+	-I$(top_builddir)/intl
 
 if DEV
 CFLAGS = -ansi -pedantic -Wall -g

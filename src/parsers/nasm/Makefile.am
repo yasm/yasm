@@ -29,7 +29,7 @@ AM_LFLAGS = -Pnasm_parser_ -olex.yy.c
 
 INCLUDES = \
 	-I$(top_srcdir)/src	\
-	-I../../../intl
+	-I$(top_builddir)/intl
 
 if DEV
 CFLAGS = -ansi -pedantic -Wall -g
