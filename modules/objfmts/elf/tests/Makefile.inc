@@ -21,3 +21,7 @@ EXTRA_DIST += modules/objfmts/elf/tests/elfglobal.errwarn
 EXTRA_DIST += modules/objfmts/elf/tests/elfglobal.hex
 EXTRA_DIST += modules/objfmts/elf/tests/elfreloc-err.asm
 EXTRA_DIST += modules/objfmts/elf/tests/elfreloc-err.errwarn
+
+EXTRA_DIST += modules/objfmts/elf/tests/amd64/Makefile.inc
+
+include modules/objfmts/elf/tests/amd64/Makefile.inc

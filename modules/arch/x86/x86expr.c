@@ -137,7 +137,7 @@ x86_expr_checkea_get_reg16(yasm_expr__item *ei, int *regnum, void *d)
  * TODO: Clean up this code, make it easier to understand.
  */
 static int
-x86_expr_checkea_distcheck_reg(yasm_expr **ep)
+x86_expr_checkea_distcheck_reg(yasm_expr **ep, unsigned int bits)
 {
     yasm_expr *e = *ep;
     int i;
@@ -148,12 +148,23 @@ x86_expr_checkea_distcheck_reg(yasm_expr **ep)
 	switch (e->terms[i].type) {
 	    case YASM_EXPR_REG:
 		/* Check op to make sure it's valid to use w/register. */
-		if (e->op != YASM_EXPR_ADD && e->op != YASM_EXPR_MUL &&
-		    e->op != YASM_EXPR_IDENT)
-		    return 0;
-		/* Check for reg*reg */
-		if (e->op == YASM_EXPR_MUL && havereg != -1)
-		    return 0;
+		switch (e->op) {
+		    case YASM_EXPR_MUL:
+			/* Check for reg*reg */
+			if (havereg != -1)
+			    return 0;
+			break;
+		    case YASM_EXPR_ADD:
+		    case YASM_EXPR_IDENT:
+			break;
+		    case YASM_EXPR_WRT:
+			/* Allow expr WRT rip in 64-bit mode. */
+			if (bits != 64 || i != 1)
+			    return 0;
+			break;
+		    default:
+			return 0;
+		}
 		havereg = i;
 		break;
 	    case YASM_EXPR_FLOAT:
@@ -174,7 +185,8 @@ x86_expr_checkea_distcheck_reg(yasm_expr **ep)
 		    havereg_expr = i;
 		    /* Recurse to check lower levels */
 		    ret2 =
-			x86_expr_checkea_distcheck_reg(&e->terms[i].data.expn);
+			x86_expr_checkea_distcheck_reg(&e->terms[i].data.expn,
+						       bits);
 		    if (ret2 == 0)
 			return 0;
 		    if (ret2 == 2)
@@ -241,7 +253,8 @@ x86_expr_checkea_distcheck_reg(yasm_expr **ep)
  */
 static int
 x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
-    void *data, int *(*get_reg)(yasm_expr__item *ei, int *regnum, void *d),
+    unsigned char *pcrel, unsigned int bits, void *data,
+    int *(*get_reg)(yasm_expr__item *ei, int *regnum, void *d),
     yasm_calc_bc_dist_func calc_bc_dist)
 {
     int i;
@@ -255,7 +268,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
     /*@=unqualifiedtrans@*/
     assert(*ep != NULL);
     e = *ep;
-    switch (x86_expr_checkea_distcheck_reg(ep)) {
+    switch (x86_expr_checkea_distcheck_reg(ep, bits)) {
 	case 0:
 	    return 1;
 	case 2:
@@ -269,6 +282,26 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
     }
 
     switch (e->op) {
+	case YASM_EXPR_WRT:
+	    /* Handle xx WRT rip. */
+	    if (e->terms[1].type == YASM_EXPR_REG) {
+		if (bits != 64)		    /* only valid in 64-bit mode */
+		    return 1;
+		reg = get_reg(&e->terms[1], &regnum, data);
+		if (!reg || regnum != 16)   /* only accept rip */
+		    return 1;
+		(*reg)++;
+
+		/* Simplify WRT to ident.  Set pcrel to 1 to indicate to x86
+		 * bytecode code to do PC-relative displacement transform.
+		 */
+		*pcrel = 1;
+		e->op = YASM_EXPR_IDENT;
+		e->numterms = 1;
+		/* Delete the intnum created by get_reg(). */
+		yasm_intnum_delete(e->terms[1].data.intn);
+	    }
+	    break;
 	case YASM_EXPR_ADD:
 	    /* Prescan for non-int multipliers against a reg.
 	     * This is because if any of the terms is a more complex
@@ -342,7 +375,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 	    break;
 	default:
 	    /* Should never get here! */
-	    break;
+	    yasm_internal_error(N_("unexpected expr op"));
     }
 
     /* Simplify expr, which is now really just the displacement. This
@@ -525,7 +558,8 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 		       unsigned char *displen, unsigned char *modrm,
 		       unsigned char *v_modrm, unsigned char *n_modrm,
 		       unsigned char *sib, unsigned char *v_sib,
-		       unsigned char *n_sib, unsigned char *rex,
+		       unsigned char *n_sib, unsigned char *pcrel,
+		       unsigned char *rex,
 		       yasm_calc_bc_dist_func calc_bc_dist)
 {
     yasm_expr *e = *ep;
@@ -616,7 +650,8 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 	reg3264_data.regs = reg3264mult;
 	reg3264_data.bits = bits;
 	reg3264_data.addrsize = *addrsize;
-	switch (x86_expr_checkea_getregusage(ep, &indexreg, &reg3264_data,
+	switch (x86_expr_checkea_getregusage(ep, &indexreg, pcrel, bits,
+					     &reg3264_data,
 					     x86_expr_checkea_get_reg3264,
 					     calc_bc_dist)) {
 	    case 1:
@@ -857,7 +892,8 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 	*v_sib = 0;
 	*n_sib = 0;
 
-	switch (x86_expr_checkea_getregusage(ep, (int *)NULL, &reg16mult,
+	switch (x86_expr_checkea_getregusage(ep, (int *)NULL, pcrel, bits,
+					     &reg16mult,
 					     x86_expr_checkea_get_reg16,
 					     calc_bc_dist)) {
 	    case 1:

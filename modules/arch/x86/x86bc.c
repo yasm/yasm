@@ -37,6 +37,9 @@
 typedef struct x86_effaddr {
     yasm_effaddr ea;		/* base structure */
 
+    /* PC-relative portions are for AMD64 only (RIP addressing) */
+    /*@null@*/ /*@dependent@*/ yasm_symrec *origin;    /* pcrel origin */
+
     unsigned char segment;	/* segment override, 0 if none */
 
     /* How the spare (register) bits in Mod/RM are handled:
@@ -51,6 +54,8 @@ typedef struct x86_effaddr {
     unsigned char valid_sib;	/* 1 if SIB byte currently valid, 0 if not */
     unsigned char need_sib;	/* 1 if SIB byte needed, 0 if not,
 				   0xff if unknown */
+
+    unsigned char pcrel;	/* 1 if PC-relative transformation needed */
 } x86_effaddr;
 
 typedef struct x86_insn {
@@ -153,6 +158,7 @@ yasm_x86__bc_new_insn(x86_new_insn_data *d)
 
     insn->ea = (x86_effaddr *)d->ea;
     if (d->ea) {
+	insn->ea->origin = d->ea_origin;
 	insn->ea->modrm &= 0xC7;	/* zero spare/reg bits */
 	insn->ea->modrm |= (d->spare << 3) & 0x38;  /* plug in provided bits */
     }
@@ -252,6 +258,7 @@ yasm_x86__ea_set_disponly(yasm_effaddr *ea)
     x86_ea->need_modrm = 0;
     x86_ea->valid_sib = 0;
     x86_ea->need_sib = 0;
+    x86_ea->pcrel = 0;
 }
 
 yasm_effaddr *
@@ -275,6 +282,7 @@ yasm_x86__ea_new_reg(unsigned long reg, unsigned char *rex, unsigned int bits)
     x86_ea->sib = 0;
     x86_ea->valid_sib = 0;
     x86_ea->need_sib = 0;
+    x86_ea->pcrel = 0;
 
     return (yasm_effaddr *)x86_ea;
 }
@@ -299,6 +307,7 @@ yasm_x86__ea_new_expr(yasm_expr *e)
      * the BITS/address override setting.
      */
     x86_ea->need_sib = 0xff;
+    x86_ea->pcrel = 0;
 
     return (yasm_effaddr *)x86_ea;
 }
@@ -321,6 +330,7 @@ yasm_x86__ea_new_imm(yasm_expr *imm, unsigned int im_len)
     x86_ea->sib = 0;
     x86_ea->valid_sib = 0;
     x86_ea->need_sib = 0;
+    x86_ea->pcrel = 0;
 
     return (yasm_effaddr *)x86_ea;
 }
@@ -445,8 +455,8 @@ void
 yasm_x86__ea_data_print(FILE *f, int indent_level, const yasm_effaddr *ea)
 {
     const x86_effaddr *x86_ea = (const x86_effaddr *)ea;
-    fprintf(f, "%*sSegmentOv=%02x\n", indent_level, "",
-	    (unsigned int)x86_ea->segment);
+    fprintf(f, "%*sSegmentOv=%02x PCRel=%u\n", indent_level, "",
+	    (unsigned int)x86_ea->segment, (unsigned int)x86_ea->pcrel);
     fprintf(f, "%*sModRM=%03o ValidRM=%u NeedRM=%u\n", indent_level, "",
 	    (unsigned int)x86_ea->modrm, (unsigned int)x86_ea->valid_modrm,
 	    (unsigned int)x86_ea->need_modrm);
@@ -603,7 +613,8 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 	    switch (yasm_x86__expr_checkea(&temp, &insn->addrsize,
 		    insn->mode_bits, ea->nosplit, &displen, &eat.modrm,
 		    &eat.valid_modrm, &eat.need_modrm, &eat.sib,
-		    &eat.valid_sib, &eat.need_sib, &insn->rex, calc_bc_dist)) {
+		    &eat.valid_sib, &eat.need_sib, &eat.pcrel, &insn->rex,
+		    calc_bc_dist)) {
 		case 1:
 		    yasm_expr_delete(temp);
 		    /* failed, don't bother checking rest of insn */
@@ -951,15 +962,27 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp,
 				       ea->nosplit, &displen, &eat.modrm,
 				       &eat.valid_modrm, &eat.need_modrm,
 				       &eat.sib, &eat.valid_sib,
-				       &eat.need_sib, &insn->rex,
+				       &eat.need_sib, &eat.pcrel, &insn->rex,
 				       yasm_common_calc_bc_dist))
 		yasm_internal_error(N_("checkea failed"));
 
 	    if (ea->disp) {
-		if (output_expr(&ea->disp, *bufp, ea->len, (size_t)(ea->len*8),
-				0, (unsigned long)(*bufp-bufp_orig), sect, bc,
-				0, 1, d))
-		    return 1;
+		if (eat.pcrel) {
+		    ea->disp =
+			yasm_expr_new(YASM_EXPR_SUB, yasm_expr_expr(ea->disp),
+			      yasm_expr_sym(eat.origin), bc->line);
+		    if (output_expr(&ea->disp, *bufp, ea->len,
+				    (size_t)(ea->len*8), 0,
+				    (unsigned long)(*bufp-bufp_orig), sect, bc,
+				    1, 1, d))
+			return 1;
+		} else {
+		    if (output_expr(&ea->disp, *bufp, ea->len,
+				    (size_t)(ea->len*8), 0,
+				    (unsigned long)(*bufp-bufp_orig), sect, bc,
+				    0, 1, d))
+			return 1;
+		}
 		*bufp += ea->len;
 	    } else {
 		/* 0 displacement, but we didn't know it before, so we have to

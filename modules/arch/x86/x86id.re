@@ -1912,6 +1912,7 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
     /* Copy what we can from info */
     d.lindex = lindex;
     d.ea = NULL;
+    d.ea_origin = NULL;
     d.imm = NULL;
     d.opersize = info->opersize;
     d.op_len = info->opcode_len;
@@ -1992,6 +1993,10 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 			    if ((info->operands[i] & OPT_MASK) == OPT_MemOffs)
 				/* Special-case for MOV MemOffs instruction */
 				yasm_x86__ea_set_disponly(d.ea);
+			    else if (yasm_x86_LTX_mode_bits == 64)
+				/* Save origin for possible RIP-relative */
+				d.ea_origin = yasm_symrec_define_label("$",
+				    cur_section, prev_bc, 0, lindex);
 			    break;
 			case YASM_INSN__OPERAND_IMM:
 			    d.ea = yasm_x86__ea_new_imm(op->data.val,

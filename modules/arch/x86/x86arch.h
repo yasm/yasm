@@ -153,6 +153,7 @@ void yasm_x86__bc_insn_set_lockrep_prefix(yasm_bytecode *bc,
 typedef struct x86_new_insn_data {
     unsigned long lindex;
     /*@keep@*/ /*@null@*/ yasm_effaddr *ea;
+    /*@null@*/ /*@dependent@*/ yasm_symrec *ea_origin;
     /*@keep@*/ /*@null@*/ yasm_expr *imm;
     unsigned char opersize;
     unsigned char op_len;
@@ -205,8 +206,8 @@ int yasm_x86__expr_checkea
     (yasm_expr **ep, unsigned char *addrsize, unsigned int bits,
      unsigned int nosplit, unsigned char *displen, unsigned char *modrm,
      unsigned char *v_modrm, unsigned char *n_modrm, unsigned char *sib,
-     unsigned char *v_sib, unsigned char *n_sib, unsigned char *rex,
-     yasm_calc_bc_dist_func calc_bc_dist);
+     unsigned char *v_sib, unsigned char *n_sib, unsigned char *pcrel,
+     unsigned char *rex, yasm_calc_bc_dist_func calc_bc_dist);
 
 void yasm_x86__parse_cpu(const char *cpuid, unsigned long lindex);
 
