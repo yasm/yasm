@@ -212,48 +212,50 @@ bc_get_offset(/*@unused@*/ section *sect, /*@unused@*/ bytecode *bc,
 }
 
 void
-bc_print(const bytecode *bc)
+bc_print(FILE *f, const bytecode *bc)
 {
     const bytecode_data *data;
     const bytecode_reserve *reserve;
 
     switch (bc->type) {
 	case BC_EMPTY:
-	    printf("_Empty_\n");
+	    fprintf(f, "%*s_Empty_\n", indent_level, "");
 	    break;
 	case BC_DATA:
 	    data = bc_get_const_data(bc);
-	    printf("_Data_\n");
-	    printf("Final Element Size=%u\n",
-		   (unsigned int)data->size);
-	    printf("Elements:\n");
-	    dvs_print(&data->datahead);
+	    fprintf(f, "%*s_Data_\n", indent_level, "");
+	    indent_level++;
+	    fprintf(f, "%*sFinal Element Size=%u\n", indent_level, "",
+		    (unsigned int)data->size);
+	    fprintf(f, "%*sElements:\n", indent_level, "");
+	    indent_level++;
+	    dvs_print(f, &data->datahead);
+	    indent_level-=2;
 	    break;
 	case BC_RESERVE:
 	    reserve = bc_get_const_data(bc);
-	    printf("_Reserve_\n");
-	    printf("Num Items=");
-	    expr_print(reserve->numitems);
-	    printf("\nItem Size=%u\n",
-		   (unsigned int)reserve->itemsize);
+	    fprintf(f, "%*s_Reserve_\n", indent_level, "");
+	    fprintf(f, "%*sNum Items=", indent_level, "");
+	    expr_print(f, reserve->numitems);
+	    fprintf(f, "\n%*sItem Size=%u\n", indent_level, "",
+		    (unsigned int)reserve->itemsize);
 	    break;
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
-		cur_arch->bc.bc_print(bc);
+		cur_arch->bc.bc_print(f, bc);
 	    else
-		printf("_Unknown_\n");
+		fprintf(f, "%*s_Unknown_\n", indent_level, "");
 	    break;
     }
-    printf("Multiple=");
+    fprintf(f, "%*sMultiple=", indent_level, "");
     if (!bc->multiple)
-	printf("nil (1)");
+	fprintf(f, "nil (1)");
     else
-	expr_print(bc->multiple);
-    printf("\n");
-    printf("Length=%lu\n", bc->len);
-    printf("Filename=\"%s\" Line Number=%u\n",
-	   bc->filename ? bc->filename : "<UNKNOWN>", bc->lineno);
-    printf("Offset=%lx\n", bc->offset);
+	expr_print(f, bc->multiple);
+    fprintf(f, "\n%*sLength=%lu\n", indent_level, "", bc->len);
+    fprintf(f, "%*sFilename=\"%s\" Line Number=%u\n", indent_level, "",
+	    bc->filename ? bc->filename : "<UNKNOWN>", bc->lineno);
+    fprintf(f, "%*sOffset=%lx\n", indent_level, "", bc->offset);
 }
 
 void
@@ -301,13 +303,15 @@ bcs_append(bytecodehead *headp, bytecode *bc)
 }
 
 void
-bcs_print(const bytecodehead *headp)
+bcs_print(FILE *f, const bytecodehead *headp)
 {
     bytecode *cur;
 
     STAILQ_FOREACH(cur, headp, link) {
-	printf("---Next Bytecode---\n");
-	bc_print(cur);
+	fprintf(f, "%*sNext Bytecode:\n", indent_level, "");
+	indent_level++;
+	bc_print(f, cur);
+	indent_level--;
     }
 }
 
@@ -377,22 +381,23 @@ dvs_append(datavalhead *headp, dataval *dv)
 }
 
 void
-dvs_print(const datavalhead *head)
+dvs_print(FILE *f, const datavalhead *head)
 {
     dataval *cur;
 
     STAILQ_FOREACH(cur, head, link) {
 	switch (cur->type) {
 	    case DV_EMPTY:
-		printf(" Empty\n");
+		fprintf(f, "%*sEmpty\n", indent_level, "");
 		break;
 	    case DV_EXPR:
-		printf(" Expr=");
-		expr_print(cur->data.expn);
-		printf("\n");
+		fprintf(f, "%*sExpr=", indent_level, "");
+		expr_print(f, cur->data.expn);
+		fprintf(f, "\n");
 		break;
 	    case DV_STRING:
-		printf(" String=%s\n", cur->data.str_val);
+		fprintf(f, "%*sString=%s\n", indent_level, "",
+			cur->data.str_val);
 		break;
 	}
     }

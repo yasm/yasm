@@ -22,6 +22,7 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
+#include "globals.h"
 #include "expr.h"
 
 
@@ -41,4 +42,29 @@ vps_delete(valparamhead *headp)
 	cur = next;
     }
     STAILQ_INIT(headp);
+}
+
+void
+vps_print(FILE *f, valparamhead *headp)
+{
+    valparam *vp;
+
+    if(!headp) {
+	fprintf(f, "(none)");
+	return;
+    }
+
+    vps_foreach(vp, headp) {
+	if (vp->val)
+	    fprintf(f, "(\"%s\",", vp->val);
+	else
+	    fprintf(f, "((nil),");
+	if (vp->param)
+	    expr_print(f, vp->param);
+	else
+	    fprintf(f, "(nil)");
+	fprintf(f, ")");
+	if (vps_next(vp))
+	    fprintf(f, ",");
+    }
 }

@@ -22,6 +22,10 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
+#ifdef STDC_HEADERS
+# include <assert.h>
+#endif
+
 #ifdef gettext_noop
 #define N_(String)	gettext_noop(String)
 #else
@@ -49,11 +53,13 @@
 #endif
 
 static int files_open = 0;
-/*@null@*/ static FILE *in;
+/*@null@*/ /*@only@*/ static char *obj_filename = NULL;
+/*@null@*/ static FILE *in = NULL, *obj = NULL;
 
 /* Forward declarations: cmd line parser handlers */
 static int opt_option_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_format_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_objfile_handler(char *cmd, /*@null@*/ char *param, int extra);
 /* Fake handlers: remove them */
 static int boo_boo_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int b_handler(char *cmd, /*@null@*/ char *param, int extra);
@@ -66,6 +72,7 @@ static opt_option options[] =
 {
     { 'h', "help",    0, opt_option_handler, OPT_SHOW_HELP, "show help text", NULL },
     { 'f', "oformat", 1, opt_format_handler, 0, "select output format", "<format>" },
+    { 'o', "objfile", 1, opt_objfile_handler, 0, "name of object-file output", "<filename>" },
     /* Fake handlers: remove them */
     { 'b', NULL,      0, b_handler, 0, "says boom!", NULL },
     {  0,  "boo-boo", 0, boo_boo_handler, 0, "says boo-boo!", NULL },
@@ -88,6 +95,7 @@ static const char *help_tail =
     "\n";
 
 /* main function */
+/*@-globstate@*/
 int
 main(int argc, char *argv[])
 {
@@ -108,8 +116,7 @@ main(int argc, char *argv[])
     }
 
     /* if no files were specified, fallback to reading stdin */
-    if (!in)
-    {
+    if (!in) {
 	in = stdin;
 	switch_filename("<STDIN>");
     }
@@ -124,6 +131,28 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 
+    /* open the object file if not specified */
+    if (!obj) {
+	/* build the object filename */
+	/* TODO: replace the existing extension; this just appends. */
+	if (obj_filename)
+	    xfree(obj_filename);
+	assert(in_filename != NULL);
+	obj_filename = xmalloc(strlen(in_filename)+
+			       strlen(cur_objfmt->extension)+2);
+	sprintf(obj_filename, "%s.%s", in_filename, cur_objfmt->extension);
+
+	/* open the built filename */
+	obj = fopen(obj_filename, "wb");
+	if (!obj) {
+	    ErrorNow(_("could not open file `%s'"), obj_filename);
+	    return EXIT_FAILURE;
+	}
+    }
+
+    /* Initialize the object format */
+    cur_objfmt->initialize(obj);
+
     /* Set NASM as the parser */
     cur_parser = find_parser("nasm");
     if (!cur_parser) {
@@ -136,6 +165,8 @@ main(int argc, char *argv[])
 
     sections = cur_parser->do_parse(cur_parser, in);
 
+    fclose(in);
+
     if (OutputAllErrorWarning() > 0) {
 	sections_delete(sections);
 	symrec_delete_all();
@@ -144,22 +175,40 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 
-    sections_print(sections);
-    printf("\n***Symbol Table***\n");
-    symrec_foreach((int (*) (symrec *))symrec_print);
+    /* XXX  Only for temporary debugging! */
+    fprintf(obj, "\nSections after parsing:\n");
+    indent_level++;
+    sections_print(obj, sections);
+    indent_level--;
+
+    fprintf(obj, "\nSymbol Table:\n");
+    indent_level++;
+    symrec_print_all(obj);
+    indent_level--;
 
     symrec_parser_finalize();
     sections_parser_finalize(sections);
 
-    printf("Post-parser-finalization:\n");
-    sections_print(sections);
+    fprintf(obj, "\nSections after post-parser-finalization:\n");
+    indent_level++;
+    sections_print(obj, sections);
+    indent_level--;
+
+    /* Finalize the object output */
+    cur_objfmt->finalize();
+
+    fclose(obj);
+    if (obj_filename)
+	xfree(obj_filename);
 
     sections_delete(sections);
     symrec_delete_all();
     filename_delete_all();
+
     BitVector_Shutdown();
     return EXIT_SUCCESS;
 }
+/*@=globstate@*/
 
 /*
  *  Command line options handlers
@@ -194,7 +243,38 @@ opt_option_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param, int extra)
 static int
 opt_format_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
-    printf("selected format: %s\n", param?param:"(NULL)");
+    assert(param != NULL);
+    printf("selected format: %s\n", param);
+    return 0;
+}
+
+static int
+opt_objfile_handler(/*@unused@*/ char *cmd, char *param,
+		    /*@unused@*/ int extra)
+{
+    assert(param != NULL);
+    if (strcasecmp(param, "stdout") == 0)
+	obj = stdout;
+    else if (strcasecmp(param, "stderr") == 0)
+	obj = stderr;
+    else {
+	if (obj) {
+	    WarningNow("can open only one output file, last specified used");
+	    if (obj != stdout && obj != stderr && fclose(obj))
+		ErrorNow("could not close old output file");
+	}
+    }
+
+    obj = fopen(param, "wb");
+    if (!obj) {
+	ErrorNow(_("could not open file `%s'"), param);
+	return 1;
+    }
+
+    if (obj_filename)
+	xfree(obj_filename);
+    obj_filename = xstrdup(param);
+
     return 0;
 }
 

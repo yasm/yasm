@@ -830,11 +830,16 @@ expr_get_symrec(expr **ep, int simplify)
 /*@=unqualifiedtrans =nullderef -nullstate -onlytrans@*/
 
 void
-expr_print(expr *e)
+expr_print(FILE *f, expr *e)
 {
     static const char *regs[] = {"ax","cx","dx","bx","sp","bp","si","di"};
     char opstr[3];
     int i;
+
+    if (!e) {
+	fprintf(f, "(nil)");
+	return;
+    }
 
     switch (e->op) {
 	case EXPR_ADD:
@@ -859,10 +864,12 @@ expr_print(expr *e)
 	    strcpy(opstr, "%%");
 	    break;
 	case EXPR_NEG:
-	    strcpy(opstr, "-");
+	    fprintf(f, "-");
+	    opstr[0] = 0;
 	    break;
 	case EXPR_NOT:
-	    strcpy(opstr, "~");
+	    fprintf(f, "~");
+	    opstr[0] = 0;
 	    break;
 	case EXPR_OR:
 	    strcpy(opstr, "|");
@@ -913,28 +920,28 @@ expr_print(expr *e)
     for (i=0; i<e->numterms; i++) {
 	switch (e->terms[i].type) {
 	    case EXPR_SYM:
-		printf("%s", symrec_get_name(e->terms[i].data.sym));
+		fprintf(f, "%s", symrec_get_name(e->terms[i].data.sym));
 		break;
 	    case EXPR_EXPR:
-		printf("(");
-		expr_print(e->terms[i].data.expn);
-		printf(")");
+		fprintf(f, "(");
+		expr_print(f, e->terms[i].data.expn);
+		fprintf(f, ")");
 		break;
 	    case EXPR_INT:
-		intnum_print(e->terms[i].data.intn);
+		intnum_print(f, e->terms[i].data.intn);
 		break;
 	    case EXPR_FLOAT:
-		floatnum_print(e->terms[i].data.flt);
+		floatnum_print(f, e->terms[i].data.flt);
 		break;
 	    case EXPR_REG:
 		if (e->terms[i].data.reg.size == 32)
-		    printf("e");
-		printf("%s", regs[e->terms[i].data.reg.num&7]);
+		    fprintf(f, "e");
+		fprintf(f, "%s", regs[e->terms[i].data.reg.num&7]);
 		break;
 	    case EXPR_NONE:
 		break;
 	}
 	if (i < e->numterms-1)
-	    printf("%s", opstr);
+	    fprintf(f, "%s", opstr);
     }
 }

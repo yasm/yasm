@@ -30,6 +30,9 @@ struct objfmt {
     /* keyword used to select format on the command line */
     const char *keyword;
 
+    /* default output file extension (without the '.') */
+    const char *extension;
+
     /* default (starting) section name */
     const char *default_section_name;
 
@@ -46,15 +49,24 @@ struct objfmt {
      */
 /*    debugfmt *default_df;*/
 
+    /* Initializes object output.  Must be called before any other object
+     * format functions.
+     */
+    void (*initialize) (/*@dependent@*/ FILE *f);
+
+    /* Finishes object output, and cleans up anything created by initialize. */
+    void (*finalize) (void);
+
     /* Switch object file sections.  The first val of the valparams should
-     * be the section name.
+     * be the section name.  Returns NULL if something's wrong, otherwise
+     * returns the new section.
      */
     /*@dependent@*/ /*@null@*/ section *
 	(*sections_switch)(sectionhead *headp, valparamhead *valparams,
 			   /*@null@*/ valparamhead *objext_valparams);
 
     void (*section_data_delete)(/*@only@*/ void *data);
-    void (*section_data_print)(void *data);
+    void (*section_data_print)(FILE *f, /*@null@*/ void *data);
 
     /*@null@*/ void *(*extern_data_new)(const char *name, /*@null@*/
 					valparamhead *objext_valparams);
@@ -64,10 +76,12 @@ struct objfmt {
 					/*@only@*/ expr *size, /*@null@*/
 					valparamhead *objext_valparams);
 
-    /* It's only valid to pass this *one* SymVisibility (eg, vis is an enum not
-     * a bitmask).
+    /* It's only valid to pass these two functions *one* SymVisibility (eg, vis
+     * is an enum not a bitmask).
      */
     void (*declare_data_delete)(SymVisibility vis, /*@only@*/ void *data);
+    void (*declare_data_print)(FILE *f, SymVisibility vis,
+			       /*@null@*/ void *data);
 
     /* Object format-specific directive support.  Returns 1 if directive was
      * not recognized.  Returns 0 if directive was recognized, even if it

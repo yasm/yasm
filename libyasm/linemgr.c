@@ -37,6 +37,8 @@
 unsigned int line_number = 1;
 unsigned int asm_options = 0;
 
+int indent_level = 0;
+
 static /*@only@*/ /*@null@*/ ternary_tree filename_table = (ternary_tree)NULL;
 
 void

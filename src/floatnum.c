@@ -660,7 +660,7 @@ floatnum_check_size(/*@unused@*/ const floatnum *flt, size_t size)
 }
 
 void
-floatnum_print(const floatnum *flt)
+floatnum_print(FILE *f, const floatnum *flt)
 {
     unsigned char out[10];
     unsigned char *str;
@@ -668,24 +668,25 @@ floatnum_print(const floatnum *flt)
 
     /* Internal format */
     str = BitVector_to_Hex(flt->mantissa);
-    printf("%c %s *2^%04x\n", flt->sign?'-':'+', (char *)str, flt->exponent);
+    fprintf(f, "%c %s *2^%04x\n", flt->sign?'-':'+', (char *)str,
+	    flt->exponent);
     xfree(str);
 
     /* 32-bit (single precision) format */
-    printf("32-bit: %d: ", floatnum_get_sized(flt, out, 4));
+    fprintf(f, "32-bit: %d: ", floatnum_get_sized(flt, out, 4));
     for (i=0; i<4; i++)
-	printf("%02x ", out[i]);
-    printf("\n");
+	fprintf(f, "%02x ", out[i]);
+    fprintf(f, "\n");
 
     /* 64-bit (double precision) format */
-    printf("64-bit: %d: ", floatnum_get_sized(flt, out, 8));
+    fprintf(f, "64-bit: %d: ", floatnum_get_sized(flt, out, 8));
     for (i=0; i<8; i++)
-	printf("%02x ", out[i]);
-    printf("\n");
+	fprintf(f, "%02x ", out[i]);
+    fprintf(f, "\n");
 
     /* 80-bit (extended precision) format */
-    printf("80-bit: %d: ", floatnum_get_sized(flt, out, 10));
+    fprintf(f, "80-bit: %d: ", floatnum_get_sized(flt, out, 10));
     for (i=0; i<10; i++)
-	printf("%02x ", out[i]);
-    printf("\n");
+	fprintf(f, "%02x ", out[i]);
+    fprintf(f, "\n");
 }

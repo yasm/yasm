@@ -606,17 +606,17 @@ intnum_check_size(const intnum *intn, size_t size, int is_signed)
 }
 
 void
-intnum_print(const intnum *intn)
+intnum_print(FILE *f, const intnum *intn)
 {
     unsigned char *s;
 
     switch (intn->type) {
 	case INTNUM_UL:
-	    printf("0x%lx/%u", intn->val.ul, (unsigned int)intn->origsize);
+	    fprintf(f, "0x%lx/%u", intn->val.ul, (unsigned int)intn->origsize);
 	    break;
 	case INTNUM_BV:
 	    s = BitVector_to_Hex(intn->val.bv);
-	    printf("0x%s/%u", (char *)s, (unsigned int)intn->origsize);
+	    fprintf(f, "0x%s/%u", (char *)s, (unsigned int)intn->origsize);
 	    xfree(s);
 	    break;
     }

@@ -66,6 +66,12 @@ typedef struct x86_insn {
      */
     unsigned char shift_op;
 
+    /* HACK, similar to that for shift_op above, for optimizing instructions
+     * that take a sign-extended imm8 as well as imm values (eg, the arith
+     * instructions and a subset of the imul instructions).
+     */
+    unsigned char signext_imm8_op;
+
     unsigned char mode_bits;
 } x86_insn;
 
@@ -89,7 +95,7 @@ typedef struct x86_jmprel {
 } x86_jmprel;
 
 void x86_bc_delete(bytecode *bc);
-void x86_bc_print(const bytecode *bc);
+void x86_bc_print(FILE *f, const bytecode *bc);
 void x86_bc_parser_finalize(bytecode *bc);
 
 int x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,

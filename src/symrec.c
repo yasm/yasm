@@ -114,9 +114,9 @@ symrec_get_or_new(const char *name, int in_table)
 /* Call a function with each symrec.  Stops early if 0 returned by func.
    Returns 0 if stopped early. */
 int
-symrec_foreach(int (*func) (symrec *sym))
+symrec_traverse(void *d, int (*func) (symrec *sym, void *d))
 {
-    return ternary_traverse(sym_table, (int (*) (void *))func);
+    return ternary_traverse(sym_table, d, (int (*) (void *, void *))func);
 }
 
 symrec *
@@ -264,7 +264,7 @@ symrec_get_equ(const symrec *sym)
 static unsigned long firstundef_line;
 static /*@dependent@*/ /*@null@*/ const char *firstundef_filename;
 static int
-symrec_parser_finalize_checksym(symrec *sym)
+symrec_parser_finalize_checksym(symrec *sym, /*@unused@*/ /*@null@*/ void *d)
 {
     /* error if a symbol is used but never defined */
     if ((sym->status & SYM_USED) && !(sym->status & SYM_DEFINED)) {
@@ -283,7 +283,7 @@ void
 symrec_parser_finalize(void)
 {
     firstundef_line = ULONG_MAX;
-    symrec_foreach(symrec_parser_finalize_checksym);
+    symrec_traverse(NULL, symrec_parser_finalize_checksym);
     if (firstundef_line < ULONG_MAX)
 	ErrorAt(firstundef_filename, firstundef_line,
 		_(" (Each undefined symbol is reported only once.)"));
@@ -324,64 +324,101 @@ symrec_delete(symrec *sym)
     /*@=branchstate@*/
 }
 
-void
-symrec_print(const symrec *sym)
+/*@+voidabstract@*/
+static int
+symrec_print_wrapper(symrec *sym, /*@null@*/ void *d)
 {
-    printf("---Symbol `%s'---\n", sym->name);
+    FILE *f;
+    assert(d != NULL);
+    f = (FILE *)d;
+    fprintf(f, "%*sSymbol `%s'\n", indent_level, "", sym->name);
+    indent_level++;
+    symrec_print(f, sym);
+    indent_level--;
+    return 1;
+}
 
+void
+symrec_print_all(FILE *f)
+{
+    symrec_traverse(f, symrec_print_wrapper);
+}
+/*@=voidabstract@*/
+
+void
+symrec_print(FILE *f, const symrec *sym)
+{
     switch (sym->type) {
 	case SYM_UNKNOWN:
-	    printf("-Unknown (Common/Extern)-\n");
+	    fprintf(f, "%*s-Unknown (Common/Extern)-\n", indent_level, "");
 	    break;
 	case SYM_EQU:
-	    printf("_EQU_\n");
-	    printf("Expn=");
-	    expr_print(sym->value.expn);
-	    printf("\n");
+	    fprintf(f, "%*s_EQU_\n", indent_level, "");
+	    fprintf(f, "%*sExpn=", indent_level, "");
+	    expr_print(f, sym->value.expn);
+	    fprintf(f, "\n");
 	    break;
 	case SYM_LABEL:
-	    printf("_Label_\nSection:");
-	    if (sym->value.label.sect)
-		section_print(sym->value.label.sect, 0);
-	    else
-		printf(" (none)\n");
+	    fprintf(f, "%*s_Label_\n%*sSection:\n", indent_level, "",
+		    indent_level, "");
+	    indent_level++;
+	    section_print(f, sym->value.label.sect, 0);
+	    indent_level--;
 	    if (!sym->value.label.bc)
-		printf("[First bytecode]\n");
+		fprintf(f, "%*sFirst bytecode\n", indent_level, "");
 	    else {
-		printf("[Preceding bytecode]\n");
-		bc_print(sym->value.label.bc);
+		fprintf(f, "%*sPreceding bytecode:\n", indent_level, "");
+		indent_level++;
+		bc_print(f, sym->value.label.bc);
+		indent_level--;
 	    }
 	    break;
     }
 
-    printf("Status=");
+    fprintf(f, "%*sStatus=", indent_level, "");
     if (sym->status == SYM_NOSTATUS)
-	printf("None\n");
+	fprintf(f, "None\n");
     else {
 	if (sym->status & SYM_USED)
-	    printf("Used,");
+	    fprintf(f, "Used,");
 	if (sym->status & SYM_DEFINED)
-	    printf("Defined,");
+	    fprintf(f, "Defined,");
 	if (sym->status & SYM_VALUED)
-	    printf("Valued,");
+	    fprintf(f, "Valued,");
 	if (sym->status & SYM_NOTINTABLE)
-	    printf("Not in Table,");
-	printf("\n");
+	    fprintf(f, "Not in Table,");
+	fprintf(f, "\n");
     }
 
-    printf("Visibility=");
+    fprintf(f, "%*sVisibility=", indent_level, "");
     if (sym->visibility == SYM_LOCAL)
-	printf("Local\n");
+	fprintf(f, "Local\n");
     else {
 	if (sym->visibility & SYM_GLOBAL)
-	    printf("Global,");
+	    fprintf(f, "Global,");
 	if (sym->visibility & SYM_COMMON)
-	    printf("Common,");
+	    fprintf(f, "Common,");
 	if (sym->visibility & SYM_EXTERN)
-	    printf("Extern,");
-	printf("\n");
+	    fprintf(f, "Extern,");
+	fprintf(f, "\n");
     }
 
-    printf("Filename=\"%s\" Line Number=%lu\n",
+    assert(cur_objfmt != NULL);
+    if (sym->visibility & SYM_GLOBAL) {
+	fprintf(f, "%*sGlobal object format-specific data:\n", indent_level,
+		"");
+	indent_level++;
+	cur_objfmt->declare_data_print(f, SYM_GLOBAL, sym->of_data_vis_g);
+	indent_level--;
+    }
+    if (sym->visibility & SYM_COMMON) {
+	fprintf(f, "%*sCommon/Extern object format-specific data:\n",
+		indent_level, "");
+	indent_level++;
+	cur_objfmt->declare_data_print(f, SYM_COMMON, sym->of_data_vis_ce);
+	indent_level--;
+    }
+
+    fprintf(f, "%*sFilename=\"%s\" Line Number=%lu\n", indent_level, "",
 	   sym->filename?sym->filename:"(NULL)", sym->line);
 }

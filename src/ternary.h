@@ -54,6 +54,7 @@ void ternary_cleanup (/*@only@*/ ternary_tree p,
 
 /* Traverse over tree, calling callback function for each leaf. 
    Stops early if func returns 0. */
-int ternary_traverse (ternary_tree p, int (*func) (/*@dependent@*/ /*@null@*/
-						   void *d));
+int ternary_traverse (ternary_tree p, /*@null@*/ void *d,
+		      int (*func) (/*@dependent@*/ /*@null@*/ void *node,
+				   /*@null@*/ void *d));
 #endif

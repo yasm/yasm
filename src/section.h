@@ -39,7 +39,7 @@ int section_is_absolute(section *sect);
 
 void sections_delete(sectionhead *headp);
 
-void sections_print(const sectionhead *headp);
+void sections_print(FILE *f, const sectionhead *headp);
 
 void sections_parser_finalize(sectionhead *headp);
 
@@ -50,5 +50,5 @@ void sections_parser_finalize(sectionhead *headp);
 
 void section_delete(/*@only@*/ section *sect);
 
-void section_print(const section *sect, int print_bcs);
+void section_print(FILE *f, /*@null@*/ const section *sect, int print_bcs);
 #endif

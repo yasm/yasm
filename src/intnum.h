@@ -62,6 +62,6 @@ void intnum_get_sized(const intnum *intn, unsigned char *ptr, size_t size);
  */
 int intnum_check_size(const intnum *intn, size_t size, int is_signed);
 
-void intnum_print(const intnum *intn);
+void intnum_print(FILE *f, const intnum *intn);
 
 #endif

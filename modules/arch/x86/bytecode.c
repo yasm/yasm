@@ -22,6 +22,7 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
+#include "globals.h"
 #include "errwarn.h"
 #include "intnum.h"
 #include "expr.h"
@@ -331,7 +332,7 @@ x86_bc_delete(bytecode *bc)
 }
 
 void
-x86_bc_print(const bytecode *bc)
+x86_bc_print(FILE *f, const bytecode *bc)
 {
     const x86_insn *insn;
     const x86_jmprel *jmprel;
@@ -340,108 +341,121 @@ x86_bc_print(const bytecode *bc)
     switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
 	    insn = bc_get_const_data(bc);
-	    printf("_Instruction_\n");
-	    printf("Effective Address:");
+	    fprintf(f, "%*s_Instruction_\n", indent_level, "");
+	    fprintf(f, "%*sEffective Address:", indent_level, "");
 	    if (!insn->ea)
-		printf(" (nil)\n");
+		fprintf(f, " (nil)\n");
 	    else {
-		printf("\n Disp=");
-		if (insn->ea->disp)
-		    expr_print(insn->ea->disp);
-		else
-		    printf("(nil)");
-		printf("\n");
+		indent_level++;
+		fprintf(f, "\n%*sDisp=", indent_level, "");
+		expr_print(f, insn->ea->disp);
+		fprintf(f, "\n");
 		ead = ea_get_data(insn->ea);
-		printf(" Len=%u SegmentOv=%02x NoSplit=%u\n",
-		       (unsigned int)insn->ea->len,
-		       (unsigned int)ead->segment,
-		       (unsigned int)insn->ea->nosplit);
-		printf(" ModRM=%03o ValidRM=%u NeedRM=%u\n",
-		       (unsigned int)ead->modrm,
-		       (unsigned int)ead->valid_modrm,
-		       (unsigned int)ead->need_modrm);
-		printf(" SIB=%03o ValidSIB=%u NeedSIB=%u\n",
-		       (unsigned int)ead->sib,
-		       (unsigned int)ead->valid_sib,
-		       (unsigned int)ead->need_sib);
+		fprintf(f, "%*sLen=%u SegmentOv=%02x NoSplit=%u\n",
+			indent_level, "", (unsigned int)insn->ea->len,
+			(unsigned int)ead->segment,
+			(unsigned int)insn->ea->nosplit);
+		fprintf(f, "%*sModRM=%03o ValidRM=%u NeedRM=%u\n",
+			indent_level, "", (unsigned int)ead->modrm,
+			(unsigned int)ead->valid_modrm,
+			(unsigned int)ead->need_modrm);
+		fprintf(f, "%*sSIB=%03o ValidSIB=%u NeedSIB=%u\n",
+			indent_level, "", (unsigned int)ead->sib,
+			(unsigned int)ead->valid_sib,
+			(unsigned int)ead->need_sib);
+		indent_level--;
 	    }
-	    printf("Immediate Value:");
+	    fprintf(f, "%*sImmediate Value:", indent_level, "");
 	    if (!insn->imm)
-		printf(" (nil)\n");
+		fprintf(f, " (nil)\n");
 	    else {
-		printf("\n Val=");
+		indent_level++;
+		fprintf(f, "\n%*sVal=", indent_level, "");
 		if (insn->imm->val)
-		    expr_print(insn->imm->val);
+		    expr_print(f, insn->imm->val);
 		else
-		    printf("(nil-SHOULDN'T HAPPEN)");
-		printf("\n");
-		printf(" Len=%u, IsNeg=%u\n",
-		       (unsigned int)insn->imm->len,
-		       (unsigned int)insn->imm->isneg);
-		printf(" FLen=%u, FSign=%u\n",
-		       (unsigned int)insn->imm->f_len,
-		       (unsigned int)insn->imm->f_sign);
+		    fprintf(f, "(nil-SHOULDN'T HAPPEN)");
+		fprintf(f, "\n");
+		fprintf(f, "%*sLen=%u, IsNeg=%u\n", indent_level, "",
+			(unsigned int)insn->imm->len,
+			(unsigned int)insn->imm->isneg);
+		fprintf(f, "%*sFLen=%u, FSign=%u\n", indent_level, "",
+			(unsigned int)insn->imm->f_len,
+			(unsigned int)insn->imm->f_sign);
+		indent_level--;
 	    }
-	    printf("Opcode: %02x %02x %02x OpLen=%u\n",
-		   (unsigned int)insn->opcode[0],
-		   (unsigned int)insn->opcode[1],
-		   (unsigned int)insn->opcode[2],
-		   (unsigned int)insn->opcode_len);
-	    printf("AddrSize=%u OperSize=%u LockRepPre=%02x ShiftOp=%u\n",
-		   (unsigned int)insn->addrsize,
-		   (unsigned int)insn->opersize,
-		   (unsigned int)insn->lockrep_pre,
-		   (unsigned int)insn->shift_op);
-	    printf("BITS=%u\n", (unsigned int)insn->mode_bits);
+	    fprintf(f, "%*sOpcode: %02x %02x %02x OpLen=%u\n", indent_level,
+		    "", (unsigned int)insn->opcode[0],
+		    (unsigned int)insn->opcode[1],
+		    (unsigned int)insn->opcode[2],
+		    (unsigned int)insn->opcode_len);
+	    fprintf(f,
+		    "%*sAddrSize=%u OperSize=%u LockRepPre=%02x ShiftOp=%u\n",
+		    indent_level, "",
+		    (unsigned int)insn->addrsize,
+		    (unsigned int)insn->opersize,
+		    (unsigned int)insn->lockrep_pre,
+		    (unsigned int)insn->shift_op);
+	    fprintf(f, "%*sBITS=%u\n", indent_level, "",
+		    (unsigned int)insn->mode_bits);
 	    break;
 	case X86_BC_JMPREL:
 	    jmprel = bc_get_const_data(bc);
-	    printf("_Relative Jump_\n");
-	    printf("Target=");
-	    expr_print(jmprel->target);
-	    printf("\nShort Form:\n");
+	    fprintf(f, "%*s_Relative Jump_\n", indent_level, "");
+	    fprintf(f, "%*sTarget=", indent_level, "");
+	    expr_print(f, jmprel->target);
+	    fprintf(f, "\n%*sShort Form:\n", indent_level, "");
+	    indent_level++;
 	    if (jmprel->shortop.opcode_len == 0)
-		printf(" None\n");
+		fprintf(f, "%*sNone\n", indent_level, "");
 	    else
-		printf(" Opcode: %02x %02x %02x OpLen=%u\n",
-		       (unsigned int)jmprel->shortop.opcode[0],
-		       (unsigned int)jmprel->shortop.opcode[1],
-		       (unsigned int)jmprel->shortop.opcode[2],
-		       (unsigned int)jmprel->shortop.opcode_len);
+		fprintf(f, "%*sOpcode: %02x %02x %02x OpLen=%u\n",
+			indent_level, "",
+			(unsigned int)jmprel->shortop.opcode[0],
+			(unsigned int)jmprel->shortop.opcode[1],
+			(unsigned int)jmprel->shortop.opcode[2],
+			(unsigned int)jmprel->shortop.opcode_len);
+	    indent_level--;
+	    fprintf(f, "%*sNear Form:\n", indent_level, "");
+	    indent_level++;
 	    if (jmprel->nearop.opcode_len == 0)
-		printf(" None\n");
+		fprintf(f, "%*sNone\n", indent_level, "");
 	    else
-		printf(" Opcode: %02x %02x %02x OpLen=%u\n",
-		       (unsigned int)jmprel->nearop.opcode[0],
-		       (unsigned int)jmprel->nearop.opcode[1],
-		       (unsigned int)jmprel->nearop.opcode[2],
-		       (unsigned int)jmprel->nearop.opcode_len);
-	    printf("OpSel=");
+		fprintf(f, "%*sOpcode: %02x %02x %02x OpLen=%u\n",
+			indent_level, "",
+			(unsigned int)jmprel->nearop.opcode[0],
+			(unsigned int)jmprel->nearop.opcode[1],
+			(unsigned int)jmprel->nearop.opcode[2],
+			(unsigned int)jmprel->nearop.opcode_len);
+	    indent_level--;
+	    fprintf(f, "%*sOpSel=", indent_level, "");
 	    switch (jmprel->op_sel) {
 		case JR_NONE:
-		    printf("None");
+		    fprintf(f, "None");
 		    break;
 		case JR_SHORT:
-		    printf("Short");
+		    fprintf(f, "Short");
 		    break;
 		case JR_NEAR:
-		    printf("Near");
+		    fprintf(f, "Near");
 		    break;
 		case JR_SHORT_FORCED:
-		    printf("Forced Short");
+		    fprintf(f, "Forced Short");
 		    break;
 		case JR_NEAR_FORCED:
-		    printf("Forced Near");
+		    fprintf(f, "Forced Near");
 		    break;
 		default:
-		    printf("UNKNOWN!!");
+		    fprintf(f, "UNKNOWN!!");
 		    break;
 	    }
-	    printf(" BITS=%u\nAddrSize=%u OperSize=%u LockRepPre=%02x\n",
-		   (unsigned int)jmprel->mode_bits,
-		   (unsigned int)jmprel->addrsize,
-		   (unsigned int)jmprel->opersize,
-		   (unsigned int)jmprel->lockrep_pre);
+	    fprintf(f, "\n%*sAddrSize=%u OperSize=%u LockRepPre=%02x\n",
+		    indent_level, "",
+		    (unsigned int)jmprel->addrsize,
+		    (unsigned int)jmprel->opersize,
+		    (unsigned int)jmprel->lockrep_pre);
+	    fprintf(f, "%*sBITS=%u\n", indent_level, "",
+		    (unsigned int)jmprel->mode_bits);
 	    break;
     }
 }

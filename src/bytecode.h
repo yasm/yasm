@@ -58,7 +58,7 @@ void bc_delete(/*@only@*/ /*@null@*/ bytecode *bc);
 int bc_get_offset(section *sect, bytecode *bc,
 		  /*@out@*/ unsigned long *ret_val);
 
-void bc_print(const bytecode *bc);
+void bc_print(FILE *f, const bytecode *bc);
 
 void bc_parser_finalize(bytecode *bc);
 
@@ -77,7 +77,7 @@ void bcs_delete(bytecodehead *headp);
 					   /*@returned@*/ /*@only@*/ /*@null@*/
 					   bytecode *bc);
 
-void bcs_print(const bytecodehead *headp);
+void bcs_print(FILE *f, const bytecodehead *headp);
 
 void bcs_parser_finalize(bytecodehead *headp);
 
@@ -99,6 +99,6 @@ void dvs_delete(datavalhead *headp);
 /*@null@*/ dataval *dvs_append(datavalhead *headp,
 			       /*@returned@*/ /*@null@*/ dataval *dv);
 
-void dvs_print(const datavalhead *head);
+void dvs_print(FILE *f, const datavalhead *head);
 
 #endif

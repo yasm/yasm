@@ -52,6 +52,6 @@ int floatnum_get_sized(const floatnum *flt, /*@out@*/ unsigned char *ptr,
  */
 int floatnum_check_size(const floatnum *flt, size_t size);
 
-void floatnum_print(const floatnum *flt);
+void floatnum_print(FILE *f, const floatnum *flt);
 
 #endif

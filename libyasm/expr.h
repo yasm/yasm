@@ -69,6 +69,6 @@ void expr_expand_equ(expr *e);
 /*@dependent@*/ /*@null@*/ const symrec *expr_get_symrec(expr **ep,
 							 int simplify);
 
-void expr_print(expr *);
+void expr_print(FILE *f, /*@null@*/ expr *);
 
 #endif

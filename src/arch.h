@@ -37,7 +37,7 @@ struct arch {
 	const int type_max;
 
 	void (*bc_delete) (bytecode *bc);
-	void (*bc_print) (const bytecode *bc);
+	void (*bc_print) (FILE *f, const bytecode *bc);
 	void (*bc_parser_finalize) (bytecode *bc);
     } bc;
 };

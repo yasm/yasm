@@ -32,6 +32,8 @@ extern /*@null@*/ objfmt *cur_objfmt;
 extern unsigned int line_number;
 extern unsigned int asm_options;
 
+extern int indent_level;
+
 void switch_filename(const char *filename);
 void filename_delete_all(void);
 

@@ -59,29 +59,28 @@ struct section {
     bytecodehead bc;		/* the bytecodes for the section's contents */
 };
 
+/*@-compdestroy@*/
 section *
 sections_initialize(sectionhead *headp)
 {
     section *s;
+    valparamhead vps;
+    valparam *vp;
 
     /* Initialize linked list */
     STAILQ_INIT(headp);
 
-    /* Add an initial "default" section to the list */
-    s = xcalloc(1, sizeof(section));
-    STAILQ_INSERT_TAIL(headp, s, link);
-
-    /* Initialize default section */
-    s->type = SECTION_GENERAL;
+    /* Add an initial "default" section */
     assert(cur_objfmt != NULL);
-    s->data.general.name = xstrdup(cur_objfmt->default_section_name);
-    s->data.general.of_data = NULL;
-    bytecodes_initialize(&s->bc);
-
-    s->res_only = 0;
+    vp_new(vp, xstrdup(cur_objfmt->default_section_name), NULL);
+    vps_initialize(&vps);
+    vps_append(&vps, vp);
+    s = cur_objfmt->sections_switch(headp, &vps, NULL);
+    vps_delete(&vps);
 
     return s;
 }
+/*@=compdestroy@*/
 
 /*@-onlytrans@*/
 section *
@@ -164,13 +163,15 @@ sections_delete(sectionhead *headp)
 }
 
 void
-sections_print(const sectionhead *headp)
+sections_print(FILE *f, const sectionhead *headp)
 {
     section *cur;
     
     STAILQ_FOREACH(cur, headp, link) {
-	printf("***SECTION***\n");
-	section_print(cur, 1);
+	fprintf(f, "%*sSection:\n", indent_level, "");
+	indent_level++;
+	section_print(f, cur, 1);
+	indent_level--;
     }
 }
 
@@ -227,28 +228,37 @@ section_delete(section *sect)
 }
 
 void
-section_print(const section *sect, int print_bcs)
+section_print(FILE *f, const section *sect, int print_bcs)
 {
-    printf(" type=");
+    if (!sect) {
+	fprintf(f, "%*s(none)\n", indent_level, "");
+	return;
+    }
+
+    fprintf(f, "%*stype=", indent_level, "");
     switch (sect->type) {
 	case SECTION_GENERAL:
-	    printf("general\n name=%s\n objfmt data:\n",
-		   sect->data.general.name);
+	    fprintf(f, "general\n%*sname=%s\n%*sobjfmt data:\n", indent_level,
+		    "", sect->data.general.name, indent_level, "");
 	    assert(cur_objfmt != NULL);
+	    indent_level++;
 	    if (sect->data.general.of_data)
-		cur_objfmt->section_data_print(sect->data.general.of_data);
+		cur_objfmt->section_data_print(f, sect->data.general.of_data);
 	    else
-		printf("  (none)\n");
+		fprintf(f, "%*s(none)\n", indent_level, "");
+	    indent_level--;
 	    break;
 	case SECTION_ABSOLUTE:
-	    printf("absolute\n start=");
-	    expr_print(sect->data.start);
-	    printf("\n");
+	    fprintf(f, "absolute\n%*sstart=", indent_level, "");
+	    expr_print(f, sect->data.start);
+	    fprintf(f, "\n");
 	    break;
     }
 
     if (print_bcs) {
-	printf(" Bytecodes:\n");
-	bcs_print(&sect->bc);
+	fprintf(f, "%*sBytecodes:\n", indent_level, "");
+	indent_level++;
+	bcs_print(f, &sect->bc);
+	indent_level--;
     }
 }

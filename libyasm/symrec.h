@@ -47,7 +47,9 @@ SymVisibility symrec_get_visibility(const symrec *sym);
 
 /*@observer@*/ /*@null@*/ const expr *symrec_get_equ(const symrec *sym);
 
-int /*@alt void@*/ symrec_foreach(int (*func) (symrec *sym));
+int /*@alt void@*/ symrec_traverse(/*@null@*/ void *d,
+				   int (*func) (symrec *sym,
+						/*@null@*/ void *d));
 
 void symrec_parser_finalize(void);
 
@@ -58,5 +60,7 @@ void symrec_delete_all(void);
  */
 void symrec_delete(/*@only@*/ symrec *sym);
 
-void symrec_print(const symrec *sym);
+void symrec_print_all(FILE *f);
+
+void symrec_print(FILE *f, const symrec *sym);
 #endif

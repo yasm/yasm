@@ -171,20 +171,21 @@ ternary_recursivesearch (ternary_tree p, const char *s)
 /* Traverse over tree, calling callback function for each leaf. 
    Stops early if func returns 0. */
 int
-ternary_traverse (ternary_tree p, int (*func) (/*@dependent@*/ /*@null@*/
-					       void *d))
+ternary_traverse (ternary_tree p, void *d,
+		  int (*func) (/*@dependent@*/ /*@null@*/ void *node,
+			       /*@null@*/ void *d))
 {
   if (!p)
     return 1;
-  if (ternary_traverse (p->lokid, func) == 0)
+  if (ternary_traverse (p->lokid, d, func) == 0)
     return 0;
   if (p->splitchar)
     {
-      if (ternary_traverse (p->eqkid, func) == 0)
+      if (ternary_traverse (p->eqkid, d, func) == 0)
 	return 0;
     }
   else
-    if (func (p->eqkid) == 0)
+    if (func (p->eqkid, d) == 0)
       return 0;
-  return ternary_traverse (p->hikid, func);
+  return ternary_traverse (p->hikid, d, func);
 }
