@@ -13,9 +13,9 @@ parser_nasm_la_LDFLAGS = -module -avoid-version -no-undefined
 parser_nasm_la_LIBADD = libyasm.la
 YASM_MODULES += -dlopen parser_nasm.la
 
-nasm-token.c: $(srcdir)/modules/parsers/nasm/nasm-token.re re2c$(EXEEXT) $(srcdir)/tools/re2c/cleanup.pl
+nasm-token.c: $(srcdir)/modules/parsers/nasm/nasm-token.re re2c$(EXEEXT) cleanup$(EXEEXT)
 	$(top_builddir)/re2c$(EXEEXT) -b $(srcdir)/modules/parsers/nasm/nasm-token.re \
-	| $(PERL) $(top_srcdir)/tools/re2c/cleanup.pl \
+	| $(top_builddir)/cleanup$(EXEEXT) \
 	| sed "/^#l/ s,re2c-out\.c,$@," > $@
 
 BUILT_SOURCES += nasm-bison.c

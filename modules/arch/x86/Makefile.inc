@@ -12,9 +12,9 @@ arch_x86_la_LDFLAGS = -module -avoid-version -no-undefined
 arch_x86_la_LIBADD = libyasm.la
 YASM_MODULES += -dlopen arch_x86.la
 
-x86id.c: $(srcdir)/modules/arch/x86/x86id.re re2c$(EXEEXT) $(srcdir)/tools/re2c/cleanup.pl
+x86id.c: $(srcdir)/modules/arch/x86/x86id.re re2c$(EXEEXT) cleanup$(EXEEXT)
 	$(top_builddir)/re2c$(EXEEXT) -s $(srcdir)/modules/arch/x86/x86id.re \
-	| $(PERL) $(top_srcdir)/tools/re2c/cleanup.pl \
+	| $(top_builddir)/cleanup$(EXEEXT) \
 	| sed "/^#l/ s,re2c-out\.c,$@," > $@
 
 BUILT_SOURCES += x86id.c

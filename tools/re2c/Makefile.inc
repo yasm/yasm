@@ -1,6 +1,6 @@
 # $IdPath$
 
-noinst_PROGRAMS += re2c
+noinst_PROGRAMS += re2c cleanup
 
 re2c_CFLAGS =
 re2c_SOURCES  = tools/re2c/main.c
@@ -20,6 +20,8 @@ re2c_SOURCES += tools/re2c/scanner.c
 re2c_SOURCES += tools/re2c/substr.h
 re2c_SOURCES += tools/re2c/substr.c
 re2c_SOURCES += tools/re2c/translate.c
+
+cleanup_SOURCES = tools/re2c/cleanup.c
 
 BUILT_SOURCES += re2c-parser.c
 BUILT_SOURCES += re2c-parser.h
@@ -47,4 +49,3 @@ EXTRA_DIST += tools/re2c/examples/simple.re
 EXTRA_DIST += tools/re2c/examples/rexx/README
 EXTRA_DIST += tools/re2c/examples/rexx/rexx.l
 EXTRA_DIST += tools/re2c/examples/rexx/scanio.c
-EXTRA_DIST += tools/re2c/cleanup.pl

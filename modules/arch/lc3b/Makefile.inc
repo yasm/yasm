@@ -11,9 +11,9 @@ arch_lc3b_la_LDFLAGS = -module -avoid-version -no-undefined
 arch_lc3b_la_LIBADD = libyasm.la
 YASM_MODULES += -dlopen arch_lc3b.la
 
-lc3bid.c: $(srcdir)/modules/arch/lc3b/lc3bid.re re2c$(EXEEXT) $(srcdir)/tools/re2c/cleanup.pl
+lc3bid.c: $(srcdir)/modules/arch/lc3b/lc3bid.re re2c$(EXEEXT) cleanup$(EXEEXT)
 	$(top_builddir)/re2c$(EXEEXT) -s $(srcdir)/modules/arch/lc3b/lc3bid.re \
-	| $(PERL) $(top_srcdir)/tools/re2c/cleanup.pl \
+	| $(top_builddir)/cleanup$(EXEEXT) \
 	| sed "/^#l/ s,re2c-out\.c,$@," > $@
 
 BUILT_SOURCES += lc3bid.c

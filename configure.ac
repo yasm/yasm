@@ -1,9 +1,6 @@
 # Process this file with autoconf to produce a configure script.
 # $IdPath$
 
-# Minimum required perl version for development
-PERL_VERSION=5.004
-
 #
 # autoconf setup
 #
@@ -83,8 +80,6 @@ if test "$ac_cv_prog_cc_stdc" = no; then
 	AC_MSG_ERROR([A standard (ANSI/ISO C89) C compiler is required.])
 fi
 
-# Check for Perl (for gen_instr.pl and the like, needed only for development)
-AC_PATH_PROGS(PERL, $PERL perl5 perl)
 # Check for groff (for rendering manpages, needed only for development)
 AC_PATH_PROGS(GROFF, $GROFF groff)
 
@@ -173,21 +168,6 @@ if test "$USE_MAINTAINER_MODE" = "yes"; then
   # Enable more warnings
   if test "$GCC" = "yes"; then
     MORE_CFLAGS="$MORE_CFLAGS -Waggregate-return -Wbad-function-cast -Wcast-align -Wcast-qual -Wconversion -Winline -Wmissing-declarations -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wshadow -Wsign-compare -Wstrict-prototypes -Wwrite-strings"
-  fi
-
-  # Require Perl
-  if test -z "$PERL" || test "$PERL" = ":"; then
-    AC_MSG_ERROR([Perl not found in \$PATH])
-  fi
-
-  # Require Perl >= PERL_VERSION
-  AC_MSG_CHECKING([for minimum required perl version >= $PERL_VERSION])
-  _perl_version=`PERL_VERSION=$PERL_VERSION $PERL -e 'print "$]"; if ($] >= $ENV{PERL_VERSION}) { exit(0); } else { exit(1); }' 2>&5`
-  _perl_res=$?
-  AC_MSG_RESULT([$_perl_version])
-
-  if test "$_perl_res" != 0; then
-    AC_MSG_ERROR([Perl $PERL_VERSION or higher is required.])
   fi
 
   # Require groff
