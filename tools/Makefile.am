@@ -1,2 +1,2 @@
 # $IdPath$
-SUBDIRS = lemon re2c
+SUBDIRS = re2c
