@@ -38,7 +38,8 @@ typedef struct symrec_s {
     char *name;
     SymType type;
     SymStatus status;
-    int line;			/* line symbol was first declared or used on */
+    char *filename;		/* file and line */
+    int line;			/*  symbol was first declared or used on */
     double value;
 } symrec;
 

@@ -67,6 +67,7 @@ symrec_get_or_new(char *name, SymType type)
 	Fatal(FATAL_NOMEM);
     rec->type = type;
     rec->value = 0;
+    rec->filename = strdup(filename);
     rec->line = line_number;
     rec->status = SYM_NOSTATUS;
 
