@@ -69,7 +69,7 @@ struct symrec {
     SymType type;
     SymStatus status;
     SymVisibility visibility;
-    char *filename;		/* file and line */
+    const char *filename;	/* file and line */
     unsigned long line;		/*  symbol was first declared or used on */
     union {
 	expr *expn;		/* equ value */
@@ -107,7 +107,7 @@ symrec_get_or_new(const char *name, int in_table)
 
     rec->name = xstrdup(name);
     rec->type = SYM_UNKNOWN;
-    rec->filename = xstrdup(in_filename);
+    rec->filename = in_filename;
     rec->line = line_number;
     rec->visibility = SYM_LOCAL;
 

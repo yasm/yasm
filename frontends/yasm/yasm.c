@@ -124,7 +124,7 @@ main(int argc, char *argv[])
     if (!files_open)
     {
 	in = stdin;
-	in_filename = xstrdup("<STDIN>");
+	switch_filename("<STDIN>");
     }
 
     /* Get initial BITS setting from object format */
@@ -145,8 +145,7 @@ main(int argc, char *argv[])
     printf("Post-parser-finalization:\n");
     sections_print(sections);
 
-    if (in_filename)
-	free(in_filename);
+    filename_delete_all();
     return EXIT_SUCCESS;
 }
 
@@ -158,7 +157,6 @@ not_an_option_handler(char *param)
 {
     if (files_open > 0) {
 	WarningNow("can open only one input file, only latest file will be processed");
-	free(in_filename);
 	fclose(in);
     }
 
@@ -167,7 +165,7 @@ not_an_option_handler(char *param)
 	ErrorNow(_("could not open file `%s'"), param);
 	return 1;
     }
-    in_filename = xstrdup(param);
+    switch_filename(param);
 
     files_open++;
     return 0;

@@ -175,7 +175,7 @@ struct bytecode {
 				   multiple copies), 0 if unknown */
 
     /* where it came from */
-    char *filename;
+    const char *filename;
     unsigned int lineno;
 
     /* other assembler state info */
@@ -426,7 +426,7 @@ bytecode_new_common(void)
     bc->multiple = (expr *)NULL;
     bc->len = 0;
 
-    bc->filename = xstrdup(in_filename);
+    bc->filename = in_filename;
     bc->lineno = line_number;
 
     bc->offset = 0;

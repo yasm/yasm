@@ -76,7 +76,7 @@ typedef struct errwarn_s {
 
     enum { WE_ERROR, WE_WARNING } type;
 
-    char *filename;
+    const char *filename;
     unsigned long line;
     /* FIXME: This should not be a fixed size.  But we don't have vasprintf()
      * right now. */
@@ -177,7 +177,7 @@ Error(const char *fmt, ...)
 	we = xmalloc(sizeof(errwarn));
 
 	we->type = WE_ERROR;
-	we->filename = xstrdup(in_filename);
+	we->filename = in_filename;
 	we->line = line_number;
     }
 
@@ -211,7 +211,7 @@ Warning(const char *fmt, ...)
     we = xmalloc(sizeof(errwarn));
 
     we->type = WE_WARNING;
-    we->filename = xstrdup(in_filename);
+    we->filename = in_filename;
     we->line = line_number;
     va_start(ap, fmt);
     vsprintf(we->msg, fmt, ap);

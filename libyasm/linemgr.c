@@ -27,9 +27,34 @@
 
 #include <stdio.h>
 
+#include "globals.h"
+
+#ifdef DMALLOC
+# include <dmalloc.h>
+#endif
+
 RCSID("$IdPath$");
 
-char *in_filename = (char *)NULL;
+const char *in_filename = (const char *)NULL;
 unsigned int line_number = 1;
 unsigned char mode_bits = 0;
 unsigned int asm_options = 0;
+
+static ternary_tree filename_table = (ternary_tree)NULL;
+
+void
+switch_filename(const char *filename)
+{
+    char *copy = xstrdup(filename);
+    in_filename = ternary_insert(&filename_table, filename, copy, 0);
+    if (in_filename != copy)
+	xfree(copy);
+}
+
+void
+filename_delete_all(void)
+{
+    in_filename = NULL;
+    ternary_cleanup(filename_table);
+    filename_table = NULL;
+}

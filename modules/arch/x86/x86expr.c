@@ -84,7 +84,7 @@ struct ExprItem {
  */
 struct expr {
     ExprOp op;
-    char *filename;
+    const char *filename;
     unsigned long line;
     int numterms;
     ExprItem terms[2];		/* structure may be extended to include more */
@@ -121,7 +121,7 @@ expr_new(ExprOp op, ExprItem *left, ExprItem *right)
 	ptr->numterms++;
     }
 
-    ptr->filename = xstrdup(in_filename);
+    ptr->filename = in_filename;
     ptr->line = line_number;
 
     return ptr;
@@ -182,7 +182,7 @@ expr_xform_neg_item(expr *e, ExprItem *ei)
 
     /* Build -1*ei subexpression */
     sube->op = EXPR_MUL;
-    sube->filename = xstrdup(e->filename);
+    sube->filename = e->filename;
     sube->line = e->line;
     sube->numterms = 2;
     sube->terms[0].type = EXPR_INT;
@@ -243,7 +243,7 @@ expr_xform_neg_helper(expr *e)
 	     */
 	    ne = xmalloc(sizeof(expr));
 	    ne->op = EXPR_MUL;
-	    ne->filename = xstrdup(e->filename);
+	    ne->filename = e->filename;
 	    ne->line = e->line;
 	    ne->numterms = 2;
 	    ne->terms[0].type = EXPR_INT;
@@ -442,7 +442,6 @@ expr_level_op(expr *e, int fold_const, int simplify_ident)
 	       e->terms[i].data.expn->op == EXPR_IDENT) {
 	    expr *sube = e->terms[i].data.expn;
 	    e->terms[i] = sube->terms[0];
-	    xfree(sube->filename);
 	    xfree(sube);
 	}
 
@@ -558,7 +557,6 @@ expr_level_op(expr *e, int fold_const, int simplify_ident)
 	    /* delete subexpression, but *don't delete nodes* (as we've just
 	     * copied them!)
 	     */
-	    xfree(sube->filename);
 	    xfree(sube);
 	} else if (o != i) {
 	    /* copy operand if it changed places */
@@ -656,7 +654,7 @@ expr_copy_except(const expr *e, int except)
     n = xmalloc(sizeof(expr)+sizeof(ExprItem)*(e->numterms-2));
 
     n->op = e->op;
-    n->filename = xstrdup(e->filename);
+    n->filename = e->filename;
     n->line = e->line;
     n->numterms = e->numterms;
     for (i=0; i<e->numterms; i++) {
@@ -713,7 +711,6 @@ expr_delete_each(expr *e, void *d)
 		break;	/* none of the other types needs to be deleted */
 	}
     }
-    xfree(e->filename);
     xfree(e);	/* free ourselves */
     return 0;	/* don't stop recursion */
 }
