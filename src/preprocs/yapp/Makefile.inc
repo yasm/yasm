@@ -18,8 +18,11 @@ TESTS += \
 
 EXTRA_DIST += \
 	src/preprocs/yapp/tests/define.asm \
-	src/preprocs/yapp/tests/define.pre
+	src/preprocs/yapp/tests/define.pre \
+	src/preprocs/yapp/tests/ifdef.asm \
+	src/preprocs/yapp/tests/ifdef.pre \
 
 CLEANFILES += \
-	define.yp
+	define.yp \
+	ifdef.yp
 
