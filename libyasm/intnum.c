@@ -29,6 +29,7 @@
 /*@unused@*/ RCSID("$IdPath$");
 
 #include <ctype.h>
+#include <limits.h>
 
 #include "coretype.h"
 #include "bitvect.h"
@@ -44,7 +45,7 @@
 struct yasm_intnum {
     union val {
 	unsigned long ul;	/* integer value (for integers <=32 bits) */
-	intptr bv;		/* bit vector (for integers >32 bits) */
+	wordptr bv;		/* bit vector (for integers >32 bits) */
     } val;
     enum { INTNUM_UL, INTNUM_BV } type;
     unsigned char origsize;	/* original (parsed) size, in bits */
@@ -237,9 +238,17 @@ yasm_intnum_new_uint(unsigned long i)
 yasm_intnum *
 yasm_intnum_new_int(long i)
 {
-    yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
+    yasm_intnum *intn;
 
-    BitVector_Fill(conv_bv);
+    /* positive numbers can go through the uint() function */
+    if (i >= 0)
+	return yasm_intnum_new_uint((unsigned long)i);
+
+    BitVector_Empty(conv_bv);
+    BitVector_Chunk_Store(conv_bv, 32, 0, (unsigned long)(-i));
+    BitVector_Negate(conv_bv, conv_bv);
+
+    intn = yasm_xmalloc(sizeof(yasm_intnum));
     intn->val.bv = BitVector_Clone(conv_bv);
     intn->type = INTNUM_BV;
     intn->origsize = 0;
@@ -475,22 +484,30 @@ yasm_intnum_get_int(const yasm_intnum *intn)
 {
     switch (intn->type) {
 	case INTNUM_UL:
-	    return (long)intn->val.ul;
+	    /* unsigned long values are always positive; max out if needed */
+	    return (intn->val.ul & 0x80000000) ? LONG_MAX : (long)intn->val.ul;
 	case INTNUM_BV:
 	    if (BitVector_msb_(intn->val.bv)) {
 		/* it's negative: negate the bitvector to get a positive
 		 * number, then negate the positive number.
 		 */
-		intptr abs_bv = BitVector_Create(BITVECT_NATIVE_SIZE, FALSE);
-		long retval;
+		wordptr abs_bv = BitVector_Create(BITVECT_NATIVE_SIZE, FALSE);
+		unsigned long ul;
 
 		BitVector_Negate(abs_bv, intn->val.bv);
-		retval = -((long)BitVector_Chunk_Read(abs_bv, 32, 0));
-
+		if (Set_Max(abs_bv) >= 32) {
+		    /* too negative */
+		    BitVector_Destroy(abs_bv);
+		    return LONG_MIN;
+		}
+		ul = BitVector_Chunk_Read(abs_bv, 32, 0);
 		BitVector_Destroy(abs_bv);
-		return retval;
-	    } else
-		return (long)BitVector_Chunk_Read(intn->val.bv, 32, 0);
+		/* check for too negative */
+		return (ul & 0x80000000) ? LONG_MIN : -((long)ul);
+	    }
+
+	    /* it's positive, and since it's a BV, it must be >0x7FFFFFFF */
+	    return LONG_MAX;
 	default:
 	    yasm_internal_error(N_("unknown intnum type"));
 	    /*@notreached@*/
@@ -551,8 +568,8 @@ yasm_intnum_check_size(const yasm_intnum *intn, size_t size, int is_signed)
 		    return 1;
 		if (BitVector_msb_(intn->val.bv)) {
 		    /* it's negative */
-		    intptr abs_bv = BitVector_Create(BITVECT_NATIVE_SIZE,
-						     FALSE);
+		    wordptr abs_bv = BitVector_Create(BITVECT_NATIVE_SIZE,
+						      FALSE);
 		    int retval;
 
 		    BitVector_Negate(abs_bv, intn->val.bv);
