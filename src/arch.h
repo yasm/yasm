@@ -40,9 +40,9 @@ struct arch {
 	void (*bc_print) (FILE *f, const bytecode *bc);
 
 	/* See bytecode.h comments on bc_calc_len() */
-	int (*bc_calc_len) (bytecode *bc, /*@only@*/ /*@null@*/
-			    intnum *(*resolve_label) (section *sect, /*@null@*/
-						      bytecode *bc));
+	unsigned long (*bc_calc_len) (bytecode *bc, /*@only@*/ /*@null@*/
+				      intnum *(*resolve_label) (section *sect,
+					  /*@null@*/ bytecode *bc));
     } bc;
 };
 

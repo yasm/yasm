@@ -460,7 +460,7 @@ x86_bc_print(FILE *f, const bytecode *bc)
     }
 }
 
-static int
+static unsigned long
 x86_bc_calc_len_insn(x86_insn *insn, /*@only@*/ /*@null@*/
 		     intnum *(*resolve_label) (section *sect,
 					       /*@null@*/ bytecode *bc))
@@ -518,7 +518,7 @@ x86_bc_calc_len_insn(x86_insn *insn, /*@only@*/ /*@null@*/
     return 0;
 }
 
-int
+unsigned long
 x86_bc_calc_len(bytecode *bc,
 		intnum *(*resolve_label) (section *sect,
 					  /*@null@*/ bytecode *bc))

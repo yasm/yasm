@@ -307,7 +307,7 @@ bc_print(FILE *f, const bytecode *bc)
     fprintf(f, "%*sOffset=%lx\n", indent_level, "", bc->offset);
 }
 
-int
+unsigned long
 bc_calc_len(bytecode *bc,
 	    intnum *(*resolve_label) (section *sect, /*@null@*/ bytecode *bc))
 {
