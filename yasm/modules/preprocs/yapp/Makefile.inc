@@ -1,6 +1,6 @@
 # $IdPath$
 
-lib_LTLIBRARIES += yasm-yapp.la
+lib_LTLIBRARIES += yasm_yapp.la
 
 yasm_yapp_la_SOURCES = \
 	modules/preprocs/yapp/yapp-preproc.h	\
@@ -9,7 +9,7 @@ yasm_yapp_la_SOURCES = \
 	modules/preprocs/yapp/yapp-token.l
 yasm_yapp_la_LDFLAGS = -module -avoid-version -no-undefined
 yasm_yapp_la_LIBADD = libyasm.la
-YASM_MODULES += -dlopen yasm-yapp.la
+YASM_MODULES += -dlopen yasm_yapp.la
 
 BUILT_SOURCES += \
 	yapp-token.c

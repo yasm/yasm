@@ -1,6 +1,6 @@
 # $IdPath$
 
-#lib_LTLIBRARIES += yasm-nasm.la
+#lib_LTLIBRARIES += yasm_nasm.la
 
 yasm_nasm_la_SOURCES += \
 	modules/preprocs/nasm/nasm-preproc.c \
@@ -25,4 +25,4 @@ EXTRA_DIST += modules/preprocs/nasm/macros.pl \
 
 #yasm_nasm_la_LDFLAGS = -module -avoid-version -no-undefined
 #yasm_nasm_la_LIBADD = libyasm.la
-#YASM_MODULES += -dlopen yasm-nasm.la
+#YASM_MODULES += -dlopen yasm_nasm.la

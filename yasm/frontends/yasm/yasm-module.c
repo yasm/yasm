@@ -79,7 +79,7 @@ load_module(const char *keyword)
 
     /* Look for dynamic module.  First build full module name from keyword. */
     name = yasm_xmalloc(5+strlen(keyword)+1);
-    strcpy(name, "yasm-");
+    strcpy(name, "yasm_");
     strcat(name, keyword);
     handle = lt_dlopenext(name);
 
