@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.10 2001/06/13 06:05:08 peter Exp $
+/* $Id: errwarn.c,v 1.11 2001/06/28 08:48:32 peter Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,14 +19,24 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <stdio.h>
+
+#ifdef STDC_HEADERS
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#endif
+
 #include <ctype.h>
+
+#include "util.h"
+
 #include "errwarn.h"
 #include "globals.h"
-#include "util.h"
 
 unsigned int error_count = 0;
 unsigned int warning_count = 0;
@@ -132,7 +142,7 @@ static char *process_argtypes(char *src, char *argtypes)
 	    }
 	}
     } else {
-	dest = y_strdup(src);
+	dest = strdup(src);
 	if(!dest)
 	    Fatal(FATAL_NOMEM);
     }

@@ -1,4 +1,4 @@
-/* $Id: token.l.in,v 1.6 2001/06/13 05:43:59 mu Exp $
+/* $Id: token.l.in,v 1.7 2001/06/28 08:48:32 peter Exp $
  * Main lexer
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -20,12 +20,20 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 %{
-#include <stdlib.h>
-#include <string.h>
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+# include <string.h>
+#endif
+
+#include "util.h"
+
 #include "symrec.h"
 #include "bytecode.h"
 #include "errwarn.h"
-#include "util.h"
 #include "bison.tab.h"
 
 %}
@@ -90,14 +98,14 @@ WS       [ \t\r]
 <DIRECTIVE2>{WS}+   ;
 <DIRECTIVE>[a-z]+   {
     BEGIN DIRECTIVE2;
-    yylval.str_val = y_strdup(yytext);
+    yylval.str_val = strdup(yytext);
     if(!yylval.str_val)
 	Fatal(FATAL_NOMEM);
     return DIRECTIVE_NAME;
 }
     /* everything printable except for ' ', '[' and ']'. */
 <DIRECTIVE2>[!-@a-z\\^-`{|}~]+ {
-    yylval.str_val = y_strdup(yytext);
+    yylval.str_val = strdup(yytext);
     if(!yylval.str_val)
 	Fatal(FATAL_NOMEM);
     return DIRECTIVE_VAL;
@@ -222,7 +230,7 @@ gs	{ yylval.int_val = 5; return REG_GS; }
 
     /* special non-local ..@label */
 \.\.@[a-z0-9_$#@~.?]+ {
-    yylval.syminfo.name = y_strdup (yytext);
+    yylval.syminfo.name = strdup (yytext);
     if (yylval.syminfo.name == NULL) Fatal (FATAL_NOMEM);
     yylval.syminfo.line = line_number;
 
@@ -234,7 +242,7 @@ gs	{ yylval.int_val = 5; return REG_GS; }
     if (locallabel_base == NULL) 
     {
 	Warning (WARN_NO_BASE_LABEL, (char *)NULL, yytext);
-	yylval.syminfo.name = y_strdup (yytext);
+	yylval.syminfo.name = strdup (yytext);
 	if (yylval.syminfo.name == NULL) Fatal (FATAL_NOMEM);
     }
     else
@@ -256,7 +264,7 @@ gs	{ yylval.int_val = 5; return REG_GS; }
 
     /* label */
 [a-z_?][a-z0-9_$#@~.?]* {
-    yylval.syminfo.name = y_strdup (yytext);
+    yylval.syminfo.name = strdup (yytext);
     if (yylval.syminfo.name == NULL) Fatal (FATAL_NOMEM);
     yylval.syminfo.line = line_number;
 

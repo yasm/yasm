@@ -10,4 +10,8 @@ AM_PROG_LEX
 AC_PROG_YACC
 AC_PROG_INSTALL
 
+AC_HEADER_STDC
+AC_CHECK_FUNCS(memcpy)
+AC_REPLACE_FUNCS(strdup)
+
 AC_OUTPUT(Makefile src/Makefile	include/Makefile)

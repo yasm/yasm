@@ -8,8 +8,7 @@ yasm_SOURCES = \
 	bytecode.c		\
 	errwarn.c		\
 	main.c			\
-	symrec.c		\
-	util.c
+	symrec.c
 
 noinst_SCRIPTS = gen_instr.pl
 

@@ -1,5 +1,5 @@
-/* $Id: util.h,v 1.1 2001/06/13 05:24:50 peter Exp $
- * Various utility functions for ANSI C compatibility header file
+/* $Id: util.h,v 1.2 2001/06/28 08:48:32 peter Exp $
+ * Defines prototypes for replacement functions if needed.
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -22,6 +22,8 @@
 #ifndef _UTIL_H_
 #define _UTIL_H_
 
-char *y_strdup(char *str);
+#ifndef HAVE_STRDUP
+char *strdup(const char *str);
+#endif
 
 #endif
