@@ -19,6 +19,7 @@ all: yasm
 
 LIBYASM_OBJS= \
  libyasm/arch.o \
+ libyasm/assocdat.o \
  libyasm/bitvect.o \
  libyasm/bytecode.o \
  libyasm/errwarn.o \
