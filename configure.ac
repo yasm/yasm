@@ -20,6 +20,7 @@ AM_PROG_CC_STDC
 AM_PROG_LEX
 AC_PROG_YACC
 AC_PROG_INSTALL
+AC_PROG_RANLIB
 
 AC_HEADER_STDC
 
@@ -30,4 +31,4 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(memcpy toascii)
 AC_REPLACE_FUNCS(strdup strtoul)
 
-AC_OUTPUT(Makefile src/Makefile)
+AC_OUTPUT(Makefile src/Makefile src/parsers/Makefile src/parsers/nasm/Makefile src/preprocs/Makefile src/preprocs/raw/Makefile src/outfmts/Makefile src/outfmts/dbg/Makefile)
