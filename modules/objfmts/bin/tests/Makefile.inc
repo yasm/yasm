@@ -5,6 +5,9 @@ TESTS += \
 
 EXTRA_DIST += \
 	src/objfmts/bin/tests/bin_test.sh		\
+	src/objfmts/bin/tests/bintest.asm		\
+	src/objfmts/bin/tests/bintest.hex		\
+	src/objfmts/bin/tests/bintest.errwarn		\
 	src/objfmts/bin/tests/float-err.asm		\
 	src/objfmts/bin/tests/float-err.errwarn		\
 	src/objfmts/bin/tests/float.asm			\
@@ -23,6 +26,9 @@ EXTRA_DIST += \
 	src/objfmts/bin/tests/reserve-err.errwarn
 
 CLEANFILES += \
+	bintest \
+	bintest.hx \
+	bintest.ew \
 	float-err.ew \
 	float \
 	float.hx \
