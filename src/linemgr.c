@@ -35,9 +35,6 @@
  */
 /*@null@*/ FILE *debug_file = NULL;
 
-/* Current (selected) parser */
-/*@null@*/ parser *cur_parser = NULL;
-
 /* Current (selected) object format) */
 /*@null@*/ objfmt *cur_objfmt = NULL;
 

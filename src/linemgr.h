@@ -30,9 +30,6 @@
  */
 extern /*@null@*/ /*@dependent@*/ FILE *debug_file;
 
-/* Current (selected) parser */
-extern /*@null@*/ parser *cur_parser;
-
 /* Current (selected) object format */
 extern /*@null@*/ objfmt *cur_objfmt;
 

@@ -57,6 +57,7 @@ extern unsigned char x86_mode_bits;
 
 /*@null@*/ /*@only@*/ static char *obj_filename = NULL, *in_filename = NULL;
 static int special_options = 0;
+/*@null@*/ static parser *cur_parser = NULL;
 /*@null@*/ /*@dependent@*/ static preproc *cur_preproc = NULL;
 static int preproc_only = 0;
 
