@@ -16,9 +16,11 @@ noinst_PROGRAMS =
 
 yasm_SOURCES =
 yasm_LDFLAGS =
-yasm_LDADD = libyasm.la @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@
+yasm_LDADD = libyasm.la @LIBLTDL@ $(INTLLIBS) @LIBADD_DL@
 
 lib_LTLIBRARIES = libyasm.la
+libyasm_la_LIBADD = @LTLIBOBJS@
+
 BUILT_SOURCES =
 # configure.lineno doesn't clean up after itself?
 CLEANFILES = configure.lineno

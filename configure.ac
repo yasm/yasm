@@ -283,6 +283,12 @@ esac
 AC_SUBST(INCLTDL)
 AC_SUBST(LIBLTDL)
 
+# Create LTLIBOBJS
+Xsed="sed -e s/^X//"
+LTLIBOBJS=`echo X"$LIB@&t@OBJS"|\
+	[$Xsed -e 's,\.[^.]* ,.lo ,g;s,\.[^.]*$,.lo,']`
+AC_SUBST(LTLIBOBJS)
+
 AC_CONFIG_FILES([Makefile
 	libltdl/Makefile
 	m4/Makefile
