@@ -188,8 +188,9 @@ WS       [ \t\r]
     return DIRECTIVE_NAME;
 }
 <DIRECTIVE>. {
-    Warning(_("ignoring unrecognized character `%s'"),
-	    conv_unprint(yytext[0]));
+    if (WARN_ENABLED(WARN_UNRECOGNIZED_CHAR))
+	Warning(_("ignoring unrecognized character `%s'"),
+		conv_unprint(yytext[0]));
 }
 
     /* override local labels in directive state */
@@ -345,7 +346,8 @@ gs	{ yylval.int_info = 5; return REG_GS; }
 \n	return '\n';
 
 .	{
-    Warning(_("ignoring unrecognized character `%s'"),
-	    conv_unprint(yytext[0]));
+    if (WARN_ENABLED(WARN_UNRECOGNIZED_CHAR))
+	Warning(_("ignoring unrecognized character `%s'"),
+		conv_unprint(yytext[0]));
 }
 

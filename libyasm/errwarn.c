@@ -38,6 +38,19 @@
 #include "errwarn.h"
 
 
+/* ALL warnings are disabled if this is nonzero. */
+int warnings_disabled = 0;
+
+/* Warnings are treated as errors if this is nonzero.
+ * =2 indicates that warnings are treated as errors, and the message to the
+ * user saying that has been output.
+ */
+int warning_error = 0;
+
+/* Default enabled warnings.  See errwarn.h for a list. */
+unsigned long warning_flags =
+    (1<<WARN_UNRECOGNIZED_CHAR);
+
 /* Total error count for entire assembler run.
  * Assembler should exit with EXIT_FAILURE if this is >= 0 on finish. */
 static unsigned int error_count = 0;
@@ -194,6 +207,9 @@ Warning(const char *fmt, ...)
     va_list ap;
     errwarn *we;
 
+    if (warnings_disabled)
+	return;
+
     if (previous_warning_line == line_index)
 	return;
 
@@ -231,6 +247,9 @@ WarningNow(const char *fmt, ...)
 {
     va_list ap;
 
+    if (warnings_disabled)
+	return;
+
     fprintf(stderr, "%s ", _("warning:"));
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
@@ -262,6 +281,9 @@ WarningAt(unsigned long lindex, const char *fmt, ...)
     const char *filename;
     unsigned long line;
 
+    if (warnings_disabled)
+	return;
+
     line_lookup(lindex, &filename, &line);
     fprintf(stderr, "%s:%lu: %s ", filename?filename:"NULL", line,
 	    _("warning:"));
@@ -280,8 +302,18 @@ OutputAllErrorWarning(void)
     unsigned long line;
 
     /* If errwarns hasn't been initialized, there are no messages. */
-    if (!errwarns)
-	return error_count;
+    if (!errwarns) {
+	if (warning_error)
+	    return error_count+warning_count;
+	else
+	    return error_count;
+    }
+
+    /* If we're treating warnings as errors, tell the user about it. */
+    if (warning_error && warning_error != 2) {
+	fprintf(stderr, "%s\n", _("warnings being treated as errors"));
+	warning_error = 2;
+    }
 
     /* Output error and warning messages. */
     STAILQ_FOREACH(we, errwarns, link) {
@@ -301,6 +333,10 @@ OutputAllErrorWarning(void)
 	we = we2;
     }
 
-    /* Return the total error count up to this point. */
+    /* Return the total error count up to this point.
+     * If we're treating warnings as errors, add that to the total as well.
+     */
+    if (warning_error)
+	return error_count+warning_count;
     return error_count;
 }

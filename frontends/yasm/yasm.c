@@ -54,6 +54,7 @@ static int files_open = 0;
 static int opt_option_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_format_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_objfile_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
 /* Fake handlers: remove them */
 static int boo_boo_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int b_handler(char *cmd, /*@null@*/ char *param, int extra);
@@ -67,6 +68,8 @@ static opt_option options[] =
     { 'h', "help",    0, opt_option_handler, OPT_SHOW_HELP, "show help text", NULL },
     { 'f', "oformat", 1, opt_format_handler, 0, "select output format", "<format>" },
     { 'o', "objfile", 1, opt_objfile_handler, 0, "name of object-file output", "<filename>" },
+    { 'w', NULL,      0, opt_warning_handler, 1, "inhibits warning messages", NULL },
+    { 'W', NULL,      0, opt_warning_handler, 0, "enables/disables warning", NULL },
     /* Fake handlers: remove them */
     { 'b', NULL,      0, b_handler, 0, "says boom!", NULL },
     {  0,  "boo-boo", 0, boo_boo_handler, 0, "says boo-boo!", NULL },
@@ -294,6 +297,39 @@ opt_objfile_handler(/*@unused@*/ char *cmd, char *param,
     if (obj_filename)
 	xfree(obj_filename);
     obj_filename = xstrdup(param);
+
+    return 0;
+}
+
+static int
+opt_warning_handler(char *cmd, /*@unused@*/ char *param, int extra)
+{
+    int enable = 1;	/* is it disabling the warning instead of enabling? */
+
+    if (extra == 1) {
+	/* -w, disable warnings */
+	warnings_disabled = 1;
+	return 0;
+    }
+
+    /* skip past 'W' */
+    cmd++;
+
+    /* detect no- prefix to disable the warning */
+    if (cmd[0] == 'n' && cmd[1] == 'o' && cmd[2] == '-') {
+	enable = 0;
+	cmd += 3;   /* skip past it to get to the warning name */
+    }
+
+    if (cmd[0] == '\0')
+	/* just -W or -Wno-, so definitely not valid */
+	return 1;
+    else if (strcmp(cmd, "error") == 0) {
+	warning_error = enable;
+    } else if (strcmp(cmd, "unrecognized-char") == 0) {
+	WARN_ENABLE(WARN_UNRECOGNIZED_CHAR, enable);
+    } else
+	return 1;
 
     return 0;
 }

@@ -22,6 +22,34 @@
 #ifndef YASM_ERRWARN_H
 #define YASM_ERRWARN_H
 
+/* ALL warnings disabled? */
+extern int warnings_disabled;
+
+/* Warnings treated as errors? */
+extern int warning_error;
+
+/* Warning flags.  Currently a maximum of 32 are allowed.  This can be
+ * increased by making this an array and modifying the WARN_ macros to use the
+ * proper array index based on the warning number.
+ *
+ * If a bit is 1, it means that particular warning is enabled.  The bit numbers
+ * are assigned according to the warn_flag_num enum.
+ *
+ * See errwarn.c for what warnings are enabled by default.
+ */
+extern unsigned long warning_flags;
+typedef enum {
+    WARN_UNRECOGNIZED_CHAR = 0
+} warn_flag_num;
+
+/* Tests the warning flags to see if warning "warn" is enabled */
+#define WARN_ENABLED(warn)	(warning_flags & (1<<(warn)))
+/* Sets warning "warn" to be enabled or disabled based on "s" (1=en, 0=dis). */
+#define WARN_ENABLE(warn, s)	do { \
+	warning_flags &= ~(1<<(warn)); \
+	warning_flags |= (s)<<(warn); \
+    } while(0)
+
 /* Fatal error constants.
  * See fatal_msgs in errwarn.c for strings that match up to these constants.
  * When adding a constant here, keep errwarn.c in sync! */
