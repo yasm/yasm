@@ -95,7 +95,7 @@ struct objfmt {
 
     /* May be NULL if symrec_set_of_data() is never called. */
     void (*symrec_data_delete)(/*@only@*/ void *data);
-    void (*symrec_data_print)(FILE *f, /*@null@*/ void *data);
+    void (*symrec_data_print)(FILE *f, void *data);
 
     /* Object format-specific directive support.  Returns 1 if directive was
      * not recognized.  Returns 0 if directive was recognized, even if it
