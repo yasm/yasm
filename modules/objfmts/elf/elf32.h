@@ -26,21 +26,21 @@
  * $FreeBSD: src/sys/sys/elf32.h,v 1.7 1999/08/28 00:51:41 peterr Exp $
  */
 
-#ifndef _SYS_ELF32_H_
-#define _SYS_ELF32_H_ 1
+#ifndef YASM_ELF32_H
+#define YASM_ELF32_H 1
 
-#include <sys/elf_common.h>
+#include "elf_common.h"
 
 /*
  * ELF definitions common to all 32-bit architectures.
  */
 
-typedef u_int32_t	Elf32_Addr;
-typedef u_int16_t	Elf32_Half;
-typedef u_int32_t	Elf32_Off;
-typedef int32_t		Elf32_Sword;
-typedef u_int32_t	Elf32_Word;
-typedef u_int32_t	Elf32_Size;
+typedef unsigned long	Elf32_Addr;
+typedef unsigned short	Elf32_Half;
+typedef unsigned long	Elf32_Off;
+typedef signed long	Elf32_Sword;
+typedef unsigned long	Elf32_Word;
+typedef unsigned long	Elf32_Size;
 
 /*
  * ELF header.
@@ -152,4 +152,4 @@ typedef struct {
 /* Macro for constructing st_info from field values. */
 #define ELF32_ST_INFO(bind, type)	(((bind) << 4) + ((type) & 0xf))
 
-#endif /* !_SYS_ELF32_H_ */
+#endif /* !YASM_ELF32_H */

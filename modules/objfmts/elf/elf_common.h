@@ -26,8 +26,8 @@
  * $FreeBSD: src/sys/sys/elf_common.h,v 1.5.2.3 2001/02/28 02:30:46 obrien Exp $
  */
 
-#ifndef _SYS_ELF_COMMON_H_
-#define _SYS_ELF_COMMON_H_ 1
+#ifndef YASM_ELF_COMMON_H
+#define YASM_ELF_COMMON_H 1
 
 /*
  * ELF definitions that are independent of architecture or word size.
@@ -43,9 +43,9 @@
  */
 
 typedef struct {
-	u_int32_t	n_namesz;	/* Length of name. */
-	u_int32_t	n_descsz;	/* Length of descriptor. */
-	u_int32_t	n_type;		/* Type of this note. */
+	unsigned long	n_namesz;	/* Length of name. */
+	unsigned long	n_descsz;	/* Length of descriptor. */
+	unsigned long	n_type;		/* Type of this note. */
 } Elf_Note;
 
 /* Indexes into the e_ident array.  Keep synced with 
@@ -245,4 +245,4 @@ typedef struct {
 /* Special symbol table indexes. */
 #define STN_UNDEF	0	/* Undefined symbol index. */
 
-#endif /* !_SYS_ELF_COMMON_H_ */
+#endif /* !YASM_ELF_COMMON_H */
