@@ -16,3 +16,6 @@ aclocal.m4
 *.yp
 *.hx
 *.ew
+*.la
+*.lo
+.libs
