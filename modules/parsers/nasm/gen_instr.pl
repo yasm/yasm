@@ -524,9 +524,6 @@ sub output_yacc ($@)
 			if($inst->[SHORTOPCODE] =~ m/nil/)
 			{
 			    push @args, 'short_op_len=0;';
-			    push @args, 'short_op[0]=0;';
-			    push @args, 'short_op[1]=0;';
-			    push @args, 'short_op[2]=0;';
 			}
 			else
 			{
@@ -542,20 +539,12 @@ sub output_yacc ($@)
 				$opcodes[$i] =~ s/\$(\d+)(?!\.)/"\$".($1*2)/eg;
 				push @args, "short_op[$i]=$opcodes[$i];";
 			    }
-
-			    # opcode piece 2 (if not attached)
-			    push @args, "short_op[1]=0;" if @opcodes < 2;
-			    # opcode piece 3 (if not attached)
-			    push @args, "short_op[2]=0;" if @opcodes < 3;
 			}
 
 			# test for near opcode "nil"
 			if($inst->[NEAROPCODE] =~ m/nil/)
 			{
 			    push @args, 'near_op_len=0;';
-			    push @args, 'near_op[0]=0;';
-			    push @args, 'near_op[1]=0;';
-			    push @args, 'near_op[2]=0;';
 			}
 			else
 			{
@@ -571,11 +560,6 @@ sub output_yacc ($@)
 				$opcodes[$i] =~ s/\$(\d+)(?!\.)/"\$".($1*2)/eg;
 				push @args, "near_op[$i]=$opcodes[$i];";
 			    }
-
-			    # opcode piece 2 (if not attached)
-			    push @args, "near_op[1]=0;" if @opcodes < 2;
-			    # opcode piece 3 (if not attached)
-			    push @args, "near_op[2]=0;" if @opcodes < 3;
 			}
 
 			# address size
@@ -639,14 +623,9 @@ sub output_yacc ($@)
 			    push @args, "op[$i]=$opcodes[$i];";
 			}
 
-			# opcode piece 2 (if not attached)
-			push @args, "op[1]=0;" if @opcodes < 2;
-			# opcode piece 3 (if not attached)
-			push @args, "op[2]=0;" if @opcodes < 3;
-
 			# effective addresses
 			my $effaddr = $inst->[EFFADDR];
-			$effaddr =~ s/^nil/(effaddr *)NULL,0/;
+			$effaddr =~ s/^nil/NULL,0/;
 			$effaddr =~ s/nil/0/;
 			# don't let a $0.\d match slip into the following rules.
 			$effaddr =~ s/\$(\d+)([ri])?(?!\.)/"\$".($1*2+$to).($2||'')/eg;
@@ -660,11 +639,14 @@ sub output_yacc ($@)
 			my @effaddr_split = split ',', $effaddr;
 			$effaddr_split[0] =~ s/\^/,/;
 			push @args, "ea=$effaddr_split[0];";
-			push @args, "spare=$effaddr_split[1];";
+			if ($effaddr_split[0] !~ m/NULL/)
+			{
+			    push @args, "spare=$effaddr_split[1];";
+			}
 
 			# immediate sources
 			my $imm = $inst->[IMM];
-			$imm =~ s/nil/(immval *)NULL,0/;
+			$imm =~ s/nil/NULL,0/;
 			# don't match $0.\d in the following rules.
 			$imm =~ s/\$(\d+)(?!\.)/"\$".($1*2+$to).($2||'')/eg;
 			$imm =~ s[^([0-9A-Fa-f]+),]
@@ -680,8 +662,11 @@ sub output_yacc ($@)
 
 			my @imm_split = split ",", $imm;
 			push @args, "imm=$imm_split[0];";
-			push @args, "im_len=$imm_split[1];";
-			push @args, "im_sign=$imm_split[2];";
+			if ($imm_split[0] !~ m/NULL/)
+			{
+			    push @args, "im_len=$imm_split[1];";
+			    push @args, "im_sign=$imm_split[2];";
+			}
 
 			# now that we've constructed the arglist, subst $0.\d
 			s/\$0\.(\d+)/\$1\[$1\]/g foreach (@args);
@@ -737,10 +722,9 @@ sub output_yacc ($@)
 			    # Now output imm version, with second opcode byte
 			    # set to ,1 opcode.  Also call SetInsnShiftFlag().
 			    $tokens =~ s/imm8x/imm/;
-			    die "no space for ONE?" if $args[3] !~ m/0;/;
 			    my $oneval = $ONE->[3]->[2];
-			    $oneval =~ s/(idata\.op\[\d\]=)|;//g;
-			    $args[3] =~ s/0/$oneval/;
+			    $oneval =~ s/op\[(\d)\]=/"op[".($1+1)."]="/eg;
+			    push @args, $oneval;
 			    print GRAMMAR action_setshiftflag ($rule, $tokens, $func, \@args, $count++);
 			}
 			elsif ($AL and ($inst->[OPERANDS]||"") =~ m/reg8,imm/)
