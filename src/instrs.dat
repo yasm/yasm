@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.30 2001/07/11 04:07:11 peter Exp $
+; $Id: instrs.dat,v 1.31 2001/08/19 02:09:03 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -85,8 +85,8 @@
 ;  When an instruction that uses a group is encountered, eg:
 ;   inst!grpname  parm1[,parm2[,parm3]]
 ;  The following lex code is generated:
-;   inst { yylval.groupdata.d1=0xparm1; return GRPNAME; }
-;  (and additional yylval.groupdata.d#=0xparm#; if needed)
+;   inst { yylval.groupdata[0]=0xparm1; return GRPNAME; }
+;  (and additional yylval.groupdata[#-1]=0xparm#; if needed)
 ;
 ; KEY
 ;
