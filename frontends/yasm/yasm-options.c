@@ -144,6 +144,9 @@ help_msg(const char *msg, const char *tail, opt_option *options, size_t nopts)
     printf("%s", gettext(msg));
 
     for (i = 0; i < nopts; i++) {
+	int shortopt_len = 0;
+	int longopt_len = 0;
+
 	optbuf[0] = 0;
 	optopt[0] = 0;
 
@@ -152,28 +155,39 @@ help_msg(const char *msg, const char *tail, opt_option *options, size_t nopts)
 		sprintf(optbuf, "-%c <%s>", options[i].sopt,
 			options[i].param_desc ? options[i].
 			param_desc : _("param"));
+		shortopt_len = strlen(optbuf);
 	    }
 	    if (options[i].sopt && options[i].lopt)
 		strcat(optbuf, ", ");
 	    if (options[i].lopt) {
-		sprintf(optopt, "--%s <%s>", options[i].lopt,
+		sprintf(optopt, "--%s=<%s>", options[i].lopt,
 			options[i].param_desc ? options[i].
 			param_desc : _("param"));
 		strcat(optbuf, optopt);
+		longopt_len = strlen(optbuf);
 	    }
 	} else {
 	    if (options[i].sopt) {
 		sprintf(optbuf, "-%c", options[i].sopt);
+		shortopt_len = strlen(optbuf);
 	    }
 	    if (options[i].sopt && options[i].lopt)
 		strcat(optbuf, ", ");
 	    if (options[i].lopt) {
 		sprintf(optopt, "--%s", options[i].lopt);
 		strcat(optbuf, optopt);
+		longopt_len = strlen(optbuf);
 	    }
 	}
 
-	printf("    %-24s  %s\n", optbuf, gettext(options[i].description));
+	/* split [-s <desc>], [--long <desc>] if it destroys columns */
+	if (shortopt_len && longopt_len && longopt_len > 22) {
+	    optbuf[shortopt_len] = '\0';
+	    printf("    %-22s  %s\n", optopt, gettext(options[i].description));
+	    printf("     %s\n", optbuf);
+	}
+	else
+	    printf("    %-22s  %s\n", optbuf, gettext(options[i].description));
     }
 
     printf("%s", gettext(tail));
