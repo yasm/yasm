@@ -1,5 +1,5 @@
 /*
- * NASM-compatible lex lexer
+ * NASM-compatible re2c lexer
  *
  *  Copyright (C) 2001  Peter Johnson
  *
