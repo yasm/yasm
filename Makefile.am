@@ -3,7 +3,11 @@
 SUBDIRS = intl po doc
 
 CFLAGS = @ANSI_CFLAGS@
-INCLUDES = -I$(top_srcdir) -I$(top_srcdir)/src -I$(top_srcdir)/check
+INCLUDES = \
+	-I$(top_srcdir) \
+	-I$(top_srcdir)/src \
+	-I$(top_srcdir)/check \
+	-I$(top_srcdir)/intl
 
 bin_PROGRAMS = yasm
 TESTS =
