@@ -243,5 +243,6 @@ yasm_arch yasm_x86_LTX_arch = {
     NULL,	/* x86_ea_data_delete */
     yasm_x86__ea_data_print,
     x86_machines,
-    "x86"
+    "x86",
+    2
 };

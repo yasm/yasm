@@ -119,5 +119,6 @@ yasm_arch yasm_lc3b_LTX_arch = {
     NULL,	/*yasm_lc3b__ea_data_delete*/
     NULL,	/*yasm_lc3b__ea_data_print*/
     lc3b_machines,
-    "lc3b"
+    "lc3b",
+    2
 };

@@ -93,7 +93,7 @@ typedef struct yasm_arch_machine {
  * definitions match the module loader's function definitions.  The version
  * number must never be decreased.
  */
-#define YASM_ARCH_VERSION	0
+#define YASM_ARCH_VERSION	1
 
 /** YASM architecture interface.
  * \note All "data" in parser-related functions (parse_*) needs to start the
@@ -337,6 +337,9 @@ struct yasm_arch {
 
     /** Default machine keyword. */
     const char *default_machine_keyword;
+
+    /** Canonical "word" size in bytes. */
+    unsigned int wordsize;
 };
 
 #ifdef YASM_LIB_INTERNAL

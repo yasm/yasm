@@ -80,7 +80,7 @@ static yasm_bytecode *nasm_parser_temp_bc;
 %token <intn> INTNUM
 %token <flt> FLTNUM
 %token <str_val> DIRECTIVE_NAME STRING FILENAME
-%token <int_info> BYTE WORD DWORD QWORD TWORD DQWORD
+%token <int_info> BYTE WORD HWORD DWORD QWORD TWORD DQWORD
 %token <int_info> DECLARE_DATA
 %token <int_info> RESERVE_SPACE
 %token INCBIN EQU TIMES
@@ -313,10 +313,26 @@ memaddr: expr		    {
 	$$ = $3;
 	nasm_parser_arch->parse_seg_override($$, $1[0], cur_lindex);
     }
-    | BYTE memaddr	    { $$ = $2; yasm_ea_set_len($$, 1); }
-    | WORD memaddr	    { $$ = $2; yasm_ea_set_len($$, 2); }
-    | DWORD memaddr	    { $$ = $2; yasm_ea_set_len($$, 4); }
-    | QWORD memaddr	    { $$ = $2; yasm_ea_set_len($$, 8); }
+    | BYTE memaddr	    {
+	$$ = $2;
+	yasm_ea_set_len($$, 1);
+    }
+    | HWORD memaddr	    {
+	$$ = $2;
+	yasm_ea_set_len($$, nasm_parser_arch->wordsize/2);
+    }
+    | WORD memaddr	    {
+	$$ = $2;
+	yasm_ea_set_len($$, nasm_parser_arch->wordsize);
+    }
+    | DWORD memaddr	    {
+	$$ = $2;
+	yasm_ea_set_len($$, nasm_parser_arch->wordsize*2);
+    }
+    | QWORD memaddr	    {
+	$$ = $2;
+	yasm_ea_set_len($$, nasm_parser_arch->wordsize*4);
+    }
     | NOSPLIT memaddr	    { $$ = $2; yasm_ea_set_nosplit($$, 1); }
 ;
 
@@ -344,45 +360,59 @@ operand: '[' memaddr ']'    { $$ = yasm_operand_new_mem($2); }
 	else
 	    $$->size = 1;
     }
+    | HWORD operand	    {
+	$$ = $2;
+	if ($$->type == YASM_INSN__OPERAND_REG &&
+	    nasm_parser_arch->get_reg_size($$->data.reg) !=
+	    nasm_parser_arch->wordsize/2)
+	    yasm__error(cur_lindex, N_("cannot override register size"));
+	else
+	    $$->size = nasm_parser_arch->wordsize/2;
+    }
     | WORD operand	    {
 	$$ = $2;
 	if ($$->type == YASM_INSN__OPERAND_REG &&
-	    nasm_parser_arch->get_reg_size($$->data.reg) != 2)
+	    nasm_parser_arch->get_reg_size($$->data.reg) !=
+	    nasm_parser_arch->wordsize)
 	    yasm__error(cur_lindex, N_("cannot override register size"));
 	else
-	    $$->size = 2;
+	    $$->size = nasm_parser_arch->wordsize;
     }
     | DWORD operand	    {
 	$$ = $2;
 	if ($$->type == YASM_INSN__OPERAND_REG &&
-	    nasm_parser_arch->get_reg_size($$->data.reg) != 4)
+	    nasm_parser_arch->get_reg_size($$->data.reg) !=
+	    nasm_parser_arch->wordsize*2)
 	    yasm__error(cur_lindex, N_("cannot override register size"));
 	else
-	    $$->size = 4;
+	    $$->size = nasm_parser_arch->wordsize*2;
     }
     | QWORD operand	    {
 	$$ = $2;
 	if ($$->type == YASM_INSN__OPERAND_REG &&
-	    nasm_parser_arch->get_reg_size($$->data.reg) != 8)
+	    nasm_parser_arch->get_reg_size($$->data.reg) !=
+	    nasm_parser_arch->wordsize*4)
 	    yasm__error(cur_lindex, N_("cannot override register size"));
 	else
-	    $$->size = 8;
+	    $$->size = nasm_parser_arch->wordsize*4;
     }
     | TWORD operand	    {
 	$$ = $2;
 	if ($$->type == YASM_INSN__OPERAND_REG &&
-	    nasm_parser_arch->get_reg_size($$->data.reg) != 10)
+	    nasm_parser_arch->get_reg_size($$->data.reg) !=
+	    nasm_parser_arch->wordsize*5)
 	    yasm__error(cur_lindex, N_("cannot override register size"));
 	else
-	    $$->size = 10;
+	    $$->size = nasm_parser_arch->wordsize*5;
     }
     | DQWORD operand	    {
 	$$ = $2;
 	if ($$->type == YASM_INSN__OPERAND_REG &&
-	    nasm_parser_arch->get_reg_size($$->data.reg) != 16)
+	    nasm_parser_arch->get_reg_size($$->data.reg) !=
+	    nasm_parser_arch->wordsize*8)
 	    yasm__error(cur_lindex, N_("cannot override register size"));
 	else
-	    $$->size = 16;
+	    $$->size = nasm_parser_arch->wordsize*8;
     }
     | TARGETMOD operand	    { $$ = $2; $$->targetmod = $1[0]; }
 ;
