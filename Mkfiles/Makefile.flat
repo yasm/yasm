@@ -1,0 +1,97 @@
+# $IdPath$
+#
+# Ultra-flat Makefile "prototype" for non-Unix platforms.
+# Does NOT depend on or use configure.
+#
+# Works for simple build but *not* for development (no clean, dist, etc).
+# Also, WARNING, no header dependencies are included!
+#
+# Problem to fix: to simplify this file, we probably want subdir Makefiles
+#  included into this one?  But include directives vary between Make versions.
+# Should bison/flex/perl rules even be included in this if it's not for
+#  development use?
+#
+# NOTE: Needs a valid config.h for the platform being compiled on.
+#
+# This file should be customized to particular platforms by changing CC and
+#  CFLAGS appropriately, along with writing a config.h for the platform.
+
+CFLAGS=-DHAVE_CONFIG_H -I. -Isrc -Inointl
+CC=gcc
+BISON=bison
+FLEX=flex
+PERL=perl
+
+all: src/yasm
+
+SRC_OBJS= \
+ src/bytecode.o \
+ src/errwarn.o \
+ src/expr.o \
+ src/symrec.o \
+ src/globals.o \
+ src/file.o \
+ src/section.o \
+ src/options.o \
+ src/parser.o \
+ src/intnum.o \
+ src/floatnum.o \
+ src/ternary.o \
+ src/bitvect.o \
+ src/xmalloc.o \
+ src/xstrdup.o \
+ src/strcasecmp.o
+
+SRC_PREPROCS_RAW_OBJS= \
+ src/preprocs/raw/preproc.o
+
+SRC_PREPROCS_OBJS= \
+ $(SRC_PREPROCS_RAW_OBJS)
+
+SRC_PARSERS_NASM_OBJS= \
+ src/parsers/nasm/parser.o \
+ src/parsers/nasm/bison.o \
+ src/parsers/nasm/token.o
+
+SRC_PARSERS_OBJS= \
+ $(SRC_PARSERS_NASM_OBJS)
+
+SRC_OPTIMIZERS_DBG_OBJS= \
+ src/optimizers/dbg/optimizer.o
+
+SRC_OPTIMIZERS_OBJS= \
+ $(SRC_OPTIMIZERS_DBG_OBJS)
+
+SRC_OBJFMTS_DBG_OBJS= \
+ src/objfmts/dbg/objfmt.o
+
+SRC_OBJFMTS_OBJS= \
+ $(SRC_OBJFMTS_DBG_OBJS)
+
+YASM_OBJS= \
+ src/main.o \
+ $(SRC_OBJS) \
+ $(SRC_PREPROCS_OBJS) \
+ $(SRC_PARSERS_OBJS) \
+ $(SRC_OPTIMIZERS_OBJS) \
+ $(SRC_OBJFMTS_OBJS)
+
+src/yasm: $(YASM_OBJS)
+	$(CC) -o src/yasm $(YASM_OBJS)
+
+src/parsers/nasm/token.o: src/parsers/nasm/token.c
+	$(CC) -c $(CFLAGS) -Isrc/parsers/nasm -o $@ $<
+
+# This is broken: it produces an invalid bison.h
+src/parsers/nasm/bison.c: src/parsers/nasm/bison.y
+	$(BISON) -d --name-prefix=nasm_parser_ -o $@ $<
+
+src/parsers/nasm/token.c: src/parsers/nasm/token.l
+	$(FLEX) -Pname_parser_ -o$@ $<
+
+src/parsers/nasm/bison.y src/parsers/nasm/token.l: src/instrs.dat src/parsers/nasm/bison.y.in src/parsers/nasm/token.l.in src/parsers/nasm/gen_instr.pl
+	$(PERL) src/parsers/nasm/gen_instr.pl -i src/instrs.dat -t src/parsers/nasm/token.l -g src/parsers/nasm/bison.y
+
+.c.o:
+	$(CC) -c $(CFLAGS) -o $@ $<
+
