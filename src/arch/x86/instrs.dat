@@ -130,12 +130,12 @@ mov	mem32x,segreg		32	8C		$1,$2		nil	386
 mov	segreg,mem		nil	8E		$2,$1		nil	8086
 mov	segreg,rm16x		nil	8E		$2,$1		nil	8086
 mov	segreg,rm32x		nil	8E		$2,$1		nil	386
-;mov	REG_AL,memoff8
-;mov	REG_AX,memoff16
-;mov	REG_EAX,memoff32
-;mov	memoff8,REG_AL
-;mov	memoff16,REG_AX
-;mov	memoff32,REG_EAX
+;mov	reg_al,memoff8
+;mov	reg_ax,memoff16
+;mov	reg_eax,memoff32
+;mov	memoff8,reg_al
+;mov	memoff16,reg_ax
+;mov	memoff32,reg_eax
 mov	reg8,imm8		nil	B0+$1		nil		$2,8	8086
 mov	reg16,imm16		16	B8+$1		nil		$2,16	8086
 mov	reg32,imm32		32	B8+$1		nil		$2,32	386
@@ -169,12 +169,12 @@ push	reg32			32	50+$1		nil		nil	386
 push	imm8x			nil	6A		nil		$1,8	8086
 push	imm16x			16	68		nil		$1,16	8086
 push	imm32x			32	68		nil		$1,32	386
-push	REG_CS			nil	0E		nil		nil	8086
-push	REG_SS			nil	16		nil		nil	8086
-push	REG_DS			nil	1E		nil		nil	8086
-push	REG_ES			nil	06		nil		nil	8086
-push	REG_FS			nil	0F,A0		nil		nil	386
-push	REG_GS			nil	0F,A8		nil		nil	386
+push	reg_cs			nil	0E		nil		nil	8086
+push	reg_ss			nil	16		nil		nil	8086
+push	reg_ds			nil	1E		nil		nil	8086
+push	reg_es			nil	06		nil		nil	8086
+push	reg_fs			nil	0F,A0		nil		nil	386
+push	reg_gs			nil	0F,A8		nil		nil	386
 pusha!onebyte		nil,60		186
 pushad!onebyte		20,60		386
 pushaw!onebyte		10,60		186
@@ -185,11 +185,11 @@ pop	mem16x			16	8F		$1,0		nil	8086
 pop	mem32x			32	8F		$1,0		nil	386
 pop	reg16			16	58+$1		nil		nil	8086
 pop	reg32			32	58+$1		nil		nil	386
-pop	REG_DS			nil	1F		nil		nil	8086
-pop	REG_ES			nil	07		nil		nil	8086
-pop	REG_SS			nil	17		nil		nil	8086
-pop	REG_FS			nil	0F,A1		nil		nil	386
-pop	REG_GS			nil	0F,A9		nil		nil	386
+pop	reg_ds			nil	1F		nil		nil	8086
+pop	reg_es			nil	07		nil		nil	8086
+pop	reg_ss			nil	17		nil		nil	8086
+pop	reg_fs			nil	0F,A1		nil		nil	386
+pop	reg_gs			nil	0F,A9		nil		nil	386
 popa!onebyte		nil,61		186
 popad!onebyte		20,61		386
 popaw!onebyte		10,61		186
@@ -201,15 +201,15 @@ xchg	reg8,reg8		nil	86		$1r,$2		nil	8086
 xchg	mem,reg8		nil	86		$1,$2		nil	8086
 xchg	mem8x,reg8		nil	86		$1,$2		nil	8086
 xchg	reg8,mem8		nil	86		$2,$1		nil	8086
-xchg	REG_AX,reg16		16	90+$2		nil		nil	8086
-xchg	reg16,REG_AX		16	90+$1		nil		nil	8086
+xchg	reg_ax,reg16		16	90+$2		nil		nil	8086
+xchg	reg16,reg_ax		16	90+$1		nil		nil	8086
 ; arbitrary encoding, picked $1r,$2 instead of $2r,$1
 xchg	reg16,reg16		16	87		$1r,$2		nil	8086
 xchg	mem,reg16		16	87		$1,$2		nil	8086
 xchg	mem16x,reg16		16	87		$1,$2		nil	8086
 xchg	reg16,mem16		16	87		$2,$1		nil	8086
-xchg	REG_EAX,reg32		32	90+$2		nil		nil	386
-xchg	reg32,REG_EAX		32	90+$1		nil		nil	386
+xchg	reg_eax,reg32		32	90+$2		nil		nil	386
+xchg	reg32,reg_eax		32	90+$1		nil		nil	386
 ; arbitrary encoding, picked $1r,$2 instead of $2r,$1
 xchg	reg32,reg32		32	87		$1r,$2		nil	386
 xchg	mem,reg32		32	87		$1,$2		nil	386
@@ -218,18 +218,18 @@ xchg	reg32,mem32		32	87		$2,$1		nil	386
 ;
 ; In/out from ports
 ;
-in	REG_AL,imm8		nil	E4		nil		$2,8	8086
-in	REG_AX,imm8		16	E5		nil		$2,8	8086
-in	REG_EAX,imm8		32	E5		nil		$2,8	386
-in	REG_AL,REG_DX		nil	EC		nil		nil	8086
-in	REG_AX,REG_DX		16	ED		nil		nil	8086
-in	REG_EAX,REG_DX		32	ED		nil		nil	386
-out	imm8,REG_AL		nil	E6		nil		$1,8	8086
-out	imm8,REG_AX		16	E7		nil		$1,8	8086
-out	imm8,REG_EAX		32	E7		nil		$1,8	386
-out	REG_DX,REG_AL		nil	EE		nil		nil	8086
-out	REG_DX,REG_AX		16	EF		nil		nil	8086
-out	REG_DX,REG_EAX		32	EF		nil		nil	386
+in	reg_al,imm8		nil	E4		nil		$2,8	8086
+in	reg_ax,imm8		16	E5		nil		$2,8	8086
+in	reg_eax,imm8		32	E5		nil		$2,8	386
+in	reg_al,reg_dx		nil	EC		nil		nil	8086
+in	reg_ax,reg_dx		16	ED		nil		nil	8086
+in	reg_eax,reg_dx		32	ED		nil		nil	386
+out	imm8,reg_al		nil	E6		nil		$1,8	8086
+out	imm8,reg_ax		16	E7		nil		$1,8	8086
+out	imm8,reg_eax		32	E7		nil		$1,8	386
+out	reg_dx,reg_al		nil	EE		nil		nil	8086
+out	reg_dx,reg_ax		16	EF		nil		nil	8086
+out	reg_dx,reg_eax		32	EF		nil		nil	386
 ;
 ; Load effective address
 ;
@@ -271,9 +271,9 @@ sti!onebyte		nil,FB		8086
 ; Arithmetic
 ;
 ;  General arithmetic
-!arith	REG_AL,imm8		nil	$0.1+4		nil		$2,8	8086
-!arith	REG_AX,imm16		16	$0.1+5		nil		$2,16	8086
-!arith	REG_EAX,imm32		32	$0.1+5		nil		$2,32	386
+!arith	reg_al,imm8		nil	$0.1+4		nil		$2,8	8086
+!arith	reg_ax,imm16		16	$0.1+5		nil		$2,16	8086
+!arith	reg_eax,imm32		32	$0.1+5		nil		$2,32	386
 !arith	reg8,imm8		nil	80		$1r,$0.2	$2,8	8086
 !arith	mem8x,imm		nil	80		$1,$0.2		$2,8	8086
 !arith	mem,imm8x		nil	80		$1,$0.2		$2,8	8086
@@ -318,9 +318,9 @@ sub!arith		28,5
 dec!incdec		1,48
 sbb!arith		18,3
 cmp!arith		38,7
-test	REG_AL,imm8		nil	A8		nil		$2,8	8086
-test	REG_AX,imm16		16	A9		nil		$2,16	8086
-test	REG_EAX,imm32		32	A9		nil		$2,32	386
+test	reg_al,imm8		nil	A8		nil		$2,8	8086
+test	reg_ax,imm16		16	A9		nil		$2,16	8086
+test	reg_eax,imm32		32	A9		nil		$2,32	386
 test	reg8,imm8		nil	F6		$1r,0		$2,8	8086
 test	mem8x,imm		nil	F6		$1,0		$2,8	8086
 test	mem,imm8x		nil	F6		$1,0		$2,8	8086
@@ -388,13 +388,13 @@ idiv!groupf6		7
 ;
 ;  Standard
 !shift	rm8x,ONE		nil	D0		$1,$0.1		nil	8086
-!shift	rm8x,REG_CL		nil	D2		$1,$0.1		nil	8086
+!shift	rm8x,reg_cl		nil	D2		$1,$0.1		nil	8086
 !shift	rm8x,imm8		nil	C0		$1,$0.1		$2,8	186
 !shift	rm16x,ONE		16	D1		$1,$0.1		nil	8086
-!shift	rm16x,REG_CL		16	D3		$1,$0.1		nil	8086
+!shift	rm16x,reg_cl		16	D3		$1,$0.1		nil	8086
 !shift	rm16x,imm8		16	C1		$1,$0.1		$2,8	186
 !shift	rm32x,ONE		32	D1		$1,$0.1		nil	386
-!shift	rm32x,REG_CL		32	D3		$1,$0.1		nil	386
+!shift	rm32x,reg_cl		32	D3		$1,$0.1		nil	386
 !shift	rm32x,imm8		32	C1		$1,$0.1		$2,8	386
 ;  Doubleword
 ; arbitrary encoding, picked $1r,$2 instead of $2r,$1
@@ -402,17 +402,17 @@ idiv!groupf6		7
 !shlrd	mem,reg16,imm8		16	0F,$0.1		$1,$2		$3,8	386
 !shlrd	mem16x,reg16,imm8	16	0F,$0.1		$1,$2		$3,8	386
 ; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-!shlrd	reg16,reg16,REG_CL	16	0F,$0.1+1	$1r,$2		nil	386
-!shlrd	mem,reg16,REG_CL	16	0F,$0.1+1	$1,$2		nil	386
-!shlrd	mem16x,reg16,REG_CL	16	0F,$0.1+1	$1,$2		nil	386
+!shlrd	reg16,reg16,reg_cl	16	0F,$0.1+1	$1r,$2		nil	386
+!shlrd	mem,reg16,reg_cl	16	0F,$0.1+1	$1,$2		nil	386
+!shlrd	mem16x,reg16,reg_cl	16	0F,$0.1+1	$1,$2		nil	386
 ; arbitrary encoding, picked $1r,$2 instead of $2r,$1
 !shlrd	reg32,reg32,imm8	32	0F,$0.1		$1r,$2		$3,8	386
 !shlrd	mem,reg32,imm8		32	0F,$0.1		$1,$2		$3,8	386
 !shlrd	mem32x,reg32,imm8	32	0F,$0.1		$1,$2		$3,8	386
 ; arbitrary encoding, picked $1r,$2 instead of $2r,$1
-!shlrd	reg32,reg32,REG_CL	32	0F,$0.1+1	$1r,$2		nil	386
-!shlrd	mem,reg32,REG_CL	32	0F,$0.1+1	$1,$2		nil	386
-!shlrd	mem32x,reg32,REG_CL	32	0F,$0.1+1	$1,$2		nil	386
+!shlrd	reg32,reg32,reg_cl	32	0F,$0.1+1	$1r,$2		nil	386
+!shlrd	mem,reg32,reg_cl	32	0F,$0.1+1	$1,$2		nil	386
+!shlrd	mem32x,reg32,reg_cl	32	0F,$0.1+1	$1,$2		nil	386
 rol!shift		0
 ror!shift		1
 rcl!shift		2
@@ -488,8 +488,8 @@ jecxz		target		32	E3	nil		386	386
 ; Loop instructions
 ;
 !loopg		target		nil	E0+$0.1	nil		8086	8086
-!loopg		target,REG_CX	16	E0+$0.1	nil		8086	8086
-!loopg		target,REG_ECX	32	E0+$0.1	nil		386	386
+!loopg		target,reg_cx	16	E0+$0.1	nil		8086	8086
+!loopg		target,reg_ecx	32	E0+$0.1	nil		386	386
 loop!loopg		2
 loopz!loopg		1
 loope!loopg		1
@@ -744,9 +744,9 @@ fldcw	mem16			nil	D9		$1,5		nil	8086,FPU
 fnstcw	mem16			nil	D9		$1,7		nil	8086,FPU
 fstcw	mem16			nil	9B,D9		$1,7		nil	8086,FPU
 fnstsw	mem16			nil	DD		$1,7		nil	8086,FPU
-fnstsw	REG_AX			nil	DF,E0		nil		nil	8086,FPU
+fnstsw	reg_ax			nil	DF,E0		nil		nil	8086,FPU
 fstsw	mem16			nil	9B,DD		$1,7		nil	8086,FPU
-fstsw	REG_AX			nil	9B,DF,E0	nil		nil	8086,FPU
+fstsw	reg_ax			nil	9B,DF,E0	nil		nil	8086,FPU
 fnclex!twobyte		DB,E2		8086,FPU
 fclex!threebyte		9B,DB,E2	8086,FPU
 fnstenv!onebytemem	D9,6		8086,FPU
@@ -1188,7 +1188,7 @@ ibts	mem,reg32		32	0F,A7		$1,$2		nil	386,UNDOC,OBS
 ibts	mem32x,reg32		32	0F,A7		$1,$2		nil	386,UNDOC,OBS
 loadall!twobyte		0F,07		386,UNDOC
 loadall286!twobyte	0F,05		286,UNDOC
-;pop	REG_CS			nil	0F		nil		nil	8086,UNDOC,OBS
+;pop	reg_cs			nil	0F		nil		nil	8086,UNDOC,OBS
 salc!onebyte		nil,D6		8086,UNDOC
 smi!onebyte		nil,F1		386,UNDOC
 ; opcode arbitrarily picked for next 3 (could be 12/13 instead of 10/11).

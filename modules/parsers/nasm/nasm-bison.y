@@ -91,7 +91,7 @@ static bytecode *nasm_parser_temp_bc;
 %token INCBIN EQU TIMES
 %token SEG WRT NEAR SHORT FAR NOSPLIT ORG
 %token TO
-%token O16 O32 A16 A32 LOCK REPNZ REP REPZ
+%token LOCK REPNZ REP REPZ
 %token <int_info> OPERSIZE ADDRSIZE
 %token <int_info> CR4 CRREG_NOTCR4 DRREG TRREG ST0 FPUREG_NOTST0 MMXREG XMMREG
 %token <int_info> REG_EAX REG_ECX REG_EDX REG_EBX
@@ -109,6 +109,10 @@ static bytecode *nasm_parser_temp_bc;
 
 %type <bc> line lineexp exp instr instrbase
 
+%type <int_info> reg_eax reg_ecx
+%type <int_info> reg_ax reg_cx reg_dx
+%type <int_info> reg_al reg_cl
+%type <int_info> reg_es reg_cs reg_ss reg_ds reg_fs reg_gs
 %type <int_info> fpureg rawreg32 reg32 rawreg16 reg16 reg8 segreg
 %type <ea> mem memaddr memfar
 %type <ea> mem8x mem16x mem32x mem64x mem80x mem128x
@@ -252,6 +256,14 @@ fpureg: ST0
     | FPUREG_NOTST0
 ;
 
+reg_eax: REG_EAX
+    | DWORD reg_eax	{ $$ = $2; }
+;
+
+reg_ecx: REG_ECX
+    | DWORD reg_ecx	{ $$ = $2; }
+;
+
 rawreg32: REG_EAX
     | REG_ECX
     | REG_EDX
@@ -263,7 +275,19 @@ rawreg32: REG_EAX
 ;
 
 reg32: rawreg32
-    | DWORD reg32
+    | DWORD reg32	{ $$ = $2; }
+;
+
+reg_ax: REG_AX
+    | WORD reg_ax	{ $$ = $2; }
+;
+
+reg_cx: REG_CX
+    | WORD reg_cx	{ $$ = $2; }
+;
+
+reg_dx: REG_DX
+    | WORD reg_dx	{ $$ = $2; }
 ;
 
 rawreg16: REG_AX
@@ -277,7 +301,15 @@ rawreg16: REG_AX
 ;
 
 reg16: rawreg16
-    | WORD reg16
+    | WORD reg16	{ $$ = $2; }
+;
+
+reg_al: REG_AL
+    | BYTE reg_al	{ $$ = $2; }
+;
+
+reg_cl: REG_CL
+    | BYTE reg_cl	{ $$ = $2; }
 ;
 
 reg8: REG_AL
@@ -288,16 +320,40 @@ reg8: REG_AL
     | REG_CH
     | REG_DH
     | REG_BH
-    | BYTE reg8
+    | BYTE reg8		{ $$ = $2; }
 ;
 
-segreg:  REG_ES
+reg_es: REG_ES
+    | WORD reg_es	{ $$ = $2; }
+;
+
+reg_ss: REG_SS
+    | WORD reg_ss	{ $$ = $2; }
+;
+
+reg_ds: REG_DS
+    | WORD reg_ds	{ $$ = $2; }
+;
+
+reg_fs: REG_FS
+    | WORD reg_fs	{ $$ = $2; }
+;
+
+reg_gs: REG_GS
+    | WORD reg_gs	{ $$ = $2; }
+;
+
+reg_cs: REG_CS
+    | WORD reg_cs	{ $$ = $2; }
+;
+
+segreg: REG_ES
     | REG_SS
     | REG_DS
     | REG_FS
     | REG_GS
     | REG_CS
-    | WORD segreg
+    | WORD segreg	{ $$ = $2; }
 ;
 
 /* memory addresses */
@@ -367,20 +423,27 @@ mem: '[' memaddr ']'	{ $$ = $2; }
 
 /* explicit memory */
 mem8x: BYTE mem		{ $$ = $2; }
+    | BYTE mem8x	{ $$ = $2; }
 ;
 mem16x: WORD mem	{ $$ = $2; }
+    | WORD mem16x	{ $$ = $2; }
 ;
 mem32x: DWORD mem	{ $$ = $2; }
+    | DWORD mem32x	{ $$ = $2; }
 ;
 mem64x: QWORD mem	{ $$ = $2; }
+    | QWORD mem64x	{ $$ = $2; }
 ;
 mem80x: TWORD mem	{ $$ = $2; }
+    | TWORD mem80x	{ $$ = $2; }
 ;
 mem128x: DQWORD mem	{ $$ = $2; }
+    | DQWORD mem128x	{ $$ = $2; }
 ;
 
 /* FAR memory, for jmp and call */
 memfar: FAR mem		{ $$ = $2; }
+    | FAR memfar	{ $$ = $2; }
 ;
 
 /* implicit memory */

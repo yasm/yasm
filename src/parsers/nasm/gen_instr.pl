@@ -72,13 +72,13 @@ exit 0 if $showversion or $showusage;
 
 # valid values for instrs.dat fields
 my $valid_regs = join '|', qw(
-    REG_AL REG_AH REG_AX REG_EAX
-    REG_BL REG_BH REG_BX REG_EBX
-    REG_CL REG_CH REG_CX REG_ECX
-    REG_DL REG_DH REG_DX REG_EDX
-    REG_SI REG_ESI REG_DI REG_EDI
-    REG_BP REG_EBP
-    REG_CS REG_DS REG_ES REG_FS REG_GS REG_SS
+    reg_al reg_ah reg_ax reg_eax
+    reg_bl reg_bh reg_bx reg_ebx
+    reg_cl reg_ch reg_cx reg_ecx
+    reg_dl reg_dh reg_dx reg_edx
+    reg_si reg_esi reg_di reg_edi
+    reg_bp reg_ebp
+    reg_cs reg_ds reg_es reg_fs reg_gs reg_ss
     ONE XMMREG MMXREG segreg CRREG_NOTCR4 CR4 DRREG
     fpureg FPUREG_NOTST0 ST0 ST1 ST2 ST3 ST4 ST5 ST6 ST7 mem imm
     imm8 imm16 imm32 imm64 imm80 imm128
@@ -484,14 +484,14 @@ sub output_yacc ($@)
 	    {
 		# I'm still convinced this is a hack.  The idea is if
 		# within an instruction we see certain versions of the
-		# opcodes with ONE, or REG_E?A[LX],imm(8|16|32).  If we
+		# opcodes with ONE, or reg_e?a[lx],imm(8|16|32).  If we
 		# do, defer generation of the action, as we may need to
 		# fold it into another version with a conditional to
 		# generate the more efficient variant of the opcode
 		# BUT, if we don't fold it in, we have to generate the
 		# original version we would have otherwise.
 		($ONE, $AL, $AX, $EAX) = (0, 0, 0, 0);
-		# Folding for xchg (REG_E?AX,reg16 and reg16,REG_E?AX).
+		# Folding for xchg (reg_e?ax,reg16 and reg16,reg_e?ax).
 		(@XCHG_AX, @XCHG_EAX) = ((0, 0), (0, 0));
 		my $count = 0;
 		foreach my $inst (@{$groups->{$group}{rules}}) {
@@ -694,31 +694,31 @@ sub output_yacc ($@)
 			{
 			    $ONE = [ $rule, $tokens, $func, \@args];
 			}
-			elsif (($inst->[OPERANDS]||"") =~ m/REG_AL,imm8/)
+			elsif (($inst->[OPERANDS]||"") =~ m/reg_al,imm8/)
 			{
 			    $AL = [ $rule, $tokens, $func, \@args];
 			}
-			elsif (($inst->[OPERANDS]||"") =~ m/REG_AX,imm16/)
+			elsif (($inst->[OPERANDS]||"") =~ m/reg_ax,imm16/)
 			{
 			    $AX = [ $rule, $tokens, $func, \@args];
 			}
-			elsif (($inst->[OPERANDS]||"") =~ m/REG_EAX,imm32/)
+			elsif (($inst->[OPERANDS]||"") =~ m/reg_eax,imm32/)
 			{
 			    $EAX = [ $rule, $tokens, $func, \@args];
 			}
-			elsif (($inst->[OPERANDS]||"") =~ m/REG_AX,reg16/)
+			elsif (($inst->[OPERANDS]||"") =~ m/reg_ax,reg16/)
 			{
 			    $XCHG_AX[0] = [ $rule, $tokens, $func, \@args];
 			}
-			elsif (($inst->[OPERANDS]||"") =~ m/reg16,REG_AX/)
+			elsif (($inst->[OPERANDS]||"") =~ m/reg16,reg_ax/)
 			{
 			    $XCHG_AX[1] = [ $rule, $tokens, $func, \@args];
 			}
-			elsif (($inst->[OPERANDS]||"") =~ m/REG_EAX,reg32/)
+			elsif (($inst->[OPERANDS]||"") =~ m/reg_eax,reg32/)
 			{
 			    $XCHG_EAX[0] = [ $rule, $tokens, $func, \@args];
 			}
-			elsif (($inst->[OPERANDS]||"") =~ m/reg32,REG_EAX/)
+			elsif (($inst->[OPERANDS]||"") =~ m/reg32,reg_eax/)
 			{
 			    $XCHG_EAX[1] = [ $rule, $tokens, $func, \@args];
 			}
