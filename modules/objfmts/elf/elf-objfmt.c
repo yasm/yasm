@@ -207,12 +207,6 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	elf_reloc_entry *reloc;
 	yasm_sym_vis vis;
 
-	/* XXX: this can't be platform portable */
-	if (valsize != 32) {
-	    yasm__error(bc->line, N_("elf: invalid relocation size"));
-	    return 1;
-	}
-
 	vis = yasm_symrec_get_visibility(sym);
 	if (!(vis & (YASM_SYM_COMMON|YASM_SYM_EXTERN)))
 	{
@@ -240,7 +234,11 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	    *ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
 	}
 
-	reloc = elf_reloc_entry_new(sym, bc->offset + offset, rel);
+	reloc = elf_reloc_entry_new(sym, bc->offset + offset, rel, valsize);
+	if (reloc == NULL) {
+	    yasm__error(bc->line, N_("elf: invalid relocation size"));
+	    return 1;
+	}
 	/* allocate .rel sections on a need-basis */
 	if (elf_secthead_append_reloc(info->shead, reloc))
 	    elf_objfmt_parse_scnum++;

@@ -76,16 +76,33 @@ elf_set_arch(yasm_arch *arch, const char *machine)
 elf_reloc_entry *
 elf_reloc_entry_new(yasm_symrec *sym,
 		    elf_address addr,
-		    int rel)
+		    int rel,
+		    size_t valsize)
 {
-    elf_reloc_entry *entry = yasm_xmalloc(sizeof(elf_reloc_entry));
+    elf_reloc_entry *entry;
+    switch (cur_machine) {
+	case M_X86_32:
+	    if (valsize != 32)
+		return NULL;
+	    break;
 
+	case M_X86_64:
+	    if (valsize != 8 && valsize != 16 && valsize != 32 && valsize != 64)
+		return NULL;
+	    break;
+
+	default:
+	    yasm_internal_error(N_("Unsupported machine for ELF output"));
+    }
+
+    entry = yasm_xmalloc(sizeof(elf_reloc_entry));
     if (sym == NULL)
 	yasm_internal_error("sym is null");
 
     entry->sym = sym;
     entry->addr = addr;
     entry->rtype_rel = rel;
+    entry->valsize = valsize;
 
     return entry;
 }
@@ -433,7 +450,7 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab)
 
 	    case ELF64:
 		YASM_WRITE_32_L(bufp, entry->name ? entry->name->index : 0);
-/* XXX */	YASM_WRITE_8(bufp, ELF32_ST_INFO(entry->bind, entry->type));
+		YASM_WRITE_8(bufp, ELF64_ST_INFO(entry->bind, entry->type));
 		YASM_WRITE_8(bufp, 0);
 		if (entry->sect) {
 		    elf_secthead *shead = yasm_section_get_of_data(entry->sect);
@@ -749,8 +766,40 @@ elf_secthead_write_relocs_to_file(FILE *f, elf_secthead *shead)
 		break;
 
 	    case M_X86_64:
-		r_type = (unsigned char)
-		    (reloc->rtype_rel ? R_X86_64_PC32 : R_X86_64_64);
+		if (reloc->rtype_rel) {
+		    switch (reloc->valsize) {
+			case 8:
+			    r_type = (unsigned char) R_X86_64_PC8;
+			    break;
+			case 16:
+			    r_type = (unsigned char) R_X86_64_PC16;
+			    break;
+			case 32:
+			    r_type = (unsigned char) R_X86_64_PC32;
+			    break;
+			default:
+			    yasm_internal_error(
+				N_("Unsupported relocation size"));
+		    }
+		} else {
+		    switch (reloc->valsize) {
+			case 8:
+			    r_type = (unsigned char) R_X86_64_8;
+			    break;
+			case 16:
+			    r_type = (unsigned char) R_X86_64_16;
+			    break;
+			case 32:
+			    r_type = (unsigned char) R_X86_64_32;
+			    break;
+			case 64:
+			    r_type = (unsigned char) R_X86_64_64;
+			    break;
+			default:
+			    yasm_internal_error(
+				N_("Unsupported relocation size"));
+		    }
+		}
 		break;
 
 	    default:

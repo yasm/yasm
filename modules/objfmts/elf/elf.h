@@ -203,6 +203,7 @@ typedef enum {
 #define ELF32_ST_INFO(bind, type)	(((bind) << 4) + ((type) & 0xf))
 #define ELF32_R_INFO(s,t)		(((s)<<8)+(unsigned char)(t))
 
+#define ELF64_ST_INFO(bind, type)	(((bind) << 4) + ((type) & 0xf))
 #define ELF64_R_INFO(s,t)		(((s)<<32) + ((t) & 0xffffffffL))
 
 #define EHDR32_SIZE 52
@@ -302,6 +303,7 @@ struct elf_reloc_entry {
     elf_address		 addr;
     yasm_symrec		*sym;
     int			 rtype_rel;
+    size_t		 valsize;
 };
 
 STAILQ_HEAD(elf_strtab_head, elf_strtab_entry);
@@ -335,7 +337,8 @@ int elf_set_arch(struct yasm_arch *arch, const char *machine);
 /* reloc functions */
 elf_reloc_entry *elf_reloc_entry_new(yasm_symrec *sym,
 				     elf_address addr,
-				     int rel);
+				     int rel,
+				     size_t valsize);
 void elf_reloc_entry_delete(elf_reloc_entry *entry);
 elf_reloc_head *elf_relocs_new(void);
 void elf_reloc_delete(elf_reloc_head *head);
