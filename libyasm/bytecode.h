@@ -81,6 +81,8 @@ void SetInsnShiftFlag(bytecode *bc);
 
 void SetOpcodeSel(jmprel_opcode_sel *old_sel, jmprel_opcode_sel new_sel);
 
+void SetBCMultiple(bytecode *bc, expr *e);
+
 /* IMPORTANT: ea_ptr and im_ptr cannot be reused or freed after calling this
  * function (it doesn't make a copy).
  */

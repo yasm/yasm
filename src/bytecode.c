@@ -156,7 +156,10 @@ struct bytecode {
 	} reserve;
     } data;
 
-    unsigned long len;		/* total length of entire bytecode */
+    expr *multiple;		/* number of times bytecode is repeated */
+
+    unsigned long len;		/* total length of entire bytecode (including
+				   multiple copies) */
 
     /* where it came from */
     char *filename;
@@ -385,11 +388,21 @@ SetOpcodeSel(jmprel_opcode_sel *old_sel, jmprel_opcode_sel new_sel)
     *old_sel = new_sel;
 }
 
+void
+SetBCMultiple(bytecode *bc, expr *e)
+{
+    if (bc->multiple)
+	bc->multiple = expr_new_tree(bc->multiple, EXPR_MUL, e);
+    else
+	bc->multiple = e;
+}
+
 static bytecode *
 bytecode_new_common(void)
 {
     bytecode *bc = xmalloc(sizeof(bytecode));
 
+    bc->multiple = (expr *)NULL;
     bc->len = 0;
 
     bc->filename = xstrdup(in_filename);
@@ -632,6 +645,12 @@ bytecode_print(bytecode *bc)
 	default:
 	    printf("_Unknown_\n");
     }
+    printf("Multiple=");
+    if (!bc->multiple)
+	printf("1");
+    else
+	expr_print(bc->multiple);
+    printf("\n");
     printf("Length=%lu\n", bc->len);
     printf("Filename=\"%s\" Line Number=%u\n",
 	   bc->filename ? bc->filename : "<UNKNOWN>", bc->lineno);

@@ -117,7 +117,7 @@ static bytecode *nasm_parser_temp_bc;
 %type <ea> rm8x rm16x rm32x /*rm64x rm128x*/
 %type <ea> rm8 rm16 rm32 rm64 rm128
 %type <im_val> imm imm8x imm16x imm32x imm8 imm16 imm32
-%type <exp> expr expr_no_string
+%type <exp> expr expr_no_string expr_no_fltstr
 %type <sym> explabel
 %type <str_val> label_id
 %type <tgt_val> target
@@ -154,17 +154,19 @@ line: '\n'		{ $$ = (bytecode *)NULL; }
 ;
 
 lineexp: exp
-    | label		{ $$ = (bytecode *)NULL; }
-    | label exp		{ $$ = $2; }
-    | label_id EQU expr	{
+    | TIMES expr_no_fltstr exp		{ $$ = $3; SetBCMultiple($$, $2); }
+    | label				{ $$ = (bytecode *)NULL; }
+    | label exp				{ $$ = $2; }
+    | label TIMES expr_no_fltstr exp	{ $$ = $4; SetBCMultiple($$, $3); }
+    | label_id EQU expr			{
 	symrec_define_equ($1, $3);
 	$$ = (bytecode *)NULL;
     }
 ;
 
 exp: instr
-    | DECLARE_DATA datavals { $$ = bytecode_new_data(&$2, $1); }
-    | RESERVE_SPACE expr    { $$ = bytecode_new_reserve($2, $1); }
+    | DECLARE_DATA datavals	    { $$ = bytecode_new_data(&$2, $1); }
+    | RESERVE_SPACE expr_no_fltstr  { $$ = bytecode_new_reserve($2, $1); }
 ;
 
 datavals: dataval	    {
@@ -385,14 +387,17 @@ imm32: imm
 ;
 
 /* jump targets */
-target: expr	    { $$.val = $1; SetOpcodeSel(&$$.op_sel, JR_NONE); }
-    | SHORT target  { $$ = $2; SetOpcodeSel(&$$.op_sel, JR_SHORT_FORCED); }
-    | NEAR target   { $$ = $2; SetOpcodeSel(&$$.op_sel, JR_NEAR_FORCED); }
+target: expr_no_string	{ $$.val = $1; SetOpcodeSel(&$$.op_sel, JR_NONE); }
+    | SHORT target	{ $$ = $2; SetOpcodeSel(&$$.op_sel, JR_SHORT_FORCED); }
+    | NEAR target	{ $$ = $2; SetOpcodeSel(&$$.op_sel, JR_NEAR_FORCED); }
 ;
 
 /* expression trees */
-expr_no_string: INTNUM		{ $$ = expr_new_ident(ExprInt($1)); }
+expr_no_string: expr_no_fltstr
     | FLTNUM			{ $$ = expr_new_ident(ExprFloat($1)); }
+;
+
+expr_no_fltstr: INTNUM		{ $$ = expr_new_ident(ExprInt($1)); }
     | explabel			{ $$ = expr_new_ident(ExprSym($1)); }
     /*| expr '||' expr		{ $$ = expr_new_tree($1, EXPR_LOR, $3); }*/
     | expr '|' expr		{ $$ = expr_new_tree($1, EXPR_OR, $3); }
