@@ -356,7 +356,7 @@ int
 yasm_symrec_get_label(const yasm_symrec *sym,
 		      yasm_symrec_get_label_bytecodep *precbc)
 {
-    if (sym->type != SYM_LABEL) {
+    if (sym->type != SYM_LABEL || !sym->value.precbc) {
 	*precbc = (yasm_symrec_get_label_bytecodep)0xDEADBEEF;
 	return 0;
     }

@@ -130,6 +130,7 @@ yasm_arch_module yasm_lc3b_LTX_arch = {
     NULL,	/*yasm_lc3b__parse_seg_prefix*/
     NULL,	/*yasm_lc3b__parse_seg_override*/
     lc3b_floatnum_tobytes,
+    yasm_lc3b__intnum_fixup_rel,
     yasm_lc3b__intnum_tobytes,
     lc3b_get_reg_size,
     lc3b_reg_print,

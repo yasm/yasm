@@ -263,6 +263,7 @@ yasm_arch_module yasm_x86_LTX_arch = {
     x86_parse_seg_prefix,
     x86_parse_seg_override,
     yasm_x86__floatnum_tobytes,
+    yasm_x86__intnum_fixup_rel,
     yasm_x86__intnum_tobytes,
     yasm_x86__get_reg_size,
     x86_reg_print,

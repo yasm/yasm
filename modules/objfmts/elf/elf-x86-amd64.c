@@ -26,7 +26,7 @@
  */
 
 #include <util.h>
-/*@unused@*/ RCSID("$Id:$");
+/*@unused@*/ RCSID("$Id$");
 
 #define YASM_LIB_INTERNAL
 #define YASM_EXPR_INTERNAL
@@ -35,9 +35,23 @@
 #include "elf.h"
 #include "elf-machine.h"
 
+enum ssym_index {
+    SSYM_GOTPCREL = 0,
+    SSYM_GOT,
+    SSYM_PLT
+};
+
 static int
-elf_x86_amd64_accepts_reloc_size(size_t val)
+elf_x86_amd64_accepts_reloc(size_t val, yasm_symrec *wrt, yasm_symrec **ssyms)
 {
+    if (wrt) {
+	if ((wrt == ssyms[SSYM_GOTPCREL] && val == 32)
+	    || (wrt == ssyms[SSYM_GOT] && val == 32)
+	    || (wrt == ssyms[SSYM_PLT] && val == 32))
+	    return 1;
+	else
+	    return 0;
+    }
     return (val&(val-1)) ? 0 : ((val & (8|16|32|64)) != 0);
 }
 
@@ -126,9 +140,19 @@ elf_x86_amd64_handle_reloc_addend(yasm_intnum *intn, elf_reloc_entry *reloc)
 }
 
 static unsigned int
-elf_x86_amd64_map_reloc_info_to_type(elf_reloc_entry *reloc)
+elf_x86_amd64_map_reloc_info_to_type(elf_reloc_entry *reloc,
+				     yasm_symrec **ssyms)
 {
-    if (reloc->rtype_rel) {
+    if (reloc->wrt) {
+	if (reloc->wrt == ssyms[SSYM_GOTPCREL] && reloc->valsize == 32)
+	    return (unsigned char) R_X86_64_GOTPCREL;
+	else if (reloc->wrt == ssyms[SSYM_GOT] && reloc->valsize == 32)
+	    return (unsigned char) R_X86_64_GOT32;
+	else if (reloc->wrt == ssyms[SSYM_PLT] && reloc->valsize == 32)
+	    return (unsigned char) R_X86_64_PLT32;
+	else
+	    yasm_internal_error(N_("Unsupported WRT"));
+    } else if (reloc->rtype_rel) {
         switch (reloc->valsize) {
             case 8: return (unsigned char) R_X86_64_PC8;
             case 16: return (unsigned char) R_X86_64_PC16;
@@ -190,16 +214,24 @@ elf_x86_amd64_write_proghead(unsigned char **bufpp,
     *bufpp = bufp;
 }
 
+static elf_machine_ssym elf_x86_amd64_ssyms[] = {
+    {"..gotpcrel", 1},
+    {"..got", 1},
+    {"..plt", 0}
+};
+
 const elf_machine_handler
 elf_machine_handler_x86_amd64 = {
     "x86", "amd64", ".rela",
     SYMTAB64_SIZE, SYMTAB64_ALIGN, RELOC64A_SIZE, SHDR64_SIZE, EHDR64_SIZE,
-    elf_x86_amd64_accepts_reloc_size,
+    elf_x86_amd64_accepts_reloc,
     elf_x86_amd64_write_symtab_entry,
     elf_x86_amd64_write_secthead,
     elf_x86_amd64_write_secthead_rel,
     elf_x86_amd64_handle_reloc_addend,
     elf_x86_amd64_map_reloc_info_to_type,
     elf_x86_amd64_write_reloc,
-    elf_x86_amd64_write_proghead
+    elf_x86_amd64_write_proghead,
+    elf_x86_amd64_ssyms,
+    sizeof(elf_x86_amd64_ssyms)/sizeof(elf_x86_amd64_ssyms[0])
 };

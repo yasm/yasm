@@ -157,11 +157,6 @@ x86_expr_checkea_distcheck_reg(yasm_expr **ep, unsigned int bits)
 		    case YASM_EXPR_ADD:
 		    case YASM_EXPR_IDENT:
 			break;
-		    case YASM_EXPR_WRT:
-			/* Allow expr WRT rip in 64-bit mode. */
-			if (bits != 64 || i != 1)
-			    return 0;
-			break;
 		    default:
 			return 0;
 		}
@@ -252,9 +247,9 @@ x86_expr_checkea_distcheck_reg(yasm_expr **ep, unsigned int bits)
  * and 0 if all values successfully determined and saved in data.
  */
 static int
-x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
-    unsigned char *pcrel, unsigned int bits, void *data,
-    int *(*get_reg)(yasm_expr__item *ei, int *regnum, void *d),
+x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ yasm_expr **wrt,
+    /*@null@*/ int *indexreg, unsigned char *pcrel, unsigned int bits,
+    void *data, int *(*get_reg)(yasm_expr__item *ei, int *regnum, void *d),
     yasm_calc_bc_dist_func calc_bc_dist)
 {
     int i;
@@ -267,6 +262,9 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
     /*@-unqualifiedtrans@*/
     *ep = yasm_expr__level_tree(*ep, 1, indexreg == 0, calc_bc_dist, NULL,
 				NULL, NULL);
+    if (*wrt)
+	*wrt = yasm_expr__level_tree(*wrt, 1, indexreg == 0, calc_bc_dist,
+				     NULL, NULL, NULL);
     /*@=unqualifiedtrans@*/
     assert(*ep != NULL);
     e = *ep;
@@ -283,27 +281,31 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 	    break;
     }
 
-    switch (e->op) {
-	case YASM_EXPR_WRT:
-	    /* Handle xx WRT rip. */
-	    if (e->terms[1].type == YASM_EXPR_REG) {
-		if (bits != 64)		    /* only valid in 64-bit mode */
-		    return 1;
-		reg = get_reg(&e->terms[1], &regnum, data);
-		if (!reg || regnum != 16)   /* only accept rip */
-		    return 1;
-		(*reg)++;
+    if (*wrt && (*wrt)->op == YASM_EXPR_IDENT &&
+	(*wrt)->terms[0].type == YASM_EXPR_REG) {
+	/* Handle xx WRT rip. */
+	if (bits != 64)		    /* only valid in 64-bit mode */
+	    return 1;
+	reg = get_reg(&(*wrt)->terms[0], &regnum, data);
+	if (!reg || regnum != 16)   /* only accept rip */
+	    return 1;
+	(*reg)++;
 
-		/* Simplify WRT to ident.  Set pcrel to 1 to indicate to x86
-		 * bytecode code to do PC-relative displacement transform.
-		 */
-		*pcrel = 1;
-		e->op = YASM_EXPR_IDENT;
-		e->numterms = 1;
-		/* Delete the intnum created by get_reg(). */
-		yasm_intnum_destroy(e->terms[1].data.intn);
-	    }
-	    break;
+	/* Delete WRT.  Set pcrel to 1 to indicate to x86
+	 * bytecode code to do PC-relative displacement transform.
+	 */
+	*pcrel = 1;
+	yasm_expr_destroy(*wrt);
+
+	/* Drill down to next WRT and recurse if there was one. */
+	*wrt = yasm_expr_extract_wrt(ep);
+	if (*wrt)
+	    return x86_expr_checkea_getregusage(ep, wrt, indexreg, pcrel,
+						bits, data, get_reg,
+						calc_bc_dist);
+    }
+
+    switch (e->op) {
 	case YASM_EXPR_ADD:
 	    /* Prescan for non-int multipliers against a reg.
 	     * This is because if any of the terms is a more complex
@@ -563,7 +565,12 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 		       unsigned char *rex,
 		       yasm_calc_bc_dist_func calc_bc_dist)
 {
-    yasm_expr *e = *ep;
+    yasm_expr *e, *wrt;
+    int retval;
+
+    /* First split off any top-level WRT.  We'll add it back in at the end */
+    wrt = yasm_expr_extract_wrt(ep);
+    e = *ep;
 
     if (*addrsize == 0) {
 	/* we need to figure out the address size from what we know about:
@@ -651,7 +658,7 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 	reg3264_data.regs = reg3264mult;
 	reg3264_data.bits = bits;
 	reg3264_data.addrsize = *addrsize;
-	switch (x86_expr_checkea_getregusage(ep, &indexreg, pcrel, bits,
+	switch (x86_expr_checkea_getregusage(ep, &wrt, &indexreg, pcrel, bits,
 					     &reg3264_data,
 					     x86_expr_checkea_get_reg3264,
 					     calc_bc_dist)) {
@@ -660,6 +667,9 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 		yasm__error(e->line, N_("invalid effective address"));
 		return 1;
 	    case 2:
+		if (wrt)
+		    *ep = yasm_expr_create_tree(*ep, YASM_EXPR_WRT, wrt,
+						(*ep)->line);
 		return 2;
 	    default:
 		e = *ep;
@@ -782,6 +792,9 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 	    /* RIP always requires a 32-bit displacement */
 	    *v_modrm = 1;
 	    *displen = 4;
+	    if (wrt)
+		*ep = yasm_expr_create_tree(*ep, YASM_EXPR_WRT, wrt,
+					    (*ep)->line);
 	    return 0;
 	} else if (indexreg == REG3264_NONE) {
 	    /* basereg only */
@@ -860,9 +873,12 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 	}
 
 	/* Calculate displacement length (if possible) */
-	return x86_checkea_calc_displen(ep, 4, basereg == REG3264_NONE,
+	retval = x86_checkea_calc_displen(ep, 4, basereg == REG3264_NONE,
 	    basereg == REG3264_EBP || basereg == REG64_R13, displen, modrm,
 	    v_modrm);
+	if (wrt)
+	    *ep = yasm_expr_create_tree(*ep, YASM_EXPR_WRT, wrt, (*ep)->line);
+	return retval;
     } else if (*addrsize == 16 && *n_modrm && !*v_modrm) {
 	static const unsigned char modrm16[16] = {
 	    0006 /* disp16  */, 0007 /* [BX]    */, 0004 /* [SI]    */,
@@ -893,8 +909,8 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 	*v_sib = 0;
 	*n_sib = 0;
 
-	switch (x86_expr_checkea_getregusage(ep, (int *)NULL, pcrel, bits,
-					     &reg16mult,
+	switch (x86_expr_checkea_getregusage(ep, &wrt, (int *)NULL, pcrel,
+					     bits, &reg16mult,
 					     x86_expr_checkea_get_reg16,
 					     calc_bc_dist)) {
 	    case 1:
@@ -902,6 +918,9 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 		yasm__error(e->line, N_("invalid effective address"));
 		return 1;
 	    case 2:
+		if (wrt)
+		    *ep = yasm_expr_create_tree(*ep, YASM_EXPR_WRT, wrt,
+						(*ep)->line);
 		return 2;
 	    default:
 		e = *ep;
@@ -935,9 +954,12 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 	*modrm |= modrm16[havereg];
 
 	/* Calculate displacement length (if possible) */
-	return x86_checkea_calc_displen(ep, 2, havereg == HAVE_NONE,
-					havereg == HAVE_BP, displen, modrm,
-					v_modrm);
+	retval = x86_checkea_calc_displen(ep, 2, havereg == HAVE_NONE,
+					  havereg == HAVE_BP, displen, modrm,
+					  v_modrm);
+	if (wrt)
+	    *ep = yasm_expr_create_tree(*ep, YASM_EXPR_WRT, wrt, (*ep)->line);
+	return retval;
     } else if (!*n_modrm && !*n_sib) {
 	/* Special case for MOV MemOffs opcode: displacement but no modrm. */
 	switch (*addrsize) {
@@ -963,6 +985,8 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 		break;
 	}
     }
+    if (wrt)
+	*ep = yasm_expr_create_tree(*ep, YASM_EXPR_WRT, wrt, (*ep)->line);
     return 0;
 }
 

@@ -361,7 +361,7 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 {
     /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
     yasm_objfmt_coff *objfmt_coff;
-    /*@dependent@*/ /*@null@*/ const yasm_intnum *intn;
+    /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
     /*@dependent@*/ /*@null@*/ const yasm_floatnum *flt;
     /*@dependent@*/ /*@null@*/ yasm_symrec *sym;
     /*@dependent@*/ yasm_section *label_sect;
@@ -464,10 +464,16 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	yasm_section_add_reloc(info->sect, (yasm_reloc *)reloc, yasm_xfree);
     }
     intn = yasm_expr_get_intnum(ep, NULL);
-    if (intn)
+    if (intn) {
+	if (rel) {
+	    int retval = yasm_arch_intnum_fixup_rel(objfmt_coff->arch, intn,
+						    valsize, bc, bc->line);
+	    if (retval)
+		return retval;
+	}
 	return yasm_arch_intnum_tobytes(objfmt_coff->arch, intn, buf, destsize,
-					valsize, shift, bc, rel, warn,
-					bc->line);
+					valsize, shift, bc, warn, bc->line);
+    }
 
     /* Check for complex float expressions */
     if (yasm_expr__contains(*ep, YASM_EXPR_FLOAT)) {

@@ -104,7 +104,7 @@ typedef struct yasm_arch_machine {
  * module loader's function definitions.  The version number must never be
  * decreased.
  */
-#define YASM_ARCH_VERSION	2
+#define YASM_ARCH_VERSION	3
 
 /** YASM architecture module interface.
  * \note All "data" in parser-related functions (yasm_arch_parse_*) needs to
@@ -208,12 +208,19 @@ typedef struct yasm_arch_module {
 			     size_t valsize, size_t shift, int warn,
 			     unsigned long line);
 
+    /** Module-level implementation of yasm_arch_intnum_fixup_rel().
+     * Call yasm_arch_intnum_fixup_rel() instead of calling this function.
+     */
+    int (*intnum_fixup_rel) (yasm_arch *arch, yasm_intnum *intn,
+			     size_t valsize, const yasm_bytecode *bc,
+			     unsigned long line);
+
     /** Module-level implementation of yasm_arch_intnum_tobytes().
      * Call yasm_arch_intnum_tobytes() instead of calling this function.
      */
     int (*intnum_tobytes) (yasm_arch *arch, const yasm_intnum *intn,
 			   unsigned char *buf, size_t destsize, size_t valsize,
-			   int shift, const yasm_bytecode *bc, int rel,
+			   int shift, const yasm_bytecode *bc,
 			   int warn, unsigned long line);
 
     /** Module-level implementation of yasm_arch_get_reg_size().
@@ -446,6 +453,19 @@ int yasm_arch_floatnum_tobytes(yasm_arch *arch, const yasm_floatnum *flt,
 			       size_t valsize, size_t shift, int warn,
 			       unsigned long line);
 
+/** Adjust #yasm_intnum for relative displacement from bc.  Displacement
+ * is modified in-place.
+ * \param arch		architecture
+ * \param intn		integer value
+ * \param valsize	size (in bits)
+ * \param bc		bytecode being output ("parent" of value)
+ * \param line		virtual line; may be 0 if warn is 0
+ * \return Nonzero on error.
+ */
+int yasm_arch_intnum_fixup_rel(yasm_arch *arch, yasm_intnum *intn,
+			       size_t valsize, const yasm_bytecode *bc,
+			       unsigned long line);
+
 /** Output #yasm_intnum to buffer.  Puts the value into the least
  * significant bits of the destination, or may be shifted into more
  * significant bits by the shift parameter.  The destination bits are
@@ -458,7 +478,6 @@ int yasm_arch_floatnum_tobytes(yasm_arch *arch, const yasm_floatnum *flt,
  * \param shift		left shift (in bits); may be negative to specify right
  *			shift (standard warnings include truncation to boundary)
  * \param bc		bytecode being output ("parent" of value)
- * \param rel		value is a relative displacement from bc
  * \param warn		enables standard warnings (value doesn't fit into
  *			valsize bits)
  * \param line		virtual line; may be 0 if warn is 0
@@ -467,7 +486,7 @@ int yasm_arch_floatnum_tobytes(yasm_arch *arch, const yasm_floatnum *flt,
 int yasm_arch_intnum_tobytes(yasm_arch *arch, const yasm_intnum *intn,
 			     unsigned char *buf, size_t destsize,
 			     size_t valsize, int shift,
-			     const yasm_bytecode *bc, int rel, int warn,
+			     const yasm_bytecode *bc, int warn,
 			     unsigned long line);
 
 /** Get the equivalent byte size of a register.
@@ -541,10 +560,13 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
 				   warn, line) \
     ((yasm_arch_base *)arch)->module->floatnum_tobytes \
 	(arch, flt, buf, destsize, valsize, shift, warn, line)
+#define yasm_arch_intnum_fixup_rel(arch, intn, valsize, bc, line) \
+    ((yasm_arch_base *)arch)->module->intnum_fixup_rel \
+	(arch, intn, valsize, bc, line)
 #define yasm_arch_intnum_tobytes(arch, intn, buf, destsize, valsize, shift, \
-				 bc, rel, warn, line) \
+				 bc, warn, line) \
     ((yasm_arch_base *)arch)->module->intnum_tobytes \
-	(arch, intn, buf, destsize, valsize, shift, bc, rel, warn, line)
+	(arch, intn, buf, destsize, valsize, shift, bc, warn, line)
 #define yasm_arch_get_reg_size(arch, reg) \
     ((yasm_arch_base *)arch)->module->get_reg_size(arch, reg)
 #define yasm_arch_reg_print(arch, reg, f) \

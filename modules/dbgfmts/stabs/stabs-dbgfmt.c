@@ -443,7 +443,7 @@ stabs_bc_stab_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     if (stab->symvalue != NULL) {
 	bc->offset += 8;
-	output_reloc(stab->symvalue, bc, buf, 4, 32, 0, 0, d);
+	output_reloc(stab->symvalue, bc, buf, 4, 32, 0, d);
 	bc->offset -= 8;
 	buf += 4;
     }

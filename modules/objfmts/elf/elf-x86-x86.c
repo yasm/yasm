@@ -26,7 +26,7 @@
  */
 
 #include <util.h>
-/*@unused@*/ RCSID("$Id:$");
+/*@unused@*/ RCSID("$Id$");
 
 #define YASM_LIB_INTERNAL
 #define YASM_EXPR_INTERNAL
@@ -35,9 +35,25 @@
 #include "elf.h"
 #include "elf-machine.h"
 
+enum ssym_index {
+    SSYM_GOTPC = 0,
+    SSYM_GOTOFF,
+    SSYM_GOT,
+    SSYM_PLT
+};
+
 static int
-elf_x86_x86_accepts_reloc_size(size_t val)
+elf_x86_x86_accepts_reloc(size_t val, yasm_symrec *wrt, yasm_symrec **ssyms)
 {
+    if (wrt) {
+	if ((wrt == ssyms[SSYM_GOTPC] && val == 32)
+	    || (wrt == ssyms[SSYM_GOTOFF] && val == 32)
+	    || (wrt == ssyms[SSYM_GOT] && val == 32)
+	    || (wrt == ssyms[SSYM_PLT] && val == 32))
+	    return 1;
+	else
+	    return 0;
+    }
     return (val&(val-1)) ? 0 : ((val & (8|16|32)) != 0);
 }
 
@@ -117,9 +133,21 @@ elf_x86_x86_handle_reloc_addend(yasm_intnum *intn, elf_reloc_entry *reloc)
 }
 
 static unsigned int
-elf_x86_x86_map_reloc_info_to_type(elf_reloc_entry *reloc)
+elf_x86_x86_map_reloc_info_to_type(elf_reloc_entry *reloc,
+				   yasm_symrec **ssyms)
 {
-    if (reloc->rtype_rel) {
+    if (reloc->wrt) {
+	if (reloc->wrt == ssyms[SSYM_GOTPC] && reloc->valsize == 32)
+	    return (unsigned char) R_386_GOTPC;
+	else if (reloc->wrt == ssyms[SSYM_GOTOFF] && reloc->valsize == 32)
+	    return (unsigned char) R_386_GOTOFF;
+	else if (reloc->wrt == ssyms[SSYM_GOT] && reloc->valsize == 32)
+	    return (unsigned char) R_386_GOT32;
+	else if (reloc->wrt == ssyms[SSYM_PLT] && reloc->valsize == 32)
+	    return (unsigned char) R_386_PLT32;
+	else
+	    yasm_internal_error(N_("Unsupported WRT"));
+    } else if (reloc->rtype_rel) {
         switch (reloc->valsize) {
             case 8: return (unsigned char) R_386_PC8;
             case 16: return (unsigned char) R_386_PC16;
@@ -175,16 +203,25 @@ elf_x86_x86_write_proghead(unsigned char **bufpp,
     *bufpp = bufp;
 }
 
+static elf_machine_ssym elf_x86_x86_ssyms[] = {
+    {"..gotpc", 0},
+    {"..gotoff", 0},
+    {"..got", 1},
+    {"..plt", 0}
+};
+
 const elf_machine_handler
 elf_machine_handler_x86_x86 = {
     "x86", "x86", ".rel",
     SYMTAB32_SIZE, SYMTAB32_ALIGN, RELOC32_SIZE, SHDR32_SIZE, EHDR32_SIZE,
-    elf_x86_x86_accepts_reloc_size,
+    elf_x86_x86_accepts_reloc,
     elf_x86_x86_write_symtab_entry,
     elf_x86_x86_write_secthead,
     elf_x86_x86_write_secthead_rel,
     elf_x86_x86_handle_reloc_addend,
     elf_x86_x86_map_reloc_info_to_type,
     elf_x86_x86_write_reloc,
-    elf_x86_x86_write_proghead
+    elf_x86_x86_write_proghead,
+    elf_x86_x86_ssyms,
+    sizeof(elf_x86_x86_ssyms)/sizeof(elf_x86_x86_ssyms[0])
 };

@@ -354,6 +354,7 @@ struct elf_reloc_entry {
     int			 rtype_rel;
     size_t		 valsize;
     yasm_intnum         *addend;
+    /*@null@*/ yasm_symrec *wrt;
 };
 
 STAILQ_HEAD(elf_strtab_head, elf_strtab_entry);
@@ -384,10 +385,12 @@ extern const yasm_assoc_data_callback elf_section_data;
 extern const yasm_assoc_data_callback elf_symrec_data;
 
 
-int elf_set_arch(struct yasm_arch *arch);
+int elf_set_arch(struct yasm_arch *arch, yasm_symtab *symtab);
 
 /* reloc functions */
+int elf_is_wrt_sym_relative(yasm_symrec *wrt);
 elf_reloc_entry *elf_reloc_entry_create(yasm_symrec *sym,
+					/*@null@*/ yasm_symrec *wrt,
 					yasm_intnum *addr,
 					int rel,
 					size_t valsize);

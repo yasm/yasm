@@ -218,10 +218,13 @@ int yasm_x86__floatnum_tobytes
     (yasm_arch *arch, const yasm_floatnum *flt, unsigned char *buf,
      size_t destsize, size_t valsize, size_t shift, int warn,
      unsigned long line);
+int yasm_x86__intnum_fixup_rel
+    (yasm_arch *arch, yasm_intnum *intn, size_t valsize,
+     const yasm_bytecode *bc, unsigned long line);
 int yasm_x86__intnum_tobytes
     (yasm_arch *arch, const yasm_intnum *intn, unsigned char *buf,
      size_t destsize, size_t valsize, int shift, const yasm_bytecode *bc,
-     int rel, int warn, unsigned long line);
+     int warn, unsigned long line);
 
 unsigned int yasm_x86__get_reg_size(yasm_arch *arch, unsigned long reg);
 #endif

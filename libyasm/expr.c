@@ -993,6 +993,10 @@ yasm_expr_extract_symrec(yasm_expr **ep, int relocate,
 
     switch ((*ep)->op) {
 	case YASM_EXPR_IDENT:
+	    /* Be kind, recurse */
+	    if ((*ep)->terms[0].type == YASM_EXPR_EXPR)
+		return yasm_expr_extract_symrec(&((*ep)->terms[0].data.expn),
+						relocate, calc_bc_dist);
 	    /* Replace sym with 0 value, return sym */
 	    if ((*ep)->terms[0].type == YASM_EXPR_SYM) {
 		sym = (*ep)->terms[0].data.sym;

@@ -65,8 +65,12 @@ yasm_arch_check_id_retval yasm_lc3b__parse_check_id
      /*@null@*/ yasm_insn_operands *operands, yasm_bytecode *prev_bc,
      unsigned long line);
 
+int yasm_lc3b__intnum_fixup_rel
+    (yasm_arch *arch, yasm_intnum *intn, size_t valsize,
+     const yasm_bytecode *bc, unsigned long line);
+
 int yasm_lc3b__intnum_tobytes
     (yasm_arch *arch, const yasm_intnum *intn, unsigned char *buf,
      size_t destsize, size_t valsize, int shift, const yasm_bytecode *bc,
-     int rel, int warn, unsigned long line);
+     int warn, unsigned long line);
 #endif

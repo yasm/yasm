@@ -1026,10 +1026,17 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
 	    if (ea->disp) {
 		if (eat.pcrel) {
+		    /*@null@*/ yasm_expr *wrt = yasm_expr_extract_wrt(&ea->disp);
 		    ea->disp =
 			yasm_expr_create(YASM_EXPR_SUB,
 					 yasm_expr_expr(ea->disp),
 					 yasm_expr_sym(eat.origin), bc->line);
+		    if (wrt) {
+			ea->disp =
+			    yasm_expr_create(YASM_EXPR_WRT,
+					     yasm_expr_expr(ea->disp),
+					     yasm_expr_expr(wrt), bc->line);
+		    }
 		    if (output_expr(&ea->disp, *bufp, ea->len,
 				    (size_t)(ea->len*8), 0,
 				    (unsigned long)(*bufp-bufp_orig), bc, 1, 1,
@@ -1074,6 +1081,7 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     unsigned int i;
     unsigned char *bufp_orig = *bufp;
     /*@null@*/ yasm_expr *targetseg;
+    /*@null@*/ yasm_expr *wrt;
     yasm_expr *dup;
 
     /* Prefixes */
@@ -1101,9 +1109,14 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		YASM_WRITE_8(*bufp, jmp->shortop.opcode[i]);
 
 	    /* Relative displacement */
+	    wrt = yasm_expr_extract_wrt(&jmp->target);
 	    jmp->target =
 		yasm_expr_create(YASM_EXPR_SUB, yasm_expr_expr(jmp->target),
 				 yasm_expr_sym(jmp->origin), bc->line);
+	    if (wrt)
+		jmp->target = yasm_expr_create_tree(jmp->target,
+						    YASM_EXPR_WRT, wrt,
+						    bc->line);
 	    if (output_expr(&jmp->target, *bufp, 1, 8, 0,
 			    (unsigned long)(*bufp-bufp_orig), bc, 1, 1, d))
 		return 1;
@@ -1122,9 +1135,14 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		YASM_WRITE_8(*bufp, jmp->nearop.opcode[i]);
 
 	    /* Relative displacement */
+	    wrt = yasm_expr_extract_wrt(&jmp->target);
 	    jmp->target =
 		yasm_expr_create(YASM_EXPR_SUB, yasm_expr_expr(jmp->target),
 				 yasm_expr_sym(jmp->origin), bc->line);
+	    if (wrt)
+		jmp->target = yasm_expr_create_tree(jmp->target,
+						    YASM_EXPR_WRT, wrt,
+						    bc->line);
 	    i = (opersize == 16) ? 2 : 4;
 	    if (output_expr(&jmp->target, *bufp, i, i*8, 0,
 			    (unsigned long)(*bufp-bufp_orig), bc, 1, 1, d))
@@ -1169,27 +1187,27 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 }
 
 int
+yasm_x86__intnum_fixup_rel(yasm_arch *arch, yasm_intnum *intn, size_t valsize,
+			   const yasm_bytecode *bc, unsigned long line)
+{
+    yasm_intnum *delta;
+    if (valsize != 8 && valsize != 16 && valsize != 32)
+	yasm_internal_error(
+	    N_("tried to do PC-relative offset from invalid sized value"));
+    delta = yasm_intnum_create_uint(bc->len);
+    yasm_intnum_calc(intn, YASM_EXPR_SUB, delta, line);
+    yasm_intnum_destroy(delta);
+    return 0;
+}
+
+int
 yasm_x86__intnum_tobytes(yasm_arch *arch, const yasm_intnum *intn,
 			 unsigned char *buf, size_t destsize, size_t valsize,
-			 int shift, const yasm_bytecode *bc, int rel, int warn,
+			 int shift, const yasm_bytecode *bc, int warn,
 			 unsigned long line)
 {
-    if (rel) {
-	yasm_intnum *relnum, *delta;
-	if (valsize != 8 && valsize != 16 && valsize != 32)
-	    yasm_internal_error(
-		N_("tried to do PC-relative offset from invalid sized value"));
-	relnum = yasm_intnum_copy(intn);
-	delta = yasm_intnum_create_uint(bc->len);
-	yasm_intnum_calc(relnum, YASM_EXPR_SUB, delta, line);
-	yasm_intnum_destroy(delta);
-	yasm_intnum_get_sized(relnum, buf, destsize, valsize, shift, 0, warn,
-			      line);
-	yasm_intnum_destroy(relnum);
-    } else {
-	/* Write value out. */
-	yasm_intnum_get_sized(intn, buf, destsize, valsize, shift, 0, warn,
-			      line);
-    }
+    /* Write value out. */
+    yasm_intnum_get_sized(intn, buf, destsize, valsize, shift, 0, warn,
+			  line);
     return 0;
 }

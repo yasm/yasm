@@ -155,7 +155,7 @@ bin_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 		       int rel, int warn, /*@null@*/ void *d)
 {
     /*@null@*/ bin_objfmt_output_info *info = (bin_objfmt_output_info *)d;
-    /*@dependent@*/ /*@null@*/ const yasm_intnum *intn;
+    /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
     /*@dependent@*/ /*@null@*/ const yasm_floatnum *flt;
 
     assert(info != NULL);
@@ -180,10 +180,18 @@ bin_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 
     /* Handle integer expressions */
     intn = yasm_expr_get_intnum(ep, NULL);
-    if (intn)
+    if (intn) {
+	if (rel) {
+	    int retval = yasm_arch_intnum_fixup_rel(info->objfmt_bin->arch,
+						    intn, valsize, bc,
+						    bc->line);
+	    if (retval)
+		return retval;
+	}
 	return yasm_arch_intnum_tobytes(info->objfmt_bin->arch, intn, buf,
-					destsize, valsize, shift, bc, rel,
-					warn, bc->line);
+					destsize, valsize, shift, bc, warn,
+					bc->line);
+    }
 
     /* Check for complex float expressions */
     if (yasm_expr__contains(*ep, YASM_EXPR_FLOAT)) {

@@ -201,7 +201,6 @@ typedef int (*yasm_output_expr_func)
  * \param buf		buffer for byte representation
  * \param destsize	destination size (in bytes)
  * \param valsize	size (in bits)
- * \param rel		if nonzero, expr should be treated as PC/IP-relative
  * \param warn		enables standard warnings: zero for none;
  *			nonzero for overflow/underflow floating point warnings;
  *			negative for signed integer warnings,
@@ -212,7 +211,7 @@ typedef int (*yasm_output_expr_func)
  */
 typedef int (*yasm_output_reloc_func)
     (yasm_symrec *sym, yasm_bytecode *bc, unsigned char *buf, size_t destsize,
-     size_t valsize, int rel, int warn, void *d);
+     size_t valsize, int warn, void *d);
 
 /** Sort an array using merge sort algorithm.
  * \internal

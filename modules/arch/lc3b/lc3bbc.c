@@ -241,27 +241,28 @@ lc3b_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 }
 
 int
+yasm_lc3b__intnum_fixup_rel(yasm_arch *arch, yasm_intnum *intn,
+			    size_t valsize, const yasm_bytecode *bc,
+			    unsigned long line)
+{
+    yasm_intnum *delta;
+    if (valsize != 9)
+	yasm_internal_error(
+	    N_("tried to do PC-relative offset from invalid sized value"));
+    delta = yasm_intnum_create_uint(bc->len);
+    yasm_intnum_calc(intn, YASM_EXPR_SUB, delta, line);
+    yasm_intnum_destroy(delta);
+    return 0;
+}
+
+int
 yasm_lc3b__intnum_tobytes(yasm_arch *arch, const yasm_intnum *intn,
 			  unsigned char *buf, size_t destsize, size_t valsize,
-			  int shift, const yasm_bytecode *bc, int rel,
-			  int warn, unsigned long line)
+			  int shift, const yasm_bytecode *bc, int warn,
+			  unsigned long line)
 {
-    if (rel) {
-	yasm_intnum *relnum, *delta;
-	if (valsize != 9)
-	    yasm_internal_error(
-		N_("tried to do PC-relative offset from invalid sized value"));
-	relnum = yasm_intnum_copy(intn);
-	delta = yasm_intnum_create_uint(bc->len);
-	yasm_intnum_calc(relnum, YASM_EXPR_SUB, delta, line);
-	yasm_intnum_destroy(delta);
-	yasm_intnum_get_sized(relnum, buf, destsize, valsize, shift, 0, warn,
-			      line);
-	yasm_intnum_destroy(relnum);
-    } else {
-	/* Write value out. */
-	yasm_intnum_get_sized(intn, buf, destsize, valsize, shift, 0, warn,
-			      line);
-    }
+    /* Write value out. */
+    yasm_intnum_get_sized(intn, buf, destsize, valsize, shift, 0, warn,
+			  line);
     return 0;
 }

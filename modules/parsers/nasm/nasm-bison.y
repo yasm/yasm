@@ -110,6 +110,8 @@ static void define_label(yasm_parser_nasm *parser_nasm, /*@only@*/ char *name,
 %type <insn_operands> operands
 %type <insn_operand> operand
 
+%left ':'
+%left WRT
 %left '|'
 %left '^'
 %left '&'
@@ -117,8 +119,7 @@ static void define_label(yasm_parser_nasm *parser_nasm, /*@only@*/ char *name,
 %left '-' '+'
 %left '*' '/' SIGNDIV '%' SIGNMOD
 %nonassoc UNARYOP
-%nonassoc SEG WRT
-%left ':'
+%nonassoc SEG
 
 %%
 input: /* empty */

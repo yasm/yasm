@@ -63,9 +63,10 @@ static const elf_machine_handler *elf_machine_handlers[] =
 };
 static const elf_machine_handler elf_null_machine = {0};
 static elf_machine_handler const *elf_march = &elf_null_machine;
+static yasm_symrec **elf_ssyms;
 
 int
-elf_set_arch(yasm_arch *arch)
+elf_set_arch(yasm_arch *arch, yasm_symtab *symtab)
 {
     const char *machine = yasm_arch_get_machine(arch);
     int i;
@@ -78,23 +79,50 @@ elf_set_arch(yasm_arch *arch)
             if (yasm__strcasecmp(machine, elf_march->machine)==0)
                 break;
     }
+
+    if (elf_march && elf_march->num_ssyms > 0)
+    {
+	/* Allocate "special" syms */
+	elf_ssyms =
+	    yasm_xmalloc(elf_march->num_ssyms * sizeof(yasm_symrec *));
+	for (i=0; (unsigned int)i<elf_march->num_ssyms; i++)
+	{
+	    /* FIXME: misuse of NULL bytecode */
+	    elf_ssyms[i] = yasm_symtab_define_label(symtab,
+						    elf_march->ssyms[i].name,
+						    NULL, 1, 0);
+	}
+    }
+
     return elf_march != NULL;
 }
 
 /* reloc functions */
+int
+elf_is_wrt_sym_relative(yasm_symrec *wrt)
+{
+    int i;
+    for (i=0; (unsigned int)i<elf_march->num_ssyms; i++) {
+	if (elf_ssyms[i] == wrt)
+	    return elf_march->ssyms[i].sym_rel;
+    }
+    return 0;
+}
+
 /* takes ownership of addr */
 elf_reloc_entry *
 elf_reloc_entry_create(yasm_symrec *sym,
+		       yasm_symrec *wrt,
 		       yasm_intnum *addr,
 		       int rel,
 		       size_t valsize)
 {
     elf_reloc_entry *entry;
 
-    if (!elf_march->accepts_reloc_size)
+    if (!elf_march->accepts_reloc)
 	yasm_internal_error(N_("Unsupported machine for ELF output"));
 
-    if (!elf_march->accepts_reloc_size(valsize))
+    if (!elf_march->accepts_reloc(valsize, wrt, elf_ssyms))
     {
         if (addr)
             yasm_intnum_destroy(addr);
@@ -110,6 +138,7 @@ elf_reloc_entry_create(yasm_symrec *sym,
     entry->rtype_rel = rel;
     entry->valsize = valsize;
     entry->addend = NULL;
+    entry->wrt = wrt;
 
     return entry;
 }
@@ -670,7 +699,7 @@ elf_secthead_write_relocs_to_file(FILE *f, yasm_section *sect,
 	vis = yasm_symrec_get_visibility(reloc->reloc.sym);
         if (!elf_march->map_reloc_info_to_type)
             yasm_internal_error(N_("Unsupported arch/machine for elf output"));
-        r_type = elf_march->map_reloc_info_to_type(reloc);
+        r_type = elf_march->map_reloc_info_to_type(reloc, elf_ssyms);
 
 	bufp = buf;
         if (!elf_march->write_reloc || !elf_march->reloc_entry_size)

@@ -87,7 +87,7 @@ nasm_listfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 			 /*@null@*/ void *d)
 {
     /*@null@*/ nasm_listfmt_output_info *info = (nasm_listfmt_output_info *)d;
-    /*@dependent@*/ /*@null@*/ const yasm_intnum *intn;
+    /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
     /*@dependent@*/ /*@null@*/ const yasm_floatnum *flt;
 
     assert(info != NULL);
@@ -115,15 +115,14 @@ nasm_listfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	if (shift < 0)
 	    yasm_internal_error(N_("attempting to negative shift a float"));
 	return yasm_arch_floatnum_tobytes(info->arch, flt, buf, destsize,
-					  valsize, (unsigned int)shift, warn,
+					  valsize, (unsigned int)shift, 0,
 					  bc->line);
     }
 
     intn = yasm_expr_get_intnum(ep, NULL);
     if (intn)
 	return yasm_arch_intnum_tobytes(info->arch, intn, buf, destsize,
-					valsize, shift, bc, rel, warn,
-					bc->line);
+					valsize, shift, bc, 0, bc->line);
 
     return 0;
 }

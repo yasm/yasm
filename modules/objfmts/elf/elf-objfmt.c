@@ -62,6 +62,8 @@ typedef struct yasm_objfmt_elf {
     yasm_object *object;
     yasm_symtab *symtab;
     /*@dependent@*/ yasm_arch *arch;
+    
+    yasm_symrec *dotdotsym;		/* ..sym symbol */
 } yasm_objfmt_elf;
 
 typedef struct {
@@ -154,7 +156,7 @@ elf_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
     objfmt_elf->object = object;
     objfmt_elf->symtab = yasm_object_get_symtab(object);
     objfmt_elf->arch = a;
-    if (!elf_set_arch(a)) {
+    if (!elf_set_arch(a, objfmt_elf->symtab)) {
 	yasm_xfree(objfmt_elf);
 	return NULL;
     }
@@ -166,13 +168,17 @@ elf_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
     objfmt_elf->elf_symtab = elf_symtab_create();
 
     /* FIXME: misuse of NULL bytecode here; it works, but only barely. */
-    filesym = yasm_symtab_define_label(yasm_object_get_symtab(object), ".file",
-				       NULL, 0, 0);
+    filesym = yasm_symtab_define_label(objfmt_elf->symtab, ".file", NULL, 0,
+				       0);
     entry = elf_symtab_entry_create(
 	elf_strtab_append_str(objfmt_elf->strtab, in_filename), filesym);
     yasm_symrec_add_data(filesym, &elf_symrec_data, entry);
     elf_symtab_set_nonzero(entry, NULL, SHN_ABS, STB_LOCAL, STT_FILE, NULL, 0);
     elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
+
+    /* FIXME: misuse of NULL bytecode */
+    objfmt_elf->dotdotsym = yasm_symtab_define_label(objfmt_elf->symtab,
+						     "..sym", NULL, 1, 0);
 
     return (yasm_objfmt *)objfmt_elf;
 }
@@ -204,15 +210,15 @@ elf_objfmt_output_align(FILE *f, unsigned int align)
 static int
 elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
 			unsigned char *buf, size_t destsize, size_t valsize,
-			int rel, int warn, void *d)
+			int warn, void *d)
 {
     elf_reloc_entry *reloc;
     elf_objfmt_output_info *info = d;
     yasm_intnum *zero;
     int retval;
 
-    reloc = elf_reloc_entry_create(sym,
-	yasm_intnum_create_uint(bc->offset), rel, valsize);
+    reloc = elf_reloc_entry_create(sym, NULL,
+	yasm_intnum_create_uint(bc->offset), 0, valsize);
     if (reloc == NULL) {
 	yasm__error(bc->line, N_("elf: invalid relocation size"));
 	return 1;
@@ -224,7 +230,7 @@ elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
     zero = yasm_intnum_create_uint(0);
     elf_handle_reloc_addend(zero, reloc);
     retval = yasm_arch_intnum_tobytes(info->objfmt_elf->arch, zero, buf,
-				      destsize, valsize, 0, bc, rel, warn,
+				      destsize, valsize, 0, bc, warn,
 				      bc->line);
     yasm_intnum_destroy(zero);
     return retval;
@@ -241,6 +247,8 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     /*@dependent@*/ /*@null@*/ const yasm_floatnum *flt;
     /*@dependent@*/ /*@null@*/ yasm_symrec *sym;
     /*@null@*/ elf_reloc_entry *reloc = NULL;
+    /*@null@*/ yasm_expr *wrt_expr;
+    /*@dependent@*/ /*@null@*/ yasm_symrec *wrt = NULL;
 
     if (info == NULL)
 	yasm_internal_error("null info struct");
@@ -257,13 +265,32 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 					  (unsigned int)shift, warn, bc->line);
     }
 
+    /* Check for a WRT relocation */
+    wrt_expr = yasm_expr_extract_wrt(ep);
+    if (wrt_expr) {
+	wrt = yasm_expr_extract_symrec(&wrt_expr, 0,
+				       yasm_common_calc_bc_dist);
+	yasm_expr_destroy(wrt_expr);
+	if (!wrt) {
+	    yasm__error(bc->line, N_("WRT expression too complex"));
+	    return 1;
+	}
+    }
+
     /* Handle integer expressions, with relocation if necessary */
-    sym = yasm_expr_extract_symrec(ep, 1, yasm_common_calc_bc_dist);
+    sym = yasm_expr_extract_symrec(ep,
+				   !(wrt == info->objfmt_elf->dotdotsym ||
+				     (wrt && elf_is_wrt_sym_relative(wrt))),
+				   yasm_common_calc_bc_dist);
     if (sym) {
 	yasm_sym_vis vis;
 
 	vis = yasm_symrec_get_visibility(sym);
-	if (!(vis & (YASM_SYM_COMMON|YASM_SYM_EXTERN)))
+	if (wrt == info->objfmt_elf->dotdotsym)
+	    wrt = NULL;
+	else if (wrt && elf_is_wrt_sym_relative(wrt))
+	    ;
+	else if (!(vis & (YASM_SYM_COMMON|YASM_SYM_EXTERN)))
 	{
 	    yasm_bytecode *label_precbc;
 	    /* Local symbols need relocation to their section's start */
@@ -290,10 +317,10 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	    *ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
 	}
 
-	reloc = elf_reloc_entry_create(sym,
+	reloc = elf_reloc_entry_create(sym, wrt,
 	    yasm_intnum_create_uint(bc->offset + offset), rel, valsize);
 	if (reloc == NULL) {
-	    yasm__error(bc->line, N_("elf: invalid relocation size"));
+	    yasm__error(bc->line, N_("elf: invalid relocation (WRT or size)"));
 	    return 1;
 	}
 	/* allocate .rel[a] sections on a need-basis */
@@ -302,12 +329,20 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     }
 
     intn = yasm_expr_get_intnum(ep, NULL);
-    if (intn && reloc)
-        elf_handle_reloc_addend(intn, reloc);
-    if (intn)
+    if (intn) {
+	if (rel) {
+	    int retval = yasm_arch_intnum_fixup_rel(info->objfmt_elf->arch,
+						    intn, valsize, bc,
+						    bc->line);
+	    if (retval)
+		return retval;
+	}
+	if (reloc)
+	    elf_handle_reloc_addend(intn, reloc);
 	return yasm_arch_intnum_tobytes(info->objfmt_elf->arch, intn, buf,
-					destsize, valsize, shift, bc, rel,
-					warn, bc->line);
+					destsize, valsize, shift, bc, warn,
+					bc->line);
+    }
 
     /* Check for complex float expressions */
     if (yasm_expr__contains(*ep, YASM_EXPR_FLOAT)) {
