@@ -615,11 +615,11 @@ bytecode_print(const bytecode *bc)
 		       (unsigned int)bc->data.insn.ea->valid_sib,
 		       (unsigned int)bc->data.insn.ea->need_sib);
 	    }
-	    printf("Immediate Value:\n");
-	    printf(" Val=");
+	    printf("Immediate Value:");
 	    if (!bc->data.insn.imm)
-		printf("(nil)\n");
+		printf(" (nil)\n");
 	    else {
+		printf("\n Val=");
 		expr_print(bc->data.insn.imm->val);
 		printf("\n");
 		printf(" Len=%u, IsNeg=%u\n",
@@ -706,7 +706,7 @@ bytecode_print(const bytecode *bc)
     }
     printf("Multiple=");
     if (!bc->multiple)
-	printf("1");
+	printf("nil (1)");
     else
 	expr_print(bc->multiple);
     printf("\n");
@@ -720,6 +720,7 @@ static void
 bytecode_parser_finalize_insn(bytecode *bc)
 {
     effaddr *ea = bc->data.insn.ea;
+    immval *imm = bc->data.insn.imm;
 
     if (ea) {
 	if ((ea->disp) && ((!ea->valid_sib && ea->need_sib) ||
@@ -739,6 +740,34 @@ bytecode_parser_finalize_insn(bytecode *bc)
 		return;	    /* failed, don't bother checking rest of insn */
 	}
     }
+
+    if (imm) {
+	const intnum *num;
+
+	if (imm->val) {
+	    expr_expand_equ(imm->val);
+	    expr_simplify(imm->val);
+	}
+	/* TODO: check imm f_len vs. len? */
+
+	/* Handle shift_op special-casing */
+	if (bc->data.insn.shift_op && (num = expr_get_intnum(&imm->val))) {
+	    if (intnum_get_uint(num) == 1) {
+		/* Use ,1 form: first copy ,1 opcode. */
+		bc->data.insn.opcode[0] = bc->data.insn.opcode[1];
+		/* Delete ModRM, as it's no longer needed */
+		xfree(ea);
+		bc->data.insn.ea = (effaddr *)NULL;
+		/* Delete Imm, as it's not needed */
+		expr_delete(imm->val);
+		xfree(imm);
+		bc->data.insn.imm = (immval *)NULL;
+	    }
+	    bc->data.insn.shift_op = 0;
+	}
+    }
+
+    
 }
 
 void
