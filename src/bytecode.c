@@ -190,9 +190,11 @@ bc_new_incbin(char *filename, expr *start, expr *maxlen)
     bytecode *bc = bc_new_common(BC_INCBIN, sizeof(bytecode_incbin));
     bytecode_incbin *incbin = bc_get_data(bc);
 
+    /*@-mustfree@*/
     incbin->filename = filename;
     incbin->start = start;
     incbin->maxlen = maxlen;
+    /*@=mustfree@*/
 
     return bc;
 }
@@ -207,6 +209,7 @@ bc_delete(bytecode *bc)
     if (!bc)
 	return;
 
+    /*@-branchstate@*/
     switch (bc->type) {
 	case BC_EMPTY:
 	    break;
@@ -231,6 +234,7 @@ bc_delete(bytecode *bc)
 		InternalError(_("Unknown bytecode type"));
 	    break;
     }
+    /*@=branchstate@*/
 
     expr_delete(bc->multiple);
     xfree(bc);

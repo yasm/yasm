@@ -48,7 +48,7 @@ void bc_set_multiple(bytecode *bc, /*@keep@*/ expr *e);
 
 /*@only@*/ bytecode *bc_new_common(bytecode_type type, size_t datasize);
 /*@only@*/ bytecode *bc_new_data(datavalhead *datahead, unsigned char size);
-/*@only@*/ bytecode *bc_new_reserve(/*@keep@*/ expr *numitems,
+/*@only@*/ bytecode *bc_new_reserve(/*@only@*/ expr *numitems,
 				    unsigned char itemsize);
 /*@only@*/ bytecode *bc_new_incbin(/*@only@*/ char *filename,
 				   /*@only@*/ /*@null@*/ expr *start,
