@@ -1,6 +1,0 @@
-Makefile.in.in
-POTFILES
-cat-id-tbl.c
-yasm.pot
-stamp-cat-id
-remove-potcdate.sed
