@@ -82,4 +82,6 @@ struct yasm_linemgr {
 						      int type);
 };
 
+extern yasm_linemgr yasm_std_linemgr;
+
 #endif

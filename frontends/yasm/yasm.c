@@ -52,12 +52,6 @@
 #include "arch.h"
 
 
-/* YASM's standard line manager (for parse stage). */
-extern yasm_linemgr yasm_std_linemgr;
-
-/* YASM's standard errwarn handlers. */
-extern yasm_errwarn yasm_std_errwarn;
-
 /* Extra path to search for our modules. */
 #ifndef YASM_MODULE_PATH_ENV
 # define YASM_MODULE_PATH_ENV	"YASM_MODULE_PATH"

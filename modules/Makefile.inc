@@ -34,6 +34,8 @@ libyasm_la_SOURCES = \
 	src/bitvect.h		\
 	src/valparam.c		\
 	src/valparam.h		\
+	src/errwarn.c		\
+	src/linemgr.c		\
 	src/xmalloc.c		\
 	src/xstrdup.c		\
 	src/strcasecmp.c
@@ -43,9 +45,7 @@ yasm_SOURCES += \
 	src/options.c		\
 	src/options.h		\
 	src/module.h		\
-	src/module.c		\
-	src/errwarn.c		\
-	src/linemgr.c
+	src/module.c
 
 
 EXTRA_DIST += \

@@ -94,4 +94,6 @@ struct yasm_errwarn {
     char * (*conv_unprint) (char ch);
 };
 
+extern yasm_errwarn yasm_std_errwarn;
+
 #endif
