@@ -2,7 +2,7 @@
  * \file arch.h
  * \brief YASM architecture interface.
  *
- * $IdPath: yasm/libyasm/arch.h,v 1.28 2003/03/31 08:22:05 peter Exp $
+ * $IdPath$
  *
  *  Copyright (C) 2002  Peter Johnson
  *
@@ -30,7 +30,7 @@
 #ifndef YASM_ARCH_H
 #define YASM_ARCH_H
 
-/** Return value from yasm_arch::check_identifier(). */
+/** Return value from yasm_arch::parse_check_id(). */
 typedef enum {
     YASM_ARCH_CHECK_ID_NONE = 0,	/**< Just a normal identifier. */
     YASM_ARCH_CHECK_ID_INSN,		/**< An instruction. */
@@ -67,10 +67,10 @@ typedef enum {
 } yasm_arch_syntax_flavor;
 
 /** YASM architecture interface.
- * \note All "data" in parser-related functions needs to start the parse
- *	 initialized to 0 to make it okay for a parser-related function to
- *	 use/check previously stored data to see if it's been called before on
- *	 the same piece of data.
+ * \note All "data" in parser-related functions (parse_*) needs to start the
+ *	 parse initialized to 0 to make it okay for a parser-related function
+ *	 to use/check previously stored data to see if it's been called before
+ *	 on the same piece of data.
  */
 struct yasm_arch {
     /** One-line description of the architecture. */
@@ -112,7 +112,7 @@ struct yasm_arch {
 	(unsigned long data[4], const char *id, unsigned long lindex);
 
     /** Handle architecture-specific directives.
-     * Should modify behavior ONLY of parse functions, much like switch_cpu().
+     * Should modify behavior ONLY of parse functions, much like parse_cpu().
      * \param name		directive name
      * \param valparams		value/parameters
      * \param objext_valparams	object format extensions
@@ -128,7 +128,7 @@ struct yasm_arch {
 
     /** Create an instruction.  Creates a bytecode by matching the
      * instruction data and the parameters given with a valid instruction.
-     * \param data		instruction data (from check_identifier()); all
+     * \param data		instruction data (from parse_check_id()); all
      *				zero indicates an empty instruction
      * \param num_operands	number of operands parsed
      * \param operands		list of operands (in parse order)
@@ -147,7 +147,7 @@ struct yasm_arch {
     /** Handle an instruction prefix.
      * Modifies an instruction bytecode based on the prefix in data.
      * \param bc	bytecode (must be instruction bytecode)
-     * \param data	prefix (from check_identifier())
+     * \param data	prefix (from parse_check_id())
      * \param lindex	line index (as from yasm_linemgr)
      */
     void (*parse_prefix) (yasm_bytecode *bc, const unsigned long data[4],
@@ -156,7 +156,7 @@ struct yasm_arch {
     /** Handle an segment register instruction prefix.
      * Modifies an instruction bytecode based on a segment register prefix.
      * \param bc	bytecode (must be instruction bytecode)
-     * \param segreg	segment register (from check_identifier())
+     * \param segreg	segment register (from parse_check_id())
      * \param lindex	line index (as from yasm_linemgr)
      */
     void (*parse_seg_prefix) (yasm_bytecode *bc, unsigned long segreg,
@@ -166,7 +166,7 @@ struct yasm_arch {
      * Modifies an instruction bytecode based on a segment override in a
      * memory expression.
      * \param bc	bytecode (must be instruction bytecode)
-     * \param segreg	segment register (from check_identifier())
+     * \param segreg	segment register (from parse_check_id())
      * \param lindex	line index (as from yasm_linemgr)
      */
     void (*parse_seg_override) (yasm_effaddr *ea, unsigned long segreg,
@@ -314,27 +314,27 @@ struct yasm_insn_operand {
  */
 void yasm_arch_common_initialize(yasm_arch *a);
 
-/** Create a yasm_insn_operand from a register.
+/** Create an instruction operand from a register.
  * \param reg	register
  * \return Newly allocated operand.
  */
 yasm_insn_operand *yasm_operand_new_reg(unsigned long reg);
 
-/** Create a yasm_insn_operand from a segment register.
+/** Create an instruction operand from a segment register.
  * \param segreg	segment register
  * \return Newly allocated operand.
  */
 yasm_insn_operand *yasm_operand_new_segreg(unsigned long segreg);
 
-/** Create a yasm_insn_operand from an effective address.
+/** Create an instruction operand from an effective address.
  * \param ea	effective address
  * \return Newly allocated operand.
  */
 yasm_insn_operand *yasm_operand_new_mem(/*@only@*/ yasm_effaddr *ea);
 
-/** Create a yasm_insn_operand from an immediate expression.
- * Looks for cases of a single register and creates an INSN_OPERAND_REG variant
- * of yasm_insn_operand.
+/** Create an instruction operand from an immediate expression.
+ * Looks for cases of a single register and creates a register variant of
+ * #yasm_insn_operand.
  * \param val	immediate expression
  * \return Newly allocated operand.
  */
