@@ -231,38 +231,84 @@ typedef enum {
 #define RELOC64_ALIGN 8
 
 
-/* elf relocation type - index of semantics */
+/* elf relocation type - index of semantics
+ *
+ * A = Addend (r_addend for RELA, value at location for REL)
+ * B = Base address
+ * G = Offset into global offset table (GOT)
+ * GOT = Address of the global offset table (GOT)
+ * L = Location of procedure linkage table (PLT)
+ * P = Location of location being relocated (r_offset)
+ * S = Value of symbol
+ */
 typedef enum {
     R_386_NONE = 0,		/* none */
-    R_386_32 = 1,		/* word, S + A */
-    R_386_PC32 = 2,		/* word, S + A - P */
-    R_386_GOT32 = 3,		/* word, G + A - P */
-    R_386_PLT32 = 4,		/* word, L + A - P */
+    R_386_32 = 1,		/* word32, S + A */
+    R_386_PC32 = 2,		/* word32, S + A - P */
+    R_386_GOT32 = 3,		/* word32, G + A - P */
+    R_386_PLT32 = 4,		/* word32, L + A - P */
     R_386_COPY = 5,		/* none */
-    R_386_GLOB_DAT = 6,		/* word, S */
-    R_386_JMP_SLOT = 7,		/* word, S */
-    R_386_RELATIVE = 8,		/* word, B + A */
-    R_386_GOTOFF = 9,		/* word, S + A - GOT */
-    R_386_GOTPC = 10		/* word, GOT + A - P */
+    R_386_GLOB_DAT = 6,		/* word32, S */
+    R_386_JMP_SLOT = 7,		/* word32, S */
+    R_386_RELATIVE = 8,		/* word32, B + A */
+    R_386_GOTOFF = 9,		/* word32, S + A - GOT */
+    R_386_GOTPC = 10,		/* word32, GOT + A - P */
+    R_386_TLS_TPOFF = 14,	/* Negative offset in static TLS block (GNU
+				   version) */
+    R_386_TLS_IE = 15,		/* Absolute address of GOT entry for negative
+				   static TLS block offset */
+    R_386_TLS_GOTIE = 16,	/* GOT entry for negative static TLS block
+				   offset */
+    R_386_TLS_LE = 17,		/* Negative offset relative to static TLS
+				   (GNU version) */
+    R_386_TLS_GD = 18,		/* Direct 32 bit for GNU version of GD TLS */
+    R_386_TLS_LDM = 19,		/* Direct 32 bit for GNU version of LD TLS
+				   in LE code */
+    R_386_16 = 20,		/* word16, S + A (GNU extension) */
+    R_386_PC16 = 21,		/* word16, S + A - P (GNU extension) */
+    R_386_8 = 22,		/* word8, S + A (GNU extension) */
+    R_386_PC8 = 23,		/* word8, S + A - P (GNU extension) */
+    R_386_TLS_GD_32 = 24,	/* Direct 32 bit for GD TLS */
+    R_386_TLS_GD_PUSH = 25,	/* Tag for pushl in GD TLS code */
+    R_386_TLS_GD_CALL = 26,	/* Relocation for call to */
+    R_386_TLS_GD_POP = 27,	/* Tag for popl in GD TLS code */
+    R_386_TLS_LDM_32 = 28,	/* Direct 32 bit for local dynamic code */
+    R_386_TLS_LDM_PUSH = 29,	/* Tag for pushl in LDM TLS code */
+    R_386_TLS_LDM_CALL = 30,	/* Relocation for call to */
+    R_386_TLS_LDM_POP = 31,	/* Tag for popl in LDM TLS code */
+    R_386_TLS_LDO_32 = 32,	/* Offset relative to TLS block */
+    R_386_TLS_IE_32 = 33,	/* GOT entry for static TLS block */
+    R_386_TLS_LE_32 = 34,	/* Offset relative to static TLS block */
+    R_386_TLS_DTPMOD32 = 35,	/* ID of module containing symbol */
+    R_386_TLS_DTPOFF32 = 36,	/* Offset in TLS block */
+    R_386_TLS_TPOFF32 = 37	/* Offset in static TLS block */
 } elf_386_relocation_type;
 
 typedef enum {
     R_X86_64_NONE = 0,		/* none */
-    R_X86_64_64 = 1,		/* add 64-bit symbol value */
-    R_X86_64_PC32 = 2,		/* pc-relative 32bit signed sym value */
-    R_X86_64_GOT32 = 3,		/* pc-relative 32bit signed GOT offset */
-    R_X86_64_PLT32 = 4,		/* pc-relative 32bit signed PLT offset */
-    R_X86_64_COPY = 5,		/* Copy data from shared object */
-    R_X86_64_GLOB_DAT = 6,	/* Set GOT entry to data address */
-    R_X86_64_JMP_SLOT = 7,	/* Set GOT entry to code address */
-    R_X86_64_RELATIVE = 8,	/* Add load address of shared object */
-    R_X86_64_GOTPCREL = 9,	/* Add 32bit signed pcrel offset to GOT */
-    R_X86_64_32 = 10,		/* Add 32bit zero extended (zx) symbol value */
-    R_X86_64_32S = 11,		/* Add 32bit sign extended (sx) symbol value */
-    R_X86_64_16 = 12,		/* Add 16bit zx symbol value */
-    R_X86_64_PC16 = 13,		/* Add 16bit sx pc relative symbol value */
-    R_X86_64_8 = 14,		/* Add 8bit zx symbol value */
-    R_X86_64_PC8 = 15		/* Add 8bit sx pc relative symbol value */
+    R_X86_64_64 = 1,		/* word64, S + A */
+    R_X86_64_PC32 = 2,		/* word32, S + A - P */
+    R_X86_64_GOT32 = 3,		/* word32, G + A */
+    R_X86_64_PLT32 = 4,		/* word32, L + A - P */
+    R_X86_64_COPY = 5,		/* none */
+    R_X86_64_GLOB_DAT = 6,	/* word64, S, set GOT entry to data address */
+    R_X86_64_JMP_SLOT = 7,	/* word64, S, set GOT entry to code address */
+    R_X86_64_RELATIVE = 8,	/* word64, B + A */
+    R_X86_64_GOTPCREL = 9,	/* word32, G + GOT + A - P */
+    R_X86_64_32 = 10,		/* word32 (zero extend), S + A */
+    R_X86_64_32S = 11,		/* word32 (sign extend), S + A */
+    R_X86_64_16 = 12,		/* word16, S + A */
+    R_X86_64_PC16 = 13,		/* word16, S + A - P */
+    R_X86_64_8 = 14,		/* word8, S + A */
+    R_X86_64_PC8 = 15,		/* word8, S + A - P */
+    R_X86_64_DPTMOD64 = 16,	/* word64, ID of module containing symbol */
+    R_X86_64_DTPOFF64 = 17,	/* word64, offset in TLS block */
+    R_X86_64_TPOFF64 = 18,	/* word64, offset in initial TLS block */
+    R_X86_64_TLSGD = 19,	/* word32, PC-rel offset to GD GOT block */
+    R_X86_64_TLSLD = 20,	/* word32, PC-rel offset to LD GOT block */
+    R_X86_64_DTPOFF32 = 21,	/* word32, offset to TLS block */
+    R_X86_64_GOTTPOFF = 22,	/* word32, PC-rel offset to IE GOT entry */
+    R_X86_64_TPOFF32 = 23	/* word32, offset in initial TLS block */
 } elf_x86_64_relocation_type;
 
 struct elf_secthead {

@@ -38,7 +38,7 @@
 static int
 elf_x86_x86_accepts_reloc_size(size_t val)
 {
-    return val == 32;
+    return (val&(val-1)) ? 0 : ((val & (8|16|32)) != 0);
 }
 
 static void
@@ -119,7 +119,22 @@ elf_x86_x86_handle_reloc_addend(yasm_intnum *intn, elf_reloc_entry *reloc)
 static unsigned int
 elf_x86_x86_map_reloc_info_to_type(elf_reloc_entry *reloc)
 {
-    return (reloc->rtype_rel ? R_386_PC32 : R_386_32);
+    if (reloc->rtype_rel) {
+        switch (reloc->valsize) {
+            case 8: return (unsigned char) R_386_PC8;
+            case 16: return (unsigned char) R_386_PC16;
+            case 32: return (unsigned char) R_386_PC32;
+            default: yasm_internal_error(N_("Unsupported relocation size"));
+        }
+    } else {
+        switch (reloc->valsize) {
+            case 8: return (unsigned char) R_386_8;
+            case 16: return (unsigned char) R_386_16;
+            case 32: return (unsigned char) R_386_32;
+            default: yasm_internal_error(N_("Unsupported relocation size"));
+        }
+    }
+    return 0;
 }
 
 static void
