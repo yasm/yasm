@@ -478,7 +478,7 @@ int
 not_an_option_handler(char *param)
 {
     if (in_filename) {
-	WarningNow("can open only one input file, only the last file will be processed");
+	WarningNow(_("can open only one input file, only the last file will be processed"));
 	xfree(in_filename);
     }
 
