@@ -28,15 +28,11 @@
 # include <stdarg.h>
 #endif
 
-#ifdef gettext_noop
-#define N_(String)	gettext_noop(String)
-#else
-#define N_(String)	(String)
-#endif
-
 #include "globals.h"
 #include "errwarn.h"
 
+
+#define MSG_MAXSIZE	1024
 
 /* ALL warnings are disabled if this is nonzero. */
 int warnings_disabled = 0;
@@ -49,7 +45,7 @@ int warning_error = 0;
 
 /* Default enabled warnings.  See errwarn.h for a list. */
 unsigned long warning_flags =
-    (1<<WARN_UNRECOGNIZED_CHAR);
+    (1UL<<WARN_UNRECOGNIZED_CHAR);
 
 /* Total error count for entire assembler run.
  * Assembler should exit with EXIT_FAILURE if this is >= 0 on finish. */
@@ -81,7 +77,7 @@ typedef struct errwarn_s {
     unsigned long line;
     /* FIXME: This should not be a fixed size.  But we don't have vasprintf()
      * right now. */
-    char msg[1024];
+    char msg[MSG_MAXSIZE];
 } errwarn;
 
 /* Line number of the previous error.  Set and checked by Error(). */
@@ -132,7 +128,7 @@ ParserError(const char *s)
 void
 InternalError_(const char *file, unsigned int line, const char *message)
 {
-    fprintf(stderr, _("INTERNAL ERROR at %s, line %d: %s\n"), file, line,
+    fprintf(stderr, _("INTERNAL ERROR at %s, line %u: %s\n"), file, line,
 	    message);
 #ifdef HAVE_ABORT
     abort();
@@ -184,7 +180,11 @@ Error(const char *fmt, ...)
     assert(we != NULL);
 
     va_start(ap, fmt);
+#ifdef HAVE_VSNPRINTF
+    vsnprintf(we->msg, MSG_MAXSIZE, fmt, ap);
+#else
     vsprintf(we->msg, fmt, ap);
+#endif
     va_end(ap);
 
     /*@-branchstate@*/
@@ -220,7 +220,11 @@ Warning(const char *fmt, ...)
     we->type = WE_WARNING;
     we->line = line_index;
     va_start(ap, fmt);
+#ifdef HAVE_VSNPRINTF
+    vsnprintf(we->msg, MSG_MAXSIZE, fmt, ap);
+#else
     vsprintf(we->msg, fmt, ap);
+#endif
     va_end(ap);
 
     if (!errwarns) {

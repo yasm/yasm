@@ -51,10 +51,10 @@
 
 /*@null@*/ /*@only@*/ static char *obj_filename = NULL, *in_filename = NULL;
 static int special_options = 0;
-static preproc *cur_preproc = NULL;
+/*@null@*/ /*@dependent@*/ static preproc *cur_preproc = NULL;
 static int preproc_only = 0;
 
-static FILE *open_obj(void);
+/*@null@*/ /*@dependent@*/ static FILE *open_obj(void);
 static void cleanup(sectionhead *sections);
 
 /* Forward declarations: cmd line parser handlers */
@@ -85,22 +85,23 @@ static opt_option options[] =
 };
 
 /* version message */
-static const char version_msg[] = N_(
-    "yasm " VERSION "\n"
-    "Copyright (c) 2001-2002 Peter Johnson and other " PACKAGE " developers\n"
-    "This program is free software; you may redistribute it under the terms\n"
-    "of the GNU General Public License.  Portions of this program are\n"
-    "licensed under the GNU Lesser General Public License or the 3-clause\n"
-    "BSD license; see individual file comments for details.  This program\n"
-    "has absolutely no warranty; not even for merchantability or fitness for\n"
-    "a particular purpose.\n"
-    "Compiled on " __DATE__ ".\n");
+/*@observer@*/ static const char *version_msg[] = {
+    N_("yasm " VERSION "\n"),
+    N_("Copyright (c) 2001-2002 Peter Johnson and other " PACKAGE " developers\n"),
+    N_("This program is free software; you may redistribute it under the\n"),
+    N_("terms of the GNU General Public License.  Portions of this program\n"),
+    N_("are licensed under the GNU Lesser General Public License or the\n"),
+    N_("3-clause BSD license; see individual file comments for details.\n"),
+    N_("This program has absolutely no warranty; not even for\n"),
+    N_("merchantibility or fitness for a particular purpose.\n"),
+    N_("Compiled on " __DATE__ ".\n"),
+};
 
 /* help messages */
-static const char help_head[] = N_(
+/*@observer@*/ static const char help_head[] = N_(
     "usage: yasm [option]* file\n"
     "Options:\n");
-static const char help_tail[] = N_(
+/*@observer@*/ static const char help_tail[] = N_(
     "\n"
     "Files are asm sources to be assembled.\n"
     "\n"
@@ -116,6 +117,7 @@ main(int argc, char *argv[])
 {
     /*@null@*/ FILE *in = NULL, *obj = NULL;
     sectionhead *sections;
+    size_t i;
 
 #if defined(HAVE_SETLOCALE) && defined(HAVE_LC_MESSAGES)
     setlocale(LC_MESSAGES, "");
@@ -135,7 +137,8 @@ main(int argc, char *argv[])
 		     countof(options, opt_option));
 	    return EXIT_SUCCESS;
 	case SPECIAL_SHOW_VERSION:
-	    printf("%s", gettext(version_msg));
+	    for (i=0; i<sizeof(version_msg)/sizeof(char *); i++)
+		printf("%s", gettext(version_msg[i]));
 	    return EXIT_SUCCESS;
     }
 
@@ -184,8 +187,10 @@ main(int argc, char *argv[])
 
 	/* Open output (object) file */
 	obj = open_obj();
-	if (!obj)
+	if (!obj) {
+	    xfree(preproc_buf);
 	    return EXIT_FAILURE;
+	}
 
 	/* If not already specified, default to yapp preproc. */
 	if (!cur_preproc)
@@ -207,9 +212,11 @@ main(int argc, char *argv[])
 	if (OutputAllErrorWarning() > 0) {
 	    if (obj != stdout)
 		remove(obj_filename);
+	    xfree(preproc_buf);
 	    return EXIT_FAILURE;
 	}
 	xfree(obj_filename);
+	xfree(preproc_buf);
 
 	return EXIT_SUCCESS;
     }
