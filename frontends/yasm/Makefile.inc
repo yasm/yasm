@@ -65,5 +65,4 @@ include src/objfmts/Makefile.inc
 include src/tests/Makefile.inc
 
 EXTRA_DIST += \
-	src/compat-queue.h	\
-	src/lclint.sh
+	src/compat-queue.h

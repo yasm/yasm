@@ -29,6 +29,7 @@ include src/Makefile.inc
 EXTRA_DIST += \
 	strsep.c mergesort.c \
 	COPYING.LIB-2.0 \
+	splint.sh \
 	Mkfiles/Makefile.flat \
 	Mkfiles/Makefile.dj Mkfiles/dj/config.h \
 	Mkfiles/Makefile.vc Mkfiles/vc/config.h
