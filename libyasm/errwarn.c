@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.2 2001/05/21 18:31:43 peter Exp $
+/* $Id: errwarn.c,v 1.3 2001/05/21 20:14:58 peter Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -45,7 +45,8 @@ static char *err_msgs[] = {
 
 static char *warn_msgs[] = {
     "unknown",
-    "ignoring unrecognized character '%s'"
+    "ignoring unrecognized character '%s'",
+    "%s value exceeds bounds"
 };
 
 /* conv_unprint: convert a possibly unprintable character into a printable
