@@ -860,7 +860,7 @@ sub output_yacc ($@)
 		# ASSUMES: at least one previous action exists
 		print GRAMMAR "    | \Ugrp_$group\E error {\n";
 		print GRAMMAR "        Error (_(\"expression syntax error\"));\n";
-		print GRAMMAR "        \$\$ = (bytecode *)NULL\n";
+		print GRAMMAR "        \$\$ = (bytecode *)NULL;\n";
 		print GRAMMAR "    }\n";
 
 		# terminate the rule
