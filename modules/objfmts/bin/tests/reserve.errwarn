@@ -1,0 +1,4 @@
+./src/objfmts/bin/tests/reserve.asm:2: warning: uninitialized space declared in code/data section: zeroing
+./src/objfmts/bin/tests/reserve.asm:3: warning: uninitialized space declared in code/data section: zeroing
+./src/objfmts/bin/tests/reserve.asm:4: warning: uninitialized space declared in code/data section: zeroing
+./src/objfmts/bin/tests/reserve.asm:5: warning: uninitialized space declared in code/data section: zeroing

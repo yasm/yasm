@@ -16,3 +16,5 @@ m4
 ABOUT-NLS
 *.tar.gz
 *.yp
+*.hx
+*.ew
