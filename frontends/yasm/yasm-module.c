@@ -157,6 +157,7 @@ basename(const char *path)
 	base = path;
     else
 	base++;
+    return base;
 }
 #endif
 
