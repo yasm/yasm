@@ -1927,7 +1927,7 @@ x86_switch_cpu(const char *id, unsigned long lindex)
 			  CPU_SMM|CPU_Prot|CPU_Priv;
 	    return;
 	}
-	(S L E D G E)? (H A M M E R) {
+	((S L E D G E)? (H A M M E R)) | (O P T E R O N) {
 	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
 			  CPU_K6|CPU_Athlon|CPU_Hammer|CPU_FPU|CPU_MMX|CPU_SSE|
 			  CPU_3DNow|CPU_SMM|CPU_Prot|CPU_Priv;
