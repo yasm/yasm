@@ -51,3 +51,4 @@ typedef enum {
 } YAPP_Output;
 
 void yapp_lex_initialize(FILE *f);
+void set_inhibit(void);

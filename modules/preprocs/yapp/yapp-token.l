@@ -63,6 +63,7 @@ int line_number;
 %x D
 %x incl
 %x line
+%x inhibit
 
 DIGIT    [0-9]
 BINDIGIT [01]
@@ -159,6 +160,7 @@ DIR	 %[ \t]*
 
     /* includes - based on flex manual handling of include files */
     /* FIXME: stop includes inside non-output zones from happening */
+<inhibit>{DIR}include[^\n]* ;
 {DIR}include  BEGIN(incl);
     /* note the " handling here is a hack that doesn't accept useful
      * things (like spaces, or quotes).  fix it later */
@@ -196,7 +198,7 @@ DIR	 %[ \t]*
 	yy_switch_to_buffer (inc->include_state);
 	free(current_file);
 	current_file = inc->filename;
-	line_number = inc->line_number;
+	line_number = inc->line_number + 1;
 	SLIST_REMOVE_HEAD(&includes_head, next);
 	free(inc);
 
@@ -209,8 +211,10 @@ DIR	 %[ \t]*
 
 
     /* directive: % directive [args] */
+<inhibit>{DIR}clear[^\n]    ;
 {DIR}clear    return CLEAR;
 
+<inhibit>{DIR}line[^\n]    ;
 {DIR}line     BEGIN(line);
 <line>{DIGIT}+	    line_number = strtoul(yytext, (char **)NULL, 10);
 <line>{DIGIT}+{WS}*\n	{
@@ -234,32 +238,55 @@ DIR	 %[ \t]*
 {DIR}macro    return MACRO;
 {DIR}endmacro return ENDMACRO;
 {DIR}rotate   return ROTATE;
+<inhibit>{DIR}define[^\n]*	;
+<inhibit>{DIR}undef[^\n]*	;
+<inhibit>{DIR}assign[^\n]*	;
+<inhibit>{DIR}macro[^\n]*	;
+<inhibit>{DIR}endmacro[^\n]*	;
+<inhibit>{DIR}rotate[^\n]*	;
 
     /* preprocessor loops */
 {DIR}rep      return REP;
 {DIR}exitrep  return EXITREP;
 {DIR}endrep   return ENDREP;
+<inhibit>{DIR}rep[^\n]*	;
+<inhibit>{DIR}exitrep[^\n]*	;
+<inhibit>{DIR}endrep[^\n]*	;
 
 {DIR}if       return IF;
 {DIR}elif     return ELIF;
 {DIR}else     return ELSE;
 {DIR}endif    return ENDIF;
+<inhibit>{DIR}if       { BEGIN(INITIAL); return IF; }
+<inhibit>{DIR}elif     { BEGIN(INITIAL); return ELIF; }
+<inhibit>{DIR}else     { BEGIN(INITIAL); return ELSE; }
+<inhibit>{DIR}endif    { BEGIN(INITIAL); return ENDIF; }
 
     /* test defines */
 {DIR}ifdef    return IFDEF;
 {DIR}elifdef  return ELIFDEF;
 {DIR}ifndef   return IFNDEF;
 {DIR}elifndef return ELIFNDEF;
+<inhibit>{DIR}ifdef    { BEGIN(INITIAL); return IFDEF; }
+<inhibit>{DIR}elifdef  { BEGIN(INITIAL); return ELIFDEF; }
+<inhibit>{DIR}ifndef   { BEGIN(INITIAL); return IFNDEF; }
+<inhibit>{DIR}elifndef { BEGIN(INITIAL); return ELIFNDEF; }
 
     /* test context stack */
 {DIR}ifctx    return IFCTX;
 {DIR}elifctx  return ELIFCTX;
+<inhibit>{DIR}ifctx    { BEGIN(INITIAL); return IFCTX; }
+<inhibit>{DIR}elifctx  { BEGIN(INITIAL); return ELIFCTX; }
 
     /* test exact identity */
 {DIR}ifidn    return IFIDN;
 {DIR}elifidn  return ELIFIDN;
 {DIR}ifidni   return IFIDNI;
 {DIR}elifidni return ELIFIDNI;
+<inhibit>{DIR}ifidn    { BEGIN(INITIAL); return IFIDN; }
+<inhibit>{DIR}elifidn  { BEGIN(INITIAL); return ELIFIDN; }
+<inhibit>{DIR}ifidni   { BEGIN(INITIAL); return IFIDNI; }
+<inhibit>{DIR}elifidni { BEGIN(INITIAL); return ELIFIDNI; }
 
     /* test token types */
 {DIR}ifid     return IFID;
@@ -268,6 +295,12 @@ DIR	 %[ \t]*
 {DIR}elifnum  return ELIFNUM;
 {DIR}ifstr    return IFSTR;
 {DIR}elifstr  return ELIFSTR;
+<inhibit>{DIR}ifid     { BEGIN(INITIAL); return IFID; }
+<inhibit>{DIR}elifid   { BEGIN(INITIAL); return ELIFID; }
+<inhibit>{DIR}ifnum    { BEGIN(INITIAL); return IFNUM; }
+<inhibit>{DIR}elifnum  { BEGIN(INITIAL); return ELIFNUM; }
+<inhibit>{DIR}ifstr    { BEGIN(INITIAL); return IFSTR; }
+<inhibit>{DIR}elifstr  { BEGIN(INITIAL); return ELIFSTR; }
 
     /* error reporting */
 {DIR}error[ ]+.*    { yylval.str_val = yytext; return ERROR; }
@@ -281,9 +314,15 @@ DIR	 %[ \t]*
 
 {WS}+	;
 
+<inhibit>[^%\n]*\n { line_number++; return '\n'; }
+
 \n	{ line_number++; return '\n'; }
 
 [][+*/,()-] { return yytext[0]; }
+
+<inhibit>.  {
+    Warning(_("Unhandled character in <inhibit> `%s'"), conv_unprint(yytext[0]));
+}
 
 .	{
     Warning(_("ignoring unrecognized character `%s'"),
@@ -297,4 +336,9 @@ yapp_lex_initialize(FILE *f)
 {
     SLIST_INIT(&includes_head);
     yyin = f;
+}
+
+void set_inhibit(void)
+{
+    BEGIN(inhibit);
 }

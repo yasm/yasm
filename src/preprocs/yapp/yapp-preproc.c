@@ -170,6 +170,7 @@ yapp_preproc_initialize(FILE *f, const char *in_filename)
 {
     is_interactive = f ? (isatty(fileno(f)) > 0) : 0;
     current_file = xstrdup(in_filename);
+    line_number = 1;
     yapp_lex_initialize(f);
     SLIST_INIT(&output_head);
     SLIST_INIT(&source_head);
@@ -187,6 +188,7 @@ yapp_preproc_initialize(FILE *f, const char *in_filename)
 
     current_head = &source_head;
     current_tail = &source_tail;
+    append_token(LINE);
 }
 
 /* Generate a new level of if* context
@@ -212,6 +214,7 @@ push_if(int val)
 	    current_output = YAPP_BLOCKED_OUTPUT;
 	    break;
     }
+    if (current_output != YAPP_OUTPUT) set_inhibit();
 
 }
 
@@ -239,6 +242,7 @@ push_else(int val)
 	case YAPP_BLOCKED_OUTPUT:
 	    break;
     }
+    if (current_output != YAPP_OUTPUT) set_inhibit();
 }
 
 /* Clear the curent if* context level */
@@ -249,6 +253,7 @@ pop_if(void)
     current_output = out->out;
     SLIST_REMOVE_HEAD(&output_head, next);
     free(out);
+    if (current_output != YAPP_OUTPUT) set_inhibit();
 }
 
 /* undefine a symbol */
@@ -301,6 +306,7 @@ append_token(int token)
 	    break;
 
 	case LINE:
+	    /* TODO: consider removing any trailing newline or LINE tokens */
 	    src->token.str = xmalloc(23+strlen(current_file));
 	    sprintf(src->token.str, "%%line %d+1 %s\n", line_number, current_file);
 	    break;
