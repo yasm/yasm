@@ -40,7 +40,6 @@ typedef struct module {
 } module;
 
 extern yasm_arch yasm_x86_LTX_arch;
-extern int yasm_x86_LTX_mode_bits;
 extern yasm_arch yasm_lc3b_LTX_arch;
 extern yasm_dbgfmt yasm_null_LTX_dbgfmt;
 extern yasm_objfmt yasm_bin_LTX_objfmt;
@@ -56,7 +55,6 @@ extern yasm_preproc yasm_yapp_LTX_preproc;
 
 static module modules[] = {
     {MODULE_ARCH, "x86", "arch", &yasm_x86_LTX_arch},
-    {MODULE_ARCH, "x86", "mode_bits", &yasm_x86_LTX_mode_bits},
     {MODULE_ARCH, "lc3b", "arch", &yasm_lc3b_LTX_arch},
     {MODULE_DBGFMT, "null", "dbgfmt", &yasm_null_LTX_dbgfmt},
     {MODULE_OBJFMT, "bin",  "objfmt", &yasm_bin_LTX_objfmt},
@@ -112,11 +110,11 @@ list_modules(module_type type,
 	     void (*printfunc) (const char *name, const char *keyword))
 {
     int i;
-    yasm_arch *arch;
+    yasm_arch_module *arch;
     yasm_dbgfmt *dbgfmt;
     yasm_objfmt *objfmt;
     yasm_optimizer *optimizer;
-    yasm_parser *parser;
+    yasm_parser_module *parser;
     yasm_preproc *preproc;
 
     /* Go through available list, and try to load each one */
