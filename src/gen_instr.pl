@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.16 2001/07/06 04:42:59 peter Exp $
+# $Id: gen_instr.pl,v 1.17 2001/07/09 05:30:55 mu Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -154,12 +154,9 @@ sub read_instructions ($)
     {
 	my ($inst, $args, $groups, $instrfile) = splice @_;
 
-	# yes, this is a kludge, to slide $0.\d down by one.
-	# is there a better way? (other than changing instrs.dat :)
-	$args =~ s/\$0\.1/\$0\.0/g;
-	$args =~ s/\$0\.2/\$0\.1/g;
-	$args =~ s/\$0\.3/\$0\.2/g;
-	$args =~ s/\$0\.4/\$0\.3/g;
+	# slide $0.\d down by one.
+	# i still say changing instrs.dat would be better ;)
+	$args =~ s/\$0\.([1-4])/ '$0.' . ($1-1) /eg;
 
 	my ($op, $size, $opcode, $eff, $imm, $cpu) = split /\t+/, $args;
 	eval {
