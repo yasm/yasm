@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#! /usr/bin/env perl
 my @sourcelines = <>;
 my %usedlabel;
 my %usedvar;
