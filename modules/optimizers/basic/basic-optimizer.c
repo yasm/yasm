@@ -1,4 +1,4 @@
-/* $Id: basic-optimizer.c,v 1.1 2001/09/16 21:39:58 peter Exp $
+/* $IdPath$
  * Debugging optimizer (used to debug optimizer module interface)
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -27,7 +27,7 @@
 
 #include "optimizer.h"
 
-RCSID("$Id: basic-optimizer.c,v 1.1 2001/09/16 21:39:58 peter Exp $");
+RCSID("$IdPath$");
 
 /* Define optimizer structure -- see optimizer.h for details */
 optimizer dbg_optimizer = {

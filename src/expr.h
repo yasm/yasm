@@ -1,4 +1,4 @@
-/* $Id: expr.h,v 1.5 2001/08/19 03:52:58 peter Exp $
+/* $IdPath$
  * Expression handling header file
  *
  *  Copyright (C) 2001  Michael Urman

@@ -1,4 +1,4 @@
-/* $Id: util.h,v 1.8 2001/09/16 09:15:27 peter Exp $
+/* $IdPath$
  * Defines prototypes for replacement functions if needed.
  *
  *  Copyright (C) 2001  Peter Johnson

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.21 2001/09/16 19:47:21 peter Exp $
+# $IdPath$
 # Generates NASM-compatible bison.y and token.l from instrs.dat.
 #
 #    Copyright (C) 2001  Michael Urman

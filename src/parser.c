@@ -1,4 +1,4 @@
-/* $Id: parser.c,v 1.2 2001/09/16 17:21:33 peter Exp $
+/* $IdPath$
  * Generic functions for all parsers
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -42,7 +42,7 @@
 #include "preproc.h"
 #include "parser.h"
 
-RCSID("$Id: parser.c,v 1.2 2001/09/16 17:21:33 peter Exp $");
+RCSID("$IdPath$");
 
 /* NULL-terminated list of all available parsers.
  * Someday change this if we dynamically load parsers at runtime.

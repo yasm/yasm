@@ -1,4 +1,4 @@
-/* $Id: objfmt.c,v 1.4 2001/09/15 07:16:59 peter Exp $
+/* $IdPath$
  * Debugging object format (used to debug object format module interface)
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -27,7 +27,7 @@
 
 #include "objfmt.h"
 
-RCSID("$Id: objfmt.c,v 1.4 2001/09/15 07:16:59 peter Exp $");
+RCSID("$IdPath$");
 
 /* Define objfmt structure -- see objfmt.h for details */
 objfmt dbg_objfmt = {

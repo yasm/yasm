@@ -1,4 +1,4 @@
-/* $Id: nasm-bison.y,v 1.32 2001/09/16 20:17:51 peter Exp $
+/* $IdPath$
  * NASM-compatible bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -42,7 +42,7 @@
 #include "bytecode.h"
 #include "section.h"
 
-RCSID("$Id: nasm-bison.y,v 1.32 2001/09/16 20:17:51 peter Exp $");
+RCSID("$IdPath$");
 
 #define YYDEBUG 1
 

@@ -1,4 +1,4 @@
-/* $Id: errwarn.h,v 1.14 2001/08/30 03:45:26 peter Exp $
+/* $IdPath$
  * Error and warning reporting and related functions header file.
  *
  *  Copyright (C) 2001  Peter Johnson

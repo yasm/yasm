@@ -1,4 +1,4 @@
-/* $Id: acconfig.h,v 1.2 2001/08/30 03:45:16 peter Exp $ */
+/* $IdPath$ */
 
 #ifndef YASM_CONFIG_H
 #define YASM_CONFIG_H

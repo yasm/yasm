@@ -1,4 +1,4 @@
-/* $Id: section.h,v 1.7 2001/09/16 18:53:47 peter Exp $
+/* $IdPath$
  * Section header file
  *
  *  Copyright (C) 2001  Peter Johnson

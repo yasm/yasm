@@ -1,4 +1,4 @@
-/* $Id: strcasecmp.c,v 1.1 2001/09/16 09:13:00 peter Exp $
+/* $IdPath$
  * strcasecmp() implementation for systems that don't have it or stricmp()
  * or strcmpi().
  *
@@ -47,7 +47,7 @@ static char sccsid[] = "@(#)strcasecmp.c	8.1 (Berkeley) 6/4/93";
 # include <ctype.h>
 #endif
 
-RCSID("$Id: strcasecmp.c,v 1.1 2001/09/16 09:13:00 peter Exp $");
+RCSID("$IdPath$");
 
 int
 strcasecmp(const char *s1, const char *s2)

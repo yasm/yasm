@@ -1,4 +1,4 @@
-/* $Id: compat-queue.h,v 1.3 2001/08/19 05:40:20 peter Exp $
+/* $IdPath$
  * <sys/queue.h> implementation for systems that don't have it.
  *
  * Copyright (c) 1991, 1993

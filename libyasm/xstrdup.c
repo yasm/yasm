@@ -1,4 +1,4 @@
-/* $Id: xstrdup.c,v 1.4 2001/08/19 07:46:52 peter Exp $
+/* $IdPath$
  * strdup() implementation for systems that don't have it.
  *
  * Copyright (c) 1988, 1993
@@ -54,7 +54,7 @@ void memcpy(void *, const void *, size_t);
 # endif
 #endif
 
-RCSID("$Id: xstrdup.c,v 1.4 2001/08/19 07:46:52 peter Exp $");
+RCSID("$IdPath$");
 
 char *
 strdup(const char *str)

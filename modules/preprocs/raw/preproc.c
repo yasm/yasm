@@ -1,4 +1,4 @@
-/* $Id: preproc.c,v 1.8 2001/09/16 21:07:22 peter Exp $
+/* $IdPath$
  * Raw preprocessor (preforms NO preprocessing)
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -35,7 +35,7 @@
 #include "objfmt.h"
 #include "preproc.h"
 
-RCSID("$Id: preproc.c,v 1.8 2001/09/16 21:07:22 peter Exp $");
+RCSID("$IdPath$");
 
 static int is_interactive;
 static FILE *in;

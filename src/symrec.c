@@ -1,4 +1,4 @@
-/* $Id: symrec.c,v 1.9 2001/08/30 03:45:26 peter Exp $
+/* $IdPath$
  * Symbol table handling
  *
  *  Copyright (C) 2001  Michael Urman
@@ -37,7 +37,7 @@
 #include "errwarn.h"
 #include "symrec.h"
 
-RCSID("$Id: symrec.c,v 1.9 2001/08/30 03:45:26 peter Exp $");
+RCSID("$IdPath$");
 
 /* private functions */
 static symtab *symtab_get(char *);

@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.24 2001/09/16 05:39:35 peter Exp $
+/* $IdPath$
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -45,7 +45,7 @@
 #include "globals.h"
 #include "errwarn.h"
 
-RCSID("$Id: errwarn.c,v 1.24 2001/09/16 05:39:35 peter Exp $");
+RCSID("$IdPath$");
 
 /* Total error count for entire assembler run.
  * Assembler should exit with EXIT_FAILURE if this is >= 0 on finish. */

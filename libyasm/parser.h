@@ -1,4 +1,4 @@
-/* $Id: parser.h,v 1.4 2001/09/16 04:49:46 peter Exp $
+/* $IdPath$
  * Parser module interface header file
  *
  *  Copyright (C) 2001  Peter Johnson

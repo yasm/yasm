@@ -1,4 +1,4 @@
-/* $Id: optimizer.h,v 1.1 2001/09/16 21:39:58 peter Exp $
+/* $IdPath$
  * Optimizer module interface header file
  *
  *  Copyright (C) 2001  Peter Johnson

@@ -1,4 +1,4 @@
-/* $Id: symrec.h,v 1.6 2001/08/19 03:52:58 peter Exp $
+/* $IdPath$
  * Symbol table handling header file
  *
  *  Copyright (C) 2001  Michael Urman

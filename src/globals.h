@@ -1,4 +1,4 @@
-/* $Id: globals.h,v 1.4 2001/08/18 22:15:12 peter Exp $
+/* $IdPath$
  * Globals header file
  *
  *  Copyright (C) 2001  Peter Johnson

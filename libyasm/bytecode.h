@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.19 2001/09/16 19:44:49 peter Exp $
+/* $IdPath$
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson

@@ -1,4 +1,4 @@
-/* $Id: token.l.in,v 1.19 2001/09/16 20:17:51 peter Exp $
+/* $IdPath$
  * NASM-compatible lex lexer
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -42,7 +42,7 @@
 
 #include "bison.h"
 
-RCSID("$Id: token.l.in,v 1.19 2001/09/16 20:17:51 peter Exp $");
+RCSID("$IdPath$");
 
 #define yylval	nasm_parser_lval
 

@@ -1,4 +1,4 @@
-# $Id: acinclude.m4,v 1.1 2001/08/30 03:45:16 peter Exp $
+# $IdPath$
 
 # This test replaces the one in autoconf.
 # Currently this macro should have the same name as the autoconf macro

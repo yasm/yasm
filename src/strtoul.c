@@ -1,4 +1,4 @@
-/* $Id: strtoul.c,v 1.3 2001/08/19 07:46:52 peter Exp $
+/* $IdPath$
  * strtoul() implementation for systems that don't have it.
  *
  * Copyright (c) 1990, 1993
@@ -49,7 +49,7 @@ static char sccsid[] = "@(#)strtoul.c	8.1 (Berkeley) 6/4/93";
 # include <stdlib.h>
 #endif
 
-RCSID("$Id: strtoul.c,v 1.3 2001/08/19 07:46:52 peter Exp $");
+RCSID("$IdPath$");
 
 /*
  * Convert a string to an unsigned long integer.
