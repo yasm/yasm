@@ -1,0 +1,12 @@
+mov ax,100
+mov ax,0a2h
+mov ax,$0a2
+mov ax,0xa2
+mov ax,777q
+mov ax,10010011b
+mov eax,'abcd'
+db 'hello'
+db 'h','e','l','l','o'
+dd 'ninechars'
+dd 'nine','char','s'
+db 'ninechars',0,0,0
