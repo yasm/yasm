@@ -317,8 +317,9 @@ bin_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
     int isnew;
     unsigned long start;
     char *sectname;
-    /*@null@*/ void *data = NULL;
     int resonly = 0;
+    unsigned long alignval = 0;
+    int have_alignval = 0;
 
     if ((vp = vps_first(valparams)) && !vp->param && vp->val != NULL) {
 	/* If it's the first section output (.text) start at 0, otherwise
@@ -342,7 +343,6 @@ bin_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 	while ((vp = vps_next(vp))) {
 	    if (strcasecmp(vp->val, "align") == 0 && vp->param) {
 		/*@dependent@*/ /*@null@*/ const intnum *align;
-		unsigned long alignval;
 		unsigned long bitcnt;
 
 		if (strcmp(sectname, ".text") == 0) {
@@ -369,16 +369,24 @@ bin_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 		    return NULL;
 		}
 
-		/* Point data to (a copy of) alignval. */
-		data = xmalloc(sizeof(unsigned long));
-		*((unsigned long *)data) = alignval;
+		have_alignval = 1;
 	    }
 	}
 
-	retval = sections_switch_general(headp, sectname, start, data, resonly,
+	retval = sections_switch_general(headp, sectname, start, resonly,
 					 &isnew);
-	if (isnew)
+
+	if (isnew) {
+	    if (have_alignval) {
+		unsigned long *data = xmalloc(sizeof(unsigned long));
+		*data = alignval;
+		section_set_of_data(retval, data);
+	    }
+
 	    symrec_define_label(sectname, retval, (bytecode *)NULL, 1);
+	} else if (have_alignval)
+	    Warning(_("alignment value ignored on section redeclaration"));
+
 	return retval;
     } else
 	return NULL;

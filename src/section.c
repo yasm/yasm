@@ -82,8 +82,7 @@ sections_initialize(sectionhead *headp)
 /*@-onlytrans@*/
 section *
 sections_switch_general(sectionhead *headp, const char *name,
-			unsigned long start, void *of_data,
-			int res_only, int *isnew)
+			unsigned long start, int res_only, int *isnew)
 {
     section *s;
 
@@ -93,14 +92,6 @@ sections_switch_general(sectionhead *headp, const char *name,
     STAILQ_FOREACH(s, headp, link) {
 	if (s->type == SECTION_GENERAL &&
 	    strcmp(s->data.general.name, name) == 0) {
-	    if (of_data) {
-		assert(cur_objfmt != NULL);
-		if (cur_objfmt->section_data_delete)
-		    cur_objfmt->section_data_delete(s->data.general.of_data);
-		else
-		    InternalError(_("don't know how to delete objfmt-specific section data"));
-		s->data.general.of_data = of_data;
-	    }
 	    *isnew = 0;
 	    return s;
 	}
@@ -114,7 +105,7 @@ sections_switch_general(sectionhead *headp, const char *name,
 
     s->type = SECTION_GENERAL;
     s->data.general.name = xstrdup(name);
-    s->data.general.of_data = of_data;
+    s->data.general.of_data = NULL;
     s->start = expr_new_ident(ExprInt(intnum_new_uint(start)));
     bcs_initialize(&s->bc);
 
@@ -162,6 +153,32 @@ void
 section_set_opt_flags(section *sect, unsigned long opt_flags)
 {
     sect->opt_flags = opt_flags;
+}
+
+void
+section_set_of_data(section *sect, void *of_data)
+{
+    /* Check to see if section type supports of_data */
+    if (sect->type != SECTION_GENERAL) {
+	assert(cur_objfmt != NULL);
+	if (cur_objfmt->section_data_delete)
+	    cur_objfmt->section_data_delete(of_data);
+	else
+	    InternalError(_("don't know how to delete objfmt-specific section data"));
+	return;
+    }
+
+    /* Delete current of_data if present */
+    if (sect->data.general.of_data) {
+	assert(cur_objfmt != NULL);
+	if (cur_objfmt->section_data_delete)
+	    cur_objfmt->section_data_delete(sect->data.general.of_data);
+	else
+	    InternalError(_("don't know how to delete objfmt-specific section data"));
+    }
+
+    /* Assign new of_data */
+    sect->data.general.of_data = of_data;
 }
 
 void *
