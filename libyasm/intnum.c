@@ -42,24 +42,35 @@ struct intnum {
     unsigned char origsize;	/* original (parsed) size, in bits */
 };
 
+/* static bitvect used for conversions */
+static /*@only@*/ /*@null@*/ wordptr conv_bv = NULL;
+
+void
+intnum_shutdown(void)
+{
+    if (conv_bv) {
+	BitVector_Destroy(conv_bv);
+	conv_bv = NULL;
+    }
+}
+
 intnum *
 intnum_new_dec(char *str)
 {
     intnum *intn = xmalloc(sizeof(intnum));
-    wordptr bv;
 
     intn->origsize = 0;	    /* no reliable way to figure this out */
 
-    bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
-    if (BitVector_from_Dec(bv, (unsigned char *)str) == ErrCode_Ovfl)
+    if (!conv_bv)
+	conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
+    if (BitVector_from_Dec(conv_bv, (unsigned char *)str) == ErrCode_Ovfl)
 	Warning(_("Numeric constant too large for internal format"));
-    if (Set_Max(bv) < 32) {
+    if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
-	intn->val.ul = BitVector_Chunk_Read(bv, 32, 0);
-	BitVector_Destroy(bv);
+	intn->val.ul = BitVector_Chunk_Read(conv_bv, 32, 0);
     } else {
 	intn->type = INTNUM_BV;
-	intn->val.bv = bv;
+	intn->val.bv = BitVector_Clone(conv_bv);
     }
 
     return intn;
@@ -69,22 +80,21 @@ intnum *
 intnum_new_bin(char *str)
 {
     intnum *intn = xmalloc(sizeof(intnum));
-    wordptr bv;
 
     intn->origsize = (unsigned char)strlen(str);
 
     if(intn->origsize > BITVECT_ALLOC_SIZE)
 	Warning(_("Numeric constant too large for internal format"));
 
-    bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
-    BitVector_from_Bin(bv, (unsigned char *)str);
-    if (Set_Max(bv) < 32) {
+    if (!conv_bv)
+	conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
+    BitVector_from_Bin(conv_bv, (unsigned char *)str);
+    if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
-	intn->val.ul = BitVector_Chunk_Read(bv, 32, 0);
-	BitVector_Destroy(bv);
+	intn->val.ul = BitVector_Chunk_Read(conv_bv, 32, 0);
     } else {
 	intn->type = INTNUM_BV;
-	intn->val.bv = bv;
+	intn->val.bv = BitVector_Clone(conv_bv);
     }
 
     return intn;
@@ -94,22 +104,21 @@ intnum *
 intnum_new_oct(char *str)
 {
     intnum *intn = xmalloc(sizeof(intnum));
-    wordptr bv;
 
     intn->origsize = strlen(str)*3;
 
     if(intn->origsize > BITVECT_ALLOC_SIZE)
 	Warning(_("Numeric constant too large for internal format"));
 
-    bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
-    BitVector_from_Oct(bv, (unsigned char *)str);
-    if (Set_Max(bv) < 32) {
+    if (!conv_bv)
+	conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
+    BitVector_from_Oct(conv_bv, (unsigned char *)str);
+    if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
-	intn->val.ul = BitVector_Chunk_Read(bv, 32, 0);
-	BitVector_Destroy(bv);
+	intn->val.ul = BitVector_Chunk_Read(conv_bv, 32, 0);
     } else {
 	intn->type = INTNUM_BV;
-	intn->val.bv = bv;
+	intn->val.bv = BitVector_Clone(conv_bv);
     }
 
     return intn;
@@ -119,22 +128,21 @@ intnum *
 intnum_new_hex(char *str)
 {
     intnum *intn = xmalloc(sizeof(intnum));
-    wordptr bv;
 
     intn->origsize = strlen(str)*4;
 
     if(intn->origsize > BITVECT_ALLOC_SIZE)
 	Warning(_("Numeric constant too large for internal format"));
 
-    bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
-    BitVector_from_Hex(bv, (unsigned char *)str);
-    if (Set_Max(bv) < 32) {
+    if (!conv_bv)
+	conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
+    BitVector_from_Hex(conv_bv, (unsigned char *)str);
+    if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
-	intn->val.ul = BitVector_Chunk_Read(bv, 32, 0);
-	BitVector_Destroy(bv);
+	intn->val.ul = BitVector_Chunk_Read(conv_bv, 32, 0);
     } else {
 	intn->type = INTNUM_BV;
-	intn->val.bv = bv;
+	intn->val.bv = BitVector_Clone(conv_bv);
     }
 
     return intn;

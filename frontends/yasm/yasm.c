@@ -28,6 +28,7 @@
 #include "globals.h"
 #include "options.h"
 #include "errwarn.h"
+#include "intnum.h"
 #include "floatnum.h"
 #include "symrec.h"
 
@@ -182,6 +183,7 @@ main(int argc, char *argv[])
 	symrec_delete_all();
 	line_shutdown();
 	floatnum_shutdown();
+	intnum_shutdown();
 	BitVector_Shutdown();
 	return EXIT_FAILURE;
     }
@@ -219,6 +221,7 @@ main(int argc, char *argv[])
     line_shutdown();
 
     floatnum_shutdown();
+    intnum_shutdown();
 
     BitVector_Shutdown();
     return EXIT_SUCCESS;

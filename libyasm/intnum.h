@@ -22,6 +22,9 @@
 #ifndef YASM_INTNUM_H
 #define YASM_INTNUM_H
 
+/* Clean up internal allocations */
+void intnum_shutdown(void);
+
 /*@only@*/ intnum *intnum_new_dec(char *str);
 /*@only@*/ intnum *intnum_new_bin(char *str);
 /*@only@*/ intnum *intnum_new_oct(char *str);
