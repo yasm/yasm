@@ -83,6 +83,7 @@ static unsigned long cpu_enabled = ~CPU_Any;
 #define MOD_SpAdd   (1<<5)	/* Parameter adds to "spare" value */
 #define MOD_OpSizeR (1<<6)	/* Parameter replaces opersize */
 #define MOD_Imm8    (1<<7)	/* Parameter is included as immediate byte */
+#define MOD_AdSizeR (1<<8)	/* Parameter replaces addrsize (jmprel only) */
 
 /* Operand types.  These are more detailed than the "general" types for all
  * architectures, as they include the size, for instance.
@@ -110,7 +111,7 @@ static unsigned long cpu_enabled = ~CPU_Any;
  *             13 = memory offset (an EA, but with no registers allowed)
  *                  [special case for MOV opcode]
  *  - 3 bits = size (user-specified, or from register size):
- *             0 = any size acceptable
+ *             0 = any size acceptable/no size spec acceptable (dep. on strict)
  *             1/2/3/4 = 8/16/32/64 bits (from user or reg size)
  *             5/6 = 80/128 bits (from user)
  *  - 1 bit = size implicit or explicit ("strictness" of size matching on
@@ -129,7 +130,7 @@ static unsigned long cpu_enabled = ~CPU_Any;
  * gets the operand.  This may require conversion (e.g. a register going into
  * an ea field).  Naturally, only one of each of these may be contained in the
  * operands of a single insn_info structure.
- *  - 3 bits = action:
+ *  - 4 bits = action:
  *             0 = does nothing (operand data is discarded)
  *             1 = operand data goes into ea field
  *             2 = operand data goes into imm field
@@ -139,6 +140,8 @@ static unsigned long cpu_enabled = ~CPU_Any;
  *             6 = operand data is added to opcode byte 1
  *             7 = operand data goes into BOTH ea and spare
  *                 [special case for imul opcode]
+ *             8 = relative jump (outputs a jmprel instead of normal insn)
+ *             9 = operand size goes into address size (jmprel only)
  * The below describes postponed actions: actions which can't be completed at
  * parse-time due to things like EQU and complex expressions.  For these, some
  * additional data (stored in the second byte of the opcode with a one-byte
@@ -199,12 +202,14 @@ static unsigned long cpu_enabled = ~CPU_Any;
 #define OPA_Op0Add	(5<<12)
 #define OPA_Op1Add	(6<<12)
 #define OPA_SpareEA	(7<<12)
-#define OPA_MASK	(7<<12)
+#define OPA_JmpRel	(8<<12)
+#define OPA_AdSizeR	(9<<12)
+#define OPA_MASK	(0xF<<12)
 
-#define OPAP_None	(0<<15)
-#define OPAP_ShiftOp	(1<<15)
-#define OPAP_SImm8Avail	(2<<15)
-#define OPAP_MASK	(3<<15)
+#define OPAP_None	(0<<16)
+#define OPAP_ShiftOp	(1<<16)
+#define OPAP_SImm8Avail	(2<<16)
+#define OPAP_MASK	(3<<16)
 
 typedef struct x86_insn_info {
     /* The CPU feature flags needed to execute this instruction.  This is OR'ed
@@ -654,7 +659,70 @@ static const x86_insn_info shlrd_insn[] = {
 };
 
 /* Control transfer instructions (unconditional) */
-/* TODO: jmp/call */
+static const x86_insn_info call_insn[] = {
+    { CPU_Any, 0, 0, 0, {0, 0, 0}, 0, 1, {OPT_Imm|OPS_Any|OPA_JmpRel, 0, 0} },
+    { CPU_Any, 0, 16, 0, {0, 0, 0}, 0, 1, {OPT_Imm|OPS_16|OPA_JmpRel, 0, 0} },
+    { CPU_386, 0, 32, 0, {0, 0, 0}, 0, 1, {OPT_Imm|OPS_32|OPA_JmpRel, 0, 0} },
+
+    { CPU_Any, 0, 16, 1, {0xE8, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_16|OPTM_Near|OPA_JmpRel, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xE8, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0xE8, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_Any|OPTM_Near|OPA_JmpRel, 0, 0} },
+
+    { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 2, 1, {OPT_RM|OPS_16|OPA_EA, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xFF, 0, 0}, 2, 1, {OPT_RM|OPS_32|OPA_EA, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0xFF, 0, 0}, 2, 1, {OPT_Mem|OPS_Any|OPA_EA, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 2, 1,
+      {OPT_RM|OPS_16|OPTM_Near|OPA_EA, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xFF, 0, 0}, 2, 1,
+      {OPT_RM|OPS_32|OPTM_Near|OPA_EA, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0xFF, 0, 0}, 2, 1,
+      {OPT_Mem|OPS_Any|OPTM_Near|OPA_EA, 0, 0} },
+
+    /* TODO: Far Imm 16:16/32 */
+
+    { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 3, 1,
+      {OPT_Mem|OPS_16|OPTM_Far|OPA_EA, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xFF, 0, 0}, 3, 1,
+      {OPT_Mem|OPS_32|OPTM_Far|OPA_EA, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0xFF, 0, 0}, 3, 1,
+      {OPT_Mem|OPS_Any|OPTM_Far|OPA_EA, 0, 0} }
+};
+static const x86_insn_info jmp_insn[] = {
+    { CPU_Any, 0, 0, 0, {0, 0, 0}, 0, 1, {OPT_Imm|OPS_Any|OPA_JmpRel, 0, 0} },
+    { CPU_Any, 0, 16, 0, {0, 0, 0}, 0, 1, {OPT_Imm|OPS_16|OPA_JmpRel, 0, 0} },
+    { CPU_386, 0, 32, 1, {0, 0, 0}, 0, 1, {OPT_Imm|OPS_32|OPA_JmpRel, 0, 0} },
+
+    { CPU_Any, 0, 0, 1, {0xEB, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_Any|OPTM_Short|OPA_JmpRel, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0xE9, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_16|OPTM_Near|OPA_JmpRel, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xE9, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0xE9, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_Any|OPTM_Near|OPA_JmpRel, 0, 0} },
+
+    { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 4, 1, {OPT_RM|OPS_16|OPA_EA, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xFF, 0, 0}, 4, 1, {OPT_RM|OPS_32|OPA_EA, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0xFF, 0, 0}, 4, 1, {OPT_Mem|OPS_Any|OPA_EA, 0, 0} },
+    { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 4, 1,
+      {OPT_RM|OPS_16|OPTM_Near|OPA_EA, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xFF, 0, 0}, 4, 1,
+      {OPT_RM|OPS_32|OPTM_Near|OPA_EA, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0xFF, 0, 0}, 4, 1,
+      {OPT_Mem|OPS_Any|OPTM_Near|OPA_EA, 0, 0} },
+
+    /* TODO: Far Imm 16:16/32 */
+
+    { CPU_Any, 0, 16, 1, {0xFF, 0, 0}, 5, 1,
+      {OPT_Mem|OPS_16|OPTM_Far|OPA_EA, 0, 0} },
+    { CPU_386, 0, 32, 1, {0xFF, 0, 0}, 5, 1,
+      {OPT_Mem|OPS_32|OPTM_Far|OPA_EA, 0, 0} },
+    { CPU_Any, 0, 0, 1, {0xFF, 0, 0}, 5, 1,
+      {OPT_Mem|OPS_Any|OPTM_Far|OPA_EA, 0, 0} }
+};
 static const x86_insn_info retnf_insn[] = {
     { CPU_Any, MOD_Op0Add, 0, 1, {0x01, 0, 0}, 0, 0, {0, 0, 0} },
     { CPU_Any, MOD_Op0Add, 0, 1, {0x00, 0, 0}, 0, 1,
@@ -666,9 +734,42 @@ static const x86_insn_info enter_insn[] = {
        0} }
 };
 
-/* TODO: Conditional jumps */
+/* Conditional jumps */
+static const x86_insn_info jcc_insn[] = {
+    { CPU_Any, 0, 0, 0, {0, 0, 0}, 0, 1, {OPT_Imm|OPS_Any|OPA_JmpRel, 0, 0} },
+    { CPU_Any, 0, 16, 0, {0, 0, 0}, 0, 1, {OPT_Imm|OPS_16|OPA_JmpRel, 0, 0} },
+    { CPU_386, 0, 32, 0, {0, 0, 0}, 0, 1, {OPT_Imm|OPS_32|OPA_JmpRel, 0, 0} },
+    { CPU_Any, MOD_Op0Add, 0, 1, {0x70, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_Any|OPTM_Short|OPA_JmpRel, 0, 0} },
+    { CPU_386, MOD_Op1Add, 16, 2, {0x0F, 0x80, 0}, 0, 1,
+      {OPT_Imm|OPS_16|OPTM_Near|OPA_JmpRel, 0, 0} },
+    { CPU_386, MOD_Op1Add, 32, 2, {0x0F, 0x80, 0}, 0, 1,
+      {OPT_Imm|OPS_32|OPTM_Near|OPA_JmpRel, 0, 0} },
+    { CPU_386, MOD_Op1Add, 0, 2, {0x0F, 0x80, 0}, 0, 1,
+      {OPT_Imm|OPS_Any|OPTM_Near|OPA_JmpRel, 0, 0} }
+};
+static const x86_insn_info jcxz_insn[] = {
+    { CPU_Any, MOD_AdSizeR, 0, 0, {0, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_Any|OPA_JmpRel, 0, 0} },
+    { CPU_Any, MOD_AdSizeR, 0, 1, {0xE3, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_Any|OPTM_Short|OPA_JmpRel, 0, 0} }
+};
 
-/* TODO: Loop instructions */
+/* Loop instructions */
+static const x86_insn_info loop_insn[] = {
+    { CPU_Any, 0, 0, 0, {0, 0, 0}, 0, 1, {OPT_Imm|OPS_Any|OPA_JmpRel, 0, 0} },
+    { CPU_Any, 0, 0, 0, {0, 0, 0}, 0, 2,
+      {OPT_Imm|OPS_Any|OPA_JmpRel, OPT_Creg|OPS_16|OPA_AdSizeR, 0} },
+    { CPU_386, 0, 0, 0, {0, 0, 0}, 0, 2,
+      {OPT_Imm|OPS_Any|OPA_JmpRel, OPT_Creg|OPS_32|OPA_AdSizeR, 0} },
+
+    { CPU_Any, MOD_Op0Add, 0, 1, {0xE0, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_Any|OPTM_Short|OPA_JmpRel, 0, 0} },
+    { CPU_Any, MOD_Op0Add, 0, 1, {0xE0, 0, 0}, 0, 2,
+      {OPT_Imm|OPS_Any|OPTM_Short|OPA_JmpRel, OPT_Creg|OPS_16|OPA_AdSizeR, 0} },
+    { CPU_386, MOD_Op0Add, 0, 1, {0xE0, 0, 0}, 0, 2,
+      {OPT_Imm|OPS_Any|OPTM_Short|OPA_JmpRel, OPT_Creg|OPS_32|OPA_AdSizeR, 0} }
+};
 
 /* Set byte on flag instructions */
 static const x86_insn_info setcc_insn[] = {
@@ -936,6 +1037,93 @@ static const x86_insn_info xbts_insn[] = {
 };
 
 
+static bytecode *
+x86_new_jmprel(const unsigned long data[4], int num_operands,
+	       insn_operandhead *operands, x86_insn_info *jrinfo)
+{
+    x86_new_jmprel_data d;
+    int num_info = (int)(data[1]&0xFF);
+    x86_insn_info *info = (x86_insn_info *)data[0];
+    unsigned long mod_data = data[1] >> 8;
+    insn_operand *op;
+    static const unsigned char size_lookup[] = {0, 8, 16, 32, 64, 80, 128, 0};
+
+    /* We know the target is in operand 0, but sanity check for Imm. */
+    op = ops_first(operands);
+    if (op->type != INSN_OPERAND_IMM)
+	InternalError(_("invalid operand conversion"));
+    d.target = op->data.val;
+
+    /* See if the user explicitly specified short/near. */
+    switch (jrinfo->operands[0] & OPTM_MASK) {
+	case OPTM_Short:
+	    d.op_sel = JR_SHORT_FORCED;
+	    break;
+	case OPTM_Near:
+	    d.op_sel = JR_NEAR_FORCED;
+	    break;
+	default:
+	    d.op_sel = JR_NONE;
+    }
+
+    /* Set operand size */
+    d.opersize = jrinfo->opersize;
+
+    /* Check for address size setting in second operand, if present */
+    if (jrinfo->num_operands > 1 &&
+	(jrinfo->operands[1] & OPA_MASK) == OPA_AdSizeR)
+	d.addrsize = (unsigned char)size_lookup[(info->operands[1] &
+						 OPS_MASK)>>OPS_SHIFT];
+    else
+	d.addrsize = 0;
+
+    /* Check for address size override */
+    if (jrinfo->modifiers & MOD_AdSizeR)
+	d.addrsize = (unsigned char)(mod_data & 0xFF);
+
+    /* Scan through other infos for this insn looking for short/near versions.
+     * Needs to match opersize and number of operands, also be within CPU.
+     */
+    d.short_op_len = 0;
+    d.near_op_len = 0;
+    for (; num_info>0 && (d.short_op_len == 0 || d.near_op_len == 0);
+	 num_info--, info++) {
+	unsigned long cpu = info->cpu | data[2];
+	if ((cpu_enabled & cpu) != cpu)
+	    continue;
+
+	if (info->num_operands == 0)
+	    continue;
+
+	if ((info->operands[0] & OPA_MASK) != OPA_JmpRel)
+	    continue;
+
+	if (info->opersize != d.opersize)
+	    continue;
+
+	switch (info->operands[0] & OPTM_MASK) {
+	    case OPTM_Short:
+		d.short_op_len = info->opcode_len;
+		d.short_op[0] = info->opcode[0];
+		d.short_op[1] = info->opcode[1];
+		d.short_op[2] = info->opcode[2];
+		if (info->modifiers & MOD_Op0Add)
+		    d.short_op[0] += (unsigned char)(mod_data & 0xFF);
+		break;
+	    case OPTM_Near:
+		d.near_op_len = info->opcode_len;
+		d.near_op[0] = info->opcode[0];
+		d.near_op[1] = info->opcode[1];
+		d.near_op[2] = info->opcode[2];
+		if (info->modifiers & MOD_Op1Add)
+		    d.near_op[1] += (unsigned char)(mod_data & 0xFF);
+		break;
+	}
+    }
+
+    return x86_bc_new_jmprel(&d);
+}
+
 bytecode *
 x86_new_insn(const unsigned long data[4], int num_operands,
 	     insn_operandhead *operands)
@@ -1118,6 +1306,9 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 		}
 	    }
 
+	    if (mismatch)
+		break;
+
 	    /* Check target modifier */
 	    switch (info->operands[i] & OPTM_MASK) {
 		case OPTM_None:
@@ -1163,6 +1354,10 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 	Error(_("invalid combination of opcode and operands"));
 	return NULL;
     }
+
+    /* Shortcut to JmpRel */
+    if (operands && (info->operands[0] & OPA_MASK) == OPA_JmpRel)
+	return x86_new_jmprel(data, num_operands, operands, info);
 
     /* Copy what we can from info */
     d.ea = NULL;
@@ -1708,52 +1903,52 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	S H L D { RET_INSN(shlrd, 0xA4, CPU_386); }
 	S H R D { RET_INSN(shlrd, 0xAC, CPU_386); }
 	/* Control transfer instructions (unconditional) */
-	/* C A L L */
-	/* J M P */
+	C A L L { RET_INSN(call, 0, CPU_Any); }
+	J M P { RET_INSN(jmp, 0, CPU_Any); }
 	R E T { RET_INSN(onebyte, 0x00C3, CPU_Any); }
 	R E T N { RET_INSN(retnf, 0xC2, CPU_Any); }
 	R E T F { RET_INSN(retnf, 0xCA, CPU_Any); }
 	E N T E R { RET_INSN(enter, 0, CPU_186); }
 	L E A V E { RET_INSN(onebyte, 0x00C9, CPU_186); }
 	/* Conditional jumps */
-	/* J O */
-	/* J N O */
-	/* J B */
-	/* JC */
-	/* J N A E */
-	/* J N B */
-	/* J N C */
-	/* J A E */
-	/* J E */
-	/* J Z */
-	/* J N E */
-	/* J N Z */
-	/* J B E */
-	/* J N A */
-	/* J N B E */
-	/* J A */
-	/* J S */
-	/* J N S */
-	/* J P */
-	/* J P E */
-	/* J N P */
-	/* J P O */
-	/* J L */
-	/* J N G E */
-	/* J N L */
-	/* J G E */
-	/* J L E */
-	/* J N G */
-	/* J N L E */
-	/* J G */
-	/* J C X Z */
-	/* J E C X Z */
+	J O { RET_INSN(jcc, 0x00, CPU_Any); }
+	J N O { RET_INSN(jcc, 0x01, CPU_Any); }
+	J B { RET_INSN(jcc, 0x02, CPU_Any); }
+	J C { RET_INSN(jcc, 0x02, CPU_Any); }
+	J N A E { RET_INSN(jcc, 0x02, CPU_Any); }
+	J N B { RET_INSN(jcc, 0x03, CPU_Any); }
+	J N C { RET_INSN(jcc, 0x03, CPU_Any); }
+	J A E { RET_INSN(jcc, 0x03, CPU_Any); }
+	J E { RET_INSN(jcc, 0x04, CPU_Any); }
+	J Z { RET_INSN(jcc, 0x04, CPU_Any); }
+	J N E { RET_INSN(jcc, 0x05, CPU_Any); }
+	J N Z { RET_INSN(jcc, 0x05, CPU_Any); }
+	J B E { RET_INSN(jcc, 0x06, CPU_Any); }
+	J N A { RET_INSN(jcc, 0x06, CPU_Any); }
+	J N B E { RET_INSN(jcc, 0x07, CPU_Any); }
+	J A { RET_INSN(jcc, 0x07, CPU_Any); }
+	J S { RET_INSN(jcc, 0x08, CPU_Any); }
+	J N S { RET_INSN(jcc, 0x09, CPU_Any); }
+	J P { RET_INSN(jcc, 0x0A, CPU_Any); }
+	J P E { RET_INSN(jcc, 0x0A, CPU_Any); }
+	J N P { RET_INSN(jcc, 0x0B, CPU_Any); }
+	J P O { RET_INSN(jcc, 0x0B, CPU_Any); }
+	J L { RET_INSN(jcc, 0x0C, CPU_Any); }
+	J N G E { RET_INSN(jcc, 0x0C, CPU_Any); }
+	J N L { RET_INSN(jcc, 0x0D, CPU_Any); }
+	J G E { RET_INSN(jcc, 0x0D, CPU_Any); }
+	J L E { RET_INSN(jcc, 0x0E, CPU_Any); }
+	J N G { RET_INSN(jcc, 0x0E, CPU_Any); }
+	J N L E { RET_INSN(jcc, 0x0F, CPU_Any); }
+	J G { RET_INSN(jcc, 0x0F, CPU_Any); }
+	J C X Z { RET_INSN(jcxz, 16, CPU_Any); }
+	J E C X Z { RET_INSN(jcxz, 32, CPU_386); }
 	/* Loop instructions */
-	/* L O O P */
-	/* L O O P Z */
-	/* L O O P E */
-	/* L O O P N Z */
-	/* L O O P N E */
+	L O O P { RET_INSN(loop, 0x02, CPU_Any); }
+	L O O P Z { RET_INSN(loop, 0x01, CPU_Any); }
+	L O O P E { RET_INSN(loop, 0x01, CPU_Any); }
+	L O O P N Z { RET_INSN(loop, 0x00, CPU_Any); }
+	L O O P N E { RET_INSN(loop, 0x00, CPU_Any); }
 	/* Set byte on flag instructions */
 	S E T O { RET_INSN(setcc, 0x00, CPU_386); }
 	S E T N O { RET_INSN(setcc, 0x01, CPU_386); }
