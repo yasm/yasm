@@ -29,7 +29,7 @@
 /*@unused@*/ RCSID("$IdPath$");
 
 
-/* Define preproc structure -- see preproc.h for details */
+/* Define dbgfmt structure -- see dbgfmt.h for details */
 yasm_dbgfmt yasm_null_LTX_dbgfmt = {
     "No debugging info",
     "null",
