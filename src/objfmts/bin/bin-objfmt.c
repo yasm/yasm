@@ -248,11 +248,22 @@ bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
 		InternalError(_("tried to do PC-relative offset from invalid sized value"));
 	    val = intnum_get_uint(num);
 	    val = (unsigned long)((long)(val - (bc->offset + bc->len)));
+	    switch (valsize) {
+		case 1:
+		    WRITE_BYTE(*bufp, val);
+		    break;
+		case 2:
+		    WRITE_SHORT(*bufp, val);
+		    break;
+		case 4:
+		    WRITE_LONG(*bufp, val);
+		    break;
+	    }
+	} else {
+	    /* Write value out. */
+	    intnum_get_sized(num, *bufp, (size_t)valsize);
+	    *bufp += valsize;
 	}
-
-	/* Write value out. */
-	intnum_get_sized(num, *bufp, (size_t)valsize);
-	*bufp += valsize;
 	return 0;
     }
 
