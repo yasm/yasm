@@ -3,6 +3,8 @@
 # include "config.h"
 #endif
 
+#include "util.h"
+
 /*****************************************************************************/
 /*  MODULE NAME:  BitVector.c                           MODULE TYPE:  (adt)  */
 /*****************************************************************************/
@@ -18,6 +20,8 @@
 /*  MODULE INTERFACE:                                                        */
 /*****************************************************************************/
 #include "bitvect.h"
+
+RCSID("$IdPath$");
 
 /* ToolBox.h */
 #define and         &&      /* logical (boolean) operators: lower case */
