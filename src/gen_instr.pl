@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.1 2001/05/21 21:46:33 mu Exp $
+# $Id: gen_instr.pl,v 1.2 2001/05/21 22:33:23 mu Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -61,14 +61,14 @@ my $gotopts = GetOptions ( 'input=s' => \$instrfile,
 exit 0 if $showversion or $showusage;
 
 
-my ($instructions, $instrlist) = &read_instructions ($instrfile);
+my $instrlist = &read_instructions ($instrfile);
 
 exit 0 if $dry_run; # done with simple verification, so exit
 
 unless ($dry_run)
 {
-    &output_lex ($tokenfile, $tokensource, $instructions, $instrlist);
-    &output_yacc ($grammarfile, $grammarsource, $instructions, $instrlist);
+    &output_lex ($tokenfile, $tokensource, $instrlist);
+    &output_yacc ($grammarfile, $grammarsource, $instrlist);
 }
 
 # print version for --version, etc.
@@ -132,8 +132,7 @@ sub read_instructions ($)
 	next if /^\s*(?:;.*)$/;
 	if (m/^:(\w+)\t+(\w+)$/)
 	{
-	    # TODO: actually handle this.  Probably in lex.
-	    # alias $1 -> $2
+	    $instr{$1} = $2;	# simple scalar => alias
 	    next;
 	}
 	my ($inst, $op, $size, $opcode, $eff, $imm, $cpu) = split /\t+/;
@@ -154,11 +153,12 @@ sub read_instructions ($)
 		if $cpu !~ m/^(?:$valid_cpus)(?:,(?:$valid_cpus))*$/o;
 	};
 	die "Malformed Instruction at $instrfile line $.: $@" if $@;
-	push @instr, [$inst, $op, $size, $opcode, $eff, $imm, $cpu];
-	$instr{$inst} = 1;
+	die "Multiple Definiton for alias $inst at $instrfile line $.\n"
+	    if exists $instr{$inst} and not ref $instr{$inst};
+	push @{$instr{$inst}}, [$inst, $op, $size, $opcode, $eff, $imm, $cpu];
     }
     close INPUT;
-    return (\@instr, \%instr);
+    return (\%instr);
 }
 
 sub output_lex ($@)
@@ -166,7 +166,6 @@ sub output_lex ($@)
     my $tokenfile = shift or die;
     my $tokensource = shift;
     $tokensource ||= "$tokenfile.in";
-    my $instructions = shift or die;
     my $instrlist = shift or die;
 
     open IN, "< $tokensource" or die "Cannot open '$tokensource' for reading: $!\n";
@@ -178,7 +177,9 @@ sub output_lex ($@)
 	{
 	    foreach my $inst (sort keys %$instrlist)
 	    {
-		printf TOKEN "%-12s{ return %-16s }\n", $inst, "\Uins_$inst;\E";
+		printf TOKEN "%-12s{ return %-16s }\n", $inst,
+		    (ref $instrlist->{$inst}) ?
+			"\Uins_$inst;\E" : "\Uins_$instrlist->{$inst};\E";
 	    }
 	}
 	else
@@ -195,7 +196,6 @@ sub output_yacc ($@)
     my $grammarfile = shift or die;
     my $grammarsource = shift;
     $grammarsource ||= "$grammarfile.in";
-    my $instructions = shift or die;
     my $instrlist = shift or die;
 
     open IN, "< $grammarsource" or die "Cannot open '$grammarsource' for reading: $!\n";
@@ -228,6 +228,7 @@ sub output_yacc ($@)
 	    print GRAMMAR "%type <bc>";
 	    foreach my $inst (sort keys %$instrlist)
 	    {
+		next unless ref $instrlist->{$inst};
 		if ($len + length($inst) < 76)
 		{
 		    print GRAMMAR " $inst";
@@ -245,85 +246,95 @@ sub output_yacc ($@)
 	{
 	    # list every kind of instruction that instrbase can be
 	    print GRAMMAR "instrbase:    ",
-		    join( "\n    | ", sort keys %$instrlist), "\n;\n";
+		    join( "\n    | ", sort grep {ref $instrlist->{$_}} keys %$instrlist), "\n;\n";
 
 	    # list the arguments and actions (buildbc)
-	    foreach my $inst (@$instructions)
+	    foreach my $instrname (sort keys %$instrlist)
 	    {
-		# build the instruction in pieces.
+		my $count = 0;
+		next unless ref $instrlist->{$instrname};
+		foreach my $inst (@{$instrlist->{$instrname}}) {
+		    # build the instruction in pieces.
 
-		# rulename = instruction
-		my $rule = "$inst->[INST]";
+		    # rulename = instruction
+		    my $rule = "$inst->[INST]";
 
-		# tokens it eats: instruction and arguments
-		# nil => no arguments
-		my $tokens = "\Uins_$inst->[INST]\E";
-		$tokens .= " $inst->[OPERANDS]" if $inst->[OPERANDS] ne 'nil';
-		$tokens =~ s/,/ ',' /g;
+		    # tokens it eats: instruction and arguments
+		    # nil => no arguments
+		    my $tokens = "\Uins_$inst->[INST]\E";
+		    $tokens .= " $inst->[OPERANDS]" if $inst->[OPERANDS] ne 'nil';
+		    $tokens =~ s/,/ ',' /g;
+		    my $to = $tokens =~ m/\bTO\b/ ? 1 : 0;  # offset args
 
-		my $func = "BuildBC_Insn";
+		    my $func = "BuildBC_Insn";
 
-		# Create the argument list for BuildBC
-		my @args;
+		    # Create the argument list for BuildBC
+		    my @args;
 
-		# First argument is always &$$
-		push @args, '&$$,';
+		    # First argument is always &$$
+		    push @args, '&$$,';
 
-		# opcode size
-		push @args, "$inst->[OPSIZE],";
-		$args[-1] =~ s/nil/0/;
+		    # opcode size
+		    push @args, "$inst->[OPSIZE],";
+		    $args[-1] =~ s/nil/0/;
 
-		# number of bytes of opcodes
-		push @args, (scalar(()=$inst->[OPCODE] =~ m/(,)/)+1) . ",";
+		    # number of bytes of opcodes
+		    push @args, (scalar(()=$inst->[OPCODE] =~ m/(,)/)+1) . ",";
 
-		# opcode piece 1 (and 2 if attached)
-		push @args, $inst->[OPCODE];
-		$args[-1] =~ s/,/, /;
-		$args[-1] =~ s/([0-9A-Fa-f]{2})/0x$1/g;
-		$args[-1] =~ s/\$(\d+)/"\$" . ($1*2)/eg;
-		$args[-1] .= ',';
+		    # opcode piece 1 (and 2 if attached)
+		    push @args, $inst->[OPCODE];
+		    $args[-1] =~ s/,/, /;
+		    $args[-1] =~ s/([0-9A-Fa-f]{2})/0x$1/g;
+		    $args[-1] =~ s/\$(\d+)/"\$" . ($1*2+$to)/eg;
+		    $args[-1] .= ',';
 
-		# opcode piece 2 (if not attached)
-		push @args, "0," if $inst->[OPCODE] !~ m/,/;
+		    # opcode piece 2 (if not attached)
+		    push @args, "0," if $inst->[OPCODE] !~ m/,/;
 
-		# effective addresses
-		push @args, $inst->[EFFADDR];
-		$args[-1] =~ s/,/, /;
-		$args[-1] =~ s/nil/(effaddr *)NULL, 0/;
-		$args[-1] =~ s/\$(\d+)([ri])?/"\$" . ($1*2) . ($2||'')/eg;
-		$args[-1] =~ s/(\$\d+[ri]?)/\&$1/; # Just the first!
-		$args[-1] =~ s/\&(\$\d+)r/ConvertRegToEA((effaddr *)NULL, $1)/;
-		$args[-1] =~ s[\&(\$\d+)i,\s*(\d+)]
-		    ["ConvertImmToEA((effaddr *)NULL, \&$1, ".($2/8)."), 0"]e;
-		$args[-1] .= ',';
+		    # effective addresses
+		    push @args, $inst->[EFFADDR];
+		    $args[-1] =~ s/,/, /;
+		    $args[-1] =~ s/nil/(effaddr *)NULL, 0/;
+		    $args[-1] =~ s/\$(\d+)([ri])?/"\$".($1*2+$to).($2||'')/eg;
+		    $args[-1] =~ s/(\$\d+[ri]?)/\&$1/; # Just the first!
+		    $args[-1] =~ s/\&(\$\d+)r/ConvertRegToEA((effaddr *)NULL, $1)/;
+		    $args[-1] =~ s[\&(\$\d+)i,\s*(\d+)]
+			["ConvertImmToEA((effaddr *)NULL, \&$1, ".($2/8)."), 0"]e;
+		    $args[-1] .= ',';
 
-		die $args[-1] if $args[-1] =~ m/\d+[ri]/;
+		    die $args[-1] if $args[-1] =~ m/\d+[ri]/;
 
-		# immediate sources
-		push @args, $inst->[IMM];
-		$args[-1] =~ s/,/, /;
-		$args[-1] =~ s/nil/(immval *)NULL, 0/;
-		$args[-1] =~ s/\$(\d+)(r)?/"\$" . ($1*2) . ($2||'')/eg;
-		$args[-1] =~ s/(\$\d+r?)/\&$1/; # Just the first!
-		$args[-1] =~ s[^([0-9A-Fa-f]+),]
-		    [ConvertIntToImm((immval *)NULL, 0x$1),];
+		    # immediate sources
+		    push @args, $inst->[IMM];
+		    $args[-1] =~ s/,/, /;
+		    $args[-1] =~ s/nil/(immval *)NULL, 0/;
+		    $args[-1] =~ s/\$(\d+)(r)?/"\$".($1*2+$to).($2||'')/eg;
+		    $args[-1] =~ s/(\$\d+r?)/\&$1/; # Just the first!
+		    $args[-1] =~ s[^([0-9A-Fa-f]+),]
+			[ConvertIntToImm((immval *)NULL, 0x$1),];
 
-		# divide the second, and only the second, by 8 bits/byte
-		$args[-1] =~ s#(,\s*)(\d+)(s)?#$1 . ($2/8)#eg;
-		$args[-1] .= ($3||'') eq 's' ? ', 1' : ', 0';
+		    # divide the second, and only the second, by 8 bits/byte
+		    $args[-1] =~ s#(,\s*)(\d+)(s)?#$1 . ($2/8)#eg;
+		    $args[-1] .= ($3||'') eq 's' ? ', 1' : ', 0';
 
-		$args[-1] =~ s/(\&\$\d+)(r)?/$1/;
-		$args[-1] .= ($2||'') eq 'r' ? ', 1' : ', 0';
+		    $args[-1] =~ s/(\&\$\d+)(r)?/$1/;
+		    $args[-1] .= ($2||'') eq 'r' ? ', 1' : ', 0';
 
-		die $args[-1] if $args[-1] =~ m/\d+[ris]/;
+		    die $args[-1] if $args[-1] =~ m/\d+[ris]/;
 
-		# lame way first---rule: args { action }; for every version
-		# do the compression to |'s later
-		print GRAMMAR <<"EOF";
-$rule: $tokens {
-	$func (@args);
-    };
-EOF
+		    unless ($count)
+		    {
+			print GRAMMAR "$rule: $tokens {\n"; 
+		    }
+		    else
+		    {
+			print GRAMMAR "    | $tokens {\n"; 
+		    }
+		    print GRAMMAR "        $func (@args);\n";
+		    print GRAMMAR "    }\n";
+		    ++$count;
+		}
+		print GRAMMAR ";\n";
 	    }
 	}
 	else
