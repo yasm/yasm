@@ -675,7 +675,8 @@ bytecode_parser_finalize_insn(bytecode *bc)
     if (ea) {
 	if ((ea->disp) && ((!ea->valid_sib && ea->need_sib) ||
 			   (!ea->valid_modrm && ea->need_modrm))) {
-	    /* First simplify expression to minimize check cost */
+	    /* First expand equ's and simplify expression */
+	    expr_expand_equ(ea->disp);
 	    expr_simplify(ea->disp);
 
 	    /* Check validity of effective address and calc R/M bits of
