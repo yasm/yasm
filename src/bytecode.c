@@ -350,8 +350,16 @@ dvs_delete(datavalhead *headp)
     cur = STAILQ_FIRST(headp);
     while (cur) {
 	next = STAILQ_NEXT(cur, link);
-	if (cur->type == DV_EXPR)
-	    expr_delete(cur->data.expn);
+	switch (cur->type) {
+	    case DV_EXPR:
+		expr_delete(cur->data.expn);
+		break;
+	    case DV_STRING:
+		xfree(cur->data.str_val);
+		break;
+	    default:
+		break;
+	}
 	xfree(cur);
 	cur = next;
     }
