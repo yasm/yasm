@@ -22,7 +22,11 @@ print OUTPUT "/* This file auto-generated from standard.mac by macros.pl" .
 " - don't edit it */\n\n#include <stddef.h>\n\nstatic const char *stdmac[] = {\n";
     
 foreach $fname ( @ARGV ) {
-    open(INPUT,$fname) or die "unable to open $fname\n";
+    if (not open(INPUT,$fname)) {
+	close(OUTPUT);
+	unlink("nasm-macros.c");
+	die "unable to open $fname\n";
+    }
     while (<INPUT>) {
 	$line++;
 	chomp;
@@ -37,6 +41,8 @@ foreach $fname ( @ARGV ) {
 		$index++;
 	    } 
 	} else {
+	    close(OUTPUT);
+	    unlink("nasm-macros.c");
 	    die "$fname:$line:  error unterminated quote";
 	}
     }
