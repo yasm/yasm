@@ -45,12 +45,27 @@ expr *expr_copy(const expr *e);
 
 void expr_delete(/*@only@*/ /*@null@*/ expr *e);
 
+/* "Extra" transformation function that may be inserted into an expr_level_tree()
+ * invocation.
+ * Inputs: e, the expression being simplified
+ *         d, data provided as expr_xform_extra_data to expr_level_tree()
+ * Returns updated e.
+ */
+typedef /*@only@*/ expr * (*expr_xform_func) (/*@returned@*/ /*@only@*/ expr *e,
+					      /*@null@*/ void *d);
+
+typedef SLIST_HEAD(exprhead, exprentry) exprhead;
+/* Level an entire expn tree.  Call with eh = NULL */
+/*@only@*/ /*@null@*/ expr *expr_level_tree(
+    /*@returned@*/ /*@only@*/ /*@null@*/ expr *e, int fold_const,
+    int simplify_ident, /*@null@*/ calc_bc_dist_func calc_bc_dist,
+    /*@null@*/ expr_xform_func expr_xform_extra,
+    /*@null@*/ void *expr_xform_extra_data, /*@null@*/ exprhead *eh);
+
 /* Simplifies the expression e as much as possible, eliminating extraneous
  * branches and simplifying integer-only subexpressions.
  */
-/*@only@*/ /*@null@*/ expr *expr_simplify(/*@returned@*/ /*@only@*/ /*@null@*/
-					  expr *e, /*@null@*/
-					  calc_bc_dist_func calc_bc_dist);
+#define expr_simplify(e, cbd)	expr_level_tree(e, 1, 1, cbd, NULL, NULL, NULL)
 
 /* Extracts a single symrec out of an expression, replacing it with the
  * symrec's value (if it's a label).  Returns NULL if it's unable to extract a

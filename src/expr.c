@@ -369,25 +369,6 @@ expr_xform_neg(/*@returned@*/ /*@only@*/ expr *e)
     return e;
 }
 
-/* Transform negatives throughout an entire expn tree */
-expr *
-expr_xform_neg_tree(expr *e)
-{
-    int i;
-
-    if (!e)
-	return 0;
-
-    /* traverse terms */
-    for (i=0; i<e->numterms; i++) {
-	if (e->terms[i].type == EXPR_EXPR)
-	    e->terms[i].data.expn = expr_xform_neg_tree(e->terms[i].data.expn);
-    }
-
-    /* do callback */
-    return expr_xform_neg(e);
-}
-
 /* Look for simple identities that make the entire result constant:
  * 0*&x, -1|x, etc.
  */
@@ -696,6 +677,8 @@ expr_level_tree(expr *e, int fold_const, int simplify_ident,
 	SLIST_INIT(eh);
     }
 
+    e = expr_xform_neg(e);
+
     ee.e = NULL;
 
     /* traverse terms */
@@ -959,14 +942,6 @@ expr_traverse_leaves_in(expr *e, void *d,
 	}
     }
     return 0;
-}
-
-/* Simplify expression by getting rid of unnecessary branches. */
-expr *
-expr_simplify(expr *e, calc_bc_dist_func calc_bc_dist)
-{
-    e = expr_xform_neg_tree(e);
-    return expr_level_tree(e, 1, 1, calc_bc_dist, NULL, NULL, NULL);
 }
 
 symrec *

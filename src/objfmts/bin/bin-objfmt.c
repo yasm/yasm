@@ -145,7 +145,6 @@ bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
      * Other object formats need to generate their relocation list from here!
      */
 
-    *ep = expr_xform_neg_tree(*ep);
     *ep = expr_level_tree(*ep, 1, 1, NULL, bin_objfmt_expr_xform, NULL, NULL);
 
     /* Handle floating point expressions */
