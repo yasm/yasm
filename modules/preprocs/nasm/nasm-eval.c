@@ -52,8 +52,10 @@ static long abs_offset = 0;		/* ABSOLUTE segment offset */
  */
 void nasm_eval_cleanup(void) 
 {
-    while (ntempexprs)
-	nasm_free (tempexprs[--ntempexprs]);
+    while (ntempexprs) {
+	ntempexprs--;
+	nasm_free (tempexprs[ntempexprs]);
+    }
     nasm_free (tempexprs);
 }
 
@@ -782,8 +784,10 @@ nasm_expr *nasm_evaluate (scanner sc, void *scprivate, struct tokenval *tv,
     else
 	i = tokval->t_type;
 
-    while (ntempexprs)		       /* initialise temporary storage */
-	nasm_free (tempexprs[--ntempexprs]);
+    while (ntempexprs) {	       /* initialise temporary storage */
+	ntempexprs--;
+	nasm_free (tempexprs[ntempexprs]);
+    }
 
     e = bexpr (critical);
     if (!e)
