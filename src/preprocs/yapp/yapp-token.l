@@ -283,7 +283,7 @@ DIR	 %[ \t]*
 
 \n	{ line_number++; return '\n'; }
 
-[-+*/,()] { return yytext[0]; }
+[][+*/,()-] { return yytext[0]; }
 
 .	{
     Warning(_("ignoring unrecognized character `%s'"),
