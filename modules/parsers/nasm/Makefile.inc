@@ -11,7 +11,7 @@ yasm_nasm_la_SOURCES += \
 	nasm-token.c
 #yasm_nasm_la_LDFLAGS = -module -avoid-version
 #yasm_nasm_la_LIBADD = libyasm.la
-#yasm_LDADD += -dlpreopen yasm-nasm.la
+#YASM_MODULES += -dlopen yasm-nasm.la
 
 nasm-token.c: $(srcdir)/modules/parsers/nasm/nasm-token.re re2c$(EXEEXT) $(srcdir)/tools/re2c/cleanup.pl
 	$(top_builddir)/re2c$(EXEEXT) -b $(srcdir)/modules/parsers/nasm/nasm-token.re | $(PERL) $(srcdir)/tools/re2c/cleanup.pl | sed "/^#l/ s,re2c-out\.c,$@," > $@

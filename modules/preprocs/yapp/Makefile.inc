@@ -9,7 +9,7 @@ yasm_yapp_la_SOURCES = \
 	modules/preprocs/yapp/yapp-token.l
 yasm_yapp_la_LDFLAGS = -module -avoid-version
 yasm_yapp_la_LIBADD = libyasm.la
-yasm_LDADD += -dlopen yasm-yapp.la
+YASM_MODULES += -dlopen yasm-yapp.la
 
 BUILT_SOURCES += \
 	yapp-token.c

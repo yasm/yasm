@@ -13,7 +13,7 @@ lib_LTLIBRARIES += yasm-nasm.la
 yasm_nasm_la_SOURCES =
 yasm_nasm_la_LDFLAGS = -module -avoid-version
 yasm_nasm_la_LIBADD = libyasm.la
-yasm_LDADD += -dlopen yasm-nasm.la
+YASM_MODULES += -dlopen yasm-nasm.la
 
 include modules/arch/Makefile.inc
 include modules/parsers/Makefile.inc

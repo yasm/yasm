@@ -25,4 +25,4 @@ EXTRA_DIST += modules/preprocs/nasm/macros.pl \
 
 #yasm_nasm_la_LDFLAGS = -module -avoid-version
 #yasm_nasm_la_LIBADD = libyasm.la
-#yasm_LDADD += -dlopen yasm-nasm.la
+#YASM_MODULES += -dlopen yasm-nasm.la

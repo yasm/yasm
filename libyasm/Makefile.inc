@@ -1,5 +1,6 @@
 # $IdPath$
 
+lib_LTLIBRARIES += libyasm.la
 libyasm_la_SOURCES = \
 	libyasm/bytecode.c	\
 	libyasm/bytecode.h	\
@@ -39,6 +40,7 @@ libyasm_la_SOURCES = \
 	libyasm/xmalloc.c	\
 	libyasm/xstrdup.c	\
 	libyasm/strcasecmp.c
+libyasm_la_LIBADD = @LTLIBOBJS@
 libyasm_la_LDFLAGS = -no-undefined
 
 EXTRA_DIST += \

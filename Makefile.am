@@ -9,17 +9,13 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/check \
 	@INCLTDL@
 
-bin_PROGRAMS = yasm
+bin_PROGRAMS =
 TESTS =
 noinst_PROGRAMS =
 
-yasm_SOURCES =
-yasm_LDFLAGS =
-yasm_LDADD = libyasm.la @LIBLTDL@ $(INTLLIBS) @LIBADD_DL@
-EXTRA_yasm_SOURCES =
+lib_LTLIBRARIES =
 
-lib_LTLIBRARIES = libyasm.la
-libyasm_la_LIBADD = @LTLIBOBJS@
+YASM_MODULES = 
 
 BUILT_SOURCES =
 # configure.lineno doesn't clean up after itself?
