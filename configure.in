@@ -265,9 +265,4 @@ esac
 AC_OUTPUT(Makefile
 	intl/Makefile
 	po/Makefile.in
-	doc/Makefile
-	doc/user/Makefile
-	doc/programmer/Makefile
-	doc/programmer/queue/Makefile
-	doc/programmer/bitvect/Makefile
 )

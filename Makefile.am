@@ -1,6 +1,6 @@
 # $IdPath$
 
-SUBDIRS = intl po doc
+SUBDIRS = intl po
 
 CFLAGS = @ANSI_CFLAGS@
 AM_YFLAGS = -d
