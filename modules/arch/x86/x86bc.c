@@ -505,9 +505,11 @@ yasm_x86__bc_print(FILE *f, int indent_level, const yasm_bytecode *bc)
 	    break;
 	case X86_BC_JMP:
 	    jmp = (const x86_jmp *)bc;
-	    fprintf(f, "%*s_Relative Jump_\n", indent_level, "");
+	    fprintf(f, "%*s_Jump_\n", indent_level, "");
 	    fprintf(f, "%*sTarget=", indent_level, "");
 	    yasm_expr_print(f, jmp->target);
+	    fprintf(f, "%*sOrigin=\n", indent_level, "");
+	    yasm_symrec_print(f, indent_level+1, jmp->origin);
 	    fprintf(f, "\n%*sShort Form:\n", indent_level, "");
 	    if (jmp->shortop.opcode_len == 0)
 		fprintf(f, "%*sNone\n", indent_level+1, "");
@@ -528,6 +530,16 @@ yasm_x86__bc_print(FILE *f, int indent_level, const yasm_bytecode *bc)
 			(unsigned int)jmp->nearop.opcode[1],
 			(unsigned int)jmp->nearop.opcode[2],
 			(unsigned int)jmp->nearop.opcode_len);
+	    fprintf(f, "%*sFar Form:\n", indent_level, "");
+	    if (jmp->farop.opcode_len == 0)
+		fprintf(f, "%*sNone\n", indent_level+1, "");
+	    else
+		fprintf(f, "%*sOpcode: %02x %02x %02x OpLen=%u\n",
+			indent_level+1, "",
+			(unsigned int)jmp->farop.opcode[0],
+			(unsigned int)jmp->farop.opcode[1],
+			(unsigned int)jmp->farop.opcode[2],
+			(unsigned int)jmp->farop.opcode_len);
 	    fprintf(f, "%*sOpSel=", indent_level, "");
 	    switch (jmp->op_sel) {
 		case JMP_NONE:
