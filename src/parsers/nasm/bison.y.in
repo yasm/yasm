@@ -387,7 +387,7 @@ imm32: imm
 ;
 
 /* jump targets */
-target: expr_no_string	{ $$.val = $1; SetOpcodeSel(&$$.op_sel, JR_NONE); }
+target: expr_no_fltstr	{ $$.val = $1; SetOpcodeSel(&$$.op_sel, JR_NONE); }
     | SHORT target	{ $$ = $2; SetOpcodeSel(&$$.op_sel, JR_SHORT_FORCED); }
     | NEAR target	{ $$ = $2; SetOpcodeSel(&$$.op_sel, JR_NEAR_FORCED); }
 ;
