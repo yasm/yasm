@@ -34,15 +34,15 @@
 
 #include <stdio.h>
 
-#include "check.h"
-
 #include "libyasm/bitvect.h"
 
-START_TEST(test_boot)
+static int
+test_boot()
 {
-    fail_unless(BitVector_Boot() == ErrCode_Ok, "failed to Boot()");
+    if (BitVector_Boot() != ErrCode_Ok)
+	return 1;
+    return 0;
 }
-END_TEST
 
 typedef struct Val_s {
     const char *ascii;
@@ -121,53 +121,57 @@ num_check(Val *val)
     return ret;
 }
 
-START_TEST(test_oct_small_num)
+static int
+test_oct_small_num()
 {
     Val *vals = oct_small_vals;
     int i, num = sizeof(oct_small_vals)/sizeof(Val);
 
-    for (i=0; i<num; i++)
-	fail_unless(num_check(&vals[i]) == 0, result_msg);
+    for (i=0; i<num; i++) {
+	if (num_check(&vals[i]) != 0)
+	    return 1;
+    }
+    return 0;
 }
-END_TEST
 
-START_TEST(test_oct_large_num)
+static int
+test_oct_large_num()
 {
     Val *vals = oct_large_vals;
     int i, num = sizeof(oct_large_vals)/sizeof(Val);
 
-    for (i=0; i<num; i++)
-	fail_unless(num_check(&vals[i]) == 0, result_msg);
+    for (i=0; i<num; i++) {
+	if (num_check(&vals[i]) != 0)
+	    return 1;
+    }
+    return 0;
 }
-END_TEST
 
-static Suite *
-bitvect_suite(void)
+static int
+runtest_(char *testname, int (*testfunc)(), void (*setup)(),
+	 void (*teardown)())
 {
-    Suite *s = suite_create("BitVector");
-    TCase *tc_boot = tcase_create("Boot");
-    TCase *tc_from_oct = tcase_create("from_Oct");
-
-    suite_add_tcase(s, tc_boot);
-    tcase_add_test(tc_boot, test_boot);
-
-    suite_add_tcase(s, tc_from_oct);
-    tcase_add_test(tc_from_oct, test_oct_small_num);
-    tcase_add_test(tc_from_oct, test_oct_large_num);
-    tcase_set_fixture(tc_from_oct, num_family_setup, num_family_teardown);
-
-    return s;
+    int nf;
+    printf("bitvect_test: Testing libyasm bitvect for %s ... ", testname);
+    fflush(stdout);
+    if (setup)
+	setup();
+    nf = testfunc();
+    if (teardown)
+	teardown();
+    printf("%s.\n", nf>0 ? "FAIL":"PASS");
+    return nf;
 }
+#define runtest(x,y,z)	runtest_(#x,test_##x,y,z)
 
 int
 main(void)
 {
-    int nf;
-    Suite *s = bitvect_suite();
-    SRunner *sr = srunner_create(s);
-    srunner_run_all(sr, CRNORMAL);
-    nf = srunner_ntests_failed(sr);
-    srunner_free(sr);
-    suite_free(s);
+    int nf = 0;
+    nf += runtest(boot, NULL, NULL);
+    nf += runtest(oct_small_num, num_family_setup, num_family_teardown);
+    nf += runtest(oct_large_num, num_family_setup, num_family_teardown);
+    printf("bitvect_test: %d%%: Checks: 3, Failures: %d\n",
+	   100*(3-nf)/3, nf);
     return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -34,8 +34,6 @@
 
 #include <stdio.h>
 
-#include "check.h"
-
 #include "libyasm/floatnum.c"
 
 /* constants describing parameters of internal floating point format.
@@ -194,31 +192,35 @@ new_check_flt(Init_Entry *val)
     return 0;
 }
 
-START_TEST(test_new_normalized)
+static int
+test_new_normalized()
 {
     Init_Entry *vals = normalized_vals;
     int i, num = sizeof(normalized_vals)/sizeof(Init_Entry);
 
     for (i=0; i<num; i++) {
 	new_setup(vals, i);
-	fail_unless(new_check_flt(&vals[i]) == 0, result_msg);
+	if (new_check_flt(&vals[i]) != 0)
+	    return 1;
 	yasm_floatnum_destroy(flt);
     }
+    return 0;
 }
-END_TEST
 
-START_TEST(test_new_normalized_edgecase)
+static int
+test_new_normalized_edgecase()
 {
     Init_Entry *vals = normalized_edgecase_vals;
     int i, num = sizeof(normalized_edgecase_vals)/sizeof(Init_Entry);
 
     for (i=0; i<num; i++) {
 	new_setup(vals, i);
-	fail_unless(new_check_flt(&vals[i]) == 0, result_msg);
+	if (new_check_flt(&vals[i]) != 0)
+	    return 1;
 	yasm_floatnum_destroy(flt);
     }
+    return 0;
 }
-END_TEST
 
 static void
 get_family_setup(void)
@@ -284,7 +286,8 @@ get_common_check_result(int len, const unsigned char *val,
  * get_single tests
  */
 
-START_TEST(test_get_single_normalized)
+static int
+test_get_single_normalized()
 {
     unsigned char outval[4];
     Init_Entry *vals = normalized_vals;
@@ -292,15 +295,17 @@ START_TEST(test_get_single_normalized)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(yasm_floatnum_get_sized(flt, outval, 4, 32, 0, 0, 0, 0) ==
-		    vals[i].ret32, ret_msg);
-	fail_unless(get_common_check_result(4, outval, vals[i].result32) == 0,
-		    result_msg);
+	if (yasm_floatnum_get_sized(flt, outval, 4, 32, 0, 0, 0, 0) !=
+	    vals[i].ret32)
+	    return 1;
+	if (get_common_check_result(4, outval, vals[i].result32) != 0)
+	    return 1;
     }
+    return 0;
 }
-END_TEST
 
-START_TEST(test_get_single_normalized_edgecase)
+static int
+test_get_single_normalized_edgecase()
 {
     unsigned char outval[4];
     Init_Entry *vals = normalized_edgecase_vals;
@@ -308,19 +313,21 @@ START_TEST(test_get_single_normalized_edgecase)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(yasm_floatnum_get_sized(flt, outval, 4, 32, 0, 0, 0, 0) ==
-		    vals[i].ret32, ret_msg);
-	fail_unless(get_common_check_result(4, outval, vals[i].result32) == 0,
-		    result_msg);
+	if (yasm_floatnum_get_sized(flt, outval, 4, 32, 0, 0, 0, 0) !=
+	    vals[i].ret32)
+	    return 1;
+	if (get_common_check_result(4, outval, vals[i].result32) != 0)
+	    return 1;
     }
+    return 0;
 }
-END_TEST
 
 /*
  * get_double tests
  */
 
-START_TEST(test_get_double_normalized)
+static int
+test_get_double_normalized()
 {
     unsigned char outval[8];
     Init_Entry *vals = normalized_vals;
@@ -328,15 +335,17 @@ START_TEST(test_get_double_normalized)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(yasm_floatnum_get_sized(flt, outval, 8, 64, 0, 0, 0, 0) ==
-		    vals[i].ret64, ret_msg);
-	fail_unless(get_common_check_result(8, outval, vals[i].result64) == 0,
-		    result_msg);
+	if (yasm_floatnum_get_sized(flt, outval, 8, 64, 0, 0, 0, 0) !=
+	    vals[i].ret64)
+	    return 1;
+	if (get_common_check_result(8, outval, vals[i].result64) != 0)
+	    return 1;
     }
+    return 0;
 }
-END_TEST
 
-START_TEST(test_get_double_normalized_edgecase)
+static int
+test_get_double_normalized_edgecase()
 {
     unsigned char outval[8];
     Init_Entry *vals = normalized_edgecase_vals;
@@ -344,19 +353,21 @@ START_TEST(test_get_double_normalized_edgecase)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(yasm_floatnum_get_sized(flt, outval, 8, 64, 0, 0, 0, 0) ==
-		    vals[i].ret64, ret_msg);
-	fail_unless(get_common_check_result(8, outval, vals[i].result64) == 0,
-		    result_msg);
+	if (yasm_floatnum_get_sized(flt, outval, 8, 64, 0, 0, 0, 0) !=
+	    vals[i].ret64)
+	    return 1;
+	if (get_common_check_result(8, outval, vals[i].result64) != 0)
+	    return 1;
     }
+    return 0;
 }
-END_TEST
 
 /*
  * get_extended tests
  */
 
-START_TEST(test_get_extended_normalized)
+static int
+test_get_extended_normalized()
 {
     unsigned char outval[10];
     Init_Entry *vals = normalized_vals;
@@ -364,15 +375,17 @@ START_TEST(test_get_extended_normalized)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(yasm_floatnum_get_sized(flt, outval, 10, 80, 0, 0, 0, 0) ==
-		    vals[i].ret80, ret_msg);
-	fail_unless(get_common_check_result(10, outval, vals[i].result80) == 0,
-		    result_msg);
+	if (yasm_floatnum_get_sized(flt, outval, 10, 80, 0, 0, 0, 0) !=
+	    vals[i].ret80)
+	    return 1;
+	if (get_common_check_result(10, outval, vals[i].result80) != 0)
+	    return 1;
     }
+    return 0;
 }
-END_TEST
 
-START_TEST(test_get_extended_normalized_edgecase)
+static int
+test_get_extended_normalized_edgecase()
 {
     unsigned char outval[10];
     Init_Entry *vals = normalized_edgecase_vals;
@@ -380,56 +393,48 @@ START_TEST(test_get_extended_normalized_edgecase)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(yasm_floatnum_get_sized(flt, outval, 10, 80, 0, 0, 0, 0) ==
-		    vals[i].ret80, ret_msg);
-	fail_unless(get_common_check_result(10, outval, vals[i].result80) == 0,
-		    result_msg);
+	if (yasm_floatnum_get_sized(flt, outval, 10, 80, 0, 0, 0, 0) !=
+	    vals[i].ret80)
+	    return 1;
+	if (get_common_check_result(10, outval, vals[i].result80) != 0)
+	    return 1;
     }
+    return 0;
 }
-END_TEST
 
-static Suite *
-floatnum_suite(void)
+static int
+runtest_(char *testname, int (*testfunc)(), void (*setup)(),
+	 void (*teardown)())
 {
-    Suite *s = suite_create("floatnum");
-    TCase *tc_new = tcase_create("new");
-    TCase *tc_get_single = tcase_create("get_single");
-    TCase *tc_get_double = tcase_create("get_double");
-    TCase *tc_get_extended = tcase_create("get_extended");
-
-    suite_add_tcase(s, tc_new);
-    tcase_add_test(tc_new, test_new_normalized);
-    tcase_add_test(tc_new, test_new_normalized_edgecase);
-
-    suite_add_tcase(s, tc_get_single);
-    tcase_add_test(tc_get_single, test_get_single_normalized);
-    tcase_add_test(tc_get_single, test_get_single_normalized_edgecase);
-    tcase_set_fixture(tc_get_single, get_family_setup, get_family_teardown);
-
-    suite_add_tcase(s, tc_get_double);
-    tcase_add_test(tc_get_double, test_get_double_normalized);
-    tcase_add_test(tc_get_double, test_get_double_normalized_edgecase);
-    tcase_set_fixture(tc_get_double, get_family_setup, get_family_teardown);
-
-    suite_add_tcase(s, tc_get_extended);
-    tcase_add_test(tc_get_extended, test_get_extended_normalized);
-    tcase_add_test(tc_get_extended, test_get_extended_normalized_edgecase);
-    tcase_set_fixture(tc_get_extended, get_family_setup, get_family_teardown);
-
-    return s;
+    int nf;
+    printf("floatnum_test: Testing for %s ... ", testname);
+    fflush(stdout);
+    if (setup)
+	setup();
+    nf = testfunc();
+    if (teardown)
+	teardown();
+    printf("%s.\n", nf>0 ? "FAIL":"PASS");
+    return nf;
 }
+#define runtest(x,y,z)	runtest_(#x,test_##x,y,z)
 
 int
 main(void)
 {
-    int nf;
-    Suite *s = floatnum_suite();
-    SRunner *sr = srunner_create(s);
-    BitVector_Boot();
+    int nf = 0;
+    if (BitVector_Boot() != ErrCode_Ok)
+	return EXIT_FAILURE;
     yasm_floatnum_initialize();
-    srunner_run_all(sr, CRNORMAL);
-    nf = srunner_ntests_failed(sr);
-    srunner_free(sr);
-    suite_free(s);
+    nf += runtest(new_normalized, NULL, NULL);
+    nf += runtest(new_normalized_edgecase, NULL, NULL);
+    nf += runtest(get_single_normalized, get_family_setup, get_family_teardown);
+    nf += runtest(get_single_normalized_edgecase, get_family_setup, get_family_teardown);
+    nf += runtest(get_double_normalized, get_family_setup, get_family_teardown);
+    nf += runtest(get_double_normalized_edgecase, get_family_setup, get_family_teardown);
+    nf += runtest(get_extended_normalized, get_family_setup, get_family_teardown);
+    nf += runtest(get_extended_normalized_edgecase, get_family_setup, get_family_teardown);
+    printf("floatnum_test: %d%%: Checks: 8, Failures: %d\n",
+	   100*(3-nf)/3, nf);
     return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

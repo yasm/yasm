@@ -101,7 +101,7 @@ AM_WITH_DMALLOC
 #
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([alloca.h limits.h sys/cdefs.h sys/ipc.h sys/msg.h sys/param.h sys/types.h sys/queue.h unistd.h libgen.h])
+AC_CHECK_HEADERS([limits.h sys/param.h unistd.h libgen.h])
 
 # REQUIRE standard C headers
 if test "$ac_cv_header_stdc" != yes; then
@@ -114,21 +114,16 @@ fi
 AC_C_CONST
 AC_C_INLINE
 AC_C_PROTOTYPES
-# PID_T is used by the test suite (not required).
-AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 
 #
 # Checks for library functions.
 #
-AC_FUNC_FORK
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([abort memcpy memmove strrchr toascii vsnprintf])
 AC_CHECK_FUNCS([strsep mergesort])
 # Look for the case-insensitive comparison functions
 AC_CHECK_FUNCS([strcasecmp strncasecmp stricmp strcmpi])
-# Check for stuff wanted by the test suite.  None of this is required.
-AC_CHECK_FUNCS([msgctl msgget msgrcv msgsnd strerror snprintf wait])
 AC_REPLACE_FUNCS([basename dirname])
 AC_LIB_LTDL
 
@@ -177,23 +172,6 @@ fi
 #
 # Add some more CFLAGS for various options.
 #
-
-# "Check" tests can use fork/wait/msg* if ALL are available.
-AH_TEMPLATE([USE_FORKWAITMSG], [Combined test for fork/wait/msg*])
-if ${check}; then
-  if test "$ac_cv_func_fork" = yes &&
-     test "$ac_cv_func_wait" = yes &&
-     test "$ac_cv_func_msgctl" = yes &&
-     test "$ac_cv_func_msgget" = yes &&
-     test "$ac_cv_func_msgrcv" = yes &&
-     test "$ac_cv_func_msgsnd" = yes; then
-    AC_DEFINE([USE_FORKWAITMSG])
-    AC_DEFINE([_GNU_SOURCE], 1,
-	      [Make sure we see all GNU extensions.])
-    AC_DEFINE([_SVID_SOURCE], 1,
-	      [Make sure we see all SVID extensions.])
-  fi
-fi
 
 if test "$debugging" = "no" ; then
   changequote(,)
