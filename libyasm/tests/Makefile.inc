@@ -14,16 +14,12 @@ EXTRA_DIST += libyasm/tests/unary.asm
 EXTRA_DIST += libyasm/tests/unary.errwarn
 EXTRA_DIST += libyasm/tests/unary.hex
 
-noinst_PROGRAMS += bitvect_test
-noinst_PROGRAMS += floatnum_test
+check_PROGRAMS += bitvect_test
+check_PROGRAMS += floatnum_test
 
-bitvect_test_CFLAGS =
 bitvect_test_SOURCES  = libyasm/tests/bitvect_test.c
-bitvect_test_LDFLAGS =
 bitvect_test_LDADD = libyasm.la @LIBLTDL@ $(INTLLIBS) @LIBADD_DL@
 
-floatnum_test_CFLAGS =
 floatnum_test_SOURCES  = libyasm/tests/floatnum_test.c
-floatnum_test_LDFLAGS =
 floatnum_test_LDADD = libyasm.la @LIBLTDL@ $(INTLLIBS) @LIBADD_DL@
 

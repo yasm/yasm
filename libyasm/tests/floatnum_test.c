@@ -24,7 +24,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #ifdef HAVE_CONFIG_H
-# include "config.h"
+# include <config.h>
 #endif
 
 #ifdef STDC_HEADERS
@@ -193,7 +193,7 @@ new_check_flt(Init_Entry *val)
 }
 
 static int
-test_new_normalized()
+test_new_normalized(void)
 {
     Init_Entry *vals = normalized_vals;
     int i, num = sizeof(normalized_vals)/sizeof(Init_Entry);
@@ -208,7 +208,7 @@ test_new_normalized()
 }
 
 static int
-test_new_normalized_edgecase()
+test_new_normalized_edgecase(void)
 {
     Init_Entry *vals = normalized_edgecase_vals;
     int i, num = sizeof(normalized_edgecase_vals)/sizeof(Init_Entry);
@@ -287,7 +287,7 @@ get_common_check_result(int len, const unsigned char *val,
  */
 
 static int
-test_get_single_normalized()
+test_get_single_normalized(void)
 {
     unsigned char outval[4];
     Init_Entry *vals = normalized_vals;
@@ -305,7 +305,7 @@ test_get_single_normalized()
 }
 
 static int
-test_get_single_normalized_edgecase()
+test_get_single_normalized_edgecase(void)
 {
     unsigned char outval[4];
     Init_Entry *vals = normalized_edgecase_vals;
@@ -327,7 +327,7 @@ test_get_single_normalized_edgecase()
  */
 
 static int
-test_get_double_normalized()
+test_get_double_normalized(void)
 {
     unsigned char outval[8];
     Init_Entry *vals = normalized_vals;
@@ -345,7 +345,7 @@ test_get_double_normalized()
 }
 
 static int
-test_get_double_normalized_edgecase()
+test_get_double_normalized_edgecase(void)
 {
     unsigned char outval[8];
     Init_Entry *vals = normalized_edgecase_vals;
@@ -367,7 +367,7 @@ test_get_double_normalized_edgecase()
  */
 
 static int
-test_get_extended_normalized()
+test_get_extended_normalized(void)
 {
     unsigned char outval[10];
     Init_Entry *vals = normalized_vals;
@@ -385,7 +385,7 @@ test_get_extended_normalized()
 }
 
 static int
-test_get_extended_normalized_edgecase()
+test_get_extended_normalized_edgecase(void)
 {
     unsigned char outval[10];
     Init_Entry *vals = normalized_edgecase_vals;
@@ -403,8 +403,8 @@ test_get_extended_normalized_edgecase()
 }
 
 static int
-runtest_(char *testname, int (*testfunc)(), void (*setup)(),
-	 void (*teardown)())
+runtest_(const char *testname, int (*testfunc)(void), void (*setup)(void),
+	 void (*teardown)(void))
 {
     int nf;
     printf("floatnum_test: Testing for %s ... ", testname);

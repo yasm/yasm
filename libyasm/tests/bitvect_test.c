@@ -24,7 +24,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #ifdef HAVE_CONFIG_H
-# include "config.h"
+# include <config.h>
 #endif
 
 #ifdef STDC_HEADERS
@@ -37,7 +37,7 @@
 #include "libyasm/bitvect.h"
 
 static int
-test_boot()
+test_boot(void)
 {
     if (BitVector_Boot() != ErrCode_Ok)
 	return 1;
@@ -122,7 +122,7 @@ num_check(Val *val)
 }
 
 static int
-test_oct_small_num()
+test_oct_small_num(void)
 {
     Val *vals = oct_small_vals;
     int i, num = sizeof(oct_small_vals)/sizeof(Val);
@@ -135,7 +135,7 @@ test_oct_small_num()
 }
 
 static int
-test_oct_large_num()
+test_oct_large_num(void)
 {
     Val *vals = oct_large_vals;
     int i, num = sizeof(oct_large_vals)/sizeof(Val);
@@ -148,8 +148,8 @@ test_oct_large_num()
 }
 
 static int
-runtest_(char *testname, int (*testfunc)(), void (*setup)(),
-	 void (*teardown)())
+runtest_(const char *testname, int (*testfunc)(void), void (*setup)(void),
+	 void (*teardown)(void))
 {
     int nf;
     printf("bitvect_test: Testing libyasm bitvect for %s ... ", testname);
