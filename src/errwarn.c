@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.18 2001/08/18 22:15:12 peter Exp $
+/* $Id: errwarn.c,v 1.19 2001/08/18 23:05:37 peter Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -73,7 +73,8 @@ static char *err_msgs[] = {
     "expression syntax error",
     "floating-point constant encountered in `%s'",
     "non-floating-point value encountered in `%s'",
-    "could not open file `%s'"
+    "could not open file `%s'",
+    "error when reading from file"
 };
 
 /* Warning messages.  Match up with warn_num enum in errwarn.h. */
