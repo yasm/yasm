@@ -1035,7 +1035,7 @@ void BitVector_Interval_Copy(wordptr X, wordptr Y, N_int Xoffset,
     N_word  t_min;
     N_word  mask;
     N_word  bits;
-    N_word  select;
+    N_word  sel;
     boolean ascending;
     boolean notfirst;
     wordptr Z = X;
@@ -1094,8 +1094,8 @@ void BitVector_Interval_Copy(wordptr X, wordptr Y, N_int Xoffset,
                         X--;
                     }
                 }
-                select = ((t_base == t_hi_base) << 1) OR (t_base == t_lo_base);
-                switch (select)
+                sel = ((t_base == t_hi_base) << 1) OR (t_base == t_lo_base);
+                switch (sel)
                 {
                     case 0:
                         t_lower = 0;
@@ -1145,8 +1145,8 @@ void BitVector_Interval_Copy(wordptr X, wordptr Y, N_int Xoffset,
                     }
                 }
                 source = *Y;
-                select = ((s_base == s_hi_base) << 1) OR (s_base == s_lo_base);
-                switch (select)
+                sel = ((s_base == s_hi_base) << 1) OR (s_base == s_lo_base);
+                switch (sel)
                 {
                     case 0:
                         s_lower = 0;
