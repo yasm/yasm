@@ -155,10 +155,12 @@ exp: instr
 
 datavals: dataval	    {
 	STAILQ_INIT(&$$);
-	STAILQ_INSERT_TAIL(&$$, $1, link);
+	if ($1)
+	    STAILQ_INSERT_TAIL(&$$, $1, link);
     }
     | datavals ',' dataval  {
-	STAILQ_INSERT_TAIL(&$1, $3, link);
+	if ($3)
+	    STAILQ_INSERT_TAIL(&$1, $3, link);
 	$$ = $1;
     }
 ;
