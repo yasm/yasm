@@ -451,7 +451,7 @@ void BitVector_Destroy(wordptr addr)                        /* free          */
     if (addr != NULL)
     {
         addr -= BIT_VECTOR_HIDDEN_WORDS;
-        free((voidptr) addr);
+        xfree((voidptr) addr);
     }
 }
 
@@ -1930,7 +1930,7 @@ ErrCode BitVector_from_Enum(wordptr addr, charptr string)
 
 void BitVector_Dispose(charptr string)
 {
-    if (string != NULL) free((voidptr) string);
+    if (string != NULL) xfree((voidptr) string);
 }
 
 void BitVector_Bit_Off(wordptr addr, N_int indx)            /* X = X \ {x}   */

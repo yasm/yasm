@@ -497,7 +497,7 @@ void
 floatnum_delete(floatnum *flt)
 {
     BitVector_Destroy(flt->mantissa);
-    free(flt);
+    xfree(flt);
 }
 
 void
@@ -604,7 +604,7 @@ floatnum_get_common(const floatnum *flt, unsigned char *ptr, int byte_size,
     memcpy(ptr, buf, byte_size*sizeof(unsigned char));
 
     /* free allocated resources */
-    free(buf);
+    xfree(buf);
 
     BitVector_Destroy(output);
 
@@ -682,7 +682,7 @@ floatnum_print(const floatnum *flt)
     /* Internal format */
     str = BitVector_to_Hex(flt->mantissa);
     printf("%c %s *2^%04x\n", flt->sign?'-':'+', str, flt->exponent);
-    free(str);
+    xfree(str);
 
     /* 32-bit (single precision) format */
     printf("32-bit: %d: ", floatnum_get_sized(flt, out, 4));

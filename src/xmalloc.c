@@ -29,6 +29,9 @@
 # include <stdlib.h>
 #endif
 
+#include <libintl.h>
+#define _(String)	gettext(String)
+
 #include "errwarn.h"
 
 #ifndef DMALLOC
@@ -80,4 +83,13 @@ xrealloc(void *oldmem, size_t size)
 
     return newmem;
 }
+
+void
+xfree(void *p)
+{
+    if (!p)
+	InternalError(__LINE__, __FILE__, _("Tried to free NULL pointer"));
+    free(p);
+}
+
 #endif

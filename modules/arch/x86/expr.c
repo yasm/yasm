@@ -109,7 +109,7 @@ expr_new(ExprOp op, ExprItem *left, ExprItem *right)
     ptr->terms[1].type = EXPR_NONE;
     if (left) {
 	memcpy(&ptr->terms[0], left, sizeof(ExprItem));
-	free(left);
+	xfree(left);
 	ptr->numterms++;
     } else {
 	InternalError(__LINE__, __FILE__,
@@ -118,7 +118,7 @@ expr_new(ExprOp op, ExprItem *left, ExprItem *right)
 
     if (right) {
 	memcpy(&ptr->terms[1], right, sizeof(ExprItem));
-	free(right);
+	xfree(right);
 	ptr->numterms++;
     }
 
@@ -443,8 +443,8 @@ expr_level_op(expr *e, int fold_const, int simplify_ident)
 	       e->terms[i].data.expn->op == EXPR_IDENT) {
 	    expr *sube = e->terms[i].data.expn;
 	    e->terms[i] = sube->terms[0];
-	    free(sube->filename);
-	    free(sube);
+	    xfree(sube->filename);
+	    xfree(sube);
 	}
 
 	if (e->terms[i].type == EXPR_EXPR &&
@@ -559,8 +559,8 @@ expr_level_op(expr *e, int fold_const, int simplify_ident)
 	    /* delete subexpression, but *don't delete nodes* (as we've just
 	     * copied them!)
 	     */
-	    free(sube->filename);
-	    free(sube);
+	    xfree(sube->filename);
+	    xfree(sube);
 	} else if (o != i) {
 	    /* copy operand if it changed places */
 	    e->terms[o--] = e->terms[i];
@@ -714,8 +714,8 @@ expr_delete_each(expr *e, void *d)
 		break;	/* none of the other types needs to be deleted */
 	}
     }
-    free(e->filename);
-    free(e);	/* free ourselves */
+    xfree(e->filename);
+    xfree(e);	/* free ourselves */
     return 0;	/* don't stop recursion */
 }
 

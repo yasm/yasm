@@ -222,7 +222,7 @@ intnum_delete(intnum *intn)
 {
     if (intn->type == INTNUM_BV)
 	BitVector_Destroy(intn->val.bv);
-    free(intn);
+    xfree(intn);
 }
 
 void
@@ -542,7 +542,7 @@ intnum_get_sized(const intnum *intn, unsigned char *ptr, size_t size)
 		InternalError(__LINE__, __FILE__,
 			      _("Invalid size specified (too large)"));
 	    memcpy(ptr, buf, size);
-	    free(buf);
+	    xfree(buf);
 	    break;
     }
 }
@@ -627,7 +627,7 @@ intnum_print(const intnum *intn)
 	case INTNUM_BV:
 	    s = BitVector_to_Hex(intn->val.bv);
 	    printf("0x%s/%u", s, (unsigned int)intn->origsize);
-	    free(s);
+	    xfree(s);
 	    break;
     }
 }

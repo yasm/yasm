@@ -71,6 +71,7 @@ int strncasecmp(const char *s1, const char *s2, size_t n);
 void *xmalloc(size_t size);
 void *xcalloc(size_t nelem, size_t elsize);
 void *xrealloc(void *oldmem, size_t size);
+void xfree(void *p);
 
 #ifdef HAVE_SYS_CDEFS_H
 # include <sys/cdefs.h>

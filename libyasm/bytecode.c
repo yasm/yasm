@@ -737,7 +737,7 @@ bytecodes_append(bytecodehead *headp, bytecode *bc)
 	    STAILQ_INSERT_TAIL(headp, bc, link);
 	    return bc;
 	} else {
-	    free(bc);
+	    xfree(bc);
 	}
     }
     return (bytecode *)NULL;

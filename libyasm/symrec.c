@@ -98,7 +98,7 @@ symrec_get_or_new(const char *name, int in_table)
 	rec2 = ternary_insert(&sym_table, name, rec, 0);
 
 	if (rec2 != rec) {
-	    free(rec);
+	    xfree(rec);
 	    return rec2;
 	}
 	rec->status = SYM_NOSTATUS;

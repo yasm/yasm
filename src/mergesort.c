@@ -236,7 +236,7 @@ COPY:	    			b = t;
 		memmove(list2, list1, nmemb*size);
 		list2 = list1;
 	}
-	free(list2);
+	xfree(list2);
 	return (0);
 }
 

@@ -297,7 +297,7 @@ OutputAllErrorWarning(void)
     we = STAILQ_FIRST(errwarns);
     while (we) {
 	we2 = STAILQ_NEXT(we, link);
-	free(we);
+	xfree(we);
 	we = we2;
     }
 

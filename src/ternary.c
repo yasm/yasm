@@ -110,7 +110,7 @@ ternary_cleanup (ternary_tree p)
       if (p->splitchar)
 	ternary_cleanup (p->eqkid);
       ternary_cleanup (p->hikid);
-      free (p);
+      xfree (p);
     }
 }
 
