@@ -35,6 +35,8 @@
 #include "yasm-module.h"
 
 
+extern char *basename(const char *path);
+
 extern const lt_dlsymlist lt_preloaded_symbols[];
 
 typedef struct module {
@@ -144,22 +146,6 @@ typedef struct list_module_data {
     list_module_info *matches;
     size_t matches_num, matches_alloc;
 } list_module_data;
-
-#ifdef HAVE_BASENAME
-extern char *basename(const char *);
-#else
-static const char *
-basename(const char *path)
-{
-    const char *base;
-    base = strrchr(path, '/');
-    if (!base)
-	base = path;
-    else
-	base++;
-    return base;
-}
-#endif
 
 static int
 list_module_load(const char *filename, lt_ptr data)

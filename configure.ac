@@ -125,12 +125,13 @@ AC_TYPE_SIZE_T
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([abort basename memcpy memmove strrchr toascii vsnprintf])
+AC_CHECK_FUNCS([abort memcpy memmove strrchr toascii vsnprintf])
 AC_CHECK_FUNCS([strsep mergesort])
 # Look for the case-insensitive comparison functions
 AC_CHECK_FUNCS([strcasecmp strncasecmp stricmp strcmpi])
 # Check for stuff wanted by the test suite.  None of this is required.
 AC_CHECK_FUNCS([msgctl msgget msgrcv msgsnd strerror snprintf wait])
+AC_REPLACE_FUNCS([basename dirname])
 AC_LIB_LTDL
 
 #

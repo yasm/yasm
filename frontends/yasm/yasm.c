@@ -44,6 +44,8 @@
 #endif
 
 #ifndef WIN32
+extern char *dirname(const char *path);
+
 extern const lt_dlsymlist lt_preloaded_symbols[];
 #endif
 
@@ -271,10 +273,14 @@ main(int argc, char *argv[])
 	const char *path = getenv(YASM_MODULE_PATH_ENV);
 	if (path)
 	    errors = lt_dladdsearchdir(path);
+    }
 #if defined(YASM_MODULEDIR)
-	if (errors == 0)
-	    errors = lt_dladdsearchdir(YASM_MODULEDIR);
+    if (errors == 0)
+	errors = lt_dladdsearchdir(YASM_MODULEDIR);
 #endif
+    if (errors == 0) {
+	/* Path where yasm executable is running from (argv[0]) */
+	errors = lt_dladdsearchdir(dirname(argv[0]));
     }
     if (errors != 0) {
 	print_error(_("%s: module loader initialization failed"), _("FATAL"));
