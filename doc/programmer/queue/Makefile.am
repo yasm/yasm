@@ -1,5 +1,6 @@
 # $IdPath$
 # Transforms queue manpage into various output formats.
+# The queue manpage is courtesy of FreeBSD.
 
 noinst_DATA = queue.html queue.ps
 

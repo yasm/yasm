@@ -70,6 +70,7 @@ AC_OUTPUT(Makefile
 	src/objfmts/Makefile
 	src/objfmts/dbg/Makefile
 	doc/Makefile
-	doc/contrib/Makefile
-	doc/contrib/queue/Makefile
+	doc/user/Makefile
+	doc/programmer/Makefile
+	doc/programmer/queue/Makefile
 )

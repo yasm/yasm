@@ -1,3 +1,7 @@
 # $IdPath$
 
-SUBDIRS = contrib
+if DEV
+SUBDIRS = programmer user
+else
+SUBDIRS = user
+endif
