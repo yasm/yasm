@@ -89,12 +89,12 @@ basic_optimize_bytecode_1(bytecode *bc, void *d)
 
     bc->opt_flags = BCFLAG_INPROGRESS;
 
-    bc_calc_len(bc, basic_optimize_resolve_label);
     if (!*precbc)
 	bc->offset = 0;
     else
 	bc->offset = (*precbc)->offset + (*precbc)->len;
     *precbc = bc;
+    bc_calc_len(bc, basic_optimize_resolve_label);
 
     bc->opt_flags = BCFLAG_DONE;
 
