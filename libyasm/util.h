@@ -1,4 +1,4 @@
-/* $Id: util.h,v 1.3 2001/06/28 21:22:01 peter Exp $
+/* $Id: util.h,v 1.4 2001/06/29 02:11:36 peter Exp $
  * Defines prototypes for replacement functions if needed.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -24,6 +24,14 @@
 
 #ifndef HAVE_STRDUP
 char *strdup(const char *str);
+#endif
+
+#ifndef HAVE_STRTOUL
+unsigned long strtoul(const char *nptr, char **endptr, int base);
+#endif
+
+#ifndef HAVE_TOASCII
+# define toascii(c) ((c) & 0x7F)
 #endif
 
 #endif
