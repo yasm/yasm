@@ -10,11 +10,32 @@
 
 START_TEST(test_ConvertRegToEA)
 {
-    effaddr static_val, *allocp, *retp;
+    effaddr static_val, *retp;
+    int i;
 
-    /* Test with static passing */
+    /* Test with non-NULL */
     fail_unless(ConvertRegToEA(&static_val, 1) == &static_val,
-		"No allocation should be performed if non-NULL passed in ptr");
+		"Should return ptr if non-NULL passed in ptr");
+
+    /* Test with NULL */
+    retp = ConvertRegToEA(NULL, 1);
+    fail_unless(retp != NULL,
+		"Should return static structure if NULL passed in ptr");
+
+    /* Test structure values function should set */
+    fail_unless(retp->len == 0, "len should be 0");
+    fail_unless(retp->segment == 0, "Should be no segment override");
+    fail_unless(retp->valid_modrm == 1, "Mod/RM should be valid");
+    fail_unless(retp->need_modrm == 1, "Mod/RM should be needed");
+    fail_unless(retp->valid_sib == 0, "SIB should be invalid");
+    fail_unless(retp->need_sib == 0, "SIB should not be needed");
+
+    /* Exhaustively test generated Mod/RM byte with register values */
+    for(i=0; i<8; i++) {
+	ConvertRegToEA(&static_val, i);
+	fail_unless(static_val.modrm == 0xC0 | (i & 0x07),
+		    "Invalid Mod/RM byte generated");
+    }
 }
 END_TEST
 
