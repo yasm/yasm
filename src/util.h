@@ -29,6 +29,11 @@
 /* strdup() implementation with error checking (using xmalloc). */
 char *xstrdup(const char *str);
 
+#if !defined(HAVE_MERGESORT)
+int mergesort(void *base, size_t nmemb, size_t size,
+	      int (*compar)(const void *, const void *));
+#endif
+
 #if !defined(HAVE_STRSEP) || defined(HAVE_GNU_C_LIBRARY)
 char *strsep(char **stringp, const char *delim);
 #endif
