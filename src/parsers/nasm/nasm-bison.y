@@ -1,4 +1,4 @@
-/* $Id: nasm-bison.y,v 1.12 2001/07/04 20:53:21 peter Exp $
+/* $Id: nasm-bison.y,v 1.13 2001/07/05 02:51:01 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -82,9 +82,9 @@ extern void yyerror(char *);
 %type <bc> line exp instr instrbase label
 
 %type <int_val> fpureg reg32 reg16 reg8 segreg
-%type <ea_val> mem memaddr memexp
+%type <ea_val> memexp memaddr memref
 %type <ea_val> mem8x mem16x mem32x mem64x mem80x mem128x
-%type <ea_val> mem8 mem16 mem32 mem64 mem80 mem128 mem1632
+%type <ea_val> mem mem8 mem16 mem32 mem64 mem80 mem128 mem1632
 %type <ea_val> rm8x rm16x rm32x /*rm64x rm128x*/
 %type <ea_val> rm8 rm16 rm32 rm64 rm128
 %type <im_val> immexp imm imm8x imm16x imm32x imm8 imm16 imm32
