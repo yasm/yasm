@@ -36,7 +36,7 @@ struct yasm_valparam {
 /*@reldef@*/ STAILQ_HEAD(yasm_valparamhead, yasm_valparam);
 #endif
 
-yasm_valparam *yasm_vp_new(/*@keep@*/ const char *v, /*@keep@*/ yasm_expr *p);
+yasm_valparam *yasm_vp_new(/*@keep@*/ char *v, /*@keep@*/ yasm_expr *p);
 
 void yasm_vps_initialize(/*@out@*/ yasm_valparamhead *headp);
 #ifdef YASM_INTERNAL
