@@ -31,9 +31,9 @@
 
 
 void
-vps_delete(valparamhead *headp)
+yasm_vps_delete(yasm_valparamhead *headp)
 {
-    valparam *cur, *next;
+    yasm_valparam *cur, *next;
 
     cur = STAILQ_FIRST(headp);
     while (cur) {
@@ -41,7 +41,7 @@ vps_delete(valparamhead *headp)
 	if (cur->val)
 	    xfree(cur->val);
 	if (cur->param)
-	    expr_delete(cur->param);
+	    yasm_expr_delete(cur->param);
 	xfree(cur);
 	cur = next;
     }
@@ -49,26 +49,26 @@ vps_delete(valparamhead *headp)
 }
 
 void
-vps_print(FILE *f, const valparamhead *headp)
+yasm_vps_print(FILE *f, const yasm_valparamhead *headp)
 {
-    const valparam *vp;
+    const yasm_valparam *vp;
 
     if(!headp) {
 	fprintf(f, "(none)");
 	return;
     }
 
-    vps_foreach(vp, headp) {
+    yasm_vps_foreach(vp, headp) {
 	if (vp->val)
 	    fprintf(f, "(\"%s\",", vp->val);
 	else
 	    fprintf(f, "((nil),");
 	if (vp->param)
-	    expr_print(f, vp->param);
+	    yasm_expr_print(f, vp->param);
 	else
 	    fprintf(f, "(nil)");
 	fprintf(f, ")");
-	if (vps_next(vp))
+	if (yasm_vps_next(vp))
 	    fprintf(f, ",");
     }
 }

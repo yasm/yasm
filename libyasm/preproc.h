@@ -28,7 +28,7 @@
 #define YASM_PREPROC_H
 
 /* Interface to the preprocesor module(s) */
-struct preproc {
+struct yasm_preproc {
     /* one-line description of the preprocessor */
     const char *name;
 
@@ -43,8 +43,8 @@ struct preproc {
      * This function also takes the FILE * to the initial starting file and
      * the filename.
      */
-    void (*initialize) (FILE *f, const char *in_filename, linemgr *lm,
-			errwarn *we);
+    void (*initialize) (FILE *f, const char *in_filename, yasm_linemgr *lm,
+			yasm_errwarn *we);
 
     /* Cleans up any allocated memory. */
     void (*cleanup) (void);

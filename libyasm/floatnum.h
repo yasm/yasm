@@ -29,17 +29,17 @@
 #ifndef YASM_FLOATNUM_H
 #define YASM_FLOATNUM_H
 
-void floatnum_initialize(errwarn *we);
+void yasm_floatnum_initialize(yasm_errwarn *we);
 /* Clean up internal allocations */
-void floatnum_cleanup(void);
+void yasm_floatnum_cleanup(void);
 
-/*@only@*/ floatnum *floatnum_new(const char *str);
-/*@only@*/ floatnum *floatnum_copy(const floatnum *flt);
-void floatnum_delete(/*@only@*/ floatnum *flt);
+/*@only@*/ yasm_floatnum *yasm_floatnum_new(const char *str);
+/*@only@*/ yasm_floatnum *yasm_floatnum_copy(const yasm_floatnum *flt);
+void yasm_floatnum_delete(/*@only@*/ yasm_floatnum *flt);
 
 /* calculation function: acc = acc op operand */
-void floatnum_calc(floatnum *acc, ExprOp op, floatnum *operand,
-		   unsigned long lindex);
+void yasm_floatnum_calc(yasm_floatnum *acc, yasm_expr_op op,
+			yasm_floatnum *operand, unsigned long lindex);
 
 /* The get functions return nonzero if flt can't fit into that size format:
  * -1 if underflow occurred, 1 if overflow occurred.
@@ -48,20 +48,21 @@ void floatnum_calc(floatnum *acc, ExprOp op, floatnum *operand,
 /* Essentially a convert to single-precision and return as 32-bit value.
  * The 32-bit value is a "standard" C value (eg, of unknown endian).
  */
-int floatnum_get_int(const floatnum *flt, /*@out@*/ unsigned long *ret_val);
+int yasm_floatnum_get_int(const yasm_floatnum *flt,
+			  /*@out@*/ unsigned long *ret_val);
 
 /* ptr will point to the Intel-format little-endian byte string after a
  * successful call (eg, [0] should be the first byte output to the file).
  */
-int floatnum_get_sized(const floatnum *flt, /*@out@*/ unsigned char *ptr,
-		       size_t size);
+int yasm_floatnum_get_sized(const yasm_floatnum *flt,
+			    /*@out@*/ unsigned char *ptr, size_t size);
 
 /* Basic check to see if size is even valid for flt conversion (doesn't
  * actually check for underflow/overflow but rather checks for size=4,8,10).
  * Returns 1 if valid, 0 if not.
  */
-int floatnum_check_size(const floatnum *flt, size_t size);
+int yasm_floatnum_check_size(const yasm_floatnum *flt, size_t size);
 
-void floatnum_print(FILE *f, const floatnum *flt);
+void yasm_floatnum_print(FILE *f, const yasm_floatnum *flt);
 
 #endif

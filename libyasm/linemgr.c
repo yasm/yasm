@@ -87,7 +87,7 @@ filename_delete_one(/*@only@*/ void *d)
 }
 
 static void
-yasm_linemgr_set(const char *filename, unsigned long line,
+yasm_std_linemgr_set(const char *filename, unsigned long line,
 		 unsigned long line_inc)
 {
     char *copy;
@@ -119,10 +119,10 @@ yasm_linemgr_set(const char *filename, unsigned long line,
 }
 
 static void
-yasm_linemgr_initialize(/*@exits@*/
-			void (*error_func) (const char *file,
-					    unsigned int line,
-					    const char *message))
+yasm_std_linemgr_initialize(/*@exits@*/
+			    void (*error_func) (const char *file,
+						unsigned int line,
+						const char *message))
 {
     int i;
 
@@ -148,7 +148,7 @@ yasm_linemgr_initialize(/*@exits@*/
 }
 
 static void
-yasm_linemgr_cleanup(void)
+yasm_std_linemgr_cleanup(void)
 {
     if (line_index_assoc_data_array) {
 	int i;
@@ -181,14 +181,14 @@ yasm_linemgr_cleanup(void)
 }
 
 static unsigned long
-yasm_linemgr_get_current(void)
+yasm_std_linemgr_get_current(void)
 {
     return line_index;
 }
 
 static void
-yasm_linemgr_add_assoc_data(int type, /*@only@*/ void *data,
-			    /*@null@*/ void (*delete_func) (void *))
+yasm_std_linemgr_add_assoc_data(int type, /*@only@*/ void *data,
+				/*@null@*/ void (*delete_func) (void *))
 {
     if ((type & 1) && type < MAX_LINE_INDEX_ASSOC_DATA_ARRAY*2) {
 	line_index_assoc_data_raw_head *adrh =
@@ -225,14 +225,14 @@ yasm_linemgr_add_assoc_data(int type, /*@only@*/ void *data,
 }
 
 static unsigned long
-yasm_linemgr_goto_next(void)
+yasm_std_linemgr_goto_next(void)
 {
     return ++line_index;
 }
 
 static void
-yasm_linemgr_lookup(unsigned long lindex, const char **filename,
-		    unsigned long *line)
+yasm_std_linemgr_lookup(unsigned long lindex, const char **filename,
+			unsigned long *line)
 {
     line_index_mapping *mapping;
     unsigned long vindex, step;
@@ -259,7 +259,7 @@ yasm_linemgr_lookup(unsigned long lindex, const char **filename,
 }
 
 static /*@dependent@*/ /*@null@*/ void *
-yasm_linemgr_lookup_data(unsigned long lindex, int type)
+yasm_std_linemgr_lookup_data(unsigned long lindex, int type)
 {
     if ((type & 1) && type < MAX_LINE_INDEX_ASSOC_DATA_ARRAY*2) {
 	line_index_assoc_data_raw_head *adrh =
@@ -272,13 +272,13 @@ yasm_linemgr_lookup_data(unsigned long lindex, int type)
 	return NULL;
 }
 
-linemgr yasm_linemgr = {
-    yasm_linemgr_initialize,
-    yasm_linemgr_cleanup,
-    yasm_linemgr_get_current,
-    yasm_linemgr_add_assoc_data,
-    yasm_linemgr_goto_next,
-    yasm_linemgr_set,
-    yasm_linemgr_lookup,
-    yasm_linemgr_lookup_data
+yasm_linemgr yasm_std_linemgr = {
+    yasm_std_linemgr_initialize,
+    yasm_std_linemgr_cleanup,
+    yasm_std_linemgr_get_current,
+    yasm_std_linemgr_add_assoc_data,
+    yasm_std_linemgr_goto_next,
+    yasm_std_linemgr_set,
+    yasm_std_linemgr_lookup,
+    yasm_std_linemgr_lookup_data
 };

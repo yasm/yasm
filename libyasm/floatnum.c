@@ -47,7 +47,7 @@
  * Exponent is bias 32767.
  * Mantissa does NOT have an implied one bit (it's explicit).
  */
-struct floatnum {
+struct yasm_floatnum {
     /*@only@*/ wordptr mantissa;	/* Allocated to MANT_BITS bits */
     unsigned short exponent;
     unsigned char sign;
@@ -69,7 +69,7 @@ struct floatnum {
 
 /* Note this structure integrates the floatnum structure */
 typedef struct POT_Entry_s {
-    floatnum f;
+    yasm_floatnum f;
     int dec_exponent;
 } POT_Entry;
 
@@ -135,7 +135,7 @@ static POT_Entry_Source POT_TableP_Source[] = {
     {{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x80},0x7fff}, /* 1e+0 */
 };
 
-static /*@dependent@*/ errwarn *cur_we;
+static /*@dependent@*/ yasm_errwarn *cur_we;
 
 
 static void
@@ -160,7 +160,7 @@ POT_Table_Init_Entry(/*@out@*/ POT_Entry *e, POT_Entry_Source *s, int dec_exp)
 
 /*@-compdef@*/
 void
-floatnum_initialize(errwarn *we)
+yasm_floatnum_initialize(yasm_errwarn *we)
 /*@globals undef POT_TableN, undef POT_TableP, POT_TableP_Source,
    POT_TableN_Source @*/
 {
@@ -194,7 +194,7 @@ floatnum_initialize(errwarn *we)
 
 /*@-globstate@*/
 void
-floatnum_cleanup(void)
+yasm_floatnum_cleanup(void)
 {
     int i;
 
@@ -213,7 +213,7 @@ floatnum_cleanup(void)
 /*@=globstate@*/
 
 static void
-floatnum_normalize(floatnum *flt)
+floatnum_normalize(yasm_floatnum *flt)
 {
     long norm_amt;
 
@@ -233,7 +233,7 @@ floatnum_normalize(floatnum *flt)
 
 /* acc *= op */
 static void
-floatnum_mul(floatnum *acc, const floatnum *op)
+floatnum_mul(yasm_floatnum *acc, const yasm_floatnum *op)
 {
     long exp;
     wordptr product, op1, op2;
@@ -304,10 +304,10 @@ floatnum_mul(floatnum *acc, const floatnum *op)
     BitVector_Destroy(op2);
 }
 
-floatnum *
-floatnum_new(const char *str)
+yasm_floatnum *
+yasm_floatnum_new(const char *str)
 {
-    floatnum *flt;
+    yasm_floatnum *flt;
     int dec_exponent, dec_exp_add;	/* decimal (powers of 10) exponent */
     int POT_index;
     wordptr operand[2];
@@ -315,7 +315,7 @@ floatnum_new(const char *str)
     int decimal_pt;
     boolean carry;
 
-    flt = xmalloc(sizeof(floatnum));
+    flt = xmalloc(sizeof(yasm_floatnum));
 
     flt->mantissa = BitVector_Create(MANT_BITS, TRUE);
 
@@ -491,10 +491,10 @@ floatnum_new(const char *str)
     return flt;
 }
 
-floatnum *
-floatnum_copy(const floatnum *flt)
+yasm_floatnum *
+yasm_floatnum_copy(const yasm_floatnum *flt)
 {
-    floatnum *f = xmalloc(sizeof(floatnum));
+    yasm_floatnum *f = xmalloc(sizeof(yasm_floatnum));
 
     f->mantissa = BitVector_Clone(flt->mantissa);
     f->exponent = flt->exponent;
@@ -505,17 +505,17 @@ floatnum_copy(const floatnum *flt)
 }
 
 void
-floatnum_delete(floatnum *flt)
+yasm_floatnum_delete(yasm_floatnum *flt)
 {
     BitVector_Destroy(flt->mantissa);
     xfree(flt);
 }
 
 void
-floatnum_calc(floatnum *acc, ExprOp op, /*@unused@*/ floatnum *operand,
-	      unsigned long lindex)
+yasm_floatnum_calc(yasm_floatnum *acc, yasm_expr_op op,
+		   /*@unused@*/ yasm_floatnum *operand, unsigned long lindex)
 {
-    if (op != EXPR_NEG)
+    if (op != YASM_EXPR_NEG)
 	cur_we->error(lindex,
 		      N_("Unsupported floating-point arithmetic operation"));
     else
@@ -523,16 +523,16 @@ floatnum_calc(floatnum *acc, ExprOp op, /*@unused@*/ floatnum *operand,
 }
 
 int
-floatnum_get_int(const floatnum *flt, unsigned long *ret_val)
+yasm_floatnum_get_int(const yasm_floatnum *flt, unsigned long *ret_val)
 {
     unsigned char t[4];
 
-    if (floatnum_get_sized(flt, t, 4)) {
+    if (yasm_floatnum_get_sized(flt, t, 4)) {
 	*ret_val = 0xDEADBEEFUL;    /* Obviously incorrect return value */
 	return 1;
     }
 
-    LOAD_32_L(*ret_val, &t[0]);
+    YASM_LOAD_32_L(*ret_val, &t[0]);
     return 0;
 }
 
@@ -548,7 +548,7 @@ floatnum_get_int(const floatnum *flt, unsigned long *ret_val)
  * Returns 0 on success, 1 if overflow, -1 if underflow.
  */
 static int
-floatnum_get_common(const floatnum *flt, /*@out@*/ unsigned char *ptr,
+floatnum_get_common(const yasm_floatnum *flt, /*@out@*/ unsigned char *ptr,
 		    N_int byte_size, N_int mant_bits, int implicit1,
 		    N_int exp_bits)
 {
@@ -660,7 +660,8 @@ floatnum_get_common(const floatnum *flt, /*@out@*/ unsigned char *ptr,
  * s = sign (for mantissa)
  */
 int
-floatnum_get_sized(const floatnum *flt, unsigned char *ptr, size_t size)
+yasm_floatnum_get_sized(const yasm_floatnum *flt, unsigned char *ptr,
+			size_t size)
 {
     switch (size) {
 	case 4:
@@ -678,7 +679,7 @@ floatnum_get_sized(const floatnum *flt, unsigned char *ptr, size_t size)
 
 /* 1 if the size is valid, 0 if it isn't */
 int
-floatnum_check_size(/*@unused@*/ const floatnum *flt, size_t size)
+yasm_floatnum_check_size(/*@unused@*/ const yasm_floatnum *flt, size_t size)
 {
     switch (size) {
 	case 4:
@@ -691,7 +692,7 @@ floatnum_check_size(/*@unused@*/ const floatnum *flt, size_t size)
 }
 
 void
-floatnum_print(FILE *f, const floatnum *flt)
+yasm_floatnum_print(FILE *f, const yasm_floatnum *flt)
 {
     unsigned char out[10];
     unsigned char *str;
@@ -704,19 +705,19 @@ floatnum_print(FILE *f, const floatnum *flt)
     xfree(str);
 
     /* 32-bit (single precision) format */
-    fprintf(f, "32-bit: %d: ", floatnum_get_sized(flt, out, 4));
+    fprintf(f, "32-bit: %d: ", yasm_floatnum_get_sized(flt, out, 4));
     for (i=0; i<4; i++)
 	fprintf(f, "%02x ", out[i]);
     fprintf(f, "\n");
 
     /* 64-bit (double precision) format */
-    fprintf(f, "64-bit: %d: ", floatnum_get_sized(flt, out, 8));
+    fprintf(f, "64-bit: %d: ", yasm_floatnum_get_sized(flt, out, 8));
     for (i=0; i<8; i++)
 	fprintf(f, "%02x ", out[i]);
     fprintf(f, "\n");
 
     /* 80-bit (extended precision) format */
-    fprintf(f, "80-bit: %d: ", floatnum_get_sized(flt, out, 10));
+    fprintf(f, "80-bit: %d: ", yasm_floatnum_get_sized(flt, out, 10));
     for (i=0; i<10; i++)
 	fprintf(f, "%02x ", out[i]);
     fprintf(f, "\n");

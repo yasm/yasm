@@ -29,21 +29,21 @@
 
 /* Warning classes (may be enabled/disabled). */
 typedef enum {
-    WARN_GENERAL = 0,	    /* non-specific warnings */
-    WARN_UNREC_CHAR,	    /* unrecognized characters (while tokenizing) */
-    WARN_PREPROC	    /* preprocessor warnings */
-} warn_class_num;
+    YASM_WARN_GENERAL = 0,  /* non-specific warnings */
+    YASM_WARN_UNREC_CHAR,   /* unrecognized characters (while tokenizing) */
+    YASM_WARN_PREPROC	    /* preprocessor warnings */
+} yasm_warn_class;
 
 /* Fatal error constants.
  * See fatal_msgs in errwarn.c for strings that match up to these constants.
  * When adding a constant here, keep errwarn.c in sync!
  */
 typedef enum {
-    FATAL_UNKNOWN = 0,
-    FATAL_NOMEM
-} fatal_num;
+    YASM_FATAL_UNKNOWN = 0,
+    YASM_FATAL_NOMEM
+} yasm_fatal_cause;
 
-struct errwarn {
+struct yasm_errwarn {
     /* Initialize any internal data structures. */
     void (*initialize) (void);
 
@@ -61,15 +61,15 @@ struct errwarn {
     /* Reporting point of fatal errors.
      * This function must NOT return to calling code.  Either exit or longjmp.
      */
-    /*@exits@*/ void (*fatal) (fatal_num);
+    /*@exits@*/ void (*fatal) (yasm_fatal_cause);
 
     /* va_list versions of the below two functions */
     void (*error_va) (unsigned long lindex, const char *, va_list va);
-    void (*warning_va) (warn_class_num, unsigned long lindex, const char *,
+    void (*warning_va) (yasm_warn_class, unsigned long lindex, const char *,
 			va_list va);
 
     void (*error) (unsigned long lindex, const char *, ...) /*@printflike@*/;
-    void (*warning) (warn_class_num, unsigned long lindex, const char *, ...)
+    void (*warning) (yasm_warn_class, unsigned long lindex, const char *, ...)
 	/*@printflike@*/;
 
     /* Logs a parser error.  These can be overwritten by non-parser errors on
@@ -78,8 +78,8 @@ struct errwarn {
     void (*parser_error) (unsigned long lindex, const char *);
 
     /* Enables/disables a class of warnings. */
-    void (*warn_enable) (warn_class_num);
-    void (*warn_disable) (warn_class_num);
+    void (*warn_enable) (yasm_warn_class);
+    void (*warn_disable) (yasm_warn_class);
     void (*warn_disable_all) (void);
 
     /* Returns total number of errors logged to this point.
@@ -88,7 +88,7 @@ struct errwarn {
     unsigned int (*get_num_errors) (int warning_as_error);
 
     /* Outputs all errors/warnings (e.g. to stderr or elsewhere). */
-    void (*output_all) (linemgr *lm, int warning_as_error);
+    void (*output_all) (yasm_linemgr *lm, int warning_as_error);
 
     /* Convert a possibly unprintable character into a printable string. */
     char * (*conv_unprint) (char ch);

@@ -37,8 +37,8 @@
 #include "nasm-eval.h"
 
 static FILE *in;
-static linemgr *cur_lm;
-static errwarn *cur_we;
+static yasm_linemgr *cur_lm;
+static yasm_errwarn *cur_we;
 static char *line, *linepos;
 static size_t lineleft;
 static char *file_name;
@@ -95,13 +95,14 @@ nasm_efunc(int severity, const char *fmt, ...)
     va_start(va, fmt);
     switch (severity & ERR_MASK) {
 	case ERR_WARNING:
-	    cur_we->warning_va(WARN_PREPROC, cur_lm->get_current(), fmt, va);
+	    cur_we->warning_va(YASM_WARN_PREPROC, cur_lm->get_current(), fmt,
+			       va);
 	    break;
 	case ERR_NONFATAL:
 	    cur_we->error_va(cur_lm->get_current(), fmt, va);
 	    break;
 	case ERR_FATAL:
-	    cur_we->fatal(FATAL_UNKNOWN);   /* FIXME */
+	    cur_we->fatal(YASM_FATAL_UNKNOWN);	/* FIXME */
 	    break;
 	case ERR_PANIC:
 	    cur_we->internal_error(fmt);    /* FIXME */
@@ -113,8 +114,8 @@ nasm_efunc(int severity, const char *fmt, ...)
 }
 
 static void
-nasm_preproc_initialize(FILE *f, const char *in_filename, linemgr *lm,
-			errwarn *we)
+nasm_preproc_initialize(FILE *f, const char *in_filename, yasm_linemgr *lm,
+			yasm_errwarn *we)
 {
     in = f;
     cur_lm = lm;
@@ -181,7 +182,7 @@ nasm_preproc_input(char *buf, size_t max_size)
 
 
 /* Define preproc structure -- see preproc.h for details */
-preproc yasm_nasm_LTX_preproc = {
+yasm_preproc yasm_nasm_LTX_preproc = {
     "Real NASM Preprocessor",
     "nasm",
     nasm_preproc_initialize,

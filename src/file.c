@@ -31,7 +31,7 @@
 
 
 size_t
-fwrite_16_l(unsigned short val, FILE *f)
+yasm_fwrite_16_l(unsigned short val, FILE *f)
 {
     if (fputc(val & 0xFF, f) == EOF)
 	return 0;
@@ -41,7 +41,7 @@ fwrite_16_l(unsigned short val, FILE *f)
 }
 
 size_t
-fwrite_32_l(unsigned long val, FILE *f)
+yasm_fwrite_32_l(unsigned long val, FILE *f)
 {
     if (fputc((int)(val & 0xFF), f) == EOF)
 	return 0;
@@ -55,7 +55,7 @@ fwrite_32_l(unsigned long val, FILE *f)
 }
 
 size_t
-fwrite_16_b(unsigned short val, FILE *f)
+yasm_fwrite_16_b(unsigned short val, FILE *f)
 {
     if (fputc((val >> 8) & 0xFF, f) == EOF)
 	return 0;
@@ -65,7 +65,7 @@ fwrite_16_b(unsigned short val, FILE *f)
 }
 
 size_t
-fwrite_32_b(unsigned long val, FILE *f)
+yasm_fwrite_32_b(unsigned long val, FILE *f)
 {
     if (fputc((int)((val >> 24) & 0xFF), f) == EOF)
 	return 0;

@@ -27,38 +27,41 @@
 #ifndef YASM_VALPARAM_H
 #define YASM_VALPARAM_H
 
-typedef struct valparam {
-    /*@reldef@*/ STAILQ_ENTRY(valparam) link;
+typedef struct yasm_valparam {
+    /*@reldef@*/ STAILQ_ENTRY(yasm_valparam) link;
     /*@owned@*/ /*@null@*/ char *val;
-    /*@owned@*/ /*@null@*/ expr *param;
-} valparam;
-typedef /*@reldef@*/ STAILQ_HEAD(valparamhead, valparam) valparamhead;
+    /*@owned@*/ /*@null@*/ yasm_expr *param;
+} yasm_valparam;
+typedef /*@reldef@*/ STAILQ_HEAD(yasm_valparamhead, yasm_valparam)
+    yasm_valparamhead;
 
-void vp_new(/*@out@*/ valparam *r, /*@keep@*/ const char *v,
-	    /*@keep@*/ expr *p);
-#define vp_new(r, v, p)		do {	\
-	r = xmalloc(sizeof(valparam));	\
-	r->val = v;			\
-	r->param = p;			\
+void yasm_vp_new(/*@out@*/ yasm_valparam *r, /*@keep@*/ const char *v,
+		 /*@keep@*/ yasm_expr *p);
+#define yasm_vp_new(r, v, p)	    do {	\
+	r = xmalloc(sizeof(yasm_valparam));	\
+	r->val = v;				\
+	r->param = p;				\
     } while(0)
 
-void vps_initialize(/*@out@*/ valparamhead *headp);
-#define vps_initialize(headp)	STAILQ_INIT(headp)
-void vps_delete(valparamhead *headp);
-void vps_append(valparamhead *headp, /*@keep@*/ valparam *vp);
-#define vps_append(headp, vp)	do {		    \
+/* void yasm_vps_initialize(//@out@// yasm_valparamhead *headp); */
+#define yasm_vps_initialize(headp)	STAILQ_INIT(headp)
+void yasm_vps_delete(yasm_valparamhead *headp);
+void yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp);
+#define yasm_vps_append(headp, vp)	do {	    \
 	if (vp)					    \
 	    STAILQ_INSERT_TAIL(headp, vp, link);    \
     } while(0)
 
-/*@null@*/ /*@dependent@*/ valparam *vps_first(valparamhead *headp);
-#define vps_first(headp)	    STAILQ_FIRST(headp)
+/* //@null@// //@dependent@// yasm_valparam *yasm_vps_first
+    (yasm_valparamhead *headp); */
+#define yasm_vps_first(headp)	    STAILQ_FIRST(headp)
 
-/*@null@*/ /*@dependent@*/ valparam *vps_next(valparam *cur);
-#define vps_next(cur)		    STAILQ_NEXT(cur, link)
+/* //@null@// //@dependent@// yasm_valparam *yasm_vps_next
+    (yasm_valparam *cur); */
+#define yasm_vps_next(cur)	    STAILQ_NEXT(cur, link)
 
-#define vps_foreach(iter, headp)    STAILQ_FOREACH(iter, headp, link)
+#define yasm_vps_foreach(iter, headp)	STAILQ_FOREACH(iter, headp, link)
 
-void vps_print(FILE *f, /*@null@*/ const valparamhead *headp);
+void yasm_vps_print(FILE *f, /*@null@*/ const yasm_valparamhead *headp);
 
 #endif

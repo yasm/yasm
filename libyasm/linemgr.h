@@ -28,16 +28,16 @@
 #define YASM_LINEMGR_H
 
 /* Standard data types appropriate for use with add_assoc_data(). */
-typedef enum linemgr_std_type {
+typedef enum yasm_linemgr_std_type {
     /* Source line, a 0-terminated, allocated string. */
-    LINEMGR_STD_TYPE_SOURCE = 1,   
+    YASM_LINEMGR_STD_TYPE_SOURCE = 1,   
     /* User-defined types start here.  Use odd numbers (low bit set) for types
      * very likely to have data associated for every line.
      */
-    LINEMGR_STD_TYPE_USER = 4
-} linemgr_std_type;
+    YASM_LINEMGR_STD_TYPE_USER = 4
+} yasm_linemgr_std_type;
 
-struct linemgr {
+struct yasm_linemgr {
     /* Initialize cur_lindex and any manager internal data structures. */
     void (*initialize) (/*@exits@*/
 			void (*error_func) (const char *file,

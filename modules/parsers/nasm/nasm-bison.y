@@ -53,12 +53,14 @@ RCSID("$IdPath$");
 
 
 static void nasm_parser_error(const char *);
-static void nasm_parser_directive(const char *name, valparamhead *valparams,
-				  /*@null@*/ valparamhead *objext_valparams);
-static int fix_directive_symrec(/*@null@*/ ExprItem *ei, /*@null@*/ void *d);
+static void nasm_parser_directive
+    (const char *name, yasm_valparamhead *valparams,
+     /*@null@*/ yasm_valparamhead *objext_valparams);
+static int fix_directive_symrec(/*@null@*/ yasm_expr__item *ei,
+				/*@null@*/ void *d);
 
-static /*@null@*/ bytecode *nasm_parser_prev_bc = (bytecode *)NULL;
-static bytecode *nasm_parser_temp_bc;
+static /*@null@*/ yasm_bytecode *nasm_parser_prev_bc = (yasm_bytecode *)NULL;
+static yasm_bytecode *nasm_parser_temp_bc;
 
 /* additional data declarations (dynamically generated) */
 /* @DATADECLS@ */
@@ -69,22 +71,22 @@ static bytecode *nasm_parser_temp_bc;
 %union {
     unsigned int int_info;
     char *str_val;
-    intnum *intn;
-    floatnum *flt;
-    symrec *sym;
+    yasm_intnum *intn;
+    yasm_floatnum *flt;
+    yasm_symrec *sym;
     unsigned long arch_data[4];
-    effaddr *ea;
-    expr *exp;
-    datavalhead datahead;
-    dataval *data;
-    bytecode *bc;
-    valparamhead dir_valparams;
-    valparam *dir_valparam;
+    yasm_effaddr *ea;
+    yasm_expr *exp;
+    yasm_datavalhead datahead;
+    yasm_dataval *data;
+    yasm_bytecode *bc;
+    yasm_valparamhead dir_valparams;
+    yasm_valparam *dir_valparam;
     struct {
-	insn_operandhead operands;
+	yasm_insn_operandhead operands;
 	int num_operands;
     } insn_operands;
-    insn_operand *insn_operand;
+    yasm_insn_operand *insn_operand;
 }
 
 %token <intn> INTNUM
@@ -126,65 +128,67 @@ static bytecode *nasm_parser_temp_bc;
 %%
 input: /* empty */
     | input line    {
-	nasm_parser_temp_bc = bcs_append(section_get_bytecodes(nasm_parser_cur_section),
-					       $2);
+	nasm_parser_temp_bc =
+	    yasm_bcs_append(yasm_section_get_bytecodes(nasm_parser_cur_section),
+			    $2);
 	if (nasm_parser_temp_bc)
 	    nasm_parser_prev_bc = nasm_parser_temp_bc;
 	nasm_parser_linemgr->goto_next();
     }
 ;
 
-line: '\n'		{ $$ = (bytecode *)NULL; }
+line: '\n'		{ $$ = (yasm_bytecode *)NULL; }
     | lineexp '\n'
     | LINE INTNUM '+' INTNUM FILENAME '\n' {
 	/* %line indicates the line number of the *next* line, so subtract out
 	 * the increment when setting the line number.
 	 */
-	nasm_parser_linemgr->set($5, intnum_get_uint($2)-intnum_get_uint($4),
-				 intnum_get_uint($4));
-	intnum_delete($2);
-	intnum_delete($4);
+	nasm_parser_linemgr->set($5, yasm_intnum_get_uint($2)
+				 - yasm_intnum_get_uint($4),
+				 yasm_intnum_get_uint($4));
+	yasm_intnum_delete($2);
+	yasm_intnum_delete($4);
 	xfree($5);
-	$$ = (bytecode *)NULL;
+	$$ = (yasm_bytecode *)NULL;
     }
     | '[' { nasm_parser_set_directive_state(); } directive ']' '\n' {
-	$$ = (bytecode *)NULL;
+	$$ = (yasm_bytecode *)NULL;
     }
     | error '\n'	{
 	cur_we->error(cur_lindex,
 		      N_("label or instruction expected at start of line"));
-	$$ = (bytecode *)NULL;
+	$$ = (yasm_bytecode *)NULL;
 	yyerrok;
     }
 ;
 
 lineexp: exp
-    | TIMES expr exp			{ $$ = $3; bc_set_multiple($$, $2); }
-    | label				{ $$ = (bytecode *)NULL; }
-    | label exp				{ $$ = $2; }
-    | label TIMES expr exp		{ $$ = $4; bc_set_multiple($$, $3); }
-    | label_id_equ EQU expr		{
-	symrec_define_equ($1, $3, cur_lindex);
+    | TIMES expr exp		{ $$ = $3; yasm_bc_set_multiple($$, $2); }
+    | label			{ $$ = (yasm_bytecode *)NULL; }
+    | label exp			{ $$ = $2; }
+    | label TIMES expr exp	{ $$ = $4; yasm_bc_set_multiple($$, $3); }
+    | label_id_equ EQU expr	{
+	yasm_symrec_define_equ($1, $3, cur_lindex);
 	xfree($1);
-	$$ = (bytecode *)NULL;
+	$$ = (yasm_bytecode *)NULL;
     }
 ;
 
 exp: instr
     | DECLARE_DATA datavals		{
-	$$ = bc_new_data(&$2, $1, cur_lindex);
+	$$ = yasm_bc_new_data(&$2, $1, cur_lindex);
     }
     | RESERVE_SPACE expr		{
-	$$ = bc_new_reserve($2, $1, cur_lindex);
+	$$ = yasm_bc_new_reserve($2, $1, cur_lindex);
     }
     | INCBIN STRING			{
-	$$ = bc_new_incbin($2, NULL, NULL, cur_lindex);
+	$$ = yasm_bc_new_incbin($2, NULL, NULL, cur_lindex);
     }
     | INCBIN STRING ',' expr		{
-	$$ = bc_new_incbin($2, $4, NULL, cur_lindex);
+	$$ = yasm_bc_new_incbin($2, $4, NULL, cur_lindex);
     }
     | INCBIN STRING ',' expr ',' expr	{
-	$$ = bc_new_incbin($2, $4, $6, cur_lindex);
+	$$ = yasm_bc_new_incbin($2, $4, $6, cur_lindex);
     }
 ;
 
@@ -198,7 +202,7 @@ instr: INSN		{
 					      &$2.operands,
 					      nasm_parser_cur_section,
 					      nasm_parser_prev_bc, cur_lindex);
-	ops_delete(&$2.operands, 0);
+	yasm_ops_delete(&$2.operands, 0);
     }
     | INSN error	{
 	cur_we->error(cur_lindex, N_("expression syntax error"));
@@ -214,26 +218,29 @@ instr: INSN		{
     }
 ;
 
-datavals: dataval	    { dvs_initialize(&$$); dvs_append(&$$, $1); }
-    | datavals ',' dataval  { dvs_append(&$1, $3); $$ = $1; }
+datavals: dataval	    {
+	yasm_dvs_initialize(&$$);
+	yasm_dvs_append(&$$, $1);
+    }
+    | datavals ',' dataval  { yasm_dvs_append(&$1, $3); $$ = $1; }
 ;
 
-dataval: dvexpr		{ $$ = dv_new_expr($1); }
-    | STRING		{ $$ = dv_new_string($1); }
+dataval: dvexpr		{ $$ = yasm_dv_new_expr($1); }
+    | STRING		{ $$ = yasm_dv_new_string($1); }
     | error		{
 	cur_we->error(cur_lindex, N_("expression syntax error"));
-	$$ = (dataval *)NULL;
+	$$ = (yasm_dataval *)NULL;
     }
 ;
 
 label: label_id	    {
-	symrec_define_label($1, nasm_parser_cur_section, nasm_parser_prev_bc,
-			    1, cur_lindex);
+	yasm_symrec_define_label($1, nasm_parser_cur_section,
+				 nasm_parser_prev_bc, 1, cur_lindex);
 	xfree($1);
     }
     | label_id ':'  {
-	symrec_define_label($1, nasm_parser_cur_section, nasm_parser_prev_bc,
-			    1, cur_lindex);
+	yasm_symrec_define_label($1, nasm_parser_cur_section,
+				 nasm_parser_prev_bc, 1, cur_lindex);
 	xfree($1);
     }
 ;
@@ -277,15 +284,15 @@ directive_val: directive_valparams {
 ;
 
 directive_valparams: directive_valparam		{
-	vps_initialize(&$$);
-	vps_append(&$$, $1);
+	yasm_vps_initialize(&$$);
+	yasm_vps_append(&$$, $1);
     }
     | directive_valparams directive_valparam	{
-	vps_append(&$1, $2);
+	yasm_vps_append(&$1, $2);
 	$$ = $1;
     }
     | directive_valparams ',' directive_valparam    {
-	vps_append(&$1, $3);
+	yasm_vps_append(&$1, $3);
 	$$ = $1;
     }
 ;
@@ -295,19 +302,19 @@ directive_valparam: direxpr	{
 	 * Otherwise, we need to go through the expr and replace the current
 	 * (local) symrecs with the use of global ones.
 	 */
-	const /*@null@*/ symrec *vp_symrec;
-	if ((vp_symrec = expr_get_symrec(&$1, 0))) {
-	    vp_new($$, xstrdup(symrec_get_name(vp_symrec)), NULL);
-	    expr_delete($1);
+	const /*@null@*/ yasm_symrec *vp_symrec;
+	if ((vp_symrec = yasm_expr_get_symrec(&$1, 0))) {
+	    yasm_vp_new($$, xstrdup(yasm_symrec_get_name(vp_symrec)), NULL);
+	    yasm_expr_delete($1);
 	} else {
-	    expr_traverse_leaves_in($1, NULL, fix_directive_symrec);
-	    vp_new($$, NULL, $1);
+	    yasm_expr__traverse_leaves_in($1, NULL, fix_directive_symrec);
+	    yasm_vp_new($$, NULL, $1);
 	}
     }
-    | STRING			{ vp_new($$, $1, NULL); }
+    | STRING			{ yasm_vp_new($$, $1, NULL); }
     | ID '=' direxpr		{
-	expr_traverse_leaves_in($3, NULL, fix_directive_symrec);
-	vp_new($$, $1, $3);
+	yasm_expr__traverse_leaves_in($3, NULL, fix_directive_symrec);
+	yasm_vp_new($$, $1, $3);
     }
 ;
 
@@ -319,32 +326,32 @@ memaddr: expr		    {
 	$$ = $3;
 	nasm_parser_arch->parse.handle_seg_override($$, $1[0], cur_lindex);
     }
-    | BYTE memaddr	    { $$ = $2; ea_set_len($$, 1); }
-    | WORD memaddr	    { $$ = $2; ea_set_len($$, 2); }
-    | DWORD memaddr	    { $$ = $2; ea_set_len($$, 4); }
-    | QWORD memaddr	    { $$ = $2; ea_set_len($$, 8); }
-    | NOSPLIT memaddr	    { $$ = $2; ea_set_nosplit($$, 1); }
+    | BYTE memaddr	    { $$ = $2; yasm_ea_set_len($$, 1); }
+    | WORD memaddr	    { $$ = $2; yasm_ea_set_len($$, 2); }
+    | DWORD memaddr	    { $$ = $2; yasm_ea_set_len($$, 4); }
+    | QWORD memaddr	    { $$ = $2; yasm_ea_set_len($$, 8); }
+    | NOSPLIT memaddr	    { $$ = $2; yasm_ea_set_nosplit($$, 1); }
 ;
 
 /* instruction operands */
 operands: operand	    {
-	ops_initialize(&$$.operands);
-	ops_append(&$$.operands, $1);
+	yasm_ops_initialize(&$$.operands);
+	yasm_ops_append(&$$.operands, $1);
 	$$.num_operands = 1;
     }
     | operands ',' operand  {
-	ops_append(&$1.operands, $3);
+	yasm_ops_append(&$1.operands, $3);
 	$$.operands = $1.operands;
 	$$.num_operands = $1.num_operands+1;
     }
 ;
 
-operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
-    | expr		    { $$ = operand_new_imm($1); }
-    | SEGREG		    { $$ = operand_new_segreg($1[0]); }
+operand: '[' memaddr ']'    { $$ = yasm_operand_new_mem($2); }
+    | expr		    { $$ = yasm_operand_new_imm($1); }
+    | SEGREG		    { $$ = yasm_operand_new_segreg($1[0]); }
     | BYTE operand	    {
 	$$ = $2;
-	if ($$->type == INSN_OPERAND_REG &&
+	if ($$->type == YASM_INSN__OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 1)
 	    cur_we->error(cur_lindex, N_("cannot override register size"));
 	else
@@ -352,7 +359,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
     }
     | WORD operand	    {
 	$$ = $2;
-	if ($$->type == INSN_OPERAND_REG &&
+	if ($$->type == YASM_INSN__OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 2)
 	    cur_we->error(cur_lindex, N_("cannot override register size"));
 	else
@@ -360,7 +367,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
     }
     | DWORD operand	    {
 	$$ = $2;
-	if ($$->type == INSN_OPERAND_REG &&
+	if ($$->type == YASM_INSN__OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 4)
 	    cur_we->error(cur_lindex, N_("cannot override register size"));
 	else
@@ -368,7 +375,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
     }
     | QWORD operand	    {
 	$$ = $2;
-	if ($$->type == INSN_OPERAND_REG &&
+	if ($$->type == YASM_INSN__OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 8)
 	    cur_we->error(cur_lindex, N_("cannot override register size"));
 	else
@@ -376,7 +383,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
     }
     | TWORD operand	    {
 	$$ = $2;
-	if ($$->type == INSN_OPERAND_REG &&
+	if ($$->type == YASM_INSN__OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 10)
 	    cur_we->error(cur_lindex, N_("cannot override register size"));
 	else
@@ -384,7 +391,7 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
     }
     | DQWORD operand	    {
 	$$ = $2;
-	if ($$->type == INSN_OPERAND_REG &&
+	if ($$->type == YASM_INSN__OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 16)
 	    cur_we->error(cur_lindex, N_("cannot override register size"));
 	else
@@ -396,58 +403,58 @@ operand: '[' memaddr ']'    { $$ = operand_new_mem($2); }
 /* expression trees */
 
 /* expr w/o FLTNUM and unary + and -, for use in directives */
-direxpr: INTNUM			{ $$ = p_expr_new_ident(ExprInt($1)); }
+direxpr: INTNUM			{ $$ = p_expr_new_ident(yasm_expr_int($1)); }
     | ID			{
-	$$ = p_expr_new_ident(ExprSym(symrec_define_label($1, NULL, NULL, 0,
-							  cur_lindex)));
+	$$ = p_expr_new_ident(yasm_expr_sym(
+	    yasm_symrec_define_label($1, NULL, NULL, 0, cur_lindex)));
 	xfree($1);
     }
-    | direxpr '|' direxpr	{ $$ = p_expr_new_tree($1, EXPR_OR, $3); }
-    | direxpr '^' direxpr	{ $$ = p_expr_new_tree($1, EXPR_XOR, $3); }
-    | direxpr '&' direxpr	{ $$ = p_expr_new_tree($1, EXPR_AND, $3); }
-    | direxpr LEFT_OP direxpr	{ $$ = p_expr_new_tree($1, EXPR_SHL, $3); }
-    | direxpr RIGHT_OP direxpr	{ $$ = p_expr_new_tree($1, EXPR_SHR, $3); }
-    | direxpr '+' direxpr	{ $$ = p_expr_new_tree($1, EXPR_ADD, $3); }
-    | direxpr '-' direxpr	{ $$ = p_expr_new_tree($1, EXPR_SUB, $3); }
-    | direxpr '*' direxpr	{ $$ = p_expr_new_tree($1, EXPR_MUL, $3); }
-    | direxpr '/' direxpr	{ $$ = p_expr_new_tree($1, EXPR_DIV, $3); }
-    | direxpr SIGNDIV direxpr	{ $$ = p_expr_new_tree($1, EXPR_SIGNDIV, $3); }
-    | direxpr '%' direxpr	{ $$ = p_expr_new_tree($1, EXPR_MOD, $3); }
-    | direxpr SIGNMOD direxpr	{ $$ = p_expr_new_tree($1, EXPR_SIGNMOD, $3); }
-    /*| '!' expr		{ $$ = p_expr_new_branch(EXPR_LNOT, $2); }*/
-    | '~' direxpr %prec UNARYOP	{ $$ = p_expr_new_branch(EXPR_NOT, $2); }
+    | direxpr '|' direxpr	{ $$ = p_expr_new_tree($1, YASM_EXPR_OR, $3); }
+    | direxpr '^' direxpr	{ $$ = p_expr_new_tree($1, YASM_EXPR_XOR, $3); }
+    | direxpr '&' direxpr	{ $$ = p_expr_new_tree($1, YASM_EXPR_AND, $3); }
+    | direxpr LEFT_OP direxpr	{ $$ = p_expr_new_tree($1, YASM_EXPR_SHL, $3); }
+    | direxpr RIGHT_OP direxpr	{ $$ = p_expr_new_tree($1, YASM_EXPR_SHR, $3); }
+    | direxpr '+' direxpr	{ $$ = p_expr_new_tree($1, YASM_EXPR_ADD, $3); }
+    | direxpr '-' direxpr	{ $$ = p_expr_new_tree($1, YASM_EXPR_SUB, $3); }
+    | direxpr '*' direxpr	{ $$ = p_expr_new_tree($1, YASM_EXPR_MUL, $3); }
+    | direxpr '/' direxpr	{ $$ = p_expr_new_tree($1, YASM_EXPR_DIV, $3); }
+    | direxpr SIGNDIV direxpr	{ $$ = p_expr_new_tree($1, YASM_EXPR_SIGNDIV, $3); }
+    | direxpr '%' direxpr	{ $$ = p_expr_new_tree($1, YASM_EXPR_MOD, $3); }
+    | direxpr SIGNMOD direxpr	{ $$ = p_expr_new_tree($1, YASM_EXPR_SIGNMOD, $3); }
+    /*| '!' expr	    { $$ = p_expr_new_branch(YASM_EXPR_LNOT, $2); }*/
+    | '~' direxpr %prec UNARYOP	{ $$ = p_expr_new_branch(YASM_EXPR_NOT, $2); }
     | '(' direxpr ')'		{ $$ = $2; }
 ;
 
-dvexpr: INTNUM			{ $$ = p_expr_new_ident(ExprInt($1)); }
-    | FLTNUM			{ $$ = p_expr_new_ident(ExprFloat($1)); }
-    | explabel			{ $$ = p_expr_new_ident(ExprSym($1)); }
-    /*| dvexpr '||' dvexpr	{ $$ = p_expr_new_tree($1, EXPR_LOR, $3); }*/
-    | dvexpr '|' dvexpr		{ $$ = p_expr_new_tree($1, EXPR_OR, $3); }
-    | dvexpr '^' dvexpr		{ $$ = p_expr_new_tree($1, EXPR_XOR, $3); }
-    /*| dvexpr '&&' dvexpr	{ $$ = p_expr_new_tree($1, EXPR_LAND, $3); }*/
-    | dvexpr '&' dvexpr		{ $$ = p_expr_new_tree($1, EXPR_AND, $3); }
-    /*| dvexpr '==' dvexpr	{ $$ = p_expr_new_tree($1, EXPR_EQUALS, $3); }*/
-    /*| dvexpr '>' dvexpr	{ $$ = p_expr_new_tree($1, EXPR_GT, $3); }*/
-    /*| dvexpr '<' dvexpr	{ $$ = p_expr_new_tree($1, EXPR_GT, $3); }*/
-    /*| dvexpr '>=' dvexpr	{ $$ = p_expr_new_tree($1, EXPR_GE, $3); }*/
-    /*| dvexpr '<=' dvexpr	{ $$ = p_expr_new_tree($1, EXPR_GE, $3); }*/
-    /*| dvexpr '!=' dvexpr	{ $$ = p_expr_new_tree($1, EXPR_NE, $3); }*/
-    | dvexpr LEFT_OP dvexpr	{ $$ = p_expr_new_tree($1, EXPR_SHL, $3); }
-    | dvexpr RIGHT_OP dvexpr	{ $$ = p_expr_new_tree($1, EXPR_SHR, $3); }
-    | dvexpr '+' dvexpr		{ $$ = p_expr_new_tree($1, EXPR_ADD, $3); }
-    | dvexpr '-' dvexpr		{ $$ = p_expr_new_tree($1, EXPR_SUB, $3); }
-    | dvexpr '*' dvexpr		{ $$ = p_expr_new_tree($1, EXPR_MUL, $3); }
-    | dvexpr '/' dvexpr		{ $$ = p_expr_new_tree($1, EXPR_DIV, $3); }
-    | dvexpr SIGNDIV dvexpr	{ $$ = p_expr_new_tree($1, EXPR_SIGNDIV, $3); }
-    | dvexpr '%' dvexpr		{ $$ = p_expr_new_tree($1, EXPR_MOD, $3); }
-    | dvexpr SIGNMOD dvexpr	{ $$ = p_expr_new_tree($1, EXPR_SIGNMOD, $3); }
+dvexpr: INTNUM		    { $$ = p_expr_new_ident(yasm_expr_int($1)); }
+    | FLTNUM		    { $$ = p_expr_new_ident(yasm_expr_float($1)); }
+    | explabel		    { $$ = p_expr_new_ident(yasm_expr_sym($1)); }
+    /*| dvexpr '||' dvexpr  { $$ = p_expr_new_tree($1, YASM_EXPR_LOR, $3); }*/
+    | dvexpr '|' dvexpr	    { $$ = p_expr_new_tree($1, YASM_EXPR_OR, $3); }
+    | dvexpr '^' dvexpr	    { $$ = p_expr_new_tree($1, YASM_EXPR_XOR, $3); }
+    /*| dvexpr '&&' dvexpr  { $$ = p_expr_new_tree($1, YASM_EXPR_LAND, $3); }*/
+    | dvexpr '&' dvexpr	    { $$ = p_expr_new_tree($1, YASM_EXPR_AND, $3); }
+    /*| dvexpr '==' dvexpr  { $$ = p_expr_new_tree($1, YASM_EXPR_EQUALS, $3); }*/
+    /*| dvexpr '>' dvexpr   { $$ = p_expr_new_tree($1, YASM_EXPR_GT, $3); }*/
+    /*| dvexpr '<' dvexpr   { $$ = p_expr_new_tree($1, YASM_EXPR_GT, $3); }*/
+    /*| dvexpr '>=' dvexpr  { $$ = p_expr_new_tree($1, YASM_EXPR_GE, $3); }*/
+    /*| dvexpr '<=' dvexpr  { $$ = p_expr_new_tree($1, YASM_EXPR_GE, $3); }*/
+    /*| dvexpr '!=' dvexpr  { $$ = p_expr_new_tree($1, YASM_EXPR_NE, $3); }*/
+    | dvexpr LEFT_OP dvexpr { $$ = p_expr_new_tree($1, YASM_EXPR_SHL, $3); }
+    | dvexpr RIGHT_OP dvexpr { $$ = p_expr_new_tree($1, YASM_EXPR_SHR, $3); }
+    | dvexpr '+' dvexpr	    { $$ = p_expr_new_tree($1, YASM_EXPR_ADD, $3); }
+    | dvexpr '-' dvexpr	    { $$ = p_expr_new_tree($1, YASM_EXPR_SUB, $3); }
+    | dvexpr '*' dvexpr	    { $$ = p_expr_new_tree($1, YASM_EXPR_MUL, $3); }
+    | dvexpr '/' dvexpr	    { $$ = p_expr_new_tree($1, YASM_EXPR_DIV, $3); }
+    | dvexpr SIGNDIV dvexpr { $$ = p_expr_new_tree($1, YASM_EXPR_SIGNDIV, $3); }
+    | dvexpr '%' dvexpr	    { $$ = p_expr_new_tree($1, YASM_EXPR_MOD, $3); }
+    | dvexpr SIGNMOD dvexpr { $$ = p_expr_new_tree($1, YASM_EXPR_SIGNMOD, $3); }
     | '+' dvexpr %prec UNARYOP  { $$ = $2; }
-    | '-' dvexpr %prec UNARYOP  { $$ = p_expr_new_branch(EXPR_NEG, $2); }
-    /*| '!' dvexpr		{ $$ = p_expr_new_branch(EXPR_LNOT, $2); }*/
-    | '~' dvexpr %prec UNARYOP  { $$ = p_expr_new_branch(EXPR_NOT, $2); }
-    | SEG dvexpr		{ $$ = p_expr_new_branch(EXPR_SEG, $2); }
-    | WRT dvexpr		{ $$ = p_expr_new_branch(EXPR_WRT, $2); }
+    | '-' dvexpr %prec UNARYOP  { $$ = p_expr_new_branch(YASM_EXPR_NEG, $2); }
+    /*| '!' dvexpr	    { $$ = p_expr_new_branch(YASM_EXPR_LNOT, $2); }*/
+    | '~' dvexpr %prec UNARYOP  { $$ = p_expr_new_branch(YASM_EXPR_NOT, $2); }
+    | SEG dvexpr		{ $$ = p_expr_new_branch(YASM_EXPR_SEG, $2); }
+    | WRT dvexpr		{ $$ = p_expr_new_branch(YASM_EXPR_WRT, $2); }
     | '(' dvexpr ')'		{ $$ = $2; }
 ;
 
@@ -455,66 +462,66 @@ dvexpr: INTNUM			{ $$ = p_expr_new_ident(ExprInt($1)); }
  * We don't attempt to check memory expressions for validity here.
  * Essentially the same as expr_no_string above but adds REG and STRING.
  */
-expr: INTNUM			{ $$ = p_expr_new_ident(ExprInt($1)); }
-    | FLTNUM			{ $$ = p_expr_new_ident(ExprFloat($1)); }
-    | REG			{ $$ = p_expr_new_ident(ExprReg($1[0])); }
-    | STRING			{
-	$$ = p_expr_new_ident(ExprInt(intnum_new_charconst_nasm($1,
-								cur_lindex)));
+expr: INTNUM		{ $$ = p_expr_new_ident(yasm_expr_int($1)); }
+    | FLTNUM		{ $$ = p_expr_new_ident(yasm_expr_float($1)); }
+    | REG		{ $$ = p_expr_new_ident(yasm_expr_reg($1[0])); }
+    | STRING		{
+	$$ = p_expr_new_ident(yasm_expr_int(
+	    yasm_intnum_new_charconst_nasm($1, cur_lindex)));
 	xfree($1);
     }
-    | explabel			{ $$ = p_expr_new_ident(ExprSym($1)); }
-    /*| expr '||' expr		{ $$ = p_expr_new_tree($1, EXPR_LOR, $3); }*/
-    | expr '|' expr		{ $$ = p_expr_new_tree($1, EXPR_OR, $3); }
-    | expr '^' expr		{ $$ = p_expr_new_tree($1, EXPR_XOR, $3); }
-    /*| expr '&&' expr		{ $$ = p_expr_new_tree($1, EXPR_LAND, $3); }*/
-    | expr '&' expr		{ $$ = p_expr_new_tree($1, EXPR_AND, $3); }
-    /*| expr '==' expr		{ $$ = p_expr_new_tree($1, EXPR_EQUALS, $3); }*/
-    /*| expr '>' expr		{ $$ = p_expr_new_tree($1, EXPR_GT, $3); }*/
-    /*| expr '<' expr		{ $$ = p_expr_new_tree($1, EXPR_GT, $3); }*/
-    /*| expr '>=' expr		{ $$ = p_expr_new_tree($1, EXPR_GE, $3); }*/
-    /*| expr '<=' expr		{ $$ = p_expr_new_tree($1, EXPR_GE, $3); }*/
-    /*| expr '!=' expr		{ $$ = p_expr_new_tree($1, EXPR_NE, $3); }*/
-    | expr LEFT_OP expr		{ $$ = p_expr_new_tree($1, EXPR_SHL, $3); }
-    | expr RIGHT_OP expr	{ $$ = p_expr_new_tree($1, EXPR_SHR, $3); }
-    | expr '+' expr		{ $$ = p_expr_new_tree($1, EXPR_ADD, $3); }
-    | expr '-' expr		{ $$ = p_expr_new_tree($1, EXPR_SUB, $3); }
-    | expr '*' expr		{ $$ = p_expr_new_tree($1, EXPR_MUL, $3); }
-    | expr '/' expr		{ $$ = p_expr_new_tree($1, EXPR_DIV, $3); }
-    | expr SIGNDIV expr		{ $$ = p_expr_new_tree($1, EXPR_SIGNDIV, $3); }
-    | expr '%' expr		{ $$ = p_expr_new_tree($1, EXPR_MOD, $3); }
-    | expr SIGNMOD expr		{ $$ = p_expr_new_tree($1, EXPR_SIGNMOD, $3); }
+    | explabel		{ $$ = p_expr_new_ident(yasm_expr_sym($1)); }
+    /*| expr '||' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_LOR, $3); }*/
+    | expr '|' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_OR, $3); }
+    | expr '^' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_XOR, $3); }
+    /*| expr '&&' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_LAND, $3); }*/
+    | expr '&' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_AND, $3); }
+    /*| expr '==' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_EQUALS, $3); }*/
+    /*| expr '>' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_GT, $3); }*/
+    /*| expr '<' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_GT, $3); }*/
+    /*| expr '>=' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_GE, $3); }*/
+    /*| expr '<=' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_GE, $3); }*/
+    /*| expr '!=' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_NE, $3); }*/
+    | expr LEFT_OP expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_SHL, $3); }
+    | expr RIGHT_OP expr { $$ = p_expr_new_tree($1, YASM_EXPR_SHR, $3); }
+    | expr '+' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_ADD, $3); }
+    | expr '-' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_SUB, $3); }
+    | expr '*' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_MUL, $3); }
+    | expr '/' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_DIV, $3); }
+    | expr SIGNDIV expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_SIGNDIV, $3); }
+    | expr '%' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_MOD, $3); }
+    | expr SIGNMOD expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_SIGNMOD, $3); }
     | '+' expr %prec UNARYOP	{ $$ = $2; }
-    | '-' expr %prec UNARYOP	{ $$ = p_expr_new_branch(EXPR_NEG, $2); }
-    /*| '!' expr		{ $$ = p_expr_new_branch(EXPR_LNOT, $2); }*/
-    | '~' expr %prec UNARYOP	{ $$ = p_expr_new_branch(EXPR_NOT, $2); }
-    | SEG expr			{ $$ = p_expr_new_branch(EXPR_SEG, $2); }
-    | WRT expr			{ $$ = p_expr_new_branch(EXPR_WRT, $2); }
-    | expr ':' expr		{ $$ = p_expr_new_tree($1, EXPR_SEGOFF, $3); }
-    | '(' expr ')'		{ $$ = $2; }
+    | '-' expr %prec UNARYOP	{ $$ = p_expr_new_branch(YASM_EXPR_NEG, $2); }
+    /*| '!' expr	{ $$ = p_expr_new_branch(YASM_EXPR_LNOT, $2); }*/
+    | '~' expr %prec UNARYOP	{ $$ = p_expr_new_branch(YASM_EXPR_NOT, $2); }
+    | SEG expr		{ $$ = p_expr_new_branch(YASM_EXPR_SEG, $2); }
+    | WRT expr		{ $$ = p_expr_new_branch(YASM_EXPR_WRT, $2); }
+    | expr ':' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_SEGOFF, $3); }
+    | '(' expr ')'	{ $$ = $2; }
 ;
 
 explabel: ID		{
-	$$ = symrec_use($1, cur_lindex);
+	$$ = yasm_symrec_use($1, cur_lindex);
 	xfree($1);
     }
     | SPECIAL_ID	{
-	$$ = symrec_use($1, cur_lindex);
+	$$ = yasm_symrec_use($1, cur_lindex);
 	xfree($1);
     }
     | LOCAL_ID		{
-	$$ = symrec_use($1, cur_lindex);
+	$$ = yasm_symrec_use($1, cur_lindex);
 	xfree($1);
     }
     | '$'		{
 	/* "$" references the current assembly position */
-	$$ = symrec_define_label("$", nasm_parser_cur_section,
-				 nasm_parser_prev_bc, 0, cur_lindex);
+	$$ = yasm_symrec_define_label("$", nasm_parser_cur_section,
+				      nasm_parser_prev_bc, 0, cur_lindex);
     }
     | START_SECTION_ID	{
 	/* "$$" references the start of the current section */
-	$$ = symrec_define_label("$$", nasm_parser_cur_section, NULL, 0,
-				 cur_lindex);
+	$$ = yasm_symrec_define_label("$$", nasm_parser_cur_section, NULL, 0,
+				      cur_lindex);
     }
 ;
 
@@ -522,62 +529,65 @@ explabel: ID		{
 /*@=usedef =nullassign =memtrans =usereleased =compdef =mustfree@*/
 
 static int
-fix_directive_symrec(ExprItem *ei, /*@unused@*/ void *d)
+fix_directive_symrec(yasm_expr__item *ei, /*@unused@*/ void *d)
 {
-    if (!ei || ei->type != EXPR_SYM)
+    if (!ei || ei->type != YASM_EXPR_SYM)
 	return 0;
 
     /* FIXME: Delete current symrec */
-    ei->data.sym = symrec_use(symrec_get_name(ei->data.sym), cur_lindex);
+    ei->data.sym =
+	yasm_symrec_use(yasm_symrec_get_name(ei->data.sym), cur_lindex);
 
     return 0;
 }
 
 static void
-nasm_parser_directive(const char *name, valparamhead *valparams,
-		      valparamhead *objext_valparams)
+nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
+		      yasm_valparamhead *objext_valparams)
 {
-    valparam *vp, *vp2;
-    symrec *sym;
+    yasm_valparam *vp, *vp2;
+    yasm_symrec *sym;
     unsigned long lindex = cur_lindex;
 
     /* Handle (mostly) output-format independent directives here */
     if (strcasecmp(name, "extern") == 0) {
-	vp = vps_first(valparams);
+	vp = yasm_vps_first(valparams);
 	if (vp->val) {
-	    sym = symrec_declare(vp->val, SYM_EXTERN, lindex);
+	    sym = yasm_symrec_declare(vp->val, YASM_SYM_EXTERN, lindex);
 	    if (nasm_parser_objfmt->extern_declare)
 		nasm_parser_objfmt->extern_declare(sym, objext_valparams,
 						   lindex);
 	} else
 	    cur_we->error(lindex, N_("invalid argument to [%s]"), "EXTERN");
     } else if (strcasecmp(name, "global") == 0) {
-	vp = vps_first(valparams);
+	vp = yasm_vps_first(valparams);
 	if (vp->val) {
-	    sym = symrec_declare(vp->val, SYM_GLOBAL, lindex);
+	    sym = yasm_symrec_declare(vp->val, YASM_SYM_GLOBAL, lindex);
 	    if (nasm_parser_objfmt->global_declare)
 		nasm_parser_objfmt->global_declare(sym, objext_valparams,
 						   lindex);
 	} else
 	    cur_we->error(lindex, N_("invalid argument to [%s]"), "GLOBAL");
     } else if (strcasecmp(name, "common") == 0) {
-	vp = vps_first(valparams);
+	vp = yasm_vps_first(valparams);
 	if (vp->val) {
-	    vp2 = vps_next(vp);
+	    vp2 = yasm_vps_next(vp);
 	    if (!vp2 || (!vp2->val && !vp2->param))
 		cur_we->error(lindex,
 			      N_("no size specified in %s declaration"),
 			      "COMMON");
 	    else {
 		if (vp2->val) {
-		    sym = symrec_declare(vp->val, SYM_COMMON, lindex);
+		    sym = yasm_symrec_declare(vp->val, YASM_SYM_COMMON,
+					      lindex);
 		    if (nasm_parser_objfmt->common_declare)
 			nasm_parser_objfmt->common_declare(sym,
-			    p_expr_new_ident(ExprSym(symrec_use(vp2->val,
-								lindex))),
+			    p_expr_new_ident(yasm_expr_sym(
+				yasm_symrec_use(vp2->val, lindex))),
 			    objext_valparams, lindex);
 		} else if (vp2->param) {
-		    sym = symrec_declare(vp->val, SYM_COMMON, lindex);
+		    sym = yasm_symrec_declare(vp->val, YASM_SYM_COMMON,
+					      lindex);
 		    if (nasm_parser_objfmt->common_declare)
 			nasm_parser_objfmt->common_declare(sym, vp2->param,
 							   objext_valparams,
@@ -589,43 +599,45 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 	    cur_we->error(lindex, N_("invalid argument to [%s]"), "COMMON");
     } else if (strcasecmp(name, "section") == 0 ||
 	       strcasecmp(name, "segment") == 0) {
-	section *new_section =
+	yasm_section *new_section =
 	    nasm_parser_objfmt->sections_switch(&nasm_parser_sections,
 						valparams, objext_valparams,
 						lindex);
 	if (new_section) {
 	    nasm_parser_cur_section = new_section;
-	    nasm_parser_prev_bc = bcs_last(section_get_bytecodes(new_section));
+	    nasm_parser_prev_bc =
+		yasm_bcs_last(yasm_section_get_bytecodes(new_section));
 	} else
 	    cur_we->error(lindex, N_("invalid argument to [%s]"), "SECTION");
     } else if (strcasecmp(name, "absolute") == 0) {
 	/* it can be just an ID or a complete expression, so handle both. */
-	vp = vps_first(valparams);
+	vp = yasm_vps_first(valparams);
 	if (vp->val)
 	    nasm_parser_cur_section =
-		sections_switch_absolute(&nasm_parser_sections,
-		    p_expr_new_ident(ExprSym(symrec_use(vp->val, lindex))),
+		yasm_sections_switch_absolute(&nasm_parser_sections,
+		    p_expr_new_ident(yasm_expr_sym(
+			yasm_symrec_use(vp->val, lindex))),
 		    cur_we->internal_error_);
 	else if (vp->param) {
 	    nasm_parser_cur_section =
-		sections_switch_absolute(&nasm_parser_sections, vp->param,
-					 cur_we->internal_error_);
+		yasm_sections_switch_absolute(&nasm_parser_sections, vp->param,
+					      cur_we->internal_error_);
 	    vp->param = NULL;
 	}
-	nasm_parser_prev_bc = (bytecode *)NULL;
+	nasm_parser_prev_bc = (yasm_bytecode *)NULL;
     } else if (strcasecmp(name, "cpu") == 0) {
-	vps_foreach(vp, valparams) {
+	yasm_vps_foreach(vp, valparams) {
 	    if (vp->val)
 		nasm_parser_arch->parse.switch_cpu(vp->val, lindex);
 	    else if (vp->param) {
-		const intnum *intcpu;
-		intcpu = expr_get_intnum(&vp->param, NULL);
+		const yasm_intnum *intcpu;
+		intcpu = yasm_expr_get_intnum(&vp->param, NULL);
 		if (!intcpu)
 		    cur_we->error(lindex, N_("invalid argument to [%s]"),
 				  "CPU");
 		else {
 		    char strcpu[16];
-		    sprintf(strcpu, "%lu", intnum_get_uint(intcpu));
+		    sprintf(strcpu, "%lu", yasm_intnum_get_uint(intcpu));
 		    nasm_parser_arch->parse.switch_cpu(strcpu, lindex);
 		}
 	    }
@@ -640,9 +652,9 @@ nasm_parser_directive(const char *name, valparamhead *valparams,
 	cur_we->error(lindex, N_("unrecognized directive [%s]"), name);
     }
 
-    vps_delete(valparams);
+    yasm_vps_delete(valparams);
     if (objext_valparams)
-	vps_delete(objext_valparams);
+	yasm_vps_delete(objext_valparams);
 }
 
 static void

@@ -28,7 +28,7 @@
 #define YASM_DBGFMT_H
 
 /* Interface to the object format module(s) */
-struct dbgfmt {
+struct yasm_dbgfmt {
     /* one-line description of the format */
     const char *name;
 

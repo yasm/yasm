@@ -27,73 +27,76 @@
 #ifndef YASM_BYTECODE_H
 #define YASM_BYTECODE_H
 
-typedef struct effaddr effaddr;
-typedef struct immval immval;
-typedef /*@reldef@*/ STAILQ_HEAD(datavalhead, dataval) datavalhead;
-typedef struct dataval dataval;
+typedef struct yasm_effaddr yasm_effaddr;
+typedef struct yasm_immval yasm_immval;
+typedef /*@reldef@*/ STAILQ_HEAD(yasm_datavalhead, yasm_dataval)
+    yasm_datavalhead;
+typedef struct yasm_dataval yasm_dataval;
 
 /* Additional types may be architecture-defined starting at
- * BYTECODE_TYPE_BASE.
+ * YASM_BYTECODE_TYPE_BASE.
  */
 typedef enum {
-    BC_EMPTY = 0,
-    BC_DATA,
-    BC_RESERVE,
-    BC_INCBIN,
-    BC_ALIGN,
-    BC_OBJFMT_DATA
-} bytecode_type;
-#define BYTECODE_TYPE_BASE  BC_OBJFMT_DATA+1
+    YASM_BC__EMPTY = 0,
+    YASM_BC__DATA,
+    YASM_BC__RESERVE,
+    YASM_BC__INCBIN,
+    YASM_BC__ALIGN,
+    YASM_BC__OBJFMT_DATA
+} yasm_bytecode_type;
+#define YASM_BYTECODE_TYPE_BASE		YASM_BC__OBJFMT_DATA+1
 
-void bc_initialize(arch *a, errwarn *we);
+void yasm_bc_initialize(yasm_arch *a, yasm_errwarn *we);
 
-/*@only@*/ immval *imm_new_int(unsigned long int_val, unsigned long lindex);
-/*@only@*/ immval *imm_new_expr(/*@keep@*/ expr *e);
+/*@only@*/ yasm_immval *yasm_imm_new_int(unsigned long int_val,
+					 unsigned long lindex);
+/*@only@*/ yasm_immval *yasm_imm_new_expr(/*@keep@*/ yasm_expr *e);
 
-/*@observer@*/ const expr *ea_get_disp(const effaddr *ea);
-void ea_set_len(effaddr *ea, unsigned char len);
-void ea_set_nosplit(effaddr *ea, unsigned char nosplit);
-void ea_delete(/*@only@*/ effaddr *ea);
-void ea_print(FILE *f, int indent_level, const effaddr *ea);
+/*@observer@*/ const yasm_expr *yasm_ea_get_disp(const yasm_effaddr *ea);
+void yasm_ea_set_len(yasm_effaddr *ea, unsigned char len);
+void yasm_ea_set_nosplit(yasm_effaddr *ea, unsigned char nosplit);
+void yasm_ea_delete(/*@only@*/ yasm_effaddr *ea);
+void yasm_ea_print(FILE *f, int indent_level, const yasm_effaddr *ea);
 
-void bc_set_multiple(bytecode *bc, /*@keep@*/ expr *e);
+void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
 
-/*@only@*/ bytecode *bc_new_common(bytecode_type type, size_t datasize,
-				   unsigned long lindex);
-/*@only@*/ bytecode *bc_new_data(datavalhead *datahead, unsigned char size,
-				 unsigned long lindex);
-/*@only@*/ bytecode *bc_new_reserve(/*@only@*/ expr *numitems,
-				    unsigned char itemsize,
-				    unsigned long lindex);
-/*@only@*/ bytecode *bc_new_incbin(/*@only@*/ char *filename,
-				   /*@only@*/ /*@null@*/ expr *start,
-				   /*@only@*/ /*@null@*/ expr *maxlen,
-				   unsigned long lindex);
-/*@only@*/ bytecode *bc_new_align(unsigned long boundary,
-				  unsigned long lindex);
-/*@only@*/ bytecode *bc_new_objfmt_data(unsigned int type, unsigned long len,
-					objfmt *of, /*@only@*/ void *data,
-					unsigned long lindex);
+/*@only@*/ yasm_bytecode *yasm_bc_new_common(yasm_bytecode_type type,
+					     size_t datasize,
+					     unsigned long lindex);
+/*@only@*/ yasm_bytecode *yasm_bc_new_data(yasm_datavalhead *datahead,
+					   unsigned char size,
+					   unsigned long lindex);
+/*@only@*/ yasm_bytecode *yasm_bc_new_reserve(/*@only@*/ yasm_expr *numitems,
+					      unsigned char itemsize,
+					      unsigned long lindex);
+/*@only@*/ yasm_bytecode *yasm_bc_new_incbin
+    (/*@only@*/ char *filename, /*@only@*/ /*@null@*/ yasm_expr *start,
+     /*@only@*/ /*@null@*/ yasm_expr *maxlen, unsigned long lindex);
+/*@only@*/ yasm_bytecode *yasm_bc_new_align(unsigned long boundary,
+					    unsigned long lindex);
+/*@only@*/ yasm_bytecode *yasm_bc_new_objfmt_data
+    (unsigned int type, unsigned long len, yasm_objfmt *of,
+     /*@only@*/ void *data, unsigned long lindex);
 
-void bc_delete(/*@only@*/ /*@null@*/ bytecode *bc);
+void yasm_bc_delete(/*@only@*/ /*@null@*/ yasm_bytecode *bc);
 
-void bc_print(FILE *f, int indent_level, const bytecode *bc);
+void yasm_bc_print(FILE *f, int indent_level, const yasm_bytecode *bc);
 
 /* A common version of a calc_bc_dist function that should work for the final
  * stages of optimizers as well as in objfmt expr output functions.  It takes
  * the offsets from the bytecodes.
  */
-/*@null@*/ intnum *common_calc_bc_dist(section *sect,
-				       /*@null@*/ bytecode *precbc1,
-				       /*@null@*/ bytecode *precbc2);
+/*@null@*/ yasm_intnum *yasm_common_calc_bc_dist
+    (yasm_section *sect, /*@null@*/ yasm_bytecode *precbc1,
+     /*@null@*/ yasm_bytecode *precbc2);
 
 /* Return value flags for bc_resolve() */
 typedef enum {
-    BC_RESOLVE_NONE = 0,		/* Ok, but length is not minimum */
-    BC_RESOLVE_ERROR = 1<<0,		/* Error found, output */
-    BC_RESOLVE_MIN_LEN = 1<<1,		/* Length is minimum possible */
-    BC_RESOLVE_UNKNOWN_LEN = 1<<2	/* Length indeterminate */
-} bc_resolve_flags;
+    YASM_BC_RESOLVE_NONE = 0,		/* Ok, but length is not minimum */
+    YASM_BC_RESOLVE_ERROR = 1<<0,	/* Error found, output */
+    YASM_BC_RESOLVE_MIN_LEN = 1<<1,	/* Length is minimum possible */
+    YASM_BC_RESOLVE_UNKNOWN_LEN = 1<<2	/* Length indeterminate */
+} yasm_bc_resolve_flags;
 
 /* Resolves labels in bytecode, and calculates its length.
  * Tries to minimize the length as much as possible.
@@ -110,8 +113,9 @@ typedef enum {
  * resolve_label except temporarily to try to minimize the length).
  * When save is nonzero, all fields in bc may be modified by this function.
  */
-bc_resolve_flags bc_resolve(bytecode *bc, int save, const section *sect,
-			    calc_bc_dist_func calc_bc_dist);
+yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
+				      const yasm_section *sect,
+				      yasm_calc_bc_dist_func calc_bc_dist);
 
 /* Converts the bytecode bc into its byte representation.
  * Inputs:
@@ -131,21 +135,21 @@ bc_resolve_flags bc_resolve(bytecode *bc, int save, const section *sect,
  * representation), or a newly allocated buffer that should be used instead
  * of buf for reading the byte representation.
  */
-/*@null@*/ /*@only@*/ unsigned char *bc_tobytes(bytecode *bc,
-    unsigned char *buf, unsigned long *bufsize,
-    /*@out@*/ unsigned long *multiple, /*@out@*/ int *gap, const section *sect,
-    void *d, output_expr_func output_expr,
-    /*@null@*/ output_bc_objfmt_data_func output_bc_objfmt_data)
+/*@null@*/ /*@only@*/ unsigned char *yasm_bc_tobytes
+    (yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
+     /*@out@*/ unsigned long *multiple, /*@out@*/ int *gap,
+     const yasm_section *sect, void *d, yasm_output_expr_func output_expr,
+     /*@null@*/ yasm_output_bc_objfmt_data_func output_bc_objfmt_data)
     /*@sets *buf@*/;
 
-/* void bcs_initialize(bytecodehead *headp); */
-#define	bcs_initialize(headp)	STAILQ_INIT(headp)
+/* void yasm_bcs_initialize(yasm_bytecodehead *headp); */
+#define	yasm_bcs_initialize(headp)	STAILQ_INIT(headp)
 
-/* bytecode *bcs_first(bytecodehead *headp); */
-#define bcs_first(headp)	STAILQ_FIRST(headp)
+/* yasm_bytecode *yasm_bcs_first(yasm_bytecodehead *headp); */
+#define yasm_bcs_first(headp)	STAILQ_FIRST(headp)
 
-/*@null@*/ bytecode *bcs_last(bytecodehead *headp);
-void bcs_delete(bytecodehead *headp);
+/*@null@*/ yasm_bytecode *yasm_bcs_last(yasm_bytecodehead *headp);
+void yasm_bcs_delete(yasm_bytecodehead *headp);
 
 /* Adds bc to the list of bytecodes headp.
  * NOTE: Does not make a copy of bc; so don't pass this function
@@ -153,11 +157,11 @@ void bcs_delete(bytecodehead *headp);
  * this function.  If bc was actually appended (it wasn't NULL or empty),
  * then returns bc, otherwise returns NULL.
  */
-/*@only@*/ /*@null@*/ bytecode *bcs_append(bytecodehead *headp,
-					   /*@returned@*/ /*@only@*/ /*@null@*/
-					   bytecode *bc);
+/*@only@*/ /*@null@*/ yasm_bytecode *yasm_bcs_append
+    (yasm_bytecodehead *headp,
+     /*@returned@*/ /*@only@*/ /*@null@*/ yasm_bytecode *bc);
 
-void bcs_print(FILE *f, int indent_level, const bytecodehead *headp);
+void yasm_bcs_print(FILE *f, int indent_level, const yasm_bytecodehead *headp);
 
 /* Calls func for each bytecode in the linked list of bytecodes pointed to by
  * headp.  The data pointer d is passed to each func call.
@@ -165,17 +169,17 @@ void bcs_print(FILE *f, int indent_level, const bytecodehead *headp);
  * Stops early (and returns func's return value) if func returns a nonzero
  * value.  Otherwise returns 0.
  */
-int bcs_traverse(bytecodehead *headp, /*@null@*/ void *d,
-		 int (*func) (bytecode *bc, /*@null@*/ void *d));
+int yasm_bcs_traverse(yasm_bytecodehead *headp, /*@null@*/ void *d,
+		      int (*func) (yasm_bytecode *bc, /*@null@*/ void *d));
 
-dataval *dv_new_expr(/*@keep@*/ expr *expn);
-dataval *dv_new_float(/*@keep@*/ floatnum *flt);
-dataval *dv_new_string(/*@keep@*/ char *str_val);
+yasm_dataval *yasm_dv_new_expr(/*@keep@*/ yasm_expr *expn);
+yasm_dataval *yasm_dv_new_float(/*@keep@*/ yasm_floatnum *flt);
+yasm_dataval *yasm_dv_new_string(/*@keep@*/ char *str_val);
 
-void dvs_initialize(datavalhead *headp);
-#define	dvs_initialize(headp)	STAILQ_INIT(headp)
+/* void yasm_dvs_initialize(yasm_datavalhead *headp); */
+#define	yasm_dvs_initialize(headp)	STAILQ_INIT(headp)
 
-void dvs_delete(datavalhead *headp);
+void yasm_dvs_delete(yasm_datavalhead *headp);
 
 /* Adds dv to the list of datavals headp.
  * NOTE: Does not make a copy of dv; so don't pass this function
@@ -183,9 +187,9 @@ void dvs_delete(datavalhead *headp);
  * this function.  If dv was actually appended (it wasn't NULL), then
  * returns dv, otherwise returns NULL.
  */
-/*@null@*/ dataval *dvs_append(datavalhead *headp,
-			       /*@returned@*/ /*@null@*/ dataval *dv);
+/*@null@*/ yasm_dataval *yasm_dvs_append
+    (yasm_datavalhead *headp, /*@returned@*/ /*@null@*/ yasm_dataval *dv);
 
-void dvs_print(FILE *f, int indent_level, const datavalhead *head);
+void yasm_dvs_print(FILE *f, int indent_level, const yasm_datavalhead *head);
 
 #endif

@@ -27,53 +27,54 @@
 #ifndef YASM_SYMREC_H
 #define YASM_SYMREC_H
 
-void symrec_initialize(errwarn *we);
+void yasm_symrec_initialize(yasm_errwarn *we);
 
-/*@dependent@*/ symrec *symrec_use(const char *name, unsigned long lindex);
-/*@dependent@*/ symrec *symrec_define_equ(const char *name, /*@keep@*/ expr *e,
-					  unsigned long lindex);
+/*@dependent@*/ yasm_symrec *yasm_symrec_use(const char *name,
+					     unsigned long lindex);
+/*@dependent@*/ yasm_symrec *yasm_symrec_define_equ
+    (const char *name, /*@keep@*/ yasm_expr *e, unsigned long lindex);
 /* in_table specifies if the label should be inserted into the symbol table.
  * All labels are memory managed internally.
  */
-/*@dependent@*/ symrec *symrec_define_label(const char *name,
-					    /*@dependent@*/ /*@null@*/
-					    section *sect,
-					    /*@dependent@*/ /*@null@*/
-					    bytecode *precbc, int in_table,
-					    unsigned long lindex);
-/*@dependent@*/ symrec *symrec_declare(const char *name, SymVisibility vis,
-				       unsigned long lindex);
+/*@dependent@*/ yasm_symrec *yasm_symrec_define_label
+    (const char *name, /*@dependent@*/ /*@null@*/ yasm_section *sect,
+     /*@dependent@*/ /*@null@*/ yasm_bytecode *precbc, int in_table,
+     unsigned long lindex);
+/*@dependent@*/ yasm_symrec *yasm_symrec_declare
+    (const char *name, yasm_sym_vis vis, unsigned long lindex);
 
-/*@observer@*/ const char *symrec_get_name(const symrec *sym);
-SymVisibility symrec_get_visibility(const symrec *sym);
+/*@observer@*/ const char *yasm_symrec_get_name(const yasm_symrec *sym);
+yasm_sym_vis yasm_symrec_get_visibility(const yasm_symrec *sym);
 
-/*@observer@*/ /*@null@*/ const expr *symrec_get_equ(const symrec *sym);
+/*@observer@*/ /*@null@*/ const yasm_expr *yasm_symrec_get_equ
+    (const yasm_symrec *sym);
 /* Returns 0 if not a label or if EXTERN/COMMON (not defined in the file) */
-typedef /*@dependent@*/ /*@null@*/ section *symrec_get_label_sectionp;
-typedef /*@dependent@*/ /*@null@*/ bytecode *symrec_get_label_bytecodep;
-int symrec_get_label(const symrec *sym,
-		     /*@out@*/ symrec_get_label_sectionp *sect,
-		     /*@out@*/ symrec_get_label_bytecodep *precbc);
+typedef /*@dependent@*/ /*@null@*/ yasm_section *
+    yasm_symrec_get_label_sectionp;
+typedef /*@dependent@*/ /*@null@*/ yasm_bytecode *
+    yasm_symrec_get_label_bytecodep;
+int yasm_symrec_get_label(const yasm_symrec *sym,
+			  /*@out@*/ yasm_symrec_get_label_sectionp *sect,
+			  /*@out@*/ yasm_symrec_get_label_bytecodep *precbc);
 
 /* Get and set optimizer flags */
-unsigned long symrec_get_opt_flags(const symrec *sym);
-void symrec_set_opt_flags(symrec *sym, unsigned long opt_flags);
+unsigned long yasm_symrec_get_opt_flags(const yasm_symrec *sym);
+void yasm_symrec_set_opt_flags(yasm_symrec *sym, unsigned long opt_flags);
 
-/*@dependent@*/ /*@null@*/ void *symrec_get_of_data(symrec *sym);
+/*@dependent@*/ /*@null@*/ void *yasm_symrec_get_of_data(yasm_symrec *sym);
 
 /* Caution: deletes any existing of_data */
-void symrec_set_of_data(symrec *sym, objfmt *of,
-			/*@only@*/ /*@null@*/ void *of_data);
+void yasm_symrec_set_of_data(yasm_symrec *sym, yasm_objfmt *of,
+			     /*@only@*/ /*@null@*/ void *of_data);
 
-int /*@alt void@*/ symrec_traverse(/*@null@*/ void *d,
-				   int (*func) (symrec *sym,
-						/*@null@*/ void *d));
+int /*@alt void@*/ yasm_symrec_traverse
+    (/*@null@*/ void *d, int (*func) (yasm_symrec *sym, /*@null@*/ void *d));
 
-void symrec_parser_finalize(void);
+void yasm_symrec_parser_finalize(void);
 
-void symrec_cleanup(void);
+void yasm_symrec_cleanup(void);
 
-void symrec_print_all(FILE *f, int indent_level);
+void yasm_symrec_print_all(FILE *f, int indent_level);
 
-void symrec_print(FILE *f, int indent_level, const symrec *sym);
+void yasm_symrec_print(FILE *f, int indent_level, const yasm_symrec *sym);
 #endif

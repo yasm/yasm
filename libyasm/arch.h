@@ -27,19 +27,19 @@
 #ifndef YASM_ARCH_H
 #define YASM_ARCH_H
 
-typedef enum arch_check_id_retval {
-    ARCH_CHECK_ID_NONE = 0,	/* just a normal identifier */
-    ARCH_CHECK_ID_INSN,		/* an instruction */
-    ARCH_CHECK_ID_PREFIX,	/* an instruction prefix */ 
-    ARCH_CHECK_ID_REG,		/* a register */
-    ARCH_CHECK_ID_SEGREG,	/* a segment register (for memory overrides) */
-    ARCH_CHECK_ID_TARGETMOD	/* an target modifier (for jumps) */
-} arch_check_id_retval;
+typedef enum yasm_arch_check_id_retval {
+    YASM_ARCH_CHECK_ID_NONE = 0,	/* just a normal identifier */
+    YASM_ARCH_CHECK_ID_INSN,		/* an instruction */
+    YASM_ARCH_CHECK_ID_PREFIX,		/* an instruction prefix */ 
+    YASM_ARCH_CHECK_ID_REG,		/* a register */
+    YASM_ARCH_CHECK_ID_SEGREG,	/* a segment register (for memory overrides) */
+    YASM_ARCH_CHECK_ID_TARGETMOD	/* an target modifier (for jumps) */
+} yasm_arch_check_id_retval;
 
-typedef /*@reldef@*/ STAILQ_HEAD(insn_operandhead, insn_operand)
-	insn_operandhead;
+typedef /*@reldef@*/ STAILQ_HEAD(yasm_insn_operandhead, yasm_insn_operand)
+	yasm_insn_operandhead;
 
-typedef struct insn_operand insn_operand;
+typedef struct yasm_insn_operand yasm_insn_operand;
 
 /* Different assemblers order instruction operands differently.  Also, some
  * differ on how exactly various registers are specified.  There's no great
@@ -51,19 +51,19 @@ typedef struct insn_operand insn_operand;
  * probably not even use this, but it's required for some (x86 in particular)
  * for correct behavior on all parsers.
  */
-typedef enum arch_syntax_flavor {
-    ARCH_SYNTAX_FLAVOR_NASM = 1,	/* like NASM */
-    ARCH_SYNTAX_FLAVOR_GAS		/* like GAS */
-} arch_syntax_flavor;
+typedef enum yasm_arch_syntax_flavor {
+    YASM_ARCH_SYNTAX_FLAVOR_NASM = 1,	/* like NASM */
+    YASM_ARCH_SYNTAX_FLAVOR_GAS		/* like GAS */
+} yasm_arch_syntax_flavor;
 
-struct arch {
+struct yasm_arch {
     /* one-line description of the architecture */
     const char *name;
 
     /* keyword used to select architecture */
     const char *keyword;
 
-    void (*initialize) (errwarn *we);
+    void (*initialize) (yasm_errwarn *we);
     void (*cleanup) (void);
 
     struct {
@@ -89,49 +89,47 @@ struct arch {
 	 * Note: even though this is passed a data[4], only data[0] should be
 	 * used for TARGETMOD, REG, and SEGREG return values.
 	 */
-	arch_check_id_retval (*check_identifier) (unsigned long data[4],
-						  const char *id,
-						  unsigned long lindex);
+	yasm_arch_check_id_retval (*check_identifier)
+	    (unsigned long data[4], const char *id, unsigned long lindex);
 
 	/* Architecture-specific directive support.  Returns 1 if directive was
 	 * not recognized.  Returns 0 if directive was recognized, even if it
 	 * wasn't valid.  Should modify behavior ONLY of parse functions, much
 	 * like switch_cpu() above.
 	 */
-	int (*directive) (const char *name, valparamhead *valparams,
-			  /*@null@*/ valparamhead *objext_valparams,
-			  sectionhead *headp, unsigned long lindex);
+	int (*directive) (const char *name, yasm_valparamhead *valparams,
+			  /*@null@*/ yasm_valparamhead *objext_valparams,
+			  yasm_sectionhead *headp, unsigned long lindex);
 
 	/* Creates an instruction.  Creates a bytecode by matching the
 	 * instruction data and the parameters given with a valid instruction.
 	 * If no match is found (the instruction is invalid), returns NULL.
 	 * All zero data indicates an empty instruction should be created.
 	 */
-	/*@null@*/ bytecode * (*new_insn) (const unsigned long data[4],
-					   int num_operands, /*@null@*/
-					   insn_operandhead *operands,
-					   section *cur_section,
-					   /*@null@*/ bytecode *prev_bc,
-					   unsigned long lindex);
+	/*@null@*/ yasm_bytecode * (*new_insn)
+	    (const unsigned long data[4], int num_operands,
+	     /*@null@*/ yasm_insn_operandhead *operands,
+	     yasm_section *cur_section, /*@null@*/ yasm_bytecode *prev_bc,
+	     unsigned long lindex);
 
 	/* Handle an instruction prefix by modifying bc as necessary. */
-	void (*handle_prefix) (bytecode *bc, const unsigned long data[4],
+	void (*handle_prefix) (yasm_bytecode *bc, const unsigned long data[4],
 			       unsigned long lindex);
 
 	/* Handle an segment register instruction prefix by modifying bc as
 	 * necessary.
 	 */
-	void (*handle_seg_prefix) (bytecode *bc, unsigned long segreg,
+	void (*handle_seg_prefix) (yasm_bytecode *bc, unsigned long segreg,
 				   unsigned long lindex);
 
 	/* Handle memory expression segment overrides by modifying ea as
 	 * necessary.
 	 */
-	void (*handle_seg_override) (effaddr *ea, unsigned long segreg,
+	void (*handle_seg_override) (yasm_effaddr *ea, unsigned long segreg,
 				     unsigned long lindex);
 
 	/* Convert an expression into an effective address. */
-	effaddr * (*ea_new_expr) (/*@keep@*/ expr *e);
+	yasm_effaddr * (*ea_new_expr) (/*@keep@*/ yasm_expr *e);
     } parse;
 
     struct {
@@ -141,17 +139,17 @@ struct arch {
 	 */
 	const int type_max;
 
-	void (*bc_delete) (bytecode *bc);
-	void (*bc_print) (FILE *f, int indent_level, const bytecode *bc);
+	void (*bc_delete) (yasm_bytecode *bc);
+	void (*bc_print) (FILE *f, int indent_level, const yasm_bytecode *bc);
 
 	/* See bytecode.h comments on bc_resolve() */
-	bc_resolve_flags (*bc_resolve) (bytecode *bc, int save,
-					const section *sect,
-					calc_bc_dist_func calc_bc_dist);
+	yasm_bc_resolve_flags (*bc_resolve)
+	    (yasm_bytecode *bc, int save, const yasm_section *sect,
+	     yasm_calc_bc_dist_func calc_bc_dist);
 	/* See bytecode.h comments on bc_tobytes() */
-	int (*bc_tobytes) (bytecode *bc, unsigned char **bufp,
-			   const section *sect, void *d,
-			   output_expr_func output_expr);
+	int (*bc_tobytes) (yasm_bytecode *bc, unsigned char **bufp,
+			   const yasm_section *sect, void *d,
+			   yasm_output_expr_func output_expr);
     } bc;
 
     /* Functions to output floats and integers, architecture-specific because
@@ -159,11 +157,11 @@ struct arch {
      * valsize (bytes saved to bufp).  For intnums, rel indicates a relative
      * displacement, and bc is the containing bytecode to compute it from.
      */
-    int (*floatnum_tobytes) (const floatnum *flt, unsigned char **bufp,
-			     unsigned long valsize, const expr *e);
-    int (*intnum_tobytes) (const intnum *intn, unsigned char **bufp,
-			   unsigned long valsize, const expr *e,
-			   const bytecode *bc, int rel);
+    int (*floatnum_tobytes) (const yasm_floatnum *flt, unsigned char **bufp,
+			     unsigned long valsize, const yasm_expr *e);
+    int (*intnum_tobytes) (const yasm_intnum *intn, unsigned char **bufp,
+			   unsigned long valsize, const yasm_expr *e,
+			   const yasm_bytecode *bc, int rel);
 
     /* Gets the equivalent register size in bytes.  Returns 0 if there is no
      * suitable equivalent size.
@@ -177,25 +175,25 @@ struct arch {
      * deletion is required (e.g. there's no dynamically allocated pointers
      * in the ea data).
      */
-    void (*ea_data_delete) (effaddr *ea);
+    void (*ea_data_delete) (yasm_effaddr *ea);
 
-    void (*ea_data_print) (FILE *f, int indent_level, const effaddr *ea);
+    void (*ea_data_print) (FILE *f, int indent_level, const yasm_effaddr *ea);
 };
 
-struct insn_operand {
-    /*@reldef@*/ STAILQ_ENTRY(insn_operand) link;
+struct yasm_insn_operand {
+    /*@reldef@*/ STAILQ_ENTRY(yasm_insn_operand) link;
 
     enum {
-	INSN_OPERAND_REG = 1,	/* a register */
-	INSN_OPERAND_SEGREG,	/* a segment register */
-	INSN_OPERAND_MEMORY,	/* an effective address (memory reference) */
-	INSN_OPERAND_IMM	/* an immediate or jump target */
+	YASM_INSN__OPERAND_REG = 1,	/* a register */
+	YASM_INSN__OPERAND_SEGREG,	/* a segment register */
+	YASM_INSN__OPERAND_MEMORY,/* an effective address (memory reference) */
+	YASM_INSN__OPERAND_IMM		/* an immediate or jump target */
     } type;
 
     union {
 	unsigned long reg;	/* arch data for reg/segreg */
-	effaddr *ea;		/* effective address for memory references */
-	expr *val;		/* value of immediate or jump target */
+	yasm_effaddr *ea;	/* effective address for memory references */
+	yasm_expr *val;		/* value of immediate or jump target */
     } data;
 
     unsigned long targetmod;	/* arch target modifier, 0 if none */
@@ -204,26 +202,27 @@ struct insn_operand {
     unsigned int size;
 };
 
-void arch_common_initialize(arch *a);
+void yasm_arch_common_initialize(yasm_arch *a);
 
 /* insn_operand constructors.  operand_new_imm() will look for cases of a
  * single register and create an INSN_OPERAND_REG variant of insn_operand.
  */
-insn_operand *operand_new_reg(unsigned long reg);
-insn_operand *operand_new_segreg(unsigned long segreg);
-insn_operand *operand_new_mem(/*@only@*/ effaddr *ea);
-insn_operand *operand_new_imm(/*@only@*/ expr *val);
+yasm_insn_operand *yasm_operand_new_reg(unsigned long reg);
+yasm_insn_operand *yasm_operand_new_segreg(unsigned long segreg);
+yasm_insn_operand *yasm_operand_new_mem(/*@only@*/ yasm_effaddr *ea);
+yasm_insn_operand *yasm_operand_new_imm(/*@only@*/ yasm_expr *val);
 
-void operand_print(FILE *f, int indent_level, const insn_operand *op);
+void yasm_operand_print(FILE *f, int indent_level,
+			const yasm_insn_operand *op);
 
-#define ops_initialize(headp)	STAILQ_INIT(headp)
-#define ops_first(headp)	STAILQ_FIRST(headp)
-#define ops_next(cur)		STAILQ_NEXT(cur, link)
+#define yasm_ops_initialize(headp)	STAILQ_INIT(headp)
+#define yasm_ops_first(headp)		STAILQ_FIRST(headp)
+#define yasm_ops_next(cur)		STAILQ_NEXT(cur, link)
 
 /* Deletes operands linked list.  Deletes content of each operand if content i
  * nonzero.
  */
-void ops_delete(insn_operandhead *headp, int content);
+void yasm_ops_delete(yasm_insn_operandhead *headp, int content);
 
 /* Adds op to the list of operands headp.
  * NOTE: Does not make a copy of op; so don't pass this function
@@ -231,9 +230,11 @@ void ops_delete(insn_operandhead *headp, int content);
  * this function.  If op was actually appended (it wasn't NULL), then
  * returns op, otherwise returns NULL.
  */
-/*@null@*/ insn_operand *ops_append(insn_operandhead *headp,
-				    /*@returned@*/ /*@null@*/ insn_operand *op);
+/*@null@*/ yasm_insn_operand *yasm_ops_append
+    (yasm_insn_operandhead *headp,
+     /*@returned@*/ /*@null@*/ yasm_insn_operand *op);
 
-void ops_print(FILE *f, int indent_level, const insn_operandhead *headp);
+void yasm_ops_print(FILE *f, int indent_level,
+		    const yasm_insn_operandhead *headp);
 
 #endif

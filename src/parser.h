@@ -28,7 +28,7 @@
 #define YASM_PARSER_H
 
 /* Interface to the parser module(s) -- the "front end" of the assembler */
-struct parser {
+struct yasm_parser {
     /* one-line description of the parser */
     const char *name;
 
@@ -58,9 +58,9 @@ struct parser {
      * This function returns the starting section of a linked list of sections
      * (whatever was in the file).
      */
-    sectionhead *(*do_parse) (preproc *pp, arch *a, objfmt *of, linemgr *lm,
-			      errwarn *we, FILE *f, const char *in_filename,
-			      int save_input);
+    yasm_sectionhead *(*do_parse)
+	(yasm_preproc *pp, yasm_arch *a, yasm_objfmt *of, yasm_linemgr *lm,
+	 yasm_errwarn *we, FILE *f, const char *in_filename, int save_input);
 };
 
 /* Generic functions for all parsers - implemented in src/parser.c */
@@ -68,6 +68,7 @@ struct parser {
 /* Lists all available parsers.  Calls printfunc with the name and keyword
  * of each available parser.
  */
-void list_parsers(void (*printfunc) (const char *name, const char *keyword));
+void yasm_list_parsers(void (*printfunc) (const char *name,
+					  const char *keyword));
 
 #endif

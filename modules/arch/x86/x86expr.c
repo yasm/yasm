@@ -52,7 +52,8 @@ typedef struct x86_checkea_reg3264_data {
  * Overwrites ei with intnum of 0 (to eliminate regs from the final expr).
  */
 static /*@null@*/ /*@dependent@*/ int *
-x86_expr_checkea_get_reg3264(ExprItem *ei, int *regnum, /*returned*/ void *d)
+x86_expr_checkea_get_reg3264(yasm_expr__item *ei, int *regnum,
+			     /*returned*/ void *d)
 {
     x86_checkea_reg3264_data *data = d;
 
@@ -77,8 +78,8 @@ x86_expr_checkea_get_reg3264(ExprItem *ei, int *regnum, /*returned*/ void *d)
     }
 
     /* overwrite with 0 to eliminate register from displacement expr */
-    ei->type = EXPR_INT;
-    ei->data.intn = intnum_new_uint(0);
+    ei->type = YASM_EXPR_INT;
+    ei->data.intn = yasm_intnum_new_uint(0);
 
     /* we're okay */
     return &data->regs[*regnum];
@@ -92,7 +93,7 @@ typedef struct x86_checkea_reg16_data {
  * Overwrites ei with intnum of 0 (to eliminate regs from the final expr).
  */
 static /*@null@*/ int *
-x86_expr_checkea_get_reg16(ExprItem *ei, int *regnum, void *d)
+x86_expr_checkea_get_reg16(yasm_expr__item *ei, int *regnum, void *d)
 {
     x86_checkea_reg16_data *data = d;
     /* in order: ax,cx,dx,bx,sp,bp,si,di */
@@ -117,8 +118,8 @@ x86_expr_checkea_get_reg16(ExprItem *ei, int *regnum, void *d)
 	return 0;
 
     /* overwrite with 0 to eliminate register from displacement expr */
-    ei->type = EXPR_INT;
-    ei->data.intn = intnum_new_uint(0);
+    ei->type = YASM_EXPR_INT;
+    ei->data.intn = yasm_intnum_new_uint(0);
 
     /* we're okay */
     return reg16[*regnum];
@@ -144,37 +145,38 @@ x86_expr_checkea_get_reg16(ExprItem *ei, int *regnum, void *d)
  * TODO: Clean up this code, make it easier to understand.
  */
 static int
-x86_expr_checkea_distcheck_reg(expr **ep)
+x86_expr_checkea_distcheck_reg(yasm_expr **ep)
 {
-    expr *e = *ep;
+    yasm_expr *e = *ep;
     int i;
     int havereg = -1, havereg_expr = -1;
     int retval = 1;	/* default to legal, no changes */
 
     for (i=0; i<e->numterms; i++) {
 	switch (e->terms[i].type) {
-	    case EXPR_REG:
+	    case YASM_EXPR_REG:
 		/* Check op to make sure it's valid to use w/register. */
-		if (e->op != EXPR_ADD && e->op != EXPR_MUL &&
-		    e->op != EXPR_IDENT)
+		if (e->op != YASM_EXPR_ADD && e->op != YASM_EXPR_MUL &&
+		    e->op != YASM_EXPR_IDENT)
 		    return 0;
 		/* Check for reg*reg */
-		if (e->op == EXPR_MUL && havereg != -1)
+		if (e->op == YASM_EXPR_MUL && havereg != -1)
 		    return 0;
 		havereg = i;
 		break;
-	    case EXPR_FLOAT:
+	    case YASM_EXPR_FLOAT:
 		/* Floats not allowed. */
 		return 0;
-	    case EXPR_EXPR:
-		if (expr_contains(e->terms[i].data.expn, EXPR_REG)) {
+	    case YASM_EXPR_EXPR:
+		if (yasm_expr__contains(e->terms[i].data.expn,
+					YASM_EXPR_REG)) {
 		    int ret2;
 
 		    /* Check op to make sure it's valid to use w/register. */
-		    if (e->op != EXPR_ADD && e->op != EXPR_MUL)
+		    if (e->op != YASM_EXPR_ADD && e->op != YASM_EXPR_MUL)
 			return 0;
 		    /* Check for reg*reg */
-		    if (e->op == EXPR_MUL && havereg != -1)
+		    if (e->op == YASM_EXPR_MUL && havereg != -1)
 			return 0;
 		    havereg = i;
 		    havereg_expr = i;
@@ -185,7 +187,8 @@ x86_expr_checkea_distcheck_reg(expr **ep)
 			return 0;
 		    if (ret2 == 2)
 			retval = 2;
-		} else if (expr_contains(e->terms[i].data.expn, EXPR_FLOAT))
+		} else if (yasm_expr__contains(e->terms[i].data.expn,
+					       YASM_EXPR_FLOAT))
 		    return 0;	/* Disallow floats */
 		break;
 	    default:
@@ -198,33 +201,33 @@ x86_expr_checkea_distcheck_reg(expr **ep)
 	return retval;
 
     /* Distribute */
-    if (e->op == EXPR_MUL && havereg_expr != -1) {
-	expr *ne;
+    if (e->op == YASM_EXPR_MUL && havereg_expr != -1) {
+	yasm_expr *ne;
 
 	retval = 2;	/* we're going to change it */
 
 	/* The reg expn *must* be EXPR_ADD at this point.  Sanity check. */
-	if (e->terms[havereg_expr].type != EXPR_EXPR ||
-	    e->terms[havereg_expr].data.expn->op != EXPR_ADD)
+	if (e->terms[havereg_expr].type != YASM_EXPR_EXPR ||
+	    e->terms[havereg_expr].data.expn->op != YASM_EXPR_ADD)
 	    cur_we->internal_error(N_("Register expression not ADD or EXPN"));
 
 	/* Iterate over each term in reg expn */
 	for (i=0; i<e->terms[havereg_expr].data.expn->numterms; i++) {
 	    /* Copy everything EXCEPT havereg_expr term into new expression */
-	    ne = expr_copy_except(e, havereg_expr);
+	    ne = yasm_expr__copy_except(e, havereg_expr);
 	    assert(ne != NULL);
 	    /* Copy reg expr term into uncopied (empty) term in new expn */
 	    ne->terms[havereg_expr] =
 		e->terms[havereg_expr].data.expn->terms[i]; /* struct copy */
 	    /* Overwrite old reg expr term with new expn */
-	    e->terms[havereg_expr].data.expn->terms[i].type = EXPR_EXPR;
+	    e->terms[havereg_expr].data.expn->terms[i].type = YASM_EXPR_EXPR;
 	    e->terms[havereg_expr].data.expn->terms[i].data.expn = ne;
 	}
 
 	/* Replace e with expanded reg expn */
 	ne = e->terms[havereg_expr].data.expn;
-	e->terms[havereg_expr].type = EXPR_NONE;    /* don't delete it! */
-	expr_delete(e);				    /* but everything else */
+	e->terms[havereg_expr].type = YASM_EXPR_NONE;	/* don't delete it! */
+	yasm_expr_delete(e);			    /* but everything else */
 	e = ne;
 	/*@-onlytrans@*/
 	*ep = ne;
@@ -245,18 +248,18 @@ x86_expr_checkea_distcheck_reg(expr **ep)
  * and 2 if all values successfully determined and saved in data.
  */
 static int
-x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
-			     int *(*get_reg)(ExprItem *ei, int *regnum,
-					     void *d),
-			     calc_bc_dist_func calc_bc_dist)
+x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
+    void *data, int *(*get_reg)(yasm_expr__item *ei, int *regnum, void *d),
+    yasm_calc_bc_dist_func calc_bc_dist)
 {
     int i;
     int *reg;
     int regnum;
-    expr *e;
+    yasm_expr *e;
 
     /*@-unqualifiedtrans@*/
-    *ep = expr_level_tree(*ep, 1, indexreg == 0, calc_bc_dist, NULL, NULL, NULL);
+    *ep = yasm_expr__level_tree(*ep, 1, indexreg == 0, calc_bc_dist, NULL,
+				NULL, NULL);
     /*@=unqualifiedtrans@*/
     assert(*ep != NULL);
     e = *ep;
@@ -265,7 +268,8 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
 	    return 0;
 	case 2:
 	    /* Need to simplify again */
-	    *ep = expr_level_tree(*ep, 1, indexreg == 0, NULL, NULL, NULL, NULL);
+	    *ep = yasm_expr__level_tree(*ep, 1, indexreg == 0, NULL, NULL,
+					NULL, NULL);
 	    e = *ep;
 	    break;
 	default:
@@ -273,7 +277,7 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
     }
 
     switch (e->op) {
-	case EXPR_ADD:
+	case YASM_EXPR_ADD:
 	    /* Prescan for non-int multipliers.
 	     * This is because if any of the terms is a more complex
 	     * expr (eg, undetermined value), we don't want to try to
@@ -283,33 +287,33 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
 	     * would be a major chore.
 	     */
 	    for (i=0; i<e->numterms; i++)
-		if (e->terms[i].type == EXPR_EXPR) {
+		if (e->terms[i].type == YASM_EXPR_EXPR) {
 		    if (e->terms[i].data.expn->numterms > 2)
 			return 1;
-		    expr_order_terms(e->terms[i].data.expn);
-		    if (e->terms[i].data.expn->terms[1].type != EXPR_INT)
+		    yasm_expr__order_terms(e->terms[i].data.expn);
+		    if (e->terms[i].data.expn->terms[1].type != YASM_EXPR_INT)
 			return 1;
 		}
 
 	    /*@fallthrough@*/
-	case EXPR_IDENT:
+	case YASM_EXPR_IDENT:
 	    /* Check each term for register (and possible multiplier). */
 	    for (i=0; i<e->numterms; i++) {
-		if (e->terms[i].type == EXPR_REG) {
+		if (e->terms[i].type == YASM_EXPR_REG) {
 		    reg = get_reg(&e->terms[i], &regnum, data);
 		    if (!reg)
 			return 0;
 		    (*reg)++;
 		    if (indexreg)
 			*indexreg = regnum;
-		} else if (e->terms[i].type == EXPR_EXPR) {
+		} else if (e->terms[i].type == YASM_EXPR_EXPR) {
 		    /* Already ordered from ADD above, just grab the value.
 		     * Sanity check for EXPR_INT.
 		     */
-		    if (e->terms[i].data.expn->terms[0].type != EXPR_REG)
+		    if (e->terms[i].data.expn->terms[0].type != YASM_EXPR_REG)
 			cur_we->internal_error(
 			    N_("Register not found in reg expn"));
-		    if (e->terms[i].data.expn->terms[1].type != EXPR_INT)
+		    if (e->terms[i].data.expn->terms[1].type != YASM_EXPR_INT)
 			cur_we->internal_error(
 			    N_("Non-integer value in reg expn"));
 		    reg = get_reg(&e->terms[i].data.expn->terms[0], &regnum,
@@ -317,23 +321,24 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
 		    if (!reg)
 			return 0;
 		    (*reg) +=
-			intnum_get_int(e->terms[i].data.expn->terms[1].data.intn);
+			yasm_intnum_get_int(
+			    e->terms[i].data.expn->terms[1].data.intn);
 		    if (indexreg && *reg > 0)
 			*indexreg = regnum;
 		}
 	    }
 	    break;
-	case EXPR_MUL:
+	case YASM_EXPR_MUL:
 	    /* Here, too, check for non-int multipliers. */
 	    if (e->numterms > 2)
 		return 1;
-	    expr_order_terms(e);
-	    if (e->terms[1].type != EXPR_INT)
+	    yasm_expr__order_terms(e);
+	    if (e->terms[1].type != YASM_EXPR_INT)
 		return 1;
 	    reg = get_reg(&e->terms[0], &regnum, data);
 	    if (!reg)
 		return 0;
-	    (*reg) += intnum_get_int(e->terms[1].data.intn);
+	    (*reg) += yasm_intnum_get_int(e->terms[1].data.intn);
 	    if (indexreg)
 		*indexreg = regnum;
 	    break;
@@ -345,7 +350,7 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
     /* Simplify expr, which is now really just the displacement. This
      * should get rid of the 0's we put in for registers in the callback.
      */
-    *ep = expr_simplify(*ep, NULL);
+    *ep = yasm_expr_simplify(*ep, NULL);
     /* e = *ep; */
 
     return 2;
@@ -360,12 +365,12 @@ x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
  */
 /*@-nullstate@*/
 static int
-x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
+x86_checkea_calc_displen(yasm_expr **ep, unsigned int wordsize, int noreg,
 			 int dispreq, unsigned char *displen,
 			 unsigned char *modrm, unsigned char *v_modrm)
 {
-    expr *e = *ep;
-    const intnum *intn;
+    yasm_expr *e = *ep;
+    const yasm_intnum *intn;
     long dispval;
 
     *v_modrm = 0;	/* default to not yet valid */
@@ -392,7 +397,7 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 		*displen = 0xff;
 	    }
 
-	    intn = expr_get_intnum(ep, NULL);
+	    intn = yasm_expr_get_intnum(ep, NULL);
 	    if (!intn) {
 		/* expr still has unknown values: assume 16/32-bit disp */
 		*displen = wordsize;
@@ -404,8 +409,8 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 	    /* make sure the displacement will fit in 16/32 bits if unsigned,
 	     * and 8 bits if signed.
 	     */
-	    if (!intnum_check_size(intn, (size_t)wordsize, 0) &&
-		!intnum_check_size(intn, 1, 1)) {
+	    if (!yasm_intnum_check_size(intn, (size_t)wordsize, 0) &&
+		!yasm_intnum_check_size(intn, 1, 1)) {
 		cur_we->error(e->line, N_("invalid effective address"));
 		return 0;
 	    }
@@ -425,7 +430,7 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 	    /* Don't worry about overflows here (it's already guaranteed
 	     * to be 16/32 or 8 bits).
 	     */
-	    dispval = intnum_get_int(intn);
+	    dispval = yasm_intnum_get_int(intn);
 
 	    /* Figure out what size displacement we will have. */
 	    if (*displen != 0xff && dispval == 0) {
@@ -438,8 +443,8 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 		 * Don't do this if we came from dispreq check above, so
 		 * check *displen.
 		 */
-		expr_delete(e);
-		*ep = (expr *)NULL;
+		yasm_expr_delete(e);
+		*ep = (yasm_expr *)NULL;
 	    } else if (dispval >= -128 && dispval <= 127) {
 		/* It fits into a signed byte */
 		*displen = 1;
@@ -491,11 +496,11 @@ x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
 /*@=nullstate@*/
 
 static int
-x86_expr_checkea_getregsize_callback(ExprItem *ei, void *d)
+x86_expr_checkea_getregsize_callback(yasm_expr__item *ei, void *d)
 {
     unsigned char *addrsize = (unsigned char *)d;
 
-    if (ei->type == EXPR_REG) {
+    if (ei->type == YASM_EXPR_REG) {
 	switch ((x86_expritem_reg_size)(ei->data.reg & ~0xF)) {
 	    case X86_REG16:
 		*addrsize = 16;
@@ -516,14 +521,15 @@ x86_expr_checkea_getregsize_callback(ExprItem *ei, void *d)
 }
 
 int
-x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
-		 unsigned char nosplit, unsigned char *displen,
-		 unsigned char *modrm, unsigned char *v_modrm,
-		 unsigned char *n_modrm, unsigned char *sib,
-		 unsigned char *v_sib, unsigned char *n_sib,
-		 unsigned char *rex, calc_bc_dist_func calc_bc_dist)
+yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
+		       unsigned char bits, unsigned char nosplit,
+		       unsigned char *displen, unsigned char *modrm,
+		       unsigned char *v_modrm, unsigned char *n_modrm,
+		       unsigned char *sib, unsigned char *v_sib,
+		       unsigned char *n_sib, unsigned char *rex,
+		       yasm_calc_bc_dist_func calc_bc_dist)
 {
-    expr *e = *ep;
+    yasm_expr *e = *ep;
 
     if (*addrsize == 0) {
 	/* we need to figure out the address size from what we know about:
@@ -561,8 +567,8 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 		/* check for use of 16 or 32-bit registers; if none are used
 		 * default to bits setting.
 		 */
-		if (!expr_traverse_leaves_in(e, addrsize,
-					     x86_expr_checkea_getregsize_callback))
+		if (!yasm_expr__traverse_leaves_in(e, addrsize,
+			x86_expr_checkea_getregsize_callback))
 		    *addrsize = bits;
 		/* TODO: Add optional warning here if switched address size
 		 * from bits setting just by register use.. eg [ax] in
@@ -744,8 +750,8 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	     * of register basereg is, as x86_set_rex_from_reg doesn't pay
 	     * much attention.
 	     */
-	    if (x86_set_rex_from_reg(rex, &low3, X86_REG64 | basereg,
-				     bits, X86_REX_B)) {
+	    if (yasm_x86__set_rex_from_reg(rex, &low3, X86_REG64 | basereg,
+					   bits, X86_REX_B)) {
 		cur_we->error(e->line,
 		    N_("invalid combination of operands and effective address"));
 		return 0;
@@ -773,8 +779,8 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	    if (basereg == REG3264_NONE)
 		*sib |= 5;
 	    else {
-		if (x86_set_rex_from_reg(rex, &low3, X86_REG64 | basereg,
-					 bits, X86_REX_B)) {
+		if (yasm_x86__set_rex_from_reg(rex, &low3, X86_REG64 | basereg,
+					       bits, X86_REX_B)) {
 		    cur_we->error(e->line,
 			N_("invalid combination of operands and effective address"));
 		    return 0;
@@ -787,8 +793,9 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 		*sib |= 040;
 		/* Any scale field is valid, just leave at 0. */
 	    else {
-		if (x86_set_rex_from_reg(rex, &low3, X86_REG64 | indexreg,
-					 bits, X86_REX_X)) {
+		if (yasm_x86__set_rex_from_reg(rex, &low3,
+					       X86_REG64 | indexreg, bits,
+					       X86_REX_X)) {
 		    cur_we->error(e->line,
 			N_("invalid combination of operands and effective address"));
 		    return 0;
@@ -918,17 +925,17 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 }
 
 int
-x86_floatnum_tobytes(const floatnum *flt, unsigned char **bufp,
-		     unsigned long valsize, const expr *e)
+yasm_x86__floatnum_tobytes(const yasm_floatnum *flt, unsigned char **bufp,
+			   unsigned long valsize, const yasm_expr *e)
 {
     int fltret;
 
-    if (!floatnum_check_size(flt, (size_t)valsize)) {
+    if (!yasm_floatnum_check_size(flt, (size_t)valsize)) {
 	cur_we->error(e->line, N_("invalid floating point constant size"));
 	return 1;
     }
 
-    fltret = floatnum_get_sized(flt, *bufp, (size_t)valsize);
+    fltret = yasm_floatnum_get_sized(flt, *bufp, (size_t)valsize);
     if (fltret < 0) {
 	cur_we->error(e->line, N_("underflow in floating point expression"));
 	return 1;

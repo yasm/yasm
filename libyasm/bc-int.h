@@ -27,8 +27,8 @@
 #ifndef YASM_BC_INT_H
 #define YASM_BC_INT_H
 
-struct effaddr {
-    /*@only@*/ /*@null@*/ expr *disp;	/* address displacement */
+struct yasm_effaddr {
+    /*@only@*/ /*@null@*/ yasm_expr *disp;	/* address displacement */
     unsigned char len;		/* length of disp (in bytes), 0 if unknown,
 				 * 0xff if unknown and required to be >0.
 				 */
@@ -36,20 +36,20 @@ struct effaddr {
 				   reg+reg. (0 if not) */
 };
 
-struct immval {
-    /*@only@*/ /*@null@*/ expr *val;
+struct yasm_immval {
+    /*@only@*/ /*@null@*/ yasm_expr *val;
 
     unsigned char len;		/* final length (in bytes), 0 if unknown */
     unsigned char sign;		/* 1 if final imm is treated as signed */
 };
 
-struct bytecode {
-    /*@reldef@*/ STAILQ_ENTRY(bytecode) link;
+struct yasm_bytecode {
+    /*@reldef@*/ STAILQ_ENTRY(yasm_bytecode) link;
 
-    bytecode_type type;
+    yasm_bytecode_type type;
 
     /* number of times bytecode is repeated, NULL=1. */
-    /*@only@*/ /*@null@*/ expr *multiple;
+    /*@only@*/ /*@null@*/ yasm_expr *multiple;
 
     unsigned long len;		/* total length of entire bytecode (including
 				   multiple copies), 0 if unknown */
@@ -64,6 +64,6 @@ struct bytecode {
     unsigned long opt_flags;
 };
 
-#define bcs_next(x)		STAILQ_NEXT(x, link)
+#define yasm_bcs__next(x)		STAILQ_NEXT(x, link)
 
 #endif

@@ -42,13 +42,13 @@
 
 
 unsigned char yasm_x86_LTX_mode_bits = 0;
-/*@dependent@*/ errwarn *yasm_x86_errwarn;
+/*@dependent@*/ yasm_errwarn *yasm_x86__errwarn;
 
 
 static void
-x86_initialize(errwarn *we)
+x86_initialize(yasm_errwarn *we)
 {
-    yasm_x86_errwarn = we;
+    yasm_x86__errwarn = we;
 }
 
 static void
@@ -57,18 +57,19 @@ x86_cleanup(void)
 }
 
 int
-x86_directive(const char *name, valparamhead *valparams,
-	      /*@unused@*/ /*@null@*/ valparamhead *objext_valparams,
-	      /*@unused@*/ sectionhead *headp, unsigned long lindex)
+yasm_x86__directive(const char *name, yasm_valparamhead *valparams,
+		    /*@unused@*/ /*@null@*/ yasm_valparamhead *objext_valparams,
+		    /*@unused@*/ yasm_sectionhead *headp, unsigned long lindex)
 {
-    valparam *vp;
-    const intnum *intn;
+    yasm_valparam *vp;
+    const yasm_intnum *intn;
     long lval;
 
     if (strcasecmp(name, "bits") == 0) {
-	if ((vp = vps_first(valparams)) && !vp->val && vp->param != NULL &&
-	    (intn = expr_get_intnum(&vp->param, NULL)) != NULL &&
-	    (lval = intnum_get_int(intn)) &&
+	if ((vp = yasm_vps_first(valparams)) && !vp->val &&
+	    vp->param != NULL &&
+	    (intn = yasm_expr_get_intnum(&vp->param, NULL)) != NULL &&
+	    (lval = yasm_intnum_get_int(intn)) &&
 	    (lval == 16 || lval == 32 || lval == 64))
 	    yasm_x86_LTX_mode_bits = (unsigned char)lval;
 	else
@@ -79,7 +80,7 @@ x86_directive(const char *name, valparamhead *valparams,
 }
 
 unsigned int
-x86_get_reg_size(unsigned long reg)
+yasm_x86__get_reg_size(unsigned long reg)
 {
     switch ((x86_expritem_reg_size)(reg & ~0xF)) {
 	case X86_REG8:
@@ -106,7 +107,7 @@ x86_get_reg_size(unsigned long reg)
 }
 
 void
-x86_reg_print(FILE *f, unsigned long reg)
+yasm_x86__reg_print(FILE *f, unsigned long reg)
 {
     static const char *name8[] = {"al","cl","dl","bl","ah","ch","dh","bh"};
     static const char *name8x[] = {
@@ -166,71 +167,73 @@ x86_reg_print(FILE *f, unsigned long reg)
 }
 
 void
-x86_segreg_print(FILE *f, unsigned long segreg)
+yasm_x86__segreg_print(FILE *f, unsigned long segreg)
 {
     static const char *name[] = {"es","cs","ss","ds","fs","gs"};
     fprintf(f, "%s", name[segreg&7]);
 }
 
 void
-x86_handle_prefix(bytecode *bc, const unsigned long data[4],
-		  unsigned long lindex)
+yasm_x86__handle_prefix(yasm_bytecode *bc, const unsigned long data[4],
+			unsigned long lindex)
 {
     switch((x86_parse_insn_prefix)data[0]) {
 	case X86_LOCKREP:
-	    x86_bc_insn_set_lockrep_prefix(bc, (unsigned char)data[1], lindex);
+	    yasm_x86__bc_insn_set_lockrep_prefix(bc, (unsigned char)data[1],
+						 lindex);
 	    break;
 	case X86_ADDRSIZE:
-	    x86_bc_insn_addrsize_override(bc, (unsigned char)data[1]);
+	    yasm_x86__bc_insn_addrsize_override(bc, (unsigned char)data[1]);
 	    break;
 	case X86_OPERSIZE:
-	    x86_bc_insn_opersize_override(bc, (unsigned char)data[1]);
+	    yasm_x86__bc_insn_opersize_override(bc, (unsigned char)data[1]);
 	    break;
     }
 }
 
 void
-x86_handle_seg_prefix(bytecode *bc, unsigned long segreg, unsigned long lindex)
+yasm_x86__handle_seg_prefix(yasm_bytecode *bc, unsigned long segreg,
+			    unsigned long lindex)
 {
-    x86_ea_set_segment(x86_bc_insn_get_ea(bc), (unsigned char)(segreg>>8),
-		       lindex);
+    yasm_x86__ea_set_segment(yasm_x86__bc_insn_get_ea(bc),
+			     (unsigned char)(segreg>>8), lindex);
 }
 
 void
-x86_handle_seg_override(effaddr *ea, unsigned long segreg,
-			unsigned long lindex)
+yasm_x86__handle_seg_override(yasm_effaddr *ea, unsigned long segreg,
+			      unsigned long lindex)
 {
-    x86_ea_set_segment(ea, (unsigned char)(segreg>>8), lindex);
+    yasm_x86__ea_set_segment(ea, (unsigned char)(segreg>>8), lindex);
 }
 
 /* Define arch structure -- see arch.h for details */
-arch yasm_x86_LTX_arch = {
+yasm_arch yasm_x86_LTX_arch = {
     "x86 (IA-32, x86-64)",
     "x86",
     x86_initialize,
     x86_cleanup,
     {
-	x86_switch_cpu,
-	x86_check_identifier,
-	x86_directive,
-	x86_new_insn,
-	x86_handle_prefix,
-	x86_handle_seg_prefix,
-	x86_handle_seg_override,
-	x86_ea_new_expr
+	yasm_x86__switch_cpu,
+	yasm_x86__check_identifier,
+	yasm_x86__directive,
+	yasm_x86__new_insn,
+	yasm_x86__handle_prefix,
+	yasm_x86__handle_seg_prefix,
+	yasm_x86__handle_seg_override,
+	yasm_x86__ea_new_expr
     },
     {
 	X86_BYTECODE_TYPE_MAX,
-	x86_bc_delete,
-	x86_bc_print,
-	x86_bc_resolve,
-	x86_bc_tobytes
+	yasm_x86__bc_delete,
+	yasm_x86__bc_print,
+	yasm_x86__bc_resolve,
+	yasm_x86__bc_tobytes
     },
-    x86_floatnum_tobytes,
-    x86_intnum_tobytes,
-    x86_get_reg_size,
-    x86_reg_print,
-    x86_segreg_print,
+    yasm_x86__floatnum_tobytes,
+    yasm_x86__intnum_tobytes,
+    yasm_x86__get_reg_size,
+    yasm_x86__reg_print,
+    yasm_x86__segreg_print,
     NULL,	/* x86_ea_data_delete */
-    x86_ea_data_print
+    yasm_x86__ea_data_print
 };

@@ -28,7 +28,7 @@
 #define YASM_OBJFMT_H
 
 /* Interface to the object format module(s) */
-struct objfmt {
+struct yasm_objfmt {
     /* one-line description of the format */
     const char *name;
 
@@ -62,13 +62,13 @@ struct objfmt {
      * provided solely for informational purposes.
      */
     void (*initialize) (const char *in_filename, const char *obj_filename,
-			dbgfmt *df, arch *a, errwarn *we);
+			yasm_dbgfmt *df, yasm_arch *a, yasm_errwarn *we);
 
     /* Write out (post-optimized) sections to the object file.
      * This function may call symrec functions as necessary (including
      * symrec_traverse) to retrieve symbolic information.
      */
-    void (*output) (FILE *f, sectionhead *sections);
+    void (*output) (FILE *f, yasm_sectionhead *sections);
 
     /* Cleans up anything allocated by initialize.
      * May be NULL if not needed by the object format.
@@ -79,9 +79,10 @@ struct objfmt {
      * be the section name.  Returns NULL if something's wrong, otherwise
      * returns the new section.
      */
-    /*@observer@*/ /*@null@*/ section *
-	(*sections_switch)(sectionhead *headp, valparamhead *valparams,
-			   /*@null@*/ valparamhead *objext_valparams,
+    /*@observer@*/ /*@null@*/ yasm_section *
+	(*sections_switch)(yasm_sectionhead *headp,
+			   yasm_valparamhead *valparams,
+			   /*@null@*/ yasm_valparamhead *objext_valparams,
 			   unsigned long lindex);
 
     /* Object format-specific data handling functions for sections.
@@ -93,14 +94,14 @@ struct objfmt {
     /* These functions should call symrec_set_of_data() to store data.
      * May be NULL if objfmt doesn't care about such declarations.
      */
-    void (*extern_declare)(symrec *sym,
-			   /*@null@*/ valparamhead *objext_valparams,
+    void (*extern_declare)(yasm_symrec *sym,
+			   /*@null@*/ yasm_valparamhead *objext_valparams,
 			   unsigned long lindex);
-    void (*global_declare)(symrec *sym,
-			   /*@null@*/ valparamhead *objext_valparams,
+    void (*global_declare)(yasm_symrec *sym,
+			   /*@null@*/ yasm_valparamhead *objext_valparams,
 			   unsigned long lindex);
-    void (*common_declare)(symrec *sym, /*@only@*/ expr *size,
-			   /*@null@*/ valparamhead *objext_valparams,
+    void (*common_declare)(yasm_symrec *sym, /*@only@*/ yasm_expr *size,
+			   /*@null@*/ yasm_valparamhead *objext_valparams,
 			   unsigned long lindex);
 
     /* May be NULL if symrec_set_of_data() is never called. */
@@ -111,9 +112,9 @@ struct objfmt {
      * not recognized.  Returns 0 if directive was recognized, even if it
      * wasn't valid.
      */
-    int (*directive)(const char *name, valparamhead *valparams,
-		     /*@null@*/ valparamhead *objext_valparams,
-		     sectionhead *headp, unsigned long lindex);
+    int (*directive)(const char *name, yasm_valparamhead *valparams,
+		     /*@null@*/ yasm_valparamhead *objext_valparams,
+		     yasm_sectionhead *headp, unsigned long lindex);
 
     /* Bytecode objfmt data (BC_OBJFMT_DATA) handling functions.
      * May be NULL if no BC_OBJFMT_DATA is ever allocated by the object format.
@@ -128,6 +129,7 @@ struct objfmt {
 /* Lists all available object formats.  Calls printfunc with the name and
  * keyword of each available format.
  */
-void list_objfmts(void (*printfunc) (const char *name, const char *keyword));
+void yasm_list_objfmts(void (*printfunc) (const char *name,
+					  const char *keyword));
 
 #endif

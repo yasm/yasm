@@ -36,24 +36,24 @@ extern FILE *nasm_parser_in;
 extern int nasm_parser_debug;
 extern size_t (*nasm_parser_input) (char *buf, size_t max_size);
 
-extern sectionhead nasm_parser_sections;
-extern /*@dependent@*/ section *nasm_parser_cur_section;
+extern yasm_sectionhead nasm_parser_sections;
+extern /*@dependent@*/ yasm_section *nasm_parser_cur_section;
 
 extern char *nasm_parser_locallabel_base;
 extern size_t nasm_parser_locallabel_base_len;
 
-extern /*@dependent@*/ arch *nasm_parser_arch;
-extern /*@dependent@*/ objfmt *nasm_parser_objfmt;
-extern /*@dependent@*/ linemgr *nasm_parser_linemgr;
-extern /*@dependent@*/ errwarn *nasm_parser_errwarn;
+extern /*@dependent@*/ yasm_arch *nasm_parser_arch;
+extern /*@dependent@*/ yasm_objfmt *nasm_parser_objfmt;
+extern /*@dependent@*/ yasm_linemgr *nasm_parser_linemgr;
+extern /*@dependent@*/ yasm_errwarn *nasm_parser_errwarn;
 
 extern int nasm_parser_save_input;
 
 #define cur_lindex	(nasm_parser_linemgr->get_current())
 
-#define p_expr_new_tree(l,o,r)	expr_new_tree(l,o,r,cur_lindex)
-#define p_expr_new_branch(o,r)	expr_new_branch(o,r,cur_lindex)
-#define p_expr_new_ident(r)	expr_new_ident(r,cur_lindex)
+#define p_expr_new_tree(l,o,r)	yasm_expr_new_tree(l,o,r,cur_lindex)
+#define p_expr_new_branch(o,r)	yasm_expr_new_branch(o,r,cur_lindex)
+#define p_expr_new_ident(r)	yasm_expr_new_ident(r,cur_lindex)
 
 #define cur_we		nasm_parser_errwarn
 

@@ -43,16 +43,17 @@
 #include "expr-int.h"
 
 
-static int expr_traverse_nodes_post(/*@null@*/ expr *e, /*@null@*/ void *d,
-				    int (*func) (/*@null@*/ expr *e,
+static int expr_traverse_nodes_post(/*@null@*/ yasm_expr *e,
+				    /*@null@*/ void *d,
+				    int (*func) (/*@null@*/ yasm_expr *e,
 						 /*@null@*/ void *d));
 
-static /*@dependent@*/ arch *cur_arch;
-static /*@dependent@*/ errwarn *cur_we;
+static /*@dependent@*/ yasm_arch *cur_arch;
+static /*@dependent@*/ yasm_errwarn *cur_we;
 
 
 void
-expr_initialize(arch *a, errwarn *we)
+yasm_expr_initialize(yasm_arch *a, yasm_errwarn *we)
 {
     cur_arch = a;
     cur_we = we;
@@ -61,16 +62,17 @@ expr_initialize(arch *a, errwarn *we)
 /* allocate a new expression node, with children as defined.
  * If it's a unary operator, put the element in left and set right=NULL. */
 /*@-compmempass@*/
-expr *
-expr_new(ExprOp op, ExprItem *left, ExprItem *right, unsigned long lindex)
+yasm_expr *
+yasm_expr_new(yasm_expr_op op, yasm_expr__item *left, yasm_expr__item *right,
+	      unsigned long lindex)
 {
-    expr *ptr, *sube;
-    ptr = xmalloc(sizeof(expr));
+    yasm_expr *ptr, *sube;
+    ptr = xmalloc(sizeof(yasm_expr));
 
     ptr->op = op;
     ptr->numterms = 0;
-    ptr->terms[0].type = EXPR_NONE;
-    ptr->terms[1].type = EXPR_NONE;
+    ptr->terms[0].type = YASM_EXPR_NONE;
+    ptr->terms[1].type = YASM_EXPR_NONE;
     if (left) {
 	ptr->terms[0] = *left;	/* structure copy */
 	xfree(left);
@@ -79,8 +81,8 @@ expr_new(ExprOp op, ExprItem *left, ExprItem *right, unsigned long lindex)
 	/* Search downward until we find something *other* than an
 	 * IDENT, then bring it up to the current level.
 	 */
-	while (ptr->terms[0].type == EXPR_EXPR &&
-	       ptr->terms[0].data.expn->op == EXPR_IDENT) {
+	while (ptr->terms[0].type == YASM_EXPR_EXPR &&
+	       ptr->terms[0].data.expn->op == YASM_EXPR_IDENT) {
 	    sube = ptr->terms[0].data.expn;
 	    ptr->terms[0] = sube->terms[0];	/* structure copy */
 	    /*@-usereleased@*/
@@ -99,8 +101,8 @@ expr_new(ExprOp op, ExprItem *left, ExprItem *right, unsigned long lindex)
 	/* Search downward until we find something *other* than an
 	 * IDENT, then bring it up to the current level.
 	 */
-	while (ptr->terms[1].type == EXPR_EXPR &&
-	       ptr->terms[1].data.expn->op == EXPR_IDENT) {
+	while (ptr->terms[1].type == YASM_EXPR_EXPR &&
+	       ptr->terms[1].data.expn->op == YASM_EXPR_IDENT) {
 	    sube = ptr->terms[1].data.expn;
 	    ptr->terms[1] = sube->terms[0];	/* structure copy */
 	    /*@-usereleased@*/
@@ -116,47 +118,47 @@ expr_new(ExprOp op, ExprItem *left, ExprItem *right, unsigned long lindex)
 /*@=compmempass@*/
 
 /* helpers */
-ExprItem *
-ExprSym(symrec *s)
+yasm_expr__item *
+yasm_expr_sym(yasm_symrec *s)
 {
-    ExprItem *e = xmalloc(sizeof(ExprItem));
-    e->type = EXPR_SYM;
+    yasm_expr__item *e = xmalloc(sizeof(yasm_expr__item));
+    e->type = YASM_EXPR_SYM;
     e->data.sym = s;
     return e;
 }
 
-ExprItem *
-ExprExpr(expr *x)
+yasm_expr__item *
+yasm_expr_expr(yasm_expr *x)
 {
-    ExprItem *e = xmalloc(sizeof(ExprItem));
-    e->type = EXPR_EXPR;
+    yasm_expr__item *e = xmalloc(sizeof(yasm_expr__item));
+    e->type = YASM_EXPR_EXPR;
     e->data.expn = x;
     return e;
 }
 
-ExprItem *
-ExprInt(intnum *i)
+yasm_expr__item *
+yasm_expr_int(yasm_intnum *i)
 {
-    ExprItem *e = xmalloc(sizeof(ExprItem));
-    e->type = EXPR_INT;
+    yasm_expr__item *e = xmalloc(sizeof(yasm_expr__item));
+    e->type = YASM_EXPR_INT;
     e->data.intn = i;
     return e;
 }
 
-ExprItem *
-ExprFloat(floatnum *f)
+yasm_expr__item *
+yasm_expr_float(yasm_floatnum *f)
 {
-    ExprItem *e = xmalloc(sizeof(ExprItem));
-    e->type = EXPR_FLOAT;
+    yasm_expr__item *e = xmalloc(sizeof(yasm_expr__item));
+    e->type = YASM_EXPR_FLOAT;
     e->data.flt = f;
     return e;
 }
 
-ExprItem *
-ExprReg(unsigned long reg)
+yasm_expr__item *
+yasm_expr_reg(unsigned long reg)
 {
-    ExprItem *e = xmalloc(sizeof(ExprItem));
-    e->type = EXPR_REG;
+    yasm_expr__item *e = xmalloc(sizeof(yasm_expr__item));
+    e->type = YASM_EXPR_REG;
     e->data.reg = reg;
     return e;
 }
@@ -165,81 +167,82 @@ ExprReg(unsigned long reg)
  * possible.  Also transforms single symrec's that reference absolute sections.
  * Uses a simple n^2 algorithm because n is usually quite small.
  */
-static /*@only@*/ expr *
-expr_xform_bc_dist(/*@returned@*/ /*@only@*/ expr *e,
-		   calc_bc_dist_func calc_bc_dist)
+static /*@only@*/ yasm_expr *
+expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e,
+		   yasm_calc_bc_dist_func calc_bc_dist)
 {
     int i;
-    /*@dependent@*/ section *sect;
-    /*@dependent@*/ /*@null@*/ bytecode *precbc;
-    /*@null@*/ intnum *dist;
+    /*@dependent@*/ yasm_section *sect;
+    /*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
+    /*@null@*/ yasm_intnum *dist;
     int numterms;
 
     for (i=0; i<e->numterms; i++) {
 	/* Transform symrecs that reference absolute sections into
 	 * absolute start expr + intnum(dist).
 	 */
-	if (e->terms[i].type == EXPR_SYM &&
-	    symrec_get_label(e->terms[i].data.sym, &sect, &precbc) &&
-	    section_is_absolute(sect) &&
+	if (e->terms[i].type == YASM_EXPR_SYM &&
+	    yasm_symrec_get_label(e->terms[i].data.sym, &sect, &precbc) &&
+	    yasm_section_is_absolute(sect) &&
 	    (dist = calc_bc_dist(sect, NULL, precbc))) {
-	    const expr *start = section_get_start(sect);
-	    e->terms[i].type = EXPR_EXPR;
+	    const yasm_expr *start = yasm_section_get_start(sect);
+	    e->terms[i].type = YASM_EXPR_EXPR;
 	    e->terms[i].data.expn =
-		expr_new(EXPR_ADD, ExprExpr(expr_copy(start)), ExprInt(dist),
-			 start->line);
+		yasm_expr_new(YASM_EXPR_ADD,
+			      yasm_expr_expr(yasm_expr_copy(start)),
+			      yasm_expr_int(dist), start->line);
 	}
     }
 
     /* Handle symrec-symrec in ADD exprs by looking for (-1*symrec) and
      * symrec term pairs (where both symrecs are in the same segment).
      */
-    if (e->op != EXPR_ADD)
+    if (e->op != YASM_EXPR_ADD)
 	return e;
 
     for (i=0; i<e->numterms; i++) {
 	int j;
-	expr *sube;
-	intnum *intn;
-	symrec *sym;
-	/*@dependent@*/ section *sect2;
-	/*@dependent@*/ /*@null@*/ bytecode *precbc2;
+	yasm_expr *sube;
+	yasm_intnum *intn;
+	yasm_symrec *sym;
+	/*@dependent@*/ yasm_section *sect2;
+	/*@dependent@*/ /*@null@*/ yasm_bytecode *precbc2;
 
 	/* First look for an (-1*symrec) term */
-	if (e->terms[i].type != EXPR_EXPR)
+	if (e->terms[i].type != YASM_EXPR_EXPR)
 	    continue;
        	sube = e->terms[i].data.expn;
-	if (sube->op != EXPR_MUL || sube->numterms != 2)
+	if (sube->op != YASM_EXPR_MUL || sube->numterms != 2)
 	    continue;
 
-	if (sube->terms[0].type == EXPR_INT &&
-	    sube->terms[1].type == EXPR_SYM) {
+	if (sube->terms[0].type == YASM_EXPR_INT &&
+	    sube->terms[1].type == YASM_EXPR_SYM) {
 	    intn = sube->terms[0].data.intn;
 	    sym = sube->terms[1].data.sym;
-	} else if (sube->terms[0].type == EXPR_SYM &&
-		   sube->terms[1].type == EXPR_INT) {
+	} else if (sube->terms[0].type == YASM_EXPR_SYM &&
+		   sube->terms[1].type == YASM_EXPR_INT) {
 	    sym = sube->terms[0].data.sym;
 	    intn = sube->terms[1].data.intn;
 	} else
 	    continue;
 
-	if (!intnum_is_neg1(intn))
+	if (!yasm_intnum_is_neg1(intn))
 	    continue;
 
-	symrec_get_label(sym, &sect2, &precbc);
+	yasm_symrec_get_label(sym, &sect2, &precbc);
 
 	/* Now look for a symrec term in the same segment */
 	for (j=0; j<e->numterms; j++) {
-	    if (e->terms[j].type == EXPR_SYM &&
-		symrec_get_label(e->terms[j].data.sym, &sect, &precbc2) &&
+	    if (e->terms[j].type == YASM_EXPR_SYM &&
+		yasm_symrec_get_label(e->terms[j].data.sym, &sect, &precbc2) &&
 		sect == sect2 &&
 		(dist = calc_bc_dist(sect, precbc, precbc2))) {
 		/* Change the symrec term to an integer */
-		e->terms[j].type = EXPR_INT;
+		e->terms[j].type = YASM_EXPR_INT;
 		e->terms[j].data.intn = dist;
 		/* Delete the matching (-1*symrec) term */
-		expr_delete(sube);
-		e->terms[i].type = EXPR_NONE;
+		yasm_expr_delete(sube);
+		e->terms[i].type = YASM_EXPR_NONE;
 		break;	/* stop looking for matching symrec term */
 	    }
 	}
@@ -248,15 +251,15 @@ expr_xform_bc_dist(/*@returned@*/ /*@only@*/ expr *e,
     /* Clean up any deleted (EXPR_NONE) terms */
     numterms = 0;
     for (i=0; i<e->numterms; i++) {
-	if (e->terms[i].type != EXPR_NONE)
+	if (e->terms[i].type != YASM_EXPR_NONE)
 	    e->terms[numterms++] = e->terms[i];	/* structure copy */
     }
     if (e->numterms != numterms) {
 	e->numterms = numterms;
-	e = xrealloc(e, sizeof(expr)+((numterms<2) ? 0 :
-		     sizeof(ExprItem)*(numterms-2)));
+	e = xrealloc(e, sizeof(yasm_expr)+((numterms<2) ? 0 :
+		     sizeof(yasm_expr__item)*(numterms-2)));
 	if (numterms == 1)
-	    e->op = EXPR_IDENT;
+	    e->op = YASM_EXPR_IDENT;
     }
 
     return e;
@@ -264,20 +267,20 @@ expr_xform_bc_dist(/*@returned@*/ /*@only@*/ expr *e,
 
 /* Negate just a single ExprItem by building a -1*ei subexpression */
 static void
-expr_xform_neg_item(expr *e, ExprItem *ei)
+expr_xform_neg_item(yasm_expr *e, yasm_expr__item *ei)
 {
-    expr *sube = xmalloc(sizeof(expr));
+    yasm_expr *sube = xmalloc(sizeof(yasm_expr));
 
     /* Build -1*ei subexpression */
-    sube->op = EXPR_MUL;
+    sube->op = YASM_EXPR_MUL;
     sube->line = e->line;
     sube->numterms = 2;
-    sube->terms[0].type = EXPR_INT;
-    sube->terms[0].data.intn = intnum_new_int(-1);
+    sube->terms[0].type = YASM_EXPR_INT;
+    sube->terms[0].data.intn = yasm_intnum_new_int(-1);
     sube->terms[1] = *ei;	/* structure copy */
 
     /* Replace original ExprItem with subexp */
-    ei->type = EXPR_EXPR;
+    ei->type = YASM_EXPR_EXPR;
     ei->data.expn = sube;
 }
 
@@ -287,63 +290,64 @@ expr_xform_neg_item(expr *e, ExprItem *ei)
  *
  * Returns a possibly reallocated e.
  */
-static /*@only@*/ expr *
-expr_xform_neg_helper(/*@returned@*/ /*@only@*/ expr *e)
+static /*@only@*/ yasm_expr *
+expr_xform_neg_helper(/*@returned@*/ /*@only@*/ yasm_expr *e)
 {
-    expr *ne;
+    yasm_expr *ne;
     int i;
 
     switch (e->op) {
-	case EXPR_ADD:
+	case YASM_EXPR_ADD:
 	    /* distribute (recursively if expr) over terms */
 	    for (i=0; i<e->numterms; i++) {
-		if (e->terms[i].type == EXPR_EXPR)
+		if (e->terms[i].type == YASM_EXPR_EXPR)
 		    e->terms[i].data.expn =
 			expr_xform_neg_helper(e->terms[i].data.expn);
 		else
 		    expr_xform_neg_item(e, &e->terms[i]);
 	    }
 	    break;
-	case EXPR_SUB:
+	case YASM_EXPR_SUB:
 	    /* change op to ADD, and recursively negate left side (if expr) */
-	    e->op = EXPR_ADD;
-	    if (e->terms[0].type == EXPR_EXPR)
+	    e->op = YASM_EXPR_ADD;
+	    if (e->terms[0].type == YASM_EXPR_EXPR)
 		e->terms[0].data.expn =
 		    expr_xform_neg_helper(e->terms[0].data.expn);
 	    else
 		expr_xform_neg_item(e, &e->terms[0]);
 	    break;
-	case EXPR_NEG:
+	case YASM_EXPR_NEG:
 	    /* Negating a negated value?  Make it an IDENT. */
-	    e->op = EXPR_IDENT;
+	    e->op = YASM_EXPR_IDENT;
 	    break;
-	case EXPR_IDENT:
+	case YASM_EXPR_IDENT:
 	    /* Negating an ident?  Change it into a MUL w/ -1 if there's no
 	     * floatnums present below; if there ARE floatnums, recurse.
 	     */
-	    if (e->terms[0].type == EXPR_FLOAT)
-		floatnum_calc(e->terms[0].data.flt, EXPR_NEG, NULL, e->line);
-	    else if (e->terms[0].type == EXPR_EXPR &&
-		expr_contains(e->terms[0].data.expn, EXPR_FLOAT))
+	    if (e->terms[0].type == YASM_EXPR_FLOAT)
+		yasm_floatnum_calc(e->terms[0].data.flt, YASM_EXPR_NEG, NULL,
+				   e->line);
+	    else if (e->terms[0].type == YASM_EXPR_EXPR &&
+		yasm_expr__contains(e->terms[0].data.expn, YASM_EXPR_FLOAT))
 		    expr_xform_neg_helper(e->terms[0].data.expn);
 	    else {
-		e->op = EXPR_MUL;
+		e->op = YASM_EXPR_MUL;
 		e->numterms = 2;
-		e->terms[1].type = EXPR_INT;
-		e->terms[1].data.intn = intnum_new_int(-1);
+		e->terms[1].type = YASM_EXPR_INT;
+		e->terms[1].data.intn = yasm_intnum_new_int(-1);
 	    }
 	    break;
 	default:
 	    /* Everything else.  MUL will be combined when it's leveled.
 	     * Make a new expr (to replace e) with -1*e.
 	     */
-	    ne = xmalloc(sizeof(expr));
-	    ne->op = EXPR_MUL;
+	    ne = xmalloc(sizeof(yasm_expr));
+	    ne->op = YASM_EXPR_MUL;
 	    ne->line = e->line;
 	    ne->numterms = 2;
-	    ne->terms[0].type = EXPR_INT;
-	    ne->terms[0].data.intn = intnum_new_int(-1);
-	    ne->terms[1].type = EXPR_EXPR;
+	    ne->terms[0].type = YASM_EXPR_INT;
+	    ne->terms[0].data.intn = yasm_intnum_new_int(-1);
+	    ne->terms[1].type = YASM_EXPR_EXPR;
 	    ne->terms[1].data.expn = e;
 	    return ne;
     }
@@ -358,20 +362,20 @@ expr_xform_neg_helper(/*@returned@*/ /*@only@*/ expr *e)
  *
  * Returns a possibly reallocated e.
  */
-static /*@only@*/ expr *
-expr_xform_neg(/*@returned@*/ /*@only@*/ expr *e)
+static /*@only@*/ yasm_expr *
+expr_xform_neg(/*@returned@*/ /*@only@*/ yasm_expr *e)
 {
     switch (e->op) {
-	case EXPR_NEG:
+	case YASM_EXPR_NEG:
 	    /* Turn -x into -1*x */
-	    e->op = EXPR_IDENT;
+	    e->op = YASM_EXPR_IDENT;
 	    return expr_xform_neg_helper(e);
-	case EXPR_SUB:
+	case YASM_EXPR_SUB:
 	    /* Turn a-b into a+(-1*b) */
 
 	    /* change op to ADD, and recursively negate right side (if expr) */
-	    e->op = EXPR_ADD;
-	    if (e->terms[1].type == EXPR_EXPR)
+	    e->op = YASM_EXPR_ADD;
+	    if (e->terms[1].type == YASM_EXPR_EXPR)
 		e->terms[1].data.expn =
 		    expr_xform_neg_helper(e->terms[1].data.expn);
 	    else
@@ -388,35 +392,35 @@ expr_xform_neg(/*@returned@*/ /*@only@*/ expr *e)
  * 0*&x, -1|x, etc.
  */
 static int
-expr_is_constant(ExprOp op, intnum *intn)
+expr_is_constant(yasm_expr_op op, yasm_intnum *intn)
 {
-    return ((intnum_is_zero(intn) && op == EXPR_MUL) ||
-	    (intnum_is_zero(intn) && op == EXPR_AND) ||
-	    (intnum_is_neg1(intn) && op == EXPR_OR));
+    return ((yasm_intnum_is_zero(intn) && op == YASM_EXPR_MUL) ||
+	    (yasm_intnum_is_zero(intn) && op == YASM_EXPR_AND) ||
+	    (yasm_intnum_is_neg1(intn) && op == YASM_EXPR_OR));
 }
 
 /* Look for simple "left" identities like 0+x, 1*x, etc. */
 static int
-expr_can_delete_int_left(ExprOp op, intnum *intn)
+expr_can_delete_int_left(yasm_expr_op op, yasm_intnum *intn)
 {
-    return ((intnum_is_pos1(intn) && op == EXPR_MUL) ||
-	    (intnum_is_zero(intn) && op == EXPR_ADD) ||
-	    (intnum_is_neg1(intn) && op == EXPR_AND) ||
-	    (intnum_is_zero(intn) && op == EXPR_OR));
+    return ((yasm_intnum_is_pos1(intn) && op == YASM_EXPR_MUL) ||
+	    (yasm_intnum_is_zero(intn) && op == YASM_EXPR_ADD) ||
+	    (yasm_intnum_is_neg1(intn) && op == YASM_EXPR_AND) ||
+	    (yasm_intnum_is_zero(intn) && op == YASM_EXPR_OR));
 }
 
 /* Look for simple "right" identities like x+|-0, x*&/1 */
 static int
-expr_can_delete_int_right(ExprOp op, intnum *intn)
+expr_can_delete_int_right(yasm_expr_op op, yasm_intnum *intn)
 {
-    return ((intnum_is_pos1(intn) && op == EXPR_MUL) ||
-	    (intnum_is_pos1(intn) && op == EXPR_DIV) ||
-	    (intnum_is_zero(intn) && op == EXPR_ADD) ||
-	    (intnum_is_zero(intn) && op == EXPR_SUB) ||
-	    (intnum_is_neg1(intn) && op == EXPR_AND) ||
-	    (intnum_is_zero(intn) && op == EXPR_OR) ||
-	    (intnum_is_zero(intn) && op == EXPR_SHL) ||
-	    (intnum_is_zero(intn) && op == EXPR_SHR));
+    return ((yasm_intnum_is_pos1(intn) && op == YASM_EXPR_MUL) ||
+	    (yasm_intnum_is_pos1(intn) && op == YASM_EXPR_DIV) ||
+	    (yasm_intnum_is_zero(intn) && op == YASM_EXPR_ADD) ||
+	    (yasm_intnum_is_zero(intn) && op == YASM_EXPR_SUB) ||
+	    (yasm_intnum_is_neg1(intn) && op == YASM_EXPR_AND) ||
+	    (yasm_intnum_is_zero(intn) && op == YASM_EXPR_OR) ||
+	    (yasm_intnum_is_zero(intn) && op == YASM_EXPR_SHL) ||
+	    (yasm_intnum_is_zero(intn) && op == YASM_EXPR_SHR));
 }
 
 /* Check for and simplify identities.  Returns new number of expr terms.
@@ -427,7 +431,7 @@ expr_can_delete_int_right(ExprOp op, intnum *intn)
  * NOTE: Really designed to only be used by expr_level_op().
  */
 static int
-expr_simplify_identity(expr *e, int numterms, int int_term)
+expr_simplify_identity(yasm_expr *e, int numterms, int int_term)
 {
     int i;
 
@@ -439,12 +443,12 @@ expr_simplify_identity(expr *e, int numterms, int int_term)
 	(int_term > 0 &&
 	 expr_can_delete_int_right(e->op, e->terms[int_term].data.intn))) {
 	/* Delete the intnum */
-	intnum_delete(e->terms[int_term].data.intn);
+	yasm_intnum_delete(e->terms[int_term].data.intn);
 
 	/* Slide everything to its right over by 1 */
 	if (int_term != numterms-1) /* if it wasn't last.. */
 	    memmove(&e->terms[int_term], &e->terms[int_term+1],
-		    (numterms-1-int_term)*sizeof(ExprItem));
+		    (numterms-1-int_term)*sizeof(yasm_expr__item));
 
 	/* Update numterms */
 	numterms--;
@@ -459,14 +463,14 @@ expr_simplify_identity(expr *e, int numterms, int int_term)
 	for (i=0; i<e->numterms; i++)
 	    if (i != int_term)
 		switch (e->terms[i].type) {
-		    case EXPR_INT:
-			intnum_delete(e->terms[i].data.intn);
+		    case YASM_EXPR_INT:
+			yasm_intnum_delete(e->terms[i].data.intn);
 			break;
-		    case EXPR_FLOAT:
-			floatnum_delete(e->terms[i].data.flt);
+		    case YASM_EXPR_FLOAT:
+			yasm_floatnum_delete(e->terms[i].data.flt);
 			break;
-		    case EXPR_EXPR:
-			expr_delete(e->terms[i].data.expn);
+		    case YASM_EXPR_EXPR:
+			yasm_expr_delete(e->terms[i].data.expn);
 			break;
 		    default:
 			break;
@@ -482,7 +486,7 @@ expr_simplify_identity(expr *e, int numterms, int int_term)
 
     /* Change expression to IDENT if possible. */
     if (numterms == 1)
-	e->op = EXPR_IDENT;
+	e->op = YASM_EXPR_IDENT;
 
     /* Return the updated numterms */
     return numterms;
@@ -500,8 +504,8 @@ expr_simplify_identity(expr *e, int numterms, int int_term)
  * Returns a possibly reallocated e.
  */
 /*@-mustfree@*/
-static /*@only@*/ expr *
-expr_level_op(/*@returned@*/ /*@only@*/ expr *e, int fold_const,
+static /*@only@*/ yasm_expr *
+expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
 	      int simplify_ident)
 {
     int i, j, o, fold_numterms, level_numterms, level_fold_numterms;
@@ -510,8 +514,8 @@ expr_level_op(/*@returned@*/ /*@only@*/ expr *e, int fold_const,
     /* Determine how many operands will need to be brought up (for leveling).
      * Go ahead and bring up any IDENT'ed values.
      */
-    while (e->op == EXPR_IDENT && e->terms[0].type == EXPR_EXPR) {
-	expr *sube = e->terms[0].data.expn;
+    while (e->op == YASM_EXPR_IDENT && e->terms[0].type == YASM_EXPR_EXPR) {
+	yasm_expr *sube = e->terms[0].data.expn;
 	xfree(e);
 	e = sube;
     }
@@ -521,14 +525,14 @@ expr_level_op(/*@returned@*/ /*@only@*/ expr *e, int fold_const,
 	/* Search downward until we find something *other* than an
 	 * IDENT, then bring it up to the current level.
 	 */
-	while (e->terms[i].type == EXPR_EXPR &&
-	       e->terms[i].data.expn->op == EXPR_IDENT) {
-	    expr *sube = e->terms[i].data.expn;
+	while (e->terms[i].type == YASM_EXPR_EXPR &&
+	       e->terms[i].data.expn->op == YASM_EXPR_IDENT) {
+	    yasm_expr *sube = e->terms[i].data.expn;
 	    e->terms[i] = sube->terms[0];
 	    xfree(sube);
 	}
 
-	if (e->terms[i].type == EXPR_EXPR &&
+	if (e->terms[i].type == YASM_EXPR_EXPR &&
 	    e->terms[i].data.expn->op == e->op) {
 		/* It's an expression w/the same operator, add in its numterms.
 		 * But don't forget to subtract one for the expr itself!
@@ -540,14 +544,16 @@ expr_level_op(/*@returned@*/ /*@only@*/ expr *e, int fold_const,
 		 */
 		if (fold_const)
 		    for (j=0; j<e->terms[i].data.expn->numterms; j++)
-			if (e->terms[i].data.expn->terms[j].type == EXPR_INT)
+			if (e->terms[i].data.expn->terms[j].type ==
+			    YASM_EXPR_INT)
 			    level_fold_numterms++;
 	}
 
 	/* Find the first integer term (if one is present) if we're folding
 	 * constants.
 	 */
-	if (fold_const && first_int_term == -1 && e->terms[i].type == EXPR_INT)
+	if (fold_const && first_int_term == -1 &&
+	    e->terms[i].type == YASM_EXPR_INT)
 	    first_int_term = i;
     }
 
@@ -558,13 +564,13 @@ expr_level_op(/*@returned@*/ /*@only@*/ expr *e, int fold_const,
     fold_numterms = e->numterms;
     if (first_int_term != -1) {
 	for (i=first_int_term+1, o=first_int_term+1; i<e->numterms; i++) {
-	    if (e->terms[i].type == EXPR_INT) {
-		intnum_calc(e->terms[first_int_term].data.intn, e->op,
-			    e->terms[i].data.intn);
+	    if (e->terms[i].type == YASM_EXPR_INT) {
+		yasm_intnum_calc(e->terms[first_int_term].data.intn, e->op,
+				 e->terms[i].data.intn);
 		fold_numterms--;
 		level_numterms--;
 		/* make sure to delete folded intnum */
-		intnum_delete(e->terms[i].data.intn);
+		yasm_intnum_delete(e->terms[i].data.intn);
 	    } else if (o != i) {
 		/* copy term if it changed places */
 		e->terms[o++] = e->terms[i];
@@ -576,19 +582,20 @@ expr_level_op(/*@returned@*/ /*@only@*/ expr *e, int fold_const,
 	    fold_numterms = expr_simplify_identity(e, fold_numterms,
 						   first_int_term);
 	else if (fold_numterms == 1)
-	    e->op = EXPR_IDENT;
+	    e->op = YASM_EXPR_IDENT;
     }
 
     /* Only level operators that allow more than two operand terms.
      * Also don't bother leveling if it's not necessary to bring up any terms.
      */
-    if ((e->op != EXPR_ADD && e->op != EXPR_MUL && e->op != EXPR_OR &&
-	 e->op != EXPR_AND && e->op != EXPR_XOR) ||
+    if ((e->op != YASM_EXPR_ADD && e->op != YASM_EXPR_MUL &&
+	 e->op != YASM_EXPR_OR && e->op != YASM_EXPR_AND &&
+	 e->op != YASM_EXPR_XOR) ||
 	level_numterms <= fold_numterms) {
 	/* Downsize e if necessary */
 	if (fold_numterms < e->numterms && e->numterms > 2)
-	    e = xrealloc(e, sizeof(expr)+((fold_numterms<2) ? 0 :
-			 sizeof(ExprItem)*(fold_numterms-2)));
+	    e = xrealloc(e, sizeof(yasm_expr)+((fold_numterms<2) ? 0 :
+			 sizeof(yasm_expr__item)*(fold_numterms-2)));
 	/* Update numterms */
 	e->numterms = fold_numterms;
 	return e;
@@ -604,22 +611,22 @@ expr_level_op(/*@returned@*/ /*@only@*/ expr *e, int fold_const,
     }
 
     /* Alloc more (or conceivably less, but not usually) space for e */
-    e = xrealloc(e, sizeof(expr)+((level_numterms<2) ? 0 :
-		 sizeof(ExprItem)*(level_numterms-2)));
+    e = xrealloc(e, sizeof(yasm_expr)+((level_numterms<2) ? 0 :
+		 sizeof(yasm_expr__item)*(level_numterms-2)));
 
     /* Copy up ExprItem's.  Iterate from right to left to keep the same
      * ordering as was present originally.
      * Combine integer terms as necessary.
      */
     for (i=e->numterms-1, o=level_numterms-1; i>=0; i--) {
-	if (e->terms[i].type == EXPR_EXPR &&
+	if (e->terms[i].type == YASM_EXPR_EXPR &&
 	    e->terms[i].data.expn->op == e->op) {
 	    /* bring up subexpression */
-	    expr *sube = e->terms[i].data.expn;
+	    yasm_expr *sube = e->terms[i].data.expn;
 
 	    /* copy terms right to left */
 	    for (j=sube->numterms-1; j>=0; j--) {
-		if (fold_const && sube->terms[j].type == EXPR_INT) {
+		if (fold_const && sube->terms[j].type == YASM_EXPR_INT) {
 		    /* Need to fold it in.. but if there's no int term already,
 		     * just copy into a new one.
 		     */
@@ -627,10 +634,10 @@ expr_level_op(/*@returned@*/ /*@only@*/ expr *e, int fold_const,
 			first_int_term = o--;
 			e->terms[first_int_term] = sube->terms[j];  /* struc */
 		    } else {
-			intnum_calc(e->terms[first_int_term].data.intn, e->op,
-				    sube->terms[j].data.intn);
+			yasm_intnum_calc(e->terms[first_int_term].data.intn,
+					 e->op, sube->terms[j].data.intn);
 			/* make sure to delete folded intnum */
-			intnum_delete(sube->terms[j].data.intn);
+			yasm_intnum_delete(sube->terms[j].data.intn);
 		    }
 		} else {
 		    if (o == first_int_term)
@@ -662,27 +669,28 @@ expr_level_op(/*@returned@*/ /*@only@*/ expr *e, int fold_const,
     } else {
 	e->numterms = level_numterms;
 	if (level_numterms == 1)
-	    e->op = EXPR_IDENT;
+	    e->op = YASM_EXPR_IDENT;
     }
 
     return e;
 }
 /*@=mustfree@*/
 
-typedef struct exprentry {
-    /*@reldef@*/ SLIST_ENTRY(exprentry) next;
-    /*@null@*/ const expr *e;
-} exprentry;
+typedef struct yasm__exprentry {
+    /*@reldef@*/ SLIST_ENTRY(yasm__exprentry) next;
+    /*@null@*/ const yasm_expr *e;
+} yasm__exprentry;
 
 /* Level an entire expn tree, expanding equ's as we go */
-expr *
-expr_level_tree(expr *e, int fold_const, int simplify_ident,
-		calc_bc_dist_func calc_bc_dist, expr_xform_func expr_xform_extra,
-		void *expr_xform_extra_data, exprhead *eh)
+yasm_expr *
+yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
+		      yasm_calc_bc_dist_func calc_bc_dist,
+		      yasm_expr_xform_func expr_xform_extra,
+		      void *expr_xform_extra_data, yasm__exprhead *eh)
 {
     int i;
-    exprhead eh_local;
-    exprentry ee;
+    yasm__exprhead eh_local;
+    yasm__exprentry ee;
 
     if (!e)
 	return 0;
@@ -699,10 +707,11 @@ expr_level_tree(expr *e, int fold_const, int simplify_ident,
     /* traverse terms */
     for (i=0; i<e->numterms; i++) {
 	/* First expand equ's */
-	if (e->terms[i].type == EXPR_SYM) {
-	    const expr *equ_expr = symrec_get_equ(e->terms[i].data.sym);
+	if (e->terms[i].type == YASM_EXPR_SYM) {
+	    const yasm_expr *equ_expr =
+		yasm_symrec_get_equ(e->terms[i].data.sym);
 	    if (equ_expr) {
-		exprentry *np;
+		yasm__exprentry *np;
 
 		/* Check for circular reference */
 		SLIST_FOREACH(np, eh, next) {
@@ -713,19 +722,20 @@ expr_level_tree(expr *e, int fold_const, int simplify_ident,
 		    }
 		}
 
-		e->terms[i].type = EXPR_EXPR;
-		e->terms[i].data.expn = expr_copy(equ_expr);
+		e->terms[i].type = YASM_EXPR_EXPR;
+		e->terms[i].data.expn = yasm_expr_copy(equ_expr);
 
 		ee.e = equ_expr;
 		SLIST_INSERT_HEAD(eh, &ee, next);
 	    }
 	}
 
-	if (e->terms[i].type == EXPR_EXPR)
+	if (e->terms[i].type == YASM_EXPR_EXPR)
 	    e->terms[i].data.expn =
-		expr_level_tree(e->terms[i].data.expn, fold_const,
-				simplify_ident, calc_bc_dist, expr_xform_extra,
-				expr_xform_extra_data, eh);
+		yasm_expr__level_tree(e->terms[i].data.expn, fold_const,
+				      simplify_ident, calc_bc_dist,
+				      expr_xform_extra, expr_xform_extra_data,
+				      eh);
 
 	if (ee.e) {
 	    SLIST_REMOVE_HEAD(eh, next);
@@ -740,8 +750,8 @@ expr_level_tree(expr *e, int fold_const, int simplify_ident,
 	    e = expr_xform_bc_dist(e, calc_bc_dist);
 	if (expr_xform_extra)
 	    e = expr_xform_extra(e, expr_xform_extra_data);
-	e = expr_level_tree(e, fold_const, simplify_ident, NULL, NULL, NULL,
-			    NULL);
+	e = yasm_expr__level_tree(e, fold_const, simplify_ident, NULL, NULL,
+				  NULL, NULL);
     }
     return e;
 }
@@ -752,7 +762,7 @@ expr_level_tree(expr *e, int fold_const, int simplify_ident,
 static int
 expr_order_terms_compare(const void *va, const void *vb)
 {
-    const ExprItem *a = va, *b = vb;
+    const yasm_expr__item *a = va, *b = vb;
     return (a->type - b->type);
 }
 
@@ -764,7 +774,7 @@ expr_order_terms_compare(const void *va, const void *vb)
  * NOTE: Only performs reordering on *one* level (no recursion).
  */
 void
-expr_order_terms(expr *e)
+yasm_expr__order_terms(yasm_expr *e)
 {
     /* don't bother reordering if only one element */
     if (e->numterms == 1)
@@ -772,16 +782,16 @@ expr_order_terms(expr *e)
 
     /* only reorder some types of operations */
     switch (e->op) {
-	case EXPR_ADD:
-	case EXPR_MUL:
-	case EXPR_OR:
-	case EXPR_AND:
-	case EXPR_XOR:
+	case YASM_EXPR_ADD:
+	case YASM_EXPR_MUL:
+	case YASM_EXPR_OR:
+	case YASM_EXPR_AND:
+	case YASM_EXPR_XOR:
 	    /* Use mergesort to sort.  It's fast on already sorted values and a
 	     * stable sort (multiple terms of same type are kept in the same
 	     * order).
 	     */
-	    mergesort(e->terms, (size_t)e->numterms, sizeof(ExprItem),
+	    mergesort(e->terms, (size_t)e->numterms, sizeof(yasm_expr__item),
 		      expr_order_terms_compare);
 	    break;
 	default:
@@ -790,38 +800,40 @@ expr_order_terms(expr *e)
 }
 
 /* Copy entire expression EXCEPT for index "except" at *top level only*. */
-expr *
-expr_copy_except(const expr *e, int except)
+yasm_expr *
+yasm_expr__copy_except(const yasm_expr *e, int except)
 {
-    expr *n;
+    yasm_expr *n;
     int i;
     
-    n = xmalloc(sizeof(expr)+sizeof(ExprItem)*(e->numterms<2?0:e->numterms-2));
+    n = xmalloc(sizeof(yasm_expr) +
+		sizeof(yasm_expr__item)*(e->numterms<2?0:e->numterms-2));
 
     n->op = e->op;
     n->line = e->line;
     n->numterms = e->numterms;
     for (i=0; i<e->numterms; i++) {
-	ExprItem *dest = &n->terms[i];
-	const ExprItem *src = &e->terms[i];
+	yasm_expr__item *dest = &n->terms[i];
+	const yasm_expr__item *src = &e->terms[i];
 
 	if (i != except) {
 	    dest->type = src->type;
 	    switch (src->type) {
-		case EXPR_SYM:
+		case YASM_EXPR_SYM:
 		    /* Symbols don't need to be copied */
 		    dest->data.sym = src->data.sym;
 		    break;
-		case EXPR_EXPR:
-		    dest->data.expn = expr_copy_except(src->data.expn, -1);
+		case YASM_EXPR_EXPR:
+		    dest->data.expn =
+			yasm_expr__copy_except(src->data.expn, -1);
 		    break;
-		case EXPR_INT:
-		    dest->data.intn = intnum_copy(src->data.intn);
+		case YASM_EXPR_INT:
+		    dest->data.intn = yasm_intnum_copy(src->data.intn);
 		    break;
-		case EXPR_FLOAT:
-		    dest->data.flt = floatnum_copy(src->data.flt);
+		case YASM_EXPR_FLOAT:
+		    dest->data.flt = yasm_floatnum_copy(src->data.flt);
 		    break;
-		case EXPR_REG:
+		case YASM_EXPR_REG:
 		    dest->data.reg = src->data.reg;
 		    break;
 		default:
@@ -833,23 +845,23 @@ expr_copy_except(const expr *e, int except)
     return n;
 }
 
-expr *
-expr_copy(const expr *e)
+yasm_expr *
+yasm_expr_copy(const yasm_expr *e)
 {
-    return expr_copy_except(e, -1);
+    return yasm_expr__copy_except(e, -1);
 }
 
 static int
-expr_delete_each(/*@only@*/ expr *e, /*@unused@*/ void *d)
+expr_delete_each(/*@only@*/ yasm_expr *e, /*@unused@*/ void *d)
 {
     int i;
     for (i=0; i<e->numterms; i++) {
 	switch (e->terms[i].type) {
-	    case EXPR_INT:
-		intnum_delete(e->terms[i].data.intn);
+	    case YASM_EXPR_INT:
+		yasm_intnum_delete(e->terms[i].data.intn);
 		break;
-	    case EXPR_FLOAT:
-		floatnum_delete(e->terms[i].data.flt);
+	    case YASM_EXPR_FLOAT:
+		yasm_floatnum_delete(e->terms[i].data.flt);
 		break;
 	    default:
 		break;	/* none of the other types needs to be deleted */
@@ -861,23 +873,23 @@ expr_delete_each(/*@only@*/ expr *e, /*@unused@*/ void *d)
 
 /*@-mustfree@*/
 void
-expr_delete(expr *e)
+yasm_expr_delete(yasm_expr *e)
 {
     expr_traverse_nodes_post(e, NULL, expr_delete_each);
 }
 /*@=mustfree@*/
 
 static int
-expr_contains_callback(const ExprItem *ei, void *d)
+expr_contains_callback(const yasm_expr__item *ei, void *d)
 {
-    ExprType *t = d;
+    yasm_expr__type *t = d;
     return (ei->type & *t);
 }
 
 int
-expr_contains(const expr *e, ExprType t)
+yasm_expr__contains(const yasm_expr *e, yasm_expr__type t)
 {
-    return expr_traverse_leaves_in_const(e, &t, expr_contains_callback);
+    return yasm_expr__traverse_leaves_in_const(e, &t, expr_contains_callback);
 }
 
 /* Traverse over expression tree, calling func for each operation AFTER the
@@ -887,8 +899,9 @@ expr_contains(const expr *e, ExprType t)
  * Stops early (and returns 1) if func returns 1.  Otherwise returns 0.
  */
 static int
-expr_traverse_nodes_post(expr *e, void *d,
-			 int (*func) (/*@null@*/ expr *e, /*@null@*/ void *d))
+expr_traverse_nodes_post(yasm_expr *e, void *d,
+			 int (*func) (/*@null@*/ yasm_expr *e,
+				      /*@null@*/ void *d))
 {
     int i;
 
@@ -897,7 +910,7 @@ expr_traverse_nodes_post(expr *e, void *d,
 
     /* traverse terms */
     for (i=0; i<e->numterms; i++) {
-	if (e->terms[i].type == EXPR_EXPR &&
+	if (e->terms[i].type == YASM_EXPR_EXPR &&
 	    expr_traverse_nodes_post(e->terms[i].data.expn, d, func))
 	    return 1;
     }
@@ -912,9 +925,8 @@ expr_traverse_nodes_post(expr *e, void *d,
  * Stops early (and returns 1) if func returns 1.  Otherwise returns 0.
  */
 int
-expr_traverse_leaves_in_const(const expr *e, void *d,
-			      int (*func) (/*@null@*/ const ExprItem *ei,
-					   /*@null@*/ void *d))
+yasm_expr__traverse_leaves_in_const(const yasm_expr *e, void *d,
+    int (*func) (/*@null@*/ const yasm_expr__item *ei, /*@null@*/ void *d))
 {
     int i;
 
@@ -922,8 +934,9 @@ expr_traverse_leaves_in_const(const expr *e, void *d,
 	return 0;
 
     for (i=0; i<e->numterms; i++) {
-	if (e->terms[i].type == EXPR_EXPR) {
-	    if (expr_traverse_leaves_in_const(e->terms[i].data.expn, d, func))
+	if (e->terms[i].type == YASM_EXPR_EXPR) {
+	    if (yasm_expr__traverse_leaves_in_const(e->terms[i].data.expn, d,
+						    func))
 		return 1;
 	} else {
 	    if (func(&e->terms[i], d))
@@ -939,9 +952,8 @@ expr_traverse_leaves_in_const(const expr *e, void *d,
  * Stops early (and returns 1) if func returns 1.  Otherwise returns 0.
  */
 int
-expr_traverse_leaves_in(expr *e, void *d,
-			int (*func) (/*@null@*/ ExprItem *ei,
-				     /*@null@*/ void *d))
+yasm_expr__traverse_leaves_in(yasm_expr *e, void *d,
+    int (*func) (/*@null@*/ yasm_expr__item *ei, /*@null@*/ void *d))
 {
     int i;
 
@@ -949,8 +961,8 @@ expr_traverse_leaves_in(expr *e, void *d,
 	return 0;
 
     for (i=0; i<e->numterms; i++) {
-	if (e->terms[i].type == EXPR_EXPR) {
-	    if (expr_traverse_leaves_in(e->terms[i].data.expn, d, func))
+	if (e->terms[i].type == YASM_EXPR_EXPR) {
+	    if (yasm_expr__traverse_leaves_in(e->terms[i].data.expn, d, func))
 		return 1;
 	} else {
 	    if (func(&e->terms[i], d))
@@ -960,24 +972,24 @@ expr_traverse_leaves_in(expr *e, void *d,
     return 0;
 }
 
-symrec *
-expr_extract_symrec(expr **ep, calc_bc_dist_func calc_bc_dist)
+yasm_symrec *
+yasm_expr_extract_symrec(yasm_expr **ep, yasm_calc_bc_dist_func calc_bc_dist)
 {
-    symrec *sym = NULL;
+    yasm_symrec *sym = NULL;
     int i, symterm = -1;
 
     switch ((*ep)->op) {
-	case EXPR_IDENT:
+	case YASM_EXPR_IDENT:
 	    /* Replace sym with 0 value, return sym */
-	    if ((*ep)->terms[0].type == EXPR_SYM) {
+	    if ((*ep)->terms[0].type == YASM_EXPR_SYM) {
 		sym = (*ep)->terms[0].data.sym;
 		symterm = 0;
 	    }
 	    break;
-	case EXPR_ADD:
+	case YASM_EXPR_ADD:
 	    /* Search for sym, if found, delete it from expr and return it */
 	    for (i=0; i<(*ep)->numterms; i++) {
-		if ((*ep)->terms[i].type == EXPR_SYM) {
+		if ((*ep)->terms[i].type == YASM_EXPR_SYM) {
 		    sym = (*ep)->terms[i].data.sym;
 		    symterm = i;
 		    break;
@@ -988,70 +1000,71 @@ expr_extract_symrec(expr **ep, calc_bc_dist_func calc_bc_dist)
 	    break;
     }
     if (sym) {
-	/*@dependent@*/ section *sect;
-	/*@dependent@*/ /*@null@*/ bytecode *precbc;
-	/*@null@*/ intnum *intn;
+	/*@dependent@*/ yasm_section *sect;
+	/*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
+	/*@null@*/ yasm_intnum *intn;
 
-	if (symrec_get_label(sym, &sect, &precbc)) {
+	if (yasm_symrec_get_label(sym, &sect, &precbc)) {
 	    intn = calc_bc_dist(sect, NULL, precbc);
 	    if (!intn)
 		return NULL;
 	} else
-	    intn = intnum_new_uint(0);
-	(*ep)->terms[symterm].type = EXPR_INT;
+	    intn = yasm_intnum_new_uint(0);
+	(*ep)->terms[symterm].type = YASM_EXPR_INT;
 	(*ep)->terms[symterm].data.intn = intn;
     }
     return sym;
 }
 
 /*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
-const intnum *
-expr_get_intnum(expr **ep, calc_bc_dist_func calc_bc_dist)
+const yasm_intnum *
+yasm_expr_get_intnum(yasm_expr **ep, yasm_calc_bc_dist_func calc_bc_dist)
 {
-    *ep = expr_simplify(*ep, calc_bc_dist);
+    *ep = yasm_expr_simplify(*ep, calc_bc_dist);
 
-    if ((*ep)->op == EXPR_IDENT && (*ep)->terms[0].type == EXPR_INT)
+    if ((*ep)->op == YASM_EXPR_IDENT && (*ep)->terms[0].type == YASM_EXPR_INT)
 	return (*ep)->terms[0].data.intn;
     else
-	return (intnum *)NULL;
+	return (yasm_intnum *)NULL;
 }
 /*@=unqualifiedtrans =nullderef -nullstate -onlytrans@*/
 
 /*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
-const floatnum *
-expr_get_floatnum(expr **ep)
+const yasm_floatnum *
+yasm_expr_get_floatnum(yasm_expr **ep)
 {
-    *ep = expr_simplify(*ep, NULL);
+    *ep = yasm_expr_simplify(*ep, NULL);
 
-    if ((*ep)->op == EXPR_IDENT && (*ep)->terms[0].type == EXPR_FLOAT)
+    if ((*ep)->op == YASM_EXPR_IDENT &&
+	(*ep)->terms[0].type == YASM_EXPR_FLOAT)
 	return (*ep)->terms[0].data.flt;
     else
-	return (floatnum *)NULL;
+	return (yasm_floatnum *)NULL;
 }
 /*@=unqualifiedtrans =nullderef -nullstate -onlytrans@*/
 
 /*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
-const symrec *
-expr_get_symrec(expr **ep, int simplify)
+const yasm_symrec *
+yasm_expr_get_symrec(yasm_expr **ep, int simplify)
 {
     if (simplify)
-	*ep = expr_simplify(*ep, NULL);
+	*ep = yasm_expr_simplify(*ep, NULL);
 
-    if ((*ep)->op == EXPR_IDENT && (*ep)->terms[0].type == EXPR_SYM)
+    if ((*ep)->op == YASM_EXPR_IDENT && (*ep)->terms[0].type == YASM_EXPR_SYM)
 	return (*ep)->terms[0].data.sym;
     else
-	return (symrec *)NULL;
+	return (yasm_symrec *)NULL;
 }
 /*@=unqualifiedtrans =nullderef -nullstate -onlytrans@*/
 
 /*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
 const unsigned long *
-expr_get_reg(expr **ep, int simplify)
+yasm_expr_get_reg(yasm_expr **ep, int simplify)
 {
     if (simplify)
-	*ep = expr_simplify(*ep, NULL);
+	*ep = yasm_expr_simplify(*ep, NULL);
 
-    if ((*ep)->op == EXPR_IDENT && (*ep)->terms[0].type == EXPR_REG)
+    if ((*ep)->op == YASM_EXPR_IDENT && (*ep)->terms[0].type == YASM_EXPR_REG)
 	return &((*ep)->terms[0].data.reg);
     else
 	return NULL;
@@ -1059,7 +1072,7 @@ expr_get_reg(expr **ep, int simplify)
 /*@=unqualifiedtrans =nullderef -nullstate -onlytrans@*/
 
 void
-expr_print(FILE *f, const expr *e)
+yasm_expr_print(FILE *f, const yasm_expr *e)
 {
     char opstr[6];
     int i;
@@ -1070,111 +1083,111 @@ expr_print(FILE *f, const expr *e)
     }
 
     switch (e->op) {
-	case EXPR_ADD:
+	case YASM_EXPR_ADD:
 	    strcpy(opstr, "+");
 	    break;
-	case EXPR_SUB:
+	case YASM_EXPR_SUB:
 	    strcpy(opstr, "-");
 	    break;
-	case EXPR_MUL:
+	case YASM_EXPR_MUL:
 	    strcpy(opstr, "*");
 	    break;
-	case EXPR_DIV:
+	case YASM_EXPR_DIV:
 	    strcpy(opstr, "/");
 	    break;
-	case EXPR_SIGNDIV:
+	case YASM_EXPR_SIGNDIV:
 	    strcpy(opstr, "//");
 	    break;
-	case EXPR_MOD:
+	case YASM_EXPR_MOD:
 	    strcpy(opstr, "%");
 	    break;
-	case EXPR_SIGNMOD:
+	case YASM_EXPR_SIGNMOD:
 	    strcpy(opstr, "%%");
 	    break;
-	case EXPR_NEG:
+	case YASM_EXPR_NEG:
 	    fprintf(f, "-");
 	    opstr[0] = 0;
 	    break;
-	case EXPR_NOT:
+	case YASM_EXPR_NOT:
 	    fprintf(f, "~");
 	    opstr[0] = 0;
 	    break;
-	case EXPR_OR:
+	case YASM_EXPR_OR:
 	    strcpy(opstr, "|");
 	    break;
-	case EXPR_AND:
+	case YASM_EXPR_AND:
 	    strcpy(opstr, "&");
 	    break;
-	case EXPR_XOR:
+	case YASM_EXPR_XOR:
 	    strcpy(opstr, "^");
 	    break;
-	case EXPR_SHL:
+	case YASM_EXPR_SHL:
 	    strcpy(opstr, "<<");
 	    break;
-	case EXPR_SHR:
+	case YASM_EXPR_SHR:
 	    strcpy(opstr, ">>");
 	    break;
-	case EXPR_LOR:
+	case YASM_EXPR_LOR:
 	    strcpy(opstr, "||");
 	    break;
-	case EXPR_LAND:
+	case YASM_EXPR_LAND:
 	    strcpy(opstr, "&&");
 	    break;
-	case EXPR_LNOT:
+	case YASM_EXPR_LNOT:
 	    strcpy(opstr, "!");
 	    break;
-	case EXPR_LT:
+	case YASM_EXPR_LT:
 	    strcpy(opstr, "<");
 	    break;
-	case EXPR_GT:
+	case YASM_EXPR_GT:
 	    strcpy(opstr, ">");
 	    break;
-	case EXPR_LE:
+	case YASM_EXPR_LE:
 	    strcpy(opstr, "<=");
 	    break;
-	case EXPR_GE:
+	case YASM_EXPR_GE:
 	    strcpy(opstr, ">=");
 	    break;
-	case EXPR_NE:
+	case YASM_EXPR_NE:
 	    strcpy(opstr, "!=");
 	    break;
-	case EXPR_EQ:
+	case YASM_EXPR_EQ:
 	    strcpy(opstr, "==");
 	    break;
-	case EXPR_SEG:
+	case YASM_EXPR_SEG:
 	    fprintf(f, "SEG ");
 	    opstr[0] = 0;
 	    break;
-	case EXPR_WRT:
+	case YASM_EXPR_WRT:
 	    strcpy(opstr, " WRT ");
 	    break;
-	case EXPR_SEGOFF:
+	case YASM_EXPR_SEGOFF:
 	    strcpy(opstr, ":");
 	    break;
-	case EXPR_IDENT:
+	case YASM_EXPR_IDENT:
 	    opstr[0] = 0;
 	    break;
     }
     for (i=0; i<e->numterms; i++) {
 	switch (e->terms[i].type) {
-	    case EXPR_SYM:
-		fprintf(f, "%s", symrec_get_name(e->terms[i].data.sym));
+	    case YASM_EXPR_SYM:
+		fprintf(f, "%s", yasm_symrec_get_name(e->terms[i].data.sym));
 		break;
-	    case EXPR_EXPR:
+	    case YASM_EXPR_EXPR:
 		fprintf(f, "(");
-		expr_print(f, e->terms[i].data.expn);
+		yasm_expr_print(f, e->terms[i].data.expn);
 		fprintf(f, ")");
 		break;
-	    case EXPR_INT:
-		intnum_print(f, e->terms[i].data.intn);
+	    case YASM_EXPR_INT:
+		yasm_intnum_print(f, e->terms[i].data.intn);
 		break;
-	    case EXPR_FLOAT:
-		floatnum_print(f, e->terms[i].data.flt);
+	    case YASM_EXPR_FLOAT:
+		yasm_floatnum_print(f, e->terms[i].data.flt);
 		break;
-	    case EXPR_REG:
+	    case YASM_EXPR_REG:
 		cur_arch->reg_print(f, e->terms[i].data.reg);
 		break;
-	    case EXPR_NONE:
+	    case YASM_EXPR_NONE:
 		break;
 	}
 	if (i < e->numterms-1)

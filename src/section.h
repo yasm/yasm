@@ -27,32 +27,34 @@
 #ifndef YASM_SECTION_H
 #define YASM_SECTION_H
 
-/*@dependent@*/ section *sections_initialize(sectionhead *headp, objfmt *of);
+/*@dependent@*/ yasm_section *yasm_sections_initialize(yasm_sectionhead *headp,
+						       yasm_objfmt *of);
 
-/*@dependent@*/ section *sections_switch_general(sectionhead *headp,
-    const char *name, unsigned long start, int res_only, /*@out@*/ int *isnew,
-    unsigned long lindex,
-    /*@exits@*/ void (*error_func) (const char *file, unsigned int line,
-				    const char *message));
+/*@dependent@*/ yasm_section *yasm_sections_switch_general
+    (yasm_sectionhead *headp, const char *name, unsigned long start,
+     int res_only, /*@out@*/ int *isnew, unsigned long lindex,
+     /*@exits@*/ void (*error_func) (const char *file, unsigned int line,
+				     const char *message));
 
-/*@dependent@*/ section *sections_switch_absolute(sectionhead *headp,
-    /*@keep@*/ expr *start,
-    /*@exits@*/ void (*error_func) (const char *file, unsigned int line,
-				    const char *message));
+/*@dependent@*/ yasm_section *yasm_sections_switch_absolute
+    (yasm_sectionhead *headp, /*@keep@*/ yasm_expr *start,
+     /*@exits@*/ void (*error_func) (const char *file, unsigned int line,
+				     const char *message));
 
-int section_is_absolute(section *sect);
+int yasm_section_is_absolute(yasm_section *sect);
 
 /* Get and set optimizer flags */
-unsigned long section_get_opt_flags(const section *sect);
-void section_set_opt_flags(section *sect, unsigned long opt_flags);
+unsigned long yasm_section_get_opt_flags(const yasm_section *sect);
+void yasm_section_set_opt_flags(yasm_section *sect, unsigned long opt_flags);
 
-void section_set_of_data(section *sect, objfmt *of,
-			 /*@null@*/ /*@only@*/ void *of_data);
-/*@dependent@*/ /*@null@*/ void *section_get_of_data(section *sect);
+void yasm_section_set_of_data(yasm_section *sect, yasm_objfmt *of,
+			      /*@null@*/ /*@only@*/ void *of_data);
+/*@dependent@*/ /*@null@*/ void *yasm_section_get_of_data(yasm_section *sect);
 
-void sections_delete(sectionhead *headp);
+void yasm_sections_delete(yasm_sectionhead *headp);
 
-void sections_print(FILE *f, int indent_level, const sectionhead *headp);
+void yasm_sections_print(FILE *f, int indent_level,
+			 const yasm_sectionhead *headp);
 
 /* Calls func for each section in the linked list of sections pointed to by
  * headp.  The data pointer d is passed to each func call.
@@ -60,22 +62,26 @@ void sections_print(FILE *f, int indent_level, const sectionhead *headp);
  * Stops early (and returns func's return value) if func returns a nonzero
  * value.  Otherwise returns 0.
  */
-int sections_traverse(sectionhead *headp, /*@null@*/ void *d,
-		      int (*func) (section *sect, /*@null@*/ void *d));
+int yasm_sections_traverse(yasm_sectionhead *headp, /*@null@*/ void *d,
+			   int (*func) (yasm_section *sect,
+					/*@null@*/ void *d));
 
-/*@dependent@*/ /*@null@*/ section *sections_find_general(sectionhead *headp,
-							  const char *name);
+/*@dependent@*/ /*@null@*/ yasm_section *yasm_sections_find_general
+    (yasm_sectionhead *headp, const char *name);
 
-/*@dependent@*/ bytecodehead *section_get_bytecodes(section *sect);
+/*@dependent@*/ yasm_bytecodehead *yasm_section_get_bytecodes
+    (yasm_section *sect);
 
-/*@observer@*/ /*@null@*/ const char *section_get_name(const section *sect);
+/*@observer@*/ /*@null@*/ const char *yasm_section_get_name
+    (const yasm_section *sect);
 
-void section_set_start(section *sect, unsigned long start,
-		       unsigned long lindex);
-/*@observer@*/ const expr *section_get_start(const section *sect);
+void yasm_section_set_start(yasm_section *sect, unsigned long start,
+			    unsigned long lindex);
+/*@observer@*/ const yasm_expr *yasm_section_get_start
+    (const yasm_section *sect);
 
-void section_delete(/*@only@*/ section *sect);
+void yasm_section_delete(/*@only@*/ yasm_section *sect);
 
-void section_print(FILE *f, int indent_level, /*@null@*/ const section *sect,
-		   int print_bcs);
+void yasm_section_print(FILE *f, int indent_level,
+			/*@null@*/ const yasm_section *sect, int print_bcs);
 #endif

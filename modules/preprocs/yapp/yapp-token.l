@@ -330,11 +330,11 @@ DIR	 %[ \t]*
 [][+*/,()-] { return yytext[0]; }
 
 <inhibit>.  {
-    cur_we->warning(WARN_PREPROC, cur_lindex, _("Unhandled character in <inhibit> `%s'"), cur_we->conv_unprint(yytext[0]));
+    cur_we->warning(YASM_WARN_PREPROC, cur_lindex, _("Unhandled character in <inhibit> `%s'"), cur_we->conv_unprint(yytext[0]));
 }
 
 .	{
-    cur_we->warning(WARN_PREPROC, cur_lindex, _("ignoring unrecognized character `%s'"),
+    cur_we->warning(YASM_WARN_PREPROC, cur_lindex, _("ignoring unrecognized character `%s'"),
 	    	    cur_we->conv_unprint(yytext[0]));
 }
 

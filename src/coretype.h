@@ -27,66 +27,68 @@
 #ifndef YASM_CORETYPE_H
 #define YASM_CORETYPE_H
 
-typedef struct arch arch;
+typedef struct yasm_arch yasm_arch;
 
-typedef struct preproc preproc;
-typedef struct parser parser;
-typedef struct optimizer optimizer;
-typedef struct objfmt objfmt;
-typedef struct dbgfmt dbgfmt;
+typedef struct yasm_preproc yasm_preproc;
+typedef struct yasm_parser yasm_parser;
+typedef struct yasm_optimizer yasm_optimizer;
+typedef struct yasm_objfmt yasm_objfmt;
+typedef struct yasm_dbgfmt yasm_dbgfmt;
 
-typedef struct bytecode bytecode;
-typedef /*@reldef@*/ STAILQ_HEAD(bytecodehead, bytecode) bytecodehead;
+typedef struct yasm_bytecode yasm_bytecode;
+typedef /*@reldef@*/ STAILQ_HEAD(yasm_bytecodehead, yasm_bytecode)
+    yasm_bytecodehead;
 
-typedef struct section section;
-typedef /*@reldef@*/ STAILQ_HEAD(sectionhead, section) sectionhead;
+typedef struct yasm_section yasm_section;
+typedef /*@reldef@*/ STAILQ_HEAD(yasm_sectionhead, yasm_section)
+    yasm_sectionhead;
 
-typedef struct symrec symrec;
+typedef struct yasm_symrec yasm_symrec;
 
-typedef struct expr expr;
-typedef struct intnum intnum;
-typedef struct floatnum floatnum;
+typedef struct yasm_expr yasm_expr;
+typedef struct yasm_intnum yasm_intnum;
+typedef struct yasm_floatnum yasm_floatnum;
 
-typedef struct linemgr linemgr;
-typedef struct errwarn errwarn;
+typedef struct yasm_linemgr yasm_linemgr;
+typedef struct yasm_errwarn yasm_errwarn;
 
 typedef enum {
-    EXPR_ADD,
-    EXPR_SUB,
-    EXPR_MUL,
-    EXPR_DIV,
-    EXPR_SIGNDIV,
-    EXPR_MOD,
-    EXPR_SIGNMOD,
-    EXPR_NEG,
-    EXPR_NOT,
-    EXPR_OR,
-    EXPR_AND,
-    EXPR_XOR,
-    EXPR_SHL,
-    EXPR_SHR,
-    EXPR_LOR,
-    EXPR_LAND,
-    EXPR_LNOT,
-    EXPR_LT,
-    EXPR_GT,
-    EXPR_EQ,
-    EXPR_LE,
-    EXPR_GE,
-    EXPR_NE,
-    EXPR_SEG,
-    EXPR_WRT,
-    EXPR_SEGOFF,    /* The ':' in SEG:OFF */
-    EXPR_IDENT	    /* no operation, just a value */
-} ExprOp;
+    YASM_EXPR_ADD,
+    YASM_EXPR_SUB,
+    YASM_EXPR_MUL,
+    YASM_EXPR_DIV,
+    YASM_EXPR_SIGNDIV,
+    YASM_EXPR_MOD,
+    YASM_EXPR_SIGNMOD,
+    YASM_EXPR_NEG,
+    YASM_EXPR_NOT,
+    YASM_EXPR_OR,
+    YASM_EXPR_AND,
+    YASM_EXPR_XOR,
+    YASM_EXPR_SHL,
+    YASM_EXPR_SHR,
+    YASM_EXPR_LOR,
+    YASM_EXPR_LAND,
+    YASM_EXPR_LNOT,
+    YASM_EXPR_LT,
+    YASM_EXPR_GT,
+    YASM_EXPR_EQ,
+    YASM_EXPR_LE,
+    YASM_EXPR_GE,
+    YASM_EXPR_NE,
+    YASM_EXPR_SEG,
+    YASM_EXPR_WRT,
+    YASM_EXPR_SEGOFF,	/* The ':' in SEG:OFF */
+    YASM_EXPR_IDENT	/* no operation, just a value */
+} yasm_expr_op;
 
 /* EXTERN and COMMON are mutually exclusive */
 typedef enum {
-    SYM_LOCAL = 0,		/* default, local only */
-    SYM_GLOBAL = 1 << 0,	/* if it's declared GLOBAL */
-    SYM_COMMON = 1 << 1,	/* if it's declared COMMON */
-    SYM_EXTERN = 1 << 2		/* if it's declared EXTERN */
-} SymVisibility;
+    YASM_SYM_LOCAL = 0,		/* default, local only */
+    YASM_SYM_GLOBAL = 1 << 0,	/* if it's declared GLOBAL */
+    YASM_SYM_COMMON = 1 << 1,	/* if it's declared COMMON */
+    YASM_SYM_EXTERN = 1 << 2	/* if it's declared EXTERN */
+} yasm_sym_vis;
 
 /* Determines the distance, in bytes, between the starting offsets of two
  * bytecodes in a section.
@@ -97,9 +99,9 @@ typedef enum {
  * Returns distance in bytes (bc2-bc1), or NULL if the distance was
  *  indeterminate.
  */
-typedef /*@null@*/ intnum * (*calc_bc_dist_func) (section *sect,
-						  /*@null@*/ bytecode *precbc1,
-						  /*@null@*/ bytecode *precbc2);
+typedef /*@null@*/ yasm_intnum * (*yasm_calc_bc_dist_func)
+    (yasm_section *sect, /*@null@*/ yasm_bytecode *precbc1,
+     /*@null@*/ yasm_bytecode *precbc2);
 
 /* Converts an expr to its byte representation.  Usually implemented by
  * object formats to keep track of relocations and verify legal expressions.
@@ -114,11 +116,10 @@ typedef /*@null@*/ intnum * (*calc_bc_dist_func) (section *sect,
  *  d       - objfmt-specific data (passed into higher-level calling fct)
  * Returns nonzero if an error occurred, 0 otherwise
  */
-typedef int (*output_expr_func) (expr **ep, unsigned char **bufp,
-				 unsigned long valsize, unsigned long offset,
-				 /*@observer@*/ const section *sect,
-				 /*@observer@*/ const bytecode *bc, int rel,
-				 /*@null@*/ void *d)
+typedef int (*yasm_output_expr_func)
+    (yasm_expr **ep, unsigned char **bufp, unsigned long valsize,
+     unsigned long offset, /*@observer@*/ const yasm_section *sect,
+     /*@observer@*/ const yasm_bytecode *bc, int rel, /*@null@*/ void *d)
     /*@uses *ep@*/ /*@sets **bufp@*/;
 
 /* Converts a objfmt data bytecode into its byte representation.  Usually
@@ -131,8 +132,7 @@ typedef int (*output_expr_func) (expr **ep, unsigned char **bufp,
  * by the original bc_new_objfmt_data() call).
  * Returns nonzero if an error occurred, 0 otherwise.
  */
-typedef int (*output_bc_objfmt_data_func) (unsigned int type,
-					   /*@observer@*/ void *data,
-					   unsigned char **bufp)
+typedef int (*yasm_output_bc_objfmt_data_func)
+    (unsigned int type, /*@observer@*/ void *data, unsigned char **bufp)
     /*@sets **bufp@*/;
 #endif

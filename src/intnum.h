@@ -27,29 +27,29 @@
 #ifndef YASM_INTNUM_H
 #define YASM_INTNUM_H
 
-void intnum_initialize(errwarn *we);
+void yasm_intnum_initialize(yasm_errwarn *we);
 /* Clean up internal allocations */
-void intnum_cleanup(void);
+void yasm_intnum_cleanup(void);
 
-/*@only@*/ intnum *intnum_new_dec(char *str, unsigned long lindex);
-/*@only@*/ intnum *intnum_new_bin(char *str, unsigned long lindex);
-/*@only@*/ intnum *intnum_new_oct(char *str, unsigned long lindex);
-/*@only@*/ intnum *intnum_new_hex(char *str, unsigned long lindex);
+/*@only@*/ yasm_intnum *yasm_intnum_new_dec(char *str, unsigned long lindex);
+/*@only@*/ yasm_intnum *yasm_intnum_new_bin(char *str, unsigned long lindex);
+/*@only@*/ yasm_intnum *yasm_intnum_new_oct(char *str, unsigned long lindex);
+/*@only@*/ yasm_intnum *yasm_intnum_new_hex(char *str, unsigned long lindex);
 /* convert character constant to integer value, using NASM rules */
-/*@only@*/ intnum *intnum_new_charconst_nasm(const char *str,
-					     unsigned long lindex);
-/*@only@*/ intnum *intnum_new_uint(unsigned long i);
-/*@only@*/ intnum *intnum_new_int(long i);
-/*@only@*/ intnum *intnum_copy(const intnum *intn);
-void intnum_delete(/*@only@*/ intnum *intn);
+/*@only@*/ yasm_intnum *yasm_intnum_new_charconst_nasm(const char *str,
+						       unsigned long lindex);
+/*@only@*/ yasm_intnum *yasm_intnum_new_uint(unsigned long i);
+/*@only@*/ yasm_intnum *yasm_intnum_new_int(long i);
+/*@only@*/ yasm_intnum *yasm_intnum_copy(const yasm_intnum *intn);
+void yasm_intnum_delete(/*@only@*/ yasm_intnum *intn);
 
 /* calculation function: acc = acc op operand */
-void intnum_calc(intnum *acc, ExprOp op, intnum *operand);
+void yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand);
 
 /* simple value checks (for catching identities and the like) */
-int intnum_is_zero(intnum *acc);
-int intnum_is_pos1(intnum *acc);
-int intnum_is_neg1(intnum *acc);
+int yasm_intnum_is_zero(yasm_intnum *acc);
+int yasm_intnum_is_pos1(yasm_intnum *acc);
+int yasm_intnum_is_neg1(yasm_intnum *acc);
 
 /* The get functions truncate intn to the size specified; they don't check
  * for overflow.  Use intnum_check_size() to check for overflow.
@@ -59,20 +59,22 @@ int intnum_is_neg1(intnum *acc);
  * intnum_get_uint() treats intn as an unsigned integer (and returns as such).
  * intnum_get_int() treats intn as a signed integer (and returns as such).
  */
-unsigned long intnum_get_uint(const intnum *intn);
-long intnum_get_int(const intnum *intn);
+unsigned long yasm_intnum_get_uint(const yasm_intnum *intn);
+long yasm_intnum_get_int(const yasm_intnum *intn);
 
 /* ptr will point to the Intel-format little-endian byte string after
  * call (eg, [0] should be the first byte output to the file).
  */
-void intnum_get_sized(const intnum *intn, unsigned char *ptr, size_t size);
+void yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
+			   size_t size);
 
 /* Check to see if intn will fit without overflow in size bytes.
  * If is_signed is 1, intn is treated as a signed number.
  * Returns 1 if it will, 0 if not.
  */
-int intnum_check_size(const intnum *intn, size_t size, int is_signed);
+int yasm_intnum_check_size(const yasm_intnum *intn, size_t size,
+			   int is_signed);
 
-void intnum_print(FILE *f, const intnum *intn);
+void yasm_intnum_print(FILE *f, const yasm_intnum *intn);
 
 #endif

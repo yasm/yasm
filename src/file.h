@@ -29,16 +29,16 @@
 
 /* These functions only work properly if p is an (unsigned char *) */
 
-#define WRITE_8(ptr, val)			\
+#define YASM_WRITE_8(ptr, val)			\
 	*((ptr)++) = (unsigned char)((val) & 0xFF)
 
-#define WRITE_16_L(ptr, val)			\
+#define YASM_WRITE_16_L(ptr, val)		\
 	do {					\
 	    *((ptr)++) = (unsigned char)((val) & 0xFF);		\
 	    *((ptr)++) = (unsigned char)(((val) >> 8) & 0xFF);	\
 	} while (0)
 
-#define WRITE_32_L(ptr, val)			\
+#define YASM_WRITE_32_L(ptr, val)		\
 	do {					\
 	    *((ptr)++) = (unsigned char)((val) & 0xFF);		\
 	    *((ptr)++) = (unsigned char)(((val) >> 8) & 0xFF);	\
@@ -46,13 +46,13 @@
 	    *((ptr)++) = (unsigned char)(((val) >> 24) & 0xFF);	\
 	} while (0)
 
-#define WRITE_16_B(ptr, val)			\
+#define YASM_WRITE_16_B(ptr, val)		\
 	do {					\
 	    *((ptr)++) = (unsigned char)(((val) >> 8) & 0xFF);	\
 	    *((ptr)++) = (unsigned char)((val) & 0xFF);		\
 	} while (0)
 
-#define WRITE_32_B(ptr, val)			\
+#define YASM_WRITE_32_B(ptr, val)		\
 	do {					\
 	    *((ptr)++) = (unsigned char)(((val) >> 24) & 0xFF);	\
 	    *((ptr)++) = (unsigned char)(((val) >> 16) & 0xFF);	\
@@ -63,16 +63,16 @@
 
 /* Non-incrementing versions of the above. */
 
-#define SAVE_8(ptr, val)			\
+#define YASM_SAVE_8(ptr, val)			\
 	*(ptr) = (unsigned char)((val) & 0xFF)
 
-#define SAVE_16_L(ptr, val)			\
+#define YASM_SAVE_16_L(ptr, val)		\
 	do {					\
 	    *(ptr) = (unsigned char)((val) & 0xFF);		\
 	    *((ptr)+1) = (unsigned char)(((val) >> 8) & 0xFF);	\
 	} while (0)
 
-#define SAVE_32_L(ptr, val)			\
+#define YASM_SAVE_32_L(ptr, val)		\
 	do {					\
 	    *(ptr) = (unsigned char)((val) & 0xFF);		\
 	    *((ptr)+1) = (unsigned char)(((val) >> 8) & 0xFF);	\
@@ -80,13 +80,13 @@
 	    *((ptr)+3) = (unsigned char)(((val) >> 24) & 0xFF);	\
 	} while (0)
 
-#define SAVE_16_B(ptr, val)			\
+#define YASM_SAVE_16_B(ptr, val)		\
 	do {					\
 	    *(ptr) = (unsigned char)(((val) >> 8) & 0xFF);	\
 	    *((ptr)+1) = (unsigned char)((val) & 0xFF);		\
 	} while (0)
 
-#define SAVE_32_B(ptr, val)			\
+#define YASM_SAVE_32_B(ptr, val)		\
 	do {					\
 	    *(ptr) = (unsigned char)(((val) >> 24) & 0xFF);	\
 	    *((ptr)+1) = (unsigned char)(((val) >> 16) & 0xFF);	\
@@ -100,23 +100,23 @@
  * return values can be used like the return value from fwrite()).
  */
 
-size_t fwrite_16_l(unsigned short val, FILE *f);
-size_t fwrite_32_l(unsigned long val, FILE *f);
-size_t fwrite_16_b(unsigned short val, FILE *f);
-size_t fwrite_32_b(unsigned long val, FILE *f);
+size_t yasm_fwrite_16_l(unsigned short val, FILE *f);
+size_t yasm_fwrite_32_l(unsigned long val, FILE *f);
+size_t yasm_fwrite_16_b(unsigned short val, FILE *f);
+size_t yasm_fwrite_32_b(unsigned long val, FILE *f);
 
 /* Read/Load versions.  val is the variable to receive the data. */
 
-#define READ_8(val, ptr)			\
+#define YASM_READ_8(val, ptr)			\
 	(val) = *((ptr)++) & 0xFF
 
-#define READ_16_L(val, ptr)			\
+#define YASM_READ_16_L(val, ptr)		\
 	do {					\
 	    (val) = *((ptr)++) & 0xFF;		\
 	    (val) |= (*((ptr)++) & 0xFF) << 8;	\
 	} while (0)
 
-#define READ_32_L(val, ptr)			\
+#define YASM_READ_32_L(val, ptr)		\
 	do {					\
 	    (val) = *((ptr)++) & 0xFF;		\
 	    (val) |= (*((ptr)++) & 0xFF) << 8;	\
@@ -124,13 +124,13 @@ size_t fwrite_32_b(unsigned long val, FILE *f);
 	    (val) |= (*((ptr)++) & 0xFF) << 24;	\
 	} while (0)
 
-#define READ_16_B(val, ptr)			\
+#define YASM_READ_16_B(val, ptr)		\
 	do {					\
 	    (val) = (*((ptr)++) & 0xFF) << 8;	\
 	    (val) |= *((ptr)++) & 0xFF;		\
 	} while (0)
 
-#define READ_32_B(val, ptr)			\
+#define YASM_READ_32_B(val, ptr)		\
 	do {					\
 	    (val) = (*((ptr)++) & 0xFF) << 24;	\
 	    (val) |= (*((ptr)++) & 0xFF) << 16;	\
@@ -140,16 +140,16 @@ size_t fwrite_32_b(unsigned long val, FILE *f);
 
 /* Non-incrementing versions of the above. */
 
-#define LOAD_8(val, ptr)			\
+#define YASM_LOAD_8(val, ptr)			\
 	(val) = *(ptr) & 0xFF
 
-#define LOAD_16_L(val, ptr)			\
+#define YASM_LOAD_16_L(val, ptr)		\
 	do {					\
 	    (val) = *(ptr) & 0xFF;		\
 	    (val) |= (*((ptr)+1) & 0xFF) << 8;	\
 	} while (0)
 
-#define LOAD_32_L(val, ptr)			\
+#define YASM_LOAD_32_L(val, ptr)		\
 	do {					\
 	    (val) = (unsigned long)(*(ptr) & 0xFF);		    \
 	    (val) |= (unsigned long)((*((ptr)+1) & 0xFF) << 8);	    \
@@ -157,13 +157,13 @@ size_t fwrite_32_b(unsigned long val, FILE *f);
 	    (val) |= (unsigned long)((*((ptr)+3) & 0xFF) << 24);    \
 	} while (0)
 
-#define LOAD_16_B(val, ptr)			\
+#define YASM_LOAD_16_B(val, ptr)		\
 	do {					\
 	    (val) = (*(ptr) & 0xFF) << 8;	\
 	    (val) |= *((ptr)+1) & 0xFF;		\
 	} while (0)
 
-#define LOAD_32_B(val, ptr)			\
+#define YASM_LOAD_32_B(val, ptr)		\
 	do {					\
 	    (val) = (unsigned long)((*(ptr) & 0xFF) << 24);	    \
 	    (val) |= (unsigned long)((*((ptr)+1) & 0xFF) << 16);    \

@@ -40,24 +40,24 @@
 FILE *nasm_parser_in = NULL;
 size_t (*nasm_parser_input) (char *buf, size_t max_size);
 
-sectionhead nasm_parser_sections;
-/*@dependent@*/ section *nasm_parser_cur_section;
+yasm_sectionhead nasm_parser_sections;
+/*@dependent@*/ yasm_section *nasm_parser_cur_section;
 
 /* last "base" label for local (.) labels */
 char *nasm_parser_locallabel_base = (char *)NULL;
 size_t nasm_parser_locallabel_base_len = 0;
 
-/*@dependent@*/ arch *nasm_parser_arch;
-/*@dependent@*/ objfmt *nasm_parser_objfmt;
-/*@dependent@*/ linemgr *nasm_parser_linemgr;
-/*@dependent@*/ errwarn *nasm_parser_errwarn;
+/*@dependent@*/ yasm_arch *nasm_parser_arch;
+/*@dependent@*/ yasm_objfmt *nasm_parser_objfmt;
+/*@dependent@*/ yasm_linemgr *nasm_parser_linemgr;
+/*@dependent@*/ yasm_errwarn *nasm_parser_errwarn;
 
 int nasm_parser_save_input;
 
-static /*@dependent@*/ sectionhead *
-nasm_parser_do_parse(preproc *pp, arch *a, objfmt *of, linemgr *lm,
-		     errwarn *we, FILE *f, const char *in_filename,
-		     int save_input)
+static /*@dependent@*/ yasm_sectionhead *
+nasm_parser_do_parse(yasm_preproc *pp, yasm_arch *a, yasm_objfmt *of,
+		     yasm_linemgr *lm, yasm_errwarn *we, FILE *f,
+		     const char *in_filename, int save_input)
     /*@globals killed nasm_parser_locallabel_base @*/
 {
     pp->initialize(f, in_filename, lm, we);
@@ -70,7 +70,8 @@ nasm_parser_do_parse(preproc *pp, arch *a, objfmt *of, linemgr *lm,
     nasm_parser_save_input = save_input;
 
     /* Initialize section list */
-    nasm_parser_cur_section = sections_initialize(&nasm_parser_sections, of);
+    nasm_parser_cur_section =
+	yasm_sections_initialize(&nasm_parser_sections, of);
 
     /* yacc debugging, needs YYDEBUG set in bison.y.in to work */
     /* nasm_parser_debug = 1; */
@@ -93,7 +94,7 @@ static const char *nasm_parser_preproc_keywords[] = {
 };
 
 /* Define parser structure -- see parser.h for details */
-parser yasm_nasm_LTX_parser = {
+yasm_parser yasm_nasm_LTX_parser = {
     "NASM-compatible parser",
     "nasm",
     nasm_parser_preproc_keywords,

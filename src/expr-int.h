@@ -29,21 +29,21 @@
 
 /* Types listed in canonical sorting order.  See expr_order_terms(). */
 typedef enum {
-    EXPR_NONE = 0,
-    EXPR_REG = 1<<0,
-    EXPR_INT = 1<<1,
-    EXPR_FLOAT = 1<<2,
-    EXPR_SYM = 1<<3,
-    EXPR_EXPR = 1<<4
-} ExprType;
+    YASM_EXPR_NONE = 0,
+    YASM_EXPR_REG = 1<<0,
+    YASM_EXPR_INT = 1<<1,
+    YASM_EXPR_FLOAT = 1<<2,
+    YASM_EXPR_SYM = 1<<3,
+    YASM_EXPR_EXPR = 1<<4
+} yasm_expr__type;
 
-struct ExprItem {
-    ExprType type;
+struct yasm_expr__item {
+    yasm_expr__type type;
     union {
-	symrec *sym;
-	expr *expn;
-	intnum *intn;
-	floatnum *flt;
+	yasm_symrec *sym;
+	yasm_expr *expn;
+	yasm_intnum *intn;
+	yasm_floatnum *flt;
 	unsigned long reg;
     } data;
 };
@@ -51,11 +51,11 @@ struct ExprItem {
 /* Some operations may allow more than two operand terms:
  * ADD, MUL, OR, AND, XOR
  */
-struct expr {
-    ExprOp op;
+struct yasm_expr {
+    yasm_expr_op op;
     unsigned long line;
     int numterms;
-    ExprItem terms[2];		/* structure may be extended to include more */
+    yasm_expr__item terms[2];	/* structure may be extended to include more */
 };
 
 /* Traverse over expression tree in order, calling func for each leaf
@@ -63,12 +63,12 @@ struct expr {
  *
  * Stops early (and returns 1) if func returns 1.  Otherwise returns 0.
  */
-int expr_traverse_leaves_in_const(const expr *e, /*@null@*/ void *d,
-				  int (*func) (/*@null@*/ const ExprItem *ei,
-					       /*@null@*/ void *d));
-int expr_traverse_leaves_in(expr *e, /*@null@*/ void *d,
-			    int (*func) (/*@null@*/ ExprItem *ei,
-					 /*@null@*/ void *d));
+int yasm_expr__traverse_leaves_in_const
+    (const yasm_expr *e, /*@null@*/ void *d,
+     int (*func) (/*@null@*/ const yasm_expr__item *ei, /*@null@*/ void *d));
+int yasm_expr__traverse_leaves_in
+    (yasm_expr *e, /*@null@*/ void *d,
+     int (*func) (/*@null@*/ yasm_expr__item *ei, /*@null@*/ void *d));
 
 /* Reorder terms of e into canonical order.  Only reorders if reordering
  * doesn't change meaning of expression.  (eg, doesn't reorder SUB).
@@ -77,11 +77,11 @@ int expr_traverse_leaves_in(expr *e, /*@null@*/ void *d,
  * the original expression.
  * NOTE: Only performs reordering on *one* level (no recursion).
  */
-void expr_order_terms(expr *e);
+void yasm_expr__order_terms(yasm_expr *e);
 
 /* Copy entire expression EXCEPT for index "except" at *top level only*. */
-expr *expr_copy_except(const expr *e, int except);
+yasm_expr *yasm_expr__copy_except(const yasm_expr *e, int except);
 
-int expr_contains(const expr *e, ExprType t);
+int yasm_expr__contains(const yasm_expr *e, yasm_expr__type t);
 
 #endif

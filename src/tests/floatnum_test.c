@@ -149,7 +149,7 @@ static Init_Entry normalized_edgecase_vals[] = {
     },*/
 };
 
-static floatnum *flt;
+static yasm_floatnum *flt;
 
 /* failure messages */
 static char ret_msg[1024], result_msg[1024];
@@ -157,7 +157,7 @@ static char ret_msg[1024], result_msg[1024];
 static void
 new_setup(Init_Entry *vals, int i)
 {
-    flt = floatnum_new(vals[i].ascii);
+    flt = yasm_floatnum_new(vals[i].ascii);
     strcpy(result_msg, vals[i].ascii);
     strcat(result_msg, ": incorrect ");
 }
@@ -202,7 +202,7 @@ START_TEST(test_new_normalized)
     for (i=0; i<num; i++) {
 	new_setup(vals, i);
 	fail_unless(new_check_flt(&vals[i]) == 0, result_msg);
-	floatnum_delete(flt);
+	yasm_floatnum_delete(flt);
     }
 }
 END_TEST
@@ -215,7 +215,7 @@ START_TEST(test_new_normalized_edgecase)
     for (i=0; i<num; i++) {
 	new_setup(vals, i);
 	fail_unless(new_check_flt(&vals[i]) == 0, result_msg);
-	floatnum_delete(flt);
+	yasm_floatnum_delete(flt);
     }
 }
 END_TEST
@@ -223,7 +223,7 @@ END_TEST
 static void
 get_family_setup(void)
 {
-    flt = malloc(sizeof(floatnum));
+    flt = malloc(sizeof(yasm_floatnum));
     flt->mantissa = BitVector_Create(MANT_BITS, TRUE);
 }
 
@@ -292,7 +292,7 @@ START_TEST(test_get_single_normalized)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(floatnum_get_sized(flt, outval, 4) == vals[i].ret32,
+	fail_unless(yasm_floatnum_get_sized(flt, outval, 4) == vals[i].ret32,
 		    ret_msg);
 	fail_unless(get_common_check_result(4, outval, vals[i].result32) == 0,
 		    result_msg);
@@ -308,7 +308,7 @@ START_TEST(test_get_single_normalized_edgecase)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(floatnum_get_sized(flt, outval, 4) == vals[i].ret32,
+	fail_unless(yasm_floatnum_get_sized(flt, outval, 4) == vals[i].ret32,
 		    ret_msg);
 	fail_unless(get_common_check_result(4, outval, vals[i].result32) == 0,
 		    result_msg);
@@ -328,7 +328,7 @@ START_TEST(test_get_double_normalized)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(floatnum_get_sized(flt, outval, 8) == vals[i].ret64,
+	fail_unless(yasm_floatnum_get_sized(flt, outval, 8) == vals[i].ret64,
 		    ret_msg);
 	fail_unless(get_common_check_result(8, outval, vals[i].result64) == 0,
 		    result_msg);
@@ -344,7 +344,7 @@ START_TEST(test_get_double_normalized_edgecase)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(floatnum_get_sized(flt, outval, 8) == vals[i].ret64,
+	fail_unless(yasm_floatnum_get_sized(flt, outval, 8) == vals[i].ret64,
 		    ret_msg);
 	fail_unless(get_common_check_result(8, outval, vals[i].result64) == 0,
 		    result_msg);
@@ -364,7 +364,7 @@ START_TEST(test_get_extended_normalized)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(floatnum_get_sized(flt, outval, 10) == vals[i].ret80,
+	fail_unless(yasm_floatnum_get_sized(flt, outval, 10) == vals[i].ret80,
 		    ret_msg);
 	fail_unless(get_common_check_result(10, outval, vals[i].result80) == 0,
 		    result_msg);
@@ -380,7 +380,7 @@ START_TEST(test_get_extended_normalized_edgecase)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	fail_unless(floatnum_get_sized(flt, outval, 10) == vals[i].ret80,
+	fail_unless(yasm_floatnum_get_sized(flt, outval, 10) == vals[i].ret80,
 		    ret_msg);
 	fail_unless(get_common_check_result(10, outval, vals[i].result80) == 0,
 		    result_msg);
@@ -426,7 +426,7 @@ main(void)
     Suite *s = floatnum_suite();
     SRunner *sr = srunner_create(s);
     BitVector_Boot();
-    floatnum_initialize(NULL);
+    yasm_floatnum_initialize(NULL);
     srunner_run_all(sr, CRNORMAL);
     nf = srunner_ntests_failed(sr);
     srunner_free(sr);

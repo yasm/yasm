@@ -28,7 +28,7 @@
 #define YASM_OPTIMIZER_H
 
 /* Interface to the optimizer module(s) */
-struct optimizer {
+struct yasm_optimizer {
     /* one-line description of the optimizer */
     const char *name;
 
@@ -42,7 +42,7 @@ struct optimizer {
      * object file.  (A failure is indicated by calling ErrorAt() from within
      * this function).
      */
-    void (*optimize) (sectionhead *sections, errwarn *we);
+    void (*optimize) (yasm_sectionhead *sections, yasm_errwarn *we);
 };
 
 #endif

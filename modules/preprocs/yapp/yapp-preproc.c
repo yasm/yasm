@@ -40,8 +40,8 @@ static HAMT *macro_table;
 static YAPP_Output current_output;
 YYSTYPE yapp_preproc_lval;
 
-/*@dependent@*/ linemgr *yapp_preproc_linemgr;
-/*@dependent@*/ errwarn *yapp_preproc_errwarn;
+/*@dependent@*/ yasm_linemgr *yapp_preproc_linemgr;
+/*@dependent@*/ yasm_errwarn *yapp_preproc_errwarn;
 
 int isatty(int);
 
@@ -141,7 +141,7 @@ yapp_define_insert (char *name, int argc, int fillargs)
 	if ((argc >= 0 && ym->args < 0)
 	    || (argc < 0 && ym->args >= 0))
 	{
-	    cur_we->warning(WARN_PREPROC, cur_lindex, N_("Attempted %%define both with and without parameters"));
+	    cur_we->warning(YASM_WARN_PREPROC, cur_lindex, N_("Attempted %%define both with and without parameters"));
 	    return NULL;
 	}
     }
@@ -237,8 +237,8 @@ void
 expand_token_list(struct source_head *paramexp, struct source_head *to_head, source **to_tail);
 
 static void
-yapp_preproc_initialize(FILE *f, const char *in_filename, linemgr *lm,
-			errwarn *we)
+yapp_preproc_initialize(FILE *f, const char *in_filename, yasm_linemgr *lm,
+			yasm_errwarn *we)
 {
     is_interactive = f ? (isatty(fileno(f)) > 0) : 0;
     yapp_preproc_linemgr = lm;
@@ -948,7 +948,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 }
 
 /* Define preproc structure -- see preproc.h for details */
-preproc yasm_yapp_LTX_preproc = {
+yasm_preproc yasm_yapp_LTX_preproc = {
     "YAPP preprocessing (NASM style)",
     "yapp",
     yapp_preproc_initialize,

@@ -35,14 +35,14 @@
 
 static int is_interactive;
 static FILE *in;
-static linemgr *cur_lm;
-static errwarn *cur_we;
+static yasm_linemgr *cur_lm;
+static yasm_errwarn *cur_we;
 
 int isatty(int);
 
 static void
-raw_preproc_initialize(FILE *f, const char *in_filename, linemgr *lm,
-		       errwarn *we)
+raw_preproc_initialize(FILE *f, const char *in_filename, yasm_linemgr *lm,
+		       yasm_errwarn *we)
 {
     in = f;
     cur_lm = lm;
@@ -79,7 +79,7 @@ raw_preproc_input(char *buf, size_t max_size)
 }
 
 /* Define preproc structure -- see preproc.h for details */
-preproc yasm_raw_LTX_preproc = {
+yasm_preproc yasm_raw_LTX_preproc = {
     "Disable preprocessing",
     "raw",
     raw_preproc_initialize,

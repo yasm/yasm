@@ -131,7 +131,7 @@ save_line(YYCTYPE *cursor)
     int i = 0;
 
     /* save previous line using assoc_data */
-    nasm_parser_linemgr->add_assoc_data(LINEMGR_STD_TYPE_SOURCE,
+    nasm_parser_linemgr->add_assoc_data(YASM_LINEMGR_STD_TYPE_SOURCE,
 					xstrdup(cur_line), delete_line);
     /* save next line into cur_line */
     if ((YYLIMIT - YYCURSOR) < 80)
@@ -218,7 +218,7 @@ nasm_parser_lex(void)
     YYCTYPE endch;
     size_t count, len;
     YYCTYPE savech;
-    arch_check_id_retval check_id_ret;
+    yasm_arch_check_id_retval check_id_ret;
 
     /* Catch EOF */
     if (s.eof && cursor == s.eof)
@@ -244,7 +244,7 @@ scan:
 	digit+ {
 	    savech = s.tok[TOKLEN];
 	    s.tok[TOKLEN] = '\0';
-	    yylval.intn = intnum_new_dec(s.tok, cur_lindex);
+	    yylval.intn = yasm_intnum_new_dec(s.tok, cur_lindex);
 	    s.tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -252,21 +252,21 @@ scan:
 
 	bindigit+ "b" {
 	    s.tok[TOKLEN-1] = '\0'; /* strip off 'b' */
-	    yylval.intn = intnum_new_bin(s.tok, cur_lindex);
+	    yylval.intn = yasm_intnum_new_bin(s.tok, cur_lindex);
 	    RETURN(INTNUM);
 	}
 
 	/* 777q - octal number */
 	octdigit+ "q" {
 	    s.tok[TOKLEN-1] = '\0'; /* strip off 'q' */
-	    yylval.intn = intnum_new_oct(s.tok, cur_lindex);
+	    yylval.intn = yasm_intnum_new_oct(s.tok, cur_lindex);
 	    RETURN(INTNUM);
 	}
 
 	/* 0AAh form of hexidecimal number */
 	digit hexdigit* "h" {
 	    s.tok[TOKLEN-1] = '\0'; /* strip off 'h' */
-	    yylval.intn = intnum_new_hex(s.tok, cur_lindex);
+	    yylval.intn = yasm_intnum_new_hex(s.tok, cur_lindex);
 	    RETURN(INTNUM);
 	}
 
@@ -276,10 +276,10 @@ scan:
 	    s.tok[TOKLEN] = '\0';
 	    if (s.tok[1] == 'x')
 		/* skip 0 and x */
-		yylval.intn = intnum_new_hex(s.tok+2, cur_lindex);
+		yylval.intn = yasm_intnum_new_hex(s.tok+2, cur_lindex);
 	    else
 		/* don't skip 0 */
-		yylval.intn = intnum_new_hex(s.tok+1, cur_lindex);
+		yylval.intn = yasm_intnum_new_hex(s.tok+1, cur_lindex);
 	    s.tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -288,7 +288,7 @@ scan:
 	digit+ "." digit* (E [-+]? digit+)? {
 	    savech = s.tok[TOKLEN];
 	    s.tok[TOKLEN] = '\0';
-	    yylval.flt = floatnum_new(s.tok);
+	    yylval.flt = yasm_floatnum_new(s.tok);
 	    s.tok[TOKLEN] = savech;
 	    RETURN(FLTNUM);
 	}
@@ -366,7 +366,7 @@ scan:
 		yylval.str_val = xstrndup(s.tok, TOKLEN);
 		RETURN(ID);
 	    } else if (!nasm_parser_locallabel_base) {
-		cur_we->warning(WARN_GENERAL, cur_lindex,
+		cur_we->warning(YASM_WARN_GENERAL, cur_lindex,
 				N_("no non-local label before `%s'"),
 				s.tok[0]);
 		yylval.str_val = xstrndup(s.tok, TOKLEN);
@@ -395,22 +395,22 @@ scan:
 		yylval.arch_data, s.tok, cur_lindex);
 	    s.tok[TOKLEN] = savech;
 	    switch (check_id_ret) {
-		case ARCH_CHECK_ID_NONE:
+		case YASM_ARCH_CHECK_ID_NONE:
 		    /* Just an identifier, return as such. */
 		    yylval.str_val = xstrndup(s.tok, TOKLEN);
 		    RETURN(ID);
-		case ARCH_CHECK_ID_INSN:
+		case YASM_ARCH_CHECK_ID_INSN:
 		    RETURN(INSN);
-		case ARCH_CHECK_ID_PREFIX:
+		case YASM_ARCH_CHECK_ID_PREFIX:
 		    RETURN(PREFIX);
-		case ARCH_CHECK_ID_REG:
+		case YASM_ARCH_CHECK_ID_REG:
 		    RETURN(REG);
-		case ARCH_CHECK_ID_SEGREG:
+		case YASM_ARCH_CHECK_ID_SEGREG:
 		    RETURN(SEGREG);
-		case ARCH_CHECK_ID_TARGETMOD:
+		case YASM_ARCH_CHECK_ID_TARGETMOD:
 		    RETURN(TARGETMOD);
 		default:
-		    cur_we->warning(WARN_GENERAL, cur_lindex,
+		    cur_we->warning(YASM_WARN_GENERAL, cur_lindex,
 			N_("Arch feature not supported, treating as identifier"));
 		    yylval.str_val = xstrndup(s.tok, TOKLEN);
 		    RETURN(ID);
@@ -429,7 +429,7 @@ scan:
 	}
 
 	any {
-	    cur_we->warning(WARN_UNREC_CHAR, cur_lindex,
+	    cur_we->warning(YASM_WARN_UNREC_CHAR, cur_lindex,
 			    N_("ignoring unrecognized character `%s'"),
 			    cur_we->conv_unprint(s.tok[0]));
 	    goto scan;
@@ -445,7 +445,7 @@ linechg:
 	    linechg_numcount++;
 	    savech = s.tok[TOKLEN];
 	    s.tok[TOKLEN] = '\0';
-	    yylval.intn = intnum_new_dec(s.tok, cur_lindex);
+	    yylval.intn = yasm_intnum_new_dec(s.tok, cur_lindex);
 	    s.tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -470,7 +470,7 @@ linechg:
 	}
 
 	any {
-	    cur_we->warning(WARN_UNREC_CHAR, cur_lindex,
+	    cur_we->warning(YASM_WARN_UNREC_CHAR, cur_lindex,
 			    N_("ignoring unrecognized character `%s'"),
 			    cur_we->conv_unprint(s.tok[0]));
 	    goto linechg;
@@ -516,7 +516,7 @@ directive:
 	}
 
 	any {
-	    cur_we->warning(WARN_UNREC_CHAR, cur_lindex,
+	    cur_we->warning(YASM_WARN_UNREC_CHAR, cur_lindex,
 			    N_("ignoring unrecognized character `%s'"),
 			    cur_we->conv_unprint(s.tok[0]));
 	    goto directive;

@@ -36,8 +36,8 @@
 #include "objfmt.h"
 
 
-struct section {
-    /*@reldef@*/ STAILQ_ENTRY(section) link;
+struct yasm_section {
+    /*@reldef@*/ STAILQ_ENTRY(yasm_section) link;
 
     enum { SECTION_GENERAL, SECTION_ABSOLUTE } type;
 
@@ -47,55 +47,55 @@ struct section {
 	    /*@owned@*/ char *name;	/* strdup()'ed name (given by user) */
 
 	    /* object-format-specific data */
-	    /*@null@*/ /*@dependent@*/ objfmt *of;
+	    /*@null@*/ /*@dependent@*/ yasm_objfmt *of;
 	    /*@null@*/ /*@owned@*/ void *of_data;
 	} general;
     } data;
 
-    /*@owned@*/ expr *start;	/* Starting address of section contents */
+    /*@owned@*/ yasm_expr *start;   /* Starting address of section contents */
 
     unsigned long opt_flags;	/* storage for optimizer flags */
 
     int res_only;		/* allow only resb family of bytecodes? */
 
-    bytecodehead bc;		/* the bytecodes for the section's contents */
+    yasm_bytecodehead bc;	/* the bytecodes for the section's contents */
 
     /*@exits@*/ void (*error_func) (const char *file, unsigned int line,
 				    const char *message);
 };
 
 /*@-compdestroy@*/
-section *
-sections_initialize(sectionhead *headp, objfmt *of)
+yasm_section *
+yasm_sections_initialize(yasm_sectionhead *headp, yasm_objfmt *of)
 {
-    section *s;
-    valparamhead vps;
-    valparam *vp;
+    yasm_section *s;
+    yasm_valparamhead vps;
+    yasm_valparam *vp;
 
     /* Initialize linked list */
     STAILQ_INIT(headp);
 
     /* Add an initial "default" section */
-    vp_new(vp, xstrdup(of->default_section_name), NULL);
-    vps_initialize(&vps);
-    vps_append(&vps, vp);
+    yasm_vp_new(vp, xstrdup(of->default_section_name), NULL);
+    yasm_vps_initialize(&vps);
+    yasm_vps_append(&vps, vp);
     s = of->sections_switch(headp, &vps, NULL, 0);
-    vps_delete(&vps);
+    yasm_vps_delete(&vps);
 
     return s;
 }
 /*@=compdestroy@*/
 
 /*@-onlytrans@*/
-section *
-sections_switch_general(sectionhead *headp, const char *name,
-			unsigned long start, int res_only, int *isnew,
-			unsigned long lindex,
-			/*@exits@*/ void (*error_func) (const char *file,
-							unsigned int line,
-							const char *message))
+yasm_section *
+yasm_sections_switch_general(yasm_sectionhead *headp, const char *name,
+			     unsigned long start, int res_only, int *isnew,
+			     unsigned long lindex,
+			     /*@exits@*/ void (*error_func)
+				(const char *file, unsigned int line,
+				 const char *message))
 {
-    section *s;
+    yasm_section *s;
 
     /* Search through current sections to see if we already have one with
      * that name.
@@ -111,15 +111,16 @@ sections_switch_general(sectionhead *headp, const char *name,
     /* No: we have to allocate and create a new one. */
 
     /* Okay, the name is valid; now allocate and initialize */
-    s = xcalloc(1, sizeof(section));
+    s = xcalloc(1, sizeof(yasm_section));
     STAILQ_INSERT_TAIL(headp, s, link);
 
     s->type = SECTION_GENERAL;
     s->data.general.name = xstrdup(name);
     s->data.general.of = NULL;
     s->data.general.of_data = NULL;
-    s->start = expr_new_ident(ExprInt(intnum_new_uint(start)), lindex);
-    bcs_initialize(&s->bc);
+    s->start = yasm_expr_new_ident(yasm_expr_int(yasm_intnum_new_uint(start)),
+				   lindex);
+    yasm_bcs_initialize(&s->bc);
 
     s->opt_flags = 0;
     s->res_only = res_only;
@@ -132,20 +133,20 @@ sections_switch_general(sectionhead *headp, const char *name,
 /*@=onlytrans@*/
 
 /*@-onlytrans@*/
-section *
-sections_switch_absolute(sectionhead *headp, expr *start,
-			 /*@exits@*/ void (*error_func) (const char *file,
-							 unsigned int line,
-							 const char *message))
+yasm_section *
+yasm_sections_switch_absolute(yasm_sectionhead *headp, yasm_expr *start,
+			      /*@exits@*/ void (*error_func)
+				(const char *file, unsigned int line,
+				 const char *message))
 {
-    section *s;
+    yasm_section *s;
 
-    s = xcalloc(1, sizeof(section));
+    s = xcalloc(1, sizeof(yasm_section));
     STAILQ_INSERT_TAIL(headp, s, link);
 
     s->type = SECTION_ABSOLUTE;
     s->start = start;
-    bcs_initialize(&s->bc);
+    yasm_bcs_initialize(&s->bc);
 
     s->opt_flags = 0;
     s->res_only = 1;
@@ -157,25 +158,25 @@ sections_switch_absolute(sectionhead *headp, expr *start,
 /*@=onlytrans@*/
 
 int
-section_is_absolute(section *sect)
+yasm_section_is_absolute(yasm_section *sect)
 {
     return (sect->type == SECTION_ABSOLUTE);
 }
 
 unsigned long
-section_get_opt_flags(const section *sect)
+yasm_section_get_opt_flags(const yasm_section *sect)
 {
     return sect->opt_flags;
 }
 
 void
-section_set_opt_flags(section *sect, unsigned long opt_flags)
+yasm_section_set_opt_flags(yasm_section *sect, unsigned long opt_flags)
 {
     sect->opt_flags = opt_flags;
 }
 
 void
-section_set_of_data(section *sect, objfmt *of, void *of_data)
+yasm_section_set_of_data(yasm_section *sect, yasm_objfmt *of, void *of_data)
 {
     /* Check to see if section type supports of_data */
     if (sect->type != SECTION_GENERAL) {
@@ -189,7 +190,7 @@ section_set_of_data(section *sect, objfmt *of, void *of_data)
 
     /* Delete current of_data if present */
     if (sect->data.general.of_data && sect->data.general.of) {
-	objfmt *of2 = sect->data.general.of;
+	yasm_objfmt *of2 = sect->data.general.of;
 	if (of2->section_data_delete)
 	    of2->section_data_delete(sect->data.general.of_data);
 	else
@@ -203,7 +204,7 @@ section_set_of_data(section *sect, objfmt *of, void *of_data)
 }
 
 void *
-section_get_of_data(section *sect)
+yasm_section_get_of_data(yasm_section *sect)
 {
     if (sect->type == SECTION_GENERAL)
 	return sect->data.general.of_data;
@@ -212,35 +213,35 @@ section_get_of_data(section *sect)
 }
 
 void
-sections_delete(sectionhead *headp)
+yasm_sections_delete(yasm_sectionhead *headp)
 {
-    section *cur, *next;
+    yasm_section *cur, *next;
 
     cur = STAILQ_FIRST(headp);
     while (cur) {
 	next = STAILQ_NEXT(cur, link);
-	section_delete(cur);
+	yasm_section_delete(cur);
 	cur = next;
     }
     STAILQ_INIT(headp);
 }
 
 void
-sections_print(FILE *f, int indent_level, const sectionhead *headp)
+yasm_sections_print(FILE *f, int indent_level, const yasm_sectionhead *headp)
 {
-    section *cur;
+    yasm_section *cur;
     
     STAILQ_FOREACH(cur, headp, link) {
 	fprintf(f, "%*sSection:\n", indent_level, "");
-	section_print(f, indent_level+1, cur, 1);
+	yasm_section_print(f, indent_level+1, cur, 1);
     }
 }
 
 int
-sections_traverse(sectionhead *headp, /*@null@*/ void *d,
-		  int (*func) (section *sect, /*@null@*/ void *d))
+yasm_sections_traverse(yasm_sectionhead *headp, /*@null@*/ void *d,
+		       int (*func) (yasm_section *sect, /*@null@*/ void *d))
 {
-    section *cur;
+    yasm_section *cur;
     
     STAILQ_FOREACH(cur, headp, link) {
 	int retval = func(cur, d);
@@ -251,10 +252,10 @@ sections_traverse(sectionhead *headp, /*@null@*/ void *d,
 }
 
 /*@-onlytrans@*/
-section *
-sections_find_general(sectionhead *headp, const char *name)
+yasm_section *
+yasm_sections_find_general(yasm_sectionhead *headp, const char *name)
 {
-    section *cur;
+    yasm_section *cur;
 
     STAILQ_FOREACH(cur, headp, link) {
 	if (cur->type == SECTION_GENERAL &&
@@ -265,14 +266,14 @@ sections_find_general(sectionhead *headp, const char *name)
 }
 /*@=onlytrans@*/
 
-bytecodehead *
-section_get_bytecodes(section *sect)
+yasm_bytecodehead *
+yasm_section_get_bytecodes(yasm_section *sect)
 {
     return &sect->bc;
 }
 
 const char *
-section_get_name(const section *sect)
+yasm_section_get_name(const yasm_section *sect)
 {
     if (sect->type == SECTION_GENERAL)
 	return sect->data.general.name;
@@ -280,20 +281,23 @@ section_get_name(const section *sect)
 }
 
 void
-section_set_start(section *sect, unsigned long start, unsigned long lindex)
+yasm_section_set_start(yasm_section *sect, unsigned long start,
+		       unsigned long lindex)
 {
-    expr_delete(sect->start);
-    sect->start = expr_new_ident(ExprInt(intnum_new_uint(start)), lindex);
+    yasm_expr_delete(sect->start);
+    sect->start =
+	yasm_expr_new_ident(yasm_expr_int(yasm_intnum_new_uint(start)),
+			    lindex);
 }
 
-const expr *
-section_get_start(const section *sect)
+const yasm_expr *
+yasm_section_get_start(const yasm_section *sect)
 {
     return sect->start;
 }
 
 void
-section_delete(section *sect)
+yasm_section_delete(yasm_section *sect)
 {
     if (!sect)
 	return;
@@ -301,7 +305,7 @@ section_delete(section *sect)
     if (sect->type == SECTION_GENERAL) {
 	xfree(sect->data.general.name);
 	if (sect->data.general.of_data && sect->data.general.of) {
-	    objfmt *of = sect->data.general.of;
+	    yasm_objfmt *of = sect->data.general.of;
 	    if (of->section_data_delete)
 		of->section_data_delete(sect->data.general.of_data);
 	    else
@@ -309,13 +313,14 @@ section_delete(section *sect)
 		    N_("don't know how to delete objfmt-specific section data"));
 	}
     }
-    expr_delete(sect->start);
-    bcs_delete(&sect->bc);
+    yasm_expr_delete(sect->start);
+    yasm_bcs_delete(&sect->bc);
     xfree(sect);
 }
 
 void
-section_print(FILE *f, int indent_level, const section *sect, int print_bcs)
+yasm_section_print(FILE *f, int indent_level, const yasm_section *sect,
+		   int print_bcs)
 {
     if (!sect) {
 	fprintf(f, "%*s(none)\n", indent_level, "");
@@ -329,7 +334,7 @@ section_print(FILE *f, int indent_level, const section *sect, int print_bcs)
 		    "", sect->data.general.name, indent_level, "");
 	    indent_level++;
 	    if (sect->data.general.of_data && sect->data.general.of) {
-		objfmt *of = sect->data.general.of;
+		yasm_objfmt *of = sect->data.general.of;
 		if (of->section_data_print)
 		    of->section_data_print(f, indent_level,
 					   sect->data.general.of_data);
@@ -345,11 +350,11 @@ section_print(FILE *f, int indent_level, const section *sect, int print_bcs)
     }
 
     fprintf(f, "%*sstart=", indent_level, "");
-    expr_print(f, sect->start);
+    yasm_expr_print(f, sect->start);
     fprintf(f, "\n");
 
     if (print_bcs) {
 	fprintf(f, "%*sBytecodes:\n", indent_level, "");
-	bcs_print(f, indent_level+1, &sect->bc);
+	yasm_bcs_print(f, indent_level+1, &sect->bc);
     }
 }

@@ -31,7 +31,7 @@
 
 
 /* Define preproc structure -- see preproc.h for details */
-dbgfmt yasm_null_LTX_dbgfmt = {
+yasm_dbgfmt yasm_null_LTX_dbgfmt = {
     "No debugging info",
     "null",
     NULL,   /*null_dbgfmt_initialize*/

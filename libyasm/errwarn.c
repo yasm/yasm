@@ -83,11 +83,12 @@ static char unprint[5];
 
 
 static void
-yasm_errwarn_initialize(void)
+yasm_std_errwarn_initialize(void)
 {
     /* Default enabled warnings.  See errwarn.h for a list. */
     warn_class_enabled = 
-	(1UL<<WARN_GENERAL) | (1UL<<WARN_UNREC_CHAR) | (1UL<<WARN_PREPROC);
+	(1UL<<YASM_WARN_GENERAL) | (1UL<<YASM_WARN_UNREC_CHAR) |
+	(1UL<<YASM_WARN_PREPROC);
 
     error_count = 0;
     warning_count = 0;
@@ -96,7 +97,7 @@ yasm_errwarn_initialize(void)
 }
 
 static void
-yasm_errwarn_cleanup(void)
+yasm_std_errwarn_cleanup(void)
 {
     errwarn_data *we;
 
@@ -113,7 +114,7 @@ yasm_errwarn_cleanup(void)
  * standard cat(1) convention for unprintable characters.
  */
 static char *
-yasm_errwarn_conv_unprint(char ch)
+yasm_std_errwarn_conv_unprint(char ch)
 {
     int pos = 0;
 
@@ -136,8 +137,8 @@ yasm_errwarn_conv_unprint(char ch)
  * Exit immediately because it's essentially an assert() trap.
  */
 static void
-yasm_errwarn_internal_error_(const char *file, unsigned int line,
-			     const char *message)
+yasm_std_errwarn_internal_error_(const char *file, unsigned int line,
+				 const char *message)
 {
     fprintf(stderr, _("INTERNAL ERROR at %s, line %u: %s\n"), file, line,
 	    gettext(message));
@@ -152,7 +153,7 @@ yasm_errwarn_internal_error_(const char *file, unsigned int line,
  * memory), so just exit immediately.
  */
 static void
-yasm_errwarn_fatal(fatal_num num)
+yasm_std_errwarn_fatal(yasm_fatal_cause num)
 {
     fprintf(stderr, _("FATAL: %s\n"), gettext(fatal_msgs[num]));
 #ifdef HAVE_ABORT
@@ -210,7 +211,7 @@ errwarn_data_new(unsigned long lindex, int replace_parser_error)
 	    assert(ins_we != NULL);
 	    SLIST_INSERT_AFTER(ins_we, we, link);
 	} else
-	    yasm_errwarn_internal_error_(__FILE__, __LINE__,
+	    yasm_std_errwarn_internal_error_(__FILE__, __LINE__,
 		N_("Unexpected errwarn insert action"));
     }
 
@@ -224,7 +225,7 @@ errwarn_data_new(unsigned long lindex, int replace_parser_error)
  * for output_all() to print.
  */
 static void
-yasm_errwarn_error_va(unsigned long lindex, const char *fmt, va_list va)
+yasm_std_errwarn_error_va(unsigned long lindex, const char *fmt, va_list va)
 {
     errwarn_data *we = errwarn_data_new(lindex, 1);
 
@@ -243,8 +244,8 @@ yasm_errwarn_error_va(unsigned long lindex, const char *fmt, va_list va)
  * it for output_all() to print.
  */
 static void
-yasm_errwarn_warning_va(warn_class_num num, unsigned long lindex,
-			const char *fmt, va_list va)
+yasm_std_errwarn_warning_va(yasm_warn_class num, unsigned long lindex,
+			    const char *fmt, va_list va)
 {
     errwarn_data *we;
 
@@ -268,11 +269,11 @@ yasm_errwarn_warning_va(warn_class_num num, unsigned long lindex,
  * for output_all() to print.
  */
 static void
-yasm_errwarn_error(unsigned long lindex, const char *fmt, ...)
+yasm_std_errwarn_error(unsigned long lindex, const char *fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
-    yasm_errwarn_error_va(lindex, fmt, va);
+    yasm_std_errwarn_error_va(lindex, fmt, va);
     va_end(va);
 }
 
@@ -280,12 +281,12 @@ yasm_errwarn_error(unsigned long lindex, const char *fmt, ...)
  * it for output_all() to print.
  */
 static void
-yasm_errwarn_warning(warn_class_num num, unsigned long lindex, const char *fmt,
-		     ...)
+yasm_std_errwarn_warning(yasm_warn_class num, unsigned long lindex,
+			 const char *fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
-    yasm_errwarn_warning_va(num, lindex, fmt, va);
+    yasm_std_errwarn_warning_va(num, lindex, fmt, va);
     va_end(va);
 }
 
@@ -293,26 +294,26 @@ yasm_errwarn_warning(warn_class_num num, unsigned long lindex, const char *fmt,
  * system.
  */
 static void
-yasm_errwarn_parser_error(unsigned long lindex, const char *s)
+yasm_std_errwarn_parser_error(unsigned long lindex, const char *s)
 {
-    yasm_errwarn_error(lindex, N_("parser error: %s"), s);
+    yasm_std_errwarn_error(lindex, N_("parser error: %s"), s);
     previous_we->type = WE_PARSERERROR;
 }
 
 static void
-yasm_errwarn_warn_enable(warn_class_num num)
+yasm_std_errwarn_warn_enable(yasm_warn_class num)
 {
     warn_class_enabled |= (1UL<<num);
 }
 
 static void
-yasm_errwarn_warn_disable(warn_class_num num)
+yasm_std_errwarn_warn_disable(yasm_warn_class num)
 {
     warn_class_enabled &= ~(1UL<<num);
 }
 
 static void
-yasm_errwarn_warn_disable_all(void)
+yasm_std_errwarn_warn_disable_all(void)
 {
     warn_class_enabled = 0;
 }
@@ -321,7 +322,7 @@ yasm_errwarn_warn_disable_all(void)
  * as errors).
  */
 static unsigned int
-yasm_errwarn_get_num_errors(int warning_as_error)
+yasm_std_errwarn_get_num_errors(int warning_as_error)
 {
     if (warning_as_error)
 	return error_count+warning_count;
@@ -331,7 +332,7 @@ yasm_errwarn_get_num_errors(int warning_as_error)
 
 /* Output all previously stored errors and warnings to stderr. */
 static void
-yasm_errwarn_output_all(linemgr *lm, int warning_as_error)
+yasm_std_errwarn_output_all(yasm_linemgr *lm, int warning_as_error)
 {
     errwarn_data *we;
     const char *filename;
@@ -355,20 +356,20 @@ yasm_errwarn_output_all(linemgr *lm, int warning_as_error)
     }
 }
 
-errwarn yasm_errwarn = {
-    yasm_errwarn_initialize,
-    yasm_errwarn_cleanup,
-    yasm_errwarn_internal_error_,
-    yasm_errwarn_fatal,
-    yasm_errwarn_error_va,
-    yasm_errwarn_warning_va,
-    yasm_errwarn_error,
-    yasm_errwarn_warning,
-    yasm_errwarn_parser_error,
-    yasm_errwarn_warn_enable,
-    yasm_errwarn_warn_disable,
-    yasm_errwarn_warn_disable_all,
-    yasm_errwarn_get_num_errors,
-    yasm_errwarn_output_all,
-    yasm_errwarn_conv_unprint
+yasm_errwarn yasm_std_errwarn = {
+    yasm_std_errwarn_initialize,
+    yasm_std_errwarn_cleanup,
+    yasm_std_errwarn_internal_error_,
+    yasm_std_errwarn_fatal,
+    yasm_std_errwarn_error_va,
+    yasm_std_errwarn_warning_va,
+    yasm_std_errwarn_error,
+    yasm_std_errwarn_warning,
+    yasm_std_errwarn_parser_error,
+    yasm_std_errwarn_warn_enable,
+    yasm_std_errwarn_warn_disable,
+    yasm_std_errwarn_warn_disable_all,
+    yasm_std_errwarn_get_num_errors,
+    yasm_std_errwarn_output_all,
+    yasm_std_errwarn_conv_unprint
 };

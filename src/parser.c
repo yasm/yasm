@@ -44,10 +44,10 @@ const char *parsers[] = {
 
 
 void
-list_parsers(void (*printfunc) (const char *name, const char *keyword))
+yasm_list_parsers(void (*printfunc) (const char *name, const char *keyword))
 {
     int i;
-    parser *p;
+    yasm_parser *p;
 
     /* Go through available list, and try to load each one */
     for (i = 0; parsers[i]; i++) {

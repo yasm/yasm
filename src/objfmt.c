@@ -46,10 +46,10 @@ const char *objfmts[] = {
 
 
 void
-list_objfmts(void (*printfunc) (const char *name, const char *keyword))
+yasm_list_objfmts(void (*printfunc) (const char *name, const char *keyword))
 {
     int i;
-    objfmt *of;
+    yasm_objfmt *of;
 
     /* Go through available list, and try to load each one */
     for (i = 0; objfmts[i]; i++) {
