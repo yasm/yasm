@@ -54,6 +54,6 @@ void vps_append(valparamhead *headp, /*@keep@*/ valparam *vp);
 
 #define vps_foreach(iter, headp)    STAILQ_FOREACH(iter, headp, link)
 
-void vps_print(FILE *f, /*@null@*/ valparamhead *headp);
+void vps_print(FILE *f, /*@null@*/ const valparamhead *headp);
 
 #endif

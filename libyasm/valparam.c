@@ -45,9 +45,9 @@ vps_delete(valparamhead *headp)
 }
 
 void
-vps_print(FILE *f, valparamhead *headp)
+vps_print(FILE *f, const valparamhead *headp)
 {
-    valparam *vp;
+    const valparam *vp;
 
     if(!headp) {
 	fprintf(f, "(none)");
