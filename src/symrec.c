@@ -24,6 +24,7 @@
 
 #ifdef STDC_HEADERS
 # include <assert.h>
+# include <limits.h>
 #endif
 
 #include "ternary.h"
@@ -233,6 +234,8 @@ symrec_get_equ(const symrec *sym)
     return (const expr *)NULL;
 }
 
+static unsigned long firstundef_line;
+static /*@dependent@*/ /*@null@*/ const char *firstundef_filename;
 static int
 symrec_parser_finalize_checksym(symrec *sym)
 {
@@ -240,17 +243,23 @@ symrec_parser_finalize_checksym(symrec *sym)
     if ((sym->status & SYM_USED) && !(sym->status & SYM_DEFINED)) {
 	ErrorAt(sym->filename, sym->line,
 		_("undefined symbol `%s' (first use)"), sym->name);
-	ErrorAt(sym->filename, sym->line,
-		_("(Each undefined symbol is reported only once.)"));
-	return 0;
-    } else
-	return 1;
+	if (sym->line < firstundef_line) {
+	    firstundef_line = sym->line;
+	    firstundef_filename = sym->filename;
+	}
+    }
+
+    return 1;
 }
 
 void
 symrec_parser_finalize(void)
 {
+    firstundef_line = ULONG_MAX;
     symrec_foreach(symrec_parser_finalize_checksym);
+    if (firstundef_line < ULONG_MAX)
+	ErrorAt(firstundef_filename, firstundef_line,
+		_(" (Each undefined symbol is reported only once.)"));
 }
 
 static void
