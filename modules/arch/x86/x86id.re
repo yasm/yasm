@@ -1345,7 +1345,7 @@ x86_new_jmprel(const unsigned long data[4], int num_operands,
     /* Check for address size setting in second operand, if present */
     if (jrinfo->num_operands > 1 &&
 	(jrinfo->operands[1] & OPA_MASK) == OPA_AdSizeR)
-	d.addrsize = (unsigned char)size_lookup[(info->operands[1] &
+	d.addrsize = (unsigned char)size_lookup[(jrinfo->operands[1] &
 						 OPS_MASK)>>OPS_SHIFT];
     else
 	d.addrsize = 0;
