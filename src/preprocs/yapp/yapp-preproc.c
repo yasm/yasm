@@ -42,11 +42,11 @@ YYSTYPE yapp_preproc_lval;
 int isatty(int);
 
 /* Build source and macro representations */
-static SLIST_HEAD(source_head, source_s) source_head, macro_head, param_head, *current_head;
+static SLIST_HEAD(source_head, source_s) source_head, macro_head, param_head;
 static struct source_s {
     SLIST_ENTRY(source_s) next;
     YAPP_Token token;
-} *src, *source_tail, *macro_tail, *param_tail, **current_tail;
+} *src, *source_tail, *macro_tail, *param_tail;
 typedef struct source_s source;
 
 /* don't forget what the nesting level says */
@@ -144,7 +144,12 @@ yapp_define_insert (char *name, int argc, int fillargs)
     else if (argc >= 0)
     {
 	/* insert placeholder for paramlisted defines */
-	HAMT_insert(macro_table, name, (void *)0, &zero, (void (*)(void *))yapp_macro_error_exists);
+	ym = xmalloc(sizeof(YAPP_Macro));
+	ym->type = YAPP_DEFINE;
+	ym->args = argc;
+	ym->fillargs = fillargs;
+	ym->expanding = 0;
+	HAMT_insert(macro_table, name, (void *)ym, &zero, (void (*)(void *))yapp_macro_error_exists);
     }
 
     /* now for the real one */
@@ -159,7 +164,7 @@ yapp_define_insert (char *name, int argc, int fillargs)
 	sprintf(mungename, "%s(%d)", name, argc);
     }
 
-    /*ydebug (("]]Inserting %s:%d:%d\n", mungename, argc, fillargs));*/
+    ydebug(("YAPP: +Inserting macro %s\n", mungename));
 
     memcpy(&ym->macro_head, &macro_head, sizeof(macro_head));
     memcpy(&ym->param_head, &param_head, sizeof(param_head));
@@ -199,6 +204,9 @@ yapp_define_param_get (HAMT *hamt, const char *key)
 }
 
 /*****************************************************************************/
+
+void
+append_processed_token(source *tok, struct source_head *to_head, source **to_tail);
 
 void
 append_token(int token, struct source_head *to_head, source **to_tail);
@@ -245,8 +253,6 @@ yapp_preproc_initialize(FILE *f, const char *in_filename)
     macro_tail = SLIST_FIRST(&macro_head);
     param_tail = SLIST_FIRST(&param_head);
 
-    current_head = &source_head;
-    current_tail = &source_tail;
     append_token(LINE, &source_head, &source_tail);
 }
 
@@ -331,6 +337,21 @@ yapp_defined(const char *key)
 }
 
 void
+append_processed_token(source *tok, struct source_head *to_head, source **to_tail)
+{
+    ydebug(("YAPP: appended token \"%s\"\n", tok->token.str));
+    if (*to_tail) {
+	SLIST_INSERT_AFTER(*to_tail, tok, next);
+    }
+    else {
+	SLIST_INSERT_HEAD(to_head, tok, next);
+    }
+    *to_tail = tok;
+    if (to_head == &source_head)
+	saved_length += strlen(tok->token.str);
+}
+
+void
 append_token(int token, struct source_head *to_head, source **to_tail)
 {
     if (current_output != YAPP_OUTPUT) {
@@ -371,7 +392,7 @@ append_token(int token, struct source_head *to_head, source **to_tail)
 		break;
 
 	    case '+': case '-': case '*': case '/': case '%': case ',': case '\n':
-	    case '[': case ']':
+	    case '[': case ']': case '(': case ')':
 		src->token.str = xmalloc(2);
 		src->token.str[0] = (char)token;
 		src->token.str[1] = '\0';
@@ -387,15 +408,7 @@ append_token(int token, struct source_head *to_head, source **to_tail)
 		free(src);
 		return;
 	}
-	if (*to_tail) {
-	    SLIST_INSERT_AFTER(*to_tail, src, next);
-	}
-	else {
-	    SLIST_INSERT_HEAD(to_head, src, next);
-	}
-	*to_tail = src;
-	if (current_head == &source_head)
-	    saved_length += strlen(src->token.str);
+	append_processed_token(src, to_head, to_tail);
     }
 }
 
@@ -405,6 +418,22 @@ replay_saved_tokens(char *ident,
 		    struct source_head *to_head,
 		    source **to_tail)
 {
+    source *item, *after;
+    ydebug(("-No, %s didn't match any macro we have\n", ident));
+    /* this means a macro expansion failed.  stick its name and all the saved
+     * tokens into the output stream */
+    yapp_preproc_lval.str_val = ident;
+    append_token(IDENT, to_head, to_tail);
+
+    item = SLIST_FIRST(from_head);
+    while (item) {
+	after = SLIST_NEXT(item, next);
+	SLIST_INSERT_AFTER(*to_tail, item, next);
+	*to_tail = item;
+	saved_length += strlen(item->token.str);
+	item = after;
+    }
+    SLIST_INIT(from_head);
 }
 
 int
@@ -453,15 +482,7 @@ copy_token(YAPP_Token *tok, struct source_head *to_head, source **to_tail)
     src->token.type = tok->type;
     src->token.str = xstrdup(tok->str);
 
-    if (*current_tail) {
-	SLIST_INSERT_AFTER(*current_tail, src, next);
-    }
-    else {
-	SLIST_INSERT_HEAD(current_head, src, next);
-    }
-    *current_tail = src;
-    if (current_head == &source_head)
-	saved_length += strlen(src->token.str);
+    append_processed_token(src, to_head, to_tail);
 }
 
 void
@@ -475,14 +496,16 @@ expand_macro(char *name,
 
     YAPP_Macro *ym = yapp_macro_get(name);
 
-    if (ym->expanding) InternalError(_("Recursively expanding a macro!"));
+    ydebug(("YAPP: +Expand macro %s...\n", name));
 
-    ym->expanding = 1;
+    if (ym->expanding) InternalError(_("Recursively expanding a macro!"));
 
     if (ym->type == YAPP_DEFINE) {
 	if (ym->args == -1) {
 	    /* no parens to deal with */
+	    ym->expanding = 1;
 	    expand_token_list(&ym->macro_head, to_head, to_tail);
+	    ym->expanding = 0;
 	}
 	else
 	{
@@ -493,6 +516,8 @@ expand_macro(char *name,
 	    HAMT *param_table;
 	    source *replay, *param;
 
+	    ydebug(("YAPP: +Expanding multi-arg macro %s...\n", name));
+
 	    /* Build up both a parameter reference list and a token buffer,
 	     * because we won't know until we've reached the closing paren if
 	     * we can actuall expand the macro or not.  bleah. */
@@ -502,22 +527,21 @@ expand_macro(char *name,
 	    /* HMM */
 	    SLIST_INIT(&replay_head);
 	    replay_tail = SLIST_FIRST(&replay_head);
-	    SLIST_INIT(&arg_head);
-	    arg_tail = SLIST_FIRST(&arg_head);
 
 	    /* find out what we got */
-	    append_token(token, &replay_head, &replay_tail);
+	    if (from_head) {
+		InternalError("Expanding macro with non-null from_head ugh\n");
+	    }
 	    token = yapp_preproc_lex();
 	    append_token(token, &replay_head, &replay_tail);
+	    /* allow one whitespace */
 	    if (token == WHITESPACE) {
+		ydebug(("Ignoring WS between macro and paren\n"));
 		token = yapp_preproc_lex();
 		append_token(token, &replay_head, &replay_tail);
-		if (token != '(') {
-		    replay_saved_tokens(name, &replay_head, to_head, to_tail);
-		    return;
-		}
 	    }
-	    else if (token != '(') {
+	    if (token != '(') {
+		ydebug(("YAPP: -Didn't get to left paren; instead got '%c' \"%s\"\n", token, yapp_preproc_lval.str_val));
 		replay_saved_tokens(name, &replay_head, to_head, to_tail);
 		return;
 	    }
@@ -525,6 +549,7 @@ expand_macro(char *name,
 	    /* at this point, we've got the left paren.  time to get annoyed */
 	    while (token != ')') {
 		token = yapp_preproc_lex();
+		append_token(token, &replay_head, &replay_tail);
 		/* TODO: handle { } for commas?  or is that just macros? */
 		switch (token) {
 		    case '(':
@@ -532,10 +557,13 @@ expand_macro(char *name,
 			break;
 
 		    case ')':
-			if (parennest)
+			if (parennest) {
 			    parennest--;
-			else
+			    token = ',';
+			}
+			else {
 			    argc++;
+			}
 			break;
 
 		    case ',':
@@ -544,11 +572,14 @@ expand_macro(char *name,
 			break;
 
 		    case WHITESPACE: case IDENT: case INTNUM: case FLTNUM: case STRING:
-			append_token(token, &replay_head, &replay_tail);
+		    case '+': case '-': case '*': case '/':
 			break;
 
 		    default:
-			Error(_("Cannot handle preprocessor items inside possible macro invocation"));
+			if (token < 256)
+			    InternalError(_("Unexpected character token in parameter expansion"));
+			else
+			    Error(_("Cannot handle preprocessor items inside possible macro invocation"));
 		}
 	    }
 
@@ -558,12 +589,14 @@ expand_macro(char *name,
 	    ym = yapp_macro_get(mungename);
 	    if (!ym)
 	    {
-		current_head = &source_head;
-		current_tail = &source_tail;
+		ydebug(("YAPP: -Didn't find macro %s\n", mungename));
 		replay_saved_tokens(name, &replay_head, to_head, to_tail);
 		xfree(mungename);
 		return;
 	    }
+	    ydebug(("YAPP: +Found macro %s\n", mungename));
+
+	    ym->expanding = 1;
 
 	    /* so the macro exists. build a HAMT parameter table */
 	    param_table = HAMT_new();
@@ -573,35 +606,45 @@ expand_macro(char *name,
 	    /* get to the opening paren */
 	    replay = SLIST_FIRST(&replay_head);
 	    while (replay->token.type != '(') {
+		ydebug(("YAPP: Ignoring replay token '%c' \"%s\"\n", replay->token.type, replay->token.str));
 		SLIST_REMOVE_HEAD(&replay_head, next);
 		free(replay->token.str);
 		free(replay);
 		replay = SLIST_FIRST(&replay_head);
 	    }
+	    ydebug(("YAPP: Ignoring replay token '%c' \"%s\"\n", replay->token.type, replay->token.str));
 
 	    /* free the open paren */
 	    SLIST_REMOVE_HEAD(&replay_head, next);
 	    free(replay->token.str);
 	    free(replay);
-	    replay = SLIST_FIRST(&replay_head);
 
 	    param = SLIST_FIRST(&ym->param_head);
 
-	    while (parennest || (replay && replay->token.type != ')')) {
-		SLIST_REMOVE_HEAD(&replay_head, next);
+	    SLIST_INIT(&arg_head);
+	    arg_tail = SLIST_FIRST(&arg_head);
+
+	    replay = SLIST_FIRST(&replay_head);
+	    SLIST_REMOVE_HEAD(&replay_head, next);
+	    while (parennest || replay) {
 		if (replay->token.type == '(') {
 		    parennest++;
-		    append_token(token, &arg_head, &arg_tail);
+		    append_processed_token(replay, &arg_head, &arg_tail);
+		    ydebug(("YAPP: +add arg token '%c'\n", replay->token.type));
 		}
 		else if (parennest && replay->token.type == ')') {
 		    parennest--;
-		    append_token(token, &arg_head, &arg_tail);
+		    append_processed_token(replay, &arg_head, &arg_tail);
+		    ydebug(("YAPP: +add arg token '%c'\n", replay->token.type));
 		}
-		else if (!parennest && (replay->token.type == ','
-					|| replay->token.type == ')'))
+		else if ((!parennest) && (replay->token.type == ','
+					  || replay->token.type == ')'))
 		{
 		    int zero=0;
 		    struct source_head *argmacro = xmalloc(sizeof(struct source_head));
+		    memcpy(argmacro, &arg_head, sizeof(struct source_head));
+		    SLIST_INIT(&arg_head);
+		    arg_tail = SLIST_FIRST(&arg_head);
 
 		    /* don't save the comma */
 		    free(replay->token.str);
@@ -612,33 +655,37 @@ expand_macro(char *name,
 				(void *)argmacro,
 				&zero,
 				(void (*)(void *))yapp_macro_error_sameargname);
+		    param = SLIST_NEXT(param, next);
 		}
 		else if (replay->token.type == IDENT
 			 && yapp_defined(replay->token.str))
 		{
+		    ydebug(("YAPP: +add arg macro '%c' \"%s\"\n", replay->token.type, replay->token.str));
 		    expand_macro(replay->token.str, &replay_head, &arg_head, &arg_tail);
 		}
-		else {
-		    if (arg_tail)
-			SLIST_INSERT_AFTER(arg_tail, replay, next);
-		    else
-			SLIST_INSERT_HEAD(&arg_head, replay, next);
-		    arg_tail = replay;
+		else if (arg_tail || replay->token.type != WHITESPACE) {
+		    ydebug(("YAPP: +else add arg token '%c' \"%s\"\n", replay->token.type, replay->token.str));
+		    append_processed_token(replay, &arg_head, &arg_tail);
 		}
 		replay = SLIST_FIRST(&replay_head);
+		if (replay) SLIST_REMOVE_HEAD(&replay_head, next);
 	    }
-	    free(replay->token.str);
-	    free(replay);
+	    if (replay) {
+		free(replay->token.str);
+		free(replay);
+	    }
+	    else if (param) {
+		  InternalError(_("Got to end of arglist before end of replay!"));
+	    }
 	    replay = SLIST_FIRST(&replay_head);
-	    if (replay)
+	    if (replay || param)
 		InternalError(_("Count and distribution of define args mismatched!"));
 
 	    /* the param_table is set up without errors, so expansion is ready
 	     * to go */
-
-	    /* no parens to deal with */
 	    SLIST_FOREACH (replay, &ym->macro_head, next) {
 		if (replay->token.type == IDENT) {
+
 		    /* check local args first */
 		    struct source_head *paramexp =
 			yapp_define_param_get(param_table, replay->token.str);
@@ -662,11 +709,7 @@ expand_macro(char *name,
 		    copy_token(&replay->token, to_head, to_tail);
 		}
 	    }
-
-	    current_head = &source_head;
-	    current_tail = &source_tail;
-
-	    InternalError(_("Invoking Defines with argument lists not yet supported"));
+	    ym->expanding = 0;
 	}
     }
     else
@@ -713,7 +756,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 		{
 		    char *s;
 		    default:
-			append_token(token, current_head, current_tail);
+			append_token(token, &source_head, &source_tail);
 			/*if (append_to_return()==0) state=YAPP_STATE_EOF;*/
 			ydebug(("YAPP: default: '%c' \"%s\"\n", token, yapp_preproc_lval.str_val));
 			/*Error(_("YAPP got an unhandled token."));*/
@@ -722,10 +765,10 @@ yapp_preproc_input(char *buf, size_t max_size)
 		    case IDENT:
 			ydebug(("YAPP: ident: \"%s\"\n", yapp_preproc_lval.str_val));
 			if (yapp_defined(yapp_preproc_lval.str_val)) {
-			    expand_macro(yapp_preproc_lval.str_val, NULL, current_head, current_tail);
+			    expand_macro(yapp_preproc_lval.str_val, NULL, &source_head, &source_tail);
 			}
 			else {
-			    append_token(token, current_head, current_tail);
+			    append_token(token, &source_head, &source_tail);
 			}
 			break;
 
@@ -734,7 +777,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 			break;
 
 		    case '\n':
-			append_token(token, current_head, current_tail);
+			append_token(token, &source_head, &source_tail);
 			break;
 
 		    case CLEAR:
@@ -753,31 +796,31 @@ yapp_preproc_input(char *buf, size_t max_size)
 			if (token == '\n') {
 			    /* no args or content - just insert it */
 			    yapp_define_insert(s, -1, 0);
-			    append_token('\n', current_head, current_tail);
+			    append_token('\n', &source_head, &source_tail);
 			}
 			else if (token == WHITESPACE) {
 			    /* no parens */
-			    current_head = &macro_head;
-			    current_tail = &macro_tail;
-			    if(append_to_return(current_head, current_tail)==0) state=YAPP_STATE_EOF;
+			    if(append_to_return(&macro_head, &macro_tail)==0) state=YAPP_STATE_EOF;
 			    else {
 				yapp_define_insert(s, -1, 0);
 			    }
-			    current_head = &source_head;
-			    current_tail = &source_tail;
-			    append_token('\n', current_head, current_tail);
+			    append_token('\n', &source_head, &source_tail);
 			}
 			else if (token == '(') {
 			    /* get all params of the parameter list */
 			    /* ensure they alternate IDENT and ',' */
 			    int param_count = 0;
 			    int last_token = ',';
-			    current_head = &param_head;
-			    current_tail = &param_tail;
+
+			    ydebug((" *Getting arglist for define %s\n", s));
 
 			    while ((token = yapp_preproc_lex())!=')') {
-				if (last_token == ',' && token == IDENT) {
-				    append_token(token, current_head, current_tail);
+				ydebug(("YAPP: +read token '%c' \"%s\" for macro %s\n", token, yapp_preproc_lval.str_val, s));
+				if (token == WHITESPACE) {
+				    token = last_token;
+				}
+				else if (last_token == ',' && token == IDENT) {
+				    append_token(token, &param_head, &param_tail);
 				    param_count++;
 				}
 				else if (token == 0) {
@@ -791,16 +834,13 @@ yapp_preproc_input(char *buf, size_t max_size)
 			    if (token == ')') {
 				/* after paramlist and ')' */
 				/* everything is what it's defined to be */
-				current_head = &macro_head;
-				current_tail = &macro_tail;
-				if(append_to_return(current_head, current_tail)==0) state=YAPP_STATE_EOF;
+				if(append_to_return(&macro_head, &macro_tail)==0) state=YAPP_STATE_EOF;
 				else {
+				    ydebug(("YAPP: Inserting define macro %s (%d)\n", s, param_count));
 				    yapp_define_insert(s, param_count, 0);
 				}
 			    }
-			    current_head = &source_head;
-			    current_tail = &source_tail;
-			    append_token('\n', current_head, current_tail);
+			    append_token('\n', &source_head, &source_tail);
 			}
 			else {
 			    InternalError(_("%%define ... failed miserably - neither \\n, WS, or ( followed ident"));
@@ -861,7 +901,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 		}
 		if (state == YAPP_STATE_NEED_EOL)
 		{
-		    if (eat_through_return(current_head, current_tail)==0) state=YAPP_STATE_EOF;
+		    if (eat_through_return(&source_head, &source_tail)==0) state=YAPP_STATE_EOF;
 		    else state=YAPP_STATE_INITIAL;
 		}
 		break;
@@ -869,7 +909,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 		Error(_("YAPP got into a bad state"));
 	}
 	if (need_line_directive) {
-	    append_token(LINE, current_head, current_tail);
+	    append_token(LINE, &source_head, &source_tail);
 	    need_line_directive = 0;
 	}
     }
