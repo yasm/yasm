@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$IdPath: yasm/modules/arch/x86/x86arch.c,v 1.23 2003/03/31 05:36:29 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #define YASM_LIB_INTERNAL
 #include <libyasm.h>
@@ -200,7 +200,7 @@ yasm_x86__parse_seg_override(yasm_effaddr *ea, unsigned long segreg,
 
 /* Define arch structure -- see arch.h for details */
 yasm_arch yasm_x86_LTX_arch = {
-    "x86 (IA-32, x86-64)",
+    "x86 (IA-32, AMD64)",
     "x86",
     x86_initialize,
     x86_cleanup,
