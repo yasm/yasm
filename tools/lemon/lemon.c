@@ -24,8 +24,6 @@
 ** Author contact information:
 **   drh@acm.org
 **   http://www.hwaci.com/drh/
-**
-** $Id: lemon.c,v 1.1 2002/04/07 19:13:04 peter Exp $
 */
 #include <stdio.h>
 #include <varargs.h>
@@ -101,11 +99,11 @@ struct s_options {
   char *arg;
   char *message;
 };
-int    optinit(/* char**,struct s_options*,FILE* */);
-int    optnargs(/* void */);
-char  *optarg(/* int */);
-void   opterr(/* int */);
-void   optprint(/* void */);
+int    OptInit(/* char**,struct s_options*,FILE* */);
+int    OptNArgs(/* void */);
+char  *OptArg(/* int */);
+void   OptErr(/* int */);
+void   OptPrint(/* void */);
 
 /******** From the file "parse.h" *****************************************/
 void Parse(/* struct lemon *lemp */);
@@ -282,10 +280,7 @@ struct lemon {
   char *tokendest;         /* Code to execute to destroy token data */
   int  tokendestln;        /* Line number for token destroyer code */
   char *filename;          /* Name of the input file */
-  char *basename;          /* Basename of inputer file (no directory or path */
   char *outname;           /* Name of the current output file */
-  char *outdirname;        /* Name of the output directory, specified by user */
-  char *templatename;      /* Name of template file to use, specified by user */
   char *tokenprefix;       /* A prefix added to token names in the .h file */
   int nconflict;           /* Number of parsing conflicts */
   int tablesize;           /* Size of the parse tables */
@@ -380,7 +375,8 @@ struct action *ap2;
   rc = ap1->sp->index - ap2->sp->index;
   if( rc==0 ) rc = (int)ap1->type - (int)ap2->type;
   if( rc==0 ){
-    assert( ap1->type==REDUCE && ap2->type==REDUCE );
+    assert( ap1->type==REDUCE || ap1->type==RD_RESOLVED || ap1->type==CONFLICT);
+    assert( ap2->type==REDUCE || ap2->type==RD_RESOLVED || ap2->type==CONFLICT);
     rc = ap1->x.rp->index - ap2->x.rp->index;
   }
   return rc;
@@ -1171,43 +1167,6 @@ void memory_error(){
   exit(1);
 }
 
-/* Locates the basename in a string possibly containing paths,
- * including forward-slash and backward-slash delimiters on Windows,
- * and allocates a new string containing just the basename.
- * Returns the pointer to that string.
- */
-PRIVATE char*
-make_basename(char* fullname)
-{
-	char	*cp;
-	char	*new_string;
-
-	/* Find the last forward slash */
-	cp = strrchr(fullname, '/');
-
-#ifdef WIN32
-	/* On Windows, if no forward slash was found, look ofr
-	 * backslash also */
-	if (!cp)
-		cp = strrchr(fullname, '\\');
-#endif
-
-	if (!cp) {
-		new_string = malloc( strlen(fullname) );
-		strcpy(new_string, fullname);
-	}
-	else {
-		/* skip the slash */
-		cp++;
-		new_string = malloc( strlen(cp) );
-		strcpy(new_string, cp);
-	}
-
-	return new_string;
-}
-
-
-
 
 /* The main program.  Parse the command line and do it... */
 int main(argc,argv)
@@ -1221,24 +1180,20 @@ char **argv;
   static int quiet = 0;
   static int statistics = 0;
   static int mhflag = 0;
-  static char *outdirname = NULL;
-  static char *templatename = NULL;
   static struct s_options options[] = {
     {OPT_FLAG, "b", (char*)&basisflag, "Print only the basis in report."},
     {OPT_FLAG, "c", (char*)&compress, "Don't compress the action table."},
-    {OPT_STR,  "d", (char*)&outdirname, "Output directory name."},
     {OPT_FLAG, "g", (char*)&rpflag, "Print grammar without actions."},
     {OPT_FLAG, "m", (char*)&mhflag, "Output a makeheaders compatible file"},
     {OPT_FLAG, "q", (char*)&quiet, "(Quiet) Don't print the report file."},
     {OPT_FLAG, "s", (char*)&statistics, "Print parser stats to standard output."},
-    {OPT_STR,  "t", (char*)&templatename, "Template file to use."},
     {OPT_FLAG, "x", (char*)&version, "Print the version number."},
     {OPT_FLAG,0,0,0}
   };
   int i;
   struct lemon lem;
 
-  optinit(argv,options,stderr);
+  OptInit(argv,options,stderr);
   if( version ){
      printf("Lemon version 1.0\n"
        "Copyright 1991-1997 by D. Richard Hipp\n"
@@ -1246,7 +1201,7 @@ char **argv;
      );
      exit(0); 
   }
-  if( optnargs()!=1 ){
+  if( OptNArgs()!=1 ){
     fprintf(stderr,"Exactly one filename argument is required.\n");
     exit(1);
   }
@@ -1257,7 +1212,7 @@ char **argv;
   Symbol_init();
   State_init();
   lem.argv0 = argv[0];
-  lem.filename = optarg(0);
+  lem.filename = OptArg(0);
   lem.basisflag = basisflag;
   lem.nconflict = 0;
   lem.name = lem.include = lem.arg = lem.tokentype = lem.start = 0;
@@ -1267,9 +1222,6 @@ char **argv;
   lem.tablesize = 0;
   Symbol_new("$");
   lem.errsym = Symbol_new("error");
-  lem.outdirname = outdirname;
-  lem.templatename = templatename;
-  lem.basename = make_basename(lem.filename);
 
   /* Parse the input file */
   Parse(&lem);
@@ -1644,7 +1596,7 @@ FILE *err;
   return errcnt;
 }
 
-int optinit(a,o,err)
+int OptInit(a,o,err)
 char **a;
 struct s_options *o;
 FILE *err;
@@ -1665,13 +1617,13 @@ FILE *err;
   }
   if( errcnt>0 ){
     fprintf(err,"Valid command line options for \"%s\" are:\n",*a);
-    optprint();
+    OptPrint();
     exit(1);
   }
   return 0;
 }
 
-int optnargs(){
+int OptNArgs(){
   int cnt = 0;
   int dashdash = 0;
   int i;
@@ -1684,7 +1636,7 @@ int optnargs(){
   return cnt;
 }
 
-char *optarg(n)
+char *OptArg(n)
 int n;
 {
   int i;
@@ -1692,7 +1644,7 @@ int n;
   return i>=0 ? argv[i] : 0;
 }
 
-void opterr(n)
+void OptErr(n)
 int n;
 {
   int i;
@@ -1700,7 +1652,7 @@ int n;
   if( i>=0 ) errline(i,0,errstream);
 }
 
-void optprint(){
+void OptPrint(){
   int i;
   int max, len;
   max = 0;
@@ -2258,7 +2210,7 @@ struct lemon *gp;
 	}
       }
       if( c==0 ){
-        ErrorMsg(ps.filename,startline,
+        ErrorMsg(ps.filename,ps.tokenlineno,
 "C code starting on this line is not terminated before the end of the file.");
         ps.errorcnt++;
         nextcp = cp;
@@ -2361,77 +2313,37 @@ struct plink *plp;
 ** name comes from malloc() and must be freed by the calling
 ** function.
 */
-PRIVATE char *file_makename(pattern,suffix)
-char *pattern;
+PRIVATE char *file_makename(lemp,suffix)
+struct lemon *lemp;
 char *suffix;
 {
   char *name;
   char *cp;
 
-  name = malloc( strlen(pattern) + strlen(suffix) + 5 );
+  name = malloc( strlen(lemp->filename) + strlen(suffix) + 5 );
   if( name==0 ){
     fprintf(stderr,"Can't allocate space for a filename.\n");
     exit(1);
   }
-  strcpy(name,pattern);
+  strcpy(name,lemp->filename);
   cp = strrchr(name,'.');
   if( cp ) *cp = 0;
   strcat(name,suffix);
   return name;
 }
 
-/* Generate a filename with the given suffix.  Uses only
-** the basename of the input file, not the entire path. This
-** is useful for creating output files when using outdirname.
-** Space to hold this name comes from malloc() and must be
-** freed by the calling function.
-*/
-PRIVATE char *file_makename_using_basename(lemp,suffix)
-struct lemon *lemp;
-char *suffix;
-{
-	return file_makename(lemp->basename, suffix);
-}
-
 /* Open a file with a name based on the name of the input file,
 ** but with a different (specified) suffix, and return a pointer
-** to the stream. Prepend outdirname for both reads and writes, because
-** the only time we read is when checking for an already-produced
-** header file, which should exist in the output directory, not the
-** input directory. If we ever need to file_open(,,"r") on the input
-** side, we should add another arg to file_open() indicating which
-** directory, ("input, "output", or "other") we should deal with.
-*/
+** to the stream */
 PRIVATE FILE *file_open(lemp,suffix,mode)
 struct lemon *lemp;
 char *suffix;
 char *mode;
 {
   FILE *fp;
-  char *name;
 
   if( lemp->outname ) free(lemp->outname);
-  name = file_makename_using_basename(lemp, suffix);
-
-  if ( lemp->outdirname != NULL ) {
-	  lemp->outname = malloc( strlen(lemp->outdirname) + strlen(name) + 2);
-	  if ( lemp->outname == 0 ) {
-		  fprintf(stderr, "Can't allocate space for dir/filename");
-		  exit(1);
-	  }
-	  strcpy(lemp->outname, lemp->outdirname);
-#ifdef __WIN32__
-	  strcat(lemp->outname, "\\");
-#else
-	  strcat(lemp->outname, "/");
-#endif
-	  strcat(lemp->outname, name);
-	  free(name);
-  }
-  else {
-	 lemp->outname = name;
-  }
-
+  lemp->outname = file_makename(lemp, suffix);
   fp = fopen(lemp->outname,mode);
   if( fp==0 && *mode=='w' ){
     fprintf(stderr,"Can't open file \"%s\".\n",lemp->outname);
@@ -2723,21 +2635,16 @@ struct lemon *lemp;
   char *tpltname;
   char *cp;
 
-  if (lemp->templatename) {
-	  tpltname = lemp->templatename;
+  cp = strrchr(lemp->filename,'.');
+  if( cp ){
+    sprintf(buf,"%.*s.lt",(int)cp-(int)lemp->filename,lemp->filename);
+  }else{
+    sprintf(buf,"%s.lt",lemp->filename);
   }
-  else {
-	  cp = strrchr(lemp->filename,'.');
-	  if( cp ){
-	    sprintf(buf,"%.*s.lt",(int)cp-(int)lemp->filename,lemp->filename);
-	  }else{
-	    sprintf(buf,"%s.lt",lemp->filename);
-	  }
-	  if( access(buf,004)==0 ){
-	    tpltname = buf;
-	  }else{
-	    tpltname = pathsearch(lemp->argv0,templatename,0);
-	  }
+  if( access(buf,004)==0 ){
+    tpltname = buf;
+  }else{
+    tpltname = pathsearch(lemp->argv0,templatename,0);
   }
   if( tpltname==0 ){
     fprintf(stderr,"Can't find the parser driver template file \"%s\".\n",
@@ -3041,7 +2948,7 @@ int mhflag;     /* Output in makeheaders format if true */
   /* Generate the include code, if any */
   tplt_print(out,lemp,lemp->include,lemp->includeln,&lineno);
   if( mhflag ){
-    char *name = file_makename_using_basename(lemp, ".h");
+    char *name = file_makename(lemp, ".h");
     fprintf(out,"#include \"%s\"\n", name); lineno++;
     free(name);
   }
@@ -3089,7 +2996,7 @@ int mhflag;     /* Output in makeheaders format if true */
     int i;
     i = strlen(lemp->arg);
     while( i>=1 && isspace(lemp->arg[i-1]) ) i--;
-    while( i>=1 && isalnum(lemp->arg[i-1]) ) i--;
+    while( i>=1 && (isalnum(lemp->arg[i-1]) || lemp->arg[i-1]=='_') ) i--;
     fprintf(out,"#define %sARGDECL ,%s\n",name,&lemp->arg[i]);  lineno++;
     fprintf(out,"#define %sXARGDECL %s;\n",name,lemp->arg);  lineno++;
     fprintf(out,"#define %sANSIARGDECL ,%s\n",name,lemp->arg);  lineno++;
