@@ -62,6 +62,13 @@ void expr_expand_equ(expr *e);
  */
 /*@dependent@*/ /*@null@*/ const intnum *expr_get_intnum(expr **ep);
 
+/* Gets the symrec value of e if the expression is just an integer.  If the
+ * expression is more complex, returns NULL.  Simplifies the expr first if
+ * simplify is nonzero.
+ */
+/*@dependent@*/ /*@null@*/ const symrec *expr_get_symrec(expr **ep,
+							 int simplify);
+
 void expr_print(expr *);
 
 #endif

@@ -815,6 +815,20 @@ expr_get_intnum(expr **ep)
 }
 /*@=unqualifiedtrans =nullderef -nullstate -onlytrans@*/
 
+/*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
+const symrec *
+expr_get_symrec(expr **ep, int simplify)
+{
+    if (simplify)
+	*ep = expr_simplify(*ep);
+
+    if ((*ep)->op == EXPR_IDENT && (*ep)->terms[0].type == EXPR_SYM)
+	return (*ep)->terms[0].data.sym;
+    else
+	return (symrec *)NULL;
+}
+/*@=unqualifiedtrans =nullderef -nullstate -onlytrans@*/
+
 void
 expr_print(expr *e)
 {
