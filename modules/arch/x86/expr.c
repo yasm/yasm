@@ -761,9 +761,9 @@ expr_checkea_get_reg32(ExprItem *ei, void *d)
     return ret;
 }
 
-typedef struct checkea_invalid16_data {
+typedef struct checkea_reg16_data {
     int bx, si, di, bp;		/* total multiplier for each reg */
-} checkea_invalid16_data;
+} checkea_reg16_data;
 
 /* Only works if ei->type == EXPR_REG (doesn't check).
  * Overwrites ei with intnum of 0 (to eliminate regs from the final expr).
@@ -771,7 +771,7 @@ typedef struct checkea_invalid16_data {
 static int *
 expr_checkea_get_reg16(ExprItem *ei, void *d)
 {
-    checkea_invalid16_data *data = d;
+    checkea_reg16_data *data = d;
     /* in order: ax,cx,dx,bx,sp,bp,si,di */
     static int *reg16[8] = {0,0,0,0,0,0,0,0};
     int *ret;
@@ -910,7 +910,7 @@ expr_checkea_distcheck_reg(expr **ep)
  * where the [...] parts are optional.
  *
  * Don't simplify out constant identities if we're looking for an indexreg: we
- * need the multiplier for determining what the indexreg is!
+ * may need the multiplier for determining what the indexreg is!
  *
  * Returns 0 if invalid register usage, 1 if unable to determine all values,
  * and 2 if all values successfully determined and saved in data.
@@ -928,7 +928,6 @@ expr_checkea_getregusage(expr **ep, int *indexreg, void *data,
     e = *ep;
     switch (expr_checkea_distcheck_reg(ep)) {
 	case 0:
-	    ErrorAt(e->filename, e->line, _("invalid effective address"));
 	    return 0;
 	case 2:
 	    /* Need to simplify again */
@@ -968,6 +967,8 @@ expr_checkea_getregusage(expr **ep, int *indexreg, void *data,
 		    if (!reg)
 			return 0;
 		    (*reg)++;
+		    if (indexreg)
+			*indexreg = reg-(int *)data;
 		} else if (e->terms[i].type == EXPR_EXPR) {
 		    /* Already ordered from ADD above, just grab the value.
 		     * Sanity check for EXPR_INT.
@@ -982,8 +983,7 @@ expr_checkea_getregusage(expr **ep, int *indexreg, void *data,
 		    (*reg) +=
 			intnum_get_int(e->terms[i].data.expn->terms[1].data.intn);
 		    if (indexreg)
-			*indexreg =
-			    e->terms[i].data.expn->terms[0].data.reg.num;
+			*indexreg = reg-(int *)data;
 		}
 	    }
 	    break;
@@ -998,6 +998,8 @@ expr_checkea_getregusage(expr **ep, int *indexreg, void *data,
 	    if (!reg)
 		return 0;
 	    (*reg) += intnum_get_int(e->terms[1].data.intn);
+	    if (indexreg)
+		*indexreg = reg-(int *)data;
 	    break;
 	default:
 	    /* Should never get here! */
@@ -1011,6 +1013,123 @@ expr_checkea_getregusage(expr **ep, int *indexreg, void *data,
     /* e = *ep; */
 
     return 2;
+}
+
+/* Calculate the displacement length, if possible.
+ * Takes several extra inputs so it can be used by both 32-bit and 16-bit
+ * expressions:
+ *  wordsize=2 for 16-bit, =4 for 32-bit.
+ *  noreg=1 if the *ModRM byte* has no registers used.
+ *  isbpreg=1 if BP/EBP is the *only* register used within the *ModRM byte*.
+ */
+static int
+checkea_calc_displen(expr **ep, int wordsize, int noreg, int isbpreg,
+		     unsigned char *displen, unsigned char *modrm,
+		     unsigned char *v_modrm)
+{
+    expr *e = *ep;
+    const intnum *intn;
+    long dispval;
+
+    *v_modrm = 0;	/* default to not yet valid */
+
+    switch (*displen) {
+	case 0:
+	    /* the displacement length hasn't been forced, try to
+	     * determine what it is.
+	     */
+	    if (noreg) {
+		/* no register in ModRM expression, so it must be disp16/32,
+		 * and as the Mod bits are set to 0 by the caller, we're done
+		 * with the ModRM byte.
+		 */
+		*displen = wordsize;
+		*v_modrm = 1;
+	    } else if (isbpreg) {
+		/* for BP/EBP, there *must* be a displacement value, but we
+		 * may not know the size (8 or 16/32) for sure right now.
+		 * We can't leave displen at 0, because that just means
+		 * unknown displacement, including none.
+		 */
+		*displen = 0xff;
+	    }
+
+	    intn = expr_get_intnum(ep);
+	    if (!intn)
+		break;		/* expr still has unknown values */
+
+	    /* make sure the displacement will fit in 16/32 bits if unsigned,
+	     * and 8 bits if signed.
+	     */
+	    if (!intnum_check_size(intn, wordsize, 0) &&
+		!intnum_check_size(intn, 1, 1)) {
+		ErrorAt(e->filename, e->line, _("invalid effective address"));
+		return 0;
+	    }
+
+	    /* don't try to find out what size displacement we have if
+	     * displen is known.
+	     */
+	    if (*displen != 0 && *displen != 0xff)
+		break;
+
+	    /* Don't worry about overflows here (it's already guaranteed
+	     * to be 16/32 or 8 bits).
+	     */
+	    dispval = intnum_get_int(intn);
+
+	    /* Figure out what size displacement we will have. */
+	    if (*displen != 0xff && dispval == 0) {
+		/* if we know that the displacement is 0 right now,
+		 * go ahead and delete the expr (making it so no
+		 * displacement value is included in the output).
+		 * The Mod bits of ModRM are set to 0 above, and
+		 * we're done with the ModRM byte!
+		 *
+		 * Don't do this if we came from isbpreg check above, so
+		 * check *displen.
+		 */
+		expr_delete(e);
+		*ep = (expr *)NULL;
+	    } else if (dispval >= -128 && dispval <= 127) {
+		/* It fits into a signed byte */
+		*displen = 1;
+		*modrm |= 0100;
+	    } else {
+		/* It's a 16/32-bit displacement */
+		*displen = wordsize;
+		*modrm |= 0200;
+	    }
+	    *v_modrm = 1;	/* We're done with ModRM */
+
+	    break;
+
+	/* If not 0, the displacement length was forced; set the Mod bits
+	 * appropriately and we're done with the ModRM byte.  We assume
+	 * that the user knows what they're doing if they do an explicit
+	 * override, so we don't check for overflow (we'll just truncate
+	 * when we output).
+	 */
+	case 1:
+	    *modrm |= 0100;
+	    *v_modrm = 1;
+	    break;
+	case 2:
+	case 4:
+	    if (wordsize != *displen) {
+		ErrorAt(e->filename, e->line,
+			_("invalid effective address (displacement size)"));
+		return 0;
+	    }
+	    *modrm |= 0200;
+	    *v_modrm = 1;
+	    break;
+	default:
+	    /* we shouldn't ever get any other size! */
+	    InternalError(_("strange EA displacement size"));
+    }
+
+    return 1;
 }
 
 static int
@@ -1033,8 +1152,6 @@ expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	     unsigned char *n_sib)
 {
     expr *e = *ep;
-    const intnum *intn;
-    long dispval;
 
     if (*addrsize == 0) {
 	/* we need to figure out the address size from what we know about:
@@ -1066,9 +1183,21 @@ expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
     }
 
     if (*addrsize == 32 && ((*n_modrm && !*v_modrm) || (*n_sib && !*v_sib))) {
+	int i;
+	typedef enum {
+	    REG32_NONE = -1,
+	    REG32_EAX = 0,
+	    REG32_ECX = 1,
+	    REG32_EDX = 2,
+	    REG32_EBX = 3,
+	    REG32_ESP = 4,
+	    REG32_EBP = 5,
+	    REG32_ESI = 6,
+	    REG32_EDI = 7
+	} reg32type;
 	int reg32mult[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-	/*int basereg = 0;*/    /* "base" register (for SIB) */
-	int indexreg = 0;   /* "index" register (for SIB) */
+	int basereg = REG32_NONE;	/* "base" register (for SIB) */
+	int indexreg = REG32_NONE;	/* "index" register (for SIB) */
 	
 	switch (expr_checkea_getregusage(ep, &indexreg, reg32mult,
 					 expr_checkea_get_reg32)) {
@@ -1083,6 +1212,153 @@ expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 		break;
 	}
 
+	/* If indexreg mult is 0, discard it.
+	 * This is possible because of the way indexreg is found in
+	 * expr_checkea_getregusage().
+	 */
+	if (indexreg != REG32_NONE && reg32mult[indexreg] == 0)
+	    indexreg = REG32_NONE;
+
+	/* Find a basereg (*1, but not indexreg), if there is one.
+	 * Also, if an indexreg hasn't been assigned, try to find one.
+	 * Meanwhile, check to make sure there's no negative register mults.
+	 */
+	for (i=0; i<8; i++) {
+	    if (reg32mult[i] < 0) {
+		ErrorAt(e->filename, e->line, _("invalid effective address"));
+		return 0;
+	    }
+	    if (i != indexreg && reg32mult[i] == 1)
+		basereg = i;
+	    else if (indexreg == REG32_NONE && reg32mult[i] > 0)
+		indexreg = i;
+	}
+
+	/* Handle certain special cases of indexreg mults when basereg is
+	 * empty.
+	 */
+	if (indexreg != REG32_NONE && basereg == REG32_NONE)
+	    switch (reg32mult[indexreg]) {
+		case 1:
+		    /* Only optimize this way if nosplit wasn't specified */
+		    if (!nosplit) {
+			basereg = indexreg;
+			indexreg = -1;
+		    }
+		    break;
+		case 2:
+		    /* Only split if nosplit wasn't specified */
+		    if (!nosplit) {
+			basereg = indexreg;
+			reg32mult[indexreg] = 1;
+		    }
+		    break;
+		case 3:
+		case 5:
+		case 9:
+		    basereg = indexreg;
+		    reg32mult[indexreg]--;
+		    break;
+	    }
+
+	/* Make sure there's no other registers than the basereg and indexreg
+	 * we just found.
+	 */
+	for (i=0; i<8; i++)
+	    if (i != basereg && i != indexreg && reg32mult[i] != 0) {
+		ErrorAt(e->filename, e->line, _("invalid effective address"));
+		return 0;
+	    }
+
+	/* Check the index multiplier value for validity if present. */
+	if (indexreg != REG32_NONE && reg32mult[indexreg] != 1 &&
+	    reg32mult[indexreg] != 2 && reg32mult[indexreg] != 4 &&
+	    reg32mult[indexreg] != 8) {
+	    ErrorAt(e->filename, e->line, _("invalid effective address"));
+	    return 0;
+	}
+
+	/* ESP is not a legal indexreg. */
+	if (indexreg == REG32_ESP) {
+	    /* If mult>1 or basereg is ESP also, there's no way to make it
+	     * legal.
+	     */
+	    if (reg32mult[REG32_ESP] > 1 || basereg == REG32_ESP) {
+		ErrorAt(e->filename, e->line, _("invalid effective address"));
+		return 0;
+	    }
+	    /* If mult==1 and basereg is not ESP, swap indexreg w/basereg. */
+	    indexreg = basereg;
+	    basereg = REG32_ESP;
+	}
+
+	/* At this point, we know the base and index registers and that the
+	 * memory expression is (essentially) valid.  Now build the ModRM and
+	 * (optional) SIB bytes.
+	 */
+
+	/* First determine R/M (Mod is later determined from disp size) */
+	*n_modrm = 1;	/* we always need ModRM */
+	if (basereg == REG32_NONE) {
+	    /* disp32[index] */
+	    *modrm |= 5;
+	    /* we must have a SIB */
+	    *n_sib = 1;
+	} else if (indexreg == REG32_NONE) {
+	    /* basereg only */
+	    *modrm |= basereg;
+	    /* we don't need an SIB *unless* basereg is ESP */
+	    if (basereg == REG32_ESP)
+		*n_sib = 1;
+	    else {
+		*sib = 0;
+		*v_sib = 0;
+		*n_sib = 0;
+	    }
+	} else {
+	    /* both base AND index */
+	    *modrm |= 4;
+	    *n_sib = 1;
+	}
+
+	/* Determine SIB if needed */
+	if (*n_sib == 1) {
+	    *sib = 0;	/* start with 0 */
+
+	    /* Special case: no basereg (only happens in disp32[index] case) */
+	    if (basereg == REG32_NONE)
+		*sib |= 5;
+	    else
+		*sib |= basereg & 7;	/* &7 to sanity check */
+	    
+	    /* Put in indexreg, checking for none case */
+	    if (indexreg == REG32_NONE)
+		*sib |= 040;
+		/* Any scale field is valid, just leave at 0. */
+	    else {
+		*sib |= (indexreg & 7) << 3;	/* &7 to sanity check */
+		/* Set scale field, 1 case -> 0, so don't bother. */
+		switch (reg32mult[indexreg]) {
+		    case 2:
+			*sib |= 0100;
+			break;
+		    case 4:
+			*sib |= 0200;
+			break;
+		    case 8:
+			*sib |= 0300;
+			break;
+		}
+	    }
+
+	    *v_sib = 1;	/* Done with SIB */
+	}
+
+	/* Calculate displacement length (if possible) */
+	return checkea_calc_displen(ep, 4, basereg == REG32_NONE,
+				    basereg == REG32_EBP &&
+				    indexreg == REG32_NONE, displen, modrm,
+				    v_modrm);
     } else if (*addrsize == 16 && *n_modrm && !*v_modrm) {
 	static const unsigned char modrm16[16] = {
 	    0006 /* disp16  */, 0007 /* [BX]    */, 0004 /* [SI]    */,
@@ -1092,7 +1368,7 @@ expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	    0003 /* [BP+DI] */, 0377 /* invalid */, 0377 /* invalid */,
 	    0377 /* invalid */
 	};
-	checkea_invalid16_data reg16mult = {0, 0, 0, 0};
+	checkea_reg16_data reg16mult = {0, 0, 0, 0};
 	enum {
 	    HAVE_NONE = 0,
 	    HAVE_BX = 1<<0,
@@ -1142,107 +1418,13 @@ expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 	    return 0;
 	}
 
+	/* Set ModRM byte for registers */
 	*modrm |= modrm16[havereg];
 
-	*v_modrm = 0;	/* default to not yet valid */
-
-	switch (*displen) {
-	    case 0:
-		/* the displacement length hasn't been forced, try to
-		 * determine what it is.
-		 */
-		switch (havereg) {
-		    case HAVE_NONE:
-			/* no register in expression, so it must be disp16, and
-			 * as the Mod bits are set to 0 above, we're done with
-			 * the ModRM byte.
-			 */
-			*displen = 2;
-			*v_modrm = 1;
-			break;
-		    case HAVE_BP:
-			/* for BP, there *must* be a displacement value, but we
-			 * may not know the size (8 or 16) for sure right now.
-			 * We can't leave displen at 0, because that just means
-			 * unknown displacement, including none.
-			 */
-			*displen = 0xff;
-			break;
-		    default:
-			break;
-		}
-
-		intn = expr_get_intnum(ep);
-		if (!intn)
-		    break;	    /* expr still has unknown values */
-
-		/* make sure the displacement will fit in 16 bits if unsigned,
-		 * and 8 bits if signed.
-		 */
-		if (!intnum_check_size(intn, 2, 0) &&
-		    !intnum_check_size(intn, 1, 1)) {
-		    ErrorAt(e->filename, e->line,
-			    _("invalid effective address"));
-		    return 0;
-		}
-
-		/* don't try to find out what size displacement we have if
-		 * displen is known.
-		 */
-		if (*displen != 0 && *displen != 0xff)
-		    break;
-
-		/* Don't worry about overflows here (it's already guaranteed
-		 * to be 16 or 8 bits).
-		 */
-		dispval = intnum_get_int(intn);
-
-		/* Figure out what size displacement we will have. */
-		if (*displen != 0xff && dispval == 0) {
-		    /* if we know that the displacement is 0 right now,
-		     * go ahead and delete the expr (making it so no
-		     * displacement value is included in the output).
-		     * The Mod bits of ModRM are set to 0 above, and
-		     * we're done with the ModRM byte!
-		     *
-		     * Don't do this if we came from HAVE_BP above, so
-		     * check *displen.
-		     */
-		    expr_delete(e);
-		    *ep = (expr *)NULL;
-		} else if (dispval >= -128 && dispval <= 127) {
-		    /* It fits into a signed byte */
-		    *displen = 1;
-		    *modrm |= 0100;
-		} else {
-		    /* It's a 16-bit displacement */
-		    *displen = 2;
-		    *modrm |= 0200;
-		}
-		*v_modrm = 1;	/* We're done with ModRM */
-
-		break;
-
-	    /* If not 0, the displacement length was forced; set the Mod bits
-	     * appropriately and we're done with the ModRM byte.  We assume
-	     * that the user knows what they're doing if they do an explicit
-	     * override, so we don't check for overflow (we'll just truncate
-	     * when we output).
-	     */
-	    case 1:
-		*modrm |= 0100;
-		*v_modrm = 1;
-		break;
-	    case 2:
-		*modrm |= 0200;
-		*v_modrm = 1;
-		break;
-	    default:
-		/* any other size is an error */
-		ErrorAt(e->filename, e->line,
-			_("invalid effective address (displacement size)"));
-		return 0;
-	}
+	/* Calculate displacement length (if possible) */
+	return checkea_calc_displen(ep, 2, havereg == HAVE_NONE,
+				    havereg == HAVE_BP, displen, modrm,
+				    v_modrm);
     }
     return 1;
 }
