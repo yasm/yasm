@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.12 2001/07/06 06:25:53 mu Exp $
+/* $Id: bytecode.h,v 1.13 2001/07/11 04:07:10 peter Exp $
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -41,18 +41,30 @@ typedef struct immval_s {
     struct expr_s *val;
 
     unsigned char len;		/* length of val (in bytes), 0 if none */
-    unsigned char isrel;
     unsigned char isneg;	/* the value has been explicitly negated */
 
     unsigned char f_len;	/* final imm length */
-    unsigned char f_rel;	/* 1 if final imm should be rel */
     unsigned char f_sign;	/* 1 if final imm should be signed */
 } immval;
+
+typedef enum jmprel_opcode_sel_e {
+    JR_NONE,
+    JR_SHORT,
+    JR_NEAR,
+    JR_SHORT_FORCED,
+    JR_NEAR_FORCED
+} jmprel_opcode_sel;
+
+typedef struct targetval_s {
+    struct expr_s *val;
+
+    jmprel_opcode_sel op_sel;
+} targetval;
 
 typedef struct bytecode_s {
     struct bytecode_s *next;
 
-    enum { BC_INSN, BC_DATA, BC_RESERVE } type;
+    enum { BC_INSN, BC_JMPREL, BC_DATA, BC_RESERVE } type;
 
     union {
 	struct {
@@ -67,6 +79,23 @@ typedef struct bytecode_s {
 	    unsigned char opersize;	/* 0 indicates no override */
 	    unsigned char lockrep_pre;	/* 0 indicates no prefix */
 	} insn;
+	struct {
+	    struct expr_s *target;	/* target location */
+
+	    struct {
+		unsigned char opcode[3];
+		unsigned char opcode_len;
+		unsigned char valid;	/* does the opcode exist? */
+	    } shortop, nearop;
+
+	    /* which opcode are we using? */
+	    /* The *FORCED forms are specified in the source as such */
+	    jmprel_opcode_sel op_sel;
+
+	    unsigned char addrsize;	/* 0 indicates no override */
+	    unsigned char opersize;	/* 0 indicates no override */
+	    unsigned char lockrep_pre;	/* 0 indicates no prefix */
+	} jmprel;
 	struct {
 	    unsigned char *data;
 	} data;
@@ -98,6 +127,8 @@ void SetInsnOperSizeOverride(bytecode *bc, unsigned char opersize);
 void SetInsnAddrSizeOverride(bytecode *bc, unsigned char addrsize);
 void SetInsnLockRepPrefix(bytecode *bc, unsigned char prefix);
 
+void SetOpcodeSel(jmprel_opcode_sel *old_sel, jmprel_opcode_sel new_sel);
+
 void BuildBC_Insn(bytecode      *bc,
 		  unsigned char  opersize,
 		  unsigned char  opcode_len,
@@ -108,8 +139,21 @@ void BuildBC_Insn(bytecode      *bc,
 		  unsigned char  spare,
 		  immval        *im_ptr,
 		  unsigned char  im_len,
-		  unsigned char  im_sign,
-		  unsigned char  im_rel);
+		  unsigned char  im_sign);
+
+void BuildBC_JmpRel(bytecode      *bc,
+		    targetval     *target,
+		    unsigned char  short_valid,
+		    unsigned char  short_opcode_len,
+		    unsigned char  short_op0,
+		    unsigned char  short_op1,
+		    unsigned char  short_op2,
+		    unsigned char  near_valid,
+		    unsigned char  near_opcode_len,
+		    unsigned char  near_op0,
+		    unsigned char  near_op1,
+		    unsigned char  near_op2,
+		    unsigned char  addrsize);
 
 unsigned char *ConvertBCInsnToBytes(unsigned char *ptr, bytecode *bc, int *len);
 

@@ -1,4 +1,4 @@
-/* $Id: bison.y.in,v 1.19 2001/07/06 06:25:53 mu Exp $
+/* $Id: bison.y.in,v 1.20 2001/07/11 04:07:10 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -45,10 +45,11 @@ extern void yyerror(char *);
 	char *name;
 	int line;
     } syminfo;
-    unsigned char groupdata[3];
+    unsigned char groupdata[4];
     effaddr ea_val;
     expr *exp;
     immval im_val;
+    targetval tgt_val;
     bytecode bc;
 } 
 
@@ -80,7 +81,7 @@ extern void yyerror(char *);
 %type <bc> line exp instr instrbase label
 
 %type <int_val> fpureg reg32 reg16 reg8 segreg
-%type <ea_val> mem memaddr memexp
+%type <ea_val> mem memaddr memexp memfar
 %type <ea_val> mem8x mem16x mem32x mem64x mem80x mem128x
 %type <ea_val> mem8 mem16 mem32 mem64 mem80 mem128 mem1632
 %type <ea_val> rm8x rm16x rm32x /*rm64x rm128x*/
@@ -89,6 +90,7 @@ extern void yyerror(char *);
 %type <exp> expr
 %type <syminfo> explabel
 %type <sym> label_id
+%type <tgt_val> target
 
 %left '|'
 %left '^'
@@ -215,6 +217,10 @@ mem80x: TWORD mem	{ $$ = $2; }
 mem128x: DQWORD mem	{ $$ = $2; }
 ;
 
+/* FAR memory, for jmp and call */
+memfar: FAR mem		{ $$ = $2; }
+;
+
 /* implicit memory */
 mem8: mem
     | mem8x
@@ -298,6 +304,15 @@ imm16: imm
 ;
 imm32: imm
     | imm32x
+;
+
+/* jump targets */
+target: explabel	{
+	$$.val = expr_new_ident(EXPR_SYM, ExprSym(sym_use_get($1.name, SYM_LABEL)));
+	$$.op_sel = JR_NONE;
+    }
+    | SHORT target	{ $$ = $2; SetOpcodeSel(&$$.op_sel, JR_SHORT_FORCED); }
+    | NEAR target	{ $$ = $2; SetOpcodeSel(&$$.op_sel, JR_NEAR_FORCED); }
 ;
 
 /* expression trees */

@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.29 2001/07/05 09:39:30 peter Exp $
+; $Id: instrs.dat,v 1.30 2001/07/11 04:07:11 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -37,7 +37,6 @@
 ;             $xr indicates operand is register, not ModRM (needs convert to RM)
 ;             $xi indicates operand is immediate (2nd parm is size in bits)
 ;  Imm      - Immediate source operand and forced size (in bits).
-;             $xr means relative displacement needed
 ;             "s" after size indicates signed number
 ;             A number instead of a $x is a hex constant value.
 ;
@@ -49,7 +48,7 @@
 ;
 ; Instructions are listed in the same order as that in GNU binutils
 ;  /include/opcode/i386.h, used for the GAS assembler.  See
-;  <http://sources.redhat.com/cgi-bin/cvsweb.cgi/src/include/opcode/i386.h>.
+;  <http://sources.redhat.com/cgi-bin/cvsweb.cgi/src/include/opcode/i386.h?cvsroot=src>.
 ;
 ; TODO:
 ;  Finish instructions (may require changing parser code).
@@ -427,8 +426,21 @@ shrd!shlrd		AC
 ;
 ; Control transfer instructions (unconditional)
 ;
-; call
-; jmp
+; Special format for relative targets:
+; !Grp/Inst	target		AdSize	ShrtOp	NearOp		ShrtCPU	NearCPU
+;
+!jmpcall	target		nil	$0.1	$0.2		8086	8086
+!jmpcall	imm:imm		nil	$0.3		$2i,nil		$1,16	8086
+!jmpcall	WORD imm:imm	16	$0.3		$2i,16		$1,16	8086
+!jmpcall	DWORD imm:imm	32	$0.3		$2i,32		$1,16	386
+!jmpcall	memfar		nil	FF		$1,$0.4+1	nil	8086
+!jmpcall	WORD memfar	16	FF		$1,$0.4+1	nil	8086
+!jmpcall	DWORD memfar	32	FF		$1,$0.4+1	nil	386
+!jmpcall	mem		nil	FF		$1,$0.4		nil	8086
+!jmpcall	rm16x		16	FF		$1,$0.4		nil	8086
+!jmpcall	rm32x		32	FF		$1,$0.4		nil	386
+call!jmpcall		nil,E8,9A,2
+jmp!jmpcall		EB,E9,EA,4
 ret!onebyte		nil,C3		8086
 retn	nil			nil	C3		nil		nil	8086
 retf	nil			nil	CB		nil		nil	8086
@@ -439,26 +451,84 @@ leave!onebyte		nil,C9		186
 ;
 ; Conditional jumps
 ;
-; jcc
-; jcxz
-; jecxz
+!jcc		target		nil	70+$0.1	0F,80+$0.1	8086	386
+jo!jcc			0
+jno!jcc			1
+jb!jcc			2
+jc!jcc			2
+jnae!jcc		2
+jnb!jcc			3
+jnc!jcc			3
+jae!jcc			3
+je!jcc			4
+jz!jcc			4
+jne!jcc			5
+jnz!jcc			5
+jbe!jcc			6
+jna!jcc			6
+jnbe!jcc		7
+ja!jcc			7
+js!jcc			8
+jns!jcc			9
+jp!jcc			A
+jpe!jcc			A
+jnp!jcc			B
+jpo!jcc			B
+jl!jcc			C
+jnge!jcc		C
+jnl!jcc			D
+jge!jcc			D
+jle!jcc			E
+jng!jcc			E
+jnle!jcc		F
+jg!jcc			F
+jcxz		target		16	E3	nil		8086	8086
+jecxz		target		32	E3	nil		386	386
 ;
 ; Loop instructions
 ;
-; loop
-; loopcc:
-;:loope	loopz
-;loopz	imm1632			nil	E1		nil		$1r,8s	8086
-;loopz	imm1632,REG_CX		16	E1		nil		$1r,8s	8086
-;loopz	imm1632,REG_ECX		32	E1		nil		$1r,8s	386
-;:loopne	loopnz
-;loopnz	imm1632			nil	E1		nil		$1r,8s	8086
-;loopnz	imm1632,REG_CX		16	E1		nil		$1r,8s	8086
-;loopnz	imm1632,REG_ECX		32	E1		nil		$1r,8s	386
+!loopg		target		nil	E0+$0.1	nil		8086	8086
+!loopg		target,REG_CX	16	E0+$0.1	nil		8086	8086
+!loopg		target,REG_ECX	32	E0+$0.1	nil		386	386
+loop!loopg		2
+loopz!loopg		1
+loope!loopg		1
+loopnz!loopg		0
+loopne!loopg		0
 ;
 ; Set byte on flag instructions
 ;
-; setcc
+!setcc	rm8			nil	0F,90+$0.1	$1,2		nil	386
+seto!setcc		0
+setno!setcc		1
+setb!setcc		2
+setc!setcc		2
+setnae!setcc		2
+setnb!setcc		3
+setnc!setcc		3
+setae!setcc		3
+sete!setcc		4
+setz!setcc		4
+setne!setcc		5
+setnz!setcc		5
+setbe!setcc		6
+setna!setcc		6
+setnbe!setcc		7
+seta!setcc		7
+sets!setcc		8
+setns!setcc		9
+setp!setcc		A
+setpe!setcc		A
+setnp!setcc		B
+setpo!setcc		B
+setl!setcc		C
+setnge!setcc		C
+setnl!setcc		D
+setge!setcc		D
+setle!setcc		E
+setng!setcc		E
+setnle!setcc		F
+setg!setcc		F
 ;
 ; String instructions
 ;

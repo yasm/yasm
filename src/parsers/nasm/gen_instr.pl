@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.17 2001/07/09 05:30:55 mu Exp $
+# $Id: gen_instr.pl,v 1.18 2001/07/11 04:07:11 peter Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -26,13 +26,21 @@ use Getopt::Long;
 my $VERSION = "0.0.1";
 
 # useful constants for instruction arrays
-use constant INST	=> 0;
-use constant OPERANDS	=> 1;
-use constant OPSIZE	=> 2;
-use constant OPCODE	=> 3;
-use constant EFFADDR	=> 4;
-use constant IMM	=> 5;
-use constant CPU	=> 6;
+#  common
+use constant INST	    => 0;
+use constant OPERANDS	    => 1;
+#  general format
+use constant OPSIZE	    => 2;
+use constant OPCODE	    => 3;
+use constant EFFADDR	    => 4;
+use constant IMM	    => 5;
+use constant CPU	    => 6;
+#  relative target format
+use constant ADSIZE	    => 2;
+use constant SHORTOPCODE    => 3;
+use constant NEAROPCODE	    => 4;
+use constant SHORTCPU	    => 5;
+use constant NEARCPU	    => 6;
 
 use constant TOO_MANY_ERRORS => 20;
 
@@ -81,6 +89,7 @@ my $valid_regs = join '|', qw(
     reg8x reg16x reg32x reg1632x reg64x reg80x reg128x
     mem8 mem16 mem32 mem1632 mem64 mem80 mem128
     mem8x mem16x mem32x mem1632x mem64x mem80x mem128x
+    target memfar
 );
 my $valid_opcodes = join '|', qw(
     [0-9A-F]{2}
@@ -158,28 +167,56 @@ sub read_instructions ($)
 	# i still say changing instrs.dat would be better ;)
 	$args =~ s/\$0\.([1-4])/ '$0.' . ($1-1) /eg;
 
-	my ($op, $size, $opcode, $eff, $imm, $cpu) = split /\t+/, $args;
-	eval {
-	    die "Invalid group name\n"
-		    if $inst !~ m/^!\w+$/o;
-	    die "Invalid Operands\n"
-		    if $op !~ m/^(nil|(TO\s)?(?:$valid_regs)(,(?:$valid_regs)){0,2})$/oi;
-	    die "Invalid Operation Size\n"
-		    if $size !~ m/^(nil|16|32|\$0\.\d)$/oi;
-	    die "Invalid Opcode\n"
-		    if $opcode !~ m/^(?:$valid_opcodes)(,(?:$valid_opcodes)){0,2}(\+(\$\d|\$0\.\d|\d))?$/oi;
-	    die "Invalid Effective Address\n"
-		    if $eff !~ m/^(nil|\$?\d(r?,(\$?\d|\$0.\d)(\+\d)?|i,(nil|16|32)))$/oi;
-	    die "Invalid Immediate Operand\n"
-		    if $imm !~ m/^(nil|((\$\d|[0-9A-F]{2}|\$0\.\d),(((8|16|32)s?))?))$/oi;
-	    die "Invalid CPU\n"
-		    if $cpu !~ m/^(?:$valid_cpus)(?:,(?:$valid_cpus))*$/o;
-	};
-	push @messages, "Malformed Instruction at $instrfile line $.: $@" and $errcount++ if $@;
-	die_with_errors @messages if $errcount and @messages>=TOO_MANY_ERRORS;
-	# knock the ! off of $inst for the groupname
-	$inst = substr $inst, 1;
-	push @{$groups->{$inst}{rules}}, [$inst, $op, $size, $opcode, $eff, $imm, $cpu];
+	# detect relative target format by looking for "target" in args
+	if($args =~ m/target/oi)
+	{
+	    my ($op, $size, $shortopcode, $nearopcode, $shortcpu, $nearcpu) =
+		split /\t+/, $args;
+	    eval {
+		die "Invalid group name\n"
+			if $inst !~ m/^!\w+$/o;
+		die "Invalid Operands\n"
+			if $op !~ m/^(nil|((TO|WORD|DWORD)\s)?(?:$valid_regs)([,:](?:$valid_regs)){0,2})$/oi;
+		die "Invalid Address Size\n"
+			if $size !~ m/^(nil|16|32|\$0\.\d)$/oi;
+		die "Invalid Short Opcode\n"
+			if $shortopcode !~ m/^(nil|(?:$valid_opcodes)(,(?:$valid_opcodes)){0,2}(\+(\$\d|\$0\.\d|\d))?)$/oi;
+		die "Invalid Near Opcode\n"
+			if $nearopcode !~ m/^(nil|(?:$valid_opcodes)(,(?:$valid_opcodes)){0,2}(\+(\$\d|\$0\.\d|\d))?)$/oi;
+		die "Invalid Short CPU\n"
+			if $shortcpu !~ m/^(?:$valid_cpus)(?:,(?:$valid_cpus))*$/o;
+		die "Invalid Near CPU\n"
+			if $nearcpu !~ m/^(?:$valid_cpus)(?:,(?:$valid_cpus))*$/o;
+	    };
+	    push @messages, "Malformed Instruction at $instrfile line $.: $@" and $errcount++ if $@;
+	    die_with_errors @messages if $errcount and @messages>=TOO_MANY_ERRORS;
+	    # knock the ! off of $inst for the groupname
+	    $inst = substr $inst, 1;
+	    push @{$groups->{$inst}{rules}}, [$inst, $op, $size, $shortopcode, $nearopcode, $shortcpu, $nearcpu];
+	} else {
+	    my ($op, $size, $opcode, $eff, $imm, $cpu) = split /\t+/, $args;
+	    eval {
+		die "Invalid group name\n"
+			if $inst !~ m/^!\w+$/o;
+		die "Invalid Operands\n"
+			if $op !~ m/^(nil|((TO|WORD|DWORD)\s)?(?:$valid_regs)([,:](?:$valid_regs)){0,2})$/oi;
+		die "Invalid Operation Size\n"
+			if $size !~ m/^(nil|16|32|\$0\.\d)$/oi;
+		die "Invalid Opcode\n"
+			if $opcode !~ m/^(?:$valid_opcodes)(,(?:$valid_opcodes)){0,2}(\+(\$\d|\$0\.\d|\d))?$/oi;
+		die "Invalid Effective Address\n"
+			if $eff !~ m/^(nil|\$?\d(r?,(\$?\d|\$0.\d)(\+\d)?|i,(nil|16|32)))$/oi;
+		die "Invalid Immediate Operand\n"
+			if $imm !~ m/^(nil|((\$\d|[0-9A-F]{2}|\$0\.\d),(((8|16|32)s?))?))$/oi;
+		die "Invalid CPU\n"
+			if $cpu !~ m/^(?:$valid_cpus)(?:,(?:$valid_cpus))*$/o;
+	    };
+	    push @messages, "Malformed Instruction at $instrfile line $.: $@" and $errcount++ if $@;
+	    die_with_errors @messages if $errcount and @messages>=TOO_MANY_ERRORS;
+	    # knock the ! off of $inst for the groupname
+	    $inst = substr $inst, 1;
+	    push @{$groups->{$inst}{rules}}, [$inst, $op, $size, $opcode, $eff, $imm, $cpu];
+	}
     }
 
     sub add_group_member ($$$$$)
@@ -439,212 +476,308 @@ sub output_yacc ($@)
 		(@XCHG_AX, @XCHG_EAX) = ((0, 0), (0, 0));
 		my $count = 0;
 		foreach my $inst (@{$groups->{$group}{rules}}) {
-		    # build the instruction in pieces.
-
-		    # rulename = instruction
-		    my $rule = "$inst->[INST]";
-
-		    # tokens it eats: instruction and arguments
-		    # nil => no arguments
-		    my $tokens = "\Ugrp_$rule\E";
-		    $tokens .= " $inst->[OPERANDS]" if $inst->[OPERANDS] ne 'nil';
-		    $tokens =~ s/,/ ',' /g;
-		    my $to = $tokens =~ m/\bTO\b/ ? 1 : 0;  # offset args
-
-		    my $func = "BuildBC_Insn";
-
-		    # Create the argument list for BuildBC
-		    my @args;
-
-		    # First argument is always &$$
-		    push @args, '&$$,';
-
-		    # opcode size
-		    push @args, "$inst->[OPSIZE],";
-		    $args[-1] =~ s/nil/0/;
-
-		    # number of bytes of opcodes
-		    push @args, (scalar(()=$inst->[OPCODE] =~ m/(,)/)+1) . ",";
-
-		    # opcode piece 1 (and 2 if attached)
-		    push @args, $inst->[OPCODE];
-		    $args[-1] =~ s/,/, /;
-		    $args[-1] =~ s/([0-9A-Fa-f]{2})/0x$1/g;
-		    # don't match $0.\d in the following rule.
-		    $args[-1] =~ s/\$(\d+)(?!\.)/"\$" . ($1*2+$to)/eg;
-		    $args[-1] .= ',';
-
-		    # opcode piece 2 (if not attached)
-		    push @args, "0," if $inst->[OPCODE] !~ m/,/o;
-		    # opcode piece 3 (if not attached)
-		    push @args, "0," if $inst->[OPCODE] !~ m/,.*,/o;
-
-		    # effective addresses
-		    push @args, $inst->[EFFADDR];
-		    $args[-1] =~ s/,/, /;
-		    $args[-1] =~ s/nil/(effaddr *)NULL, 0/;
-		    # don't let a $0.\d match slip into the following rules.
-		    $args[-1] =~ s/\$(\d+)([ri])?(?!\.)/"\$".($1*2+$to).($2||'')/eg;
-		    $args[-1] =~ s/(\$\d+[ri]?)(?!\.)/\&$1/; # Just the first!
-		    $args[-1] =~ s/\&(\$\d+)r/ConvertRegToEA((effaddr *)NULL, $1)/;
-		    $args[-1] =~ s[\&(\$\d+)i,\s*(\d+)]
-			["ConvertImmToEA((effaddr *)NULL, \&$1, ".($2/8)."), 0"]e;
-		    $args[-1] .= ',';
-
-		    die $args[-1] if $args[-1] =~ m/\d+[ri]/;
-
-		    # immediate sources
-		    push @args, $inst->[IMM];
-		    $args[-1] =~ s/,/, /;
-		    $args[-1] =~ s/nil/(immval *)NULL, 0/;
-		    # don't match $0.\d in the following rules.
-		    $args[-1] =~ s/\$(\d+)(r)?(?!\.)/"\$".($1*2+$to).($2||'')/eg;
-		    $args[-1] =~ s/(\$\d+r?)(?!\.)/\&$1/; # Just the first!
-		    $args[-1] =~ s[^([0-9A-Fa-f]+),]
-			[ConvertIntToImm((immval *)NULL, 0x$1),];
-		    $args[-1] =~ s[^\$0.(\d+),]
-			[ConvertIntToImm((immval *)NULL, \$1\[$1\]),];
-
-		    # divide the second, and only the second, by 8 bits/byte
-		    $args[-1] =~ s#(,\s*)(\d+)(s)?#$1 . ($2/8)#eg;
-		    $args[-1] .= ($3||'') eq 's' ? ', 1' : ', 0';
-
-		    $args[-1] =~ s/(\&\$\d+)(r)?/$1/;
-		    $args[-1] .= ($2||'') eq 'r' ? ', 1' : ', 0';
-
-		    die $args[-1] if $args[-1] =~ m/\d+[ris]/;
-
-		    # now that we've constructed the arglist, subst $0.\d
-		    s/\$0\.(\d+)/\$1\[$1\]/g foreach (@args);
-		    
-		    # see if we match one of the cases to defer
-		    if (($inst->[OPERANDS]||"") =~ m/,ONE/)
+		    if($inst->[OPERANDS] =~ m/target/oi)
 		    {
-			$ONE = [ $rule, $tokens, $func, \@args];
-		    }
-		    elsif (($inst->[OPERANDS]||"") =~ m/REG_AL,imm8/)
-		    {
-			$AL = [ $rule, $tokens, $func, \@args];
-		    }
-		    elsif (($inst->[OPERANDS]||"") =~ m/REG_AX,imm16/)
-		    {
-			$AX = [ $rule, $tokens, $func, \@args];
-		    }
-		    elsif (($inst->[OPERANDS]||"") =~ m/REG_EAX,imm32/)
-		    {
-			$EAX = [ $rule, $tokens, $func, \@args];
-		    }
-		    elsif (($inst->[OPERANDS]||"") =~ m/REG_AX,reg16/)
-		    {
-			$XCHG_AX[0] = [ $rule, $tokens, $func, \@args];
-		    }
-		    elsif (($inst->[OPERANDS]||"") =~ m/reg16,REG_AX/)
-		    {
-			$XCHG_AX[1] = [ $rule, $tokens, $func, \@args];
-		    }
-		    elsif (($inst->[OPERANDS]||"") =~ m/REG_EAX,reg32/)
-		    {
-			$XCHG_EAX[0] = [ $rule, $tokens, $func, \@args];
-		    }
-		    elsif (($inst->[OPERANDS]||"") =~ m/reg32,REG_EAX/)
-		    {
-			$XCHG_EAX[1] = [ $rule, $tokens, $func, \@args];
-		    }
+			# relative target format
+			# build the instruction in pieces.
 
-		    # or if we've deferred and we match the folding version
-		    elsif ($ONE and ($inst->[OPERANDS]||"") =~ m/imm8/)
-		    {
-			my $immarg = get_token_number ($tokens, "imm8");
+			# rulename = instruction
+			my $rule = "$inst->[INST]";
 
-			$ONE->[4] = 1;
-			print GRAMMAR cond_action ($rule, $tokens, $count++, "$immarg.val", 1, $func, $ONE->[3], \@args);
-		    }
-		    elsif ($AL and ($inst->[OPERANDS]||"") =~ m/reg8,imm/)
-		    {
-			$AL->[4] = 1;
-			my $regarg = get_token_number ($tokens, "reg8");
+			# tokens it eats: instruction and arguments
+			# nil => no arguments
+			my $tokens = "\Ugrp_$rule\E";
+			$tokens .= " $inst->[OPERANDS]"
+			    if $inst->[OPERANDS] ne 'nil';
+			$tokens =~ s/,/ ',' /g;
+			$tokens =~ s/:/ ':' /g;
+			my $func = "BuildBC_JmpRel";
 
-			print GRAMMAR cond_action ($rule, $tokens, $count++, $regarg, 0, $func, $AL->[3], \@args);
-		    }
-		    elsif ($AX and ($inst->[OPERANDS]||"") =~ m/reg16,imm/)
-		    {
-			$AX->[4] = 1;
-			my $regarg = get_token_number ($tokens, "reg16");
+			# Create the argument list for BuildBC
+			my @args;
 
-			print GRAMMAR cond_action ($rule, $tokens, $count++, $regarg, 0, $func, $AX->[3], \@args);
-		    }
-		    elsif ($EAX and ($inst->[OPERANDS]||"") =~ m/reg32,imm/)
-		    {
-			$EAX->[4] = 1;
-			my $regarg = get_token_number ($tokens, "reg32");
+			# First argument is always &$$
+			push @args, '&$$,';
 
-			print GRAMMAR cond_action ($rule, $tokens, $count++, $regarg, 0, $func, $EAX->[3], \@args);
-		    }
-		    elsif (($XCHG_AX[0] or $XCHG_AX[1]) and
-			($inst->[OPERANDS]||"") =~ m/reg16,reg16/)
-		    {
-			my $first = 1;
-			for (my $i=0; $i < @XCHG_AX; ++$i)
+			# Target argument: HACK: Always assumed to be arg 1.
+			push @args, '&$2,';
+
+			# test for short opcode "nil"
+			if($inst->[SHORTOPCODE] =~ m/nil/)
 			{
-			    if($XCHG_AX[$i])
-			    {
-				$XCHG_AX[$i]->[4] = 1;
-				# This is definitely a hack.  The "right" way
-				# to do this would be to enhance
-				# get_token_number to get the nth reg16
-				# instead of always getting the first.
-				my $regarg =
-				    get_token_number ($tokens, "reg16") + $i*2;
-
-				if ($first)
-				{
-				    print GRAMMAR cond_action_if ($rule, $tokens, $count++, $regarg, 0, $func, $XCHG_AX[$i]->[3]);
-				    $first = 0;
-				}
-				else
-				{
-				    $count++;
-				    print GRAMMAR cond_action_elsif ($regarg, 0, $func, $XCHG_AX[$i]->[3]);
-				}
-			    }
+			    push @args, '0, 0, 0, 0, 0,';
 			}
-			print GRAMMAR cond_action_else ($func, \@args);
-		    }
-		    elsif (($XCHG_EAX[0] or $XCHG_EAX[1]) and
-			($inst->[OPERANDS]||"") =~ m/reg32,reg32/)
-		    {
-			my $first = 1;
-			for (my $i=0; $i < @XCHG_EAX; ++$i)
+			else
 			{
-			    if($XCHG_EAX[$i])
-			    {
-				$XCHG_EAX[$i]->[4] = 1;
-				# This is definitely a hack.  The "right" way
-				# to do this would be to enhance
-				# get_token_number to get the nth reg32
-				# instead of always getting the first.
-				my $regarg =
-				    get_token_number ($tokens, "reg32") + $i*2;
+			    # opcode is valid
+			    push @args, '1,';
 
-				if ($first)
-				{
-				    print GRAMMAR cond_action_if ($rule, $tokens, $count++, $regarg, 0, $func, $XCHG_EAX[$i]->[3]);
-				    $first = 0;
-				}
-				else
-				{
-				    $count++;
-				    print GRAMMAR cond_action_elsif ($regarg, 0, $func, $XCHG_EAX[$i]->[3]);
-				}
-			    }
+			    # number of bytes of short opcode
+			    push @args, (scalar(()=$inst->[SHORTOPCODE] =~ m/(,)/)+1) . ",";
+
+			    # opcode piece 1 (and 2 and 3 if attached)
+			    push @args, $inst->[SHORTOPCODE];
+			    $args[-1] =~ s/,/, /;
+			    $args[-1] =~ s/([0-9A-Fa-f]{2})/0x$1/g;
+			    # don't match $0.\d in the following rule.
+			    $args[-1] =~ s/\$(\d+)(?!\.)/"\$" . ($1*2)/eg;
+			    $args[-1] .= ',';
+
+			    # opcode piece 2 (if not attached)
+			    push @args, "0," if $inst->[SHORTOPCODE] !~ m/,/o;
+			    # opcode piece 3 (if not attached)
+			    push @args, "0," if $inst->[SHORTOPCODE] !~ m/,.*,/o;
 			}
-			print GRAMMAR cond_action_else ($func, \@args);
-		    }
 
-		    # otherwise, generate the normal version
+			# test for near opcode "nil"
+			if($inst->[NEAROPCODE] =~ m/nil/)
+			{
+			    push @args, '0, 0, 0, 0, 0,';
+			}
+			else
+			{
+			    # opcode is valid
+			    push @args, '1,';
+
+			    # number of bytes of near opcode
+			    push @args, (scalar(()=$inst->[NEAROPCODE] =~ m/(,)/)+1) . ",";
+
+			    # opcode piece 1 (and 2 and 3 if attached)
+			    push @args, $inst->[NEAROPCODE];
+			    $args[-1] =~ s/,/, /;
+			    $args[-1] =~ s/([0-9A-Fa-f]{2})/0x$1/g;
+			    # don't match $0.\d in the following rule.
+			    $args[-1] =~ s/\$(\d+)(?!\.)/"\$" . ($1*2)/eg;
+			    $args[-1] .= ',';
+
+			    # opcode piece 2 (if not attached)
+			    push @args, "0," if $inst->[NEAROPCODE] !~ m/,/o;
+			    # opcode piece 3 (if not attached)
+			    push @args, "0," if $inst->[NEAROPCODE] !~ m/,.*,/o;
+			}
+
+			# address size
+			push @args, "$inst->[ADSIZE]";
+			$args[-1] =~ s/nil/0/;
+
+			# now that we've constructed the arglist, subst $0.\d
+			s/\$0\.(\d+)/\$1\[$1\]/g foreach (@args);
+
+			# generate the grammar
+			print GRAMMAR action ($rule, $tokens, $func, \@args, $count++);
+		    }
 		    else
 		    {
-			print GRAMMAR action ($rule, $tokens, $func, \@args, $count++);
+			# general instruction format
+			# build the instruction in pieces.
+
+			# rulename = instruction
+			my $rule = "$inst->[INST]";
+
+			# tokens it eats: instruction and arguments
+			# nil => no arguments
+			my $tokens = "\Ugrp_$rule\E";
+			$tokens .= " $inst->[OPERANDS]"
+			    if $inst->[OPERANDS] ne 'nil';
+			$tokens =~ s/,/ ',' /g;
+			$tokens =~ s/:/ ':' /g;
+			# offset args
+			my $to = $tokens =~ m/\b(TO|WORD|DWORD)\b/ ? 1 : 0;
+			my $func = "BuildBC_Insn";
+
+			# Create the argument list for BuildBC
+			my @args;
+
+			# First argument is always &$$
+			push @args, '&$$,';
+
+			# operand size
+			push @args, "$inst->[OPSIZE],";
+			$args[-1] =~ s/nil/0/;
+
+			# number of bytes of opcodes
+			push @args, (scalar(()=$inst->[OPCODE] =~ m/(,)/)+1) . ",";
+
+			# opcode piece 1 (and 2 and 3 if attached)
+			push @args, $inst->[OPCODE];
+			$args[-1] =~ s/,/, /;
+			$args[-1] =~ s/([0-9A-Fa-f]{2})/0x$1/g;
+			# don't match $0.\d in the following rule.
+			$args[-1] =~ s/\$(\d+)(?!\.)/"\$" . ($1*2+$to)/eg;
+			$args[-1] .= ',';
+
+			# opcode piece 2 (if not attached)
+			push @args, "0," if $inst->[OPCODE] !~ m/,/o;
+			# opcode piece 3 (if not attached)
+			push @args, "0," if $inst->[OPCODE] !~ m/,.*,/o;
+
+			# effective addresses
+			push @args, $inst->[EFFADDR];
+			$args[-1] =~ s/,/, /;
+			$args[-1] =~ s/^nil$/(effaddr *)NULL, 0/;
+			$args[-1] =~ s/nil/0/;
+			# don't let a $0.\d match slip into the following rules.
+			$args[-1] =~ s/\$(\d+)([ri])?(?!\.)/"\$".($1*2+$to).($2||'')/eg;
+			$args[-1] =~ s/(\$\d+[ri]?)(?!\.)/\&$1/; # Just the first!
+			$args[-1] =~ s/\&(\$\d+)r/ConvertRegToEA((effaddr *)NULL, $1)/;
+			$args[-1] =~ s[\&(\$\d+)i,\s*(\d+)]
+			    ["ConvertImmToEA((effaddr *)NULL, \&$1, ".($2/8)."), 0"]e;
+			$args[-1] .= ',';
+
+			die $args[-1] if $args[-1] =~ m/\d+[ri]/;
+
+			# immediate sources
+			push @args, $inst->[IMM];
+			$args[-1] =~ s/,/, /;
+			$args[-1] =~ s/nil/(immval *)NULL, 0/;
+			# don't match $0.\d in the following rules.
+			$args[-1] =~ s/\$(\d+)(?!\.)/"\$".($1*2+$to).($2||'')/eg;
+			$args[-1] =~ s/(\$\d+)(?!\.)/\&$1/; # Just the first!
+			$args[-1] =~ s[^([0-9A-Fa-f]+),]
+			    [ConvertIntToImm((immval *)NULL, 0x$1),];
+			$args[-1] =~ s[^\$0.(\d+),]
+			    [ConvertIntToImm((immval *)NULL, \$1\[$1\]),];
+
+			# divide the second, and only the second, by 8 bits/byte
+			$args[-1] =~ s#(,\s*)(\d+)(s)?#$1 . ($2/8)#eg;
+			$args[-1] .= ($3||'') eq 's' ? ', 1' : ', 0';
+
+			die $args[-1] if $args[-1] =~ m/\d+s/;
+
+			# now that we've constructed the arglist, subst $0.\d
+			s/\$0\.(\d+)/\$1\[$1\]/g foreach (@args);
+		    
+			# see if we match one of the cases to defer
+			if (($inst->[OPERANDS]||"") =~ m/,ONE/)
+			{
+			    $ONE = [ $rule, $tokens, $func, \@args];
+			}
+			elsif (($inst->[OPERANDS]||"") =~ m/REG_AL,imm8/)
+			{
+			    $AL = [ $rule, $tokens, $func, \@args];
+			}
+			elsif (($inst->[OPERANDS]||"") =~ m/REG_AX,imm16/)
+			{
+			    $AX = [ $rule, $tokens, $func, \@args];
+			}
+			elsif (($inst->[OPERANDS]||"") =~ m/REG_EAX,imm32/)
+			{
+			    $EAX = [ $rule, $tokens, $func, \@args];
+			}
+			elsif (($inst->[OPERANDS]||"") =~ m/REG_AX,reg16/)
+			{
+			    $XCHG_AX[0] = [ $rule, $tokens, $func, \@args];
+			}
+			elsif (($inst->[OPERANDS]||"") =~ m/reg16,REG_AX/)
+			{
+			    $XCHG_AX[1] = [ $rule, $tokens, $func, \@args];
+			}
+			elsif (($inst->[OPERANDS]||"") =~ m/REG_EAX,reg32/)
+			{
+			    $XCHG_EAX[0] = [ $rule, $tokens, $func, \@args];
+			}
+			elsif (($inst->[OPERANDS]||"") =~ m/reg32,REG_EAX/)
+			{
+			    $XCHG_EAX[1] = [ $rule, $tokens, $func, \@args];
+			}
+
+			# or if we've deferred and we match the folding version
+			elsif ($ONE and ($inst->[OPERANDS]||"") =~ m/imm8/)
+			{
+			    my $immarg = get_token_number ($tokens, "imm8");
+
+			    $ONE->[4] = 1;
+			    print GRAMMAR cond_action ($rule, $tokens, $count++, "$immarg.val", 1, $func, $ONE->[3], \@args);
+			}
+			elsif ($AL and ($inst->[OPERANDS]||"") =~ m/reg8,imm/)
+			{
+			    $AL->[4] = 1;
+			    my $regarg = get_token_number ($tokens, "reg8");
+
+			    print GRAMMAR cond_action ($rule, $tokens, $count++, $regarg, 0, $func, $AL->[3], \@args);
+			}
+			elsif ($AX and ($inst->[OPERANDS]||"") =~ m/reg16,imm/)
+			{
+			    $AX->[4] = 1;
+			    my $regarg = get_token_number ($tokens, "reg16");
+
+			    print GRAMMAR cond_action ($rule, $tokens, $count++, $regarg, 0, $func, $AX->[3], \@args);
+			}
+			elsif ($EAX and ($inst->[OPERANDS]||"") =~ m/reg32,imm/)
+			{
+			    $EAX->[4] = 1;
+			    my $regarg = get_token_number ($tokens, "reg32");
+
+			    print GRAMMAR cond_action ($rule, $tokens, $count++, $regarg, 0, $func, $EAX->[3], \@args);
+			}
+			elsif (($XCHG_AX[0] or $XCHG_AX[1]) and
+			    ($inst->[OPERANDS]||"") =~ m/reg16,reg16/)
+			{
+			    my $first = 1;
+			    for (my $i=0; $i < @XCHG_AX; ++$i)
+			    {
+				if($XCHG_AX[$i])
+				{
+				    $XCHG_AX[$i]->[4] = 1;
+				    # This is definitely a hack.  The "right"
+				    # way to do this would be to enhance
+				    # get_token_number to get the nth reg16
+				    # instead of always getting the first.
+				    my $regarg =
+					get_token_number ($tokens, "reg16")
+					+ $i*2;
+
+				    if ($first)
+				    {
+					print GRAMMAR cond_action_if ($rule, $tokens, $count++, $regarg, 0, $func, $XCHG_AX[$i]->[3]);
+					$first = 0;
+				    }
+				    else
+				    {
+					$count++;
+					print GRAMMAR cond_action_elsif ($regarg, 0, $func, $XCHG_AX[$i]->[3]);
+				    }
+				}
+			    }
+			    print GRAMMAR cond_action_else ($func, \@args);
+			}
+			elsif (($XCHG_EAX[0] or $XCHG_EAX[1]) and
+			    ($inst->[OPERANDS]||"") =~ m/reg32,reg32/)
+			{
+			    my $first = 1;
+			    for (my $i=0; $i < @XCHG_EAX; ++$i)
+			    {
+				if($XCHG_EAX[$i])
+				{
+				    $XCHG_EAX[$i]->[4] = 1;
+				    # This is definitely a hack.  The "right"
+				    # way to do this would be to enhance
+				    # get_token_number to get the nth reg32
+				    # instead of always getting the first.
+				    my $regarg =
+					get_token_number ($tokens, "reg32")
+					+ $i*2;
+
+				    if ($first)
+				    {
+					print GRAMMAR cond_action_if ($rule, $tokens, $count++, $regarg, 0, $func, $XCHG_EAX[$i]->[3]);
+					$first = 0;
+				    }
+				    else
+				    {
+					$count++;
+					print GRAMMAR cond_action_elsif ($regarg, 0, $func, $XCHG_EAX[$i]->[3]);
+				    }
+				}
+			    }
+			    print GRAMMAR cond_action_else ($func, \@args);
+			}
+
+			# otherwise, generate the normal version
+			else
+			{
+			    print GRAMMAR action ($rule, $tokens, $func, \@args, $count++);
+			}
 		    }
 		}
 

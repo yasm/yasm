@@ -1,4 +1,4 @@
-/* $Id: errwarn.h,v 1.8 2001/07/04 20:53:21 peter Exp $
+/* $Id: errwarn.h,v 1.9 2001/07/11 04:07:10 peter Exp $
  * Error and warning reporting and related functions header file.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -29,6 +29,7 @@ typedef enum {
     FATAL_NOMEM
 } fatal_num;
 
+void InternalError(unsigned int line, char *file, char *message);
 void Fatal(fatal_num);
 
 typedef enum {
@@ -41,7 +42,8 @@ typedef enum {
     ERR_INVALID_LINE,
     ERR_EXP_SYNTAX,
     ERR_DUPLICATE_DEF,
-    ERR_OP_SIZE_MISMATCH
+    ERR_OP_SIZE_MISMATCH,
+    ERR_NO_JMPREL_FORM
 } err_num;
 
 void Error(err_num, char *, ...);
@@ -52,7 +54,8 @@ typedef enum {
     WARN_VALUE_EXCEEDS_BOUNDS,
     WARN_MULT_SEG_OVERRIDE,
     WARN_MULT_LOCKREP_PREFIX,
-    WARN_NO_BASE_LABEL
+    WARN_NO_BASE_LABEL,
+    WARN_MULT_SHORTNEAR
 } warn_num;
 
 void Warning(warn_num, char *, ...);

@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.11 2001/07/06 06:25:53 mu Exp $
+/* $Id: bytecode.c,v 1.12 2001/07/11 04:07:10 peter Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -120,7 +120,6 @@ immval *ConvertIntToImm(immval *ptr, unsigned long int_val)
     else
 	ptr->len = 4;
 
-    ptr->isrel = 0;
     ptr->isneg = 0;
 
     return ptr;
@@ -133,7 +132,6 @@ immval *ConvertExprToImm(immval *ptr, expr *expr_ptr)
 
     ptr->val = expr_ptr;
 
-    ptr->isrel = 0;
     ptr->isneg = 0;
 
     return ptr;
@@ -167,7 +165,18 @@ void SetInsnOperSizeOverride(bytecode *bc, unsigned char opersize)
     if(!bc)
 	return;
 
-    bc->data.insn.opersize = opersize;
+    switch(bc->type) {
+	case BC_INSN:
+	    bc->data.insn.opersize = opersize;
+	    break;
+	case BC_JMPREL:
+	    bc->data.jmprel.opersize = opersize;
+	    break;
+	default:
+	    InternalError(__LINE__, __FILE__,
+		"OperSize override applied to non-instruction");
+	    return;
+    }
 }
 
 void SetInsnAddrSizeOverride(bytecode *bc, unsigned char addrsize)
@@ -175,18 +184,65 @@ void SetInsnAddrSizeOverride(bytecode *bc, unsigned char addrsize)
     if(!bc)
 	return;
 
-    bc->data.insn.addrsize = addrsize;
+    switch(bc->type) {
+	case BC_INSN:
+	    bc->data.insn.addrsize = addrsize;
+	    break;
+	case BC_JMPREL:
+	    bc->data.jmprel.addrsize = addrsize;
+	    break;
+	default:
+	    InternalError(__LINE__, __FILE__,
+		"AddrSize override applied to non-instruction");
+	    return;
+    }
 }
 
 void SetInsnLockRepPrefix(bytecode *bc, unsigned char prefix)
 {
+    unsigned char *lockrep_pre = (unsigned char *)NULL;
+
     if(!bc)
 	return;
 
-    if(bc->data.insn.lockrep_pre != 0)
+    switch(bc->type) {
+	case BC_INSN:
+	    lockrep_pre = &bc->data.insn.lockrep_pre;
+	    break;
+	case BC_JMPREL:
+	    lockrep_pre = &bc->data.jmprel.lockrep_pre;
+	    break;
+	default:
+	    InternalError(__LINE__, __FILE__,
+		"LockRep prefix applied to non-instruction");
+	    return;
+    }
+
+    if(*lockrep_pre != 0)
 	Warning(WARN_MULT_LOCKREP_PREFIX, (char *)NULL);
 
-    bc->data.insn.lockrep_pre = prefix;
+    *lockrep_pre = prefix;
+}
+
+void SetOpcodeSel(jmprel_opcode_sel *old_sel, jmprel_opcode_sel new_sel)
+{
+    if(!old_sel)
+	return;
+
+    if((*old_sel == JR_SHORT_FORCED) || (*old_sel == JR_NEAR_FORCED))
+	Warning(WARN_MULT_SHORTNEAR, (char *)NULL);
+    *old_sel = new_sel;
+}
+
+static void BuildBC_Common(bytecode *bc)
+{
+    bc->len = 0;
+
+    bc->filename = (char *)NULL;
+    bc->lineno = line_number;
+
+    bc->offset = 0;
+    bc->mode_bits = mode_bits;
 }
 
 void BuildBC_Insn(bytecode      *bc,
@@ -199,8 +255,7 @@ void BuildBC_Insn(bytecode      *bc,
 		  unsigned char  spare,
 		  immval        *im_ptr,
 		  unsigned char  im_len,
-		  unsigned char  im_sign,
-		  unsigned char  im_rel)
+		  unsigned char  im_sign)
 {
     bc->next = (bytecode *)NULL;
     bc->type = BC_INSN;
@@ -218,12 +273,10 @@ void BuildBC_Insn(bytecode      *bc,
 
     if(im_ptr) {
 	bc->data.insn.imm = *im_ptr;
-	bc->data.insn.imm.f_rel = im_rel;
 	bc->data.insn.imm.f_sign = im_sign;
 	bc->data.insn.imm.f_len = im_len;
     } else {
 	bc->data.insn.imm.len = 0;
-	bc->data.insn.imm.f_rel = 0;
 	bc->data.insn.imm.f_sign = 0;
 	bc->data.insn.imm.f_len = 0;
     }
@@ -235,16 +288,59 @@ void BuildBC_Insn(bytecode      *bc,
 
     bc->data.insn.addrsize = 0;
     bc->data.insn.opersize = opersize;
+    bc->data.insn.lockrep_pre = 0;
 
-    bc->len = 0;
-
-    bc->filename = (char *)NULL;
-    bc->lineno = line_number;
-
-    bc->offset = 0;
-    bc->mode_bits = mode_bits;
+    BuildBC_Common(bc);
 }
- 
+
+void BuildBC_JmpRel(bytecode      *bc,
+		    targetval     *target,
+		    unsigned char  short_valid,
+		    unsigned char  short_opcode_len,
+		    unsigned char  short_op0,
+		    unsigned char  short_op1,
+		    unsigned char  short_op2,
+		    unsigned char  near_valid,
+		    unsigned char  near_opcode_len,
+		    unsigned char  near_op0,
+		    unsigned char  near_op1,
+		    unsigned char  near_op2,
+		    unsigned char  addrsize)
+{
+    bc->next = (bytecode *)NULL;
+    bc->type = BC_JMPREL;
+
+    bc->data.jmprel.target = target->val;
+    bc->data.jmprel.op_sel = target->op_sel;
+
+    if((target->op_sel == JR_SHORT_FORCED) && (!short_valid))
+	Error(ERR_NO_JMPREL_FORM, (char *)NULL, "SHORT");
+    if((target->op_sel == JR_NEAR_FORCED) && (!near_valid))
+	Error(ERR_NO_JMPREL_FORM, (char *)NULL, "NEAR");
+
+    bc->data.jmprel.shortop.valid = short_valid;
+    if(short_valid) {
+	bc->data.jmprel.shortop.opcode[0] = short_op0;
+	bc->data.jmprel.shortop.opcode[1] = short_op1;
+	bc->data.jmprel.shortop.opcode[2] = short_op2;
+	bc->data.jmprel.shortop.opcode_len = short_opcode_len;
+    }
+
+    bc->data.jmprel.nearop.valid = near_valid;
+    if(near_valid) {
+	bc->data.jmprel.nearop.opcode[0] = near_op0;
+	bc->data.jmprel.nearop.opcode[1] = near_op1;
+	bc->data.jmprel.nearop.opcode[2] = near_op2;
+	bc->data.jmprel.nearop.opcode_len = near_opcode_len;
+    }
+
+    bc->data.jmprel.addrsize = addrsize;
+    bc->data.jmprel.opersize = 0;
+    bc->data.jmprel.lockrep_pre = 0;
+
+    BuildBC_Common(bc);
+}
+
 /* TODO: implement.  Shouldn't be difficult. */
 unsigned char *ConvertBCInsnToBytes(unsigned char *ptr, bytecode *bc, int *len)
 {
@@ -278,28 +374,63 @@ void DebugPrintBC(bytecode *bc)
 		(unsigned int)bc->data.insn.ea.sib,
 		(unsigned int)bc->data.insn.ea.valid_sib,
 		(unsigned int)bc->data.insn.ea.need_sib);
-	    printf("Immediate/Relative Value:\n");
+	    printf("Immediate Value:\n");
 	    printf(" Val=");
 	    if (!bc->data.insn.imm.val)
 		printf("(nil)");
 	    else
 		expr_print(bc->data.insn.imm.val);
 	    printf("\n");
-	    printf(" Len=%u, IsRel=%u, IsNeg=%u\n",
+	    printf(" Len=%u, IsNeg=%u\n",
 		(unsigned int)bc->data.insn.imm.len,
-		(unsigned int)bc->data.insn.imm.isrel,
 		(unsigned int)bc->data.insn.imm.isneg);
-	    printf(" FLen=%u, FRel=%u, FSign=%u\n",
+	    printf(" FLen=%u, FSign=%u\n",
 		(unsigned int)bc->data.insn.imm.f_len,
-		(unsigned int)bc->data.insn.imm.f_rel,
 		(unsigned int)bc->data.insn.imm.f_sign);
-	    printf("Opcode: %2x %2x OpLen=%u\n",
+	    printf("Opcode: %2x %2x %2x OpLen=%u\n",
 		(unsigned int)bc->data.insn.opcode[0],
 		(unsigned int)bc->data.insn.opcode[1],
+		(unsigned int)bc->data.insn.opcode[2],
 		(unsigned int)bc->data.insn.opcode_len);
-	    printf("OperSize=%u LockRepPre=%2x\n",
+	    printf("AddrSize=%u OperSize=%u LockRepPre=%2x\n",
+		(unsigned int)bc->data.insn.addrsize,
 		(unsigned int)bc->data.insn.opersize,
 		(unsigned int)bc->data.insn.lockrep_pre);
+	    break;
+	case BC_JMPREL:
+	    printf("_Relative Jump_\n");
+	    printf("Target=");
+	    expr_print(bc->data.jmprel.target);
+	    printf("\nShort Form:\n");
+	    if(!bc->data.jmprel.shortop.valid)
+		printf(" None\n");
+	    else
+		printf(" Opcode: %2x %2x %2x OpLen=%u\n",
+		    (unsigned int)bc->data.jmprel.shortop.opcode[0],
+		    (unsigned int)bc->data.jmprel.shortop.opcode[1],
+		    (unsigned int)bc->data.jmprel.shortop.opcode[2],
+		    (unsigned int)bc->data.jmprel.shortop.opcode_len);
+	    if(!bc->data.jmprel.nearop.valid)
+		printf(" None\n");
+	    else
+		printf(" Opcode: %2x %2x %2x OpLen=%u\n",
+		    (unsigned int)bc->data.jmprel.nearop.opcode[0],
+		    (unsigned int)bc->data.jmprel.nearop.opcode[1],
+		    (unsigned int)bc->data.jmprel.nearop.opcode[2],
+		    (unsigned int)bc->data.jmprel.nearop.opcode_len);
+	    printf("OpSel=");
+	    switch(bc->data.jmprel.op_sel) {
+		case JR_NONE:		printf("None"); break;
+		case JR_SHORT:		printf("Short"); break;
+		case JR_NEAR:		printf("Near"); break;
+		case JR_SHORT_FORCED:	printf("Forced Short"); break;
+		case JR_NEAR_FORCED:	printf("Forced Near"); break;
+		default:		printf("UNKNOWN!!"); break;
+	    }
+	    printf("\nAddrSize=%u OperSize=%u LockRepPre=%2x\n",
+		(unsigned int)bc->data.jmprel.addrsize,
+		(unsigned int)bc->data.jmprel.opersize,
+		(unsigned int)bc->data.jmprel.lockrep_pre);
 	    break;
 	case BC_DATA:
 	    printf("_Data_\n");

@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.14 2001/07/04 20:57:53 peter Exp $
+/* $Id: errwarn.c,v 1.15 2001/07/11 04:07:10 peter Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -56,7 +56,8 @@ static char *err_msgs[] = {
     "label or instruction expected at start of line",
     "expression syntax error",
     "duplicate definition of `%1'; previously defined line %2",
-    "mismatch in operand sizes"
+    "mismatch in operand sizes",
+    "no %s form of that jump instruction exists"
 };
 
 static char *warn_msgs[] = {
@@ -65,7 +66,8 @@ static char *warn_msgs[] = {
     "%s value exceeds bounds",
     "multiple segment overrides, using leftmost",
     "multiple LOCK or REP prefixes, using leftmost",
-    "no non-local label before '%s'"
+    "no non-local label before '%s'",
+    "multiple SHORT or NEAR specifiers, using leftmost"
 };
 
 /* hate to define these as static buffers; better solution would be to use
@@ -101,6 +103,13 @@ char *conv_unprint(char ch)
 void yyerror(char *s)
 {
     Error(ERR_PARSER, (char *)NULL, s);
+}
+
+void InternalError(unsigned int line, char *file, char *message)
+{
+    fprintf(stderr, "INTERNAL ERROR at %s, line %d: %s\n", file, line,
+	message);
+    exit(EXIT_FAILURE);
 }
 
 void Fatal(fatal_num num)
