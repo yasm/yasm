@@ -58,15 +58,6 @@ AC_ARG_ENABLE(dmalloc,
   *) AC_MSG_ERROR([bad value ${enableval} for --enable-dmalloc]) ;;
 esac],[dmalloc=false])
 
-AC_ARG_ENABLE(check,
-[  --disable-check     Disable building of test suite and make check],
-[case "${enableval}" in
-  yes) check=true ;;
-  no)  check=false ;;
-  *) AC_MSG_ERROR([bad value ${enableval} for --enable-check]) ;;
-esac],[check=true])
-AM_CONDITIONAL(CHECK, test x$check = xtrue)
-
 #
 # Check for gettext() and other i18n/l10n things.
 #
