@@ -78,7 +78,7 @@ struct symrec {
     unsigned long opt_flags;
 };
 
-/* The symbol table: a ternary tree. */
+/* The symbol table: a hash array mapped trie (HAMT). */
 static /*@only@*/ /*@null@*/ HAMT *sym_table = NULL;
 
 /* Linked list of symbols not in the symbol table. */
