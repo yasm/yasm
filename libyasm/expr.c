@@ -1058,6 +1058,34 @@ yasm_expr_extract_segment(yasm_expr **ep)
     return retval;
 }
 
+yasm_expr *
+yasm_expr_extract_wrt(yasm_expr **ep)
+{
+    yasm_expr *retval;
+    yasm_expr *e = *ep;
+
+    /* If not WRT, we can't do this transformation */
+    if (e->op != YASM_EXPR_WRT)
+	return NULL;
+
+    /* Extract the right side portion out to its own expression */
+    if (e->terms[1].type == YASM_EXPR_EXPR)
+	retval = e->terms[1].data.expn;
+    else {
+	/* Need to build IDENT expression to hold non-expression contents */
+	retval = yasm_xmalloc(sizeof(yasm_expr));
+	retval->op = YASM_EXPR_IDENT;
+	retval->numterms = 1;
+	retval->terms[0] = e->terms[1];	/* structure copy */
+    }
+
+    /* Delete the right side portion by changing the expr into an IDENT */
+    e->op = YASM_EXPR_IDENT;
+    e->numterms = 1;
+
+    return retval;
+}
+
 /*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
 const yasm_intnum *
 yasm_expr_get_intnum(yasm_expr **ep, yasm_calc_bc_dist_func calc_bc_dist)

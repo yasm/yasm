@@ -193,6 +193,16 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
  */
 /*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_segment(yasm_expr **ep);
 
+/** Extract the right portion (y) of a x WRT y expression, leaving the left
+ * portion (x).
+ * \param ep		expression (pointer to)
+ * \return NULL if unable to extract (YASM_EXPR_WRT not the top-level
+ *         operator), otherwise the right side of the WRT expression.  The
+ *         input expression is modified such that on return, it's the left side
+ *         of the WRT expression.
+ */
+/*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_wrt(yasm_expr **ep);
+
 /** Get the integer value of an expression if it's just an integer.
  * \param ep		expression (pointer to)
  * \param calc_bc_dist	bytecode distance-calculation function
