@@ -48,4 +48,7 @@ void list_objfmts(void (*printfunc) (const char *name, const char *keyword));
  */
 void list_parsers(void (*printfunc) (const char *name, const char *keyword));
 
+void list_preprocs(void (*printfunc) (const char *name, const char *keyword));
+void list_dbgfmts(void (*printfunc) (const char *name, const char *keyword));
+
 #endif

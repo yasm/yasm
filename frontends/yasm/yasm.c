@@ -90,6 +90,7 @@ static void print_yasm_warning(const char *filename, unsigned long line,
 			       const char *msg);
 
 static void apply_preproc_saved_options(void);
+static void print_list_keword_desc(const char *name, const char *keyword);
 
 /* values for special_options */
 #define SPECIAL_SHOW_HELP 0x01
@@ -103,13 +104,13 @@ static opt_option options[] =
     { 'h', "help", 0, opt_special_handler, SPECIAL_SHOW_HELP,
       N_("show help text"), NULL },
     { 'p', "parser", 1, opt_parser_handler, 0,
-      N_("select parser"), N_("parser") },
+      N_("select parser (list with -p help)"), N_("parser") },
     { 'r', "preproc", 1, opt_preproc_handler, 0,
-      N_("select preprocessor"), N_("preproc") },
+      N_("select preprocessor (list with -r help)"), N_("preproc") },
     { 'f', "oformat", 1, opt_objfmt_handler, 0,
-      N_("select object format"), N_("format") },
+      N_("select object format (list with -f help)"), N_("format") },
     { 'g', "dformat", 1, opt_dbgfmt_handler, 0,
-      N_("select debugging format"), N_("debug") },
+      N_("select debugging format (list with -g help)"), N_("debug") },
     { 'o', "objfile", 1, opt_objfile_handler, 0,
       N_("name of object-file output"), N_("filename") },
     { 'w', NULL, 0, opt_warning_handler, 1,
@@ -594,6 +595,11 @@ opt_parser_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_parser = load_parser(param);
     if (!cur_parser) {
+	if (!strcmp("help", param)) {
+	    printf(_("Available yasm parsers:\n"));
+	    list_parsers(print_list_keword_desc);
+	    return 1;
+	}
 	print_error(_("unrecognized parser `%s'"), param);
 	return 1;
     }
@@ -606,6 +612,11 @@ opt_preproc_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_preproc = load_preproc(param);
     if (!cur_preproc) {
+	if (!strcmp("help", param)) {
+	    printf(_("Available yasm preprocessors:\n"));
+	    list_preprocs(print_list_keword_desc);
+	    return 1;
+	}
 	print_error(_("unrecognized preprocessor `%s'"), param);
 	return 1;
     }
@@ -618,6 +629,11 @@ opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_objfmt = load_objfmt(param);
     if (!cur_objfmt) {
+	if (!strcmp("help", param)) {
+	    printf(_("Available yasm object formats:\n"));
+	    list_objfmts(print_list_keword_desc);
+	    return 1;
+	}
 	print_error(_("unrecognized object format `%s'"), param);
 	return 1;
     }
@@ -630,6 +646,11 @@ opt_dbgfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_dbgfmt = load_dbgfmt(param);
     if (!cur_dbgfmt) {
+	if (!strcmp("help", param)) {
+	    printf(_("Available yasm debug formats:\n"));
+	    list_dbgfmts(print_list_keword_desc);
+	    return 1;
+	}
 	print_error(_("unrecognized debugging format `%s'"), param);
 	return 1;
     }
@@ -806,6 +827,12 @@ replace_extension(const char *orig, /*@null@*/ const char *ext,
 	strcpy(out, def);
 
     return out;
+}
+
+void
+print_list_keword_desc(const char *name, const char *keyword)
+{
+    printf("%4s%-12s%s\n", "", keyword, name);
 }
 
 static void

@@ -45,6 +45,16 @@ SLIST_HEAD(modulehead, module) modules = SLIST_HEAD_INITIALIZER(modules);
  * Could improve this a little by generating automatically at build-time.
  */
 /*@-nullassign@*/
+const char *dbgfmts[] = {
+    "null",
+    NULL
+};
+/*@=nullassign@*/
+
+/* NULL-terminated list of all possibly available object format keywords.
+ * Could improve this a little by generating automatically at build-time.
+ */
+/*@-nullassign@*/
 const char *objfmts[] = {
     "dbg",
     "bin",
@@ -63,6 +73,16 @@ const char *parsers[] = {
 };
 /*@=nullassign@*/
 
+/* NULL-terminated list of all possibly available preproc keywords.
+ * Could improve this a little by generating automatically at build-time.
+ */
+/*@-nullassign@*/
+const char *preprocs[] = {
+    "nasm",
+    "raw",
+    NULL
+};
+/*@=nullassign@*/
 
 static /*@dependent@*/ /*@null@*/ module *
 load_module(const char *keyword)
@@ -147,6 +167,34 @@ list_parsers(void (*printfunc) (const char *name, const char *keyword))
     /* Go through available list, and try to load each one */
     for (i = 0; parsers[i]; i++) {
 	p = load_parser(parsers[i]);
+	if (p)
+	    printfunc(p->name, p->keyword);
+    }
+}
+
+void
+list_preprocs(void (*printfunc) (const char *name, const char *keyword))
+{
+    int i;
+    yasm_preproc *p;
+
+    /* Go through available list, and try to load each one */
+    for (i = 0; preprocs[i]; i++) {
+	p = load_preproc(preprocs[i]);
+	if (p)
+	    printfunc(p->name, p->keyword);
+    }
+}
+
+void
+list_dbgfmts(void (*printfunc) (const char *name, const char *keyword))
+{
+    int i;
+    yasm_dbgfmt *p;
+
+    /* Go through available list, and try to load each one */
+    for (i = 0; dbgfmts[i]; i++) {
+	p = load_dbgfmt(dbgfmts[i]);
 	if (p)
 	    printfunc(p->name, p->keyword);
     }
