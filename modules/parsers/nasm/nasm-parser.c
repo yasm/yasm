@@ -1,4 +1,4 @@
-/* $Id: nasm-parser.c,v 1.1 2001/08/19 02:15:18 peter Exp $
+/* $Id: nasm-parser.c,v 1.2 2001/08/19 02:50:14 peter Exp $
  * NASM-compatible parser
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -58,5 +58,5 @@ parser nasm_parser = {
     "nasm",
     preprocs,
     &raw_preproc,
-    &doparse
+    doparse
 };

@@ -1,4 +1,4 @@
-/* $Id: raw-preproc.c,v 1.1 2001/08/19 02:15:18 peter Exp $
+/* $Id: raw-preproc.c,v 1.2 2001/08/19 02:50:14 peter Exp $
  * Raw preprocessor (preforms NO preprocessing)
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -58,6 +58,6 @@ input(char *buf, int max_size)
 preproc raw_preproc = {
     "Disable preprocessing",
     "raw",
-    &initialize,
-    &input
+    initialize,
+    input
 };
