@@ -37,6 +37,7 @@ yasm_vp_new(/*@keep@*/ const char *v, /*@keep@*/ yasm_expr *p)
     yasm_valparam *r = yasm_xmalloc(sizeof(yasm_valparam));
     r->val = v;
     r->param = p;
+    return r;
 }
 
 void
