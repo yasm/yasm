@@ -638,6 +638,81 @@ static const x86_insn_info shlrd_insn[] = {
        OPT_Creg|OPS_8|OPA_None} }
 };
 
+/* Control transfer instructions (unconditional) */
+/* TODO: jmp/call */
+static const x86_insn_info retnf_insn[] = {
+    { CPU_Any, MOD_Op0Add, 0, 1, {0x01, 0, 0}, 0, 0, {0, 0, 0} },
+    { CPU_Any, MOD_Op0Add, 0, 1, {0x00, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm, 0, 0} }
+};
+static const x86_insn_info enter_insn[] = {
+    { CPU_186, 0, 0, 1, {0xC8, 0, 0}, 0, 2,
+      {OPT_Imm|OPS_16|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm,
+       0} }
+};
+
+/* TODO: Conditional jumps */
+
+/* TODO: Loop instructions */
+
+/* Set byte on flag instructions */
+static const x86_insn_info setcc_insn[] = {
+    { CPU_386, MOD_Op1Add, 0, 2, {0x0F, 0x90, 0}, 2, 1,
+      {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, 0, 0} }
+};
+
+/* Bit manipulation - bit tests */
+static const x86_insn_info bittest_insn[] = {
+    { CPU_386, MOD_Op1Add, 16, 2, {0x0F, 0x00, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare, 0} },
+    { CPU_386, MOD_Op1Add, 32, 2, {0x0F, 0x00, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} },
+    { CPU_386, MOD_Gap0|MOD_SpAdd, 16, 2, {0x0F, 0xBA, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_8|OPA_Imm, 0} },
+    { CPU_386, MOD_Gap0|MOD_SpAdd, 32, 2, {0x0F, 0xBA, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_8|OPA_Imm, 0} }
+};
+
+/* Bit manipulation - bit scans - also used for lar/lsl */
+static const x86_insn_info bsfr_insn[] = {
+    { CPU_286, MOD_Op1Add, 16, 2, {0x0F, 0x00, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_386, MOD_Op1Add, 32, 2, {0x0F, 0x00, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} }
+};
+
+/* Interrupts and operating system instructions */
+static const x86_insn_info int_insn[] = {
+    { CPU_Any, 0, 0, 1, {0xCD, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0, 0} }
+};
+static const x86_insn_info bound_insn[] = {
+    { CPU_186, 0, 16, 1, {0x62, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_Mem|OPS_16|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_386, 0, 32, 1, {0x62, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_Mem|OPS_32|OPS_Relaxed|OPA_EA, 0} }
+};
+
+/* Protection control */
+static const x86_insn_info arpl_insn[] = {
+    { CPU_286|CPU_Prot, 0, 0, 1, {0x63, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare, 0} }
+};
+static const x86_insn_info prot286_insn[] = {
+    { CPU_286, MOD_Op1Add|MOD_SpAdd, 0, 2, {0x0F, 0x00, 0}, 0, 1,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0, 0} }
+};
+static const x86_insn_info sldtmsw_insn[] = {
+    { CPU_286, MOD_Op1Add|MOD_SpAdd, 0, 2, {0x0F, 0x00, 0}, 0, 1,
+      {OPT_Mem|OPS_16|OPS_Relaxed|OPA_EA, 0, 0} },
+    { CPU_386, MOD_Op1Add|MOD_SpAdd, 0, 2, {0x0F, 0x00, 0}, 0, 1,
+      {OPT_Mem|OPS_32|OPS_Relaxed|OPA_EA, 0, 0} },
+    { CPU_286, MOD_Op1Add|MOD_SpAdd, 16, 2, {0x0F, 0x00, 0}, 0, 1,
+      {OPT_Reg|OPS_16|OPA_EA, 0, 0} },
+    { CPU_386, MOD_Op1Add|MOD_SpAdd, 32, 2, {0x0F, 0x00, 0}, 0, 1,
+      {OPT_Reg|OPS_32|OPA_EA, 0, 0} }
+};
+
 
 bytecode *
 x86_new_insn(const unsigned long data[4], int num_operands,
@@ -1378,9 +1453,9 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	/* C A L L */
 	/* J M P */
 	R E T { RET_INSN(onebyte, 0x00C3, CPU_Any); }
-	/* R E T N */
-	/* R E T F */
-	/* E N T E R */
+	R E T N { RET_INSN(retnf, 0xC2, CPU_Any); }
+	R E T F { RET_INSN(retnf, 0xCA, CPU_Any); }
+	E N T E R { RET_INSN(enter, 0, CPU_186); }
 	L E A V E { RET_INSN(onebyte, 0x00C9, CPU_186); }
 	/* Conditional jumps */
 	/* J O */
@@ -1422,36 +1497,36 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	/* L O O P N Z */
 	/* L O O P N E */
 	/* Set byte on flag instructions */
-	/* S E T O */
-	/* S E T N O */
-	/* S E T B */
-	/* S E T C */
-	/* S E T N A E */
-	/* S E T N B */
-	/* S E T N C */
-	/* S E T A E */
-	/* S E T E */
-	/* S E T Z */
-	/* S E T N E */
-	/* S E T N Z */
-	/* S E T B E */
-	/* S E T N A */
-	/* S E T N B E */
-	/* S E T A */
-	/* S E T S */
-	/* S E T N S */
-	/* S E T P */
-	/* S E T P E */
-	/* S E T N P */
-	/* S E T P O */
-	/* S E T L */
-	/* S E T N G E */
-	/* S E T N L */
-	/* S E T G E */
-	/* S E T L E */
-	/* S E T N G */
-	/* S E T N L E */
-	/* S E T G */
+	S E T O { RET_INSN(setcc, 0x00, CPU_386); }
+	S E T N O { RET_INSN(setcc, 0x01, CPU_386); }
+	S E T B { RET_INSN(setcc, 0x02, CPU_386); }
+	S E T C { RET_INSN(setcc, 0x02, CPU_386); }
+	S E T N A E { RET_INSN(setcc, 0x02, CPU_386); }
+	S E T N B { RET_INSN(setcc, 0x03, CPU_386); }
+	S E T N C { RET_INSN(setcc, 0x03, CPU_386); }
+	S E T A E { RET_INSN(setcc, 0x03, CPU_386); }
+	S E T E { RET_INSN(setcc, 0x04, CPU_386); }
+	S E T Z { RET_INSN(setcc, 0x04, CPU_386); }
+	S E T N E { RET_INSN(setcc, 0x05, CPU_386); }
+	S E T N Z { RET_INSN(setcc, 0x05, CPU_386); }
+	S E T B E { RET_INSN(setcc, 0x06, CPU_386); }
+	S E T N A { RET_INSN(setcc, 0x06, CPU_386); }
+	S E T N B E { RET_INSN(setcc, 0x07, CPU_386); }
+	S E T A { RET_INSN(setcc, 0x07, CPU_386); }
+	S E T S { RET_INSN(setcc, 0x08, CPU_386); }
+	S E T N S { RET_INSN(setcc, 0x09, CPU_386); }
+	S E T P { RET_INSN(setcc, 0x0A, CPU_386); }
+	S E T P E { RET_INSN(setcc, 0x0A, CPU_386); }
+	S E T N P { RET_INSN(setcc, 0x0B, CPU_386); }
+	S E T P O { RET_INSN(setcc, 0x0B, CPU_386); }
+	S E T L { RET_INSN(setcc, 0x0C, CPU_386); }
+	S E T N G E { RET_INSN(setcc, 0x0C, CPU_386); }
+	S E T N L { RET_INSN(setcc, 0x0D, CPU_386); }
+	S E T G E { RET_INSN(setcc, 0x0D, CPU_386); }
+	S E T L E { RET_INSN(setcc, 0x0E, CPU_386); }
+	S E T N G { RET_INSN(setcc, 0x0E, CPU_386); }
+	S E T N L E { RET_INSN(setcc, 0x0F, CPU_386); }
+	S E T G { RET_INSN(setcc, 0x0F, CPU_386); }
 	/* String instructions. */
 	C M P S B { RET_INSN(onebyte, 0x00A6, CPU_Any); }
 	C M P S W { RET_INSN(onebyte, 0x10A7, CPU_Any); }
@@ -1476,14 +1551,14 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	S T O S D { RET_INSN(onebyte, 0x20AB, CPU_386); }
 	X L A T B? { RET_INSN(onebyte, 0x00D7, CPU_Any); }
 	/* Bit manipulation */
-	/* B S F */
-	/* B S R */
-	/* B T */
-	/* B T C */
-	/* B T R */
-	/* B T S */
+	B S F { RET_INSN(bsfr, 0xBC, CPU_386); }
+	B S R { RET_INSN(bsfr, 0xBD, CPU_386); }
+	B T { RET_INSN(bittest, 0x04A3, CPU_386); }
+	B T C { RET_INSN(bittest, 0x07BB, CPU_386); }
+	B T R { RET_INSN(bittest, 0x06B3, CPU_386); }
+	B T S { RET_INSN(bittest, 0x05AB, CPU_386); }
 	/* Interrupts and operating system instructions */
-	/* I N T */
+	I N T { RET_INSN(int, 0, CPU_Any); }
 	I N T "3" { RET_INSN(onebyte, 0x00CC, CPU_Any); }
 	I N T "03" { RET_INSN(onebyte, 0x00CC, CPU_Any); }
 	I N T O { RET_INSN(onebyte, 0x00CE, CPU_Any); }
@@ -1491,25 +1566,25 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	I R E T W { RET_INSN(onebyte, 0x10CF, CPU_Any); }
 	I R E T D { RET_INSN(onebyte, 0x20CF, CPU_386); }
 	R S M { RET_INSN(twobyte, 0x0FAA, CPU_586|CPU_SMM); }
-	/* B O U N D */
+	B O U N D { RET_INSN(bound, 0, CPU_186); }
 	H L T { RET_INSN(onebyte, 0x00F4, CPU_Priv); }
 	N O P { RET_INSN(onebyte, 0x0090, CPU_Any); }
 	/* Protection control */
-	/* A R P L */
-	/* L A R */
+	A R P L { RET_INSN(arpl, 0, CPU_286|CPU_Prot); }
+	L A R { RET_INSN(bsfr, 0x02, CPU_286|CPU_Prot); }
 	L G D T { RET_INSN(twobytemem, 0x020F01, CPU_286|CPU_Priv); }
 	L I D T { RET_INSN(twobytemem, 0x030F01, CPU_286|CPU_Priv); }
-	/* L L D T */
-	/* L M S W */
-	/* L S L */
-	/* L T R */
+	L L D T { RET_INSN(prot286, 0x0200, CPU_286|CPU_Prot|CPU_Priv); }
+	L M S W { RET_INSN(prot286, 0x0601, CPU_286|CPU_Priv); }
+	L S L { RET_INSN(bsfr, 0x03, CPU_286|CPU_Prot); }
+	L T R { RET_INSN(prot286, 0x0300, CPU_286|CPU_Prot|CPU_Priv); }
 	S G D T { RET_INSN(twobytemem, 0x000F01, CPU_286|CPU_Priv); }
 	S I D T { RET_INSN(twobytemem, 0x010F01, CPU_286|CPU_Priv); }
-	/* S L D T */
-	/* S M S W */
-	/* S T R */
-	/* V E R R */
-	/* V E R W */
+	S L D T { RET_INSN(sldtmsw, 0x0000, CPU_286); }
+	S M S W { RET_INSN(sldtmsw, 0x0401, CPU_286); }
+	S T R { RET_INSN(prot286, 0x0100, CPU_286|CPU_Prot); }
+	V E R R { RET_INSN(prot286, 0x0400, CPU_286|CPU_Prot); }
+	V E R W { RET_INSN(prot286, 0x0500, CPU_286|CPU_Prot); }
 	/* Floating point instructions */
 	/* F L D */
 	/* F I L D */
