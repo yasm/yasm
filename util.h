@@ -78,7 +78,7 @@ int mergesort(void *base, size_t nmemb, size_t size,
 #  define strncasecmp(x, y)	strnicmp(x, y)
 # elif HAVE_STRCMPI
 #  define strcasecmp(x, y)	strcmpi(x, y)
-#  define strcasecmp(x, y)	strncmpi(x, y)
+#  define strncasecmp(x, y)	strncmpi(x, y)
 # else
 #  define USE_OUR_OWN_STRCASECMP
 # endif
