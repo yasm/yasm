@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.8 2001/07/04 04:24:52 peter Exp $
+; $Id: instrs.dat,v 1.9 2001/07/04 04:45:51 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -746,13 +746,10 @@ psrldq	XMMREG,imm8		nil	66,0F,73	$1r,3	$2,8	P4,SSE2
 psrlw!pshift		D1,71,2
 psrld!pshift		D2,72,2
 psrlq!pshift		D3,73,2
-
 psubb	MMXREG,imm8		nil	0F,F8		$1r,2	$2,8	P5,MMX
 psubb	XMMREG,imm8		nil	66,0F,F8	$1r,2	$2,8	P4,SSE2
-
 psubw	MMXREG,imm8		nil	0F,F9		$1r,2	$2,8	P5,MMX
 psubw	XMMREG,imm8		nil	66,0F,F9	$1r,2	$2,8	P4,SSE2
-
 psubd!sse2mmx		FA		P5
 psubq!sse2mmx		FB		P5
 psubsb!sse2mmx		E8		P5
@@ -821,15 +818,12 @@ shld!shlrd		A4
 shrd!shlrd		AC
 shufpd	XMMREG,rm128,imm8	nil	66,0F,C6	$2,$1	$3,8	P4,SSE2
 shufps	XMMREG,rm128,imm8	nil	0F,C6		$2,$1	$3,8	KATMAI,SSE
-
 sldt	mem1632			nil	0F,00		$1,0	nil	286
 sldt	reg16			16	0F,00		$1r,0	nil	286
 sldt	reg32			32	0F,00		$1r,0	nil	386
-
 smsw	mem1632			nil	0F,01		$1,4	nil	286
 smsw	reg16			16	0F,01		$1r,4	nil	286
 smsw	reg32			32	0F,01		$1r,4	nil	386
-
 sqrtpd!sse2pd		51
 sqrtps!sseps		51
 sqrtsd!sse2sd		51
