@@ -4229,7 +4229,7 @@ pp_getline(void)
 		if (i->next) 
 		{
 		    nasm_src_set_linnum(i->lineno);
-		    nasm_free(nasm_src_set_fname(i->fname));
+		    nasm_free(nasm_src_set_fname(nasm_strdup(i->fname)));
 		}
 		istk = i->next;
 		list->downlevel(LIST_INCLUDE);
