@@ -29,8 +29,6 @@
 #ifndef YASM_UTIL_H
 #define YASM_UTIL_H
 
-#include <stdio.h>
-
 #ifdef YASM_LIB_INTERNAL
 # define YASM_INTERNAL
 # define YASM_AUTOCONF_INTERNAL
@@ -39,10 +37,24 @@
 #endif
 
 #ifdef YASM_INTERNAL
-# include <stdarg.h>
 
 #if defined(YASM_LIB_AC_INTERNAL) && defined(HAVE_CONFIG_H)
 # include <libyasm/config.h>
+
+/* Work around glibc's non-defining of certain things when using gcc -ansi */
+# if defined(HAVE_GNU_C_LIBRARY) && defined(__STRICT_ANSI__)
+#  undef __STRICT_ANSI__
+# endif
+#endif
+
+#endif
+
+#include <stdio.h>
+
+#ifdef YASM_INTERNAL
+
+#if defined(YASM_LIB_AC_INTERNAL) && defined(HAVE_CONFIG_H)
+# include <stdarg.h>
 #endif
 
 #if !defined(lint) && !defined(NDEBUG)
