@@ -206,7 +206,11 @@ main(int argc, char *argv[])
     /* If not already specified, default to dbg as the object format. */
     if (!cur_objfmt)
 	cur_objfmt = find_objfmt("dbg");
-    assert(cur_objfmt != NULL);
+
+    if (!cur_objfmt) {
+	ErrorNow(_("Could not load default object format"));
+	return EXIT_FAILURE;
+    }
 
     /* handle preproc-only case here */
     if (preproc_only) {
