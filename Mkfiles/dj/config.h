@@ -30,11 +30,17 @@
 /* Define to 1 if you have the <assert.h> header file. */
 /* #undef HAVE_ASSERT_H */
 
+/* Define to 1 if you have the `basename' function. */
+#define HAVE_BASENAME 1
+
 /* Define to 1 if you have the `bcopy' function. */
 /* #undef HAVE_BCOPY */
 
 /* */
 /* #undef HAVE_CATGETS */
+
+/* Define to 1 if you have the `closedir' function. */
+/* #undef HAVE_CLOSEDIR */
 
 /* Define to 1 if you have the <ctype.h> header file. */
 #define HAVE_CTYPE_H 1
@@ -98,7 +104,8 @@
 /* Define if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1
 
-/* Define if your system has a working `malloc' function. */
+/* Define to 1 if your system has a GNU libc compatible `malloc' function, and
+   to 0 otherwise. */
 #define HAVE_MALLOC 1
 
 /* Define if you have the <malloc.h> header file. */
@@ -131,8 +138,14 @@
 /* Define to 1 if you have the <ndir.h> header file, and it defines `DIR'. */
 /* #undef HAVE_NDIR_H */
 
+/* Define to 1 if you have the `opendir' function. */
+/* #undef HAVE_OPENDIR */
+
 /* Define if libtool can extract symbol lists from object files. */
 /* #undef HAVE_PRELOADED_SYMBOLS */
+
+/* Define to 1 if you have the `readdir' function. */
+/* #undefine HAVE_READDIR */
 
 /* Define to 1 if you have the `rindex' function. */
 /* #undef HAVE_RINDEX */
@@ -280,13 +293,13 @@
 #define PACKAGE_NAME "yasm"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "yasm `date "+%Y%m%d"`"
+#define PACKAGE_STRING "yasm CVS"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "yasm"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "`date "+%Y%m%d"`"
+#define PACKAGE_VERSION "CVS"
 
 /* Define if the C compiler supports function prototypes. */
 #define PROTOTYPES 1
@@ -298,14 +311,10 @@
 /* #undef USE_FORKWAITMSG */
 
 /* Version number of package */
-#define VERSION "0.1.0"
+#define VERSION "CVS"
 
 /* Define if using the dmalloc debugging malloc package */
 /* #undef WITH_DMALLOC */
-
-/* Define if `lex' declares `yytext' as a `char *' by default, not a `char[]'.
-   */
-#define YYTEXT_POINTER 1
 
 /* Make sure we see all GNU extensions. */
 /* #undef _GNU_SOURCE */
@@ -325,6 +334,9 @@
 /* Define as `__inline' if that's what the C compiler calls it, or to nothing
    if it is not supported. */
 /* #undef inline */
+
+/* Define to rpl_malloc if the replacement function should be used. */
+/* #undef malloc */
 
 /* Define to `int' if <sys/types.h> doesn't define. */
 /* #undef pid_t */

@@ -126,7 +126,7 @@ AC_TYPE_SIZE_T
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([abort memcpy memmove strrchr toascii])
+AC_CHECK_FUNCS([abort memcpy memmove strrchr toascii vsnprintf])
 # Look for the case-insensitive comparison functions
 AC_CHECK_FUNCS([strcasecmp strncasecmp stricmp strcmpi])
 # Check for stuff wanted by the test suite.  None of this is required.
