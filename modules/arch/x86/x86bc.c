@@ -503,9 +503,6 @@ x86_bc_parser_finalize_insn(x86_insn *insn)
 		if (intnum_get_uint(num) == 1) {
 		    /* Use ,1 form: first copy ,1 opcode. */
 		    insn->opcode[0] = insn->opcode[1];
-		    /* Delete ModRM, as it's no longer needed */
-		    xfree(ea);
-		    insn->ea = (effaddr *)NULL;
 		    /* Delete Imm, as it's not needed */
 		    expr_delete(imm->val);
 		    xfree(imm);
