@@ -569,7 +569,7 @@ static int
 opt_dbgfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     assert(param != NULL);
-    cur_dbgfmt = load_objfmt(param);
+    cur_dbgfmt = load_dbgfmt(param);
     if (!cur_dbgfmt) {
 	print_error(_("unrecognized debugging format `%s'"), param);
 	return 1;
