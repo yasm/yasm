@@ -18,6 +18,7 @@ yasm_LDADD = \
 	optimizers/dbg/liboptimizer.a	\
 	objfmts/dbg/libobjfmt.a		\
 	libyasm.a			\
+	@LIBOBJS@			\
 	$(INTLLIBS)
 
 noinst_LIBRARIES = libyasm.a
