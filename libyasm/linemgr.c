@@ -152,7 +152,7 @@ yasm_std_linemgr_cleanup(void)
 	    line_index_assoc_data_raw_head *adrh =
 		&line_index_assoc_data_array[i];
 	    if (adrh->delete_func && adrh->vector) {
-		int j;
+		unsigned int j;
 		for (j=0; j<adrh->size; j++) {
 		    if (adrh->vector[j])
 			adrh->delete_func(adrh->vector[j]);
@@ -191,7 +191,7 @@ yasm_std_linemgr_add_assoc_data(int type, /*@only@*/ void *data,
 	    &line_index_assoc_data_array[type>>1];
 
 	if (adrh->size == 0) {
-	    int i;
+	    unsigned int i;
 
 	    adrh->size = 4;
 	    adrh->vector = yasm_xmalloc(adrh->size*sizeof(void *));
@@ -201,7 +201,7 @@ yasm_std_linemgr_add_assoc_data(int type, /*@only@*/ void *data,
 	}
 
 	while (line_index > adrh->size) {
-	    int i;
+	    unsigned int i;
 
 	    /* allocate another size bins when full for 2x space */
 	    adrh->vector = yasm_xrealloc(adrh->vector,
