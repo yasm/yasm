@@ -17,5 +17,8 @@ CLEANFILES += \
 	x86id.c
 
 EXTRA_DIST += \
+	src/arch/x86/tests/Makefile.inc	\
 	src/arch/x86/README	\
 	src/arch/x86/x86id.re
+
+include src/arch/x86/tests/Makefile.inc

@@ -1,0 +1,4 @@
+./src/arch/x86/tests/div-err.asm:1: cannot override register size
+./src/arch/x86/tests/div-err.asm:3: cannot override register size
+./src/arch/x86/tests/div-err.asm:4: cannot override register size
+./src/arch/x86/tests/div-err.asm:5: cannot override register size

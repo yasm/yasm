@@ -1,0 +1,4 @@
+./src/arch/x86/tests/lds-err.asm:2: invalid combination of opcode and operands
+./src/arch/x86/tests/lds-err.asm:3: invalid combination of opcode and operands
+./src/arch/x86/tests/lds-err.asm:5: invalid combination of opcode and operands
+./src/arch/x86/tests/lds-err.asm:6: invalid combination of opcode and operands

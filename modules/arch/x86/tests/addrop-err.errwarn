@@ -1,0 +1,1 @@
+./src/arch/x86/tests/addrop-err.asm:2: invalid effective address (displacement size)
