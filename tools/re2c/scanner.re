@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "scanner.h"
+#include "parse.h"
 #include "parser.h"
-#include "y.tab.h"
 
 extern YYSTYPE yylval;
 

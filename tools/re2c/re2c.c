@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include "globals.h"
-#include "parser.h"
+#include "parse.h"
 #include "dfa.h"
 
 char *fileName;

@@ -5,7 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "globals.h"
-#include "parser.h"
+#include "parse.h"
 int yyparse();
 int yylex();
 void yyerror(char*);

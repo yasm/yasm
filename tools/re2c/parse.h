@@ -1,5 +1,5 @@
-#ifndef re2c_parser_h
-#define re2c_parser_h
+#ifndef re2c_parse_h
+#define re2c_parse_h
 
 #include <stdio.h>
 #include "scanner.h"

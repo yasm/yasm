@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #include "globals.h"
-#include "parser.h"
+#include "parse.h"
 #include "dfa.h"
 
 static Symbol *first = NULL;
