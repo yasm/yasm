@@ -46,7 +46,9 @@ endif
 BUILT_SOURCES = token.l bison.y
 
 EXTRA_DIST = \
+	token.l			\
 	token.l.in		\
+	bison.y			\
 	bison.y.in		\
 	bison.h			\
 	gen_instr.pl
