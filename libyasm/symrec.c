@@ -243,6 +243,26 @@ symrec_get_equ(const symrec *sym)
     return (const expr *)NULL;
 }
 
+static int
+symrec_parser_finalize_checksym(symrec *sym)
+{
+    /* error if a symbol is used but never defined */
+    if ((sym->status & SYM_USED) && !(sym->status & SYM_DEFINED)) {
+	ErrorAt(sym->filename, sym->line,
+		_("undefined symbol `%s' (first use)"), sym->name);
+	ErrorAt(sym->filename, sym->line,
+		_("(Each undefined symbol is reported only once.)"));
+	return 0;
+    } else
+	return 1;
+}
+
+void
+symrec_parser_finalize(void)
+{
+    symrec_foreach(symrec_parser_finalize_checksym);
+}
+
 void
 symrec_print(const symrec *sym)
 {

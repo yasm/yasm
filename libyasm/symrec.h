@@ -72,5 +72,7 @@ const expr *symrec_get_equ(const symrec *sym);
 
 int symrec_foreach(int (*func) (symrec *sym));
 
+void symrec_parser_finalize(void);
+
 void symrec_print(const symrec *sym);
 #endif
