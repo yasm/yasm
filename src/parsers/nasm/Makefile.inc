@@ -21,4 +21,7 @@ CLEANFILES += \
 	nasm-token.c
 
 EXTRA_DIST += \
+	src/parsers/nasm/tests/Makefile.inc	\
 	src/parsers/nasm/nasm-token.re
+
+include src/parsers/nasm/tests/Makefile.inc
