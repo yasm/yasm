@@ -74,4 +74,6 @@ void *bc_get_data(bytecode *);
 const void *bc_get_const_data(const bytecode *);
 #define bc_get_const_data(x)	(const void *)(((const char *)x)+sizeof(bytecode))
 
+#define bcs_next(x)		STAILQ_NEXT(x, link)
+
 #endif
