@@ -26,7 +26,7 @@
  */
 %{
 #include <util.h>
-RCSID("$IdPath: yasm/modules/parsers/nasm/nasm-bison.y,v 1.93 2003/05/04 22:15:09 peter Exp $");
+RCSID("$IdPath$");
 
 #define YASM_LIB_INTERNAL
 #define YASM_EXPR_INTERNAL
@@ -441,7 +441,7 @@ dvexpr: INTNUM		    { $$ = p_expr_new_ident(yasm_expr_int($1)); }
     /*| '!' dvexpr	    { $$ = p_expr_new_branch(YASM_EXPR_LNOT, $2); }*/
     | '~' dvexpr %prec UNARYOP  { $$ = p_expr_new_branch(YASM_EXPR_NOT, $2); }
     | SEG dvexpr		{ $$ = p_expr_new_branch(YASM_EXPR_SEG, $2); }
-    | WRT dvexpr		{ $$ = p_expr_new_branch(YASM_EXPR_WRT, $2); }
+    | dvexpr WRT dvexpr	    { $$ = p_expr_new_tree($1, YASM_EXPR_WRT, $3); }
     | '(' dvexpr ')'		{ $$ = $2; }
 ;
 
@@ -483,7 +483,7 @@ expr: INTNUM		{ $$ = p_expr_new_ident(yasm_expr_int($1)); }
     /*| '!' expr	{ $$ = p_expr_new_branch(YASM_EXPR_LNOT, $2); }*/
     | '~' expr %prec UNARYOP	{ $$ = p_expr_new_branch(YASM_EXPR_NOT, $2); }
     | SEG expr		{ $$ = p_expr_new_branch(YASM_EXPR_SEG, $2); }
-    | WRT expr		{ $$ = p_expr_new_branch(YASM_EXPR_WRT, $2); }
+    | expr WRT expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_WRT, $3); }
     | expr ':' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_SEGOFF, $3); }
     | '(' expr ')'	{ $$ = $2; }
 ;
