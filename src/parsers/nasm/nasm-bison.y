@@ -1,4 +1,4 @@
-/* $Id: nasm-bison.y,v 1.1 2001/05/15 05:20:39 peter Exp $
+/* $Id: nasm-bison.y,v 1.2 2001/05/18 21:42:31 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -327,106 +327,106 @@ instrbase:	aaa
 ;
 
 aaa: INS_AAA {
-	BuildBC_Insn(&$$, 0, 1, 0x37, 0, (effaddr *)NULL, 0, (immval *)NULL, 0);
+	BuildBC_Insn(&$$, 0, 1, 0x37, 0, (effaddr *)NULL, 0, (immval *)NULL, 0, 0, 0);
     }
 ;
 
 aad: INS_AAD {
-	BuildBC_Insn(&$$, 0, 2, 0xD5, 0x0A, (effaddr *)NULL, 0, (immval *)NULL, 0);
+	BuildBC_Insn(&$$, 0, 2, 0xD5, 0x0A, (effaddr *)NULL, 0, (immval *)NULL, 0, 0, 0);
     }
     | INS_AAD imm8 {
-	BuildBC_Insn(&$$, 0, 1, 0xD5, 0, (effaddr *)NULL, 0, &$2, 1);
+	BuildBC_Insn(&$$, 0, 1, 0xD5, 0, (effaddr *)NULL, 0, &$2, 1, 0, 0);
     }
 ;
 
 idiv: INS_IDIV rm8x {
-	BuildBC_Insn(&$$, 0, 1, 0xF6, 0, &$2, 7, (immval *)NULL, 0);
+	BuildBC_Insn(&$$, 0, 1, 0xF6, 0, &$2, 7, (immval *)NULL, 0, 0, 0);
     }
     | INS_IDIV rm16x {
-	BuildBC_Insn(&$$, 16, 1, 0xF7, 0, &$2, 7, (immval *)NULL, 0);
+	BuildBC_Insn(&$$, 16, 1, 0xF7, 0, &$2, 7, (immval *)NULL, 0, 0, 0);
     }
     | INS_IDIV rm32x {
-	BuildBC_Insn(&$$, 32, 1, 0xF7, 0, &$2, 7, (immval *)NULL, 0);
+	BuildBC_Insn(&$$, 32, 1, 0xF7, 0, &$2, 7, (immval *)NULL, 0, 0, 0);
     }
 ;
 
 imul: INS_IMUL rm8x {
-	BuildBC_Insn(&$$, 0, 1, 0xF6, 0, &$2, 5, (immval *)NULL, 0);
+	BuildBC_Insn(&$$, 0, 1, 0xF6, 0, &$2, 5, (immval *)NULL, 0, 0, 0);
     }
     | INS_IMUL rm16x {
-	BuildBC_Insn(&$$, 16, 1, 0xF7, 0, &$2, 5, (immval *)NULL, 0);
+	BuildBC_Insn(&$$, 16, 1, 0xF7, 0, &$2, 5, (immval *)NULL, 0, 0, 0);
     }
     | INS_IMUL rm32x {
-	BuildBC_Insn(&$$, 32, 1, 0xF7, 0, &$2, 5, (immval *)NULL, 0);
+	BuildBC_Insn(&$$, 32, 1, 0xF7, 0, &$2, 5, (immval *)NULL, 0, 0, 0);
     }
     | INS_IMUL reg16 ',' rm16 {
-	BuildBC_Insn(&$$, 16, 2, 0x0F, 0xAF, &$4, $2, (immval *)NULL, 0);
+	BuildBC_Insn(&$$, 16, 2, 0x0F, 0xAF, &$4, $2, (immval *)NULL, 0, 0, 0);
     }
     | INS_IMUL reg32 ',' rm32 {
-	BuildBC_Insn(&$$, 32, 2, 0x0F, 0xAF, &$4, $2, (immval *)NULL, 0);
+	BuildBC_Insn(&$$, 32, 2, 0x0F, 0xAF, &$4, $2, (immval *)NULL, 0, 0, 0);
     }
     | INS_IMUL reg16 ',' rm16 ',' imm8x {
-	BuildBC_Insn(&$$, 16, 1, 0x6B, 0, &$4, $2, &$6, 1);
+	BuildBC_Insn(&$$, 16, 1, 0x6B, 0, &$4, $2, &$6, 1, 1, 0);
     }
     | INS_IMUL reg32 ',' rm32 ',' imm8x {
-	BuildBC_Insn(&$$, 32, 1, 0x6B, 0, &$4, $2, &$6, 1);
+	BuildBC_Insn(&$$, 32, 1, 0x6B, 0, &$4, $2, &$6, 1, 1, 0);
     }
     | INS_IMUL reg16 ',' rm16 ',' imm16 {
-	BuildBC_Insn(&$$, 16, 1, 0x69, 0, &$4, $2, &$6, 2);
+	BuildBC_Insn(&$$, 16, 1, 0x69, 0, &$4, $2, &$6, 2, 1, 0);
     }
     | INS_IMUL reg32 ',' rm32 ',' imm32 {
-	BuildBC_Insn(&$$, 32, 1, 0x69, 0, &$4, $2, &$6, 4);
+	BuildBC_Insn(&$$, 32, 1, 0x69, 0, &$4, $2, &$6, 4, 1, 0);
     }
     | INS_IMUL reg16 ',' imm8x {
-	BuildBC_Insn(&$$, 16, 1, 0x6B, 0, ConvertRegToEA((effaddr *)NULL, $2), $2, &$4, 1);
+	BuildBC_Insn(&$$, 16, 1, 0x6B, 0, ConvertRegToEA((effaddr *)NULL, $2), $2, &$4, 1, 1, 0);
     }
     | INS_IMUL reg32 ',' imm8x {
-	BuildBC_Insn(&$$, 32, 1, 0x6B, 0, ConvertRegToEA((effaddr *)NULL, $2), $2, &$4, 1);
+	BuildBC_Insn(&$$, 32, 1, 0x6B, 0, ConvertRegToEA((effaddr *)NULL, $2), $2, &$4, 1, 1, 0);
     }
     | INS_IMUL reg16 ',' imm16 {
-	BuildBC_Insn(&$$, 16, 1, 0x69, 0, ConvertRegToEA((effaddr *)NULL, $2), $2, &$4, 2);
+	BuildBC_Insn(&$$, 16, 1, 0x69, 0, ConvertRegToEA((effaddr *)NULL, $2), $2, &$4, 2, 1, 0);
     }
     | INS_IMUL reg32 ',' imm32 {
-	BuildBC_Insn(&$$, 32, 1, 0x69, 0, ConvertRegToEA((effaddr *)NULL, $2), $2, &$4, 4);
+	BuildBC_Insn(&$$, 32, 1, 0x69, 0, ConvertRegToEA((effaddr *)NULL, $2), $2, &$4, 4, 1, 0);
     }
 ;
 
 in: INS_IN REG_AL ',' imm8 {
-	BuildBC_Insn(&$$, 0, 1, 0xE4, 0, (effaddr *)NULL, 0, &$4, 1);
+	BuildBC_Insn(&$$, 0, 1, 0xE4, 0, (effaddr *)NULL, 0, &$4, 1, 0, 0);
     }
     | INS_IN REG_AX ',' imm8 {
-	BuildBC_Insn(&$$, 16, 1, 0xE5, 0, (effaddr *)NULL, 0, &$4, 1);
+	BuildBC_Insn(&$$, 16, 1, 0xE5, 0, (effaddr *)NULL, 0, &$4, 1, 0, 0);
     }
     | INS_IN REG_EAX ',' imm8 {
-	BuildBC_Insn(&$$, 32, 1, 0xE5, 0, (effaddr *)NULL, 0, &$4, 1);
+	BuildBC_Insn(&$$, 32, 1, 0xE5, 0, (effaddr *)NULL, 0, &$4, 1, 0, 0);
     }
     | INS_IN REG_AL ',' REG_DX {
-	BuildBC_Insn(&$$, 0, 1, 0xEC, 0, (effaddr *)NULL, 0, (immval *)NULL, 0);
+	BuildBC_Insn(&$$, 0, 1, 0xEC, 0, (effaddr *)NULL, 0, (immval *)NULL, 0, 0, 0);
     }
     | INS_IN REG_AX ',' REG_DX {
-	BuildBC_Insn(&$$, 16, 1, 0xED, 0, (effaddr *)NULL, 0, (immval *)NULL, 0);
+	BuildBC_Insn(&$$, 16, 1, 0xED, 0, (effaddr *)NULL, 0, (immval *)NULL, 0, 0, 0);
     }
     | INS_IN REG_EAX ',' REG_DX {
-	BuildBC_Insn(&$$, 32, 1, 0xED, 0, (effaddr *)NULL, 0, (immval *)NULL, 0);
+	BuildBC_Insn(&$$, 32, 1, 0xED, 0, (effaddr *)NULL, 0, (immval *)NULL, 0, 0, 0);
     }
 ;
 
 loopz: INS_LOOPZ imm1632 {
-	BuildBC_Insn_Rel(&$$, 0, 1, 0xE1, 0, (effaddr *)NULL, 0, ConvertImmToRel((relval *)NULL, &$2, 1));
+	BuildBC_Insn(&$$, 0, 1, 0xE1, 0, (effaddr *)NULL, 0, &$2, 1, 1, 1);
     }
     | INS_LOOPZ imm1632 ',' REG_CX {
-	BuildBC_Insn_Rel(&$$, 16, 1, 0xE1, 0, (effaddr *)NULL, 0, ConvertImmToRel((relval *)NULL, &$2, 1));
+	BuildBC_Insn(&$$, 16, 1, 0xE1, 0, (effaddr *)NULL, 0, &$2, 1, 1, 1);
     }
     | INS_LOOPZ imm1632 ',' REG_ECX {
-	BuildBC_Insn_Rel(&$$, 32, 1, 0xE1, 0, (effaddr *)NULL, 0, ConvertImmToRel((relval *)NULL, &$2, 1));
+	BuildBC_Insn(&$$, 32, 1, 0xE1, 0, (effaddr *)NULL, 0, &$2, 1, 1, 1);
     }
 ;
 
 lsl: INS_LSL reg16 ',' rm16 {
-	BuildBC_Insn(&$$, 16, 2, 0x0F, 0x03, &$4, $2, (immval *)NULL, 0);
+	BuildBC_Insn(&$$, 16, 2, 0x0F, 0x03, &$4, $2, (immval *)NULL, 0, 0, 0);
     }
     | INS_LSL reg32 ',' rm32 {
-	BuildBC_Insn(&$$, 32, 2, 0x0F, 0x03, &$4, $2, (immval *)NULL, 0);
+	BuildBC_Insn(&$$, 32, 2, 0x0F, 0x03, &$4, $2, (immval *)NULL, 0, 0, 0);
     }
 ;
 

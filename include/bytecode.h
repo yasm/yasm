@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.1 2001/05/15 05:28:06 peter Exp $
+/* $Id: bytecode.h,v 1.2 2001/05/18 21:42:31 peter Exp $
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -34,13 +34,10 @@ typedef struct effaddr_s {
 
 typedef struct immval_s {
     unsigned long val;
-    unsigned char len;		/* length of val (in bytes) */
+    unsigned char len;		/* length of val (in bytes), 0 if none */
+    unsigned char isrel;
+    unsigned char isneg;	/* the value has been explicitly negated */
 } immval;
-
-typedef struct relval_s {
-    unsigned long val;
-    unsigned char len;		/* length of val (in bytes) */
-} relval;
 
 typedef struct bytecode_s {
     struct bytecode_s *next;
@@ -50,15 +47,17 @@ typedef struct bytecode_s {
     union {
 	struct {
 	    effaddr ea;			/* effective address */
-	    union {
-		immval im;		/* immediate value */
-		relval rel;
-	    } imm;
+
+	    immval imm;			/* immediate or relative value */
+	    unsigned char f_len_imm;	/* final imm length */
+	    unsigned char f_rel_imm;	/* 1 if final imm should be rel */
+	    unsigned char f_sign_imm;	/* 1 if final imm should be signed */
+
 	    unsigned char opcode[2];	/* opcode */
 	    unsigned char opcode_len;
+
 	    unsigned char opersize;	/* 0 indicates no override */
 	    unsigned char lockrep_pre;	/* 0 indicates no prefix */
-	    unsigned char isrel;
 	} insn;
 	struct {
 	    unsigned char *data;
@@ -81,17 +80,10 @@ effaddr *ConvertRegToEA(effaddr *ptr, unsigned long reg);
 
 immval *ConvertIntToImm(immval *ptr, unsigned long int_val);
 
-relval *ConvertImmToRel(relval *ptr, immval *im_ptr,
-    unsigned char rel_forcelen);
-
 void BuildBC_Insn(bytecode *bc, unsigned char opersize,
     unsigned char opcode_len, unsigned char op0, unsigned char op1,
     effaddr *ea_ptr, unsigned char spare, immval *im_ptr,
-    unsigned char im_forcelen);
-
-void BuildBC_Insn_Rel(bytecode *bc, unsigned char opersize,
-    unsigned char opcode_len, unsigned char op0, unsigned char op1,
-    effaddr *ea_ptr, unsigned char spare, relval *rel_ptr);
+    unsigned char im_len, unsigned char im_sign, unsigned char im_rel);
 
 unsigned char *ConvertBCInsnToBytes(unsigned char *ptr, bytecode *bc, int *len);
 

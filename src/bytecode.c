@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.1 2001/05/15 05:23:23 peter Exp $
+/* $Id: bytecode.c,v 1.2 2001/05/18 21:42:32 peter Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -23,13 +23,8 @@
 #include "globals.h"
 #include "bytecode.h"
 
-static void buildbc_insn_common(bytecode *bc, unsigned char opersize,
-    unsigned char opcode_len, unsigned char op0, unsigned char op1,
-    effaddr *ea_ptr, unsigned char spare);
-
 static effaddr eff_static;
 static immval im_static;
-static relval rel_static;
 unsigned char bytes_static[16];
 
 /* FIXME: converting int to EA, but we don't know addrsize yet? 
@@ -88,29 +83,16 @@ immval *ConvertIntToImm(immval *ptr, unsigned long int_val)
     else
 	ptr->len = 4;
 
-    return ptr;
-}
-
-/* FIXME: This actually doesn't do anything useful yet :) */
-relval *ConvertImmToRel(relval *ptr, immval *im_ptr,
-    unsigned char rel_forcelen)
-{
-    if(!ptr)
-	ptr = &rel_static;
-
-    if(im_ptr) {
-	ptr->val = im_ptr->val;
-	ptr->len = im_ptr->len;
-    } else {
-	ptr->len = 0;
-    }
+    ptr->isrel = 0;
+    ptr->isneg = 0;
 
     return ptr;
 }
 
-static void buildbc_insn_common(bytecode *bc, unsigned char opersize,
+void BuildBC_Insn(bytecode *bc, unsigned char opersize,
     unsigned char opcode_len, unsigned char op0, unsigned char op1,
-    effaddr *ea_ptr, unsigned char spare)
+    effaddr *ea_ptr, unsigned char spare, immval *im_ptr,
+    unsigned char im_len, unsigned char im_sign, unsigned char im_rel)
 {
     bc->next = (bytecode *)NULL;
     bc->type = BC_INSN;
@@ -125,6 +107,15 @@ static void buildbc_insn_common(bytecode *bc, unsigned char opersize,
 	bc->data.insn.ea.segment = 0;
 	bc->data.insn.ea.need_sib = 0;
     }
+
+    if(im_ptr) {
+	bc->data.insn.imm = *im_ptr;
+    } else {
+	bc->data.insn.imm.len = 0;
+    }
+    bc->data.insn.f_rel_imm = im_rel;
+    bc->data.insn.f_sign_imm = im_sign;
+    bc->data.insn.f_len_imm = im_len;
 
     bc->data.insn.opcode[0] = op0;
     bc->data.insn.opcode[1] = op1;
@@ -141,37 +132,6 @@ static void buildbc_insn_common(bytecode *bc, unsigned char opersize,
     bc->mode_bits = mode_bits;
 }
  
-
-void BuildBC_Insn(bytecode *bc, unsigned char opersize,
-    unsigned char opcode_len, unsigned char op0, unsigned char op1,
-    effaddr *ea_ptr, unsigned char spare, immval *im_ptr,
-    unsigned char im_forcelen)
-{
-    buildbc_insn_common(bc, opersize, opcode_len, op0, op1, ea_ptr, spare);
-
-    if(im_ptr) {
-	bc->data.insn.imm.im = *im_ptr;
-	bc->data.insn.imm.im.len = im_forcelen;		/* TODO: Add Warning */
-    } else {
-	bc->data.insn.imm.im.len = 0;
-    }
-    bc->data.insn.isrel = 0;
-}
-
-void BuildBC_Insn_Rel(bytecode *bc, unsigned char opersize,
-    unsigned char opcode_len, unsigned char op0, unsigned char op1,
-    effaddr *ea_ptr, unsigned char spare, relval *rel_ptr)
-{
-    buildbc_insn_common(bc, opersize, opcode_len, op0, op1, ea_ptr, spare);
-
-    if(rel_ptr) {
-	bc->data.insn.imm.rel = *rel_ptr;
-    } else {
-	bc->data.insn.imm.rel.len = 0;
-    }
-    bc->data.insn.isrel = 1;
-}
-
 /* TODO: implement.  Shouldn't be difficult. */
 unsigned char *ConvertBCInsnToBytes(unsigned char *ptr, bytecode *bc, int *len)
 {
@@ -197,15 +157,14 @@ void DebugPrintBC(bytecode *bc)
 		(unsigned int)bc->data.insn.ea.modrm,
 		(unsigned int)bc->data.insn.ea.sib,
 		(unsigned int)bc->data.insn.ea.need_sib);
-	    if(bc->data.insn.isrel) {
-		printf("Relative Offset:\n");
-		printf(" Val=%lx Len=%u\n", bc->data.insn.imm.rel.val,
-		    (unsigned int)bc->data.insn.imm.rel.len);
-	    } else {
-		printf("Immediate Value:\n");
-		printf(" Val=%lx Len=%u\n", bc->data.insn.imm.im.val,
-		    (unsigned int)bc->data.insn.imm.im.len);
-	    }
+	    printf("Immediate/Relative Value:\n");
+	    printf(" Val=%lx Len=%u, IsRel=%u\n", bc->data.insn.imm.val,
+		(unsigned int)bc->data.insn.imm.len,
+		(unsigned int)bc->data.insn.imm.isrel);
+	    printf(" FLen=%u, FRel=%u, FSign=%u\n",
+		(unsigned int)bc->data.insn.f_len_imm,
+		(unsigned int)bc->data.insn.f_rel_imm,
+		(unsigned int)bc->data.insn.f_sign_imm);
 	    printf("Opcode: %2x %2x OpLen=%u\n",
 		(unsigned int)bc->data.insn.opcode[0],
 		(unsigned int)bc->data.insn.opcode[1],
