@@ -29,9 +29,9 @@
 
 typedef enum {
     X86_BC_INSN = YASM_BYTECODE_TYPE_BASE,
-    X86_BC_JMPREL
+    X86_BC_JMP
 } x86_bytecode_type;
-#define X86_BYTECODE_TYPE_MAX	X86_BC_JMPREL+1
+#define X86_BYTECODE_TYPE_MAX	X86_BC_JMP+1
 
 /* 0-15 (low 4 bits) used for register number, stored in same data area.
  * Note 8-15 are only valid for some registers, and only in 64-bit mode.
@@ -65,13 +65,13 @@ typedef enum {
 } x86_parse_targetmod;
 
 typedef enum {
-    JR_NONE,
-    JR_SHORT,
-    JR_NEAR,
-    JR_SHORT_FORCED,
-    JR_NEAR_FORCED,
-    JR_FAR		    /* not really relative, but fits here */
-} x86_jmprel_opcode_sel;
+    JMP_NONE,
+    JMP_SHORT,
+    JMP_NEAR,
+    JMP_SHORT_FORCED,
+    JMP_NEAR_FORCED,
+    JMP_FAR		    /* not really relative, but fits here */
+} x86_jmp_opcode_sel;
 
 typedef enum {
     X86_REX_W = 3,
@@ -130,14 +130,14 @@ typedef struct x86_new_insn_data {
 
 yasm_bytecode *yasm_x86__bc_new_insn(x86_new_insn_data *d);
 
-/* Structure with *all* inputs passed to x86_bytecode_new_jmprel().
+/* Structure with *all* inputs passed to x86_bytecode_new_jmp().
  * Pass 0 for the opcode_len if that version of the opcode doesn't exist.
  */
-typedef struct x86_new_jmprel_data {
+typedef struct x86_new_jmp_data {
     unsigned long lindex;
     /*@keep@*/ yasm_expr *target;
     /*@dependent@*/ yasm_symrec *origin;
-    x86_jmprel_opcode_sel op_sel;
+    x86_jmp_opcode_sel op_sel;
     unsigned char short_op_len;
     unsigned char short_op[3];
     unsigned char near_op_len;
@@ -146,9 +146,9 @@ typedef struct x86_new_jmprel_data {
     unsigned char far_op[3];
     unsigned char addrsize;
     unsigned char opersize;
-} x86_new_jmprel_data;
+} x86_new_jmp_data;
 
-yasm_bytecode *yasm_x86__bc_new_jmprel(x86_new_jmprel_data *d);
+yasm_bytecode *yasm_x86__bc_new_jmp(x86_new_jmp_data *d);
 
 extern unsigned char yasm_x86_LTX_mode_bits;
 

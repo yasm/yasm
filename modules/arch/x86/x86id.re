@@ -84,7 +84,7 @@ static unsigned long cpu_enabled = ~CPU_Any;
 #define MOD_SpAdd   (1UL<<5)	/* Parameter adds to "spare" value */
 #define MOD_OpSizeR (1UL<<6)	/* Parameter replaces opersize */
 #define MOD_Imm8    (1UL<<7)	/* Parameter is included as immediate byte */
-#define MOD_AdSizeR (1UL<<8)	/* Parameter replaces addrsize (jmprel only) */
+#define MOD_AdSizeR (1UL<<8)	/* Parameter replaces addrsize (jmp only) */
 
 /* Modifiers that aren't actually used as modifiers.  Rather, if set, bits
  * 20-27 in the modifier are used as an index into an array.
@@ -155,8 +155,8 @@ static unsigned long cpu_enabled = ~CPU_Any;
  *             6 = operand data is added to opcode byte 1
  *             7 = operand data goes into BOTH ea and spare
  *                 [special case for imul opcode]
- *             8 = relative jump (outputs a jmprel instead of normal insn)
- *             9 = operand size goes into address size (jmprel only)
+ *             8 = relative jump (outputs a jmp instead of normal insn)
+ *             9 = operand size goes into address size (jmp only)
  * The below describes postponed actions: actions which can't be completed at
  * parse-time due to things like EQU and complex expressions.  For these, some
  * additional data (stored in the second byte of the opcode with a one-byte
@@ -1523,12 +1523,12 @@ static const x86_insn_info xbts_insn[] = {
 
 
 static yasm_bytecode *
-x86_new_jmprel(const unsigned long data[4], int num_operands,
-	       yasm_insn_operandhead *operands, x86_insn_info *jrinfo,
-	       yasm_section *cur_section, /*@null@*/ yasm_bytecode *prev_bc,
-	       unsigned long lindex)
+x86_new_jmp(const unsigned long data[4], int num_operands,
+	    yasm_insn_operandhead *operands, x86_insn_info *jinfo,
+	    yasm_section *cur_section, /*@null@*/ yasm_bytecode *prev_bc,
+	    unsigned long lindex)
 {
-    x86_new_jmprel_data d;
+    x86_new_jmp_data d;
     int num_info = (int)(data[1]&0xFF);
     x86_insn_info *info = (x86_insn_info *)data[0];
     unsigned long mod_data = data[1] >> 8;
@@ -1543,7 +1543,7 @@ x86_new_jmprel(const unsigned long data[4], int num_operands,
 	yasm_internal_error(N_("invalid operand conversion"));
 
     /* Far target needs to become "seg imm:imm". */
-    if ((jrinfo->operands[0] & OPTM_MASK) == OPTM_Far)
+    if ((jinfo->operands[0] & OPTM_MASK) == OPTM_Far)
 	d.target = yasm_expr_new_tree(
 	    yasm_expr_new_branch(YASM_EXPR_SEG, op->data.val, lindex),
 	    YASM_EXPR_SEGOFF, yasm_expr_copy(op->data.val), lindex);
@@ -1557,37 +1557,37 @@ x86_new_jmprel(const unsigned long data[4], int num_operands,
     d.far_op_len = 0;
 
     /* See if the user explicitly specified short/near/far. */
-    switch ((int)(jrinfo->operands[0] & OPTM_MASK)) {
+    switch ((int)(jinfo->operands[0] & OPTM_MASK)) {
 	case OPTM_Short:
-	    d.op_sel = JR_SHORT_FORCED;
+	    d.op_sel = JMP_SHORT_FORCED;
 	    break;
 	case OPTM_Near:
-	    d.op_sel = JR_NEAR_FORCED;
+	    d.op_sel = JMP_NEAR_FORCED;
 	    break;
 	case OPTM_Far:
-	    d.op_sel = JR_FAR;
+	    d.op_sel = JMP_FAR;
 	    d.far_op_len = info->opcode_len;
 	    d.far_op[0] = info->opcode[0];
 	    d.far_op[1] = info->opcode[1];
 	    d.far_op[2] = info->opcode[2];
 	    break;
 	default:
-	    d.op_sel = JR_NONE;
+	    d.op_sel = JMP_NONE;
     }
 
     /* Set operand size */
-    d.opersize = jrinfo->opersize;
+    d.opersize = jinfo->opersize;
 
     /* Check for address size setting in second operand, if present */
-    if (jrinfo->num_operands > 1 &&
-	(jrinfo->operands[1] & OPA_MASK) == OPA_AdSizeR)
-	d.addrsize = (unsigned char)size_lookup[(jrinfo->operands[1] &
+    if (jinfo->num_operands > 1 &&
+	(jinfo->operands[1] & OPA_MASK) == OPA_AdSizeR)
+	d.addrsize = (unsigned char)size_lookup[(jinfo->operands[1] &
 						 OPS_MASK)>>OPS_SHIFT];
     else
 	d.addrsize = 0;
 
     /* Check for address size override */
-    if (jrinfo->modifiers & MOD_AdSizeR)
+    if (jinfo->modifiers & MOD_AdSizeR)
 	d.addrsize = (unsigned char)(mod_data & 0xFF);
 
     /* Scan through other infos for this insn looking for short/near versions.
@@ -1641,7 +1641,7 @@ x86_new_jmprel(const unsigned long data[4], int num_operands,
 	}
     }
 
-    return yasm_x86__bc_new_jmprel(&d);
+    return yasm_x86__bc_new_jmp(&d);
 }
 
 yasm_bytecode *
@@ -1943,8 +1943,8 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 
     /* Shortcut to JmpRel */
     if (operands && (info->operands[0] & OPA_MASK) == OPA_JmpRel)
-	return x86_new_jmprel(data, num_operands, operands, info, cur_section,
-			      prev_bc, lindex);
+	return x86_new_jmp(data, num_operands, operands, info, cur_section,
+			   prev_bc, lindex);
 
     /* Copy what we can from info */
     d.lindex = lindex;
