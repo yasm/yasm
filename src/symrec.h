@@ -35,7 +35,8 @@ typedef enum {
 					  /*@keep@*/ expr *e);
 /* in_table specifies if the label should be inserted into the symbol table. */
 /*@dependent@*/ symrec *symrec_define_label(const char *name,
-					    /*@dependent@*/ section *sect,
+					    /*@dependent@*/ /*@null@*/
+					    section *sect,
 					    /*@dependent@*/ /*@null@*/
 					    bytecode *precbc, int in_table);
 /*@dependent@*/ symrec *symrec_declare(const char *name, SymVisibility vis);
@@ -58,6 +59,11 @@ int /*@alt void@*/ symrec_foreach(int (*func) (symrec *sym));
 void symrec_parser_finalize(void);
 
 void symrec_delete_all(void);
+
+/* Deletes symrec if it isn't in the symbol table.  If it *is* in the symbol
+ * table, does nothing.
+ */
+void symrec_delete(/*@only@*/ symrec *sym);
 
 void symrec_print(const symrec *sym);
 #endif

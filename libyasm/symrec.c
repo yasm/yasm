@@ -59,7 +59,7 @@ struct symrec {
     union {
 	expr *expn;		/* equ value */
 	struct label_s {	/* bytecode immediately preceding a label */
-	    /*@dependent@*/ section *sect;
+	    /*@dependent@*/ /*@null@*/ section *sect;
 	    /*@dependent@*/ /*@null@*/ bytecode *bc;
 	} label;
     } value;
@@ -267,6 +267,15 @@ symrec_delete_all(void)
 }
 
 void
+symrec_delete(symrec *sym)
+{
+    /*@-branchstate@*/
+    if (sym->status & SYM_NOTINTABLE)
+	symrec_delete_one(sym);
+    /*@=branchstate@*/
+}
+
+void
 symrec_print(const symrec *sym)
 {
     printf("---Symbol `%s'---\n", sym->name);
@@ -283,7 +292,8 @@ symrec_print(const symrec *sym)
 	    break;
 	case SYM_LABEL:
 	    printf("_Label_\n");
-	    printf("Section=`%s'\n", section_get_name(sym->value.label.sect));
+	    printf("Section=`%s'\n", sym->value.label.sect?
+		   section_get_name(sym->value.label.sect):"(nil)");
 	    if (!sym->value.label.bc)
 		printf("[First bytecode]\n");
 	    else {

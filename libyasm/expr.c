@@ -687,6 +687,10 @@ expr_delete_each(/*@only@*/ expr *e, /*@unused@*/ void *d)
 	    case EXPR_FLOAT:
 		floatnum_delete(e->terms[i].data.flt);
 		break;
+	    case EXPR_SYM:
+		/* call symrec_delete in case sym isn't in the symbol table */
+		symrec_delete(e->terms[i].data.sym);
+		break;
 	    default:
 		break;	/* none of the other types needs to be deleted */
 	}
