@@ -297,13 +297,13 @@
 #define PACKAGE_NAME "yasm"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "yasm CVS"
+#define PACKAGE_STRING "yasm HEAD"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "yasm"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "CVS"
+#define PACKAGE_VERSION "HEAD"
 
 /* Define if the C compiler supports function prototypes. */
 #define PROTOTYPES 1
@@ -315,7 +315,7 @@
 /* #undef USE_FORKWAITMSG */
 
 /* Version number of package */
-#define VERSION "CVS"
+#define VERSION "HEAD"
 
 /* Define if using the dmalloc debugging malloc package */
 /* #undef WITH_DMALLOC */
