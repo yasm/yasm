@@ -40,11 +40,8 @@ const void *ea_get_const_data(const effaddr *);
 struct immval {
     /*@only@*/ /*@null@*/ expr *val;
 
-    unsigned char len;		/* length of val (in bytes), 0 if unknown */
-    unsigned char isneg;	/* the value has been explicitly negated */
-
-    unsigned char f_len;	/* final imm length */
-    unsigned char f_sign;	/* 1 if final imm should be signed */
+    unsigned char len;		/* final length (in bytes), 0 if unknown */
+    unsigned char sign;		/* 1 if final imm is treated as signed */
 };
 
 struct bytecode {

@@ -75,22 +75,7 @@ unsigned char bytes_static[16];
 immval *
 imm_new_int(unsigned long int_val)
 {
-    immval *im = xmalloc(sizeof(immval));
-
-    im->val = expr_new_ident(ExprInt(intnum_new_int(int_val)));
-
-    if ((int_val & 0xFF) == int_val)
-	im->len = 1;
-    else if ((int_val & 0xFFFF) == int_val)
-	im->len = 2;
-    else
-	im->len = 4;
-
-    im->isneg = 0;
-    im->f_len = 0;
-    im->f_sign = 0;
-
-    return im;
+    return imm_new_expr(expr_new_ident(ExprInt(intnum_new_int(int_val))));
 }
 
 immval *
@@ -100,9 +85,7 @@ imm_new_expr(expr *expr_ptr)
 
     im->val = expr_ptr;
     im->len = 0;
-    im->isneg = 0;
-    im->f_len = 0;
-    im->f_sign = 0;
+    im->sign = 0;
 
     return im;
 }

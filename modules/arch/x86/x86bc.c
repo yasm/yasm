@@ -54,8 +54,8 @@ x86_bc_new_insn(x86_new_insn_data *d)
 
     insn->imm = d->imm;
     if (d->imm) {
-	insn->imm->f_len = d->im_len;
-	insn->imm->f_sign = d->im_sign;
+	insn->imm->len = d->im_len;
+	insn->imm->sign = d->im_sign;
     }
 
     insn->opcode[0] = d->op[0];
@@ -379,12 +379,9 @@ x86_bc_print(FILE *f, const bytecode *bc)
 		else
 		    fprintf(f, "(nil-SHOULDN'T HAPPEN)");
 		fprintf(f, "\n");
-		fprintf(f, "%*sLen=%u, IsNeg=%u\n", indent_level, "",
+		fprintf(f, "%*sLen=%u, Sign=%u\n", indent_level, "",
 			(unsigned int)insn->imm->len,
-			(unsigned int)insn->imm->isneg);
-		fprintf(f, "%*sFLen=%u, FSign=%u\n", indent_level, "",
-			(unsigned int)insn->imm->f_len,
-			(unsigned int)insn->imm->f_sign);
+			(unsigned int)insn->imm->sign);
 		indent_level--;
 	    }
 	    fprintf(f, "%*sOpcode: %02x %02x %02x OpLen=%u\n", indent_level,
