@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.2 2001/05/21 22:33:23 mu Exp $
+# $Id: gen_instr.pl,v 1.3 2001/05/22 07:17:50 peter Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -108,10 +108,10 @@ sub read_instructions ($)
 	REG_SI REG_ESI REG_DI REG_EDI
 	REG_BP REG_EBP
 	REG_CS REG_DS REG_ES REG_FS REG_GS REG_SS
-	ONE XMMREG MMXREG segreg CRREG_NOTCR4 CR4 DRREG xrm64
-	fpureg ST0 ST1 ST2 ST3 ST4 ST5 ST6 ST7 mem
-	imm8 imm16 imm32 imm1632 imm64 imm80 imm128
-	imm8x imm16x imm32x imm1632x imm64x imm80x imm128x
+	ONE XMMREG MMXREG segreg CRREG_NOTCR4 CR4 DRREG
+	fpureg FPUREG_NOTST0 ST0 ST1 ST2 ST3 ST4 ST5 ST6 ST7 mem imm
+	imm8 imm16 imm32 imm64 imm80 imm128
+	imm8x imm16x imm32x imm64x imm80x imm128x
 	rm8 rm16 rm32 rm1632 rm64 rm80 rm128
 	rm8x rm16x rm32x rm1632x rm64x rm80x rm128x
 	reg8 reg16 reg32 reg1632 reg64 reg80 reg128
