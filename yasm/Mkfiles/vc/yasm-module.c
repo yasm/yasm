@@ -41,11 +41,13 @@ typedef struct module {
 
 extern yasm_arch yasm_x86_LTX_arch;
 extern int yasm_x86_LTX_mode_bits;
+extern yasm_arch yasm_lc3b_LTX_arch;
 extern yasm_dbgfmt yasm_null_LTX_dbgfmt;
 extern yasm_objfmt yasm_bin_LTX_objfmt;
 extern yasm_objfmt yasm_coff_LTX_objfmt;
 extern yasm_objfmt yasm_win32_LTX_objfmt;
 extern yasm_objfmt yasm_dbg_LTX_objfmt;
+extern yasm_objfmt yasm_elf_LTX_objfmt;
 extern yasm_optimizer yasm_basic_LTX_optimizer;
 extern yasm_parser yasm_nasm_LTX_parser;
 extern yasm_preproc yasm_nasm_LTX_preproc;
@@ -55,11 +57,13 @@ extern yasm_preproc yasm_yapp_LTX_preproc;
 static module modules[] = {
     {MODULE_ARCH, "x86", "arch", &yasm_x86_LTX_arch},
     {MODULE_ARCH, "x86", "mode_bits", &yasm_x86_LTX_mode_bits},
+    {MODULE_ARCH, "lc3b", "arch", &yasm_lc3b_LTX_arch},
     {MODULE_DBGFMT, "null", "dbgfmt", &yasm_null_LTX_dbgfmt},
     {MODULE_OBJFMT, "bin",  "objfmt", &yasm_bin_LTX_objfmt},
     {MODULE_OBJFMT, "coff", "objfmt", &yasm_coff_LTX_objfmt},
     {MODULE_OBJFMT, "dbg", "objfmt", &yasm_dbg_LTX_objfmt},
     {MODULE_OBJFMT, "win32", "objfmt", &yasm_win32_LTX_objfmt},
+    {MODULE_OBJFMT, "elf", "objfmt", &yasm_elf_LTX_objfmt},
     {MODULE_OPTIMIZER, "basic", "optimizer", &yasm_basic_LTX_optimizer},
     {MODULE_PARSER, "nasm", "parser", &yasm_nasm_LTX_parser},
     {MODULE_PREPROC, "nasm", "preproc", &yasm_nasm_LTX_preproc},
