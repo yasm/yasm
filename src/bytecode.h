@@ -82,9 +82,21 @@ typedef struct bytecode_s {
 
     enum { BC_EMPTY, BC_INSN, BC_JMPREL, BC_DATA, BC_RESERVE } type;
 
+    /* This union has been somewhat tweaked to get it as small as possible
+     * on the 4-byte-aligned x86 architecture (without resorting to
+     * bitfields).  In particular, insn and jmprel are the largest structures
+     * in the union, and are also the same size (after padding).  jmprel
+     * can have another unsigned char added to the end without affecting
+     * its size.
+     *
+     * Don't worry about this too much, but keep it in mind when changing
+     * this structure.  We care about the size of bytecode in particular
+     * because it accounts for the majority of the memory usage in the
+     * assembler when assembling a large file.
+     */
     union {
 	struct {
-	    effaddr ea;		/* effective address */
+	    effaddr *ea;	/* effective address */
 
 	    immval imm;		/* immediate or relative value */
 
@@ -94,14 +106,28 @@ typedef struct bytecode_s {
 	    unsigned char addrsize;	/* 0 indicates no override */
 	    unsigned char opersize;	/* 0 indicates no override */
 	    unsigned char lockrep_pre;	/* 0 indicates no prefix */
+
+	    /* HACK, but a space-saving one: shift opcodes have an immediate
+	     * form and a ,1 form (with no immediate).  In the parser, we
+	     * set this and opcode_len=1, but store the ,1 version in the
+	     * second byte of the opcode array.  We then choose between the
+	     * two versions once we know the actual value of imm (because we
+	     * don't know it in the parser module).
+	     *
+	     * A override to force the imm version should just leave this at
+	     * 0.  Then later code won't know the ,1 version even exists.
+	     * TODO: Figure out how this affects CPU flags processing.
+	     *
+	     * Call SetInsnShiftFlag() to set this flag to 1.
+	     */
+	    unsigned char shift_op;
 	} insn;
 	struct {
 	    struct expr_s *target;	/* target location */
 
 	    struct {
 		unsigned char opcode[3];
-		unsigned char opcode_len;
-		unsigned char valid;	/* does the opcode exist? */
+		unsigned char opcode_len;   /* 0 = no opc for this version */
 	    } shortop, nearop;
 
 	    /* which opcode are we using? */
@@ -133,12 +159,12 @@ typedef struct bytecode_s {
 
     /* other assembler state info */
     unsigned long offset;
-    unsigned int mode_bits;
+    unsigned char mode_bits;
 } bytecode;
 
-effaddr *ConvertRegToEA(effaddr *ptr, unsigned long reg);
-effaddr *ConvertImmToEA(effaddr *ptr, immval *im_ptr, unsigned char im_len);
-effaddr *ConvertExprToEA(effaddr *ptr, struct expr_s *expr_ptr);
+effaddr *effaddr_new_reg(unsigned long reg);
+effaddr *effaddr_new_imm(immval *im_ptr, unsigned char im_len);
+effaddr *effaddr_new_expr(struct expr_s *expr_ptr);
 
 immval *ConvertIntToImm(immval *ptr, unsigned long int_val);
 immval *ConvertExprToImm(immval *ptr, struct expr_s *expr_ptr);
@@ -149,9 +175,13 @@ void SetEALen(effaddr *ptr, unsigned char len);
 void SetInsnOperSizeOverride(bytecode *bc, unsigned char opersize);
 void SetInsnAddrSizeOverride(bytecode *bc, unsigned char addrsize);
 void SetInsnLockRepPrefix(bytecode *bc, unsigned char prefix);
+void SetInsnShiftFlag(bytecode *bc);
 
 void SetOpcodeSel(jmprel_opcode_sel *old_sel, jmprel_opcode_sel new_sel);
 
+/* IMPORTANT: ea_ptr cannot be reused or freed after calling this function
+ * (it doesn't make a copy).  im_ptr, on the other hand, can be.
+ */
 bytecode *bytecode_new_insn(unsigned char  opersize,
 			    unsigned char  opcode_len,
 			    unsigned char  op0,
@@ -163,13 +193,12 @@ bytecode *bytecode_new_insn(unsigned char  opersize,
 			    unsigned char  im_len,
 			    unsigned char  im_sign);
 
+/* Pass 0 for the opcode_len if that version of the opcode doesn't exist. */
 bytecode *bytecode_new_jmprel(targetval     *target,
-			      unsigned char  short_valid,
 			      unsigned char  short_opcode_len,
 			      unsigned char  short_op0,
 			      unsigned char  short_op1,
 			      unsigned char  short_op2,
-			      unsigned char  near_valid,
 			      unsigned char  near_opcode_len,
 			      unsigned char  near_op0,
 			      unsigned char  near_op1,

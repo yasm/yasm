@@ -44,9 +44,6 @@
 RCSID("$IdPath$");
 
 /* Static structures for when NULL is passed to conversion functions. */
-/*  for Convert*ToEA() */
-static effaddr eff_static;
-
 /*  for Convert*ToImm() */
 static immval im_static;
 
@@ -56,57 +53,63 @@ unsigned char bytes_static[16];
 static bytecode *bytecode_new_common(void);
 
 effaddr *
-ConvertRegToEA(effaddr *ptr, unsigned long reg)
+effaddr_new_reg(unsigned long reg)
 {
-    if (!ptr)
-	ptr = &eff_static;
+    effaddr *ea = malloc(sizeof(effaddr));
 
-    ptr->len = 0;
-    ptr->segment = 0;
-    ptr->modrm = 0xC0 | (reg & 0x07);	/* Mod=11, R/M=Reg, Reg=0 */
-    ptr->valid_modrm = 1;
-    ptr->need_modrm = 1;
-    ptr->valid_sib = 0;
-    ptr->need_sib = 0;
+    if (!ea)
+	Fatal(FATAL_NOMEM);
 
-    return ptr;
+    ea->len = 0;
+    ea->segment = 0;
+    ea->modrm = 0xC0 | (reg & 0x07);	/* Mod=11, R/M=Reg, Reg=0 */
+    ea->valid_modrm = 1;
+    ea->need_modrm = 1;
+    ea->valid_sib = 0;
+    ea->need_sib = 0;
+
+    return ea;
 }
 
 effaddr *
-ConvertExprToEA(effaddr *ptr, expr *expr_ptr)
+effaddr_new_expr(expr *expr_ptr)
 {
-    if (!ptr)
-	ptr = &eff_static;
+    effaddr *ea = malloc(sizeof(effaddr));
 
-    ptr->segment = 0;
+    if (!ea)
+	Fatal(FATAL_NOMEM);
 
-    ptr->valid_modrm = 0;
-    ptr->need_modrm = 1;
-    ptr->valid_sib = 0;
-    ptr->need_sib = 0;
+    ea->segment = 0;
 
-    ptr->disp = expr_ptr;
+    ea->valid_modrm = 0;
+    ea->need_modrm = 1;
+    ea->valid_sib = 0;
+    ea->need_sib = 0;
 
-    return ptr;
+    ea->disp = expr_ptr;
+
+    return ea;
 }
 
 effaddr *
-ConvertImmToEA(effaddr *ptr, immval *im_ptr, unsigned char im_len)
+effaddr_new_imm(immval *im_ptr, unsigned char im_len)
 {
-    if (!ptr)
-	ptr = &eff_static;
+    effaddr *ea = malloc(sizeof(effaddr));
 
-    ptr->disp = im_ptr->val;
+    if (!ea)
+	Fatal(FATAL_NOMEM);
+
+    ea->disp = im_ptr->val;
     if (im_ptr->len > im_len)
 	Warning(_("%s value exceeds bounds"), "word");
-    ptr->len = im_len;
-    ptr->segment = 0;
-    ptr->valid_modrm = 0;
-    ptr->need_modrm = 0;
-    ptr->valid_sib = 0;
-    ptr->need_sib = 0;
+    ea->len = im_len;
+    ea->segment = 0;
+    ea->valid_modrm = 0;
+    ea->need_modrm = 0;
+    ea->valid_sib = 0;
+    ea->need_sib = 0;
 
-    return ptr;
+    return ea;
 }
 
 immval *
@@ -236,6 +239,19 @@ SetInsnLockRepPrefix(bytecode *bc, unsigned char prefix)
 }
 
 void
+SetInsnShiftFlag(bytecode *bc)
+{
+    if (!bc)
+	return;
+
+    if (bc->type != BC_INSN)
+	InternalError(__LINE__, __FILE__,
+		      _("Attempted to set shift flag on non-instruction"));
+
+    bc->data.insn.shift_op = 1;
+}
+
+void
 SetOpcodeSel(jmprel_opcode_sel *old_sel, jmprel_opcode_sel new_sel)
 {
     if (!old_sel)
@@ -281,15 +297,10 @@ bytecode_new_insn(unsigned char  opersize,
 
     bc->type = BC_INSN;
 
+    bc->data.insn.ea = ea_ptr;
     if (ea_ptr) {
-	bc->data.insn.ea = *ea_ptr;
-	bc->data.insn.ea.modrm &= 0xC7;	/* zero spare/reg bits */
-	bc->data.insn.ea.modrm |= (spare << 3) & 0x38;	/* plug in provided bits */
-    } else {
-	bc->data.insn.ea.len = 0;
-	bc->data.insn.ea.segment = 0;
-	bc->data.insn.ea.need_modrm = 0;
-	bc->data.insn.ea.need_sib = 0;
+	bc->data.insn.ea->modrm &= 0xC7;	/* zero spare/reg bits */
+	bc->data.insn.ea->modrm |= (spare << 3) & 0x38;	/* plug in provided bits */
     }
 
     if (im_ptr) {
@@ -310,18 +321,17 @@ bytecode_new_insn(unsigned char  opersize,
     bc->data.insn.addrsize = 0;
     bc->data.insn.opersize = opersize;
     bc->data.insn.lockrep_pre = 0;
+    bc->data.insn.shift_op = 0;
 
     return bc;
 }
 
 bytecode *
 bytecode_new_jmprel(targetval     *target,
-		    unsigned char  short_valid,
 		    unsigned char  short_opcode_len,
 		    unsigned char  short_op0,
 		    unsigned char  short_op1,
 		    unsigned char  short_op2,
-		    unsigned char  near_valid,
 		    unsigned char  near_opcode_len,
 		    unsigned char  near_op0,
 		    unsigned char  near_op1,
@@ -335,26 +345,20 @@ bytecode_new_jmprel(targetval     *target,
     bc->data.jmprel.target = target->val;
     bc->data.jmprel.op_sel = target->op_sel;
 
-    if ((target->op_sel == JR_SHORT_FORCED) && (!short_valid))
+    if ((target->op_sel == JR_SHORT_FORCED) && (near_opcode_len == 0))
 	Error(_("no SHORT form of that jump instruction exists"));
-    if ((target->op_sel == JR_NEAR_FORCED) && (!near_valid))
+    if ((target->op_sel == JR_NEAR_FORCED) && (short_opcode_len == 0))
 	Error(_("no NEAR form of that jump instruction exists"));
 
-    bc->data.jmprel.shortop.valid = short_valid;
-    if (short_valid) {
-	bc->data.jmprel.shortop.opcode[0] = short_op0;
-	bc->data.jmprel.shortop.opcode[1] = short_op1;
-	bc->data.jmprel.shortop.opcode[2] = short_op2;
-	bc->data.jmprel.shortop.opcode_len = short_opcode_len;
-    }
+    bc->data.jmprel.shortop.opcode[0] = short_op0;
+    bc->data.jmprel.shortop.opcode[1] = short_op1;
+    bc->data.jmprel.shortop.opcode[2] = short_op2;
+    bc->data.jmprel.shortop.opcode_len = short_opcode_len;
 
-    bc->data.jmprel.nearop.valid = near_valid;
-    if (near_valid) {
-	bc->data.jmprel.nearop.opcode[0] = near_op0;
-	bc->data.jmprel.nearop.opcode[1] = near_op1;
-	bc->data.jmprel.nearop.opcode[2] = near_op2;
-	bc->data.jmprel.nearop.opcode_len = near_opcode_len;
-    }
+    bc->data.jmprel.nearop.opcode[0] = near_op0;
+    bc->data.jmprel.nearop.opcode[1] = near_op1;
+    bc->data.jmprel.nearop.opcode[2] = near_op2;
+    bc->data.jmprel.nearop.opcode_len = near_opcode_len;
 
     bc->data.jmprel.addrsize = addrsize;
     bc->data.jmprel.opersize = 0;
@@ -437,24 +441,25 @@ bytecode_print(bytecode *bc)
 	    break;
 	case BC_INSN:
 	    printf("_Instruction_\n");
-	    printf("Effective Address:\n");
-	    printf(" Disp=");
-	    if (!bc->data.insn.ea.disp)
-		printf("(nil)");
-	    else
-		expr_print(bc->data.insn.ea.disp);
-	    printf("\n");
-	    printf(" Len=%u SegmentOv=%2x\n",
-		   (unsigned int)bc->data.insn.ea.len,
-		   (unsigned int)bc->data.insn.ea.segment);
-	    printf(" ModRM=%2x ValidRM=%u NeedRM=%u\n",
-		   (unsigned int)bc->data.insn.ea.modrm,
-		   (unsigned int)bc->data.insn.ea.valid_modrm,
-		   (unsigned int)bc->data.insn.ea.need_modrm);
-	    printf(" SIB=%2x ValidSIB=%u NeedSIB=%u\n",
-		   (unsigned int)bc->data.insn.ea.sib,
-		   (unsigned int)bc->data.insn.ea.valid_sib,
-		   (unsigned int)bc->data.insn.ea.need_sib);
+	    printf("Effective Address:");
+	    if (!bc->data.insn.ea)
+		printf(" (nil)\n");
+	    else {
+		printf("\n Disp=");
+		expr_print(bc->data.insn.ea->disp);
+		printf("\n");
+		printf(" Len=%u SegmentOv=%2x\n",
+		       (unsigned int)bc->data.insn.ea->len,
+		       (unsigned int)bc->data.insn.ea->segment);
+		printf(" ModRM=%2x ValidRM=%u NeedRM=%u\n",
+		       (unsigned int)bc->data.insn.ea->modrm,
+		       (unsigned int)bc->data.insn.ea->valid_modrm,
+		       (unsigned int)bc->data.insn.ea->need_modrm);
+		printf(" SIB=%2x ValidSIB=%u NeedSIB=%u\n",
+		       (unsigned int)bc->data.insn.ea->sib,
+		       (unsigned int)bc->data.insn.ea->valid_sib,
+		       (unsigned int)bc->data.insn.ea->need_sib);
+	    }
 	    printf("Immediate Value:\n");
 	    printf(" Val=");
 	    if (!bc->data.insn.imm.val)
@@ -483,7 +488,7 @@ bytecode_print(bytecode *bc)
 	    printf("Target=");
 	    expr_print(bc->data.jmprel.target);
 	    printf("\nShort Form:\n");
-	    if (!bc->data.jmprel.shortop.valid)
+	    if (!bc->data.jmprel.shortop.opcode_len == 0)
 		printf(" None\n");
 	    else
 		printf(" Opcode: %2x %2x %2x OpLen=%u\n",
@@ -491,7 +496,7 @@ bytecode_print(bytecode *bc)
 		       (unsigned int)bc->data.jmprel.shortop.opcode[1],
 		       (unsigned int)bc->data.jmprel.shortop.opcode[2],
 		       (unsigned int)bc->data.jmprel.shortop.opcode_len);
-	    if (!bc->data.jmprel.nearop.valid)
+	    if (!bc->data.jmprel.nearop.opcode_len == 0)
 		printf(" None\n");
 	    else
 		printf(" Opcode: %2x %2x %2x OpLen=%u\n",

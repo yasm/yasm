@@ -392,6 +392,15 @@ sub action ( @ $ )
 	. rule_footer; 
 }
 
+sub action_setshiftflag ( @ $ )
+{
+    my ($rule, $tokens, $func, $a_args, $count) = splice @_;
+    return rule_header ($rule, $tokens, $count)
+	. "        \$\$ = $func (@$a_args);\n"
+	. "        SetInsnShiftFlag(\$\$);\n"
+	. rule_footer; 
+}
+
 sub get_token_number ( $ $ )
 {
     my ($tokens, $str) = splice @_;
@@ -502,13 +511,10 @@ sub output_yacc ($@)
 			# test for short opcode "nil"
 			if($inst->[SHORTOPCODE] =~ m/nil/)
 			{
-			    push @args, '0, 0, 0, 0, 0,';
+			    push @args, '0, 0, 0, 0,';
 			}
 			else
 			{
-			    # opcode is valid
-			    push @args, '1,';
-
 			    # number of bytes of short opcode
 			    push @args, (scalar(()=$inst->[SHORTOPCODE] =~ m/(,)/)+1) . ",";
 
@@ -529,13 +535,10 @@ sub output_yacc ($@)
 			# test for near opcode "nil"
 			if($inst->[NEAROPCODE] =~ m/nil/)
 			{
-			    push @args, '0, 0, 0, 0, 0,';
+			    push @args, '0, 0, 0, 0,';
 			}
 			else
 			{
-			    # opcode is valid
-			    push @args, '1,';
-
 			    # number of bytes of near opcode
 			    push @args, (scalar(()=$inst->[NEAROPCODE] =~ m/(,)/)+1) . ",";
 
@@ -612,10 +615,10 @@ sub output_yacc ($@)
 			$args[-1] =~ s/nil/0/;
 			# don't let a $0.\d match slip into the following rules.
 			$args[-1] =~ s/\$(\d+)([ri])?(?!\.)/"\$".($1*2+$to).($2||'')/eg;
-			$args[-1] =~ s/(\$\d+[ri]?)(?!\.)/\&$1/; # Just the first!
-			$args[-1] =~ s/\&(\$\d+)r/ConvertRegToEA((effaddr *)NULL, $1)/;
-			$args[-1] =~ s[\&(\$\d+)i,\s*(\d+)]
-			    ["ConvertImmToEA((effaddr *)NULL, \&$1, ".($2/8)."), 0"]e;
+			#$args[-1] =~ s/(\$\d+[ri]?)(?!\.)/\&$1/; # Just the first!
+			$args[-1] =~ s/(\$\d+)r/effaddr_new_reg($1)/;
+			$args[-1] =~ s[(\$\d+)i,\s*(\d+)]
+			    ["effaddr_new_imm(\&$1, ".($2/8)."), 0"]e;
 			$args[-1] .= ',';
 
 			die $args[-1] if $args[-1] =~ m/\d+[ri]/;
@@ -678,10 +681,20 @@ sub output_yacc ($@)
 			# or if we've deferred and we match the folding version
 			elsif ($ONE and ($inst->[OPERANDS]||"") =~ m/imm8/)
 			{
-			    my $immarg = get_token_number ($tokens, "imm8");
-
 			    $ONE->[4] = 1;
-			    print GRAMMAR cond_action ($rule, $tokens, $count++, "$immarg.val", 1, $func, $ONE->[3], \@args);
+			    # Output a normal version except imm8 -> imm8x
+			    # (BYTE override always makes longer version, and
+			    # we don't want to conflict with the imm version
+			    # we output right after this one.
+			    $tokens =~ s/imm8/imm8x/;
+			    print GRAMMAR action ($rule, $tokens, $func, \@args, $count++);
+
+			    # Now output imm version, with second opcode byte
+			    # set to ,1 opcode.  Also call SetInsnShiftFlag().
+			    $tokens =~ s/imm8x/imm/;
+			    die "no space for ONE?" if $args[3] !~ m/0,/;
+			    $args[3] = $ONE->[3]->[2];
+			    print GRAMMAR action_setshiftflag ($rule, $tokens, $func, \@args, $count++);
 			}
 			elsif ($AL and ($inst->[OPERANDS]||"") =~ m/reg8,imm/)
 			{

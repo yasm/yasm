@@ -69,7 +69,7 @@ extern section *nasm_parser_cur_section;
 	int line;
     } syminfo;
     unsigned char groupdata[4];
-    effaddr ea_val;
+    effaddr *ea;
     expr *exp;
     immval im_val;
     targetval tgt_val;
@@ -105,11 +105,11 @@ extern section *nasm_parser_cur_section;
 %type <bc> line exp instr instrbase label
 
 %type <int_val> fpureg reg32 reg16 reg8 segreg
-%type <ea_val> mem memaddr memexp memfar
-%type <ea_val> mem8x mem16x mem32x mem64x mem80x mem128x
-%type <ea_val> mem8 mem16 mem32 mem64 mem80 mem128 mem1632
-%type <ea_val> rm8x rm16x rm32x /*rm64x rm128x*/
-%type <ea_val> rm8 rm16 rm32 rm64 rm128
+%type <ea> mem memaddr memexp memfar
+%type <ea> mem8x mem16x mem32x mem64x mem80x mem128x
+%type <ea> mem8 mem16 mem32 mem64 mem80 mem128 mem1632
+%type <ea> rm8x rm16x rm32x /*rm64x rm128x*/
+%type <ea> rm8 rm16 rm32 rm64 rm128
 %type <im_val> imm imm8x imm16x imm32x imm8 imm16 imm32
 %type <exp> expr expr_no_string
 %type <syminfo> explabel
@@ -245,19 +245,19 @@ segreg:  REG_ES
 ;
 
 /* memory addresses */
-memexp: expr	{ expr_simplify ($1); ConvertExprToEA (&$$, $1); }
+memexp: expr	{ expr_simplify ($1); $$ = effaddr_new_expr($1); }
 ;
 
-memaddr: memexp		    { $$ = $1; $$.segment = 0; }
-    | REG_CS ':' memaddr    { $$ = $3; SetEASegment(&$$, 0x2E); }
-    | REG_SS ':' memaddr    { $$ = $3; SetEASegment(&$$, 0x36); }
-    | REG_DS ':' memaddr    { $$ = $3; SetEASegment(&$$, 0x3E); }
-    | REG_ES ':' memaddr    { $$ = $3; SetEASegment(&$$, 0x26); }
-    | REG_FS ':' memaddr    { $$ = $3; SetEASegment(&$$, 0x64); }
-    | REG_GS ':' memaddr    { $$ = $3; SetEASegment(&$$, 0x65); }
-    | BYTE memaddr	    { $$ = $2; SetEALen(&$$, 1); }
-    | WORD memaddr	    { $$ = $2; SetEALen(&$$, 2); }
-    | DWORD memaddr	    { $$ = $2; SetEALen(&$$, 4); }
+memaddr: memexp		    { $$ = $1; $$->segment = 0; }
+    | REG_CS ':' memaddr    { $$ = $3; SetEASegment($$, 0x2E); }
+    | REG_SS ':' memaddr    { $$ = $3; SetEASegment($$, 0x36); }
+    | REG_DS ':' memaddr    { $$ = $3; SetEASegment($$, 0x3E); }
+    | REG_ES ':' memaddr    { $$ = $3; SetEASegment($$, 0x26); }
+    | REG_FS ':' memaddr    { $$ = $3; SetEASegment($$, 0x64); }
+    | REG_GS ':' memaddr    { $$ = $3; SetEASegment($$, 0x65); }
+    | BYTE memaddr	    { $$ = $2; SetEALen($$, 1); }
+    | WORD memaddr	    { $$ = $2; SetEALen($$, 2); }
+    | DWORD memaddr	    { $$ = $2; SetEALen($$, 4); }
 ;
 
 mem: '[' memaddr ']'	{ $$ = $2; }
@@ -308,38 +308,38 @@ mem1632: mem
 ;
 
 /* explicit register or memory */
-rm8x: reg8	{ (void)ConvertRegToEA(&$$, $1); }
+rm8x: reg8	{ $$ = effaddr_new_reg($1); }
     | mem8x
 ;
-rm16x: reg16	{ (void)ConvertRegToEA(&$$, $1); }
+rm16x: reg16	{ $$ = effaddr_new_reg($1); }
     | mem16x
 ;
-rm32x: reg32	{ (void)ConvertRegToEA(&$$, $1); }
+rm32x: reg32	{ $$ = effaddr_new_reg($1); }
     | mem32x
 ;
 /* not needed:
-rm64x: MMXREG	{ (void)ConvertRegToEA(&$$, $1); }
+rm64x: MMXREG	{ $$ = effaddr_new_reg($1); }
     | mem64x
 ;
-rm128x: XMMREG	{ (void)ConvertRegToEA(&$$, $1); }
+rm128x: XMMREG	{ $$ = effaddr_new_reg($1); }
     | mem128x
 ;
 */
 
 /* implicit register or memory */
-rm8: reg8	{ (void)ConvertRegToEA(&$$, $1); }
+rm8: reg8	{ $$ = effaddr_new_reg($1); }
     | mem8
 ;
-rm16: reg16	{ (void)ConvertRegToEA(&$$, $1); }
+rm16: reg16	{ $$ = effaddr_new_reg($1); }
     | mem16
 ;
-rm32: reg32	{ (void)ConvertRegToEA(&$$, $1); }
+rm32: reg32	{ $$ = effaddr_new_reg($1); }
     | mem32
 ;
-rm64: MMXREG	{ (void)ConvertRegToEA(&$$, $1); }
+rm64: MMXREG	{ $$ = effaddr_new_reg($1); }
     | mem64
 ;
-rm128: XMMREG	{ (void)ConvertRegToEA(&$$, $1); }
+rm128: XMMREG	{ $$ = effaddr_new_reg($1); }
     | mem128
 ;
 
@@ -417,12 +417,12 @@ explabel: ID
 instr: instrbase
     | OPERSIZE instr	{ $$ = $2; SetInsnOperSizeOverride($$, $1); }
     | ADDRSIZE instr	{ $$ = $2; SetInsnAddrSizeOverride($$, $1); }
-    | REG_CS instr	{ $$ = $2; SetEASegment(&$$->data.insn.ea, 0x2E); }
-    | REG_SS instr	{ $$ = $2; SetEASegment(&$$->data.insn.ea, 0x36); }
-    | REG_DS instr	{ $$ = $2; SetEASegment(&$$->data.insn.ea, 0x3E); }
-    | REG_ES instr	{ $$ = $2; SetEASegment(&$$->data.insn.ea, 0x26); }
-    | REG_FS instr	{ $$ = $2; SetEASegment(&$$->data.insn.ea, 0x64); }
-    | REG_GS instr	{ $$ = $2; SetEASegment(&$$->data.insn.ea, 0x65); }
+    | REG_CS instr	{ $$ = $2; SetEASegment($$->data.insn.ea, 0x2E); }
+    | REG_SS instr	{ $$ = $2; SetEASegment($$->data.insn.ea, 0x36); }
+    | REG_DS instr	{ $$ = $2; SetEASegment($$->data.insn.ea, 0x3E); }
+    | REG_ES instr	{ $$ = $2; SetEASegment($$->data.insn.ea, 0x26); }
+    | REG_FS instr	{ $$ = $2; SetEASegment($$->data.insn.ea, 0x64); }
+    | REG_GS instr	{ $$ = $2; SetEASegment($$->data.insn.ea, 0x65); }
     | LOCK instr	{ $$ = $2; SetInsnLockRepPrefix($$, 0xF0); }
     | REPNZ instr	{ $$ = $2; SetInsnLockRepPrefix($$, 0xF2); }
     | REP instr		{ $$ = $2; SetInsnLockRepPrefix($$, 0xF3); }
