@@ -2,6 +2,11 @@
 
 TESTS += bitvect_test
 TESTS += floatnum_test
+TESTS += libyasm/tests/libyasm_test.sh
+
+EXTRA_DIST += libyasm/tests/libyasm_test.sh
+EXTRA_DIST += libyasm/tests/duplabel-err.asm
+EXTRA_DIST += libyasm/tests/duplabel-err.errwarn
 
 noinst_PROGRAMS += bitvect_test
 noinst_PROGRAMS += floatnum_test

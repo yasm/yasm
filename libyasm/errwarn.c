@@ -74,6 +74,8 @@ typedef struct errwarn_data {
     enum { WE_UNKNOWN, WE_ERROR, WE_WARNING, WE_PARSERERROR } type;
 
     unsigned long line;
+    unsigned long displine;
+
     /* FIXME: This should not be a fixed size.  But we don't have vasprintf()
      * right now. */
     char msg[MSG_MAXSIZE];
@@ -179,7 +181,8 @@ def_fatal(const char *fmt, ...)
  * type is WE_PARSERERROR.
  */
 static errwarn_data *
-errwarn_data_new(unsigned long line, int replace_parser_error)
+errwarn_data_new(unsigned long line, unsigned long displine,
+		 int replace_parser_error)
 {
     errwarn_data *first, *next, *ins_we, *we;
     enum { INS_NONE, INS_HEAD, INS_AFTER } action = INS_NONE;
@@ -215,6 +218,7 @@ errwarn_data_new(unsigned long line, int replace_parser_error)
 
 	we->type = WE_UNKNOWN;
 	we->line = line;
+	we->displine = displine;
 
 	if (action == INS_HEAD)
 	    SLIST_INSERT_HEAD(&errwarns, we, link);
@@ -231,13 +235,14 @@ errwarn_data_new(unsigned long line, int replace_parser_error)
     return we;
 }
 
-/* Register an error at line line.  Does not print the error, only stores it
- * for output_all() to print.
+/* Register an error at line line, displaying line displine.  Does not print
+ * the error, only stores it for output_all() to print.
  */
 void
-yasm__error_va(unsigned long line, const char *fmt, va_list va)
+yasm__error_va_at(unsigned long line, unsigned long displine, const char *fmt,
+		  va_list va)
 {
-    errwarn_data *we = errwarn_data_new(line, 1);
+    errwarn_data *we = errwarn_data_new(line, displine, 1);
 
     we->type = WE_ERROR;
 
@@ -250,19 +255,19 @@ yasm__error_va(unsigned long line, const char *fmt, va_list va)
     error_count++;
 }
 
-/* Register an warning at line line.  Does not print the warning, only stores
- * it for output_all() to print.
+/* Register an warning at line line, displaying line displine.  Does not print
+ * the warning, only stores it for output_all() to print.
  */
 void
-yasm__warning_va(yasm_warn_class num, unsigned long line, const char *fmt,
-		 va_list va)
+yasm__warning_va_at(yasm_warn_class num, unsigned long line,
+		    unsigned long displine, const char *fmt, va_list va)
 {
     errwarn_data *we;
 
     if (!(warn_class_enabled & (1UL<<num)))
 	return;	    /* warning is part of disabled class */
 
-    we = errwarn_data_new(line, 0);
+    we = errwarn_data_new(line, displine, 0);
 
     we->type = WE_WARNING;
 
@@ -283,7 +288,20 @@ yasm__error(unsigned long line, const char *fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
-    yasm__error_va(line, fmt, va);
+    yasm__error_va_at(line, line, fmt, va);
+    va_end(va);
+}
+
+/* Register an error at line line, displaying line displine.  Does not print
+ * the error, only stores it for output_all() to print.
+ */
+void
+yasm__error_at(unsigned long line, unsigned long displine, const char *fmt,
+	       ...)
+{
+    va_list va;
+    va_start(va, fmt);
+    yasm__error_va_at(line, displine, fmt, va);
     va_end(va);
 }
 
@@ -295,7 +313,20 @@ yasm__warning(yasm_warn_class num, unsigned long line, const char *fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
-    yasm__warning_va(num, line, fmt, va);
+    yasm__warning_va_at(num, line, line, fmt, va);
+    va_end(va);
+}
+
+/* Register an warning at line line, displaying line displine.  Does not print
+ * the warning, only stores it for output_all() to print.
+ */
+void
+yasm__warning_at(yasm_warn_class num, unsigned long line,
+		 unsigned long displine, const char *fmt, ...)
+{
+    va_list va;
+    va_start(va, fmt);
+    yasm__warning_va_at(num, line, line, fmt, va);
     va_end(va);
 }
 
@@ -354,7 +385,7 @@ yasm_errwarn_output_all(yasm_linemap *lm, int warning_as_error,
     /* Output error/warnings. */
     SLIST_FOREACH(we, &errwarns, link) {
 	/* Output error/warning */
-	yasm_linemap_lookup(lm, we->line, &filename, &line);
+	yasm_linemap_lookup(lm, we->displine, &filename, &line);
 	if (we->type == WE_ERROR)
 	    print_error(filename, line, we->msg);
 	else

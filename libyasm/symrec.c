@@ -191,9 +191,9 @@ symtab_define(yasm_symtab *symtab, const char *name, sym_type type,
     /* Has it been defined before (either by DEFINED or COMMON/EXTERN)? */
     if ((rec->status & SYM_DEFINED) ||
 	(rec->visibility & (YASM_SYM_COMMON | YASM_SYM_EXTERN))) {
-	yasm__error(line,
-	    N_("duplicate definition of `%s'; first defined on line %lu"),
-	    name, rec->line);
+	yasm__error(line, N_("redefinition of `%s'"), name);
+	yasm__error_at(line, rec->line, N_("`%s' previously defined here"),
+		       name);
     } else {
 	rec->line = line;	/* set line number of definition */
 	rec->type = type;

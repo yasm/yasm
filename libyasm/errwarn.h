@@ -75,13 +75,38 @@ extern /*@exits@*/ void (*yasm_internal_error_)
  */
 extern /*@exits@*/ void (*yasm_fatal) (const char *message, ...);
 
+/** Log an error at a given line, displaying a different line.  va_list version
+ * of yasm__error_at().
+ * \internal
+ * \param line      virtual line
+ * \param displine  displayed virtual line
+ * \param message   printf-like-format message
+ * \param va	    argument list for message
+ */
+void yasm__error_va_at(unsigned long line, unsigned long displine,
+		       const char *message, va_list va);
+
 /** Log an error.  va_list version of yasm__error().
  * \internal
  * \param line      virtual line
  * \param message   printf-like-format message
  * \param va	    argument list for message
  */
-void yasm__error_va(unsigned long line, const char *message, va_list va);
+#define yasm__error_va(line, message, va) \
+    yasm__error_va_at(line, line, message, va)
+
+/** Log a warning at a given line, displaying a different line.  va_list
+ * version of yasm__warning_at().
+ * \internal
+ * \param wclass    warning class
+ * \param line      virtual line
+ * \param displine  displayed virtual line
+ * \param message   printf-like-format message
+ * \param va	    argument list for message
+ */
+void yasm__warning_va_at(yasm_warn_class wclass, unsigned long line,
+			 unsigned long displine, const char *message,
+			 va_list va);
 
 /** Log a warning.  va_list version of yasm__warning().
  * \internal
@@ -90,8 +115,8 @@ void yasm__error_va(unsigned long line, const char *message, va_list va);
  * \param message   printf-like-format message
  * \param va	    argument list for message
  */
-void yasm__warning_va(yasm_warn_class wclass, unsigned long line,
-		      const char *message, va_list va);
+#define yasm__warning_va(wclass, line, message, va) \
+    yasm__warning_va_at(wclass, line, line, message, va)
 
 /** Log an error.  Does not print it out immediately; yasm_errwarn_output_all()
  * outputs errors and warnings.
@@ -103,6 +128,17 @@ void yasm__warning_va(yasm_warn_class wclass, unsigned long line,
 void yasm__error(unsigned long line, const char *message, ...)
     /*@printflike@*/;
 
+/** Log an error at a given line, displaying a different line.  Does not print
+ * it out immediately; yasm_errwarn_output_all() outputs errors and warnings.
+ * \internal
+ * \param line      virtual line
+ * \param displine  displayed virtual line
+ * \param message   printf-like-format message
+ * \param ...	    argument list for message
+ */
+void yasm__error_at(unsigned long line, unsigned long displine,
+		    const char *message, ...) /*@printflike@*/;
+
 /** Log a warning.  Does not print it out immediately;
  * yasm_errwarn_output_all() outputs errors and warnings.
  * \internal
@@ -113,6 +149,19 @@ void yasm__error(unsigned long line, const char *message, ...)
  */
 void yasm__warning(yasm_warn_class wclass, unsigned long line,
 		   const char *message, ...) /*@printflike@*/;
+
+/** Log a warning at a given line, displaying a different line.  Does not print
+ * it out immediately; yasm_errwarn_output_all() outputs errors and warnings.
+ * \internal
+ * \param wclass    warning class
+ * \param line      virtual line
+ * \param displine  displayed virtual line
+ * \param message   printf-like-format message
+ * \param ...	    argument list for message
+ */
+void yasm__warning_at(yasm_warn_class wclass, unsigned long line,
+		      unsigned long displine, const char *message, ...)
+    /*@printflike@*/;
 
 /** Log a parser error.  Parser errors can be overwritten by non-parser errors
  * on the same line.
