@@ -5,7 +5,14 @@
 
 src/errwarn.c
 src/bytecode.c
+src/expr.c
+src/file.c
+src/floatnum.c
+src/intnum.c
+src/main.c
+src/options.c
 src/symrec.c
-src/parsers/nasm/bison.c
-src/parsers/nasm/token.c
-src/preprocs/raw/preproc.c
+nasm-bison.c
+nasm-token.c
+src/arch/x86/x86bc.c
+src/preprocs/raw/raw-preproc.c
