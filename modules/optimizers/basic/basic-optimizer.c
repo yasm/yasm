@@ -1,5 +1,5 @@
 /*
- * Debugging optimizer (used to debug optimizer module interface)
+ * Basic optimizer (equivalent to the NASM 2-pass 'no optimizer' design)
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -26,7 +26,7 @@ RCSID("$IdPath$");
 
 
 /* Define optimizer structure -- see optimizer.h for details */
-optimizer dbg_optimizer = {
-    "Trace of all info passed to optimizer module",
-    "dbg"
+optimizer basic_optimizer = {
+    "Only the most basic optimizations",
+    "basic"
 };

@@ -1,3 +1,3 @@
 # $IdPath$
 
-SUBDIRS = dbg
+SUBDIRS = basic

@@ -210,7 +210,7 @@ AC_OUTPUT(Makefile
 	src/preprocs/Makefile
 	src/preprocs/raw/Makefile
 	src/optimizers/Makefile
-	src/optimizers/dbg/Makefile
+	src/optimizers/basic/Makefile
 	src/objfmts/Makefile
 	src/objfmts/dbg/Makefile
 	src/tests/Makefile

@@ -38,6 +38,6 @@ struct optimizer {
 };
 
 /* Available optimizers */
-extern optimizer dbg_optimizer;
+extern optimizer basic_optimizer;
 
 #endif
