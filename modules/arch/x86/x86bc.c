@@ -24,21 +24,12 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util.h"
+#define YASM_LIB_INTERNAL
+#define YASM_BC_INTERNAL
+#include "libyasm.h"
 /*@unused@*/ RCSID("$IdPath$");
 
-#include "file.h"
-
-#include "errwarn.h"
-#include "intnum.h"
-#include "expr.h"
-
-#include "bytecode.h"
-#include "arch.h"
-
 #include "x86arch.h"
-
-#include "bc-int.h"
 
 
 typedef struct x86_effaddr {

@@ -36,12 +36,10 @@ typedef struct yasm_objfmt yasm_objfmt;
 typedef struct yasm_dbgfmt yasm_dbgfmt;
 
 typedef struct yasm_bytecode yasm_bytecode;
-typedef /*@reldef@*/ STAILQ_HEAD(yasm_bytecodehead, yasm_bytecode)
-    yasm_bytecodehead;
+typedef struct yasm_bytecodehead yasm_bytecodehead;
 
 typedef struct yasm_section yasm_section;
-typedef /*@reldef@*/ STAILQ_HEAD(yasm_sectionhead, yasm_section)
-    yasm_sectionhead;
+typedef struct yasm_sectionhead yasm_sectionhead;
 
 typedef struct yasm_symrec yasm_symrec;
 
@@ -50,6 +48,9 @@ typedef struct yasm_intnum yasm_intnum;
 typedef struct yasm_floatnum yasm_floatnum;
 
 typedef struct yasm_linemgr yasm_linemgr;
+
+typedef struct yasm_valparam yasm_valparam;
+typedef struct yasm_valparamhead yasm_valparamhead;
 
 typedef enum {
     YASM_EXPR_ADD,

@@ -24,20 +24,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util.h"
+#define YASM_LIB_INTERNAL
+#define YASM_BC_INTERNAL
+#include "libyasm.h"
 /*@unused@*/ RCSID("$IdPath$");
-
-#include "errwarn.h"
-#include "intnum.h"
-#include "expr.h"
-#include "symrec.h"
-
-#include "bytecode.h"
-#include "section.h"
-
-#include "bc-int.h"
-
-#include "optimizer.h"
 
 
 #define SECTFLAG_NONE		0UL

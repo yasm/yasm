@@ -36,7 +36,7 @@
 
 #include "check.h"
 
-#include "bitvect.h"
+#include "libyasm/bitvect.h"
 
 START_TEST(test_boot)
 {

@@ -29,9 +29,12 @@
 
 typedef struct yasm_effaddr yasm_effaddr;
 typedef struct yasm_immval yasm_immval;
-typedef /*@reldef@*/ STAILQ_HEAD(yasm_datavalhead, yasm_dataval)
-    yasm_datavalhead;
 typedef struct yasm_dataval yasm_dataval;
+typedef struct yasm_datavalhead yasm_datavalhead;
+
+#ifdef YASM_INTERNAL
+/*@reldef@*/ STAILQ_HEAD(yasm_bytecodehead, yasm_bytecode);
+/*@reldef@*/ STAILQ_HEAD(yasm_datavalhead, yasm_dataval);
 
 /* Additional types may be architecture-defined starting at
  * YASM_BYTECODE_TYPE_BASE.
@@ -45,6 +48,7 @@ typedef enum {
     YASM_BC__OBJFMT_DATA
 } yasm_bytecode_type;
 #define YASM_BYTECODE_TYPE_BASE		YASM_BC__OBJFMT_DATA+1
+#endif
 
 void yasm_bc_initialize(yasm_arch *a);
 
@@ -142,11 +146,15 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
      /*@null@*/ yasm_output_bc_objfmt_data_func output_bc_objfmt_data)
     /*@sets *buf@*/;
 
-/* void yasm_bcs_initialize(yasm_bytecodehead *headp); */
+void yasm_bcs_initialize(yasm_bytecodehead *headp);
+#ifdef YASM_INTERNAL
 #define	yasm_bcs_initialize(headp)	STAILQ_INIT(headp)
+#endif
 
-/* yasm_bytecode *yasm_bcs_first(yasm_bytecodehead *headp); */
+yasm_bytecode *yasm_bcs_first(yasm_bytecodehead *headp);
+#ifdef YASM_INTERNAL
 #define yasm_bcs_first(headp)	STAILQ_FIRST(headp)
+#endif
 
 /*@null@*/ yasm_bytecode *yasm_bcs_last(yasm_bytecodehead *headp);
 void yasm_bcs_delete(yasm_bytecodehead *headp);
@@ -176,8 +184,10 @@ yasm_dataval *yasm_dv_new_expr(/*@keep@*/ yasm_expr *expn);
 yasm_dataval *yasm_dv_new_float(/*@keep@*/ yasm_floatnum *flt);
 yasm_dataval *yasm_dv_new_string(/*@keep@*/ char *str_val);
 
-/* void yasm_dvs_initialize(yasm_datavalhead *headp); */
+void yasm_dvs_initialize(yasm_datavalhead *headp);
+#ifdef YASM_INTERNAL
 #define	yasm_dvs_initialize(headp)	STAILQ_INIT(headp)
+#endif
 
 void yasm_dvs_delete(yasm_datavalhead *headp);
 

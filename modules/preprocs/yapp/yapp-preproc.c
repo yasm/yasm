@@ -19,13 +19,9 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#include "util.h"
+#define YASM_LIB_INTERNAL
+#include "libyasm.h"
 /*@unused@*/ RCSID("$IdPath$");
-
-#include "linemgr.h"
-#include "errwarn.h"
-#include "preproc.h"
-#include "hamt.h"
 
 #include "yapp-preproc.h"
 #include "yapp-token.h"

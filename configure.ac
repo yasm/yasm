@@ -11,7 +11,7 @@ AC_PREREQ(2.50)
 AC_INIT([yasm], `date "+%Y%m%d"`, [bug-yasm@tortall.net])
 #AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_AUX_DIR(config)
-AM_CONFIG_HEADER([config.h])
+AM_CONFIG_HEADER([libyasm/config.h])
 
 AM_INIT_AUTOMAKE(yasm, `date "+%Y%m%d"`)
 AM_MAINTAINER_MODE
@@ -115,11 +115,11 @@ AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([abort memcpy memmove strrchr toascii vsnprintf])
+AC_CHECK_FUNCS([strsep mergesort])
 # Look for the case-insensitive comparison functions
 AC_CHECK_FUNCS([strcasecmp strncasecmp stricmp strcmpi])
 # Check for stuff wanted by the test suite.  None of this is required.
 AC_CHECK_FUNCS([msgctl msgget msgrcv msgsnd strerror snprintf wait])
-AC_REPLACE_FUNCS([strsep mergesort])
 AC_LIB_LTDL
 
 #
@@ -241,12 +241,6 @@ AC_SUBST(MORE_CFLAGS)
 # Substitutions for libltdl
 AC_SUBST(INCLTDL)
 AC_SUBST(LIBLTDL)
-
-# Create LTLIBOBJS
-Xsed="sed -e s/^X//"
-LTLIBOBJS=`echo X"$LIB@&t@OBJS"|\
-	[$Xsed -e 's,\.[^.]* ,.lo ,g;s,\.[^.]*$,.lo,']`
-AC_SUBST(LTLIBOBJS)
 
 AC_CONFIG_FILES([Makefile
 	libltdl/Makefile

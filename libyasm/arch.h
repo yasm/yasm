@@ -36,10 +36,11 @@ typedef enum yasm_arch_check_id_retval {
     YASM_ARCH_CHECK_ID_TARGETMOD	/* an target modifier (for jumps) */
 } yasm_arch_check_id_retval;
 
-typedef /*@reldef@*/ STAILQ_HEAD(yasm_insn_operandhead, yasm_insn_operand)
-	yasm_insn_operandhead;
-
 typedef struct yasm_insn_operand yasm_insn_operand;
+typedef struct yasm_insn_operandhead yasm_insn_operandhead;
+#ifdef YASM_INTERNAL
+/*@reldef@*/ STAILQ_HEAD(yasm_insn_operandhead, yasm_insn_operand);
+#endif
 
 /* Different assemblers order instruction operands differently.  Also, some
  * differ on how exactly various registers are specified.  There's no great
@@ -180,6 +181,7 @@ struct yasm_arch {
     void (*ea_data_print) (FILE *f, int indent_level, const yasm_effaddr *ea);
 };
 
+#ifdef YASM_INTERNAL
 struct yasm_insn_operand {
     /*@reldef@*/ STAILQ_ENTRY(yasm_insn_operand) link;
 
@@ -201,6 +203,7 @@ struct yasm_insn_operand {
     /* Specified size of the operand, in bytes.  0 if not user-specified. */
     unsigned int size;
 };
+#endif
 
 void yasm_arch_common_initialize(yasm_arch *a);
 
@@ -215,9 +218,14 @@ yasm_insn_operand *yasm_operand_new_imm(/*@only@*/ yasm_expr *val);
 void yasm_operand_print(FILE *f, int indent_level,
 			const yasm_insn_operand *op);
 
+void yasm_ops_initialize(yasm_insn_operandhead *headp);
+yasm_insn_operand *yasm_ops_first(yasm_insn_operandhead *headp);
+yasm_insn_operand *yasm_ops_next(yasm_insn_operand *cur);
+#ifdef YASM_INTERNAL
 #define yasm_ops_initialize(headp)	STAILQ_INIT(headp)
 #define yasm_ops_first(headp)		STAILQ_FIRST(headp)
 #define yasm_ops_next(cur)		STAILQ_NEXT(cur, link)
+#endif
 
 /* Deletes operands linked list.  Deletes content of each operand if content i
  * nonzero.

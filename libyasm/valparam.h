@@ -27,40 +27,42 @@
 #ifndef YASM_VALPARAM_H
 #define YASM_VALPARAM_H
 
-typedef struct yasm_valparam {
+#ifdef YASM_INTERNAL
+struct yasm_valparam {
     /*@reldef@*/ STAILQ_ENTRY(yasm_valparam) link;
     /*@owned@*/ /*@null@*/ char *val;
     /*@owned@*/ /*@null@*/ yasm_expr *param;
-} yasm_valparam;
-typedef /*@reldef@*/ STAILQ_HEAD(yasm_valparamhead, yasm_valparam)
-    yasm_valparamhead;
+};
+/*@reldef@*/ STAILQ_HEAD(yasm_valparamhead, yasm_valparam);
+#endif
 
-void yasm_vp_new(/*@out@*/ yasm_valparam *r, /*@keep@*/ const char *v,
-		 /*@keep@*/ yasm_expr *p);
-#define yasm_vp_new(r, v, p)	    do {		\
-	r = yasm_xmalloc(sizeof(yasm_valparam));	\
-	r->val = v;					\
-	r->param = p;					\
-    } while(0)
+yasm_valparam *yasm_vp_new(/*@keep@*/ const char *v, /*@keep@*/ yasm_expr *p);
 
-/* void yasm_vps_initialize(//@out@// yasm_valparamhead *headp); */
+void yasm_vps_initialize(/*@out@*/ yasm_valparamhead *headp);
+#ifdef YASM_INTERNAL
 #define yasm_vps_initialize(headp)	STAILQ_INIT(headp)
+#endif
 void yasm_vps_delete(yasm_valparamhead *headp);
 void yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp);
+#ifdef YASM_INTERNAL
 #define yasm_vps_append(headp, vp)	do {	    \
 	if (vp)					    \
 	    STAILQ_INSERT_TAIL(headp, vp, link);    \
     } while(0)
+#endif
 
-/* //@null@// //@dependent@// yasm_valparam *yasm_vps_first
-    (yasm_valparamhead *headp); */
+/*@null@*/ /*@dependent@*/ yasm_valparam *yasm_vps_first
+    (yasm_valparamhead *headp);
+#ifdef YASM_INTERNAL
 #define yasm_vps_first(headp)	    STAILQ_FIRST(headp)
+#endif
 
-/* //@null@// //@dependent@// yasm_valparam *yasm_vps_next
-    (yasm_valparam *cur); */
+/*@null@*/ /*@dependent@*/ yasm_valparam *yasm_vps_next(yasm_valparam *cur);
+#ifdef YASM_INTERNAL
 #define yasm_vps_next(cur)	    STAILQ_NEXT(cur, link)
 
 #define yasm_vps_foreach(iter, headp)	STAILQ_FOREACH(iter, headp, link)
+#endif
 
 void yasm_vps_print(FILE *f, /*@null@*/ const yasm_valparamhead *headp);
 

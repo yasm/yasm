@@ -36,7 +36,7 @@
 
 #include "check.h"
 
-#include "floatnum.c"
+#include "libyasm/floatnum.c"
 
 /* constants describing parameters of internal floating point format.
  *  (these should match those in src/floatnum.c !)

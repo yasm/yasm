@@ -29,11 +29,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#define YASM_LIB_INTERNAL
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
 
-#ifdef USE_OUR_OWN_STRCASECMP
+#ifndef USE_OUR_OWN_STRCASECMP
+#undef yasm__strcasecmp
+#undef yasm__strncasecmp
+#endif
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)strcasecmp.c	8.1 (Berkeley) 6/4/93";
@@ -44,6 +48,13 @@ static char sccsid[] = "@(#)strcasecmp.c	8.1 (Berkeley) 6/4/93";
 int
 yasm__strcasecmp(const char *s1, const char *s2)
 {
+#ifdef HAVE_STRCASECMP
+    return strcasecmp(s1, s2);
+#elif HAVE_STRICMP
+    return stricmp(s1, s2);
+#elif HAVE_STRCMPI
+    return strcmpi(s1, s2);
+#else
 	const unsigned char
 			*us1 = (const unsigned char *)s1,
 			*us2 = (const unsigned char *)s2;
@@ -52,11 +63,19 @@ yasm__strcasecmp(const char *s1, const char *s2)
 		if (*us1++ == '\0')
 			return (0);
 	return (tolower(*us1) - tolower(*--us2));
+#endif
 }
 
 int
 yasm__strncasecmp(const char *s1, const char *s2, size_t n)
 {
+#ifdef HAVE_STRCASECMP
+    return strncasecmp(s1, s2, n);
+#elif HAVE_STRICMP
+    return strnicmp(s1, s2, n);
+#elif HAVE_STRCMPI
+    return strncmpi(s1, s2, n);
+#else
 	const unsigned char
 			*us1 = (const unsigned char *)s1,
 			*us2 = (const unsigned char *)s2;
@@ -70,5 +89,5 @@ yasm__strncasecmp(const char *s1, const char *s2, size_t n)
 		} while (--n != 0);
 	}
 	return (0);
-}
 #endif
+}

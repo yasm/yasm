@@ -24,25 +24,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util.h"
+#define YASM_LIB_INTERNAL
+#define YASM_BC_INTERNAL
+#define YASM_EXPR_INTERNAL
+#include "libyasm.h"
 /*@unused@*/ RCSID("$IdPath$");
-
-#include "file.h"
-
-#include "errwarn.h"
-#include "intnum.h"
-#include "floatnum.h"
-#include "expr.h"
-#include "symrec.h"
-
-#include "bytecode.h"
-#include "section.h"
-
-#include "expr-int.h"
-#include "bc-int.h"
-
-#include "arch.h"
-#include "objfmt.h"
 
 
 #define REGULAR_OUTBUF_SIZE	1024

@@ -5,7 +5,8 @@
  * redistributable under the licence given in the file "Licence"
  * distributed in the NASM archive.
  */
-#include "util.h"
+#define YASM_LIB_INTERNAL
+#include "libyasm/util.h"
 #include <ctype.h>
 
 #include "nasm.h"

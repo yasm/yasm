@@ -62,7 +62,11 @@ void yasm_expr_delete(/*@only@*/ /*@null@*/ yasm_expr *e);
 typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
     (/*@returned@*/ /*@only@*/ yasm_expr *e, /*@null@*/ void *d);
 
-typedef SLIST_HEAD(yasm__exprhead, yasm__exprentry) yasm__exprhead;
+typedef struct yasm__exprhead yasm__exprhead;
+#ifdef YASM_INTERNAL
+SLIST_HEAD(yasm__exprhead, yasm__exprentry);
+#endif
+
 /* Level an entire expn tree.  Call with eh = NULL */
 /*@only@*/ /*@null@*/ yasm_expr *yasm_expr__level_tree
     (/*@returned@*/ /*@only@*/ /*@null@*/ yasm_expr *e, int fold_const,

@@ -24,24 +24,13 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util.h"
+#define YASM_LIB_INTERNAL
+#define YASM_BC_INTERNAL
+#define YASM_EXPR_INTERNAL
+#include "libyasm.h"
 RCSID("$IdPath$");
 
-#include "bitvect.h"
-
-#include "errwarn.h"
-#include "intnum.h"
-#include "floatnum.h"
-#include "expr.h"
-#include "symrec.h"
-
-#include "bytecode.h"
-
-#include "arch.h"
 #include "modules/arch/x86/x86arch.h"
-
-#include "expr-int.h"
-#include "bc-int.h"
 
 
 /* Available CPU feature flags */

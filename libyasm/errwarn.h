@@ -54,6 +54,8 @@ extern /*@exits@*/ void (*yasm_internal_error_)
  */
 extern /*@exits@*/ void (*yasm_fatal) (const char *message);
 
+#ifdef YASM_INTERNAL
+
 /* va_list versions of the below two functions */
 void yasm__error_va(unsigned long lindex, const char *, va_list va);
 void yasm__warning_va(yasm_warn_class, unsigned long lindex, const char *,
@@ -67,6 +69,8 @@ void yasm__warning(yasm_warn_class, unsigned long lindex, const char *, ...)
  * the same line.
  */
 void yasm__parser_error(unsigned long lindex, const char *);
+
+#endif
 
 /* Enables/disables a class of warnings. */
 void yasm_warn_enable(yasm_warn_class);
@@ -85,8 +89,10 @@ void yasm_errwarn_output_all
      void (*print_warning) (const char *fn, unsigned long line,
 			    const char *msg));
 
+#ifdef YASM_INTERNAL
 /* Convert a possibly unprintable character into a printable string. */
 char *yasm__conv_unprint(char ch);
+#endif
 
 /* Map to gettext() if gettext is being used. */
 extern const char * (*yasm_gettext_hook) (const char *msgid);

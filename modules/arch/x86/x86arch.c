@@ -24,19 +24,9 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util.h"
+#define YASM_LIB_INTERNAL
+#include "libyasm.h"
 /*@unused@*/ RCSID("$IdPath$");
-
-#include "file.h"
-
-#include "errwarn.h"
-#include "intnum.h"
-#include "floatnum.h"
-#include "expr.h"
-
-#include "bytecode.h"
-
-#include "arch.h"
 
 #include "x86arch.h"
 

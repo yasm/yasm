@@ -28,6 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#define YASM_LIB_INTERNAL
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
@@ -36,6 +37,9 @@
 static char sccsid[] = "@(#)strsep.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 
+#ifdef HAVE_STRSEP
+#undef yasm__strsep
+#endif
 
 /*
  * Get next token from string *stringp, where tokens are possibly-empty
@@ -50,8 +54,11 @@ static char sccsid[] = "@(#)strsep.c	8.1 (Berkeley) 6/4/93";
  */
 /*@-nullstate@*/
 char *
-strsep(char **stringp, const char *delim)
+yasm__strsep(char **stringp, const char *delim)
 {
+#ifdef HAVE_STRSEP
+    return strsep(stringp, delim);
+#else
 	register char *s;
 	register const char *spanp;
 	register int c, sc;
@@ -74,5 +81,6 @@ strsep(char **stringp, const char *delim)
 		} while (sc != 0);
 	}
 	/* NOTREACHED */
+#endif
 }
 /*@=nullstate@*/

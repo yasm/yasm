@@ -28,6 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#define YASM_LIB_INTERNAL
 #include "util.h"
 RCSID("$IdPath$");
 
@@ -47,7 +48,9 @@ void memcpy(void *, const void *, size_t);
 # endif
 #endif
 
-#ifndef WITH_DMALLOC
+#ifdef WITH_DMALLOC
+#undef yasm__xstrdup
+#endif
 
 char *
 yasm__xstrdup(const char *str)
@@ -60,7 +63,6 @@ yasm__xstrdup(const char *str)
 	memcpy(copy, str, len);
 	return (copy);
 }
-#endif
 
 char *
 yasm__xstrndup(const char *str, size_t len)

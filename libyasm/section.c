@@ -24,6 +24,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#define YASM_LIB_INTERNAL
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
@@ -73,7 +74,7 @@ yasm_sections_initialize(yasm_sectionhead *headp, yasm_objfmt *of)
     STAILQ_INIT(headp);
 
     /* Add an initial "default" section */
-    yasm_vp_new(vp, yasm__xstrdup(of->default_section_name), NULL);
+    vp = yasm_vp_new(yasm__xstrdup(of->default_section_name), NULL);
     yasm_vps_initialize(&vps);
     yasm_vps_append(&vps, vp);
     s = of->sections_switch(headp, &vps, NULL, 0);

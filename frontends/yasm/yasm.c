@@ -24,32 +24,13 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util.h"
+#define YASM_LIB_INTERNAL
+#include "libyasm.h"
 /*@unused@*/ RCSID("$IdPath$");
 
 #include "ltdl.h"
 #include "yasm-module.h"
-
-#include "bitvect.h"
-#include "file.h"
-
 #include "yasm-options.h"
-#include "linemgr.h"
-#include "errwarn.h"
-#include "intnum.h"
-#include "floatnum.h"
-#include "expr.h"
-#include "symrec.h"
-
-#include "bytecode.h"
-#include "section.h"
-#include "objfmt.h"
-#include "dbgfmt.h"
-#include "preproc.h"
-#include "parser.h"
-#include "optimizer.h"
-
-#include "arch.h"
 
 
 /* Extra path to search for our modules. */

@@ -24,6 +24,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#define YASM_LIB_INTERNAL
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
@@ -173,4 +174,28 @@ yasm_ops_print(FILE *f, int indent_level, const yasm_insn_operandhead *headp)
 
     STAILQ_FOREACH (cur, headp, link)
 	yasm_operand_print(f, indent_level, cur);
+}
+
+/* Non-macro yasm_ops_initialize() for non-YASM_INTERNAL users. */
+#undef yasm_ops_initialize
+void
+yasm_ops_initialize(yasm_insn_operandhead *headp)
+{
+    STAILQ_INIT(headp);
+}
+
+/* Non-macro yasm_ops_first() for non-YASM_INTERNAL users. */
+#undef yasm_ops_first
+yasm_insn_operand *
+yasm_ops_first(yasm_insn_operandhead *headp)
+{
+    return STAILQ_FIRST(headp);
+}
+
+/* Non-macro yasm_ops_next() for non-YASM_INTERNAL users. */
+#undef yasm_ops_next
+yasm_insn_operand *
+yasm_ops_next(yasm_insn_operand *cur)
+{
+    return STAILQ_NEXT(cur, link);
 }

@@ -20,13 +20,11 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 %{
-#include "util.h"
+#define YASM_LIB_INTERNAL
+#include "libyasm.h"
 /*@unused@*/ RCSID("$IdPath$");
 
 #include <errno.h>
-
-#include "linemgr.h"
-#include "errwarn.h"
 
 #include "modules/preprocs/yapp/yapp-preproc.h"
 #include "modules/preprocs/yapp/yapp-token.h"

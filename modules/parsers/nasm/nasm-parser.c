@@ -24,15 +24,9 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util.h"
+#define YASM_LIB_INTERNAL
+#include "libyasm.h"
 /*@unused@*/ RCSID("$IdPath$");
-
-#include "errwarn.h"
-
-#include "section.h"
-#include "objfmt.h"
-#include "preproc.h"
-#include "parser.h"
 
 #include "nasm-parser.h"
 

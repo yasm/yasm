@@ -7,7 +7,8 @@
  *
  * initial version 27/iii/95 by Simon Tatham
  */
-#include "util.h"
+#define YASM_LIB_INTERNAL
+#include "libyasm/util.h"
 #include <ctype.h>
 
 #include "nasm.h"

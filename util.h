@@ -29,86 +29,106 @@
 #ifndef YASM_UTIL_H
 #define YASM_UTIL_H
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
+#include <stdio.h>
+
+#ifdef YASM_LIB_INTERNAL
+# define YASM_INTERNAL
+# define YASM_AUTOCONF_INTERNAL
+# define YASM_LIB_AC_INTERNAL
+# define YASM_GETTEXT_INTERNAL
 #endif
 
-#include <stdio.h>
+#ifdef YASM_INTERNAL
+# include <stdarg.h>
+
+#if defined(YASM_LIB_AC_INTERNAL) && defined(HAVE_CONFIG_H)
+# include "libyasm/config.h"
+#endif
 
 #if !defined(lint)
 # define NDEBUG
 #endif
 
-#ifdef STDC_HEADERS
-# include <stddef.h>
-# include <stdlib.h>
-# include <string.h>
-# include <assert.h>
-# include <stdarg.h>
-#endif
+#ifdef YASM_AUTOCONF_INTERNAL
 
-#if defined(lint)
-#define _(String)	String
-#else
-# ifdef HAVE_LOCALE_H
-#  include <locale.h>
+# ifdef STDC_HEADERS
+#  include <stddef.h>
+#  include <stdlib.h>
+#  include <string.h>
+#  include <assert.h>
 # endif
 
-# ifdef ENABLE_NLS
-#  include <libintl.h>
-#  define _(String)	gettext(String)
-# else
-#  define gettext(Msgid)    (Msgid)
-#  define dgettext(Domainname, Msgid)	(Msgid)
-#  define dcgettext(Domainname, Msgid, Category)    (Msgid)
-#  define textdomain(Domainname)		while (0) /* nothing */
-#  define bindtextdomain(Domainname, Dirname)	while (0) /* nothing */
-#  define _(String)	(String)
-# endif
+# ifdef YASM_GETTEXT_INTERNAL
+#  if defined(lint)
+#   define _(String)	String
+#  else
+#   ifdef HAVE_LOCALE_H
+#    include <locale.h>
+#   endif
+
+#   ifdef ENABLE_NLS
+#    include <libintl.h>
+#    define _(String)	gettext(String)
+#   else
+#    define gettext(Msgid)			    (Msgid)
+#    define dgettext(Domainname, Msgid)		    (Msgid)
+#    define dcgettext(Domainname, Msgid, Category)  (Msgid)
+#    define textdomain(Domainname)		    while (0) /* nothing */
+#    define bindtextdomain(Domainname, Dirname)	    while (0) /* nothing */
+#    define _(String)	(String)
+#   endif
+#  endif
+
+#  ifdef gettext_noop
+#   define N_(String)	gettext_noop(String)
+#  else
+#   define N_(String)	(String)
+#  endif
+
+# endif	/*YASM_GETTEXT_INTERNAL*/
+
+#endif	/*YASM_AUTOCONF_INTERNAL*/
+
+int yasm__mergesort(void *base, size_t nmemb, size_t size,
+		    int (*compar)(const void *, const void *));
+
+#if defined(YASM_AUTOCONF_INTERNAL) && defined(HAVE_MERGESORT)
+#define yasm__mergesort(a, b, c, d)	mergesort(a, b, c, d)
 #endif
 
-#ifdef gettext_noop
-# define N_(String)	gettext_noop(String)
-#else
-# define N_(String)	(String)
+/*@null@*/ char *yasm__strsep(char **stringp, const char *delim);
+
+#if defined(YASM_AUTOCONF_INTERNAL) && defined(HAVE_STRSEP)
+#define yasm__strsep(a, b)		strsep(a, b)
 #endif
 
-#if !defined(HAVE_MERGESORT) || defined(lint)
-int mergesort(void *base, size_t nmemb, size_t size,
-	      int (*compar)(const void *, const void *));
-#endif
+int yasm__strcasecmp(const char *s1, const char *s2);
+int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
 
-#if !defined(HAVE_STRSEP) || defined(lint)
-/*@null@*/ char *strsep(char **stringp, const char *delim);
-#endif
+#ifdef YASM_AUTOCONF_INTERNAL
 
 #ifdef HAVE_STRCASECMP
 # define yasm__strcasecmp(x, y)		strcasecmp(x, y)
-# define yasm__strncasecmp(x, y)	strncasecmp(x, y)
+# define yasm__strncasecmp(x, y, n)	strncasecmp(x, y, n)
+#elif HAVE_STRICMP
+# define yasm__strcasecmp(x, y)		stricmp(x, y)
+# define yasm__strncasecmp(x, y, n)	strnicmp(x, y, n)
+#elif HAVE_STRCMPI
+# define yasm__strcasecmp(x, y)		strcmpi(x, y)
+# define yasm__strncasecmp(x, y, n)	strncmpi(x, y, n)
 #else
-# ifdef HAVE_STRICMP
-#  define yasm__strcasecmp(x, y)	stricmp(x, y)
-#  define yasm__strncasecmp(x, y)	strnicmp(x, y)
-# elif HAVE_STRCMPI
-#  define yasm__strcasecmp(x, y)	strcmpi(x, y)
-#  define yasm__strncasecmp(x, y)	strncmpi(x, y)
-# else
-#  define USE_OUR_OWN_STRCASECMP
-# endif
-#endif
-
-#if defined(USE_OUR_OWN_STRCASECMP) || defined(lint)
-int yasm__strcasecmp(const char *s1, const char *s2);
-int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
+# define USE_OUR_OWN_STRCASECMP
 #endif
 
 #if !defined(HAVE_TOASCII) || defined(lint)
 # define toascii(c) ((c) & 0x7F)
 #endif
 
-#include "compat-queue.h"
+#endif	/*YASM_AUTOCONF_INTERNAL*/
 
-#ifdef HAVE_SYS_CDEFS_H
+#include "libyasm/compat-queue.h"
+
+#if defined(YASM_AUTOCONF_INTERNAL) && defined(HAVE_SYS_CDEFS_H)
 # include <sys/cdefs.h>
 #endif
 
@@ -126,18 +146,11 @@ int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
 # endif
 #endif
 
-#ifdef WITH_DMALLOC
-# include <dmalloc.h>
-
-#define yasm__xstrdup(str)		xstrdup(str)
-#define yasm_xmalloc(size)		xmalloc(size)
-#define yasm_xcalloc(count, size)	xcalloc(count, size)
-#define yasm_xrealloc(ptr, size)	xrealloc(ptr, size)
-#define yasm_xfree(ptr)			xfree(ptr)
-
-#else
 /* strdup() implementation with error checking (using xmalloc). */
 /*@only@*/ char *yasm__xstrdup(const char *str);
+/*@only@*/ char *yasm__xstrndup(const char *str, size_t len);
+
+#endif	/*YASM_INTERNAL*/
 
 /* Error-checking memory allocation routines.  Default implementations in
  * xmalloc.c.
@@ -150,9 +163,17 @@ extern /*@only@*/ void * (*yasm_xrealloc)
 extern void (*yasm_xfree) (/*@only@*/ /*@out@*/ /*@null@*/ void *p)
     /*@modifies p@*/;
 
-#endif
+#ifdef YASM_INTERNAL
 
-/*@only@*/ char *yasm__xstrndup(const char *str, size_t len);
+#if defined(YASM_AUTOCONF_INTERNAL) && defined(WITH_DMALLOC)
+# include <dmalloc.h>
+
+#define yasm__xstrdup(str)		xstrdup(str)
+#define yasm_xmalloc(size)		xmalloc(size)
+#define yasm_xcalloc(count, size)	xcalloc(count, size)
+#define yasm_xrealloc(ptr, size)	xrealloc(ptr, size)
+#define yasm_xfree(ptr)			xfree(ptr)
+#endif
 
 /* Bit-counting: used primarily by HAMT but also in a few other places. */
 #define SK5	0x55555555
@@ -172,8 +193,10 @@ extern void (*yasm_xfree) (/*@only@*/ /*@out@*/ /*@null@*/ void *p)
 #define NELEMS(array)	(sizeof(array) / sizeof(array[0]))
 #endif
 
-#include "coretype.h"
+#endif	/*YASM_INTERNAL*/
 
-#include "valparam.h"
+#include "libyasm/coretype.h"
+
+#include "libyasm/valparam.h"
 
 #endif

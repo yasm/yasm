@@ -1,3 +1,4 @@
+#define YASM_LIB_INTERNAL
 #include "util.h"
 RCSID("$IdPath$");
 

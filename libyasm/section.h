@@ -27,6 +27,10 @@
 #ifndef YASM_SECTION_H
 #define YASM_SECTION_H
 
+#ifdef YASM_INTERNAL
+/*@reldef@*/ STAILQ_HEAD(yasm_sectionhead, yasm_section);
+#endif
+
 /*@dependent@*/ yasm_section *yasm_sections_initialize(yasm_sectionhead *headp,
 						       yasm_objfmt *of);
 

@@ -2,6 +2,7 @@ autom4te.cache
 nasm-bison.c
 nasm-bison.h
 nasm-token.c
+nasm-macros.c
 yapp-token.c
 x86id.c
 re2c-parser.c
@@ -12,7 +13,6 @@ re2c
 configure
 configure.scan
 config.*
-stamp-h*
 aclocal.m4
 *.tar.gz
 *.la

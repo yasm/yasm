@@ -5,13 +5,14 @@ SUBDIRS = libltdl m4 po .
 AM_YFLAGS = -d
 AM_CFLAGS = @MORE_CFLAGS@
 AM_CPPFLAGS = \
-	-I$(top_srcdir)/libyasm \
 	-I$(top_srcdir)/check \
 	@INCLTDL@
 
 bin_PROGRAMS =
 TESTS =
 noinst_PROGRAMS =
+
+include_HEADERS = libyasm.h
 
 lib_LTLIBRARIES =
 
@@ -41,6 +42,9 @@ EXTRA_DIST += \
 	Mkfiles/Makefile.flat \
 	Mkfiles/Makefile.dj Mkfiles/dj/config.h \
 	Mkfiles/Makefile.vc Mkfiles/vc/config.h
+
+# Until this gets fixed in automake
+DISTCLEANFILES = libyasm/stamp-h libyasm/stamp-h[0-9]*
 
 ACLOCAL_AMFLAGS = -I m4
 

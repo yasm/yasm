@@ -13,7 +13,7 @@ bitvect_test_SOURCES = \
 	libyasm/tests/bitvect_test.c	\
 	$(CHECKFILES)
 bitvect_test_LDFLAGS =
-bitvect_test_LDADD = libyasm.la @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@
+bitvect_test_LDADD = libyasm.la @LIBLTDL@ $(INTLLIBS) @LIBADD_DL@
 
 #bytecode_test_CFLAGS =
 #bytecode_test_SOURCES = \
@@ -25,14 +25,14 @@ bitvect_test_LDADD = libyasm.la @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@
 #	$(YASMARCHFILES)		\
 #	$(CHECKFILES)
 #bytecode_test_LDFLAGS =
-#bytecode_test_LDADD = libyasm.la @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@
+#bytecode_test_LDADD = libyasm.la @LIBLTDL@ $(INTLLIBS) @LIBADD_DL@
 
 floatnum_test_CFLAGS =
 floatnum_test_SOURCES = \
 	libyasm/tests/floatnum_test.c	\
 	$(CHECKFILES)
 floatnum_test_LDFLAGS =
-floatnum_test_LDADD = libyasm.la @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@
+floatnum_test_LDADD = libyasm.la @LIBLTDL@ $(INTLLIBS) @LIBADD_DL@
 
 #memexpr_test_CFLAGS =
 #memexpr_test_SOURCES = \
@@ -44,4 +44,4 @@ floatnum_test_LDADD = libyasm.la @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@
 #	$(YASMARCHFILES)		\
 #	$(CHECKFILES)
 #memexpr_test_LDFLAGS =
-#memexpr_test_LDADD = libyasm.la @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@
+#memexpr_test_LDADD = libyasm.la @LIBLTDL@ $(INTLLIBS) @LIBADD_DL@

@@ -24,13 +24,19 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#define YASM_LIB_INTERNAL
 #include "util.h"
 RCSID("$IdPath$");
 
 #include "errwarn.h"
 
 
-#ifndef WITH_DMALLOC
+#ifdef WITH_DMALLOC
+#undef yasm_xmalloc
+#undef yasm_xcalloc
+#undef yasm_xrealloc
+#undef yasm_xfree
+#endif
 
 static /*@only@*/ /*@out@*/ void *def_xmalloc(size_t size);
 static /*@only@*/ void *def_xcalloc(size_t nelem, size_t elsize);
@@ -103,5 +109,3 @@ def_xfree(void *p)
 	return;
     free(p);
 }
-
-#endif

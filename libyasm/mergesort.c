@@ -31,6 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#define YASM_LIB_INTERNAL
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
@@ -38,6 +39,11 @@
 static char sccsid[] = "@(#)merge.c	8.2 (Berkeley) 2/14/94";
 #endif /* LIBC_SCCS and not lint */
 
+#ifdef HAVE_MERGESORT
+#undef yasm__mergesort
+#endif
+
+#ifndef HAVE_MERGESORT
 /*
  * Hybrid exponential search/linear search merge sort with hybrid
  * natural/pairwise first pass.  Requires about .3% more comparisons
@@ -91,14 +97,18 @@ static void insertionsort(unsigned char *, size_t, size_t,
 #define EVAL(p) (unsigned char **)						\
 	((unsigned char *)0 +							\
 	    (((unsigned char *)p + PSIZE - 1 - (unsigned char *) 0) & ~(PSIZE - 1)))
+#endif	/*HAVE_MERGESORT*/
 
 /*
  * Arguments are as for qsort.
  */
 int
-mergesort(void *base, size_t nmemb, size_t size,
-	  int (*cmp)(const void *, const void *))
+yasm__mergesort(void *base, size_t nmemb, size_t size,
+		int (*cmp)(const void *, const void *))
 {
+#ifdef HAVE_MERGESORT
+    return mergesort(base, nmemb, size, cmp);
+#else
 	size_t i;
 	int sense;
 	int big, iflag;
@@ -232,7 +242,10 @@ COPY:	    			b = t;
 	}
 	xfree(list2);
 	return (0);
+#endif	/*HAVE_MERGESORT*/
 }
+
+#ifndef HAVE_MERGESORT
 
 #define	swap(a, b) {					\
 		s = b;					\
@@ -348,3 +361,4 @@ insertionsort(unsigned char *a, size_t n, size_t size,
 			swap(u, t);
 		}
 }
+#endif	/*HAVE_MERGESORT*/

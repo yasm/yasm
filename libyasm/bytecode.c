@@ -24,6 +24,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#define YASM_LIB_INTERNAL
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
@@ -982,4 +983,28 @@ yasm_dvs_print(FILE *f, int indent_level, const yasm_datavalhead *head)
 		break;
 	}
     }
+}
+
+/* Non-macro yasm_bcs_initialize() for non-YASM_INTERNAL users. */
+#undef yasm_bcs_initialize
+void
+yasm_bcs_initialize(yasm_bytecodehead *headp)
+{
+    STAILQ_INIT(headp);
+}
+
+/* Non-macro yasm_bcs_first() for non-YASM_INTERNAL users. */
+#undef yasm_bcs_first
+yasm_bytecode *
+yasm_bcs_first(yasm_bytecodehead *headp)
+{
+    return STAILQ_FIRST(headp);
+}
+
+/* Non-macro yasm_dvs_initialize() for non-YASM_INTERNAL users. */
+#undef yasm_dvs_initialize
+void
+yasm_dvs_initialize(yasm_datavalhead *headp)
+{
+    STAILQ_INIT(headp);
 }

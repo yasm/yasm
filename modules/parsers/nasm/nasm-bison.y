@@ -25,28 +25,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 %{
-#include "util.h"
+#define YASM_LIB_INTERNAL
+#define YASM_EXPR_INTERNAL
+#include "libyasm.h"
 RCSID("$IdPath$");
 
 #ifdef STDC_HEADERS
 # include <math.h>
 #endif
-
-#include "bitvect.h"
-
-#include "linemgr.h"
-#include "errwarn.h"
-#include "intnum.h"
-#include "floatnum.h"
-#include "expr.h"
-#include "expr-int.h"
-#include "symrec.h"
-
-#include "bytecode.h"
-#include "section.h"
-#include "objfmt.h"
-
-#include "arch.h"
 
 #include "modules/parsers/nasm/nasm-parser.h"
 #include "modules/parsers/nasm/nasm-defs.h"
@@ -304,18 +290,18 @@ directive_valparam: direxpr	{
 	 */
 	const /*@null@*/ yasm_symrec *vp_symrec;
 	if ((vp_symrec = yasm_expr_get_symrec(&$1, 0))) {
-	    yasm_vp_new($$, yasm__xstrdup(yasm_symrec_get_name(vp_symrec)),
-			NULL);
+	    $$ = yasm_vp_new(yasm__xstrdup(yasm_symrec_get_name(vp_symrec)),
+			     NULL);
 	    yasm_expr_delete($1);
 	} else {
 	    yasm_expr__traverse_leaves_in($1, NULL, fix_directive_symrec);
-	    yasm_vp_new($$, NULL, $1);
+	    $$ = yasm_vp_new(NULL, $1);
 	}
     }
-    | STRING			{ yasm_vp_new($$, $1, NULL); }
+    | STRING			{ $$ = yasm_vp_new($1, NULL); }
     | ID '=' direxpr		{
 	yasm_expr__traverse_leaves_in($3, NULL, fix_directive_symrec);
-	yasm_vp_new($$, $1, $3);
+	$$ = yasm_vp_new($1, $3);
     }
 ;
 
