@@ -527,15 +527,15 @@ static const x86_insn_info lea_insn[] = {
 /* Load segment registers from memory */
 static const x86_insn_info ldes_insn[] = {
     { CPU_Any, MOD_Op0Add, 16, 1, {0, 0, 0}, 0, 2,
-      {OPT_Reg|OPS_16|OPA_Spare, OPT_Mem|OPS_Any|OPS_Relaxed|OPA_EA, 0} },
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_Mem|OPS_Any|OPA_EA, 0} },
     { CPU_386, MOD_Op0Add, 32, 1, {0, 0, 0}, 0, 2,
-      {OPT_Reg|OPS_32|OPA_Spare, OPT_Mem|OPS_Any|OPS_Relaxed|OPA_EA, 0} }
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_Mem|OPS_Any|OPA_EA, 0} }
 };
 static const x86_insn_info lfgss_insn[] = {
     { CPU_386, MOD_Op1Add, 16, 2, {0x0F, 0x00, 0}, 0, 2,
-      {OPT_Reg|OPS_16|OPA_Spare, OPT_Mem|OPS_Any|OPS_Relaxed|OPA_EA, 0} },
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_Mem|OPS_Any|OPA_EA, 0} },
     { CPU_386, MOD_Op1Add, 32, 2, {0x0F, 0x00, 0}, 0, 2,
-      {OPT_Reg|OPS_32|OPA_Spare, OPT_Mem|OPS_Any|OPS_Relaxed|OPA_EA, 0} }
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_Mem|OPS_Any|OPA_EA, 0} }
 };
 
 /* Arithmetic - general */
