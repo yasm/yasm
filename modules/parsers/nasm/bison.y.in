@@ -217,12 +217,17 @@ label_id: ID	    {
 /* directives */
 directive: '[' DIRECTIVE_NAME DIRECTIVE_VAL ']'	{
 	nasm_parser_directive($2, $3);
+	xfree($2);
+	xfree($3);
     }
     | '[' DIRECTIVE_NAME DIRECTIVE_VAL error	{
 	Error(_("missing `%c'"), ']');
+	xfree($2);
+	xfree($3);
     }
     | '[' DIRECTIVE_NAME error			{
 	Error(_("missing argument to `%s'"), $2);
+	xfree($2);
     }
 ;
 
