@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.6 2001/05/30 07:26:28 mu Exp $
+# $Id: gen_instr.pl,v 1.7 2001/05/30 21:39:53 mu Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -449,6 +449,13 @@ sub output_yacc ($@)
 		    print GRAMMAR action (@$EAX, $count++);
 		}
 		
+		# print error action
+		# ASSUMES: at least one previous action exists
+		print GRAMMAR "    | \Uins_$instrname\E error {\n";
+		print GRAMMAR "        Error (ERR_EXP_SYNTAX, (char *)NULL);\n";
+		print GRAMMAR "    }\n";
+
+		# terminate the rule
 		print GRAMMAR ";\n";
 	    }
 	}
