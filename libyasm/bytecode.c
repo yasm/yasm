@@ -290,27 +290,167 @@ bc_print(FILE *f, const bytecode *bc)
     fprintf(f, "%*sOffset=%lx\n", indent_level, "", bc->offset);
 }
 
+static int
+bc_calc_len_data(bytecode_data *bc_data, unsigned long *len)
+{
+    dataval *dv;
+    size_t slen;
+
+    /* Count up element sizes, rounding up string length. */
+    STAILQ_FOREACH(dv, &bc_data->datahead, link) {
+	switch (dv->type) {
+	    case DV_EMPTY:
+		break;
+	    case DV_EXPR:
+		*len += bc_data->size;
+		break;
+	    case DV_STRING:
+		slen = strlen(dv->data.str_val);
+		/* find count, rounding up to nearest multiple of size */
+		slen = (slen + bc_data->size - 1) / bc_data->size;
+		*len += slen*bc_data->size;
+		break;
+	}
+    }
+
+    return 1;
+}
+
+static int
+bc_calc_len_reserve(bytecode_reserve *reserve, unsigned long *len,
+		    intnum *(*resolve_label) (symrec *sym))
+{
+    int retval = 1;
+    /*@null@*/ expr *temp;
+    /*@dependent@*/ /*@null@*/ const intnum *num;
+
+    temp = expr_copy(reserve->numitems);
+    assert(temp != NULL);
+    expr_expand_labelequ(temp, resolve_label);
+    num = expr_get_intnum(&temp);
+    if (!num)
+	retval = -1;
+    else
+	*len += intnum_get_uint(num)*reserve->itemsize;
+    expr_delete(temp);
+    return retval;
+}
+
+static int
+bc_calc_len_incbin(bytecode_incbin *incbin, unsigned long *len,
+		   unsigned long line, intnum *(*resolve_label) (symrec *sym))
+{
+    FILE *f;
+    /*@null@*/ expr *temp;
+    /*@dependent@*/ /*@null@*/ const intnum *num;
+    unsigned long start = 0, maxlen = 0xFFFFFFFFUL, flen;
+
+    /* Try to convert start to integer value */
+    if (incbin->start) {
+	temp = expr_copy(incbin->start);
+	assert(temp != NULL);
+	expr_expand_labelequ(temp, resolve_label);
+	num = expr_get_intnum(&temp);
+	if (num)
+	    start = intnum_get_uint(num);
+	expr_delete(temp);
+	if (!num)
+	    return -1;
+    }
+
+    /* Try to convert maxlen to integer value */
+    if (incbin->maxlen) {
+	temp = expr_copy(incbin->maxlen);
+	assert(temp != NULL);
+	expr_expand_labelequ(temp, resolve_label);
+	num = expr_get_intnum(&temp);
+	if (num)
+	    maxlen = intnum_get_uint(num);
+	expr_delete(temp);
+	if (!num)
+	    return -1;
+    }
+
+    /* FIXME: Search include path for filename */
+
+    /* Open file and determine its length */
+    f = fopen(incbin->filename, "rb");
+    if (!f) {
+	ErrorAt(line, _("`incbin': unable to open file `%s'"),
+		incbin->filename);
+	return -1;
+    }
+    if (fseek(f, 0L, SEEK_END) < 0) {
+	ErrorAt(line, _("`incbin': unable to seek on file `%s'"),
+		incbin->filename);
+	return -1;
+    }
+    flen = (unsigned long)ftell(f);
+    fclose(f);
+
+    /* Compute length of incbin from start, maxlen, and len */
+    if (start > flen) {
+	WarningAt(line, _("`incbin': start past end of file `%s'"),
+		  incbin->filename);
+	start = flen;
+    }
+    flen -= start;
+    if (incbin->maxlen)
+	if (maxlen < flen)
+	    flen = maxlen;
+    *len += flen;
+    return 1;
+}
+
 int
 bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
 {
+    int retval = 1;
+    bytecode_data *bc_data;
+    bytecode_reserve *reserve;
+    bytecode_incbin *incbin;
+    /*@null@*/ expr *temp;
+    /*@dependent@*/ /*@null@*/ const intnum *num;
+
     bc->len = 0;	/* start at 0 */
 
     switch (bc->type) {
 	case BC_EMPTY:
 	    InternalError(_("got empty bytecode in bc_calc_len"));
 	case BC_DATA:
+	    bc_data = bc_get_data(bc);
+	    retval = bc_calc_len_data(bc_data, &bc->len);
 	    break;
 	case BC_RESERVE:
+	    reserve = bc_get_data(bc);
+	    retval = bc_calc_len_reserve(reserve, &bc->len, resolve_label);
 	    break;
 	case BC_INCBIN:
+	    incbin = bc_get_data(bc);
+	    retval = bc_calc_len_incbin(incbin, &bc->len, bc->line,
+					resolve_label);
 	    break;
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
-		return cur_arch->bc.bc_calc_len(bc, resolve_label);
+		retval = cur_arch->bc.bc_calc_len(bc, resolve_label);
 	    else
 		InternalError(_("Unknown bytecode type"));
     }
-    return 0;
+
+    /* Multiply len by number of multiples */
+    if (bc->multiple) {
+	temp = expr_copy(bc->multiple);
+	assert(temp != NULL);
+	expr_expand_labelequ(temp, resolve_label);
+	num = expr_get_intnum(&temp);
+	if (!num)
+	    retval = -1;
+	else
+	    bc->len *= intnum_get_uint(num);
+	expr_delete(temp);
+    }
+
+    return retval;
 }
 
 void
