@@ -34,9 +34,18 @@
 #include <config.h>
 #endif
 
+#ifdef HAVE_GNU_C_LIBRARY
+
 /* Work around glibc's non-defining of certain things when using gcc -ansi */
-#if defined(HAVE_GNU_C_LIBRARY) && defined(__STRICT_ANSI__)
-# undef __STRICT_ANSI__
+# ifdef __STRICT_ANSI__
+#  undef __STRICT_ANSI__
+# endif
+
+/* Work around glibc's string inlines (in bits/string2.h) if needed */
+# ifdef NO_STRING_INLINES
+#  define __NO_STRING_INLINES
+# endif
+
 #endif
 
 #if !defined(lint) && !defined(NDEBUG)

@@ -29,6 +29,7 @@
  * SUCH DAMAGE.
  */
 #define YASM_LIB_INTERNAL
+#define NO_STRING_INLINES
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
