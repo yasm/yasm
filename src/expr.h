@@ -22,57 +22,7 @@
 #ifndef YASM_EXPR_H
 #define YASM_EXPR_H
 
-#ifndef YASM_SYMREC
-#define YASM_SYMREC
-typedef struct symrec symrec;
-#endif
-
-#ifndef YASM_FLOATNUM
-#define YASM_FLOATNUM
-typedef struct floatnum floatnum;
-#endif
-
-#ifndef YASM_INTNUM
-#define YASM_INTNUM
-typedef struct intnum intnum;
-#endif
-
-#ifndef YASM_EXPROP
-#define YASM_EXPROP
-typedef enum {
-    EXPR_ADD,
-    EXPR_SUB,
-    EXPR_MUL,
-    EXPR_DIV,
-    EXPR_SIGNDIV,
-    EXPR_MOD,
-    EXPR_SIGNMOD,
-    EXPR_NEG,
-    EXPR_NOT,
-    EXPR_OR,
-    EXPR_AND,
-    EXPR_XOR,
-    EXPR_SHL,
-    EXPR_SHR,
-    EXPR_LOR,
-    EXPR_LAND,
-    EXPR_LNOT,
-    EXPR_LT,
-    EXPR_GT,
-    EXPR_EQ,
-    EXPR_LE,
-    EXPR_GE,
-    EXPR_NE,
-    EXPR_IDENT	    /* no operation, just a value */
-} ExprOp;
-#endif
-
 typedef struct ExprItem ExprItem;
-
-#ifndef YASM_EXPR
-#define YASM_EXPR
-typedef struct expr expr;
-#endif
 
 expr *expr_new(ExprOp, ExprItem *, ExprItem *);
 

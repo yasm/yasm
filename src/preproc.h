@@ -23,7 +23,7 @@
 #define YASM_PREPROC_H
 
 /* Interface to the preprocesor module(s) */
-typedef struct preproc_s {
+struct preproc {
     /* one-line description of the preprocessor */
     const char *name;
 
@@ -44,7 +44,7 @@ typedef struct preproc_s {
     /* Gets more preprocessed source code (up to max_size bytes) into buf.
      * Note that more than a single line may be returned in buf. */
     int (*input) (char *buf, int max_size);
-} preproc;
+};
 
 /* Available preprocessors */
 extern preproc raw_preproc;

@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * Little-endian file functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,17 +19,11 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
-
-#include <stdio.h>
+RCSID("$IdPath$");
 
 #include "file.h"
 
-RCSID("$IdPath$");
 
 size_t
 fwrite_short(unsigned short val, FILE *f)

@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * Raw preprocessor (preforms NO preprocessing)
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,23 +19,13 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
-
-#include <stdio.h>
-
-#include <libintl.h>
-#define _(String)	gettext(String)
+RCSID("$IdPath$");
 
 #include "errwarn.h"
 
-#include "objfmt.h"
 #include "preproc.h"
 
-RCSID("$IdPath$");
 
 static int is_interactive;
 static FILE *in;

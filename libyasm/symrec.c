@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * Symbol table handling
  *
  *  Copyright (C) 2001  Michael Urman, Peter Johnson
@@ -19,20 +19,10 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
+RCSID("$IdPath$");
 
-#include <stdio.h>
-
-#ifdef STDC_HEADERS
-# include <string.h>
-#endif
-
-#include <libintl.h>
-#define _(String)	gettext(String)
+#include "ternary.h"
 
 #include "globals.h"
 #include "errwarn.h"
@@ -43,11 +33,6 @@
 #include "bytecode.h"
 #include "section.h"
 
-#ifdef DMALLOC
-# include <dmalloc.h>
-#endif
-
-RCSID("$IdPath$");
 
 /* DEFINED is set with EXTERN and COMMON below */
 typedef enum {

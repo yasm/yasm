@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * Expression handling
  *
  *  Copyright (C) 2001  Michael Urman, Peter Johnson
@@ -19,26 +19,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
-
-#include <stdio.h>
-
-#ifdef STDC_HEADERS
-# include <stdlib.h>
-# include <string.h>
-#endif
-
-#include <libintl.h>
-#define _(String)	gettext(String)
-#ifdef gettext_noop
-#define N_(String)	gettext_noop(String)
-#else
-#define N_(String)	(String)
-#endif
+RCSID("$IdPath$");
 
 #include "bitvect.h"
 
@@ -49,11 +31,6 @@
 #include "expr.h"
 #include "symrec.h"
 
-#ifdef DMALLOC
-# include <dmalloc.h>
-#endif
-
-RCSID("$IdPath$");
 
 /* Types listed in canonical sorting order.  See expr_order_terms(). */
 typedef enum {

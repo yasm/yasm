@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,23 +19,15 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
+RCSID("$IdPath$");
 
-#include <stdio.h>
 #include <ctype.h>
 
 #ifdef STDC_HEADERS
-# include <stdlib.h>
 # include <stdarg.h>
-# include <string.h>
 #endif
 
-#include <libintl.h>
-#define _(String)	gettext(String)
 #ifdef gettext_noop
 #define N_(String)	gettext_noop(String)
 #else
@@ -45,11 +37,6 @@
 #include "globals.h"
 #include "errwarn.h"
 
-#ifdef DMALLOC
-# include <dmalloc.h>
-#endif
-
-RCSID("$IdPath$");
 
 /* Total error count for entire assembler run.
  * Assembler should exit with EXIT_FAILURE if this is >= 0 on finish. */

@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,35 +19,16 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
-
-#include <stdio.h>
-
-#ifdef STDC_HEADERS
-# include <string.h>
-#endif
-
-#include <libintl.h>
-#define _(String)	gettext(String)
+RCSID("$IdPath$");
 
 #include "globals.h"
 #include "errwarn.h"
 #include "intnum.h"
-#include "floatnum.h"
 #include "expr.h"
 
 #include "bytecode.h"
-#include "section.h"
 
-#ifdef DMALLOC
-# include <dmalloc.h>
-#endif
-
-RCSID("$IdPath$");
 
 struct effaddr {
     expr *disp;			/* address displacement */

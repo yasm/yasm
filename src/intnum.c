@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * Integer number functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,21 +19,10 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
+RCSID("$IdPath$");
 
-#include <stdio.h>
 #include <ctype.h>
-
-#ifdef STDC_HEADERS
-# include <string.h>
-#endif
-
-#include <libintl.h>
-#define _(String)	gettext(String)
 
 #include "bitvect.h"
 #include "file.h"
@@ -41,11 +30,6 @@
 #include "errwarn.h"
 #include "intnum.h"
 
-#ifdef DMALLOC
-# include <dmalloc.h>
-#endif
-
-RCSID("$IdPath$");
 
 #define BITVECT_ALLOC_SIZE	80
 

@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * mergesort() implementation for systems that don't have it.
  *
  * Copyright (c) 1992, 1993
@@ -31,18 +31,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
-
-#ifdef DMALLOC
-# include <dmalloc.h>
-#endif
-
 RCSID("$IdPath$");
+
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)merge.c	8.2 (Berkeley) 2/14/94";

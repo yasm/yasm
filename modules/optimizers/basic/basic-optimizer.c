@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * Debugging optimizer (used to debug optimizer module interface)
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,15 +19,11 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
+RCSID("$IdPath$");
 
 #include "optimizer.h"
 
-RCSID("$IdPath$");
 
 /* Define optimizer structure -- see optimizer.h for details */
 optimizer dbg_optimizer = {

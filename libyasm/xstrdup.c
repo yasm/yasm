@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * strdup() implementation with error checking (using xmalloc).
  *
  * Copyright (c) 1988, 1993
@@ -28,21 +28,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#include "util.h"
+RCSID("$IdPath$");
+
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)strdup.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
 
-#include "util.h"
-
-#ifdef STDC_HEADERS
-# include <stddef.h>
-# include <string.h>
-#else
+#ifndef STDC_HEADERS
 size_t strlen(const char *);
 # ifndef HAVE_MEMCPY
 void bcopy(const void *, void *, size_t);
@@ -53,8 +48,6 @@ void memcpy(void *, const void *, size_t);
 #endif
 
 #ifndef DMALLOC
-
-RCSID("$IdPath$");
 
 char *
 xstrdup(const char *str)

@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * Global variables
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,21 +19,13 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
+RCSID("$IdPath$");
 
-#include <stdio.h>
+#include "ternary.h"
 
 #include "globals.h"
 
-#ifdef DMALLOC
-# include <dmalloc.h>
-#endif
-
-RCSID("$IdPath$");
 
 const char *in_filename = (const char *)NULL;
 unsigned int line_number = 1;

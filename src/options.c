@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * Generic Options Support Header File
  *
  * Copyright (c) 2001  Stanislav Karchebny <berk@madfire.net>
@@ -27,25 +27,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
-
-#include <stdio.h>
-
-#ifdef STDC_HEADERS
-# include <string.h>
-#endif
-
-#include <libintl.h>
-#define _(String)       gettext(String)
-#ifdef gettext_noop
-#define N_(String)      gettext_noop(String)
-#else
-#define N_(String)      (String)
-#endif
+RCSID("$IdPath$");
 
 #include "options.h"
 #include "errwarn.h"

@@ -23,7 +23,7 @@
 #define YASM_OBJFMT_H
 
 /* Interface to the object format module(s) */
-typedef struct objfmt_s {
+struct objfmt {
     /* one-line description of the format */
     const char *name;
 
@@ -39,18 +39,18 @@ typedef struct objfmt_s {
     /* NULL-terminated list of debugging formats that are valid to use with
      * this object format.
      */
-/*    struct debugfmt_s **debugfmts;*/
+/*    debugfmt **debugfmts;*/
 
     /* Default debugging format (set even if there's only one available to
      * use)
      */
-/*    struct debugfmt_s *default_df;*/
+/*    debugfmt *default_df;*/
 
     /* Is the specified section name valid?
      * Return is a boolean value.
      */
     int (*is_valid_section) (const char *name);
-} objfmt;
+};
 
 /* Available object formats */
 extern objfmt dbg_objfmt;

@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * Section utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,25 +19,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
-
-#include <stdio.h>
-
-#ifdef STDC_HEADERS
-# include <string.h>
-#endif
-
-#include <libintl.h>
-#define	_(String)	gettext(String)
-#ifdef gettext_noop
-#define	N_(String)	gettext_noop(String)
-#else
-#define	N_(String)	(String)
-#endif
+RCSID("$IdPath$");
 
 #include "globals.h"
 #include "errwarn.h"
@@ -47,11 +30,6 @@
 #include "section.h"
 #include "objfmt.h"
 
-#ifdef DMALLOC
-# include <dmalloc.h>
-#endif
-
-RCSID("$IdPath$");
 
 struct section {
     STAILQ_ENTRY(section) link;

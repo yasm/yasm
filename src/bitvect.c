@@ -1,30 +1,21 @@
-/* $IdPath$ */
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
+RCSID("$IdPath$");
 
 /*****************************************************************************/
 /*  MODULE NAME:  BitVector.c                           MODULE TYPE:  (adt)  */
 /*****************************************************************************/
 /*  MODULE IMPORTS:                                                          */
 /*****************************************************************************/
+#include <ctype.h>                                  /*  MODULE TYPE:  (sys)  */
 #ifdef STDC_HEADERS
 #include <limits.h>                                 /*  MODULE TYPE:  (sys)  */
 #include <string.h>                                 /*  MODULE TYPE:  (sys)  */
-#include <ctype.h>                                  /*  MODULE TYPE:  (sys)  */
 #endif
 /*****************************************************************************/
 /*  MODULE INTERFACE:                                                        */
 /*****************************************************************************/
 #include "bitvect.h"
 
-#ifdef DMALLOC
-# include <dmalloc.h>
-#endif
-
-RCSID("$IdPath$");
 
 /* ToolBox.h */
 #define and         &&      /* logical (boolean) operators: lower case */

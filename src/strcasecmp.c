@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * strcasecmp() implementation for systems that don't have it or stricmp()
  * or strcmpi().
  *
@@ -29,14 +29,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
-
 RCSID("$IdPath$");
+
 
 #ifdef USE_OUR_OWN_STRCASECMP
 
@@ -44,10 +39,7 @@ RCSID("$IdPath$");
 static char sccsid[] = "@(#)strcasecmp.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 
-#ifdef STDC_HEADERS
-# include <string.h>
-# include <ctype.h>
-#endif
+#include <ctype.h>
 
 int
 strcasecmp(const char *s1, const char *s2)

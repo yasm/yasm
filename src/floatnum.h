@@ -24,41 +24,6 @@
 #ifndef YASM_FLOATNUM_H
 #define YASM_FLOATNUM_H
 
-#ifndef YASM_EXPROP
-#define YASM_EXPROP
-typedef enum {
-    EXPR_ADD,
-    EXPR_SUB,
-    EXPR_MUL,
-    EXPR_DIV,
-    EXPR_SIGNDIV,
-    EXPR_MOD,
-    EXPR_SIGNMOD,
-    EXPR_NEG,
-    EXPR_NOT,
-    EXPR_OR,
-    EXPR_AND,
-    EXPR_XOR,
-    EXPR_SHL,
-    EXPR_SHR,
-    EXPR_LOR,
-    EXPR_LAND,
-    EXPR_LNOT,
-    EXPR_LT,
-    EXPR_GT,
-    EXPR_EQ,
-    EXPR_LE,
-    EXPR_GE,
-    EXPR_NE,
-    EXPR_IDENT	/* if right is IDENT, then the entire expr is just a num */
-} ExprOp;
-#endif
-
-#ifndef YASM_FLOATNUM
-#define YASM_FLOATNUM
-typedef struct floatnum floatnum;
-#endif
-
 floatnum *floatnum_new(const char *str);
 floatnum *floatnum_copy(const floatnum *flt);
 void floatnum_delete(floatnum *flt);

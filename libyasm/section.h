@@ -22,18 +22,11 @@
 #ifndef YASM_SECTION_H
 #define YASM_SECTION_H
 
-struct objfmt_s;
+struct objfmt;
 
-typedef STAILQ_HEAD(sectionhead, section) sectionhead;
+section *sections_initialize(sectionhead *headp, struct objfmt *of);
 
-#ifndef YASM_SECTION
-#define YASM_SECTION
-typedef struct section section;
-#endif
-
-section *sections_initialize(sectionhead *headp, struct objfmt_s *of);
-
-section *sections_switch(sectionhead *headp, struct objfmt_s *of,
+section *sections_switch(sectionhead *headp, struct objfmt *of,
 			 const char *name);
 
 void sections_delete(sectionhead *headp);

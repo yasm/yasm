@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * Debugging object format (used to debug object format module interface)
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,17 +19,11 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
-
-#include <stdio.h>
+RCSID("$IdPath$");
 
 #include "objfmt.h"
 
-RCSID("$IdPath$");
 
 static int
 dbg_objfmt_is_valid_section(const char *name)

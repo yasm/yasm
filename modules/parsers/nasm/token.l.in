@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * NASM-compatible lex lexer
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -20,19 +20,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 %{
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
-
-#ifdef STDC_HEADERS
-# include <stdlib.h>
-# include <string.h>
-#endif
-
-#include <libintl.h>
-#define _(String)	gettext(String)
+RCSID("$IdPath$");
 
 #include "bitvect.h"
 
@@ -46,11 +35,6 @@
 
 #include "bison.h"
 
-#ifdef DMALLOC
-# include <dmalloc.h>
-#endif
-
-RCSID("$IdPath$");
 
 #define YY_NEVER_INTERACTIVE	1
 

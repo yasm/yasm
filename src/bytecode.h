@@ -22,31 +22,10 @@
 #ifndef YASM_BYTECODE_H
 #define YASM_BYTECODE_H
 
-#ifndef YASM_SECTION
-#define YASM_SECTION
-typedef struct section section;
-#endif
-
-#ifndef YASM_EXPR
-#define YASM_EXPR
-typedef struct expr expr;
-#endif
-
-#ifndef YASM_FLOATNUM
-#define YASM_FLOATNUM
-typedef struct floatnum floatnum;
-#endif
-
 typedef struct effaddr effaddr;
 typedef struct immval immval;
 typedef STAILQ_HEAD(datavalhead, dataval) datavalhead;
 typedef struct dataval dataval;
-typedef STAILQ_HEAD(bytecodehead, bytecode) bytecodehead;
-
-#ifndef YASM_BYTECODE
-#define YASM_BYTECODE
-typedef struct bytecode bytecode;
-#endif
 
 typedef enum {
     JR_NONE,
@@ -56,7 +35,7 @@ typedef enum {
     JR_NEAR_FORCED
 } jmprel_opcode_sel;
 
-typedef struct targetval_s {
+typedef struct targetval {
     expr *val;
 
     jmprel_opcode_sel op_sel;

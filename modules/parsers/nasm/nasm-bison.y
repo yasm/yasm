@@ -1,4 +1,4 @@
-/* $IdPath$
+/*
  * NASM-compatible bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -20,20 +20,12 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 %{
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "util.h"
+RCSID("$IdPath$");
 
 #ifdef STDC_HEADERS
-# include <stdlib.h>
-# include <string.h>
 # include <math.h>
 #endif
-
-#include <libintl.h>
-#define _(String)	gettext(String)
 
 #include "bitvect.h"
 
@@ -48,11 +40,6 @@
 #include "section.h"
 #include "objfmt.h"
 
-#ifdef DMALLOC
-# include <dmalloc.h>
-#endif
-
-RCSID("$IdPath$");
 
 #define YYDEBUG 1
 

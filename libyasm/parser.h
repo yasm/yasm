@@ -23,7 +23,7 @@
 #define YASM_PARSER_H
 
 /* Interface to the parser module(s) -- the "front end" of the assembler */
-typedef struct parser_s {
+struct parser {
     /* one-line description of the parser */
     const char *name;
 
@@ -52,8 +52,8 @@ typedef struct parser_s {
      * This function returns the starting section of a linked list of sections
      * (whatever was in the file).
      */
-    sectionhead *(*do_parse) (struct parser_s *p, objfmt *of, FILE *f);
-} parser;
+    sectionhead *(*do_parse) (parser *p, objfmt *of, FILE *f);
+};
 
 /* Generic functions for all parsers - implemented in src/parser.c */
 

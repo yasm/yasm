@@ -23,7 +23,7 @@
 #define YASM_OPTIMIZER_H
 
 /* Interface to the optimizer module(s) */
-typedef struct optimizer_s {
+struct optimizer {
     /* one-line description of the optimizer */
     const char *name;
 
@@ -35,7 +35,7 @@ typedef struct optimizer_s {
      * This function takes the unoptimized linked list of sections and returns
      * an optimized linked list of sections ready for output to an object file.
      */
-} optimizer;
+};
 
 /* Available optimizers */
 extern optimizer dbg_optimizer;

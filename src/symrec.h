@@ -22,21 +22,6 @@
 #ifndef YASM_SYMREC_H
 #define YASM_SYMREC_H
 
-#ifndef YASM_EXPR
-#define YASM_EXPR
-typedef struct expr expr;
-#endif
-
-#ifndef YASM_SECTION
-#define YASM_SECTION
-typedef struct section section;
-#endif
-
-#ifndef YASM_BYTECODE
-#define YASM_BYTECODE
-typedef struct bytecode bytecode;
-#endif
-
 /* EXTERN and COMMON are mutually exclusive */
 typedef enum {
     SYM_LOCAL = 0,		/* default, local only */
@@ -44,11 +29,6 @@ typedef enum {
     SYM_COMMON = 1 << 1,	/* if it's declared COMMON */
     SYM_EXTERN = 1 << 2		/* if it's declared EXTERN */
 } SymVisibility;
-
-#ifndef YASM_SYMREC
-#define YASM_SYMREC
-typedef struct symrec symrec;
-#endif
 
 symrec *symrec_use(const char *name);
 symrec *symrec_define_equ(const char *name, expr *e);
