@@ -33,5 +33,6 @@ endif
 
 EXTRA_DIST = \
 	instrs.dat		\
+	compat-queue.h		\
 	strdup.c		\
 	strtoul.c

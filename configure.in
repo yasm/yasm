@@ -50,6 +50,9 @@ case "$host" in
 *-*-sco3.2v5*)
 	AC_DEFINE(HAVE_BOGUS_SYS_QUEUE_H)
 	;;
+*-*-linux*)
+	AC_DEFINE(HAVE_BOGUS_SYS_QUEUE_H)
+	;;
 esac
 
 AC_OUTPUT(Makefile intl/Makefile po/Makefile.in src/Makefile src/parsers/Makefile src/parsers/nasm/Makefile src/preprocs/Makefile src/preprocs/raw/Makefile src/outfmts/Makefile src/outfmts/dbg/Makefile)
