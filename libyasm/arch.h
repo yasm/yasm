@@ -123,7 +123,7 @@ struct yasm_arch {
      *				value/parameters
      * \param headp		list of sections
      * \param lindex		line index (as from yasm_linemgr)
-     * \return Nonzero if directive was recognized; 0 if directive was
+     * \return Nonzero if directive was not recognized; 0 if directive was
      *	       recognized, even if it wasn't valid.
      */
     int (*parse_directive) (const char *name, yasm_valparamhead *valparams,
