@@ -41,6 +41,25 @@
 	    *((ptr)++) = ((val) >> 24) & 0xFF;	\
 	} while (0)
 
+/* Non-incrementing versions of the above. */
+
+#define SAVE_BYTE(ptr, val)			\
+	*(ptr) = (val) & 0xFF
+
+#define SAVE_SHORT(ptr, val)			\
+	do {					\
+	    *(ptr) = (val) & 0xFF;		\
+	    *((ptr)+1) = ((val) >> 8) & 0xFF;	\
+	} while (0)
+
+#define SAVE_LONG(ptr, val)			\
+	do {					\
+	    *(ptr) = (val) & 0xFF;		\
+	    *((ptr)+1) = ((val) >> 8) & 0xFF;	\
+	    *((ptr)+2) = ((val) >> 16) & 0xFF;	\
+	    *((ptr)+3) = ((val) >> 24) & 0xFF;	\
+	} while (0)
+
 /* Direct-to-file versions of the above.  Using the above macros and a single
  * fwrite() will probably be faster than calling these functions many times.
  * These functions return 1 if the write was successful, 0 if not (so their
@@ -49,5 +68,43 @@
 
 size_t fwrite_short(unsigned short val, FILE *f);
 size_t fwrite_long(unsigned long val, FILE *f);
+
+/* Read/Load versions.  val is the variable to receive the data. */
+
+#define READ_BYTE(val, ptr)			\
+	(val) = *((ptr)++) & 0xFF
+
+#define READ_SHORT(val, ptr)			\
+	do {					\
+	    (val) = *((ptr)++) & 0xFF;		\
+	    (val) |= (*((ptr)++) & 0xFF) << 8;	\
+	} while (0)
+
+#define READ_LONG(val, ptr)			\
+	do {					\
+	    (val) = *((ptr)++) & 0xFF;		\
+	    (val) |= (*((ptr)++) & 0xFF) << 8;	\
+	    (val) |= (*((ptr)++) & 0xFF) << 16;	\
+	    (val) |= (*((ptr)++) & 0xFF) << 24;	\
+	} while (0)
+
+/* Non-incrementing versions of the above. */
+
+#define LOAD_BYTE(val, ptr)			\
+	(val) = *(ptr) & 0xFF
+
+#define LOAD_SHORT(val, ptr)			\
+	do {					\
+	    (val) = *(ptr) & 0xFF;		\
+	    (val) |= (*((ptr)+1) & 0xFF) << 8;	\
+	} while (0)
+
+#define LOAD_LONG(val, ptr)			\
+	do {					\
+	    (val) = *(ptr) & 0xFF;		\
+	    (val) |= (*((ptr)+1) & 0xFF) << 8;	\
+	    (val) |= (*((ptr)+2) & 0xFF) << 16;	\
+	    (val) |= (*((ptr)+3) & 0xFF) << 24;	\
+	} while (0)
 
 #endif
