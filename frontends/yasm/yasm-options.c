@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #define YASM_LIB_INTERNAL
-#include "libyasm.h"
+#include <libyasm.h>
 /*@unused@*/ RCSID("$IdPath$");
 
 #include "yasm-options.h"

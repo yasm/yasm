@@ -42,7 +42,7 @@
 # include <stdarg.h>
 
 #if defined(YASM_LIB_AC_INTERNAL) && defined(HAVE_CONFIG_H)
-# include "libyasm/config.h"
+# include <libyasm/config.h>
 #endif
 
 #if !defined(lint) && !defined(NDEBUG)
@@ -126,7 +126,7 @@ int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
 
 #endif	/*YASM_AUTOCONF_INTERNAL*/
 
-#include "libyasm/compat-queue.h"
+#include <libyasm/compat-queue.h>
 
 #if defined(YASM_AUTOCONF_INTERNAL) && defined(HAVE_SYS_CDEFS_H)
 # include <sys/cdefs.h>
@@ -195,8 +195,8 @@ extern void (*yasm_xfree) (/*@only@*/ /*@out@*/ /*@null@*/ void *p)
 
 #endif	/*YASM_INTERNAL*/
 
-#include "libyasm/coretype.h"
+#include <libyasm/coretype.h>
 
-#include "libyasm/valparam.h"
+#include <libyasm/valparam.h>
 
 #endif

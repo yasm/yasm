@@ -26,7 +26,7 @@
  */
 #define YASM_LIB_INTERNAL
 #define YASM_BC_INTERNAL
-#include "libyasm.h"
+#include <libyasm.h>
 /*@unused@*/ RCSID("$IdPath$");
 
 #include "x86arch.h"

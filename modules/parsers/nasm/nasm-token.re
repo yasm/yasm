@@ -27,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #define YASM_LIB_INTERNAL
-#include "libyasm.h"
+#include <libyasm.h>
 RCSID("$IdPath$");
 
 #include "modules/parsers/nasm/nasm-parser.h"

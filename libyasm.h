@@ -45,35 +45,35 @@
  *                    (used when compiling the library itself)
  */
 
-#include "libyasm/util.h"
-#include "libyasm/linemgr.h"
+#include <libyasm/util.h>
+#include <libyasm/linemgr.h>
 
-#include "libyasm/errwarn.h"
-#include "libyasm/intnum.h"
-#include "libyasm/floatnum.h"
-#include "libyasm/expr.h"
-#include "libyasm/symrec.h"
+#include <libyasm/errwarn.h>
+#include <libyasm/intnum.h>
+#include <libyasm/floatnum.h>
+#include <libyasm/expr.h>
+#include <libyasm/symrec.h>
 
-#include "libyasm/bytecode.h"
-#include "libyasm/section.h"
+#include <libyasm/bytecode.h>
+#include <libyasm/section.h>
 
-#include "libyasm/arch.h"
-#include "libyasm/dbgfmt.h"
-#include "libyasm/objfmt.h"
-#include "libyasm/optimizer.h"
-#include "libyasm/parser.h"
-#include "libyasm/preproc.h"
+#include <libyasm/arch.h>
+#include <libyasm/dbgfmt.h>
+#include <libyasm/objfmt.h>
+#include <libyasm/optimizer.h>
+#include <libyasm/parser.h>
+#include <libyasm/preproc.h>
 
 #ifdef YASM_INTERNAL
 #ifdef YASM_BC_INTERNAL
-#include "libyasm/bc-int.h"
+#include <libyasm/bc-int.h>
 #endif
 #ifdef YASM_EXPR_INTERNAL
-#include "libyasm/expr-int.h"
+#include <libyasm/expr-int.h>
 #endif
-#include "libyasm/file.h"
-#include "libyasm/hamt.h"
-#include "libyasm/bitvect.h"
+#include <libyasm/file.h>
+#include <libyasm/hamt.h>
+#include <libyasm/bitvect.h>
 #endif
 
 #endif
