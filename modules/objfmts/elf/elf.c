@@ -604,10 +604,7 @@ elf_secthead_write_relocs_to_file(FILE *f, elf_secthead *shead)
 	    r_sym = STN_UNDEF;
 
 	vis = yasm_symrec_get_visibility(reloc->sym);
-	r_type = R_386_32;
-	if (vis & YASM_SYM_EXTERN) {	/* XXX: this can't be why. */
-	    r_type = R_386_PC32;
-	}
+	r_type = (unsigned char) reloc->rtype;
 
 	bufp = buf;
 	YASM_WRITE_32_L(bufp, reloc->addr);

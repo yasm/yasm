@@ -13,3 +13,6 @@ EXTRA_DIST += modules/objfmts/elf/tests/elftimes.errwarn
 EXTRA_DIST += modules/objfmts/elf/tests/elf-x86id.asm
 EXTRA_DIST += modules/objfmts/elf/tests/elf-x86id.hex
 EXTRA_DIST += modules/objfmts/elf/tests/elf-x86id.errwarn
+EXTRA_DIST += modules/objfmts/elf/tests/elfreloc.asm
+EXTRA_DIST += modules/objfmts/elf/tests/elfreloc.errwarn
+EXTRA_DIST += modules/objfmts/elf/tests/elfreloc.hex
