@@ -247,13 +247,27 @@ WarningNow(const char *fmt, ...)
 void
 ErrorAt(const char *filename, unsigned long line, const char *fmt, ...)
 {
-    /* TODO */
+    /* XXX: Should insert into list instead of printing immediately */
+    va_list ap;
+
+    fprintf(stderr, "%s:%lu: ", filename, line);
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fprintf(stderr, "\n");
 }
 
 void
 WarningAt(const char *filename, unsigned long line, const char *fmt, ...)
 {
-    /* TODO */
+    /* XXX: Should insert into list instead of printing immediately */
+    va_list ap;
+
+    fprintf(stderr, "%s:%lu: %s ", filename, line, _("warning:"));
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fprintf(stderr, "\n");
 }
 
 /* Output all previously stored errors and warnings to stderr. */
