@@ -78,18 +78,23 @@ int intnum_is_neg1(intnum *acc);
  * for overflow.  Use intnum_check_size() to check for overflow.
  */
 
-/* Return a 32-bit value in "standard" C format (eg, of unknown endian). */
-void intnum_get_int(unsigned long *ret_val, const intnum *intn);
+/* Return a 32-bit value in "standard" C format (eg, of unknown endian).
+ * intnum_get_uint() treats intn as an unsigned integer (and returns as such).
+ * intnum_get_int() treats intn as a signed integer (and returns as such).
+ */
+unsigned long intnum_get_uint(const intnum *intn);
+long intnum_get_int(const intnum *intn);
 
 /* ptr will point to the Intel-format little-endian byte string after
  * call (eg, [0] should be the first byte output to the file).
  */
-void intnum_get_sized(unsigned char *ptr, const intnum *intn, size_t size);
+void intnum_get_sized(const intnum *intn, unsigned char *ptr, size_t size);
 
 /* Check to see if intn will fit without overflow in size bytes.
+ * If is_signed is 1, intn is treated as a signed number.
  * Returns 1 if it will, 0 if not.
  */
-int intnum_check_size(const intnum *intn, size_t size);
+int intnum_check_size(const intnum *intn, size_t size, int is_signed);
 
 void intnum_print(const intnum *intn);
 

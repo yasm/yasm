@@ -457,21 +457,49 @@ intnum_is_neg1(intnum *intn)
 	    (intn->type == INTNUM_BV && BitVector_is_full(intn->val.bv)));
 }
 
-void
-intnum_get_int(unsigned long *ret_val, const intnum *intn)
+unsigned long
+intnum_get_uint(const intnum *intn)
 {
     switch (intn->type) {
 	case INTNUM_UL:
-	    *ret_val = intn->val.ul;
-	    break;
+	    return intn->val.ul;
 	case INTNUM_BV:
-	    *ret_val = BitVector_Chunk_Read(intn->val.bv, 32, 0);
-	    break;
+	    return BitVector_Chunk_Read(intn->val.bv, 32, 0);
+	default:
+	    InternalError(__LINE__, __FILE__, _("unknown intnum type"));
+	    return 0;
+    }
+}
+
+long
+intnum_get_int(const intnum *intn)
+{
+    switch (intn->type) {
+	case INTNUM_UL:
+	    return (long)intn->val.ul;
+	case INTNUM_BV:
+	    if (BitVector_msb(intn->val.bv)) {
+		/* it's negative: negate the bitvector to get a positive
+		 * number, then negate the positive number.
+		 */
+		intptr abs_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
+		long retval;
+
+		BitVector_Negate(abs_bv, intn->val.bv);
+		retval = -((long)BitVector_Chunk_Read(abs_bv, 32, 0));
+
+		BitVector_Destroy(abs_bv);
+		return retval;
+	    } else
+		return BitVector_Chunk_Read(intn->val.bv, 32, 0);
+	default:
+	    InternalError(__LINE__, __FILE__, _("unknown intnum type"));
+	    return 0;
     }
 }
 
 void
-intnum_get_sized(unsigned char *ptr, const intnum *intn, size_t size)
+intnum_get_sized(const intnum *intn, unsigned char *ptr, size_t size)
 {
     unsigned long ul;
     unsigned char *buf;
@@ -499,27 +527,68 @@ intnum_get_sized(unsigned char *ptr, const intnum *intn, size_t size)
 
 /* Return 1 if okay size, 0 if not */
 int
-intnum_check_size(const intnum *intn, size_t size)
+intnum_check_size(const intnum *intn, size_t size, int is_signed)
 {
-    switch (intn->type) {
-	case INTNUM_UL:
-	    if (size >= 4)
-		return 1;
-	    switch (size) {
-		case 3:
-		    return ((intn->val.ul & 0x00FFFFFF) == intn->val.ul);
-		case 2:
-		    return ((intn->val.ul & 0x0000FFFF) == intn->val.ul);
-		case 1:
-		    return ((intn->val.ul & 0x000000FF) == intn->val.ul);
-	    }
-	    break;
-	case INTNUM_BV:
-	    if (size >= 10)
-		return 1;
-	    else
-		return (Set_Max(intn->val.bv) < size*8);
-	    break;
+    if (is_signed) {
+	long absl;
+
+	switch (intn->type) {
+	    case INTNUM_UL:
+		if (size >= 4)
+		    return 1;
+		/* absl = absolute value of (long)intn->val.ul */
+		absl = (long)intn->val.ul;
+		if (absl < 0)
+		    absl = -absl;
+
+		switch (size) {
+		    case 3:
+			return ((absl & 0x00FFFFFF) == absl);
+		    case 2:
+			return ((absl & 0x0000FFFF) == absl);
+		    case 1:
+			return ((absl & 0x000000FF) == absl);
+		}
+		break;
+	    case INTNUM_BV:
+		if (size >= 10)
+		    return 1;
+		if (BitVector_msb(intn->val.bv)) {
+		    /* it's negative */
+		    intptr abs_bv = BitVector_Create(BITVECT_ALLOC_SIZE,
+						     FALSE);
+		    int retval;
+
+		    BitVector_Negate(abs_bv, intn->val.bv);
+		    retval = Set_Max(abs_bv) < size*8;
+
+		    BitVector_Destroy(abs_bv);
+		    return retval;
+		} else
+		    return (Set_Max(intn->val.bv) < size*8);
+		break;
+	}
+    } else {
+	switch (intn->type) {
+	    case INTNUM_UL:
+		if (size >= 4)
+		    return 1;
+		switch (size) {
+		    case 3:
+			return ((intn->val.ul & 0x00FFFFFF) == intn->val.ul);
+		    case 2:
+			return ((intn->val.ul & 0x0000FFFF) == intn->val.ul);
+		    case 1:
+			return ((intn->val.ul & 0x000000FF) == intn->val.ul);
+		}
+		break;
+	    case INTNUM_BV:
+		if (size >= 10)
+		    return 1;
+		else
+		    return (Set_Max(intn->val.bv) < size*8);
+		break;
+	}
     }
     return 0;
 }
