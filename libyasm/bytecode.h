@@ -95,6 +95,12 @@ void bcs_delete(bytecodehead *headp);
 
 void bcs_print(FILE *f, const bytecodehead *headp);
 
+/* Calls func for each bytecode in the linked list of bytecodes pointed to by
+ * headp.  The data pointer d is passed to each func call.
+ *
+ * Stops early (and returns func's return value) if func returns a nonzero
+ * value.  Otherwise returns 0.
+ */
 int bcs_traverse(bytecodehead *headp, /*@null@*/ void *d,
 		 int (*func) (bytecode *bc, /*@null@*/ void *d));
 

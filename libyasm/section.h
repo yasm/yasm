@@ -45,6 +45,12 @@ void sections_delete(sectionhead *headp);
 
 void sections_print(FILE *f, const sectionhead *headp);
 
+/* Calls func for each section in the linked list of sections pointed to by
+ * headp.  The data pointer d is passed to each func call.
+ *
+ * Stops early (and returns func's return value) if func returns a nonzero
+ * value.  Otherwise returns 0.
+ */
 int sections_traverse(sectionhead *headp, /*@null@*/ void *d,
 		      int (*func) (section *sect, /*@null@*/ void *d));
 

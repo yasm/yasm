@@ -193,10 +193,12 @@ sections_traverse(sectionhead *headp, /*@null@*/ void *d,
 {
     section *cur;
     
-    STAILQ_FOREACH(cur, headp, link)
-	if (func(cur, d) == 0)
-	    return 0;
-    return 1;
+    STAILQ_FOREACH(cur, headp, link) {
+	int retval = func(cur, d);
+	if (retval != 0)
+	    return retval;
+    }
+    return 0;
 }
 
 bytecodehead *
