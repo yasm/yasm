@@ -151,7 +151,7 @@ void
 append_token(int token);
 
 int
-append_through_return(void);
+append_to_return(void);
 
 int
 eat_through_return(void);
@@ -341,16 +341,16 @@ append_token(int token)
 }
 
 int
-append_through_return(void)
+append_to_return(void)
 {
-    int token;
-    do {
-	token = yapp_preproc_lex();
+    int token = yapp_preproc_lex();
+    while (token != '\n') {
 	ydebug(("YAPP: ATR: '%c' \"%s\"\n", token, yapp_preproc_lval.str_val));
 	if (token == 0)
 	    return 0;
 	append_token(token);
-    } while (token != '\n');
+	token = yapp_preproc_lex();
+    } 
     return '\n';
 }
 
@@ -402,6 +402,7 @@ expand_macro(YAPP_Macro *ym)
 {
     if (ym->type == YAPP_DEFINE) {
 	if (ym->args == -1) {
+	    source *src;
 	    /* no parens to deal with */
 	    src = SLIST_FIRST(&ym->macro_head);
 	    while (src != NULL) {
@@ -445,7 +446,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 		    char *s;
 		    default:
 			append_token(token);
-			/*if (append_through_return()==0) state=YAPP_STATE_EOF;*/
+			/*if (append_to_return()==0) state=YAPP_STATE_EOF;*/
 			ydebug(("YAPP: default: '%c' \"%s\"\n", token, yapp_preproc_lval.str_val));
 			/*Error(_("YAPP got an unhandled token."));*/
 			break;
@@ -490,7 +491,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 			    /* no parens */
 			    current_head = &macro_head;
 			    current_tail = &macro_tail;
-			    if(append_through_return()==0) state=YAPP_STATE_EOF;
+			    if(append_to_return()==0) state=YAPP_STATE_EOF;
 			    else {
 				yapp_define_insert(s, -1, 0);
 			    }
@@ -524,7 +525,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 				/* everything is what it's defined to be */
 				current_head = &macro_head;
 				current_tail = &macro_tail;
-				if(append_through_return()==0) state=YAPP_STATE_EOF;
+				if(append_to_return()==0) state=YAPP_STATE_EOF;
 				else {
 				    yapp_define_insert(s, param_count, 0);
 				}
