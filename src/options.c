@@ -43,7 +43,8 @@
 
 /* Options Parser */
 int
-parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts)
+parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts,
+	      void (*print_error) (const char *fmt, ...))
 {
     int errors = 0;
     size_t i;
@@ -67,9 +68,9 @@ parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts)
 			if (options[i].takes_param) {
 			    param = strchr(&argv[0][2], '=');
 			    if (!param) {
-				fprintf(stderr,
-					_("option '--%s' needs an argument!"),
-					options[i].lopt);
+				print_error(
+				    _("option `--%s' needs an argument!"),
+				    options[i].lopt);
 				errors++;
 				goto fail;
 			    } else {
@@ -86,7 +87,7 @@ parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts)
 		    }
 		}
 		if (!got_it) {
-		    fprintf(stderr, _("unrecognized option '%s'"), argv[0]);
+		    print_error(_("unrecognized option `%s'"), argv[0]);
 		    errors++;
 		}
 	    } else {		/* sopt */
@@ -101,9 +102,9 @@ parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts)
 			    if (argv[0][2] != '\0')
 				param = &argv[0][2];
 			    else if (param == NULL || *param == '-') {
-				fprintf(stderr,
-					_("option '-%c' needs an argument!"),
-					options[i].sopt);
+				print_error(
+				    _("option `-%c' needs an argument!"),
+				    options[i].sopt);
 				errors++;
 				goto fail;
 			    } else {
@@ -119,7 +120,7 @@ parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts)
 		    }
 		}
 		if (!got_it) {
-		    fprintf(stderr, _("unrecognized option '%s'"), argv[0]);
+		    print_error(_("unrecognized option `%s'"), argv[0]);
 		    errors++;
 		}
 	    }

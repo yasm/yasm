@@ -87,6 +87,7 @@ static int preproc_only_handler(char *cmd, /*@null@*/ char *param, int extra);
 
 static /*@only@*/ char *replace_extension(const char *orig, /*@null@*/
 					  const char *ext, const char *def);
+static void print_error(const char *fmt, ...);
 
 /* values for special_options */
 #define SPECIAL_SHOW_HELP 0x01
@@ -180,11 +181,11 @@ main(int argc, char *argv[])
 	    errors = lt_dladdsearchdir(path);
     }
     if (errors != 0) {
-	fprintf(stderr, _("Module loader initialization failed"));
+	print_error(_("Module loader initialization failed"));
 	return EXIT_FAILURE;
     }
 
-    if (parse_cmdline(argc, argv, options, NELEMS(options)))
+    if (parse_cmdline(argc, argv, options, NELEMS(options), print_error))
 	return EXIT_FAILURE;
 
     switch (special_options) {
@@ -200,7 +201,7 @@ main(int argc, char *argv[])
 
     /* Initialize BitVector (needed for floating point). */
     if (BitVector_Boot() != ErrCode_Ok) {
-	fprintf(stderr, _("Could not initialize BitVector"));
+	print_error(_("Could not initialize BitVector"));
 	return EXIT_FAILURE;
     }
 
@@ -208,7 +209,7 @@ main(int argc, char *argv[])
 	/* Open the input file (if not standard input) */
 	in = fopen(in_filename, "rt");
 	if (!in) {
-	    fprintf(stderr, _("could not open file `%s'"), in_filename);
+	    print_error(_("could not open file `%s'"), in_filename);
 	    xfree(in_filename);
 	    if (obj_filename)
 		xfree(obj_filename);
@@ -254,7 +255,7 @@ main(int argc, char *argv[])
 	    cur_preproc = load_preproc("nasm");
 
 	if (!cur_preproc) {
-	    fprintf(stderr, _("Could not load default preprocessor"));
+	    print_error(_("Could not load default preprocessor"));
 	    cleanup(NULL);
 	    return EXIT_FAILURE;
 	}
@@ -287,7 +288,7 @@ main(int argc, char *argv[])
     cur_arch = load_arch("x86");
 
     if (!cur_arch) {
-	fprintf(stderr, _("Could not load default architecture"));
+	print_error(_("Could not load default architecture"));
 	return EXIT_FAILURE;
     }
 
@@ -297,7 +298,7 @@ main(int argc, char *argv[])
     cur_optimizer = load_optimizer("basic");
 
     if (!cur_optimizer) {
-	fprintf(stderr, _("Could not load default optimizer"));
+	print_error(_("Could not load default optimizer"));
 	return EXIT_FAILURE;
     }
 
@@ -310,7 +311,7 @@ main(int argc, char *argv[])
 	cur_objfmt = load_objfmt("bin");
 
     if (!cur_objfmt) {
-	fprintf(stderr, _("Could not load default object format"));
+	print_error(_("Could not load default object format"));
 	return EXIT_FAILURE;
     }
 
@@ -327,18 +328,18 @@ main(int argc, char *argv[])
 			   cur_dbgfmt->keyword) == 0)
 		matched_dbgfmt = 1;
 	if (!matched_dbgfmt) {
-	    fprintf(stderr,
+	    print_error(
 		_("`%s' is not a valid debug format for object format `%s'"),
 		cur_dbgfmt->keyword, cur_objfmt->keyword);
 	    if (in != stdin)
 		fclose(in);
-	    cleanup(NULL);
+	    /*cleanup(NULL);*/
 	    return EXIT_FAILURE;
 	}
     }
 
     if (!cur_dbgfmt) {
-	fprintf(stderr, _("Could not load default debug format"));
+	print_error(_("Could not load default debug format"));
 	return EXIT_FAILURE;
     }
 
@@ -362,7 +363,7 @@ main(int argc, char *argv[])
     /* Set NASM as the parser */
     cur_parser = load_parser("nasm");
     if (!cur_parser) {
-	fprintf(stderr, _("unrecognized parser `%s'"), "nasm");
+	print_error(_("unrecognized parser `%s'"), "nasm");
 	cleanup(NULL);
 	return EXIT_FAILURE;
     }
@@ -380,9 +381,8 @@ main(int argc, char *argv[])
 			   cur_preproc->keyword) == 0)
 		matched_preproc = 1;
 	if (!matched_preproc) {
-	    fprintf(stderr,
-		    _("`%s' is not a valid preprocessor for parser `%s'"),
-		    cur_preproc->keyword, cur_parser->keyword);
+	    print_error(_("`%s' is not a valid preprocessor for parser `%s'"),
+			cur_preproc->keyword, cur_parser->keyword);
 	    if (in != stdin)
 		fclose(in);
 	    cleanup(NULL);
@@ -465,7 +465,7 @@ open_obj(const char *mode)
 
     obj = fopen(obj_filename, mode);
     if (!obj)
-	fprintf(stderr, _("could not open file `%s'"), obj_filename);
+	print_error(_("could not open file `%s'"), obj_filename);
     return obj;
 }
 
@@ -511,7 +511,7 @@ int
 not_an_option_handler(char *param)
 {
     if (in_filename) {
-	fprintf(stderr,
+	print_error(
 	    _("warning: can open only one input file, only the last file will be processed"));
 	xfree(in_filename);
     }
@@ -535,7 +535,7 @@ opt_parser_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_parser = load_parser(param);
     if (!cur_parser) {
-	fprintf(stderr, _("unrecognized parser `%s'"), param);
+	print_error(_("unrecognized parser `%s'"), param);
 	return 1;
     }
     return 0;
@@ -547,7 +547,7 @@ opt_preproc_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_preproc = load_preproc(param);
     if (!cur_preproc) {
-	fprintf(stderr, _("unrecognized preprocessor `%s'"), param);
+	print_error(_("unrecognized preprocessor `%s'"), param);
 	return 1;
     }
     return 0;
@@ -559,7 +559,7 @@ opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_objfmt = load_objfmt(param);
     if (!cur_objfmt) {
-	fprintf(stderr, _("unrecognized object format `%s'"), param);
+	print_error(_("unrecognized object format `%s'"), param);
 	return 1;
     }
     return 0;
@@ -571,7 +571,7 @@ opt_dbgfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_dbgfmt = load_objfmt(param);
     if (!cur_dbgfmt) {
-	fprintf(stderr, _("unrecognized debugging format `%s'"), param);
+	print_error(_("unrecognized debugging format `%s'"), param);
 	return 1;
     }
     return 0;
@@ -582,7 +582,7 @@ opt_objfile_handler(/*@unused@*/ char *cmd, char *param,
 		    /*@unused@*/ int extra)
 {
     if (obj_filename) {
-	fprintf(stderr,
+	print_error(
 	    _("warning: can output to only one object file, last specified used"));
 	xfree(obj_filename);
     }
@@ -660,7 +660,7 @@ replace_extension(const char *orig, /*@null@*/ const char *ext,
 	outext++;   /* advance past '.' */
 	if (ext && strcmp(outext, ext) == 0) {
 	    outext = NULL;  /* indicate default should be used */
-	    fprintf(stderr,
+	    print_error(
 		_("file name already ends in `.%s': output will be in `%s'"),
 		ext, def);
 	}
@@ -669,7 +669,7 @@ replace_extension(const char *orig, /*@null@*/ const char *ext,
 	 * (again, we don't want to overwrite the source file).
 	 */
 	if (!ext)
-	    fprintf(stderr,
+	    print_error(
 		_("file name already has no extension: output will be in `%s'"),
 		def);
 	else {
@@ -690,4 +690,15 @@ replace_extension(const char *orig, /*@null@*/ const char *ext,
 	strcpy(out, def);
 
     return out;
+}
+
+static void
+print_error(const char *fmt, ...)
+{
+    va_list va;
+    fprintf(stderr, "yasm: ");
+    va_start(va, fmt);
+    vfprintf(stderr, fmt, va);
+    va_end(va);
+    fputc('\n', stderr);
 }

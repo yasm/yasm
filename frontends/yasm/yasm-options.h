@@ -63,7 +63,8 @@ int not_an_option_handler(char *param);
  * options - array of options
  * nopts - options count
  */
-int parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts);
+int parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts,
+		  void (*print_error) (const char *fmt, ...));
 
 /* display help message msg followed by list of options in options and followed
  * by tail
