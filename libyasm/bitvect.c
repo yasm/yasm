@@ -899,15 +899,15 @@ void BitVector_Interval_Copy(wordptr X, wordptr Y, N_int Xoffset,
 {
     N_word  bitsX = bits_(X);
     N_word  bitsY = bits_(Y);
-    N_word  source;
-    N_word  target;
+    N_word  source = 0;
+    N_word  target = 0;
     N_word  s_lo_base;
     N_word  s_hi_base;
     N_word  s_lo_bit;
     N_word  s_hi_bit;
     N_word  s_base;
-    N_word  s_lower;
-    N_word  s_upper;
+    N_word  s_lower = 0;
+    N_word  s_upper = 0;
     N_word  s_bits;
     N_word  s_min;
     N_word  s_max;
@@ -916,8 +916,8 @@ void BitVector_Interval_Copy(wordptr X, wordptr Y, N_int Xoffset,
     N_word  t_lo_bit;
     N_word  t_hi_bit;
     N_word  t_base;
-    N_word  t_lower;
-    N_word  t_upper;
+    N_word  t_lower = 0;
+    N_word  t_upper = 0;
     N_word  t_bits;
     N_word  t_min;
     N_word  mask;
@@ -1387,7 +1387,7 @@ ErrCode BitVector_from_Oct(wordptr addr, charptr string)
     N_word  value_fill = 0;
     N_word  count;
     Z_word  count_fill = 0;
-    int     digit;
+    int     digit = 0;
 
     if (size > 0)
     {
@@ -1824,7 +1824,7 @@ ErrCode BitVector_from_Enum(wordptr addr, charptr string)
     N_word  state = 1;
     N_word  token;
     N_word  indx;
-    N_word  start;
+    N_word  start = 0;
 
     if (bits > 0)
     {
@@ -3047,7 +3047,7 @@ Z_long Set_Min(wordptr addr)                                /* = min(X)      */
     boolean empty = TRUE;
     N_word  size  = size_(addr);
     N_word  i     = 0;
-    N_word  c;
+    N_word  c     = 0;
 
     while (empty and (size-- > 0))
     {
@@ -3068,7 +3068,7 @@ Z_long Set_Max(wordptr addr)                                /* = max(X)      */
     boolean empty = TRUE;
     N_word  size  = size_(addr);
     N_word  i     = size;
-    N_word  c;
+    N_word  c     = 0;
 
     addr += size-1;
     while (empty and (size-- > 0))
