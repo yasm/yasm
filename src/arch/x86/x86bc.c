@@ -1,5 +1,5 @@
 /*
- * x86 architecture description
+ * x86 bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
  *
