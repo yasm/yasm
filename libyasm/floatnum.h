@@ -41,6 +41,7 @@ typedef struct floatnum_s {
 } floatnum;
 
 floatnum *floatnum_new(char *str);
+void floatnum_delete(floatnum *flt);
 
 /* The get functions return nonzero if flt can't fit into that size format. */
 

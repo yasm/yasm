@@ -475,6 +475,13 @@ floatnum_new(char *str)
     return flt;
 }
 
+void
+floatnum_delete(floatnum *flt)
+{
+    BitVector_Destroy(flt->mantissa);
+    free(flt);
+}
+
 int
 floatnum_get_int(unsigned long *ret_val, const floatnum *flt)
 {
