@@ -187,6 +187,9 @@ ErrCode BitVector_from_Oct(/*@out@*/ wordptr addr, charptr string);
 ErrCode BitVector_from_Bin(/*@out@*/ wordptr addr, charptr string);
 
 /*@only@*/ charptr BitVector_to_Dec  (wordptr addr);
+ErrCode BitVector_from_Dec_static_Boot(N_word bits);
+void BitVector_from_Dec_static_Shutdown(void);
+ErrCode BitVector_from_Dec_static(/*@out@*/ wordptr addr, charptr string);
 ErrCode BitVector_from_Dec(/*@out@*/ wordptr addr, charptr string);
 
 /*@only@*/ charptr BitVector_to_Enum (wordptr addr);

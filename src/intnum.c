@@ -52,6 +52,7 @@ intnum_shutdown(void)
 	BitVector_Destroy(conv_bv);
 	conv_bv = NULL;
     }
+    BitVector_from_Dec_static_Shutdown();
 }
 
 intnum *
@@ -61,9 +62,12 @@ intnum_new_dec(char *str)
 
     intn->origsize = 0;	    /* no reliable way to figure this out */
 
-    if (!conv_bv)
+    if (!conv_bv) {
 	conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
-    if (BitVector_from_Dec(conv_bv, (unsigned char *)str) == ErrCode_Ovfl)
+	BitVector_from_Dec_static_Boot(BITVECT_ALLOC_SIZE);
+    }
+    if (BitVector_from_Dec_static(conv_bv,
+				  (unsigned char *)str) == ErrCode_Ovfl)
 	Warning(_("Numeric constant too large for internal format"));
     if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
@@ -86,8 +90,10 @@ intnum_new_bin(char *str)
     if(intn->origsize > BITVECT_ALLOC_SIZE)
 	Warning(_("Numeric constant too large for internal format"));
 
-    if (!conv_bv)
+    if (!conv_bv) {
 	conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
+	BitVector_from_Dec_static_Boot(BITVECT_ALLOC_SIZE);
+    }
     BitVector_from_Bin(conv_bv, (unsigned char *)str);
     if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
@@ -110,8 +116,10 @@ intnum_new_oct(char *str)
     if(intn->origsize > BITVECT_ALLOC_SIZE)
 	Warning(_("Numeric constant too large for internal format"));
 
-    if (!conv_bv)
+    if (!conv_bv) {
 	conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
+	BitVector_from_Dec_static_Boot(BITVECT_ALLOC_SIZE);
+    }
     BitVector_from_Oct(conv_bv, (unsigned char *)str);
     if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
@@ -134,8 +142,10 @@ intnum_new_hex(char *str)
     if(intn->origsize > BITVECT_ALLOC_SIZE)
 	Warning(_("Numeric constant too large for internal format"));
 
-    if (!conv_bv)
+    if (!conv_bv) {
 	conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
+	BitVector_from_Dec_static_Boot(BITVECT_ALLOC_SIZE);
+    }
     BitVector_from_Hex(conv_bv, (unsigned char *)str);
     if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;

@@ -1606,6 +1606,175 @@ charptr BitVector_to_Dec(wordptr addr)
     return(result);
 }
 
+static wordptr from_Dec_term = NULL;
+static wordptr from_Dec_base = NULL;
+static wordptr from_Dec_prod = NULL;
+static wordptr from_Dec_rank = NULL;
+static wordptr from_Dec_temp = NULL;
+
+ErrCode BitVector_from_Dec_static_Boot(N_word bits)
+{
+    if (bits > 0)
+    {
+	BitVector_from_Dec_static_Shutdown();
+        from_Dec_term = BitVector_Create(BITS,FALSE);
+        if (from_Dec_term == NULL)
+        {
+            return(ErrCode_Null);
+        }
+        from_Dec_base = BitVector_Create(BITS,FALSE);
+        if (from_Dec_base == NULL)
+        {
+            BitVector_Destroy(from_Dec_term);
+            return(ErrCode_Null);
+        }
+        from_Dec_prod = BitVector_Create(bits,FALSE);
+        if (from_Dec_prod == NULL)
+        {
+            BitVector_Destroy(from_Dec_term);
+            BitVector_Destroy(from_Dec_base);
+            return(ErrCode_Null);
+        }
+        from_Dec_rank = BitVector_Create(bits,FALSE);
+        if (from_Dec_rank == NULL)
+        {
+            BitVector_Destroy(from_Dec_term);
+            BitVector_Destroy(from_Dec_base);
+            BitVector_Destroy(from_Dec_prod);
+            return(ErrCode_Null);
+        }
+        from_Dec_temp = BitVector_Create(bits,FALSE);
+        if (from_Dec_temp == NULL)
+        {
+            BitVector_Destroy(from_Dec_term);
+            BitVector_Destroy(from_Dec_base);
+            BitVector_Destroy(from_Dec_prod);
+            BitVector_Destroy(from_Dec_rank);
+            return(ErrCode_Null);
+        }
+    }
+    return(ErrCode_Ok);
+}
+
+void BitVector_from_Dec_static_Shutdown(void)
+{
+    if (from_Dec_term != NULL)
+        BitVector_Destroy(from_Dec_term);
+    if (from_Dec_base != NULL)
+        BitVector_Destroy(from_Dec_base);
+    if (from_Dec_prod != NULL)
+        BitVector_Destroy(from_Dec_prod);
+    if (from_Dec_rank != NULL)
+        BitVector_Destroy(from_Dec_rank);
+    if (from_Dec_temp != NULL)
+        BitVector_Destroy(from_Dec_temp);
+}
+
+ErrCode BitVector_from_Dec_static(wordptr addr, charptr string)
+{
+    ErrCode error = ErrCode_Ok;
+    N_word  bits = bits_(addr);
+    N_word  mask = mask_(addr);
+    boolean init = (bits > BITS);
+    boolean minus;
+    boolean shift;
+    boolean carry;
+    wordptr term = from_Dec_term;
+    wordptr base = from_Dec_base;
+    wordptr prod = from_Dec_prod;
+    wordptr rank = from_Dec_rank;
+    wordptr temp = from_Dec_temp;
+    N_word  accu;
+    N_word  powr;
+    N_word  count;
+    N_word  length;
+    int     digit;
+
+    if (bits > 0)
+    {
+        length = strlen((char *) string);
+        if (length == 0) return(ErrCode_Pars);
+        digit = (int) *string;
+        if ((minus = (digit == (int) '-')) or
+                     (digit == (int) '+'))
+        {
+            string++;
+            if (--length == 0) return(ErrCode_Pars);
+        }
+        string += length;
+	if (init)
+	{
+	    BitVector_Empty(prod);
+	    BitVector_Empty(rank);
+        }
+        BitVector_Empty(addr);
+        *base = EXP10;
+        shift = FALSE;
+        while ((not error) and (length > 0))
+        {
+            accu = 0;
+            powr = 1;
+            count = LOG10;
+            while ((not error) and (length > 0) and (count-- > 0))
+            {
+                digit = (int) *(--string); length--;
+                /* separate because isdigit() is likely a macro! */
+                if (isdigit(digit) != 0)
+                {
+                    accu += ((N_word) digit - (N_word) '0') * powr;
+                    powr *= 10;
+                }
+                else error = ErrCode_Pars;
+            }
+            if (not error)
+            {
+                if (shift)
+                {
+                    *term = accu;
+                    BitVector_Copy(temp,rank);
+                    error = BitVector_Mul_Pos(prod,temp,term,FALSE);
+                }
+                else
+                {
+                    *prod = accu;
+                    if ((not init) and ((accu AND NOT mask) != 0)) error = ErrCode_Ovfl;
+                }
+                if (not error)
+                {
+                    carry = FALSE;
+                    BitVector_compute(addr,addr,prod,FALSE,&carry);
+                    /* ignores sign change (= overflow) but not */
+                    /* numbers too large (= carry) for resulting bit vector */
+                    if (carry) error = ErrCode_Ovfl;
+                    else
+                    {
+                        if (length > 0)
+                        {
+                            if (shift)
+                            {
+                                BitVector_Copy(temp,rank);
+                                error = BitVector_Mul_Pos(rank,temp,base,FALSE);
+                            }
+                            else
+                            {
+                                *rank = *base;
+                                shift = TRUE;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (not error and minus)
+        {
+            BitVector_Negate(addr,addr);
+            if ((*(addr + size_(addr) - 1) AND mask AND NOT (mask >> 1)) == 0)
+                error = ErrCode_Ovfl;
+        }
+    }
+    return(error);
+}
+
 ErrCode BitVector_from_Dec(wordptr addr, charptr string)
 {
     ErrCode error = ErrCode_Ok;
