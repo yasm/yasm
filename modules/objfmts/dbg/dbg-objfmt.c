@@ -146,7 +146,7 @@ dbg_objfmt_common_data_new(const char *name, /*@only@*/ expr *size,
 static void *
 dbg_objfmt_declare_data_copy(SymVisibility vis, /*@only@*/ void *data)
 {
-    void *retval;
+    void *retval = NULL;
 
     fprintf(debug_file, "%*sdeclare_data_copy(", indent_level, "");
     switch (vis) {
