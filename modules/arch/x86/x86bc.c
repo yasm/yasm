@@ -270,17 +270,16 @@ yasm_x86__ea_create_imm(yasm_expr *imm, unsigned int im_len)
 /*@=compmempass@*/
 
 void
-yasm_x86__bc_apply_prefixes(yasm_bytecode *bc, int num_prefixes,
-			    unsigned long **prefixes)
+yasm_x86__bc_apply_prefixes(x86_common *common, int num_prefixes,
+			    unsigned long **prefixes, unsigned long line)
 {
-    x86_common *common = (x86_common *)bc->contents;
     int i;
 
     for (i=0; i<num_prefixes; i++) {
 	switch ((x86_parse_insn_prefix)prefixes[i][0]) {
 	    case X86_LOCKREP:
 		if (common->lockrep_pre != 0)
-		    yasm__warning(YASM_WARN_GENERAL, bc->line,
+		    yasm__warning(YASM_WARN_GENERAL, line,
 			N_("multiple LOCK or REP prefixes, using leftmost"));
 		common->lockrep_pre = (unsigned char)prefixes[i][1];
 		break;

@@ -231,7 +231,8 @@ void yasm_x86__bc_transform_jmp(yasm_bytecode *bc, x86_jmp *jmp);
 void yasm_x86__bc_transform_jmpfar(yasm_bytecode *bc, x86_jmpfar *jmpfar);
 
 void yasm_x86__bc_apply_prefixes
-    (yasm_bytecode *bc, int num_prefixes, unsigned long **prefixes);
+    (x86_common *common, int num_prefixes, unsigned long **prefixes,
+     unsigned long line);
 
 void yasm_x86__ea_init(yasm_effaddr *ea, unsigned int spare,
 		       /*@null@*/ yasm_symrec *origin);

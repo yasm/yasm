@@ -1754,9 +1754,11 @@ x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc,
 	    yasm_internal_error(N_("didn't get FAR expression in jmpfar"));
     }
 
+    yasm_x86__bc_apply_prefixes((x86_common *)jmpfar, num_prefixes, prefixes,
+				bc->line);
+
     /* Transform the bytecode */
     yasm_x86__bc_transform_jmpfar(bc, jmpfar);
-    yasm_x86__bc_apply_prefixes(bc, num_prefixes, prefixes);
 }
 
 static void
@@ -1856,9 +1858,11 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 	yasm__error(bc->line,
 		    N_("no NEAR form of that jump instruction exists"));
 
+    yasm_x86__bc_apply_prefixes((x86_common *)jmp, num_prefixes, prefixes,
+				bc->line);
+
     /* Transform the bytecode */
     yasm_x86__bc_transform_jmp(bc, jmp);
-    yasm_x86__bc_apply_prefixes(bc, num_prefixes, prefixes);
 }
 
 void
@@ -2420,9 +2424,11 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     } else
 	insn->imm = NULL;
 
+    yasm_x86__bc_apply_prefixes((x86_common *)insn, num_prefixes, prefixes,
+				bc->line);
+
     /* Transform the bytecode */
     yasm_x86__bc_transform_insn(bc, insn);
-    yasm_x86__bc_apply_prefixes(bc, num_prefixes, prefixes);
 }
 
 
