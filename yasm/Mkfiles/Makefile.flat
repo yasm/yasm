@@ -1,0 +1,96 @@
+# $IdPath$
+#
+# Ultra-flat Makefile "prototype" for non-Unix platforms.
+# Does NOT depend on or use configure.
+#
+# Works for simple build but *not* for development (no clean, dist, etc).
+# Also, WARNING, no header dependencies are included!
+#
+# NOTE: Needs a valid config.h for the platform being compiled on.
+#
+# This file should be customized to particular platforms by changing CC and
+#  CFLAGS appropriately, along with writing a config.h for the platform and
+#  placing it in a libyasm subdirectory.
+
+CFLAGS=-DHAVE_CONFIG_H -DWIN32 -IMkfiles -I. -Ifrontends/yasm
+CC=gcc
+
+all: yasm
+
+LIBYASM_OBJS= \
+ libyasm/arch.o \
+ libyasm/bitvect.o \
+ libyasm/bytecode.o \
+ libyasm/errwarn.o \
+ libyasm/expr.o \
+ libyasm/file.o \
+ libyasm/floatnum.o \
+ libyasm/hamt.o \
+ libyasm/intnum.o \
+ libyasm/linemgr.o \
+ libyasm/mergesort.o \
+ libyasm/section.o \
+ libyasm/strcasecmp.o \
+ libyasm/strsep.o \
+ libyasm/symrec.o \
+ libyasm/valparam.o \
+ libyasm/xmalloc.o \
+ libyasm/xstrdup.o
+
+MODULES_ARCH_OBJS= \
+ modules/arch/x86/x86arch.o \
+ modules/arch/x86/x86bc.o \
+ modules/arch/x86/x86expr.o \
+ x86id.o
+
+MODULES_DBGFMTS_OBJS= \
+ modules/dbgfmts/null/null-dbgfmt.o
+
+MODULES_OBJFMTS_OBJS= \
+ modules/objfmts/dbg/dbg-objfmt.o \
+ modules/objfmts/bin/bin-objfmt.o \
+ modules/objfmts/coff/coff-objfmt.o
+
+MODULES_OPTIMIZERS_OBJS= \
+ modules/optimizers/basic/basic-optimizer.o
+
+MODULES_PARSERS_OBJS= \
+ modules/parsers/nasm/nasm-parser.o \
+ nasm-bison.o \
+ nasm-token.o
+
+MODULES_PREPROCS_NASM_OBJS= \
+ modules/preprocs/nasm/nasm-eval.o \
+ modules/preprocs/nasm/nasm-pp.o \
+ modules/preprocs/nasm/nasm-preproc.o \
+ modules/preprocs/nasm/nasmlib.o \
+ nasm-macros.o
+
+MODULES_PREPROCS_RAW_OBJS = \
+ modules/preprocs/raw/raw-preproc.o \
+
+MODULES_PREPROCS_OBJS = \
+ $(MODULES_PREPROCS_NASM_OBJS) \
+ $(MODULES_PREPROCS_RAW_OBJS)
+
+MODULES_OBJS = \
+ $(MODULES_ARCH_OBJS) \
+ $(MODULES_DBGFMTS_OBJS) \
+ $(MODULES_OBJFMTS_OBJS) \
+ $(MODULES_OPTIMIZERS_OBJS) \
+ $(MODULES_PARSERS_OBJS) \
+ $(MODULES_PREPROCS_OBJS)
+
+YASM_OBJS= \
+ frontends/yasm/yasm.o \
+ Mkfiles/vc/yasm-module.o \
+ frontends/yasm/yasm-options.o \
+ $(LIBYASM_OBJS) \
+ $(MODULES_OBJS)
+
+yasm: $(YASM_OBJS)
+	$(CC) -o yasm $(YASM_OBJS)
+
+.c.o:
+	$(CC) -c $(CFLAGS) -o $@ $<
+

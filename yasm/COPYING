@@ -1,0 +1,42 @@
+-----------------------------------
+YASM licensing overview and summary
+-----------------------------------
+
+Note: This document does not provide legal advice nor is it the actual license
+of any part of YASM.  See the individual licenses for complete details.
+Consult a laywer for legal advice.
+
+The primary license of YASM is the 2-clause BSD license.  Please use this
+license if you plan on submitting code to the project.
+
+-------
+Libyasm
+-------
+Libyasm is 2-clause or 3-clause BSD licensed, with the exception of bitvect,
+which is triple-licensed under the Artistic license, GPL, and LGPL.  Libyasm
+is thus GPL and LGPL compatible.  In addition, this also means that libyasm
+is free for binary-only distribution as long as the terms of the 3-clause BSD
+license and Artistic license are fulfilled.
+
+-------
+Modules
+-------
+Most of the modules are 2-clause BSD licensed, with the exception of:
+ preprocs/nasm - LGPL licensed
+
+---------
+Frontends
+---------
+The frontends are 2-clause BSD licensed.
+
+-------------
+License Texts
+-------------
+The full text of all licenses are provided in separate files in this
+distribution.  Each file may include the entire license (in the case of the BSD
+and Artistic licenses), or may reference the GPL or LGPL license file.
+
+BSD.txt - 2-clause and 3-clause BSD licenses
+Artistic.txt - Artistic license
+GNU_GPL-2.0 - GNU General Public License
+GNU_LGPL-2.0 - GNU Library General Public License
