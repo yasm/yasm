@@ -464,8 +464,7 @@ x86_bc_print(FILE *f, const bytecode *bc)
 }
 
 static unsigned long
-x86_bc_calc_len_insn(x86_insn *insn, /*@only@*/ /*@null@*/
-		     intnum *(*resolve_label) (symrec *sym))
+x86_bc_calc_len_insn(x86_insn *insn, intnum *(*resolve_label) (symrec *sym))
 {
     effaddr *ea = insn->ea;
     x86_effaddr_data *ead = ea_get_data(ea);

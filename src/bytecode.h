@@ -63,7 +63,7 @@ void bc_print(FILE *f, const bytecode *bc);
  * resolve_label is the function used to determine the value (offset) of a
  *  in-file label (eg, not an EXTERN variable, which is indeterminate).
  */
-unsigned long bc_calc_len(bytecode *bc, /*@only@*/ /*@null@*/
+unsigned long bc_calc_len(bytecode *bc,
 			  intnum *(*resolve_label) (symrec *sym));
 
 /* void bcs_initialize(bytecodehead *headp); */
