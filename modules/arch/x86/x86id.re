@@ -1919,7 +1919,6 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
     d.op[1] = info->opcode[1];
     d.op[2] = info->opcode[2];
     d.spare = info->spare;
-    d.rex = (yasm_x86_LTX_mode_bits == 64 && info->opersize == 64) ? 0x48: 0;
     d.im_len = 0;
     d.im_sign = 0;
     d.shift_op = 0;
@@ -1956,6 +1955,8 @@ yasm_x86__parse_insn(const unsigned long data[4], int num_operands,
 	d.im_len = 1;
 	/*mod_data >>= 8;*/
     }
+
+    d.rex = (yasm_x86_LTX_mode_bits == 64 && d.opersize == 64) ? 0x48: 0;
 
     /* Go through operands and assign */
     if (operands) {
