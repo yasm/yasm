@@ -42,8 +42,7 @@
 #endif
 
 #if defined(lint)
-/*@dependent@*/ const char *gettext(const char *s);
-#define _(String)	gettext(String)
+#define _(String)	String
 #else
 # ifdef HAVE_LOCALE_H
 #  include <locale.h>
