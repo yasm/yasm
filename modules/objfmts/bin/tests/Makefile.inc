@@ -5,6 +5,9 @@ TESTS += \
 
 EXTRA_DIST += \
 	src/objfmts/bin/tests/bin_test.sh		\
+	src/objfmts/bin/tests/abs.asm			\
+	src/objfmts/bin/tests/abs.hex			\
+	src/objfmts/bin/tests/abs.errwarn		\
 	src/objfmts/bin/tests/bintest.asm		\
 	src/objfmts/bin/tests/bintest.hex		\
 	src/objfmts/bin/tests/bintest.errwarn		\
