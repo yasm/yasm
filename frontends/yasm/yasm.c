@@ -31,6 +31,10 @@
 #include <libyasm/bitvect.h>
 #include <libyasm.h>
 
+#ifdef HAVE_LIBGEN_H
+#include <libgen.h>
+#endif
+
 #ifndef WIN32
 #include "ltdl.h"
 #endif
@@ -44,8 +48,6 @@
 #endif
 
 #ifndef WIN32
-extern char *dirname(const char *path);
-
 extern const lt_dlsymlist lt_preloaded_symbols[];
 #endif
 

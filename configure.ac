@@ -101,7 +101,7 @@ AM_WITH_DMALLOC
 #
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([alloca.h limits.h sys/cdefs.h sys/ipc.h sys/msg.h sys/param.h sys/types.h sys/queue.h unistd.h])
+AC_CHECK_HEADERS([alloca.h limits.h sys/cdefs.h sys/ipc.h sys/msg.h sys/param.h sys/types.h sys/queue.h unistd.h libgen.h])
 
 # REQUIRE standard C headers
 if test "$ac_cv_header_stdc" != yes; then

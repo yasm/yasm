@@ -30,12 +30,14 @@
 #include <libyasm/compat-queue.h>
 #include <libyasm.h>
 
+#ifdef HAVE_LIBGEN_H
+#include <libgen.h>
+#endif
+
 #include "ltdl.h"
 
 #include "yasm-module.h"
 
-
-extern char *basename(const char *path);
 
 extern const lt_dlsymlist lt_preloaded_symbols[];
 
