@@ -54,12 +54,18 @@ MODULES_ARCH_OBJS= \
 MODULES_DBGFMTS_OBJS= \
  modules/dbgfmts/null/null-dbgfmt.o
 
+MODULES_LISTFMTS_OBJS= \
+ modules/listfmts/nasm/nasm-listfmt.o
+
 MODULES_OBJFMTS_OBJS= \
  modules/objfmts/dbg/dbg-objfmt.o \
  modules/objfmts/bin/bin-objfmt.o \
  modules/objfmts/coff/coff-objfmt.o \
  modules/objfmts/elf/elf.o \
- modules/objfmts/elf/elf-objfmt.o
+ modules/objfmts/elf/elf-x86-x86.o \
+ modules/objfmts/elf/elf-x86-amd64.o \
+ modules/objfmts/elf/elf-objfmt.o \
+ modules/objfmts/xdf/xdf-objfmt.o
 
 MODULES_OPTIMIZERS_OBJS= \
  modules/optimizers/basic/basic-optimizer.o
@@ -86,6 +92,7 @@ MODULES_PREPROCS_OBJS = \
 MODULES_OBJS = \
  $(MODULES_ARCH_OBJS) \
  $(MODULES_DBGFMTS_OBJS) \
+ $(MODULES_LISTFMTS_OBJS) \
  $(MODULES_OBJFMTS_OBJS) \
  $(MODULES_OPTIMIZERS_OBJS) \
  $(MODULES_PARSERS_OBJS) \
