@@ -7,7 +7,7 @@
 #include "tools/re2c/parse.h"
 #include "tools/re2c/dfa.h"
 
-char *fileName;
+const char *fileName;
 int sFlag = 0;
 int bFlag = 0;
 

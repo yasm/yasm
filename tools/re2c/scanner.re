@@ -6,8 +6,6 @@
 #include "tools/re2c/parse.h"
 #include "re2c-parser.h"
 
-extern YYSTYPE yylval;
-
 #define	BSIZE	8192
 
 #define	YYCTYPE		uchar
@@ -181,7 +179,7 @@ comment:
 }
 
 void
-Scanner_fatal(Scanner *s, char *msg)
+Scanner_fatal(Scanner *s, const char *msg)
 {
     fprintf(stderr, "line %d, column %d: %s\n", s->tline, s->tchar + 1, msg);
     exit(1);

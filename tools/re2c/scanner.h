@@ -15,7 +15,7 @@ static inline Scanner *Scanner_new(FILE *);
 
 int Scanner_echo(Scanner*, FILE *);
 int Scanner_scan(Scanner*);
-void Scanner_fatal(Scanner*, char*);
+void Scanner_fatal(Scanner*, const char*);
 static inline SubStr Scanner_token(Scanner*);
 static inline uint Scanner_line(Scanner*);
 

@@ -310,7 +310,7 @@ Range_out(FILE *o, const Range *r)
     Range_out(o, r->next);
 }
 
-Range *doUnion(Range *r1, Range *r2){
+static Range *doUnion(Range *r1, Range *r2){
     Range *r, **rP = &r;
     for(;;){
 	Range *s;
@@ -357,7 +357,7 @@ Range *doUnion(Range *r1, Range *r2){
     return r;
 }
 
-Range *doDiff(Range *r1, Range *r2){
+static Range *doDiff(Range *r1, Range *r2){
     Range *r, *s, **rP = &r;
     for(; r1; r1 = r1->next){
 	uint lb = r1->lb;
@@ -397,7 +397,7 @@ RegExp *mkDiff(RegExp *e1, RegExp *e2){
     return r? RegExp_new_MatchOp(r) : RegExp_new_NullOp();
 }
 
-RegExp *doAlt(RegExp *e1, RegExp *e2){
+static RegExp *doAlt(RegExp *e1, RegExp *e2){
     if(!e1)
 	return e2;
     if(!e2)
@@ -423,7 +423,7 @@ RegExp *mkAlt(RegExp *e1, RegExp *e2){
     return doAlt(merge(m1, m2), doAlt(e1, e2));
 }
 
-uchar unescape(SubStr *s){
+static uchar unescape(SubStr *s){
     uchar c;
     uchar v;
     s->len--;
@@ -456,7 +456,7 @@ uchar unescape(SubStr *s){
     }
 }
 
-Range *getRange(SubStr *s){
+static Range *getRange(SubStr *s){
     uchar lb = unescape(s), ub;
     if(s->len < 2 || *s->str != '-'){
 	ub = lb;
@@ -471,7 +471,7 @@ Range *getRange(SubStr *s){
     return Range_new(lb, ub+1);
 }
 
-RegExp *matchChar(uint c){
+static RegExp *matchChar(uint c){
     return RegExp_new_MatchOp(Range_new(c, c+1));
 }
 
@@ -510,9 +510,7 @@ RegExp_new_RuleOp(RegExp *e, RegExp *c, Token *t, uint a)
     return r;
 }
 
-extern void printSpan(FILE *, uint, uint);
-
-void optimize(Ins *i){
+static void optimize(Ins *i){
     while(!isMarked(i)){
 	mark(i);
 	if(i->i.tag == CHAR){

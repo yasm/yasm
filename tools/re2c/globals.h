@@ -3,7 +3,7 @@
 
 #include "tools/re2c/basics.h"
 
-extern char *fileName;
+extern const char *fileName;
 extern int sFlag;
 extern int bFlag;
 

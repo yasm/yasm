@@ -46,7 +46,7 @@ void Go_unmap(Go *g, Go *base, State *x){
     g->nSpans = s - g->span;
 }
 
-void doGen(Go *g, State *s, uchar *bm, uchar m){
+static void doGen(Go *g, State *s, uchar *bm, uchar m){
     Span *b = g->span, *e = &b[g->nSpans];
     uint lb = 0;
     for(; b < e; ++b){
@@ -55,8 +55,8 @@ void doGen(Go *g, State *s, uchar *bm, uchar m){
 	lb = b->ub;
     }
 }
-
-void prt(FILE *o, Go *g, State *s){
+#if 0
+static void prt(FILE *o, Go *g, State *s){
     Span *b = g->span, *e = &b[g->nSpans];
     uint lb = 0;
     for(; b < e; ++b){
@@ -65,8 +65,8 @@ void prt(FILE *o, Go *g, State *s){
 	lb = b->ub;
     }
 }
-
-int matches(Go *g1, State *s1, Go *g2, State *s2){
+#endif
+static int matches(Go *g1, State *s1, Go *g2, State *s2){
     Span *b1 = g1->span, *e1 = &b1[g1->nSpans];
     uint lb1 = 0;
     Span *b2 = g2->span, *e2 = &b2[g2->nSpans];
@@ -165,17 +165,17 @@ void BitMap_stats(void){
 }
 #endif
 
-void genGoTo(FILE *o, State *to){
+static void genGoTo(FILE *o, State *to){
     fprintf(o, "\tgoto yy%u;\n", to->label);
 }
 
-void genIf(FILE *o, const char *cmp, uint v){
+static void genIf(FILE *o, const char *cmp, uint v){
     fprintf(o, "\tif(yych %s '", cmp);
     prtCh(o, v);
     fputs("')", o);
 }
 
-void indent(FILE *o, uint i){
+static void indent(FILE *o, uint i){
     while(i-- > 0)
 	fputc('\t', o);
 }
@@ -263,7 +263,7 @@ Action_new_Accept(State *x, uint n, uint *s, State **r)
     return a;
 }
 
-void doLinear(FILE *o, uint i, Span *s, uint n, State *next){
+static void doLinear(FILE *o, uint i, Span *s, uint n, State *next){
     for(;;){
 	State *bg = s[0].to;
 	while(n >= 3 && s[2].to == bg && (s[1].ub - s[0].ub) == 1){
@@ -295,7 +295,7 @@ Go_genLinear(Go *g, FILE *o, State *next){
     doLinear(o, 0, g->span, g->nSpans, next);
 }
 
-void genCases(FILE *o, uint lb, Span *s){
+static void genCases(FILE *o, uint lb, Span *s){
     if(lb < s->ub){
 	for(;;){
 	    fputs("\tcase '", o); prtCh(o, lb); fputs("':", o);
@@ -346,7 +346,7 @@ Go_genSwitch(Go *g, FILE *o, State *next){
     }
 }
 
-void doBinary(FILE *o, uint i, Span *s, uint n, State *next){
+static void doBinary(FILE *o, uint i, Span *s, uint n, State *next){
     if(n <= 4){
 	doLinear(o, i, s, n, next);
     } else {
@@ -524,7 +524,7 @@ static void SCC_traverse(SCC *s, State *x){
 	} while(*s->top != x);
 }
 
-uint maxDist(State *s){
+static uint maxDist(State *s){
     uint mm = 0, i;
     for(i = 0; i < s->go.nSpans; ++i){
 	State *t = s->go.span[i].to;
@@ -539,7 +539,7 @@ uint maxDist(State *s){
     return mm;
 }
 
-void calcDepth(State *head){
+static void calcDepth(State *head){
     State *t, *s;
     for(s = head; s; s = s->next){
 	if(s->link == s){

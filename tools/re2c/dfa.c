@@ -146,11 +146,11 @@ DFA_new(Ins *ins, uint ni, uint lb, uint ub, Char *rep)
 	s->rule = NULL;
 	for(iP = s->kernel; (i = *iP); ++iP){
 	    if(i->i.tag == CHAR){
-		Ins *j;
-		for(j = i + 1; j < (Ins*) i->i.link; ++j){
-		    if(!(j->c.link = goTo[j->c.value - lb].to))
-			goTo[nGoTos++].ch = j->c.value;
-		    goTo[j->c.value - lb].to = j;
+		Ins *j2;
+		for(j2 = i + 1; j2 < (Ins*) i->i.link; ++j2){
+		    if(!(j2->c.link = goTo[j2->c.value - lb].to))
+			goTo[nGoTos++].ch = j2->c.value;
+		    goTo[j2->c.value - lb].to = j2;
 		}
 	    } else if(i->i.tag == TERM){
 		if(!s->rule || ((RegExp *)i->i.link)->d.RuleOp.accept < s->rule->d.RuleOp.accept)

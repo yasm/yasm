@@ -7,9 +7,10 @@
 #include <stdlib.h>
 #include "tools/re2c/globals.h"
 #include "tools/re2c/parse.h"
-int yyparse();
-int yylex();
-void yyerror(char*);
+int yylex(void);
+void yyerror(const char*);
+
+static char *mystrdup(const char *str);
 
 static uint accept;
 static RegExp *spec;
@@ -120,7 +121,7 @@ primary	:	ID
 
 %%
 
-void yyerror(char* s){
+void yyerror(const char* s){
     Scanner_fatal(in, s);
 }
 
@@ -128,7 +129,7 @@ int yylex(){
     return Scanner_scan(in);
 }
 
-char *
+static char *
 mystrdup(const char *str)
 {
 	size_t len;
