@@ -63,7 +63,7 @@ typedef enum {
     EXPR_LE,
     EXPR_GE,
     EXPR_NE,
-    EXPR_IDENT			/* if right is IDENT, then the entire expr is just a num */
+    EXPR_IDENT	    /* no operation, just a value */
 } ExprOp;
 #endif
 
@@ -74,7 +74,7 @@ typedef struct ExprItem ExprItem;
 typedef struct expr expr;
 #endif
 
-expr *expr_new(ExprItem *, ExprOp, ExprItem *);
+expr *expr_new(ExprOp, ExprItem *, ExprItem *);
 
 ExprItem *ExprSym(symrec *);
 ExprItem *ExprExpr(expr *);
@@ -83,20 +83,18 @@ ExprItem *ExprFloat(floatnum *);
 ExprItem *ExprReg(unsigned char reg, unsigned char size);
 
 #define expr_new_tree(l,o,r) \
-    expr_new (ExprExpr(l), (o), ExprExpr(r))
+    expr_new ((o), ExprExpr(l), ExprExpr(r))
 #define expr_new_branch(o,r) \
-    expr_new ((ExprItem *)NULL, (o), ExprExpr(r))
+    expr_new ((o), ExprExpr(r), (ExprItem *)NULL)
 #define expr_new_ident(r) \
-    expr_new ((ExprItem *)NULL, EXPR_IDENT, (r))
+    expr_new (EXPR_IDENT, (r), (ExprItem *)NULL)
 
 /* allocates and makes an exact duplicate of e */
 expr *expr_copy(const expr *e);
 
 void expr_delete(expr *e);
 
-int expr_contains_float(expr *);
-
-int expr_checkea(expr **e, unsigned char *addrsize, unsigned char bits,
+int expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 		 unsigned char *displen, unsigned char *modrm,
 		 unsigned char *v_modrm, unsigned char *n_modrm,
 		 unsigned char *sib, unsigned char *v_sib,
@@ -110,13 +108,13 @@ void expr_expand_equ(expr *e);
 /* Simplifies the expression e as much as possible, eliminating extraneous
  * branches and simplifying integer-only subexpressions.
  */
-int expr_simplify(expr *);
+expr *expr_simplify(expr *e);
 
 /* Gets the integer value of e if the expression is just an integer.  If the
  * expression is more complex (contains anything other than integers, ie
  * floats, non-valued labels, registers), returns NULL.
  */
-const intnum *expr_get_intnum(expr *e);
+const intnum *expr_get_intnum(expr **ep);
 
 void expr_print(expr *);
 
