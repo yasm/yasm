@@ -103,7 +103,7 @@ struct bytecode {
 	struct {
 	    effaddr *ea;	/* effective address */
 
-	    immval imm;		/* immediate or relative value */
+	    immval *imm;	/* immediate or relative value */
 
 	    unsigned char opcode[3];	/* opcode */
 	    unsigned char opcode_len;
@@ -423,14 +423,10 @@ bytecode_new_insn(unsigned char  opersize,
 	bc->data.insn.ea->modrm |= (spare << 3) & 0x38;	/* plug in provided bits */
     }
 
+    bc->data.insn.imm = im_ptr;
     if (im_ptr) {
-	bc->data.insn.imm = *im_ptr;
-	bc->data.insn.imm.f_sign = im_sign;
-	bc->data.insn.imm.f_len = im_len;
-    } else {
-	bc->data.insn.imm.len = 0;
-	bc->data.insn.imm.f_sign = 0;
-	bc->data.insn.imm.f_len = 0;
+	bc->data.insn.imm->f_sign = im_sign;
+	bc->data.insn.imm->f_len = im_len;
     }
 
     bc->data.insn.opcode[0] = op0;
@@ -588,26 +584,27 @@ bytecode_print(bytecode *bc)
 	    }
 	    printf("Immediate Value:\n");
 	    printf(" Val=");
-	    if (!bc->data.insn.imm.val)
+	    if (!bc->data.insn.imm)
 		printf("(nil)");
-	    else
-		expr_print(bc->data.insn.imm.val);
-	    printf("\n");
-	    printf(" Len=%u, IsNeg=%u\n",
-		   (unsigned int)bc->data.insn.imm.len,
-		   (unsigned int)bc->data.insn.imm.isneg);
-	    printf(" FLen=%u, FSign=%u\n",
-		   (unsigned int)bc->data.insn.imm.f_len,
-		   (unsigned int)bc->data.insn.imm.f_sign);
-	    printf("Opcode: %2x %2x %2x OpLen=%u\n",
-		   (unsigned int)bc->data.insn.opcode[0],
-		   (unsigned int)bc->data.insn.opcode[1],
-		   (unsigned int)bc->data.insn.opcode[2],
-		   (unsigned int)bc->data.insn.opcode_len);
-	    printf("AddrSize=%u OperSize=%u LockRepPre=%2x\n",
-		   (unsigned int)bc->data.insn.addrsize,
-		   (unsigned int)bc->data.insn.opersize,
-		   (unsigned int)bc->data.insn.lockrep_pre);
+	    else {
+		expr_print(bc->data.insn.imm->val);
+		printf("\n");
+		printf(" Len=%u, IsNeg=%u\n",
+		       (unsigned int)bc->data.insn.imm->len,
+		       (unsigned int)bc->data.insn.imm->isneg);
+		printf(" FLen=%u, FSign=%u\n",
+		       (unsigned int)bc->data.insn.imm->f_len,
+		       (unsigned int)bc->data.insn.imm->f_sign);
+		printf("Opcode: %2x %2x %2x OpLen=%u\n",
+		       (unsigned int)bc->data.insn.opcode[0],
+		       (unsigned int)bc->data.insn.opcode[1],
+		       (unsigned int)bc->data.insn.opcode[2],
+		       (unsigned int)bc->data.insn.opcode_len);
+		printf("AddrSize=%u OperSize=%u LockRepPre=%2x\n",
+		       (unsigned int)bc->data.insn.addrsize,
+		       (unsigned int)bc->data.insn.opersize,
+		       (unsigned int)bc->data.insn.lockrep_pre);
+	    }
 	    break;
 	case BC_JMPREL:
 	    printf("_Relative Jump_\n");
