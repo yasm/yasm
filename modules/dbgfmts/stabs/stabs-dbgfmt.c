@@ -331,9 +331,9 @@ stabs_dbgfmt_generate_sections(yasm_section *sect, /*@null@*/ void *d)
     if (yasm__strcasecmp(sectname, ".text")==0) {
 	char *str;
 	const char *symname=yasm_symrec_get_name(info->firstsym);
-	size_t len = strlen(symname)+4;
-	str = yasm_xmalloc(len);
-	snprintf(str, len, "%s:F1", symname);
+	str = yasm_xmalloc(strlen(symname)+4);
+	strcpy(str, symname);
+	strcat(str, ":F1");
 	stabs_dbgfmt_append_stab(info, info->stab,
 				 stabs_dbgfmt_append_bcstr(info->stabstr, str),
 				 N_FUN, 0, info->firstsym, info->firstbc, 0);
