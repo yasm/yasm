@@ -68,6 +68,7 @@ fi
 
 echo "Generating configuration files for $package, please wait...."
 
+rm -f stamp-h.in
 echo "  aclocal $ACLOCAL_FLAGS"
 aclocal $ACLOCAL_FLAGS || exit 1
 echo "  gettextize -f"
