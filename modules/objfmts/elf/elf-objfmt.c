@@ -433,7 +433,7 @@ elf_objfmt_output(FILE *f, yasm_sectionhead *sections, int all_syms)
     info.addr = 0;
 
     /* Allocate space for Ehdr by seeking forward */
-    if (fseek(f, (long)(EHDR_SIZE), SEEK_SET) < 0) {
+    if (fseek(f, (long)(elf_proghead_get_size()), SEEK_SET) < 0) {
 	yasm__error(0, N_("could not seek on output file"));
 	return;
     }

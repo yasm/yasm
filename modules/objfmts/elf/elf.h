@@ -41,8 +41,6 @@ typedef unsigned long	elf_offset;
 typedef unsigned long	elf_size;
 typedef unsigned long	elf_section_info;
 
-#define EHDR_SIZE 52
-
 typedef enum {
     ET_NONE = 0,
     ET_REL = 1,					/* Relocatable */
@@ -63,7 +61,19 @@ typedef enum {
     EM_68K = 4,					/* Motorola 68000 */
     EM_88K = 5,					/* Motorola 88000 */
     EM_860 = 7,					/* Intel 80860 */
-    EM_MIPS = 8					/* MIPS RS3000 */
+    EM_MIPS = 8,				/* MIPS RS3000 */
+
+    EM_S370 = 9,				/* IBM System/370 */
+    EM_MIPS_RS4_BE = 10,			/* MIPS R4000 Big-Endian (dep)*/
+    EM_PARISC = 15,				/* HPPA */
+    EM_SPARC32PLUS = 18,			/* SPARC v8plus */
+    EM_PPC = 20,				/* PowerPC 32-bit */
+    EM_PPC64 = 21,				/* PowerPC 64-bit */
+    EM_ARM = 40,				/* ARM */
+    EM_SPARCV9 = 43,				/* SPARC v9 64-bit */
+    EM_IA_64 = 50,				/* Intel IA-64 */
+    EM_X86_64 = 62,				/* AMD x86-64 */
+    EM_ALPHA = 0x9026				/* Alpha (no ABI) */
 } elf_machine;
 
 typedef enum {
@@ -195,6 +205,23 @@ typedef enum {
 
 #define ELF64_R_INFO(s,t)		(((s)<<32) + ((t) & 0xffffffffL))
 
+#define EHDR32_SIZE 52
+#define EHDR64_SIZE 64
+#define EHDR_MAXSIZE 64
+
+#define SHDR32_SIZE 40
+#define SHDR64_SIZE 64
+#define SHDR_MAXSIZE 64
+
+#define SYMTAB32_SIZE 16
+#define SYMTAB64_SIZE 24
+#define SYMTAB_MAXSIZE 24
+
+#define RELOC32_SIZE 8
+#define RELOC64_SIZE 16
+#define RELOC_MAXSIZE 16
+
+
 /* elf relocation type - index of semantics */
 typedef enum {
     R_386_NONE = 0,		/* none */
@@ -208,7 +235,26 @@ typedef enum {
     R_386_RELATIVE = 8,		/* word, B + A */
     R_386_GOTOFF = 9,		/* word, S + A - GOT */
     R_386_GOTPC = 10		/* word, GOT + A - P */
-} elf_relocation_type;
+} elf_386_relocation_type;
+
+typedef enum {
+    R_X86_64_NONE = 0,		/* none */
+    R_X86_64_64 = 1,		/* add 64-bit symbol value */
+    R_X86_64_PC32 = 2,		/* pc-relative 32bit signed sym value */
+    R_X86_64_GOT32 = 3,		/* pc-relative 32bit signed GOT offset */
+    R_X86_64_PLT32 = 4,		/* pc-relative 32bit signed PLT offset */
+    R_X86_64_COPY = 5,		/* Copy data from shared object */
+    R_X86_64_GLOB_DAT = 6,	/* Set GOT entry to data address */
+    R_X86_64_JMP_SLOT = 7,	/* Set GOT entry to code address */
+    R_X86_64_RELATIVE = 8,	/* Add load address of shared object */
+    R_X86_64_GOTPCREL = 9,	/* Add 32bit signed pcrel offset to GOT */
+    R_X86_64_32 = 10,		/* Add 32bit zero extended (zx) symbol value */
+    R_X86_64_32S = 11,		/* Add 32bit sign extended (sx) symbol value */
+    R_X86_64_16 = 12,		/* Add 16bit zx symbol value */
+    R_X86_64_PC16 = 13,		/* Add 16bit sx pc relative symbol value */
+    R_X86_64_8 = 14,		/* Add 8bit zx symbol value */
+    R_X86_64_PC8 = 15		/* Add 8bit sx pc relative symbol value */
+} elf_x86_64_relocation_type;
 
 struct elf_secthead {
     elf_section_type	 type;
@@ -255,7 +301,7 @@ struct elf_reloc_entry {
     STAILQ_ENTRY(elf_reloc_entry) qlink;
     elf_address		 addr;
     yasm_symrec		*sym;
-    elf_relocation_type	 rtype;
+    int			 rtype_rel;
 };
 
 STAILQ_HEAD(elf_strtab_head, elf_strtab_entry);
@@ -361,6 +407,8 @@ unsigned long elf_secthead_write_relocs_to_file(FILE *f, elf_secthead *shead);
 long elf_secthead_set_file_offset(elf_secthead *shead, long pos);
 
 /* program header function */
+unsigned long
+elf_proghead_get_size(void);
 unsigned long
 elf_proghead_write_to_file(FILE *f,
 			   elf_offset secthead_addr,

@@ -34,18 +34,39 @@
 #define YASM_OBJFMT_ELF_INTERNAL
 #include "elf.h"
 
+#define YASM_WRITE_64C_L(p,hi,lo) \
+    YASM_WRITE_32_L(p, lo); \
+    YASM_WRITE_32_L(p, hi)
+
 static /*@dependent@*/ yasm_arch *cur_arch;
-static const char *arch_machine = NULL;
+static enum {
+    M_X86_32 = 1,
+    M_X86_64
+} cur_machine = 0;
+static enum {
+    ELF32 = 1,
+    ELF64
+} cur_elf = 0;
 
 int
 elf_set_arch(yasm_arch *arch, const char *machine)
 {
     cur_arch = arch;
-    arch_machine = machine;
 
-    /* FIXME: only support x86 arch, x86 machine */
-    if (yasm__strcasecmp(cur_arch->keyword, "x86") != 0 ||
-	yasm__strcasecmp(machine, "x86") != 0)
+    /* TODO: support more than x86:x86, x86:amd64 */
+    if (yasm__strcasecmp(cur_arch->keyword, "x86") == 0) {
+	if (yasm__strcasecmp(machine, "x86") == 0) {
+	    cur_machine = M_X86_32;
+	    cur_elf = ELF32;
+	}
+	else if (yasm__strcasecmp(machine, "amd64") == 0) {
+	    cur_elf = ELF64;
+	    cur_machine = M_X86_64;
+	}
+	else
+	    return 0;
+    }
+    else
 	return 0;
 
     return 1;
@@ -64,7 +85,7 @@ elf_reloc_entry_new(yasm_symrec *sym,
 
     entry->sym = sym;
     entry->addr = addr;
-    entry->rtype = rel ? R_386_PC32 : R_386_32;
+    entry->rtype_rel = rel;
 
     return entry;
 }
@@ -344,7 +365,7 @@ elf_symtab_assign_indices(elf_symtab_head *symtab)
 unsigned long
 elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab)
 {
-    unsigned char buf[16], *bufp;
+    unsigned char buf[SYMTAB_MAXSIZE], *bufp;
     elf_symtab_entry *entry, *prev;
     unsigned long size = 0;
 
@@ -390,23 +411,47 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab)
 	    }
 	}
 
-	/* ? refer to nasty coff_objfmt_output_symtab code - add it */
-	YASM_WRITE_32_L(bufp, entry->name ? entry->name->index : 0);
-	YASM_WRITE_32_L(bufp, entry->value);
-	YASM_WRITE_32_L(bufp, entry->size);
-	YASM_WRITE_8(bufp, ELF32_ST_INFO(entry->bind, entry->type));
-	YASM_WRITE_8(bufp, 0);
-	if (entry->sect) {
-	    elf_secthead *shead = yasm_section_get_of_data(entry->sect);
-	    if (!shead)
-		yasm_internal_error(
-		    N_("symbol references section without data"));
-	    YASM_WRITE_16_L(bufp, shead->index);
-	} else {
-	    YASM_WRITE_16_L(bufp, entry->index);
+	switch (cur_elf) {
+	    case ELF32:
+		YASM_WRITE_32_L(bufp, entry->name ? entry->name->index : 0);
+		YASM_WRITE_32_L(bufp, entry->value);
+		YASM_WRITE_32_L(bufp, entry->size);
+		YASM_WRITE_8(bufp, ELF32_ST_INFO(entry->bind, entry->type));
+		YASM_WRITE_8(bufp, 0);
+		if (entry->sect) {
+		    elf_secthead *shead = yasm_section_get_of_data(entry->sect);
+		    if (!shead)
+			yasm_internal_error(
+			    N_("symbol references section without data"));
+		    YASM_WRITE_16_L(bufp, shead->index);
+		} else {
+		    YASM_WRITE_16_L(bufp, entry->index);
+		}
+		fwrite(buf, SYMTAB32_SIZE, 1, f);
+		size += SYMTAB32_SIZE;
+		break;
+
+	    case ELF64:
+		YASM_WRITE_32_L(bufp, entry->name ? entry->name->index : 0);
+/* XXX */	YASM_WRITE_8(bufp, ELF32_ST_INFO(entry->bind, entry->type));
+		YASM_WRITE_8(bufp, 0);
+		if (entry->sect) {
+		    elf_secthead *shead = yasm_section_get_of_data(entry->sect);
+		    if (!shead)
+			yasm_internal_error(
+			    N_("symbol references section without data"));
+		    YASM_WRITE_16_L(bufp, shead->index);
+		} else {
+		    YASM_WRITE_16_L(bufp, entry->index);
+		}
+		/* XXX: instead of turning arbitrary sized intnums to 32-bit
+		 * values above, write them directly here */
+		YASM_WRITE_64C_L(bufp, 0, entry->value);
+		YASM_WRITE_64C_L(bufp, 0, entry->size);
+		fwrite(buf, SYMTAB64_SIZE, 1, f);
+		size += SYMTAB64_SIZE;
+		break;
 	}
-	fwrite(buf, 16, 1, f);
-	size += 16;
 	prev = entry;
     }
     return size;
@@ -463,7 +508,18 @@ elf_secthead_new(elf_strtab_entry	*name,
 
     if (name && (strcmp(name->str, ".symtab") == 0)) {
 	esd->align = 4;
-	esd->entsize = 16;
+	switch (cur_elf) {
+	    case ELF32:
+		esd->entsize = SYMTAB32_SIZE;
+		break;
+
+	    case ELF64:
+		esd->entsize = SYMTAB64_SIZE;
+		break;
+
+	    default:
+		yasm_internal_error(N_("unsupported ELF format"));
+	}
     }
 
     return esd;
@@ -528,27 +584,49 @@ unsigned long
 elf_secthead_write_to_file(FILE *f, elf_secthead *shead,
 			   elf_section_index sindex)
 {
-    unsigned char buf[40], *bufp = buf;
+    unsigned char buf[SHDR_MAXSIZE], *bufp = buf;
     shead->index = sindex;
 
     if (shead == NULL)
 	yasm_internal_error("shead is null");
 
-    YASM_WRITE_32_L(bufp, shead->name ? shead->name->index : 0);
-    YASM_WRITE_32_L(bufp, shead->type);
-    YASM_WRITE_32_L(bufp, shead->flags);
-    YASM_WRITE_32_L(bufp, shead->addr);
+    switch (cur_elf) {
+	case ELF32:
+	    YASM_WRITE_32_L(bufp, shead->name ? shead->name->index : 0);
+	    YASM_WRITE_32_L(bufp, shead->type);
+	    YASM_WRITE_32_L(bufp, shead->flags);
+	    YASM_WRITE_32_L(bufp, shead->addr);
 
-    YASM_WRITE_32_L(bufp, shead->offset);
-    YASM_WRITE_32_L(bufp, shead->size);
-    YASM_WRITE_32_L(bufp, shead->link);
-    YASM_WRITE_32_L(bufp, shead->info);
+	    YASM_WRITE_32_L(bufp, shead->offset);
+	    YASM_WRITE_32_L(bufp, shead->size);
+	    YASM_WRITE_32_L(bufp, shead->link);
+	    YASM_WRITE_32_L(bufp, shead->info);
 
-    YASM_WRITE_32_L(bufp, shead->align);
-    YASM_WRITE_32_L(bufp, shead->entsize);
+	    YASM_WRITE_32_L(bufp, shead->align);
+	    YASM_WRITE_32_L(bufp, shead->entsize);
 
-    if (fwrite(buf, 40, 1, f))
-	return 40;
+	    if (fwrite(buf, SHDR32_SIZE, 1, f))
+		return SHDR32_SIZE;
+	    break;
+
+	case ELF64:
+	    YASM_WRITE_32_L(bufp, shead->name ? shead->name->index : 0);
+	    YASM_WRITE_32_L(bufp, shead->type);
+	    YASM_WRITE_64C_L(bufp, 0, shead->flags);
+	    YASM_WRITE_64C_L(bufp, 0, shead->addr);
+	    YASM_WRITE_64C_L(bufp, 0, shead->offset);
+	    YASM_WRITE_64C_L(bufp, 0, shead->size);
+
+	    YASM_WRITE_32_L(bufp, shead->link);
+	    YASM_WRITE_32_L(bufp, shead->info);
+
+	    YASM_WRITE_64C_L(bufp, 0, shead->align);
+	    YASM_WRITE_64C_L(bufp, 0, shead->entsize);
+	    
+	    if (fwrite(buf, SHDR64_SIZE, 1, f))
+		return SHDR64_SIZE;
+	    break;
+    }
     yasm_internal_error(N_("Failed to write an elf section header"));
     return 0;
 }
@@ -578,7 +656,7 @@ unsigned long
 elf_secthead_write_rel_to_file(FILE *f, elf_section_index symtab_idx,
 			       elf_secthead *shead, elf_section_index sindex)
 {
-    unsigned char buf[40], *bufp = buf;
+    unsigned char buf[SHDR_MAXSIZE], *bufp = buf;
 
     if (shead == NULL)
 	yasm_internal_error("shead is null");
@@ -588,21 +666,42 @@ elf_secthead_write_rel_to_file(FILE *f, elf_section_index symtab_idx,
 
     shead->rel_index = sindex;
 
-    YASM_WRITE_32_L(bufp, shead->rel_name ? shead->rel_name->index : 0);
-    YASM_WRITE_32_L(bufp, SHT_REL);
-    YASM_WRITE_32_L(bufp, 0);
-    YASM_WRITE_32_L(bufp, 0);
+    switch (cur_elf) {
+	case ELF32:
+	    YASM_WRITE_32_L(bufp, shead->rel_name ? shead->rel_name->index : 0);
+	    YASM_WRITE_32_L(bufp, SHT_REL);
+	    YASM_WRITE_32_L(bufp, 0);
+	    YASM_WRITE_32_L(bufp, 0);
 
-    YASM_WRITE_32_L(bufp, shead->rel_offset);
-    YASM_WRITE_32_L(bufp, 8 * shead->nreloc);	/* size */
-    YASM_WRITE_32_L(bufp, symtab_idx);		/* link: symtab index */
-    YASM_WRITE_32_L(bufp, shead->index);	/* info: relocated's index */
+	    YASM_WRITE_32_L(bufp, shead->rel_offset);
+	    YASM_WRITE_32_L(bufp, RELOC32_SIZE * shead->nreloc);/* size */
+	    YASM_WRITE_32_L(bufp, symtab_idx);		/* link: symtab index */
+	    YASM_WRITE_32_L(bufp, shead->index);	/* info: relocated's index */
 
-    YASM_WRITE_32_L(bufp, 4);			/* align */
-    YASM_WRITE_32_L(bufp, 8);			/* entity size */
+	    YASM_WRITE_32_L(bufp, 4);			/* align */
+	    YASM_WRITE_32_L(bufp, RELOC32_SIZE);	/* entity size */
 
-    if (fwrite(buf, 40, 1, f))
-	return 40;
+	    if (fwrite(buf, SHDR32_SIZE, 1, f))
+		return SHDR32_SIZE;
+	    break;
+
+	case ELF64:
+	    YASM_WRITE_32_L(bufp, shead->rel_name ? shead->rel_name->index : 0);
+	    YASM_WRITE_32_L(bufp, SHT_REL);
+	    YASM_WRITE_64C_L(bufp, 0, 0);
+	    YASM_WRITE_64C_L(bufp, 0, 0);
+	    YASM_WRITE_64C_L(bufp, 0, shead->rel_offset);
+	    YASM_WRITE_64C_L(bufp, 0, RELOC64_SIZE * shead->nreloc); /* size */
+
+	    YASM_WRITE_32_L(bufp, symtab_idx);		/* link: symtab index */
+	    YASM_WRITE_32_L(bufp, shead->index);	/* info: relocated's index */
+	    YASM_WRITE_64C_L(bufp, 0, 8);		/* align */
+	    YASM_WRITE_64C_L(bufp, 0, RELOC64_SIZE);	/* entity size */
+
+	    if (fwrite(buf, SHDR64_SIZE, 1, f))
+		return SHDR64_SIZE;
+	    break;
+    }
     yasm_internal_error(N_("Failed to write an elf section header"));
     return 0;
 }
@@ -611,7 +710,7 @@ unsigned long
 elf_secthead_write_relocs_to_file(FILE *f, elf_secthead *shead)
 {
     elf_reloc_entry *reloc;
-    unsigned char buf[8], *bufp;
+    unsigned char buf[RELOC_MAXSIZE], *bufp;
     unsigned long size = 0;
     long pos;
 
@@ -633,7 +732,7 @@ elf_secthead_write_relocs_to_file(FILE *f, elf_secthead *shead)
 
     STAILQ_FOREACH(reloc, shead->relocs, qlink) {
 	yasm_sym_vis vis;
-	unsigned char r_type, r_sym;
+	unsigned char r_type=0, r_sym;
 	elf_symtab_entry *esym;
 
 	esym = yasm_symrec_get_of_data(reloc->sym);
@@ -643,13 +742,43 @@ elf_secthead_write_relocs_to_file(FILE *f, elf_secthead *shead)
 	    r_sym = STN_UNDEF;
 
 	vis = yasm_symrec_get_visibility(reloc->sym);
-	r_type = (unsigned char) reloc->rtype;
+	switch (cur_machine) {
+	    case M_X86_32:
+		r_type = (unsigned char)
+		    (reloc->rtype_rel ? R_386_PC32 : R_386_32);
+		break;
+
+	    case M_X86_64:
+		r_type = (unsigned char)
+		    (reloc->rtype_rel ? R_X86_64_PC32 : R_X86_64_64);
+		break;
+
+	    default:
+		yasm_internal_error(
+		    N_("Unsupported arch/machine for elf output"));
+	}
 
 	bufp = buf;
-	YASM_WRITE_32_L(bufp, reloc->addr);
-	YASM_WRITE_32_L(bufp, ELF32_R_INFO(r_sym, r_type));
-	fwrite(buf, 8, 1, f);
-	size += 8;
+	switch (cur_elf) {
+	    case ELF32:
+		YASM_WRITE_32_L(bufp, reloc->addr);
+		YASM_WRITE_32_L(bufp, ELF32_R_INFO(r_sym, r_type));
+		fwrite(buf, RELOC32_SIZE, 1, f);
+		size += RELOC32_SIZE;
+		break;
+
+	    case ELF64:
+		YASM_WRITE_64C_L(bufp, 0, reloc->addr);
+		/*YASM_WRITE_64_L(bufp, ELF64_R_INFO(r_sym, r_type));*/
+		YASM_WRITE_64C_L(bufp, r_sym, r_type);
+		fwrite(buf, RELOC64_SIZE, 1, f);
+		size += RELOC64_SIZE;
+		break;
+
+	    default:
+		yasm_internal_error( N_("Unsupported elf format for output"));
+	}
+		
     }
     return size;
 }
@@ -745,43 +874,93 @@ elf_secthead_set_file_offset(elf_secthead *shead, long pos)
 }
 
 unsigned long
+elf_proghead_get_size(void)
+{
+    switch (cur_elf) {
+	case ELF32: return EHDR32_SIZE;
+	case ELF64: return EHDR64_SIZE;
+	default: yasm_internal_error(
+	    N_("Unsupported ELF format for output"));
+    }
+    return 0;
+}
+
+unsigned long
 elf_proghead_write_to_file(FILE *f,
 			   elf_offset secthead_addr,
 			   unsigned long secthead_count,
 			   elf_section_index shstrtab_index)
 {
-    char buf[52], *bufp = buf;
+    char buf[EHDR_MAXSIZE], *bufp = buf;
 
     YASM_WRITE_8(bufp, ELFMAG0);		/* ELF magic number */
     YASM_WRITE_8(bufp, ELFMAG1);
     YASM_WRITE_8(bufp, ELFMAG2);
     YASM_WRITE_8(bufp, ELFMAG3);
 
-    YASM_WRITE_8(bufp, ELFCLASS32);		/* elf class :: 64? */
-    YASM_WRITE_8(bufp, ELFDATA2LSB);		/* data encoding :: MSB? */
-    YASM_WRITE_8(bufp, EV_CURRENT);		/* elf version */
-    while (bufp-buf < EI_NIDENT)		/* e_ident padding */
-	YASM_WRITE_8(bufp, 0);
+    switch (cur_elf) {
+	case ELF32:
 
-    YASM_WRITE_16_L(bufp, ET_REL);		/* e_type - object file */
-    YASM_WRITE_16_L(bufp, EM_386);		/* e_machine - also others */
-    YASM_WRITE_32_L(bufp, EV_CURRENT);		/* elf version */
-    YASM_WRITE_32_L(bufp, 0);			/* e_entry exection startaddr */
-    YASM_WRITE_32_L(bufp, 0);			/* e_phoff program header off */
-    YASM_WRITE_32_L(bufp, secthead_addr);	/* e_shoff section header off */
-    YASM_WRITE_32_L(bufp, 0);			/* e_flags also by arch */
-    YASM_WRITE_16_L(bufp, EHDR_SIZE);		/* e_ehsize */
-    YASM_WRITE_16_L(bufp, 0);			/* e_phentsize */
-    YASM_WRITE_16_L(bufp, 0);			/* e_phnum */
-    YASM_WRITE_16_L(bufp, 40);			/* e_shentsize */
-    YASM_WRITE_16_L(bufp, secthead_count);	/* e_shnum */
-    YASM_WRITE_16_L(bufp, shstrtab_index);	/* e_shstrndx */
+	    YASM_WRITE_8(bufp, ELFCLASS32);	    /* elf class */
+	    YASM_WRITE_8(bufp, ELFDATA2LSB);	    /* data encoding :: MSB? */
+	    YASM_WRITE_8(bufp, EV_CURRENT);	    /* elf version */
+	    while (bufp-buf < EI_NIDENT)	    /* e_ident padding */
+		YASM_WRITE_8(bufp, 0);
 
-    if (bufp - buf != 52)
-	yasm_internal_error(N_("ELF program header is not 52 bytes long"));
+	    YASM_WRITE_16_L(bufp, ET_REL);	    /* e_type - object file */
+	    YASM_WRITE_16_L(bufp, EM_386);	    /* e_machine - or others */
+	    YASM_WRITE_32_L(bufp, EV_CURRENT);	    /* elf version */
+	    YASM_WRITE_32_L(bufp, 0);		/* e_entry exection startaddr */
+	    YASM_WRITE_32_L(bufp, 0);		/* e_phoff program header off */
+	    YASM_WRITE_32_L(bufp, secthead_addr);   /* e_shoff section header off */
+	    YASM_WRITE_32_L(bufp, 0);		    /* e_flags also by arch */
+	    YASM_WRITE_16_L(bufp, EHDR32_SIZE);	    /* e_ehsize */
+	    YASM_WRITE_16_L(bufp, 0);		    /* e_phentsize */
+	    YASM_WRITE_16_L(bufp, 0);		    /* e_phnum */
+	    YASM_WRITE_16_L(bufp, SHDR32_SIZE);	    /* e_shentsize */
+	    YASM_WRITE_16_L(bufp, secthead_count);  /* e_shnum */
+	    YASM_WRITE_16_L(bufp, shstrtab_index);  /* e_shstrndx */
 
-    if (fwrite(buf, 52, 1, f))
-	return 52;
+	    if (bufp - buf != EHDR32_SIZE)
+		yasm_internal_error(N_("ELF program header is not 52 bytes long"));
+
+	    if (fwrite(buf, EHDR32_SIZE, 1, f))
+		return EHDR32_SIZE;
+	    break;
+
+	case ELF64:
+	    YASM_WRITE_8(bufp, ELFCLASS64);	    /* elf class */
+	    YASM_WRITE_8(bufp, ELFDATA2LSB);	    /* data encoding :: MSB? */
+	    YASM_WRITE_8(bufp, EV_CURRENT);	    /* elf version */
+	    YASM_WRITE_8(bufp, ELFOSABI_SYSV);	    /* os/abi */
+	    YASM_WRITE_8(bufp, 0);			/* SYSV v3 ABI=0 */
+	    while (bufp-buf < EI_NIDENT)		/* e_ident padding */
+		YASM_WRITE_8(bufp, 0);
+
+	    YASM_WRITE_16_L(bufp, ET_REL);	    /* e_type - object file */
+	    YASM_WRITE_16_L(bufp, EM_X86_64);	    /* e_machine - or others */
+	    YASM_WRITE_32_L(bufp, EV_CURRENT);	    /* elf version */
+	    YASM_WRITE_64C_L(bufp, 0, 0);	    /* e_entry */
+	    YASM_WRITE_64C_L(bufp, 0, 0);	    /* e_phoff */
+	    YASM_WRITE_64C_L(bufp, 0, secthead_addr);/* e_shoff secthead off */
+
+	    YASM_WRITE_32_L(bufp, 0);		    /* e_flags */
+	    YASM_WRITE_16_L(bufp, EHDR64_SIZE);	    /* e_ehsize */
+	    YASM_WRITE_16_L(bufp, 0);		    /* e_phentsize */
+	    YASM_WRITE_16_L(bufp, 0);		    /* e_phnum */
+	    YASM_WRITE_16_L(bufp, SHDR64_SIZE);	    /* e_shentsize */
+	    YASM_WRITE_16_L(bufp, secthead_count);  /* e_shnum */
+	    YASM_WRITE_16_L(bufp, shstrtab_index);  /* e_shstrndx */
+
+	    if (bufp - buf != EHDR64_SIZE)
+		yasm_internal_error(N_("ELF program header is not 64 bytes long"));
+
+	    if (fwrite(buf, EHDR64_SIZE, 1, f))
+		return EHDR64_SIZE;
+	    break;
+	default:
+	    yasm_internal_error(N_("Unsupported elf format for output"));
+    }
     yasm_internal_error(N_("Failed to write ELF program header"));
     return 0;
 }
