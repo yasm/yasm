@@ -1,4 +1,4 @@
-/* $Id: nasm-bison.y,v 1.22 2001/07/25 00:33:10 peter Exp $
+/* $Id: nasm-bison.y,v 1.23 2001/08/19 02:15:18 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -31,9 +31,10 @@
 #define YYDEBUG 1
 
 void init_table(void);
-extern int yylex(void);
+extern int nasm_parser_lex(void);
 extern void yyerror(char *);
 static unsigned long ConvertCharConstToInt(char *);
+void nasm_parser_error(char *);
 
 %}
 
@@ -411,5 +412,11 @@ ConvertCharConstToInt(char *cc)
     }
 
     return retval;
+}
+
+void
+nasm_parser_error(char *s)
+{
+    yyerror(s);
 }
 

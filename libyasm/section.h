@@ -1,4 +1,4 @@
-/* $Id: section.h,v 1.2 2001/06/28 21:22:01 peter Exp $
+/* $Id: section.h,v 1.3 2001/08/19 02:15:18 peter Exp $
  * Section header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -27,9 +27,11 @@ typedef struct section_s {
 
     enum type { SECTION, ABSOLUTE };
 
+    char *name;
+    unsigned int id;
+
     union {
 	/* SECTION data */
-	char *name;
 	/* ABSOLUTE data */
 	unsigned long start;
     } data;

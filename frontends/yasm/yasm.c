@@ -1,4 +1,4 @@
-/* $Id: yasm.c,v 1.5 2001/08/18 22:15:12 peter Exp $
+/* $Id: yasm.c,v 1.6 2001/08/19 02:15:18 peter Exp $
  * Program entry point, command line parsing
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -22,11 +22,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-extern int yydebug;
-extern FILE *yyin;
-
-extern int yyparse(void);
+#include "bytecode.h"
+#include "section.h"
+#include "outfmt.h"
+#include "preproc.h"
+#include "parser.h"
 
 char *filename = (char *)NULL;
 unsigned int line_number = 1;
@@ -37,8 +37,6 @@ main (int argc, char *argv[])
 {
     FILE *in;
 
-    yydebug = 1;
-
     if(argc==2) {
 	in = fopen(argv[1], "rt");
 	if(!in) {
@@ -46,11 +44,12 @@ main (int argc, char *argv[])
 	    return EXIT_FAILURE;
 	}
 	filename = strdup(argv[1]);
-	yyin = in;
-    } else
-	filename = strdup("<UNKNOWN>");
+    } else {
+	in = stdin;
+	filename = strdup("<STDIN>");
+    }
 
-    yyparse();
+    nasm_parser.doparse(&raw_preproc, &dbg_outfmt, in);
 
     if(filename)
 	free(filename);

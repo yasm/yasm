@@ -1,5 +1,5 @@
-/* $Id: main.c,v 1.6 2001/08/19 02:15:18 peter Exp $
- * Program entry point, command line parsing
+/* $Id: outfmt.h,v 1.1 2001/08/19 02:15:18 peter Exp $
+ * Output format module interface header file
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -19,40 +19,26 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "bytecode.h"
-#include "section.h"
-#include "outfmt.h"
-#include "preproc.h"
-#include "parser.h"
+#ifndef YASM_OUTFMT_H
+#define YASM_OUTFMT_H
 
-char *filename = (char *)NULL;
-unsigned int line_number = 1;
-unsigned int mode_bits = 32;
+/* Interface to the output format module(s) */
+typedef struct outfmt_s {
+    char *name;		/* one-line description of the format */
+    char *keyword;	/* keyword used to select format on the command line */
 
-int
-main (int argc, char *argv[])
-{
-    FILE *in;
+    /* NULL-terminated list of debugging formats that are valid to use with
+     * this output format.
+     */
+/*    struct debugfmt_s **debugfmts;*/
 
-    if(argc==2) {
-	in = fopen(argv[1], "rt");
-	if(!in) {
-	    fprintf(stderr, "could not open file `%s'\n", argv[1]);
-	    return EXIT_FAILURE;
-	}
-	filename = strdup(argv[1]);
-    } else {
-	in = stdin;
-	filename = strdup("<STDIN>");
-    }
+    /* Default debugging format (set even if there's only one available to
+     * use)
+     */
+/*    struct debugfmt_s *default_df;*/
+} outfmt;
 
-    nasm_parser.doparse(&raw_preproc, &dbg_outfmt, in);
+/* Available output formats */
+extern outfmt dbg_outfmt;
 
-    if(filename)
-	free(filename);
-    return EXIT_SUCCESS;
-}
-
+#endif

@@ -1,0 +1,10 @@
+.*.sw?
+bison.c
+bison.h
+token.c
+bison.y
+token.l
+Makefile.in
+Makefile
+.deps
+libparser.a

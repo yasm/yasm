@@ -1,5 +1,5 @@
-/* $Id: main.c,v 1.6 2001/08/19 02:15:18 peter Exp $
- * Program entry point, command line parsing
+/* $Id: nasm-parser.c,v 1.1 2001/08/19 02:15:18 peter Exp $
+ * NASM-compatible parser
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -20,39 +20,43 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "bytecode.h"
 #include "section.h"
 #include "outfmt.h"
 #include "preproc.h"
 #include "parser.h"
 
-char *filename = (char *)NULL;
-unsigned int line_number = 1;
-unsigned int mode_bits = 32;
+extern FILE *nasm_parser_in;
+extern int nasm_parser_debug;
 
-int
-main (int argc, char *argv[])
+int (*nasm_parser_yyinput) (char *buf, int max_size);
+
+static section *
+doparse(preproc *pp, outfmt *of, FILE *f)
 {
-    FILE *in;
+    pp->initialize(of, f);
+    nasm_parser_in = f;
+    nasm_parser_yyinput = pp->input;
 
-    if(argc==2) {
-	in = fopen(argv[1], "rt");
-	if(!in) {
-	    fprintf(stderr, "could not open file `%s'\n", argv[1]);
-	    return EXIT_FAILURE;
-	}
-	filename = strdup(argv[1]);
-    } else {
-	in = stdin;
-	filename = strdup("<STDIN>");
-    }
+    /* only temporary */
+    nasm_parser_debug = 1;
 
-    nasm_parser.doparse(&raw_preproc, &dbg_outfmt, in);
+    nasm_parser_parse();
 
-    if(filename)
-	free(filename);
-    return EXIT_SUCCESS;
+    return NULL;
 }
 
+/* Define valid preprocessors to use with this parser */
+static preproc *preprocs[] = {
+    &raw_preproc,
+    NULL
+};
+
+/* Define parser structure -- see parser.h for details */
+parser nasm_parser = {
+    "NASM-compatible parser",
+    "nasm",
+    preprocs,
+    &raw_preproc,
+    &doparse
+};

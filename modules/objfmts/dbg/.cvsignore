@@ -2,4 +2,4 @@
 Makefile.in
 Makefile
 .deps
-yasm
+liboutfmt.a
