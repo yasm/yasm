@@ -72,7 +72,7 @@ int mergesort(void *base, size_t nmemb, size_t size,
 	      int (*compar)(const void *, const void *));
 #endif
 
-#if !defined(HAVE_STRSEP) || defined(HAVE_GNU_C_LIBRARY) || defined(lint)
+#if !defined(HAVE_STRSEP) || defined(lint)
 /*@null@*/ char *strsep(char **stringp, const char *delim);
 #endif
 
@@ -88,7 +88,7 @@ int mergesort(void *base, size_t nmemb, size_t size,
 # endif
 #endif
 
-#if defined(USE_OUR_OWN_STRCASECMP) || defined(HAVE_GNU_C_LIBRARY) || defined(lint)
+#if defined(USE_OUR_OWN_STRCASECMP) || defined(lint)
 int strcasecmp(const char *s1, const char *s2);
 int strncasecmp(const char *s1, const char *s2, size_t n);
 #endif
