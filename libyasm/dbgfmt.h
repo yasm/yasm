@@ -39,12 +39,16 @@ struct yasm_dbgfmt {
      * format functions.  The filenames are provided solely for informational
      * purposes.  May be NULL if not needed by the debug format.
      */
-    void (*initialize) (const char *in_filename, const char *obj_filename);
+    void (*initialize) (const char *in_filename, const char *obj_filename,
+			yasm_objfmt *of);
 
     /* Cleans up anything allocated by initialize.
      * May be NULL if not needed by the debug format.
      */
     void (*cleanup) (void);
+
+    /* DEBUG directive support. */
+    void (*directive) (yasm_valparamhead *valparams, unsigned long lindex);
 };
 
 #endif
