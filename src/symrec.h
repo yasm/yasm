@@ -67,6 +67,8 @@ int symrec_get_int_value(const symrec *sym, unsigned long *ret_val,
 
 const char *symrec_get_name(const symrec *sym);
 
+const expr *symrec_get_equ(const symrec *sym);
+
 int symrec_foreach(int (*func) (symrec *sym));
 
 void symrec_print(const symrec *sym);

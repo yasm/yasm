@@ -229,6 +229,14 @@ symrec_get_name(const symrec *sym)
     return sym->name;
 }
 
+const expr *
+symrec_get_equ(const symrec *sym)
+{
+    if (sym->type == SYM_EQU)
+	return sym->value.expn;
+    return (const expr *)NULL;
+}
+
 void
 symrec_print(const symrec *sym)
 {

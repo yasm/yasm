@@ -142,6 +142,42 @@ ExprFloat(floatnum *f)
     return e;
 }
 
+int
+expr_contains_float(const expr *e)
+{
+    if (!e)
+	return 0;
+
+    switch (e->left.type) {
+	case EXPR_SYM:
+	    if (expr_contains_float(symrec_get_equ(e->left.data.sym)))
+		return 1;
+	    break;
+	case EXPR_EXPR:
+	    if (expr_contains_float(e->left.data.expn))
+		return 1;
+	    break;
+	case EXPR_FLOAT:
+	    return 1;
+	case EXPR_INT:
+	case EXPR_NONE:
+	    break;
+    }
+
+    switch (e->right.type) {
+	case EXPR_SYM:
+	    return expr_contains_float(symrec_get_equ(e->right.data.sym));
+	case EXPR_EXPR:
+	    return expr_contains_float(e->right.data.expn);
+	case EXPR_FLOAT:
+	    return 1;
+	case EXPR_INT:
+	case EXPR_NONE:
+	    break;
+    }
+    return 0;
+}
+
 /* get rid of unnecessary branches if possible.  report. */
 int
 expr_simplify(expr *e)

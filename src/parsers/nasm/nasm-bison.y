@@ -111,13 +111,13 @@ static bytecode *nasm_parser_temp_bc;
 %type <bc> line lineexp exp instr instrbase
 
 %type <int_info> fpureg reg32 reg16 reg8 segreg
-%type <ea> mem memaddr memexp memfar
+%type <ea> mem memaddr memfar
 %type <ea> mem8x mem16x mem32x mem64x mem80x mem128x
 %type <ea> mem8 mem16 mem32 mem64 mem80 mem128 mem1632
 %type <ea> rm8x rm16x rm32x /*rm64x rm128x*/
 %type <ea> rm8 rm16 rm32 rm64 rm128
 %type <im_val> imm imm8x imm16x imm32x imm8 imm16 imm32
-%type <exp> expr expr_no_string expr_no_fltstr
+%type <exp> expr expr_no_string memexpr
 %type <sym> explabel
 %type <str_val> label_id
 %type <tgt_val> target
@@ -154,10 +154,10 @@ line: '\n'		{ $$ = (bytecode *)NULL; }
 ;
 
 lineexp: exp
-    | TIMES expr_no_fltstr exp		{ $$ = $3; SetBCMultiple($$, $2); }
+    | TIMES expr exp			{ $$ = $3; SetBCMultiple($$, $2); }
     | label				{ $$ = (bytecode *)NULL; }
     | label exp				{ $$ = $2; }
-    | label TIMES expr_no_fltstr exp	{ $$ = $4; SetBCMultiple($$, $3); }
+    | label TIMES expr exp		{ $$ = $4; SetBCMultiple($$, $3); }
     | label_id EQU expr			{
 	symrec_define_equ($1, $3);
 	$$ = (bytecode *)NULL;
@@ -166,7 +166,7 @@ lineexp: exp
 
 exp: instr
     | DECLARE_DATA datavals	    { $$ = bytecode_new_data(&$2, $1); }
-    | RESERVE_SPACE expr_no_fltstr  { $$ = bytecode_new_reserve($2, $1); }
+    | RESERVE_SPACE expr	    { $$ = bytecode_new_reserve($2, $1); }
 ;
 
 datavals: dataval	    {
@@ -265,10 +265,10 @@ segreg:  REG_ES
 ;
 
 /* memory addresses */
-memexp: expr	{ $$ = effaddr_new_expr($1); }
+memexpr: expr
 ;
 
-memaddr: memexp		    { $$ = $1; SetEASegment($$, 0); }
+memaddr: memexpr	    { $$ = effaddr_new_expr($1); SetEASegment($$, 0); }
     | REG_CS ':' memaddr    { $$ = $3; SetEASegment($$, 0x2E); }
     | REG_SS ':' memaddr    { $$ = $3; SetEASegment($$, 0x36); }
     | REG_DS ':' memaddr    { $$ = $3; SetEASegment($$, 0x3E); }
@@ -387,17 +387,14 @@ imm32: imm
 ;
 
 /* jump targets */
-target: expr_no_fltstr	{ $$.val = $1; SetOpcodeSel(&$$.op_sel, JR_NONE); }
+target: expr		{ $$.val = $1; SetOpcodeSel(&$$.op_sel, JR_NONE); }
     | SHORT target	{ $$ = $2; SetOpcodeSel(&$$.op_sel, JR_SHORT_FORCED); }
     | NEAR target	{ $$ = $2; SetOpcodeSel(&$$.op_sel, JR_NEAR_FORCED); }
 ;
 
 /* expression trees */
-expr_no_string: expr_no_fltstr
+expr_no_string: INTNUM		{ $$ = expr_new_ident(ExprInt($1)); }
     | FLTNUM			{ $$ = expr_new_ident(ExprFloat($1)); }
-;
-
-expr_no_fltstr: INTNUM		{ $$ = expr_new_ident(ExprInt($1)); }
     | explabel			{ $$ = expr_new_ident(ExprSym($1)); }
     /*| expr '||' expr		{ $$ = expr_new_tree($1, EXPR_LOR, $3); }*/
     | expr '|' expr		{ $$ = expr_new_tree($1, EXPR_OR, $3); }

@@ -88,6 +88,8 @@ ExprItem *ExprFloat(floatnum *);
 #define expr_new_ident(r) \
     expr_new ((ExprItem *)NULL, EXPR_IDENT, (r))
 
+int expr_contains_float(const expr *);
+
 int expr_simplify(expr *);
 void expr_print(expr *);
 
