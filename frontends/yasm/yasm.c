@@ -545,6 +545,16 @@ main(int argc, char *argv[])
     if (in != stdin)
 	fclose(in);
 
+    /* Check for undefined symbols */
+    yasm_symtab_parser_finalize(yasm_object_get_symtab(object));
+
+    if (yasm_get_num_errors(warning_error) > 0) {
+	yasm_errwarn_output_all(yasm_object_get_linemap(object), warning_error,
+				print_yasm_error, print_yasm_warning);
+	cleanup(object);
+	return EXIT_FAILURE;
+    }
+
     /* Finalize parse */
     yasm_object_finalize(object);
 
@@ -555,7 +565,7 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 
-    yasm_symtab_parser_finalize(yasm_object_get_symtab(object));
+    /* Optimize */
     cur_optimizer_module->optimize(object);
 
     if (yasm_get_num_errors(warning_error) > 0) {

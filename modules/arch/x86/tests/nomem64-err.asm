@@ -1,6 +1,4 @@
 [bits 64]
-mov bh, r8b
-mov r8b, ch
 push es
 pop fs
 pushaw
