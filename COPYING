@@ -22,7 +22,6 @@ license and Artistic license are fulfilled.
 Modules
 -------
 Most of the modules are 2-clause BSD licensed, with the exception of:
- preprocs/yapp - GPL licensed
  preprocs/nasm - LGPL licensed
 
 ---------
