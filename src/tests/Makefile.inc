@@ -11,11 +11,6 @@ noinst_PROGRAMS += \
 bitvect_test_CFLAGS =
 bitvect_test_SOURCES = \
 	src/tests/bitvect_test.c	\
-	$(YASMPARSERFILES)		\
-	$(YASMPREPROCFILES)		\
-	$(YASMOPTIMIZERFILES)		\
-	$(YASMOBJFMTFILES)		\
-	$(YASMARCHFILES)		\
 	$(CHECKFILES)
 bitvect_test_LDFLAGS =
 bitvect_test_LDADD = libyasm.la @LIBLTDL@ @LIBOBJS@ $(INTLLIBS) @LIBADD_DL@
