@@ -148,6 +148,75 @@ static Init_Entry normalized_edgecase_vals[] = {
 
 static floatnum *flt;
 
+/* failure messages */
+static char ret_msg[1024], result_msg[1024];
+
+static void
+new_setup(Init_Entry *vals, int i)
+{
+    flt = floatnum_new(vals[i].ascii);
+    strcpy(result_msg, vals[i].ascii);
+    strcat(result_msg, ": incorrect ");
+}
+
+static int
+new_check_flt(Init_Entry *val)
+{
+    unsigned char *mantissa;
+    int i, result = 0;
+    unsigned int len;
+
+    mantissa = BitVector_Block_Read(flt->mantissa, &len);
+    for (i=1;i<MANT_BYTES;i++)	    /* don't compare first byte */
+	if (mantissa[i] != val->mantissa[i])
+	    result = 1;
+    free(mantissa);
+    if (result) {
+	strcat(result_msg, "mantissa");
+	return 1;
+    }
+
+    if (flt->exponent != val->exponent) {
+	strcat(result_msg, "exponent");
+	return 1;
+    }
+    if (flt->sign != val->sign) {
+	strcat(result_msg, "sign");
+	return 1;
+    }
+    if (flt->flags != val->flags) {
+	strcat(result_msg, "flags");
+	return 1;
+    }
+    return 0;
+}
+
+START_TEST(test_new_normalized)
+{
+    Init_Entry *vals = normalized_vals;
+    int i, num = sizeof(normalized_vals)/sizeof(Init_Entry);
+
+    for (i=0; i<num; i++) {
+	new_setup(vals, i);
+	fail_unless(new_check_flt(&vals[i]) == 0, result_msg);
+	floatnum_delete(flt);
+    }
+}
+END_TEST
+
+START_TEST(test_new_normalized_edgecase)
+{
+    Init_Entry *vals = normalized_edgecase_vals;
+    int i, num = sizeof(normalized_edgecase_vals)/sizeof(Init_Entry);
+
+    for (i=0; i<num; i++) {
+	new_setup(vals, i);
+	fail_unless(new_check_flt(&vals[i]) == 0, result_msg);
+	floatnum_delete(flt);
+    }
+}
+END_TEST
+
 static void
 get_family_setup(void)
 {
@@ -161,9 +230,6 @@ get_family_teardown(void)
     BitVector_Destroy(flt->mantissa);
     free(flt);
 }
-
-/* failure messages, set by get_common_setup(). */
-static char ret_msg[1024], result_msg[1024];
 
 static void
 get_common_setup(Init_Entry *vals, int i)
@@ -319,9 +385,14 @@ static Suite *
 floatnum_suite(void)
 {
     Suite *s = suite_create("floatnum");
+    TCase *tc_new = tcase_create("new");
     TCase *tc_get_single = tcase_create("get_single");
     TCase *tc_get_double = tcase_create("get_double");
     TCase *tc_get_extended = tcase_create("get_extended");
+
+    suite_add_tcase(s, tc_new);
+    tcase_add_test(tc_new, test_new_normalized);
+    tcase_add_test(tc_new, test_new_normalized_edgecase);
 
     suite_add_tcase(s, tc_get_single);
     tcase_add_test(tc_get_single, test_get_single_normalized);
