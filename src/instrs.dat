@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.27 2001/07/05 07:00:01 peter Exp $
+; $Id: instrs.dat,v 1.28 2001/07/05 09:30:04 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -197,20 +197,20 @@ popaw!onebyte		10,61		186
 ;
 ; Exchange instructions
 ;
-;xchg	REG_AX,reg16		16	90+$2		nil	nil	8086
-;xchg	reg16,REG_AX		16	90+$1		nil	nil	8086
-;xchg	REG_EAX,reg32		32	90+$2		nil	nil	386
-;xchg	reg32,REG_EAX		32	90+$1		nil	nil	386
 ; arbitrary encoding, picked $1r,$2 instead of $2r,$1
 xchg	reg8,reg8		nil	86		$1r,$2	nil	8086
 xchg	mem,reg8		nil	86		$1,$2	nil	8086
 xchg	mem8x,reg8		nil	86		$1,$2	nil	8086
 xchg	reg8,mem8		nil	86		$2,$1	nil	8086
+xchg	REG_AX,reg16		16	90+$2		nil	nil	8086
+xchg	reg16,REG_AX		16	90+$1		nil	nil	8086
 ; arbitrary encoding, picked $1r,$2 instead of $2r,$1
 xchg	reg16,reg16		16	87		$1r,$2	nil	8086
 xchg	mem,reg16		16	87		$1,$2	nil	8086
 xchg	mem16x,reg16		16	87		$1,$2	nil	8086
 xchg	reg16,mem16		16	87		$2,$1	nil	8086
+xchg	REG_EAX,reg32		32	90+$2		nil	nil	386
+xchg	reg32,REG_EAX		32	90+$1		nil	nil	386
 ; arbitrary encoding, picked $1r,$2 instead of $2r,$1
 xchg	reg32,reg32		32	87		$1r,$2	nil	386
 xchg	mem,reg32		32	87		$1,$2	nil	386

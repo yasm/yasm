@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: gen_instr.pl,v 1.14 2001/07/05 07:21:35 peter Exp $
+# $Id: gen_instr.pl,v 1.15 2001/07/05 09:30:04 peter Exp $
 # Generates bison.y and token.l from instrs.dat for YASM
 #
 #    Copyright (C) 2001  Michael Urman
@@ -312,18 +312,40 @@ sub rule_footer ()
 {
     return "    }\n";
 }
-sub cond_action ( $ $ $ $ $ $ $ $ )
+
+sub cond_action_if ( $ $ $ $ $ $ $ )
 {
-    my ($rule, $tokens, $count, $regarg, $val, $func, $a_eax, $a_args)
-	= splice (@_);
-    return rule_header ($rule, $tokens, $count) . <<"EOF" . rule_footer;
+    my ($rule, $tokens, $count, $regarg, $val, $func, $a_eax) = splice (@_);
+    return rule_header ($rule, $tokens, $count) . <<"EOF";
         if (\$$regarg == $val) {
             $func(@$a_eax);
         }
+EOF
+}
+sub cond_action_elsif ( $ $ $ $ )
+{
+    my ($regarg, $val, $func, $a_eax) = splice (@_);
+    return <<"EOF";
+        else if (\$$regarg == $val) {
+            $func(@$a_eax);
+        }
+EOF
+}
+sub cond_action_else ( $ $ )
+{
+    my ($func, $a_args) = splice (@_);
+    return <<"EOF" . rule_footer;
         else {
             $func (@$a_args);
         }
 EOF
+}
+sub cond_action ( $ $ $ $ $ $ $ $ )
+{
+    my ($rule, $tokens, $count, $regarg, $val, $func, $a_eax, $a_args)
+     = splice (@_);
+    return cond_action_if ($rule, $tokens, $count, $regarg, $val, $func,
+	$a_eax) . cond_action_else ($func, $a_args);
 }
 
 #sub action ( $ $ $ $ $ )
@@ -400,6 +422,7 @@ sub output_yacc ($@)
 		    join( "\n    | ", sort keys %$groups), "\n;\n";
 
 	    my ($ONE, $AL, $AX, $EAX);	# need the outer scope
+	    my (@XCHG_AX, @XCHG_EAX);
 
 	    # list the arguments and actions (buildbc)
 	    #foreach my $instrname (sort keys %$instrlist)
@@ -414,6 +437,8 @@ sub output_yacc ($@)
 		# BUT, if we don't fold it in, we have to generate the
 		# original version we would have otherwise.
 		($ONE, $AL, $AX, $EAX) = (0, 0, 0, 0);
+		# Folding for xchg (REG_E?AX,reg16 and reg16,REG_E?AX).
+		(@XCHG_AX, @XCHG_EAX) = ((0, 0), (0, 0));
 		my $count = 0;
 		foreach my $inst (@{$groups->{$group}{rules}}) {
 		    # build the instruction in pieces.
@@ -511,6 +536,22 @@ sub output_yacc ($@)
 		    {
 			$EAX = [ $rule, $tokens, $func, \@args];
 		    }
+		    elsif (($inst->[OPERANDS]||"") =~ m/REG_AX,reg16/)
+		    {
+			$XCHG_AX[0] = [ $rule, $tokens, $func, \@args];
+		    }
+		    elsif (($inst->[OPERANDS]||"") =~ m/reg16,REG_AX/)
+		    {
+			$XCHG_AX[1] = [ $rule, $tokens, $func, \@args];
+		    }
+		    elsif (($inst->[OPERANDS]||"") =~ m/REG_EAX,reg32/)
+		    {
+			$XCHG_EAX[0] = [ $rule, $tokens, $func, \@args];
+		    }
+		    elsif (($inst->[OPERANDS]||"") =~ m/reg32,REG_EAX/)
+		    {
+			$XCHG_EAX[1] = [ $rule, $tokens, $func, \@args];
+		    }
 
 		    # or if we've deferred and we match the folding version
 		    elsif ($ONE and ($inst->[OPERANDS]||"") =~ m/imm8/)
@@ -540,6 +581,66 @@ sub output_yacc ($@)
 			my $regarg = get_token_number ($tokens, "reg32");
 
 			print GRAMMAR cond_action ($rule, $tokens, $count++, $regarg, 0, $func, $EAX->[3], \@args);
+		    }
+		    elsif (($XCHG_AX[0] or $XCHG_AX[1]) and
+			($inst->[OPERANDS]||"") =~ m/reg16,reg16/)
+		    {
+			my $first = 1;
+			for (my $i=0; $i < @XCHG_AX; ++$i)
+			{
+			    if($XCHG_AX[$i])
+			    {
+				$XCHG_AX[$i]->[4] = 1;
+				# This is definitely a hack.  The "right" way
+				# to do this would be to enhance
+				# get_token_number to get the nth reg16
+				# instead of always getting the first.
+				my $regarg =
+				    get_token_number ($tokens, "reg16") + $i*2;
+
+				if ($first)
+				{
+				    print GRAMMAR cond_action_if ($rule, $tokens, $count++, $regarg, 0, $func, $XCHG_AX[$i]->[3]);
+				    $first = 0;
+				}
+				else
+				{
+				    $count++;
+				    print GRAMMAR cond_action_elsif ($regarg, 0, $func, $XCHG_AX[$i]->[3]);
+				}
+			    }
+			}
+			print GRAMMAR cond_action_else ($func, \@args);
+		    }
+		    elsif (($XCHG_EAX[0] or $XCHG_EAX[1]) and
+			($inst->[OPERANDS]||"") =~ m/reg32,reg32/)
+		    {
+			my $first = 1;
+			for (my $i=0; $i < @XCHG_EAX; ++$i)
+			{
+			    if($XCHG_EAX[$i])
+			    {
+				$XCHG_EAX[$i]->[4] = 1;
+				# This is definitely a hack.  The "right" way
+				# to do this would be to enhance
+				# get_token_number to get the nth reg32
+				# instead of always getting the first.
+				my $regarg =
+				    get_token_number ($tokens, "reg32") + $i*2;
+
+				if ($first)
+				{
+				    print GRAMMAR cond_action_if ($rule, $tokens, $count++, $regarg, 0, $func, $XCHG_EAX[$i]->[3]);
+				    $first = 0;
+				}
+				else
+				{
+				    $count++;
+				    print GRAMMAR cond_action_elsif ($regarg, 0, $func, $XCHG_EAX[$i]->[3]);
+				}
+			    }
+			}
+			print GRAMMAR cond_action_else ($func, \@args);
 		    }
 
 		    # otherwise, generate the normal version
