@@ -52,6 +52,14 @@ void expr_delete(/*@only@*/ /*@null@*/ expr *e);
 					  expr *e, /*@null@*/
 					  calc_bc_dist_func calc_bc_dist);
 
+/* Extracts a single symrec out of an expression, replacing it with the
+ * symrec's value (if it's a label).  Returns NULL if it's unable to extract a
+ * symrec (too complex of expr, none present, etc).
+ */
+/*@dependent@*/ /*@null@*/ symrec *expr_extract_symrec(expr **ep,
+						       calc_bc_dist_func
+						       calc_bc_dist);
+
 /* Gets the integer value of e if the expression is just an integer.  If the
  * expression is more complex (contains anything other than integers, ie
  * floats, non-valued labels, registers), returns NULL.

@@ -969,6 +969,50 @@ expr_simplify(expr *e, calc_bc_dist_func calc_bc_dist)
     return expr_level_tree(e, 1, 1, calc_bc_dist, NULL, NULL, NULL);
 }
 
+symrec *
+expr_extract_symrec(expr **ep, calc_bc_dist_func calc_bc_dist)
+{
+    symrec *sym = NULL;
+    int i, symterm = -1;
+
+    switch ((*ep)->op) {
+	case EXPR_IDENT:
+	    /* Replace sym with 0 value, return sym */
+	    if ((*ep)->terms[0].type == EXPR_SYM) {
+		sym = (*ep)->terms[0].data.sym;
+		symterm = 0;
+	    }
+	    break;
+	case EXPR_ADD:
+	    /* Search for sym, if found, delete it from expr and return it */
+	    for (i=0; i<(*ep)->numterms; i++) {
+		if ((*ep)->terms[i].type == EXPR_SYM) {
+		    sym = (*ep)->terms[i].data.sym;
+		    symterm = i;
+		    break;
+		}
+	    }
+	    break;
+	default:
+	    break;
+    }
+    if (sym) {
+	/*@dependent@*/ section *sect;
+	/*@dependent@*/ /*@null@*/ bytecode *precbc;
+	/*@null@*/ intnum *intn;
+
+	if (symrec_get_label(sym, &sect, &precbc)) {
+	    intn = calc_bc_dist(sect, NULL, precbc);
+	    if (!intn)
+		return NULL;
+	} else
+	    intn = intnum_new_uint(0);
+	(*ep)->terms[symterm].type = EXPR_INT;
+	(*ep)->terms[symterm].data.intn = intn;
+    }
+    return sym;
+}
+
 /*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
 const intnum *
 expr_get_intnum(expr **ep, calc_bc_dist_func calc_bc_dist)
