@@ -26,12 +26,16 @@ EXTRA_DIST += \
 	src/preprocs/yapp/tests/ddefine.pre \
 	src/preprocs/yapp/tests/rdefine.asm \
 	src/preprocs/yapp/tests/rdefine.pre \
+	src/preprocs/yapp/tests/pdefine.asm \
+	src/preprocs/yapp/tests/pdefine.pre \
 	src/preprocs/yapp/tests/ifdef.asm \
 	src/preprocs/yapp/tests/ifdef.pre \
 	src/preprocs/yapp/tests/include.asm \
 	src/preprocs/yapp/tests/include.pre \
 	src/preprocs/yapp/tests/rinclude.asm \
-	src/preprocs/yapp/tests/rinclude.pre
+	src/preprocs/yapp/tests/rinclude.pre \
+	src/preprocs/yapp/tests/params.asm \
+	src/preprocs/yapp/tests/params.pre
 
 CLEANFILES += \
 	raw.yp \
@@ -39,7 +43,9 @@ CLEANFILES += \
 	define.yp \
 	ddefine.yp \
 	rdefine.yp \
+	pdefine.yp \
 	ifdef.yp \
 	include.yp \
-	rinclude.yp
+	rinclude.yp \
+	params.yp
 
