@@ -66,6 +66,7 @@ int symrec_get_int_value(const symrec *sym, unsigned long *ret_val,
 			 int resolve_label);
 
 const char *symrec_get_name(const symrec *sym);
+SymVisibility symrec_get_visibility(const symrec *sym);
 
 const expr *symrec_get_equ(const symrec *sym);
 

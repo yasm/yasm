@@ -229,6 +229,12 @@ symrec_get_name(const symrec *sym)
     return sym->name;
 }
 
+SymVisibility
+symrec_get_visibility(const symrec *sym)
+{
+    return sym->visibility;
+}
+
 const expr *
 symrec_get_equ(const symrec *sym)
 {
