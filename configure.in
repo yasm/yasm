@@ -31,7 +31,7 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(memcpy toascii)
 AC_REPLACE_FUNCS(strdup strtoul)
 
-AC_CHECK_HEADERS(sys/queue.h)
+AC_CHECK_HEADERS(limits.h sys/queue.h sys/cdefs.h)
 
 # Check for some target-specific stuff
 case "$host" in
