@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.20 2001/08/19 03:52:58 peter Exp $
+/* $Id: errwarn.c,v 1.21 2001/08/19 07:33:47 peter Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -23,20 +23,19 @@
 # include "config.h"
 #endif
 
-#include <stdio.h>
-
-#ifdef STDC_HEADERS
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
-#endif
-
-#include <ctype.h>
-
 #include "util.h"
 
-#include "errwarn.h"
+#include <stdio.h>
+#include <ctype.h>
+
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+# include <stdarg.h>
+# include <string.h>
+#endif
+
 #include "globals.h"
+#include "errwarn.h"
 
 /* Total error count for entire assembler run.
  * Assembler should exit with EXIT_FAILURE if this is >= 0 on finish. */

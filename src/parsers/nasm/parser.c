@@ -1,4 +1,4 @@
-/* $Id: parser.c,v 1.4 2001/08/19 05:41:01 peter Exp $
+/* $Id: parser.c,v 1.5 2001/08/19 07:33:47 peter Exp $
  * NASM-compatible parser
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -23,8 +23,10 @@
 # include "config.h"
 #endif
 
-#include <stdio.h>
 #include "util.h"
+
+#include <stdio.h>
+
 #include "bytecode.h"
 #include "section.h"
 #include "outfmt.h"

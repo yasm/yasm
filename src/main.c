@@ -1,4 +1,4 @@
-/* $Id: main.c,v 1.8 2001/08/19 05:41:01 peter Exp $
+/* $Id: main.c,v 1.9 2001/08/19 07:33:47 peter Exp $
  * Program entry point, command line parsing
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -23,10 +23,15 @@
 # include "config.h"
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "util.h"
+
+#include <stdio.h>
+
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+# include <string.h>
+#endif
+
 #include "bytecode.h"
 #include "section.h"
 #include "outfmt.h"

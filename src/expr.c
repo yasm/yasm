@@ -1,4 +1,4 @@
-/* $Id: expr.c,v 1.5 2001/08/19 03:52:58 peter Exp $
+/* $Id: expr.c,v 1.6 2001/08/19 07:33:47 peter Exp $
  * Expression handling
  *
  *  Copyright (C) 2001  Michael Urman
@@ -19,13 +19,23 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#include <stdlib.h>
-#include <string.h>
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#include "util.h"
+
 #include <stdio.h>
-#include "expr.h"
-#include "symrec.h"
+
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+# include <string.h>
+#endif
+
 #include "globals.h"
 #include "errwarn.h"
+#include "expr.h"
+#include "symrec.h"
 
 /* allocate a new expression node, with children as defined.
  * If it's a unary operator, put the element on the right */

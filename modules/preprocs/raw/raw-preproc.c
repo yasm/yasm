@@ -1,4 +1,4 @@
-/* $Id: raw-preproc.c,v 1.3 2001/08/19 03:52:58 peter Exp $
+/* $Id: raw-preproc.c,v 1.4 2001/08/19 07:33:47 peter Exp $
  * Raw preprocessor (preforms NO preprocessing)
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,10 +19,16 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <stdio.h>
+
+#include "errwarn.h"
+
 #include "outfmt.h"
 #include "preproc.h"
-#include "errwarn.h"
 
 static int is_interactive;
 static FILE *in;

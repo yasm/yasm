@@ -1,4 +1,4 @@
-/* $Id: strtoul.c,v 1.1 2001/06/29 02:06:55 peter Exp $
+/* $Id: strtoul.c,v 1.2 2001/08/19 07:33:47 peter Exp $
  * strtoul() implementation for systems that don't have it.
  *
  * Copyright (c) 1990, 1993
@@ -37,14 +37,17 @@ static char sccsid[] = "@(#)strtoul.c	8.1 (Berkeley) 6/4/93";
 # include "config.h"
 #endif
 
-#include <limits.h>
+#include "util.h"
+
+#ifdef HAVE_LIMITS_H
+# include <limits.h>
+#endif
 #include <ctype.h>
 #include <errno.h>
+
 #ifdef STDC_HEADERS
 # include <stdlib.h>
 #endif
-
-#include "util.h"
 
 /*
  * Convert a string to an unsigned long integer.

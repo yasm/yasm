@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.17 2001/08/19 05:41:01 peter Exp $
+/* $Id: bytecode.c,v 1.18 2001/08/19 07:33:47 peter Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -23,14 +23,20 @@
 # include "config.h"
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "util.h"
+
+#include <stdio.h>
+
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+# include <string.h>
+#endif
+
 #include "globals.h"
-#include "bytecode.h"
 #include "errwarn.h"
 #include "expr.h"
+
+#include "bytecode.h"
 
 /* Static structures for when NULL is passed to conversion functions. */
 /*  for Convert*ToEA() */

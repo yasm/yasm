@@ -1,4 +1,4 @@
-/* $Id: xstrdup.c,v 1.2 2001/06/28 22:21:17 peter Exp $
+/* $Id: xstrdup.c,v 1.3 2001/08/19 07:33:47 peter Exp $
  * strdup() implementation for systems that don't have it.
  *
  * Copyright (c) 1988, 1993
@@ -37,6 +37,8 @@ static char sccsid[] = "@(#)strdup.c	8.1 (Berkeley) 6/4/93";
 # include "config.h"
 #endif
 
+#include "util.h"
+
 #ifdef STDC_HEADERS
 # include <stddef.h>
 # include <stdlib.h>
@@ -51,8 +53,6 @@ void bcopy(const void *, void *, size_t);
 void memcpy(void *, const void *, size_t);
 # endif
 #endif
-
-#include "util.h"
 
 char *
 strdup(const char *str)

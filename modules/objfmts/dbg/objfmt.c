@@ -1,4 +1,4 @@
-/* $Id: objfmt.c,v 1.1 2001/08/19 02:15:18 peter Exp $
+/* $Id: objfmt.c,v 1.2 2001/08/19 07:33:47 peter Exp $
  * Debugging output format (used to debug output format module interface)
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,6 +19,12 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#include "util.h"
+
 #include "outfmt.h"
 
 /* Define outfmt structure -- see outfmt.h for details */

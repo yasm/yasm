@@ -1,4 +1,4 @@
-/* $Id: token.l.in,v 1.13 2001/08/19 02:15:18 peter Exp $
+/* $Id: token.l.in,v 1.14 2001/08/19 07:33:47 peter Exp $
  * Main lexer
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -24,17 +24,19 @@
 # include "config.h"
 #endif
 
+#include "util.h"
+
 #ifdef STDC_HEADERS
 # include <stdlib.h>
 # include <string.h>
 #endif
 
-#include "util.h"
-
-#include "symrec.h"
-#include "bytecode.h"
 #include "errwarn.h"
 #include "expr.h"
+#include "symrec.h"
+
+#include "bytecode.h"
+
 #include "bison.h"
 
 #define yylval	nasm_parser_lval

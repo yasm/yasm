@@ -1,4 +1,4 @@
-/* $Id: nasm-bison.y,v 1.25 2001/08/19 05:44:53 peter Exp $
+/* $Id: nasm-bison.y,v 1.26 2001/08/19 07:33:47 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -24,14 +24,19 @@
 # include "config.h"
 #endif
 
-#include <math.h>
-#include <stdlib.h>
 #include "util.h"
-#include "symrec.h"
+
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+# include <math.h>
+#endif
+
 #include "globals.h"
-#include "bytecode.h"
 #include "errwarn.h"
 #include "expr.h"
+#include "symrec.h"
+
+#include "bytecode.h"
 
 #define YYDEBUG 1
 
