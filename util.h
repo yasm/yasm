@@ -1,4 +1,4 @@
-/* $IdPath: yasm/util.h,v 1.52 2003/05/05 03:42:08 peter Exp $
+/* $IdPath$
  * YASM utility functions.
  *
  * Includes standard headers and defines prototypes for replacement functions
@@ -30,7 +30,9 @@
 #ifndef YASM_UTIL_H
 #define YASM_UTIL_H
 
+#ifdef HAVE_CONFIG_H
 #include <config.h>
+#endif
 
 /* Work around glibc's non-defining of certain things when using gcc -ansi */
 #if defined(HAVE_GNU_C_LIBRARY) && defined(__STRICT_ANSI__)
