@@ -6,3 +6,5 @@ bison.y
 token.l
 Makefile.in
 Makefile
+.deps
+yasm
