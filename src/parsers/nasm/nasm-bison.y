@@ -40,6 +40,7 @@ RCSID("$IdPath$");
 #include "section.h"
 #include "objfmt.h"
 
+#include "arch.h"
 
 #define YYDEBUG 1
 
@@ -56,6 +57,9 @@ extern char *nasm_parser_locallabel_base;
 static bytecode *nasm_parser_prev_bc = (bytecode *)NULL;
 static bytecode *nasm_parser_temp_bc;
 
+/* additional data declarations (dynamically generated) */
+/* @DATADECLS@ */
+
 %}
 
 %union {
@@ -68,7 +72,7 @@ static bytecode *nasm_parser_temp_bc;
     effaddr *ea;
     expr *exp;
     immval *im_val;
-    targetval tgt_val;
+    x86_targetval tgt_val;
     datavalhead datahead;
     dataval *data;
     bytecode *bc;
@@ -126,7 +130,7 @@ static bytecode *nasm_parser_temp_bc;
 %%
 input: /* empty */
     | input line    {
-	nasm_parser_temp_bc = bytecodes_append(section_get_bytecodes(nasm_parser_cur_section),
+	nasm_parser_temp_bc = bcs_append(section_get_bytecodes(nasm_parser_cur_section),
 					       $2);
 	if (nasm_parser_temp_bc)
 	    nasm_parser_prev_bc = nasm_parser_temp_bc;
@@ -145,10 +149,10 @@ line: '\n'		{ $$ = (bytecode *)NULL; }
 ;
 
 lineexp: exp
-    | TIMES expr exp			{ $$ = $3; SetBCMultiple($$, $2); }
+    | TIMES expr exp			{ $$ = $3; bc_set_multiple($$, $2); }
     | label				{ $$ = (bytecode *)NULL; }
     | label exp				{ $$ = $2; }
-    | label TIMES expr exp		{ $$ = $4; SetBCMultiple($$, $3); }
+    | label TIMES expr exp		{ $$ = $4; bc_set_multiple($$, $3); }
     | label_id EQU expr			{
 	symrec_define_equ($1, $3);
 	xfree($1);
@@ -157,22 +161,16 @@ lineexp: exp
 ;
 
 exp: instr
-    | DECLARE_DATA datavals	    { $$ = bytecode_new_data(&$2, $1); }
-    | RESERVE_SPACE expr	    { $$ = bytecode_new_reserve($2, $1); }
+    | DECLARE_DATA datavals	    { $$ = bc_new_data(&$2, $1); }
+    | RESERVE_SPACE expr	    { $$ = bc_new_reserve($2, $1); }
 ;
 
-datavals: dataval	    {
-	datavals_initialize(&$$);
-	datavals_append(&$$, $1);
-    }
-    | datavals ',' dataval  {
-	datavals_append(&$1, $3);
-	$$ = $1;
-    }
+datavals: dataval	    { dvs_initialize(&$$); dvs_append(&$$, $1); }
+    | datavals ',' dataval  { dvs_append(&$1, $3); $$ = $1; }
 ;
 
-dataval: expr_no_string	{ $$ = dataval_new_expr($1); }
-    | STRING		{ $$ = dataval_new_string($1); }
+dataval: expr_no_string	{ $$ = dv_new_expr($1); }
+    | STRING		{ $$ = dv_new_string($1); }
     | error		{
 	Error(_("expression syntax error"));
 	$$ = (dataval *)NULL;
@@ -317,17 +315,20 @@ memexpr: INTNUM			{ $$ = expr_new_ident(ExprInt($1)); }
     | error			{ Error(_("invalid effective address")); }
 ;
 
-memaddr: memexpr	    { $$ = effaddr_new_expr($1); SetEASegment($$, 0); }
-    | REG_CS ':' memaddr    { $$ = $3; SetEASegment($$, 0x2E); }
-    | REG_SS ':' memaddr    { $$ = $3; SetEASegment($$, 0x36); }
-    | REG_DS ':' memaddr    { $$ = $3; SetEASegment($$, 0x3E); }
-    | REG_ES ':' memaddr    { $$ = $3; SetEASegment($$, 0x26); }
-    | REG_FS ':' memaddr    { $$ = $3; SetEASegment($$, 0x64); }
-    | REG_GS ':' memaddr    { $$ = $3; SetEASegment($$, 0x65); }
-    | BYTE memaddr	    { $$ = $2; SetEALen($$, 1); }
-    | WORD memaddr	    { $$ = $2; SetEALen($$, 2); }
-    | DWORD memaddr	    { $$ = $2; SetEALen($$, 4); }
-    | NOSPLIT memaddr	    { $$ = $2; SetEANosplit($$, 1); }
+memaddr: memexpr	    {
+	$$ = x86_ea_new_expr($1);
+	x86_ea_set_segment($$, 0);
+    }
+    | REG_CS ':' memaddr    { $$ = $3; x86_ea_set_segment($$, 0x2E); }
+    | REG_SS ':' memaddr    { $$ = $3; x86_ea_set_segment($$, 0x36); }
+    | REG_DS ':' memaddr    { $$ = $3; x86_ea_set_segment($$, 0x3E); }
+    | REG_ES ':' memaddr    { $$ = $3; x86_ea_set_segment($$, 0x26); }
+    | REG_FS ':' memaddr    { $$ = $3; x86_ea_set_segment($$, 0x64); }
+    | REG_GS ':' memaddr    { $$ = $3; x86_ea_set_segment($$, 0x65); }
+    | BYTE memaddr	    { $$ = $2; ea_set_len($$, 1); }
+    | WORD memaddr	    { $$ = $2; ea_set_len($$, 2); }
+    | DWORD memaddr	    { $$ = $2; ea_set_len($$, 4); }
+    | NOSPLIT memaddr	    { $$ = $2; ea_set_nosplit($$, 1); }
 ;
 
 mem: '[' memaddr ']'	{ $$ = $2; }
@@ -378,43 +379,43 @@ mem1632: mem
 ;
 
 /* explicit register or memory */
-rm8x: reg8	{ $$ = effaddr_new_reg($1); }
+rm8x: reg8	{ $$ = x86_ea_new_reg($1); }
     | mem8x
 ;
-rm16x: reg16	{ $$ = effaddr_new_reg($1); }
+rm16x: reg16	{ $$ = x86_ea_new_reg($1); }
     | mem16x
 ;
-rm32x: reg32	{ $$ = effaddr_new_reg($1); }
+rm32x: reg32	{ $$ = x86_ea_new_reg($1); }
     | mem32x
 ;
 /* not needed:
-rm64x: MMXREG	{ $$ = effaddr_new_reg($1); }
+rm64x: MMXREG	{ $$ = x86_ea_new_reg($1); }
     | mem64x
 ;
-rm128x: XMMREG	{ $$ = effaddr_new_reg($1); }
+rm128x: XMMREG	{ $$ = x86_ea_new_reg($1); }
     | mem128x
 ;
 */
 
 /* implicit register or memory */
-rm8: reg8	{ $$ = effaddr_new_reg($1); }
+rm8: reg8	{ $$ = x86_ea_new_reg($1); }
     | mem8
 ;
-rm16: reg16	{ $$ = effaddr_new_reg($1); }
+rm16: reg16	{ $$ = x86_ea_new_reg($1); }
     | mem16
 ;
-rm32: reg32	{ $$ = effaddr_new_reg($1); }
+rm32: reg32	{ $$ = x86_ea_new_reg($1); }
     | mem32
 ;
-rm64: MMXREG	{ $$ = effaddr_new_reg($1); }
+rm64: MMXREG	{ $$ = x86_ea_new_reg($1); }
     | mem64
 ;
-rm128: XMMREG	{ $$ = effaddr_new_reg($1); }
+rm128: XMMREG	{ $$ = x86_ea_new_reg($1); }
     | mem128
 ;
 
 /* immediate values */
-imm: expr   { $$ = immval_new_expr($1); }
+imm: expr   { $$ = imm_new_expr($1); }
 ;
 
 /* explicit immediates */
@@ -437,9 +438,18 @@ imm32: imm
 ;
 
 /* jump targets */
-target: expr		{ $$.val = $1; SetOpcodeSel(&$$.op_sel, JR_NONE); }
-    | SHORT target	{ $$ = $2; SetOpcodeSel(&$$.op_sel, JR_SHORT_FORCED); }
-    | NEAR target	{ $$ = $2; SetOpcodeSel(&$$.op_sel, JR_NEAR_FORCED); }
+target: expr		{
+	$$.val = $1;
+	x86_set_jmprel_opcode_sel(&$$.op_sel, JR_NONE);
+    }
+    | SHORT target	{
+	$$ = $2;
+	x86_set_jmprel_opcode_sel(&$$.op_sel, JR_SHORT_FORCED);
+    }
+    | NEAR target	{
+	$$ = $2;
+	x86_set_jmprel_opcode_sel(&$$.op_sel, JR_NEAR_FORCED);
+    }
 ;
 
 /* expression trees */
@@ -493,18 +503,36 @@ explabel: ID		{ $$ = symrec_use($1); xfree($1); }
 ;
 
 instr: instrbase
-    | OPERSIZE instr	{ $$ = $2; SetInsnOperSizeOverride($$, $1); }
-    | ADDRSIZE instr	{ $$ = $2; SetInsnAddrSizeOverride($$, $1); }
-    | REG_CS instr	{ $$ = $2; SetEASegment(GetInsnEA($$), 0x2E); }
-    | REG_SS instr	{ $$ = $2; SetEASegment(GetInsnEA($$), 0x36); }
-    | REG_DS instr	{ $$ = $2; SetEASegment(GetInsnEA($$), 0x3E); }
-    | REG_ES instr	{ $$ = $2; SetEASegment(GetInsnEA($$), 0x26); }
-    | REG_FS instr	{ $$ = $2; SetEASegment(GetInsnEA($$), 0x64); }
-    | REG_GS instr	{ $$ = $2; SetEASegment(GetInsnEA($$), 0x65); }
-    | LOCK instr	{ $$ = $2; SetInsnLockRepPrefix($$, 0xF0); }
-    | REPNZ instr	{ $$ = $2; SetInsnLockRepPrefix($$, 0xF2); }
-    | REP instr		{ $$ = $2; SetInsnLockRepPrefix($$, 0xF3); }
-    | REPZ instr	{ $$ = $2; SetInsnLockRepPrefix($$, 0xF4); }
+    | OPERSIZE instr	{ $$ = $2; x86_bc_insn_opersize_override($$, $1); }
+    | ADDRSIZE instr	{ $$ = $2; x86_bc_insn_addrsize_override($$, $1); }
+    | REG_CS instr	{
+	$$ = $2;
+	x86_ea_set_segment(x86_bc_insn_get_ea($$), 0x2E);
+    }
+    | REG_SS instr	{
+	$$ = $2;
+	x86_ea_set_segment(x86_bc_insn_get_ea($$), 0x36);
+    }
+    | REG_DS instr	{
+	$$ = $2;
+	x86_ea_set_segment(x86_bc_insn_get_ea($$), 0x3E);
+    }
+    | REG_ES instr	{
+	$$ = $2;
+	x86_ea_set_segment(x86_bc_insn_get_ea($$), 0x26);
+    }
+    | REG_FS instr	{
+	$$ = $2;
+	x86_ea_set_segment(x86_bc_insn_get_ea($$), 0x64);
+    }
+    | REG_GS instr	{
+	$$ = $2;
+	x86_ea_set_segment(x86_bc_insn_get_ea($$), 0x65);
+    }
+    | LOCK instr	{ $$ = $2; x86_bc_insn_set_lockrep_prefix($$, 0xF0); }
+    | REPNZ instr	{ $$ = $2; x86_bc_insn_set_lockrep_prefix($$, 0xF2); }
+    | REP instr		{ $$ = $2; x86_bc_insn_set_lockrep_prefix($$, 0xF3); }
+    | REPZ instr	{ $$ = $2; x86_bc_insn_set_lockrep_prefix($$, 0xF4); }
 ;
 
 /* instruction grammars (dynamically generated) */
@@ -528,7 +556,7 @@ nasm_parser_directive(const char *name, const char *val)
 	if (*val == '\0' || *end != '\0' || (lval != 16 && lval != 32))
 	    Error(_("`%s' is not a valid argument to [BITS]"), val);
 	else
-	    mode_bits = (unsigned char)lval;
+	    x86_mode_bits = (unsigned char)lval;
     } else {
 	printf("Directive: Name=`%s' Value=`%s'\n", name, val);
     }

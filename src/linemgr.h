@@ -24,7 +24,6 @@
 
 extern const char *in_filename;
 extern unsigned int line_number;
-extern unsigned char mode_bits;
 extern unsigned int asm_options;
 
 void switch_filename(const char *filename);

@@ -29,7 +29,6 @@ RCSID("$IdPath$");
 
 const char *in_filename = (const char *)NULL;
 unsigned int line_number = 1;
-unsigned char mode_bits = 0;
 unsigned int asm_options = 0;
 
 static ternary_tree filename_table = (ternary_tree)NULL;

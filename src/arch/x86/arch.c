@@ -22,11 +22,22 @@
 #include "util.h"
 RCSID("$IdPath$");
 
+#include "bytecode.h"
 #include "arch.h"
 
+#include "x86-int.h"
+
+
+unsigned char x86_mode_bits = 0;
 
 /* Define arch structure -- see arch.h for details */
 arch x86_arch = {
     "x86 (IA-32, x86-64)",
-    "x86"
+    "x86",
+    {
+	X86_BYTECODE_TYPE_MAX,
+	x86_bc_delete,
+	x86_bc_print,
+	x86_bc_parser_finalize
+    }
 };

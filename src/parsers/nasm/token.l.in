@@ -33,6 +33,8 @@ RCSID("$IdPath$");
 
 #include "bytecode.h"
 
+#include "arch.h"
+
 #include "bison.h"
 
 

@@ -28,9 +28,24 @@ struct arch {
 
     /* keyword used to select architecture */
     const char *keyword;
+
+    struct {
+	/* Maximum used bytecode type value+1.  Should be set to
+	 * BYTECODE_TYPE_BASE if no additional bytecode types are defined by
+	 * the architecture.
+	 */
+	const int type_max;
+
+	void (*bc_delete) (bytecode *bc);
+	void (*bc_print) (const bytecode *bc);
+	void (*bc_parser_finalize) (bytecode *bc);
+    } bc;
 };
 
 /* Available architectures */
+#include "arch/x86/x86arch.h"
 extern arch x86_arch;
+
+extern arch *cur_arch;
 
 #endif

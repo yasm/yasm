@@ -41,6 +41,8 @@ RCSID("$IdPath$");
 #include "preproc.h"
 #include "parser.h"
 
+#include "arch.h"
+
 
 #ifndef countof
 #define countof(x,y)	(sizeof(x)/sizeof(y))
@@ -110,8 +112,11 @@ main(int argc, char *argv[])
 	switch_filename("<STDIN>");
     }
 
+    /* Set x86 as the architecture */
+    cur_arch = &x86_arch;
+
     /* Get initial BITS setting from object format */
-    mode_bits = dbg_objfmt.default_mode_bits;
+    x86_mode_bits = dbg_objfmt.default_mode_bits;
 
     sections = nasm_parser.do_parse(&nasm_parser, &dbg_objfmt, in);
 

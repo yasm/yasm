@@ -27,87 +27,43 @@ typedef struct immval immval;
 typedef STAILQ_HEAD(datavalhead, dataval) datavalhead;
 typedef struct dataval dataval;
 
-typedef enum {
-    JR_NONE,
-    JR_SHORT,
-    JR_NEAR,
-    JR_SHORT_FORCED,
-    JR_NEAR_FORCED
-} jmprel_opcode_sel;
-
-typedef struct targetval {
-    expr *val;
-
-    jmprel_opcode_sel op_sel;
-} targetval;
-
-effaddr *effaddr_new_reg(unsigned long reg);
-effaddr *effaddr_new_imm(immval *im_ptr, unsigned char im_len);
-effaddr *effaddr_new_expr(expr *expr_ptr);
-
-immval *immval_new_int(unsigned long int_val);
-immval *immval_new_expr(expr *expr_ptr);
-
-void SetEASegment(effaddr *ptr, unsigned char segment);
-void SetEALen(effaddr *ptr, unsigned char len);
-void SetEANosplit(effaddr *ptr, unsigned char nosplit);
-
-effaddr *GetInsnEA(bytecode *bc);
-
-void SetInsnOperSizeOverride(bytecode *bc, unsigned char opersize);
-void SetInsnAddrSizeOverride(bytecode *bc, unsigned char addrsize);
-void SetInsnLockRepPrefix(bytecode *bc, unsigned char prefix);
-void SetInsnShiftFlag(bytecode *bc);
-
-void SetOpcodeSel(jmprel_opcode_sel *old_sel, jmprel_opcode_sel new_sel);
-
-void SetBCMultiple(bytecode *bc, expr *e);
-
-/* IMPORTANT: ea_ptr and im_ptr cannot be reused or freed after calling this
- * function (it doesn't make a copy).
+/* Additional types may be architecture-defined starting at
+ * BYTECODE_TYPE_BASE.
  */
-bytecode *bytecode_new_insn(unsigned char  opersize,
-			    unsigned char  opcode_len,
-			    unsigned char  op0,
-			    unsigned char  op1,
-			    unsigned char  op2,
-			    effaddr       *ea_ptr,
-			    unsigned char  spare,
-			    immval        *im_ptr,
-			    unsigned char  im_len,
-			    unsigned char  im_sign);
+typedef enum {
+    BC_EMPTY = 0,
+    BC_DATA,
+    BC_RESERVE
+} bytecode_type;
+#define BYTECODE_TYPE_BASE  BC_RESERVE+1
 
-/* Pass 0 for the opcode_len if that version of the opcode doesn't exist. */
-bytecode *bytecode_new_jmprel(targetval     *target,
-			      unsigned char  short_opcode_len,
-			      unsigned char  short_op0,
-			      unsigned char  short_op1,
-			      unsigned char  short_op2,
-			      unsigned char  near_opcode_len,
-			      unsigned char  near_op0,
-			      unsigned char  near_op1,
-			      unsigned char  near_op2,
-			      unsigned char  addrsize);
+immval *imm_new_int(unsigned long int_val);
+immval *imm_new_expr(expr *e);
 
-bytecode *bytecode_new_data(datavalhead *datahead, unsigned long size);
+void ea_set_len(effaddr *ea, unsigned char len);
+void ea_set_nosplit(effaddr *ea, unsigned char nosplit);
 
-bytecode *bytecode_new_reserve(expr *numitems, unsigned long itemsize);
+void bc_set_multiple(bytecode *bc, expr *e);
 
-void bytecode_delete(bytecode *bc);
+bytecode *bc_new_common(bytecode_type type, size_t datasize);
+bytecode *bc_new_data(datavalhead *datahead, unsigned long size);
+bytecode *bc_new_reserve(expr *numitems, unsigned long itemsize);
+
+void bc_delete(bytecode *bc);
 
 /* Gets the offset of the bytecode specified by bc if possible.
  * Return value is IF POSSIBLE, not the value.
  */
-int bytecode_get_offset(section *sect, bytecode *bc, unsigned long *ret_val);
+int bc_get_offset(section *sect, bytecode *bc, unsigned long *ret_val);
 
-void bytecode_print(const bytecode *bc);
+void bc_print(const bytecode *bc);
 
-void bytecode_parser_finalize(bytecode *bc);
+void bc_parser_finalize(bytecode *bc);
 
 /* void bytecodes_initialize(bytecodehead *headp); */
 #define	bytecodes_initialize(headp)	STAILQ_INIT(headp)
 
-void bytecodes_delete(bytecodehead *headp);
+void bcs_delete(bytecodehead *headp);
 
 /* Adds bc to the list of bytecodes headp.
  * NOTE: Does not make a copy of bc; so don't pass this function
@@ -115,20 +71,20 @@ void bytecodes_delete(bytecodehead *headp);
  * this function.  If bc was actually appended (it wasn't NULL or empty),
  * then returns bc, otherwise returns NULL.
  */
-bytecode *bytecodes_append(bytecodehead *headp, bytecode *bc);
+bytecode *bcs_append(bytecodehead *headp, bytecode *bc);
 
-void bytecodes_print(const bytecodehead *headp);
+void bcs_print(const bytecodehead *headp);
 
-void bytecodes_parser_finalize(bytecodehead *headp);
+void bcs_parser_finalize(bytecodehead *headp);
 
-dataval *dataval_new_expr(expr *expn);
-dataval *dataval_new_float(floatnum *flt);
-dataval *dataval_new_string(char *str_val);
+dataval *dv_new_expr(expr *expn);
+dataval *dv_new_float(floatnum *flt);
+dataval *dv_new_string(char *str_val);
 
-/* void datavals_initialize(datavalhead *headp); */
-#define	datavals_initialize(headp)	STAILQ_INIT(headp)
+/* void dvs_initialize(datavalhead *headp); */
+#define	dvs_initialize(headp)	STAILQ_INIT(headp)
 
-void datavals_delete(datavalhead *headp);
+void dvs_delete(datavalhead *headp);
 
 /* Adds dv to the list of datavals headp.
  * NOTE: Does not make a copy of dv; so don't pass this function
@@ -136,8 +92,8 @@ void datavals_delete(datavalhead *headp);
  * this function.  If dv was actually appended (it wasn't NULL), then
  * returns dv, otherwise returns NULL.
  */
-dataval *datavals_append(datavalhead *headp, dataval *dv);
+dataval *dvs_append(datavalhead *headp, dataval *dv);
 
-void datavals_print(const datavalhead *head);
+void dvs_print(const datavalhead *head);
 
 #endif

@@ -290,7 +290,7 @@ symrec_print(const symrec *sym)
 		printf("[First bytecode]\n");
 	    else {
 		printf("[Preceding bytecode]\n");
-		bytecode_print(sym->value.label.bc);
+		bc_print(sym->value.label.bc);
 	    }
 	    break;
     }

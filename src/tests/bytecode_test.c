@@ -18,41 +18,41 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
-#ifdef STDC_HEADERS
-# include <stdlib.h>
-#endif
+#include "util.h"
 
 #include "check.h"
 
-#include "bytecode.c"
+#include "bytecode.h"
+#include "bc-int.h"
+#include "arch.h"
+#include "x86-int.h"
 
-START_TEST(test_effaddr_new_reg)
+START_TEST(test_x86_ea_new_reg)
 {
     effaddr *ea;
+    x86_effaddr_data *ead;
     int i;
 
     /* Test with NULL */
-    ea = effaddr_new_reg(1);
+    ea = x86_ea_new_reg(1);
     fail_unless(ea != NULL, "Should die if out of memory (not return NULL)");
 
     /* Test structure values function should set */
     fail_unless(ea->len == 0, "len should be 0");
-    fail_unless(ea->segment == 0, "Should be no segment override");
-    fail_unless(ea->valid_modrm == 1, "Mod/RM should be valid");
-    fail_unless(ea->need_modrm == 1, "Mod/RM should be needed");
-    fail_unless(ea->valid_sib == 0, "SIB should be invalid");
-    fail_unless(ea->need_sib == 0, "SIB should not be needed");
+    ead = ea_get_data(ea);
+    fail_unless(ead->segment == 0, "Should be no segment override");
+    fail_unless(ead->valid_modrm == 1, "Mod/RM should be valid");
+    fail_unless(ead->need_modrm == 1, "Mod/RM should be needed");
+    fail_unless(ead->valid_sib == 0, "SIB should be invalid");
+    fail_unless(ead->need_sib == 0, "SIB should not be needed");
 
     free(ea);
 
     /* Exhaustively test generated Mod/RM byte with register values */
     for(i=0; i<8; i++) {
-	ea = effaddr_new_reg(i);
-	fail_unless(ea->modrm == (0xC0 | (i & 0x07)),
+	ea = x86_ea_new_reg(i);
+	ead = ea_get_data(ea);
+	fail_unless(ead->modrm == (0xC0 | (i & 0x07)),
 		    "Invalid Mod/RM byte generated");
 	free(ea);
     }
@@ -66,7 +66,7 @@ bytecode_suite(void)
     TCase *tc_conversion = tcase_create("Conversion");
 
     suite_add_tcase(s, tc_conversion);
-    tcase_add_test(tc_conversion, test_effaddr_new_reg);
+    tcase_add_test(tc_conversion, test_x86_ea_new_reg);
 
     return s;
 }

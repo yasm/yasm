@@ -1,5 +1,5 @@
-/*
- * Global variables
+/* $IdPath$
+ * Architecture interface
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -20,38 +20,10 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
 
-#include "ternary.h"
+#include "bytecode.h"
 
-#include "globals.h"
+#include "arch.h"
 
+arch *cur_arch;
 
-const char *in_filename = (const char *)NULL;
-unsigned int line_number = 1;
-unsigned int asm_options = 0;
-
-static ternary_tree filename_table = (ternary_tree)NULL;
-
-void
-switch_filename(const char *filename)
-{
-    char *copy = xstrdup(filename);
-    in_filename = ternary_insert(&filename_table, filename, copy, 0);
-    if (in_filename != copy)
-	xfree(copy);
-}
-
-static void
-filename_delete_one(void *d)
-{
-    xfree(d);
-}
-
-void
-filename_delete_all(void)
-{
-    in_filename = NULL;
-    ternary_cleanup(filename_table, filename_delete_one);
-    filename_table = NULL;
-}

@@ -25,6 +25,7 @@ noinst_LIBRARIES = libyasm.a
 libyasm_a_SOURCES = \
 	bytecode.c		\
 	bytecode.h		\
+	bc-int.h		\
 	expr.c			\
 	expr.h			\
 	symrec.c		\
@@ -37,6 +38,7 @@ libyasm_a_SOURCES = \
 	file.h			\
 	section.c		\
 	section.h		\
+	arch.c			\
 	arch.h			\
 	objfmt.h		\
 	options.h		\

@@ -134,7 +134,7 @@ sections_parser_finalize(sectionhead *headp)
     section *cur;
     
     STAILQ_FOREACH(cur, headp, link)
-	bytecodes_parser_finalize(&cur->bc);
+	bcs_parser_finalize(&cur->bc);
 }
 
 bytecodehead *
@@ -156,7 +156,7 @@ section_delete(section *sect)
 	return;
 
     xfree(sect->name);
-    bytecodes_delete(&sect->bc);
+    bcs_delete(&sect->bc);
     xfree(sect);
 }
 
@@ -176,5 +176,5 @@ section_print(const section *sect)
     }
 
     printf(" Bytecodes:\n");
-    bytecodes_print(&sect->bc);
+    bcs_print(&sect->bc);
 }

@@ -353,7 +353,8 @@ sub cond_action_if ( $ $ $ $ $ $ $ )
     my ($rule, $tokens, $count, $regarg, $val, $func, $a_eax) = splice (@_);
     return rule_header ($rule, $tokens, $count) . <<"EOF";
         if (\$$regarg == $val) {
-            \$\$ = $func(@$a_eax);
+            @$a_eax
+            \$\$ = $func;
         }
 EOF
 }
@@ -362,7 +363,8 @@ sub cond_action_elsif ( $ $ $ $ )
     my ($regarg, $val, $func, $a_eax) = splice (@_);
     return <<"EOF";
         else if (\$$regarg == $val) {
-            \$\$ = $func(@$a_eax);
+            @$a_eax
+            \$\$ = $func;
         }
 EOF
 }
@@ -371,7 +373,8 @@ sub cond_action_else ( $ $ )
     my ($func, $a_args) = splice (@_);
     return <<"EOF" . rule_footer;
         else {
-            \$\$ = $func (@$a_args);
+            @$a_args
+            \$\$ = $func;
         }
 EOF
 }
@@ -388,7 +391,8 @@ sub action ( @ $ )
 {
     my ($rule, $tokens, $func, $a_args, $count) = splice @_;
     return rule_header ($rule, $tokens, $count)
-	. "        \$\$ = $func (@$a_args);\n"
+	. "        @$a_args\n"
+	. "        \$\$ = $func;\n"
 	. rule_footer; 
 }
 
@@ -396,8 +400,9 @@ sub action_setshiftflag ( @ $ )
 {
     my ($rule, $tokens, $func, $a_args, $count) = splice @_;
     return rule_header ($rule, $tokens, $count)
-	. "        \$\$ = $func (@$a_args);\n"
-	. "        SetInsnShiftFlag(\$\$);\n"
+	. "        @$a_args\n"
+	. "        \$\$ = $func;\n"
+	. "        x86_bc_insn_set_shift_flag(\$\$);\n"
 	. rule_footer; 
 }
 
@@ -421,7 +426,12 @@ sub output_yacc ($@)
 
     while (<IN>)
     {
-	if (m{/[*]\s*[@]TOKENS[@]\s*[*]/})
+	if (m{/[*]\s*[@]DATADECLS[@]\s*[*]/})
+	{
+	    print GRAMMAR "static x86_new_insn_data idata;\n";
+	    print GRAMMAR "static x86_new_jmprel_data jrdata;\n";
+	}
+	elsif (m{/[*]\s*[@]TOKENS[@]\s*[*]/})
 	{
 	    my $len = length("%token <groupdata>");
 	    print GRAMMAR "%token <groupdata>";
@@ -500,68 +510,81 @@ sub output_yacc ($@)
 			    if $inst->[OPERANDS] ne 'nil';
 			$tokens =~ s/,/ ',' /g;
 			$tokens =~ s/:/ ':' /g;
-			my $func = "bytecode_new_jmprel";
+			my $datastruct = "x86_new_jmprel_data";
+			my $datastructname = "jrdata";
+			my $func = "x86_bc_new_jmprel(&$datastructname)";
 
 			# Create the argument list for bytecode_new
 			my @args;
 
 			# Target argument: HACK: Always assumed to be arg 1.
-			push @args, '&$2,';
+			push @args, 'target=&$2;';
 
 			# test for short opcode "nil"
 			if($inst->[SHORTOPCODE] =~ m/nil/)
 			{
-			    push @args, '0, 0, 0, 0,';
+			    push @args, 'short_op_len=0;';
+			    push @args, 'short_op[0]=0;';
+			    push @args, 'short_op[1]=0;';
+			    push @args, 'short_op[2]=0;';
 			}
 			else
 			{
-			    # number of bytes of short opcode
-			    push @args, (scalar(()=$inst->[SHORTOPCODE] =~ m/(,)/)+1) . ",";
-
 			    # opcode piece 1 (and 2 and 3 if attached)
-			    push @args, $inst->[SHORTOPCODE];
-			    $args[-1] =~ s/,/, /;
-			    $args[-1] =~ s/([0-9A-Fa-f]{2})/0x$1/g;
-			    # don't match $0.\d in the following rule.
-			    $args[-1] =~ s/\$(\d+)(?!\.)/"\$" . ($1*2)/eg;
-			    $args[-1] .= ',';
+			    my @opcodes = split ",", $inst->[SHORTOPCODE];
+			    # number of bytes of short opcode
+			    push @args, "short_op_len=".@opcodes.";";
+			    for (my $i=0; $i < @opcodes; ++$i)
+			    {
+				$opcodes[$i] =~ s/([0-9A-Fa-f]{2})/0x$1/g;
+				# don't match $0.\d in the following rule.
+				$opcodes[$i] =~ s/\$(\d+)(?!\.)/"\$".($1*2)/eg;
+				push @args, "short_op[$i]=$opcodes[$i];";
+			    }
 
 			    # opcode piece 2 (if not attached)
-			    push @args, "0," if $inst->[SHORTOPCODE] !~ m/,/o;
+			    push @args, "short_op[1]=0;" if @opcodes < 2;
 			    # opcode piece 3 (if not attached)
-			    push @args, "0," if $inst->[SHORTOPCODE] !~ m/,.*,/o;
+			    push @args, "short_op[2]=0;" if @opcodes < 3;
 			}
 
 			# test for near opcode "nil"
 			if($inst->[NEAROPCODE] =~ m/nil/)
 			{
-			    push @args, '0, 0, 0, 0,';
+			    push @args, 'near_op_len=0;';
+			    push @args, 'near_op[0]=0;';
+			    push @args, 'near_op[1]=0;';
+			    push @args, 'near_op[2]=0;';
 			}
 			else
 			{
-			    # number of bytes of near opcode
-			    push @args, (scalar(()=$inst->[NEAROPCODE] =~ m/(,)/)+1) . ",";
-
 			    # opcode piece 1 (and 2 and 3 if attached)
-			    push @args, $inst->[NEAROPCODE];
-			    $args[-1] =~ s/,/, /;
-			    $args[-1] =~ s/([0-9A-Fa-f]{2})/0x$1/g;
-			    # don't match $0.\d in the following rule.
-			    $args[-1] =~ s/\$(\d+)(?!\.)/"\$" . ($1*2)/eg;
-			    $args[-1] .= ',';
+			    my @opcodes = split ",", $inst->[NEAROPCODE];
+			    # number of bytes of near opcode
+			    push @args, "near_op_len=".@opcodes.";";
+			    for (my $i=0; $i < @opcodes; ++$i)
+			    {
+				$opcodes[$i] =~ s/([0-9A-Fa-f]{2})/0x$1/g;
+				# don't match $0.\d in the following rule.
+				$opcodes[$i] =~ s/\$(\d+)(?!\.)/"\$".($1*2)/eg;
+				push @args, "near_op[$i]=$opcodes[$i];";
+			    }
 
 			    # opcode piece 2 (if not attached)
-			    push @args, "0," if $inst->[NEAROPCODE] !~ m/,/o;
+			    push @args, "near_op[1]=0;" if @opcodes < 2;
 			    # opcode piece 3 (if not attached)
-			    push @args, "0," if $inst->[NEAROPCODE] !~ m/,.*,/o;
+			    push @args, "near_op[2]=0;" if @opcodes < 3;
 			}
 
 			# address size
-			push @args, "$inst->[ADSIZE]";
+			push @args, "addrsize=$inst->[ADSIZE];";
 			$args[-1] =~ s/nil/0/;
 
 			# now that we've constructed the arglist, subst $0.\d
 			s/\$0\.(\d+)/\$1\[$1\]/g foreach (@args);
+
+			# and add the data structure reference
+			s/^/$datastructname./g foreach (@args);
 
 			# generate the grammar
 			print GRAMMAR action ($rule, $tokens, $func, \@args, $count++);
@@ -583,65 +606,79 @@ sub output_yacc ($@)
 			$tokens =~ s/:/ ':' /g;
 			# offset args
 			my $to = $tokens =~ m/\b(TO|WORD|DWORD)\b/ ? 1 : 0;
-			my $func = "bytecode_new_insn";
+			my $datastruct = "x86_new_insn_data";
+			my $datastructname = "idata";
+			my $func = "x86_bc_new_insn(&$datastructname)";
 
 			# Create the argument list for bytecode_new
 			my @args;
 
 			# operand size
-			push @args, "$inst->[OPSIZE],";
+			push @args, "opersize=$inst->[OPSIZE];";
 			$args[-1] =~ s/nil/0/;
 
-			# number of bytes of opcodes
-			push @args, (scalar(()=$inst->[OPCODE] =~ m/(,)/)+1) . ",";
 
 			# opcode piece 1 (and 2 and 3 if attached)
-			push @args, $inst->[OPCODE];
-			$args[-1] =~ s/,/, /;
-			$args[-1] =~ s/([0-9A-Fa-f]{2})/0x$1/g;
-			# don't match $0.\d in the following rule.
-			$args[-1] =~ s/\$(\d+)(?!\.)/"\$" . ($1*2+$to)/eg;
-			$args[-1] .= ',';
+			my @opcodes = split ",", $inst->[OPCODE];
+			# number of bytes of opcodes
+			push @args, "op_len=".@opcodes.";";
+			for (my $i=0; $i < @opcodes; ++$i)
+			{
+			    $opcodes[$i] =~ s/([0-9A-Fa-f]{2})/0x$1/g;
+			    # don't match $0.\d in the following rule.
+			    $opcodes[$i] =~ s/\$(\d+)(?!\.)/"\$".($1*2+$to)/eg;
+			    push @args, "op[$i]=$opcodes[$i];";
+			}
 
 			# opcode piece 2 (if not attached)
-			push @args, "0," if $inst->[OPCODE] !~ m/,/o;
+			push @args, "op[1]=0;" if @opcodes < 2;
 			# opcode piece 3 (if not attached)
-			push @args, "0," if $inst->[OPCODE] !~ m/,.*,/o;
+			push @args, "op[2]=0;" if @opcodes < 3;
 
 			# effective addresses
-			push @args, $inst->[EFFADDR];
-			$args[-1] =~ s/,/, /;
-			$args[-1] =~ s/^nil$/(effaddr *)NULL, 0/;
-			$args[-1] =~ s/nil/0/;
+			my $effaddr = $inst->[EFFADDR];
+			$effaddr =~ s/^nil/(effaddr *)NULL,0/;
+			$effaddr =~ s/nil/0/;
 			# don't let a $0.\d match slip into the following rules.
-			$args[-1] =~ s/\$(\d+)([ri])?(?!\.)/"\$".($1*2+$to).($2||'')/eg;
+			$effaddr =~ s/\$(\d+)([ri])?(?!\.)/"\$".($1*2+$to).($2||'')/eg;
 			#$args[-1] =~ s/(\$\d+[ri]?)(?!\.)/\&$1/; # Just the first!
-			$args[-1] =~ s/(\$\d+)r/effaddr_new_reg($1)/;
-			$args[-1] =~ s[(\$\d+)i,\s*(\d+)]
-			    ["effaddr_new_imm($1, ".($2/8)."), 0"]e;
-			$args[-1] .= ',';
+			$effaddr =~ s/(\$\d+)r/x86_ea_new_reg($1)/;
+			$effaddr =~ s[(\$\d+)i,\s*(\d+)]
+			    ["x86_ea_new_imm($1^ ".($2/8)."),0"]e;
 
-			die $args[-1] if $args[-1] =~ m/\d+[ri]/;
+			die $effaddr if $effaddr =~ m/\d+[ri]/;
+
+			my @effaddr_split = split ',', $effaddr;
+			$effaddr_split[0] =~ s/\^/,/;
+			push @args, "ea=$effaddr_split[0];";
+			push @args, "spare=$effaddr_split[1];";
 
 			# immediate sources
-			push @args, $inst->[IMM];
-			$args[-1] =~ s/,/, /;
-			$args[-1] =~ s/nil/(immval *)NULL, 0/;
+			my $imm = $inst->[IMM];
+			$imm =~ s/nil/(immval *)NULL,0/;
 			# don't match $0.\d in the following rules.
-			$args[-1] =~ s/\$(\d+)(?!\.)/"\$".($1*2+$to).($2||'')/eg;
-			$args[-1] =~ s[^([0-9A-Fa-f]+),]
-			    [immval_new_int(0x$1),];
-			$args[-1] =~ s[^\$0.(\d+),]
-			    [immval_new_int(\$1\[$1\]),];
+			$imm =~ s/\$(\d+)(?!\.)/"\$".($1*2+$to).($2||'')/eg;
+			$imm =~ s[^([0-9A-Fa-f]+),]
+			    [imm_new_int(0x$1),];
+			$imm =~ s[^\$0.(\d+),]
+			    [imm_new_int(\$1\[$1\]),];
 
 			# divide the second, and only the second, by 8 bits/byte
-			$args[-1] =~ s#(,\s*)(\d+)(s)?#$1 . ($2/8)#eg;
-			$args[-1] .= ($3||'') eq 's' ? ', 1' : ', 0';
+			$imm =~ s#(,\s*)(\d+)(s)?#$1 . ($2/8)#eg;
+			$imm .= ($3||'') eq 's' ? ',1' : ',0';
 
-			die $args[-1] if $args[-1] =~ m/\d+s/;
+			die $imm if $imm =~ m/\d+s/;
+
+			my @imm_split = split ",", $imm;
+			push @args, "imm=$imm_split[0];";
+			push @args, "im_len=$imm_split[1];";
+			push @args, "im_sign=$imm_split[2];";
 
 			# now that we've constructed the arglist, subst $0.\d
 			s/\$0\.(\d+)/\$1\[$1\]/g foreach (@args);
+
+			# and add the data structure reference
+			s/^/$datastructname./g foreach (@args);
 		    
 			# see if we match one of the cases to defer
 			if (($inst->[OPERANDS]||"") =~ m/,ONE/)
@@ -691,8 +728,9 @@ sub output_yacc ($@)
 			    # Now output imm version, with second opcode byte
 			    # set to ,1 opcode.  Also call SetInsnShiftFlag().
 			    $tokens =~ s/imm8x/imm/;
-			    die "no space for ONE?" if $args[3] !~ m/0,/;
-			    $args[3] = $ONE->[3]->[2];
+			    die "no space for ONE?" if $args[3] !~ m/0;/;
+			    my $oneval = $ONE->[3]->[2];
+			    $args[3] =~ s/0/$oneval/;
 			    print GRAMMAR action_setshiftflag ($rule, $tokens, $func, \@args, $count++);
 			}
 			elsif ($AL and ($inst->[OPERANDS]||"") =~ m/reg8,imm/)

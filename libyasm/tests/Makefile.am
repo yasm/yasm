@@ -26,6 +26,7 @@ LDADD = \
 	$(top_builddir)/src/preprocs/raw/libpreproc.a		\
 	$(top_builddir)/src/optimizers/dbg/liboptimizer.a	\
 	$(top_builddir)/src/objfmts/dbg/libobjfmt.a		\
+	$(top_builddir)/src/arch/@ARCH@/libarch.a		\
 	$(top_builddir)/src/libyasm.a				\
 	$(INTLLIBS)
 
@@ -54,5 +55,5 @@ memexpr_test_SOURCES = \
 	memexpr_test.c
 
 INCLUDES= -I$(top_srcdir) -I$(top_srcdir)/src -I$(top_srcdir)/check \
-	-I$(top_builddir)/intl
+	-I$(top_srcdir)/src/arch/@ARCH@ -I$(top_builddir)/intl
 

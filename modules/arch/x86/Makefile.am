@@ -3,7 +3,10 @@
 noinst_LIBRARIES = libarch.a
 
 libarch_a_SOURCES = \
-	arch.c
+	x86arch.h	\
+	x86-int.h	\
+	arch.c		\
+	bytecode.c
 
 INCLUDES = \
 	-I$(top_srcdir)/src	\
