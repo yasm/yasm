@@ -99,14 +99,15 @@ static unsigned long cpu_enabled = ~CPU_Any;
  *             8 = ST0
  *             9 = AL/AX/EAX (depending on size)
  *             A = CL/CX/ECX (depending on size)
- *             B = CS
- *             C = DS
- *             D = ES
- *             E = FS
- *             F = GS
- *             10 = SS
- *             11 = CR4
- *             12 = memory offset (an EA, but with no registers allowed)
+ *             B = DL/DX/EDX (depending on size)
+ *             C = CS
+ *             D = DS
+ *             E = ES
+ *             F = FS
+ *             10 = GS
+ *             11 = SS
+ *             12 = CR4
+ *             13 = memory offset (an EA, but with no registers allowed)
  *                  [special case for MOV opcode]
  *  - 3 bits = size (user-specified, or from register size):
  *             0 = any size acceptable
@@ -140,14 +141,15 @@ static unsigned long cpu_enabled = ~CPU_Any;
 #define OPT_ST0		0x8
 #define OPT_Areg	0x9
 #define OPT_Creg	0xA
-#define OPT_CS		0xB
-#define OPT_DS		0xC
-#define OPT_ES		0xD
-#define OPT_FS		0xE
-#define OPT_GS		0xF
-#define OPT_SS		0x10
-#define OPT_CR4		0x11
-#define OPT_MemOffs	0x12
+#define OPT_Dreg	0xB
+#define OPT_CS		0xC
+#define OPT_DS		0xD
+#define OPT_ES		0xE
+#define OPT_FS		0xF
+#define OPT_GS		0x10
+#define OPT_SS		0x11
+#define OPT_CR4		0x12
+#define OPT_MemOffs	0x13
 #define OPT_MASK	0x001F
 
 #define OPS_Any		(0<<5)
@@ -364,6 +366,60 @@ static const x86_insn_info pop_insn[] = {
       {OPT_GS|OPS_Any|OPA_None, 0, 0} }
 };
 
+/* Exchange instructions */
+static const x86_insn_info xchg_insn[] = {
+    { CPU_Any, 0, 0, 1, {0x86, 0, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_8|OPA_Spare, 0} },
+    { CPU_Any, 0, 0, 1, {0x86, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_8|OPA_Spare, OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_Any, 0, 16, 1, {0x90, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_16|OPA_None, OPT_Reg|OPS_16|OPA_Op0Add, 0} },
+    { CPU_Any, 0, 16, 1, {0x90, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_Op0Add, OPT_Areg|OPS_16|OPA_None, 0} },
+    { CPU_Any, 0, 16, 1, {0x87, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare, 0} },
+    { CPU_Any, 0, 16, 1, {0x87, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_386, 0, 32, 1, {0x90, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_32|OPA_None, OPT_Reg|OPS_32|OPA_Op0Add, 0} },
+    { CPU_386, 0, 32, 1, {0x90, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Op0Add, OPT_Areg|OPS_32|OPA_None, 0} },
+    { CPU_386, 0, 32, 1, {0x87, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} },
+    { CPU_386, 0, 32, 1, {0x87, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} }
+};
+
+/* In/out from ports */
+static const x86_insn_info in_insn[] = {
+    { CPU_Any, 0, 0, 1, {0xE4, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_8|OPA_None, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_Any, 0, 16, 1, {0xE5, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_16|OPA_None, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_386, 0, 32, 1, {0xE5, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_32|OPA_None, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_Any, 0, 0, 1, {0xEC, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_8|OPA_None, OPT_Dreg|OPS_16|OPA_None, 0} },
+    { CPU_Any, 0, 16, 1, {0xED, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_16|OPA_None, OPT_Dreg|OPS_16|OPA_None, 0} },
+    { CPU_386, 0, 32, 1, {0xED, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_32|OPA_None, OPT_Dreg|OPS_16|OPA_None, 0} }
+};
+static const x86_insn_info out_insn[] = {
+    { CPU_Any, 0, 0, 1, {0xE6, 0, 0}, 0, 2,
+      {OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, OPT_Areg|OPS_8|OPA_None, 0} },
+    { CPU_Any, 0, 16, 1, {0xE7, 0, 0}, 0, 2,
+      {OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, OPT_Areg|OPS_16|OPA_None, 0} },
+    { CPU_386, 0, 32, 1, {0xE7, 0, 0}, 0, 2,
+      {OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, OPT_Areg|OPS_32|OPA_None, 0} },
+    { CPU_Any, 0, 0, 1, {0xEE, 0, 0}, 0, 2,
+      {OPT_Dreg|OPS_16|OPA_None, OPT_Areg|OPS_8|OPA_None, 0} },
+    { CPU_Any, 0, 16, 1, {0xEF, 0, 0}, 0, 2,
+      {OPT_Dreg|OPS_16|OPA_None, OPT_Areg|OPS_16|OPA_None, 0} },
+    { CPU_386, 0, 32, 1, {0xEF, 0, 0}, 0, 2,
+      {OPT_Dreg|OPS_16|OPA_None, OPT_Areg|OPS_32|OPA_None, 0} }
+};
+
 bytecode *
 x86_new_insn(const unsigned long data[4], int num_operands,
 	     insn_operandhead *operands)
@@ -469,6 +525,16 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 			 op->data.reg != (X86_REG16 | 1)) ||
 			((info->operands[i] & OPS_MASK) == OPS_32 &&
 			 op->data.reg != (X86_REG32 | 1)))
+			mismatch = 1;
+		    break;
+		case OPT_Dreg:
+		    if (op->type != INSN_OPERAND_REG ||
+			((info->operands[i] & OPS_MASK) == OPS_8 &&
+			 op->data.reg != (X86_REG8 | 2)) ||
+			((info->operands[i] & OPS_MASK) == OPS_16 &&
+			 op->data.reg != (X86_REG16 | 2)) ||
+			((info->operands[i] & OPS_MASK) == OPS_32 &&
+			 op->data.reg != (X86_REG32 | 2)))
 			mismatch = 1;
 		    break;
 		case OPT_CS:
@@ -988,10 +1054,10 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	P O P A D { RET_INSN(onebyte, 0x2061, CPU_386); }
 	P O P A W { RET_INSN(onebyte, 0x1061, CPU_186); }
 	/* Exchange */
-	/* X C H G */
+	X C H G { RET_INSN(xchg, 0, CPU_Any); }
 	/* In/out from ports */
-	/* I N */
-	/* O U T */
+	I N { RET_INSN(in, 0, CPU_Any); }
+	O U T { RET_INSN(out, 0, CPU_Any); }
 	/* Load effective address */
 	/* L E A */
 	/* Load segment registers from memory */
