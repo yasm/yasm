@@ -71,7 +71,7 @@ static bytecode *nasm_parser_temp_bc;
     unsigned char groupdata[4];
     effaddr *ea;
     expr *exp;
-    immval im_val;
+    immval *im_val;
     targetval tgt_val;
     datavalhead datahead;
     dataval *data;
@@ -128,7 +128,7 @@ static bytecode *nasm_parser_temp_bc;
 %%
 input: /* empty */
     | input line    {
-	nasm_parser_temp_bc = bytecodes_append(&nasm_parser_cur_section->bc,
+	nasm_parser_temp_bc = bytecodes_append(section_get_bytecodes(nasm_parser_cur_section),
 					       $2);
 	if (nasm_parser_temp_bc)
 	    nasm_parser_prev_bc = nasm_parser_temp_bc;
@@ -154,13 +154,11 @@ exp: instr
 ;
 
 datavals: dataval	    {
-	STAILQ_INIT(&$$);
-	if ($1)
-	    STAILQ_INSERT_TAIL(&$$, $1, link);
+	datavals_initialize(&$$);
+	datavals_append(&$$, $1);
     }
     | datavals ',' dataval  {
-	if ($3)
-	    STAILQ_INSERT_TAIL(&$1, $3, link);
+	datavals_append(&$1, $3);
 	$$ = $1;
     }
 ;
@@ -259,7 +257,7 @@ segreg:  REG_ES
 memexp: expr	{ expr_simplify ($1); $$ = effaddr_new_expr($1); }
 ;
 
-memaddr: memexp		    { $$ = $1; $$->segment = 0; }
+memaddr: memexp		    { $$ = $1; SetEASegment($$, 0); }
     | REG_CS ':' memaddr    { $$ = $3; SetEASegment($$, 0x2E); }
     | REG_SS ':' memaddr    { $$ = $3; SetEASegment($$, 0x36); }
     | REG_DS ':' memaddr    { $$ = $3; SetEASegment($$, 0x3E); }
@@ -355,7 +353,7 @@ rm128: XMMREG	{ $$ = effaddr_new_reg($1); }
 ;
 
 /* immediate values */
-imm: expr   { expr_simplify ($1); ConvertExprToImm (&$$, $1); }
+imm: expr   { expr_simplify($1); $$ = immval_new_expr($1); }
 ;
 
 /* explicit immediates */
@@ -378,16 +376,14 @@ imm32: imm
 ;
 
 /* jump targets */
-target: expr	    { $$.val = $1; $$.op_sel = JR_NONE; }
+target: expr	    { $$.val = $1; SetOpcodeSel(&$$.op_sel, JR_NONE); }
     | SHORT target  { $$ = $2; SetOpcodeSel(&$$.op_sel, JR_SHORT_FORCED); }
     | NEAR target   { $$ = $2; SetOpcodeSel(&$$.op_sel, JR_NEAR_FORCED); }
 ;
 
 /* expression trees */
-expr_no_string: INTNUM		{ $$ = expr_new_ident(EXPR_INT, ExprInt($1)); }
-    | explabel			{
-	$$ = expr_new_ident(EXPR_SYM, ExprSym(symrec_use($1)));
-    }
+expr_no_string: INTNUM		{ $$ = expr_new_ident(ExprInt($1)); }
+    | explabel			{ $$ = expr_new_ident(ExprSym(symrec_use($1))); }
     /*| expr '||' expr		{ $$ = expr_new_tree($1, EXPR_LOR, $3); }*/
     | expr '|' expr		{ $$ = expr_new_tree($1, EXPR_OR, $3); }
     | expr '^' expr		{ $$ = expr_new_tree($1, EXPR_XOR, $3); }
@@ -415,7 +411,7 @@ expr_no_string: INTNUM		{ $$ = expr_new_ident(EXPR_INT, ExprInt($1)); }
 
 expr: expr_no_string
     | STRING		{
-	$$ = expr_new_ident (EXPR_INT, ExprInt(ConvertCharConstToInt($1)));
+	$$ = expr_new_ident(ExprInt(ConvertCharConstToInt($1)));
     }
 ;
 
@@ -427,12 +423,12 @@ explabel: ID
 instr: instrbase
     | OPERSIZE instr	{ $$ = $2; SetInsnOperSizeOverride($$, $1); }
     | ADDRSIZE instr	{ $$ = $2; SetInsnAddrSizeOverride($$, $1); }
-    | REG_CS instr	{ $$ = $2; SetEASegment($$->data.insn.ea, 0x2E); }
-    | REG_SS instr	{ $$ = $2; SetEASegment($$->data.insn.ea, 0x36); }
-    | REG_DS instr	{ $$ = $2; SetEASegment($$->data.insn.ea, 0x3E); }
-    | REG_ES instr	{ $$ = $2; SetEASegment($$->data.insn.ea, 0x26); }
-    | REG_FS instr	{ $$ = $2; SetEASegment($$->data.insn.ea, 0x64); }
-    | REG_GS instr	{ $$ = $2; SetEASegment($$->data.insn.ea, 0x65); }
+    | REG_CS instr	{ $$ = $2; SetEASegment(GetInsnEA($$), 0x2E); }
+    | REG_SS instr	{ $$ = $2; SetEASegment(GetInsnEA($$), 0x36); }
+    | REG_DS instr	{ $$ = $2; SetEASegment(GetInsnEA($$), 0x3E); }
+    | REG_ES instr	{ $$ = $2; SetEASegment(GetInsnEA($$), 0x26); }
+    | REG_FS instr	{ $$ = $2; SetEASegment(GetInsnEA($$), 0x64); }
+    | REG_GS instr	{ $$ = $2; SetEASegment(GetInsnEA($$), 0x65); }
     | LOCK instr	{ $$ = $2; SetInsnLockRepPrefix($$, 0xF0); }
     | REPNZ instr	{ $$ = $2; SetInsnLockRepPrefix($$, 0xF2); }
     | REP instr		{ $$ = $2; SetInsnLockRepPrefix($$, 0xF3); }

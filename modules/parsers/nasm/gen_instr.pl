@@ -618,7 +618,7 @@ sub output_yacc ($@)
 			#$args[-1] =~ s/(\$\d+[ri]?)(?!\.)/\&$1/; # Just the first!
 			$args[-1] =~ s/(\$\d+)r/effaddr_new_reg($1)/;
 			$args[-1] =~ s[(\$\d+)i,\s*(\d+)]
-			    ["effaddr_new_imm(\&$1, ".($2/8)."), 0"]e;
+			    ["effaddr_new_imm($1, ".($2/8)."), 0"]e;
 			$args[-1] .= ',';
 
 			die $args[-1] if $args[-1] =~ m/\d+[ri]/;
@@ -629,11 +629,10 @@ sub output_yacc ($@)
 			$args[-1] =~ s/nil/(immval *)NULL, 0/;
 			# don't match $0.\d in the following rules.
 			$args[-1] =~ s/\$(\d+)(?!\.)/"\$".($1*2+$to).($2||'')/eg;
-			$args[-1] =~ s/(\$\d+)(?!\.)/\&$1/; # Just the first!
 			$args[-1] =~ s[^([0-9A-Fa-f]+),]
-			    [ConvertIntToImm((immval *)NULL, 0x$1),];
+			    [immval_new_int(0x$1),];
 			$args[-1] =~ s[^\$0.(\d+),]
-			    [ConvertIntToImm((immval *)NULL, \$1\[$1\]),];
+			    [immval_new_int(\$1\[$1\]),];
 
 			# divide the second, and only the second, by 8 bits/byte
 			$args[-1] =~ s#(,\s*)(\d+)(s)?#$1 . ($2/8)#eg;

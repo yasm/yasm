@@ -22,6 +22,16 @@
 #ifndef YASM_EXPR_H
 #define YASM_EXPR_H
 
+#ifndef YASM_SYMREC
+#define YASM_SYMREC
+typedef struct symrec symrec;
+#endif
+
+#ifndef YASM_FLOATNUM
+#define YASM_FLOATNUM
+typedef struct floatnum floatnum;
+#endif
+
 typedef enum {
     EXPR_ADD,
     EXPR_SUB,
@@ -47,41 +57,26 @@ typedef enum {
     EXPR_IDENT			/* if right is IDENT, then the entire expr is just a num */
 } ExprOp;
 
-typedef enum {
-    EXPR_NONE,			/* for left side of a NOT, NEG, etc. */
-    EXPR_SYM,
-    EXPR_EXPR,
-    EXPR_INT,
-    EXPR_FLOAT
-} ExprType;
+typedef struct ExprItem ExprItem;
 
-typedef union expritem_u {
-    struct symrec_s *sym;
-    struct expr_s *exp;
-    unsigned long int_val;
-    struct floatnum_s *flt;
-} ExprItem;
+#ifndef YASM_EXPR
+#define YASM_EXPR
+typedef struct expr expr;
+#endif
 
-typedef struct expr_s {
-    ExprType ltype, rtype;
-    ExprItem left, right;
-    ExprOp op;
-} expr;
+expr *expr_new(ExprItem *, ExprOp, ExprItem *);
 
-expr *expr_new(ExprType, ExprItem, ExprOp, ExprType, ExprItem);
-
-ExprItem ExprSym(struct symrec_s *);
-ExprItem ExprExpr(expr *);
-ExprItem ExprInt(unsigned long);
-ExprItem ExprFloat(struct floatnum_s *);
-ExprItem ExprNone(void);
+ExprItem *ExprSym(symrec *);
+ExprItem *ExprExpr(expr *);
+ExprItem *ExprInt(unsigned long);
+ExprItem *ExprFloat(floatnum *);
 
 #define expr_new_tree(l,o,r) \
-    expr_new (EXPR_EXPR, ExprExpr(l), (o), EXPR_EXPR, ExprExpr(r))
+    expr_new (ExprExpr(l), (o), ExprExpr(r))
 #define expr_new_branch(o,r) \
-    expr_new (EXPR_NONE, ExprNone(), (o), EXPR_EXPR, ExprExpr(r))
-#define expr_new_ident(t,r) \
-    expr_new (EXPR_NONE, ExprNone(), EXPR_IDENT, (ExprType)(t), (r))
+    expr_new ((ExprItem *)NULL, (o), ExprExpr(r))
+#define expr_new_ident(r) \
+    expr_new ((ExprItem *)NULL, EXPR_IDENT, (r))
 
 int expr_simplify(expr *);
 void expr_print(expr *);

@@ -32,6 +32,14 @@
 # include <string.h>
 #endif
 
+#include <libintl.h>
+#define _(String)	gettext(String)
+#ifdef gettext_noop
+#define N_(String)	gettext_noop(String)
+#else
+#define N_(String)	(String)
+#endif
+
 #include "globals.h"
 #include "errwarn.h"
 #include "floatnum.h"
@@ -40,88 +48,88 @@
 
 RCSID("$IdPath$");
 
+typedef enum {
+    EXPR_NONE,			/* for left side of a NOT, NEG, etc. */
+    EXPR_SYM,
+    EXPR_EXPR,
+    EXPR_INT,
+    EXPR_FLOAT
+} ExprType;
+
+struct ExprItem {
+    ExprType type;
+    union {
+	symrec *sym;
+	expr *expn;
+	unsigned long int_val;
+	floatnum *flt;
+    } data;
+};
+
+struct expr {
+    ExprItem left, right;
+    ExprOp op;
+};
+
 /* allocate a new expression node, with children as defined.
  * If it's a unary operator, put the element on the right */
 expr *
-expr_new(ExprType ltype,
-	 ExprItem left,
-	 ExprOp   op,
-	 ExprType rtype,
-	 ExprItem right)
+expr_new(ExprItem *left, ExprOp op, ExprItem *right)
 {
     expr *ptr;
     ptr = xmalloc(sizeof(expr));
 
-    ptr->ltype = ltype;
+    ptr->left.type = EXPR_NONE;
     ptr->op = op;
-    ptr->rtype = rtype;
-    switch (ltype) {
-	case EXPR_SYM:
-	case EXPR_EXPR:
-	case EXPR_INT:
-	case EXPR_FLOAT:
-	    memcpy(&ptr->left, &left, sizeof(ExprItem));
-	    break;
-	case EXPR_NONE:
-	    break;
+    ptr->right.type = EXPR_NONE;
+    if (left) {
+	memcpy(&ptr->left, left, sizeof(ExprItem));
+	free(left);
     }
-    switch (rtype) {
-	case EXPR_SYM:
-	case EXPR_EXPR:
-	case EXPR_INT:
-	case EXPR_FLOAT:
-	    memcpy(&ptr->right, &right, sizeof(ExprItem));
-	    break;
-	case EXPR_NONE:
-	    Fatal(FATAL_UNKNOWN);	/* TODO: better error? */
-	    break;
+    if (right) {
+	memcpy(&ptr->right, right, sizeof(ExprItem));
+	free(right);
+    } else {
+	InternalError(__LINE__, __FILE__,
+		      _("Right side of expression must exist"));
     }
     return ptr;
 }
 
 /* helpers */
-ExprItem
-ExprSym(struct symrec_s *s)
+ExprItem *
+ExprSym(symrec *s)
 {
-    ExprItem e;
-
-    e.sym = s;
+    ExprItem *e = xmalloc(sizeof(ExprItem));
+    e->type = EXPR_SYM;
+    e->data.sym = s;
     return e;
 }
 
-ExprItem
+ExprItem *
 ExprExpr(expr *x)
 {
-    ExprItem e;
-    e.exp = x;
-
+    ExprItem *e = xmalloc(sizeof(ExprItem));
+    e->type = EXPR_EXPR;
+    e->data.expn = x;
     return e;
 }
 
-ExprItem
+ExprItem *
 ExprInt(unsigned long i)
 {
-    ExprItem e;
-
-    e.int_val = i;
+    ExprItem *e = xmalloc(sizeof(ExprItem));
+    e->type = EXPR_INT;
+    e->data.int_val = i;
     return e;
 }
 
-ExprItem
+ExprItem *
 ExprFloat(floatnum *f)
 {
-    ExprItem e;
-
-    e.flt = f;
-    return e;
-}
-
-ExprItem
-ExprNone(void)
-{
-    ExprItem e;
-
-    e.int_val = 0;
+    ExprItem *e = xmalloc(sizeof(ExprItem));
+    e->type = EXPR_FLOAT;
+    e->data.flt = f;
     return e;
 }
 
@@ -133,118 +141,118 @@ expr_simplify(expr *e)
     unsigned long int_val;
 
     /* try to simplify the left side */
-    if (e->ltype == EXPR_EXPR) {
+    if (e->left.type == EXPR_EXPR) {
 	/* if the left subexpr isn't an IDENT, recurse simplification */
-	if (e->left.exp->op != EXPR_IDENT)
-	    simplified |= expr_simplify(e->left.exp);
+	if (e->left.data.expn->op != EXPR_IDENT)
+	    simplified |= expr_simplify(e->left.data.expn);
 
 	/* if the left subexpr is just an IDENT (or string thereof),
 	 * pull it up into the current node */
-	while (e->ltype == EXPR_EXPR && e->left.exp->op == EXPR_IDENT) {
+	while (e->left.type == EXPR_EXPR && e->left.data.expn->op == EXPR_IDENT) {
 	    ExprItem tmp;
-	    e->ltype = e->left.exp->rtype;
-	    memcpy(&tmp, &(e->left.exp->right), sizeof(ExprItem));
-	    free(e->left.exp);
-	    memcpy(&(e->left.int_val), &tmp, sizeof(ExprItem));
+	    e->left.type = e->left.data.expn->right.type;
+	    memcpy(&tmp, &(e->left.data.expn->right), sizeof(ExprItem));
+	    free(e->left.data.expn);
+	    memcpy(&(e->left.data.int_val), &tmp, sizeof(ExprItem));
 	    simplified = 1;
 	}
-    } else if (e->ltype == EXPR_SYM) {
+    } else if (e->left.type == EXPR_SYM) {
 	/* try to get value of symbol */
-	if (symrec_get_int_value(e->left.sym, &int_val, 0)) {
-	    e->ltype = EXPR_INT;
+	if (symrec_get_int_value(e->left.data.sym, &int_val, 0)) {
+	    e->left.type = EXPR_INT;
 	    /* don't try to free the symrec here. */
-	    e->left.int_val = int_val;
+	    e->left.data.int_val = int_val;
 	    simplified = 1;
 	}
     }
 
     /* ditto on the right */
-    if (e->rtype == EXPR_EXPR) {
-	if (e->right.exp->op != EXPR_IDENT)
-	    simplified |= expr_simplify(e->right.exp);
+    if (e->right.type == EXPR_EXPR) {
+	if (e->right.data.expn->op != EXPR_IDENT)
+	    simplified |= expr_simplify(e->right.data.expn);
 
-	while (e->rtype == EXPR_EXPR && e->right.exp->op == EXPR_IDENT) {
+	while (e->right.type == EXPR_EXPR && e->right.data.expn->op == EXPR_IDENT) {
 	    ExprItem tmp;
-	    e->rtype = e->right.exp->rtype;
-	    memcpy(&tmp, &(e->right.exp->right), sizeof(ExprItem));
-	    free(e->right.exp);
-	    memcpy(&(e->right.int_val), &tmp, sizeof(ExprItem));
+	    e->right.type = e->right.data.expn->right.type;
+	    memcpy(&tmp, &(e->right.data.expn->right), sizeof(ExprItem));
+	    free(e->right.data.expn);
+	    memcpy(&(e->right.data.int_val), &tmp, sizeof(ExprItem));
 	    simplified = 1;
 	}
-    } else if (e->rtype == EXPR_SYM) {
-	if (symrec_get_int_value(e->right.sym, &int_val, 0)) {
-	    e->rtype = EXPR_INT;
+    } else if (e->right.type == EXPR_SYM) {
+	if (symrec_get_int_value(e->right.data.sym, &int_val, 0)) {
+	    e->right.type = EXPR_INT;
 	    /* don't try to free the symrec here. */
-	    e->right.int_val = int_val;
+	    e->right.data.int_val = int_val;
 	    simplified = 1;
 	}
     }
 
-    if ((e->ltype == EXPR_INT || e->ltype == EXPR_NONE)
-	&& e->rtype == EXPR_INT && e->op != EXPR_IDENT) {
+    if ((e->left.type == EXPR_INT || e->left.type == EXPR_NONE)
+	&& e->right.type == EXPR_INT && e->op != EXPR_IDENT) {
 	switch (e->op) {
 	    case EXPR_ADD:
-		e->right.int_val = e->left.int_val + e->right.int_val;
+		e->right.data.int_val = e->left.data.int_val + e->right.data.int_val;
 		break;
 	    case EXPR_SUB:
-		e->right.int_val = e->left.int_val - e->right.int_val;
+		e->right.data.int_val = e->left.data.int_val - e->right.data.int_val;
 		break;
 	    case EXPR_MUL:
-		e->right.int_val = e->left.int_val * e->right.int_val;
+		e->right.data.int_val = e->left.data.int_val * e->right.data.int_val;
 		break;
 	    case EXPR_DIV:
-		e->right.int_val = e->left.int_val / e->right.int_val;
+		e->right.data.int_val = e->left.data.int_val / e->right.data.int_val;
 		break;
 	    case EXPR_MOD:
-		e->right.int_val = e->left.int_val % e->right.int_val;
+		e->right.data.int_val = e->left.data.int_val % e->right.data.int_val;
 		break;
 	    case EXPR_NEG:
-		e->right.int_val = -(e->right.int_val);
+		e->right.data.int_val = -(e->right.data.int_val);
 		break;
 	    case EXPR_NOT:
-		e->right.int_val = ~(e->right.int_val);
+		e->right.data.int_val = ~(e->right.data.int_val);
 		break;
 	    case EXPR_OR:
-		e->right.int_val = e->left.int_val | e->right.int_val;
+		e->right.data.int_val = e->left.data.int_val | e->right.data.int_val;
 		break;
 	    case EXPR_AND:
-		e->right.int_val = e->left.int_val & e->right.int_val;
+		e->right.data.int_val = e->left.data.int_val & e->right.data.int_val;
 		break;
 	    case EXPR_XOR:
-		e->right.int_val = e->left.int_val ^ e->right.int_val;
+		e->right.data.int_val = e->left.data.int_val ^ e->right.data.int_val;
 		break;
 	    case EXPR_SHL:
-		e->right.int_val = e->right.int_val << e->left.int_val;
+		e->right.data.int_val = e->right.data.int_val << e->left.data.int_val;
 		break;
 	    case EXPR_SHR:
-		e->right.int_val = e->right.int_val << e->left.int_val;
+		e->right.data.int_val = e->right.data.int_val << e->left.data.int_val;
 		break;
 	    case EXPR_LOR:
-		e->right.int_val = e->left.int_val || e->right.int_val;
+		e->right.data.int_val = e->left.data.int_val || e->right.data.int_val;
 		break;
 	    case EXPR_LAND:
-		e->right.int_val = e->left.int_val && e->right.int_val;
+		e->right.data.int_val = e->left.data.int_val && e->right.data.int_val;
 		break;
 	    case EXPR_LNOT:
-		e->right.int_val = !e->right.int_val;
+		e->right.data.int_val = !e->right.data.int_val;
 		break;
 	    case EXPR_EQ:
-		e->right.int_val = e->right.int_val == e->left.int_val;
+		e->right.data.int_val = e->right.data.int_val == e->left.data.int_val;
 		break;
 	    case EXPR_LT:
-		e->right.int_val = e->right.int_val < e->left.int_val;
+		e->right.data.int_val = e->right.data.int_val < e->left.data.int_val;
 		break;
 	    case EXPR_GT:
-		e->right.int_val = e->right.int_val > e->left.int_val;
+		e->right.data.int_val = e->right.data.int_val > e->left.data.int_val;
 		break;
 	    case EXPR_LE:
-		e->right.int_val = e->right.int_val <= e->left.int_val;
+		e->right.data.int_val = e->right.data.int_val <= e->left.data.int_val;
 		break;
 	    case EXPR_GE:
-		e->right.int_val = e->right.int_val >= e->left.int_val;
+		e->right.data.int_val = e->right.data.int_val >= e->left.data.int_val;
 		break;
 	    case EXPR_NE:
-		e->right.int_val = e->right.int_val != e->left.int_val;
+		e->right.data.int_val = e->right.data.int_val != e->left.data.int_val;
 		break;
 	    case EXPR_IDENT:
 		break;
@@ -254,34 +262,34 @@ expr_simplify(expr *e)
     }
 
     /* catch simple identities like 0+x, 1*x, etc., for x not a num */
-    else if (e->ltype == EXPR_INT && ((e->left.int_val == 1 && e->op == EXPR_MUL)
-				      || (e->left.int_val == 0 &&
+    else if (e->left.type == EXPR_INT && ((e->left.data.int_val == 1 && e->op == EXPR_MUL)
+				      || (e->left.data.int_val == 0 &&
 					  e->op == EXPR_ADD)
-				      || (e->left.int_val == -1 &&
+				      || (e->left.data.int_val == -1 &&
 					  e->op == EXPR_AND)
-				      || (e->left.int_val == 0 &&
+				      || (e->left.data.int_val == 0 &&
 					  e->op == EXPR_OR))) {
 	e->op = EXPR_IDENT;
 	simplified = 1;
     }
     /* and the corresponding x+|-0, x*&/1 */
-    else if (e->rtype == EXPR_INT && ((e->right.int_val == 1 && e->op == EXPR_MUL)
-				      || (e->right.int_val == 1 &&
+    else if (e->right.type == EXPR_INT && ((e->right.data.int_val == 1 && e->op == EXPR_MUL)
+				      || (e->right.data.int_val == 1 &&
 					  e->op == EXPR_DIV)
-				      || (e->right.int_val == 0 &&
+				      || (e->right.data.int_val == 0 &&
 					  e->op == EXPR_ADD)
-				      || (e->right.int_val == 0 &&
+				      || (e->right.data.int_val == 0 &&
 					  e->op == EXPR_SUB)
-				      || (e->right.int_val == -1 &&
+				      || (e->right.data.int_val == -1 &&
 					  e->op == EXPR_AND)
-				      || (e->right.int_val == 0 &&
+				      || (e->right.data.int_val == 0 &&
 					  e->op == EXPR_OR)
-				      || (e->right.int_val == 0 &&
+				      || (e->right.data.int_val == 0 &&
 					  e->op == EXPR_SHL)
-				      || (e->right.int_val == 0 &&
+				      || (e->right.data.int_val == 0 &&
 					  e->op == EXPR_SHR))) {
 	e->op = EXPR_IDENT;
-	e->rtype = e->ltype;
+	e->right.type = e->left.type;
 	memcpy(&e->right, &e->left, sizeof(ExprItem));
 	simplified = 1;
     }
@@ -292,11 +300,11 @@ expr_simplify(expr *e)
 int
 expr_get_value(expr *e, unsigned long *retval)
 {
-    while (!(e->op == EXPR_IDENT && e->rtype == EXPR_INT)
+    while (!(e->op == EXPR_IDENT && e->right.type == EXPR_INT)
 	   && expr_simplify(e)) ;
 
-    if (e->op == EXPR_IDENT && e->rtype == EXPR_INT) {
-	*retval = e->right.int_val;
+    if (e->op == EXPR_IDENT && e->right.type == EXPR_INT) {
+	*retval = e->right.data.int_val;
 	return 1;
     } else
 	return 0;
@@ -306,20 +314,20 @@ void
 expr_print(expr *e)
 {
     if (e->op != EXPR_IDENT) {
-	switch (e->ltype) {
+	switch (e->left.type) {
 	    case EXPR_SYM:
-		printf("%s", e->left.sym->name);
+		printf("%s", symrec_get_name(e->left.data.sym));
 		break;
 	    case EXPR_EXPR:
 		printf("(");
-		expr_print(e->left.exp);
+		expr_print(e->left.data.expn);
 		printf(")");
 		break;
 	    case EXPR_INT:
-		printf("%lu", e->left.int_val);
+		printf("%lu", e->left.data.int_val);
 		break;
 	    case EXPR_FLOAT:
-		floatnum_print(e->left.flt);
+		floatnum_print(e->left.data.flt);
 		break;
 	    case EXPR_NONE:
 		break;
@@ -392,20 +400,20 @@ expr_print(expr *e)
 	case EXPR_IDENT:
 	    break;
     }
-    switch (e->rtype) {
+    switch (e->right.type) {
 	case EXPR_SYM:
-	    printf("%s", e->right.sym->name);
+	    printf("%s", symrec_get_name(e->right.data.sym));
 	    break;
 	case EXPR_EXPR:
 	    printf("(");
-	    expr_print(e->right.exp);
+	    expr_print(e->right.data.expn);
 	    printf(")");
 	    break;
 	case EXPR_INT:
-	    printf("%lu", e->right.int_val);
+	    printf("%lu", e->right.data.int_val);
 	    break;
 	case EXPR_FLOAT:
-	    floatnum_print(e->right.flt);
+	    floatnum_print(e->right.data.flt);
 	    break;
 	case EXPR_NONE:
 	    break;

@@ -50,6 +50,22 @@
 
 RCSID("$IdPath$");
 
+struct section {
+    STAILQ_ENTRY(section) link;
+
+    enum { SECTION_GENERAL, SECTION_ABSOLUTE } type;
+
+    char *name;			/* strdup()'ed name (given by user) */
+
+    union {
+	/* SECTION_GENERAL data */
+	/* SECTION_ABSOLUTE data */
+	unsigned long start;
+    } data;
+
+    bytecodehead bc;		/* the bytecodes for the section's contents */
+};
+
 section *
 sections_initialize(sectionhead *headp, objfmt *of)
 {
@@ -106,4 +122,10 @@ sections_switch(sectionhead *headp, objfmt *of, const char *name)
     bytecodes_initialize(&s->bc);
 
     return s;
+}
+
+bytecodehead *
+section_get_bytecodes(section *sect)
+{
+    return &sect->bc;
 }

@@ -43,6 +43,23 @@
 
 RCSID("$IdPath$");
 
+struct symrec {
+    char *name;
+    SymType type;
+    SymStatus status;
+    SymVisibility visibility;
+    char *filename;		/* file and line */
+    unsigned long line;		/*  symbol was first declared or used on */
+    union {
+	unsigned long int_val;	/* integer constant */
+	floatnum *flt;		/* floating point constant */
+	struct label_s {	/* bytecode immediately preceding a label */
+	    section *sect;
+	    bytecode *bc;
+	} label;
+    } value;
+};
+
 /* private functions */
 static symrec *symrec_get_or_new(const char *);
 static symrec *symrec_define(const char *, SymType type);
@@ -191,4 +208,10 @@ symrec_get_int_value(const symrec *sym, unsigned long *ret_val,
 
     /* We can't get the value right now. */
     return 0;
+}
+
+const char *
+symrec_get_name(const symrec *sym)
+{
+    return sym->name;
 }

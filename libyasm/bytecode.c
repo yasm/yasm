@@ -45,10 +45,129 @@
 
 RCSID("$IdPath$");
 
-/* Static structures for when NULL is passed to conversion functions. */
-/*  for Convert*ToImm() */
-static immval im_static;
+struct effaddr {
+    expr *disp;			/* address displacement */
+    unsigned char len;		/* length of disp (in bytes), 0 if none */
 
+    unsigned char segment;	/* segment override, 0 if none */
+
+    unsigned char modrm;
+    unsigned char valid_modrm;	/* 1 if Mod/RM byte currently valid, 0 if not */
+    unsigned char need_modrm;	/* 1 if Mod/RM byte needed, 0 if not */
+
+    unsigned char sib;
+    unsigned char valid_sib;	/* 1 if SIB byte currently valid, 0 if not */
+    unsigned char need_sib;	/* 1 if SIB byte needed, 0 if not */
+};
+
+struct immval {
+    expr *val;
+
+    unsigned char len;		/* length of val (in bytes), 0 if none */
+    unsigned char isneg;	/* the value has been explicitly negated */
+
+    unsigned char f_len;	/* final imm length */
+    unsigned char f_sign;	/* 1 if final imm should be signed */
+};
+
+struct dataval {
+    STAILQ_ENTRY(dataval) link;
+
+    enum { DV_EMPTY, DV_EXPR, DV_FLOAT, DV_STRING } type;
+
+    union {
+	expr *expn;
+	floatnum *flt;
+	char *str_val;
+    } data;
+};
+
+struct bytecode {
+    STAILQ_ENTRY(bytecode) link;
+
+    enum { BC_EMPTY, BC_INSN, BC_JMPREL, BC_DATA, BC_RESERVE } type;
+
+    /* This union has been somewhat tweaked to get it as small as possible
+     * on the 4-byte-aligned x86 architecture (without resorting to
+     * bitfields).  In particular, insn and jmprel are the largest structures
+     * in the union, and are also the same size (after padding).  jmprel
+     * can have another unsigned char added to the end without affecting
+     * its size.
+     *
+     * Don't worry about this too much, but keep it in mind when changing
+     * this structure.  We care about the size of bytecode in particular
+     * because it accounts for the majority of the memory usage in the
+     * assembler when assembling a large file.
+     */
+    union {
+	struct {
+	    effaddr *ea;	/* effective address */
+
+	    immval imm;		/* immediate or relative value */
+
+	    unsigned char opcode[3];	/* opcode */
+	    unsigned char opcode_len;
+
+	    unsigned char addrsize;	/* 0 indicates no override */
+	    unsigned char opersize;	/* 0 indicates no override */
+	    unsigned char lockrep_pre;	/* 0 indicates no prefix */
+
+	    /* HACK, but a space-saving one: shift opcodes have an immediate
+	     * form and a ,1 form (with no immediate).  In the parser, we
+	     * set this and opcode_len=1, but store the ,1 version in the
+	     * second byte of the opcode array.  We then choose between the
+	     * two versions once we know the actual value of imm (because we
+	     * don't know it in the parser module).
+	     *
+	     * A override to force the imm version should just leave this at
+	     * 0.  Then later code won't know the ,1 version even exists.
+	     * TODO: Figure out how this affects CPU flags processing.
+	     *
+	     * Call SetInsnShiftFlag() to set this flag to 1.
+	     */
+	    unsigned char shift_op;
+	} insn;
+	struct {
+	    expr *target;		/* target location */
+
+	    struct {
+		unsigned char opcode[3];
+		unsigned char opcode_len;   /* 0 = no opc for this version */
+	    } shortop, nearop;
+
+	    /* which opcode are we using? */
+	    /* The *FORCED forms are specified in the source as such */
+	    jmprel_opcode_sel op_sel;
+
+	    unsigned char addrsize;	/* 0 indicates no override */
+	    unsigned char opersize;	/* 0 indicates no override */
+	    unsigned char lockrep_pre;	/* 0 indicates no prefix */
+	} jmprel;
+	struct {
+	    /* non-converted data (linked list) */
+	    datavalhead datahead;
+
+	    /* final (converted) size of each element (in bytes) */
+	    unsigned char size;
+	} data;
+	struct {
+	    expr *numitems;		/* number of items to reserve */
+	    unsigned char itemsize;	/* size of each item (in bytes) */
+	} reserve;
+    } data;
+
+    unsigned long len;		/* total length of entire bytecode */
+
+    /* where it came from */
+    char *filename;
+    unsigned int lineno;
+
+    /* other assembler state info */
+    unsigned long offset;
+    unsigned char mode_bits;
+};
+
+/* Static structures for when NULL is passed to conversion functions. */
 /*  for Convert*ToBytes() */
 unsigned char bytes_static[16];
 
@@ -106,37 +225,34 @@ effaddr_new_imm(immval *im_ptr, unsigned char im_len)
 }
 
 immval *
-ConvertIntToImm(immval *ptr, unsigned long int_val)
+immval_new_int(unsigned long int_val)
 {
-    if (!ptr)
-	ptr = &im_static;
+    immval *im = xmalloc(sizeof(immval));
 
-    /* FIXME: this will leak expr's if static is used */
-    ptr->val = expr_new_ident(EXPR_INT, ExprInt(int_val));
+    im->val = expr_new_ident(ExprInt(int_val));
 
     if ((int_val & 0xFF) == int_val)
-	ptr->len = 1;
+	im->len = 1;
     else if ((int_val & 0xFFFF) == int_val)
-	ptr->len = 2;
+	im->len = 2;
     else
-	ptr->len = 4;
+	im->len = 4;
 
-    ptr->isneg = 0;
+    im->isneg = 0;
 
-    return ptr;
+    return im;
 }
 
 immval *
-ConvertExprToImm(immval *ptr, expr *expr_ptr)
+immval_new_expr(expr *expr_ptr)
 {
-    if (!ptr)
-	ptr = &im_static;
+    immval *im = xmalloc(sizeof(immval));
 
-    ptr->val = expr_ptr;
+    im->val = expr_ptr;
 
-    ptr->isneg = 0;
+    im->isneg = 0;
 
-    return ptr;
+    return im;
 }
 
 void
@@ -145,7 +261,7 @@ SetEASegment(effaddr *ptr, unsigned char segment)
     if (!ptr)
 	return;
 
-    if (ptr->segment != 0)
+    if (segment != 0 && ptr->segment != 0)
 	Warning(_("multiple segment overrides, using leftmost"));
 
     ptr->segment = segment;
@@ -162,6 +278,19 @@ SetEALen(effaddr *ptr, unsigned char len)
      */
 
     ptr->len = len;
+}
+
+effaddr *
+GetInsnEA(bytecode *bc)
+{
+    if (!bc)
+	return NULL;
+
+    if (bc->type != BC_INSN)
+	InternalError(__LINE__, __FILE__,
+		      _("Trying to get EA of non-instruction"));
+
+    return bc->data.insn.ea;
 }
 
 void
@@ -250,7 +379,8 @@ SetOpcodeSel(jmprel_opcode_sel *old_sel, jmprel_opcode_sel new_sel)
     if (!old_sel)
 	return;
 
-    if ((*old_sel == JR_SHORT_FORCED) || (*old_sel == JR_NEAR_FORCED))
+    if (new_sel != JR_NONE && ((*old_sel == JR_SHORT_FORCED) ||
+			       (*old_sel == JR_NEAR_FORCED)))
 	Warning(_("multiple SHORT or NEAR specifiers, using leftmost"));
     *old_sel = new_sel;
 }
@@ -594,6 +724,16 @@ dataval_new_string(char *str_val)
     retval->data.str_val = str_val;
 
     return retval;
+}
+
+dataval *
+datavals_append(datavalhead *headp, dataval *dv)
+{
+    if (dv) {
+	STAILQ_INSERT_TAIL(headp, dv, link);
+	return dv;
+    }
+    return (dataval *)NULL;
 }
 
 void

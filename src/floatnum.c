@@ -51,6 +51,22 @@
 
 RCSID("$IdPath$");
 
+/* 97-bit internal floating point format:
+ * xxxxxxxs eeeeeeee eeeeeeee m.....................................m
+ * Sign          exponent     mantissa (80 bits)
+ *                            79                                    0
+ *
+ * Only L.O. bit of Sign byte is significant.  The rest is garbage.
+ * Exponent is bias 32767.
+ * Mantissa does NOT have an implied one bit (it's explicit).
+ */
+struct floatnum {
+    unsigned int *mantissa;	/* Allocated to 64 bits */
+    unsigned short exponent;
+    unsigned char sign;
+    unsigned char flags;
+};
+
 /* constants describing parameters of internal floating point format */
 #define MANT_BITS	80
 #define MANT_BYTES	10

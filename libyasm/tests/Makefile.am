@@ -21,7 +21,8 @@ bytecode_test_SOURCES = \
 floatnum_test_SOURCES = \
 	floatnum_test.c
 
-INCLUDES= -I$(top_srcdir) -I$(top_srcdir)/src -I$(top_srcdir)/check
+INCLUDES= -I$(top_srcdir) -I$(top_srcdir)/src -I$(top_srcdir)/check \
+	-I$(top_builddir)/intl
 LDADD = \
 	$(top_builddir)/check/libcheck.a			\
 	$(top_builddir)/src/parsers/nasm/libparser.a		\

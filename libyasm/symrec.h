@@ -22,6 +22,21 @@
 #ifndef YASM_SYMREC_H
 #define YASM_SYMREC_H
 
+#ifndef YASM_FLOATNUM
+#define YASM_FLOATNUM
+typedef struct floatnum floatnum;
+#endif
+
+#ifndef YASM_SECTION
+#define YASM_SECTION
+typedef struct section section;
+#endif
+
+#ifndef YASM_BYTECODE
+#define YASM_BYTECODE
+typedef struct bytecode bytecode;
+#endif
+
 /* DEFINED is set with EXTERN and COMMON below */
 typedef enum {
     SYM_NOSTATUS = 0,
@@ -45,28 +60,15 @@ typedef enum {
     SYM_LABEL			/* for labels */
 } SymType;
 
-typedef struct symrec_s {
-    char *name;
-    SymType type;
-    SymStatus status;
-    SymVisibility visibility;
-    char *filename;		/* file and line */
-    unsigned long line;		/*  symbol was first declared or used on */
-    union {
-	unsigned long int_val;	/* integer constant */
-	struct floatnum_s *flt;	/* floating point constant */
-	struct label_s {	/* bytecode immediately preceding a label */
-	    struct section_s *sect;
-	    struct bytecode_s *bc;
-	} label;
-    } value;
-} symrec;
+#ifndef YASM_SYMREC
+#define YASM_SYMREC
+typedef struct symrec symrec;
+#endif
 
 symrec *symrec_use(const char *name);
 symrec *symrec_define_constant_int(const char *name, unsigned long int_val);
-symrec *symrec_define_constant_float(const char *name, struct floatnum_s *flt);
-symrec *symrec_define_label(const char *name, struct section_s *sect,
-			    struct bytecode_s *precbc);
+symrec *symrec_define_constant_float(const char *name, floatnum *flt);
+symrec *symrec_define_label(const char *name, section *sect, bytecode *precbc);
 symrec *symrec_declare(const char *name, SymVisibility vis);
 
 /* Get the numeric 32-bit value of a symbol if possible.
@@ -76,6 +78,8 @@ symrec *symrec_declare(const char *name, SymVisibility vis);
  */
 int symrec_get_int_value(const symrec *sym, unsigned long *ret_val,
 			 int resolve_label);
+
+const char *symrec_get_name(const symrec *sym);
 
 void symrec_foreach(int (*func) (const char *name, symrec *rec));
 

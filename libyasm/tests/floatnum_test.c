@@ -31,9 +31,7 @@
 
 #include "check.h"
 
-#include "bitvect.h"
-
-#include "floatnum.h"
+#include "floatnum.c"
 
 /* constants describing parameters of internal floating point format.
  *  (these should match those in src/floatnum.c !)

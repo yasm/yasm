@@ -28,9 +28,7 @@
 
 #include "check.h"
 
-#include "util.h"
-
-#include "bytecode.h"
+#include "bytecode.c"
 
 START_TEST(test_effaddr_new_reg)
 {

@@ -24,27 +24,17 @@
 
 struct objfmt_s;
 
-typedef STAILQ_HEAD(sectionhead_s, section_s) sectionhead;
+typedef STAILQ_HEAD(sectionhead, section) sectionhead;
 
-typedef struct section_s {
-    STAILQ_ENTRY(section_s) link;
-
-    enum { SECTION_GENERAL, SECTION_ABSOLUTE } type;
-
-    char *name;			/* strdup()'ed name (given by user) */
-
-    union {
-	/* SECTION_GENERAL data */
-	/* SECTION_ABSOLUTE data */
-	unsigned long start;
-    } data;
-
-    bytecodehead bc;		/* the bytecodes for the section's contents */
-} section;
+#ifndef YASM_SECTION
+#define YASM_SECTION
+typedef struct section section;
+#endif
 
 section *sections_initialize(sectionhead *headp, struct objfmt_s *of);
 
 section *sections_switch(sectionhead *headp, struct objfmt_s *of,
 			 const char *name);
 
+bytecodehead *section_get_bytecodes(section *sect);
 #endif

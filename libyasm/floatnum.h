@@ -24,21 +24,10 @@
 #ifndef YASM_FLOATNUM_H
 #define YASM_FLOATNUM_H
 
-/* 97-bit internal floating point format:
- * xxxxxxxs eeeeeeee eeeeeeee m.....................................m
- * Sign          exponent     mantissa (80 bits)
- *                            79                                    0
- *
- * Only L.O. bit of Sign byte is significant.  The rest is garbage.
- * Exponent is bias 32767.
- * Mantissa does NOT have an implied one bit (it's explicit).
- */
-typedef struct floatnum_s {
-    unsigned int *mantissa;	/* Allocated to 64 bits */
-    unsigned short exponent;
-    unsigned char sign;
-    unsigned char flags;
-} floatnum;
+#ifndef YASM_FLOATNUM
+#define YASM_FLOATNUM
+typedef struct floatnum floatnum;
+#endif
 
 floatnum *floatnum_new(const char *str);
 void floatnum_delete(floatnum *flt);
