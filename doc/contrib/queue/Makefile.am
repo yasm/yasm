@@ -1,7 +1,9 @@
 # $IdPath$
 # Transforms queue manpage into various output formats.
 
-all: queue.html queue.ps
+noinst_DATA = queue.html queue.ps
+
+EXTRA_DIST = queue.3
 
 queue.html: queue.3
 	groff -mmandoc -Thtml queue.3 >queue.html
