@@ -662,14 +662,15 @@ bc_tobytes_data(bytecode_data *bc_data, unsigned char **bufp,
     dataval *dv;
     size_t slen;
     size_t i;
+    unsigned char *bufp_orig = *bufp;
 
     STAILQ_FOREACH(dv, &bc_data->datahead, link) {
 	switch (dv->type) {
 	    case DV_EMPTY:
 		break;
 	    case DV_EXPR:
-		if (output_expr(&dv->data.expn, bufp, bc_data->size, sect, bc,
-				0, d))
+		if (output_expr(&dv->data.expn, bufp, bc_data->size,
+				*bufp-bufp_orig, sect, bc, 0, d))
 		    return 1;
 		break;
 	    case DV_STRING:

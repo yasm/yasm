@@ -130,6 +130,7 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ expr *e,
 
 static int
 bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
+		       /*@unused@*/ unsigned long offset,
 		       /*@observer@*/ const section *sect,
 		       /*@observer@*/ const bytecode *bc, int rel,
 		       /*@unused@*/ /*@null@*/ void *d)

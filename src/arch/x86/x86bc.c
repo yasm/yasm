@@ -811,6 +811,7 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
     /*@null@*/ effaddr *ea = &x86_ea->ea;
     immval *imm = insn->imm;
     unsigned int i;
+    unsigned char *bufp_orig = *bufp;
 
     /* Prefixes */
     if (insn->lockrep_pre != 0)
@@ -866,7 +867,8 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
 		InternalError(_("checkea failed"));
 
 	    if (ea->disp) {
-		if (output_expr(&ea->disp, bufp, ea->len, sect, bc, 0, d))
+		if (output_expr(&ea->disp, bufp, ea->len, *bufp-bufp_orig,
+				sect, bc, 0, d))
 		    return 1;
 	    } else {
 		/* 0 displacement, but we didn't know it before, so we have to
@@ -881,7 +883,8 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
     /* Immediate (if required) */
     if (imm && imm->val) {
 	/* TODO: check imm->len vs. sized len from expr? */
-	if (output_expr(&imm->val, bufp, imm->len, sect, bc, 0, d))
+	if (output_expr(&imm->val, bufp, imm->len, *bufp-bufp_orig, sect, bc,
+			0, d))
 	    return 1;
     }
 
@@ -895,6 +898,7 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 {
     unsigned char opersize;
     unsigned int i;
+    unsigned char *bufp_orig = *bufp;
 
     /* Prefixes */
     if (jmprel->lockrep_pre != 0)
@@ -922,7 +926,8 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 		WRITE_8(*bufp, jmprel->shortop.opcode[i]);
 
 	    /* Relative displacement */
-	    if (output_expr(&jmprel->target, bufp, 1, sect, bc, 1, d))
+	    if (output_expr(&jmprel->target, bufp, 1, *bufp-bufp_orig, sect,
+			    bc, 1, d))
 		return 1;
 	    break;
 	case JR_NEAR_FORCED:
@@ -939,7 +944,8 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 
 	    /* Relative displacement */
 	    if (output_expr(&jmprel->target, bufp,
-			    (opersize == 32) ? 4UL : 2UL, sect, bc, 1, d))
+			    (opersize == 32) ? 4UL : 2UL, *bufp-bufp_orig,
+			    sect, bc, 1, d))
 		return 1;
 	    break;
 	default:

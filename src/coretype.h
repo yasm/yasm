@@ -98,14 +98,15 @@ typedef /*@null@*/ intnum * (*calc_bc_dist_func) (section *sect,
  *  ep      - (double) pointer to the expression to output
  *  bufp    - (double) pointer to buffer to contain byte representation
  *  valsize - the size (in bytes) to be used for the byte rep
+ *  offset  - the offset (in bytes) of the expr contents from the bc start
  *  sect    - current section (usually passed into higher-level calling fct)
- *  bc      - current bytecode (usually passed into higher-level callign fct)
+ *  bc      - current bytecode (usually passed into higher-level calling fct)
  *  rel     - should the expr be treated as PC/IP-relative? (nonzero=yes)
  *  d       - objfmt-specific data (passed into higher-level calling fct)
  * Returns nonzero if an error occurred, 0 otherwise
  */
 typedef int (*output_expr_func) (expr **ep, unsigned char **bufp,
-				 unsigned long valsize,
+				 unsigned long valsize, unsigned long offset,
 				 /*@observer@*/ const section *sect,
 				 /*@observer@*/ const bytecode *bc, int rel,
 				 /*@null@*/ void *d)
