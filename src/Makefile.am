@@ -7,7 +7,6 @@ yasm_SOURCES = \
 	bison.tab.c		\
 	bytecode.c		\
 	errwarn.c		\
-	expr.c			\
 	main.c			\
 	symrec.c		\
 	util.c
