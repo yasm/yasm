@@ -429,18 +429,18 @@ shrd!shlrd		AC
 ; Special format for relative targets:
 ; !Grp/Inst	target		AdSize	ShrtOp	NearOp		ShrtCPU	NearCPU
 ;
-!jmpcall	target		nil	$0.1	$0.2		8086	8086
-!jmpcall	imm:imm		nil	$0.3		$2i,nil		$1,16	8086
-!jmpcall	WORD imm:imm	16	$0.3		$2i,16		$1,16	8086
-!jmpcall	DWORD imm:imm	32	$0.3		$2i,32		$1,16	386
+!jmpcall	target		nil	$0.1?$0.2	$0.3	8086	8086
+!jmpcall	imm:imm		nil	$0.4		$2i,nil		$1,16	8086
+!jmpcall	WORD imm:imm	16	$0.4		$2i,16		$1,16	8086
+!jmpcall	DWORD imm:imm	32	$0.4		$2i,32		$1,16	386
 !jmpcall	memfar		nil	FF		$1,$0.4+1	nil	8086
 !jmpcall	WORD memfar	16	FF		$1,$0.4+1	nil	8086
 !jmpcall	DWORD memfar	32	FF		$1,$0.4+1	nil	386
 !jmpcall	mem		nil	FF		$1,$0.4		nil	8086
 !jmpcall	rm16x		16	FF		$1,$0.4		nil	8086
 !jmpcall	rm32x		32	FF		$1,$0.4		nil	386
-call!jmpcall		nil,E8,9A,2
-jmp!jmpcall		EB,E9,EA,4
+call!jmpcall		nil,0,E8,9A,2
+jmp!jmpcall		1,EB,E9,EA,4
 ret!onebyte		nil,C3		8086
 retn	nil			nil	C3		nil		nil	8086
 retf	nil			nil	CB		nil		nil	8086
