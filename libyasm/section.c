@@ -401,7 +401,7 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
     switch (sect->type) {
 	case SECTION_GENERAL:
 	    fprintf(f, "general\n%*sname=%s\n", indent_level, "",
-		    sect->data.general.name, indent_level, "");
+		    sect->data.general.name);
 	    break;
 	case SECTION_ABSOLUTE:
 	    fprintf(f, "absolute\n");
