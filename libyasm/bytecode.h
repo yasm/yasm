@@ -2,7 +2,7 @@
  * \file bytecode.h
  * \brief YASM bytecode interface.
  *
- * $IdPath$
+ * $IdPath: yasm/libyasm/bytecode.h,v 1.71 2003/03/31 08:22:05 peter Exp $
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -43,9 +43,9 @@ typedef struct yasm_datavalhead yasm_datavalhead;
 /*@reldef@*/ STAILQ_HEAD(yasm_bytecodehead, yasm_bytecode);
 /*@reldef@*/ STAILQ_HEAD(yasm_datavalhead, yasm_dataval);
 
-/** \internal Built-in bytecode types.
- * Additional types may be #yasm_arch defined starting at
- * #YASM_BYTECODE_TYPE_BASE.
+/** Built-in bytecode types.  Additional types may be #yasm_arch defined
+ * starting at #YASM_BYTECODE_TYPE_BASE.
+ * \internal
  */
 typedef enum {
     YASM_BC__EMPTY = 0,	    /**< Empty; should not exist except temporarily. */

@@ -2,7 +2,7 @@
  * \file errwarn.h
  * \brief YASM error and warning reporting interface.
  *
- * $IdPath: yasm/libyasm/errwarn.h,v 1.35 2003/03/16 23:52:54 peter Exp $
+ * $IdPath: yasm/libyasm/errwarn.h,v 1.36 2003/05/04 01:39:10 peter Exp $
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -72,14 +72,16 @@ extern /*@exits@*/ void (*yasm_fatal) (const char *message);
 
 #ifdef YASM_INTERNAL
 
-/** \internal Log an error.  va_list version of yasm__error().
+/** Log an error.  va_list version of yasm__error().
+ * \internal
  * \param lindex    line index
  * \param message   printf-like-format message
  * \param va	    argument list for message
  */
 void yasm__error_va(unsigned long lindex, const char *message, va_list va);
 
-/** \internal Log a warning.  va_list version of yasm__warning().
+/** Log a warning.  va_list version of yasm__warning().
+ * \internal
  * \param wclass    warning class
  * \param lindex    line index
  * \param message   printf-like-format message
@@ -88,8 +90,9 @@ void yasm__error_va(unsigned long lindex, const char *message, va_list va);
 void yasm__warning_va(yasm_warn_class wclass, unsigned long lindex,
 		      const char *message, va_list va);
 
-/** \internal Log an error.  Does not print it out immediately;
- * yasm_errwarn_output_all() outputs errors and warnings.
+/** Log an error.  Does not print it out immediately; yasm_errwarn_output_all()
+ * outputs errors and warnings.
+ * \internal
  * \param lindex    line index
  * \param message   printf-like-format message
  * \param ...	    argument list for message
@@ -97,8 +100,9 @@ void yasm__warning_va(yasm_warn_class wclass, unsigned long lindex,
 void yasm__error(unsigned long lindex, const char *message, ...)
     /*@printflike@*/;
 
-/** \internal Log a warning.  Does not print it out immediately;
+/** Log a warning.  Does not print it out immediately;
  * yasm_errwarn_output_all() outputs errors and warnings.
+ * \internal
  * \param wclass    warning class
  * \param lindex    line index
  * \param message   printf-like-format message
@@ -107,8 +111,9 @@ void yasm__error(unsigned long lindex, const char *message, ...)
 void yasm__warning(yasm_warn_class, unsigned long lindex, const char *message,
 		   ...) /*@printflike@*/;
 
-/** \internal Log a parser error.  Parser errors can be overwritten by
- * non-parser errors on the same line.
+/** Log a parser error.  Parser errors can be overwritten by non-parser errors
+ * on the same line.
+ * \internal
  * \param lindex    line index
  * \param message   parser error message
  */
@@ -162,7 +167,8 @@ void yasm_errwarn_output_all
      yasm_print_warning_func print_warning);
 
 #ifdef YASM_INTERNAL
-/** \internal Convert a possibly unprintable character into a printable string.
+/** Convert a possibly unprintable character into a printable string.
+ * \internal
  * \param ch	possibly unprintable character
  * \return Printable string representation (static buffer).
  */
