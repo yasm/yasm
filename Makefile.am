@@ -37,7 +37,3 @@ EXTRA_DIST += \
 	Mkfiles/Makefile.vc Mkfiles/vc/config.h
 
 ACLOCAL_AMFLAGS = -I m4
-
-SUFFIXES = .re
-.re.c: tools/re2c/re2c$(EXEEXT)
-	tools/re2c/re2c -b $< | tools/re2c/cleanup.pl > $@
