@@ -1,4 +1,4 @@
-/* $Id: token.l.in,v 1.7 2001/06/28 08:48:32 peter Exp $
+/* $Id: token.l.in,v 1.8 2001/06/29 05:11:40 peter Exp $
  * Main lexer
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -34,7 +34,7 @@
 #include "symrec.h"
 #include "bytecode.h"
 #include "errwarn.h"
-#include "bison.tab.h"
+#include "bison.h"
 
 %}
 %option noyywrap
