@@ -75,6 +75,9 @@ struct symrec {
      */
     /*@null@*/ /*@owned@*/ void *of_data_vis_ce;
     /*@null@*/ /*@owned@*/ void *of_data_vis_g;
+
+    /* storage for optimizer flags */
+    unsigned long opt_flags;
 };
 
 /* The symbol table: a ternary tree. */
@@ -116,6 +119,7 @@ symrec_get_or_new(const char *name, int in_table)
     rec->visibility = SYM_LOCAL;
     rec->of_data_vis_ce = NULL;
     rec->of_data_vis_g = NULL;
+    rec->opt_flags = 0;
 
     if (in_table) {
 	rec->status = SYM_NOSTATUS;
@@ -281,6 +285,18 @@ symrec_get_equ(const symrec *sym)
     if (sym->type == SYM_EQU)
 	return sym->value.expn;
     return (const expr *)NULL;
+}
+
+unsigned long
+symrec_get_opt_flags(const symrec *sym)
+{
+    return sym->opt_flags;
+}
+
+void
+symrec_set_opt_flags(symrec *sym, unsigned long opt_flags)
+{
+    sym->opt_flags = opt_flags;
 }
 
 static unsigned long firstundef_line;

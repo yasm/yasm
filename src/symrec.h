@@ -47,6 +47,10 @@ SymVisibility symrec_get_visibility(const symrec *sym);
 
 /*@observer@*/ /*@null@*/ const expr *symrec_get_equ(const symrec *sym);
 
+/* Get and set optimizer flags */
+unsigned long symrec_get_opt_flags(const symrec *sym);
+void symrec_set_opt_flags(symrec *sym, unsigned long opt_flags);
+
 int /*@alt void@*/ symrec_traverse(/*@null@*/ void *d,
 				   int (*func) (symrec *sym,
 						/*@null@*/ void *d));

@@ -143,6 +143,8 @@ bc_new_common(bytecode_type type, size_t datasize)
 
     bc->offset = 0;
 
+    bc->opt_flags = 0;
+
     return bc;
 }
 

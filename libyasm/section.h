@@ -37,6 +37,10 @@ struct objfmt;
 
 int section_is_absolute(section *sect);
 
+/* Get and set optimizer flags */
+unsigned long section_get_opt_flags(const section *sect);
+void section_set_opt_flags(section *sect, unsigned long opt_flags);
+
 void sections_delete(sectionhead *headp);
 
 void sections_print(FILE *f, const sectionhead *headp);

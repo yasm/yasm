@@ -65,6 +65,9 @@ struct bytecode {
     /* other assembler state info */
     unsigned long offset;	/* 0 if unknown */
 
+    /* storage for optimizer flags */
+    unsigned long opt_flags;
+
     /* architecture-dependent data may be appended */
 };
 void *bc_get_data(bytecode *);

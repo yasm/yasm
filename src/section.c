@@ -53,6 +53,8 @@ struct section {
 	/*@owned@*/ expr *start;
     } data;
 
+    
+    unsigned long opt_flags;	/* storage for optimizer flags */
 
     int res_only;		/* allow only resb family of bytecodes? */
 
@@ -116,6 +118,7 @@ sections_switch_general(sectionhead *headp, const char *name, void *of_data,
     s->data.general.of_data = of_data;
     bytecodes_initialize(&s->bc);
 
+    s->opt_flags = 0;
     s->res_only = res_only;
 
     *isnew = 1;
@@ -136,6 +139,7 @@ sections_switch_absolute(sectionhead *headp, expr *start)
     s->data.start = start;
     bytecodes_initialize(&s->bc);
 
+    s->opt_flags = 0;
     s->res_only = 1;
 
     return s;
@@ -146,6 +150,18 @@ int
 section_is_absolute(section *sect)
 {
     return (sect->type == SECTION_ABSOLUTE);
+}
+
+unsigned long
+section_get_opt_flags(const section *sect)
+{
+    return sect->opt_flags;
+}
+
+void
+section_set_opt_flags(section *sect, unsigned long opt_flags)
+{
+    sect->opt_flags = opt_flags;
 }
 
 void
