@@ -579,7 +579,7 @@ x86_bc_calc_len_jmprel(x86_jmprel *jmprel, unsigned long *len,
     unsigned long target;
     long rel;
     unsigned char opersize;
-    int jrshort = 1;
+    int jrshort = 0;
 
     /* As opersize may be 0, figure out its "real" value. */
     opersize = (jmprel->opersize == 0) ? jmprel->mode_bits :
@@ -611,13 +611,17 @@ x86_bc_calc_len_jmprel(x86_jmprel *jmprel, unsigned long *len,
 		target = intnum_get_uint(num);
 		rel = (long)(target-offset);
 		/* short displacement must fit within -128 <= rel <= +127 */
-		if (rel >= -128 && rel <= 127) {
+		if (jmprel->shortop.opcode_len != 0 && rel >= -128 &&
+		    rel <= 127) {
 		    /* It fits into a short displacement. */
 		    jrshort = 1;
 		} else {
-		    /* Near for now, but could get shorter in the future. */
+		    /* Near for now, but could get shorter in the future if
+		     * there's a short form available.
+		     */
 		    jrshort = 0;
-		    retval = 0;
+		    if (jmprel->shortop.opcode_len != 0)
+			retval = 0;
 		}
 	    } else {
 		/* Assume whichever size is claimed as default by op_sel */
