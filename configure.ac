@@ -164,8 +164,8 @@ if test "$USE_MAINTAINER_MODE" = "yes"; then
     MORE_CFLAGS="$MORE_CFLAGS -Wcast-qual"
     MORE_CFLAGS="$MORE_CFLAGS -Wchar-subscripts"
     MORE_CFLAGS="$MORE_CFLAGS -Wconversion"
-    MORE_CFLAGS="$MORE_CFLAGS -Wdeclaration-after-statement"
-    MORE_CFLAGS="$MORE_CFLAGS -Wendif-labels"
+#    MORE_CFLAGS="$MORE_CFLAGS -Wdeclaration-after-statement"
+#    MORE_CFLAGS="$MORE_CFLAGS -Wendif-labels"
     MORE_CFLAGS="$MORE_CFLAGS -Winline"
     MORE_CFLAGS="$MORE_CFLAGS -Wmissing-declarations"
     MORE_CFLAGS="$MORE_CFLAGS -Wmissing-prototypes"
@@ -178,7 +178,7 @@ if test "$USE_MAINTAINER_MODE" = "yes"; then
     MORE_CFLAGS="$MORE_CFLAGS -Wswitch"
     MORE_CFLAGS="$MORE_CFLAGS -Wwrite-strings"
     MORE_CFLAGS="$MORE_CFLAGS -Wno-undef"
-    MORE_CFLAGS="$MORE_CFLAGS -Wno-unused-parameter"
+#    MORE_CFLAGS="$MORE_CFLAGS -Wno-unused-parameter"
   fi
 fi
 
