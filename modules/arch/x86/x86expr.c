@@ -56,7 +56,8 @@ typedef enum {
     EXPR_SYM,
     EXPR_EXPR,
     EXPR_INT,
-    EXPR_FLOAT
+    EXPR_FLOAT,
+    EXPR_REG
 } ExprType;
 
 struct ExprItem {
@@ -66,6 +67,10 @@ struct ExprItem {
 	expr *expn;
 	intnum *intn;
 	floatnum *flt;
+	struct reg {
+	    unsigned char num;
+	    unsigned char size;	/* in bits, eg AX=16, EAX=32 */
+	} reg;
     } data;
 };
 
@@ -142,6 +147,16 @@ ExprFloat(floatnum *f)
     return e;
 }
 
+ExprItem *
+ExprReg(unsigned char reg, unsigned char size)
+{
+    ExprItem *e = xmalloc(sizeof(ExprItem));
+    e->type = EXPR_REG;
+    e->data.reg.num = reg;
+    e->data.reg.size = size;
+    return e;
+}
+
 int
 expr_contains_float(const expr *e)
 {
@@ -159,6 +174,7 @@ expr_contains_float(const expr *e)
 	    break;
 	case EXPR_FLOAT:
 	    return 1;
+	case EXPR_REG:
 	case EXPR_INT:
 	case EXPR_NONE:
 	    break;
@@ -171,6 +187,7 @@ expr_contains_float(const expr *e)
 	    return expr_contains_float(e->right.data.expn);
 	case EXPR_FLOAT:
 	    return 1;
+	case EXPR_REG:
 	case EXPR_INT:
 	case EXPR_NONE:
 	    break;
@@ -277,6 +294,8 @@ expr_simplify(expr *e)
 void
 expr_print(expr *e)
 {
+    static const char *regs[] = {"ax","cx","dx","bx","sp","bp","si","di"};
+
     if (e->op != EXPR_IDENT) {
 	switch (e->left.type) {
 	    case EXPR_SYM:
@@ -292,6 +311,11 @@ expr_print(expr *e)
 		break;
 	    case EXPR_FLOAT:
 		floatnum_print(e->left.data.flt);
+		break;
+	    case EXPR_REG:
+		if (e->left.data.reg.size == 32)
+		    printf("e");
+		printf("%s", regs[e->left.data.reg.num]);
 		break;
 	    case EXPR_NONE:
 		break;
@@ -384,6 +408,11 @@ expr_print(expr *e)
 	    break;
 	case EXPR_FLOAT:
 	    floatnum_print(e->right.data.flt);
+	    break;
+	case EXPR_REG:
+	    if (e->right.data.reg.size == 32)
+		printf("e");
+	    printf("%s", regs[e->right.data.reg.num]);
 	    break;
 	case EXPR_NONE:
 	    break;

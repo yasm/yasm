@@ -80,6 +80,7 @@ ExprItem *ExprSym(symrec *);
 ExprItem *ExprExpr(expr *);
 ExprItem *ExprInt(intnum *);
 ExprItem *ExprFloat(floatnum *);
+ExprItem *ExprReg(unsigned char reg, unsigned char size);
 
 #define expr_new_tree(l,o,r) \
     expr_new (ExprExpr(l), (o), ExprExpr(r))

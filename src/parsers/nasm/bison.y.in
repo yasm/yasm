@@ -110,7 +110,7 @@ static bytecode *nasm_parser_temp_bc;
 
 %type <bc> line lineexp exp instr instrbase
 
-%type <int_info> fpureg reg32 reg16 reg8 segreg
+%type <int_info> fpureg rawreg32 reg32 rawreg16 reg16 reg8 segreg
 %type <ea> mem memaddr memfar
 %type <ea> mem8x mem16x mem32x mem64x mem80x mem128x
 %type <ea> mem8 mem16 mem32 mem64 mem80 mem128 mem1632
@@ -222,7 +222,7 @@ fpureg: ST0
     | FPUREG_NOTST0
 ;
 
-reg32: REG_EAX
+rawreg32: REG_EAX
     | REG_ECX
     | REG_EDX
     | REG_EBX
@@ -230,10 +230,13 @@ reg32: REG_EAX
     | REG_EBP
     | REG_ESI
     | REG_EDI
+;
+
+reg32: rawreg32
     | DWORD reg32
 ;
 
-reg16: REG_AX
+rawreg16: REG_AX
     | REG_CX
     | REG_DX
     | REG_BX
@@ -241,6 +244,9 @@ reg16: REG_AX
     | REG_BP
     | REG_SI
     | REG_DI
+;
+
+reg16: rawreg16
     | WORD reg16
 ;
 
@@ -265,7 +271,48 @@ segreg:  REG_ES
 ;
 
 /* memory addresses */
-memexpr: expr
+/* FIXME: Is there any way this redundancy can be eliminated?  This is almost
+ * identical to expr: the only difference is that FLTNUM is replaced by
+ * rawreg16 and rawreg32.
+ *
+ * Note that the two can't be just combined because of conflicts caused by imm
+ * vs. reg.  I don't see a simple solution right now to this.
+ *
+ * We don't attempt to check memory expressions for validity here.
+ */
+memexpr: INTNUM			{ $$ = expr_new_ident(ExprInt($1)); }
+    | rawreg16			{ $$ = expr_new_ident(ExprReg($1, 16)); }
+    | rawreg32			{ $$ = expr_new_ident(ExprReg($1, 32)); }
+    | explabel			{ $$ = expr_new_ident(ExprSym($1)); }
+    /*| memexpr '||' memexpr	{ $$ = expr_new_tree($1, EXPR_LOR, $3); }*/
+    | memexpr '|' memexpr	{ $$ = expr_new_tree($1, EXPR_OR, $3); }
+    | memexpr '^' memexpr	{ $$ = expr_new_tree($1, EXPR_XOR, $3); }
+    /*| expr '&&' memexpr	{ $$ = expr_new_tree($1, EXPR_LAND, $3); }*/
+    | memexpr '&' memexpr	{ $$ = expr_new_tree($1, EXPR_AND, $3); }
+    /*| memexpr '==' memexpr	{ $$ = expr_new_tree($1, EXPR_EQUALS, $3); }*/
+    /*| memexpr '>' memexpr	{ $$ = expr_new_tree($1, EXPR_GT, $3); }*/
+    /*| memexpr '<' memexpr	{ $$ = expr_new_tree($1, EXPR_GT, $3); }*/
+    /*| memexpr '>=' memexpr	{ $$ = expr_new_tree($1, EXPR_GE, $3); }*/
+    /*| memexpr '<=' memexpr	{ $$ = expr_new_tree($1, EXPR_GE, $3); }*/
+    /*| memexpr '!=' memexpr	{ $$ = expr_new_tree($1, EXPR_NE, $3); }*/
+    | memexpr LEFT_OP memexpr	{ $$ = expr_new_tree($1, EXPR_SHL, $3); }
+    | memexpr RIGHT_OP memexpr	{ $$ = expr_new_tree($1, EXPR_SHR, $3); }
+    | memexpr '+' memexpr	{ $$ = expr_new_tree($1, EXPR_ADD, $3); }
+    | memexpr '-' memexpr	{ $$ = expr_new_tree($1, EXPR_SUB, $3); }
+    | memexpr '*' memexpr	{ $$ = expr_new_tree($1, EXPR_MUL, $3); }
+    | memexpr '/' memexpr	{ $$ = expr_new_tree($1, EXPR_DIV, $3); }
+    | memexpr SIGNDIV memexpr	{ $$ = expr_new_tree($1, EXPR_SIGNDIV, $3); }
+    | memexpr '%' memexpr	{ $$ = expr_new_tree($1, EXPR_MOD, $3); }
+    | memexpr SIGNMOD memexpr	{ $$ = expr_new_tree($1, EXPR_SIGNMOD, $3); }
+    | '+' memexpr %prec UNARYOP	{ $$ = $2; }
+    | '-' memexpr %prec UNARYOP	{ $$ = expr_new_branch(EXPR_NEG, $2); }
+    /*| '!' memexpr		{ $$ = expr_new_branch(EXPR_LNOT, $2); }*/
+    | '~' memexpr %prec UNARYOP	{ $$ = expr_new_branch(EXPR_NOT, $2); }
+    | '(' memexpr ')'		{ $$ = $2; }
+    | STRING			{
+	$$ = expr_new_ident(ExprInt(intnum_new_charconst_nasm($1)));
+    }
+    | error			{ Error(_("invalid effective address")); }
 ;
 
 memaddr: memexpr	    { $$ = effaddr_new_expr($1); SetEASegment($$, 0); }
