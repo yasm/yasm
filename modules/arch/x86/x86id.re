@@ -136,7 +136,8 @@ static unsigned long cpu_enabled = ~CPU_Any;
  *             3 = operand data goes into sign-extended imm field
  *             4 = operand data goes into "spare" field
  *             5 = operand data is added to opcode byte 0
- *             6 = operand data goes into BOTH ea and spare
+ *             6 = operand data is added to opcode byte 1
+ *             7 = operand data goes into BOTH ea and spare
  *                 [special case for imul opcode]
  * The below describes postponed actions: actions which can't be completed at
  * parse-time due to things like EQU and complex expressions.  For these, some
@@ -196,7 +197,8 @@ static unsigned long cpu_enabled = ~CPU_Any;
 #define OPA_SImm	(3<<12)
 #define OPA_Spare	(4<<12)
 #define OPA_Op0Add	(5<<12)
-#define OPA_SpareEA	(6<<12)
+#define OPA_Op1Add	(6<<12)
+#define OPA_SpareEA	(7<<12)
 #define OPA_MASK	(7<<12)
 
 #define OPAP_None	(0<<15)
@@ -726,6 +728,119 @@ static const x86_insn_info sldtmsw_insn[] = {
       {OPT_Reg|OPS_32|OPA_EA, 0, 0} }
 };
 
+/* Floating point instructions - load/store with pop (integer and normal) */
+static const x86_insn_info fldstp_insn[] = {
+    { CPU_FPU, MOD_Gap0|MOD_SpAdd, 0, 1, {0xD9, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_32|OPA_EA, 0, 0} },
+    { CPU_FPU, MOD_Gap0|MOD_SpAdd, 0, 1, {0xDD, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_64|OPA_EA, 0, 0} },
+    { CPU_FPU, MOD_Gap0|MOD_Gap1|MOD_SpAdd, 0, 1, {0xDB, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_80|OPA_EA, 0, 0} },
+    { CPU_FPU, MOD_Op1Add, 0, 2, {0xD9, 0x00, 0}, 0, 1,
+      {OPT_Reg|OPS_80|OPA_Op1Add, 0, 0} }
+};
+static const x86_insn_info fildstp_insn[] = {
+    { CPU_FPU, MOD_SpAdd, 0, 1, {0xDF, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_16|OPA_EA, 0, 0} },
+    { CPU_FPU, MOD_SpAdd, 0, 1, {0xDB, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_32|OPA_EA, 0, 0} },
+    { CPU_FPU, MOD_Gap0|MOD_SpAdd, 0, 1, {0xDF, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_64|OPA_EA, 0, 0} }
+};
+static const x86_insn_info fbldstp_insn[] = {
+    { CPU_FPU, MOD_SpAdd, 0, 1, {0xDF, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_80|OPS_Relaxed|OPA_EA, 0, 0} }
+};
+/* Floating point instructions - store (normal) */
+static const x86_insn_info fst_insn[] = {
+    { CPU_FPU, 0, 0, 1, {0xD9, 0, 0}, 2, 1, {OPT_Mem|OPS_32|OPA_EA, 0, 0} },
+    { CPU_FPU, 0, 0, 1, {0xDD, 0, 0}, 2, 1, {OPT_Mem|OPS_64|OPA_EA, 0, 0} },
+    { CPU_FPU, 0, 0, 2, {0xDD, 0xD0, 0}, 0, 1,
+      {OPT_Reg|OPS_80|OPA_Op1Add, 0, 0} }
+};
+/* Floating point instructions - exchange (with ST0) */
+static const x86_insn_info fxch_insn[] = {
+    { CPU_FPU, 0, 0, 2, {0xD9, 0xC8, 0}, 0, 1,
+      {OPT_Reg|OPS_80|OPA_Op1Add, 0, 0} },
+    { CPU_FPU, 0, 0, 2, {0xD9, 0xC8, 0}, 0, 2,
+      {OPT_ST0|OPS_80|OPA_None, OPT_Reg|OPS_80|OPA_Op1Add, 0} },
+    { CPU_FPU, 0, 0, 2, {0xD9, 0xC8, 0}, 0, 2,
+      {OPT_Reg|OPS_80|OPA_Op1Add, OPT_ST0|OPS_80|OPA_None, 0} },
+    { CPU_FPU, 0, 0, 2, {0xD9, 0xC9, 0}, 0, 0, {0, 0, 0} }
+};
+/* Floating point instructions - comparisons */
+static const x86_insn_info fcom_insn[] = {
+    { CPU_FPU, MOD_Gap0|MOD_SpAdd, 0, 1, {0xD8, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_32|OPA_EA, 0, 0} },
+    { CPU_FPU, MOD_Gap0|MOD_SpAdd, 0, 1, {0xDC, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_64|OPA_EA, 0, 0} },
+    { CPU_FPU, MOD_Op1Add, 0, 2, {0xD8, 0x00, 0}, 0, 1,
+      {OPT_Reg|OPS_80|OPA_Op1Add, 0, 0} },
+    { CPU_FPU, MOD_Op1Add, 0, 2, {0xD8, 0x00, 0}, 0, 2,
+      {OPT_ST0|OPS_80|OPA_None, OPT_Reg|OPS_80|OPA_Op1Add, 0} }
+};
+/* Floating point instructions - extended comparisons */
+static const x86_insn_info fcom2_insn[] = {
+    { CPU_286|CPU_FPU, MOD_Op0Add|MOD_Op1Add, 0, 2, {0x00, 0x00, 0}, 0, 1,
+      {OPT_Reg|OPS_80|OPA_Op1Add, 0, 0} },
+    { CPU_286|CPU_FPU, MOD_Op0Add|MOD_Op1Add, 0, 2, {0x00, 0x00, 0}, 0, 2,
+      {OPT_ST0|OPS_80|OPA_None, OPT_Reg|OPS_80|OPA_Op1Add, 0} }
+};
+/* Floating point instructions - arithmetic */
+static const x86_insn_info farith_insn[] = {
+    { CPU_FPU, MOD_Gap0|MOD_Gap1|MOD_SpAdd, 0, 1, {0xD8, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_32|OPA_EA, 0, 0} },
+    { CPU_FPU, MOD_Gap0|MOD_Gap1|MOD_SpAdd, 0, 1, {0xDC, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_64|OPA_EA, 0, 0} },
+    { CPU_FPU, MOD_Gap0|MOD_Op1Add, 0, 2, {0xD8, 0x00, 0}, 0, 1,
+      {OPT_Reg|OPS_80|OPA_Op1Add, 0, 0} },
+    { CPU_FPU, MOD_Gap0|MOD_Op1Add, 0, 2, {0xD8, 0x00, 0}, 0, 2,
+      {OPT_ST0|OPS_80|OPA_None, OPT_Reg|OPS_80|OPA_Op1Add, 0} },
+    { CPU_FPU, MOD_Op1Add, 0, 2, {0xDC, 0x00, 0}, 0, 1,
+      {OPT_Reg|OPS_80|OPTM_To|OPA_Op1Add, 0, 0} },
+    { CPU_FPU, MOD_Op1Add, 0, 2, {0xDC, 0x00, 0}, 0, 2,
+      {OPT_Reg|OPS_80|OPA_Op1Add, OPT_ST0|OPS_80|OPA_None, 0} }
+};
+static const x86_insn_info farithp_insn[] = {
+    { CPU_FPU, MOD_Op1Add, 0, 2, {0xDE, 0x01, 0}, 0, 0, {0, 0, 0} },
+    { CPU_FPU, MOD_Op1Add, 0, 2, {0xDE, 0x00, 0}, 0, 1,
+      {OPT_Reg|OPS_80|OPA_Op1Add, 0, 0} },
+    { CPU_FPU, MOD_Op1Add, 0, 2, {0xDE, 0x00, 0}, 0, 2,
+      {OPT_Reg|OPS_80|OPA_Op1Add, OPT_ST0|OPS_80|OPA_None, 0} }
+};
+/* Floating point instructions - integer arith/store wo pop/compare */
+static const x86_insn_info fiarith_insn[] = {
+    { CPU_FPU, MOD_Op0Add|MOD_SpAdd, 0, 1, {0x04, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_16|OPA_EA, 0, 0} },
+    { CPU_FPU, MOD_Op0Add|MOD_SpAdd, 0, 1, {0x00, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_32|OPA_EA, 0, 0} }
+};
+/* Floating point instructions - processor control */
+static const x86_insn_info fldnstcw_insn[] = {
+    { CPU_FPU, MOD_SpAdd, 0, 1, {0xD9, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_16|OPS_Relaxed|OPA_EA, 0, 0} }
+};
+static const x86_insn_info fstcw_insn[] = {
+    { CPU_FPU, 0, 0, 2, {0x9B, 0xD9, 0}, 7, 1,
+      {OPT_Mem|OPS_16|OPS_Relaxed|OPA_EA, 0, 0} }
+};
+static const x86_insn_info fnstsw_insn[] = {
+    { CPU_FPU, 0, 0, 1, {0xDD, 0, 0}, 7, 1,
+      {OPT_Mem|OPS_16|OPS_Relaxed|OPA_EA, 0, 0} },
+    { CPU_FPU, 0, 0, 2, {0xDF, 0xE0, 0}, 0, 1,
+      {OPT_Areg|OPS_16|OPA_None, 0, 0} }
+};
+static const x86_insn_info fstsw_insn[] = {
+    { CPU_FPU, 0, 0, 2, {0x9B, 0xDD, 0}, 7, 1,
+      {OPT_Mem|OPS_16|OPS_Relaxed|OPA_EA, 0, 0} },
+    { CPU_FPU, 0, 0, 3, {0x9B, 0xDF, 0xE0}, 0, 1,
+      {OPT_Areg|OPS_16|OPA_None, 0, 0} }
+};
+static const x86_insn_info ffree_insn[] = {
+    { CPU_FPU, MOD_Op0Add, 0, 2, {0x00, 0xC0, 0}, 0, 1,
+      {OPT_Reg|OPS_80|OPA_Op1Add, 0, 0} }
+};
+
 
 bytecode *
 x86_new_insn(const unsigned long data[4], int num_operands,
@@ -1071,6 +1186,12 @@ x86_new_insn(const unsigned long data[4], int num_operands,
 		case OPA_Op0Add:
 		    if (op->type == INSN_OPERAND_REG)
 			d.op[0] += (unsigned char)(op->data.reg&7);
+		    else
+			InternalError(_("invalid operand conversion"));
+		    break;
+		case OPA_Op1Add:
+		    if (op->type == INSN_OPERAND_REG)
+			d.op[1] += (unsigned char)(op->data.reg&7);
 		    else
 			InternalError(_("invalid operand conversion"));
 		    break;
@@ -1629,22 +1750,22 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	V E R R { RET_INSN(prot286, 0x0400, CPU_286|CPU_Prot); }
 	V E R W { RET_INSN(prot286, 0x0500, CPU_286|CPU_Prot); }
 	/* Floating point instructions */
-	/* F L D */
-	/* F I L D */
-	/* F B L D */
-	/* F S T */
-	/* F I S T */
-	/* F S T P */
-	/* F I S T P */
-	/* F B S T P */
-	/* F X C H */
-	/* F C O M */
-	/* F I C O M */
-	/* F C O M P */
-	/* F I C O M P */
+	F L D { RET_INSN(fldstp, 0x0500C0, CPU_FPU); }
+	F I L D { RET_INSN(fildstp, 0x0500, CPU_FPU); }
+	F B L D { RET_INSN(fbldstp, 0x04, CPU_FPU); }
+	F S T { RET_INSN(fst, 0, CPU_FPU); }
+	F I S T { RET_INSN(fiarith, 0x02DB, CPU_FPU); }
+	F S T P { RET_INSN(fldstp, 0x0703D8, CPU_FPU); }
+	F I S T P { RET_INSN(fildstp, 0x0703, CPU_FPU); }
+	F B S T P { RET_INSN(fbldstp, 0x06, CPU_FPU); }
+	F X C H { RET_INSN(fxch, 0, CPU_FPU); }
+	F C O M { RET_INSN(fcom, 0x02D0, CPU_FPU); }
+	F I C O M { RET_INSN(fiarith, 0x02DA, CPU_FPU); }
+	F C O M P { RET_INSN(fcom, 0x03D8, CPU_FPU); }
+	F I C O M P { RET_INSN(fiarith, 0x03DA, CPU_FPU); }
 	F C O M P P { RET_INSN(twobyte, 0xDED9, CPU_FPU); }
-	/* F U C O M */
-	/* F U C O M P */
+	F U C O M { RET_INSN(fcom2, 0xDDE0, CPU_286|CPU_FPU); }
+	F U C O M P { RET_INSN(fcom2, 0xDDE8, CPU_286|CPU_FPU); }
 	F U C O M P P { RET_INSN(twobyte, 0xDAE9, CPU_286|CPU_FPU); }
 	F T S T { RET_INSN(twobyte, 0xD9E4, CPU_FPU); }
 	F X A M { RET_INSN(twobyte, 0xD9E5, CPU_FPU); }
@@ -1655,24 +1776,24 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	F L D L G "2" { RET_INSN(twobyte, 0xD9EC, CPU_FPU); }
 	F L D L N "2" { RET_INSN(twobyte, 0xD9ED, CPU_FPU); }
 	F L D Z { RET_INSN(twobyte, 0xD9EE, CPU_FPU); }
-	/* F A D D */
-	/* F A D D P */
-	/* F I A D D */
-	/* F S U B */
-	/* F I S U B */
-	/* F S U B P */
-	/* F S U B R */
-	/* F I S U B R */
-	/* F S U B R P */
-	/* F M U L */
-	/* F I M U L */
-	/* F M U L P */
-	/* F D I V */
-	/* F I D I V */
-	/* F D I V P */
-	/* F D I V R */
-	/* F I D I V R */
-	/* F D I V R P */
+	F A D D { RET_INSN(farith, 0x00C0C0, CPU_FPU); }
+	F A D D P { RET_INSN(farithp, 0xC0, CPU_FPU); }
+	F I A D D { RET_INSN(fiarith, 0x00DA, CPU_FPU); }
+	F S U B { RET_INSN(farith, 0x04E0E8, CPU_FPU); }
+	F I S U B { RET_INSN(fiarith, 0x04DA, CPU_FPU); }
+	F S U B P { RET_INSN(farithp, 0xE8, CPU_FPU); }
+	F S U B R { RET_INSN(farith, 0x05E8E0, CPU_FPU); }
+	F I S U B R { RET_INSN(fiarith, 0x05DA, CPU_FPU); }
+	F S U B R P { RET_INSN(farithp, 0xE0, CPU_FPU); }
+	F M U L { RET_INSN(farith, 0x01C8C8, CPU_FPU); }
+	F I M U L { RET_INSN(fiarith, 0x01DA, CPU_FPU); }
+	F M U L P { RET_INSN(farithp, 0xC8, CPU_FPU); }
+	F D I V { RET_INSN(farith, 0x06F0F8, CPU_FPU); }
+	F I D I V { RET_INSN(fiarith, 0x06DA, CPU_FPU); }
+	F D I V P { RET_INSN(farithp, 0xF8, CPU_FPU); }
+	F D I V R { RET_INSN(farith, 0x07F8F0, CPU_FPU); }
+	F I D I V R { RET_INSN(fiarith, 0x07DA, CPU_FPU); }
+	F D I V R P { RET_INSN(farithp, 0xF0, CPU_FPU); }
 	F "2" X M "1" { RET_INSN(twobyte, 0xD9F0, CPU_FPU); }
 	F Y L "2" X { RET_INSN(twobyte, 0xD9F1, CPU_FPU); }
 	F P T A N { RET_INSN(twobyte, 0xD9F2, CPU_FPU); }
@@ -1693,11 +1814,11 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	F A B S { RET_INSN(twobyte, 0xD9E1, CPU_FPU); }
 	F N I N I T { RET_INSN(twobyte, 0xDBE3, CPU_FPU); }
 	F I N I T { RET_INSN(threebyte, 0x98DBE3, CPU_FPU); }
-	/* F L D C W */
-	/* F N S T C W */
-	/* F S T C W */
-	/* F N S T S W */
-	/* F S T S W */
+	F L D C W { RET_INSN(fldnstcw, 0x05, CPU_FPU); }
+	F N S T C W { RET_INSN(fldnstcw, 0x07, CPU_FPU); }
+	F S T C W { RET_INSN(fstcw, 0, CPU_FPU); }
+	F N S T S W { RET_INSN(fnstsw, 0, CPU_FPU); }
+	F S T S W { RET_INSN(fstsw, 0, CPU_FPU); }
 	F N C L E X { RET_INSN(twobyte, 0xDBE2, CPU_FPU); }
 	F C L E X { RET_INSN(threebyte, 0x98DBE2, CPU_FPU); }
 	F N S T E N V { RET_INSN(onebytemem, 0x06D9, CPU_FPU); }
@@ -1706,8 +1827,8 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	F N S A V E { RET_INSN(onebytemem, 0x06DD, CPU_FPU); }
 	F S A V E { RET_INSN(twobytemem, 0x069BDD, CPU_FPU); }
 	F R S T O R { RET_INSN(onebytemem, 0x04DD, CPU_FPU); }
-	/* F F R E E */
-	/* F F R E E P */
+	F F R E E { RET_INSN(ffree, 0xDD, CPU_FPU); }
+	F F R E E P { RET_INSN(ffree, 0xDF, CPU_686|CPU_FPU|CPU_Undoc); }
 	F N O P { RET_INSN(twobyte, 0xD9D0, CPU_FPU); }
 	F W A I T { RET_INSN(onebyte, 0x009B, CPU_FPU); }
 	/* Prefixes (should the others be here too? should wait be a prefix? */
@@ -1737,10 +1858,10 @@ x86_check_identifier(unsigned long data[4], const char *id)
 	U D "1" { RET_INSN(twobyte, 0x0FB9, CPU_286|CPU_Undoc); }
 	/* C M O V */
 	/* F C M O V */
-	/* F C O M I */
-	/* F U C O M I */
-	/* F C O M I P */
-	/* F U C O M I P */
+	F C O M I { RET_INSN(fcom2, 0xDBF0, CPU_686|CPU_FPU); }
+	F U C O M I { RET_INSN(fcom2, 0xDBE8, CPU_686|CPU_FPU); }
+	F C O M I P { RET_INSN(fcom2, 0xDFF0, CPU_686|CPU_FPU); }
+	F U C O M I P { RET_INSN(fcom2, 0xDFE8, CPU_686|CPU_FPU); }
 	/* Pentium4 extensions */
 	/* M O V N T I */
 	/* C L F L U S H */
