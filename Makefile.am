@@ -16,7 +16,6 @@ noinst_PROGRAMS =
 yasm_SOURCES =
 yasm_LDFLAGS =
 yasm_LDADD = libyasm.la @LIBLTDL@ $(INTLLIBS) @LIBADD_DL@
-yasm_DEPENDENCIES = $(LIBLTDL)
 EXTRA_yasm_SOURCES =
 
 lib_LTLIBRARIES = libyasm.la
