@@ -91,7 +91,7 @@ void yasm_errwarn_output_all
 
 #ifdef YASM_INTERNAL
 /* Convert a possibly unprintable character into a printable string. */
-char *yasm__conv_unprint(char ch);
+char *yasm__conv_unprint(int ch);
 #endif
 
 /* Map to gettext() if gettext is being used. */

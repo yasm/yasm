@@ -122,7 +122,7 @@ yasm_errwarn_cleanup(void)
  * standard cat(1) convention for unprintable characters.
  */
 char *
-yasm__conv_unprint(char ch)
+yasm__conv_unprint(int ch)
 {
     int pos = 0;
 
