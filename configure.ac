@@ -143,6 +143,8 @@ AC_SUBST(CHECK_CFLAGS)
 
 if ${dev}; then
 	DEVFLAGS=" -g"
+else
+	DEVFLAGS=" -O"
 fi
 
 if ${morewarn}; then
@@ -175,7 +177,7 @@ fi
 if test "$GCC" = yes; then
 	ANSI_CFLAGS="-ansi -pedantic -Wall $MOREWARNFLAGS $WARNERRORFLAGS $DEVFLAGS $PROFILINGFLAGS $DMALLOCFLAGS"
 else
-	ANSI_CFLAGS="$DEVFLAGS"
+	ANSI_CFLAGS=""
 fi
 AC_SUBST(ANSI_CFLAGS)
 
