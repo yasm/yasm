@@ -41,7 +41,7 @@ replace_extension(const char *orig, const char *ext, const char *def)
 	 * (as we don't want to overwrite the source file).
 	 */
 	outext++;   /* advance past '.' */
-	if (strcmp(outext, ext)) {
+	if (strcmp(outext, ext) == 0) {
 	    outext = NULL;  /* indicate default should be used */
 	    WarningNow(_("file name already ends in `.%s': output will be in `%s'"),
 		       ext, def);
