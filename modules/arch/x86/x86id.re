@@ -2071,7 +2071,7 @@ yasm_x86__new_insn(const unsigned long data[4], int num_operands,
 			    yasm__error(lindex,
 				N_("invalid combination of opcode and operands"));
 			    if (d.ea)
-				xfree(d.ea);
+				yasm_xfree(d.ea);
 			    return NULL;
 			}
 		    } else

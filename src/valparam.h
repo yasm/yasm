@@ -37,10 +37,10 @@ typedef /*@reldef@*/ STAILQ_HEAD(yasm_valparamhead, yasm_valparam)
 
 void yasm_vp_new(/*@out@*/ yasm_valparam *r, /*@keep@*/ const char *v,
 		 /*@keep@*/ yasm_expr *p);
-#define yasm_vp_new(r, v, p)	    do {	\
-	r = xmalloc(sizeof(yasm_valparam));	\
-	r->val = v;				\
-	r->param = p;				\
+#define yasm_vp_new(r, v, p)	    do {		\
+	r = yasm_xmalloc(sizeof(yasm_valparam));	\
+	r->val = v;					\
+	r->param = p;					\
     } while(0)
 
 /* void yasm_vps_initialize(//@out@// yasm_valparamhead *headp); */

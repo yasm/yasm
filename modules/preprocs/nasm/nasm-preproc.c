@@ -167,7 +167,7 @@ nasm_preproc_input(char *buf, size_t max_size)
     tot += n;
 
     if (n == lineleft) {
-	xfree(line);
+	yasm_xfree(line);
 	line = NULL;
     } else {
 	lineleft -= n;

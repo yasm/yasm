@@ -104,7 +104,7 @@ replay_saved_tokens(char *ident,
 YAPP_Macro *
 yapp_macro_insert (char *name, int argc, int fillargs)
 {
-    YAPP_Macro *ym = xmalloc(sizeof(YAPP_Macro));
+    YAPP_Macro *ym = yasm_xmalloc(sizeof(YAPP_Macro));
     ym->type = YAPP_MACRO;
     ym->args = argc;
     ym->fillargs = fillargs;
@@ -147,7 +147,7 @@ yapp_define_insert (char *name, int argc, int fillargs)
     else if (argc >= 0)
     {
 	/* insert placeholder for paramlisted defines */
-	ym = xmalloc(sizeof(YAPP_Macro));
+	ym = yasm_xmalloc(sizeof(YAPP_Macro));
 	ym->type = YAPP_DEFINE;
 	ym->args = argc;
 	ym->fillargs = fillargs;
@@ -156,14 +156,14 @@ yapp_define_insert (char *name, int argc, int fillargs)
     }
 
     /* now for the real one */
-    ym = xmalloc(sizeof(YAPP_Macro));
+    ym = yasm_xmalloc(sizeof(YAPP_Macro));
     ym->type = YAPP_DEFINE;
     ym->args = argc;
     ym->fillargs = fillargs;
     ym->expanding = 0;
 
     if (argc>=0) {
-	mungename = xmalloc(strlen(name)+8);
+	mungename = yasm_xmalloc(strlen(name)+8);
 	sprintf(mungename, "%s(%d)", name, argc);
     }
 
@@ -188,10 +188,10 @@ yapp_macro_delete (YAPP_Macro *ym)
 {
     while (!SLIST_EMPTY(&ym->macro_head)) {
 	source *s = SLIST_FIRST(&ym->macro_head);
-	xfree(s);
+	yasm_xfree(s);
 	SLIST_REMOVE_HEAD(&ym->macro_head, next);
     }
-    xfree(ym);
+    yasm_xfree(ym);
 }
 
 static YAPP_Macro *
@@ -240,14 +240,14 @@ yapp_preproc_initialize(FILE *f, const char *in_filename, yasm_linemgr *lm)
 {
     is_interactive = f ? (isatty(fileno(f)) > 0) : 0;
     yapp_preproc_linemgr = lm;
-    yapp_preproc_current_file = xstrdup(in_filename);
+    yapp_preproc_current_file = yasm__xstrdup(in_filename);
     yapp_preproc_line_number = 1;
     yapp_lex_initialize(f);
     SLIST_INIT(&output_head);
     SLIST_INIT(&source_head);
     SLIST_INIT(&macro_head);
     SLIST_INIT(&param_head);
-    out = xmalloc(sizeof(output));
+    out = yasm_xmalloc(sizeof(output));
     out->out = current_output = YAPP_OUTPUT;
     SLIST_INSERT_HEAD(&output_head, out, next);
 
@@ -273,7 +273,7 @@ yapp_preproc_cleanup(void)
 static void
 push_if(int val)
 {
-    out = xmalloc(sizeof(output));
+    out = yasm_xmalloc(sizeof(output));
     out->out = current_output;
     SLIST_INSERT_HEAD(&output_head, out, next);
 
@@ -327,7 +327,7 @@ pop_if(void)
     out = SLIST_FIRST(&output_head);
     current_output = out->out;
     SLIST_REMOVE_HEAD(&output_head, next);
-    xfree(out);
+    yasm_xfree(out);
     if (current_output != YAPP_OUTPUT) set_inhibit();
 }
 
@@ -373,49 +373,49 @@ append_token(int token, struct source_head *to_head, source **to_tail)
     if ((*to_tail) && (*to_tail)->token.type == LINE
 	&& (token == '\n' || token == LINE))
     {
-	xfree ((*to_tail)->token.str);
-	(*to_tail)->token.str = xmalloc(23+strlen(yapp_preproc_current_file));
+	yasm_xfree ((*to_tail)->token.str);
+	(*to_tail)->token.str = yasm_xmalloc(23+strlen(yapp_preproc_current_file));
 	sprintf((*to_tail)->token.str, "%%line %d+1 %s\n", yapp_preproc_line_number, yapp_preproc_current_file);
     }
     else {
-	src = xmalloc(sizeof(source));
+	src = yasm_xmalloc(sizeof(source));
 	src->token.type = token;
 	switch (token)
 	{
 	    case INTNUM:
-		src->token.str = xstrdup(yapp_preproc_lval.int_str_val.str);
+		src->token.str = yasm__xstrdup(yapp_preproc_lval.int_str_val.str);
 		src->token.val.int_val = yapp_preproc_lval.int_str_val.val;
 		break;
 
 	    case FLTNUM:
-		src->token.str = xstrdup(yapp_preproc_lval.double_str_val.str);
+		src->token.str = yasm__xstrdup(yapp_preproc_lval.double_str_val.str);
 		src->token.val.double_val = yapp_preproc_lval.double_str_val.val;
 		break;
 
 	    case STRING:
 	    case WHITESPACE:
-		src->token.str = xstrdup(yapp_preproc_lval.str_val);
+		src->token.str = yasm__xstrdup(yapp_preproc_lval.str_val);
 		break;
 
 	    case IDENT:
-		src->token.str = xstrdup(yapp_preproc_lval.str_val);
+		src->token.str = yasm__xstrdup(yapp_preproc_lval.str_val);
 		break;
 
 	    case '+': case '-': case '*': case '/': case '%': case ',': case '\n':
 	    case '[': case ']': case '(': case ')':
-		src->token.str = xmalloc(2);
+		src->token.str = yasm_xmalloc(2);
 		src->token.str[0] = (char)token;
 		src->token.str[1] = '\0';
 		break;
 
 	    case LINE:
 		/* TODO: consider removing any trailing newline or LINE tokens */
-		src->token.str = xmalloc(23+strlen(yapp_preproc_current_file));
+		src->token.str = yasm_xmalloc(23+strlen(yapp_preproc_current_file));
 		sprintf(src->token.str, "%%line %d+1 %s\n", yapp_preproc_line_number, yapp_preproc_current_file);
 		break;
 
 	    default:
-		xfree(src);
+		yasm_xfree(src);
 		return;
 	}
 	append_processed_token(src, to_head, to_tail);
@@ -488,9 +488,9 @@ yapp_get_ident(const char *synlvl)
 void
 copy_token(YAPP_Token *tok, struct source_head *to_head, source **to_tail)
 {
-    src = xmalloc(sizeof(source));
+    src = yasm_xmalloc(sizeof(source));
     src->token.type = tok->type;
-    src->token.str = xstrdup(tok->str);
+    src->token.str = yasm__xstrdup(tok->str);
 
     append_processed_token(src, to_head, to_tail);
 }
@@ -594,14 +594,14 @@ expand_macro(char *name,
 	    }
 
 	    /* Now we have the argument count; let's see if it exists */
-	    mungename = xmalloc(strlen(name)+8);
+	    mungename = yasm_xmalloc(strlen(name)+8);
 	    sprintf(mungename, "%s(%d)", name, argc);
 	    ym = yapp_macro_get(mungename);
 	    if (!ym)
 	    {
 		ydebug(("YAPP: -Didn't find macro %s\n", mungename));
 		replay_saved_tokens(name, &replay_head, to_head, to_tail);
-		xfree(mungename);
+		yasm_xfree(mungename);
 		return;
 	    }
 	    ydebug(("YAPP: +Found macro %s\n", mungename));
@@ -618,16 +618,16 @@ expand_macro(char *name,
 	    while (replay->token.type != '(') {
 		ydebug(("YAPP: Ignoring replay token '%c' \"%s\"\n", replay->token.type, replay->token.str));
 		SLIST_REMOVE_HEAD(&replay_head, next);
-		xfree(replay->token.str);
-		xfree(replay);
+		yasm_xfree(replay->token.str);
+		yasm_xfree(replay);
 		replay = SLIST_FIRST(&replay_head);
 	    }
 	    ydebug(("YAPP: Ignoring replay token '%c' \"%s\"\n", replay->token.type, replay->token.str));
 
 	    /* free the open paren */
 	    SLIST_REMOVE_HEAD(&replay_head, next);
-	    xfree(replay->token.str);
-	    xfree(replay);
+	    yasm_xfree(replay->token.str);
+	    yasm_xfree(replay);
 
 	    param = SLIST_FIRST(&ym->param_head);
 
@@ -651,14 +651,14 @@ expand_macro(char *name,
 					  || replay->token.type == ')'))
 		{
 		    int zero=0;
-		    struct source_head *argmacro = xmalloc(sizeof(struct source_head));
+		    struct source_head *argmacro = yasm_xmalloc(sizeof(struct source_head));
 		    memcpy(argmacro, &arg_head, sizeof(struct source_head));
 		    SLIST_INIT(&arg_head);
 		    arg_tail = SLIST_FIRST(&arg_head);
 
 		    /* don't save the comma */
-		    xfree(replay->token.str);
-		    xfree(replay);
+		    yasm_xfree(replay->token.str);
+		    yasm_xfree(replay);
 
 		    HAMT_insert(param_table,
 				param->token.str,
@@ -681,8 +681,8 @@ expand_macro(char *name,
 		if (replay) SLIST_REMOVE_HEAD(&replay_head, next);
 	    }
 	    if (replay) {
-		xfree(replay->token.str);
-		xfree(replay);
+		yasm_xfree(replay->token.str);
+		yasm_xfree(replay);
 	    }
 	    else if (param) {
 		  yasm_internal_error(N_("Got to end of arglist before end of replay!"));
@@ -799,7 +799,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 			ydebug(("YAPP: define: "));
 			token = yapp_get_ident("define");
 			    ydebug((" \"%s\"\n", yapp_preproc_lval.str_val));
-			s = xstrdup(yapp_preproc_lval.str_val);
+			s = yasm__xstrdup(yapp_preproc_lval.str_val);
 
 			/* three cases: newline or stuff or left paren */
 			token = yapp_preproc_lex();
@@ -936,8 +936,8 @@ yapp_preproc_input(char *buf, size_t max_size)
 
 	    saved_length -= strlen(src->token.str);
 	    SLIST_REMOVE_HEAD(&source_head, next);
-	    xfree(src->token.str);
-	    xfree(src);
+	    yasm_xfree(src->token.str);
+	    yasm_xfree(src);
 	}
     }
 

@@ -34,6 +34,9 @@
 
 #define yylval	yapp_preproc_lval
 
+#define malloc yasm_xmalloc
+#define realloc yasm_xrealloc
+
 /* starting size of string buffer */
 #define STRBUF_ALLOC_SIZE	128
 
@@ -124,7 +127,7 @@ DIR	 %[ \t]*
     int inch, count;
     char endch = yytext[0];
 
-    strbuf = xmalloc(STRBUF_ALLOC_SIZE);
+    strbuf = yasm_xmalloc(STRBUF_ALLOC_SIZE);
 
     strbuf_size = STRBUF_ALLOC_SIZE;
     inch = input();
@@ -132,7 +135,7 @@ DIR	 %[ \t]*
     while(inch != EOF && inch != endch && inch != '\n') {
 	strbuf[count++] = inch;
 	if(count >= strbuf_size) {
-	    strbuf = xrealloc(strbuf, strbuf_size + STRBUF_ALLOC_SIZE);
+	    strbuf = yasm_xrealloc(strbuf, strbuf_size + STRBUF_ALLOC_SIZE);
 	    strbuf_size += STRBUF_ALLOC_SIZE;
 	}
 	inch = input();
@@ -153,7 +156,7 @@ DIR	 %[ \t]*
 \.\.[a-z0-9_$#@~.?]+ |
 \.[a-z0-9_$#@~?][a-z0-9_$#@~.?]* | 
 [a-z_?][a-z0-9_$#@~.?]* {
-    yylval.str_val = xstrdup(yytext);
+    yylval.str_val = yasm__xstrdup(yytext);
     return IDENT;
 }
 
@@ -166,7 +169,7 @@ DIR	 %[ \t]*
 <incl>[^ \t\n"]* { /* have the filename */
     include *inc;
     FILE *incfile;
-    inc = xmalloc(sizeof(include));
+    inc = yasm_xmalloc(sizeof(include));
     inc->include_state = YY_CURRENT_BUFFER;
 
     /* FIXME: handle includes that aren't relative */
@@ -174,7 +177,7 @@ DIR	 %[ \t]*
     if(!incfile) {
 	yasm__error(cur_lindex, _("include file `%s': %s"),
 		    yytext, strerror(errno));
-	xfree(inc);
+	yasm_xfree(inc);
     }
     else {
 	yyin = incfile;
@@ -183,7 +186,7 @@ DIR	 %[ \t]*
 	SLIST_INSERT_HEAD(&includes_head, inc, next);
 
 	yapp_preproc_line_number = 1;
-	yapp_preproc_current_file = xstrdup(yytext);
+	yapp_preproc_current_file = yasm__xstrdup(yytext);
 	BEGIN(INITIAL);
 	yy_switch_to_buffer(yy_create_buffer(yyin, YY_BUF_SIZE));
     }
@@ -200,11 +203,11 @@ DIR	 %[ \t]*
 	inc = SLIST_FIRST(&includes_head);
 	yy_delete_buffer (YY_CURRENT_BUFFER);
 	yy_switch_to_buffer (inc->include_state);
-	xfree(yapp_preproc_current_file);
+	yasm_xfree(yapp_preproc_current_file);
 	yapp_preproc_current_file = inc->filename;
 	yapp_preproc_line_number = inc->line_number + 1;
 	SLIST_REMOVE_HEAD(&includes_head, next);
-	xfree(inc);
+	yasm_xfree(inc);
 
 	BEGIN(incl);
 	return INCLUDE;
@@ -228,8 +231,8 @@ DIR	 %[ \t]*
 }
 <line>{WS}+["]	    ;	/* eat space before file */
 <line>[^ \t\n"]*    { /* have the filename */
-    xfree(yapp_preproc_current_file);
-    yapp_preproc_current_file = xstrdup(yytext);
+    yasm_xfree(yapp_preproc_current_file);
+    yapp_preproc_current_file = yasm__xstrdup(yytext);
 }
 <line>["]{WS}*\n    {
     BEGIN(INITIAL);

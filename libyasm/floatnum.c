@@ -166,8 +166,8 @@ yasm_floatnum_initialize(void)
     int i;
 
     /* Allocate space for two POT tables */
-    POT_TableN = xmalloc(14*sizeof(POT_Entry));
-    POT_TableP = xmalloc(15*sizeof(POT_Entry));	/* note 1 extra for -1 */
+    POT_TableN = yasm_xmalloc(14*sizeof(POT_Entry));
+    POT_TableP = yasm_xmalloc(15*sizeof(POT_Entry)); /* note 1 extra for -1 */
 
     /* Initialize entry[0..12] */
     for (i=12; i>=0; i--) {
@@ -203,8 +203,8 @@ yasm_floatnum_cleanup(void)
     }
     BitVector_Destroy(POT_TableP[14].f.mantissa);
 
-    xfree(POT_TableN);
-    xfree(POT_TableP);
+    yasm_xfree(POT_TableN);
+    yasm_xfree(POT_TableP);
 }
 /*@=globstate@*/
 
@@ -311,7 +311,7 @@ yasm_floatnum_new(const char *str)
     int decimal_pt;
     boolean carry;
 
-    flt = xmalloc(sizeof(yasm_floatnum));
+    flt = yasm_xmalloc(sizeof(yasm_floatnum));
 
     flt->mantissa = BitVector_Create(MANT_BITS, TRUE);
 
@@ -490,7 +490,7 @@ yasm_floatnum_new(const char *str)
 yasm_floatnum *
 yasm_floatnum_copy(const yasm_floatnum *flt)
 {
-    yasm_floatnum *f = xmalloc(sizeof(yasm_floatnum));
+    yasm_floatnum *f = yasm_xmalloc(sizeof(yasm_floatnum));
 
     f->mantissa = BitVector_Clone(flt->mantissa);
     f->exponent = flt->exponent;
@@ -504,7 +504,7 @@ void
 yasm_floatnum_delete(yasm_floatnum *flt)
 {
     BitVector_Destroy(flt->mantissa);
-    xfree(flt);
+    yasm_xfree(flt);
 }
 
 void
@@ -618,7 +618,7 @@ floatnum_get_common(const yasm_floatnum *flt, /*@out@*/ unsigned char *ptr,
     memcpy(ptr, buf, byte_size*sizeof(unsigned char));
 
     /* free allocated resources */
-    xfree(buf);
+    yasm_xfree(buf);
 
     BitVector_Destroy(output);
 
@@ -698,7 +698,7 @@ yasm_floatnum_print(FILE *f, const yasm_floatnum *flt)
     str = BitVector_to_Hex(flt->mantissa);
     fprintf(f, "%c %s *2^%04x\n", flt->sign?'-':'+', (char *)str,
 	    flt->exponent);
-    xfree(str);
+    yasm_xfree(str);
 
     /* 32-bit (single precision) format */
     fprintf(f, "32-bit: %d: ", yasm_floatnum_get_sized(flt, out, 4));

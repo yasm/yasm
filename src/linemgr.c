@@ -81,7 +81,7 @@ static line_index_assoc_data_raw_head *line_index_assoc_data_array;
 static void
 filename_delete_one(/*@only@*/ void *d)
 {
-    xfree(d);
+    yasm_xfree(d);
 }
 
 static void
@@ -95,8 +95,9 @@ yasm_std_linemgr_set(const char *filename, unsigned long line,
     /* Create a new mapping in the map */
     if (line_index_map->size >= line_index_map->allocated) {
 	/* allocate another size bins when full for 2x space */
-	line_index_map->vector = xrealloc(line_index_map->vector,
-		2*line_index_map->allocated*sizeof(line_index_mapping));
+	line_index_map->vector =
+	    yasm_xrealloc(line_index_map->vector, 2*line_index_map->allocated
+			  *sizeof(line_index_mapping));
 	line_index_map->allocated *= 2;
     }
     mapping = &line_index_map->vector[line_index_map->size];
@@ -105,7 +106,7 @@ yasm_std_linemgr_set(const char *filename, unsigned long line,
     /* Fill it */
 
     /* Copy the filename (via shared storage) */
-    copy = xstrdup(filename);
+    copy = yasm__xstrdup(filename);
     /*@-aliasunique@*/
     mapping->filename = HAMT_insert(filename_table, copy, copy, &replace,
 				    filename_delete_one);
@@ -126,15 +127,15 @@ yasm_std_linemgr_initialize(void)
     line_index = 1;
 
     /* initialize mapping vector */
-    line_index_map = xmalloc(sizeof(line_index_mapping_head));
-    line_index_map->vector = xmalloc(8*sizeof(line_index_mapping));
+    line_index_map = yasm_xmalloc(sizeof(line_index_mapping_head));
+    line_index_map->vector = yasm_xmalloc(8*sizeof(line_index_mapping));
     line_index_map->size = 0;
     line_index_map->allocated = 8;
     
     /* initialize associated data arrays */
     line_index_assoc_data_array =
-	xmalloc(MAX_LINE_INDEX_ASSOC_DATA_ARRAY *
-		sizeof(line_index_assoc_data_raw_head));
+	yasm_xmalloc(MAX_LINE_INDEX_ASSOC_DATA_ARRAY *
+		     sizeof(line_index_assoc_data_raw_head));
     for (i=0; i<MAX_LINE_INDEX_ASSOC_DATA_ARRAY; i++) {
 	line_index_assoc_data_array[i].vector = NULL;
 	line_index_assoc_data_array[i].size = 0;
@@ -155,16 +156,16 @@ yasm_std_linemgr_cleanup(void)
 		    if (adrh->vector[j])
 			adrh->delete_func(adrh->vector[j]);
 		}
-		xfree(adrh->vector);
+		yasm_xfree(adrh->vector);
 	    }
 	}
-	xfree(line_index_assoc_data_array);
+	yasm_xfree(line_index_assoc_data_array);
 	line_index_assoc_data_array = NULL;
     }
 
     if (line_index_map) {
-	xfree(line_index_map->vector);
-	xfree(line_index_map);
+	yasm_xfree(line_index_map->vector);
+	yasm_xfree(line_index_map);
 	line_index_map = NULL;
     }
 
@@ -192,7 +193,7 @@ yasm_std_linemgr_add_assoc_data(int type, /*@only@*/ void *data,
 	    int i;
 
 	    adrh->size = 4;
-	    adrh->vector = xmalloc(adrh->size*sizeof(void *));
+	    adrh->vector = yasm_xmalloc(adrh->size*sizeof(void *));
 	    adrh->delete_func = delete_func;
 	    for (i=0; i<adrh->size; i++)
 		adrh->vector[i] = NULL;
@@ -202,7 +203,8 @@ yasm_std_linemgr_add_assoc_data(int type, /*@only@*/ void *data,
 	    int i;
 
 	    /* allocate another size bins when full for 2x space */
-	    adrh->vector = xrealloc(adrh->vector, 2*adrh->size*sizeof(void *));
+	    adrh->vector = yasm_xrealloc(adrh->vector,
+					 2*adrh->size*sizeof(void *));
 	    for(i=adrh->size; i<adrh->size*2; i++)
 		adrh->vector[i] = NULL;
 	    adrh->size *= 2;

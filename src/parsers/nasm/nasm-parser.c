@@ -80,7 +80,7 @@ nasm_parser_do_parse(yasm_preproc *pp, yasm_arch *a, yasm_objfmt *of,
 
     /* Free locallabel base if necessary */
     if (nasm_parser_locallabel_base)
-	xfree(nasm_parser_locallabel_base);
+	yasm_xfree(nasm_parser_locallabel_base);
 
     return &nasm_parser_sections;
 }

@@ -126,21 +126,33 @@ int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
 # endif
 #endif
 
-/* strdup() implementation with error checking (using xmalloc). */
-/*@only@*/ char *xstrdup(const char *str);
-
-/* Error-checking memory allocation routines in xmalloc.c. */
-/*@only@*/ /*@out@*/ void *xmalloc(size_t size);
-/*@only@*/ void *xcalloc(size_t nelem, size_t elsize);
-/*@only@*/ void *xrealloc(/*@only@*/ /*@out@*/ /*@returned@*/ /*@null@*/
-			  void *oldmem, size_t size) /*@modifies oldmem@*/;
-void xfree(/*@only@*/ /*@out@*/ /*@null@*/ void *p) /*@modifies p@*/;
-
 #ifdef WITH_DMALLOC
 # include <dmalloc.h>
+
+#define yasm__xstrdup(str)		xstrdup(str)
+#define yasm_xmalloc(size)		xmalloc(size)
+#define yasm_xcalloc(count, size)	xcalloc(count, size)
+#define yasm_xrealloc(ptr, size)	xrealloc(ptr, size)
+#define yasm_xfree(ptr)			xfree(ptr)
+
+#else
+/* strdup() implementation with error checking (using xmalloc). */
+/*@only@*/ char *yasm__xstrdup(const char *str);
+
+/* Error-checking memory allocation routines.  Default implementations in
+ * xmalloc.c.
+ */
+extern /*@only@*/ /*@out@*/ void * (*yasm_xmalloc) (size_t size);
+extern /*@only@*/ void * (*yasm_xcalloc) (size_t nelem, size_t elsize);
+extern /*@only@*/ void * (*yasm_xrealloc)
+    (/*@only@*/ /*@out@*/ /*@returned@*/ /*@null@*/ void *oldmem, size_t size)
+    /*@modifies oldmem@*/;
+extern void (*yasm_xfree) (/*@only@*/ /*@out@*/ /*@null@*/ void *p)
+    /*@modifies p@*/;
+
 #endif
 
-/*@only@*/ char *xstrndup(const char *str, size_t len);
+/*@only@*/ char *yasm__xstrndup(const char *str, size_t len);
 
 /* Bit-counting: used primarily by HAMT but also in a few other places. */
 #define SK5	0x55555555

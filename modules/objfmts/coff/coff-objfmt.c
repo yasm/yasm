@@ -180,14 +180,14 @@ coff_objfmt_symtab_append(yasm_symrec *sym, coff_symrec_sclass sclass,
     sym_data_prev = yasm_symrec_get_of_data(entry->sym);
     assert(sym_data_prev != NULL);
 
-    sym_data = xmalloc(sizeof(coff_symrec_data));
+    sym_data = yasm_xmalloc(sizeof(coff_symrec_data));
     sym_data->index = sym_data_prev->index + entry->numaux + 1;
     sym_data->sclass = sclass;
     sym_data->size = size;
     yasm_symrec_set_of_data(sym, &yasm_coff_LTX_objfmt, sym_data);
 
-    entry = xmalloc(sizeof(coff_symtab_entry) +
-		    (numaux-1)*sizeof(coff_symtab_auxent));
+    entry = yasm_xmalloc(sizeof(coff_symtab_entry) +
+			 (numaux-1)*sizeof(coff_symtab_auxent));
     entry->sym = sym;
     entry->numaux = numaux;
     entry->auxtype = auxtype;
@@ -210,18 +210,18 @@ coff_objfmt_initialize(const char *in_filename,
     coff_objfmt_parse_scnum = 1;    /* section numbering starts at 1 */
     STAILQ_INIT(&coff_symtab);
 
-    data = xmalloc(sizeof(coff_symrec_data));
+    data = yasm_xmalloc(sizeof(coff_symrec_data));
     data->index = 0;
     data->sclass = COFF_SCL_FILE;
     data->size = NULL;
     filesym = yasm_symrec_define_label(".file", NULL, NULL, 0, 0);
     yasm_symrec_set_of_data(filesym, &yasm_coff_LTX_objfmt, data);
 
-    entry = xmalloc(sizeof(coff_symtab_entry));
+    entry = yasm_xmalloc(sizeof(coff_symtab_entry));
     entry->sym = filesym;
     entry->numaux = 1;
     entry->auxtype = COFF_SYMTAB_AUX_FILE;
-    entry->aux[0].fname = xstrdup(in_filename);
+    entry->aux[0].fname = yasm__xstrdup(in_filename);
     STAILQ_INSERT_TAIL(&coff_symtab, entry, link);
 }
 
@@ -282,7 +282,7 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char **bufp,
 	    return 1;
 	}
 
-	reloc = xmalloc(sizeof(coff_reloc));
+	reloc = yasm_xmalloc(sizeof(coff_reloc));
 	reloc->addr = bc->offset + offset;
 	if (COFF_SET_VMA)
 	    reloc->addr += info->addr;
@@ -357,7 +357,7 @@ coff_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     /* Don't bother doing anything else if size ended up being 0. */
     if (size == 0) {
 	if (bigbuf)
-	    xfree(bigbuf);
+	    yasm_xfree(bigbuf);
 	return 0;
     }
 
@@ -384,7 +384,7 @@ coff_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 
     /* If bigbuf was allocated, free it */
     if (bigbuf)
-	xfree(bigbuf);
+	yasm_xfree(bigbuf);
 
     return 0;
 }
@@ -519,7 +519,7 @@ coff_objfmt_output(FILE *f, yasm_sectionhead *sections)
     coff_symtab_entry *entry;
 
     info.f = f;
-    info.buf = xmalloc(REGULAR_OUTBUF_SIZE);
+    info.buf = yasm_xmalloc(REGULAR_OUTBUF_SIZE);
 
     /* Allocate space for headers by seeking forward */
     if (fseek(f, 20+40*(coff_objfmt_parse_scnum-1), SEEK_SET) < 0) {
@@ -686,7 +686,7 @@ coff_objfmt_output(FILE *f, yasm_sectionhead *sections)
 
     yasm_sections_traverse(sections, &info, coff_objfmt_output_secthead);
 
-    xfree(info.buf);
+    yasm_xfree(info.buf);
 }
 
 static void
@@ -699,8 +699,8 @@ coff_objfmt_cleanup(void)
     while (entry1 != NULL) {
 	entry2 = STAILQ_NEXT(entry1, link);
 	if (entry1->numaux == 1 && entry1->auxtype == COFF_SYMTAB_AUX_FILE)
-	    xfree(entry1->aux[0].fname);
-	xfree(entry1);
+	    yasm_xfree(entry1->aux[0].fname);
+	yasm_xfree(entry1);
 	entry1 = entry2;
     }
 }
@@ -760,7 +760,7 @@ coff_objfmt_sections_switch(yasm_sectionhead *headp,
 	coff_section_data *data;
 	yasm_symrec *sym;
 
-	data = xmalloc(sizeof(coff_section_data));
+	data = yasm_xmalloc(sizeof(coff_section_data));
 	data->scnum = coff_objfmt_parse_scnum++;
 	data->flags = flags;
 	data->addr = 0;
@@ -790,10 +790,10 @@ coff_objfmt_section_data_delete(/*@only@*/ void *data)
     r1 = STAILQ_FIRST(&csd->relocs);
     while (r1 != NULL) {
 	r2 = STAILQ_NEXT(r1, link);
-	xfree(r1);
+	yasm_xfree(r1);
 	r1 = r2;
     }
-    xfree(data);
+    yasm_xfree(data);
 }
 
 static void
@@ -868,7 +868,7 @@ coff_objfmt_symrec_data_delete(/*@only@*/ void *data)
     coff_symrec_data *csymd = (coff_symrec_data *)data;
     if (csymd->size)
 	yasm_expr_delete(csymd->size);
-    xfree(data);
+    yasm_xfree(data);
 }
 
 static void

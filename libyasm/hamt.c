@@ -87,11 +87,11 @@ HAMT *
 HAMT_new(/*@exits@*/ void (*error_func) (const char *file, unsigned int line,
 					 const char *message))
 {
-    /*@out@*/ HAMT *hamt = xmalloc(sizeof(HAMT));
+    /*@out@*/ HAMT *hamt = yasm_xmalloc(sizeof(HAMT));
     int i;
 
     SLIST_INIT(&hamt->entries);
-    hamt->root = xmalloc(32*sizeof(HAMTNode));
+    hamt->root = yasm_xmalloc(32*sizeof(HAMTNode));
 
     for (i=0; i<32; i++) {
 	hamt->root[i].BitMapKey = 0;
@@ -115,7 +115,7 @@ HAMT_delete_trie(HAMTNode *node)
 
 	for (i=0; i<Size; i++)
 	    HAMT_delete_trie(&(GetSubTrie(node))[i]);
-	xfree(GetSubTrie(node));
+	yasm_xfree(GetSubTrie(node));
     }
 }
 
@@ -130,15 +130,15 @@ HAMT_delete(HAMT *hamt, void (*deletefunc) (/*@only@*/ void *data))
 	entry = SLIST_FIRST(&hamt->entries);
 	SLIST_REMOVE_HEAD(&hamt->entries, next);
 	deletefunc(entry->data);
-	xfree(entry);
+	yasm_xfree(entry);
     }
 
     /* delete trie */
     for (i=0; i<32; i++)
 	HAMT_delete_trie(&hamt->root[i]);
 
-    xfree(hamt->root);
-    xfree(hamt);
+    yasm_xfree(hamt->root);
+    yasm_xfree(hamt);
 }
 
 int
@@ -170,7 +170,7 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 
     if (!node->BaseValue) {
 	node->BitMapKey = key;
-	entry = xmalloc(sizeof(HAMTEntry));
+	entry = yasm_xmalloc(sizeof(HAMTEntry));
 	entry->str = str;
 	entry->data = data;
 	SLIST_INSERT_HEAD(&hamt->entries, entry, next);
@@ -216,7 +216,7 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 			/* Still equal, build one-node subtrie and continue
 			 * downward.
 			 */
-			newnodes = xmalloc(sizeof(HAMTNode));
+			newnodes = yasm_xmalloc(sizeof(HAMTNode));
 			newnodes[0] = *node;	/* structure copy */
 			node->BitMapKey = 1<<keypart;
 			SetSubTrie(hamt, node, newnodes);
@@ -224,9 +224,9 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 			level++;
 		    } else {
 			/* partitioned: allocate two-node subtrie */
-			newnodes = xmalloc(2*sizeof(HAMTNode));
+			newnodes = yasm_xmalloc(2*sizeof(HAMTNode));
 
-			entry = xmalloc(sizeof(HAMTEntry));
+			entry = yasm_xmalloc(sizeof(HAMTEntry));
 			entry->str = str;
 			entry->data = data;
 			SLIST_INSERT_HEAD(&hamt->entries, entry, next);
@@ -270,7 +270,7 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 	    /* Count total number of bits in bitmap to determine new size */
 	    BitCount(Size, node->BitMapKey);
 	    Size &= 0x1F;	/* Clamp to <32 */
-	    newnodes = xmalloc(Size*sizeof(HAMTNode));
+	    newnodes = yasm_xmalloc(Size*sizeof(HAMTNode));
 
 	    /* Count bits below to find where to insert new node at */
 	    BitCount(Map, node->BitMapKey & ~((~0UL)<<keypart));
@@ -280,10 +280,10 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 	    memcpy(&newnodes[Map+1], &(GetSubTrie(node))[Map],
 		   (Size-Map-1)*sizeof(HAMTNode));
 	    /* Delete old subtrie */
-	    xfree(GetSubTrie(node));
+	    yasm_xfree(GetSubTrie(node));
 	    /* Set up new node */
 	    newnodes[Map].BitMapKey = key;
-	    entry = xmalloc(sizeof(HAMTEntry));
+	    entry = yasm_xmalloc(sizeof(HAMTEntry));
 	    entry->str = str;
 	    entry->data = data;
 	    SLIST_INSERT_HEAD(&hamt->entries, entry, next);

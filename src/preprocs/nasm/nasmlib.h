@@ -16,11 +16,11 @@
  * passed a NULL pointer; nasm_free will do nothing if it is passed
  * a NULL pointer.
  */
-#define nasm_malloc xmalloc
-#define nasm_realloc xrealloc
-#define nasm_free(p) if (p) xfree(p)
-#define nasm_strdup xstrdup
-#define nasm_strndup xstrndup
+#define nasm_malloc yasm_xmalloc
+#define nasm_realloc yasm_xrealloc
+#define nasm_free(p) yasm_xfree(p)
+#define nasm_strdup yasm__xstrdup
+#define nasm_strndup yasm__xstrndup
 #define nasm_stricmp yasm__strcasecmp
 #define nasm_strnicmp yasm__strncasecmp
 

@@ -173,8 +173,8 @@ main(int argc, char *argv[])
     lt_dlmalloc = malloc;
     lt_dlfree = free;
 #else
-    lt_dlmalloc = xmalloc;
-    lt_dlfree = xfree;
+    lt_dlmalloc = yasm_xmalloc;
+    lt_dlfree = yasm_xfree;
 #endif
 
     /* Initialize preloaded symbol lookup table. */
@@ -219,16 +219,16 @@ main(int argc, char *argv[])
 	in = fopen(in_filename, "rt");
 	if (!in) {
 	    print_error(_("could not open file `%s'"), in_filename);
-	    xfree(in_filename);
+	    yasm_xfree(in_filename);
 	    if (obj_filename)
-		xfree(obj_filename);
+		yasm_xfree(obj_filename);
 	    return EXIT_FAILURE;
 	}
     } else {
 	/* If no files were specified or filename was "-", read stdin */
 	in = stdin;
 	if (!in_filename)
-	    in_filename = xstrdup("-");
+	    in_filename = yasm__xstrdup("-");
     }
 
     /* Initialize line manager */
@@ -244,7 +244,7 @@ main(int argc, char *argv[])
 
     /* handle preproc-only case here */
     if (preproc_only) {
-	char *preproc_buf = xmalloc(PREPROC_BUF_SIZE);
+	char *preproc_buf = yasm_xmalloc(PREPROC_BUF_SIZE);
 	size_t got;
 
 	/* Default output to stdout if not specified */
@@ -254,7 +254,7 @@ main(int argc, char *argv[])
 	    /* Open output (object) file */
 	    obj = open_obj("wt");
 	    if (!obj) {
-		xfree(preproc_buf);
+		yasm_xfree(preproc_buf);
 		return EXIT_FAILURE;
 	    }
 	}
@@ -285,11 +285,11 @@ main(int argc, char *argv[])
 				    print_yasm_error, print_yasm_warning);
 	    if (obj != stdout)
 		remove(obj_filename);
-	    xfree(preproc_buf);
+	    yasm_xfree(preproc_buf);
 	    cleanup(NULL);
 	    return EXIT_FAILURE;
 	}
-	xfree(preproc_buf);
+	yasm_xfree(preproc_buf);
 	cleanup(NULL);
 	return EXIT_SUCCESS;
     }
@@ -357,7 +357,7 @@ main(int argc, char *argv[])
     if (!obj_filename) {
 	if (in == stdin)
 	    /* Default to yasm.out if no obj filename specified */
-	    obj_filename = xstrdup("yasm.out");
+	    obj_filename = yasm__xstrdup("yasm.out");
 	else
 	    /* replace (or add) extension */
 	    obj_filename = replace_extension(in_filename,
@@ -521,9 +521,9 @@ cleanup(yasm_sectionhead *sections)
 
     if (DO_FREE) {
 	if (in_filename)
-	    xfree(in_filename);
+	    yasm_xfree(in_filename);
 	if (obj_filename)
-	    xfree(obj_filename);
+	    yasm_xfree(obj_filename);
     }
 }
 
@@ -536,10 +536,10 @@ not_an_option_handler(char *param)
     if (in_filename) {
 	print_error(
 	    _("warning: can open only one input file, only the last file will be processed"));
-	xfree(in_filename);
+	yasm_xfree(in_filename);
     }
 
-    in_filename = xstrdup(param);
+    in_filename = yasm__xstrdup(param);
 
     return 0;
 }
@@ -607,11 +607,11 @@ opt_objfile_handler(/*@unused@*/ char *cmd, char *param,
     if (obj_filename) {
 	print_error(
 	    _("warning: can output to only one object file, last specified used"));
-	xfree(obj_filename);
+	yasm_xfree(obj_filename);
     }
 
     assert(param != NULL);
-    obj_filename = xstrdup(param);
+    obj_filename = yasm__xstrdup(param);
 
     return 0;
 }
@@ -673,7 +673,7 @@ replace_extension(const char *orig, /*@null@*/ const char *ext,
     char *out, *outext;
 
     /* allocate enough space for full existing name + extension */
-    out = xmalloc(strlen(orig)+(ext ? (strlen(ext)+2) : 1));
+    out = yasm_xmalloc(strlen(orig)+(ext ? (strlen(ext)+2) : 1));
     strcpy(out, orig);
     outext = strrchr(out, '.');
     if (outext) {

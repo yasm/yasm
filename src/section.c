@@ -73,7 +73,7 @@ yasm_sections_initialize(yasm_sectionhead *headp, yasm_objfmt *of)
     STAILQ_INIT(headp);
 
     /* Add an initial "default" section */
-    yasm_vp_new(vp, xstrdup(of->default_section_name), NULL);
+    yasm_vp_new(vp, yasm__xstrdup(of->default_section_name), NULL);
     yasm_vps_initialize(&vps);
     yasm_vps_append(&vps, vp);
     s = of->sections_switch(headp, &vps, NULL, 0);
@@ -105,11 +105,11 @@ yasm_sections_switch_general(yasm_sectionhead *headp, const char *name,
     /* No: we have to allocate and create a new one. */
 
     /* Okay, the name is valid; now allocate and initialize */
-    s = xcalloc(1, sizeof(yasm_section));
+    s = yasm_xcalloc(1, sizeof(yasm_section));
     STAILQ_INSERT_TAIL(headp, s, link);
 
     s->type = SECTION_GENERAL;
-    s->data.general.name = xstrdup(name);
+    s->data.general.name = yasm__xstrdup(name);
     s->data.general.of = NULL;
     s->data.general.of_data = NULL;
     s->start = yasm_expr_new_ident(yasm_expr_int(yasm_intnum_new_uint(start)),
@@ -130,7 +130,7 @@ yasm_sections_switch_absolute(yasm_sectionhead *headp, yasm_expr *start)
 {
     yasm_section *s;
 
-    s = xcalloc(1, sizeof(yasm_section));
+    s = yasm_xcalloc(1, sizeof(yasm_section));
     STAILQ_INSERT_TAIL(headp, s, link);
 
     s->type = SECTION_ABSOLUTE;
@@ -290,7 +290,7 @@ yasm_section_delete(yasm_section *sect)
 	return;
 
     if (sect->type == SECTION_GENERAL) {
-	xfree(sect->data.general.name);
+	yasm_xfree(sect->data.general.name);
 	if (sect->data.general.of_data && sect->data.general.of) {
 	    yasm_objfmt *of = sect->data.general.of;
 	    if (of->section_data_delete)
@@ -302,7 +302,7 @@ yasm_section_delete(yasm_section *sect)
     }
     yasm_expr_delete(sect->start);
     yasm_bcs_delete(&sect->bc);
-    xfree(sect);
+    yasm_xfree(sect);
 }
 
 void

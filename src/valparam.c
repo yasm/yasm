@@ -39,10 +39,10 @@ yasm_vps_delete(yasm_valparamhead *headp)
     while (cur) {
 	next = STAILQ_NEXT(cur, link);
 	if (cur->val)
-	    xfree(cur->val);
+	    yasm_xfree(cur->val);
 	if (cur->param)
 	    yasm_expr_delete(cur->param);
-	xfree(cur);
+	yasm_xfree(cur);
 	cur = next;
     }
     STAILQ_INIT(headp);

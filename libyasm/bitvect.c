@@ -332,7 +332,7 @@ ErrCode BitVector_Boot(void)
     FACTOR = LOGBITS - 3;  /* ld(BITS / 8) = ld(BITS) - ld(8) = ld(BITS) - 3 */
     MSB = (LSB << MODMASK);
 
-    BITMASKTAB = (wordptr) xmalloc((size_t) (BITS << FACTOR));
+    BITMASKTAB = (wordptr) yasm_xmalloc((size_t) (BITS << FACTOR));
 
     if (BITMASKTAB == NULL) return(ErrCode_Null);
 
@@ -349,7 +349,7 @@ ErrCode BitVector_Boot(void)
 
 void BitVector_Shutdown(void)
 {
-    if (BITMASKTAB) xfree(BITMASKTAB);
+    if (BITMASKTAB) yasm_xfree(BITMASKTAB);
 }
 
 N_word BitVector_Size(N_int bits)           /* bit vector size (# of words)  */
@@ -399,7 +399,7 @@ N_int BitVector_Long_Bits(void)
 
 void BitVector_Dispose(charptr string)                      /* free string   */
 {
-    if (string != NULL) xfree((voidptr) string);
+    if (string != NULL) yasm_xfree((voidptr) string);
 }
 
 void BitVector_Destroy(wordptr addr)                        /* free bitvec   */
@@ -407,7 +407,7 @@ void BitVector_Destroy(wordptr addr)                        /* free bitvec   */
     if (addr != NULL)
     {
         addr -= BIT_VECTOR_HIDDEN_WORDS;
-        xfree((voidptr) addr);
+        yasm_xfree((voidptr) addr);
     }
 }
 
@@ -437,7 +437,7 @@ wordptr BitVector_Create(N_int bits, boolean clear)         /* malloc        */
     size = BitVector_Size(bits);
     mask = BitVector_Mask(bits);
     bytes = (size + BIT_VECTOR_HIDDEN_WORDS) << FACTOR;
-    addr = (wordptr) xmalloc((size_t) bytes);
+    addr = (wordptr) yasm_xmalloc((size_t) bytes);
     if (addr != NULL)
     {
         *addr++ = bits;
@@ -507,7 +507,7 @@ wordptr BitVector_Resize(wordptr oldaddr, N_int bits)       /* realloc       */
     else
     {
         bytes = (newsize + BIT_VECTOR_HIDDEN_WORDS) << FACTOR;
-        newaddr = (wordptr) xmalloc((size_t) bytes);
+        newaddr = (wordptr) yasm_xmalloc((size_t) bytes);
         if (newaddr != NULL)
         {
             *newaddr++ = bits;
@@ -1428,7 +1428,7 @@ charptr BitVector_to_Hex(wordptr addr)
 
     length = bits >> 2;
     if (bits AND 0x0003) length++;
-    string = (charptr) xmalloc((size_t) (length+1));
+    string = (charptr) yasm_xmalloc((size_t) (length+1));
     if (string == NULL) return(NULL);
     string += length;
     *string = (N_char) '\0';
@@ -1540,7 +1540,7 @@ charptr BitVector_to_Bin(wordptr addr)
     charptr string;
 
     length = bits_(addr);
-    string = (charptr) xmalloc((size_t) (length+1));
+    string = (charptr) yasm_xmalloc((size_t) (length+1));
     if (string == NULL) return(NULL);
     string += length;
     *string = (N_char) '\0';
@@ -1623,7 +1623,7 @@ charptr BitVector_to_Dec(wordptr addr)
 
     length = (N_word) (bits / 3.3);        /* digits = bits * ln(2) / ln(10) */
     length += 2; /* compensate for truncating & provide space for minus sign */
-    result = (charptr) xmalloc((size_t) (length+1));   /* remember the '\0'! */
+    result = (charptr) yasm_xmalloc((size_t) (length+1));   /* remember the '\0'! */
     if (result == NULL) return(NULL);
     string = result;
     sign = BitVector_Sign(addr);
@@ -2064,7 +2064,7 @@ charptr BitVector_to_Enum(wordptr addr)
         }
     }
     else length = 1;
-    string = (charptr) xmalloc((size_t) length);
+    string = (charptr) yasm_xmalloc((size_t) length);
     if (string == NULL) return(NULL);
     start = 0;
     comma = FALSE;
@@ -3247,7 +3247,7 @@ charptr BitVector_Block_Read(wordptr addr, N_intptr length)
 
     /* provide translation for independence of endian-ness: */
     *length = size << FACTOR;
-    buffer = (charptr) xmalloc((size_t) ((*length)+1));
+    buffer = (charptr) yasm_xmalloc((size_t) ((*length)+1));
     if (buffer == NULL) return(NULL);
     target = buffer;
     if (size > 0)

@@ -97,7 +97,7 @@ void
 yasm_symrec_initialize(void)
 {
     sym_table = HAMT_new(yasm_internal_error_);
-    non_table_syms = xmalloc(sizeof(nontablesymhead));
+    non_table_syms = yasm_xmalloc(sizeof(nontablesymhead));
     SLIST_INIT(non_table_syms);
 }
 
@@ -105,7 +105,7 @@ static void
 symrec_delete_one(/*@only@*/ void *d)
 {
     yasm_symrec *sym = d;
-    xfree(sym->name);
+    yasm_xfree(sym->name);
     if (sym->type == SYM_EQU)
 	yasm_expr_delete(sym->value.expn);
     if (sym->of_data && sym->of) {
@@ -115,13 +115,13 @@ symrec_delete_one(/*@only@*/ void *d)
 	    yasm_internal_error(
 		N_("don't know how to delete objfmt-specific data"));
     }
-    xfree(sym);
+    yasm_xfree(sym);
 }
 
 static /*@partial@*/ yasm_symrec *
 symrec_new_common(/*@keep@*/ char *name)
 {
-    yasm_symrec *rec = xmalloc(sizeof(yasm_symrec));
+    yasm_symrec *rec = yasm_xmalloc(sizeof(yasm_symrec));
     rec->name = name;
     rec->type = SYM_UNKNOWN;
     rec->line = 0;
@@ -146,7 +146,7 @@ symrec_get_or_new_in_table(/*@only@*/ char *name)
 static /*@partial@*/ /*@dependent@*/ yasm_symrec *
 symrec_get_or_new_not_in_table(/*@only@*/ char *name)
 {
-    non_table_symrec *sym = xmalloc(sizeof(non_table_symrec));
+    non_table_symrec *sym = yasm_xmalloc(sizeof(non_table_symrec));
     sym->rec = symrec_new_common(name);
 
     sym->rec->status = SYM_NOTINTABLE;
@@ -161,7 +161,7 @@ symrec_get_or_new_not_in_table(/*@only@*/ char *name)
 static /*@partial@*/ /*@dependent@*/ yasm_symrec *
 symrec_get_or_new(const char *name, int in_table)
 {
-    char *symname = xstrdup(name);
+    char *symname = yasm__xstrdup(name);
 
     if (in_table)
 	return symrec_get_or_new_in_table(symname);
@@ -360,9 +360,9 @@ yasm_symrec_cleanup(void)
 	non_table_symrec *sym = SLIST_FIRST(non_table_syms);
 	SLIST_REMOVE_HEAD(non_table_syms, link);
 	symrec_delete_one(sym->rec);
-	xfree(sym);
+	yasm_xfree(sym);
     }
-    xfree(non_table_syms);
+    yasm_xfree(non_table_syms);
 }
 
 typedef struct symrec_print_data {

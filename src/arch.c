@@ -45,7 +45,7 @@ yasm_arch_common_initialize(yasm_arch *a)
 yasm_insn_operand *
 yasm_operand_new_reg(unsigned long reg)
 {
-    yasm_insn_operand *retval = xmalloc(sizeof(yasm_insn_operand));
+    yasm_insn_operand *retval = yasm_xmalloc(sizeof(yasm_insn_operand));
 
     retval->type = YASM_INSN__OPERAND_REG;
     retval->data.reg = reg;
@@ -58,7 +58,7 @@ yasm_operand_new_reg(unsigned long reg)
 yasm_insn_operand *
 yasm_operand_new_segreg(unsigned long segreg)
 {
-    yasm_insn_operand *retval = xmalloc(sizeof(yasm_insn_operand));
+    yasm_insn_operand *retval = yasm_xmalloc(sizeof(yasm_insn_operand));
 
     retval->type = YASM_INSN__OPERAND_SEGREG;
     retval->data.reg = segreg;
@@ -71,7 +71,7 @@ yasm_operand_new_segreg(unsigned long segreg)
 yasm_insn_operand *
 yasm_operand_new_mem(/*@only@*/ yasm_effaddr *ea)
 {
-    yasm_insn_operand *retval = xmalloc(sizeof(yasm_insn_operand));
+    yasm_insn_operand *retval = yasm_xmalloc(sizeof(yasm_insn_operand));
 
     retval->type = YASM_INSN__OPERAND_MEMORY;
     retval->data.ea = ea;
@@ -92,7 +92,7 @@ yasm_operand_new_imm(/*@only@*/ yasm_expr *val)
 	retval = yasm_operand_new_reg(*reg);
 	yasm_expr_delete(val);
     } else {
-	retval = xmalloc(sizeof(yasm_insn_operand));
+	retval = yasm_xmalloc(sizeof(yasm_insn_operand));
 	retval->type = YASM_INSN__OPERAND_IMM;
 	retval->data.val = val;
 	retval->targetmod = 0;
@@ -149,7 +149,7 @@ yasm_ops_delete(yasm_insn_operandhead *headp, int content)
 		default:
 		    break;
 	    }
-	xfree(cur);
+	yasm_xfree(cur);
 	cur = next;
     }
     STAILQ_INIT(headp);

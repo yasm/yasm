@@ -119,7 +119,7 @@ static void
 dbg_objfmt_section_data_delete(/*@only@*/ void *data)
 {
     fprintf(dbg_objfmt_file, "section_data_delete(%p)\n", data);
-    xfree(data);
+    yasm_xfree(data);
 }
 
 static void
@@ -214,7 +214,7 @@ static void
 dbg_objfmt_bc_objfmt_data_delete(unsigned int type, /*@only@*/ void *data)
 {
     fprintf(dbg_objfmt_file, "symrec_data_delete(%u, %p)\n", type, data);
-    xfree(data);
+    yasm_xfree(data);
 }
 
 static void

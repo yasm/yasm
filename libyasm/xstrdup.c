@@ -50,24 +50,24 @@ void memcpy(void *, const void *, size_t);
 #ifndef WITH_DMALLOC
 
 char *
-xstrdup(const char *str)
+yasm__xstrdup(const char *str)
 {
 	size_t len;
 	char *copy;
 
 	len = strlen(str) + 1;
-	copy = xmalloc(len);
+	copy = yasm_xmalloc(len);
 	memcpy(copy, str, len);
 	return (copy);
 }
 #endif
 
 char *
-xstrndup(const char *str, size_t len)
+yasm__xstrndup(const char *str, size_t len)
 {
 	char *copy;
 
-	copy = xmalloc(len+1);
+	copy = yasm_xmalloc(len+1);
 	memcpy(copy, str, len);
 	copy[len] = '\0';
 	return (copy);

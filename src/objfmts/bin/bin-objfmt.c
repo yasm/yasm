@@ -199,7 +199,7 @@ bin_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     /* Don't bother doing anything else if size ended up being 0. */
     if (size == 0) {
 	if (bigbuf)
-	    xfree(bigbuf);
+	    yasm_xfree(bigbuf);
 	return 0;
     }
 
@@ -224,7 +224,7 @@ bin_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 
     /* If bigbuf was allocated, free it */
     if (bigbuf)
-	xfree(bigbuf);
+	yasm_xfree(bigbuf);
 
     return 0;
 }
@@ -242,7 +242,7 @@ bin_objfmt_output(FILE *f, yasm_sectionhead *sections)
     bin_objfmt_output_info info;
 
     info.f = f;
-    info.buf = xmalloc(REGULAR_OUTBUF_SIZE);
+    info.buf = yasm_xmalloc(REGULAR_OUTBUF_SIZE);
 
     text = yasm_sections_find_general(sections, ".text");
     data = yasm_sections_find_general(sections, ".data");
@@ -311,7 +311,7 @@ bin_objfmt_output(FILE *f, yasm_sectionhead *sections)
     /* If .bss is present, check it for non-reserve bytecodes */
 
 
-    xfree(info.buf);
+    yasm_xfree(info.buf);
 }
 
 static void
@@ -396,7 +396,7 @@ bin_objfmt_sections_switch(yasm_sectionhead *headp,
 
 	if (isnew) {
 	    if (have_alignval) {
-		unsigned long *data = xmalloc(sizeof(unsigned long));
+		unsigned long *data = yasm_xmalloc(sizeof(unsigned long));
 		*data = alignval;
 		yasm_section_set_of_data(retval, &yasm_bin_LTX_objfmt, data);
 	    }
@@ -415,7 +415,7 @@ bin_objfmt_sections_switch(yasm_sectionhead *headp,
 static void
 bin_objfmt_section_data_delete(/*@only@*/ void *d)
 {
-    xfree(d);
+    yasm_xfree(d);
 }
 
 static void

@@ -65,7 +65,7 @@ yasm_expr_new(yasm_expr_op op, yasm_expr__item *left, yasm_expr__item *right,
 	      unsigned long lindex)
 {
     yasm_expr *ptr, *sube;
-    ptr = xmalloc(sizeof(yasm_expr));
+    ptr = yasm_xmalloc(sizeof(yasm_expr));
 
     ptr->op = op;
     ptr->numterms = 0;
@@ -73,7 +73,7 @@ yasm_expr_new(yasm_expr_op op, yasm_expr__item *left, yasm_expr__item *right,
     ptr->terms[1].type = YASM_EXPR_NONE;
     if (left) {
 	ptr->terms[0] = *left;	/* structure copy */
-	xfree(left);
+	yasm_xfree(left);
 	ptr->numterms++;
 
 	/* Search downward until we find something *other* than an
@@ -84,7 +84,7 @@ yasm_expr_new(yasm_expr_op op, yasm_expr__item *left, yasm_expr__item *right,
 	    sube = ptr->terms[0].data.expn;
 	    ptr->terms[0] = sube->terms[0];	/* structure copy */
 	    /*@-usereleased@*/
-	    xfree(sube);
+	    yasm_xfree(sube);
 	    /*@=usereleased@*/
 	}
     } else {
@@ -93,7 +93,7 @@ yasm_expr_new(yasm_expr_op op, yasm_expr__item *left, yasm_expr__item *right,
 
     if (right) {
 	ptr->terms[1] = *right;	/* structure copy */
-	xfree(right);
+	yasm_xfree(right);
 	ptr->numterms++;
 
 	/* Search downward until we find something *other* than an
@@ -104,7 +104,7 @@ yasm_expr_new(yasm_expr_op op, yasm_expr__item *left, yasm_expr__item *right,
 	    sube = ptr->terms[1].data.expn;
 	    ptr->terms[1] = sube->terms[0];	/* structure copy */
 	    /*@-usereleased@*/
-	    xfree(sube);
+	    yasm_xfree(sube);
 	    /*@=usereleased@*/
 	}
     }
@@ -119,7 +119,7 @@ yasm_expr_new(yasm_expr_op op, yasm_expr__item *left, yasm_expr__item *right,
 yasm_expr__item *
 yasm_expr_sym(yasm_symrec *s)
 {
-    yasm_expr__item *e = xmalloc(sizeof(yasm_expr__item));
+    yasm_expr__item *e = yasm_xmalloc(sizeof(yasm_expr__item));
     e->type = YASM_EXPR_SYM;
     e->data.sym = s;
     return e;
@@ -128,7 +128,7 @@ yasm_expr_sym(yasm_symrec *s)
 yasm_expr__item *
 yasm_expr_expr(yasm_expr *x)
 {
-    yasm_expr__item *e = xmalloc(sizeof(yasm_expr__item));
+    yasm_expr__item *e = yasm_xmalloc(sizeof(yasm_expr__item));
     e->type = YASM_EXPR_EXPR;
     e->data.expn = x;
     return e;
@@ -137,7 +137,7 @@ yasm_expr_expr(yasm_expr *x)
 yasm_expr__item *
 yasm_expr_int(yasm_intnum *i)
 {
-    yasm_expr__item *e = xmalloc(sizeof(yasm_expr__item));
+    yasm_expr__item *e = yasm_xmalloc(sizeof(yasm_expr__item));
     e->type = YASM_EXPR_INT;
     e->data.intn = i;
     return e;
@@ -146,7 +146,7 @@ yasm_expr_int(yasm_intnum *i)
 yasm_expr__item *
 yasm_expr_float(yasm_floatnum *f)
 {
-    yasm_expr__item *e = xmalloc(sizeof(yasm_expr__item));
+    yasm_expr__item *e = yasm_xmalloc(sizeof(yasm_expr__item));
     e->type = YASM_EXPR_FLOAT;
     e->data.flt = f;
     return e;
@@ -155,7 +155,7 @@ yasm_expr_float(yasm_floatnum *f)
 yasm_expr__item *
 yasm_expr_reg(unsigned long reg)
 {
-    yasm_expr__item *e = xmalloc(sizeof(yasm_expr__item));
+    yasm_expr__item *e = yasm_xmalloc(sizeof(yasm_expr__item));
     e->type = YASM_EXPR_REG;
     e->data.reg = reg;
     return e;
@@ -254,8 +254,8 @@ expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e,
     }
     if (e->numterms != numterms) {
 	e->numterms = numterms;
-	e = xrealloc(e, sizeof(yasm_expr)+((numterms<2) ? 0 :
-		     sizeof(yasm_expr__item)*(numterms-2)));
+	e = yasm_xrealloc(e, sizeof(yasm_expr)+((numterms<2) ? 0 :
+			  sizeof(yasm_expr__item)*(numterms-2)));
 	if (numterms == 1)
 	    e->op = YASM_EXPR_IDENT;
     }
@@ -267,7 +267,7 @@ expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e,
 static void
 expr_xform_neg_item(yasm_expr *e, yasm_expr__item *ei)
 {
-    yasm_expr *sube = xmalloc(sizeof(yasm_expr));
+    yasm_expr *sube = yasm_xmalloc(sizeof(yasm_expr));
 
     /* Build -1*ei subexpression */
     sube->op = YASM_EXPR_MUL;
@@ -339,7 +339,7 @@ expr_xform_neg_helper(/*@returned@*/ /*@only@*/ yasm_expr *e)
 	    /* Everything else.  MUL will be combined when it's leveled.
 	     * Make a new expr (to replace e) with -1*e.
 	     */
-	    ne = xmalloc(sizeof(yasm_expr));
+	    ne = yasm_xmalloc(sizeof(yasm_expr));
 	    ne->op = YASM_EXPR_MUL;
 	    ne->line = e->line;
 	    ne->numterms = 2;
@@ -514,7 +514,7 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
      */
     while (e->op == YASM_EXPR_IDENT && e->terms[0].type == YASM_EXPR_EXPR) {
 	yasm_expr *sube = e->terms[0].data.expn;
-	xfree(e);
+	yasm_xfree(e);
 	e = sube;
     }
     level_numterms = e->numterms;
@@ -527,7 +527,7 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
 	       e->terms[i].data.expn->op == YASM_EXPR_IDENT) {
 	    yasm_expr *sube = e->terms[i].data.expn;
 	    e->terms[i] = sube->terms[0];
-	    xfree(sube);
+	    yasm_xfree(sube);
 	}
 
 	if (e->terms[i].type == YASM_EXPR_EXPR &&
@@ -592,8 +592,8 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
 	level_numterms <= fold_numterms) {
 	/* Downsize e if necessary */
 	if (fold_numterms < e->numterms && e->numterms > 2)
-	    e = xrealloc(e, sizeof(yasm_expr)+((fold_numterms<2) ? 0 :
-			 sizeof(yasm_expr__item)*(fold_numterms-2)));
+	    e = yasm_xrealloc(e, sizeof(yasm_expr)+((fold_numterms<2) ? 0 :
+			      sizeof(yasm_expr__item)*(fold_numterms-2)));
 	/* Update numterms */
 	e->numterms = fold_numterms;
 	return e;
@@ -609,8 +609,8 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
     }
 
     /* Alloc more (or conceivably less, but not usually) space for e */
-    e = xrealloc(e, sizeof(yasm_expr)+((level_numterms<2) ? 0 :
-		 sizeof(yasm_expr__item)*(level_numterms-2)));
+    e = yasm_xrealloc(e, sizeof(yasm_expr)+((level_numterms<2) ? 0 :
+		      sizeof(yasm_expr__item)*(level_numterms-2)));
 
     /* Copy up ExprItem's.  Iterate from right to left to keep the same
      * ordering as was present originally.
@@ -647,7 +647,7 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
 	    /* delete subexpression, but *don't delete nodes* (as we've just
 	     * copied them!)
 	     */
-	    xfree(sube);
+	    yasm_xfree(sube);
 	} else if (o != i) {
 	    /* copy operand if it changed places */
 	    if (o == first_int_term)
@@ -804,8 +804,8 @@ yasm_expr__copy_except(const yasm_expr *e, int except)
     yasm_expr *n;
     int i;
     
-    n = xmalloc(sizeof(yasm_expr) +
-		sizeof(yasm_expr__item)*(e->numterms<2?0:e->numterms-2));
+    n = yasm_xmalloc(sizeof(yasm_expr) +
+		     sizeof(yasm_expr__item)*(e->numterms<2?0:e->numterms-2));
 
     n->op = e->op;
     n->line = e->line;
@@ -865,7 +865,7 @@ expr_delete_each(/*@only@*/ yasm_expr *e, /*@unused@*/ void *d)
 		break;	/* none of the other types needs to be deleted */
 	}
     }
-    xfree(e);	/* free ourselves */
+    yasm_xfree(e);	/* free ourselves */
     return 0;	/* don't stop recursion */
 }
 

@@ -32,8 +32,26 @@ RCSID("$IdPath$");
 
 #ifndef WITH_DMALLOC
 
-void *
-xmalloc(size_t size)
+static /*@only@*/ /*@out@*/ void *def_xmalloc(size_t size);
+static /*@only@*/ void *def_xcalloc(size_t nelem, size_t elsize);
+static /*@only@*/ void *def_xrealloc
+    (/*@only@*/ /*@out@*/ /*@returned@*/ /*@null@*/ void *oldmem, size_t size)
+    /*@modifies oldmem@*/;
+static void def_xfree(/*@only@*/ /*@out@*/ /*@null@*/ void *p)
+    /*@modifies p@*/;
+
+/* storage for global function pointers */
+/*@only@*/ /*@out@*/ void * (*yasm_xmalloc) (size_t size) = def_xmalloc;
+/*@only@*/ void * (*yasm_xcalloc) (size_t nelem, size_t elsize) = def_xcalloc;
+/*@only@*/ void * (*yasm_xrealloc)
+    (/*@only@*/ /*@out@*/ /*@returned@*/ /*@null@*/ void *oldmem, size_t size)
+    /*@modifies oldmem@*/ = def_xrealloc;
+void (*yasm_xfree) (/*@only@*/ /*@out@*/ /*@null@*/ void *p)
+    /*@modifies p@*/ = def_xfree;
+
+
+static void *
+def_xmalloc(size_t size)
 {
     void *newmem;
 
@@ -46,8 +64,8 @@ xmalloc(size_t size)
     return newmem;
 }
 
-void *
-xcalloc(size_t nelem, size_t elsize)
+static void *
+def_xcalloc(size_t nelem, size_t elsize)
 {
     void *newmem;
 
@@ -61,8 +79,8 @@ xcalloc(size_t nelem, size_t elsize)
     return newmem;
 }
 
-void *
-xrealloc(void *oldmem, size_t size)
+static void *
+def_xrealloc(void *oldmem, size_t size)
 {
     void *newmem;
 
@@ -78,8 +96,8 @@ xrealloc(void *oldmem, size_t size)
     return newmem;
 }
 
-void
-xfree(void *p)
+static void
+def_xfree(void *p)
 {
     if (!p)
 	return;

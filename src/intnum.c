@@ -68,7 +68,7 @@ yasm_intnum_cleanup(void)
 yasm_intnum *
 yasm_intnum_new_dec(char *str, unsigned long lindex)
 {
-    yasm_intnum *intn = xmalloc(sizeof(yasm_intnum));
+    yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
 
     intn->origsize = 0;	    /* no reliable way to figure this out */
 
@@ -90,7 +90,7 @@ yasm_intnum_new_dec(char *str, unsigned long lindex)
 yasm_intnum *
 yasm_intnum_new_bin(char *str, unsigned long lindex)
 {
-    yasm_intnum *intn = xmalloc(sizeof(yasm_intnum));
+    yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
 
     intn->origsize = (unsigned char)strlen(str);
 
@@ -113,7 +113,7 @@ yasm_intnum_new_bin(char *str, unsigned long lindex)
 yasm_intnum *
 yasm_intnum_new_oct(char *str, unsigned long lindex)
 {
-    yasm_intnum *intn = xmalloc(sizeof(yasm_intnum));
+    yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
 
     intn->origsize = strlen(str)*3;
 
@@ -136,7 +136,7 @@ yasm_intnum_new_oct(char *str, unsigned long lindex)
 yasm_intnum *
 yasm_intnum_new_hex(char *str, unsigned long lindex)
 {
-    yasm_intnum *intn = xmalloc(sizeof(yasm_intnum));
+    yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
 
     intn->origsize = strlen(str)*4;
 
@@ -160,7 +160,7 @@ yasm_intnum_new_hex(char *str, unsigned long lindex)
 yasm_intnum *
 yasm_intnum_new_charconst_nasm(const char *str, unsigned long lindex)
 {
-    yasm_intnum *intn = xmalloc(sizeof(yasm_intnum));
+    yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
     size_t len = strlen(str);
 
     if (len > 4)
@@ -195,7 +195,7 @@ yasm_intnum_new_charconst_nasm(const char *str, unsigned long lindex)
 yasm_intnum *
 yasm_intnum_new_uint(unsigned long i)
 {
-    yasm_intnum *intn = xmalloc(sizeof(yasm_intnum));
+    yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
 
     intn->val.ul = i;
     intn->type = INTNUM_UL;
@@ -214,7 +214,7 @@ yasm_intnum_new_int(long i)
 yasm_intnum *
 yasm_intnum_copy(const yasm_intnum *intn)
 {
-    yasm_intnum *n = xmalloc(sizeof(yasm_intnum));
+    yasm_intnum *n = yasm_xmalloc(sizeof(yasm_intnum));
 
     switch (intn->type) {
 	case INTNUM_UL:
@@ -235,7 +235,7 @@ yasm_intnum_delete(yasm_intnum *intn)
 {
     if (intn->type == INTNUM_BV)
 	BitVector_Destroy(intn->val.bv);
-    xfree(intn);
+    yasm_xfree(intn);
 }
 
 /*@-nullderef -nullpass -branchstate@*/
@@ -561,7 +561,7 @@ yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr, size_t size)
 	    if (len < (unsigned int)size)
 		yasm_internal_error(N_("Invalid size specified (too large)"));
 	    memcpy(ptr, buf, size);
-	    xfree(buf);
+	    yasm_xfree(buf);
 	    break;
     }
 }
@@ -644,7 +644,7 @@ yasm_intnum_print(FILE *f, const yasm_intnum *intn)
 	case INTNUM_BV:
 	    s = BitVector_to_Hex(intn->val.bv);
 	    fprintf(f, "0x%s/%u", (char *)s, (unsigned int)intn->origsize);
-	    xfree(s);
+	    yasm_xfree(s);
 	    break;
     }
 }

@@ -148,7 +148,7 @@ line: '\n'		{ $$ = (yasm_bytecode *)NULL; }
 				 yasm_intnum_get_uint($4));
 	yasm_intnum_delete($2);
 	yasm_intnum_delete($4);
-	xfree($5);
+	yasm_xfree($5);
 	$$ = (yasm_bytecode *)NULL;
     }
     | '[' { nasm_parser_set_directive_state(); } directive ']' '\n' {
@@ -169,7 +169,7 @@ lineexp: exp
     | label TIMES expr exp	{ $$ = $4; yasm_bc_set_multiple($$, $3); }
     | label_id_equ EQU expr	{
 	yasm_symrec_define_equ($1, $3, cur_lindex);
-	xfree($1);
+	yasm_xfree($1);
 	$$ = (yasm_bytecode *)NULL;
     }
 ;
@@ -236,22 +236,22 @@ dataval: dvexpr		{ $$ = yasm_dv_new_expr($1); }
 label: label_id	    {
 	yasm_symrec_define_label($1, nasm_parser_cur_section,
 				 nasm_parser_prev_bc, 1, cur_lindex);
-	xfree($1);
+	yasm_xfree($1);
     }
     | label_id ':'  {
 	yasm_symrec_define_label($1, nasm_parser_cur_section,
 				 nasm_parser_prev_bc, 1, cur_lindex);
-	xfree($1);
+	yasm_xfree($1);
     }
 ;
 
 label_id: ID	    {
 	$$ = $1;
 	if (nasm_parser_locallabel_base)
-	    xfree(nasm_parser_locallabel_base);
+	    yasm_xfree(nasm_parser_locallabel_base);
 	nasm_parser_locallabel_base_len = strlen($1);
 	nasm_parser_locallabel_base =
-	    xmalloc(nasm_parser_locallabel_base_len+1);
+	    yasm_xmalloc(nasm_parser_locallabel_base_len+1);
 	strcpy(nasm_parser_locallabel_base, $1);
     }
     | SPECIAL_ID
@@ -265,11 +265,11 @@ label_id_equ: ID
 
 /* directives */
 directive: DIRECTIVE_NAME directive_val	{
-	xfree($1);
+	yasm_xfree($1);
     }
     | DIRECTIVE_NAME error		{
 	yasm__error(cur_lindex, N_("invalid arguments to [%s]"), $1);
-	xfree($1);
+	yasm_xfree($1);
     }
 ;
 
@@ -304,7 +304,8 @@ directive_valparam: direxpr	{
 	 */
 	const /*@null@*/ yasm_symrec *vp_symrec;
 	if ((vp_symrec = yasm_expr_get_symrec(&$1, 0))) {
-	    yasm_vp_new($$, xstrdup(yasm_symrec_get_name(vp_symrec)), NULL);
+	    yasm_vp_new($$, yasm__xstrdup(yasm_symrec_get_name(vp_symrec)),
+			NULL);
 	    yasm_expr_delete($1);
 	} else {
 	    yasm_expr__traverse_leaves_in($1, NULL, fix_directive_symrec);
@@ -407,7 +408,7 @@ direxpr: INTNUM			{ $$ = p_expr_new_ident(yasm_expr_int($1)); }
     | ID			{
 	$$ = p_expr_new_ident(yasm_expr_sym(
 	    yasm_symrec_define_label($1, NULL, NULL, 0, cur_lindex)));
-	xfree($1);
+	yasm_xfree($1);
     }
     | direxpr '|' direxpr	{ $$ = p_expr_new_tree($1, YASM_EXPR_OR, $3); }
     | direxpr '^' direxpr	{ $$ = p_expr_new_tree($1, YASM_EXPR_XOR, $3); }
@@ -468,7 +469,7 @@ expr: INTNUM		{ $$ = p_expr_new_ident(yasm_expr_int($1)); }
     | STRING		{
 	$$ = p_expr_new_ident(yasm_expr_int(
 	    yasm_intnum_new_charconst_nasm($1, cur_lindex)));
-	xfree($1);
+	yasm_xfree($1);
     }
     | explabel		{ $$ = p_expr_new_ident(yasm_expr_sym($1)); }
     /*| expr '||' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_LOR, $3); }*/
@@ -503,15 +504,15 @@ expr: INTNUM		{ $$ = p_expr_new_ident(yasm_expr_int($1)); }
 
 explabel: ID		{
 	$$ = yasm_symrec_use($1, cur_lindex);
-	xfree($1);
+	yasm_xfree($1);
     }
     | SPECIAL_ID	{
 	$$ = yasm_symrec_use($1, cur_lindex);
-	xfree($1);
+	yasm_xfree($1);
     }
     | LOCAL_ID		{
 	$$ = yasm_symrec_use($1, cur_lindex);
-	xfree($1);
+	yasm_xfree($1);
     }
     | '$'		{
 	/* "$" references the current assembly position */

@@ -113,7 +113,7 @@ yasm_errwarn_cleanup(void)
 	we = SLIST_FIRST(&errwarns);
 
 	SLIST_REMOVE_HEAD(&errwarns, link);
-	xfree(we);
+	yasm_xfree(we);
     }
 }
 
@@ -208,7 +208,7 @@ errwarn_data_new(unsigned long lindex, int replace_parser_error)
 	we = ins_we;
     } else {
 	/* add a new error */
-	we = xmalloc(sizeof(errwarn_data));
+	we = yasm_xmalloc(sizeof(errwarn_data));
 
 	we->type = WE_UNKNOWN;
 	we->line = lindex;

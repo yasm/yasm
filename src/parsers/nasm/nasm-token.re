@@ -92,7 +92,7 @@ fill(YYCTYPE *cursor)
 	if (!s.bot)
 	    first = 1;
 	if((s.top - s.lim) < BSIZE){
-	    char *buf = xmalloc((s.lim - s.bot) + BSIZE);
+	    char *buf = yasm_xmalloc((s.lim - s.bot) + BSIZE);
 	    memcpy(buf, s.tok, s.lim - s.tok);
 	    s.tok = buf;
 	    s.ptr = &buf[s.ptr - s.bot];
@@ -101,7 +101,7 @@ fill(YYCTYPE *cursor)
 	    s.lim = &buf[s.lim - s.bot];
 	    s.top = &s.lim[BSIZE];
 	    if (s.bot)
-		xfree(s.bot);
+		yasm_xfree(s.bot);
 	    s.bot = buf;
 	}
 	if((cnt = nasm_parser_input(s.lim, BSIZE)) == 0){
@@ -122,7 +122,7 @@ fill(YYCTYPE *cursor)
 static void
 delete_line(/*@only@*/ void *data)
 {
-    xfree(data);
+    yasm_xfree(data);
 }
 
 static YYCTYPE *
@@ -132,7 +132,7 @@ save_line(YYCTYPE *cursor)
 
     /* save previous line using assoc_data */
     nasm_parser_linemgr->add_assoc_data(YASM_LINEMGR_STD_TYPE_SOURCE,
-					xstrdup(cur_line), delete_line);
+					yasm__xstrdup(cur_line), delete_line);
     /* save next line into cur_line */
     if ((YYLIMIT - YYCURSOR) < 80)
 	YYFILL(80);
@@ -146,7 +146,7 @@ void
 nasm_parser_cleanup(void)
 {
     if (s.bot)
-	xfree(s.bot);
+	yasm_xfree(s.bot);
 }
 
 /* starting size of string buffer */
@@ -355,7 +355,7 @@ scan:
 
 	/* special non-local ..@label and labels like ..start */
 	".." [a-zA-Z0-9_$#@~.?]+ {
-	    yylval.str_val = xstrndup(s.tok, TOKLEN);
+	    yylval.str_val = yasm__xstrndup(s.tok, TOKLEN);
 	    RETURN(SPECIAL_ID);
 	}
 
@@ -363,15 +363,15 @@ scan:
 	"." [a-zA-Z0-9_$#@~?][a-zA-Z0-9_$#@~.?]* {
 	    /* override local labels in directive state */
 	    if (state == DIRECTIVE2) {
-		yylval.str_val = xstrndup(s.tok, TOKLEN);
+		yylval.str_val = yasm__xstrndup(s.tok, TOKLEN);
 		RETURN(ID);
 	    } else if (!nasm_parser_locallabel_base) {
 		yasm__warning(YASM_WARN_GENERAL, cur_lindex,
 			      N_("no non-local label before `%s'"), s.tok[0]);
-		yylval.str_val = xstrndup(s.tok, TOKLEN);
+		yylval.str_val = yasm__xstrndup(s.tok, TOKLEN);
 	    } else {
 		len = TOKLEN + nasm_parser_locallabel_base_len;
-		yylval.str_val = xmalloc(len + 1);
+		yylval.str_val = yasm_xmalloc(len + 1);
 		strcpy(yylval.str_val, nasm_parser_locallabel_base);
 		strncat(yylval.str_val, s.tok, TOKLEN);
 		yylval.str_val[len] = '\0';
@@ -382,7 +382,7 @@ scan:
 
 	/* forced identifier */
 	"$" [a-zA-Z_?][a-zA-Z0-9_$#@~.?]* {
-	    yylval.str_val = xstrndup(s.tok, TOKLEN);
+	    yylval.str_val = yasm__xstrndup(s.tok, TOKLEN);
 	    RETURN(ID);
 	}
 
@@ -396,7 +396,7 @@ scan:
 	    switch (check_id_ret) {
 		case YASM_ARCH_CHECK_ID_NONE:
 		    /* Just an identifier, return as such. */
-		    yylval.str_val = xstrndup(s.tok, TOKLEN);
+		    yylval.str_val = yasm__xstrndup(s.tok, TOKLEN);
 		    RETURN(ID);
 		case YASM_ARCH_CHECK_ID_INSN:
 		    RETURN(INSN);
@@ -411,7 +411,7 @@ scan:
 		default:
 		    yasm__warning(YASM_WARN_GENERAL, cur_lindex,
 			N_("Arch feature not supported, treating as identifier"));
-		    yylval.str_val = xstrndup(s.tok, TOKLEN);
+		    yylval.str_val = yasm__xstrndup(s.tok, TOKLEN);
 		    RETURN(ID);
 	    }
 	}
@@ -491,7 +491,7 @@ linechg2:
 
 	(any \ [\r\n])+	{
 	    state = LINECHG;
-	    yylval.str_val = xstrndup(s.tok, TOKLEN);
+	    yylval.str_val = yasm__xstrndup(s.tok, TOKLEN);
 	    RETURN(FILENAME);
 	}
     */
@@ -510,7 +510,7 @@ directive:
 
 	iletter+ {
 	    state = DIRECTIVE2;
-	    yylval.str_val = xstrndup(s.tok, TOKLEN);
+	    yylval.str_val = yasm__xstrndup(s.tok, TOKLEN);
 	    RETURN(DIRECTIVE_NAME);
 	}
 
@@ -524,7 +524,7 @@ directive:
 
     /* string/character constant values */
 stringconst:
-    strbuf = xmalloc(STRBUF_ALLOC_SIZE);
+    strbuf = yasm_xmalloc(STRBUF_ALLOC_SIZE);
     strbuf_size = STRBUF_ALLOC_SIZE;
     count = 0;
 
@@ -554,7 +554,7 @@ stringconst_scan:
 
 	    strbuf[count++] = s.tok[0];
 	    if (count >= strbuf_size) {
-		strbuf = xrealloc(strbuf, strbuf_size + STRBUF_ALLOC_SIZE);
+		strbuf = yasm_xrealloc(strbuf, strbuf_size + STRBUF_ALLOC_SIZE);
 		strbuf_size += STRBUF_ALLOC_SIZE;
 	    }
 

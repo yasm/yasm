@@ -79,17 +79,17 @@ load_module(const char *keyword)
     }
 
     /* Look for dynamic module.  First build full module name from keyword. */
-    name = xmalloc(5+strlen(keyword)+1);
+    name = yasm_xmalloc(5+strlen(keyword)+1);
     strcpy(name, "yasm-");
     strcat(name, keyword);
     handle = lt_dlopenext(name);
 
     if (!handle) {
-	xfree(name);
+	yasm_xfree(name);
 	return NULL;
     }
 
-    m = xmalloc(sizeof(module));
+    m = yasm_xmalloc(sizeof(module));
     m->keyword = name;
     strcpy(m->keyword, keyword);
     m->handle = handle;
@@ -105,9 +105,9 @@ unload_modules(void)
     while (!SLIST_EMPTY(&modules)) {
 	m = SLIST_FIRST(&modules);
 	SLIST_REMOVE_HEAD(&modules, link);
-	xfree(m->keyword);
+	yasm_xfree(m->keyword);
 	lt_dlclose(m->handle);
-	xfree(m);
+	yasm_xfree(m);
     }
 }
 

@@ -120,7 +120,7 @@ yasm_imm_new_int(unsigned long int_val, unsigned long lindex)
 yasm_immval *
 yasm_imm_new_expr(yasm_expr *expr_ptr)
 {
-    yasm_immval *im = xmalloc(sizeof(yasm_immval));
+    yasm_immval *im = yasm_xmalloc(sizeof(yasm_immval));
 
     im->val = expr_ptr;
     im->len = 0;
@@ -164,7 +164,7 @@ yasm_ea_delete(yasm_effaddr *ea)
     if (cur_arch->ea_data_delete)
 	cur_arch->ea_data_delete(ea);
     yasm_expr_delete(ea->disp);
-    xfree(ea);
+    yasm_xfree(ea);
 }
 /*@=nullstate@*/
 
@@ -194,7 +194,7 @@ yasm_bc_set_multiple(yasm_bytecode *bc, yasm_expr *e)
 yasm_bytecode *
 yasm_bc_new_common(yasm_bytecode_type type, size_t size, unsigned long lindex)
 {
-    yasm_bytecode *bc = xmalloc(size);
+    yasm_bytecode *bc = yasm_xmalloc(size);
 
     bc->type = type;
 
@@ -323,7 +323,7 @@ yasm_bc_delete(yasm_bytecode *bc)
 	    break;
 	case YASM_BC__INCBIN:
 	    incbin = (bytecode_incbin *)bc;
-	    xfree(incbin->filename);
+	    yasm_xfree(incbin->filename);
 	    yasm_expr_delete(incbin->start);
 	    yasm_expr_delete(incbin->maxlen);
 	    break;
@@ -348,7 +348,7 @@ yasm_bc_delete(yasm_bytecode *bc)
     /*@=branchstate@*/
 
     yasm_expr_delete(bc->multiple);
-    xfree(bc);
+    yasm_xfree(bc);
 }
 
 void
@@ -799,7 +799,7 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
     *gap = 0;
 
     if (*bufsize < datasize) {
-	mybuf = xmalloc(sizeof(bc->len));
+	mybuf = yasm_xmalloc(sizeof(bc->len));
 	origbuf = mybuf;
 	destbuf = mybuf;
     } else {
@@ -874,7 +874,7 @@ yasm_bcs_append(yasm_bytecodehead *headp, yasm_bytecode *bc)
 	    STAILQ_INSERT_TAIL(headp, bc, link);
 	    return bc;
 	} else {
-	    xfree(bc);
+	    yasm_xfree(bc);
 	}
     }
     return (yasm_bytecode *)NULL;
@@ -908,7 +908,7 @@ yasm_bcs_traverse(yasm_bytecodehead *headp, void *d,
 yasm_dataval *
 yasm_dv_new_expr(yasm_expr *expn)
 {
-    yasm_dataval *retval = xmalloc(sizeof(yasm_dataval));
+    yasm_dataval *retval = yasm_xmalloc(sizeof(yasm_dataval));
 
     retval->type = DV_EXPR;
     retval->data.expn = expn;
@@ -919,7 +919,7 @@ yasm_dv_new_expr(yasm_expr *expn)
 yasm_dataval *
 yasm_dv_new_string(char *str_val)
 {
-    yasm_dataval *retval = xmalloc(sizeof(yasm_dataval));
+    yasm_dataval *retval = yasm_xmalloc(sizeof(yasm_dataval));
 
     retval->type = DV_STRING;
     retval->data.str_val = str_val;
@@ -940,12 +940,12 @@ yasm_dvs_delete(yasm_datavalhead *headp)
 		yasm_expr_delete(cur->data.expn);
 		break;
 	    case DV_STRING:
-		xfree(cur->data.str_val);
+		yasm_xfree(cur->data.str_val);
 		break;
 	    default:
 		break;
 	}
-	xfree(cur);
+	yasm_xfree(cur);
 	cur = next;
     }
     STAILQ_INIT(headp);

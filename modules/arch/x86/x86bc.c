@@ -264,7 +264,7 @@ yasm_x86__ea_new_reg(unsigned long reg, unsigned char *rex, unsigned char bits)
     if (yasm_x86__set_rex_from_reg(rex, &rm, reg, bits, X86_REX_B))
 	return NULL;
 
-    x86_ea = xmalloc(sizeof(x86_effaddr));
+    x86_ea = yasm_xmalloc(sizeof(x86_effaddr));
 
     x86_ea->ea.disp = (yasm_expr *)NULL;
     x86_ea->ea.len = 0;
@@ -285,7 +285,7 @@ yasm_x86__ea_new_expr(yasm_expr *e)
 {
     x86_effaddr *x86_ea;
 
-    x86_ea = xmalloc(sizeof(x86_effaddr));
+    x86_ea = yasm_xmalloc(sizeof(x86_effaddr));
 
     x86_ea->ea.disp = e;
     x86_ea->ea.len = 0;
@@ -310,7 +310,7 @@ yasm_x86__ea_new_imm(yasm_expr *imm, unsigned char im_len)
 {
     x86_effaddr *x86_ea;
 
-    x86_ea = xmalloc(sizeof(x86_effaddr));
+    x86_ea = yasm_xmalloc(sizeof(x86_effaddr));
 
     x86_ea->ea.disp = imm;
     x86_ea->ea.len = im_len;
@@ -432,7 +432,7 @@ yasm_x86__bc_delete(yasm_bytecode *bc)
 		yasm_ea_delete((yasm_effaddr *)insn->ea);
 	    if (insn->imm) {
 		yasm_expr_delete(insn->imm->val);
-		xfree(insn->imm);
+		yasm_xfree(insn->imm);
 	    }
 	    break;
 	case X86_BC_JMPREL:
@@ -645,7 +645,7 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 			insn->opcode[0] = insn->opcode[1];
 			/* Delete imm, as it's not needed. */
 			yasm_expr_delete(imm->val);
-			xfree(imm);
+			yasm_xfree(imm);
 			insn->imm = (yasm_immval *)NULL;
 		    }
 		} else
