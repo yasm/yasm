@@ -22,9 +22,12 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
+#include "file.h"
+
 #include "globals.h"
 #include "errwarn.h"
 #include "intnum.h"
+#include "floatnum.h"
 #include "expr.h"
 
 #include "bytecode.h"
@@ -177,6 +180,8 @@ arch x86_arch = {
 	x86_bc_resolve,
 	x86_bc_tobytes
     },
+    x86_floatnum_tobytes,
+    x86_intnum_tobytes,
     x86_get_reg_size,
     x86_reg_print,
     x86_segreg_print,

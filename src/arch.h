@@ -141,6 +141,17 @@ struct arch {
 			   output_expr_func output_expr);
     } bc;
 
+    /* Functions to output floats and integers, architecture-specific because
+     * of endianness.  Returns nonzero on error, otherwise updates bufp by
+     * valsize (bytes saved to bufp).  For intnums, rel indicates a relative
+     * displacement, and bc is the containing bytecode to compute it from.
+     */
+    int (*floatnum_tobytes) (const floatnum *flt, unsigned char **bufp,
+			     unsigned long valsize, const expr *e);
+    int (*intnum_tobytes) (const intnum *intn, unsigned char **bufp,
+			   unsigned long valsize, const expr *e,
+			   const bytecode *bc, int rel);
+
     /* Gets the equivalent register size in bytes.  Returns 0 if there is no
      * suitable equivalent size.
      */

@@ -75,7 +75,7 @@ replace_extension(const char *orig, /*@null@*/ const char *ext,
 }
 
 size_t
-fwrite_short(unsigned short val, FILE *f)
+fwrite_16_l(unsigned short val, FILE *f)
 {
     if (fputc(val & 0xFF, f) == EOF)
 	return 0;
@@ -85,7 +85,7 @@ fwrite_short(unsigned short val, FILE *f)
 }
 
 size_t
-fwrite_long(unsigned long val, FILE *f)
+fwrite_32_l(unsigned long val, FILE *f)
 {
     if (fputc((int)(val & 0xFF), f) == EOF)
 	return 0;
@@ -94,6 +94,30 @@ fwrite_long(unsigned long val, FILE *f)
     if (fputc((int)((val >> 16) & 0xFF), f) == EOF)
 	return 0;
     if (fputc((int)((val >> 24) & 0xFF), f) == EOF)
+	return 0;
+    return 1;
+}
+
+size_t
+fwrite_16_b(unsigned short val, FILE *f)
+{
+    if (fputc((val >> 8) & 0xFF, f) == EOF)
+	return 0;
+    if (fputc(val & 0xFF, f) == EOF)
+	return 0;
+    return 1;
+}
+
+size_t
+fwrite_32_b(unsigned long val, FILE *f)
+{
+    if (fputc((int)((val >> 24) & 0xFF), f) == EOF)
+	return 0;
+    if (fputc((int)((val >> 16) & 0xFF), f) == EOF)
+	return 0;
+    if (fputc((int)((val >> 8) & 0xFF), f) == EOF)
+	return 0;
+    if (fputc((int)(val & 0xFF), f) == EOF)
 	return 0;
     return 1;
 }

@@ -771,3 +771,27 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
     }
     return 1;
 }
+
+int
+x86_floatnum_tobytes(const floatnum *flt, unsigned char **bufp,
+		     unsigned long valsize, const expr *e)
+{
+    int fltret;
+
+    if (!floatnum_check_size(flt, (size_t)valsize)) {
+	ErrorAt(e->line, _("invalid floating point constant size"));
+	return 1;
+    }
+
+    fltret = floatnum_get_sized(flt, *bufp, (size_t)valsize);
+    if (fltret < 0) {
+	ErrorAt(e->line, _("underflow in floating point expression"));
+	return 1;
+    }
+    if (fltret > 0) {
+	ErrorAt(e->line, _("overflow in floating point expression"));
+	return 1;
+    }
+    *bufp += valsize;
+    return 0;
+}

@@ -551,7 +551,7 @@ intnum_get_sized(const intnum *intn, unsigned char *ptr, size_t size)
 	case INTNUM_UL:
 	    ul = intn->val.ul;
 	    while (size-- > 0) {
-		WRITE_BYTE(ptr, ul);
+		WRITE_8(ptr, ul);
 		if (ul != 0)
 		    ul >>= 8;
 	    }

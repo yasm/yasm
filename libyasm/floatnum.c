@@ -529,7 +529,7 @@ floatnum_get_int(const floatnum *flt, unsigned long *ret_val)
 	return 1;
     }
 
-    LOAD_LONG(*ret_val, &t[0]);
+    LOAD_32_L(*ret_val, &t[0]);
     return 0;
 }
 

@@ -668,7 +668,7 @@ bc_tobytes_data(bytecode_data *bc_data, unsigned char **bufp,
 		if (slen > 0) {
 		    slen = bc_data->size-slen;
 		    for (i=0; i<slen; i++)
-			WRITE_BYTE(*bufp, 0);
+			WRITE_8(*bufp, 0);
 		}
 		break;
 	}

@@ -37,6 +37,7 @@
 #include "expr-int.h"
 #include "bc-int.h"
 
+#include "arch.h"
 #include "objfmt.h"
 
 
@@ -106,7 +107,7 @@ bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
 		       /*@observer@*/ const bytecode *bc, int rel,
 		       /*@unused@*/ /*@null@*/ void *d)
 {
-    /*@dependent@*/ /*@null@*/ const intnum *num;
+    /*@dependent@*/ /*@null@*/ const intnum *intn;
     /*@dependent@*/ /*@null@*/ const floatnum *flt;
 
     assert(info != NULL);
@@ -120,54 +121,13 @@ bin_objfmt_output_expr(expr **ep, unsigned char **bufp, unsigned long valsize,
 
     /* Handle floating point expressions */
     flt = expr_get_floatnum(ep);
-    if (flt) {
-	int fltret;
-
-	if (!floatnum_check_size(flt, (size_t)valsize)) {
-	    ErrorAt((*ep)->line, _("invalid floating point constant size"));
-	    return 1;
-	}
-
-	fltret = floatnum_get_sized(flt, *bufp, (size_t)valsize);
-	if (fltret < 0) {
-	    ErrorAt((*ep)->line, _("underflow in floating point expression"));
-	    return 1;
-	}
-	if (fltret > 0) {
-	    ErrorAt((*ep)->line, _("overflow in floating point expression"));
-	    return 1;
-	}
-	*bufp += valsize;
-	return 0;
-    }
+    if (flt)
+	return cur_arch->floatnum_tobytes(flt, bufp, valsize, *ep);
 
     /* Handle integer expressions */
-    num = expr_get_intnum(ep, NULL);
-    if (num) {
-	if (rel) {
-	    long val;
-	    if (valsize != 1 && valsize != 2 && valsize != 4)
-		InternalError(_("tried to do PC-relative offset from invalid sized value"));
-	    val = intnum_get_uint(num);
-	    val -= bc->len;
-	    switch (valsize) {
-		case 1:
-		    WRITE_BYTE(*bufp, val);
-		    break;
-		case 2:
-		    WRITE_SHORT(*bufp, val);
-		    break;
-		case 4:
-		    WRITE_LONG(*bufp, val);
-		    break;
-	    }
-	} else {
-	    /* Write value out. */
-	    intnum_get_sized(num, *bufp, (size_t)valsize);
-	    *bufp += valsize;
-	}
-	return 0;
-    }
+    intn = expr_get_intnum(ep, NULL);
+    if (intn)
+	return cur_arch->intnum_tobytes(intn, bufp, valsize, *ep, bc, rel);
 
     /* Check for complex float expressions */
     if (expr_contains(*ep, EXPR_FLOAT)) {

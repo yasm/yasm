@@ -726,17 +726,17 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
 
     /* Prefixes */
     if (insn->lockrep_pre != 0)
-	WRITE_BYTE(*bufp, insn->lockrep_pre);
+	WRITE_8(*bufp, insn->lockrep_pre);
     if (ea && ead->segment != 0)
-	WRITE_BYTE(*bufp, ead->segment);
+	WRITE_8(*bufp, ead->segment);
     if (insn->opersize != 0 && insn->opersize != insn->mode_bits)
-	WRITE_BYTE(*bufp, 0x66);
+	WRITE_8(*bufp, 0x66);
     if (insn->addrsize != 0 && insn->addrsize != insn->mode_bits)
-	WRITE_BYTE(*bufp, 0x67);
+	WRITE_8(*bufp, 0x67);
 
     /* Opcode */
     for (i=0; i<insn->opcode_len; i++)
-	WRITE_BYTE(*bufp, insn->opcode[i]);
+	WRITE_8(*bufp, insn->opcode[i]);
 
     /* Effective address: ModR/M (if required), SIB (if required), and
      * displacement (if required).
@@ -745,13 +745,13 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
 	if (ead->need_modrm) {
 	    if (!ead->valid_modrm)
 		InternalError(_("invalid Mod/RM in x86 tobytes_insn"));
-	    WRITE_BYTE(*bufp, ead->modrm);
+	    WRITE_8(*bufp, ead->modrm);
 	}
 
 	if (ead->need_sib) {
 	    if (!ead->valid_sib)
 		InternalError(_("invalid SIB in x86 tobytes_insn"));
-	    WRITE_BYTE(*bufp, ead->sib);
+	    WRITE_8(*bufp, ead->sib);
 	}
 
 	if (ea->disp) {
@@ -780,7 +780,7 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
 		 * write out 0 value.
 		 */
 		for (i=0; i<ea->len; i++)
-		    WRITE_BYTE(*bufp, 0);
+		    WRITE_8(*bufp, 0);
 	    }
 	}
     }
@@ -805,12 +805,12 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 
     /* Prefixes */
     if (jmprel->lockrep_pre != 0)
-	WRITE_BYTE(*bufp, jmprel->lockrep_pre);
+	WRITE_8(*bufp, jmprel->lockrep_pre);
     /* FIXME: branch hints! */
     if (jmprel->opersize != 0 && jmprel->opersize != jmprel->mode_bits)
-	WRITE_BYTE(*bufp, 0x66);
+	WRITE_8(*bufp, 0x66);
     if (jmprel->addrsize != 0 && jmprel->addrsize != jmprel->mode_bits)
-	WRITE_BYTE(*bufp, 0x67);
+	WRITE_8(*bufp, 0x67);
 
     /* As opersize may be 0, figure out its "real" value. */
     opersize = (jmprel->opersize == 0) ? jmprel->mode_bits :
@@ -826,7 +826,7 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 
 	    /* Opcode */
 	    for (i=0; i<jmprel->shortop.opcode_len; i++)
-		WRITE_BYTE(*bufp, jmprel->shortop.opcode[i]);
+		WRITE_8(*bufp, jmprel->shortop.opcode[i]);
 
 	    /* Relative displacement */
 	    if (output_expr(&jmprel->target, bufp, 1, sect, bc, 1, d))
@@ -842,7 +842,7 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 
 	    /* Opcode */
 	    for (i=0; i<jmprel->nearop.opcode_len; i++)
-		WRITE_BYTE(*bufp, jmprel->nearop.opcode[i]);
+		WRITE_8(*bufp, jmprel->nearop.opcode[i]);
 
 	    /* Relative displacement */
 	    if (output_expr(&jmprel->target, bufp,
@@ -876,3 +876,32 @@ x86_bc_tobytes(bytecode *bc, unsigned char **bufp, const section *sect,
     return 0;
 }
 
+int
+x86_intnum_tobytes(const intnum *intn, unsigned char **bufp,
+		   unsigned long valsize, const expr *e, const bytecode *bc,
+		   int rel)
+{
+    if (rel) {
+	long val;
+	if (valsize != 1 && valsize != 2 && valsize != 4)
+	    InternalError(_("tried to do PC-relative offset from invalid sized value"));
+	val = intnum_get_uint(intn);
+	val -= bc->len;
+	switch (valsize) {
+	    case 1:
+		WRITE_8(*bufp, val);
+		break;
+	    case 2:
+		WRITE_16_L(*bufp, val);
+		break;
+	    case 4:
+		WRITE_32_L(*bufp, val);
+		break;
+	}
+    } else {
+	/* Write value out. */
+	intnum_get_sized(intn, *bufp, (size_t)valsize);
+	*bufp += valsize;
+    }
+    return 0;
+}

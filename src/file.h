@@ -1,5 +1,5 @@
 /* $IdPath$
- * Little-endian file functions header file.
+ * Big and little endian file functions header file.
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -33,16 +33,16 @@
 
 /* These functions only work properly if p is an (unsigned char *) */
 
-#define WRITE_BYTE(ptr, val)			\
+#define WRITE_8(ptr, val)			\
 	*((ptr)++) = (unsigned char)((val) & 0xFF)
 
-#define WRITE_SHORT(ptr, val)			\
+#define WRITE_16_L(ptr, val)			\
 	do {					\
 	    *((ptr)++) = (unsigned char)((val) & 0xFF);		\
 	    *((ptr)++) = (unsigned char)(((val) >> 8) & 0xFF);	\
 	} while (0)
 
-#define WRITE_LONG(ptr, val)			\
+#define WRITE_32_L(ptr, val)			\
 	do {					\
 	    *((ptr)++) = (unsigned char)((val) & 0xFF);		\
 	    *((ptr)++) = (unsigned char)(((val) >> 8) & 0xFF);	\
@@ -50,23 +50,52 @@
 	    *((ptr)++) = (unsigned char)(((val) >> 24) & 0xFF);	\
 	} while (0)
 
+#define WRITE_16_B(ptr, val)			\
+	do {					\
+	    *((ptr)++) = (unsigned char)(((val) >> 8) & 0xFF);	\
+	    *((ptr)++) = (unsigned char)((val) & 0xFF);		\
+	} while (0)
+
+#define WRITE_32_B(ptr, val)			\
+	do {					\
+	    *((ptr)++) = (unsigned char)(((val) >> 24) & 0xFF);	\
+	    *((ptr)++) = (unsigned char)(((val) >> 16) & 0xFF);	\
+	    *((ptr)++) = (unsigned char)(((val) >> 8) & 0xFF);	\
+	    *((ptr)++) = (unsigned char)((val) & 0xFF);		\
+	} while (0)
+
+
 /* Non-incrementing versions of the above. */
 
-#define SAVE_BYTE(ptr, val)			\
+#define SAVE_8(ptr, val)			\
 	*(ptr) = (unsigned char)((val) & 0xFF)
 
-#define SAVE_SHORT(ptr, val)			\
+#define SAVE_16_L(ptr, val)			\
 	do {					\
 	    *(ptr) = (unsigned char)((val) & 0xFF);		\
 	    *((ptr)+1) = (unsigned char)(((val) >> 8) & 0xFF);	\
 	} while (0)
 
-#define SAVE_LONG(ptr, val)			\
+#define SAVE_32_L(ptr, val)			\
 	do {					\
 	    *(ptr) = (unsigned char)((val) & 0xFF);		\
 	    *((ptr)+1) = (unsigned char)(((val) >> 8) & 0xFF);	\
 	    *((ptr)+2) = (unsigned char)(((val) >> 16) & 0xFF);	\
 	    *((ptr)+3) = (unsigned char)(((val) >> 24) & 0xFF);	\
+	} while (0)
+
+#define SAVE_16_B(ptr, val)			\
+	do {					\
+	    *(ptr) = (unsigned char)(((val) >> 8) & 0xFF);	\
+	    *((ptr)+1) = (unsigned char)((val) & 0xFF);		\
+	} while (0)
+
+#define SAVE_32_B(ptr, val)			\
+	do {					\
+	    *(ptr) = (unsigned char)(((val) >> 24) & 0xFF);	\
+	    *((ptr)+1) = (unsigned char)(((val) >> 16) & 0xFF);	\
+	    *((ptr)+2) = (unsigned char)(((val) >> 8) & 0xFF);	\
+	    *((ptr)+3) = (unsigned char)((val) & 0xFF);		\
 	} while (0)
 
 /* Direct-to-file versions of the above.  Using the above macros and a single
@@ -75,21 +104,23 @@
  * return values can be used like the return value from fwrite()).
  */
 
-size_t fwrite_short(unsigned short val, FILE *f);
-size_t fwrite_long(unsigned long val, FILE *f);
+size_t fwrite_16_l(unsigned short val, FILE *f);
+size_t fwrite_32_l(unsigned long val, FILE *f);
+size_t fwrite_16_b(unsigned short val, FILE *f);
+size_t fwrite_32_b(unsigned long val, FILE *f);
 
 /* Read/Load versions.  val is the variable to receive the data. */
 
-#define READ_BYTE(val, ptr)			\
+#define READ_8(val, ptr)			\
 	(val) = *((ptr)++) & 0xFF
 
-#define READ_SHORT(val, ptr)			\
+#define READ_16_L(val, ptr)			\
 	do {					\
 	    (val) = *((ptr)++) & 0xFF;		\
 	    (val) |= (*((ptr)++) & 0xFF) << 8;	\
 	} while (0)
 
-#define READ_LONG(val, ptr)			\
+#define READ_32_L(val, ptr)			\
 	do {					\
 	    (val) = *((ptr)++) & 0xFF;		\
 	    (val) |= (*((ptr)++) & 0xFF) << 8;	\
@@ -97,23 +128,51 @@ size_t fwrite_long(unsigned long val, FILE *f);
 	    (val) |= (*((ptr)++) & 0xFF) << 24;	\
 	} while (0)
 
+#define READ_16_B(val, ptr)			\
+	do {					\
+	    (val) = (*((ptr)++) & 0xFF) << 8;	\
+	    (val) |= *((ptr)++) & 0xFF;		\
+	} while (0)
+
+#define READ_32_B(val, ptr)			\
+	do {					\
+	    (val) = (*((ptr)++) & 0xFF) << 24;	\
+	    (val) |= (*((ptr)++) & 0xFF) << 16;	\
+	    (val) |= (*((ptr)++) & 0xFF) << 8;	\
+	    (val) |= *((ptr)++) & 0xFF;		\
+	} while (0)
+
 /* Non-incrementing versions of the above. */
 
-#define LOAD_BYTE(val, ptr)			\
+#define LOAD_8(val, ptr)			\
 	(val) = *(ptr) & 0xFF
 
-#define LOAD_SHORT(val, ptr)			\
+#define LOAD_16_L(val, ptr)			\
 	do {					\
 	    (val) = *(ptr) & 0xFF;		\
 	    (val) |= (*((ptr)+1) & 0xFF) << 8;	\
 	} while (0)
 
-#define LOAD_LONG(val, ptr)			\
+#define LOAD_32_L(val, ptr)			\
 	do {					\
 	    (val) = (unsigned long)(*(ptr) & 0xFF);		    \
 	    (val) |= (unsigned long)((*((ptr)+1) & 0xFF) << 8);	    \
 	    (val) |= (unsigned long)((*((ptr)+2) & 0xFF) << 16);    \
 	    (val) |= (unsigned long)((*((ptr)+3) & 0xFF) << 24);    \
+	} while (0)
+
+#define LOAD_16_B(val, ptr)			\
+	do {					\
+	    (val) = (*(ptr) & 0xFF) << 8;	\
+	    (val) |= *((ptr)+1) & 0xFF;		\
+	} while (0)
+
+#define LOAD_32_B(val, ptr)			\
+	do {					\
+	    (val) = (unsigned long)((*(ptr) & 0xFF) << 24);	    \
+	    (val) |= (unsigned long)((*((ptr)+1) & 0xFF) << 16);    \
+	    (val) |= (unsigned long)((*((ptr)+2) & 0xFF) << 8);	    \
+	    (val) |= (unsigned long)(*((ptr)+3) & 0xFF);	    \
 	} while (0)
 
 #endif

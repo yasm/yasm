@@ -220,6 +220,12 @@ void x86_handle_seg_prefix(bytecode *bc, unsigned long segreg);
 
 void x86_handle_seg_override(effaddr *ea, unsigned long segreg);
 
+int x86_floatnum_tobytes(const floatnum *flt, unsigned char **bufp,
+			 unsigned long valsize, const expr *e);
+int x86_intnum_tobytes(const intnum *intn, unsigned char **bufp,
+		       unsigned long valsize, const expr *e,
+		       const bytecode *bc, int rel);
+
 unsigned int x86_get_reg_size(unsigned long reg);
 
 void x86_reg_print(FILE *f, unsigned long reg);
