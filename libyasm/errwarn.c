@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.11 2001/06/28 08:48:32 peter Exp $
+/* $Id: errwarn.c,v 1.12 2001/06/29 02:12:15 peter Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -84,7 +84,7 @@ char *conv_unprint(char ch)
     if(((ch & ~0x7F) != 0)/*!isascii(ch)*/ && !isprint(ch)) {
 	unprint[pos++] = 'M';
 	unprint[pos++] = '-';
-	ch &= 0x7F; /* toascii(ch) */
+	ch &= toascii(ch);
     }
     if(iscntrl(ch)) {
 	unprint[pos++] = '^';
