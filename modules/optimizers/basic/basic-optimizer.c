@@ -135,25 +135,29 @@ basic_optimize_section_1(section *sect, /*@unused@*/ /*@null@*/ void *d)
 
     return 0;
 }
-#if 0
+
 static int
 basic_optimize_bytecode_2(bytecode *bc, /*@unused@*/ /*@null@*/ void *d)
 {
-    if (bc->opt_flags != BCFLAG_DONE)
-	return 0;
+    if (bc->opt_flags != BCFLAG_DONE) {
+	InternalError(_("Optimizer pass 1 missed a bytecode!"));
+	return -1;
+    }
     bc_resolve(bc, basic_optimize_resolve_label);
-    return 1;
+    return 0;
 }
 
 static int
 basic_optimize_section_2(section *sect, /*@unused@*/ /*@null@*/ void *d)
 {
-    if (section_get_opt_flags(sect) != SECTFLAG_DONE)
-	return 0;
+    if (section_get_opt_flags(sect) != SECTFLAG_DONE) {
+	InternalError(_("Optimizer pass 1 missed a section!"));
+	return -1;
+    }
     return bcs_traverse(section_get_bytecodes(sect), NULL,
 			basic_optimize_bytecode_2);
 }
-#endif
+
 static void
 basic_optimize(sectionhead *sections)
 {
@@ -175,8 +179,7 @@ basic_optimize(sectionhead *sections)
     /* Pass 2:
      *  Resolve (compute value of) forward references.
      */
-    /*sections_traverse(sections, NULL, basic_optimize_section_2);*/
-    return;
+    sections_traverse(sections, NULL, basic_optimize_section_2);
 }
 
 /* Define optimizer structure -- see optimizer.h for details */
