@@ -1,7 +1,7 @@
-/* $Id: symrec.c,v 1.1 2001/05/15 05:24:04 peter Exp $
+/* $Id: symrec.c,v 1.2 2001/06/13 05:43:59 mu Exp $
  * Symbol table handling
  *
- *  Copyright (C) 2001  Peter Johnson
+ *  Copyright (C) 2001  Michael Urman
  *
  *  This file is part of YASM.
  *
@@ -22,10 +22,105 @@
 #include <stdlib.h>
 #include <string.h>
 #include "symrec.h"
+#include "globals.h"
+#include "errwarn.h"
 
-/* The symbol table: a chain of `symrec'. */
-symrec *sym_table = (symrec *)NULL;
+/* private functions */
+static symtab *symtab_get (char *);
+static symtab *symtab_new (char *, SymType);
+static symtab *symtab_get_or_new (char *, SymType);
+static void symtab_insert (symtab *);
 
+/* The symbol table: a chain of `symtab'. */
+symtab *sym_table = (symtab *)NULL;
+
+/* insert a symtab into the global sym_table */
+void symtab_insert (symtab *tab)
+{
+    tab->next = (symtab *)sym_table;
+    sym_table = tab;
+}
+
+/* find a symtab in the global sym_table */
+symtab *symtab_get (char *name)
+{
+    symtab *tab;
+    for (tab = sym_table; tab != NULL; tab = tab->next)
+    {
+	if (strcmp (tab->rec.name, name) == 0)
+	{
+	    return tab;
+	}
+    }
+    return NULL;
+}
+
+/* call a function with each symrec.  stop early if 0 returned */
+void sym_foreach (int(*mapfunc)(symrec *))
+{
+    symtab *tab;
+    for (tab = sym_table; tab != NULL; tab = tab->next)
+    {
+	if (mapfunc(&(tab->rec)) == 0)
+	{
+	    return;
+	}
+    }
+}
+
+/* create a new symtab */
+symtab *symtab_new (char *name, SymType type)
+{
+    symtab *tab;
+    tab = malloc(sizeof(symtab));
+    if (tab == NULL) return NULL;
+    tab->rec.name = malloc(strlen(name)+1);
+    if (tab->rec.name == NULL)
+    {
+	free (tab);
+	return NULL;
+    }
+    strcpy(tab->rec.name, name);
+    tab->rec.type = type;
+    tab->rec.value = 0;
+    tab->rec.line = line_number;
+    tab->rec.status = SYM_NOSTATUS;
+    symtab_insert (tab);
+    return tab;
+}
+
+symtab *symtab_get_or_new (char *name, SymType type)
+{
+    symtab *tab;
+    tab = symtab_get (name);
+    if (tab == NULL)
+    {
+	tab = symtab_new (name, type);
+	if (tab == NULL)
+	{
+	    Fatal (FATAL_NOMEM);
+	}
+    }
+    return tab;
+}
+
+symrec *sym_use_get (char *name, SymType type)
+{
+    symtab *tab;
+    tab = symtab_get_or_new (name, type);
+    tab->rec.status |= SYM_USED;
+    return &(tab->rec);
+}
+
+symrec *sym_def_get (char *name, SymType type)
+{
+    symtab *tab;
+    tab = symtab_get_or_new (name, type);
+    tab->rec.status |= SYM_DECLARED;
+    return &(tab->rec);
+}
+
+#if 0
 symrec *putsym(char *sym_name, int sym_type)
 {
     symrec *ptr;
@@ -47,4 +142,4 @@ symrec *getsym(char *sym_name)
 	    return ptr;
     return 0;
 }
-
+#endif /* 0 */

@@ -1,7 +1,7 @@
-/* $Id: nasm-bison.y,v 1.9 2001/05/30 07:41:27 peter Exp $
+/* $Id: nasm-bison.y,v 1.10 2001/06/13 05:43:59 mu Exp $
  * Main bison parser
  *
- *  Copyright (C) 2001  Peter Johnson
+ *  Copyright (C) 2001  Peter Johnson, Michael Urman
  *
  *  This file is part of YASM.
  *
@@ -40,6 +40,10 @@ extern void yyerror(char *);
     char *str_val;
     double double_val;
     symrec *sym;
+    struct {
+	char *name;
+	int line;
+    } syminfo;
     effaddr ea_val;
     immval im_val;
     bytecode bc;
@@ -63,14 +67,14 @@ extern void yyerror(char *);
 %token <int_val> REG_ES REG_CS REG_SS REG_DS REG_FS REG_GS
 %token LEFT_OP RIGHT_OP SIGNDIV SIGNMOD
 %token START_SECTION_OFFSET ENTRY_POINT
-%token <sym> ID
+%token <syminfo> ID LOCAL_ID SPECIAL_ID
 
 /* instruction tokens (dynamically generated) */
 /* @TOKENS@ */
 
 /* @TYPES@ */
 
-%type <bc> line exp instr instrbase
+%type <bc> line exp instr instrbase label
 
 %type <int_val> fpureg reg32 reg16 reg8 segreg
 %type <ea_val> mem memaddr memexp
@@ -79,6 +83,7 @@ extern void yyerror(char *);
 %type <ea_val> rm8x rm16x rm32x /*rm64x rm128x*/
 %type <ea_val> rm8 rm16 rm32 rm64 rm128
 %type <im_val> immexp imm imm8x imm16x imm32x imm8 imm16 imm32
+%type <sym> label_id
 
 %left '-' '+'
 %left '*' '/'
@@ -90,11 +95,22 @@ input: /* empty */
 
 line: '\n'	{ $$.len = 0; }
     | exp '\n' { DebugPrintBC(&$1); $$ = $1; }
+    | label exp '\n' { DebugPrintBC(&$2); $$ = $2; }
+    | label '\n'
     | directive '\n' { }
     | error '\n' { Error(ERR_INVALID_LINE, (char *)NULL); yyerrok; }
 ;
 
 exp: instr
+;
+
+label: label_id { $1->value = 0; } /* TODO: calculate offset */
+    | label_id ':' { $1->value = 0; } /* TODO: calculate offset */
+;
+
+label_id: ID { $$ = locallabel_base = sym_def_get ($1.name, SYM_LABEL); }
+    | SPECIAL_ID { $$ = sym_def_get ($1.name, SYM_LABEL); }
+    | LOCAL_ID { $$ = sym_def_get ($1.name, SYM_LABEL); }
 ;
 
 /* directives */

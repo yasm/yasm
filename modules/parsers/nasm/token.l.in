@@ -1,4 +1,4 @@
-/* $Id: token.l.in,v 1.5 2001/05/21 22:10:02 peter Exp $
+/* $Id: token.l.in,v 1.6 2001/06/13 05:43:59 mu Exp $
  * Main lexer
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -25,13 +25,15 @@
 #include "symrec.h"
 #include "bytecode.h"
 #include "errwarn.h"
+#include "util.h"
 #include "bison.tab.h"
 
 %}
 %option noyywrap
 %option nounput
 %option case-insensitive
-    static char *locallabel_base = (char *)NULL;
+    symrec *locallabel_base = (symrec *)NULL;
+    int line_number;
 
 %x DIRECTIVE DIRECTIVE2
 
@@ -88,14 +90,14 @@ WS       [ \t\r]
 <DIRECTIVE2>{WS}+   ;
 <DIRECTIVE>[a-z]+   {
     BEGIN DIRECTIVE2;
-    yylval.str_val = strdup(yytext);
+    yylval.str_val = y_strdup(yytext);
     if(!yylval.str_val)
 	Fatal(FATAL_NOMEM);
     return DIRECTIVE_NAME;
 }
     /* everything printable except for ' ', '[' and ']'. */
 <DIRECTIVE2>[!-@a-z\\^-`{|}~]+ {
-    yylval.str_val = strdup(yytext);
+    yylval.str_val = y_strdup(yytext);
     if(!yylval.str_val)
 	Fatal(FATAL_NOMEM);
     return DIRECTIVE_VAL;
@@ -220,21 +222,33 @@ gs	{ yylval.int_val = 5; return REG_GS; }
 
     /* special non-local ..@label */
 \.\.@[a-z0-9_$#@~.?]+ {
-    symrec *s = getsym(yytext);
-    if(!s)
-	s = putsym(yytext, ID);
-    yylval.sym = s;
-    return s->type;
+    yylval.syminfo.name = y_strdup (yytext);
+    if (yylval.syminfo.name == NULL) Fatal (FATAL_NOMEM);
+    yylval.syminfo.line = line_number;
+
+    return SPECIAL_ID;
 }
 
     /* local label (.label) */
 \.[a-z0-9_$#@~?][a-z0-9_$#@~.?]* {
-    /* TODO: append yytext to locallabel_base before testing */
-    symrec *s = getsym(yytext);
-    if(!s)
-	s = putsym(yytext, ID);
-    yylval.sym = s;
-    return s->type;
+    if (locallabel_base == NULL) 
+    {
+	Warning (WARN_NO_BASE_LABEL, (char *)NULL, yytext);
+	yylval.syminfo.name = y_strdup (yytext);
+	if (yylval.syminfo.name == NULL) Fatal (FATAL_NOMEM);
+    }
+    else
+    {
+	yylval.syminfo.name = malloc (strlen (yytext)
+				  + strlen (locallabel_base->name)
+				  + 1);
+	if (yylval.syminfo.name == NULL) Fatal (FATAL_NOMEM);
+	strcpy (yylval.syminfo.name, locallabel_base->name);
+	strcat (yylval.syminfo.name, yytext);
+    }
+    yylval.syminfo.line = line_number;
+
+    return LOCAL_ID;
 }
 
     /* instructions */
@@ -242,19 +256,11 @@ gs	{ yylval.int_val = 5; return REG_GS; }
 
     /* label */
 [a-z_?][a-z0-9_$#@~.?]* {
-    symrec *s = getsym(yytext);
-    if(!s)
-	s = putsym(yytext, ID);
-    yylval.sym = s;
+    yylval.syminfo.name = y_strdup (yytext);
+    if (yylval.syminfo.name == NULL) Fatal (FATAL_NOMEM);
+    yylval.syminfo.line = line_number;
 
-    /* TODO: optimize to decrease number of allocations */
-    if(locallabel_base)
-	free(locallabel_base);
-    locallabel_base = strdup(yytext);
-    if(!locallabel_base)
-	Fatal(FATAL_NOMEM);
-
-    return s->type;
+    return ID;
 }
 
 ;.*	;

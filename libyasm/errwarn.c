@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.5 2001/05/30 07:38:42 peter Exp $
+/* $Id: errwarn.c,v 1.6 2001/06/13 05:43:59 mu Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -51,7 +51,8 @@ static char *warn_msgs[] = {
     "ignoring unrecognized character '%s'",
     "%s value exceeds bounds",
     "multiple segment overrides, using leftmost",
-    "multiple LOCK or REP prefixes, using leftmost"
+    "multiple LOCK or REP prefixes, using leftmost",
+    "no non-local label before '%s'"
 };
 
 /* hate to define these as static buffers; better solution would be to use

@@ -1,7 +1,7 @@
-/* $Id: symrec.h,v 1.2 2001/05/18 21:40:54 peter Exp $
+/* $Id: symrec.h,v 1.3 2001/06/13 05:43:59 mu Exp $
  * Symbol table handling header file
  *
- *  Copyright (C) 2001  Peter Johnson
+ *  Copyright (C) 2001  Michael Urman
  *
  *  This file is part of YASM.
  *
@@ -22,19 +22,39 @@
 #ifndef _SYMREC_H_
 #define _SYMREC_H_
 
+typedef enum {
+    SYM_NOSTATUS = 0,
+    SYM_USED	 = 1 << 0,  /* for using variables before declared */
+    SYM_DECLARED = 1 << 1,  /* once it's been declared */
+    SYM_VALUED	 = 1 << 2   /* once its value has been determined */
+} SymStatus;
+
+typedef enum {
+    SYM_CONSTANT,	    /* for EQU defined symbols */
+    SYM_LABEL,		    /* for labels */
+    SYM_DATA		    /* for variables */
+} SymType;
+
 typedef struct symrec_s {
     char *name;
-    int type;
-    union {
-	double var;
-	double (*fnctptr)(void);
-    } value;
-    struct symrec_s *next;
+    SymType type;
+    SymStatus status;
+    int line;
+    double value;
 } symrec;
 
-extern symrec *sym_table;
+typedef struct symtab_s {
+    symrec rec;
+    struct symtab_s *next;
+} symtab;
 
-symrec *putsym(char *, int);
-symrec *getsym(char *);
+extern symtab *sym_table;
+
+/*symrec *putsym(char *, SymType);*/
+/*symrec *getsym(char *);*/
+
+symrec *sym_use_get (char *, SymType);
+symrec *sym_def_get (char *, SymType);
+void sym_foreach (int(*)(symrec *));
 
 #endif

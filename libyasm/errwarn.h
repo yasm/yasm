@@ -1,4 +1,4 @@
-/* $Id: errwarn.h,v 1.4 2001/05/30 07:38:42 peter Exp $
+/* $Id: errwarn.h,v 1.5 2001/06/13 05:43:59 mu Exp $
  * Error and warning reporting and related functions header file.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -49,7 +49,8 @@ typedef enum {
     WARN_UNREC_CHAR,
     WARN_VALUE_EXCEEDS_BOUNDS,
     WARN_MULT_SEG_OVERRIDE,
-    WARN_MULT_LOCKREP_PREFIX
+    WARN_MULT_LOCKREP_PREFIX,
+    WARN_NO_BASE_LABEL
 } warn_num;
 
 void Warning(warn_num, char *, ...);

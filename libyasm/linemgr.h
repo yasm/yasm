@@ -1,4 +1,4 @@
-/* $Id: linemgr.h,v 1.1 2001/05/15 05:28:06 peter Exp $
+/* $Id: linemgr.h,v 1.2 2001/06/13 05:43:59 mu Exp $
  * Globals header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -24,5 +24,6 @@
 
 extern unsigned int line_number;
 extern unsigned int mode_bits;
+extern struct symrec_s *locallabel_base;
 
 #endif
