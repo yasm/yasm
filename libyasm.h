@@ -64,6 +64,8 @@
 #include <libyasm/parser.h>
 #include <libyasm/preproc.h>
 
+#include <libyasm/file.h>
+
 #ifdef YASM_INTERNAL
 #ifdef YASM_BC_INTERNAL
 #include <libyasm/bc-int.h>
@@ -71,7 +73,6 @@
 #ifdef YASM_EXPR_INTERNAL
 #include <libyasm/expr-int.h>
 #endif
-#include <libyasm/file.h>
 #include <libyasm/hamt.h>
 #include <libyasm/bitvect.h>
 #endif
