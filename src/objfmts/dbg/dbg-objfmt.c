@@ -151,39 +151,6 @@ dbg_objfmt_common_data_new(const char *name, /*@only@*/ expr *size,
     return size;
 }
 
-static void *
-dbg_objfmt_declare_data_copy(SymVisibility vis, const void *data)
-{
-    void *retval = NULL;
-
-    assert(debug_file != NULL);
-    fprintf(debug_file, "%*sdeclare_data_copy(", indent_level, "");
-    switch (vis) {
-	case SYM_LOCAL:
-	    fprintf(debug_file, "Local, ");
-	    break;
-	case SYM_GLOBAL:
-	    fprintf(debug_file, "Global, ");
-	    break;
-	case SYM_COMMON:
-	    fprintf(debug_file, "Common, ");
-	    break;
-	case SYM_EXTERN:
-	    fprintf(debug_file, "Extern, ");
-	    break;
-    }
-    if (vis == SYM_COMMON) {
-	expr_print(debug_file, data);
-	retval = expr_copy(data);
-    } else {
-	fprintf(debug_file, "%p", data);
-	InternalError(_("Trying to copy unrecognized objfmt data"));
-    }
-    fprintf(debug_file, "), returning copy\n");
-
-    return retval;
-}
-
 static void
 dbg_objfmt_declare_data_delete(SymVisibility vis, /*@only@*/ void *data)
 {
@@ -226,6 +193,14 @@ dbg_objfmt_declare_data_print(FILE *f, SymVisibility vis,
     }
 }
 
+static void
+dbg_objfmt_symrec_data_delete(/*@only@*/ void *data)
+{
+    assert(debug_file != NULL);
+    fprintf(debug_file, "%*ssymrec_data_delete(%p)\n", indent_level, "", data);
+    xfree(data);
+}
+
 static int
 dbg_objfmt_directive(const char *name, valparamhead *valparams,
 		     /*@null@*/ valparamhead *objext_valparams,
@@ -238,6 +213,22 @@ dbg_objfmt_directive(const char *name, valparamhead *valparams,
     vps_print(debug_file, objext_valparams);
     fprintf(debug_file, "), returning 0 (recognized)\n");
     return 0;	    /* dbg format "recognizes" all directives */
+}
+
+static void
+dbg_objfmt_bc_objfmt_data_delete(unsigned int type, /*@only@*/ void *data)
+{
+    assert(debug_file != NULL);
+    fprintf(debug_file, "%*ssymrec_data_delete(%u, %p)\n", indent_level, "",
+	    type, data);
+    xfree(data);
+}
+
+static void
+dbg_objfmt_bc_objfmt_data_print(FILE *f, unsigned int type, const void *data)
+{
+    fprintf(f, "%*sType=%u\n", indent_level, "", type);
+    fprintf(f, "%*sData=%p\n", indent_level, "", data);
 }
 
 /* Define objfmt structure -- see objfmt.h for details */
@@ -256,8 +247,10 @@ objfmt yasm_dbg_LTX_objfmt = {
     dbg_objfmt_extern_data_new,
     dbg_objfmt_global_data_new,
     dbg_objfmt_common_data_new,
-    dbg_objfmt_declare_data_copy,
     dbg_objfmt_declare_data_delete,
     dbg_objfmt_declare_data_print,
-    dbg_objfmt_directive
+    dbg_objfmt_symrec_data_delete,
+    dbg_objfmt_directive,
+    dbg_objfmt_bc_objfmt_data_delete,
+    dbg_objfmt_bc_objfmt_data_print
 };

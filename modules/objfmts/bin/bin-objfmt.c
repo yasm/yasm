@@ -465,9 +465,9 @@ objfmt yasm_bin_LTX_objfmt = {
     bin_objfmt_extern_data_new,
     bin_objfmt_global_data_new,
     bin_objfmt_common_data_new,
-    NULL /*bin_objfmt_declare_data_copy*/,
     NULL /*bin_objfmt_declare_data_delete*/,
     NULL /*bin_objfmt_declare_data_print*/,
+    NULL /*bin_objfmt_symrec_data_delete*/,
     bin_objfmt_directive,
     NULL /*bin_objfmt_bc_objfmt_data_delete*/,
     NULL /*bin_objfmt_bc_objfmt_data_print*/

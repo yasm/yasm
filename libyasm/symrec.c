@@ -74,6 +74,9 @@ struct symrec {
     /*@null@*/ /*@owned@*/ void *of_data_vis_ce;
     /*@null@*/ /*@owned@*/ void *of_data_vis_g;
 
+    /* General objfmt-specific data */
+    /*@null@*/ /*@owned@*/ void *of_data;
+
     /* storage for optimizer flags */
     unsigned long opt_flags;
 };
@@ -117,6 +120,12 @@ symrec_delete_one(/*@only@*/ void *d)
 	else
 	    InternalError(_("don't know how to delete objfmt-specific declare data"));
     }
+    if (sym->of_data) {
+	if (cur_objfmt->symrec_data_delete)
+	    cur_objfmt->symrec_data_delete(sym->of_data);
+	else
+	    InternalError(_("don't know how to delete objfmt-specific data"));
+    }
     xfree(sym);
 }
 
@@ -130,6 +139,7 @@ symrec_new_common(/*@keep@*/ char *name)
     rec->visibility = SYM_LOCAL;
     rec->of_data_vis_ce = NULL;
     rec->of_data_vis_g = NULL;
+    rec->of_data = NULL;
     rec->opt_flags = 0;
     return rec;
 }
@@ -350,6 +360,24 @@ void
 symrec_set_opt_flags(symrec *sym, unsigned long opt_flags)
 {
     sym->opt_flags = opt_flags;
+}
+
+void *
+symrec_get_of_data(symrec *sym)
+{
+    return sym->of_data;
+}
+
+void
+symrec_set_of_data(symrec *sym, void *of_data)
+{
+    if (sym->of_data) {
+	if (cur_objfmt->symrec_data_delete)
+	    cur_objfmt->symrec_data_delete(sym->of_data);
+	else
+	    InternalError(_("don't know how to delete objfmt-specific data"));
+    }
+    sym->of_data = of_data;
 }
 
 static unsigned long firstundef_line;

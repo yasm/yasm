@@ -51,6 +51,11 @@ int symrec_get_label(const symrec *sym,
 unsigned long symrec_get_opt_flags(const symrec *sym);
 void symrec_set_opt_flags(symrec *sym, unsigned long opt_flags);
 
+/*@dependent@*/ /*@null@*/ void *symrec_get_of_data(symrec *sym);
+
+/* Caution: deletes any existing of_data */
+void symrec_set_of_data(symrec *sym, /*@only@*/ /*@null@*/ void *of_data);
+
 int /*@alt void@*/ symrec_traverse(/*@null@*/ void *d,
 				   int (*func) (symrec *sym,
 						/*@null@*/ void *d));

@@ -96,11 +96,12 @@ struct objfmt {
      * These functions may be NULL if no data is ever returned by the above
      * *_data_new() functions.
      */
-    /*@only@*/ void *
-	(*declare_data_copy)(SymVisibility vis, const void *data);
     void (*declare_data_delete)(SymVisibility vis, /*@only@*/ void *data);
     void (*declare_data_print)(FILE *f, SymVisibility vis,
 			       /*@null@*/ void *data);
+
+    /* May be NULL if symrec_set_of_data() is never called. */
+    void (*symrec_data_delete)(/*@only@*/ void *data);
 
     /* Object format-specific directive support.  Returns 1 if directive was
      * not recognized.  Returns 0 if directive was recognized, even if it
