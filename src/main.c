@@ -139,13 +139,18 @@ main(int argc, char *argv[])
     /* open the object file if not specified */
     if (!obj) {
 	/* build the object filename */
-	/* TODO: replace the existing extension; this just appends. */
+	char *exttail;
 	if (obj_filename)
 	    xfree(obj_filename);
 	assert(in_filename != NULL);
+	/* allocate enough space for full existing name + extension */
 	obj_filename = xmalloc(strlen(in_filename)+
 			       strlen(cur_objfmt->extension)+2);
-	sprintf(obj_filename, "%s.%s", in_filename, cur_objfmt->extension);
+	strcpy(obj_filename, in_filename);
+	exttail = strrchr(obj_filename, '.');
+	if (!exttail)
+	    exttail = strrchr(obj_filename, '\0');
+	sprintf(exttail, ".%s", cur_objfmt->extension);
 
 	/* open the built filename */
 	obj = fopen(obj_filename, "wb");
