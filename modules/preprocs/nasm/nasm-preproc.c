@@ -225,7 +225,6 @@ nasm_preproc_undefine_macro(yasm_preproc *preproc, const char *macroname)
 
 /* Define preproc structure -- see preproc.h for details */
 yasm_preproc_module yasm_nasm_LTX_preproc = {
-    YASM_PREPROC_VERSION,
     "Real NASM Preprocessor",
     "nasm",
     nasm_preproc_create,

@@ -227,7 +227,6 @@ basic_optimize(yasm_object *object)
 
 /* Define optimizer structure -- see optimizer.h for details */
 yasm_optimizer_module yasm_basic_LTX_optimizer = {
-    YASM_OPTIMIZER_VERSION,
     "Only the most basic optimizations",
     "basic",
     basic_optimize

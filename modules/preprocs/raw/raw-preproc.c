@@ -115,7 +115,6 @@ raw_preproc_undefine_macro(yasm_preproc *preproc, const char *macroname)
 
 /* Define preproc structure -- see preproc.h for details */
 yasm_preproc_module yasm_raw_LTX_preproc = {
-    YASM_PREPROC_VERSION,
     "Disable preprocessing",
     "raw",
     raw_preproc_create,

@@ -44,25 +44,8 @@ typedef struct yasm_listfmt_base {
 } yasm_listfmt_base;
 #endif
 
-/** Version number of #yasm_listfmt_module interface.  Any functional change
- * to the #yasm_listfmt_module interface should simultaneously increment this
- * number.  This version should be checked by #yasm_listfmt loaders to verify
- * that the expected version (the version defined by its libyasm header files)
- * matches the loaded module version (the version defined by the module's
- * libyasm header files).  Doing this will ensure that the module version's
- * function definitions match the module loader's function definitions.  The
- * version number must never be decreased.
- */
-#define YASM_LISTFMT_VERSION	0
-
 /** YASM list format module interface. */
 typedef struct yasm_listfmt_module {
-    /** Version (see #YASM_LISTFMT_VERSION).  Should always be set to
-     * #YASM_LISTFMT_VERSION by the module source and checked against
-     * #YASM_LISTFMT_VERSION by the module loader.
-     */
-    unsigned int version;
-
     /** One-line description of the list format. */
     const char *name;
 

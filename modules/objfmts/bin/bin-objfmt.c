@@ -557,7 +557,6 @@ static const char *bin_objfmt_dbgfmt_keywords[] = {
 
 /* Define objfmt structure -- see objfmt.h for details */
 yasm_objfmt_module yasm_bin_LTX_objfmt = {
-    YASM_OBJFMT_VERSION,
     "Flat format binary",
     "bin",
     NULL,

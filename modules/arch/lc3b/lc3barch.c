@@ -115,7 +115,6 @@ static yasm_arch_machine lc3b_machines[] = {
 
 /* Define arch structure -- see arch.h for details */
 yasm_arch_module yasm_lc3b_LTX_arch = {
-    YASM_ARCH_VERSION,
     "LC-3b",
     "lc3b",
     lc3b_create,

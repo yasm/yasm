@@ -893,7 +893,6 @@ static const char *xdf_objfmt_dbgfmt_keywords[] = {
 
 /* Define objfmt structure -- see objfmt.h for details */
 yasm_objfmt_module yasm_xdf_LTX_objfmt = {
-    YASM_OBJFMT_VERSION,
     "Extended Dynamic Object",
     "xdf",
     "xdf",

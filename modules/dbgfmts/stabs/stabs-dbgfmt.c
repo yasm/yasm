@@ -500,7 +500,6 @@ stabs_dbgfmt_directive(yasm_dbgfmt *dbgfmt, const char *name,
 
 /* Define dbgfmt structure -- see dbgfmt.h for details */
 yasm_dbgfmt_module yasm_stabs_LTX_dbgfmt = {
-    YASM_DBGFMT_VERSION,
     "Stabs debugging format",
     "stabs",
     stabs_dbgfmt_create,

@@ -64,7 +64,6 @@ null_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
 
 /* Define dbgfmt structure -- see dbgfmt.h for details */
 yasm_dbgfmt_module yasm_null_LTX_dbgfmt = {
-    YASM_DBGFMT_VERSION,
     "No debugging info",
     "null",
     null_dbgfmt_create,

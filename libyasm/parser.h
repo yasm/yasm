@@ -34,25 +34,8 @@
 #ifndef YASM_PARSER_H
 #define YASM_PARSER_H
 
-/** Version number of #yasm_parser_module interface.  Any functional change to
- * the #yasm_parser_module interface should simultaneously increment this
- * number.  This version should be checked by #yasm_parser_module loaders to
- * verify that the expected version (the version defined by its libyasm header
- * files) matches the loaded module version (the version defined by the
- * module's libyasm header files).  Doing this will ensure that the module
- * version's function definitions match the module loader's function
- * definitions.  The version number must never be decreased.
- */
-#define YASM_PARSER_VERSION	1
-
 /** YASM parser module interface.  The "front end" of the assembler. */
 typedef struct yasm_parser_module {
-    /** Version (see #YASM_PARSER_VERSION).  Should always be set to
-     * #YASM_PARSER_VERSION by the module source and checked against
-     * #YASM_PARSER_VERSION by the module loader.
-     */
-    unsigned int version;
-
     /** One-line description of the parser */
     const char *name;
 

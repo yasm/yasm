@@ -277,7 +277,6 @@ nasm_listfmt_output(yasm_listfmt *listfmt, FILE *f, yasm_linemap *linemap,
 
 /* Define listfmt structure -- see listfmt.h for details */
 yasm_listfmt_module yasm_nasm_LTX_listfmt = {
-    YASM_LISTFMT_VERSION,
     "NASM-style list format",
     "nasm",
     nasm_listfmt_create,

@@ -90,18 +90,6 @@ typedef struct yasm_arch_machine {
     const char *keyword;
 } yasm_arch_machine;
 
-/** Version number of #yasm_arch_module interface.  Any functional change to
- * the #yasm_arch_module interface should simultaneously increment this number.
- * This version should be checked by #yasm_arch_module loaders (using
- * yasm_arch_module_get_version()) to verify that the expected version (the
- * version defined by its libyasm header files) matches the loaded module
- * version (the version defined by the module's libyasm header files).  Doing
- * this will ensure that the module version's function definitions match the
- * module loader's function definitions.  The version number must never be
- * decreased.
- */
-#define YASM_ARCH_VERSION	4
-
 /** YASM architecture module interface.
  * \note All "data" in parser-related functions (yasm_arch_parse_*) needs to
  *	 start the parse initialized to 0 to make it okay for a parser-related
@@ -109,12 +97,6 @@ typedef struct yasm_arch_machine {
  *	 called before on the same piece of data.
  */
 typedef struct yasm_arch_module {
-    /** Version (see #YASM_ARCH_VERSION).  Should always be set to
-     * #YASM_ARCH_VERSION by the module source and checked against
-     * #YASM_ARCH_VERSION by the module loader.
-     */
-    unsigned int version;
-
     /** One-line description of the architecture.
      * Call yasm_arch_name() to get the name of a particular #yasm_arch.
      */
