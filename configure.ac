@@ -137,7 +137,7 @@ AC_REPLACE_FUNCS([strsep mergesort])
 # Check for gettext() and other i18n/l10n things.
 #
 ALL_LINGUAS=""
-AM_GNU_GETTEXT
+AM_GNU_GETTEXT([external])
 # autoheader templates for AM_GNU_GETTEXT checks.
 AH_TEMPLATE([ENABLE_NLS], [])
 AH_TEMPLATE([HAVE_CATGETS], [])
@@ -277,7 +277,7 @@ AC_CONFIG_FILES([Makefile
 	tools/Makefile
 	tools/lemon/Makefile
 	tools/re2c/Makefile
-	intl/Makefile
+	m4/Makefile
 	po/Makefile.in
 ])
 AC_OUTPUT

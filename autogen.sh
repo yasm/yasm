@@ -3,6 +3,8 @@
 # Run this to set up the build system: configure, makefiles, etc.
 # (based on the version in enlightenment's cvs)
 
+ACLOCAL_FLAGS="-I m4"
+
 package="yasm"
 
 srcdir=`dirname $0`
@@ -73,10 +75,10 @@ if test ! -d "config"; then
 fi
 
 rm -f stamp-h.in
-echo "  aclocal $ACLOCAL_FLAGS"
-aclocal $ACLOCAL_FLAGS || exit 1
 echo "  gettextize -f"
 echo "N" | gettextize -f || exit 1
+echo "  aclocal $ACLOCAL_FLAGS"
+aclocal $ACLOCAL_FLAGS || exit 1
 echo "  autoheader"
 autoheader || exit 1
 echo "  automake -a"

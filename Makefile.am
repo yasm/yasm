@@ -1,14 +1,13 @@
 # $IdPath$
 
-SUBDIRS = tools intl po
+SUBDIRS = tools m4 po
 
 CFLAGS = @ANSI_CFLAGS@
 AM_YFLAGS = -d
 INCLUDES = \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/src \
-	-I$(top_srcdir)/check \
-	-Iintl
+	-I$(top_srcdir)/check
 
 bin_PROGRAMS = yasm
 TESTS =
@@ -19,7 +18,7 @@ yasm_LDADD = @LIBOBJS@ $(INTLLIBS)
 
 BUILT_SOURCES =
 CLEANFILES =
-EXTRA_DIST = \
+EXTRA_DIST = config/config.rpath  \
 	check/Makefile.inc	\
 	src/Makefile.inc
 
@@ -33,3 +32,5 @@ EXTRA_DIST += \
 	Mkfiles/Makefile.flat \
 	Mkfiles/Makefile.dj Mkfiles/dj/config.h \
 	Mkfiles/Makefile.vc Mkfiles/vc/config.h
+
+ACLOCAL_AMFLAGS = -I m4
