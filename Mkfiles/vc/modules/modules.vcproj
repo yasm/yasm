@@ -363,6 +363,9 @@
 					</FileConfiguration>
 				</File>
 				<File
+					RelativePath="..\..\..\modules\objfmts\elf\elf-machine.h">
+				</File>
+				<File
 					RelativePath="..\..\..\modules\objfmts\elf\elf-objfmt.c">
 					<FileConfiguration
 						Name="Release|Win32">
@@ -381,6 +384,12 @@
 							PreprocessorDefinitions=""
 							BasicRuntimeChecks="3"/>
 					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\objfmts\elf\elf-x86-amd64.c">
+				</File>
+				<File
+					RelativePath="..\..\..\modules\objfmts\elf\elf-x86-x86.c">
 				</File>
 				<File
 					RelativePath="..\..\..\modules\objfmts\elf\elf.c">
