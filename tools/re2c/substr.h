@@ -1,45 +1,56 @@
-#ifndef _substr_h
-#define _substr_h
+#ifndef re2c_substr_h
+#define re2c_substr_h
 
-#include <iostream.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "basics.h"
 
-class SubStr {
-public:
+struct SubStr {
     char		*str;
     uint		len;
-public:
-    friend bool operator==(const SubStr &, const SubStr &);
-    SubStr(uchar*, uint);
-    SubStr(char*, uint);
-    SubStr(const SubStr&);
-    void out(ostream&) const;
 };
 
-class Str: public SubStr {
-public:
-    Str(const SubStr&);
-    Str(Str&);
-    Str();
-    ~Str();
-};
+typedef struct SubStr SubStr;
 
-inline ostream& operator<<(ostream& o, const SubStr &s){
-    s.out(o);
-    return o;
+int SubStr_eq(const SubStr *, const SubStr *);
+static inline SubStr *SubStr_new_u(uchar*, uint);
+static inline SubStr *SubStr_new(char*, uint);
+static inline SubStr *SubStr_copy(const SubStr*);
+void SubStr_out(const SubStr *, FILE *);
+#define SubStr_delete(x)    free(x)
+
+typedef struct SubStr Str;
+
+Str *Str_new(const SubStr*);
+Str *Str_copy(Str*);
+Str *Str_new_empty(void);
+void Str_delete(Str *);
+
+static inline SubStr *
+SubStr_new_u(uchar *s, uint l)
+{
+    SubStr *r = malloc(sizeof(SubStr));
+    r->str = (char*)s;
+    r->len = l;
+    return r;
 }
 
-inline ostream& operator<<(ostream& o, const SubStr* s){
-    return o << *s;
+static inline SubStr *
+SubStr_new(char *s, uint l)
+{
+    SubStr *r = malloc(sizeof(SubStr));
+    r->str = s;
+    r->len = l;
+    return r;
 }
 
-inline SubStr::SubStr(uchar *s, uint l)
-    : str((char*) s), len(l) { }
-
-inline SubStr::SubStr(char *s, uint l)
-    : str(s), len(l) { }
-
-inline SubStr::SubStr(const SubStr &s)
-    : str(s.str), len(s.len) { }
+static inline SubStr *
+SubStr_copy(const SubStr *s)
+{
+    SubStr *r = malloc(sizeof(SubStr));
+    r->str = s->str;
+    r->len = s->len;
+    return r;
+}
 
 #endif
