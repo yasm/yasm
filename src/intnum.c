@@ -435,6 +435,8 @@ intnum_calc(intnum *acc, ExprOp op, intnum *operand)
 	    if (result)
 		BitVector_Copy(result, op1);
 	    break;
+	default:
+	    InternalError(_("invalid operation in intnum calculation"));
     }
 
     /* If we were doing a bitvector computation... */
