@@ -1,0 +1,236 @@
+/* $Id: bytecode.c,v 1.1 2001/05/15 05:23:23 peter Exp $
+ * Bytecode utility functions
+ *
+ *  Copyright (C) 2001  Peter Johnson
+ *
+ *  This file is part of YASM.
+ *
+ *  YASM is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  YASM is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+#include <stdio.h>
+#include "globals.h"
+#include "bytecode.h"
+
+static void buildbc_insn_common(bytecode *bc, unsigned char opersize,
+    unsigned char opcode_len, unsigned char op0, unsigned char op1,
+    effaddr *ea_ptr, unsigned char spare);
+
+static effaddr eff_static;
+static immval im_static;
+static relval rel_static;
+unsigned char bytes_static[16];
+
+/* FIXME: converting int to EA, but we don't know addrsize yet? 
+   currently assumes BITS setting.. probably better to always do calculations
+   in 32 bits in case BITS 16 is going to be overridden later in parsing. */
+
+effaddr *ConvertIntToEA(effaddr *ptr, unsigned long int_val)
+{
+    if(!ptr)
+	ptr = &eff_static;
+
+    ptr->addrsize = 0;
+    ptr->segment = 0;
+
+    if(mode_bits == 32) {
+	ptr->offset = int_val;
+	ptr->len = 5;
+	ptr->modrm = 0x05;		    /* Mod=00 R/M=disp32, Reg=0 */
+	ptr->need_sib = 0;
+    } else if(mode_bits == 16) {
+	ptr->offset = int_val & 0xFFFF;
+	ptr->len = 3;
+	ptr->modrm = 0x06;		    /* Mod=00 R/M=disp16, Reg=0 */
+	ptr->need_sib = 0;
+    } else
+	return (effaddr *)NULL;
+
+    return ptr;
+}
+
+effaddr *ConvertRegToEA(effaddr *ptr, unsigned long reg)
+{
+    if(!ptr)
+	ptr = &eff_static;
+
+    ptr->len = 1;
+    ptr->addrsize = 0;
+    ptr->segment = 0;
+    ptr->modrm = 0xC0 | (reg & 0x07);	    /* Mod=11, R/M=Reg, Reg=0 */
+    ptr->need_sib = 0;
+
+    return ptr;
+}
+
+immval *ConvertIntToImm(immval *ptr, unsigned long int_val)
+{
+    if(!ptr)
+	ptr = &im_static;
+
+    ptr->val = int_val;
+
+    if((int_val & 0xFF) == int_val)
+	ptr->len = 1;
+    else if((int_val & 0xFFFF) == int_val)
+	ptr->len = 2;
+    else
+	ptr->len = 4;
+
+    return ptr;
+}
+
+/* FIXME: This actually doesn't do anything useful yet :) */
+relval *ConvertImmToRel(relval *ptr, immval *im_ptr,
+    unsigned char rel_forcelen)
+{
+    if(!ptr)
+	ptr = &rel_static;
+
+    if(im_ptr) {
+	ptr->val = im_ptr->val;
+	ptr->len = im_ptr->len;
+    } else {
+	ptr->len = 0;
+    }
+
+    return ptr;
+}
+
+static void buildbc_insn_common(bytecode *bc, unsigned char opersize,
+    unsigned char opcode_len, unsigned char op0, unsigned char op1,
+    effaddr *ea_ptr, unsigned char spare)
+{
+    bc->next = (bytecode *)NULL;
+    bc->type = BC_INSN;
+
+    if(ea_ptr) {
+	bc->data.insn.ea = *ea_ptr;
+	bc->data.insn.ea.modrm &= 0xC7;		/* zero spare/reg bits */
+	bc->data.insn.ea.modrm |= (spare << 3) & 0x38;	/* plug in provided bits */
+    } else {
+	bc->data.insn.ea.len = 0;
+	bc->data.insn.ea.addrsize = 0;
+	bc->data.insn.ea.segment = 0;
+	bc->data.insn.ea.need_sib = 0;
+    }
+
+    bc->data.insn.opcode[0] = op0;
+    bc->data.insn.opcode[1] = op1;
+    bc->data.insn.opcode_len = opcode_len;
+
+    bc->data.insn.opersize = opersize;
+
+    bc->len = 0;
+
+    bc->filename = (char *)NULL;
+    bc->lineno = line_number;
+
+    bc->offset = 0;
+    bc->mode_bits = mode_bits;
+}
+ 
+
+void BuildBC_Insn(bytecode *bc, unsigned char opersize,
+    unsigned char opcode_len, unsigned char op0, unsigned char op1,
+    effaddr *ea_ptr, unsigned char spare, immval *im_ptr,
+    unsigned char im_forcelen)
+{
+    buildbc_insn_common(bc, opersize, opcode_len, op0, op1, ea_ptr, spare);
+
+    if(im_ptr) {
+	bc->data.insn.imm.im = *im_ptr;
+	bc->data.insn.imm.im.len = im_forcelen;		/* TODO: Add Warning */
+    } else {
+	bc->data.insn.imm.im.len = 0;
+    }
+    bc->data.insn.isrel = 0;
+}
+
+void BuildBC_Insn_Rel(bytecode *bc, unsigned char opersize,
+    unsigned char opcode_len, unsigned char op0, unsigned char op1,
+    effaddr *ea_ptr, unsigned char spare, relval *rel_ptr)
+{
+    buildbc_insn_common(bc, opersize, opcode_len, op0, op1, ea_ptr, spare);
+
+    if(rel_ptr) {
+	bc->data.insn.imm.rel = *rel_ptr;
+    } else {
+	bc->data.insn.imm.rel.len = 0;
+    }
+    bc->data.insn.isrel = 1;
+}
+
+/* TODO: implement.  Shouldn't be difficult. */
+unsigned char *ConvertBCInsnToBytes(unsigned char *ptr, bytecode *bc, int *len)
+{
+    if(bc->type != BC_INSN)
+	return (unsigned char *)NULL;
+    return (unsigned char *)NULL;
+}
+
+void DebugPrintBC(bytecode *bc)
+{
+    unsigned long i;
+
+    switch(bc->type) {
+	case BC_INSN:
+	    printf("_Instruction_\n");
+	    printf("Effective Address:\n");
+	    printf(" Offset=%lx Len=%u\n", bc->data.insn.ea.offset,
+		(unsigned int)bc->data.insn.ea.len);
+	    printf(" AddrSize=%u SegmentOv=%2x\n",
+		(unsigned int)bc->data.insn.ea.addrsize,
+		(unsigned int)bc->data.insn.ea.segment);
+	    printf(" ModRM=%2x SIB=%2x NeedSIB=%u\n",
+		(unsigned int)bc->data.insn.ea.modrm,
+		(unsigned int)bc->data.insn.ea.sib,
+		(unsigned int)bc->data.insn.ea.need_sib);
+	    if(bc->data.insn.isrel) {
+		printf("Relative Offset:\n");
+		printf(" Val=%lx Len=%u\n", bc->data.insn.imm.rel.val,
+		    (unsigned int)bc->data.insn.imm.rel.len);
+	    } else {
+		printf("Immediate Value:\n");
+		printf(" Val=%lx Len=%u\n", bc->data.insn.imm.im.val,
+		    (unsigned int)bc->data.insn.imm.im.len);
+	    }
+	    printf("Opcode: %2x %2x OpLen=%u\n",
+		(unsigned int)bc->data.insn.opcode[0],
+		(unsigned int)bc->data.insn.opcode[1],
+		(unsigned int)bc->data.insn.opcode_len);
+	    printf("OperSize=%u LockRepPre=%2x\n",
+		(unsigned int)bc->data.insn.opersize,
+		(unsigned int)bc->data.insn.lockrep_pre);
+	    break;
+	case BC_DATA:
+	    printf("_Data_\n");
+	    for(i=0; i<bc->len; i++) {
+		printf("%2x ", (unsigned int)bc->data.data.data[i]);
+		if((i & ~0xFFFF) == i)
+		    printf("\n");
+	    }
+	    break;
+	case BC_RESERVE:
+	    printf("_Reserve_\n");
+	    break;
+	default:
+	    printf("_Unknown_\n");
+    }
+    printf("Length=%lu\n", bc->len);
+    printf("Filename=\"%s\" Line Number=%u\n",
+	bc->filename ? bc->filename : "<UNKNOWN>", bc->lineno);
+    printf("Offset=%lx BITS=%u\n", bc->offset, bc->mode_bits);
+}
+
