@@ -11,7 +11,6 @@ BUILT_SOURCES += \
 
 CLEANFILES += \
 	yapp-token.c
-	src/tests/yapp_test.sh
 
 TESTS += \
 	src/preprocs/yapp/tests/yapp_test.sh
