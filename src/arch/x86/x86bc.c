@@ -463,7 +463,7 @@ x86_bc_print(FILE *f, const bytecode *bc)
     }
 }
 
-static unsigned long
+static int
 x86_bc_calc_len_insn(x86_insn *insn, intnum *(*resolve_label) (symrec *sym))
 {
     effaddr *ea = insn->ea;
@@ -519,7 +519,7 @@ x86_bc_calc_len_insn(x86_insn *insn, intnum *(*resolve_label) (symrec *sym))
     return 0;
 }
 
-unsigned long
+int
 x86_bc_calc_len(bytecode *bc,
 		intnum *(*resolve_label) (symrec *sym))
 {
