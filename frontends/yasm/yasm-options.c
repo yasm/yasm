@@ -98,7 +98,7 @@ parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts)
 
 			if (options[i].takes_param) {
 			    param = argv[1];
-			    if (*param == '-' || param == NULL) {
+			    if (param == NULL || *param == '-') {
 				ErrorNow(_("option '-%c' needs an argument!"),
 					 options[i].sopt);
 				errors++;
