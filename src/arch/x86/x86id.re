@@ -1921,7 +1921,7 @@ x86_switch_cpu(const char *id, unsigned long lindex)
 			  CPU_Priv;
 	    return;
 	}
-	A T H L O N {
+	(A T H L O N) | (K "7") {
 	    cpu_enabled = CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|
 			  CPU_K6|CPU_Athlon|CPU_FPU|CPU_MMX|CPU_SSE|CPU_3DNow|
 			  CPU_SMM|CPU_Prot|CPU_Priv;
