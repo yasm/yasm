@@ -155,7 +155,8 @@ POT_Table_Init_Entry(/*@out@*/ POT_Entry *e, POT_Entry_Source *s, int dec_exp)
 /*@-compdef@*/
 static void
 POT_Table_Init(void)
-/*@globals undef POT_TableN, undef POT_TableP @*/
+/*@globals undef POT_TableN, undef POT_TableP, POT_TableP_Source,
+   POT_TableN_Source @*/
 {
     int dec_exp = 1;
     int i;
@@ -523,8 +524,10 @@ floatnum_get_int(const floatnum *flt, unsigned long *ret_val)
 {
     unsigned char t[4];
 
-    if (floatnum_get_sized(flt, t, 4))
+    if (floatnum_get_sized(flt, t, 4)) {
+	*ret_val = 0xDEADBEEFUL;    /* Obviously incorrect return value */
 	return 1;
+    }
 
     LOAD_LONG(*ret_val, &t[0]);
     return 0;
