@@ -88,7 +88,7 @@ void
 xfree(void *p)
 {
     if (!p)
-	InternalError(__LINE__, __FILE__, _("Tried to free NULL pointer"));
+	InternalError(_("Tried to free NULL pointer"));
     free(p);
 }
 

@@ -316,8 +316,7 @@ GetInsnEA(bytecode *bc)
 	return NULL;
 
     if (bc->type != BC_INSN)
-	InternalError(__LINE__, __FILE__,
-		      _("Trying to get EA of non-instruction"));
+	InternalError(_("Trying to get EA of non-instruction"));
 
     return bc->data.insn.ea;
 }
@@ -336,8 +335,7 @@ SetInsnOperSizeOverride(bytecode *bc, unsigned char opersize)
 	    bc->data.jmprel.opersize = opersize;
 	    break;
 	default:
-	    InternalError(__LINE__, __FILE__,
-			  _("OperSize override applied to non-instruction"));
+	    InternalError(_("OperSize override applied to non-instruction"));
 	    return;
     }
 }
@@ -356,8 +354,7 @@ SetInsnAddrSizeOverride(bytecode *bc, unsigned char addrsize)
 	    bc->data.jmprel.addrsize = addrsize;
 	    break;
 	default:
-	    InternalError(__LINE__, __FILE__,
-			  _("AddrSize override applied to non-instruction"));
+	    InternalError(_("AddrSize override applied to non-instruction"));
 	    return;
     }
 }
@@ -378,8 +375,7 @@ SetInsnLockRepPrefix(bytecode *bc, unsigned char prefix)
 	    lockrep_pre = &bc->data.jmprel.lockrep_pre;
 	    break;
 	default:
-	    InternalError(__LINE__, __FILE__,
-			  _("LockRep prefix applied to non-instruction"));
+	    InternalError(_("LockRep prefix applied to non-instruction"));
 	    return;
     }
 
@@ -396,8 +392,7 @@ SetInsnShiftFlag(bytecode *bc)
 	return;
 
     if (bc->type != BC_INSN)
-	InternalError(__LINE__, __FILE__,
-		      _("Attempted to set shift flag on non-instruction"));
+	InternalError(_("Attempted to set shift flag on non-instruction"));
 
     bc->data.insn.shift_op = 1;
 }
@@ -718,8 +713,7 @@ bytecode_parser_finalize(bytecode *bc)
     switch (bc->type) {
 	case BC_EMPTY:
 	    /* FIXME: delete it (probably in bytecodes_ level, not here */
-	    InternalError(__LINE__, __FILE__,
-			  _("got empty bytecode in parser_finalize"));
+	    InternalError(_("got empty bytecode in parser_finalize"));
 	    break;
 	case BC_INSN:
 	    bytecode_parser_finalize_insn(bc);

@@ -257,7 +257,7 @@ intnum_calc(intnum *acc, ExprOp op, intnum *operand)
     }
 
     if (!operand && op != EXPR_NEG && op != EXPR_NOT && op != EXPR_LNOT)
-	InternalError(__LINE__, __FILE__, _("Operation needs an operand"));
+	InternalError(_("Operation needs an operand"));
 
     /* A operation does a bitvector computation if result is allocated. */
     switch (op) {
@@ -488,7 +488,7 @@ intnum_get_uint(const intnum *intn)
 	case INTNUM_BV:
 	    return BitVector_Chunk_Read(intn->val.bv, 32, 0);
 	default:
-	    InternalError(__LINE__, __FILE__, _("unknown intnum type"));
+	    InternalError(_("unknown intnum type"));
 	    return 0;
     }
 }
@@ -515,7 +515,7 @@ intnum_get_int(const intnum *intn)
 	    } else
 		return BitVector_Chunk_Read(intn->val.bv, 32, 0);
 	default:
-	    InternalError(__LINE__, __FILE__, _("unknown intnum type"));
+	    InternalError(_("unknown intnum type"));
 	    return 0;
     }
 }
@@ -539,8 +539,7 @@ intnum_get_sized(const intnum *intn, unsigned char *ptr, size_t size)
 	case INTNUM_BV:
 	    buf = BitVector_Block_Read(intn->val.bv, &len);
 	    if (len < size)
-		InternalError(__LINE__, __FILE__,
-			      _("Invalid size specified (too large)"));
+		InternalError(_("Invalid size specified (too large)"));
 	    memcpy(ptr, buf, size);
 	    xfree(buf);
 	    break;

@@ -34,7 +34,8 @@ char *conv_unprint(char ch);
 
 void ParserError(const char *);
 
-void InternalError(unsigned int line, const char *file, const char *message);
+void InternalError_(const char *file, unsigned int line, const char *message);
+#define InternalError(msg)	InternalError_(__FILE__, __LINE__, msg)
 
 void Fatal(fatal_num);
 void Error(const char *, ...);

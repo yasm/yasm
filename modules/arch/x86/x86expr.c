@@ -112,8 +112,7 @@ expr_new(ExprOp op, ExprItem *left, ExprItem *right)
 	xfree(left);
 	ptr->numterms++;
     } else {
-	InternalError(__LINE__, __FILE__,
-		      _("Right side of expression must exist"));
+	InternalError(_("Right side of expression must exist"));
     }
 
     if (right) {
@@ -880,8 +879,7 @@ expr_checkea_distcheck_reg(expr **ep)
 	/* The reg expn *must* be EXPR_ADD at this point.  Sanity check. */
 	if (e->terms[havereg_expr].type != EXPR_EXPR ||
 	    e->terms[havereg_expr].data.expn->op != EXPR_ADD)
-	    InternalError(__LINE__, __FILE__,
-			  _("Register expression not ADD or EXPN"));
+	    InternalError(_("Register expression not ADD or EXPN"));
 
 	/* Iterate over each term in reg expn */
 	for (i=0; i<e->terms[havereg_expr].data.expn->numterms; i++) {
@@ -974,11 +972,9 @@ expr_checkea_getregusage(expr **ep, int *indexreg, void *data,
 		     * Sanity check for EXPR_INT.
 		     */
 		    if (e->terms[i].data.expn->terms[0].type != EXPR_REG)
-			InternalError(__LINE__, __FILE__,
-				      _("Register not found in reg expn"));
+			InternalError(_("Register not found in reg expn"));
 		    if (e->terms[i].data.expn->terms[1].type != EXPR_INT)
-			InternalError(__LINE__, __FILE__,
-				      _("Non-integer value in reg expn"));
+			InternalError(_("Non-integer value in reg expn"));
 		    reg = get_reg(&e->terms[i].data.expn->terms[0], data);
 		    if (!reg)
 			return 0;

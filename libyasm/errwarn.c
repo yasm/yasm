@@ -129,7 +129,7 @@ ParserError(const char *s)
 /* Report an internal error.  Essentially a fatal error with trace info.
  * Exit immediately because it's essentially an assert() trap. */
 void
-InternalError(unsigned int line, const char *file, const char *message)
+InternalError_(const char *file, unsigned int line, const char *message)
 {
     fprintf(stderr, _("INTERNAL ERROR at %s, line %d: %s\n"), file, line,
 	    message);

@@ -574,7 +574,7 @@ floatnum_get_common(const floatnum *flt, unsigned char *ptr, int byte_size,
 
     /* underflow and overflow both set!? */
     if (underflow && overflow)
-	InternalError(__LINE__, __FILE__, _("Both underflow and overflow set"));
+	InternalError(_("Both underflow and overflow set"));
 
     /* check for underflow or overflow and set up appropriate output */
     if (underflow) {
@@ -597,8 +597,7 @@ floatnum_get_common(const floatnum *flt, unsigned char *ptr, int byte_size,
     /* get little-endian bytes */
     buf = BitVector_Block_Read(output, &len);
     if (len < byte_size)
-	InternalError(__LINE__, __FILE__,
-		      _("Byte length of BitVector does not match bit length"));
+	InternalError(_("Byte length of BitVector does not match bit length"));
 
     /* copy to output */
     memcpy(ptr, buf, byte_size*sizeof(unsigned char));
@@ -652,8 +651,7 @@ floatnum_get_sized(const floatnum *flt, unsigned char *ptr, size_t size)
 	case 10:
 	    return floatnum_get_common(flt, ptr, 10, 64, 0, 15);
 	default:
-	    InternalError(__LINE__, __FILE__,
-			  _("Invalid float conversion size"));
+	    InternalError(_("Invalid float conversion size"));
 	    return 1;	    /* never reached, but silence GCC warning */
     }
 }
