@@ -1,5 +1,8 @@
-/* $IdPath$
- * Floating point number functions header file.
+/**
+ * \file floatnum.h
+ * \brief YASM floating point (IEEE) interface.
+ *
+ * $IdPath: yasm/libyasm/floatnum.h,v 1.20 2003/03/13 06:54:19 peter Exp $
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -8,9 +11,9 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 1. Redistributions of source code must retain the above copyright
+ *  - Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
+ *  - Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
@@ -29,40 +32,79 @@
 #ifndef YASM_FLOATNUM_H
 #define YASM_FLOATNUM_H
 
+/** Initialize floatnum internal data structures. */
 void yasm_floatnum_initialize(void);
-/* Clean up internal allocations */
+
+/** Clean up internal floatnum allocations. */
 void yasm_floatnum_cleanup(void);
 
+/** Create a new floatnum from a decimal string.  The input string must be in
+ * standard C representation ([+-]123.456e[-+]789).
+ * \param str	floating point decimal string
+ * \return Newly allocated floatnum.
+ */
 /*@only@*/ yasm_floatnum *yasm_floatnum_new(const char *str);
+
+/** Duplicate a floatnum.
+ * \param flt	floatnum
+ * \return Newly allocated floatnum with the same value as flt.
+ */
 /*@only@*/ yasm_floatnum *yasm_floatnum_copy(const yasm_floatnum *flt);
+
+/** Destroy (free allocated memory for) a floatnum.
+ * \param flt	floatnum
+ */
 void yasm_floatnum_delete(/*@only@*/ yasm_floatnum *flt);
 
-/* calculation function: acc = acc op operand */
+/** Floating point calculation function: acc = acc op operand.
+ * \note Not all operations in yasm_expr_op may be supported; unsupported
+ *       operations will result in an error.
+ * \param acc	    floatnum accumulator
+ * \param op	    operation
+ * \param operand   floatnum operand
+ * \param lindex    line index (of expression)
+ */
 void yasm_floatnum_calc(yasm_floatnum *acc, yasm_expr_op op,
 			yasm_floatnum *operand, unsigned long lindex);
 
-/* The get functions return nonzero if flt can't fit into that size format:
- * -1 if underflow occurred, 1 if overflow occurred.
- */
-
-/* Essentially a convert to single-precision and return as 32-bit value.
+/** Convert a floatnum to single-precision and return as 32-bit value.
  * The 32-bit value is a "standard" C value (eg, of unknown endian).
+ * \param flt	    floatnum
+ * \param ret_val   pointer to storage for 32-bit output
+ * \return Nonzero if flt can't fit into single precision: -1 if underflow
+ *         occurred, 1 if overflow occurred.
  */
 int yasm_floatnum_get_int(const yasm_floatnum *flt,
 			  /*@out@*/ unsigned long *ret_val);
 
-/* ptr will point to the Intel-format little-endian byte string after a
- * successful call (eg, [0] should be the first byte output to the file).
+/** Convert a floatnum to Intel-format little-endian byte string.
+ * [0] should be the first byte output to an Intel-format file.
+ * \note Not all sizes are valid.  Currently, only 4 (single-precision), 8
+ *       (double-precision), and 10 (extended-precision) are valid sizes.
+ *       Use yasm_floatnum_check_size() to check for supported sizes.
+ * \param flt	    floatnum
+ * \param ptr	    pointer to storage for size bytes of output
+ * \param size	    size (in bytes) of desired output.
+ * \return Nonzero if flt can't fit into the specified precision: -1 if
+ *         underflow occurred, 1 if overflow occurred.
  */
 int yasm_floatnum_get_sized(const yasm_floatnum *flt,
 			    /*@out@*/ unsigned char *ptr, size_t size);
 
-/* Basic check to see if size is even valid for flt conversion (doesn't
- * actually check for underflow/overflow but rather checks for size=4,8,10).
- * Returns 1 if valid, 0 if not.
+/** Basic check to see if size is valid for flt conversion (using
+ * yasm_floatnum_get_sized()).  Doesn't actually check for underflow/overflow
+ * but rather checks for size=4,8,10
+ * (at present).
+ * \param flt	    floatnum
+ * \param size	    size (in bytes) of desired conversion output
+ * \return 1 if valid size, 0 if invalid size.
  */
 int yasm_floatnum_check_size(const yasm_floatnum *flt, size_t size);
 
+/** Print various representations of a floatnum.  For debugging purposes only.
+ * \param f	    file
+ * \param flt	    floatnum
+ */
 void yasm_floatnum_print(FILE *f, const yasm_floatnum *flt);
 
 #endif
