@@ -1722,11 +1722,12 @@ x86_new_jmp(yasm_arch *arch, const unsigned long data[4], int num_operands,
 	yasm_internal_error(N_("invalid operand conversion"));
 
     /* Far target needs to become "seg imm:imm". */
-    if ((jinfo->operands[0] & OPTM_MASK) == OPTM_Far)
+    if ((jinfo->operands[0] & OPTM_MASK) == OPTM_Far) {
+	yasm_expr *copy = yasm_expr_copy(op->data.val);
 	d.target = yasm_expr_create_tree(
 	    yasm_expr_create_branch(YASM_EXPR_SEG, op->data.val, line),
-	    YASM_EXPR_SEGOFF, yasm_expr_copy(op->data.val), line);
-    else
+	    YASM_EXPR_SEGOFF, copy, line);
+    } else
 	d.target = op->data.val;
 
     /* Need to save jump origin for relative jumps. */
