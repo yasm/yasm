@@ -31,3 +31,7 @@ nocheck_error:
 if DEV
 CFLAGS = -ansi -pedantic -Wall -g
 endif
+
+EXTRA_DIST = \
+	NEWS	\
+	README
