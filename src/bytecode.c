@@ -308,8 +308,7 @@ bc_print(FILE *f, const bytecode *bc)
 }
 
 unsigned long
-bc_calc_len(bytecode *bc,
-	    intnum *(*resolve_label) (section *sect, /*@null@*/ bytecode *bc))
+bc_calc_len(bytecode *bc, intnum *(*resolve_label) (symrec *sym))
 {
     switch (bc->type) {
 	case BC_EMPTY:

@@ -716,24 +716,37 @@ expr_contains(expr *e, ExprType t)
     return expr_traverse_leaves_in(e, &t, expr_contains_callback);
 }
 
+/* NOTE: This can't be passed through *d because of data/function pointer
+ * portability issues.
+ */
+static intnum *(*labelequ_resolve_label) (symrec *sym);
+
 static int
-expr_expand_equ_callback(ExprItem *ei, /*@unused@*/ void *d)
+expr_expand_labelequ_callback(ExprItem *ei, /*@unused@*/ void *d)
 {
     const expr *equ_expr;
+    intnum *intn;
     if (ei->type == EXPR_SYM) {
 	equ_expr = symrec_get_equ(ei->data.sym);
 	if (equ_expr) {
 	    ei->type = EXPR_EXPR;
 	    ei->data.expn = expr_copy(equ_expr);
+	} else {
+	    intn = labelequ_resolve_label(ei->data.sym);
+	    if (intn) {
+		ei->type = EXPR_INT;
+		ei->data.intn = intn;
+	    }
 	}
     }
     return 0;
 }
 
 void
-expr_expand_equ(expr *e)
+expr_expand_labelequ(expr *e, intnum *(*resolve_label) (symrec *sym))
 {
-    expr_traverse_leaves_in(e, NULL, expr_expand_equ_callback);
+    labelequ_resolve_label = resolve_label;
+    expr_traverse_leaves_in(e, NULL, expr_expand_labelequ_callback);
 }
 
 /* Traverse over expression tree, calling func for each operation AFTER the

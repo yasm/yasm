@@ -46,9 +46,9 @@ typedef struct ExprItem ExprItem;
 void expr_delete(/*@only@*/ /*@null@*/ expr *e);
 
 /* Expands all (symrec) equ's in the expression into full expression
- * instances.
+ * instances.  Also resolves labels, if possible.
  */
-void expr_expand_equ(expr *e);
+void expr_expand_labelequ(expr *e, intnum *(*resolve_label) (symrec *sym));
 
 /* Simplifies the expression e as much as possible, eliminating extraneous
  * branches and simplifying integer-only subexpressions.

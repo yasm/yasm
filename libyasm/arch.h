@@ -41,8 +41,7 @@ struct arch {
 
 	/* See bytecode.h comments on bc_calc_len() */
 	unsigned long (*bc_calc_len) (bytecode *bc, /*@only@*/ /*@null@*/
-				      intnum *(*resolve_label) (section *sect,
-					  /*@null@*/ bytecode *bc));
+				      intnum *(*resolve_label) (symrec *sym));
     } bc;
 };
 

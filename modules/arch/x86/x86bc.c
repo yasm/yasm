@@ -462,8 +462,7 @@ x86_bc_print(FILE *f, const bytecode *bc)
 
 static unsigned long
 x86_bc_calc_len_insn(x86_insn *insn, /*@only@*/ /*@null@*/
-		     intnum *(*resolve_label) (section *sect,
-					       /*@null@*/ bytecode *bc))
+		     intnum *(*resolve_label) (symrec *sym))
 {
     effaddr *ea = insn->ea;
     x86_effaddr_data *ead = ea_get_data(ea);
@@ -473,7 +472,7 @@ x86_bc_calc_len_insn(x86_insn *insn, /*@only@*/ /*@null@*/
 	if ((ea->disp) && ((!ead->valid_sib && ead->need_sib) ||
 			   (!ead->valid_modrm && ead->need_modrm))) {
 	    /* First expand equ's */
-	    expr_expand_equ(ea->disp);
+	    expr_expand_labelequ(ea->disp, resolve_label);
 
 	    /* Check validity of effective address and calc R/M bits of
 	     * Mod/RM byte and SIB byte.  We won't know the Mod field
@@ -492,7 +491,7 @@ x86_bc_calc_len_insn(x86_insn *insn, /*@only@*/ /*@null@*/
 	const intnum *num;
 
 	if (imm->val) {
-	    expr_expand_equ(imm->val);
+	    expr_expand_labelequ(imm->val, resolve_label);
 	    imm->val = expr_simplify(imm->val);
 	}
 	/* TODO: check imm f_len vs. len? */
@@ -520,8 +519,7 @@ x86_bc_calc_len_insn(x86_insn *insn, /*@only@*/ /*@null@*/
 
 unsigned long
 x86_bc_calc_len(bytecode *bc,
-		intnum *(*resolve_label) (section *sect,
-					  /*@null@*/ bytecode *bc))
+		intnum *(*resolve_label) (symrec *sym))
 {
     x86_insn *insn;
 

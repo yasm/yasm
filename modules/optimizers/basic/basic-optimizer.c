@@ -22,6 +22,8 @@
 #include "util.h"
 RCSID("$IdPath$");
 
+#include "symrec.h"
+
 #include "bytecode.h"
 #include "section.h"
 
@@ -39,11 +41,11 @@ RCSID("$IdPath$");
 #define BCFLAG_DONE		(1<<1)
 
 static /*@only@*/ /*@null@*/ intnum *
-basic_optimize_resolve_label(section *sect, bytecode *bc)
+basic_optimize_resolve_label(symrec *sym)
 {
     unsigned long flags;
 
-    flags = section_get_opt_flags(sect);
+    flags = symrec_get_opt_flags(sym);
 
     return NULL;
 }
