@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.8 2001/05/30 07:41:03 peter Exp $
+/* $Id: bytecode.c,v 1.9 2001/07/05 08:37:59 mu Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -23,6 +23,7 @@
 #include "globals.h"
 #include "bytecode.h"
 #include "errwarn.h"
+#include "expr.h"
 
 static effaddr eff_static;
 static immval im_static;
@@ -70,10 +71,12 @@ effaddr *ConvertRegToEA(effaddr *ptr, unsigned long reg)
 
 effaddr *ConvertImmToEA(effaddr *ptr, immval *im_ptr, unsigned char im_len)
 {
+    int gotexprval;
     if(!ptr)
 	ptr = &eff_static;
 
-    ptr->disp = im_ptr->val;
+    /* FIXME: warn when gotexprval is 0, and/or die */
+    gotexprval = expr_get_value (im_ptr->val, &ptr->disp);
     if(im_ptr->len > im_len)
 	Warning(WARN_VALUE_EXCEEDS_BOUNDS, (char *)NULL, "word");
     ptr->len = im_len;
@@ -91,7 +94,8 @@ immval *ConvertIntToImm(immval *ptr, unsigned long int_val)
     if(!ptr)
 	ptr = &im_static;
 
-    ptr->val = int_val;
+    /* FIXME: this will leak expr's if static is used */
+    ptr->val = expr_new_ident(EXPR_NUM, int_val);
 
     if((int_val & 0xFF) == int_val)
 	ptr->len = 1;
@@ -99,6 +103,19 @@ immval *ConvertIntToImm(immval *ptr, unsigned long int_val)
 	ptr->len = 2;
     else
 	ptr->len = 4;
+
+    ptr->isrel = 0;
+    ptr->isneg = 0;
+
+    return ptr;
+}
+
+immval *ConvertExprToImm(immval *ptr, expr *expr_ptr)
+{
+    if(!ptr)
+	ptr = &im_static;
+
+    ptr->val = expr_ptr;
 
     ptr->isrel = 0;
     ptr->isneg = 0;
@@ -240,7 +257,9 @@ void DebugPrintBC(bytecode *bc)
 		(unsigned int)bc->data.insn.ea.valid_sib,
 		(unsigned int)bc->data.insn.ea.need_sib);
 	    printf("Immediate/Relative Value:\n");
-	    printf(" Val=%lx\n", bc->data.insn.imm.val);
+	    printf(" Val=");
+	    expr_print(bc->data.insn.imm.val);
+	    printf("\n");
 	    printf(" Len=%u, IsRel=%u, IsNeg=%u\n",
 		(unsigned int)bc->data.insn.imm.len,
 		(unsigned int)bc->data.insn.imm.isrel,

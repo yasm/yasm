@@ -1,4 +1,4 @@
-/* $Id: token.l.in,v 1.8 2001/06/29 05:11:40 peter Exp $
+/* $Id: token.l.in,v 1.9 2001/07/05 08:37:59 mu Exp $
  * Main lexer
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -34,6 +34,7 @@
 #include "symrec.h"
 #include "bytecode.h"
 #include "errwarn.h"
+#include "expr.h"
 #include "bison.h"
 
 %}

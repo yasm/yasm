@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.8 2001/06/28 21:22:01 peter Exp $
+/* $Id: bytecode.h,v 1.9 2001/07/05 08:37:59 mu Exp $
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -38,7 +38,7 @@ typedef struct effaddr_s {
 } effaddr;
 
 typedef struct immval_s {
-    unsigned long val;
+    struct expr_s *val;
 
     unsigned char len;		/* length of val (in bytes), 0 if none */
     unsigned char isrel;

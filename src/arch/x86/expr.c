@@ -1,4 +1,4 @@
-/* $Id: expr.c,v 1.1 2001/07/05 06:28:54 mu Exp $
+/* $Id: expr.c,v 1.2 2001/07/05 08:37:59 mu Exp $
  * Expression handling
  *
  *  Copyright (C) 2001  Michael Urman
@@ -188,4 +188,59 @@ int expr_simplify (expr *e)
     }
 
     return simplified;
+}
+
+int expr_get_value (expr *e, unsigned long *retval)
+{
+    while (!(e->op == EXPR_IDENT && e->rtype == EXPR_NUM)
+	   && expr_simplify (e));
+
+    if (e->op == EXPR_IDENT && e->rtype == EXPR_NUM)
+    {
+	*retval = e->right.num;
+	return 1;
+    }
+    else
+	return 0;
+}
+
+void expr_print (expr *e)
+{
+    if (e->op != EXPR_IDENT) {
+	switch (e->ltype) {
+	    case EXPR_NUM: printf ("%d", e->left.num); break;
+	    case EXPR_SYM: printf ("%s", e->left.sym->name); break;
+	    case EXPR_EXPR: printf ("("); expr_print (e->left.expr); printf(")");
+	    case EXPR_NONE: break;
+	}
+    }
+    switch (e->op) {
+	case EXPR_ADD: printf ("+"); break;
+	case EXPR_SUB: printf ("-"); break;
+	case EXPR_MUL: printf ("*"); break;
+	case EXPR_DIV: printf ("/"); break;
+	case EXPR_MOD: printf ("%"); break;
+	case EXPR_NEG: printf ("-"); break;
+	case EXPR_NOT: printf ("~"); break;
+	case EXPR_OR: printf ("|"); break;
+	case EXPR_AND: printf ("&"); break;
+	case EXPR_XOR: printf ("^"); break;
+	case EXPR_SHL: printf ("<<"); break;
+	case EXPR_SHR: printf (">>"); break;
+	case EXPR_LOR: printf ("||"); break;
+	case EXPR_LAND: printf ("&&"); break;
+	case EXPR_LNOT: printf ("!"); break;
+	case EXPR_LT: printf ("<"); break;
+	case EXPR_GT: printf (">"); break;
+	case EXPR_LE: printf ("<="); break;
+	case EXPR_GE: printf (">="); break;
+	case EXPR_NE: printf ("!="); break;
+	case EXPR_IDENT: break;
+    }
+    switch (e->rtype) {
+	case EXPR_NUM: printf ("%d", e->right.num); break;
+	case EXPR_SYM: printf ("%s", e->right.sym->name); break;
+	case EXPR_EXPR: printf ("("); expr_print (e->right.expr); printf(")");
+	case EXPR_NONE: break;
+    }
 }
