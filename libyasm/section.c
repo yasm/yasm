@@ -66,7 +66,7 @@ sections_initialize(sectionhead *headp, objfmt *of)
 
     /* Initialize default section */
     s->type = SECTION_GENERAL;
-    s->name = strdup(of->get_default_section_name());
+    s->name = strdup(of->default_section_name);
     bytecodes_initialize(&s->bc);
 
     return s;

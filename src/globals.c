@@ -31,4 +31,4 @@ RCSID("$IdPath$");
 
 char *filename = (char *)NULL;
 unsigned int line_number = 1;
-unsigned int mode_bits = 32;
+unsigned char mode_bits = 0;

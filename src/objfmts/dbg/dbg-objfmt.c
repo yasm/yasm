@@ -31,13 +31,6 @@
 
 RCSID("$IdPath$");
 
-static const char *
-dbg_objfmt_get_default_section_name(void)
-{
-    fprintf(stderr, "-dbg_objfmt_get_default_section_name()\n");
-    return ".text";
-}
-
 static int
 dbg_objfmt_is_valid_section(const char *name)
 {
@@ -49,6 +42,7 @@ dbg_objfmt_is_valid_section(const char *name)
 objfmt dbg_objfmt = {
     "Trace of all info passed to object format module",
     "dbg",
-    dbg_objfmt_get_default_section_name,
+    ".text",
+    32,
     dbg_objfmt_is_valid_section
 };

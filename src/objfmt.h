@@ -30,6 +30,12 @@ typedef struct objfmt_s {
     /* keyword used to select format on the command line */
     char *keyword;
 
+    /* default (starting) section name */
+    const char *default_section_name;
+
+    /* default (starting) BITS setting */
+    const unsigned char default_mode_bits;
+
     /* NULL-terminated list of debugging formats that are valid to use with
      * this object format.
      */
@@ -39,9 +45,6 @@ typedef struct objfmt_s {
      * use)
      */
 /*    struct debugfmt_s *default_df;*/
-
-    /* Get the default (starting) section name. */
-    const char *(*get_default_section_name) (void);
 
     /* Is the specified section name valid?
      * Return is a boolean value.

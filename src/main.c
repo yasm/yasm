@@ -59,6 +59,9 @@ main(int argc, char *argv[])
 	filename = strdup("<STDIN>");
     }
 
+    /* Get initial BITS setting from object format */
+    mode_bits = dbg_objfmt.default_mode_bits;
+
     nasm_parser.do_parse(&nasm_parser, &dbg_objfmt, in);
 
     if (filename)
