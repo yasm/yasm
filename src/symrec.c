@@ -40,105 +40,65 @@
 RCSID("$IdPath$");
 
 /* private functions */
-static symtab *symtab_get(char *);
-static symtab *symtab_new(char *, SymType);
-static symtab *symtab_get_or_new(char *, SymType);
-static void symtab_insert(symtab *);
+static symrec *symrec_get_or_new(char *, SymType);
 
-/* The symbol table: a chain of `symtab'. */
-symtab *sym_table = (symtab *)NULL;
+/* The symbol table: a ternary tree. */
+static ternary_tree sym_table = (ternary_tree)NULL;
 
-/* insert a symtab into the global sym_table */
-void
-symtab_insert(symtab *tab)
+/* create a new symrec */
+static symrec *
+symrec_get_or_new(char *name, SymType type)
 {
-    tab->next = (symtab *)sym_table;
-    sym_table = tab;
-}
+    symrec *rec, *rec2;
 
-/* find a symtab in the global sym_table */
-symtab *
-symtab_get(char *name)
-{
-    symtab *tab;
+    rec = malloc(sizeof(symrec));
+    if (!rec)
+	Fatal(FATAL_NOMEM);
 
-    for (tab = sym_table; tab != NULL; tab = tab->next) {
-	if (strcmp(tab->rec.name, name) == 0) {
-	    return tab;
-	}
+    rec2 = ternary_insert(&sym_table, name, rec, 0);
+
+    if (rec2 != rec) {
+	free(rec);
+	return rec2;
     }
-    return NULL;
+
+    rec->name = strdup(name);
+    if (!rec->name)
+	Fatal(FATAL_NOMEM);
+    rec->type = type;
+    rec->value = 0;
+    rec->line = line_number;
+    rec->status = SYM_NOSTATUS;
+
+    return rec;
 }
 
 /* call a function with each symrec.  stop early if 0 returned */
 void
-sym_foreach(int (*mapfunc) (symrec *))
+symrec_foreach(int (*func) (char *name, symrec *rec))
 {
-    symtab *tab;
-
-    for (tab = sym_table; tab != NULL; tab = tab->next) {
-	if (mapfunc(&(tab->rec)) == 0) {
-	    return;
-	}
-    }
-}
-
-/* create a new symtab */
-symtab *
-symtab_new(char *name, SymType type)
-{
-    symtab *tab;
-    tab = malloc(sizeof(symtab));
-    if (tab == NULL)
-	return NULL;
-    tab->rec.name = malloc(strlen(name) + 1);
-    if (tab->rec.name == NULL) {
-	free(tab);
-	return NULL;
-    }
-    strcpy(tab->rec.name, name);
-    tab->rec.type = type;
-    tab->rec.value = 0;
-    tab->rec.line = line_number;
-    tab->rec.status = SYM_NOSTATUS;
-    symtab_insert(tab);
-    return tab;
-}
-
-symtab *
-symtab_get_or_new(char *name, SymType type)
-{
-    symtab *tab;
-
-    tab = symtab_get(name);
-    if (tab == NULL) {
-	tab = symtab_new(name, type);
-	if (tab == NULL) {
-	    Fatal(FATAL_NOMEM);
-	}
-    }
-    return tab;
 }
 
 symrec *
-sym_use_get(char *name, SymType type)
+symrec_use(char *name, SymType type)
 {
-    symtab *tab;
+    symrec *rec;
 
-    tab = symtab_get_or_new(name, type);
-    tab->rec.status |= SYM_USED;
-    return &(tab->rec);
+    rec = symrec_get_or_new(name, type);
+    rec->status |= SYM_USED;
+    return rec;
 }
 
 symrec *
-sym_def_get(char *name, SymType type)
+symrec_define(char *name, SymType type)
 {
-    symtab *tab;
+    symrec *rec;
 
-    tab = symtab_get_or_new(name, type);
-    if (tab->rec.status & SYM_DECLARED)
+    rec = symrec_get_or_new(name, type);
+    if (rec->status & SYM_DECLARED)
 	Error(_("duplicate definition of `%s'; previously defined on line %d"),
-	      tab->rec.name, tab->rec.line);
-    tab->rec.status |= SYM_DECLARED;
-    return &(tab->rec);
+	      name, rec->line);
+    rec->line = line_number;	/* set line number of definition */
+    rec->status |= SYM_DECLARED;
+    return rec;
 }

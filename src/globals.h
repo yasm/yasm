@@ -25,6 +25,5 @@
 extern char *filename;
 extern unsigned int line_number;
 extern unsigned char mode_bits;
-extern struct symrec_s *locallabel_base;
 
 #endif

@@ -56,6 +56,7 @@ void nasm_parser_error(char *);
 extern objfmt *nasm_parser_objfmt;
 extern sectionhead nasm_parser_sections;
 extern section *nasm_parser_cur_section;
+extern char *nasm_parser_locallabel_base;
 
 %}
 
@@ -176,9 +177,12 @@ label: label_id	    { $1->value = 0; } /* TODO: add pointer to bytecode */
     | label_id ':'  { $1->value = 0; } /* TODO: add pointer to bytecode */
 ;
 
-label_id: ID	    { $$ = locallabel_base = sym_def_get($1.name, SYM_LABEL); }
-    | SPECIAL_ID    { $$ = sym_def_get($1.name, SYM_LABEL); }
-    | LOCAL_ID	    { $$ = sym_def_get($1.name, SYM_LABEL); }
+label_id: ID	    {
+	$$ = symrec_define($1.name, SYM_LABEL);
+	nasm_parser_locallabel_base = strdup($1.name);
+    }
+    | SPECIAL_ID    { $$ = symrec_define($1.name, SYM_LABEL); }
+    | LOCAL_ID	    { $$ = symrec_define($1.name, SYM_LABEL); }
 ;
 
 /* directives */
@@ -375,8 +379,7 @@ target: expr	    { $$.val = $1; $$.op_sel = JR_NONE; }
 /* expression trees */
 expr_no_string: INTNUM		{ $$ = expr_new_ident(EXPR_NUM, ExprNum($1)); }
     | explabel			{
-	$$ = expr_new_ident(EXPR_SYM,
-			    ExprSym(sym_use_get($1.name, SYM_LABEL)));
+	$$ = expr_new_ident(EXPR_SYM, ExprSym(symrec_use($1.name, SYM_LABEL)));
     }
     /*| expr '||' expr		{ $$ = expr_new_tree($1, EXPR_LOR, $3); }*/
     | expr '|' expr		{ $$ = expr_new_tree($1, EXPR_OR, $3); }

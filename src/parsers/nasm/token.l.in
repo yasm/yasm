@@ -62,7 +62,7 @@ static char *strbuf = (char *)NULL;
 static size_t strbuf_size = 0;
 
 /* last "base" label for local (.) labels */
-symrec *locallabel_base = (symrec *)NULL;
+char *nasm_parser_locallabel_base = (char *)NULL;
 
 /* current line number */
 int line_number;
@@ -305,17 +305,17 @@ $$|$|\.\.[a-z0-9_$#@~.?]+ {
 
     /* local label (.label) */
 \.[a-z0-9_$#@~?][a-z0-9_$#@~.?]* {
-    if (!locallabel_base) {
+    if (!nasm_parser_locallabel_base) {
 	Warning(_("no non-local label before `%s'"), yytext);
 	yylval.syminfo.name = strdup(yytext);
 	if (!yylval.syminfo.name)
 	    Fatal(FATAL_NOMEM);
     } else {
 	yylval.syminfo.name = malloc(strlen(yytext) +
-				     strlen(locallabel_base->name) + 1);
+				     strlen(nasm_parser_locallabel_base) + 1);
 	if (!yylval.syminfo.name)
 	    Fatal(FATAL_NOMEM);
-	strcpy(yylval.syminfo.name, locallabel_base->name);
+	strcpy(yylval.syminfo.name, nasm_parser_locallabel_base);
 	strcat(yylval.syminfo.name, yytext);
     }
     yylval.syminfo.line = line_number;

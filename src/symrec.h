@@ -38,19 +38,12 @@ typedef struct symrec_s {
     char *name;
     SymType type;
     SymStatus status;
-    int line;
+    int line;			/* line symbol was first declared or used on */
     double value;
 } symrec;
 
-typedef struct symtab_s {
-    symrec rec;
-    struct symtab_s *next;
-} symtab;
-
-extern symtab *sym_table;
-
-symrec *sym_use_get(char *, SymType);
-symrec *sym_def_get(char *, SymType);
-void sym_foreach(int (*)(symrec *));
+symrec *symrec_use(char *name, SymType type);
+symrec *symrec_define(char *name, SymType type);
+void symrec_foreach(int (*func) (char *name, symrec *rec));
 
 #endif
