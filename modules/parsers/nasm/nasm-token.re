@@ -27,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-RCSID("$IdPath: yasm/modules/parsers/nasm/nasm-token.re,v 1.20 2003/03/31 05:36:30 peter Exp $");
+RCSID("$IdPath$");
 
 #define YASM_LIB_INTERNAL
 #include <libyasm.h>
@@ -356,9 +356,10 @@ scan:
 		yylval.str_val = yasm__xstrndup(s.tok, TOKLEN);
 		RETURN(ID);
 	    } else if (!nasm_parser_locallabel_base) {
-		yasm__warning(YASM_WARN_GENERAL, cur_lindex,
-			      N_("no non-local label before `%s'"), s.tok[0]);
 		yylval.str_val = yasm__xstrndup(s.tok, TOKLEN);
+		yasm__warning(YASM_WARN_GENERAL, cur_lindex,
+			      N_("no non-local label before `%s'"),
+			      yylval.str_val);
 	    } else {
 		len = TOKLEN + nasm_parser_locallabel_base_len;
 		yylval.str_val = yasm_xmalloc(len + 1);
