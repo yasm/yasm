@@ -1,4 +1,4 @@
-/* $Id: bison.y.in,v 1.7 2001/05/22 07:17:04 peter Exp $
+/* $Id: bison.y.in,v 1.8 2001/05/22 20:48:21 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -85,13 +85,13 @@ extern void yyerror(char *);
 
 %%
 input: /* empty */
-    | input line
+    | input line { OutputError(); OutputWarning(); line_number++; }
 ;
 
-line: '\n'	{ $$.len = 0; line_number++; }
-    | exp '\n' { DebugPrintBC(&$1); $$ = $1; line_number++; }
-    | directive '\n' { line_number++; }
-    | error '\n' { yyerrok; line_number++; }
+line: '\n'	{ $$.len = 0; }
+    | exp '\n' { DebugPrintBC(&$1); $$ = $1; }
+    | directive '\n' { }
+    | error '\n' { Error(ERR_INVALID_LINE, (char *)NULL); yyerrok; }
 ;
 
 exp: instr
@@ -162,15 +162,14 @@ memexp: INTNUM	    { (void)ConvertIntToEA(&$$, $1); }
 ;
 
 memaddr: memexp			{ $$ = $1; $$.segment = 0; }
-    | REG_CS ':' memaddr	{ $$ = $3; $$.segment = 0x2E; }
-    | REG_SS ':' memaddr	{ $$ = $3; $$.segment = 0x36; }
-    | REG_DS ':' memaddr	{ $$ = $3; $$.segment = 0x3E; }
-    | REG_ES ':' memaddr	{ $$ = $3; $$.segment = 0x26; }
-    | REG_FS ':' memaddr	{ $$ = $3; $$.segment = 0x64; }
-    | REG_GS ':' memaddr	{ $$ = $3; $$.segment = 0x65; }
-    | BYTE memaddr		{ $$ = $2; $$.addrsize = 8; $$.len = 2; }
-    | WORD memaddr		{ $$ = $2; $$.addrsize = 16; $$.len = 3; }
-    | DWORD memaddr		{ $$ = $2; $$.addrsize = 32; $$.len = 5; }
+    | REG_CS ':' memaddr	{ $$ = $3; SetEASegment(&$$, 0x2E); }
+    | REG_SS ':' memaddr	{ $$ = $3; SetEASegment(&$$, 0x36); }
+    | REG_DS ':' memaddr	{ $$ = $3; SetEASegment(&$$, 0x3E); }
+    | REG_ES ':' memaddr	{ $$ = $3; SetEASegment(&$$, 0x26); }
+    | REG_FS ':' memaddr	{ $$ = $3; SetEASegment(&$$, 0x64); }
+    | REG_GS ':' memaddr	{ $$ = $3; SetEASegment(&$$, 0x65); }
+    | WORD memaddr		{ $$ = $2; $$.addrsize = 16; $$.len = 2; }
+    | DWORD memaddr		{ $$ = $2; $$.addrsize = 32; $$.len = 4; }
 ;
 
 mem: '[' memaddr ']' { $$ = $2; }
