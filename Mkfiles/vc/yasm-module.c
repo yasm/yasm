@@ -62,7 +62,6 @@ static module modules[] = {
     {"nasm", "parser", &yasm_nasm_LTX_parser},
     {"nasm", "preproc", &yasm_nasm_LTX_preproc},
     {"raw", "preproc", &yasm_raw_LTX_preproc},
-    {"yapp", "preproc", &yasm_yapp_LTX_preproc},
 };
 
 

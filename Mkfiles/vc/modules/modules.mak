@@ -67,8 +67,6 @@ CLEAN :
 	-@erase "$(INTDIR)\x86bc.obj"
 	-@erase "$(INTDIR)\x86expr.obj"
 	-@erase "$(INTDIR)\x86id.obj"
-	-@erase "$(INTDIR)\yapp-preproc.obj"
-	-@erase "$(INTDIR)\yapp-token.obj"
 	-@erase "$(OUTDIR)\modules.lib"
 
 "$(OUTDIR)" :
@@ -132,8 +130,6 @@ LIB32_OBJS= \
 	"$(INTDIR)\nasm-pp.obj" \
 	"$(INTDIR)\nasm-preproc.obj" \
 	"$(INTDIR)\nasmlib.obj" \
-	"$(INTDIR)\yapp-preproc.obj" \
-	"$(INTDIR)\yapp-token.obj" \
 	"$(INTDIR)\raw-preproc.obj" \
 	"..\libyasm\Release\libyasm.lib"
 
@@ -185,8 +181,6 @@ CLEAN :
 	-@erase "$(INTDIR)\x86bc.obj"
 	-@erase "$(INTDIR)\x86expr.obj"
 	-@erase "$(INTDIR)\x86id.obj"
-	-@erase "$(INTDIR)\yapp-preproc.obj"
-	-@erase "$(INTDIR)\yapp-token.obj"
 	-@erase "$(OUTDIR)\modules.lib"
 
 "$(OUTDIR)" :
@@ -250,8 +244,6 @@ LIB32_OBJS= \
 	"$(INTDIR)\nasm-pp.obj" \
 	"$(INTDIR)\nasm-preproc.obj" \
 	"$(INTDIR)\nasmlib.obj" \
-	"$(INTDIR)\yapp-preproc.obj" \
-	"$(INTDIR)\yapp-token.obj" \
 	"$(INTDIR)\raw-preproc.obj" \
 	"..\libyasm\Debug\libyasm.lib"
 
@@ -372,18 +364,6 @@ SOURCE="..\..\..\modules\preprocs\nasm\nasm-preproc.c"
 SOURCE=..\..\..\modules\preprocs\nasm\nasmlib.c
 
 "$(INTDIR)\nasmlib.obj" : $(SOURCE) "$(INTDIR)"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE="..\..\..\modules\preprocs\yapp\yapp-preproc.c"
-
-"$(INTDIR)\yapp-preproc.obj" : $(SOURCE) "$(INTDIR)"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE="..\..\..\yapp-token.c"
-
-"$(INTDIR)\yapp-token.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

@@ -210,26 +210,6 @@ SOURCE=..\..\..\modules\preprocs\nasm\nasmlib.c
 SOURCE=..\..\..\modules\preprocs\nasm\nasmlib.h
 # End Source File
 # End Group
-# Begin Group "yapp"
-
-# PROP Default_Filter ""
-# Begin Source File
-
-SOURCE="..\..\..\modules\preprocs\yapp\yapp-preproc.c"
-# End Source File
-# Begin Source File
-
-SOURCE="..\..\..\modules\preprocs\yapp\yapp-preproc.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\..\..\yapp-token.c"
-# End Source File
-# Begin Source File
-
-SOURCE="..\..\..\modules\preprocs\yapp\yapp-token.h"
-# End Source File
-# End Group
 # Begin Group "raw"
 
 # PROP Default_Filter ""

@@ -63,16 +63,11 @@ MODULES_PREPROCS_NASM_OBJS= \
  modules/preprocs/nasm/nasmlib.o \
  nasm-macros.o
 
-MODULES_PREPROCS_YAPP_OBJS = \
- modules/preprocs/yapp/yapp-preproc.o \
- yapp-token.o
-
 MODULES_PREPROCS_RAW_OBJS = \
  modules/preprocs/raw/raw-preproc.o \
 
 MODULES_PREPROCS_OBJS = \
  $(MODULES_PREPROCS_NASM_OBJS) \
- $(MODULES_PREPROCS_YAPP_OBJS) \
  $(MODULES_PREPROCS_RAW_OBJS)
 
 MODULES_OBJS = \
