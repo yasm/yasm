@@ -350,6 +350,8 @@ static Context *cstk;
 static Include *istk;
 static IncPath *ipath = NULL;
 
+static FILE *first_fp = NULL;
+
 static efunc _error;		/* Pointer to client-provided error reporting function */
 static evalfunc evaluate;
 
@@ -4064,6 +4066,7 @@ pp_reset(FILE *f, const char *file, int apass, efunc errfunc, evalfunc eval,
 {
     int h;
 
+    first_fp = f;
     _error = errfunc;
     cstk = NULL;
     istk = nasm_malloc(sizeof(Include));
@@ -4225,7 +4228,8 @@ pp_getline(void)
 	     */
 	    {
 		Include *i = istk;
-		fclose(i->fp);
+		if (i->fp != first_fp)
+		    fclose(i->fp);
 		if (i->conds)
 		    error(ERR_FATAL, "expected `%%endif' before end of file");
 		/* only set line and file name if there's a next node */
@@ -4356,7 +4360,8 @@ pp_cleanup(int pass_)
     {
 	Include *i = istk;
 	istk = istk->next;
-	fclose(i->fp);
+	if (i->fp != first_fp)
+	    fclose(i->fp);
 	nasm_free(i->fname);
 	nasm_free(i);
     }
