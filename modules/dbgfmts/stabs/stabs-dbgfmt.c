@@ -339,7 +339,15 @@ stabs_dbgfmt_generate_sections(yasm_section *sect, /*@null@*/ void *d)
 				 N_FUN, 0, info->firstsym, info->firstbc, 0);
 	yasm_xfree(str);
     }
+
     yasm_section_bcs_traverse(sect, d, stabs_dbgfmt_generate_bcs);
+
+    if (yasm__strcasecmp(sectname, ".text")==0) {
+        /* Close out last function by appending a null SO stab after last bc */
+        yasm_bytecode *bc = yasm_section_bcs_last(sect);
+        yasm_symrec *sym = yasm_symtab_define_label2(".n_so", bc, 1, bc->line);
+	stabs_dbgfmt_append_stab(info, info->stab, 0, N_SO, 0, sym, bc, 0);
+    }
 
     return 1;
 }
