@@ -30,7 +30,7 @@ do
     p=`echo ${asm} | sed 's,.asm$,.pre,'`
 
     echo $ECHO_N "$YT: Testing yapp for ${a} ... $ECHO_C"
-    if sed "s,\./,${srcdir}/," ${asm} | ./yasm -e |
+    if sed "s,\./,${srcdir}/," ${asm} | ./yasm -e -r yapp |
 	sed "s,${srcdir}/,./," > ${y}; then
 	if diff -w ${p} ${y} > /dev/null; then
 	    echo "PASS."
