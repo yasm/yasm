@@ -22,6 +22,12 @@
 #ifndef YASM_GLOBALS_H
 #define YASM_GLOBALS_H
 
+/* Current (selected) parser */
+extern /*@null@*/ parser *cur_parser;
+
+/* Current (selected) object format */
+extern /*@null@*/ objfmt *cur_objfmt;
+
 /*@null@*/ /*@dependent@*/ extern const char *in_filename;
 extern unsigned int line_number;
 extern unsigned int asm_options;

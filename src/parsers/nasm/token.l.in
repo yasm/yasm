@@ -68,7 +68,8 @@ int line_number;
 %option nounput
 %option case-insensitive
 
-%x DIRECTIVE DIRECTIVE2
+%x DIRECTIVE
+%s DIRECTIVE2
 
 DIGIT    [0-9]
 BINDIGIT [01]
@@ -158,26 +159,21 @@ WS       [ \t\r]
 <DIRECTIVE2>"]"	    { BEGIN INITIAL; return ']'; }
 <DIRECTIVE>\n	    { BEGIN INITIAL; return '\n'; }
 <DIRECTIVE2>\n	    { BEGIN INITIAL; return '\n'; }
-<DIRECTIVE>{WS}+    ;
-<DIRECTIVE2>{WS}+   ;
 
 <DIRECTIVE>[a-z]+   {
     BEGIN DIRECTIVE2;
     yylval.str_val = xstrdup(yytext);
     return DIRECTIVE_NAME;
 }
-    /* everything printable except for ' ', '[' and ']'. */
-<DIRECTIVE2>[!-@a-z\\^-`{|}~]+ {
-    yylval.str_val = xstrdup(yytext);
-    return DIRECTIVE_VAL;
-}
 <DIRECTIVE>. {
     Warning(_("ignoring unrecognized character `%s'"),
 	    conv_unprint(yytext[0]));
 }
-<DIRECTIVE2>. {
-    Warning(_("ignoring unrecognized character `%s'"),
-	    conv_unprint(yytext[0]));
+
+    /* override local labels in directive state */
+<DIRECTIVE2>\.[a-z0-9_$#@~.?]* {
+    yylval.str_val = xstrdup(yytext);
+    return ID;
 }
 
     /* size specifiers */
@@ -288,7 +284,7 @@ gs	{ yylval.int_info = 5; return REG_GS; }
 "//"			{ return SIGNDIV; }
 "%%"			{ return SIGNMOD; }
 "$$"			{ return START_SECTION_ID; }
-[-+|^&*/%~$():[\],]	{ return yytext[0]; }
+[-+|^&*/%~$():[\]=,]	{ return yytext[0]; }
 
     /* special non-local ..@label and labels like ..start */
 \.\.[a-z0-9_$#@~.?]+ {

@@ -22,6 +22,10 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
+#ifdef STDC_HEADERS
+# include <assert.h>
+#endif
+
 #include "globals.h"
 #include "errwarn.h"
 #include "expr.h"
@@ -36,19 +40,27 @@ struct section {
 
     enum { SECTION_GENERAL, SECTION_ABSOLUTE } type;
 
-    char *name;			/* strdup()'ed name (given by user) */
-
     union {
 	/* SECTION_GENERAL data */
+	struct general {
+	    /*@owned@*/ char *name;	/* strdup()'ed name (given by user) */
+
+	    /* object-format-specific data */ 
+	    /*@null@*/ /*@owned@*/ void *of_data;
+	} general;
+
 	/* SECTION_ABSOLUTE data */
-	unsigned long start;
+	/*@owned@*/ expr *start;
     } data;
+
+
+    int res_only;		/* allow only resb family of bytecodes? */
 
     bytecodehead bc;		/* the bytecodes for the section's contents */
 };
 
 section *
-sections_initialize(sectionhead *headp, objfmt *of)
+sections_initialize(sectionhead *headp)
 {
     section *s;
 
@@ -61,55 +73,79 @@ sections_initialize(sectionhead *headp, objfmt *of)
 
     /* Initialize default section */
     s->type = SECTION_GENERAL;
-    s->name = xstrdup(of->default_section_name);
+    assert(cur_objfmt != NULL);
+    s->data.general.name = xstrdup(cur_objfmt->default_section_name);
+    s->data.general.of_data = NULL;
     bytecodes_initialize(&s->bc);
 
-    s->data.start = 0;
+    s->res_only = 0;
 
     return s;
 }
 
 /*@-onlytrans@*/
 section *
-sections_switch(sectionhead *headp, objfmt *of, const char *name)
+sections_switch_general(sectionhead *headp, const char *name, void *of_data,
+			int res_only)
 {
-    section *s, *sp;
+    section *s;
 
     /* Search through current sections to see if we already have one with
      * that name.
      */
-    s = (section *)NULL;
-    STAILQ_FOREACH(sp, headp, link) {
-	if (strcmp(sp->name, name) == 0)
-	    s = sp;
+    STAILQ_FOREACH(s, headp, link) {
+	if (s->type == SECTION_GENERAL &&
+	    strcmp(s->data.general.name, name) == 0) {
+	    if (of_data) {
+		Warning(_("segment attributes specified on redeclaration of segment: ignoring"));
+		assert(cur_objfmt != NULL);
+		cur_objfmt->section_data_delete(of_data);
+	    }
+	    return s;
+	}
     }
-
-    if (s)
-	return s;
 
     /* No: we have to allocate and create a new one. */
-
-    /* But first check with objfmt to see if the name is valid.
-     * If it isn't, error and just return the default (first) section.
-     */
-    if (!of->is_valid_section(name)) {
-	Error(_("Invalid section name: %s"), name);
-	return STAILQ_FIRST(headp);
-    }
 
     /* Okay, the name is valid; now allocate and initialize */
     s = xcalloc(1, sizeof(section));
     STAILQ_INSERT_TAIL(headp, s, link);
 
     s->type = SECTION_GENERAL;
-    s->name = xstrdup(name);
+    s->data.general.name = xstrdup(name);
+    s->data.general.of_data = of_data;
     bytecodes_initialize(&s->bc);
 
-    s->data.start = 0;
+    s->res_only = res_only;
 
     return s;
 }
 /*@=onlytrans@*/
+
+/*@-onlytrans@*/
+section *
+sections_switch_absolute(sectionhead *headp, expr *start)
+{
+    section *s;
+
+    s = xcalloc(1, sizeof(section));
+    STAILQ_INSERT_TAIL(headp, s, link);
+
+    s->type = SECTION_ABSOLUTE;
+    s->data.start = start;
+    bytecodes_initialize(&s->bc);
+
+    s->res_only = 1;
+
+    return s;
+}
+/*@=onlytrans@*/
+
+int
+section_is_absolute(section *sect)
+{
+    return (sect->type == SECTION_ABSOLUTE);
+}
 
 void
 sections_delete(sectionhead *headp)
@@ -130,8 +166,10 @@ sections_print(const sectionhead *headp)
 {
     section *cur;
     
-    STAILQ_FOREACH(cur, headp, link)
+    STAILQ_FOREACH(cur, headp, link) {
+	printf("***SECTION***\n");
 	section_print(cur);
+    }
 }
 
 void
@@ -152,7 +190,17 @@ section_get_bytecodes(section *sect)
 const char *
 section_get_name(const section *sect)
 {
-    return sect->name;
+    if (sect->type == SECTION_GENERAL)
+	return sect->data.general.name;
+    return NULL;
+}
+
+const expr *
+section_get_start(const section *sect)
+{
+    if (sect->type == SECTION_ABSOLUTE)
+	return sect->data.start;
+    return NULL;
 }
 
 void
@@ -161,7 +209,17 @@ section_delete(section *sect)
     if (!sect)
 	return;
 
-    xfree(sect->name);
+    switch (sect->type) {
+	case SECTION_GENERAL:
+	    xfree(sect->data.general.name);
+	    assert(cur_objfmt != NULL);
+	    if (sect->data.general.of_data)
+		cur_objfmt->section_data_delete(sect->data.general.of_data);
+	    break;
+	case SECTION_ABSOLUTE:
+	    expr_delete(sect->data.start);
+	    break;
+    }
     bcs_delete(&sect->bc);
     xfree(sect);
 }
@@ -169,15 +227,21 @@ section_delete(section *sect)
 void
 section_print(const section *sect)
 {
-    printf("***SECTION %s***\n", sect->name);
     printf(" type=");
     switch (sect->type) {
 	case SECTION_GENERAL:
-	    printf("general\n");
+	    printf("general\n name=%s\n objfmt data:\n",
+		   sect->data.general.name);
+	    assert(cur_objfmt != NULL);
+	    if (sect->data.general.of_data)
+		cur_objfmt->section_data_print(sect->data.general.of_data);
+	    else
+		printf("  (none)\n");
 	    break;
 	case SECTION_ABSOLUTE:
-	    printf("absolute\n");
-	    printf("start=%lu\n", sect->data.start);
+	    printf("absolute\n start=");
+	    expr_print(sect->data.start);
+	    printf("\n");
 	    break;
     }
 

@@ -12,6 +12,7 @@ yasm_SOURCES = \
 	errwarn.h
 
 yasm_LDADD = \
+	libyasm.a			\
 	arch/@ARCH@/libarch.a		\
 	parsers/nasm/libparser.a	\
 	preprocs/raw/libpreproc.a	\
@@ -41,6 +42,7 @@ libyasm_a_SOURCES = \
 	section.h		\
 	arch.c			\
 	arch.h			\
+	objfmt.c		\
 	objfmt.h		\
 	options.h		\
 	options.c		\

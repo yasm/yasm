@@ -21,6 +21,7 @@ noinst_PROGRAMS =
 endif
 
 LDADD = \
+	$(top_builddir)/src/libyasm.a				\
 	$(top_builddir)/check/libcheck.a			\
 	$(top_builddir)/src/parsers/nasm/libparser.a		\
 	$(top_builddir)/src/preprocs/raw/libpreproc.a		\

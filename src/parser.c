@@ -28,6 +28,9 @@
 #include "parser.h"
 
 
+/* Available parsers */
+extern parser nasm_parser;
+
 /* NULL-terminated list of all available parsers.
  * Someday change this if we dynamically load parsers at runtime.
  * Could improve this a little by generating automatically at build-time.

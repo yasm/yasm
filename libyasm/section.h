@@ -24,11 +24,17 @@
 
 struct objfmt;
 
-/*@dependent@*/ section *sections_initialize(sectionhead *headp,
-					     struct objfmt *of);
+/*@dependent@*/ section *sections_initialize(sectionhead *headp);
 
-/*@dependent@*/ section *sections_switch(sectionhead *headp, struct objfmt *of,
-					 const char *name);
+/*@dependent@*/ section *sections_switch_general(sectionhead *headp,
+						 const char *name,
+						 /*@null@*/ /*@only@*/
+						 void *of_data, int res_only);
+
+/*@dependent@*/ section *sections_switch_absolute(sectionhead *headp,
+						  /*@keep@*/ expr *start);
+
+int section_is_absolute(section *sect);
 
 void sections_delete(sectionhead *headp);
 
@@ -38,7 +44,8 @@ void sections_parser_finalize(sectionhead *headp);
 
 /*@dependent@*/ bytecodehead *section_get_bytecodes(section *sect);
 
-/*@observer@*/ const char *section_get_name(const section *sect);
+/*@observer@*/ /*@null@*/ const char *section_get_name(const section *sect);
+/*@observer@*/ /*@null@*/ const expr *section_get_start(const section *sect);
 
 void section_delete(/*@only@*/ section *sect);
 

@@ -27,6 +27,12 @@
 #include "globals.h"
 
 
+/* Current (selected) parser */
+/*@null@*/ parser *cur_parser = NULL;
+
+/* Current (selected) object format) */
+/*@null@*/ objfmt *cur_objfmt = NULL;
+
 /*@null@*/ /*@dependent@*/ const char *in_filename = (const char *)NULL;
 unsigned int line_number = 1;
 unsigned int asm_options = 0;

@@ -37,24 +37,21 @@ extern int nasm_parser_parse(void);
 
 size_t (*nasm_parser_yyinput) (char *buf, size_t max_size);
 
-objfmt *nasm_parser_objfmt;
 sectionhead nasm_parser_sections;
 /*@dependent@*/ section *nasm_parser_cur_section;
 
 extern /*@only@*/ char *nasm_parser_locallabel_base;
 
 static /*@dependent@*/ sectionhead *
-nasm_parser_do_parse(parser *p, objfmt *of, FILE *f)
+nasm_parser_do_parse(parser *p, FILE *f)
     /*@globals killed nasm_parser_locallabel_base @*/
 {
-    p->current_pp->initialize(of, f);
+    p->current_pp->initialize(f);
     nasm_parser_in = f;
     nasm_parser_yyinput = p->current_pp->input;
 
-    nasm_parser_objfmt = of;
-
     /* Initialize section list */
-    nasm_parser_cur_section = sections_initialize(&nasm_parser_sections, of);
+    nasm_parser_cur_section = sections_initialize(&nasm_parser_sections);
 
     /* yacc debugging, needs YYDEBUG set in bison.y.in to work */
     /* nasm_parser_debug = 1; */

@@ -24,6 +24,7 @@
 RCSID("$IdPath$");
 
 #ifdef STDC_HEADERS
+# include <assert.h>
 # include <math.h>
 #endif
 
@@ -42,12 +43,12 @@ RCSID("$IdPath$");
 
 #include "arch.h"
 
-#define YYDEBUG 1
-
 void init_table(void);
 extern int nasm_parser_lex(void);
 void nasm_parser_error(const char *);
-static void nasm_parser_directive(const char *name, const char *val);
+static void nasm_parser_directive(const char *name,
+				  valparamhead *valparams,
+				  /*@null@*/ valparamhead *objext_valparams);
 
 extern objfmt *nasm_parser_objfmt;
 extern sectionhead nasm_parser_sections;
@@ -77,11 +78,13 @@ static bytecode *nasm_parser_temp_bc;
     datavalhead datahead;
     dataval *data;
     bytecode *bc;
+    valparamhead dir_valparams;
+    valparam *dir_valparam;
 }
 
 %token <intn> INTNUM
 %token <flt> FLTNUM
-%token <str_val> DIRECTIVE_NAME DIRECTIVE_VAL STRING
+%token <str_val> DIRECTIVE_NAME STRING
 %token <int_info> BYTE WORD DWORD QWORD TWORD DQWORD
 %token <int_info> DECLARE_DATA
 %token <int_info> RESERVE_SPACE
@@ -113,12 +116,14 @@ static bytecode *nasm_parser_temp_bc;
 %type <ea> rm8x rm16x rm32x /*rm64x rm128x*/
 %type <ea> rm8 rm16 rm32 rm64 rm128
 %type <im_val> imm imm8x imm16x imm32x imm8 imm16 imm32
-%type <exp> expr expr_no_string memexpr
+%type <exp> expr expr_no_string memexpr direxpr
 %type <sym> explabel
 %type <str_val> label_id
 %type <tgt_val> target
 %type <data> dataval
 %type <datahead> datavals
+%type <dir_valparams> directive_valparams
+%type <dir_valparam> directive_valparam
 
 %left '|'
 %left '^'
@@ -201,20 +206,38 @@ label_id: ID	    {
 ;
 
 /* directives */
-directive: '[' DIRECTIVE_NAME DIRECTIVE_VAL ']'	{
-	nasm_parser_directive($2, $3);
-	xfree($2);
-	xfree($3);
-    }
-    | '[' DIRECTIVE_NAME DIRECTIVE_VAL error	{
-	Error(_("missing `%c'"), ']');
-	xfree($2);
-	xfree($3);
-    }
-    | '[' DIRECTIVE_NAME error			{
-	Error(_("missing argument to `%s'"), $2);
+directive: '[' DIRECTIVE_NAME directive_val ']'	{
 	xfree($2);
     }
+    | '[' DIRECTIVE_NAME error ']'		{
+	Error(_("invalid arguments to [%s]"), $2);
+	xfree($2);
+    }
+;
+
+    /* $<str_val>0 is the DIRECTIVE_NAME */
+    /* After : is (optional) object-format specific extension */
+directive_val: directive_valparams {
+	nasm_parser_directive($<str_val>0, &$1, NULL);
+    }
+    | directive_valparams ':' directive_valparams {
+	nasm_parser_directive($<str_val>0, &$1, &$3);
+    }
+;
+
+directive_valparams: directive_valparam		{
+	vps_initialize(&$$);
+	vps_append(&$$, $1);
+    }
+    | directive_valparams directive_valparam	{
+	vps_append(&$1, $2);
+	$$ = $1;
+    }
+;
+
+directive_valparam: ID		{ vp_new($$, $1, NULL); }
+    | direxpr			{ vp_new($$, NULL, $1); }
+    | ID '=' direxpr		{ vp_new($$, $1, $3); }
 ;
 
 /* register groupings */
@@ -454,6 +477,26 @@ target: expr		{
 ;
 
 /* expression trees */
+
+/* expr w/o FLTNUM and unary + and -, for use in directives */
+direxpr: INTNUM			{ $$ = expr_new_ident(ExprInt($1)); }
+    | direxpr '|' direxpr	{ $$ = expr_new_tree($1, EXPR_OR, $3); }
+    | direxpr '^' direxpr	{ $$ = expr_new_tree($1, EXPR_XOR, $3); }
+    | direxpr '&' direxpr	{ $$ = expr_new_tree($1, EXPR_AND, $3); }
+    | direxpr LEFT_OP direxpr	{ $$ = expr_new_tree($1, EXPR_SHL, $3); }
+    | direxpr RIGHT_OP direxpr	{ $$ = expr_new_tree($1, EXPR_SHR, $3); }
+    | direxpr '+' direxpr	{ $$ = expr_new_tree($1, EXPR_ADD, $3); }
+    | direxpr '-' direxpr	{ $$ = expr_new_tree($1, EXPR_SUB, $3); }
+    | direxpr '*' direxpr	{ $$ = expr_new_tree($1, EXPR_MUL, $3); }
+    | direxpr '/' direxpr	{ $$ = expr_new_tree($1, EXPR_DIV, $3); }
+    | direxpr SIGNDIV direxpr	{ $$ = expr_new_tree($1, EXPR_SIGNDIV, $3); }
+    | direxpr '%' direxpr	{ $$ = expr_new_tree($1, EXPR_MOD, $3); }
+    | direxpr SIGNMOD direxpr	{ $$ = expr_new_tree($1, EXPR_SIGNMOD, $3); }
+    /*| '!' expr		{ $$ = expr_new_branch(EXPR_LNOT, $2); }*/
+    | '~' direxpr %prec UNARYOP	{ $$ = expr_new_branch(EXPR_NOT, $2); }
+    | '(' direxpr ')'		{ $$ = $2; }
+;
+
 expr_no_string: INTNUM		{ $$ = expr_new_ident(ExprInt($1)); }
     | FLTNUM			{ $$ = expr_new_ident(ExprFloat($1)); }
     | explabel			{ $$ = expr_new_ident(ExprSym($1)); }
@@ -491,15 +534,31 @@ expr: expr_no_string
     }
 ;
 
-explabel: ID		{ $$ = symrec_use($1); xfree($1); }
-    | SPECIAL_ID	{ $$ = symrec_use($1); xfree($1); }
-    | LOCAL_ID		{ $$ = symrec_use($1); xfree($1); }
+explabel: ID		{
+	$$ = symrec_use($1);
+	xfree($1);
+    }
+    | SPECIAL_ID	{
+	$$ = symrec_use($1);
+	xfree($1);
+    }
+    | LOCAL_ID		{
+	$$ = symrec_use($1);
+	xfree($1);
+    }
     | '$'		{
 	$$ = symrec_define_label("$", nasm_parser_cur_section,
 				 nasm_parser_prev_bc, 0);
     }
     | START_SECTION_ID	{
-	$$ = symrec_use(section_get_name(nasm_parser_cur_section));
+	if (section_is_absolute(nasm_parser_cur_section)) {
+	    Error(_("`$$' is not valid within an ABSOLUTE section"));
+	    YYERROR;
+	} else {
+	    const char *ss_name = section_get_name(nasm_parser_cur_section);
+	    assert(ss_name != NULL);
+	    $$ = symrec_use(ss_name);
+	}
     }
 ;
 
@@ -543,25 +602,66 @@ instr: instrbase
 /*@=usedef =nullassign =memtrans =usereleased =compdef =mustfree@*/
 
 static void
-nasm_parser_directive(const char *name, const char *val)
+nasm_parser_directive(const char *name, valparamhead *valparams,
+		      valparamhead *objext_valparams)
 {
+    valparam *vp;
+    const intnum *intn;
     long lval;
-    char *end;
 
+    assert(cur_objfmt != NULL);
     if (strcasecmp(name, "section") == 0) {
-	nasm_parser_cur_section = sections_switch(&nasm_parser_sections,
-						  nasm_parser_objfmt, val);
+	section *new_section =
+	    cur_objfmt->sections_switch(&nasm_parser_sections, valparams,
+					objext_valparams);
+	if (new_section) {
+	    nasm_parser_cur_section = new_section;
+	    nasm_parser_prev_bc = (bytecode *)NULL;
+	} else
+	    Error(_("invalid argument to [%s]"), "SECTION");
+    } else if (strcasecmp(name, "absolute") == 0) {
+	vp = vps_first(valparams);
+	nasm_parser_cur_section =
+	    sections_switch_absolute(&nasm_parser_sections, vp->val ?
+		expr_new_ident(ExprSym(symrec_use(vp->val))) : vp->param);
 	nasm_parser_prev_bc = (bytecode *)NULL;
-	symrec_define_label(val, nasm_parser_cur_section, (bytecode *)NULL, 1);
     } else if (strcasecmp(name, "bits") == 0) {
-	lval = strtol(val, &end, 10);
-	if (*val == '\0' || *end != '\0' || (lval != 16 && lval != 32))
-	    Error(_("`%s' is not a valid argument to [BITS]"), val);
-	else
+	if ((vp = vps_first(valparams)) && !vp->val && vp->param != NULL &&
+	    (intn = expr_get_intnum(&vp->param)) != NULL &&
+	    (lval = intnum_get_int(intn)) && (lval == 16 || lval == 32))
 	    x86_mode_bits = (unsigned char)lval;
+	else
+	    Error(_("invalid argument to [%s]"), "BITS");
     } else {
-	printf("Directive: Name=`%s' Value=`%s'\n", name, val);
+	Error(_("unrecognized directive [%s]"), name);
+#if 0
+	printf("Directive: Name=`%s'\n Val/Params:\n", name);
+	vps_foreach(vp, valparams) {
+	    printf("  (%s,", vp->val?vp->val:"(nil)");
+	    if (vp->param)
+		expr_print(vp->param);
+	    else
+		printf("(nil)");
+	    printf(")\n");
+	}
+	printf(" Obj Ext Val/Params:\n");
+	if (!objext_valparams)
+	    printf("  (none)\n");
+	else
+	    vps_foreach(vp, objext_valparams) {
+		printf("  (%s,", vp->val?vp->val:"(nil)");
+		if (vp->param)
+		    expr_print(vp->param);
+		else
+		    printf("(nil)");
+		printf(")\n");
+	    }
+#endif
     }
+
+    vps_delete(valparams);
+    if (objext_valparams)
+	vps_delete(objext_valparams);
 }
 
 void

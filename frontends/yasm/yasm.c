@@ -117,10 +117,24 @@ main(int argc, char *argv[])
     /* Set x86 as the architecture */
     cur_arch = &x86_arch;
 
-    /* Get initial BITS setting from object format */
-    x86_mode_bits = dbg_objfmt.default_mode_bits;
+    /* Set dbg as the object format */
+    cur_objfmt = find_objfmt("dbg");
+    if (!cur_objfmt) {
+	ErrorNow(_("unrecognized output format `%s'"), "dbg");
+	return EXIT_FAILURE;
+    }
 
-    sections = nasm_parser.do_parse(&nasm_parser, &dbg_objfmt, in);
+    /* Set NASM as the parser */
+    cur_parser = find_parser("nasm");
+    if (!cur_parser) {
+	ErrorNow(_("unrecognized parser `%s'"), "nasm");
+	return EXIT_FAILURE;
+    }
+
+    /* Get initial BITS setting from object format */
+    x86_mode_bits = cur_objfmt->default_mode_bits;
+
+    sections = cur_parser->do_parse(cur_parser, in);
 
     if (OutputAllErrorWarning() > 0) {
 	sections_delete(sections);

@@ -39,7 +39,7 @@ struct preproc {
      * not the filename (which is in a global variable and is not
      * preprocessor-specific).
      */
-    void (*initialize) (objfmt *of, FILE *f);
+    void (*initialize) (FILE *f);
 
     /* Gets more preprocessed source code (up to max_size bytes) into buf.
      * Note that more than a single line may be returned in buf. */

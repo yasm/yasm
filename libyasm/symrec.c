@@ -22,6 +22,10 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
+#ifdef STDC_HEADERS
+# include <assert.h>
+#endif
+
 #include "ternary.h"
 
 #include "globals.h"
@@ -291,9 +295,11 @@ symrec_print(const symrec *sym)
 	    printf("\n");
 	    break;
 	case SYM_LABEL:
-	    printf("_Label_\n");
-	    printf("Section=`%s'\n", sym->value.label.sect?
-		   section_get_name(sym->value.label.sect):"(nil)");
+	    printf("_Label_\nSection:");
+	    if (sym->value.label.sect)
+		section_print(sym->value.label.sect);
+	    else
+		printf(" (none)\n");
 	    if (!sym->value.label.bc)
 		printf("[First bytecode]\n");
 	    else {

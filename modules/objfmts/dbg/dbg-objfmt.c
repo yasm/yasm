@@ -22,14 +22,62 @@
 #include "util.h"
 /*@unused@*/ RCSID("$IdPath$");
 
+#include "expr.h"
+#include "symrec.h"
+
+#include "section.h"
 #include "objfmt.h"
 
 
-static int
-dbg_objfmt_is_valid_section(const char *name)
+static /*@dependent@*/ /*@null@*/ section *
+dbg_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
+			   /*@unused@*/ /*@null@*/
+			   valparamhead *objext_valparams)
 {
-    fprintf(stderr, "-dbg_objfmt_is_valid_section(\"%s\")\n", name);
-    return 1;
+    valparam *vp;
+    section *retval;
+
+#if 0
+    fprintf(stderr, "-dbg_objfmt_sections_switch():\n");
+    printf(" Val/Params:\n");
+    vps_foreach(vp, valparams) {
+	printf("  (%s,", vp->val?vp->val:"(nil)");
+	if (vp->param)
+	    expr_print(vp->param);
+	else
+	    printf("(nil)");
+	printf(")\n");
+    }
+    printf(" Obj Ext Val/Params:\n");
+    if (!objext_valparams)
+	printf("  (none)\n");
+    else
+	vps_foreach(vp, objext_valparams) {
+	    printf("  (%s,", vp->val?vp->val:"(nil)");
+	    if (vp->param)
+		expr_print(vp->param);
+	    else
+		printf("(nil)");
+	    printf(")\n");
+	}
+#endif
+    if ((vp = vps_first(valparams)) && !vp->param && vp->val != NULL) {
+	retval = sections_switch_general(headp, vp->val, NULL, 0);
+	symrec_define_label(vp->val, retval, (bytecode *)NULL, 1);
+	return retval;
+    } else
+	return NULL;
+}
+
+static void
+dbg_objfmt_section_data_delete(/*@only@*/ void *data)
+{
+    xfree(data);
+}
+
+static void
+dbg_objfmt_section_data_print(/*@unused@*/ void *data)
+{
 }
 
 /* Define objfmt structure -- see objfmt.h for details */
@@ -38,5 +86,7 @@ objfmt dbg_objfmt = {
     "dbg",
     ".text",
     32,
-    dbg_objfmt_is_valid_section
+    dbg_objfmt_sections_switch,
+    dbg_objfmt_section_data_delete,
+    dbg_objfmt_section_data_print
 };

@@ -24,7 +24,7 @@ endif
 
 noinst_SCRIPTS = gen_instr.pl
 
-AM_YFLAGS = -d --name-prefix=nasm_parser_
+AM_YFLAGS = -v -d --name-prefix=nasm_parser_
 AM_LFLAGS = -Pnasm_parser_ -olex.yy.c
 
 INCLUDES = \

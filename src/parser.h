@@ -52,7 +52,7 @@ struct parser {
      * This function returns the starting section of a linked list of sections
      * (whatever was in the file).
      */
-    sectionhead *(*do_parse) (parser *p, objfmt *of, FILE *f);
+    sectionhead *(*do_parse) (parser *p, FILE *f);
 };
 
 /* Generic functions for all parsers - implemented in src/parser.c */
@@ -76,8 +76,5 @@ void parser_listpp(parser *p,
  * of each available parser.
  */
 void list_parsers(void (*printfunc) (const char *name, const char *keyword));
-
-/* Available parsers */
-extern parser nasm_parser;
 
 #endif

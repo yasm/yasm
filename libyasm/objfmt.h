@@ -46,13 +46,27 @@ struct objfmt {
      */
 /*    debugfmt *default_df;*/
 
-    /* Is the specified section name valid?
-     * Return is a boolean value.
+    /* Switch object file sections.  The first val of the valparams should
+     * be the section name.
      */
-    int (*is_valid_section) (const char *name);
+    /*@dependent@*/ /*@null@*/ section *
+	(*sections_switch)(sectionhead *headp, valparamhead *valparams,
+			   /*@null@*/ valparamhead *objext_valparams);
+
+    void (*section_data_delete)(/*@only@*/ void *data);
+    void (*section_data_print)(void *data);
 };
 
-/* Available object formats */
-extern objfmt dbg_objfmt;
+/* Generic functions for all object formats - implemented in src/objfmt.c */
+
+/* Finds an object format based on its keyword.  Returns NULL if no match was
+ * found.
+ */
+/*@null@*/ objfmt *find_objfmt(const char *keyword);
+
+/* Lists all available object formats.  Calls printfunc with the name and
+ * keyword of each available format.
+ */
+void list_objfmts(void (*printfunc) (const char *name, const char *keyword));
 
 #endif
