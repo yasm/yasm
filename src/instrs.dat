@@ -1,4 +1,4 @@
-; $Id: instrs.dat,v 1.11 2001/07/04 08:03:04 peter Exp $
+; $Id: instrs.dat,v 1.12 2001/07/04 08:14:46 peter Exp $
 ; List of valid instruction/operand combinations
 ;
 ;    Copyright (C) 2001  Peter Johnson
@@ -209,6 +209,9 @@
 !onebyte16	nil		16	$0.1		nil		nil	8086
 !onebyte32	nil		32	$0.1		nil		nil	386
 ;
+; One byte opcode instructions with general memory operand:
+!onebytemem	mem		nil	$0.1		$1,$0.2		nil	#0
+;
 ; 286 rm16 protected mode group (LLDT/LTR/STR/VERR/VERW):
 !prot286	rm16		nil	0F,00		$1,$0.1		nil	286,PROT,#0
 ;
@@ -263,6 +266,9 @@
 ;
 ; Two byte opcode instructions with no operands:
 !twobyte	nil		nil	$0.1,$0.2	nil		nil	#0
+;
+; Two byte opcode instructions with general memory operand:
+!twobytemem	mem		nil	$0.1,$0.2	$1,$0.3		nil	#0
 ;
 ; Three byte opcode instructions with no operands:
 !threebyte	nil		nil	$0.1,$0.2,$0.3	nil		nil	#0
@@ -410,7 +416,7 @@ fldlg2!twobyte		D9,EC		8086,FPU
 fldln2!twobyte		D9,ED		8086,FPU
 fldz!twobyte		D9,EE		8086,FPU
 fldcw	mem16			nil	D9		$1,5	nil	8086,FPU
-fldenv	mem			nil	D9		$1,4	nil	8086,FPU
+fldenv!onebytemem	D9,4		8086,FPU
 fmul!farith		1,C8,C8
 fmulp!farithp		C8
 fimul!fiarith		1
@@ -420,9 +426,9 @@ fprem!twobyte		D9,F8		8086,FPU
 fprem1!twobyte		D9,F5		8086,FPU
 fptan!twobyte		D9,F2		8086,FPU
 frndint!twobyte		D9,FC		8086,FPU
-frstor	mem			nil	DD		$1,4	nil	8086,FPU
-fsave	mem			nil	9B,DD		$1,6	nil	8086,FPU
-fnsave	mem			nil	DD		$1,6	nil	8086,FPU
+frstor!onebytemem	DD,4		8086,FPU
+fsave!twobytemem	9B,DD,6		8086,FPU
+fnsave!onebytemem	DD,6		8086,FPU
 fscale!twobyte		D9,FD		8086,FPU
 fsin!twobyte		D9,FE		8086,FPU
 fsincos!twobyte		D9,FB		8086,FPU
@@ -436,8 +442,8 @@ fstp	mem80x			nil	DB		$1,7	nil	8086,FPU
 fstp	fpureg			nil	DD,D8+$1	nil	nil	8086,FPU
 fstcw	mem16			nil	9B,D9		$1,7	nil	8086,FPU
 fnstcw	mem16			nil	D9		$1,7	nil	8086,FPU
-fstenv	mem			nil	9B,D9		$1,6	nil	8086,FPU
-fnstenv	mem			nil	D9		$1,6	nil	8086,FPU
+fstenv!twobytemem	9B,D9,6		8086,FPU
+fnstenv!onebytemem	D9,6		8086,FPU
 fstsw	mem16			nil	9B,DD		$1,7	nil	8086,FPU
 fstsw	REG_AX			nil	9B,DF,E0	nil	nil	8086,FPU
 fnstsw	mem16			nil	DD		$1,7	nil	8086,FPU
@@ -458,8 +464,8 @@ fxch	ST0,ST0			nil	D9,C8		nil	nil	8086,FPU
 fxch	ST0,FPUREG_NOTST0	nil	D9,C8+$2	nil	nil	8086,FPU
 fxch	FPUREG_NOTST0,ST0	nil	D9,C8+$1	nil	nil	8086,FPU
 fxch	nil			nil	D9,C9		nil	nil	8086,FPU
-fxrstor	mem			nil	0F,AE		$1,1	nil	P6,SSE,FPU
-fxsave	mem			nil	0F,AE		$1,0	nil	P6,SSE,FPU
+fxrstor!twobytemem	0F,AE,1		P6,SSE,FPU
+fxsave!twobytemem	0F,AE,0		P6,SSE,FPU
 fxtract!twobyte		D9,F4		8086,FPU
 fyl2x!twobyte		D9,F1		8086,FPU
 fyl2xp1!twobyte		D9,F9		8086,FPU
@@ -493,7 +499,7 @@ int03!onebyte		CC		8086
 int	imm8			nil	CD		nil	$1,8	8086
 into!onebyte		CE		8086
 invd!twobyte		0F,08		486,PRIV
-invlpg	mem			nil	0F,01		$1,7	nil	486,PRIV
+invlpg!twobytemem	0F,01,7		486,PRIV
 iret!onebyte		CF		8086
 iretw!onebyte16		CF
 iretd!onebyte32		CF
@@ -517,8 +523,8 @@ lea	reg16,mem16		16	8D		$2,$1	nil	8086
 lea	reg32,mem32		32	8D		$2,$1	nil	386
 leave!onebyte		C9		186
 ; lfence
-lgdt	mem			nil	0F,01		$1,2	nil	286,PRIV
-lidt	mem			nil	0F,01		$1,3	nil	286,PRIV
+lgdt!twobytemem		0F,01,2		286,PRIV
+lidt!twobytemem		0F,01,3		286,PRIV
 lldt!prot286		2		PRIV
 lmsw	rm16			nil	0F,01		$1,6	nil	286,PRIV
 lodsb!onebyte		AC		8086
@@ -730,10 +736,10 @@ popf!onebyte		9D		8086
 popfd!onebyte32		9D
 popfw!onebyte16		9D
 por!mmxsse		EB		P5		KATMAI,SSE
-prefetcht0	mem		nil	0F,18		$1,1	nil	KATMAI
-prefetcht1	mem		nil	0F,18		$1,2	nil	KATMAI
-prefetcht2	mem		nil	0F,18		$1,3	nil	KATMAI
-prefetchnta	mem		nil	0F,18		$1,0	nil	KATMAI
+prefetcht0!twobytemem	0F,18,1		KATMAI
+prefetcht1!twobytemem	0F,18,2		KATMAI
+prefetcht2!twobytemem	0F,18,3		KATMAI
+prefetchnta!twobytemem	0F,18,0		KATMAI
 psadbw!mmxsse		F6		KATMAI		KATMAI,SSE
 pshufd!sse2pdimm	70
 pshufhw	XMMREG,rm128,imm8	nil	F3,0F,70	$2,$1	$3,8	P4,SSE2
@@ -815,8 +821,8 @@ scasw!onebyte16		AF
 scasd!onebyte32		AF
 ; setcc
 ;sfence	nil			nil	0F,AE		,7?
-sgdt	mem			nil	0F,01		$1,0	nil	286
-sidt	mem			nil	0F,01		$1,1	nil	286
+sgdt!twobytemem		0F,01,0		286
+sidt!twobytemem		0F,01,1		286
 shld!shlrd		A4
 shrd!shlrd		AC
 shufpd!sse2pdimm	C6
@@ -985,8 +991,8 @@ pfsubr!now3d		AA		P5
 pi2fd!now3d		0D		P5
 pi2fw!now3d		0C		ATHLON
 pmulhrwa!now3d		B7		P5
-prefetch	mem		nil	0F,0D		$1,0	nil	P5,3DNOW,AMD
-prefetchw	mem		nil	0F,0D		$1,1	nil	P5,3DNOW,AMD
+prefetch!twobytemem	0F,0D,0		P5,3DNOW,AMD
+prefetchw!twobytemem	0F,0D,1		P5,3DNOW,AMD
 pswapd!now3d		BB		ATHLON
 ;
 ; Other AMD Instructions
