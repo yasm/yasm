@@ -21,6 +21,7 @@ yasm_SOURCES = \
 	preproc.h		\
 	parser.c		\
 	parser.h		\
+	optimizer.h		\
 	strcasecmp.c
 
 yasm_LDADD = \
