@@ -170,7 +170,7 @@ sections_print(const sectionhead *headp)
     
     STAILQ_FOREACH(cur, headp, link) {
 	printf("***SECTION***\n");
-	section_print(cur);
+	section_print(cur, 1);
     }
 }
 
@@ -227,7 +227,7 @@ section_delete(section *sect)
 }
 
 void
-section_print(const section *sect)
+section_print(const section *sect, int print_bcs)
 {
     printf(" type=");
     switch (sect->type) {
@@ -247,6 +247,8 @@ section_print(const section *sect)
 	    break;
     }
 
-    printf(" Bytecodes:\n");
-    bcs_print(&sect->bc);
+    if (print_bcs) {
+	printf(" Bytecodes:\n");
+	bcs_print(&sect->bc);
+    }
 }

@@ -50,5 +50,5 @@ void sections_parser_finalize(sectionhead *headp);
 
 void section_delete(/*@only@*/ section *sect);
 
-void section_print(const section *sect);
+void section_print(const section *sect, int print_bcs);
 #endif

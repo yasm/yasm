@@ -297,7 +297,7 @@ symrec_print(const symrec *sym)
 	case SYM_LABEL:
 	    printf("_Label_\nSection:");
 	    if (sym->value.label.sect)
-		section_print(sym->value.label.sect);
+		section_print(sym->value.label.sect, 0);
 	    else
 		printf(" (none)\n");
 	    if (!sym->value.label.bc)
