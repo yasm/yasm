@@ -1,10 +1,9 @@
 # $IdPath$
 
-EXTRA_DIST += \
-	modules/objfmts/dbg/Makefile.inc \
-	modules/objfmts/bin/Makefile.inc \
-	modules/objfmts/coff/Makefile.inc \
-	modules/objfmts/win32/Makefile.inc
+EXTRA_DIST += modules/objfmts/dbg/Makefile.inc
+EXTRA_DIST += modules/objfmts/bin/Makefile.inc
+EXTRA_DIST += modules/objfmts/coff/Makefile.inc
+EXTRA_DIST += modules/objfmts/win32/Makefile.inc
 
 include modules/objfmts/dbg/Makefile.inc
 include modules/objfmts/bin/Makefile.inc

@@ -1,21 +1,19 @@
 # $IdPath$
 
-CHECKFILES = \
-	check/check.c		\
-	check/check_run.c	\
-	check/check.h		\
-	check/check_impl.h	\
-	check/check_msg.c	\
-	check/check_msg.h	\
-	check/check_log.c	\
-	check/check_log.h	\
-	check/check_print.c	\
-	check/check_print.h	\
-	check/error.c		\
-	check/error.h		\
-	check/list.c		\
-	check/list.h
+CHECKFILES  = check/check.c
+CHECKFILES += check/check_run.c
+CHECKFILES += check/check.h
+CHECKFILES += check/check_impl.h
+CHECKFILES += check/check_msg.c
+CHECKFILES += check/check_msg.h
+CHECKFILES += check/check_log.c
+CHECKFILES += check/check_log.h
+CHECKFILES += check/check_print.c
+CHECKFILES += check/check_print.h
+CHECKFILES += check/error.c
+CHECKFILES += check/error.h
+CHECKFILES += check/list.c
+CHECKFILES += check/list.h
 
-EXTRA_DIST += \
-	check/NEWS	\
-	check/README
+EXTRA_DIST += check/NEWS
+EXTRA_DIST += check/README

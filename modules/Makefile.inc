@@ -1,11 +1,10 @@
 # $IdPath$
 
-EXTRA_DIST += \
-	modules/arch/Makefile.inc	\
-	modules/parsers/Makefile.inc	\
-	modules/preprocs/Makefile.inc	\
-	modules/optimizers/Makefile.inc	\
-	modules/objfmts/Makefile.inc
+EXTRA_DIST += modules/arch/Makefile.inc
+EXTRA_DIST += modules/parsers/Makefile.inc
+EXTRA_DIST += modules/preprocs/Makefile.inc
+EXTRA_DIST += modules/optimizers/Makefile.inc
+EXTRA_DIST += modules/objfmts/Makefile.inc
 
 include modules/arch/Makefile.inc
 include modules/parsers/Makefile.inc

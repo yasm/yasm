@@ -1,13 +1,12 @@
-# $IdPath: yasm/Makefile.am,v 1.48 2003/05/03 06:26:15 peter Exp $
+# $IdPath$
 
 SUBDIRS = libltdl m4 po .
 
 AM_YFLAGS = -d
 AM_CFLAGS = @MORE_CFLAGS@
-AM_CPPFLAGS = \
-	-I$(top_srcdir)/check \
-	-DYASM_MODULEDIR="\"${pkglibdir}\"" \
-	@INCLTDL@
+AM_CPPFLAGS  = -DYASM_MODULEDIR="\"${pkglibdir}\""
+AM_CPPFLAGS += -I$(top_srcdir)/check
+AM_CPPFLAGS += @INCLTDL@
 
 bin_PROGRAMS =
 TESTS =
@@ -25,12 +24,13 @@ YASM_MODULES =
 BUILT_SOURCES =
 # configure.lineno doesn't clean up after itself?
 CLEANFILES = configure.lineno
-EXTRA_DIST = config/config.rpath  \
-	check/Makefile.inc	\
-	tools/Makefile.inc	\
-	libyasm/Makefile.inc	\
-	modules/Makefile.inc	\
-	frontends/Makefile.inc
+EXTRA_DIST = config/config.rpath
+
+EXTRA_DIST += check/Makefile.inc
+EXTRA_DIST += tools/Makefile.inc
+EXTRA_DIST += libyasm/Makefile.inc
+EXTRA_DIST += modules/Makefile.inc
+EXTRA_DIST += frontends/Makefile.inc
 
 include check/Makefile.inc
 include tools/Makefile.inc
@@ -38,25 +38,25 @@ include libyasm/Makefile.inc
 include modules/Makefile.inc
 include frontends/Makefile.inc
 
-EXTRA_DIST += \
-	out_test.sh \
-	test_hd.pl \
-	COPYING.LIB-2.0 \
-	splint.sh \
-	Mkfiles/Makefile.flat \
-	Mkfiles/Makefile.dj Mkfiles/dj/libyasm/config.h \
-	Mkfiles/vc/yasm-module.c \
-	Mkfiles/vc/yasm.dep \
-	Mkfiles/vc/yasm.dsp \
-	Mkfiles/vc/yasm.dsw \
-	Mkfiles/vc/yasm.mak \
-	Mkfiles/vc/libyasm/config.h \
-	Mkfiles/vc/libyasm/libyasm.dep \
-	Mkfiles/vc/libyasm/libyasm.dsp \
-	Mkfiles/vc/libyasm/libyasm.mak \
-	Mkfiles/vc/modules/modules.dep \
-	Mkfiles/vc/modules/modules.dsp \
-	Mkfiles/vc/modules/modules.mak
+EXTRA_DIST += out_test.sh
+EXTRA_DIST += test_hd.pl
+EXTRA_DIST += COPYING.LIB-2.0
+EXTRA_DIST += splint.sh
+EXTRA_DIST += Mkfiles/Makefile.flat
+EXTRA_DIST += Mkfiles/Makefile.dj
+EXTRA_DIST += Mkfiles/dj/libyasm/config.h
+EXTRA_DIST += Mkfiles/vc/yasm-module.c
+EXTRA_DIST += Mkfiles/vc/yasm.dep
+EXTRA_DIST += Mkfiles/vc/yasm.dsp
+EXTRA_DIST += Mkfiles/vc/yasm.dsw
+EXTRA_DIST += Mkfiles/vc/yasm.mak
+EXTRA_DIST += Mkfiles/vc/libyasm/config.h
+EXTRA_DIST += Mkfiles/vc/libyasm/libyasm.dep
+EXTRA_DIST += Mkfiles/vc/libyasm/libyasm.dsp
+EXTRA_DIST += Mkfiles/vc/libyasm/libyasm.mak
+EXTRA_DIST += Mkfiles/vc/modules/modules.dep
+EXTRA_DIST += Mkfiles/vc/modules/modules.dsp
+EXTRA_DIST += Mkfiles/vc/modules/modules.mak
 
 # Until this gets fixed in automake
 DISTCLEANFILES = libyasm/stamp-h libyasm/stamp-h[0-9]*

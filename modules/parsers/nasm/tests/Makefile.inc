@@ -1,16 +1,14 @@
 # $IdPath$
 
-TESTS += \
-	modules/parsers/nasm/tests/nasm_test.sh
+TESTS += modules/parsers/nasm/tests/nasm_test.sh
 
-EXTRA_DIST += \
-	modules/parsers/nasm/tests/nasm_test.sh		\
-	modules/parsers/nasm/tests/equlocal.asm		\
-	modules/parsers/nasm/tests/equlocal.errwarn	\
-	modules/parsers/nasm/tests/equlocal.hex		\
-	modules/parsers/nasm/tests/newsect.asm		\
-	modules/parsers/nasm/tests/newsect.errwarn	\
-	modules/parsers/nasm/tests/newsect.hex		\
-	modules/parsers/nasm/tests/prevlocalwarn.asm	\
-	modules/parsers/nasm/tests/prevlocalwarn.errwarn \
-	modules/parsers/nasm/tests/prevlocalwarn.hex
+EXTRA_DIST += modules/parsers/nasm/tests/nasm_test.sh
+EXTRA_DIST += modules/parsers/nasm/tests/equlocal.asm
+EXTRA_DIST += modules/parsers/nasm/tests/equlocal.errwarn
+EXTRA_DIST += modules/parsers/nasm/tests/equlocal.hex
+EXTRA_DIST += modules/parsers/nasm/tests/newsect.asm
+EXTRA_DIST += modules/parsers/nasm/tests/newsect.errwarn
+EXTRA_DIST += modules/parsers/nasm/tests/newsect.hex
+EXTRA_DIST += modules/parsers/nasm/tests/prevlocalwarn.asm
+EXTRA_DIST += modules/parsers/nasm/tests/prevlocalwarn.errwarn
+EXTRA_DIST += modules/parsers/nasm/tests/prevlocalwarn.hex
