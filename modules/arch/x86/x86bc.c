@@ -698,6 +698,10 @@ x86_bc_insn_resolve(yasm_bytecode *bc, int save,
 		    displen = (insn->addrsize == 16) ? 2U : 4U;
 	    }
 
+	    /* If we had forced ea->len but had to override, save it now */
+	    if (ea->len != 0 && ea->len != displen)
+		ea->len = displen;
+
 	    if (save) {
 		*x86_ea = eat;	/* structure copy */
 		ea->len = displen;

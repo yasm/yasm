@@ -419,86 +419,17 @@ x86_checkea_calc_displen(yasm_expr **ep, unsigned int wordsize, int noreg,
 
     switch (*displen) {
 	case 0:
-	    /* the displacement length hasn't been forced, try to
-	     * determine what it is.
-	     */
-	    if (noreg) {
-		/* no register in ModRM expression, so it must be disp16/32,
-		 * and as the Mod bits are set to 0 by the caller, we're done
-		 * with the ModRM byte.
-		 */
-		*displen = wordsize;
-		*v_modrm = 1;
-		break;
-	    } else if (dispreq) {
-		/* for BP/EBP, there *must* be a displacement value, but we
-		 * may not know the size (8 or 16/32) for sure right now.
-		 * We can't leave displen at 0, because that just means
-		 * unknown displacement, including none.
-		 */
-		*displen = 0xff;
-	    }
-
-	    intn = yasm_expr_get_intnum(ep, NULL);
-	    if (!intn) {
-		/* expr still has unknown values: assume 16/32-bit disp */
-		*displen = wordsize;
-		*modrm |= 0200;
-		*v_modrm = 1;
-		break;
-	    }	
-
-	    /* don't try to find out what size displacement we have if
-	     * displen is known.
-	     */
-	    if (*displen != 0 && *displen != 0xff) {
-		if (*displen == 1)
-		    *modrm |= 0100;
-		else
-		    *modrm |= 0200;
-		*v_modrm = 1;
-		break;
-	    }
-
-	    dispval = yasm_intnum_get_int(intn);
-
-	    /* Figure out what size displacement we will have. */
-	    if (*displen != 0xff && dispval == 0) {
-		/* if we know that the displacement is 0 right now,
-		 * go ahead and delete the expr (making it so no
-		 * displacement value is included in the output).
-		 * The Mod bits of ModRM are set to 0 above, and
-		 * we're done with the ModRM byte!
-		 *
-		 * Don't do this if we came from dispreq check above, so
-		 * check *displen.
-		 */
-		yasm_expr_destroy(e);
-		*ep = (yasm_expr *)NULL;
-	    } else if (dispval >= -128 && dispval <= 127) {
-		/* It fits into a signed byte */
-		*displen = 1;
-		*modrm |= 0100;
-	    } else {
-		/* It's a 16/32-bit displacement */
-		*displen = wordsize;
-		*modrm |= 0200;
-	    }
-	    *v_modrm = 1;	/* We're done with ModRM */
-
 	    break;
-
 	/* If not 0, the displacement length was forced; set the Mod bits
-	 * appropriately and we're done with the ModRM byte.  We assume
-	 * that the user knows what they're doing if they do an explicit
-	 * override, so we don't check for overflow (we'll just truncate
-	 * when we output).
+	 * appropriately and we're done with the ModRM byte.
 	 */
 	case 1:
-	    /* TODO: Add optional warning here about byte not being valid
-	     * override in noreg case.
-	     */
-	    if (!noreg)
+	    /* Byte is not valid override in noreg case; fix it. */
+	    if (noreg) {
+		*displen = 0;
+		yasm__warning(YASM_WARN_GENERAL, e->line,
+			      N_("invalid displacement size; fixed"));
+	    } else
 		*modrm |= 0100;
 	    *v_modrm = 1;
 	    break;
@@ -509,16 +440,88 @@ x86_checkea_calc_displen(yasm_expr **ep, unsigned int wordsize, int noreg,
 		    N_("invalid effective address (displacement size)"));
 		return 1;
 	    }
-	    /* TODO: Add optional warning here about 2/4 not being valid
-	     * override in noreg case.
-	     */
-	    if (!noreg)
+	    /* 2/4 is not valid override in noreg case; fix it. */
+	    if (noreg) {
+		if (wordsize != *displen)
+		    yasm__warning(YASM_WARN_GENERAL, e->line,
+				  N_("invalid displacement size; fixed"));
+		*displen = 0;
+	    } else
 		*modrm |= 0200;
 	    *v_modrm = 1;
 	    break;
 	default:
 	    /* we shouldn't ever get any other size! */
 	    yasm_internal_error(N_("strange EA displacement size"));
+    }
+
+    if (*displen == 0) {
+	/* the displacement length hasn't been forced (or the forcing wasn't
+	 * valid), try to determine what it is.
+	 */
+	if (noreg) {
+	    /* no register in ModRM expression, so it must be disp16/32,
+	     * and as the Mod bits are set to 0 by the caller, we're done
+	     * with the ModRM byte.
+	     */
+	    *displen = wordsize;
+	    *v_modrm = 1;
+	    return 0;
+	} else if (dispreq) {
+	    /* for BP/EBP, there *must* be a displacement value, but we
+	     * may not know the size (8 or 16/32) for sure right now.
+	     * We can't leave displen at 0, because that just means
+	     * unknown displacement, including none.
+	     */
+	    *displen = 0xff;
+	}
+
+	intn = yasm_expr_get_intnum(ep, NULL);
+	if (!intn) {
+	    /* expr still has unknown values: assume 16/32-bit disp */
+	    *displen = wordsize;
+	    *modrm |= 0200;
+	    *v_modrm = 1;
+	    return 0;
+	}	
+
+	/* don't try to find out what size displacement we have if
+	 * displen is known.
+	 */
+	if (*displen != 0 && *displen != 0xff) {
+	    if (*displen == 1)
+		*modrm |= 0100;
+	    else
+		*modrm |= 0200;
+	    *v_modrm = 1;
+	    return 0;
+	}
+
+	dispval = yasm_intnum_get_int(intn);
+
+	/* Figure out what size displacement we will have. */
+	if (*displen != 0xff && dispval == 0) {
+	    /* if we know that the displacement is 0 right now,
+	     * go ahead and delete the expr (making it so no
+	     * displacement value is included in the output).
+	     * The Mod bits of ModRM are set to 0 above, and
+	     * we're done with the ModRM byte!
+	     *
+	     * Don't do this if we came from dispreq check above, so
+	     * check *displen.
+	     */
+	    yasm_expr_destroy(e);
+	    *ep = (yasm_expr *)NULL;
+	} else if (dispval >= -128 && dispval <= 127) {
+	    /* It fits into a signed byte */
+	    *displen = 1;
+	    *modrm |= 0100;
+	} else {
+	    /* It's a 16/32-bit displacement */
+	    *displen = wordsize;
+	    *modrm |= 0200;
+	}
+	*v_modrm = 1;	/* We're done with ModRM */
     }
 
     return 0;
