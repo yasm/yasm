@@ -34,7 +34,6 @@ RCSID("$IdPath$");
 
 #include "modules/parsers/nasm/nasm-parser.h"
 #include "modules/parsers/nasm/nasm-defs.h"
-#include "nasm-bison.h"
 
 
 #define BSIZE	8192
@@ -192,7 +191,7 @@ static int linechg_numcount;
 
 
 int
-nasm_parser_lex_arg(yasm_parser_nasm *parser_nasm)
+nasm_parser_lex(YYSTYPE *lvalp, yasm_parser_nasm *parser_nasm)
 {
     Scanner *s = &parser_nasm->s;
     YYCTYPE *cursor = s->cur;
@@ -225,7 +224,7 @@ scan:
 	digit+ {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    yylval.intn = yasm_intnum_create_dec(s->tok, cur_line);
+	    lvalp->intn = yasm_intnum_create_dec(s->tok, cur_line);
 	    s->tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -233,21 +232,21 @@ scan:
 
 	bindigit+ "b" {
 	    s->tok[TOKLEN-1] = '\0'; /* strip off 'b' */
-	    yylval.intn = yasm_intnum_create_bin(s->tok, cur_line);
+	    lvalp->intn = yasm_intnum_create_bin(s->tok, cur_line);
 	    RETURN(INTNUM);
 	}
 
 	/* 777q - octal number */
 	octdigit+ "q" {
 	    s->tok[TOKLEN-1] = '\0'; /* strip off 'q' */
-	    yylval.intn = yasm_intnum_create_oct(s->tok, cur_line);
+	    lvalp->intn = yasm_intnum_create_oct(s->tok, cur_line);
 	    RETURN(INTNUM);
 	}
 
 	/* 0AAh form of hexidecimal number */
 	digit hexdigit* "h" {
 	    s->tok[TOKLEN-1] = '\0'; /* strip off 'h' */
-	    yylval.intn = yasm_intnum_create_hex(s->tok, cur_line);
+	    lvalp->intn = yasm_intnum_create_hex(s->tok, cur_line);
 	    RETURN(INTNUM);
 	}
 
@@ -257,10 +256,10 @@ scan:
 	    s->tok[TOKLEN] = '\0';
 	    if (s->tok[1] == 'x')
 		/* skip 0 and x */
-		yylval.intn = yasm_intnum_create_hex(s->tok+2, cur_line);
+		lvalp->intn = yasm_intnum_create_hex(s->tok+2, cur_line);
 	    else
 		/* don't skip 0 */
-		yylval.intn = yasm_intnum_create_hex(s->tok+1, cur_line);
+		lvalp->intn = yasm_intnum_create_hex(s->tok+1, cur_line);
 	    s->tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -269,7 +268,7 @@ scan:
 	digit+ "." digit* (E [-+]? digit+)? {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    yylval.flt = yasm_floatnum_create(s->tok);
+	    lvalp->flt = yasm_floatnum_create(s->tok);
 	    s->tok[TOKLEN] = savech;
 	    RETURN(FLTNUM);
 	}
@@ -288,25 +287,25 @@ scan:
 	}
 
 	/* size specifiers */
-	B Y T E		{ yylval.int_info = 1; RETURN(BYTE); }
-	W O R D		{ yylval.int_info = 2; RETURN(WORD); }
-	D W O R D	{ yylval.int_info = 4; RETURN(DWORD); }
-	Q W O R D	{ yylval.int_info = 8; RETURN(QWORD); }
-	T W O R D	{ yylval.int_info = 10; RETURN(TWORD); }
-	D Q W O R D	{ yylval.int_info = 16; RETURN(DQWORD); }
+	B Y T E		{ lvalp->int_info = 1; RETURN(BYTE); }
+	W O R D		{ lvalp->int_info = 2; RETURN(WORD); }
+	D W O R D	{ lvalp->int_info = 4; RETURN(DWORD); }
+	Q W O R D	{ lvalp->int_info = 8; RETURN(QWORD); }
+	T W O R D	{ lvalp->int_info = 10; RETURN(TWORD); }
+	D Q W O R D	{ lvalp->int_info = 16; RETURN(DQWORD); }
 
 	/* pseudo-instructions */
-	D B		{ yylval.int_info = 1; RETURN(DECLARE_DATA); }
-	D W		{ yylval.int_info = 2; RETURN(DECLARE_DATA); }
-	D D		{ yylval.int_info = 4; RETURN(DECLARE_DATA); }
-	D Q		{ yylval.int_info = 8; RETURN(DECLARE_DATA); }
-	D T		{ yylval.int_info = 10; RETURN(DECLARE_DATA); }
+	D B		{ lvalp->int_info = 1; RETURN(DECLARE_DATA); }
+	D W		{ lvalp->int_info = 2; RETURN(DECLARE_DATA); }
+	D D		{ lvalp->int_info = 4; RETURN(DECLARE_DATA); }
+	D Q		{ lvalp->int_info = 8; RETURN(DECLARE_DATA); }
+	D T		{ lvalp->int_info = 10; RETURN(DECLARE_DATA); }
 
-	R E S B		{ yylval.int_info = 1; RETURN(RESERVE_SPACE); }
-	R E S W		{ yylval.int_info = 2; RETURN(RESERVE_SPACE); }
-	R E S D		{ yylval.int_info = 4; RETURN(RESERVE_SPACE); }
-	R E S Q		{ yylval.int_info = 8; RETURN(RESERVE_SPACE); }
-	R E S T		{ yylval.int_info = 10; RETURN(RESERVE_SPACE); }
+	R E S B		{ lvalp->int_info = 1; RETURN(RESERVE_SPACE); }
+	R E S W		{ lvalp->int_info = 2; RETURN(RESERVE_SPACE); }
+	R E S D		{ lvalp->int_info = 4; RETURN(RESERVE_SPACE); }
+	R E S Q		{ lvalp->int_info = 8; RETURN(RESERVE_SPACE); }
+	R E S T		{ lvalp->int_info = 10; RETURN(RESERVE_SPACE); }
 
 	I N C B I N	{ RETURN(INCBIN); }
 
@@ -336,7 +335,7 @@ scan:
 
 	/* special non-local ..@label and labels like ..start */
 	".." [a-zA-Z0-9_$#@~.?]+ {
-	    yylval.str_val = yasm__xstrndup(s->tok, TOKLEN);
+	    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
 	    RETURN(SPECIAL_ID);
 	}
 
@@ -344,19 +343,19 @@ scan:
 	"." [a-zA-Z0-9_$#@~?][a-zA-Z0-9_$#@~.?]* {
 	    /* override local labels in directive state */
 	    if (parser_nasm->state == DIRECTIVE2) {
-		yylval.str_val = yasm__xstrndup(s->tok, TOKLEN);
+		lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
 		RETURN(ID);
 	    } else if (!parser_nasm->locallabel_base) {
-		yylval.str_val = yasm__xstrndup(s->tok, TOKLEN);
+		lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
 		yasm__warning(YASM_WARN_GENERAL, cur_line,
 			      N_("no non-local label before `%s'"),
-			      yylval.str_val);
+			      lvalp->str_val);
 	    } else {
 		len = TOKLEN + parser_nasm->locallabel_base_len;
-		yylval.str_val = yasm_xmalloc(len + 1);
-		strcpy(yylval.str_val, parser_nasm->locallabel_base);
-		strncat(yylval.str_val, s->tok, TOKLEN);
-		yylval.str_val[len] = '\0';
+		lvalp->str_val = yasm_xmalloc(len + 1);
+		strcpy(lvalp->str_val, parser_nasm->locallabel_base);
+		strncat(lvalp->str_val, s->tok, TOKLEN);
+		lvalp->str_val[len] = '\0';
 	    }
 
 	    RETURN(LOCAL_ID);
@@ -364,7 +363,7 @@ scan:
 
 	/* forced identifier */
 	"$" [a-zA-Z_?][a-zA-Z0-9_$#@~.?]* {
-	    yylval.str_val = yasm__xstrndup(s->tok, TOKLEN);
+	    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
 	    RETURN(ID);
 	}
 
@@ -373,13 +372,13 @@ scan:
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    check_id_ret = p_arch->module->parse_check_id(p_arch,
-							  yylval.arch_data,
+							  lvalp->arch_data,
 							  s->tok, cur_line);
 	    s->tok[TOKLEN] = savech;
 	    switch (check_id_ret) {
 		case YASM_ARCH_CHECK_ID_NONE:
 		    /* Just an identifier, return as such. */
-		    yylval.str_val = yasm__xstrndup(s->tok, TOKLEN);
+		    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
 		    RETURN(ID);
 		case YASM_ARCH_CHECK_ID_INSN:
 		    RETURN(INSN);
@@ -394,7 +393,7 @@ scan:
 		default:
 		    yasm__warning(YASM_WARN_GENERAL, cur_line,
 			N_("Arch feature not supported, treating as identifier"));
-		    yylval.str_val = yasm__xstrndup(s->tok, TOKLEN);
+		    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
 		    RETURN(ID);
 	    }
 	}
@@ -427,7 +426,7 @@ linechg:
 	    linechg_numcount++;
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    yylval.intn = yasm_intnum_create_dec(s->tok, cur_line);
+	    lvalp->intn = yasm_intnum_create_dec(s->tok, cur_line);
 	    s->tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -474,7 +473,7 @@ linechg2:
 
 	(any \ [\r\n])+	{
 	    parser_nasm->state = LINECHG;
-	    yylval.str_val = yasm__xstrndup(s->tok, TOKLEN);
+	    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
 	    RETURN(FILENAME);
 	}
     */
@@ -493,7 +492,7 @@ directive:
 
 	iletter+ {
 	    parser_nasm->state = DIRECTIVE2;
-	    yylval.str_val = yasm__xstrndup(s->tok, TOKLEN);
+	    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
 	    RETURN(DIRECTIVE_NAME);
 	}
 
@@ -522,7 +521,7 @@ stringconst_scan:
 	    else
 		yasm__error(cur_line, N_("unterminated string"));
 	    strbuf[count] = '\0';
-	    yylval.str_val = strbuf;
+	    lvalp->str_val = strbuf;
 	    if (parser_nasm->save_input && cursor != s->eof)
 		cursor = save_line(parser_nasm, cursor);
 	    RETURN(STRING);
@@ -531,7 +530,7 @@ stringconst_scan:
 	any	{
 	    if (s->tok[0] == endch) {
 		strbuf[count] = '\0';
-		yylval.str_val = strbuf;
+		lvalp->str_val = strbuf;
 		RETURN(STRING);
 	    }
 

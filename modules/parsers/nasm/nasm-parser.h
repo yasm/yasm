@@ -27,6 +27,8 @@
 #ifndef YASM_NASM_PARSER_H
 #define YASM_NASM_PARSER_H
 
+#include "nasm-bison.h"
+
 #define YYCTYPE		char
 typedef struct Scanner {
     YYCTYPE		*bot, *tok, *ptr, *cur, *pos, *lim, *top, *eof;
@@ -81,7 +83,6 @@ typedef struct yasm_parser_nasm {
 
 int nasm_parser_parse(void *parser_nasm_arg);
 void nasm_parser_cleanup(yasm_parser_nasm *parser_nasm);
-int nasm_parser_lex_arg(yasm_parser_nasm *parser_nasm);
-#define nasm_parser_lex()	nasm_parser_lex_arg(parser_nasm)
+int nasm_parser_lex(YYSTYPE *lvalp, yasm_parser_nasm *parser_nasm);
 
 #endif

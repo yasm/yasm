@@ -48,11 +48,14 @@ static int fix_directive_symrec(/*@null@*/ yasm_expr__item *ei,
 
 #define nasm_parser_error(s)	yasm__parser_error(cur_line, s)
 #define YYPARSE_PARAM	parser_nasm_arg
+#define YYLEX_PARAM	parser_nasm_arg
 #define parser_nasm	((yasm_parser_nasm *)parser_nasm_arg)
 #define nasm_parser_debug   (parser_nasm->debug)
 
 /*@-usedef -nullassign -memtrans -usereleased -compdef -mustfree@*/
 %}
+
+%pure_parser
 
 %union {
     unsigned int int_info;
