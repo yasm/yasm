@@ -18,7 +18,7 @@ bitvect_test_SOURCES = \
 	$(YASMOBJFMTFILES)		\
 	$(YASMARCHFILES)		\
 	$(CHECKFILES)
-bitvect_test_LDADD = $(INTLLIBS)
+bitvect_test_LDADD = @LIBOBJS@ $(INTLLIBS)
 
 #bytecode_test_SOURCES = \
 #	src/tests/bytecode_test.c	\
@@ -30,7 +30,7 @@ bitvect_test_LDADD = $(INTLLIBS)
 #	$(YASMOBJFMTFILES)		\
 #	$(YASMARCHFILES)		\
 #	$(CHECKFILES)
-#bytecode_test_LDADD = $(INTLLIBS)
+#bytecode_test_LDADD = @LIBOBJS@ $(INTLLIBS)
 
 floatnum_test_SOURCES = \
 	src/tests/floatnum_test.c	\
@@ -41,7 +41,7 @@ floatnum_test_SOURCES = \
 	src/xmalloc.c			\
 	src/xstrdup.c			\
 	$(CHECKFILES)
-floatnum_test_LDADD = $(INTLLIBS)
+floatnum_test_LDADD = @LIBOBJS@ $(INTLLIBS)
 
 #memexpr_test_SOURCES = \
 #	src/tests/memexpr_test.c	\
@@ -53,4 +53,4 @@ floatnum_test_LDADD = $(INTLLIBS)
 #	$(YASMOBJFMTFILES)		\
 #	$(YASMARCHFILES)		\
 #	$(CHECKFILES)
-#memexpr_test_LDADD = $(INTLLIBS)
+#memexpr_test_LDADD = @LIBOBJS@ $(INTLLIBS)
