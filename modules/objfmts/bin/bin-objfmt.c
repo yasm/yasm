@@ -157,6 +157,8 @@ bin_objfmt_expr_traverse_callback(ExprItem *ei, void *d)
 	if (equ_expr) {
 	    ei->type = EXPR_EXPR;
 	    ei->data.expn = expr_copy(equ_expr);
+	    expr_traverse_leaves_in(ei->data.expn, data,
+				    bin_objfmt_expr_traverse_callback);
 	} else {
 	    intnum *intn;
 

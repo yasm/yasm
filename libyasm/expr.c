@@ -741,6 +741,8 @@ expr_expand_labelequ_callback(ExprItem *ei, void *d)
 	if (equ_expr) {
 	    ei->type = EXPR_EXPR;
 	    ei->data.expn = expr_copy(equ_expr);
+	    expr_expand_labelequ(ei->data.expn, data->sect, data->withstart,
+				 data->resolve_label);
 	} else {
 	    /*@dependent@*/ section *sect;
 	    /*@dependent@*/ /*@null@*/ bytecode *precbc;
