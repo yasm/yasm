@@ -95,7 +95,8 @@ int bc_resolve(bytecode *bc, int save, const section *sect,
 /*@null@*/ /*@only@*/ unsigned char *bc_tobytes(bytecode *bc,
     unsigned char *buf, unsigned long *bufsize,
     /*@out@*/ unsigned long *multiple, /*@out@*/ int *gap, const section *sect,
-    void *d, output_expr_func output_expr);
+    void *d, output_expr_func output_expr)
+    /*@sets *buf@*/;
 
 /* void bcs_initialize(bytecodehead *headp); */
 #define	bcs_initialize(headp)	STAILQ_INIT(headp)

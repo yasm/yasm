@@ -99,5 +99,6 @@ typedef /*@null@*/ intnum *(*resolve_label_func) (symrec *sym, int withstart);
  */
 typedef int (*output_expr_func) (expr **ep, unsigned char **bufp,
 				 unsigned long valsize, const section *sect,
-				 const bytecode *bc, int rel, void *d);
+				 const bytecode *bc, int rel, void *d)
+    /*@uses *ep@*/ /*@sets **bufp@*/;
 #endif

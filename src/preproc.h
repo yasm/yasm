@@ -43,7 +43,7 @@ struct preproc {
 
     /* Gets more preprocessed source code (up to max_size bytes) into buf.
      * Note that more than a single line may be returned in buf. */
-    size_t (*input) (char *buf, size_t max_size);
+    size_t (*input) (/*@out@*/ char *buf, size_t max_size);
 };
 
 /* Available preprocessors */
@@ -52,7 +52,7 @@ extern preproc yapp_preproc;
 
 /* Finds a preproc based on its keyword.  Returns NULL if no match was found.
  */
-/*@null@*/ preproc *find_preproc(const char *keyword);
+/*@null@*/ /*@dependent@*/ preproc *find_preproc(const char *keyword);
 
 /* Lists all available preprocs.  Calls printfunc with the name and keyword
  * of each available preprocessor.

@@ -28,7 +28,7 @@
  * in the assembly process).  Opening the file early is special-cased in
  * main().
  */
-extern /*@null@*/ FILE *debug_file;
+extern /*@null@*/ /*@dependent@*/ FILE *debug_file;
 
 /* Current (selected) parser */
 extern /*@null@*/ parser *cur_parser;

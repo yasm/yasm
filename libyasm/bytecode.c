@@ -492,6 +492,7 @@ static int
 bc_tobytes_data(bytecode_data *bc_data, unsigned char **bufp,
 		const section *sect, const bytecode *bc, void *d,
 		output_expr_func output_expr)
+    /*@sets **bufp@*/
 {
     dataval *dv;
     size_t slen;
@@ -525,8 +526,9 @@ bc_tobytes_data(bytecode_data *bc_data, unsigned char **bufp,
 }
 
 static int
-bc_tobytes_reserve(bytecode_reserve *reserve, unsigned char **bufp,
-		   unsigned long len)
+bc_tobytes_reserve(/*@unused@*/ bytecode_reserve *reserve,
+		   unsigned char **bufp, unsigned long len)
+    /*@sets **bufp@*/
 {
     unsigned long i;
 
@@ -542,6 +544,7 @@ bc_tobytes_reserve(bytecode_reserve *reserve, unsigned char **bufp,
 static int
 bc_tobytes_incbin(bytecode_incbin *incbin, unsigned char **bufp,
 		  unsigned long len, unsigned long line)
+    /*@sets **bufp@*/
 {
     FILE *f;
     /*@dependent@*/ /*@null@*/ const intnum *num;
@@ -564,7 +567,7 @@ bc_tobytes_incbin(bytecode_incbin *incbin, unsigned char **bufp,
     }
 
     /* Seek to start of data */
-    if (fseek(f, start, SEEK_SET) < 0) {
+    if (fseek(f, (long)start, SEEK_SET) < 0) {
 	ErrorAt(line, _("`incbin': unable to seek on file `%s'"),
 		incbin->filename);
 	fclose(f);
@@ -572,7 +575,7 @@ bc_tobytes_incbin(bytecode_incbin *incbin, unsigned char **bufp,
     }
 
     /* Read len bytes */
-    if (fread(*bufp, len, 1, f) < len) {
+    if (fread(*bufp, (size_t)len, 1, f) < (size_t)len) {
 	ErrorAt(line, _("`incbin': unable to read %lu bytes from file `%s'"),
 		len, incbin->filename);
 	fclose(f);
@@ -588,6 +591,7 @@ bc_tobytes_incbin(bytecode_incbin *incbin, unsigned char **bufp,
 bc_tobytes(bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 	   /*@out@*/ unsigned long *multiple, /*@out@*/ int *gap,
 	   const section *sect, void *d, output_expr_func output_expr)
+    /*@sets *buf@*/
 {
     /*@only@*/ /*@null@*/ unsigned char *mybuf = NULL;
     unsigned char *origbuf, *destbuf;
