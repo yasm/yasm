@@ -24,17 +24,17 @@
 
 struct objfmt;
 
-/*@dependent@*/ section *sections_initialize(sectionhead *headp);
+/*@observer@*/ section *sections_initialize(sectionhead *headp);
 
-/*@dependent@*/ section *sections_switch_general(sectionhead *headp,
-						 const char *name,
-						 unsigned long start,
-						 /*@null@*/ /*@only@*/
-						 void *of_data, int res_only,
-						 /*@out@*/ int *isnew);
+/*@observer@*/ section *sections_switch_general(sectionhead *headp,
+						const char *name,
+						unsigned long start,
+						/*@null@*/ /*@only@*/
+						void *of_data, int res_only,
+						/*@out@*/ int *isnew);
 
-/*@dependent@*/ section *sections_switch_absolute(sectionhead *headp,
-						  /*@keep@*/ expr *start);
+/*@observer@*/ section *sections_switch_absolute(sectionhead *headp,
+						 /*@keep@*/ expr *start);
 
 int section_is_absolute(section *sect);
 
@@ -57,15 +57,15 @@ void sections_print(FILE *f, const sectionhead *headp);
 int sections_traverse(sectionhead *headp, /*@null@*/ void *d,
 		      int (*func) (section *sect, /*@null@*/ void *d));
 
-/*@null@*/ section *sections_find_general(sectionhead *headp,
-					  const char *name);
+/*@observer@*/ /*@null@*/ section *sections_find_general(sectionhead *headp,
+							 const char *name);
 
 /*@dependent@*/ bytecodehead *section_get_bytecodes(section *sect);
 
 /*@observer@*/ /*@null@*/ const char *section_get_name(const section *sect);
 
 void section_set_start(section *sect, unsigned long start);
-/*@observer@*/ /*@null@*/ const expr *section_get_start(const section *sect);
+/*@observer@*/ const expr *section_get_start(const section *sect);
 
 void section_delete(/*@only@*/ section *sect);
 
