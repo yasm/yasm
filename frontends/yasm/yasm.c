@@ -223,7 +223,7 @@ main(int argc, char *argv[])
 #endif
     }
     if (errors != 0) {
-	print_error(_("Module loader initialization failed"));
+	print_error(_("%s: module loader initialization failed"), _("FATAL"));
 	return EXIT_FAILURE;
     }
 #endif
@@ -251,7 +251,7 @@ main(int argc, char *argv[])
 
     /* Initialize BitVector (needed for floating point). */
     if (BitVector_Boot() != ErrCode_Ok) {
-	print_error(_("Could not initialize BitVector"));
+	print_error(_("%s: could not initialize BitVector"), _("FATAL"));
 	return EXIT_FAILURE;
     }
 
@@ -259,7 +259,8 @@ main(int argc, char *argv[])
 	/* Open the input file (if not standard input) */
 	in = fopen(in_filename, "rt");
 	if (!in) {
-	    print_error(_("could not open file `%s'"), in_filename);
+	    print_error(_("%s: could not open file `%s'"), _("FATAL"),
+			in_filename);
 	    yasm_xfree(in_filename);
 	    if (obj_filename)
 		yasm_xfree(obj_filename);
@@ -305,7 +306,8 @@ main(int argc, char *argv[])
 	    cur_preproc = load_preproc("nasm");
 
 	if (!cur_preproc) {
-	    print_error(_("Could not load default preprocessor"));
+	    print_error(_("%s: could not load default %s"), _("FATAL"),
+			_("preprocessor"));
 	    cleanup(NULL);
 	    return EXIT_FAILURE;
 	}
@@ -341,7 +343,8 @@ main(int argc, char *argv[])
     if (!cur_arch) {
 	cur_arch = load_arch("x86");
 	if (!cur_arch) {
-	    print_error(_("Could not load default architecture"));
+	    print_error(_("%s: could not load default %s"), _("FATAL"),
+			_("architecture"));
 	    return EXIT_FAILURE;
 	}
     }
@@ -352,7 +355,8 @@ main(int argc, char *argv[])
     cur_optimizer = load_optimizer("basic");
 
     if (!cur_optimizer) {
-	print_error(_("Could not load default optimizer"));
+	print_error(_("%s: could not load default %s"), _("FATAL"),
+		    _("optimizer"));
 	return EXIT_FAILURE;
     }
 
@@ -365,7 +369,8 @@ main(int argc, char *argv[])
 	cur_objfmt = load_objfmt("bin");
 
     if (!cur_objfmt) {
-	print_error(_("Could not load default object format"));
+	print_error(_("%s: could not load default %s"), _("FATAL"),
+		    _("object format"));
 	return EXIT_FAILURE;
     }
 
@@ -382,9 +387,9 @@ main(int argc, char *argv[])
 				 cur_dbgfmt->keyword) == 0)
 		matched_dbgfmt = 1;
 	if (!matched_dbgfmt) {
-	    print_error(
-		_("`%s' is not a valid debug format for object format `%s'"),
-		cur_dbgfmt->keyword, cur_objfmt->keyword);
+	    print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
+		_("FATAL"), cur_dbgfmt->keyword, _("debug format"),
+		_("object format"), cur_objfmt->keyword);
 	    if (in != stdin)
 		fclose(in);
 	    /*cleanup(NULL);*/
@@ -393,7 +398,8 @@ main(int argc, char *argv[])
     }
 
     if (!cur_dbgfmt) {
-	print_error(_("Could not load default debug format"));
+	print_error(_("%s: could not load default %s"), _("FATAL"),
+		    _("debug format"));
 	return EXIT_FAILURE;
     }
 
@@ -418,7 +424,8 @@ main(int argc, char *argv[])
     if (!cur_parser) {
 	cur_parser = load_parser("nasm");
 	if (!cur_parser) {
-	    print_error(_("Could not load default parser"));
+	    print_error(_("%s: could not load default %s"), _("FATAL"),
+			_("parser"));
 	    cleanup(NULL);
 	    return EXIT_FAILURE;
 	}
@@ -437,8 +444,9 @@ main(int argc, char *argv[])
 			   cur_preproc->keyword) == 0)
 		matched_preproc = 1;
 	if (!matched_preproc) {
-	    print_error(_("`%s' is not a valid preprocessor for parser `%s'"),
-			cur_preproc->keyword, cur_parser->keyword);
+	    print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
+			_("FATAL"), cur_preproc->keyword, _("preprocessor"),
+			_("parser"), cur_parser->keyword);
 	    if (in != stdin)
 		fclose(in);
 	    cleanup(NULL);
@@ -447,7 +455,8 @@ main(int argc, char *argv[])
     }
 
     if (!cur_preproc) {
-	print_error(_("Could not load default preprocessor"));
+	print_error(_("%s: could not load default %s"), _("FATAL"),
+		    _("preprocessor"));
 	cleanup(NULL);
 	return EXIT_FAILURE;
     }
@@ -622,8 +631,9 @@ opt_arch_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 	    special_options = SPECIAL_LISTED;
 	    return 0;
 	}
-	print_error(_("unrecognized architecture `%s'"), param);
-	return 1;
+	print_error(_("%s: unrecognized %s `%s'"), _("FATAL"),
+		    _("architecture"), param);
+	exit(EXIT_FAILURE);
     }
     return 0;
 }
@@ -640,8 +650,9 @@ opt_parser_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 	    special_options = SPECIAL_LISTED;
 	    return 0;
 	}
-	print_error(_("unrecognized parser `%s'"), param);
-	return 1;
+	print_error(_("%s: unrecognized %s `%s'"), _("FATAL"), _("parser"),
+		    param);
+	exit(EXIT_FAILURE);
     }
     return 0;
 }
@@ -658,8 +669,9 @@ opt_preproc_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 	    special_options = SPECIAL_LISTED;
 	    return 0;
 	}
-	print_error(_("unrecognized preprocessor `%s'"), param);
-	return 1;
+	print_error(_("%s: unrecognized %s `%s'"), _("FATAL"),
+		    _("preprocessor"), param);
+	exit(EXIT_FAILURE);
     }
     return 0;
 }
@@ -676,8 +688,9 @@ opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 	    special_options = SPECIAL_LISTED;
 	    return 0;
 	}
-	print_error(_("unrecognized object format `%s'"), param);
-	return 1;
+	print_error(_("%s: unrecognized %s `%s'"), _("FATAL"),
+		    _("object format"), param);
+	exit(EXIT_FAILURE);
     }
     return 0;
 }
@@ -694,8 +707,9 @@ opt_dbgfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 	    special_options = SPECIAL_LISTED;
 	    return 0;
 	}
-	print_error(_("unrecognized debugging format `%s'"), param);
-	return 1;
+	print_error(_("%s: unrecognized %s `%s'"), _("FATAL"),
+		    _("debug format"), param);
+	exit(EXIT_FAILURE);
     }
     return 0;
 }
