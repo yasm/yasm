@@ -27,7 +27,7 @@
 #ifndef YASM_SYMREC_H
 #define YASM_SYMREC_H
 
-void yasm_symrec_initialize(yasm_errwarn *we);
+void yasm_symrec_initialize(void);
 
 /*@dependent@*/ yasm_symrec *yasm_symrec_use(const char *name,
 					     unsigned long lindex);

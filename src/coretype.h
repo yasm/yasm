@@ -50,7 +50,6 @@ typedef struct yasm_intnum yasm_intnum;
 typedef struct yasm_floatnum yasm_floatnum;
 
 typedef struct yasm_linemgr yasm_linemgr;
-typedef struct yasm_errwarn yasm_errwarn;
 
 typedef enum {
     YASM_EXPR_ADD,

@@ -88,6 +88,16 @@ static /*@only@*/ char *replace_extension(const char *orig, /*@null@*/
 					  const char *ext, const char *def);
 static void print_error(const char *fmt, ...);
 
+static /*@exits@*/ void handle_yasm_int_error(const char *file,
+					      unsigned int line,
+					      const char *message);
+static /*@exits@*/ void handle_yasm_fatal(const char *message);
+static const char *handle_yasm_gettext(const char *msgid);
+static void print_yasm_error(const char *filename, unsigned long line,
+			     const char *msg);
+static void print_yasm_warning(const char *filename, unsigned long line,
+			       const char *msg);
+
 /* values for special_options */
 #define SPECIAL_SHOW_HELP 0x01
 #define SPECIAL_SHOW_VERSION 0x02
@@ -153,11 +163,10 @@ main(int argc, char *argv[])
     textdomain(PACKAGE);
 
     /* Initialize errwarn handling */
-    yasm_std_errwarn.initialize();
-
-    /* Initialize memory allocation */
-    xalloc_initialize((void (*) (int))yasm_std_errwarn.fatal,
-		      YASM_FATAL_NOMEM);
+    yasm_internal_error_ = handle_yasm_int_error;
+    yasm_fatal = handle_yasm_fatal;
+    yasm_gettext_hook = handle_yasm_gettext;
+    yasm_errwarn_initialize();
 
     /* Set libltdl malloc/free functions. */
 #ifdef WITH_DMALLOC
@@ -223,15 +232,15 @@ main(int argc, char *argv[])
     }
 
     /* Initialize line manager */
-    yasm_std_linemgr.initialize(yasm_std_errwarn.internal_error_);
+    yasm_std_linemgr.initialize();
     yasm_std_linemgr.set(in_filename, 1, 1);
 
     /* Initialize intnum and floatnum */
-    yasm_intnum_initialize(&yasm_std_errwarn);
-    yasm_floatnum_initialize(&yasm_std_errwarn);
+    yasm_intnum_initialize();
+    yasm_floatnum_initialize();
 
     /* Initialize symbol table */
-    yasm_symrec_initialize(&yasm_std_errwarn);
+    yasm_symrec_initialize();
 
     /* handle preproc-only case here */
     if (preproc_only) {
@@ -261,8 +270,7 @@ main(int argc, char *argv[])
 	}
 
 	/* Pre-process until done */
-	cur_preproc->initialize(in, in_filename, &yasm_std_linemgr,
-				&yasm_std_errwarn);
+	cur_preproc->initialize(in, in_filename, &yasm_std_linemgr);
 	while ((got = cur_preproc->input(preproc_buf, PREPROC_BUF_SIZE)) != 0)
 	    fwrite(preproc_buf, got, 1, obj);
 
@@ -272,8 +280,9 @@ main(int argc, char *argv[])
 	if (obj != stdout)
 	    fclose(obj);
 
-	if (yasm_std_errwarn.get_num_errors(warning_error) > 0) {
-	    yasm_std_errwarn.output_all(&yasm_std_linemgr, warning_error);
+	if (yasm_get_num_errors(warning_error) > 0) {
+	    yasm_errwarn_output_all(&yasm_std_linemgr, warning_error,
+				    print_yasm_error, print_yasm_warning);
 	    if (obj != stdout)
 		remove(obj_filename);
 	    xfree(preproc_buf);
@@ -293,7 +302,7 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 
-    cur_arch->initialize(&yasm_std_errwarn);
+    cur_arch->initialize();
 
     /* Set basic as the optimizer (TODO: user choice) */
     cur_optimizer = load_optimizer("basic");
@@ -304,8 +313,8 @@ main(int argc, char *argv[])
     }
 
     yasm_arch_common_initialize(cur_arch);
-    yasm_expr_initialize(cur_arch, &yasm_std_errwarn);
-    yasm_bc_initialize(cur_arch, &yasm_std_errwarn);
+    yasm_expr_initialize(cur_arch);
+    yasm_bc_initialize(cur_arch);
 
     /* If not already specified, default to bin as the object format. */
     if (!cur_objfmt)
@@ -359,7 +368,7 @@ main(int argc, char *argv[])
     /* Initialize the object format */
     if (cur_objfmt->initialize)
 	cur_objfmt->initialize(in_filename, obj_filename, cur_dbgfmt,
-			       cur_arch, &yasm_std_errwarn);
+			       cur_arch);
 
     /* Set NASM as the parser */
     cur_parser = load_parser("nasm");
@@ -401,24 +410,25 @@ main(int argc, char *argv[])
 
     /* Parse! */
     sections = cur_parser->do_parse(cur_preproc, cur_arch, cur_objfmt,
-				    &yasm_std_linemgr, &yasm_std_errwarn, in,
-				    in_filename, 0);
+				    &yasm_std_linemgr, in, in_filename, 0);
 
     /* Close input file */
     if (in != stdin)
 	fclose(in);
 
-    if (yasm_std_errwarn.get_num_errors(warning_error) > 0) {
-	yasm_std_errwarn.output_all(&yasm_std_linemgr, warning_error);
+    if (yasm_get_num_errors(warning_error) > 0) {
+	yasm_errwarn_output_all(&yasm_std_linemgr, warning_error,
+				print_yasm_error, print_yasm_warning);
 	cleanup(sections);
 	return EXIT_FAILURE;
     }
 
     yasm_symrec_parser_finalize();
-    cur_optimizer->optimize(sections, &yasm_std_errwarn);
+    cur_optimizer->optimize(sections);
 
-    if (yasm_std_errwarn.get_num_errors(warning_error) > 0) {
-	yasm_std_errwarn.output_all(&yasm_std_linemgr, warning_error);
+    if (yasm_get_num_errors(warning_error) > 0) {
+	yasm_errwarn_output_all(&yasm_std_linemgr, warning_error,
+				print_yasm_error, print_yasm_warning);
 	cleanup(sections);
 	return EXIT_FAILURE;
     }
@@ -442,14 +452,16 @@ main(int argc, char *argv[])
     /* If we had an error at this point, we also need to delete the output
      * object file (to make sure it's not left newer than the source).
      */
-    if (yasm_std_errwarn.get_num_errors(warning_error) > 0) {
-	yasm_std_errwarn.output_all(&yasm_std_linemgr, warning_error);
+    if (yasm_get_num_errors(warning_error) > 0) {
+	yasm_errwarn_output_all(&yasm_std_linemgr, warning_error,
+				print_yasm_error, print_yasm_warning);
 	remove(obj_filename);
 	cleanup(sections);
 	return EXIT_FAILURE;
     }
 
-    yasm_std_errwarn.output_all(&yasm_std_linemgr, warning_error);
+    yasm_errwarn_output_all(&yasm_std_linemgr, warning_error,
+			    print_yasm_error, print_yasm_warning);
 
     cleanup(sections);
     return EXIT_SUCCESS;
@@ -496,7 +508,7 @@ cleanup(yasm_sectionhead *sections)
 	yasm_floatnum_cleanup();
 	yasm_intnum_cleanup();
 
-	yasm_std_errwarn.cleanup();
+	yasm_errwarn_cleanup();
 	yasm_std_linemgr.cleanup();
 
 	BitVector_Shutdown();
@@ -611,7 +623,7 @@ opt_warning_handler(char *cmd, /*@unused@*/ char *param, int extra)
 
     if (extra == 1) {
 	/* -w, disable warnings */
-	yasm_std_errwarn.warn_disable_all();
+	yasm_warn_disable_all();
 	return 0;
     }
 
@@ -631,9 +643,9 @@ opt_warning_handler(char *cmd, /*@unused@*/ char *param, int extra)
 	warning_error = enable;
     } else if (strcmp(cmd, "unrecognized-char") == 0) {
 	if (enable)
-	    yasm_std_errwarn.warn_enable(YASM_WARN_UNREC_CHAR);
+	    yasm_warn_enable(YASM_WARN_UNREC_CHAR);
 	else
-	    yasm_std_errwarn.warn_disable(YASM_WARN_UNREC_CHAR);
+	    yasm_warn_disable(YASM_WARN_UNREC_CHAR);
     } else
 	return 1;
 
@@ -712,4 +724,45 @@ print_error(const char *fmt, ...)
     vfprintf(stderr, fmt, va);
     va_end(va);
     fputc('\n', stderr);
+}
+
+static /*@exits@*/ void
+handle_yasm_int_error(const char *file, unsigned int line, const char *message)
+{
+    fprintf(stderr, _("INTERNAL ERROR at %s, line %u: %s\n"), file, line,
+	    gettext(message));
+#ifdef HAVE_ABORT
+    abort();
+#else
+    exit(EXIT_FAILURE);
+#endif
+}
+
+static /*@exits@*/ void
+handle_yasm_fatal(const char *message)
+{
+    fprintf(stderr, _("FATAL: %s\n"), gettext(message));
+#ifdef HAVE_ABORT
+    abort();
+#else
+    exit(EXIT_FAILURE);
+#endif
+}
+
+static const char *
+handle_yasm_gettext(const char *msgid)
+{
+    return gettext(msgid);
+}
+
+static void
+print_yasm_error(const char *filename, unsigned long line, const char *msg)
+{
+    fprintf(stderr, "%s:%lu: %s\n", filename, line, msg);
+}
+
+static void
+print_yasm_warning(const char *filename, unsigned long line, const char *msg)
+{
+    fprintf(stderr, "%s:%lu: %s %s\n", filename, line, _("warning:"), msg);
 }

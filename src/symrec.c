@@ -92,15 +92,11 @@ typedef /*@reldef@*/ SLIST_HEAD(nontablesymhead_s, non_table_symrec_s)
 	nontablesymhead;
 static /*@only@*/ nontablesymhead *non_table_syms;
 
-static /*@dependent@*/ yasm_errwarn *cur_we;
-
 
 void
-yasm_symrec_initialize(yasm_errwarn *we)
+yasm_symrec_initialize(void)
 {
-    cur_we = we;
-
-    sym_table = HAMT_new(cur_we->internal_error_);
+    sym_table = HAMT_new(yasm_internal_error_);
     non_table_syms = xmalloc(sizeof(nontablesymhead));
     SLIST_INIT(non_table_syms);
 }
@@ -116,7 +112,7 @@ symrec_delete_one(/*@only@*/ void *d)
 	if (sym->of->symrec_data_delete)
 	    sym->of->symrec_data_delete(sym->of_data);
 	else
-	    cur_we->internal_error(
+	    yasm_internal_error(
 		N_("don't know how to delete objfmt-specific data"));
     }
     xfree(sym);
@@ -201,7 +197,7 @@ symrec_define(const char *name, sym_type type, int in_table,
     /* Has it been defined before (either by DEFINED or COMMON/EXTERN)? */
     if ((rec->status & SYM_DEFINED) ||
 	(rec->visibility & (YASM_SYM_COMMON | YASM_SYM_EXTERN))) {
-	cur_we->error(lindex,
+	yasm__error(lindex,
 	    N_("duplicate definition of `%s'; first defined on line %lu"),
 	    name, rec->line);
     } else {
@@ -255,7 +251,7 @@ yasm_symrec_declare(const char *name, yasm_sym_vis vis, unsigned long lindex)
 	  ((rec->visibility & YASM_SYM_EXTERN) && (vis == YASM_SYM_EXTERN)))))
 	rec->visibility |= vis;
     else
-	cur_we->error(lindex,
+	yasm__error(lindex,
 	    N_("duplicate definition of `%s'; first defined on line %lu"),
 	    name, rec->line);
     return rec;
@@ -321,7 +317,7 @@ yasm_symrec_set_of_data(yasm_symrec *sym, yasm_objfmt *of, void *of_data)
 	if (sym->of->symrec_data_delete)
 	    sym->of->symrec_data_delete(sym->of_data);
 	else
-	    cur_we->internal_error(
+	    yasm_internal_error(
 		N_("don't know how to delete objfmt-specific data"));
     }
     sym->of = of;
@@ -336,8 +332,8 @@ symrec_parser_finalize_checksym(yasm_symrec *sym,
     /* error if a symbol is used but never defined or extern/common declared */
     if ((sym->status & SYM_USED) && !(sym->status & SYM_DEFINED) &&
 	!(sym->visibility & (YASM_SYM_EXTERN | YASM_SYM_COMMON))) {
-	cur_we->error(sym->line, N_("undefined symbol `%s' (first use)"),
-		      sym->name);
+	yasm__error(sym->line, N_("undefined symbol `%s' (first use)"),
+		    sym->name);
 	if (sym->line < firstundef_line)
 	    firstundef_line = sym->line;
     }
@@ -351,8 +347,8 @@ yasm_symrec_parser_finalize(void)
     firstundef_line = ULONG_MAX;
     yasm_symrec_traverse(NULL, symrec_parser_finalize_checksym);
     if (firstundef_line < ULONG_MAX)
-	cur_we->error(firstundef_line,
-	    N_(" (Each undefined symbol is reported only once.)"));
+	yasm__error(firstundef_line,
+		    N_(" (Each undefined symbol is reported only once.)"));
 }
 
 void

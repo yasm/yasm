@@ -27,17 +27,8 @@
 #include "util.h"
 RCSID("$IdPath$");
 
+#include "errwarn.h"
 
-static /*@exits@*/ void (*fatal_func) (int type);
-static int nomem_fatal_type;
-
-
-void
-xalloc_initialize(/*@exits@*/ void (*f) (int type), int t)
-{
-    fatal_func = f;
-    nomem_fatal_type = t;
-}
 
 #ifndef WITH_DMALLOC
 
@@ -50,7 +41,7 @@ xmalloc(size_t size)
 	size = 1;
     newmem = malloc(size);
     if (!newmem)
-	fatal_func(nomem_fatal_type);
+	yasm_fatal(N_("out of memory"));
 
     return newmem;
 }
@@ -65,7 +56,7 @@ xcalloc(size_t nelem, size_t elsize)
 
     newmem = calloc(nelem, elsize);
     if (!newmem)
-	fatal_func(nomem_fatal_type);
+	yasm_fatal(N_("out of memory"));
 
     return newmem;
 }
@@ -82,7 +73,7 @@ xrealloc(void *oldmem, size_t size)
     else
 	newmem = realloc(oldmem, size);
     if (!newmem)
-	fatal_func(nomem_fatal_type);
+	yasm_fatal(N_("out of memory"));
 
     return newmem;
 }

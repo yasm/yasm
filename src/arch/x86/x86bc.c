@@ -202,11 +202,11 @@ yasm_x86__bc_new_jmprel(x86_new_jmprel_data *d)
     jmprel->op_sel = d->op_sel;
 
     if ((d->op_sel == JR_SHORT_FORCED) && (d->near_op_len == 0))
-	cur_we->error(d->lindex,
-		      N_("no SHORT form of that jump instruction exists"));
+	yasm__error(d->lindex,
+		    N_("no SHORT form of that jump instruction exists"));
     if ((d->op_sel == JR_NEAR_FORCED) && (d->short_op_len == 0))
-	cur_we->error(d->lindex,
-		      N_("no NEAR form of that jump instruction exists"));
+	yasm__error(d->lindex,
+		    N_("no NEAR form of that jump instruction exists"));
 
     jmprel->shortop.opcode[0] = d->short_op[0];
     jmprel->shortop.opcode[1] = d->short_op[1];
@@ -238,8 +238,8 @@ yasm_x86__ea_set_segment(yasm_effaddr *ea, unsigned char segment,
 	return;
 
     if (segment != 0 && x86_ea->segment != 0)
-	cur_we->warning(YASM_WARN_GENERAL, lindex,
-			N_("multiple segment overrides, using leftmost"));
+	yasm__warning(YASM_WARN_GENERAL, lindex,
+		      N_("multiple segment overrides, using leftmost"));
 
     x86_ea->segment = segment;
 }
@@ -334,7 +334,7 @@ yasm_x86__bc_insn_get_ea(yasm_bytecode *bc)
 	return NULL;
 
     if ((x86_bytecode_type)bc->type != X86_BC_INSN)
-	cur_we->internal_error(N_("Trying to get EA of non-instruction"));
+	yasm_internal_error(N_("Trying to get EA of non-instruction"));
 
     return (yasm_effaddr *)(((x86_insn *)bc)->ea);
 }
@@ -358,7 +358,7 @@ yasm_x86__bc_insn_opersize_override(yasm_bytecode *bc, unsigned char opersize)
 	    jmprel->opersize = opersize;
 	    break;
 	default:
-	    cur_we->internal_error(
+	    yasm_internal_error(
 		N_("OperSize override applied to non-instruction"));
     }
 }
@@ -382,7 +382,7 @@ yasm_x86__bc_insn_addrsize_override(yasm_bytecode *bc, unsigned char addrsize)
 	    jmprel->addrsize = addrsize;
 	    break;
 	default:
-	    cur_we->internal_error(
+	    yasm_internal_error(
 		N_("AddrSize override applied to non-instruction"));
     }
 }
@@ -408,13 +408,13 @@ yasm_x86__bc_insn_set_lockrep_prefix(yasm_bytecode *bc, unsigned char prefix,
 	    lockrep_pre = &jmprel->lockrep_pre;
 	    break;
 	default:
-	    cur_we->internal_error(
+	    yasm_internal_error(
 		N_("LockRep prefix applied to non-instruction"));
     }
 
     if (*lockrep_pre != 0)
-	cur_we->warning(YASM_WARN_GENERAL, lindex,
-			N_("multiple LOCK or REP prefixes, using leftmost"));
+	yasm__warning(YASM_WARN_GENERAL, lindex,
+		      N_("multiple LOCK or REP prefixes, using leftmost"));
 
     *lockrep_pre = prefix;
 }
@@ -701,7 +701,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		temp = yasm_expr_copy(jmprel->target);
 		num = yasm_expr_get_intnum(&temp, calc_bc_dist);
 		if (!num) {
-		    cur_we->error(bc->line,
+		    yasm__error(bc->line,
 			N_("short jump target external or out of segment"));
 		    yasm_expr_delete(temp);
 		    return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
@@ -711,14 +711,13 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		    yasm_expr_delete(temp);
 		    /* does a short form exist? */
 		    if (jmprel->shortop.opcode_len == 0) {
-			cur_we->error(bc->line,
-				      N_("short jump does not exist"));
+			yasm__error(bc->line, N_("short jump does not exist"));
 			return YASM_BC_RESOLVE_ERROR |
 			    YASM_BC_RESOLVE_UNKNOWN_LEN;
 		    }
 		    /* short displacement must fit in -128 <= rel <= +127 */
 		    if (rel < -128 || rel > 127) {
-			cur_we->error(bc->line, N_("short jump out of range"));
+			yasm__error(bc->line, N_("short jump out of range"));
 			return YASM_BC_RESOLVE_ERROR |
 			    YASM_BC_RESOLVE_UNKNOWN_LEN;
 		    }
@@ -730,7 +729,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 	    jrshort = 0;
 	    if (save) {
 		if (jmprel->nearop.opcode_len == 0) {
-		    cur_we->error(bc->line, N_("near jump does not exist"));
+		    yasm__error(bc->line, N_("near jump does not exist"));
 		    return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
 		}
 	    }
@@ -765,7 +764,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		     * it to actually be within short range).
 		     */
 		    if (save) {
-			cur_we->error(bc->line,
+			yasm__error(bc->line,
 			    N_("short jump out of range (near jump does not exist)"));
 			return YASM_BC_RESOLVE_ERROR |
 			    YASM_BC_RESOLVE_UNKNOWN_LEN;
@@ -783,7 +782,7 @@ x86_bc_resolve_jmprel(x86_jmprel *jmprel, unsigned long *len, int save,
 		    jrshort = 0;
 		} else {
 		    if (save) {
-			cur_we->error(bc->line,
+			yasm__error(bc->line,
 			    N_("short jump out of range (near jump does not exist)"));
 			return YASM_BC_RESOLVE_ERROR |
 			    YASM_BC_RESOLVE_UNKNOWN_LEN;
@@ -834,7 +833,7 @@ yasm_x86__bc_resolve(yasm_bytecode *bc, int save, const yasm_section *sect,
 	default:
 	    break;
     }
-    cur_we->internal_error(N_("Didn't handle bytecode type in x86 arch"));
+    yasm_internal_error(N_("Didn't handle bytecode type in x86 arch"));
     /*@notreached@*/
     return YASM_BC_RESOLVE_UNKNOWN_LEN;
 }
@@ -863,7 +862,7 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp,
 	YASM_WRITE_8(*bufp, 0x67);
     if (insn->rex != 0 && insn->rex != 0xff) {
 	if (insn->mode_bits != 64)
-	    cur_we->internal_error(
+	    yasm_internal_error(
 		N_("x86: got a REX prefix in non-64-bit mode"));
 	YASM_WRITE_8(*bufp, insn->rex);
     }
@@ -878,14 +877,13 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp,
     if (ea) {
 	if (x86_ea->need_modrm) {
 	    if (!x86_ea->valid_modrm)
-		cur_we->internal_error(
-		    N_("invalid Mod/RM in x86 tobytes_insn"));
+		yasm_internal_error(N_("invalid Mod/RM in x86 tobytes_insn"));
 	    YASM_WRITE_8(*bufp, x86_ea->modrm);
 	}
 
 	if (x86_ea->need_sib) {
 	    if (!x86_ea->valid_sib)
-		cur_we->internal_error(N_("invalid SIB in x86 tobytes_insn"));
+		yasm_internal_error(N_("invalid SIB in x86 tobytes_insn"));
 	    YASM_WRITE_8(*bufp, x86_ea->sib);
 	}
 
@@ -906,7 +904,7 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp,
 					&eat.sib, &eat.valid_sib,
 					&eat.need_sib, &insn->rex,
 					yasm_common_calc_bc_dist))
-		cur_we->internal_error(N_("checkea failed"));
+		yasm_internal_error(N_("checkea failed"));
 
 	    if (ea->disp) {
 		if (output_expr(&ea->disp, bufp, ea->len, *bufp-bufp_orig,
@@ -961,7 +959,7 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 	case JR_SHORT:
 	    /* 1 byte relative displacement */
 	    if (jmprel->shortop.opcode_len == 0)
-		cur_we->internal_error(N_("short jump does not exist"));
+		yasm_internal_error(N_("short jump does not exist"));
 
 	    /* Opcode */
 	    for (i=0; i<jmprel->shortop.opcode_len; i++)
@@ -976,7 +974,7 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 	case JR_NEAR:
 	    /* 2/4 byte relative displacement (depending on operand size) */
 	    if (jmprel->nearop.opcode_len == 0) {
-		cur_we->error(bc->line, N_("near jump does not exist"));
+		yasm__error(bc->line, N_("near jump does not exist"));
 		return 1;
 	    }
 
@@ -991,7 +989,7 @@ x86_bc_tobytes_jmprel(x86_jmprel *jmprel, unsigned char **bufp,
 		return 1;
 	    break;
 	default:
-	    cur_we->internal_error(N_("unrecognized relative jump op_sel"));
+	    yasm_internal_error(N_("unrecognized relative jump op_sel"));
     }
     return 0;
 }
@@ -1022,7 +1020,7 @@ yasm_x86__intnum_tobytes(const yasm_intnum *intn, unsigned char **bufp,
     if (rel) {
 	long val;
 	if (valsize != 1 && valsize != 2 && valsize != 4)
-	    cur_we->internal_error(
+	    yasm_internal_error(
 		N_("tried to do PC-relative offset from invalid sized value"));
 	val = yasm_intnum_get_uint(intn);
 	val -= bc->len;

@@ -39,10 +39,7 @@ typedef enum yasm_linemgr_std_type {
 
 struct yasm_linemgr {
     /* Initialize cur_lindex and any manager internal data structures. */
-    void (*initialize) (/*@exits@*/
-			void (*error_func) (const char *file,
-					    unsigned int line,
-					    const char *message));
+    void (*initialize) (void);
 
     /* Cleans up any memory allocated. */
     void (*cleanup) (void);

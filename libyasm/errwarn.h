@@ -34,66 +34,61 @@ typedef enum {
     YASM_WARN_PREPROC	    /* preprocessor warnings */
 } yasm_warn_class;
 
-/* Fatal error constants.
- * See fatal_msgs in errwarn.c for strings that match up to these constants.
- * When adding a constant here, keep errwarn.c in sync!
+/* Initialize any internal data structures. */
+void yasm_errwarn_initialize(void);
+
+/* Cleans up any memory allocated by initialize or other functions. */
+void yasm_errwarn_cleanup(void);
+
+/* Reporting point of internal errors.  These are usually due to sanity
+ * check failures in the code.
+ * This function must NOT return to calling code.  Either exit or longjmp.
  */
-typedef enum {
-    YASM_FATAL_UNKNOWN = 0,
-    YASM_FATAL_NOMEM
-} yasm_fatal_cause;
+extern /*@exits@*/ void (*yasm_internal_error_)
+    (const char *file, unsigned int line, const char *message);
+#define yasm_internal_error(msg) \
+    yasm_internal_error_(__FILE__, __LINE__, msg)
 
-struct yasm_errwarn {
-    /* Initialize any internal data structures. */
-    void (*initialize) (void);
+/* Reporting point of fatal errors.
+ * This function must NOT return to calling code.  Either exit or longjmp.
+ */
+extern /*@exits@*/ void (*yasm_fatal) (const char *message);
 
-    /* Cleans up any memory allocated by initialize or other functions. */
-    void (*cleanup) (void);
+/* va_list versions of the below two functions */
+void yasm__error_va(unsigned long lindex, const char *, va_list va);
+void yasm__warning_va(yasm_warn_class, unsigned long lindex, const char *,
+		      va_list va);
 
-    /* Reporting point of internal errors.  These are usually due to sanity
-     * check failures in the code.
-     * This function must NOT return to calling code.  Either exit or longjmp.
-     */
-    /*@exits@*/ void (*internal_error_) (const char *file, unsigned int line,
-					 const char *message);
-#define internal_error(msg)	internal_error_(__FILE__, __LINE__, msg)
+void yasm__error(unsigned long lindex, const char *, ...) /*@printflike@*/;
+void yasm__warning(yasm_warn_class, unsigned long lindex, const char *, ...)
+    /*@printflike@*/;
 
-    /* Reporting point of fatal errors.
-     * This function must NOT return to calling code.  Either exit or longjmp.
-     */
-    /*@exits@*/ void (*fatal) (yasm_fatal_cause);
+/* Logs a parser error.  These can be overwritten by non-parser errors on
+ * the same line.
+ */
+void yasm__parser_error(unsigned long lindex, const char *);
 
-    /* va_list versions of the below two functions */
-    void (*error_va) (unsigned long lindex, const char *, va_list va);
-    void (*warning_va) (yasm_warn_class, unsigned long lindex, const char *,
-			va_list va);
+/* Enables/disables a class of warnings. */
+void yasm_warn_enable(yasm_warn_class);
+void yasm_warn_disable(yasm_warn_class);
+void yasm_warn_disable_all(void);
 
-    void (*error) (unsigned long lindex, const char *, ...) /*@printflike@*/;
-    void (*warning) (yasm_warn_class, unsigned long lindex, const char *, ...)
-	/*@printflike@*/;
+/* Returns total number of errors logged to this point.
+ * If warning_as_error is nonzero, warnings are treated as errors.
+ */
+unsigned int yasm_get_num_errors(int warning_as_error);
 
-    /* Logs a parser error.  These can be overwritten by non-parser errors on
-     * the same line.
-     */
-    void (*parser_error) (unsigned long lindex, const char *);
+/* Outputs all errors/warnings by calling print_error and print_warning. */
+void yasm_errwarn_output_all
+    (yasm_linemgr *lm, int warning_as_error,
+     void (*print_error) (const char *fn, unsigned long line, const char *msg),
+     void (*print_warning) (const char *fn, unsigned long line,
+			    const char *msg));
 
-    /* Enables/disables a class of warnings. */
-    void (*warn_enable) (yasm_warn_class);
-    void (*warn_disable) (yasm_warn_class);
-    void (*warn_disable_all) (void);
+/* Convert a possibly unprintable character into a printable string. */
+char *yasm__conv_unprint(char ch);
 
-    /* Returns total number of errors logged to this point.
-     * If warning_as_error is nonzero, warnings are treated as errors.
-     */
-    unsigned int (*get_num_errors) (int warning_as_error);
-
-    /* Outputs all errors/warnings (e.g. to stderr or elsewhere). */
-    void (*output_all) (yasm_linemgr *lm, int warning_as_error);
-
-    /* Convert a possibly unprintable character into a printable string. */
-    char * (*conv_unprint) (char ch);
-};
-
-extern yasm_errwarn yasm_std_errwarn;
+/* Map to gettext() if gettext is being used. */
+extern const char * (*yasm_gettext_hook) (const char *msgid);
 
 #endif

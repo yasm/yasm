@@ -38,7 +38,6 @@
 
 static FILE *in;
 static yasm_linemgr *cur_lm;
-static yasm_errwarn *cur_we;
 static char *line, *linepos;
 static size_t lineleft;
 static char *file_name;
@@ -95,17 +94,17 @@ nasm_efunc(int severity, const char *fmt, ...)
     va_start(va, fmt);
     switch (severity & ERR_MASK) {
 	case ERR_WARNING:
-	    cur_we->warning_va(YASM_WARN_PREPROC, cur_lm->get_current(), fmt,
-			       va);
+	    yasm__warning_va(YASM_WARN_PREPROC, cur_lm->get_current(), fmt,
+			     va);
 	    break;
 	case ERR_NONFATAL:
-	    cur_we->error_va(cur_lm->get_current(), fmt, va);
+	    yasm__error_va(cur_lm->get_current(), fmt, va);
 	    break;
 	case ERR_FATAL:
-	    cur_we->fatal(YASM_FATAL_UNKNOWN);	/* FIXME */
+	    yasm_fatal(N_("unknown"));	/* FIXME */
 	    break;
 	case ERR_PANIC:
-	    cur_we->internal_error(fmt);    /* FIXME */
+	    yasm_internal_error(fmt);	/* FIXME */
 	    break;
 	case ERR_DEBUG:
 	    break;
@@ -114,12 +113,10 @@ nasm_efunc(int severity, const char *fmt, ...)
 }
 
 static void
-nasm_preproc_initialize(FILE *f, const char *in_filename, yasm_linemgr *lm,
-			yasm_errwarn *we)
+nasm_preproc_initialize(FILE *f, const char *in_filename, yasm_linemgr *lm)
 {
     in = f;
     cur_lm = lm;
-    cur_we = we;
     line = NULL;
     file_name = NULL;
     prior_linnum = 0;

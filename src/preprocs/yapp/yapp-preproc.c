@@ -41,7 +41,6 @@ static YAPP_Output current_output;
 YYSTYPE yapp_preproc_lval;
 
 /*@dependent@*/ yasm_linemgr *yapp_preproc_linemgr;
-/*@dependent@*/ yasm_errwarn *yapp_preproc_errwarn;
 
 int isatty(int);
 
@@ -120,13 +119,13 @@ yapp_macro_insert (char *name, int argc, int fillargs)
 void
 yapp_macro_error_exists (YAPP_Macro *v)
 {
-    if (v) cur_we->error(cur_lindex, N_("Redefining macro of the same name %d:%d"), v->type, v->args);
+    if (v) yasm__error(cur_lindex, N_("Redefining macro of the same name %d:%d"), v->type, v->args);
 }
 
 void
 yapp_macro_error_sameargname (YAPP_Macro *v)
 {
-    if (v) cur_we->error(cur_lindex, N_("Duplicate argument names in macro"));
+    if (v) yasm__error(cur_lindex, N_("Duplicate argument names in macro"));
 }
 
 YAPP_Macro *
@@ -141,7 +140,7 @@ yapp_define_insert (char *name, int argc, int fillargs)
 	if ((argc >= 0 && ym->args < 0)
 	    || (argc < 0 && ym->args >= 0))
 	{
-	    cur_we->warning(YASM_WARN_PREPROC, cur_lindex, N_("Attempted %%define both with and without parameters"));
+	    yasm__warning(YASM_WARN_PREPROC, cur_lindex, N_("Attempted %%define both with and without parameters"));
 	    return NULL;
 	}
     }
@@ -237,12 +236,10 @@ void
 expand_token_list(struct source_head *paramexp, struct source_head *to_head, source **to_tail);
 
 static void
-yapp_preproc_initialize(FILE *f, const char *in_filename, yasm_linemgr *lm,
-			yasm_errwarn *we)
+yapp_preproc_initialize(FILE *f, const char *in_filename, yasm_linemgr *lm)
 {
     is_interactive = f ? (isatty(fileno(f)) > 0) : 0;
     yapp_preproc_linemgr = lm;
-    yapp_preproc_errwarn = we;
     yapp_preproc_current_file = xstrdup(in_filename);
     yapp_preproc_line_number = 1;
     yapp_lex_initialize(f);
@@ -254,7 +251,7 @@ yapp_preproc_initialize(FILE *f, const char *in_filename, yasm_linemgr *lm,
     out->out = current_output = YAPP_OUTPUT;
     SLIST_INSERT_HEAD(&output_head, out, next);
 
-    macro_table = HAMT_new(we->internal_error_);
+    macro_table = HAMT_new(yasm_internal_error_);
 
     source_tail = SLIST_FIRST(&source_head);
     macro_tail = SLIST_FIRST(&macro_head);
@@ -470,7 +467,7 @@ eat_through_return(struct source_head *to_head, source **to_tail)
     while ((token = yapp_preproc_lex()) != '\n') {
 	if (token == 0)
 	    return 0;
-	cur_we->error(cur_lindex, N_("Skipping possibly valid %%define stuff"));
+	yasm__error(cur_lindex, N_("Skipping possibly valid %%define stuff"));
     }
     append_token('\n', to_head, to_tail);
     return '\n';
@@ -483,7 +480,7 @@ yapp_get_ident(const char *synlvl)
     if (token == WHITESPACE)
 	token = yapp_preproc_lex();
     if (token != IDENT) {
-	cur_we->error(cur_lindex, N_("Identifier expected after %%%s"), synlvl);
+	yasm__error(cur_lindex, N_("Identifier expected after %%%s"), synlvl);
     }
     return token;
 }
@@ -511,7 +508,7 @@ expand_macro(char *name,
 
     ydebug(("YAPP: +Expand macro %s...\n", name));
 
-    if (ym->expanding) cur_we->internal_error(N_("Recursively expanding a macro!"));
+    if (ym->expanding) yasm_internal_error(N_("Recursively expanding a macro!"));
 
     if (ym->type == YAPP_DEFINE) {
 	if (ym->args == -1) {
@@ -543,7 +540,7 @@ expand_macro(char *name,
 
 	    /* find out what we got */
 	    if (from_head) {
-		cur_we->internal_error(N_("Expanding macro with non-null from_head ugh\n"));
+		yasm_internal_error(N_("Expanding macro with non-null from_head ugh\n"));
 	    }
 	    token = yapp_preproc_lex();
 	    append_token(token, &replay_head, &replay_tail);
@@ -590,9 +587,9 @@ expand_macro(char *name,
 
 		    default:
 			if (token < 256)
-			    cur_we->internal_error(N_("Unexpected character token in parameter expansion"));
+			    yasm_internal_error(N_("Unexpected character token in parameter expansion"));
 			else
-			    cur_we->error(cur_lindex, N_("Cannot handle preprocessor items inside possible macro invocation"));
+			    yasm__error(cur_lindex, N_("Cannot handle preprocessor items inside possible macro invocation"));
 		}
 	    }
 
@@ -612,7 +609,7 @@ expand_macro(char *name,
 	    ym->expanding = 1;
 
 	    /* so the macro exists. build a HAMT parameter table */
-	    param_table = HAMT_new(cur_we->internal_error_);
+	    param_table = HAMT_new(yasm_internal_error_);
 	    /* fill the entries by walking the replay buffer and create
 	     * "macros".  coincidentally, clear the replay buffer. */
 
@@ -688,11 +685,11 @@ expand_macro(char *name,
 		xfree(replay);
 	    }
 	    else if (param) {
-		  cur_we->internal_error(N_("Got to end of arglist before end of replay!"));
+		  yasm_internal_error(N_("Got to end of arglist before end of replay!"));
 	    }
 	    replay = SLIST_FIRST(&replay_head);
 	    if (replay || param)
-		cur_we->internal_error(N_("Count and distribution of define args mismatched!"));
+		yasm_internal_error(N_("Count and distribution of define args mismatched!"));
 
 	    /* the param_table is set up without errors, so expansion is ready
 	     * to go */
@@ -726,7 +723,7 @@ expand_macro(char *name,
 	}
     }
     else
-	cur_we->internal_error(N_("Invoking Macros not yet supported"));
+	yasm_internal_error(N_("Invoking Macros not yet supported"));
 
     ym->expanding = 0;
 }
@@ -772,7 +769,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 			append_token(token, &source_head, &source_tail);
 			/*if (append_to_return()==0) state=YAPP_STATE_EOF;*/
 			ydebug(("YAPP: default: '%c' \"%s\"\n", token, yapp_preproc_lval.str_val));
-			/*cur_we->error(cur_lindex, N_("YAPP got an unhandled token."));*/
+			/*yasm__error(cur_lindex, N_("YAPP got an unhandled token."));*/
 			break;
 
 		    case IDENT:
@@ -795,7 +792,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 
 		    case CLEAR:
 			HAMT_delete(macro_table, (void (*)(void *))yapp_macro_delete);
-			macro_table = HAMT_new(cur_we->internal_error_);
+			macro_table = HAMT_new(yasm_internal_error_);
 			break;
 
 		    case DEFINE:
@@ -841,7 +838,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 				    break;
 				}
 				else if (last_token == ',' || token != ',')
-				    cur_we->error(cur_lindex, N_("Unexpected token in %%define parameters"));
+				    yasm__error(cur_lindex, N_("Unexpected token in %%define parameters"));
 				last_token = token;
 			    }
 			    if (token == ')') {
@@ -858,7 +855,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 			    append_token('\n', &source_head, &source_tail);
 			}
 			else {
-			    cur_we->internal_error(N_("%%define ... failed miserably - neither \\n, WS, or ( followed ident"));
+			    yasm_internal_error(N_("%%define ... failed miserably - neither \\n, WS, or ( followed ident"));
 			}
 			break;
 
@@ -921,7 +918,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 		}
 		break;
 	    default:
-		cur_we->error(cur_lindex, N_("YAPP got into a bad state"));
+		yasm__error(cur_lindex, N_("YAPP got into a bad state"));
 	}
 	if (need_line_directive) {
 	    append_token(LINE, &source_head, &source_tail);

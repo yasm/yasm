@@ -62,7 +62,7 @@ struct yasm_objfmt {
      * provided solely for informational purposes.
      */
     void (*initialize) (const char *in_filename, const char *obj_filename,
-			yasm_dbgfmt *df, yasm_arch *a, yasm_errwarn *we);
+			yasm_dbgfmt *df, yasm_arch *a);
 
     /* Write out (post-optimized) sections to the object file.
      * This function may call symrec functions as necessary (including

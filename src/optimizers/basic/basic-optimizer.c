@@ -48,7 +48,6 @@
 #define BCFLAG_INPROGRESS	(1UL<<0)
 #define BCFLAG_DONE		(1UL<<1)
 
-static /*@dependent@*/ yasm_errwarn *cur_we;
 
 static int basic_optimize_section_1(yasm_section *sect,
 				    /*@unused@*/ /*@null@*/ void *d);
@@ -138,7 +137,7 @@ basic_optimize_bytecode_1(/*@observer@*/ yasm_bytecode *bc, void *d)
 				 basic_optimize_calc_bc_dist_1);
     if (bcr_retval & YASM_BC_RESOLVE_UNKNOWN_LEN) {
 	if (!(bcr_retval & YASM_BC_RESOLVE_ERROR))
-	    cur_we->error(bc->line, N_("circular reference detected."));
+	    yasm__error(bc->line, N_("circular reference detected."));
 	data->saw_unknown = -1;
 	return 0;
     }
@@ -190,7 +189,7 @@ basic_optimize_bytecode_2(/*@observer@*/ yasm_bytecode *bc, /*@null@*/ void *d)
     assert(data != NULL);
 
     if (bc->opt_flags != BCFLAG_DONE)
-	cur_we->internal_error(N_("Optimizer pass 1 missed a bytecode!"));
+	yasm_internal_error(N_("Optimizer pass 1 missed a bytecode!"));
 
     if (!data->precbc)
 	bc->offset = 0;
@@ -212,18 +211,16 @@ basic_optimize_section_2(yasm_section *sect, /*@unused@*/ /*@null@*/ void *d)
     data.sect = sect;
 
     if (yasm_section_get_opt_flags(sect) != SECTFLAG_DONE)
-	cur_we->internal_error(N_("Optimizer pass 1 missed a section!"));
+	yasm_internal_error(N_("Optimizer pass 1 missed a section!"));
 
     return yasm_bcs_traverse(yasm_section_get_bytecodes(sect), &data,
 			     basic_optimize_bytecode_2);
 }
 
 static void
-basic_optimize(yasm_sectionhead *sections, yasm_errwarn *we)
+basic_optimize(yasm_sectionhead *sections)
 {
     int saw_unknown = 0;
-
-    cur_we = we;
 
     /* Optimization process: (essentially NASM's pass 1)
      *  Determine the size of all bytecodes.

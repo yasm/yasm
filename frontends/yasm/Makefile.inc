@@ -39,6 +39,7 @@ libyasm_la_SOURCES = \
 	src/xmalloc.c		\
 	src/xstrdup.c		\
 	src/strcasecmp.c
+libyasm_la_LDFLAGS = -no-undefined
 
 yasm_SOURCES += \
 	src/main.c		\

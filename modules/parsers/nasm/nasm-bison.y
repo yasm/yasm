@@ -155,8 +155,8 @@ line: '\n'		{ $$ = (yasm_bytecode *)NULL; }
 	$$ = (yasm_bytecode *)NULL;
     }
     | error '\n'	{
-	cur_we->error(cur_lindex,
-		      N_("label or instruction expected at start of line"));
+	yasm__error(cur_lindex,
+		    N_("label or instruction expected at start of line"));
 	$$ = (yasm_bytecode *)NULL;
 	yyerrok;
     }
@@ -205,7 +205,7 @@ instr: INSN		{
 	yasm_ops_delete(&$2.operands, 0);
     }
     | INSN error	{
-	cur_we->error(cur_lindex, N_("expression syntax error"));
+	yasm__error(cur_lindex, N_("expression syntax error"));
 	$$ = NULL;
     }
     | PREFIX instr	{
@@ -228,7 +228,7 @@ datavals: dataval	    {
 dataval: dvexpr		{ $$ = yasm_dv_new_expr($1); }
     | STRING		{ $$ = yasm_dv_new_string($1); }
     | error		{
-	cur_we->error(cur_lindex, N_("expression syntax error"));
+	yasm__error(cur_lindex, N_("expression syntax error"));
 	$$ = (yasm_dataval *)NULL;
     }
 ;
@@ -268,7 +268,7 @@ directive: DIRECTIVE_NAME directive_val	{
 	xfree($1);
     }
     | DIRECTIVE_NAME error		{
-	cur_we->error(cur_lindex, N_("invalid arguments to [%s]"), $1);
+	yasm__error(cur_lindex, N_("invalid arguments to [%s]"), $1);
 	xfree($1);
     }
 ;
@@ -353,7 +353,7 @@ operand: '[' memaddr ']'    { $$ = yasm_operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == YASM_INSN__OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 1)
-	    cur_we->error(cur_lindex, N_("cannot override register size"));
+	    yasm__error(cur_lindex, N_("cannot override register size"));
 	else
 	    $$->size = 1;
     }
@@ -361,7 +361,7 @@ operand: '[' memaddr ']'    { $$ = yasm_operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == YASM_INSN__OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 2)
-	    cur_we->error(cur_lindex, N_("cannot override register size"));
+	    yasm__error(cur_lindex, N_("cannot override register size"));
 	else
 	    $$->size = 2;
     }
@@ -369,7 +369,7 @@ operand: '[' memaddr ']'    { $$ = yasm_operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == YASM_INSN__OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 4)
-	    cur_we->error(cur_lindex, N_("cannot override register size"));
+	    yasm__error(cur_lindex, N_("cannot override register size"));
 	else
 	    $$->size = 4;
     }
@@ -377,7 +377,7 @@ operand: '[' memaddr ']'    { $$ = yasm_operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == YASM_INSN__OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 8)
-	    cur_we->error(cur_lindex, N_("cannot override register size"));
+	    yasm__error(cur_lindex, N_("cannot override register size"));
 	else
 	    $$->size = 8;
     }
@@ -385,7 +385,7 @@ operand: '[' memaddr ']'    { $$ = yasm_operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == YASM_INSN__OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 10)
-	    cur_we->error(cur_lindex, N_("cannot override register size"));
+	    yasm__error(cur_lindex, N_("cannot override register size"));
 	else
 	    $$->size = 10;
     }
@@ -393,7 +393,7 @@ operand: '[' memaddr ']'    { $$ = yasm_operand_new_mem($2); }
 	$$ = $2;
 	if ($$->type == YASM_INSN__OPERAND_REG &&
 	    nasm_parser_arch->get_reg_size($$->data.reg) != 16)
-	    cur_we->error(cur_lindex, N_("cannot override register size"));
+	    yasm__error(cur_lindex, N_("cannot override register size"));
 	else
 	    $$->size = 16;
     }
@@ -558,7 +558,7 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
 		nasm_parser_objfmt->extern_declare(sym, objext_valparams,
 						   lindex);
 	} else
-	    cur_we->error(lindex, N_("invalid argument to [%s]"), "EXTERN");
+	    yasm__error(lindex, N_("invalid argument to [%s]"), "EXTERN");
     } else if (yasm__strcasecmp(name, "global") == 0) {
 	vp = yasm_vps_first(valparams);
 	if (vp->val) {
@@ -567,15 +567,14 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
 		nasm_parser_objfmt->global_declare(sym, objext_valparams,
 						   lindex);
 	} else
-	    cur_we->error(lindex, N_("invalid argument to [%s]"), "GLOBAL");
+	    yasm__error(lindex, N_("invalid argument to [%s]"), "GLOBAL");
     } else if (yasm__strcasecmp(name, "common") == 0) {
 	vp = yasm_vps_first(valparams);
 	if (vp->val) {
 	    vp2 = yasm_vps_next(vp);
 	    if (!vp2 || (!vp2->val && !vp2->param))
-		cur_we->error(lindex,
-			      N_("no size specified in %s declaration"),
-			      "COMMON");
+		yasm__error(lindex, N_("no size specified in %s declaration"),
+			    "COMMON");
 	    else {
 		if (vp2->val) {
 		    sym = yasm_symrec_declare(vp->val, YASM_SYM_COMMON,
@@ -596,7 +595,7 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
 		}
 	    }
 	} else
-	    cur_we->error(lindex, N_("invalid argument to [%s]"), "COMMON");
+	    yasm__error(lindex, N_("invalid argument to [%s]"), "COMMON");
     } else if (yasm__strcasecmp(name, "section") == 0 ||
 	       yasm__strcasecmp(name, "segment") == 0) {
 	yasm_section *new_section =
@@ -608,7 +607,7 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
 	    nasm_parser_prev_bc =
 		yasm_bcs_last(yasm_section_get_bytecodes(new_section));
 	} else
-	    cur_we->error(lindex, N_("invalid argument to [%s]"), "SECTION");
+	    yasm__error(lindex, N_("invalid argument to [%s]"), "SECTION");
     } else if (yasm__strcasecmp(name, "absolute") == 0) {
 	/* it can be just an ID or a complete expression, so handle both. */
 	vp = yasm_vps_first(valparams);
@@ -616,12 +615,11 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
 	    nasm_parser_cur_section =
 		yasm_sections_switch_absolute(&nasm_parser_sections,
 		    p_expr_new_ident(yasm_expr_sym(
-			yasm_symrec_use(vp->val, lindex))),
-		    cur_we->internal_error_);
+			yasm_symrec_use(vp->val, lindex))));
 	else if (vp->param) {
 	    nasm_parser_cur_section =
-		yasm_sections_switch_absolute(&nasm_parser_sections, vp->param,
-					      cur_we->internal_error_);
+		yasm_sections_switch_absolute(&nasm_parser_sections,
+					      vp->param);
 	    vp->param = NULL;
 	}
 	nasm_parser_prev_bc = (yasm_bytecode *)NULL;
@@ -633,8 +631,7 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
 		const yasm_intnum *intcpu;
 		intcpu = yasm_expr_get_intnum(&vp->param, NULL);
 		if (!intcpu)
-		    cur_we->error(lindex, N_("invalid argument to [%s]"),
-				  "CPU");
+		    yasm__error(lindex, N_("invalid argument to [%s]"), "CPU");
 		else {
 		    char strcpu[16];
 		    sprintf(strcpu, "%lu", yasm_intnum_get_uint(intcpu));
@@ -649,7 +646,7 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
 	;
     } else if (nasm_parser_objfmt->directive(name, valparams, objext_valparams,
 					     &nasm_parser_sections, lindex)) {
-	cur_we->error(lindex, N_("unrecognized directive [%s]"), name);
+	yasm__error(lindex, N_("unrecognized directive [%s]"), name);
     }
 
     yasm_vps_delete(valparams);
@@ -660,6 +657,6 @@ nasm_parser_directive(const char *name, yasm_valparamhead *valparams,
 static void
 nasm_parser_error(const char *s)
 {
-    cur_we->parser_error(cur_lindex, s);
+    yasm__parser_error(cur_lindex, s);
 }
 

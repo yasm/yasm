@@ -135,8 +135,6 @@ static POT_Entry_Source POT_TableP_Source[] = {
     {{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x80},0x7fff}, /* 1e+0 */
 };
 
-static /*@dependent@*/ yasm_errwarn *cur_we;
-
 
 static void
 POT_Table_Init_Entry(/*@out@*/ POT_Entry *e, POT_Entry_Source *s, int dec_exp)
@@ -160,14 +158,12 @@ POT_Table_Init_Entry(/*@out@*/ POT_Entry *e, POT_Entry_Source *s, int dec_exp)
 
 /*@-compdef@*/
 void
-yasm_floatnum_initialize(yasm_errwarn *we)
+yasm_floatnum_initialize(void)
 /*@globals undef POT_TableN, undef POT_TableP, POT_TableP_Source,
    POT_TableN_Source @*/
 {
     int dec_exp = 1;
     int i;
-
-    cur_we = we;
 
     /* Allocate space for two POT tables */
     POT_TableN = xmalloc(14*sizeof(POT_Entry));
@@ -516,8 +512,8 @@ yasm_floatnum_calc(yasm_floatnum *acc, yasm_expr_op op,
 		   /*@unused@*/ yasm_floatnum *operand, unsigned long lindex)
 {
     if (op != YASM_EXPR_NEG)
-	cur_we->error(lindex,
-		      N_("Unsupported floating-point arithmetic operation"));
+	yasm__error(lindex,
+		    N_("Unsupported floating-point arithmetic operation"));
     else
 	acc->sign ^= 1;
 }
@@ -592,7 +588,7 @@ floatnum_get_common(const yasm_floatnum *flt, /*@out@*/ unsigned char *ptr,
 
     /* underflow and overflow both set!? */
     if (underflow && overflow)
-	cur_we->internal_error(N_("Both underflow and overflow set"));
+	yasm_internal_error(N_("Both underflow and overflow set"));
 
     /* check for underflow or overflow and set up appropriate output */
     if (underflow) {
@@ -615,7 +611,7 @@ floatnum_get_common(const yasm_floatnum *flt, /*@out@*/ unsigned char *ptr,
     /* get little-endian bytes */
     buf = BitVector_Block_Read(output, &len);
     if (len < byte_size)
-	cur_we->internal_error(
+	yasm_internal_error(
 	    N_("Byte length of BitVector does not match bit length"));
 
     /* copy to output */
@@ -671,7 +667,7 @@ yasm_floatnum_get_sized(const yasm_floatnum *flt, unsigned char *ptr,
 	case 10:
 	    return floatnum_get_common(flt, ptr, 10, 64, 0, 15);
 	default:
-	    cur_we->internal_error(N_("Invalid float conversion size"));
+	    yasm_internal_error(N_("Invalid float conversion size"));
 	    /*@notreached@*/
 	    return 1;	    /* never reached, but silence GCC warning */
     }

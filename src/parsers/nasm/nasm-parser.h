@@ -45,7 +45,6 @@ extern size_t nasm_parser_locallabel_base_len;
 extern /*@dependent@*/ yasm_arch *nasm_parser_arch;
 extern /*@dependent@*/ yasm_objfmt *nasm_parser_objfmt;
 extern /*@dependent@*/ yasm_linemgr *nasm_parser_linemgr;
-extern /*@dependent@*/ yasm_errwarn *nasm_parser_errwarn;
 
 extern int nasm_parser_save_input;
 
@@ -54,7 +53,5 @@ extern int nasm_parser_save_input;
 #define p_expr_new_tree(l,o,r)	yasm_expr_new_tree(l,o,r,cur_lindex)
 #define p_expr_new_branch(o,r)	yasm_expr_new_branch(o,r,cur_lindex)
 #define p_expr_new_ident(r)	yasm_expr_new_ident(r,cur_lindex)
-
-#define cur_we		nasm_parser_errwarn
 
 #endif

@@ -39,6 +39,19 @@
 
 #define MSG_MAXSIZE	1024
 
+/* Default handlers for replacable functions */
+static /*@exits@*/ void def_internal_error_
+    (const char *file, unsigned int line, const char *message);
+static /*@exits@*/ void def_fatal(const char *message);
+static const char *def_gettext_hook(const char *msgid);
+
+/* Storage for errwarn's "extern" functions */
+/*@exits@*/ void (*yasm_internal_error_)
+    (const char *file, unsigned int line, const char *message)
+    = def_internal_error_;
+/*@exits@*/ void (*yasm_fatal) (const char *message) = def_fatal;
+const char * (*yasm_gettext_hook) (const char *msgid) = def_gettext_hook;
+
 /* Enabled warnings.  See errwarn.h for a list. */
 static unsigned long warn_class_enabled;
 
@@ -47,18 +60,6 @@ static unsigned int error_count;
 
 /* Total warning count */
 static unsigned int warning_count;
-
-/* See errwarn.h for constants that match up to these strings.
- * When adding a string here, keep errwarn.h in sync!
- */
-
-/* Fatal error messages.  Match up with fatal_num enum in errwarn.h. */
-/*@-observertrans@*/
-static const char *fatal_msgs[] = {
-    N_("unknown"),
-    N_("out of memory")
-};
-/*@=observertrans@*/
 
 typedef /*@reldef@*/ SLIST_HEAD(errwarndatahead_s, errwarn_data)
     errwarndatahead;
@@ -82,8 +83,14 @@ static /*@null@*/ errwarn_data *previous_we;
 static char unprint[5];
 
 
-static void
-yasm_std_errwarn_initialize(void)
+static const char *
+def_gettext_hook(const char *msgid)
+{
+    return msgid;
+}
+
+void
+yasm_errwarn_initialize(void)
 {
     /* Default enabled warnings.  See errwarn.h for a list. */
     warn_class_enabled = 
@@ -96,8 +103,8 @@ yasm_std_errwarn_initialize(void)
     previous_we = NULL;
 }
 
-static void
-yasm_std_errwarn_cleanup(void)
+void
+yasm_errwarn_cleanup(void)
 {
     errwarn_data *we;
 
@@ -113,8 +120,8 @@ yasm_std_errwarn_cleanup(void)
 /* Convert a possibly unprintable character into a printable string, using
  * standard cat(1) convention for unprintable characters.
  */
-static char *
-yasm_std_errwarn_conv_unprint(char ch)
+char *
+yasm__conv_unprint(char ch)
 {
     int pos = 0;
 
@@ -137,11 +144,11 @@ yasm_std_errwarn_conv_unprint(char ch)
  * Exit immediately because it's essentially an assert() trap.
  */
 static void
-yasm_std_errwarn_internal_error_(const char *file, unsigned int line,
-				 const char *message)
+def_internal_error_(const char *file, unsigned int line, const char *message)
 {
-    fprintf(stderr, _("INTERNAL ERROR at %s, line %u: %s\n"), file, line,
-	    gettext(message));
+    fprintf(stderr,
+	    yasm_gettext_hook(N_("INTERNAL ERROR at %s, line %u: %s\n")),
+	    file, line, yasm_gettext_hook(message));
 #ifdef HAVE_ABORT
     abort();
 #else
@@ -153,9 +160,10 @@ yasm_std_errwarn_internal_error_(const char *file, unsigned int line,
  * memory), so just exit immediately.
  */
 static void
-yasm_std_errwarn_fatal(yasm_fatal_cause num)
+def_fatal(const char *message)
 {
-    fprintf(stderr, _("FATAL: %s\n"), gettext(fatal_msgs[num]));
+    fprintf(stderr, yasm_gettext_hook(N_("FATAL: %s\n")),
+	    yasm_gettext_hook(message));
 #ifdef HAVE_ABORT
     abort();
 #else
@@ -211,8 +219,7 @@ errwarn_data_new(unsigned long lindex, int replace_parser_error)
 	    assert(ins_we != NULL);
 	    SLIST_INSERT_AFTER(ins_we, we, link);
 	} else
-	    yasm_std_errwarn_internal_error_(__FILE__, __LINE__,
-		N_("Unexpected errwarn insert action"));
+	    yasm_internal_error(N_("Unexpected errwarn insert action"));
     }
 
     /* Remember previous err/warn */
@@ -224,17 +231,17 @@ errwarn_data_new(unsigned long lindex, int replace_parser_error)
 /* Register an error at line lindex.  Does not print the error, only stores it
  * for output_all() to print.
  */
-static void
-yasm_std_errwarn_error_va(unsigned long lindex, const char *fmt, va_list va)
+void
+yasm__error_va(unsigned long lindex, const char *fmt, va_list va)
 {
     errwarn_data *we = errwarn_data_new(lindex, 1);
 
     we->type = WE_ERROR;
 
 #ifdef HAVE_VSNPRINTF
-    vsnprintf(we->msg, MSG_MAXSIZE, gettext(fmt), va);
+    vsnprintf(we->msg, MSG_MAXSIZE, yasm_gettext_hook(fmt), va);
 #else
-    vsprintf(we->msg, gettext(fmt), va);
+    vsprintf(we->msg, yasm_gettext_hook(fmt), va);
 #endif
 
     error_count++;
@@ -243,9 +250,9 @@ yasm_std_errwarn_error_va(unsigned long lindex, const char *fmt, va_list va)
 /* Register an warning at line lindex.  Does not print the warning, only stores
  * it for output_all() to print.
  */
-static void
-yasm_std_errwarn_warning_va(yasm_warn_class num, unsigned long lindex,
-			    const char *fmt, va_list va)
+void
+yasm__warning_va(yasm_warn_class num, unsigned long lindex, const char *fmt,
+		 va_list va)
 {
     errwarn_data *we;
 
@@ -257,9 +264,9 @@ yasm_std_errwarn_warning_va(yasm_warn_class num, unsigned long lindex,
     we->type = WE_WARNING;
 
 #ifdef HAVE_VSNPRINTF
-    vsnprintf(we->msg, MSG_MAXSIZE, gettext(fmt), va);
+    vsnprintf(we->msg, MSG_MAXSIZE, yasm_gettext_hook(fmt), va);
 #else
-    vsprintf(we->msg, gettext(fmt), va);
+    vsprintf(we->msg, yasm_gettext_hook(fmt), va);
 #endif
 
     warning_count++;
@@ -268,61 +275,57 @@ yasm_std_errwarn_warning_va(yasm_warn_class num, unsigned long lindex,
 /* Register an error at line lindex.  Does not print the error, only stores it
  * for output_all() to print.
  */
-static void
-yasm_std_errwarn_error(unsigned long lindex, const char *fmt, ...)
+void
+yasm__error(unsigned long lindex, const char *fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
-    yasm_std_errwarn_error_va(lindex, fmt, va);
+    yasm__error_va(lindex, fmt, va);
     va_end(va);
 }
 
 /* Register an warning at line lindex.  Does not print the warning, only stores
  * it for output_all() to print.
  */
-static void
-yasm_std_errwarn_warning(yasm_warn_class num, unsigned long lindex,
-			 const char *fmt, ...)
+void
+yasm__warning(yasm_warn_class num, unsigned long lindex, const char *fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
-    yasm_std_errwarn_warning_va(num, lindex, fmt, va);
+    yasm__warning_va(num, lindex, fmt, va);
     va_end(va);
 }
 
 /* Parser error handler.  Moves YACC-style error into our error handling
  * system.
  */
-static void
-yasm_std_errwarn_parser_error(unsigned long lindex, const char *s)
+void
+yasm__parser_error(unsigned long lindex, const char *s)
 {
-    yasm_std_errwarn_error(lindex, N_("parser error: %s"), s);
+    yasm__error(lindex, N_("parser error: %s"), s);
     previous_we->type = WE_PARSERERROR;
 }
 
-static void
-yasm_std_errwarn_warn_enable(yasm_warn_class num)
+void
+yasm_warn_enable(yasm_warn_class num)
 {
     warn_class_enabled |= (1UL<<num);
 }
 
-static void
-yasm_std_errwarn_warn_disable(yasm_warn_class num)
+void
+yasm_warn_disable(yasm_warn_class num)
 {
     warn_class_enabled &= ~(1UL<<num);
 }
 
-static void
-yasm_std_errwarn_warn_disable_all(void)
+void
+yasm_warn_disable_all(void)
 {
     warn_class_enabled = 0;
 }
 
-/* Get the number of errors (including warnings if warnings are being treated
- * as errors).
- */
-static unsigned int
-yasm_std_errwarn_get_num_errors(int warning_as_error)
+unsigned int
+yasm_get_num_errors(int warning_as_error)
 {
     if (warning_as_error)
 	return error_count+warning_count;
@@ -330,9 +333,11 @@ yasm_std_errwarn_get_num_errors(int warning_as_error)
 	return error_count;
 }
 
-/* Output all previously stored errors and warnings to stderr. */
-static void
-yasm_std_errwarn_output_all(yasm_linemgr *lm, int warning_as_error)
+void
+yasm_errwarn_output_all(yasm_linemgr *lm, int warning_as_error,
+     void (*print_error) (const char *fn, unsigned long line, const char *msg),
+     void (*print_warning) (const char *fn, unsigned long line,
+			    const char *msg))
 {
     errwarn_data *we;
     const char *filename;
@@ -340,7 +345,8 @@ yasm_std_errwarn_output_all(yasm_linemgr *lm, int warning_as_error)
 
     /* If we're treating warnings as errors, tell the user about it. */
     if (warning_as_error && warning_as_error != 2) {
-	fprintf(stderr, "%s\n", _("warnings being treated as errors"));
+	print_error("", 0,
+		    yasm_gettext_hook(N_("warnings being treated as errors")));
 	warning_as_error = 2;
     }
 
@@ -349,27 +355,8 @@ yasm_std_errwarn_output_all(yasm_linemgr *lm, int warning_as_error)
 	/* Output error/warning */
 	lm->lookup(we->line, &filename, &line);
 	if (we->type == WE_ERROR)
-	    fprintf(stderr, "%s:%lu: %s\n", filename, line, we->msg);
+	    print_error(filename, line, we->msg);
 	else
-	    fprintf(stderr, "%s:%lu: %s %s\n", filename, line, _("warning:"),
-		    we->msg);
+	    print_warning(filename, line, we->msg);
     }
 }
-
-yasm_errwarn yasm_std_errwarn = {
-    yasm_std_errwarn_initialize,
-    yasm_std_errwarn_cleanup,
-    yasm_std_errwarn_internal_error_,
-    yasm_std_errwarn_fatal,
-    yasm_std_errwarn_error_va,
-    yasm_std_errwarn_warning_va,
-    yasm_std_errwarn_error,
-    yasm_std_errwarn_warning,
-    yasm_std_errwarn_parser_error,
-    yasm_std_errwarn_warn_enable,
-    yasm_std_errwarn_warn_disable,
-    yasm_std_errwarn_warn_disable_all,
-    yasm_std_errwarn_get_num_errors,
-    yasm_std_errwarn_output_all,
-    yasm_std_errwarn_conv_unprint
-};

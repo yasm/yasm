@@ -29,7 +29,7 @@
 
 typedef struct yasm_expr__item yasm_expr__item;
 
-void yasm_expr_initialize(yasm_arch *a, yasm_errwarn *we);
+void yasm_expr_initialize(yasm_arch *a);
 
 /*@only@*/ yasm_expr *yasm_expr_new(yasm_expr_op, /*@only@*/ yasm_expr__item *,
 				    /*@only@*/ /*@null@*/ yasm_expr__item *,

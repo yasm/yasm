@@ -51,14 +51,11 @@ yasm_objfmt yasm_dbg_LTX_objfmt;
  */
 static FILE *dbg_objfmt_file;
 
-static /*@dependent@*/ yasm_errwarn *cur_we;
 
 static void
 dbg_objfmt_initialize(const char *in_filename, const char *obj_filename,
-		      yasm_dbgfmt *df, yasm_arch *a, yasm_errwarn *we)
+		      yasm_dbgfmt *df, yasm_arch *a)
 {
-    cur_we = we;
-
     dbg_objfmt_file = fopen(obj_filename, "wt");
     if (!dbg_objfmt_file) {
 	fprintf(stderr, N_("could not open file `%s'"), obj_filename);
@@ -104,7 +101,7 @@ dbg_objfmt_sections_switch(yasm_sectionhead *headp,
 
     if ((vp = yasm_vps_first(valparams)) && !vp->param && vp->val != NULL) {
 	retval = yasm_sections_switch_general(headp, vp->val, 200, 0, &isnew,
-					      lindex, cur_we->internal_error_);
+					      lindex);
 	if (isnew) {
 	    fprintf(dbg_objfmt_file, "(new) ");
 	    yasm_symrec_define_label(vp->val, retval, (yasm_bytecode *)NULL, 1,

@@ -139,9 +139,9 @@ DIR	 %[ \t]*
     }
 
     if(inch == '\n')
-	cur_we->error(cur_lindex, _("unterminated string"));
+	yasm__error(cur_lindex, _("unterminated string"));
     else if(inch == EOF)
-	cur_we->error(cur_lindex, _("unexpected end of file in string"));
+	yasm__error(cur_lindex, _("unexpected end of file in string"));
 
     strbuf[count] = '\0';
 
@@ -172,8 +172,8 @@ DIR	 %[ \t]*
     /* FIXME: handle includes that aren't relative */
     incfile = fopen (yytext, "r");
     if(!incfile) {
-	cur_we->error(cur_lindex, _("include file `%s': %s"),
-		yytext, strerror(errno));
+	yasm__error(cur_lindex, _("include file `%s': %s"),
+		    yytext, strerror(errno));
 	xfree(inc);
     }
     else {
@@ -330,12 +330,12 @@ DIR	 %[ \t]*
 [][+*/,()-] { return yytext[0]; }
 
 <inhibit>.  {
-    cur_we->warning(YASM_WARN_PREPROC, cur_lindex, _("Unhandled character in <inhibit> `%s'"), cur_we->conv_unprint(yytext[0]));
+    yasm__warning(YASM_WARN_PREPROC, cur_lindex, _("Unhandled character in <inhibit> `%s'"), yasm__conv_unprint(yytext[0]));
 }
 
 .	{
-    cur_we->warning(YASM_WARN_PREPROC, cur_lindex, _("ignoring unrecognized character `%s'"),
-	    	    cur_we->conv_unprint(yytext[0]));
+    yasm__warning(YASM_WARN_PREPROC, cur_lindex, _("ignoring unrecognized character `%s'"),
+	    	    yasm__conv_unprint(yytext[0]));
 }
 
 %%

@@ -29,7 +29,7 @@
 #ifndef YASM_FLOATNUM_H
 #define YASM_FLOATNUM_H
 
-void yasm_floatnum_initialize(yasm_errwarn *we);
+void yasm_floatnum_initialize(void);
 /* Clean up internal allocations */
 void yasm_floatnum_cleanup(void);
 

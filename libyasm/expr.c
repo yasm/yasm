@@ -49,14 +49,12 @@ static int expr_traverse_nodes_post(/*@null@*/ yasm_expr *e,
 						 /*@null@*/ void *d));
 
 static /*@dependent@*/ yasm_arch *cur_arch;
-static /*@dependent@*/ yasm_errwarn *cur_we;
 
 
 void
-yasm_expr_initialize(yasm_arch *a, yasm_errwarn *we)
+yasm_expr_initialize(yasm_arch *a)
 {
     cur_arch = a;
-    cur_we = we;
 }
 
 /* allocate a new expression node, with children as defined.
@@ -90,7 +88,7 @@ yasm_expr_new(yasm_expr_op op, yasm_expr__item *left, yasm_expr__item *right,
 	    /*@=usereleased@*/
 	}
     } else {
-	cur_we->internal_error(N_("Right side of expression must exist"));
+	yasm_internal_error(N_("Right side of expression must exist"));
     }
 
     if (right) {
@@ -716,8 +714,8 @@ yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
 		/* Check for circular reference */
 		SLIST_FOREACH(np, eh, next) {
 		    if (np->e == equ_expr) {
-			cur_we->error(e->line,
-				      N_("circular reference detected."));
+			yasm__error(e->line,
+				    N_("circular reference detected."));
 			return e;
 		    }
 		}

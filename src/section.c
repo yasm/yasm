@@ -59,9 +59,6 @@ struct yasm_section {
     int res_only;		/* allow only resb family of bytecodes? */
 
     yasm_bytecodehead bc;	/* the bytecodes for the section's contents */
-
-    /*@exits@*/ void (*error_func) (const char *file, unsigned int line,
-				    const char *message);
 };
 
 /*@-compdestroy@*/
@@ -90,10 +87,7 @@ yasm_sections_initialize(yasm_sectionhead *headp, yasm_objfmt *of)
 yasm_section *
 yasm_sections_switch_general(yasm_sectionhead *headp, const char *name,
 			     unsigned long start, int res_only, int *isnew,
-			     unsigned long lindex,
-			     /*@exits@*/ void (*error_func)
-				(const char *file, unsigned int line,
-				 const char *message))
+			     unsigned long lindex)
 {
     yasm_section *s;
 
@@ -125,8 +119,6 @@ yasm_sections_switch_general(yasm_sectionhead *headp, const char *name,
     s->opt_flags = 0;
     s->res_only = res_only;
 
-    s->error_func = error_func;
-
     *isnew = 1;
     return s;
 }
@@ -134,10 +126,7 @@ yasm_sections_switch_general(yasm_sectionhead *headp, const char *name,
 
 /*@-onlytrans@*/
 yasm_section *
-yasm_sections_switch_absolute(yasm_sectionhead *headp, yasm_expr *start,
-			      /*@exits@*/ void (*error_func)
-				(const char *file, unsigned int line,
-				 const char *message))
+yasm_sections_switch_absolute(yasm_sectionhead *headp, yasm_expr *start)
 {
     yasm_section *s;
 
@@ -150,8 +139,6 @@ yasm_sections_switch_absolute(yasm_sectionhead *headp, yasm_expr *start,
 
     s->opt_flags = 0;
     s->res_only = 1;
-
-    s->error_func = error_func;
 
     return s;
 }
@@ -183,7 +170,7 @@ yasm_section_set_of_data(yasm_section *sect, yasm_objfmt *of, void *of_data)
 	if (of->section_data_delete)
 	    of->section_data_delete(of_data);
 	else
-	    sect->error_func(__FILE__, __LINE__,
+	    yasm_internal_error(
 		N_("don't know how to delete objfmt-specific section data"));
 	return;
     }
@@ -194,7 +181,7 @@ yasm_section_set_of_data(yasm_section *sect, yasm_objfmt *of, void *of_data)
 	if (of2->section_data_delete)
 	    of2->section_data_delete(sect->data.general.of_data);
 	else
-	    sect->error_func(__FILE__, __LINE__,
+	    yasm_internal_error(
 		N_("don't know how to delete objfmt-specific section data"));
     }
 
@@ -309,7 +296,7 @@ yasm_section_delete(yasm_section *sect)
 	    if (of->section_data_delete)
 		of->section_data_delete(sect->data.general.of_data);
 	    else
-		sect->error_func(__FILE__, __LINE__,
+		yasm_internal_error(
 		    N_("don't know how to delete objfmt-specific section data"));
 	}
     }

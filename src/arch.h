@@ -63,7 +63,7 @@ struct yasm_arch {
     /* keyword used to select architecture */
     const char *keyword;
 
-    void (*initialize) (yasm_errwarn *we);
+    void (*initialize) (void);
     void (*cleanup) (void);
 
     struct {

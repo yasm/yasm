@@ -32,14 +32,10 @@
 
 /*@dependent@*/ yasm_section *yasm_sections_switch_general
     (yasm_sectionhead *headp, const char *name, unsigned long start,
-     int res_only, /*@out@*/ int *isnew, unsigned long lindex,
-     /*@exits@*/ void (*error_func) (const char *file, unsigned int line,
-				     const char *message));
+     int res_only, /*@out@*/ int *isnew, unsigned long lindex);
 
 /*@dependent@*/ yasm_section *yasm_sections_switch_absolute
-    (yasm_sectionhead *headp, /*@keep@*/ yasm_expr *start,
-     /*@exits@*/ void (*error_func) (const char *file, unsigned int line,
-				     const char *message));
+    (yasm_sectionhead *headp, /*@keep@*/ yasm_expr *start);
 
 int yasm_section_is_absolute(yasm_section *sect);
 

@@ -42,13 +42,11 @@
 
 
 unsigned char yasm_x86_LTX_mode_bits = 0;
-/*@dependent@*/ yasm_errwarn *yasm_x86__errwarn;
 
 
 static void
-x86_initialize(yasm_errwarn *we)
+x86_initialize(void)
 {
-    yasm_x86__errwarn = we;
 }
 
 static void
@@ -73,7 +71,7 @@ yasm_x86__directive(const char *name, yasm_valparamhead *valparams,
 	    (lval == 16 || lval == 32 || lval == 64))
 	    yasm_x86_LTX_mode_bits = (unsigned char)lval;
 	else
-	    cur_we->error(lindex, N_("invalid argument to [%s]"), "BITS");
+	    yasm__error(lindex, N_("invalid argument to [%s]"), "BITS");
 	return 0;
     } else
 	return 1;
@@ -101,7 +99,7 @@ yasm_x86__get_reg_size(unsigned long reg)
 	case X86_FPUREG:
 	    return 10;
 	default:
-	    cur_we->internal_error(N_("unknown register size"));
+	    yasm_internal_error(N_("unknown register size"));
     }
     return 0;
 }
@@ -162,7 +160,7 @@ yasm_x86__reg_print(FILE *f, unsigned long reg)
 	    fprintf(f, "st%d", (int)(reg&0xF));
 	    break;
 	default:
-	    cur_we->internal_error(N_("unknown register size"));
+	    yasm_internal_error(N_("unknown register size"));
     }
 }
 

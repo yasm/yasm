@@ -101,14 +101,12 @@ typedef struct bytecode_objfmt_data {
 unsigned char bytes_static[16];
 
 /*@dependent@*/ static yasm_arch *cur_arch;
-/*@dependent@*/ static yasm_errwarn *cur_we;
 
 
 void
-yasm_bc_initialize(yasm_arch *a, yasm_errwarn *we)
+yasm_bc_initialize(yasm_arch *a)
 {
     cur_arch = a;
-    cur_we = we;
 }
 
 yasm_immval *
@@ -337,14 +335,14 @@ yasm_bc_delete(yasm_bytecode *bc)
 		objfmt_data->of->bc_objfmt_data_delete(objfmt_data->type,
 						       objfmt_data->data);
 	    else
-		cur_we->internal_error(
+		yasm_internal_error(
 		    N_("objfmt can't handle its own objfmt data bytecode"));
 	    break;
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
 		cur_arch->bc.bc_delete(bc);
 	    else
-		cur_we->internal_error(N_("Unknown bytecode type"));
+		yasm_internal_error(N_("Unknown bytecode type"));
 	    break;
     }
     /*@=branchstate@*/
@@ -511,10 +509,10 @@ bc_resolve_reserve(bytecode_reserve *reserve, unsigned long *len,
 	 * the circular reference error to filter through.
 	 */
 	if (temp && yasm_expr__contains(temp, YASM_EXPR_FLOAT))
-	    cur_we->error(line,
+	    yasm__error(line,
 		N_("expression must not contain floating point value"));
 	else
-	    cur_we->error(line,
+	    yasm__error(line,
 		N_("attempt to reserve non-constant quantity of space"));
 	retval = YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
     } else
@@ -577,13 +575,13 @@ bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
     /* Open file and determine its length */
     f = fopen(incbin->filename, "rb");
     if (!f) {
-	cur_we->error(line, N_("`incbin': unable to open file `%s'"),
-		      incbin->filename);
+	yasm__error(line, N_("`incbin': unable to open file `%s'"),
+		    incbin->filename);
 	return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
     }
     if (fseek(f, 0L, SEEK_END) < 0) {
-	cur_we->error(line, N_("`incbin': unable to seek on file `%s'"),
-		      incbin->filename);
+	yasm__error(line, N_("`incbin': unable to seek on file `%s'"),
+		    incbin->filename);
 	return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
     }
     flen = (unsigned long)ftell(f);
@@ -591,9 +589,9 @@ bc_resolve_incbin(bytecode_incbin *incbin, unsigned long *len, int save,
 
     /* Compute length of incbin from start, maxlen, and len */
     if (start > flen) {
-	cur_we->warning(YASM_WARN_GENERAL, line,
-			N_("`incbin': start past end of file `%s'"),
-			incbin->filename);
+	yasm__warning(YASM_WARN_GENERAL, line,
+		      N_("`incbin': start past end of file `%s'"),
+		      incbin->filename);
 	start = flen;
     }
     flen -= start;
@@ -617,7 +615,7 @@ yasm_bc_resolve(yasm_bytecode *bc, int save, const yasm_section *sect,
 
     switch (bc->type) {
 	case YASM_BC__EMPTY:
-	    cur_we->internal_error(N_("got empty bytecode in bc_calc_len"));
+	    yasm_internal_error(N_("got empty bytecode in bc_calc_len"));
 	    /*break;*/
 	case YASM_BC__DATA:
 	    retval = bc_resolve_data((bytecode_data *)bc, &bc->len);
@@ -632,18 +630,17 @@ yasm_bc_resolve(yasm_bytecode *bc, int save, const yasm_section *sect,
 	    break;
 	case YASM_BC__ALIGN:
 	    /* TODO */
-	    cur_we->internal_error(
-		N_("TODO: align bytecode not implemented!"));
+	    yasm_internal_error(N_("TODO: align bytecode not implemented!"));
 	    /*break;*/
 	case YASM_BC__OBJFMT_DATA:
-	    cur_we->internal_error(N_("resolving objfmt data bytecode?"));
+	    yasm_internal_error(N_("resolving objfmt data bytecode?"));
 	    /*break;*/
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
 		retval = cur_arch->bc.bc_resolve(bc, save, sect,
 						 calc_bc_dist);
 	    else
-		cur_we->internal_error(N_("Unknown bytecode type"));
+		yasm_internal_error(N_("Unknown bytecode type"));
     }
 
     /* Multiply len by number of multiples */
@@ -660,7 +657,7 @@ yasm_bc_resolve(yasm_bytecode *bc, int save, const yasm_section *sect,
 	if (!num) {
 	    retval = YASM_BC_RESOLVE_UNKNOWN_LEN;
 	    if (temp && yasm_expr__contains(temp, YASM_EXPR_FLOAT)) {
-		cur_we->error(bc->line,
+		yasm__error(bc->line,
 		    N_("expression must not contain floating point value"));
 		retval |= YASM_BC_RESOLVE_ERROR;
 	    }
@@ -727,7 +724,7 @@ bc_tobytes_incbin(bytecode_incbin *incbin, unsigned char **bufp,
     if (incbin->start) {
 	num = yasm_expr_get_intnum(&incbin->start, NULL);
 	if (!num)
-	    cur_we->internal_error(
+	    yasm_internal_error(
 		N_("could not determine start in bc_tobytes_incbin"));
 	start = yasm_intnum_get_uint(num);
     }
@@ -735,24 +732,24 @@ bc_tobytes_incbin(bytecode_incbin *incbin, unsigned char **bufp,
     /* Open file */
     f = fopen(incbin->filename, "rb");
     if (!f) {
-	cur_we->error(line, N_("`incbin': unable to open file `%s'"),
-		      incbin->filename);
+	yasm__error(line, N_("`incbin': unable to open file `%s'"),
+		    incbin->filename);
 	return 1;
     }
 
     /* Seek to start of data */
     if (fseek(f, (long)start, SEEK_SET) < 0) {
-	cur_we->error(line, N_("`incbin': unable to seek on file `%s'"),
-		      incbin->filename);
+	yasm__error(line, N_("`incbin': unable to seek on file `%s'"),
+		    incbin->filename);
 	fclose(f);
 	return 1;
     }
 
     /* Read len bytes */
     if (fread(*bufp, (size_t)len, 1, f) < (size_t)len) {
-	cur_we->error(line,
-		      N_("`incbin': unable to read %lu bytes from file `%s'"),
-		      len, incbin->filename);
+	yasm__error(line,
+		    N_("`incbin': unable to read %lu bytes from file `%s'"),
+		    len, incbin->filename);
 	fclose(f);
 	return 1;
     }
@@ -781,7 +778,7 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
     if (bc->multiple) {
 	num = yasm_expr_get_intnum(&bc->multiple, NULL);
 	if (!num)
-	    cur_we->internal_error(
+	    yasm_internal_error(
 		N_("could not determine multiple in bc_tobytes"));
 	*multiple = yasm_intnum_get_uint(num);
 	if (*multiple == 0) {
@@ -812,7 +809,7 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 
     switch (bc->type) {
 	case YASM_BC__EMPTY:
-	    cur_we->internal_error(N_("got empty bytecode in bc_tobytes"));
+	    yasm_internal_error(N_("got empty bytecode in bc_tobytes"));
 	    /*break;*/
 	case YASM_BC__DATA:
 	    error = bc_tobytes_data((bytecode_data *)bc, &destbuf, sect, bc, d,
@@ -824,8 +821,7 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 	    break;
 	case YASM_BC__ALIGN:
 	    /* TODO */
-	    cur_we->internal_error(
-		N_("TODO: align bytecode not implemented!"));
+	    yasm_internal_error(N_("TODO: align bytecode not implemented!"));
 	    /*break;*/
 	case YASM_BC__OBJFMT_DATA:
 	    objfmt_data = (bytecode_objfmt_data *)bc;
@@ -833,7 +829,7 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 		error = output_bc_objfmt_data(objfmt_data->type,
 					      objfmt_data->data, &destbuf);
 	    else
-		cur_we->internal_error(
+		yasm_internal_error(
 		    N_("Have objfmt data bytecode but no way to output it"));
 	    break;
 	default:
@@ -841,11 +837,11 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 		error = cur_arch->bc.bc_tobytes(bc, &destbuf, sect, d,
 						output_expr);
 	    else
-		cur_we->internal_error(N_("Unknown bytecode type"));
+		yasm_internal_error(N_("Unknown bytecode type"));
     }
 
     if (!error && ((unsigned long)(destbuf - origbuf) != datasize))
-	cur_we->internal_error(
+	yasm_internal_error(
 	    N_("written length does not match optimized length"));
     return mybuf;
 }

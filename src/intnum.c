@@ -49,14 +49,11 @@ struct yasm_intnum {
 
 /* static bitvect used for conversions */
 static /*@only@*/ wordptr conv_bv;
-static /*@dependent@*/ yasm_errwarn *cur_we;
 
 
 void
-yasm_intnum_initialize(yasm_errwarn *we)
+yasm_intnum_initialize(void)
 {
-    cur_we = we;
-
     conv_bv = BitVector_Create(BITVECT_ALLOC_SIZE, FALSE);
     BitVector_from_Dec_static_Boot(BITVECT_ALLOC_SIZE);
 }
@@ -77,8 +74,8 @@ yasm_intnum_new_dec(char *str, unsigned long lindex)
 
     if (BitVector_from_Dec_static(conv_bv,
 				  (unsigned char *)str) == ErrCode_Ovfl)
-	cur_we->warning(YASM_WARN_GENERAL, lindex,
-			N_("Numeric constant too large for internal format"));
+	yasm__warning(YASM_WARN_GENERAL, lindex,
+		      N_("Numeric constant too large for internal format"));
     if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
 	intn->val.ul = BitVector_Chunk_Read(conv_bv, 32, 0);
@@ -98,8 +95,8 @@ yasm_intnum_new_bin(char *str, unsigned long lindex)
     intn->origsize = (unsigned char)strlen(str);
 
     if(intn->origsize > BITVECT_ALLOC_SIZE)
-	cur_we->warning(YASM_WARN_GENERAL, lindex,
-			N_("Numeric constant too large for internal format"));
+	yasm__warning(YASM_WARN_GENERAL, lindex,
+		      N_("Numeric constant too large for internal format"));
 
     BitVector_from_Bin(conv_bv, (unsigned char *)str);
     if (Set_Max(conv_bv) < 32) {
@@ -121,8 +118,8 @@ yasm_intnum_new_oct(char *str, unsigned long lindex)
     intn->origsize = strlen(str)*3;
 
     if(intn->origsize > BITVECT_ALLOC_SIZE)
-	cur_we->warning(YASM_WARN_GENERAL, lindex,
-			N_("Numeric constant too large for internal format"));
+	yasm__warning(YASM_WARN_GENERAL, lindex,
+		      N_("Numeric constant too large for internal format"));
 
     BitVector_from_Oct(conv_bv, (unsigned char *)str);
     if (Set_Max(conv_bv) < 32) {
@@ -144,8 +141,8 @@ yasm_intnum_new_hex(char *str, unsigned long lindex)
     intn->origsize = strlen(str)*4;
 
     if(intn->origsize > BITVECT_ALLOC_SIZE)
-	cur_we->warning(YASM_WARN_GENERAL, lindex,
-			N_("Numeric constant too large for internal format"));
+	yasm__warning(YASM_WARN_GENERAL, lindex,
+		      N_("Numeric constant too large for internal format"));
 
     BitVector_from_Hex(conv_bv, (unsigned char *)str);
     if (Set_Max(conv_bv) < 32) {
@@ -167,7 +164,7 @@ yasm_intnum_new_charconst_nasm(const char *str, unsigned long lindex)
     size_t len = strlen(str);
 
     if (len > 4)
-	cur_we->warning(YASM_WARN_GENERAL, lindex,
+	yasm__warning(YASM_WARN_GENERAL, lindex,
 	    N_("character constant too large, ignoring trailing characters"));
 
     intn->val.ul = 0;
@@ -275,7 +272,7 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand)
 
     if (!operand && op != YASM_EXPR_NEG && op != YASM_EXPR_NOT &&
 	op != YASM_EXPR_LNOT)
-	cur_we->internal_error(N_("Operation needs an operand"));
+	yasm_internal_error(N_("Operation needs an operand"));
 
     /* A operation does a bitvector computation if result is allocated. */
     switch (op) {
@@ -446,8 +443,7 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand)
 		BitVector_Copy(result, op1);
 	    break;
 	default:
-	    cur_we->internal_error(
-		N_("invalid operation in intnum calculation"));
+	    yasm_internal_error(N_("invalid operation in intnum calculation"));
     }
 
     /* If we were doing a bitvector computation... */
@@ -510,7 +506,7 @@ yasm_intnum_get_uint(const yasm_intnum *intn)
 	case INTNUM_BV:
 	    return BitVector_Chunk_Read(intn->val.bv, 32, 0);
 	default:
-	    cur_we->internal_error(N_("unknown intnum type"));
+	    yasm_internal_error(N_("unknown intnum type"));
 	    /*@notreached@*/
 	    return 0;
     }
@@ -538,7 +534,7 @@ yasm_intnum_get_int(const yasm_intnum *intn)
 	    } else
 		return (long)BitVector_Chunk_Read(intn->val.bv, 32, 0);
 	default:
-	    cur_we->internal_error(N_("unknown intnum type"));
+	    yasm_internal_error(N_("unknown intnum type"));
 	    /*@notreached@*/
 	    return 0;
     }
@@ -563,8 +559,7 @@ yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr, size_t size)
 	case INTNUM_BV:
 	    buf = BitVector_Block_Read(intn->val.bv, &len);
 	    if (len < (unsigned int)size)
-		cur_we->internal_error(
-		    N_("Invalid size specified (too large)"));
+		yasm_internal_error(N_("Invalid size specified (too large)"));
 	    memcpy(ptr, buf, size);
 	    xfree(buf);
 	    break;

@@ -46,7 +46,7 @@ typedef enum {
 } yasm_bytecode_type;
 #define YASM_BYTECODE_TYPE_BASE		YASM_BC__OBJFMT_DATA+1
 
-void yasm_bc_initialize(yasm_arch *a, yasm_errwarn *we);
+void yasm_bc_initialize(yasm_arch *a);
 
 /*@only@*/ yasm_immval *yasm_imm_new_int(unsigned long int_val,
 					 unsigned long lindex);

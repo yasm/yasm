@@ -43,8 +43,7 @@ struct yasm_preproc {
      * This function also takes the FILE * to the initial starting file and
      * the filename.
      */
-    void (*initialize) (FILE *f, const char *in_filename, yasm_linemgr *lm,
-			yasm_errwarn *we);
+    void (*initialize) (FILE *f, const char *in_filename, yasm_linemgr *lm);
 
     /* Cleans up any allocated memory. */
     void (*cleanup) (void);

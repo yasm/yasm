@@ -366,9 +366,8 @@ scan:
 		yylval.str_val = xstrndup(s.tok, TOKLEN);
 		RETURN(ID);
 	    } else if (!nasm_parser_locallabel_base) {
-		cur_we->warning(YASM_WARN_GENERAL, cur_lindex,
-				N_("no non-local label before `%s'"),
-				s.tok[0]);
+		yasm__warning(YASM_WARN_GENERAL, cur_lindex,
+			      N_("no non-local label before `%s'"), s.tok[0]);
 		yylval.str_val = xstrndup(s.tok, TOKLEN);
 	    } else {
 		len = TOKLEN + nasm_parser_locallabel_base_len;
@@ -410,7 +409,7 @@ scan:
 		case YASM_ARCH_CHECK_ID_TARGETMOD:
 		    RETURN(TARGETMOD);
 		default:
-		    cur_we->warning(YASM_WARN_GENERAL, cur_lindex,
+		    yasm__warning(YASM_WARN_GENERAL, cur_lindex,
 			N_("Arch feature not supported, treating as identifier"));
 		    yylval.str_val = xstrndup(s.tok, TOKLEN);
 		    RETURN(ID);
@@ -429,9 +428,9 @@ scan:
 	}
 
 	any {
-	    cur_we->warning(YASM_WARN_UNREC_CHAR, cur_lindex,
-			    N_("ignoring unrecognized character `%s'"),
-			    cur_we->conv_unprint(s.tok[0]));
+	    yasm__warning(YASM_WARN_UNREC_CHAR, cur_lindex,
+			  N_("ignoring unrecognized character `%s'"),
+			  yasm__conv_unprint(s.tok[0]));
 	    goto scan;
 	}
     */
@@ -470,9 +469,9 @@ linechg:
 	}
 
 	any {
-	    cur_we->warning(YASM_WARN_UNREC_CHAR, cur_lindex,
-			    N_("ignoring unrecognized character `%s'"),
-			    cur_we->conv_unprint(s.tok[0]));
+	    yasm__warning(YASM_WARN_UNREC_CHAR, cur_lindex,
+			  N_("ignoring unrecognized character `%s'"),
+			  yasm__conv_unprint(s.tok[0]));
 	    goto linechg;
 	}
     */
@@ -516,9 +515,9 @@ directive:
 	}
 
 	any {
-	    cur_we->warning(YASM_WARN_UNREC_CHAR, cur_lindex,
-			    N_("ignoring unrecognized character `%s'"),
-			    cur_we->conv_unprint(s.tok[0]));
+	    yasm__warning(YASM_WARN_UNREC_CHAR, cur_lindex,
+			  N_("ignoring unrecognized character `%s'"),
+			  yasm__conv_unprint(s.tok[0]));
 	    goto directive;
 	}
     */
@@ -535,10 +534,10 @@ stringconst_scan:
     /*!re2c
 	"\n"	{
 	    if (cursor == s.eof)
-		cur_we->error(cur_lindex,
-			      N_("unexpected end of file in string"));
+		yasm__error(cur_lindex,
+			    N_("unexpected end of file in string"));
 	    else
-		cur_we->error(cur_lindex, N_("unterminated string"));
+		yasm__error(cur_lindex, N_("unterminated string"));
 	    strbuf[count] = '\0';
 	    yylval.str_val = strbuf;
 	    if (nasm_parser_save_input && cursor != s.eof)

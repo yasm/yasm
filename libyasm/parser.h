@@ -60,6 +60,6 @@ struct yasm_parser {
      */
     yasm_sectionhead *(*do_parse)
 	(yasm_preproc *pp, yasm_arch *a, yasm_objfmt *of, yasm_linemgr *lm,
-	 yasm_errwarn *we, FILE *f, const char *in_filename, int save_input);
+	 FILE *f, const char *in_filename, int save_input);
 };
 #endif

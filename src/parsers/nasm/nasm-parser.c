@@ -50,23 +50,21 @@ size_t nasm_parser_locallabel_base_len = 0;
 /*@dependent@*/ yasm_arch *nasm_parser_arch;
 /*@dependent@*/ yasm_objfmt *nasm_parser_objfmt;
 /*@dependent@*/ yasm_linemgr *nasm_parser_linemgr;
-/*@dependent@*/ yasm_errwarn *nasm_parser_errwarn;
 
 int nasm_parser_save_input;
 
 static /*@dependent@*/ yasm_sectionhead *
 nasm_parser_do_parse(yasm_preproc *pp, yasm_arch *a, yasm_objfmt *of,
-		     yasm_linemgr *lm, yasm_errwarn *we, FILE *f,
-		     const char *in_filename, int save_input)
+		     yasm_linemgr *lm, FILE *f, const char *in_filename,
+		     int save_input)
     /*@globals killed nasm_parser_locallabel_base @*/
 {
-    pp->initialize(f, in_filename, lm, we);
+    pp->initialize(f, in_filename, lm);
     nasm_parser_in = f;
     nasm_parser_input = pp->input;
     nasm_parser_arch = a;
     nasm_parser_objfmt = of;
     nasm_parser_linemgr = lm;
-    nasm_parser_errwarn = we;
     nasm_parser_save_input = save_input;
 
     /* Initialize section list */

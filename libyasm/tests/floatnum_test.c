@@ -426,7 +426,7 @@ main(void)
     Suite *s = floatnum_suite();
     SRunner *sr = srunner_create(s);
     BitVector_Boot();
-    yasm_floatnum_initialize(NULL);
+    yasm_floatnum_initialize();
     srunner_run_all(sr, CRNORMAL);
     nf = srunner_ntests_failed(sr);
     srunner_free(sr);

@@ -27,7 +27,7 @@
 #ifndef YASM_INTNUM_H
 #define YASM_INTNUM_H
 
-void yasm_intnum_initialize(yasm_errwarn *we);
+void yasm_intnum_initialize(void);
 /* Clean up internal allocations */
 void yasm_intnum_cleanup(void);
 

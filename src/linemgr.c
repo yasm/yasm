@@ -29,11 +29,9 @@
 
 #include "hamt.h"
 
+#include "errwarn.h"
 #include "linemgr.h"
 
-
-static /*@exits@*/ void (*efunc) (const char *file, unsigned int line,
-				  const char *message);
 
 /* Source lines tracking */
 typedef struct {
@@ -119,15 +117,11 @@ yasm_std_linemgr_set(const char *filename, unsigned long line,
 }
 
 static void
-yasm_std_linemgr_initialize(/*@exits@*/
-			    void (*error_func) (const char *file,
-						unsigned int line,
-						const char *message))
+yasm_std_linemgr_initialize(void)
 {
     int i;
 
-    filename_table = HAMT_new(error_func);
-    efunc = error_func;
+    filename_table = HAMT_new(yasm_internal_error_);
 
     line_index = 1;
 
@@ -216,10 +210,9 @@ yasm_std_linemgr_add_assoc_data(int type, /*@only@*/ void *data,
 
 	adrh->vector[line_index-1] = data;
 	if (adrh->delete_func != delete_func)
-	    efunc(__FILE__, __LINE__,
-		  N_("multiple deletion functions specified"));
+	    yasm_internal_error(N_("multiple deletion functions specified"));
     } else {
-	efunc(__FILE__, __LINE__, N_("non-common data not supported yet"));
+	yasm_internal_error(N_("non-common data not supported yet"));
 	delete_func(data);
     }
 }

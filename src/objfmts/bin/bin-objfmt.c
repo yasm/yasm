@@ -49,17 +49,14 @@
 
 yasm_objfmt yasm_bin_LTX_objfmt;
 static /*@dependent@*/ yasm_arch *cur_arch;
-static /*@dependent@*/ yasm_errwarn *cur_we;
 
 
 static void
 bin_objfmt_initialize(/*@unused@*/ const char *in_filename,
 		      /*@unused@*/ const char *obj_filename,
-		      /*@unused@*/ yasm_dbgfmt *df, yasm_arch *a,
-		      yasm_errwarn *we)
+		      /*@unused@*/ yasm_dbgfmt *df, yasm_arch *a)
 {
     cur_arch = a;
-    cur_we = we;
 }
 
 /* Aligns sect to either its specified alignment (in its objfmt-specific data)
@@ -174,13 +171,12 @@ bin_objfmt_output_expr(yasm_expr **ep, unsigned char **bufp,
 
     /* Check for complex float expressions */
     if (yasm_expr__contains(*ep, YASM_EXPR_FLOAT)) {
-	cur_we->error((*ep)->line,
-		      N_("floating point expression too complex"));
+	yasm__error((*ep)->line, N_("floating point expression too complex"));
 	return 1;
     }
 
     /* Couldn't output, assume it contains an external reference. */
-    cur_we->error((*ep)->line,
+    yasm__error((*ep)->line,
 	N_("binary object format does not support external references"));
     return 1;
 }
@@ -210,7 +206,7 @@ bin_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     /* Warn that gaps are converted to 0 and write out the 0's. */
     if (gap) {
 	unsigned long left;
-	cur_we->warning(YASM_WARN_GENERAL, bc->line,
+	yasm__warning(YASM_WARN_GENERAL, bc->line,
 	    N_("uninitialized space declared in code/data section: zeroing"));
 	/* Write out in chunks */
 	memset(info->buf, 0, REGULAR_OUTBUF_SIZE);
@@ -253,7 +249,7 @@ bin_objfmt_output(FILE *f, yasm_sectionhead *sections)
     bss = yasm_sections_find_general(sections, ".bss");
 
     if (!text)
-	cur_we->internal_error(N_("No `.text' section in bin objfmt output"));
+	yasm_internal_error(N_("No `.text' section in bin objfmt output"));
 
     /* First determine the actual starting offsets for .data and .bss.
      * As the order in the file is .text -> .data -> .bss (not present),
@@ -267,8 +263,7 @@ bin_objfmt_output(FILE *f, yasm_sectionhead *sections)
     assert(startexpr != NULL);
     startnum = yasm_expr_get_intnum(&startexpr, NULL);
     if (!startnum)
-	cur_we->internal_error(
-	    N_("Complex expr for start in bin objfmt output"));
+	yasm_internal_error(N_("Complex expr for start in bin objfmt output"));
     start = yasm_intnum_get_uint(startnum);
     yasm_expr_delete(startexpr);
     textstart = start;
@@ -354,8 +349,8 @@ bin_objfmt_sections_switch(yasm_sectionhead *headp,
 	    resonly = 1;
 	} else {
 	    /* other section names not recognized. */
-	    cur_we->error(lindex, N_("segment name `%s' not recognized"),
-			  sectname);
+	    yasm__error(lindex, N_("segment name `%s' not recognized"),
+			sectname);
 	    return NULL;
 	}
 
@@ -366,7 +361,7 @@ bin_objfmt_sections_switch(yasm_sectionhead *headp,
 		unsigned long bitcnt;
 
 		if (strcmp(sectname, ".text") == 0) {
-		    cur_we->error(lindex,
+		    yasm__error(lindex,
 			N_("cannot specify an alignment to the `%s' section"),
 			sectname);
 		    return NULL;
@@ -374,9 +369,9 @@ bin_objfmt_sections_switch(yasm_sectionhead *headp,
 		
 		align = yasm_expr_get_intnum(&vp->param, NULL);
 		if (!align) {
-		    cur_we->error(lindex,
-				  N_("argument to `%s' is not a power of two"),
-				  vp->val);
+		    yasm__error(lindex,
+				N_("argument to `%s' is not a power of two"),
+				vp->val);
 		    return NULL;
 		}
 		alignval = yasm_intnum_get_uint(align);
@@ -386,9 +381,9 @@ bin_objfmt_sections_switch(yasm_sectionhead *headp,
 		 */
 		BitCount(bitcnt, alignval);
 		if (bitcnt > 1) {
-		    cur_we->error(lindex,
-				  N_("argument to `%s' is not a power of two"),
-				  vp->val);
+		    yasm__error(lindex,
+				N_("argument to `%s' is not a power of two"),
+				vp->val);
 		    return NULL;
 		}
 
@@ -397,8 +392,7 @@ bin_objfmt_sections_switch(yasm_sectionhead *headp,
 	}
 
 	retval = yasm_sections_switch_general(headp, sectname, start, resonly,
-					      &isnew, lindex,
-					      cur_we->internal_error_);
+					      &isnew, lindex);
 
 	if (isnew) {
 	    if (have_alignval) {
@@ -410,7 +404,7 @@ bin_objfmt_sections_switch(yasm_sectionhead *headp,
 	    yasm_symrec_define_label(sectname, retval, (yasm_bytecode *)NULL,
 				     1, lindex);
 	} else if (have_alignval)
-	    cur_we->warning(YASM_WARN_GENERAL, lindex,
+	    yasm__warning(YASM_WARN_GENERAL, lindex,
 		N_("alignment value ignored on section redeclaration"));
 
 	return retval;
@@ -431,7 +425,7 @@ bin_objfmt_common_declare(/*@unused@*/ yasm_symrec *sym,
 			  unsigned long lindex)
 {
     yasm_expr_delete(size);
-    cur_we->error(lindex,
+    yasm__error(lindex,
 	N_("binary object format does not support common variables"));
 }
 
@@ -450,20 +444,20 @@ bin_objfmt_directive(const char *name, yasm_valparamhead *valparams,
 	/* ORG takes just a simple integer as param */
 	vp = yasm_vps_first(valparams);
 	if (vp->val) {
-	    cur_we->error(lindex, N_("argument to ORG should be numeric"));
+	    yasm__error(lindex, N_("argument to ORG should be numeric"));
 	    return 0;
 	} else if (vp->param)
 	    start = yasm_expr_get_intnum(&vp->param, NULL);
 
 	if (!start) {
-	    cur_we->error(lindex, N_("argument to ORG should be numeric"));
+	    yasm__error(lindex, N_("argument to ORG should be numeric"));
 	    return 0;
 	}
 
 	/* ORG changes the start of the .text section */
 	sect = yasm_sections_find_general(headp, ".text");
 	if (!sect)
-	    cur_we->internal_error(
+	    yasm_internal_error(
 		N_("bin objfmt: .text section does not exist before ORG is called?"));
 	yasm_section_set_start(sect, yasm_intnum_get_uint(start), lindex);
 

@@ -42,7 +42,7 @@ struct yasm_optimizer {
      * object file.  (A failure is indicated by calling ErrorAt() from within
      * this function).
      */
-    void (*optimize) (yasm_sectionhead *sections, yasm_errwarn *we);
+    void (*optimize) (yasm_sectionhead *sections);
 };
 
 #endif
