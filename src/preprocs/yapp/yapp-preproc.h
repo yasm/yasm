@@ -32,14 +32,6 @@ typedef struct YAPP_Token_s {
     } val;
 } YAPP_Token;
 
-/* Build source and macro representations */
-static SLIST_HEAD(source_head, source_s) source_head, macro_head, param_head, *current_head;
-static struct source_s {
-    SLIST_ENTRY(source_s) next;
-    YAPP_Token token;
-} *src, *source_tail, *macro_tail, *param_tail, **current_tail;
-typedef struct source_s source;
-
 /* internal state of preprocessor's parser */
 typedef enum {
     YAPP_STATE_INITIAL = 0,
@@ -58,9 +50,4 @@ typedef enum {
     YAPP_BLOCKED_OUTPUT /* the surrounding level is not outputting */
 } YAPP_Output;
 
-/* don't forget what the nesting level says */
-static SLIST_HEAD(output_head, output_s) output_head;
-static struct output_s {
-    SLIST_ENTRY(output_s) next;
-    YAPP_Output out;
-} output, *out;
+void yapp_lex_initialize(FILE *f);

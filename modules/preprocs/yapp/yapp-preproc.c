@@ -41,7 +41,21 @@ YAPP_Output current_output;
 YYSTYPE yapp_preproc_lval;
 
 int isatty(int);
-void yapp_lex_initialize(FILE *f);
+
+/* Build source and macro representations */
+static SLIST_HEAD(source_head, source_s) source_head, macro_head, param_head, *current_head;
+static struct source_s {
+    SLIST_ENTRY(source_s) next;
+    YAPP_Token token;
+} *src, *source_tail, *macro_tail, *param_tail, **current_tail;
+typedef struct source_s source;
+
+/* don't forget what the nesting level says */
+static SLIST_HEAD(output_head, output_s) output_head;
+static struct output_s {
+    SLIST_ENTRY(output_s) next;
+    YAPP_Output out;
+} output, *out;
 
 /*****************************************************************************/
 /* macro support - to be moved to a separate file later (?)                  */

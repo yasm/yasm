@@ -29,6 +29,7 @@
 
 #include "bytecode.h"
 
+#include "src/preprocs/yapp/yapp-preproc.h"
 #include "src/preprocs/yapp/yapp-token.h"
 
 
