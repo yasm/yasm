@@ -40,7 +40,10 @@ include frontends/Makefile.inc
 
 EXTRA_DIST += out_test.sh
 EXTRA_DIST += test_hd.pl
-EXTRA_DIST += COPYING.LIB-2.0
+EXTRA_DIST += Artistic.txt
+EXTRA_DIST += BSD.txt
+EXTRA_DIST += GNU_GPL-2.0
+EXTRA_DIST += GNU_LGPL-2.0
 EXTRA_DIST += splint.sh
 EXTRA_DIST += Mkfiles/Makefile.flat
 EXTRA_DIST += Mkfiles/Makefile.dj
