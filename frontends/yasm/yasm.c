@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$IdPath: yasm/frontends/yasm/yasm.c,v 1.96 2003/05/03 06:26:15 peter Exp $");
+/*@unused@*/ RCSID("$IdPath: yasm/frontends/yasm/yasm.c,v 1.97 2003/05/05 03:42:09 peter Exp $");
 
 #include <libyasm/compat-queue.h>
 #include <libyasm/bitvect.h>
@@ -137,7 +137,7 @@ static opt_option options[] =
     N_("This program is free software; you may redistribute it under the\n"),
     N_("terms of the GNU General Public License.  Portions of this program\n"),
     N_("are licensed under the GNU Lesser General Public License or the\n"),
-    N_("3-clause BSD license; see individual file comments for details.\n"),
+    N_("2-clause BSD license; see individual file comments for details.\n"),
     N_("This program has absolutely no warranty; not even for\n"),
     N_("merchantibility or fitness for a particular purpose.\n"),
     N_("Compiled on"), " " __DATE__ ".\n",
