@@ -289,7 +289,7 @@ main(int argc, char *argv[])
 
     /* If not already specified, default to null as the debug format. */
     if (!cur_dbgfmt)
-	cur_dbgfmt = load_objfmt("null");
+	cur_dbgfmt = load_dbgfmt("null");
     else {
 	int matched_dbgfmt = 0;
 	/* Check to see if the requested debug format is in the allowed list
@@ -309,8 +309,8 @@ main(int argc, char *argv[])
 	}
     }
 
-    if (!cur_objfmt) {
-	ErrorNow(_("Could not load default object format"));
+    if (!cur_dbgfmt) {
+	ErrorNow(_("Could not load default debug format"));
 	return EXIT_FAILURE;
     }
 
