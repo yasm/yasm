@@ -489,14 +489,18 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab)
 		YASM_WRITE_8(bufp, ELF32_ST_INFO(entry->bind, entry->type));
 		YASM_WRITE_8(bufp, 0);
 		if (entry->sect) {
-		    elf_secthead *shead =
-			yasm_section_get_data(entry->sect, &elf_section_data);
-		    if (!shead)
-			yasm_internal_error(
-			    N_("symbol references section without data"));
-		    YASM_WRITE_16_L(bufp, shead->index);
+                    if (yasm_section_is_absolute(entry->sect)) {
+                        YASM_WRITE_16_L(bufp, SHN_ABS);
+                    } else {
+                        elf_secthead *shead = yasm_section_get_data(entry->sect,
+                            &elf_section_data);
+                        if (!shead)
+                            yasm_internal_error(
+                                N_("symbol references section without data"));
+                        YASM_WRITE_16_L(bufp, shead->index);
+                    }
 		} else {
-		    YASM_WRITE_16_L(bufp, entry->index);
+                    YASM_WRITE_16_L(bufp, entry->index);
 		}
 		fwrite(buf, SYMTAB32_SIZE, 1, f);
 		size += SYMTAB32_SIZE;
@@ -507,12 +511,16 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab)
 		YASM_WRITE_8(bufp, ELF64_ST_INFO(entry->bind, entry->type));
 		YASM_WRITE_8(bufp, 0);
 		if (entry->sect) {
-		    elf_secthead *shead =
-			yasm_section_get_data(entry->sect, &elf_section_data);
-		    if (!shead)
-			yasm_internal_error(
-			    N_("symbol references section without data"));
-		    YASM_WRITE_16_L(bufp, shead->index);
+                    if (yasm_section_is_absolute(entry->sect)) {
+                        YASM_WRITE_16_L(bufp, SHN_ABS);
+                    } else {
+                        elf_secthead *shead = yasm_section_get_data(entry->sect,
+                            &elf_section_data);
+                        if (!shead)
+                            yasm_internal_error(
+                                N_("symbol references section without data"));
+                        YASM_WRITE_16_L(bufp, shead->index);
+                    }
 		} else {
 		    YASM_WRITE_16_L(bufp, entry->index);
 		}

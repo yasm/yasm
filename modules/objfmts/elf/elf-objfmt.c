@@ -114,8 +114,9 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	if (!yasm_symrec_get_label(sym, &precbc))
 	    return 1;
 	sect = yasm_bc_get_section(precbc);
-	is_sect = strcmp(yasm_symrec_get_name(sym),
-			 yasm_section_get_name(sect))==0;
+	if (!yasm_section_is_absolute(sect) &&
+	    strcmp(yasm_symrec_get_name(sym), yasm_section_get_name(sect))==0)
+	    is_sect = 1;
 
 	/* neither sections nor locals (except when debugging) need names */
 	entry = elf_symtab_insert_local_sym(info->objfmt_elf->elf_symtab,
