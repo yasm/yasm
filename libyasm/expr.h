@@ -183,7 +183,6 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
 /** Remove the SEG unary operator if present, leaving the lower level
  * expression.
  * \param ep		expression (pointer to)
- * \param simplify	if nonzero, simplify the expression first
  * \return NULL if the expression does not have a top-level operator of SEG;
  * otherwise the modified input expression (without the SEG).
  */
