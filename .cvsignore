@@ -3,6 +3,7 @@ nasm-bison.c
 nasm-bison.h
 nasm-token.l
 nasm-token.c
+yapp-token.c
 yasm
 *_test
 configure
