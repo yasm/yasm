@@ -277,6 +277,10 @@ directive_valparams: directive_valparam		{
 	vps_append(&$1, $2);
 	$$ = $1;
     }
+    | directive_valparams ',' directive_valparam    {
+	vps_append(&$1, $3);
+	$$ = $1;
+    }
 ;
 
 directive_valparam: direxpr	{
