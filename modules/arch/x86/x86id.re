@@ -2400,12 +2400,12 @@ yasm_x86__parse_check_id(yasm_arch *arch, unsigned long data[4],
 	}
 	R E P E		{
 	    data[0] = X86_LOCKREP;
-	    data[1] = 0xF4;
+	    data[1] = 0xF3;
 	    return YASM_ARCH_CHECK_ID_PREFIX;
 	}
 	R E P Z		{
 	    data[0] = X86_LOCKREP;
-	    data[1] = 0xF4;
+	    data[1] = 0xF3;
 	    return YASM_ARCH_CHECK_ID_PREFIX;
 	}
 
