@@ -1,4 +1,4 @@
-/* $Id: nasm-bison.y,v 1.16 2001/07/05 08:37:59 mu Exp $
+/* $Id: nasm-bison.y,v 1.17 2001/07/05 09:32:58 mu Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -276,8 +276,8 @@ rm128: XMMREG	{ (void)ConvertRegToEA(&$$, $1); }
 /* immediate values */
 /* TODO: formula expansion */
 immexp: /*INTNUM	{ (void)ConvertIntToImm(&$$, $1); } */
-	INTNUM		{ $$ = expr_new_ident (EXPR_NUM, $1); }
-    | immlabel		{ $$ = expr_new_ident (EXPR_SYM, sym_use_get ($1.name, SYM_LABEL)); }
+	INTNUM		{ $$ = expr_new_ident (EXPR_NUM, ExprNum($1)); }
+    | immlabel		{ $$ = expr_new_ident (EXPR_SYM, ExprSym(sym_use_get ($1.name, SYM_LABEL))); }
     /*| immexp '||' immexp	{ $$ = expr_new_tree ($1, EXPR_LOR, $3); }*/
     | immexp '|' immexp	{ $$ = expr_new_tree ($1, EXPR_OR, $3); }
     | immexp '^' immexp	{ $$ = expr_new_tree ($1, EXPR_XOR, $3); }

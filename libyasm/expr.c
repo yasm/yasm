@@ -1,4 +1,4 @@
-/* $Id: expr.c,v 1.2 2001/07/05 08:37:59 mu Exp $
+/* $Id: expr.c,v 1.3 2001/07/05 09:32:58 mu Exp $
  * Expression handling
  *
  *  Copyright (C) 2001  Michael Urman
@@ -21,6 +21,7 @@
  */
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include "expr.h"
 #include "symrec.h"
 #include "globals.h"
@@ -62,6 +63,12 @@ expr *expr_new (ExprType ltype,
     }
     return ptr;
 }
+
+/* helpers */
+ExprItem ExprSym (struct symrec_s *s) { ExprItem e; e.sym = s; return e; }
+ExprItem ExprExpr (expr *x) { ExprItem e; e.expr = x; return e; }
+ExprItem ExprNum (unsigned long n) { ExprItem e; e.num = n; return e; }
+ExprItem ExprNone () { ExprItem e; e.num = 0; return e; }
 
 /* get rid of unnecessary branches if possible.  report. */
 int expr_simplify (expr *e)
@@ -208,7 +215,7 @@ void expr_print (expr *e)
 {
     if (e->op != EXPR_IDENT) {
 	switch (e->ltype) {
-	    case EXPR_NUM: printf ("%d", e->left.num); break;
+	    case EXPR_NUM: printf ("%lu", e->left.num); break;
 	    case EXPR_SYM: printf ("%s", e->left.sym->name); break;
 	    case EXPR_EXPR: printf ("("); expr_print (e->left.expr); printf(")");
 	    case EXPR_NONE: break;
@@ -219,7 +226,7 @@ void expr_print (expr *e)
 	case EXPR_SUB: printf ("-"); break;
 	case EXPR_MUL: printf ("*"); break;
 	case EXPR_DIV: printf ("/"); break;
-	case EXPR_MOD: printf ("%"); break;
+	case EXPR_MOD: printf ("%%"); break;
 	case EXPR_NEG: printf ("-"); break;
 	case EXPR_NOT: printf ("~"); break;
 	case EXPR_OR: printf ("|"); break;
@@ -235,10 +242,11 @@ void expr_print (expr *e)
 	case EXPR_LE: printf ("<="); break;
 	case EXPR_GE: printf (">="); break;
 	case EXPR_NE: printf ("!="); break;
+	case EXPR_EQ: printf ("=="); break;
 	case EXPR_IDENT: break;
     }
     switch (e->rtype) {
-	case EXPR_NUM: printf ("%d", e->right.num); break;
+	case EXPR_NUM: printf ("%lu", e->right.num); break;
 	case EXPR_SYM: printf ("%s", e->right.sym->name); break;
 	case EXPR_EXPR: printf ("("); expr_print (e->right.expr); printf(")");
 	case EXPR_NONE: break;

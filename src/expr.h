@@ -1,4 +1,4 @@
-/* $Id: expr.h,v 1.2 2001/07/05 08:37:59 mu Exp $
+/* $Id: expr.h,v 1.3 2001/07/05 09:32:58 mu Exp $
  * Expression handling header file
  *
  *  Copyright (C) 2001  Michael Urman
@@ -67,17 +67,20 @@ typedef struct expr_s {
 } expr;
 
 expr *expr_new (ExprType, ExprItem, ExprOp, ExprType, ExprItem);
-/*expr *expr_new_tree (ExprItem, ExprOp, ExprItem);
-expr *expr_new_branch (ExprOp, ExprItem);
-expr *expr_new_ident (ExprType, ExprItem);*/
-#define expr_new_tree(l,o,r) \
-    expr_new (EXPR_EXPR, (ExprItem)(l), (ExprOp)(o), EXPR_EXPR, (ExprItem)(r))
-#define expr_new_branch(o,r) \
-    expr_new (EXPR_NONE, (ExprItem)0UL, (ExprOp)(o), EXPR_EXPR, (ExprItem)(r))
-#define expr_new_ident(t,r) \
-    expr_new (EXPR_NONE, (ExprItem)0UL, EXPR_IDENT, (ExprType)(t), (ExprItem)(r))
-int expr_simplify (expr *);
 
+ExprItem ExprSym (struct symrec_s *);
+ExprItem ExprExpr (expr *);
+ExprItem ExprNum (unsigned long);
+ExprItem ExprNone ();
+
+#define expr_new_tree(l,o,r) \
+    expr_new (EXPR_EXPR, ExprExpr(l), (o), EXPR_EXPR, ExprExpr(r))
+#define expr_new_branch(o,r) \
+    expr_new (EXPR_NONE, ExprNone(), (o), EXPR_EXPR, ExprExpr(r))
+#define expr_new_ident(t,r) \
+    expr_new (EXPR_NONE, ExprNone(), EXPR_IDENT, (ExprType)(t), (r))
+
+int expr_simplify (expr *);
 void expr_print (expr *);
 
 /* get the value if possible.  return value is IF POSSIBLE, not the val */

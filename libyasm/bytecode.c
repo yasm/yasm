@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.9 2001/07/05 08:37:59 mu Exp $
+/* $Id: bytecode.c,v 1.10 2001/07/05 09:32:58 mu Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -95,7 +95,7 @@ immval *ConvertIntToImm(immval *ptr, unsigned long int_val)
 	ptr = &im_static;
 
     /* FIXME: this will leak expr's if static is used */
-    ptr->val = expr_new_ident(EXPR_NUM, int_val);
+    ptr->val = expr_new_ident(EXPR_NUM, ExprNum(int_val));
 
     if((int_val & 0xFF) == int_val)
 	ptr->len = 1;
