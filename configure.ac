@@ -20,7 +20,7 @@ AM_MAINTAINER_MODE
 # autoconf command-line options
 #
 AC_ARG_ENABLE(dev,
-[  --enable-dev        Enable full development build capability],
+AC_HELP_STRING([--enable-dev],[Enable full development build capability]),
 [case "${enableval}" in
   yes) dev=true ;;
   no)  dev=false ;;
@@ -29,7 +29,7 @@ esac],[dev=false])
 AM_CONDITIONAL(DEV, test x$dev = xtrue)
 
 AC_ARG_ENABLE(morewarn,
-[  --enable-morewarn   Enable lots of extra GCC warnings],
+AC_HELP_STRING([--enable-morewarn],[Enable lots of extra GCC warnings]),
 [case "${enableval}" in
   yes) morewarn=true ;;
   no)  morewarn=false ;;
@@ -37,7 +37,7 @@ AC_ARG_ENABLE(morewarn,
 esac],[morewarn=false])
 
 AC_ARG_ENABLE(warnerror,
-[  --enable-warnerror  Treat GCC warnings as errors],
+AC_HELP_STRING([--enable-warnerror],[Treat GCC warnings as errors]),
 [case "${enableval}" in
   yes) warnerror=true ;;
   no)  warnerror=false ;;
@@ -45,7 +45,7 @@ AC_ARG_ENABLE(warnerror,
 esac],[warnerror=false])
 
 AC_ARG_ENABLE(profiling,
-[  --enable-profiling  Enable profiling (requires GCC)],
+AC_HELP_STRING([--enable-profiling],[Enable profiling (requires GCC)]),
 [case "${enableval}" in
   yes) profiling=true ;;
   no)  profiling=false ;;
@@ -53,7 +53,7 @@ AC_ARG_ENABLE(profiling,
 esac],[profiling=false])
 
 AC_ARG_ENABLE(gcov,
-[  --enable-gcov  Enable gcov code coverage (requires GCC)],
+AC_HELP_STRING([--enable-gcov],[Enable gcov code coverage (requires GCC)]),
 [case "${enableval}" in
   yes) gcov=true ;;
   no)  gcov=false ;;
