@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.8 2001/06/13 05:56:06 mu Exp $
+/* $Id: errwarn.c,v 1.9 2001/06/13 05:58:21 mu Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -26,6 +26,7 @@
 #include <ctype.h>
 #include "errwarn.h"
 #include "globals.h"
+#include "util.h"
 
 unsigned int error_count = 0;
 unsigned int warning_count = 0;
