@@ -11,8 +11,7 @@ HACKER'S GUIDE TO YASM
 Table of Contents
 
   * What to Read
-  * Building From a Working (CVS) Copy -- On UNIX
-  * Generating ChangeLogs
+  * Building From a Working (Subversion) Copy -- On UNIX
 
 
 What to Read
@@ -52,17 +51,16 @@ util.h provide functions that are standard on some machines but not available
 on others.  The function and header checks are performed using GNU configure.
 
 
-Building From a Working (CVS) Copy -- On UNIX
-=============================================
+Building From a Working (Subversion) Copy -- On UNIX
+====================================================
 
-Unlike a packaged distribution, the YASM CVS tree doesn't contain a configure
-script nor any of the other generated files normally used in configuration and
-building.  You have to regenerate these files in your local copy before
-running configure.
+Unlike a packaged distribution, the YASM Subversion tree doesn't contain a
+configure script nor any of the other generated files normally used in
+configuration and building.  You have to regenerate these files in your local
+copy before running configure.
 
 Building in this fashion requires many more programs than YASM normally
-requires in a packaged distribution.  All of the following are GNU programs,
-which are fairly portable in their own right:
+requires in a packaged distribution.  Programs required:
   * automake (1.5 or newer)
   * autoconf (2.5 or newer)
   * m4
@@ -70,8 +68,9 @@ which are fairly portable in their own right:
   * make (GNU preferred)
   * bison
   * gcc
-  * groff
-  * perl (5.003 or newer)
+
+To rebuild the manpages from the DocBook XML files, the program "xmlto" and
+all of its dependencies are required.
 
 To prepare your working copy for building, run:
   % ./autogen.sh
@@ -86,20 +85,3 @@ distcheck target of make to build a package.  If this doesn't complete
 successfully, something is wrong in the source tree.  If you caused the
 breakage, fix it or ask someone to help you fix it.  If you didn't cause it (it
 happens with a new checkout), notify the developers!
-
-Generating ChangeLogs
-=====================
-
-YASM does not keep ChangeLog files, because they're redundant with the CVS log
-entries.  But ChangeLog is an easier format to browse, so it's often handy to
-generate a ChangeLog from the CVS log data.  You can do so with the script
-cvs2cl.pl, from:
-
-  http://www.red-bean.com/cvs2cl/
-
-If you've never used it before, try invoking it like this:
-
-  cvs2cl.pl -r -f Changes
-
-Caution: don't use the default output filename (ChangeLog) in the top-level.
-It's all too easy to check it into CVS by accident.  Someday we may fix this.

@@ -9,6 +9,7 @@ AM_CPPFLAGS += -I$(top_srcdir)/check
 AM_CPPFLAGS += @INCLTDL@
 
 bin_PROGRAMS =
+man_MANS =
 TESTS =
 noinst_PROGRAMS =
 
@@ -82,3 +83,8 @@ ACLOCAL_AMFLAGS = -I m4
 
 distclean-local:
 	-rm -rf results
+
+if BUILD_MAN
+.xml.1:
+	xmlto -o $(@D) man $<
+endif

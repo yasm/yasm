@@ -80,8 +80,12 @@ if test "$ac_cv_prog_cc_stdc" = no; then
 	AC_MSG_ERROR([A standard (ANSI/ISO C89) C compiler is required.])
 fi
 
-# Check for groff (for rendering manpages, needed only for development)
-AC_PATH_PROGS(GROFF, $GROFF groff)
+# Check for xmlto (for rendering manpages, needed only for development)
+AC_CHECK_PROGS([XMLTO], [$XMLTO xmlto], [:])
+if test "$XMLTO" = ":"; then
+  AC_MSG_WARN([xmlto not found, manpages will not be rebuilt.])
+fi
+AM_CONDITIONAL(BUILD_MAN, test "$XMLTO" != ":")
 
 # Check for compiler output filename suffixes.
 AC_OBJEXT
@@ -167,11 +171,6 @@ if test "$USE_MAINTAINER_MODE" = "yes"; then
   # Enable more warnings
   if test "$GCC" = "yes"; then
     MORE_CFLAGS="$MORE_CFLAGS -Waggregate-return -Wbad-function-cast -Wcast-align -Wcast-qual -Wconversion -Winline -Wmissing-declarations -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wshadow -Wsign-compare -Wstrict-prototypes -Wwrite-strings"
-  fi
-
-  # Require groff
-  if test -z "$GROFF" || test "$GROFF" = ":"; then
-    AC_MSG_ERROR([groff not found in \$PATH])
   fi
 fi
 
