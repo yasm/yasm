@@ -4,10 +4,16 @@ yasm_SOURCES = \
 	bison.y			\
 	token.l			\
 	bytecode.c		\
+	bytecode.h		\
 	errwarn.c		\
+	errwarn.h		\
 	expr.c			\
+	expr.h			\
 	main.c			\
-	symrec.c
+	symrec.c		\
+	symrec.h		\
+	globals.h		\
+	util.h
 
 noinst_SCRIPTS = gen_instr.pl
 
@@ -24,4 +30,7 @@ BUILT_SOURCES = token.l bison.y
 
 EXTRA_DIST = \
 	instrs.dat		\
+	token.l.in		\
+	bison.y.in		\
+	bison.h			\
 	gen_instr.pl

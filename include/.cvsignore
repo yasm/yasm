@@ -1,5 +1,0 @@
-.*.sw?
-*.in
-Makefile
-stamp-h
-config.h
