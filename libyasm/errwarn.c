@@ -1,4 +1,4 @@
-/* $Id: errwarn.c,v 1.3 2001/05/21 20:14:58 peter Exp $
+/* $Id: errwarn.c,v 1.4 2001/05/22 20:44:32 peter Exp $
  * Error and warning reporting and related functions.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -36,18 +36,28 @@ static char *fatal_msgs[] = {
 };
 
 static char *err_msgs[] = {
-    "unknown error",
+    "",
     "parser error: %s",
     "missing '%1'",
     "missing argument to %s",
-    "invalid argument to %s"
+    "invalid argument to %s",
+    "invalid effective address",
+    "label or instruction expected at start of line",
+    "expression syntax error"
 };
 
 static char *warn_msgs[] = {
-    "unknown",
+    "",
     "ignoring unrecognized character '%s'",
     "%s value exceeds bounds"
 };
+
+/* hate to define these as static buffers; better solution would be to use
+ * vasprintf() to dynamically allocate, but that's not ANSI C */
+static char last_err[1024];
+static char last_warn[1024];
+static err_num last_err_num = ERR_NONE;
+static warn_num last_warn_num = WARN_NONE;
 
 /* conv_unprint: convert a possibly unprintable character into a printable
  * string, using standard cat(1) convention for unprintable characters. */
@@ -129,13 +139,16 @@ void Error(err_num num, char *argtypes, ...)
     va_list ap;
     char *printf_str;
 
+    if((last_err_num != ERR_NONE) && (last_err_num != ERR_PARSER))
+	return;
+
+    last_err_num = num;
+
     printf_str = process_argtypes(err_msgs[num], argtypes);
 
-    fprintf(stderr, "filename:%u: ", line_number);
     va_start(ap, argtypes);
-    vfprintf(stderr, printf_str, ap);
+    vsprintf(last_err, printf_str, ap);
     va_end(ap);
-    fprintf(stderr, "\n");
 
     free(printf_str);
 
@@ -147,16 +160,33 @@ void Warning(warn_num num, char *argtypes, ...)
     va_list ap;
     char *printf_str;
 
+    if(last_warn_num != WARN_NONE)
+	return;
+
+    last_warn_num = num;
+
     printf_str = process_argtypes(warn_msgs[num], argtypes);
 
-    fprintf(stderr, "filename:%u: warning: ", line_number);
     va_start(ap, argtypes);
-    vfprintf(stderr, printf_str, ap);
+    vsprintf(last_warn, printf_str, ap);
     va_end(ap);
-    fprintf(stderr, "\n");
 
     free(printf_str);
 
     warning_count++;
+}
+
+void OutputError(void)
+{
+    if(last_err_num != ERR_NONE)
+	fprintf(stderr, "filename:%u: %s\n", line_number, last_err);
+    last_err_num = ERR_NONE;
+}
+
+void OutputWarning(void)
+{
+    if(last_warn_num != WARN_NONE)
+	fprintf(stderr, "filename:%u: warning: %s\n", line_number, last_warn);
+    last_warn_num = WARN_NONE;
 }
 

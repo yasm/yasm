@@ -1,4 +1,4 @@
-/* $Id: errwarn.h,v 1.2 2001/05/21 20:14:58 peter Exp $
+/* $Id: errwarn.h,v 1.3 2001/05/22 20:44:32 peter Exp $
  * Error and warning reporting and related functions header file.
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -32,21 +32,27 @@ typedef enum {
 void Fatal(fatal_num);
 
 typedef enum {
-    ERR_UNKNOWN = 0,
+    ERR_NONE = 0,
     ERR_PARSER,
     ERR_MISSING,
     ERR_MISSING_ARG,
-    ERR_INVALID_ARG
+    ERR_INVALID_ARG,
+    ERR_INVALID_EA,
+    ERR_INVALID_LINE,
+    ERR_EXP_SYNTAX
 } err_num;
 
 void Error(err_num, char *, ...);
 
 typedef enum {
-    WARN_UNKNOWN = 0,
+    WARN_NONE = 0,
     WARN_UNREC_CHAR,
     WARN_VALUE_EXCEEDS_BOUNDS
 } warn_num;
 
 void Warning(warn_num, char *, ...);
+
+void OutputError(void);
+void OutputWarning(void);
 
 #endif
