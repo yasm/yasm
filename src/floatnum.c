@@ -494,11 +494,11 @@ floatnum_calc(floatnum *acc, ExprOp op, floatnum *operand)
 }
 
 int
-floatnum_get_int(unsigned long *ret_val, const floatnum *flt)
+floatnum_get_int(const floatnum *flt, unsigned long *ret_val)
 {
     unsigned char t[4];
 
-    if (floatnum_get_sized(t, flt, 4))
+    if (floatnum_get_sized(flt, t, 4))
 	return 1;
 
     LOAD_LONG(*ret_val, &t[0]);
@@ -517,7 +517,7 @@ floatnum_get_int(unsigned long *ret_val, const floatnum *flt)
  * Returns 0 on success, 1 if overflow, -1 if underflow.
  */
 static int
-floatnum_get_common(unsigned char *ptr, const floatnum *flt, int byte_size,
+floatnum_get_common(const floatnum *flt, unsigned char *ptr, int byte_size,
 		    int mant_bits, int implicit1, int exp_bits)
 {
     int exponent = flt->exponent;
@@ -626,15 +626,15 @@ floatnum_get_common(unsigned char *ptr, const floatnum *flt, int byte_size,
  * s = sign (for mantissa)
  */
 int
-floatnum_get_sized(unsigned char *ptr, const floatnum *flt, size_t size)
+floatnum_get_sized(const floatnum *flt, unsigned char *ptr, size_t size)
 {
     switch (size) {
 	case 4:
-	    return floatnum_get_common(ptr, flt, 4, 23, 1, 8);
+	    return floatnum_get_common(flt, ptr, 4, 23, 1, 8);
 	case 8:
-	    return floatnum_get_common(ptr, flt, 8, 52, 1, 11);
+	    return floatnum_get_common(flt, ptr, 8, 52, 1, 11);
 	case 10:
-	    return floatnum_get_common(ptr, flt, 10, 64, 0, 15);
+	    return floatnum_get_common(flt, ptr, 10, 64, 0, 15);
 	default:
 	    InternalError(__LINE__, __FILE__,
 			  _("Invalid float conversion size"));
@@ -669,19 +669,19 @@ floatnum_print(const floatnum *flt)
     free(str);
 
     /* 32-bit (single precision) format */
-    printf("32-bit: %d: ", floatnum_get_sized(out, flt, 4));
+    printf("32-bit: %d: ", floatnum_get_sized(flt, out, 4));
     for (i=0; i<4; i++)
 	printf("%02x ", out[i]);
     printf("\n");
 
     /* 64-bit (double precision) format */
-    printf("64-bit: %d: ", floatnum_get_sized(out, flt, 8));
+    printf("64-bit: %d: ", floatnum_get_sized(flt, out, 8));
     for (i=0; i<8; i++)
 	printf("%02x ", out[i]);
     printf("\n");
 
     /* 80-bit (extended precision) format */
-    printf("80-bit: %d: ", floatnum_get_sized(out, flt, 10));
+    printf("80-bit: %d: ", floatnum_get_sized(flt, out, 10));
     for (i=0; i<10; i++)
 	printf("%02x ", out[i]);
     printf("\n");

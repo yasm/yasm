@@ -72,12 +72,12 @@ void floatnum_calc(floatnum *acc, ExprOp op, floatnum *operand);
 /* Essentially a convert to single-precision and return as 32-bit value.
  * The 32-bit value is a "standard" C value (eg, of unknown endian).
  */
-int floatnum_get_int(unsigned long *ret_val, const floatnum *flt);
+int floatnum_get_int(const floatnum *flt, unsigned long *ret_val);
 
 /* ptr will point to the Intel-format little-endian byte string after a
  * successful call (eg, [0] should be the first byte output to the file).
  */
-int floatnum_get_sized(unsigned char *ptr, const floatnum *flt, size_t size);
+int floatnum_get_sized(const floatnum *flt, unsigned char *ptr, size_t size);
 
 /* Basic check to see if size is even valid for flt conversion (doesn't
  * actually check for underflow/overflow but rather checks for size=4,8,10).
