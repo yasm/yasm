@@ -26,7 +26,7 @@
  */
 #define YASM_LIB_INTERNAL
 #include "util.h"
-/*@unused@*/ RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath: yasm/libyasm/section.c,v 1.35 2003/03/15 05:07:48 peter Exp $");
 
 #include "errwarn.h"
 #include "intnum.h"
@@ -61,6 +61,8 @@ struct yasm_section {
 
     yasm_bytecodehead bc;	/* the bytecodes for the section's contents */
 };
+
+static void yasm_section_delete(/*@only@*/ yasm_section *sect);
 
 /*@-compdestroy@*/
 yasm_section *
@@ -284,7 +286,7 @@ yasm_section_get_start(const yasm_section *sect)
     return sect->start;
 }
 
-void
+static void
 yasm_section_delete(yasm_section *sect)
 {
     if (!sect)

@@ -2,7 +2,7 @@
  * \file section.h
  * \brief YASM section interface.
  *
- * $IdPath: yasm/libyasm/section.h,v 1.36 2003/03/15 05:07:48 peter Exp $
+ * $IdPath: yasm/libyasm/section.h,v 1.37 2003/05/04 20:28:28 peter Exp $
  *
  *  Copyright (C) 2001  Peter Johnson
  *
@@ -163,8 +163,6 @@ void yasm_section_set_start(yasm_section *sect, unsigned long start,
  */
 /*@observer@*/ const yasm_expr *yasm_section_get_start
     (const yasm_section *sect);
-
-void yasm_section_delete(/*@only@*/ yasm_section *sect);
 
 /** Print a section.  For debugging purposes.
  * \param f		file
