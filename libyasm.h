@@ -74,6 +74,7 @@
 #include <libyasm/preproc.h>
 
 #include <libyasm/file.h>
+#include <libyasm/module.h>
 
 #ifdef YASM_LIB_INTERNAL
 #ifdef YASM_BC_INTERNAL

@@ -1,11 +1,8 @@
 # $Id$
 
-pkglib_LTLIBRARIES += objfmt_coff.la
+libyasm_a_SOURCES += modules/objfmts/coff/coff-objfmt.c
 
-objfmt_coff_la_SOURCES = modules/objfmts/coff/coff-objfmt.c
-objfmt_coff_la_LDFLAGS = -module -avoid-version -no-undefined
-objfmt_coff_la_LIBADD = libyasm.la
-YASM_MODULES += -dlopen objfmt_coff.la
+YASM_MODULES += objfmt_coff
 
 EXTRA_DIST += modules/objfmts/coff/tests/Makefile.inc
 

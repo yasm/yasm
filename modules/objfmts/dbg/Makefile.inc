@@ -1,8 +1,5 @@
 # $Id$
 
-pkglib_LTLIBRARIES += objfmt_dbg.la
+libyasm_a_SOURCES += modules/objfmts/dbg/dbg-objfmt.c
 
-objfmt_dbg_la_SOURCES = modules/objfmts/dbg/dbg-objfmt.c
-objfmt_dbg_la_LDFLAGS = -module -avoid-version -no-undefined
-objfmt_dbg_la_LIBADD = libyasm.la
-YASM_MODULES += -dlopen objfmt_dbg.la
+YASM_MODULES += objfmt_dbg

@@ -1,0 +1,145 @@
+/*
+ * YASM module loader
+ *
+ *  Copyright (C) 2004  Peter Johnson
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND OTHER CONTRIBUTORS ``AS IS''
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR OTHER CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+#include <util.h>
+/*@unused@*/ RCSID("$Id$");
+
+#include <libyasm.h>
+
+
+typedef struct module {
+    const char *keyword;	    /* module keyword */
+    void *data;			    /* associated data */
+} module;
+
+EXTERN_LIST
+
+static module arch_modules[] = {
+MODULES_arch_
+};
+
+static module dbgfmt_modules[] = {
+MODULES_dbgfmt_
+};
+
+static module objfmt_modules[] = {
+MODULES_objfmt_
+};
+
+static module listfmt_modules[] = {
+MODULES_listfmt_
+};
+
+static module optimizer_modules[] = {
+MODULES_optimizer_
+};
+
+static module parser_modules[] = {
+MODULES_parser_
+};
+
+static module preproc_modules[] = {
+MODULES_preproc_
+};
+
+static struct {
+    module *m;
+    size_t n;
+} module_types[] = {
+    {arch_modules, sizeof(arch_modules)/sizeof(module)},
+    {dbgfmt_modules, sizeof(dbgfmt_modules)/sizeof(module)},
+    {objfmt_modules, sizeof(objfmt_modules)/sizeof(module)},
+    {listfmt_modules, sizeof(listfmt_modules)/sizeof(module)},
+    {optimizer_modules, sizeof(optimizer_modules)/sizeof(module)},
+    {parser_modules, sizeof(parser_modules)/sizeof(module)},
+    {preproc_modules, sizeof(preproc_modules)/sizeof(module)},
+};
+
+void *
+yasm_load_module(yasm_module_type type, const char *keyword)
+{
+    size_t i;
+    module *modules = module_types[type].m;
+    size_t n = module_types[type].n;
+
+    /* Look for the module/symbol. */
+    for (i=0; i<n; i++) {
+	if (yasm__strcasecmp(modules[i].keyword, keyword) == 0)
+	    return modules[i].data;
+    }
+
+    return NULL;
+}
+
+void
+yasm_list_modules(yasm_module_type type,
+		  void (*printfunc) (const char *name, const char *keyword))
+{
+    size_t i;
+    module *modules = module_types[type].m;
+    size_t n = module_types[type].n;
+    yasm_arch_module *arch;
+    yasm_dbgfmt_module *dbgfmt;
+    yasm_objfmt_module *objfmt;
+    yasm_listfmt_module *listfmt;
+    yasm_optimizer_module *optimizer;
+    yasm_parser_module *parser;
+    yasm_preproc_module *preproc;
+
+    /* Go through available list, and try to load each one */
+    for (i=0; i<n; i++) {
+	switch (type) {
+	    case YASM_MODULE_ARCH:
+		arch = modules[i].data;
+		printfunc(arch->name, arch->keyword);
+		break;
+	    case YASM_MODULE_DBGFMT:
+		dbgfmt = modules[i].data;
+		printfunc(dbgfmt->name, dbgfmt->keyword);
+		break;
+	    case YASM_MODULE_OBJFMT:
+		objfmt = modules[i].data;
+		printfunc(objfmt->name, objfmt->keyword);
+		break;
+	    case YASM_MODULE_LISTFMT:
+		listfmt = modules[i].data;
+		printfunc(listfmt->name, listfmt->keyword);
+		break;
+	    case YASM_MODULE_OPTIMIZER:
+		optimizer = modules[i].data;
+		printfunc(optimizer->name, optimizer->keyword);
+		break;
+	    case YASM_MODULE_PARSER:
+		parser = modules[i].data;
+		printfunc(parser->name, parser->keyword);
+		break;
+	    case YASM_MODULE_PREPROC:
+		preproc = modules[i].data;
+		printfunc(preproc->name, preproc->keyword);
+		break;
+	}
+    }
+}

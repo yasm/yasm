@@ -1,20 +1,16 @@
 # $Id$
 
-pkglib_LTLIBRARIES += preproc_nasm.la
+libyasm_a_SOURCES += modules/preprocs/nasm/nasm-preproc.c
+libyasm_a_SOURCES += modules/preprocs/nasm/nasm-pp.h
+libyasm_a_SOURCES += modules/preprocs/nasm/nasm-pp.c
+libyasm_a_SOURCES += modules/preprocs/nasm/nasm.h
+libyasm_a_SOURCES += modules/preprocs/nasm/nasmlib.h
+libyasm_a_SOURCES += modules/preprocs/nasm/nasmlib.c
+libyasm_a_SOURCES += modules/preprocs/nasm/nasm-eval.h
+libyasm_a_SOURCES += modules/preprocs/nasm/nasm-eval.c
+libyasm_a_SOURCES += nasm-macros.c
 
-preproc_nasm_la_SOURCES  = modules/preprocs/nasm/nasm-preproc.c
-preproc_nasm_la_SOURCES += modules/preprocs/nasm/nasm-pp.h
-preproc_nasm_la_SOURCES += modules/preprocs/nasm/nasm-pp.c
-preproc_nasm_la_SOURCES += modules/preprocs/nasm/nasm.h
-preproc_nasm_la_SOURCES += modules/preprocs/nasm/nasmlib.h
-preproc_nasm_la_SOURCES += modules/preprocs/nasm/nasmlib.c
-preproc_nasm_la_SOURCES += modules/preprocs/nasm/nasm-eval.h
-preproc_nasm_la_SOURCES += modules/preprocs/nasm/nasm-eval.c
-preproc_nasm_la_SOURCES += nasm-macros.c
-
-preproc_nasm_la_LDFLAGS = -module -avoid-version -no-undefined
-preproc_nasm_la_LIBADD = libyasm.la
-YASM_MODULES += -dlopen preproc_nasm.la
+YASM_MODULES += preproc_nasm
 
 $(top_modulesdir)/src/preprocs/nasm/nasm-pp.c: nasm-macros.c
 

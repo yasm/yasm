@@ -1,16 +1,12 @@
 # $Id$
 
-pkglib_LTLIBRARIES += arch_x86.la
+libyasm_a_SOURCES += modules/arch/x86/x86arch.c
+libyasm_a_SOURCES += modules/arch/x86/x86arch.h
+libyasm_a_SOURCES += modules/arch/x86/x86bc.c
+libyasm_a_SOURCES += modules/arch/x86/x86expr.c
+libyasm_a_SOURCES += x86id.c
 
-arch_x86_la_SOURCES  = modules/arch/x86/x86arch.c
-arch_x86_la_SOURCES += modules/arch/x86/x86arch.h
-arch_x86_la_SOURCES += modules/arch/x86/x86bc.c
-arch_x86_la_SOURCES += modules/arch/x86/x86expr.c
-arch_x86_la_SOURCES += x86id.c
-
-arch_x86_la_LDFLAGS = -module -avoid-version -no-undefined
-arch_x86_la_LIBADD = libyasm.la
-YASM_MODULES += -dlopen arch_x86.la
+YASM_MODULES += arch_x86
 
 x86id.c: $(srcdir)/modules/arch/x86/x86id.re re2c$(EXEEXT) cleanup$(EXEEXT)
 	$(top_builddir)/re2c$(EXEEXT) -s $(srcdir)/modules/arch/x86/x86id.re \

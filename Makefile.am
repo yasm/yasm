@@ -1,12 +1,9 @@
 # $Id$
 
-SUBDIRS = libltdl m4 po .
+SUBDIRS = po .
 
 AM_YFLAGS = -d
 AM_CFLAGS = @MORE_CFLAGS@
-AM_CPPFLAGS  = -DYASM_MODULEDIR="\"${pkglibdir}\""
-AM_CPPFLAGS += -I$(top_srcdir)/check
-AM_CPPFLAGS += @INCLTDL@
 
 bin_PROGRAMS =
 man_MANS =
@@ -20,11 +17,6 @@ test_hd_SOURCES = test_hd.c
 include_HEADERS = libyasm.h
 
 noinst_HEADERS = util.h
-
-lib_LTLIBRARIES =
-pkglib_LTLIBRARIES =
-
-YASM_MODULES = 
 
 BUILT_SOURCES =
 # configure.lineno doesn't clean up after itself?
@@ -40,12 +32,16 @@ EXTRA_DIST += modules/Makefile.inc
 EXTRA_DIST += frontends/Makefile.inc
 
 include tools/Makefile.inc
-include libyasm/Makefile.inc
-include modules/Makefile.inc
-include frontends/Makefile.inc
 
-EXTRA_DIST += basename.c
-EXTRA_DIST += dirname.c
+YASM_MODULES = 
+lib_LIBRARIES = libyasm.a
+libyasm_a_SOURCES =
+include modules/Makefile.inc
+
+include libyasm/Makefile.inc
+include frontends/Makefile.inc
+include m4/Makefile.inc
+
 EXTRA_DIST += out_test.sh
 EXTRA_DIST += Artistic.txt
 EXTRA_DIST += BSD.txt
@@ -55,7 +51,6 @@ EXTRA_DIST += splint.sh
 EXTRA_DIST += Mkfiles/Makefile.flat
 EXTRA_DIST += Mkfiles/Makefile.dj
 EXTRA_DIST += Mkfiles/dj/config.h
-EXTRA_DIST += Mkfiles/vc/yasm-module.c
 EXTRA_DIST += Mkfiles/vc/yasm.sln
 EXTRA_DIST += Mkfiles/vc/yasm.vcproj
 EXTRA_DIST += Mkfiles/vc/config.h

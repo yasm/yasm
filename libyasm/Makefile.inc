@@ -1,29 +1,44 @@
 # $Id$
 
-lib_LTLIBRARIES += libyasm.la
+libyasm_a_SOURCES += libyasm/bytecode.c
+libyasm_a_SOURCES += libyasm/expr.c
+libyasm_a_SOURCES += libyasm/symrec.c
+libyasm_a_SOURCES += libyasm/file.c
+libyasm_a_SOURCES += libyasm/section.c
+libyasm_a_SOURCES += libyasm/arch.c
+libyasm_a_SOURCES += libyasm/objfmt.c
+libyasm_a_SOURCES += libyasm/intnum.c
+libyasm_a_SOURCES += libyasm/floatnum.c
+libyasm_a_SOURCES += libyasm/hamt.c
+libyasm_a_SOURCES += libyasm/bitvect.c
+libyasm_a_SOURCES += libyasm/valparam.c
+libyasm_a_SOURCES += libyasm/errwarn.c
+libyasm_a_SOURCES += libyasm/linemgr.c
+libyasm_a_SOURCES += libyasm/assocdat.c
+libyasm_a_SOURCES += libyasm/xmalloc.c
+libyasm_a_SOURCES += libyasm/xstrdup.c
+libyasm_a_SOURCES += libyasm/strcasecmp.c
+libyasm_a_SOURCES += libyasm/mergesort.c
+libyasm_a_SOURCES += libyasm/strsep.c
+libyasm_a_SOURCES += module.c
 
-libyasm_la_SOURCES  = libyasm/bytecode.c
-libyasm_la_SOURCES += libyasm/expr.c
-libyasm_la_SOURCES += libyasm/symrec.c
-libyasm_la_SOURCES += libyasm/file.c
-libyasm_la_SOURCES += libyasm/section.c
-libyasm_la_SOURCES += libyasm/arch.c
-libyasm_la_SOURCES += libyasm/objfmt.c
-libyasm_la_SOURCES += libyasm/intnum.c
-libyasm_la_SOURCES += libyasm/floatnum.c
-libyasm_la_SOURCES += libyasm/hamt.c
-libyasm_la_SOURCES += libyasm/bitvect.c
-libyasm_la_SOURCES += libyasm/valparam.c
-libyasm_la_SOURCES += libyasm/errwarn.c
-libyasm_la_SOURCES += libyasm/linemgr.c
-libyasm_la_SOURCES += libyasm/assocdat.c
-libyasm_la_SOURCES += libyasm/xmalloc.c
-libyasm_la_SOURCES += libyasm/xstrdup.c
-libyasm_la_SOURCES += libyasm/strcasecmp.c
-libyasm_la_SOURCES += libyasm/mergesort.c
-libyasm_la_SOURCES += libyasm/strsep.c
+module.c: $(top_srcdir)/libyasm/module.in genmodule$(EXEEXT) Makefile
+	$(top_builddir)/genmodule$(EXEEXT) $(top_srcdir)/libyasm/module.in $(YASM_MODULES)
 
-libyasm_la_LDFLAGS = -no-undefined
+BUILT_SOURCES += module.c
+CLEANFILES += module.c
+
+noinst_PROGRAMS += genmodule
+
+genmodule_SOURCES =
+EXTRA_DIST += libyasm/genmodule.c
+genmodule_LDADD = genmodule.$(OBJEXT)
+genmodule_LINK = $(CCLD_FOR_BUILD) -o $@
+
+genmodule.$(OBJEXT): libyasm/genmodule.c
+	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f libyasm/genmodule.c || echo '$(srcdir)/'`libyasm/genmodule.c
+
+EXTRA_DIST += libyasm/module.in
 
 modincludedir = $(includedir)/libyasm
 
@@ -51,6 +66,7 @@ modinclude_HEADERS += libyasm/bitvect.h
 modinclude_HEADERS += libyasm/valparam.h
 modinclude_HEADERS += libyasm/compat-queue.h
 modinclude_HEADERS += libyasm/assocdat.h
+modinclude_HEADERS += libyasm/module.h
 
 EXTRA_DIST += libyasm/tests/Makefile.inc
 

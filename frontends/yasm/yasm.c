@@ -35,36 +35,11 @@
 #include <libgen.h>
 #endif
 
-#ifndef WIN32
-#include "ltdl.h"
-#endif
-#include "yasm-module.h"
 #include "yasm-options.h"
 
 
-/* Extra path to search for our modules. */
-#ifndef YASM_MODULE_PATH_ENV
-# define YASM_MODULE_PATH_ENV	"YASM_MODULE_PATH"
-#endif
-
-#ifndef WIN32
-extern const lt_dlsymlist lt_preloaded_symbols[];
-#endif
-
 /* Preprocess-only buffer size */
 #define PREPROC_BUF_SIZE    16384
-
-/* Check the module version */
-#define check_module_version(d, TYPE, type)	\
-do { \
-    if (d && d->version != YASM_##TYPE##_VERSION) { \
-	print_error( \
-	    _("%s: module version mismatch: %s `%s' (need %d, module %d)"), \
-	    _("FATAL"), _(#type), d->keyword, YASM_##TYPE##_VERSION, \
-	    d->version); \
-	exit(EXIT_FAILURE); \
-    } \
-} while (0)
 
 /*@null@*/ /*@only@*/ static char *obj_filename = NULL, *in_filename = NULL;
 /*@null@*/ /*@only@*/ static char *list_filename = NULL;
@@ -247,9 +222,6 @@ main(int argc, char *argv[])
     yasm_object *object = NULL;
     yasm_section *def_sect;
     size_t i;
-#ifndef WIN32
-    int errors;
-#endif
 
 #if defined(HAVE_SETLOCALE) && defined(HAVE_LC_MESSAGES)
     setlocale(LC_MESSAGES, "");
@@ -264,42 +236,6 @@ main(int argc, char *argv[])
     yasm_fatal = handle_yasm_fatal;
     yasm_gettext_hook = handle_yasm_gettext;
     yasm_errwarn_initialize();
-
-#ifndef WIN32
-    /* Set libltdl malloc/free functions. */
-#ifdef WITH_DMALLOC
-    lt_dlmalloc = malloc;
-    lt_dlfree = free;
-#else
-    lt_dlmalloc = yasm_xmalloc;
-    lt_dlfree = yasm_xfree;
-#endif
-
-    /* Initialize preloaded symbol lookup table. */
-    lt_dlpreload_default(lt_preloaded_symbols);
-
-    /* Initialize libltdl. */
-    errors = lt_dlinit();
-
-    /* Set up extra module search directories. */
-    if (errors == 0) {
-	const char *path = getenv(YASM_MODULE_PATH_ENV);
-	if (path)
-	    errors = lt_dladdsearchdir(path);
-    }
-#if defined(YASM_MODULEDIR)
-    if (errors == 0)
-	errors = lt_dladdsearchdir(YASM_MODULEDIR);
-#endif
-    if (errors == 0) {
-	/* Path where yasm executable is running from (argv[0]) */
-	errors = lt_dladdsearchdir(dirname(argv[0]));
-    }
-    if (errors != 0) {
-	print_error(_("%s: module loader initialization failed"), _("FATAL"));
-	return EXIT_FAILURE;
-    }
-#endif
 
     /* Initialize parameter storage */
     STAILQ_INIT(&preproc_options);
@@ -373,7 +309,7 @@ main(int argc, char *argv[])
 
 	/* If not already specified, default to nasm preproc. */
 	if (!cur_preproc_module)
-	    cur_preproc_module = load_preproc_module("nasm");
+	    cur_preproc_module = yasm_load_preproc("nasm");
 
 	if (!cur_preproc_module) {
 	    print_error(_("%s: could not load default %s"), _("FATAL"),
@@ -381,7 +317,6 @@ main(int argc, char *argv[])
 	    cleanup(NULL);
 	    return EXIT_FAILURE;
 	}
-	check_module_version(cur_preproc_module, PREPROC, preproc);
 
 	apply_preproc_saved_options();
 
@@ -420,14 +355,13 @@ main(int argc, char *argv[])
 
     /* Default to x86 as the architecture */
     if (!cur_arch_module) {
-	cur_arch_module = load_arch_module("x86");
+	cur_arch_module = yasm_load_arch("x86");
 	if (!cur_arch_module) {
 	    print_error(_("%s: could not load default %s"), _("FATAL"),
 			_("architecture"));
 	    return EXIT_FAILURE;
 	}
     }
-    check_module_version(cur_arch_module, ARCH, arch);
 
     /* Set up architecture using the selected (or default) machine */
     if (!machine_name)
@@ -453,36 +387,34 @@ main(int argc, char *argv[])
     }
 
     /* Set basic as the optimizer (TODO: user choice) */
-    cur_optimizer_module = load_optimizer_module("basic");
+    cur_optimizer_module = yasm_load_optimizer("basic");
 
     if (!cur_optimizer_module) {
 	print_error(_("%s: could not load default %s"), _("FATAL"),
 		    _("optimizer"));
 	return EXIT_FAILURE;
     }
-    check_module_version(cur_optimizer_module, OPTIMIZER, optimizer);
 
     /* If list file enabled, make sure we have a list format loaded. */
     if (list_filename) {
 	/* If not already specified, default to nasm as the list format. */
 	if (!cur_listfmt_module)
-	    cur_listfmt_module = load_listfmt_module("nasm");
+	    cur_listfmt_module = yasm_load_listfmt("nasm");
     }
 
     /* If not already specified, default to bin as the object format. */
     if (!cur_objfmt_module)
-	cur_objfmt_module = load_objfmt_module("bin");
+	cur_objfmt_module = yasm_load_objfmt("bin");
 
     if (!cur_objfmt_module) {
 	print_error(_("%s: could not load default %s"), _("FATAL"),
 		    _("object format"));
 	return EXIT_FAILURE;
     }
-    check_module_version(cur_objfmt_module, OBJFMT, objfmt);
 
     /* If not already specified, default to null as the debug format. */
     if (!cur_dbgfmt_module)
-	cur_dbgfmt_module = load_dbgfmt_module("null");
+	cur_dbgfmt_module = yasm_load_dbgfmt("null");
     else {
 	int matched_dbgfmt = 0;
 	/* Check to see if the requested debug format is in the allowed list
@@ -508,7 +440,6 @@ main(int argc, char *argv[])
 		    _("debug format"));
 	return EXIT_FAILURE;
     }
-    check_module_version(cur_dbgfmt_module, DBGFMT, dbgfmt);
 
     /* determine the object filename if not specified */
     if (!obj_filename) {
@@ -554,7 +485,7 @@ main(int argc, char *argv[])
 
     /* Default to NASM as the parser */
     if (!cur_parser_module) {
-	cur_parser_module = load_parser_module("nasm");
+	cur_parser_module = yasm_load_parser("nasm");
 	if (!cur_parser_module) {
 	    print_error(_("%s: could not load default %s"), _("FATAL"),
 			_("parser"));
@@ -562,12 +493,11 @@ main(int argc, char *argv[])
 	    return EXIT_FAILURE;
 	}
     }
-    check_module_version(cur_parser_module, PARSER, parser);
 
     /* If not already specified, default to the parser's default preproc. */
     if (!cur_preproc_module)
 	cur_preproc_module =
-	    load_preproc_module(cur_parser_module->default_preproc_keyword);
+	    yasm_load_preproc(cur_parser_module->default_preproc_keyword);
     else {
 	int matched_preproc = 0;
 	/* Check to see if the requested preprocessor is in the allowed list
@@ -595,7 +525,6 @@ main(int argc, char *argv[])
 	cleanup(NULL);
 	return EXIT_FAILURE;
     }
-    check_module_version(cur_preproc_module, PREPROC, preproc);
 
     cur_preproc = cur_preproc_module->create(in, in_filename,
 					     yasm_object_get_linemap(object));
@@ -734,13 +663,6 @@ cleanup(yasm_object *object)
 	BitVector_Shutdown();
     }
 
-    unload_modules();
-
-#ifndef WIN32
-    /* Finish with libltdl. */
-    lt_dlexit();
-#endif
-
     if (DO_FREE) {
 	if (in_filename)
 	    yasm_xfree(in_filename);
@@ -782,11 +704,11 @@ static int
 opt_arch_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     assert(param != NULL);
-    cur_arch_module = load_arch_module(param);
+    cur_arch_module = yasm_load_arch(param);
     if (!cur_arch_module) {
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm %s:\n"), _("architectures"));
-	    list_archs(print_list_keyword_desc);
+	    yasm_list_arch(print_list_keyword_desc);
 	    special_options = SPECIAL_LISTED;
 	    return 0;
 	}
@@ -801,11 +723,11 @@ static int
 opt_parser_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     assert(param != NULL);
-    cur_parser_module = load_parser_module(param);
+    cur_parser_module = yasm_load_parser(param);
     if (!cur_parser_module) {
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm %s:\n"), _("parsers"));
-	    list_parsers(print_list_keyword_desc);
+	    yasm_list_parser(print_list_keyword_desc);
 	    special_options = SPECIAL_LISTED;
 	    return 0;
 	}
@@ -820,11 +742,11 @@ static int
 opt_preproc_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     assert(param != NULL);
-    cur_preproc_module = load_preproc_module(param);
+    cur_preproc_module = yasm_load_preproc(param);
     if (!cur_preproc_module) {
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm %s:\n"), _("preprocessors"));
-	    list_preprocs(print_list_keyword_desc);
+	    yasm_list_preproc(print_list_keyword_desc);
 	    special_options = SPECIAL_LISTED;
 	    return 0;
 	}
@@ -839,11 +761,11 @@ static int
 opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     assert(param != NULL);
-    cur_objfmt_module = load_objfmt_module(param);
+    cur_objfmt_module = yasm_load_objfmt(param);
     if (!cur_objfmt_module) {
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm %s:\n"), _("object formats"));
-	    list_objfmts(print_list_keyword_desc);
+	    yasm_list_objfmt(print_list_keyword_desc);
 	    special_options = SPECIAL_LISTED;
 	    return 0;
 	}
@@ -858,11 +780,11 @@ static int
 opt_dbgfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     assert(param != NULL);
-    cur_dbgfmt_module = load_dbgfmt_module(param);
+    cur_dbgfmt_module = yasm_load_dbgfmt(param);
     if (!cur_dbgfmt_module) {
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm %s:\n"), _("debug formats"));
-	    list_dbgfmts(print_list_keyword_desc);
+	    yasm_list_dbgfmt(print_list_keyword_desc);
 	    special_options = SPECIAL_LISTED;
 	    return 0;
 	}
@@ -878,11 +800,11 @@ opt_listfmt_handler(/*@unused@*/ char *cmd, char *param,
 		    /*@unused@*/ int extra)
 {
     assert(param != NULL);
-    cur_listfmt_module = load_listfmt_module(param);
+    cur_listfmt_module = yasm_load_listfmt(param);
     if (!cur_listfmt_module) {
 	if (!strcmp("help", param)) {
 	    printf(_("Available yasm %s:\n"), _("list formats"));
-	    list_listfmts(print_list_keyword_desc);
+	    yasm_list_listfmt(print_list_keyword_desc);
 	    special_options = SPECIAL_LISTED;
 	    return 0;
 	}

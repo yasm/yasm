@@ -67,13 +67,7 @@ fi
 AC_PROG_CC_STDC
 AC_PROG_INSTALL
 AC_PROG_LN_S
-
-# Libtool
-AC_LIBTOOL_DLOPEN
-AC_LIBTOOL_WIN32_DLL
-AC_LIBLTDL_CONVENIENCE
-AC_PROG_LIBTOOL
-AC_SUBST([LIBTOOL_DEPS])
+AC_PROG_RANLIB
 
 # REQUIRE a standard (ANSI/ISO) C compiler
 if test "$ac_cv_prog_cc_stdc" = no; then
@@ -101,7 +95,7 @@ AM_WITH_DMALLOC
 #
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([limits.h sys/param.h unistd.h libgen.h])
+AC_CHECK_HEADERS([limits.h sys/param.h libgen.h])
 
 # REQUIRE standard C headers
 if test "$ac_cv_header_stdc" != yes; then
@@ -124,8 +118,6 @@ AC_CHECK_FUNCS([abort memcpy memmove strrchr toascii vsnprintf])
 AC_CHECK_FUNCS([strsep mergesort])
 # Look for the case-insensitive comparison functions
 AC_CHECK_FUNCS([strcasecmp strncasecmp stricmp strcmpi])
-AC_REPLACE_FUNCS([basename dirname])
-AC_LIB_LTDL
 
 #
 # Check for gettext() and other i18n/l10n things.
@@ -206,10 +198,6 @@ if test "$GCC" = yes; then
 fi
 AC_SUBST(MORE_CFLAGS)
 
-# Substitutions for libltdl
-AC_SUBST(INCLTDL)
-AC_SUBST(LIBLTDL)
-
 #
 # Cross-building
 #
@@ -235,8 +223,6 @@ AC_SUBST(HOST_CC)
 
 
 AC_CONFIG_FILES([Makefile
-	libltdl/Makefile
-	m4/Makefile
 	po/Makefile.in
 ])
 AC_OUTPUT

@@ -1,12 +1,8 @@
 # $Id$
 
-pkglib_LTLIBRARIES += listfmt_nasm.la
+libyasm_a_SOURCES += modules/listfmts/nasm/nasm-listfmt.c
 
-listfmt_nasm_la_SOURCES  = modules/listfmts/nasm/nasm-listfmt.c
-
-listfmt_nasm_la_LDFLAGS = -module -avoid-version -no-undefined
-listfmt_nasm_la_LIBADD = libyasm.la
-YASM_MODULES += -dlopen listfmt_nasm.la
+YASM_MODULES += listfmt_nasm
 
 #EXTRA_DIST += modules/listfmts/nasm/tests/Makefile.inc
 

@@ -1,17 +1,13 @@
 # $Id$
 
-pkglib_LTLIBRARIES += parser_nasm.la
+libyasm_a_SOURCES += modules/parsers/nasm/nasm-parser.c
+libyasm_a_SOURCES += modules/parsers/nasm/nasm-parser.h
+libyasm_a_SOURCES += modules/parsers/nasm/nasm-defs.h
+libyasm_a_SOURCES += modules/parsers/nasm/nasm-bison.y
+libyasm_a_SOURCES += nasm-bison.h
+libyasm_a_SOURCES += nasm-token.c
 
-parser_nasm_la_SOURCES  = modules/parsers/nasm/nasm-parser.c
-parser_nasm_la_SOURCES += modules/parsers/nasm/nasm-parser.h
-parser_nasm_la_SOURCES += modules/parsers/nasm/nasm-defs.h
-parser_nasm_la_SOURCES += modules/parsers/nasm/nasm-bison.y
-parser_nasm_la_SOURCES += nasm-bison.h
-parser_nasm_la_SOURCES += nasm-token.c
-
-parser_nasm_la_LDFLAGS = -module -avoid-version -no-undefined
-parser_nasm_la_LIBADD = libyasm.la
-YASM_MODULES += -dlopen parser_nasm.la
+YASM_MODULES += parser_nasm
 
 nasm-token.c: $(srcdir)/modules/parsers/nasm/nasm-token.re re2c$(EXEEXT) cleanup$(EXEEXT)
 	$(top_builddir)/re2c$(EXEEXT) -b $(srcdir)/modules/parsers/nasm/nasm-token.re \

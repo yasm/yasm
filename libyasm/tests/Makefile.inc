@@ -18,8 +18,8 @@ check_PROGRAMS += bitvect_test
 check_PROGRAMS += floatnum_test
 
 bitvect_test_SOURCES  = libyasm/tests/bitvect_test.c
-bitvect_test_LDADD = libyasm.la @LIBLTDL@ $(INTLLIBS) @LIBADD_DL@
+bitvect_test_LDADD = libyasm.a $(INTLLIBS)
 
 floatnum_test_SOURCES  = libyasm/tests/floatnum_test.c
-floatnum_test_LDADD = libyasm.la @LIBLTDL@ $(INTLLIBS) @LIBADD_DL@
+floatnum_test_LDADD = libyasm.a $(INTLLIBS)
 
