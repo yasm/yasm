@@ -187,7 +187,7 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
  *         expression is modified such that on return, it's the offset
  *         expression.
  */
-/*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_segment(yasm_expr **e);
+/*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_segment(yasm_expr **ep);
 
 /** Get the integer value of an expression if it's just an integer.
  * \param ep		expression (pointer to)
