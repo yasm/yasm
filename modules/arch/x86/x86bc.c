@@ -69,7 +69,8 @@ typedef struct x86_insn {
     unsigned char opersize;	/* 0 indicates no override */
     unsigned char lockrep_pre;	/* 0 indicates no prefix */
 
-    unsigned char rex;		/* REX x86-64 extension, 0 if none */
+    unsigned char rex;		/* REX x86-64 extension, 0 if none,
+				   0xff if not allowed (high 8 bit reg used) */
 
     /* HACK, but a space-saving one: shift opcodes have an immediate
      * form and a ,1 form (with no immediate).  In the parser, we
@@ -117,6 +118,30 @@ typedef struct x86_jmprel {
 } x86_jmprel;
 
 
+int
+x86_set_rex_from_reg(unsigned char *rex, unsigned char *low3,
+		     unsigned long reg, x86_rex_bit_pos rexbit)
+{
+    *low3 = (unsigned char)(reg&7);
+
+    if (yasm_x86_LTX_mode_bits == 64) {
+	x86_expritem_reg_size size = (x86_expritem_reg_size)(reg & ~0xF);
+
+	if (size == X86_REG8X || (reg & 0xF) >= 8) {
+	    if (*rex == 0xff)
+		return 1;
+	    *rex |= 0x40 | (((reg & 8) >> 3) << rexbit);
+	} else if (size == X86_REG8 && (reg & 7) >= 4) {
+	    /* AH/BH/CH/DH, so no REX allowed */
+	    if (*rex != 0 && *rex != 0xff)
+		return 1;
+	    *rex = 0xff;
+	}
+    }
+
+    return 0;
+}
+
 /*@-compmempass -mustfree@*/
 bytecode *
 x86_bc_new_insn(x86_new_insn_data *d)
@@ -147,7 +172,7 @@ x86_bc_new_insn(x86_new_insn_data *d)
     insn->addrsize = 0;
     insn->opersize = d->opersize;
     insn->lockrep_pre = 0;
-    insn->rex = 0;
+    insn->rex = d->rex;
     insn->shift_op = d->shift_op;
     insn->signext_imm8_op = d->signext_imm8_op;
 
@@ -223,9 +248,13 @@ x86_ea_set_disponly(effaddr *ea)
 }
 
 effaddr *
-x86_ea_new_reg(unsigned char reg)
+x86_ea_new_reg(unsigned long reg, unsigned char *rex)
 {
     x86_effaddr *x86_ea;
+    unsigned char rm;
+
+    if (x86_set_rex_from_reg(rex, &rm, reg, X86_REX_B))
+	return NULL;
 
     x86_ea = xmalloc(sizeof(x86_effaddr));
 
@@ -233,7 +262,7 @@ x86_ea_new_reg(unsigned char reg)
     x86_ea->ea.len = 0;
     x86_ea->ea.nosplit = 0;
     x86_ea->segment = 0;
-    x86_ea->modrm = 0xC0 | (reg & 0x07);	/* Mod=11, R/M=Reg, Reg=0 */
+    x86_ea->modrm = 0xC0 | rm;	/* Mod=11, R/M=Reg, Reg=0 */
     x86_ea->valid_modrm = 1;
     x86_ea->need_modrm = 1;
     x86_ea->sib = 0;
@@ -627,9 +656,12 @@ x86_bc_resolve_insn(x86_insn *insn, unsigned long *len, int save,
 
     *len += insn->opcode_len;
     *len += (insn->addrsize != 0 && insn->addrsize != insn->mode_bits) ? 1:0;
-    *len += (insn->opersize != 0 && insn->opersize != insn->mode_bits) ? 1:0;
+    if (insn->opersize != 0 &&
+	((insn->mode_bits != 64 && insn->opersize != insn->mode_bits) ||
+	 (insn->mode_bits == 64 && insn->opersize == 16)))
+	(*len)++;
     *len += (insn->lockrep_pre != 0) ? 1:0;
-    *len += (insn->rex != 0) ? 1:0;
+    *len += (insn->rex != 0 && insn->rex != 0xff) ? 1:0;
 
     return retval;
 }
@@ -810,11 +842,13 @@ x86_bc_tobytes_insn(x86_insn *insn, unsigned char **bufp, const section *sect,
 	WRITE_8(*bufp, insn->lockrep_pre);
     if (x86_ea && x86_ea->segment != 0)
 	WRITE_8(*bufp, x86_ea->segment);
-    if (insn->opersize != 0 && insn->opersize != insn->mode_bits)
+    if (insn->opersize != 0 &&
+	((insn->mode_bits != 64 && insn->opersize != insn->mode_bits) ||
+	 (insn->mode_bits == 64 && insn->opersize == 16)))
 	WRITE_8(*bufp, 0x66);
     if (insn->addrsize != 0 && insn->addrsize != insn->mode_bits)
 	WRITE_8(*bufp, 0x67);
-    if (insn->rex != 0) {
+    if (insn->rex != 0 && insn->rex != 0xff) {
 	if (insn->mode_bits != 64)
 	    cur_we->internal_error(
 		N_("x86: got a REX prefix in non-64-bit mode"));

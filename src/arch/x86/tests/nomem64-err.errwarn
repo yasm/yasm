@@ -1,0 +1,25 @@
+-:2: invalid combination of opcode and operands
+-:3: invalid combination of opcode and operands
+-:4: warning: `es' segment register ignored in 64-bit mode
+-:4: invalid combination of opcode and operands
+-:6: `pushaw' invalid in 64-bit mode
+-:6: invalid combination of opcode and operands
+-:7: `popa' invalid in 64-bit mode
+-:7: invalid combination of opcode and operands
+-:8: `lds' invalid in 64-bit mode
+-:8: invalid combination of opcode and operands
+-:9: `aas' invalid in 64-bit mode
+-:9: invalid combination of opcode and operands
+-:10: `das' invalid in 64-bit mode
+-:10: invalid combination of opcode and operands
+-:11: `aad' invalid in 64-bit mode
+-:11: invalid combination of opcode and operands
+-:12: `into' invalid in 64-bit mode
+-:12: invalid combination of opcode and operands
+-:13: `salc' invalid in 64-bit mode
+-:13: invalid combination of opcode and operands
+-:15: warning: `xmm9' is a register in 64-bit mode
+-:16: warning: `rax' is a register in 64-bit mode
+-:17: warning: `rdx' is a register in 64-bit mode
+-:18: warning: `cdqe' is an instruction in 64-bit mode
+-:19: warning: `swapgs' is an instruction in 64-bit mode

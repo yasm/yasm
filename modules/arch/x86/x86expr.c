@@ -47,10 +47,10 @@ x86_expr_checkea_get_reg32(ExprItem *ei, /*returned*/ void *d)
     int *ret;
 
     /* don't allow 16-bit registers */
-    if ((ei->data.reg & ~7) != X86_REG32)
+    if ((ei->data.reg & ~0xF) != X86_REG32)
 	return 0;
 
-    ret = &data[ei->data.reg & 7];
+    ret = &data[ei->data.reg & 0xF];
 
     /* overwrite with 0 to eliminate register from displacement expr */
     ei->type = EXPR_INT;
@@ -83,11 +83,11 @@ x86_expr_checkea_get_reg16(ExprItem *ei, void *d)
     reg16[7] = &data->di;
 
     /* don't allow 32-bit registers */
-    if ((ei->data.reg & ~7) != X86_REG16)
+    if ((ei->data.reg & ~0xF) != X86_REG16)
 	return 0;
 
     /* & 7 for sanity check */
-    ret = reg16[ei->data.reg & 7];
+    ret = reg16[ei->data.reg & 0xF];
 
     /* only allow BX, SI, DI, BP */
     if (!ret)
@@ -470,7 +470,19 @@ x86_expr_checkea_getregsize_callback(ExprItem *ei, void *d)
     unsigned char *addrsize = (unsigned char *)d;
 
     if (ei->type == EXPR_REG) {
-	*addrsize = (unsigned char)ei->data.reg & ~7;
+	switch ((x86_expritem_reg_size)(ei->data.reg & ~0xF)) {
+	    case X86_REG16:
+		*addrsize = 16;
+		break;
+	    case X86_REG32:
+		*addrsize = 32;
+		break;
+	    case X86_REG64:
+		*addrsize = 64;
+		break;
+	    default:
+		return 0;
+	}
 	return 1;
     } else
 	return 0;

@@ -28,17 +28,22 @@ typedef enum {
 } x86_bytecode_type;
 #define X86_BYTECODE_TYPE_MAX	X86_BC_JMPREL+1
 
-/* 0-7 (low 3 bits) used for register number, stored in same data area */
+/* 0-15 (low 4 bits) used for register number, stored in same data area.
+ * Note 8-15 are only valid for some registers, and only in 64-bit mode.
+ */
 typedef enum {
-    X86_REG8 = 0x8,
-    X86_REG16 = 0x10,
-    X86_REG32 = 0x20,
-    X86_MMXREG = 0x40,
-    X86_XMMREG = 0x80,
-    X86_CRREG = 0xC0,
-    X86_DRREG = 0xC8,
-    X86_TRREG = 0xF0,
-    X86_FPUREG = 0xF8
+    X86_REG8 = 0x1<<4,
+    X86_REG8X = 0x2<<4,	    /* 64-bit mode only, REX prefix version of REG8 */
+    X86_REG16 = 0x3<<4,
+    X86_REG32 = 0x4<<4,
+    X86_REG64 = 0x5<<4,	    /* 64-bit mode only */
+    X86_FPUREG = 0x6<<4,
+    X86_MMXREG = 0x7<<4,
+    X86_XMMREG = 0x8<<4,
+    X86_CRREG = 0x9<<4,
+    X86_DRREG = 0xA<<4,
+    X86_TRREG = 0xB<<4,
+    X86_RIP = 0xC<<4	    /* 64-bit mode only, always RIP (regnum ignored) */
 } x86_expritem_reg_size;
 
 typedef enum {
@@ -62,10 +67,25 @@ typedef enum {
     JR_NEAR_FORCED
 } x86_jmprel_opcode_sel;
 
+typedef enum {
+    X86_REX_W = 3,
+    X86_REX_R = 2,
+    X86_REX_X = 1,
+    X86_REX_B = 0
+} x86_rex_bit_pos;
+
+/* Sets REX (4th bit) and 3 LS bits from register size/number.  Returns 1 if
+ * impossible to fit reg into REX, otherwise returns 0.  Input parameter rexbit
+ * indicates bit of REX to use if REX is needed.  Will not modify REX if not
+ * in 64-bit mode or if it wasn't needed to express reg.
+ */
+int x86_set_rex_from_reg(unsigned char *rex, unsigned char *low3,
+			 unsigned long reg, x86_rex_bit_pos rexbit);
+
 void x86_ea_set_segment(/*@null@*/ effaddr *ea, unsigned char segment,
 			unsigned long lindex);
 void x86_ea_set_disponly(effaddr *ea);
-effaddr *x86_ea_new_reg(unsigned char reg);
+effaddr *x86_ea_new_reg(unsigned long reg, unsigned char *rex);
 effaddr *x86_ea_new_imm(/*@keep@*/expr *imm, unsigned char im_len);
 effaddr *x86_ea_new_expr(/*@keep@*/ expr *e);
 
@@ -88,6 +108,7 @@ typedef struct x86_new_insn_data {
     unsigned char op_len;
     unsigned char op[3];
     unsigned char spare;	/* bits to go in 'spare' field of ModRM */
+    unsigned char rex;
     unsigned char im_len;
     unsigned char im_sign;
     unsigned char shift_op;
