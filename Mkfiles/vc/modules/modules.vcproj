@@ -405,6 +405,9 @@
 				<File
 					RelativePath="..\..\..\modules\objfmts\elf\elf.h">
 				</File>
+				<File
+					RelativePath="..\..\..\modules\objfmts\xdf\xdf-objfmt.c">
+				</File>
 			</Filter>
 			<Filter
 				Name="optimizers"
@@ -627,6 +630,17 @@
 								PreprocessorDefinitions=""
 								BasicRuntimeChecks="3"/>
 						</FileConfiguration>
+					</File>
+				</Filter>
+			</Filter>
+			<Filter
+				Name="listfmts"
+				Filter="">
+				<Filter
+					Name="nasm"
+					Filter="">
+					<File
+						RelativePath="..\..\..\modules\listfmts\nasm\nasm-listfmt.c">
 					</File>
 				</Filter>
 			</Filter>

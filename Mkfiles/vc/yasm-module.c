@@ -47,11 +47,13 @@ extern yasm_objfmt_module yasm_coff_LTX_objfmt;
 extern yasm_objfmt_module yasm_win32_LTX_objfmt;
 extern yasm_objfmt_module yasm_dbg_LTX_objfmt;
 extern yasm_objfmt_module yasm_elf_LTX_objfmt;
+extern yasm_objfmt_module yasm_xdf_LTX_objfmt;
 extern yasm_optimizer_module yasm_basic_LTX_optimizer;
 extern yasm_parser_module yasm_nasm_LTX_parser;
 extern yasm_preproc_module yasm_nasm_LTX_preproc;
 extern yasm_preproc_module yasm_raw_LTX_preproc;
 extern yasm_preproc_module yasm_yapp_LTX_preproc;
+extern yasm_listfmt_module yasm_nasm_LTX_listfmt;
 
 static module modules[] = {
     {MODULE_ARCH, "x86", "arch", &yasm_x86_LTX_arch},
@@ -62,10 +64,12 @@ static module modules[] = {
     {MODULE_OBJFMT, "dbg", "objfmt", &yasm_dbg_LTX_objfmt},
     {MODULE_OBJFMT, "win32", "objfmt", &yasm_win32_LTX_objfmt},
     {MODULE_OBJFMT, "elf", "objfmt", &yasm_elf_LTX_objfmt},
+    {MODULE_OBJFMT, "xdf", "objfmt", &yasm_xdf_LTX_objfmt},
     {MODULE_OPTIMIZER, "basic", "optimizer", &yasm_basic_LTX_optimizer},
     {MODULE_PARSER, "nasm", "parser", &yasm_nasm_LTX_parser},
     {MODULE_PREPROC, "nasm", "preproc", &yasm_nasm_LTX_preproc},
     {MODULE_PREPROC, "raw", "preproc", &yasm_raw_LTX_preproc},
+    {MODULE_LISTFMT, "nasm", "listfmt", &yasm_nasm_LTX_listfmt},
 };
 
 
