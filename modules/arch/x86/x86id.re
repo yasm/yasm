@@ -1007,11 +1007,11 @@ static const x86_insn_info bittest_insn[] = {
     { CPU_Hammer|CPU_64, MOD_Op1Add, 64, 2, {0x0F, 0x00, 0}, 0, 2,
       {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_64|OPA_Spare, 0} },
     { CPU_386, MOD_Gap0|MOD_SpAdd, 16, 2, {0x0F, 0xBA, 0}, 0, 2,
-      {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_8|OPA_Imm, 0} },
+      {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
     { CPU_386, MOD_Gap0|MOD_SpAdd, 32, 2, {0x0F, 0xBA, 0}, 0, 2,
-      {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_8|OPA_Imm, 0} },
+      {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
     { CPU_Hammer|CPU_64, MOD_Gap0|MOD_SpAdd, 64, 2, {0x0F, 0xBA, 0}, 0, 2,
-      {OPT_RM|OPS_64|OPA_EA, OPT_Imm|OPS_8|OPA_Imm, 0} }
+      {OPT_RM|OPS_64|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} }
 };
 
 /* Bit manipulation - bit scans - also used for lar/lsl */
