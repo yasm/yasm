@@ -6,7 +6,7 @@
 #include "tools/re2c/ins.h"
 
 typedef struct CharPtn {
-    uint	card;
+    unsigned int	card;
     struct CharPtn	*fix;
     struct CharPtn	*nxt;
 } CharPtn;
@@ -20,11 +20,11 @@ typedef struct CharSet {
 
 typedef struct Range {
     struct Range	*next;
-    uint	lb, ub;		/* [lb,ub) */
+    unsigned int	lb, ub;		/* [lb,ub) */
 } Range;
 
 static inline void
-Range_init(Range *r, uint l, uint u)
+Range_init(Range *r, unsigned int l, unsigned int u)
 {
     r->next = NULL;
     r->lb = l;
@@ -32,7 +32,7 @@ Range_init(Range *r, uint l, uint u)
 }
 
 static inline Range *
-Range_new(uint l, uint u)
+Range_new(unsigned int l, unsigned int u)
 {
     Range *r = malloc(sizeof(Range));
     r->next = NULL;
@@ -72,7 +72,7 @@ typedef enum {
 
 typedef struct RegExp {
     RegExpType	type;
-    uint	size;
+    unsigned int	size;
     union {
 	/* for MatchOp */
 	Range	*match;
@@ -81,9 +81,9 @@ typedef struct RegExp {
 	    struct RegExp	*exp;
 	    struct RegExp	*ctx;
 	    Ins		*ins;
-	    uint	accept;
+	    unsigned int	accept;
 	    Token	*code;
-	    uint	line;
+	    unsigned int	line;
 	} RuleOp;
 	/* for AltOp and CatOp*/
 	struct {
@@ -102,7 +102,7 @@ RegExp_isA(RegExp *r, RegExpType t)
 
 void RegExp_split(RegExp*, CharSet*);
 void RegExp_calcSize(RegExp*, Char*);
-uint RegExp_fixedLength(RegExp*);
+unsigned int RegExp_fixedLength(RegExp*);
 void RegExp_compile(RegExp*, Char*, Ins*);
 void RegExp_display(RegExp*, FILE *);
 
@@ -123,7 +123,7 @@ RegExp_new_MatchOp(Range *m)
     return r;
 }
 
-RegExp *RegExp_new_RuleOp(RegExp*, RegExp*, Token*, uint);
+RegExp *RegExp_new_RuleOp(RegExp*, RegExp*, Token*, unsigned int);
 
 static inline RegExp *
 RegExp_new_AltOp(RegExp *e1, RegExp *e2)

@@ -5,9 +5,8 @@
 #define inline __inline__
 #endif
 
-typedef unsigned int 	uint;
-typedef unsigned char 	uchar, byte;
-typedef unsigned short 	ushort, word;
-typedef unsigned long 	ulong, dword;
+typedef unsigned char 	byte;
+typedef unsigned short 	word;
+typedef unsigned long 	dword;
 
 #endif

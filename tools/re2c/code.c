@@ -13,7 +13,7 @@
 
 void Go_compact(Go *g){
     /* arrange so that adjacent spans have different targets */
-    uint i = 0, j;
+    unsigned int i = 0, j;
     for(j = 1; j < g->nSpans; ++j){
 	if(g->span[j].to != g->span[i].to){
 	    ++i; g->span[i].to = g->span[j].to;
@@ -25,7 +25,7 @@ void Go_compact(Go *g){
 
 void Go_unmap(Go *g, Go *base, State *x){
     Span *s = g->span, *b = base->span, *e = &b[base->nSpans];
-    uint lb = 0;
+    unsigned int lb = 0;
     s->ub = 0;
     s->to = NULL;
     for(; b != e; ++b){
@@ -46,9 +46,9 @@ void Go_unmap(Go *g, Go *base, State *x){
     g->nSpans = s - g->span;
 }
 
-static void doGen(Go *g, State *s, uchar *bm, uchar m){
+static void doGen(Go *g, State *s, unsigned char *bm, unsigned char m){
     Span *b = g->span, *e = &b[g->nSpans];
-    uint lb = 0;
+    unsigned int lb = 0;
     for(; b < e; ++b){
 	if(b->to == s)
 	    for(; lb < b->ub; ++lb) bm[lb] |= m;
@@ -58,7 +58,7 @@ static void doGen(Go *g, State *s, uchar *bm, uchar m){
 #if 0
 static void prt(FILE *o, Go *g, State *s){
     Span *b = g->span, *e = &b[g->nSpans];
-    uint lb = 0;
+    unsigned int lb = 0;
     for(; b < e; ++b){
 	if(b->to == s)
 	    printSpan(o, lb, b->ub);
@@ -68,9 +68,9 @@ static void prt(FILE *o, Go *g, State *s){
 #endif
 static int matches(Go *g1, State *s1, Go *g2, State *s2){
     Span *b1 = g1->span, *e1 = &b1[g1->nSpans];
-    uint lb1 = 0;
+    unsigned int lb1 = 0;
     Span *b2 = g2->span, *e2 = &b2[g2->nSpans];
-    uint lb2 = 0;
+    unsigned int lb2 = 0;
     for(;;){
 	for(; b1 < e1 && b1->to != s1; ++b1) lb1 = b1->ub;
 	for(; b2 < e2 && b2->to != s2; ++b2) lb2 = b2->ub;
@@ -85,13 +85,13 @@ typedef struct BitMap {
     Go			*go;
     State		*on;
     struct BitMap	*next;
-    uint		i;
-    uchar		m;
+    unsigned int	i;
+    unsigned char	m;
 } BitMap;
 
 static BitMap *BitMap_find_go(Go*, State*);
 static BitMap *BitMap_find(State*);
-static void BitMap_gen(FILE *, uint, uint);
+static void BitMap_gen(FILE *, unsigned int, unsigned int);
 /* static void BitMap_stats(void);*/
 static BitMap *BitMap_new(Go*, State*);
 
@@ -128,24 +128,24 @@ BitMap_find(State *x){
     return NULL;
 }
 
-void BitMap_gen(FILE *o, uint lb, uint ub){
+void BitMap_gen(FILE *o, unsigned int lb, unsigned int ub){
     BitMap *b = BitMap_first;
     if(b){
-	uint n = ub - lb;
-	uint i;
-	uchar *bm = malloc(sizeof(uchar)*n);
+	unsigned int n = ub - lb;
+	unsigned int i;
+	unsigned char *bm = malloc(sizeof(unsigned char)*n);
 	memset(bm, 0, n);
 	fputs("\tstatic unsigned char yybm[] = {", o);
 	for(i = 0; b; i += n){
-	    uchar m;
-	    uint j;
+	    unsigned char m;
+	    unsigned int j;
 	    for(m = 0x80; b && m; b = b->next, m >>= 1){
 		b->i = i; b->m = m;
 		doGen(b->go, b->on, bm-lb, m);
 	    }
 	    for(j = 0; j < n; ++j){
 		if(j%8 == 0) {fputs("\n\t", o); oline++;}
-		fprintf(o, "%3u, ", (uint) bm[j]);
+		fprintf(o, "%3u, ", (unsigned int) bm[j]);
 	    }
 	}
 	fputs("\n\t};\n", o); oline+=2;
@@ -154,7 +154,7 @@ void BitMap_gen(FILE *o, uint lb, uint ub){
 
 #if 0
 void BitMap_stats(void){
-    uint n = 0;
+    unsigned int n = 0;
     BitMap *b;
     for(b = BitMap_first; b; b = b->next){
 	prt(stderr, b->go, b->on); fputs("\n", stderr);
@@ -169,18 +169,18 @@ static void genGoTo(FILE *o, State *to){
     fprintf(o, "\tgoto yy%u;\n", to->label); oline++;
 }
 
-static void genIf(FILE *o, const char *cmp, uint v){
+static void genIf(FILE *o, const char *cmp, unsigned int v){
     fprintf(o, "\tif(yych %s '", cmp);
     prtCh(o, v);
     fputs("')", o);
 }
 
-static void indent(FILE *o, uint i){
+static void indent(FILE *o, unsigned int i){
     while(i-- > 0)
 	fputc('\t', o);
 }
 
-static void need(FILE *o, uint n){
+static void need(FILE *o, unsigned int n){
     if(n == 1) {
 	fputs("\tif(YYLIMIT == YYCURSOR) YYFILL(1);\n", o); oline++;
     } else {
@@ -194,8 +194,8 @@ void
 Action_emit(Action *a, FILE *o)
 {
     int first = 1;
-    uint i;
-    uint back;
+    unsigned int i;
+    unsigned int back;
 
     switch (a->type) {
 	case MATCHACT:
@@ -256,7 +256,7 @@ Action_emit(Action *a, FILE *o)
 }
 
 Action *
-Action_new_Accept(State *x, uint n, uint *s, State **r)
+Action_new_Accept(State *x, unsigned int n, unsigned int *s, State **r)
 {
     Action *a = malloc(sizeof(Action));
     a->type = ACCEPTACT;
@@ -268,7 +268,8 @@ Action_new_Accept(State *x, uint n, uint *s, State **r)
     return a;
 }
 
-static void doLinear(FILE *o, uint i, Span *s, uint n, State *next){
+static void doLinear(FILE *o, unsigned int i, Span *s, unsigned int n,
+		     State *next){
     for(;;){
 	State *bg = s[0].to;
 	while(n >= 3 && s[2].to == bg && (s[1].ub - s[0].ub) == 1){
@@ -300,7 +301,7 @@ Go_genLinear(Go *g, FILE *o, State *next){
     doLinear(o, 0, g->span, g->nSpans, next);
 }
 
-static void genCases(FILE *o, uint lb, Span *s){
+static void genCases(FILE *o, unsigned int lb, Span *s){
     if(lb < s->ub){
 	for(;;){
 	    fputs("\tcase '", o); prtCh(o, lb); fputs("':", o);
@@ -318,7 +319,7 @@ Go_genSwitch(Go *g, FILE *o, State *next){
     } else {
 	State *def = g->span[g->nSpans-1].to;
 	Span **sP = malloc(sizeof(Span*)*(g->nSpans-1)), **r, **s, **t;
-	uint i;
+	unsigned int i;
 
 	t = &sP[0];
 	for(i = 0; i < g->nSpans; ++i)
@@ -351,11 +352,12 @@ Go_genSwitch(Go *g, FILE *o, State *next){
     }
 }
 
-static void doBinary(FILE *o, uint i, Span *s, uint n, State *next){
+static void doBinary(FILE *o, unsigned int i, Span *s, unsigned int n,
+		     State *next){
     if(n <= 4){
 	doLinear(o, i, s, n, next);
     } else {
-	uint h = n/2;
+	unsigned int h = n/2;
 	indent(o, i); genIf(o, "<=", s[h-1].ub - 1); fputs("{\n", o); oline++;
 	doBinary(o, i+1, &s[0], h, next);
 	indent(o, i); fputs("\t} else {\n", o); oline++;
@@ -379,7 +381,7 @@ Go_genBase(Go *g, FILE *o, State *next){
     }
     if(g->nSpans > 8){
 	Span *bot = &g->span[0], *top = &g->span[g->nSpans-1];
-	uint util;
+	unsigned int util;
 	if(bot[0].to == top[0].to){
 	    util = (top[-1].ub - bot[0].ub)/(g->nSpans - 2);
 	} else {
@@ -403,7 +405,7 @@ Go_genBase(Go *g, FILE *o, State *next){
 
 void
 Go_genGoto(Go *g, FILE *o, State *next){
-    uint i;
+    unsigned int i;
     if(bFlag){
 	for(i = 0; i < g->nSpans; ++i){
 	    State *to = g->span[i].to;
@@ -413,7 +415,8 @@ Go_genGoto(Go *g, FILE *o, State *next){
 		    Go go;
 		    go.span = malloc(sizeof(Span)*g->nSpans);
 		    Go_unmap(&go, g, to);
-		    fprintf(o, "\tif(yybm[%u+yych] & %u)", b->i, (uint) b->m);
+		    fprintf(o, "\tif(yybm[%u+yych] & %u)", b->i,
+			    (unsigned int) b->m);
 		    genGoTo(o, to);
 		    Go_genBase(&go, o, next);
 		    free(go.span);
@@ -430,9 +433,9 @@ void State_emit(State *s, FILE *o){
     Action_emit(s->action, o);
 }
 
-static uint merge(Span *x0, State *fg, State *bg){
+static unsigned int merge(Span *x0, State *fg, State *bg){
     Span *x = x0, *f = fg->go.span, *b = bg->go.span;
-    uint nf = fg->go.nSpans, nb = bg->go.nSpans;
+    unsigned int nf = fg->go.nSpans, nb = bg->go.nSpans;
     State *prev = NULL, *to;
     /* NB: we assume both spans are for same range */
     for(;;){
@@ -471,26 +474,26 @@ static uint merge(Span *x0, State *fg, State *bg){
     }
 }
 
-const uint cInfinity = ~0;
+const unsigned int cInfinity = ~0;
 
 typedef struct SCC {
     State	**top, **stk;
 } SCC;
 
-static void SCC_init(SCC*, uint);
-static SCC *SCC_new(uint);
+static void SCC_init(SCC*, unsigned int);
+static SCC *SCC_new(unsigned int);
 static void SCC_destroy(SCC*);
 static void SCC_delete(SCC*);
 static void SCC_traverse(SCC*, State*);
 
 static inline void
-SCC_init(SCC *s, uint size)
+SCC_init(SCC *s, unsigned int size)
 {
     s->top = s->stk = malloc(sizeof(State*)*size);
 }
 
 static inline SCC *
-SCC_new(uint size){
+SCC_new(unsigned int size){
     SCC *s = malloc(sizeof(SCC));
     s->top = s->stk = malloc(sizeof(State*)*size);
     return s;
@@ -508,7 +511,7 @@ SCC_delete(SCC *s){
 }
 
 static void SCC_traverse(SCC *s, State *x){
-    uint k, i;
+    unsigned int k, i;
 
     *s->top = x;
     k = ++s->top - s->stk;
@@ -529,12 +532,12 @@ static void SCC_traverse(SCC *s, State *x){
 	} while(*s->top != x);
 }
 
-static uint maxDist(State *s){
-    uint mm = 0, i;
+static unsigned int maxDist(State *s){
+    unsigned int mm = 0, i;
     for(i = 0; i < s->go.nSpans; ++i){
 	State *t = s->go.span[i].to;
 	if(t){
-	    uint m = 1;
+	    unsigned int m = 1;
 	    if(!t->link)
 		m += maxDist(t);
 	    if(m > mm)
@@ -548,7 +551,7 @@ static void calcDepth(State *head){
     State *t, *s;
     for(s = head; s; s = s->next){
 	if(s->link == s){
-	    uint i;
+	    unsigned int i;
 	    for(i = 0; i < s->go.nSpans; ++i){
 		t = s->go.span[i].to;
 		if(t && t->link == s)
@@ -596,12 +599,12 @@ void DFA_split(DFA *d, State *s){
 }
 
 void DFA_emit(DFA *d, FILE *o){
-    static uint label = 0;
+    static unsigned int label = 0;
     State *s;
-    uint i;
-    uint nRules = 0;
-    uint nSaves = 0;
-    uint *saves;
+    unsigned int i;
+    unsigned int nRules = 0;
+    unsigned int nSaves = 0;
+    unsigned int *saves;
     State **rules;
     State *accept = NULL;
     Span *span;
@@ -614,8 +617,8 @@ void DFA_emit(DFA *d, FILE *o){
 	if(s->rule && s->rule->d.RuleOp.accept >= nRules)
 		nRules = s->rule->d.RuleOp.accept + 1;
 
-    saves = malloc(sizeof(uint)*nRules);
-    memset(saves, ~0, (nRules)*sizeof(uint));
+    saves = malloc(sizeof(unsigned int)*nRules);
+    memset(saves, ~0, (nRules)*sizeof(unsigned int));
 
     /* mark backtracking points */
     for(s = d->head; s; s = s->next){
@@ -684,7 +687,7 @@ void DFA_emit(DFA *d, FILE *o){
 	    for(i = 0; i < s->go.nSpans; ++i){
 		State *to = s->go.span[i].to;
 		if(to && to->isBase){
-		    uint nSpans;
+		    unsigned int nSpans;
 		    to = to->go.span[0].to;
 		    nSpans = merge(span, s, to);
 		    if(nSpans < s->go.nSpans){

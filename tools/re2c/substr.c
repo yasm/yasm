@@ -62,6 +62,6 @@ Str_new_empty(void)
 void Str_delete(Str *s) {
     free(s->str);
     s->str = (char*)-1;
-    s->len = (uint)-1;
+    s->len = (unsigned int)-1;
     free(s);
 }

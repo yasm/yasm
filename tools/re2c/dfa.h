@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include "tools/re2c/re.h"
 
-extern void prtCh(FILE *, uchar);
-extern void printSpan(FILE *, uint, uint);
+extern void prtCh(FILE *, unsigned char);
+extern void printSpan(FILE *, unsigned int, unsigned int);
 
 struct DFA;
 struct State;
@@ -24,13 +24,13 @@ typedef struct Action {
     ActionType		type;
     union {
 	/* data for Enter */
-	uint		label;
+	unsigned int		label;
 	/* data for SaveMatch */
-	uint		selector;
+	unsigned int		selector;
 	/* data for Accept */
 	struct {
-	    uint		nRules;
-	    uint		*saves;
+	    unsigned int		nRules;
+	    unsigned int		*saves;
 	    struct State	**rules;
 	} Accept;
 	/* data for Rule */
@@ -41,26 +41,26 @@ typedef struct Action {
 void Action_emit(Action*, FILE *);
 
 typedef struct Span {
-    uint		ub;
+    unsigned int		ub;
     struct State	*to;
 } Span;
 
-uint Span_show(Span*, FILE *, uint);
+unsigned int Span_show(Span*, FILE *, unsigned int);
 
 typedef struct Go {
-    uint		nSpans;
+    unsigned int	nSpans;
     Span		*span;
 } Go;
 
 typedef struct State {
-    uint		label;
+    unsigned int	label;
     RegExp		*rule;	/* RuleOp */
     struct State	*next;
     struct State	*link;
-    uint		depth;		/* for finding SCCs */
-    uint		kCount;
+    unsigned int	depth;		/* for finding SCCs */
+    unsigned int	kCount;
     Ins			**kernel;
-    uint		isBase:1;
+    unsigned int	isBase:1;
     Go			go;
     Action		*action;
 } State;
@@ -79,17 +79,17 @@ void State_emit(State*, FILE *);
 void State_out(FILE *, const State*);
 
 typedef struct DFA {
-    uint		lbChar;
-    uint		ubChar;
-    uint		nStates;
+    unsigned int	lbChar;
+    unsigned int	ubChar;
+    unsigned int	nStates;
     State		*head, **tail;
     State		*toDo;
 } DFA;
 
-DFA *DFA_new(Ins*, uint, uint, uint, Char*);
+DFA *DFA_new(Ins*, unsigned int, unsigned int, unsigned int, Char*);
 void DFA_delete(DFA*);
 void DFA_addState(DFA*, State**, State*);
-State *DFA_findState(DFA*, Ins**, uint);
+State *DFA_findState(DFA*, Ins**, unsigned int);
 void DFA_split(DFA*, State*);
 
 void DFA_findSCCs(DFA*);
@@ -107,7 +107,7 @@ Action_new_Match(State *s)
 }
 
 static inline Action *
-Action_new_Enter(State *s, uint l)
+Action_new_Enter(State *s, unsigned int l)
 {
     Action *a = malloc(sizeof(Action));
     a->type = ENTERACT;
@@ -118,7 +118,7 @@ Action_new_Enter(State *s, uint l)
 }
 
 static inline Action *
-Action_new_Save(State *s, uint i)
+Action_new_Save(State *s, unsigned int i)
 {
     Action *a = malloc(sizeof(Action));
     a->type = SAVEMATCHACT;
@@ -138,7 +138,7 @@ Action_new_Move(State *s)
     return a;
 }
 
-Action *Action_new_Accept(State*, uint, uint*, State**);
+Action *Action_new_Accept(State*, unsigned int, unsigned int*, State**);
 
 static inline Action *
 Action_new_Rule(State *s, RegExp *r) /* RuleOp */

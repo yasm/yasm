@@ -12,7 +12,7 @@
 
 #define	BSIZE	8192
 
-#define	YYCTYPE		uchar
+#define	YYCTYPE		unsigned char
 #define	YYCURSOR	cursor
 #define	YYLIMIT		s->lim
 #define	YYMARKER	s->ptr
@@ -20,7 +20,7 @@
 
 #define	RETURN(i)	{s->cur = cursor; return i;}
 
-static uchar *fill(Scanner*, uchar*);
+static unsigned char *fill(Scanner*, unsigned char*);
 
 void
 Scanner_init(Scanner *s, FILE *i)
@@ -32,11 +32,11 @@ Scanner_init(Scanner *s, FILE *i)
     s->cline = 1;
 }
 
-static uchar *
-fill(Scanner *s, uchar *cursor)
+static unsigned char *
+fill(Scanner *s, unsigned char *cursor)
 {
     if(!s->eof){
-	uint cnt = s->tok - s->bot;
+	unsigned int cnt = s->tok - s->bot;
 	if(cnt){
 	    memcpy(s->bot, s->tok, s->lim - s->tok);
 	    s->tok = s->bot;
@@ -46,7 +46,7 @@ fill(Scanner *s, uchar *cursor)
 	    s->lim -= cnt;
 	}
 	if((s->top - s->lim) < BSIZE){
-	    uchar *buf = malloc(sizeof(uchar)*((s->lim - s->bot) + BSIZE));
+	    unsigned char *buf = malloc(((s->lim - s->bot) + BSIZE));
 	    memcpy(buf, s->tok, s->lim - s->tok);
 	    s->tok = buf;
 	    s->ptr = &buf[s->ptr - s->bot];
@@ -58,7 +58,7 @@ fill(Scanner *s, uchar *cursor)
 		free(s->bot);
 	    s->bot = buf;
 	}
-	if((cnt = fread(s->lim, sizeof(uchar), BSIZE, s->in)) != BSIZE){
+	if((cnt = fread(s->lim, 1, BSIZE, s->in)) != BSIZE){
 	    s->eof = &s->lim[cnt]; *s->eof++ = '\n';
 	}
 	s->lim += cnt;
@@ -72,7 +72,7 @@ fill(Scanner *s, uchar *cursor)
 int
 Scanner_echo(Scanner *s, FILE *out)
 {
-    uchar *cursor = s->cur;
+    unsigned char *cursor = s->cur;
     s->tok = cursor;
 echo:
 
@@ -134,8 +134,8 @@ yy9:	yych = *++YYCURSOR;
 int
 Scanner_scan(Scanner *s)
 {
-    uchar *cursor = s->cur;
-    uint depth;
+    unsigned char *cursor = s->cur;
+    unsigned int depth;
 
 scan:
     s->tchar = cursor - s->pos;

@@ -7,18 +7,18 @@
 
 struct SubStr {
     char		*str;
-    uint		len;
+    unsigned int	len;
 };
 
 typedef struct SubStr SubStr;
 
 int SubStr_eq(const SubStr *, const SubStr *);
 
-static inline void SubStr_init_u(SubStr*, uchar*, uint);
-static inline SubStr *SubStr_new_u(uchar*, uint);
+static inline void SubStr_init_u(SubStr*, unsigned char*, unsigned int);
+static inline SubStr *SubStr_new_u(unsigned char*, unsigned int);
 
-static inline void SubStr_init(SubStr*, char*, uint);
-static inline SubStr *SubStr_new(char*, uint);
+static inline void SubStr_init(SubStr*, char*, unsigned int);
+static inline SubStr *SubStr_new(char*, unsigned int);
 
 static inline void SubStr_copy(SubStr*, const SubStr*);
 static inline SubStr *SubStr_new_copy(const SubStr*);
@@ -39,14 +39,14 @@ void Str_destroy(Str *);
 void Str_delete(Str *);
 
 static inline void
-SubStr_init_u(SubStr *r, uchar *s, uint l)
+SubStr_init_u(SubStr *r, unsigned char *s, unsigned int l)
 {
     r->str = (char*)s;
     r->len = l;
 }
 
 static inline SubStr *
-SubStr_new_u(uchar *s, uint l)
+SubStr_new_u(unsigned char *s, unsigned int l)
 {
     SubStr *r = malloc(sizeof(SubStr));
     r->str = (char*)s;
@@ -55,14 +55,14 @@ SubStr_new_u(uchar *s, uint l)
 }
 
 static inline void
-SubStr_init(SubStr *r, char *s, uint l)
+SubStr_init(SubStr *r, char *s, unsigned int l)
 {
     r->str = s;
     r->len = l;
 }
 
 static inline SubStr *
-SubStr_new(char *s, uint l)
+SubStr_new(char *s, unsigned int l)
 {
     SubStr *r = malloc(sizeof(SubStr));
     r->str = s;

@@ -4,7 +4,7 @@
 #include "tools/re2c/basics.h"
 
 #define nChars 256
-typedef uchar Char;
+typedef unsigned char Char;
 
 #define CHAR 0
 #define GOTO 1
@@ -19,8 +19,8 @@ typedef union Ins {
 	void	*link;
     }			i;
     struct {
-	ushort	value;
-	ushort	bump;
+	unsigned short	value;
+	unsigned short	bump;
 	void	*link;
     }			c;
 } Ins;

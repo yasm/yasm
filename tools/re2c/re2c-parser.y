@@ -12,7 +12,7 @@ void yyerror(const char*);
 
 static char *mystrdup(const char *str);
 
-static uint accept;
+static unsigned int accept;
 static RegExp *spec;
 static Scanner *in;
 

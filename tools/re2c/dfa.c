@@ -9,8 +9,8 @@
 
 #define octCh(c) ('0' + c%8)
 
-void prtCh(FILE *o, uchar c){
-    uchar oc = talx[c];
+void prtCh(FILE *o, unsigned char c){
+    unsigned char oc = talx[c];
     switch(oc){
     case '\'': fputs("\\'", o); break;
     case '\n': fputs("\\n", o); break;
@@ -29,7 +29,7 @@ void prtCh(FILE *o, uchar c){
     }
 }
 
-void printSpan(FILE *o, uint lb, uint ub){
+void printSpan(FILE *o, unsigned int lb, unsigned int ub){
     if(lb > ub)
 	fputc('*', o);
     fputc('[', o);
@@ -43,8 +43,8 @@ void printSpan(FILE *o, uint lb, uint ub){
     fputc(']', o);
 }
 
-uint
-Span_show(Span *s, FILE *o, uint lb)
+unsigned int
+Span_show(Span *s, FILE *o, unsigned int lb)
 {
     if(s->to){
 	printSpan(o, lb, s->ub);
@@ -55,7 +55,7 @@ Span_show(Span *s, FILE *o, uint lb)
 
 void
 State_out(FILE *o, const State *s){
-    uint lb, i;
+    unsigned int lb, i;
     fprintf(o, "state %u", s->label);
     if(s->rule)
 	fprintf(o, " accepts %u", s->rule->d.RuleOp.accept);
@@ -119,11 +119,11 @@ typedef struct GoTo {
 } GoTo;
 
 DFA *
-DFA_new(Ins *ins, uint ni, uint lb, uint ub, Char *rep)
+DFA_new(Ins *ins, unsigned int ni, unsigned int lb, unsigned int ub, Char *rep)
 {
     DFA *d = malloc(sizeof(DFA));
     Ins **work = malloc(sizeof(Ins*)*(ni+1));
-    uint nc = ub - lb;
+    unsigned int nc = ub - lb;
     GoTo *goTo = malloc(sizeof(GoTo)*nc);
     Span *span = malloc(sizeof(Span)*nc);
 
@@ -139,8 +139,8 @@ DFA_new(Ins *ins, uint ni, uint lb, uint ub, Char *rep)
 	State *s = d->toDo;
 
 	Ins **cP, **iP, *i;
-	uint nGoTos = 0;
-	uint j;
+	unsigned int nGoTos = 0;
+	unsigned int j;
 
 	d->toDo = s->link;
 	s->rule = NULL;
@@ -208,7 +208,7 @@ void DFA_addState(DFA *d, State **a, State *s){
 	d->tail = &s->next;
 }
 
-State *DFA_findState(DFA *d, Ins **kernel, uint kCount){
+State *DFA_findState(DFA *d, Ins **kernel, unsigned int kCount){
     Ins **cP, **iP, *i;
     State *s;
 

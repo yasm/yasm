@@ -6,8 +6,8 @@
 
 typedef struct Scanner {
     FILE		*in;
-    uchar		*bot, *tok, *ptr, *cur, *pos, *lim, *top, *eof;
-    uint		tchar, tline, cline;
+    unsigned char	*bot, *tok, *ptr, *cur, *pos, *lim, *top, *eof;
+    unsigned int	tchar, tline, cline;
 } Scanner;
 
 void Scanner_init(Scanner*, FILE *);
@@ -17,7 +17,7 @@ int Scanner_echo(Scanner*, FILE *);
 int Scanner_scan(Scanner*);
 void Scanner_fatal(Scanner*, const char*);
 static inline SubStr Scanner_token(Scanner*);
-static inline uint Scanner_line(Scanner*);
+static inline unsigned int Scanner_line(Scanner*);
 
 static inline SubStr
 Scanner_token(Scanner *s)
@@ -27,7 +27,7 @@ Scanner_token(Scanner *s)
     return r;
 }
 
-static inline uint
+static inline unsigned int
 Scanner_line(Scanner *s)
 {
     return s->cline;

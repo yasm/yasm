@@ -55,28 +55,28 @@ void showIns(FILE *o, const Ins *i, const Ins *base){
 }
 */
 
-static uint
+static unsigned int
 AltOp_fixedLength(RegExp *r)
 {
-    uint l1 = RegExp_fixedLength(r->d.AltCatOp.exp1);
+    unsigned int l1 = RegExp_fixedLength(r->d.AltCatOp.exp1);
     /* XXX? Should be exp2? */
-    uint l2 = RegExp_fixedLength(r->d.AltCatOp.exp1);
+    unsigned int l2 = RegExp_fixedLength(r->d.AltCatOp.exp1);
     if(l1 != l2 || l1 == ~0u)
 	return ~0;
     return l1;
 }
 
-static uint
+static unsigned int
 CatOp_fixedLength(RegExp *r)
 {
-    uint l1, l2;
+    unsigned int l1, l2;
     if((l1 = RegExp_fixedLength(r->d.AltCatOp.exp1)) != ~0u )
         if((l2 = RegExp_fixedLength(r->d.AltCatOp.exp2)) != ~0u)
 	    return l1+l2;
     return ~0;
 }
 
-uint
+unsigned int
 RegExp_fixedLength(RegExp *r)
 {
     switch (r->type) {
@@ -98,7 +98,7 @@ void
 RegExp_calcSize(RegExp *re, Char *rep)
 {
     Range *r;
-    uint c;
+    unsigned int c;
 
     switch (re->type) {
 	case NULLOP:
@@ -138,9 +138,9 @@ static void
 MatchOp_compile(RegExp *re, Char *rep, Ins *i)
 {
     Ins *j;
-    uint bump;
+    unsigned int bump;
     Range *r;
-    uint c;
+    unsigned int c;
 
     i->i.tag = CHAR;
     i->i.link = &i[re->size];
@@ -209,7 +209,7 @@ static void
 MatchOp_split(RegExp *re, CharSet *s)
 {
     Range *r;
-    uint c;
+    unsigned int c;
 
     for(r = re->d.match; r; r = r->next){
 	for(c = r->lb; c < r->ub; ++c){
@@ -328,7 +328,7 @@ static Range *doUnion(Range *r1, Range *r2){
 		if(r1->ub > s->ub)
 		    s->ub = r1->ub;
 		if(!(r1 = r1->next)){
-		    uint ub = 0;
+		    unsigned int ub = 0;
 		    for(; r2 && r2->lb <= s->ub; r2 = r2->next)
 			ub = r2->ub;
 		    if(ub > s->ub)
@@ -342,7 +342,7 @@ static Range *doUnion(Range *r1, Range *r2){
 		if(r2->ub > s->ub)
 		    s->ub = r2->ub;
 		if(!(r2 = r2->next)){
-		    uint ub = 0;
+		    unsigned int ub = 0;
 		    for(; r1 && r1->lb <= s->ub; r1 = r1->next)
 			ub = r1->ub;
 		    if(ub > s->ub)
@@ -360,7 +360,7 @@ static Range *doUnion(Range *r1, Range *r2){
 static Range *doDiff(Range *r1, Range *r2){
     Range *r, *s, **rP = &r;
     for(; r1; r1 = r1->next){
-	uint lb = r1->lb;
+	unsigned int lb = r1->lb;
 	for(; r2 && r2->ub <= r1->lb; r2 = r2->next);
 	for(; r2 && r2->lb <  r1->ub; r2 = r2->next){
 	    if(lb < r2->lb){
@@ -423,9 +423,9 @@ RegExp *mkAlt(RegExp *e1, RegExp *e2){
     return doAlt(merge(m1, m2), doAlt(e1, e2));
 }
 
-static uchar unescape(SubStr *s){
-    uchar c;
-    uchar v;
+static unsigned char unescape(SubStr *s){
+    unsigned char c;
+    unsigned char v;
     s->len--;
     if((c = *s->str++) != '\\' || s->len == 0)
 	return xlat[c];
@@ -457,21 +457,21 @@ static uchar unescape(SubStr *s){
 }
 
 static Range *getRange(SubStr *s){
-    uchar lb = unescape(s), ub;
+    unsigned char lb = unescape(s), ub;
     if(s->len < 2 || *s->str != '-'){
 	ub = lb;
     } else {
 	s->len--; s->str++;
 	ub = unescape(s);
 	if(ub < lb){
-	    uchar tmp;
+	    unsigned char tmp;
 	    tmp = lb; lb = ub; ub = tmp;
 	}
     }
     return Range_new(lb, ub+1);
 }
 
-static RegExp *matchChar(uint c){
+static RegExp *matchChar(unsigned int c){
     return RegExp_new_MatchOp(Range_new(c, c+1));
 }
 
@@ -498,7 +498,7 @@ RegExp *ranToRE(SubStr s){
 }
 
 RegExp *
-RegExp_new_RuleOp(RegExp *e, RegExp *c, Token *t, uint a)
+RegExp_new_RuleOp(RegExp *e, RegExp *c, Token *t, unsigned int a)
 {
     RegExp *r = malloc(sizeof(RegExp));
     r->type = RULEOP;
@@ -539,7 +539,7 @@ static void optimize(Ins *i){
 
 void genCode(FILE *o, RegExp *re){
     CharSet cs;
-    uint j;
+    unsigned int j;
     Char rep[nChars];
     Ins *ins, *eoi;
     DFA *dfa;
@@ -555,7 +555,7 @@ void genCode(FILE *o, RegExp *re){
     cs.ptn[0].nxt = NULL;
     RegExp_split(re, &cs);
 /*
-    for(uint k = 0; k < nChars;){
+    for(unsigned int k = 0; k < nChars;){
 	for(j = k; ++k < nChars && cs.rep[k] == cs.rep[j];);
 	printSpan(cerr, j, k);
 	cerr << "\t" << cs.rep[j] - &cs.ptn[0] << endl;
