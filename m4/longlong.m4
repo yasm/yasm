@@ -16,6 +16,16 @@ AC_DEFUN([jm_AC_TYPE_LONG_LONG],
     AC_DEFINE(HAVE_LONG_LONG, 1,
       [Define if you have the long long type.])
   fi
+  AC_CACHE_CHECK(for __int64, ac_cv_c___int64,
+  [AC_TRY_LINK([__int64 ll; int i = 63;],
+    [__int64 llmax = (__int64) -1;
+     return ll << i | ll >> i | llmax / ll | llmax % ll;],
+	ac_cv_c___int64=yes,
+	ac_cv_c___int64=no)])
+  if test $ac_cv_c___int64 = yes; then
+    AC_DEFINE(HAVE___INT64, 1,
+      [Define if your compiler supports the \`__int64' type.])
+  fi
 ])
 
 # Define HAVE_UNSIGNED_LONG_LONG if 'unsigned long long' works.
