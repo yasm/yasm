@@ -1,4 +1,4 @@
-/* $Id: objfmt.c,v 1.2 2001/08/19 07:33:47 peter Exp $
+/* $Id: objfmt.c,v 1.3 2001/08/19 07:46:52 peter Exp $
  * Debugging output format (used to debug output format module interface)
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -26,6 +26,8 @@
 #include "util.h"
 
 #include "outfmt.h"
+
+RCSID("$Id: objfmt.c,v 1.3 2001/08/19 07:46:52 peter Exp $");
 
 /* Define outfmt structure -- see outfmt.h for details */
 outfmt dbg_outfmt = {

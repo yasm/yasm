@@ -1,4 +1,4 @@
-/* $Id: main.c,v 1.9 2001/08/19 07:33:47 peter Exp $
+/* $Id: main.c,v 1.10 2001/08/19 07:46:52 peter Exp $
  * Program entry point, command line parsing
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -37,6 +37,8 @@
 #include "outfmt.h"
 #include "preproc.h"
 #include "parser.h"
+
+RCSID("$Id: main.c,v 1.10 2001/08/19 07:46:52 peter Exp $");
 
 char *filename = (char *)NULL;
 unsigned int line_number = 1;

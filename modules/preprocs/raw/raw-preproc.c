@@ -1,4 +1,4 @@
-/* $Id: raw-preproc.c,v 1.4 2001/08/19 07:33:47 peter Exp $
+/* $Id: raw-preproc.c,v 1.5 2001/08/19 07:46:52 peter Exp $
  * Raw preprocessor (preforms NO preprocessing)
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -23,12 +23,16 @@
 # include "config.h"
 #endif
 
+#include "util.h"
+
 #include <stdio.h>
 
 #include "errwarn.h"
 
 #include "outfmt.h"
 #include "preproc.h"
+
+RCSID("$Id: raw-preproc.c,v 1.5 2001/08/19 07:46:52 peter Exp $");
 
 static int is_interactive;
 static FILE *in;

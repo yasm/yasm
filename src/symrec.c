@@ -1,4 +1,4 @@
-/* $Id: symrec.c,v 1.7 2001/08/19 07:33:47 peter Exp $
+/* $Id: symrec.c,v 1.8 2001/08/19 07:46:52 peter Exp $
  * Symbol table handling
  *
  *  Copyright (C) 2001  Michael Urman
@@ -33,6 +33,8 @@
 #include "globals.h"
 #include "errwarn.h"
 #include "symrec.h"
+
+RCSID("$Id: symrec.c,v 1.8 2001/08/19 07:46:52 peter Exp $");
 
 /* private functions */
 static symtab *symtab_get(char *);

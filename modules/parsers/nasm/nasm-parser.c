@@ -1,4 +1,4 @@
-/* $Id: nasm-parser.c,v 1.5 2001/08/19 07:33:47 peter Exp $
+/* $Id: nasm-parser.c,v 1.6 2001/08/19 07:46:52 peter Exp $
  * NASM-compatible parser
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -32,6 +32,8 @@
 #include "outfmt.h"
 #include "preproc.h"
 #include "parser.h"
+
+RCSID("$Id: nasm-parser.c,v 1.6 2001/08/19 07:46:52 peter Exp $");
 
 extern FILE *nasm_parser_in;
 extern int nasm_parser_debug;

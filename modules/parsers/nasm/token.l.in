@@ -1,4 +1,4 @@
-/* $Id: token.l.in,v 1.14 2001/08/19 07:33:47 peter Exp $
+/* $Id: token.l.in,v 1.15 2001/08/19 07:46:52 peter Exp $
  * Main lexer
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -38,6 +38,8 @@
 #include "bytecode.h"
 
 #include "bison.h"
+
+RCSID("$Id: token.l.in,v 1.15 2001/08/19 07:46:52 peter Exp $");
 
 #define yylval	nasm_parser_lval
 

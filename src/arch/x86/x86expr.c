@@ -1,4 +1,4 @@
-/* $Id: x86expr.c,v 1.6 2001/08/19 07:33:47 peter Exp $
+/* $Id: x86expr.c,v 1.7 2001/08/19 07:46:52 peter Exp $
  * Expression handling
  *
  *  Copyright (C) 2001  Michael Urman
@@ -36,6 +36,8 @@
 #include "errwarn.h"
 #include "expr.h"
 #include "symrec.h"
+
+RCSID("$Id: x86expr.c,v 1.7 2001/08/19 07:46:52 peter Exp $");
 
 /* allocate a new expression node, with children as defined.
  * If it's a unary operator, put the element on the right */

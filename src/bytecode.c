@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.18 2001/08/19 07:33:47 peter Exp $
+/* $Id: bytecode.c,v 1.19 2001/08/19 07:46:52 peter Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -37,6 +37,8 @@
 #include "expr.h"
 
 #include "bytecode.h"
+
+RCSID("$Id: bytecode.c,v 1.19 2001/08/19 07:46:52 peter Exp $");
 
 /* Static structures for when NULL is passed to conversion functions. */
 /*  for Convert*ToEA() */

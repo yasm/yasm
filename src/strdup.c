@@ -1,4 +1,4 @@
-/* $Id: strdup.c,v 1.3 2001/08/19 07:33:47 peter Exp $
+/* $Id: strdup.c,v 1.4 2001/08/19 07:46:52 peter Exp $
  * strdup() implementation for systems that don't have it.
  *
  * Copyright (c) 1988, 1993
@@ -53,6 +53,8 @@ void bcopy(const void *, void *, size_t);
 void memcpy(void *, const void *, size_t);
 # endif
 #endif
+
+RCSID("$Id: strdup.c,v 1.4 2001/08/19 07:46:52 peter Exp $");
 
 char *
 strdup(const char *str)
