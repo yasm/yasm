@@ -1,4 +1,4 @@
-/* $Id: bytecode.h,v 1.16 2001/08/19 03:52:58 peter Exp $
+/* $Id: bytecode.h,v 1.17 2001/08/19 05:41:01 peter Exp $
  * Bytecode utility functions header file
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -47,8 +47,10 @@ typedef struct immval_s {
     unsigned char f_sign;	/* 1 if final imm should be signed */
 } immval;
 
+typedef STAILQ_HEAD(datavalhead_s, dataval_s) datavalhead;
+
 typedef struct dataval_s {
-    struct dataval_s *next, *last;
+    STAILQ_ENTRY(dataval_s) link;
 
     enum { DV_EMPTY, DV_EXPR, DV_FLOAT, DV_STRING } type;
 
@@ -74,7 +76,7 @@ typedef struct targetval_s {
 } targetval;
 
 typedef struct bytecode_s {
-    struct bytecode_s *next;
+    STAILQ_ENTRY(bytecode_s) link;
 
     enum { BC_EMPTY, BC_INSN, BC_JMPREL, BC_DATA, BC_RESERVE } type;
 
@@ -109,7 +111,8 @@ typedef struct bytecode_s {
 	    unsigned char lockrep_pre;	/* 0 indicates no prefix */
 	} jmprel;
 	struct {
-	    dataval *data;	/* non-converted data (linked list) */
+	    /* non-converted data (linked list) */
+	    datavalhead datahead;
 
 	    /* final (converted) size of each element (in bytes) */
 	    unsigned char size;
@@ -173,7 +176,7 @@ void BuildBC_JmpRel(bytecode      *bc,
 		    unsigned char  near_op2,
 		    unsigned char  addrsize);
 
-void BuildBC_Data(bytecode *bc, dataval *data, unsigned long size);
+void BuildBC_Data(bytecode *bc, datavalhead *datahead, unsigned long size);
 
 void BuildBC_Reserve(bytecode      *bc,
 		     struct expr_s *numitems,
@@ -187,6 +190,6 @@ dataval *dataval_new_string(char *str_val);
 
 dataval *dataval_append(dataval *list, dataval *item);
 
-void dataval_print(dataval *start);
+void dataval_print(datavalhead *head);
 
 #endif

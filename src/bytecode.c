@@ -1,4 +1,4 @@
-/* $Id: bytecode.c,v 1.16 2001/08/19 03:52:58 peter Exp $
+/* $Id: bytecode.c,v 1.17 2001/08/19 05:41:01 peter Exp $
  * Bytecode utility functions
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,9 +19,14 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "util.h"
 #include "globals.h"
 #include "bytecode.h"
 #include "errwarn.h"
@@ -255,7 +260,6 @@ BuildBC_Insn(bytecode      *bc,
 	     unsigned char  im_len,
 	     unsigned char  im_sign)
 {
-    bc->next = (bytecode *)NULL;
     bc->type = BC_INSN;
 
     if (ea_ptr) {
@@ -306,7 +310,6 @@ BuildBC_JmpRel(bytecode      *bc,
 	       unsigned char  near_op2,
 	       unsigned char  addrsize)
 {
-    bc->next = (bytecode *)NULL;
     bc->type = BC_JMPREL;
 
     bc->data.jmprel.target = target->val;
@@ -341,9 +344,9 @@ BuildBC_JmpRel(bytecode      *bc,
 }
 
 void
-BuildBC_Data(bytecode *bc, dataval *data, unsigned long size)
+BuildBC_Data(bytecode *bc, datavalhead *datahead, unsigned long size)
 {
-    dataval *cur = data;
+    dataval *cur;
 
     /* First check to see if all the data elements are valid for the size
      * being set.
@@ -359,7 +362,7 @@ BuildBC_Data(bytecode *bc, dataval *data, unsigned long size)
      * constants (equ's) should always be legal, but labels should raise
      * warnings when used in db or dq context at the minimum).
      */
-    while (cur) {
+    STAILQ_FOREACH(cur, datahead, link) {
 	switch (cur->type) {
 	    case DV_EMPTY:
 	    case DV_STRING:
@@ -376,13 +379,11 @@ BuildBC_Data(bytecode *bc, dataval *data, unsigned long size)
 		    Error(ERR_DECLDATA_EXPR, (char *)NULL, "DT");
 		break;
 	}
-	cur = cur->next;
     }
 
-    bc->next = (bytecode *)NULL;
     bc->type = BC_DATA;
 
-    bc->data.data.data = data;
+    bc->data.data.datahead = *datahead;
     bc->data.data.size = size;
 
     BuildBC_Common(bc);
@@ -391,7 +392,6 @@ BuildBC_Data(bytecode *bc, dataval *data, unsigned long size)
 void
 BuildBC_Reserve(bytecode *bc, expr *numitems, unsigned long itemsize)
 {
-    bc->next = (bytecode *)NULL;
     bc->type = BC_RESERVE;
 
     bc->data.reserve.numitems = numitems;
@@ -502,7 +502,7 @@ DebugPrintBC(bytecode *bc)
 	    printf("Final Element Size=%u\n",
 		   (unsigned int)bc->data.data.size);
 	    printf("Elements:\n");
-	    dataval_print(bc->data.data.data);
+	    dataval_print(&bc->data.data.datahead);
 	    break;
 	case BC_RESERVE:
 	    printf("_Reserve_\n");
@@ -528,8 +528,6 @@ dataval_new_expr(expr *exp)
     if (!retval)
 	Fatal(FATAL_NOMEM);
 
-    retval->next = (dataval *)NULL;
-    retval->last = retval;
     retval->type = DV_EXPR;
     retval->data.exp = exp;
 
@@ -544,8 +542,6 @@ dataval_new_float(double float_val)
     if (!retval)
 	Fatal(FATAL_NOMEM);
 
-    retval->next = (dataval *)NULL;
-    retval->last = retval;
     retval->type = DV_FLOAT;
     retval->data.float_val = float_val;
 
@@ -560,39 +556,18 @@ dataval_new_string(char *str_val)
     if (!retval)
 	Fatal(FATAL_NOMEM);
 
-    retval->next = (dataval *)NULL;
-    retval->last = retval;
     retval->type = DV_STRING;
     retval->data.str_val = str_val;
 
     return retval;
 }
 
-dataval *
-dataval_append(dataval *list, dataval *item)
-{
-    if (item)
-	item->next = (dataval *)NULL;
-
-    if (!list) {
-	item->last = item;
-	return item;
-    } else {
-	if (item) {
-	    list->last->next = item;
-	    list->last = item;
-	    item->last = (dataval *)NULL;
-	}
-	return list;
-    }
-}
-
 void
-dataval_print(dataval *start)
+dataval_print(datavalhead *head)
 {
-    dataval *cur = start;
+    dataval *cur;
 
-    while (cur) {
+    STAILQ_FOREACH(cur, head, link) {
 	switch (cur->type) {
 	    case DV_EMPTY:
 		printf(" Empty\n");
@@ -609,7 +584,5 @@ dataval_print(dataval *start)
 		printf(" String=%s\n", cur->data.str_val);
 		break;
 	}
-
-	cur = cur->next;
     }
 }

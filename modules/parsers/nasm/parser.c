@@ -1,4 +1,4 @@
-/* $Id: parser.c,v 1.3 2001/08/19 02:57:02 peter Exp $
+/* $Id: parser.c,v 1.4 2001/08/19 05:41:01 peter Exp $
  * NASM-compatible parser
  *
  *  Copyright (C) 2001  Peter Johnson
@@ -19,7 +19,12 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <stdio.h>
+#include "util.h"
 #include "bytecode.h"
 #include "section.h"
 #include "outfmt.h"

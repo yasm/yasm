@@ -1,4 +1,4 @@
-/* $Id: nasm-bison.y,v 1.23 2001/08/19 02:15:18 peter Exp $
+/* $Id: nasm-bison.y,v 1.24 2001/08/19 05:41:01 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -20,8 +20,13 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 %{
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <math.h>
 #include <stdlib.h>
+#include "util.h"
 #include "symrec.h"
 #include "globals.h"
 #include "bytecode.h"
@@ -52,6 +57,7 @@ void nasm_parser_error(char *);
     expr *exp;
     immval im_val;
     targetval tgt_val;
+    datavalhead datahead;
     dataval *data;
     bytecode bc;
 }
@@ -93,7 +99,8 @@ void nasm_parser_error(char *);
 %type <syminfo> explabel
 %type <sym> label_id
 %type <tgt_val> target
-%type <data> dataval datavals
+%type <data> dataval
+%type <datahead> datavals
 
 %left '|'
 %left '^'
@@ -121,12 +128,18 @@ line: '\n'	{ $$.type = BC_EMPTY; }
 ;
 
 exp: instr
-    | DECLARE_DATA datavals	{ BuildBC_Data(&$$, $2, $1); }
+    | DECLARE_DATA datavals	{ BuildBC_Data(&$$, &$2, $1); }
     | RESERVE_SPACE expr	{ BuildBC_Reserve(&$$, $2, $1); }
 ;
 
-datavals: dataval
-    | datavals ',' dataval	{ $$ = dataval_append($1, $3); }
+datavals: dataval		{
+	STAILQ_INIT(&$$);
+	STAILQ_INSERT_TAIL(&$$, $1, link);
+    }
+    | datavals ',' dataval	{
+	STAILQ_INSERT_TAIL(&$1, $3, link);
+	$$ = $1;
+    }
 ;
 
 dataval: expr_no_string		{ $$ = dataval_new_expr($1); }
