@@ -22,7 +22,6 @@ BUILT_SOURCES += x86id.c
 CLEANFILES += x86id.c
 
 EXTRA_DIST += modules/arch/x86/tests/Makefile.inc
-EXTRA_DIST += modules/arch/x86/README
 EXTRA_DIST += modules/arch/x86/x86id.re
 
 include modules/arch/x86/tests/Makefile.inc

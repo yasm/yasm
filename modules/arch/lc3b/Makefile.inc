@@ -21,7 +21,6 @@ BUILT_SOURCES += lc3bid.c
 CLEANFILES += lc3bid.c
 
 EXTRA_DIST += modules/arch/lc3b/tests/Makefile.inc
-EXTRA_DIST += modules/arch/lc3b/README
 EXTRA_DIST += modules/arch/lc3b/lc3bid.re
 
 include modules/arch/lc3b/tests/Makefile.inc

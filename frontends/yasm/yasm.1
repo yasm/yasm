@@ -66,7 +66,7 @@ Prints a summary of invocation options\&. All other options are ignored, and no 
 
 .TP
 \fB\-a \fIarch\fR\fR or \fB\-\-arch=\fIarch\fR\fR
-Selects the target architecture\&. The default architecture is ``x86'', which supports both the IA\-32 and derivatives and AMD64 instruction sets\&. To print a list of available architectures to standard output, use ``help'' as \fIarch\fR\&.
+Selects the target architecture\&. The default architecture is ``x86'', which supports both the IA\-32 and derivatives and AMD64 instruction sets\&. To print a list of available architectures to standard output, use ``help'' as \fIarch\fR\&. See \fByasm_arch\fR(7) for more details\&.
 
 .TP
 \fB\-p \fIparser\fR\fR or \fB\-\-parser=\fIparser\fR\fR
@@ -90,7 +90,7 @@ Specifies the name of the output file, overriding any default name selected by \
 
 .TP
 \fB\-m \fImachine\fR\fR or \fB\-\-machine=\fImachine\fR\fR
-Selects the target machine architecture\&. Essentially a subtype of the selected architecture, the machine type selects between major subsets of an architecture\&. For example, for the ``x86'' architecture, the two available machines are ``x86'', which is used for the IA\-32 and derivative 32\-bit instruction set, and ``amd64'', which is used for the 64\-bit instruction set\&. This differentiation is required to generate the proper object file for relocatable object formats such as COFF and ELF\&. To print a list of available machines for a given architecture to standard output, use ``help'' as \fImachine\fR and the given architecture using \fB\-a \fIarch\fR\fR\&.
+Selects the target machine architecture\&. Essentially a subtype of the selected architecture, the machine type selects between major subsets of an architecture\&. For example, for the ``x86'' architecture, the two available machines are ``x86'', which is used for the IA\-32 and derivative 32\-bit instruction set, and ``amd64'', which is used for the 64\-bit instruction set\&. This differentiation is required to generate the proper object file for relocatable object formats such as COFF and ELF\&. To print a list of available machines for a given architecture to standard output, use ``help'' as \fImachine\fR and the given architecture using \fB\-a \fIarch\fR\fR\&. See \fByasm_arch\fR(7) for more details\&.
 
 .SH "WARNING OPTIONS"
 
@@ -183,12 +183,12 @@ Relocatable object formats are limited to static linking applications, as YASM c
 .SH "SEE ALSO"
 
 .PP
-\fBas\fR(1), \fBld\fR(1), \fBnasm\fR(1)
+\fBas\fR(1), \fBld\fR(1), \fBnasm\fR(1), \fByasm_arch\fR(7)
 
 .SH "BUGS"
 
 .PP
-When using the ``x86'' architecture, it is over\-easy to generate AMD64 code (using the \fBBITS 64\fR directive) and generate a 32\-bit object file (by failing to specify \fB\-m amd64\fR on the command line)\&. Similarly, specifying \fB\-m amd64\fR does not default the BITS setting to 64\&.
+When using the ``x86'' architecture, it is overly easy to generate AMD64 code (using the \fBBITS 64\fR directive) and generate a 32\-bit object file (by failing to specify\fB\-m amd64\fR on the command line)\&. Similarly, specifying\fB\-m amd64\fR does not default the BITS setting to 64\&.
 
 .SH AUTHOR
 Peter Johnson <peter@tortall\&.net>.

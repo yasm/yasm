@@ -1,0 +1,110 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd">
+
+<!-- $Id$ -->     
+
+<refentry id="yasm_arch">
+
+<refentryinfo>
+    <title>YASM Architectures</title>
+    <date>September 2004</date>
+    <productname>YASM</productname>
+    <author>
+        <firstname>Peter</firstname>
+        <surname>Johnson</surname>
+        <affiliation>
+            <address><email>peter@tortall.net</email></address>
+        </affiliation>
+    </author>
+
+    <copyright>
+        <year>2004</year>
+        <holder>Peter Johnson</holder>
+    </copyright>
+</refentryinfo>
+
+<refmeta>
+    <refentrytitle>yasm_arch</refentrytitle>
+    <manvolnum>7</manvolnum>
+</refmeta>
+
+<refnamediv>
+    <refname>yasm_arch</refname>
+    <refpurpose>YASM Architectures</refpurpose>
+</refnamediv>
+
+<refsynopsisdiv>
+    <cmdsynopsis>
+        <command>yasm</command>
+        <arg choice="plain">
+            <option>-a <replaceable>arch</replaceable></option>
+        </arg>
+        <arg choice="opt">
+            <option>-m <replaceable>machine</replaceable></option>
+        </arg>
+        <arg choice="plain">
+            <option><replaceable>...</replaceable></option>
+        </arg>
+    </cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1><title>Description</title>
+
+    <para>The standard YASM distribution includes a number of loadable modules
+	for different target architectures.  Additional target architectures
+	may be installed as third-party modules.  Each target architecture can
+	support one or more machine architectures.</para>
+
+    <para>The architecture and machine are selected on the <citerefentry>
+	    <refentrytitle>yasm</refentrytitle> <manvolnum>1</manvolnum>
+	    </citerefentry> command line by use of the <option>-a
+	    <replaceable>arch</replaceable></option> and <option>-m
+	    <replaceable>machine</replaceable></option> command line options,
+	respectively.</para>
+
+</refsect1>
+
+<refsect1><title>x86 Architecture</title>
+
+    <para>The <quote>x86</quote> architecture supports the IA-32 instruction
+	set and derivatives and the AMD64 instruction set.  It consists of two
+	machines: <quote>x86</quote> (for the IA-32 and derivatives) and
+	<quote>amd64</quote> (for the AMD64 and derivatives).  The default
+	machine for the <quote>x86</quote> architecture is the
+	<quote>x86</quote> machine.</para>
+
+</refsect1>
+
+<refsect1><title>lc3b Architecture</title>
+
+    <para>The <quote>lc3b</quote> architecture supports the LC-3b ISA as used
+	in the ECE 312 (now ECE 411) course at the University of Illinois,
+	Urbana-Champaign, as well as other university courses.  See <ulink
+	    url="http://courses.ece.uiuc.edu/ece411/"/> for more details and
+	example code.  The <quote>lc3b</quote> architecture consists of only
+	one machine: <quote>lc3b</quote>.</para>
+
+</refsect1>
+
+<refsect1><title>See Also</title>
+
+    <para><citerefentry>
+            <refentrytitle>yasm</refentrytitle>
+            <manvolnum>1</manvolnum>
+        </citerefentry></para>
+
+</refsect1>
+
+<refsect1><title>Bugs</title>
+
+    <para>When using the <quote>x86</quote> architecture, it is overly easy to
+	generate AMD64 code (using the <userinput>BITS 64</userinput>
+	directive) and generate a 32-bit object file (by failing to specify
+	<option>-m amd64</option> on the command line).  Similarly, specifying
+	<option>-m amd64</option> does not default the BITS setting to
+	64.</para>
+
+</refsect1>
+
+</refentry>
