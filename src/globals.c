@@ -49,14 +49,14 @@ typedef struct line_index_mapping {
     /* "original" source base line number */
     unsigned long line;
     /* "original" source line number increment (for following lines) */
-    unsigned int line_inc;
+    unsigned long line_inc;
 } line_index_mapping;
 /* Shared storage for filenames */
 static /*@only@*/ /*@null@*/ HAMT *filename_table = NULL;
 
 /* Virtual line number.  Uniquely specifies every line read by the parser. */
 unsigned long line_index = 1;
-static line_index_mapping_head *line_index_map = NULL;
+static /*@only@*/ /*@null@*/ line_index_mapping_head *line_index_map = NULL;
 
 /* Global assembler options. */
 unsigned int asm_options = 0;
@@ -105,13 +105,17 @@ void
 line_shutdown(void)
 {
     line_index_mapping *mapping, *mapping2;
-    mapping = STAILQ_FIRST(line_index_map);
-    while (mapping) {
-	mapping2 = STAILQ_NEXT(mapping, link);
-	xfree(mapping);
-	mapping = mapping2;
+
+    if (line_index_map) {
+	mapping = STAILQ_FIRST(line_index_map);
+	while (mapping) {
+	    mapping2 = STAILQ_NEXT(mapping, link);
+	    xfree(mapping);
+	    mapping = mapping2;
+	}
+	xfree(line_index_map);
+	line_index_map = NULL;
     }
-    xfree(line_index_map);
 
     if (filename_table) {
 	HAMT_delete(filename_table, filename_delete_one);
@@ -120,21 +124,24 @@ line_shutdown(void)
 }
 
 void
-line_lookup(unsigned long index, const char **filename, unsigned long *line)
+line_lookup(unsigned long lindex, const char **filename, unsigned long *line)
 {
     line_index_mapping *mapping, *mapping2;
 
-    assert(index <= line_index);
+    assert(lindex <= line_index);
 
     /* Linearly search through map to find highest line_index <= index */
+    assert(line_index_map != NULL);
     mapping = STAILQ_FIRST(line_index_map);
     while (mapping) {
 	mapping2 = STAILQ_NEXT(mapping, link);
-	if (!mapping2 || mapping2->index > index)
+	if (!mapping2 || mapping2->index > lindex)
 	    break;
 	mapping = mapping2;
     }
 
+    assert(mapping != NULL);
+
     *filename = mapping->filename;
-    *line = mapping->line+mapping->line_inc*(index-mapping->index);
+    *line = mapping->line+mapping->line_inc*(lindex-mapping->index);
 }

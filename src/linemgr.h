@@ -40,7 +40,7 @@ extern int indent_level;
 void line_set(const char *filename, unsigned long line,
 	      unsigned long line_inc);
 void line_shutdown(void);
-void line_lookup(unsigned long index, const char **filename,
-		 unsigned long *line);
+void line_lookup(unsigned long lindex, /*@out@*/ const char **filename,
+		 /*@out@*/ unsigned long *line);
 
 #endif

@@ -239,14 +239,14 @@ WarningNow(const char *fmt, ...)
 }
 
 void
-ErrorAt(unsigned long index, const char *fmt, ...)
+ErrorAt(unsigned long lindex, const char *fmt, ...)
 {
     /* XXX: Should insert into list instead of printing immediately */
     va_list ap;
     const char *filename;
     unsigned long line;
 
-    line_lookup(index, &filename, &line);
+    line_lookup(lindex, &filename, &line);
     fprintf(stderr, "%s:%lu: ", filename?filename:"(NULL)", line);
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
@@ -255,14 +255,14 @@ ErrorAt(unsigned long index, const char *fmt, ...)
 }
 
 void
-WarningAt(unsigned long index, const char *fmt, ...)
+WarningAt(unsigned long lindex, const char *fmt, ...)
 {
     /* XXX: Should insert into list instead of printing immediately */
     va_list ap;
     const char *filename;
     unsigned long line;
 
-    line_lookup(index, &filename, &line);
+    line_lookup(lindex, &filename, &line);
     fprintf(stderr, "%s:%lu: %s ", filename?filename:"NULL", line,
 	    _("warning:"));
     va_start(ap, fmt);
