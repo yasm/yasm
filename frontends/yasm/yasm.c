@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$IdPath: yasm/frontends/yasm/yasm.c,v 1.97 2003/05/05 03:42:09 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include <libyasm/compat-queue.h>
 #include <libyasm/bitvect.h>
@@ -66,6 +66,7 @@ static void cleanup(/*@null@*/ yasm_sectionhead *sections);
 
 /* Forward declarations: cmd line parser handlers */
 static int opt_special_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_arch_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_parser_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_preproc_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_objfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
@@ -107,6 +108,8 @@ static opt_option options[] =
       N_("show version text"), NULL },
     { 'h', "help", 0, opt_special_handler, SPECIAL_SHOW_HELP,
       N_("show help text"), NULL },
+    { 'a', "arch", 1, opt_arch_handler, 0,
+      N_("select architecture (list with -a help)"), N_("arch") },
     { 'p', "parser", 1, opt_parser_handler, 0,
       N_("select parser (list with -p help)"), N_("parser") },
     { 'r', "preproc", 1, opt_preproc_handler, 0,
@@ -334,12 +337,13 @@ main(int argc, char *argv[])
 	return EXIT_SUCCESS;
     }
 
-    /* Set x86 as the architecture (TODO: user choice) */
-    cur_arch = load_arch("x86");
-
+    /* Default to x86 as the architecture */
     if (!cur_arch) {
-	print_error(_("Could not load default architecture"));
-	return EXIT_FAILURE;
+	cur_arch = load_arch("x86");
+	if (!cur_arch) {
+	    print_error(_("Could not load default architecture"));
+	    return EXIT_FAILURE;
+	}
     }
 
     cur_arch->initialize();
@@ -410,12 +414,14 @@ main(int argc, char *argv[])
 	cur_objfmt->initialize(in_filename, obj_filename, cur_dbgfmt,
 			       cur_arch);
 
-    /* Set NASM as the parser */
-    cur_parser = load_parser("nasm");
+    /* Default to NASM as the parser */
     if (!cur_parser) {
-	print_error(_("unrecognized parser `%s'"), "nasm");
-	cleanup(NULL);
-	return EXIT_FAILURE;
+	cur_parser = load_parser("nasm");
+	if (!cur_parser) {
+	    print_error(_("Could not load default parser"));
+	    cleanup(NULL);
+	    return EXIT_FAILURE;
+	}
     }
 
     /* If not already specified, default to the parser's default preproc. */
@@ -601,6 +607,24 @@ opt_special_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param, int extra)
 {
     if (special_options == 0)
 	special_options = extra;
+    return 0;
+}
+
+static int
+opt_arch_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
+{
+    assert(param != NULL);
+    cur_arch = load_arch(param);
+    if (!cur_arch) {
+	if (!strcmp("help", param)) {
+	    printf(_("Available yasm architectures:\n"));
+	    list_archs(print_list_keyword_desc);
+	    special_options = SPECIAL_LISTED;
+	    return 0;
+	}
+	print_error(_("unrecognized architecture `%s'"), param);
+	return 1;
+    }
     return 0;
 }
 

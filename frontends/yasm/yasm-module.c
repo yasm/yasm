@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$IdPath: yasm/frontends/yasm/yasm-module.c,v 1.13 2003/05/03 06:26:15 peter Exp $");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include <libyasm/compat-queue.h>
 #include <libyasm.h>
@@ -43,6 +43,16 @@ typedef struct module {
 } module;
 
 SLIST_HEAD(modulehead, module) modules = SLIST_HEAD_INITIALIZER(modules);
+
+/* NULL-terminated list of all possibly available architecture keywords.
+ * Could improve this a little by generating automatically at build-time.
+ */
+/*@-nullassign@*/
+const char *archs[] = {
+    "x86",
+    NULL
+};
+/*@=nullassign@*/
 
 /* NULL-terminated list of all possibly available object format keywords.
  * Could improve this a little by generating automatically at build-time.
@@ -215,6 +225,20 @@ list_dbgfmts(void (*printfunc) (const char *name, const char *keyword))
     /* Go through available list, and try to load each one */
     for (i = 0; dbgfmts[i]; i++) {
 	p = load_dbgfmt(dbgfmts[i]);
+	if (p)
+	    printfunc(p->name, p->keyword);
+    }
+}
+
+void
+list_archs(void (*printfunc) (const char *name, const char *keyword))
+{
+    int i;
+    yasm_arch *p;
+
+    /* Go through available list, and try to load each one */
+    for (i = 0; archs[i]; i++) {
+	p = load_arch(archs[i]);
 	if (p)
 	    printfunc(p->name, p->keyword);
     }
