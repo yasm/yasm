@@ -24,9 +24,9 @@
 #ifndef YASM_FLOATNUM_H
 #define YASM_FLOATNUM_H
 
-floatnum *floatnum_new(const char *str);
-floatnum *floatnum_copy(const floatnum *flt);
-void floatnum_delete(floatnum *flt);
+/*@only@*/ floatnum *floatnum_new(const char *str);
+/*@only@*/ floatnum *floatnum_copy(const floatnum *flt);
+void floatnum_delete(/*@only@*/ floatnum *flt);
 
 /* calculation function: acc = acc op operand */
 void floatnum_calc(floatnum *acc, ExprOp op, floatnum *operand);
@@ -38,12 +38,13 @@ void floatnum_calc(floatnum *acc, ExprOp op, floatnum *operand);
 /* Essentially a convert to single-precision and return as 32-bit value.
  * The 32-bit value is a "standard" C value (eg, of unknown endian).
  */
-int floatnum_get_int(const floatnum *flt, unsigned long *ret_val);
+int floatnum_get_int(const floatnum *flt, /*@out@*/ unsigned long *ret_val);
 
 /* ptr will point to the Intel-format little-endian byte string after a
  * successful call (eg, [0] should be the first byte output to the file).
  */
-int floatnum_get_sized(const floatnum *flt, unsigned char *ptr, size_t size);
+int floatnum_get_sized(const floatnum *flt, /*@out@*/ unsigned char *ptr,
+		       size_t size);
 
 /* Basic check to see if size is even valid for flt conversion (doesn't
  * actually check for underflow/overflow but rather checks for size=4,8,10).

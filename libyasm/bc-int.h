@@ -23,7 +23,7 @@
 #define YASM_BC_INT_H
 
 struct effaddr {
-    expr *disp;			/* address displacement */
+    /*@only@*/ /*@null@*/ expr *disp;	/* address displacement */
     unsigned char len;		/* length of disp (in bytes), 0 if unknown,
 				 * 0xff if unknown and required to be >0.
 				 */
@@ -32,11 +32,13 @@ struct effaddr {
 
     /* architecture-dependent data may be appended */
 };
+void *ea_get_data(effaddr *);
 #define ea_get_data(x)		(void *)(((char *)x)+sizeof(effaddr))
+const void *ea_get_const_data(const effaddr *);
 #define ea_get_const_data(x)	(const void *)(((const char *)x)+sizeof(effaddr))
 
 struct immval {
-    expr *val;
+    /*@only@*/ /*@null@*/ expr *val;
 
     unsigned char len;		/* length of val (in bytes), 0 if unknown */
     unsigned char isneg;	/* the value has been explicitly negated */
@@ -46,18 +48,18 @@ struct immval {
 };
 
 struct bytecode {
-    STAILQ_ENTRY(bytecode) link;
+    /*@reldef@*/ STAILQ_ENTRY(bytecode) link;
 
     bytecode_type type;
 
-    expr *multiple;		/* number of times bytecode is repeated,
-				   NULL=1 */
+    /* number of times bytecode is repeated, NULL=1. */
+    /*@only@*/ /*@null@*/ expr *multiple;
 
     unsigned long len;		/* total length of entire bytecode (including
 				   multiple copies), 0 if unknown */
 
     /* where it came from */
-    const char *filename;
+    /*@dependent@*/ /*@null@*/ const char *filename;
     unsigned int lineno;
 
     /* other assembler state info */
@@ -65,7 +67,9 @@ struct bytecode {
 
     /* architecture-dependent data may be appended */
 };
+void *bc_get_data(bytecode *);
 #define bc_get_data(x)		(void *)(((char *)x)+sizeof(bytecode))
+const void *bc_get_const_data(const bytecode *);
 #define bc_get_const_data(x)	(const void *)(((const char *)x)+sizeof(bytecode))
 
 #endif

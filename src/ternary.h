@@ -22,14 +22,14 @@
 #define YASM_TERNARY_H
 /* Ternary search trees */
 
-typedef struct ternary_node_def *ternary_tree;
+typedef /*@null@*/ struct ternary_node_def *ternary_tree;
 
 typedef struct ternary_node_def
 {
   char splitchar;
-  ternary_tree lokid;
-  ternary_tree eqkid;
-  ternary_tree hikid;
+  /*@null@*/ ternary_tree lokid;
+  /*@owned@*/ /*@null@*/ ternary_tree eqkid;
+  /*@null@*/ ternary_tree hikid;
 }
 ternary_node;
 
@@ -38,17 +38,22 @@ ternary_node;
    already there, and replace is 0.
    Otherwise, replaces if it it exists, inserts if it doesn't, and
    returns the data you passed in. */
-void *ternary_insert (ternary_tree *p, const char *s, void *data, int replace);
+/*@dependent@*/ void *ternary_insert (ternary_tree *p, const char *s,
+				      void *data, int replace);
 
 /* Delete the ternary search tree rooted at P. 
    Does NOT delete the data you associated with the strings. */
-void ternary_cleanup (ternary_tree p, void (*data_cleanup)(void *d));
+void ternary_cleanup (/*@only@*/ ternary_tree p,
+		      void (*data_cleanup)(/*@dependent@*/ /*@null@*/
+					   void *d));
 
 /* Search the ternary tree for string S, returning the data associated
    with it if found. */
-void *ternary_search (ternary_tree p, const char *s);
+/*@dependent@*/ /*@null@*/ void *ternary_search (ternary_tree p,
+						 const char *s);
 
 /* Traverse over tree, calling callback function for each leaf. 
    Stops early if func returns 0. */
-int ternary_traverse (ternary_tree p, int (*func) (void *d));
+int ternary_traverse (ternary_tree p, int (*func) (/*@dependent@*/ /*@null@*/
+						   void *d));
 #endif

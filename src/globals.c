@@ -20,30 +20,32 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "ternary.h"
 
 #include "globals.h"
 
 
-const char *in_filename = (const char *)NULL;
+/*@null@*/ /*@dependent@*/ const char *in_filename = (const char *)NULL;
 unsigned int line_number = 1;
 unsigned int asm_options = 0;
 
-static ternary_tree filename_table = (ternary_tree)NULL;
+static /*@only@*/ /*@null@*/ ternary_tree filename_table = (ternary_tree)NULL;
 
 void
 switch_filename(const char *filename)
 {
     char *copy = xstrdup(filename);
     in_filename = ternary_insert(&filename_table, filename, copy, 0);
+    /*@-branchstate@*/
     if (in_filename != copy)
 	xfree(copy);
+    /*@=branchstate@*/
 }
 
 static void
-filename_delete_one(void *d)
+filename_delete_one(/*@only@*/ void *d)
 {
     xfree(d);
 }

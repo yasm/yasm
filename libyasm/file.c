@@ -20,7 +20,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "file.h"
 
@@ -38,13 +38,13 @@ fwrite_short(unsigned short val, FILE *f)
 size_t
 fwrite_long(unsigned long val, FILE *f)
 {
-    if (fputc(val & 0xFF, f) == EOF)
+    if (fputc((int)(val & 0xFF), f) == EOF)
 	return 0;
-    if (fputc((val >> 8) & 0xFF, f) == EOF)
+    if (fputc((int)((val >> 8) & 0xFF), f) == EOF)
 	return 0;
-    if (fputc((val >> 16) & 0xFF, f) == EOF)
+    if (fputc((int)((val >> 16) & 0xFF), f) == EOF)
 	return 0;
-    if (fputc((val >> 24) & 0xFF, f) == EOF)
+    if (fputc((int)((val >> 24) & 0xFF), f) == EOF)
 	return 0;
     return 1;
 }

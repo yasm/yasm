@@ -68,4 +68,5 @@ CFLAGS = @ANSI_CFLAGS@
 EXTRA_DIST = \
 	strsep.c		\
 	mergesort.c		\
-	compat-queue.h
+	compat-queue.h		\
+	lclint.sh

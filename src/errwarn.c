@@ -20,12 +20,13 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include <ctype.h>
 
 #ifdef STDC_HEADERS
 # include <stdarg.h>
+# include <assert.h>
 #endif
 
 #ifdef gettext_noop
@@ -50,20 +51,22 @@ static unsigned int warning_count = 0;
  * When adding a string here, keep errwarn.h in sync! */
 
 /* Fatal error messages.  Match up with fatal_num enum in errwarn.h. */
+/*@-observertrans@*/
 static const char *fatal_msgs[] = {
     N_("unknown"),
     N_("out of memory")
 };
+/*@=observertrans@*/
 
-typedef STAILQ_HEAD(errwarnhead_s, errwarn_s) errwarnhead;
-errwarnhead *errwarns = (errwarnhead *)NULL;
+typedef /*@reldef@*/ STAILQ_HEAD(errwarnhead_s, errwarn_s) errwarnhead;
+static /*@only@*/ /*@null@*/ errwarnhead *errwarns = (errwarnhead *)NULL;
 
 typedef struct errwarn_s {
-    STAILQ_ENTRY(errwarn_s) link;
+    /*@reldef@*/ STAILQ_ENTRY(errwarn_s) link;
 
     enum { WE_ERROR, WE_WARNING } type;
 
-    const char *filename;
+    /*@dependent@*/ const char *filename;
     unsigned long line;
     /* FIXME: This should not be a fixed size.  But we don't have vasprintf()
      * right now. */
@@ -168,12 +171,16 @@ Error(const char *fmt, ...)
 	we->line = line_number;
     }
 
+    assert(we != NULL);
+
     va_start(ap, fmt);
     vsprintf(we->msg, fmt, ap);
     va_end(ap);
 
+    /*@-branchstate@*/
     if (!previous_error_parser)
 	STAILQ_INSERT_TAIL(errwarns, we, link);
+    /*@=branchstate@*/
 
     previous_error_line = line_number;
     previous_error_parser = 0;
@@ -241,7 +248,7 @@ ErrorAt(const char *filename, unsigned long line, const char *fmt, ...)
     /* XXX: Should insert into list instead of printing immediately */
     va_list ap;
 
-    fprintf(stderr, "%s:%lu: ", filename, line);
+    fprintf(stderr, "%s:%lu: ", filename?filename:"(NULL)", line);
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
     va_end(ap);
@@ -254,7 +261,8 @@ WarningAt(const char *filename, unsigned long line, const char *fmt, ...)
     /* XXX: Should insert into list instead of printing immediately */
     va_list ap;
 
-    fprintf(stderr, "%s:%lu: %s ", filename, line, _("warning:"));
+    fprintf(stderr, "%s:%lu: %s ", filename?filename:"NULL", line,
+	    _("warning:"));
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
     va_end(ap);

@@ -24,13 +24,14 @@
 
 typedef struct ExprItem ExprItem;
 
-expr *expr_new(ExprOp, ExprItem *, ExprItem *);
+/*@only@*/ expr *expr_new(ExprOp, /*@only@*/ ExprItem *,
+			  /*@only@*/ /*@null@*/ ExprItem *);
 
-ExprItem *ExprSym(symrec *);
-ExprItem *ExprExpr(expr *);
-ExprItem *ExprInt(intnum *);
-ExprItem *ExprFloat(floatnum *);
-ExprItem *ExprReg(unsigned char reg, unsigned char size);
+/*@only@*/ ExprItem *ExprSym(/*@keep@*/ symrec *);
+/*@only@*/ ExprItem *ExprExpr(/*@keep@*/ expr *);
+/*@only@*/ ExprItem *ExprInt(/*@keep@*/ intnum *);
+/*@only@*/ ExprItem *ExprFloat(/*@keep@*/ floatnum *);
+/*@only@*/ ExprItem *ExprReg(unsigned char reg, unsigned char size);
 
 #define expr_new_tree(l,o,r) \
     expr_new ((o), ExprExpr(l), ExprExpr(r))
@@ -40,9 +41,9 @@ ExprItem *ExprReg(unsigned char reg, unsigned char size);
     expr_new (EXPR_IDENT, (r), (ExprItem *)NULL)
 
 /* allocates and makes an exact duplicate of e */
-expr *expr_copy(const expr *e);
+/*@null@*/ expr *expr_copy(const expr *e);
 
-void expr_delete(expr *e);
+void expr_delete(/*@only@*/ /*@null@*/ expr *e);
 
 /* Expands all (symrec) equ's in the expression into full expression
  * instances.
@@ -52,13 +53,14 @@ void expr_expand_equ(expr *e);
 /* Simplifies the expression e as much as possible, eliminating extraneous
  * branches and simplifying integer-only subexpressions.
  */
-expr *expr_simplify(expr *e);
+/*@only@*/ /*@null@*/ expr *expr_simplify(/*@returned@*/ /*@only@*/ /*@null@*/
+					  expr *e);
 
 /* Gets the integer value of e if the expression is just an integer.  If the
  * expression is more complex (contains anything other than integers, ie
  * floats, non-valued labels, registers), returns NULL.
  */
-const intnum *expr_get_intnum(expr **ep);
+/*@dependent@*/ /*@null@*/ const intnum *expr_get_intnum(expr **ep);
 
 void expr_print(expr *);
 

@@ -30,10 +30,10 @@ typedef struct optimizer optimizer;
 typedef struct objfmt objfmt;
 
 typedef struct bytecode bytecode;
-typedef STAILQ_HEAD(bytecodehead, bytecode) bytecodehead;
+typedef /*@reldef@*/ STAILQ_HEAD(bytecodehead, bytecode) bytecodehead;
 
 typedef struct section section;
-typedef STAILQ_HEAD(sectionhead, section) sectionhead;
+typedef /*@reldef@*/ STAILQ_HEAD(sectionhead, section) sectionhead;
 
 typedef struct symrec symrec;
 

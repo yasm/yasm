@@ -169,8 +169,8 @@ struct {								\
  */
 #define STAILQ_HEAD(name, type)						\
 struct name {								\
-	struct type *stqh_first;/* first element */			\
-	struct type **stqh_last;/* addr of last next element */		\
+	/*@reldef@*/ struct type *stqh_first;/* first element */	\
+	/*@reldef@*/ struct type **stqh_last;/* addr of last next element */ \
 }
 
 #define STAILQ_HEAD_INITIALIZER(head)					\
@@ -178,7 +178,7 @@ struct name {								\
 
 #define STAILQ_ENTRY(type)						\
 struct {								\
-	struct type *stqe_next;	/* next element */			\
+	/*@reldef@*/ struct type *stqe_next;	/* next element */	\
 }
 
 /*
@@ -188,7 +188,9 @@ struct {								\
 
 #define	STAILQ_INIT(head) do {						\
 	(head)->stqh_first = NULL;					\
+	/*@-immediatetrans@*/						\
 	(head)->stqh_last = &(head)->stqh_first;			\
+	/*@=immediatetrans@*/						\
 } while (0)
 
 #define STAILQ_FIRST(head)	((head)->stqh_first)
@@ -210,8 +212,10 @@ struct {								\
 
 #define STAILQ_INSERT_TAIL(head, elm, field) do {			\
 	(elm)->field.stqe_next = NULL;					\
+	/*@-onlytrans -mustfree -immediatetrans@*/			\
 	*(head)->stqh_last = (elm);					\
 	(head)->stqh_last = &(elm)->field.stqe_next;			\
+	/*@=onlytrans =mustfree =immediatetrans@*/			\
 } while (0)
 
 #define STAILQ_INSERT_AFTER(head, tqelm, elm, field) do {		\

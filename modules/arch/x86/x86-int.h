@@ -40,9 +40,9 @@ typedef struct x86_effaddr_data {
 } x86_effaddr_data;
 
 typedef struct x86_insn {
-    effaddr *ea;	/* effective address */
+    /*@null@*/ effaddr *ea;	/* effective address */
 
-    immval *imm;	/* immediate or relative value */
+    /*@null@*/ immval *imm;	/* immediate or relative value */
 
     unsigned char opcode[3];	/* opcode */
     unsigned char opcode_len;

@@ -24,10 +24,11 @@
 
 struct objfmt;
 
-section *sections_initialize(sectionhead *headp, struct objfmt *of);
+/*@dependent@*/ section *sections_initialize(sectionhead *headp,
+					     struct objfmt *of);
 
-section *sections_switch(sectionhead *headp, struct objfmt *of,
-			 const char *name);
+/*@dependent@*/ section *sections_switch(sectionhead *headp, struct objfmt *of,
+					 const char *name);
 
 void sections_delete(sectionhead *headp);
 
@@ -35,11 +36,11 @@ void sections_print(const sectionhead *headp);
 
 void sections_parser_finalize(sectionhead *headp);
 
-bytecodehead *section_get_bytecodes(section *sect);
+/*@dependent@*/ bytecodehead *section_get_bytecodes(section *sect);
 
-const char *section_get_name(const section *sect);
+/*@observer@*/ const char *section_get_name(const section *sect);
 
-void section_delete(section *sect);
+void section_delete(/*@only@*/ section *sect);
 
 void section_print(const section *sect);
 #endif

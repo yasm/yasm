@@ -44,7 +44,7 @@ RCSID("$IdPath$");
 
 int nasm_parser_lex(void);
 
-extern int (*nasm_parser_yyinput) (char *buf, int max_size);
+extern size_t (*nasm_parser_yyinput) (char *buf, size_t max_size);
 #undef YY_INPUT
 #define YY_INPUT(b, r, ms)	(r = nasm_parser_yyinput(b, ms))
 

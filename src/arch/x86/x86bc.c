@@ -20,7 +20,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "errwarn.h"
 #include "intnum.h"
@@ -34,13 +34,14 @@ RCSID("$IdPath$");
 #include "bc-int.h"
 
 
+/*@-compmempass -mustfree@*/
 bytecode *
 x86_bc_new_insn(x86_new_insn_data *d)
 {
     bytecode *bc;
     x86_insn *insn;
    
-    bc = bc_new_common(X86_BC_INSN, sizeof(x86_insn));
+    bc = bc_new_common((bytecode_type)X86_BC_INSN, sizeof(x86_insn));
     insn = bc_get_data(bc);
 
     insn->ea = d->ea;
@@ -70,14 +71,16 @@ x86_bc_new_insn(x86_new_insn_data *d)
 
     return bc;
 }
+/*@=compmempass =mustfree@*/
 
+/*@-compmempass -mustfree@*/
 bytecode *
 x86_bc_new_jmprel(x86_new_jmprel_data *d)
 {
     bytecode *bc;
     x86_jmprel *jmprel;
 
-    bc = bc_new_common(X86_BC_JMPREL, sizeof(x86_jmprel));
+    bc = bc_new_common((bytecode_type)X86_BC_JMPREL, sizeof(x86_jmprel));
     jmprel = bc_get_data(bc);
 
     jmprel->target = d->target->val;
@@ -106,6 +109,7 @@ x86_bc_new_jmprel(x86_new_jmprel_data *d)
 
     return bc;
 }
+/*@=compmempass =mustfree@*/
 
 void
 x86_ea_set_segment(effaddr *ea, unsigned char segment)
@@ -124,7 +128,7 @@ x86_ea_set_segment(effaddr *ea, unsigned char segment)
 }
 
 effaddr *
-x86_ea_new_reg(unsigned long reg)
+x86_ea_new_reg(unsigned char reg)
 {
     effaddr *ea = xmalloc(sizeof(effaddr)+sizeof(x86_effaddr_data));
     x86_effaddr_data *ead = ea_get_data(ea);
@@ -162,6 +166,7 @@ x86_ea_new_expr(expr *e)
     return ea;
 }
 
+/*@-compmempass@*/
 effaddr *
 x86_ea_new_imm(immval *imm, unsigned char im_len)
 {
@@ -180,6 +185,7 @@ x86_ea_new_imm(immval *imm, unsigned char im_len)
 
     return ea;
 }
+/*@=compmempass@*/
 
 effaddr *
 x86_bc_insn_get_ea(bytecode *bc)
@@ -189,7 +195,7 @@ x86_bc_insn_get_ea(bytecode *bc)
     if (!bc)
 	return NULL;
 
-    if (bc->type != X86_BC_INSN)
+    if ((x86_bytecode_type)bc->type != X86_BC_INSN)
 	InternalError(_("Trying to get EA of non-instruction"));
 
     return insn->ea;
@@ -204,7 +210,7 @@ x86_bc_insn_opersize_override(bytecode *bc, unsigned char opersize)
     if (!bc)
 	return;
 
-    switch (bc->type) {
+    switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
 	    insn = bc_get_data(bc);
 	    insn->opersize = opersize;
@@ -215,7 +221,6 @@ x86_bc_insn_opersize_override(bytecode *bc, unsigned char opersize)
 	    break;
 	default:
 	    InternalError(_("OperSize override applied to non-instruction"));
-	    return;
     }
 }
 
@@ -228,7 +233,7 @@ x86_bc_insn_addrsize_override(bytecode *bc, unsigned char addrsize)
     if (!bc)
 	return;
 
-    switch (bc->type) {
+    switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
 	    insn = bc_get_data(bc);
 	    insn->addrsize = addrsize;
@@ -239,7 +244,6 @@ x86_bc_insn_addrsize_override(bytecode *bc, unsigned char addrsize)
 	    break;
 	default:
 	    InternalError(_("AddrSize override applied to non-instruction"));
-	    return;
     }
 }
 
@@ -253,7 +257,7 @@ x86_bc_insn_set_lockrep_prefix(bytecode *bc, unsigned char prefix)
     if (!bc)
 	return;
 
-    switch (bc->type) {
+    switch ((x86_bytecode_type)bc->type) {
 	case X86_BC_INSN:
 	    insn = bc_get_data(bc);
 	    lockrep_pre = &insn->lockrep_pre;
@@ -264,7 +268,6 @@ x86_bc_insn_set_lockrep_prefix(bytecode *bc, unsigned char prefix)
 	    break;
 	default:
 	    InternalError(_("LockRep prefix applied to non-instruction"));
-	    return;
     }
 
     if (*lockrep_pre != 0)
@@ -281,7 +284,7 @@ x86_bc_insn_set_shift_flag(bytecode *bc)
     if (!bc)
 	return;
 
-    if (bc->type != X86_BC_INSN)
+    if ((x86_bytecode_type)bc->type != X86_BC_INSN)
 	InternalError(_("Attempted to set shift flag on non-instruction"));
 
     insn = bc_get_data(bc);
@@ -367,7 +370,10 @@ x86_bc_print(const bytecode *bc)
 		printf(" (nil)\n");
 	    else {
 		printf("\n Val=");
-		expr_print(insn->imm->val);
+		if (insn->imm->val)
+		    expr_print(insn->imm->val);
+		else
+		    printf("(nil-SHOULDN'T HAPPEN)");
 		printf("\n");
 		printf(" Len=%u, IsNeg=%u\n",
 		       (unsigned int)insn->imm->len,
@@ -471,24 +477,28 @@ x86_bc_parser_finalize_insn(x86_insn *insn)
 
 	if (imm->val) {
 	    expr_expand_equ(imm->val);
-	    expr_simplify(imm->val);
+	    imm->val = expr_simplify(imm->val);
 	}
 	/* TODO: check imm f_len vs. len? */
 
 	/* Handle shift_op special-casing */
+	/*@-nullstate@*/
 	if (insn->shift_op && (num = expr_get_intnum(&imm->val))) {
-	    if (intnum_get_uint(num) == 1) {
-		/* Use ,1 form: first copy ,1 opcode. */
-		insn->opcode[0] = insn->opcode[1];
-		/* Delete ModRM, as it's no longer needed */
-		xfree(ea);
-		insn->ea = (effaddr *)NULL;
-		/* Delete Imm, as it's not needed */
-		expr_delete(imm->val);
-		xfree(imm);
-		insn->imm = (immval *)NULL;
+	/*@=nullstate@*/
+	    if (num) {
+		if (intnum_get_uint(num) == 1) {
+		    /* Use ,1 form: first copy ,1 opcode. */
+		    insn->opcode[0] = insn->opcode[1];
+		    /* Delete ModRM, as it's no longer needed */
+		    xfree(ea);
+		    insn->ea = (effaddr *)NULL;
+		    /* Delete Imm, as it's not needed */
+		    expr_delete(imm->val);
+		    xfree(imm);
+		    insn->imm = (immval *)NULL;
+		}
+		insn->shift_op = 0;
 	    }
-	    insn->shift_op = 0;
 	}
     }
 

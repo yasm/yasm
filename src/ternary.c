@@ -21,7 +21,11 @@
    Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
    USA.  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
+
+#ifdef STDC_HEADERS
+# include <assert.h>
+#endif
 
 #include "errwarn.h"
 
@@ -30,7 +34,7 @@ RCSID("$IdPath$");
 
 /* Non-recursive so we don't waste stack space/time on large
    insertions. */
-
+/*@-compmempass@*/
 void *
 ternary_insert (ternary_tree * root, const char *s, void *data, int replace)
 {
@@ -51,7 +55,12 @@ ternary_insert (ternary_tree * root, const char *s, void *data, int replace)
 	  if (*s++ == 0)
 	    {
 	      if (replace)
-		curr->eqkid = (ternary_tree) data;
+	        {
+		  xfree(curr->eqkid);
+		  /*@-temptrans@*/
+		  curr->eqkid = (ternary_tree) data;
+		  /*@=temptrans@*/
+	        }
 	      return (void *) curr->eqkid;
 	    }
 	  pcurr = &(curr->eqkid);
@@ -89,10 +98,12 @@ ternary_insert (ternary_tree * root, const char *s, void *data, int replace)
       pcurr = &(curr->eqkid);
     }
 }
+/*@=compmempass@*/
 
 /* Free the ternary search tree rooted at p. */
 void
-ternary_cleanup (ternary_tree p, void (*data_cleanup)(void *d))
+ternary_cleanup (ternary_tree p, void (*data_cleanup)(/*@dependent@*/
+						      /*@null@*/ void *d))
 {
   if (p)
     {
@@ -110,13 +121,14 @@ ternary_cleanup (ternary_tree p, void (*data_cleanup)(void *d))
 void *
 ternary_search (ternary_tree p, const char *s)
 {
-  ternary_tree curr;
+  /*@null@*/ ternary_tree curr;
   int diff, spchar;
   spchar = *s;
   curr = p;
   /* Loop while we haven't hit a NULL node or returned */
   while (curr)
     {
+      assert(curr != NULL);
       /* Calculate the difference */
       diff = spchar - curr->splitchar;
       /* Handle the equal case */
@@ -139,7 +151,7 @@ ternary_search (ternary_tree p, const char *s)
 
 /* For those who care, the recursive version of the search. Useful if
    you want a starting point for pmsearch or nearsearch. */
-static void *
+static /*@dependent@*/ /*@null@*/ void *
 ternary_recursivesearch (ternary_tree p, const char *s)
 {
   if (!p)
@@ -159,7 +171,8 @@ ternary_recursivesearch (ternary_tree p, const char *s)
 /* Traverse over tree, calling callback function for each leaf. 
    Stops early if func returns 0. */
 int
-ternary_traverse (ternary_tree p, int (*func) (void *d))
+ternary_traverse (ternary_tree p, int (*func) (/*@dependent@*/ /*@null@*/
+					       void *d))
 {
   if (!p)
     return 1;

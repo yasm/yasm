@@ -20,7 +20,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "globals.h"
 #include "errwarn.h"
@@ -32,7 +32,7 @@ RCSID("$IdPath$");
 
 
 struct section {
-    STAILQ_ENTRY(section) link;
+    /*@reldef@*/ STAILQ_ENTRY(section) link;
 
     enum { SECTION_GENERAL, SECTION_ABSOLUTE } type;
 
@@ -64,9 +64,12 @@ sections_initialize(sectionhead *headp, objfmt *of)
     s->name = xstrdup(of->default_section_name);
     bytecodes_initialize(&s->bc);
 
+    s->data.start = 0;
+
     return s;
 }
 
+/*@-onlytrans@*/
 section *
 sections_switch(sectionhead *headp, objfmt *of, const char *name)
 {
@@ -102,8 +105,11 @@ sections_switch(sectionhead *headp, objfmt *of, const char *name)
     s->name = xstrdup(name);
     bytecodes_initialize(&s->bc);
 
+    s->data.start = 0;
+
     return s;
 }
+/*@=onlytrans@*/
 
 void
 sections_delete(sectionhead *headp)

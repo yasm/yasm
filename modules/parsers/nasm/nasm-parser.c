@@ -20,7 +20,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "errwarn.h"
 
@@ -35,16 +35,17 @@ extern int nasm_parser_debug;
 
 extern int nasm_parser_parse(void);
 
-int (*nasm_parser_yyinput) (char *buf, int max_size);
+size_t (*nasm_parser_yyinput) (char *buf, size_t max_size);
 
 objfmt *nasm_parser_objfmt;
 sectionhead nasm_parser_sections;
-section *nasm_parser_cur_section;
+/*@dependent@*/ section *nasm_parser_cur_section;
 
-extern char *nasm_parser_locallabel_base;
+extern /*@only@*/ char *nasm_parser_locallabel_base;
 
-static sectionhead *
+static /*@dependent@*/ sectionhead *
 nasm_parser_do_parse(parser *p, objfmt *of, FILE *f)
+    /*@globals killed nasm_parser_locallabel_base @*/
 {
     p->current_pp->initialize(of, f);
     nasm_parser_in = f;
@@ -68,10 +69,12 @@ nasm_parser_do_parse(parser *p, objfmt *of, FILE *f)
 }
 
 /* Define valid preprocessors to use with this parser */
+/*@-nullassign@*/
 static preproc *nasm_parser_preprocs[] = {
     &raw_preproc,
     NULL
 };
+/*@=nullassign@*/
 
 /* Define parser structure -- see parser.h for details */
 parser nasm_parser = {

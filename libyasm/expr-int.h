@@ -52,7 +52,7 @@ struct ExprItem {
  */
 struct expr {
     ExprOp op;
-    const char *filename;
+    /*@dependent@*/ /*@null@*/ const char *filename;
     unsigned long line;
     int numterms;
     ExprItem terms[2];		/* structure may be extended to include more */
@@ -63,14 +63,19 @@ struct expr {
  *
  * Stops early (and returns 1) if func returns 1.  Otherwise returns 0.
  */
-int expr_traverse_leaves_in(expr *e, void *d,
-			    int (*func) (ExprItem *ei, void *d));
+int expr_traverse_leaves_in(expr *e, /*@null@*/ void *d,
+			    int (*func) (/*@null@*/ ExprItem *ei,
+					 /*@null@*/ void *d));
 
 /* Transform negatives throughout an entire expn tree */
-expr *expr_xform_neg_tree(expr *e);
+/*@only@*/ /*@null@*/ expr *expr_xform_neg_tree(/*@returned@*/ /*@only@*/
+						/*@null@*/ expr *e);
 
 /* Level an entire expn tree */
-expr *expr_level_tree(expr *e, int fold_const, int simplify_ident);
+/*@only@*/ /*@null@*/ expr *expr_level_tree(/*@returned@*/ /*@only@*/
+					    /*@null@*/ expr *e,
+					    int fold_const,
+					    int simplify_ident);
 
 /* Reorder terms of e into canonical order.  Only reorders if reordering
  * doesn't change meaning of expression.  (eg, doesn't reorder SUB).
@@ -82,7 +87,7 @@ expr *expr_level_tree(expr *e, int fold_const, int simplify_ident);
 void expr_order_terms(expr *e);
 
 /* Copy entire expression EXCEPT for index "except" at *top level only*. */
-expr *expr_copy_except(const expr *e, int except);
+/*@null@*/ expr *expr_copy_except(const expr *e, int except);
 
 int expr_contains(expr *e, ExprType t);
 

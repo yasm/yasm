@@ -20,7 +20,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "globals.h"
 #include "errwarn.h"
@@ -35,13 +35,13 @@ RCSID("$IdPath$");
 
 
 struct dataval {
-    STAILQ_ENTRY(dataval) link;
+    /*@reldef@*/ STAILQ_ENTRY(dataval) link;
 
     enum { DV_EMPTY, DV_EXPR, DV_STRING } type;
 
     union {
-	expr *expn;
-	char *str_val;
+	/*@only@*/ expr *expn;
+	/*@only@*/ char *str_val;
     } data;
 };
 
@@ -54,7 +54,7 @@ typedef struct bytecode_data {
 } bytecode_data;
 
 typedef struct bytecode_reserve {
-    expr *numitems;		/* number of items to reserve */
+    /*@only@*/ expr *numitems;	/* number of items to reserve */
     unsigned char itemsize;	/* size of each item (in bytes) */
 } bytecode_reserve;
 
@@ -77,6 +77,8 @@ imm_new_int(unsigned long int_val)
 	im->len = 4;
 
     im->isneg = 0;
+    im->f_len = 0;
+    im->f_sign = 0;
 
     return im;
 }
@@ -89,6 +91,8 @@ imm_new_expr(expr *expr_ptr)
     im->val = expr_ptr;
     im->len = 0;
     im->isneg = 0;
+    im->f_len = 0;
+    im->f_sign = 0;
 
     return im;
 }
@@ -143,7 +147,7 @@ bc_new_common(bytecode_type type, size_t datasize)
 }
 
 bytecode *
-bc_new_data(datavalhead *datahead, unsigned long size)
+bc_new_data(datavalhead *datahead, unsigned char size)
 {
     bytecode *bc = bc_new_common(BC_DATA, sizeof(bytecode_data));
     bytecode_data *data = bc_get_data(bc);
@@ -155,12 +159,14 @@ bc_new_data(datavalhead *datahead, unsigned long size)
 }
 
 bytecode *
-bc_new_reserve(expr *numitems, unsigned long itemsize)
+bc_new_reserve(expr *numitems, unsigned char itemsize)
 {
     bytecode *bc = bc_new_common(BC_RESERVE, sizeof(bytecode_reserve));
     bytecode_reserve *reserve = bc_get_data(bc);
 
+    /*@-mustfree@*/
     reserve->numitems = numitems;
+    /*@=mustfree@*/
     reserve->itemsize = itemsize;
 
     return bc;
@@ -199,7 +205,8 @@ bc_delete(bytecode *bc)
 }
 
 int
-bc_get_offset(section *sect, bytecode *bc, unsigned long *ret_val)
+bc_get_offset(/*@unused@*/ section *sect, /*@unused@*/ bytecode *bc,
+	      /*@unused@*/ unsigned long *ret_val)
 {
     return 0;	/* TODO */
 }
@@ -256,7 +263,6 @@ bc_parser_finalize(bytecode *bc)
 	case BC_EMPTY:
 	    /* FIXME: delete it (probably in bytecodes_ level, not here */
 	    InternalError(_("got empty bytecode in parser_finalize"));
-	    break;
 	default:
 	    if (bc->type < cur_arch->bc.type_max)
 		cur_arch->bc.bc_parser_finalize(bc);

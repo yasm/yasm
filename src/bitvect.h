@@ -120,7 +120,7 @@ const char * BitVector_Version    (void);          /* returns version string */
 N_int   BitVector_Word_Bits  (void);    /* returns # of bits in machine word */
 N_int   BitVector_Long_Bits  (void);   /* returns # of bits in unsigned long */
 
-wordptr BitVector_Create(N_int bits, boolean clear);              /* malloc  */
+/*@only@*/ wordptr BitVector_Create(N_int bits, boolean clear);              /* malloc  */
 
 /* ===> OBJECT METHODS: <=== */
 
@@ -130,7 +130,7 @@ wordptr BitVector_Clone   (wordptr addr);           /* makes exact duplicate */
 wordptr BitVector_Concat  (wordptr X, wordptr Y);   /* returns concatenation */
 
 wordptr BitVector_Resize  (wordptr oldaddr, N_int bits);          /* realloc */
-void    BitVector_Destroy (wordptr addr);                         /* free    */
+void    BitVector_Destroy (/*@only@*/ wordptr addr);                         /* free    */
 
 /* ===> bit vector copy function: */
 
@@ -150,20 +150,20 @@ void    BitVector_Reverse (wordptr X, wordptr Y);
 
 /* ===> bit vector interval operations and functions: */
 
-void    BitVector_Interval_Empty   (wordptr addr, N_int lower, N_int upper);
-void    BitVector_Interval_Fill    (wordptr addr, N_int lower, N_int upper);
-void    BitVector_Interval_Flip    (wordptr addr, N_int lower, N_int upper);
-void    BitVector_Interval_Reverse (wordptr addr, N_int lower, N_int upper);
+void    BitVector_Interval_Empty   (/*@out@*/ wordptr addr, N_int lower, N_int upper);
+void    BitVector_Interval_Fill    (/*@out@*/ wordptr addr, N_int lower, N_int upper);
+void    BitVector_Interval_Flip    (/*@out@*/ wordptr addr, N_int lower, N_int upper);
+void    BitVector_Interval_Reverse (/*@out@*/ wordptr addr, N_int lower, N_int upper);
 
 boolean BitVector_interval_scan_inc(wordptr addr, N_int start,
                                     N_intptr min, N_intptr max);
 boolean BitVector_interval_scan_dec(wordptr addr, N_int start,
                                     N_intptr min, N_intptr max);
 
-void    BitVector_Interval_Copy    (wordptr X, wordptr Y, N_int Xoffset,
+void    BitVector_Interval_Copy    (/*@out@*/ wordptr X, wordptr Y, N_int Xoffset,
                                     N_int Yoffset, N_int length);
 
-wordptr BitVector_Interval_Substitute(wordptr X, wordptr Y,
+wordptr BitVector_Interval_Substitute(/*@out@*/ wordptr X, wordptr Y,
                                     N_int Xoffset, N_int Xlength,
                                     N_int Yoffset, N_int Ylength);
 
@@ -178,42 +178,42 @@ Z_int   BitVector_Compare          (wordptr X, wordptr Y);  /* X <,=,> Y ?   */
 
 /* ===> bit vector string conversion functions: */
 
-charptr BitVector_to_Hex  (wordptr addr);
-ErrCode BitVector_from_Hex(wordptr addr, charptr string);
+/*@only@*/ charptr BitVector_to_Hex  (wordptr addr);
+ErrCode BitVector_from_Hex(/*@out@*/ wordptr addr, charptr string);
 
-ErrCode BitVector_from_Oct(wordptr addr, charptr string);
+ErrCode BitVector_from_Oct(/*@out@*/ wordptr addr, charptr string);
 
-charptr BitVector_to_Bin  (wordptr addr);
-ErrCode BitVector_from_Bin(wordptr addr, charptr string);
+/*@only@*/ charptr BitVector_to_Bin  (wordptr addr);
+ErrCode BitVector_from_Bin(/*@out@*/ wordptr addr, charptr string);
 
-charptr BitVector_to_Dec  (wordptr addr);
-ErrCode BitVector_from_Dec(wordptr addr, charptr string);
+/*@only@*/ charptr BitVector_to_Dec  (wordptr addr);
+ErrCode BitVector_from_Dec(/*@out@*/ wordptr addr, charptr string);
 
-charptr BitVector_to_Enum (wordptr addr);
-ErrCode BitVector_from_Enum(wordptr addr, charptr string);
+/*@only@*/ charptr BitVector_to_Enum (wordptr addr);
+ErrCode BitVector_from_Enum(/*@out@*/ wordptr addr, charptr string);
 
-void    BitVector_Dispose (charptr string);
+void    BitVector_Dispose (/*@only@*/ /*@out@*/ charptr string);
 
 /* ===> bit vector bit operations, functions & tests: */
 
-void    BitVector_Bit_Off (wordptr addr, N_int indx);      /* X = X \ {x}   */
-void    BitVector_Bit_On  (wordptr addr, N_int indx);      /* X = X + {x}   */
-boolean BitVector_bit_flip(wordptr addr, N_int indx);  /* X=(X+{x})\(X*{x}) */
+void    BitVector_Bit_Off (/*@out@*/ wordptr addr, N_int indx);      /* X = X \ {x}   */
+void    BitVector_Bit_On  (/*@out@*/ wordptr addr, N_int indx);      /* X = X + {x}   */
+boolean BitVector_bit_flip(/*@out@*/ wordptr addr, N_int indx);  /* X=(X+{x})\(X*{x}) */
 
 boolean BitVector_bit_test(wordptr addr, N_int indx);      /* {x} in X ?    */
 
-void    BitVector_Bit_Copy(wordptr addr, N_int indx, boolean bit);
+void    BitVector_Bit_Copy(/*@out@*/ wordptr addr, N_int indx, boolean bit);
 
 /* ===> bit vector bit shift & rotate functions: */
 
-void    BitVector_LSB         (wordptr addr, boolean bit);
-void    BitVector_MSB         (wordptr addr, boolean bit);
+void    BitVector_LSB         (/*@out@*/ wordptr addr, boolean bit);
+void    BitVector_MSB         (/*@out@*/ wordptr addr, boolean bit);
 boolean BitVector_lsb         (wordptr addr);
 boolean BitVector_msb         (wordptr addr);
-boolean BitVector_rotate_left (wordptr addr);
-boolean BitVector_rotate_right(wordptr addr);
-boolean BitVector_shift_left  (wordptr addr, boolean carry_in);
-boolean BitVector_shift_right (wordptr addr, boolean carry_in);
+boolean /*@alt void@*/ BitVector_rotate_left (wordptr addr);
+boolean /*@alt void@*/ BitVector_rotate_right(wordptr addr);
+boolean /*@alt void@*/ BitVector_shift_left  (wordptr addr, boolean carry_in);
+boolean /*@alt void@*/ BitVector_shift_right (wordptr addr, boolean carry_in);
 void    BitVector_Move_Left   (wordptr addr, N_int bits);
 void    BitVector_Move_Right  (wordptr addr, N_int bits);
 
@@ -226,15 +226,15 @@ void    BitVector_Delete      (wordptr addr, N_int offset, N_int count,
 
 /* ===> bit vector arithmetic: */
 
-boolean BitVector_increment   (wordptr addr);               /* X++           */
-boolean BitVector_decrement   (wordptr addr);               /* X--           */
+boolean /*@alt void@*/ BitVector_increment   (wordptr addr);               /* X++           */
+boolean /*@alt void@*/ BitVector_decrement   (wordptr addr);               /* X--           */
 
-boolean BitVector_compute (wordptr X, wordptr Y, wordptr Z, boolean minus,
-                                                            boolean *carry);
-boolean BitVector_add     (wordptr X, wordptr Y, wordptr Z, boolean *carry);
-boolean BitVector_sub     (wordptr X, wordptr Y, wordptr Z, boolean *carry);
-boolean BitVector_inc     (wordptr X, wordptr Y);
-boolean BitVector_dec     (wordptr X, wordptr Y);
+boolean /*@alt void@*/ BitVector_compute (wordptr X, wordptr Y, wordptr Z, boolean minus,
+                                                            /*@out@*/ boolean *carry);
+boolean /*@alt void@*/ BitVector_add     (wordptr X, wordptr Y, wordptr Z, /*@out@*/ boolean *carry);
+boolean /*@alt void@*/ BitVector_sub     (wordptr X, wordptr Y, wordptr Z, /*@out@*/ boolean *carry);
+boolean /*@alt void@*/ BitVector_inc     (wordptr X, wordptr Y);
+boolean /*@alt void@*/ BitVector_dec     (wordptr X, wordptr Y);
 
 void    BitVector_Negate  (wordptr X, wordptr Y);
 void    BitVector_Absolute(wordptr X, wordptr Y);
@@ -249,7 +249,7 @@ ErrCode BitVector_Power   (wordptr X, wordptr Y, wordptr Z);
 /* ===> direct memory access functions: */
 
 void    BitVector_Block_Store (wordptr addr, charptr buffer, N_int length);
-charptr BitVector_Block_Read  (wordptr addr, N_intptr length);
+charptr BitVector_Block_Read  (wordptr addr, /*@out@*/ N_intptr length);
 
 /* ===> word array functions: */
 

@@ -43,13 +43,13 @@
 #endif
 #define _(String)	gettext(String)
 
-#if !defined(HAVE_MERGESORT)
+#if !defined(HAVE_MERGESORT) || defined(lint)
 int mergesort(void *base, size_t nmemb, size_t size,
 	      int (*compar)(const void *, const void *));
 #endif
 
-#if !defined(HAVE_STRSEP) || defined(HAVE_GNU_C_LIBRARY)
-char *strsep(char **stringp, const char *delim);
+#if !defined(HAVE_STRSEP) || defined(HAVE_GNU_C_LIBRARY) || defined(lint)
+/*@null@*/ char *strsep(char **stringp, const char *delim);
 #endif
 
 #ifndef HAVE_STRCASECMP
@@ -64,12 +64,12 @@ char *strsep(char **stringp, const char *delim);
 # endif
 #endif
 
-#if defined(USE_OUR_OWN_STRCASECMP) || defined(HAVE_GNU_C_LIBRARY)
+#if defined(USE_OUR_OWN_STRCASECMP) || defined(HAVE_GNU_C_LIBRARY) || defined(lint)
 int strcasecmp(const char *s1, const char *s2);
 int strncasecmp(const char *s1, const char *s2, size_t n);
 #endif
 
-#if !defined(HAVE_TOASCII) || defined(HAVE_GNU_C_LIBRARY)
+#if !defined(HAVE_TOASCII) || defined(HAVE_GNU_C_LIBRARY) || defined(lint)
 # define toascii(c) ((c) & 0x7F)
 #endif
 
@@ -104,10 +104,10 @@ int strncasecmp(const char *s1, const char *s2, size_t n);
 /*@only@*/ char *xstrdup(const char *str);
 
 /* Error-checking memory allocation routines in xmalloc.c. */
-/*@only@*/ void *xmalloc(size_t size);
-/*@only@*/ void *xcalloc(size_t nelem, size_t elsize);
-void *xrealloc(void *oldmem, size_t size);
-void xfree(/*@only@*/ void *p);
+/*@only@*/ /*@out@*/ void *xmalloc(size_t size);
+/*@only@*/ /*@out@*/ void *xcalloc(size_t nelem, size_t elsize);
+/*@out@*/ void *xrealloc(/*@returned@*/ /*@null@*/ void *oldmem, size_t size);
+void xfree(/*@only@*/ /*@out@*/ /*@null@*/ void *p);
 #endif
 
 #include "coretype.h"

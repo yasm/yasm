@@ -20,7 +20,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "bitvect.h"
 
@@ -34,15 +34,17 @@ RCSID("$IdPath$");
 #include "expr-int.h"
 
 
-static int expr_traverse_nodes_post(expr *e, void *d,
-				    int (*func) (expr *e, void *d));
+static int expr_traverse_nodes_post(/*@null@*/ expr *e, /*@null@*/ void *d,
+				    int (*func) (/*@null@*/ expr *e,
+						 /*@null@*/ void *d));
 
 /* allocate a new expression node, with children as defined.
  * If it's a unary operator, put the element in left and set right=NULL. */
+/*@-usedef@*/
 expr *
 expr_new(ExprOp op, ExprItem *left, ExprItem *right)
 {
-    expr *ptr;
+    expr *ptr, *sube;
     ptr = xmalloc(sizeof(expr));
 
     ptr->op = op;
@@ -59,9 +61,11 @@ expr_new(ExprOp op, ExprItem *left, ExprItem *right)
 	 */
 	while (ptr->terms[0].type == EXPR_EXPR &&
 	       ptr->terms[0].data.expn->op == EXPR_IDENT) {
-	    expr *sube = ptr->terms[0].data.expn;
+	    sube = ptr->terms[0].data.expn;
 	    ptr->terms[0] = sube->terms[0];	/* structure copy */
+	    /*@-usereleased@*/
 	    xfree(sube);
+	    /*@=usereleased@*/
 	}
     } else {
 	InternalError(_("Right side of expression must exist"));
@@ -77,9 +81,11 @@ expr_new(ExprOp op, ExprItem *left, ExprItem *right)
 	 */
 	while (ptr->terms[1].type == EXPR_EXPR &&
 	       ptr->terms[1].data.expn->op == EXPR_IDENT) {
-	    expr *sube = ptr->terms[1].data.expn;
+	    sube = ptr->terms[1].data.expn;
 	    ptr->terms[1] = sube->terms[0];	/* structure copy */
+	    /*@-usereleased@*/
 	    xfree(sube);
+	    /*@=usereleased@*/
 	}
     }
 
@@ -88,6 +94,7 @@ expr_new(ExprOp op, ExprItem *left, ExprItem *right)
 
     return ptr;
 }
+/*@=usedef@*/
 
 /* helpers */
 ExprItem *
@@ -148,7 +155,7 @@ expr_xform_neg_item(expr *e, ExprItem *ei)
     sube->line = e->line;
     sube->numterms = 2;
     sube->terms[0].type = EXPR_INT;
-    sube->terms[0].data.intn = intnum_new_int(-1);
+    sube->terms[0].data.intn = intnum_new_int((unsigned long)-1);
     sube->terms[1] = *ei;	/* structure copy */
 
     /* Replace original ExprItem with subexp */
@@ -162,8 +169,8 @@ expr_xform_neg_item(expr *e, ExprItem *ei)
  *
  * Returns a possibly reallocated e.
  */
-static expr *
-expr_xform_neg_helper(expr *e)
+static /*@only@*/ expr *
+expr_xform_neg_helper(/*@returned@*/ /*@only@*/ expr *e)
 {
     expr *ne;
     int i;
@@ -197,7 +204,7 @@ expr_xform_neg_helper(expr *e)
 	    e->op = EXPR_MUL;
 	    e->numterms = 2;
 	    e->terms[1].type = EXPR_INT;
-	    e->terms[1].data.intn = intnum_new_int(-1);
+	    e->terms[1].data.intn = intnum_new_int((unsigned long)-1);
 	    break;
 	default:
 	    /* Everything else.  MUL will be combined when it's leveled.
@@ -209,7 +216,7 @@ expr_xform_neg_helper(expr *e)
 	    ne->line = e->line;
 	    ne->numterms = 2;
 	    ne->terms[0].type = EXPR_INT;
-	    ne->terms[0].data.intn = intnum_new_int(-1);
+	    ne->terms[0].data.intn = intnum_new_int((unsigned long)-1);
 	    ne->terms[1].type = EXPR_EXPR;
 	    ne->terms[1].data.expn = e;
 	    return ne;
@@ -225,8 +232,8 @@ expr_xform_neg_helper(expr *e)
  *
  * Returns a possibly reallocated e.
  */
-static expr *
-expr_xform_neg(expr *e)
+static /*@only@*/ expr *
+expr_xform_neg(/*@returned@*/ /*@only@*/ expr *e)
 {
     switch (e->op) {
 	case EXPR_NEG:
@@ -385,8 +392,10 @@ expr_simplify_identity(expr *e, int numterms, int int_term)
  *
  * Returns a possibly reallocated e.
  */
-static expr *
-expr_level_op(expr *e, int fold_const, int simplify_ident)
+/*@-mustfree@*/
+static /*@only@*/ expr *
+expr_level_op(/*@returned@*/ /*@only@*/ expr *e, int fold_const,
+	      int simplify_ident)
 {
     int i, j, o, fold_numterms, level_numterms, level_fold_numterms;
     int first_int_term = -1;
@@ -546,6 +555,7 @@ expr_level_op(expr *e, int fold_const, int simplify_ident)
 
     return e;
 }
+/*@=mustfree@*/
 
 /* Level an entire expn tree */
 expr *
@@ -603,7 +613,7 @@ expr_order_terms(expr *e)
 	     * stable sort (multiple terms of same type are kept in the same
 	     * order).
 	     */
-	    mergesort(e->terms, e->numterms, sizeof(ExprItem),
+	    mergesort(e->terms, (size_t)e->numterms, sizeof(ExprItem),
 		      expr_order_terms_compare);
 	    break;
 	default:
@@ -666,7 +676,7 @@ expr_copy(const expr *e)
 }
 
 static int
-expr_delete_each(expr *e, void *d)
+expr_delete_each(/*@only@*/ expr *e, /*@unused@*/ void *d)
 {
     int i;
     for (i=0; i<e->numterms; i++) {
@@ -685,11 +695,13 @@ expr_delete_each(expr *e, void *d)
     return 0;	/* don't stop recursion */
 }
 
+/*@-mustfree@*/
 void
 expr_delete(expr *e)
 {
     expr_traverse_nodes_post(e, NULL, expr_delete_each);
 }
+/*@=mustfree@*/
 
 static int
 expr_contains_callback(ExprItem *ei, void *d)
@@ -705,7 +717,7 @@ expr_contains(expr *e, ExprType t)
 }
 
 static int
-expr_expand_equ_callback(ExprItem *ei, void *d)
+expr_expand_equ_callback(ExprItem *ei, /*@unused@*/ void *d)
 {
     const expr *equ_expr;
     if (ei->type == EXPR_SYM) {
@@ -731,7 +743,8 @@ expr_expand_equ(expr *e)
  * Stops early (and returns 1) if func returns 1.  Otherwise returns 0.
  */
 static int
-expr_traverse_nodes_post(expr *e, void *d, int (*func) (expr *e, void *d))
+expr_traverse_nodes_post(expr *e, void *d,
+			 int (*func) (/*@null@*/ expr *e, /*@null@*/ void *d))
 {
     int i;
 
@@ -756,7 +769,8 @@ expr_traverse_nodes_post(expr *e, void *d, int (*func) (expr *e, void *d))
  */
 int
 expr_traverse_leaves_in(expr *e, void *d,
-			int (*func) (ExprItem *ei, void *d))
+			int (*func) (/*@null@*/ ExprItem *ei,
+				     /*@null@*/ void *d))
 {
     int i;
 
@@ -784,6 +798,7 @@ expr_simplify(expr *e)
     return e;
 }
 
+/*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
 const intnum *
 expr_get_intnum(expr **ep)
 {
@@ -794,6 +809,7 @@ expr_get_intnum(expr **ep)
     else
 	return (intnum *)NULL;
 }
+/*@=unqualifiedtrans =nullderef -nullstate -onlytrans@*/
 
 void
 expr_print(expr *e)

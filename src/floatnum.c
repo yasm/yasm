@@ -22,7 +22,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include <ctype.h>
 
@@ -43,7 +43,7 @@ RCSID("$IdPath$");
  * Mantissa does NOT have an implied one bit (it's explicit).
  */
 struct floatnum {
-    wordptr mantissa;		/* Allocated to MANT_BITS bits */
+    /*@only@*/ wordptr mantissa;	/* Allocated to MANT_BITS bits */
     unsigned short exponent;
     unsigned char sign;
     unsigned char flags;
@@ -84,7 +84,9 @@ typedef struct POT_Entry_Source_s {
  * entry[12-n] = 10 ** (-2 ** n) for 0 <= n <= 12.
  * entry[13] = 1.0
  */
-static POT_Entry *POT_TableN = (POT_Entry *)NULL;
+/*@-nullassign@*/
+static /*@only@*/ POT_Entry *POT_TableN = (POT_Entry *)NULL;
+/*@=nullassign@*/
 static POT_Entry_Source POT_TableN_Source[] = {
     {{0xe3,0x2d,0xde,0x9f,0xce,0xd2,0xc8,0x04,0xdd,0xa6},0x4ad8}, /* 1e-4096 */
     {{0x25,0x49,0xe4,0x2d,0x36,0x34,0x4f,0x53,0xae,0xce},0x656b}, /* 1e-2048 */
@@ -112,7 +114,7 @@ static POT_Entry_Source POT_TableN_Source[] = {
  * before the table.  This -1 entry is created at runtime by duplicating the
  * 0 entry.
  */
-static POT_Entry *POT_TableP;
+static /*@only@*/ POT_Entry *POT_TableP;
 static POT_Entry_Source POT_TableP_Source[] = {
     {{0x4c,0xc9,0x9a,0x97,0x20,0x8a,0x02,0x52,0x60,0xc4},0xb525}, /* 1e+4096 */
     {{0x4d,0xa7,0xe4,0x5d,0x3d,0xc5,0x5d,0x3b,0x8b,0x9e},0x9a92}, /* 1e+2048 */
@@ -131,7 +133,7 @@ static POT_Entry_Source POT_TableP_Source[] = {
 };
 
 static void
-POT_Table_Init_Entry(POT_Entry *e, POT_Entry_Source *s, int dec_exp)
+POT_Table_Init_Entry(/*@out@*/ POT_Entry *e, POT_Entry_Source *s, int dec_exp)
 {
     /* Save decimal exponent */
     e->dec_exponent = dec_exp;
@@ -150,10 +152,12 @@ POT_Table_Init_Entry(POT_Entry *e, POT_Entry_Source *s, int dec_exp)
     e->f.flags = 0;
 }
 
+/*@-compdef@*/
 static void
 POT_Table_Init(void)
+/*@globals undef POT_TableN, undef POT_TableP @*/
 {
-    unsigned int dec_exp = 1;
+    int dec_exp = 1;
     int i;
 
     /* Allocate space for two POT tables */
@@ -177,11 +181,12 @@ POT_Table_Init(void)
     /* Offset POT_TableP so that [0] becomes [-1] */
     POT_TableP++;
 }
+/*@=compdef@*/
 
 static void
 floatnum_normalize(floatnum *flt)
 {
-    int norm_amt;
+    long norm_amt;
 
     if (BitVector_is_empty(flt->mantissa)) {
 	flt->exponent = 0;
@@ -191,9 +196,9 @@ floatnum_normalize(floatnum *flt)
     /* Look for the highest set bit, shift to make it the MSB, and adjust
      * exponent.  Don't let exponent go negative. */
     norm_amt = (MANT_BITS-1)-Set_Max(flt->mantissa);
-    if (norm_amt > flt->exponent)
-	norm_amt = flt->exponent;
-    BitVector_Move_Left(flt->mantissa, norm_amt);
+    if (norm_amt > (long)flt->exponent)
+	norm_amt = (long)flt->exponent;
+    BitVector_Move_Left(flt->mantissa, (N_int)norm_amt);
     flt->exponent -= norm_amt;
 }
 
@@ -201,9 +206,9 @@ floatnum_normalize(floatnum *flt)
 static void
 floatnum_mul(floatnum *acc, const floatnum *op)
 {
-    int exp;
+    long exp;
     wordptr product, op1, op2;
-    int norm_amt;
+    long norm_amt;
 
     /* Compute the new sign */
     acc->sign ^= op->sign;
@@ -231,14 +236,14 @@ floatnum_mul(floatnum *acc, const floatnum *op)
     }
 
     /* Add one to the final exponent, as the multiply shifts one extra time. */
-    acc->exponent = exp+1;
+    acc->exponent = (unsigned short)(exp+1);
 
     /* Allocate space for the multiply result */
-    product = BitVector_Create((MANT_BITS+1)*2, FALSE);
+    product = BitVector_Create((N_int)((MANT_BITS+1)*2), FALSE);
 
     /* Allocate 1-bit-longer fields to force the operands to be unsigned */
-    op1 = BitVector_Create(MANT_BITS+1, FALSE);
-    op2 = BitVector_Create(MANT_BITS+1, FALSE);
+    op1 = BitVector_Create((N_int)(MANT_BITS+1), FALSE);
+    op2 = BitVector_Create((N_int)(MANT_BITS+1), FALSE);
 
     /* Make the operands unsigned after copying from original operands */
     BitVector_Copy(op1, acc->mantissa);
@@ -256,9 +261,9 @@ floatnum_mul(floatnum *acc, const floatnum *op)
      * exponent.  Don't let exponent go negative.
      */
     norm_amt = (MANT_BITS*2-1)-Set_Max(product);
-    if (norm_amt > acc->exponent)
-	norm_amt = acc->exponent;
-    BitVector_Move_Left(product, norm_amt);
+    if (norm_amt > (long)acc->exponent)
+	norm_amt = (long)acc->exponent;
+    BitVector_Move_Left(product, (N_int)norm_amt);
     acc->exponent -= norm_amt;
 
     /* Store the highest bits of the result */
@@ -338,7 +343,7 @@ floatnum_new(const char *str)
 
 		/* Add in current digit */
 		BitVector_Empty(operand[0]);
-		BitVector_Chunk_Store(operand[0], 4, 0, *str-'0');
+		BitVector_Chunk_Store(operand[0], 4, 0, (N_long)(*str-'0'));
 		carry = 0;
 		BitVector_add(flt->mantissa, operand[1], operand[0], &carry);
 	    } else {
@@ -374,7 +379,7 @@ floatnum_new(const char *str)
 
 		/* Add in current digit */
 		BitVector_Empty(operand[0]);
-		BitVector_Chunk_Store(operand[0], 4, 0, *str-'0');
+		BitVector_Chunk_Store(operand[0], 4, 0, (N_long)(*str-'0'));
 		carry = 0;
 		BitVector_add(flt->mantissa, operand[1], operand[0], &carry);
 	    }
@@ -405,7 +410,8 @@ floatnum_new(const char *str)
 
 	return flt;
     }
-    flt->exponent = 0x7FFF+(MANT_BITS-1);   /* Exponent if already norm. */
+    /* Exponent if already norm. */
+    flt->exponent = (unsigned short)(0x7FFF+(MANT_BITS-1));
     floatnum_normalize(flt);
 
     /* The number is normalized.  Now multiply by 10 the number of times
@@ -480,7 +486,7 @@ floatnum_delete(floatnum *flt)
 }
 
 void
-floatnum_calc(floatnum *acc, ExprOp op, floatnum *operand)
+floatnum_calc(floatnum *acc, ExprOp op, /*@unused@*/ floatnum *operand)
 {
     if (op != EXPR_NEG)
 	Error(_("Unsupported floating-point arithmetic operation"));
@@ -512,22 +518,25 @@ floatnum_get_int(const floatnum *flt, unsigned long *ret_val)
  * Returns 0 on success, 1 if overflow, -1 if underflow.
  */
 static int
-floatnum_get_common(const floatnum *flt, unsigned char *ptr, int byte_size,
-		    int mant_bits, int implicit1, int exp_bits)
+floatnum_get_common(const floatnum *flt, /*@out@*/ unsigned char *ptr,
+		    N_int byte_size, N_int mant_bits, int implicit1,
+		    N_int exp_bits)
 {
-    int exponent = flt->exponent;
+    long exponent = (long)flt->exponent;
     wordptr output;
     charptr buf;
     unsigned int len;
-    unsigned int overflow = 0, underflow = 0, retval = 0;
-    int exp_bias = (1<<(exp_bits-1))-1;
-    int exp_inf = (1<<exp_bits)-1;
+    unsigned int overflow = 0, underflow = 0;
+    int retval = 0;
+    long exp_bias = (1<<(exp_bits-1))-1;
+    long exp_inf = (1<<exp_bits)-1;
 
     output = BitVector_Create(byte_size*8, TRUE);
 
     /* copy mantissa */
     BitVector_Interval_Copy(output, flt->mantissa, 0,
-			    (MANT_BITS-implicit1)-mant_bits, mant_bits);
+			    (N_int)((MANT_BITS-implicit1)-mant_bits),
+			    mant_bits);
 
     /* round mantissa */
     if (BitVector_bit_test(flt->mantissa, (MANT_BITS-implicit1)-(mant_bits+1)))
@@ -568,7 +577,7 @@ floatnum_get_common(const floatnum *flt, unsigned char *ptr, int byte_size,
     }
 
     /* move exponent into place */
-    BitVector_Chunk_Store(output, exp_bits, mant_bits, exponent);
+    BitVector_Chunk_Store(output, exp_bits, mant_bits, (N_long)exponent);
 
     /* merge in sign bit */
     BitVector_Bit_Copy(output, byte_size*8-1, flt->sign);
@@ -631,13 +640,14 @@ floatnum_get_sized(const floatnum *flt, unsigned char *ptr, size_t size)
 	    return floatnum_get_common(flt, ptr, 10, 64, 0, 15);
 	default:
 	    InternalError(_("Invalid float conversion size"));
+	    /*@notreached@*/
 	    return 1;	    /* never reached, but silence GCC warning */
     }
 }
 
 /* 1 if the size is valid, 0 if it isn't */
 int
-floatnum_check_size(const floatnum *flt, size_t size)
+floatnum_check_size(/*@unused@*/ const floatnum *flt, size_t size)
 {
     switch (size) {
 	case 4:
@@ -658,7 +668,7 @@ floatnum_print(const floatnum *flt)
 
     /* Internal format */
     str = BitVector_to_Hex(flt->mantissa);
-    printf("%c %s *2^%04x\n", flt->sign?'-':'+', str, flt->exponent);
+    printf("%c %s *2^%04x\n", flt->sign?'-':'+', (char *)str, flt->exponent);
     xfree(str);
 
     /* 32-bit (single precision) format */

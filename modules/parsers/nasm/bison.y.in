@@ -54,12 +54,13 @@ extern sectionhead nasm_parser_sections;
 extern section *nasm_parser_cur_section;
 extern char *nasm_parser_locallabel_base;
 
-static bytecode *nasm_parser_prev_bc = (bytecode *)NULL;
+static /*@null@*/ bytecode *nasm_parser_prev_bc = (bytecode *)NULL;
 static bytecode *nasm_parser_temp_bc;
 
 /* additional data declarations (dynamically generated) */
 /* @DATADECLS@ */
 
+/*@-usedef -nullassign -memtrans -usereleased -compdef -mustfree@*/
 %}
 
 %union {
@@ -539,6 +540,7 @@ instr: instrbase
 /* @INSTRUCTIONS@ */
 
 %%
+/*@=usedef =nullassign =memtrans =usereleased =compdef =mustfree@*/
 
 static void
 nasm_parser_directive(const char *name, const char *val)

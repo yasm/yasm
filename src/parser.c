@@ -20,7 +20,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "globals.h"
 
@@ -32,10 +32,12 @@ RCSID("$IdPath$");
  * Someday change this if we dynamically load parsers at runtime.
  * Could improve this a little by generating automatically at build-time.
  */
+/*@-nullassign@*/
 static parser *parsers[] = {
     &nasm_parser,
     NULL
 };
+/*@=nullassign@*/
 
 int
 parser_setpp(parser *p, const char *pp_keyword)
@@ -45,7 +47,9 @@ parser_setpp(parser *p, const char *pp_keyword)
     /* We're just doing a linear search, as preprocs should be short */
     for (i = 0; p->preprocs[i]; i++) {
 	if (strcasecmp(p->preprocs[i]->keyword, pp_keyword) == 0) {
+	    /*@-unqualifiedtrans@*/
 	    p->current_pp = p->preprocs[i];
+	    /*@=unqualifiedtrans@*/
 	    return 0;
 	}
     }
@@ -73,7 +77,9 @@ find_parser(const char *keyword)
     /* We're just doing a linear search, as there aren't many parsers */
     for (i = 0; parsers[i]; i++) {
 	if (strcasecmp(parsers[i]->keyword, keyword) == 0)
+	    /*@-unqualifiedtrans@*/
 	    return parsers[i];
+	    /*@=unqualifiedtrans@*/
     }
 
     /* no match found */

@@ -25,7 +25,7 @@
 /* These functions only work properly if p is an (unsigned char *) */
 
 #define WRITE_BYTE(ptr, val)			\
-	*((ptr)++) = (val) & 0xFF
+	*((ptr)++) = (unsigned char)((val) & 0xFF)
 
 #define WRITE_SHORT(ptr, val)			\
 	do {					\
@@ -101,10 +101,10 @@ size_t fwrite_long(unsigned long val, FILE *f);
 
 #define LOAD_LONG(val, ptr)			\
 	do {					\
-	    (val) = *(ptr) & 0xFF;		\
-	    (val) |= (*((ptr)+1) & 0xFF) << 8;	\
-	    (val) |= (*((ptr)+2) & 0xFF) << 16;	\
-	    (val) |= (*((ptr)+3) & 0xFF) << 24;	\
+	    (val) = (unsigned long)(*(ptr) & 0xFF);		    \
+	    (val) |= (unsigned long)((*((ptr)+1) & 0xFF) << 8);	    \
+	    (val) |= (unsigned long)((*((ptr)+2) & 0xFF) << 16);    \
+	    (val) |= (unsigned long)((*((ptr)+3) & 0xFF) << 24);    \
 	} while (0)
 
 #endif

@@ -537,6 +537,7 @@ sub output_yacc ($@)
 			    for (my $i=0; $i < @opcodes; ++$i)
 			    {
 				$opcodes[$i] =~ s/([0-9A-Fa-f]{2})/0x$1/g;
+				$opcodes[$i] =~ s/(0x[0-9A-Fa-f]{2}.*\+)/(unsigned char)$1/g;
 				# don't match $0.\d in the following rule.
 				$opcodes[$i] =~ s/\$(\d+)(?!\.)/"\$".($1*2)/eg;
 				push @args, "short_op[$i]=$opcodes[$i];";
@@ -565,6 +566,7 @@ sub output_yacc ($@)
 			    for (my $i=0; $i < @opcodes; ++$i)
 			    {
 				$opcodes[$i] =~ s/([0-9A-Fa-f]{2})/0x$1/g;
+				$opcodes[$i] =~ s/(0x[0-9A-Fa-f]{2}.*\+)/(unsigned char)$1/g;
 				# don't match $0.\d in the following rule.
 				$opcodes[$i] =~ s/\$(\d+)(?!\.)/"\$".($1*2)/eg;
 				push @args, "near_op[$i]=$opcodes[$i];";
@@ -585,6 +587,12 @@ sub output_yacc ($@)
 
 			# and add the data structure reference
 			s/^/$datastructname./g foreach (@args);
+
+			if ($args[0] =~ m/\&\$/)
+			{
+			    $args[0] = '/*@-immediatetrans@*/' . $args[0] .
+			    	'/*@=immediatetrans@*/';
+			}
 
 			# generate the grammar
 			print GRAMMAR action ($rule, $tokens, $func, \@args, $count++);
@@ -625,6 +633,7 @@ sub output_yacc ($@)
 			for (my $i=0; $i < @opcodes; ++$i)
 			{
 			    $opcodes[$i] =~ s/([0-9A-Fa-f]{2})/0x$1/g;
+			    $opcodes[$i] =~ s/(0x[0-9A-Fa-f]{2}.*\+)/(unsigned char)$1/g;
 			    # don't match $0.\d in the following rule.
 			    $opcodes[$i] =~ s/\$(\d+)(?!\.)/"\$".($1*2+$to)/eg;
 			    push @args, "op[$i]=$opcodes[$i];";
@@ -661,7 +670,7 @@ sub output_yacc ($@)
 			$imm =~ s[^([0-9A-Fa-f]+),]
 			    [imm_new_int(0x$1),];
 			$imm =~ s[^\$0.(\d+),]
-			    [imm_new_int(\$1\[$1\]),];
+			    [imm_new_int((unsigned long)\$1\[$1\]),];
 
 			# divide the second, and only the second, by 8 bits/byte
 			$imm =~ s#(,\s*)(\d+)(s)?#$1 . ($2/8)#eg;

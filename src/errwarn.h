@@ -30,30 +30,33 @@ typedef enum {
     FATAL_NOMEM
 } fatal_num;
 
-char *conv_unprint(char ch);
+/*@shared@*/ char *conv_unprint(char ch);
 
 void ParserError(const char *);
 
-void InternalError_(const char *file, unsigned int line, const char *message);
+/*@exits@*/ void InternalError_(const char *file, unsigned int line,
+				const char *message);
 #define InternalError(msg)	InternalError_(__FILE__, __LINE__, msg)
 
-void Fatal(fatal_num);
-void Error(const char *, ...);
-void Warning(const char *, ...);
+/*@exits@*/ void Fatal(fatal_num);
+void Error(const char *, ...) /*@printflike@*/;
+void Warning(const char *, ...) /*@printflike@*/;
 
 /* Use Error() and Warning() instead of ErrorAt() and WarningAt() when being
  * called in line order from a parser.  The *At() functions are much slower,
  * at least in the current implementation.
  */
-void ErrorAt(const char *filename, unsigned long line, const char *, ...);
-void WarningAt(const char *filename, unsigned long line, const char *, ...);
+void ErrorAt(/*@null@*/ const char *filename, unsigned long line, const char *,
+	     ...) /*@printflike@*/;
+void WarningAt(/*@null@*/ const char *filename, unsigned long line,
+	       const char *, ...) /*@printflike@*/;
 
 /* These two functions immediately output the error or warning, with no file
  * or line information.  They should be used for errors and warnings outside
  * the parser stage (at program startup, for instance).
  */
-void ErrorNow(const char *, ...);
-void WarningNow(const char *, ...);
+void ErrorNow(const char *, ...) /*@printflike@*/;
+void WarningNow(const char *, ...) /*@printflike@*/;
 
 /* Returns total number of errors to this point in assembly. */
 unsigned int OutputAllErrorWarning(void);

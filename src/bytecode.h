@@ -24,7 +24,7 @@
 
 typedef struct effaddr effaddr;
 typedef struct immval immval;
-typedef STAILQ_HEAD(datavalhead, dataval) datavalhead;
+typedef /*@reldef@*/ STAILQ_HEAD(datavalhead, dataval) datavalhead;
 typedef struct dataval dataval;
 
 /* Additional types may be architecture-defined starting at
@@ -37,24 +37,26 @@ typedef enum {
 } bytecode_type;
 #define BYTECODE_TYPE_BASE  BC_RESERVE+1
 
-immval *imm_new_int(unsigned long int_val);
-immval *imm_new_expr(expr *e);
+/*@only@*/ immval *imm_new_int(unsigned long int_val);
+/*@only@*/ immval *imm_new_expr(/*@keep@*/ expr *e);
 
 void ea_set_len(effaddr *ea, unsigned char len);
 void ea_set_nosplit(effaddr *ea, unsigned char nosplit);
 
-void bc_set_multiple(bytecode *bc, expr *e);
+void bc_set_multiple(bytecode *bc, /*@keep@*/ expr *e);
 
-bytecode *bc_new_common(bytecode_type type, size_t datasize);
-bytecode *bc_new_data(datavalhead *datahead, unsigned long size);
-bytecode *bc_new_reserve(expr *numitems, unsigned long itemsize);
+/*@only@*/ bytecode *bc_new_common(bytecode_type type, size_t datasize);
+/*@only@*/ bytecode *bc_new_data(datavalhead *datahead, unsigned char size);
+/*@only@*/ bytecode *bc_new_reserve(/*@keep@*/ expr *numitems,
+				    unsigned char itemsize);
 
-void bc_delete(bytecode *bc);
+void bc_delete(/*@only@*/ /*@null@*/ bytecode *bc);
 
 /* Gets the offset of the bytecode specified by bc if possible.
  * Return value is IF POSSIBLE, not the value.
  */
-int bc_get_offset(section *sect, bytecode *bc, unsigned long *ret_val);
+int bc_get_offset(section *sect, bytecode *bc,
+		  /*@out@*/ unsigned long *ret_val);
 
 void bc_print(const bytecode *bc);
 
@@ -71,17 +73,19 @@ void bcs_delete(bytecodehead *headp);
  * this function.  If bc was actually appended (it wasn't NULL or empty),
  * then returns bc, otherwise returns NULL.
  */
-bytecode *bcs_append(bytecodehead *headp, bytecode *bc);
+/*@only@*/ /*@null@*/ bytecode *bcs_append(bytecodehead *headp,
+					   /*@returned@*/ /*@only@*/ /*@null@*/
+					   bytecode *bc);
 
 void bcs_print(const bytecodehead *headp);
 
 void bcs_parser_finalize(bytecodehead *headp);
 
-dataval *dv_new_expr(expr *expn);
-dataval *dv_new_float(floatnum *flt);
-dataval *dv_new_string(char *str_val);
+dataval *dv_new_expr(/*@keep@*/ expr *expn);
+dataval *dv_new_float(/*@keep@*/ floatnum *flt);
+dataval *dv_new_string(/*@keep@*/ char *str_val);
 
-/* void dvs_initialize(datavalhead *headp); */
+void dvs_initialize(datavalhead *headp);
 #define	dvs_initialize(headp)	STAILQ_INIT(headp)
 
 void dvs_delete(datavalhead *headp);
@@ -92,7 +96,8 @@ void dvs_delete(datavalhead *headp);
  * this function.  If dv was actually appended (it wasn't NULL), then
  * returns dv, otherwise returns NULL.
  */
-dataval *dvs_append(datavalhead *headp, dataval *dv);
+/*@null@*/ dataval *dvs_append(datavalhead *headp,
+			       /*@returned@*/ /*@null@*/ dataval *dv);
 
 void dvs_print(const datavalhead *head);
 

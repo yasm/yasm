@@ -22,15 +22,15 @@
 #ifndef YASM_INTNUM_H
 #define YASM_INTNUM_H
 
-intnum *intnum_new_dec(char *str);
-intnum *intnum_new_bin(char *str);
-intnum *intnum_new_oct(char *str);
-intnum *intnum_new_hex(char *str);
+/*@only@*/ intnum *intnum_new_dec(char *str);
+/*@only@*/ intnum *intnum_new_bin(char *str);
+/*@only@*/ intnum *intnum_new_oct(char *str);
+/*@only@*/ intnum *intnum_new_hex(char *str);
 /* convert character constant to integer value, using NASM rules */
-intnum *intnum_new_charconst_nasm(const char *str);
-intnum *intnum_new_int(unsigned long i);
-intnum *intnum_copy(const intnum *intn);
-void intnum_delete(intnum *intn);
+/*@only@*/ intnum *intnum_new_charconst_nasm(const char *str);
+/*@only@*/ intnum *intnum_new_int(unsigned long i);
+/*@only@*/ intnum *intnum_copy(const intnum *intn);
+void intnum_delete(/*@only@*/ intnum *intn);
 
 /* calculation function: acc = acc op operand */
 void intnum_calc(intnum *acc, ExprOp op, intnum *operand);

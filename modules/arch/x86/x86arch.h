@@ -42,12 +42,12 @@ typedef struct x86_targetval {
     x86_jmprel_opcode_sel op_sel;
 } x86_targetval;
 
-void x86_ea_set_segment(effaddr *ea, unsigned char segment);
-effaddr *x86_ea_new_reg(unsigned long reg);
+void x86_ea_set_segment(/*@null@*/ effaddr *ea, unsigned char segment);
+effaddr *x86_ea_new_reg(unsigned char reg);
 effaddr *x86_ea_new_imm(immval *imm, unsigned char im_len);
-effaddr *x86_ea_new_expr(expr *e);
+effaddr *x86_ea_new_expr(/*@keep@*/ expr *e);
 
-effaddr *x86_bc_insn_get_ea(bytecode *bc);
+/*@null@*/ effaddr *x86_bc_insn_get_ea(bytecode *bc);
 
 void x86_bc_insn_opersize_override(bytecode *bc, unsigned char opersize);
 void x86_bc_insn_addrsize_override(bytecode *bc, unsigned char addrsize);
@@ -62,8 +62,8 @@ void x86_set_jmprel_opcode_sel(x86_jmprel_opcode_sel *old_sel,
  * function (it doesn't make a copy).
  */
 typedef struct x86_new_insn_data {
-    effaddr *ea;
-    immval *imm;
+    /*@keep@*/ /*@null@*/ effaddr *ea;
+    /*@keep@*/ /*@null@*/ immval *imm;
     unsigned char opersize;
     unsigned char op_len;
     unsigned char op[3];
@@ -78,7 +78,7 @@ bytecode *x86_bc_new_insn(x86_new_insn_data *d);
  * Pass 0 for the opcode_len if that version of the opcode doesn't exist.
  */
 typedef struct x86_new_jmprel_data {
-    x86_targetval *target;
+    /*@keep@*/ x86_targetval *target;
     unsigned char short_op_len;
     unsigned char short_op[3];
     unsigned char near_op_len;

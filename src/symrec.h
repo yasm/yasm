@@ -30,12 +30,15 @@ typedef enum {
     SYM_EXTERN = 1 << 2		/* if it's declared EXTERN */
 } SymVisibility;
 
-symrec *symrec_use(const char *name);
-symrec *symrec_define_equ(const char *name, expr *e);
+/*@dependent@*/ symrec *symrec_use(const char *name);
+/*@dependent@*/ symrec *symrec_define_equ(const char *name,
+					  /*@keep@*/ expr *e);
 /* in_table specifies if the label should be inserted into the symbol table. */
-symrec *symrec_define_label(const char *name, section *sect, bytecode *precbc,
-			    int in_table);
-symrec *symrec_declare(const char *name, SymVisibility vis);
+/*@dependent@*/ symrec *symrec_define_label(const char *name,
+					    /*@dependent@*/ section *sect,
+					    /*@dependent@*/ /*@null@*/
+					    bytecode *precbc, int in_table);
+/*@dependent@*/ symrec *symrec_declare(const char *name, SymVisibility vis);
 
 /* Get the numeric 32-bit value of a symbol if possible.
  * Return value is IF POSSIBLE, not the value.
@@ -45,10 +48,10 @@ symrec *symrec_declare(const char *name, SymVisibility vis);
 int symrec_get_int_value(const symrec *sym, unsigned long *ret_val,
 			 int resolve_label);
 
-const char *symrec_get_name(const symrec *sym);
+/*@observer@*/ const char *symrec_get_name(const symrec *sym);
 SymVisibility symrec_get_visibility(const symrec *sym);
 
-const expr *symrec_get_equ(const symrec *sym);
+/*@observer@*/ /*@null@*/ const expr *symrec_get_equ(const symrec *sym);
 
 int /*@alt void@*/ symrec_foreach(int (*func) (symrec *sym));
 

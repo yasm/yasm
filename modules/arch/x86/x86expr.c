@@ -20,7 +20,11 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
+
+#ifdef STDC_HEADERS
+# include <assert.h>
+#endif
 
 #include "bitvect.h"
 
@@ -41,8 +45,8 @@ RCSID("$IdPath$");
 /* Only works if ei->type == EXPR_REG (doesn't check).
  * Overwrites ei with intnum of 0 (to eliminate regs from the final expr).
  */
-static int *
-x86_expr_checkea_get_reg32(ExprItem *ei, void *d)
+static /*@null@*/ /*@dependent@*/ int *
+x86_expr_checkea_get_reg32(ExprItem *ei, /*returned*/ void *d)
 {
     int *data = d;
     int *ret;
@@ -68,12 +72,14 @@ typedef struct x86_checkea_reg16_data {
 /* Only works if ei->type == EXPR_REG (doesn't check).
  * Overwrites ei with intnum of 0 (to eliminate regs from the final expr).
  */
-static int *
+static /*@null@*/ int *
 x86_expr_checkea_get_reg16(ExprItem *ei, void *d)
 {
     x86_checkea_reg16_data *data = d;
     /* in order: ax,cx,dx,bx,sp,bp,si,di */
+    /*@-nullassign@*/
     static int *reg16[8] = {0,0,0,0,0,0,0,0};
+    /*@=nullassign@*/
     int *ret;
 
     reg16[3] = &data->bx;
@@ -187,6 +193,7 @@ x86_expr_checkea_distcheck_reg(expr **ep)
 	for (i=0; i<e->terms[havereg_expr].data.expn->numterms; i++) {
 	    /* Copy everything EXCEPT havereg_expr term into new expression */
 	    ne = expr_copy_except(e, havereg_expr);
+	    assert(ne != NULL);
 	    /* Copy reg expr term into uncopied (empty) term in new expn */
 	    ne->terms[havereg_expr] =
 		e->terms[havereg_expr].data.expn->terms[i]; /* struct copy */
@@ -200,7 +207,9 @@ x86_expr_checkea_distcheck_reg(expr **ep)
 	e->terms[havereg_expr].type = EXPR_NONE;    /* don't delete it! */
 	expr_delete(e);				    /* but everything else */
 	e = ne;
+	/*@-onlytrans@*/
 	*ep = ne;
+	/*@=onlytrans@*/
     }
 
     return retval;
@@ -217,15 +226,18 @@ x86_expr_checkea_distcheck_reg(expr **ep)
  * and 2 if all values successfully determined and saved in data.
  */
 static int
-x86_expr_checkea_getregusage(expr **ep, int *indexreg, void *data,
+x86_expr_checkea_getregusage(expr **ep, /*@null@*/ int *indexreg, void *data,
 			     int *(*get_reg)(ExprItem *ei, void *d))
 {
     int i;
     int *reg;
     expr *e;
 
+    /*@-unqualifiedtrans@*/
     *ep = expr_xform_neg_tree(*ep);
     *ep = expr_level_tree(*ep, 1, indexreg == 0);
+    /*@=unqualifiedtrans@*/
+    assert(*ep != NULL);
     e = *ep;
     switch (x86_expr_checkea_distcheck_reg(ep)) {
 	case 0:
@@ -259,7 +271,7 @@ x86_expr_checkea_getregusage(expr **ep, int *indexreg, void *data,
 			return 1;
 		}
 
-	    /* FALLTHROUGH */
+	    /*@fallthrough@*/
 	case EXPR_IDENT:
 	    /* Check each term for register (and possible multiplier). */
 	    for (i=0; i<e->numterms; i++) {
@@ -323,10 +335,11 @@ x86_expr_checkea_getregusage(expr **ep, int *indexreg, void *data,
  *  noreg=1 if the *ModRM byte* has no registers used.
  *  isbpreg=1 if BP/EBP is the *only* register used within the *ModRM byte*.
  */
+/*@-nullstate@*/
 static int
-x86_checkea_calc_displen(expr **ep, int wordsize, int noreg, int isbpreg,
-			 unsigned char *displen, unsigned char *modrm,
-			 unsigned char *v_modrm)
+x86_checkea_calc_displen(expr **ep, unsigned int wordsize, int noreg,
+			 int isbpreg, unsigned char *displen,
+			 unsigned char *modrm, unsigned char *v_modrm)
 {
     expr *e = *ep;
     const intnum *intn;
@@ -362,7 +375,7 @@ x86_checkea_calc_displen(expr **ep, int wordsize, int noreg, int isbpreg,
 	    /* make sure the displacement will fit in 16/32 bits if unsigned,
 	     * and 8 bits if signed.
 	     */
-	    if (!intnum_check_size(intn, wordsize, 0) &&
+	    if (!intnum_check_size(intn, (size_t)wordsize, 0) &&
 		!intnum_check_size(intn, 1, 1)) {
 		ErrorAt(e->filename, e->line, _("invalid effective address"));
 		return 0;
@@ -440,6 +453,7 @@ x86_checkea_calc_displen(expr **ep, int wordsize, int noreg, int isbpreg,
 
     return 1;
 }
+/*@=nullstate@*/
 
 static int
 x86_expr_checkea_getregsize_callback(ExprItem *ei, void *d)
@@ -645,7 +659,7 @@ x86_expr_checkea(expr **ep, unsigned char *addrsize, unsigned char bits,
 		*sib |= 040;
 		/* Any scale field is valid, just leave at 0. */
 	    else {
-		*sib |= (indexreg & 7) << 3;	/* &7 to sanity check */
+		*sib |= ((unsigned int)indexreg & 7) << 3;
 		/* Set scale field, 1 case -> 0, so don't bother. */
 		switch (reg32mult[indexreg]) {
 		    case 2:

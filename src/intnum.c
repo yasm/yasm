@@ -20,7 +20,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include <ctype.h>
 
@@ -71,7 +71,7 @@ intnum_new_bin(char *str)
     intnum *intn = xmalloc(sizeof(intnum));
     wordptr bv;
 
-    intn->origsize = strlen(str);
+    intn->origsize = (unsigned char)strlen(str);
 
     if(intn->origsize > BITVECT_ALLOC_SIZE)
 	Warning(_("Numeric constant too large for internal format"));
@@ -140,6 +140,7 @@ intnum_new_hex(char *str)
     return intn;
 }
 
+/*@-usedef -compdef -uniondef@*/
 intnum *
 intnum_new_charconst_nasm(const char *str)
 {
@@ -157,18 +158,22 @@ intnum_new_charconst_nasm(const char *str)
 	case 4:
 	    intn->val.ul |= (unsigned long)str[3];
 	    intn->val.ul <<= 8;
+	    /*@fallthrough@*/
 	case 3:
 	    intn->val.ul |= (unsigned long)str[2];
 	    intn->val.ul <<= 8;
+	    /*@fallthrough@*/
 	case 2:
 	    intn->val.ul |= (unsigned long)str[1];
 	    intn->val.ul <<= 8;
+	    /*@fallthrough@*/
 	case 1:
 	    intn->val.ul |= (unsigned long)str[0];
     }
 
     return intn;
 }
+/*@=usedef =compdef =uniondef@*/
 
 intnum *
 intnum_new_int(unsigned long i)
@@ -209,11 +214,12 @@ intnum_delete(intnum *intn)
     xfree(intn);
 }
 
+/*@-nullderef -nullpass -branchstate@*/
 void
 intnum_calc(intnum *acc, ExprOp op, intnum *operand)
 {
     wordptr result = (wordptr)NULL, op1 = (wordptr)NULL, op2 = (wordptr)NULL;
-    wordptr spare;
+    wordptr spare = (wordptr)NULL;
     boolean carry;
 
     /* upsize to bitvector op if one of two parameters is bitvector already.
@@ -326,7 +332,7 @@ intnum_calc(intnum *acc, ExprOp op, intnum *operand)
 	    if (result) {
 		if (operand->type == INTNUM_UL) {
 		    BitVector_Copy(result, op1);
-		    BitVector_Move_Left(result, operand->val.ul);
+		    BitVector_Move_Left(result, (N_int)operand->val.ul);
 		} else	/* don't even bother, just zero result */
 		    BitVector_Empty(result);
 	    } else
@@ -336,7 +342,7 @@ intnum_calc(intnum *acc, ExprOp op, intnum *operand)
 	    if (result) {
 		if (operand->type == INTNUM_UL) {
 		    BitVector_Copy(result, op1);
-		    BitVector_Move_Right(result, operand->val.ul);
+		    BitVector_Move_Right(result, (N_int)operand->val.ul);
 		} else	/* don't even bother, just zero result */
 		    BitVector_Empty(result);
 	    } else
@@ -441,6 +447,7 @@ intnum_calc(intnum *acc, ExprOp op, intnum *operand)
 	}
     }
 }
+/*@=nullderef =nullpass =branchstate@*/
 
 int
 intnum_is_zero(intnum *intn)
@@ -459,7 +466,7 @@ intnum_is_pos1(intnum *intn)
 int
 intnum_is_neg1(intnum *intn)
 {
-    return ((intn->type == INTNUM_UL && intn->val.ul == -1) ||
+    return ((intn->type == INTNUM_UL && (long)intn->val.ul == -1) ||
 	    (intn->type == INTNUM_BV && BitVector_is_full(intn->val.bv)));
 }
 
@@ -473,6 +480,7 @@ intnum_get_uint(const intnum *intn)
 	    return BitVector_Chunk_Read(intn->val.bv, 32, 0);
 	default:
 	    InternalError(_("unknown intnum type"));
+	    /*@notreached@*/
 	    return 0;
     }
 }
@@ -497,9 +505,10 @@ intnum_get_int(const intnum *intn)
 		BitVector_Destroy(abs_bv);
 		return retval;
 	    } else
-		return BitVector_Chunk_Read(intn->val.bv, 32, 0);
+		return (long)BitVector_Chunk_Read(intn->val.bv, 32, 0);
 	default:
 	    InternalError(_("unknown intnum type"));
+	    /*@notreached@*/
 	    return 0;
     }
 }
@@ -522,7 +531,7 @@ intnum_get_sized(const intnum *intn, unsigned char *ptr, size_t size)
 	    break;
 	case INTNUM_BV:
 	    buf = BitVector_Block_Read(intn->val.bv, &len);
-	    if (len < size)
+	    if (len < (unsigned int)size)
 		InternalError(_("Invalid size specified (too large)"));
 	    memcpy(ptr, buf, size);
 	    xfree(buf);
@@ -571,7 +580,6 @@ intnum_check_size(const intnum *intn, size_t size, int is_signed)
 		    return retval;
 		} else
 		    return (Set_Max(intn->val.bv) < size*8);
-		break;
 	}
     } else {
 	switch (intn->type) {
@@ -592,7 +600,6 @@ intnum_check_size(const intnum *intn, size_t size, int is_signed)
 		    return 1;
 		else
 		    return (Set_Max(intn->val.bv) < size*8);
-		break;
 	}
     }
     return 0;
@@ -609,7 +616,7 @@ intnum_print(const intnum *intn)
 	    break;
 	case INTNUM_BV:
 	    s = BitVector_to_Hex(intn->val.bv);
-	    printf("0x%s/%u", s, (unsigned int)intn->origsize);
+	    printf("0x%s/%u", (char *)s, (unsigned int)intn->origsize);
 	    xfree(s);
 	    break;
     }

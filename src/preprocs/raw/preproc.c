@@ -20,7 +20,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "errwarn.h"
 
@@ -33,16 +33,19 @@ static FILE *in;
 int isatty(int);
 
 static void
-raw_preproc_initialize(objfmt *of, FILE *f)
+raw_preproc_initialize(/*@unused@*/ objfmt *of, FILE *f)
 {
     in = f;
+    /*@-unrecog@*/
     is_interactive = f ? (isatty(fileno(f)) > 0) : 0;
+    /*@=unrecog@*/
 }
 
-static int
-raw_preproc_input(char *buf, int max_size)
+static size_t
+raw_preproc_input(char *buf, size_t max_size)
 {
-    int c = '*', n;
+    int c = '*';
+    size_t n;
 
     if (is_interactive) {
 	for (n = 0; n < max_size && (c = getc(in)) != EOF && c != '\n'; n++)

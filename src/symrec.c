@@ -20,7 +20,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 #include "ternary.h"
 
@@ -54,26 +54,22 @@ struct symrec {
     SymType type;
     SymStatus status;
     SymVisibility visibility;
-    const char *filename;	/* file and line */
+    /*@dependent@*/ /*@null@*/ const char *filename;	/* file and line */
     unsigned long line;		/*  symbol was first declared or used on */
     union {
 	expr *expn;		/* equ value */
 	struct label_s {	/* bytecode immediately preceding a label */
-	    section *sect;
-	    bytecode *bc;
+	    /*@dependent@*/ section *sect;
+	    /*@dependent@*/ /*@null@*/ bytecode *bc;
 	} label;
     } value;
 };
 
-/* private functions */
-static symrec *symrec_get_or_new(const char *name, int in_table);
-static symrec *symrec_define(const char *name, SymType type, int in_table);
-
 /* The symbol table: a ternary tree. */
-static ternary_tree sym_table = (ternary_tree)NULL;
+static /*@only@*/ /*@null@*/ ternary_tree sym_table = (ternary_tree)NULL;
 
 /* create a new symrec */
-static symrec *
+static /*@partial@*/ /*@dependent@*/ symrec *
 symrec_get_or_new(const char *name, int in_table)
 {
     symrec *rec, *rec2;
@@ -96,7 +92,9 @@ symrec_get_or_new(const char *name, int in_table)
     rec->line = line_number;
     rec->visibility = SYM_LOCAL;
 
+    /*@-freshtrans -mustfree@*/
     return rec;
+    /*@=freshtrans =mustfree@*/
 }
 
 /* Call a function with each symrec.  Stops early if 0 returned by func.
@@ -116,7 +114,7 @@ symrec_use(const char *name)
     return rec;
 }
 
-static symrec *
+static /*@dependent@*/ symrec *
 symrec_define(const char *name, SymType type, int in_table)
 {
     symrec *rec = symrec_get_or_new(name, in_table);
@@ -252,7 +250,7 @@ symrec_parser_finalize(void)
 }
 
 static void
-symrec_delete_one(void *d)
+symrec_delete_one(/*@only@*/ void *d)
 {
     symrec *sym = d;
     xfree(sym->name);
@@ -323,5 +321,6 @@ symrec_print(const symrec *sym)
 	printf("\n");
     }
 
-    printf("Filename=\"%s\" Line Number=%lu\n", sym->filename, sym->line);
+    printf("Filename=\"%s\" Line Number=%lu\n",
+	   sym->filename?sym->filename:"(NULL)", sym->line);
 }

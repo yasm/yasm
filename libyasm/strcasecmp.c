@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  */
 #include "util.h"
-RCSID("$IdPath$");
+/*@unused@*/ RCSID("$IdPath$");
 
 
 #ifdef USE_OUR_OWN_STRCASECMP

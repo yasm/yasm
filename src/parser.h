@@ -37,7 +37,7 @@ struct parser {
     preproc **preprocs;
 
     /* Current preprocessor (set to the default at compile time) */
-    preproc *current_pp;
+    /*@dependent@*/ preproc *current_pp;
 
     /* Main entrance point for the parser.
      *
@@ -60,7 +60,7 @@ struct parser {
 /* Sets current_pp within p by searching the preprocs list for a preproc
  * matching pp_keyword.  Returns nonzero if no match was found.
  */
-int parser_setpp(parser *p, const char *pp_keyword);
+int parser_setpp(/*@partial@*/ parser *p, const char *pp_keyword);
 
 /* Lists preprocessors available for p.  Calls printfunc with the name
  * and keyword of each available preprocessor.
@@ -70,7 +70,7 @@ void parser_listpp(parser *p,
 
 /* Finds a parser based on its keyword.  Returns NULL if no match was found.
  */
-parser *find_parser(const char *keyword);
+/*@null@*/ parser *find_parser(const char *keyword);
 
 /* Lists all available parsers.  Calls printfunc with the name and keyword
  * of each available parser.
