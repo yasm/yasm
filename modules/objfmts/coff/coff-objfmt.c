@@ -392,7 +392,7 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     long pos;
     coff_reloc *reloc;
 
-    /* Don't output absolute sections */
+    /* Don't output absolute sections into the section table */
     if (yasm_section_is_absolute(sect))
 	return 0;
 
@@ -468,7 +468,7 @@ coff_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     /*@dependent@*/ /*@null@*/ coff_section_data *csd;
     unsigned char *localbuf;
 
-    /* Don't output absolute sections */
+    /* Don't output absolute sections into the section table */
     if (yasm_section_is_absolute(sect))
 	return 0;
 
@@ -551,6 +551,8 @@ coff_objfmt_output(FILE *f, yasm_sectionhead *sections, int all_syms)
     symtab_pos = (unsigned long)pos;
     STAILQ_FOREACH(entry, &coff_symtab, link) {
 	const char *name = yasm_symrec_get_name(entry->sym);
+	const yasm_expr *equ_val;
+	const yasm_intnum *intn;
 	size_t len = strlen(name);
 	int aux;
 	/*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
@@ -574,18 +576,48 @@ coff_objfmt_output(FILE *f, yasm_sectionhead *sections, int all_syms)
 	    if (sect) {
 		/*@dependent@*/ /*@null@*/ coff_section_data *csectd;
 		csectd = yasm_section_get_of_data(sect);
-		scnum = csectd->scnum;
-		scnlen = csectd->size;
-		nreloc = csectd->nreloc;
+		if (csectd) {
+		    scnum = csectd->scnum;
+		    scnlen = csectd->size;
+		    nreloc = csectd->nreloc;
+		    if (COFF_SET_VMA)
+			value = csectd->addr;
+		} else if (yasm_section_is_absolute(sect)) {
+		    yasm_expr *abs_start;
+
+		    abs_start = yasm_expr_copy(yasm_section_get_start(sect));
+		    intn = yasm_expr_get_intnum(&abs_start,
+						yasm_common_calc_bc_dist);
+		    if (!intn)
+			yasm__error(abs_start->line,
+			    N_("absolute section start not an integer expression"));
+		    else
+			value = yasm_intnum_get_uint(intn);
+		    yasm_expr_delete(abs_start);
+
+		    scnum = 0xffff;	/* -1 = absolute symbol */
+		} else
+		    yasm_internal_error(N_("didn't understand section"));
 		if (precbc)
-		    value = precbc->offset + precbc->len;
-		if (COFF_SET_VMA)
-		    value += csectd->addr;
+		    value += precbc->offset + precbc->len;
 	    }
+	} else if ((equ_val = yasm_symrec_get_equ(entry->sym))) {
+	    yasm_expr *equ_val_copy = yasm_expr_copy(equ_val);
+	    intn = yasm_expr_get_intnum(&equ_val_copy,
+					yasm_common_calc_bc_dist);
+	    if (!intn) {
+		yasm_sym_vis vis = yasm_symrec_get_visibility(entry->sym);
+		if (vis & YASM_SYM_GLOBAL)
+		    yasm__error(equ_val->line,
+			N_("global EQU value not an integer expression"));
+	    } else
+		value = yasm_intnum_get_uint(intn);
+	    yasm_expr_delete(equ_val_copy);
+
+	    scnum = 0xffff;     /* -1 = absolute symbol */
 	} else {
 	    yasm_sym_vis vis = yasm_symrec_get_visibility(entry->sym);
 	    if (vis & YASM_SYM_COMMON) {
-		const yasm_intnum *intn;
 		intn = yasm_expr_get_intnum(&csymd->size,
 					    yasm_common_calc_bc_dist);
 		if (!intn)
