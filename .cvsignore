@@ -1,3 +1,10 @@
+nasm-bison.y
+nasm-bison.c
+nasm-bison.h
+nasm-token.l
+nasm-token.c
+yasm
+*_test
 configure
 configure.scan
 config.*
