@@ -18,7 +18,6 @@ yasm_LDADD = \
 	optimizers/dbg/liboptimizer.a	\
 	objfmts/dbg/libobjfmt.a		\
 	libyasm.a			\
-	@LIBOBJS@			\
 	$(INTLLIBS)
 
 noinst_LIBRARIES = libyasm.a
@@ -59,6 +58,9 @@ libyasm_a_SOURCES = \
 	xmalloc.c		\
 	xstrdup.c		\
 	strcasecmp.c
+
+libyasm_a_LIBADD = \
+	@LIBOBJS@
 
 CFLAGS = @ANSI_CFLAGS@
 
