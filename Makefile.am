@@ -27,6 +27,7 @@ include check/Makefile.inc
 include src/Makefile.inc
 
 EXTRA_DIST += \
+	strsep.c mergesort.c \
 	COPYING.LIB-2.0 \
 	Mkfiles/Makefile.flat \
 	Mkfiles/Makefile.dj Mkfiles/config.h.dj \
