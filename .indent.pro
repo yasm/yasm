@@ -50,7 +50,7 @@
 -Tsection
 -Tpreproc
 -Tparser
--Toutfmt
+-Tobjfmt
 -Tdataval
 -TSymStatus
 -TSymType
