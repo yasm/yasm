@@ -22,6 +22,8 @@
 #ifndef YASM_CORETYPE_H
 #define YASM_CORETYPE_H
 
+typedef struct arch arch;
+
 typedef struct preproc preproc;
 typedef struct parser parser;
 typedef struct optimizer optimizer;

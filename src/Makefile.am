@@ -1,6 +1,6 @@
 # $IdPath$
 
-SUBDIRS = parsers preprocs optimizers objfmts . tests
+SUBDIRS = arch parsers preprocs optimizers objfmts . tests
 
 INCLUDES = -I$(top_builddir)/intl
 
@@ -12,6 +12,7 @@ yasm_SOURCES = \
 	errwarn.h
 
 yasm_LDADD = \
+	arch/@ARCH@/libarch.a		\
 	parsers/nasm/libparser.a	\
 	preprocs/raw/libpreproc.a	\
 	optimizers/dbg/liboptimizer.a	\
@@ -31,10 +32,12 @@ libyasm_a_SOURCES = \
 	globals.c		\
 	globals.h		\
 	util.h			\
+	coretype.h		\
 	file.c			\
 	file.h			\
 	section.c		\
 	section.h		\
+	arch.h			\
 	objfmt.h		\
 	options.h		\
 	options.c		\
@@ -57,5 +60,4 @@ libyasm_a_SOURCES = \
 CFLAGS = @ANSI_CFLAGS@
 
 EXTRA_DIST = \
-	instrs.dat		\
 	compat-queue.h

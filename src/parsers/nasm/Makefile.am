@@ -33,7 +33,7 @@ INCLUDES = \
 
 CFLAGS = @ANSI_CFLAGS@
 
-token.l bison.y: $(top_srcdir)/src/instrs.dat token.l.in bison.y.in gen_instr.pl
+token.l bison.y: $(top_srcdir)/src/arch/@ARCH@/instrs.dat token.l.in bison.y.in gen_instr.pl
 if DEV
 	$(PERL) gen_instr.pl -i $(top_srcdir)/src/instrs.dat -t token.l -g bison.y
 else

@@ -8,6 +8,9 @@ AM_CONFIG_HEADER(config.h)
 
 AM_INIT_AUTOMAKE(yasm, 0.0.1)
 
+ARCH=x86
+AC_SUBST(ARCH)
+
 AC_ARG_ENABLE(dev,
 [  --enable-dev        Enable full development build capability],
 [case "${enableval}" in
@@ -200,6 +203,8 @@ AC_OUTPUT(Makefile
 	intl/Makefile
 	po/Makefile.in
 	src/Makefile
+	src/arch/Makefile
+	src/arch/x86/Makefile
 	src/parsers/Makefile
 	src/parsers/nasm/Makefile
 	src/preprocs/Makefile

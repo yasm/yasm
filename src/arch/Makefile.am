@@ -1,0 +1,3 @@
+# $IdPath$
+
+SUBDIRS = x86
