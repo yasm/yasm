@@ -31,6 +31,7 @@ SRC_OBJS= \
  src\mergesort.obj \
  src\ternary.obj \
  src\bitvect.obj \
+ src\valparam.obj \
  src\xmalloc.obj \
  src\xstrdup.obj \
  src\strcasecmp.obj

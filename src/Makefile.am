@@ -56,6 +56,8 @@ libyasm_a_SOURCES = \
 	ternary.h		\
 	bitvect.c		\
 	bitvect.h		\
+	valparam.c		\
+	valparam.h		\
 	xmalloc.c		\
 	xstrdup.c		\
 	strcasecmp.c

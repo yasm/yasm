@@ -112,4 +112,6 @@ void xfree(/*@only@*/ /*@out@*/ /*@null@*/ void *p);
 
 #include "coretype.h"
 
+#include "valparam.h"
+
 #endif
