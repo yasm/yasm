@@ -6,93 +6,95 @@
 # Works for simple build but *not* for development (no clean, dist, etc).
 # Also, WARNING, no header dependencies are included!
 #
-# Problem to fix: to simplify this file, we probably want subdir Makefiles
-#  included into this one?  But include directives vary between Make versions.
-# Should bison/flex/perl rules even be included in this if it's not for
-#  development use?
-#
 # NOTE: Needs a valid config.h for the platform being compiled on.
 #
 # This file should be customized to particular platforms by changing CC and
-#  CFLAGS appropriately, along with writing a config.h for the platform.
+#  CFLAGS appropriately, along with writing a config.h for the platform and
+#  placing it in a libyasm subdirectory.
 
-CFLAGS=-DHAVE_CONFIG_H -IMkfiles -I. -Isrc -Isrc/arch/x86
+CFLAGS=-DHAVE_CONFIG_H -DWIN32 -IMkfiles -I. -Ifrontends/yasm
 CC=gcc
-BISON=bison
-FLEX=flex
-PERL=perl
 
-all: src/yasm
+all: yasm
 
-YASM_BASE_OBJS= \
- src/bytecode.o \
- src/expr.o \
- src/symrec.o \
- src/globals.o \
- src/file.o \
- src/section.o \
- src/arch.o \
- src/objfmt.o \
- src/preproc.o \
- src/parser.o \
- src/intnum.o \
- src/floatnum.o \
- src/hamt.o \
- src/bitvect.o \
- src/valparam.o \
- src/xmalloc.o \
- src/xstrdup.o \
- src/strcasecmp.o
+LIBYASM_OBJS= \
+ libyasm/arch.o \
+ libyasm/bitvect.o \
+ libyasm/bytecode.o \
+ libyasm/errwarn.o \
+ libyasm/expr.o \
+ libyasm/file.o \
+ libyasm/floatnum.o \
+ libyasm/hamt.o \
+ libyasm/intnum.o \
+ libyasm/linemgr.o \
+ libyasm/mergesort.o \
+ libyasm/section.o \
+ libyasm/strcasecmp.o \
+ libyasm/strsep.o \
+ libyasm/symrec.o \
+ libyasm/valparam.o \
+ libyasm/xmalloc.o \
+ libyasm/xstrdup.o
 
-YASM_ARCH_OBJS= \
- src/arch/x86/x86arch.o \
- src/arch/x86/x86bc.o \
- src/arch/x86/x86expr.o
+MODULES_ARCH_OBJS= \
+ modules/arch/x86/x86arch.o \
+ modules/arch/x86/x86bc.o \
+ modules/arch/x86/x86expr.o \
+ x86id.o
 
-YASM_PARSER_OBJS= \
- src/parsers/nasm/nasm-parser.o \
+MODULES_DBGFMTS_OBJS= \
+ modules/dbgfmts/null/null-dbgfmt.o
+
+MODULES_OBJFMTS_OBJS= \
+ modules/objfmts/dbg/dbg-objfmt.o \
+ modules/objfmts/bin/bin-objfmt.o \
+ modules/objfmts/coff/coff-objfmt.o
+
+MODULES_OPTIMIZERS_OBJS= \
+ modules/optimizers/basic/basic-optimizer.o
+
+MODULES_PARSERS_OBJS= \
+ modules/parsers/nasm/nasm-parser.o \
  nasm-bison.o \
  nasm-token.o
 
-YASM_PREPROC_OBJS= \
- src/preprocs/raw/raw-preproc.o \
- src/preprocs/yapp/yapp-preproc.o \
+MODULES_PREPROCS_NASM_OBJS= \
+ modules/preprocs/nasm/nasm-eval.o \
+ modules/preprocs/nasm/nasm-pp.o \
+ modules/preprocs/nasm/nasm-preproc.o \
+ modules/preprocs/nasm/nasmlib.o \
+ nasm-macros.o
+
+MODULES_PREPROCS_YAPP_OBJS = \
+ modules/preprocs/yapp/yapp-preproc.o \
  yapp-token.o
 
-YASM_OPTIMIZER_OBJS= \
- src/optimizers/basic/basic-optimizer.o
+MODULES_PREPROCS_RAW_OBJS = \
+ modules/preprocs/raw/raw-preproc.o \
 
-YASM_OBJFMT_OBJS= \
- src/objfmts/dbg/dbg-objfmt.o \
- src/objfmts/bin/bin-objfmt.o
+MODULES_PREPROCS_OBJS = \
+ $(MODULES_PREPROCS_NASM_OBJS) \
+ $(MODULES_PREPROCS_YAPP_OBJS) \
+ $(MODULES_PREPROCS_RAW_OBJS)
+
+MODULES_OBJS = \
+ $(MODULES_ARCH_OBJS) \
+ $(MODULES_DBGFMTS_OBJS) \
+ $(MODULES_OBJFMTS_OBJS) \
+ $(MODULES_OPTIMIZERS_OBJS) \
+ $(MODULES_PARSERS_OBJS) \
+ $(MODULES_PREPROCS_OBJS)
 
 YASM_OBJS= \
- src/main.o \
- src/errwarn.o \
- src/options.o \
- $(YASM_BASE_OBJS) \
- $(YASM_ARCH_OBJS) \
- $(YASM_PARSER_OBJS) \
- $(YASM_PREPROC_OBJS) \
- $(YASM_OPTIMIZER_OBJS) \
- $(YASM_OBJFMT_OBJS) \
- mergesort.o
+ frontends/yasm/yasm.o \
+ Mkfiles/vc/yasm-module.o \
+ frontends/yasm/yasm-options.o \
+ $(LIBYASM_OBJS) \
+ $(MODULES_OBJS)
 
-src/yasm: $(YASM_OBJS)
-	$(CC) -o src/yasm $(YASM_OBJS)
-
-# This is broken: it produces an invalid bison.h
-nasm-bison.c: nasm-bison.y
-	$(BISON) -d --name-prefix=nasm_parser_ -o $@ $<
-
-nasm-token.c: nasm-token.l
-	$(FLEX) -Pnasm_parser_ -o$@ $<
-
-nasm-bison.y nasm-token.l: src/arch/x86/instrs.dat src/parsers/nasm/bison.y.in src/parsers/nasm/token.l.in src/parsers/nasm/gen_instr.pl
-	$(PERL) src/parsers/nasm/gen_instr.pl -i src/arch/x86/instrs.dat -t nasm-token.l -g nasm-bison.y
-
-yapp-token.c: src/preprocs/yapp/yapp-token.l
-	$(FLEX) -Pyapp_parser_ -o$@ $<
+yasm: $(YASM_OBJS)
+	$(CC) -o yasm $(YASM_OBJS)
 
 .c.o:
 	$(CC) -c $(CFLAGS) -o $@ $<

@@ -40,7 +40,7 @@ EXTRA_DIST += \
 	COPYING.LIB-2.0 \
 	splint.sh \
 	Mkfiles/Makefile.flat \
-	Mkfiles/Makefile.dj Mkfiles/dj/config.h \
+	Mkfiles/Makefile.dj Mkfiles/dj/libyasm/config.h \
 	Mkfiles/vc/yasm-module.c \
 	Mkfiles/vc/yasm.dep \
 	Mkfiles/vc/yasm.dsp \
