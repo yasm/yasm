@@ -105,6 +105,9 @@ RCSID("$IdPath$");
  *            2 = SHORT
  *            3 = FAR
  *            4 = TO
+ *  - 1 bit = effective address size
+ *            0 = any address size allowed except for 64-bit
+ *            1 = only 64-bit address size allowed
  *
  * MSBs than the above are actions: what to do with the operand if the
  * instruction matches.  Essentially describes what part of the output bytecode
@@ -128,11 +131,12 @@ RCSID("$IdPath$");
  * additional data (stored in the second byte of the opcode with a one-byte
  * opcode) is passed to later stages of the assembler with flags set to
  * indicate postponed actions.
- *  - 2 bits = postponed action:
+ *  - 3 bits = postponed action:
  *             0 = none
  *             1 = shift operation with a ,1 short form (instead of imm8).
  *             2 = large imm16/32 that can become a sign-extended imm8.
  *             3 = can be far jump
+ *             4 = could become a short opcode mov with bits=64 and a32 prefix
  */
 #define OPT_Imm		0x0
 #define OPT_Reg		0x1
@@ -171,30 +175,35 @@ RCSID("$IdPath$");
 #define OPS_Relaxed	(1UL<<8)
 #define OPS_RMASK	(1UL<<8)
 
-#define OPTM_None	(0UL<<9)
-#define OPTM_Near	(1UL<<9)
-#define OPTM_Short	(2UL<<9)
-#define OPTM_Far	(3UL<<9)
-#define OPTM_To		(4UL<<9)
-#define OPTM_MASK	(7UL<<9)
+#define OPEAS_Not64	(0UL<<9)
+#define OPEAS_64	(1UL<<9)
+#define OPEAS_MASK	(1UL<<9)
 
-#define OPA_None	(0UL<<12)
-#define OPA_EA		(1UL<<12)
-#define OPA_Imm		(2UL<<12)
-#define OPA_SImm	(3UL<<12)
-#define OPA_Spare	(4UL<<12)
-#define OPA_Op0Add	(5UL<<12)
-#define OPA_Op1Add	(6UL<<12)
-#define OPA_SpareEA	(7UL<<12)
-#define OPA_JmpRel	(8UL<<12)
-#define OPA_AdSizeR	(9UL<<12)
-#define OPA_MASK	(0xFUL<<12)
+#define OPTM_None	(0UL<<10)
+#define OPTM_Near	(1UL<<10)
+#define OPTM_Short	(2UL<<10)
+#define OPTM_Far	(3UL<<10)
+#define OPTM_To		(4UL<<10)
+#define OPTM_MASK	(7UL<<10)
 
-#define OPAP_None	(0UL<<16)
-#define OPAP_ShiftOp	(1UL<<16)
-#define OPAP_SImm8Avail	(2UL<<16)
-#define OPAP_JmpFar	(3UL<<16)
-#define OPAP_MASK	(3UL<<16)
+#define OPA_None	(0UL<<13)
+#define OPA_EA		(1UL<<13)
+#define OPA_Imm		(2UL<<13)
+#define OPA_SImm	(3UL<<13)
+#define OPA_Spare	(4UL<<13)
+#define OPA_Op0Add	(5UL<<13)
+#define OPA_Op1Add	(6UL<<13)
+#define OPA_SpareEA	(7UL<<13)
+#define OPA_JmpRel	(8UL<<13)
+#define OPA_AdSizeR	(9UL<<13)
+#define OPA_MASK	(0xFUL<<13)
+
+#define OPAP_None	(0UL<<17)
+#define OPAP_ShiftOp	(1UL<<17)
+#define OPAP_SImm8Avail	(2UL<<17)
+#define OPAP_JmpFar	(3UL<<17)
+#define OPAP_ShortMov	(4UL<<17)
+#define OPAP_MASK	(7UL<<17)
 
 typedef struct x86_insn_info {
     /* The CPU feature flags needed to execute this instruction.  This is OR'ed
@@ -303,24 +312,63 @@ static const x86_insn_info twobytemem_insn[] = {
 
 /* Move instructions */
 static const x86_insn_info mov_insn[] = {
-    { CPU_Any, 0, 0, 0, 0, 1, {0xA0, 0, 0}, 0, 2,
+    /* Absolute forms for non-64-bit mode */
+    { CPU_Not64, 0, 0, 0, 0, 1, {0xA0, 0, 0}, 0, 2,
       {OPT_Areg|OPS_8|OPA_None, OPT_MemOffs|OPS_8|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_Any, 0, 16, 0, 0, 1, {0xA1, 0, 0}, 0, 2,
+    { CPU_Not64, 0, 16, 0, 0, 1, {0xA1, 0, 0}, 0, 2,
       {OPT_Areg|OPS_16|OPA_None, OPT_MemOffs|OPS_16|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_386, 0, 32, 0, 0, 1, {0xA1, 0, 0}, 0, 2,
+    { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0xA1, 0, 0}, 0, 2,
       {OPT_Areg|OPS_32|OPA_None, OPT_MemOffs|OPS_32|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_Hammer|CPU_64, 0, 64, 0, 0, 1, {0xA1, 0, 0}, 0, 2,
-      {OPT_Areg|OPS_64|OPA_None, OPT_MemOffs|OPS_64|OPS_Relaxed|OPA_EA, 0} },
 
-    { CPU_Any, 0, 0, 0, 0, 1, {0xA2, 0, 0}, 0, 2,
+    { CPU_Not64, 0, 0, 0, 0, 1, {0xA2, 0, 0}, 0, 2,
       {OPT_MemOffs|OPS_8|OPS_Relaxed|OPA_EA, OPT_Areg|OPS_8|OPA_None, 0} },
-    { CPU_Any, 0, 16, 0, 0, 1, {0xA3, 0, 0}, 0, 2,
+    { CPU_Not64, 0, 16, 0, 0, 1, {0xA3, 0, 0}, 0, 2,
       {OPT_MemOffs|OPS_16|OPS_Relaxed|OPA_EA, OPT_Areg|OPS_16|OPA_None, 0} },
-    { CPU_386, 0, 32, 0, 0, 1, {0xA3, 0, 0}, 0, 2,
+    { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0xA3, 0, 0}, 0, 2,
       {OPT_MemOffs|OPS_32|OPS_Relaxed|OPA_EA, OPT_Areg|OPS_32|OPA_None, 0} },
-    { CPU_Hammer|CPU_64, 0, 64, 0, 0, 1, {0xA3, 0, 0}, 0, 2,
-      {OPT_MemOffs|OPS_64|OPS_Relaxed|OPA_EA, OPT_Areg|OPS_64|OPA_None, 0} },
 
+    /* 64-bit absolute forms for 64-bit mode */
+    { CPU_Hammer|CPU_64, 0, 0, 0, 0, 1, {0xA0, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_8|OPA_None,
+       OPT_MemOffs|OPS_8|OPS_Relaxed|OPEAS_64|OPA_EA, 0} },
+    { CPU_Hammer|CPU_64, 0, 16, 0, 0, 1, {0xA1, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_16|OPA_None,
+       OPT_MemOffs|OPS_16|OPS_Relaxed|OPEAS_64|OPA_EA, 0} },
+    { CPU_Hammer|CPU_64, 0, 32, 0, 0, 1, {0xA1, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_32|OPA_None,
+       OPT_MemOffs|OPS_32|OPS_Relaxed|OPEAS_64|OPA_EA, 0} },
+    { CPU_Hammer|CPU_64, 0, 64, 0, 0, 1, {0xA1, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_64|OPA_None,
+       OPT_MemOffs|OPS_64|OPS_Relaxed|OPEAS_64|OPA_EA, 0} },
+
+    { CPU_Hammer|CPU_64, 0, 0, 0, 0, 1, {0xA2, 0, 0}, 0, 2,
+      {OPT_MemOffs|OPS_8|OPS_Relaxed|OPEAS_64|OPA_EA,
+       OPT_Areg|OPS_8|OPA_None, 0} },
+    { CPU_Hammer|CPU_64, 0, 16, 0, 0, 1, {0xA3, 0, 0}, 0, 2,
+      {OPT_MemOffs|OPS_16|OPS_Relaxed|OPEAS_64|OPA_EA,
+       OPT_Areg|OPS_16|OPA_None, 0} },
+    { CPU_Hammer|CPU_64, 0, 32, 0, 0, 1, {0xA3, 0, 0}, 0, 2,
+      {OPT_MemOffs|OPS_32|OPS_Relaxed|OPEAS_64|OPA_EA,
+       OPT_Areg|OPS_32|OPA_None, 0} },
+    { CPU_Hammer|CPU_64, 0, 64, 0, 0, 1, {0xA3, 0, 0}, 0, 2,
+      {OPT_MemOffs|OPS_64|OPS_Relaxed|OPEAS_64|OPA_EA,
+       OPT_Areg|OPS_64|OPA_None, 0} },
+
+    /* General 32-bit forms using Areg / short absolute option */
+    { CPU_Any, 0, 0, 0, 0, 1, {0x88, 0xA2, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA|OPAP_ShortMov, OPT_Areg|OPS_8|OPA_Spare,
+       0} },
+    { CPU_Any, 0, 16, 0, 0, 1, {0x89, 0xA3, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA|OPAP_ShortMov,
+       OPT_Areg|OPS_16|OPA_Spare, 0} },
+    { CPU_386, 0, 32, 0, 0, 1, {0x89, 0xA3, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA|OPAP_ShortMov,
+       OPT_Areg|OPS_32|OPA_Spare, 0} },
+    { CPU_Hammer|CPU_64, 0, 64, 0, 0, 1, {0x89, 0xA3, 0}, 0, 2,
+      {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA|OPAP_ShortMov,
+       OPT_Areg|OPS_64|OPA_Spare, 0} },
+
+    /* General 32-bit forms */
     { CPU_Any, 0, 0, 0, 0, 1, {0x88, 0, 0}, 0, 2,
       {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_8|OPA_Spare, 0} },
     { CPU_Any, 0, 16, 0, 0, 1, {0x89, 0, 0}, 0, 2,
@@ -330,6 +378,21 @@ static const x86_insn_info mov_insn[] = {
     { CPU_Hammer|CPU_64, 0, 64, 0, 0, 1, {0x89, 0, 0}, 0, 2,
       {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_64|OPA_Spare, 0} },
 
+    /* General 32-bit forms using Areg / short absolute option */
+    { CPU_Any, 0, 0, 0, 0, 1, {0x8A, 0xA0, 0}, 0, 2,
+      {OPT_Areg|OPS_8|OPA_Spare, OPT_RM|OPS_8|OPS_Relaxed|OPA_EA|OPAP_ShortMov,
+       0} },
+    { CPU_Any, 0, 16, 0, 0, 1, {0x8B, 0xA1, 0}, 0, 2,
+      {OPT_Areg|OPS_16|OPA_Spare,
+       OPT_RM|OPS_16|OPS_Relaxed|OPA_EA|OPAP_ShortMov, 0} },
+    { CPU_386, 0, 32, 0, 0, 1, {0x8B, 0xA1, 0}, 0, 2,
+      {OPT_Areg|OPS_32|OPA_Spare,
+       OPT_RM|OPS_32|OPS_Relaxed|OPA_EA|OPAP_ShortMov, 0} },
+    { CPU_Hammer|CPU_64, 0, 64, 0, 0, 1, {0x8B, 0xA1, 0}, 0, 2,
+      {OPT_Areg|OPS_64|OPA_Spare,
+       OPT_RM|OPS_64|OPS_Relaxed|OPA_EA|OPAP_ShortMov, 0} },
+
+    /* General 32-bit forms */
     { CPU_Any, 0, 0, 0, 0, 1, {0x8A, 0, 0}, 0, 2,
       {OPT_Reg|OPS_8|OPA_Spare, OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, 0} },
     { CPU_Any, 0, 16, 0, 0, 1, {0x8B, 0, 0}, 0, 2,
@@ -339,6 +402,7 @@ static const x86_insn_info mov_insn[] = {
     { CPU_Hammer|CPU_64, 0, 64, 0, 0, 1, {0x8B, 0, 0}, 0, 2,
       {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} },
 
+    /* Segment register forms */
     { CPU_Any, 0, 0, 0, 0, 1, {0x8C, 0, 0}, 0, 2,
       {OPT_Mem|OPS_16|OPS_Relaxed|OPA_EA,
        OPT_SegReg|OPS_16|OPS_Relaxed|OPA_Spare, 0} },
@@ -357,6 +421,7 @@ static const x86_insn_info mov_insn[] = {
     { CPU_Hammer|CPU_64, 0, 0, 0, 0, 1, {0x8E, 0, 0}, 0, 2,
       {OPT_SegReg|OPS_16|OPS_Relaxed|OPA_Spare, OPT_Reg|OPS_64|OPA_EA, 0} },
 
+    /* Immediate forms */
     { CPU_Any, 0, 0, 0, 0, 1, {0xB0, 0, 0}, 0, 2,
       {OPT_Reg|OPS_8|OPA_Op0Add, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
     { CPU_Any, 0, 16, 0, 0, 1, {0xB8, 0, 0}, 0, 2,
@@ -383,6 +448,7 @@ static const x86_insn_info mov_insn[] = {
     { CPU_Hammer|CPU_64, 0, 64, 0, 0, 1, {0xC7, 0, 0}, 0, 2,
       {OPT_RM|OPS_64|OPA_EA, OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm, 0} },
 
+    /* CR/DR forms */
     { CPU_586|CPU_Priv|CPU_Not64, 0, 0, 0, 0, 2, {0x0F, 0x22, 0}, 0, 2,
       {OPT_CR4|OPS_32|OPA_Spare, OPT_Reg|OPS_32|OPA_EA, 0} },
     { CPU_386|CPU_Priv|CPU_Not64, 0, 0, 0, 0, 2, {0x0F, 0x22, 0}, 0, 2,
@@ -1986,6 +2052,18 @@ yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
 	    if (mismatch)
 		break;
 
+	    /* Check for 64-bit effective address size */
+	    if (op->type == YASM_INSN__OPERAND_MEMORY) {
+		if ((info->operands[i] & OPEAS_MASK) == OPEAS_64) {
+		    if (op->data.ea->len != 8)
+			mismatch = 1;
+		} else if (op->data.ea->len == 8)
+		    mismatch = 1;
+	    }
+
+	    if (mismatch)
+		break;
+
 	    /* Check target modifier */
 	    switch ((int)(info->operands[i] & OPTM_MASK)) {
 		case OPTM_None:
@@ -2076,6 +2154,7 @@ yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
     d.im_sign = 0;
     d.shift_op = 0;
     d.signext_imm8_op = 0;
+    d.shortmov_op = 0;
     d.rex = 0;
 
     /* Apply modifiers */
@@ -2254,6 +2333,9 @@ yasm_x86__parse_insn(yasm_arch *arch, const unsigned long data[4],
 		    break;
 		case OPAP_SImm8Avail:
 		    d.signext_imm8_op = 1;
+		    break;
+		case OPAP_ShortMov:
+		    d.shortmov_op = 1;
 		    break;
 		default:
 		    yasm_internal_error(

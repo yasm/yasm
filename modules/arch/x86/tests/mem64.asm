@@ -1,12 +1,15 @@
 [bits 64]
-mov ax, [0]			; 66 A1 00 00 00 00 00 00 00 00
+mov ax, [0]			; 66 8B 04 25 00 00 00 00
 mov rax, [qword 0]		; 48 A1 00 00 00 00 00 00 00 00
-mov rax, [dword 0]		; 67 48 A1 00 00 00 00
-mov al, [0xfedcba9876543210]	; 48 A0 10 32 54 76 98 BA DC FE
+mov rax, [0]			; 48 8B 04 25 00 00 00 00
+mov rax, [dword 0]		; 48 8B 04 25 00 00 00 00
+mov al, [qword 0xfedcba9876543210]	; A0 10 32 54 76 98 BA DC FE
+mov al, [0xfedcba9876543210]	; 8A 04 25 10 32 54 76 (+ warning)
 a32 mov rax, [0]		; 67 48 A1 00 00 00 00
 a32 mov eax, [0]		; 67 A1 00 00 00 00
 mov ecx, [0]			; 8B 0C 25 00 00 00 00
 mov edx, [dword 0]		; 8B 14 25 00 00 00 00
+mov rbx, [0]			; 48 8B 1C 25 00 00 00 00
 a32 mov rbx, [0]		; 67 48 8B 1C 25 00 00 00 00
 mov ebx, [rcx]			; 8B 19
 mov r8, [r9]			; 4D 8B 01

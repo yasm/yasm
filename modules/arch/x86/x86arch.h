@@ -167,6 +167,7 @@ typedef struct x86_new_insn_data {
     unsigned char im_sign;
     unsigned char shift_op;
     unsigned char signext_imm8_op;
+    unsigned char shortmov_op;
 } x86_new_insn_data;
 
 yasm_bytecode *yasm_x86__bc_create_insn(yasm_arch *arch, x86_new_insn_data *d);

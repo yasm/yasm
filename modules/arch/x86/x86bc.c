@@ -29,6 +29,7 @@
 
 #define YASM_LIB_INTERNAL
 #define YASM_BC_INTERNAL
+#define YASM_EXPR_INTERNAL
 #include <libyasm.h>
 
 #include "x86arch.h"
@@ -102,6 +103,13 @@ typedef struct x86_insn {
      * instructions and a subset of the imul instructions).
      */
     unsigned char signext_imm8_op;
+
+    /* HACK, similar to those above, for optimizing long (modrm+sib) mov
+     * instructions in amd64 into short mov instructions if a 32-bit address
+     * override is applied in 64-bit mode to an EA of just an offset (no
+     * registers) and the target register is al/ax/eax/rax.
+     */
+    unsigned char shortmov_op;
 
     unsigned char mode_bits;
 } x86_insn;
@@ -238,6 +246,7 @@ yasm_x86__bc_create_insn(yasm_arch *arch, x86_new_insn_data *d)
     insn->rex = d->rex;
     insn->shift_op = d->shift_op;
     insn->signext_imm8_op = d->signext_imm8_op;
+    insn->shortmov_op = d->shortmov_op;
 
     insn->mode_bits = arch_x86->mode_bits;
 
@@ -643,6 +652,18 @@ x86_bc_insn_resolve(yasm_bytecode *bc, int save,
 	if (ea->disp) {
 	    temp = yasm_expr_copy(ea->disp);
 	    assert(temp != NULL);
+
+	    /* Handle shortmov special-casing */
+	    if (insn->shortmov_op && insn->mode_bits == 64 &&
+		insn->addrsize == 32 &&
+		!yasm_expr__contains(temp, YASM_EXPR_REG)) {
+		yasm_x86__ea_set_disponly((yasm_effaddr *)&eat);
+
+		if (save) {
+		    /* Make the short form permanent. */
+		    insn->opcode[0] = insn->opcode[1];
+		}
+	    }
 
 	    /* Check validity of effective address and calc R/M bits of
 	     * Mod/RM byte and SIB byte.  We won't know the Mod field
