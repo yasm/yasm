@@ -37,9 +37,11 @@
 
 #include "globals.h"
 #include "errwarn.h"
+#include "floatnum.h"
 #include "expr.h"
 
 #include "bytecode.h"
+#include "section.h"
 
 RCSID("$IdPath$");
 
@@ -119,7 +121,7 @@ ConvertIntToImm(immval *ptr, unsigned long int_val)
 	ptr = &im_static;
 
     /* FIXME: this will leak expr's if static is used */
-    ptr->val = expr_new_ident(EXPR_NUM, ExprNum(int_val));
+    ptr->val = expr_new_ident(EXPR_INT, ExprInt(int_val));
 
     if ((int_val & 0xFF) == int_val)
 	ptr->len = 1;
@@ -432,6 +434,12 @@ bytecode_new_reserve(expr *numitems, unsigned long itemsize)
     return bc;
 }
 
+int
+bytecode_get_offset(section *sect, bytecode *bc, unsigned long *ret_val)
+{
+    return 0;	/* TODO */
+}
+
 void
 bytecode_print(bytecode *bc)
 {
@@ -553,15 +561,18 @@ bytecode_print(bytecode *bc)
     printf("Offset=%lx BITS=%u\n", bc->offset, bc->mode_bits);
 }
 
-void
+bytecode *
 bytecodes_append(bytecodehead *headp, bytecode *bc)
 {
     if (bc) {
-	if (bc->type != BC_EMPTY)
+	if (bc->type != BC_EMPTY) {
 	    STAILQ_INSERT_TAIL(headp, bc, link);
-	else
+	    return bc;
+	} else {
 	    free(bc);
+	}
     }
+    return (bytecode *)NULL;
 }
 
 dataval *
@@ -579,7 +590,7 @@ dataval_new_expr(expr *exp)
 }
 
 dataval *
-dataval_new_float(double float_val)
+dataval_new_float(floatnum *flt)
 {
     dataval *retval = malloc(sizeof(dataval));
 
@@ -587,7 +598,7 @@ dataval_new_float(double float_val)
 	Fatal(FATAL_NOMEM);
 
     retval->type = DV_FLOAT;
-    retval->data.float_val = float_val;
+    retval->data.flt = flt;
 
     return retval;
 }
@@ -622,7 +633,9 @@ dataval_print(datavalhead *head)
 		printf("\n");
 		break;
 	    case DV_FLOAT:
-		printf(" Float=%e\n", cur->data.float_val);
+		printf(" Float=");
+		floatnum_print(cur->data.flt);
+		printf("\n");
 		break;
 	    case DV_STRING:
 		printf(" String=%s\n", cur->data.str_val);

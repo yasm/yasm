@@ -37,6 +37,7 @@
 
 #include "globals.h"
 #include "errwarn.h"
+#include "floatnum.h"
 #include "expr.h"
 #include "symrec.h"
 
@@ -58,17 +59,15 @@ extern sectionhead nasm_parser_sections;
 extern section *nasm_parser_cur_section;
 extern char *nasm_parser_locallabel_base;
 
+static bytecode *nasm_parser_prev_bc = (bytecode *)NULL;
+static bytecode *nasm_parser_temp_bc;
+
 %}
 
 %union {
     unsigned long int_val;
     char *str_val;
-    double double_val;
-    symrec *sym;
-    struct {
-	char *name;
-	int line;
-    } syminfo;
+    floatnum *flt;
     unsigned char groupdata[4];
     effaddr *ea;
     expr *exp;
@@ -80,7 +79,7 @@ extern char *nasm_parser_locallabel_base;
 }
 
 %token <int_val> INTNUM
-%token <double_val> FLTNUM
+%token <flt> FLTNUM
 %token <str_val> DIRECTIVE_NAME DIRECTIVE_VAL STRING
 %token <int_val> BYTE WORD DWORD QWORD TWORD DQWORD
 %token <int_val> DECLARE_DATA
@@ -96,7 +95,7 @@ extern char *nasm_parser_locallabel_base;
 %token <int_val> REG_AL REG_CL REG_DL REG_BL REG_AH REG_CH REG_DH REG_BH
 %token <int_val> REG_ES REG_CS REG_SS REG_DS REG_FS REG_GS
 %token LEFT_OP RIGHT_OP SIGNDIV SIGNMOD
-%token <syminfo> ID LOCAL_ID SPECIAL_ID
+%token <str_val> ID LOCAL_ID SPECIAL_ID
 
 /* instruction tokens (dynamically generated) */
 /* @TOKENS@ */
@@ -113,8 +112,7 @@ extern char *nasm_parser_locallabel_base;
 %type <ea> rm8 rm16 rm32 rm64 rm128
 %type <im_val> imm imm8x imm16x imm32x imm8 imm16 imm32
 %type <exp> expr expr_no_string
-%type <syminfo> explabel
-%type <sym> label_id
+%type <str_val> explabel label_id
 %type <tgt_val> target
 %type <data> dataval
 %type <datahead> datavals
@@ -130,7 +128,10 @@ extern char *nasm_parser_locallabel_base;
 %%
 input: /* empty */
     | input line    {
-	bytecodes_append(&nasm_parser_cur_section->bc, $2);
+	nasm_parser_temp_bc = bytecodes_append(&nasm_parser_cur_section->bc,
+					       $2);
+	if (nasm_parser_temp_bc)
+	    nasm_parser_prev_bc = nasm_parser_temp_bc;
 	line_number++;
     }
 ;
@@ -171,25 +172,31 @@ dataval: expr_no_string	{ $$ = dataval_new_expr($1); }
     }
 ;
 
-label: label_id	    { $1->value = 0; } /* TODO: add pointer to bytecode */
-    | label_id ':'  { $1->value = 0; } /* TODO: add pointer to bytecode */
+label: label_id	    {
+	symrec_define_label($1, nasm_parser_cur_section, nasm_parser_prev_bc);
+    }
+    | label_id ':'  {
+	symrec_define_label($1, nasm_parser_cur_section, nasm_parser_prev_bc);
+    }
 ;
 
 label_id: ID	    {
-	$$ = symrec_define($1.name, SYM_LABEL);
-	nasm_parser_locallabel_base = strdup($1.name);
+	$$ = $1;
+	nasm_parser_locallabel_base = strdup($1);
     }
-    | SPECIAL_ID    { $$ = symrec_define($1.name, SYM_LABEL); }
-    | LOCAL_ID	    { $$ = symrec_define($1.name, SYM_LABEL); }
+    | SPECIAL_ID
+    | LOCAL_ID
 ;
 
 /* directives */
 directive: '[' DIRECTIVE_NAME DIRECTIVE_VAL ']'	{
-	if (strcasecmp($2, "section") == 0)
+	if (strcasecmp($2, "section") == 0) {
 	    nasm_parser_cur_section = sections_switch(&nasm_parser_sections,
 						      nasm_parser_objfmt, $3);
-	else
+	    nasm_parser_prev_bc = (bytecode *)NULL;
+	} else {
 	    printf("Directive: Name='%s' Value='%s'\n", $2, $3);
+	}
     }
     | '[' DIRECTIVE_NAME DIRECTIVE_VAL error	{
 	Error(_("missing `%c'"), ']');
@@ -375,9 +382,9 @@ target: expr	    { $$.val = $1; $$.op_sel = JR_NONE; }
 ;
 
 /* expression trees */
-expr_no_string: INTNUM		{ $$ = expr_new_ident(EXPR_NUM, ExprNum($1)); }
+expr_no_string: INTNUM		{ $$ = expr_new_ident(EXPR_INT, ExprInt($1)); }
     | explabel			{
-	$$ = expr_new_ident(EXPR_SYM, ExprSym(symrec_use($1.name, SYM_LABEL)));
+	$$ = expr_new_ident(EXPR_SYM, ExprSym(symrec_use($1)));
     }
     /*| expr '||' expr		{ $$ = expr_new_tree($1, EXPR_LOR, $3); }*/
     | expr '|' expr		{ $$ = expr_new_tree($1, EXPR_OR, $3); }
@@ -406,7 +413,7 @@ expr_no_string: INTNUM		{ $$ = expr_new_ident(EXPR_NUM, ExprNum($1)); }
 
 expr: expr_no_string
     | STRING		{
-	$$ = expr_new_ident (EXPR_NUM, ExprNum(ConvertCharConstToInt($1)));
+	$$ = expr_new_ident (EXPR_INT, ExprInt(ConvertCharConstToInt($1)));
     }
 ;
 

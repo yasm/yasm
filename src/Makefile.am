@@ -39,6 +39,8 @@ libyasm_a_SOURCES = \
 	parser.c		\
 	parser.h		\
 	optimizer.h		\
+	floatnum.c		\
+	floatnum.h		\
 	ternary.c		\
 	ternary.h		\
 	strcasecmp.c

@@ -35,6 +35,7 @@
 #define _(String)	gettext(String)
 
 #include "errwarn.h"
+#include "floatnum.h"
 #include "expr.h"
 #include "symrec.h"
 
@@ -114,7 +115,7 @@ WS       [ \t\r]
 
     /* floating point value */
 {DIGIT}+\.{DIGIT}*(e[-+]?{DIGIT}+)? {
-    yylval.double_val = strtod(yytext, (char **)NULL);
+    yylval.flt = floatnum_new(yytext);
     return FLTNUM;
 }
 
@@ -295,10 +296,9 @@ gs	{ yylval.int_val = 5; return REG_GS; }
 
     /* special non-local ..@label and labels like ..start */
 $$|$|\.\.[a-z0-9_$#@~.?]+ {
-    yylval.syminfo.name = strdup(yytext);
-    if (!yylval.syminfo.name)
+    yylval.str_val = strdup(yytext);
+    if (!yylval.str_val)
 	Fatal(FATAL_NOMEM);
-    yylval.syminfo.line = line_number;
 
     return SPECIAL_ID;
 }
@@ -307,18 +307,17 @@ $$|$|\.\.[a-z0-9_$#@~.?]+ {
 \.[a-z0-9_$#@~?][a-z0-9_$#@~.?]* {
     if (!nasm_parser_locallabel_base) {
 	Warning(_("no non-local label before `%s'"), yytext);
-	yylval.syminfo.name = strdup(yytext);
-	if (!yylval.syminfo.name)
+	yylval.str_val = strdup(yytext);
+	if (!yylval.str_val)
 	    Fatal(FATAL_NOMEM);
     } else {
-	yylval.syminfo.name = malloc(strlen(yytext) +
-				     strlen(nasm_parser_locallabel_base) + 1);
-	if (!yylval.syminfo.name)
+	yylval.str_val = malloc(strlen(yytext) +
+				strlen(nasm_parser_locallabel_base) + 1);
+	if (!yylval.str_val)
 	    Fatal(FATAL_NOMEM);
-	strcpy(yylval.syminfo.name, nasm_parser_locallabel_base);
-	strcat(yylval.syminfo.name, yytext);
+	strcpy(yylval.str_val, nasm_parser_locallabel_base);
+	strcat(yylval.str_val, yytext);
     }
-    yylval.syminfo.line = line_number;
 
     return LOCAL_ID;
 }
@@ -328,10 +327,9 @@ $$|$|\.\.[a-z0-9_$#@~.?]+ {
 
     /* label */
 [a-z_?][a-z0-9_$#@~.?]* {
-    yylval.syminfo.name = strdup(yytext);
-    if (!yylval.syminfo.name)
+    yylval.str_val = strdup(yytext);
+    if (!yylval.str_val)
 	Fatal(FATAL_NOMEM);
-    yylval.syminfo.line = line_number;
 
     return ID;
 }

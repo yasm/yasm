@@ -22,6 +22,8 @@
 #ifndef YASM_BYTECODE_H
 #define YASM_BYTECODE_H
 
+struct section_s;
+
 typedef struct effaddr_s {
     struct expr_s *disp;	/* address displacement */
     unsigned char len;		/* length of disp (in bytes), 0 if none */
@@ -56,7 +58,7 @@ typedef struct dataval_s {
 
     union {
 	struct expr_s *exp;
-	double float_val;
+	struct floatnum_s *flt;
 	char *str_val;
     } data;
 } dataval;
@@ -210,6 +212,12 @@ bytecode *bytecode_new_data(datavalhead *datahead, unsigned long size);
 bytecode *bytecode_new_reserve(struct expr_s *numitems,
 			       unsigned long  itemsize);
 
+/* Gets the offset of the bytecode specified by bc if possible.
+ * Return value is IF POSSIBLE, not the value.
+ */
+int bytecode_get_offset(struct section_s *sect, bytecode *bc,
+			unsigned long *ret_val);
+
 void bytecode_print(bytecode *bc);
 
 /* void bytecodes_initialize(bytecodehead *headp); */
@@ -218,12 +226,13 @@ void bytecode_print(bytecode *bc);
 /* Adds bc to the list of bytecodes headp.
  * NOTE: Does not make a copy of bc; so don't pass this function
  * static or local variables, and discard the bc pointer after calling
- * this function.
+ * this function.  If bc was actually appended (it wasn't NULL or empty),
+ * then returns bc, otherwise returns NULL.
  */
-void bytecodes_append(bytecodehead *headp, bytecode *bc);
+bytecode *bytecodes_append(bytecodehead *headp, bytecode *bc);
 
 dataval *dataval_new_expr(struct expr_s *exp);
-dataval *dataval_new_float(double float_val);
+dataval *dataval_new_float(struct floatnum_s *flt);
 dataval *dataval_new_string(char *str_val);
 
 void dataval_print(datavalhead *head);

@@ -1,7 +1,7 @@
 /* $IdPath$
  * Expression handling header file
  *
- *  Copyright (C) 2001  Michael Urman
+ *  Copyright (C) 2001  Michael Urman, Peter Johnson
  *
  *  This file is part of YASM.
  *
@@ -49,15 +49,17 @@ typedef enum {
 
 typedef enum {
     EXPR_NONE,			/* for left side of a NOT, NEG, etc. */
-    EXPR_NUM,
+    EXPR_SYM,
     EXPR_EXPR,
-    EXPR_SYM
+    EXPR_INT,
+    EXPR_FLOAT
 } ExprType;
 
 typedef union expritem_u {
     struct symrec_s *sym;
-    struct expr_s *expr;
-    unsigned long num;
+    struct expr_s *exp;
+    unsigned long int_val;
+    struct floatnum_s *flt;
 } ExprItem;
 
 typedef struct expr_s {
@@ -70,7 +72,8 @@ expr *expr_new(ExprType, ExprItem, ExprOp, ExprType, ExprItem);
 
 ExprItem ExprSym(struct symrec_s *);
 ExprItem ExprExpr(expr *);
-ExprItem ExprNum(unsigned long);
+ExprItem ExprInt(unsigned long);
+ExprItem ExprFloat(struct floatnum_s *);
 ExprItem ExprNone(void);
 
 #define expr_new_tree(l,o,r) \

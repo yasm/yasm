@@ -1,7 +1,7 @@
 /* $IdPath$
  * Symbol table handling
  *
- *  Copyright (C) 2001  Michael Urman
+ *  Copyright (C) 2001  Michael Urman, Peter Johnson
  *
  *  This file is part of YASM.
  *
@@ -35,19 +35,24 @@
 
 #include "globals.h"
 #include "errwarn.h"
+#include "floatnum.h"
 #include "symrec.h"
+
+#include "bytecode.h"
+#include "section.h"
 
 RCSID("$IdPath$");
 
 /* private functions */
-static symrec *symrec_get_or_new(char *, SymType);
+static symrec *symrec_get_or_new(const char *);
+static symrec *symrec_define(const char *, SymType type);
 
 /* The symbol table: a ternary tree. */
 static ternary_tree sym_table = (ternary_tree)NULL;
 
 /* create a new symrec */
 static symrec *
-symrec_get_or_new(char *name, SymType type)
+symrec_get_or_new(const char *name)
 {
     symrec *rec, *rec2;
 
@@ -65,41 +70,128 @@ symrec_get_or_new(char *name, SymType type)
     rec->name = strdup(name);
     if (!rec->name)
 	Fatal(FATAL_NOMEM);
-    rec->type = type;
-    rec->value = 0;
+    rec->type = SYM_UNKNOWN;
     rec->filename = strdup(filename);
     rec->line = line_number;
     rec->status = SYM_NOSTATUS;
+    rec->visibility = SYM_LOCAL;
 
     return rec;
 }
 
 /* call a function with each symrec.  stop early if 0 returned */
 void
-symrec_foreach(int (*func) (char *name, symrec *rec))
+symrec_foreach(int (*func) (const char *name, symrec *rec))
 {
+    /* TODO */
 }
 
 symrec *
-symrec_use(char *name, SymType type)
+symrec_use(const char *name)
 {
-    symrec *rec;
+    symrec *rec = symrec_get_or_new(name);
 
-    rec = symrec_get_or_new(name, type);
     rec->status |= SYM_USED;
     return rec;
 }
 
-symrec *
-symrec_define(char *name, SymType type)
+static symrec *
+symrec_define(const char *name, SymType type)
 {
-    symrec *rec;
+    symrec *rec = symrec_get_or_new(name);
 
-    rec = symrec_get_or_new(name, type);
-    if (rec->status & SYM_DECLARED)
-	Error(_("duplicate definition of `%s'; previously defined on line %d"),
+    /* Has it been defined before (either by DEFINED or COMMON/EXTERN)? */
+    if (rec->status & SYM_DEFINED) {
+	Error(_("duplicate definition of `%s'; first defined on line %d"),
 	      name, rec->line);
-    rec->line = line_number;	/* set line number of definition */
-    rec->status |= SYM_DECLARED;
+    } else {
+	rec->line = line_number;	/* set line number of definition */
+	rec->type = type;
+	rec->status |= SYM_DEFINED;
+    }
     return rec;
+}
+
+symrec *
+symrec_define_constant_int(const char *name, unsigned long int_val)
+{
+    symrec *rec = symrec_define(name, SYM_CONSTANT_INT);
+    rec->value.int_val = int_val;
+    rec->status |= SYM_VALUED;
+    return rec;
+}
+
+symrec *
+symrec_define_constant_float(const char *name, floatnum *flt)
+{
+    symrec *rec = symrec_define(name, SYM_CONSTANT_FLOAT);
+    rec->value.flt = flt;
+    rec->status |= SYM_VALUED;
+    return rec;
+}
+
+symrec *
+symrec_define_label(const char *name, section *sect, bytecode *precbc)
+{
+    symrec *rec = symrec_define(name, SYM_LABEL);
+    rec->value.label.sect = sect;
+    rec->value.label.bc = precbc;
+    return rec;
+}
+
+symrec *
+symrec_declare(const char *name, SymVisibility vis)
+{
+    symrec *rec = symrec_get_or_new(name);
+
+    /* Don't allow EXTERN and COMMON if symbol has already been DEFINED. */
+    /* Also, EXTERN and COMMON are mutually exclusive. */
+    if ((rec->status & SYM_DEFINED) ||
+	((rec->visibility & SYM_COMMON) && (vis == SYM_EXTERN)) ||
+	((rec->visibility & SYM_EXTERN) && (vis == SYM_COMMON))) {
+	Error(_("duplicate definition of `%s'; first defined on line %d"),
+	      name, rec->line);
+    } else {
+	rec->line = line_number;	/* set line number of declaration */
+	rec->visibility |= vis;
+
+	/* If declared as COMMON or EXTERN, set as DEFINED. */
+	if ((vis == SYM_COMMON) || (vis == SYM_EXTERN))
+	    rec->status |= SYM_DEFINED;
+    }
+    return rec;
+}
+
+int
+symrec_get_int_value(const symrec *sym, unsigned long *ret_val,
+		     int resolve_label)
+{
+    /* If we already know the value, just return it. */
+    if (sym->status & SYM_VALUED) {
+	switch (sym->type) {
+	    case SYM_CONSTANT_INT:
+		*ret_val = sym->value.int_val;
+		break;
+	    case SYM_CONSTANT_FLOAT:
+		*ret_val = floatnum_get_int(sym->value.flt);
+		break;
+	    case SYM_LABEL:
+		if (!bytecode_get_offset(sym->value.label.sect,
+					 sym->value.label.bc, ret_val))
+		    InternalError(__LINE__, __FILE__,
+				  _("Label symbol is valued but cannot get offset"));
+	    case SYM_UNKNOWN:
+		InternalError(__LINE__, __FILE__,
+			      _("Have a valued symbol but of unknown type"));
+	}
+	return 1;
+    }
+
+    /* Try to get offset of unvalued label */
+    if (resolve_label && sym->type == SYM_LABEL)
+	return bytecode_get_offset(sym->value.label.sect, sym->value.label.bc,
+				   ret_val);
+
+    /* We can't get the value right now. */
+    return 0;
 }
