@@ -41,6 +41,8 @@ libyasm_a_SOURCES = \
 	parser.c		\
 	parser.h		\
 	optimizer.h		\
+	intnum.c		\
+	intnum.h		\
 	floatnum.c		\
 	floatnum.h		\
 	ternary.c		\
@@ -55,5 +57,4 @@ CFLAGS = @ANSI_CFLAGS@
 
 EXTRA_DIST = \
 	instrs.dat		\
-	compat-queue.h		\
-	strtoul.c
+	compat-queue.h

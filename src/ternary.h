@@ -47,4 +47,8 @@ void ternary_cleanup (ternary_tree p);
 /* Search the ternary tree for string S, returning the data associated
    with it if found. */
 void *ternary_search (ternary_tree p, const char *s);
+
+/* Traverse over tree, calling callback function for each leaf. 
+   Stops early if func returns 0. */
+int ternary_traverse (ternary_tree p, int (*func) (void *d));
 #endif

@@ -124,8 +124,42 @@ sections_switch(sectionhead *headp, objfmt *of, const char *name)
     return s;
 }
 
+void
+sections_print(sectionhead *headp)
+{
+    section *cur;
+    
+    STAILQ_FOREACH(cur, headp, link)
+	section_print(cur);
+}
+
 bytecodehead *
 section_get_bytecodes(section *sect)
 {
     return &sect->bc;
+}
+
+const char *
+section_get_name(const section *sect)
+{
+    return sect->name;
+}
+
+void
+section_print(const section *sect)
+{
+    printf("***SECTION %s***\n", sect->name);
+    printf(" type=");
+    switch (sect->type) {
+	case SECTION_GENERAL:
+	    printf("general\n");
+	    break;
+	case SECTION_ABSOLUTE:
+	    printf("absolute\n");
+	    printf("start=%lu\n", sect->data.start);
+	    break;
+    }
+
+    printf(" Bytecodes:\n");
+    bytecodes_print(&sect->bc);
 }

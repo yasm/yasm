@@ -37,6 +37,7 @@
 
 #include "globals.h"
 #include "errwarn.h"
+#include "intnum.h"
 #include "floatnum.h"
 #include "expr.h"
 
@@ -73,11 +74,10 @@ struct immval {
 struct dataval {
     STAILQ_ENTRY(dataval) link;
 
-    enum { DV_EMPTY, DV_EXPR, DV_FLOAT, DV_STRING } type;
+    enum { DV_EMPTY, DV_EXPR, DV_STRING } type;
 
     union {
 	expr *expn;
-	floatnum *flt;
 	char *str_val;
     } data;
 };
@@ -229,7 +229,7 @@ immval_new_int(unsigned long int_val)
 {
     immval *im = xmalloc(sizeof(immval));
 
-    im->val = expr_new_ident(ExprInt(int_val));
+    im->val = expr_new_ident(ExprInt(intnum_new_int(int_val)));
 
     if ((int_val & 0xFF) == int_val)
 	im->len = 1;
@@ -249,7 +249,7 @@ immval_new_expr(expr *expr_ptr)
     immval *im = xmalloc(sizeof(immval));
 
     im->val = expr_ptr;
-
+    im->len = 0;
     im->isneg = 0;
 
     return im;
@@ -486,46 +486,7 @@ bytecode_new_jmprel(targetval     *target,
 bytecode *
 bytecode_new_data(datavalhead *datahead, unsigned long size)
 {
-    bytecode *bc;
-    dataval *cur;
-
-    /* First check to see if all the data elements are valid for the size
-     * being set.
-     * Validity table:
-     *  db (1)  -> expr, string
-     *  dw (2)  -> expr, string
-     *  dd (4)  -> expr, float, string
-     *  dq (8)  -> expr, float, string
-     *  dt (10) -> float, string
-     *
-     * Once we calculate expr we'll have to validate it against the size
-     * and warn/error appropriately (symbol constants versus labels:
-     * constants (equ's) should always be legal, but labels should raise
-     * warnings when used in db or dq context at the minimum).
-     */
-    STAILQ_FOREACH(cur, datahead, link) {
-	switch (cur->type) {
-	    case DV_EMPTY:
-	    case DV_STRING:
-		/* string is valid in every size */
-		break;
-	    case DV_FLOAT:
-		if (size == 1)
-		    Error(_("floating-point constant encountered in `%s'"),
-			  "DB");
-		else if (size == 2)
-		    Error(_("floating-point constant encountered in `%s'"),
-			  "DW");
-		break;
-	    case DV_EXPR:
-		if (size == 10)
-		    Error(_("non-floating-point value encountered in `%s'"),
-			  "DT");
-		break;
-	}
-    }
-
-    bc = bytecode_new_common();
+    bytecode *bc = bytecode_new_common();
 
     bc->type = BC_DATA;
 
@@ -570,14 +531,14 @@ bytecode_print(bytecode *bc)
 		printf("\n Disp=");
 		expr_print(bc->data.insn.ea->disp);
 		printf("\n");
-		printf(" Len=%u SegmentOv=%2x\n",
+		printf(" Len=%u SegmentOv=%02x\n",
 		       (unsigned int)bc->data.insn.ea->len,
 		       (unsigned int)bc->data.insn.ea->segment);
-		printf(" ModRM=%2x ValidRM=%u NeedRM=%u\n",
+		printf(" ModRM=%02x ValidRM=%u NeedRM=%u\n",
 		       (unsigned int)bc->data.insn.ea->modrm,
 		       (unsigned int)bc->data.insn.ea->valid_modrm,
 		       (unsigned int)bc->data.insn.ea->need_modrm);
-		printf(" SIB=%2x ValidSIB=%u NeedSIB=%u\n",
+		printf(" SIB=%02x ValidSIB=%u NeedSIB=%u\n",
 		       (unsigned int)bc->data.insn.ea->sib,
 		       (unsigned int)bc->data.insn.ea->valid_sib,
 		       (unsigned int)bc->data.insn.ea->need_sib);
@@ -595,16 +556,17 @@ bytecode_print(bytecode *bc)
 		printf(" FLen=%u, FSign=%u\n",
 		       (unsigned int)bc->data.insn.imm->f_len,
 		       (unsigned int)bc->data.insn.imm->f_sign);
-		printf("Opcode: %2x %2x %2x OpLen=%u\n",
-		       (unsigned int)bc->data.insn.opcode[0],
-		       (unsigned int)bc->data.insn.opcode[1],
-		       (unsigned int)bc->data.insn.opcode[2],
-		       (unsigned int)bc->data.insn.opcode_len);
-		printf("AddrSize=%u OperSize=%u LockRepPre=%2x\n",
-		       (unsigned int)bc->data.insn.addrsize,
-		       (unsigned int)bc->data.insn.opersize,
-		       (unsigned int)bc->data.insn.lockrep_pre);
 	    }
+	    printf("Opcode: %02x %02x %02x OpLen=%u\n",
+		   (unsigned int)bc->data.insn.opcode[0],
+		   (unsigned int)bc->data.insn.opcode[1],
+		   (unsigned int)bc->data.insn.opcode[2],
+		   (unsigned int)bc->data.insn.opcode_len);
+	    printf("AddrSize=%u OperSize=%u LockRepPre=%02x ShiftOp=%u\n",
+		   (unsigned int)bc->data.insn.addrsize,
+		   (unsigned int)bc->data.insn.opersize,
+		   (unsigned int)bc->data.insn.lockrep_pre,
+		   (unsigned int)bc->data.insn.shift_op);
 	    break;
 	case BC_JMPREL:
 	    printf("_Relative Jump_\n");
@@ -614,7 +576,7 @@ bytecode_print(bytecode *bc)
 	    if (!bc->data.jmprel.shortop.opcode_len == 0)
 		printf(" None\n");
 	    else
-		printf(" Opcode: %2x %2x %2x OpLen=%u\n",
+		printf(" Opcode: %02x %02x %02x OpLen=%u\n",
 		       (unsigned int)bc->data.jmprel.shortop.opcode[0],
 		       (unsigned int)bc->data.jmprel.shortop.opcode[1],
 		       (unsigned int)bc->data.jmprel.shortop.opcode[2],
@@ -622,7 +584,7 @@ bytecode_print(bytecode *bc)
 	    if (!bc->data.jmprel.nearop.opcode_len == 0)
 		printf(" None\n");
 	    else
-		printf(" Opcode: %2x %2x %2x OpLen=%u\n",
+		printf(" Opcode: %02x %02x %02x OpLen=%u\n",
 		       (unsigned int)bc->data.jmprel.nearop.opcode[0],
 		       (unsigned int)bc->data.jmprel.nearop.opcode[1],
 		       (unsigned int)bc->data.jmprel.nearop.opcode[2],
@@ -648,7 +610,7 @@ bytecode_print(bytecode *bc)
 		    printf("UNKNOWN!!");
 		    break;
 	    }
-	    printf("\nAddrSize=%u OperSize=%u LockRepPre=%2x\n",
+	    printf("\nAddrSize=%u OperSize=%u LockRepPre=%02x\n",
 		   (unsigned int)bc->data.jmprel.addrsize,
 		   (unsigned int)bc->data.jmprel.opersize,
 		   (unsigned int)bc->data.jmprel.lockrep_pre);
@@ -690,6 +652,17 @@ bytecodes_append(bytecodehead *headp, bytecode *bc)
     return (bytecode *)NULL;
 }
 
+void
+bytecodes_print(const bytecodehead *headp)
+{
+    bytecode *cur;
+
+    STAILQ_FOREACH(cur, headp, link) {
+	printf("---Next Bytecode---\n");
+	bytecode_print(cur);
+    }
+}
+
 dataval *
 dataval_new_expr(expr *expn)
 {
@@ -697,17 +670,6 @@ dataval_new_expr(expr *expn)
 
     retval->type = DV_EXPR;
     retval->data.expn = expn;
-
-    return retval;
-}
-
-dataval *
-dataval_new_float(floatnum *flt)
-{
-    dataval *retval = xmalloc(sizeof(dataval));
-
-    retval->type = DV_FLOAT;
-    retval->data.flt = flt;
 
     return retval;
 }
@@ -746,11 +708,6 @@ dataval_print(datavalhead *head)
 	    case DV_EXPR:
 		printf(" Expr=");
 		expr_print(cur->data.expn);
-		printf("\n");
-		break;
-	    case DV_FLOAT:
-		printf(" Float=");
-		floatnum_print(cur->data.flt);
 		printf("\n");
 		break;
 	    case DV_STRING:

@@ -34,7 +34,10 @@
 #include <libintl.h>
 #define _(String)	gettext(String)
 
+#include "bitvect.h"
+
 #include "errwarn.h"
+#include "intnum.h"
 #include "floatnum.h"
 #include "expr.h"
 #include "symrec.h"
@@ -87,31 +90,37 @@ WS       [ \t\r]
 
     /* standard decimal integer */
 {DIGIT}+ {
-    yylval.int_val = strtoul(yytext, (char **)NULL, 10);
+    yylval.intn = intnum_new_dec(yytext);
     return INTNUM;
 }
 
     /* 10010011b - binary number */
 {BINDIGIT}+b {
-    yylval.int_val = strtoul(yytext, (char **)NULL, 2);
+    yytext[strlen(yytext)] = '\0';  /* strip off 'b' */
+    yylval.intn = intnum_new_bin(yytext);
     return INTNUM;
 }
 
     /* 777q - octal number */
 {OCTDIGIT}+q {
-    yylval.int_val = strtoul(yytext, (char **)NULL, 8);
+    yytext[strlen(yytext)] = '\0';  /* strip off 'q' */
+    yylval.intn = intnum_new_oct(yytext);
     return INTNUM;
 }
 
     /* 0AAh form of hexidecimal number */
 0{HEXDIGIT}+h {
-    yylval.int_val = strtoul(yytext+1, (char **)NULL, 16);
+    yytext[strlen(yytext)] = '\0';  /* strip off 'h' */
+    yylval.intn = intnum_new_hex(yytext);
     return INTNUM;
 }
 
     /* $0AA and 0xAA forms of hexidecimal number */
 (\$0|0x){HEXDIGIT}+ {
-    yylval.int_val = strtoul(yytext+2, (char **)NULL, 16);
+    if (yytext[1] == 'x')
+	yylval.intn = intnum_new_hex(yytext+2);	/* 0x format, skip 0 and x */
+    else
+	yylval.intn = intnum_new_hex(yytext+1);	/* $0 format, don't skip 0 */
     return INTNUM;
 }
 
@@ -182,25 +191,25 @@ WS       [ \t\r]
 }
 
     /* size specifiers */
-byte	{ yylval.int_val = 1; return BYTE; }
-word	{ yylval.int_val = 2; return WORD; }
-dword	{ yylval.int_val = 4; return DWORD; }
-qword	{ yylval.int_val = 8; return QWORD; }
-tword	{ yylval.int_val = 10; return TWORD; }
-dqword	{ yylval.int_val = 16; return DQWORD; }
+byte	{ yylval.int_info = 1; return BYTE; }
+word	{ yylval.int_info = 2; return WORD; }
+dword	{ yylval.int_info = 4; return DWORD; }
+qword	{ yylval.int_info = 8; return QWORD; }
+tword	{ yylval.int_info = 10; return TWORD; }
+dqword	{ yylval.int_info = 16; return DQWORD; }
 
     /* pseudo-instructions */
-db	{ yylval.int_val = 1; return DECLARE_DATA; }
-dw	{ yylval.int_val = 2; return DECLARE_DATA; }
-dd	{ yylval.int_val = 4; return DECLARE_DATA; }
-dq	{ yylval.int_val = 8; return DECLARE_DATA; }
-dt	{ yylval.int_val = 10; return DECLARE_DATA; }
+db	{ yylval.int_info = 1; return DECLARE_DATA; }
+dw	{ yylval.int_info = 2; return DECLARE_DATA; }
+dd	{ yylval.int_info = 4; return DECLARE_DATA; }
+dq	{ yylval.int_info = 8; return DECLARE_DATA; }
+dt	{ yylval.int_info = 10; return DECLARE_DATA; }
 
-resb	{ yylval.int_val = 1; return RESERVE_SPACE; }
-resw	{ yylval.int_val = 2; return RESERVE_SPACE; }
-resd	{ yylval.int_val = 4; return RESERVE_SPACE; }
-resq	{ yylval.int_val = 8; return RESERVE_SPACE; }
-rest	{ yylval.int_val = 10; return RESERVE_SPACE; }
+resb	{ yylval.int_info = 1; return RESERVE_SPACE; }
+resw	{ yylval.int_info = 2; return RESERVE_SPACE; }
+resd	{ yylval.int_info = 4; return RESERVE_SPACE; }
+resq	{ yylval.int_info = 8; return RESERVE_SPACE; }
+rest	{ yylval.int_info = 10; return RESERVE_SPACE; }
 
 incbin	{ return INCBIN; }
 
@@ -221,11 +230,11 @@ org	{ return ORG; }
 to	{ return TO; }
 
     /* operand size overrides */
-o16	{ yylval.int_val = 16; return OPERSIZE; }
-o32	{ yylval.int_val = 32; return OPERSIZE; }
+o16	{ yylval.int_info = 16; return OPERSIZE; }
+o32	{ yylval.int_info = 32; return OPERSIZE; }
     /* address size overrides */
-a16	{ yylval.int_val = 16; return ADDRSIZE; }
-a32	{ yylval.int_val = 32; return ADDRSIZE; }
+a16	{ yylval.int_info = 16; return ADDRSIZE; }
+a32	{ yylval.int_info = 32; return ADDRSIZE; }
 
     /* instruction prefixes */
 lock	{ return LOCK; }
@@ -236,62 +245,63 @@ repe	{ return REPZ; }
 repz	{ return REPZ; }
 
     /* control, debug, and test registers */
-cr4		{ yylval.int_val = 4; return CR4; }
-cr[023]		{ yylval.int_val = yytext[2]-'0'; return CRREG_NOTCR4; }
-dr[0-367]	{ yylval.int_val = yytext[2]-'0'; return DRREG; }
-tr[3-7]		{ yylval.int_val = yytext[2]-'0'; return TRREG; }
+cr4		{ yylval.int_info = 4; return CR4; }
+cr[023]		{ yylval.int_info = yytext[2]-'0'; return CRREG_NOTCR4; }
+dr[0-367]	{ yylval.int_info = yytext[2]-'0'; return DRREG; }
+tr[3-7]		{ yylval.int_info = yytext[2]-'0'; return TRREG; }
 
     /* floating point, MMX, and SSE registers */
-st0	    { yylval.int_val = 0; return ST0; }
-st[1-7]	    { yylval.int_val = yytext[2]-'0'; return FPUREG_NOTST0; }
-mm[0-7]	    { yylval.int_val = yytext[2]-'0'; return MMXREG; }
-xmm[0-7]    { yylval.int_val = yytext[3]-'0'; return XMMREG; }
+st0	    { yylval.int_info = 0; return ST0; }
+st[1-7]	    { yylval.int_info = yytext[2]-'0'; return FPUREG_NOTST0; }
+mm[0-7]	    { yylval.int_info = yytext[2]-'0'; return MMXREG; }
+xmm[0-7]    { yylval.int_info = yytext[3]-'0'; return XMMREG; }
 
     /* integer registers */
-eax	{ yylval.int_val = 0; return REG_EAX; }
-ecx	{ yylval.int_val = 1; return REG_ECX; }
-edx	{ yylval.int_val = 2; return REG_EDX; }
-ebx	{ yylval.int_val = 3; return REG_EBX; }
-esp	{ yylval.int_val = 4; return REG_ESP; }
-ebp	{ yylval.int_val = 5; return REG_EBP; }
-esi	{ yylval.int_val = 6; return REG_ESI; }
-edi	{ yylval.int_val = 7; return REG_EDI; }
+eax	{ yylval.int_info = 0; return REG_EAX; }
+ecx	{ yylval.int_info = 1; return REG_ECX; }
+edx	{ yylval.int_info = 2; return REG_EDX; }
+ebx	{ yylval.int_info = 3; return REG_EBX; }
+esp	{ yylval.int_info = 4; return REG_ESP; }
+ebp	{ yylval.int_info = 5; return REG_EBP; }
+esi	{ yylval.int_info = 6; return REG_ESI; }
+edi	{ yylval.int_info = 7; return REG_EDI; }
 
-ax	{ yylval.int_val = 0; return REG_AX; }
-cx	{ yylval.int_val = 1; return REG_CX; }
-dx	{ yylval.int_val = 2; return REG_DX; }
-bx	{ yylval.int_val = 3; return REG_BX; }
-sp	{ yylval.int_val = 4; return REG_SP; }
-bp	{ yylval.int_val = 5; return REG_BP; }
-si	{ yylval.int_val = 6; return REG_SI; }
-di	{ yylval.int_val = 7; return REG_DI; }
+ax	{ yylval.int_info = 0; return REG_AX; }
+cx	{ yylval.int_info = 1; return REG_CX; }
+dx	{ yylval.int_info = 2; return REG_DX; }
+bx	{ yylval.int_info = 3; return REG_BX; }
+sp	{ yylval.int_info = 4; return REG_SP; }
+bp	{ yylval.int_info = 5; return REG_BP; }
+si	{ yylval.int_info = 6; return REG_SI; }
+di	{ yylval.int_info = 7; return REG_DI; }
 
-al	{ yylval.int_val = 0; return REG_AL; }
-cl	{ yylval.int_val = 1; return REG_CL; }
-dl	{ yylval.int_val = 2; return REG_DL; }
-bl	{ yylval.int_val = 3; return REG_BL; }
-ah	{ yylval.int_val = 4; return REG_AH; }
-ch	{ yylval.int_val = 5; return REG_CH; }
-dh	{ yylval.int_val = 6; return REG_DH; }
-bh	{ yylval.int_val = 7; return REG_BH; }
+al	{ yylval.int_info = 0; return REG_AL; }
+cl	{ yylval.int_info = 1; return REG_CL; }
+dl	{ yylval.int_info = 2; return REG_DL; }
+bl	{ yylval.int_info = 3; return REG_BL; }
+ah	{ yylval.int_info = 4; return REG_AH; }
+ch	{ yylval.int_info = 5; return REG_CH; }
+dh	{ yylval.int_info = 6; return REG_DH; }
+bh	{ yylval.int_info = 7; return REG_BH; }
 
     /* segment registers */
-es	{ yylval.int_val = 0; return REG_ES; }
-cs	{ yylval.int_val = 1; return REG_CS; }
-ss	{ yylval.int_val = 2; return REG_SS; }
-ds	{ yylval.int_val = 3; return REG_DS; }
-fs	{ yylval.int_val = 4; return REG_FS; }
-gs	{ yylval.int_val = 5; return REG_GS; }
+es	{ yylval.int_info = 0; return REG_ES; }
+cs	{ yylval.int_info = 1; return REG_CS; }
+ss	{ yylval.int_info = 2; return REG_SS; }
+ds	{ yylval.int_info = 3; return REG_DS; }
+fs	{ yylval.int_info = 4; return REG_FS; }
+gs	{ yylval.int_info = 5; return REG_GS; }
 
     /* operators */
 "<<"			{ return LEFT_OP; }
 ">>"			{ return RIGHT_OP; }
 "//"			{ return SIGNDIV; }
 "%%"			{ return SIGNMOD; }
-[-+|^&*/%~():[\],]	{ return yytext[0]; }
+"$$"			{ return START_SECTION_ID; }
+[-+|^&*/%~$():[\],]	{ return yytext[0]; }
 
     /* special non-local ..@label and labels like ..start */
-$$|$|\.\.[a-z0-9_$#@~.?]+ {
+\.\.[a-z0-9_$#@~.?]+ {
     yylval.str_val = xstrdup(yytext);
     return SPECIAL_ID;
 }

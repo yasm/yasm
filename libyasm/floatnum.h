@@ -24,6 +24,36 @@
 #ifndef YASM_FLOATNUM_H
 #define YASM_FLOATNUM_H
 
+#ifndef YASM_EXPROP
+#define YASM_EXPROP
+typedef enum {
+    EXPR_ADD,
+    EXPR_SUB,
+    EXPR_MUL,
+    EXPR_DIV,
+    EXPR_SIGNDIV,
+    EXPR_MOD,
+    EXPR_SIGNMOD,
+    EXPR_NEG,
+    EXPR_NOT,
+    EXPR_OR,
+    EXPR_AND,
+    EXPR_XOR,
+    EXPR_SHL,
+    EXPR_SHR,
+    EXPR_LOR,
+    EXPR_LAND,
+    EXPR_LNOT,
+    EXPR_LT,
+    EXPR_GT,
+    EXPR_EQ,
+    EXPR_LE,
+    EXPR_GE,
+    EXPR_NE,
+    EXPR_IDENT	/* if right is IDENT, then the entire expr is just a num */
+} ExprOp;
+#endif
+
 #ifndef YASM_FLOATNUM
 #define YASM_FLOATNUM
 typedef struct floatnum floatnum;
@@ -32,7 +62,12 @@ typedef struct floatnum floatnum;
 floatnum *floatnum_new(const char *str);
 void floatnum_delete(floatnum *flt);
 
-/* The get functions return nonzero if flt can't fit into that size format. */
+/* calculation function: acc = acc op operand */
+void floatnum_calc(floatnum *acc, ExprOp op, floatnum *operand);
+
+/* The get functions return nonzero if flt can't fit into that size format:
+ * -1 if underflow occurred, 1 if overflow occurred.
+ */
 
 /* Essentially a convert to single-precision and return as 32-bit value.
  * The 32-bit value is a "standard" C value (eg, of unknown endian).
@@ -42,9 +77,13 @@ int floatnum_get_int(unsigned long *ret_val, const floatnum *flt);
 /* ptr will point to the Intel-format little-endian byte string after a
  * successful call (eg, [0] should be the first byte output to the file).
  */
-int floatnum_get_single(unsigned char *ptr, const floatnum *flt);
-int floatnum_get_double(unsigned char *ptr, const floatnum *flt);
-int floatnum_get_extended(unsigned char *ptr, const floatnum *flt);
+int floatnum_get_sized(unsigned char *ptr, const floatnum *flt, size_t size);
+
+/* Basic check to see if size is even valid for flt conversion (doesn't
+ * actually check for underflow/overflow but rather checks for size=4,8,10).
+ * Returns 1 if valid, 0 if not.
+ */
+int floatnum_check_size(const floatnum *flt, size_t size);
 
 void floatnum_print(const floatnum *flt);
 

@@ -22,9 +22,9 @@
 #ifndef YASM_SYMREC_H
 #define YASM_SYMREC_H
 
-#ifndef YASM_FLOATNUM
-#define YASM_FLOATNUM
-typedef struct floatnum floatnum;
+#ifndef YASM_EXPR
+#define YASM_EXPR
+typedef struct expr expr;
 #endif
 
 #ifndef YASM_SECTION
@@ -51,9 +51,10 @@ typedef struct symrec symrec;
 #endif
 
 symrec *symrec_use(const char *name);
-symrec *symrec_define_constant_int(const char *name, unsigned long int_val);
-symrec *symrec_define_constant_float(const char *name, floatnum *flt);
-symrec *symrec_define_label(const char *name, section *sect, bytecode *precbc);
+symrec *symrec_define_equ(const char *name, expr *e);
+/* in_table specifies if the label should be inserted into the symbol table. */
+symrec *symrec_define_label(const char *name, section *sect, bytecode *precbc,
+			    int in_table);
 symrec *symrec_declare(const char *name, SymVisibility vis);
 
 /* Get the numeric 32-bit value of a symbol if possible.
@@ -66,6 +67,7 @@ int symrec_get_int_value(const symrec *sym, unsigned long *ret_val,
 
 const char *symrec_get_name(const symrec *sym);
 
-void symrec_foreach(int (*func) (const char *name, symrec *rec));
+int symrec_foreach(int (*func) (symrec *sym));
 
+void symrec_print(const symrec *sym);
 #endif

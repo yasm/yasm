@@ -35,8 +35,11 @@
 #include <libintl.h>
 #define _(String)	gettext(String)
 
+#include "bitvect.h"
+
 #include "globals.h"
 #include "errwarn.h"
+#include "intnum.h"
 #include "floatnum.h"
 #include "expr.h"
 #include "symrec.h"
@@ -51,7 +54,6 @@ RCSID("$IdPath$");
 
 void init_table(void);
 extern int nasm_parser_lex(void);
-static unsigned long ConvertCharConstToInt(char *);
 void nasm_parser_error(const char *);
 
 extern objfmt *nasm_parser_objfmt;
@@ -65,9 +67,11 @@ static bytecode *nasm_parser_temp_bc;
 %}
 
 %union {
-    unsigned long int_val;
+    unsigned int int_info;
     char *str_val;
+    intnum *intn;
     floatnum *flt;
+    symrec *sym;
     unsigned char groupdata[4];
     effaddr *ea;
     expr *exp;
@@ -78,23 +82,24 @@ static bytecode *nasm_parser_temp_bc;
     bytecode *bc;
 }
 
-%token <int_val> INTNUM
+%token <intn> INTNUM
 %token <flt> FLTNUM
 %token <str_val> DIRECTIVE_NAME DIRECTIVE_VAL STRING
-%token <int_val> BYTE WORD DWORD QWORD TWORD DQWORD
-%token <int_val> DECLARE_DATA
-%token <int_val> RESERVE_SPACE
+%token <int_info> BYTE WORD DWORD QWORD TWORD DQWORD
+%token <int_info> DECLARE_DATA
+%token <int_info> RESERVE_SPACE
 %token INCBIN EQU TIMES
 %token SEG WRT NEAR SHORT FAR NOSPLIT ORG
 %token TO
 %token O16 O32 A16 A32 LOCK REPNZ REP REPZ
-%token <int_val> OPERSIZE ADDRSIZE
-%token <int_val> CR4 CRREG_NOTCR4 DRREG TRREG ST0 FPUREG_NOTST0 MMXREG XMMREG
-%token <int_val> REG_EAX REG_ECX REG_EDX REG_EBX REG_ESP REG_EBP REG_ESI REG_EDI
-%token <int_val> REG_AX REG_CX REG_DX REG_BX REG_SP REG_BP REG_SI REG_DI
-%token <int_val> REG_AL REG_CL REG_DL REG_BL REG_AH REG_CH REG_DH REG_BH
-%token <int_val> REG_ES REG_CS REG_SS REG_DS REG_FS REG_GS
-%token LEFT_OP RIGHT_OP SIGNDIV SIGNMOD
+%token <int_info> OPERSIZE ADDRSIZE
+%token <int_info> CR4 CRREG_NOTCR4 DRREG TRREG ST0 FPUREG_NOTST0 MMXREG XMMREG
+%token <int_info> REG_EAX REG_ECX REG_EDX REG_EBX
+%token <int_info> REG_ESP REG_EBP REG_ESI REG_EDI
+%token <int_info> REG_AX REG_CX REG_DX REG_BX REG_SP REG_BP REG_SI REG_DI
+%token <int_info> REG_AL REG_CL REG_DL REG_BL REG_AH REG_CH REG_DH REG_BH
+%token <int_info> REG_ES REG_CS REG_SS REG_DS REG_FS REG_GS
+%token LEFT_OP RIGHT_OP SIGNDIV SIGNMOD START_SECTION_ID
 %token <str_val> ID LOCAL_ID SPECIAL_ID
 
 /* instruction tokens (dynamically generated) */
@@ -102,9 +107,9 @@ static bytecode *nasm_parser_temp_bc;
 
 /* @TYPES@ */
 
-%type <bc> line exp instr instrbase label
+%type <bc> line exp instr instrbase
 
-%type <int_val> fpureg reg32 reg16 reg8 segreg
+%type <int_info> fpureg reg32 reg16 reg8 segreg
 %type <ea> mem memaddr memexp memfar
 %type <ea> mem8x mem16x mem32x mem64x mem80x mem128x
 %type <ea> mem8 mem16 mem32 mem64 mem80 mem128 mem1632
@@ -112,7 +117,8 @@ static bytecode *nasm_parser_temp_bc;
 %type <ea> rm8 rm16 rm32 rm64 rm128
 %type <im_val> imm imm8x imm16x imm32x imm8 imm16 imm32
 %type <exp> expr expr_no_string
-%type <str_val> explabel label_id
+%type <sym> explabel
+%type <str_val> label_id
 %type <tgt_val> target
 %type <data> dataval
 %type <datahead> datavals
@@ -164,7 +170,6 @@ datavals: dataval	    {
 ;
 
 dataval: expr_no_string	{ $$ = dataval_new_expr($1); }
-    | FLTNUM		{ $$ = dataval_new_float($1); }
     | STRING		{ $$ = dataval_new_string($1); }
     | error		{
 	Error(_("expression syntax error"));
@@ -173,10 +178,12 @@ dataval: expr_no_string	{ $$ = dataval_new_expr($1); }
 ;
 
 label: label_id	    {
-	symrec_define_label($1, nasm_parser_cur_section, nasm_parser_prev_bc);
+	symrec_define_label($1, nasm_parser_cur_section, nasm_parser_prev_bc,
+			    1);
     }
     | label_id ':'  {
-	symrec_define_label($1, nasm_parser_cur_section, nasm_parser_prev_bc);
+	symrec_define_label($1, nasm_parser_cur_section, nasm_parser_prev_bc,
+			    1);
     }
 ;
 
@@ -194,6 +201,8 @@ directive: '[' DIRECTIVE_NAME DIRECTIVE_VAL ']'	{
 	    nasm_parser_cur_section = sections_switch(&nasm_parser_sections,
 						      nasm_parser_objfmt, $3);
 	    nasm_parser_prev_bc = (bytecode *)NULL;
+	    symrec_define_label($3, nasm_parser_cur_section, (bytecode *)NULL,
+				1);
 	} else {
 	    printf("Directive: Name='%s' Value='%s'\n", $2, $3);
 	}
@@ -254,7 +263,7 @@ segreg:  REG_ES
 ;
 
 /* memory addresses */
-memexp: expr	{ expr_simplify ($1); $$ = effaddr_new_expr($1); }
+memexp: expr	{ $$ = effaddr_new_expr($1); }
 ;
 
 memaddr: memexp		    { $$ = $1; SetEASegment($$, 0); }
@@ -353,7 +362,7 @@ rm128: XMMREG	{ $$ = effaddr_new_reg($1); }
 ;
 
 /* immediate values */
-imm: expr   { expr_simplify($1); $$ = immval_new_expr($1); }
+imm: expr   { $$ = immval_new_expr($1); }
 ;
 
 /* explicit immediates */
@@ -383,7 +392,8 @@ target: expr	    { $$.val = $1; SetOpcodeSel(&$$.op_sel, JR_NONE); }
 
 /* expression trees */
 expr_no_string: INTNUM		{ $$ = expr_new_ident(ExprInt($1)); }
-    | explabel			{ $$ = expr_new_ident(ExprSym(symrec_use($1))); }
+    | FLTNUM			{ $$ = expr_new_ident(ExprFloat($1)); }
+    | explabel			{ $$ = expr_new_ident(ExprSym($1)); }
     /*| expr '||' expr		{ $$ = expr_new_tree($1, EXPR_LOR, $3); }*/
     | expr '|' expr		{ $$ = expr_new_tree($1, EXPR_OR, $3); }
     | expr '^' expr		{ $$ = expr_new_tree($1, EXPR_XOR, $3); }
@@ -401,7 +411,9 @@ expr_no_string: INTNUM		{ $$ = expr_new_ident(ExprInt($1)); }
     | expr '-' expr		{ $$ = expr_new_tree($1, EXPR_SUB, $3); }
     | expr '*' expr		{ $$ = expr_new_tree($1, EXPR_MUL, $3); }
     | expr '/' expr		{ $$ = expr_new_tree($1, EXPR_DIV, $3); }
+    | expr SIGNDIV expr		{ $$ = expr_new_tree($1, EXPR_SIGNDIV, $3); }
     | expr '%' expr		{ $$ = expr_new_tree($1, EXPR_MOD, $3); }
+    | expr SIGNMOD expr		{ $$ = expr_new_tree($1, EXPR_SIGNMOD, $3); }
     | '+' expr %prec UNARYOP	{ $$ = $2; }
     | '-' expr %prec UNARYOP	{ $$ = expr_new_branch(EXPR_NEG, $2); }
     /*| '!' expr		{ $$ = expr_new_branch(EXPR_LNOT, $2); }*/
@@ -411,13 +423,20 @@ expr_no_string: INTNUM		{ $$ = expr_new_ident(ExprInt($1)); }
 
 expr: expr_no_string
     | STRING		{
-	$$ = expr_new_ident(ExprInt(ConvertCharConstToInt($1)));
+	$$ = expr_new_ident(ExprInt(intnum_new_charconst_nasm($1)));
     }
 ;
 
-explabel: ID
-    | SPECIAL_ID
-    | LOCAL_ID
+explabel: ID		{ $$ = symrec_use($1); }
+    | SPECIAL_ID	{ $$ = symrec_use($1); }
+    | LOCAL_ID		{ $$ = symrec_use($1); }
+    | '$'		{
+	$$ = symrec_define_label("$", nasm_parser_cur_section,
+				 nasm_parser_prev_bc, 0);
+    }
+    | START_SECTION_ID	{
+	$$ = symrec_use(section_get_name(nasm_parser_cur_section));
+    }
 ;
 
 instr: instrbase
@@ -439,32 +458,6 @@ instr: instrbase
 /* @INSTRUCTIONS@ */
 
 %%
-
-static unsigned long
-ConvertCharConstToInt(char *cc)
-{
-    unsigned long retval = 0;
-    size_t len = strlen(cc);
-
-    if (len > 4)
-	Warning(_("character constant too large, ignoring trailing characters"));
-
-    switch (len) {
-	case 4:
-	    retval |= (unsigned long)cc[3];
-	    retval <<= 8;
-	case 3:
-	    retval |= (unsigned long)cc[2];
-	    retval <<= 8;
-	case 2:
-	    retval |= (unsigned long)cc[1];
-	    retval <<= 8;
-	case 1:
-	    retval |= (unsigned long)cc[0];
-    }
-
-    return retval;
-}
 
 void
 nasm_parser_error(const char *s)

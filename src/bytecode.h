@@ -129,6 +129,8 @@ void bytecode_print(bytecode *bc);
  */
 bytecode *bytecodes_append(bytecodehead *headp, bytecode *bc);
 
+void bytecodes_print(const bytecodehead *headp);
+
 dataval *dataval_new_expr(expr *expn);
 dataval *dataval_new_float(floatnum *flt);
 dataval *dataval_new_string(char *str_val);

@@ -45,6 +45,7 @@
 #include "globals.h"
 #include "options.h"
 #include "errwarn.h"
+#include "symrec.h"
 
 #include "bytecode.h"
 #include "section.h"
@@ -99,6 +100,8 @@ char help_tail[] = "\n"
 int
 main(int argc, char *argv[])
 {
+    sectionhead *sections;
+
     if (parse_cmdline(argc, argv, options, countof(options, opt_option)))
 	return EXIT_FAILURE;
 
@@ -123,10 +126,14 @@ main(int argc, char *argv[])
     /* Get initial BITS setting from object format */
     mode_bits = dbg_objfmt.default_mode_bits;
 
-    nasm_parser.do_parse(&nasm_parser, &dbg_objfmt, in);
+    sections = nasm_parser.do_parse(&nasm_parser, &dbg_objfmt, in);
 
     if (OutputAllErrorWarning() > 0)
 	return EXIT_FAILURE;
+
+    sections_print(sections);
+    printf("\n***Symbol Table***\n");
+    symrec_foreach((int (*) (symrec *))symrec_print);
 
     if (in_filename)
 	free(in_filename);

@@ -36,5 +36,11 @@ section *sections_initialize(sectionhead *headp, struct objfmt_s *of);
 section *sections_switch(sectionhead *headp, struct objfmt_s *of,
 			 const char *name);
 
+void sections_print(sectionhead *headp);
+
 bytecodehead *section_get_bytecodes(section *sect);
+
+const char *section_get_name(const section *sect);
+
+void section_print(const section *sect);
 #endif

@@ -32,12 +32,21 @@ typedef struct symrec symrec;
 typedef struct floatnum floatnum;
 #endif
 
+#ifndef YASM_INTNUM
+#define YASM_INTNUM
+typedef struct intnum intnum;
+#endif
+
+#ifndef YASM_EXPROP
+#define YASM_EXPROP
 typedef enum {
     EXPR_ADD,
     EXPR_SUB,
     EXPR_MUL,
     EXPR_DIV,
+    EXPR_SIGNDIV,
     EXPR_MOD,
+    EXPR_SIGNMOD,
     EXPR_NEG,
     EXPR_NOT,
     EXPR_OR,
@@ -56,6 +65,7 @@ typedef enum {
     EXPR_NE,
     EXPR_IDENT			/* if right is IDENT, then the entire expr is just a num */
 } ExprOp;
+#endif
 
 typedef struct ExprItem ExprItem;
 
@@ -68,7 +78,7 @@ expr *expr_new(ExprItem *, ExprOp, ExprItem *);
 
 ExprItem *ExprSym(symrec *);
 ExprItem *ExprExpr(expr *);
-ExprItem *ExprInt(unsigned long);
+ExprItem *ExprInt(intnum *);
 ExprItem *ExprFloat(floatnum *);
 
 #define expr_new_tree(l,o,r) \
@@ -80,8 +90,5 @@ ExprItem *ExprFloat(floatnum *);
 
 int expr_simplify(expr *);
 void expr_print(expr *);
-
-/* get the value if possible.  return value is IF POSSIBLE, not the val */
-int expr_get_value(expr *, unsigned long *);
 
 #endif

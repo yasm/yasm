@@ -25,6 +25,8 @@
 
 #include "util.h"
 
+#include <stdio.h>
+
 #ifdef STDC_HEADERS
 # include <stdlib.h>
 # include <string.h>
@@ -36,6 +38,7 @@
 #include "globals.h"
 #include "errwarn.h"
 #include "floatnum.h"
+#include "expr.h"
 #include "symrec.h"
 
 #include "bytecode.h"
@@ -48,13 +51,13 @@ typedef enum {
     SYM_NOSTATUS = 0,
     SYM_USED = 1 << 0,		/* for using variables before definition */
     SYM_DEFINED = 1 << 1,	/* once it's been defined in the file */
-    SYM_VALUED = 1 << 2		/* once its value has been determined */
+    SYM_VALUED = 1 << 2,	/* once its value has been determined */
+    SYM_NOTINTABLE = 1 << 3	/* if it's not in sym_table (ex. '$') */
 } SymStatus;
 
 typedef enum {
     SYM_UNKNOWN,		/* for unknown type (COMMON/EXTERN) */
-    SYM_CONSTANT_INT,		/* for EQU defined symbols (integers) */
-    SYM_CONSTANT_FLOAT,		/*  (floating point) */
+    SYM_EQU,			/* for EQU defined symbols (expressions) */
     SYM_LABEL			/* for labels */
 } SymType;
 
@@ -66,8 +69,7 @@ struct symrec {
     char *filename;		/* file and line */
     unsigned long line;		/*  symbol was first declared or used on */
     union {
-	unsigned long int_val;	/* integer constant */
-	floatnum *flt;		/* floating point constant */
+	expr *expn;		/* equ value */
 	struct label_s {	/* bytecode immediately preceding a label */
 	    section *sect;
 	    bytecode *bc;
@@ -76,56 +78,60 @@ struct symrec {
 };
 
 /* private functions */
-static symrec *symrec_get_or_new(const char *);
-static symrec *symrec_define(const char *, SymType type);
+static symrec *symrec_get_or_new(const char *name, int in_table);
+static symrec *symrec_define(const char *name, SymType type, int in_table);
 
 /* The symbol table: a ternary tree. */
 static ternary_tree sym_table = (ternary_tree)NULL;
 
 /* create a new symrec */
 static symrec *
-symrec_get_or_new(const char *name)
+symrec_get_or_new(const char *name, int in_table)
 {
     symrec *rec, *rec2;
 
     rec = xmalloc(sizeof(symrec));
-    rec2 = ternary_insert(&sym_table, name, rec, 0);
+    if (in_table) {
+	rec2 = ternary_insert(&sym_table, name, rec, 0);
 
-    if (rec2 != rec) {
-	free(rec);
-	return rec2;
-    }
+	if (rec2 != rec) {
+	    free(rec);
+	    return rec2;
+	}
+	rec->status = SYM_NOSTATUS;
+    } else
+	rec->status = SYM_NOTINTABLE;
 
     rec->name = xstrdup(name);
     rec->type = SYM_UNKNOWN;
     rec->filename = xstrdup(in_filename);
     rec->line = line_number;
-    rec->status = SYM_NOSTATUS;
     rec->visibility = SYM_LOCAL;
 
     return rec;
 }
 
-/* call a function with each symrec.  stop early if 0 returned */
-void
-symrec_foreach(int (*func) (const char *name, symrec *rec))
+/* Call a function with each symrec.  Stops early if 0 returned by func.
+   Returns 0 if stopped early. */
+int
+symrec_foreach(int (*func) (symrec *sym))
 {
-    /* TODO */
+    return ternary_traverse(sym_table, (int (*) (void *))func);
 }
 
 symrec *
 symrec_use(const char *name)
 {
-    symrec *rec = symrec_get_or_new(name);
+    symrec *rec = symrec_get_or_new(name, 1);
 
     rec->status |= SYM_USED;
     return rec;
 }
 
 static symrec *
-symrec_define(const char *name, SymType type)
+symrec_define(const char *name, SymType type, int in_table)
 {
-    symrec *rec = symrec_get_or_new(name);
+    symrec *rec = symrec_get_or_new(name, in_table);
 
     /* Has it been defined before (either by DEFINED or COMMON/EXTERN)? */
     if (rec->status & SYM_DEFINED) {
@@ -140,27 +146,19 @@ symrec_define(const char *name, SymType type)
 }
 
 symrec *
-symrec_define_constant_int(const char *name, unsigned long int_val)
+symrec_define_equ(const char *name, expr *e)
 {
-    symrec *rec = symrec_define(name, SYM_CONSTANT_INT);
-    rec->value.int_val = int_val;
+    symrec *rec = symrec_define(name, SYM_EQU, 1);
+    rec->value.expn = e;
     rec->status |= SYM_VALUED;
     return rec;
 }
 
 symrec *
-symrec_define_constant_float(const char *name, floatnum *flt)
+symrec_define_label(const char *name, section *sect, bytecode *precbc,
+		    int in_table)
 {
-    symrec *rec = symrec_define(name, SYM_CONSTANT_FLOAT);
-    rec->value.flt = flt;
-    rec->status |= SYM_VALUED;
-    return rec;
-}
-
-symrec *
-symrec_define_label(const char *name, section *sect, bytecode *precbc)
-{
-    symrec *rec = symrec_define(name, SYM_LABEL);
+    symrec *rec = symrec_define(name, SYM_LABEL, in_table);
     rec->value.label.sect = sect;
     rec->value.label.bc = precbc;
     return rec;
@@ -169,7 +167,7 @@ symrec_define_label(const char *name, section *sect, bytecode *precbc)
 symrec *
 symrec_declare(const char *name, SymVisibility vis)
 {
-    symrec *rec = symrec_get_or_new(name);
+    symrec *rec = symrec_get_or_new(name, 1);
 
     /* Don't allow EXTERN and COMMON if symbol has already been DEFINED. */
     /* Also, EXTERN and COMMON are mutually exclusive. */
@@ -188,7 +186,7 @@ symrec_declare(const char *name, SymVisibility vis)
     }
     return rec;
 }
-
+#if 0
 int
 symrec_get_int_value(const symrec *sym, unsigned long *ret_val,
 		     int resolve_label)
@@ -224,9 +222,67 @@ symrec_get_int_value(const symrec *sym, unsigned long *ret_val,
     /* We can't get the value right now. */
     return 0;
 }
-
+#endif
 const char *
 symrec_get_name(const symrec *sym)
 {
     return sym->name;
+}
+
+void
+symrec_print(const symrec *sym)
+{
+    printf("---Symbol `%s'---\n", sym->name);
+
+    switch (sym->type) {
+	case SYM_UNKNOWN:
+	    printf("-Unknown (Common/Extern)-\n");
+	    break;
+	case SYM_EQU:
+	    printf("_EQU_\n");
+	    printf("Expn=");
+	    expr_print(sym->value.expn);
+	    printf("\n");
+	    break;
+	case SYM_LABEL:
+	    printf("_Label_\n");
+	    printf("Section=`%s'\n", section_get_name(sym->value.label.sect));
+	    if (!sym->value.label.bc)
+		printf("[First bytecode]\n");
+	    else {
+		printf("[Preceding bytecode]\n");
+		bytecode_print(sym->value.label.bc);
+	    }
+	    break;
+    }
+
+    printf("Status=");
+    if (sym->status == SYM_NOSTATUS)
+	printf("None\n");
+    else {
+	if (sym->status & SYM_USED)
+	    printf("Used,");
+	if (sym->status & SYM_DEFINED)
+	    printf("Defined,");
+	if (sym->status & SYM_VALUED)
+	    printf("Valued,");
+	if (sym->status & SYM_NOTINTABLE)
+	    printf("Not in Table,");
+	printf("\n");
+    }
+
+    printf("Visibility=");
+    if (sym->visibility == SYM_LOCAL)
+	printf("Local\n");
+    else {
+	if (sym->visibility & SYM_GLOBAL)
+	    printf("Global,");
+	if (sym->visibility & SYM_COMMON)
+	    printf("Common,");
+	if (sym->visibility & SYM_EXTERN)
+	    printf("Extern,");
+	printf("\n");
+    }
+
+    printf("Filename=\"%s\" Line Number=%lu\n", sym->filename, sym->line);
 }

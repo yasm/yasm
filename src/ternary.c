@@ -3,6 +3,9 @@
 
    Contributed by Daniel Berlin (dan@cgsoftware.com)
 
+   ternary_traverse by Peter Johnson (adapted from code by Jon Bentley and
+   Robert Sedgewick).
+
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
    Free Software Foundation; either version 2, or (at your option) any
@@ -159,4 +162,24 @@ ternary_recursivesearch (ternary_tree p, const char *s)
 	return (void *) p->eqkid;
       return ternary_recursivesearch (p->eqkid, ++s);
     }
+}
+
+/* Traverse over tree, calling callback function for each leaf. 
+   Stops early if func returns 0. */
+int
+ternary_traverse (ternary_tree p, int (*func) (void *d))
+{
+  if (!p)
+    return 1;
+  if (ternary_traverse (p->lokid, func) == 0)
+    return 0;
+  if (p->splitchar)
+    {
+      if (ternary_traverse (p->eqkid, func) == 0)
+	return 0;
+    }
+  else
+    if (func (p->eqkid) == 0)
+      return 0;
+  return ternary_traverse (p->hikid, func);
 }

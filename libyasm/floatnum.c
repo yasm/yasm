@@ -498,20 +498,28 @@ floatnum_delete(floatnum *flt)
     free(flt);
 }
 
+void
+floatnum_calc(floatnum *acc, ExprOp op, floatnum *operand)
+{
+    if (op != EXPR_NEG)
+	Error(_("Unsupported floating-point arithmetic operation"));
+    else
+	acc->sign ^= 1;
+}
+
 int
 floatnum_get_int(unsigned long *ret_val, const floatnum *flt)
 {
     unsigned char t[4];
 
-    if (floatnum_get_single(t, flt))
+    if (floatnum_get_sized(t, flt, 4))
 	return 1;
 
     LOAD_LONG(*ret_val, &t[0]);
     return 0;
 }
 
-/* Function used by single, double, and extended conversion routines to actually
- * perform the conversion.
+/* Function used by conversion routines to actually perform the conversion.
  *
  * ptr -> the array to return the little-endian floating point value into.
  * flt -> the floating point value to convert.
@@ -614,14 +622,8 @@ floatnum_get_common(unsigned char *ptr, const floatnum *flt, int byte_size,
  * e = bias 127 exponent
  * s = sign bit
  * m = mantissa bits, bit 23 is an implied one bit.
- */
-int
-floatnum_get_single(unsigned char *ptr, const floatnum *flt)
-{
-    return floatnum_get_common(ptr, flt, 4, 23, 1, 8);
-}
-
-/* IEEE-754 (Intel) "double precision" format:
+ *
+ * IEEE-754 (Intel) "double precision" format:
  * 64 bits:
  * bit 63       bit 51                                               bit 0
  * |            |                                                        |
@@ -630,14 +632,8 @@ floatnum_get_single(unsigned char *ptr, const floatnum *flt)
  * e = bias 1023 exponent.
  * s = sign bit.
  * m = mantissa bits.  Bit 52 is an implied one bit.
- */
-int
-floatnum_get_double(unsigned char *ptr, const floatnum *flt)
-{
-    return floatnum_get_common(ptr, flt, 8, 52, 1, 11);
-}
-
-/* IEEE-754 (Intel) "extended precision" format:
+ *
+ * IEEE-754 (Intel) "extended precision" format:
  * 80 bits:
  * bit 79            bit 63                           bit 0
  * |                 |                                    |
@@ -648,9 +644,34 @@ floatnum_get_double(unsigned char *ptr, const floatnum *flt)
  * s = sign (for mantissa)
  */
 int
-floatnum_get_extended(unsigned char *ptr, const floatnum *flt)
+floatnum_get_sized(unsigned char *ptr, const floatnum *flt, size_t size)
 {
-    return floatnum_get_common(ptr, flt, 10, 64, 0, 15);
+    switch (size) {
+	case 4:
+	    return floatnum_get_common(ptr, flt, 4, 23, 1, 8);
+	case 8:
+	    return floatnum_get_common(ptr, flt, 8, 52, 1, 11);
+	case 10:
+	    return floatnum_get_common(ptr, flt, 10, 64, 0, 15);
+	default:
+	    InternalError(__LINE__, __FILE__,
+			  _("Invalid float conversion size"));
+	    return 1;	    /* never reached, but silence GCC warning */
+    }
+}
+
+/* 1 if the size is valid, 0 if it isn't */
+int
+floatnum_check_size(const floatnum *flt, size_t size)
+{
+    switch (size) {
+	case 4:
+	case 8:
+	case 10:
+	    return 1;
+	default:
+	    return 0;
+    }
 }
 
 void
@@ -666,19 +687,19 @@ floatnum_print(const floatnum *flt)
     free(str);
 
     /* 32-bit (single precision) format */
-    printf("32-bit: %d: ", floatnum_get_single(out, flt));
+    printf("32-bit: %d: ", floatnum_get_sized(out, flt, 4));
     for (i=0; i<4; i++)
 	printf("%02x ", out[i]);
     printf("\n");
 
     /* 64-bit (double precision) format */
-    printf("64-bit: %d: ", floatnum_get_double(out, flt));
+    printf("64-bit: %d: ", floatnum_get_sized(out, flt, 8));
     for (i=0; i<8; i++)
 	printf("%02x ", out[i]);
     printf("\n");
 
     /* 80-bit (extended precision) format */
-    printf("80-bit: %d: ", floatnum_get_extended(out, flt));
+    printf("80-bit: %d: ", floatnum_get_sized(out, flt, 10));
     for (i=0; i<10; i++)
 	printf("%02x ", out[i]);
     printf("\n");

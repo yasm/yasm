@@ -33,10 +33,6 @@ char *xstrdup(const char *str);
 char *strsep(char **stringp, const char *delim);
 #endif
 
-#if !defined(HAVE_STRTOUL) || defined(HAVE_GNU_C_LIBRARY)
-unsigned long strtoul(const char *nptr, char **endptr, int base);
-#endif
-
 #ifndef HAVE_STRCASECMP
 # ifdef HAVE_STRICMP
 #  define strcasecmp(x, y)	stricmp(x, y)
