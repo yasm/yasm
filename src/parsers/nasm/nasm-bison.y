@@ -1,4 +1,4 @@
-/* $Id: nasm-bison.y,v 1.13 2001/07/05 02:51:01 peter Exp $
+/* $Id: nasm-bison.y,v 1.14 2001/07/05 05:04:37 peter Exp $
  * Main bison parser
  *
  *  Copyright (C) 2001  Peter Johnson, Michael Urman
@@ -82,9 +82,9 @@ extern void yyerror(char *);
 %type <bc> line exp instr instrbase label
 
 %type <int_val> fpureg reg32 reg16 reg8 segreg
-%type <ea_val> memexp memaddr memref
+%type <ea_val> mem memaddr memexp
 %type <ea_val> mem8x mem16x mem32x mem64x mem80x mem128x
-%type <ea_val> mem mem8 mem16 mem32 mem64 mem80 mem128 mem1632
+%type <ea_val> mem8 mem16 mem32 mem64 mem80 mem128 mem1632
 %type <ea_val> rm8x rm16x rm32x /*rm64x rm128x*/
 %type <ea_val> rm8 rm16 rm32 rm64 rm128
 %type <im_val> immexp imm imm8x imm16x imm32x imm8 imm16 imm32
@@ -194,55 +194,45 @@ memaddr: memexp			{ $$ = $1; $$.segment = 0; }
     | DWORD memaddr		{ $$ = $2; SetEALen(&$$, 4); }
 ;
 
-memref: '[' memaddr ']' { $$ = $2; }
+mem: '[' memaddr ']' { $$ = $2; }
 ;
 
 /* explicit memory */
-mem8x: BYTE memref	{ $$ = $2; }
+mem8x: BYTE mem		{ $$ = $2; }
 ;
-mem16x: WORD memref	{ $$ = $2; }
+mem16x: WORD mem	{ $$ = $2; }
 ;
-mem32x: DWORD memref	{ $$ = $2; }
+mem32x: DWORD mem	{ $$ = $2; }
 ;
-mem64x: QWORD memref	{ $$ = $2; }
+mem64x: QWORD mem	{ $$ = $2; }
 ;
-mem80x: TWORD memref	{ $$ = $2; }
+mem80x: TWORD mem	{ $$ = $2; }
 ;
-mem128x: DQWORD memref	{ $$ = $2; }
-;
-
-/* other sized memory reference - no explicit size allowed */
-mem: memref		{ $$ = $1; }
-    | mem8x		{ $$ = $1; Error(ERR_OP_SIZE_MISMATCH, (char *)NULL); }
-    | mem16x		{ $$ = $1; Error(ERR_OP_SIZE_MISMATCH, (char *)NULL); }
-    | mem32x		{ $$ = $1; Error(ERR_OP_SIZE_MISMATCH, (char *)NULL); }
-    | mem64x		{ $$ = $1; Error(ERR_OP_SIZE_MISMATCH, (char *)NULL); }
-    | mem80x		{ $$ = $1; Error(ERR_OP_SIZE_MISMATCH, (char *)NULL); }
-    | mem128x		{ $$ = $1; Error(ERR_OP_SIZE_MISMATCH, (char *)NULL); }
+mem128x: DQWORD mem	{ $$ = $2; }
 ;
 
 /* implicit memory */
-mem8: memref
+mem8: mem
     | mem8x
 ;
-mem16: memref
+mem16: mem
     | mem16x
 ;
-mem32: memref
+mem32: mem
     | mem32x
 ;
-mem64: memref
+mem64: mem
     | mem64x
 ;
-mem80: memref
+mem80: mem
     | mem80x
 ;
-mem128: memref
+mem128: mem
     | mem128x
 ;
 
 /* both 16 and 32 bit memory */
-mem1632: memref
+mem1632: mem
     | mem16x
     | mem32x
 ;
