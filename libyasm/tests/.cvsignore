@@ -1,1 +1,3 @@
-bytecode_test
+*_test
+*.gmon
+*.core
