@@ -123,6 +123,14 @@ nasm_listfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     if (intn)
 	return yasm_arch_intnum_tobytes(info->arch, intn, buf, destsize,
 					valsize, shift, bc, 0, bc->line);
+    else {
+	int retval;
+	intn = yasm_intnum_create_uint(0);
+	retval = yasm_arch_intnum_tobytes(info->arch, intn, buf, destsize,
+					  valsize, shift, bc, 0, bc->line);
+	yasm_intnum_destroy(intn);
+	return retval;
+    }
 
     return 0;
 }
