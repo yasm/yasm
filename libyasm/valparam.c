@@ -33,7 +33,8 @@ vps_delete(valparamhead *headp)
     cur = STAILQ_FIRST(headp);
     while (cur) {
 	next = STAILQ_NEXT(cur, link);
-	expr_delete(cur->val);
+	if (cur->val)
+	    xfree(cur->val);
 	if (cur->param)
 	    expr_delete(cur->param);
 	xfree(cur);

@@ -24,12 +24,13 @@
 
 typedef struct valparam {
     /*@reldef@*/ STAILQ_ENTRY(valparam) link;
-    /*@owned@*/ expr *val;
+    /*@owned@*/ /*@null@*/ char *val;
     /*@owned@*/ /*@null@*/ expr *param;
 } valparam;
 typedef /*@reldef@*/ STAILQ_HEAD(valparamhead, valparam) valparamhead;
 
-void vp_new(/*@out@*/ valparam *r, /*@keep@*/ expr *v, /*@keep@*/ expr *p);
+void vp_new(/*@out@*/ valparam *r, /*@keep@*/ const char *v,
+	    /*@keep@*/ expr *p);
 #define vp_new(r, v, p)		do {	\
 	r = xmalloc(sizeof(valparam));	\
 	r->val = v;			\
@@ -44,6 +45,9 @@ void vps_append(valparamhead *headp, /*@keep@*/ valparam *vp);
 	if (vp)					    \
 	    STAILQ_INSERT_TAIL(headp, vp, link);    \
     } while(0)
+
+/*@null@*/ /*@dependent@*/ valparam *vps_first(valparamhead *headp);
+#define vps_first(headp)	    STAILQ_FIRST(headp)
 
 #define vps_foreach(iter, headp)    STAILQ_FOREACH(iter, headp, link)
 
