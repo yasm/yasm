@@ -67,7 +67,7 @@ basic_optimize_resolve_label(symrec *sym, section *sect,
 	return intnum_new_int(startval + precbc->offset + precbc->len);
     if (bc && bc->opt_flags == BCFLAG_DONE)
 	return intnum_new_int(startval + bc->offset);
-    if (sect->opt_flags == SECTFLAG_DONE)
+    if (section_get_opt_flags(sect) == SECTFLAG_DONE)
 	return intnum_new_int(startval);
 
     return NULL;
