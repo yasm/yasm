@@ -86,7 +86,7 @@ sections_initialize(sectionhead *headp)
 /*@-onlytrans@*/
 section *
 sections_switch_general(sectionhead *headp, const char *name, void *of_data,
-			int res_only)
+			int res_only, int *isnew)
 {
     section *s;
 
@@ -101,6 +101,7 @@ sections_switch_general(sectionhead *headp, const char *name, void *of_data,
 		assert(cur_objfmt != NULL);
 		cur_objfmt->section_data_delete(of_data);
 	    }
+	    *isnew = 0;
 	    return s;
 	}
     }
@@ -118,6 +119,7 @@ sections_switch_general(sectionhead *headp, const char *name, void *of_data,
 
     s->res_only = res_only;
 
+    *isnew = 1;
     return s;
 }
 /*@=onlytrans@*/

@@ -36,6 +36,7 @@ dbg_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 {
     valparam *vp;
     section *retval;
+    int isnew;
 
 #if 0
     fprintf(stderr, "-dbg_objfmt_sections_switch():\n");
@@ -62,8 +63,9 @@ dbg_objfmt_sections_switch(sectionhead *headp, valparamhead *valparams,
 	}
 #endif
     if ((vp = vps_first(valparams)) && !vp->param && vp->val != NULL) {
-	retval = sections_switch_general(headp, vp->val, NULL, 0);
-	symrec_define_label(vp->val, retval, (bytecode *)NULL, 1);
+	retval = sections_switch_general(headp, vp->val, NULL, 0, &isnew);
+	if (isnew)
+	    symrec_define_label(vp->val, retval, (bytecode *)NULL, 1);
 	return retval;
     } else
 	return NULL;

@@ -29,7 +29,8 @@ struct objfmt;
 /*@dependent@*/ section *sections_switch_general(sectionhead *headp,
 						 const char *name,
 						 /*@null@*/ /*@only@*/
-						 void *of_data, int res_only);
+						 void *of_data, int res_only,
+						 /*@out@*/ int *isnew);
 
 /*@dependent@*/ section *sections_switch_absolute(sectionhead *headp,
 						  /*@keep@*/ expr *start);
