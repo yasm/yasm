@@ -321,7 +321,7 @@ N_word BitVector_Mask(N_int bits)           /* bit vector mask (unused bits) */
 
 charptr BitVector_Version(void)
 {
-    return((charptr)"5.8");
+    return((charptr)"6.0");
 }
 
 N_int BitVector_Word_Bits(void)
@@ -1574,14 +1574,12 @@ ErrCode BitVector_from_Dec(wordptr addr, charptr string)
     boolean init = (bits > BITS);
     boolean minus;
     boolean shift;
+    boolean carry;
     wordptr term;
     wordptr base;
     wordptr prod;
     wordptr rank;
     wordptr temp;
-    wordptr last;
-    N_word  msb;
-    N_word  prev;
     N_word  accu;
     N_word  powr;
     N_word  count;
@@ -1635,8 +1633,6 @@ ErrCode BitVector_from_Dec(wordptr addr, charptr string)
             BitVector_Destroy(rank);
             return(ErrCode_Null);
         }
-        last = addr + size_(addr) - 1;
-        msb = mask AND NOT (mask >> 1);
         BitVector_Empty(addr);
         *base = EXP10;
         shift = FALSE;
@@ -1662,7 +1658,7 @@ ErrCode BitVector_from_Dec(wordptr addr, charptr string)
                 {
                     *term = accu;
                     BitVector_Copy(temp,rank);
-                    error = BitVector_Mul_Pos(prod,temp,term);
+                    error = BitVector_Mul_Pos(prod,temp,term,FALSE);
                 }
                 else
                 {
@@ -1671,24 +1667,25 @@ ErrCode BitVector_from_Dec(wordptr addr, charptr string)
                 }
                 if (not error)
                 {
-                    prev = *last AND msb;
-                    if (BitVector_add(addr,addr,prod,0) or ((*last AND msb) != prev))
+                    carry = FALSE;
+                    BitVector_compute(addr,addr,prod,FALSE,&carry);
+                    /* ignores sign change (= overflow) but not */
+                    /* numbers too large (= carry) for resulting bit vector */
+                    if (carry) error = ErrCode_Ovfl;
+                    else
                     {
-                        *last ^= msb;
-                        if (BitVector_is_empty(addr)) *last ^= msb;
-                        else error = ErrCode_Ovfl;
-                    }
-                    else if (length > 0)
-                    {
-                        if (shift)
+                        if (length > 0)
                         {
-                            BitVector_Copy(temp,rank);
-                            error = BitVector_Mul_Pos(rank,temp,base);
-                        }
-                        else
-                        {
-                            *rank = *base;
-                            shift = TRUE;
+                            if (shift)
+                            {
+                                BitVector_Copy(temp,rank);
+                                error = BitVector_Mul_Pos(rank,temp,base,FALSE);
+                            }
+                            else
+                            {
+                                *rank = *base;
+                                shift = TRUE;
+                            }
                         }
                     }
                 }
@@ -1699,10 +1696,11 @@ ErrCode BitVector_from_Dec(wordptr addr, charptr string)
         BitVector_Destroy(prod);
         BitVector_Destroy(rank);
         BitVector_Destroy(temp);
-        if (not error)
+        if (not error and minus)
         {
-            if (minus) BitVector_Negate(addr,addr);
-            if (minus XOR ((*last AND msb) != 0)) error = ErrCode_Ovfl;
+            BitVector_Negate(addr,addr);
+            if ((*(addr + size_(addr) - 1) AND mask AND NOT (mask >> 1)) == 0)
+                error = ErrCode_Ovfl;
         }
     }
     return(error);
@@ -2187,10 +2185,13 @@ boolean BitVector_decrement(wordptr addr)                   /* X--           */
     return(carry);
 }
 
-boolean BitVector_add(wordptr X, wordptr Y, wordptr Z, boolean carry)
+boolean BitVector_compute(wordptr X, wordptr Y, wordptr Z, boolean minus, boolean *carry)
 {
     N_word size = size_(X);
     N_word mask = mask_(X);
+    N_word vv = 0;
+    N_word cc;
+    N_word mm;
     N_word yy;
     N_word zz;
     N_word lo;
@@ -2198,51 +2199,85 @@ boolean BitVector_add(wordptr X, wordptr Y, wordptr Z, boolean carry)
 
     if (size > 0)
     {
-        while (size-- > 0)
+        if (minus) cc = (*carry == 0);
+        else       cc = (*carry != 0);
+        /* deal with (size-1) least significant full words first: */
+        while (--size > 0)
         {
             yy = *Y++;
-            zz = *Z++;
-            if (size == 0) { yy &= mask; zz &= mask; }
-            lo = (yy AND LSB) + (zz AND LSB) + (carry AND LSB);
+            if (minus) { if (Z) zz = NOT *Z++; else zz = NOT 0; }
+            else       { if (Z) zz =     *Z++; else zz =     0; }
+            lo = (yy AND LSB) + (zz AND LSB) + cc;
             hi = (yy >> 1) + (zz >> 1) + (lo >> 1);
-            carry = ((hi AND MSB) != 0);
+            cc = ((hi AND MSB) != 0);
             *X++ = (hi << 1) OR (lo AND LSB);
         }
-        X--;
-        if (NOT mask) carry = ((*X AND (mask+1)) != 0);
-        *X &= mask;
+        /* deal with most significant word (may be used only partially): */
+        yy = *Y AND mask;
+        if (minus) { if (Z) zz = NOT *Z; else zz = NOT 0; }
+        else       { if (Z) zz =     *Z; else zz =     0; }
+        zz &= mask;
+        if (mask == LSB) /* special case, only one bit used */
+        {
+            vv = cc;
+            lo = yy + zz + cc;
+            cc = (lo >> 1);
+            vv ^= cc;
+            *X = lo AND LSB;
+        }
+        else
+        {
+            if (NOT mask) /* not all bits are used, but more than one */
+            {
+                mm = (mask >> 1);
+                vv = (yy AND mm) + (zz AND mm) + cc;
+                mm = mask AND NOT mm;
+                lo = yy + zz + cc;
+                cc = (lo >> 1);
+                vv ^= cc;
+                vv &= mm;
+                cc &= mm;
+                *X = lo AND mask;
+            }
+            else /* other special case, all bits are used */
+            {
+                mm = NOT MSB;
+                lo = (yy AND mm) + (zz AND mm) + cc;
+                vv = lo AND MSB;
+                hi = ((yy AND MSB) >> 1) + ((zz AND MSB) >> 1) + (vv >> 1);
+                cc = hi AND MSB;
+                vv ^= cc;
+                *X = (hi << 1) OR (lo AND mm);
+            }
+        }
+        if (minus) *carry = (cc == 0);
+        else       *carry = (cc != 0);
     }
-    return(carry);
+    return(vv != 0);
 }
 
-boolean BitVector_subtract(wordptr X, wordptr Y, wordptr Z, boolean carry)
+boolean BitVector_add(wordptr X, wordptr Y, wordptr Z, boolean *carry)
 {
-    N_word size = size_(X);
-    N_word mask = mask_(X);
-    N_word  yy;
-    N_word  zz;
-    N_word  lo;
-    N_word  hi;
+    return(BitVector_compute(X,Y,Z,FALSE,carry));
+}
 
-    if (size > 0)
-    {
-        carry = not carry;
-        while (size-- > 0)
-        {
-            yy = *Y++;
-            zz = NOT *Z++;
-            if (size == 0) { yy &= mask; zz &= mask; }
-            lo = (yy AND LSB) + (zz AND LSB) + (carry AND LSB);
-            hi = (yy >> 1) + (zz >> 1) + (lo >> 1);
-            carry = ((hi AND MSB) != 0);
-            *X++ = (hi << 1) OR (lo AND LSB);
-        }
-        X--;
-        if (NOT mask) carry = ((*X AND (mask+1)) != 0);
-        *X &= mask;
-        carry = not carry;
-    }
-    return(carry);
+boolean BitVector_sub(wordptr X, wordptr Y, wordptr Z, boolean *carry)
+{
+    return(BitVector_compute(X,Y,Z,TRUE,carry));
+}
+
+boolean BitVector_inc(wordptr X, wordptr Y)
+{
+    boolean carry = TRUE;
+
+    return(BitVector_compute(X,Y,NULL,FALSE,&carry));
+}
+
+boolean BitVector_dec(wordptr X, wordptr Y)
+{
+    boolean carry = TRUE;
+
+    return(BitVector_compute(X,Y,NULL,TRUE,&carry));
 }
 
 void BitVector_Negate(wordptr X, wordptr Y)
@@ -2298,11 +2333,15 @@ Z_int BitVector_Sign(wordptr addr)
     }
 }
 
-ErrCode BitVector_Mul_Pos(wordptr X, wordptr Y, wordptr Z)
+ErrCode BitVector_Mul_Pos(wordptr X, wordptr Y, wordptr Z, boolean heedsign)
 {
-    Z_long  last;
+    N_word  mask;
     N_word  limit;
     N_word  count;
+    Z_long  last;
+    wordptr sign;
+    boolean carry;
+    boolean overflow;
     boolean ok = TRUE;
 
     /*
@@ -2316,15 +2355,32 @@ ErrCode BitVector_Mul_Pos(wordptr X, wordptr Y, wordptr Z)
 
     if (bits_(X) != bits_(Y)) return(ErrCode_Size);
     BitVector_Empty(X);
-    if (BitVector_is_empty(Y)) return(ErrCode_Ok);
+    if (BitVector_is_empty(Y)) return(ErrCode_Ok); /* exit also taken if bits_(Y)==0 */
     if ((last = Set_Max(Z)) < 0L) return(ErrCode_Ok);
     limit = (N_word) last;
+    sign = Y + size_(Y) - 1;
+    mask = mask_(Y);
+    *sign &= mask;
+    mask &= NOT (mask >> 1);
     for ( count = 0; (ok and (count <= limit)); count++ )
     {
         if ( BIT_VECTOR_TST_BIT(Z,count) )
-            ok = not BitVector_add(X,X,Y,0);
+        {
+            carry = FALSE;
+            overflow = BitVector_compute(X,X,Y,FALSE,&carry);
+            if (heedsign) ok = not (carry or overflow);
+            else          ok = not  carry;
+        }
         if (ok and (count < limit))
-            ok = not BitVector_shift_left(Y,0);
+        {
+            carry = BitVector_shift_left(Y,0);
+            if (heedsign)
+            {
+                overflow = ((*sign AND mask) != 0);
+                ok = not (carry or overflow);
+            }
+            else ok = not carry;
+        }
     }
     if (ok) return(ErrCode_Ok); else return(ErrCode_Ovfl);
 }
@@ -2338,7 +2394,6 @@ ErrCode BitVector_Multiply(wordptr X, wordptr Y, wordptr Z)
     N_word  size;
     N_word  mask;
     N_word  msb;
-    wordptr ptr_x;
     wordptr ptr_y;
     wordptr ptr_z;
     boolean sgn_x;
@@ -2385,9 +2440,6 @@ ErrCode BitVector_Multiply(wordptr X, wordptr Y, wordptr Z)
             zero &= (*(--ptr_y) == 0);
             zero &= (*(--ptr_z) == 0);
         }
-        mask  = mask_(X);
-        msb   = (mask AND NOT (mask >> 1));
-        ptr_x = X + size_(X) - 1;
         if (*ptr_y > *ptr_z)
         {
             if (bit_x > bit_y)
@@ -2395,8 +2447,7 @@ ErrCode BitVector_Multiply(wordptr X, wordptr Y, wordptr Z)
                 A = BitVector_Resize(A,bit_x);
                 if (A == NULL) { BitVector_Destroy(B); return(ErrCode_Null); }
             }
-            if ((not (error = BitVector_Mul_Pos(X,A,B))) and
-                ((*ptr_x AND msb) != 0)) error = ErrCode_Ovfl;
+            error = BitVector_Mul_Pos(X,A,B,TRUE);
         }
         else
         {
@@ -2405,8 +2456,7 @@ ErrCode BitVector_Multiply(wordptr X, wordptr Y, wordptr Z)
                 B = BitVector_Resize(B,bit_x);
                 if (B == NULL) { BitVector_Destroy(A); return(ErrCode_Null); }
             }
-            if ((not (error = BitVector_Mul_Pos(X,B,A))) and
-                ((*ptr_x AND msb) != 0)) error = ErrCode_Ovfl;
+            error = BitVector_Mul_Pos(X,B,A,TRUE);
         }
         if ((not error) and sgn_x) BitVector_Negate(X,X);
         BitVector_Destroy(A);
@@ -2453,12 +2503,14 @@ ErrCode BitVector_Div_Pos(wordptr Q, wordptr X, wordptr Y, wordptr R)
         if (copy)
         {
             BitVector_shift_left(X,flag);
-            flag = BitVector_subtract(R,X,Y,0);
+            flag = FALSE;
+            BitVector_compute(R,X,Y,TRUE,&flag);
         }
         else
         {
             BitVector_shift_left(R,flag);
-            flag = BitVector_subtract(X,R,Y,0);
+            flag = FALSE;
+            BitVector_compute(X,R,Y,TRUE,&flag);
         }
         if (flag) *addr &= NOT mask;
         else
@@ -3200,11 +3252,12 @@ void Matrix_Transpose(wordptr X, N_int rowsX, N_int colsX,
 }
 
 /*****************************************************************************/
-/*  VERSION:  5.8                                                            */
+/*  VERSION:  6.0                                                            */
 /*****************************************************************************/
 /*  VERSION HISTORY:                                                         */
 /*****************************************************************************/
 /*                                                                           */
+/*    Version 6.0  08.10.00  Corrected overflow handling.                    */
 /*    Version 5.8  14.07.00  Added "Power()". Changed "Copy()".              */
 /*    Version 5.7  19.05.99  Quickened "Div_Pos()". Added "Product()".       */
 /*    Version 5.6  02.11.98  Leading zeros eliminated in "to_Hex()".         */

@@ -226,12 +226,17 @@ void    BitVector_Delete      (wordptr addr, N_int offset, N_int count,
 boolean BitVector_increment   (wordptr addr);               /* X++           */
 boolean BitVector_decrement   (wordptr addr);               /* X--           */
 
-boolean BitVector_add     (wordptr X, wordptr Y, wordptr Z, boolean carry);
-boolean BitVector_subtract(wordptr X, wordptr Y, wordptr Z, boolean carry);
+boolean BitVector_compute (wordptr X, wordptr Y, wordptr Z, boolean minus,
+                                                            boolean *carry);
+boolean BitVector_add     (wordptr X, wordptr Y, wordptr Z, boolean *carry);
+boolean BitVector_sub     (wordptr X, wordptr Y, wordptr Z, boolean *carry);
+boolean BitVector_inc     (wordptr X, wordptr Y);
+boolean BitVector_dec     (wordptr X, wordptr Y);
+
 void    BitVector_Negate  (wordptr X, wordptr Y);
 void    BitVector_Absolute(wordptr X, wordptr Y);
 Z_int   BitVector_Sign    (wordptr addr);
-ErrCode BitVector_Mul_Pos (wordptr X, wordptr Y, wordptr Z);
+ErrCode BitVector_Mul_Pos (wordptr X, wordptr Y, wordptr Z, boolean heedsign);
 ErrCode BitVector_Multiply(wordptr X, wordptr Y, wordptr Z);
 ErrCode BitVector_Div_Pos (wordptr Q, wordptr X, wordptr Y, wordptr R);
 ErrCode BitVector_Divide  (wordptr Q, wordptr X, wordptr Y, wordptr R);
@@ -304,11 +309,12 @@ void    Matrix_Transpose     (wordptr X, N_int rowsX, N_int colsX,
 /*****************************************************************************/
 
 /*****************************************************************************/
-/*  VERSION:  5.8                                                            */
+/*  VERSION:  6.0                                                            */
 /*****************************************************************************/
 /*  VERSION HISTORY:                                                         */
 /*****************************************************************************/
 /*                                                                           */
+/*    Version 6.0  08.10.00  Corrected overflow handling.                    */
 /*    Version 5.8  14.07.00  Added "Power()". Changed "Copy()".              */
 /*    Version 5.7  19.05.99  Quickened "Div_Pos()". Added "Product()".       */
 /*    Version 5.6  02.11.98  Leading zeros eliminated in "to_Hex()".         */
