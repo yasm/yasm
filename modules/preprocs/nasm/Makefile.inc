@@ -21,8 +21,11 @@ BUILT_SOURCES += nasm-macros.c
 CLEANFILES += nasm-macros.c
 
 EXTRA_DIST += modules/preprocs/nasm/macros.pl \
-	modules/preprocs/nasm/standard.mac
+	modules/preprocs/nasm/standard.mac \
+	modules/preprocs/nasm/tests/Makefile.inc
 
 #yasm_nasm_la_LDFLAGS = -module -avoid-version -no-undefined
 #yasm_nasm_la_LIBADD = libyasm.la
 #YASM_MODULES += -dlopen yasm_nasm.la
+
+include modules/preprocs/nasm/tests/Makefile.inc

@@ -692,9 +692,9 @@ static nasm_expr *expr6(int critical)
 	     * symbol, Here or Base references are valid because we
 	     * are in preprocess-only mode.
 	     */
-	    if (!location->known) {
+	    if (!location || !location->known) {
 		error(ERR_NONFATAL,
-		      "%s not supported in preprocess-only mode",
+		      "%s not supported",
 		      (i == TOKEN_ID ? "symbol references" :
 		       i == TOKEN_HERE ? "`$'" : "`$$'"));
 		addtotemp(EXPR_UNKNOWN, 1L);
