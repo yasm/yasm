@@ -47,6 +47,7 @@
 # include <stdlib.h>
 # include <string.h>
 # include <assert.h>
+# include <stdarg.h>
 #endif
 
 #if defined(lint)

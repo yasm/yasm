@@ -58,6 +58,11 @@ struct errwarn {
      */
     /*@exits@*/ void (*fatal) (fatal_num);
 
+    /* va_list versions of the below two functions */
+    void (*error_va) (unsigned long lindex, const char *, va_list va);
+    void (*warning_va) (warn_class_num, unsigned long lindex, const char *,
+			va_list va);
+
     void (*error) (unsigned long lindex, const char *, ...) /*@printflike@*/;
     void (*warning) (warn_class_num, unsigned long lindex, const char *, ...)
 	/*@printflike@*/;

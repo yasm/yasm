@@ -219,22 +219,56 @@ errwarn_data_new(unsigned long lindex, int replace_parser_error)
  * for output_all() to print.
  */
 static void
-yasm_errwarn_error(unsigned long lindex, const char *fmt, ...)
+yasm_errwarn_error_va(unsigned long lindex, const char *fmt, va_list va)
 {
-    va_list va;
     errwarn_data *we = errwarn_data_new(lindex, 1);
 
     we->type = WE_ERROR;
 
-    va_start(va, fmt);
 #ifdef HAVE_VSNPRINTF
     vsnprintf(we->msg, MSG_MAXSIZE, gettext(fmt), va);
 #else
     vsprintf(we->msg, gettext(fmt), va);
 #endif
-    va_end(va);
 
     error_count++;
+}
+
+/* Register an warning at line lindex.  Does not print the warning, only stores
+ * it for output_all() to print.
+ */
+static void
+yasm_errwarn_warning_va(warn_class_num num, unsigned long lindex,
+			const char *fmt, va_list va)
+{
+    errwarn_data *we;
+
+    if (!(warn_class_enabled & (1UL<<num)))
+	return;	    /* warning is part of disabled class */
+
+    we = errwarn_data_new(lindex, 0);
+
+    we->type = WE_WARNING;
+
+#ifdef HAVE_VSNPRINTF
+    vsnprintf(we->msg, MSG_MAXSIZE, gettext(fmt), va);
+#else
+    vsprintf(we->msg, gettext(fmt), va);
+#endif
+
+    warning_count++;
+}
+
+/* Register an error at line lindex.  Does not print the error, only stores it
+ * for output_all() to print.
+ */
+static void
+yasm_errwarn_error(unsigned long lindex, const char *fmt, ...)
+{
+    va_list va;
+    va_start(va, fmt);
+    yasm_errwarn_error_va(lindex, fmt, va);
+    va_end(va);
 }
 
 /* Register an warning at line lindex.  Does not print the warning, only stores
@@ -245,24 +279,9 @@ yasm_errwarn_warning(warn_class_num num, unsigned long lindex, const char *fmt,
 		     ...)
 {
     va_list va;
-    errwarn_data *we;
-
-    if (!(warn_class_enabled & (1UL<<num)))
-	return;	    /* warning is part of disabled class */
-
-    we = errwarn_data_new(lindex, 0);
-
-    we->type = WE_WARNING;
-
     va_start(va, fmt);
-#ifdef HAVE_VSNPRINTF
-    vsnprintf(we->msg, MSG_MAXSIZE, gettext(fmt), va);
-#else
-    vsprintf(we->msg, gettext(fmt), va);
-#endif
+    yasm_errwarn_warning_va(num, lindex, fmt, va);
     va_end(va);
-
-    warning_count++;
 }
 
 /* Parser error handler.  Moves YACC-style error into our error handling
@@ -336,6 +355,8 @@ errwarn yasm_errwarn = {
     yasm_errwarn_cleanup,
     yasm_errwarn_internal_error_,
     yasm_errwarn_fatal,
+    yasm_errwarn_error_va,
+    yasm_errwarn_warning_va,
     yasm_errwarn_error,
     yasm_errwarn_warning,
     yasm_errwarn_parser_error,
