@@ -388,7 +388,7 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     }
 
     /* Handle integer expressions, with relocation if necessary */
-    sym = yasm_expr_extract_symrec(ep, yasm_common_calc_bc_dist);
+    sym = yasm_expr_extract_symrec(ep, 1, yasm_common_calc_bc_dist);
     if (sym) {
 	coff_reloc *reloc;
 	yasm_sym_vis vis;

@@ -169,15 +169,25 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
 #define yasm_expr_simplify(e, cbd) \
     yasm_expr__level_tree(e, 1, 1, cbd, NULL, NULL, NULL)
 
-/** Extract a single symbol out of an expression.  Replaces it with the
- * symbol's value (if it's a label).
+/** Extract a single symbol out of an expression.  Replaces it with 0, or
+ * optionally the symbol's value (if it's a label).
  * \param ep		expression (pointer to)
+ * \param relocate	replace symbol with value (if label) if nonzero
  * \param calc_bc_dist	bytecode distance-calculation function
  * \return NULL if unable to extract a symbol (too complex of expr, none
  *         present, etc); otherwise returns the extracted symbol.
  */
 /*@dependent@*/ /*@null@*/ yasm_symrec *yasm_expr_extract_symrec
-    (yasm_expr **ep, yasm_calc_bc_dist_func calc_bc_dist);
+    (yasm_expr **ep, int relocate, yasm_calc_bc_dist_func calc_bc_dist);
+
+/** Remove the SEG unary operator if present, leaving the lower level
+ * expression.
+ * \param ep		expression (pointer to)
+ * \param simplify	if nonzero, simplify the expression first
+ * \return NULL if the expression does not have a top-level operator of SEG;
+ * otherwise the modified input expression (without the SEG).
+ */
+/*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_seg(yasm_expr **ep);
 
 /** Extract the segment portion of a SEG:OFF expression, leaving the offset.
  * \param ep		expression (pointer to)
@@ -186,7 +196,7 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
  *         expression is modified such that on return, it's the offset
  *         expression.
  */
-/*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_segment(yasm_expr **ep);
+/*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_segoff(yasm_expr **ep);
 
 /** Extract the right portion (y) of a x WRT y expression, leaving the left
  * portion (x).
@@ -197,6 +207,16 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
  *         of the WRT expression.
  */
 /*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_wrt(yasm_expr **ep);
+
+/** Extract the right portion (y) of a x SHR y expression, leaving the left
+ * portion (x).
+ * \param ep		expression (pointer to)
+ * \return NULL if unable to extract (YASM_EXPR_SHR not the top-level
+ *         operator), otherwise the right side of the SHR expression.  The
+ *         input expression is modified such that on return, it's the left side
+ *         of the SHR expression.
+ */
+/*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_shr(yasm_expr **ep);
 
 /** Get the integer value of an expression if it's just an integer.
  * \param ep		expression (pointer to)

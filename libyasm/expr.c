@@ -985,7 +985,8 @@ yasm_expr__traverse_leaves_in(yasm_expr *e, void *d,
 }
 
 yasm_symrec *
-yasm_expr_extract_symrec(yasm_expr **ep, yasm_calc_bc_dist_func calc_bc_dist)
+yasm_expr_extract_symrec(yasm_expr **ep, int relocate,
+			 yasm_calc_bc_dist_func calc_bc_dist)
 {
     yasm_symrec *sym = NULL;
     int i, symterm = -1;
@@ -1015,7 +1016,7 @@ yasm_expr_extract_symrec(yasm_expr **ep, yasm_calc_bc_dist_func calc_bc_dist)
 	/*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
 	/*@null@*/ yasm_intnum *intn;
 
-	if (yasm_symrec_get_label(sym, &precbc)) {
+	if (relocate && yasm_symrec_get_label(sym, &precbc)) {
 	    intn = calc_bc_dist(yasm_section_bcs_first(
 				    yasm_bc_get_section(precbc)), precbc);
 	    if (!intn)
@@ -1029,7 +1030,22 @@ yasm_expr_extract_symrec(yasm_expr **ep, yasm_calc_bc_dist_func calc_bc_dist)
 }
 
 yasm_expr *
-yasm_expr_extract_segment(yasm_expr **ep)
+yasm_expr_extract_seg(yasm_expr **ep)
+{
+    yasm_expr *e = *ep;
+
+    /* If not SEG, we can't do this transformation */
+    if (e->op != YASM_EXPR_SEG)
+	return NULL;
+
+    /* Remove the SEG by changing the expression into an IDENT */
+    e->op = YASM_EXPR_IDENT;
+
+    return e;
+}
+
+yasm_expr *
+yasm_expr_extract_segoff(yasm_expr **ep)
 {
     yasm_expr *retval;
     yasm_expr *e = *ep;
@@ -1065,6 +1081,34 @@ yasm_expr_extract_wrt(yasm_expr **ep)
 
     /* If not WRT, we can't do this transformation */
     if (e->op != YASM_EXPR_WRT)
+	return NULL;
+
+    /* Extract the right side portion out to its own expression */
+    if (e->terms[1].type == YASM_EXPR_EXPR)
+	retval = e->terms[1].data.expn;
+    else {
+	/* Need to build IDENT expression to hold non-expression contents */
+	retval = yasm_xmalloc(sizeof(yasm_expr));
+	retval->op = YASM_EXPR_IDENT;
+	retval->numterms = 1;
+	retval->terms[0] = e->terms[1];	/* structure copy */
+    }
+
+    /* Delete the right side portion by changing the expr into an IDENT */
+    e->op = YASM_EXPR_IDENT;
+    e->numterms = 1;
+
+    return retval;
+}
+
+yasm_expr *
+yasm_expr_extract_shr(yasm_expr **ep)
+{
+    yasm_expr *retval;
+    yasm_expr *e = *ep;
+
+    /* If not SHR, we can't do this transformation */
+    if (e->op != YASM_EXPR_SHR)
 	return NULL;
 
     /* Extract the right side portion out to its own expression */

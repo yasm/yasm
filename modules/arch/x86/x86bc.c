@@ -1139,7 +1139,7 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
 	    /* Absolute displacement: segment and offset */
 	    jmp->target = yasm_expr_simplify(jmp->target, NULL);
-	    targetseg = yasm_expr_extract_segment(&jmp->target);
+	    targetseg = yasm_expr_extract_segoff(&jmp->target);
 	    if (!targetseg)
 		yasm_internal_error(N_("could not extract segment for far jump"));
 	    i = (opersize == 16) ? 2 : 4;
