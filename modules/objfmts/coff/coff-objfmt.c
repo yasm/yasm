@@ -465,7 +465,8 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     } else {
 	pos = ftell(info->f);
 	if (pos == -1) {
-	    yasm__error(0, N_("could not get file position on output file"));
+	    yasm_fatal(N_("could not get file position on output file"));
+	    /*@notreached@*/
 	    return 1;
 	}
 
@@ -488,7 +489,8 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 
     pos = ftell(info->f);
     if (pos == -1) {
-	yasm__error(0, N_("could not get file position on output file"));
+	yasm_fatal(N_("could not get file position on output file"));
+	/*@notreached@*/
 	return 1;
     }
     csd->relptr = (unsigned long)pos;
