@@ -61,3 +61,14 @@ xstrdup(const char *str)
 	return (copy);
 }
 #endif
+
+char *
+xstrndup(const char *str, size_t len)
+{
+	char *copy;
+
+	copy = xmalloc(len+1);
+	memcpy(copy, str, len);
+	copy[len] = '\0';
+	return (copy);
+}
