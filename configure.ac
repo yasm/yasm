@@ -17,8 +17,6 @@ AC_ARG_ENABLE(dev,
 esac],[dev=false])
 AM_CONDITIONAL(DEV, test x$dev = xtrue)
 
-AC_PATH_PROGS(PERL, perl perl5.004 perl5.003 perl5.002 perl5.001 perl5)
-
 AM_PROG_CC_STDC
 
 ALL_LINGUAS=""
