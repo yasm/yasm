@@ -167,8 +167,6 @@ static yasm_objfmt *cur_objfmt = NULL;
 static const char *filename = NULL;
 static yasm_linemap *linemap = NULL;
 static yasm_arch *cur_arch = NULL;
-static size_t stabs_relocsize_bits = 0;
-static size_t stabs_relocsize_bytes = 0;
 
 static int
 stabs_dbgfmt_initialize(const char *in_filename, const char *obj_filename,
@@ -342,24 +340,13 @@ stabs_dbgfmt_generate(yasm_object *object)
     stabs_stab *stab;
     yasm_bytecode *filebc, *nullbc, *laststr;
     yasm_section *stext;
-    const char *machine = yasm_arch_get_machine(cur_arch);
 
     /* Stablen is determined by arch/machine */
     if (yasm__strcasecmp(yasm_arch_keyword(cur_arch), "x86") == 0) {
-	if (yasm__strcasecmp(machine, "x86") == 0) {
-	    info.stablen = 12;
-	}
-	else if (yasm__strcasecmp(machine, "amd64") == 0) {
-	    info.stablen = 16;
-	}
-	else
-	    return;
+        info.stablen = 12;
     }
     else /* unknown machine; generate nothing */
 	return;
-
-    stabs_relocsize_bytes = info.stablen - 8;
-    stabs_relocsize_bits = stabs_relocsize_bytes * 8;
 
     info.lastline = 0;
     info.stabcount = 0;
@@ -432,8 +419,8 @@ stabs_bc_stab_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		      yasm_output_reloc_func output_reloc)
 {
     /* This entire function, essentially the core of rendering stabs to a file,
-     * needs to become endian aware and more size agnostic.  Right now it works
-     * only for little-endian 32 and 64-bit systems */
+     * needs to become endian aware.  Size appears not to be an issue, as known
+     * 64-bit systems use truncated values in 32-bit fields. */
 
     stabs_bc_stab *bc_stab = (stabs_bc_stab *)bc;
     unsigned char *buf = *bufp;
@@ -446,20 +433,15 @@ stabs_bc_stab_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     if (stab->symvalue != NULL) {
 	bc->offset += 8;
-	output_reloc(stab->symvalue, bc, buf, stabs_relocsize_bytes,
-		     stabs_relocsize_bits, 0, 0, d);
+	output_reloc(stab->symvalue, bc, buf, 4, 32, 0, 0, d);
 	bc->offset -= 8;
-	buf += stabs_relocsize_bytes;
+	buf += 4;
     }
     else if (stab->bcvalue != NULL) {
 	YASM_WRITE_32_L(buf, stab->bcvalue->offset);
-        if (stabs_relocsize_bytes == 8)     /* Conditionally output the extra */
-	    YASM_WRITE_32_L(buf, 0);        /* bytes a 64 bit system uses */
     }
     else {
 	YASM_WRITE_32_L(buf, stab->value);
-        if (stabs_relocsize_bytes == 8)     /* Ditto for 64 bit systems */
-	    YASM_WRITE_32_L(buf, 0);
     }
 
     *bufp = buf;
