@@ -1,0 +1,77 @@
+Thu Aug 23, 2001:
+Released Check 0.7.3
+
+Fixed the Autoconf Lyx check in acinclude.m4 so that configure works
+on Solaris systems (and hopefully others), and cleaned up a minor
+problem in Debian packaging.
+
+Fri Aug 17, 2001:
+Released Check 0.7.2
+
+Automated RPM packaging, and included debian packaging. The makefiles
+now has an rpm target (the RPMFLAGS variable can be set to add
+additional flags to RPM). Debian packages are built the ordinary way
+(dpkg-buildpackage).
+
+Moved the example*.* files to tutorial*.*, since the docs really are
+tutorials. Beefed up the tutorial docs to add clarity to the behavior
+of fixture setup/teardown (based on a helpful critique by Fred Drake),
+and to document the static nature of unit tests demanded by the bug
+fix below.
+
+Many bugfixes: added -Wall to the CCFLAGS for gcc, and fixed a mess of
+warnings that resulted. Changed a bizarre naming mismatch in
+tcase_set_fixture (masked by the lack of compile warnings), and made
+unit tests static (both bugfixes suggested by Fred Drake). Also added
+a more sophisticated test of Lyx to (hopefully) ensure that Lyx
+supports linuxdoc (but it's not clear to me how to test that for
+sure).
+
+
+Wed Jul 30, 2001:
+Released Check 0.7.1
+
+Reorganized printing and logging functions to allow for a less
+primitive logging function. Logging is now documented in the tutorial
+documentation.
+
+Wed Jul 11, 2001:
+Released Check 0.7.0
+
+Included a primitive logging function (at the moment, it only prints a
+copy of the CRVERBOSE output to the log file), added the ability for
+an SRunner to run multiple suites (and reorganized the Check tests to
+take advantage of that), and added the magic to allow Check to be used
+with C++.
+
+Also added Doxygen markup to the header file, but I'm not terribly
+satisfied withe clarity of the output. I may switch to CWEB... Next
+release should include API docs and improved logging, if nothing else
+comes up...
+
+
+Wed Jun 27, 2001:
+
+Released Check 0.6.1
+
+Bug fix for srunner_failures (bad version actually returned all
+results), added srunner_results to do what srunner_failures used to
+do, and added corrected unit tests for both.
+
+Also changed the API for reporting the number of failed tests from
+srunner_nfailed to srunner_ntests_failed, to harmonized better with
+new function srunner_ntests_run. This unfortunately may break some
+unit tests slightly -- that's why the major release number is 0 :-)
+
+Thu Jun 21, 2001:
+Released Check 0.6.0
+
+Features improved unit test reporting options, more complete unit
+tests, and end-to-end test, and a full API into TestResults
+
+Check 0.5.2
+Minor edits
+Check 0.5.1
+GPL compliance release
+Check 0.5.0
+Initial public release
