@@ -46,20 +46,21 @@
 #define CPU_MMX	    (1UL<<13)	/* MMX support required */
 #define CPU_SSE	    (1UL<<14)	/* Streaming SIMD extensions required */
 #define CPU_SSE2    (1UL<<15)	/* Streaming SIMD extensions 2 required */
-#define CPU_3DNow   (1UL<<16)	/* 3DNow! support required */
-#define CPU_Cyrix   (1UL<<17)	/* Cyrix-specific instruction */
-#define CPU_AMD	    (1UL<<18)	/* AMD-specific inst. (older than K6) */
-#define CPU_SMM	    (1UL<<19)	/* System Management Mode instruction */
-#define CPU_Prot    (1UL<<20)	/* Protected mode only instruction */
-#define CPU_Undoc   (1UL<<21)	/* Undocumented instruction */
-#define CPU_Obs	    (1UL<<22)	/* Obsolete instruction */
-#define CPU_Priv    (1UL<<23)	/* Priveleged instruction */
+#define CPU_SSE3    (1UL<<16)	/* Streaming SIMD extensions 3 required */
+#define CPU_3DNow   (1UL<<17)	/* 3DNow! support required */
+#define CPU_Cyrix   (1UL<<18)	/* Cyrix-specific instruction */
+#define CPU_AMD	    (1UL<<19)	/* AMD-specific inst. (older than K6) */
+#define CPU_SMM	    (1UL<<20)	/* System Management Mode instruction */
+#define CPU_Prot    (1UL<<21)	/* Protected mode only instruction */
+#define CPU_Undoc   (1UL<<22)	/* Undocumented instruction */
+#define CPU_Obs	    (1UL<<23)	/* Obsolete instruction */
+#define CPU_Priv    (1UL<<24)	/* Priveleged instruction */
 
 /* Technically not CPU capabilities, they do affect what instructions are
  * available.  These are tested against BITS==64.
  */
-#define CPU_64	    (1UL<<24)	/* Only available in 64-bit mode */
-#define CPU_Not64   (1UL<<25)	/* Not available (invalid) in 64-bit mode */
+#define CPU_64	    (1UL<<25)	/* Only available in 64-bit mode */
+#define CPU_Not64   (1UL<<26)	/* Not available (invalid) in 64-bit mode */
 
 typedef struct yasm_arch_x86 {
     yasm_arch_base arch;	/* base structure */

@@ -1197,7 +1197,7 @@ static const x86_insn_info fildstp_insn[] = {
       {OPT_Mem|OPS_16|OPA_EA, 0, 0} },
     { CPU_FPU, MOD_SpAdd, 0, 0, 0, 1, {0xDB, 0, 0}, 0, 1,
       {OPT_Mem|OPS_32|OPA_EA, 0, 0} },
-    { CPU_FPU, MOD_Gap0|MOD_SpAdd, 0, 0, 0, 1, {0xDF, 0, 0}, 0, 1,
+    { CPU_FPU, MOD_Gap0|MOD_Op0Add|MOD_SpAdd, 0, 0, 0, 1, {0xDD, 0, 0}, 0, 1,
       {OPT_Mem|OPS_64|OPA_EA, 0, 0} }
 };
 static const x86_insn_info fbldstp_insn[] = {
@@ -1641,6 +1641,12 @@ static const x86_insn_info movq2dq_insn[] = {
 static const x86_insn_info pslrldq_insn[] = {
     { CPU_SSE2, MOD_SpAdd, 0, 0, 0x66, 2, {0x0F, 0x73, 0}, 0, 2,
       {OPT_SIMDReg|OPS_128|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} }
+};
+
+/* SSE3 instructions */
+static const x86_insn_info lddqu_insn[] = {
+    { CPU_SSE3, 0, 0, 0, 0xF2, 2, {0x0F, 0xF0, 0}, 0, 2,
+      {OPT_SIMDReg|OPS_128|OPA_Spare, OPT_Mem|OPS_Any|OPA_EA, 0} }
 };
 
 /* AMD 3DNow! instructions */
@@ -2553,8 +2559,15 @@ yasm_x86__parse_cpu(yasm_arch *arch, const char *id, unsigned long line)
 	(A T H L O N "-"? "64") {
 	    arch_x86->cpu_enabled =
 		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_K6|
-		CPU_Athlon|CPU_Hammer|CPU_FPU|CPU_MMX|CPU_SSE|CPU_3DNow|
-		CPU_SMM|CPU_Prot|CPU_Priv;
+		CPU_Athlon|CPU_Hammer|CPU_FPU|CPU_MMX|CPU_SSE|CPU_SSE2|
+		CPU_3DNow|CPU_SMM|CPU_Prot|CPU_Priv;
+	    return;
+	}
+	P R E S C O T T {
+	    arch_x86->cpu_enabled =
+		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|CPU_K6|
+		CPU_Athlon|CPU_Hammer|CPU_FPU|CPU_MMX|CPU_SSE|CPU_SSE2|
+		CPU_SSE3|CPU_3DNow|CPU_SMM|CPU_Prot|CPU_Priv;
 	    return;
 	}
 
@@ -2569,6 +2582,10 @@ yasm_x86__parse_cpu(yasm_arch *arch, const char *id, unsigned long line)
 	N O S S E	{ arch_x86->cpu_enabled &= ~CPU_SSE; return; }
 	S S E "2"	{ arch_x86->cpu_enabled |= CPU_SSE2; return; }
 	N O S S E "2"	{ arch_x86->cpu_enabled &= ~CPU_SSE2; return; }
+	S S E "3"	{ arch_x86->cpu_enabled |= CPU_SSE3; return; }
+	N O S S E "3"	{ arch_x86->cpu_enabled &= ~CPU_SSE3; return; }
+	P N I		{ arch_x86->cpu_enabled |= CPU_SSE3; return; }
+	N O P N I	{ arch_x86->cpu_enabled &= ~CPU_SSE3; return; }
 	"3" D N O W	{ arch_x86->cpu_enabled |= CPU_3DNow; return; }
 	N O "3" D N O W	{ arch_x86->cpu_enabled &= ~CPU_3DNow; return; }
 	C Y R I X	{ arch_x86->cpu_enabled |= CPU_Cyrix; return; }
@@ -3454,12 +3471,12 @@ yasm_x86__parse_check_id(yasm_arch *arch, unsigned long data[4],
 	V E R W { RET_INSN(prot286, 0x0500, CPU_286|CPU_Prot); }
 	/* Floating point instructions */
 	F L D { RET_INSN(fldstp, 0x0500C0, CPU_FPU); }
-	F I L D { RET_INSN(fildstp, 0x0500, CPU_FPU); }
+	F I L D { RET_INSN(fildstp, 0x050200, CPU_FPU); }
 	F B L D { RET_INSN(fbldstp, 0x04, CPU_FPU); }
 	F S T { RET_INSN(fst, 0, CPU_FPU); }
 	F I S T { RET_INSN(fiarith, 0x02DB, CPU_FPU); }
 	F S T P { RET_INSN(fldstp, 0x0703D8, CPU_FPU); }
-	F I S T P { RET_INSN(fildstp, 0x0703, CPU_FPU); }
+	F I S T P { RET_INSN(fildstp, 0x070203, CPU_FPU); }
 	F B S T P { RET_INSN(fbldstp, 0x06, CPU_FPU); }
 	F X C H { RET_INSN(fxch, 0, CPU_FPU); }
 	F C O M { RET_INSN(fcom, 0x02D0, CPU_FPU); }
@@ -3830,6 +3847,20 @@ yasm_x86__parse_check_id(yasm_arch *arch, unsigned long data[4],
 	P S R L D Q { RET_INSN(pslrldq, 0x03, CPU_SSE2); }
 	P U N P C K H Q D Q { RET_INSN(ssess, 0x666D, CPU_SSE2); }
 	P U N P C K L Q D Q { RET_INSN(ssess, 0x666C, CPU_SSE2); }
+	/* SSE3 / PNI (Prescott New Instructions) instructions */
+	A D D S U B P D { RET_INSN(ssess, 0x66D0, CPU_SSE3); }
+	A D D S U B P S { RET_INSN(ssess, 0xF2D0, CPU_SSE3); }
+	F I S T T P { RET_INSN(fildstp, 0x010001, CPU_SSE3); }
+	H A D D P D { RET_INSN(ssess, 0x667C, CPU_SSE3); }
+	H A D D P S { RET_INSN(ssess, 0xF27C, CPU_SSE3); }
+	H S U B P D { RET_INSN(ssess, 0x667D, CPU_SSE3); }
+	H S U B P S { RET_INSN(ssess, 0xF27D, CPU_SSE3); }
+	L D D Q U { RET_INSN(lddqu, 0, CPU_SSE3); }
+	M O N I T O R { RET_INSN(threebyte, 0x0F01C8, CPU_SSE3); }
+	M O V D D U P { RET_INSN(cvt_xmm_xmm64_ss, 0xF212, CPU_SSE3); }
+	M O V S H D U P { RET_INSN(ssess, 0xF316, CPU_SSE3); }
+	M O V S L D U P { RET_INSN(ssess, 0xF312, CPU_SSE3); }
+	M W A I T { RET_INSN(threebyte, 0x0F01C9, CPU_SSE3); }
 	/* AMD 3DNow! instructions */
 	P R E F E T C H { RET_INSN(twobytemem, 0x000F0D, CPU_3DNow); }
 	P R E F E T C H W { RET_INSN(twobytemem, 0x010F0D, CPU_3DNow); }
