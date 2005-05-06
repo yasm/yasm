@@ -81,8 +81,7 @@ MODULES_PREPROCS_NASM_OBJS= \
  modules/preprocs/nasm/nasm-eval.o \
  modules/preprocs/nasm/nasm-pp.o \
  modules/preprocs/nasm/nasm-preproc.o \
- modules/preprocs/nasm/nasmlib.o \
- nasm-macros.o
+ modules/preprocs/nasm/nasmlib.o
 
 MODULES_PREPROCS_RAW_OBJS = \
  modules/preprocs/raw/raw-preproc.o \
@@ -105,6 +104,14 @@ YASM_OBJS= \
  frontends/yasm/yasm-options.o \
  $(LIBYASM_OBJS) \
  $(MODULES_OBJS)
+
+genmacro: modules/preprocs/nasm/genmacro.c
+	$(CC) -o genmacro modules/preprocs/nasm/genmacro.c
+
+nasm-macros.c: modules/preprocs/nasm/standard.mac genmacro
+	./genmacro modules/preprocs/nasm/standard.mac
+
+modules/preprocs/nasm/nasm-pp.c: nasm-macros.c
 
 yasm: $(YASM_OBJS)
 	$(CC) -o yasm $(YASM_OBJS)
