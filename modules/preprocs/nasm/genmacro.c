@@ -102,8 +102,8 @@ main(int argc, char *argv[])
 	    while (*strp == ' ' || *strp == '\t')
 		strp++;
 	    len = strlen(strp);
-	    while (strp[len-1] == ' ' || strp[len-1] == '\t' ||
-		   strp[len-1] == '\n') {
+	    while (len > 0 && (strp[len-1] == ' ' || strp[len-1] == '\t' ||
+			       strp[len-1] == '\n')) {
 		strp[len-1] = '\0';
 		len--;
 	    }
