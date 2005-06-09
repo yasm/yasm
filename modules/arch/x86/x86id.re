@@ -3533,14 +3533,14 @@ yasm_x86__parse_check_id(yasm_arch *arch, unsigned long data[4],
 	F C H S { RET_INSN(twobyte, 0xD9E0, CPU_FPU); }
 	F A B S { RET_INSN(twobyte, 0xD9E1, CPU_FPU); }
 	F N I N I T { RET_INSN(twobyte, 0xDBE3, CPU_FPU); }
-	F I N I T { RET_INSN(threebyte, 0x98DBE3UL, CPU_FPU); }
+	F I N I T { RET_INSN(threebyte, 0x9BDBE3UL, CPU_FPU); }
 	F L D C W { RET_INSN(fldnstcw, 0x05, CPU_FPU); }
 	F N S T C W { RET_INSN(fldnstcw, 0x07, CPU_FPU); }
 	F S T C W { RET_INSN(fstcw, 0, CPU_FPU); }
 	F N S T S W { RET_INSN(fnstsw, 0, CPU_FPU); }
 	F S T S W { RET_INSN(fstsw, 0, CPU_FPU); }
 	F N C L E X { RET_INSN(twobyte, 0xDBE2, CPU_FPU); }
-	F C L E X { RET_INSN(threebyte, 0x98DBE2UL, CPU_FPU); }
+	F C L E X { RET_INSN(threebyte, 0x9BDBE2UL, CPU_FPU); }
 	F N S T E N V { RET_INSN(onebytemem, 0x06D9, CPU_FPU); }
 	F S T E N V { RET_INSN(twobytemem, 0x069BD9, CPU_FPU); }
 	F L D E N V { RET_INSN(onebytemem, 0x04D9, CPU_FPU); }
@@ -3764,7 +3764,7 @@ yasm_x86__parse_check_id(yasm_arch *arch, unsigned long data[4],
 	S T M X C S R { RET_INSN(ldstmxcsr, 0x03, CPU_SSE); }
 	S U B P S { RET_INSN(sseps, 0x5C, CPU_SSE); }
 	S U B S S { RET_INSN(ssess, 0xF35C, CPU_SSE); }
-	U C O M I S S { RET_INSN(ssess, 0xF32E, CPU_SSE); }
+	U C O M I S S { RET_INSN(ssess, 0x2E, CPU_SSE); }
 	U N P C K H P S { RET_INSN(sseps, 0x15, CPU_SSE); }
 	U N P C K L P S { RET_INSN(sseps, 0x14, CPU_SSE); }
 	X O R P S { RET_INSN(sseps, 0x57, CPU_SSE); }
@@ -3816,7 +3816,7 @@ yasm_x86__parse_check_id(yasm_arch *arch, unsigned long data[4],
 	S Q R T S D { RET_INSN(ssess, 0xF251, CPU_SSE2); }
 	S U B P D { RET_INSN(ssess, 0x665C, CPU_SSE2); }
 	S U B S D { RET_INSN(ssess, 0xF25C, CPU_SSE2); }
-	U C O M I S D { RET_INSN(ssess, 0xF22E, CPU_SSE2); }
+	U C O M I S D { RET_INSN(ssess, 0x662E, CPU_SSE2); }
 	U N P C K H P D { RET_INSN(ssess, 0x6615, CPU_SSE2); }
 	U N P C K L P D { RET_INSN(ssess, 0x6614, CPU_SSE2); }
 	X O R P D { RET_INSN(ssess, 0x6657, CPU_SSE2); }
