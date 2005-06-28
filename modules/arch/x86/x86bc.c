@@ -539,6 +539,10 @@ x86_bc_insn_resolve(yasm_bytecode *bc, int save,
 		    displen = (insn->common.addrsize == 16) ? 2U : 4U;
 	    }
 
+	    /* Handle address16_op case */
+	    if (insn->address16_op)
+		insn->common.addrsize = 0;
+
 	    /* If we had forced ea->len but had to override, save it now */
 	    if (ea->len != 0 && ea->len != displen)
 		ea->len = displen;

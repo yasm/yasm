@@ -137,6 +137,7 @@ RCSID("$Id$");
  *             1 = shift operation with a ,1 short form (instead of imm8).
  *             2 = large imm16/32 that can become a sign-extended imm8.
  *             3 = could become a short opcode mov with bits=64 and a32 prefix
+ *             4 = forced 16-bit address size (override ignored, no prefix)
  */
 #define OPT_Imm		0x0
 #define OPT_Reg		0x1
@@ -203,6 +204,7 @@ RCSID("$Id$");
 #define OPAP_ShiftOp	(1UL<<17)
 #define OPAP_SImm8Avail	(2UL<<17)
 #define OPAP_ShortMov	(3UL<<17)
+#define OPAP_A16	(4UL<<17)
 #define OPAP_MASK	(7UL<<17)
 
 typedef struct x86_insn_info {
@@ -1066,11 +1068,11 @@ static const x86_insn_info retnf_insn[] = {
 };
 static const x86_insn_info enter_insn[] = {
     { CPU_186|CPU_Not64, 0, 0, 0, 0, 1, {0xC8, 0, 0}, 0, 2,
-      {OPT_Imm|OPS_16|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm,
-       0} },
+      {OPT_Imm|OPS_16|OPS_Relaxed|OPA_EA|OPAP_A16,
+       OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
     { CPU_Hammer|CPU_64, 0, 64, 64, 0, 1, {0xC8, 0, 0}, 0, 2,
-      {OPT_Imm|OPS_16|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm,
-       0} }
+      {OPT_Imm|OPS_16|OPS_Relaxed|OPA_EA|OPAP_A16,
+       OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} }
 };
 
 /* Conditional jumps */
@@ -2251,6 +2253,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     insn->shift_op = 0;
     insn->signext_imm8_op = 0;
     insn->shortmov_op = 0;
+    insn->address16_op = 0;
     insn->rex = 0;
 
     /* Apply modifiers */
@@ -2433,6 +2436,9 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		case OPAP_ShortMov:
 		    insn->shortmov_op = 1;
 		    break;
+		case OPAP_A16:
+		    insn->address16_op = 1;
+		    break;
 		default:
 		    yasm_internal_error(
 			N_("unknown operand postponed action"));
@@ -2454,6 +2460,12 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 
     yasm_x86__bc_apply_prefixes((x86_common *)insn, num_prefixes, prefixes,
 				bc->line);
+
+    if (insn->address16_op && insn->common.addrsize) {
+	yasm__warning(YASM_WARN_GENERAL, bc->line,
+		      N_("address size override ignored"));
+	insn->common.addrsize = 0;
+    }
 
     /* Transform the bytecode */
     yasm_x86__bc_transform_insn(bc, insn);

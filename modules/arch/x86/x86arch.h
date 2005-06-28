@@ -201,6 +201,11 @@ typedef struct x86_insn {
      * registers) and the target register is al/ax/eax/rax.
      */
     unsigned char shortmov_op;
+
+    /* Override any attempt at address-size override to 16 bits, and never
+     * generate a prefix.  This is used for the ENTER opcode.
+     */
+    unsigned char address16_op;
 } x86_insn;
 
 typedef struct x86_jmp {
