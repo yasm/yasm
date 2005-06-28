@@ -311,6 +311,28 @@ static const x86_insn_info twobytemem_insn[] = {
       {OPT_Mem|OPS_Any|OPA_EA, 0, 0} }
 };
 
+/* P4 VMX Instructions */
+static const x86_insn_info vmxmemrd_insn[] = {
+    { CPU_Not64, MOD_Op1Add|MOD_Op0Add, 32, 0, 0, 2, {0, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} },
+    { CPU_64, MOD_Op1Add|MOD_Op0Add, 64, 64, 0, 2, {0, 0, 0}, 0, 2,
+      {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_64|OPA_Spare, 0} }
+};
+static const x86_insn_info vmxmemwr_insn[] = {
+    { CPU_Not64, MOD_Op1Add|MOD_Op0Add, 32, 0, 0, 2, {0, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_64, MOD_Op1Add|MOD_Op0Add, 64, 64, 0, 2, {0, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} }
+};
+static const x86_insn_info vmxtwobytemem_insn[] = {
+    { CPU_Any, MOD_SpAdd|MOD_Op1Add, 0, 0, 0, 2, {0x0F, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_64|OPS_Relaxed|OPA_EA, 0, 0} }
+};
+static const x86_insn_info vmxthreebytemem_insn[] = {
+    { CPU_Any, MOD_SpAdd|MOD_PreAdd|MOD_Op1Add, 0, 0, 0, 2, {0x0F, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_64|OPS_Relaxed|OPA_EA, 0, 0} }
+};
+
 /* Move instructions */
 static const x86_insn_info mov_insn[] = {
     /* Absolute forms for non-64-bit mode */
@@ -3829,6 +3851,17 @@ yasm_x86__parse_check_id(yasm_arch *arch, unsigned long data[4],
 	C V T P S "2" D Q { RET_INSN(ssess, 0x665B, CPU_SSE2); }
 	C V T S D "2" S I { RET_INSN(cvt_r32_xmm64, 0xF22D, CPU_SSE2); }
 	C V T S D "2" S S { RET_INSN(cvt_xmm_xmm64_ss, 0xF25A, CPU_SSE2); }
+	/* P4 VMX Instructions */
+	V M C A L L     { RET_INSN(threebyte, 0x0F01C1, CPU_P4); }
+	V M L A U N C H { RET_INSN(threebyte, 0x0F01C2, CPU_P4); }
+	V M R E S U M E { RET_INSN(threebyte, 0x0F01C3, CPU_P4); }
+	V M X O F F     { RET_INSN(threebyte, 0x0F01C4, CPU_P4); }
+	V M R E A D   { RET_INSN(vmxmemrd, 0x0F78, CPU_P4); }
+	V M W R I T E { RET_INSN(vmxmemwr, 0x0F79, CPU_P4); }
+	V M P T R L D { RET_INSN(vmxtwobytemem, 0x06C7, CPU_P4); }
+	V M P T R S T { RET_INSN(vmxtwobytemem, 0x07C7, CPU_P4); }
+	V M C L E A R { RET_INSN(vmxthreebytemem, 0x0666C7, CPU_P4); }
+	V M X O N     { RET_INSN(vmxthreebytemem, 0x06F3C7, CPU_P4); }
 	C V T S S "2" S D { RET_INSN(cvt_xmm_xmm32, 0xF35A, CPU_SSE2); }
 	C V T T P D "2" P I { RET_INSN(cvt_mm_xmm, 0x662C, CPU_SSE2); }
 	C V T T S D "2" S I { RET_INSN(cvt_r32_xmm64, 0xF22C, CPU_SSE2); }
