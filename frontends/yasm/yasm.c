@@ -67,6 +67,7 @@ static int special_options = 0;
 /*@null@*/ /*@dependent@*/ static const yasm_listfmt_module *
     cur_listfmt_module = NULL;
 static int preproc_only = 0;
+static int generate_make_dependencies = 0;
 static int warning_error = 0;	/* warnings being treated as errors */
 static enum {
     EWSTYLE_GNU = 0,
@@ -91,7 +92,8 @@ static int opt_machine_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int preproc_only_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_preproc_option(char *cmd, /*@null@*/ char *param, int extra);
-static int opt_ewmsg_handler(char *cmd, /*@null@*/ char *param, int extra); 
+static int opt_ewmsg_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_makedep_handler(char *cmd, /*@null@*/ char *param, int extra);
 
 static /*@only@*/ char *replace_extension(const char *orig, /*@null@*/
 					  const char *ext, const char *def);
@@ -145,6 +147,8 @@ static opt_option options[] =
       N_("inhibits warning messages"), NULL },
     { 'W', NULL, 0, opt_warning_handler, 0,
       N_("enables/disables warning"), NULL },
+    { 'M', NULL, 0, opt_makedep_handler, 0,
+      N_("generate Makefile dependencies on stdout"), NULL },
     { 'e', "preproc-only", 0, preproc_only_handler, 0,
       N_("preprocess only (writes output to stdout by default)"), NULL },
     { 'i', NULL, 1, opt_preproc_option, 0,
@@ -289,6 +293,16 @@ main(int argc, char *argv[])
     /* Initialize intnum and floatnum */
     yasm_intnum_initialize();
     yasm_floatnum_initialize();
+    
+    /* If not already specified, default to bin as the object format. */
+    if (!cur_objfmt_module)
+	cur_objfmt_module = yasm_load_objfmt(DEFAULT_OBJFMT_MODULE);
+
+    if (!cur_objfmt_module) {
+	print_error(_("%s: could not load default %s"), _("FATAL"),
+		    _("object format"));
+	return EXIT_FAILURE;
+    }
 
     /* handle preproc-only case here */
     if (preproc_only) {
@@ -300,10 +314,24 @@ main(int argc, char *argv[])
 	linemap = yasm_linemap_create();
 	yasm_linemap_set(linemap, in_filename, 1, 1);
 
-	/* Default output to stdout if not specified */
-	if (!obj_filename)
+	/* Default output to stdout if not specified or generating dependency
+           makefiles */
+	if (!obj_filename || generate_make_dependencies) {
 	    obj = stdout;
-	else {
+
+            /* determine the object filename if not specified, but we need a
+               file name for the makefile rule */
+            if (generate_make_dependencies && !obj_filename) {
+                if (in == stdin)
+                    /* Default to yasm.out if no obj filename specified */
+                    obj_filename = yasm__xstrdup("yasm.out");
+                else
+                    /* replace (or add) extension */
+                    obj_filename = replace_extension(in_filename,
+                                                     cur_objfmt_module->extension,
+                                                     "yasm.out");
+            }
+	} else {
 	    /* Open output (object) file */
 	    obj = open_file(obj_filename, "wt");
 	    if (!obj) {
@@ -322,16 +350,36 @@ main(int argc, char *argv[])
 	    cleanup(NULL);
 	    return EXIT_FAILURE;
 	}
+	
+	/* Pre-process until done */
+	cur_preproc = yasm_preproc_create(cur_preproc_module, in, in_filename,
+					  linemap);
 
 	apply_preproc_builtins();
 	apply_preproc_saved_options();
 
-	/* Pre-process until done */
-	cur_preproc = yasm_preproc_create(cur_preproc_module, in, in_filename,
-					  linemap);
-	while ((got = yasm_preproc_input(cur_preproc, preproc_buf,
-					 PREPROC_BUF_SIZE)) != 0)
-	    fwrite(preproc_buf, got, 1, obj);
+        if (generate_make_dependencies) {
+	    size_t totlen;
+
+            fprintf(stdout, "%s: %s", obj_filename, in_filename);
+	    totlen = strlen(obj_filename)+2+strlen(in_filename);
+
+            while ((got = yasm_preproc_get_included_file(cur_preproc,
+				preproc_buf, PREPROC_BUF_SIZE)) != 0) {
+		totlen += got;
+		if (totlen > 72) {
+		    fputs(" \\\n  ", stdout);
+		    totlen = 2;
+		}
+		fputc(' ', stdout);
+                fwrite(preproc_buf, got, 1, stdout);
+	    }
+	    fputc('\n', stdout);
+        } else {
+            while ((got = yasm_preproc_input(cur_preproc, preproc_buf,
+					     PREPROC_BUF_SIZE)) != 0)
+	        fwrite(preproc_buf, got, 1, obj);
+        }
 
 	if (in != stdin)
 	    fclose(in);
@@ -406,16 +454,6 @@ main(int argc, char *argv[])
 	/* If not already specified, default to nasm as the list format. */
 	if (!cur_listfmt_module)
 	    cur_listfmt_module = yasm_load_listfmt("nasm");
-    }
-
-    /* If not already specified, default to bin as the object format. */
-    if (!cur_objfmt_module)
-	cur_objfmt_module = yasm_load_objfmt(DEFAULT_OBJFMT_MODULE);
-
-    if (!cur_objfmt_module) {
-	print_error(_("%s: could not load default %s"), _("FATAL"),
-		    _("object format"));
-	return EXIT_FAILURE;
     }
 
     /* If not already specified, default to null as the debug format. */
@@ -948,6 +986,17 @@ opt_ewmsg_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     } else
 	print_error(_("warning: unrecognized message style `%s'"), param);
 
+    return 0;
+}
+
+static int
+opt_makedep_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
+		    /*@unused@*/ int extra)
+{
+    /* Also set preproc_only to 1, we don't want to generate code */
+    preproc_only = 1;
+    generate_make_dependencies = 1;
+    
     return 0;
 }
 

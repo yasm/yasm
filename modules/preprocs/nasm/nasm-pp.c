@@ -1325,17 +1325,10 @@ inc_fopen(char *file)
 	    backslash(combine);
 	strcat(combine, file);
 	fp = fopen(combine, "r");
-	if (pass == 0 && fp)
-	{
-	    namelen += strlen(combine) + 1;
-	    if (namelen > 62)
-	    {
-		printf(" \\\n  ");
-		namelen = 2;
-	    }
-	    printf(" %s", combine);
-	}
-	nasm_free(combine);
+	if (fp)
+	    nasm_preproc_add_dep(combine);
+	else
+	    nasm_free(combine);
 	if (fp)
 	    return fp;
 	if (!ip)

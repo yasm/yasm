@@ -48,8 +48,15 @@ typedef struct yasm_preproc_nasm {
 static yasm_linemap *cur_lm;
 int tasm_compatible_mode = 0;
 
-yasm_preproc_module yasm_nasm_LTX_preproc;
+typedef struct preproc_dep {
+    STAILQ_ENTRY(preproc_dep) link;
+    char *name;
+} preproc_dep;
 
+static STAILQ_HEAD(preproc_dep_head, preproc_dep) *preproc_deps;
+static int done_dep_preproc;
+
+yasm_preproc_module yasm_nasm_LTX_preproc;
 
 static void
 nil_listgen_init(char *p, efunc e)
@@ -127,6 +134,8 @@ nasm_preproc_create(FILE *f, const char *in_filename, yasm_linemap *lm)
 
     preproc_nasm->in = f;
     cur_lm = lm;
+    preproc_deps = NULL;
+    done_dep_preproc = 0;
     preproc_nasm->line = NULL;
     preproc_nasm->file_name = NULL;
     preproc_nasm->prior_linnum = 0;
@@ -142,6 +151,8 @@ nasm_preproc_destroy(yasm_preproc *preproc)
     nasmpp.cleanup(0);
     nasm_eval_cleanup();
     yasm_xfree(preproc);
+    if (preproc_deps)
+	yasm_xfree(preproc_deps);
 }
 
 static size_t
@@ -194,6 +205,62 @@ nasm_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
     return tot;
 }
 
+void
+nasm_preproc_add_dep(/*@only@*/ char *name)
+{
+    preproc_dep *dep;
+
+    /* If not processing dependencies, simply free name and return */
+    if (!preproc_deps) {
+	yasm_xfree(name);
+	return;
+    }
+
+    /* Save in preproc_deps */
+    dep = yasm_xmalloc(sizeof(preproc_dep));
+    dep->name = name;
+    STAILQ_INSERT_TAIL(preproc_deps, dep, link);
+}
+
+static size_t
+nasm_preproc_get_included_file(yasm_preproc *preproc, /*@out@*/ char *buf,
+			       size_t max_size)
+{
+    if (!preproc_deps) {
+	preproc_deps = yasm_xmalloc(sizeof(struct preproc_dep_head));
+	STAILQ_INIT(preproc_deps);
+    }
+
+    for (;;) {
+	char *line;
+
+	/* Pull first dep out of preproc_deps and return it if there is one */
+	if (!STAILQ_EMPTY(preproc_deps)) {
+	    char *name;
+	    preproc_dep *dep = STAILQ_FIRST(preproc_deps);
+	    STAILQ_REMOVE_HEAD(preproc_deps, link);
+	    name = dep->name;
+	    yasm_xfree(dep);
+	    strncpy(buf, name, max_size);
+	    buf[max_size-1] = '\0';
+	    yasm_xfree(name);
+	    return strlen(buf);
+	}
+
+	/* No more preprocessing to do */
+	if (done_dep_preproc) {
+	    return 0;
+	}
+
+	/* Preprocess some more, throwing away the result */
+	line = nasmpp.getline();
+	if (line)
+	    yasm_xfree(line);
+	else
+	    done_dep_preproc = 1;
+    }
+}
+
 static void
 nasm_preproc_add_include_path(yasm_preproc *preproc, const char *path)
 {
@@ -237,6 +304,7 @@ yasm_preproc_module yasm_nasm_LTX_preproc = {
     nasm_preproc_create,
     nasm_preproc_destroy,
     nasm_preproc_input,
+    nasm_preproc_get_included_file,
     nasm_preproc_add_include_path,
     nasm_preproc_add_include_file,
     nasm_preproc_predefine_macro,
