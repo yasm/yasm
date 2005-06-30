@@ -2450,6 +2450,11 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	yasm_x86__ea_init(insn->ea, spare, origin);
 	for (i=0; i<num_segregs; i++)
 	    yasm_ea_set_segreg(insn->ea, segregs[i], bc->line);
+    } else if (num_segregs > 0 && insn->special_prefix == 0) {
+	if (num_segregs > 1)
+	    yasm__warning(YASM_WARN_GENERAL, bc->line,
+			  N_("multiple segment overrides, using leftmost"));
+	insn->special_prefix = segregs[num_segregs-1]>>8;
     }
     if (imm) {
 	insn->imm = yasm_imm_create_expr(imm);
