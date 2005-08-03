@@ -354,11 +354,6 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	coff_reloc *reloc;
 	yasm_sym_vis vis;
 
-	if (valsize != 32) {
-	    yasm__error(bc->line, N_("coff: invalid relocation size"));
-	    return 1;
-	}
-
 	reloc = yasm_xmalloc(sizeof(coff_reloc));
 	addr = bc->offset + offset;
 	if (COFF_SET_VMA)
@@ -395,11 +390,21 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	}
 
 	if (rel) {
-	    if (objfmt_coff->machine == COFF_MACHINE_I386)
-		reloc->type = COFF_RELOC_I386_REL32;
-	    else if (objfmt_coff->machine == COFF_MACHINE_AMD64)
-		reloc->type = COFF_RELOC_AMD64_REL32;
-	    else
+	    if (objfmt_coff->machine == COFF_MACHINE_I386) {
+		if (valsize == 32)
+		    reloc->type = COFF_RELOC_I386_REL32;
+		else {
+		    yasm__error(bc->line, N_("coff: invalid relocation size"));
+		    return 1;
+		}
+	    } else if (objfmt_coff->machine == COFF_MACHINE_AMD64) {
+		if (valsize == 32)
+		    reloc->type = COFF_RELOC_AMD64_REL32;
+		else {
+		    yasm__error(bc->line, N_("coff: invalid relocation size"));
+		    return 1;
+		}
+	    } else
 		yasm_internal_error(N_("coff objfmt: unrecognized machine"));
 	    /* For standard COFF, need to reference to start of section, so add
 	     * $$ in.
@@ -420,9 +425,16 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	} else {
 	    if (objfmt_coff->machine == COFF_MACHINE_I386)
 		reloc->type = COFF_RELOC_I386_ADDR32;
-	    else if (objfmt_coff->machine == COFF_MACHINE_AMD64)
-		reloc->type = COFF_RELOC_AMD64_ADDR32;
-	    else
+	    else if (objfmt_coff->machine == COFF_MACHINE_AMD64) {
+		if (valsize == 32)
+		    reloc->type = COFF_RELOC_AMD64_ADDR32;
+		else if (valsize == 64)
+		    reloc->type = COFF_RELOC_AMD64_ADDR64;
+		else {
+		    yasm__error(bc->line, N_("coff: invalid relocation size"));
+		    return 1;
+		}
+	    } else
 		yasm_internal_error(N_("coff objfmt: unrecognized machine"));
 	}
 	info->csd->nreloc++;
@@ -837,6 +849,7 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
     long pos;
     unsigned long symtab_pos;
     unsigned long symtab_count;
+    unsigned int flags;
 
     info.strtab_offset = 4;
     info.objfmt_coff = objfmt_coff;
@@ -902,8 +915,12 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
     YASM_WRITE_32_L(localbuf, symtab_count);		/* number of symtabs */
     YASM_WRITE_16_L(localbuf, 0);	/* size of optional header (none) */
     /* flags */
-    YASM_WRITE_16_L(localbuf, COFF_F_AR32WR|COFF_F_LNNO
-		    |(all_syms?0:COFF_F_LSYMS));
+    flags = COFF_F_LNNO;
+    if (!all_syms)
+	flags |= COFF_F_LSYMS;
+    if (objfmt_coff->machine != COFF_MACHINE_AMD64)
+	flags |= COFF_F_AR32WR;
+    YASM_WRITE_16_L(localbuf, flags);
     fwrite(info.buf, 20, 1, f);
 
     yasm_object_sections_traverse(objfmt_coff->object, &info,
