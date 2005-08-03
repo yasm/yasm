@@ -1021,14 +1021,22 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 
     if (strcmp(sectname, ".data") == 0) {
 	flags = COFF_STYP_DATA;
-	if (objfmt_coff->win32)
-	    flags |= COFF_STYP_READ | COFF_STYP_WRITE |
-		(3<<COFF_STYP_ALIGN_SHIFT);	/* align=4 */
+	if (objfmt_coff->win32) {
+	    flags |= COFF_STYP_READ | COFF_STYP_WRITE;
+	    if (objfmt_coff->machine == COFF_MACHINE_AMD64)
+		flags |= 5<<COFF_STYP_ALIGN_SHIFT;	/* align=16 */
+	    else
+		flags |= 3<<COFF_STYP_ALIGN_SHIFT;	/* align=4 */
+	}
     } else if (strcmp(sectname, ".bss") == 0) {
 	flags = COFF_STYP_BSS;
-	if (objfmt_coff->win32)
-	    flags |= COFF_STYP_READ | COFF_STYP_WRITE |
-		(3<<COFF_STYP_ALIGN_SHIFT);	/* align=4 */
+	if (objfmt_coff->win32) {
+	    flags |= COFF_STYP_READ | COFF_STYP_WRITE;
+	    if (objfmt_coff->machine == COFF_MACHINE_AMD64)
+		flags |= 5<<COFF_STYP_ALIGN_SHIFT;	/* align=16 */
+	    else
+		flags |= 3<<COFF_STYP_ALIGN_SHIFT;	/* align=4 */
+	}
 	resonly = 1;
     } else if (strcmp(sectname, ".text") == 0) {
 	flags = COFF_STYP_TEXT;
