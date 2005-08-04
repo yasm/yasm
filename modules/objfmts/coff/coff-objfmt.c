@@ -101,6 +101,8 @@ typedef struct coff_reloc {
 #define COFF_STYP_WRITE		0x80000000UL
 #define COFF_STYP_WIN32_MASK	0xFE000000UL
 
+#define COFF_FLAG_NOBASE	(1UL<<0)    /* Use no-base (NB) relocs */
+
 typedef struct coff_section_data {
     /*@dependent@*/ yasm_symrec *sym;	/* symbol created for this section */
     unsigned int scnum;	    /* section number (1=first section) */
@@ -110,6 +112,7 @@ typedef struct coff_section_data {
     unsigned long size;	    /* size of raw data (section data) in bytes */
     unsigned long relptr;   /* file ptr to relocation */
     unsigned long nreloc;   /* number of relocation entries >64k -> error */
+    unsigned long flags2;   /* internal flags (see COFF_FLAG_* above) */
 } coff_section_data;
 
 typedef enum coff_symrec_sclass {
@@ -423,12 +426,18 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 		    (*ep)->line);
 	    *ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
 	} else {
-	    if (objfmt_coff->machine == COFF_MACHINE_I386)
-		reloc->type = COFF_RELOC_I386_ADDR32;
-	    else if (objfmt_coff->machine == COFF_MACHINE_AMD64) {
-		if (valsize == 32)
-		    reloc->type = COFF_RELOC_AMD64_ADDR32;
-		else if (valsize == 64)
+	    if (objfmt_coff->machine == COFF_MACHINE_I386) {
+		if (info->csd->flags2 & COFF_FLAG_NOBASE)
+		    reloc->type = COFF_RELOC_I386_ADDR32NB;
+		else
+		    reloc->type = COFF_RELOC_I386_ADDR32;
+	    } else if (objfmt_coff->machine == COFF_MACHINE_AMD64) {
+		if (valsize == 32) {
+		    if (info->csd->flags2 & COFF_FLAG_NOBASE)
+			reloc->type = COFF_RELOC_AMD64_ADDR32NB;
+		    else
+			reloc->type = COFF_RELOC_AMD64_ADDR32;
+		} else if (valsize == 64)
 		    reloc->type = COFF_RELOC_AMD64_ADDR64;
 		else {
 		    yasm__error(bc->line, N_("coff: invalid relocation size"));
@@ -938,7 +947,8 @@ coff_objfmt_destroy(yasm_objfmt *objfmt)
 static void 
 coff_objfmt_init_new_section(yasm_objfmt_coff *objfmt_coff,
 			     yasm_section *sect, const char *sectname,
-			     unsigned long flags, unsigned long line)
+			     unsigned long flags, unsigned long flags2,
+			     unsigned long line)
 {
     coff_section_data *data;
     yasm_symrec *sym;
@@ -951,6 +961,7 @@ coff_objfmt_init_new_section(yasm_objfmt_coff *objfmt_coff,
     data->size = 0;
     data->relptr = 0;
     data->nreloc = 0;
+    data->flags2 = flags2;
     yasm_section_add_data(sect, &coff_section_data_cb, data);
 
     sym = yasm_symtab_define_label(objfmt_coff->symtab, sectname,
@@ -972,38 +983,43 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     yasm_section *retval;
     int isnew;
     unsigned long flags;
+    unsigned long flags2 = 0;
     int flags_override = 0;
     char *sectname;
     int resonly = 0;
+
     static const struct {
 	const char *name;
 	unsigned long stdflags;	/* if 0, win32 only qualifier */
 	unsigned long win32flags;
+	unsigned long flags2;
 	/* Mode: 0 => clear specified bits
 	 *       1 => set specified bits
 	 *       2 => clear all bits, then set specified bits
 	 */
 	int mode;
     } flagquals[] = {
-	{ "code", COFF_STYP_TEXT, COFF_STYP_EXECUTE | COFF_STYP_READ, 2 },
-	{ "text", COFF_STYP_TEXT, COFF_STYP_EXECUTE | COFF_STYP_READ, 2 },
-	{ "data", COFF_STYP_DATA, COFF_STYP_READ | COFF_STYP_WRITE, 2 },
-	{ "bss", COFF_STYP_BSS, COFF_STYP_READ | COFF_STYP_WRITE, 2 },
-	{ "info", COFF_STYP_INFO, COFF_STYP_DISCARD | COFF_STYP_READ, 2 },
-	{ "discard", 0, COFF_STYP_DISCARD, 1 },
-	{ "nodiscard", 0, COFF_STYP_DISCARD, 0 },
-	{ "cache", 0, COFF_STYP_NOCACHE, 0 },
-	{ "nocache", 0, COFF_STYP_NOCACHE, 1 },
-	{ "page", 0, COFF_STYP_NOPAGE, 0 },
-	{ "nopage", 0, COFF_STYP_NOPAGE, 1 },
-	{ "share", 0, COFF_STYP_SHARED, 1 },
-	{ "noshare", 0, COFF_STYP_SHARED, 0 },
-	{ "execute", 0, COFF_STYP_EXECUTE, 1 },
-	{ "noexecute", 0, COFF_STYP_EXECUTE, 0 },
-	{ "read", 0, COFF_STYP_READ, 1 },
-	{ "noread", 0, COFF_STYP_READ, 0 },
-	{ "write", 0, COFF_STYP_WRITE, 1 },
-	{ "nowrite", 0, COFF_STYP_WRITE, 0 },
+	{ "code", COFF_STYP_TEXT, COFF_STYP_EXECUTE | COFF_STYP_READ, 0, 2 },
+	{ "text", COFF_STYP_TEXT, COFF_STYP_EXECUTE | COFF_STYP_READ, 0, 2 },
+	{ "data", COFF_STYP_DATA, COFF_STYP_READ | COFF_STYP_WRITE, 0, 2 },
+	{ "bss", COFF_STYP_BSS, COFF_STYP_READ | COFF_STYP_WRITE, 0, 2 },
+	{ "info", COFF_STYP_INFO, COFF_STYP_DISCARD | COFF_STYP_READ, 0, 2 },
+	{ "discard", 0, COFF_STYP_DISCARD, 0, 1 },
+	{ "nodiscard", 0, COFF_STYP_DISCARD, 0, 0 },
+	{ "cache", 0, COFF_STYP_NOCACHE, 0, 0 },
+	{ "nocache", 0, COFF_STYP_NOCACHE, 0, 1 },
+	{ "page", 0, COFF_STYP_NOPAGE, 0, 0 },
+	{ "nopage", 0, COFF_STYP_NOPAGE, 0, 1 },
+	{ "share", 0, COFF_STYP_SHARED, 0, 1 },
+	{ "noshare", 0, COFF_STYP_SHARED, 0, 0 },
+	{ "execute", 0, COFF_STYP_EXECUTE, 0, 1 },
+	{ "noexecute", 0, COFF_STYP_EXECUTE, 0, 0 },
+	{ "read", 0, COFF_STYP_READ, 0, 1 },
+	{ "noread", 0, COFF_STYP_READ, 0, 0 },
+	{ "write", 0, COFF_STYP_WRITE, 0, 1 },
+	{ "nowrite", 0, COFF_STYP_WRITE, 0, 0 },
+	{ "base", 0, 0, COFF_FLAG_NOBASE, 0 },
+	{ "nobase", 0, 0, COFF_FLAG_NOBASE, 1 },
     };
 
     if (!vp || vp->param || !vp->val)
@@ -1054,6 +1070,13 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	flags = COFF_STYP_INFO;
 	if (objfmt_coff->win32)
 	    flags |= COFF_STYP_DISCARD | COFF_STYP_READ;
+    } else if (objfmt_coff->win32 && strcmp(sectname, ".pdata") == 0) {
+	flags = COFF_STYP_DATA | COFF_STYP_READ
+	    | 3<<COFF_STYP_ALIGN_SHIFT;	/* align=4 */
+	flags2 = COFF_FLAG_NOBASE;
+    } else if (objfmt_coff->win32 && strcmp(sectname, ".xdata") == 0) {
+	flags = COFF_STYP_DATA | COFF_STYP_READ
+	    | 4<<COFF_STYP_ALIGN_SHIFT;	/* align=8 */
     } else {
 	/* Default to code */
 	flags = COFF_STYP_TEXT;
@@ -1075,17 +1098,20 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		else switch (flagquals[i].mode) {
 		    case 0:
 			flags &= ~flagquals[i].stdflags;
+			flags2 &= ~flagquals[i].flags2;
 			if (objfmt_coff->win32)
 			    flags &= ~flagquals[i].win32flags;
 			break;
 		    case 1:
 			flags |= flagquals[i].stdflags;
+			flags2 |= flagquals[i].flags2;
 			if (objfmt_coff->win32)
 			    flags |= flagquals[i].win32flags;
 			break;
 		    case 2:
 			flags &= ~COFF_STYP_STD_MASK;
 			flags |= flagquals[i].stdflags;
+			flags2 = flagquals[i].flags2;
 			if (objfmt_coff->win32) {
 			    flags &= ~COFF_STYP_WIN32_MASK;
 			    flags |= flagquals[i].win32flags;
@@ -1154,7 +1180,7 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 
     if (isnew)
 	coff_objfmt_init_new_section(objfmt_coff, retval, sectname, flags,
-				     line);
+				     flags2, line);
     else if (flags_override)
 	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("section flags ignored on section redeclaration"));
@@ -1314,7 +1340,7 @@ win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	    coff_objfmt_init_new_section(objfmt_coff, sect,
 					 yasm_section_get_name(sect),
 					 COFF_STYP_INFO | COFF_STYP_DISCARD
-					 | COFF_STYP_READ, line);
+					 | COFF_STYP_READ, 0, line);
 
 	/* Add text as data bytecode */
 	yasm_dvs_initialize(&dvs);
