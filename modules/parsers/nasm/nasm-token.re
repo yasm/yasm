@@ -284,7 +284,7 @@ scan:
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch);
 	    RETURN(SIZE_OVERRIDE);
 	}
-	D W O R D	{
+	(D W O R D) | (L O N G)	{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*2;
 	    RETURN(SIZE_OVERRIDE);
 	}
