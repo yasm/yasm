@@ -649,7 +649,7 @@ bc_incbin_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     }
 
     /* Read len bytes */
-    if (fread(*bufp, (size_t)bc->len, 1, f) < (size_t)bc->len) {
+    if (fread(*bufp, 1, (size_t)bc->len, f) < (size_t)bc->len) {
 	yasm__error(bc->line,
 		    N_("`incbin': unable to read %lu bytes from file `%s'"),
 		    bc->len, incbin->filename);
@@ -1031,7 +1031,7 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
     *gap = 0;
 
     if (*bufsize < datasize) {
-	mybuf = yasm_xmalloc(sizeof(bc->len));
+	mybuf = yasm_xmalloc(bc->len);
 	origbuf = mybuf;
 	destbuf = mybuf;
     } else {
