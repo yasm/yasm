@@ -23,6 +23,9 @@ BUILT_SOURCES =
 CLEANFILES = configure.lineno
 EXTRA_DIST = config/config.rpath
 
+# _stdint.h doesn't clean up after itself?
+CONFIG_CLEAN_FILES = _stdint.h
+
 # automake doesn't distribute mkinstalldirs?
 EXTRA_DIST += config/mkinstalldirs
 

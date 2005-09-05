@@ -35,6 +35,7 @@
 
 #include "coretype.h"
 #include "hamt.h"
+#include "_stdint.h"			/* for uintptr_t */
 
 typedef struct HAMTEntry {
     STAILQ_ENTRY(HAMTEntry) next;	/* next hash table entry */
@@ -58,14 +59,14 @@ struct HAMT {
  * 4 or 2-byte aligned (as it uses the LSB of the pointer variable to store
  * the subtrie flag!
  */
-#define IsSubTrie(n)		((unsigned long)((n)->BaseValue) & 1)
+#define IsSubTrie(n)		((uintptr_t)((n)->BaseValue) & 1)
 #define SetSubTrie(h, n, v)	do {				\
-	if ((unsigned long)(v) & 1)				\
+	if ((uintptr_t)(v) & 1)				\
 	    h->error_func(__FILE__, __LINE__,			\
 			  N_("Subtrie is seen as subtrie before flag is set (misaligned?)"));	\
-	(n)->BaseValue = (void *)((unsigned long)(v) | 1);	\
+	(n)->BaseValue = (void *)((uintptr_t)(v) | 1);	\
     } while (0)
-#define GetSubTrie(n)		(HAMTNode *)((unsigned long)((n)->BaseValue)&~1UL)
+#define GetSubTrie(n)		(HAMTNode *)((uintptr_t)((n)->BaseValue)&~1UL)
 
 static unsigned long
 HashKey(const char *key)
