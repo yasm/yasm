@@ -582,11 +582,15 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
 		o++;
 	}
 
-	if (simplify_ident)
+	if (simplify_ident) {
+	    int new_fold_numterms;
 	    /* Simplify identities and make IDENT if possible. */
-	    fold_numterms = expr_simplify_identity(e, fold_numterms,
-						   first_int_term);
-	else if (fold_numterms == 1)
+	    new_fold_numterms = expr_simplify_identity(e, fold_numterms,
+						       first_int_term);
+	    level_numterms -= fold_numterms-new_fold_numterms;
+	    fold_numterms = new_fold_numterms;
+	}
+	if (fold_numterms == 1)
 	    e->op = YASM_EXPR_IDENT;
     }
 
