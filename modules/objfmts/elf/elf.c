@@ -502,7 +502,6 @@ elf_secthead *
 elf_secthead_create(elf_strtab_entry	*name,
 		    elf_section_type	 type,
 		    elf_section_flags	 flags,
-		    elf_section_index	 idx,
 		    elf_address		 offset,
 		    elf_size		 size)
 {
@@ -516,13 +515,13 @@ elf_secthead_create(elf_strtab_entry	*name,
     esd->info = 0;
     esd->align = NULL;
     esd->entsize = 0;
-    esd->index = idx;
+    esd->index = 0;
 
     esd->sym = NULL;
     esd->name = name;
     esd->index = 0;
     esd->rel_name = NULL;
-    esd->rel_index = idx;
+    esd->rel_index = 0;
     esd->rel_offset = 0;
     esd->nreloc = 0;
 
@@ -600,12 +599,10 @@ elf_secthead_write_to_file(FILE *f, elf_secthead *shead,
     return 0;
 }
 
-int
+void
 elf_secthead_append_reloc(yasm_section *sect, elf_secthead *shead,
 			  elf_reloc_entry *reloc)
 {
-    int new_sect = 0;
-
     if (sect == NULL)
 	yasm_internal_error("sect is null");
     if (shead == NULL)
@@ -615,8 +612,6 @@ elf_secthead_append_reloc(yasm_section *sect, elf_secthead *shead,
 
     shead->nreloc++;
     yasm_section_add_reloc(sect, (yasm_reloc *)reloc, elf_reloc_entry_destroy);
-
-    return new_sect;
 }
 
 char *

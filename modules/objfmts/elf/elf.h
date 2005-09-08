@@ -443,14 +443,13 @@ void elf_sym_set_visibility(elf_symtab_entry    *entry,
 elf_secthead *elf_secthead_create(elf_strtab_entry	*name,
 				  elf_section_type	type,
 				  elf_section_flags	flags,
-				  elf_section_index	idx,
 				  elf_address		offset,
 				  elf_size		size);
 void elf_secthead_destroy(elf_secthead *esd);
 unsigned long elf_secthead_write_to_file(FILE *f, elf_secthead *esd,
 					 elf_section_index sindex);
-int elf_secthead_append_reloc(yasm_section *sect, elf_secthead *shead,
-			      elf_reloc_entry *reloc);
+void elf_secthead_append_reloc(yasm_section *sect, elf_secthead *shead,
+			       elf_reloc_entry *reloc);
 elf_section_type elf_secthead_get_type(elf_secthead *shead);
 int elf_secthead_is_empty(elf_secthead *shead);
 struct yasm_symrec *elf_secthead_get_sym(elf_secthead *shead);
