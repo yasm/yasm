@@ -24,7 +24,7 @@
 				MinimalRebuild="TRUE"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="5"
-				UsePrecompiledHeader="2"
+				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="TRUE"
 				DebugInformationFormat="4"/>
@@ -42,7 +42,7 @@
 				Name="VCMIDLTool"/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="run.bat $(TargetPath)"/>
+				CommandLine="run.bat &quot;$(TargetPath)&quot;"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool
@@ -70,7 +70,7 @@
 				Name="VCCLCompilerTool"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="4"
-				UsePrecompiledHeader="2"
+				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="TRUE"
 				DebugInformationFormat="3"/>
@@ -89,7 +89,7 @@
 				Name="VCMIDLTool"/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="run.bat $(TargetPath)"/>
+				CommandLine="run.bat &quot;$(TargetPath)&quot;"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool
@@ -118,20 +118,10 @@
 			<File
 				RelativePath="..\..\..\modules\preprocs\nasm\genmacro.c">
 			</File>
-			<File
-				RelativePath=".\run.bat">
-			</File>
 		</Filter>
-		<Filter
-			Name="Header Files"
-			Filter="h;hpp;hxx;hm;inl;inc;xsd"
-			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
-		</Filter>
-		<Filter
-			Name="Resource Files"
-			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx"
-			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}">
-		</Filter>
+		<File
+			RelativePath=".\run.bat">
+		</File>
 	</Files>
 	<Globals>
 	</Globals>
