@@ -572,6 +572,28 @@ x86_bc_insn_resolve(yasm_bytecode *bc, int save,
 
 	    /* TODO: check imm->len vs. sized len from expr? */
 
+	    /* Handle signext_imm8_op special-casing */
+	    if (insn->signext_imm8_op && temp &&
+		(num = yasm_expr_get_intnum(&temp, calc_bc_dist))) {
+		if (num) {
+		    int val = yasm_intnum_get_int(num);
+		    if (val >= -128 && val <= 127) {
+			/* We can use the sign-extended byte form: shorten
+			 * the immediate length to 1.
+			 */
+			immlen = 1;
+			if (save) {
+			    /* Make the byte form permanent. */
+			    insn->opcode.opcode[0] = insn->opcode.opcode[1];
+			    imm->len = 1;
+			}
+		    }
+		}
+		/* Not really necessary, but saves confusion over it. */
+		if (save)
+		    insn->signext_imm8_op = 0;
+	    }
+
 	    /* Handle shift_op special-casing */
 	    if (insn->shift_op && temp &&
 		(num = yasm_expr_get_intnum(&temp, calc_bc_dist))) {
