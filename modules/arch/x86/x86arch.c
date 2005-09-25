@@ -37,17 +37,22 @@ yasm_arch_module yasm_x86_LTX_arch;
 
 
 static /*@only@*/ yasm_arch *
-x86_create(const char *machine)
+x86_create(const char *machine, const char *parser,
+	   /*@out@*/ yasm_arch_create_error *error)
 {
     yasm_arch_x86 *arch_x86;
     unsigned int amd64_machine;
+
+    *error = YASM_ARCH_CREATE_OK;
 
     if (yasm__strcasecmp(machine, "x86") == 0)
 	amd64_machine = 0;
     else if (yasm__strcasecmp(machine, "amd64") == 0)
 	amd64_machine = 1;
-    else
+    else {
+	*error = YASM_ARCH_CREATE_BAD_MACHINE;
 	return NULL;
+    }
 
     arch_x86 = yasm_xmalloc(sizeof(yasm_arch_x86));
 
@@ -56,6 +61,12 @@ x86_create(const char *machine)
     arch_x86->cpu_enabled = ~CPU_Any;
     arch_x86->amd64_machine = amd64_machine;
     arch_x86->mode_bits = 0;
+
+    if (yasm__strcasecmp(parser, "nasm") != 0) {
+	yasm_xfree(arch_x86);
+	*error = YASM_ARCH_CREATE_BAD_PARSER;
+	return NULL;
+    }
 
     return (yasm_arch *)arch_x86;
 }

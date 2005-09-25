@@ -37,12 +37,22 @@ yasm_arch_module yasm_lc3b_LTX_arch;
 
 
 static /*@only@*/ yasm_arch *
-lc3b_create(const char *machine)
+lc3b_create(const char *machine, const char *parser,
+	    /*@out@*/ yasm_arch_create_error *error)
 {
     yasm_arch_base *arch;
 
-    if (yasm__strcasecmp(machine, "lc3b") != 0)
+    *error = YASM_ARCH_CREATE_OK;
+
+    if (yasm__strcasecmp(machine, "lc3b") != 0) {
+	*error = YASM_ARCH_CREATE_BAD_MACHINE;
 	return NULL;
+    }
+
+    if (yasm__strcasecmp(parser, "nasm") != 0) {
+	*error = YASM_ARCH_CREATE_BAD_PARSER;
+	return NULL;
+    }
 
     arch = yasm_xmalloc(sizeof(yasm_arch_base));
     arch->module = &yasm_lc3b_LTX_arch;

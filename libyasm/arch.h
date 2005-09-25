@@ -44,6 +44,13 @@ typedef enum {
     YASM_ARCH_CHECK_ID_TARGETMOD	/**< A target modifier (for jumps) */
 } yasm_arch_check_id_retval;
 
+/** Errors that may be returned by yasm_arch_module::create(). */
+typedef enum {
+    YASM_ARCH_CREATE_OK = 0,		/**< No error. */
+    YASM_ARCH_CREATE_BAD_MACHINE,	/**< Unrecognized machine name. */
+    YASM_ARCH_CREATE_BAD_PARSER		/**< Unrecognized parser name. */
+} yasm_arch_create_error;
+
 /** An instruction operand (opaque type). */
 typedef struct yasm_insn_operand yasm_insn_operand;
 #ifdef YASM_LIB_INTERNAL
@@ -59,22 +66,6 @@ typedef struct yasm_arch_base {
     const struct yasm_arch_module *module;
 } yasm_arch_base;
 #endif
-
-/** "Flavor" of the parser.
- * Different assemblers order instruction operands differently.  Also, some
- * differ on how exactly various registers are specified.  There's no great
- * solution to this, as the parsers aren't supposed to have knowledge of the
- * architectural internals, and the architecture is supposed to be parser
- * independent.  To make things work, as a rather hackish solution, we give the
- * architecture a little knowledge about the general "flavor" of the parser,
- * and let the architecture decide what to do with it.  Most architectures will
- * probably not even use this, but it's required for some (x86 in particular)
- * for correct behavior on all parsers.
- */
-typedef enum {
-    YASM_ARCH_SYNTAX_FLAVOR_NASM = 1,	/**< Like NASM */
-    YASM_ARCH_SYNTAX_FLAVOR_GAS		/**< Like GAS */
-} yasm_arch_syntax_flavor;
 
 /** YASM machine subtype.  A number of different machine types may be
  * associated with a single architecture.  These may be specific CPU's, but
@@ -110,11 +101,9 @@ typedef struct yasm_arch_module {
     /** Create architecture.
      * Module-level implementation of yasm_arch_create().
      * Call yasm_arch_create() instead of calling this function.
-     * \param machine	keyword of machine in use (must be one listed in
-     *			#machines)
-     * \return NULL if machine not recognized.
      */
-    /*@only@*/ yasm_arch * (*create) (const char *machine);
+    /*@only@*/ yasm_arch * (*create) (const char *machine, const char *parser,
+				      yasm_arch_create_error *error);
 
     /** Module-level implementation of yasm_arch_destroy().
      * Call yasm_arch_destroy() instead of calling this function.
@@ -275,10 +264,14 @@ unsigned int yasm_arch_wordsize(const yasm_arch *arch);
  * \param module	architecture module
  * \param machine	keyword of machine in use (must be one listed in
  *			#machines)
- * \return NULL if machine not recognized, otherwise new architecture.
+ * \param parser	keyword of parser in use
+ * \param error		error return value
+ * \return NULL on error (error returned in error parameter), otherwise new
+ *	   architecture.
  */
 /*@only@*/ yasm_arch *yasm_arch_create(const yasm_arch_module *module,
-				       const char *machine);
+				       const char *machine, const char *parser,
+				       /*@out@*/ yasm_arch_create_error *error);
 
 /** Clean up, free any architecture-allocated memory.
  * \param arch	architecture
@@ -465,7 +458,8 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
 #define yasm_arch_wordsize(arch) \
     (((yasm_arch_base *)arch)->module->wordsize)
 
-#define yasm_arch_create(module, machine)   module->create(machine)
+#define yasm_arch_create(module, machine, parser, error) \
+    module->create(machine, parser, error)
 
 #define yasm_arch_destroy(arch) \
     ((yasm_arch_base *)arch)->module->destroy(arch)

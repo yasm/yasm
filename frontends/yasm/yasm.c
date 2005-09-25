@@ -231,6 +231,7 @@ main(int argc, char *argv[])
     yasm_object *object = NULL;
     yasm_section *def_sect;
     size_t i;
+    yasm_arch_create_error arch_error;
 
 #if defined(HAVE_SETLOCALE) && defined(HAVE_LC_MESSAGES)
     setlocale(LC_MESSAGES, "");
@@ -417,11 +418,26 @@ main(int argc, char *argv[])
 	}
     }
 
-    /* Set up architecture using the selected (or default) machine */
+    /* Default to NASM as the parser */
+    if (!cur_parser_module) {
+	cur_parser_module = yasm_load_parser("nasm");
+	if (!cur_parser_module) {
+	    print_error(_("%s: could not load default %s"), _("FATAL"),
+			_("parser"));
+	    cleanup(NULL);
+	    return EXIT_FAILURE;
+	}
+    }
+
+    /* Set up architecture using the selected (or default) machine and
+     * selected (or default nasm) parser.
+     */
     if (!machine_name)
 	machine_name = yasm__xstrdup(cur_arch_module->default_machine_keyword);
 
-    cur_arch = cur_arch_module->create(machine_name);
+    cur_arch = cur_arch_module->create(machine_name,
+				       cur_parser_module->keyword,
+				       &arch_error);
     if (!cur_arch) {
 	if (strcmp(machine_name, "help") == 0) {
 	    yasm_arch_machine *m = cur_arch_module->machines;
@@ -434,9 +450,21 @@ main(int argc, char *argv[])
 	    return EXIT_SUCCESS;
 	}
 
-	print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
-		    _("FATAL"), machine_name, _("machine"),
-		    _("architecture"), cur_arch_module->keyword);
+	switch (arch_error) {
+	    case YASM_ARCH_CREATE_BAD_MACHINE:
+		print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
+			    _("FATAL"), machine_name, _("machine"),
+			    _("architecture"), cur_arch_module->keyword);
+		break;
+	    case YASM_ARCH_CREATE_BAD_PARSER:
+		print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
+			    _("FATAL"), machine_name, _("machine"),
+			    _("architecture"), cur_arch_module->keyword);
+		break;
+	    default:
+		print_error(_("%s: unknown architecture error"), _("FATAL"));
+	}
+
 	return EXIT_FAILURE;
     }
 
@@ -525,17 +553,6 @@ main(int argc, char *argv[])
 	if (in != stdin)
 	    fclose(in);
 	return EXIT_FAILURE;
-    }
-
-    /* Default to NASM as the parser */
-    if (!cur_parser_module) {
-	cur_parser_module = yasm_load_parser("nasm");
-	if (!cur_parser_module) {
-	    print_error(_("%s: could not load default %s"), _("FATAL"),
-			_("parser"));
-	    cleanup(NULL);
-	    return EXIT_FAILURE;
-	}
     }
 
     /* If not already specified, default to the parser's default preproc. */
