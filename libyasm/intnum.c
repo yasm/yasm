@@ -358,6 +358,10 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
 	case YASM_EXPR_XOR:
 	    Set_ExclusiveOr(result, op1, op2);
 	    break;
+	case YASM_EXPR_NOR:
+	    Set_Union(result, op1, op2);
+	    Set_Complement(result, result);
+	    break;
 	case YASM_EXPR_SHL:
 	    if (operand->type == INTNUM_UL) {
 		BitVector_Copy(result, op1);

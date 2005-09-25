@@ -131,6 +131,7 @@ typedef enum {
     YASM_EXPR_OR,	/**< Bitwise OR. */
     YASM_EXPR_AND,	/**< Bitwise AND. */
     YASM_EXPR_XOR,	/**< Bitwise XOR. */
+    YASM_EXPR_NOR,	/**< Bitwise NOR. */
     YASM_EXPR_SHL,	/**< Shift left (logical). */
     YASM_EXPR_SHR,	/**< Shift right (logical). */
     YASM_EXPR_LOR,	/**< Logical OR. */

@@ -1242,6 +1242,9 @@ yasm_expr_print(const yasm_expr *e, FILE *f)
 	case YASM_EXPR_XOR:
 	    strcpy(opstr, "^");
 	    break;
+	case YASM_EXPR_NOR:
+	    strcpy(opstr, "NOR");
+	    break;
 	case YASM_EXPR_SHL:
 	    strcpy(opstr, "<<");
 	    break;
