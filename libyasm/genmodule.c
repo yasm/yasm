@@ -99,6 +99,7 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 
+    len = 0;
     while (fgets(str, MAXLINE, in)) {
 	if (strncmp(str, "MODULES_", 8) == 0) {
 	    len = 0;
