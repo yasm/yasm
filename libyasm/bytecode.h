@@ -286,12 +286,6 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
  */
 yasm_dataval *yasm_dv_create_expr(/*@keep@*/ yasm_expr *expn);
 
-/** Create a new data value from a float.
- * \param flt	floating point value
- * \return Newly allocated data value.
- */
-yasm_dataval *yasm_dv_create_float(/*@keep@*/ yasm_floatnum *flt);
-
 /** Create a new data value from a string.
  * \param str_val	string
  * \return Newly allocated data value.
