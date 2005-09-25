@@ -40,6 +40,7 @@ typedef enum {
     YASM_ARCH_CHECK_ID_INSN,		/**< An instruction. */
     YASM_ARCH_CHECK_ID_PREFIX,		/**< An instruction prefix. */
     YASM_ARCH_CHECK_ID_REG,		/**< A register. */
+    YASM_ARCH_CHECK_ID_REGGROUP,	/**< A register group. */
     YASM_ARCH_CHECK_ID_SEGREG,/**< a segment register (for memory overrides). */
     YASM_ARCH_CHECK_ID_TARGETMOD	/**< A target modifier (for jumps) */
 } yasm_arch_check_id_retval;
@@ -178,6 +179,12 @@ typedef struct yasm_arch_module {
      * Call yasm_arch_get_reg_size() instead of calling this function.
      */
     unsigned int (*get_reg_size) (yasm_arch *arch, unsigned long reg);
+
+    /** Module-level implementation of yasm_arch_reggroup_get_reg().
+     * Call yasm_arch_reggroup_get_reg() instead of calling this function.
+     */
+    unsigned long (*reggroup_get_reg) (yasm_arch *arch, unsigned long reggroup,
+				       unsigned long regindex);
 
     /** Module-level implementation of yasm_arch_reg_print().
      * Call yasm_arch_reg_print() instead of calling this function.
@@ -424,6 +431,18 @@ int yasm_arch_intnum_tobytes(yasm_arch *arch, const yasm_intnum *intn,
  * \return 0 if there is no suitable equivalent size, otherwise the size.
  */
 unsigned int yasm_arch_get_reg_size(yasm_arch *arch, unsigned long reg);
+
+/** Get a specific register of a register group, based on the register
+ * group and the index within the group.
+ * \param arch		architecture
+ * \param reggroup	register group
+ * \param regindex	register index
+ * \return 0 if regindex is not valid for that register group, otherwise the
+ *         specific register value.
+ */
+unsigned long yasm_arch_reggroup_get_reg(yasm_arch *arch,
+					 unsigned long reggroup,
+					 unsigned long regindex);
 
 /** Print a register.  For debugging purposes.
  * \param arch		architecture

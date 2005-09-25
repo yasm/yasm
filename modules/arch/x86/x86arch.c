@@ -151,6 +151,30 @@ yasm_x86__get_reg_size(yasm_arch *arch, unsigned long reg)
     return 0;
 }
 
+static unsigned long
+x86_reggroup_get_reg(yasm_arch *arch, unsigned long reggroup,
+		     unsigned long regindex)
+{
+    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
+    switch ((x86_expritem_reg_size)(reggroup & ~0xFUL)) {
+	case X86_XMMREG:
+	    if (arch_x86->mode_bits == 64) {
+		if (regindex > 15)
+		    return 0;
+		return reggroup | (regindex & 15);
+	    }
+	    /*@fallthrough@*/
+	case X86_MMXREG:
+	case X86_FPUREG:
+	    if (regindex > 7)
+		return 0;
+	    return reggroup | (regindex & 7);
+	default:
+	    yasm_internal_error(N_("bad register group"));
+    }
+    return 0;
+}
+
 static void
 x86_reg_print(yasm_arch *arch, unsigned long reg, FILE *f)
 {
@@ -241,6 +265,7 @@ yasm_arch_module yasm_x86_LTX_arch = {
     yasm_x86__intnum_fixup_rel,
     yasm_x86__intnum_tobytes,
     yasm_x86__get_reg_size,
+    x86_reggroup_get_reg,
     x86_reg_print,
     x86_segreg_print,
     yasm_x86__ea_create_expr,

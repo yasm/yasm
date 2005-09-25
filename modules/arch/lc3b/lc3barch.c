@@ -95,6 +95,14 @@ lc3b_get_reg_size(/*@unused@*/ yasm_arch *arch, /*@unused@*/ unsigned long reg)
     return 2;
 }
 
+static unsigned long
+lc3b_reggroup_get_reg(/*@unused@*/ yasm_arch *arch,
+		      /*@unused@*/ unsigned long reggroup,
+		      /*@unused@*/ unsigned long regindex)
+{
+    return 0;
+}
+
 static void
 lc3b_reg_print(/*@unused@*/ yasm_arch *arch, unsigned long reg, FILE *f)
 {
@@ -139,6 +147,7 @@ yasm_arch_module yasm_lc3b_LTX_arch = {
     yasm_lc3b__intnum_fixup_rel,
     yasm_lc3b__intnum_tobytes,
     lc3b_get_reg_size,
+    lc3b_reggroup_get_reg,
     lc3b_reg_print,
     NULL,	/*yasm_lc3b__segreg_print*/
     lc3b_ea_create_expr,
