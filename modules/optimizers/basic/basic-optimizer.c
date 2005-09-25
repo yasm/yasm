@@ -181,7 +181,8 @@ basic_optimize_bytecode_2(/*@observer@*/ yasm_bytecode *bc, /*@null@*/ void *d)
     bc->offset = data->precbc->offset + data->precbc->len;
     data->precbc = bc;
 
-    if (yasm_bc_resolve(bc, 1, yasm_common_calc_bc_dist) < 0)
+    if (yasm_bc_resolve(bc, 1, yasm_common_calc_bc_dist)
+	& YASM_BC_RESOLVE_ERROR)
 	return -1;
     return 0;
 }
