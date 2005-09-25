@@ -598,10 +598,8 @@ x86_bc_insn_resolve(yasm_bytecode *bc, int save,
 	    if (insn->shift_op && temp &&
 		(num = yasm_expr_get_intnum(&temp, calc_bc_dist))) {
 		if (num && yasm_intnum_get_uint(num) == 1) {
-		    /* We can use the ,1 form: subtract out the imm len
-		     * (as we add it back in below).
-		     */
-		    bc->len -= imm->len;
+		    /* We can use the ,1 form: no immediate (set to 0 len) */
+		    immlen = 0;
 
 		    if (save) {
 			/* Make the ,1 form permanent. */
