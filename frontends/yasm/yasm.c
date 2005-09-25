@@ -576,10 +576,13 @@ main(int argc, char *argv[])
     apply_preproc_builtins();
     apply_preproc_saved_options();
 
-    /* Get initial x86 BITS setting from object format */
+    /* Get initial x86 BITS setting from object format except for amd64 mode */
     if (strcmp(cur_arch_module->keyword, "x86") == 0) {
-	yasm_arch_set_var(cur_arch, "mode_bits",
-			  cur_objfmt_module->default_x86_mode_bits);
+	if (strcmp(machine_name, "amd64") == 0)
+	    yasm_arch_set_var(cur_arch, "mode_bits", 64);
+	else
+	    yasm_arch_set_var(cur_arch, "mode_bits",
+			      cur_objfmt_module->default_x86_mode_bits);
     }
 
     /* Parse! */
