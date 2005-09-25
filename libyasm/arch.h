@@ -513,6 +513,8 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
 	(arch, intn, buf, destsize, valsize, shift, bc, warn, line)
 #define yasm_arch_get_reg_size(arch, reg) \
     ((yasm_arch_base *)arch)->module->get_reg_size(arch, reg)
+#define yasm_arch_reggroup_get_reg(arch, regg, regi) \
+    ((yasm_arch_base *)arch)->module->reggroup_get_reg(arch, regg, regi)
 #define yasm_arch_reg_print(arch, reg, f) \
     ((yasm_arch_base *)arch)->module->reg_print(arch, reg, f)
 #define yasm_arch_segreg_print(arch, segreg, f) \
