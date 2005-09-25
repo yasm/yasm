@@ -291,15 +291,10 @@ typedef struct symtab_finalize_info {
 static int
 symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
 {
-    unsigned long *firstundef_line = d;
     symtab_finalize_info *info = (symtab_finalize_info *)d;
     /* error if a symbol is used but never defined or extern/common declared */
     if ((sym->status & SYM_USED) && !(sym->status & SYM_DEFINED) &&
 	!(sym->visibility & (YASM_SYM_EXTERN | YASM_SYM_COMMON))) {
-	yasm__error(sym->line, N_("undefined symbol `%s' (first use)"),
-		    sym->name);
-	if (sym->line < *firstundef_line)
-	    *firstundef_line = sym->line;
 	if (info->undef_extern && info->objfmt)
 	    yasm_objfmt_extern_declare(info->objfmt, sym->name, NULL, 1);
 	else {
