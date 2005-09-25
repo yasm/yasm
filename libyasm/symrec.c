@@ -282,10 +282,17 @@ yasm_symrec_declare(yasm_symrec *rec, yasm_sym_vis vis, unsigned long line)
 	    rec->name, rec->line);
 }
 
+typedef struct symtab_finalize_info {
+    unsigned long firstundef_line;
+    int undef_extern;
+    /*@null@*/ yasm_objfmt *objfmt;
+} symtab_finalize_info;
+
 static int
 symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
 {
     unsigned long *firstundef_line = d;
+    symtab_finalize_info *info = (symtab_finalize_info *)d;
     /* error if a symbol is used but never defined or extern/common declared */
     if ((sym->status & SYM_USED) && !(sym->status & SYM_DEFINED) &&
 	!(sym->visibility & (YASM_SYM_EXTERN | YASM_SYM_COMMON))) {
@@ -293,19 +300,30 @@ symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
 		    sym->name);
 	if (sym->line < *firstundef_line)
 	    *firstundef_line = sym->line;
+	if (info->undef_extern && info->objfmt)
+	    yasm_objfmt_extern_declare(info->objfmt, sym->name, NULL, 1);
+	else {
+	    yasm__error(sym->line, N_("undefined symbol `%s' (first use)"),
+			sym->name);
+	    if (sym->line < info->firstundef_line)
+		info->firstundef_line = sym->line;
+	}
     }
 
     return 1;
 }
 
 void
-yasm_symtab_parser_finalize(yasm_symtab *symtab)
+yasm_symtab_parser_finalize(yasm_symtab *symtab, int undef_extern,
+			    yasm_objfmt *objfmt)
 {
-    unsigned long firstundef_line = ULONG_MAX;
-    yasm_symtab_traverse(symtab, &firstundef_line,
-			 symtab_parser_finalize_checksym);
-    if (firstundef_line < ULONG_MAX)
-	yasm__error(firstundef_line,
+    symtab_finalize_info info;
+    info.firstundef_line = ULONG_MAX;
+    info.undef_extern = undef_extern;
+    info.objfmt = objfmt;
+    yasm_symtab_traverse(symtab, &info, symtab_parser_finalize_checksym);
+    if (info.firstundef_line < ULONG_MAX)
+	yasm__error(info.firstundef_line,
 		    N_(" (Each undefined symbol is reported only once.)"));
 }
 

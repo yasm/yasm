@@ -611,7 +611,7 @@ main(int argc, char *argv[])
 	fclose(in);
 
     /* Check for undefined symbols */
-    yasm_symtab_parser_finalize(yasm_object_get_symtab(object));
+    yasm_symtab_parser_finalize(yasm_object_get_symtab(object), 0, NULL);
 
     if (yasm_get_num_errors(warning_error) > 0) {
 	yasm_errwarn_output_all(yasm_object_get_linemap(object), warning_error,

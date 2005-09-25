@@ -144,8 +144,13 @@ int /*@alt void@*/ yasm_symtab_traverse
 
 /** Finalize symbol table after parsing stage.  Checks for symbols that are
  * used but never defined or declared #YASM_SYM_EXTERN or #YASM_SYM_COMMON.
+ * \param symtab	symbol table
+ * \param undef_extern	if nonzero, all undef syms should be declared extern
+ * \param objfmt	object format to notify about new extern decls
+ *			(may be NULL if undef_extern is 0)
  */
-void yasm_symtab_parser_finalize(yasm_symtab *symtab);
+void yasm_symtab_parser_finalize(yasm_symtab *symtab, int undef_extern,
+				 /*@null@*/ yasm_objfmt *objfmt);
 
 /** Print the symbol table.  For debugging purposes.
  * \param symtab	symbol table
