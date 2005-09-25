@@ -18,6 +18,3 @@ EXTRA_DIST += modules/parsers/gas/tests/reggroup.asm
 EXTRA_DIST += modules/parsers/gas/tests/reggroup.errwarn
 EXTRA_DIST += modules/parsers/gas/tests/reggroup.hex
 
-EXTRA_DIST += modules/parsers/gas/tests/amd64/Makefile.inc
-
-include modules/parsers/gas/tests/amd64/Makefile.inc

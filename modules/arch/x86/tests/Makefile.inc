@@ -156,3 +156,7 @@ EXTRA_DIST += modules/arch/x86/tests/x86label.hex
 EXTRA_DIST += modules/arch/x86/tests/xmm64.asm
 EXTRA_DIST += modules/arch/x86/tests/xmm64.errwarn
 EXTRA_DIST += modules/arch/x86/tests/xmm64.hex
+
+EXTRA_DIST += modules/arch/x86/tests/gas64/Makefile.inc
+
+include modules/arch/x86/tests/gas64/Makefile.inc
