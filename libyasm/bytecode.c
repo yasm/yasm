@@ -239,6 +239,15 @@ yasm_ea_set_nosplit(yasm_effaddr *ptr, unsigned int nosplit)
 }
 
 void
+yasm_ea_set_strong(yasm_effaddr *ptr, unsigned int strong)
+{
+    if (!ptr)
+	return;
+
+    ptr->strong = (unsigned char)strong;
+}
+
+void
 yasm_ea_set_segreg(yasm_effaddr *ea, unsigned long segreg, unsigned long line)
 {
     if (!ea)

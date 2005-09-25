@@ -246,6 +246,16 @@ struct yasm_insn_operand {
 
     /** Specified size of the operand, in bytes.  0 if not user-specified. */
     unsigned int size;
+
+    /** Nonzero if dereference.  Used for "*foo" in GAS.
+     * The reason for this is that by default in GAS, an unprefixed value
+     * is a memory address, except for jumps/calls, in which case it needs a
+     * "*" prefix to become a memory address (otherwise it's an immediate).
+     * This isn't knowable in the parser stage, so the parser sets this flag
+     * to indicate the "*" prefix has been used, and the arch needs to adjust
+     * the operand type appropriately depending on the instruction type.
+     */
+    int deref;
 };
 #endif
 

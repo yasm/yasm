@@ -68,6 +68,10 @@ typedef struct yasm_arch_x86 {
     /* What instructions/features are enabled? */
     unsigned long cpu_enabled;
     unsigned int amd64_machine;
+    enum {
+	X86_PARSER_NASM,
+	X86_PARSER_GAS
+    } parser;
     unsigned char mode_bits;
 } yasm_arch_x86;
 

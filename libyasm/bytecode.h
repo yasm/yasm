@@ -92,6 +92,16 @@ void yasm_ea_set_len(yasm_effaddr *ea, unsigned int len);
  */
 void yasm_ea_set_nosplit(yasm_effaddr *ea, unsigned int nosplit);
 
+/** Set/clear strong flag of an effective address.
+ * The strong flag indicates if an effective address is *definitely* an
+ * effective address.  This is used in e.g. the GAS parser to differentiate
+ * between "expr" (which might or might not be an effective address) and
+ * "expr(,1)" (which is definitely an effective address).
+ * \param ea		effective address
+ * \param strong	strong flag setting (0=not strong, nonzero=strong)
+ */
+void yasm_ea_set_strong(yasm_effaddr *ea, unsigned int strong);
+
 /** Set segment override for an effective address.
  * Some architectures (such as x86) support segment overrides on effective
  * addresses.  A override of an override will result in a warning.

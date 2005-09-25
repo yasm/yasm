@@ -42,6 +42,10 @@ struct yasm_effaddr {
 				 */
     unsigned char nosplit;	/* 1 if reg*2 should not be split into
 				   reg+reg. (0 if not) */
+    unsigned char strong;	/* 1 if effective address is *definitely*
+				 * an effective address, e.g. in GAS if
+				 * expr(,1) form is used vs. just expr.
+				 */
 };
 
 struct yasm_immval {

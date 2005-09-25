@@ -206,6 +206,7 @@ yasm_x86__ea_create_reg(unsigned long reg, unsigned char *rex,
     x86_ea->ea.disp = (yasm_expr *)NULL;
     x86_ea->ea.len = 0;
     x86_ea->ea.nosplit = 0;
+    x86_ea->ea.strong = 0;
     x86_ea->ea.segreg = 0;
     x86_ea->modrm = 0xC0 | rm;	/* Mod=11, R/M=Reg, Reg=0 */
     x86_ea->valid_modrm = 1;
@@ -221,11 +222,27 @@ yasm_x86__ea_create_reg(unsigned long reg, unsigned char *rex,
 yasm_effaddr *
 yasm_x86__ea_create_expr(yasm_arch *arch, yasm_expr *e)
 {
+    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     x86_effaddr *x86_ea;
 
     x86_ea = yasm_xmalloc(sizeof(x86_effaddr));
 
     x86_ea->ea.callback = &x86_ea_callback;
+    if (arch_x86->parser == X86_PARSER_GAS) {
+	/* Need to change foo+rip into foo wrt rip.
+	 * Note this assumes a particular ordering coming from the parser
+	 * to work (it's not very smart)!
+	 */
+	if (e->op == YASM_EXPR_ADD && e->terms[0].type == YASM_EXPR_REG
+	    && e->terms[0].data.reg == X86_RIP) {
+	    /* replace register with 0 */
+	    e->terms[0].type = YASM_EXPR_INT;
+	    e->terms[0].data.intn = yasm_intnum_create_uint(0);
+	    /* build new wrt expression */
+	    e = yasm_expr_create(YASM_EXPR_WRT, yasm_expr_expr(e),
+				 yasm_expr_reg(X86_RIP), e->line);
+	}
+    }
     x86_ea->ea.disp = e;
     x86_ea->ea.len = 0;
     x86_ea->ea.nosplit = 0;

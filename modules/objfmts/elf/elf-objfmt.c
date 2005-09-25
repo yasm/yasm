@@ -742,11 +742,29 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 
 	if (match)
 	    ;
-	else if (yasm__strcasecmp(vp->val, "progbits") == 0) {
+	else if (yasm__strncasecmp(vp->val, "gas_", 4) == 0) {
+	    /* GAS-style flags */
+	    flags = 0;
+	    for (i=4; i<strlen(vp->val); i++) {
+		switch (vp->val[i]) {
+		    case 'a':
+			flags |= SHF_ALLOC;
+			break;
+		    case 'w':
+			flags |= SHF_WRITE;
+			break;
+		    case 'x':
+			flags |= SHF_EXECINSTR;
+			break;
+		}
+	    }
+	} else if (yasm__strcasecmp(vp->val, "progbits") == 0) {
 	    type |= SHT_PROGBITS;
 	}
-	else if (yasm__strcasecmp(vp->val, "noprogbits") == 0) {
+	else if (yasm__strcasecmp(vp->val, "noprogbits") == 0 ||
+		 yasm__strcasecmp(vp->val, "nobits") == 0) {
 	    type &= ~SHT_PROGBITS;
+	    type |= SHT_NOBITS;
 	}
 	else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
             /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;

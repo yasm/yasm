@@ -47,6 +47,7 @@ yasm_operand_create_reg(unsigned long reg)
     retval->data.reg = reg;
     retval->targetmod = 0;
     retval->size = 0;
+    retval->deref = 0;
 
     return retval;
 }
@@ -60,6 +61,7 @@ yasm_operand_create_segreg(unsigned long segreg)
     retval->data.reg = segreg;
     retval->targetmod = 0;
     retval->size = 0;
+    retval->deref = 0;
 
     return retval;
 }
@@ -73,6 +75,7 @@ yasm_operand_create_mem(/*@only@*/ yasm_effaddr *ea)
     retval->data.ea = ea;
     retval->targetmod = 0;
     retval->size = 0;
+    retval->deref = 0;
 
     return retval;
 }
@@ -93,6 +96,7 @@ yasm_operand_create_imm(/*@only@*/ yasm_expr *val)
 	retval->data.val = val;
 	retval->targetmod = 0;
 	retval->size = 0;
+	retval->deref = 0;
     }
 
     return retval;

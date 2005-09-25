@@ -62,7 +62,11 @@ x86_create(const char *machine, const char *parser,
     arch_x86->amd64_machine = amd64_machine;
     arch_x86->mode_bits = 0;
 
-    if (yasm__strcasecmp(parser, "nasm") != 0) {
+    if (yasm__strcasecmp(parser, "nasm") == 0)
+	arch_x86->parser = X86_PARSER_NASM;
+    else if (yasm__strcasecmp(parser, "gas") == 0)
+	arch_x86->parser = X86_PARSER_GAS;
+    else {
 	yasm_xfree(arch_x86);
 	*error = YASM_ARCH_CREATE_BAD_PARSER;
 	return NULL;
