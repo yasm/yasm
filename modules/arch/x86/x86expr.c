@@ -558,11 +558,11 @@ x86_expr_checkea_getregsize_callback(yasm_expr__item *ei, void *d)
 int
 yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 		       unsigned int bits, unsigned int nosplit,
-		       unsigned char *displen, unsigned char *modrm,
-		       unsigned char *v_modrm, unsigned char *n_modrm,
-		       unsigned char *sib, unsigned char *v_sib,
-		       unsigned char *n_sib, unsigned char *pcrel,
-		       unsigned char *rex,
+		       int address16_op, unsigned char *displen,
+		       unsigned char *modrm, unsigned char *v_modrm,
+		       unsigned char *n_modrm, unsigned char *sib,
+		       unsigned char *v_sib, unsigned char *n_sib,
+		       unsigned char *pcrel, unsigned char *rex,
 		       yasm_calc_bc_dist_func calc_bc_dist)
 {
     yasm_expr *e, *wrt;
@@ -898,7 +898,7 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 	} havereg = HAVE_NONE;
 
 	/* 64-bit mode does not allow 16-bit addresses */
-	if (bits == 64) {
+	if (bits == 64 && !address16_op) {
 	    yasm__error(e->line,
 		N_("16-bit addresses not supported in 64-bit mode"));
 	    return 1;
@@ -976,7 +976,7 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 		break;
 	    case 16:
 		/* 64-bit mode does not allow 16-bit addresses */
-		if (bits == 64) {
+		if (bits == 64 && !address16_op) {
 		    yasm__error(e->line,
 			N_("16-bit addresses not supported in 64-bit mode"));
 		    return 1;

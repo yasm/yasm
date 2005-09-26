@@ -529,10 +529,10 @@ x86_bc_insn_resolve(yasm_bytecode *bc, int save,
 	     * displacement.
 	     */
 	    switch (yasm_x86__expr_checkea(&temp, &insn->common.addrsize,
-		    insn->common.mode_bits, ea->nosplit, &displen, &eat.modrm,
-		    &eat.valid_modrm, &eat.need_modrm, &eat.sib,
-		    &eat.valid_sib, &eat.need_sib, &eat.pcrel, &insn->rex,
-		    calc_bc_dist)) {
+		    insn->common.mode_bits, ea->nosplit, insn->address16_op,
+		    &displen, &eat.modrm, &eat.valid_modrm, &eat.need_modrm,
+		    &eat.sib, &eat.valid_sib, &eat.need_sib, &eat.pcrel,
+		    &insn->rex, calc_bc_dist)) {
 		case 1:
 		    yasm_expr_destroy(temp);
 		    /* failed, don't bother checking rest of insn */
@@ -904,7 +904,8 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	     */
 	    if (yasm_x86__expr_checkea(&ea->disp, &addrsize,
 				       insn->common.mode_bits, ea->nosplit,
-				       &displen, &eat.modrm, &eat.valid_modrm,
+				       insn->address16_op, &displen,
+				       &eat.modrm, &eat.valid_modrm,
 				       &eat.need_modrm, &eat.sib,
 				       &eat.valid_sib, &eat.need_sib,
 				       &eat.pcrel, &insn->rex,

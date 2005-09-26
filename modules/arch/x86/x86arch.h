@@ -252,10 +252,11 @@ void yasm_x86__ea_init(yasm_effaddr *ea, unsigned int spare,
  */
 int yasm_x86__expr_checkea
     (yasm_expr **ep, unsigned char *addrsize, unsigned int bits,
-     unsigned int nosplit, unsigned char *displen, unsigned char *modrm,
-     unsigned char *v_modrm, unsigned char *n_modrm, unsigned char *sib,
-     unsigned char *v_sib, unsigned char *n_sib, unsigned char *pcrel,
-     unsigned char *rex, yasm_calc_bc_dist_func calc_bc_dist);
+     unsigned int nosplit, int address16_op, unsigned char *displen,
+     unsigned char *modrm, unsigned char *v_modrm, unsigned char *n_modrm,
+     unsigned char *sib, unsigned char *v_sib, unsigned char *n_sib,
+     unsigned char *pcrel, unsigned char *rex,
+     yasm_calc_bc_dist_func calc_bc_dist);
 
 void yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid,
 			 unsigned long line);
