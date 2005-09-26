@@ -55,6 +55,8 @@ RCSID("$Id$");
 /* Modifiers that aren't: these are used with the GAS parser to indicate
  * special cases.
  */
+#define MOD_GasOnly	(1UL<<13)	/* Only available in GAS mode */
+#define MOD_GasIllegal	(1UL<<14)	/* Illegal in GAS mode */
 #define MOD_GasNoRev	(1UL<<15)	/* Don't reverse operands */
 #define MOD_GasSufB	(1UL<<16)	/* GAS B suffix ok */
 #define MOD_GasSufW	(1UL<<17)	/* GAS W suffix ok */
@@ -542,21 +544,21 @@ static const x86_insn_info movabs_insn[] = {
 
 /* Move with sign/zero extend */
 static const x86_insn_info movszx_insn[] = {
-    { CPU_386, MOD_Op1Add, 16, 0, 0, 2, {0x0F, 0, 0}, 0, 2,
+    { CPU_386, MOD_Op1Add|MOD_GasSufB, 16, 0, 0, 2, {0x0F, 0, 0}, 0, 2,
       {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_386, MOD_Op1Add, 32, 0, 0, 2, {0x0F, 0, 0}, 0, 2,
+    { CPU_386, MOD_Op1Add|MOD_GasSufB, 32, 0, 0, 2, {0x0F, 0, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_8|OPA_EA, 0} },
-    { CPU_Hammer|CPU_64, MOD_Op1Add, 64, 0, 0, 2, {0x0F, 0, 0}, 0, 2,
-      {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_8|OPA_EA, 0} },
-    { CPU_386, MOD_Op1Add, 32, 0, 0, 2, {0x0F, 1, 0}, 0, 2,
+    { CPU_Hammer|CPU_64, MOD_Op1Add|MOD_GasSufB, 64, 0, 0, 2, {0x0F, 0, 0}, 0,
+      2, {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_8|OPA_EA, 0} },
+    { CPU_386, MOD_Op1Add|MOD_GasSufW, 32, 0, 0, 2, {0x0F, 1, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_16|OPA_EA, 0} },
-    { CPU_Hammer|CPU_64, MOD_Op1Add, 64, 0, 0, 2, {0x0F, 1, 0}, 0, 2,
-      {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_16|OPA_EA, 0} }
+    { CPU_Hammer|CPU_64, MOD_Op1Add|MOD_GasSufW, 64, 0, 0, 2, {0x0F, 1, 0}, 0,
+      2, {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_16|OPA_EA, 0} }
 };
 
 /* Move with sign-extend doubleword (64-bit mode only) */
 static const x86_insn_info movsxd_insn[] = {
-    { CPU_Hammer|CPU_64, 0, 64, 0, 0, 1, {0x63, 0, 0}, 0, 2,
+    { CPU_Hammer|CPU_64, MOD_GasSufL, 64, 0, 0, 1, {0x63, 0, 0}, 0, 2,
       {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_32|OPA_EA, 0} }
 };
 
@@ -674,64 +676,90 @@ static const x86_insn_info pop_insn[] = {
 
 /* Exchange instructions */
 static const x86_insn_info xchg_insn[] = {
-    { CPU_Any, 0, 0, 0, 0, 1, {0x86, 0, 0}, 0, 2,
+    { CPU_Any, MOD_GasSufB, 0, 0, 0, 1, {0x86, 0, 0}, 0, 2,
       {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_8|OPA_Spare, 0} },
-    { CPU_Any, 0, 0, 0, 0, 1, {0x86, 0, 0}, 0, 2,
+    { CPU_Any, MOD_GasSufB, 0, 0, 0, 1, {0x86, 0, 0}, 0, 2,
       {OPT_Reg|OPS_8|OPA_Spare, OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_Any, 0, 16, 0, 0, 1, {0x90, 0, 0}, 0, 2,
+    { CPU_Any, MOD_GasSufW, 16, 0, 0, 1, {0x90, 0, 0}, 0, 2,
       {OPT_Areg|OPS_16|OPA_None, OPT_Reg|OPS_16|OPA_Op0Add, 0} },
-    { CPU_Any, 0, 16, 0, 0, 1, {0x90, 0, 0}, 0, 2,
+    { CPU_Any, MOD_GasSufW, 16, 0, 0, 1, {0x90, 0, 0}, 0, 2,
       {OPT_Reg|OPS_16|OPA_Op0Add, OPT_Areg|OPS_16|OPA_None, 0} },
-    { CPU_Any, 0, 16, 0, 0, 1, {0x87, 0, 0}, 0, 2,
+    { CPU_Any, MOD_GasSufW, 16, 0, 0, 1, {0x87, 0, 0}, 0, 2,
       {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare, 0} },
-    { CPU_Any, 0, 16, 0, 0, 1, {0x87, 0, 0}, 0, 2,
+    { CPU_Any, MOD_GasSufW, 16, 0, 0, 1, {0x87, 0, 0}, 0, 2,
       {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_386, 0, 32, 0, 0, 1, {0x90, 0, 0}, 0, 2,
+    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0x90, 0, 0}, 0, 2,
       {OPT_Areg|OPS_32|OPA_None, OPT_Reg|OPS_32|OPA_Op0Add, 0} },
-    { CPU_386, 0, 32, 0, 0, 1, {0x90, 0, 0}, 0, 2,
+    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0x90, 0, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_Op0Add, OPT_Areg|OPS_32|OPA_None, 0} },
-    { CPU_386, 0, 32, 0, 0, 1, {0x87, 0, 0}, 0, 2,
+    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0x87, 0, 0}, 0, 2,
       {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} },
-    { CPU_386, 0, 32, 0, 0, 1, {0x87, 0, 0}, 0, 2,
+    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0x87, 0, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_Hammer|CPU_64, 0, 64, 0, 0, 1, {0x90, 0, 0}, 0, 2,
+    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0x90, 0, 0}, 0, 2,
       {OPT_Areg|OPS_64|OPA_None, OPT_Reg|OPS_64|OPA_Op0Add, 0} },
-    { CPU_Hammer|CPU_64, 0, 64, 0, 0, 1, {0x90, 0, 0}, 0, 2,
+    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0x90, 0, 0}, 0, 2,
       {OPT_Reg|OPS_64|OPA_Op0Add, OPT_Areg|OPS_64|OPA_None, 0} },
-    { CPU_Hammer|CPU_64, 0, 64, 0, 0, 1, {0x87, 0, 0}, 0, 2,
+    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0x87, 0, 0}, 0, 2,
       {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_64|OPA_Spare, 0} },
-    { CPU_Hammer|CPU_64, 0, 64, 0, 0, 1, {0x87, 0, 0}, 0, 2,
+    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0x87, 0, 0}, 0, 2,
       {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} }
 };
 
 /* In/out from ports */
 static const x86_insn_info in_insn[] = {
-    { CPU_Any, 0, 0, 0, 0, 1, {0xE4, 0, 0}, 0, 2,
+    { CPU_Any, MOD_GasSufB, 0, 0, 0, 1, {0xE4, 0, 0}, 0, 2,
       {OPT_Areg|OPS_8|OPA_None, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
-    { CPU_Any, 0, 16, 0, 0, 1, {0xE5, 0, 0}, 0, 2,
+    { CPU_Any, MOD_GasSufW, 16, 0, 0, 1, {0xE5, 0, 0}, 0, 2,
       {OPT_Areg|OPS_16|OPA_None, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
-    { CPU_386, 0, 32, 0, 0, 1, {0xE5, 0, 0}, 0, 2,
+    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0xE5, 0, 0}, 0, 2,
       {OPT_Areg|OPS_32|OPA_None, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
-    { CPU_Any, 0, 0, 0, 0, 1, {0xEC, 0, 0}, 0, 2,
+    { CPU_Any, MOD_GasSufB, 0, 0, 0, 1, {0xEC, 0, 0}, 0, 2,
       {OPT_Areg|OPS_8|OPA_None, OPT_Dreg|OPS_16|OPA_None, 0} },
-    { CPU_Any, 0, 16, 0, 0, 1, {0xED, 0, 0}, 0, 2,
+    { CPU_Any, MOD_GasSufW, 16, 0, 0, 1, {0xED, 0, 0}, 0, 2,
       {OPT_Areg|OPS_16|OPA_None, OPT_Dreg|OPS_16|OPA_None, 0} },
-    { CPU_386, 0, 32, 0, 0, 1, {0xED, 0, 0}, 0, 2,
-      {OPT_Areg|OPS_32|OPA_None, OPT_Dreg|OPS_16|OPA_None, 0} }
+    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0xED, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_32|OPA_None, OPT_Dreg|OPS_16|OPA_None, 0} },
+    /* GAS-only variants (implict accumulator register) */
+    { CPU_Any, MOD_GasOnly|MOD_GasSufB, 0, 0, 0, 1, {0xE4, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0, 0} },
+    { CPU_Any, MOD_GasOnly|MOD_GasSufW, 16, 0, 0, 1, {0xE5, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0, 0} },
+    { CPU_386, MOD_GasOnly|MOD_GasSufL, 32, 0, 0, 1, {0xE5, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0, 0} },
+    { CPU_Any, MOD_GasOnly|MOD_GasSufB, 0, 0, 0, 1, {0xEC, 0, 0}, 0, 1,
+      {OPT_Dreg|OPS_16|OPA_None, 0, 0} },
+    { CPU_Any, MOD_GasOnly|MOD_GasSufW, 16, 0, 0, 1, {0xED, 0, 0}, 0, 1,
+      {OPT_Dreg|OPS_16|OPA_None, 0, 0} },
+    { CPU_386, MOD_GasOnly|MOD_GasSufL, 32, 0, 0, 1, {0xED, 0, 0}, 0, 1,
+      {OPT_Dreg|OPS_16|OPA_None, 0, 0} }
 };
 static const x86_insn_info out_insn[] = {
-    { CPU_Any, 0, 0, 0, 0, 1, {0xE6, 0, 0}, 0, 2,
+    { CPU_Any, MOD_GasSufB, 0, 0, 0, 1, {0xE6, 0, 0}, 0, 2,
       {OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, OPT_Areg|OPS_8|OPA_None, 0} },
-    { CPU_Any, 0, 16, 0, 0, 1, {0xE7, 0, 0}, 0, 2,
+    { CPU_Any, MOD_GasSufW, 16, 0, 0, 1, {0xE7, 0, 0}, 0, 2,
       {OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, OPT_Areg|OPS_16|OPA_None, 0} },
-    { CPU_386, 0, 32, 0, 0, 1, {0xE7, 0, 0}, 0, 2,
+    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0xE7, 0, 0}, 0, 2,
       {OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, OPT_Areg|OPS_32|OPA_None, 0} },
-    { CPU_Any, 0, 0, 0, 0, 1, {0xEE, 0, 0}, 0, 2,
+    { CPU_Any, MOD_GasSufB, 0, 0, 0, 1, {0xEE, 0, 0}, 0, 2,
       {OPT_Dreg|OPS_16|OPA_None, OPT_Areg|OPS_8|OPA_None, 0} },
-    { CPU_Any, 0, 16, 0, 0, 1, {0xEF, 0, 0}, 0, 2,
+    { CPU_Any, MOD_GasSufW, 16, 0, 0, 1, {0xEF, 0, 0}, 0, 2,
       {OPT_Dreg|OPS_16|OPA_None, OPT_Areg|OPS_16|OPA_None, 0} },
-    { CPU_386, 0, 32, 0, 0, 1, {0xEF, 0, 0}, 0, 2,
-      {OPT_Dreg|OPS_16|OPA_None, OPT_Areg|OPS_32|OPA_None, 0} }
+    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0xEF, 0, 0}, 0, 2,
+      {OPT_Dreg|OPS_16|OPA_None, OPT_Areg|OPS_32|OPA_None, 0} },
+    /* GAS-only variants (implict accumulator register) */
+    { CPU_Any, MOD_GasOnly|MOD_GasSufB, 0, 0, 0, 1, {0xE6, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0, 0} },
+    { CPU_Any, MOD_GasOnly|MOD_GasSufW, 16, 0, 0, 1, {0xE7, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0, 0} },
+    { CPU_386, MOD_GasOnly|MOD_GasSufL, 32, 0, 0, 1, {0xE7, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0, 0} },
+    { CPU_Any, MOD_GasOnly|MOD_GasSufB, 0, 0, 0, 1, {0xEE, 0, 0}, 0, 1,
+      {OPT_Dreg|OPS_16|OPA_None, 0, 0} },
+    { CPU_Any, MOD_GasOnly|MOD_GasSufW, 16, 0, 0, 1, {0xEF, 0, 0}, 0, 1,
+      {OPT_Dreg|OPS_16|OPA_None, 0, 0} },
+    { CPU_386, MOD_GasOnly|MOD_GasSufL, 32, 0, 0, 1, {0xEF, 0, 0}, 0, 1,
+      {OPT_Dreg|OPS_16|OPA_None, 0, 0} }
 };
 
 /* Load effective address */
@@ -746,15 +774,15 @@ static const x86_insn_info lea_insn[] = {
 
 /* Load segment registers from memory */
 static const x86_insn_info ldes_insn[] = {
-    { CPU_Not64, MOD_Op0Add, 16, 0, 0, 1, {0, 0, 0}, 0, 2,
+    { CPU_Not64, MOD_Op0Add|MOD_GasSufW, 16, 0, 0, 1, {0, 0, 0}, 0, 2,
       {OPT_Reg|OPS_16|OPA_Spare, OPT_Mem|OPS_Any|OPA_EA, 0} },
-    { CPU_386|CPU_Not64, MOD_Op0Add, 32, 0, 0, 1, {0, 0, 0}, 0, 2,
+    { CPU_386|CPU_Not64, MOD_Op0Add|MOD_GasSufL, 32, 0, 0, 1, {0, 0, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_Spare, OPT_Mem|OPS_Any|OPA_EA, 0} }
 };
 static const x86_insn_info lfgss_insn[] = {
-    { CPU_386, MOD_Op1Add, 16, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
+    { CPU_386, MOD_Op1Add|MOD_GasSufW, 16, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
       {OPT_Reg|OPS_16|OPA_Spare, OPT_Mem|OPS_Any|OPA_EA, 0} },
-    { CPU_386, MOD_Op1Add, 32, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
+    { CPU_386, MOD_Op1Add|MOD_GasSufL, 32, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_Spare, OPT_Mem|OPS_Any|OPA_EA, 0} }
 };
 
@@ -2068,6 +2096,14 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	if (num_operands != info->num_operands)
 	    continue;
 
+	/* Match parser mode */
+	if ((info->modifiers & MOD_GasOnly)
+	    && arch_x86->parser != X86_PARSER_GAS)
+	    continue;
+	if ((info->modifiers & MOD_GasIllegal)
+	    && arch_x86->parser == X86_PARSER_GAS)
+	    continue;
+
 	/* Match suffix (if required) */
 	if (suffix != 0 && ((suffix<<MOD_GasSuf_SHIFT) & info->modifiers) == 0)
 	    continue;
@@ -2247,7 +2283,11 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		/* Require relaxed operands for suffix mode (don't allow
 		 * per-operand sizing).
 		 */
-		if ((info->operands[i] & OPT_MASK) == OPT_Imm
+		if (op->type == YASM_INSN__OPERAND_REG && op->size == 0) {
+		    /* Register size must exactly match */
+		    if (yasm_x86__get_reg_size(arch, op->data.reg) != size)
+			mismatch = 1;
+		} else if ((info->operands[i] & OPT_MASK) == OPT_Imm
 		    && (info->operands[i] & OPS_RMASK) != OPS_Relaxed)
 		    mismatch = 1;
 	    } else {
@@ -3285,6 +3325,7 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
     int suffix = 0;
     int not64 = 0;
     int warn64 = 0;
+    int suffix_ofs = -1;
 
     /*!re2c
 	/* instructions */
@@ -3293,10 +3334,29 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	M O V [bBwWlLqQ]? { RET_INSN(3, mov, 0, CPU_Any); }
 	M O V A B S [bBwWlLqQ]? { RET_INSN_GAS(6, movabs, 0, CPU_Hammer|CPU_64); }
 	/* Move with sign/zero extend */
-	M O V S X [bBwWlL]? { RET_INSN(5, movszx, 0xBE, CPU_386); }
+	M O V S B [wWlL] { suffix_ofs = -2; RET_INSN_GAS(4, movszx, 0xBE, CPU_386); }
+	M O V S W L { suffix_ofs = -2; RET_INSN_GAS(4, movszx, 0xBE, CPU_386); }
+	M O V S [bBwW] Q {
+	    suffix_ofs = -2;
+	    warn64 = 1;
+	    RET_INSN_GAS(4, movszx, 0xBE, CPU_Hammer|CPU_64);
+	}
+	M O V S X [bBwW]? { RET_INSN(5, movszx, 0xBE, CPU_386); }
+	M O V S L Q {
+	    suffix_ofs = -2;
+	    warn64 = 1;
+	    RET_INSN_GAS(4, movsxd, 0, CPU_Hammer|CPU_64);
+	}
 	M O V S X D {
 	    warn64 = 1;
-	    RET_INSN(6, movsxd, 0, CPU_Hammer|CPU_64);
+	    RET_INSN_NONGAS(6, movsxd, 0, CPU_Hammer|CPU_64);
+	}
+	M O V Z B [wWlL] { suffix_ofs = -2; RET_INSN_GAS(4, movszx, 0xB6, CPU_386); }
+	M O V Z W L { suffix_ofs = -2; RET_INSN_GAS(4, movszx, 0xB6, CPU_386); }
+	M O V Z [bBwW] Q {
+	    suffix_ofs = -2;
+	    warn64 = 1;
+	    RET_INSN_GAS(4, movszx, 0xB6, CPU_Hammer|CPU_64);
 	}
 	M O V Z X { RET_INSN(5, movszx, 0xB6, CPU_386); }
 	/* Push instructions */
@@ -3307,7 +3367,11 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	}
 	P U S H A D {
 	    not64 = 1;
-	    RET_INSN(6, onebyte, 0x2060, CPU_386);
+	    RET_INSN_NONGAS(6, onebyte, 0x2060, CPU_386);
+	}
+	P U S H A L {
+	    not64 = 1;
+	    RET_INSN_GAS(6, onebyte, 0x2060, CPU_386);
 	}
 	P U S H A W {
 	    not64 = 1;
@@ -3321,7 +3385,7 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	}
 	P O P A D {
 	    not64 = 1;
-	    RET_INSN(5, onebyte, 0x2061, CPU_386);
+	    RET_INSN_NONGAS(5, onebyte, 0x2061, CPU_386);
 	}
 	P O P A L {
 	    not64 = 1;
@@ -3332,24 +3396,24 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	    RET_INSN(5, onebyte, 0x1061, CPU_186);
 	}
 	/* Exchange */
-	X C H G { RET_INSN(4, xchg, 0, CPU_Any); }
+	X C H G [bBwWlLqQ]? { RET_INSN(4, xchg, 0, CPU_Any); }
 	/* In/out from ports */
-	I N { RET_INSN(2, in, 0, CPU_Any); }
-	O U T { RET_INSN(3, out, 0, CPU_Any); }
+	I N [bBwWlL]? { RET_INSN(2, in, 0, CPU_Any); }
+	O U T [bBwWlL]? { RET_INSN(3, out, 0, CPU_Any); }
 	/* Load effective address */
 	L E A [wWlLqQ]? { RET_INSN(3, lea, 0, CPU_Any); }
 	/* Load segment registers from memory */
-	L D S {
+	L D S [wWlL]? {
 	    not64 = 1;
 	    RET_INSN(3, ldes, 0xC5, CPU_Any);
 	}
-	L E S {
+	L E S [wWlL]? {
 	    not64 = 1;
 	    RET_INSN(3, ldes, 0xC4, CPU_Any);
 	}
-	L F S { RET_INSN(3, lfgss, 0xB4, CPU_386); }
-	L G S { RET_INSN(3, lfgss, 0xB5, CPU_386); }
-	L S S { RET_INSN(3, lfgss, 0xB2, CPU_386); }
+	L F S [wWlL]? { RET_INSN(3, lfgss, 0xB4, CPU_386); }
+	L G S [wWlL]? { RET_INSN(3, lfgss, 0xB5, CPU_386); }
+	L S S [wWlL]? { RET_INSN(3, lfgss, 0xB2, CPU_386); }
 	/* Flags register instructions */
 	C L C { RET_INSN(3, onebyte, 0x00F8, CPU_Any); }
 	C L D { RET_INSN(3, onebyte, 0x00FC, CPU_Any); }
@@ -4110,7 +4174,7 @@ done:
 	    return YASM_ARCH_CHECK_ID_NONE;
 
 	/* Match suffixes */
-	switch (id[-1]) {
+	switch (id[suffix_ofs]) {
 	    case 'b':
 	    case 'B':
 		data[3] |= (MOD_GasSufB >> MOD_GasSuf_SHIFT) << 8;
