@@ -3420,14 +3420,8 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	C L I { RET_INSN(3, onebyte, 0x00FA, CPU_Any); }
 	C L T S { RET_INSN(4, twobyte, 0x0F06, CPU_286|CPU_Priv); }
 	C M C { RET_INSN(3, onebyte, 0x00F5, CPU_Any); }
-	L A H F {
-	    not64 = 1;
- 	    RET_INSN(4, onebyte, 0x009F, CPU_Any);
-	}
-	S A H F {
-	    not64 = 1;
-	    RET_INSN(4, onebyte, 0x009E, CPU_Any);
-	}
+	L A H F { RET_INSN(4, onebyte, 0x009F, CPU_Any); }
+	S A H F { RET_INSN(4, onebyte, 0x009E, CPU_Any); }
 	P U S H F { RET_INSN(5, onebyte, 0x009C, CPU_Any); }
 	P U S H F D { RET_INSN_NONGAS(6, onebyte, 0x209C, CPU_386); }
 	P U S H F W { RET_INSN(6, onebyte, 0x109C, CPU_Any); }
