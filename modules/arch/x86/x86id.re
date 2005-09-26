@@ -55,13 +55,14 @@ RCSID("$Id$");
 /* Modifiers that aren't: these are used with the GAS parser to indicate
  * special cases.
  */
-#define MOD_GasOnly	(1UL<<13)	/* Only available in GAS mode */
-#define MOD_GasIllegal	(1UL<<14)	/* Illegal in GAS mode */
-#define MOD_GasNoRev	(1UL<<15)	/* Don't reverse operands */
-#define MOD_GasSufB	(1UL<<16)	/* GAS B suffix ok */
-#define MOD_GasSufW	(1UL<<17)	/* GAS W suffix ok */
-#define MOD_GasSufL	(1UL<<18)	/* GAS L suffix ok */
-#define MOD_GasSufQ	(1UL<<19)	/* GAS Q suffix ok */
+#define MOD_GasOnly	(1UL<<12)	/* Only available in GAS mode */
+#define MOD_GasIllegal	(1UL<<13)	/* Illegal in GAS mode */
+#define MOD_GasNoRev	(1UL<<14)	/* Don't reverse operands */
+#define MOD_GasSufB	(1UL<<15)	/* GAS B suffix ok */
+#define MOD_GasSufW	(1UL<<16)	/* GAS W suffix ok */
+#define MOD_GasSufL	(1UL<<17)	/* GAS L suffix ok */
+#define MOD_GasSufQ	(1UL<<18)	/* GAS Q suffix ok */
+#define MOD_GasSufS	(1UL<<19)	/* GAS S suffix ok */
 #define MOD_GasSuf_SHIFT 16
 #define MOD_GasSuf_MASK	(0xFUL<<16)
 
@@ -313,14 +314,15 @@ static const x86_insn_info threebyte_insn[] = {
 
 /* One byte opcode instructions with general memory operand */
 static const x86_insn_info onebytemem_insn[] = {
-    { CPU_Any, MOD_Op0Add|MOD_SpAdd, 0, 0, 0, 1, {0, 0, 0}, 0, 1,
-      {OPT_Mem|OPS_Any|OPA_EA, 0, 0} }
+    { CPU_Any, MOD_Op0Add|MOD_SpAdd|MOD_GasSufL|MOD_GasSufQ|MOD_GasSufS,
+      0, 0, 0, 1, {0, 0, 0}, 0, 1, {OPT_Mem|OPS_Any|OPA_EA, 0, 0} }
 };
 
 /* Two byte opcode instructions with general memory operand */
 static const x86_insn_info twobytemem_insn[] = {
-    { CPU_Any, MOD_Op1Add|MOD_Op0Add|MOD_SpAdd, 0, 0, 0, 2, {0, 0, 0}, 0, 1,
-      {OPT_Mem|OPS_Any|OPA_EA, 0, 0} }
+    { CPU_Any,
+      MOD_Op1Add|MOD_Op0Add|MOD_SpAdd|MOD_GasSufL|MOD_GasSufQ|MOD_GasSufS,
+      0, 0, 0, 2, {0, 0, 0}, 0, 1, {OPT_Mem|OPS_Any|OPA_EA, 0, 0} }
 };
 
 /* P4 VMX Instructions */
@@ -1259,34 +1261,35 @@ static const x86_insn_info loop_insn[] = {
 
 /* Set byte on flag instructions */
 static const x86_insn_info setcc_insn[] = {
-    { CPU_386, MOD_Op1Add, 0, 0, 0, 2, {0x0F, 0x90, 0}, 2, 1,
+    { CPU_386, MOD_Op1Add|MOD_GasSufB, 0, 0, 0, 2, {0x0F, 0x90, 0}, 2, 1,
       {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, 0, 0} }
 };
 
 /* Bit manipulation - bit tests */
 static const x86_insn_info bittest_insn[] = {
-    { CPU_386, MOD_Op1Add, 16, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
+    { CPU_386, MOD_Op1Add|MOD_GasSufW, 16, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
       {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare, 0} },
-    { CPU_386, MOD_Op1Add, 32, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
+    { CPU_386, MOD_Op1Add|MOD_GasSufL, 32, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
       {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} },
-    { CPU_Hammer|CPU_64, MOD_Op1Add, 64, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
-      {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_64|OPA_Spare, 0} },
-    { CPU_386, MOD_Gap0|MOD_SpAdd, 16, 0, 0, 2, {0x0F, 0xBA, 0}, 0, 2,
-      {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
-    { CPU_386, MOD_Gap0|MOD_SpAdd, 32, 0, 0, 2, {0x0F, 0xBA, 0}, 0, 2,
-      {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
-    { CPU_Hammer|CPU_64, MOD_Gap0|MOD_SpAdd, 64, 0, 0, 2, {0x0F, 0xBA, 0},
-      0, 2, {OPT_RM|OPS_64|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} }
+    { CPU_Hammer|CPU_64, MOD_Op1Add|MOD_GasSufQ, 64, 0, 0, 2, {0x0F, 0x00, 0},
+      0, 2, {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_64|OPA_Spare, 0} },
+    { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasSufW, 16, 0, 0, 2, {0x0F, 0xBA, 0},
+      0, 2, {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasSufL, 32, 0, 0, 2, {0x0F, 0xBA, 0},
+      0, 2, {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_Hammer|CPU_64, MOD_Gap0|MOD_SpAdd|MOD_GasSufQ, 64, 0, 0, 2,
+      {0x0F, 0xBA, 0}, 0, 2,
+      {OPT_RM|OPS_64|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} }
 };
 
 /* Bit manipulation - bit scans - also used for lar/lsl */
 static const x86_insn_info bsfr_insn[] = {
-    { CPU_286, MOD_Op1Add, 16, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
+    { CPU_286, MOD_Op1Add|MOD_GasSufW, 16, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
       {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_386, MOD_Op1Add, 32, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
+    { CPU_386, MOD_Op1Add|MOD_GasSufL, 32, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_Hammer|CPU_64, MOD_Op1Add, 64, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
-      {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} }
+    { CPU_Hammer|CPU_64, MOD_Op1Add|MOD_GasSufQ, 64, 0, 0, 2, {0x0F, 0x00, 0},
+      0, 2, {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} }
 };
 
 /* Interrupts and operating system instructions */
@@ -1295,15 +1298,15 @@ static const x86_insn_info int_insn[] = {
       {OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0, 0} }
 };
 static const x86_insn_info bound_insn[] = {
-    { CPU_186, 0, 16, 0, 0, 1, {0x62, 0, 0}, 0, 2,
+    { CPU_186, MOD_GasSufW, 16, 0, 0, 1, {0x62, 0, 0}, 0, 2,
       {OPT_Reg|OPS_16|OPA_Spare, OPT_Mem|OPS_16|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_386, 0, 32, 0, 0, 1, {0x62, 0, 0}, 0, 2,
+    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0x62, 0, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_Spare, OPT_Mem|OPS_32|OPS_Relaxed|OPA_EA, 0} }
 };
 
 /* Protection control */
 static const x86_insn_info arpl_insn[] = {
-    { CPU_286|CPU_Prot, 0, 0, 0, 0, 1, {0x63, 0, 0}, 0, 2,
+    { CPU_286|CPU_Prot, MOD_GasSufW, 0, 0, 0, 1, {0x63, 0, 0}, 0, 2,
       {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare, 0} }
 };
 static const x86_insn_info str_insn[] = {
@@ -1337,22 +1340,27 @@ static const x86_insn_info sldtmsw_insn[] = {
 
 /* Floating point instructions - load/store with pop (integer and normal) */
 static const x86_insn_info fldstp_insn[] = {
-    { CPU_FPU, MOD_Gap0|MOD_SpAdd, 0, 0, 0, 1, {0xD9, 0, 0}, 0, 1,
+    { CPU_FPU, MOD_Gap0|MOD_SpAdd|MOD_GasSufS, 0, 0, 0, 1, {0xD9, 0, 0}, 0, 1,
       {OPT_Mem|OPS_32|OPA_EA, 0, 0} },
-    { CPU_FPU, MOD_Gap0|MOD_SpAdd, 0, 0, 0, 1, {0xDD, 0, 0}, 0, 1,
+    { CPU_FPU, MOD_Gap0|MOD_SpAdd|MOD_GasSufL, 0, 0, 0, 1, {0xDD, 0, 0}, 0, 1,
       {OPT_Mem|OPS_64|OPA_EA, 0, 0} },
     { CPU_FPU, MOD_Gap0|MOD_Gap1|MOD_SpAdd, 0, 0, 0, 1, {0xDB, 0, 0}, 0, 1,
       {OPT_Mem|OPS_80|OPA_EA, 0, 0} },
     { CPU_FPU, MOD_Op1Add, 0, 0, 0, 2, {0xD9, 0x00, 0}, 0, 1,
       {OPT_Reg|OPS_80|OPA_Op1Add, 0, 0} }
 };
+/* Long memory version of floating point load/store for GAS */
+static const x86_insn_info fldstpt_insn[] = {
+    { CPU_FPU, MOD_Gap0|MOD_Gap1|MOD_SpAdd, 0, 0, 0, 1, {0xDB, 0, 0}, 0, 1,
+      {OPT_Mem|OPS_80|OPA_EA, 0, 0} }
+};
 static const x86_insn_info fildstp_insn[] = {
-    { CPU_FPU, MOD_SpAdd, 0, 0, 0, 1, {0xDF, 0, 0}, 0, 1,
+    { CPU_FPU, MOD_SpAdd|MOD_GasSufS, 0, 0, 0, 1, {0xDF, 0, 0}, 0, 1,
       {OPT_Mem|OPS_16|OPA_EA, 0, 0} },
-    { CPU_FPU, MOD_SpAdd, 0, 0, 0, 1, {0xDB, 0, 0}, 0, 1,
+    { CPU_FPU, MOD_SpAdd|MOD_GasSufL, 0, 0, 0, 1, {0xDB, 0, 0}, 0, 1,
       {OPT_Mem|OPS_32|OPA_EA, 0, 0} },
-    { CPU_FPU, MOD_Gap0|MOD_Op0Add|MOD_SpAdd, 0, 0, 0, 1, {0xDD, 0, 0}, 0, 1,
-      {OPT_Mem|OPS_64|OPA_EA, 0, 0} }
+    { CPU_FPU, MOD_Gap0|MOD_Op0Add|MOD_SpAdd|MOD_GasSufQ, 0, 0, 0, 1,
+      {0xDD, 0, 0}, 0, 1, {OPT_Mem|OPS_64|OPA_EA, 0, 0} }
 };
 static const x86_insn_info fbldstp_insn[] = {
     { CPU_FPU, MOD_SpAdd, 0, 0, 0, 1, {0xDF, 0, 0}, 0, 1,
@@ -1360,8 +1368,10 @@ static const x86_insn_info fbldstp_insn[] = {
 };
 /* Floating point instructions - store (normal) */
 static const x86_insn_info fst_insn[] = {
-    { CPU_FPU, 0, 0, 0, 0, 1, {0xD9, 0, 0}, 2, 1, {OPT_Mem|OPS_32|OPA_EA, 0, 0} },
-    { CPU_FPU, 0, 0, 0, 0, 1, {0xDD, 0, 0}, 2, 1, {OPT_Mem|OPS_64|OPA_EA, 0, 0} },
+    { CPU_FPU, MOD_GasSufS, 0, 0, 0, 1, {0xD9, 0, 0}, 2, 1,
+      {OPT_Mem|OPS_32|OPA_EA, 0, 0} },
+    { CPU_FPU, MOD_GasSufL, 0, 0, 0, 1, {0xDD, 0, 0}, 2, 1,
+      {OPT_Mem|OPS_64|OPA_EA, 0, 0} },
     { CPU_FPU, 0, 0, 0, 0, 2, {0xDD, 0xD0, 0}, 0, 1,
       {OPT_Reg|OPS_80|OPA_Op1Add, 0, 0} }
 };
@@ -1377,13 +1387,16 @@ static const x86_insn_info fxch_insn[] = {
 };
 /* Floating point instructions - comparisons */
 static const x86_insn_info fcom_insn[] = {
-    { CPU_FPU, MOD_Gap0|MOD_SpAdd, 0, 0, 0, 1, {0xD8, 0, 0}, 0, 1,
+    { CPU_FPU, MOD_Gap0|MOD_SpAdd|MOD_GasSufS, 0, 0, 0, 1, {0xD8, 0, 0}, 0, 1,
       {OPT_Mem|OPS_32|OPA_EA, 0, 0} },
-    { CPU_FPU, MOD_Gap0|MOD_SpAdd, 0, 0, 0, 1, {0xDC, 0, 0}, 0, 1,
+    { CPU_FPU, MOD_Gap0|MOD_SpAdd|MOD_GasSufL, 0, 0, 0, 1, {0xDC, 0, 0}, 0, 1,
       {OPT_Mem|OPS_64|OPA_EA, 0, 0} },
     { CPU_FPU, MOD_Op1Add, 0, 0, 0, 2, {0xD8, 0x00, 0}, 0, 1,
       {OPT_Reg|OPS_80|OPA_Op1Add, 0, 0} },
-    { CPU_FPU, MOD_Op1Add, 0, 0, 0, 2, {0xD8, 0x00, 0}, 0, 2,
+    /* Alias for fcom %st(1) for GAS compat */
+    { CPU_FPU, MOD_Op1Add|MOD_GasOnly, 0, 0, 0, 2, {0xD8, 0x01, 0}, 0, 0,
+      {0, 0, 0} },
+    { CPU_FPU, MOD_Op1Add|MOD_GasIllegal, 0, 0, 0, 2, {0xD8, 0x00, 0}, 0, 2,
       {OPT_ST0|OPS_80|OPA_None, OPT_Reg|OPS_80|OPA_Op1Add, 0} }
 };
 /* Floating point instructions - extended comparisons */
@@ -1395,10 +1408,10 @@ static const x86_insn_info fcom2_insn[] = {
 };
 /* Floating point instructions - arithmetic */
 static const x86_insn_info farith_insn[] = {
-    { CPU_FPU, MOD_Gap0|MOD_Gap1|MOD_SpAdd, 0, 0, 0, 1, {0xD8, 0, 0}, 0, 1,
-      {OPT_Mem|OPS_32|OPA_EA, 0, 0} },
-    { CPU_FPU, MOD_Gap0|MOD_Gap1|MOD_SpAdd, 0, 0, 0, 1, {0xDC, 0, 0}, 0, 1,
-      {OPT_Mem|OPS_64|OPA_EA, 0, 0} },
+    { CPU_FPU, MOD_Gap0|MOD_Gap1|MOD_SpAdd|MOD_GasSufS, 0, 0, 0, 1,
+      {0xD8, 0, 0}, 0, 1, {OPT_Mem|OPS_32|OPA_EA, 0, 0} },
+    { CPU_FPU, MOD_Gap0|MOD_Gap1|MOD_SpAdd|MOD_GasSufL, 0, 0, 0, 1,
+      {0xDC, 0, 0}, 0, 1, {OPT_Mem|OPS_64|OPA_EA, 0, 0} },
     { CPU_FPU, MOD_Gap0|MOD_Op1Add, 0, 0, 0, 2, {0xD8, 0x00, 0}, 0, 1,
       {OPT_Reg|OPS_80|OPA_Op1Add, 0, 0} },
     { CPU_FPU, MOD_Gap0|MOD_Op1Add, 0, 0, 0, 2, {0xD8, 0x00, 0}, 0, 2,
@@ -1417,30 +1430,30 @@ static const x86_insn_info farithp_insn[] = {
 };
 /* Floating point instructions - integer arith/store wo pop/compare */
 static const x86_insn_info fiarith_insn[] = {
-    { CPU_FPU, MOD_Op0Add|MOD_SpAdd, 0, 0, 0, 1, {0x04, 0, 0}, 0, 1,
-      {OPT_Mem|OPS_16|OPA_EA, 0, 0} },
-    { CPU_FPU, MOD_Op0Add|MOD_SpAdd, 0, 0, 0, 1, {0x00, 0, 0}, 0, 1,
-      {OPT_Mem|OPS_32|OPA_EA, 0, 0} }
+    { CPU_FPU, MOD_Op0Add|MOD_SpAdd|MOD_GasSufS, 0, 0, 0, 1, {0x04, 0, 0}, 0,
+      1, {OPT_Mem|OPS_16|OPA_EA, 0, 0} },
+    { CPU_FPU, MOD_Op0Add|MOD_SpAdd|MOD_GasSufL, 0, 0, 0, 1, {0x00, 0, 0}, 0,
+      1, {OPT_Mem|OPS_32|OPA_EA, 0, 0} }
 };
 /* Floating point instructions - processor control */
 static const x86_insn_info fldnstcw_insn[] = {
-    { CPU_FPU, MOD_SpAdd, 0, 0, 0, 1, {0xD9, 0, 0}, 0, 1,
+    { CPU_FPU, MOD_SpAdd|MOD_GasSufW, 0, 0, 0, 1, {0xD9, 0, 0}, 0, 1,
       {OPT_Mem|OPS_16|OPS_Relaxed|OPA_EA, 0, 0} }
 };
 static const x86_insn_info fstcw_insn[] = {
-    { CPU_FPU, 0, 0, 0, 0, 2, {0x9B, 0xD9, 0}, 7, 1,
+    { CPU_FPU, MOD_GasSufW, 0, 0, 0, 2, {0x9B, 0xD9, 0}, 7, 1,
       {OPT_Mem|OPS_16|OPS_Relaxed|OPA_EA, 0, 0} }
 };
 static const x86_insn_info fnstsw_insn[] = {
-    { CPU_FPU, 0, 0, 0, 0, 1, {0xDD, 0, 0}, 7, 1,
+    { CPU_FPU, MOD_GasSufW, 0, 0, 0, 1, {0xDD, 0, 0}, 7, 1,
       {OPT_Mem|OPS_16|OPS_Relaxed|OPA_EA, 0, 0} },
-    { CPU_FPU, 0, 0, 0, 0, 2, {0xDF, 0xE0, 0}, 0, 1,
+    { CPU_FPU, MOD_GasSufW, 0, 0, 0, 2, {0xDF, 0xE0, 0}, 0, 1,
       {OPT_Areg|OPS_16|OPA_None, 0, 0} }
 };
 static const x86_insn_info fstsw_insn[] = {
-    { CPU_FPU, 0, 0, 0, 0, 2, {0x9B, 0xDD, 0}, 7, 1,
+    { CPU_FPU, MOD_GasSufW, 0, 0, 0, 2, {0x9B, 0xDD, 0}, 7, 1,
       {OPT_Mem|OPS_16|OPS_Relaxed|OPA_EA, 0, 0} },
-    { CPU_FPU, 0, 0, 0, 0, 3, {0x9B, 0xDF, 0xE0}, 0, 1,
+    { CPU_FPU, MOD_GasSufW, 0, 0, 0, 3, {0x9B, 0xDF, 0xE0}, 0, 1,
       {OPT_Areg|OPS_16|OPA_None, 0, 0} }
 };
 static const x86_insn_info ffree_insn[] = {
@@ -1450,36 +1463,36 @@ static const x86_insn_info ffree_insn[] = {
 
 /* 486 extensions */
 static const x86_insn_info bswap_insn[] = {
-    { CPU_486, 0, 32, 0, 0, 2, {0x0F, 0xC8, 0}, 0, 1,
+    { CPU_486, MOD_GasSufL, 32, 0, 0, 2, {0x0F, 0xC8, 0}, 0, 1,
       {OPT_Reg|OPS_32|OPA_Op1Add, 0, 0} },
-    { CPU_Hammer|CPU_64, 0, 64, 0, 0, 2, {0x0F, 0xC8, 0}, 0, 1,
+    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 2, {0x0F, 0xC8, 0}, 0, 1,
       {OPT_Reg|OPS_64|OPA_Op1Add, 0, 0} }
 };
 static const x86_insn_info cmpxchgxadd_insn[] = {
-    { CPU_486, MOD_Op1Add, 0, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
+    { CPU_486, MOD_Op1Add|MOD_GasSufB, 0, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
       {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_8|OPA_Spare, 0} },
-    { CPU_486, MOD_Op1Add, 16, 0, 0, 2, {0x0F, 0x01, 0}, 0, 2,
+    { CPU_486, MOD_Op1Add|MOD_GasSufW, 16, 0, 0, 2, {0x0F, 0x01, 0}, 0, 2,
       {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare, 0} },
-    { CPU_486, MOD_Op1Add, 32, 0, 0, 2, {0x0F, 0x01, 0}, 0, 2,
+    { CPU_486, MOD_Op1Add|MOD_GasSufL, 32, 0, 0, 2, {0x0F, 0x01, 0}, 0, 2,
       {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} },
-    { CPU_Hammer|CPU_64, MOD_Op1Add, 64, 0, 0, 2, {0x0F, 0x01, 0}, 0, 2,
-      {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_64|OPA_Spare, 0} }
+    { CPU_Hammer|CPU_64, MOD_Op1Add|MOD_GasSufQ, 64, 0, 0, 2, {0x0F, 0x01, 0},
+      0, 2, {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_64|OPA_Spare, 0} }
 };
 
 /* Pentium extensions */
 static const x86_insn_info cmpxchg8b_insn[] = {
-    { CPU_586, 0, 0, 0, 0, 2, {0x0F, 0xC7, 0}, 1, 1,
+    { CPU_586, MOD_GasSufQ, 0, 0, 0, 2, {0x0F, 0xC7, 0}, 1, 1,
       {OPT_Mem|OPS_64|OPS_Relaxed|OPA_EA, 0, 0} }
 };
 
 /* Pentium II/Pentium Pro extensions */
 static const x86_insn_info cmovcc_insn[] = {
-    { CPU_686, MOD_Op1Add, 16, 0, 0, 2, {0x0F, 0x40, 0}, 0, 2,
+    { CPU_686, MOD_Op1Add|MOD_GasSufW, 16, 0, 0, 2, {0x0F, 0x40, 0}, 0, 2,
       {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_686, MOD_Op1Add, 32, 0, 0, 2, {0x0F, 0x40, 0}, 0, 2,
+    { CPU_686, MOD_Op1Add|MOD_GasSufL, 32, 0, 0, 2, {0x0F, 0x40, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_Hammer|CPU_64, MOD_Op1Add, 64, 0, 0, 2, {0x0F, 0x40, 0}, 0, 2,
-      {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} }
+    { CPU_Hammer|CPU_64, MOD_Op1Add|MOD_GasSufQ, 64, 0, 0, 2, {0x0F, 0x40, 0},
+      0, 2, {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} }
 };
 static const x86_insn_info fcmovcc_insn[] = {
     { CPU_686|CPU_FPU, MOD_Op0Add|MOD_Op1Add, 0, 0, 0, 2, {0x00, 0x00, 0},
@@ -1488,9 +1501,9 @@ static const x86_insn_info fcmovcc_insn[] = {
 
 /* Pentium4 extensions */
 static const x86_insn_info movnti_insn[] = {
-    { CPU_P4, 0, 0, 0, 0, 2, {0x0F, 0xC3, 0}, 0, 2,
+    { CPU_P4, MOD_GasSufL, 0, 0, 0, 2, {0x0F, 0xC3, 0}, 0, 2,
       {OPT_Mem|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} },
-    { CPU_Hammer|CPU_64, 0, 64, 0, 0, 2, {0x0F, 0xC3, 0}, 0, 2,
+    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 2, {0x0F, 0xC3, 0}, 0, 2,
       {OPT_Mem|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_64|OPA_Spare, 0} }
 };
 static const x86_insn_info clflush_insn[] = {
@@ -2342,8 +2355,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 
 	    /* Check operand size */
 	    size = size_lookup[(info->operands[i] & OPS_MASK)>>OPS_SHIFT];
-	    if (suffix != 0) {
-		/* Require relaxed operands for suffix mode (don't allow
+	    if (arch_x86->parser == X86_PARSER_GAS) {
+		/* Require relaxed operands for GAS mode (don't allow
 		 * per-operand sizing).
 		 */
 		if (op->type == YASM_INSN__OPERAND_REG && op->size == 0) {
@@ -3661,36 +3674,36 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	L O O P N Z { RET_INSN(6, loop, 0x00, CPU_Any); }
 	L O O P N E { RET_INSN(6, loop, 0x00, CPU_Any); }
 	/* Set byte on flag instructions */
-	S E T O { RET_INSN(4, setcc, 0x00, CPU_386); }
-	S E T N O { RET_INSN(5, setcc, 0x01, CPU_386); }
-	S E T B { RET_INSN(4, setcc, 0x02, CPU_386); }
-	S E T C { RET_INSN(4, setcc, 0x02, CPU_386); }
-	S E T N A E { RET_INSN(6, setcc, 0x02, CPU_386); }
-	S E T N B { RET_INSN(5, setcc, 0x03, CPU_386); }
-	S E T N C { RET_INSN(5, setcc, 0x03, CPU_386); }
-	S E T A E { RET_INSN(5, setcc, 0x03, CPU_386); }
-	S E T E { RET_INSN(4, setcc, 0x04, CPU_386); }
-	S E T Z { RET_INSN(4, setcc, 0x04, CPU_386); }
-	S E T N E { RET_INSN(5, setcc, 0x05, CPU_386); }
-	S E T N Z { RET_INSN(5, setcc, 0x05, CPU_386); }
-	S E T B E { RET_INSN(5, setcc, 0x06, CPU_386); }
-	S E T N A { RET_INSN(5, setcc, 0x06, CPU_386); }
-	S E T N B E { RET_INSN(6, setcc, 0x07, CPU_386); }
-	S E T A { RET_INSN(4, setcc, 0x07, CPU_386); }
-	S E T S { RET_INSN(4, setcc, 0x08, CPU_386); }
-	S E T N S { RET_INSN(5, setcc, 0x09, CPU_386); }
-	S E T P { RET_INSN(4, setcc, 0x0A, CPU_386); }
-	S E T P E { RET_INSN(5, setcc, 0x0A, CPU_386); }
-	S E T N P { RET_INSN(5, setcc, 0x0B, CPU_386); }
-	S E T P O { RET_INSN(5, setcc, 0x0B, CPU_386); }
-	S E T L { RET_INSN(4, setcc, 0x0C, CPU_386); }
-	S E T N G E { RET_INSN(6, setcc, 0x0C, CPU_386); }
-	S E T N L { RET_INSN(5, setcc, 0x0D, CPU_386); }
-	S E T G E { RET_INSN(5, setcc, 0x0D, CPU_386); }
-	S E T L E { RET_INSN(5, setcc, 0x0E, CPU_386); }
-	S E T N G { RET_INSN(5, setcc, 0x0E, CPU_386); }
-	S E T N L E { RET_INSN(6, setcc, 0x0F, CPU_386); }
-	S E T G { RET_INSN(4, setcc, 0x0F, CPU_386); }
+	S E T O B? { RET_INSN(4, setcc, 0x00, CPU_386); }
+	S E T N O B? { RET_INSN(5, setcc, 0x01, CPU_386); }
+	S E T B B? { RET_INSN(4, setcc, 0x02, CPU_386); }
+	S E T C B? { RET_INSN(4, setcc, 0x02, CPU_386); }
+	S E T N A E B? { RET_INSN(6, setcc, 0x02, CPU_386); }
+	S E T N B B? { RET_INSN(5, setcc, 0x03, CPU_386); }
+	S E T N C B? { RET_INSN(5, setcc, 0x03, CPU_386); }
+	S E T A E B? { RET_INSN(5, setcc, 0x03, CPU_386); }
+	S E T E B? { RET_INSN(4, setcc, 0x04, CPU_386); }
+	S E T Z B? { RET_INSN(4, setcc, 0x04, CPU_386); }
+	S E T N E B? { RET_INSN(5, setcc, 0x05, CPU_386); }
+	S E T N Z B? { RET_INSN(5, setcc, 0x05, CPU_386); }
+	S E T B E B? { RET_INSN(5, setcc, 0x06, CPU_386); }
+	S E T N A B? { RET_INSN(5, setcc, 0x06, CPU_386); }
+	S E T N B E B? { RET_INSN(6, setcc, 0x07, CPU_386); }
+	S E T A B? { RET_INSN(4, setcc, 0x07, CPU_386); }
+	S E T S B? { RET_INSN(4, setcc, 0x08, CPU_386); }
+	S E T N S B? { RET_INSN(5, setcc, 0x09, CPU_386); }
+	S E T P B? { RET_INSN(4, setcc, 0x0A, CPU_386); }
+	S E T P E B? { RET_INSN(5, setcc, 0x0A, CPU_386); }
+	S E T N P B? { RET_INSN(5, setcc, 0x0B, CPU_386); }
+	S E T P O B? { RET_INSN(5, setcc, 0x0B, CPU_386); }
+	S E T L B? { RET_INSN(4, setcc, 0x0C, CPU_386); }
+	S E T N G E B? { RET_INSN(6, setcc, 0x0C, CPU_386); }
+	S E T N L B? { RET_INSN(5, setcc, 0x0D, CPU_386); }
+	S E T G E B? { RET_INSN(5, setcc, 0x0D, CPU_386); }
+	S E T L E B? { RET_INSN(5, setcc, 0x0E, CPU_386); }
+	S E T N G B? { RET_INSN(5, setcc, 0x0E, CPU_386); }
+	S E T N L E B? { RET_INSN(6, setcc, 0x0F, CPU_386); }
+	S E T G B? { RET_INSN(4, setcc, 0x0F, CPU_386); }
 	/* String instructions. */
 	C M P S B { RET_INSN(5, onebyte, 0x00A6, CPU_Any); }
 	C M P S W { RET_INSN(5, onebyte, 0x10A7, CPU_Any); }
@@ -3735,45 +3748,46 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	}
 	X L A T B? { RET_INSN(5, onebyte, 0x00D7, CPU_Any); }
 	/* Bit manipulation */
-	B S F { RET_INSN(3, bsfr, 0xBC, CPU_386); }
-	B S R { RET_INSN(3, bsfr, 0xBD, CPU_386); }
-	B T { RET_INSN(2, bittest, 0x04A3, CPU_386); }
-	B T C { RET_INSN(3, bittest, 0x07BB, CPU_386); }
-	B T R { RET_INSN(3, bittest, 0x06B3, CPU_386); }
-	B T S { RET_INSN(3, bittest, 0x05AB, CPU_386); }
+	B S F [wWlLqQ]? { RET_INSN(3, bsfr, 0xBC, CPU_386); }
+	B S R [wWlLqQ]? { RET_INSN(3, bsfr, 0xBD, CPU_386); }
+	B T [wWlLqQ]? { RET_INSN(2, bittest, 0x04A3, CPU_386); }
+	B T C [wWlLqQ]? { RET_INSN(3, bittest, 0x07BB, CPU_386); }
+	B T R [wWlLqQ]? { RET_INSN(3, bittest, 0x06B3, CPU_386); }
+	B T S [wWlLqQ]? { RET_INSN(3, bittest, 0x05AB, CPU_386); }
 	/* Interrupts and operating system instructions */
 	I N T { RET_INSN(3, int, 0, CPU_Any); }
 	I N T "3" { RET_INSN(4, onebyte, 0x00CC, CPU_Any); }
-	I N T "03" { RET_INSN(5, onebyte, 0x00CC, CPU_Any); }
+	I N T "03" { RET_INSN_NONGAS(5, onebyte, 0x00CC, CPU_Any); }
 	I N T O {
 	    not64 = 1;
 	    RET_INSN(4, onebyte, 0x00CE, CPU_Any);
 	}
 	I R E T { RET_INSN(4, onebyte, 0x00CF, CPU_Any); }
 	I R E T W { RET_INSN(5, onebyte, 0x10CF, CPU_Any); }
-	I R E T D { RET_INSN(5, onebyte, 0x20CF, CPU_386); }
+	I R E T D { RET_INSN_NONGAS(5, onebyte, 0x20CF, CPU_386); }
+	I R E T L { RET_INSN_GAS(5, onebyte, 0x20CF, CPU_386); }
 	I R E T Q {
 	    warn64 = 1;
 	    RET_INSN(5, onebyte, 0x40CF, CPU_Hammer|CPU_64);
 	}
 	R S M { RET_INSN(3, twobyte, 0x0FAA, CPU_586|CPU_SMM); }
-	B O U N D {
+	B O U N D [wWlL]? {
 	    not64 = 1;
 	    RET_INSN(5, bound, 0, CPU_186);
 	}
 	H L T { RET_INSN(3, onebyte, 0x00F4, CPU_Priv); }
 	N O P { RET_INSN(3, onebyte, 0x0090, CPU_Any); }
 	/* Protection control */
-	A R P L {
+	A R P L W? {
 	    not64 = 1;
 	    RET_INSN(4, arpl, 0, CPU_286|CPU_Prot);
 	}
-	L A R { RET_INSN(3, bsfr, 0x02, CPU_286|CPU_Prot); }
+	L A R [wWlLqQ]? { RET_INSN(3, bsfr, 0x02, CPU_286|CPU_Prot); }
 	L G D T { RET_INSN(4, twobytemem, 0x020F01, CPU_286|CPU_Priv); }
 	L I D T { RET_INSN(4, twobytemem, 0x030F01, CPU_286|CPU_Priv); }
 	L L D T { RET_INSN(4, prot286, 0x0200, CPU_286|CPU_Prot|CPU_Priv); }
 	L M S W { RET_INSN(4, prot286, 0x0601, CPU_286|CPU_Priv); }
-	L S L { RET_INSN(3, bsfr, 0x03, CPU_286|CPU_Prot); }
+	L S L [wWlLqQ]? { RET_INSN(3, bsfr, 0x03, CPU_286|CPU_Prot); }
 	L T R { RET_INSN(3, prot286, 0x0300, CPU_286|CPU_Prot|CPU_Priv); }
 	S G D T { RET_INSN(4, twobytemem, 0x000F01, CPU_286|CPU_Priv); }
 	S I D T { RET_INSN(4, twobytemem, 0x010F01, CPU_286|CPU_Priv); }
@@ -3783,19 +3797,23 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	V E R R { RET_INSN(4, prot286, 0x0400, CPU_286|CPU_Prot); }
 	V E R W { RET_INSN(4, prot286, 0x0500, CPU_286|CPU_Prot); }
 	/* Floating point instructions */
-	F L D { RET_INSN(3, fldstp, 0x0500C0, CPU_FPU); }
-	F I L D { RET_INSN(4, fildstp, 0x050200, CPU_FPU); }
+	F L D [lLsS]? { RET_INSN(3, fldstp, 0x0500C0, CPU_FPU); }
+	F L D T { RET_INSN_GAS(4, fldstpt, 0x0500C0, CPU_FPU); }
+	F I L D [lLqQsS]? { RET_INSN(4, fildstp, 0x050200, CPU_FPU); }
+	F I L D L L { RET_INSN_GAS(6, fbldstp, 0x05, CPU_FPU); }
 	F B L D { RET_INSN(4, fbldstp, 0x04, CPU_FPU); }
-	F S T { RET_INSN(3, fst, 0, CPU_FPU); }
-	F I S T { RET_INSN(4, fiarith, 0x02DB, CPU_FPU); }
-	F S T P { RET_INSN(4, fldstp, 0x0703D8, CPU_FPU); }
-	F I S T P { RET_INSN(5, fildstp, 0x070203, CPU_FPU); }
+	F S T [lLsS]? { RET_INSN(3, fst, 0, CPU_FPU); }
+	F I S T [lLsS]? { RET_INSN(4, fiarith, 0x02DB, CPU_FPU); }
+	F S T P [lLsS]? { RET_INSN(4, fldstp, 0x0703D8, CPU_FPU); }
+	F S T P T { RET_INSN_GAS(5, fldstpt, 0x0703D8, CPU_FPU); }
+	F I S T P [lLqQsS]? { RET_INSN(5, fildstp, 0x070203, CPU_FPU); }
+	F I S T P L L { RET_INSN_GAS(7, fbldstp, 0x07, CPU_FPU); }
 	F B S T P { RET_INSN(5, fbldstp, 0x06, CPU_FPU); }
 	F X C H { RET_INSN(4, fxch, 0, CPU_FPU); }
-	F C O M { RET_INSN(4, fcom, 0x02D0, CPU_FPU); }
-	F I C O M { RET_INSN(5, fiarith, 0x02DA, CPU_FPU); }
-	F C O M P { RET_INSN(5, fcom, 0x03D8, CPU_FPU); }
-	F I C O M P { RET_INSN(6, fiarith, 0x03DA, CPU_FPU); }
+	F C O M [lLsS]? { RET_INSN(4, fcom, 0x02D0, CPU_FPU); }
+	F I C O M [lLsS]? { RET_INSN(5, fiarith, 0x02DA, CPU_FPU); }
+	F C O M P [lLsS]? { RET_INSN(5, fcom, 0x03D8, CPU_FPU); }
+	F I C O M P [lLsS]? { RET_INSN(6, fiarith, 0x03DA, CPU_FPU); }
 	F C O M P P { RET_INSN(6, twobyte, 0xDED9, CPU_FPU); }
 	F U C O M { RET_INSN(5, fcom2, 0xDDE0, CPU_286|CPU_FPU); }
 	F U C O M P { RET_INSN(6, fcom2, 0xDDE8, CPU_286|CPU_FPU); }
@@ -3809,23 +3827,23 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	F L D L G "2" { RET_INSN(6, twobyte, 0xD9EC, CPU_FPU); }
 	F L D L N "2" { RET_INSN(6, twobyte, 0xD9ED, CPU_FPU); }
 	F L D Z { RET_INSN(4, twobyte, 0xD9EE, CPU_FPU); }
-	F A D D { RET_INSN(4, farith, 0x00C0C0, CPU_FPU); }
+	F A D D [lLsS]? { RET_INSN(4, farith, 0x00C0C0, CPU_FPU); }
 	F A D D P { RET_INSN(5, farithp, 0xC0, CPU_FPU); }
-	F I A D D { RET_INSN(5, fiarith, 0x00DA, CPU_FPU); }
-	F S U B { RET_INSN(4, farith, 0x04E0E8, CPU_FPU); }
-	F I S U B { RET_INSN(5, fiarith, 0x04DA, CPU_FPU); }
+	F I A D D [lLsS]? { RET_INSN(5, fiarith, 0x00DA, CPU_FPU); }
+	F S U B [lLsS]? { RET_INSN(4, farith, 0x04E0E8, CPU_FPU); }
+	F I S U B [lLsS]? { RET_INSN(5, fiarith, 0x04DA, CPU_FPU); }
 	F S U B P { RET_INSN(5, farithp, 0xE8, CPU_FPU); }
-	F S U B R { RET_INSN(5, farith, 0x05E8E0, CPU_FPU); }
-	F I S U B R { RET_INSN(6, fiarith, 0x05DA, CPU_FPU); }
+	F S U B R [lLsS]? { RET_INSN(5, farith, 0x05E8E0, CPU_FPU); }
+	F I S U B R [lLsS]? { RET_INSN(6, fiarith, 0x05DA, CPU_FPU); }
 	F S U B R P { RET_INSN(6, farithp, 0xE0, CPU_FPU); }
-	F M U L { RET_INSN(4, farith, 0x01C8C8, CPU_FPU); }
-	F I M U L { RET_INSN(5, fiarith, 0x01DA, CPU_FPU); }
+	F M U L [lLsS]? { RET_INSN(4, farith, 0x01C8C8, CPU_FPU); }
+	F I M U L [lLsS]? { RET_INSN(5, fiarith, 0x01DA, CPU_FPU); }
 	F M U L P { RET_INSN(5, farithp, 0xC8, CPU_FPU); }
-	F D I V { RET_INSN(4, farith, 0x06F0F8, CPU_FPU); }
-	F I D I V { RET_INSN(5, fiarith, 0x06DA, CPU_FPU); }
+	F D I V [lLsS]? { RET_INSN(4, farith, 0x06F0F8, CPU_FPU); }
+	F I D I V [lLsS]? { RET_INSN(5, fiarith, 0x06DA, CPU_FPU); }
 	F D I V P { RET_INSN(5, farithp, 0xF8, CPU_FPU); }
-	F D I V R { RET_INSN(5, farith, 0x07F8F0, CPU_FPU); }
-	F I D I V R { RET_INSN(6, fiarith, 0x07DA, CPU_FPU); }
+	F D I V R [lLsS]? { RET_INSN(5, farith, 0x07F8F0, CPU_FPU); }
+	F I D I V R [lLsS]? { RET_INSN(6, fiarith, 0x07DA, CPU_FPU); }
 	F D I V R P { RET_INSN(6, farithp, 0xF0, CPU_FPU); }
 	F "2" X M "1" { RET_INSN(5, twobyte, 0xD9F0, CPU_FPU); }
 	F Y L "2" X { RET_INSN(5, twobyte, 0xD9F1, CPU_FPU); }
@@ -3847,19 +3865,19 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	F A B S { RET_INSN(4, twobyte, 0xD9E1, CPU_FPU); }
 	F N I N I T { RET_INSN(6, twobyte, 0xDBE3, CPU_FPU); }
 	F I N I T { RET_INSN(5, threebyte, 0x9BDBE3UL, CPU_FPU); }
-	F L D C W { RET_INSN(5, fldnstcw, 0x05, CPU_FPU); }
-	F N S T C W { RET_INSN(6, fldnstcw, 0x07, CPU_FPU); }
-	F S T C W { RET_INSN(5, fstcw, 0, CPU_FPU); }
-	F N S T S W { RET_INSN(6, fnstsw, 0, CPU_FPU); }
-	F S T S W { RET_INSN(5, fstsw, 0, CPU_FPU); }
+	F L D C W W? { RET_INSN(5, fldnstcw, 0x05, CPU_FPU); }
+	F N S T C W W? { RET_INSN(6, fldnstcw, 0x07, CPU_FPU); }
+	F S T C W W? { RET_INSN(5, fstcw, 0, CPU_FPU); }
+	F N S T S W W? { RET_INSN(6, fnstsw, 0, CPU_FPU); }
+	F S T S W W? { RET_INSN(5, fstsw, 0, CPU_FPU); }
 	F N C L E X { RET_INSN(6, twobyte, 0xDBE2, CPU_FPU); }
 	F C L E X { RET_INSN(5, threebyte, 0x9BDBE2UL, CPU_FPU); }
-	F N S T E N V { RET_INSN(7, onebytemem, 0x06D9, CPU_FPU); }
-	F S T E N V { RET_INSN(6, twobytemem, 0x069BD9, CPU_FPU); }
-	F L D E N V { RET_INSN(6, onebytemem, 0x04D9, CPU_FPU); }
-	F N S A V E { RET_INSN(6, onebytemem, 0x06DD, CPU_FPU); }
-	F S A V E { RET_INSN(5, twobytemem, 0x069BDD, CPU_FPU); }
-	F R S T O R { RET_INSN(6, onebytemem, 0x04DD, CPU_FPU); }
+	F N S T E N V [lLsS]? { RET_INSN(7, onebytemem, 0x06D9, CPU_FPU); }
+	F S T E N V [lLsS]? { RET_INSN(6, twobytemem, 0x069BD9, CPU_FPU); }
+	F L D E N V [lLsS]? { RET_INSN(6, onebytemem, 0x04D9, CPU_FPU); }
+	F N S A V E [lLsS]? { RET_INSN(6, onebytemem, 0x06DD, CPU_FPU); }
+	F S A V E [lLsS]? { RET_INSN(5, twobytemem, 0x069BDD, CPU_FPU); }
+	F R S T O R [lLsS]? { RET_INSN(6, onebytemem, 0x04DD, CPU_FPU); }
 	F F R E E { RET_INSN(5, ffree, 0xDD, CPU_FPU); }
 	F F R E E P { RET_INSN(6, ffree, 0xDF, CPU_686|CPU_FPU|CPU_Undoc); }
 	F N O P { RET_INSN(4, twobyte, 0xD9D0, CPU_FPU); }
@@ -3867,10 +3885,10 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	/* Prefixes (should the others be here too? should wait be a prefix? */
 	W A I T { RET_INSN(4, onebyte, 0x009B, CPU_Any); }
 	/* 486 extensions */
-	B S W A P { RET_INSN(5, bswap, 0, CPU_486); }
-	X A D D { RET_INSN(4, cmpxchgxadd, 0xC0, CPU_486); }
-	C M P X C H G { RET_INSN(7, cmpxchgxadd, 0xB0, CPU_486); }
-	C M P X C H G "486" { RET_INSN(10, cmpxchgxadd, 0xA6, CPU_486|CPU_Undoc); }
+	B S W A P [lLqQ]? { RET_INSN(5, bswap, 0, CPU_486); }
+	X A D D [bBwWlLqQ]? { RET_INSN(4, cmpxchgxadd, 0xC0, CPU_486); }
+	C M P X C H G [bBwWlLqQ]? { RET_INSN(7, cmpxchgxadd, 0xB0, CPU_486); }
+	C M P X C H G "486" { RET_INSN_NONGAS(10, cmpxchgxadd, 0xA6, CPU_486|CPU_Undoc); }
 	I N V D { RET_INSN(4, twobyte, 0x0F08, CPU_486|CPU_Priv); }
 	W B I N V D { RET_INSN(6, twobyte, 0x0F09, CPU_486|CPU_Priv); }
 	I N V L P G { RET_INSN(6, twobytemem, 0x070F01, CPU_486|CPU_Priv); }
@@ -3880,7 +3898,7 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	W R M S R { RET_INSN(5, twobyte, 0x0F30, CPU_586|CPU_Priv); }
 	R D T S C { RET_INSN(5, twobyte, 0x0F31, CPU_586); }
 	R D M S R { RET_INSN(5, twobyte, 0x0F32, CPU_586|CPU_Priv); }
-	C M P X C H G "8" B { RET_INSN(9, cmpxchg8b, 0, CPU_586); }
+	C M P X C H G "8" B Q? { RET_INSN(9, cmpxchg8b, 0, CPU_586); }
 	/* Pentium II/Pentium Pro extensions */
 	S Y S E N T E R {
 	    not64 = 1;
@@ -3890,41 +3908,41 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	    not64 = 1;
 	    RET_INSN(7, twobyte, 0x0F35, CPU_686|CPU_Priv);
 	}
-	F X S A V E { RET_INSN(6, twobytemem, 0x000FAE, CPU_686|CPU_FPU); }
-	F X R S T O R { RET_INSN(7, twobytemem, 0x010FAE, CPU_686|CPU_FPU); }
+	F X S A V E Q? { RET_INSN(6, twobytemem, 0x000FAE, CPU_686|CPU_FPU); }
+	F X R S T O R Q? { RET_INSN(7, twobytemem, 0x010FAE, CPU_686|CPU_FPU); }
 	R D P M C { RET_INSN(5, twobyte, 0x0F33, CPU_686); }
 	U D "2" { RET_INSN(3, twobyte, 0x0F0B, CPU_286); }
 	U D "1" { RET_INSN(3, twobyte, 0x0FB9, CPU_286|CPU_Undoc); }
-	C M O V O { RET_INSN(5, cmovcc, 0x00, CPU_686); }
-	C M O V N O { RET_INSN(6, cmovcc, 0x01, CPU_686); }
-	C M O V B { RET_INSN(5, cmovcc, 0x02, CPU_686); }
-	C M O V C { RET_INSN(5, cmovcc, 0x02, CPU_686); }
-	C M O V N A E { RET_INSN(7, cmovcc, 0x02, CPU_686); }
-	C M O V N B { RET_INSN(6, cmovcc, 0x03, CPU_686); }
-	C M O V N C { RET_INSN(6, cmovcc, 0x03, CPU_686); }
-	C M O V A E { RET_INSN(6, cmovcc, 0x03, CPU_686); }
-	C M O V E { RET_INSN(5, cmovcc, 0x04, CPU_686); }
-	C M O V Z { RET_INSN(5, cmovcc, 0x04, CPU_686); }
-	C M O V N E { RET_INSN(6, cmovcc, 0x05, CPU_686); }
-	C M O V N Z { RET_INSN(6, cmovcc, 0x05, CPU_686); }
-	C M O V B E { RET_INSN(6, cmovcc, 0x06, CPU_686); }
-	C M O V N A { RET_INSN(6, cmovcc, 0x06, CPU_686); }
-	C M O V N B E { RET_INSN(7, cmovcc, 0x07, CPU_686); }
-	C M O V A { RET_INSN(5, cmovcc, 0x07, CPU_686); }
-	C M O V S { RET_INSN(5, cmovcc, 0x08, CPU_686); }
-	C M O V N S { RET_INSN(6, cmovcc, 0x09, CPU_686); }
-	C M O V P { RET_INSN(5, cmovcc, 0x0A, CPU_686); }
-	C M O V P E { RET_INSN(6, cmovcc, 0x0A, CPU_686); }
-	C M O V N P { RET_INSN(6, cmovcc, 0x0B, CPU_686); }
-	C M O V P O { RET_INSN(6, cmovcc, 0x0B, CPU_686); }
-	C M O V L { RET_INSN(5, cmovcc, 0x0C, CPU_686); }
-	C M O V N G E { RET_INSN(7, cmovcc, 0x0C, CPU_686); }
-	C M O V N L { RET_INSN(6, cmovcc, 0x0D, CPU_686); }
-	C M O V G E { RET_INSN(6, cmovcc, 0x0D, CPU_686); }
-	C M O V L E { RET_INSN(6, cmovcc, 0x0E, CPU_686); }
-	C M O V N G { RET_INSN(6, cmovcc, 0x0E, CPU_686); }
-	C M O V N L E { RET_INSN(7, cmovcc, 0x0F, CPU_686); }
-	C M O V G { RET_INSN(5, cmovcc, 0x0F, CPU_686); }
+	C M O V O [wWlLqQ]? { RET_INSN(5, cmovcc, 0x00, CPU_686); }
+	C M O V N O [wWlLqQ]? { RET_INSN(6, cmovcc, 0x01, CPU_686); }
+	C M O V B [wWlLqQ]? { RET_INSN(5, cmovcc, 0x02, CPU_686); }
+	C M O V C [wWlLqQ]? { RET_INSN(5, cmovcc, 0x02, CPU_686); }
+	C M O V N A E [wWlLqQ]? { RET_INSN(7, cmovcc, 0x02, CPU_686); }
+	C M O V N B [wWlLqQ]? { RET_INSN(6, cmovcc, 0x03, CPU_686); }
+	C M O V N C [wWlLqQ]? { RET_INSN(6, cmovcc, 0x03, CPU_686); }
+	C M O V A E [wWlLqQ]? { RET_INSN(6, cmovcc, 0x03, CPU_686); }
+	C M O V E [wWlLqQ]? { RET_INSN(5, cmovcc, 0x04, CPU_686); }
+	C M O V Z [wWlLqQ]? { RET_INSN(5, cmovcc, 0x04, CPU_686); }
+	C M O V N E [wWlLqQ]? { RET_INSN(6, cmovcc, 0x05, CPU_686); }
+	C M O V N Z [wWlLqQ]? { RET_INSN(6, cmovcc, 0x05, CPU_686); }
+	C M O V B E [wWlLqQ]? { RET_INSN(6, cmovcc, 0x06, CPU_686); }
+	C M O V N A [wWlLqQ]? { RET_INSN(6, cmovcc, 0x06, CPU_686); }
+	C M O V N B E [wWlLqQ]? { RET_INSN(7, cmovcc, 0x07, CPU_686); }
+	C M O V A [wWlLqQ]? { RET_INSN(5, cmovcc, 0x07, CPU_686); }
+	C M O V S [wWlLqQ]? { RET_INSN(5, cmovcc, 0x08, CPU_686); }
+	C M O V N S [wWlLqQ]? { RET_INSN(6, cmovcc, 0x09, CPU_686); }
+	C M O V P [wWlLqQ]? { RET_INSN(5, cmovcc, 0x0A, CPU_686); }
+	C M O V P E [wWlLqQ]? { RET_INSN(6, cmovcc, 0x0A, CPU_686); }
+	C M O V N P [wWlLqQ]? { RET_INSN(6, cmovcc, 0x0B, CPU_686); }
+	C M O V P O [wWlLqQ]? { RET_INSN(6, cmovcc, 0x0B, CPU_686); }
+	C M O V L [wWlLqQ]? { RET_INSN(5, cmovcc, 0x0C, CPU_686); }
+	C M O V N G E [wWlLqQ]? { RET_INSN(7, cmovcc, 0x0C, CPU_686); }
+	C M O V N L [wWlLqQ]? { RET_INSN(6, cmovcc, 0x0D, CPU_686); }
+	C M O V G E [wWlLqQ]? { RET_INSN(6, cmovcc, 0x0D, CPU_686); }
+	C M O V L E [wWlLqQ]? { RET_INSN(6, cmovcc, 0x0E, CPU_686); }
+	C M O V N G [wWlLqQ]? { RET_INSN(6, cmovcc, 0x0E, CPU_686); }
+	C M O V N L E [wWlLqQ]? { RET_INSN(7, cmovcc, 0x0F, CPU_686); }
+	C M O V G [wWlLqQ]? { RET_INSN(5, cmovcc, 0x0F, CPU_686); }
 	F C M O V B { RET_INSN(6, fcmovcc, 0xDAC0, CPU_686|CPU_FPU); }
 	F C M O V E { RET_INSN(6, fcmovcc, 0xDAC8, CPU_686|CPU_FPU); }
 	F C M O V B E { RET_INSN(7, fcmovcc, 0xDAD0, CPU_686|CPU_FPU); }
@@ -3938,7 +3956,7 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	F C O M I P { RET_INSN(6, fcom2, 0xDFF0, CPU_686|CPU_FPU); }
 	F U C O M I P { RET_INSN(7, fcom2, 0xDFE8, CPU_686|CPU_FPU); }
 	/* Pentium4 extensions */
-	M O V N T I { RET_INSN(6, movnti, 0, CPU_P4); }
+	M O V N T I [lLqQ]? { RET_INSN(6, movnti, 0, CPU_P4); }
 	C L F L U S H { RET_INSN(7, clflush, 0, CPU_P3); }
 	L F E N C E { RET_INSN(6, threebyte, 0x0FAEE8, CPU_P3); }
 	M F E N C E { RET_INSN(6, threebyte, 0x0FAEF0, CPU_P3); }
@@ -4284,6 +4302,10 @@ done:
 	    case 'q':
 	    case 'Q':
 		data[3] |= (MOD_GasSufQ >> MOD_GasSuf_SHIFT) << 8;
+		break;
+	    case 's':
+	    case 'S':
+		data[3] |= (MOD_GasSufS >> MOD_GasSuf_SHIFT) << 8;
 		break;
 	    default:
 		yasm_internal_error(N_("unrecognized suffix"));
