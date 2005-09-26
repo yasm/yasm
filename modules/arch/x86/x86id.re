@@ -3424,6 +3424,7 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	S A H F { RET_INSN(4, onebyte, 0x009E, CPU_Any); }
 	P U S H F { RET_INSN(5, onebyte, 0x009C, CPU_Any); }
 	P U S H F D { RET_INSN_NONGAS(6, onebyte, 0x209C, CPU_386); }
+	P U S H F L { RET_INSN_GAS(6, onebyte, 0x209C, CPU_386); }
 	P U S H F W { RET_INSN(6, onebyte, 0x109C, CPU_Any); }
 	P U S H F Q {
 	    warn64 = 1;
@@ -3432,7 +3433,11 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	P O P F { RET_INSN(4, onebyte, 0x40009D, CPU_Any); }
 	P O P F D {
 	    not64 = 1;
-	    RET_INSN(5, onebyte, 0x00209D, CPU_386);
+	    RET_INSN_NONGAS(5, onebyte, 0x00209D, CPU_386);
+	}
+	P O P F L {
+	    not64 = 1;
+	    RET_INSN_GAS(5, onebyte, 0x00209D, CPU_386);
 	}
 	P O P F W { RET_INSN(5, onebyte, 0x40109D, CPU_Any); }
 	P O P F Q {
@@ -3489,9 +3494,22 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	}
 	C W D { RET_INSN(3, onebyte, 0x1099, CPU_Any); }
 	C D Q { RET_INSN(3, onebyte, 0x2099, CPU_386); }
-	C D O {
+	C Q O {
 	    warn64 = 1;
 	    RET_INSN(3, onebyte, 0x4099, CPU_Hammer|CPU_64);
+	}
+	/* Conversion instructions - GAS / AT&T naming */
+	C B T W { RET_INSN_GAS(4, onebyte, 0x1098, CPU_Any); }
+	C W T L { RET_INSN_GAS(4, onebyte, 0x2098, CPU_386); }
+	C L T Q {
+	    warn64 = 1;
+	    RET_INSN_GAS(4, onebyte, 0x4098, CPU_Hammer|CPU_64);
+	}
+	C W T D { RET_INSN_GAS(4, onebyte, 0x1099, CPU_Any); }
+	C L T D { RET_INSN_GAS(4, onebyte, 0x2099, CPU_386); }
+	C Q T O {
+	    warn64 = 1;
+	    RET_INSN_GAS(4, onebyte, 0x4099, CPU_Hammer|CPU_64);
 	}
 	/* Multiplication and division */
 	M U L { RET_INSN(3, f6, 0x04, CPU_Any); }
