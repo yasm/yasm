@@ -63,8 +63,8 @@ RCSID("$Id$");
 #define MOD_GasSufL	(1UL<<17)	/* GAS L suffix ok */
 #define MOD_GasSufQ	(1UL<<18)	/* GAS Q suffix ok */
 #define MOD_GasSufS	(1UL<<19)	/* GAS S suffix ok */
-#define MOD_GasSuf_SHIFT 16
-#define MOD_GasSuf_MASK	(0xFUL<<16)
+#define MOD_GasSuf_SHIFT 15
+#define MOD_GasSuf_MASK	(0x1FUL<<15)
 
 /* Modifiers that aren't actually used as modifiers.  Rather, if set, bits
  * 20-27 in the modifier are used as an index into an array.
@@ -277,7 +277,7 @@ typedef struct x86_insn_info {
     data[1] = ((mod)<<8) | \
     	      ((unsigned char)(sizeof(group##_insn)/sizeof(x86_insn_info))); \
     data[2] = cpu; \
-    data[3] = arch_x86->mode_bits; \
+    data[3] |= arch_x86->mode_bits; \
     } while (0)
 
 /*
@@ -2173,7 +2173,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	    continue;
 
 	/* Match suffix (if required) */
-	if (suffix != 0 && ((suffix<<MOD_GasSuf_SHIFT) & info->modifiers) == 0)
+	if (suffix != 0 && suffix != 0x80
+	    && ((suffix<<MOD_GasSuf_SHIFT) & info->modifiers) == 0)
 	    continue;
 
 	if (!operands) {
@@ -2355,7 +2356,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 
 	    /* Check operand size */
 	    size = size_lookup[(info->operands[i] & OPS_MASK)>>OPS_SHIFT];
-	    if (arch_x86->parser == X86_PARSER_GAS) {
+	    if (suffix != 0) {
 		/* Require relaxed operands for GAS mode (don't allow
 		 * per-operand sizing).
 		 */
@@ -2364,7 +2365,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		    if (yasm_x86__get_reg_size(arch, op->data.reg) != size)
 			mismatch = 1;
 		} else if ((info->operands[i] & OPT_MASK) == OPT_Imm
-		    && (info->operands[i] & OPS_RMASK) != OPS_Relaxed)
+		    && (info->operands[i] & OPS_RMASK) != OPS_Relaxed
+		    && (info->operands[i] & OPA_MASK) != OPA_JmpRel)
 		    mismatch = 1;
 	    } else {
 		if (op->type == YASM_INSN__OPERAND_REG && op->size == 0) {
@@ -3403,6 +3405,8 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
     int warn64 = 0;
     int suffix_ofs = -1;
 
+    data[3] = 0;
+
     /*!re2c
 	/* instructions */
 
@@ -3798,14 +3802,20 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	V E R W { RET_INSN(4, prot286, 0x0500, CPU_286|CPU_Prot); }
 	/* Floating point instructions */
 	F L D [lLsS]? { RET_INSN(3, fldstp, 0x0500C0, CPU_FPU); }
-	F L D T { RET_INSN_GAS(4, fldstpt, 0x0500C0, CPU_FPU); }
+	F L D T {
+	    data[3] |= 0x80 << 8;
+	    RET_INSN_GAS(4, fldstpt, 0x0500C0, CPU_FPU);
+	}
 	F I L D [lLqQsS]? { RET_INSN(4, fildstp, 0x050200, CPU_FPU); }
 	F I L D L L { RET_INSN_GAS(6, fbldstp, 0x05, CPU_FPU); }
 	F B L D { RET_INSN(4, fbldstp, 0x04, CPU_FPU); }
 	F S T [lLsS]? { RET_INSN(3, fst, 0, CPU_FPU); }
 	F I S T [lLsS]? { RET_INSN(4, fiarith, 0x02DB, CPU_FPU); }
 	F S T P [lLsS]? { RET_INSN(4, fldstp, 0x0703D8, CPU_FPU); }
-	F S T P T { RET_INSN_GAS(5, fldstpt, 0x0703D8, CPU_FPU); }
+	F S T P T {
+	    data[3] |= 0x80 << 8;
+	    RET_INSN_GAS(5, fldstpt, 0x0703D8, CPU_FPU);
+	}
 	F I S T P [lLqQsS]? { RET_INSN(5, fildstp, 0x070203, CPU_FPU); }
 	F I S T P L L { RET_INSN_GAS(7, fbldstp, 0x07, CPU_FPU); }
 	F B S T P { RET_INSN(5, fbldstp, 0x06, CPU_FPU); }
