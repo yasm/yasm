@@ -589,6 +589,16 @@ expr_id: label_id
     | DIR_DATA	{ $$ = yasm__xstrdup(".data"); }
     | DIR_TEXT	{ $$ = yasm__xstrdup(".text"); }
     | DIR_BSS	{ $$ = yasm__xstrdup(".bss"); }
+    | INSN	{
+	/* Used as an identifier, grab token to make it one! */
+	$$ = yasm__xstrndup(parser_gas->s.tok,
+			    (size_t)(parser_gas->s.cur - parser_gas->s.tok));
+    }
+    | PREFIX	{
+	/* Used as an identifier, grab token to make it one! */
+	$$ = yasm__xstrndup(parser_gas->s.tok,
+			    (size_t)(parser_gas->s.cur - parser_gas->s.tok));
+    }
 ;
 
 label_id: ID | DIR_ID;

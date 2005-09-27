@@ -20,4 +20,7 @@ EXTRA_DIST += modules/parsers/gas/tests/reggroup-err.errwarn
 EXTRA_DIST += modules/parsers/gas/tests/reggroup.asm
 EXTRA_DIST += modules/parsers/gas/tests/reggroup.errwarn
 EXTRA_DIST += modules/parsers/gas/tests/reggroup.hex
+EXTRA_DIST += modules/parsers/gas/tests/varinsn.asm
+EXTRA_DIST += modules/parsers/gas/tests/varinsn.errwarn
+EXTRA_DIST += modules/parsers/gas/tests/varinsn.hex
 
