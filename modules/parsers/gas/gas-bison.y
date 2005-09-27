@@ -106,7 +106,7 @@ static void gas_parser_directive
 
 %type <bc> line lineexp instr
 
-%type <str_val> label_id
+%type <str_val> expr_id label_id
 %type <ea> memaddr
 %type <exp> expr regmemexpr
 %type <sym> explabel
@@ -568,7 +568,7 @@ expr: INTNUM		{ $$ = p_expr_new_ident(yasm_expr_int($1)); }
     | '(' expr ')'	{ $$ = $2; }
 ;
 
-explabel: label_id	{
+explabel: expr_id	{
 	/* "." references the current assembly position */
 	if ($1[1] == '\0' && $1[0] == '.')
 	    $$ = yasm_symtab_define_label(p_symtab, ".", parser_gas->prev_bc,
@@ -577,12 +577,18 @@ explabel: label_id	{
 	    $$ = yasm_symtab_use(p_symtab, $1, cur_line);
 	yasm_xfree($1);
     }
-    | label_id '@' label_id {
+    | expr_id '@' label_id {
 	/* TODO: this is needed for shared objects, e.g. sym@PLT */
 	$$ = yasm_symtab_use(p_symtab, $1, cur_line);
 	yasm_xfree($1);
 	yasm_xfree($3);
     }
+;
+
+expr_id: label_id
+    | DIR_DATA	{ $$ = yasm__xstrdup(".data"); }
+    | DIR_TEXT	{ $$ = yasm__xstrdup(".text"); }
+    | DIR_BSS	{ $$ = yasm__xstrdup(".bss"); }
 ;
 
 label_id: ID | DIR_ID;
