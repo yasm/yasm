@@ -119,7 +119,7 @@ typedef struct lc3b_insn_info {
 
 #define RET_INSN(group, mod)	do { \
     DEF_INSN_DATA(group, mod); \
-    return YASM_ARCH_CHECK_ID_INSN; \
+    return 1; \
     } while (0)
 
 /*
@@ -348,20 +348,50 @@ yasm_lc3b__parse_cpu(yasm_arch *arch, const char *id, unsigned long line)
 {
 }
 
-yasm_arch_check_id_retval
-yasm_lc3b__parse_check_id(yasm_arch *arch, unsigned long data[4],
-			  const char *id, unsigned long line)
+int
+yasm_lc3b__parse_check_reg(yasm_arch *arch, unsigned long data[1],
+			   const char *id, unsigned long line)
 {
     const char *oid = id;
     /*const char *marker;*/
     /*!re2c
-
 	/* integer registers */
 	R [0-7]	{
 	    data[0] = (oid[1]-'0');
-	    return YASM_ARCH_CHECK_ID_REG;
+	    return 1;
 	}
 
+	/* catchalls */
+	[\001-\377]+	{
+	    return 0;
+	}
+	[\000]	{
+	    return 0;
+	}
+    */
+}
+
+int
+yasm_lc3b__parse_check_reggroup(yasm_arch *arch, unsigned long data[1],
+				const char *id, unsigned long line)
+{
+    return 0;
+}
+
+int
+yasm_lc3b__parse_check_segreg(yasm_arch *arch, unsigned long data[1],
+			      const char *id, unsigned long line)
+{
+    return 0;
+}
+
+int
+yasm_lc3b__parse_check_insn(yasm_arch *arch, unsigned long data[4],
+			    const char *id, unsigned long line)
+{
+    const char *oid = id;
+    /*const char *marker;*/
+    /*!re2c
 	/* instructions */
 
 	A D D { RET_INSN(addand, 0x00); }
@@ -402,10 +432,24 @@ yasm_lc3b__parse_check_id(yasm_arch *arch, unsigned long data[4],
 
 	/* catchalls */
 	[\001-\377]+	{
-	    return YASM_ARCH_CHECK_ID_NONE;
+	    return 0;
 	}
 	[\000]	{
-	    return YASM_ARCH_CHECK_ID_NONE;
+	    return 0;
 	}
     */
+}
+
+int
+yasm_lc3b__parse_check_prefix(yasm_arch *arch, unsigned long data[4],
+			      const char *id, unsigned long line)
+{
+    return 0;
+}
+
+int
+yasm_lc3b__parse_check_targetmod(yasm_arch *arch, unsigned long data[1],
+				 const char *id, unsigned long line)
+{
+    return 0;
 }

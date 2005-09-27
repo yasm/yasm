@@ -261,8 +261,23 @@ int yasm_x86__expr_checkea
 void yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid,
 			 unsigned long line);
 
-yasm_arch_check_id_retval yasm_x86__parse_check_id
-    (yasm_arch *arch, unsigned long data[4], const char *id,
+int yasm_x86__parse_check_reg
+    (yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
+     unsigned long line);
+int yasm_x86__parse_check_reggroup
+    (yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
+     unsigned long line);
+int yasm_x86__parse_check_segreg
+    (yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
+     unsigned long line);
+int yasm_x86__parse_check_insn
+    (yasm_arch *arch, /*@out@*/ unsigned long data[4], const char *id,
+     unsigned long line);
+int yasm_x86__parse_check_prefix
+    (yasm_arch *arch, /*@out@*/ unsigned long data[4], const char *id,
+     unsigned long line);
+int yasm_x86__parse_check_targetmod
+    (yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
      unsigned long line);
 
 void yasm_x86__finalize_insn

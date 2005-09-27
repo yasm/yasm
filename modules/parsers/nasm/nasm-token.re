@@ -186,7 +186,6 @@ nasm_parser_lex(YYSTYPE *lvalp, yasm_parser_nasm *parser_nasm)
     YYCTYPE endch;
     size_t count, len;
     YYCTYPE savech;
-    yasm_arch_check_id_retval check_id_ret;
 
     /* Catch EOF */
     if (s->eof && cursor == s->eof)
@@ -409,31 +408,38 @@ scan:
 	[a-zA-Z_?][a-zA-Z0-9_$#@~.?]* {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    check_id_ret = yasm_arch_parse_check_id(parser_nasm->arch,
-						    lvalp->arch_data, s->tok,
-						    cur_line);
-	    s->tok[TOKLEN] = savech;
-	    switch (check_id_ret) {
-		case YASM_ARCH_CHECK_ID_NONE:
-		    /* Just an identifier, return as such. */
-		    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
-		    RETURN(ID);
-		case YASM_ARCH_CHECK_ID_INSN:
-		    RETURN(INSN);
-		case YASM_ARCH_CHECK_ID_PREFIX:
-		    RETURN(PREFIX);
-		case YASM_ARCH_CHECK_ID_REG:
-		    RETURN(REG);
-		case YASM_ARCH_CHECK_ID_SEGREG:
-		    RETURN(SEGREG);
-		case YASM_ARCH_CHECK_ID_TARGETMOD:
-		    RETURN(TARGETMOD);
-		default:
-		    yasm__warning(YASM_WARN_GENERAL, cur_line,
-			N_("Arch feature not supported, treating as identifier"));
-		    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
-		    RETURN(ID);
+	    if (yasm_arch_parse_check_reg(parser_nasm->arch, lvalp->arch_data,
+					  s->tok, cur_line)) {
+		s->tok[TOKLEN] = savech;
+		RETURN(REG);
 	    }
+	    if (yasm_arch_parse_check_insn(parser_nasm->arch, lvalp->arch_data,
+					   s->tok, cur_line)) {
+		s->tok[TOKLEN] = savech;
+		RETURN(INSN);
+	    }
+	    if (yasm_arch_parse_check_segreg(parser_nasm->arch,
+					     lvalp->arch_data, s->tok,
+					     cur_line)) {
+		s->tok[TOKLEN] = savech;
+		RETURN(SEGREG);
+	    }
+	    if (yasm_arch_parse_check_prefix(parser_nasm->arch,
+					     lvalp->arch_data, s->tok,
+					     cur_line)) {
+		s->tok[TOKLEN] = savech;
+		RETURN(PREFIX);
+	    }
+	    if (yasm_arch_parse_check_targetmod(parser_nasm->arch,
+						lvalp->arch_data, s->tok,
+						cur_line)) {
+		s->tok[TOKLEN] = savech;
+		RETURN(TARGETMOD);
+	    }
+	    s->tok[TOKLEN] = savech;
+	    /* Just an identifier, return as such. */
+	    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
+	    RETURN(ID);
 	}
 
 	";" (any \ [\n])*	{ goto scan; }

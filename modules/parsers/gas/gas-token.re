@@ -198,7 +198,6 @@ gas_parser_lex(YYSTYPE *lvalp, yasm_parser_gas *parser_gas)
     YYCTYPE *cursor = s->cur;
     size_t count;
     YYCTYPE savech;
-    yasm_arch_check_id_retval check_id_ret;
 
     /* Catch EOF */
     if (s->eof && cursor == s->eof)
@@ -342,59 +341,52 @@ scan:
 	[%][a-z0-9]+ {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    check_id_ret = yasm_arch_parse_check_id(parser_gas->arch,
-						    lvalp->arch_data, s->tok+1,
-						    cur_line);
-	    s->tok[TOKLEN] = savech;
-	    switch (check_id_ret) {
-		case YASM_ARCH_CHECK_ID_REG:
-		    RETURN(REG);
-		case YASM_ARCH_CHECK_ID_REGGROUP:
-		    RETURN(REGGROUP);
-		case YASM_ARCH_CHECK_ID_SEGREG:
-		    RETURN(SEGREG);
-		default:
-		    s->tok[TOKLEN] = '\0';
-		    yasm__error(cur_line,
-			N_("Unrecognized register name `%s'"), s->tok);
-		    s->tok[TOKLEN] = savech;
-		    lvalp->arch_data[0] = 0;
-		    lvalp->arch_data[1] = 0;
-		    lvalp->arch_data[2] = 0;
-		    lvalp->arch_data[3] = 0;
-		    RETURN(REG);
+	    if (yasm_arch_parse_check_reg(parser_gas->arch, lvalp->arch_data,
+					  s->tok+1, cur_line)) {
+		s->tok[TOKLEN] = savech;
+		RETURN(REG);
 	    }
+	    if (yasm_arch_parse_check_reggroup(parser_gas->arch,
+					       lvalp->arch_data, s->tok+1,
+					       cur_line)) {
+		s->tok[TOKLEN] = savech;
+		RETURN(REGGROUP);
+	    }
+	    if (yasm_arch_parse_check_segreg(parser_gas->arch,
+					     lvalp->arch_data, s->tok+1,
+					     cur_line)) {
+		s->tok[TOKLEN] = savech;
+		RETURN(SEGREG);
+	    }
+	    yasm__error(cur_line, N_("Unrecognized register name `%s'"),
+			s->tok);
+	    s->tok[TOKLEN] = savech;
+	    lvalp->arch_data[0] = 0;
+	    lvalp->arch_data[1] = 0;
+	    lvalp->arch_data[2] = 0;
+	    lvalp->arch_data[3] = 0;
+	    RETURN(REG);
 	}
 
 	/* identifier that may be an instruction, etc. */
 	[a-zA-Z][a-zA-Z0-9_$.]* {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    check_id_ret = yasm_arch_parse_check_id(parser_gas->arch,
-						    lvalp->arch_data, s->tok,
-						    cur_line);
-	    s->tok[TOKLEN] = savech;
-	    switch (check_id_ret) {
-		case YASM_ARCH_CHECK_ID_NONE:
-		    /* Just an identifier, return as such. */
-		    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
-		    RETURN(ID);
-		case YASM_ARCH_CHECK_ID_INSN:
-		    RETURN(INSN);
-		case YASM_ARCH_CHECK_ID_PREFIX:
-		    RETURN(PREFIX);
-		case YASM_ARCH_CHECK_ID_TARGETMOD:
-		    RETURN(TARGETMOD);
-		case YASM_ARCH_CHECK_ID_REG:
-		case YASM_ARCH_CHECK_ID_SEGREG:
-		    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
-		    RETURN(ID);
-		default:
-		    yasm__warning(YASM_WARN_GENERAL, cur_line,
-			N_("Arch feature not supported, treating as identifier"));
-		    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
-		    RETURN(ID);
+	    if (yasm_arch_parse_check_insn(parser_gas->arch, lvalp->arch_data,
+					   s->tok, cur_line)) {
+		s->tok[TOKLEN] = savech;
+		RETURN(INSN);
 	    }
+	    if (yasm_arch_parse_check_prefix(parser_gas->arch,
+					     lvalp->arch_data, s->tok,
+					     cur_line)) {
+		s->tok[TOKLEN] = savech;
+		RETURN(PREFIX);
+	    }
+	    s->tok[TOKLEN] = savech;
+	    /* Just an identifier, return as such. */
+	    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
+	    RETURN(ID);
 	}
 
 	"#" (any \ [\n])*	{ goto scan; }
