@@ -435,8 +435,16 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 		if (valsize == 32) {
 		    if (info->csd->flags2 & COFF_FLAG_NOBASE)
 			reloc->type = COFF_RELOC_AMD64_ADDR32NB;
-		    else
+		    else if (yasm_bc_is_data(bc))
 			reloc->type = COFF_RELOC_AMD64_ADDR32;
+		    else {
+			/* I don't understand this, but ML64 generates REL32
+			 * for all instructions, regardless of whether they
+			 * are RIP relative.  Obviously this is either handled
+			 * by the linker or by the compiler at a higher level!
+			 */
+			reloc->type = COFF_RELOC_AMD64_REL32;
+		    }
 		} else if (valsize == 64)
 		    reloc->type = COFF_RELOC_AMD64_ADDR64;
 		else {
