@@ -63,12 +63,12 @@ static const elf_machine_handler *elf_machine_handlers[] =
 };
 static const elf_machine_handler elf_null_machine = {0, 0, 0, 0, 0, 0, 0, 0,
 						     0, 0, 0, 0, 0, 0, 0, 0,
-						     0, 0};
+						     0, 0, 0};
 static elf_machine_handler const *elf_march = &elf_null_machine;
 static yasm_symrec **elf_ssyms;
 
-int
-elf_set_arch(yasm_arch *arch, yasm_symtab *symtab)
+const elf_machine_handler *
+elf_set_arch(yasm_arch *arch, yasm_symtab *symtab, int bits_pref)
 {
     const char *machine = yasm_arch_get_machine(arch);
     int i;
@@ -79,7 +79,8 @@ elf_set_arch(yasm_arch *arch, yasm_symtab *symtab)
     {
         if (yasm__strcasecmp(yasm_arch_keyword(arch), elf_march->arch)==0)
             if (yasm__strcasecmp(machine, elf_march->machine)==0)
-                break;
+		if (bits_pref == 0 || bits_pref == elf_march->bits)
+		    break;
     }
 
     if (elf_march && elf_march->num_ssyms > 0)
@@ -96,7 +97,7 @@ elf_set_arch(yasm_arch *arch, yasm_symtab *symtab)
 	}
     }
 
-    return elf_march != NULL;
+    return elf_march;
 }
 
 /* reloc functions */

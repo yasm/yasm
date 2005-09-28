@@ -50,6 +50,7 @@
 #include <libyasm.h>
 
 #include "elf.h"
+#include "elf-machine.h"
 
 typedef struct yasm_objfmt_elf {
     yasm_objfmt_base objfmt;		/* base structure */
@@ -80,6 +81,8 @@ typedef struct {
 } append_local_sym_info;
 
 yasm_objfmt_module yasm_elf_LTX_objfmt;
+yasm_objfmt_module yasm_elf32_LTX_objfmt;
+yasm_objfmt_module yasm_elf64_LTX_objfmt;
 
 
 static elf_symtab_entry *
@@ -146,20 +149,27 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
 }
 
 static yasm_objfmt *
-elf_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
+elf_objfmt_create_common(const char *in_filename, yasm_object *object,
+			 yasm_arch *a, yasm_objfmt_module *module,
+			 int bits_pref,
+			 const elf_machine_handler **elf_march_out)
 {
     yasm_objfmt_elf *objfmt_elf = yasm_xmalloc(sizeof(yasm_objfmt_elf));
     yasm_symrec *filesym;
     elf_symtab_entry *entry;
+    const elf_machine_handler *elf_march;
 
-    objfmt_elf->objfmt.module = &yasm_elf_LTX_objfmt;
+    objfmt_elf->objfmt.module = module;
     objfmt_elf->object = object;
     objfmt_elf->symtab = yasm_object_get_symtab(object);
     objfmt_elf->arch = a;
-    if (!elf_set_arch(a, objfmt_elf->symtab)) {
+    elf_march = elf_set_arch(a, objfmt_elf->symtab, bits_pref);
+    if (!elf_march) {
 	yasm_xfree(objfmt_elf);
 	return NULL;
     }
+    if (elf_march_out)
+	*elf_march_out = elf_march;
 
     objfmt_elf->shstrtab = elf_strtab_create();
     objfmt_elf->strtab = elf_strtab_create();
@@ -179,6 +189,40 @@ elf_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
 						     "..sym", NULL, 1, 0);
 
     return (yasm_objfmt *)objfmt_elf;
+}
+
+static yasm_objfmt *
+elf_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
+{
+    const elf_machine_handler *elf_march;
+    yasm_objfmt *objfmt;
+    yasm_objfmt_elf *objfmt_elf;
+
+    objfmt = elf_objfmt_create_common(in_filename, object, a,
+				      &yasm_elf_LTX_objfmt, 0, &elf_march);
+    if (objfmt) {
+	objfmt_elf = (yasm_objfmt_elf *)objfmt;
+	/* Figure out which bitness of object format to use */
+	if (elf_march->bits == 32)
+	    objfmt_elf->objfmt.module = &yasm_elf32_LTX_objfmt;
+	else if (elf_march->bits == 64)
+	    objfmt_elf->objfmt.module = &yasm_elf64_LTX_objfmt;
+    }
+    return objfmt;
+}
+
+static yasm_objfmt *
+elf32_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
+{
+    return elf_objfmt_create_common(in_filename, object, a,
+				    &yasm_elf32_LTX_objfmt, 32, NULL);
+}
+
+static yasm_objfmt *
+elf64_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
+{
+    return elf_objfmt_create_common(in_filename, object, a,
+				    &yasm_elf64_LTX_objfmt, 64, NULL);
 }
 
 static long
@@ -972,6 +1016,42 @@ yasm_objfmt_module yasm_elf_LTX_objfmt = {
     elf_objfmt_dbgfmt_keywords,
     "null",
     elf_objfmt_create,
+    elf_objfmt_output,
+    elf_objfmt_destroy,
+    elf_objfmt_section_switch,
+    elf_objfmt_extern_declare,
+    elf_objfmt_global_declare,
+    elf_objfmt_common_declare,
+    elf_objfmt_directive
+};
+
+yasm_objfmt_module yasm_elf32_LTX_objfmt = {
+    "ELF (32-bit)",
+    "elf32",
+    "o",
+    ".text",
+    32,
+    elf_objfmt_dbgfmt_keywords,
+    "null",
+    elf32_objfmt_create,
+    elf_objfmt_output,
+    elf_objfmt_destroy,
+    elf_objfmt_section_switch,
+    elf_objfmt_extern_declare,
+    elf_objfmt_global_declare,
+    elf_objfmt_common_declare,
+    elf_objfmt_directive
+};
+
+yasm_objfmt_module yasm_elf64_LTX_objfmt = {
+    "ELF (64-bit)",
+    "elf64",
+    "o",
+    ".text",
+    64,
+    elf_objfmt_dbgfmt_keywords,
+    "null",
+    elf64_objfmt_create,
     elf_objfmt_output,
     elf_objfmt_destroy,
     elf_objfmt_section_switch,

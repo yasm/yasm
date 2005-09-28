@@ -432,8 +432,18 @@ main(int argc, char *argv[])
     /* Set up architecture using the selected (or default) machine and
      * selected (or default nasm) parser.
      */
-    if (!machine_name)
-	machine_name = yasm__xstrdup(cur_arch_module->default_machine_keyword);
+    if (!machine_name) {
+	/* If we're using x86 and the default objfmt bits is 64, default the
+	 * machine to amd64.  When we get more arches with multiple machines,
+	 * we should do this in a more modular fashion.
+	 */
+	if (strcmp(cur_arch_module->keyword, "x86") == 0 &&
+	    cur_objfmt_module->default_x86_mode_bits == 64)
+	    machine_name = yasm__xstrdup("amd64");
+	else
+	    machine_name =
+		yasm__xstrdup(cur_arch_module->default_machine_keyword);
+    }
 
     cur_arch = cur_arch_module->create(machine_name,
 				       cur_parser_module->keyword,
@@ -538,6 +548,9 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 
+    /* Get a fresh copy of objfmt_module as it may have changed. */
+    cur_objfmt_module = ((yasm_objfmt_base *)cur_objfmt)->module;
+
     /* Add an initial "default" section to object */
     def_sect = yasm_objfmt_add_default_section(cur_objfmt, object);
 
@@ -593,13 +606,10 @@ main(int argc, char *argv[])
     apply_preproc_builtins();
     apply_preproc_saved_options();
 
-    /* Get initial x86 BITS setting from object format except for amd64 mode */
+    /* Get initial x86 BITS setting from object format */
     if (strcmp(cur_arch_module->keyword, "x86") == 0) {
-	if (strcmp(machine_name, "amd64") == 0)
-	    yasm_arch_set_var(cur_arch, "mode_bits", 64);
-	else
-	    yasm_arch_set_var(cur_arch, "mode_bits",
-			      cur_objfmt_module->default_x86_mode_bits);
+	yasm_arch_set_var(cur_arch, "mode_bits",
+			  cur_objfmt_module->default_x86_mode_bits);
     }
 
     /* Parse! */

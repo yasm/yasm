@@ -36,6 +36,8 @@ typedef struct elf_strtab_head elf_strtab_head;
 typedef struct elf_symtab_entry elf_symtab_entry;
 typedef struct elf_symtab_head elf_symtab_head;
 
+typedef struct elf_machine_handler elf_machine_handler;
+
 typedef unsigned long	elf_address;
 typedef unsigned long	elf_offset;
 typedef unsigned long	elf_size;
@@ -399,7 +401,9 @@ extern const yasm_assoc_data_callback elf_section_data;
 extern const yasm_assoc_data_callback elf_symrec_data;
 
 
-int elf_set_arch(struct yasm_arch *arch, yasm_symtab *symtab);
+const elf_machine_handler *elf_set_arch(struct yasm_arch *arch,
+					yasm_symtab *symtab,
+					int bits_pref);
 
 /* reloc functions */
 int elf_is_wrt_sym_relative(yasm_symrec *wrt);

@@ -233,5 +233,6 @@ elf_machine_handler_x86_amd64 = {
     elf_x86_amd64_write_reloc,
     elf_x86_amd64_write_proghead,
     elf_x86_amd64_ssyms,
-    sizeof(elf_x86_amd64_ssyms)/sizeof(elf_x86_amd64_ssyms[0])
+    sizeof(elf_x86_amd64_ssyms)/sizeof(elf_x86_amd64_ssyms[0]),
+    64
 };

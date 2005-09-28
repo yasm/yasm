@@ -74,7 +74,7 @@ typedef struct {
     const int sym_rel;	    /* symbol or section-relative? */
 } elf_machine_ssym;
 
-typedef struct {
+struct elf_machine_handler {
     const char *arch;
     const char *machine;
     const char *reloc_section_prefix;
@@ -94,6 +94,8 @@ typedef struct {
 
     const elf_machine_ssym *ssyms;	/* array of "special" syms */
     const size_t num_ssyms;		/* size of array */
-} elf_machine_handler;
+
+    const int bits;			/* usually 32 or 64 */
+};
 
 #endif /* ELF_MACHINE_H_INCLUDED */

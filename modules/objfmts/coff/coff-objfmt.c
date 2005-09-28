@@ -213,6 +213,7 @@ static const yasm_assoc_data_callback coff_symrec_data_cb = {
 
 yasm_objfmt_module yasm_coff_LTX_objfmt;
 yasm_objfmt_module yasm_win32_LTX_objfmt;
+yasm_objfmt_module yasm_win64_LTX_objfmt;
 
 
 static /*@dependent@*/ coff_symrec_data *
@@ -252,16 +253,6 @@ coff_common_create(const char *in_filename, yasm_object *object, yasm_arch *a)
 	return NULL;
     }
 
-    /* Support x86 and amd64 machines of x86 arch */
-    if (yasm__strcasecmp(yasm_arch_get_machine(a), "x86") == 0) {
-	objfmt_coff->machine = COFF_MACHINE_I386;
-    } else if (yasm__strcasecmp(yasm_arch_get_machine(a), "amd64") == 0) {
-	objfmt_coff->machine = COFF_MACHINE_AMD64;
-    } else {
-	yasm_xfree(objfmt_coff);
-	return NULL;
-    }
-
     objfmt_coff->parse_scnum = 1;    /* section numbering starts at 1 */
 
     /* FIXME: misuse of NULL bytecode here; it works, but only barely. */
@@ -279,7 +270,18 @@ coff_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
 {
     yasm_objfmt_coff *objfmt_coff =
 	coff_common_create(in_filename, object, a);
+
     if (objfmt_coff) {
+	/* Support x86 and amd64 machines of x86 arch */
+	if (yasm__strcasecmp(yasm_arch_get_machine(a), "x86") == 0) {
+	    objfmt_coff->machine = COFF_MACHINE_I386;
+	} else if (yasm__strcasecmp(yasm_arch_get_machine(a), "amd64") == 0) {
+	    objfmt_coff->machine = COFF_MACHINE_AMD64;
+	} else {
+	    yasm_xfree(objfmt_coff);
+	    return NULL;
+	}
+
 	objfmt_coff->objfmt.module = &yasm_coff_LTX_objfmt;
 	objfmt_coff->win32 = 0;
     }
@@ -291,8 +293,43 @@ win32_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
 {
     yasm_objfmt_coff *objfmt_coff =
 	coff_common_create(in_filename, object, a);
+
     if (objfmt_coff) {
-	objfmt_coff->objfmt.module = &yasm_win32_LTX_objfmt;
+	/* Support x86 and amd64 machines of x86 arch.
+	 * (amd64 machine supported for backwards compatibility)
+	 */
+	if (yasm__strcasecmp(yasm_arch_get_machine(a), "x86") == 0) {
+	    objfmt_coff->machine = COFF_MACHINE_I386;
+	    objfmt_coff->objfmt.module = &yasm_win32_LTX_objfmt;
+	} else if (yasm__strcasecmp(yasm_arch_get_machine(a), "amd64") == 0) {
+	    objfmt_coff->machine = COFF_MACHINE_AMD64;
+	    objfmt_coff->objfmt.module = &yasm_win64_LTX_objfmt;
+	} else {
+	    yasm_xfree(objfmt_coff);
+	    return NULL;
+	}
+
+	objfmt_coff->win32 = 1;
+    }
+    return (yasm_objfmt *)objfmt_coff;
+}
+
+static yasm_objfmt *
+win64_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
+{
+    yasm_objfmt_coff *objfmt_coff =
+	coff_common_create(in_filename, object, a);
+
+    if (objfmt_coff) {
+	/* Support amd64 machine of x86 arch */
+	if (yasm__strcasecmp(yasm_arch_get_machine(a), "amd64") == 0) {
+	    objfmt_coff->machine = COFF_MACHINE_AMD64;
+	} else {
+	    yasm_xfree(objfmt_coff);
+	    return NULL;
+	}
+
+	objfmt_coff->objfmt.module = &yasm_win64_LTX_objfmt;
 	objfmt_coff->win32 = 1;
     }
     return (yasm_objfmt *)objfmt_coff;
@@ -1399,6 +1436,25 @@ yasm_objfmt_module yasm_win32_LTX_objfmt = {
     coff_objfmt_dbgfmt_keywords,
     "null",
     win32_objfmt_create,
+    coff_objfmt_output,
+    coff_objfmt_destroy,
+    coff_objfmt_section_switch,
+    coff_objfmt_extern_declare,
+    coff_objfmt_global_declare,
+    coff_objfmt_common_declare,
+    win32_objfmt_directive
+};
+
+/* Define objfmt structure -- see objfmt.h for details */
+yasm_objfmt_module yasm_win64_LTX_objfmt = {
+    "Win64",
+    "win64",
+    "obj",
+    ".text",
+    64,
+    coff_objfmt_dbgfmt_keywords,
+    "null",
+    win64_objfmt_create,
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_section_switch,

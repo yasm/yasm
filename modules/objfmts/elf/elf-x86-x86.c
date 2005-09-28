@@ -223,5 +223,6 @@ elf_machine_handler_x86_x86 = {
     elf_x86_x86_write_reloc,
     elf_x86_x86_write_proghead,
     elf_x86_x86_ssyms,
-    sizeof(elf_x86_x86_ssyms)/sizeof(elf_x86_x86_ssyms[0])
+    sizeof(elf_x86_x86_ssyms)/sizeof(elf_x86_x86_ssyms[0]),
+    32
 };
