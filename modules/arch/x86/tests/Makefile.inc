@@ -85,6 +85,12 @@ EXTRA_DIST += modules/arch/x86/tests/mem64hi32.hex
 EXTRA_DIST += modules/arch/x86/tests/mem64rip.asm
 EXTRA_DIST += modules/arch/x86/tests/mem64rip.errwarn
 EXTRA_DIST += modules/arch/x86/tests/mem64rip.hex
+EXTRA_DIST += modules/arch/x86/tests/movdq32.asm
+EXTRA_DIST += modules/arch/x86/tests/movdq32.errwarn
+EXTRA_DIST += modules/arch/x86/tests/movdq32.hex
+EXTRA_DIST += modules/arch/x86/tests/movdq64.asm
+EXTRA_DIST += modules/arch/x86/tests/movdq64.errwarn
+EXTRA_DIST += modules/arch/x86/tests/movdq64.hex
 EXTRA_DIST += modules/arch/x86/tests/negequ.asm
 EXTRA_DIST += modules/arch/x86/tests/negequ.errwarn
 EXTRA_DIST += modules/arch/x86/tests/negequ.hex
@@ -160,6 +166,8 @@ EXTRA_DIST += modules/arch/x86/tests/xmm64.asm
 EXTRA_DIST += modules/arch/x86/tests/xmm64.errwarn
 EXTRA_DIST += modules/arch/x86/tests/xmm64.hex
 
+EXTRA_DIST += modules/arch/x86/tests/gas32/Makefile.inc
 EXTRA_DIST += modules/arch/x86/tests/gas64/Makefile.inc
 
+include modules/arch/x86/tests/gas32/Makefile.inc
 include modules/arch/x86/tests/gas64/Makefile.inc

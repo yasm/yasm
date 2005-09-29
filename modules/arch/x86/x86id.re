@@ -506,7 +506,35 @@ static const x86_insn_info mov_insn[] = {
     { CPU_386|CPU_Priv|CPU_Not64, MOD_GasSufL, 0, 0, 0, 2, {0x0F, 0x21, 0}, 0,
       2, {OPT_Reg|OPS_32|OPA_EA, OPT_DRReg|OPS_32|OPA_Spare, 0} },
     { CPU_Hammer|CPU_Priv|CPU_64, MOD_GasSufQ, 0, 0, 0, 2, {0x0F, 0x21, 0}, 0,
-      2, {OPT_Reg|OPS_64|OPA_EA, OPT_DRReg|OPS_32|OPA_Spare, 0} }
+      2, {OPT_Reg|OPS_64|OPA_EA, OPT_DRReg|OPS_32|OPA_Spare, 0} },
+
+    /* MMX/SSE2 forms for GAS parser (copied from movq_insn) */
+    { CPU_MMX, MOD_GasOnly|MOD_GasSufQ, 0, 0, 0, 2, {0x0F, 0x6F, 0}, 0, 2,
+      {OPT_SIMDReg|OPS_64|OPA_Spare, OPT_SIMDRM|OPS_64|OPS_Relaxed|OPA_EA, 0}
+    },
+    { CPU_MMX|CPU_Hammer|CPU_64, MOD_GasOnly|MOD_GasSufQ, 64, 0, 0, 2,
+      {0x0F, 0x6E, 0}, 0, 2,
+      {OPT_SIMDReg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_MMX, MOD_GasOnly|MOD_GasSufQ, 0, 0, 0, 2, {0x0F, 0x7F, 0}, 0, 2,
+      {OPT_SIMDRM|OPS_64|OPS_Relaxed|OPA_EA, OPT_SIMDReg|OPS_64|OPA_Spare, 0}
+    },
+    { CPU_MMX|CPU_Hammer|CPU_64, MOD_GasOnly|MOD_GasSufQ, 64, 0, 0, 2,
+      {0x0F, 0x7E, 0}, 0, 2,
+      {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_SIMDReg|OPS_64|OPA_Spare, 0} },
+    { CPU_SSE2, MOD_GasOnly|MOD_GasSufQ, 0, 0, 0xF3, 2, {0x0F, 0x7E, 0}, 0, 2,
+      {OPT_SIMDReg|OPS_128|OPA_Spare, OPT_SIMDReg|OPS_128|OPA_EA, 0} },
+    { CPU_SSE2, MOD_GasOnly|MOD_GasSufQ, 0, 0, 0xF3, 2, {0x0F, 0x7E, 0}, 0, 2,
+      {OPT_SIMDReg|OPS_128|OPA_Spare, OPT_SIMDRM|OPS_64|OPS_Relaxed|OPA_EA, 0}
+    },
+    { CPU_SSE2|CPU_Hammer|CPU_64, MOD_GasOnly|MOD_GasSufQ, 64, 0, 0x66, 2,
+      {0x0F, 0x6E, 0}, 0, 2,
+      {OPT_SIMDReg|OPS_128|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_SSE2, MOD_GasOnly|MOD_GasSufQ, 0, 0, 0x66, 2, {0x0F, 0xD6, 0}, 0, 2,
+      {OPT_SIMDRM|OPS_64|OPS_Relaxed|OPA_EA, OPT_SIMDReg|OPS_128|OPA_Spare, 0}
+    },
+    { CPU_SSE2|CPU_Hammer|CPU_64, MOD_GasOnly|MOD_GasSufQ, 64, 0, 0x66, 2,
+      {0x0F, 0x7E, 0}, 0, 2,
+      {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_SIMDReg|OPS_128|OPA_Spare, 0} }
 };
 
 /* 64-bit absolute move (for GAS).
@@ -1534,17 +1562,25 @@ static const x86_insn_info movq_insn[] = {
     { CPU_MMX, 0, 0, 0, 0, 2, {0x0F, 0x6F, 0}, 0, 2,
       {OPT_SIMDReg|OPS_64|OPA_Spare, OPT_SIMDRM|OPS_64|OPS_Relaxed|OPA_EA, 0}
     },
+    { CPU_MMX|CPU_Hammer|CPU_64, 0, 64, 0, 0, 2, {0x0F, 0x6E, 0}, 0, 2,
+      {OPT_SIMDReg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} },
     { CPU_MMX, 0, 0, 0, 0, 2, {0x0F, 0x7F, 0}, 0, 2,
       {OPT_SIMDRM|OPS_64|OPS_Relaxed|OPA_EA, OPT_SIMDReg|OPS_64|OPA_Spare, 0}
     },
+    { CPU_MMX|CPU_Hammer|CPU_64, 0, 64, 0, 0, 2, {0x0F, 0x7E, 0}, 0, 2,
+      {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_SIMDReg|OPS_64|OPA_Spare, 0} },
     { CPU_SSE2, 0, 0, 0, 0xF3, 2, {0x0F, 0x7E, 0}, 0, 2,
       {OPT_SIMDReg|OPS_128|OPA_Spare, OPT_SIMDReg|OPS_128|OPA_EA, 0} },
     { CPU_SSE2, 0, 0, 0, 0xF3, 2, {0x0F, 0x7E, 0}, 0, 2,
       {OPT_SIMDReg|OPS_128|OPA_Spare, OPT_SIMDRM|OPS_64|OPS_Relaxed|OPA_EA, 0}
     },
+    { CPU_SSE2|CPU_Hammer|CPU_64, 0, 64, 0, 0x66, 2, {0x0F, 0x6E, 0}, 0, 2,
+      {OPT_SIMDReg|OPS_128|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} },
     { CPU_SSE2, 0, 0, 0, 0x66, 2, {0x0F, 0xD6, 0}, 0, 2,
       {OPT_SIMDRM|OPS_64|OPS_Relaxed|OPA_EA, OPT_SIMDReg|OPS_128|OPA_Spare, 0}
-    }
+    },
+    { CPU_SSE2|CPU_Hammer|CPU_64, 0, 64, 0, 0x66, 2, {0x0F, 0x7E, 0}, 0, 2,
+      {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_SIMDReg|OPS_128|OPA_Spare, 0} }
 };
 static const x86_insn_info mmxsse2_insn[] = {
     { CPU_MMX, MOD_Op1Add, 0, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
@@ -3439,7 +3475,7 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	/* instructions */
 
 	/* Move */
-	M O V [bBwWlLqQ]? { RET_INSN(3, mov, 0, CPU_Any); }
+	M O V [bBwWlL]? { RET_INSN(3, mov, 0, CPU_Any); }
 	M O V A B S [bBwWlLqQ]? { RET_INSN_GAS(6, movabs, 0, CPU_Hammer|CPU_64); }
 	/* Move with sign/zero extend */
 	M O V S B [wWlL] { suffix_ofs = -2; RET_INSN_GAS(4, movszx, 0xBE, CPU_386); }
@@ -4002,7 +4038,12 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	/* MMX/SSE2 instructions */
 	E M M S { RET_INSN(4, twobyte, 0x0F77, CPU_MMX); }
 	M O V D { RET_INSN(4, movd, 0, CPU_MMX); }
-	M O V Q { RET_INSN(4, movq, 0, CPU_MMX); }
+	M O V Q {
+	    if (arch_x86->parser == X86_PARSER_GAS)
+		RET_INSN(3, mov, 0, CPU_Any);
+	    else
+		RET_INSN(4, movq, 0, CPU_MMX);
+	}
 	P A C K S S D W { RET_INSN(8, mmxsse2, 0x6B, CPU_MMX); }
 	P A C K S S W B { RET_INSN(8, mmxsse2, 0x63, CPU_MMX); }
 	P A C K U S W B { RET_INSN(8, mmxsse2, 0x67, CPU_MMX); }
