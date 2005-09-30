@@ -173,7 +173,8 @@ typedef struct yasm_objfmt_coff {
     yasm_objfmt_base objfmt;		    /* base structure*/
 
     unsigned int parse_scnum;		    /* sect numbering in parser */
-    int win32;				    /* nonzero for win32 output */
+    int win32;				    /* nonzero for win32/64 output */
+    int win64;				    /* nonzero for win64 output */
 
     unsigned int machine;		    /* COFF machine to use */
 
@@ -284,6 +285,7 @@ coff_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
 
 	objfmt_coff->objfmt.module = &yasm_coff_LTX_objfmt;
 	objfmt_coff->win32 = 0;
+	objfmt_coff->win64 = 0;
     }
     return (yasm_objfmt *)objfmt_coff;
 }
@@ -304,6 +306,7 @@ win32_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
 	} else if (yasm__strcasecmp(yasm_arch_get_machine(a), "amd64") == 0) {
 	    objfmt_coff->machine = COFF_MACHINE_AMD64;
 	    objfmt_coff->objfmt.module = &yasm_win64_LTX_objfmt;
+	    objfmt_coff->win64 = 1;
 	} else {
 	    yasm_xfree(objfmt_coff);
 	    return NULL;
@@ -331,6 +334,7 @@ win64_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
 
 	objfmt_coff->objfmt.module = &yasm_win64_LTX_objfmt;
 	objfmt_coff->win32 = 1;
+	objfmt_coff->win64 = 1;
     }
     return (yasm_objfmt *)objfmt_coff;
 }
@@ -388,7 +392,8 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     }
 
     /* Handle integer expressions, with relocation if necessary */
-    sym = yasm_expr_extract_symrec(ep, 1, yasm_common_calc_bc_dist);
+    sym = yasm_expr_extract_symrec(ep, !objfmt_coff->win64,
+				   yasm_common_calc_bc_dist);
     if (sym) {
 	unsigned long addr;
 	coff_reloc *reloc;
@@ -413,7 +418,7 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 		    csymd->size->line);
 		*ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
 	    }
-	} else if (!(vis & YASM_SYM_EXTERN)) {
+	} else if (!(vis & YASM_SYM_EXTERN) && !objfmt_coff->win64) {
 	    /* Local symbols need relocation to their section's start */
 	    if (yasm_symrec_get_label(sym, &label_precbc)) {
 		/*@null@*/ coff_section_data *label_csd;
@@ -450,6 +455,7 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	     * $$ in.
 	     * For Win32 COFF, need to reference to next bytecode, so add '$'
 	     * (really $+$.len) in.
+	     * For Win64 COFF, don't add anything in.
 	     */
 	    if (objfmt_coff->win32)
 		*ep = yasm_expr_create(YASM_EXPR_ADD, yasm_expr_expr(*ep),
@@ -472,7 +478,7 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 		if (valsize == 32) {
 		    if (info->csd->flags2 & COFF_FLAG_NOBASE)
 			reloc->type = COFF_RELOC_AMD64_ADDR32NB;
-		    else if (yasm_bc_is_data(bc))
+		    else if (!objfmt_coff->win64 || yasm_bc_is_data(bc))
 			reloc->type = COFF_RELOC_AMD64_ADDR32;
 		    else {
 			/* I don't understand this, but ML64 generates REL32
@@ -904,6 +910,12 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
     unsigned long symtab_pos;
     unsigned long symtab_count;
     unsigned int flags;
+
+    /* Force all syms for win64 because they're needed for relocations.
+     * FIXME: Not *all* syms need to be output, only the ones needed for
+     * relocation.  Find a way to do that someday.
+     */
+    all_syms |= objfmt_coff->win64;
 
     info.strtab_offset = 4;
     info.objfmt_coff = objfmt_coff;

@@ -27,11 +27,12 @@ xptr2		dq x
 _DATA ENDS
 _BSS SEGMENT
 x		dq	?
+y		dq	?
 
 _BSS ENDS
 _TEXT SEGMENT
 x86ident:
-		; with :proc
+		; extern with :proc
 		mov	ebx,[foobar]
 		mov	rcx,offset foobar
 		lea	rdx, foobar
@@ -40,6 +41,18 @@ x86ident:
 		mov	rbx, foobar
 		movzx	rax, byte ptr foobar
 		movzx	rax, byte ptr foobar[rax]
+
+		; local proc
+		mov	ebx,[trap]
+		mov	rcx,offset trap
+		; See note in YASM file
+		lea	rdx, trap
+		mov	rax, qword ptr trap[rcx]
+		mov	rax, trap
+		mov	rbx, trap
+		; See note in YASM file
+		movzx	rax, byte ptr trap
+		movzx	rax, byte ptr trap[rax]
 
 		; with :abs
 		;mov	ebx,[foobar2]
@@ -52,6 +65,7 @@ x86ident:
 		;movzx	rax, byte ptr foobar2[rax]
 
 		; with :qword
+		mov	ebx, offset foobar3
 		mov	ebx, dword ptr [foobar3]
 		mov	rcx,offset foobar3
 		lea	rdx, foobar3
@@ -62,6 +76,7 @@ x86ident:
 		movzx	rax, byte ptr foobar3[rax]
 
 		; local var (dword)
+		mov	ebx, offset __savident
 		mov	ebx,[__savident]
 		mov	rcx,offset __savident
 		lea	rdx, __savident
@@ -72,6 +87,7 @@ x86ident:
 		movzx	rax, byte ptr __savident[rax]
 
 		; local var (qword)
+		mov	ebx, offset savidentptr2
 		mov	ebx, dword ptr [savidentptr2]
 		mov	rcx,offset savidentptr2
 		lea	rdx, savidentptr2
@@ -81,7 +97,20 @@ x86ident:
 		movzx	rax, byte ptr savidentptr2
 		movzx	rax, byte ptr savidentptr2[rax]
 
+		; bss local var (qword)
+		mov	ebx, offset y
+		mov	ebx, dword ptr [y]
+		mov	rcx,offset y
+		lea	rdx, y
+		mov	rax, y[rcx]
+		mov	rax, y
+		mov	rbx, y
+		movzx	rax, byte ptr y
+		movzx	rax, byte ptr y[rax]
+
 		call	foobar
+
+		call	trap
 
 		ret
 
