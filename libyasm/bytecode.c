@@ -432,12 +432,6 @@ yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
     return yasm_bc_create_common(&bc_data_callback, data, line);
 }
 
-int
-yasm_bc_is_data(const yasm_bytecode *bc)
-{
-    return (bc->callback == &bc_data_callback);
-}
-
 static void
 bc_reserve_destroy(void *contents)
 {

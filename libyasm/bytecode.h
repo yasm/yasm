@@ -141,12 +141,6 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
 /*@only@*/ yasm_bytecode *yasm_bc_create_data
     (yasm_datavalhead *datahead, unsigned int size, unsigned long line);
 
-/** Find out if a bytecode is a data bytecode.
- * \param bc	    bytecode
- * \return Nonzero if bytecode is a data bytecode, otherwise 0.
- */
-int yasm_bc_is_data(const yasm_bytecode *bc);
-
 /** Create a bytecode reserving space.
  * \param numitems	number of reserve "items" (kept, do not free)
  * \param itemsize	reserved size (in bytes) for each item
