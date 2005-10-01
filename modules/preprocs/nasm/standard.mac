@@ -119,3 +119,9 @@ __SECT__
 %endmacro
 %endif
 
+%ifidn __YASM_OBJFMT__,win64
+%imacro export 1+.nolist
+[export %1]
+%endmacro
+%endif
+
