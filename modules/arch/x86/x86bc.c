@@ -246,6 +246,7 @@ yasm_x86__ea_create_expr(yasm_arch *arch, yasm_expr *e)
     x86_ea->ea.disp = e;
     x86_ea->ea.len = 0;
     x86_ea->ea.nosplit = 0;
+    x86_ea->ea.strong = 0;
     x86_ea->ea.segreg = 0;
     x86_ea->modrm = 0;
     x86_ea->valid_modrm = 0;
@@ -273,6 +274,7 @@ yasm_x86__ea_create_imm(yasm_expr *imm, unsigned int im_len)
     x86_ea->ea.disp = imm;
     x86_ea->ea.len = (unsigned char)im_len;
     x86_ea->ea.nosplit = 0;
+    x86_ea->ea.strong = 0;
     x86_ea->ea.segreg = 0;
     x86_ea->modrm = 0;
     x86_ea->valid_modrm = 0;
