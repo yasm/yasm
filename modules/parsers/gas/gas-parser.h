@@ -70,6 +70,8 @@ typedef struct yasm_parser_gas {
 	INITIAL,
 	SECTION_DIRECTIVE
     } state;
+
+    int code_section;
 } yasm_parser_gas;
 
 /* shorter access names to commonly used parser_gas fields */

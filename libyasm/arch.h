@@ -166,6 +166,11 @@ typedef struct yasm_arch_module {
 			    /*@null@*/ yasm_valparamhead *objext_valparams,
 			    yasm_object *object, unsigned long line);
 
+    /** Module-level implementation of yasm_arch_get_fill().
+     * Call yasm_arch_get_fill() instead of calling this function.
+     */
+    const unsigned char ** (*get_fill) (const yasm_arch *arch);
+
     /** Module-level implementation of yasm_arch_finalize_insn().
      * Call yasm_arch_finalize_insn() instead of calling this function.
      */
@@ -456,6 +461,13 @@ int yasm_arch_parse_directive(yasm_arch *arch, const char *name,
 			      /*@null@*/ yasm_valparamhead *objext_valparams,
 			      yasm_object *object, unsigned long line);
 
+/** Get NOP fill patterns for 1-15 bytes of fill.
+ * \param arch		architecture
+ * \return 16-entry array of arrays; [0] is unused, [1] - [15] point to arrays
+ * of 1-15 bytes (respectively) in length.
+ */
+const unsigned char **yasm_arch_get_fill(const yasm_arch *arch);
+
 /** Finalize an instruction from a semi-generic insn description.  Note an
  * existing bytecode is required.
  * \param arch		architecture
@@ -616,6 +628,8 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
 				  object, line) \
     ((yasm_arch_base *)arch)->module->parse_directive \
 	(arch, name, valparams, objext_valparams, object, line)
+#define yasm_arch_get_fill(arch) \
+    ((yasm_arch_base *)arch)->module->get_fill(arch)
 #define yasm_arch_finalize_insn(arch, bc, prev_bc, data, num_operands, \
 				operands, num_prefixes, prefixes, \
 				num_segregs, segregs) \

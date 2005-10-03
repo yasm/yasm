@@ -81,8 +81,21 @@ typedef struct bytecode_incbin {
 } bytecode_incbin;
 
 typedef struct bytecode_align {
-    unsigned long boundary;	/* alignment boundary */
+    /*@only@*/ yasm_expr *boundary;	/* alignment boundary */
+
+    /* What to fill intervening locations with, NULL if using code_fill */
+    /*@only@*/ /*@null@*/ yasm_expr *fill;
+
+    /* Maximum number of bytes to skip, NULL if no maximum. */
+    /*@only@*/ /*@null@*/ yasm_expr *maxskip;
+
+    /* Code fill, NULL if using 0 fill */
+    /*@null@*/ const unsigned char **code_fill;
 } bytecode_align;
+
+typedef struct bytecode_org {
+    unsigned long start;	/* target starting offset within section */
+} bytecode_org;
 
 typedef struct bytecode_insn {
     /*@dependent@*/ yasm_arch *arch;
@@ -128,11 +141,20 @@ static int bc_incbin_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
 static void bc_align_destroy(void *contents);
 static void bc_align_print(const void *contents, FILE *f, int indent_level);
+static void bc_align_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 static yasm_bc_resolve_flags bc_align_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			    yasm_output_expr_func output_expr,
 			    /*@null@*/ yasm_output_reloc_func output_reloc);
+
+static void bc_org_destroy(void *contents);
+static void bc_org_print(const void *contents, FILE *f, int indent_level);
+static yasm_bc_resolve_flags bc_org_resolve
+    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int bc_org_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+			  yasm_output_expr_func output_expr,
+			  /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static void bc_insn_destroy(void *contents);
 static void bc_insn_print(const void *contents, FILE *f, int indent_level);
@@ -172,9 +194,17 @@ static const yasm_bytecode_callback bc_incbin_callback = {
 static const yasm_bytecode_callback bc_align_callback = {
     bc_align_destroy,
     bc_align_print,
-    yasm_bc_finalize_common,
+    bc_align_finalize,
     bc_align_resolve,
     bc_align_tobytes
+};
+
+static const yasm_bytecode_callback bc_org_callback = {
+    bc_org_destroy,
+    bc_org_print,
+    yasm_bc_finalize_common,
+    bc_org_resolve,
+    bc_org_tobytes
 };
 
 static const yasm_bytecode_callback bc_insn_callback = {
@@ -689,6 +719,9 @@ yasm_bc_create_incbin(char *filename, yasm_expr *start, yasm_expr *maxlen,
 static void
 bc_align_destroy(void *contents)
 {
+    bytecode_align *align = (bytecode_align *)contents;
+    if (align->fill)
+	yasm_expr_destroy(align->fill);
     yasm_xfree(contents);
 }
 
@@ -697,16 +730,54 @@ bc_align_print(const void *contents, FILE *f, int indent_level)
 {
     const bytecode_align *align = (const bytecode_align *)contents;
     fprintf(f, "%*s_Align_\n", indent_level, "");
-    fprintf(f, "%*sBoundary=%lu\n", indent_level, "", align->boundary);
+    fprintf(f, "%*sBoundary=", indent_level, "");
+    yasm_expr_print(align->boundary, f);
+    fprintf(f, "\n%*sFill=", indent_level, "");
+    yasm_expr_print(align->fill, f);
+    fprintf(f, "\n%*sMax Skip=", indent_level, "");
+    yasm_expr_print(align->maxskip, f);
+    fprintf(f, "\n");
+}
+
+static void
+bc_align_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
+{
+    bytecode_align *align = (bytecode_align *)bc->contents;
+    if (!yasm_expr_get_intnum(&align->boundary, NULL))
+	yasm__error(bc->line, N_("align boundary must be a constant"));
+    if (align->fill && !yasm_expr_get_intnum(&align->fill, NULL))
+	yasm__error(bc->line, N_("align fill must be a constant"));
+    if (align->maxskip && !yasm_expr_get_intnum(&align->maxskip, NULL))
+	yasm__error(bc->line, N_("align maximum skip must be a constant"));
 }
 
 static yasm_bc_resolve_flags
 bc_align_resolve(yasm_bytecode *bc, int save,
 		 yasm_calc_bc_dist_func calc_bc_dist)
 {
-    yasm_internal_error(N_("TODO: align bytecode not implemented!"));
-    /*@notreached@*/
-    return YASM_BC_RESOLVE_ERROR;
+    bytecode_align *align = (bytecode_align *)bc->contents;
+    unsigned long end;
+    unsigned long boundary =
+	yasm_intnum_get_uint(yasm_expr_get_intnum(&align->boundary, NULL));
+
+    if (boundary == 0) {
+	bc->len = 0;
+	return YASM_BC_RESOLVE_MIN_LEN;
+    }
+
+    end = bc->offset;
+    if (bc->offset & (boundary-1))
+	end = (bc->offset & ~(boundary-1)) + boundary;
+
+    bc->len = end - bc->offset;
+
+    if (align->maxskip) {
+	unsigned long maxskip =
+	    yasm_intnum_get_uint(yasm_expr_get_intnum(&align->maxskip, NULL));
+	if ((end - bc->offset) > maxskip)
+	    bc->len = 0;
+    }
+    return YASM_BC_RESOLVE_MIN_LEN;
 }
 
 static int
@@ -714,19 +785,123 @@ bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		 yasm_output_expr_func output_expr,
 		 /*@unused@*/ yasm_output_reloc_func output_reloc)
 {
-    yasm_internal_error(N_("TODO: align bytecode not implemented!"));
-    /*@notreached@*/
-    return 1;
+    bytecode_align *align = (bytecode_align *)bc->contents;
+    unsigned long len, i;
+    unsigned long boundary =
+	yasm_intnum_get_uint(yasm_expr_get_intnum(&align->boundary, NULL));
+
+    if (boundary == 0)
+	return 0;
+    else {
+	unsigned long end = bc->offset;
+	if (bc->offset & (boundary-1))
+	    end = (bc->offset & ~(boundary-1)) + boundary;
+	len = end - bc->offset;
+	if (len == 0)
+	    return 0;
+	if (align->maxskip) {
+	    unsigned long maxskip =
+		yasm_intnum_get_uint(yasm_expr_get_intnum(&align->maxskip,
+							  NULL));
+	    if (len > maxskip)
+		return 0;
+	}
+    }
+
+    if (align->fill) {
+	unsigned long v;
+	v = yasm_intnum_get_uint(yasm_expr_get_intnum(&align->fill, NULL));
+	memset(*bufp, (int)v, len);
+	*bufp += len;
+    } else if (align->code_fill) {
+	while (len > 15) {
+	    memcpy(*bufp, align->code_fill[15], 15);
+	    *bufp += 15;
+	    len -= 15;
+	}
+	memcpy(*bufp, align->code_fill[len], len);
+	*bufp += len;
+    } else {
+	/* Just fill with 0 */
+	memset(*bufp, 0, len);
+	*bufp += len;
+    }
+    return 0;
 }
 
 yasm_bytecode *
-yasm_bc_create_align(unsigned long boundary, unsigned long line)
+yasm_bc_create_align(yasm_expr *boundary, yasm_expr *fill,
+		     yasm_expr *maxskip, const unsigned char **code_fill,
+		     unsigned long line)
 {
     bytecode_align *align = yasm_xmalloc(sizeof(bytecode_align));
 
     align->boundary = boundary;
+    align->fill = fill;
+    align->maxskip = maxskip;
+    align->code_fill = code_fill;
 
     return yasm_bc_create_common(&bc_align_callback, align, line);
+}
+
+static void
+bc_org_destroy(void *contents)
+{
+    yasm_xfree(contents);
+}
+
+static void
+bc_org_print(const void *contents, FILE *f, int indent_level)
+{
+    const bytecode_org *org = (const bytecode_org *)contents;
+    fprintf(f, "%*s_Org_\n", indent_level, "");
+    fprintf(f, "%*sStart=%lu\n", indent_level, "", org->start);
+}
+
+static yasm_bc_resolve_flags
+bc_org_resolve(yasm_bytecode *bc, int save,
+	       yasm_calc_bc_dist_func calc_bc_dist)
+{
+    bytecode_org *org = (bytecode_org *)bc->contents;
+
+    /* Check for overrun */
+    if (bc->offset > org->start) {
+	yasm__error(bc->line, N_("ORG overlap with already existing data"));
+	return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
+    }
+
+    /* Generate space to start offset */
+    bc->len = org->start - bc->offset;
+    return YASM_BC_RESOLVE_MIN_LEN;
+}
+
+static int
+bc_org_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+	       yasm_output_expr_func output_expr,
+	       /*@unused@*/ yasm_output_reloc_func output_reloc)
+{
+    bytecode_org *org = (bytecode_org *)bc->contents;
+    unsigned long len, i;
+
+    /* Sanity check for overrun */
+    if (bc->offset > org->start) {
+	yasm__error(bc->line, N_("ORG overlap with already existing data"));
+	return 1;
+    }
+    len = org->start - bc->offset;
+    for (i=0; i<len; i++)
+	YASM_WRITE_8(*bufp, 0);
+    return 0;
+}
+
+yasm_bytecode *
+yasm_bc_create_org(unsigned long start, unsigned long line)
+{
+    bytecode_org *org = yasm_xmalloc(sizeof(bytecode_org));
+
+    org->start = start;
+
+    return yasm_bc_create_common(&bc_org_callback, org, line);
 }
 
 static void

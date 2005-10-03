@@ -128,6 +128,108 @@ x86_parse_directive(yasm_arch *arch, const char *name,
 	return 1;
 }
 
+static const unsigned char **
+x86_get_fill(const yasm_arch *arch)
+{
+    const yasm_arch_x86 *arch_x86 = (const yasm_arch_x86 *)arch;
+
+    /* Fill patterns that GAS uses. */
+    static const char *fill16[16] = {
+	NULL,				/* unused			*/
+	"\x90",				/* 1 - nop			*/
+	"\x89\xf6",			/* 2 - mov si, si		*/
+	"\x8d\x74\x00",			/* 3 - lea si, [si+byte 0]	*/
+	"\x8d\xb4\x00\x00",		/* 4 - lea si, [si+word 0]	*/
+	"\x90"				/* 5 - nop			*/
+	"\x8d\xb4\x00\x00",		/*     lea si, [si+word 0]	*/
+	"\x89\xf6"			/* 6 - mov si, si		*/
+	"\x8d\xbd\x00\x00",		/*     lea di, [di+word 0]	*/
+	"\x8d\x74\x00"			/* 7 - lea si, [si+byte 0]	*/
+	"\x8d\xbd\x00\x00",		/*     lea di, [di+word 0]	*/
+	"\x8d\xb4\x00\x00"		/* 8 - lea si, [si+word 0]	*/
+	"\x8d\xbd\x00\x00"		/*     lea di, [di+word 0]	*/
+	"\xeb\x07\x90\x90\x90\x90\x90"	/* 9 - jmp $+9; nop fill	*/
+	"\x90\x90",
+	"\xeb\x08\x90\x90\x90\x90\x90"	/* 10 - jmp $+10; nop fill	*/
+	"\x90\x90\x90",
+	"\xeb\x09\x90\x90\x90\x90\x90"	/* 11 - jmp $+11; nop fill	*/
+	"\x90\x90\x90\x90",
+	"\xeb\x0a\x90\x90\x90\x90\x90"	/* 12 - jmp $+12; nop fill	*/
+	"\x90\x90\x90\x90\x90",
+	"\xeb\x0b\x90\x90\x90\x90\x90"	/* 13 - jmp $+13; nop fill	*/
+	"\x90\x90\x90\x90\x90\x90",
+	"\xeb\x0c\x90\x90\x90\x90\x90"	/* 14 - jmp $+14; nop fill	*/
+	"\x90\x90\x90\x90\x90\x90\x90",
+	"\xeb\x0d\x90\x90\x90\x90\x90"	/* 15 - jmp $+15; nop fill	*/
+	"\x90\x90\x90\x90\x90\x90\x90\x90"
+    };
+    static const char *fill32[16] = {
+	NULL,				/* unused			*/
+	"\x90",				/* 1 - nop			*/
+	"\x89\xf6",			/* 2 - mov esi, esi		*/
+	"\x8d\x76\x00",			/* 3 - lea esi, [esi+byte 0]	*/
+	"\x8d\x74\x26\x00",		/* 4 - lea esi, [esi*1+byte 0]	*/
+	"\x90"				/* 5 - nop			*/
+	"\x8d\x74\x26\x00",		/*     lea esi, [esi*1+byte 0]	*/
+	"\x8d\xb6\x00\x00\x00\x00",	/* 6 - lea esi, [esi+dword 0]	*/
+	"\x8d\xb4\x26\x00\x00\x00\x00",	/* 7 - lea esi, [esi*1+dword 0]	*/
+	"\x90"				/* 8 - nop			*/
+	"\x8d\xb4\x26\x00\x00\x00\x00",	/*     lea esi, [esi*1+dword 0]	*/
+	"\x89\xf6"			/* 9 - mov esi, esi		*/
+	"\x8d\xbc\x27\x00\x00\x00\x00",	/*     lea edi, [edi*1+dword 0]	*/
+	"\x8d\x76\x00"			/* 10 - lea esi, [esi+byte 0]	*/
+	"\x8d\xbc\x27\x00\x00\x00\x00",	/*      lea edi, [edi+dword 0]	*/
+	"\x8d\x74\x26\x00"		/* 11 - lea esi, [esi*1+byte 0]	*/
+	"\x8d\xbc\x27\x00\x00\x00\x00",	/*      lea edi, [edi*1+dword 0]*/
+	"\x8d\xb6\x00\x00\x00\x00"	/* 12 - lea esi, [esi+dword 0]	*/
+	"\x8d\xbf\x00\x00\x00\x00",	/*      lea edi, [edi+dword 0]	*/
+	"\x8d\xb6\x00\x00\x00\x00"	/* 13 - lea esi, [esi+dword 0]	*/
+	"\x8d\xbc\x27\x00\x00\x00\x00",	/*      lea edi, [edi*1+dword 0]*/
+	"\x8d\xb4\x26\x00\x00\x00\x00"	/* 14 - lea esi, [esi*1+dword 0]*/
+	"\x8d\xbc\x27\x00\x00\x00\x00",	/*      lea edi, [edi*1+dword 0]*/
+	"\xeb\x0d\x90\x90\x90\x90\x90"	/* 15 - jmp $+15; nop fill	*/
+	"\x90\x90\x90\x90\x90\x90\x90\x90"
+    };
+    static const char *fill64[16] = {
+	NULL,				/* unused			*/
+	"\x90",				/* 1 - nop			*/
+	"\x66\x90",			/* 2 - o16; nop			*/
+	"\x66\x66\x90",			/* 3 - o16; o16; nop		*/
+	"\x66\x66\x66\x90",		/* 4 - o16; o16; o16; nop	*/
+	"\x66\x66\x90\x66\x90",		/* 5 */
+	"\x66\x66\x90\x66\x66\x90",	/* 6 */
+	"\x66\x66\x66\x90\x66\x66\x90",	/* 7 */
+	"\x66\x66\x66\x90\x66\x66\x66"	/* 8 */
+	"\x90",
+	"\x66\x66\x90\x66\x66\x90\x66"	/* 9 */
+	"\x66\x90",
+	"\x66\x66\x66\x90\x66\x66\x90"	/* 10 */
+	"\x66\x66\x90",
+	"\x66\x66\x66\x90\x66\x66\x66"	/* 11 */
+	"\x90\x66\x66\x90",
+	"\x66\x66\x66\x90\x66\x66\x66"	/* 12 */
+	"\x90\x66\x66\x66\x90",
+	"\x66\x66\x66\x90\x66\x66\x90"	/* 13 */
+	"\x66\x66\x90\x66\x66\x90",
+	"\x66\x66\x66\x90\x66\x66\x66"	/* 14 */
+	"\x90\x66\x66\x90\x66\x66\x90",
+	"\x66\x66\x66\x90\x66\x66\x66"	/* 15 */
+	"\x90\x66\x66\x66\x90\x66\x66\x90"
+    };
+    switch (arch_x86->mode_bits) {
+	case 16:
+	    return (const unsigned char **)fill16;
+	case 32:
+	    return (const unsigned char **)fill32;
+	case 64:
+	    return (const unsigned char **)fill64;
+	default:
+	    yasm_internal_error(N_("Invalid mode_bits in x86_get_fill"));
+	    /*@notreached@*/
+	    return NULL;
+    }
+}
+
 unsigned int
 yasm_x86__get_reg_size(yasm_arch *arch, unsigned long reg)
 {
@@ -269,6 +371,7 @@ yasm_arch_module yasm_x86_LTX_arch = {
     yasm_x86__parse_check_prefix,
     yasm_x86__parse_check_targetmod,
     x86_parse_directive,
+    x86_get_fill,
     yasm_x86__finalize_insn,
     yasm_x86__floatnum_tobytes,
     yasm_x86__intnum_fixup_rel,

@@ -3,6 +3,9 @@
 TESTS += modules/arch/x86/tests/gas64/x86_gas64_test.sh
 
 EXTRA_DIST += modules/arch/x86/tests/gas64/x86_gas64_test.sh
+EXTRA_DIST += modules/arch/x86/tests/gas64/align64.asm
+EXTRA_DIST += modules/arch/x86/tests/gas64/align64.errwarn
+EXTRA_DIST += modules/arch/x86/tests/gas64/align64.hex
 EXTRA_DIST += modules/arch/x86/tests/gas64/gas-cbw.asm
 EXTRA_DIST += modules/arch/x86/tests/gas64/gas-cbw.errwarn
 EXTRA_DIST += modules/arch/x86/tests/gas64/gas-cbw.hex

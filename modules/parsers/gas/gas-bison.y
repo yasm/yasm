@@ -48,6 +48,9 @@ static yasm_section *gas_get_section(yasm_parser_gas *parser_gas, char *name,
 				     /*@null@*/ char *type);
 static void gas_switch_section(yasm_parser_gas *parser_gas, char *name,
 			       /*@null@*/ char *flags, /*@null@*/ char *type);
+static yasm_bytecode *gas_parser_align(yasm_parser_gas *parser_gas,
+				       yasm_valparamhead *valparams,
+				       int power2);
 static yasm_bytecode *gas_define_strings(yasm_parser_gas *parser_gas,
 					 yasm_valparamhead *vps, int withzero);
 static yasm_bytecode *gas_define_data(yasm_parser_gas *parser_gas,
@@ -102,7 +105,7 @@ static void gas_parser_directive
 %token DIR_EQU DIR_FILE DIR_FLOAT DIR_GLOBAL DIR_IDENT DIR_INT DIR_LOC
 %token DIR_LCOMM DIR_OCTA DIR_ORG DIR_P2ALIGN DIR_REPT DIR_SECTION
 %token DIR_SHORT DIR_SIZE DIR_SKIP DIR_STRING
-%token DIR_TEXT DIR_TFLOAT DIR_TYPE DIR_QUAD DIR_WORD
+%token DIR_TEXT DIR_TFLOAT DIR_TYPE DIR_QUAD DIR_WORD DIR_ZERO
 
 %type <bc> line lineexp instr
 
@@ -155,26 +158,20 @@ lineexp: instr
     }
     /* Alignment directives */
     | DIR_ALIGN datavals2 {
-	/* FIXME: Whether this is power-of-two or not depends on arch */
-	/*@dependent@*/ yasm_valparam *bound, *fill = NULL, *maxskip = NULL;
-	bound = yasm_vps_first(&$2);
-	if (bound)
-	    fill = yasm_vps_next(bound);
-	else
-	    yasm__error(cur_line,
-			N_("align directive must specify alignment"));
-	if (fill)
-	    maxskip = yasm_vps_next(fill);
-	$$ = (yasm_bytecode *)NULL;
+	/* FIXME: Whether this is power-of-two or not depends on arch and
+	 * objfmt.
+	 */
+	$$ = gas_parser_align(parser_gas, &$2, 0);
     }
     | DIR_P2ALIGN datavals2 {
-	$$ = (yasm_bytecode *)NULL;
+	$$ = gas_parser_align(parser_gas, &$2, 1);
     }
     | DIR_BALIGN datavals2 {
-	$$ = (yasm_bytecode *)NULL;
+	$$ = gas_parser_align(parser_gas, &$2, 0);
     }
-    | DIR_ORG expr {
-	$$ = (yasm_bytecode *)NULL;
+    | DIR_ORG INTNUM {
+	/* TODO: support expr instead of intnum */
+	$$ = yasm_bc_create_org(yasm_intnum_get_uint($2), cur_line);
     }
     /* Data visibility directives */
     | DIR_GLOBAL label_id {
@@ -274,6 +271,16 @@ lineexp: instr
 	$$ = gas_define_data(parser_gas, &$2, 16);
 	yasm_vps_delete(&$2);
     }
+    | DIR_ZERO expr {
+	yasm_datavalhead dvs;
+
+	yasm_dvs_initialize(&dvs);
+	yasm_dvs_append(&dvs, yasm_dv_create_expr(
+	    p_expr_new_ident(yasm_expr_int(yasm_intnum_create_uint(0)))));
+	$$ = yasm_bc_create_data(&dvs, 1, cur_line);
+
+	yasm_bc_set_multiple($$, $2);
+    }
     /* Floating point data definition directives */
     | DIR_FLOAT datavals {
 	$$ = gas_define_data(parser_gas, &$2, 4);
@@ -348,6 +355,10 @@ lineexp: instr
 	$$ = NULL;
     }
     | DIR_FILE INTNUM STRING {
+	/* TODO */
+	$$ = NULL;
+    }
+    | DIR_FILE STRING {
 	/* TODO */
 	$$ = NULL;
     }
@@ -671,6 +682,49 @@ gas_switch_section(yasm_parser_gas *parser_gas, char *name,
 	parser_gas->prev_bc = yasm_section_bcs_last(new_section);
     } else
 	yasm__error(cur_line, N_("invalid section name `%s'"), name);
+    parser_gas->code_section = !strcmp(name, ".text");
+}
+
+static yasm_bytecode *
+gas_parser_align(yasm_parser_gas *parser_gas, yasm_valparamhead *valparams,
+		 int power2)
+{
+    /*@dependent@*/ yasm_valparam *bound, *fill = NULL, *maxskip = NULL;
+    yasm_expr *boundval, *fillval = NULL, *maxskipval = NULL;
+
+    bound = yasm_vps_first(valparams);
+    boundval = bound->param;
+    bound->param = NULL;
+    if (bound && boundval) {
+	fill = yasm_vps_next(bound);
+    } else {
+	yasm__error(cur_line, N_("align directive must specify alignment"));
+	return NULL;
+    }
+
+    if (fill) {
+	fillval = fill->param;
+	fill->param = NULL;
+	maxskip = yasm_vps_next(fill);
+    }
+
+    if (maxskip) {
+	maxskipval = maxskip->param;
+	maxskip->param = NULL;
+    }
+
+    yasm_vps_delete(valparams);
+
+    /* Convert power of two to number of bytes if necessary */
+    if (power2)
+	boundval = yasm_expr_create(YASM_EXPR_SHL,
+				    yasm_expr_int(yasm_intnum_create_uint(1)),
+				    yasm_expr_expr(boundval), cur_line);
+
+    return yasm_bc_create_align(boundval, fillval, maxskipval,
+				parser_gas->code_section ?
+				    yasm_arch_get_fill(parser_gas->arch) : NULL,
+				cur_line);
 }
 
 static yasm_bytecode *

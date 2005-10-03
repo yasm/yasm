@@ -89,6 +89,35 @@ lc3b_parse_directive(/*@unused@*/ yasm_arch *arch,
     return 1;
 }
 
+static const unsigned char **
+lc3b_get_fill(const yasm_arch *arch)
+{
+    /* NOP pattern is AND r0, r0, r0 repeated */
+    static const char *fill[16] = {
+	NULL,		/* unused */
+	NULL,		/* 1 - illegal; all opcodes are 2 bytes long */
+	"\x50\x00",			/* 4 */
+	NULL,				/* 3 - illegal */
+	"\x50\x00\x50\x00",		/* 4 */
+	NULL,				/* 5 - illegal */
+	"\x50\x00\x50\x00\x50\x00",	/* 6 */
+	NULL,				/* 7 - illegal */
+	"\x50\x00\x50\x00\x50\x00"	/* 8 */
+	"\x50\x00",
+	NULL,				/* 9 - illegal */
+	"\x50\x00\x50\x00\x50\x00"	/* 10 */
+	"\x50\x00\x50\x00",
+	NULL,				/* 11 - illegal */
+	"\x50\x00\x50\x00\x50\x00"	/* 12 */
+	"\x50\x00\x50\x00\x50\x00",
+	NULL,				/* 13 - illegal */
+	"\x50\x00\x50\x00\x50\x00"	/* 14 */
+	"\x50\x00\x50\x00\x50\x00\x50\x00",
+	NULL				/* 15 - illegal */
+    };
+    return (const unsigned char **)fill;
+}
+
 static unsigned int
 lc3b_get_reg_size(/*@unused@*/ yasm_arch *arch, /*@unused@*/ unsigned long reg)
 {
@@ -147,6 +176,7 @@ yasm_arch_module yasm_lc3b_LTX_arch = {
     yasm_lc3b__parse_check_prefix,
     yasm_lc3b__parse_check_targetmod,
     lc3b_parse_directive,
+    lc3b_get_fill,
     yasm_lc3b__finalize_insn,
     lc3b_floatnum_tobytes,
     yasm_lc3b__intnum_fixup_rel,

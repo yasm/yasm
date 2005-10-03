@@ -166,11 +166,29 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
 
 /** Create a bytecode that aligns the following bytecode to a boundary.
  * \param boundary	byte alignment (must be a power of two)
+ * \param fill		fill data (if NULL, code_fill or 0 is used)
+ * \param maxskip	maximum number of bytes to skip
+ * \param code_fill	code fill data (if NULL, 0 is used)
+ * \param line		virtual line (from yasm_linemap)
+ * \return Newly allocated bytecode.
+ * \note The precedence on generated fill is as follows:
+ *       - from fill parameter (if not NULL)
+ *       - from code_fill parameter (if not NULL)
+ *       - 0
+ */
+/*@only@*/ yasm_bytecode *yasm_bc_create_align
+    (/*@keep@*/ yasm_expr *boundary, /*@keep@*/ /*@null@*/ yasm_expr *fill,
+     /*@keep@*/ /*@null@*/ yasm_expr *maxskip,
+     /*@null@*/ const unsigned char **code_fill, unsigned long line);
+
+/** Create a bytecode that puts the following bytecode at a fixed section
+ * offset.
+ * \param start		section offset of following bytecode
  * \param line		virtual line (from yasm_linemap)
  * \return Newly allocated bytecode.
  */
-/*@only@*/ yasm_bytecode *yasm_bc_create_align
-    (unsigned long boundary, unsigned long line);
+/*@only@*/ yasm_bytecode *yasm_bc_create_org
+    (unsigned long start, unsigned long line);
 
 /** Create a bytecode that represents a single instruction.
  * \param arch		instruction's architecture

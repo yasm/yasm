@@ -324,6 +324,7 @@ scan:
 	".type"		{ RETURN(DIR_TYPE); }
 	".quad"		{ RETURN(DIR_QUAD); }
 	".word"		{ RETURN(DIR_WORD); }
+	".zero"		{ RETURN(DIR_ZERO); }
 
 	/* label or maybe directive */
 	[.][a-zA-Z0-9_$.]* {

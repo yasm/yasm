@@ -77,6 +77,8 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
 
     parser_gas.state = INITIAL;
 
+    parser_gas.code_section = !strcmp(yasm_section_get_name(def_sect), ".text");
+
     /* yacc debugging, needs YYDEBUG set in bison.y.in to work */
     parser_gas.debug = 1;
 
