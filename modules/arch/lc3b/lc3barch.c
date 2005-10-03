@@ -92,27 +92,27 @@ lc3b_parse_directive(/*@unused@*/ yasm_arch *arch,
 static const unsigned char **
 lc3b_get_fill(const yasm_arch *arch)
 {
-    /* NOP pattern is AND r0, r0, r0 repeated */
+    /* NOP pattern is all 0's per LC-3b Assembler 3.50 output */
     static const char *fill[16] = {
 	NULL,		/* unused */
 	NULL,		/* 1 - illegal; all opcodes are 2 bytes long */
-	"\x50\x00",			/* 4 */
+	"\x00\x00",			/* 4 */
 	NULL,				/* 3 - illegal */
-	"\x50\x00\x50\x00",		/* 4 */
+	"\x00\x00\x00\x00",		/* 4 */
 	NULL,				/* 5 - illegal */
-	"\x50\x00\x50\x00\x50\x00",	/* 6 */
+	"\x00\x00\x00\x00\x00\x00",	/* 6 */
 	NULL,				/* 7 - illegal */
-	"\x50\x00\x50\x00\x50\x00"	/* 8 */
-	"\x50\x00",
+	"\x00\x00\x00\x00\x00\x00"	/* 8 */
+	"\x00\x00",
 	NULL,				/* 9 - illegal */
-	"\x50\x00\x50\x00\x50\x00"	/* 10 */
-	"\x50\x00\x50\x00",
+	"\x00\x00\x00\x00\x00\x00"	/* 10 */
+	"\x00\x00\x00\x00",
 	NULL,				/* 11 - illegal */
-	"\x50\x00\x50\x00\x50\x00"	/* 12 */
-	"\x50\x00\x50\x00\x50\x00",
+	"\x00\x00\x00\x00\x00\x00"	/* 12 */
+	"\x00\x00\x00\x00\x00\x00",
 	NULL,				/* 13 - illegal */
-	"\x50\x00\x50\x00\x50\x00"	/* 14 */
-	"\x50\x00\x50\x00\x50\x00\x50\x00",
+	"\x00\x00\x00\x00\x00\x00"	/* 14 */
+	"\x00\x00\x00\x00\x00\x00\x00\x00",
 	NULL				/* 15 - illegal */
     };
     return (const unsigned char **)fill;

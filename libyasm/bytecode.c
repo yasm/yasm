@@ -786,7 +786,7 @@ bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		 /*@unused@*/ yasm_output_reloc_func output_reloc)
 {
     bytecode_align *align = (bytecode_align *)bc->contents;
-    unsigned long len, i;
+    unsigned long len;
     unsigned long boundary =
 	yasm_intnum_get_uint(yasm_expr_get_intnum(&align->boundary, NULL));
 
@@ -814,11 +814,26 @@ bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	memset(*bufp, (int)v, len);
 	*bufp += len;
     } else if (align->code_fill) {
-	while (len > 15) {
-	    memcpy(*bufp, align->code_fill[15], 15);
-	    *bufp += 15;
-	    len -= 15;
+	unsigned long maxlen = 15;
+	while (!align->code_fill[maxlen] && maxlen>0)
+	    maxlen--;
+	if (maxlen == 0) {
+	    yasm__error(bc->line, N_("could not find any code alignment size"));
+	    return 1;
 	}
+
+	/* Fill with maximum code fill as much as possible */
+	while (len > maxlen) {
+	    memcpy(*bufp, align->code_fill[maxlen], maxlen);
+	    *bufp += maxlen;
+	    len -= maxlen;
+	}
+
+	if (!align->code_fill[len]) {
+	    yasm__error(bc->line, N_("invalid alignment size %d"), len);
+	    return 1;
+	}
+	/* Handle rest of code fill */
 	memcpy(*bufp, align->code_fill[len], len);
 	*bufp += len;
     } else {
