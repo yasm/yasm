@@ -274,7 +274,7 @@ typedef struct x86_insn_info {
  */
 #define DEF_INSN_DATA(group, mod, cpu)	do { \
     data[0] = (unsigned long)group##_insn; \
-    data[1] = ((mod)<<8) | \
+    data[1] = (((unsigned long)mod)<<8) | \
     	      ((unsigned char)(sizeof(group##_insn)/sizeof(x86_insn_info))); \
     data[2] = cpu; \
     data[3] |= arch_x86->mode_bits; \
@@ -1931,6 +1931,11 @@ static const x86_insn_info svm_rax_insn[] = {
     { CPU_SVM, MOD_Op2Add, 0, 0, 0, 3, {0x0F, 0x01, 0x00}, 0, 1,
       {OPT_Areg|OPS_64|OPA_None, 0, 0} }
 };
+/* VIA PadLock instructions */
+static const x86_insn_info padlock_insn[] = {
+    { CPU_Any, MOD_Imm8|MOD_PreAdd|MOD_Op1Add, 0, 0, 0x00, 2, {0x0F, 0x00, 0},
+      0, 0, {0, 0, 0} }
+};
 
 /* Cyrix MMX instructions */
 static const x86_insn_info cyrixmmx_insn[] = {
@@ -2983,6 +2988,8 @@ yasm_x86__parse_cpu(yasm_arch *arch, const char *id, unsigned long line)
 	N O P R I V	{ arch_x86->cpu_enabled &= ~CPU_Priv; return; }
 	S V M		{ arch_x86->cpu_enabled |= CPU_SVM; return; }
 	N O S V M	{ arch_x86->cpu_enabled &= ~CPU_SVM; return; }
+	P A D L O C K	{ arch_x86->cpu_enabled |= CPU_PadLock; return; }
+	N O P A D L O C K   { arch_x86->cpu_enabled &= ~CPU_PadLock; return; }
 
 	/* catchalls */
 	[\001-\377]+	{
@@ -4408,6 +4415,16 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	V M M C A L L { RET_INSN_NS(threebyte, 0x0F01D9, CPU_Hammer|CPU_64|CPU_SVM); }
 	V M R U N { RET_INSN_NS(svm_rax, 0xD8, CPU_Hammer|CPU_64|CPU_SVM); }
 	V M S A V E { RET_INSN_NS(svm_rax, 0xDB, CPU_Hammer|CPU_64|CPU_SVM); }
+	/* VIA PadLock instructions */
+	X S T O R E (R N G)? { RET_INSN_NS(padlock, 0xC000A7, CPU_PadLock); }
+	X C R Y P T E C B { RET_INSN_NS(padlock, 0xC8F3A7, CPU_PadLock); }
+	X C R Y P T C B C { RET_INSN_NS(padlock, 0xD0F3A7, CPU_PadLock); }
+	X C R Y P T C T R { RET_INSN_NS(padlock, 0xD8F3A7, CPU_PadLock); }
+	X C R Y P T C F B { RET_INSN_NS(padlock, 0xE0F3A7, CPU_PadLock); }
+	X C R Y P T O F B { RET_INSN_NS(padlock, 0xE8F3A7, CPU_PadLock); }
+	M O N T M U L { RET_INSN_NS(padlock, 0xC0F3A6, CPU_PadLock); }
+	X S H A "1" { RET_INSN_NS(padlock, 0xC8F3A6, CPU_PadLock); }
+	X S H A "256" { RET_INSN_NS(padlock, 0xD0F3A6, CPU_PadLock); }
 	/* Cyrix MMX instructions */
 	P A D D S I W { RET_INSN(7, cyrixmmx, 0x51, CPU_Cyrix|CPU_MMX); }
 	P A V E B { RET_INSN(5, cyrixmmx, 0x50, CPU_Cyrix|CPU_MMX); }

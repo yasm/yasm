@@ -56,12 +56,13 @@
 #define CPU_Obs	    (1UL<<23)	/* Obsolete instruction */
 #define CPU_Priv    (1UL<<24)	/* Priveleged instruction */
 #define CPU_SVM	    (1UL<<25)	/* Secure Virtual Machine instruction */
+#define CPU_PadLock (1UL<<25)	/* VIA PadLock instruction */
 
 /* Technically not CPU capabilities, they do affect what instructions are
  * available.  These are tested against BITS==64.
  */
-#define CPU_64	    (1UL<<25)	/* Only available in 64-bit mode */
-#define CPU_Not64   (1UL<<26)	/* Not available (invalid) in 64-bit mode */
+#define CPU_64	    (1UL<<26)	/* Only available in 64-bit mode */
+#define CPU_Not64   (1UL<<27)	/* Not available (invalid) in 64-bit mode */
 
 typedef struct yasm_arch_x86 {
     yasm_arch_base arch;	/* base structure */
