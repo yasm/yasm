@@ -412,10 +412,10 @@ x86_bc_insn_print(const void *contents, FILE *f, int indent_level)
     }
     x86_opcode_print(&insn->opcode, f, indent_level);
     x86_common_print(&insn->common, f, indent_level);
-    fprintf(f, "%*sSpPre=%02x REX=%03o ShiftOp=%u\n", indent_level, "",
+    fprintf(f, "%*sSpPre=%02x REX=%03o PostOp=%u\n", indent_level, "",
 	    (unsigned int)insn->special_prefix,
 	    (unsigned int)insn->rex,
-	    (unsigned int)insn->shift_op);
+	    (unsigned int)insn->postop);
 }
 
 static void
@@ -514,8 +514,8 @@ x86_bc_insn_resolve(yasm_bytecode *bc, int save,
 	    assert(temp != NULL);
 
 	    /* Handle shortmov special-casing */
-	    if (insn->shortmov_op && insn->common.mode_bits == 64 &&
-		insn->common.addrsize == 32 &&
+	    if (insn->postop == X86_POSTOP_SHORTMOV &&
+		insn->common.mode_bits == 64 && insn->common.addrsize == 32 &&
 		!yasm_expr__contains(temp, YASM_EXPR_REG)) {
 		yasm_x86__ea_set_disponly((yasm_effaddr *)&eat);
 
@@ -531,10 +531,11 @@ x86_bc_insn_resolve(yasm_bytecode *bc, int save,
 	     * displacement.
 	     */
 	    switch (yasm_x86__expr_checkea(&temp, &insn->common.addrsize,
-		    insn->common.mode_bits, ea->nosplit, insn->address16_op,
-		    &displen, &eat.modrm, &eat.valid_modrm, &eat.need_modrm,
-		    &eat.sib, &eat.valid_sib, &eat.need_sib, &eat.pcrel,
-		    &insn->rex, calc_bc_dist)) {
+		    insn->common.mode_bits, ea->nosplit,
+		    insn->postop == X86_POSTOP_ADDRESS16, &displen, &eat.modrm,
+		    &eat.valid_modrm, &eat.need_modrm, &eat.sib,
+		    &eat.valid_sib, &eat.need_sib, &eat.pcrel, &insn->rex,
+		    calc_bc_dist)) {
 		case 1:
 		    yasm_expr_destroy(temp);
 		    /* failed, don't bother checking rest of insn */
@@ -558,8 +559,8 @@ x86_bc_insn_resolve(yasm_bytecode *bc, int save,
 		    displen = (insn->common.addrsize == 16) ? 2U : 4U;
 	    }
 
-	    /* Handle address16_op case */
-	    if (insn->address16_op)
+	    /* Handle address16 postop case */
+	    if (insn->postop == X86_POSTOP_ADDRESS16)
 		insn->common.addrsize = 0;
 
 	    /* If we had forced ea->len but had to override, save it now */
@@ -591,8 +592,8 @@ x86_bc_insn_resolve(yasm_bytecode *bc, int save,
 
 	    /* TODO: check imm->len vs. sized len from expr? */
 
-	    /* Handle signext_imm8_op special-casing */
-	    if (insn->signext_imm8_op && temp &&
+	    /* Handle signext_imm8 postop special-casing */
+	    if (insn->postop == X86_POSTOP_SIGNEXT_IMM8 && temp &&
 		(num = yasm_expr_get_intnum(&temp, calc_bc_dist))) {
 		if (num) {
 		    int val = yasm_intnum_get_int(num);
@@ -610,11 +611,11 @@ x86_bc_insn_resolve(yasm_bytecode *bc, int save,
 		}
 		/* Not really necessary, but saves confusion over it. */
 		if (save)
-		    insn->signext_imm8_op = 0;
+		    insn->postop = X86_POSTOP_NONE;
 	    }
 
-	    /* Handle shift_op special-casing */
-	    if (insn->shift_op && temp &&
+	    /* Handle shift postop special-casing */
+	    if (insn->postop == X86_POSTOP_SHIFT && temp &&
 		(num = yasm_expr_get_intnum(&temp, calc_bc_dist))) {
 		if (num && yasm_intnum_get_uint(num) == 1) {
 		    /* We can use the ,1 form: no immediate (set to 0 len) */
@@ -633,7 +634,7 @@ x86_bc_insn_resolve(yasm_bytecode *bc, int save,
 
 		/* Not really necessary, but saves confusion over it. */
 		if (save)
-		    insn->shift_op = 0;
+		    insn->postop = X86_POSTOP_NONE;
 	    }
 
 	    yasm_expr_destroy(temp);
@@ -906,8 +907,8 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	     */
 	    if (yasm_x86__expr_checkea(&ea->disp, &addrsize,
 				       insn->common.mode_bits, ea->nosplit,
-				       insn->address16_op, &displen,
-				       &eat.modrm, &eat.valid_modrm,
+				       insn->postop == X86_POSTOP_ADDRESS16,
+				       &displen, &eat.modrm, &eat.valid_modrm,
 				       &eat.need_modrm, &eat.sib,
 				       &eat.valid_sib, &eat.need_sib,
 				       &eat.pcrel, &insn->rex,

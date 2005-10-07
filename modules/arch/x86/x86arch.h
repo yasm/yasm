@@ -180,38 +180,42 @@ typedef struct x86_insn {
     unsigned char rex;		/* REX AMD64 extension, 0 if none,
 				   0xff if not allowed (high 8 bit reg used) */
 
-    /* HACK, but a space-saving one: shift opcodes have an immediate
-     * form and a ,1 form (with no immediate).  In the parser, we
-     * set this and opcode_len=1, but store the ,1 version in the
-     * second byte of the opcode array.  We then choose between the
-     * two versions once we know the actual value of imm (because we
-     * don't know it in the parser module).
-     *
-     * A override to force the imm version should just leave this at
-     * 0.  Then later code won't know the ,1 version even exists.
-     * TODO: Figure out how this affects CPU flags processing.
-     *
-     * Call x86_SetInsnShiftFlag() to set this flag to 1.
-     */
-    unsigned char shift_op;
+    /* Postponed (from parsing to later binding) action options. */
+    enum {
+	/* None */
+	X86_POSTOP_NONE = 0,
 
-    /* HACK, similar to that for shift_op above, for optimizing instructions
-     * that take a sign-extended imm8 as well as imm values (eg, the arith
-     * instructions and a subset of the imul instructions).
-     */
-    unsigned char signext_imm8_op;
+	/* Shift opcodes have an immediate form and a ,1 form (with no
+	 * immediate).  In the parser, we set this and opcode_len=1, but store
+	 * the ,1 version in the second byte of the opcode array.  We then
+	 * choose between the two versions once we know the actual value of
+	 * imm (because we don't know it in the parser module).
+	 *
+	 * A override to force the imm version should just leave this at
+	 * 0.  Then later code won't know the ,1 version even exists.
+	 * TODO: Figure out how this affects CPU flags processing.
+	 */
+	X86_POSTOP_SHIFT,
 
-    /* HACK, similar to those above, for optimizing long (modrm+sib) mov
-     * instructions in amd64 into short mov instructions if a 32-bit address
-     * override is applied in 64-bit mode to an EA of just an offset (no
-     * registers) and the target register is al/ax/eax/rax.
-     */
-    unsigned char shortmov_op;
+	/* Instructions that take a sign-extended imm8 as well as imm values
+	 * (eg, the arith instructions and a subset of the imul instructions)
+	 * should set this and put the imm8 form in the second byte of the
+	 * opcode.
+	 */
+	X86_POSTOP_SIGNEXT_IMM8,
 
-    /* Override any attempt at address-size override to 16 bits, and never
-     * generate a prefix.  This is used for the ENTER opcode.
-     */
-    unsigned char address16_op;
+	/* Long (modrm+sib) mov instructions in amd64 can be optimized into
+	 * short mov instructions if a 32-bit address override is applied in
+	 * 64-bit mode to an EA of just an offset (no registers) and the
+	 * target register is al/ax/eax/rax.
+	 */
+	X86_POSTOP_SHORTMOV,
+
+	/* Override any attempt at address-size override to 16 bits, and never
+	 * generate a prefix.  This is used for the ENTER opcode.
+	 */
+	X86_POSTOP_ADDRESS16
+    } postop;
 } x86_insn;
 
 typedef struct x86_jmp {

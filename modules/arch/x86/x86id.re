@@ -2595,10 +2595,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     spare = info->spare;
     im_len = 0;
     im_sign = 0;
-    insn->shift_op = 0;
-    insn->signext_imm8_op = 0;
-    insn->shortmov_op = 0;
-    insn->address16_op = 0;
+    insn->postop = X86_POSTOP_NONE;
     insn->rex = 0;
 
     /* Apply modifiers */
@@ -2773,16 +2770,16 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		case OPAP_None:
 		    break;
 		case OPAP_ShiftOp:
-		    insn->shift_op = 1;
+		    insn->postop = X86_POSTOP_SHIFT;
 		    break;
 		case OPAP_SImm8Avail:
-		    insn->signext_imm8_op = 1;
+		    insn->postop = X86_POSTOP_SIGNEXT_IMM8;
 		    break;
 		case OPAP_ShortMov:
-		    insn->shortmov_op = 1;
+		    insn->postop = X86_POSTOP_SHORTMOV;
 		    break;
 		case OPAP_A16:
-		    insn->address16_op = 1;
+		    insn->postop = X86_POSTOP_ADDRESS16;
 		    break;
 		default:
 		    yasm_internal_error(
@@ -2811,7 +2808,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     yasm_x86__bc_apply_prefixes((x86_common *)insn, num_prefixes, prefixes,
 				bc->line);
 
-    if (insn->address16_op && insn->common.addrsize) {
+    if (insn->postop == X86_POSTOP_ADDRESS16 && insn->common.addrsize) {
 	yasm__warning(YASM_WARN_GENERAL, bc->line,
 		      N_("address size override ignored"));
 	insn->common.addrsize = 0;
