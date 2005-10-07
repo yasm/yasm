@@ -55,6 +55,7 @@
 #define CPU_Undoc   (1UL<<22)	/* Undocumented instruction */
 #define CPU_Obs	    (1UL<<23)	/* Obsolete instruction */
 #define CPU_Priv    (1UL<<24)	/* Priveleged instruction */
+#define CPU_SVM	    (1UL<<25)	/* Secure Virtual Machine instruction */
 
 /* Technically not CPU capabilities, they do affect what instructions are
  * available.  These are tested against BITS==64.

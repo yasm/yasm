@@ -328,16 +328,16 @@ static const x86_insn_info twobytemem_insn[] = {
 
 /* P4 VMX Instructions */
 static const x86_insn_info vmxmemrd_insn[] = {
-    { CPU_Not64, MOD_Op1Add|MOD_Op0Add, 32, 0, 0, 2, {0, 0, 0}, 0, 2,
-      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} },
-    { CPU_64, MOD_Op1Add|MOD_Op0Add, 64, 64, 0, 2, {0, 0, 0}, 0, 2,
-      {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_64|OPA_Spare, 0} }
+    { CPU_Not64, MOD_Op1Add|MOD_Op0Add|MOD_GasSufL, 32, 0, 0, 2, {0, 0, 0}, 0,
+      2, {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} },
+    { CPU_64, MOD_Op1Add|MOD_Op0Add|MOD_GasSufQ, 64, 64, 0, 2, {0, 0, 0}, 0,
+      2, {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_64|OPA_Spare, 0} }
 };
 static const x86_insn_info vmxmemwr_insn[] = {
-    { CPU_Not64, MOD_Op1Add|MOD_Op0Add, 32, 0, 0, 2, {0, 0, 0}, 0, 2,
-      {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_64, MOD_Op1Add|MOD_Op0Add, 64, 64, 0, 2, {0, 0, 0}, 0, 2,
-      {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} }
+    { CPU_Not64, MOD_Op1Add|MOD_Op0Add|MOD_GasSufL, 32, 0, 0, 2, {0, 0, 0}, 0,
+      2, {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} },
+    { CPU_64, MOD_Op1Add|MOD_Op0Add|MOD_GasSufQ, 64, 64, 0, 2, {0, 0, 0}, 0,
+      2, {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} }
 };
 static const x86_insn_info vmxtwobytemem_insn[] = {
     { CPU_Any, MOD_SpAdd|MOD_Op1Add, 0, 0, 0, 2, {0x0F, 0, 0}, 0, 1,
@@ -1915,6 +1915,23 @@ static const x86_insn_info now3d_insn[] = {
       {OPT_SIMDReg|OPS_64|OPA_Spare, OPT_SIMDRM|OPS_64|OPS_Relaxed|OPA_EA, 0} }
 };
 
+/* AMD Pacifica (SVM) instructions */
+static const x86_insn_info invlpga_insn[] = {
+    { CPU_SVM, 0, 0, 0, 0, 3, {0x0F, 0x01, 0xDF}, 0, 0, {0, 0, 0} },
+    { CPU_SVM, 0, 0, 0, 0, 3, {0x0F, 0x01, 0xDF}, 0, 2,
+      {OPT_Areg|OPS_64|OPA_None, OPT_Creg|OPS_32|OPA_None, 0} }
+};
+static const x86_insn_info skinit_insn[] = {
+    { CPU_SVM, 0, 0, 0, 0, 3, {0x0F, 0x01, 0xDE}, 0, 0, {0, 0, 0} },
+    { CPU_SVM, 0, 0, 0, 0, 3, {0x0F, 0x01, 0xDE}, 0, 1,
+      {OPT_Areg|OPS_32|OPA_None, 0, 0} }
+};
+static const x86_insn_info svm_rax_insn[] = {
+    { CPU_SVM, MOD_Op2Add, 0, 0, 0, 3, {0x0F, 0x01, 0x00}, 0, 0, {0, 0, 0} },
+    { CPU_SVM, MOD_Op2Add, 0, 0, 0, 3, {0x0F, 0x01, 0x00}, 0, 1,
+      {OPT_Areg|OPS_64|OPA_None, 0, 0} }
+};
+
 /* Cyrix MMX instructions */
 static const x86_insn_info cyrixmmx_insn[] = {
     { CPU_Cyrix|CPU_MMX, MOD_Op1Add, 0, 0, 0, 2, {0x0F, 0x00, 0}, 0, 2,
@@ -2964,6 +2981,8 @@ yasm_x86__parse_cpu(yasm_arch *arch, const char *id, unsigned long line)
 	N O O B S	{ arch_x86->cpu_enabled &= ~CPU_Obs; return; }
 	P R I V		{ arch_x86->cpu_enabled |= CPU_Priv; return; }
 	N O P R I V	{ arch_x86->cpu_enabled &= ~CPU_Priv; return; }
+	S V M		{ arch_x86->cpu_enabled |= CPU_SVM; return; }
+	N O S V M	{ arch_x86->cpu_enabled &= ~CPU_SVM; return; }
 
 	/* catchalls */
 	[\001-\377]+	{
@@ -4301,8 +4320,8 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	V M L A U N C H { RET_INSN_NS(threebyte, 0x0F01C2, CPU_P4); }
 	V M R E S U M E { RET_INSN_NS(threebyte, 0x0F01C3, CPU_P4); }
 	V M X O F F     { RET_INSN_NS(threebyte, 0x0F01C4, CPU_P4); }
-	V M R E A D   { RET_INSN_NS(vmxmemrd, 0x0F78, CPU_P4); }
-	V M W R I T E { RET_INSN_NS(vmxmemwr, 0x0F79, CPU_P4); }
+	V M R E A D [lLqQ]? { RET_INSN(6, vmxmemrd, 0x0F78, CPU_P4); }
+	V M W R I T E [lLqQ]? { RET_INSN(7, vmxmemwr, 0x0F79, CPU_P4); }
 	V M P T R L D { RET_INSN_NS(vmxtwobytemem, 0x06C7, CPU_P4); }
 	V M P T R S T { RET_INSN_NS(vmxtwobytemem, 0x07C7, CPU_P4); }
 	V M C L E A R { RET_INSN_NS(vmxthreebytemem, 0x0666C7, CPU_P4); }
@@ -4379,6 +4398,16 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	    warn64 = 1;
 	    RET_INSN(6, threebyte, 0x0F01F8, CPU_Hammer|CPU_64);
 	}
+	R D T S C P { RET_INSN(6, threebyte, 0x0F01F9, CPU_686|CPU_AMD|CPU_Priv); }
+	/* AMD Pacifica (SVM) instructions */
+	C L G I { RET_INSN_NS(threebyte, 0x0F01DD, CPU_Hammer|CPU_64|CPU_SVM); }
+	I N V L P G A { RET_INSN_NS(invlpga, 0, CPU_Hammer|CPU_64|CPU_SVM); }
+	S K I N I T { RET_INSN_NS(skinit, 0, CPU_Hammer|CPU_64|CPU_SVM); }
+	S T G I { RET_INSN_NS(threebyte, 0x0F01DC, CPU_Hammer|CPU_64|CPU_SVM); }
+	V M L O A D { RET_INSN_NS(svm_rax, 0xDA, CPU_Hammer|CPU_64|CPU_SVM); }
+	V M M C A L L { RET_INSN_NS(threebyte, 0x0F01D9, CPU_Hammer|CPU_64|CPU_SVM); }
+	V M R U N { RET_INSN_NS(svm_rax, 0xD8, CPU_Hammer|CPU_64|CPU_SVM); }
+	V M S A V E { RET_INSN_NS(svm_rax, 0xDB, CPU_Hammer|CPU_64|CPU_SVM); }
 	/* Cyrix MMX instructions */
 	P A D D S I W { RET_INSN(7, cyrixmmx, 0x51, CPU_Cyrix|CPU_MMX); }
 	P A V E B { RET_INSN(5, cyrixmmx, 0x50, CPU_Cyrix|CPU_MMX); }
