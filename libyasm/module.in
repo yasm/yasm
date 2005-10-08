@@ -53,10 +53,6 @@ static module listfmt_modules[] = {
 MODULES_listfmt_
 };
 
-static module optimizer_modules[] = {
-MODULES_optimizer_
-};
-
 static module parser_modules[] = {
 MODULES_parser_
 };
@@ -73,7 +69,6 @@ static struct {
     {dbgfmt_modules, sizeof(dbgfmt_modules)/sizeof(module)},
     {objfmt_modules, sizeof(objfmt_modules)/sizeof(module)},
     {listfmt_modules, sizeof(listfmt_modules)/sizeof(module)},
-    {optimizer_modules, sizeof(optimizer_modules)/sizeof(module)},
     {parser_modules, sizeof(parser_modules)/sizeof(module)},
     {preproc_modules, sizeof(preproc_modules)/sizeof(module)},
 };
@@ -105,7 +100,6 @@ yasm_list_modules(yasm_module_type type,
     yasm_dbgfmt_module *dbgfmt;
     yasm_objfmt_module *objfmt;
     yasm_listfmt_module *listfmt;
-    yasm_optimizer_module *optimizer;
     yasm_parser_module *parser;
     yasm_preproc_module *preproc;
 
@@ -127,10 +121,6 @@ yasm_list_modules(yasm_module_type type,
 	    case YASM_MODULE_LISTFMT:
 		listfmt = modules[i].data;
 		printfunc(listfmt->name, listfmt->keyword);
-		break;
-	    case YASM_MODULE_OPTIMIZER:
-		optimizer = modules[i].data;
-		printfunc(optimizer->name, optimizer->keyword);
 		break;
 	    case YASM_MODULE_PARSER:
 		parser = modules[i].data;

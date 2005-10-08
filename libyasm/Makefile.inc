@@ -20,6 +20,9 @@ libyasm_a_SOURCES += libyasm/xstrdup.c
 libyasm_a_SOURCES += libyasm/strcasecmp.c
 libyasm_a_SOURCES += libyasm/mergesort.c
 libyasm_a_SOURCES += libyasm/strsep.c
+libyasm_a_SOURCES += libyasm/qq.c
+libyasm_a_SOURCES += libyasm/stack.c
+libyasm_a_SOURCES += libyasm/interval_tree.c
 libyasm_a_SOURCES += module.c
 
 module.c: $(top_srcdir)/libyasm/module.in genmodule$(EXEEXT) Makefile
@@ -56,7 +59,6 @@ modinclude_HEADERS += libyasm/arch.h
 modinclude_HEADERS += libyasm/dbgfmt.h
 modinclude_HEADERS += libyasm/objfmt.h
 modinclude_HEADERS += libyasm/listfmt.h
-modinclude_HEADERS += libyasm/optimizer.h
 modinclude_HEADERS += libyasm/parser.h
 modinclude_HEADERS += libyasm/preproc.h
 modinclude_HEADERS += libyasm/intnum.h
@@ -67,6 +69,9 @@ modinclude_HEADERS += libyasm/valparam.h
 modinclude_HEADERS += libyasm/compat-queue.h
 modinclude_HEADERS += libyasm/assocdat.h
 modinclude_HEADERS += libyasm/module.h
+modinclude_HEADERS += libyasm/qq.h
+modinclude_HEADERS += libyasm/stack.h
+modinclude_HEADERS += libyasm/interval_tree.h
 
 EXTRA_DIST += libyasm/tests/Makefile.inc
 

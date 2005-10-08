@@ -59,8 +59,10 @@ typedef struct yasm_bytecode_callback {
     void (*destroy) (/*@only@*/ void *contents);
     void (*print) (const void *contents, FILE *f, int indent_level);
     void (*finalize) (yasm_bytecode *bc, yasm_bytecode *prev_bc);
-    yasm_bc_resolve_flags (*resolve)
-	(yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+    int (*calc_len) (yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
+		     /*@out@*/ /*@only@*/ yasm_expr **critical,
+		     /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres);
+    void (*set_long) (yasm_bytecode *bc);
     int (*tobytes) (yasm_bytecode *bc, unsigned char **bufp, void *d,
 		    yasm_output_expr_func output_expr,
 		    /*@null@*/ yasm_output_reloc_func output_reloc);
@@ -84,9 +86,10 @@ struct yasm_bytecode {
     unsigned long line;
 
     /* other assembler state info */
-    unsigned long offset;	/* 0 if unknown */
+    unsigned long offset;	/* ~0UL if unknown */
+    unsigned long bc_index;
 
-    /* storage for optimizer flags */
+    /* optimizer info */
     unsigned long opt_flags;
 
     /* NULL-terminated array of labels that point to this bytecode (as the
@@ -121,6 +124,12 @@ void yasm_bc_transform(yasm_bytecode *bc,
  * is ever required for this type of bytecode.
  */
 void yasm_bc_finalize_common(yasm_bytecode *bc, yasm_bytecode *prev_bc);
+
+/** Common bytecode callback set_long function, for where the bytecode is
+ * always short (calc_len always returns 0, never 1).  Causes an internal
+ * error if called.
+ */
+void yasm_bc_set_long_common(yasm_bytecode *bc);
 
 #define yasm_bc__next(x)		STAILQ_NEXT(x, link)
 

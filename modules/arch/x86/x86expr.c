@@ -249,8 +249,7 @@ x86_expr_checkea_distcheck_reg(yasm_expr **ep, unsigned int bits)
 static int
 x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ yasm_expr **wrt,
     /*@null@*/ int *indexreg, unsigned char *pcrel, unsigned int bits,
-    void *data, int *(*get_reg)(yasm_expr__item *ei, int *regnum, void *d),
-    yasm_calc_bc_dist_func calc_bc_dist)
+    void *data, int *(*get_reg)(yasm_expr__item *ei, int *regnum, void *d))
 {
     int i;
     int *reg;
@@ -260,11 +259,10 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ yasm_expr **wrt,
     yasm_expr *e;
 
     /*@-unqualifiedtrans@*/
-    *ep = yasm_expr__level_tree(*ep, 1, indexreg == 0, calc_bc_dist, NULL,
-				NULL, NULL);
+    *ep = yasm_expr__level_tree(*ep, 1, indexreg == 0, NULL, NULL, NULL, NULL);
     if (*wrt)
-	*wrt = yasm_expr__level_tree(*wrt, 1, indexreg == 0, calc_bc_dist,
-				     NULL, NULL, NULL);
+	*wrt = yasm_expr__level_tree(*wrt, 1, indexreg == 0, NULL, NULL, NULL,
+				     NULL);
     /*@=unqualifiedtrans@*/
     assert(*ep != NULL);
     e = *ep;
@@ -301,19 +299,13 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ yasm_expr **wrt,
 	*wrt = yasm_expr_extract_wrt(ep);
 	if (*wrt)
 	    return x86_expr_checkea_getregusage(ep, wrt, indexreg, pcrel,
-						bits, data, get_reg,
-						calc_bc_dist);
+						bits, data, get_reg);
     }
 
     switch (e->op) {
 	case YASM_EXPR_ADD:
 	    /* Prescan for non-int multipliers against a reg.
-	     * This is because if any of the terms is a more complex
-	     * expr (eg, undetermined value), we don't want to try to
-	     * figure out *any* of the expression, because each register
-	     * lookup overwrites the register with a 0 value!  And storing
-	     * the state of this routine from one excution to the next
-	     * would be a major chore.
+	     * This is invalid due to the optimizer structure.
 	     */
 	    for (i=0; i<e->numterms; i++)
 		if (e->terms[i].type == YASM_EXPR_EXPR) {
@@ -321,10 +313,10 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ yasm_expr **wrt,
 		    if (e->terms[i].data.expn->terms[0].type ==
 			YASM_EXPR_REG) {
 			if (e->terms[i].data.expn->numterms > 2)
-			    return 2;
+			    return 1;
 			if (e->terms[i].data.expn->terms[1].type !=
 			    YASM_EXPR_INT)
-			    return 2;
+			    return 1;
 		    }
 		}
 
@@ -374,9 +366,9 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ yasm_expr **wrt,
 	    yasm_expr__order_terms(e);
 	    if (e->terms[0].type == YASM_EXPR_REG) {
 		if (e->numterms > 2)
-		    return 2;
+		    return 1;
 		if (e->terms[1].type != YASM_EXPR_INT)
-		    return 2;
+		    return 1;
 		reg = get_reg(&e->terms[0], &regnum, data);
 		if (!reg)
 		    return 1;
@@ -476,25 +468,27 @@ x86_checkea_calc_displen(yasm_expr **ep, unsigned int wordsize, int noreg,
 	     * unknown displacement, including none.
 	     */
 	    *displen = 0xff;
+	    *modrm |= 0100;
+	    *v_modrm = 1;
+	    return 0;
 	}
+
+	/* At this point there's 3 possibilities for the displacement:
+	 *  - None (if =0)
+	 *  - signed 8 bit (if in -128 to 127 range)
+	 *  - 16/32 bit (word size)
+	 * For now, check intnum value right now; if it's not 0,
+	 * assume 8 bit and set up for allowing 16 bit later.
+	 * FIXME: this should really set up two thresholds, one for 8-bit
+	 * expansion and one for 16-bit expansion.  The complex expression
+	 * equaling zero is probably a rare case, so we ignore it for now.
+	 */
 
 	intn = yasm_expr_get_intnum(ep, NULL);
 	if (!intn) {
-	    /* expr still has unknown values: assume 16/32-bit disp */
-	    *displen = wordsize;
-	    *modrm |= 0200;
-	    *v_modrm = 1;
-	    return 0;
-	}	
-
-	/* don't try to find out what size displacement we have if
-	 * displen is known.
-	 */
-	if (*displen != 0 && *displen != 0xff) {
-	    if (*displen == 1)
-		*modrm |= 0100;
-	    else
-		*modrm |= 0200;
+	    /* expr still has unknown values: treat like BP/EBP above */
+	    *displen = 0xff;
+	    *modrm |= 0100;
 	    *v_modrm = 1;
 	    return 0;
 	}
@@ -502,15 +496,12 @@ x86_checkea_calc_displen(yasm_expr **ep, unsigned int wordsize, int noreg,
 	dispval = yasm_intnum_get_int(intn);
 
 	/* Figure out what size displacement we will have. */
-	if (*displen != 0xff && dispval == 0) {
+	if (dispval == 0) {
 	    /* if we know that the displacement is 0 right now,
 	     * go ahead and delete the expr (making it so no
 	     * displacement value is included in the output).
 	     * The Mod bits of ModRM are set to 0 above, and
 	     * we're done with the ModRM byte!
-	     *
-	     * Don't do this if we came from dispreq check above, so
-	     * check *displen.
 	     */
 	    yasm_expr_destroy(e);
 	    *ep = (yasm_expr *)NULL;
@@ -562,8 +553,7 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 		       unsigned char *modrm, unsigned char *v_modrm,
 		       unsigned char *n_modrm, unsigned char *sib,
 		       unsigned char *v_sib, unsigned char *n_sib,
-		       unsigned char *pcrel, unsigned char *rex,
-		       yasm_calc_bc_dist_func calc_bc_dist)
+		       unsigned char *pcrel, unsigned char *rex)
 {
     yasm_expr *e, *wrt;
     int retval;
@@ -658,23 +648,13 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 	reg3264_data.regs = reg3264mult;
 	reg3264_data.bits = bits;
 	reg3264_data.addrsize = *addrsize;
-	switch (x86_expr_checkea_getregusage(ep, &wrt, &indexreg, pcrel, bits,
-					     &reg3264_data,
-					     x86_expr_checkea_get_reg3264,
-					     calc_bc_dist)) {
-	    case 1:
-		e = *ep;
-		yasm__error(e->line, N_("invalid effective address"));
-		return 1;
-	    case 2:
-		if (wrt)
-		    *ep = yasm_expr_create_tree(*ep, YASM_EXPR_WRT, wrt,
-						(*ep)->line);
-		return 2;
-	    default:
-		e = *ep;
-		break;
+	if (x86_expr_checkea_getregusage(ep, &wrt, &indexreg, pcrel, bits,
+					 &reg3264_data,
+					 x86_expr_checkea_get_reg3264)) {
+	    yasm__error((*ep)->line, N_("invalid effective address"));
+	    return 1;
 	}
+	e = *ep;
 
 	/* If indexreg mult is 0, discard it.
 	 * This is possible because of the way indexreg is found in
@@ -909,23 +889,13 @@ yasm_x86__expr_checkea(yasm_expr **ep, unsigned char *addrsize,
 	*v_sib = 0;
 	*n_sib = 0;
 
-	switch (x86_expr_checkea_getregusage(ep, &wrt, (int *)NULL, pcrel,
-					     bits, &reg16mult,
-					     x86_expr_checkea_get_reg16,
-					     calc_bc_dist)) {
-	    case 1:
-		e = *ep;
-		yasm__error(e->line, N_("invalid effective address"));
-		return 1;
-	    case 2:
-		if (wrt)
-		    *ep = yasm_expr_create_tree(*ep, YASM_EXPR_WRT, wrt,
-						(*ep)->line);
-		return 2;
-	    default:
-		e = *ep;
-		break;
+	if (x86_expr_checkea_getregusage(ep, &wrt, NULL, pcrel, bits,
+					 &reg16mult,
+					 x86_expr_checkea_get_reg16)) {
+	    yasm__error((*ep)->line, N_("invalid effective address"));
+	    return 1;
 	}
+	e = *ep;
 
 	/* reg multipliers not 0 or 1 are illegal. */
 	if (reg16mult.bx & ~1 || reg16mult.si & ~1 || reg16mult.di & ~1 ||

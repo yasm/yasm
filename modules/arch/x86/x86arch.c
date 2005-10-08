@@ -383,5 +383,6 @@ yasm_arch_module yasm_x86_LTX_arch = {
     yasm_x86__ea_create_expr,
     x86_machines,
     "x86",
-    2
+    2,
+    128
 };

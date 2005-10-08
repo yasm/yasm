@@ -32,7 +32,6 @@ typedef enum yasm_module_type {
     YASM_MODULE_DBGFMT,
     YASM_MODULE_OBJFMT,
     YASM_MODULE_LISTFMT,
-    YASM_MODULE_OPTIMIZER,
     YASM_MODULE_PARSER,
     YASM_MODULE_PREPROC
 } yasm_module_type;
@@ -48,8 +47,6 @@ typedef enum yasm_module_type {
     yasm_load_module(YASM_MODULE_OBJFMT, keyword)
 #define yasm_load_listfmt(keyword)	\
     yasm_load_module(YASM_MODULE_LISTFMT, keyword)
-#define yasm_load_optimizer(keyword)	\
-    yasm_load_module(YASM_MODULE_OPTIMIZER, keyword)
 #define yasm_load_parser(keyword)	\
     yasm_load_module(YASM_MODULE_PARSER, keyword)
 #define yasm_load_preproc(keyword)	\
@@ -67,8 +64,6 @@ void yasm_list_modules
     yasm_list_modules(YASM_MODULE_OBJFMT, func)
 #define yasm_list_listfmt(func)		\
     yasm_list_modules(YASM_MODULE_LISTFMT, func)
-#define yasm_list_optimizer(func)	\
-    yasm_list_modules(YASM_MODULE_OPTIMIZER, func)
 #define yasm_list_parser(func)		\
     yasm_list_modules(YASM_MODULE_PARSER, func)
 #define yasm_list_preproc(func)		\

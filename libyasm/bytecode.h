@@ -47,14 +47,6 @@ typedef struct yasm_datavalhead yasm_datavalhead;
 /*@reldef@*/ STAILQ_HEAD(yasm_datavalhead, yasm_dataval);
 #endif
 
-/** Return value flags for yasm_bc_resolve(). */
-typedef enum {
-    YASM_BC_RESOLVE_NONE = 0,		/**< Ok, but length is not minimum. */
-    YASM_BC_RESOLVE_ERROR = 1<<0,	/**< Error found, output. */
-    YASM_BC_RESOLVE_MIN_LEN = 1<<1,	/**< Length is minimum possible. */
-    YASM_BC_RESOLVE_UNKNOWN_LEN = 1<<2	/**< Length indeterminate. */
-} yasm_bc_resolve_flags;
-
 /** Create an immediate value from an unsigned integer.
  * \param int_val   unsigned integer
  * \param line	    virtual line (from yasm_linemap)
@@ -260,24 +252,32 @@ void yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 /*@null@*/ yasm_intnum *yasm_common_calc_bc_dist
     (/*@null@*/ yasm_bytecode *precbc1, /*@null@*/ yasm_bytecode *precbc2);
 
-/** Resolve labels in a bytecode, and calculate its length.
- * Tries to minimize the length as much as possible.
- * \note Sometimes it's impossible to determine if a length is the minimum
- *       possible.  In this case, this function returns that the length is NOT
- *       the minimum.
+/** Resolve EQUs in a bytecode and calculate its possible lengths.
+ * Tries to minimize the length as much as possible for short_len.
+ * The short length is set in the bytecode, and the long length is returned
+ * in long_len (if applicable).
  * \param bc		bytecode
- * \param save		when zero, this function does \em not modify bc other
- *			than the length/size values (i.e. it doesn't keep the
- *			values returned by calc_bc_dist except temporarily to
- *			try to minimize the length); when nonzero, all fields
- *			in bc may be modified by this function
- * \param calc_bc_dist	function used to determine bytecode distance
- * \return Flags indicating whether the length is the minimum possible,
- *	   indeterminate, and if there was an error recognized (and output)
- *	   during execution.
+ * \param long_len	longer length (returned).  0 returned if no longer
+ *                      length is available (must be short).
+ * \param critical	critical expression if bytecode could be longer
+ *			(returned).  NULL returned if no critical expression.
+ * \param neg_thres	negative threshold for long/short decision (returned)
+ * \param pos_thres	positive threshold for long/short decision (returned)
+ * \return 0 if length is minimum (no way it can ever increase), negative if
+ *	   there was an error recognized (and output) during execution, and
+ *	   positive if the length may increase based on the critical expr.
+ * \note May store to bytecode updated expressions and the short length.
  */
-yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
-				      yasm_calc_bc_dist_func calc_bc_dist);
+int yasm_bc_calc_len(yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
+		     /*@out@*/ /*@only@*/ yasm_expr **critical,
+		     /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres);
+
+/** Mark a bytecode as long.  Has no effect if the bytecode does not have
+ * a long form.
+ * \param bc		bytecode
+ * \param long_len	long length (as returned by yasm_bc_calc_len)
+ */
+void yasm_bc_set_long(yasm_bytecode *bc, unsigned long long_len);
 
 /** Convert a bytecode into its byte representation.
  * \param bc	 	bytecode

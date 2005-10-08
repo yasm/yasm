@@ -58,8 +58,6 @@ static int special_options = 0;
 /*@null@*/ /*@dependent@*/ static yasm_objfmt *cur_objfmt = NULL;
 /*@null@*/ /*@dependent@*/ static const yasm_objfmt_module *
     cur_objfmt_module = NULL;
-/*@null@*/ /*@dependent@*/ static const yasm_optimizer_module *
-    cur_optimizer_module = NULL;
 /*@null@*/ /*@dependent@*/ static yasm_dbgfmt *cur_dbgfmt = NULL;
 /*@null@*/ /*@dependent@*/ static const yasm_dbgfmt_module *
     cur_dbgfmt_module = NULL;
@@ -478,15 +476,6 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 
-    /* Set basic as the optimizer (TODO: user choice) */
-    cur_optimizer_module = yasm_load_optimizer("basic");
-
-    if (!cur_optimizer_module) {
-	print_error(_("%s: could not load default %s"), _("FATAL"),
-		    _("optimizer"));
-	return EXIT_FAILURE;
-    }
-
     /* If list file enabled, make sure we have a list format loaded. */
     if (list_filename) {
 	/* If not already specified, default to nasm as the list format. */
@@ -643,7 +632,7 @@ main(int argc, char *argv[])
     }
 
     /* Optimize */
-    cur_optimizer_module->optimize(object);
+    yasm_object_optimize(object, cur_arch);
 
     if (yasm_get_num_errors(warning_error) > 0) {
 	yasm_errwarn_output_all(yasm_object_get_linemap(object), warning_error,

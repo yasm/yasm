@@ -132,23 +132,19 @@ int yasm_object_sections_traverse
 /*@dependent@*/ yasm_linemap *yasm_object_get_linemap
     (const yasm_object *object);
 
+/** Optimize an object.  Takes the unoptimized object and optimizes it.
+ * If successful, the object is ready for output to an object file.
+ * \param object	object
+ * \note Optimization failures are indicated by this function calling
+ *       yasm__error_at(); see errwarn.h for details.
+ */
+void yasm_object_optimize(yasm_object *object, yasm_arch *arch);
+
 /** Determine if a section is absolute or general.
  * \param sect	    section
  * \return Nonzero if section is absolute.
  */
 int yasm_section_is_absolute(yasm_section *sect);
-
-/** Get yasm_optimizer-specific flags.  For yasm_optimizer use only.
- * \param sect	    section
- * \return Optimizer-specific flags.
- */
-unsigned long yasm_section_get_opt_flags(const yasm_section *sect);
-
-/** Set yasm_optimizer-specific flags.  For yasm_optimizer use only.
- * \param sect	    section
- * \param opt_flags optimizer-specific flags.
- */
-void yasm_section_set_opt_flags(yasm_section *sect, unsigned long opt_flags);
 
 /** Get object owner of a section.
  * \param sect	    section

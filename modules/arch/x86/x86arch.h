@@ -187,7 +187,7 @@ typedef struct x86_insn {
 
 	/* Shift opcodes have an immediate form and a ,1 form (with no
 	 * immediate).  In the parser, we set this and opcode_len=1, but store
-	 * the ,1 version in the second byte of the opcode array.  We then
+	 * the non-,1 version in the second byte of the opcode array.  We then
 	 * choose between the two versions once we know the actual value of
 	 * imm (because we don't know it in the parser module).
 	 *
@@ -199,7 +199,7 @@ typedef struct x86_insn {
 
 	/* Instructions that take a sign-extended imm8 as well as imm values
 	 * (eg, the arith instructions and a subset of the imul instructions)
-	 * should set this and put the imm8 form in the second byte of the
+	 * should set this and put the non-imm8 form in the second byte of the
 	 * opcode.
 	 */
 	X86_POSTOP_SIGNEXT_IMM8,
@@ -261,8 +261,7 @@ int yasm_x86__expr_checkea
      unsigned int nosplit, int address16_op, unsigned char *displen,
      unsigned char *modrm, unsigned char *v_modrm, unsigned char *n_modrm,
      unsigned char *sib, unsigned char *v_sib, unsigned char *n_sib,
-     unsigned char *pcrel, unsigned char *rex,
-     yasm_calc_bc_dist_func calc_bc_dist);
+     unsigned char *pcrel, unsigned char *rex);
 
 void yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid,
 			 unsigned long line);

@@ -117,24 +117,30 @@ typedef struct bytecode_insn {
 
 static void bc_data_destroy(void *contents);
 static void bc_data_print(const void *contents, FILE *f, int indent_level);
-static yasm_bc_resolve_flags bc_data_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int bc_data_calc_len
+    (yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
+     /*@out@*/ /*@only@*/ yasm_expr **critical, /*@out@*/ long *neg_thres,
+     /*@out@*/ long *pos_thres);
 static int bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			   yasm_output_expr_func output_expr,
 			   /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static void bc_reserve_destroy(void *contents);
 static void bc_reserve_print(const void *contents, FILE *f, int indent_level);
-static yasm_bc_resolve_flags bc_reserve_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int bc_reserve_calc_len
+    (yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
+     /*@out@*/ /*@only@*/ yasm_expr **critical, /*@out@*/ long *neg_thres,
+     /*@out@*/ long *pos_thres);
 static int bc_reserve_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			      yasm_output_expr_func output_expr,
 			      /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static void bc_incbin_destroy(void *contents);
 static void bc_incbin_print(const void *contents, FILE *f, int indent_level);
-static yasm_bc_resolve_flags bc_incbin_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int bc_incbin_calc_len
+    (yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
+     /*@out@*/ /*@only@*/ yasm_expr **critical, /*@out@*/ long *neg_thres,
+     /*@out@*/ long *pos_thres);
 static int bc_incbin_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			     yasm_output_expr_func output_expr,
 			     /*@null@*/ yasm_output_reloc_func output_reloc);
@@ -142,16 +148,20 @@ static int bc_incbin_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 static void bc_align_destroy(void *contents);
 static void bc_align_print(const void *contents, FILE *f, int indent_level);
 static void bc_align_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
-static yasm_bc_resolve_flags bc_align_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int bc_align_calc_len
+    (yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
+     /*@out@*/ /*@only@*/ yasm_expr **critical, /*@out@*/ long *neg_thres,
+     /*@out@*/ long *pos_thres);
 static int bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			    yasm_output_expr_func output_expr,
 			    /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static void bc_org_destroy(void *contents);
 static void bc_org_print(const void *contents, FILE *f, int indent_level);
-static yasm_bc_resolve_flags bc_org_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int bc_org_calc_len
+    (yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
+     /*@out@*/ /*@only@*/ yasm_expr **critical, /*@out@*/ long *neg_thres,
+     /*@out@*/ long *pos_thres);
 static int bc_org_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			  yasm_output_expr_func output_expr,
 			  /*@null@*/ yasm_output_reloc_func output_reloc);
@@ -159,8 +169,10 @@ static int bc_org_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 static void bc_insn_destroy(void *contents);
 static void bc_insn_print(const void *contents, FILE *f, int indent_level);
 static void bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
-static yasm_bc_resolve_flags bc_insn_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int bc_insn_calc_len
+    (yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
+     /*@out@*/ /*@only@*/ yasm_expr **critical, /*@out@*/ long *neg_thres,
+     /*@out@*/ long *pos_thres);
 static int bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			   yasm_output_expr_func output_expr,
 			   /*@null@*/ yasm_output_reloc_func output_reloc);
@@ -171,7 +183,8 @@ static const yasm_bytecode_callback bc_data_callback = {
     bc_data_destroy,
     bc_data_print,
     yasm_bc_finalize_common,
-    bc_data_resolve,
+    bc_data_calc_len,
+    yasm_bc_set_long_common,
     bc_data_tobytes
 };
 
@@ -179,7 +192,8 @@ static const yasm_bytecode_callback bc_reserve_callback = {
     bc_reserve_destroy,
     bc_reserve_print,
     yasm_bc_finalize_common,
-    bc_reserve_resolve,
+    bc_reserve_calc_len,
+    yasm_bc_set_long_common,
     bc_reserve_tobytes
 };
 
@@ -187,7 +201,8 @@ static const yasm_bytecode_callback bc_incbin_callback = {
     bc_incbin_destroy,
     bc_incbin_print,
     yasm_bc_finalize_common,
-    bc_incbin_resolve,
+    bc_incbin_calc_len,
+    yasm_bc_set_long_common,
     bc_incbin_tobytes
 };
 
@@ -195,7 +210,8 @@ static const yasm_bytecode_callback bc_align_callback = {
     bc_align_destroy,
     bc_align_print,
     bc_align_finalize,
-    bc_align_resolve,
+    bc_align_calc_len,
+    yasm_bc_set_long_common,
     bc_align_tobytes
 };
 
@@ -203,7 +219,8 @@ static const yasm_bytecode_callback bc_org_callback = {
     bc_org_destroy,
     bc_org_print,
     yasm_bc_finalize_common,
-    bc_org_resolve,
+    bc_org_calc_len,
+    yasm_bc_set_long_common,
     bc_org_tobytes
 };
 
@@ -211,7 +228,8 @@ static const yasm_bytecode_callback bc_insn_callback = {
     bc_insn_destroy,
     bc_insn_print,
     bc_insn_finalize,
-    bc_insn_resolve,
+    bc_insn_calc_len,
+    yasm_bc_set_long_common,
     bc_insn_tobytes
 };
 
@@ -328,6 +346,12 @@ yasm_bc_finalize_common(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 }
 
 void
+yasm_bc_set_long_common(yasm_bytecode *bc)
+{
+    yasm_internal_error(N_("bytecode does not have a long format"));
+}
+
+void
 yasm_bc_transform(yasm_bytecode *bc, const yasm_bytecode_callback *callback,
 		  void *contents)
 {
@@ -352,7 +376,7 @@ yasm_bc_create_common(const yasm_bytecode_callback *callback, void *contents,
 
     bc->line = line;
 
-    bc->offset = 0;
+    bc->offset = ~0UL;
 
     bc->opt_flags = 0;
 
@@ -382,9 +406,9 @@ bc_data_print(const void *contents, FILE *f, int indent_level)
     yasm_dvs_print(&bc_data->datahead, f, indent_level+2);
 }
 
-static yasm_bc_resolve_flags
-bc_data_resolve(yasm_bytecode *bc, int save,
-		yasm_calc_bc_dist_func calc_bc_dist)
+static int
+bc_data_calc_len(yasm_bytecode *bc, unsigned long *long_len,
+		 yasm_expr **critical, long *neg_thres, long *pos_thres)
 {
     bytecode_data *bc_data = (bytecode_data *)bc->contents;
     yasm_dataval *dv;
@@ -407,7 +431,7 @@ bc_data_resolve(yasm_bytecode *bc, int save,
 	}
     }
 
-    return YASM_BC_RESOLVE_MIN_LEN;
+    return 0;
 }
 
 static int
@@ -481,40 +505,30 @@ bc_reserve_print(const void *contents, FILE *f, int indent_level)
 	    (unsigned int)reserve->itemsize);
 }
 
-static yasm_bc_resolve_flags
-bc_reserve_resolve(yasm_bytecode *bc, int save,
-		   yasm_calc_bc_dist_func calc_bc_dist)
+static int
+bc_reserve_calc_len(yasm_bytecode *bc, unsigned long *long_len,
+		    yasm_expr **critical, long *neg_thres, long *pos_thres)
 {
     bytecode_reserve *reserve = (bytecode_reserve *)bc->contents;
-    yasm_bc_resolve_flags retval = YASM_BC_RESOLVE_MIN_LEN;
-    /*@null@*/ yasm_expr *temp;
-    yasm_expr **tempp;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
 
-    if (save) {
-	temp = NULL;
-	tempp = &reserve->numitems;
-    } else {
-	temp = yasm_expr_copy(reserve->numitems);
-	assert(temp != NULL);
-	tempp = &temp;
-    }
-    num = yasm_expr_get_intnum(tempp, calc_bc_dist);
+    num = yasm_expr_get_intnum(&reserve->numitems, NULL);
     if (!num) {
-	/* For reserve, just say non-constant quantity instead of allowing
-	 * the circular reference error to filter through.
-	 */
-	if (temp && yasm_expr__contains(temp, YASM_EXPR_FLOAT))
+	/* Check for use of floats first. */
+	if (reserve->numitems &&
+	    yasm_expr__contains(reserve->numitems, YASM_EXPR_FLOAT)) {
 	    yasm__error(bc->line,
 		N_("expression must not contain floating point value"));
-	else
-	    yasm__error(bc->line,
-		N_("attempt to reserve non-constant quantity of space"));
-	retval = YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
-    } else
-	bc->len += yasm_intnum_get_uint(num)*reserve->itemsize;
-    yasm_expr_destroy(temp);
-    return retval;
+	    return -1;
+	}
+	/* FIXME: Non-constant currently not allowed. */
+	yasm__error(bc->line,
+		    N_("attempt to reserve non-constant quantity of space"));
+	return -1;
+    }
+    
+    bc->len += yasm_intnum_get_uint(num)*reserve->itemsize;
+    return 0;
 }
 
 static int
@@ -571,51 +585,39 @@ bc_incbin_print(const void *contents, FILE *f, int indent_level)
     fprintf(f, "\n");
 }
 
-static yasm_bc_resolve_flags
-bc_incbin_resolve(yasm_bytecode *bc, int save,
-		  yasm_calc_bc_dist_func calc_bc_dist)
+static int
+bc_incbin_calc_len(yasm_bytecode *bc, unsigned long *long_len,
+		   yasm_expr **critical, long *neg_thres, long *pos_thres)
 {
     bytecode_incbin *incbin = (bytecode_incbin *)bc->contents;
     FILE *f;
-    /*@null@*/ yasm_expr *temp;
-    yasm_expr **tempp;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
     unsigned long start = 0, maxlen = 0xFFFFFFFFUL, flen;
 
     /* Try to convert start to integer value */
     if (incbin->start) {
-	if (save) {
-	    temp = NULL;
-	    tempp = &incbin->start;
-	} else {
-	    temp = yasm_expr_copy(incbin->start);
-	    assert(temp != NULL);
-	    tempp = &temp;
-	}
-	num = yasm_expr_get_intnum(tempp, calc_bc_dist);
+	num = yasm_expr_get_intnum(&incbin->start, NULL);
 	if (num)
 	    start = yasm_intnum_get_uint(num);
-	yasm_expr_destroy(temp);
-	if (!num)
-	    return YASM_BC_RESOLVE_UNKNOWN_LEN;
+	if (!num) {
+	    /* FIXME */
+	    yasm__error(bc->line,
+			N_("incbin does not yet understand non-constant"));
+	    return -1;
+	}
     }
 
     /* Try to convert maxlen to integer value */
     if (incbin->maxlen) {
-	if (save) {
-	    temp = NULL;
-	    tempp = &incbin->maxlen;
-	} else {
-	    temp = yasm_expr_copy(incbin->maxlen);
-	    assert(temp != NULL);
-	    tempp = &temp;
-	}
-	num = yasm_expr_get_intnum(tempp, calc_bc_dist);
+	num = yasm_expr_get_intnum(&incbin->maxlen, NULL);
 	if (num)
 	    maxlen = yasm_intnum_get_uint(num);
-	yasm_expr_destroy(temp);
-	if (!num)
-	    return YASM_BC_RESOLVE_UNKNOWN_LEN;
+	if (!num) {
+	    /* FIXME */
+	    yasm__error(bc->line,
+			N_("incbin does not yet understand non-constant"));
+	    return -1;
+	}
     }
 
     /* FIXME: Search include path for filename.  Save full path back into
@@ -627,29 +629,29 @@ bc_incbin_resolve(yasm_bytecode *bc, int save,
     if (!f) {
 	yasm__error(bc->line, N_("`incbin': unable to open file `%s'"),
 		    incbin->filename);
-	return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
+	return -1;
     }
     if (fseek(f, 0L, SEEK_END) < 0) {
 	yasm__error(bc->line, N_("`incbin': unable to seek on file `%s'"),
 		    incbin->filename);
-	return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
+	return -1;
     }
     flen = (unsigned long)ftell(f);
     fclose(f);
 
     /* Compute length of incbin from start, maxlen, and len */
     if (start > flen) {
-	yasm__warning(YASM_WARN_GENERAL, bc->line,
-		      N_("`incbin': start past end of file `%s'"),
-		      incbin->filename);
-	start = flen;
+	yasm__error(bc->line, N_("`incbin': start past end of file `%s'"),
+		    incbin->filename);
+	return -1;
     }
     flen -= start;
     if (incbin->maxlen)
 	if (maxlen < flen)
 	    flen = maxlen;
     bc->len += flen;
-    return YASM_BC_RESOLVE_MIN_LEN;
+
+    return 0;
 }
 
 static int
@@ -751,10 +753,12 @@ bc_align_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 	yasm__error(bc->line, N_("align maximum skip must be a constant"));
 }
 
-static yasm_bc_resolve_flags
-bc_align_resolve(yasm_bytecode *bc, int save,
-		 yasm_calc_bc_dist_func calc_bc_dist)
+static int
+bc_align_calc_len(yasm_bytecode *bc, unsigned long *long_len,
+		  yasm_expr **critical, long *neg_thres, long *pos_thres)
 {
+    yasm_internal_error(N_("align not yet implemented"));
+    /*
     bytecode_align *align = (bytecode_align *)bc->contents;
     unsigned long end;
     unsigned long boundary =
@@ -778,6 +782,8 @@ bc_align_resolve(yasm_bytecode *bc, int save,
 	    bc->len = 0;
     }
     return YASM_BC_RESOLVE_MIN_LEN;
+    */
+    return 0;
 }
 
 static int
@@ -873,10 +879,12 @@ bc_org_print(const void *contents, FILE *f, int indent_level)
     fprintf(f, "%*sStart=%lu\n", indent_level, "", org->start);
 }
 
-static yasm_bc_resolve_flags
-bc_org_resolve(yasm_bytecode *bc, int save,
-	       yasm_calc_bc_dist_func calc_bc_dist)
+static int
+bc_org_calc_len(yasm_bytecode *bc, unsigned long *long_len,
+		yasm_expr **critical, long *neg_thres, long *pos_thres)
 {
+    yasm_internal_error(N_("org not yet implemented"));
+#if 0
     bytecode_org *org = (bytecode_org *)bc->contents;
 
     /* Check for overrun */
@@ -888,6 +896,8 @@ bc_org_resolve(yasm_bytecode *bc, int save,
     /* Generate space to start offset */
     bc->len = org->start - bc->offset;
     return YASM_BC_RESOLVE_MIN_LEN;
+#endif
+    return 0;
 }
 
 static int
@@ -977,13 +987,13 @@ bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 			    insn->num_segregs, insn->segregs);
 }
 
-static yasm_bc_resolve_flags
-bc_insn_resolve(yasm_bytecode *bc, int save,
-		yasm_calc_bc_dist_func calc_bc_dist)
+static int
+bc_insn_calc_len(yasm_bytecode *bc, unsigned long *long_len,
+		  yasm_expr **critical, long *neg_thres, long *pos_thres)
 {
-    yasm_internal_error(N_("bc_insn_resolve() is not implemented"));
+    yasm_internal_error(N_("bc_insn_calc_len() is not implemented"));
     /*@notreached@*/
-    return YASM_BC_RESOLVE_ERROR;
+    return 0;
 }
 
 static int
@@ -1146,50 +1156,62 @@ yasm_common_calc_bc_dist(/*@null@*/ yasm_bytecode *precbc1,
     }
 }
 
-yasm_bc_resolve_flags
-yasm_bc_resolve(yasm_bytecode *bc, int save,
-		yasm_calc_bc_dist_func calc_bc_dist)
+int
+yasm_bc_calc_len(yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
+		 /*@out@*/ /*@only@*/ yasm_expr **critical,
+		 /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
-    yasm_bc_resolve_flags retval = YASM_BC_RESOLVE_MIN_LEN;
-    /*@null@*/ yasm_expr *temp;
-    yasm_expr **tempp;
-    /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
+    int retval = 0;
 
-    bc->len = 0;	/* start at 0 */
+    bc->len = 0;
+    *critical = NULL;
+    *neg_thres = 0;
+    *pos_thres = 0;
+    *long_len = 0;
 
     if (!bc->callback)
 	yasm_internal_error(N_("got empty bytecode in bc_resolve"));
     else
-	retval = bc->callback->resolve(bc, save, calc_bc_dist);
+	retval = bc->callback->calc_len(bc, long_len, critical, neg_thres,
+					pos_thres);
 
-    /* Multiply len by number of multiples */
+    /* Check for multiples */
     if (bc->multiple) {
-	if (save) {
-	    temp = NULL;
-	    tempp = &bc->multiple;
-	} else {
-	    temp = yasm_expr_copy(bc->multiple);
-	    assert(temp != NULL);
-	    tempp = &temp;
-	}
-	num = yasm_expr_get_intnum(tempp, calc_bc_dist);
+	/*@null@*/ yasm_expr *temp;
+	/*@dependent@*/ /*@null@*/ const yasm_intnum *num;
+
+	num = yasm_expr_get_intnum(&bc->multiple, NULL);
 	if (!num) {
-	    retval = YASM_BC_RESOLVE_UNKNOWN_LEN;
-	    if (temp && yasm_expr__contains(temp, YASM_EXPR_FLOAT)) {
+	    if (yasm_expr__contains(bc->multiple, YASM_EXPR_FLOAT)) {
 		yasm__error(bc->line,
 		    N_("expression must not contain floating point value"));
-		retval |= YASM_BC_RESOLVE_ERROR;
+		retval = -1;
+	    } else {
+		/* FIXME: Non-constant currently not allowed. */
+		yasm__error(bc->line,
+			    N_("attempt to use non-constant multiple"));
+		retval = -1;
 	    }
-	} else
-	    bc->len *= yasm_intnum_get_uint(num);
-	yasm_expr_destroy(temp);
+	}
     }
 
     /* If we got an error somewhere along the line, clear out any calc len */
-    if (retval & YASM_BC_RESOLVE_UNKNOWN_LEN)
+    if (retval < 0) {
 	bc->len = 0;
+	*long_len = 0;
+    }
 
     return retval;
+}
+
+void
+yasm_bc_set_long(yasm_bytecode *bc, unsigned long long_len)
+{
+    if (!bc->callback)
+	yasm_internal_error(N_("got empty bytecode in bc_set_long"));
+    else
+	bc->callback->set_long(bc);
+    bc->len = long_len;
 }
 
 /*@null@*/ /*@only@*/ unsigned char *

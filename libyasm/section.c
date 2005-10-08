@@ -1,7 +1,7 @@
 /*
  * Section utility functions
  *
- *  Copyright (C) 2001  Peter Johnson
+ *  Copyright (C) 2001-2005  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "coretype.h"
 #include "valparam.h"
 #include "assocdat.h"
+#include "qq.h"
 
 #include "linemgr.h"
 #include "errwarn.h"
@@ -39,6 +40,7 @@
 #include "symrec.h"
 
 #include "bytecode.h"
+#include "arch.h"
 #include "section.h"
 #include "objfmt.h"
 
@@ -211,18 +213,6 @@ yasm_section_is_absolute(yasm_section *sect)
     return (sect->type == SECTION_ABSOLUTE);
 }
 
-unsigned long
-yasm_section_get_opt_flags(const yasm_section *sect)
-{
-    return sect->opt_flags;
-}
-
-void
-yasm_section_set_opt_flags(yasm_section *sect, unsigned long opt_flags)
-{
-    sect->opt_flags = opt_flags;
-}
-
 yasm_object *
 yasm_section_get_object(const yasm_section *sect)
 {
@@ -283,11 +273,14 @@ void
 yasm_object_finalize(yasm_object *object)
 {
     yasm_section *sect;
+    unsigned long bc_index = 0;
 
     /* Iterate through sections */
     STAILQ_FOREACH(sect, &object->sections, link) {
 	yasm_bytecode *cur = STAILQ_FIRST(&sect->bcs);
 	yasm_bytecode *prev;
+
+	cur->bc_index = bc_index++;
 
 	/* Skip our locally created empty bytecode first. */
 	prev = cur;
@@ -295,6 +288,7 @@ yasm_object_finalize(yasm_object *object)
 
 	/* Iterate through the remainder, if any. */
 	while (cur) {
+	    cur->bc_index = bc_index++;
 	    /* Finalize */
 	    yasm_bc_finalize(cur, prev);
 	    prev = cur;
@@ -505,6 +499,122 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
 	STAILQ_FOREACH(cur, &sect->bcs, link) {
 	    fprintf(f, "%*sNext Bytecode:\n", indent_level+1, "");
 	    yasm_bc_print(cur, f, indent_level+2);
+	}
+    }
+}
+
+/*
+ * Robertson (1977) optimizer
+ * Based on the algorithm given in:
+ *   MRC Technical Summary Report # 1779
+ *   CODE GENERATION FOR SHORT/LONG ADDRESS MACHINES
+ *   Edward L. Robertson
+ *   Mathematics Research Center
+ *   University of Wisconsin-Madison
+ *   610 Walnut Street
+ *   Madison, Wisconsin 53706
+ *   August 1977
+ *
+ * Key components of algorithm:
+ *  - start assuming all short forms
+ *  - build spans for short->long transition dependencies
+ *  - if a long form is needed, walk the dependencies and update
+ * Major differences from Robertson's algorithm:
+ *  - detection of cycles
+ *  - any difference of two locations is allowed
+ *
+ * Data structures:
+ *  - Interval tree to store spans and associated data
+ *  - Queue Q
+ *
+ * Basic algorithm outline:
+ *
+ * 1. Initialization:
+ *  a. Number bytecodes sequentially (done in object_finalize by setting
+ *     bc_index values).
+ *  b. First pass through bytecodes assumes minimum length but builds spans
+ *     if necessary.  Also avoids building spans for things that are
+ *     considered "certainly long" such as inter-section references or if
+ *     the # of bytecodes spanned is greater than the long threshold
+ *     (basically treating each bytecode as 1 byte in length).
+ *  c. Iterate over spans; if span exceeds long threshold, add BC for that
+ *     span to Q.
+ * 2. Main loop:
+ *   While Q not empty:
+ *     Mark BC at head of Q long (and remove from Q).
+ *     For each span that contains BC:
+ *       Increase span length by difference between short and long BC length.
+ *       If span exceeds long threshold, add its BC to tail of Q.
+ * 3. Final pass over bytecodes to generate offsets.
+ */
+
+void
+yasm_object_optimize(yasm_object *object, yasm_arch *arch)
+{
+    yasm_section *sect;
+    int saw_error = 0;
+
+    /* Step 1b */
+    STAILQ_FOREACH(sect, &object->sections, link) {
+	unsigned long i;
+
+	yasm_bytecode *cur = STAILQ_FIRST(&sect->bcs);
+	yasm_bytecode *prev;
+
+	/* Skip our locally created empty bytecode first. */
+	prev = cur;
+	cur = STAILQ_NEXT(cur, link);
+
+	/* Iterate through the remainder, if any. */
+	while (cur) {
+	    unsigned long long_len;
+	    /*@only@*/ /*@null@*/ yasm_expr *critical;
+	    long neg_thres;
+	    long pos_thres;
+	    int retval;
+
+	    switch (yasm_bc_calc_len(cur, &long_len, &critical, &neg_thres,
+				     &pos_thres)) {
+		case -1:
+		    saw_error = 1;
+		    break;
+		case 0:
+		    /* No special action required */
+		    break;
+		case 1:
+		    /* Need to build a span */
+		    yasm_bc_set_long(cur, long_len);
+		    yasm_expr_destroy(critical);
+		    break;
+		default:
+		    yasm_internal_error(N_("bad return value from bc_calc_len"));
+	    }
+
+	    prev = cur;
+	    cur = STAILQ_NEXT(cur, link);
+	}
+    }
+
+    if (saw_error)
+	return;
+
+    /* Step 3 */
+    STAILQ_FOREACH(sect, &object->sections, link) {
+	unsigned long offset = 0;
+
+	yasm_bytecode *cur = STAILQ_FIRST(&sect->bcs);
+	yasm_bytecode *prev;
+
+	/* Skip our locally created empty bytecode first. */
+	prev = cur;
+	cur = STAILQ_NEXT(cur, link);
+
+	/* Iterate through the remainder, if any. */
+	while (cur) {
+	    cur->offset = offset;
+	    offset += cur->len;
+	    prev = cur;
+	    cur = STAILQ_NEXT(cur, link);
 	}
     }
 }
