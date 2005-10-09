@@ -9,9 +9,8 @@ libyasm_a_SOURCES += gas-token.c
 
 YASM_MODULES += parser_gas
 
-gas-token.c: $(srcdir)/modules/parsers/gas/gas-token.re re2c$(EXEEXT) cleanup$(EXEEXT)
+gas-token.c: $(srcdir)/modules/parsers/gas/gas-token.re re2c$(EXEEXT)
 	$(top_builddir)/re2c$(EXEEXT) -b -o $@ $(srcdir)/modules/parsers/gas/gas-token.re
-	$(top_builddir)/cleanup$(EXEEXT) $@
 
 BUILT_SOURCES += gas-bison.c
 BUILT_SOURCES += gas-bison.h

@@ -11,6 +11,8 @@ const char *outputFileName = 0;
 int sFlag = 0;
 int bFlag = 0;
 unsigned int oline = 1;
+unsigned char *vUsedLabels;
+unsigned int vUsedLabelAlloc = 1000;
 
 static char *opt_arg = NULL;
 static int opt_ind = 1;
@@ -22,29 +24,32 @@ static const mbo_opt_struct OPTIONS[] = {
 	{'h', 0, "help"},
 	{'s', 0, "nested-ifs"},
 	{'o', 1, "output"},
-	{'v', 0, "version"}
+	{'v', 0, "version"},
+        {'-', 0, NULL} /* end of args */ 
 };
 
 static void usage()
 {
-    fprintf(stderr, "usage: re2c [-esbvh] file\n"
-		"\n"
-		"-? -h   --help          Display this info.\n"
-		"\n"
-		"-b      --bit-vectors   Implies -s. Use bit vectors as well in the attempt to\n"
-		"                        coax better code out of the compiler. Most useful for\n"
-		"                        specifications with more than a few keywords (e.g. for\n"
-		"                        most programming languages).\n"
-		"\n"
-		"-e      --ecb           Cross-compile from an ASCII platform to\n"
-		"                        an EBCDIC one.\n"
-		"\n"
-		"-s      --nested-ifs    Generate nested ifs for some switches. Many compilers\n"
-		"                        need this assist to generate better code.\n"
-		"\n"
-		"-o      --output=output Specify the output file instead of stdout\n"
-		"\n"
-		"-v      --version       Show version information.\n");
+    fprintf(stderr,
+	"usage: re2c [-esbvh] file\n"
+	"\n"
+	"-? -h   --help          Display this info.\n"
+	"\n"
+	"-b      --bit-vectors   Implies -s. Use bit vectors as well in the attempt to\n"
+	"                        coax better code out of the compiler. Most useful for\n"
+	"                        specifications with more than a few keywords (e.g. for\n"
+	"                        most programming languages).\n"
+	"\n"
+	"-e      --ecb           Cross-compile from an ASCII platform to\n"
+	"                        an EBCDIC one.\n"
+	"\n"
+	"-s      --nested-ifs    Generate nested ifs for some switches. Many compilers\n"
+	"                        need this assist to generate better code.\n"
+	"\n"
+	"-o      --output=output Specify the output file instead of stdout\n"
+	"\n"
+	"-v      --version       Show version information.\n"
+	"-V      --vernum        Show version as one number.\n");
 }
 
 int main(int argc, char *argv[])
@@ -76,8 +81,14 @@ int main(int argc, char *argv[])
 		outputFileName = opt_arg;
 		break;
 	    case 'v':
-		fputs("re2c\n", stderr);
+		fputs("re2c " PACKAGE_VERSION "\n", stdout);
 		break;
+	    case 'V': {
+		int v1, v2, v3;
+		sscanf(PACKAGE_VERSION, "%d.%d.%d", &v1, &v2, &v3);
+		fprintf(stdout, "%02d%02d%02d\n", v1, v2, v3);
+		return 2;
+	    }
 	    case 'h':
 	    case '?':
 	    default:
@@ -91,6 +102,12 @@ int main(int argc, char *argv[])
     } else {
 	usage();
 	return 2;
+    }
+
+    vUsedLabels = calloc(vUsedLabelAlloc, 1);
+    if (!vUsedLabels) {
+	fputs("Out of memory.\n", stderr);
+	return 1;
     }
 
     /* set up the input stream */

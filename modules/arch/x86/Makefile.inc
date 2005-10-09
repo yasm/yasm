@@ -8,9 +8,8 @@ libyasm_a_SOURCES += x86id.c
 
 YASM_MODULES += arch_x86
 
-x86id.c: $(srcdir)/modules/arch/x86/x86id.re re2c$(EXEEXT) cleanup$(EXEEXT)
+x86id.c: $(srcdir)/modules/arch/x86/x86id.re re2c$(EXEEXT)
 	$(top_builddir)/re2c$(EXEEXT) -s -o $@ $(srcdir)/modules/arch/x86/x86id.re
-	$(top_builddir)/cleanup$(EXEEXT) $@
 
 BUILT_SOURCES += x86id.c
 

@@ -7,9 +7,8 @@ libyasm_a_SOURCES += lc3bid.c
 
 YASM_MODULES += arch_lc3b
 
-lc3bid.c: $(srcdir)/modules/arch/lc3b/lc3bid.re re2c$(EXEEXT) cleanup$(EXEEXT)
+lc3bid.c: $(srcdir)/modules/arch/lc3b/lc3bid.re re2c$(EXEEXT)
 	$(top_builddir)/re2c$(EXEEXT) -s -o $@ $(srcdir)/modules/arch/lc3b/lc3bid.re
-	$(top_builddir)/cleanup$(EXEEXT) $@
 
 BUILT_SOURCES += lc3bid.c
 

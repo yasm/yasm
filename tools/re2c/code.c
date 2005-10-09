@@ -5,6 +5,19 @@
 #include "tools/re2c/globals.h"
 #include "tools/re2c/dfa.h"
 
+static void useLabel(size_t value) {
+    while (value >= vUsedLabelAlloc) {
+	vUsedLabels = realloc(vUsedLabels, vUsedLabelAlloc * 2);
+	if (!vUsedLabels) {
+	    fputs("Out of memory.\n", stderr);
+	    exit(EXIT_FAILURE);
+	}
+	memset(vUsedLabels + vUsedLabelAlloc, 0, vUsedLabelAlloc);
+	vUsedLabelAlloc *= 2;
+    }
+    vUsedLabels[value] = 1;
+}
+
 /* there must be at least one span in list;  all spans must cover
  * same range
  */
@@ -163,16 +176,18 @@ void BitMap_stats(void){
 }
 #endif
 
-static void genGoTo(FILE *o, State *from, State *to, int *readCh)
+static void genGoTo(FILE *o, State *from, State *to, int *readCh,
+		    const char *indent)
 {
 #if 0
     if (*readCh && from->label + 1 != to->label)
     {
-	fputs("\tyych = *YYCURSOR;\n", o); oline++;
+	fputs("%syych = *YYCURSOR;\n", indent, o); oline++;
 	*readCh = 0;
     }
 #endif
-    fprintf(o, "\tgoto yy%u;\n", to->label); oline++;
+    fprintf(o, "%sgoto yy%u;\n", indent, to->label); oline++;
+    useLabel(to->label);
 }
 
 static void genIf(FILE *o, const char *cmp, unsigned int v, int *readCh)
@@ -267,7 +282,7 @@ Action_emit(Action *a, FILE *o, int *readCh)
 			fputs("\tswitch(yyaccept){\n", o); oline+=2;
 		    }
 		    fprintf(o, "\tcase %u:", a->d.Accept.saves[i]);
-		    genGoTo(o, a->state, a->d.Accept.rules[i], readCh);
+		    genGoTo(o, a->state, a->d.Accept.rules[i], readCh, "\t");
 		}
 	    if(!first) {
 		fputs("\t}\n", o); oline++;
@@ -307,37 +322,37 @@ static void doLinear(FILE *o, unsigned int i, Span *s, unsigned int n,
 	    if(s[1].to == next && n == 3){
 		indent(o, i);
 		genIf(o, "!=", s[0].ub, readCh);
-		genGoTo(o, from, bg, readCh);
+		genGoTo(o, from, bg, readCh, "\t");
 		indent(o, i);
-		genGoTo(o, from, next, readCh);
+		genGoTo(o, from, next, readCh, "\t");
 		return;
 	    } else {
 		indent(o, i);
 		genIf(o, "==", s[0].ub, readCh);
-		genGoTo(o, from, s[1].to, readCh);
+		genGoTo(o, from, s[1].to, readCh, "\t");
 	    }
 	    n -= 2; s += 2;
 	}
 	if(n == 1){
 	    indent(o, i);
-	    genGoTo(o, from, s[0].to, readCh);
+	    genGoTo(o, from, s[0].to, readCh, "\t");
 	    return;
 	} else if(n == 2 && bg == next){
 	    indent(o, i);
 	    genIf(o, ">=", s[0].ub, readCh);
-	    genGoTo(o, from, s[1].to, readCh);
+	    genGoTo(o, from, s[1].to, readCh, "\t");
 	    indent(o, i);
-	    genGoTo(o, from, next, readCh);
+	    genGoTo(o, from, next, readCh, "\t");
 	    return;
 	} else {
 	    indent(o, i);
 	    genIf(o, "<=", s[0].ub - 1, readCh);
-	    genGoTo(o, from, bg, readCh);
+	    genGoTo(o, from, bg, readCh, "\t");
 	    n -= 1; s += 1;
 	}
     }
     indent(o, i);
-    genGoTo(o, from, next, readCh);
+    genGoTo(o, from, next, readCh, "\t");
 }
 
 void
@@ -392,11 +407,11 @@ Go_genSwitch(Go *g, FILE *o, State *from, State *next, int *readCh){
 		else
 		    *(r++) = *s;
 	    }
-	    genGoTo(o, from, to, readCh);
+	    genGoTo(o, from, to, readCh, "\t");
 	    t = r;
 	}
 	fputs("\tdefault:", o);
-	genGoTo(o, from, def, readCh);
+	genGoTo(o, from, def, readCh, "\t");
 	fputs("\t}\n", o); oline++;
 
 	free(sP);
@@ -468,9 +483,16 @@ Go_genGoto(Go *g, FILE *o, State *from, State *next, int *readCh){
 		    Go go;
 		    go.span = malloc(sizeof(Span)*g->nSpans);
 		    Go_unmap(&go, g, to);
-		    fprintf(o, "\tif(yybm[%u+yych] & %u)", b->i,
-			    (unsigned int) b->m);
-		    genGoTo(o, from, to, readCh);
+		    fprintf(o, "\tif(yybm[%u+", b->i);
+#if 0
+		    if (*readCh)
+			fputs("(yych = *YYCURSOR)", o);
+		    else
+#endif
+			fputs("yych", o);
+		    fprintf(o, "] & %u) {\n", (unsigned int) b->m); oline++;
+		    genGoTo(o, from, to, readCh, "\t\t");
+		    fputs("\t}\n", o); oline++;
 		    Go_genBase(&go, o, from, next, readCh);
 		    free(go.span);
 		    return;
@@ -482,7 +504,8 @@ Go_genGoto(Go *g, FILE *o, State *from, State *next, int *readCh){
 }
 
 void State_emit(State *s, FILE *o, int *readCh){
-    fprintf(o, "yy%u:", s->label);
+    if (vUsedLabels[s->label])
+	fprintf(o, "yy%u:", s->label);
     Action_emit(s->action, o, readCh);
 }
 
@@ -658,9 +681,11 @@ void DFA_emit(DFA *d, FILE *o){
     unsigned int nRules = 0;
     unsigned int nSaves = 0;
     unsigned int *saves;
+    unsigned int nOrgOline;
     State **rules;
     State *accept = NULL;
     Span *span;
+    FILE *tmpo;
 
     DFA_findSCCs(d);
     d->head->link = d->head;
@@ -767,10 +792,22 @@ void DFA_emit(DFA *d, FILE *o){
 	BitMap_gen(o, d->lbChar, d->ubChar);
 
     fprintf(o, "\tgoto yy%u;\n", label); oline++;
+    useLabel(label);
     Action_new_Enter(d->head, label++);
 
     for(s = d->head; s; s = s->next)
 	s->label = label++;
+
+    nOrgOline = oline;
+    tmpo = fopen("re2c.tmp", "wt");
+    for(s = d->head; s; s = s->next){
+	int readCh = 0;
+	State_emit(s, tmpo, &readCh);
+	Go_genGoto(&s->go, o, s, s->next, &readCh);
+    }
+    fclose(tmpo);
+    unlink("re2c.tmp");
+    oline = nOrgOline;
 
     for(s = d->head; s; s = s->next){
 	int readCh = 0;

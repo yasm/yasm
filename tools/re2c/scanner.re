@@ -58,7 +58,7 @@ fill(Scanner *s, unsigned char *cursor)
 	    s->bot = buf;
 	}
 	if((cnt = fread(s->lim, 1, BSIZE, s->in)) != BSIZE){
-	    s->eof = &s->lim[cnt]; *s->eof++ = '\n';
+	    s->eof = &s->lim[cnt]; *s->eof++ = '\0';
 	}
 	s->lim += cnt;
     }
@@ -66,6 +66,7 @@ fill(Scanner *s, unsigned char *cursor)
 }
 
 /*!re2c
+zero		= "\000";
 any		= [\000-\377];
 dot		= any \ [\n];
 esc		= dot \ [\\];
@@ -91,11 +92,12 @@ echo:
 	"/*!re2c"		{ fwrite(s->tok, 1, &cursor[-7] - s->tok, out);
 				  s->tok = cursor;
 				  RETURN(1); }
-	"\n"			{ if(cursor == s->eof) RETURN(0);
-				  fwrite(s->tok, 1, cursor - s->tok, out);
+	"\n"			{ fwrite(s->tok, 1, cursor - s->tok, out);
 				  s->tok = s->pos = cursor; s->cline++; oline++;
 				  goto echo; }
-        any			{ goto echo; }
+	zero			{ fwrite(s->tok, 1, cursor - s->tok - 1, out); /* -1 so we don't write out the \0 */
+				  if(cursor == s->eof) { RETURN(0); } }
+	any			{ goto echo; }
 */
 }
 

@@ -3,7 +3,7 @@
 # These utility programs have to be built for BUILD host in cross-build.
 # This makes things rather non-standard automake
 
-noinst_PROGRAMS += re2c cleanup
+noinst_PROGRAMS += re2c
 
 re2c_SOURCES =
 EXTRA_DIST += tools/re2c/main.c
@@ -88,14 +88,6 @@ re2c-parser.h: re2c-parser.c
 	  rm -f re2c-parser.c; \
 	  $(MAKE) re2c-parser.c; \
 	else :; fi
-
-cleanup_SOURCES =
-EXTRA_DIST += tools/re2c/cleanup.c
-cleanup_LDADD = cleanup.$(OBJEXT)
-cleanup_LINK = $(CCLD_FOR_BUILD) -o $@
-
-cleanup.$(OBJEXT): tools/re2c/cleanup.c
-	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/cleanup.c || echo '$(srcdir)/'`tools/re2c/cleanup.c
 
 BUILT_SOURCES += re2c-parser.c
 BUILT_SOURCES += re2c-parser.h
