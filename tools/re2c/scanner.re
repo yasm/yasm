@@ -5,6 +5,10 @@
 #include "tools/re2c/globals.h"
 #include "re2c-parser.h"
 
+#ifndef MAX
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#endif
+
 #define	BSIZE	8192
 
 #define	YYCTYPE		unsigned char
@@ -130,6 +134,18 @@ scan:
 
 	[*+?]			{ yylval.op = *s->tok;
 				  RETURN(CLOSE); }
+
+	"{" [0-9]+ "}"		{ yylval.extop.minsize = atoi((char *)s->tok+1);
+				  yylval.extop.maxsize = atoi((char *)s->tok+1);
+				  RETURN(CLOSESIZE); }
+
+	"{" [0-9]+ "," [0-9]+ "}"	{ yylval.extop.minsize = atoi((char *)s->tok+1);
+				  yylval.extop.maxsize = MAX(yylval.extop.minsize,atoi(strchr((char *)s->tok, ',')+1));
+				  RETURN(CLOSESIZE); }
+
+	"{" [0-9]+ ",}"		{ yylval.extop.minsize = atoi((char *)s->tok+1);
+				  yylval.extop.maxsize = -1;
+				  RETURN(CLOSESIZE); }
 
 	letter (letter|digit)*	{ SubStr substr;
 				  s->cur = cursor;

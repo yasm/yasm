@@ -129,6 +129,16 @@ RegExp_calcSize(RegExp *re, Char *rep)
 	    RegExp_calcSize(re->d.exp, rep);
 	    re->size = re->d.exp->size + 1;
 	    break;
+	case CLOSEVOP:
+	    RegExp_calcSize(re->d.CloseVOp.exp, rep);
+
+	    if (re->d.CloseVOp.max >= 0)
+		re->size = (re->d.CloseVOp.exp->size * re->d.CloseVOp.min) +
+		    ((1 + re->d.CloseVOp.exp->size) *
+		     (re->d.CloseVOp.max - re->d.CloseVOp.min));
+	    else
+		re->size = (re->d.CloseVOp.exp->size * re->d.CloseVOp.min) + 1;
+	    break;
     }
 }
 
@@ -171,6 +181,9 @@ AltOp_compile(RegExp *re, Char *rep, Ins *i){
 void
 RegExp_compile(RegExp *re, Char *rep, Ins *i)
 {
+    Ins *jumppoint;
+    int st = 0;
+
     switch (re->type) {
 	case NULLOP:
 	    break;
@@ -199,6 +212,26 @@ RegExp_compile(RegExp *re, Char *rep, Ins *i)
 	    i += re->d.exp->size;
 	    i->i.tag = FORK;
 	    i->i.link = i - re->d.exp->size;
+	    break;
+	case CLOSEVOP:
+	    jumppoint = i + ((1 + re->d.CloseVOp.exp->size) *
+			     (re->d.CloseVOp.max - re->d.CloseVOp.min));
+	    for(st = re->d.CloseVOp.min; st < re->d.CloseVOp.max; st++) {
+		i->i.tag = FORK;
+		i->i.link = jumppoint;
+		i+=1;
+		RegExp_compile(re->d.CloseVOp.exp, rep, &i[0]);
+		i += re->d.CloseVOp.exp->size;
+	    }
+	    for(st = 0; st < re->d.CloseVOp.min; st++) {
+		RegExp_compile(re->d.CloseVOp.exp, rep, &i[0]);
+		i += re->d.CloseVOp.exp->size;
+		if(re->d.CloseVOp.max < 0 && st == 0) {
+		    i->i.tag = FORK;
+		    i->i.link = i - re->d.CloseVOp.exp->size;
+		    i++;
+		}
+	    }
 	    break;
     }
 }
@@ -256,6 +289,9 @@ RegExp_split(RegExp *re, CharSet *s)
 	    break;
 	case CLOSEOP:
 	    RegExp_split(re->d.exp, s);
+	    break;
+	case CLOSEVOP:
+	    RegExp_split(re->d.CloseVOp.exp, s);
 	    break;
     }
 }

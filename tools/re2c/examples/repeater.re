@@ -1,0 +1,35 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#define RET(n) printf("%d\n", n); return n
+
+int scan(char *s, int l){
+char *p = s;
+char *q;
+#define YYCTYPE         char
+#define YYCURSOR        p
+#define YYLIMIT         (s+l)
+#define YYMARKER        q
+#define YYFILL(n)
+/*!re2c
+	"a"{1}"\n"	    {RET(1);}
+	"a"{2,3}"\n"	{RET(2);}
+	"a"{4,}"\n"	    {RET(3);}
+	[^aq]|"\n"      {RET(0);}
+*/
+}
+
+#define do_scan(str) scan(str, strlen(str))
+
+main()
+{
+	do_scan("a\n");
+	do_scan("aa\n");
+	do_scan("aaa\n");
+	do_scan("aaaa\n");
+	do_scan("q");
+	do_scan("a");
+	do_scan("\n");
+	do_scan("0");
+}

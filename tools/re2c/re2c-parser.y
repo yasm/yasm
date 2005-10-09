@@ -23,12 +23,14 @@ static Scanner *in;
     RegExp	*regexp;
     Token	*token;
     char	op;
+    ExtOp	extop;
 }
 
-%token		CLOSE	ID	CODE	RANGE	STRING
+%token		CLOSESIZE   CLOSE	ID	CODE	RANGE	STRING
 
 %type	<op>		CLOSE
 %type	<op>		close
+%type	<extop>		CLOSESIZE
 %type	<symbol>	ID
 %type	<token>		CODE
 %type	<regexp>	RANGE	STRING
@@ -96,6 +98,10 @@ factor	:	primary
 			$$ = mkAlt($1, RegExp_new_NullOp());
 			break;
 		    }
+		}
+	|	primary CLOSESIZE
+		{
+			$$ = RegExp_new_CloseVOp($1, $2.minsize, $2.maxsize);
 		}
 	;
 
