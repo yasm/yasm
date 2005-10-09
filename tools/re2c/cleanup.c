@@ -31,6 +31,18 @@
 
 #define MAXLINE	1024
 
+static char *
+mystrdup(const char *str)
+{
+	size_t len;
+	char *copy;
+
+	len = strlen(str) + 1;
+	copy = malloc(len);
+	memcpy(copy, str, len);
+	return (copy);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -77,7 +89,7 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	    }
 	}
-	inlines[numlines] = strdup(str);
+	inlines[numlines] = mystrdup(str);
 	numlines++;
     }
 
