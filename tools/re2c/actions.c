@@ -60,7 +60,7 @@ AltOp_fixedLength(RegExp *r)
     /* XXX? Should be exp2? */
     unsigned int l2 = RegExp_fixedLength(r->d.AltCatOp.exp1);
     if(l1 != l2 || l1 == ~0u)
-	return ~0;
+	return ~0u;
     return l1;
 }
 
@@ -71,7 +71,7 @@ CatOp_fixedLength(RegExp *r)
     if((l1 = RegExp_fixedLength(r->d.AltCatOp.exp1)) != ~0u )
         if((l2 = RegExp_fixedLength(r->d.AltCatOp.exp2)) != ~0u)
 	    return l1+l2;
-    return ~0;
+    return ~0u;
 }
 
 unsigned int
@@ -87,9 +87,9 @@ RegExp_fixedLength(RegExp *r)
 	case CATOP:
 	    return CatOp_fixedLength(r);
 	default:
-	    return ~0;
+	    return ~0u;
     }
-    return ~0;
+    return ~0u;
 }
 
 void
@@ -556,6 +556,44 @@ RegExp *ranToRE(SubStr s){
     while(s.len > 0)
 	r = doUnion(r, getRange(&s));
     return RegExp_new_MatchOp(r);
+}
+
+RegExp *invToRE(SubStr s)
+{
+    RegExp *any, *ran, *inv;
+    SubStr *ss;
+
+
+    s.len--;
+    s.str++;
+
+    ss = SubStr_new("[\\000-\\377]", strlen("[\\000-\\377]"));
+    any = ranToRE(*ss);
+    free(ss);
+    if (s.len <= 2)
+	return any;
+
+    ran = ranToRE(s);
+    inv = mkDiff(any, ran);
+
+    free(ran);
+    free(any);
+
+    return inv;
+}
+
+RegExp *mkDot()
+{
+    SubStr *ss = SubStr_new("[\\000-\\377]", strlen("[\\000-\\377]"));
+    RegExp * any = ranToRE(*ss);
+    RegExp * ran = matchChar('\n');
+    RegExp * inv = mkDiff(any, ran);
+
+    free(ss);
+    free(ran);
+    free(any);
+
+    return inv;
 }
 
 RegExp *

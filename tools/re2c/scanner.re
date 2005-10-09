@@ -71,6 +71,7 @@ zero		= "\000";
 any		= [\000-\377];
 dot		= any \ [\n];
 esc		= dot \ [\\];
+istring		= "[" "^" ((esc \ [\]]) | "\\" dot)* "]" ;
 cstring		= "["  ((esc \ [\]]) | "\\" dot)* "]" ;
 dstring		= "\"" ((esc \ ["] ) | "\\" dot)* "\"";
 sstring		= "'"  ((esc \ ['] ) | "\\" dot)* "'" ;
@@ -150,6 +151,10 @@ scan:
 	"\""			{ Scanner_fatal(s, "unterminated string constant (missing \")"); }
 	"'"			{ Scanner_fatal(s, "unterminated string constant (missing ')"); }
 
+	istring			{ s->cur = cursor;
+				  yylval.regexp = invToRE(Scanner_token(s));
+				  return RANGE; }
+
 	cstring			{ s->cur = cursor;
 				  yylval.regexp = ranToRE(Scanner_token(s));
 				  return RANGE; }
@@ -185,6 +190,11 @@ scan:
 				  s->pos = cursor; s->cline++;
 				  goto scan;
 	    			}
+
+	"."			{ s->cur = cursor;
+				  yylval.regexp = mkDot();
+				  return RANGE;
+				}
 
 	any			{ fprintf(stderr, "unexpected character: '%c'\n", *s->tok);
 				  goto scan;

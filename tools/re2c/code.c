@@ -314,7 +314,8 @@ Action_emit(Action *a, FILE *o, int *readCh)
 	    line_source(o, a->d.rule->d.RuleOp.code->line);
 	    SubStr_out(&a->d.rule->d.RuleOp.code->text, o);
 	    fprintf(o, "\n"); oline++;
-	    fprintf(o, "#line %u \"%s\"\n", ++oline, outputFileName);
+	    if (!iFlag)
+		fprintf(o, "#line %u \"%s\"\n", oline++, outputFileName);
 	    break;
     }
 }
@@ -402,6 +403,9 @@ Go_genSwitch(Go *g, FILE *o, State *from, State *next, int *readCh){
 	for(i = 0; i < g->nSpans; ++i)
 	    if(g->span[i].to != def)
 		*(t++) = &g->span[i];
+
+	    if (dFlag)
+		fputs("\tYYDEBUG(-1, yych);\n", o);
 
 #if 0
 	if (*readCh) {
@@ -524,6 +528,8 @@ Go_genGoto(Go *g, FILE *o, State *from, State *next, int *readCh){
 void State_emit(State *s, FILE *o, int *readCh){
     if (vUsedLabels[s->label])
 	fprintf(o, "yy%u:", s->label);
+    if (dFlag)
+	fprintf(o, "\n\tYYDEBUG(%u, *YYCURSOR);\n", s->label);
     Action_emit(s->action, o, readCh);
 }
 
@@ -711,6 +717,12 @@ void DFA_emit(DFA *d, FILE *o){
     int maxFillIndexes, orgVFillIndexes;
     unsigned int start_label;
 
+    hasFillLabels = (0<=vFillIndexes);
+    if (hasFillLabels && label!=0) {
+	fputs("re2c : error : multiple /*!re2c blocks aren't supported when -f is specified\n", stderr);
+	exit(1);
+    }
+
     DFA_findSCCs(d);
     d->head->link = d->head;
 
@@ -842,10 +854,10 @@ void DFA_emit(DFA *d, FILE *o){
     vFillIndexes = orgVFillIndexes;
     oline = nOrgOline;
 
-    hasFillLabels = (0<=vFillIndexes);
-
+    fputs("\n", o);
     oline++;
-    fprintf(o, "\n#line %u \"%s\"\n", ++oline, outputFileName);
+    if (!iFlag)
+	fprintf(o, "#line %u \"%s\"\n", oline++, outputFileName);
 
     if (!hasFillLabels) {
 	fputs("{\n\tYYCTYPE yych;\n", o);

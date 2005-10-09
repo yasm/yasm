@@ -8,8 +8,6 @@
 int yylex(void);
 void yyerror(const char*);
 
-static char *mystrdup(const char *str);
-
 static unsigned int accept;
 static RegExp *spec;
 static Scanner *in;
@@ -133,23 +131,13 @@ int yylex(){
     return Scanner_scan(in);
 }
 
-static char *
-mystrdup(const char *str)
-{
-	size_t len;
-	char *copy;
-
-	len = strlen(str) + 1;
-	copy = malloc(len);
-	memcpy(copy, str, len);
-	return (copy);
-}
-
 void line_source(FILE *o, unsigned int line)
 {
     char *	fnamebuf;
     char *	token;
 
+    if (iFlag)
+	return;
     fprintf(o, "#line %u \"", line);
     if( fileName != NULL ) {
     	fnamebuf = mystrdup( fileName );

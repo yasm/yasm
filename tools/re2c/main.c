@@ -7,9 +7,11 @@
 #include "mbo_getopt.h"
 
 const char *fileName = 0;
-const char *outputFileName = 0;
+char *outputFileName = 0;
 int sFlag = 0;
 int bFlag = 0;
+int dFlag = 0;
+int iFlag = 0;
 int bUsedYYAccept = 0;
 unsigned int oline = 1;
 unsigned int maxFill = 1;
@@ -23,11 +25,13 @@ static int opt_ind = 1;
 static const mbo_opt_struct OPTIONS[] = {
 	{'?', 0, "help"},
 	{'b', 0, "bit-vectors"},
+	{'d', 0, "debug-output"},
 	{'e', 0, "ecb"},
-	{'h', 0, "help"},
-	{'s', 0, "nested-ifs"},
 	{'f', 0, "storable-state"},
+	{'h', 0, "help"},
+	{'i', 0, "no-debug-info"},
 	{'o', 1, "output"},
+	{'s', 0, "nested-ifs"},
 	{'v', 0, "version"},
         {'-', 0, NULL} /* end of args */ 
 };
@@ -35,7 +39,7 @@ static const mbo_opt_struct OPTIONS[] = {
 static void usage()
 {
     fprintf(stderr,
-	"usage: re2c [-esbvh] file\n"
+	"usage: re2c [-esbvhd] file\n"
 	"\n"
 	"-? -h   --help          Display this info.\n"
 	"\n"
@@ -54,8 +58,26 @@ static void usage()
 	"\n"
 	"-o      --output=output Specify the output file instead of stdout\n"
 	"\n"
+	"-d      --debug-output  Creates a parser that dumps information during\n"
+	"                        about the current position and in which state the\n"
+	"                        parser is.\n"
+	"\n"
+	"-i      --no-debug-info Do not generate '#line' info (usefull for versioning).\n"
+	"\n"
 	"-v      --version       Show version information.\n"
 	"-V      --vernum        Show version as one number.\n");
+}
+
+char *
+mystrdup(const char *str)
+{
+	size_t len;
+	char *copy;
+
+	len = strlen(str) + 1;
+	copy = malloc(len);
+	memcpy(copy, str, len);
+	return (copy);
 }
 
 int main(int argc, char *argv[])
@@ -83,8 +105,14 @@ int main(int argc, char *argv[])
 	    case 's':
 		sFlag = 1;
 		break;
+	    case 'd':
+		dFlag = 1;
+		break;
 	    case 'f':
 		vFillIndexes = 0;
+		break;
+	    case 'i':
+		iFlag = 1;
 		break;
 	    case 'o':
 		outputFileName = opt_arg;
@@ -132,16 +160,33 @@ int main(int argc, char *argv[])
 
     // set up the output stream
     if (outputFileName == 0 || (fileName[0] == '-' && fileName[1] == '\0')) {
-	outputFileName = "<stdout>";
+	outputFileName = mystrdup("<stdout>");
 	output = stdout;
     } else {
+	int len;
+	char *src, *dst, *tmp;
+
 	output = fopen(outputFileName, "wt");
 	if (!output) {
 	    fprintf(stderr, "can't open %s\n", outputFileName);
 	    return 1;
 	}
+
+	len = strlen(outputFileName);
+	tmp = (char*)malloc((len+1)*2);
+
+	for (src = outputFileName, dst = tmp; *src; ++src)
+	{
+	    if (*src == '\\')
+		*dst++ = *src;
+	    *dst++ = *src;
+	}
+	*dst = '\0';
+
+	outputFileName = tmp;
     }
 
     parse(f, output);
+    free(outputFileName);
     return 0;
 }
