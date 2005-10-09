@@ -181,6 +181,7 @@ RegExp_new_CloseVOp(RegExp *e, int lb, int ub)
 extern void genCode(FILE *, RegExp*);
 extern RegExp *mkDiff(RegExp*, RegExp*);
 extern RegExp *strToRE(SubStr);
+extern RegExp *strToCaseInsensitiveRE(SubStr);
 extern RegExp *ranToRE(SubStr);
 
 extern RegExp *mkAlt(RegExp*, RegExp*);

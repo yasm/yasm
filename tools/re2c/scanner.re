@@ -123,12 +123,19 @@ scan:
 	dstring			{ s->cur = cursor;
 				  yylval.regexp = strToRE(Scanner_token(s));
 				  return STRING; }
-	"\""			{ Scanner_fatal(s, "bad string"); }
+
+	sstring			{ s->cur = cursor;
+				  yylval.regexp = strToCaseInsensitiveRE(Scanner_token(s));
+				  return STRING; }
+
+	"\""			{ Scanner_fatal(s, "unterminated string constant (missing \")"); }
+	"'"			{ Scanner_fatal(s, "unterminated string constant (missing ')"); }
 
 	cstring			{ s->cur = cursor;
 				  yylval.regexp = ranToRE(Scanner_token(s));
 				  return RANGE; }
-	"["			{ Scanner_fatal(s, "bad character constant"); }
+
+	"["			{ Scanner_fatal(s, "unterminated range (missing ])"); }
 
 	[()|=;/\\]		{ RETURN(*s->tok); }
 

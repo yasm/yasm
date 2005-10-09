@@ -4,6 +4,7 @@
 #include "tools/re2c/basics.h"
 
 extern const char *fileName;
+extern const char *outputFileName;
 extern int sFlag;
 extern int bFlag;
 extern unsigned int oline;

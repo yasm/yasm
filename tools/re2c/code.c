@@ -163,12 +163,32 @@ void BitMap_stats(void){
 }
 #endif
 
-static void genGoTo(FILE *o, State *to){
+static void genGoTo(FILE *o, State *from, State *to, int *readCh)
+{
+#if 0
+    if (*readCh && from->label + 1 != to->label)
+    {
+	fputs("\tyych = *YYCURSOR;\n", o); oline++;
+	*readCh = 0;
+    }
+#endif
     fprintf(o, "\tgoto yy%u;\n", to->label); oline++;
 }
 
-static void genIf(FILE *o, const char *cmp, unsigned int v){
-    fprintf(o, "\tif(yych %s '", cmp);
+static void genIf(FILE *o, const char *cmp, unsigned int v, int *readCh)
+{
+#if 0
+    if (*readCh)
+    {
+	fputs("\tif((yych = *YYCURSOR) ", o);
+	*readCh = 0;
+    } else {
+#endif
+	fputs("\tif(yych ", o);
+#if 0
+    }
+#endif
+    fprintf(o, "%s '", cmp);
     prtCh(o, v);
     fputs("')", o);
 }
@@ -178,7 +198,8 @@ static void indent(FILE *o, unsigned int i){
 	fputc('\t', o);
 }
 
-static void need(FILE *o, unsigned int n){
+static void need(FILE *o, unsigned int n, int *readCh)
+{
     if(n == 1) {
 	fputs("\tif(YYLIMIT == YYCURSOR) YYFILL(1);\n", o); oline++;
     } else {
@@ -186,10 +207,11 @@ static void need(FILE *o, unsigned int n){
 	oline++;
     }
     fputs("\tyych = *YYCURSOR;\n", o); oline++;
+    *readCh = 0;
 }
 
 void
-Action_emit(Action *a, FILE *o)
+Action_emit(Action *a, FILE *o, int *readCh)
 {
     int first = 1;
     unsigned int i;
@@ -198,29 +220,40 @@ Action_emit(Action *a, FILE *o)
     switch (a->type) {
 	case MATCHACT:
 	    if(a->state->link){
-		fputs("\t++YYCURSOR;\n", o); oline++;
-		need(o, a->state->depth);
+		fputs("\t++YYCURSOR;\n", o);
+		need(o, a->state->depth, readCh);
+#if 0
+	    } else if (!Action_readAhead(a)) {
+		/* do not read next char if match */
+		fputs("\t++YYCURSOR;\n", o);
+		*readCh = 1;
+#endif
 	    } else {
-		fputs("\tyych = *++YYCURSOR;\n", o); oline++;
+		fputs("\tyych = *++YYCURSOR;\n", o);
+		*readCh = 0;
 	    }
+	    oline++;
 	    break;
 	case ENTERACT:
 	    if(a->state->link){
 		fputs("\t++YYCURSOR;\n", o);
 		fprintf(o, "yy%u:\n", a->d.label); oline+=2;
-		need(o, a->state->depth);
+		need(o, a->state->depth, readCh);
 	    } else {
+		/* we shouldn't need 'rule-following' protection here */
 		fputs("\tyych = *++YYCURSOR;\n", o);
 		fprintf(o, "yy%u:\n", a->d.label); oline+=2;
+		*readCh = 0;
 	    }
 	    break;
 	case SAVEMATCHACT:
 	    fprintf(o, "\tyyaccept = %u;\n", a->d.selector); oline++;
 	    if(a->state->link){
 		fputs("\tYYMARKER = ++YYCURSOR;\n", o); oline++;
-		need(o, a->state->depth);
+		need(o, a->state->depth, readCh);
 	    } else {
 		fputs("\tyych = *(YYMARKER = ++YYCURSOR);\n", o); oline++;
+		*readCh = 0;
 	    }
 	    break;
 	case MOVEACT:
@@ -234,7 +267,7 @@ Action_emit(Action *a, FILE *o)
 			fputs("\tswitch(yyaccept){\n", o); oline+=2;
 		    }
 		    fprintf(o, "\tcase %u:", a->d.Accept.saves[i]);
-		    genGoTo(o, a->d.Accept.rules[i]);
+		    genGoTo(o, a->state, a->d.Accept.rules[i], readCh);
 		}
 	    if(!first) {
 		fputs("\t}\n", o); oline++;
@@ -248,7 +281,7 @@ Action_emit(Action *a, FILE *o)
 	    line_source(o, a->d.rule->d.RuleOp.code->line);
 	    SubStr_out(&a->d.rule->d.RuleOp.code->text, o);
 	    fprintf(o, "\n"); oline++;
-	    fprintf(o, "#line %u \"re2c-out.c\"\n", ++oline);
+	    fprintf(o, "#line %u \"%s\"\n", ++oline, outputFileName);
 	    break;
     }
 }
@@ -267,37 +300,49 @@ Action_new_Accept(State *x, unsigned int n, unsigned int *s, State **r)
 }
 
 static void doLinear(FILE *o, unsigned int i, Span *s, unsigned int n,
-		     State *next){
+		     State *from, State *next, int *readCh){
     for(;;){
 	State *bg = s[0].to;
 	while(n >= 3 && s[2].to == bg && (s[1].ub - s[0].ub) == 1){
 	    if(s[1].to == next && n == 3){
-		indent(o, i); genIf(o, "!=", s[0].ub); genGoTo(o, bg);
-		indent(o, i); genGoTo(o, next);
+		indent(o, i);
+		genIf(o, "!=", s[0].ub, readCh);
+		genGoTo(o, from, bg, readCh);
+		indent(o, i);
+		genGoTo(o, from, next, readCh);
 		return;
 	    } else {
-		indent(o, i); genIf(o, "==", s[0].ub); genGoTo(o, s[1].to);
+		indent(o, i);
+		genIf(o, "==", s[0].ub, readCh);
+		genGoTo(o, from, s[1].to, readCh);
 	    }
 	    n -= 2; s += 2;
 	}
 	if(n == 1){
-	    indent(o, i); genGoTo(o, s[0].to);
+	    indent(o, i);
+	    genGoTo(o, from, s[0].to, readCh);
 	    return;
 	} else if(n == 2 && bg == next){
-	    indent(o, i); genIf(o, ">=", s[0].ub); genGoTo(o, s[1].to);
-	    indent(o, i); genGoTo(o, next);
+	    indent(o, i);
+	    genIf(o, ">=", s[0].ub, readCh);
+	    genGoTo(o, from, s[1].to, readCh);
+	    indent(o, i);
+	    genGoTo(o, from, next, readCh);
 	    return;
 	} else {
-	    indent(o, i); genIf(o, "<=", s[0].ub - 1); genGoTo(o, bg);
+	    indent(o, i);
+	    genIf(o, "<=", s[0].ub - 1, readCh);
+	    genGoTo(o, from, bg, readCh);
 	    n -= 1; s += 1;
 	}
     }
-    indent(o, i); genGoTo(o, next);
+    indent(o, i);
+    genGoTo(o, from, next, readCh);
 }
 
 void
-Go_genLinear(Go *g, FILE *o, State *next){
-    doLinear(o, 0, g->span, g->nSpans, next);
+Go_genLinear(Go *g, FILE *o, State *from, State *next, int *readCh){
+    doLinear(o, 0, g->span, g->nSpans, from, next, readCh);
 }
 
 static void genCases(FILE *o, unsigned int lb, Span *s){
@@ -312,9 +357,9 @@ static void genCases(FILE *o, unsigned int lb, Span *s){
 }
 
 void
-Go_genSwitch(Go *g, FILE *o, State *next){
+Go_genSwitch(Go *g, FILE *o, State *from, State *next, int *readCh){
     if(g->nSpans <= 2){
-	Go_genLinear(g, o, next);
+	Go_genLinear(g, o, from, next, readCh);
     } else {
 	State *def = g->span[g->nSpans-1].to;
 	Span **sP = malloc(sizeof(Span*)*(g->nSpans-1)), **r, **s, **t;
@@ -325,7 +370,14 @@ Go_genSwitch(Go *g, FILE *o, State *next){
 	    if(g->span[i].to != def)
 		*(t++) = &g->span[i];
 
-	fputs("\tswitch(yych){\n", o); oline++;
+#if 0
+	if (*readCh) {
+	    fputs("\tswitch((yych = *YYCURSOR)) {\n", o);
+	    *readCh = 0;
+	} else
+#endif
+	    fputs("\tswitch(yych){\n", o);
+	oline++;
 	while(t != &sP[0]){
 	    State *to;
 	    r = s = &sP[0];
@@ -340,11 +392,11 @@ Go_genSwitch(Go *g, FILE *o, State *next){
 		else
 		    *(r++) = *s;
 	    }
-	    genGoTo(o, to);
+	    genGoTo(o, from, to, readCh);
 	    t = r;
 	}
 	fputs("\tdefault:", o);
-	genGoTo(o, def);
+	genGoTo(o, from, def, readCh);
 	fputs("\t}\n", o); oline++;
 
 	free(sP);
@@ -352,30 +404,32 @@ Go_genSwitch(Go *g, FILE *o, State *next){
 }
 
 static void doBinary(FILE *o, unsigned int i, Span *s, unsigned int n,
-		     State *next){
+		     State *from, State *next, int *readCh){
     if(n <= 4){
-	doLinear(o, i, s, n, next);
+	doLinear(o, i, s, n, from, next, readCh);
     } else {
 	unsigned int h = n/2;
-	indent(o, i); genIf(o, "<=", s[h-1].ub - 1); fputs("{\n", o); oline++;
-	doBinary(o, i+1, &s[0], h, next);
+	indent(o, i);
+	genIf(o, "<=", s[h-1].ub - 1, readCh);
+	fputs("{\n", o); oline++;
+	doBinary(o, i+1, &s[0], h, from, next, readCh);
 	indent(o, i); fputs("\t} else {\n", o); oline++;
-	doBinary(o, i+1, &s[h], n - h, next);
+	doBinary(o, i+1, &s[h], n - h, from, next, readCh);
 	indent(o, i); fputs("\t}\n", o); oline++;
     }
 }
 
 void
-Go_genBinary(Go *g, FILE *o, State *next){
-    doBinary(o, 0, g->span, g->nSpans, next);
+Go_genBinary(Go *g, FILE *o, State *from, State *next, int *readCh){
+    doBinary(o, 0, g->span, g->nSpans, from, next, readCh);
 }
 
 void
-Go_genBase(Go *g, FILE *o, State *next){
+Go_genBase(Go *g, FILE *o, State *from, State *next, int *readCh){
     if(g->nSpans == 0)
 	return;
     if(!sFlag){
-	Go_genSwitch(g, o, next);
+	Go_genSwitch(g, o, from, next, readCh);
 	return;
     }
     if(g->nSpans > 8){
@@ -391,19 +445,19 @@ Go_genBase(Go *g, FILE *o, State *next){
 	    }
 	}
 	if(util <= 2){
-	    Go_genSwitch(g, o, next);
+	    Go_genSwitch(g, o, from, next, readCh);
 	    return;
 	}
     }
     if(g->nSpans > 5){
-	Go_genBinary(g, o, next);
+	Go_genBinary(g, o, from, next, readCh);
     } else {
-	Go_genLinear(g, o, next);
+	Go_genLinear(g, o, from, next, readCh);
     }
 }
 
 void
-Go_genGoto(Go *g, FILE *o, State *next){
+Go_genGoto(Go *g, FILE *o, State *from, State *next, int *readCh){
     unsigned int i;
     if(bFlag){
 	for(i = 0; i < g->nSpans; ++i){
@@ -416,20 +470,20 @@ Go_genGoto(Go *g, FILE *o, State *next){
 		    Go_unmap(&go, g, to);
 		    fprintf(o, "\tif(yybm[%u+yych] & %u)", b->i,
 			    (unsigned int) b->m);
-		    genGoTo(o, to);
-		    Go_genBase(&go, o, next);
+		    genGoTo(o, from, to, readCh);
+		    Go_genBase(&go, o, from, next, readCh);
 		    free(go.span);
 		    return;
 		}
 	    }
 	}
     }
-    Go_genBase(g, o, next);
+    Go_genBase(g, o, from, next, readCh);
 }
 
-void State_emit(State *s, FILE *o){
+void State_emit(State *s, FILE *o, int *readCh){
     fprintf(o, "yy%u:", s->label);
-    Action_emit(s->action, o);
+    Action_emit(s->action, o, readCh);
 }
 
 static unsigned int merge(Span *x0, State *fg, State *bg){
@@ -705,7 +759,7 @@ void DFA_emit(DFA *d, FILE *o){
     free(d->head->action);
 
     oline++;
-    fprintf(o, "\n#line %u \"re2c-out.c\"\n", ++oline);
+    fprintf(o, "\n#line %u \"%s\"\n", ++oline, outputFileName);
 
     fputs("{\n\tYYCTYPE yych;\n\tunsigned int yyaccept;\n", o); oline+=3;
 
@@ -719,8 +773,9 @@ void DFA_emit(DFA *d, FILE *o){
 	s->label = label++;
 
     for(s = d->head; s; s = s->next){
-	State_emit(s, o);
-	Go_genGoto(&s->go, o, s->next);
+	int readCh = 0;
+	State_emit(s, o, &readCh);
+	Go_genGoto(&s->go, o, s, s->next, &readCh);
     }
     fputs("}\n", o); oline++;
 

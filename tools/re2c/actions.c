@@ -520,6 +520,33 @@ RegExp *strToRE(SubStr s){
     return re;
 }
 
+RegExp *strToCaseInsensitiveRE(SubStr s){
+    unsigned char c;
+    RegExp *re, *reL, *reU;
+    s.len -= 2; s.str += 1;
+    if(s.len == 0)
+	return RegExp_new_NullOp();
+    c = unescape(&s);
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+	reL = matchChar(tolower(c));
+	reU = matchChar(toupper(c));
+	re = mkAlt(reL, reU);
+    } else {
+	re = matchChar(c);
+    }
+    while(s.len > 0) {
+	c = unescape(&s);
+	if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+	    reL = matchChar(tolower(c));
+	    reU = matchChar(toupper(c));
+	    re = RegExp_new_CatOp(re, mkAlt(reL, reU));
+    	} else {
+	    re = RegExp_new_CatOp(re, matchChar(c));
+	}
+    }
+    return re;
+}
+
 RegExp *ranToRE(SubStr s){
     Range *r;
     s.len -= 2; s.str += 1;

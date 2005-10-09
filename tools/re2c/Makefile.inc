@@ -20,6 +20,8 @@ EXTRA_DIST += tools/re2c/re2c-parser.y
 EXTRA_DIST += tools/re2c/actions.c
 EXTRA_DIST += tools/re2c/scanner.h
 EXTRA_DIST += tools/re2c/scanner.c
+EXTRA_DIST += tools/re2c/mbo_getopt.h
+EXTRA_DIST += tools/re2c/mbo_getopt.c
 EXTRA_DIST += tools/re2c/substr.h
 EXTRA_DIST += tools/re2c/substr.c
 EXTRA_DIST += tools/re2c/translate.c
@@ -29,6 +31,7 @@ re2c_LDADD += re2c-dfa.$(OBJEXT)
 re2c_LDADD += re2c-parser.$(OBJEXT)
 re2c_LDADD += re2c-actions.$(OBJEXT)
 re2c_LDADD += re2c-scanner.$(OBJEXT)
+re2c_LDADD += re2c-mbo_getopt.$(OBJEXT)
 re2c_LDADD += re2c-substr.$(OBJEXT)
 re2c_LDADD += re2c-translate.$(OBJEXT)
 re2c_LINK = $(CCLD_FOR_BUILD) -o $@
@@ -50,6 +53,9 @@ re2c-actions.$(OBJEXT): tools/re2c/actions.c
 
 re2c-scanner.$(OBJEXT): tools/re2c/scanner.c
 	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/scanner.c || echo '$(srcdir)/'`tools/re2c/scanner.c
+
+re2c-mbo_getopt.$(OBJEXT): tools/re2c/mbo_getopt.c
+	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/mbo_getopt.c || echo '$(srcdir)/'`tools/re2c/mbo_getopt.c
 
 re2c-substr.$(OBJEXT): tools/re2c/substr.c
 	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/substr.c || echo '$(srcdir)/'`tools/re2c/substr.c
@@ -115,6 +121,7 @@ EXTRA_DIST += tools/re2c/examples/cmmap.re
 EXTRA_DIST += tools/re2c/examples/cnokw.re
 EXTRA_DIST += tools/re2c/examples/cunroll.re
 EXTRA_DIST += tools/re2c/examples/modula.re
+EXTRA_DIST += tools/re2c/examples/repeater.re
 EXTRA_DIST += tools/re2c/examples/sample.re
 EXTRA_DIST += tools/re2c/examples/simple.re
 EXTRA_DIST += tools/re2c/examples/rexx/README

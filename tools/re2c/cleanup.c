@@ -32,7 +32,7 @@
 #define MAXLINE	1024
 
 int
-main()
+main(int argc, char *argv[])
 {
     char str[MAXLINE];
     size_t alloclines = 1000;
@@ -48,6 +48,18 @@ main()
     unsigned long value;
     char *pos;
     size_t span1, span2;
+    FILE *f;
+
+    if (argc < 2) {
+	fputs("Usage: cleanup <file>\n", stderr);
+	return EXIT_FAILURE;
+    }
+
+    f = fopen(argv[1], "rt");
+    if (!f) {
+	fprintf(stderr, "Could not open %s for reading.\n", argv[1]);
+	return EXIT_FAILURE;
+    }
 
     inlines = malloc(alloclines * sizeof(char *));
     if (!inlines) {
@@ -55,7 +67,7 @@ main()
 	return EXIT_FAILURE;
     }
 
-    while (fgets(str, MAXLINE, stdin)) {
+    while (fgets(str, MAXLINE, f)) {
 	/* check array bounds */
 	if (numlines >= alloclines) {
 	    alloclines *= 2;
@@ -136,6 +148,14 @@ main()
 	    usedvar[lastusedvarline] = 255;	    /* used */
     }
 
+    fclose(f);
+
+    f = fopen(argv[1], "wt");
+    if (!f) {
+	fprintf(stderr, "Could not open %s for writing.\n", argv[1]);
+	return EXIT_FAILURE;
+    }
+
     for (line = 1; line <= numlines; line++) {
 	pos = inlines[line-1];
 	/* look for yy[0-9]+ labels */
@@ -148,9 +168,9 @@ main()
 		pos = &pos[2+span1+1];
 	}
 	if (line < allocvar && usedvar[line] != 0 && usedvar[line] != 255)
-	    putc('\n', stdout);
+	    putc('\n', f);
 	else
-	    fputs(pos, stdout);
+	    fputs(pos, f);
     }
 
     free(usedvar);
@@ -158,6 +178,8 @@ main()
     for (line = 0; line < numlines; line++)
 	free(inlines[line]);
     free(inlines);
+
+    fclose(f);
 
     return EXIT_SUCCESS;
 }

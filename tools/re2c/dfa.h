@@ -38,7 +38,7 @@ typedef struct Action {
     } d;
 } Action;
 
-void Action_emit(Action*, FILE *);
+void Action_emit(Action*, FILE *, int *);
 
 typedef struct Span {
     unsigned int		ub;
@@ -65,17 +65,17 @@ typedef struct State {
     Action		*action;
 } State;
 
-void Go_genGoto(Go*, FILE *, State*);
-void Go_genBase(Go*, FILE *, State*);
-void Go_genLinear(Go*, FILE *, State*);
-void Go_genBinary(Go*, FILE *, State*);
-void Go_genSwitch(Go*, FILE *, State*);
+void Go_genGoto(Go*, FILE *, State*, State*, int*);
+void Go_genBase(Go*, FILE *, State*, State*, int*);
+void Go_genLinear(Go*, FILE *, State*, State*, int*);
+void Go_genBinary(Go*, FILE *, State*, State*, int*);
+void Go_genSwitch(Go*, FILE *, State*, State*, int*);
 void Go_compact(Go*);
 void Go_unmap(Go*, Go*, State*);
 
 State *State_new(void);
 void State_delete(State*);
-void State_emit(State*, FILE *);
+void State_emit(State*, FILE *, int *);
 void State_out(FILE *, const State*);
 
 typedef struct DFA {
@@ -149,6 +149,25 @@ Action_new_Rule(State *s, RegExp *r) /* RuleOp */
     a->d.rule = r;
     s->action = a;
     return a;
+}
+
+static int
+Action_isRule(Action *a)
+{
+    return a->type == RULEACT;
+}
+
+static int
+Action_isMatch(Action *a)
+{
+    return a->type == MATCHACT;
+}
+
+static int
+Action_readAhead(Action *a)
+{
+    return !Action_isMatch(a) ||
+	(a->state && a->state->next && !Action_isRule(a->state->next->action));
 }
 
 #endif
