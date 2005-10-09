@@ -215,12 +215,26 @@ static void indent(FILE *o, unsigned int i){
 
 static void need(FILE *o, unsigned int n, int *readCh)
 {
+    unsigned int fillIndex;
+    int hasFillIndex = (0<=vFillIndexes);
+    if (hasFillIndex) {
+	fillIndex = vFillIndexes++;
+	fprintf(o, "\tYYSETSTATE(%u);\n", fillIndex);
+	++oline;
+    }
+
     if(n == 1) {
 	fputs("\tif(YYLIMIT == YYCURSOR) YYFILL(1);\n", o); oline++;
     } else {
 	fprintf(o, "\tif((YYLIMIT - YYCURSOR) < %u) YYFILL(%u);\n", n, n);
 	oline++;
     }
+
+    if (hasFillIndex) {
+	fprintf(o, "yyFillLabel%u:\n", fillIndex);
+	++oline;
+    }
+
     fputs("\tyych = *YYCURSOR;\n", o); oline++;
     *readCh = 0;
 }
@@ -262,7 +276,10 @@ Action_emit(Action *a, FILE *o, int *readCh)
 	    }
 	    break;
 	case SAVEMATCHACT:
-	    fprintf(o, "\tyyaccept = %u;\n", a->d.selector); oline++;
+	    if (bUsedYYAccept) {
+		fprintf(o, "\tyyaccept = %u;\n", a->d.selector);
+		oline++;
+	    }
 	    if(a->state->link){
 		fputs("\tYYMARKER = ++YYCURSOR;\n", o); oline++;
 		need(o, a->state->depth, readCh);
@@ -278,6 +295,7 @@ Action_emit(Action *a, FILE *o, int *readCh)
 		if(a->d.Accept.saves[i] != ~0u){
 		    if(first){
 			first = 0;
+			bUsedYYAccept = 1;
 			fputs("\tYYCURSOR = YYMARKER;\n", o);
 			fputs("\tswitch(yyaccept){\n", o); oline+=2;
 		    }
@@ -614,8 +632,11 @@ static unsigned int maxDist(State *s){
 	State *t = s->go.span[i].to;
 	if(t){
 	    unsigned int m = 1;
-	    if(!t->link)
-		m += maxDist(t);
+	    if(!t->link) {
+		if (t->depth == -1)
+		    t->depth = maxDist(t);
+		m += t->depth;
+	    }
 	    if(m > mm)
 		mm = m;
 	}
@@ -677,7 +698,7 @@ void DFA_split(DFA *d, State *s){
 void DFA_emit(DFA *d, FILE *o){
     static unsigned int label = 0;
     State *s;
-    unsigned int i;
+    unsigned int i, bitmap_brace = 0;
     unsigned int nRules = 0;
     unsigned int nSaves = 0;
     unsigned int *saves;
@@ -686,14 +707,21 @@ void DFA_emit(DFA *d, FILE *o){
     State *accept = NULL;
     Span *span;
     FILE *tmpo;
+    int hasFillLabels;
+    int maxFillIndexes, orgVFillIndexes;
+    unsigned int start_label;
 
     DFA_findSCCs(d);
     d->head->link = d->head;
-    d->head->depth = maxDist(d->head);
 
-    for(s = d->head; s; s = s->next)
+    maxFill = 1;
+    for(s = d->head; s; s = s->next) {
+	s->depth = maxDist(s);
+	if (maxFill < s->depth)
+	    maxFill = s->depth;
 	if(s->rule && s->rule->d.RuleOp.accept >= nRules)
 		nRules = s->rule->d.RuleOp.accept + 1;
+    }
 
     saves = malloc(sizeof(unsigned int)*nRules);
     memset(saves, ~0, (nRules)*sizeof(unsigned int));
@@ -783,31 +811,73 @@ void DFA_emit(DFA *d, FILE *o){
 
     free(d->head->action);
 
-    oline++;
-    fprintf(o, "\n#line %u \"%s\"\n", ++oline, outputFileName);
-
-    fputs("{\n\tYYCTYPE yych;\n\tunsigned int yyaccept;\n", o); oline+=3;
-
-    if(bFlag)
+    if(bFlag) {
+	fputs("{\n", o);
+	oline++;
+	bitmap_brace = 1;
 	BitMap_gen(o, d->lbChar, d->ubChar);
+    }
 
-    fprintf(o, "\tgoto yy%u;\n", label); oline++;
-    useLabel(label);
+    bUsedYYAccept = 0;
+
+    start_label = label;
+
     Action_new_Enter(d->head, label++);
 
     for(s = d->head; s; s = s->next)
 	s->label = label++;
 
     nOrgOline = oline;
+    maxFillIndexes = vFillIndexes;
+    orgVFillIndexes = vFillIndexes;
     tmpo = fopen("re2c.tmp", "wt");
     for(s = d->head; s; s = s->next){
 	int readCh = 0;
 	State_emit(s, tmpo, &readCh);
-	Go_genGoto(&s->go, o, s, s->next, &readCh);
+	Go_genGoto(&s->go, tmpo, s, s->next, &readCh);
     }
     fclose(tmpo);
     unlink("re2c.tmp");
+    maxFillIndexes = vFillIndexes;
+    vFillIndexes = orgVFillIndexes;
     oline = nOrgOline;
+
+    hasFillLabels = (0<=vFillIndexes);
+
+    oline++;
+    fprintf(o, "\n#line %u \"%s\"\n", ++oline, outputFileName);
+
+    if (!hasFillLabels) {
+	fputs("{\n\tYYCTYPE yych;\n", o);
+	oline += 2;
+	if (bUsedYYAccept) {
+	    fputs("\tunsigned int yyaccept;\n", o);
+	    oline++;
+	}
+    } else {
+	fputs("{\n\n", o);
+	oline += 2;
+    }
+
+    if (!hasFillLabels) {
+	fprintf(o, "\tgoto yy%u;\n", start_label);
+	oline++;
+	useLabel(label);
+    } else {
+	unsigned int i;
+	fputs("\tswitch(YYGETSTATE()) {\n", o);
+	fputs("\t\tcase -1: goto yy0;\n", o);
+
+	for (i=0; i<maxFillIndexes; ++i)
+	    fprintf(o, "\t\tcase %u: goto yyFillLabel%u;\n", i, i);
+
+	fputs("\t\tdefault: /* abort() */;\n", o);
+	fputs("\t}\n", o);
+	fputs("yyNext:\n", o);
+
+	oline += maxFillIndexes;
+	oline += 5;
+    }
 
     for(s = d->head; s; s = s->next){
 	int readCh = 0;
@@ -815,6 +885,10 @@ void DFA_emit(DFA *d, FILE *o){
 	Go_genGoto(&s->go, o, s, s->next, &readCh);
     }
     fputs("}\n", o); oline++;
+    if (bitmap_brace) {
+	fputs("}\n", o);
+	oline++;
+    }
 
     BitMap_first = NULL;
 

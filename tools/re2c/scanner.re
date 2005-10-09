@@ -4,6 +4,7 @@
 #include "tools/re2c/parse.h"
 #include "tools/re2c/globals.h"
 #include "re2c-parser.h"
+#include "globals.h"
 
 #ifndef MAX
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -81,6 +82,7 @@ int
 Scanner_echo(Scanner *s, FILE *out)
 {
     unsigned char *cursor = s->cur;
+    int ignore_eoc = 0;
 
     /* Catch EOF */
     if (s->eof && cursor == s->eof)
@@ -92,6 +94,21 @@ echo:
 	"/*!re2c"		{ fwrite(s->tok, 1, &cursor[-7] - s->tok, out);
 				  s->tok = cursor;
 				  RETURN(1); }
+	"/*!max:re2c" {
+		fprintf(out, "#define YYMAXFILL %u\n", maxFill);
+		s->tok = s->pos = cursor;
+		ignore_eoc = 1;
+		goto echo;
+	}
+	"*" "/"		{
+		if (ignore_eoc) {
+		    ignore_eoc = 0;
+		} else {
+		    fwrite(s->tok, 1, cursor - s->tok, out);
+		}
+		s->tok = s->pos = cursor;
+		goto echo;
+	}
 	"\n"			{ fwrite(s->tok, 1, cursor - s->tok, out);
 				  s->tok = s->pos = cursor; s->cline++; oline++;
 				  goto echo; }

@@ -10,7 +10,10 @@ const char *fileName = 0;
 const char *outputFileName = 0;
 int sFlag = 0;
 int bFlag = 0;
+int bUsedYYAccept = 0;
 unsigned int oline = 1;
+unsigned int maxFill = 1;
+int vFillIndexes = -1;
 unsigned char *vUsedLabels;
 unsigned int vUsedLabelAlloc = 1000;
 
@@ -23,6 +26,7 @@ static const mbo_opt_struct OPTIONS[] = {
 	{'e', 0, "ecb"},
 	{'h', 0, "help"},
 	{'s', 0, "nested-ifs"},
+	{'f', 0, "storable-state"},
 	{'o', 1, "output"},
 	{'v', 0, "version"},
         {'-', 0, NULL} /* end of args */ 
@@ -45,6 +49,8 @@ static void usage()
 	"\n"
 	"-s      --nested-ifs    Generate nested ifs for some switches. Many compilers\n"
 	"                        need this assist to generate better code.\n"
+	"\n"
+	"-f      --storable-state Generate a scanner with support for storable state\n"
 	"\n"
 	"-o      --output=output Specify the output file instead of stdout\n"
 	"\n"
@@ -76,6 +82,9 @@ int main(int argc, char *argv[])
 		break;
 	    case 's':
 		sFlag = 1;
+		break;
+	    case 'f':
+		vFillIndexes = 0;
 		break;
 	    case 'o':
 		outputFileName = opt_arg;

@@ -7,7 +7,10 @@ extern const char *fileName;
 extern const char *outputFileName;
 extern int sFlag;
 extern int bFlag;
+extern int bUsedYYAccept;
 extern unsigned int oline;
+extern unsigned int maxFill;
+extern int vFillIndexes;
 extern unsigned char *vUsedLabels;
 extern unsigned int vUsedLabelAlloc;
 
