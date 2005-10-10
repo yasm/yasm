@@ -162,32 +162,6 @@ strbuf_append(size_t count, YYCTYPE *cursor, Scanner *s, unsigned long line,
   hexdigit = [0-9a-fA-F];
   ws = [ \t\r];
   dquot = ["];
-  A = [aA];
-  B = [bB];
-  C = [cC];
-  D = [dD];
-  E = [eE];
-  F = [fF];
-  G = [gG];
-  H = [hH];
-  I = [iI];
-  J = [jJ];
-  K = [kK];
-  L = [lL];
-  M = [mM];
-  N = [nN];
-  O = [oO];
-  P = [pP];
-  Q = [qQ];
-  R = [rR];
-  S = [sS];
-  T = [tT];
-  U = [uU];
-  V = [vV];
-  W = [wW];
-  X = [xX];
-  Y = [yY];
-  Z = [zZ];
 */
 
 
@@ -225,7 +199,7 @@ scan:
 	}
 
 	/* 0b10010011 - binary number */
-	"0" B bindigit+ {
+	'0b' bindigit+ {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    lvalp->intn = yasm_intnum_create_bin(s->tok+2, cur_line);
@@ -243,7 +217,7 @@ scan:
 	}
 
 	/* 0xAA - hexidecimal number */
-	"0x" hexdigit+ {
+	'0x' hexdigit+ {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    /* skip 0 and x */
@@ -253,7 +227,7 @@ scan:
 	}
 
 	/* floating point value */
-	"0" [DdEeFfTt] [-+]? (digit+)? ("." digit*)? (E [-+]? digit+)? {
+	"0" [DdEeFfTt] [-+]? (digit+)? ("." digit*)? ('e' [-+]? digit+)? {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    lvalp->flt = yasm_floatnum_create(s->tok+2);
@@ -279,52 +253,52 @@ scan:
 	[-+|^!*&/~$():@=,]	{ RETURN(s->tok[0]); }
 
 	/* arch-independent directives */
-	".2byte"	{ RETURN(DIR_2BYTE); }
-	".4byte"	{ RETURN(DIR_4BYTE); }
-	".8byte"	{ RETURN(DIR_QUAD); }
-	".align"	{ RETURN(DIR_ALIGN); }
-	".ascii"	{ RETURN(DIR_ASCII); }
-	".asciz"	{ RETURN(DIR_ASCIZ); }
-	".balign"	{ RETURN(DIR_BALIGN); }
-	".bss"		{ RETURN(DIR_BSS); }
-	".byte"		{ RETURN(DIR_BYTE); }
-	".comm"		{ RETURN(DIR_COMM); }
-	".data"		{ RETURN(DIR_DATA); }
-	".double"	{ RETURN(DIR_DOUBLE); }
-	".endr"		{ RETURN(DIR_ENDR); }
-	".equ"		{ RETURN(DIR_EQU); }
-	".extern"	{ RETURN(DIR_EXTERN); }
-	".file"		{ RETURN(DIR_FILE); }
-	".float"	{ RETURN(DIR_FLOAT); }
-	".global"	{ RETURN(DIR_GLOBAL); }
-	".globl"	{ RETURN(DIR_GLOBAL); }
-	".hword"	{ RETURN(DIR_SHORT); }
-	".ident"	{ RETURN(DIR_IDENT); }
-	".int"		{ RETURN(DIR_INT); }
-	".lcomm"	{ RETURN(DIR_LCOMM); }
-	".loc"		{ RETURN(DIR_LOC); }
-	".long"		{ RETURN(DIR_INT); }
-	".octa"		{ RETURN(DIR_OCTA); }
-	".org"		{ RETURN(DIR_ORG); }
-	".p2align"	{ RETURN(DIR_P2ALIGN); }
-	".rept"		{ RETURN(DIR_REPT); }
-	".section"	{
+	'.2byte'	{ RETURN(DIR_2BYTE); }
+	'.4byte'	{ RETURN(DIR_4BYTE); }
+	'.8byte'	{ RETURN(DIR_QUAD); }
+	'.align'	{ RETURN(DIR_ALIGN); }
+	'.ascii'	{ RETURN(DIR_ASCII); }
+	'.asciz'	{ RETURN(DIR_ASCIZ); }
+	'.balign'	{ RETURN(DIR_BALIGN); }
+	'.bss'		{ RETURN(DIR_BSS); }
+	'.byte'		{ RETURN(DIR_BYTE); }
+	'.comm'		{ RETURN(DIR_COMM); }
+	'.data'		{ RETURN(DIR_DATA); }
+	'.double'	{ RETURN(DIR_DOUBLE); }
+	'.endr'		{ RETURN(DIR_ENDR); }
+	'.equ'		{ RETURN(DIR_EQU); }
+	'.extern'	{ RETURN(DIR_EXTERN); }
+	'.file'		{ RETURN(DIR_FILE); }
+	'.float'	{ RETURN(DIR_FLOAT); }
+	'.global'	{ RETURN(DIR_GLOBAL); }
+	'.globl'	{ RETURN(DIR_GLOBAL); }
+	'.hword'	{ RETURN(DIR_SHORT); }
+	'.ident'	{ RETURN(DIR_IDENT); }
+	'.int'		{ RETURN(DIR_INT); }
+	'.lcomm'	{ RETURN(DIR_LCOMM); }
+	'.loc'		{ RETURN(DIR_LOC); }
+	'.long'		{ RETURN(DIR_INT); }
+	'.octa'		{ RETURN(DIR_OCTA); }
+	'.org'		{ RETURN(DIR_ORG); }
+	'.p2align'	{ RETURN(DIR_P2ALIGN); }
+	'.rept'		{ RETURN(DIR_REPT); }
+	'.section'	{
 	    parser_gas->state = SECTION_DIRECTIVE;
 	    RETURN(DIR_SECTION);
 	}
-	".set"		{ RETURN(DIR_EQU); }
-	".short"	{ RETURN(DIR_SHORT); }
-	".single"	{ RETURN(DIR_FLOAT); }
-	".size"		{ RETURN(DIR_SIZE); }
-	".skip"		{ RETURN(DIR_SKIP); }
-	".space"	{ RETURN(DIR_SKIP); }
-	".string"	{ RETURN(DIR_ASCIZ); }
-	".text"		{ RETURN(DIR_TEXT); }
-	".tfloat"	{ RETURN(DIR_TFLOAT); }
-	".type"		{ RETURN(DIR_TYPE); }
-	".quad"		{ RETURN(DIR_QUAD); }
-	".word"		{ RETURN(DIR_WORD); }
-	".zero"		{ RETURN(DIR_ZERO); }
+	'.set'		{ RETURN(DIR_EQU); }
+	'.short'	{ RETURN(DIR_SHORT); }
+	'.single'	{ RETURN(DIR_FLOAT); }
+	'.size'		{ RETURN(DIR_SIZE); }
+	'.skip'		{ RETURN(DIR_SKIP); }
+	'.space'	{ RETURN(DIR_SKIP); }
+	'.string'	{ RETURN(DIR_ASCIZ); }
+	'.text'		{ RETURN(DIR_TEXT); }
+	'.tfloat'	{ RETURN(DIR_TFLOAT); }
+	'.type'		{ RETURN(DIR_TYPE); }
+	'.quad'		{ RETURN(DIR_QUAD); }
+	'.word'		{ RETURN(DIR_WORD); }
+	'.zero'		{ RETURN(DIR_ZERO); }
 
 	/* label or maybe directive */
 	[.][a-zA-Z0-9_$.]* {
@@ -339,7 +313,7 @@ scan:
 	}
 
 	/* register or segment register */
-	[%][a-z0-9]+ {
+	[%][a-zA-Z0-9]+ {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    if (yasm_arch_parse_check_reg(parser_gas->arch, lvalp->arch_data,
@@ -490,7 +464,7 @@ stringconst_scan:
 	    yasm_intnum_destroy(lvalp->intn);
 	    goto stringconst_scan;
 	}
-	"\\" X hexdigit+    {
+	'\\x' hexdigit+    {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    lvalp->intn = yasm_intnum_create_hex(s->tok+2, cur_line);

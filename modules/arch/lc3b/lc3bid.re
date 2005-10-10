@@ -313,36 +313,6 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 #define YYMARKER	marker
 #define YYFILL(n)	(void)(n)
 
-/*!re2c
-  any = [\000-\377];
-  A = [aA];
-  B = [bB];
-  C = [cC];
-  D = [dD];
-  E = [eE];
-  F = [fF];
-  G = [gG];
-  H = [hH];
-  I = [iI];
-  J = [jJ];
-  K = [kK];
-  L = [lL];
-  M = [mM];
-  N = [nN];
-  O = [oO];
-  P = [pP];
-  Q = [qQ];
-  R = [rR];
-  S = [sS];
-  T = [tT];
-  U = [uU];
-  V = [vV];
-  W = [wW];
-  X = [xX];
-  Y = [yY];
-  Z = [zZ];
-*/
-
 void
 yasm_lc3b__parse_cpu(yasm_arch *arch, const char *id, unsigned long line)
 {
@@ -356,7 +326,7 @@ yasm_lc3b__parse_check_reg(yasm_arch *arch, unsigned long data[1],
     /*const char *marker;*/
     /*!re2c
 	/* integer registers */
-	R [0-7]	{
+	'r' [0-7]	{
 	    data[0] = (oid[1]-'0');
 	    return 1;
 	}
@@ -394,41 +364,42 @@ yasm_lc3b__parse_check_insn(yasm_arch *arch, unsigned long data[4],
     /*!re2c
 	/* instructions */
 
-	A D D { RET_INSN(addand, 0x00); }
-	A N D { RET_INSN(addand, 0x40); }
+	'add' { RET_INSN(addand, 0x00); }
+	'and' { RET_INSN(addand, 0x40); }
 
-	B R { RET_INSN(br, 0x00); }
-	B R N { RET_INSN(br, 0x08); }
-	B R Z { RET_INSN(br, 0x04); }
-	B R P { RET_INSN(br, 0x02); }
-	B R N Z { RET_INSN(br, 0x0C); }
-	B R N P { RET_INSN(br, 0x0A); }
-	B R Z P { RET_INSN(br, 0x06); }
-	B R N Z P { RET_INSN(br, 0x0E); }
-	J S R { RET_INSN(br, 0x40); }
+	'br' { RET_INSN(br, 0x00); }
+	'brn' { RET_INSN(br, 0x08); }
+	'brz' { RET_INSN(br, 0x04); }
+	'brp' { RET_INSN(br, 0x02); }
+	'brnz' { RET_INSN(br, 0x0C); }
+	'brnp' { RET_INSN(br, 0x0A); }
+	'brzp' { RET_INSN(br, 0x06); }
+	'brnzp' { RET_INSN(br, 0x0E); }
+	'jsr' { RET_INSN(br, 0x40); }
 
-	J M P { RET_INSN(jmp, 0); }
+	'jmp' { RET_INSN(jmp, 0); }
 
-	L E A { RET_INSN(lea, 0); }
+	'lea' { RET_INSN(lea, 0); }
 
-	L D { RET_INSN(ldst, 0x20); }
-	L D I { RET_INSN(ldst, 0xA0); }
-	S T { RET_INSN(ldst, 0x30); }
-	S T I { RET_INSN(ldst, 0xB0); }
+	'ld' { RET_INSN(ldst, 0x20); }
+	'ldi' { RET_INSN(ldst, 0xA0); }
+	'st' { RET_INSN(ldst, 0x30); }
+	'sti' { RET_INSN(ldst, 0xB0); }
 
-	L D B { RET_INSN(ldstb, 0x60); }
-	S T B { RET_INSN(ldstb, 0x70); }
+	'ldb' { RET_INSN(ldstb, 0x60); }
+	'stb' { RET_INSN(ldstb, 0x70); }
 
-	N O T { RET_INSN(not, 0); }
+	'not' { RET_INSN(not, 0); }
 
-	R E T { RET_INSN(nooperand, 0xCE); }
-	R T I { RET_INSN(nooperand, 0x80); }
+	'ret' { RET_INSN(nooperand, 0xCE); }
+	'rti' { RET_INSN(nooperand, 0x80); }
+	'nop' { RET_INSN(nooperand, 0); }
 
-	L S H F { RET_INSN(shift, 0x00); }
-	R S H F L { RET_INSN(shift, 0x10); }
-	R S H F A { RET_INSN(shift, 0x30); }
+	'lshf' { RET_INSN(shift, 0x00); }
+	'rshfl' { RET_INSN(shift, 0x10); }
+	'rshfa' { RET_INSN(shift, 0x30); }
 
-	T R A P { RET_INSN(trap, 0); }
+	'trap' { RET_INSN(trap, 0); }
 
 	/* catchalls */
 	[\001-\377]+	{

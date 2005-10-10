@@ -149,32 +149,6 @@ static int linechg_numcount;
   hexdigit = [0-9a-fA-F];
   ws = [ \t\r];
   quot = ["'];
-  A = [aA];
-  B = [bB];
-  C = [cC];
-  D = [dD];
-  E = [eE];
-  F = [fF];
-  G = [gG];
-  H = [hH];
-  I = [iI];
-  J = [jJ];
-  K = [kK];
-  L = [lL];
-  M = [mM];
-  N = [nN];
-  O = [oO];
-  P = [pP];
-  Q = [qQ];
-  R = [rR];
-  S = [sS];
-  T = [tT];
-  U = [uU];
-  V = [vV];
-  W = [wW];
-  X = [xX];
-  Y = [yY];
-  Z = [zZ];
 */
 
 
@@ -217,21 +191,21 @@ scan:
 	}
 	/* 10010011b - binary number */
 
-	bindigit+ B {
+	bindigit+ 'b' {
 	    s->tok[TOKLEN-1] = '\0'; /* strip off 'b' */
 	    lvalp->intn = yasm_intnum_create_bin(s->tok, cur_line);
 	    RETURN(INTNUM);
 	}
 
 	/* 777q - octal number */
-	octdigit+ Q {
+	octdigit+ 'q' {
 	    s->tok[TOKLEN-1] = '\0'; /* strip off 'q' */
 	    lvalp->intn = yasm_intnum_create_oct(s->tok, cur_line);
 	    RETURN(INTNUM);
 	}
 
 	/* 0AAh form of hexidecimal number */
-	digit hexdigit* H {
+	digit hexdigit* 'h' {
 	    s->tok[TOKLEN-1] = '\0'; /* strip off 'h' */
 	    lvalp->intn = yasm_intnum_create_hex(s->tok, cur_line);
 	    RETURN(INTNUM);
@@ -252,7 +226,7 @@ scan:
 	}
 
 	/* floating point value */
-	digit+ "." digit* (E [-+]? digit+)? {
+	digit+ "." digit* ('e' [-+]? digit+)? {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    lvalp->flt = yasm_floatnum_create(s->tok);
@@ -274,86 +248,86 @@ scan:
 	}
 
 	/* size specifiers */
-	B Y T E		{ lvalp->int_info = 1; RETURN(SIZE_OVERRIDE); }
-	H W O R D	{
+	'byte'		{ lvalp->int_info = 1; RETURN(SIZE_OVERRIDE); }
+	'hword'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)/2;
 	    RETURN(SIZE_OVERRIDE);
 	}
-	W O R D		{
+	'word'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch);
 	    RETURN(SIZE_OVERRIDE);
 	}
-	(D W O R D) | (L O N G)	{
+	'dword' | 'long'	{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*2;
 	    RETURN(SIZE_OVERRIDE);
 	}
-	Q W O R D	{
+	'qword'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*4;
 	    RETURN(SIZE_OVERRIDE);
 	}
-	T W O R D	{ lvalp->int_info = 10; RETURN(SIZE_OVERRIDE); }
-	D Q W O R D	{
+	'tword'		{ lvalp->int_info = 10; RETURN(SIZE_OVERRIDE); }
+	'dqword'	{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*8;
 	    RETURN(SIZE_OVERRIDE);
 	}
 
 	/* pseudo-instructions */
-	D B		{ lvalp->int_info = 1; RETURN(DECLARE_DATA); }
-	D H W		{
+	'db'		{ lvalp->int_info = 1; RETURN(DECLARE_DATA); }
+	'dhw'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)/2;
 	    RETURN(DECLARE_DATA);
 	}
-	D W		{
+	'dw'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch);
 	    RETURN(DECLARE_DATA);
 	}
-	D D		{
+	'dd'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*2;
 	    RETURN(DECLARE_DATA);
 	}
-	D Q		{
+	'dq'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*4;
 	    RETURN(DECLARE_DATA);
 	}
-	D T		{ lvalp->int_info = 10; RETURN(DECLARE_DATA); }
-	D D Q		{
+	'dt'		{ lvalp->int_info = 10; RETURN(DECLARE_DATA); }
+	'ddq'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*8;
 	    RETURN(DECLARE_DATA);
 	}
 
-	R E S B		{ lvalp->int_info = 1; RETURN(RESERVE_SPACE); }
-	R E S H W	{
+	'resb'		{ lvalp->int_info = 1; RETURN(RESERVE_SPACE); }
+	'reshw'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)/2;
 	    RETURN(RESERVE_SPACE);
 	}
-	R E S W		{
+	'resw'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch);
 	    RETURN(RESERVE_SPACE);
 	}
-	R E S D		{
+	'resd'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*2;
 	    RETURN(RESERVE_SPACE);
 	}
-	R E S Q		{
+	'resq'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*4;
 	    RETURN(RESERVE_SPACE);
 	}
-	R E S T		{ lvalp->int_info = 10; RETURN(RESERVE_SPACE); }
-	R E S D Q	{
+	'rest'		{ lvalp->int_info = 10; RETURN(RESERVE_SPACE); }
+	'resdq'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*8;
 	    RETURN(RESERVE_SPACE);
 	}
 
-	I N C B I N	{ RETURN(INCBIN); }
+	'incbin'	{ RETURN(INCBIN); }
 
-	E Q U		{ RETURN(EQU); }
+	'equ'		{ RETURN(EQU); }
 
-	T I M E S	{ RETURN(TIMES); }
+	'times'		{ RETURN(TIMES); }
 
-	S E G		{ RETURN(SEG); }
-	W R T		{ RETURN(WRT); }
+	'seg'		{ RETURN(SEG); }
+	'wrt'		{ RETURN(WRT); }
 
-	N O S P L I T	{ RETURN(NOSPLIT); }
+	'nosplit'	{ RETURN(NOSPLIT); }
 
 	/* operators */
 	"<<"			{ RETURN(LEFT_OP); }
