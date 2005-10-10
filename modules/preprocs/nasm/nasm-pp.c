@@ -1314,7 +1314,6 @@ inc_fopen(char *file)
     const char *prefix = "";
     char *combine;
     IncPath *ip = ipath;
-    static int namelen = 0;
     int len = strlen(file);
 
     while (1)

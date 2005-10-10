@@ -3408,7 +3408,7 @@ int
 yasm_x86__parse_check_reggroup(yasm_arch *arch, unsigned long data[1],
 			       const char *id, unsigned long line)
 {
-    const char *oid = id;
+    /*const char *oid = id;*/
     /*!re2c
 	/* floating point, MMX, and SSE/SSE2 registers */
 	'st'		{
