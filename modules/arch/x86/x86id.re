@@ -277,7 +277,6 @@ typedef struct x86_insn_info {
     data[1] = (((unsigned long)mod)<<8) | \
     	      ((unsigned char)(sizeof(group##_insn)/sizeof(x86_insn_info))); \
     data[2] = cpu; \
-    data[3] |= arch_x86->mode_bits; \
     } while (0)
 
 /*
@@ -3516,7 +3515,7 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
     int suffix_ofs = -1;
     char suffix_over = '\0';
 
-    data[3] = 0;
+    data[3] = arch_x86->mode_bits;
 
     /*!re2c
 	/* instructions */
@@ -3549,12 +3548,12 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	    warn64 = 1;
 	    RET_INSN_GAS(4, movszx, 0xB6, CPU_Hammer|CPU_64);
 	}
-	'movzx' { RET_INSN(5, movszx, 0xB6, CPU_386); }
+	'movzx' { RET_INSN_NS(movszx, 0xB6, CPU_386); }
 	/* Push instructions */
 	'push' [wWlLqQ]? { RET_INSN(4, push, 0, CPU_Any); }
 	'pusha' {
 	    not64 = 1;
-	    RET_INSN(5, onebyte, 0x0060, CPU_186);
+	    RET_INSN_NS(onebyte, 0x0060, CPU_186);
 	}
 	'pushad' {
 	    not64 = 1;
@@ -3566,13 +3565,13 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	}
 	'pushaw' {
 	    not64 = 1;
-	    RET_INSN(6, onebyte, 0x1060, CPU_186);
+	    RET_INSN_NS(onebyte, 0x1060, CPU_186);
 	}
 	/* Pop instructions */
 	'pop' [wWlLqQ]? { RET_INSN(3, pop, 0, CPU_Any); }
 	'popa' {
 	    not64 = 1;
-	    RET_INSN(4, onebyte, 0x0061, CPU_186);
+	    RET_INSN_NS(onebyte, 0x0061, CPU_186);
 	}
 	'popad' {
 	    not64 = 1;
@@ -3584,7 +3583,7 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	}
 	'popaw' {
 	    not64 = 1;
-	    RET_INSN(5, onebyte, 0x1061, CPU_186);
+	    RET_INSN_NS(onebyte, 0x1061, CPU_186);
 	}
 	/* Exchange */
 	'xchg' [bBwWlLqQ]? { RET_INSN(4, xchg, 0, CPU_Any); }
@@ -3606,22 +3605,22 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	'lgs' [wWlL]? { RET_INSN(3, lfgss, 0xB5, CPU_386); }
 	'lss' [wWlL]? { RET_INSN(3, lfgss, 0xB2, CPU_386); }
 	/* Flags register instructions */
-	'clc' { RET_INSN(3, onebyte, 0x00F8, CPU_Any); }
-	'cld' { RET_INSN(3, onebyte, 0x00FC, CPU_Any); }
-	'cli' { RET_INSN(3, onebyte, 0x00FA, CPU_Any); }
-	'clts' { RET_INSN(4, twobyte, 0x0F06, CPU_286|CPU_Priv); }
-	'cmc' { RET_INSN(3, onebyte, 0x00F5, CPU_Any); }
-	'lahf' { RET_INSN(4, onebyte, 0x009F, CPU_Any); }
-	'sahf' { RET_INSN(4, onebyte, 0x009E, CPU_Any); }
-	'pushf' { RET_INSN(5, onebyte, 0x009C, CPU_Any); }
+	'clc' { RET_INSN_NS(onebyte, 0x00F8, CPU_Any); }
+	'cld' { RET_INSN_NS(onebyte, 0x00FC, CPU_Any); }
+	'cli' { RET_INSN_NS(onebyte, 0x00FA, CPU_Any); }
+	'clts' { RET_INSN_NS(twobyte, 0x0F06, CPU_286|CPU_Priv); }
+	'cmc' { RET_INSN_NS(onebyte, 0x00F5, CPU_Any); }
+	'lahf' { RET_INSN_NS(onebyte, 0x009F, CPU_Any); }
+	'sahf' { RET_INSN_NS(onebyte, 0x009E, CPU_Any); }
+	'pushf' { RET_INSN_NS(onebyte, 0x009C, CPU_Any); }
 	'pushfd' { RET_INSN_NONGAS(6, onebyte, 0x209C, CPU_386); }
 	'pushfl' { RET_INSN_GAS(6, onebyte, 0x209C, CPU_386); }
-	'pushfw' { RET_INSN(6, onebyte, 0x109C, CPU_Any); }
+	'pushfw' { RET_INSN_NS(onebyte, 0x109C, CPU_Any); }
 	'pushfq' {
 	    warn64 = 1;
-	    RET_INSN(6, onebyte, 0x409C, CPU_Hammer|CPU_64);
+	    RET_INSN_NS(onebyte, 0x409C, CPU_Hammer|CPU_64);
 	}
-	'popf' { RET_INSN(4, onebyte, 0x40009D, CPU_Any); }
+	'popf' { RET_INSN_NS(onebyte, 0x40009D, CPU_Any); }
 	'popfd' {
 	    not64 = 1;
 	    RET_INSN_NONGAS(5, onebyte, 0x00209D, CPU_386);
@@ -3630,14 +3629,14 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	    not64 = 1;
 	    RET_INSN_GAS(5, onebyte, 0x00209D, CPU_386);
 	}
-	'popfw' { RET_INSN(5, onebyte, 0x40109D, CPU_Any); }
+	'popfw' { RET_INSN_NS(onebyte, 0x40109D, CPU_Any); }
 	'popfq' {
 	    warn64 = 1;
-	    RET_INSN(5, onebyte, 0x40409D, CPU_Hammer|CPU_64);
+	    RET_INSN_NS(onebyte, 0x40409D, CPU_Hammer|CPU_64);
 	}
-	'stc' { RET_INSN(3, onebyte, 0x00F9, CPU_Any); }
-	'std' { RET_INSN(3, onebyte, 0x00FD, CPU_Any); }
-	'sti' { RET_INSN(3, onebyte, 0x00FB, CPU_Any); }
+	'stc' { RET_INSN_NS(onebyte, 0x00F9, CPU_Any); }
+	'std' { RET_INSN_NS(onebyte, 0x00FD, CPU_Any); }
+	'sti' { RET_INSN_NS(onebyte, 0x00FB, CPU_Any); }
 	/* Arithmetic */
 	'add' [bBwWlLqQ]? { RET_INSN(3, arith, 0x0000, CPU_Any); }
 	'inc' [bBwWlLqQ]? { RET_INSN(3, incdec, 0x0040, CPU_Any); }
@@ -3654,40 +3653,40 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	'not' [bBwWlLqQ]? { RET_INSN(3, f6, 0x02, CPU_Any); }
 	'aaa' {
 	    not64 = 1;
-	    RET_INSN(3, onebyte, 0x0037, CPU_Any);
+	    RET_INSN_NS(onebyte, 0x0037, CPU_Any);
 	}
 	'aas' {
 	    not64 = 1;
-	    RET_INSN(3, onebyte, 0x003F, CPU_Any);
+	    RET_INSN_NS(onebyte, 0x003F, CPU_Any);
 	}
 	'daa' {
 	    not64 = 1;
-	    RET_INSN(3, onebyte, 0x0027, CPU_Any);
+	    RET_INSN_NS(onebyte, 0x0027, CPU_Any);
 	}
 	'das' {
 	    not64 = 1;
-	    RET_INSN(3, onebyte, 0x002F, CPU_Any);
+	    RET_INSN_NS(onebyte, 0x002F, CPU_Any);
 	}
 	'aad' {
 	    not64 = 1;
-	    RET_INSN(3, aadm, 0x01, CPU_Any);
+	    RET_INSN_NS(aadm, 0x01, CPU_Any);
 	}
 	'aam' {
 	    not64 = 1;
-	    RET_INSN(3, aadm, 0x00, CPU_Any);
+	    RET_INSN_NS(aadm, 0x00, CPU_Any);
 	}
 	/* Conversion instructions */
-	'cbw' { RET_INSN(3, onebyte, 0x1098, CPU_Any); }
-	'cwde' { RET_INSN(4, onebyte, 0x2098, CPU_386); }
+	'cbw' { RET_INSN_NS(onebyte, 0x1098, CPU_Any); }
+	'cwde' { RET_INSN_NS(onebyte, 0x2098, CPU_386); }
 	'cdqe' {
 	    warn64 = 1;
-	    RET_INSN(4, onebyte, 0x4098, CPU_Hammer|CPU_64);
+	    RET_INSN_NS(onebyte, 0x4098, CPU_Hammer|CPU_64);
 	}
-	'cwd' { RET_INSN(3, onebyte, 0x1099, CPU_Any); }
-	'cdq' { RET_INSN(3, onebyte, 0x2099, CPU_386); }
+	'cwd' { RET_INSN_NS(onebyte, 0x1099, CPU_Any); }
+	'cdq' { RET_INSN_NS(onebyte, 0x2099, CPU_386); }
 	'cqo' {
 	    warn64 = 1;
-	    RET_INSN(3, onebyte, 0x4099, CPU_Hammer|CPU_64);
+	    RET_INSN_NS(onebyte, 0x4099, CPU_Hammer|CPU_64);
 	}
 	/* Conversion instructions - GAS / AT&T naming */
 	'cbtw' { RET_INSN_GAS(4, onebyte, 0x1098, CPU_Any); }
@@ -3742,52 +3741,52 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	    RET_INSN_GAS(4, retnf, 0xCA, CPU_Any);
 	}
 	'enter' [wWlLqQ]? { RET_INSN(5, enter, 0, CPU_186); }
-	'leave' { RET_INSN(5, onebyte, 0x4000C9, CPU_186); }
+	'leave' { RET_INSN_NS(onebyte, 0x4000C9, CPU_186); }
 	'leave' [wW] { RET_INSN_GAS(6, onebyte, 0x0010C9, CPU_186); }
 	'leave' [lLqQ] { RET_INSN_GAS(6, onebyte, 0x4000C9, CPU_186); }
 	/* Conditional jumps */
-	'jo' { RET_INSN(2, jcc, 0x00, CPU_Any); }
-	'jno' { RET_INSN(3, jcc, 0x01, CPU_Any); }
-	'jb' { RET_INSN(2, jcc, 0x02, CPU_Any); }
-	'jc' { RET_INSN(2, jcc, 0x02, CPU_Any); }
-	'jnae' { RET_INSN(4, jcc, 0x02, CPU_Any); }
-	'jnb' { RET_INSN(3, jcc, 0x03, CPU_Any); }
-	'jnc' { RET_INSN(3, jcc, 0x03, CPU_Any); }
-	'jae' { RET_INSN(3, jcc, 0x03, CPU_Any); }
-	'je' { RET_INSN(2, jcc, 0x04, CPU_Any); }
-	'jz' { RET_INSN(2, jcc, 0x04, CPU_Any); }
-	'jne' { RET_INSN(3, jcc, 0x05, CPU_Any); }
-	'jnz' { RET_INSN(3, jcc, 0x05, CPU_Any); }
-	'jbe' { RET_INSN(3, jcc, 0x06, CPU_Any); }
-	'jna' { RET_INSN(3, jcc, 0x06, CPU_Any); }
-	'jnbe' { RET_INSN(4, jcc, 0x07, CPU_Any); }
-	'ja' { RET_INSN(2, jcc, 0x07, CPU_Any); }
-	'js' { RET_INSN(2, jcc, 0x08, CPU_Any); }
-	'jns' { RET_INSN(3, jcc, 0x09, CPU_Any); }
-	'jp' { RET_INSN(2, jcc, 0x0A, CPU_Any); }
-	'jpe' { RET_INSN(3, jcc, 0x0A, CPU_Any); }
-	'jnp' { RET_INSN(3, jcc, 0x0B, CPU_Any); }
-	'jpo' { RET_INSN(3, jcc, 0x0B, CPU_Any); }
-	'jl' { RET_INSN(2, jcc, 0x0C, CPU_Any); }
-	'jnge' { RET_INSN(4, jcc, 0x0C, CPU_Any); }
-	'jnl' { RET_INSN(3, jcc, 0x0D, CPU_Any); }
-	'jge' { RET_INSN(3, jcc, 0x0D, CPU_Any); }
-	'jle' { RET_INSN(3, jcc, 0x0E, CPU_Any); }
-	'jng' { RET_INSN(3, jcc, 0x0E, CPU_Any); }
-	'jnle' { RET_INSN(3, jcc, 0x0F, CPU_Any); }
-	'jg' { RET_INSN(2, jcc, 0x0F, CPU_Any); }
-	'jcxz' { RET_INSN(4, jcxz, 16, CPU_Any); }
-	'jecxz' { RET_INSN(5, jcxz, 32, CPU_386); }
+	'jo' { RET_INSN_NS(jcc, 0x00, CPU_Any); }
+	'jno' { RET_INSN_NS(jcc, 0x01, CPU_Any); }
+	'jb' { RET_INSN_NS(jcc, 0x02, CPU_Any); }
+	'jc' { RET_INSN_NS(jcc, 0x02, CPU_Any); }
+	'jnae' { RET_INSN_NS(jcc, 0x02, CPU_Any); }
+	'jnb' { RET_INSN_NS(jcc, 0x03, CPU_Any); }
+	'jnc' { RET_INSN_NS(jcc, 0x03, CPU_Any); }
+	'jae' { RET_INSN_NS(jcc, 0x03, CPU_Any); }
+	'je' { RET_INSN_NS(jcc, 0x04, CPU_Any); }
+	'jz' { RET_INSN_NS(jcc, 0x04, CPU_Any); }
+	'jne' { RET_INSN_NS(jcc, 0x05, CPU_Any); }
+	'jnz' { RET_INSN_NS(jcc, 0x05, CPU_Any); }
+	'jbe' { RET_INSN_NS(jcc, 0x06, CPU_Any); }
+	'jna' { RET_INSN_NS(jcc, 0x06, CPU_Any); }
+	'jnbe' { RET_INSN_NS(jcc, 0x07, CPU_Any); }
+	'ja' { RET_INSN_NS(jcc, 0x07, CPU_Any); }
+	'js' { RET_INSN_NS(jcc, 0x08, CPU_Any); }
+	'jns' { RET_INSN_NS(jcc, 0x09, CPU_Any); }
+	'jp' { RET_INSN_NS(jcc, 0x0A, CPU_Any); }
+	'jpe' { RET_INSN_NS(jcc, 0x0A, CPU_Any); }
+	'jnp' { RET_INSN_NS(jcc, 0x0B, CPU_Any); }
+	'jpo' { RET_INSN_NS(jcc, 0x0B, CPU_Any); }
+	'jl' { RET_INSN_NS(jcc, 0x0C, CPU_Any); }
+	'jnge' { RET_INSN_NS(jcc, 0x0C, CPU_Any); }
+	'jnl' { RET_INSN_NS(jcc, 0x0D, CPU_Any); }
+	'jge' { RET_INSN_NS(jcc, 0x0D, CPU_Any); }
+	'jle' { RET_INSN_NS(jcc, 0x0E, CPU_Any); }
+	'jng' { RET_INSN_NS(jcc, 0x0E, CPU_Any); }
+	'jnle' { RET_INSN_NS(jcc, 0x0F, CPU_Any); }
+	'jg' { RET_INSN_NS(jcc, 0x0F, CPU_Any); }
+	'jcxz' { RET_INSN_NS(jcxz, 16, CPU_Any); }
+	'jecxz' { RET_INSN_NS(jcxz, 32, CPU_386); }
 	'jrcxz' {
 	    warn64 = 1;
-	    RET_INSN(5, jcxz, 64, CPU_Hammer|CPU_64);
+	    RET_INSN_NS(jcxz, 64, CPU_Hammer|CPU_64);
 	}
 	/* Loop instructions */
-	'loop' { RET_INSN(4, loop, 0x02, CPU_Any); }
-	'loopz' { RET_INSN(5, loop, 0x01, CPU_Any); }
-	'loope' { RET_INSN(5, loop, 0x01, CPU_Any); }
-	'loopnz' { RET_INSN(6, loop, 0x00, CPU_Any); }
-	'loopne' { RET_INSN(6, loop, 0x00, CPU_Any); }
+	'loop' { RET_INSN_NS(loop, 0x02, CPU_Any); }
+	'loopz' { RET_INSN_NS(loop, 0x01, CPU_Any); }
+	'loope' { RET_INSN_NS(loop, 0x01, CPU_Any); }
+	'loopnz' { RET_INSN_NS(loop, 0x00, CPU_Any); }
+	'loopne' { RET_INSN_NS(loop, 0x00, CPU_Any); }
 	/* Set byte on flag instructions */
 	'seto' B? { RET_INSN(4, setcc, 0x00, CPU_386); }
 	'setno' B? { RET_INSN(5, setcc, 0x01, CPU_386); }
@@ -3820,37 +3819,37 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	'setnle' B? { RET_INSN(6, setcc, 0x0F, CPU_386); }
 	'setg' B? { RET_INSN(4, setcc, 0x0F, CPU_386); }
 	/* String instructions. */
-	'cmpsb' { RET_INSN(5, onebyte, 0x00A6, CPU_Any); }
-	'cmpsw' { RET_INSN(5, onebyte, 0x10A7, CPU_Any); }
-	'cmpsd' { RET_INSN(5, cmpsd, 0, CPU_Any); }
+	'cmpsb' { RET_INSN_NS(onebyte, 0x00A6, CPU_Any); }
+	'cmpsw' { RET_INSN_NS(onebyte, 0x10A7, CPU_Any); }
+	'cmpsd' { RET_INSN_NS(cmpsd, 0, CPU_Any); }
 	'cmpsl' { RET_INSN_GAS(5, onebyte, 0x20A7, CPU_386); }
 	'cmpsq' {
 	    warn64 = 1;
-	    RET_INSN(5, onebyte, 0x40A7, CPU_Hammer|CPU_64);
+	    RET_INSN_NS(onebyte, 0x40A7, CPU_Hammer|CPU_64);
 	}
-	'insb' { RET_INSN(4, onebyte, 0x006C, CPU_Any); }
-	'insw' { RET_INSN(4, onebyte, 0x106D, CPU_Any); }
+	'insb' { RET_INSN_NS(onebyte, 0x006C, CPU_Any); }
+	'insw' { RET_INSN_NS(onebyte, 0x106D, CPU_Any); }
 	'insd' { RET_INSN_NONGAS(4, onebyte, 0x206D, CPU_386); }
 	'insl' { RET_INSN_GAS(4, onebyte, 0x206D, CPU_386); }
-	'outsb' { RET_INSN(5, onebyte, 0x006E, CPU_Any); }
-	'outsw' { RET_INSN(5, onebyte, 0x106F, CPU_Any); }
+	'outsb' { RET_INSN_NS(onebyte, 0x006E, CPU_Any); }
+	'outsw' { RET_INSN_NS(onebyte, 0x106F, CPU_Any); }
 	'outsd' { RET_INSN_NONGAS(5, onebyte, 0x206F, CPU_386); }
 	'outsl' { RET_INSN_GAS(5, onebyte, 0x206F, CPU_386); }
-	'lodsb' { RET_INSN(5, onebyte, 0x00AC, CPU_Any); }
-	'lodsw' { RET_INSN(5, onebyte, 0x10AD, CPU_Any); }
+	'lodsb' { RET_INSN_NS(onebyte, 0x00AC, CPU_Any); }
+	'lodsw' { RET_INSN_NS(onebyte, 0x10AD, CPU_Any); }
 	'lodsd' { RET_INSN_NONGAS(5, onebyte, 0x20AD, CPU_386); }
 	'lodsl' { RET_INSN_GAS(5, onebyte, 0x20AD, CPU_386); }
 	'lodsq' {
 	    warn64 = 1;
-	    RET_INSN(5, onebyte, 0x40AD, CPU_Hammer|CPU_64);
+	    RET_INSN_NS(onebyte, 0x40AD, CPU_Hammer|CPU_64);
 	}
-	'movsb' { RET_INSN(5, onebyte, 0x00A4, CPU_Any); }
-	'movsw' { RET_INSN(5, onebyte, 0x10A5, CPU_Any); }
-	'movsd' { RET_INSN(5, movsd, 0, CPU_Any); }
+	'movsb' { RET_INSN_NS(onebyte, 0x00A4, CPU_Any); }
+	'movsw' { RET_INSN_NS(onebyte, 0x10A5, CPU_Any); }
+	'movsd' { RET_INSN_NS(movsd, 0, CPU_Any); }
 	'movsl' { RET_INSN_GAS(5, onebyte, 0x20A5, CPU_386); }
 	'movsq' {
 	    warn64 = 1;
-	    RET_INSN(5, onebyte, 0x40A5, CPU_Any);
+	    RET_INSN_NS(onebyte, 0x40A5, CPU_Any);
 	}
 	/* smov alias for movs in GAS mode */
 	'smovb' { RET_INSN_GAS(5, onebyte, 0x00A4, CPU_Any); }
@@ -3860,13 +3859,13 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	    warn64 = 1;
 	    RET_INSN_GAS(5, onebyte, 0x40A5, CPU_Any);
 	}
-	'scasb' { RET_INSN(5, onebyte, 0x00AE, CPU_Any); }
-	'scasw' { RET_INSN(5, onebyte, 0x10AF, CPU_Any); }
+	'scasb' { RET_INSN_NS(onebyte, 0x00AE, CPU_Any); }
+	'scasw' { RET_INSN_NS(onebyte, 0x10AF, CPU_Any); }
 	'scasd' { RET_INSN_NONGAS(5, onebyte, 0x20AF, CPU_386); }
 	'scasl' { RET_INSN_GAS(5, onebyte, 0x20AF, CPU_386); }
 	'scasq' {
 	    warn64 = 1;
-	    RET_INSN(5, onebyte, 0x40AF, CPU_Hammer|CPU_64);
+	    RET_INSN_NS(onebyte, 0x40AF, CPU_Hammer|CPU_64);
 	}
 	/* ssca alias for scas in GAS mode */
 	'sscab' { RET_INSN_GAS(5, onebyte, 0x00AE, CPU_Any); }
@@ -3876,13 +3875,13 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	    warn64 = 1;
 	    RET_INSN_GAS(5, onebyte, 0x40AF, CPU_Hammer|CPU_64);
 	}
-	'stosb' { RET_INSN(5, onebyte, 0x00AA, CPU_Any); }
-	'stosw' { RET_INSN(5, onebyte, 0x10AB, CPU_Any); }
+	'stosb' { RET_INSN_NS(onebyte, 0x00AA, CPU_Any); }
+	'stosw' { RET_INSN_NS(onebyte, 0x10AB, CPU_Any); }
 	'stosd' { RET_INSN_NONGAS(5, onebyte, 0x20AB, CPU_386); }
 	'stosl' { RET_INSN_GAS(5, onebyte, 0x20AB, CPU_386); }
 	'stosq' {
 	    warn64 = 1;
-	    RET_INSN(5, onebyte, 0x40AB, CPU_Hammer|CPU_64);
+	    RET_INSN_NS(onebyte, 0x40AB, CPU_Hammer|CPU_64);
 	}
 	'xlat' B? { RET_INSN(5, onebyte, 0x00D7, CPU_Any); }
 	/* Bit manipulation */
@@ -3893,28 +3892,28 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	'btr' [wWlLqQ]? { RET_INSN(3, bittest, 0x06B3, CPU_386); }
 	'bts' [wWlLqQ]? { RET_INSN(3, bittest, 0x05AB, CPU_386); }
 	/* Interrupts and operating system instructions */
-	'int' { RET_INSN(3, int, 0, CPU_Any); }
-	'int3' { RET_INSN(4, onebyte, 0x00CC, CPU_Any); }
+	'int' { RET_INSN_NS(int, 0, CPU_Any); }
+	'int3' { RET_INSN_NS(onebyte, 0x00CC, CPU_Any); }
 	'int03' { RET_INSN_NONGAS(5, onebyte, 0x00CC, CPU_Any); }
 	'into' {
 	    not64 = 1;
-	    RET_INSN(4, onebyte, 0x00CE, CPU_Any);
+	    RET_INSN_NS(onebyte, 0x00CE, CPU_Any);
 	}
-	'iret' { RET_INSN(4, onebyte, 0x00CF, CPU_Any); }
-	'iretw' { RET_INSN(5, onebyte, 0x10CF, CPU_Any); }
+	'iret' { RET_INSN_NS(onebyte, 0x00CF, CPU_Any); }
+	'iretw' { RET_INSN_NS(onebyte, 0x10CF, CPU_Any); }
 	'iretd' { RET_INSN_NONGAS(5, onebyte, 0x20CF, CPU_386); }
 	'iretl' { RET_INSN_GAS(5, onebyte, 0x20CF, CPU_386); }
 	'iretq' {
 	    warn64 = 1;
-	    RET_INSN(5, onebyte, 0x40CF, CPU_Hammer|CPU_64);
+	    RET_INSN_NS(onebyte, 0x40CF, CPU_Hammer|CPU_64);
 	}
-	'rsm' { RET_INSN(3, twobyte, 0x0FAA, CPU_586|CPU_SMM); }
+	'rsm' { RET_INSN_NS(twobyte, 0x0FAA, CPU_586|CPU_SMM); }
 	'bound' [wWlL]? {
 	    not64 = 1;
 	    RET_INSN(5, bound, 0, CPU_186);
 	}
-	'hlt' { RET_INSN(3, onebyte, 0x00F4, CPU_Priv); }
-	'nop' { RET_INSN(3, onebyte, 0x0090, CPU_Any); }
+	'hlt' { RET_INSN_NS(onebyte, 0x00F4, CPU_Priv); }
+	'nop' { RET_INSN_NS(onebyte, 0x0090, CPU_Any); }
 	/* Protection control */
 	'arpl' W? {
 	    not64 = 1;
@@ -3952,111 +3951,111 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	}
 	'fistp' [lLqQsS]? { RET_INSN(5, fildstp, 0x070203, CPU_FPU); }
 	'fistpll' { RET_INSN_GAS(7, fbldstp, 0x07, CPU_FPU); }
-	'fbstp' { RET_INSN(5, fbldstp, 0x06, CPU_FPU); }
-	'fxch' { RET_INSN(4, fxch, 0, CPU_FPU); }
+	'fbstp' { RET_INSN_NS(fbldstp, 0x06, CPU_FPU); }
+	'fxch' { RET_INSN_NS(fxch, 0, CPU_FPU); }
 	'fcom' [lLsS]? { RET_INSN(4, fcom, 0x02D0, CPU_FPU); }
 	'ficom' [lLsS]? { RET_INSN(5, fiarith, 0x02DA, CPU_FPU); }
 	'fcomp' [lLsS]? { RET_INSN(5, fcom, 0x03D8, CPU_FPU); }
 	'ficomp' [lLsS]? { RET_INSN(6, fiarith, 0x03DA, CPU_FPU); }
-	'fcompp' { RET_INSN(6, twobyte, 0xDED9, CPU_FPU); }
-	'fucom' { RET_INSN(5, fcom2, 0xDDE0, CPU_286|CPU_FPU); }
-	'fucomp' { RET_INSN(6, fcom2, 0xDDE8, CPU_286|CPU_FPU); }
-	'fucompp' { RET_INSN(7, twobyte, 0xDAE9, CPU_286|CPU_FPU); }
-	'ftst' { RET_INSN(4, twobyte, 0xD9E4, CPU_FPU); }
-	'fxam' { RET_INSN(4, twobyte, 0xD9E5, CPU_FPU); }
-	'fld1' { RET_INSN(4, twobyte, 0xD9E8, CPU_FPU); }
-	'fldl2t' { RET_INSN(6, twobyte, 0xD9E9, CPU_FPU); }
-	'fldl2e' { RET_INSN(6, twobyte, 0xD9EA, CPU_FPU); }
-	'fldpi' { RET_INSN(5, twobyte, 0xD9EB, CPU_FPU); }
-	'fldlg2' { RET_INSN(6, twobyte, 0xD9EC, CPU_FPU); }
-	'fldln2' { RET_INSN(6, twobyte, 0xD9ED, CPU_FPU); }
-	'fldz' { RET_INSN(4, twobyte, 0xD9EE, CPU_FPU); }
+	'fcompp' { RET_INSN_NS(twobyte, 0xDED9, CPU_FPU); }
+	'fucom' { RET_INSN_NS(fcom2, 0xDDE0, CPU_286|CPU_FPU); }
+	'fucomp' { RET_INSN_NS(fcom2, 0xDDE8, CPU_286|CPU_FPU); }
+	'fucompp' { RET_INSN_NS(twobyte, 0xDAE9, CPU_286|CPU_FPU); }
+	'ftst' { RET_INSN_NS(twobyte, 0xD9E4, CPU_FPU); }
+	'fxam' { RET_INSN_NS(twobyte, 0xD9E5, CPU_FPU); }
+	'fld1' { RET_INSN_NS(twobyte, 0xD9E8, CPU_FPU); }
+	'fldl2t' { RET_INSN_NS(twobyte, 0xD9E9, CPU_FPU); }
+	'fldl2e' { RET_INSN_NS(twobyte, 0xD9EA, CPU_FPU); }
+	'fldpi' { RET_INSN_NS(twobyte, 0xD9EB, CPU_FPU); }
+	'fldlg2' { RET_INSN_NS(twobyte, 0xD9EC, CPU_FPU); }
+	'fldln2' { RET_INSN_NS(twobyte, 0xD9ED, CPU_FPU); }
+	'fldz' { RET_INSN_NS(twobyte, 0xD9EE, CPU_FPU); }
 	'fadd' [lLsS]? { RET_INSN(4, farith, 0x00C0C0, CPU_FPU); }
-	'faddp' { RET_INSN(5, farithp, 0xC0, CPU_FPU); }
+	'faddp' { RET_INSN_NS(farithp, 0xC0, CPU_FPU); }
 	'fiadd' [lLsS]? { RET_INSN(5, fiarith, 0x00DA, CPU_FPU); }
 	'fsub' [lLsS]? { RET_INSN(4, farith, 0x04E0E8, CPU_FPU); }
 	'fisub' [lLsS]? { RET_INSN(5, fiarith, 0x04DA, CPU_FPU); }
-	'fsubp' { RET_INSN(5, farithp, 0xE8, CPU_FPU); }
+	'fsubp' { RET_INSN_NS(farithp, 0xE8, CPU_FPU); }
 	'fsubr' [lLsS]? { RET_INSN(5, farith, 0x05E8E0, CPU_FPU); }
 	'fisubr' [lLsS]? { RET_INSN(6, fiarith, 0x05DA, CPU_FPU); }
-	'fsubrp' { RET_INSN(6, farithp, 0xE0, CPU_FPU); }
+	'fsubrp' { RET_INSN_NS(farithp, 0xE0, CPU_FPU); }
 	'fmul' [lLsS]? { RET_INSN(4, farith, 0x01C8C8, CPU_FPU); }
 	'fimul' [lLsS]? { RET_INSN(5, fiarith, 0x01DA, CPU_FPU); }
-	'fmulp' { RET_INSN(5, farithp, 0xC8, CPU_FPU); }
+	'fmulp' { RET_INSN_NS(farithp, 0xC8, CPU_FPU); }
 	'fdiv' [lLsS]? { RET_INSN(4, farith, 0x06F0F8, CPU_FPU); }
 	'fidiv' [lLsS]? { RET_INSN(5, fiarith, 0x06DA, CPU_FPU); }
-	'fdivp' { RET_INSN(5, farithp, 0xF8, CPU_FPU); }
+	'fdivp' { RET_INSN_NS(farithp, 0xF8, CPU_FPU); }
 	'fdivr' [lLsS]? { RET_INSN(5, farith, 0x07F8F0, CPU_FPU); }
 	'fidivr' [lLsS]? { RET_INSN(6, fiarith, 0x07DA, CPU_FPU); }
-	'fdivrp' { RET_INSN(6, farithp, 0xF0, CPU_FPU); }
-	'f2xm1' { RET_INSN(5, twobyte, 0xD9F0, CPU_FPU); }
-	'fyl2x' { RET_INSN(5, twobyte, 0xD9F1, CPU_FPU); }
-	'fptan' { RET_INSN(5, twobyte, 0xD9F2, CPU_FPU); }
-	'fpatan' { RET_INSN(6, twobyte, 0xD9F3, CPU_FPU); }
-	'fxtract' { RET_INSN(7, twobyte, 0xD9F4, CPU_FPU); }
-	'fprem1' { RET_INSN(6, twobyte, 0xD9F5, CPU_286|CPU_FPU); }
-	'fdecstp' { RET_INSN(7, twobyte, 0xD9F6, CPU_FPU); }
-	'fincstp' { RET_INSN(7, twobyte, 0xD9F7, CPU_FPU); }
-	'fprem' { RET_INSN(5, twobyte, 0xD9F8, CPU_FPU); }
-	'fyl2xp1' { RET_INSN(7, twobyte, 0xD9F9, CPU_FPU); }
-	'fsqrt' { RET_INSN(5, twobyte, 0xD9FA, CPU_FPU); }
-	'fsincos' { RET_INSN(7, twobyte, 0xD9FB, CPU_286|CPU_FPU); }
-	'frndint' { RET_INSN(7, twobyte, 0xD9FC, CPU_FPU); }
-	'fscale' { RET_INSN(6, twobyte, 0xD9FD, CPU_FPU); }
-	'fsin' { RET_INSN(4, twobyte, 0xD9FE, CPU_286|CPU_FPU); }
-	'fcos' { RET_INSN(4, twobyte, 0xD9FF, CPU_286|CPU_FPU); }
-	'fchs' { RET_INSN(4, twobyte, 0xD9E0, CPU_FPU); }
-	'fabs' { RET_INSN(4, twobyte, 0xD9E1, CPU_FPU); }
-	'fninit' { RET_INSN(6, twobyte, 0xDBE3, CPU_FPU); }
-	'finit' { RET_INSN(5, threebyte, 0x9BDBE3UL, CPU_FPU); }
+	'fdivrp' { RET_INSN_NS(farithp, 0xF0, CPU_FPU); }
+	'f2xm1' { RET_INSN_NS(twobyte, 0xD9F0, CPU_FPU); }
+	'fyl2x' { RET_INSN_NS(twobyte, 0xD9F1, CPU_FPU); }
+	'fptan' { RET_INSN_NS(twobyte, 0xD9F2, CPU_FPU); }
+	'fpatan' { RET_INSN_NS(twobyte, 0xD9F3, CPU_FPU); }
+	'fxtract' { RET_INSN_NS(twobyte, 0xD9F4, CPU_FPU); }
+	'fprem1' { RET_INSN_NS(twobyte, 0xD9F5, CPU_286|CPU_FPU); }
+	'fdecstp' { RET_INSN_NS(twobyte, 0xD9F6, CPU_FPU); }
+	'fincstp' { RET_INSN_NS(twobyte, 0xD9F7, CPU_FPU); }
+	'fprem' { RET_INSN_NS(twobyte, 0xD9F8, CPU_FPU); }
+	'fyl2xp1' { RET_INSN_NS(twobyte, 0xD9F9, CPU_FPU); }
+	'fsqrt' { RET_INSN_NS(twobyte, 0xD9FA, CPU_FPU); }
+	'fsincos' { RET_INSN_NS(twobyte, 0xD9FB, CPU_286|CPU_FPU); }
+	'frndint' { RET_INSN_NS(twobyte, 0xD9FC, CPU_FPU); }
+	'fscale' { RET_INSN_NS(twobyte, 0xD9FD, CPU_FPU); }
+	'fsin' { RET_INSN_NS(twobyte, 0xD9FE, CPU_286|CPU_FPU); }
+	'fcos' { RET_INSN_NS(twobyte, 0xD9FF, CPU_286|CPU_FPU); }
+	'fchs' { RET_INSN_NS(twobyte, 0xD9E0, CPU_FPU); }
+	'fabs' { RET_INSN_NS(twobyte, 0xD9E1, CPU_FPU); }
+	'fninit' { RET_INSN_NS(twobyte, 0xDBE3, CPU_FPU); }
+	'finit' { RET_INSN_NS(threebyte, 0x9BDBE3UL, CPU_FPU); }
 	'fldcw' W? { RET_INSN(5, fldnstcw, 0x05, CPU_FPU); }
 	'fnstcw' W? { RET_INSN(6, fldnstcw, 0x07, CPU_FPU); }
 	'fstcw' W? { RET_INSN(5, fstcw, 0, CPU_FPU); }
 	'fnstsw' W? { RET_INSN(6, fnstsw, 0, CPU_FPU); }
 	'fstsw' W? { RET_INSN(5, fstsw, 0, CPU_FPU); }
-	'fnclex' { RET_INSN(6, twobyte, 0xDBE2, CPU_FPU); }
-	'fclex' { RET_INSN(5, threebyte, 0x9BDBE2UL, CPU_FPU); }
+	'fnclex' { RET_INSN_NS(twobyte, 0xDBE2, CPU_FPU); }
+	'fclex' { RET_INSN_NS(threebyte, 0x9BDBE2UL, CPU_FPU); }
 	'fnstenv' [lLsS]? { RET_INSN(7, onebytemem, 0x06D9, CPU_FPU); }
 	'fstenv' [lLsS]? { RET_INSN(6, twobytemem, 0x069BD9, CPU_FPU); }
 	'fldenv' [lLsS]? { RET_INSN(6, onebytemem, 0x04D9, CPU_FPU); }
 	'fnsave' [lLsS]? { RET_INSN(6, onebytemem, 0x06DD, CPU_FPU); }
 	'fsave' [lLsS]? { RET_INSN(5, twobytemem, 0x069BDD, CPU_FPU); }
 	'frstor' [lLsS]? { RET_INSN(6, onebytemem, 0x04DD, CPU_FPU); }
-	'ffree' { RET_INSN(5, ffree, 0xDD, CPU_FPU); }
-	'ffreep' { RET_INSN(6, ffree, 0xDF, CPU_686|CPU_FPU|CPU_Undoc); }
-	'fnop' { RET_INSN(4, twobyte, 0xD9D0, CPU_FPU); }
-	'fwait' { RET_INSN(5, onebyte, 0x009B, CPU_FPU); }
+	'ffree' { RET_INSN_NS(ffree, 0xDD, CPU_FPU); }
+	'ffreep' { RET_INSN_NS(ffree, 0xDF, CPU_686|CPU_FPU|CPU_Undoc); }
+	'fnop' { RET_INSN_NS(twobyte, 0xD9D0, CPU_FPU); }
+	'fwait' { RET_INSN_NS(onebyte, 0x009B, CPU_FPU); }
 	/* Prefixes (should the others be here too? should wait be a prefix? */
-	'wait' { RET_INSN(4, onebyte, 0x009B, CPU_Any); }
+	'wait' { RET_INSN_NS(onebyte, 0x009B, CPU_Any); }
 	/* 486 extensions */
 	'bswap' [lLqQ]? { RET_INSN(5, bswap, 0, CPU_486); }
 	'xadd' [bBwWlLqQ]? { RET_INSN(4, cmpxchgxadd, 0xC0, CPU_486); }
 	'cmpxchg' [bBwWlLqQ]? { RET_INSN(7, cmpxchgxadd, 0xB0, CPU_486); }
 	'cmpxchg486' { RET_INSN_NONGAS(10, cmpxchgxadd, 0xA6, CPU_486|CPU_Undoc); }
-	'invd' { RET_INSN(4, twobyte, 0x0F08, CPU_486|CPU_Priv); }
-	'wbinvd' { RET_INSN(6, twobyte, 0x0F09, CPU_486|CPU_Priv); }
-	'invlpg' { RET_INSN(6, twobytemem, 0x070F01, CPU_486|CPU_Priv); }
+	'invd' { RET_INSN_NS(twobyte, 0x0F08, CPU_486|CPU_Priv); }
+	'wbinvd' { RET_INSN_NS(twobyte, 0x0F09, CPU_486|CPU_Priv); }
+	'invlpg' { RET_INSN_NS(twobytemem, 0x070F01, CPU_486|CPU_Priv); }
 	/* 586+ and late 486 extensions */
-	'cpuid' { RET_INSN(5, twobyte, 0x0FA2, CPU_486); }
+	'cpuid' { RET_INSN_NS(twobyte, 0x0FA2, CPU_486); }
 	/* Pentium extensions */
-	'wrmsr' { RET_INSN(5, twobyte, 0x0F30, CPU_586|CPU_Priv); }
-	'rdtsc' { RET_INSN(5, twobyte, 0x0F31, CPU_586); }
-	'rdmsr' { RET_INSN(5, twobyte, 0x0F32, CPU_586|CPU_Priv); }
+	'wrmsr' { RET_INSN_NS(twobyte, 0x0F30, CPU_586|CPU_Priv); }
+	'rdtsc' { RET_INSN_NS(twobyte, 0x0F31, CPU_586); }
+	'rdmsr' { RET_INSN_NS(twobyte, 0x0F32, CPU_586|CPU_Priv); }
 	'cmpxchg8b' Q? { RET_INSN(9, cmpxchg8b, 0, CPU_586); }
 	/* Pentium II/Pentium Pro extensions */
 	'sysenter' {
 	    not64 = 1;
-	    RET_INSN(8, twobyte, 0x0F34, CPU_686);
+	    RET_INSN_NS(twobyte, 0x0F34, CPU_686);
 	}
 	'sysexit' {
 	    not64 = 1;
-	    RET_INSN(7, twobyte, 0x0F35, CPU_686|CPU_Priv);
+	    RET_INSN_NS(twobyte, 0x0F35, CPU_686|CPU_Priv);
 	}
 	'fxsave' Q? { RET_INSN(6, twobytemem, 0x000FAE, CPU_686|CPU_FPU); }
 	'fxrstor' Q? { RET_INSN(7, twobytemem, 0x010FAE, CPU_686|CPU_FPU); }
-	'rdpmc' { RET_INSN(5, twobyte, 0x0F33, CPU_686); }
-	'ud2' { RET_INSN(3, twobyte, 0x0F0B, CPU_286); }
-	'ud1' { RET_INSN(3, twobyte, 0x0FB9, CPU_286|CPU_Undoc); }
+	'rdpmc' { RET_INSN_NS(twobyte, 0x0F33, CPU_686); }
+	'ud2' { RET_INSN_NS(twobyte, 0x0F0B, CPU_286); }
+	'ud1' { RET_INSN_NS(twobyte, 0x0FB9, CPU_286|CPU_Undoc); }
 	'cmovo' [wWlLqQ]? { RET_INSN(5, cmovcc, 0x00, CPU_686); }
 	'cmovno' [wWlLqQ]? { RET_INSN(6, cmovcc, 0x01, CPU_686); }
 	'cmovb' [wWlLqQ]? { RET_INSN(5, cmovcc, 0x02, CPU_686); }
@@ -4087,114 +4086,114 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	'cmovng' [wWlLqQ]? { RET_INSN(6, cmovcc, 0x0E, CPU_686); }
 	'cmovnle' [wWlLqQ]? { RET_INSN(7, cmovcc, 0x0F, CPU_686); }
 	'cmovg' [wWlLqQ]? { RET_INSN(5, cmovcc, 0x0F, CPU_686); }
-	'fcmovb' { RET_INSN(6, fcmovcc, 0xDAC0, CPU_686|CPU_FPU); }
-	'fcmove' { RET_INSN(6, fcmovcc, 0xDAC8, CPU_686|CPU_FPU); }
-	'fcmovbe' { RET_INSN(7, fcmovcc, 0xDAD0, CPU_686|CPU_FPU); }
-	'fcmovu' { RET_INSN(6, fcmovcc, 0xDAD8, CPU_686|CPU_FPU); }
-	'fcmovnb' { RET_INSN(7, fcmovcc, 0xDBC0, CPU_686|CPU_FPU); }
-	'fcmovne' { RET_INSN(7, fcmovcc, 0xDBC8, CPU_686|CPU_FPU); }
-	'fcmovnbe' { RET_INSN(8, fcmovcc, 0xDBD0, CPU_686|CPU_FPU); }
-	'fcmovu' { RET_INSN(6, fcmovcc, 0xDBD8, CPU_686|CPU_FPU); }
-	'fcomi' { RET_INSN(5, fcom2, 0xDBF0, CPU_686|CPU_FPU); }
-	'fucomi' { RET_INSN(6, fcom2, 0xDBE8, CPU_686|CPU_FPU); }
-	'fcomip' { RET_INSN(6, fcom2, 0xDFF0, CPU_686|CPU_FPU); }
-	'fucomip' { RET_INSN(7, fcom2, 0xDFE8, CPU_686|CPU_FPU); }
+	'fcmovb' { RET_INSN_NS(fcmovcc, 0xDAC0, CPU_686|CPU_FPU); }
+	'fcmove' { RET_INSN_NS(fcmovcc, 0xDAC8, CPU_686|CPU_FPU); }
+	'fcmovbe' { RET_INSN_NS(fcmovcc, 0xDAD0, CPU_686|CPU_FPU); }
+	'fcmovu' { RET_INSN_NS(fcmovcc, 0xDAD8, CPU_686|CPU_FPU); }
+	'fcmovnb' { RET_INSN_NS(fcmovcc, 0xDBC0, CPU_686|CPU_FPU); }
+	'fcmovne' { RET_INSN_NS(fcmovcc, 0xDBC8, CPU_686|CPU_FPU); }
+	'fcmovnbe' { RET_INSN_NS(fcmovcc, 0xDBD0, CPU_686|CPU_FPU); }
+	'fcmovu' { RET_INSN_NS(fcmovcc, 0xDBD8, CPU_686|CPU_FPU); }
+	'fcomi' { RET_INSN_NS(fcom2, 0xDBF0, CPU_686|CPU_FPU); }
+	'fucomi' { RET_INSN_NS(fcom2, 0xDBE8, CPU_686|CPU_FPU); }
+	'fcomip' { RET_INSN_NS(fcom2, 0xDFF0, CPU_686|CPU_FPU); }
+	'fucomip' { RET_INSN_NS(fcom2, 0xDFE8, CPU_686|CPU_FPU); }
 	/* Pentium4 extensions */
 	'movnti' [lLqQ]? { RET_INSN(6, movnti, 0, CPU_P4); }
-	'clflush' { RET_INSN(7, clflush, 0, CPU_P3); }
-	'lfence' { RET_INSN(6, threebyte, 0x0FAEE8, CPU_P3); }
-	'mfence' { RET_INSN(6, threebyte, 0x0FAEF0, CPU_P3); }
-	'pause' { RET_INSN(5, onebyte_prefix, 0xF390, CPU_P4); }
+	'clflush' { RET_INSN_NS(clflush, 0, CPU_P3); }
+	'lfence' { RET_INSN_NS(threebyte, 0x0FAEE8, CPU_P3); }
+	'mfence' { RET_INSN_NS(threebyte, 0x0FAEF0, CPU_P3); }
+	'pause' { RET_INSN_NS(onebyte_prefix, 0xF390, CPU_P4); }
 	/* MMX/SSE2 instructions */
-	'emms' { RET_INSN(4, twobyte, 0x0F77, CPU_MMX); }
-	'movd' { RET_INSN(4, movd, 0, CPU_MMX); }
+	'emms' { RET_INSN_NS(twobyte, 0x0F77, CPU_MMX); }
+	'movd' { RET_INSN_NS(movd, 0, CPU_MMX); }
 	'movq' {
 	    if (arch_x86->parser == X86_PARSER_GAS)
 		RET_INSN(3, mov, 0, CPU_Any);
 	    else
-		RET_INSN(4, movq, 0, CPU_MMX);
+		RET_INSN_NS(movq, 0, CPU_MMX);
 	}
-	'packssdw' { RET_INSN(8, mmxsse2, 0x6B, CPU_MMX); }
-	'packsswb' { RET_INSN(8, mmxsse2, 0x63, CPU_MMX); }
-	'packuswb' { RET_INSN(8, mmxsse2, 0x67, CPU_MMX); }
-	'paddb' { RET_INSN(5, mmxsse2, 0xFC, CPU_MMX); }
-	'paddw' { RET_INSN(5, mmxsse2, 0xFD, CPU_MMX); }
-	'paddd' { RET_INSN(5, mmxsse2, 0xFE, CPU_MMX); }
-	'paddq' { RET_INSN(5, mmxsse2, 0xD4, CPU_MMX); }
-	'paddsb' { RET_INSN(6, mmxsse2, 0xEC, CPU_MMX); }
-	'paddsw' { RET_INSN(6, mmxsse2, 0xED, CPU_MMX); }
-	'paddusb' { RET_INSN(7, mmxsse2, 0xDC, CPU_MMX); }
-	'paddusw' { RET_INSN(7, mmxsse2, 0xDD, CPU_MMX); }
-	'pand' { RET_INSN(4, mmxsse2, 0xDB, CPU_MMX); }
-	'pandn' { RET_INSN(5, mmxsse2, 0xDF, CPU_MMX); }
-	'pcmpeqb' { RET_INSN(7, mmxsse2, 0x74, CPU_MMX); }
-	'pcmpeqw' { RET_INSN(7, mmxsse2, 0x75, CPU_MMX); }
-	'pcmpeqd' { RET_INSN(7, mmxsse2, 0x76, CPU_MMX); }
-	'pcmpgtb' { RET_INSN(7, mmxsse2, 0x64, CPU_MMX); }
-	'pcmpgtw' { RET_INSN(7, mmxsse2, 0x65, CPU_MMX); }
-	'pcmpgtd' { RET_INSN(7, mmxsse2, 0x66, CPU_MMX); }
-	'pmaddwd' { RET_INSN(7, mmxsse2, 0xF5, CPU_MMX); }
-	'pmulhw' { RET_INSN(6, mmxsse2, 0xE5, CPU_MMX); }
-	'pmullw' { RET_INSN(6, mmxsse2, 0xD5, CPU_MMX); }
-	'por' { RET_INSN(3, mmxsse2, 0xEB, CPU_MMX); }
-	'psllw' { RET_INSN(5, pshift, 0x0671F1, CPU_MMX); }
-	'pslld' { RET_INSN(5, pshift, 0x0672F2, CPU_MMX); }
-	'psllq' { RET_INSN(5, pshift, 0x0673F3, CPU_MMX); }
-	'psraw' { RET_INSN(5, pshift, 0x0471E1, CPU_MMX); }
-	'psrad' { RET_INSN(5, pshift, 0x0472E2, CPU_MMX); }
-	'psrlw' { RET_INSN(5, pshift, 0x0271D1, CPU_MMX); }
-	'psrld' { RET_INSN(5, pshift, 0x0272D2, CPU_MMX); }
-	'psrlq' { RET_INSN(5, pshift, 0x0273D3, CPU_MMX); }
-	'psubb' { RET_INSN(5, mmxsse2, 0xF8, CPU_MMX); }
-	'psubw' { RET_INSN(5, mmxsse2, 0xF9, CPU_MMX); }
-	'psubd' { RET_INSN(5, mmxsse2, 0xFA, CPU_MMX); }
-	'psubq' { RET_INSN(5, mmxsse2, 0xFB, CPU_MMX); }
-	'psubsb' { RET_INSN(6, mmxsse2, 0xE8, CPU_MMX); }
-	'psubsw' { RET_INSN(6, mmxsse2, 0xE9, CPU_MMX); }
-	'psubusb' { RET_INSN(7, mmxsse2, 0xD8, CPU_MMX); }
-	'psubusw' { RET_INSN(7, mmxsse2, 0xD9, CPU_MMX); }
-	'punpckhbw' { RET_INSN(9, mmxsse2, 0x68, CPU_MMX); }
-	'punpckhwd' { RET_INSN(9, mmxsse2, 0x69, CPU_MMX); }
-	'punpckhdq' { RET_INSN(9, mmxsse2, 0x6A, CPU_MMX); }
-	'punpcklbw' { RET_INSN(9, mmxsse2, 0x60, CPU_MMX); }
-	'punpcklwd' { RET_INSN(9, mmxsse2, 0x61, CPU_MMX); }
-	'punpckldq' { RET_INSN(9, mmxsse2, 0x62, CPU_MMX); }
-	'pxor' { RET_INSN(4, mmxsse2, 0xEF, CPU_MMX); }
+	'packssdw' { RET_INSN_NS(mmxsse2, 0x6B, CPU_MMX); }
+	'packsswb' { RET_INSN_NS(mmxsse2, 0x63, CPU_MMX); }
+	'packuswb' { RET_INSN_NS(mmxsse2, 0x67, CPU_MMX); }
+	'paddb' { RET_INSN_NS(mmxsse2, 0xFC, CPU_MMX); }
+	'paddw' { RET_INSN_NS(mmxsse2, 0xFD, CPU_MMX); }
+	'paddd' { RET_INSN_NS(mmxsse2, 0xFE, CPU_MMX); }
+	'paddq' { RET_INSN_NS(mmxsse2, 0xD4, CPU_MMX); }
+	'paddsb' { RET_INSN_NS(mmxsse2, 0xEC, CPU_MMX); }
+	'paddsw' { RET_INSN_NS(mmxsse2, 0xED, CPU_MMX); }
+	'paddusb' { RET_INSN_NS(mmxsse2, 0xDC, CPU_MMX); }
+	'paddusw' { RET_INSN_NS(mmxsse2, 0xDD, CPU_MMX); }
+	'pand' { RET_INSN_NS(mmxsse2, 0xDB, CPU_MMX); }
+	'pandn' { RET_INSN_NS(mmxsse2, 0xDF, CPU_MMX); }
+	'pcmpeqb' { RET_INSN_NS(mmxsse2, 0x74, CPU_MMX); }
+	'pcmpeqw' { RET_INSN_NS(mmxsse2, 0x75, CPU_MMX); }
+	'pcmpeqd' { RET_INSN_NS(mmxsse2, 0x76, CPU_MMX); }
+	'pcmpgtb' { RET_INSN_NS(mmxsse2, 0x64, CPU_MMX); }
+	'pcmpgtw' { RET_INSN_NS(mmxsse2, 0x65, CPU_MMX); }
+	'pcmpgtd' { RET_INSN_NS(mmxsse2, 0x66, CPU_MMX); }
+	'pmaddwd' { RET_INSN_NS(mmxsse2, 0xF5, CPU_MMX); }
+	'pmulhw' { RET_INSN_NS(mmxsse2, 0xE5, CPU_MMX); }
+	'pmullw' { RET_INSN_NS(mmxsse2, 0xD5, CPU_MMX); }
+	'por' { RET_INSN_NS(mmxsse2, 0xEB, CPU_MMX); }
+	'psllw' { RET_INSN_NS(pshift, 0x0671F1, CPU_MMX); }
+	'pslld' { RET_INSN_NS(pshift, 0x0672F2, CPU_MMX); }
+	'psllq' { RET_INSN_NS(pshift, 0x0673F3, CPU_MMX); }
+	'psraw' { RET_INSN_NS(pshift, 0x0471E1, CPU_MMX); }
+	'psrad' { RET_INSN_NS(pshift, 0x0472E2, CPU_MMX); }
+	'psrlw' { RET_INSN_NS(pshift, 0x0271D1, CPU_MMX); }
+	'psrld' { RET_INSN_NS(pshift, 0x0272D2, CPU_MMX); }
+	'psrlq' { RET_INSN_NS(pshift, 0x0273D3, CPU_MMX); }
+	'psubb' { RET_INSN_NS(mmxsse2, 0xF8, CPU_MMX); }
+	'psubw' { RET_INSN_NS(mmxsse2, 0xF9, CPU_MMX); }
+	'psubd' { RET_INSN_NS(mmxsse2, 0xFA, CPU_MMX); }
+	'psubq' { RET_INSN_NS(mmxsse2, 0xFB, CPU_MMX); }
+	'psubsb' { RET_INSN_NS(mmxsse2, 0xE8, CPU_MMX); }
+	'psubsw' { RET_INSN_NS(mmxsse2, 0xE9, CPU_MMX); }
+	'psubusb' { RET_INSN_NS(mmxsse2, 0xD8, CPU_MMX); }
+	'psubusw' { RET_INSN_NS(mmxsse2, 0xD9, CPU_MMX); }
+	'punpckhbw' { RET_INSN_NS(mmxsse2, 0x68, CPU_MMX); }
+	'punpckhwd' { RET_INSN_NS(mmxsse2, 0x69, CPU_MMX); }
+	'punpckhdq' { RET_INSN_NS(mmxsse2, 0x6A, CPU_MMX); }
+	'punpcklbw' { RET_INSN_NS(mmxsse2, 0x60, CPU_MMX); }
+	'punpcklwd' { RET_INSN_NS(mmxsse2, 0x61, CPU_MMX); }
+	'punpckldq' { RET_INSN_NS(mmxsse2, 0x62, CPU_MMX); }
+	'pxor' { RET_INSN_NS(mmxsse2, 0xEF, CPU_MMX); }
 	/* PIII (Katmai) new instructions / SIMD instructions */
-	'addps' { RET_INSN(5, sseps, 0x58, CPU_SSE); }
-	'addss' { RET_INSN(5, ssess, 0xF358, CPU_SSE); }
-	'andnps' { RET_INSN(6, sseps, 0x55, CPU_SSE); }
-	'andps' { RET_INSN(5, sseps, 0x54, CPU_SSE); }
-	'cmpeqps' { RET_INSN(7, ssecmpps, 0x00, CPU_SSE); }
-	'cmpeqss' { RET_INSN(7, ssecmpss, 0x00F3, CPU_SSE); }
-	'cmpleps' { RET_INSN(7, ssecmpps, 0x02, CPU_SSE); }
-	'cmpless' { RET_INSN(7, ssecmpss, 0x02F3, CPU_SSE); }
-	'cmpltps' { RET_INSN(7, ssecmpps, 0x01, CPU_SSE); }
-	'cmpltss' { RET_INSN(7, ssecmpss, 0x01F3, CPU_SSE); }
-	'cmpneqps' { RET_INSN(8, ssecmpps, 0x04, CPU_SSE); }
-	'cmpneqss' { RET_INSN(8, ssecmpss, 0x04F3, CPU_SSE); }
-	'cmpnleps' { RET_INSN(8, ssecmpps, 0x06, CPU_SSE); }
-	'cmpnless' { RET_INSN(8, ssecmpss, 0x06F3, CPU_SSE); }
-	'cmpnltps' { RET_INSN(8, ssecmpps, 0x05, CPU_SSE); }
-	'cmpnltss' { RET_INSN(8, ssecmpss, 0x05F3, CPU_SSE); }
-	'cmpordps' { RET_INSN(8, ssecmpps, 0x07, CPU_SSE); }
-	'cmpordss' { RET_INSN(8, ssecmpss, 0x07F3, CPU_SSE); }
-	'cmpunordps' { RET_INSN(10, ssecmpps, 0x03, CPU_SSE); }
-	'cmpunordss' { RET_INSN(10, ssecmpss, 0x03F3, CPU_SSE); }
-	'cmpps' { RET_INSN(5, ssepsimm, 0xC2, CPU_SSE); }
-	'cmpss' { RET_INSN(5, ssessimm, 0xF3C2, CPU_SSE); }
-	'comiss' { RET_INSN(6, sseps, 0x2F, CPU_SSE); }
-	'cvtpi2ps' { RET_INSN(8, cvt_xmm_mm_ps, 0x2A, CPU_SSE); }
-	'cvtps2pi' { RET_INSN(8, cvt_mm_xmm64, 0x2D, CPU_SSE); }
+	'addps' { RET_INSN_NS(sseps, 0x58, CPU_SSE); }
+	'addss' { RET_INSN_NS(ssess, 0xF358, CPU_SSE); }
+	'andnps' { RET_INSN_NS(sseps, 0x55, CPU_SSE); }
+	'andps' { RET_INSN_NS(sseps, 0x54, CPU_SSE); }
+	'cmpeqps' { RET_INSN_NS(ssecmpps, 0x00, CPU_SSE); }
+	'cmpeqss' { RET_INSN_NS(ssecmpss, 0x00F3, CPU_SSE); }
+	'cmpleps' { RET_INSN_NS(ssecmpps, 0x02, CPU_SSE); }
+	'cmpless' { RET_INSN_NS(ssecmpss, 0x02F3, CPU_SSE); }
+	'cmpltps' { RET_INSN_NS(ssecmpps, 0x01, CPU_SSE); }
+	'cmpltss' { RET_INSN_NS(ssecmpss, 0x01F3, CPU_SSE); }
+	'cmpneqps' { RET_INSN_NS(ssecmpps, 0x04, CPU_SSE); }
+	'cmpneqss' { RET_INSN_NS(ssecmpss, 0x04F3, CPU_SSE); }
+	'cmpnleps' { RET_INSN_NS(ssecmpps, 0x06, CPU_SSE); }
+	'cmpnless' { RET_INSN_NS(ssecmpss, 0x06F3, CPU_SSE); }
+	'cmpnltps' { RET_INSN_NS(ssecmpps, 0x05, CPU_SSE); }
+	'cmpnltss' { RET_INSN_NS(ssecmpss, 0x05F3, CPU_SSE); }
+	'cmpordps' { RET_INSN_NS(ssecmpps, 0x07, CPU_SSE); }
+	'cmpordss' { RET_INSN_NS(ssecmpss, 0x07F3, CPU_SSE); }
+	'cmpunordps' { RET_INSN_NS(ssecmpps, 0x03, CPU_SSE); }
+	'cmpunordss' { RET_INSN_NS(ssecmpss, 0x03F3, CPU_SSE); }
+	'cmpps' { RET_INSN_NS(ssepsimm, 0xC2, CPU_SSE); }
+	'cmpss' { RET_INSN_NS(ssessimm, 0xF3C2, CPU_SSE); }
+	'comiss' { RET_INSN_NS(sseps, 0x2F, CPU_SSE); }
+	'cvtpi2ps' { RET_INSN_NS(cvt_xmm_mm_ps, 0x2A, CPU_SSE); }
+	'cvtps2pi' { RET_INSN_NS(cvt_mm_xmm64, 0x2D, CPU_SSE); }
 	'cvtsi2ss' [lLqQ]? { RET_INSN(8, cvt_xmm_rmx, 0xF32A, CPU_SSE); }
 	'cvtss2si' [lLqQ]? { RET_INSN(8, cvt_rx_xmm32, 0xF32D, CPU_SSE); }
-	'cvttps2pi' { RET_INSN(9, cvt_mm_xmm64, 0x2C, CPU_SSE); }
+	'cvttps2pi' { RET_INSN_NS(cvt_mm_xmm64, 0x2C, CPU_SSE); }
 	'cvttss2si' [lLqQ]? { RET_INSN(9, cvt_rx_xmm32, 0xF32C, CPU_SSE); }
-	'divps' { RET_INSN(5, sseps, 0x5E, CPU_SSE); }
-	'divss' { RET_INSN(5, ssess, 0xF35E, CPU_SSE); }
-	'ldmxcsr' { RET_INSN(7, ldstmxcsr, 0x02, CPU_SSE); }
-	'maskmovq' { RET_INSN(8, maskmovq, 0, CPU_P3|CPU_MMX); }
-	'maxps' { RET_INSN(5, sseps, 0x5F, CPU_SSE); }
+	'divps' { RET_INSN_NS(sseps, 0x5E, CPU_SSE); }
+	'divss' { RET_INSN_NS(ssess, 0xF35E, CPU_SSE); }
+	'ldmxcsr' { RET_INSN_NS(ldstmxcsr, 0x02, CPU_SSE); }
+	'maskmovq' { RET_INSN_NS(maskmovq, 0, CPU_P3|CPU_MMX); }
+	'maxps' { RET_INSN_NS(sseps, 0x5F, CPU_SSE); }
 	'maxss' { RET_INSN_NS(ssess, 0xF35F, CPU_SSE); }
 	'minps' { RET_INSN_NS(sseps, 0x5D, CPU_SSE); }
 	'minss' { RET_INSN_NS(ssess, 0xF35D, CPU_SSE); }
@@ -4372,21 +4371,21 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	'pfrcpit2' { RET_INSN_NS(now3d, 0xB6, CPU_3DNow); }
 	'pfrsqit1' { RET_INSN_NS(now3d, 0xA7, CPU_3DNow); }
 	'pfrsqrt' { RET_INSN_NS(now3d, 0x97, CPU_3DNow); }
-	'pfsub' { RET_INSN(5, now3d, 0x9A, CPU_3DNow); }
-	'pfsubr' { RET_INSN(6, now3d, 0xAA, CPU_3DNow); }
-	'pi2fd' { RET_INSN(5, now3d, 0x0D, CPU_3DNow); }
-	'pi2fw' { RET_INSN(5, now3d, 0x0C, CPU_Athlon|CPU_3DNow); }
-	'pmulhrwa' { RET_INSN(8, now3d, 0xB7, CPU_3DNow); }
-	'pswapd' { RET_INSN(6, now3d, 0xBB, CPU_Athlon|CPU_3DNow); }
+	'pfsub' { RET_INSN_NS(now3d, 0x9A, CPU_3DNow); }
+	'pfsubr' { RET_INSN_NS(now3d, 0xAA, CPU_3DNow); }
+	'pi2fd' { RET_INSN_NS(now3d, 0x0D, CPU_3DNow); }
+	'pi2fw' { RET_INSN_NS(now3d, 0x0C, CPU_Athlon|CPU_3DNow); }
+	'pmulhrwa' { RET_INSN_NS(now3d, 0xB7, CPU_3DNow); }
+	'pswapd' { RET_INSN_NS(now3d, 0xBB, CPU_Athlon|CPU_3DNow); }
 	/* AMD extensions */
-	'syscall' { RET_INSN(7, twobyte, 0x0F05, CPU_686|CPU_AMD); }
+	'syscall' { RET_INSN_NS(twobyte, 0x0F05, CPU_686|CPU_AMD); }
 	'sysret' [lLqQ]? { RET_INSN(6, twobyte, 0x0F07, CPU_686|CPU_AMD|CPU_Priv); }
 	/* AMD x86-64 extensions */
 	'swapgs' {
 	    warn64 = 1;
-	    RET_INSN(6, threebyte, 0x0F01F8, CPU_Hammer|CPU_64);
+	    RET_INSN_NS(threebyte, 0x0F01F8, CPU_Hammer|CPU_64);
 	}
-	'rdtscp' { RET_INSN(6, threebyte, 0x0F01F9, CPU_686|CPU_AMD|CPU_Priv); }
+	'rdtscp' { RET_INSN_NS(threebyte, 0x0F01F9, CPU_686|CPU_AMD|CPU_Priv); }
 	/* AMD Pacifica (SVM) instructions */
 	'clgi' { RET_INSN_NS(threebyte, 0x0F01DD, CPU_Hammer|CPU_64|CPU_SVM); }
 	'invlpga' { RET_INSN_NS(invlpga, 0, CPU_Hammer|CPU_64|CPU_SVM); }
@@ -4407,41 +4406,41 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	'xsha1' { RET_INSN_NS(padlock, 0xC8F3A6, CPU_PadLock); }
 	'xsha256' { RET_INSN_NS(padlock, 0xD0F3A6, CPU_PadLock); }
 	/* Cyrix MMX instructions */
-	'paddsiw' { RET_INSN(7, cyrixmmx, 0x51, CPU_Cyrix|CPU_MMX); }
-	'paveb' { RET_INSN(5, cyrixmmx, 0x50, CPU_Cyrix|CPU_MMX); }
-	'pdistib' { RET_INSN(7, cyrixmmx, 0x54, CPU_Cyrix|CPU_MMX); }
-	'pmachriw' { RET_INSN(8, pmachriw, 0, CPU_Cyrix|CPU_MMX); }
-	'pmagw' { RET_INSN(5, cyrixmmx, 0x52, CPU_Cyrix|CPU_MMX); }
-	'pmulhriw' { RET_INSN(8, cyrixmmx, 0x5D, CPU_Cyrix|CPU_MMX); }
-	'pmulhrwc' { RET_INSN(8, cyrixmmx, 0x59, CPU_Cyrix|CPU_MMX); }
-	'pmvgezb' { RET_INSN(7, cyrixmmx, 0x5C, CPU_Cyrix|CPU_MMX); }
-	'pmvlzb' { RET_INSN(6, cyrixmmx, 0x5B, CPU_Cyrix|CPU_MMX); }
-	'pmvnzb' { RET_INSN(6, cyrixmmx, 0x5A, CPU_Cyrix|CPU_MMX); }
-	'pmvzb' { RET_INSN(5, cyrixmmx, 0x58, CPU_Cyrix|CPU_MMX); }
-	'psubsiw' { RET_INSN(7, cyrixmmx, 0x55, CPU_Cyrix|CPU_MMX); }
+	'paddsiw' { RET_INSN_NS(cyrixmmx, 0x51, CPU_Cyrix|CPU_MMX); }
+	'paveb' { RET_INSN_NS(cyrixmmx, 0x50, CPU_Cyrix|CPU_MMX); }
+	'pdistib' { RET_INSN_NS(cyrixmmx, 0x54, CPU_Cyrix|CPU_MMX); }
+	'pmachriw' { RET_INSN_NS(pmachriw, 0, CPU_Cyrix|CPU_MMX); }
+	'pmagw' { RET_INSN_NS(cyrixmmx, 0x52, CPU_Cyrix|CPU_MMX); }
+	'pmulhriw' { RET_INSN_NS(cyrixmmx, 0x5D, CPU_Cyrix|CPU_MMX); }
+	'pmulhrwc' { RET_INSN_NS(cyrixmmx, 0x59, CPU_Cyrix|CPU_MMX); }
+	'pmvgezb' { RET_INSN_NS(cyrixmmx, 0x5C, CPU_Cyrix|CPU_MMX); }
+	'pmvlzb' { RET_INSN_NS(cyrixmmx, 0x5B, CPU_Cyrix|CPU_MMX); }
+	'pmvnzb' { RET_INSN_NS(cyrixmmx, 0x5A, CPU_Cyrix|CPU_MMX); }
+	'pmvzb' { RET_INSN_NS(cyrixmmx, 0x58, CPU_Cyrix|CPU_MMX); }
+	'psubsiw' { RET_INSN_NS(cyrixmmx, 0x55, CPU_Cyrix|CPU_MMX); }
 	/* Cyrix extensions */
-	'rdshr' { RET_INSN(5, twobyte, 0x0F36, CPU_686|CPU_Cyrix|CPU_SMM); }
-	'rsdc' { RET_INSN(4, rsdc, 0, CPU_486|CPU_Cyrix|CPU_SMM); }
-	'rsldt' { RET_INSN(5, cyrixsmm, 0x7B, CPU_486|CPU_Cyrix|CPU_SMM); }
-	'rsts' { RET_INSN(4, cyrixsmm, 0x7D, CPU_486|CPU_Cyrix|CPU_SMM); }
-	'svdc' { RET_INSN(4, svdc, 0, CPU_486|CPU_Cyrix|CPU_SMM); }
-	'svldt' { RET_INSN(5, cyrixsmm, 0x7A, CPU_486|CPU_Cyrix|CPU_SMM); }
-	'svts' { RET_INSN(4, cyrixsmm, 0x7C, CPU_486|CPU_Cyrix|CPU_SMM); }
-	'smint' { RET_INSN(5, twobyte, 0x0F38, CPU_686|CPU_Cyrix); }
-	'smintold' { RET_INSN(8, twobyte, 0x0F7E, CPU_486|CPU_Cyrix|CPU_Obs); }
-	'wrshr' { RET_INSN(5, twobyte, 0x0F37, CPU_686|CPU_Cyrix|CPU_SMM); }
+	'rdshr' { RET_INSN_NS(twobyte, 0x0F36, CPU_686|CPU_Cyrix|CPU_SMM); }
+	'rsdc' { RET_INSN_NS(rsdc, 0, CPU_486|CPU_Cyrix|CPU_SMM); }
+	'rsldt' { RET_INSN_NS(cyrixsmm, 0x7B, CPU_486|CPU_Cyrix|CPU_SMM); }
+	'rsts' { RET_INSN_NS(cyrixsmm, 0x7D, CPU_486|CPU_Cyrix|CPU_SMM); }
+	'svdc' { RET_INSN_NS(svdc, 0, CPU_486|CPU_Cyrix|CPU_SMM); }
+	'svldt' { RET_INSN_NS(cyrixsmm, 0x7A, CPU_486|CPU_Cyrix|CPU_SMM); }
+	'svts' { RET_INSN_NS(cyrixsmm, 0x7C, CPU_486|CPU_Cyrix|CPU_SMM); }
+	'smint' { RET_INSN_NS(twobyte, 0x0F38, CPU_686|CPU_Cyrix); }
+	'smintold' { RET_INSN_NS(twobyte, 0x0F7E, CPU_486|CPU_Cyrix|CPU_Obs); }
+	'wrshr' { RET_INSN_NS(twobyte, 0x0F37, CPU_686|CPU_Cyrix|CPU_SMM); }
 	/* Obsolete/undocumented instructions */
-	'fsetpm' { RET_INSN(6, twobyte, 0xDBE4, CPU_286|CPU_FPU|CPU_Obs); }
-	'ibts' { RET_INSN(4, ibts, 0, CPU_386|CPU_Undoc|CPU_Obs); }
-	'loadall' { RET_INSN(7, twobyte, 0x0F07, CPU_386|CPU_Undoc); }
-	'loadall286' { RET_INSN(10, twobyte, 0x0F05, CPU_286|CPU_Undoc); }
+	'fsetpm' { RET_INSN_NS(twobyte, 0xDBE4, CPU_286|CPU_FPU|CPU_Obs); }
+	'ibts' { RET_INSN_NS(ibts, 0, CPU_386|CPU_Undoc|CPU_Obs); }
+	'loadall' { RET_INSN_NS(twobyte, 0x0F07, CPU_386|CPU_Undoc); }
+	'loadall286' { RET_INSN_NS(twobyte, 0x0F05, CPU_286|CPU_Undoc); }
 	'salc' {
 	    not64 = 1;
-	    RET_INSN(4, onebyte, 0x00D6, CPU_Undoc);
+	    RET_INSN_NS(onebyte, 0x00D6, CPU_Undoc);
 	}
-	'smi' { RET_INSN(3, onebyte, 0x00F1, CPU_386|CPU_Undoc); }
-	'umov' { RET_INSN(4, umov, 0, CPU_386|CPU_Undoc); }
-	'xbts' { RET_INSN(4, xbts, 0, CPU_386|CPU_Undoc|CPU_Obs); }
+	'smi' { RET_INSN_NS(onebyte, 0x00F1, CPU_386|CPU_Undoc); }
+	'umov' { RET_INSN_NS(umov, 0, CPU_386|CPU_Undoc); }
+	'xbts' { RET_INSN_NS(xbts, 0, CPU_386|CPU_Undoc|CPU_Obs); }
 
 
 	/* catchalls */
