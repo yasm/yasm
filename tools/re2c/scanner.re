@@ -4,7 +4,6 @@
 #include "tools/re2c/parse.h"
 #include "tools/re2c/globals.h"
 #include "re2c-parser.h"
-#include "globals.h"
 
 #ifndef MAX
 #define MAX(a,b) (((a)>(b))?(a):(b))

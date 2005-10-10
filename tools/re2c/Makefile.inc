@@ -103,7 +103,6 @@ EXTRA_DIST += tools/re2c/NO_WARRANTY
 EXTRA_DIST += tools/re2c/README
 EXTRA_DIST += tools/re2c/scanner.re
 EXTRA_DIST += tools/re2c/re2c.1
-EXTRA_DIST += tools/re2c/bootstrap/re2c.man
 EXTRA_DIST += tools/re2c/bootstrap/scanner.c
 EXTRA_DIST += tools/re2c/doc/loplas.ps.gz
 EXTRA_DIST += tools/re2c/doc/sample.bib
