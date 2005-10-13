@@ -596,7 +596,7 @@ x86_bc_insn_resolve(yasm_bytecode *bc, int save,
 	    if (insn->postop == X86_POSTOP_SIGNEXT_IMM8 && temp &&
 		(num = yasm_expr_get_intnum(&temp, calc_bc_dist))) {
 		if (num) {
-		    int val = yasm_intnum_get_int(num);
+		    long val = yasm_intnum_get_int(num);
 		    if (val >= -128 && val <= 127) {
 			/* We can use the sign-extended byte form: shorten
 			 * the immediate length to 1.
