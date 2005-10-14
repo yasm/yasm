@@ -45,11 +45,13 @@ MODULES_ARCH_X86_OBJS= \
  modules/arch/x86/x86bc.o \
  modules/arch/x86/x86expr.o \
  x86id.o
+YASM_MODULES=arch_x86
 
 MODULES_ARCH_LC3B_OBJS= \
  modules/arch/lc3b/lc3barch.o \
  modules/arch/lc3b/lc3bbc.o \
  lc3bid.o
+YASM_MODULES+=arch_lc3b
 
 MODULES_ARCH_OBJS= \
  $(MODULES_ARCH_X86_OBJS) \
@@ -58,9 +60,12 @@ MODULES_ARCH_OBJS= \
 MODULES_DBGFMTS_OBJS= \
  modules/dbgfmts/null/null-dbgfmt.o \
  modules/dbgfmts/stabs/stabs-dbgfmt.o
+YASM_MODULES+=dbgfmt_null
+YASM_MODULES+=dbgfmt_stabs
 
 MODULES_LISTFMTS_OBJS= \
  modules/listfmts/nasm/nasm-listfmt.o
+YASM_MODULES+=listfmt_nasm
 
 MODULES_OBJFMTS_OBJS= \
  modules/objfmts/dbg/dbg-objfmt.o \
@@ -71,23 +76,36 @@ MODULES_OBJFMTS_OBJS= \
  modules/objfmts/elf/elf-x86-amd64.o \
  modules/objfmts/elf/elf-objfmt.o \
  modules/objfmts/xdf/xdf-objfmt.o
+YASM_MODULES+=objfmt_dbg
+YASM_MODULES+=objfmt_bin
+YASM_MODULES+=objfmt_coff objfmt_win32 objfmt_win64
+YASM_MODULES+=objfmt_elf objfmt_elf32 objfmt_elf64
+YASM_MODULES+=objfmt_xdf
 
 MODULES_OPTIMIZERS_OBJS= \
  modules/optimizers/basic/basic-optimizer.o
+YASM_MODULES+=optimizer_basic
 
 MODULES_PARSERS_OBJS= \
  modules/parsers/nasm/nasm-parser.o \
  nasm-bison.o \
- nasm-token.o
+ nasm-token.o \
+ modules/parsers/gas/gas-parser.o \
+ gas-bison.o \
+ gas-token.o
+YASM_MODULES+=parser_nasm
+YASM_MODULES+=parser_gas
 
 MODULES_PREPROCS_NASM_OBJS= \
  modules/preprocs/nasm/nasm-eval.o \
  modules/preprocs/nasm/nasm-pp.o \
  modules/preprocs/nasm/nasm-preproc.o \
  modules/preprocs/nasm/nasmlib.o
+YASM_MODULES+=preproc_nasm
 
 MODULES_PREPROCS_RAW_OBJS = \
- modules/preprocs/raw/raw-preproc.o \
+ modules/preprocs/raw/raw-preproc.o
+YASM_MODULES+=preproc_raw
 
 MODULES_PREPROCS_OBJS = \
  $(MODULES_PREPROCS_NASM_OBJS) \
@@ -115,6 +133,12 @@ nasm-macros.c: modules/preprocs/nasm/standard.mac genmacro
 	./genmacro modules/preprocs/nasm/standard.mac
 
 modules/preprocs/nasm/nasm-pp.c: nasm-macros.c
+
+genmodule: libyasm/genmodule.c
+	$(CC) -o genmodule libyasm/genmodule.c
+
+module.c: libyasm/module.in genmodule
+	./genmodule libyasm/module.in $(YASM_MODULES)
 
 yasm: $(YASM_OBJS)
 	$(CC) -o yasm $(YASM_OBJS)
