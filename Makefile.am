@@ -54,6 +54,7 @@ EXTRA_DIST += splint.sh
 EXTRA_DIST += Mkfiles/Makefile.flat
 EXTRA_DIST += Mkfiles/Makefile.dj
 EXTRA_DIST += Mkfiles/dj/config.h
+EXTRA_DIST += Mkfiles/dj/_stdint.h
 EXTRA_DIST += Mkfiles/vc/yasm.sln
 EXTRA_DIST += Mkfiles/vc/yasm.vcproj
 EXTRA_DIST += Mkfiles/vc/config.h
