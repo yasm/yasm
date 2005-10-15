@@ -664,17 +664,17 @@ static const x86_insn_info push_insn[] = {
 
 /* Pop instructions */
 static const x86_insn_info pop_insn[] = {
-    { CPU_Any, 0, 16, 64, 0, 1, {0x58, 0, 0}, 0, 1,
+    { CPU_Any, MOD_GasSufW, 16, 64, 0, 1, {0x58, 0, 0}, 0, 1,
       {OPT_Reg|OPS_16|OPA_Op0Add, 0, 0} },
-    { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0x58, 0, 0}, 0, 1,
+    { CPU_386|CPU_Not64, MOD_GasSufL, 32, 0, 0, 1, {0x58, 0, 0}, 0, 1,
       {OPT_Reg|OPS_32|OPA_Op0Add, 0, 0} },
-    { CPU_Hammer|CPU_64, 0, 0, 64, 0, 1, {0x58, 0, 0}, 0, 1,
+    { CPU_Hammer|CPU_64, MOD_GasSufQ, 0, 64, 0, 1, {0x58, 0, 0}, 0, 1,
       {OPT_Reg|OPS_64|OPA_Op0Add, 0, 0} },
-    { CPU_Any, 0, 16, 64, 0, 1, {0x8F, 0, 0}, 0, 1,
+    { CPU_Any, MOD_GasSufW, 16, 64, 0, 1, {0x8F, 0, 0}, 0, 1,
       {OPT_RM|OPS_16|OPA_EA, 0, 0} },
-    { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0x8F, 0, 0}, 0, 1,
+    { CPU_386|CPU_Not64, MOD_GasSufL, 32, 0, 0, 1, {0x8F, 0, 0}, 0, 1,
       {OPT_RM|OPS_32|OPA_EA, 0, 0} },
-    { CPU_Hammer|CPU_64, 0, 0, 64, 0, 1, {0x8F, 0, 0}, 0, 1,
+    { CPU_Hammer|CPU_64, MOD_GasSufQ, 0, 64, 0, 1, {0x8F, 0, 0}, 0, 1,
       {OPT_RM|OPS_64|OPA_EA, 0, 0} },
     /* POP CS is debateably valid on the 8086, if obsolete and undocumented.
      * We don't include it because it's VERY unlikely it will ever be used
