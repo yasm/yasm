@@ -105,7 +105,7 @@ static void gas_parser_directive
 %token DIR_EQU DIR_FILE DIR_FLOAT DIR_GLOBAL DIR_IDENT DIR_INT DIR_LOC
 %token DIR_LCOMM DIR_OCTA DIR_ORG DIR_P2ALIGN DIR_REPT DIR_SECTION
 %token DIR_SHORT DIR_SIZE DIR_SKIP DIR_STRING
-%token DIR_TEXT DIR_TFLOAT DIR_TYPE DIR_QUAD DIR_WORD DIR_ZERO
+%token DIR_TEXT DIR_TFLOAT DIR_TYPE DIR_QUAD DIR_WEAK DIR_WORD DIR_ZERO
 
 %type <bc> line lineexp instr
 
@@ -203,6 +203,20 @@ lineexp: instr
 	/* Go ahead and do it, even though all undef become extern */
 	yasm_objfmt_extern_declare(parser_gas->objfmt, $2, NULL, cur_line);
 	yasm_xfree($2);
+	$$ = NULL;
+    }
+    | DIR_WEAK label_id {
+	yasm_valparamhead vps;
+	yasm_valparam *vp;
+
+	yasm_vps_initialize(&vps);
+	vp = yasm_vp_create($2, NULL);
+	yasm_vps_append(&vps, vp);
+
+	yasm_objfmt_directive(parser_gas->objfmt, "weak", &vps, NULL,
+			      cur_line);
+
+	yasm_vps_delete(&vps);
 	$$ = NULL;
     }
     | DIR_LCOMM label_id ',' expr {

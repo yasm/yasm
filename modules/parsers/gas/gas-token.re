@@ -297,6 +297,7 @@ scan:
 	'.tfloat'	{ RETURN(DIR_TFLOAT); }
 	'.type'		{ RETURN(DIR_TYPE); }
 	'.quad'		{ RETURN(DIR_QUAD); }
+	'.weak'		{ RETURN(DIR_WEAK); }
 	'.word'		{ RETURN(DIR_WORD); }
 	'.zero'		{ RETURN(DIR_ZERO); }
 
