@@ -988,14 +988,80 @@ elf_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
 }
 
 static int
-elf_objfmt_directive(/*@unused@*/ yasm_objfmt *objfmt,
-		     /*@unused@*/ const char *name,
-		     /*@unused@*/ yasm_valparamhead *valparams,
+elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
+		     yasm_valparamhead *valparams,
 		     /*@unused@*/ /*@null@*/
 		     yasm_valparamhead *objext_valparams,
-		     /*@unused@*/ unsigned long line)
+		     unsigned long line)
 {
-    return 1;	/* no objfmt directives */
+    yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
+    yasm_symrec *sym;
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    char *symname = vp->val;
+    elf_symtab_entry *entry;
+
+    if (!symname) {
+	yasm__error(line, N_("Symbol name not specified"));
+	return 0;
+    }
+
+    if (yasm__strcasecmp(name, "type") == 0) {
+	/* Get symbol elf data */
+	sym = yasm_symtab_use(objfmt_elf->symtab, symname, line);
+	entry = yasm_symrec_get_data(sym, &elf_symrec_data);
+
+	/* Create entry if necessary */
+	if (!entry) {
+	    entry = elf_symtab_entry_create(
+		elf_strtab_append_str(objfmt_elf->strtab, symname), sym);
+	    elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
+	    yasm_symrec_add_data(sym, &elf_symrec_data, entry);
+	}
+
+	/* Pull new type from val */
+	vp = yasm_vps_next(vp);
+	if (vp->val) {
+	    if (yasm__strcasecmp(vp->val, "function") == 0)
+		elf_sym_set_type(entry, STT_FUNC);
+	    else if (yasm__strcasecmp(vp->val, "object") == 0)
+		elf_sym_set_type(entry, STT_OBJECT);
+	    else
+		yasm__warning(YASM_WARN_GENERAL, line,
+			      N_("unrecognized symbol type `%s'"), vp->val);
+	} else
+	    yasm__error(line, N_("no type specified"));
+    } else if (yasm__strcasecmp(name, "size") == 0) {
+	/* Get symbol elf data */
+	sym = yasm_symtab_use(objfmt_elf->symtab, symname, line);
+	entry = yasm_symrec_get_data(sym, &elf_symrec_data);
+
+	/* Create entry if necessary */
+	if (!entry) {
+	    entry = elf_symtab_entry_create(
+		elf_strtab_append_str(objfmt_elf->strtab, symname), sym);
+	    elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
+	    yasm_symrec_add_data(sym, &elf_symrec_data, entry);
+	}
+
+	/* Pull new size from either param (expr) or val */
+	vp = yasm_vps_next(vp);
+	if (vp->param) {
+	    elf_sym_set_size(entry, vp->param);
+	    vp->param = NULL;
+	} else if (vp->val)
+	    elf_sym_set_size(entry, yasm_expr_create_ident(yasm_expr_sym(
+		yasm_symtab_use(objfmt_elf->symtab, vp->val, line)), line));
+	else
+	    yasm__error(line, N_("no size specified"));
+    } else if (yasm__strcasecmp(name, "weak") == 0) {
+	sym = yasm_symtab_declare(objfmt_elf->symtab, symname, YASM_SYM_GLOBAL,
+				  line);
+	elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_WEAK,
+				 STT_NOTYPE, STV_DEFAULT, NULL, 0);
+    } else
+	return 1;	/* unrecognized */
+
+    return 0;
 }
 
 

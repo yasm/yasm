@@ -499,6 +499,22 @@ elf_sym_set_visibility(elf_symtab_entry *entry,
     entry->vis = ELF_ST_VISIBILITY(vis);
 }                            
 
+void
+elf_sym_set_type(elf_symtab_entry *entry,
+                 elf_symbol_type   type)
+{
+    entry->type = type;
+}                            
+
+void
+elf_sym_set_size(elf_symtab_entry *entry,
+                 struct yasm_expr *size)
+{
+    if (entry->xsize)
+	yasm_expr_destroy(entry->xsize);
+    entry->xsize = size;
+}                            
+
 elf_secthead *
 elf_secthead_create(elf_strtab_entry	*name,
 		    elf_section_type	 type,

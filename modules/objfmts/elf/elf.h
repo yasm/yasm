@@ -442,6 +442,8 @@ void elf_symtab_set_nonzero(elf_symtab_entry	*entry,
 			    elf_address		 value);
 void elf_sym_set_visibility(elf_symtab_entry    *entry,
                             elf_symbol_vis       vis);
+void elf_sym_set_type(elf_symtab_entry *entry, elf_symbol_type type);
+void elf_sym_set_size(elf_symtab_entry *entry, struct yasm_expr *size);
 
 /* section header functions */
 elf_secthead *elf_secthead_create(elf_strtab_entry	*name,

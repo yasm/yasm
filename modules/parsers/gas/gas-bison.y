@@ -367,11 +367,35 @@ lineexp: instr
 	$$ = NULL;
     }
     | DIR_TYPE label_id ',' '@' label_id {
-	/* TODO */
+	yasm_valparamhead vps;
+	yasm_valparam *vp;
+
+	yasm_vps_initialize(&vps);
+	vp = yasm_vp_create($2, NULL);
+	yasm_vps_append(&vps, vp);
+	vp = yasm_vp_create($5, NULL);
+	yasm_vps_append(&vps, vp);
+
+	yasm_objfmt_directive(parser_gas->objfmt, "type", &vps, NULL,
+			      cur_line);
+
+	yasm_vps_delete(&vps);
 	$$ = NULL;
     }
     | DIR_SIZE label_id ',' expr {
-	/* TODO */
+	yasm_valparamhead vps;
+	yasm_valparam *vp;
+
+	yasm_vps_initialize(&vps);
+	vp = yasm_vp_create($2, NULL);
+	yasm_vps_append(&vps, vp);
+	vp = yasm_vp_create(NULL, $4);
+	yasm_vps_append(&vps, vp);
+
+	yasm_objfmt_directive(parser_gas->objfmt, "size", &vps, NULL,
+			      cur_line);
+
+	yasm_vps_delete(&vps);
 	$$ = NULL;
     }
     | DIR_ID datavals	{
