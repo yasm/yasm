@@ -56,6 +56,9 @@ static yasm_bytecode *gas_define_strings(yasm_parser_gas *parser_gas,
 static yasm_bytecode *gas_define_data(yasm_parser_gas *parser_gas,
 				      yasm_valparamhead *vps,
 				      unsigned int size);
+static yasm_bytecode *gas_define_leb128(yasm_parser_gas *parser_gas,
+					yasm_valparamhead *vps,
+					int sign);
 static void gas_parser_directive
     (yasm_parser_gas *parser_gas, const char *name,
      yasm_valparamhead *valparams,
@@ -104,8 +107,9 @@ static void gas_parser_directive
 %token DIR_BSS DIR_BYTE DIR_COMM DIR_DATA DIR_DOUBLE DIR_ENDR DIR_EXTERN
 %token DIR_EQU DIR_FILE DIR_FLOAT DIR_GLOBAL DIR_IDENT DIR_INT DIR_LOC
 %token DIR_LCOMM DIR_OCTA DIR_ORG DIR_P2ALIGN DIR_REPT DIR_SECTION
-%token DIR_SHORT DIR_SIZE DIR_SKIP DIR_STRING
-%token DIR_TEXT DIR_TFLOAT DIR_TYPE DIR_QUAD DIR_WEAK DIR_WORD DIR_ZERO
+%token DIR_SHORT DIR_SIZE DIR_SKIP DIR_SLEB128 DIR_STRING
+%token DIR_TEXT DIR_TFLOAT DIR_TYPE DIR_QUAD DIR_ULEB128 DIR_WEAK DIR_WORD
+%token DIR_ZERO
 
 %type <bc> line lineexp instr
 
@@ -294,6 +298,14 @@ lineexp: instr
 	$$ = yasm_bc_create_data(&dvs, 1, cur_line);
 
 	yasm_bc_set_multiple($$, $2);
+    }
+    | DIR_SLEB128 datavals {
+	$$ = gas_define_leb128(parser_gas, &$2, 1);
+	yasm_vps_delete(&$2);
+    }
+    | DIR_ULEB128 datavals {
+	$$ = gas_define_leb128(parser_gas, &$2, 0);
+	yasm_vps_delete(&$2);
     }
     /* Floating point data definition directives */
     | DIR_FLOAT datavals {
@@ -808,6 +820,27 @@ gas_define_data(yasm_parser_gas *parser_gas, yasm_valparamhead *vps,
 	    cur->param = NULL;
 	}
 	return yasm_bc_create_data(&dvs, size, cur_line);
+    } else
+	return NULL;
+}
+
+static yasm_bytecode *
+gas_define_leb128(yasm_parser_gas *parser_gas, yasm_valparamhead *vps,
+		  int sign)
+{
+    if (yasm_vps_first(vps)) {
+	yasm_datavalhead dvs;
+	yasm_valparam *cur;
+
+	yasm_dvs_initialize(&dvs);
+	yasm_vps_foreach(cur, vps) {
+	    if (!cur->param)
+		yasm__error(cur_line, N_("missing data value"));
+	    else
+		yasm_dvs_append(&dvs, yasm_dv_create_expr(cur->param));
+	    cur->param = NULL;
+	}
+	return yasm_bc_create_leb128(&dvs, sign, cur_line);
     } else
 	return NULL;
 }

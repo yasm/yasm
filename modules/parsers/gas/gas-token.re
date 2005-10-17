@@ -291,12 +291,14 @@ scan:
 	'.single'	{ RETURN(DIR_FLOAT); }
 	'.size'		{ RETURN(DIR_SIZE); }
 	'.skip'		{ RETURN(DIR_SKIP); }
+	'.sleb128'	{ RETURN(DIR_SLEB128); }
 	'.space'	{ RETURN(DIR_SKIP); }
 	'.string'	{ RETURN(DIR_ASCIZ); }
 	'.text'		{ RETURN(DIR_TEXT); }
 	'.tfloat'	{ RETURN(DIR_TFLOAT); }
 	'.type'		{ RETURN(DIR_TYPE); }
 	'.quad'		{ RETURN(DIR_QUAD); }
+	'.uleb128'	{ RETURN(DIR_ULEB128); }
 	'.weak'		{ RETURN(DIR_WEAK); }
 	'.word'		{ RETURN(DIR_WORD); }
 	'.zero'		{ RETURN(DIR_ZERO); }

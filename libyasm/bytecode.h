@@ -141,6 +141,15 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
 /*@only@*/ yasm_bytecode *yasm_bc_create_data
     (yasm_datavalhead *datahead, unsigned int size, unsigned long line);
 
+/** Create a bytecode containing LEB128-encoded data value(s).
+ * \param datahead	list of data values (kept, do not free)
+ * \param sign		signedness (1=signed, 0=unsigned) of each data value
+ * \param line		virtual line (from yasm_linemap)
+ * \return Newly allocated bytecode.
+ */
+/*@only@*/ yasm_bytecode *yasm_bc_create_leb128
+    (yasm_datavalhead *datahead, int sign, unsigned long line);
+
 /** Create a bytecode reserving space.
  * \param numitems	number of reserve "items" (kept, do not free)
  * \param itemsize	reserved size (in bytes) for each item

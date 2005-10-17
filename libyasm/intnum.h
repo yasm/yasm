@@ -135,6 +135,12 @@ int yasm_intnum_is_pos1(yasm_intnum *acc);
  */
 int yasm_intnum_is_neg1(yasm_intnum *acc);
 
+/** Simple sign check.
+ * \param acc	    intnum
+ * \return -1 if negative, 0 if zero, +1 if positive
+ */
+int yasm_intnum_sign(yasm_intnum *acc);
+
 /** Convert an intnum to an unsigned 32-bit value.  The value is in "standard"
  * C format (eg, of unknown endian).
  * \note Parameter intnum is truncated to fit into 32 bits.  Use
@@ -185,6 +191,22 @@ void yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
  */
 int yasm_intnum_check_size(const yasm_intnum *intn, size_t size,
 			   size_t rshift, int rangetype);
+
+/** Output #yasm_intnum to buffer in LEB128-encoded form.
+ * \param intn	    intnum
+ * \param ptr	    pointer to storage for output bytes
+ * \param sign	    signedness of LEB128 encoding (0=unsigned, 1=signed)
+ * \return Number of bytes generated.
+ */
+unsigned long yasm_intnum_get_leb128(const yasm_intnum *intn,
+				     unsigned char *ptr, int sign);
+
+/** Calculate number of bytes LEB128-encoded form of #yasm_intnum will take.
+ * \param intn	    intnum
+ * \param sign	    signedness of LEB128 encoding (0=unsigned, 1=signed)
+ * \return Number of bytes.
+ */
+unsigned long yasm_intnum_size_leb128(const yasm_intnum *intn, int sign);
 
 /** Print an intnum.  For debugging purposes.
  * \param f	file
