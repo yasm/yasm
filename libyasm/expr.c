@@ -221,7 +221,8 @@ expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e,
 	if (!yasm_intnum_is_neg1(intn))
 	    continue;
 
-	yasm_symrec_get_label(sym, &precbc);
+	if (!yasm_symrec_get_label(sym, &precbc))
+	    continue;
 	sect2 = yasm_bc_get_section(precbc);
 
 	/* Now look for a symrec term in the same segment */

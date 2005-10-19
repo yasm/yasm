@@ -178,7 +178,12 @@ elf_x86_amd64_write_reloc(unsigned char *bufp, elf_reloc_entry *reloc,
     YASM_WRITE_64I_L(bufp, reloc->reloc.addr);
     /*YASM_WRITE_64_L(bufp, ELF64_R_INFO(r_sym, r_type));*/
     YASM_WRITE_64C_L(bufp, r_sym, r_type);
-    YASM_WRITE_64I_L(bufp, reloc->addend);
+    if (reloc->addend)
+	YASM_WRITE_64I_L(bufp, reloc->addend);
+    else {
+	YASM_WRITE_32_L(bufp, 0);
+	YASM_WRITE_32_L(bufp, 0);
+    }
 }
 
 static void
