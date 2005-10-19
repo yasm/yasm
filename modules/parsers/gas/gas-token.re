@@ -145,12 +145,12 @@ strbuf_append(size_t count, YYCTYPE *cursor, Scanner *s, unsigned long line,
 {
     if (cursor == s->eof)
 	yasm__error(line, N_("unexpected end of file in string"));
-    strbuf[count] = ch;
 
     if (count >= strbuf_size) {
 	strbuf = yasm_xrealloc(strbuf, strbuf_size + STRBUF_ALLOC_SIZE);
 	strbuf_size += STRBUF_ALLOC_SIZE;
     }
+    strbuf[count] = ch;
 }
 
 /*!re2c
