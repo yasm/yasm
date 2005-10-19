@@ -715,8 +715,7 @@ elf_objfmt_destroy(yasm_objfmt *objfmt)
 
 static /*@observer@*/ /*@null@*/ yasm_section *
 elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
-			  /*@unused@*/ /*@null@*/
-			  yasm_valparamhead *objext_valparams,
+			  /*@null@*/ yasm_valparamhead *objext_valparams,
 			  unsigned long line)
 {
     yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
@@ -800,6 +799,22 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		    case 'x':
 			flags |= SHF_EXECINSTR;
 			break;
+		    case 'M':
+			flags |= SHF_MERGE;
+			break;
+		    case 'S':
+			flags |= SHF_STRINGS;
+			break;
+		    case 'G':
+			flags |= SHF_GROUP;
+			break;
+		    case 'T':
+			flags |= SHF_TLS;
+			break;
+		    default:
+			yasm__warning(YASM_WARN_GENERAL, line,
+				      N_("unrecognized section attribute: `%c'"),
+				      vp->val[i]);
 		}
 	    }
 	} else if (yasm__strcasecmp(vp->val, "progbits") == 0) {
@@ -857,6 +872,26 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	    yasm_section_bcs_first(retval), 1, line);
 
 	elf_secthead_set_sym(esd, sym);
+
+	/* Handle merge entity size */
+	if (flags & SHF_MERGE) {
+	    if (objext_valparams && (vp = yasm_vps_first(objext_valparams))
+		&& vp->param) {
+		/*@dependent@*/ /*@null@*/ const yasm_intnum *merge_intn;
+
+		merge_intn = yasm_expr_get_intnum(&vp->param, NULL);
+		if (merge_intn)
+		    elf_secthead_set_entsize(esd,
+					     yasm_intnum_get_uint(merge_intn));
+		else
+		    yasm__warning(YASM_WARN_GENERAL, line,
+				  N_("invalid merge entity size"));
+	    } else {
+		yasm__warning(YASM_WARN_GENERAL, line,
+			      N_("entity size for SHF_MERGE not specified"));
+		flags &= ~SHF_MERGE;
+	    }
+	}
     } else if (flags_override)
 	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("section flags ignored on section redeclaration"));

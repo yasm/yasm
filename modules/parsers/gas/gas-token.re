@@ -299,6 +299,7 @@ scan:
 	'.type'		{ RETURN(DIR_TYPE); }
 	'.quad'		{ RETURN(DIR_QUAD); }
 	'.uleb128'	{ RETURN(DIR_ULEB128); }
+	'.value'	{ RETURN(DIR_VALUE); }
 	'.weak'		{ RETURN(DIR_WEAK); }
 	'.word'		{ RETURN(DIR_WORD); }
 	'.zero'		{ RETURN(DIR_ZERO); }

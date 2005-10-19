@@ -151,6 +151,10 @@ typedef enum {
     SHF_WRITE = 0x1,		/* data should be writable at runtime */
     SHF_ALLOC = 0x2,		/* occupies memory at runtime */
     SHF_EXECINSTR = 0x4,	/* contains machine instructions */
+    SHF_MERGE = 0x10,		/* data can be merged */
+    SHF_STRINGS = 0x20,		/* contains 0-terminated strings */
+    SHF_GROUP = 0x200,		/* member of a section group */
+    SHF_TLS = 0x400,		/* thread local storage */
     SHF_MASKOS = 0x0f000000/*,*//* environment specific use */
     /*SHF_MASKPROC = 0xf0000000*/	/* bits reserved for processor specific needs */
 } elf_section_flags;
