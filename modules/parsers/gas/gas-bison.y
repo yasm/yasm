@@ -112,7 +112,7 @@ static void gas_parser_directive
 %token DIR_TFLOAT DIR_TYPE DIR_QUAD DIR_ULEB128 DIR_VALUE DIR_WEAK DIR_WORD
 %token DIR_ZERO
 
-%type <bc> line lineexp instr
+%type <bc> lineexp instr
 
 %type <str_val> expr_id label_id
 %type <ea> memaddr
@@ -130,25 +130,32 @@ static void gas_parser_directive
 %%
 input: /* empty */
     | input line    {
-	parser_gas->temp_bc =
-	    yasm_section_bcs_append(parser_gas->cur_section, $2);
-	if (parser_gas->temp_bc)
-	    parser_gas->prev_bc = parser_gas->temp_bc;
 	if (parser_gas->save_input)
 	    yasm_linemap_add_source(parser_gas->linemap,
-		parser_gas->temp_bc,
+		parser_gas->prev_bc,
 		parser_gas->save_line[parser_gas->save_last ^ 1]);
 	yasm_linemap_goto_next(parser_gas->linemap);
     }
 ;
 
-line: '\n'		{ $$ = (yasm_bytecode *)NULL; }
-    | lineexp '\n'
+line: '\n'
+    | linebcs '\n'
     | error '\n'	{
 	yasm__error(cur_line,
 		    N_("label or instruction expected at start of line"));
-	$$ = (yasm_bytecode *)NULL;
 	yyerrok;
+    }
+;
+
+linebcs: linebc
+    | linebc ';' linebcs
+;
+
+linebc: lineexp {
+	parser_gas->temp_bc =
+	    yasm_section_bcs_append(parser_gas->cur_section, $1);
+	if (parser_gas->temp_bc)
+	    parser_gas->prev_bc = parser_gas->temp_bc;
     }
 ;
 

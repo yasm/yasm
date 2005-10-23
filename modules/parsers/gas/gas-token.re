@@ -250,7 +250,7 @@ scan:
 	">>"			{ RETURN(RIGHT_OP); }
 	"<"			{ RETURN(LEFT_OP); }
 	">"			{ RETURN(RIGHT_OP); }
-	[-+|^!*&/~$():@=,]	{ RETURN(s->tok[0]); }
+	[-+|^!*&/~$():;@=,]	{ RETURN(s->tok[0]); }
 
 	/* arch-independent directives */
 	'.2byte'	{ RETURN(DIR_2BYTE); }
