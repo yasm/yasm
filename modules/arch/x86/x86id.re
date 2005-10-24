@@ -283,6 +283,11 @@ typedef struct x86_insn_info {
  * General instruction groupings
  */
 
+/* Empty instruction */
+static const x86_insn_info empty_insn[] = {
+    { CPU_Any, 0, 0, 0, 0, 0, {0, 0, 0}, 0, 0, {0, 0, 0} }
+};
+
 /* Placeholder for instructions invalid in 64-bit mode */
 static const x86_insn_info not64_insn[] = {
     { CPU_Not64, 0, 0, 0, 0, 0, {0, 0, 0}, 0, 0, {0, 0, 0} }
@@ -1990,7 +1995,7 @@ static const x86_insn_info xbts_insn[] = {
 
 
 static void
-x86_finalize_common(x86_common *common, x86_insn_info *info,
+x86_finalize_common(x86_common *common, const x86_insn_info *info,
 		    unsigned int mode_bits)
 {
     common->addrsize = 0;
@@ -2000,7 +2005,7 @@ x86_finalize_common(x86_common *common, x86_insn_info *info,
 }
 
 static void
-x86_finalize_opcode(x86_opcode *opcode, x86_insn_info *info)
+x86_finalize_opcode(x86_opcode *opcode, const x86_insn_info *info)
 {
     opcode->len = info->opcode_len;
     opcode->opcode[0] = info->opcode[0];
@@ -2012,7 +2017,7 @@ static void
 x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc,
 		    const unsigned long data[4], int num_operands,
 		    yasm_insn_operands *operands, int num_prefixes,
-		    unsigned long **prefixes, x86_insn_info *info)
+		    unsigned long **prefixes, const x86_insn_info *info)
 {
     x86_jmpfar *jmpfar;
     yasm_insn_operand *op;
@@ -2041,8 +2046,8 @@ x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc,
 	    yasm_internal_error(N_("didn't get FAR expression in jmpfar"));
     }
 
-    yasm_x86__bc_apply_prefixes((x86_common *)jmpfar, num_prefixes, prefixes,
-				bc->line);
+    yasm_x86__bc_apply_prefixes((x86_common *)jmpfar, NULL, num_prefixes,
+				prefixes, bc->line);
 
     /* Transform the bytecode */
     yasm_x86__bc_transform_jmpfar(bc, jmpfar);
@@ -2052,7 +2057,7 @@ static void
 x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 		 const unsigned long data[4], int num_operands,
 		 yasm_insn_operands *operands, int num_prefixes,
-		 unsigned long **prefixes, x86_insn_info *jinfo)
+		 unsigned long **prefixes, const x86_insn_info *jinfo)
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     x86_jmp *jmp;
@@ -2146,8 +2151,8 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 	yasm__error(bc->line,
 		    N_("no NEAR form of that jump instruction exists"));
 
-    yasm_x86__bc_apply_prefixes((x86_common *)jmp, num_prefixes, prefixes,
-				bc->line);
+    yasm_x86__bc_apply_prefixes((x86_common *)jmp, NULL, num_prefixes,
+				prefixes, bc->line);
 
     /* Transform the bytecode */
     yasm_x86__bc_transform_jmp(bc, jmp);
@@ -2164,7 +2169,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     x86_insn *insn;
     int num_info = (int)(data[1]&0xFF);
-    x86_insn_info *info = (x86_insn_info *)data[0];
+    const x86_insn_info *info = (const x86_insn_info *)data[0];
     unsigned long mod_data = data[1] >> 8;
     unsigned char mode_bits = (unsigned char)(data[3] & 0xFF);
     unsigned long suffix = (data[3]>>8) & 0xFF;
@@ -2177,6 +2182,11 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     unsigned char spare;
     int i;
     static const unsigned int size_lookup[] = {0, 1, 2, 4, 8, 10, 16, 0};
+
+    if (!info) {
+	num_info = 1;
+	info = empty_insn;
+    }
 
     /* Build local array of operands from list, since we know we have a max
      * of 3 operands.
@@ -2804,8 +2814,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     } else
 	insn->imm = NULL;
 
-    yasm_x86__bc_apply_prefixes((x86_common *)insn, num_prefixes, prefixes,
-				bc->line);
+    yasm_x86__bc_apply_prefixes((x86_common *)insn, &insn->rex, num_prefixes,
+				prefixes, bc->line);
 
     if (insn->postop == X86_POSTOP_ADDRESS16 && insn->common.addrsize) {
 	yasm__warning(YASM_WARN_GENERAL, bc->line,
@@ -3042,17 +3052,28 @@ yasm_x86__parse_check_prefix(yasm_arch *arch, unsigned long data[4],
     const char *oid = id;
     /*!re2c
 	/* operand size overrides */
-	'o16'	{
+	'o16' | 'data16' | 'word'	{
+	    if (oid[0] != 'o' && arch_x86->parser != X86_PARSER_GAS)
+		return 0;
 	    data[0] = X86_OPERSIZE;
 	    data[1] = 16;
 	    return 1;
 	}
-	'o32'	{
+	'o32' | 'data32' | 'dword'	{
+	    if (oid[0] != 'o' && arch_x86->parser != X86_PARSER_GAS)
+		return 0;
+	    if (arch_x86->mode_bits == 64) {
+		yasm__error(line,
+		    N_("Cannot override data size to 32 bits in 64-bit mode"));
+		return 0;
+	    }
 	    data[0] = X86_OPERSIZE;
 	    data[1] = 32;
 	    return 1;
 	}
-	'o64'	{
+	'o64' | 'data64' | 'qword'	{
+	    if (oid[0] != 'o' && arch_x86->parser != X86_PARSER_GAS)
+		return 0;
 	    if (arch_x86->mode_bits != 64) {
 		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a prefix in 64-bit mode"), oid);
@@ -3063,7 +3084,9 @@ yasm_x86__parse_check_prefix(yasm_arch *arch, unsigned long data[4],
 	    return 1;
 	}
 	/* address size overrides */
-	'a16'	{
+	'a16' | 'addr16' | 'aword'	{
+	    if (oid[1] != '1' && arch_x86->parser != X86_PARSER_GAS)
+		return 0;
 	    if (arch_x86->mode_bits == 64) {
 		yasm__error(line,
 		    N_("Cannot override address size to 16 bits in 64-bit mode"));
@@ -3073,12 +3096,16 @@ yasm_x86__parse_check_prefix(yasm_arch *arch, unsigned long data[4],
 	    data[1] = 16;
 	    return 1;
 	}
-	'a32'	{
+	'a32' | 'addr32' | 'adword'	{
+	    if (oid[1] != '3' && arch_x86->parser != X86_PARSER_GAS)
+		return 0;
 	    data[0] = X86_ADDRSIZE;
 	    data[1] = 32;
 	    return 1;
 	}
-	'a64'	{
+	'a64' | 'addr64' | 'aqword'	{
+	    if (oid[1] != '6' && arch_x86->parser != X86_PARSER_GAS)
+		return 0;
 	    if (arch_x86->mode_bits != 64) {
 		yasm__warning(YASM_WARN_GENERAL, line,
 			      N_("`%s' is a prefix in 64-bit mode"), oid);
@@ -3103,6 +3130,152 @@ yasm_x86__parse_check_prefix(yasm_arch *arch, unsigned long data[4],
 	'rep' ('e' | 'z')?	{
 	    data[0] = X86_LOCKREP;
 	    data[1] = 0xF3;
+	    return 1;
+	}
+
+	/* other prefixes (limited to GAS-only at the moment) */
+	/* Hint taken/not taken (for jumps */
+	'ht'	{
+	    if (arch_x86->parser != X86_PARSER_GAS)
+		return 0;
+	    data[0] = X86_SEGREG;
+	    data[1] = 0x3E;
+	    return 1;
+	}
+	'hnt'	{
+	    if (arch_x86->parser != X86_PARSER_GAS)
+		return 0;
+	    data[0] = X86_SEGREG;
+	    data[1] = 0x2E;
+	    return 1;
+	}
+	/* REX byte explicit prefixes */
+	'rex'	{
+	    if (arch_x86->parser != X86_PARSER_GAS
+		|| arch_x86->mode_bits != 64)
+		return 0;
+	    data[0] = X86_REX;
+	    data[1] = 0x40;
+	    return 1;
+	}
+	'rexz'	{
+	    if (arch_x86->parser != X86_PARSER_GAS
+		|| arch_x86->mode_bits != 64)
+		return 0;
+	    data[0] = X86_REX;
+	    data[1] = 0x41;
+	    return 1;
+	}
+	'rexy'	{
+	    if (arch_x86->parser != X86_PARSER_GAS
+		|| arch_x86->mode_bits != 64)
+		return 0;
+	    data[0] = X86_REX;
+	    data[1] = 0x42;
+	    return 1;
+	}
+	'rexyz'	{
+	    if (arch_x86->parser != X86_PARSER_GAS
+		|| arch_x86->mode_bits != 64)
+		return 0;
+	    data[0] = X86_REX;
+	    data[1] = 0x43;
+	    return 1;
+	}
+	'rexx'	{
+	    if (arch_x86->parser != X86_PARSER_GAS
+		|| arch_x86->mode_bits != 64)
+		return 0;
+	    data[0] = X86_REX;
+	    data[1] = 0x44;
+	    return 1;
+	}
+	'rexxz'	{
+	    if (arch_x86->parser != X86_PARSER_GAS
+		|| arch_x86->mode_bits != 64)
+		return 0;
+	    data[0] = X86_REX;
+	    data[1] = 0x45;
+	    return 1;
+	}
+	'rexxy'	{
+	    if (arch_x86->parser != X86_PARSER_GAS
+		|| arch_x86->mode_bits != 64)
+		return 0;
+	    data[0] = X86_REX;
+	    data[1] = 0x46;
+	    return 1;
+	}
+	'rexxyz'    {
+	    if (arch_x86->parser != X86_PARSER_GAS
+		|| arch_x86->mode_bits != 64)
+		return 0;
+	    data[0] = X86_REX;
+	    data[1] = 0x47;
+	    return 1;
+	}
+	'rex64'	{
+	    if (arch_x86->parser != X86_PARSER_GAS
+		|| arch_x86->mode_bits != 64)
+		return 0;
+	    data[0] = X86_REX;
+	    data[1] = 0x48;
+	    return 1;
+	}
+	'rex64z'    {
+	    if (arch_x86->parser != X86_PARSER_GAS
+		|| arch_x86->mode_bits != 64)
+		return 0;
+	    data[0] = X86_REX;
+	    data[1] = 0x49;
+	    return 1;
+	}
+	'rex64y'    {
+	    if (arch_x86->parser != X86_PARSER_GAS
+		|| arch_x86->mode_bits != 64)
+		return 0;
+	    data[0] = X86_REX;
+	    data[1] = 0x4a;
+	    return 1;
+	}
+	'rex64yz'   {
+	    if (arch_x86->parser != X86_PARSER_GAS
+		|| arch_x86->mode_bits != 64)
+		return 0;
+	    data[0] = X86_REX;
+	    data[1] = 0x4b;
+	    return 1;
+	}
+	'rex64x'    {
+	    if (arch_x86->parser != X86_PARSER_GAS
+		|| arch_x86->mode_bits != 64)
+		return 0;
+	    data[0] = X86_REX;
+	    data[1] = 0x4c;
+	    return 1;
+	}
+	'rex64xz'   {
+	    if (arch_x86->parser != X86_PARSER_GAS
+		|| arch_x86->mode_bits != 64)
+		return 0;
+	    data[0] = X86_REX;
+	    data[1] = 0x4d;
+	    return 1;
+	}
+	'rex64xy'   {
+	    if (arch_x86->parser != X86_PARSER_GAS
+		|| arch_x86->mode_bits != 64)
+		return 0;
+	    data[0] = X86_REX;
+	    data[1] = 0x4e;
+	    return 1;
+	}
+	'rex64xyz'  {
+	    if (arch_x86->parser != X86_PARSER_GAS
+		|| arch_x86->mode_bits != 64)
+		return 0;
+	    data[0] = X86_REX;
+	    data[1] = 0x4f;
 	    return 1;
 	}
 

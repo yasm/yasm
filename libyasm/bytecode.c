@@ -1153,6 +1153,25 @@ yasm_bc_create_insn(yasm_arch *arch, const unsigned long insn_data[4],
     return yasm_bc_create_common(&bc_insn_callback, insn, line);
 }
 
+yasm_bytecode *
+yasm_bc_create_empty_insn(yasm_arch *arch, unsigned long line)
+{
+    bytecode_insn *insn = yasm_xmalloc(sizeof(bytecode_insn));
+
+    insn->arch = arch;
+    insn->insn_data[0] = 0;
+    insn->insn_data[1] = 0;
+    insn->insn_data[2] = 0;
+    insn->insn_data[3] = 0;
+    insn->num_operands = 0;
+    insn->num_prefixes = 0;
+    insn->prefixes = NULL;
+    insn->num_segregs = 0;
+    insn->segregs = NULL;
+
+    return yasm_bc_create_common(&bc_insn_callback, insn, line);
+}
+
 void
 yasm_bc_insn_add_prefix(yasm_bytecode *bc, const unsigned long prefix_data[4])
 {

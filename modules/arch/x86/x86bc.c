@@ -289,10 +289,12 @@ yasm_x86__ea_create_imm(yasm_expr *imm, unsigned int im_len)
 /*@=compmempass@*/
 
 void
-yasm_x86__bc_apply_prefixes(x86_common *common, int num_prefixes,
-			    unsigned long **prefixes, unsigned long line)
+yasm_x86__bc_apply_prefixes(x86_common *common, unsigned char *rex,
+			    int num_prefixes, unsigned long **prefixes,
+			    unsigned long line)
 {
     int i;
+    int first = 1;
 
     for (i=0; i<num_prefixes; i++) {
 	switch ((x86_parse_insn_prefix)prefixes[i][0]) {
@@ -307,6 +309,36 @@ yasm_x86__bc_apply_prefixes(x86_common *common, int num_prefixes,
 		break;
 	    case X86_OPERSIZE:
 		common->opersize = (unsigned char)prefixes[i][1];
+		break;
+	    case X86_SEGREG:
+		/* This is a hack.. we should really be putting this in the
+		 * the effective address!
+		 */
+		common->lockrep_pre = (unsigned char)prefixes[i][1];
+		break;
+	    case X86_REX:
+		if (!rex)
+		    yasm__warning(YASM_WARN_GENERAL, line,
+			N_("ignoring REX prefix on jump"));
+		else if (*rex == 0xff)
+		    yasm__warning(YASM_WARN_GENERAL, line,
+			N_("REX prefix not allowed on this instruction, ignoring"));
+		else {
+		    if (*rex != 0) {
+			if (first)
+			    yasm__warning(YASM_WARN_GENERAL, line,
+				N_("overriding generated REX prefix"));
+			else
+			    yasm__warning(YASM_WARN_GENERAL, line,
+				N_("multiple REX prefixes, using leftmost"));
+		    }
+		    /* Here we assume that we can't get this prefix in non
+		     * 64 bit mode due to checks in parse_check_prefix().
+		     */
+		    common->mode_bits = 64;
+		    *rex = (unsigned char)prefixes[i][1];
+		}
+		first = 0;
 		break;
 	}
     }

@@ -213,6 +213,15 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
     (yasm_arch *arch, const unsigned long insn_data[4], int num_operands,
      /*@null@*/ yasm_insn_operands *operands, unsigned long line);
 
+/** Create a bytecode that represents a single empty (0 length) instruction.
+ * This is used for handling solitary prefixes.
+ * \param arch		instruction's architecture
+ * \param line		virtual line (from yasm_linemap)
+ * \return Newly allocated bytecode.
+ */
+/*@only@*/ yasm_bytecode *yasm_bc_create_empty_insn(yasm_arch *arch,
+						    unsigned long line);
+
 /** Associate a prefix with an instruction bytecode.
  * \param bc		instruction bytecode
  * \param prefix_data	data the identifies the prefix

@@ -481,6 +481,18 @@ instr: INSN		{
 	$$ = $2;
 	yasm_bc_insn_add_prefix($$, $1);
     }
+    | SEGREG instr	{
+	$$ = $2;
+	yasm_bc_insn_add_seg_prefix($$, $1[0]);
+    }
+    | PREFIX {
+	$$ = yasm_bc_create_empty_insn(parser_gas->arch, cur_line);
+	yasm_bc_insn_add_prefix($$, $1);
+    }
+    | SEGREG {
+	$$ = yasm_bc_create_empty_insn(parser_gas->arch, cur_line);
+	yasm_bc_insn_add_seg_prefix($$, $1[0]);
+    }
     | ID {
 	yasm__error(cur_line, N_("instruction not recognized: `%s'"), $1);
 	$$ = NULL;
