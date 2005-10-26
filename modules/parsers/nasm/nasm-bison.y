@@ -82,11 +82,16 @@ static void define_label(yasm_parser_nasm *parser_nasm, /*@only@*/ char *name,
 	char *name;
 	int local;
     } label;
+    struct {
+	char *contents;
+	size_t len;
+    } str;
 }
 
 %token <intn> INTNUM
 %token <flt> FLTNUM
-%token <str_val> DIRECTIVE_NAME STRING FILENAME
+%token <str_val> DIRECTIVE_NAME FILENAME
+%token <str> STRING
 %token <int_info> SIZE_OVERRIDE
 %token <int_info> DECLARE_DATA
 %token <int_info> RESERVE_SPACE
@@ -191,25 +196,25 @@ lineexp: exp
 
 exp: instr
     | DECLARE_DATA datavals		{
-	$$ = yasm_bc_create_data(&$2, $1, cur_line);
+	$$ = yasm_bc_create_data(&$2, $1, 0, cur_line);
     }
     | RESERVE_SPACE expr		{
 	$$ = yasm_bc_create_reserve($2, $1, cur_line);
     }
     | INCBIN STRING			{
-	$$ = yasm_bc_create_incbin($2, NULL, NULL, cur_line);
+	$$ = yasm_bc_create_incbin($2.contents, NULL, NULL, cur_line);
     }
     | INCBIN STRING ','			{
-	$$ = yasm_bc_create_incbin($2, NULL, NULL, cur_line);
+	$$ = yasm_bc_create_incbin($2.contents, NULL, NULL, cur_line);
     }
     | INCBIN STRING ',' expr		{
-	$$ = yasm_bc_create_incbin($2, $4, NULL, cur_line);
+	$$ = yasm_bc_create_incbin($2.contents, $4, NULL, cur_line);
     }
     | INCBIN STRING ',' expr ','	{
-	$$ = yasm_bc_create_incbin($2, $4, NULL, cur_line);
+	$$ = yasm_bc_create_incbin($2.contents, $4, NULL, cur_line);
     }
     | INCBIN STRING ',' expr ',' expr	{
-	$$ = yasm_bc_create_incbin($2, $4, $6, cur_line);
+	$$ = yasm_bc_create_incbin($2.contents, $4, $6, cur_line);
     }
 ;
 
@@ -243,7 +248,9 @@ datavals: dataval	    {
 ;
 
 dataval: dvexpr		{ $$ = yasm_dv_create_expr($1); }
-    | STRING		{ $$ = yasm_dv_create_string($1); }
+    | STRING		{
+	$$ = yasm_dv_create_string($1.contents, $1.len);
+    }
     | error		{
 	yasm__error(cur_line, N_("expression syntax error"));
 	$$ = (yasm_dataval *)NULL;
@@ -309,7 +316,7 @@ directive_valparam: direxpr	{
 	    $$ = yasm_vp_create(NULL, $1);
 	}
     }
-    | STRING			{ $$ = yasm_vp_create($1, NULL); }
+    | STRING			{ $$ = yasm_vp_create($1.contents, NULL); }
     | ID '=' direxpr		{
 	yasm_expr__traverse_leaves_in($3, parser_nasm, fix_directive_symrec);
 	$$ = yasm_vp_create($1, $3);
@@ -424,8 +431,8 @@ expr: INTNUM		{ $$ = p_expr_new_ident(yasm_expr_int($1)); }
     | REG		{ $$ = p_expr_new_ident(yasm_expr_reg($1[0])); }
     | STRING		{
 	$$ = p_expr_new_ident(yasm_expr_int(
-	    yasm_intnum_create_charconst_nasm($1, cur_line)));
-	yasm_xfree($1);
+	    yasm_intnum_create_charconst_nasm($1.contents, cur_line)));
+	yasm_xfree($1.contents);
     }
     | explabel		{ $$ = p_expr_new_ident(yasm_expr_sym($1)); }
     /*| expr '||' expr	{ $$ = p_expr_new_tree($1, YASM_EXPR_LOR, $3); }*/

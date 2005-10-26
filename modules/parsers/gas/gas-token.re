@@ -494,7 +494,8 @@ stringconst_scan:
 
 	dquot	{
 	    strbuf_append(count, cursor, s, cur_line, '\0');
-	    lvalp->str_val = strbuf;
+	    lvalp->str.contents = strbuf;
+	    lvalp->str.len = count;
 	    RETURN(STRING);
 	}
 

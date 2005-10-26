@@ -135,11 +135,14 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
 /** Create a bytecode containing data value(s).
  * \param datahead	list of data values (kept, do not free)
  * \param size		storage size (in bytes) for each data value
+ * \param append_zero	append a single zero byte after each data value
+ *			(if non-zero)
  * \param line		virtual line (from yasm_linemap)
  * \return Newly allocated bytecode.
  */
 /*@only@*/ yasm_bytecode *yasm_bc_create_data
-    (yasm_datavalhead *datahead, unsigned int size, unsigned long line);
+    (yasm_datavalhead *datahead, unsigned int size, int append_zero,
+     unsigned long line);
 
 /** Create a bytecode containing LEB128-encoded data value(s).
  * \param datahead	list of data values (kept, do not free)
@@ -336,7 +339,7 @@ yasm_dataval *yasm_dv_create_expr(/*@keep@*/ yasm_expr *expn);
  * \param str_val	string
  * \return Newly allocated data value.
  */
-yasm_dataval *yasm_dv_create_string(/*@keep@*/ char *str_val);
+yasm_dataval *yasm_dv_create_string(/*@keep@*/ char *contents, size_t len);
 
 /** Initialize a list of data values.
  * \param headp	list of data values

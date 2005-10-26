@@ -539,7 +539,8 @@ stringconst_scan:
 	    else
 		yasm__error(cur_line, N_("unterminated string"));
 	    strbuf[count] = '\0';
-	    lvalp->str_val = strbuf;
+	    lvalp->str.contents = strbuf;
+	    lvalp->str.len = count;
 	    if (parser_nasm->save_input && cursor != s->eof)
 		cursor = save_line(parser_nasm, cursor);
 	    RETURN(STRING);
@@ -548,7 +549,8 @@ stringconst_scan:
 	any	{
 	    if (s->tok[0] == endch) {
 		strbuf[count] = '\0';
-		lvalp->str_val = strbuf;
+		lvalp->str.contents = strbuf;
+		lvalp->str.len = count;
 		RETURN(STRING);
 	    }
 
