@@ -336,7 +336,8 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
 yasm_dataval *yasm_dv_create_expr(/*@keep@*/ yasm_expr *expn);
 
 /** Create a new data value from a string.
- * \param str_val	string
+ * \param contents	string (raw, may contain NULs)
+ * \param len		length of string
  * \return Newly allocated data value.
  */
 yasm_dataval *yasm_dv_create_string(/*@keep@*/ char *contents, size_t len);
