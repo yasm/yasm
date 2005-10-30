@@ -460,25 +460,25 @@ yasm_intnum_zero(yasm_intnum *intn)
 }
 
 int
-yasm_intnum_is_zero(yasm_intnum *intn)
+yasm_intnum_is_zero(const yasm_intnum *intn)
 {
     return (intn->type == INTNUM_UL && intn->val.ul == 0);
 }
 
 int
-yasm_intnum_is_pos1(yasm_intnum *intn)
+yasm_intnum_is_pos1(const yasm_intnum *intn)
 {
     return (intn->type == INTNUM_UL && intn->val.ul == 1);
 }
 
 int
-yasm_intnum_is_neg1(yasm_intnum *intn)
+yasm_intnum_is_neg1(const yasm_intnum *intn)
 {
     return (intn->type == INTNUM_BV && BitVector_is_full(intn->val.bv));
 }
 
 int
-yasm_intnum_sign(yasm_intnum *intn)
+yasm_intnum_sign(const yasm_intnum *intn)
 {
     if (intn->type == INTNUM_UL) {
 	if (intn->val.ul == 0)

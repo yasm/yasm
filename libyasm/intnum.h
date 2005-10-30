@@ -121,25 +121,25 @@ void yasm_intnum_zero(yasm_intnum *intn);
  * \param acc	    intnum
  * \return Nonzero if acc==0.
  */
-int yasm_intnum_is_zero(yasm_intnum *acc);
+int yasm_intnum_is_zero(const yasm_intnum *acc);
 
 /** Simple value check for 1.
  * \param acc	    intnum
  * \return Nonzero if acc==1.
  */
-int yasm_intnum_is_pos1(yasm_intnum *acc);
+int yasm_intnum_is_pos1(const yasm_intnum *acc);
 
 /** Simple value check for -1.
  * \param acc	    intnum
  * \return Nonzero if acc==-1.
  */
-int yasm_intnum_is_neg1(yasm_intnum *acc);
+int yasm_intnum_is_neg1(const yasm_intnum *acc);
 
 /** Simple sign check.
  * \param acc	    intnum
  * \return -1 if negative, 0 if zero, +1 if positive
  */
-int yasm_intnum_sign(yasm_intnum *acc);
+int yasm_intnum_sign(const yasm_intnum *acc);
 
 /** Convert an intnum to an unsigned 32-bit value.  The value is in "standard"
  * C format (eg, of unknown endian).
