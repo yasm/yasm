@@ -1344,8 +1344,12 @@ yasm_bc_resolve(yasm_bytecode *bc, int save,
 		    N_("expression must not contain floating point value"));
 		retval |= YASM_BC_RESOLVE_ERROR;
 	    }
-	} else
-	    bc->len *= yasm_intnum_get_uint(num);
+	} else {
+	    if (yasm_intnum_sign(num) >= 0)
+		bc->len *= yasm_intnum_get_uint(num);
+	    else
+		retval |= YASM_BC_RESOLVE_ERROR;
+	}
 	yasm_expr_destroy(temp);
     }
 
@@ -1374,6 +1378,11 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 	if (!num)
 	    yasm_internal_error(
 		N_("could not determine multiple in bc_tobytes"));
+	if (yasm_intnum_sign(num) < 0) {
+	    yasm__error(bc->line, N_("multiple is negative"));
+	    *bufsize = 0;
+	    return NULL;
+	}
 	*multiple = yasm_intnum_get_uint(num);
 	if (*multiple == 0) {
 	    *bufsize = 0;
