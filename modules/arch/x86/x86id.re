@@ -4266,7 +4266,7 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	'fcmovnb' { RET_INSN_NS(fcmovcc, 0xDBC0, CPU_686|CPU_FPU); }
 	'fcmovne' { RET_INSN_NS(fcmovcc, 0xDBC8, CPU_686|CPU_FPU); }
 	'fcmovnbe' { RET_INSN_NS(fcmovcc, 0xDBD0, CPU_686|CPU_FPU); }
-	'fcmovu' { RET_INSN_NS(fcmovcc, 0xDBD8, CPU_686|CPU_FPU); }
+	'fcmovnu' { RET_INSN_NS(fcmovcc, 0xDBD8, CPU_686|CPU_FPU); }
 	'fcomi' { RET_INSN_NS(fcom2, 0xDBF0, CPU_686|CPU_FPU); }
 	'fucomi' { RET_INSN_NS(fcom2, 0xDBE8, CPU_686|CPU_FPU); }
 	'fcomip' { RET_INSN_NS(fcom2, 0xDFF0, CPU_686|CPU_FPU); }
