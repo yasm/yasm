@@ -243,6 +243,7 @@ elf_symtab_entry_create(elf_strtab_entry *name,
 			yasm_symrec *sym)
 {
     elf_symtab_entry *entry = yasm_xmalloc(sizeof(elf_symtab_entry));
+    entry->in_table = 0;
     entry->sym = sym;
     entry->sect = NULL;
     entry->name = name;
@@ -317,6 +318,7 @@ elf_symtab_create()
     elf_symtab_entry *entry = yasm_xmalloc(sizeof(elf_symtab_entry));
 
     STAILQ_INIT(symtab);
+    entry->in_table = 1;
     entry->sym = NULL;
     entry->sect = NULL;
     entry->name = NULL;
@@ -324,7 +326,7 @@ elf_symtab_create()
     entry->xsize = NULL;
     entry->size = 0;
     entry->index = SHN_UNDEF;
-    entry->bind = 0;
+    entry->bind = STB_LOCAL;
     entry->type = STT_NOTYPE;
     entry->vis = STV_DEFAULT;
     entry->symindex = 0;
@@ -332,7 +334,7 @@ elf_symtab_create()
     return symtab;
 }
 
-elf_symtab_entry *
+void
 elf_symtab_append_entry(elf_symtab_head *symtab, elf_symtab_entry *entry)
 {
     if (symtab == NULL)
@@ -343,18 +345,12 @@ elf_symtab_append_entry(elf_symtab_head *symtab, elf_symtab_entry *entry)
 	yasm_internal_error(N_("symtab is missing initial dummy entry"));
 
     STAILQ_INSERT_TAIL(symtab, entry, qlink);
-    return entry;
+    entry->in_table = 1;
 }
 
-elf_symtab_entry *
-elf_symtab_insert_local_sym(elf_symtab_head *symtab,
-			    elf_strtab_head *strtab,
-			    yasm_symrec *sym)
+void
+elf_symtab_insert_local_sym(elf_symtab_head *symtab, elf_symtab_entry *entry)
 {
-    elf_strtab_entry *name = strtab
-	? elf_strtab_append_str(strtab, yasm_symrec_get_name(sym))
-	: NULL;
-    elf_symtab_entry *entry = elf_symtab_entry_create(name, sym);
     elf_symtab_entry *after = STAILQ_FIRST(symtab);
     elf_symtab_entry *before = NULL;
 
@@ -364,8 +360,7 @@ elf_symtab_insert_local_sym(elf_symtab_head *symtab,
 	after = STAILQ_NEXT(after, qlink);
     }
     STAILQ_INSERT_AFTER(symtab, before, entry, qlink);
-
-    return entry;
+    entry->in_table = 1;
 }
 
 void
@@ -514,6 +509,12 @@ elf_sym_set_size(elf_symtab_entry *entry,
 	yasm_expr_destroy(entry->xsize);
     entry->xsize = size;
 }                            
+
+int
+elf_sym_in_table(elf_symtab_entry *entry)
+{
+    return entry->in_table;
+}
 
 elf_secthead *
 elf_secthead_create(elf_strtab_entry	*name,

@@ -93,16 +93,19 @@ elf_objfmt_symtab_append(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym,
 {
     /* Only append to table if not already appended */
     elf_symtab_entry *entry = yasm_symrec_get_data(sym, &elf_symrec_data);
-    if (!entry) {
-	elf_strtab_entry *name = elf_strtab_append_str(objfmt_elf->strtab,
-						       yasm_symrec_get_name(sym));
-	entry = elf_symtab_entry_create(name, sym);
+    if (!entry || !elf_sym_in_table(entry)) {
+	if (!entry) {
+	    elf_strtab_entry *name =
+		elf_strtab_append_str(objfmt_elf->strtab,
+				      yasm_symrec_get_name(sym));
+	    entry = elf_symtab_entry_create(name, sym);
+	}
 	elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
+	yasm_symrec_add_data(sym, &elf_symrec_data, entry);
     }
 
     elf_symtab_set_nonzero(entry, NULL, sectidx, bind, type, size, value);
     elf_sym_set_visibility(entry, vis);
-    yasm_symrec_add_data(sym, &elf_symrec_data, entry);
 
     return entry;
 }
@@ -118,19 +121,26 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
 
     assert(info != NULL);
 
-    if (!yasm_symrec_get_data(sym, &elf_symrec_data)) {
+    if (!yasm_symrec_get_label(sym, &precbc))
+	return 1;
+    sect = yasm_bc_get_section(precbc);
+
+    entry = yasm_symrec_get_data(sym, &elf_symrec_data);
+    if (!entry || !elf_sym_in_table(entry)) {
 	int is_sect = 0;
-	if (!yasm_symrec_get_label(sym, &precbc))
-	    return 1;
-	sect = yasm_bc_get_section(precbc);
 	if (!yasm_section_is_absolute(sect) &&
 	    strcmp(yasm_symrec_get_name(sym), yasm_section_get_name(sect))==0)
 	    is_sect = 1;
 
 	/* neither sections nor locals (except when debugging) need names */
-	entry = elf_symtab_insert_local_sym(info->objfmt_elf->elf_symtab,
-		    info->local_names && !is_sect ?
-		    info->objfmt_elf->strtab : NULL, sym);
+	if (!entry) {
+	    elf_strtab_entry *name = info->local_names && !is_sect
+		? elf_strtab_append_str(info->objfmt_elf->strtab,
+					yasm_symrec_get_name(sym))
+		: NULL;
+	    entry = elf_symtab_entry_create(name, sym);
+	}
+	elf_symtab_insert_local_sym(info->objfmt_elf->elf_symtab, entry);
 	elf_symtab_set_nonzero(entry, sect, 0, STB_LOCAL,
 			       is_sect ? STT_SECTION : 0, NULL, 0);
 	yasm_symrec_add_data(sym, &elf_symrec_data, entry);
@@ -138,13 +148,7 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	if (is_sect)
 	    return 1;
     }
-    else {
-	if (!yasm_symrec_get_label(sym, &precbc))
-	    return 1;
-	sect = yasm_bc_get_section(precbc);
-    }
 
-    entry = yasm_symrec_get_data(sym, &elf_symrec_data);
     if (precbc)
 	value = precbc->offset + precbc->len;
     elf_symtab_set_nonzero(entry, sect, 0, 0, 0, NULL, value);
@@ -1056,7 +1060,6 @@ elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	if (!entry) {
 	    entry = elf_symtab_entry_create(
 		elf_strtab_append_str(objfmt_elf->strtab, symname), sym);
-	    elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
 	    yasm_symrec_add_data(sym, &elf_symrec_data, entry);
 	}
 
@@ -1081,7 +1084,6 @@ elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	if (!entry) {
 	    entry = elf_symtab_entry_create(
 		elf_strtab_append_str(objfmt_elf->strtab, symname), sym);
-	    elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
 	    yasm_symrec_add_data(sym, &elf_symrec_data, entry);
 	}
 

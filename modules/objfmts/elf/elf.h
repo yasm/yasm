@@ -386,6 +386,7 @@ struct elf_strtab_entry {
 STAILQ_HEAD(elf_symtab_head, elf_symtab_entry);
 struct elf_symtab_entry {
     STAILQ_ENTRY(elf_symtab_entry) qlink;
+    int			in_table;
     yasm_symrec		*sym;
     yasm_section	*sect;
     elf_strtab_entry	*name;
@@ -429,11 +430,9 @@ unsigned long elf_strtab_output_to_file(FILE *f, elf_strtab_head *head);
 elf_symtab_entry *elf_symtab_entry_create(elf_strtab_entry *name,
 					  struct yasm_symrec *sym);
 elf_symtab_head *elf_symtab_create(void);
-elf_symtab_entry *elf_symtab_append_entry(elf_symtab_head *symtab,
-					  elf_symtab_entry *entry);
-elf_symtab_entry *elf_symtab_insert_local_sym(elf_symtab_head *symtab,
-					      elf_strtab_head *strtab,
-					      struct yasm_symrec *sym);
+void elf_symtab_append_entry(elf_symtab_head *symtab, elf_symtab_entry *entry);
+void elf_symtab_insert_local_sym(elf_symtab_head *symtab,
+				 elf_symtab_entry *entry);
 void elf_symtab_destroy(elf_symtab_head *head);
 unsigned long elf_symtab_assign_indices(elf_symtab_head *symtab);
 unsigned long elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab);
@@ -448,6 +447,7 @@ void elf_sym_set_visibility(elf_symtab_entry    *entry,
                             elf_symbol_vis       vis);
 void elf_sym_set_type(elf_symtab_entry *entry, elf_symbol_type type);
 void elf_sym_set_size(elf_symtab_entry *entry, struct yasm_expr *size);
+int elf_sym_in_table(elf_symtab_entry *entry);
 
 /* section header functions */
 elf_secthead *elf_secthead_create(elf_strtab_entry	*name,
