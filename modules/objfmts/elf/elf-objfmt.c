@@ -132,7 +132,7 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
 		    info->local_names && !is_sect ?
 		    info->objfmt_elf->strtab : NULL, sym);
 	elf_symtab_set_nonzero(entry, sect, 0, STB_LOCAL,
-			       is_sect ? STT_SECTION : STT_NOTYPE, NULL, 0);
+			       is_sect ? STT_SECTION : 0, NULL, 0);
 	yasm_symrec_add_data(sym, &elf_symrec_data, entry);
 
 	if (is_sect)
@@ -915,7 +915,7 @@ elf_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
 
     sym = yasm_symtab_declare(objfmt_elf->symtab, name, YASM_SYM_EXTERN, line);
     elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_GLOBAL,
-                             STT_NOTYPE, STV_DEFAULT, NULL, 0);
+                             0, STV_DEFAULT, NULL, 0);
 
     if (objext_valparams) {
 	yasm_valparam *vp = yasm_vps_first(objext_valparams);
@@ -935,7 +935,7 @@ elf_objfmt_global_declare(yasm_objfmt *objfmt, const char *name,
 {
     yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
     yasm_symrec *sym;
-    elf_symbol_type type = STT_NOTYPE;
+    elf_symbol_type type = 0;
     yasm_expr *size = NULL;
     elf_symbol_vis vis = STV_DEFAULT;
     unsigned int vis_overrides = 0;
@@ -1024,7 +1024,7 @@ elf_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
     }
 
     elf_objfmt_symtab_append(objfmt_elf, sym, SHN_COMMON, STB_GLOBAL,
-                             STT_NOTYPE, STV_DEFAULT, size, addralign);
+                             0, STV_DEFAULT, size, addralign);
 
     return sym;
 }
@@ -1099,7 +1099,7 @@ elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	sym = yasm_symtab_declare(objfmt_elf->symtab, symname, YASM_SYM_GLOBAL,
 				  line);
 	elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_WEAK,
-				 STT_NOTYPE, STV_DEFAULT, NULL, 0);
+				 0, STV_DEFAULT, NULL, 0);
     } else
 	return 1;	/* unrecognized */
 

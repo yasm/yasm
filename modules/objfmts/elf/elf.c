@@ -325,7 +325,7 @@ elf_symtab_create()
     entry->size = 0;
     entry->index = SHN_UNDEF;
     entry->bind = 0;
-    entry->type = 0;
+    entry->type = STT_NOTYPE;
     entry->vis = STV_DEFAULT;
     entry->symindex = 0;
     STAILQ_INSERT_TAIL(symtab, entry, qlink);
