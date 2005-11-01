@@ -91,10 +91,14 @@ elf_objfmt_symtab_append(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym,
 			 elf_symbol_type type, elf_symbol_vis vis,
                          yasm_expr *size, elf_address value)
 {
-    elf_strtab_entry *name = elf_strtab_append_str(objfmt_elf->strtab,
-						   yasm_symrec_get_name(sym));
-    elf_symtab_entry *entry = elf_symtab_entry_create(name, sym);
-    elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
+    /* Only append to table if not already appended */
+    elf_symtab_entry *entry = yasm_symrec_get_data(sym, &elf_symrec_data);
+    if (!entry) {
+	elf_strtab_entry *name = elf_strtab_append_str(objfmt_elf->strtab,
+						       yasm_symrec_get_name(sym));
+	entry = elf_symtab_entry_create(name, sym);
+	elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
+    }
 
     elf_symtab_set_nonzero(entry, NULL, sectidx, bind, type, size, value);
     elf_sym_set_visibility(entry, vis);
