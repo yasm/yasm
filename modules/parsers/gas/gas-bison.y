@@ -729,12 +729,12 @@ gas_get_section(yasm_parser_gas *parser_gas, char *name,
 	gasflags = yasm_xmalloc(5+strlen(flags));
 	strcpy(gasflags, "gas_");
 	strcat(gasflags, flags);
-    } else
+	vp = yasm_vp_create(gasflags, NULL);
+	yasm_vps_append(&vps, vp);
+    } else if (type) {
 	gasflags = yasm__xstrdup("gas_");
-    vp = yasm_vp_create(gasflags, NULL);
-    yasm_vps_append(&vps, vp);
-
-    if (type) {
+	vp = yasm_vp_create(gasflags, NULL);
+	yasm_vps_append(&vps, vp);
 	vp = yasm_vp_create(type, NULL);
 	yasm_vps_append(&vps, vp);
     }

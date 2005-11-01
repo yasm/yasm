@@ -759,6 +759,9 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	align = 16;
 	type = SHT_PROGBITS;
 	flags = SHF_ALLOC + SHF_EXECINSTR;
+    } else if (strcmp(sectname, ".comment") == 0) {
+	type = SHT_PROGBITS;
+	flags = 0;
     } else {
 	/* Default to code */
 	align = 1;
