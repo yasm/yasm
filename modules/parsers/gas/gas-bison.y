@@ -45,10 +45,12 @@ RCSID("$Id$");
 static void define_label(yasm_parser_gas *parser_gas, char *name, int local);
 static yasm_section *gas_get_section
     (yasm_parser_gas *parser_gas, char *name, /*@null@*/ char *flags,
-     /*@null@*/ char *type, /*@null@*/ yasm_valparamhead *objext_valparams);
+     /*@null@*/ char *type, /*@null@*/ yasm_valparamhead *objext_valparams,
+     int builtin);
 static void gas_switch_section(yasm_parser_gas *parser_gas, char *name,
 			       /*@null@*/ char *flags, /*@null@*/ char *type,
-			       /*@null@*/ yasm_valparamhead *objext_valparams);
+			       /*@null@*/ yasm_valparamhead *objext_valparams,
+			       int builtin);
 static yasm_bytecode *gas_parser_align(yasm_parser_gas *parser_gas,
 				       yasm_valparamhead *valparams,
 				       int power2);
@@ -234,7 +236,7 @@ lineexp: instr
 	/* Put into .bss section. */
 	/*@dependent@*/ yasm_section *bss =
 	    gas_get_section(parser_gas, yasm__xstrdup(".bss"), NULL, NULL,
-			    NULL);
+			    NULL, 1);
 	/* TODO: default alignment */
 	yasm_symtab_define_label(p_symtab, $2, yasm_section_bcs_last(bss), 1,
 				 cur_line);
@@ -246,7 +248,7 @@ lineexp: instr
 	/* Put into .bss section. */
 	/*@dependent@*/ yasm_section *bss =
 	    gas_get_section(parser_gas, yasm__xstrdup(".bss"), NULL, NULL,
-			    NULL);
+			    NULL, 1);
 	/* TODO: force alignment */
 	yasm_symtab_define_label(p_symtab, $2, yasm_section_bcs_last(bss), 1,
 				 cur_line);
@@ -334,32 +336,33 @@ lineexp: instr
     /* Section directives */
     | DIR_TEXT {
 	gas_switch_section(parser_gas, yasm__xstrdup(".text"), NULL, NULL,
-			   NULL);
+			   NULL, 1);
 	$$ = NULL;
     }
     | DIR_DATA {
 	gas_switch_section(parser_gas, yasm__xstrdup(".data"), NULL, NULL,
-			   NULL);
+			   NULL, 1);
 	$$ = NULL;
     }
     | DIR_BSS {
-	gas_switch_section(parser_gas, yasm__xstrdup(".bss"), NULL, NULL, NULL);
+	gas_switch_section(parser_gas, yasm__xstrdup(".bss"), NULL, NULL, NULL,
+			   1);
 	$$ = NULL;
     }
     | DIR_SECTION label_id {
-	gas_switch_section(parser_gas, $2, NULL, NULL, NULL);
+	gas_switch_section(parser_gas, $2, NULL, NULL, NULL, 0);
 	$$ = NULL;
     }
     | DIR_SECTION label_id ',' STRING {
-	gas_switch_section(parser_gas, $2, $4.contents, NULL, NULL);
+	gas_switch_section(parser_gas, $2, $4.contents, NULL, NULL, 0);
 	$$ = NULL;
     }
     | DIR_SECTION label_id ',' STRING ',' '@' label_id {
-	gas_switch_section(parser_gas, $2, $4.contents, $7, NULL);
+	gas_switch_section(parser_gas, $2, $4.contents, $7, NULL, 0);
 	$$ = NULL;
     }
     | DIR_SECTION label_id ',' STRING ',' '@' label_id ',' dirvals {
-	gas_switch_section(parser_gas, $2, $4.contents, $7, &$9);
+	gas_switch_section(parser_gas, $2, $4.contents, $7, &$9, 0);
 	$$ = NULL;
     }
     /* Other directives */
@@ -367,7 +370,7 @@ lineexp: instr
 	/* Put text into .comment section. */
 	/*@dependent@*/ yasm_section *comment =
 	    gas_get_section(parser_gas, yasm__xstrdup(".comment"), NULL, NULL,
-			    NULL);
+			    NULL, 1);
 	/* To match GAS output, if the comment section is empty, put an
 	 * initial 0 byte in the section.
 	 */
@@ -714,7 +717,8 @@ define_label(yasm_parser_gas *parser_gas, char *name, int local)
 static yasm_section *
 gas_get_section(yasm_parser_gas *parser_gas, char *name,
 		/*@null@*/ char *flags, /*@null@*/ char *type,
-		/*@null@*/ yasm_valparamhead *objext_valparams)
+		/*@null@*/ yasm_valparamhead *objext_valparams,
+		int builtin)
 {
     yasm_valparamhead vps;
     yasm_valparam *vp;
@@ -725,18 +729,19 @@ gas_get_section(yasm_parser_gas *parser_gas, char *name,
     vp = yasm_vp_create(name, NULL);
     yasm_vps_append(&vps, vp);
 
-    if (flags) {
-	gasflags = yasm_xmalloc(5+strlen(flags));
-	strcpy(gasflags, "gas_");
-	strcat(gasflags, flags);
+    if (!builtin) {
+	if (flags) {
+	    gasflags = yasm_xmalloc(5+strlen(flags));
+	    strcpy(gasflags, "gas_");
+	    strcat(gasflags, flags);
+	} else
+	    gasflags = yasm__xstrdup("gas_");
 	vp = yasm_vp_create(gasflags, NULL);
 	yasm_vps_append(&vps, vp);
-    } else if (type) {
-	gasflags = yasm__xstrdup("gas_");
-	vp = yasm_vp_create(gasflags, NULL);
-	yasm_vps_append(&vps, vp);
-	vp = yasm_vp_create(type, NULL);
-	yasm_vps_append(&vps, vp);
+	if (type) {
+	    vp = yasm_vp_create(type, NULL);
+	    yasm_vps_append(&vps, vp);
+	}
     }
 
     new_section = yasm_objfmt_section_switch(parser_gas->objfmt, &vps,
@@ -749,12 +754,13 @@ gas_get_section(yasm_parser_gas *parser_gas, char *name,
 static void
 gas_switch_section(yasm_parser_gas *parser_gas, char *name,
 		   /*@null@*/ char *flags, /*@null@*/ char *type,
-		   /*@null@*/ yasm_valparamhead *objext_valparams)
+		   /*@null@*/ yasm_valparamhead *objext_valparams,
+		   int builtin)
 {
     yasm_section *new_section;
 
     new_section = gas_get_section(parser_gas, name, flags, type,
-				  objext_valparams);
+				  objext_valparams, builtin);
     if (new_section) {
 	parser_gas->cur_section = new_section;
 	parser_gas->prev_bc = yasm_section_bcs_last(new_section);
