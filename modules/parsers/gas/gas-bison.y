@@ -106,8 +106,8 @@ static void gas_parser_directive
 %token LINE
 %token DIR_2BYTE DIR_4BYTE DIR_ALIGN DIR_ASCII DIR_ASCIZ DIR_BALIGN
 %token DIR_BSS DIR_BYTE DIR_COMM DIR_DATA DIR_DOUBLE DIR_ENDR DIR_EXTERN
-%token DIR_EQU DIR_FILE DIR_FLOAT DIR_GLOBAL DIR_IDENT DIR_INT DIR_LOC
-%token DIR_LCOMM DIR_OCTA DIR_ORG DIR_P2ALIGN DIR_REPT DIR_SECTION
+%token DIR_EQU DIR_FILE DIR_FLOAT DIR_GLOBAL DIR_IDENT DIR_INT DIR_LINE
+%token DIR_LOC DIR_LCOMM DIR_OCTA DIR_ORG DIR_P2ALIGN DIR_REPT DIR_SECTION
 %token DIR_SHORT DIR_SIZE DIR_SKIP DIR_SLEB128 DIR_STRING DIR_TEXT
 %token DIR_TFLOAT DIR_TYPE DIR_QUAD DIR_ULEB128 DIR_VALUE DIR_WEAK DIR_WORD
 %token DIR_ZERO
@@ -168,6 +168,44 @@ lineexp: instr
     | label_id ':' instr	{
 	$$ = $3;
 	define_label(parser_gas, $1, 0);
+    }
+    /* Line directive */
+    | DIR_LINE INTNUM {
+	$$ = (yasm_bytecode *)NULL;
+	if (yasm_intnum_sign($2) < 0)
+	    yasm__error(cur_line, N_("line number is negative"));
+	else
+	    yasm_linemap_set(parser_gas->linemap, NULL,
+			     yasm_intnum_get_uint($2), 1);
+    }
+    /* Macro directives */
+    | DIR_REPT expr {
+	yasm_intnum *intn = yasm_expr_get_intnum(&$2, NULL);
+
+	$$ = (yasm_bytecode *)NULL;
+	if (!intn) {
+	    yasm__error(cur_line, N_("rept expression not absolute"));
+	} else if (yasm_intnum_sign(intn) < 0) {
+	    yasm__error(cur_line, N_("rept expression is negative"));
+	} else {
+	    gas_rept *rept = yasm_xmalloc(sizeof(gas_rept));
+	    STAILQ_INIT(&rept->lines);
+	    rept->startline = cur_line;
+	    rept->numrept = yasm_intnum_get_uint(intn);
+	    rept->numdone = 0;
+	    rept->line = NULL;
+	    rept->linepos = 0;
+	    rept->ended = 0;
+	    rept->oldbuf = NULL;
+	    rept->oldbuflen = 0;
+	    rept->oldbufpos = 0;
+	    parser_gas->rept = rept;
+	}
+    }
+    | DIR_ENDR {
+	$$ = (yasm_bytecode *)NULL;
+	/* Shouldn't ever get here unless we didn't get a DIR_REPT first */
+	yasm__error(cur_line, N_("endr without matching rept"));
     }
     /* Alignment directives */
     | DIR_ALIGN dirvals2 {

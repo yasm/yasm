@@ -79,10 +79,17 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
 
     parser_gas.code_section = !strcmp(yasm_section_get_name(def_sect), ".text");
 
+    parser_gas.rept = NULL;
+
     /* yacc debugging, needs YYDEBUG set in bison.y.in to work */
     parser_gas.debug = 1;
 
     gas_parser_parse(&parser_gas);
+
+    /* Check for ending inside a rept */
+    if (parser_gas.rept)
+	yasm__error(parser_gas.rept->startline,
+		    N_("rept without matching endr"));
 
     gas_parser_cleanup(&parser_gas);
 

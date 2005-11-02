@@ -33,3 +33,5 @@ EXTRA_DIST += modules/parsers/gas/tests/varinsn.asm
 EXTRA_DIST += modules/parsers/gas/tests/varinsn.errwarn
 EXTRA_DIST += modules/parsers/gas/tests/varinsn.hex
 
+EXTRA_DIST += modules/parsers/gas/tests/bin/Makefile.inc
+include modules/parsers/gas/tests/bin/Makefile.inc

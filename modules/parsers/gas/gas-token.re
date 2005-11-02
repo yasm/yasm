@@ -54,6 +54,80 @@ RCSID("$Id$");
 
 #define TOKLEN		(size_t)(cursor-s->tok)
 
+static size_t
+rept_input(yasm_parser_gas *parser_gas, /*@out@*/ char *buf, size_t max_size)
+{
+    gas_rept *rept = parser_gas->rept;
+    size_t numleft = max_size;
+    char *bufp = buf;
+
+    /* If numrept is 0, copy out just the line end characters */
+    if (rept->numrept == 0) {
+	/* Skip first line, which contains .line */
+	rept->line = STAILQ_NEXT(rept->line, link);
+	if (!rept->line) {
+	    rept->numrept = 1;
+	    rept->numdone = 1;
+	}
+	while (rept->numrept == 0 && numleft > 0) {
+	    *bufp++ = rept->line->data[rept->line->len-1];
+	    rept->line = STAILQ_NEXT(rept->line, link);
+	    if (!rept->line) {
+		rept->numrept = 1;
+		rept->numdone = 1;
+	    }
+	}
+    }
+
+    /* Copy out the previous fill buffer until we're *really* done */
+    if (rept->numdone == rept->numrept) {
+	size_t numcopy = rept->oldbuflen - rept->oldbufpos;
+	if (numcopy > numleft)
+	    numcopy = numleft;
+	memcpy(bufp, &rept->oldbuf[rept->oldbufpos], numcopy);
+	numleft -= numcopy;
+	bufp += numcopy;
+	rept->oldbufpos += numcopy;
+
+	if (rept->oldbufpos == rept->oldbuflen) {
+	    /* Delete lines, then delete rept and clear rept state */
+	    gas_rept_line *cur, *next;
+	    cur = STAILQ_FIRST(&rept->lines);
+	    while (cur) {
+		next = STAILQ_NEXT(cur, link);
+		yasm_xfree(cur->data);
+		yasm_xfree(cur);
+		cur = next;
+	    }
+	    yasm_xfree(rept->oldbuf);
+	    yasm_xfree(rept);
+	    parser_gas->rept = NULL;
+	}
+    }
+
+    while (numleft > 0 && rept->numdone < rept->numrept) {
+	/* Copy from line data to buf */
+	size_t numcopy = rept->line->len - rept->linepos;
+	if (numcopy > numleft)
+	    numcopy = numleft;
+	memcpy(bufp, &rept->line->data[rept->linepos], numcopy);
+	numleft -= numcopy;
+	bufp += numcopy;
+	rept->linepos += numcopy;
+
+	/* Update locations if needed */
+	if (rept->linepos == rept->line->len) {
+	    rept->line = STAILQ_NEXT(rept->line, link);
+	    rept->linepos = 0;
+	}
+	if (rept->line == NULL) {
+	    rept->numdone++;
+	    rept->line = STAILQ_FIRST(&rept->lines);
+	}
+    }
+
+    return (max_size-numleft);
+}
 
 static YYCTYPE *
 fill(yasm_parser_gas *parser_gas, YYCTYPE *cursor)
@@ -85,7 +159,10 @@ fill(yasm_parser_gas *parser_gas, YYCTYPE *cursor)
 		yasm_xfree(s->bot);
 	    s->bot = buf;
 	}
-	if((cnt = yasm_preproc_input(parser_gas->preproc, s->lim,
+	if (parser_gas->rept && parser_gas->rept->ended) {
+	    /* Pull from rept lines instead of preproc */
+	    cnt = rept_input(parser_gas, s->lim, BSIZE);
+	} else if((cnt = yasm_preproc_input(parser_gas->preproc, s->lim,
 				     BSIZE)) == 0) {
 	    s->eof = &s->lim[cnt]; *s->eof++ = '\n';
 	}
@@ -168,14 +245,21 @@ strbuf_append(size_t count, YYCTYPE *cursor, Scanner *s, unsigned long line,
 int
 gas_parser_lex(YYSTYPE *lvalp, yasm_parser_gas *parser_gas)
 {
+    /*@null@*/ gas_rept *rept = parser_gas->rept;
     Scanner *s = &parser_gas->s;
     YYCTYPE *cursor = s->cur;
     size_t count;
     YYCTYPE savech;
+    int linestart;
+    gas_rept_line *new_line;
 
     /* Catch EOF */
     if (s->eof && cursor == s->eof)
 	return 0;
+
+    /* Handle rept */
+    if (rept && !rept->ended)
+	goto rept_directive;
 
     /* Jump to proper "exclusive" states */
     switch (parser_gas->state) {
@@ -276,6 +360,7 @@ scan:
 	'.ident'	{ RETURN(DIR_IDENT); }
 	'.int'		{ RETURN(DIR_INT); }
 	'.lcomm'	{ RETURN(DIR_LCOMM); }
+	'.line'		{ RETURN(DIR_LINE); }
 	'.loc'		{ RETURN(DIR_LOC); }
 	'.long'		{ RETURN(DIR_INT); }
 	'.octa'		{ RETURN(DIR_OCTA); }
@@ -504,4 +589,104 @@ stringconst_scan:
 	    goto stringconst_scan;
 	}
     */
+
+rept_directive:
+    strbuf = yasm_xmalloc(STRBUF_ALLOC_SIZE);
+    strbuf_size = STRBUF_ALLOC_SIZE;
+    count = 0;
+    linestart = 1;
+
+
+rept_scan:
+    SCANINIT();
+
+    /*!re2c
+	[\n;]	{
+	    /* Line ending, save in lines */
+	    new_line = yasm_xmalloc(sizeof(gas_rept_line));
+	    if (cursor == s->eof) {
+		yasm_xfree(strbuf);
+		return 0;
+	    }
+	    strbuf_append(count++, cursor, s, cur_line, s->tok[0]);
+	    new_line->data = strbuf;
+	    new_line->len = count;
+	    STAILQ_INSERT_TAIL(&rept->lines, new_line, link);
+	    /* Allocate new strbuf */
+	    strbuf = yasm_xmalloc(STRBUF_ALLOC_SIZE);
+	    strbuf_size = STRBUF_ALLOC_SIZE;
+	    count = 0;
+	    /* Mark start of line */
+	    linestart = 1;
+	    goto rept_scan;
+	}
+	'.rept'	{
+	    int i;
+	    if (linestart) {
+		/* We don't support nested right now, error */
+		yasm__error(cur_line, N_("nested rept not supported"));
+	    }
+	    for (i=0; i<6; i++)
+		strbuf_append(count++, cursor, s, cur_line, s->tok[i]);
+	    goto rept_scan;
+	}
+	'.endr'	{
+	    if (linestart) {
+		/* We're done, kick off the main lexer */
+		rept->line = STAILQ_FIRST(&rept->lines);
+		if (!rept->line) {
+		    /* Didn't get any intervening data?  Empty repeat, so
+		     * don't even bother.
+		     */
+		    yasm_xfree(strbuf);
+		    yasm_xfree(rept);
+		    parser_gas->rept = NULL;
+		} else {
+		    rept->ended = 1;
+
+		    /* Add .line as first line to get line numbers correct */
+		    new_line = yasm_xmalloc(sizeof(gas_rept_line));
+		    new_line->data = yasm_xmalloc(40);
+		    sprintf(new_line->data, ".line %lu;", rept->startline+1);
+		    new_line->len = strlen(new_line->data);
+		    STAILQ_INSERT_HEAD(&rept->lines, new_line, link);
+
+		    /* Save previous fill buffer */
+		    rept->oldbuf = parser_gas->s.bot;
+		    rept->oldbuflen = s->lim - s->bot;
+		    rept->oldbufpos = cursor - s->bot;
+
+		    /* Reset fill */
+		    s->bot = NULL;
+		    s->tok = NULL;
+		    s->ptr = NULL;
+		    s->cur = NULL;
+		    s->pos = NULL;
+		    s->lim = NULL;
+		    s->top = NULL;
+		    s->eof = NULL;
+		    cursor = NULL;
+		    YYFILL(1);
+		}
+
+		goto scan;
+	    } else {
+		int i;
+		for (i=0; i<6; i++)
+		    strbuf_append(count++, cursor, s, cur_line, s->tok[i]);
+		goto rept_scan;
+	    }
+	}
+
+	any	{
+	    if (cursor == s->eof) {
+		yasm_xfree(strbuf);
+		return 0;
+	    }
+	    strbuf_append(count++, cursor, s, cur_line, s->tok[0]);
+	    linestart = 0;
+	    goto rept_scan;
+	}
+    */
+
 }
