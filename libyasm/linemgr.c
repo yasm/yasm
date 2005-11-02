@@ -105,12 +105,21 @@ yasm_linemap_set(yasm_linemap *linemap, const char *filename,
 
     /* Fill it */
 
-    /* Copy the filename (via shared storage) */
-    copy = yasm__xstrdup(filename);
-    /*@-aliasunique@*/
-    mapping->filename = HAMT_insert(linemap->filenames, copy, copy, &replace,
-				    filename_delete_one);
-    /*@=aliasunique@*/
+    if (!filename) {
+	if (linemap->map->size >= 2)
+	    mapping->filename =
+		linemap->map->vector[linemap->map->size-2].filename;
+	else
+	    filename = "unknown";
+    }
+    if (filename) {
+	/* Copy the filename (via shared storage) */
+	copy = yasm__xstrdup(filename);
+	/*@-aliasunique@*/
+	mapping->filename = HAMT_insert(linemap->filenames, copy, copy,
+					&replace, filename_delete_one);
+	/*@=aliasunique@*/
+    }
 
     mapping->line = linemap->current;
     mapping->file_line = file_line;
