@@ -950,7 +950,8 @@ opt_machine_handler(/*@unused@*/ char *cmd, char *param,
 static int
 opt_warning_handler(char *cmd, /*@unused@*/ char *param, int extra)
 {
-    int enable = 1;	/* is it disabling the warning instead of enabling? */
+    /* is it disabling the warning instead of enabling? */
+    void (*action)(yasm_warn_class wclass) = yasm_warn_enable;
 
     if (extra == 1) {
 	/* -w, disable warnings */
@@ -963,26 +964,22 @@ opt_warning_handler(char *cmd, /*@unused@*/ char *param, int extra)
 
     /* detect no- prefix to disable the warning */
     if (cmd[0] == 'n' && cmd[1] == 'o' && cmd[2] == '-') {
-	enable = 0;
+	action = yasm_warn_disable;
 	cmd += 3;   /* skip past it to get to the warning name */
     }
 
     if (cmd[0] == '\0')
 	/* just -W or -Wno-, so definitely not valid */
 	return 1;
-    else if (strcmp(cmd, "error") == 0) {
-	warning_error = enable;
-    } else if (strcmp(cmd, "unrecognized-char") == 0) {
-	if (enable)
-	    yasm_warn_enable(YASM_WARN_UNREC_CHAR);
-	else
-	    yasm_warn_disable(YASM_WARN_UNREC_CHAR);
-    } else if (strcmp(cmd, "orphan-labels") == 0) {
-	if (enable)
-	    yasm_warn_enable(YASM_WARN_ORPHAN_LABEL);
-	else
-	    yasm_warn_disable(YASM_WARN_ORPHAN_LABEL);
-    } else
+    else if (strcmp(cmd, "error") == 0)
+	warning_error = (action == yasm_warn_enable);
+    else if (strcmp(cmd, "unrecognized-char") == 0)
+	action(YASM_WARN_UNREC_CHAR);
+    else if (strcmp(cmd, "orphan-labels") == 0)
+	action(YASM_WARN_ORPHAN_LABEL);
+    else if (strcmp(cmd, "uninit-contents") == 0)
+	action(YASM_WARN_UNINIT_CONTENTS);
+    else
 	return 1;
 
     return 0;

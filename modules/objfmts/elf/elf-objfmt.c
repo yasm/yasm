@@ -439,7 +439,7 @@ elf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     /* Warn that gaps are converted to 0 and write out the 0's. */
     if (gap) {
 	unsigned long left;
-	yasm__warning(YASM_WARN_GENERAL, bc->line,
+	yasm__warning(YASM_WARN_UNINIT_CONTENTS, bc->line,
 	    N_("uninitialized space declared in code/data section: zeroing"));
 	/* Write out in chunks */
 	memset(buf, 0, 256);
