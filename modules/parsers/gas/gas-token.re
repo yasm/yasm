@@ -334,60 +334,64 @@ scan:
 	">>"			{ RETURN(RIGHT_OP); }
 	"<"			{ RETURN(LEFT_OP); }
 	">"			{ RETURN(RIGHT_OP); }
-	[-+|^!*&/~$():;@=,]	{ RETURN(s->tok[0]); }
+	[-+|^!*&/~$():@=,]	{ RETURN(s->tok[0]); }
+	";"	{
+	    parser_gas->state = INITIAL;
+	    RETURN(s->tok[0]);
+	}
 
 	/* arch-independent directives */
-	'.2byte'	{ RETURN(DIR_2BYTE); }
-	'.4byte'	{ RETURN(DIR_4BYTE); }
-	'.8byte'	{ RETURN(DIR_QUAD); }
-	'.align'	{ RETURN(DIR_ALIGN); }
-	'.ascii'	{ RETURN(DIR_ASCII); }
-	'.asciz'	{ RETURN(DIR_ASCIZ); }
-	'.balign'	{ RETURN(DIR_BALIGN); }
-	'.bss'		{ RETURN(DIR_BSS); }
-	'.byte'		{ RETURN(DIR_BYTE); }
-	'.comm'		{ RETURN(DIR_COMM); }
-	'.data'		{ RETURN(DIR_DATA); }
-	'.double'	{ RETURN(DIR_DOUBLE); }
-	'.endr'		{ RETURN(DIR_ENDR); }
-	'.equ'		{ RETURN(DIR_EQU); }
-	'.extern'	{ RETURN(DIR_EXTERN); }
-	'.file'		{ RETURN(DIR_FILE); }
-	'.float'	{ RETURN(DIR_FLOAT); }
-	'.global'	{ RETURN(DIR_GLOBAL); }
-	'.globl'	{ RETURN(DIR_GLOBAL); }
-	'.hword'	{ RETURN(DIR_SHORT); }
-	'.ident'	{ RETURN(DIR_IDENT); }
-	'.int'		{ RETURN(DIR_INT); }
-	'.lcomm'	{ RETURN(DIR_LCOMM); }
-	'.line'		{ RETURN(DIR_LINE); }
-	'.loc'		{ RETURN(DIR_LOC); }
-	'.long'		{ RETURN(DIR_INT); }
-	'.octa'		{ RETURN(DIR_OCTA); }
-	'.org'		{ RETURN(DIR_ORG); }
-	'.p2align'	{ RETURN(DIR_P2ALIGN); }
-	'.rept'		{ RETURN(DIR_REPT); }
+	'.2byte'	{ parser_gas->state = INSTDIR; RETURN(DIR_2BYTE); }
+	'.4byte'	{ parser_gas->state = INSTDIR; RETURN(DIR_4BYTE); }
+	'.8byte'	{ parser_gas->state = INSTDIR; RETURN(DIR_QUAD); }
+	'.align'	{ parser_gas->state = INSTDIR; RETURN(DIR_ALIGN); }
+	'.ascii'	{ parser_gas->state = INSTDIR; RETURN(DIR_ASCII); }
+	'.asciz'	{ parser_gas->state = INSTDIR; RETURN(DIR_ASCIZ); }
+	'.balign'	{ parser_gas->state = INSTDIR; RETURN(DIR_BALIGN); }
+	'.bss'		{ parser_gas->state = INSTDIR; RETURN(DIR_BSS); }
+	'.byte'		{ parser_gas->state = INSTDIR; RETURN(DIR_BYTE); }
+	'.comm'		{ parser_gas->state = INSTDIR; RETURN(DIR_COMM); }
+	'.data'		{ parser_gas->state = INSTDIR; RETURN(DIR_DATA); }
+	'.double'	{ parser_gas->state = INSTDIR; RETURN(DIR_DOUBLE); }
+	'.endr'		{ parser_gas->state = INSTDIR; RETURN(DIR_ENDR); }
+	'.equ'		{ parser_gas->state = INSTDIR; RETURN(DIR_EQU); }
+	'.extern'	{ parser_gas->state = INSTDIR; RETURN(DIR_EXTERN); }
+	'.file'		{ parser_gas->state = INSTDIR; RETURN(DIR_FILE); }
+	'.float'	{ parser_gas->state = INSTDIR; RETURN(DIR_FLOAT); }
+	'.global'	{ parser_gas->state = INSTDIR; RETURN(DIR_GLOBAL); }
+	'.globl'	{ parser_gas->state = INSTDIR; RETURN(DIR_GLOBAL); }
+	'.hword'	{ parser_gas->state = INSTDIR; RETURN(DIR_SHORT); }
+	'.ident'	{ parser_gas->state = INSTDIR; RETURN(DIR_IDENT); }
+	'.int'		{ parser_gas->state = INSTDIR; RETURN(DIR_INT); }
+	'.lcomm'	{ parser_gas->state = INSTDIR; RETURN(DIR_LCOMM); }
+	'.line'		{ parser_gas->state = INSTDIR; RETURN(DIR_LINE); }
+	'.loc'		{ parser_gas->state = INSTDIR; RETURN(DIR_LOC); }
+	'.long'		{ parser_gas->state = INSTDIR; RETURN(DIR_INT); }
+	'.octa'		{ parser_gas->state = INSTDIR; RETURN(DIR_OCTA); }
+	'.org'		{ parser_gas->state = INSTDIR; RETURN(DIR_ORG); }
+	'.p2align'	{ parser_gas->state = INSTDIR; RETURN(DIR_P2ALIGN); }
+	'.rept'		{ parser_gas->state = INSTDIR; RETURN(DIR_REPT); }
 	'.section'	{
 	    parser_gas->state = SECTION_DIRECTIVE;
 	    RETURN(DIR_SECTION);
 	}
-	'.set'		{ RETURN(DIR_EQU); }
-	'.short'	{ RETURN(DIR_SHORT); }
-	'.single'	{ RETURN(DIR_FLOAT); }
-	'.size'		{ RETURN(DIR_SIZE); }
-	'.skip'		{ RETURN(DIR_SKIP); }
-	'.sleb128'	{ RETURN(DIR_SLEB128); }
-	'.space'	{ RETURN(DIR_SKIP); }
-	'.string'	{ RETURN(DIR_ASCIZ); }
-	'.text'		{ RETURN(DIR_TEXT); }
-	'.tfloat'	{ RETURN(DIR_TFLOAT); }
-	'.type'		{ RETURN(DIR_TYPE); }
-	'.quad'		{ RETURN(DIR_QUAD); }
-	'.uleb128'	{ RETURN(DIR_ULEB128); }
-	'.value'	{ RETURN(DIR_VALUE); }
-	'.weak'		{ RETURN(DIR_WEAK); }
-	'.word'		{ RETURN(DIR_WORD); }
-	'.zero'		{ RETURN(DIR_ZERO); }
+	'.set'		{ parser_gas->state = INSTDIR; RETURN(DIR_EQU); }
+	'.short'	{ parser_gas->state = INSTDIR; RETURN(DIR_SHORT); }
+	'.single'	{ parser_gas->state = INSTDIR; RETURN(DIR_FLOAT); }
+	'.size'		{ parser_gas->state = INSTDIR; RETURN(DIR_SIZE); }
+	'.skip'		{ parser_gas->state = INSTDIR; RETURN(DIR_SKIP); }
+	'.sleb128'	{ parser_gas->state = INSTDIR; RETURN(DIR_SLEB128); }
+	'.space'	{ parser_gas->state = INSTDIR; RETURN(DIR_SKIP); }
+	'.string'	{ parser_gas->state = INSTDIR; RETURN(DIR_ASCIZ); }
+	'.text'		{ parser_gas->state = INSTDIR; RETURN(DIR_TEXT); }
+	'.tfloat'	{ parser_gas->state = INSTDIR; RETURN(DIR_TFLOAT); }
+	'.type'		{ parser_gas->state = INSTDIR; RETURN(DIR_TYPE); }
+	'.quad'		{ parser_gas->state = INSTDIR; RETURN(DIR_QUAD); }
+	'.uleb128'	{ parser_gas->state = INSTDIR; RETURN(DIR_ULEB128); }
+	'.value'	{ parser_gas->state = INSTDIR; RETURN(DIR_VALUE); }
+	'.weak'		{ parser_gas->state = INSTDIR; RETURN(DIR_WEAK); }
+	'.word'		{ parser_gas->state = INSTDIR; RETURN(DIR_WORD); }
+	'.zero'		{ parser_gas->state = INSTDIR; RETURN(DIR_ZERO); }
 
 	/* label or maybe directive */
 	[.][a-zA-Z0-9_$.]* {
@@ -432,22 +436,41 @@ scan:
 	    RETURN(REG);
 	}
 
+	/* label */
+	[a-zA-Z][a-zA-Z0-9_$.]* ws* ':' {
+	    /* strip off colon and any whitespace */
+	    count = TOKLEN-1;
+	    while (s->tok[count] == ' ' || s->tok[count] == '\t'
+		   || s->tok[count] == '\r')
+		count--;
+	    /* Just an identifier, return as such. */
+	    lvalp->str_val = yasm__xstrndup(s->tok, count);
+	    RETURN(LABEL);
+	}
+
 	/* identifier that may be an instruction, etc. */
 	[a-zA-Z][a-zA-Z0-9_$.]* {
-	    savech = s->tok[TOKLEN];
-	    s->tok[TOKLEN] = '\0';
-	    if (yasm_arch_parse_check_insn(parser_gas->arch, lvalp->arch_data,
-					   s->tok, cur_line)) {
+	    /* Can only be an instruction/prefix when not inside an
+	     * instruction or directive.
+	     */
+	    if (parser_gas->state != INSTDIR) {
+		savech = s->tok[TOKLEN];
+		s->tok[TOKLEN] = '\0';
+		if (yasm_arch_parse_check_insn(parser_gas->arch,
+					       lvalp->arch_data, s->tok,
+					       cur_line)) {
+		    s->tok[TOKLEN] = savech;
+		    parser_gas->state = INSTDIR;
+		    RETURN(INSN);
+		}
+		if (yasm_arch_parse_check_prefix(parser_gas->arch,
+						 lvalp->arch_data, s->tok,
+						 cur_line)) {
+		    s->tok[TOKLEN] = savech;
+		    RETURN(PREFIX);
+		}
 		s->tok[TOKLEN] = savech;
-		RETURN(INSN);
 	    }
-	    if (yasm_arch_parse_check_prefix(parser_gas->arch,
-					     lvalp->arch_data, s->tok,
-					     cur_line)) {
-		s->tok[TOKLEN] = savech;
-		RETURN(PREFIX);
-	    }
-	    s->tok[TOKLEN] = savech;
 	    /* Just an identifier, return as such. */
 	    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
 	    RETURN(ID);

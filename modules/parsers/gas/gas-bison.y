@@ -102,7 +102,7 @@ static void gas_parser_directive
 %token <int_info> RESERVE_SPACE
 %token <arch_data> INSN PREFIX REG REGGROUP SEGREG TARGETMOD
 %token LEFT_OP RIGHT_OP
-%token <str_val> ID DIR_ID
+%token <str_val> ID DIR_ID LABEL
 %token LINE
 %token DIR_2BYTE DIR_4BYTE DIR_ALIGN DIR_ASCII DIR_ASCIZ DIR_BALIGN
 %token DIR_BSS DIR_BYTE DIR_COMM DIR_DATA DIR_DOUBLE DIR_ENDR DIR_EXTERN
@@ -167,6 +167,14 @@ lineexp: instr
     }
     | label_id ':' instr	{
 	$$ = $3;
+	define_label(parser_gas, $1, 0);
+    }
+    | LABEL		{
+	$$ = (yasm_bytecode *)NULL;
+	define_label(parser_gas, $1, 0);
+    }
+    | LABEL instr	{
+	$$ = $2;
 	define_label(parser_gas, $1, 0);
     }
     /* Line directive */
@@ -716,16 +724,6 @@ expr_id: label_id
     | DIR_DATA	{ $$ = yasm__xstrdup(".data"); }
     | DIR_TEXT	{ $$ = yasm__xstrdup(".text"); }
     | DIR_BSS	{ $$ = yasm__xstrdup(".bss"); }
-    | INSN	{
-	/* Used as an identifier, grab token to make it one! */
-	$$ = yasm__xstrndup(parser_gas->s.tok,
-			    (size_t)(parser_gas->s.cur - parser_gas->s.tok));
-    }
-    | PREFIX	{
-	/* Used as an identifier, grab token to make it one! */
-	$$ = yasm__xstrndup(parser_gas->s.tok,
-			    (size_t)(parser_gas->s.cur - parser_gas->s.tok));
-    }
 ;
 
 label_id: ID | DIR_ID;
