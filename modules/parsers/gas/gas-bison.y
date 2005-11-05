@@ -663,13 +663,13 @@ operand: memaddr	    { $$ = yasm_operand_create_mem($1); }
 	unsigned long reg =
 	    yasm_arch_reggroup_get_reg(parser_gas->arch, $1[0],
 				       yasm_intnum_get_uint($3));
-	yasm_intnum_destroy($3);
 	if (reg == 0) {
 	    yasm__error(cur_line, N_("bad register index `%u'"),
 			yasm_intnum_get_uint($3));
 	    $$ = yasm_operand_create_reg($1[0]);
 	} else
 	    $$ = yasm_operand_create_reg(reg);
+	yasm_intnum_destroy($3);
     }
     | '$' expr		    { $$ = yasm_operand_create_imm($2); }
     | '*' REG		    {
@@ -762,7 +762,7 @@ gas_get_section(yasm_parser_gas *parser_gas, char *name,
     yasm_section *new_section;
 
     yasm_vps_initialize(&vps);
-    vp = yasm_vp_create(name, NULL);
+    vp = yasm_vp_create(yasm__xstrdup(name), NULL);
     yasm_vps_append(&vps, vp);
 
     if (!builtin) {
