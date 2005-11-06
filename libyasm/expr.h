@@ -169,16 +169,29 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
 #define yasm_expr_simplify(e, cbd) \
     yasm_expr__level_tree(e, 1, 1, cbd, NULL, NULL, NULL)
 
+/** Relocation actions for yasm_expr_extract_symrec(). */
+typedef enum yasm_symrec_relocate_action {
+    YASM_SYMREC_REPLACE_ZERO = 0,   /**< Replace the symbol with 0 */
+    YASM_SYMREC_REPLACE_VALUE,	    /**< Replace with symbol's value (offset)
+				     * if symbol is a label.
+				     */
+    YASM_SYMREC_REPLACE_VALUE_IF_LOCAL	/**< Replace with symbol's value only
+					 * if symbol is label and declared
+					 * local.
+					 */
+} yasm_symrec_relocate_action;
+
 /** Extract a single symbol out of an expression.  Replaces it with 0, or
  * optionally the symbol's value (if it's a label).
- * \param ep		expression (pointer to)
- * \param relocate	replace symbol with value (if label) if nonzero
- * \param calc_bc_dist	bytecode distance-calculation function
+ * \param ep		    expression (pointer to)
+ * \param relocate_action   replacement action to take on symbol in expr
+ * \param calc_bc_dist	    bytecode distance-calculation function
  * \return NULL if unable to extract a symbol (too complex of expr, none
  *         present, etc); otherwise returns the extracted symbol.
  */
 /*@dependent@*/ /*@null@*/ yasm_symrec *yasm_expr_extract_symrec
-    (yasm_expr **ep, int relocate, yasm_calc_bc_dist_func calc_bc_dist);
+    (yasm_expr **ep, yasm_symrec_relocate_action relocate_action,
+     yasm_calc_bc_dist_func calc_bc_dist);
 
 /** Remove the SEG unary operator if present, leaving the lower level
  * expression.

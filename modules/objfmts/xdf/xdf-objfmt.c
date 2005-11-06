@@ -208,7 +208,8 @@ xdf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     wrt_expr = yasm_expr_extract_wrt(ep);
 
     /* Handle integer expressions, with relocation if necessary */
-    sym = yasm_expr_extract_symrec(ep, 0, yasm_common_calc_bc_dist);
+    sym = yasm_expr_extract_symrec(ep, YASM_SYMREC_REPLACE_ZERO,
+				   yasm_common_calc_bc_dist);
     if (sym) {
 	xdf_reloc *reloc;
 
@@ -222,7 +223,8 @@ xdf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	if (seg)
 	    reloc->type = XDF_RELOC_SEG;
 	else if (wrt_expr) {
-	    reloc->base = yasm_expr_extract_symrec(&wrt_expr, 0,
+	    reloc->base = yasm_expr_extract_symrec(&wrt_expr,
+						   YASM_SYMREC_REPLACE_ZERO, 
 						   yasm_common_calc_bc_dist);
 	    if (!reloc->base) {
 		yasm__error(bc->line, N_("WRT expression too complex"));

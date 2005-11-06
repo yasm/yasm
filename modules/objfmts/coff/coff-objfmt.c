@@ -392,8 +392,13 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     }
 
     /* Handle integer expressions, with relocation if necessary */
-    sym = yasm_expr_extract_symrec(ep, !objfmt_coff->win64,
-				   yasm_common_calc_bc_dist);
+    if (objfmt_coff->win64)
+	sym = yasm_expr_extract_symrec(ep, YASM_SYMREC_REPLACE_ZERO,
+				       yasm_common_calc_bc_dist);
+    else
+	sym = yasm_expr_extract_symrec(ep, YASM_SYMREC_REPLACE_VALUE,
+				       yasm_common_calc_bc_dist);
+
     if (sym) {
 	unsigned long addr;
 	coff_reloc *reloc;

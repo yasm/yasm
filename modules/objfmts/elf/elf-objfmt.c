@@ -317,7 +317,7 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     /* Check for a WRT relocation */
     wrt_expr = yasm_expr_extract_wrt(ep);
     if (wrt_expr) {
-	wrt = yasm_expr_extract_symrec(&wrt_expr, 0,
+	wrt = yasm_expr_extract_symrec(&wrt_expr, YASM_SYMREC_REPLACE_ZERO,
 				       yasm_common_calc_bc_dist);
 	yasm_expr_destroy(wrt_expr);
 	if (!wrt) {
@@ -327,10 +327,14 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     }
 
     /* Handle integer expressions, with relocation if necessary */
-    sym = yasm_expr_extract_symrec(ep,
-				   !(wrt == info->objfmt_elf->dotdotsym ||
-				     (wrt && elf_is_wrt_sym_relative(wrt))),
-				   yasm_common_calc_bc_dist);
+    if (wrt == info->objfmt_elf->dotdotsym
+	|| (wrt && elf_is_wrt_sym_relative(wrt)))
+	sym = yasm_expr_extract_symrec(ep, YASM_SYMREC_REPLACE_ZERO,
+				       yasm_common_calc_bc_dist);
+    else
+	sym = yasm_expr_extract_symrec(ep, YASM_SYMREC_REPLACE_VALUE_IF_LOCAL,
+				       yasm_common_calc_bc_dist);
+
     if (sym) {
 	yasm_sym_vis vis;
 
@@ -339,8 +343,7 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	    wrt = NULL;
 	else if (wrt && elf_is_wrt_sym_relative(wrt))
 	    ;
-	else if (!(vis & (YASM_SYM_COMMON|YASM_SYM_EXTERN)))
-	{
+	else if (vis == YASM_SYM_LOCAL) {
 	    yasm_bytecode *label_precbc;
 	    /* Local symbols need relocation to their section's start */
 	    if (yasm_symrec_get_label(sym, &label_precbc)) {

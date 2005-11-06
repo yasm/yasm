@@ -45,5 +45,7 @@ EXTRA_DIST += modules/objfmts/elf/tests/elfvisibility.errwarn
 EXTRA_DIST += modules/objfmts/elf/tests/elfvisibility.hex
 
 EXTRA_DIST += modules/objfmts/elf/tests/amd64/Makefile.inc
+EXTRA_DIST += modules/objfmts/elf/tests/gas64/Makefile.inc
 
 include modules/objfmts/elf/tests/amd64/Makefile.inc
+include modules/objfmts/elf/tests/gas64/Makefile.inc
