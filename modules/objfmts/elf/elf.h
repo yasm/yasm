@@ -442,7 +442,7 @@ void elf_symtab_set_nonzero(elf_symtab_entry	*entry,
 			    elf_symbol_binding	 bind,
 			    elf_symbol_type	 type,
 			    struct yasm_expr	*size,
-			    elf_address		 value);
+			    elf_address		*value);
 void elf_sym_set_visibility(elf_symtab_entry    *entry,
                             elf_symbol_vis       vis);
 void elf_sym_set_type(elf_symtab_entry *entry, elf_symbol_type type);

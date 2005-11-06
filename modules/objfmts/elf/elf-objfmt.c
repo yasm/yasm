@@ -89,7 +89,7 @@ static elf_symtab_entry *
 elf_objfmt_symtab_append(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym,
 			 elf_section_index sectidx, elf_symbol_binding bind,
 			 elf_symbol_type type, elf_symbol_vis vis,
-                         yasm_expr *size, elf_address value)
+                         yasm_expr *size, elf_address *value)
 {
     /* Only append to table if not already appended */
     elf_symtab_entry *entry = yasm_symrec_get_data(sym, &elf_symrec_data);
@@ -151,7 +151,7 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
 
     if (precbc)
 	value = precbc->offset + precbc->len;
-    elf_symtab_set_nonzero(entry, sect, 0, 0, 0, NULL, value);
+    elf_symtab_set_nonzero(entry, sect, 0, 0, 0, NULL, &value);
 
     return 1;
 }
@@ -189,7 +189,8 @@ elf_objfmt_create_common(const char *in_filename, yasm_object *object,
     entry = elf_symtab_entry_create(
 	elf_strtab_append_str(objfmt_elf->strtab, in_filename), filesym);
     yasm_symrec_add_data(filesym, &elf_symrec_data, entry);
-    elf_symtab_set_nonzero(entry, NULL, SHN_ABS, STB_LOCAL, STT_FILE, NULL, 0);
+    elf_symtab_set_nonzero(entry, NULL, SHN_ABS, STB_LOCAL, STT_FILE, NULL,
+			   NULL);
     elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
 
     /* FIXME: misuse of NULL bytecode */
@@ -922,7 +923,7 @@ elf_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
 
     sym = yasm_symtab_declare(objfmt_elf->symtab, name, YASM_SYM_EXTERN, line);
     elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_GLOBAL,
-                             0, STV_DEFAULT, NULL, 0);
+                             0, STV_DEFAULT, NULL, NULL);
 
     if (objext_valparams) {
 	yasm_valparam *vp = yasm_vps_first(objext_valparams);
@@ -987,7 +988,7 @@ elf_objfmt_global_declare(yasm_objfmt *objfmt, const char *name,
     }
 
     elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_GLOBAL,
-                             type, vis, size, 0);
+                             type, vis, size, NULL);
 
     return sym;
 }
@@ -1031,7 +1032,7 @@ elf_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
     }
 
     elf_objfmt_symtab_append(objfmt_elf, sym, SHN_COMMON, STB_GLOBAL,
-                             0, STV_DEFAULT, size, addralign);
+                             0, STV_DEFAULT, size, &addralign);
 
     return sym;
 }
@@ -1104,7 +1105,7 @@ elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	sym = yasm_symtab_declare(objfmt_elf->symtab, symname, YASM_SYM_GLOBAL,
 				  line);
 	elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_WEAK,
-				 0, STV_DEFAULT, NULL, 0);
+				 0, STV_DEFAULT, NULL, NULL);
     } else
 	return 1;	/* unrecognized */
 

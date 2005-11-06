@@ -475,7 +475,7 @@ void elf_symtab_set_nonzero(elf_symtab_entry *entry,
 			    elf_symbol_binding bind,
 			    elf_symbol_type type,
 			    yasm_expr *xsize,
-			    elf_address value)
+			    elf_address *value)
 {
     if (!entry)
 	yasm_internal_error("NULL entry");
@@ -484,7 +484,7 @@ void elf_symtab_set_nonzero(elf_symtab_entry *entry,
     if (bind) entry->bind = bind;
     if (type) entry->type = type;
     if (xsize) entry->xsize = xsize;
-    if (value) entry->value = value;
+    if (value) entry->value = *value;
 }
 
 void
