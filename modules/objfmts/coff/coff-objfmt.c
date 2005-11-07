@@ -1241,6 +1241,37 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 }
 
 static void
+coff_objfmt_section_align(yasm_objfmt *objfmt, yasm_section *sect,
+			  unsigned long align, unsigned long line)
+{
+    yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
+    /*@dependent@*/ /*@null@*/ coff_section_data *csd;
+
+    csd = yasm_section_get_data(sect, &coff_section_data_cb);
+    if (!csd)
+	yasm_internal_error(N_("NULL coff section data in section_align"));
+
+    if (!objfmt_coff->win32) {
+	yasm__warning(YASM_WARN_GENERAL, line,
+		      N_("COFF does not support section alignment"));
+	return;
+    }
+
+    /* Check to see if alignment is supported size */
+    if (align > 8192) {
+	yasm__error(line, N_("Win32 does not support alignments > 8192"));
+	return;
+    }
+
+    /* Convert alignment into flags setting */
+    csd->flags &= ~COFF_STYP_ALIGN_MASK;
+    while (align != 0) {
+	csd->flags += 1<<COFF_STYP_ALIGN_SHIFT;
+	align >>= 1;
+    }
+}
+
+static void
 coff_section_data_destroy(void *data)
 {
     yasm_xfree(data);
@@ -1430,6 +1461,7 @@ yasm_objfmt_module yasm_coff_LTX_objfmt = {
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_section_switch,
+    coff_objfmt_section_align,
     coff_objfmt_extern_declare,
     coff_objfmt_global_declare,
     coff_objfmt_common_declare,
@@ -1449,6 +1481,7 @@ yasm_objfmt_module yasm_win32_LTX_objfmt = {
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_section_switch,
+    coff_objfmt_section_align,
     coff_objfmt_extern_declare,
     coff_objfmt_global_declare,
     coff_objfmt_common_declare,
@@ -1468,6 +1501,7 @@ yasm_objfmt_module yasm_win64_LTX_objfmt = {
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_section_switch,
+    coff_objfmt_section_align,
     coff_objfmt_extern_declare,
     coff_objfmt_global_declare,
     coff_objfmt_common_declare,

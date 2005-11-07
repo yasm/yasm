@@ -913,6 +913,20 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     return retval;
 }
 
+static void
+elf_objfmt_section_align(/*@unused@*/ yasm_objfmt *objfmt, yasm_section *sect,
+			 unsigned long align, unsigned long line)
+{
+    /*@dependent@*/ /*@null@*/ elf_secthead *esd;
+
+    esd = yasm_section_get_data(sect, &elf_section_data);
+
+    if (!esd)
+	yasm_internal_error(N_("NULL elf section data in section_align"));
+
+    elf_secthead_set_align(esd, yasm_intnum_create_uint(align));
+}
+
 static yasm_symrec *
 elf_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
 			  /*@null@*/ yasm_valparamhead *objext_valparams,
@@ -1133,6 +1147,7 @@ yasm_objfmt_module yasm_elf_LTX_objfmt = {
     elf_objfmt_output,
     elf_objfmt_destroy,
     elf_objfmt_section_switch,
+    elf_objfmt_section_align,
     elf_objfmt_extern_declare,
     elf_objfmt_global_declare,
     elf_objfmt_common_declare,
@@ -1151,6 +1166,7 @@ yasm_objfmt_module yasm_elf32_LTX_objfmt = {
     elf_objfmt_output,
     elf_objfmt_destroy,
     elf_objfmt_section_switch,
+    elf_objfmt_section_align,
     elf_objfmt_extern_declare,
     elf_objfmt_global_declare,
     elf_objfmt_common_declare,
@@ -1169,6 +1185,7 @@ yasm_objfmt_module yasm_elf64_LTX_objfmt = {
     elf_objfmt_output,
     elf_objfmt_destroy,
     elf_objfmt_section_switch,
+    elf_objfmt_section_align,
     elf_objfmt_extern_declare,
     elf_objfmt_global_declare,
     elf_objfmt_common_declare,

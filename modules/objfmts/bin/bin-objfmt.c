@@ -445,6 +445,27 @@ bin_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     } else
 	return NULL;
 }
+static void
+bin_objfmt_section_align(yasm_objfmt *objfmt, yasm_section *sect,
+			 unsigned long align, unsigned long line)
+{
+    /*@only@*/ unsigned long *oldalign;
+
+    if (strcmp(yasm_section_get_name(sect), ".text") == 0) {
+	yasm__error(line, N_("cannot specify an alignment to the `%s' section"),
+		    ".text");
+	return;
+    }
+
+    oldalign = yasm_section_get_data(sect, &bin_section_data_callback);
+    if (oldalign)
+	*oldalign = align;
+    else {
+	unsigned long *data = yasm_xmalloc(sizeof(unsigned long));
+	*data = align;
+	yasm_section_add_data(sect, &bin_section_data_callback, data);
+    }
+}
 
 static void
 bin_section_data_destroy(/*@only@*/ void *d)
@@ -568,6 +589,7 @@ yasm_objfmt_module yasm_bin_LTX_objfmt = {
     bin_objfmt_output,
     bin_objfmt_destroy,
     bin_objfmt_section_switch,
+    bin_objfmt_section_align,
     bin_objfmt_extern_declare,
     bin_objfmt_global_declare,
     bin_objfmt_common_declare,

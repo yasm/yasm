@@ -841,6 +841,31 @@ gas_parser_align(yasm_parser_gas *parser_gas, yasm_valparamhead *valparams,
 				    yasm_expr_int(yasm_intnum_create_uint(1)),
 				    yasm_expr_expr(boundval), cur_line);
 
+    /* If .align is the first bytecode in the section, it's really specifying
+     * section alignment.
+     */
+    if (parser_gas->prev_bc
+	== yasm_section_bcs_first(parser_gas->cur_section)) {
+	yasm_intnum *boundintn = yasm_expr_get_intnum(&boundval, NULL);
+	unsigned long boundint;
+	if (!boundintn) {
+	    yasm__error(cur_line, N_("section alignment not constnat"));
+	    return NULL;
+	}
+	boundint = yasm_intnum_get_uint(boundintn);
+
+	/* Alignments must be a power of two. */
+	if ((boundint & (boundint - 1)) != 0) {
+	    yasm__error(cur_line,
+			N_("section alignment is not a power of two"));
+	    return NULL;
+	}
+
+	yasm_objfmt_section_align(parser_gas->objfmt, parser_gas->cur_section,
+				  boundint, cur_line);
+	return NULL;
+    }
+
     return yasm_bc_create_align(boundval, fillval, maxskipval,
 				parser_gas->code_section ?
 				    yasm_arch_get_fill(parser_gas->arch) : NULL,

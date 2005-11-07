@@ -133,6 +133,15 @@ dbg_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     }
 }
 
+static void
+dbg_objfmt_section_align(yasm_objfmt *objfmt, yasm_section *sect,
+			 unsigned long align, unsigned long line)
+{
+    yasm_objfmt_dbg *objfmt_dbg = (yasm_objfmt_dbg *)objfmt;
+    fprintf(objfmt_dbg->dbgfile, "section_align(\"%s\", %lu, %lu)\n",
+	    yasm_section_get_name(sect), align, line);
+}
+
 static yasm_symrec *
 dbg_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name,
 			  /*@unused@*/ /*@null@*/
@@ -225,6 +234,7 @@ yasm_objfmt_module yasm_dbg_LTX_objfmt = {
     dbg_objfmt_output,
     dbg_objfmt_destroy,
     dbg_objfmt_section_switch,
+    dbg_objfmt_section_align,
     dbg_objfmt_extern_declare,
     dbg_objfmt_global_declare,
     dbg_objfmt_common_declare,

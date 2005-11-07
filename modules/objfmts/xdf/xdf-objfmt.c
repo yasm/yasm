@@ -776,6 +776,24 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		      N_("section flags ignored on section redeclaration"));
     return retval;
 }
+static void
+xdf_objfmt_section_align(yasm_objfmt *objfmt, yasm_section *sect,
+			 unsigned long align, unsigned long line)
+{
+    /*@dependent@*/ /*@null@*/ xdf_section_data *xsd;
+
+    xsd = yasm_section_get_data(sect, &xdf_section_data_cb);
+    if (!xsd)
+	yasm_internal_error(N_("NULL xdf section data in section_align"));
+
+    /* Check to see if alignment is supported size */
+    if (align > 4096) {
+	yasm__error(line, N_("XDF does not support alignments > 4096"));
+	return;
+    }
+
+    xsd->align = align;
+}
 
 static void
 xdf_section_data_destroy(void *data)
@@ -891,6 +909,7 @@ yasm_objfmt_module yasm_xdf_LTX_objfmt = {
     xdf_objfmt_output,
     xdf_objfmt_destroy,
     xdf_objfmt_section_switch,
+    xdf_objfmt_section_align,
     xdf_objfmt_extern_declare,
     xdf_objfmt_global_declare,
     xdf_objfmt_common_declare,
