@@ -216,7 +216,14 @@ typedef struct x86_insn {
 	/* Override any attempt at address-size override to 16 bits, and never
 	 * generate a prefix.  This is used for the ENTER opcode.
 	 */
-	X86_POSTOP_ADDRESS16
+	X86_POSTOP_ADDRESS16,
+
+	/* Used for 64-bit mov immediate, which can take a sign-extended
+	 * imm32 as well as imm64 values.  The imm32 form is put in the
+	 * second byte of the opcode and its ModRM byte is put in the third
+	 * byte of the opcode.
+	 */
+	X86_POSTOP_SIGNEXT_IMM32
     } postop;
 } x86_insn;
 

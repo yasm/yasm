@@ -51,30 +51,31 @@ RCSID("$Id$");
 #define MOD_Imm8    (1UL<<9)	/* Parameter is included as immediate byte */
 #define MOD_AdSizeR (1UL<<10)	/* Parameter replaces addrsize (jmp only) */
 #define MOD_DOpS64R (1UL<<11)	/* Parameter replaces default 64-bit opersize */
+#define MOD_Op2AddSp (1UL<<12)	/* Parameter is added as "spare" to opcode byte 2 */
 
 /* Modifiers that aren't: these are used with the GAS parser to indicate
  * special cases.
  */
-#define MOD_GasOnly	(1UL<<12)	/* Only available in GAS mode */
-#define MOD_GasIllegal	(1UL<<13)	/* Illegal in GAS mode */
-#define MOD_GasNoRev	(1UL<<14)	/* Don't reverse operands */
-#define MOD_GasSufB	(1UL<<15)	/* GAS B suffix ok */
-#define MOD_GasSufW	(1UL<<16)	/* GAS W suffix ok */
-#define MOD_GasSufL	(1UL<<17)	/* GAS L suffix ok */
-#define MOD_GasSufQ	(1UL<<18)	/* GAS Q suffix ok */
-#define MOD_GasSufS	(1UL<<19)	/* GAS S suffix ok */
-#define MOD_GasSuf_SHIFT 15
-#define MOD_GasSuf_MASK	(0x1FUL<<15)
+#define MOD_GasOnly	(1UL<<13)	/* Only available in GAS mode */
+#define MOD_GasIllegal	(1UL<<14)	/* Illegal in GAS mode */
+#define MOD_GasNoRev	(1UL<<15)	/* Don't reverse operands */
+#define MOD_GasSufB	(1UL<<16)	/* GAS B suffix ok */
+#define MOD_GasSufW	(1UL<<17)	/* GAS W suffix ok */
+#define MOD_GasSufL	(1UL<<18)	/* GAS L suffix ok */
+#define MOD_GasSufQ	(1UL<<19)	/* GAS Q suffix ok */
+#define MOD_GasSufS	(1UL<<20)	/* GAS S suffix ok */
+#define MOD_GasSuf_SHIFT 16
+#define MOD_GasSuf_MASK	(0x1FUL<<16)
 
 /* Modifiers that aren't actually used as modifiers.  Rather, if set, bits
  * 20-27 in the modifier are used as an index into an array.
  * Obviously, only one of these may be set at a time.
  */
-#define MOD_ExtNone (0UL<<28)	/* No extended modifier */
-#define MOD_ExtErr  (1UL<<28)	/* Extended error: index into error strings */
-#define MOD_ExtWarn (2UL<<28)	/* Extended warning: index into warning strs */
-#define MOD_Ext_MASK (0xFUL<<28)
-#define MOD_ExtIndex_SHIFT	20
+#define MOD_ExtNone (0UL<<29)	/* No extended modifier */
+#define MOD_ExtErr  (1UL<<29)	/* Extended error: index into error strings */
+#define MOD_ExtWarn (2UL<<29)	/* Extended warning: index into warning strs */
+#define MOD_Ext_MASK (0x3UL<<29)
+#define MOD_ExtIndex_SHIFT	21
 #define MOD_ExtIndex(indx)	(((unsigned long)(indx))<<MOD_ExtIndex_SHIFT)
 #define MOD_ExtIndex_MASK	(0xFFUL<<MOD_ExtIndex_SHIFT)
 
@@ -152,6 +153,7 @@ RCSID("$Id$");
  *             2 = large imm16/32 that can become a sign-extended imm8.
  *             3 = could become a short opcode mov with bits=64 and a32 prefix
  *             4 = forced 16-bit address size (override ignored, no prefix)
+ *             5 = large imm64 that can become a sign-extended imm32.
  */
 #define OPT_Imm		0x0
 #define OPT_Reg		0x1
@@ -219,6 +221,7 @@ RCSID("$Id$");
 #define OPAP_SImm8Avail	(2UL<<17)
 #define OPAP_ShortMov	(3UL<<17)
 #define OPAP_A16	(4UL<<17)
+#define OPAP_SImm32Avail (5UL<<17)
 #define OPAP_MASK	(7UL<<17)
 
 typedef struct x86_insn_info {
@@ -470,8 +473,12 @@ static const x86_insn_info mov_insn[] = {
       {OPT_Reg|OPS_16|OPA_Op0Add, OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm, 0} },
     { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0xB8, 0, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_Op0Add, OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm, 0} },
-    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0xB8, 0, 0}, 0, 2,
-      {OPT_Reg|OPS_64|OPA_Op0Add, OPT_Imm|OPS_64|OPS_Relaxed|OPA_Imm, 0} },
+    /* 64-bit forced size form */
+    { CPU_Hammer|CPU_64, MOD_GasIllegal, 64, 0, 0, 1, {0xB8, 0, 0}, 0, 2,
+      {OPT_Reg|OPS_64|OPA_Op0Add, OPT_Imm|OPS_64|OPA_Imm, 0} },
+    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0xB8, 0xC7, 0}, 0, 2,
+      {OPT_Reg|OPS_64|OPA_Op0Add,
+       OPT_Imm|OPS_64|OPS_Relaxed|OPA_Imm|OPAP_SImm32Avail, 0} },
     /* Need two sets here, one for strictness on left side, one for right. */
     { CPU_Any, MOD_GasSufB, 0, 0, 0, 1, {0xC6, 0, 0}, 0, 2,
       {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_8|OPA_Imm, 0} },
@@ -833,33 +840,47 @@ static const x86_insn_info lfgss_insn[] = {
 
 /* Arithmetic - general */
 static const x86_insn_info arith_insn[] = {
+    /* Also have forced-size forms to override the optimization */
     { CPU_Any, MOD_Op0Add|MOD_GasSufB, 0, 0, 0, 1, {0x04, 0, 0}, 0, 2,
       {OPT_Areg|OPS_8|OPA_None, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
-    { CPU_Any, MOD_Op0Add|MOD_GasSufW, 16, 0, 0, 1, {0x05, 0, 0}, 0, 2,
-      {OPT_Areg|OPS_16|OPA_None, OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm, 0} },
-    { CPU_386, MOD_Op0Add|MOD_GasSufL, 32, 0, 0, 1, {0x05, 0, 0}, 0, 2,
-      {OPT_Areg|OPS_32|OPA_None, OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm, 0} },
-    { CPU_Hammer|CPU_64, MOD_Op0Add|MOD_GasSufQ, 64, 0, 0, 1, {0x05, 0, 0}, 0,
-      2, {OPT_Areg|OPS_64|OPA_None, OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm, 0} },
+    { CPU_Any, MOD_Op0Add|MOD_GasIllegal, 16, 0, 0, 1, {0x05, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_16|OPA_None, OPT_Imm|OPS_16|OPA_Imm, 0} },
+    { CPU_Any, MOD_Op0Add|MOD_Op2AddSp|MOD_GasSufW, 16, 0, 0, 1,
+      {0x05, 0x83, 0xC0}, 0, 2,
+      {OPT_Areg|OPS_16|OPA_None,
+       OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
+    { CPU_386, MOD_Op0Add|MOD_GasIllegal, 32, 0, 0, 1, {0x05, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_32|OPA_None, OPT_Imm|OPS_32|OPA_Imm, 0} },
+    { CPU_386, MOD_Op0Add|MOD_Op2AddSp|MOD_GasSufL, 32, 0, 0, 1,
+      {0x05, 0x83, 0xC0}, 0, 2,
+      {OPT_Areg|OPS_32|OPA_None,
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
+    { CPU_Hammer|CPU_64, MOD_Op0Add|MOD_GasIllegal, 64, 0, 0, 1, {0x05, 0, 0},
+      0, 2, {OPT_Areg|OPS_64|OPA_None, OPT_Imm|OPS_32|OPA_Imm, 0} },
+    { CPU_Hammer|CPU_64, MOD_Op0Add|MOD_Op2AddSp|MOD_GasSufQ, 64, 0, 0, 1,
+      {0x05, 0x83, 0xC0}, 0,
+      2, {OPT_Areg|OPS_64|OPA_None,
+	  OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
 
+    /* Also have forced-size forms to override the optimization */
     { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasSufB, 0, 0, 0, 1, {0x80, 0, 0}, 0, 2,
       {OPT_RM|OPS_8|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
     { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasSufB, 0, 0, 0, 1, {0x80, 0, 0}, 0, 2,
       {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_8|OPA_Imm, 0} },
     { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasSufW, 16, 0, 0, 1, {0x83, 0, 0}, 0, 2,
       {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_8|OPA_SImm, 0} },
+    { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasIllegal, 16, 0, 0, 1, {0x81, 0, 0}, 0,
+      2, {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_16|OPA_Imm, 0} },
     { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasSufW, 16, 0, 0, 1, {0x81, 0x83, 0}, 0,
       2, {OPT_RM|OPS_16|OPA_EA,
 	  OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
-    { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasSufW, 16, 0, 0, 1, {0x81, 0, 0}, 0, 2,
-      {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_16|OPA_Imm, 0} },
     { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasSufL, 32, 0, 0, 1, {0x83, 0, 0}, 0, 2,
       {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_8|OPA_SImm, 0} },
+    { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasIllegal, 32, 0, 0, 1, {0x81, 0, 0}, 0,
+      2, {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_32|OPA_Imm, 0} },
     { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasSufL, 32, 0, 0, 1, {0x81, 0x83, 0}, 0,
       2, {OPT_RM|OPS_32|OPA_EA,
 	  OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
-    { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasSufL, 32, 0, 0, 1, {0x81, 0, 0}, 0, 2,
-      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_32|OPA_Imm, 0} },
     { CPU_Hammer|CPU_64, MOD_Gap0|MOD_SpAdd|MOD_GasSufQ, 64, 0, 0, 1,
       {0x83, 0, 0}, 0, 2,
       {OPT_RM|OPS_64|OPA_EA, OPT_Imm|OPS_8|OPA_SImm, 0} },
@@ -2646,6 +2667,10 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     }
     if (info->modifiers & MOD_DOpS64R) {
 	insn->def_opersize_64 = (unsigned char)(mod_data & 0xFF);
+	mod_data >>= 8;
+    }
+    if (info->modifiers & MOD_Op2AddSp) {
+	insn->opcode.opcode[2] += (unsigned char)(mod_data & 0xFF)<<3;
 	/*mod_data >>= 8;*/
     }
 
@@ -2789,6 +2814,9 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		    break;
 		case OPAP_A16:
 		    insn->postop = X86_POSTOP_ADDRESS16;
+		    break;
+		case OPAP_SImm32Avail:
+		    insn->postop = X86_POSTOP_SIGNEXT_IMM32;
 		    break;
 		default:
 		    yasm_internal_error(

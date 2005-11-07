@@ -107,7 +107,7 @@ long_mode:
 
         BITS 64
 
-	mov rax, test_code	; jmp to testcode
+	mov rax, qword test_code	; jmp to testcode
 	jmp [rax]
 	
 	

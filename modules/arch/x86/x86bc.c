@@ -624,49 +624,85 @@ x86_bc_insn_resolve(yasm_bytecode *bc, int save,
 
 	    /* TODO: check imm->len vs. sized len from expr? */
 
-	    /* Handle signext_imm8 postop special-casing */
-	    if (insn->postop == X86_POSTOP_SIGNEXT_IMM8 && temp &&
-		(num = yasm_expr_get_intnum(&temp, calc_bc_dist))) {
-		if (num) {
-		    long val = yasm_intnum_get_int(num);
-		    if (val >= -128 && val <= 127) {
-			/* We can use the sign-extended byte form: shorten
-			 * the immediate length to 1.
-			 */
-			immlen = 1;
-			if (save) {
-			    /* Make the byte form permanent. */
-			    insn->opcode.opcode[0] = insn->opcode.opcode[1];
-			    imm->len = 1;
+	    num = yasm_expr_get_intnum(&temp, calc_bc_dist);
+
+	    switch (insn->postop) {
+		case X86_POSTOP_SIGNEXT_IMM8:
+		    /* Handle signext_imm8 postop special-casing */
+		    if (num) {
+			long val = yasm_intnum_get_int(num);
+			if (val >= -128 && val <= 127) {
+			    /* We can use the sign-extended byte form: shorten
+			     * the immediate length to 1.
+			     */
+			    immlen = 1;
+			    if (save) {
+				/* Make the byte form permanent. */
+				insn->opcode.opcode[0] = insn->opcode.opcode[1];
+				imm->len = 1;
+				if (insn->opcode.opcode[2] != 0) {
+				    insn->opcode.opcode[1] = insn->opcode.opcode[2];
+				    insn->opcode.len++;
+				}
+			    } else if (insn->opcode.opcode[2] != 0)
+				bc->len++;
 			}
 		    }
-		}
-		/* Not really necessary, but saves confusion over it. */
-		if (save)
-		    insn->postop = X86_POSTOP_NONE;
-	    }
+		    /* Not really necessary, but saves confusion over it. */
+		    if (save)
+			insn->postop = X86_POSTOP_NONE;
+		    break;
 
-	    /* Handle shift postop special-casing */
-	    if (insn->postop == X86_POSTOP_SHIFT && temp &&
-		(num = yasm_expr_get_intnum(&temp, calc_bc_dist))) {
-		if (num && yasm_intnum_get_uint(num) == 1) {
-		    /* We can use the ,1 form: no immediate (set to 0 len) */
-		    immlen = 0;
+		case X86_POSTOP_SIGNEXT_IMM32:
+		    /* Handle signext_imm32 postop special-casing */
+		    if (!num || yasm_intnum_check_size(num, 32, 0, 1)) {
+			bc->len++;  /* Due to ModRM byte */
+			immlen = 4;
+			if (save) {
+			    /* Throwaway REX byte */
+			    unsigned char rex_temp = 0;
 
-		    if (save) {
-			/* Make the ,1 form permanent. */
-			insn->opcode.opcode[0] = insn->opcode.opcode[1];
-			/* Delete imm, as it's not needed. */
-			yasm_expr_destroy(imm->val);
-			yasm_xfree(imm);
-			insn->imm = (yasm_immval *)NULL;
+			    /* Build ModRM EA - CAUTION: this depends on
+			     * opcode 0 being a mov instruction!
+			     */
+			    insn->ea = yasm_x86__ea_create_reg(
+				(unsigned long)insn->opcode.opcode[0]-0xB8,
+				&rex_temp, 64);
+
+			    /* Make the imm32s form permanent. */
+			    insn->opcode.opcode[0] = insn->opcode.opcode[1];
+			    imm->len = 4;
+			}
 		    }
-		} else
-		    retval = YASM_BC_RESOLVE_NONE;  /* we could still get ,1 */
+		    /* Not really necessary, but saves confusion over it. */
+		    if (save)
+			insn->postop = X86_POSTOP_NONE;
+		    break;
 
-		/* Not really necessary, but saves confusion over it. */
-		if (save)
-		    insn->postop = X86_POSTOP_NONE;
+		case X86_POSTOP_SHIFT:
+		    /* Handle shift postop special-casing */
+		    if (num && yasm_intnum_get_uint(num) == 1) {
+			/* We can use the ,1 form: no imm (set to 0 len) */
+			immlen = 0;
+
+			if (save) {
+			    /* Make the ,1 form permanent. */
+			    insn->opcode.opcode[0] = insn->opcode.opcode[1];
+			    /* Delete imm, as it's not needed. */
+			    yasm_expr_destroy(imm->val);
+			    yasm_xfree(imm);
+			    insn->imm = (yasm_immval *)NULL;
+			}
+		    } else
+			retval = YASM_BC_RESOLVE_NONE;  /* could still get ,1 */
+
+		    /* Not really necessary, but saves confusion over it. */
+		    if (save)
+			insn->postop = X86_POSTOP_NONE;
+		    break;
+
+		default:
+		    break;
 	    }
 
 	    yasm_expr_destroy(temp);
