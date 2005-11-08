@@ -3,6 +3,6 @@
 TESTS += modules/objfmts/elf/tests/gas64/elf_gas64_test.sh
 
 EXTRA_DIST += modules/objfmts/elf/tests/gas64/elf_gas64_test.sh
-EXTRA_DIST += modules/objfmts/elf/tests/amd64/elf_gas64_reloc.asm
-EXTRA_DIST += modules/objfmts/elf/tests/amd64/elf_gas64_reloc.hex
-EXTRA_DIST += modules/objfmts/elf/tests/amd64/elf_gas64_reloc.errwarn
+EXTRA_DIST += modules/objfmts/elf/tests/gas64/elf_gas64_reloc.asm
+EXTRA_DIST += modules/objfmts/elf/tests/gas64/elf_gas64_reloc.hex
+EXTRA_DIST += modules/objfmts/elf/tests/gas64/elf_gas64_reloc.errwarn
