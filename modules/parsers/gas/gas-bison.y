@@ -811,6 +811,7 @@ gas_parser_align(yasm_parser_gas *parser_gas, yasm_valparamhead *valparams,
 {
     /*@dependent@*/ yasm_valparam *bound, *fill = NULL, *maxskip = NULL;
     yasm_expr *boundval, *fillval = NULL, *maxskipval = NULL;
+    yasm_intnum *boundintn;
 
     bound = yasm_vps_first(valparams);
     boundval = bound->param;
@@ -844,26 +845,16 @@ gas_parser_align(yasm_parser_gas *parser_gas, yasm_valparamhead *valparams,
     /* If .align is the first bytecode in the section, it's really specifying
      * section alignment.
      */
-    if (parser_gas->prev_bc
-	== yasm_section_bcs_first(parser_gas->cur_section)) {
-	yasm_intnum *boundintn = yasm_expr_get_intnum(&boundval, NULL);
-	unsigned long boundint;
-	if (!boundintn) {
-	    yasm__error(cur_line, N_("section alignment not constnat"));
-	    return NULL;
-	}
-	boundint = yasm_intnum_get_uint(boundintn);
+    boundintn = yasm_expr_get_intnum(&boundval, NULL);
+    if (boundintn) {
+	unsigned long boundint = yasm_intnum_get_uint(boundintn);
 
 	/* Alignments must be a power of two. */
-	if ((boundint & (boundint - 1)) != 0) {
-	    yasm__error(cur_line,
-			N_("section alignment is not a power of two"));
-	    return NULL;
+	if ((boundint & (boundint - 1)) == 0) {
+	    yasm_objfmt_section_align(parser_gas->objfmt,
+				      parser_gas->cur_section, boundint,
+				      cur_line);
 	}
-
-	yasm_objfmt_section_align(parser_gas->objfmt, parser_gas->cur_section,
-				  boundint, cur_line);
-	return NULL;
     }
 
     return yasm_bc_create_align(boundval, fillval, maxskipval,

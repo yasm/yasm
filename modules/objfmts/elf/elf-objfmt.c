@@ -772,6 +772,7 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	type = SHT_PROGBITS;
 	flags = SHF_ALLOC + SHF_EXECINSTR;
     } else if (strcmp(sectname, ".comment") == 0) {
+	align = 0;
 	type = SHT_PROGBITS;
 	flags = 0;
     } else {
@@ -918,13 +919,20 @@ elf_objfmt_section_align(/*@unused@*/ yasm_objfmt *objfmt, yasm_section *sect,
 			 unsigned long align, unsigned long line)
 {
     /*@dependent@*/ /*@null@*/ elf_secthead *esd;
+    const yasm_intnum *old_align_intn;
+    unsigned long old_align = 0;
 
     esd = yasm_section_get_data(sect, &elf_section_data);
 
     if (!esd)
 	yasm_internal_error(N_("NULL elf section data in section_align"));
 
-    elf_secthead_set_align(esd, yasm_intnum_create_uint(align));
+    old_align_intn = elf_secthead_get_align(esd);
+    if (old_align_intn)
+	old_align = yasm_intnum_get_uint(old_align_intn);
+
+    if (align > old_align)
+	elf_secthead_set_align(esd, yasm_intnum_create_uint(align));
 }
 
 static yasm_symrec *

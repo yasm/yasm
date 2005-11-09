@@ -762,6 +762,12 @@ elf_secthead_get_index(elf_secthead *shead)
 }
 
 const yasm_intnum *
+elf_secthead_get_align(const elf_secthead *shead)
+{
+    return shead->align;
+}
+
+const yasm_intnum *
 elf_secthead_set_align(elf_secthead *shead, yasm_intnum *align)
 {
     if (shead->align != NULL)

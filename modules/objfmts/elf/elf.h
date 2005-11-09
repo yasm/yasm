@@ -463,6 +463,7 @@ void elf_secthead_append_reloc(yasm_section *sect, elf_secthead *shead,
 elf_section_type elf_secthead_get_type(elf_secthead *shead);
 int elf_secthead_is_empty(elf_secthead *shead);
 struct yasm_symrec *elf_secthead_get_sym(elf_secthead *shead);
+const struct yasm_intnum *elf_secthead_get_align(const elf_secthead *shead);
 const struct yasm_intnum *elf_secthead_set_align(elf_secthead *shead,
 						 struct yasm_intnum *align);
 elf_section_index elf_secthead_get_index(elf_secthead *shead);
