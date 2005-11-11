@@ -423,8 +423,8 @@ bin_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 
 	retval = yasm_object_get_general(objfmt_bin->object, sectname,
 	    yasm_expr_create_ident(
-		yasm_expr_int(yasm_intnum_create_uint(start)), line), resonly,
-	    &isnew, line);
+		yasm_expr_int(yasm_intnum_create_uint(start)), line),
+	    strcmp(sectname, ".text") == 0, resonly, &isnew, line);
 
 	if (isnew) {
 	    if (have_alignval) {

@@ -92,8 +92,6 @@ typedef struct yasm_parser_gas {
 	INSTDIR
     } state;
 
-    int code_section;
-
     /*@null@*/ gas_rept *rept;
 } yasm_parser_gas;
 

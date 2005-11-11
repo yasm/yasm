@@ -868,7 +868,8 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			  N_("Unrecognized qualifier `%s'"), vp->val);
     }
 
-    retval = yasm_object_get_general(objfmt_elf->object, sectname, 0, resonly,
+    retval = yasm_object_get_general(objfmt_elf->object, sectname, 0,
+				     (flags & SHF_EXECINSTR) != 0, resonly,
 				     &isnew, line);
 
     if (isnew) {

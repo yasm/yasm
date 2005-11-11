@@ -60,6 +60,8 @@ struct yasm_reloc {
  * \param name	    section name
  * \param start	    starting address (ignored if section already exists),
  *		    NULL if 0 or don't care.
+ * \param code	    if nonzero, section is intended to contain code
+ *		    (e.g. alignment should be made with NOP instructions, not 0)
  * \param res_only  if nonzero, only space-reserving bytecodes are allowed in
  *		    the section (ignored if section already exists)
  * \param isnew	    output; set to nonzero if section did not already exist
@@ -69,7 +71,7 @@ struct yasm_reloc {
  */
 /*@dependent@*/ yasm_section *yasm_object_get_general
     (yasm_object *object, const char *name,
-     /*@null@*/ /*@only@*/ yasm_expr *start, int res_only,
+     /*@null@*/ /*@only@*/ yasm_expr *start, int code, int res_only,
      /*@out@*/ int *isnew, unsigned long line);
 
 /** Create a new absolute section.  No checking is performed at creation to
@@ -137,6 +139,12 @@ int yasm_object_sections_traverse
  * \return Nonzero if section is absolute.
  */
 int yasm_section_is_absolute(yasm_section *sect);
+
+/** Determine if a section is flagged to contain code.
+ * \param sect	    section
+ * \return Nonzero if section is flagged to contain code.
+ */
+int yasm_section_is_code(yasm_section *sect);
 
 /** Get yasm_optimizer-specific flags.  For yasm_optimizer use only.
  * \param sect	    section

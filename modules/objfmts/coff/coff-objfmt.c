@@ -1228,8 +1228,9 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		N_("Standard COFF does not support qualifier `%s'"), vp->val);
     }
 
-    retval = yasm_object_get_general(objfmt_coff->object, sectname, 0, resonly,
-				     &isnew, line);
+    retval = yasm_object_get_general(objfmt_coff->object, sectname, 0,
+				     (flags & COFF_STYP_EXECUTE) != 0,
+				     resonly, &isnew, line);
 
     if (isnew)
 	coff_objfmt_init_new_section(objfmt_coff, retval, sectname, flags,
@@ -1417,7 +1418,7 @@ win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 
 	/* Add to end of linker directives */
 	sect = yasm_object_get_general(objfmt_coff->object, ".drectve", 0, 0,
-				       &isnew, line);
+				       0, &isnew, line);
 
 	/* Initialize directive section if needed */
 	if (isnew)

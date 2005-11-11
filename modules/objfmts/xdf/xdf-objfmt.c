@@ -741,8 +741,8 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			  N_("Unrecognized qualifier `%s'"), vp->val);
     }
 
-    retval = yasm_object_get_general(objfmt_xdf->object, sectname, 0, resonly,
-				     &isnew, line);
+    retval = yasm_object_get_general(objfmt_xdf->object, sectname, 0, 1,
+				     resonly, &isnew, line);
 
     if (isnew) {
 	xdf_section_data *data;

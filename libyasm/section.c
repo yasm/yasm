@@ -73,6 +73,7 @@ struct yasm_section {
 
     unsigned long opt_flags;	/* storage for optimizer flags */
 
+    int code;			/* section contains code (instructions) */
     int res_only;		/* allow only resb family of bytecodes? */
 
     /* the bytecodes for the section's contents */
@@ -107,7 +108,7 @@ yasm_object_create(void)
 /*@-onlytrans@*/
 yasm_section *
 yasm_object_get_general(yasm_object *object, const char *name,
-			yasm_expr *start, int res_only, int *isnew,
+			yasm_expr *start, int code, int res_only, int *isnew,
 			unsigned long line)
 {
     yasm_section *s;
@@ -153,6 +154,7 @@ yasm_object_get_general(yasm_object *object, const char *name,
     STAILQ_INIT(&s->relocs);
     s->destroy_reloc = NULL;
 
+    s->code = code;
     s->res_only = res_only;
 
     *isnew = 1;
@@ -209,6 +211,12 @@ int
 yasm_section_is_absolute(yasm_section *sect)
 {
     return (sect->type == SECTION_ABSOLUTE);
+}
+
+int
+yasm_section_is_code(yasm_section *sect)
+{
+    return sect->code;
 }
 
 unsigned long

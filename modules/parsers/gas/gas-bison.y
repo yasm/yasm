@@ -802,7 +802,6 @@ gas_switch_section(yasm_parser_gas *parser_gas, char *name,
 	parser_gas->prev_bc = yasm_section_bcs_last(new_section);
     } else
 	yasm__error(cur_line, N_("invalid section name `%s'"), name);
-    parser_gas->code_section = !strcmp(name, ".text");
 }
 
 static yasm_bytecode *
@@ -858,7 +857,7 @@ gas_parser_align(yasm_parser_gas *parser_gas, yasm_valparamhead *valparams,
     }
 
     return yasm_bc_create_align(boundval, fillval, maxskipval,
-				parser_gas->code_section ?
+				yasm_section_is_code(parser_gas->cur_section) ?
 				    yasm_arch_get_fill(parser_gas->arch) : NULL,
 				cur_line);
 }
