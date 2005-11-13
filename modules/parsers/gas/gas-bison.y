@@ -850,9 +850,9 @@ gas_parser_align(yasm_parser_gas *parser_gas, yasm_valparamhead *valparams,
 
 	/* Alignments must be a power of two. */
 	if ((boundint & (boundint - 1)) == 0) {
-	    yasm_objfmt_section_align(parser_gas->objfmt,
-				      parser_gas->cur_section, boundint,
-				      cur_line);
+	    if (boundint > yasm_section_get_align(parser_gas->cur_section))
+		yasm_section_set_align(parser_gas->cur_section, boundint,
+				       cur_line);
 	}
     }
 

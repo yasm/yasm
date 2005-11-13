@@ -98,10 +98,7 @@ elf_x86_x86_write_secthead(unsigned char *bufp, elf_secthead *shead)
     YASM_WRITE_32_L(bufp, shead->link);
     YASM_WRITE_32_L(bufp, shead->info);
 
-    if (shead->align)
-        YASM_WRITE_32I_L(bufp, shead->align);
-    else
-        YASM_WRITE_32_L(bufp, 0);
+    YASM_WRITE_32_L(bufp, shead->align);
     YASM_WRITE_32_L(bufp, shead->entsize);
 
 }

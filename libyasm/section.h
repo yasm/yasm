@@ -60,6 +60,7 @@ struct yasm_reloc {
  * \param name	    section name
  * \param start	    starting address (ignored if section already exists),
  *		    NULL if 0 or don't care.
+ * \param align	    alignment in bytes (0 if none)
  * \param code	    if nonzero, section is intended to contain code
  *		    (e.g. alignment should be made with NOP instructions, not 0)
  * \param res_only  if nonzero, only space-reserving bytecodes are allowed in
@@ -71,8 +72,8 @@ struct yasm_reloc {
  */
 /*@dependent@*/ yasm_section *yasm_object_get_general
     (yasm_object *object, const char *name,
-     /*@null@*/ /*@only@*/ yasm_expr *start, int code, int res_only,
-     /*@out@*/ int *isnew, unsigned long line);
+     /*@null@*/ /*@only@*/ yasm_expr *start, unsigned long align, int code,
+     int res_only, /*@out@*/ int *isnew, unsigned long line);
 
 /** Create a new absolute section.  No checking is performed at creation to
  * check for overlaps with other absolute sections.
@@ -278,6 +279,20 @@ void yasm_section_set_start(yasm_section *sect, /*@only@*/ yasm_expr *start,
  */
 /*@observer@*/ const yasm_expr *yasm_section_get_start
     (const yasm_section *sect);
+
+/** Change alignment of a section.
+ * \param sect	    section
+ * \param align	    alignment in bytes
+ * \param line	    virtual line
+ */
+void yasm_section_set_align(yasm_section *sect, unsigned long align,
+			    unsigned long line);
+
+/** Get alignment of a section.
+ * \param sect	    section
+ * \return Alignment in bytes (0 if none).
+ */
+unsigned long yasm_section_get_align(const yasm_section *sect);
 
 /** Print a section.  For debugging purposes.
  * \param f		file

@@ -118,7 +118,7 @@ dbg_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     if ((vp = yasm_vps_first(valparams)) && !vp->param && vp->val != NULL) {
 	retval = yasm_object_get_general(objfmt_dbg->object, vp->val,
 	    yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(200)),
-				   line), 0, 0, &isnew, line);
+				   line), 0, 0, 0, &isnew, line);
 	if (isnew) {
 	    fprintf(objfmt_dbg->dbgfile, "(new) ");
 	    yasm_symtab_define_label(
@@ -234,7 +234,6 @@ yasm_objfmt_module yasm_dbg_LTX_objfmt = {
     dbg_objfmt_output,
     dbg_objfmt_destroy,
     dbg_objfmt_section_switch,
-    dbg_objfmt_section_align,
     dbg_objfmt_extern_declare,
     dbg_objfmt_global_declare,
     dbg_objfmt_common_declare,

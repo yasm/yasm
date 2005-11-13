@@ -472,24 +472,20 @@ elf_objfmt_create_dbg_secthead(yasm_section *sect,
 {
     elf_secthead *shead;
     elf_section_type type=SHT_PROGBITS;
-    yasm_intnum *align=NULL;
     elf_size entsize=0;
     const char *sectname = yasm_section_get_name(sect);
     elf_strtab_entry *name = elf_strtab_append_str(info->objfmt_elf->shstrtab,
 						   sectname);
 
     if (yasm__strcasecmp(sectname, ".stab")==0) {
-	align = yasm_intnum_create_uint(4);
 	entsize = 12;
     } else if (yasm__strcasecmp(sectname, ".stabstr")==0) {
 	type = SHT_STRTAB;
-	align = yasm_intnum_create_uint(1);
     }
     else
 	yasm_internal_error(N_("Unrecognized section without data"));
 
     shead = elf_secthead_create(name, type, 0, 0, 0);
-    elf_secthead_set_align(shead, align);
     elf_secthead_set_entsize(shead, entsize);
 
     yasm_section_add_data(sect, &elf_section_data, shead);
@@ -515,6 +511,9 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     shead = yasm_section_get_data(sect, &elf_section_data);
     if (shead == NULL)
 	shead = elf_objfmt_create_dbg_secthead(sect, info);
+
+    if (elf_secthead_get_align(shead) == 0)
+	elf_secthead_set_align(shead, yasm_section_get_align(sect));
 
     /* don't output header-only sections */
     if ((elf_secthead_get_type(shead) & SHT_NOBITS) == SHT_NOBITS)
@@ -843,7 +842,6 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	}
 	else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
             /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
-            unsigned long addralign;
 
             align_expr = yasm_expr_get_intnum(&vp->param, NULL);
             if (!align_expr) {
@@ -852,23 +850,21 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
                             vp->val);
                 return NULL;
             }
-            addralign = yasm_intnum_get_uint(align_expr);
+            align = yasm_intnum_get_uint(align_expr);
 
             /* Alignments must be a power of two. */
-            if ((addralign & (addralign - 1)) != 0) {
+            if ((align & (align - 1)) != 0) {
                 yasm__error(line,
                             N_("argument to `%s' is not a power of two"),
                             vp->val);
                 return NULL;
             }
-
-            align_intn = yasm_intnum_copy(align_expr);
 	} else
 	    yasm__warning(YASM_WARN_GENERAL, line,
 			  N_("Unrecognized qualifier `%s'"), vp->val);
     }
 
-    retval = yasm_object_get_general(objfmt_elf->object, sectname, 0,
+    retval = yasm_object_get_general(objfmt_elf->object, sectname, 0, align,
 				     (flags & SHF_EXECINSTR) != 0, resonly,
 				     &isnew, line);
 
@@ -879,10 +875,6 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 						       sectname);
 
 	esd = elf_secthead_create(name, type, flags, 0, 0);
-	if (!align_intn)
-	    align_intn = yasm_intnum_create_uint(align);
-	if (align_intn)
-	    elf_secthead_set_align(esd, align_intn);
 	yasm_section_add_data(retval, &elf_section_data, esd);
 	sym = yasm_symtab_define_label(
 	    yasm_object_get_symtab(objfmt_elf->object), sectname,
@@ -913,27 +905,6 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("section flags ignored on section redeclaration"));
     return retval;
-}
-
-static void
-elf_objfmt_section_align(/*@unused@*/ yasm_objfmt *objfmt, yasm_section *sect,
-			 unsigned long align, unsigned long line)
-{
-    /*@dependent@*/ /*@null@*/ elf_secthead *esd;
-    const yasm_intnum *old_align_intn;
-    unsigned long old_align = 0;
-
-    esd = yasm_section_get_data(sect, &elf_section_data);
-
-    if (!esd)
-	yasm_internal_error(N_("NULL elf section data in section_align"));
-
-    old_align_intn = elf_secthead_get_align(esd);
-    if (old_align_intn)
-	old_align = yasm_intnum_get_uint(old_align_intn);
-
-    if (align > old_align)
-	elf_secthead_set_align(esd, yasm_intnum_create_uint(align));
 }
 
 static yasm_symrec *
@@ -1156,7 +1127,6 @@ yasm_objfmt_module yasm_elf_LTX_objfmt = {
     elf_objfmt_output,
     elf_objfmt_destroy,
     elf_objfmt_section_switch,
-    elf_objfmt_section_align,
     elf_objfmt_extern_declare,
     elf_objfmt_global_declare,
     elf_objfmt_common_declare,
@@ -1175,7 +1145,6 @@ yasm_objfmt_module yasm_elf32_LTX_objfmt = {
     elf_objfmt_output,
     elf_objfmt_destroy,
     elf_objfmt_section_switch,
-    elf_objfmt_section_align,
     elf_objfmt_extern_declare,
     elf_objfmt_global_declare,
     elf_objfmt_common_declare,
@@ -1194,7 +1163,6 @@ yasm_objfmt_module yasm_elf64_LTX_objfmt = {
     elf_objfmt_output,
     elf_objfmt_destroy,
     elf_objfmt_section_switch,
-    elf_objfmt_section_align,
     elf_objfmt_extern_declare,
     elf_objfmt_global_declare,
     elf_objfmt_common_declare,

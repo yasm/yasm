@@ -662,6 +662,7 @@ coff_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     yasm_objfmt_coff *objfmt_coff;
     /*@dependent@*/ /*@null@*/ coff_section_data *csd;
     unsigned char *localbuf;
+    unsigned long align = yasm_section_get_align(sect);
 
     /* Don't output absolute sections into the section table */
     if (yasm_section_is_absolute(sect))
@@ -671,6 +672,17 @@ coff_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     objfmt_coff = info->objfmt_coff;
     csd = yasm_section_get_data(sect, &coff_section_data_cb);
     assert(csd != NULL);
+
+    /* Check to see if alignment is supported size */
+    if (align > 8192)
+	align = 8192;
+
+    /* Convert alignment into flags setting */
+    csd->flags &= ~COFF_STYP_ALIGN_MASK;
+    while (align != 0) {
+	csd->flags += 1<<COFF_STYP_ALIGN_SHIFT;
+	align >>= 1;
+    }
 
     localbuf = info->buf;
     strncpy((char *)localbuf, yasm_section_get_name(sect), 8);/* section name */
@@ -1040,6 +1052,7 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     int flags_override = 0;
     char *sectname;
     int resonly = 0;
+    unsigned long align = 0;
 
     static const struct {
 	const char *name;
@@ -1093,30 +1106,32 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	if (objfmt_coff->win32) {
 	    flags |= COFF_STYP_READ | COFF_STYP_WRITE;
 	    if (objfmt_coff->machine == COFF_MACHINE_AMD64)
-		flags |= 5<<COFF_STYP_ALIGN_SHIFT;	/* align=16 */
+		align = 16;
 	    else
-		flags |= 3<<COFF_STYP_ALIGN_SHIFT;	/* align=4 */
+		align = 4;
 	}
     } else if (strcmp(sectname, ".bss") == 0) {
 	flags = COFF_STYP_BSS;
 	if (objfmt_coff->win32) {
 	    flags |= COFF_STYP_READ | COFF_STYP_WRITE;
 	    if (objfmt_coff->machine == COFF_MACHINE_AMD64)
-		flags |= 5<<COFF_STYP_ALIGN_SHIFT;	/* align=16 */
+		align = 16;
 	    else
-		flags |= 3<<COFF_STYP_ALIGN_SHIFT;	/* align=4 */
+		align = 4;
 	}
 	resonly = 1;
     } else if (strcmp(sectname, ".text") == 0) {
 	flags = COFF_STYP_TEXT;
-	if (objfmt_coff->win32)
-	    flags |= COFF_STYP_EXECUTE | COFF_STYP_READ |
-		(5<<COFF_STYP_ALIGN_SHIFT);	/* align=16 */
+	if (objfmt_coff->win32) {
+	    flags |= COFF_STYP_EXECUTE | COFF_STYP_READ;
+	    align = 16;
+	}
     } else if (strcmp(sectname, ".rdata") == 0) {
 	flags = COFF_STYP_DATA;
-	if (objfmt_coff->win32)
-	    flags |= COFF_STYP_READ | (4<<COFF_STYP_ALIGN_SHIFT); /* align=8 */
-	else
+	if (objfmt_coff->win32) {
+	    flags |= COFF_STYP_READ;
+	    align = 8;
+	} else
 	    yasm__warning(YASM_WARN_GENERAL, line,
 		N_("Standard COFF does not support read-only data sections"));
     } else if (strcmp(sectname, ".drectve") == 0) {
@@ -1124,12 +1139,12 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	if (objfmt_coff->win32)
 	    flags |= COFF_STYP_DISCARD | COFF_STYP_READ;
     } else if (objfmt_coff->win32 && strcmp(sectname, ".pdata") == 0) {
-	flags = COFF_STYP_DATA | COFF_STYP_READ
-	    | 3<<COFF_STYP_ALIGN_SHIFT;	/* align=4 */
+	flags = COFF_STYP_DATA | COFF_STYP_READ;
+	align = 4;
 	flags2 = COFF_FLAG_NOBASE;
     } else if (objfmt_coff->win32 && strcmp(sectname, ".xdata") == 0) {
-	flags = COFF_STYP_DATA | COFF_STYP_READ
-	    | 4<<COFF_STYP_ALIGN_SHIFT;	/* align=8 */
+	flags = COFF_STYP_DATA | COFF_STYP_READ;
+	align = 8;
     } else {
 	/* Default to code */
 	flags = COFF_STYP_TEXT;
@@ -1180,24 +1195,20 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	    ;
 	else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
 	    if (objfmt_coff->win32) {
-		/*@dependent@*/ /*@null@*/ const yasm_intnum *align;
+		/*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
 		unsigned long bitcnt;
-		unsigned long addralign;
 
-		align = yasm_expr_get_intnum(&vp->param, NULL);
-		if (!align) {
+		align_expr = yasm_expr_get_intnum(&vp->param, NULL);
+		if (!align_expr) {
 		    yasm__error(line,
 				N_("argument to `%s' is not a power of two"),
 				vp->val);
 		    return NULL;
 		}
-		addralign = yasm_intnum_get_uint(align);
+		align = yasm_intnum_get_uint(align_expr);
 
-		/* Check to see if alignment is a power of two.
-		 * This can be checked by seeing if only one bit is set.
-		 */
-		BitCount(bitcnt, addralign);
-		if (bitcnt > 1) {
+		/* Alignments must be a power of two. */
+		if ((align & (align - 1)) != 0) {
 		    yasm__error(line,
 				N_("argument to `%s' is not a power of two"),
 				vp->val);
@@ -1205,18 +1216,12 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		}
 
 		/* Check to see if alignment is supported size */
-		if (addralign > 8192) {
+		if (align > 8192) {
 		    yasm__error(line,
 			N_("Win32 does not support alignments > 8192"));
 		    return NULL;
 		}
 
-		/* Convert alignment into flags setting */
-		flags &= ~COFF_STYP_ALIGN_MASK;
-		while (addralign != 0) {
-		    flags += 1<<COFF_STYP_ALIGN_SHIFT;
-		    addralign >>= 1;
-		}
 	    } else
 		win32warn = 1;
 	} else
@@ -1228,7 +1233,7 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		N_("Standard COFF does not support qualifier `%s'"), vp->val);
     }
 
-    retval = yasm_object_get_general(objfmt_coff->object, sectname, 0,
+    retval = yasm_object_get_general(objfmt_coff->object, sectname, 0, align,
 				     (flags & COFF_STYP_EXECUTE) != 0,
 				     resonly, &isnew, line);
 
@@ -1239,37 +1244,6 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("section flags ignored on section redeclaration"));
     return retval;
-}
-
-static void
-coff_objfmt_section_align(yasm_objfmt *objfmt, yasm_section *sect,
-			  unsigned long align, unsigned long line)
-{
-    yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
-    /*@dependent@*/ /*@null@*/ coff_section_data *csd;
-
-    csd = yasm_section_get_data(sect, &coff_section_data_cb);
-    if (!csd)
-	yasm_internal_error(N_("NULL coff section data in section_align"));
-
-    if (!objfmt_coff->win32) {
-	yasm__warning(YASM_WARN_GENERAL, line,
-		      N_("COFF does not support section alignment"));
-	return;
-    }
-
-    /* Check to see if alignment is supported size */
-    if (align > 8192) {
-	yasm__error(line, N_("Win32 does not support alignments > 8192"));
-	return;
-    }
-
-    /* Convert alignment into flags setting */
-    csd->flags &= ~COFF_STYP_ALIGN_MASK;
-    while (align != 0) {
-	csd->flags += 1<<COFF_STYP_ALIGN_SHIFT;
-	align >>= 1;
-    }
 }
 
 static void
@@ -1418,7 +1392,7 @@ win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 
 	/* Add to end of linker directives */
 	sect = yasm_object_get_general(objfmt_coff->object, ".drectve", 0, 0,
-				       0, &isnew, line);
+				       0, 0, &isnew, line);
 
 	/* Initialize directive section if needed */
 	if (isnew)
@@ -1462,7 +1436,6 @@ yasm_objfmt_module yasm_coff_LTX_objfmt = {
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_section_switch,
-    coff_objfmt_section_align,
     coff_objfmt_extern_declare,
     coff_objfmt_global_declare,
     coff_objfmt_common_declare,
@@ -1482,7 +1455,6 @@ yasm_objfmt_module yasm_win32_LTX_objfmt = {
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_section_switch,
-    coff_objfmt_section_align,
     coff_objfmt_extern_declare,
     coff_objfmt_global_declare,
     coff_objfmt_common_declare,
@@ -1502,7 +1474,6 @@ yasm_objfmt_module yasm_win64_LTX_objfmt = {
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_section_switch,
-    coff_objfmt_section_align,
     coff_objfmt_extern_declare,
     coff_objfmt_global_declare,
     coff_objfmt_common_declare,

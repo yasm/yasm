@@ -107,12 +107,6 @@ typedef struct yasm_objfmt_module {
 			  /*@null@*/ yasm_valparamhead *objext_valparams,
 			  unsigned long line);
 
-    /** Module-level implementation of yasm_objfmt_section_align().
-     * Call yasm_objfmt_section_align() instead of calling this function.
-     */
-    void (*section_align)(yasm_objfmt *objfmt, yasm_section *sect,
-			  unsigned long align, unsigned long line);
-
     /** Module-level implementation of yasm_objfmt_extern_declare().
      * Call yasm_objfmt_extern_declare() instead of calling this function.
      */
@@ -185,15 +179,6 @@ void yasm_objfmt_destroy(/*@only@*/ yasm_objfmt *objfmt);
     (yasm_objfmt *objfmt, yasm_valparamhead *valparams,
      /*@null@*/ yasm_valparamhead *objext_valparams, unsigned long line);
 
-/** Set alignment for a section.
- * \param objfmt	object format
- * \param sect		section
- * \param align		desired alignment (must be power of two)
- * \param line		virtual line (from yasm_linemap)
- */
-void yasm_objfmt_section_align(yasm_objfmt *objfmt, yasm_section *sect,
-			       unsigned long align, unsigned long line);
-
 /** Declare an "extern" (importing from another module) symbol.  Should
  * call yasm_symtab_declare().
  * \param objfmt		object format
@@ -261,9 +246,6 @@ int yasm_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 #define yasm_objfmt_section_switch(objfmt, vpms, oe_vpms, line) \
     ((yasm_objfmt_base *)objfmt)->module->section_switch(objfmt, vpms, \
 							 oe_vpms, line)
-#define yasm_objfmt_section_align(objfmt, sect, align, line) \
-    ((yasm_objfmt_base *)objfmt)->module->section_align(objfmt, sect, \
-							align, line)
 #define yasm_objfmt_extern_declare(objfmt, name, oe_vpms, line) \
     ((yasm_objfmt_base *)objfmt)->module->extern_declare(objfmt, name, \
 							 oe_vpms, line)

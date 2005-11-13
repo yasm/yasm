@@ -71,6 +71,8 @@ struct yasm_section {
 
     /*@owned@*/ yasm_expr *start;   /* Starting address of section contents */
 
+    unsigned long align;	/* Section alignment */
+
     unsigned long opt_flags;	/* storage for optimizer flags */
 
     int code;			/* section contains code (instructions) */
@@ -108,8 +110,8 @@ yasm_object_create(void)
 /*@-onlytrans@*/
 yasm_section *
 yasm_object_get_general(yasm_object *object, const char *name,
-			yasm_expr *start, int code, int res_only, int *isnew,
-			unsigned long line)
+			yasm_expr *start, unsigned long align, int code,
+			int res_only, int *isnew, unsigned long line)
 {
     yasm_section *s;
     yasm_bytecode *bc;
@@ -141,6 +143,7 @@ yasm_object_get_general(yasm_object *object, const char *name,
 	s->start =
 	    yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(0)),
 				   line);
+    s->align = align;
 
     /* Initialize bytecodes with one empty bytecode (acts as "prior" for first
      * real bytecode in section.
@@ -439,6 +442,19 @@ const yasm_expr *
 yasm_section_get_start(const yasm_section *sect)
 {
     return sect->start;
+}
+
+void
+yasm_section_set_align(yasm_section *sect, unsigned long align,
+		       unsigned long line)
+{
+    sect->align = align;
+}
+
+unsigned long
+yasm_section_get_align(const yasm_section *sect)
+{
+    return sect->align;
 }
 
 static void

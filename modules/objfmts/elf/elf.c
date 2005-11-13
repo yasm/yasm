@@ -531,7 +531,7 @@ elf_secthead_create(elf_strtab_entry	*name,
     esd->size = yasm_intnum_create_uint(size);
     esd->link = 0;
     esd->info = 0;
-    esd->align = NULL;
+    esd->align = 0;
     esd->entsize = 0;
     esd->index = 0;
 
@@ -547,7 +547,7 @@ elf_secthead_create(elf_strtab_entry	*name,
         if (!elf_march->symtab_entry_size || !elf_march->symtab_entry_align)
 	    yasm_internal_error(N_("unsupported ELF format"));
         esd->entsize = elf_march->symtab_entry_size;
-        esd->align = yasm_intnum_create_uint(elf_march->symtab_entry_align);
+        esd->align = elf_march->symtab_entry_align;
     }
 
     return esd;
@@ -558,9 +558,6 @@ elf_secthead_destroy(elf_secthead *shead)
 {
     if (shead == NULL)
 	yasm_internal_error(N_("shead is null"));
-
-    if (shead->align)
-	yasm_intnum_destroy(shead->align);
 
     yasm_xfree(shead);
 }
@@ -593,8 +590,7 @@ elf_secthead_print(void *data, FILE *f, int indent_level)
     fprintf(f, "%*ssize=0x%lx\n", indent_level, "",
 	    yasm_intnum_get_uint(sect->size));
     fprintf(f, "%*slink=0x%x\n", indent_level, "", sect->link);
-    fprintf(f, "%*salign=%ld\n", indent_level, "",
-	    yasm_intnum_get_uint(sect->align));
+    fprintf(f, "%*salign=%lu\n", indent_level, "", sect->align);
     fprintf(f, "%*snreloc=%ld\n", indent_level, "", sect->nreloc);
 }
 
@@ -761,18 +757,15 @@ elf_secthead_get_index(elf_secthead *shead)
     return shead->index;
 }
 
-const yasm_intnum *
+unsigned long
 elf_secthead_get_align(const elf_secthead *shead)
 {
     return shead->align;
 }
 
-const yasm_intnum *
-elf_secthead_set_align(elf_secthead *shead, yasm_intnum *align)
+unsigned long
+elf_secthead_set_align(elf_secthead *shead, unsigned long align)
 {
-    if (shead->align != NULL)
-	yasm_intnum_destroy(shead->align);
-    
     return shead->align = align;
 }
 
@@ -829,7 +822,7 @@ elf_secthead_add_size(elf_secthead *shead, yasm_intnum *size)
 long
 elf_secthead_set_file_offset(elf_secthead *shead, long pos)
 {
-    unsigned long align = yasm_intnum_get_uint(shead->align);
+    unsigned long align = shead->align;
 
     if (align == 0 || align == 1) {
 	shead->offset = (unsigned long)pos;

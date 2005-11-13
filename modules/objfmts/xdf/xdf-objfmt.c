@@ -66,7 +66,6 @@ typedef struct xdf_section_data {
     yasm_intnum *addr;	    /* starting memory address */
     yasm_intnum *vaddr;	    /* starting virtual address */
     long scnum;		    /* section number (0=first section) */
-    unsigned int align;	    /* section alignment (0-4096) */
     enum {
 	XDF_SECT_ABSOLUTE = 0x01,
 	XDF_SECT_FLAT = 0x02,
@@ -453,7 +452,7 @@ xdf_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 	YASM_WRITE_32_L(localbuf, 0);
 	YASM_WRITE_32_L(localbuf, 0);
     }
-    YASM_WRITE_16_L(localbuf, xsd->align);	/* alignment */
+    YASM_WRITE_16_L(localbuf, yasm_section_get_align(sect)); /* alignment */
     YASM_WRITE_16_L(localbuf, xsd->flags);	/* flags */
     YASM_WRITE_32_L(localbuf, xsd->scnptr);	/* file ptr to data */
     YASM_WRITE_32_L(localbuf, xsd->size);	/* section size */
@@ -664,7 +663,7 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     int isnew;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *absaddr = NULL;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *vaddr = NULL;
-    unsigned int addralign = 0;
+    unsigned long align = 0;
     unsigned long flags = 0;
     int flags_override = 0;
     char *sectname;
@@ -709,29 +708,25 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		return NULL;
 	    }
 	} else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
-	    /*@dependent@*/ /*@null@*/ const yasm_intnum *align;
-	    unsigned long bitcnt;
+	    /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
 
-	    align = yasm_expr_get_intnum(&vp->param, NULL);
-	    if (!align) {
+	    align_expr = yasm_expr_get_intnum(&vp->param, NULL);
+	    if (!align_expr) {
 		yasm__error(line, N_("argument to `%s' is not a power of two"),
 			    vp->val);
 		return NULL;
 	    }
-	    addralign = yasm_intnum_get_uint(align);
+	    align = yasm_intnum_get_uint(align_expr);
 
-	    /* Check to see if alignment is a power of two.
-	     * This can be checked by seeing if only one bit is set.
-	     */
-	    BitCount(bitcnt, addralign);
-	    if (bitcnt > 1) {
+            /* Alignments must be a power of two. */
+            if ((align & (align - 1)) != 0) {
 		yasm__error(line, N_("argument to `%s' is not a power of two"),
 			    vp->val);
 		return NULL;
 	    }
 
 	    /* Check to see if alignment is supported size */
-	    if (addralign > 4096) {
+	    if (align > 4096) {
 		yasm__error(line,
 			    N_("XDF does not support alignments > 4096"));
 		return NULL;
@@ -741,7 +736,7 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			  N_("Unrecognized qualifier `%s'"), vp->val);
     }
 
-    retval = yasm_object_get_general(objfmt_xdf->object, sectname, 0, 1,
+    retval = yasm_object_get_general(objfmt_xdf->object, sectname, 0, align, 1,
 				     resonly, &isnew, line);
 
     if (isnew) {
@@ -750,7 +745,6 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 
 	data = yasm_xmalloc(sizeof(xdf_section_data));
 	data->scnum = objfmt_xdf->parse_scnum++;
-	data->align = addralign;
 	data->flags = flags;
 	if (absaddr)
 	    data->addr = yasm_intnum_copy(absaddr);
@@ -775,24 +769,6 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("section flags ignored on section redeclaration"));
     return retval;
-}
-static void
-xdf_objfmt_section_align(yasm_objfmt *objfmt, yasm_section *sect,
-			 unsigned long align, unsigned long line)
-{
-    /*@dependent@*/ /*@null@*/ xdf_section_data *xsd;
-
-    xsd = yasm_section_get_data(sect, &xdf_section_data_cb);
-    if (!xsd)
-	yasm_internal_error(N_("NULL xdf section data in section_align"));
-
-    /* Check to see if alignment is supported size */
-    if (align > 4096) {
-	yasm__error(line, N_("XDF does not support alignments > 4096"));
-	return;
-    }
-
-    xsd->align = align;
 }
 
 static void
@@ -909,7 +885,6 @@ yasm_objfmt_module yasm_xdf_LTX_objfmt = {
     xdf_objfmt_output,
     xdf_objfmt_destroy,
     xdf_objfmt_section_switch,
-    xdf_objfmt_section_align,
     xdf_objfmt_extern_declare,
     xdf_objfmt_global_declare,
     xdf_objfmt_common_declare,
