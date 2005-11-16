@@ -1145,6 +1145,10 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     } else if (objfmt_coff->win32 && strcmp(sectname, ".xdata") == 0) {
 	flags = COFF_STYP_DATA | COFF_STYP_READ;
 	align = 8;
+    } else if (strcmp(sectname, ".comment") == 0) {
+	flags = COFF_STYP_INFO;
+	if (objfmt_coff->win32)
+	    flags |= COFF_STYP_DISCARD | COFF_STYP_READ;
     } else {
 	/* Default to code */
 	flags = COFF_STYP_TEXT;
@@ -1193,7 +1197,65 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 
 	if (match)
 	    ;
-	else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
+	else if (yasm__strncasecmp(vp->val, "gas_", 4) == 0) {
+	    /* GAS-style flags */
+	    int alloc = 0, load = 0, readonly = 0, code = 0, data = 0;
+	    int shared = 0;
+	    for (i=4; i<strlen(vp->val); i++) {
+		switch (vp->val[i]) {
+		    case 'a':
+			break;
+		    case 'b':
+			alloc = 1;
+			load = 0;
+			break;
+		    case 'n':
+			load = 0;
+			break;
+		    case 's':
+			shared = 1;
+			/*@fallthrough@*/
+		    case 'd':
+			data = 1;
+			load = 1;
+			readonly = 0;
+		    case 'x':
+			code = 1;
+			load = 1;
+			break;
+		    case 'r':
+			data = 1;
+			load = 1;
+			readonly = 1;
+			break;
+		    case 'w':
+			readonly = 0;
+			break;
+		    default:
+			yasm__warning(YASM_WARN_GENERAL, line,
+				      N_("unrecognized section attribute: `%c'"),
+				      vp->val[i]);
+		}
+	    }
+	    if (code) {
+		flags = COFF_STYP_TEXT;
+		if (objfmt_coff->win32)
+		    flags |= COFF_STYP_EXECUTE | COFF_STYP_READ;
+	    } else if (data) {
+		flags = COFF_STYP_DATA;
+		if (objfmt_coff->win32)
+		    flags |= COFF_STYP_READ | COFF_STYP_WRITE;
+	    } else if (readonly) {
+		flags = COFF_STYP_DATA;
+		if (objfmt_coff->win32)
+		    flags |= COFF_STYP_READ;
+	    } else if (load)
+		flags = COFF_STYP_TEXT;
+	    else if (alloc)
+		flags = COFF_STYP_BSS;
+	    if (shared && objfmt_coff->win32)
+		flags |= COFF_STYP_SHARED;
+	} else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
 	    if (objfmt_coff->win32) {
 		/*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
 		unsigned long bitcnt;
