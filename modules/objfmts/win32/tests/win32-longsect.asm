@@ -1,0 +1,10 @@
+[section this_is_a_very_long_section_name]
+dd 0
+[section another.long.section]
+dd 0
+[section exactly8]
+dd 0
+[section onemorex9]
+dd 0
+[section juuust7]
+dd 0

@@ -113,6 +113,7 @@ typedef struct coff_section_data {
     unsigned long relptr;   /* file ptr to relocation */
     unsigned long nreloc;   /* number of relocation entries >64k -> error */
     unsigned long flags2;   /* internal flags (see COFF_FLAG_* above) */
+    unsigned long strtab_name;	/* strtab offset of name if name > 8 chars */
 } coff_section_data;
 
 typedef enum coff_symrec_sclass {
@@ -584,6 +585,15 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     csd = yasm_section_get_data(sect, &coff_section_data_cb);
     assert(csd != NULL);
 
+    /* Add to strtab if in win32 format and name > 8 chars */
+    if (info->objfmt_coff->win32) {
+	size_t namelen = strlen(yasm_section_get_name(sect));
+	if (namelen > 8) {
+	    csd->strtab_name = info->strtab_offset;
+	    info->strtab_offset += namelen + 1;
+	}
+    }
+
     csd->addr = info->addr;
 
     if ((csd->flags & COFF_STYP_STD_MASK) == COFF_STYP_BSS) {
@@ -656,6 +666,28 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 }
 
 static int
+coff_objfmt_output_sectstr(yasm_section *sect, /*@null@*/ void *d)
+{
+    /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
+    const char *name;
+    size_t len;
+
+    /* Don't output absolute sections into the section table */
+    if (yasm_section_is_absolute(sect))
+	return 0;
+
+    /* Add to strtab if in win32 format and name > 8 chars */
+    if (!info->objfmt_coff->win32)
+       return 0;
+    
+    name = yasm_section_get_name(sect);
+    len = strlen(name);
+    if (len > 8)
+	fwrite(name, len+1, 1, info->f);
+    return 0;
+}
+
+static int
 coff_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 {
     /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
@@ -684,8 +716,13 @@ coff_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 	align >>= 1;
     }
 
+    /* section name */
     localbuf = info->buf;
-    strncpy((char *)localbuf, yasm_section_get_name(sect), 8);/* section name */
+    if (strlen(yasm_section_get_name(sect)) > 8) {
+	/* 9 because snprintf always forces a terminating NUL */
+	snprintf((char *)localbuf, 9, "/%ld", csd->strtab_name);
+    } else
+	strncpy((char *)localbuf, yasm_section_get_name(sect), 8);
     localbuf += 8;
     YASM_WRITE_32_L(localbuf, csd->addr);	/* physical address */
     if (COFF_SET_VMA)
@@ -972,6 +1009,8 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
 
     /* String table */
     yasm_fwrite_32_l(info.strtab_offset, f); /* total length */
+    yasm_object_sections_traverse(objfmt_coff->object, &info,
+				  coff_objfmt_output_sectstr);
     yasm_symtab_traverse(objfmt_coff->symtab, &info, coff_objfmt_output_str);
 
     /* Write headers */
@@ -1027,6 +1066,7 @@ coff_objfmt_init_new_section(yasm_objfmt_coff *objfmt_coff,
     data->relptr = 0;
     data->nreloc = 0;
     data->flags2 = flags2;
+    data->strtab_name = 0;
     yasm_section_add_data(sect, &coff_section_data_cb, data);
 
     sym = yasm_symtab_define_label(objfmt_coff->symtab, sectname,
@@ -1092,9 +1132,10 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	return NULL;
 
     sectname = vp->val;
-    if (strlen(sectname) > 8) {
-	/* TODO: win32 format supports >8 character section names in object
-	 * files via "/nnnn" (where nnnn is decimal offset into string table).
+    if (strlen(sectname) > 8 && !objfmt_coff->win32) {
+	/* win32 format supports >8 character section names in object
+	 * files via "/nnnn" (where nnnn is decimal offset into string table),
+	 * so only warn for regular COFF.
 	 */
 	yasm__warning(YASM_WARN_GENERAL, line,
 	    N_("COFF section names limited to 8 characters: truncating"));
