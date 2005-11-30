@@ -719,8 +719,9 @@ coff_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     /* section name */
     localbuf = info->buf;
     if (strlen(yasm_section_get_name(sect)) > 8) {
-	/* 9 because snprintf always forces a terminating NUL */
-	snprintf((char *)localbuf, 9, "/%ld", csd->strtab_name);
+	char namenum[30];
+	sprintf(namenum, "/%ld", csd->strtab_name);
+	strncpy((char *)localbuf, namenum, 8);
     } else
 	strncpy((char *)localbuf, yasm_section_get_name(sect), 8);
     localbuf += 8;
