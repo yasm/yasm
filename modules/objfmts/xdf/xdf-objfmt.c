@@ -675,6 +675,12 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     sectname = vp->val;
 
     while ((vp = yasm_vps_next(vp))) {
+	if (!vp->val) {
+	    yasm__warning(YASM_WARN_GENERAL, line,
+			  N_("Unrecognized numeric qualifier"));
+	    continue;
+	}
+
 	flags_override = 1;
 	if (yasm__strcasecmp(vp->val, "use16") == 0) {
 	    flags &= ~(XDF_SECT_USE_32|XDF_SECT_USE_64);

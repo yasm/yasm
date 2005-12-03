@@ -1204,6 +1204,12 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 
 	win32warn = 0;
 
+	if (!vp->val) {
+	    yasm__warning(YASM_WARN_GENERAL, line,
+			  N_("Unrecognized numeric qualifier"));
+	    continue;
+	}
+
 	match = 0;
 	for (i=0; i<NELEMS(flagquals) && !match; i++) {
 	    if (yasm__strcasecmp(vp->val, flagquals[i].name) == 0) {

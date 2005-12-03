@@ -372,6 +372,12 @@ bin_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 
 	/* Check for ALIGN qualifier */
 	while ((vp = yasm_vps_next(vp))) {
+	    if (!vp->val) {
+		yasm__warning(YASM_WARN_GENERAL, line,
+			      N_("Unrecognized numeric qualifier"));
+		continue;
+	    }
+
 	    if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
 		/*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
 		unsigned long bitcnt;
