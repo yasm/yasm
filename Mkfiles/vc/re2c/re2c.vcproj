@@ -130,6 +130,9 @@
 				RelativePath="..\..\..\tools\re2c\main.c">
 			</File>
 			<File
+				RelativePath="..\..\..\tools\re2c\mbo_getopt.c">
+			</File>
+			<File
 				RelativePath="..\..\..\re2c-parser.c">
 			</File>
 			<File
@@ -160,6 +163,9 @@
 			</File>
 			<File
 				RelativePath="..\..\..\tools\re2c\ins.h">
+			</File>
+			<File
+				RelativePath="..\..\..\tools\re2c\mbo_getopt.h">
 			</File>
 			<File
 				RelativePath="..\..\..\tools\re2c\parse.h">
