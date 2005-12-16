@@ -55,6 +55,7 @@ static int special_options = 0;
 /*@null@*/ /*@dependent@*/ static yasm_preproc *cur_preproc = NULL;
 /*@null@*/ /*@dependent@*/ static const yasm_preproc_module *
     cur_preproc_module = NULL;
+/*@null@*/ static char *objfmt_keyword = NULL;
 /*@null@*/ /*@dependent@*/ static yasm_objfmt *cur_objfmt = NULL;
 /*@null@*/ /*@dependent@*/ static const yasm_objfmt_module *
     cur_objfmt_module = NULL;
@@ -759,6 +760,8 @@ cleanup(yasm_object *object)
 	    yasm_xfree(list_filename);
 	if (machine_name)
 	    yasm_xfree(machine_name);
+	if (objfmt_keyword)
+	    yasm_xfree(objfmt_keyword);
     }
 }
 
@@ -860,6 +863,9 @@ opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 		    _("object format"), param);
 	exit(EXIT_FAILURE);
     }
+    if (objfmt_keyword)
+	yasm_xfree(objfmt_keyword);
+    objfmt_keyword = yasm__xstrdup(param);
     return 0;
 }
 
@@ -1033,10 +1039,9 @@ static void
 apply_preproc_builtins()
 {
     char *predef;
-    const char *objfmt_keyword = DEFAULT_OBJFMT_MODULE;
 
-    if (cur_objfmt_module)
-	objfmt_keyword = cur_objfmt_module->keyword;
+    if (!objfmt_keyword)
+	objfmt_keyword = yasm__xstrdup(DEFAULT_OBJFMT_MODULE);
 
     /* Define standard YASM assembly-time macro constants */
     predef = yasm_xmalloc(strlen("__YASM_OBJFMT__=")

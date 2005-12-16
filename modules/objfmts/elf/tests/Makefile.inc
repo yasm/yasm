@@ -3,6 +3,9 @@
 TESTS += modules/objfmts/elf/tests/elf_test.sh
 
 EXTRA_DIST += modules/objfmts/elf/tests/elf_test.sh
+EXTRA_DIST += modules/objfmts/elf/tests/elfcond.asm
+EXTRA_DIST += modules/objfmts/elf/tests/elfcond.hex
+EXTRA_DIST += modules/objfmts/elf/tests/elfcond.errwarn
 EXTRA_DIST += modules/objfmts/elf/tests/elfsectalign.asm
 EXTRA_DIST += modules/objfmts/elf/tests/elfsectalign.hex
 EXTRA_DIST += modules/objfmts/elf/tests/elfsectalign.errwarn
