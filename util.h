@@ -102,6 +102,9 @@
 #elif HAVE_STRICMP
 # define yasm__strcasecmp(x, y)		stricmp(x, y)
 # define yasm__strncasecmp(x, y, n)	strnicmp(x, y, n)
+#elif HAVE__STRICMP
+# define yasm__strcasecmp(x, y)		_stricmp(x, y)
+# define yasm__strncasecmp(x, y, n)	_strnicmp(x, y, n)
 #elif HAVE_STRCMPI
 # define yasm__strcasecmp(x, y)		strcmpi(x, y)
 # define yasm__strncasecmp(x, y, n)	strncmpi(x, y, n)

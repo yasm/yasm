@@ -1,5 +1,7 @@
 /* $Id: config.h 1137 2004-09-04 01:24:57Z peter $ */
 
+#define _CRT_SECURE_NO_DEPRECATE 1
+
 /* */
 /* #undef ENABLE_NLS */
 
@@ -179,15 +181,13 @@
 #define HAVE_STRCMP 1
 
 /* Define if you have the `strcmpi' function. */
-#define HAVE_STRCMPI 1
-#define strcmpi _strcmpi
+/* #undef HAVE_STRCMPI */
 
 /* Define if you have the `strerror' function. */
 #define HAVE_STRERROR 1
 
 /* Define if you have the `stricmp' function. */
-#define HAVE_STRICMP 1
-#define stricmp _stricmp
+#define HAVE__STRICMP 1
 
 /* Define if you have the <strings.h> header file. */
 /* #undef HAVE_STRINGS_H */

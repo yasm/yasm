@@ -1114,10 +1114,6 @@
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\nasm-macros.c"
-						>
-					</File>
-					<File
 						RelativePath="..\..\..\modules\preprocs\nasm\nasm-pp.c"
 						>
 						<FileConfiguration

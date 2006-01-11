@@ -1,6 +1,7 @@
 #include <time.h>
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include "tools/re2c/globals.h"
 #include "tools/re2c/parse.h"
