@@ -1306,8 +1306,6 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	} else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
 	    if (objfmt_coff->win32) {
 		/*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
-		unsigned long bitcnt;
-
 		align_expr = yasm_expr_get_intnum(&vp->param, NULL);
 		if (!align_expr) {
 		    yasm__error(line,

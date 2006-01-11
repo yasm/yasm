@@ -380,7 +380,6 @@ bin_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 
 	    if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
 		/*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
-		unsigned long bitcnt;
 
 		if (strcmp(sectname, ".text") == 0) {
 		    yasm__error(line,
