@@ -167,7 +167,7 @@ elf_x86_x86_write_reloc(unsigned char *bufp, elf_reloc_entry *reloc,
                         unsigned int r_type, unsigned int r_sym)
 {
     YASM_WRITE_32I_L(bufp, reloc->reloc.addr);
-    YASM_WRITE_32_L(bufp, ELF32_R_INFO((unsigned char)r_sym, (unsigned char)r_type));
+    YASM_WRITE_32_L(bufp, ELF32_R_INFO((unsigned long)r_sym, (unsigned char)r_type));
 }
 
 static void
