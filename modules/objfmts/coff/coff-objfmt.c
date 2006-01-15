@@ -1587,3 +1587,20 @@ yasm_objfmt_module yasm_win64_LTX_objfmt = {
     coff_objfmt_common_declare,
     win32_objfmt_directive
 };
+yasm_objfmt_module yasm_x64_LTX_objfmt = {
+    "Win64",
+    "x64",
+    "obj",
+    ".text",
+    64,
+    coff_objfmt_dbgfmt_keywords,
+    "null",
+    win64_objfmt_create,
+    coff_objfmt_output,
+    coff_objfmt_destroy,
+    coff_objfmt_section_switch,
+    coff_objfmt_extern_declare,
+    coff_objfmt_global_declare,
+    coff_objfmt_common_declare,
+    win32_objfmt_directive
+};
