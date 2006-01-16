@@ -522,30 +522,65 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
  * Major differences from Robertson's algorithm:
  *  - detection of cycles
  *  - any difference of two locations is allowed
+ *  - handling of alignment gaps
+ *  - handling of multiples
  *
  * Data structures:
  *  - Interval tree to store spans and associated data
  *  - Queue Q
  *
+ * Each span keeps track of:
+ *  - Associated bytecode (bytecode that depends on the span length)
+ *  - Sign (negative/positive; negative being "backwards" in address)
+ *  - Current length in bytes
+ *  - New length in bytes
+ *  - Negative/Positive thresholds
+ *  - Span ID (unique within each bytecode)
+ *    = 0 -- need to update bytecode length on any span length change
+ *    > 0 -- only need to update bytecode length if exceeds thresholds
+ *    Span ID 0 is reserved for times, org, and align; other IDs can be
+ *    arbitrarily chosen by the bytecode.
+ *
+ * How org, align, and times are handled:
+ * Some portions are critical values that must not depend on any bytecode
+ * offset (either relative or absolute).
+ *
+ * ALIGN: Start with 0 length.  Span from 0 to align bytecode, update
+ *        on any change (span ID 0).  Alignment is critical value.
+ * ORG:   0 length (always).  Bump offset to org value.  Span from 0 to
+ *        org bytecode, update on any change (span ID 0).  If span's length
+ *        exceeds org value, error.  ORG value is critical value.
+ * TIMES: Handled separately from bytecode "raw" size.  If not span-dependent,
+ *        trivial (just multiplied in at any bytecode size increase).  Span
+ *        dependent times update on any change (span ID 0).
+ *
  * Basic algorithm outline:
  *
  * 1. Initialization:
- *  a. Number bytecodes sequentially (done in object_finalize by setting
- *     bc_index values).
- *  b. First pass through bytecodes assumes minimum length but builds spans
- *     if necessary.  Also avoids building spans for things that are
+ *  a. Number bytecodes sequentially (via bc_index) and calculate offsets
+ *     of all bytecodes assuming minimum length (done in object_finalize).
+ *     "minimum" here means absolute minimum:
+ *      - align and org bytecodes will be 0 length
+ *      - times values (with span-dependent values) assumed to be 0
+ *  b. Second pass through bytecodes continues to assume absolute minimum
+ *     bytecode length but builds spans if necessary.  To reduce interval
+ *     tree size, this step avoids building spans for things that are
  *     considered "certainly long" such as inter-section references or if
- *     the # of bytecodes spanned is greater than the long threshold
- *     (basically treating each bytecode as 1 byte in length).
- *  c. Iterate over spans; if span exceeds long threshold, add BC for that
+ *     the distance calculated based on minimum length is already greater
+ *     than the long threshold.  If already certainly long, bytecode is
+ *     updated with new length and subsequent bytecode offsets are updated
+ *     with a running delta.
+ *  c. Iterate over spans.  Update span's length based on new bytecode offsets
+ *     determined in 1b.  If span's length exceeds long threshold, add that
  *     span to Q.
  * 2. Main loop:
  *   While Q not empty:
- *     Mark BC at head of Q long (and remove from Q).
+ *     Expand BC dependent on span at head of Q (and remove span from Q).
  *     For each span that contains BC:
  *       Increase span length by difference between short and long BC length.
- *       If span exceeds long threshold, add its BC to tail of Q.
- * 3. Final pass over bytecodes to generate offsets.
+ *       If span exceeds long threshold (or is flagged to recalculate on any
+ *       change), add it to tail of Q.
+ * 3. Final pass over bytecodes to generate final offsets.
  */
 
 void

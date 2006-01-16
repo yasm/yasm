@@ -255,7 +255,8 @@ void yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 /** Resolve EQUs in a bytecode and calculate its possible lengths.
  * Tries to minimize the length as much as possible for short_len.
  * The short length is set in the bytecode, and the long length is returned
- * in long_len (if applicable).
+ * in long_len (if applicable).  Any bytecode multiple is NOT included in
+ * the length or critical expression calculations.
  * \param bc		bytecode
  * \param long_len	longer length (returned).  0 returned if no longer
  *                      length is available (must be short).
@@ -273,11 +274,18 @@ int yasm_bc_calc_len(yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
 		     /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres);
 
 /** Mark a bytecode as long.  Has no effect if the bytecode does not have
- * a long form.
+ * a long form.  May return back a new longer threshold that can be reached.
  * \param bc		bytecode
- * \param long_len	long length (as returned by yasm_bc_calc_len)
+ * \param long_len	long length (as given by yasm_bc_calc_len)
+ * \param longer_len	next stage of lengthening (returned)
+ * \param neg_thres	negative threshold for long/short decision (returned)
+ * \param pos_thres	postivie threshold for long/short decision (returned)
+ * \return 0 if no longer threshold, positive if length may increase further
+ *         based on the new negative and positive thresholds.
  */
-void yasm_bc_set_long(yasm_bytecode *bc, unsigned long long_len);
+int yasm_bc_set_long(yasm_bytecode *bc, unsigned long long_len,
+		     /*@out@*/ unsigned long *longer_len,
+		     /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres);
 
 /** Convert a bytecode into its byte representation.
  * \param bc	 	bytecode
