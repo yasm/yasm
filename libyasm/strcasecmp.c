@@ -52,6 +52,8 @@ yasm__strcasecmp(const char *s1, const char *s2)
     return strcasecmp(s1, s2);
 #elif HAVE_STRICMP
     return stricmp(s1, s2);
+#elif HAVE__STRICMP
+    return _stricmp(s1, s2);
 #elif HAVE_STRCMPI
     return strcmpi(s1, s2);
 #else
@@ -73,6 +75,8 @@ yasm__strncasecmp(const char *s1, const char *s2, size_t n)
     return strncasecmp(s1, s2, n);
 #elif HAVE_STRICMP
     return strnicmp(s1, s2, n);
+#elif HAVE__STRNICMP
+    return _strnicmp(s1, s2, n);
 #elif HAVE_STRCMPI
     return strncmpi(s1, s2, n);
 #else

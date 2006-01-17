@@ -243,6 +243,7 @@ elf_symtab_entry_create(elf_strtab_entry *name,
 			yasm_symrec *sym)
 {
     elf_symtab_entry *entry = yasm_xmalloc(sizeof(elf_symtab_entry));
+    entry->in_table = 0;
     entry->sym = sym;
     entry->sect = NULL;
     entry->name = name;
@@ -317,6 +318,7 @@ elf_symtab_create()
     elf_symtab_entry *entry = yasm_xmalloc(sizeof(elf_symtab_entry));
 
     STAILQ_INIT(symtab);
+    entry->in_table = 1;
     entry->sym = NULL;
     entry->sect = NULL;
     entry->name = NULL;
@@ -324,15 +326,15 @@ elf_symtab_create()
     entry->xsize = NULL;
     entry->size = 0;
     entry->index = SHN_UNDEF;
-    entry->bind = 0;
-    entry->type = 0;
+    entry->bind = STB_LOCAL;
+    entry->type = STT_NOTYPE;
     entry->vis = STV_DEFAULT;
     entry->symindex = 0;
     STAILQ_INSERT_TAIL(symtab, entry, qlink);
     return symtab;
 }
 
-elf_symtab_entry *
+void
 elf_symtab_append_entry(elf_symtab_head *symtab, elf_symtab_entry *entry)
 {
     if (symtab == NULL)
@@ -343,18 +345,12 @@ elf_symtab_append_entry(elf_symtab_head *symtab, elf_symtab_entry *entry)
 	yasm_internal_error(N_("symtab is missing initial dummy entry"));
 
     STAILQ_INSERT_TAIL(symtab, entry, qlink);
-    return entry;
+    entry->in_table = 1;
 }
 
-elf_symtab_entry *
-elf_symtab_insert_local_sym(elf_symtab_head *symtab,
-			    elf_strtab_head *strtab,
-			    yasm_symrec *sym)
+void
+elf_symtab_insert_local_sym(elf_symtab_head *symtab, elf_symtab_entry *entry)
 {
-    elf_strtab_entry *name = strtab
-	? elf_strtab_append_str(strtab, yasm_symrec_get_name(sym))
-	: NULL;
-    elf_symtab_entry *entry = elf_symtab_entry_create(name, sym);
     elf_symtab_entry *after = STAILQ_FIRST(symtab);
     elf_symtab_entry *before = NULL;
 
@@ -364,8 +360,7 @@ elf_symtab_insert_local_sym(elf_symtab_head *symtab,
 	after = STAILQ_NEXT(after, qlink);
     }
     STAILQ_INSERT_AFTER(symtab, before, entry, qlink);
-
-    return entry;
+    entry->in_table = 1;
 }
 
 void
@@ -480,7 +475,7 @@ void elf_symtab_set_nonzero(elf_symtab_entry *entry,
 			    elf_symbol_binding bind,
 			    elf_symbol_type type,
 			    yasm_expr *xsize,
-			    elf_address value)
+			    elf_address *value)
 {
     if (!entry)
 	yasm_internal_error("NULL entry");
@@ -489,7 +484,7 @@ void elf_symtab_set_nonzero(elf_symtab_entry *entry,
     if (bind) entry->bind = bind;
     if (type) entry->type = type;
     if (xsize) entry->xsize = xsize;
-    if (value) entry->value = value;
+    if (value) entry->value = *value;
 }
 
 void
@@ -498,6 +493,28 @@ elf_sym_set_visibility(elf_symtab_entry *entry,
 {
     entry->vis = ELF_ST_VISIBILITY(vis);
 }                            
+
+void
+elf_sym_set_type(elf_symtab_entry *entry,
+                 elf_symbol_type   type)
+{
+    entry->type = type;
+}                            
+
+void
+elf_sym_set_size(elf_symtab_entry *entry,
+                 struct yasm_expr *size)
+{
+    if (entry->xsize)
+	yasm_expr_destroy(entry->xsize);
+    entry->xsize = size;
+}                            
+
+int
+elf_sym_in_table(elf_symtab_entry *entry)
+{
+    return entry->in_table;
+}
 
 elf_secthead *
 elf_secthead_create(elf_strtab_entry	*name,
@@ -514,7 +531,7 @@ elf_secthead_create(elf_strtab_entry	*name,
     esd->size = yasm_intnum_create_uint(size);
     esd->link = 0;
     esd->info = 0;
-    esd->align = NULL;
+    esd->align = 0;
     esd->entsize = 0;
     esd->index = 0;
 
@@ -530,7 +547,7 @@ elf_secthead_create(elf_strtab_entry	*name,
         if (!elf_march->symtab_entry_size || !elf_march->symtab_entry_align)
 	    yasm_internal_error(N_("unsupported ELF format"));
         esd->entsize = elf_march->symtab_entry_size;
-        esd->align = yasm_intnum_create_uint(elf_march->symtab_entry_align);
+        esd->align = elf_march->symtab_entry_align;
     }
 
     return esd;
@@ -541,9 +558,6 @@ elf_secthead_destroy(elf_secthead *shead)
 {
     if (shead == NULL)
 	yasm_internal_error(N_("shead is null"));
-
-    if (shead->align)
-	yasm_intnum_destroy(shead->align);
 
     yasm_xfree(shead);
 }
@@ -576,8 +590,7 @@ elf_secthead_print(void *data, FILE *f, int indent_level)
     fprintf(f, "%*ssize=0x%lx\n", indent_level, "",
 	    yasm_intnum_get_uint(sect->size));
     fprintf(f, "%*slink=0x%x\n", indent_level, "", sect->link);
-    fprintf(f, "%*salign=%ld\n", indent_level, "",
-	    yasm_intnum_get_uint(sect->align));
+    fprintf(f, "%*salign=%lu\n", indent_level, "", sect->align);
     fprintf(f, "%*snreloc=%ld\n", indent_level, "", sect->nreloc);
 }
 
@@ -744,12 +757,15 @@ elf_secthead_get_index(elf_secthead *shead)
     return shead->index;
 }
 
-const yasm_intnum *
-elf_secthead_set_align(elf_secthead *shead, yasm_intnum *align)
+unsigned long
+elf_secthead_get_align(const elf_secthead *shead)
 {
-    if (shead->align != NULL)
-	yasm_intnum_destroy(shead->align);
-    
+    return shead->align;
+}
+
+unsigned long
+elf_secthead_set_align(elf_secthead *shead, unsigned long align)
+{
     return shead->align = align;
 }
 
@@ -806,7 +822,7 @@ elf_secthead_add_size(elf_secthead *shead, yasm_intnum *size)
 long
 elf_secthead_set_file_offset(elf_secthead *shead, long pos)
 {
-    unsigned long align = yasm_intnum_get_uint(shead->align);
+    unsigned long align = shead->align;
 
     if (align == 0 || align == 1) {
 	shead->offset = (unsigned long)pos;

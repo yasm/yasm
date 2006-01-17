@@ -5,6 +5,12 @@
 #include "tools/re2c/token.h"
 #include "tools/re2c/ins.h"
 
+typedef struct extop {
+    char    op;
+    int	    minsize;
+    int	    maxsize;
+} ExtOp;
+
 typedef struct CharPtn {
     unsigned int	card;
     struct CharPtn	*fix;
@@ -67,7 +73,8 @@ typedef enum {
 	RULEOP,
 	ALTOP,
 	CATOP,
-	CLOSEOP
+	CLOSEOP,
+	CLOSEVOP
 } RegExpType;
 
 typedef struct RegExp {
@@ -91,6 +98,12 @@ typedef struct RegExp {
 	} AltCatOp;
 	/* for CloseOp */
 	struct RegExp	*exp;
+	/* for CloseVOp*/
+	struct {
+	    struct RegExp	*exp;
+	    int		min;
+	    int		max;
+	} CloseVOp;
     } d;
 } RegExp;
 
@@ -154,10 +167,24 @@ RegExp_new_CloseOp(RegExp *e)
     return r;
 }
 
+static RegExp *
+RegExp_new_CloseVOp(RegExp *e, int lb, int ub)
+{
+    RegExp *r = malloc(sizeof(RegExp));
+    r->type = CLOSEVOP;
+    r->d.CloseVOp.exp = e;
+    r->d.CloseVOp.min = lb;
+    r->d.CloseVOp.max = ub;
+    return r;
+}
+
 extern void genCode(FILE *, RegExp*);
 extern RegExp *mkDiff(RegExp*, RegExp*);
+extern RegExp *mkDot(void);
 extern RegExp *strToRE(SubStr);
+extern RegExp *strToCaseInsensitiveRE(SubStr);
 extern RegExp *ranToRE(SubStr);
+extern RegExp *invToRE(SubStr);
 
 extern RegExp *mkAlt(RegExp*, RegExp*);
 

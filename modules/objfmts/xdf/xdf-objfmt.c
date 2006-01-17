@@ -66,7 +66,6 @@ typedef struct xdf_section_data {
     yasm_intnum *addr;	    /* starting memory address */
     yasm_intnum *vaddr;	    /* starting virtual address */
     long scnum;		    /* section number (0=first section) */
-    unsigned int align;	    /* section alignment (0-4096) */
     enum {
 	XDF_SECT_ABSOLUTE = 0x01,
 	XDF_SECT_FLAT = 0x02,
@@ -208,7 +207,8 @@ xdf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     wrt_expr = yasm_expr_extract_wrt(ep);
 
     /* Handle integer expressions, with relocation if necessary */
-    sym = yasm_expr_extract_symrec(ep, 0, yasm_common_calc_bc_dist);
+    sym = yasm_expr_extract_symrec(ep, YASM_SYMREC_REPLACE_ZERO,
+				   yasm_common_calc_bc_dist);
     if (sym) {
 	xdf_reloc *reloc;
 
@@ -222,7 +222,8 @@ xdf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	if (seg)
 	    reloc->type = XDF_RELOC_SEG;
 	else if (wrt_expr) {
-	    reloc->base = yasm_expr_extract_symrec(&wrt_expr, 0,
+	    reloc->base = yasm_expr_extract_symrec(&wrt_expr,
+						   YASM_SYMREC_REPLACE_ZERO, 
 						   yasm_common_calc_bc_dist);
 	    if (!reloc->base) {
 		yasm__error(bc->line, N_("WRT expression too complex"));
@@ -291,7 +292,7 @@ xdf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     /* Warn that gaps are converted to 0 and write out the 0's. */
     if (gap) {
 	unsigned long left;
-	yasm__warning(YASM_WARN_GENERAL, bc->line,
+	yasm__warning(YASM_WARN_UNINIT_CONTENTS, bc->line,
 	    N_("uninitialized space: zeroing"));
 	/* Write out in chunks */
 	memset(info->buf, 0, REGULAR_OUTBUF_SIZE);
@@ -451,7 +452,7 @@ xdf_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 	YASM_WRITE_32_L(localbuf, 0);
 	YASM_WRITE_32_L(localbuf, 0);
     }
-    YASM_WRITE_16_L(localbuf, xsd->align);	/* alignment */
+    YASM_WRITE_16_L(localbuf, yasm_section_get_align(sect)); /* alignment */
     YASM_WRITE_16_L(localbuf, xsd->flags);	/* flags */
     YASM_WRITE_32_L(localbuf, xsd->scnptr);	/* file ptr to data */
     YASM_WRITE_32_L(localbuf, xsd->size);	/* section size */
@@ -662,7 +663,7 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     int isnew;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *absaddr = NULL;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *vaddr = NULL;
-    unsigned int addralign = 0;
+    unsigned long align = 0;
     unsigned long flags = 0;
     int flags_override = 0;
     char *sectname;
@@ -674,6 +675,12 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     sectname = vp->val;
 
     while ((vp = yasm_vps_next(vp))) {
+	if (!vp->val) {
+	    yasm__warning(YASM_WARN_GENERAL, line,
+			  N_("Unrecognized numeric qualifier"));
+	    continue;
+	}
+
 	flags_override = 1;
 	if (yasm__strcasecmp(vp->val, "use16") == 0) {
 	    flags &= ~(XDF_SECT_USE_32|XDF_SECT_USE_64);
@@ -707,29 +714,25 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		return NULL;
 	    }
 	} else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
-	    /*@dependent@*/ /*@null@*/ const yasm_intnum *align;
-	    unsigned long bitcnt;
+	    /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
 
-	    align = yasm_expr_get_intnum(&vp->param, NULL);
-	    if (!align) {
+	    align_expr = yasm_expr_get_intnum(&vp->param, NULL);
+	    if (!align_expr) {
 		yasm__error(line, N_("argument to `%s' is not a power of two"),
 			    vp->val);
 		return NULL;
 	    }
-	    addralign = yasm_intnum_get_uint(align);
+	    align = yasm_intnum_get_uint(align_expr);
 
-	    /* Check to see if alignment is a power of two.
-	     * This can be checked by seeing if only one bit is set.
-	     */
-	    BitCount(bitcnt, addralign);
-	    if (bitcnt > 1) {
+            /* Alignments must be a power of two. */
+            if ((align & (align - 1)) != 0) {
 		yasm__error(line, N_("argument to `%s' is not a power of two"),
 			    vp->val);
 		return NULL;
 	    }
 
 	    /* Check to see if alignment is supported size */
-	    if (addralign > 4096) {
+	    if (align > 4096) {
 		yasm__error(line,
 			    N_("XDF does not support alignments > 4096"));
 		return NULL;
@@ -739,8 +742,8 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			  N_("Unrecognized qualifier `%s'"), vp->val);
     }
 
-    retval = yasm_object_get_general(objfmt_xdf->object, sectname, 0, resonly,
-				     &isnew, line);
+    retval = yasm_object_get_general(objfmt_xdf->object, sectname, 0, align, 1,
+				     resonly, &isnew, line);
 
     if (isnew) {
 	xdf_section_data *data;
@@ -748,7 +751,6 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 
 	data = yasm_xmalloc(sizeof(xdf_section_data));
 	data->scnum = objfmt_xdf->parse_scnum++;
-	data->align = addralign;
 	data->flags = flags;
 	if (absaddr)
 	    data->addr = yasm_intnum_copy(absaddr);

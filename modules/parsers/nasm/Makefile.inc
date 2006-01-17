@@ -9,10 +9,8 @@ libyasm_a_SOURCES += nasm-token.c
 
 YASM_MODULES += parser_nasm
 
-nasm-token.c: $(srcdir)/modules/parsers/nasm/nasm-token.re re2c$(EXEEXT) cleanup$(EXEEXT)
-	$(top_builddir)/re2c$(EXEEXT) -b $(srcdir)/modules/parsers/nasm/nasm-token.re \
-	| $(top_builddir)/cleanup$(EXEEXT) \
-	| sed "/^#l/ s,re2c-out\.c,$@," > $@
+nasm-token.c: $(srcdir)/modules/parsers/nasm/nasm-token.re re2c$(EXEEXT)
+	$(top_builddir)/re2c$(EXEEXT) -b -o $@ $(srcdir)/modules/parsers/nasm/nasm-token.re
 
 BUILT_SOURCES += nasm-bison.c
 BUILT_SOURCES += nasm-bison.h

@@ -192,12 +192,14 @@ symtab_define(yasm_symtab *symtab, const char *name, sym_type type,
     yasm_symrec *rec = symtab_get_or_new(symtab, name, in_table);
 
     /* Has it been defined before (either by DEFINED or COMMON/EXTERN)? */
-    if ((rec->status & SYM_DEFINED) ||
-	(rec->visibility & (YASM_SYM_COMMON | YASM_SYM_EXTERN))) {
+    if (rec->status & SYM_DEFINED) {
 	yasm__error(line, N_("redefinition of `%s'"), name);
 	yasm__error_at(line, rec->line, N_("`%s' previously defined here"),
 		       name);
     } else {
+	if (rec->visibility & YASM_SYM_EXTERN)
+	    yasm__warning(YASM_WARN_GENERAL, line,
+			  N_("`%s' both defined and declared extern"), name);
 	rec->line = line;	/* set line number of definition */
 	rec->type = type;
 	rec->status |= SYM_DEFINED;

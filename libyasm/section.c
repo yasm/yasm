@@ -73,8 +73,11 @@ struct yasm_section {
 
     /*@owned@*/ yasm_expr *start;   /* Starting address of section contents */
 
+    unsigned long align;	/* Section alignment */
+
     unsigned long opt_flags;	/* storage for optimizer flags */
 
+    int code;			/* section contains code (instructions) */
     int res_only;		/* allow only resb family of bytecodes? */
 
     /* the bytecodes for the section's contents */
@@ -109,8 +112,8 @@ yasm_object_create(void)
 /*@-onlytrans@*/
 yasm_section *
 yasm_object_get_general(yasm_object *object, const char *name,
-			yasm_expr *start, int res_only, int *isnew,
-			unsigned long line)
+			yasm_expr *start, unsigned long align, int code,
+			int res_only, int *isnew, unsigned long line)
 {
     yasm_section *s;
     yasm_bytecode *bc;
@@ -142,6 +145,7 @@ yasm_object_get_general(yasm_object *object, const char *name,
 	s->start =
 	    yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(0)),
 				   line);
+    s->align = align;
 
     /* Initialize bytecodes with one empty bytecode (acts as "prior" for first
      * real bytecode in section.
@@ -155,6 +159,7 @@ yasm_object_get_general(yasm_object *object, const char *name,
     STAILQ_INIT(&s->relocs);
     s->destroy_reloc = NULL;
 
+    s->code = code;
     s->res_only = res_only;
 
     *isnew = 1;
@@ -211,6 +216,24 @@ int
 yasm_section_is_absolute(yasm_section *sect)
 {
     return (sect->type == SECTION_ABSOLUTE);
+}
+
+int
+yasm_section_is_code(yasm_section *sect)
+{
+    return sect->code;
+}
+
+unsigned long
+yasm_section_get_opt_flags(const yasm_section *sect)
+{
+    return sect->opt_flags;
+}
+
+void
+yasm_section_set_opt_flags(yasm_section *sect, unsigned long opt_flags)
+{
+    sect->opt_flags = opt_flags;
 }
 
 yasm_object *
@@ -425,6 +448,19 @@ const yasm_expr *
 yasm_section_get_start(const yasm_section *sect)
 {
     return sect->start;
+}
+
+void
+yasm_section_set_align(yasm_section *sect, unsigned long align,
+		       unsigned long line)
+{
+    sect->align = align;
+}
+
+unsigned long
+yasm_section_get_align(const yasm_section *sect)
+{
+    return sect->align;
 }
 
 static void

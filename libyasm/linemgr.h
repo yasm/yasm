@@ -85,11 +85,11 @@ unsigned long yasm_linemap_goto_next(yasm_linemap *linemap);
  * virtual line.  line_inc indicates how much the "real" line is incremented
  * by for each virtual line increment (0 is perfectly legal).
  * \param linemap	line mapping repository
- * \param filename	physical file name
+ * \param filename	physical file name (if NULL, not changed)
  * \param file_line	physical line number
  * \param line_inc	line increment
  */
-void yasm_linemap_set(yasm_linemap *linemap, const char *filename,
+void yasm_linemap_set(yasm_linemap *linemap, /*@null@*/ const char *filename,
 		      unsigned long file_line, unsigned long line_inc);
 
 /** Look up the associated physical file and line for a virtual line.

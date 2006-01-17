@@ -60,6 +60,9 @@ struct yasm_reloc {
  * \param name	    section name
  * \param start	    starting address (ignored if section already exists),
  *		    NULL if 0 or don't care.
+ * \param align	    alignment in bytes (0 if none)
+ * \param code	    if nonzero, section is intended to contain code
+ *		    (e.g. alignment should be made with NOP instructions, not 0)
  * \param res_only  if nonzero, only space-reserving bytecodes are allowed in
  *		    the section (ignored if section already exists)
  * \param isnew	    output; set to nonzero if section did not already exist
@@ -69,8 +72,8 @@ struct yasm_reloc {
  */
 /*@dependent@*/ yasm_section *yasm_object_get_general
     (yasm_object *object, const char *name,
-     /*@null@*/ /*@only@*/ yasm_expr *start, int res_only,
-     /*@out@*/ int *isnew, unsigned long line);
+     /*@null@*/ /*@only@*/ yasm_expr *start, unsigned long align, int code,
+     int res_only, /*@out@*/ int *isnew, unsigned long line);
 
 /** Create a new absolute section.  No checking is performed at creation to
  * check for overlaps with other absolute sections.
@@ -145,6 +148,24 @@ void yasm_object_optimize(yasm_object *object, yasm_arch *arch);
  * \return Nonzero if section is absolute.
  */
 int yasm_section_is_absolute(yasm_section *sect);
+
+/** Determine if a section is flagged to contain code.
+ * \param sect	    section
+ * \return Nonzero if section is flagged to contain code.
+ */
+int yasm_section_is_code(yasm_section *sect);
+
+/** Get yasm_optimizer-specific flags.  For yasm_optimizer use only.
+ * \param sect	    section
+ * \return Optimizer-specific flags.
+ */
+unsigned long yasm_section_get_opt_flags(const yasm_section *sect);
+
+/** Set yasm_optimizer-specific flags.  For yasm_optimizer use only.
+ * \param sect	    section
+ * \param opt_flags optimizer-specific flags.
+ */
+void yasm_section_set_opt_flags(yasm_section *sect, unsigned long opt_flags);
 
 /** Get object owner of a section.
  * \param sect	    section
@@ -266,6 +287,20 @@ void yasm_section_set_start(yasm_section *sect, /*@only@*/ yasm_expr *start,
  */
 /*@observer@*/ const yasm_expr *yasm_section_get_start
     (const yasm_section *sect);
+
+/** Change alignment of a section.
+ * \param sect	    section
+ * \param align	    alignment in bytes
+ * \param line	    virtual line
+ */
+void yasm_section_set_align(yasm_section *sect, unsigned long align,
+			    unsigned long line);
+
+/** Get alignment of a section.
+ * \param sect	    section
+ * \return Alignment in bytes (0 if none).
+ */
+unsigned long yasm_section_get_align(const yasm_section *sect);
 
 /** Print a section.  For debugging purposes.
  * \param f		file

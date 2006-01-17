@@ -100,7 +100,8 @@ yasm_errwarn_initialize(void)
     /* Default enabled warnings.  See errwarn.h for a list. */
     warn_class_enabled = 
 	(1UL<<YASM_WARN_GENERAL) | (1UL<<YASM_WARN_UNREC_CHAR) |
-	(1UL<<YASM_WARN_PREPROC) | (0UL<<YASM_WARN_ORPHAN_LABEL);
+	(1UL<<YASM_WARN_PREPROC) | (0UL<<YASM_WARN_ORPHAN_LABEL) |
+	(1UL<<YASM_WARN_UNINIT_CONTENTS);
 
     error_count = 0;
     warning_count = 0;

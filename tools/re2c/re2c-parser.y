@@ -8,8 +8,6 @@
 int yylex(void);
 void yyerror(const char*);
 
-static char *mystrdup(const char *str);
-
 static unsigned int accept;
 static RegExp *spec;
 static Scanner *in;
@@ -23,12 +21,14 @@ static Scanner *in;
     RegExp	*regexp;
     Token	*token;
     char	op;
+    ExtOp	extop;
 }
 
-%token		CLOSE	ID	CODE	RANGE	STRING
+%token		CLOSESIZE   CLOSE	ID	CODE	RANGE	STRING
 
 %type	<op>		CLOSE
 %type	<op>		close
+%type	<extop>		CLOSESIZE
 %type	<symbol>	ID
 %type	<token>		CODE
 %type	<regexp>	RANGE	STRING
@@ -97,6 +97,10 @@ factor	:	primary
 			break;
 		    }
 		}
+	|	primary CLOSESIZE
+		{
+			$$ = RegExp_new_CloseVOp($1, $2.minsize, $2.maxsize);
+		}
 	;
 
 close	:	CLOSE
@@ -127,23 +131,13 @@ int yylex(){
     return Scanner_scan(in);
 }
 
-static char *
-mystrdup(const char *str)
-{
-	size_t len;
-	char *copy;
-
-	len = strlen(str) + 1;
-	copy = malloc(len);
-	memcpy(copy, str, len);
-	return (copy);
-}
-
 void line_source(FILE *o, unsigned int line)
 {
     char *	fnamebuf;
     char *	token;
 
+    if (iFlag)
+	return;
     fprintf(o, "#line %u \"", line);
     if( fileName != NULL ) {
     	fnamebuf = mystrdup( fileName );

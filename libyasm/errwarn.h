@@ -39,7 +39,8 @@ typedef enum {
     YASM_WARN_GENERAL = 0,  /**< Non-specific warnings */
     YASM_WARN_UNREC_CHAR,   /**< Unrecognized characters (while tokenizing) */
     YASM_WARN_PREPROC,	    /**< Preprocessor warnings */
-    YASM_WARN_ORPHAN_LABEL  /**< Label alone on a line without a colon */
+    YASM_WARN_ORPHAN_LABEL, /**< Label alone on a line without a colon */
+    YASM_WARN_UNINIT_CONTENTS	/**< Uninitialized space in code/data section */
 } yasm_warn_class;
 
 /** Initialize any internal data structures. */

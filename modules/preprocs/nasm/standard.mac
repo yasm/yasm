@@ -125,3 +125,39 @@ __SECT__
 %endmacro
 %endif
 
+%ifidn __YASM_OBJFMT__,elf
+%imacro type 1+.nolist
+[type %1]
+%endmacro
+%imacro size 1+.nolist
+[size %1]
+%endmacro
+%imacro weak 1+.nolist
+[weak %1]
+%endmacro
+%endif
+
+%ifidn __YASM_OBJFMT__,elf32
+%imacro type 1+.nolist
+[type %1]
+%endmacro
+%imacro size 1+.nolist
+[size %1]
+%endmacro
+%imacro weak 1+.nolist
+[weak %1]
+%endmacro
+%endif
+
+%ifidn __YASM_OBJFMT__,elf64
+%imacro type 1+.nolist
+[type %1]
+%endmacro
+%imacro size 1+.nolist
+[size %1]
+%endmacro
+%imacro weak 1+.nolist
+[weak %1]
+%endmacro
+%endif
+

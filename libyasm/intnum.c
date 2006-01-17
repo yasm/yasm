@@ -460,21 +460,33 @@ yasm_intnum_zero(yasm_intnum *intn)
 }
 
 int
-yasm_intnum_is_zero(yasm_intnum *intn)
+yasm_intnum_is_zero(const yasm_intnum *intn)
 {
     return (intn->type == INTNUM_UL && intn->val.ul == 0);
 }
 
 int
-yasm_intnum_is_pos1(yasm_intnum *intn)
+yasm_intnum_is_pos1(const yasm_intnum *intn)
 {
     return (intn->type == INTNUM_UL && intn->val.ul == 1);
 }
 
 int
-yasm_intnum_is_neg1(yasm_intnum *intn)
+yasm_intnum_is_neg1(const yasm_intnum *intn)
 {
     return (intn->type == INTNUM_BV && BitVector_is_full(intn->val.bv));
+}
+
+int
+yasm_intnum_sign(const yasm_intnum *intn)
+{
+    if (intn->type == INTNUM_UL) {
+	if (intn->val.ul == 0)
+	    return 0;
+	else
+	    return 1;
+    } else
+	return BitVector_Sign(intn->val.bv);
 }
 
 unsigned long
@@ -636,6 +648,86 @@ yasm_intnum_check_size(const yasm_intnum *intn, size_t size, size_t rshift,
 	    size--;
     }
     return (Set_Max(val) < (long)size);
+}
+
+unsigned long
+yasm_intnum_get_leb128(const yasm_intnum *intn, unsigned char *ptr, int sign)
+{
+    wordptr val = op1static;
+    unsigned long i, size;
+    unsigned char *ptr_orig = ptr;
+
+    /* Shortcut 0 */
+    if (intn->type == INTNUM_UL && intn->val.ul == 0) {
+	*ptr = 0;
+	return 1;
+    }
+
+    /* If not already a bitvect, convert value to be written to a bitvect */
+    if (intn->type == INTNUM_BV)
+	val = intn->val.bv;
+    else {
+	BitVector_Empty(val);
+	BitVector_Chunk_Store(val, 32, 0, intn->val.ul);
+    }
+
+    if (sign) {
+	/* Signed mode */
+	if (BitVector_msb_(val)) {
+	    /* Negative */
+	    BitVector_Negate(conv_bv, val);
+	    size = Set_Max(conv_bv)+2;
+	} else {
+	    /* Positive */
+	    size = Set_Max(val)+2;
+	}
+    } else {
+	/* Unsigned mode */
+	size = Set_Max(val)+1;
+    }
+
+    /* Positive/Unsigned write */
+    for (i=0; i<size; i += 7) {
+	*ptr = (unsigned char)BitVector_Chunk_Read(val, 7, i);
+	*ptr |= 0x80;
+	ptr++;
+    }
+    *(ptr-1) &= 0x7F;	/* Clear MSB of last byte */
+    return (unsigned long)(ptr-ptr_orig);
+}
+
+unsigned long
+yasm_intnum_size_leb128(const yasm_intnum *intn, int sign)
+{
+    wordptr val = op1static;
+
+    /* Shortcut 0 */
+    if (intn->type == INTNUM_UL && intn->val.ul == 0) {
+	return 1;
+    }
+
+    /* If not already a bitvect, convert value to a bitvect */
+    if (intn->type == INTNUM_BV)
+	val = intn->val.bv;
+    else {
+	BitVector_Empty(val);
+	BitVector_Chunk_Store(val, 32, 0, intn->val.ul);
+    }
+
+    if (sign) {
+	/* Signed mode */
+	if (BitVector_msb_(val)) {
+	    /* Negative */
+	    BitVector_Negate(conv_bv, val);
+	    return (Set_Max(conv_bv)+8)/7;
+	} else {
+	    /* Positive */
+	    return (Set_Max(val)+8)/7;
+	}
+    } else {
+	/* Unsigned mode */
+	return (Set_Max(val)+7)/7;
+    }
 }
 
 void

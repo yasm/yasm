@@ -98,7 +98,9 @@ typedef enum {
 typedef enum {
     X86_LOCKREP = 1,
     X86_ADDRSIZE,
-    X86_OPERSIZE
+    X86_OPERSIZE,
+    X86_SEGREG,
+    X86_REX
 } x86_parse_insn_prefix;
 
 typedef enum {
@@ -214,7 +216,15 @@ typedef struct x86_insn {
 	/* Override any attempt at address-size override to 16 bits, and never
 	 * generate a prefix.  This is used for the ENTER opcode.
 	 */
-	X86_POSTOP_ADDRESS16
+	X86_POSTOP_ADDRESS16,
+
+	/* Used for 64-bit mov immediate, which can take a sign-extended
+	 * imm32 as well as imm64 values.  The imm32 form is put in the
+	 * second byte of the opcode and its ModRM byte is put in the third
+	 * byte of the opcode.
+	 * FIXME: Update for new optimizer.
+	 */
+	X86_POSTOP_SIGNEXT_IMM32
     } postop;
 } x86_insn;
 
@@ -247,8 +257,8 @@ void yasm_x86__bc_transform_jmp(yasm_bytecode *bc, x86_jmp *jmp);
 void yasm_x86__bc_transform_jmpfar(yasm_bytecode *bc, x86_jmpfar *jmpfar);
 
 void yasm_x86__bc_apply_prefixes
-    (x86_common *common, int num_prefixes, unsigned long **prefixes,
-     unsigned long line);
+    (x86_common *common, unsigned char *rex, int num_prefixes,
+     unsigned long **prefixes, unsigned long line);
 
 void yasm_x86__ea_init(yasm_effaddr *ea, unsigned int spare,
 		       /*@null@*/ yasm_symrec *origin);

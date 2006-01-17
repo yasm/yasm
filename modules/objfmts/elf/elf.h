@@ -151,6 +151,10 @@ typedef enum {
     SHF_WRITE = 0x1,		/* data should be writable at runtime */
     SHF_ALLOC = 0x2,		/* occupies memory at runtime */
     SHF_EXECINSTR = 0x4,	/* contains machine instructions */
+    SHF_MERGE = 0x10,		/* data can be merged */
+    SHF_STRINGS = 0x20,		/* contains 0-terminated strings */
+    SHF_GROUP = 0x200,		/* member of a section group */
+    SHF_TLS = 0x400,		/* thread local storage */
     SHF_MASKOS = 0x0f000000/*,*//* environment specific use */
     /*SHF_MASKPROC = 0xf0000000*/	/* bits reserved for processor specific needs */
 } elf_section_flags;
@@ -333,7 +337,7 @@ struct elf_secthead {
     yasm_intnum		*size;
     elf_section_index	 link;
     elf_section_info	 info;	    /* see note ESD1 */
-    yasm_intnum 	*align;
+    unsigned long	 align;
     elf_size		 entsize;
 
     yasm_symrec		*sym;
@@ -382,6 +386,7 @@ struct elf_strtab_entry {
 STAILQ_HEAD(elf_symtab_head, elf_symtab_entry);
 struct elf_symtab_entry {
     STAILQ_ENTRY(elf_symtab_entry) qlink;
+    int			in_table;
     yasm_symrec		*sym;
     yasm_section	*sect;
     elf_strtab_entry	*name;
@@ -425,11 +430,9 @@ unsigned long elf_strtab_output_to_file(FILE *f, elf_strtab_head *head);
 elf_symtab_entry *elf_symtab_entry_create(elf_strtab_entry *name,
 					  struct yasm_symrec *sym);
 elf_symtab_head *elf_symtab_create(void);
-elf_symtab_entry *elf_symtab_append_entry(elf_symtab_head *symtab,
-					  elf_symtab_entry *entry);
-elf_symtab_entry *elf_symtab_insert_local_sym(elf_symtab_head *symtab,
-					      elf_strtab_head *strtab,
-					      struct yasm_symrec *sym);
+void elf_symtab_append_entry(elf_symtab_head *symtab, elf_symtab_entry *entry);
+void elf_symtab_insert_local_sym(elf_symtab_head *symtab,
+				 elf_symtab_entry *entry);
 void elf_symtab_destroy(elf_symtab_head *head);
 unsigned long elf_symtab_assign_indices(elf_symtab_head *symtab);
 unsigned long elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab);
@@ -439,9 +442,12 @@ void elf_symtab_set_nonzero(elf_symtab_entry	*entry,
 			    elf_symbol_binding	 bind,
 			    elf_symbol_type	 type,
 			    struct yasm_expr	*size,
-			    elf_address		 value);
+			    elf_address		*value);
 void elf_sym_set_visibility(elf_symtab_entry    *entry,
                             elf_symbol_vis       vis);
+void elf_sym_set_type(elf_symtab_entry *entry, elf_symbol_type type);
+void elf_sym_set_size(elf_symtab_entry *entry, struct yasm_expr *size);
+int elf_sym_in_table(elf_symtab_entry *entry);
 
 /* section header functions */
 elf_secthead *elf_secthead_create(elf_strtab_entry	*name,
@@ -457,8 +463,8 @@ void elf_secthead_append_reloc(yasm_section *sect, elf_secthead *shead,
 elf_section_type elf_secthead_get_type(elf_secthead *shead);
 int elf_secthead_is_empty(elf_secthead *shead);
 struct yasm_symrec *elf_secthead_get_sym(elf_secthead *shead);
-const struct yasm_intnum *elf_secthead_set_align(elf_secthead *shead,
-						 struct yasm_intnum *align);
+unsigned long elf_secthead_get_align(const elf_secthead *shead);
+unsigned long elf_secthead_set_align(elf_secthead *shead, unsigned long align);
 elf_section_index elf_secthead_get_index(elf_secthead *shead);
 elf_section_info elf_secthead_set_info(elf_secthead *shead,
 				       elf_section_info info);

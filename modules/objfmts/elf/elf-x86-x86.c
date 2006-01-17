@@ -98,10 +98,7 @@ elf_x86_x86_write_secthead(unsigned char *bufp, elf_secthead *shead)
     YASM_WRITE_32_L(bufp, shead->link);
     YASM_WRITE_32_L(bufp, shead->info);
 
-    if (shead->align)
-        YASM_WRITE_32I_L(bufp, shead->align);
-    else
-        YASM_WRITE_32_L(bufp, 0);
+    YASM_WRITE_32_L(bufp, shead->align);
     YASM_WRITE_32_L(bufp, shead->entsize);
 
 }
@@ -170,7 +167,7 @@ elf_x86_x86_write_reloc(unsigned char *bufp, elf_reloc_entry *reloc,
                         unsigned int r_type, unsigned int r_sym)
 {
     YASM_WRITE_32I_L(bufp, reloc->reloc.addr);
-    YASM_WRITE_32_L(bufp, ELF32_R_INFO((unsigned char)r_sym, (unsigned char)r_type));
+    YASM_WRITE_32_L(bufp, ELF32_R_INFO((unsigned long)r_sym, (unsigned char)r_type));
 }
 
 static void

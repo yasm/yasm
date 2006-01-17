@@ -221,7 +221,8 @@ expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e,
 	if (!yasm_intnum_is_neg1(intn))
 	    continue;
 
-	yasm_symrec_get_label(sym, &precbc);
+	if (!yasm_symrec_get_label(sym, &precbc))
+	    continue;
 	sect2 = yasm_bc_get_section(precbc);
 
 	/* Now look for a symrec term in the same segment */
@@ -989,7 +990,8 @@ yasm_expr__traverse_leaves_in(yasm_expr *e, void *d,
 }
 
 yasm_symrec *
-yasm_expr_extract_symrec(yasm_expr **ep, int relocate,
+yasm_expr_extract_symrec(yasm_expr **ep,
+			 yasm_symrec_relocate_action relocate_action,
 			 yasm_calc_bc_dist_func calc_bc_dist)
 {
     yasm_symrec *sym = NULL;
@@ -1000,7 +1002,7 @@ yasm_expr_extract_symrec(yasm_expr **ep, int relocate,
 	    /* Be kind, recurse */
 	    if ((*ep)->terms[0].type == YASM_EXPR_EXPR)
 		return yasm_expr_extract_symrec(&((*ep)->terms[0].data.expn),
-						relocate, calc_bc_dist);
+						relocate_action, calc_bc_dist);
 	    /* Replace sym with 0 value, return sym */
 	    if ((*ep)->terms[0].type == YASM_EXPR_SYM) {
 		sym = (*ep)->terms[0].data.sym;
@@ -1024,7 +1026,10 @@ yasm_expr_extract_symrec(yasm_expr **ep, int relocate,
 	/*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
 	/*@null@*/ yasm_intnum *intn;
 
-	if (relocate && yasm_symrec_get_label(sym, &precbc)) {
+	if (yasm_symrec_get_label(sym, &precbc)
+	    && (relocate_action == YASM_SYMREC_REPLACE_VALUE ||
+		(relocate_action == YASM_SYMREC_REPLACE_VALUE_IF_LOCAL
+		 && yasm_symrec_get_visibility(sym) == YASM_SYM_LOCAL))) {
 	    intn = calc_bc_dist(yasm_section_bcs_first(
 				    yasm_bc_get_section(precbc)), precbc);
 	    if (!intn)

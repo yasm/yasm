@@ -35,14 +35,6 @@
 
 #define REGULAR_OUTBUF_SIZE	1024
 
-static void bin_section_data_destroy(/*@only@*/ void *d);
-static void bin_section_data_print(void *data, FILE *f, int indent_level);
-
-static const yasm_assoc_data_callback bin_section_data_callback = {
-    bin_section_data_destroy,
-    bin_section_data_print
-};
-
 typedef struct yasm_objfmt_bin {
     yasm_objfmt_base objfmt;		/* base structure */
 
@@ -66,20 +58,18 @@ bin_objfmt_create(/*@unused@*/ const char *in_filename, yasm_object *object,
     return (yasm_objfmt *)objfmt_bin;
 }
 
-/* Aligns sect to either its specified alignment (in its objfmt-specific data)
- * or def_align if no alignment was specified.  Uses prevsect and base to both
- * determine the new starting address (returned) and the total length of
+/* Aligns sect to either its specified alignment.  Uses prevsect and base to
+ * both determine the new starting address (returned) and the total length of
  * prevsect after sect has been aligned.
  */
 static unsigned long
 bin_objfmt_align_section(yasm_section *sect, yasm_section *prevsect,
-			 unsigned long base, unsigned long def_align,
+			 unsigned long base,
 			 /*@out@*/ unsigned long *prevsectlen,
 			 /*@out@*/ unsigned long *padamt)
 {
     /*@dependent@*/ /*@null@*/ yasm_bytecode *last;
     unsigned long start;
-    /*@dependent@*/ /*@null@*/ unsigned long *alignptr;
     unsigned long align;
 
     /* Figure out the size of .text by looking at the last bytecode's offset
@@ -96,11 +86,7 @@ bin_objfmt_align_section(yasm_section *sect, yasm_section *prevsect,
      * indicate padded size.  Because aignment is always a power of two, we
      * can use some bit trickery to do this easily.
      */
-    alignptr = yasm_section_get_data(sect, &bin_section_data_callback);
-    if (alignptr)
-	align = *alignptr;
-    else
-	align = def_align;	/* No alignment: use default */
+    align = yasm_section_get_align(sect);
 
     if (start & (align-1))
 	start = (start & ~(align-1)) + align;
@@ -230,7 +216,7 @@ bin_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     /* Warn that gaps are converted to 0 and write out the 0's. */
     if (gap) {
 	unsigned long left;
-	yasm__warning(YASM_WARN_GENERAL, bc->line,
+	yasm__warning(YASM_WARN_UNINIT_CONTENTS, bc->line,
 	    N_("uninitialized space declared in code/data section: zeroing"));
 	/* Write out in chunks */
 	memset(info->buf, 0, REGULAR_OUTBUF_SIZE);
@@ -302,7 +288,7 @@ bin_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
     prevsectlenptr = &textlen;
     prevsectpadptr = &textpad;
     if (data) {
-	start = bin_objfmt_align_section(data, prevsect, start, 4,
+	start = bin_objfmt_align_section(data, prevsect, start,
 					 prevsectlenptr, prevsectpadptr);
 	yasm_section_set_start(data, yasm_expr_create_ident(
 	    yasm_expr_int(yasm_intnum_create_uint(start)), 0), 0);
@@ -312,7 +298,7 @@ bin_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
 	prevsectpadptr = &datapad;
     }
     if (bss) {
-	start = bin_objfmt_align_section(bss, prevsect, start, 4,
+	start = bin_objfmt_align_section(bss, prevsect, start,
 					 prevsectlenptr, prevsectpadptr);
 	yasm_section_set_start(bss, yasm_expr_create_ident(
 	    yasm_expr_int(yasm_intnum_create_uint(start)), 0), 0);
@@ -362,8 +348,8 @@ bin_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     unsigned long start;
     char *sectname;
     int resonly = 0;
-    unsigned long alignval = 0;
-    int have_alignval = 0;
+    unsigned long align = 4;
+    int have_align = 0;
 
     if ((vp = yasm_vps_first(valparams)) && !vp->param && vp->val != NULL) {
 	/* If it's the first section output (.text) start at 0, otherwise
@@ -386,9 +372,14 @@ bin_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 
 	/* Check for ALIGN qualifier */
 	while ((vp = yasm_vps_next(vp))) {
+	    if (!vp->val) {
+		yasm__warning(YASM_WARN_GENERAL, line,
+			      N_("Unrecognized numeric qualifier"));
+		continue;
+	    }
+
 	    if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
-		/*@dependent@*/ /*@null@*/ const yasm_intnum *align;
-		unsigned long bitcnt;
+		/*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
 
 		if (strcmp(sectname, ".text") == 0) {
 		    yasm__error(line,
@@ -397,59 +388,43 @@ bin_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		    return NULL;
 		}
 		
-		align = yasm_expr_get_intnum(&vp->param, NULL);
-		if (!align) {
+		align_expr = yasm_expr_get_intnum(&vp->param, NULL);
+		if (!align_expr) {
 		    yasm__error(line,
 				N_("argument to `%s' is not a power of two"),
 				vp->val);
 		    return NULL;
 		}
-		alignval = yasm_intnum_get_uint(align);
+		align = yasm_intnum_get_uint(align_expr);
 
-		/* Check to see if alignval is a power of two.
-		 * This can be checked by seeing if only one bit is set.
-		 */
-		BitCount(bitcnt, alignval);
-		if (bitcnt > 1) {
+		/* Alignments must be a power of two. */
+		if ((align & (align - 1)) != 0) {
 		    yasm__error(line,
 				N_("argument to `%s' is not a power of two"),
 				vp->val);
 		    return NULL;
 		}
 
-		have_alignval = 1;
+		have_align = 1;
 	    }
 	}
 
 	retval = yasm_object_get_general(objfmt_bin->object, sectname,
 	    yasm_expr_create_ident(
-		yasm_expr_int(yasm_intnum_create_uint(start)), line), resonly,
-	    &isnew, line);
+		yasm_expr_int(yasm_intnum_create_uint(start)), line), align,
+	    strcmp(sectname, ".text") == 0, resonly, &isnew, line);
 
 	if (isnew) {
-	    if (have_alignval) {
-		unsigned long *data = yasm_xmalloc(sizeof(unsigned long));
-		*data = alignval;
-		yasm_section_add_data(retval, &bin_section_data_callback,
-				      data);
-	    }
-
 	    yasm_symtab_define_label(
 		yasm_object_get_symtab(objfmt_bin->object), sectname,
 		yasm_section_bcs_first(retval), 1, line);
-	} else if (have_alignval)
+	} else if (have_align)
 	    yasm__warning(YASM_WARN_GENERAL, line,
 		N_("alignment value ignored on section redeclaration"));
 
 	return retval;
     } else
 	return NULL;
-}
-
-static void
-bin_section_data_destroy(/*@only@*/ void *d)
-{
-    yasm_xfree(d);
 }
 
 static yasm_symrec *
@@ -540,12 +515,6 @@ bin_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	return 0;	    /* directive recognized */
     } else
 	return 1;	    /* directive unrecognized */
-}
-
-static void
-bin_section_data_print(void *data, FILE *f, int indent_level)
-{
-    fprintf(f, "%*salign=%ld\n", indent_level, "", *((unsigned long *)data));
 }
 
 

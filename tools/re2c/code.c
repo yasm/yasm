@@ -5,6 +5,19 @@
 #include "tools/re2c/globals.h"
 #include "tools/re2c/dfa.h"
 
+static void useLabel(size_t value) {
+    while (value >= vUsedLabelAlloc) {
+	vUsedLabels = realloc(vUsedLabels, vUsedLabelAlloc * 2);
+	if (!vUsedLabels) {
+	    fputs("Out of memory.\n", stderr);
+	    exit(EXIT_FAILURE);
+	}
+	memset(vUsedLabels + vUsedLabelAlloc, 0, vUsedLabelAlloc);
+	vUsedLabelAlloc *= 2;
+    }
+    vUsedLabels[value] = 1;
+}
+
 /* there must be at least one span in list;  all spans must cover
  * same range
  */
@@ -163,12 +176,34 @@ void BitMap_stats(void){
 }
 #endif
 
-static void genGoTo(FILE *o, State *to){
-    fprintf(o, "\tgoto yy%u;\n", to->label); oline++;
+static void genGoTo(FILE *o, State *from, State *to, int *readCh,
+		    const char *indent)
+{
+#if 0
+    if (*readCh && from->label + 1 != to->label)
+    {
+	fputs("%syych = *YYCURSOR;\n", indent, o); oline++;
+	*readCh = 0;
+    }
+#endif
+    fprintf(o, "%sgoto yy%u;\n", indent, to->label); oline++;
+    useLabel(to->label);
 }
 
-static void genIf(FILE *o, const char *cmp, unsigned int v){
-    fprintf(o, "\tif(yych %s '", cmp);
+static void genIf(FILE *o, const char *cmp, unsigned int v, int *readCh)
+{
+#if 0
+    if (*readCh)
+    {
+	fputs("\tif((yych = *YYCURSOR) ", o);
+	*readCh = 0;
+    } else {
+#endif
+	fputs("\tif(yych ", o);
+#if 0
+    }
+#endif
+    fprintf(o, "%s '", cmp);
     prtCh(o, v);
     fputs("')", o);
 }
@@ -178,18 +213,34 @@ static void indent(FILE *o, unsigned int i){
 	fputc('\t', o);
 }
 
-static void need(FILE *o, unsigned int n){
+static void need(FILE *o, unsigned int n, int *readCh)
+{
+    unsigned int fillIndex;
+    int hasFillIndex = (0<=vFillIndexes);
+    if (hasFillIndex) {
+	fillIndex = vFillIndexes++;
+	fprintf(o, "\tYYSETSTATE(%u);\n", fillIndex);
+	++oline;
+    }
+
     if(n == 1) {
 	fputs("\tif(YYLIMIT == YYCURSOR) YYFILL(1);\n", o); oline++;
     } else {
 	fprintf(o, "\tif((YYLIMIT - YYCURSOR) < %u) YYFILL(%u);\n", n, n);
 	oline++;
     }
+
+    if (hasFillIndex) {
+	fprintf(o, "yyFillLabel%u:\n", fillIndex);
+	++oline;
+    }
+
     fputs("\tyych = *YYCURSOR;\n", o); oline++;
+    *readCh = 0;
 }
 
 void
-Action_emit(Action *a, FILE *o)
+Action_emit(Action *a, FILE *o, int *readCh)
 {
     int first = 1;
     unsigned int i;
@@ -198,29 +249,43 @@ Action_emit(Action *a, FILE *o)
     switch (a->type) {
 	case MATCHACT:
 	    if(a->state->link){
-		fputs("\t++YYCURSOR;\n", o); oline++;
-		need(o, a->state->depth);
+		fputs("\t++YYCURSOR;\n", o);
+		need(o, a->state->depth, readCh);
+#if 0
+	    } else if (!Action_readAhead(a)) {
+		/* do not read next char if match */
+		fputs("\t++YYCURSOR;\n", o);
+		*readCh = 1;
+#endif
 	    } else {
-		fputs("\tyych = *++YYCURSOR;\n", o); oline++;
+		fputs("\tyych = *++YYCURSOR;\n", o);
+		*readCh = 0;
 	    }
+	    oline++;
 	    break;
 	case ENTERACT:
 	    if(a->state->link){
 		fputs("\t++YYCURSOR;\n", o);
 		fprintf(o, "yy%u:\n", a->d.label); oline+=2;
-		need(o, a->state->depth);
+		need(o, a->state->depth, readCh);
 	    } else {
+		/* we shouldn't need 'rule-following' protection here */
 		fputs("\tyych = *++YYCURSOR;\n", o);
 		fprintf(o, "yy%u:\n", a->d.label); oline+=2;
+		*readCh = 0;
 	    }
 	    break;
 	case SAVEMATCHACT:
-	    fprintf(o, "\tyyaccept = %u;\n", a->d.selector); oline++;
+	    if (bUsedYYAccept) {
+		fprintf(o, "\tyyaccept = %u;\n", a->d.selector);
+		oline++;
+	    }
 	    if(a->state->link){
 		fputs("\tYYMARKER = ++YYCURSOR;\n", o); oline++;
-		need(o, a->state->depth);
+		need(o, a->state->depth, readCh);
 	    } else {
 		fputs("\tyych = *(YYMARKER = ++YYCURSOR);\n", o); oline++;
+		*readCh = 0;
 	    }
 	    break;
 	case MOVEACT:
@@ -230,11 +295,12 @@ Action_emit(Action *a, FILE *o)
 		if(a->d.Accept.saves[i] != ~0u){
 		    if(first){
 			first = 0;
+			bUsedYYAccept = 1;
 			fputs("\tYYCURSOR = YYMARKER;\n", o);
 			fputs("\tswitch(yyaccept){\n", o); oline+=2;
 		    }
 		    fprintf(o, "\tcase %u:", a->d.Accept.saves[i]);
-		    genGoTo(o, a->d.Accept.rules[i]);
+		    genGoTo(o, a->state, a->d.Accept.rules[i], readCh, "\t");
 		}
 	    if(!first) {
 		fputs("\t}\n", o); oline++;
@@ -248,7 +314,8 @@ Action_emit(Action *a, FILE *o)
 	    line_source(o, a->d.rule->d.RuleOp.code->line);
 	    SubStr_out(&a->d.rule->d.RuleOp.code->text, o);
 	    fprintf(o, "\n"); oline++;
-	    fprintf(o, "#line %u \"re2c-out.c\"\n", ++oline);
+	    if (!iFlag)
+		fprintf(o, "#line %u \"%s\"\n", oline++, outputFileName);
 	    break;
     }
 }
@@ -267,36 +334,49 @@ Action_new_Accept(State *x, unsigned int n, unsigned int *s, State **r)
 }
 
 static void doLinear(FILE *o, unsigned int i, Span *s, unsigned int n,
-		     State *next){
+		     State *from, State *next, int *readCh){
     for(;;){
 	State *bg = s[0].to;
 	while(n >= 3 && s[2].to == bg && (s[1].ub - s[0].ub) == 1){
 	    if(s[1].to == next && n == 3){
-		indent(o, i); genIf(o, "!=", s[0].ub); genGoTo(o, bg);
+		indent(o, i);
+		genIf(o, "!=", s[0].ub, readCh);
+		genGoTo(o, from, bg, readCh, "\t");
+		indent(o, i);
+		genGoTo(o, from, next, readCh, "\t");
 		return;
 	    } else {
-		indent(o, i); genIf(o, "==", s[0].ub); genGoTo(o, s[1].to);
+		indent(o, i);
+		genIf(o, "==", s[0].ub, readCh);
+		genGoTo(o, from, s[1].to, readCh, "\t");
 	    }
 	    n -= 2; s += 2;
 	}
 	if(n == 1){
-	    if(bg != next){
-		indent(o, i); genGoTo(o, s[0].to);
-	    }
+	    indent(o, i);
+	    genGoTo(o, from, s[0].to, readCh, "\t");
 	    return;
 	} else if(n == 2 && bg == next){
-	    indent(o, i); genIf(o, ">=", s[0].ub); genGoTo(o, s[1].to);
+	    indent(o, i);
+	    genIf(o, ">=", s[0].ub, readCh);
+	    genGoTo(o, from, s[1].to, readCh, "\t");
+	    indent(o, i);
+	    genGoTo(o, from, next, readCh, "\t");
 	    return;
 	} else {
-	    indent(o, i); genIf(o, "<=", s[0].ub - 1); genGoTo(o, bg);
+	    indent(o, i);
+	    genIf(o, "<=", s[0].ub - 1, readCh);
+	    genGoTo(o, from, bg, readCh, "\t");
 	    n -= 1; s += 1;
 	}
     }
+    indent(o, i);
+    genGoTo(o, from, next, readCh, "\t");
 }
 
 void
-Go_genLinear(Go *g, FILE *o, State *next){
-    doLinear(o, 0, g->span, g->nSpans, next);
+Go_genLinear(Go *g, FILE *o, State *from, State *next, int *readCh){
+    doLinear(o, 0, g->span, g->nSpans, from, next, readCh);
 }
 
 static void genCases(FILE *o, unsigned int lb, Span *s){
@@ -311,9 +391,9 @@ static void genCases(FILE *o, unsigned int lb, Span *s){
 }
 
 void
-Go_genSwitch(Go *g, FILE *o, State *next){
+Go_genSwitch(Go *g, FILE *o, State *from, State *next, int *readCh){
     if(g->nSpans <= 2){
-	Go_genLinear(g, o, next);
+	Go_genLinear(g, o, from, next, readCh);
     } else {
 	State *def = g->span[g->nSpans-1].to;
 	Span **sP = malloc(sizeof(Span*)*(g->nSpans-1)), **r, **s, **t;
@@ -324,7 +404,17 @@ Go_genSwitch(Go *g, FILE *o, State *next){
 	    if(g->span[i].to != def)
 		*(t++) = &g->span[i];
 
-	fputs("\tswitch(yych){\n", o); oline++;
+	    if (dFlag)
+		fputs("\tYYDEBUG(-1, yych);\n", o);
+
+#if 0
+	if (*readCh) {
+	    fputs("\tswitch((yych = *YYCURSOR)) {\n", o);
+	    *readCh = 0;
+	} else
+#endif
+	    fputs("\tswitch(yych){\n", o);
+	oline++;
 	while(t != &sP[0]){
 	    State *to;
 	    r = s = &sP[0];
@@ -339,11 +429,11 @@ Go_genSwitch(Go *g, FILE *o, State *next){
 		else
 		    *(r++) = *s;
 	    }
-	    genGoTo(o, to);
+	    genGoTo(o, from, to, readCh, "\t");
 	    t = r;
 	}
 	fputs("\tdefault:", o);
-	genGoTo(o, def);
+	genGoTo(o, from, def, readCh, "\t");
 	fputs("\t}\n", o); oline++;
 
 	free(sP);
@@ -351,30 +441,32 @@ Go_genSwitch(Go *g, FILE *o, State *next){
 }
 
 static void doBinary(FILE *o, unsigned int i, Span *s, unsigned int n,
-		     State *next){
+		     State *from, State *next, int *readCh){
     if(n <= 4){
-	doLinear(o, i, s, n, next);
+	doLinear(o, i, s, n, from, next, readCh);
     } else {
 	unsigned int h = n/2;
-	indent(o, i); genIf(o, "<=", s[h-1].ub - 1); fputs("{\n", o); oline++;
-	doBinary(o, i+1, &s[0], h, next);
+	indent(o, i);
+	genIf(o, "<=", s[h-1].ub - 1, readCh);
+	fputs("{\n", o); oline++;
+	doBinary(o, i+1, &s[0], h, from, next, readCh);
 	indent(o, i); fputs("\t} else {\n", o); oline++;
-	doBinary(o, i+1, &s[h], n - h, next);
+	doBinary(o, i+1, &s[h], n - h, from, next, readCh);
 	indent(o, i); fputs("\t}\n", o); oline++;
     }
 }
 
 void
-Go_genBinary(Go *g, FILE *o, State *next){
-    doBinary(o, 0, g->span, g->nSpans, next);
+Go_genBinary(Go *g, FILE *o, State *from, State *next, int *readCh){
+    doBinary(o, 0, g->span, g->nSpans, from, next, readCh);
 }
 
 void
-Go_genBase(Go *g, FILE *o, State *next){
+Go_genBase(Go *g, FILE *o, State *from, State *next, int *readCh){
     if(g->nSpans == 0)
 	return;
     if(!sFlag){
-	Go_genSwitch(g, o, next);
+	Go_genSwitch(g, o, from, next, readCh);
 	return;
     }
     if(g->nSpans > 8){
@@ -390,19 +482,19 @@ Go_genBase(Go *g, FILE *o, State *next){
 	    }
 	}
 	if(util <= 2){
-	    Go_genSwitch(g, o, next);
+	    Go_genSwitch(g, o, from, next, readCh);
 	    return;
 	}
     }
     if(g->nSpans > 5){
-	Go_genBinary(g, o, next);
+	Go_genBinary(g, o, from, next, readCh);
     } else {
-	Go_genLinear(g, o, next);
+	Go_genLinear(g, o, from, next, readCh);
     }
 }
 
 void
-Go_genGoto(Go *g, FILE *o, State *next){
+Go_genGoto(Go *g, FILE *o, State *from, State *next, int *readCh){
     unsigned int i;
     if(bFlag){
 	for(i = 0; i < g->nSpans; ++i){
@@ -413,22 +505,32 @@ Go_genGoto(Go *g, FILE *o, State *next){
 		    Go go;
 		    go.span = malloc(sizeof(Span)*g->nSpans);
 		    Go_unmap(&go, g, to);
-		    fprintf(o, "\tif(yybm[%u+yych] & %u)", b->i,
-			    (unsigned int) b->m);
-		    genGoTo(o, to);
-		    Go_genBase(&go, o, next);
+		    fprintf(o, "\tif(yybm[%u+", b->i);
+#if 0
+		    if (*readCh)
+			fputs("(yych = *YYCURSOR)", o);
+		    else
+#endif
+			fputs("yych", o);
+		    fprintf(o, "] & %u) {\n", (unsigned int) b->m); oline++;
+		    genGoTo(o, from, to, readCh, "\t\t");
+		    fputs("\t}\n", o); oline++;
+		    Go_genBase(&go, o, from, next, readCh);
 		    free(go.span);
 		    return;
 		}
 	    }
 	}
     }
-    Go_genBase(g, o, next);
+    Go_genBase(g, o, from, next, readCh);
 }
 
-void State_emit(State *s, FILE *o){
-    fprintf(o, "yy%u:", s->label);
-    Action_emit(s->action, o);
+void State_emit(State *s, FILE *o, int *readCh){
+    if (vUsedLabels[s->label])
+	fprintf(o, "yy%u:", s->label);
+    if (dFlag)
+	fprintf(o, "\n\tYYDEBUG(%u, *YYCURSOR);\n", s->label);
+    Action_emit(s->action, o, readCh);
 }
 
 static unsigned int merge(Span *x0, State *fg, State *bg){
@@ -536,8 +638,11 @@ static unsigned int maxDist(State *s){
 	State *t = s->go.span[i].to;
 	if(t){
 	    unsigned int m = 1;
-	    if(!t->link)
-		m += maxDist(t);
+	    if(!t->link) {
+		if (t->depth == -1)
+		    t->depth = maxDist(t);
+		m += t->depth;
+	    }
 	    if(m > mm)
 		mm = m;
 	}
@@ -599,21 +704,36 @@ void DFA_split(DFA *d, State *s){
 void DFA_emit(DFA *d, FILE *o){
     static unsigned int label = 0;
     State *s;
-    unsigned int i;
+    unsigned int i, bitmap_brace = 0;
     unsigned int nRules = 0;
     unsigned int nSaves = 0;
     unsigned int *saves;
+    unsigned int nOrgOline;
     State **rules;
     State *accept = NULL;
     Span *span;
+    FILE *tmpo;
+    int hasFillLabels;
+    int maxFillIndexes, orgVFillIndexes;
+    unsigned int start_label;
+
+    hasFillLabels = (0<=vFillIndexes);
+    if (hasFillLabels && label!=0) {
+	fputs("re2c : error : multiple /*!re2c blocks aren't supported when -f is specified\n", stderr);
+	exit(1);
+    }
 
     DFA_findSCCs(d);
     d->head->link = d->head;
-    d->head->depth = maxDist(d->head);
 
-    for(s = d->head; s; s = s->next)
+    maxFill = 1;
+    for(s = d->head; s; s = s->next) {
+	s->depth = maxDist(s);
+	if (maxFill < s->depth)
+	    maxFill = s->depth;
 	if(s->rule && s->rule->d.RuleOp.accept >= nRules)
 		nRules = s->rule->d.RuleOp.accept + 1;
+    }
 
     saves = malloc(sizeof(unsigned int)*nRules);
     memset(saves, ~0, (nRules)*sizeof(unsigned int));
@@ -703,25 +823,84 @@ void DFA_emit(DFA *d, FILE *o){
 
     free(d->head->action);
 
-    oline++;
-    fprintf(o, "\n#line %u \"re2c-out.c\"\n", ++oline);
-
-    fputs("{\n\tYYCTYPE yych;\n\tunsigned int yyaccept;\n", o); oline+=3;
-
-    if(bFlag)
+    if(bFlag) {
+	fputs("{\n", o);
+	oline++;
+	bitmap_brace = 1;
 	BitMap_gen(o, d->lbChar, d->ubChar);
+    }
 
-    fprintf(o, "\tgoto yy%u;\n", label); oline++;
+    bUsedYYAccept = 0;
+
+    start_label = label;
+
     Action_new_Enter(d->head, label++);
 
     for(s = d->head; s; s = s->next)
 	s->label = label++;
 
+    nOrgOline = oline;
+    maxFillIndexes = vFillIndexes;
+    orgVFillIndexes = vFillIndexes;
+    tmpo = fopen("re2c.tmp", "wt");
     for(s = d->head; s; s = s->next){
-	State_emit(s, o);
-	Go_genGoto(&s->go, o, s->next);
+	int readCh = 0;
+	State_emit(s, tmpo, &readCh);
+	Go_genGoto(&s->go, tmpo, s, s->next, &readCh);
+    }
+    fclose(tmpo);
+    unlink("re2c.tmp");
+    maxFillIndexes = vFillIndexes;
+    vFillIndexes = orgVFillIndexes;
+    oline = nOrgOline;
+
+    fputs("\n", o);
+    oline++;
+    if (!iFlag)
+	fprintf(o, "#line %u \"%s\"\n", oline++, outputFileName);
+
+    if (!hasFillLabels) {
+	fputs("{\n\tYYCTYPE yych;\n", o);
+	oline += 2;
+	if (bUsedYYAccept) {
+	    fputs("\tunsigned int yyaccept;\n", o);
+	    oline++;
+	}
+    } else {
+	fputs("{\n\n", o);
+	oline += 2;
+    }
+
+    if (!hasFillLabels) {
+	fprintf(o, "\tgoto yy%u;\n", start_label);
+	oline++;
+	useLabel(label);
+    } else {
+	unsigned int i;
+	fputs("\tswitch(YYGETSTATE()) {\n", o);
+	fputs("\t\tcase -1: goto yy0;\n", o);
+
+	for (i=0; i<maxFillIndexes; ++i)
+	    fprintf(o, "\t\tcase %u: goto yyFillLabel%u;\n", i, i);
+
+	fputs("\t\tdefault: /* abort() */;\n", o);
+	fputs("\t}\n", o);
+	fputs("yyNext:\n", o);
+
+	oline += maxFillIndexes;
+	oline += 5;
+    }
+
+    for(s = d->head; s; s = s->next){
+	int readCh = 0;
+	State_emit(s, o, &readCh);
+	Go_genGoto(&s->go, o, s, s->next, &readCh);
     }
     fputs("}\n", o); oline++;
+    if (bitmap_brace) {
+	fputs("}\n", o);
+	oline++;
+    }
 
     BitMap_first = NULL;
 

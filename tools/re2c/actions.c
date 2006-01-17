@@ -1,6 +1,7 @@
 #include <time.h>
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include "tools/re2c/globals.h"
 #include "tools/re2c/parse.h"
@@ -60,7 +61,7 @@ AltOp_fixedLength(RegExp *r)
     /* XXX? Should be exp2? */
     unsigned int l2 = RegExp_fixedLength(r->d.AltCatOp.exp1);
     if(l1 != l2 || l1 == ~0u)
-	return ~0;
+	return ~0u;
     return l1;
 }
 
@@ -71,7 +72,7 @@ CatOp_fixedLength(RegExp *r)
     if((l1 = RegExp_fixedLength(r->d.AltCatOp.exp1)) != ~0u )
         if((l2 = RegExp_fixedLength(r->d.AltCatOp.exp2)) != ~0u)
 	    return l1+l2;
-    return ~0;
+    return ~0u;
 }
 
 unsigned int
@@ -87,9 +88,9 @@ RegExp_fixedLength(RegExp *r)
 	case CATOP:
 	    return CatOp_fixedLength(r);
 	default:
-	    return ~0;
+	    return ~0u;
     }
-    return ~0;
+    return ~0u;
 }
 
 void
@@ -128,6 +129,16 @@ RegExp_calcSize(RegExp *re, Char *rep)
 	case CLOSEOP:
 	    RegExp_calcSize(re->d.exp, rep);
 	    re->size = re->d.exp->size + 1;
+	    break;
+	case CLOSEVOP:
+	    RegExp_calcSize(re->d.CloseVOp.exp, rep);
+
+	    if (re->d.CloseVOp.max >= 0)
+		re->size = (re->d.CloseVOp.exp->size * re->d.CloseVOp.min) +
+		    ((1 + re->d.CloseVOp.exp->size) *
+		     (re->d.CloseVOp.max - re->d.CloseVOp.min));
+	    else
+		re->size = (re->d.CloseVOp.exp->size * re->d.CloseVOp.min) + 1;
 	    break;
     }
 }
@@ -171,6 +182,9 @@ AltOp_compile(RegExp *re, Char *rep, Ins *i){
 void
 RegExp_compile(RegExp *re, Char *rep, Ins *i)
 {
+    Ins *jumppoint;
+    int st = 0;
+
     switch (re->type) {
 	case NULLOP:
 	    break;
@@ -199,6 +213,26 @@ RegExp_compile(RegExp *re, Char *rep, Ins *i)
 	    i += re->d.exp->size;
 	    i->i.tag = FORK;
 	    i->i.link = i - re->d.exp->size;
+	    break;
+	case CLOSEVOP:
+	    jumppoint = i + ((1 + re->d.CloseVOp.exp->size) *
+			     (re->d.CloseVOp.max - re->d.CloseVOp.min));
+	    for(st = re->d.CloseVOp.min; st < re->d.CloseVOp.max; st++) {
+		i->i.tag = FORK;
+		i->i.link = jumppoint;
+		i+=1;
+		RegExp_compile(re->d.CloseVOp.exp, rep, &i[0]);
+		i += re->d.CloseVOp.exp->size;
+	    }
+	    for(st = 0; st < re->d.CloseVOp.min; st++) {
+		RegExp_compile(re->d.CloseVOp.exp, rep, &i[0]);
+		i += re->d.CloseVOp.exp->size;
+		if(re->d.CloseVOp.max < 0 && st == 0) {
+		    i->i.tag = FORK;
+		    i->i.link = i - re->d.CloseVOp.exp->size;
+		    i++;
+		}
+	    }
 	    break;
     }
 }
@@ -256,6 +290,9 @@ RegExp_split(RegExp *re, CharSet *s)
 	    break;
 	case CLOSEOP:
 	    RegExp_split(re->d.exp, s);
+	    break;
+	case CLOSEVOP:
+	    RegExp_split(re->d.CloseVOp.exp, s);
 	    break;
     }
 }
@@ -484,6 +521,33 @@ RegExp *strToRE(SubStr s){
     return re;
 }
 
+RegExp *strToCaseInsensitiveRE(SubStr s){
+    unsigned char c;
+    RegExp *re, *reL, *reU;
+    s.len -= 2; s.str += 1;
+    if(s.len == 0)
+	return RegExp_new_NullOp();
+    c = unescape(&s);
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+	reL = matchChar(tolower(c));
+	reU = matchChar(toupper(c));
+	re = mkAlt(reL, reU);
+    } else {
+	re = matchChar(c);
+    }
+    while(s.len > 0) {
+	c = unescape(&s);
+	if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+	    reL = matchChar(tolower(c));
+	    reU = matchChar(toupper(c));
+	    re = RegExp_new_CatOp(re, mkAlt(reL, reU));
+    	} else {
+	    re = RegExp_new_CatOp(re, matchChar(c));
+	}
+    }
+    return re;
+}
+
 RegExp *ranToRE(SubStr s){
     Range *r;
     s.len -= 2; s.str += 1;
@@ -493,6 +557,44 @@ RegExp *ranToRE(SubStr s){
     while(s.len > 0)
 	r = doUnion(r, getRange(&s));
     return RegExp_new_MatchOp(r);
+}
+
+RegExp *invToRE(SubStr s)
+{
+    RegExp *any, *ran, *inv;
+    SubStr *ss;
+
+
+    s.len--;
+    s.str++;
+
+    ss = SubStr_new("[\\000-\\377]", strlen("[\\000-\\377]"));
+    any = ranToRE(*ss);
+    free(ss);
+    if (s.len <= 2)
+	return any;
+
+    ran = ranToRE(s);
+    inv = mkDiff(any, ran);
+
+    free(ran);
+    free(any);
+
+    return inv;
+}
+
+RegExp *mkDot()
+{
+    SubStr *ss = SubStr_new("[\\000-\\377]", strlen("[\\000-\\377]"));
+    RegExp * any = ranToRE(*ss);
+    RegExp * ran = matchChar('\n');
+    RegExp * inv = mkDiff(any, ran);
+
+    free(ss);
+    free(ran);
+    free(any);
+
+    return inv;
 }
 
 RegExp *

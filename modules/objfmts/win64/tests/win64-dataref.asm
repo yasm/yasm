@@ -32,26 +32,26 @@ x86ident:
 		; This instruction generates a different relocation than
 		; MASM does at present.
 		mov	ebx, foobar		; WTF ML64.. this had []
-		mov	rcx, foobar
+		mov	rcx, qword foobar
 		lea	rdx, [foobar wrt rip]
 		mov	rax, [foobar+rcx]
-		mov	rax, foobar
-		mov	rbx, foobar
+		mov	rax, qword foobar
+		mov	rbx, qword foobar
 		movzx	rax, byte [foobar wrt rip]
 		movzx	rax, byte [foobar+rax]
 
 		; local "proc"
 		; See note above
 		mov	ebx, trap
-		mov	rcx, trap
+		mov	rcx, qword trap
 		; MASM generates a REL32 reloc for this even though it's in
 		; the same section.  I don't know why, as the call instruction
 		; below doesn't cause a reloc, so the linker can't be moving
 		; functions around within an object!
 		lea	rdx, [trap wrt rip]
 		mov	rax, [trap+rcx]
-		mov	rax, trap
-		mov	rbx, trap
+		mov	rax, qword trap
+		mov	rbx, qword trap
 		; MASM generates a REL32 reloc for this even though it's in
 		; the same section.  I don't know why, as the call instruction
 		; below doesn't cause a reloc, so the linker can't be moving
@@ -73,7 +73,7 @@ x86ident:
 		; See note above
 		mov	ebx, foobar3
 		mov	ebx, [foobar3 wrt rip]
-		mov	rcx, foobar3
+		mov	rcx, qword foobar3
 		lea	rdx, [foobar3 wrt rip]
 		mov	rax, [foobar3+rcx]
 		mov	rax, [foobar3 wrt rip]
@@ -85,7 +85,7 @@ x86ident:
 		; See note above
 		mov	ebx, __savident
 		mov	ebx,[__savident wrt rip]
-		mov	rcx, __savident
+		mov	rcx, qword __savident
 		lea	rdx, [__savident wrt rip]
 		mov	rax, [__savident+rcx]
 		mov	rax, [__savident wrt rip]
@@ -97,7 +97,7 @@ x86ident:
 		; See note above
 		mov	ebx, savidentptr2
 		mov	ebx, [savidentptr2 wrt rip]
-		mov	rcx, savidentptr2
+		mov	rcx, qword savidentptr2
 		lea	rdx, [savidentptr2 wrt rip]
 		mov	rax, [savidentptr2+rcx]
 		mov	rax, [savidentptr2 wrt rip]
@@ -109,7 +109,7 @@ x86ident:
 		; See note above
 		mov	ebx, y
 		mov	ebx, [y wrt rip]
-		mov	rcx, y
+		mov	rcx, qword y
 		lea	rdx, [y wrt rip]
 		mov	rax, [y+rcx]
 		mov	rax, [y wrt rip]
@@ -141,7 +141,7 @@ db	1, 7, 2, 0, 7, 1, 0x20, 0
 foo_foobar3ptr	dd foobar3
 foo_foobar3ptr2	dq foobar3
 		mov	ebx, [foobar3 wrt rip]
-		mov	rcx, foobar3
+		mov	rcx, qword foobar3
 		lea	rdx, [foobar3 wrt rip]
 		mov	rax, [foobar3+rcx]
 		mov	rax, [foobar3 wrt rip]

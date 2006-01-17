@@ -40,6 +40,26 @@ typedef struct Scanner {
 
 #define MAX_SAVED_LINE_LEN  80
 
+typedef struct gas_rept_line {
+    STAILQ_ENTRY(gas_rept_line) link;
+    YYCTYPE *data;		/* line characters */
+    size_t len;			/* length of data */
+} gas_rept_line;
+
+typedef struct gas_rept {
+    STAILQ_HEAD(reptlinelist, gas_rept_line) lines;	/* repeated lines */
+    unsigned long startline;	/* line number of rept directive */
+    unsigned long numrept;	/* number of repititions to generate */
+    unsigned long numdone;	/* number of repititions executed so far */
+    /*@null@*/ gas_rept_line *line;	/* next line to repeat */
+    size_t linepos;		/* position to start pulling chars from line */
+    int ended;			/* seen endr directive yet? */
+
+    char *oldbuf;		/* saved previous fill buffer */
+    size_t oldbuflen;		/* previous fill buffer length */
+    size_t oldbufpos;		/* position in previous fill buffer */
+} gas_rept;
+
 typedef struct yasm_parser_gas {
     FILE *in;
     int debug;
@@ -68,10 +88,11 @@ typedef struct yasm_parser_gas {
     Scanner s;
     enum {
 	INITIAL,
-	SECTION_DIRECTIVE
+	SECTION_DIRECTIVE,
+	INSTDIR
     } state;
 
-    int code_section;
+    /*@null@*/ gas_rept *rept;
 } yasm_parser_gas;
 
 /* shorter access names to commonly used parser_gas fields */

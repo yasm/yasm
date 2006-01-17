@@ -54,6 +54,80 @@ RCSID("$Id$");
 
 #define TOKLEN		(size_t)(cursor-s->tok)
 
+static size_t
+rept_input(yasm_parser_gas *parser_gas, /*@out@*/ char *buf, size_t max_size)
+{
+    gas_rept *rept = parser_gas->rept;
+    size_t numleft = max_size;
+    char *bufp = buf;
+
+    /* If numrept is 0, copy out just the line end characters */
+    if (rept->numrept == 0) {
+	/* Skip first line, which contains .line */
+	rept->line = STAILQ_NEXT(rept->line, link);
+	if (!rept->line) {
+	    rept->numrept = 1;
+	    rept->numdone = 1;
+	}
+	while (rept->numrept == 0 && numleft > 0) {
+	    *bufp++ = rept->line->data[rept->line->len-1];
+	    rept->line = STAILQ_NEXT(rept->line, link);
+	    if (!rept->line) {
+		rept->numrept = 1;
+		rept->numdone = 1;
+	    }
+	}
+    }
+
+    /* Copy out the previous fill buffer until we're *really* done */
+    if (rept->numdone == rept->numrept) {
+	size_t numcopy = rept->oldbuflen - rept->oldbufpos;
+	if (numcopy > numleft)
+	    numcopy = numleft;
+	memcpy(bufp, &rept->oldbuf[rept->oldbufpos], numcopy);
+	numleft -= numcopy;
+	bufp += numcopy;
+	rept->oldbufpos += numcopy;
+
+	if (rept->oldbufpos == rept->oldbuflen) {
+	    /* Delete lines, then delete rept and clear rept state */
+	    gas_rept_line *cur, *next;
+	    cur = STAILQ_FIRST(&rept->lines);
+	    while (cur) {
+		next = STAILQ_NEXT(cur, link);
+		yasm_xfree(cur->data);
+		yasm_xfree(cur);
+		cur = next;
+	    }
+	    yasm_xfree(rept->oldbuf);
+	    yasm_xfree(rept);
+	    parser_gas->rept = NULL;
+	}
+    }
+
+    while (numleft > 0 && rept->numdone < rept->numrept) {
+	/* Copy from line data to buf */
+	size_t numcopy = rept->line->len - rept->linepos;
+	if (numcopy > numleft)
+	    numcopy = numleft;
+	memcpy(bufp, &rept->line->data[rept->linepos], numcopy);
+	numleft -= numcopy;
+	bufp += numcopy;
+	rept->linepos += numcopy;
+
+	/* Update locations if needed */
+	if (rept->linepos == rept->line->len) {
+	    rept->line = STAILQ_NEXT(rept->line, link);
+	    rept->linepos = 0;
+	}
+	if (rept->line == NULL) {
+	    rept->numdone++;
+	    rept->line = STAILQ_FIRST(&rept->lines);
+	}
+    }
+
+    return (max_size-numleft);
+}
 
 static YYCTYPE *
 fill(yasm_parser_gas *parser_gas, YYCTYPE *cursor)
@@ -85,7 +159,10 @@ fill(yasm_parser_gas *parser_gas, YYCTYPE *cursor)
 		yasm_xfree(s->bot);
 	    s->bot = buf;
 	}
-	if((cnt = yasm_preproc_input(parser_gas->preproc, s->lim,
+	if (parser_gas->rept && parser_gas->rept->ended) {
+	    /* Pull from rept lines instead of preproc */
+	    cnt = rept_input(parser_gas, s->lim, BSIZE);
+	} else if((cnt = yasm_preproc_input(parser_gas->preproc, s->lim,
 				     BSIZE)) == 0) {
 	    s->eof = &s->lim[cnt]; *s->eof++ = '\n';
 	}
@@ -145,12 +222,12 @@ strbuf_append(size_t count, YYCTYPE *cursor, Scanner *s, unsigned long line,
 {
     if (cursor == s->eof)
 	yasm__error(line, N_("unexpected end of file in string"));
-    strbuf[count] = ch;
 
     if (count >= strbuf_size) {
 	strbuf = yasm_xrealloc(strbuf, strbuf_size + STRBUF_ALLOC_SIZE);
 	strbuf_size += STRBUF_ALLOC_SIZE;
     }
+    strbuf[count] = ch;
 }
 
 /*!re2c
@@ -162,46 +239,27 @@ strbuf_append(size_t count, YYCTYPE *cursor, Scanner *s, unsigned long line,
   hexdigit = [0-9a-fA-F];
   ws = [ \t\r];
   dquot = ["];
-  A = [aA];
-  B = [bB];
-  C = [cC];
-  D = [dD];
-  E = [eE];
-  F = [fF];
-  G = [gG];
-  H = [hH];
-  I = [iI];
-  J = [jJ];
-  K = [kK];
-  L = [lL];
-  M = [mM];
-  N = [nN];
-  O = [oO];
-  P = [pP];
-  Q = [qQ];
-  R = [rR];
-  S = [sS];
-  T = [tT];
-  U = [uU];
-  V = [vV];
-  W = [wW];
-  X = [xX];
-  Y = [yY];
-  Z = [zZ];
 */
 
 
 int
 gas_parser_lex(YYSTYPE *lvalp, yasm_parser_gas *parser_gas)
 {
+    /*@null@*/ gas_rept *rept = parser_gas->rept;
     Scanner *s = &parser_gas->s;
     YYCTYPE *cursor = s->cur;
     size_t count;
     YYCTYPE savech;
+    int linestart;
+    gas_rept_line *new_line;
 
     /* Catch EOF */
     if (s->eof && cursor == s->eof)
 	return 0;
+
+    /* Handle rept */
+    if (rept && !rept->ended)
+	goto rept_directive;
 
     /* Jump to proper "exclusive" states */
     switch (parser_gas->state) {
@@ -225,7 +283,7 @@ scan:
 	}
 
 	/* 0b10010011 - binary number */
-	"0" B bindigit+ {
+	'0b' bindigit+ {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    lvalp->intn = yasm_intnum_create_bin(s->tok+2, cur_line);
@@ -243,7 +301,7 @@ scan:
 	}
 
 	/* 0xAA - hexidecimal number */
-	"0x" hexdigit+ {
+	'0x' hexdigit+ {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    /* skip 0 and x */
@@ -253,7 +311,7 @@ scan:
 	}
 
 	/* floating point value */
-	"0" [DdEeFfTt] [-+]? (digit+)? ("." digit*)? (E [-+]? digit+)? {
+	"0" [DdEeFfTt] [-+]? (digit+)? ("." digit*)? ('e' [-+]? digit+)? {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    lvalp->flt = yasm_floatnum_create(s->tok+2);
@@ -277,54 +335,63 @@ scan:
 	"<"			{ RETURN(LEFT_OP); }
 	">"			{ RETURN(RIGHT_OP); }
 	[-+|^!*&/~$():@=,]	{ RETURN(s->tok[0]); }
+	";"	{
+	    parser_gas->state = INITIAL;
+	    RETURN(s->tok[0]);
+	}
 
 	/* arch-independent directives */
-	".2byte"	{ RETURN(DIR_2BYTE); }
-	".4byte"	{ RETURN(DIR_4BYTE); }
-	".8byte"	{ RETURN(DIR_QUAD); }
-	".align"	{ RETURN(DIR_ALIGN); }
-	".ascii"	{ RETURN(DIR_ASCII); }
-	".asciz"	{ RETURN(DIR_ASCIZ); }
-	".balign"	{ RETURN(DIR_BALIGN); }
-	".bss"		{ RETURN(DIR_BSS); }
-	".byte"		{ RETURN(DIR_BYTE); }
-	".comm"		{ RETURN(DIR_COMM); }
-	".data"		{ RETURN(DIR_DATA); }
-	".double"	{ RETURN(DIR_DOUBLE); }
-	".endr"		{ RETURN(DIR_ENDR); }
-	".equ"		{ RETURN(DIR_EQU); }
-	".extern"	{ RETURN(DIR_EXTERN); }
-	".file"		{ RETURN(DIR_FILE); }
-	".float"	{ RETURN(DIR_FLOAT); }
-	".global"	{ RETURN(DIR_GLOBAL); }
-	".globl"	{ RETURN(DIR_GLOBAL); }
-	".hword"	{ RETURN(DIR_SHORT); }
-	".ident"	{ RETURN(DIR_IDENT); }
-	".int"		{ RETURN(DIR_INT); }
-	".lcomm"	{ RETURN(DIR_LCOMM); }
-	".loc"		{ RETURN(DIR_LOC); }
-	".long"		{ RETURN(DIR_INT); }
-	".octa"		{ RETURN(DIR_OCTA); }
-	".org"		{ RETURN(DIR_ORG); }
-	".p2align"	{ RETURN(DIR_P2ALIGN); }
-	".rept"		{ RETURN(DIR_REPT); }
-	".section"	{
+	'.2byte'	{ parser_gas->state = INSTDIR; RETURN(DIR_2BYTE); }
+	'.4byte'	{ parser_gas->state = INSTDIR; RETURN(DIR_4BYTE); }
+	'.8byte'	{ parser_gas->state = INSTDIR; RETURN(DIR_QUAD); }
+	'.align'	{ parser_gas->state = INSTDIR; RETURN(DIR_ALIGN); }
+	'.ascii'	{ parser_gas->state = INSTDIR; RETURN(DIR_ASCII); }
+	'.asciz'	{ parser_gas->state = INSTDIR; RETURN(DIR_ASCIZ); }
+	'.balign'	{ parser_gas->state = INSTDIR; RETURN(DIR_BALIGN); }
+	'.bss'		{ parser_gas->state = INSTDIR; RETURN(DIR_BSS); }
+	'.byte'		{ parser_gas->state = INSTDIR; RETURN(DIR_BYTE); }
+	'.comm'		{ parser_gas->state = INSTDIR; RETURN(DIR_COMM); }
+	'.data'		{ parser_gas->state = INSTDIR; RETURN(DIR_DATA); }
+	'.double'	{ parser_gas->state = INSTDIR; RETURN(DIR_DOUBLE); }
+	'.endr'		{ parser_gas->state = INSTDIR; RETURN(DIR_ENDR); }
+	'.equ'		{ parser_gas->state = INSTDIR; RETURN(DIR_EQU); }
+	'.extern'	{ parser_gas->state = INSTDIR; RETURN(DIR_EXTERN); }
+	'.file'		{ parser_gas->state = INSTDIR; RETURN(DIR_FILE); }
+	'.float'	{ parser_gas->state = INSTDIR; RETURN(DIR_FLOAT); }
+	'.global'	{ parser_gas->state = INSTDIR; RETURN(DIR_GLOBAL); }
+	'.globl'	{ parser_gas->state = INSTDIR; RETURN(DIR_GLOBAL); }
+	'.hword'	{ parser_gas->state = INSTDIR; RETURN(DIR_SHORT); }
+	'.ident'	{ parser_gas->state = INSTDIR; RETURN(DIR_IDENT); }
+	'.int'		{ parser_gas->state = INSTDIR; RETURN(DIR_INT); }
+	'.lcomm'	{ parser_gas->state = INSTDIR; RETURN(DIR_LCOMM); }
+	'.line'		{ parser_gas->state = INSTDIR; RETURN(DIR_LINE); }
+	'.loc'		{ parser_gas->state = INSTDIR; RETURN(DIR_LOC); }
+	'.long'		{ parser_gas->state = INSTDIR; RETURN(DIR_INT); }
+	'.octa'		{ parser_gas->state = INSTDIR; RETURN(DIR_OCTA); }
+	'.org'		{ parser_gas->state = INSTDIR; RETURN(DIR_ORG); }
+	'.p2align'	{ parser_gas->state = INSTDIR; RETURN(DIR_P2ALIGN); }
+	'.rept'		{ parser_gas->state = INSTDIR; RETURN(DIR_REPT); }
+	'.section'	{
 	    parser_gas->state = SECTION_DIRECTIVE;
 	    RETURN(DIR_SECTION);
 	}
-	".set"		{ RETURN(DIR_EQU); }
-	".short"	{ RETURN(DIR_SHORT); }
-	".single"	{ RETURN(DIR_FLOAT); }
-	".size"		{ RETURN(DIR_SIZE); }
-	".skip"		{ RETURN(DIR_SKIP); }
-	".space"	{ RETURN(DIR_SKIP); }
-	".string"	{ RETURN(DIR_ASCIZ); }
-	".text"		{ RETURN(DIR_TEXT); }
-	".tfloat"	{ RETURN(DIR_TFLOAT); }
-	".type"		{ RETURN(DIR_TYPE); }
-	".quad"		{ RETURN(DIR_QUAD); }
-	".word"		{ RETURN(DIR_WORD); }
-	".zero"		{ RETURN(DIR_ZERO); }
+	'.set'		{ parser_gas->state = INSTDIR; RETURN(DIR_EQU); }
+	'.short'	{ parser_gas->state = INSTDIR; RETURN(DIR_SHORT); }
+	'.single'	{ parser_gas->state = INSTDIR; RETURN(DIR_FLOAT); }
+	'.size'		{ parser_gas->state = INSTDIR; RETURN(DIR_SIZE); }
+	'.skip'		{ parser_gas->state = INSTDIR; RETURN(DIR_SKIP); }
+	'.sleb128'	{ parser_gas->state = INSTDIR; RETURN(DIR_SLEB128); }
+	'.space'	{ parser_gas->state = INSTDIR; RETURN(DIR_SKIP); }
+	'.string'	{ parser_gas->state = INSTDIR; RETURN(DIR_ASCIZ); }
+	'.text'		{ parser_gas->state = INSTDIR; RETURN(DIR_TEXT); }
+	'.tfloat'	{ parser_gas->state = INSTDIR; RETURN(DIR_TFLOAT); }
+	'.type'		{ parser_gas->state = INSTDIR; RETURN(DIR_TYPE); }
+	'.quad'		{ parser_gas->state = INSTDIR; RETURN(DIR_QUAD); }
+	'.uleb128'	{ parser_gas->state = INSTDIR; RETURN(DIR_ULEB128); }
+	'.value'	{ parser_gas->state = INSTDIR; RETURN(DIR_VALUE); }
+	'.weak'		{ parser_gas->state = INSTDIR; RETURN(DIR_WEAK); }
+	'.word'		{ parser_gas->state = INSTDIR; RETURN(DIR_WORD); }
+	'.zero'		{ parser_gas->state = INSTDIR; RETURN(DIR_ZERO); }
 
 	/* label or maybe directive */
 	[.][a-zA-Z0-9_$.]* {
@@ -339,7 +406,7 @@ scan:
 	}
 
 	/* register or segment register */
-	[%][a-z0-9]+ {
+	[%][a-zA-Z0-9]+ {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    if (yasm_arch_parse_check_reg(parser_gas->arch, lvalp->arch_data,
@@ -369,22 +436,41 @@ scan:
 	    RETURN(REG);
 	}
 
+	/* label */
+	[a-zA-Z][a-zA-Z0-9_$.]* ws* ':' {
+	    /* strip off colon and any whitespace */
+	    count = TOKLEN-1;
+	    while (s->tok[count] == ' ' || s->tok[count] == '\t'
+		   || s->tok[count] == '\r')
+		count--;
+	    /* Just an identifier, return as such. */
+	    lvalp->str_val = yasm__xstrndup(s->tok, count);
+	    RETURN(LABEL);
+	}
+
 	/* identifier that may be an instruction, etc. */
 	[a-zA-Z][a-zA-Z0-9_$.]* {
-	    savech = s->tok[TOKLEN];
-	    s->tok[TOKLEN] = '\0';
-	    if (yasm_arch_parse_check_insn(parser_gas->arch, lvalp->arch_data,
-					   s->tok, cur_line)) {
+	    /* Can only be an instruction/prefix when not inside an
+	     * instruction or directive.
+	     */
+	    if (parser_gas->state != INSTDIR) {
+		savech = s->tok[TOKLEN];
+		s->tok[TOKLEN] = '\0';
+		if (yasm_arch_parse_check_insn(parser_gas->arch,
+					       lvalp->arch_data, s->tok,
+					       cur_line)) {
+		    s->tok[TOKLEN] = savech;
+		    parser_gas->state = INSTDIR;
+		    RETURN(INSN);
+		}
+		if (yasm_arch_parse_check_prefix(parser_gas->arch,
+						 lvalp->arch_data, s->tok,
+						 cur_line)) {
+		    s->tok[TOKLEN] = savech;
+		    RETURN(PREFIX);
+		}
 		s->tok[TOKLEN] = savech;
-		RETURN(INSN);
 	    }
-	    if (yasm_arch_parse_check_prefix(parser_gas->arch,
-					     lvalp->arch_data, s->tok,
-					     cur_line)) {
-		s->tok[TOKLEN] = savech;
-		RETURN(PREFIX);
-	    }
-	    s->tok[TOKLEN] = savech;
 	    /* Just an identifier, return as such. */
 	    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
 	    RETURN(ID);
@@ -490,7 +576,7 @@ stringconst_scan:
 	    yasm_intnum_destroy(lvalp->intn);
 	    goto stringconst_scan;
 	}
-	"\\" X hexdigit+    {
+	'\\x' hexdigit+    {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    lvalp->intn = yasm_intnum_create_hex(s->tok+2, cur_line);
@@ -516,7 +602,8 @@ stringconst_scan:
 
 	dquot	{
 	    strbuf_append(count, cursor, s, cur_line, '\0');
-	    lvalp->str_val = strbuf;
+	    lvalp->str.contents = strbuf;
+	    lvalp->str.len = count;
 	    RETURN(STRING);
 	}
 
@@ -525,4 +612,104 @@ stringconst_scan:
 	    goto stringconst_scan;
 	}
     */
+
+rept_directive:
+    strbuf = yasm_xmalloc(STRBUF_ALLOC_SIZE);
+    strbuf_size = STRBUF_ALLOC_SIZE;
+    count = 0;
+    linestart = 1;
+
+
+rept_scan:
+    SCANINIT();
+
+    /*!re2c
+	[\n;]	{
+	    /* Line ending, save in lines */
+	    new_line = yasm_xmalloc(sizeof(gas_rept_line));
+	    if (cursor == s->eof) {
+		yasm_xfree(strbuf);
+		return 0;
+	    }
+	    strbuf_append(count++, cursor, s, cur_line, s->tok[0]);
+	    new_line->data = strbuf;
+	    new_line->len = count;
+	    STAILQ_INSERT_TAIL(&rept->lines, new_line, link);
+	    /* Allocate new strbuf */
+	    strbuf = yasm_xmalloc(STRBUF_ALLOC_SIZE);
+	    strbuf_size = STRBUF_ALLOC_SIZE;
+	    count = 0;
+	    /* Mark start of line */
+	    linestart = 1;
+	    goto rept_scan;
+	}
+	'.rept'	{
+	    int i;
+	    if (linestart) {
+		/* We don't support nested right now, error */
+		yasm__error(cur_line, N_("nested rept not supported"));
+	    }
+	    for (i=0; i<6; i++)
+		strbuf_append(count++, cursor, s, cur_line, s->tok[i]);
+	    goto rept_scan;
+	}
+	'.endr'	{
+	    if (linestart) {
+		/* We're done, kick off the main lexer */
+		rept->line = STAILQ_FIRST(&rept->lines);
+		if (!rept->line) {
+		    /* Didn't get any intervening data?  Empty repeat, so
+		     * don't even bother.
+		     */
+		    yasm_xfree(strbuf);
+		    yasm_xfree(rept);
+		    parser_gas->rept = NULL;
+		} else {
+		    rept->ended = 1;
+
+		    /* Add .line as first line to get line numbers correct */
+		    new_line = yasm_xmalloc(sizeof(gas_rept_line));
+		    new_line->data = yasm_xmalloc(40);
+		    sprintf(new_line->data, ".line %lu;", rept->startline+1);
+		    new_line->len = strlen(new_line->data);
+		    STAILQ_INSERT_HEAD(&rept->lines, new_line, link);
+
+		    /* Save previous fill buffer */
+		    rept->oldbuf = parser_gas->s.bot;
+		    rept->oldbuflen = s->lim - s->bot;
+		    rept->oldbufpos = cursor - s->bot;
+
+		    /* Reset fill */
+		    s->bot = NULL;
+		    s->tok = NULL;
+		    s->ptr = NULL;
+		    s->cur = NULL;
+		    s->pos = NULL;
+		    s->lim = NULL;
+		    s->top = NULL;
+		    s->eof = NULL;
+		    cursor = NULL;
+		    YYFILL(1);
+		}
+
+		goto scan;
+	    } else {
+		int i;
+		for (i=0; i<6; i++)
+		    strbuf_append(count++, cursor, s, cur_line, s->tok[i]);
+		goto rept_scan;
+	    }
+	}
+
+	any	{
+	    if (cursor == s->eof) {
+		yasm_xfree(strbuf);
+		return 0;
+	    }
+	    strbuf_append(count++, cursor, s, cur_line, s->tok[0]);
+	    linestart = 0;
+	    goto rept_scan;
+	}
+    */
+
 }

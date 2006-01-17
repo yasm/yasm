@@ -89,16 +89,23 @@ static elf_symtab_entry *
 elf_objfmt_symtab_append(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym,
 			 elf_section_index sectidx, elf_symbol_binding bind,
 			 elf_symbol_type type, elf_symbol_vis vis,
-                         yasm_expr *size, elf_address value)
+                         yasm_expr *size, elf_address *value)
 {
-    elf_strtab_entry *name = elf_strtab_append_str(objfmt_elf->strtab,
-						   yasm_symrec_get_name(sym));
-    elf_symtab_entry *entry = elf_symtab_entry_create(name, sym);
-    elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
+    /* Only append to table if not already appended */
+    elf_symtab_entry *entry = yasm_symrec_get_data(sym, &elf_symrec_data);
+    if (!entry || !elf_sym_in_table(entry)) {
+	if (!entry) {
+	    elf_strtab_entry *name =
+		elf_strtab_append_str(objfmt_elf->strtab,
+				      yasm_symrec_get_name(sym));
+	    entry = elf_symtab_entry_create(name, sym);
+	}
+	elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
+	yasm_symrec_add_data(sym, &elf_symrec_data, entry);
+    }
 
     elf_symtab_set_nonzero(entry, NULL, sectidx, bind, type, size, value);
     elf_sym_set_visibility(entry, vis);
-    yasm_symrec_add_data(sym, &elf_symrec_data, entry);
 
     return entry;
 }
@@ -114,36 +121,37 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
 
     assert(info != NULL);
 
-    if (!yasm_symrec_get_data(sym, &elf_symrec_data)) {
+    if (!yasm_symrec_get_label(sym, &precbc))
+	return 1;
+    sect = yasm_bc_get_section(precbc);
+
+    entry = yasm_symrec_get_data(sym, &elf_symrec_data);
+    if (!entry || !elf_sym_in_table(entry)) {
 	int is_sect = 0;
-	if (!yasm_symrec_get_label(sym, &precbc))
-	    return 1;
-	sect = yasm_bc_get_section(precbc);
 	if (!yasm_section_is_absolute(sect) &&
 	    strcmp(yasm_symrec_get_name(sym), yasm_section_get_name(sect))==0)
 	    is_sect = 1;
 
 	/* neither sections nor locals (except when debugging) need names */
-	entry = elf_symtab_insert_local_sym(info->objfmt_elf->elf_symtab,
-		    info->local_names && !is_sect ?
-		    info->objfmt_elf->strtab : NULL, sym);
+	if (!entry) {
+	    elf_strtab_entry *name = info->local_names && !is_sect
+		? elf_strtab_append_str(info->objfmt_elf->strtab,
+					yasm_symrec_get_name(sym))
+		: NULL;
+	    entry = elf_symtab_entry_create(name, sym);
+	}
+	elf_symtab_insert_local_sym(info->objfmt_elf->elf_symtab, entry);
 	elf_symtab_set_nonzero(entry, sect, 0, STB_LOCAL,
-			       is_sect ? STT_SECTION : STT_NOTYPE, NULL, 0);
+			       is_sect ? STT_SECTION : 0, NULL, 0);
 	yasm_symrec_add_data(sym, &elf_symrec_data, entry);
 
 	if (is_sect)
 	    return 1;
     }
-    else {
-	if (!yasm_symrec_get_label(sym, &precbc))
-	    return 1;
-	sect = yasm_bc_get_section(precbc);
-    }
 
-    entry = yasm_symrec_get_data(sym, &elf_symrec_data);
     if (precbc)
 	value = precbc->offset + precbc->len;
-    elf_symtab_set_nonzero(entry, sect, 0, 0, 0, NULL, value);
+    elf_symtab_set_nonzero(entry, sect, 0, 0, 0, NULL, &value);
 
     return 1;
 }
@@ -181,7 +189,8 @@ elf_objfmt_create_common(const char *in_filename, yasm_object *object,
     entry = elf_symtab_entry_create(
 	elf_strtab_append_str(objfmt_elf->strtab, in_filename), filesym);
     yasm_symrec_add_data(filesym, &elf_symrec_data, entry);
-    elf_symtab_set_nonzero(entry, NULL, SHN_ABS, STB_LOCAL, STT_FILE, NULL, 0);
+    elf_symtab_set_nonzero(entry, NULL, SHN_ABS, STB_LOCAL, STT_FILE, NULL,
+			   NULL);
     elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
 
     /* FIXME: misuse of NULL bytecode */
@@ -309,7 +318,7 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     /* Check for a WRT relocation */
     wrt_expr = yasm_expr_extract_wrt(ep);
     if (wrt_expr) {
-	wrt = yasm_expr_extract_symrec(&wrt_expr, 0,
+	wrt = yasm_expr_extract_symrec(&wrt_expr, YASM_SYMREC_REPLACE_ZERO,
 				       yasm_common_calc_bc_dist);
 	yasm_expr_destroy(wrt_expr);
 	if (!wrt) {
@@ -319,10 +328,14 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
     }
 
     /* Handle integer expressions, with relocation if necessary */
-    sym = yasm_expr_extract_symrec(ep,
-				   !(wrt == info->objfmt_elf->dotdotsym ||
-				     (wrt && elf_is_wrt_sym_relative(wrt))),
-				   yasm_common_calc_bc_dist);
+    if (wrt == info->objfmt_elf->dotdotsym
+	|| (wrt && elf_is_wrt_sym_relative(wrt)))
+	sym = yasm_expr_extract_symrec(ep, YASM_SYMREC_REPLACE_ZERO,
+				       yasm_common_calc_bc_dist);
+    else
+	sym = yasm_expr_extract_symrec(ep, YASM_SYMREC_REPLACE_VALUE_IF_LOCAL,
+				       yasm_common_calc_bc_dist);
+
     if (sym) {
 	yasm_sym_vis vis;
 
@@ -331,8 +344,7 @@ elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	    wrt = NULL;
 	else if (wrt && elf_is_wrt_sym_relative(wrt))
 	    ;
-	else if (!(vis & (YASM_SYM_COMMON|YASM_SYM_EXTERN)))
-	{
+	else if (vis == YASM_SYM_LOCAL) {
 	    yasm_bytecode *label_precbc;
 	    /* Local symbols need relocation to their section's start */
 	    if (yasm_symrec_get_label(sym, &label_precbc)) {
@@ -431,7 +443,7 @@ elf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     /* Warn that gaps are converted to 0 and write out the 0's. */
     if (gap) {
 	unsigned long left;
-	yasm__warning(YASM_WARN_GENERAL, bc->line,
+	yasm__warning(YASM_WARN_UNINIT_CONTENTS, bc->line,
 	    N_("uninitialized space declared in code/data section: zeroing"));
 	/* Write out in chunks */
 	memset(buf, 0, 256);
@@ -460,24 +472,20 @@ elf_objfmt_create_dbg_secthead(yasm_section *sect,
 {
     elf_secthead *shead;
     elf_section_type type=SHT_PROGBITS;
-    yasm_intnum *align=NULL;
     elf_size entsize=0;
     const char *sectname = yasm_section_get_name(sect);
     elf_strtab_entry *name = elf_strtab_append_str(info->objfmt_elf->shstrtab,
 						   sectname);
 
     if (yasm__strcasecmp(sectname, ".stab")==0) {
-	align = yasm_intnum_create_uint(4);
 	entsize = 12;
     } else if (yasm__strcasecmp(sectname, ".stabstr")==0) {
 	type = SHT_STRTAB;
-	align = yasm_intnum_create_uint(1);
     }
     else
 	yasm_internal_error(N_("Unrecognized section without data"));
 
     shead = elf_secthead_create(name, type, 0, 0, 0);
-    elf_secthead_set_align(shead, align);
     elf_secthead_set_entsize(shead, entsize);
 
     yasm_section_add_data(sect, &elf_section_data, shead);
@@ -503,6 +511,9 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     shead = yasm_section_get_data(sect, &elf_section_data);
     if (shead == NULL)
 	shead = elf_objfmt_create_dbg_secthead(sect, info);
+
+    if (elf_secthead_get_align(shead) == 0)
+	elf_secthead_set_align(shead, yasm_section_get_align(sect));
 
     /* don't output header-only sections */
     if ((elf_secthead_get_type(shead) & SHT_NOBITS) == SHT_NOBITS)
@@ -715,8 +726,7 @@ elf_objfmt_destroy(yasm_objfmt *objfmt)
 
 static /*@observer@*/ /*@null@*/ yasm_section *
 elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
-			  /*@unused@*/ /*@null@*/
-			  yasm_valparamhead *objext_valparams,
+			  /*@null@*/ yasm_valparamhead *objext_valparams,
 			  unsigned long line)
 {
     yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
@@ -760,6 +770,10 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	align = 16;
 	type = SHT_PROGBITS;
 	flags = SHF_ALLOC + SHF_EXECINSTR;
+    } else if (strcmp(sectname, ".comment") == 0) {
+	align = 0;
+	type = SHT_PROGBITS;
+	flags = 0;
     } else {
 	/* Default to code */
 	align = 1;
@@ -768,6 +782,12 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     while ((vp = yasm_vps_next(vp))) {
 	size_t i;
 	int match;
+
+	if (!vp->val) {
+	    yasm__warning(YASM_WARN_GENERAL, line,
+			  N_("Unrecognized numeric qualifier"));
+	    continue;
+	}
 
 	match = 0;
 	for (i=0; i<NELEMS(flagquals) && !match; i++) {
@@ -800,6 +820,22 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		    case 'x':
 			flags |= SHF_EXECINSTR;
 			break;
+		    case 'M':
+			flags |= SHF_MERGE;
+			break;
+		    case 'S':
+			flags |= SHF_STRINGS;
+			break;
+		    case 'G':
+			flags |= SHF_GROUP;
+			break;
+		    case 'T':
+			flags |= SHF_TLS;
+			break;
+		    default:
+			yasm__warning(YASM_WARN_GENERAL, line,
+				      N_("unrecognized section attribute: `%c'"),
+				      vp->val[i]);
 		}
 	    }
 	} else if (yasm__strcasecmp(vp->val, "progbits") == 0) {
@@ -812,7 +848,6 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	}
 	else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
             /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
-            unsigned long addralign;
 
             align_expr = yasm_expr_get_intnum(&vp->param, NULL);
             if (!align_expr) {
@@ -821,23 +856,22 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
                             vp->val);
                 return NULL;
             }
-            addralign = yasm_intnum_get_uint(align_expr);
+            align = yasm_intnum_get_uint(align_expr);
 
             /* Alignments must be a power of two. */
-            if ((addralign & (addralign - 1)) != 0) {
+            if ((align & (align - 1)) != 0) {
                 yasm__error(line,
                             N_("argument to `%s' is not a power of two"),
                             vp->val);
                 return NULL;
             }
-
-            align_intn = yasm_intnum_copy(align_expr);
 	} else
 	    yasm__warning(YASM_WARN_GENERAL, line,
 			  N_("Unrecognized qualifier `%s'"), vp->val);
     }
 
-    retval = yasm_object_get_general(objfmt_elf->object, sectname, 0, resonly,
+    retval = yasm_object_get_general(objfmt_elf->object, sectname, 0, align,
+				     (flags & SHF_EXECINSTR) != 0, resonly,
 				     &isnew, line);
 
     if (isnew) {
@@ -847,16 +881,32 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 						       sectname);
 
 	esd = elf_secthead_create(name, type, flags, 0, 0);
-	if (!align_intn)
-	    align_intn = yasm_intnum_create_uint(align);
-	if (align_intn)
-	    elf_secthead_set_align(esd, align_intn);
 	yasm_section_add_data(retval, &elf_section_data, esd);
 	sym = yasm_symtab_define_label(
 	    yasm_object_get_symtab(objfmt_elf->object), sectname,
 	    yasm_section_bcs_first(retval), 1, line);
 
 	elf_secthead_set_sym(esd, sym);
+
+	/* Handle merge entity size */
+	if (flags & SHF_MERGE) {
+	    if (objext_valparams && (vp = yasm_vps_first(objext_valparams))
+		&& vp->param) {
+		/*@dependent@*/ /*@null@*/ const yasm_intnum *merge_intn;
+
+		merge_intn = yasm_expr_get_intnum(&vp->param, NULL);
+		if (merge_intn)
+		    elf_secthead_set_entsize(esd,
+					     yasm_intnum_get_uint(merge_intn));
+		else
+		    yasm__warning(YASM_WARN_GENERAL, line,
+				  N_("invalid merge entity size"));
+	    } else {
+		yasm__warning(YASM_WARN_GENERAL, line,
+			      N_("entity size for SHF_MERGE not specified"));
+		flags &= ~SHF_MERGE;
+	    }
+	}
     } else if (flags_override)
 	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("section flags ignored on section redeclaration"));
@@ -873,7 +923,7 @@ elf_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
 
     sym = yasm_symtab_declare(objfmt_elf->symtab, name, YASM_SYM_EXTERN, line);
     elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_GLOBAL,
-                             STT_NOTYPE, STV_DEFAULT, NULL, 0);
+                             0, STV_DEFAULT, NULL, NULL);
 
     if (objext_valparams) {
 	yasm_valparam *vp = yasm_vps_first(objext_valparams);
@@ -893,7 +943,7 @@ elf_objfmt_global_declare(yasm_objfmt *objfmt, const char *name,
 {
     yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
     yasm_symrec *sym;
-    elf_symbol_type type = STT_NOTYPE;
+    elf_symbol_type type = 0;
     yasm_expr *size = NULL;
     elf_symbol_vis vis = STV_DEFAULT;
     unsigned int vis_overrides = 0;
@@ -938,7 +988,7 @@ elf_objfmt_global_declare(yasm_objfmt *objfmt, const char *name,
     }
 
     elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_GLOBAL,
-                             type, vis, size, 0);
+                             type, vis, size, NULL);
 
     return sym;
 }
@@ -982,20 +1032,84 @@ elf_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
     }
 
     elf_objfmt_symtab_append(objfmt_elf, sym, SHN_COMMON, STB_GLOBAL,
-                             STT_NOTYPE, STV_DEFAULT, size, addralign);
+                             0, STV_DEFAULT, size, &addralign);
 
     return sym;
 }
 
 static int
-elf_objfmt_directive(/*@unused@*/ yasm_objfmt *objfmt,
-		     /*@unused@*/ const char *name,
-		     /*@unused@*/ yasm_valparamhead *valparams,
+elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
+		     yasm_valparamhead *valparams,
 		     /*@unused@*/ /*@null@*/
 		     yasm_valparamhead *objext_valparams,
-		     /*@unused@*/ unsigned long line)
+		     unsigned long line)
 {
-    return 1;	/* no objfmt directives */
+    yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
+    yasm_symrec *sym;
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    char *symname = vp->val;
+    elf_symtab_entry *entry;
+
+    if (!symname) {
+	yasm__error(line, N_("Symbol name not specified"));
+	return 0;
+    }
+
+    if (yasm__strcasecmp(name, "type") == 0) {
+	/* Get symbol elf data */
+	sym = yasm_symtab_use(objfmt_elf->symtab, symname, line);
+	entry = yasm_symrec_get_data(sym, &elf_symrec_data);
+
+	/* Create entry if necessary */
+	if (!entry) {
+	    entry = elf_symtab_entry_create(
+		elf_strtab_append_str(objfmt_elf->strtab, symname), sym);
+	    yasm_symrec_add_data(sym, &elf_symrec_data, entry);
+	}
+
+	/* Pull new type from val */
+	vp = yasm_vps_next(vp);
+	if (vp->val) {
+	    if (yasm__strcasecmp(vp->val, "function") == 0)
+		elf_sym_set_type(entry, STT_FUNC);
+	    else if (yasm__strcasecmp(vp->val, "object") == 0)
+		elf_sym_set_type(entry, STT_OBJECT);
+	    else
+		yasm__warning(YASM_WARN_GENERAL, line,
+			      N_("unrecognized symbol type `%s'"), vp->val);
+	} else
+	    yasm__error(line, N_("no type specified"));
+    } else if (yasm__strcasecmp(name, "size") == 0) {
+	/* Get symbol elf data */
+	sym = yasm_symtab_use(objfmt_elf->symtab, symname, line);
+	entry = yasm_symrec_get_data(sym, &elf_symrec_data);
+
+	/* Create entry if necessary */
+	if (!entry) {
+	    entry = elf_symtab_entry_create(
+		elf_strtab_append_str(objfmt_elf->strtab, symname), sym);
+	    yasm_symrec_add_data(sym, &elf_symrec_data, entry);
+	}
+
+	/* Pull new size from either param (expr) or val */
+	vp = yasm_vps_next(vp);
+	if (vp->param) {
+	    elf_sym_set_size(entry, vp->param);
+	    vp->param = NULL;
+	} else if (vp->val)
+	    elf_sym_set_size(entry, yasm_expr_create_ident(yasm_expr_sym(
+		yasm_symtab_use(objfmt_elf->symtab, vp->val, line)), line));
+	else
+	    yasm__error(line, N_("no size specified"));
+    } else if (yasm__strcasecmp(name, "weak") == 0) {
+	sym = yasm_symtab_declare(objfmt_elf->symtab, symname, YASM_SYM_GLOBAL,
+				  line);
+	elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_WEAK,
+				 0, STV_DEFAULT, NULL, NULL);
+    } else
+	return 1;	/* unrecognized */
+
+    return 0;
 }
 
 

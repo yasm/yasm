@@ -51,7 +51,10 @@ struct yasm_dataval {
 
     union {
 	/*@only@*/ yasm_expr *expn;
-	/*@only@*/ char *str_val;
+	struct {
+	    /*@only@*/ char *contents;
+	    size_t len;
+	} str;
     } data;
 };
 
@@ -62,8 +65,22 @@ typedef struct bytecode_data {
     yasm_datavalhead datahead;
 
     /* final (converted) size of each element (in bytes) */
-    unsigned char size;
+    unsigned int size;
+
+    /* append a zero byte after each element? */
+    int append_zero;
 } bytecode_data;
+
+typedef struct bytecode_leb128 {
+    /* source data (linked list) */
+    yasm_datavalhead datahead;
+
+    /* signedness (0=unsigned, 1=signed) */
+    int sign;
+
+    /* total length (calculated at finalize time) */
+    unsigned long len;
+} bytecode_leb128;
 
 typedef struct bytecode_reserve {
     /*@only@*/ yasm_expr *numitems; /* number of items to reserve */
@@ -124,6 +141,17 @@ static int bc_data_calc_len
 static int bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			   yasm_output_expr_func output_expr,
 			   /*@null@*/ yasm_output_reloc_func output_reloc);
+
+static void bc_leb128_destroy(void *contents);
+static void bc_leb128_print(const void *contents, FILE *f, int indent_level);
+static void bc_leb128_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
+static int bc_leb128_calc_len
+    (yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
+     /*@out@*/ /*@only@*/ yasm_expr **critical, /*@out@*/ long *neg_thres,
+     /*@out@*/ long *pos_thres);
+static int bc_leb128_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+			     yasm_output_expr_func output_expr,
+			     /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static void bc_reserve_destroy(void *contents);
 static void bc_reserve_print(const void *contents, FILE *f, int indent_level);
@@ -186,6 +214,15 @@ static const yasm_bytecode_callback bc_data_callback = {
     bc_data_calc_len,
     yasm_bc_set_long_common,
     bc_data_tobytes
+};
+
+static const yasm_bytecode_callback bc_leb128_callback = {
+    bc_leb128_destroy,
+    bc_leb128_print,
+    bc_leb128_finalize,
+    bc_leb128_calc_len,
+    yasm_bc_set_long_common,
+    bc_leb128_tobytes
 };
 
 static const yasm_bytecode_callback bc_reserve_callback = {
@@ -400,8 +437,8 @@ bc_data_print(const void *contents, FILE *f, int indent_level)
 {
     const bytecode_data *bc_data = (const bytecode_data *)contents;
     fprintf(f, "%*s_Data_\n", indent_level, "");
-    fprintf(f, "%*sFinal Element Size=%u\n", indent_level+1, "",
-	    (unsigned int)bc_data->size);
+    fprintf(f, "%*sFinal Element Size=%u\n", indent_level+1, "", bc_data->size);
+    fprintf(f, "%*sAppend Zero=%i\n", indent_level+1, "", bc_data->append_zero);
     fprintf(f, "%*sElements:\n", indent_level+1, "");
     yasm_dvs_print(&bc_data->datahead, f, indent_level+2);
 }
@@ -423,12 +460,14 @@ bc_data_calc_len(yasm_bytecode *bc, unsigned long *long_len,
 		bc->len += bc_data->size;
 		break;
 	    case DV_STRING:
-		slen = strlen(dv->data.str_val);
+		slen = dv->data.str.len;
 		/* find count, rounding up to nearest multiple of size */
 		slen = (slen + bc_data->size - 1) / bc_data->size;
 		bc->len += slen*bc_data->size;
 		break;
 	}
+	if (bc_data->append_zero)
+	    bc->len++;
     }
 
     return 0;
@@ -457,8 +496,8 @@ bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		*bufp += bc_data->size;
 		break;
 	    case DV_STRING:
-		slen = strlen(dv->data.str_val);
-		strncpy((char *)*bufp, dv->data.str_val, slen);
+		slen = dv->data.str.len;
+		memcpy(*bufp, dv->data.str.contents, slen);
 		*bufp += slen;
 		/* pad with 0's to nearest multiple of size */
 		slen %= bc_data->size;
@@ -469,6 +508,8 @@ bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		}
 		break;
 	}
+	if (bc_data->append_zero)
+	    YASM_WRITE_8(*bufp, 0);
     }
 
     return 0;
@@ -476,14 +517,121 @@ bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
 yasm_bytecode *
 yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
-		    unsigned long line)
+		    int append_zero, unsigned long line)
 {
     bytecode_data *data = yasm_xmalloc(sizeof(bytecode_data));
 
     data->datahead = *datahead;
-    data->size = (unsigned char)size;
+    data->size = size;
+    data->append_zero = append_zero;
 
     return yasm_bc_create_common(&bc_data_callback, data, line);
+}
+
+static void
+bc_leb128_destroy(void *contents)
+{
+    bytecode_leb128 *bc_leb128 = (bytecode_leb128 *)contents;
+    yasm_dvs_destroy(&bc_leb128->datahead);
+    yasm_xfree(contents);
+}
+
+static void
+bc_leb128_print(const void *contents, FILE *f, int indent_level)
+{
+    const bytecode_leb128 *bc_leb128 = (const bytecode_leb128 *)contents;
+    fprintf(f, "%*s_Data_\n", indent_level, "");
+    fprintf(f, "%*sSign=%u\n", indent_level+1, "",
+	    (unsigned int)bc_leb128->sign);
+    fprintf(f, "%*sElements:\n", indent_level+1, "");
+    yasm_dvs_print(&bc_leb128->datahead, f, indent_level+2);
+}
+
+static void
+bc_leb128_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
+{
+    bytecode_leb128 *bc_leb128 = (bytecode_leb128 *)bc->contents;
+    yasm_dataval *dv;
+    /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
+
+    /* Only constant expressions are allowed.
+     * Because of this, go ahead and calculate length.
+     */
+    bc_leb128->len = 0;
+    STAILQ_FOREACH(dv, &bc_leb128->datahead, link) {
+	switch (dv->type) {
+	    case DV_EMPTY:
+		break;
+	    case DV_EXPR:
+		intn = yasm_expr_get_intnum(&dv->data.expn, NULL);
+		if (!intn) {
+		    yasm__error(bc->line,
+				N_("LEB128 requires constant values"));
+		    return;
+		}
+		/* Warn for negative values in unsigned environment.
+		 * This could be an error instead: the likelihood this is
+		 * desired is very low!
+		 */
+		if (yasm_intnum_sign(intn) == -1 && !bc_leb128->sign)
+		    yasm__warning(YASM_WARN_GENERAL, bc->line,
+				  N_("negative value in unsigned LEB128"));
+		bc_leb128->len +=
+		    yasm_intnum_size_leb128(intn, bc_leb128->sign);
+		break;
+	    case DV_STRING:
+		yasm__error(bc->line,
+			    N_("LEB128 does not allow string constants"));
+		return;
+	}
+    }
+}
+
+static int
+bc_leb128_calc_len(yasm_bytecode *bc, unsigned long *long_len,
+		   yasm_expr **critical, long *neg_thres, long *pos_thres)
+{
+    bytecode_leb128 *bc_leb128 = (bytecode_leb128 *)bc->contents;
+    bc->len += bc_leb128->len;
+    return 0;
+}
+
+static int
+bc_leb128_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+		  yasm_output_expr_func output_expr,
+		  /*@unused@*/ yasm_output_reloc_func output_reloc)
+{
+    bytecode_leb128 *bc_leb128 = (bytecode_leb128 *)bc->contents;
+    yasm_dataval *dv;
+    /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
+
+    STAILQ_FOREACH(dv, &bc_leb128->datahead, link) {
+	switch (dv->type) {
+	    case DV_EMPTY:
+		break;
+	    case DV_EXPR:
+		intn = yasm_expr_get_intnum(&dv->data.expn, NULL);
+		if (!intn)
+		    yasm_internal_error(N_("non-constant in leb128_tobytes"));
+		*bufp += yasm_intnum_get_leb128(intn, *bufp, bc_leb128->sign);
+		break;
+	    case DV_STRING:
+		yasm_internal_error(N_("string in leb128_tobytes"));
+	}
+    }
+
+    return 0;
+}
+
+yasm_bytecode *
+yasm_bc_create_leb128(yasm_datavalhead *datahead, int sign, unsigned long line)
+{
+    bytecode_leb128 *leb128 = yasm_xmalloc(sizeof(bytecode_leb128));
+
+    leb128->datahead = *datahead;
+    leb128->sign = sign;
+
+    return yasm_bc_create_common(&bc_leb128_callback, leb128, line);
 }
 
 static void
@@ -1029,6 +1177,25 @@ yasm_bc_create_insn(yasm_arch *arch, const unsigned long insn_data[4],
     return yasm_bc_create_common(&bc_insn_callback, insn, line);
 }
 
+yasm_bytecode *
+yasm_bc_create_empty_insn(yasm_arch *arch, unsigned long line)
+{
+    bytecode_insn *insn = yasm_xmalloc(sizeof(bytecode_insn));
+
+    insn->arch = arch;
+    insn->insn_data[0] = 0;
+    insn->insn_data[1] = 0;
+    insn->insn_data[2] = 0;
+    insn->insn_data[3] = 0;
+    insn->num_operands = 0;
+    insn->num_prefixes = 0;
+    insn->prefixes = NULL;
+    insn->num_segregs = 0;
+    insn->segregs = NULL;
+
+    return yasm_bc_create_common(&bc_insn_callback, insn, line);
+}
+
 void
 yasm_bc_insn_add_prefix(yasm_bytecode *bc, const unsigned long prefix_data[4])
 {
@@ -1177,7 +1344,6 @@ yasm_bc_calc_len(yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
 
     /* Check for multiples */
     if (bc->multiple) {
-	/*@null@*/ yasm_expr *temp;
 	/*@dependent@*/ /*@null@*/ const yasm_intnum *num;
 
 	num = yasm_expr_get_intnum(&bc->multiple, NULL);
@@ -1232,6 +1398,11 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 	if (!num)
 	    yasm_internal_error(
 		N_("could not determine multiple in bc_tobytes"));
+	if (yasm_intnum_sign(num) < 0) {
+	    yasm__error(bc->line, N_("multiple is negative"));
+	    *bufsize = 0;
+	    return NULL;
+	}
 	*multiple = yasm_intnum_get_uint(num);
 	if (*multiple == 0) {
 	    *bufsize = 0;
@@ -1284,12 +1455,13 @@ yasm_dv_create_expr(yasm_expr *expn)
 }
 
 yasm_dataval *
-yasm_dv_create_string(char *str_val)
+yasm_dv_create_string(char *contents, size_t len)
 {
     yasm_dataval *retval = yasm_xmalloc(sizeof(yasm_dataval));
 
     retval->type = DV_STRING;
-    retval->data.str_val = str_val;
+    retval->data.str.contents = contents;
+    retval->data.str.len = len;
 
     return retval;
 }
@@ -1307,7 +1479,7 @@ yasm_dvs_destroy(yasm_datavalhead *headp)
 		yasm_expr_destroy(cur->data.expn);
 		break;
 	    case DV_STRING:
-		yasm_xfree(cur->data.str_val);
+		yasm_xfree(cur->data.str.contents);
 		break;
 	    default:
 		break;
@@ -1344,8 +1516,10 @@ yasm_dvs_print(const yasm_datavalhead *head, FILE *f, int indent_level)
 		fprintf(f, "\n");
 		break;
 	    case DV_STRING:
-		fprintf(f, "%*sString=%s\n", indent_level, "",
-			cur->data.str_val);
+		fprintf(f, "%*sLength=%lu\n", indent_level, "",
+			(unsigned long)cur->data.str.len);
+		fprintf(f, "%*sString=\"%s\"\n", indent_level, "",
+			cur->data.str.contents);
 		break;
 	}
     }

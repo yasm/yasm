@@ -4,4 +4,6 @@ dd end-start
 start:
 mov rax, $
 mov rbx, $
+mov rax, qword $
+mov rbx, qword $
 end:

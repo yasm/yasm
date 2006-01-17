@@ -127,11 +127,23 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
 /** Create a bytecode containing data value(s).
  * \param datahead	list of data values (kept, do not free)
  * \param size		storage size (in bytes) for each data value
+ * \param append_zero	append a single zero byte after each data value
+ *			(if non-zero)
  * \param line		virtual line (from yasm_linemap)
  * \return Newly allocated bytecode.
  */
 /*@only@*/ yasm_bytecode *yasm_bc_create_data
-    (yasm_datavalhead *datahead, unsigned int size, unsigned long line);
+    (yasm_datavalhead *datahead, unsigned int size, int append_zero,
+     unsigned long line);
+
+/** Create a bytecode containing LEB128-encoded data value(s).
+ * \param datahead	list of data values (kept, do not free)
+ * \param sign		signedness (1=signed, 0=unsigned) of each data value
+ * \param line		virtual line (from yasm_linemap)
+ * \return Newly allocated bytecode.
+ */
+/*@only@*/ yasm_bytecode *yasm_bc_create_leb128
+    (yasm_datavalhead *datahead, int sign, unsigned long line);
 
 /** Create a bytecode reserving space.
  * \param numitems	number of reserve "items" (kept, do not free)
@@ -195,6 +207,15 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
 /*@only@*/ yasm_bytecode *yasm_bc_create_insn
     (yasm_arch *arch, const unsigned long insn_data[4], int num_operands,
      /*@null@*/ yasm_insn_operands *operands, unsigned long line);
+
+/** Create a bytecode that represents a single empty (0 length) instruction.
+ * This is used for handling solitary prefixes.
+ * \param arch		instruction's architecture
+ * \param line		virtual line (from yasm_linemap)
+ * \return Newly allocated bytecode.
+ */
+/*@only@*/ yasm_bytecode *yasm_bc_create_empty_insn(yasm_arch *arch,
+						    unsigned long line);
 
 /** Associate a prefix with an instruction bytecode.
  * \param bc		instruction bytecode
@@ -323,10 +344,11 @@ int yasm_bc_set_long(yasm_bytecode *bc, unsigned long long_len,
 yasm_dataval *yasm_dv_create_expr(/*@keep@*/ yasm_expr *expn);
 
 /** Create a new data value from a string.
- * \param str_val	string
+ * \param contents	string (raw, may contain NULs)
+ * \param len		length of string
  * \return Newly allocated data value.
  */
-yasm_dataval *yasm_dv_create_string(/*@keep@*/ char *str_val);
+yasm_dataval *yasm_dv_create_string(/*@keep@*/ char *contents, size_t len);
 
 /** Initialize a list of data values.
  * \param headp	list of data values

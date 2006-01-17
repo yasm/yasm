@@ -5,6 +5,10 @@
 #include "tools/re2c/globals.h"
 #include "re2c-parser.h"
 
+#ifndef MAX
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#endif
+
 #define	BSIZE	8192
 
 #define	YYCTYPE		unsigned char
@@ -54,7 +58,7 @@ fill(Scanner *s, unsigned char *cursor)
 	    s->bot = buf;
 	}
 	if((cnt = fread(s->lim, 1, BSIZE, s->in)) != BSIZE){
-	    s->eof = &s->lim[cnt]; *s->eof++ = '\n';
+	    s->eof = &s->lim[cnt]; *s->eof++ = '\0';
 	}
 	s->lim += cnt;
     }
@@ -62,9 +66,11 @@ fill(Scanner *s, unsigned char *cursor)
 }
 
 /*!re2c
+zero		= "\000";
 any		= [\000-\377];
 dot		= any \ [\n];
 esc		= dot \ [\\];
+istring		= "[" "^" ((esc \ [\]]) | "\\" dot)* "]" ;
 cstring		= "["  ((esc \ [\]]) | "\\" dot)* "]" ;
 dstring		= "\"" ((esc \ ["] ) | "\\" dot)* "\"";
 sstring		= "'"  ((esc \ ['] ) | "\\" dot)* "'" ;
@@ -76,6 +82,7 @@ int
 Scanner_echo(Scanner *s, FILE *out)
 {
     unsigned char *cursor = s->cur;
+    int ignore_eoc = 0;
 
     /* Catch EOF */
     if (s->eof && cursor == s->eof)
@@ -87,11 +94,27 @@ echo:
 	"/*!re2c"		{ fwrite(s->tok, 1, &cursor[-7] - s->tok, out);
 				  s->tok = cursor;
 				  RETURN(1); }
-	"\n"			{ if(cursor == s->eof) RETURN(0);
-				  fwrite(s->tok, 1, cursor - s->tok, out);
+	"/*!max:re2c" {
+		fprintf(out, "#define YYMAXFILL %u\n", maxFill);
+		s->tok = s->pos = cursor;
+		ignore_eoc = 1;
+		goto echo;
+	}
+	"*" "/"		{
+		if (ignore_eoc) {
+		    ignore_eoc = 0;
+		} else {
+		    fwrite(s->tok, 1, cursor - s->tok, out);
+		}
+		s->tok = s->pos = cursor;
+		goto echo;
+	}
+	"\n"			{ fwrite(s->tok, 1, cursor - s->tok, out);
 				  s->tok = s->pos = cursor; s->cline++; oline++;
 				  goto echo; }
-        any			{ goto echo; }
+	zero			{ fwrite(s->tok, 1, cursor - s->tok - 1, out); /* -1 so we don't write out the \0 */
+				  if(cursor == s->eof) { RETURN(0); } }
+	any			{ goto echo; }
 */
 }
 
@@ -119,17 +142,40 @@ scan:
 	dstring			{ s->cur = cursor;
 				  yylval.regexp = strToRE(Scanner_token(s));
 				  return STRING; }
-	"\""			{ Scanner_fatal(s, "bad string"); }
+
+	sstring			{ s->cur = cursor;
+				  yylval.regexp = strToCaseInsensitiveRE(Scanner_token(s));
+				  return STRING; }
+
+	"\""			{ Scanner_fatal(s, "unterminated string constant (missing \")"); }
+	"'"			{ Scanner_fatal(s, "unterminated string constant (missing ')"); }
+
+	istring			{ s->cur = cursor;
+				  yylval.regexp = invToRE(Scanner_token(s));
+				  return RANGE; }
 
 	cstring			{ s->cur = cursor;
 				  yylval.regexp = ranToRE(Scanner_token(s));
 				  return RANGE; }
-	"["			{ Scanner_fatal(s, "bad character constant"); }
+
+	"["			{ Scanner_fatal(s, "unterminated range (missing ])"); }
 
 	[()|=;/\\]		{ RETURN(*s->tok); }
 
 	[*+?]			{ yylval.op = *s->tok;
 				  RETURN(CLOSE); }
+
+	"{" [0-9]+ "}"		{ yylval.extop.minsize = atoi((char *)s->tok+1);
+				  yylval.extop.maxsize = atoi((char *)s->tok+1);
+				  RETURN(CLOSESIZE); }
+
+	"{" [0-9]+ "," [0-9]+ "}"	{ yylval.extop.minsize = atoi((char *)s->tok+1);
+				  yylval.extop.maxsize = MAX(yylval.extop.minsize,atoi(strchr((char *)s->tok, ',')+1));
+				  RETURN(CLOSESIZE); }
+
+	"{" [0-9]+ ",}"		{ yylval.extop.minsize = atoi((char *)s->tok+1);
+				  yylval.extop.maxsize = -1;
+				  RETURN(CLOSESIZE); }
 
 	letter (letter|digit)*	{ SubStr substr;
 				  s->cur = cursor;
@@ -143,6 +189,11 @@ scan:
 				  s->pos = cursor; s->cline++;
 				  goto scan;
 	    			}
+
+	"."			{ s->cur = cursor;
+				  yylval.regexp = mkDot();
+				  return RANGE;
+				}
 
 	any			{ fprintf(stderr, "unexpected character: '%c'\n", *s->tok);
 				  goto scan;

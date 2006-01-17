@@ -108,7 +108,7 @@ yasm__assoc_data_add(yasm__assoc_data *assoc_data_arg,
     }
 
     /* Delete existing data (if any) */
-    if (item->data)
+    if (item->data && item->data != data)
 	item->callback->destroy(item->data);
 
     item->data = data;
