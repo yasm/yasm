@@ -125,6 +125,12 @@ __SECT__
 %endmacro
 %endif
 
+%ifidn __YASM_OBJFMT__,x64
+%imacro export 1+.nolist
+[export %1]
+%endmacro
+%endif
+
 %ifidn __YASM_OBJFMT__,elf
 %imacro type 1+.nolist
 [type %1]
