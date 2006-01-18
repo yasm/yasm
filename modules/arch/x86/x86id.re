@@ -1403,19 +1403,29 @@ static const x86_insn_info sldtmsw_insn[] = {
 };
 
 /* Floating point instructions - load/store with pop (integer and normal) */
-static const x86_insn_info fldstp_insn[] = {
-    { CPU_FPU, MOD_Gap0|MOD_SpAdd|MOD_GasSufS, 0, 0, 0, 1, {0xD9, 0, 0}, 0, 1,
+static const x86_insn_info fld_insn[] = {
+    { CPU_FPU, MOD_GasSufS, 0, 0, 0, 1, {0xD9, 0, 0}, 0, 1,
       {OPT_Mem|OPS_32|OPA_EA, 0, 0} },
-    { CPU_FPU, MOD_Gap0|MOD_SpAdd|MOD_GasSufL, 0, 0, 0, 1, {0xDD, 0, 0}, 0, 1,
+    { CPU_FPU, MOD_GasSufL, 0, 0, 0, 1, {0xDD, 0, 0}, 0, 1,
       {OPT_Mem|OPS_64|OPA_EA, 0, 0} },
-    { CPU_FPU, MOD_Gap0|MOD_Gap1|MOD_SpAdd, 0, 0, 0, 1, {0xDB, 0, 0}, 0, 1,
+    { CPU_FPU, 0, 0, 0, 0, 1, {0xDB, 0, 0}, 5, 1,
       {OPT_Mem|OPS_80|OPA_EA, 0, 0} },
-    { CPU_FPU, MOD_Op1Add, 0, 0, 0, 2, {0xD9, 0x00, 0}, 0, 1,
+    { CPU_FPU, 0, 0, 0, 0, 2, {0xD9, 0xC0, 0}, 0, 1,
+      {OPT_Reg|OPS_80|OPA_Op1Add, 0, 0} }
+};
+static const x86_insn_info fstp_insn[] = {
+    { CPU_FPU, MOD_GasSufS, 0, 0, 0, 1, {0xD9, 0, 0}, 3, 1,
+      {OPT_Mem|OPS_32|OPA_EA, 0, 0} },
+    { CPU_FPU, MOD_GasSufL, 0, 0, 0, 1, {0xDD, 0, 0}, 3, 1,
+      {OPT_Mem|OPS_64|OPA_EA, 0, 0} },
+    { CPU_FPU, 0, 0, 0, 0, 1, {0xDB, 0, 0}, 7, 1,
+      {OPT_Mem|OPS_80|OPA_EA, 0, 0} },
+    { CPU_FPU, 0, 0, 0, 0, 2, {0xDD, 0xD8, 0}, 0, 1,
       {OPT_Reg|OPS_80|OPA_Op1Add, 0, 0} }
 };
 /* Long memory version of floating point load/store for GAS */
 static const x86_insn_info fldstpt_insn[] = {
-    { CPU_FPU, MOD_Gap0|MOD_Gap1|MOD_SpAdd, 0, 0, 0, 1, {0xDB, 0, 0}, 0, 1,
+    { CPU_FPU, MOD_SpAdd, 0, 0, 0, 1, {0xDB, 0, 0}, 0, 1,
       {OPT_Mem|OPS_80|OPA_EA, 0, 0} }
 };
 static const x86_insn_info fildstp_insn[] = {
@@ -4135,20 +4145,20 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	'verr' W? { RET_INSN(4, prot286, 0x0400, CPU_286|CPU_Prot); }
 	'verw' W? { RET_INSN(4, prot286, 0x0500, CPU_286|CPU_Prot); }
 	/* Floating point instructions */
-	'fld' [lLsS]? { RET_INSN(3, fldstp, 0x0500C0, CPU_FPU); }
+	'fld' [lLsS]? { RET_INSN(3, fld, 0, CPU_FPU); }
 	'fldt' {
 	    data[3] |= 0x80 << 8;
-	    RET_INSN_GAS(4, fldstpt, 0x0500C0, CPU_FPU);
+	    RET_INSN_GAS(4, fldstpt, 0x05, CPU_FPU);
 	}
 	'fild' [lLqQsS]? { RET_INSN(4, fildstp, 0x050200, CPU_FPU); }
 	'fildll' { RET_INSN_GAS(6, fbldstp, 0x05, CPU_FPU); }
 	'fbld' { RET_INSN(4, fbldstp, 0x04, CPU_FPU); }
 	'fst' [lLsS]? { RET_INSN(3, fst, 0, CPU_FPU); }
 	'fist' [lLsS]? { RET_INSN(4, fiarith, 0x02DB, CPU_FPU); }
-	'fstp' [lLsS]? { RET_INSN(4, fldstp, 0x0703D8, CPU_FPU); }
+	'fstp' [lLsS]? { RET_INSN(4, fstp, 0, CPU_FPU); }
 	'fstpt' {
 	    data[3] |= 0x80 << 8;
-	    RET_INSN_GAS(5, fldstpt, 0x0703D8, CPU_FPU);
+	    RET_INSN_GAS(5, fldstpt, 0x07, CPU_FPU);
 	}
 	'fistp' [lLqQsS]? { RET_INSN(5, fildstp, 0x070203, CPU_FPU); }
 	'fistpll' { RET_INSN_GAS(7, fbldstp, 0x07, CPU_FPU); }
