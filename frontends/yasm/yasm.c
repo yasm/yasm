@@ -27,6 +27,7 @@
 #include <util.h>
 /*@unused@*/ RCSID("$Id$");
 
+#include <ctype.h>
 #include <libyasm/compat-queue.h>
 #include <libyasm/bitvect.h>
 #include <libyasm.h>
@@ -850,6 +851,7 @@ opt_preproc_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 static int
 opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
+    size_t i;
     assert(param != NULL);
     cur_objfmt_module = yasm_load_objfmt(param);
     if (!cur_objfmt_module) {
@@ -866,6 +868,8 @@ opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     if (objfmt_keyword)
 	yasm_xfree(objfmt_keyword);
     objfmt_keyword = yasm__xstrdup(param);
+    for (i=0; i<strlen(objfmt_keyword); i++)
+	objfmt_keyword[i] = tolower(objfmt_keyword[i]);
     return 0;
 }
 
