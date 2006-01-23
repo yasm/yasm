@@ -75,7 +75,7 @@ void yasm_linemap_add_source(yasm_linemap *linemap,
 			     /*@null@*/ yasm_bytecode *bc,
 			     const char *source);
 
-/** Go to the next line (increments the current virtual line)l
+/** Go to the next line (increments the current virtual line).
  * \param linemap	line mapping repository
  * \return The current (new) virtual line.
  */
