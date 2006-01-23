@@ -51,6 +51,7 @@ typedef struct yasm_parser_nasm {
     /*@dependent@*/ yasm_preproc *preproc;
     /*@dependent@*/ yasm_arch *arch;
     /*@dependent@*/ yasm_objfmt *objfmt;
+    /*@dependent@*/ yasm_dbgfmt *dbgfmt;
 
     /*@dependent@*/ yasm_linemap *linemap;
     /*@dependent@*/ yasm_symtab *symtab;

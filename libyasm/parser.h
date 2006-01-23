@@ -68,8 +68,9 @@ typedef struct yasm_parser_module {
      *       yasm__error(); see errwarn.h for details.
      */
     void (*do_parse) (yasm_object *object, yasm_preproc *pp, yasm_arch *a,
-		      yasm_objfmt *of, FILE *f, const char *in_filename,
-		      int save_input, yasm_section *def_sect);
+		      yasm_objfmt *of, yasm_dbgfmt *df, FILE *f,
+		      const char *in_filename, int save_input,
+		      yasm_section *def_sect);
 } yasm_parser_module;
 
 #endif

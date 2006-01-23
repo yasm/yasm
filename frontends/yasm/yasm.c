@@ -615,8 +615,9 @@ main(int argc, char *argv[])
     }
 
     /* Parse! */
-    cur_parser_module->do_parse(object, cur_preproc, cur_arch, cur_objfmt, in,
-				in_filename, list_filename != NULL, def_sect);
+    cur_parser_module->do_parse(object, cur_preproc, cur_arch, cur_objfmt,
+				cur_dbgfmt, in, in_filename,
+				list_filename != NULL, def_sect);
 
     /* Close input file */
     if (in != stdin)
