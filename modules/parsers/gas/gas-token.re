@@ -366,6 +366,7 @@ scan:
 	'.lcomm'	{ parser_gas->state = INSTDIR; RETURN(DIR_LCOMM); }
 	'.line'		{ parser_gas->state = INSTDIR; RETURN(DIR_LINE); }
 	'.loc'		{ parser_gas->state = INSTDIR; RETURN(DIR_LOC); }
+	'.local'	{ parser_gas->state = INSTDIR; RETURN(DIR_LOCAL); }
 	'.long'		{ parser_gas->state = INSTDIR; RETURN(DIR_INT); }
 	'.octa'		{ parser_gas->state = INSTDIR; RETURN(DIR_OCTA); }
 	'.org'		{ parser_gas->state = INSTDIR; RETURN(DIR_ORG); }

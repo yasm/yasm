@@ -43,6 +43,8 @@ RCSID("$Id$");
 #include "modules/parsers/gas/gas-defs.h"
 
 static void define_label(yasm_parser_gas *parser_gas, char *name, int local);
+static void define_lcomm(yasm_parser_gas *parser_gas, /*@only@*/ char *name,
+			 yasm_expr *size, /*@null@*/ yasm_expr *align);
 static yasm_section *gas_get_section
     (yasm_parser_gas *parser_gas, char *name, /*@null@*/ char *flags,
      /*@null@*/ char *type, /*@null@*/ yasm_valparamhead *objext_valparams,
@@ -51,9 +53,13 @@ static void gas_switch_section(yasm_parser_gas *parser_gas, char *name,
 			       /*@null@*/ char *flags, /*@null@*/ char *type,
 			       /*@null@*/ yasm_valparamhead *objext_valparams,
 			       int builtin);
-static yasm_bytecode *gas_parser_align(yasm_parser_gas *parser_gas,
-				       yasm_valparamhead *valparams,
-				       int power2);
+static yasm_bytecode *gas_parser_align
+    (yasm_parser_gas *parser_gas, yasm_section *sect, yasm_expr *boundval,
+     /*@null@*/ yasm_expr *fillval, /*@null@*/ yasm_expr *maxskipval,
+     int power2);
+static yasm_bytecode *gas_parser_dir_align(yasm_parser_gas *parser_gas,
+					   yasm_valparamhead *valparams,
+					   int power2);
 static void gas_parser_directive
     (yasm_parser_gas *parser_gas, const char *name,
      yasm_valparamhead *valparams,
@@ -107,8 +113,8 @@ static void gas_parser_directive
 %token DIR_2BYTE DIR_4BYTE DIR_ALIGN DIR_ASCII DIR_ASCIZ DIR_BALIGN
 %token DIR_BSS DIR_BYTE DIR_COMM DIR_DATA DIR_DOUBLE DIR_ENDR DIR_EXTERN
 %token DIR_EQU DIR_FILE DIR_FLOAT DIR_GLOBAL DIR_IDENT DIR_INT DIR_LINE
-%token DIR_LOC DIR_LCOMM DIR_OCTA DIR_ORG DIR_P2ALIGN DIR_REPT DIR_SECTION
-%token DIR_SHORT DIR_SIZE DIR_SKIP DIR_SLEB128 DIR_STRING DIR_TEXT
+%token DIR_LOC DIR_LOCAL DIR_LCOMM DIR_OCTA DIR_ORG DIR_P2ALIGN DIR_REPT
+%token DIR_SECTION DIR_SHORT DIR_SIZE DIR_SKIP DIR_SLEB128 DIR_STRING DIR_TEXT
 %token DIR_TFLOAT DIR_TYPE DIR_QUAD DIR_ULEB128 DIR_VALUE DIR_WEAK DIR_WORD
 %token DIR_ZERO
 
@@ -220,42 +226,63 @@ lineexp: instr
 	/* FIXME: Whether this is power-of-two or not depends on arch and
 	 * objfmt.
 	 */
-	$$ = gas_parser_align(parser_gas, &$2, 0);
+	$$ = gas_parser_dir_align(parser_gas, &$2, 0);
     }
     | DIR_P2ALIGN dirvals2 {
-	$$ = gas_parser_align(parser_gas, &$2, 1);
+	$$ = gas_parser_dir_align(parser_gas, &$2, 1);
     }
     | DIR_BALIGN dirvals2 {
-	$$ = gas_parser_align(parser_gas, &$2, 0);
+	$$ = gas_parser_dir_align(parser_gas, &$2, 0);
     }
     | DIR_ORG INTNUM {
 	/* TODO: support expr instead of intnum */
 	$$ = yasm_bc_create_org(yasm_intnum_get_uint($2), cur_line);
     }
     /* Data visibility directives */
+    | DIR_LOCAL label_id {
+	yasm_symtab_declare(parser_gas->symtab, $2, YASM_SYM_DLOCAL, cur_line);
+	yasm_xfree($2);
+	$$ = NULL;
+    }
     | DIR_GLOBAL label_id {
 	yasm_objfmt_global_declare(parser_gas->objfmt, $2, NULL, cur_line);
 	yasm_xfree($2);
 	$$ = NULL;
     }
     | DIR_COMM label_id ',' expr {
-	yasm_objfmt_common_declare(parser_gas->objfmt, $2, $4, NULL, cur_line);
-	yasm_xfree($2);
+	/* If already explicitly declared local, treat like LCOMM */
+	/*@null@*/ /*@dependent@*/ yasm_symrec *sym =
+	    yasm_symtab_get(parser_gas->symtab, $2);
+	if (sym && yasm_symrec_get_visibility(sym) == YASM_SYM_DLOCAL) {
+	    define_lcomm(parser_gas, $2, $4, NULL);
+	} else {
+	    yasm_objfmt_common_declare(parser_gas->objfmt, $2, $4, NULL,
+				       cur_line);
+	    yasm_xfree($2);
+	}
 	$$ = NULL;
     }
     | DIR_COMM label_id ',' expr ',' expr {
-	/* Give third parameter as objext valparam for use as alignment */
-	yasm_valparamhead vps;
-	yasm_valparam *vp;
+	/* If already explicitly declared local, treat like LCOMM */
+	/*@null@*/ /*@dependent@*/ yasm_symrec *sym =
+	    yasm_symtab_get(parser_gas->symtab, $2);
+	if (sym && yasm_symrec_get_visibility(sym)) {
+	    define_lcomm(parser_gas, $2, $4, $6);
+	} else {
+	    /* Give third parameter as objext valparam for use as alignment */
+	    yasm_valparamhead vps;
+	    yasm_valparam *vp;
 
-	yasm_vps_initialize(&vps);
-	vp = yasm_vp_create(NULL, $6);
-	yasm_vps_append(&vps, vp);
+	    yasm_vps_initialize(&vps);
+	    vp = yasm_vp_create(NULL, $6);
+	    yasm_vps_append(&vps, vp);
 
-	yasm_objfmt_common_declare(parser_gas->objfmt, $2, $4, &vps, cur_line);
+	    yasm_objfmt_common_declare(parser_gas->objfmt, $2, $4, &vps,
+				       cur_line);
 
-	yasm_vps_delete(&vps);
-	yasm_xfree($2);
+	    yasm_vps_delete(&vps);
+	    yasm_xfree($2);
+	}
 	$$ = NULL;
     }
     | DIR_EXTERN label_id {
@@ -279,27 +306,11 @@ lineexp: instr
 	$$ = NULL;
     }
     | DIR_LCOMM label_id ',' expr {
-	/* Put into .bss section. */
-	/*@dependent@*/ yasm_section *bss =
-	    gas_get_section(parser_gas, yasm__xstrdup(".bss"), NULL, NULL,
-			    NULL, 1);
-	/* TODO: default alignment */
-	yasm_symtab_define_label(p_symtab, $2, yasm_section_bcs_last(bss), 1,
-				 cur_line);
-	yasm_section_bcs_append(bss, yasm_bc_create_reserve($4, 1, cur_line));
-	yasm_xfree($2);
+	define_lcomm(parser_gas, $2, $4, NULL);
 	$$ = NULL;
     }
     | DIR_LCOMM label_id ',' expr ',' expr {
-	/* Put into .bss section. */
-	/*@dependent@*/ yasm_section *bss =
-	    gas_get_section(parser_gas, yasm__xstrdup(".bss"), NULL, NULL,
-			    NULL, 1);
-	/* TODO: force alignment */
-	yasm_symtab_define_label(p_symtab, $2, yasm_section_bcs_last(bss), 1,
-				 cur_line);
-	yasm_section_bcs_append(bss, yasm_bc_create_reserve($4, 1, cur_line));
-	yasm_xfree($2);
+	define_lcomm(parser_gas, $2, $4, $6);
 	$$ = NULL;
     }
     /* Integer data definition directives */
@@ -438,6 +449,10 @@ lineexp: instr
 	$$ = NULL;
     }
     | DIR_FILE STRING {
+	/* TODO */
+	$$ = NULL;
+    }
+    | DIR_LOC INTNUM INTNUM {
 	/* TODO */
 	$$ = NULL;
     }
@@ -750,6 +765,26 @@ define_label(yasm_parser_gas *parser_gas, char *name, int local)
     yasm_xfree(name);
 }
 
+static void
+define_lcomm(yasm_parser_gas *parser_gas, /*@only@*/ char *name,
+	     yasm_expr *size, /*@null@*/ yasm_expr *align)
+{
+    /* Put into .bss section. */
+    /*@dependent@*/ yasm_section *bss =
+	gas_get_section(parser_gas, yasm__xstrdup(".bss"), NULL, NULL, NULL, 1);
+
+    if (align) {
+	/* XXX: assume alignment is in bytes, not power-of-two */
+	yasm_section_bcs_append(bss, gas_parser_align(parser_gas, bss, align,
+				NULL, NULL, 0));
+    }
+
+    yasm_symtab_define_label(p_symtab, name, yasm_section_bcs_last(bss), 1,
+			     cur_line);
+    yasm_section_bcs_append(bss, yasm_bc_create_reserve(size, 1, cur_line));
+    yasm_xfree(name);
+}
+
 static yasm_section *
 gas_get_section(yasm_parser_gas *parser_gas, char *name,
 		/*@null@*/ char *flags, /*@null@*/ char *type,
@@ -805,12 +840,42 @@ gas_switch_section(yasm_parser_gas *parser_gas, char *name,
 }
 
 static yasm_bytecode *
-gas_parser_align(yasm_parser_gas *parser_gas, yasm_valparamhead *valparams,
-		 int power2)
+gas_parser_align(yasm_parser_gas *parser_gas, yasm_section *sect,
+		 yasm_expr *boundval, /*@null@*/ yasm_expr *fillval,
+		 /*@null@*/ yasm_expr *maxskipval, int power2)
+{
+    yasm_intnum *boundintn;
+
+    /* Convert power of two to number of bytes if necessary */
+    if (power2)
+	boundval = yasm_expr_create(YASM_EXPR_SHL,
+				    yasm_expr_int(yasm_intnum_create_uint(1)),
+				    yasm_expr_expr(boundval), cur_line);
+
+    /* Largest .align in the section specifies section alignment. */
+    boundintn = yasm_expr_get_intnum(&boundval, NULL);
+    if (boundintn) {
+	unsigned long boundint = yasm_intnum_get_uint(boundintn);
+
+	/* Alignments must be a power of two. */
+	if ((boundint & (boundint - 1)) == 0) {
+	    if (boundint > yasm_section_get_align(sect))
+		yasm_section_set_align(sect, boundint, cur_line);
+	}
+    }
+
+    return yasm_bc_create_align(boundval, fillval, maxskipval,
+				yasm_section_is_code(sect) ?
+				    yasm_arch_get_fill(parser_gas->arch) : NULL,
+				cur_line);
+}
+
+static yasm_bytecode *
+gas_parser_dir_align(yasm_parser_gas *parser_gas, yasm_valparamhead *valparams,
+		     int power2)
 {
     /*@dependent@*/ yasm_valparam *bound, *fill = NULL, *maxskip = NULL;
     yasm_expr *boundval, *fillval = NULL, *maxskipval = NULL;
-    yasm_intnum *boundintn;
 
     bound = yasm_vps_first(valparams);
     boundval = bound->param;
@@ -835,31 +900,8 @@ gas_parser_align(yasm_parser_gas *parser_gas, yasm_valparamhead *valparams,
 
     yasm_vps_delete(valparams);
 
-    /* Convert power of two to number of bytes if necessary */
-    if (power2)
-	boundval = yasm_expr_create(YASM_EXPR_SHL,
-				    yasm_expr_int(yasm_intnum_create_uint(1)),
-				    yasm_expr_expr(boundval), cur_line);
-
-    /* If .align is the first bytecode in the section, it's really specifying
-     * section alignment.
-     */
-    boundintn = yasm_expr_get_intnum(&boundval, NULL);
-    if (boundintn) {
-	unsigned long boundint = yasm_intnum_get_uint(boundintn);
-
-	/* Alignments must be a power of two. */
-	if ((boundint & (boundint - 1)) == 0) {
-	    if (boundint > yasm_section_get_align(parser_gas->cur_section))
-		yasm_section_set_align(parser_gas->cur_section, boundint,
-				       cur_line);
-	}
-    }
-
-    return yasm_bc_create_align(boundval, fillval, maxskipval,
-				yasm_section_is_code(parser_gas->cur_section) ?
-				    yasm_arch_get_fill(parser_gas->arch) : NULL,
-				cur_line);
+    return gas_parser_align(parser_gas, parser_gas->cur_section, boundval,
+			    fillval, maxskipval, power2);
 }
 
 static void

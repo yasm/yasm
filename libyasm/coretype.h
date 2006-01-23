@@ -158,7 +158,8 @@ typedef enum {
     YASM_SYM_LOCAL = 0,		/**< Default, local only */
     YASM_SYM_GLOBAL = 1 << 0,	/**< If symbol is declared GLOBAL */
     YASM_SYM_COMMON = 1 << 1,	/**< If symbol is declared COMMON */
-    YASM_SYM_EXTERN = 1 << 2	/**< If symbol is declared EXTERN */
+    YASM_SYM_EXTERN = 1 << 2,	/**< If symbol is declared EXTERN */
+    YASM_SYM_DLOCAL = 1 << 3	/**< If symbol is explicitly declared LOCAL */
 } yasm_sym_vis;
 
 /** Determine the distance between the starting offsets of two bytecodes.

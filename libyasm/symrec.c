@@ -185,6 +185,12 @@ yasm_symtab_use(yasm_symtab *symtab, const char *name, unsigned long line)
     return rec;
 }
 
+yasm_symrec *
+yasm_symtab_get(yasm_symtab *symtab, const char *name)
+{
+    return HAMT_search(symtab->sym_table, name);
+}
+
 static /*@dependent@*/ yasm_symrec *
 symtab_define(yasm_symtab *symtab, const char *name, sym_type type,
 	      int in_table, unsigned long line)

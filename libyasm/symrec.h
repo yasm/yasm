@@ -54,6 +54,18 @@ void yasm_symtab_destroy(/*@only@*/ yasm_symtab *symtab);
 /*@dependent@*/ yasm_symrec *yasm_symtab_use
     (yasm_symtab *symtab, const char *name, unsigned long line);
 
+/** Get a reference to a symbol, without "using" it.  Should be used for cases
+ * when an internal assembler usage of a symbol shouldn't be treated like a
+ * normal user symbol usage.
+ * \param symtab    symbol table
+ * \param name	    symbol name
+ * \param line      virtual line where referenced
+ * \return Symbol (dependent pointer, do not free).  May be NULL if symbol
+ *         doesn't exist.
+ */
+/*@null@*/ /*@dependent@*/ yasm_symrec *yasm_symtab_get
+    (yasm_symtab *symtab, const char *name);
+
 /** Define a symbol as an EQU value.
  * \param symtab    symbol table
  * \param name	    symbol (EQU) name
