@@ -117,6 +117,12 @@ void yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
  */
 void yasm_intnum_zero(yasm_intnum *intn);
 
+/** Set an intnum to an unsigned integer.
+ * \param intn	    intnum
+ * \param val	    integer value
+ */
+void yasm_intnum_set_uint(yasm_intnum *intn, unsigned long val);
+
 /** Simple value check for 0.
  * \param acc	    intnum
  * \return Nonzero if acc==0.

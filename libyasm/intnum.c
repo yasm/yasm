@@ -452,11 +452,17 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
 void
 yasm_intnum_zero(yasm_intnum *intn)
 {
+    yasm_intnum_set_uint(intn, 0);
+}
+
+void
+yasm_intnum_set_uint(yasm_intnum *intn, unsigned long val)
+{
     if (intn->type == INTNUM_BV) {
 	BitVector_Destroy(intn->val.bv);
 	intn->type = INTNUM_UL;
     }
-    intn->val.ul = 0;
+    intn->val.ul = val;
 }
 
 int
