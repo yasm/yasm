@@ -445,19 +445,63 @@ lineexp: instr
 	$$ = NULL;
     }
     | DIR_FILE INTNUM STRING {
-	/* TODO */
+	yasm_valparamhead vps;
+	yasm_valparam *vp;
+
+	yasm_vps_initialize(&vps);
+	vp = yasm_vp_create(NULL, p_expr_new_ident(yasm_expr_int($2)));
+	yasm_vps_append(&vps, vp);
+	vp = yasm_vp_create($3.contents, NULL);
+	yasm_vps_append(&vps, vp);
+
+	yasm_dbgfmt_directive(parser_gas->dbgfmt, "file", &vps, cur_line);
+
+	yasm_vps_delete(&vps);
 	$$ = NULL;
     }
     | DIR_FILE STRING {
-	/* TODO */
+	yasm_valparamhead vps;
+	yasm_valparam *vp;
+
+	yasm_vps_initialize(&vps);
+	vp = yasm_vp_create($2.contents, NULL);
+	yasm_vps_append(&vps, vp);
+
+	yasm_dbgfmt_directive(parser_gas->dbgfmt, "file", &vps, cur_line);
+
+	yasm_vps_delete(&vps);
 	$$ = NULL;
     }
     | DIR_LOC INTNUM INTNUM {
-	/* TODO */
+	yasm_valparamhead vps;
+	yasm_valparam *vp;
+
+	yasm_vps_initialize(&vps);
+	vp = yasm_vp_create(NULL, p_expr_new_ident(yasm_expr_int($2)));
+	yasm_vps_append(&vps, vp);
+	vp = yasm_vp_create(NULL, p_expr_new_ident(yasm_expr_int($3)));
+	yasm_vps_append(&vps, vp);
+
+	yasm_dbgfmt_directive(parser_gas->dbgfmt, "loc", &vps, cur_line);
+
+	yasm_vps_delete(&vps);
 	$$ = NULL;
     }
     | DIR_LOC INTNUM INTNUM INTNUM {
-	/* TODO */
+	yasm_valparamhead vps;
+	yasm_valparam *vp;
+
+	yasm_vps_initialize(&vps);
+	vp = yasm_vp_create(NULL, p_expr_new_ident(yasm_expr_int($2)));
+	yasm_vps_append(&vps, vp);
+	vp = yasm_vp_create(NULL, p_expr_new_ident(yasm_expr_int($3)));
+	yasm_vps_append(&vps, vp);
+	vp = yasm_vp_create(NULL, p_expr_new_ident(yasm_expr_int($4)));
+	yasm_vps_append(&vps, vp);
+
+	yasm_dbgfmt_directive(parser_gas->dbgfmt, "loc", &vps, cur_line);
+
+	yasm_vps_delete(&vps);
 	$$ = NULL;
     }
     | DIR_TYPE label_id ',' '@' label_id {
