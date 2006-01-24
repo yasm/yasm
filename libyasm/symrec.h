@@ -59,7 +59,6 @@ void yasm_symtab_destroy(/*@only@*/ yasm_symtab *symtab);
  * normal user symbol usage.
  * \param symtab    symbol table
  * \param name	    symbol name
- * \param line      virtual line where referenced
  * \return Symbol (dependent pointer, do not free).  May be NULL if symbol
  *         doesn't exist.
  */
