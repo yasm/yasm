@@ -298,6 +298,9 @@
 				<File
 					RelativePath="..\..\..\modules\dbgfmts\stabs\stabs-dbgfmt.c">
 				</File>
+				<File
+					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-dbgfmt.c">
+				</File>
 			</Filter>
 			<Filter
 				Name="objfmts"

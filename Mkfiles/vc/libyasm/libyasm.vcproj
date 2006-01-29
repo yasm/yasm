@@ -370,6 +370,9 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\libyasm\splitpath.c">
+			</File>
+			<File
 				RelativePath="..\..\..\libyasm\strcasecmp.c">
 				<FileConfiguration
 					Name="Release|Win32">

@@ -1,5 +1,7 @@
 /* $Id$ */
 
+#define yasm__splitpath(path, tail)	yasm__splitpath_win(path, tail)
+
 /* */
 /* #undef ENABLE_NLS */
 

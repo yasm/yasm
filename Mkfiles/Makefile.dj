@@ -30,6 +30,7 @@ LIBYASM_OBJS= \
  libyasm/mergesort.o \
  libyasm/objfmt.o \
  libyasm/section.o \
+ libyasm/splitpath.o \
  libyasm/strcasecmp.o \
  libyasm/strsep.o \
  libyasm/symrec.o \
@@ -57,9 +58,11 @@ MODULES_ARCH_OBJS= \
 
 MODULES_DBGFMTS_OBJS= \
  modules/dbgfmts/null/null-dbgfmt.o \
- modules/dbgfmts/stabs/stabs-dbgfmt.o
+ modules/dbgfmts/stabs/stabs-dbgfmt.o \
+ modules/dbgfmts/dwarf2/dwarf2-dbgfmt.o
 YASM_MODULES+=dbgfmt_null
 YASM_MODULES+=dbgfmt_stabs
+YASM_MODULES+=dbgfmt_dwarf2
 
 MODULES_LISTFMTS_OBJS= \
  modules/listfmts/nasm/nasm-listfmt.o
