@@ -52,6 +52,7 @@ typedef struct Test_Entry {
 
 static Test_Entry tests[] = {
     /* UNIX split */
+    {yasm__splitpath_unix, "", 0, ""},
     {yasm__splitpath_unix, "file.ext", 0, "file.ext"},
     {yasm__splitpath_unix, "/file.ext", 1, "file.ext"},
     {yasm__splitpath_unix, "/foo/file.ext", 4, "file.ext"},
@@ -59,7 +60,14 @@ static Test_Entry tests[] = {
     {yasm__splitpath_unix, "foo/file.ext", 3, "file.ext"},
     {yasm__splitpath_unix, "foo/bar/file.ext", 7, "file.ext"},
     {yasm__splitpath_unix, "foo/bar//file.ext", 7, "file.ext"},
+    {yasm__splitpath_unix, "/", 1, ""},
+    {yasm__splitpath_unix, "/foo/", 4, ""},
+    {yasm__splitpath_unix, "/foo/bar/", 8, ""},
+    {yasm__splitpath_unix, "foo/", 3, ""},
+    {yasm__splitpath_unix, "foo/bar/", 7, ""},
+    {yasm__splitpath_unix, "foo/bar//", 7, ""},
     /* Windows split */
+    {yasm__splitpath_win, "", 0, ""},
     {yasm__splitpath_win, "file.ext", 0, "file.ext"},
     {yasm__splitpath_win, "/file.ext", 1, "file.ext"},
     {yasm__splitpath_win, "/foo/file.ext", 4, "file.ext"},
@@ -80,6 +88,14 @@ static Test_Entry tests[] = {
     {yasm__splitpath_win, "g:foo\\file.ext", 5, "file.ext"},
     {yasm__splitpath_win, "h:foo/bar\\file.ext", 9, "file.ext"},
     {yasm__splitpath_win, "i:foo\\bar//\\file.ext", 9, "file.ext"},
+    {yasm__splitpath_win, "\\", 1, ""},
+    {yasm__splitpath_win, "c:", 2, ""},
+    {yasm__splitpath_win, "d:\\", 3, ""},
+    {yasm__splitpath_win, "e:\\foo/", 6, ""},
+    {yasm__splitpath_win, "f:/foo\\bar\\", 10, ""},
+    {yasm__splitpath_win, "g:foo\\", 5, ""},
+    {yasm__splitpath_win, "h:foo/bar\\", 9, ""},
+    {yasm__splitpath_win, "i:foo\\bar//\\", 9, ""},
 };
 
 static char failed[1000];
