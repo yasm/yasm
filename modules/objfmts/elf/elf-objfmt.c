@@ -481,8 +481,9 @@ elf_objfmt_create_dbg_secthead(yasm_section *sect,
 	entsize = 12;
     } else if (yasm__strcasecmp(sectname, ".stabstr")==0) {
 	type = SHT_STRTAB;
-    }
-    else
+    } else if (yasm__strncasecmp(sectname, ".debug_", 7)==0) {
+	;
+    } else
 	yasm_internal_error(N_("Unrecognized section without data"));
 
     shead = elf_secthead_create(name, type, 0, 0, 0);
@@ -1117,6 +1118,7 @@ elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 static const char *elf_objfmt_dbgfmt_keywords[] = {
     "null",
     "stabs",
+    "dwarf2",
     NULL
 };
 

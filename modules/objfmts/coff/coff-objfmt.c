@@ -1528,6 +1528,7 @@ win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 /* Define valid debug formats to use with this object format */
 static const char *coff_objfmt_dbgfmt_keywords[] = {
     "null",
+    "dwarf2",
     NULL
 };
 
