@@ -75,7 +75,8 @@ typedef struct yasm_dbgfmt_module {
      * Call yasm_dbgfmt_directive() instead of calling this function.
      */
     int (*directive) (yasm_dbgfmt *dbgfmt, const char *name,
-		      yasm_valparamhead *valparams, unsigned long line);
+		      yasm_section *sect, yasm_valparamhead *valparams,
+		      unsigned long line);
 
     /** Module-level implementation of yasm_dbgfmt_generate().
      * Call yasm_dbgfmt_generate() instead of calling this function.
@@ -113,13 +114,15 @@ void yasm_dbgfmt_destroy(/*@only@*/ yasm_dbgfmt *dbgfmt);
 /** DEBUG directive support.
  * \param dbgfmt	debug format
  * \param name		directive name
+ * \param sect		current active section
  * \param valparams	value/parameters
  * \param line		virtual line (from yasm_linemap)
  * \return Nonzero if directive was not recognized; 0 if directive was
  *	       recognized even if it wasn't valid.
  */
 int yasm_dbgfmt_directive(yasm_dbgfmt *dbgfmt, const char *name,
-			  yasm_valparamhead *valparams, unsigned long line);
+			  yasm_section *sect, yasm_valparamhead *valparams,
+			  unsigned long line);
 
 /** Generate debugging information bytecodes.
  * \param dbgfmt	debug format
@@ -138,9 +141,9 @@ void yasm_dbgfmt_generate(yasm_dbgfmt *dbgfmt);
 
 #define yasm_dbgfmt_destroy(dbgfmt) \
     ((yasm_dbgfmt_base *)dbgfmt)->module->destroy(dbgfmt)
-#define yasm_dbgfmt_directive(dbgfmt, name, valparams, line) \
-    ((yasm_dbgfmt_base *)dbgfmt)->module->directive(dbgfmt, name, valparams, \
-						    line)
+#define yasm_dbgfmt_directive(dbgfmt, name, sect, valparams, line) \
+    ((yasm_dbgfmt_base *)dbgfmt)->module->directive(dbgfmt, name, sect, \
+						    valparams, line)
 #define yasm_dbgfmt_generate(dbgfmt) \
     ((yasm_dbgfmt_base *)dbgfmt)->module->generate(dbgfmt)
 

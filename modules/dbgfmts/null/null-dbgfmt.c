@@ -51,7 +51,8 @@ null_dbgfmt_destroy(/*@only@*/ yasm_dbgfmt *dbgfmt)
 
 static int
 null_dbgfmt_directive(yasm_dbgfmt *dbgfmt, const char *name,
-		      yasm_valparamhead *valparams, unsigned long line)
+		      yasm_section *sect, yasm_valparamhead *valparams,
+		      unsigned long line)
 {
     return 1;
 }

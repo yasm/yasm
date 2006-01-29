@@ -493,7 +493,8 @@ stabs_bc_str_resolve(yasm_bytecode *bc, int save,
 
 static int
 stabs_dbgfmt_directive(yasm_dbgfmt *dbgfmt, const char *name,
-		       yasm_valparamhead *valparams, unsigned long line)
+		       yasm_section *sect, yasm_valparamhead *valparams,
+		       unsigned long line)
 {
     return 1;
 }

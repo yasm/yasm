@@ -454,7 +454,8 @@ lineexp: instr
 	vp = yasm_vp_create($3.contents, NULL);
 	yasm_vps_append(&vps, vp);
 
-	yasm_dbgfmt_directive(parser_gas->dbgfmt, "file", &vps, cur_line);
+	yasm_dbgfmt_directive(parser_gas->dbgfmt, "file",
+			      parser_gas->cur_section, &vps, cur_line);
 
 	yasm_vps_delete(&vps);
 	$$ = NULL;
@@ -467,7 +468,8 @@ lineexp: instr
 	vp = yasm_vp_create($2.contents, NULL);
 	yasm_vps_append(&vps, vp);
 
-	yasm_dbgfmt_directive(parser_gas->dbgfmt, "file", &vps, cur_line);
+	yasm_dbgfmt_directive(parser_gas->dbgfmt, "file",
+			      parser_gas->cur_section, &vps, cur_line);
 
 	yasm_vps_delete(&vps);
 	$$ = NULL;
@@ -482,7 +484,8 @@ lineexp: instr
 	vp = yasm_vp_create(NULL, p_expr_new_ident(yasm_expr_int($3)));
 	yasm_vps_append(&vps, vp);
 
-	yasm_dbgfmt_directive(parser_gas->dbgfmt, "loc", &vps, cur_line);
+	yasm_dbgfmt_directive(parser_gas->dbgfmt, "loc",
+			      parser_gas->cur_section, &vps, cur_line);
 
 	yasm_vps_delete(&vps);
 	$$ = NULL;
@@ -499,7 +502,8 @@ lineexp: instr
 	vp = yasm_vp_create(NULL, p_expr_new_ident(yasm_expr_int($4)));
 	yasm_vps_append(&vps, vp);
 
-	yasm_dbgfmt_directive(parser_gas->dbgfmt, "loc", &vps, cur_line);
+	yasm_dbgfmt_directive(parser_gas->dbgfmt, "loc",
+			      parser_gas->cur_section, &vps, cur_line);
 
 	yasm_vps_delete(&vps);
 	$$ = NULL;
