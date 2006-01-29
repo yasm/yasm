@@ -20,6 +20,7 @@ libyasm_a_SOURCES += libyasm/xstrdup.c
 libyasm_a_SOURCES += libyasm/strcasecmp.c
 libyasm_a_SOURCES += libyasm/mergesort.c
 libyasm_a_SOURCES += libyasm/strsep.c
+libyasm_a_SOURCES += libyasm/splitpath.c
 libyasm_a_SOURCES += module.c
 
 module.c: $(top_srcdir)/libyasm/module.in genmodule$(EXEEXT) Makefile
