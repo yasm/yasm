@@ -71,6 +71,12 @@ lc3b_get_machine(/*@unused@*/ const yasm_arch *arch)
     return "lc3b";
 }
 
+static unsigned int
+lc3b_get_address_size(/*@unused@*/ const yasm_arch *arch)
+{
+    return 16;
+}
+
 static int
 lc3b_set_var(yasm_arch *arch, const char *var, unsigned long val)
 {
@@ -167,6 +173,7 @@ yasm_arch_module yasm_lc3b_LTX_arch = {
     lc3b_create,
     lc3b_destroy,
     lc3b_get_machine,
+    lc3b_get_address_size,
     lc3b_set_var,
     yasm_lc3b__parse_cpu,
     yasm_lc3b__parse_check_reg,
@@ -188,5 +195,6 @@ yasm_arch_module yasm_lc3b_LTX_arch = {
     lc3b_ea_create_expr,
     lc3b_machines,
     "lc3b",
+    2,
     2
 };

@@ -91,6 +91,18 @@ x86_get_machine(const yasm_arch *arch)
 	return "x86";
 }
 
+static unsigned int
+x86_get_address_size(const yasm_arch *arch)
+{
+    const yasm_arch_x86 *arch_x86 = (const yasm_arch_x86 *)arch;
+    if (arch_x86->mode_bits != 0)
+	return arch_x86->mode_bits;
+    if (arch_x86->amd64_machine)
+	return 64;
+    else
+	return 32;
+}
+
 static int
 x86_set_var(yasm_arch *arch, const char *var, unsigned long val)
 {
@@ -362,6 +374,7 @@ yasm_arch_module yasm_x86_LTX_arch = {
     x86_create,
     x86_destroy,
     x86_get_machine,
+    x86_get_address_size,
     x86_set_var,
     yasm_x86__parse_cpu,
     yasm_x86__parse_check_reg,
@@ -383,5 +396,6 @@ yasm_arch_module yasm_x86_LTX_arch = {
     yasm_x86__ea_create_expr,
     x86_machines,
     "x86",
-    2
+    2,
+    1
 };

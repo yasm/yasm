@@ -105,6 +105,11 @@ typedef struct yasm_arch_module {
      */
     const char * (*get_machine) (const yasm_arch *arch);
 
+    /** Module-level implementation of yasm_arch_get_address_size().
+     * Call yasm_arch_get_address_size() instead of calling this function.
+     */
+    unsigned int (*get_address_size) (const yasm_arch *arch);
+
     /** Module-level implementation of yasm_arch_set_var().
      * Call yasm_arch_set_var() instead of calling this function.
      */
@@ -247,6 +252,12 @@ typedef struct yasm_arch_module {
      * #yasm_arch.
      */
     unsigned int wordsize;
+
+    /** Worst case minimum instruction length in bytes.
+     * Call yasm_arch_min_insn_len() to get the minimum instruction length of
+     * a particular #yasm_arch.
+     */
+    unsigned int min_insn_len;
 } yasm_arch_module;
 
 #ifdef YASM_LIB_INTERNAL
@@ -306,6 +317,12 @@ const char *yasm_arch_keyword(const yasm_arch *arch);
  */
 unsigned int yasm_arch_wordsize(const yasm_arch *arch);
 
+/** Get the minimum instruction length of an architecture.
+ * \param arch	    architecture
+ * \return Minimum instruction length (in bytes).
+ */
+unsigned int yasm_arch_min_insn_len(const yasm_arch *arch);
+
 /** Create architecture.
  * \param module	architecture module
  * \param machine	keyword of machine in use (must be one listed in
@@ -329,6 +346,12 @@ void yasm_arch_destroy(/*@only@*/ yasm_arch *arch);
  * \return Active machine name.
  */
 const char *yasm_arch_get_machine(const yasm_arch *arch);
+
+/** Get architecture's active address size, in bits.
+ * \param arch	architecture
+ * \return Active address size (in bits).
+ */
+unsigned int yasm_arch_get_address_size(const yasm_arch *arch);
 
 /** Set any arch-specific variables.  For example, "mode_bits" in x86.
  * \param arch	architecture
@@ -598,6 +621,8 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
     (((yasm_arch_base *)arch)->module->keyword)
 #define yasm_arch_wordsize(arch) \
     (((yasm_arch_base *)arch)->module->wordsize)
+#define yasm_arch_min_insn_len(arch) \
+    (((yasm_arch_base *)arch)->module->min_insn_len)
 
 #define yasm_arch_create(module, machine, parser, error) \
     module->create(machine, parser, error)
@@ -606,6 +631,8 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
     ((yasm_arch_base *)arch)->module->destroy(arch)
 #define yasm_arch_get_machine(arch) \
     ((yasm_arch_base *)arch)->module->get_machine(arch)
+#define yasm_arch_get_address_size(arch) \
+    ((yasm_arch_base *)arch)->module->get_address_size(arch)
 #define yasm_arch_set_var(arch, var, val) \
     ((yasm_arch_base *)arch)->module->set_var(arch, var, val)
 #define yasm_arch_parse_cpu(arch, cpuid, line) \
