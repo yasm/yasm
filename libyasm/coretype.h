@@ -282,7 +282,13 @@ size_t yasm__splitpath_win(const char *path, /*@out@*/ const char **tail);
  * \param head	(returned) directory
  * \return Length of head (directory).
  */
-#define yasm__splitpath(path, tail)	yasm__splitpath_unix(path, tail)
+# if defined (_WIN32) || defined (WIN32) || defined (__MSDOS__) || \
+ defined (__DJGPP__) || defined (__OS2__) || defined (__CYGWIN__) || \
+ defined (__CYGWIN32__)
+#  define yasm__splitpath(path, tail)	yasm__splitpath_win(path, tail)
+# else
+#  define yasm__splitpath(path, tail)	yasm__splitpath_unix(path, tail)
+# endif
 #endif
 
 /** strdup() implementation using yasm_xmalloc().
