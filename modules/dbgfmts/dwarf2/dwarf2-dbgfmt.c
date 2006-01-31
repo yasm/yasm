@@ -366,6 +366,7 @@ dwarf2_dbgfmt_generate_section(yasm_section *sect, /*@null@*/ void *d)
     /*@null@*/ dwarf2_section_data *dsd;
     /*@null@*/ dwarf2_loc *loc;
     /*@null@*/ yasm_bytecode *precbc = NULL, *bc;
+    /*@dependent@*/ yasm_symrec *lastsym = NULL;
     unsigned long addr_delta;
 
     /* registers for state machine for each sequence */
@@ -394,12 +395,13 @@ dwarf2_dbgfmt_generate_section(yasm_section *sect, /*@null@*/ void *d)
 	    if (bc->symrecs) {
 		int i = 0;
 		while (bc->symrecs[i]) {
-		    loc->sym = bc->symrecs[i];
+		    lastsym = bc->symrecs[i];
 		    i++;
 		}
 	    }
 	    bc = yasm_bc__next(bc);
 	}
+	loc->sym = lastsym;
 	loc->bc = bc;
     }
 
