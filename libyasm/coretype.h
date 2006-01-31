@@ -279,7 +279,7 @@ size_t yasm__splitpath_win(const char *path, /*@out@*/ const char **tail);
  * Unless otherwise defined, defaults to yasm__splitpath_unix().
  * \internal
  * \param path	pathname
- * \param head	(returned) directory
+ * \param tail	(returned) base filename
  * \return Length of head (directory).
  */
 # if defined (_WIN32) || defined (WIN32) || defined (__MSDOS__) || \
