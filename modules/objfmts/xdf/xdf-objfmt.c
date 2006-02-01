@@ -128,7 +128,7 @@ yasm_objfmt_module yasm_xdf_LTX_objfmt;
 
 
 static yasm_objfmt *
-xdf_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
+xdf_objfmt_create(yasm_object *object, yasm_arch *a)
 {
     yasm_objfmt_xdf *objfmt_xdf = yasm_xmalloc(sizeof(yasm_objfmt_xdf));
 
@@ -585,8 +585,8 @@ xdf_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
 }
 
 static void
-xdf_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
-		  int all_syms, /*@unused@*/ yasm_dbgfmt *df)
+xdf_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
+		  /*@unused@*/ yasm_dbgfmt *df)
 {
     yasm_objfmt_xdf *objfmt_xdf = (yasm_objfmt_xdf *)objfmt;
     xdf_objfmt_output_info info;

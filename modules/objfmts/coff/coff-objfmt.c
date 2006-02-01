@@ -182,6 +182,8 @@ typedef struct yasm_objfmt_coff {
     yasm_object *object;
     yasm_symtab *symtab;
     /*@dependent@*/ yasm_arch *arch;
+
+    coff_symrec_data *filesym_data;	    /* Data for .file symbol */
 } yasm_objfmt_coff;
 
 typedef struct coff_objfmt_output_info {
@@ -239,11 +241,10 @@ coff_objfmt_sym_set_data(yasm_symrec *sym, coff_symrec_sclass sclass,
 }
 
 static yasm_objfmt_coff *
-coff_common_create(const char *in_filename, yasm_object *object, yasm_arch *a)
+coff_common_create(yasm_object *object, yasm_arch *a)
 {
     yasm_objfmt_coff *objfmt_coff = yasm_xmalloc(sizeof(yasm_objfmt_coff));
     yasm_symrec *filesym;
-    coff_symrec_data *data;
 
     objfmt_coff->object = object;
     objfmt_coff->symtab = yasm_object_get_symtab(object);
@@ -260,18 +261,19 @@ coff_common_create(const char *in_filename, yasm_object *object, yasm_arch *a)
     /* FIXME: misuse of NULL bytecode here; it works, but only barely. */
     filesym = yasm_symtab_define_special(objfmt_coff->symtab, ".file",
 					 YASM_SYM_GLOBAL);
-    data = coff_objfmt_sym_set_data(filesym, COFF_SCL_FILE, NULL, 1,
-				    COFF_SYMTAB_AUX_FILE);
-    data->aux[0].fname = yasm__xstrdup(in_filename);
+    objfmt_coff->filesym_data =
+	coff_objfmt_sym_set_data(filesym, COFF_SCL_FILE, NULL, 1,
+				 COFF_SYMTAB_AUX_FILE);
+    /* Filename is set in coff_objfmt_output */
+    objfmt_coff->filesym_data->aux[0].fname = NULL;
 
     return objfmt_coff;
 }
 
 static yasm_objfmt *
-coff_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
+coff_objfmt_create(yasm_object *object, yasm_arch *a)
 {
-    yasm_objfmt_coff *objfmt_coff =
-	coff_common_create(in_filename, object, a);
+    yasm_objfmt_coff *objfmt_coff = coff_common_create(object, a);
 
     if (objfmt_coff) {
 	/* Support x86 and amd64 machines of x86 arch */
@@ -292,10 +294,9 @@ coff_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
 }
 
 static yasm_objfmt *
-win32_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
+win32_objfmt_create(yasm_object *object, yasm_arch *a)
 {
-    yasm_objfmt_coff *objfmt_coff =
-	coff_common_create(in_filename, object, a);
+    yasm_objfmt_coff *objfmt_coff = coff_common_create(object, a);
 
     if (objfmt_coff) {
 	/* Support x86 and amd64 machines of x86 arch.
@@ -319,10 +320,9 @@ win32_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
 }
 
 static yasm_objfmt *
-win64_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
+win64_objfmt_create(yasm_object *object, yasm_arch *a)
 {
-    yasm_objfmt_coff *objfmt_coff =
-	coff_common_create(in_filename, object, a);
+    yasm_objfmt_coff *objfmt_coff = coff_common_create(object, a);
 
     if (objfmt_coff) {
 	/* Support amd64 machine of x86 arch */
@@ -946,8 +946,8 @@ coff_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
 }
 
 static void
-coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
-		   int all_syms, /*@unused@*/ yasm_dbgfmt *df)
+coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
+		   /*@unused@*/ yasm_dbgfmt *df)
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
     coff_objfmt_output_info info;
@@ -956,6 +956,11 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
     unsigned long symtab_pos;
     unsigned long symtab_count;
     unsigned int flags;
+
+    if (objfmt_coff->filesym_data->aux[0].fname)
+	yasm_xfree(objfmt_coff->filesym_data->aux[0].fname);
+    objfmt_coff->filesym_data->aux[0].fname =
+	yasm__xstrdup(yasm_object_get_source_fn(objfmt_coff->object));
 
     /* Force all syms for win64 because they're needed for relocations.
      * FIXME: Not *all* syms need to be output, only the ones needed for

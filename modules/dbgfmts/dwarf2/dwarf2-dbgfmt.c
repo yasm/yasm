@@ -105,7 +105,6 @@ typedef struct yasm_dbgfmt_dwarf2 {
 
     yasm_object *object;
     yasm_symtab *symtab;
-    const char *filename;
     yasm_linemap *linemap;
     yasm_arch *arch;
 
@@ -234,8 +233,7 @@ yasm_dbgfmt_module yasm_dwarf2_LTX_dbgfmt;
 
 
 static /*@null@*/ /*@only@*/ yasm_dbgfmt *
-dwarf2_dbgfmt_create(const char *in_filename, const char *obj_filename,
-		     yasm_object *object, yasm_objfmt *of, yasm_arch *a)
+dwarf2_dbgfmt_create(yasm_object *object, yasm_objfmt *of, yasm_arch *a)
 {
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 =
 	yasm_xmalloc(sizeof(yasm_dbgfmt_dwarf2));
@@ -243,7 +241,6 @@ dwarf2_dbgfmt_create(const char *in_filename, const char *obj_filename,
 
     dbgfmt_dwarf2->dbgfmt.module = &yasm_dwarf2_LTX_dbgfmt;
 
-    dbgfmt_dwarf2->filename = in_filename;
     dbgfmt_dwarf2->object = object;
     dbgfmt_dwarf2->symtab = yasm_object_get_symtab(object);
     dbgfmt_dwarf2->linemap = yasm_object_get_linemap(object);
@@ -927,7 +924,7 @@ dwarf2_dbgfmt_directive(yasm_dbgfmt *dbgfmt, const char *name,
 
 	if (vp->val) {
 	    /* Just a bare filename */
-	    /* TODO: this should change the in_filename the objfmt uses */
+	    yasm_object_set_source_fn(dbgfmt_dwarf2->object, vp->val);
 	    return 0;
 	}
 

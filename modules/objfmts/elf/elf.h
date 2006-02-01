@@ -421,6 +421,7 @@ void elf_reloc_entry_destroy(void *entry);
 
 /* strtab functions */
 elf_strtab_entry *elf_strtab_entry_create(const char *str);
+void elf_strtab_entry_set_str(elf_strtab_entry *entry, const char *str);
 elf_strtab_head *elf_strtab_create(void);
 elf_strtab_entry *elf_strtab_append_str(elf_strtab_head *head, const char *str);
 void elf_strtab_destroy(elf_strtab_head *head);

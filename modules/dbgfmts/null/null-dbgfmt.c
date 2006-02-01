@@ -35,8 +35,7 @@ yasm_dbgfmt_module yasm_null_LTX_dbgfmt;
 
 
 static /*@null@*/ /*@only@*/ yasm_dbgfmt *
-null_dbgfmt_create(const char *in_filename, const char *obj_filename,
-		   yasm_object *object, yasm_objfmt *of, yasm_arch *a)
+null_dbgfmt_create(yasm_object *object, yasm_objfmt *of, yasm_arch *a)
 {
     yasm_dbgfmt_base *dbgfmt = yasm_xmalloc(sizeof(yasm_dbgfmt_base));
     dbgfmt->module = &yasm_null_LTX_dbgfmt;

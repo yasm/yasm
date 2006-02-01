@@ -406,8 +406,20 @@ main(int argc, char *argv[])
 	return EXIT_SUCCESS;
     }
 
+    /* determine the object filename if not specified */
+    if (!obj_filename) {
+	if (in == stdin)
+	    /* Default to yasm.out if no obj filename specified */
+	    obj_filename = yasm__xstrdup("yasm.out");
+	else
+	    /* replace (or add) extension */
+	    obj_filename = replace_extension(in_filename,
+					     cur_objfmt_module->extension,
+					     "yasm.out");
+    }
+
     /* Create object */
-    object = yasm_object_create();
+    object = yasm_object_create(in_filename, obj_filename);
     yasm_linemap_set(yasm_object_get_linemap(object), in_filename, 1, 1);
 
     /* Default to x86 as the architecture */
@@ -525,21 +537,8 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 
-    /* determine the object filename if not specified */
-    if (!obj_filename) {
-	if (in == stdin)
-	    /* Default to yasm.out if no obj filename specified */
-	    obj_filename = yasm__xstrdup("yasm.out");
-	else
-	    /* replace (or add) extension */
-	    obj_filename = replace_extension(in_filename,
-					     cur_objfmt_module->extension,
-					     "yasm.out");
-    }
-
     /* Initialize the object format */
-    cur_objfmt = yasm_objfmt_create(cur_objfmt_module, in_filename, object,
-				    cur_arch);
+    cur_objfmt = yasm_objfmt_create(cur_objfmt_module, object, cur_arch);
     if (!cur_objfmt) {
 	print_error(
 	    _("%s: object format `%s' does not support architecture `%s' machine `%s'"),
@@ -557,8 +556,7 @@ main(int argc, char *argv[])
     def_sect = yasm_objfmt_add_default_section(cur_objfmt, object);
 
     /* Initialize the debug format */
-    cur_dbgfmt = yasm_dbgfmt_create(cur_dbgfmt_module, in_filename,
-				    obj_filename, object, cur_objfmt,
+    cur_dbgfmt = yasm_dbgfmt_create(cur_dbgfmt_module, object, cur_objfmt,
 				    cur_arch);
     if (!cur_dbgfmt) {
 	print_error(

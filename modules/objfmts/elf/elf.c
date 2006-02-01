@@ -164,6 +164,14 @@ elf_strtab_entry_create(const char *str)
     return entry;
 }
 
+void
+elf_strtab_entry_set_str(elf_strtab_entry *entry, const char *str)
+{
+    if (entry->str)
+	yasm_xfree(entry->str);
+    entry->str = yasm__xstrdup(str);
+}
+
 elf_strtab_head *
 elf_strtab_create()
 {

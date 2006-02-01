@@ -80,19 +80,17 @@ typedef struct yasm_objfmt_module {
     /** Create object format.
      * Module-level implementation of yasm_objfmt_create().
      * Call yasm_objfmt_create() instead of calling this function.
-     * \param in_filename	main input filename (e.g. "file.asm")
      * \param object		object
      * \param a			architecture in use
      * \return NULL if architecture/machine combination not supported.
      */
-    /*@null@*/ /*@only@*/ yasm_objfmt * (*create)
-	(const char *in_filename, yasm_object *object, yasm_arch *a);
+    /*@null@*/ /*@only@*/ yasm_objfmt * (*create) (yasm_object *object,
+						   yasm_arch *a);
 
     /** Module-level implementation of yasm_objfmt_output().
      * Call yasm_objfmt_output() instead of calling this function.
      */
-    void (*output) (yasm_objfmt *of, FILE *f, const char *obj_filename,
-		    int all_syms, yasm_dbgfmt *df);
+    void (*output) (yasm_objfmt *of, FILE *f, int all_syms, yasm_dbgfmt *df);
 
     /** Module-level implementation of yasm_objfmt_destroy().
      * Call yasm_objfmt_destroy() instead of calling this function.
@@ -139,27 +137,24 @@ typedef struct yasm_objfmt_module {
 
 /** Create object format.
  * \param module	object format module
- * \param in_filename	main input filename (e.g. "file.asm")
  * \param object	object
  * \param a		architecture in use
  * \return NULL if architecture/machine combination not supported.
  */
 /*@null@*/ /*@only@*/ yasm_objfmt *yasm_objfmt_create
-    (const yasm_objfmt_module *module, const char *in_filename,
-     yasm_object *object, yasm_arch *a);
+    (const yasm_objfmt_module *module, yasm_object *object, yasm_arch *a);
 
 /** Write out (post-optimized) sections to the object file.
  * This function may call yasm_symrec_* functions as necessary (including
  * yasm_symrec_traverse()) to retrieve symbolic information.
  * \param objfmt	object format
  * \param f		output object file
- * \param obj_filename	output filename (e.g. "file.o")
  * \param all_syms	if nonzero, all symbols should be included in
  *			the object file
  * \param df		debug format in use
  */
-void yasm_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
-			int all_syms, yasm_dbgfmt *df);
+void yasm_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
+			yasm_dbgfmt *df);
 
 /** Cleans up any allocated object format memory.
  * \param objfmt	object format
@@ -235,12 +230,10 @@ int yasm_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 
 /* Inline macro implementations for objfmt functions */
 
-#define yasm_objfmt_create(module, in_filename, object, a) \
-    module->create(in_filename, object, a)
+#define yasm_objfmt_create(module, object, a)	module->create(object, a)
 
 #define yasm_objfmt_output(objfmt, f, obj_fn, all_syms, df) \
-    ((yasm_objfmt_base *)objfmt)->module->output(objfmt, f, obj_fn, all_syms, \
-						 df)
+    ((yasm_objfmt_base *)objfmt)->module->output(objfmt, f, all_syms, df)
 #define yasm_objfmt_destroy(objfmt) \
     ((yasm_objfmt_base *)objfmt)->module->destroy(objfmt)
 #define yasm_objfmt_section_switch(objfmt, vpms, oe_vpms, line) \

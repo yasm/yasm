@@ -63,6 +63,7 @@ typedef struct yasm_objfmt_elf {
     yasm_symtab *symtab;
     /*@dependent@*/ yasm_arch *arch;
     
+    elf_strtab_entry *file_strtab_entry;/* .file symbol associated string */
     yasm_symrec *dotdotsym;		/* ..sym symbol */
 } yasm_objfmt_elf;
 
@@ -157,9 +158,8 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
 }
 
 static yasm_objfmt *
-elf_objfmt_create_common(const char *in_filename, yasm_object *object,
-			 yasm_arch *a, yasm_objfmt_module *module,
-			 int bits_pref,
+elf_objfmt_create_common(yasm_object *object, yasm_arch *a,
+			 yasm_objfmt_module *module, int bits_pref,
 			 const elf_machine_handler **elf_march_out)
 {
     yasm_objfmt_elf *objfmt_elf = yasm_xmalloc(sizeof(yasm_objfmt_elf));
@@ -186,8 +186,11 @@ elf_objfmt_create_common(const char *in_filename, yasm_object *object,
     /* FIXME: misuse of NULL bytecode here; it works, but only barely. */
     filesym = yasm_symtab_define_label(objfmt_elf->symtab, ".file", NULL, 0,
 				       0);
-    entry = elf_symtab_entry_create(
-	elf_strtab_append_str(objfmt_elf->strtab, in_filename), filesym);
+    /* Put in current input filename; we'll replace it in output() */
+    objfmt_elf->file_strtab_entry =
+	elf_strtab_append_str(objfmt_elf->strtab,
+			      yasm_object_get_source_fn(object));
+    entry = elf_symtab_entry_create(objfmt_elf->file_strtab_entry, filesym);
     yasm_symrec_add_data(filesym, &elf_symrec_data, entry);
     elf_symtab_set_nonzero(entry, NULL, SHN_ABS, STB_LOCAL, STT_FILE, NULL,
 			   NULL);
@@ -201,14 +204,14 @@ elf_objfmt_create_common(const char *in_filename, yasm_object *object,
 }
 
 static yasm_objfmt *
-elf_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
+elf_objfmt_create(yasm_object *object, yasm_arch *a)
 {
     const elf_machine_handler *elf_march;
     yasm_objfmt *objfmt;
     yasm_objfmt_elf *objfmt_elf;
 
-    objfmt = elf_objfmt_create_common(in_filename, object, a,
-				      &yasm_elf_LTX_objfmt, 0, &elf_march);
+    objfmt = elf_objfmt_create_common(object, a, &yasm_elf_LTX_objfmt, 0,
+				      &elf_march);
     if (objfmt) {
 	objfmt_elf = (yasm_objfmt_elf *)objfmt;
 	/* Figure out which bitness of object format to use */
@@ -221,17 +224,17 @@ elf_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
 }
 
 static yasm_objfmt *
-elf32_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
+elf32_objfmt_create(yasm_object *object, yasm_arch *a)
 {
-    return elf_objfmt_create_common(in_filename, object, a,
-				    &yasm_elf32_LTX_objfmt, 32, NULL);
+    return elf_objfmt_create_common(object, a, &yasm_elf32_LTX_objfmt, 32,
+				    NULL);
 }
 
 static yasm_objfmt *
-elf64_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
+elf64_objfmt_create(yasm_object *object, yasm_arch *a)
 {
-    return elf_objfmt_create_common(in_filename, object, a,
-				    &yasm_elf64_LTX_objfmt, 64, NULL);
+    return elf_objfmt_create_common(object, a, &yasm_elf64_LTX_objfmt, 64,
+				    NULL);
 }
 
 static long
@@ -587,8 +590,7 @@ elf_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 }
 
 static void
-elf_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
-		  int all_syms, yasm_dbgfmt *df)
+elf_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df)
 {
     yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
     elf_objfmt_output_info info;
@@ -603,6 +605,10 @@ elf_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
 
     info.objfmt_elf = objfmt_elf;
     info.f = f;
+
+    /* Update filename strtab */
+    elf_strtab_entry_set_str(objfmt_elf->file_strtab_entry,
+			     yasm_object_get_source_fn(objfmt_elf->object));
 
     /* Allocate space for Ehdr by seeking forward */
     if (fseek(f, (long)(elf_proghead_get_size()), SEEK_SET) < 0) {

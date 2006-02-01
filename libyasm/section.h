@@ -50,9 +50,12 @@ struct yasm_reloc {
 /** Create a new object.  A default section is created as the first section.
  * An empty symbol table (yasm_symtab) and line mapping (yasm_linemap) are
  * automatically created.
+ * \param src_filename	source filename (e.g. "file.asm")
+ * \param obj_filename	object filename (e.g. "file.o")
  * \return Newly allocated object.
  */
-/*@only@*/ yasm_object *yasm_object_create(void);
+/*@only@*/ yasm_object *yasm_object_create(const char *src_filename,
+					   const char *obj_filename);
 
 /** Create a new, or continue an existing, general section.  The section is
  * added to the object if there's not already a section by that name.
@@ -121,6 +124,24 @@ int yasm_object_sections_traverse
  */
 /*@dependent@*/ /*@null@*/ yasm_section *yasm_object_find_general
     (yasm_object *object, const char *name);
+
+/** Change the source filename for an object.
+ * \param object	object
+ * \param src_filename	new source filename (e.g. "file.asm")
+ */
+void yasm_object_set_source_fn(yasm_object *object, const char *src_filename);
+
+/** Get an object's source filename.
+ * \param object	object
+ * \return Source filename.
+ */
+const char *yasm_object_get_source_fn(const yasm_object *object);
+
+/** Get an object's object filename.
+ * \param object	object
+ * \return Object filename.
+ */
+const char *yasm_object_get_object_fn(const yasm_object *object);
 
 /** Get an object's symbol table (#yasm_symtab).
  * \param object	object

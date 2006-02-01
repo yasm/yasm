@@ -55,16 +55,13 @@ typedef struct yasm_dbgfmt_module {
     /** Create debug format.
      * Module-level implementation of yasm_dbgfmt_create().
      * The filenames are provided solely for informational purposes.
-     * \param in_filename   primary input filename
-     * \param obj_filename  object filename
      * \param object	    object
      * \param of	    object format in use
      * \param a		    architecture in use
      * \return NULL if object format does not provide needed support.
      */
     /*@null@*/ /*@only@*/ yasm_dbgfmt * (*create)
-	(const char *in_filename, const char *obj_filename,
-	 yasm_object *object, yasm_objfmt *of, yasm_arch *a);
+	(yasm_object *object, yasm_objfmt *of, yasm_arch *a);
 
     /** Module-level implementation of yasm_dbgfmt_destroy().
      * Call yasm_dbgfmt_destroy() instead of calling this function.
@@ -94,16 +91,13 @@ const char *yasm_dbgfmt_keyword(const yasm_dbgfmt *dbgfmt);
  * format functions.  The filenames are provided solely for informational
  * purposes.
  * \param module	debug format module
- * \param in_filename   primary input filename
- * \param obj_filename  object filename
  * \param object	object to generate debugging information for
  * \param of		object format in use
  * \param a		architecture in use
  * \return NULL if object format does not provide needed support.
  */
 /*@null@*/ /*@only@*/ yasm_dbgfmt *yasm_dbgfmt_create
-    (const yasm_dbgfmt_module *module, const char *in_filename,
-     const char *obj_filename, yasm_object *object, yasm_objfmt *of,
+    (const yasm_dbgfmt_module *module, yasm_object *object, yasm_objfmt *of,
      yasm_arch *a);
 
 /** Cleans up any allocated debug format memory.
@@ -136,8 +130,8 @@ void yasm_dbgfmt_generate(yasm_dbgfmt *dbgfmt);
 #define yasm_dbgfmt_keyword(dbgfmt) \
     (((yasm_dbgfmt_base *)dbgfmt)->module->keyword)
 
-#define yasm_dbgfmt_create(module, in_filename, obj_filename, object, of, a) \
-    module->create(in_filename, obj_filename, object, of, a)
+#define yasm_dbgfmt_create(module, object, of, a) \
+    module->create(object, of, a)
 
 #define yasm_dbgfmt_destroy(dbgfmt) \
     ((yasm_dbgfmt_base *)dbgfmt)->module->destroy(dbgfmt)

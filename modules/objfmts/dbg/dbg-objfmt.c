@@ -43,8 +43,7 @@ yasm_objfmt_module yasm_dbg_LTX_objfmt;
 
 
 static yasm_objfmt *
-dbg_objfmt_create(const char *in_filename, yasm_object *object,
-		  yasm_arch *a)
+dbg_objfmt_create(yasm_object *object, yasm_arch *a)
 {
     yasm_objfmt_dbg *objfmt_dbg = yasm_xmalloc(sizeof(yasm_objfmt_dbg));
 
@@ -57,14 +56,12 @@ dbg_objfmt_create(const char *in_filename, yasm_object *object,
 	fprintf(stderr, N_("could not open temporary file"));
 	return 0;
     }
-    fprintf(objfmt_dbg->dbgfile, "create(\"%s\", %s arch)\n",
-	    in_filename, yasm_arch_keyword(a));
+    fprintf(objfmt_dbg->dbgfile, "create(%s arch)\n", yasm_arch_keyword(a));
     return (yasm_objfmt *)objfmt_dbg;
 }
 
 static void
-dbg_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
-		  int all_syms, yasm_dbgfmt *df)
+dbg_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df)
 {
     yasm_objfmt_dbg *objfmt_dbg = (yasm_objfmt_dbg *)objfmt;
     char buf[1024];

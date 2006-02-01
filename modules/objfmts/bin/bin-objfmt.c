@@ -47,8 +47,7 @@ yasm_objfmt_module yasm_bin_LTX_objfmt;
 
 
 static yasm_objfmt *
-bin_objfmt_create(/*@unused@*/ const char *in_filename, yasm_object *object,
-		  yasm_arch *a)
+bin_objfmt_create(yasm_object *object, yasm_arch *a)
 {
     yasm_objfmt_bin *objfmt_bin = yasm_xmalloc(sizeof(yasm_objfmt_bin));
     objfmt_bin->objfmt.module = &yasm_bin_LTX_objfmt;
@@ -240,8 +239,8 @@ bin_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 }
 
 static void
-bin_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
-		  /*@unused@*/ int all_syms, /*@unused@*/ yasm_dbgfmt *df)
+bin_objfmt_output(yasm_objfmt *objfmt, FILE *f, /*@unused@*/ int all_syms,
+		  /*@unused@*/ yasm_dbgfmt *df)
 {
     yasm_objfmt_bin *objfmt_bin = (yasm_objfmt_bin *)objfmt;
     /*@observer@*/ /*@null@*/ yasm_section *text, *data, *bss, *prevsect;

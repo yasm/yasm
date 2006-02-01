@@ -46,6 +46,9 @@
 
 
 struct yasm_object {
+    /*@owned@*/ char *src_filename;
+    /*@owned@*/ char *obj_filename;
+
     yasm_symtab	*symtab;
     yasm_linemap *linemap;
 
@@ -92,9 +95,12 @@ static void yasm_section_destroy(/*@only@*/ yasm_section *sect);
 
 /*@-compdestroy@*/
 yasm_object *
-yasm_object_create(void)
+yasm_object_create(const char *src_filename, const char *obj_filename)
 {
     yasm_object *object = yasm_xmalloc(sizeof(yasm_object));
+
+    object->src_filename = yasm__xstrdup(src_filename);
+    object->obj_filename = yasm__xstrdup(obj_filename);
 
     /* Create empty symtab and linemap */
     object->symtab = yasm_symtab_create();
@@ -197,6 +203,25 @@ yasm_object_create_absolute(yasm_object *object, yasm_expr *start,
     return s;
 }
 /*@=onlytrans@*/
+
+void
+yasm_object_set_source_fn(yasm_object *object, const char *src_filename)
+{
+    yasm_xfree(object->src_filename);
+    object->src_filename = yasm__xstrdup(src_filename);
+}
+
+const char *
+yasm_object_get_source_fn(const yasm_object *object)
+{
+    return object->src_filename;
+}
+
+const char *
+yasm_object_get_object_fn(const yasm_object *object)
+{
+    return object->obj_filename;
+}
 
 yasm_symtab *
 yasm_object_get_symtab(const yasm_object *object)

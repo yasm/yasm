@@ -85,7 +85,6 @@ typedef struct yasm_dbgfmt_stabs {
 
     yasm_object *object;
     yasm_symtab *symtab;
-    const char *filename;
     yasm_linemap *linemap;
     yasm_arch *arch;
 } yasm_dbgfmt_stabs;
@@ -161,12 +160,10 @@ yasm_dbgfmt_module yasm_stabs_LTX_dbgfmt;
 
 
 static /*@null@*/ /*@only@*/ yasm_dbgfmt *
-stabs_dbgfmt_create(const char *in_filename, const char *obj_filename,
-		    yasm_object *object, yasm_objfmt *of, yasm_arch *a)
+stabs_dbgfmt_create(yasm_object *object, yasm_objfmt *of, yasm_arch *a)
 {
     yasm_dbgfmt_stabs *dbgfmt_stabs = yasm_xmalloc(sizeof(yasm_dbgfmt_stabs));
     dbgfmt_stabs->dbgfmt.module = &yasm_stabs_LTX_dbgfmt;
-    dbgfmt_stabs->filename = in_filename;
     dbgfmt_stabs->object = object;
     dbgfmt_stabs->symtab = yasm_object_get_symtab(object);
     dbgfmt_stabs->linemap = yasm_object_get_linemap(object);
@@ -370,7 +367,8 @@ stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
 
     /* initial strtab bytecodes */
     nullbc = stabs_dbgfmt_append_bcstr(info.stabstr, "");
-    filebc = stabs_dbgfmt_append_bcstr(info.stabstr, dbgfmt_stabs->filename);
+    filebc = stabs_dbgfmt_append_bcstr(info.stabstr,
+	yasm_object_get_source_fn(dbgfmt_stabs->object));
 
     stext = yasm_object_find_general(dbgfmt_stabs->object, ".text");
     firstsym = yasm_symtab_use(dbgfmt_stabs->symtab, ".text", 0);
