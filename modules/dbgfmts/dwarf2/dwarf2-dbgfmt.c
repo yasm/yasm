@@ -149,6 +149,23 @@ typedef struct dwarf2_loc {
     yasm_symrec *sym;	    /* last symbol preceding */
 } dwarf2_loc;
 
+/* Line number state machine register state */
+typedef struct dwarf2_line_state {
+    /* static configuration */
+    yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2;
+
+    /* DWARF2 state machine registers */
+    unsigned long address;
+    unsigned long file;
+    unsigned long line;
+    unsigned long column;
+    unsigned long isa;
+    int is_stmt;
+
+    /* other state information */
+    /*@null@*/ yasm_bytecode *precbc;
+} dwarf2_line_state;
+
 /* Per-section data */
 typedef struct dwarf2_section_data {
     /* The locations set by the .loc directives in this section, in assembly
@@ -355,28 +372,12 @@ dwarf2_dbgfmt_append_line_ext_op(yasm_section *sect,
     return bc;
 }
 
-static int
-dwarf2_dbgfmt_generate_section(yasm_section *sect, /*@null@*/ void *d)
+static void
+dwarf2_dbgfmt_finalize_locs(yasm_section *sect, dwarf2_section_data *dsd)
 {
-    dwarf2_info *info = (dwarf2_info *)d;
-    yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = info->dbgfmt_dwarf2;
-    /*@null@*/ dwarf2_section_data *dsd;
-    /*@null@*/ dwarf2_loc *loc;
-    /*@null@*/ yasm_bytecode *precbc = NULL, *bc;
     /*@dependent@*/ yasm_symrec *lastsym = NULL;
-    unsigned long addr_delta;
-
-    /* registers for state machine for each sequence */
-    unsigned long address = 0;
-    unsigned long file = 1;
-    unsigned long line = 1;
-    unsigned long column = 0;
-    unsigned long isa = 0;
-    int is_stmt = DWARF2_LINE_DEFAULT_IS_STMT;
-
-    dsd = yasm_section_get_data(sect, &dwarf2_section_data_cb);
-    if (!dsd)
-	return 0;	/* no line data for this section */
+    /*@null@*/ yasm_bytecode *bc;
+    /*@null@*/ dwarf2_loc *loc;
 
     bc = yasm_section_bcs_first(sect);
     STAILQ_FOREACH(loc, &dsd->locs, link) {
@@ -401,128 +402,157 @@ dwarf2_dbgfmt_generate_section(yasm_section *sect, /*@null@*/ void *d)
 	loc->sym = lastsym;
 	loc->bc = bc;
     }
+}
+
+static int
+dwarf2_dbgfmt_gen_line_op(yasm_section *debug_line, dwarf2_line_state *state,
+			  dwarf2_loc *loc, /*@null@*/ dwarf2_loc *nextloc)
+{
+    unsigned long addr_delta;
+    long line_delta;
+    int opcode1, opcode2;
+    yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = state->dbgfmt_dwarf2;
+
+    if (state->file != loc->file) {
+	state->file = loc->file;
+	dwarf2_dbgfmt_append_line_op(debug_line, DW_LNS_set_file,
+				     yasm_intnum_create_uint(state->file));
+    }
+    if (state->column != loc->column) {
+	state->column = loc->column;
+	dwarf2_dbgfmt_append_line_op(debug_line, DW_LNS_set_column,
+				     yasm_intnum_create_uint(state->column));
+    }
+#ifdef WITH_DWARF3
+    if (loc->isa_change) {
+	state->isa = loc->isa;
+	dwarf2_dbgfmt_append_line_op(debug_line, DW_LNS_set_isa,
+				     yasm_intnum_create_uint(state->isa));
+    }
+#endif
+    if (state->is_stmt == 0 && loc->is_stmt == IS_STMT_SET) {
+	state->is_stmt = 1;
+	dwarf2_dbgfmt_append_line_op(debug_line, DW_LNS_negate_stmt, NULL);
+    } else if (state->is_stmt == 1 && loc->is_stmt == IS_STMT_CLEAR) {
+	state->is_stmt = 0;
+	dwarf2_dbgfmt_append_line_op(debug_line, DW_LNS_negate_stmt, NULL);
+    }
+    if (loc->basic_block) {
+	dwarf2_dbgfmt_append_line_op(debug_line, DW_LNS_set_basic_block, NULL);
+    }
+#ifdef WITH_DWARF3
+    if (loc->prologue_end) {
+	dwarf2_dbgfmt_append_line_op(debug_line, DW_LNS_set_prologue_end, NULL);
+    }
+    if (loc->epilogue_begin) {
+	dwarf2_dbgfmt_append_line_op(debug_line, DW_LNS_set_epilogue_begin,
+				     NULL);
+    }
+#endif
+
+    /* If multiple loc for the same location, use last */
+    if (nextloc && nextloc->bc->offset == loc->bc->offset)
+	return 0;
+
+    if (!state->precbc) {
+	/* Set the starting address for the section */
+	if (!loc->sym) {
+	    /* shouldn't happen! */
+	    yasm__error(loc->line, N_("could not find label prior to loc"));
+	    return 1;
+	}
+	dwarf2_dbgfmt_append_line_ext_op(debug_line, DW_LNE_set_address,
+	    dbgfmt_dwarf2->sizeof_address,
+	    yasm_expr_create_ident(yasm_expr_sym(loc->sym), loc->line));
+	addr_delta = 0;
+    } else if (loc->bc) {
+	if (state->precbc->offset > loc->bc->offset)
+	    yasm_internal_error(N_("dwarf2 address went backwards?"));
+	addr_delta = loc->bc->offset - state->precbc->offset;
+    } else
+	return 0;	/* ran out of bytecodes!  XXX: do something? */
+
+    /* Generate appropriate opcode(s).  Address can only increment,
+     * whereas line number can go backwards.
+     */
+    line_delta = loc->line - state->line;
+    state->line = loc->line;
+
+    /* First handle the line delta */
+    if (line_delta < DWARF2_LINE_BASE
+	|| line_delta >= DWARF2_LINE_BASE+DWARF2_LINE_RANGE) {
+	/* Won't fit in special opcode, use (signed) line advance */
+	dwarf2_dbgfmt_append_line_op(debug_line, DW_LNS_advance_line,
+				     yasm_intnum_create_int(line_delta));
+	line_delta = 0;
+    }
+
+    /* Next handle the address delta */
+    opcode1 = DWARF2_LINE_OPCODE_BASE + line_delta - DWARF2_LINE_BASE +
+	DWARF2_LINE_RANGE * (addr_delta / dbgfmt_dwarf2->min_insn_len);
+    opcode2 = DWARF2_LINE_OPCODE_BASE + line_delta - DWARF2_LINE_BASE +
+	DWARF2_LINE_RANGE * ((addr_delta - DWARF2_MAX_SPECIAL_ADDR_DELTA) /
+			     dbgfmt_dwarf2->min_insn_len);
+    if (line_delta == 0 && addr_delta == 0) {
+	/* Both line and addr deltas are 0: do DW_LNS_copy */
+	dwarf2_dbgfmt_append_line_op(debug_line, DW_LNS_copy, NULL);
+    } else if (addr_delta <= DWARF2_MAX_SPECIAL_ADDR_DELTA && opcode1 <= 255) {
+	/* Addr delta in range of special opcode */
+	dwarf2_dbgfmt_append_line_op(debug_line, opcode1, NULL);
+    } else if (addr_delta <= 2*DWARF2_MAX_SPECIAL_ADDR_DELTA
+	       && opcode2 <= 255) {
+	/* Addr delta in range of const_add_pc + special */
+	unsigned int opcode;
+	dwarf2_dbgfmt_append_line_op(debug_line, DW_LNS_const_add_pc, NULL);
+	dwarf2_dbgfmt_append_line_op(debug_line, opcode2, NULL);
+    } else {
+	/* Need advance_pc */
+	dwarf2_dbgfmt_append_line_op(debug_line, DW_LNS_advance_pc,
+				     yasm_intnum_create_uint(addr_delta));
+	/* Take care of any remaining line_delta and add entry to matrix */
+	if (line_delta == 0)
+	    dwarf2_dbgfmt_append_line_op(debug_line, DW_LNS_copy, NULL);
+	else {
+	    unsigned int opcode;
+	    opcode = DWARF2_LINE_OPCODE_BASE + line_delta - DWARF2_LINE_BASE;
+	    dwarf2_dbgfmt_append_line_op(debug_line, opcode, NULL);
+	}
+    }
+    state->precbc = loc->bc;
+    return 0;
+}
+
+static int
+dwarf2_dbgfmt_generate_section(yasm_section *sect, /*@null@*/ void *d)
+{
+    dwarf2_info *info = (dwarf2_info *)d;
+    yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = info->dbgfmt_dwarf2;
+    /*@null@*/ dwarf2_section_data *dsd;
+    /*@null@*/ dwarf2_loc *loc;
+    /*@null@*/ yasm_bytecode *bc;
+    dwarf2_line_state state;
+    unsigned long addr_delta;
+
+    dsd = yasm_section_get_data(sect, &dwarf2_section_data_cb);
+    if (!dsd)
+	return 0;	/* no line data for this section */
+
+    /* initialize state machine registers for each sequence */
+    state.dbgfmt_dwarf2 = dbgfmt_dwarf2;
+    state.address = 0;
+    state.file = 1;
+    state.line = 1;
+    state.column = 0;
+    state.isa = 0;
+    state.is_stmt = DWARF2_LINE_DEFAULT_IS_STMT;
+    state.precbc = NULL;
+
+    dwarf2_dbgfmt_finalize_locs(sect, dsd);
 
     STAILQ_FOREACH(loc, &dsd->locs, link) {
-	long line_delta;
-	int opcode1, opcode2;
-
-	if (file != loc->file) {
-	    file = loc->file;
-	    dwarf2_dbgfmt_append_line_op(info->debug_line, DW_LNS_set_file,
-					 yasm_intnum_create_uint(file));
-	}
-	if (column != loc->column) {
-	    column = loc->column;
-	    dwarf2_dbgfmt_append_line_op(info->debug_line, DW_LNS_set_column,
-					 yasm_intnum_create_uint(column));
-	}
-#ifdef WITH_DWARF3
-	if (loc->isa_change) {
-	    isa = loc->isa;
-	    dwarf2_dbgfmt_append_line_op(info->debug_line, DW_LNS_set_isa,
-					 yasm_intnum_create_uint(isa));
-	}
-#endif
-	if (is_stmt == 0 && loc->is_stmt == IS_STMT_SET) {
-	    is_stmt = 1;
-	    dwarf2_dbgfmt_append_line_op(info->debug_line, DW_LNS_negate_stmt,
-					 NULL);
-	} else if (is_stmt == 1 && loc->is_stmt == IS_STMT_CLEAR) {
-	    is_stmt = 0;
-	    dwarf2_dbgfmt_append_line_op(info->debug_line, DW_LNS_negate_stmt,
-					 NULL);
-	}
-	if (loc->basic_block) {
-	    dwarf2_dbgfmt_append_line_op(info->debug_line,
-					 DW_LNS_set_basic_block, NULL);
-	}
-#ifdef WITH_DWARF3
-	if (loc->prologue_end) {
-	    dwarf2_dbgfmt_append_line_op(info->debug_line,
-					 DW_LNS_set_prologue_end, NULL);
-	}
-	if (loc->epilogue_begin) {
-	    dwarf2_dbgfmt_append_line_op(info->debug_line,
-					 DW_LNS_set_epilogue_begin, NULL);
-	}
-#endif
-
-	/* If multiple loc for the same location, use last */
-	bc = loc->bc;
-	if (STAILQ_NEXT(loc, link)
-	    && STAILQ_NEXT(loc, link)->bc->offset == bc->offset)
-	    continue;
-
-	if (!precbc) {
-	    /* Set the starting address for the section */
-	    if (!loc->sym) {
-		/* shouldn't happen! */
-		yasm__error(loc->line, N_("could not find label prior to loc"));
-		return 1;
-	    }
-	    dwarf2_dbgfmt_append_line_ext_op(info->debug_line,
-		DW_LNE_set_address, dbgfmt_dwarf2->sizeof_address,
-		yasm_expr_create_ident(yasm_expr_sym(loc->sym), loc->line));
-	    addr_delta = 0;
-	} else if (bc) {
-	    if (precbc->offset > bc->offset)
-		yasm_internal_error(N_("dwarf2 address went backwards?"));
-	    addr_delta = bc->offset - precbc->offset;
-	} else
-	    break;	/* ran out of bytecodes!  XXX: do something? */
-
-	/* Generate appropriate opcode(s).  Address can only increment,
-	 * whereas line number can go backwards.
-	 */
-	line_delta = loc->line - line;
-	line = loc->line;
-
-	/* First handle the line delta */
-	if (line_delta < DWARF2_LINE_BASE
-	    || line_delta >= DWARF2_LINE_BASE+DWARF2_LINE_RANGE) {
-	    /* Won't fit in special opcode, use (signed) line advance */
-	    dwarf2_dbgfmt_append_line_op(info->debug_line, DW_LNS_advance_line,
-					 yasm_intnum_create_int(line_delta));
-	    line_delta = 0;
-	}
-
-	/* Next handle the address delta */
-	opcode1 = DWARF2_LINE_OPCODE_BASE + line_delta - DWARF2_LINE_BASE +
-	    DWARF2_LINE_RANGE * (addr_delta / dbgfmt_dwarf2->min_insn_len);
-	opcode2 = DWARF2_LINE_OPCODE_BASE + line_delta - DWARF2_LINE_BASE +
-	    DWARF2_LINE_RANGE * ((addr_delta - DWARF2_MAX_SPECIAL_ADDR_DELTA) /
-				 dbgfmt_dwarf2->min_insn_len);
-	if (line_delta == 0 && addr_delta == 0) {
-	    /* Both line and addr deltas are 0: do DW_LNS_copy */
-	    dwarf2_dbgfmt_append_line_op(info->debug_line, DW_LNS_copy, NULL);
-	} else if (addr_delta <= DWARF2_MAX_SPECIAL_ADDR_DELTA
-		   && opcode1 <= 255) {
-	    /* Addr delta in range of special opcode */
-	    dwarf2_dbgfmt_append_line_op(info->debug_line, opcode1, NULL);
-	} else if (addr_delta <= 2*DWARF2_MAX_SPECIAL_ADDR_DELTA
-		   && opcode2 <= 255) {
-	    /* Addr delta in range of const_add_pc + special */
-	    unsigned int opcode;
-	    dwarf2_dbgfmt_append_line_op(info->debug_line, DW_LNS_const_add_pc,
-					 NULL);
-	    dwarf2_dbgfmt_append_line_op(info->debug_line, opcode2, NULL);
-	} else {
-	    /* Need advance_pc */
-	    dwarf2_dbgfmt_append_line_op(info->debug_line, DW_LNS_advance_pc,
-					 yasm_intnum_create_uint(addr_delta));
-	    /* Take care of any remaining line_delta and add entry to matrix */
-	    if (line_delta == 0)
-		dwarf2_dbgfmt_append_line_op(info->debug_line, DW_LNS_copy,
-					     NULL);
-	    else {
-		unsigned int opcode;
-		opcode = DWARF2_LINE_OPCODE_BASE + line_delta -
-		    DWARF2_LINE_BASE;
-		dwarf2_dbgfmt_append_line_op(info->debug_line, opcode, NULL);
-	    }
-	}
-
-	precbc = bc;
+	if (dwarf2_dbgfmt_gen_line_op(info->debug_line, &state, loc,
+				      STAILQ_NEXT(loc, link)))
+	    return 1;
     }
 
     /* End sequence: bring address to end of section, then output end
@@ -530,7 +560,7 @@ dwarf2_dbgfmt_generate_section(yasm_section *sect, /*@null@*/ void *d)
      * want an extra entry in the line matrix.
      */
     bc = yasm_section_bcs_last(sect);
-    addr_delta = bc->offset + bc->len - precbc->offset;
+    addr_delta = bc->offset + bc->len - state.precbc->offset;
     if (addr_delta == DWARF2_MAX_SPECIAL_ADDR_DELTA)
 	dwarf2_dbgfmt_append_line_op(info->debug_line, DW_LNS_const_add_pc,
 				     NULL);
