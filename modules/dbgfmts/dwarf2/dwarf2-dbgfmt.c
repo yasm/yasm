@@ -502,7 +502,6 @@ dwarf2_dbgfmt_gen_line_op(yasm_section *debug_line, dwarf2_line_state *state,
     } else if (addr_delta <= 2*DWARF2_MAX_SPECIAL_ADDR_DELTA
 	       && opcode2 <= 255) {
 	/* Addr delta in range of const_add_pc + special */
-	unsigned int opcode;
 	dwarf2_dbgfmt_append_line_op(debug_line, DW_LNS_const_add_pc, NULL);
 	dwarf2_dbgfmt_append_line_op(debug_line, opcode2, NULL);
     } else {

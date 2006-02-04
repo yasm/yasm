@@ -743,7 +743,6 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     unsigned long type = SHT_PROGBITS;
     unsigned long flags = SHF_ALLOC;
     unsigned long align = 4;
-    yasm_intnum *align_intn = NULL;
     int flags_override = 0;
     char *sectname;
     int resonly = 0;

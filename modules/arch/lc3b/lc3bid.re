@@ -359,7 +359,7 @@ int
 yasm_lc3b__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 			    const char *id, unsigned long line)
 {
-    const char *oid = id;
+    /*const char *oid = id;*/
     /*const char *marker;*/
     /*!re2c
 	/* instructions */
