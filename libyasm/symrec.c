@@ -166,8 +166,6 @@ symtab_get_or_new(yasm_symtab *symtab, const char *name, int in_table)
 }
 /*@=freshtrans =mustfree@*/
 
-/* Call a function with each symrec.  Stops early if 0 returned by func.
-   Returns 0 if stopped early. */
 int
 yasm_symtab_traverse(yasm_symtab *symtab, void *d,
 		     int (*func) (yasm_symrec *sym, void *d))
@@ -313,7 +311,7 @@ symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
 	}
     }
 
-    return 1;
+    return 0;
 }
 
 void
@@ -358,7 +356,7 @@ symrec_print_wrapper(yasm_symrec *sym, /*@null@*/ void *d)
     assert(data != NULL);
     fprintf(data->f, "%*sSymbol `%s'\n", data->indent_level, "", sym->name);
     yasm_symrec_print(sym, data->f, data->indent_level+1);
-    return 1;
+    return 0;
 }
 
 void

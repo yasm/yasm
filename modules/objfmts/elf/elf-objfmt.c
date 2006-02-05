@@ -123,7 +123,7 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
     assert(info != NULL);
 
     if (!yasm_symrec_get_label(sym, &precbc))
-	return 1;
+	return 0;
     sect = yasm_bc_get_section(precbc);
 
     entry = yasm_symrec_get_data(sym, &elf_symrec_data);
@@ -147,14 +147,14 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	yasm_symrec_add_data(sym, &elf_symrec_data, entry);
 
 	if (is_sect)
-	    return 1;
+	    return 0;
     }
 
     if (precbc)
 	value = precbc->offset + precbc->len;
     elf_symtab_set_nonzero(entry, sect, 0, 0, 0, NULL, &value);
 
-    return 1;
+    return 0;
 }
 
 static yasm_objfmt *

@@ -150,10 +150,12 @@ HAMT_traverse(HAMT *hamt, void *d,
 			    /*@null@*/ void *d))
 {
     HAMTEntry *entry;
-    STAILQ_FOREACH(entry, &hamt->entries, next)
-	if (func(entry->data, d) == 0)
-	    return 0;
-    return 1;
+    STAILQ_FOREACH(entry, &hamt->entries, next) {
+	int retval = func(entry->data, d);
+	if (retval != 0)
+	    return retval;
+    }
+    return 0;
 }
 
 /*@-temptrans -kepttrans -mustfree@*/

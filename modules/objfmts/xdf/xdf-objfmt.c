@@ -476,7 +476,7 @@ xdf_objfmt_count_sym(yasm_symrec *sym, /*@null@*/ void *d)
 
 	info->indx++;
     }
-    return 1;
+    return 0;
 }
 
 static int
@@ -565,7 +565,7 @@ xdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	YASM_WRITE_32_L(localbuf, flags);	/* flags */
 	fwrite(info->buf, 16, 1, info->f);
     }
-    return 1;
+    return 0;
 }
 
 static int
@@ -581,7 +581,7 @@ xdf_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
 	size_t len = strlen(name);
 	fwrite(name, len+1, 1, info->f);
     }
-    return 1;
+    return 0;
 }
 
 static void

@@ -81,11 +81,11 @@ void HAMT_destroy(/*@only@*/ HAMT *hamt,
 /*@dependent@*/ /*@null@*/ void *HAMT_search(HAMT *hamt, const char *str);
 
 /** Traverse over all keys in HAMT, calling function on each data item. 
- * Stops early if func returns 0.
  * \param hamt		Hash array mapped trie
  * \param d		Data to pass to each call to func.
  * \param func		Function to call
- * \return 0 if stopped early, 1 if all data items were traversed.
+ * \return Stops early (and returns func's return value) if func returns a
+ *	   nonzero value; otherwise 0.
  */
 int HAMT_traverse(HAMT *hamt, /*@null@*/ void *d,
 		  int (*func) (/*@dependent@*/ /*@null@*/ void *node,

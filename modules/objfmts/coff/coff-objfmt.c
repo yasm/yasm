@@ -765,7 +765,7 @@ coff_objfmt_count_sym(yasm_symrec *sym, /*@null@*/ void *d)
 
 	info->indx += sym_data->numaux + 1;
     }
-    return 1;
+    return 0;
 }
 
 static int
@@ -906,7 +906,7 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	    fwrite(info->buf, 18, 1, info->f);
 	}
     }
-    return 1;
+    return 0;
 }
 
 static int
@@ -942,7 +942,7 @@ coff_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
 	    }
 	}
     }
-    return 1;
+    return 0;
 }
 
 static void
