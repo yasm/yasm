@@ -232,7 +232,7 @@ int yasm_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 
 #define yasm_objfmt_create(module, object, a)	module->create(object, a)
 
-#define yasm_objfmt_output(objfmt, f, obj_fn, all_syms, df) \
+#define yasm_objfmt_output(objfmt, f, all_syms, df) \
     ((yasm_objfmt_base *)objfmt)->module->output(objfmt, f, all_syms, df)
 #define yasm_objfmt_destroy(objfmt) \
     ((yasm_objfmt_base *)objfmt)->module->destroy(objfmt)

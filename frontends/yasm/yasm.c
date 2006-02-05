@@ -666,7 +666,7 @@ main(int argc, char *argv[])
     }
 
     /* Write the object file */
-    yasm_objfmt_output(cur_objfmt, obj?obj:stderr, obj_filename,
+    yasm_objfmt_output(cur_objfmt, obj?obj:stderr,
 		       strcmp(cur_dbgfmt_module->keyword, "null"), cur_dbgfmt);
 
     /* Close object file */
