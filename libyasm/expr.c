@@ -1200,7 +1200,7 @@ yasm_expr_get_reg(yasm_expr **ep, int simplify)
 void
 yasm_expr_print(const yasm_expr *e, FILE *f)
 {
-    char opstr[6];
+    char opstr[8];
     int i;
 
     if (!e) {
