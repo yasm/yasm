@@ -1392,10 +1392,10 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 	*multiple = 1;
 
     datasize = bc->len / (*multiple);
-    *bufsize = datasize;
 
     /* special case for reserve bytecodes */
     if (bc->callback == &bc_reserve_callback) {
+    	*bufsize = datasize;
 	*gap = 1;
 	return NULL;	/* we didn't allocate a buffer */
     }
@@ -1410,6 +1410,7 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 	origbuf = buf;
 	destbuf = buf;
     }
+    *bufsize = datasize;
 
     if (!bc->callback)
 	yasm_internal_error(N_("got empty bytecode in bc_tobytes"));
