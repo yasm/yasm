@@ -2093,7 +2093,7 @@ ErrCode BitVector_from_Enum(wordptr addr, charptr string)
     N_word  bits = bits_(addr);
     N_word  state = 1;
     N_word  token;
-    N_word  indx;
+    N_word  indx = 0;          /* silence compiler warning */
     N_word  start = 0;         /* silence compiler warning */
 
     if (bits > 0)
