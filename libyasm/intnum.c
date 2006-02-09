@@ -656,26 +656,11 @@ yasm_intnum_check_size(const yasm_intnum *intn, size_t size, size_t rshift,
     return (Set_Max(val) < (long)size);
 }
 
-unsigned long
-yasm_intnum_get_leb128(const yasm_intnum *intn, unsigned char *ptr, int sign)
+static unsigned long
+get_leb128(wordptr val, unsigned char *ptr, int sign)
 {
-    wordptr val = op1static;
     unsigned long i, size;
     unsigned char *ptr_orig = ptr;
-
-    /* Shortcut 0 */
-    if (intn->type == INTNUM_UL && intn->val.ul == 0) {
-	*ptr = 0;
-	return 1;
-    }
-
-    /* If not already a bitvect, convert value to be written to a bitvect */
-    if (intn->type == INTNUM_BV)
-	val = intn->val.bv;
-    else {
-	BitVector_Empty(val);
-	BitVector_Chunk_Store(val, 32, 0, intn->val.ul);
-    }
 
     if (sign) {
 	/* Signed mode */
@@ -702,6 +687,47 @@ yasm_intnum_get_leb128(const yasm_intnum *intn, unsigned char *ptr, int sign)
     return (unsigned long)(ptr-ptr_orig);
 }
 
+static unsigned long
+size_leb128(wordptr val, int sign)
+{
+    if (sign) {
+	/* Signed mode */
+	if (BitVector_msb_(val)) {
+	    /* Negative */
+	    BitVector_Negate(conv_bv, val);
+	    return (Set_Max(conv_bv)+8)/7;
+	} else {
+	    /* Positive */
+	    return (Set_Max(val)+8)/7;
+	}
+    } else {
+	/* Unsigned mode */
+	return (Set_Max(val)+7)/7;
+    }
+}
+
+unsigned long
+yasm_intnum_get_leb128(const yasm_intnum *intn, unsigned char *ptr, int sign)
+{
+    wordptr val = op1static;
+
+    /* Shortcut 0 */
+    if (intn->type == INTNUM_UL && intn->val.ul == 0) {
+	*ptr = 0;
+	return 1;
+    }
+
+    /* If not already a bitvect, convert value to be written to a bitvect */
+    if (intn->type == INTNUM_BV)
+	val = intn->val.bv;
+    else {
+	BitVector_Empty(val);
+	BitVector_Chunk_Store(val, 32, 0, intn->val.ul);
+    }
+
+    return get_leb128(val, ptr, sign);
+}
+
 unsigned long
 yasm_intnum_size_leb128(const yasm_intnum *intn, int sign)
 {
@@ -720,20 +746,75 @@ yasm_intnum_size_leb128(const yasm_intnum *intn, int sign)
 	BitVector_Chunk_Store(val, 32, 0, intn->val.ul);
     }
 
-    if (sign) {
-	/* Signed mode */
-	if (BitVector_msb_(val)) {
-	    /* Negative */
-	    BitVector_Negate(conv_bv, val);
-	    return (Set_Max(conv_bv)+8)/7;
-	} else {
-	    /* Positive */
-	    return (Set_Max(val)+8)/7;
-	}
-    } else {
-	/* Unsigned mode */
-	return (Set_Max(val)+7)/7;
+    return size_leb128(val, sign);
+}
+
+unsigned long
+yasm_get_sleb128(long v, unsigned char *ptr)
+{
+    wordptr val = op1static;
+
+    /* Shortcut 0 */
+    if (v == 0) {
+	*ptr = 0;
+	return 1;
     }
+
+    BitVector_Empty(val);
+    if (v >= 0)
+	BitVector_Chunk_Store(val, 32, 0, (unsigned long)v);
+    else {
+	BitVector_Chunk_Store(val, 32, 0, (unsigned long)(-v));
+	BitVector_Negate(val, val);
+    }
+    return get_leb128(val, ptr, 1);
+}
+
+unsigned long
+yasm_size_sleb128(long v)
+{
+    wordptr val = op1static;
+
+    if (v == 0)
+	return 1;
+
+    BitVector_Empty(val);
+    if (v >= 0)
+	BitVector_Chunk_Store(val, 32, 0, (unsigned long)v);
+    else {
+	BitVector_Chunk_Store(val, 32, 0, (unsigned long)(-v));
+	BitVector_Negate(val, val);
+    }
+    return size_leb128(val, 1);
+}
+
+unsigned long
+yasm_get_uleb128(unsigned long v, unsigned char *ptr)
+{
+    wordptr val = op1static;
+
+    /* Shortcut 0 */
+    if (v == 0) {
+	*ptr = 0;
+	return 1;
+    }
+
+    BitVector_Empty(val);
+    BitVector_Chunk_Store(val, 32, 0, v);
+    return get_leb128(val, ptr, 0);
+}
+
+unsigned long
+yasm_size_uleb128(unsigned long v)
+{
+    wordptr val = op1static;
+
+    if (v == 0)
+	return 1;
+
+    BitVector_Empty(val);
+    BitVector_Chunk_Store(val, 32, 0, v);
+    return size_leb128(val, 0);
 }
 
 void

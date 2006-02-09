@@ -214,6 +214,32 @@ unsigned long yasm_intnum_get_leb128(const yasm_intnum *intn,
  */
 unsigned long yasm_intnum_size_leb128(const yasm_intnum *intn, int sign);
 
+/** Output integer to buffer in signed LEB128-encoded form.
+ * \param v	    integer
+ * \param ptr	    pointer to storage for output bytes
+ * \return Number of bytes generated.
+ */
+unsigned long yasm_get_sleb128(long v, unsigned char *ptr);
+
+/** Calculate number of bytes signed LEB128-encoded form of integer will take.
+ * \param v	    integer
+ * \return Number of bytes.
+ */
+unsigned long yasm_size_sleb128(long v);
+
+/** Output integer to buffer in unsigned LEB128-encoded form.
+ * \param v	    integer
+ * \param ptr	    pointer to storage for output bytes
+ * \return Number of bytes generated.
+ */
+unsigned long yasm_get_uleb128(unsigned long v, unsigned char *ptr);
+
+/** Calculate number of bytes unsigned LEB128-encoded form of integer will take.
+ * \param v	    integer
+ * \return Number of bytes.
+ */
+unsigned long yasm_size_uleb128(unsigned long v);
+
 /** Print an intnum.  For debugging purposes.
  * \param f	file
  * \param intn	intnum
