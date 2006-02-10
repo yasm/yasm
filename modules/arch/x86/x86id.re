@@ -1374,14 +1374,14 @@ static const x86_insn_info arpl_insn[] = {
       {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare, 0} }
 };
 static const x86_insn_info str_insn[] = {
-    { CPU_Hammer, MOD_GasSufW, 16, 0, 0, 2, {0x0F, 0x00, 0}, 1, 1,
+    { CPU_286|CPU_Prot, MOD_GasSufW, 16, 0, 0, 2, {0x0F, 0x00, 0}, 1, 1,
       {OPT_Reg|OPS_16|OPA_EA, 0, 0} },
-    { CPU_Hammer, MOD_GasSufL, 32, 0, 0, 2, {0x0F, 0x00, 0}, 1, 1,
+    { CPU_386|CPU_Prot, MOD_GasSufL, 32, 0, 0, 2, {0x0F, 0x00, 0}, 1, 1,
       {OPT_Reg|OPS_32|OPA_EA, 0, 0} },
-    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 2, {0x0F, 0x00, 0}, 1, 1,
-      {OPT_Reg|OPS_64|OPA_EA, 0, 0} },
-    { CPU_286, MOD_Op1Add|MOD_SpAdd|MOD_GasSufW, 0, 0, 0, 2, {0x0F, 0x00, 0},
-      0, 1, {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0, 0} }
+    { CPU_Hammer|CPU_64|CPU_Prot, MOD_GasSufQ, 64, 0, 0, 2, {0x0F, 0x00, 0}, 1,
+      1, {OPT_Reg|OPS_64|OPA_EA, 0, 0} },
+    { CPU_286|CPU_Prot, MOD_GasSufW|MOD_GasSufL, 0, 0, 0, 2, {0x0F, 0x00, 0},
+      1, 1, {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0, 0} }
 };
 static const x86_insn_info prot286_insn[] = {
     { CPU_286, MOD_Op1Add|MOD_SpAdd|MOD_GasSufW, 0, 0, 0, 2, {0x0F, 0x00, 0},
