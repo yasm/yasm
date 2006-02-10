@@ -95,7 +95,7 @@ AM_WITH_DMALLOC
 #
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([limits.h sys/param.h libgen.h])
+AC_CHECK_HEADERS([limits.h sys/param.h libgen.h unistd.h])
 
 # REQUIRE standard C headers
 if test "$ac_cv_header_stdc" != yes; then
@@ -116,7 +116,7 @@ AX_CREATE_STDINT_H
 #
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([abort memcpy memmove strrchr toascii vsnprintf])
-AC_CHECK_FUNCS([strsep mergesort])
+AC_CHECK_FUNCS([strsep mergesort getcwd])
 # Look for the case-insensitive comparison functions
 AC_CHECK_FUNCS([strcasecmp strncasecmp stricmp strcmpi])
 
