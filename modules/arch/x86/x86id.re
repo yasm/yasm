@@ -110,6 +110,8 @@ RCSID("$Id$");
  *             0 = any size acceptable/no size spec acceptable (dep. on strict)
  *             1/2/3/4 = 8/16/32/64 bits (from user or reg size)
  *             5/6 = 80/128 bits (from user)
+ *             7 = current BITS setting; when this is used the size matched
+ *                 gets stored into the opersize as well.
  *  - 1 bit = size implicit or explicit ("strictness" of size matching on
  *            non-registers -- registers are always strictly matched):
  *            0 = user size must exactly match size above.
@@ -186,6 +188,7 @@ RCSID("$Id$");
 #define OPS_64		(4UL<<5)
 #define OPS_80		(5UL<<5)
 #define OPS_128		(6UL<<5)
+#define OPS_BITS	(7UL<<5)
 #define OPS_MASK	(7UL<<5)
 #define OPS_SHIFT	5
 
@@ -633,9 +636,12 @@ static const x86_insn_info push_insn[] = {
     { CPU_386|CPU_Not64, MOD_GasOnly|MOD_GasSufL, 32, 0, 0, 1,
       {0x68, 0x6A, 0}, 0, 1,
       {OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0, 0} },
-    { CPU_Hammer|CPU_64, MOD_GasOnly|MOD_GasSufQ, 64, 64, 0, 1,
+    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 64, 0, 1,
       {0x68, 0x6A, 0}, 0, 1,
       {OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail, 0, 0} },
+    { CPU_Any|CPU_Not64, MOD_GasIllegal, 0, 0, 0, 1,
+      {0x68, 0x6A, 0}, 0, 1,
+      {OPT_Imm|OPS_BITS|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0, 0} },
     { CPU_Not64, 0, 0, 0, 0, 1, {0x0E, 0, 0}, 0, 1,
       {OPT_CS|OPS_Any|OPA_None, 0, 0} },
     { CPU_Not64, MOD_GasSufW, 16, 0, 0, 1, {0x0E, 0, 0}, 0, 1,
@@ -2212,7 +2218,9 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     unsigned char im_sign;
     unsigned char spare;
     int i;
-    static const unsigned int size_lookup[] = {0, 1, 2, 4, 8, 10, 16, 0};
+    unsigned int size_lookup[] = {0, 1, 2, 4, 8, 10, 16, 0};
+
+    size_lookup[7] = mode_bits>>3;
 
     if (!info) {
 	num_info = 1;
@@ -2809,6 +2817,9 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		default:
 		    yasm_internal_error(N_("unknown operand action"));
 	    }
+
+	    if ((info->operands[i] & OPS_MASK) == OPS_BITS)
+		insn->common.opersize = (unsigned char)mode_bits;
 
 	    switch ((int)(info->operands[i] & OPAP_MASK)) {
 		case OPAP_None:
