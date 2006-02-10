@@ -559,7 +559,11 @@ yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
 	yasm_internal_error(N_("destination too large"));
 
     /* General size warnings */
-    if (warn && !yasm_intnum_check_size(intn, valsize, rshift, 2))
+    if (warn<0 && !yasm_intnum_check_size(intn, valsize, rshift, 1))
+	yasm__warning(YASM_WARN_GENERAL, line,
+		      N_("value does not fit in signed %d bit field"),
+		      valsize);
+    if (warn>0 && !yasm_intnum_check_size(intn, valsize, rshift, 2))
 	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("value does not fit in %d bit field"), valsize);
 

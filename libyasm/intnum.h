@@ -185,7 +185,6 @@ void yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
 			   int bigendian, int warn, unsigned long line);
 
 /** Check to see if intnum will fit without overflow into size bits.
- * If is_signed is 1, intnum is treated as a signed number.
  * \param intn	    intnum
  * \param size	    number of bits of output space
  * \param rshift    right shift
