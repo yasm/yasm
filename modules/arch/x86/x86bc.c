@@ -1022,7 +1022,8 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     /* Immediate (if required) */
     if (imm && imm->val) {
 	if (output_expr(&imm->val, *bufp, imm->len, (size_t)(imm->len*8), 0,
-			(unsigned long)(*bufp-bufp_orig), bc, 0, 1, d))
+			(unsigned long)(*bufp-bufp_orig), bc, 0,
+			imm->sign?-1:1, d))
 	    return 1;
 	*bufp += imm->len;
     }
@@ -1069,7 +1070,7 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 						    YASM_EXPR_WRT, wrt,
 						    bc->line);
 	    if (output_expr(&jmp->target, *bufp, 1, 8, 0,
-			    (unsigned long)(*bufp-bufp_orig), bc, 1, 1, d))
+			    (unsigned long)(*bufp-bufp_orig), bc, 1, -1, d))
 		return 1;
 	    *bufp += 1;
 	    break;
@@ -1095,7 +1096,7 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 						    bc->line);
 	    i = (opersize == 16) ? 2 : 4;
 	    if (output_expr(&jmp->target, *bufp, i, i*8, 0,
-			    (unsigned long)(*bufp-bufp_orig), bc, 1, 1, d))
+			    (unsigned long)(*bufp-bufp_orig), bc, 1, -1, d))
 		return 1;
 	    *bufp += i;
 	    break;
