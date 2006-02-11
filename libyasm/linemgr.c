@@ -241,6 +241,13 @@ yasm_linemap_lookup(yasm_linemap *linemap, unsigned long line,
 }
 
 int
+yasm_linemap_traverse_filenames(yasm_linemap *linemap, /*@null@*/ void *d,
+				int (*func) (const char *filename, void *d))
+{
+    return HAMT_traverse(linemap->filenames, d, (int (*) (void *, void *))func);
+}
+
+int
 yasm_linemap_get_source(yasm_linemap *linemap, unsigned long line,
 			yasm_bytecode **bcp, const char **sourcep)
 {
