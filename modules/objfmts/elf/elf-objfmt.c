@@ -469,16 +469,23 @@ elf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     return 0;
 }
 
-static elf_secthead *
-elf_objfmt_create_dbg_secthead(yasm_section *sect,
-			       elf_objfmt_output_info *info)
+static int
+elf_objfmt_create_dbg_secthead(yasm_section *sect, void *d)
 {
+    /*@null@*/ elf_objfmt_output_info *info = (elf_objfmt_output_info *)d;
     elf_secthead *shead;
     elf_section_type type=SHT_PROGBITS;
     elf_size entsize=0;
-    const char *sectname = yasm_section_get_name(sect);
-    elf_strtab_entry *name = elf_strtab_append_str(info->objfmt_elf->shstrtab,
-						   sectname);
+    const char *sectname;
+    /*@dependent@*/ yasm_symrec *sym;
+    elf_strtab_entry *name;
+
+    shead = yasm_section_get_data(sect, &elf_section_data);
+    if (yasm_section_is_absolute(sect) || shead)
+	return 0;   /* only create new secthead if missing and non-absolute */
+
+    sectname = yasm_section_get_name(sect);
+    name = elf_strtab_append_str(info->objfmt_elf->shstrtab, sectname);
 
     if (yasm__strcasecmp(sectname, ".stab")==0) {
 	entsize = 12;
@@ -492,9 +499,14 @@ elf_objfmt_create_dbg_secthead(yasm_section *sect,
     shead = elf_secthead_create(name, type, 0, 0, 0);
     elf_secthead_set_entsize(shead, entsize);
 
+    sym = yasm_symtab_define_label(
+	yasm_object_get_symtab(info->objfmt_elf->object), sectname,
+	yasm_section_bcs_first(sect), 1, 0);
+    elf_secthead_set_sym(shead, sym);
+
     yasm_section_add_data(sect, &elf_section_data, shead);
 
-    return shead;
+    return 0;
 }
 
 static int
@@ -514,7 +526,7 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 	yasm_internal_error("null info struct");
     shead = yasm_section_get_data(sect, &elf_section_data);
     if (shead == NULL)
-	shead = elf_objfmt_create_dbg_secthead(sect, info);
+	yasm_internal_error("no associated data");
 
     if (elf_secthead_get_align(shead) == 0)
 	elf_secthead_set_align(shead, yasm_section_get_align(sect));
@@ -616,10 +628,15 @@ elf_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df)
 	return;
     }
 
+    /* Create missing section headers */
+    localsym_info.objfmt_elf = objfmt_elf;
+    if (yasm_object_sections_traverse(objfmt_elf->object, &info,
+				      elf_objfmt_create_dbg_secthead))
+	return;
+
     /* add all (local) syms to symtab because relocation needs a symtab index
      * if all_syms, register them by name.  if not, use strtab entry 0 */
     localsym_info.local_names = all_syms;
-    localsym_info.objfmt_elf = objfmt_elf;
     yasm_symtab_traverse(yasm_object_get_symtab(objfmt_elf->object),
 			 &localsym_info, elf_objfmt_append_local_sym);
     elf_symtab_nlocal = elf_symtab_assign_indices(objfmt_elf->elf_symtab);
