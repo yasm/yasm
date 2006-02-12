@@ -299,7 +299,19 @@
 					RelativePath="..\..\..\modules\dbgfmts\stabs\stabs-dbgfmt.c">
 				</File>
 				<File
+					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-dbgfmt.h">
+				</File>
+				<File
 					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-dbgfmt.c">
+				</File>
+				<File
+					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-line.c">
+				</File>
+				<File
+					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-info.c">
+				</File>
+				<File
+					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-aranges.c">
 				</File>
 			</Filter>
 			<Filter
