@@ -10,7 +10,7 @@ AC_INIT([yasm], [HEAD], [bug-yasm@tortall.net])
 AC_CONFIG_AUX_DIR(config)
 AM_CONFIG_HEADER([config.h])
 
-AM_INIT_AUTOMAKE(yasm, [HEAD])
+AM_INIT_AUTOMAKE(yasm, [0.5.0rc1])
 AM_MAINTAINER_MODE
 
 #
