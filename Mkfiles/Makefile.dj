@@ -59,7 +59,10 @@ MODULES_ARCH_OBJS= \
 MODULES_DBGFMTS_OBJS= \
  modules/dbgfmts/null/null-dbgfmt.o \
  modules/dbgfmts/stabs/stabs-dbgfmt.o \
- modules/dbgfmts/dwarf2/dwarf2-dbgfmt.o
+ modules/dbgfmts/dwarf2/dwarf2-dbgfmt.o \
+ modules/dbgfmts/dwarf2/dwarf2-line.o \
+ modules/dbgfmts/dwarf2/dwarf2-info.o \
+ modules/dbgfmts/dwarf2/dwarf2-aranges.o
 YASM_MODULES+=dbgfmt_null
 YASM_MODULES+=dbgfmt_stabs
 YASM_MODULES+=dbgfmt_dwarf2
