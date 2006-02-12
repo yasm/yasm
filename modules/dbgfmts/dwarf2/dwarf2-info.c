@@ -374,6 +374,9 @@ yasm_dwarf2__generate_info(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
     abbrev = yasm_xmalloc(sizeof(dwarf2_abbrev));
     abc = yasm_bc_create_common(&dwarf2_abbrev_bc_callback, abbrev, 0);
     abbrev->id = 0;
+    abbrev->tag = 0;
+    abbrev->has_children = 0;
+    STAILQ_INIT(&abbrev->attrs);
     abc->len = 1;
     yasm_dwarf2__append_bc(debug_abbrev, abc);
 
