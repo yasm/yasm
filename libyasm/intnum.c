@@ -259,6 +259,44 @@ yasm_intnum_create_int(long i)
 }
 
 yasm_intnum *
+yasm_intnum_create_leb128(const unsigned char *ptr, int sign,
+			  unsigned long *size, unsigned long line)
+{
+    yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
+    const unsigned char *ptr_orig = ptr;
+    unsigned long i = 0;
+
+    intn->origsize = 0;
+
+    BitVector_Empty(conv_bv);
+    for (;;) {
+	BitVector_Chunk_Store(conv_bv, 7, i, *ptr);
+	i += 7;
+	if ((*ptr & 0x80) != 0x80)
+	    break;
+	ptr++;
+    }
+
+    *size = (ptr-ptr_orig)+1;
+
+    if(i > BITVECT_NATIVE_SIZE)
+	yasm__warning(YASM_WARN_GENERAL, line,
+		      N_("Numeric constant too large for internal format"));
+    else if (sign && (*ptr & 0x40) == 0x40)
+	BitVector_Interval_Fill(conv_bv, i, BITVECT_NATIVE_SIZE-1);
+
+    if (Set_Max(conv_bv) < 32) {
+	intn->type = INTNUM_UL;
+	intn->val.ul = BitVector_Chunk_Read(conv_bv, 32, 0);
+    } else {
+	intn->type = INTNUM_BV;
+	intn->val.bv = BitVector_Clone(conv_bv);
+    }
+
+    return intn;
+}
+
+yasm_intnum *
 yasm_intnum_copy(const yasm_intnum *intn)
 {
     yasm_intnum *n = yasm_xmalloc(sizeof(yasm_intnum));

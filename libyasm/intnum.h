@@ -90,6 +90,18 @@ void yasm_intnum_cleanup(void);
  */
 /*@only@*/ yasm_intnum *yasm_intnum_create_int(long i);
 
+/** Create a new intnum from LEB128-encoded form.
+ * \param ptr	pointer to start of LEB128 encoded form
+ * \param sign	signed (1) or unsiged (0) LEB128 format
+ * \param size	number of bytes read from ptr (output)
+ * \param line	virtual line (where the number came from)
+ * \return Newly allocated intnum.  Number of bytes read returned into
+ *         bytes_read parameter.
+ */
+/*@only@*/ yasm_intnum *yasm_intnum_create_leb128
+    (const unsigned char *ptr, int sign, /*@out@*/ unsigned long *size,
+     unsigned long line);
+
 /** Duplicate an intnum.
  * \param intn	intnum
  * \return Newly allocated intnum with the same value as intn.
