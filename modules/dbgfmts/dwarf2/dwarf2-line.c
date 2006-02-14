@@ -708,7 +708,7 @@ dwarf2_spp_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     dwarf2_spp *spp = (dwarf2_spp *)bc->contents;
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = spp->dbgfmt_dwarf2;
     unsigned char *buf = *bufp;
-    yasm_intnum *intn, *cval;
+    yasm_intnum *cval;
     size_t i, len;
 
     /* Prologue length (following this field) */

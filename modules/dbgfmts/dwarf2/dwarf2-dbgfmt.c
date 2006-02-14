@@ -155,7 +155,6 @@ static void
 dwarf2_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
 {
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = (yasm_dbgfmt_dwarf2 *)dbgfmt;
-    int new;
     size_t num_line_sections;
     /*@null@*/ yasm_section *debug_info, *debug_line, *main_code;
 
@@ -268,7 +267,6 @@ dwarf2_head_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = head->dbgfmt_dwarf2;
     unsigned char *buf = *bufp;
     yasm_intnum *intn, *cval;
-    size_t i, len;
 
     if (dbgfmt_dwarf2->format == DWARF2_FORMAT_64BIT) {
 	YASM_WRITE_8(buf, 0xff);

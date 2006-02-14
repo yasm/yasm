@@ -135,8 +135,7 @@ run_input_test(Test_Entry *test)
     char *valstr = yasm__xstrdup(test->input);
     yasm_intnum *intn = yasm_intnum_create_hex(valstr, 0);
     yasm_intnum *testn;
-    unsigned long size, i;
-    unsigned char out[100];
+    unsigned long size;
 
     yasm_xfree(valstr);
 
