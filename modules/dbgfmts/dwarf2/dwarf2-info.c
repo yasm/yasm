@@ -279,6 +279,9 @@ yasm_dwarf2__generate_info(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	yasm_object_get_general(dbgfmt_dwarf2->object, ".debug_info", 0, 4, 0,
 				0, &new, 0);
 
+    yasm_section_set_align(debug_abbrev, 0, 0);
+    yasm_section_set_align(debug_info, 0, 0);
+
     /* Create abbreviation table entry for compilation unit */
     abbrev = yasm_xmalloc(sizeof(dwarf2_abbrev));
     abc = yasm_bc_create_common(&dwarf2_abbrev_bc_callback, abbrev, 0);
