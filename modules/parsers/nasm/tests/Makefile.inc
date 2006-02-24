@@ -3,6 +3,12 @@
 TESTS += modules/parsers/nasm/tests/nasm_test.sh
 
 EXTRA_DIST += modules/parsers/nasm/tests/nasm_test.sh
+EXTRA_DIST += modules/parsers/nasm/tests/alignnop16.asm
+EXTRA_DIST += modules/parsers/nasm/tests/alignnop16.errwarn
+EXTRA_DIST += modules/parsers/nasm/tests/alignnop16.hex
+EXTRA_DIST += modules/parsers/nasm/tests/alignnop32.asm
+EXTRA_DIST += modules/parsers/nasm/tests/alignnop32.errwarn
+EXTRA_DIST += modules/parsers/nasm/tests/alignnop32.hex
 EXTRA_DIST += modules/parsers/nasm/tests/endcomma.asm
 EXTRA_DIST += modules/parsers/nasm/tests/endcomma.errwarn
 EXTRA_DIST += modules/parsers/nasm/tests/endcomma.hex
