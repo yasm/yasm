@@ -6,7 +6,6 @@ libyasm_a_SOURCES += libyasm/symrec.c
 libyasm_a_SOURCES += libyasm/file.c
 libyasm_a_SOURCES += libyasm/section.c
 libyasm_a_SOURCES += libyasm/arch.c
-libyasm_a_SOURCES += libyasm/objfmt.c
 libyasm_a_SOURCES += libyasm/intnum.c
 libyasm_a_SOURCES += libyasm/floatnum.c
 libyasm_a_SOURCES += libyasm/hamt.c

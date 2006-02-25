@@ -553,7 +553,7 @@ main(int argc, char *argv[])
     cur_objfmt_module = ((yasm_objfmt_base *)cur_objfmt)->module;
 
     /* Add an initial "default" section to object */
-    def_sect = yasm_objfmt_add_default_section(cur_objfmt, object);
+    def_sect = yasm_objfmt_add_default_section(cur_objfmt);
 
     /* Initialize the debug format */
     cur_dbgfmt = yasm_dbgfmt_create(cur_dbgfmt_module, object, cur_objfmt,

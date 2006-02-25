@@ -347,9 +347,6 @@
 				RelativePath="..\..\..\module.c">
 			</File>
 			<File
-				RelativePath="..\..\..\libyasm\objfmt.c">
-			</File>
-			<File
 				RelativePath="..\..\..\libyasm\section.c">
 				<FileConfiguration
 					Name="Release|Win32">

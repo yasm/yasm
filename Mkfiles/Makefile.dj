@@ -28,7 +28,6 @@ LIBYASM_OBJS= \
  libyasm/intnum.o \
  libyasm/linemgr.o \
  libyasm/mergesort.o \
- libyasm/objfmt.o \
  libyasm/section.o \
  libyasm/splitpath.o \
  libyasm/strcasecmp.o \

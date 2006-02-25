@@ -747,6 +747,14 @@ elf_secthead_get_type(elf_secthead *shead)
     return shead->type;
 }
 
+void
+elf_secthead_set_typeflags(elf_secthead *shead, elf_section_type type,
+			   elf_section_flags flags)
+{
+    shead->type = type;
+    shead->flags = flags;
+}
+
 int
 elf_secthead_is_empty(elf_secthead *shead)
 {

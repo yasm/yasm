@@ -57,9 +57,6 @@ typedef struct yasm_objfmt_module {
      */
     /*@null@*/ const char *extension;
 
-    /** Default (starting) section name. */
-    const char *default_section_name;
-
     /** Default (starting) x86 BITS setting.  This only appies to the x86
      * architecture; other architectures ignore this setting.
      */
@@ -96,6 +93,11 @@ typedef struct yasm_objfmt_module {
      * Call yasm_objfmt_destroy() instead of calling this function.
      */
     void (*destroy) (/*@only@*/ yasm_objfmt *objfmt);
+
+    /** Module-level implementation of yasm_objfmt_add_default_section().
+     * Call yasm_objfmt_add_default_section() instead of calling this function.
+     */
+    yasm_section * (*add_default_section) (yasm_objfmt *objfmt);
 
     /** Module-level implementation of yasm_objfmt_section_switch().
      * Call yasm_objfmt_section_switch() instead of calling this function.
@@ -160,6 +162,13 @@ void yasm_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
  * \param objfmt	object format
  */
 void yasm_objfmt_destroy(/*@only@*/ yasm_objfmt *objfmt);
+
+/** Add a default section to an object.
+ * \param objfmt    object format
+ * \param object    object
+ * \return Default section.
+ */
+yasm_section *yasm_objfmt_add_default_section(yasm_objfmt *objfmt);
 
 /** Switch object file sections.  The first val of the valparams should
  * be the section name.  Calls yasm_object_get_general() to actually get
@@ -251,14 +260,9 @@ int yasm_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 #define yasm_objfmt_directive(objfmt, name, vpms, oe_vpms, line) \
     ((yasm_objfmt_base *)objfmt)->module->directive(objfmt, name, vpms, \
 						    oe_vpms, line)
+#define yasm_objfmt_add_default_section(objfmt) \
+    ((yasm_objfmt_base *)objfmt)->module->add_default_section(objfmt)
 
 #endif
 
-/** Add a default section to an object.
- * \param objfmt    object format
- * \param object    object
- * \return Default section.
- */
-yasm_section *yasm_objfmt_add_default_section(yasm_objfmt *objfmt,
-					      yasm_object *object);
 #endif

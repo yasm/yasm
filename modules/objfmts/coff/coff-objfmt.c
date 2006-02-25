@@ -1054,24 +1054,22 @@ coff_objfmt_destroy(yasm_objfmt *objfmt)
     yasm_xfree(objfmt);
 }
 
-static void 
-coff_objfmt_init_new_section(yasm_objfmt_coff *objfmt_coff,
-			     yasm_section *sect, const char *sectname,
-			     unsigned long flags, unsigned long flags2,
-			     unsigned long line)
+static coff_section_data *
+coff_objfmt_init_new_section(yasm_objfmt_coff *objfmt_coff, yasm_section *sect,
+			     const char *sectname, unsigned long line)
 {
     coff_section_data *data;
     yasm_symrec *sym;
 
     data = yasm_xmalloc(sizeof(coff_section_data));
     data->scnum = objfmt_coff->parse_scnum++;
-    data->flags = flags;
+    data->flags = 0;
     data->addr = 0;
     data->scnptr = 0;
     data->size = 0;
     data->relptr = 0;
     data->nreloc = 0;
-    data->flags2 = flags2;
+    data->flags2 = 0;
     data->strtab_name = 0;
     yasm_section_add_data(sect, &coff_section_data_cb, data);
 
@@ -1081,6 +1079,27 @@ coff_objfmt_init_new_section(yasm_objfmt_coff *objfmt_coff,
     coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, NULL, 1,
 			     COFF_SYMTAB_AUX_SECT);
     data->sym = sym;
+    return data;
+}
+
+static yasm_section *
+coff_objfmt_add_default_section(yasm_objfmt *objfmt)
+{
+    yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
+    yasm_section *retval;
+    coff_section_data *csd;
+    int isnew;
+
+    retval = yasm_object_get_general(objfmt_coff->object, ".text", 0, 16, 1, 0,
+				     &isnew, 0);
+    if (isnew) {
+	csd = coff_objfmt_init_new_section(objfmt_coff, retval, ".text", 0);
+	csd->flags = COFF_STYP_TEXT;
+	if (objfmt_coff->win32)
+	    csd->flags |= COFF_STYP_EXECUTE | COFF_STYP_READ;
+	yasm_section_set_default(retval, 1);
+    }
+    return retval;
 }
 
 static /*@observer@*/ /*@null@*/ yasm_section *
@@ -1093,12 +1112,14 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_section *retval;
     int isnew;
+    int iscode = 0;
     unsigned long flags;
     unsigned long flags2 = 0;
     int flags_override = 0;
     char *sectname;
     int resonly = 0;
     unsigned long align = 0;
+    coff_section_data *csd;
 
     static const struct {
 	const char *name;
@@ -1173,6 +1194,7 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	    flags |= COFF_STYP_EXECUTE | COFF_STYP_READ;
 	    align = 16;
 	}
+	iscode = 1;
     } else if (strcmp(sectname, ".rdata") == 0) {
 	flags = COFF_STYP_DATA;
 	if (objfmt_coff->win32) {
@@ -1201,6 +1223,7 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	flags = COFF_STYP_TEXT;
 	if (objfmt_coff->win32)
 	    flags |= COFF_STYP_EXECUTE | COFF_STYP_READ;
+	iscode = 1;
     }
 
     while ((vp = yasm_vps_next(vp))) {
@@ -1226,12 +1249,16 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			flags2 &= ~flagquals[i].flags2;
 			if (objfmt_coff->win32)
 			    flags &= ~flagquals[i].win32flags;
+			if (flagquals[i].win32flags & COFF_STYP_EXECUTE)
+			    iscode = 0;
 			break;
 		    case 1:
 			flags |= flagquals[i].stdflags;
 			flags2 |= flagquals[i].flags2;
 			if (objfmt_coff->win32)
 			    flags |= flagquals[i].win32flags;
+			if (flagquals[i].win32flags & COFF_STYP_EXECUTE)
+			    iscode = 1;
 			break;
 		    case 2:
 			flags &= ~COFF_STYP_STD_MASK;
@@ -1241,6 +1268,8 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			    flags &= ~COFF_STYP_WIN32_MASK;
 			    flags |= flagquals[i].win32flags;
 			}
+			if (flagquals[i].win32flags & COFF_STYP_EXECUTE)
+			    iscode = 1;
 			break;
 		}
 		flags_override = 1;
@@ -1347,13 +1376,19 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     }
 
     retval = yasm_object_get_general(objfmt_coff->object, sectname, 0, align,
-				     (flags & COFF_STYP_EXECUTE) != 0,
-				     resonly, &isnew, line);
+				     iscode, resonly, &isnew, line);
 
     if (isnew)
-	coff_objfmt_init_new_section(objfmt_coff, retval, sectname, flags,
-				     flags2, line);
-    else if (flags_override)
+	csd = coff_objfmt_init_new_section(objfmt_coff, retval, sectname, line);
+    else
+	csd = yasm_section_get_data(retval, &coff_section_data_cb);
+
+    if (isnew || yasm_section_is_default(retval)) {
+	yasm_section_set_default(retval, 0);
+	csd->flags = flags;
+	csd->flags2 = flags2;
+	yasm_section_set_align(retval, align, line);
+    } else if (flags_override)
 	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("section flags ignored on section redeclaration"));
     return retval;
@@ -1508,11 +1543,13 @@ win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 				       0, 0, &isnew, line);
 
 	/* Initialize directive section if needed */
-	if (isnew)
-	    coff_objfmt_init_new_section(objfmt_coff, sect,
-					 yasm_section_get_name(sect),
-					 COFF_STYP_INFO | COFF_STYP_DISCARD
-					 | COFF_STYP_READ, 0, line);
+	if (isnew) {
+	    coff_section_data *csd;
+	    csd = coff_objfmt_init_new_section(objfmt_coff, sect,
+					       yasm_section_get_name(sect),
+					       line);
+	    csd->flags = COFF_STYP_INFO | COFF_STYP_DISCARD | COFF_STYP_READ;
+	}
 
 	/* Add text as data bytecode */
 	yasm_dvs_initialize(&dvs);
@@ -1542,13 +1579,13 @@ yasm_objfmt_module yasm_coff_LTX_objfmt = {
     "COFF (DJGPP)",
     "coff",
     "o",
-    ".text",
     32,
     coff_objfmt_dbgfmt_keywords,
     "null",
     coff_objfmt_create,
     coff_objfmt_output,
     coff_objfmt_destroy,
+    coff_objfmt_add_default_section,
     coff_objfmt_section_switch,
     coff_objfmt_extern_declare,
     coff_objfmt_global_declare,
@@ -1561,13 +1598,13 @@ yasm_objfmt_module yasm_win32_LTX_objfmt = {
     "Win32",
     "win32",
     "obj",
-    ".text",
     32,
     coff_objfmt_dbgfmt_keywords,
     "null",
     win32_objfmt_create,
     coff_objfmt_output,
     coff_objfmt_destroy,
+    coff_objfmt_add_default_section,
     coff_objfmt_section_switch,
     coff_objfmt_extern_declare,
     coff_objfmt_global_declare,
@@ -1580,13 +1617,13 @@ yasm_objfmt_module yasm_win64_LTX_objfmt = {
     "Win64",
     "win64",
     "obj",
-    ".text",
     64,
     coff_objfmt_dbgfmt_keywords,
     "null",
     win64_objfmt_create,
     coff_objfmt_output,
     coff_objfmt_destroy,
+    coff_objfmt_add_default_section,
     coff_objfmt_section_switch,
     coff_objfmt_extern_declare,
     coff_objfmt_global_declare,
@@ -1597,13 +1634,13 @@ yasm_objfmt_module yasm_x64_LTX_objfmt = {
     "Win64",
     "x64",
     "obj",
-    ".text",
     64,
     coff_objfmt_dbgfmt_keywords,
     "null",
     win64_objfmt_create,
     coff_objfmt_output,
     coff_objfmt_destroy,
+    coff_objfmt_add_default_section,
     coff_objfmt_section_switch,
     coff_objfmt_extern_declare,
     coff_objfmt_global_declare,

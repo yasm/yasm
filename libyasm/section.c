@@ -80,6 +80,8 @@ struct yasm_section {
 
     int code;			/* section contains code (instructions) */
     int res_only;		/* allow only resb family of bytecodes? */
+    int def;			/* "default" section, e.g. not specified by
+				   using section directive */
 
     /* the bytecodes for the section's contents */
     /*@reldef@*/ STAILQ_HEAD(yasm_bytecodehead, yasm_bytecode) bcs;
@@ -165,6 +167,7 @@ yasm_object_get_general(yasm_object *object, const char *name,
 
     s->code = code;
     s->res_only = res_only;
+    s->def = 0;
 
     *isnew = 1;
     return s;
@@ -198,7 +201,9 @@ yasm_object_create_absolute(yasm_object *object, yasm_expr *start,
     STAILQ_INIT(&s->relocs);
     s->destroy_reloc = NULL;
 
+    s->code = 0;
     s->res_only = 1;
+    s->def = 0;
 
     return s;
 }
@@ -257,6 +262,18 @@ void
 yasm_section_set_opt_flags(yasm_section *sect, unsigned long opt_flags)
 {
     sect->opt_flags = opt_flags;
+}
+
+int
+yasm_section_is_default(const yasm_section *sect)
+{
+    return sect->def;
+}
+
+void
+yasm_section_set_default(yasm_section *sect, int def)
+{
+    sect->def = def;
 }
 
 yasm_object *

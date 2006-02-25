@@ -651,6 +651,48 @@ xdf_objfmt_destroy(yasm_objfmt *objfmt)
     yasm_xfree(objfmt);
 }
 
+static xdf_section_data *
+xdf_objfmt_init_new_section(yasm_objfmt_xdf *objfmt_xdf, yasm_section *sect,
+			    const char *sectname, unsigned long line)
+{
+    xdf_section_data *data;
+    yasm_symrec *sym;
+
+    data = yasm_xmalloc(sizeof(xdf_section_data));
+    data->scnum = objfmt_xdf->parse_scnum++;
+    data->flags = 0;
+    data->addr = NULL;
+    data->vaddr = NULL;
+    data->scnptr = 0;
+    data->size = 0;
+    data->relptr = 0;
+    data->nreloc = 0;
+    STAILQ_INIT(&data->relocs);
+    yasm_section_add_data(sect, &xdf_section_data_cb, data);
+
+    sym = yasm_symtab_define_label(objfmt_xdf->symtab, sectname,
+				   yasm_section_bcs_first(sect), 1, line);
+    data->sym = sym;
+    return data;
+}
+
+static yasm_section *
+xdf_objfmt_add_default_section(yasm_objfmt *objfmt)
+{
+    yasm_objfmt_xdf *objfmt_xdf = (yasm_objfmt_xdf *)objfmt;
+    yasm_section *retval;
+    xdf_section_data *xsd;
+    int isnew;
+
+    retval = yasm_object_get_general(objfmt_xdf->object, ".text", 0, 0, 1, 0,
+				     &isnew, 0);
+    if (isnew) {
+	xsd = xdf_objfmt_init_new_section(objfmt_xdf, retval, ".text", 0);
+	yasm_section_set_default(retval, 1);
+    }
+    return retval;
+}
+
 static /*@observer@*/ /*@null@*/ yasm_section *
 xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			    /*@unused@*/ /*@null@*/
@@ -668,6 +710,7 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     int flags_override = 0;
     char *sectname;
     int resonly = 0;
+    xdf_section_data *xsd;
 
     if (!vp || vp->param || !vp->val)
 	return NULL;
@@ -745,32 +788,25 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     retval = yasm_object_get_general(objfmt_xdf->object, sectname, 0, align, 1,
 				     resonly, &isnew, line);
 
-    if (isnew) {
-	xdf_section_data *data;
-	yasm_symrec *sym;
+    if (isnew)
+	xsd = xdf_objfmt_init_new_section(objfmt_xdf, retval, sectname, line);
+    else
+	xsd = yasm_section_get_data(retval, &xdf_section_data_cb);
 
-	data = yasm_xmalloc(sizeof(xdf_section_data));
-	data->scnum = objfmt_xdf->parse_scnum++;
-	data->flags = flags;
-	if (absaddr)
-	    data->addr = yasm_intnum_copy(absaddr);
-	else
-	    data->addr = NULL;
-	if (vaddr)
-	    data->vaddr = yasm_intnum_copy(vaddr);
-	else
-	    data->vaddr = NULL;
-	data->scnptr = 0;
-	data->size = 0;
-	data->relptr = 0;
-	data->nreloc = 0;
-	STAILQ_INIT(&data->relocs);
-	yasm_section_add_data(retval, &xdf_section_data_cb, data);
-
-	sym =
-	    yasm_symtab_define_label(objfmt_xdf->symtab, sectname,
-				     yasm_section_bcs_first(retval), 1, line);
-	data->sym = sym;
+    if (isnew || yasm_section_is_default(retval)) {
+	yasm_section_set_default(retval, 0);
+	xsd->flags = flags;
+	if (absaddr) {
+	    if (xsd->addr)
+		yasm_intnum_destroy(xsd->addr);
+	    xsd->addr = yasm_intnum_copy(absaddr);
+	}
+	if (vaddr) {
+	    if (xsd->vaddr)
+		yasm_intnum_destroy(xsd->vaddr);
+	    xsd->vaddr = yasm_intnum_copy(vaddr);
+	}
+	yasm_section_set_align(retval, align, line);
     } else if (flags_override)
 	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("section flags ignored on section redeclaration"));
@@ -883,13 +919,13 @@ yasm_objfmt_module yasm_xdf_LTX_objfmt = {
     "Extended Dynamic Object",
     "xdf",
     "xdf",
-    ".text",
     32,
     xdf_objfmt_dbgfmt_keywords,
     "null",
     xdf_objfmt_create,
     xdf_objfmt_output,
     xdf_objfmt_destroy,
+    xdf_objfmt_add_default_section,
     xdf_objfmt_section_switch,
     xdf_objfmt_extern_declare,
     xdf_objfmt_global_declare,

@@ -748,6 +748,43 @@ elf_objfmt_destroy(yasm_objfmt *objfmt)
     yasm_xfree(objfmt);
 }
 
+static elf_secthead *
+elf_objfmt_init_new_section(yasm_objfmt_elf *objfmt_elf, yasm_section *sect,
+			    const char *sectname, unsigned long type,
+			    unsigned long flags, unsigned long line)
+{
+    elf_secthead *esd;
+    yasm_symrec *sym;
+    elf_strtab_entry *name = elf_strtab_append_str(objfmt_elf->shstrtab,
+						   sectname);
+
+    esd = elf_secthead_create(name, type, flags, 0, 0);
+    yasm_section_add_data(sect, &elf_section_data, esd);
+    sym = yasm_symtab_define_label(
+	yasm_object_get_symtab(objfmt_elf->object), sectname,
+	yasm_section_bcs_first(sect), 1, line);
+
+    elf_secthead_set_sym(esd, sym);
+
+    return esd;
+}
+
+static yasm_section *
+elf_objfmt_add_default_section(yasm_objfmt *objfmt)
+{
+    yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
+    yasm_section *retval;
+    int isnew;
+    elf_secthead *esd;
+
+    retval = yasm_object_get_general(objfmt_elf->object, ".text", 0, 16, 1, 0,
+				     &isnew, 0);
+    esd = elf_objfmt_init_new_section(objfmt_elf, retval, ".text", SHT_PROGBITS,
+				      SHF_ALLOC + SHF_EXECINSTR, 0);
+    yasm_section_set_default(retval, 1);
+    return retval;
+}
+
 static /*@observer@*/ /*@null@*/ yasm_section *
 elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			  /*@null@*/ yasm_valparamhead *objext_valparams,
@@ -773,6 +810,8 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	/*{ "progbits",	SHT_PROGBITS },*/
 	/*{ "align",	0 } */
     };
+    /*@dependent@*/ /*@null@*/ const yasm_intnum *merge_intn = NULL;
+    elf_secthead *esd;
 
     if (!vp || vp->param || !vp->val)
 	return NULL;
@@ -892,36 +931,13 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	    yasm__warning(YASM_WARN_GENERAL, line,
 			  N_("Unrecognized qualifier `%s'"), vp->val);
     }
-
-    retval = yasm_object_get_general(objfmt_elf->object, sectname, 0, align,
-				     (flags & SHF_EXECINSTR) != 0, resonly,
-				     &isnew, line);
-
-    if (isnew) {
-	elf_secthead *esd;
-	yasm_symrec *sym;
-	elf_strtab_entry *name = elf_strtab_append_str(objfmt_elf->shstrtab,
-						       sectname);
-
-	esd = elf_secthead_create(name, type, flags, 0, 0);
-	yasm_section_add_data(retval, &elf_section_data, esd);
-	sym = yasm_symtab_define_label(
-	    yasm_object_get_symtab(objfmt_elf->object), sectname,
-	    yasm_section_bcs_first(retval), 1, line);
-
-	elf_secthead_set_sym(esd, sym);
-
 	/* Handle merge entity size */
 	if (flags & SHF_MERGE) {
 	    if (objext_valparams && (vp = yasm_vps_first(objext_valparams))
 		&& vp->param) {
-		/*@dependent@*/ /*@null@*/ const yasm_intnum *merge_intn;
 
 		merge_intn = yasm_expr_get_intnum(&vp->param, NULL);
-		if (merge_intn)
-		    elf_secthead_set_entsize(esd,
-					     yasm_intnum_get_uint(merge_intn));
-		else
+		if (!merge_intn)
 		    yasm__warning(YASM_WARN_GENERAL, line,
 				  N_("invalid merge entity size"));
 	    } else {
@@ -930,6 +946,23 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		flags &= ~SHF_MERGE;
 	    }
 	}
+
+    retval = yasm_object_get_general(objfmt_elf->object, sectname, 0, align,
+				     (flags & SHF_EXECINSTR) != 0, resonly,
+				     &isnew, line);
+
+    if (isnew)
+	esd = elf_objfmt_init_new_section(objfmt_elf, retval, sectname, type,
+					  flags, line);
+    else
+	esd = yasm_section_get_data(retval, &elf_section_data);
+
+    if (isnew || yasm_section_is_default(retval)) {
+	yasm_section_set_default(retval, 0);
+	elf_secthead_set_typeflags(esd, type, flags);
+	if (merge_intn)
+	    elf_secthead_set_entsize(esd, yasm_intnum_get_uint(merge_intn));
+	yasm_section_set_align(retval, align, line);
     } else if (flags_override)
 	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("section flags ignored on section redeclaration"));
@@ -1149,13 +1182,13 @@ yasm_objfmt_module yasm_elf_LTX_objfmt = {
     "ELF",
     "elf",
     "o",
-    ".text",
     32,
     elf_objfmt_dbgfmt_keywords,
     "null",
     elf_objfmt_create,
     elf_objfmt_output,
     elf_objfmt_destroy,
+    elf_objfmt_add_default_section,
     elf_objfmt_section_switch,
     elf_objfmt_extern_declare,
     elf_objfmt_global_declare,
@@ -1167,13 +1200,13 @@ yasm_objfmt_module yasm_elf32_LTX_objfmt = {
     "ELF (32-bit)",
     "elf32",
     "o",
-    ".text",
     32,
     elf_objfmt_dbgfmt_keywords,
     "null",
     elf32_objfmt_create,
     elf_objfmt_output,
     elf_objfmt_destroy,
+    elf_objfmt_add_default_section,
     elf_objfmt_section_switch,
     elf_objfmt_extern_declare,
     elf_objfmt_global_declare,
@@ -1185,13 +1218,13 @@ yasm_objfmt_module yasm_elf64_LTX_objfmt = {
     "ELF (64-bit)",
     "elf64",
     "o",
-    ".text",
     64,
     elf_objfmt_dbgfmt_keywords,
     "null",
     elf64_objfmt_create,
     elf_objfmt_output,
     elf_objfmt_destroy,
+    elf_objfmt_add_default_section,
     elf_objfmt_section_switch,
     elf_objfmt_extern_declare,
     elf_objfmt_global_declare,
