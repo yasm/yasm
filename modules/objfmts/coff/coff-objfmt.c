@@ -340,6 +340,56 @@ win64_objfmt_create(yasm_object *object, yasm_arch *a)
     return (yasm_objfmt *)objfmt_coff;
 }
 
+static coff_section_data *
+coff_objfmt_init_new_section(yasm_objfmt_coff *objfmt_coff, yasm_section *sect,
+			     const char *sectname, unsigned long line)
+{
+    coff_section_data *data;
+    yasm_symrec *sym;
+
+    data = yasm_xmalloc(sizeof(coff_section_data));
+    data->scnum = objfmt_coff->parse_scnum++;
+    data->flags = 0;
+    data->addr = 0;
+    data->scnptr = 0;
+    data->size = 0;
+    data->relptr = 0;
+    data->nreloc = 0;
+    data->flags2 = 0;
+    data->strtab_name = 0;
+    yasm_section_add_data(sect, &coff_section_data_cb, data);
+
+    sym = yasm_symtab_define_label(objfmt_coff->symtab, sectname,
+				   yasm_section_bcs_first(sect), 1, line);
+    yasm_symrec_declare(sym, YASM_SYM_GLOBAL, line);
+    coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, NULL, 1,
+			     COFF_SYMTAB_AUX_SECT);
+    data->sym = sym;
+    return data;
+}
+
+static int
+coff_objfmt_init_remaining_section(yasm_section *sect, /*@null@*/ void *d)
+{
+    /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
+    /*@dependent@*/ /*@null@*/ coff_section_data *csd;
+
+    /* Skip absolute sections */
+    if (yasm_section_is_absolute(sect))
+	return 0;
+
+    assert(info != NULL);
+    csd = yasm_section_get_data(sect, &coff_section_data_cb);
+    if (!csd) {
+	/* Initialize new one */
+	csd = coff_objfmt_init_new_section(info->objfmt_coff, sect,
+					   yasm_section_get_name(sect), 0);
+	csd->flags = COFF_STYP_TEXT;
+    }
+
+    return 0;
+}
+
 static int
 coff_objfmt_set_section_addr(yasm_section *sect, /*@null@*/ void *d)
 {
@@ -973,6 +1023,12 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
     info.f = f;
     info.buf = yasm_xmalloc(REGULAR_OUTBUF_SIZE);
 
+    /* Initialize section data (and count in parse_scnum) any sections that
+     * we've not initialized so far.
+     */
+    yasm_object_sections_traverse(objfmt_coff->object, &info,
+				  coff_objfmt_init_remaining_section);
+
     /* Allocate space for headers by seeking forward */
     if (fseek(f, (long)(20+40*(objfmt_coff->parse_scnum-1)), SEEK_SET) < 0) {
 	yasm__fatal(N_("could not seek on output file"));
@@ -1052,34 +1108,6 @@ static void
 coff_objfmt_destroy(yasm_objfmt *objfmt)
 {
     yasm_xfree(objfmt);
-}
-
-static coff_section_data *
-coff_objfmt_init_new_section(yasm_objfmt_coff *objfmt_coff, yasm_section *sect,
-			     const char *sectname, unsigned long line)
-{
-    coff_section_data *data;
-    yasm_symrec *sym;
-
-    data = yasm_xmalloc(sizeof(coff_section_data));
-    data->scnum = objfmt_coff->parse_scnum++;
-    data->flags = 0;
-    data->addr = 0;
-    data->scnptr = 0;
-    data->size = 0;
-    data->relptr = 0;
-    data->nreloc = 0;
-    data->flags2 = 0;
-    data->strtab_name = 0;
-    yasm_section_add_data(sect, &coff_section_data_cb, data);
-
-    sym = yasm_symtab_define_label(objfmt_coff->symtab, sectname,
-				   yasm_section_bcs_first(sect), 1, line);
-    yasm_symrec_declare(sym, YASM_SYM_GLOBAL, line);
-    coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, NULL, 1,
-			     COFF_SYMTAB_AUX_SECT);
-    data->sym = sym;
-    return data;
 }
 
 static yasm_section *
