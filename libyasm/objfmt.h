@@ -165,7 +165,6 @@ void yasm_objfmt_destroy(/*@only@*/ yasm_objfmt *objfmt);
 
 /** Add a default section to an object.
  * \param objfmt    object format
- * \param object    object
  * \return Default section.
  */
 yasm_section *yasm_objfmt_add_default_section(yasm_objfmt *objfmt);
