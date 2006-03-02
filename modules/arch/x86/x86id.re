@@ -1250,19 +1250,19 @@ static const x86_insn_info jmp_insn[] = {
       {OPT_Mem|OPS_Any|OPTM_Far|OPA_EA, 0, 0} }
 };
 static const x86_insn_info retnf_insn[] = {
-    { CPU_Any, MOD_Op0Add, 0, 0, 0, 1,
+    { CPU_Not64, MOD_Op0Add, 0, 0, 0, 1,
       {0x01, 0, 0}, 0, 0, {0, 0, 0} },
-    { CPU_Any, MOD_Op0Add, 0, 0, 0, 1,
+    { CPU_Not64, MOD_Op0Add, 0, 0, 0, 1,
+      {0x00, 0, 0}, 0, 1, {OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm, 0, 0} },
+    { CPU_64, MOD_Op0Add|MOD_OpSizeR, 0, 0, 0, 1,
+      {0x01, 0, 0}, 0, 0, {0, 0, 0} },
+    { CPU_64, MOD_Op0Add|MOD_OpSizeR, 0, 0, 0, 1,
       {0x00, 0, 0}, 0, 1, {OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm, 0, 0} },
     /* GAS suffix versions */
-    { CPU_Any, MOD_Op0Add|MOD_GasSufW, 16, 0, 0, 1,
-      {0x01, 0, 0}, 0, 0, {0, 0, 0} },
-    { CPU_Any, MOD_Op0Add|MOD_GasSufW, 16, 0, 0, 1,
-      {0x00, 0, 0}, 0, 1, {OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm, 0, 0} },
-    { CPU_Any, MOD_Op0Add|MOD_GasSufL|MOD_GasSufQ, 0, 0, 0, 1,
-      {0x01, 0, 0}, 0, 0, {0, 0, 0} },
-    { CPU_Any, MOD_Op0Add|MOD_GasSufL|MOD_GasSufQ, 0, 0, 0, 1,
-      {0x00, 0, 0}, 0, 1, {OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm, 0, 0} }
+    { CPU_Any, MOD_Op0Add|MOD_OpSizeR|MOD_GasSufW|MOD_GasSufL|MOD_GasSufQ, 0,
+      0, 0, 1, {0x01, 0, 0}, 0, 0, {0, 0, 0} },
+    { CPU_Any, MOD_Op0Add|MOD_OpSizeR|MOD_GasSufW|MOD_GasSufL|MOD_GasSufQ, 0,
+      0, 0, 1, {0x00, 0, 0}, 0, 1, {OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm, 0, 0} }
 };
 static const x86_insn_info enter_insn[] = {
     { CPU_186|CPU_Not64, MOD_GasNoRev|MOD_GasSufL, 0, 0, 0, 1, {0xC8, 0, 0}, 0,
@@ -3942,25 +3942,23 @@ yasm_x86__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 	/* Control transfer instructions (unconditional) */
 	'call' { RET_INSN(4, call, 0, CPU_Any); }
 	'jmp' { RET_INSN(3, jmp, 0, CPU_Any); }
-	'ret' W? { RET_INSN(3, retnf, 0xC2, CPU_Any); }
+	'ret' { RET_INSN(3, retnf, 0x00C2, CPU_Any); }
+	'retw' { RET_INSN_GAS(3, retnf, 0x10C2, CPU_Any); }
 	'retl' {
 	    not64 = 1;
-	    RET_INSN_GAS(3, retnf, 0xC2, CPU_Any);
+	    RET_INSN_GAS(3, retnf, 0x00C2, CPU_Any);
 	}
 	'retq' {
 	    warn64 = 1;
-	    RET_INSN_GAS(3, retnf, 0xC2, CPU_Hammer|CPU_64);
+	    RET_INSN_GAS(3, retnf, 0x00C2, CPU_Hammer|CPU_64);
 	}
-	'retn' { RET_INSN_NONGAS(4, retnf, 0xC2, CPU_Any); }
-	'retf' { RET_INSN_NONGAS(4, retnf, 0xCA, CPU_Any); }
-	'lretw' { RET_INSN_GAS(4, retnf, 0xCA, CPU_Any); }
-	'lretl' {
-	    not64 = 1;
-	    RET_INSN_GAS(4, retnf, 0xCA, CPU_Any);
-	}
+	'retn' { RET_INSN_NONGAS(4, retnf, 0x00C2, CPU_Any); }
+	'retf' { RET_INSN_NONGAS(4, retnf, 0x40CA, CPU_Any); }
+	'lretw' { RET_INSN_GAS(4, retnf, 0x10CA, CPU_Any); }
+	'lretl' { RET_INSN_GAS(4, retnf, 0x00CA, CPU_Any); }
 	'lretq' {
 	    warn64 = 1;
-	    RET_INSN_GAS(4, retnf, 0xCA, CPU_Any);
+	    RET_INSN_GAS(4, retnf, 0x40CA, CPU_Any);
 	}
 	'enter' [wWlLqQ]? { RET_INSN(5, enter, 0, CPU_186); }
 	'leave' { RET_INSN_NS(onebyte, 0x4000C9, CPU_186); }
