@@ -28,6 +28,7 @@ LIBYASM_OBJS= \
  libyasm/intnum.o \
  libyasm/linemgr.o \
  libyasm/mergesort.o \
+ libyasm/phash.o \
  libyasm/section.o \
  libyasm/splitpath.o \
  libyasm/strcasecmp.o \
@@ -42,7 +43,7 @@ MODULES_ARCH_X86_OBJS= \
  modules/arch/x86/x86arch.o \
  modules/arch/x86/x86bc.o \
  modules/arch/x86/x86expr.o \
- x86id.o
+ modules/arch/x86/x86id.o
 YASM_MODULES=arch_x86
 
 MODULES_ARCH_LC3B_OBJS= \
@@ -133,7 +134,7 @@ genmacro: modules/preprocs/nasm/genmacro.c
 	$(BUILDCC) -o $@ $<
 
 nasm-macros.c: modules/preprocs/nasm/standard.mac genmacro
-	./genmacro $<
+	./genmacro modules/preprocs/nasm/standard.mac
 
 modules/preprocs/nasm/nasm-pp.c: nasm-macros.c
 
@@ -141,19 +142,21 @@ genmodule: libyasm/genmodule.c
 	$(BUILDCC) -o $@ $<
 
 module.c: libyasm/module.in genmodule
-	./genmodule $< $(YASM_MODULES)
+	./genmodule libyasm/module.in $(YASM_MODULES)
 
-x86id.c: modules/arch/x86/x86id.re re2c
-	./re2c -s -o $@ $<
+x86parse.c: modules/arch/x86/x86parse.gap gap
+	./gap modules/arch/x86/x86parse.gap $@
+
+modules/arch/x86/x86id.c: x86parse.c
 
 lc3bid.c: modules/arch/lc3b/lc3bid.re re2c
-	./re2c -s -o $@ $<
+	./re2c -s -o $@ modules/arch/lc3b/lc3bid.re
 
 gas-token.c: modules/parsers/gas/gas-token.re re2c
-	./re2c -b -o $@ $<
+	./re2c -b -o $@ modules/parsers/gas/gas-token.re
 
 nasm-token.c: modules/parsers/nasm/nasm-token.re re2c
-	./re2c -b -o $@ $<
+	./re2c -b -o $@ modules/parsers/nasm/nasm-token.re
 
 RE2C_SRCS= \
 	tools/re2c/main.c \
@@ -168,6 +171,17 @@ RE2C_SRCS= \
 
 re2c: $(RE2C_SRCS)
 	$(BUILDCC) -I. -o re2c $(RE2C_SRCS)
+
+GAP_SRCS= \
+	tools/gap/gap.c \
+	tools/gap/perfect.c \
+	libyasm/phash.c \
+	libyasm/hamt.c \
+	libyasm/xmalloc.c \
+	libyasm/xstrdup.c
+
+gap: $(GAP_SRCS)
+	$(BUILDCC) -I. -o gap $(GAP_SRCS)
 
 yasm: $(YASM_OBJS)
 	$(CC) -o yasm $(YASM_OBJS)

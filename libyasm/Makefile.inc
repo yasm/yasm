@@ -14,6 +14,7 @@ libyasm_a_SOURCES += libyasm/valparam.c
 libyasm_a_SOURCES += libyasm/errwarn.c
 libyasm_a_SOURCES += libyasm/linemgr.c
 libyasm_a_SOURCES += libyasm/assocdat.c
+libyasm_a_SOURCES += libyasm/phash.c
 libyasm_a_SOURCES += libyasm/xmalloc.c
 libyasm_a_SOURCES += libyasm/xstrdup.c
 libyasm_a_SOURCES += libyasm/strcasecmp.c
@@ -66,6 +67,7 @@ modinclude_HEADERS += libyasm/bitvect.h
 modinclude_HEADERS += libyasm/valparam.h
 modinclude_HEADERS += libyasm/compat-queue.h
 modinclude_HEADERS += libyasm/assocdat.h
+modinclude_HEADERS += libyasm/phash.h
 modinclude_HEADERS += libyasm/module.h
 
 EXTRA_DIST += libyasm/tests/Makefile.inc

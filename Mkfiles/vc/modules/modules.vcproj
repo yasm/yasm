@@ -252,7 +252,7 @@
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\..\x86id.c">
+					RelativePath="..\..\..\modules\arch\x86\x86id.c">
 					<FileConfiguration
 						Name="Release|Win32">
 						<Tool

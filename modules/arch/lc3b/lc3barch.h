@@ -52,26 +52,14 @@ typedef struct lc3b_insn {
 
 void yasm_lc3b__bc_transform_insn(yasm_bytecode *bc, lc3b_insn *insn);
 
-void yasm_lc3b__parse_cpu(yasm_arch *arch, const char *cpuid,
+void yasm_lc3b__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len,
 			  unsigned long line);
 
-int yasm_lc3b__parse_check_reg
-    (yasm_arch *arch, unsigned long data[1], const char *id,
+yasm_arch_insnprefix yasm_lc3b__parse_check_insnprefix
+    (yasm_arch *arch, unsigned long data[4], const char *id, size_t id_len,
      unsigned long line);
-int yasm_lc3b__parse_check_reggroup
-    (yasm_arch *arch, unsigned long data[1], const char *id,
-     unsigned long line);
-int yasm_lc3b__parse_check_segreg
-    (yasm_arch *arch, unsigned long data[1], const char *id,
-     unsigned long line);
-int yasm_lc3b__parse_check_insn
-    (yasm_arch *arch, unsigned long data[4], const char *id,
-     unsigned long line);
-int yasm_lc3b__parse_check_prefix
-    (yasm_arch *arch, unsigned long data[4], const char *id,
-     unsigned long line);
-int yasm_lc3b__parse_check_targetmod
-    (yasm_arch *arch, unsigned long data[1], const char *id,
+yasm_arch_regtmod yasm_lc3b__parse_check_regtmod
+    (yasm_arch *arch, unsigned long *data, const char *id, size_t id_len,
      unsigned long line);
 
 void yasm_lc3b__finalize_insn

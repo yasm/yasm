@@ -638,7 +638,8 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
     } else if (yasm__strcasecmp(name, "cpu") == 0) {
 	yasm_vps_foreach(vp, valparams) {
 	    if (vp->val)
-		yasm_arch_parse_cpu(parser_nasm->arch, vp->val, line);
+		yasm_arch_parse_cpu(parser_nasm->arch, vp->val,
+				    strlen(vp->val), line);
 	    else if (vp->param) {
 		const yasm_intnum *intcpu;
 		intcpu = yasm_expr_get_intnum(&vp->param, NULL);
@@ -647,7 +648,8 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 		else {
 		    char strcpu[16];
 		    sprintf(strcpu, "%lu", yasm_intnum_get_uint(intcpu));
-		    yasm_arch_parse_cpu(parser_nasm->arch, strcpu, line);
+		    yasm_arch_parse_cpu(parser_nasm->arch, strcpu,
+					strlen(strcpu), line);
 		}
 	    }
 	}

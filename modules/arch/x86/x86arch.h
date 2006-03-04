@@ -273,27 +273,15 @@ int yasm_x86__expr_checkea
      unsigned char *pcrel, unsigned char *rex,
      yasm_calc_bc_dist_func calc_bc_dist);
 
-void yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid,
+void yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len,
 			 unsigned long line);
 
-int yasm_x86__parse_check_reg
-    (yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
-     unsigned long line);
-int yasm_x86__parse_check_reggroup
-    (yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
-     unsigned long line);
-int yasm_x86__parse_check_segreg
-    (yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
-     unsigned long line);
-int yasm_x86__parse_check_insn
+yasm_arch_insnprefix yasm_x86__parse_check_insnprefix
     (yasm_arch *arch, /*@out@*/ unsigned long data[4], const char *id,
-     unsigned long line);
-int yasm_x86__parse_check_prefix
-    (yasm_arch *arch, /*@out@*/ unsigned long data[4], const char *id,
-     unsigned long line);
-int yasm_x86__parse_check_targetmod
-    (yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
-     unsigned long line);
+     size_t id_len, unsigned long line);
+yasm_arch_regtmod yasm_x86__parse_check_regtmod
+    (yasm_arch *arch, /*@out@*/ unsigned long *data, const char *id,
+     size_t id_len, unsigned long line);
 
 void yasm_x86__finalize_insn
     (yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
