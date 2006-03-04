@@ -347,6 +347,9 @@
 				RelativePath="..\..\..\module.c">
 			</File>
 			<File
+				RelativePath="..\..\..\libyasm\phash.c">
+			</File>
+			<File
 				RelativePath="..\..\..\libyasm\section.c">
 				<FileConfiguration
 					Name="Release|Win32">
@@ -552,6 +555,9 @@
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\parser.h">
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\phash.h">
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\preproc.h">

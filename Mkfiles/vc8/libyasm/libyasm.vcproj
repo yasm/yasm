@@ -4,6 +4,7 @@
 	Version="8.00"
 	Name="libyasm"
 	ProjectGUID="{29FE7874-1256-4AD6-B889-68E399DC9608}"
+	RootNamespace="libyasm"
 	>
 	<Platforms>
 		<Platform
@@ -839,6 +840,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\libyasm\phash.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\libyasm\section.c"
 				>
 				<FileConfiguration
@@ -1243,6 +1248,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\parser.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\phash.h"
 				>
 			</File>
 			<File
