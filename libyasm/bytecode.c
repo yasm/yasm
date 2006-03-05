@@ -865,8 +865,12 @@ static void
 bc_align_destroy(void *contents)
 {
     bytecode_align *align = (bytecode_align *)contents;
+    if (align->boundary)
+	yasm_expr_destroy(align->boundary);
     if (align->fill)
 	yasm_expr_destroy(align->fill);
+    if (align->maxskip)
+	yasm_expr_destroy(align->maxskip);
     yasm_xfree(contents);
 }
 
@@ -1255,7 +1259,8 @@ yasm_bc_destroy(yasm_bytecode *bc)
     if (bc->callback)
 	bc->callback->destroy(bc->contents);
     yasm_expr_destroy(bc->multiple);
-    yasm_xfree(bc->symrecs);
+    if (bc->symrecs)
+	yasm_xfree(bc->symrecs);
     yasm_xfree(bc);
 }
 

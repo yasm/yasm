@@ -845,7 +845,7 @@ gas_get_section(yasm_parser_gas *parser_gas, char *name,
     yasm_section *new_section;
 
     yasm_vps_initialize(&vps);
-    vp = yasm_vp_create(yasm__xstrdup(name), NULL);
+    vp = yasm_vp_create(name, NULL);
     yasm_vps_append(&vps, vp);
 
     if (!builtin) {
