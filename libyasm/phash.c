@@ -46,14 +46,23 @@ mix() was built out of 36 single-cycle latency instructions in a
 #define mix(a,b,c) \
 { \
     a -= b; a -= c; a ^= (c>>13); \
+    a &= 0xffffffff; \
     b -= c; b -= a; b ^= (a<<8); \
+    b &= 0xffffffff; \
     c -= a; c -= b; c ^= (b>>13); \
+    c &= 0xffffffff; \
     a -= b; a -= c; a ^= (c>>12);  \
+    a &= 0xffffffff; \
     b -= c; b -= a; b ^= (a<<16); \
+    b &= 0xffffffff; \
     c -= a; c -= b; c ^= (b>>5); \
+    c &= 0xffffffff; \
     a -= b; a -= c; a ^= (c>>3);  \
+    a &= 0xffffffff; \
     b -= c; b -= a; b ^= (a<<10); \
+    b &= 0xffffffff; \
     c -= a; c -= b; c ^= (b>>15); \
+    c &= 0xffffffff; \
 }
 
 /*
@@ -102,8 +111,11 @@ phash_lookup(
     while (len >= 12)
     {
 	a += (k[0] +((ub4)k[1]<<8) +((ub4)k[2]<<16) +((ub4)k[3]<<24));
+	a &= 0xffffffff;
 	b += (k[4] +((ub4)k[5]<<8) +((ub4)k[6]<<16) +((ub4)k[7]<<24));
+	b &= 0xffffffff;
 	c += (k[8] +((ub4)k[9]<<8) +((ub4)k[10]<<16)+((ub4)k[11]<<24));
+	c &= 0xffffffff;
 	mix(a,b,c);
 	k += 12; len -= 12;
     }
@@ -115,15 +127,18 @@ phash_lookup(
 	case 11: c+=((ub4)k[10]<<24);
 	case 10: c+=((ub4)k[9]<<16);
 	case 9 : c+=((ub4)k[8]<<8);
+		 c &= 0xffffffff;
 	    /* the first byte of c is reserved for the length */
 	case 8 : b+=((ub4)k[7]<<24);
 	case 7 : b+=((ub4)k[6]<<16);
 	case 6 : b+=((ub4)k[5]<<8);
 	case 5 : b+=k[4];
+		 b &= 0xffffffff;
 	case 4 : a+=((ub4)k[3]<<24);
 	case 3 : a+=((ub4)k[2]<<16);
 	case 2 : a+=((ub4)k[1]<<8);
 	case 1 : a+=k[0];
+		 a &= 0xffffffff;
 	/* case 0: nothing left to add */
     }
     mix(a,b,c);

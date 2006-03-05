@@ -32,6 +32,7 @@
 #include "tools/gap/perfect.h"
 #include "libyasm/compat-queue.h"
 #include "libyasm/coretype.h"
+#include "libyasm/errwarn.h"
 #include "libyasm/hamt.h"
 
 typedef STAILQ_HEAD(slist, sval) slist;
@@ -116,12 +117,12 @@ yasm__fatal(const char *message, ...)
 }
 
 static void
-hamt_error(const char *file, unsigned int line, const char *message)
+hamt_error(const char *file, unsigned int ln, const char *message)
 {
     abort();
 }
 
-void
+static void
 dup_slist(slist *out, slist *in)
 {
     sval *sv;
@@ -134,7 +135,7 @@ dup_slist(slist *out, slist *in)
     }
 }
 
-dir *
+static dir *
 dup_dir(dir *in)
 {
     dir *out = yasm_xmalloc(sizeof(dir));
@@ -260,7 +261,7 @@ parse_generic(dir_type type, const char *func, dir_byp_list *byp)
 static void
 parse_arch(void)
 {
-    int i;
+    size_t i;
     int found = 0;
     char *tok = strtok(NULL, " \t\n");
 
@@ -795,7 +796,7 @@ int
 main(int argc, char *argv[])
 {
     FILE *in, *out;
-    int i;
+    size_t i;
     char *tok;
     int count[NUM_DIRS];
     dir_byp *db;
