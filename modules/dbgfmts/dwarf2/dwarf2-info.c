@@ -24,15 +24,15 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include <util.h>
-/*@unused@*/ RCSID("$Id$");
-
 /* Need either unistd.h or direct.h (on Windows) to prototype getcwd() */
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #elif defined(WIN32) || defined(_WIN32)
 #include <direct.h>
 #endif
+
+#include <util.h>
+/*@unused@*/ RCSID("$Id$");
 
 #define YASM_LIB_INTERNAL
 #define YASM_BC_INTERNAL
