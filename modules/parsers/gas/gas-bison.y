@@ -46,13 +46,13 @@ static void define_label(yasm_parser_gas *parser_gas, char *name, int local);
 static void define_lcomm(yasm_parser_gas *parser_gas, /*@only@*/ char *name,
 			 yasm_expr *size, /*@null@*/ yasm_expr *align);
 static yasm_section *gas_get_section
-    (yasm_parser_gas *parser_gas, char *name, /*@null@*/ char *flags,
+    (yasm_parser_gas *parser_gas, /*@only@*/ char *name, /*@null@*/ char *flags,
      /*@null@*/ char *type, /*@null@*/ yasm_valparamhead *objext_valparams,
      int builtin);
-static void gas_switch_section(yasm_parser_gas *parser_gas, char *name,
-			       /*@null@*/ char *flags, /*@null@*/ char *type,
-			       /*@null@*/ yasm_valparamhead *objext_valparams,
-			       int builtin);
+static void gas_switch_section
+    (yasm_parser_gas *parser_gas, /*@only@*/ char *name, /*@null@*/ char *flags,
+     /*@null@*/ char *type, /*@null@*/ yasm_valparamhead *objext_valparams,
+     int builtin);
 static yasm_bytecode *gas_parser_align
     (yasm_parser_gas *parser_gas, yasm_section *sect, yasm_expr *boundval,
      /*@null@*/ yasm_expr *fillval, /*@null@*/ yasm_expr *maxskipval,
@@ -412,14 +412,17 @@ lineexp: instr
     }
     | DIR_SECTION label_id ',' STRING {
 	gas_switch_section(parser_gas, $2, $4.contents, NULL, NULL, 0);
+	yasm_xfree($4.contents);
 	$$ = NULL;
     }
     | DIR_SECTION label_id ',' STRING ',' '@' label_id {
 	gas_switch_section(parser_gas, $2, $4.contents, $7, NULL, 0);
+	yasm_xfree($4.contents);
 	$$ = NULL;
     }
     | DIR_SECTION label_id ',' STRING ',' '@' label_id ',' dirvals {
 	gas_switch_section(parser_gas, $2, $4.contents, $7, &$9, 0);
+	yasm_xfree($4.contents);
 	$$ = NULL;
     }
     /* Other directives */
@@ -878,13 +881,18 @@ gas_switch_section(yasm_parser_gas *parser_gas, char *name,
 {
     yasm_section *new_section;
 
-    new_section = gas_get_section(parser_gas, name, flags, type,
+    new_section = gas_get_section(parser_gas, yasm__xstrdup(name), flags, type,
 				  objext_valparams, builtin);
     if (new_section) {
 	parser_gas->cur_section = new_section;
 	parser_gas->prev_bc = yasm_section_bcs_last(new_section);
     } else
 	yasm__error(cur_line, N_("invalid section name `%s'"), name);
+
+    yasm_xfree(name);
+
+    if (objext_valparams)
+	yasm_vps_delete(objext_valparams);
 }
 
 static yasm_bytecode *
