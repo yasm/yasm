@@ -35,7 +35,11 @@
 
 #include "coretype.h"
 #include "hamt.h"
+#ifdef HAVE_CONFIG_H
 #include "_stdint.h"			/* for uintptr_t */
+#else
+typedef unsigned long uintptr_t;	/* for build platform only (FIXME) */
+#endif
 
 typedef struct HAMTEntry {
     STAILQ_ENTRY(HAMTEntry) next;	/* next hash table entry */
