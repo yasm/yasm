@@ -1156,6 +1156,8 @@ yasm_bc_create_insn(yasm_arch *arch, const unsigned long insn_data[4],
     insn->num_operands = num_operands;
     if (operands)
 	insn->operands = *operands;	/* structure copy */
+    else
+	STAILQ_INIT(&insn->operands);
     insn->num_prefixes = 0;
     insn->prefixes = NULL;
     insn->num_segregs = 0;

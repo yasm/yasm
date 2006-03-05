@@ -137,7 +137,7 @@ fill(yasm_parser_gas *parser_gas, YYCTYPE *cursor)
     if(!s->eof){
 	size_t cnt = s->tok - s->bot;
 	if(cnt){
-	    memcpy(s->bot, s->tok, (size_t)(s->lim - s->tok));
+	    memmove(s->bot, s->tok, (size_t)(s->lim - s->tok));
 	    s->tok = s->bot;
 	    s->ptr -= cnt;
 	    cursor -= cnt;

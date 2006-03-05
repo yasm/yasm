@@ -309,6 +309,10 @@ yasm_object_destroy(yasm_object *object)
 	cur = next;
     }
 
+    /* Delete associated filenames */
+    yasm_xfree(object->src_filename);
+    yasm_xfree(object->obj_filename);
+
     /* Delete symbol table and line mappings */
     yasm_symtab_destroy(object->symtab);
     yasm_linemap_destroy(object->linemap);

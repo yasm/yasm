@@ -567,6 +567,8 @@ elf_secthead_destroy(elf_secthead *shead)
     if (shead == NULL)
 	yasm_internal_error(N_("shead is null"));
 
+    yasm_intnum_destroy(shead->size);
+
     yasm_xfree(shead);
 }
 
