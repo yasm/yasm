@@ -33,7 +33,6 @@
 #include "libyasm/compat-queue.h"
 #include "libyasm/coretype.h"
 #include "libyasm/errwarn.h"
-#include "libyasm/hamt.h"
 
 typedef STAILQ_HEAD(slist, sval) slist;
 typedef struct sval {
@@ -41,7 +40,9 @@ typedef struct sval {
     char *str;
 } sval;
 
+typedef STAILQ_HEAD(dir_list, dir) dir_list;
 typedef struct dir {
+    STAILQ_ENTRY(dir) link;
     char *name;
     const char *func;
     slist args;
@@ -51,7 +52,7 @@ typedef STAILQ_HEAD(dir_byp_list, dir_byp) dir_byp_list;
 typedef struct dir_byp {
     STAILQ_ENTRY(dir_byp) link;
     /*@null@*/ char *parser;
-    HAMT *dirs;
+    dir_list dirs;
 } dir_byp;
 
 typedef enum {
@@ -117,12 +118,6 @@ yasm__fatal(const char *message, ...)
 }
 
 static void
-hamt_error(const char *file, unsigned int ln, const char *message)
-{
-    abort();
-}
-
-static void
 dup_slist(slist *out, slist *in)
 {
     sval *sv;
@@ -145,10 +140,10 @@ dup_dir(dir *in)
     return out;
 }
 
-static HAMT *
+static dir_list *
 get_dirs(dir_byp_list *byp, /*@null@*/ const char *parser)
 {
-    HAMT *found = NULL;
+    dir_list *found = NULL;
     dir_byp *db;
 
     if (STAILQ_EMPTY(byp)) {
@@ -159,7 +154,7 @@ get_dirs(dir_byp_list *byp, /*@null@*/ const char *parser)
     STAILQ_FOREACH(db, byp, link) {
 	if ((!parser && !db->parser) ||
 	    (parser && db->parser && strcmp(parser, db->parser) == 0)) {
-	    found = db->dirs;
+	    found = &db->dirs;
 	    break;
 	}
     }
@@ -173,17 +168,10 @@ get_dirs(dir_byp_list *byp, /*@null@*/ const char *parser)
 static int
 add_dir(dir_byp_list *byp, /*@null@*/ const char *parser, dir *d)
 {
-    HAMT *found = get_dirs(byp, parser);
-    dir *new;
-    int replace;
+    dir_list *found = get_dirs(byp, parser);
 
     if (found) {
-	replace = 0;
-	new = HAMT_insert(found, d->name, d, &replace, free);
-	if (new != d) {
-	    report_error("duplicate `%s'", d->name);
-	    return 1;
-	}
+	STAILQ_INSERT_TAIL(found, d, link);
 	return 0;
     } else if (!parser) {
 	/* Add separately to all */
@@ -193,12 +181,7 @@ add_dir(dir_byp_list *byp, /*@null@*/ const char *parser, dir *d)
 	    if (!first)
 		d = dup_dir(d);
 	    first = 0;
-	    replace = 0;
-	    new = HAMT_insert(db->dirs, d->name, d, &replace, free);
-	    if (new != d) {
-		report_error("duplicate `%s'", d->name);
-		return 1;
-	    }
+	    STAILQ_INSERT_TAIL(&db->dirs, d, link);
 	}
 	return 0;
     } else {
@@ -305,7 +288,7 @@ parse_parsers(void)
 	if (arch->multi_parser[INSN] || arch->multi_parser[PREFIX]) {
 	    db = yasm_xmalloc(sizeof(dir_byp));
 	    db->parser = yasm__xstrdup(tok);
-	    db->dirs = HAMT_create(hamt_error);
+	    STAILQ_INIT(&db->dirs);
 
 	    STAILQ_INSERT_TAIL(&insnprefix_byp, db, link);
 	}
@@ -313,7 +296,7 @@ parse_parsers(void)
 	    arch->multi_parser[CPU_FEATURE]) {
 	    db = yasm_xmalloc(sizeof(dir_byp));
 	    db->parser = yasm__xstrdup(tok);
-	    db->dirs = HAMT_create(hamt_error);
+	    STAILQ_INIT(&db->dirs);
 
 	    STAILQ_INSERT_TAIL(&cpu_byp, db, link);
 	}
@@ -321,7 +304,7 @@ parse_parsers(void)
 	    arch->multi_parser[REGGROUP] || arch->multi_parser[SEGREG]) {
 	    db = yasm_xmalloc(sizeof(dir_byp));
 	    db->parser = yasm__xstrdup(tok);
-	    db->dirs = HAMT_create(hamt_error);
+	    STAILQ_INIT(&db->dirs);
 
 	    STAILQ_INSERT_TAIL(&regtmod_byp, db, link);
 	}
@@ -332,21 +315,21 @@ parse_parsers(void)
     if (STAILQ_EMPTY(&insnprefix_byp)) {
 	db = yasm_xmalloc(sizeof(dir_byp));
 	db->parser = NULL;
-	db->dirs = HAMT_create(hamt_error);
+	STAILQ_INIT(&db->dirs);
 
 	STAILQ_INSERT_TAIL(&insnprefix_byp, db, link);
     }
     if (STAILQ_EMPTY(&cpu_byp)) {
 	db = yasm_xmalloc(sizeof(dir_byp));
 	db->parser = NULL;
-	db->dirs = HAMT_create(hamt_error);
+	STAILQ_INIT(&db->dirs);
 
 	STAILQ_INSERT_TAIL(&cpu_byp, db, link);
     }
     if (STAILQ_EMPTY(&regtmod_byp)) {
 	db = yasm_xmalloc(sizeof(dir_byp));
 	db->parser = NULL;
-	db->dirs = HAMT_create(hamt_error);
+	STAILQ_INIT(&db->dirs);
 
 	STAILQ_INSERT_TAIL(&regtmod_byp, db, link);
     }
@@ -447,7 +430,7 @@ parse_cpu_alias(void)
     char *parser = check_parser(CPU_ALIAS);
     char *name = strtok(NULL, " \t\n");
     char *alias = strtok(NULL, " \t\n");
-    HAMT *dirs = get_dirs(&cpu_byp, parser);
+    dir_list *dirs = get_dirs(&cpu_byp, parser);
     dir *aliasd, *d;
 
     if (!alias) {
@@ -455,7 +438,10 @@ parse_cpu_alias(void)
 	return;
     }
 
-    aliasd = HAMT_search(dirs, alias);
+    STAILQ_FOREACH(aliasd, dirs, link) {
+	if (strcmp(aliasd->name, alias) == 0)
+	    break;
+    }
     if (!aliasd) {
 	report_error("could not find `%s'", alias);
 	return;
@@ -616,30 +602,11 @@ make_c_tab(
     }
 }
 
-typedef struct perfect_add_key_data {
+static void
+perfect_dir(FILE *out, const char *which, const char *parser, dir_list *dirs)
+{
     ub4 nkeys;
     key *keys;
-} perfect_add_key_data;
-
-static int
-perfect_add_key(void *node, void *data)
-{
-    dir *d = (dir *)node;
-    perfect_add_key_data *pakd = (perfect_add_key_data *)data;
-    key *k = yasm_xmalloc(sizeof(key));
-
-    k->name_k = yasm__xstrdup(d->name);
-    k->len_k = strlen(d->name);
-    k->next_k = pakd->keys;
-    pakd->keys = k;
-    pakd->nkeys++;
-    return 0;
-}
-
-static void
-perfect_dir(FILE *out, const char *which, const char *parser, HAMT *dirs)
-{
-    perfect_add_key_data pakd;
     hashform form;
     bstuff *tab;		/* table indexed by b */
     hstuff *tabh;		/* table indexed by hash value */
@@ -653,6 +620,7 @@ perfect_dir(FILE *out, const char *which, const char *parser, HAMT *dirs)
     char buf[10][80];		/* buffer for generated code */
     char *buf2[10];		/* also for generated code */
     int cpumode = strcmp(which, "cpu") == 0;
+    dir *d;
 
     /* perfect hash configuration */
     form.mode = NORMAL_HM;
@@ -668,13 +636,21 @@ perfect_dir(FILE *out, const char *which, const char *parser, HAMT *dirs)
 	final.line[i] = buf[i];
 
     /* build list of keys */
-    pakd.nkeys = 0;
-    pakd.keys = NULL;
-    HAMT_traverse(dirs, &pakd, perfect_add_key);
+    nkeys = 0;
+    keys = NULL;
+    STAILQ_FOREACH(d, dirs, link) {
+	key *k = yasm_xmalloc(sizeof(key));
+
+	k->name_k = yasm__xstrdup(d->name);
+	k->len_k = strlen(d->name);
+	k->next_k = keys;
+	keys = k;
+	nkeys++;
+    }
 
     /* find the hash */
     findhash(&tab, &tabh, &alen, &blen, &salt, &final, 
-	     scramble, &smax, pakd.keys, pakd.nkeys, &form);
+	     scramble, &smax, keys, nkeys, &form);
 
     /* output the dir table: this should loop up to smax for NORMAL_HP,
      * or up to pakd.nkeys for MINIMAL_HP.
@@ -682,11 +658,14 @@ perfect_dir(FILE *out, const char *which, const char *parser, HAMT *dirs)
     fprintf(out, "static const %s_parse_data %s_", which, which);
     if (parser)
 	fprintf(out, "%s_", parser);
-    fprintf(out, "pd[%lu] = {\n", pakd.nkeys);
-    for (i=0; i<pakd.nkeys; i++) {
+    fprintf(out, "pd[%lu] = {\n", nkeys);
+    for (i=0; i<nkeys; i++) {
 	if (tabh[i].key_h) {
-	    dir *d = HAMT_search(dirs, tabh[i].key_h->name_k);
 	    sval *sv;
+	    STAILQ_FOREACH(d, dirs, link) {
+		if (strcmp(d->name, tabh[i].key_h->name_k) == 0)
+		    break;
+	    }
 	    if (!d) {
 		report_error("internal error: could not find `%s'",
 			     tabh[i].key_h->name_k);
@@ -705,7 +684,7 @@ perfect_dir(FILE *out, const char *which, const char *parser, HAMT *dirs)
 	} else
 	    fprintf(out, "  { NULL }");
 
-	if (i < pakd.nkeys-1)
+	if (i < nkeys-1)
 	    fprintf(out, ",");
 	fprintf(out, "\n");
     }
@@ -727,7 +706,7 @@ perfect_dir(FILE *out, const char *which, const char *parser, HAMT *dirs)
     fprintf(out, "  const %s_parse_data *ret;\n", which);
     for (i=0; i<final.used; ++i)
 	fprintf(out, final.line[i]);
-    fprintf(out, "  if (rsl >= %lu) return NULL;\n", pakd.nkeys);
+    fprintf(out, "  if (rsl >= %lu) return NULL;\n", nkeys);
     fprintf(out, "  ret = &%s_", which);
     if (parser)
 	fprintf(out, "%s_", parser);
@@ -861,11 +840,11 @@ main(int argc, char *argv[])
 
     /* Get perfect hashes for the three lists of directives */
     STAILQ_FOREACH(db, &insnprefix_byp, link)
-	perfect_dir(out, "insnprefix", db->parser, db->dirs);
+	perfect_dir(out, "insnprefix", db->parser, &db->dirs);
     STAILQ_FOREACH(db, &cpu_byp, link)
-	perfect_dir(out, "cpu", db->parser, db->dirs);
+	perfect_dir(out, "cpu", db->parser, &db->dirs);
     STAILQ_FOREACH(db, &regtmod_byp, link)
-	perfect_dir(out, "regtmod", db->parser, db->dirs);
+	perfect_dir(out, "regtmod", db->parser, &db->dirs);
 
     if (errors > 0)
 	return EXIT_FAILURE;
