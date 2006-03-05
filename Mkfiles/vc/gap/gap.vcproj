@@ -127,9 +127,6 @@
 				RelativePath="..\..\..\libyasm\phash.c">
 			</File>
 			<File
-				RelativePath="..\..\..\libyasm\hamt.c">
-			</File>
-			<File
 				RelativePath="..\..\..\libyasm\xmalloc.c">
 			</File>
 			<File

@@ -191,10 +191,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\libyasm\hamt.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\tools\gap\perfect.c"
 				>
 			</File>

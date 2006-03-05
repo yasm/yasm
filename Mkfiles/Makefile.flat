@@ -179,7 +179,6 @@ GAP_SRCS= \
 	tools/gap/gap.c \
 	tools/gap/perfect.c \
 	libyasm/phash.c \
-	libyasm/hamt.c \
 	libyasm/xmalloc.c \
 	libyasm/xstrdup.c
 
