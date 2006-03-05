@@ -579,7 +579,7 @@ make_c_tab(
 
 	if (blen < 16) {
 	    for (i=0; i<blen; ++i)
-		fprintf(f, "%3d,", scramble[tab[i].val_b]);
+		fprintf(f, "%3ld,", scramble[tab[i].val_b]);
 	} else if (blen <= 1024) {
 	    for (i=0; i<blen; i+=16)
 		fprintf(f, "%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,\n",
@@ -600,7 +600,7 @@ make_c_tab(
 		    scramble[tab[i+6].val_b], scramble[tab[i+7].val_b]); 
 	} else {
 	    for (i=0; i<blen; i+=16)
-		fprintf(f, "%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,\n",
+		fprintf(f, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,\n",
 		    tab[i+0].val_b, tab[i+1].val_b, 
 		    tab[i+2].val_b, tab[i+3].val_b, 
 		    tab[i+4].val_b, tab[i+5].val_b, 
@@ -770,6 +770,7 @@ static int get_line(FILE *in)
 	}
 	p -= 2;
     }
+    return 0;
 }
 
 static struct {
@@ -794,11 +795,7 @@ int
 main(int argc, char *argv[])
 {
     FILE *in, *out;
-    int i, t;
-    int insn_numnongas = 0, insn_numgas = 0, insn_numcommon = 0;
-    int cpu_num = 0, cpu_numalias = 0, cpu_numfeature = 0;
-    int prefix_numnongas = 0, prefix_numgas = 0, prefix_numcommon = 0;
-    int reg_numcommon = 0, reg_num64 = 0, reg_numgroup = 0, reg_numseg = 0;
+    int i;
     char *tok;
     int count[NUM_DIRS];
     dir_byp *db;

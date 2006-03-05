@@ -49,6 +49,7 @@ determined a perfect hash for the whole set of keys.
 ------------------------------------------------------------------------------
 */
 
+#include <string.h>
 #include "tools/gap/standard.h"
 #include "libyasm/coretype.h"
 #include "libyasm/phash.h"
@@ -124,25 +125,25 @@ hashform *form;
 	!memcmp(key1->name_k, key2->name_k, (size_t)key1->len_k))
     {
       fprintf(stderr, "perfect.c: Duplicates keys!  %.*s\n",
-	      key1->len_k, key1->name_k);
-      exit(EXIT_SUCCESS);
+	      (int)key1->len_k, key1->name_k);
+      exit(EXIT_FAILURE);
     }
     break;
   case INT_HT:
     if (key1->hash_k == key2->hash_k)
     {
       fprintf(stderr, "perfect.c: Duplicate keys!  %.8lx\n", key1->hash_k);
-      exit(EXIT_SUCCESS);
+      exit(EXIT_FAILURE);
     }
     break;
   case AB_HT:
     fprintf(stderr, "perfect.c: Duplicate keys!  %.8lx %.8lx\n",
 	    key1->a_k, key1->b_k);
-    exit(EXIT_SUCCESS);
+    exit(EXIT_FAILURE);
     break;
   default:
     fprintf(stderr, "perfect.c: Illegal hash type %ld\n", (ub4)form->hashtype);
-    exit(EXIT_SUCCESS);
+    exit(EXIT_FAILURE);
     break;
   }
 }
@@ -221,7 +222,7 @@ gencode  *final;                          /* output, code for the final hash */
     sprintf(final->line[2],
 	    "  phash_checksum(key, len, state);\n");
     sprintf(final->line[3], 
-	    "  rsl = ((state[0]&0x%x)^scramble[tab[state[1]&0x%x]]);\n",
+	    "  rsl = ((state[0]&0x%lx)^scramble[tab[state[1]&0x%lx]]);\n",
 	    alen-1, blen-1);
   }
   else
@@ -244,12 +245,12 @@ gencode  *final;                          /* output, code for the final hash */
     }
     else if (blen < USE_SCRAMBLE)
     {
-      sprintf(final->line[1], "  rsl = ((val>>%ld)^tab[val&0x%x]);\n",
+      sprintf(final->line[1], "  rsl = ((val>>%ld)^tab[val&0x%lx]);\n",
 	      UB4BITS-phash_log2(alen), blen-1);
     }
     else
     {
-      sprintf(final->line[1], "  rsl = ((val>>%ld)^scramble[tab[val&0x%x]]);\n",
+      sprintf(final->line[1], "  rsl = ((val>>%ld)^scramble[tab[val&0x%lx]]);\n",
 	      UB4BITS-phash_log2(alen), blen-1);
     }
   }
@@ -320,8 +321,6 @@ ub4       salt;                     /* used to initialize the hash function */
 hashform *form;                                           /* user directives */
 gencode  *final;                                      /* code for final hash */
 {
-  ub4 finished;
-
   /* Do the initial hash of the keys */
   switch(form->mode)
   {
@@ -617,7 +616,7 @@ hashform *form;                                           /* user directives */
       "perfect.c: Can't deal with (A,B) having A bigger than twice \n");
     fprintf(stderr,
       "  the smallest power of two greater or equal to any legal hash.\n");
-    exit(EXIT_SUCCESS);
+    exit(EXIT_FAILURE);
   }
 
   /* allocate working memory */
@@ -635,7 +634,7 @@ hashform *form;                                           /* user directives */
     if (form->perfect == MINIMAL_HP)
     {
       printf("fatal error: Cannot find perfect hash for user (A,B) pairs\n");
-      exit(EXIT_SUCCESS);
+      exit(EXIT_FAILURE);
     }
     else
     {
@@ -648,7 +647,7 @@ hashform *form;                                           /* user directives */
       if (!perfect(*tabb, tabh, tabq, *blen, *smax, scramble, nkeys, form))
       {
 	printf("fatal error: Cannot find perfect hash for user (A,B) pairs\n");
-	exit(EXIT_SUCCESS);
+	exit(EXIT_FAILURE);
       }
     }
   }
@@ -898,7 +897,7 @@ void findhash(
 	{
 	  duplicates(*tabb, *blen, keys, form);      /* check for duplicates */
 	  printf("fatal error: Cannot perfect hash: cannot find distinct (A,B)\n");
-	  exit(EXIT_SUCCESS);
+	  exit(EXIT_FAILURE);
 	}
 	bad_initkey = 0;
 	bad_perfect = 0;
@@ -926,7 +925,7 @@ void findhash(
 	else
 	{
 	  printf("fatal error: Cannot perfect hash: cannot build tab[]\n");
-	  exit(EXIT_SUCCESS);
+	  exit(EXIT_FAILURE);
 	}
 	bad_perfect = 0;
       }
