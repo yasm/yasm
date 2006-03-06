@@ -114,7 +114,8 @@ HAMT_delete_trie(HAMTNode *node)
 
 	/* Count total number of bits in bitmap to determine size */
 	BitCount(Size, node->BitMapKey);
-	if (Size > 32)
+	Size &= 0x1F;
+	if (Size == 0)
 	    Size = 32;
 
 	for (i=0; i<Size; i++)
@@ -275,7 +276,8 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 
 	    /* Count total number of bits in bitmap to determine new size */
 	    BitCount(Size, node->BitMapKey);
-	    if (Size > 32)
+	    Size &= 0x1F;
+	    if (Size == 0)
 		Size = 32;
 	    newnodes = yasm_xmalloc(Size*sizeof(HAMTNode));
 
