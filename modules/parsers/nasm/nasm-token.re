@@ -197,9 +197,9 @@ scan:
 	    RETURN(INTNUM);
 	}
 
-	/* 777q - octal number */
-	octdigit+ 'q' {
-	    s->tok[TOKLEN-1] = '\0'; /* strip off 'q' */
+	/* 777q or 777o - octal number */
+	octdigit+ [qQoO] {
+	    s->tok[TOKLEN-1] = '\0'; /* strip off 'q' or 'o' */
 	    lvalp->intn = yasm_intnum_create_oct(s->tok, cur_line);
 	    RETURN(INTNUM);
 	}
