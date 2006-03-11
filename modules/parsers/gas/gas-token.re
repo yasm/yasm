@@ -357,6 +357,7 @@ scan:
 	'.equ'		{ parser_gas->state = INSTDIR; RETURN(DIR_EQU); }
 	'.extern'	{ parser_gas->state = INSTDIR; RETURN(DIR_EXTERN); }
 	'.file'		{ parser_gas->state = INSTDIR; RETURN(DIR_FILE); }
+	'.fill'		{ parser_gas->state = INSTDIR; RETURN(DIR_FILL); }
 	'.float'	{ parser_gas->state = INSTDIR; RETURN(DIR_FLOAT); }
 	'.global'	{ parser_gas->state = INSTDIR; RETURN(DIR_GLOBAL); }
 	'.globl'	{ parser_gas->state = INSTDIR; RETURN(DIR_GLOBAL); }

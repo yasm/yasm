@@ -60,6 +60,10 @@ static yasm_bytecode *gas_parser_align
 static yasm_bytecode *gas_parser_dir_align(yasm_parser_gas *parser_gas,
 					   yasm_valparamhead *valparams,
 					   int power2);
+static yasm_bytecode *gas_parser_dir_fill
+    (yasm_parser_gas *parser_gas, /*@only@*/ yasm_expr *repeat,
+     /*@only@*/ /*@null@*/ yasm_expr *size,
+     /*@only@*/ /*@null@*/ yasm_expr *value);
 static void gas_parser_directive
     (yasm_parser_gas *parser_gas, const char *name,
      yasm_valparamhead *valparams,
@@ -112,11 +116,11 @@ static void gas_parser_directive
 %token LINE
 %token DIR_2BYTE DIR_4BYTE DIR_ALIGN DIR_ASCII DIR_ASCIZ DIR_BALIGN
 %token DIR_BSS DIR_BYTE DIR_COMM DIR_DATA DIR_DOUBLE DIR_ENDR DIR_EXTERN
-%token DIR_EQU DIR_FILE DIR_FLOAT DIR_GLOBAL DIR_IDENT DIR_INT DIR_LINE
-%token DIR_LOC DIR_LOCAL DIR_LCOMM DIR_OCTA DIR_ORG DIR_P2ALIGN DIR_REPT
-%token DIR_SECTION DIR_SHORT DIR_SIZE DIR_SKIP DIR_SLEB128 DIR_STRING DIR_TEXT
-%token DIR_TFLOAT DIR_TYPE DIR_QUAD DIR_ULEB128 DIR_VALUE DIR_WEAK DIR_WORD
-%token DIR_ZERO
+%token DIR_EQU DIR_FILE DIR_FILL DIR_FLOAT DIR_GLOBAL DIR_IDENT DIR_INT
+%token DIR_LINE DIR_LOC DIR_LOCAL DIR_LCOMM DIR_OCTA DIR_ORG DIR_P2ALIGN
+%token DIR_REPT DIR_SECTION DIR_SHORT DIR_SIZE DIR_SKIP DIR_SLEB128 DIR_STRING
+%token DIR_TEXT DIR_TFLOAT DIR_TYPE DIR_QUAD DIR_ULEB128 DIR_VALUE DIR_WEAK
+%token DIR_WORD DIR_ZERO
 
 %type <bc> lineexp instr
 
@@ -389,6 +393,16 @@ lineexp: instr
 	$$ = yasm_bc_create_data(&dvs, 1, 0, cur_line);
 
 	yasm_bc_set_multiple($$, $2);
+    }
+    /* fill data definition directive */
+    | DIR_FILL expr {
+	$$ = gas_parser_dir_fill(parser_gas, $2, NULL, NULL);
+    }
+    | DIR_FILL expr ',' expr {
+	$$ = gas_parser_dir_fill(parser_gas, $2, $4, NULL);
+    }
+    | DIR_FILL expr ',' expr ',' expr {
+	$$ = gas_parser_dir_fill(parser_gas, $2, $4, $6);
     }
     /* Section directives */
     | DIR_TEXT {
@@ -958,6 +972,43 @@ gas_parser_dir_align(yasm_parser_gas *parser_gas, yasm_valparamhead *valparams,
 
     return gas_parser_align(parser_gas, parser_gas->cur_section, boundval,
 			    fillval, maxskipval, power2);
+}
+
+static yasm_bytecode *
+gas_parser_dir_fill(yasm_parser_gas *parser_gas, /*@only@*/ yasm_expr *repeat,
+		    /*@only@*/ /*@null@*/ yasm_expr *size,
+		    /*@only@*/ /*@null@*/ yasm_expr *value)
+{
+    yasm_datavalhead dvs;
+    yasm_bytecode *bc;
+    unsigned int ssize;
+
+    if (size) {
+	/*@dependent@*/ /*@null@*/ yasm_intnum *intn;
+	intn = yasm_expr_get_intnum(&size, NULL);
+	if (!intn) {
+	    yasm__error(cur_line, N_("size must be an absolute expression"));
+	    yasm_expr_destroy(repeat);
+	    yasm_expr_destroy(size);
+	    if (value)
+		yasm_expr_destroy(value);
+	    return NULL;
+	}
+	ssize = yasm_intnum_get_uint(intn);
+    } else
+	ssize = 1;
+
+    if (!value)
+	value = yasm_expr_create_ident(
+	    yasm_expr_int(yasm_intnum_create_uint(0)), cur_line);
+
+    yasm_dvs_initialize(&dvs);
+    yasm_dvs_append(&dvs, yasm_dv_create_expr(value));
+    bc = yasm_bc_create_data(&dvs, ssize, 0, cur_line);
+
+    yasm_bc_set_multiple(bc, repeat);
+
+    return bc;
 }
 
 static void
