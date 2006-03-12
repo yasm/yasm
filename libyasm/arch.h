@@ -316,7 +316,7 @@ unsigned int yasm_arch_min_insn_len(const yasm_arch *arch);
 /** Create architecture.
  * \param module	architecture module
  * \param machine	keyword of machine in use (must be one listed in
- *			#machines)
+ *			#yasm_arch_module.machines)
  * \param parser	keyword of parser in use
  * \param error		error return value
  * \return NULL on error (error returned in error parameter), otherwise new
