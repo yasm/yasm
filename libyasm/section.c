@@ -64,9 +64,16 @@ struct yasm_section {
 
     union {
 	/* SECTION_GENERAL data */
-	struct general {
+	struct {
 	    /*@owned@*/ char *name;	/* strdup()'ed name (given by user) */
 	} general;
+	/* SECTION_ABSOLUTE data */
+	struct {
+	    /* Internally created first symrec in section.  Used by
+	     * yasm_expr__level_tree during absolute reference expansion.
+	     */
+	    /*@dependent@*/ yasm_symrec *first;
+	} absolute;
     } data;
 
     /* associated data; NULL if none */
@@ -200,6 +207,9 @@ yasm_object_create_absolute(yasm_object *object, yasm_expr *start,
     /* Initialize relocs */
     STAILQ_INIT(&s->relocs);
     s->destroy_reloc = NULL;
+
+    s->data.absolute.first =
+	yasm_symtab_define_label(object->symtab, ".absstart", bc, 0, 0);
 
     s->code = 0;
     s->res_only = 1;
@@ -473,6 +483,14 @@ yasm_section_get_name(const yasm_section *sect)
 {
     if (sect->type == SECTION_GENERAL)
 	return sect->data.general.name;
+    return NULL;
+}
+
+yasm_symrec *
+yasm_section_abs_get_sym(const yasm_section *sect)
+{
+    if (sect->type == SECTION_ABSOLUTE)
+	return sect->data.absolute.first;
     return NULL;
 }
 

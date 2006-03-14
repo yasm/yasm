@@ -155,8 +155,7 @@ yasm_expr_reg(unsigned long reg)
 }
 
 /* Transforms instances of symrec-symrec [symrec+(-1*symrec)] into integers if
- * possible.  Also transforms single symrec's that reference absolute sections.
- * Uses a simple n^2 algorithm because n is usually quite small.
+ * possible.  Uses a simple n^2 algorithm because n is usually quite small.
  */
 static /*@only@*/ yasm_expr *
 expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e,
@@ -167,24 +166,6 @@ expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e,
     /*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
     /*@null@*/ yasm_intnum *dist;
     int numterms;
-
-    for (i=0; i<e->numterms; i++) {
-	/* Transform symrecs that reference absolute sections into
-	 * absolute start expr + intnum(dist).
-	 */
-	if (e->terms[i].type == YASM_EXPR_SYM &&
-	    yasm_symrec_get_label(e->terms[i].data.sym, &precbc) &&
-	    (sect = yasm_bc_get_section(precbc)) &&
-	    yasm_section_is_absolute(sect) &&
-	    (dist = calc_bc_dist(yasm_section_bcs_first(sect), precbc))) {
-	    const yasm_expr *start = yasm_section_get_start(sect);
-	    e->terms[i].type = YASM_EXPR_EXPR;
-	    e->terms[i].data.expn =
-		yasm_expr_create(YASM_EXPR_ADD,
-				 yasm_expr_expr(yasm_expr_copy(start)),
-				 yasm_expr_int(dist), e->line);
-	}
-    }
 
     /* Handle symrec-symrec in ADD exprs by looking for (-1*symrec) and
      * symrec term pairs (where both symrecs are in the same segment).
@@ -208,10 +189,12 @@ expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e,
 	    continue;
 
 	if (sube->terms[0].type == YASM_EXPR_INT &&
-	    sube->terms[1].type == YASM_EXPR_SYM) {
+	    (sube->terms[1].type == YASM_EXPR_SYM ||
+	     sube->terms[1].type == YASM_EXPR_SYMEXP)) {
 	    intn = sube->terms[0].data.intn;
 	    sym = sube->terms[1].data.sym;
-	} else if (sube->terms[0].type == YASM_EXPR_SYM &&
+	} else if ((sube->terms[0].type == YASM_EXPR_SYM ||
+		    sube->terms[0].type == YASM_EXPR_SYMEXP) &&
 		   sube->terms[1].type == YASM_EXPR_INT) {
 	    sym = sube->terms[0].data.sym;
 	    intn = sube->terms[1].data.intn;
@@ -227,7 +210,8 @@ expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e,
 
 	/* Now look for a symrec term in the same segment */
 	for (j=0; j<e->numterms; j++) {
-	    if (e->terms[j].type == YASM_EXPR_SYM &&
+	    if ((e->terms[j].type == YASM_EXPR_SYM ||
+		 e->terms[j].type == YASM_EXPR_SYMEXP) &&
 		yasm_symrec_get_label(e->terms[j].data.sym, &precbc2) &&
 		(sect = yasm_bc_get_section(precbc2)) &&
 		sect == sect2 &&
@@ -717,13 +701,18 @@ yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
 
     /* traverse terms */
     for (i=0; i<e->numterms; i++) {
-	/* First expand equ's */
+	/* Expansion stage first: expand equ's, and expand symrecs that
+	 * reference absolute sections into
+	 * absolute start expr + (symrec - first bc in abs section).
+	 */
 	if (e->terms[i].type == YASM_EXPR_SYM) {
+	    yasm__exprentry *np;
 	    const yasm_expr *equ_expr =
 		yasm_symrec_get_equ(e->terms[i].data.sym);
-	    if (equ_expr) {
-		yasm__exprentry *np;
+	    /*@dependent@*/ yasm_section *sect;
+	    /*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
 
+	    if (equ_expr) {
 		/* Check for circular reference */
 		SLIST_FOREACH(np, eh, next) {
 		    if (np->e == equ_expr) {
@@ -737,6 +726,45 @@ yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
 		e->terms[i].data.expn = yasm_expr_copy(equ_expr);
 
 		ee.e = equ_expr;
+		SLIST_INSERT_HEAD(eh, &ee, next);
+	    } else if (yasm_symrec_get_label(e->terms[i].data.sym, &precbc) &&
+		       (sect = yasm_bc_get_section(precbc)) &&
+		       yasm_section_is_absolute(sect)) {
+		const yasm_expr *start = yasm_section_get_start(sect);
+		yasm_expr *sube, *sube2;
+
+		/* Check for circular reference */
+		SLIST_FOREACH(np, eh, next) {
+		    if (np->e == start) {
+			yasm__error(e->line,
+				    N_("circular reference detected."));
+			return e;
+		    }
+		}
+
+		sube = yasm_xmalloc(sizeof(yasm_expr));
+		sube->op = YASM_EXPR_SUB;
+		sube->line = e->line;
+		sube->numterms = 2;
+		sube->terms[0].type = YASM_EXPR_SYMEXP;
+		sube->terms[0].data.sym = e->terms[i].data.sym;
+		sube->terms[1].type = YASM_EXPR_SYMEXP;
+		sube->terms[1].data.sym = yasm_section_abs_get_sym(sect);
+		assert(sube->terms[1].data.sym != NULL);
+
+		sube2 = yasm_xmalloc(sizeof(yasm_expr));
+		sube2->op = YASM_EXPR_ADD;
+		sube2->line = e->line;
+		sube2->numterms = 2;
+		sube2->terms[0].type = YASM_EXPR_EXPR;
+		sube2->terms[0].data.expn = yasm_expr_copy(start);
+		sube2->terms[1].type = YASM_EXPR_EXPR;
+		sube2->terms[1].data.expn = sube;
+
+		e->terms[i].type = YASM_EXPR_EXPR;
+		e->terms[i].data.expn = sube2;
+
+		ee.e = start;
 		SLIST_INSERT_HEAD(eh, &ee, next);
 	    }
 	}
@@ -831,6 +859,7 @@ yasm_expr__copy_except(const yasm_expr *e, int except)
 	    dest->type = src->type;
 	    switch (src->type) {
 		case YASM_EXPR_SYM:
+		case YASM_EXPR_SYMEXP:
 		    /* Symbols don't need to be copied */
 		    dest->data.sym = src->data.sym;
 		    break;
@@ -1004,7 +1033,8 @@ yasm_expr_extract_symrec(yasm_expr **ep,
 		return yasm_expr_extract_symrec(&((*ep)->terms[0].data.expn),
 						relocate_action, calc_bc_dist);
 	    /* Replace sym with 0 value, return sym */
-	    if ((*ep)->terms[0].type == YASM_EXPR_SYM) {
+	    if ((*ep)->terms[0].type == YASM_EXPR_SYM ||
+		(*ep)->terms[0].type == YASM_EXPR_SYMEXP) {
 		sym = (*ep)->terms[0].data.sym;
 		symterm = 0;
 	    }
@@ -1012,7 +1042,8 @@ yasm_expr_extract_symrec(yasm_expr **ep,
 	case YASM_EXPR_ADD:
 	    /* Search for sym, if found, delete it from expr and return it */
 	    for (i=0; i<(*ep)->numterms; i++) {
-		if ((*ep)->terms[i].type == YASM_EXPR_SYM) {
+		if ((*ep)->terms[i].type == YASM_EXPR_SYM ||
+		    (*ep)->terms[i].type == YASM_EXPR_SYMEXP) {
 		    sym = (*ep)->terms[i].data.sym;
 		    symterm = i;
 		    break;
@@ -1176,7 +1207,9 @@ yasm_expr_get_symrec(yasm_expr **ep, int simplify)
     if (simplify)
 	*ep = yasm_expr_simplify(*ep, NULL);
 
-    if ((*ep)->op == YASM_EXPR_IDENT && (*ep)->terms[0].type == YASM_EXPR_SYM)
+    if ((*ep)->op == YASM_EXPR_IDENT &&
+	((*ep)->terms[0].type == YASM_EXPR_SYM ||
+	 (*ep)->terms[0].type == YASM_EXPR_SYMEXP))
 	return (*ep)->terms[0].data.sym;
     else
 	return (yasm_symrec *)NULL;
@@ -1303,6 +1336,7 @@ yasm_expr_print(const yasm_expr *e, FILE *f)
     for (i=0; i<e->numterms; i++) {
 	switch (e->terms[i].type) {
 	    case YASM_EXPR_SYM:
+	    case YASM_EXPR_SYMEXP:
 		fprintf(f, "%s", yasm_symrec_get_name(e->terms[i].data.sym));
 		break;
 	    case YASM_EXPR_EXPR:

@@ -298,6 +298,13 @@ int yasm_section_bcs_traverse
 /*@observer@*/ /*@null@*/ const char *yasm_section_get_name
     (const yasm_section *sect);
 
+/** Get starting symbol of an absolute section.
+ * \param   sect    section
+ * \return Starting symrec, or NULL if section is not absolute.
+ */
+/*@dependent@*/ /*@null@*/ yasm_symrec *yasm_section_abs_get_sym
+    (const yasm_section *sect);
+
 /** Change starting address of a section.
  * \param sect	    section
  * \param start	    starting address
