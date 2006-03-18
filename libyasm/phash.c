@@ -191,11 +191,12 @@ is trying to cause collisions.  Do NOT use for cryptography.
 */
 void
 phash_checksum(
-    register const unsigned char *k,
+    register const char *sk,
     register unsigned long len,
     register unsigned long *state)
 {
     register unsigned long a,b,c,d,e,f,g,h,length;
+    register const unsigned char *k = (const unsigned char *)sk;
 
     /* Use the length and level; add in the golden ratio. */
     length = len;

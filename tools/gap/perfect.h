@@ -79,7 +79,7 @@ typedef  struct hashform  hashform;
 /* representation of a key */
 struct key
 {
-  ub1        *name_k;                                      /* the actual key */
+  char       *name_k;                                      /* the actual key */
   ub4         len_k;                         /* the length of the actual key */
   ub4         hash_k;                 /* the initial hash value for this key */
   struct key *next_k;                                            /* next key */

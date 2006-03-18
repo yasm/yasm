@@ -279,7 +279,7 @@ static void initinl(
     ub4   i;
     for (i=0; i<mykey->len_k; ++i)
     {
-      hash = (mykey->name_k[i] ^ hash) + ((hash<<(UB4BITS-6))+(hash>>6));
+      hash = ((ub1)mykey->name_k[i] ^ hash) + ((hash<<(UB4BITS-6))+(hash>>6));
     }
     mykey->hash_k = hash;
     mykey->a_k = (alen > 1) ? (hash & amask) : 0;
