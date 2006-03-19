@@ -22,7 +22,6 @@ LIBYASM_OBJS= \
  libyasm/bytecode.o \
  libyasm/errwarn.o \
  libyasm/expr.o \
- libyasm/value.o \
  libyasm/file.o \
  libyasm/floatnum.o \
  libyasm/hamt.o \
@@ -36,6 +35,7 @@ LIBYASM_OBJS= \
  libyasm/strsep.o \
  libyasm/symrec.o \
  libyasm/valparam.o \
+ libyasm/value.o \
  libyasm/xmalloc.o \
  libyasm/xstrdup.o \
  module.o
