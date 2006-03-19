@@ -125,7 +125,7 @@ static yasm_bc_resolve_flags stabs_bc_str_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int stabs_bc_str_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
-     yasm_output_expr_func output_expr,
+     yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static void stabs_bc_stab_destroy(void *contents);
@@ -135,7 +135,7 @@ static yasm_bc_resolve_flags stabs_bc_stab_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int stabs_bc_stab_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
-     yasm_output_expr_func output_expr,
+     yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
 /* Bytecode callback structures */
@@ -396,7 +396,7 @@ stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
 
 static int
 stabs_bc_stab_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-		      yasm_output_expr_func output_expr,
+		      yasm_output_value_func output_value,
 		      yasm_output_reloc_func output_reloc)
 {
     /* This entire function, essentially the core of rendering stabs to a file,
@@ -430,7 +430,7 @@ stabs_bc_stab_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
 static int
 stabs_bc_str_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-		     yasm_output_expr_func output_expr,
+		     yasm_output_value_func output_value,
 		     yasm_output_reloc_func output_reloc)
 {
     const char *str = (const char *)bc->contents;

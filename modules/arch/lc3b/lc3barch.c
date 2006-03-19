@@ -182,7 +182,6 @@ yasm_arch_module yasm_lc3b_LTX_arch = {
     lc3b_get_fill,
     yasm_lc3b__finalize_insn,
     lc3b_floatnum_tobytes,
-    yasm_lc3b__intnum_fixup_rel,
     yasm_lc3b__intnum_tobytes,
     lc3b_get_reg_size,
     lc3b_reggroup_get_reg,

@@ -414,83 +414,131 @@ coff_objfmt_set_section_addr(yasm_section *sect, /*@null@*/ void *d)
 }
 
 static int
-coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
-			size_t valsize, int shift, unsigned long offset,
-			yasm_bytecode *bc, int rel, int warn,
-			/*@null@*/ void *d)
+coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
+			 size_t valsize, int shift, unsigned long offset,
+			 yasm_bytecode *bc, int warn, /*@null@*/ void *d)
 {
     /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
     yasm_objfmt_coff *objfmt_coff;
+    /*@only@*/ /*@null@*/ yasm_intnum *dist = NULL;
     /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
-    /*@dependent@*/ /*@null@*/ const yasm_floatnum *flt;
-    /*@dependent@*/ /*@null@*/ yasm_symrec *sym;
-    /*@dependent@*/ yasm_section *label_sect;
-    /*@dependent@*/ /*@null@*/ yasm_bytecode *label_precbc;
+    unsigned long intn_val, intn_minus;
+    int retval;
 
     assert(info != NULL);
     objfmt_coff = info->objfmt_coff;
 
-    *ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
+    if (value->abs)
+	value->abs = yasm_expr_simplify(value->abs, yasm_common_calc_bc_dist);
 
-    /* Handle floating point expressions */
-    flt = yasm_expr_get_floatnum(ep);
-    if (flt) {
-	if (shift < 0)
-	    yasm_internal_error(N_("attempting to negative shift a float"));
-	return yasm_arch_floatnum_tobytes(objfmt_coff->arch, flt, buf,
-					  destsize, valsize,
-					  (unsigned int)shift, warn, bc->line);
+    /* Try to output constant and PC-relative section-local first.
+     * Note this does NOT output any value with a SEG, WRT, external,
+     * cross-section, or non-PC-relative reference (those are handled below).
+     */
+    switch (yasm_value_output_basic(value, buf, destsize, valsize, shift, bc,
+				    warn, info->objfmt_coff->arch,
+				    yasm_common_calc_bc_dist)) {
+	case -1:
+	    return 1;
+	case 0:
+	    break;
+	default:
+	    return 0;
     }
 
-    /* Handle integer expressions, with relocation if necessary */
-    if (objfmt_coff->win64)
-	sym = yasm_expr_extract_symrec(ep, YASM_SYMREC_REPLACE_ZERO,
-				       yasm_common_calc_bc_dist);
-    else
-	sym = yasm_expr_extract_symrec(ep, YASM_SYMREC_REPLACE_VALUE,
-				       yasm_common_calc_bc_dist);
+    /* Handle other expressions, with relocation if necessary */
+    if (value->seg_of || value->rshift > 0) {
+	yasm__error(bc->line, N_("coff: relocation too complex"));
+	return 1;
+    }
 
-    if (sym) {
+    intn_val = 0;
+    intn_minus = 0;
+    if (value->rel) {
+	yasm_sym_vis vis = yasm_symrec_get_visibility(value->rel);
+	/*@dependent@*/ /*@null@*/ yasm_symrec *sym = value->rel;
 	unsigned long addr;
 	coff_reloc *reloc;
-	yasm_sym_vis vis;
 
+	/* Sometimes we want the relocation to be generated against one
+	 * symbol but the value generated correspond to a different symbol.
+	 * This is done through (sym being referenced) WRT (sym used for reloc).
+	 * Note both syms need to be in the same section!
+	 */
+	if (value->wrt) {
+	    /*@dependent@*/ /*@null@*/ yasm_bytecode *rel_precbc, *wrt_precbc;
+	    if (!yasm_symrec_get_label(sym, &rel_precbc)
+		|| !yasm_symrec_get_label(value->wrt, &wrt_precbc)) {
+		yasm__error(bc->line, N_("coff: wrt expression too complex"));
+		return 1;
+	    }
+	    dist = yasm_common_calc_bc_dist(wrt_precbc, rel_precbc);
+	    if (!dist) {
+		yasm__error(bc->line, N_("coff: cannot wrt across sections"));
+		return 1;
+	    }
+	    sym = value->wrt;
+	}
+
+	if (vis & YASM_SYM_COMMON) {
+	    /* In standard COFF, COMMON symbols have their length added in */
+	    if (!objfmt_coff->win32) {
+		/*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
+		/*@dependent@*/ /*@null@*/ yasm_intnum *common_size;
+
+		csymd = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
+		assert(csymd != NULL);
+		common_size = yasm_expr_get_intnum(&csymd->size,
+						   yasm_common_calc_bc_dist);
+		if (!common_size) {
+		    yasm__error(bc->line, N_("coff: common size too complex"));
+		    return 1;
+		}
+
+		if (yasm_intnum_sign(common_size) < 0) {
+		    yasm__error(bc->line, N_("coff: common size is negative"));
+		    return 1;
+		}
+
+		intn_val += yasm_intnum_get_uint(common_size);
+	    }
+	} else if (!(vis & YASM_SYM_EXTERN) && !objfmt_coff->win64) {
+	    /*@dependent@*/ /*@null@*/ yasm_bytecode *sym_precbc;
+
+	    /* Local symbols need relocation to their section's start */
+	    if (yasm_symrec_get_label(sym, &sym_precbc)) {
+		yasm_section *sym_sect = yasm_bc_get_section(sym_precbc);
+		/*@null@*/ coff_section_data *sym_csd;
+		sym_csd = yasm_section_get_data(sym_sect,
+						&coff_section_data_cb);
+		assert(sym_csd != NULL);
+		sym = sym_csd->sym;
+		intn_val = sym_precbc->offset + sym_precbc->len;
+		if (COFF_SET_VMA)
+		    intn_val += sym_csd->addr;
+	    }
+	}
+
+	if (value->curpos_rel) {
+	    /* For standard COFF, need to adjust to start of section, e.g.
+	     * subtract out the bytecode offset.
+	     * For Win32 COFF, need to reference to next bytecode.
+	     */
+	    if (objfmt_coff->win32)
+		intn_val += bc->len;
+	    else
+		intn_minus = bc->offset;
+	}
+
+	/* Generate reloc */
 	reloc = yasm_xmalloc(sizeof(coff_reloc));
 	addr = bc->offset + offset;
 	if (COFF_SET_VMA)
 	    addr += info->addr;
 	reloc->reloc.addr = yasm_intnum_create_uint(addr);
 	reloc->reloc.sym = sym;
-	vis = yasm_symrec_get_visibility(sym);
-	if (vis & YASM_SYM_COMMON) {
-	    /* In standard COFF, COMMON symbols have their length added in */
-	    if (!objfmt_coff->win32) {
-		/*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
 
-		csymd = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
-		assert(csymd != NULL);
-		*ep = yasm_expr_create(YASM_EXPR_ADD, yasm_expr_expr(*ep),
-		    yasm_expr_expr(yasm_expr_copy(csymd->size)),
-		    csymd->size->line);
-		*ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
-	    }
-	} else if (!(vis & YASM_SYM_EXTERN) && !objfmt_coff->win64) {
-	    /* Local symbols need relocation to their section's start */
-	    if (yasm_symrec_get_label(sym, &label_precbc)) {
-		/*@null@*/ coff_section_data *label_csd;
-		label_sect = yasm_bc_get_section(label_precbc);
-		label_csd = yasm_section_get_data(label_sect,
-						  &coff_section_data_cb);
-		assert(label_csd != NULL);
-		reloc->reloc.sym = label_csd->sym;
-		if (COFF_SET_VMA)
-		    *ep = yasm_expr_create(YASM_EXPR_ADD, yasm_expr_expr(*ep),
-			yasm_expr_int(yasm_intnum_create_uint(label_csd->addr)),
-			(*ep)->line);
-	    }
-	}
-
-	if (rel) {
+	if (value->curpos_rel) {
 	    if (objfmt_coff->machine == COFF_MACHINE_I386) {
 		if (valsize == 32)
 		    reloc->type = COFF_RELOC_I386_REL32;
@@ -507,22 +555,6 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 		}
 	    } else
 		yasm_internal_error(N_("coff objfmt: unrecognized machine"));
-	    /* For standard COFF, need to reference to start of section, so add
-	     * $$ in.
-	     * For Win32 COFF, need to reference to next bytecode, so add '$'
-	     * (really $+$.len) in.
-	     */
-	    if (objfmt_coff->win32)
-		*ep = yasm_expr_create(YASM_EXPR_ADD, yasm_expr_expr(*ep),
-		    yasm_expr_sym(yasm_symtab_define_label2("$", bc,
-							    0, (*ep)->line)),
-		    (*ep)->line);
-	    else
-		*ep = yasm_expr_create(YASM_EXPR_ADD, yasm_expr_expr(*ep),
-		    yasm_expr_sym(yasm_symtab_define_label2("$$",
-			yasm_section_bcs_first(info->sect), 0, (*ep)->line)),
-		    (*ep)->line);
-	    *ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
 	} else {
 	    if (objfmt_coff->machine == COFF_MACHINE_I386) {
 		if (info->csd->flags2 & COFF_FLAG_NOBASE)
@@ -547,26 +579,39 @@ coff_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	info->csd->nreloc++;
 	yasm_section_add_reloc(info->sect, (yasm_reloc *)reloc, yasm_xfree);
     }
-    intn = yasm_expr_get_intnum(ep, NULL);
-    if (intn) {
-	if (rel) {
-	    int retval = yasm_arch_intnum_fixup_rel(objfmt_coff->arch, intn,
-						    valsize, bc, bc->line);
-	    if (retval)
-		return retval;
+
+    /* Build up final integer output from intn_val, intn_minus, value->abs,
+     * and dist.  We do all this at the end to avoid creating temporary
+     * intnums above (except for dist).
+     */
+    if (intn_minus <= intn_val)
+	intn = yasm_intnum_create_uint(intn_val-intn_minus);
+    else {
+	intn = yasm_intnum_create_uint(intn_minus-intn_val);
+	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL, bc->line);
+    }
+
+    if (value->abs) {
+	yasm_intnum *intn2 = yasm_expr_get_intnum(&value->abs, NULL);
+	if (!intn2) {
+	    yasm__error(bc->line, N_("coff: relocation too complex"));
+	    yasm_intnum_destroy(intn);
+	    if (dist)
+		yasm_intnum_destroy(dist);
+	    return 1;
 	}
-	return yasm_arch_intnum_tobytes(objfmt_coff->arch, intn, buf, destsize,
-					valsize, shift, bc, warn, bc->line);
+	yasm_intnum_calc(intn, YASM_EXPR_ADD, intn2, bc->line);
     }
 
-    /* Check for complex float expressions */
-    if (yasm_expr__contains(*ep, YASM_EXPR_FLOAT)) {
-	yasm__error(bc->line, N_("floating point expression too complex"));
-	return 1;
+    if (dist) {
+	yasm_intnum_calc(intn, YASM_EXPR_ADD, dist, bc->line);
+	yasm_intnum_destroy(dist);
     }
 
-    yasm__error(bc->line, N_("coff: relocation too complex"));
-    return 1;
+    retval = yasm_arch_intnum_tobytes(objfmt_coff->arch, intn, buf, destsize,
+				      valsize, shift, bc, warn, bc->line);
+    yasm_intnum_destroy(intn);
+    return retval;
 }
 
 static int
@@ -582,7 +627,7 @@ coff_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     assert(info != NULL);
 
     bigbuf = yasm_bc_tobytes(bc, info->buf, &size, &multiple, &gap, info,
-			     coff_objfmt_output_expr, NULL);
+			     coff_objfmt_output_value, NULL);
 
     /* Don't bother doing anything else if size ended up being 0. */
     if (size == 0) {

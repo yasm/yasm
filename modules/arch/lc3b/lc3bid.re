@@ -239,9 +239,9 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 
     /* Copy what we can from info */
     insn = yasm_xmalloc(sizeof(lc3b_insn));
-    insn->imm = NULL;
+    yasm_value_initialize(&insn->imm, NULL);
     insn->imm_type = LC3B_IMM_NONE;
-    insn->origin = NULL;
+    insn->origin_prevbc = NULL;
     insn->opcode = info->opcode;
 
     /* Apply modifiers */
@@ -277,12 +277,17 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		case OPA_Imm:
 		    switch (op->type) {
 			case YASM_INSN__OPERAND_IMM:
-			    insn->imm = op->data.val;
+			    if (yasm_value_finalize_expr(&insn->imm,
+							 op->data.val))
+				yasm__error(bc->line,
+					    N_("immediate expression too complex"));
 			    break;
 			case YASM_INSN__OPERAND_REG:
-			    insn->imm = yasm_expr_create_ident(yasm_expr_int(
-				yasm_intnum_create_uint(op->data.reg & 0x7)),
-				bc->line);
+			    if (yasm_value_finalize_expr(&insn->imm,
+				    yasm_expr_create_ident(yasm_expr_int(
+				    yasm_intnum_create_uint(op->data.reg & 0x7)),
+				    bc->line)))
+				yasm_internal_error(N_("reg expr too complex?"));
 			    break;
 			default:
 			    yasm_internal_error(N_("invalid operand conversion"));
@@ -293,14 +298,15 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	    }
 
 	    insn->imm_type = (info->operands[i] & OPI_MASK)>>3;
-	    if (insn->imm_type == LC3B_IMM_9_PC)
-		insn->origin = yasm_symtab_define_label2("$", prev_bc, 0,
-							 bc->line);
+	    if (insn->imm_type == LC3B_IMM_9_PC) {
+		insn->origin_prevbc = prev_bc;
+		if (insn->imm.seg_of || insn->imm.rshift
+		    || insn->imm.curpos_rel)
+		    yasm__error(bc->line, N_("invalid jump target"));
+		insn->imm.curpos_rel = 1;
+	    }
 	}
     }
-
-    if (!insn->imm)
-	insn->imm_type = LC3B_IMM_NONE;
 
     /* Transform the bytecode */
     yasm_lc3b__bc_transform_insn(bc, insn);

@@ -81,23 +81,33 @@ nasm_listfmt_destroy(/*@only@*/ yasm_listfmt *listfmt)
 }
 
 static int
-nasm_listfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
-			 size_t valsize, int shift, unsigned long offset,
-			 yasm_bytecode *bc, int rel, int warn,
-			 /*@null@*/ void *d)
+nasm_listfmt_output_value(yasm_value *value, unsigned char *buf,
+			  size_t destsize, size_t valsize, int shift,
+			  unsigned long offset, yasm_bytecode *bc, int warn,
+			  /*@null@*/ void *d)
 {
     /*@null@*/ nasm_listfmt_output_info *info = (nasm_listfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
-    /*@dependent@*/ /*@null@*/ const yasm_floatnum *flt;
 
     assert(info != NULL);
+
+    /* Output */
+    switch (yasm_value_output_basic(value, buf, destsize, valsize, shift, bc,
+				    warn, info->arch, NULL)) {
+	case -1:
+	    return 1;
+	case 0:
+	    break;
+	default:
+	    return 0;
+    }
 
     /* Generate reloc if needed */
     if (info->next_reloc && info->next_reloc_addr == bc->offset+offset) {
 	bcreloc *reloc = yasm_xmalloc(sizeof(bcreloc));
 	reloc->offset = offset;
 	reloc->size = destsize;
-	reloc->rel = rel;
+	reloc->rel = value->curpos_rel;
 	STAILQ_INSERT_TAIL(&info->bcrelocs, reloc, link);
 
 	/* Get next reloc's info */
@@ -110,20 +120,16 @@ nasm_listfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
 	}
     }
 
-    flt = yasm_expr_get_floatnum(ep);
-    if (flt) {
-	if (shift < 0)
-	    yasm_internal_error(N_("attempting to negative shift a float"));
-	return yasm_arch_floatnum_tobytes(info->arch, flt, buf, destsize,
-					  valsize, (unsigned int)shift, 0,
-					  bc->line);
-    }
-
-    intn = yasm_expr_get_intnum(ep, NULL);
-    if (intn)
-	return yasm_arch_intnum_tobytes(info->arch, intn, buf, destsize,
-					valsize, shift, bc, 0, bc->line);
-    else {
+    if (value->abs) {
+	intn = yasm_expr_get_intnum(&value->abs, NULL);
+	if (intn)
+	    return yasm_arch_intnum_tobytes(info->arch, intn, buf, destsize,
+					    valsize, shift, bc, 0, bc->line);
+	else {
+	    yasm__error(bc->line, N_("relocation too complex"));
+	    return 1;
+	}
+    } else {
 	int retval;
 	intn = yasm_intnum_create_uint(0);
 	retval = yasm_arch_intnum_tobytes(info->arch, intn, buf, destsize,
@@ -208,7 +214,7 @@ nasm_listfmt_output(yasm_listfmt *listfmt, FILE *f, yasm_linemap *linemap,
 		 * way
 		 */
 		bigbuf = yasm_bc_tobytes(bc, buf, &size, &multiple, &gap,
-					 &info, nasm_listfmt_output_expr,
+					 &info, nasm_listfmt_output_value,
 					 NULL);
 
 		/* output bytes with reloc information */

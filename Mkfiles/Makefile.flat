@@ -25,6 +25,7 @@ LIBYASM_OBJS= \
  libyasm/bytecode.o \
  libyasm/errwarn.o \
  libyasm/expr.o \
+ libyasm/value.o \
  libyasm/file.o \
  libyasm/floatnum.o \
  libyasm/hamt.o \

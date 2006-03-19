@@ -25,6 +25,8 @@ EXTRA_DIST += libyasm/tests/timesover-err.errwarn
 EXTRA_DIST += libyasm/tests/unary.asm
 EXTRA_DIST += libyasm/tests/unary.errwarn
 EXTRA_DIST += libyasm/tests/unary.hex
+EXTRA_DIST += libyasm/tests/value-err.asm
+EXTRA_DIST += libyasm/tests/value-err.errwarn
 
 check_PROGRAMS += bitvect_test
 check_PROGRAMS += floatnum_test

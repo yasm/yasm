@@ -130,7 +130,7 @@ trap:		sub	rsp, 256
 
 [SECTION .pdata]
 dd	trap
-dd	trap+(trap.end-trap)
+dd	trap.end wrt trap
 dd	$xdatasym
 
 [SECTION .xdata]

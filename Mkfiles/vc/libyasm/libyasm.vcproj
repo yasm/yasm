@@ -453,6 +453,9 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\libyasm\value.c">
+			</File>
+			<File
 				RelativePath="..\..\..\libyasm\xmalloc.c">
 				<FileConfiguration
 					Name="Release|Win32">
@@ -573,6 +576,9 @@
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\valparam.h">
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\value.h">
 			</File>
 		</Filter>
 	</Files>

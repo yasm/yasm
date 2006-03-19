@@ -96,6 +96,48 @@ typedef struct yasm_intnum yasm_intnum;
  */
 typedef struct yasm_floatnum yasm_floatnum;
 
+/** A value.  May be absolute or relative.  Outside the parser, yasm_expr
+ * should only be used for absolute exprs.  Anything that could contain
+ * a relocatable value should use this structure instead.
+ * \see value.h for related functions.
+ */
+typedef struct yasm_value {
+    /** The absolute portion of the value.  May contain *differences* between
+     * symrecs but not standalone symrecs.  May be NULL if there is no
+     * absolute portion (e.g. the absolute portion is 0).
+     */
+    /*@null@*/ /*@only@*/ yasm_expr *abs;
+
+    /** The relative portion of the value.  This is the portion that may
+     * need to generate a relocation.  May be NULL if no relative portion.
+     */
+    /*@null@*/ /*@dependent@*/ yasm_symrec *rel;
+
+    /** What the relative portion is in reference to.  NULL if the default. */
+    /*@null@*/ /*@dependent@*/ yasm_symrec *wrt;
+
+    /** If the segment of the relative portion should be used, not the
+     * relative portion itself.  Boolean.
+     */
+    unsigned int seg_of : 1;
+
+    /** If the relative portion of the value should be shifted right
+     * (supported only by a few object formats).  If just the absolute portion
+     * should be shifted, that must be in the abs expr, not here!
+     */
+    unsigned int rshift : 7;
+
+    /** Indicates the relative portion of the value should be relocated
+     * relative to the current assembly position rather than relative to the
+     * section start.  "Current assembly position" here refers to the starting
+     * address of the bytecode containing this value.  Boolean.
+     */
+    unsigned int curpos_rel : 1;
+} yasm_value;
+
+/** Maximum value of #yasm_value.rshift */
+#define YASM_VALUE_RSHIFT_MAX	127
+
 /** Line number mapping repository (opaque type).  \see linemgr.h for related
  * functions.
  */
@@ -168,25 +210,24 @@ typedef enum {
  * \return Distance in bytes between the two bytecodes (bc2-bc1), or NULL if
  *	   the distance was indeterminate.
  */
-typedef /*@null@*/ yasm_intnum * (*yasm_calc_bc_dist_func)
+typedef /*@null@*/ /*@only@*/ yasm_intnum * (*yasm_calc_bc_dist_func)
     (yasm_bytecode *precbc1, yasm_bytecode *precbc2);
 
-/** Convert yasm_expr to its byte representation.  Usually implemented by
+/** Convert yasm_value to its byte representation.  Usually implemented by
  * object formats to keep track of relocations and verify legal expressions.
  * Must put the value into the least significant bits of the destination,
  * unless shifted into more significant bits by the shift parameter.  The
  * destination bits must be cleared before being set.
- * \param ep		(double) pointer to expression
+ * \param value		value
  * \param buf		buffer for byte representation
  * \param destsize	destination size (in bytes)
  * \param valsize	size (in bits)
  * \param shift		left shift (in bits); may be negative to specify right
  *			shift (standard warnings include truncation to boundary)
  * \param offset	offset (in bytes) of the expr contents from the start
- *			of the bytecode (sometimes needed for conditional jumps)
+ *			of the bytecode (needed for relative)
  * \param bc		current bytecode (usually passed into higher-level
  *			calling function)
- * \param rel		if nonzero, expr should be treated as PC/IP-relative
  * \param warn		enables standard warnings: zero for none;
  *			nonzero for overflow/underflow floating point warnings;
  *			negative for signed integer warnings,
@@ -195,10 +236,10 @@ typedef /*@null@*/ yasm_intnum * (*yasm_calc_bc_dist_func)
  *			function)
  * \return Nonzero if an error occurred, 0 otherwise.
  */
-typedef int (*yasm_output_expr_func)
-    (yasm_expr **ep, /*@out@*/ unsigned char *buf, size_t destsize,
+typedef int (*yasm_output_value_func)
+    (yasm_value *value, /*@out@*/ unsigned char *buf, size_t destsize,
      size_t valsize, int shift, unsigned long offset, yasm_bytecode *bc,
-     int rel, int warn, /*@null@*/ void *d) /*@uses *ep@*/;
+     int warn, /*@null@*/ void *d) /*@uses *ep@*/;
 
 /** Convert a symbol reference to its byte representation.  Usually implemented
  * by object formats and debug formats to keep track of relocations generated

@@ -2,6 +2,7 @@
 
 libyasm_a_SOURCES += libyasm/bytecode.c
 libyasm_a_SOURCES += libyasm/expr.c
+libyasm_a_SOURCES += libyasm/value.c
 libyasm_a_SOURCES += libyasm/symrec.c
 libyasm_a_SOURCES += libyasm/file.c
 libyasm_a_SOURCES += libyasm/section.c
@@ -48,6 +49,7 @@ modinclude_HEADERS += libyasm/bc-int.h
 modinclude_HEADERS += libyasm/errwarn.h
 modinclude_HEADERS += libyasm/expr.h
 modinclude_HEADERS += libyasm/expr-int.h
+modinclude_HEADERS += libyasm/value.h
 modinclude_HEADERS += libyasm/symrec.h
 modinclude_HEADERS += libyasm/linemgr.h
 modinclude_HEADERS += libyasm/coretype.h

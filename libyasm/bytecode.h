@@ -34,10 +34,55 @@
 #ifndef YASM_BYTECODE_H
 #define YASM_BYTECODE_H
 
-/** An effective address (opaque type). */
+/** An effective address. */
 typedef struct yasm_effaddr yasm_effaddr;
-/** An immediate value (opaque type). */
-typedef struct yasm_immval yasm_immval;
+
+/** Callbacks for effective address implementations. */
+typedef struct yasm_effaddr_callback {
+    /** Destroy the effective address (freeing it).
+     * \param ea	effective address
+     */
+    void (*destroy) (/*@only@*/ yasm_effaddr *ea);
+
+    /** Print the effective address.
+     * \param ea		effective address
+     * \param f			file to output to
+     * \param indent_level	indentation level
+     */
+    void (*print) (const yasm_effaddr *ea, FILE *f, int indent_level);
+} yasm_effaddr_callback;
+
+/** An effective address. */
+struct yasm_effaddr {
+    const yasm_effaddr_callback *callback;	/**< callback functions */
+
+    yasm_value disp;		/**< address displacement */
+
+    unsigned long segreg;	/**< segment register override (0 if none) */
+
+    unsigned char disp_len;	/**< length of disp (in bytes), 0 if unknown,
+				 *   0xff if unknown and required to be >0.
+				 */
+    unsigned char need_disp;	/**< 1 if a displacement should be present
+				 *   in the output.
+				 */
+    unsigned char nosplit;	/**< 1 if reg*2 should not be split into
+				 *   reg+reg. (0 if not)
+				 */
+    unsigned char strong;	/**< 1 if effective address is *definitely*
+				 *   an effective address, e.g. in GAS if
+				 *   expr(,1) form is used vs. just expr.
+				 */
+};
+
+/** An immediate value. */
+typedef struct yasm_immval {
+    yasm_value val;		/**< the immediate value itself */
+
+    unsigned char len;		/**< final length (in bytes), 0 if unknown */
+    unsigned char sign;		/**< 1 if final imm is treated as signed */
+} yasm_immval;
+
 /** A data value (opaque type). */
 typedef struct yasm_dataval yasm_dataval;
 /** A list of data values (opaque type). */
@@ -54,14 +99,6 @@ typedef enum {
     YASM_BC_RESOLVE_MIN_LEN = 1<<1,	/**< Length is minimum possible. */
     YASM_BC_RESOLVE_UNKNOWN_LEN = 1<<2	/**< Length indeterminate. */
 } yasm_bc_resolve_flags;
-
-/** Create an immediate value from an unsigned integer.
- * \param int_val   unsigned integer
- * \param line	    virtual line (from yasm_linemap)
- * \return Newly allocated immediate value.
- */
-/*@only@*/ yasm_immval *yasm_imm_create_int(unsigned long int_val,
-					    unsigned long line);
 
 /** Create an immediate value from an expression.
  * \param e	expression (kept, do not free).
@@ -278,8 +315,8 @@ void yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
  * yasm_expr output functions.
  * \see yasm_calc_bc_dist_func for parameter descriptions.
  */
-/*@null@*/ yasm_intnum *yasm_common_calc_bc_dist
-    (/*@null@*/ yasm_bytecode *precbc1, /*@null@*/ yasm_bytecode *precbc2);
+/*@null@*/ /*@only@*/ yasm_intnum *yasm_common_calc_bc_dist
+    (yasm_bytecode *precbc1, yasm_bytecode *precbc2);
 
 /** Resolve labels in a bytecode, and calculate its length.
  * Tries to minimize the length as much as possible.
@@ -310,8 +347,8 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
  * \param gap		if nonzero, indicates the data does not really need to
  *			exist in the object file; if nonzero, contents of buf
  *			are undefined [output]
- * \param d		data to pass to each call to output_expr/output_reloc
- * \param output_expr	function to call to convert expressions into their byte
+ * \param d		data to pass to each call to output_value/output_reloc
+ * \param output_value	function to call to convert values into their byte
  *			representation
  * \param output_reloc	function to call to output relocation entries
  *			for a single sym
@@ -325,7 +362,7 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
 /*@null@*/ /*@only@*/ unsigned char *yasm_bc_tobytes
     (yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
      /*@out@*/ unsigned long *multiple, /*@out@*/ int *gap, void *d,
-     yasm_output_expr_func output_expr,
+     yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc)
     /*@sets *buf@*/;
 

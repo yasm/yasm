@@ -2050,6 +2050,7 @@ x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc,
 {
     x86_jmpfar *jmpfar;
     yasm_insn_operand *op;
+    /*@only@*/ yasm_expr *segment;
 
     jmpfar = yasm_xmalloc(sizeof(x86_jmpfar));
     x86_finalize_common(&jmpfar->common, info, data[3]);
@@ -2060,16 +2061,21 @@ x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc,
     switch (op->targetmod) {
 	case X86_FAR:
 	    /* "FAR imm" target needs to become "seg imm:imm". */
-	    jmpfar->offset = yasm_expr_copy(op->data.val);
-	    jmpfar->segment = yasm_expr_create_branch(YASM_EXPR_SEG,
-						      op->data.val, bc->line);
+	    if (yasm_value_finalize_expr(&jmpfar->offset,
+					 yasm_expr_copy(op->data.val))
+		|| yasm_value_finalize_expr(&jmpfar->segment, op->data.val))
+		yasm__error(bc->line, N_("jump target expression too complex"));
+	    jmpfar->segment.seg_of = 1;
 	    break;
 	case X86_FAR_SEGOFF:
 	    /* SEG:OFF expression; split it. */
-	    jmpfar->offset = op->data.val;
-	    jmpfar->segment = yasm_expr_extract_segoff(&jmpfar->offset);
-	    if (!jmpfar->segment)
+	    segment = yasm_expr_extract_segoff(&op->data.val);
+	    if (!segment)
 		yasm_internal_error(N_("didn't get SEG:OFF expression in jmpfar"));
+	    if (yasm_value_finalize_expr(&jmpfar->segment, segment))
+		yasm__error(bc->line, N_("jump target segment too complex"));
+	    if (yasm_value_finalize_expr(&jmpfar->offset, op->data.val))
+		yasm__error(bc->line, N_("jump target offset too complex"));
 	    break;
 	default:
 	    yasm_internal_error(N_("didn't get FAR expression in jmpfar"));
@@ -2105,10 +2111,14 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 
     jmp = yasm_xmalloc(sizeof(x86_jmp));
     x86_finalize_common(&jmp->common, jinfo, mode_bits);
-    jmp->target = op->data.val;
+    if (yasm_value_finalize_expr(&jmp->target, op->data.val))
+	yasm__error(bc->line, N_("jump target expression too complex"));
+    if (jmp->target.seg_of || jmp->target.rshift || jmp->target.curpos_rel)
+	yasm__error(bc->line, N_("invalid jump target"));
+    jmp->target.curpos_rel = 1;
 
     /* Need to save jump origin for relative jumps. */
-    jmp->origin = yasm_symtab_define_label2("$", prev_bc, 0, bc->line);
+    jmp->origin_prevbc = prev_bc;
 
     /* See if the user explicitly specified short/near/far. */
     switch ((int)(jinfo->operands[0] & OPTM_MASK)) {
@@ -2180,6 +2190,13 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 	yasm__error(bc->line,
 		    N_("no NEAR form of that jump instruction exists"));
 
+    if (jmp->op_sel == JMP_NONE) {
+	if (jmp->nearop.len == 0)
+	    jmp->op_sel = JMP_SHORT_FORCED;
+	if (jmp->shortop.len == 0)
+	    jmp->op_sel = JMP_NEAR_FORCED;
+    }
+
     yasm_x86__bc_apply_prefixes((x86_common *)jmp, NULL, num_prefixes,
 				prefixes, bc->line);
 
@@ -2204,7 +2221,6 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     unsigned long suffix = (data[3]>>8) & 0xFF;
     int found = 0;
     yasm_insn_operand *op, *ops[4], *rev_ops[4], **use_ops;
-    /*@null@*/ yasm_symrec *origin;
     /*@null@*/ yasm_expr *imm;
     unsigned char im_len;
     unsigned char im_sign;
@@ -2262,7 +2278,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		if (op->data.ea->segreg != 0)
 		    yasm__warning(YASM_WARN_GENERAL, bc->line,
 				  N_("skipping prefixes on this instruction"));
-		imm = yasm_expr_copy(op->data.ea->disp);
+		imm = op->data.ea->disp.abs;
+		op->data.ea->disp.abs = NULL;
 		yasm_ea_destroy(op->data.ea);
 		op->type = YASM_INSN__OPERAND_IMM;
 		op->data.val = imm;
@@ -2529,9 +2546,9 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	    /* Check for 64-bit effective address size */
 	    if (op->type == YASM_INSN__OPERAND_MEMORY) {
 		if ((info->operands[i] & OPEAS_MASK) == OPEAS_64) {
-		    if (op->data.ea->len != 8)
+		    if (op->data.ea->disp_len != 8)
 			mismatch = 1;
-		} else if (op->data.ea->len == 8)
+		} else if (op->data.ea->disp_len == 8)
 		    mismatch = 1;
 	    }
 
@@ -2627,8 +2644,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     insn = yasm_xmalloc(sizeof(x86_insn));
     x86_finalize_common(&insn->common, info, mode_bits);
     x86_finalize_opcode(&insn->opcode, info);
-    insn->ea = NULL;
-    origin = NULL;
+    insn->x86_ea = NULL;
     imm = NULL;
     insn->def_opersize_64 = info->def_opersize_64;
     insn->special_prefix = info->special_prefix;
@@ -2706,7 +2722,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		case OPA_EA:
 		    switch (op->type) {
 			case YASM_INSN__OPERAND_REG:
-			    insn->ea =
+			    insn->x86_ea =
 				yasm_x86__ea_create_reg(op->data.reg,
 							&insn->rex,
 							mode_bits);
@@ -2715,20 +2731,16 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 			    yasm_internal_error(
 				N_("invalid operand conversion"));
 			case YASM_INSN__OPERAND_MEMORY:
-			    insn->ea = op->data.ea;
+			    insn->x86_ea = (x86_effaddr *)op->data.ea;
 			    if ((info->operands[i] & OPT_MASK) == OPT_MemOffs)
 				/* Special-case for MOV MemOffs instruction */
-				yasm_x86__ea_set_disponly(insn->ea);
-			    else if (mode_bits == 64)
-				/* Save origin for possible RIP-relative */
-				origin =
-				    yasm_symtab_define_label2("$", prev_bc, 0,
-							      bc->line);
+				yasm_x86__ea_set_disponly(insn->x86_ea);
 			    break;
 			case YASM_INSN__OPERAND_IMM:
-			    insn->ea = yasm_x86__ea_create_imm(op->data.val,
-				size_lookup[(info->operands[i] &
-					     OPS_MASK)>>OPS_SHIFT]);
+			    insn->x86_ea =
+				yasm_x86__ea_create_imm(op->data.val,
+				    size_lookup[(info->operands[i] &
+						OPS_MASK)>>OPS_SHIFT]);
 			    break;
 		    }
 		    break;
@@ -2790,16 +2802,16 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		    break;
 		case OPA_SpareEA:
 		    if (op->type == YASM_INSN__OPERAND_REG) {
-			insn->ea = yasm_x86__ea_create_reg(op->data.reg,
-							   &insn->rex,
-							   mode_bits);
-			if (!insn->ea ||
+			insn->x86_ea = yasm_x86__ea_create_reg(op->data.reg,
+							       &insn->rex,
+							       mode_bits);
+			if (!insn->x86_ea ||
 			    yasm_x86__set_rex_from_reg(&insn->rex, &spare,
 				op->data.reg, mode_bits, X86_REX_R)) {
 			    yasm__error(bc->line,
 				N_("invalid combination of opcode and operands"));
-			    if (insn->ea)
-				yasm_xfree(insn->ea);
+			    if (insn->x86_ea)
+				yasm_xfree(insn->x86_ea);
 			    yasm_xfree(insn);
 			    return;
 			}
@@ -2838,10 +2850,10 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	}
     }
 
-    if (insn->ea) {
-	yasm_x86__ea_init(insn->ea, spare, origin);
+    if (insn->x86_ea) {
+	yasm_x86__ea_init(insn->x86_ea, spare, bc->line);
 	for (i=0; i<num_segregs; i++)
-	    yasm_ea_set_segreg(insn->ea, segregs[i], bc->line);
+	    yasm_ea_set_segreg(&insn->x86_ea->ea, segregs[i], bc->line);
     } else if (num_segregs > 0 && insn->special_prefix == 0) {
 	if (num_segregs > 1)
 	    yasm__warning(YASM_WARN_GENERAL, bc->line,

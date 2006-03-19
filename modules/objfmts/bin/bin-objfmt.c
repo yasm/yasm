@@ -135,54 +135,46 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
 }
 
 static int
-bin_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
-		       size_t valsize, int shift,
-		       /*@unused@*/ unsigned long offset, yasm_bytecode *bc,
-		       int rel, int warn, /*@null@*/ void *d)
+bin_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
+			size_t valsize, int shift,
+			/*@unused@*/ unsigned long offset, yasm_bytecode *bc,
+			int warn, /*@null@*/ void *d)
 {
     /*@null@*/ bin_objfmt_output_info *info = (bin_objfmt_output_info *)d;
-    /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
-    /*@dependent@*/ /*@null@*/ const yasm_floatnum *flt;
+    /*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
+    /*@dependent@*/ yasm_section *sect;
 
     assert(info != NULL);
 
-    /* For binary output, this is trivial: any expression that doesn't simplify
-     * to an integer is an error (references something external).
-     * Other object formats need to generate their relocation list from here!
-     */
-
-    *ep = yasm_expr__level_tree(*ep, 1, 1, NULL, bin_objfmt_expr_xform, NULL,
-				NULL);
-
-    /* Handle floating point expressions */
-    flt = yasm_expr_get_floatnum(ep);
-    if (flt) {
-	if (shift < 0)
-	    yasm_internal_error(N_("attempting to negative shift a float"));
-	return yasm_arch_floatnum_tobytes(info->objfmt_bin->arch, flt, buf,
-					  destsize, valsize,
-					  (unsigned int)shift, warn, bc->line);
+    /* Binary objects we need to resolve against object, not against section. */
+    if (value->rel && !value->curpos_rel
+	&& yasm_symrec_get_label(value->rel, &precbc)
+	&& (sect = yasm_bc_get_section(precbc))) {
+	if (!value->abs)
+	    value->abs = yasm_expr_create_ident(yasm_expr_sym(value->rel),
+						bc->line);
+	else
+	    value->abs =
+		yasm_expr_create(YASM_EXPR_ADD, yasm_expr_expr(value->abs),
+				 yasm_expr_sym(value->rel), bc->line);
+	value->rel = NULL;
     }
 
-    /* Handle integer expressions */
-    intn = yasm_expr_get_intnum(ep, NULL);
-    if (intn) {
-	if (rel) {
-	    int retval = yasm_arch_intnum_fixup_rel(info->objfmt_bin->arch,
-						    intn, valsize, bc,
-						    bc->line);
-	    if (retval)
-		return retval;
-	}
-	return yasm_arch_intnum_tobytes(info->objfmt_bin->arch, intn, buf,
-					destsize, valsize, shift, bc, warn,
-					bc->line);
-    }
+    /* Simplify absolute portion of value, transforming symrecs */
+    if (value->abs)
+	value->abs = yasm_expr__level_tree
+	    (value->abs, 1, 1, 1, NULL, bin_objfmt_expr_xform, NULL, NULL,
+	     NULL);
 
-    /* Check for complex float expressions */
-    if (yasm_expr__contains(*ep, YASM_EXPR_FLOAT)) {
-	yasm__error(bc->line, N_("floating point expression too complex"));
-	return 1;
+    /* Output */
+    switch (yasm_value_output_basic(value, buf, destsize, valsize, shift,
+				    bc, warn, info->objfmt_bin->arch, NULL)) {
+	case -1:
+	    return 1;
+	case 0:
+	    break;
+	default:
+	    return 0;
     }
 
     /* Couldn't output, assume it contains an external reference. */
@@ -204,7 +196,7 @@ bin_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     assert(info != NULL);
 
     bigbuf = yasm_bc_tobytes(bc, info->buf, &size, &multiple, &gap, info,
-			     bin_objfmt_output_expr, NULL);
+			     bin_objfmt_output_value, NULL);
 
     /* Don't bother doing anything else if size ended up being 0. */
     if (size == 0) {

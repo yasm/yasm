@@ -212,7 +212,7 @@ static yasm_bc_resolve_flags dwarf2_abbrev_bc_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int dwarf2_abbrev_bc_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
-     yasm_output_expr_func output_expr,
+     yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
 /* Bytecode callback structures */
@@ -313,22 +313,25 @@ yasm_dwarf2__generate_info(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
     /* statement list (line numbers) */
     abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_stmt_list, DW_FORM_data4);
     dwarf2_append_expr(debug_info,
-	yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
-			    yasm_section_bcs_first(debug_line)),
+	yasm_expr_create_ident(yasm_expr_sym(
+	    yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
+				yasm_section_bcs_first(debug_line))), 0),
 	dbgfmt_dwarf2->sizeof_offset, 0);
 
     if (main_code) {
 	/* All code is contiguous in one section */
 	abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_low_pc, DW_FORM_addr);
 	dwarf2_append_expr(debug_info,
-	    yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
-				yasm_section_bcs_first(main_code)),
+	    yasm_expr_create_ident(yasm_expr_sym(
+		yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
+				    yasm_section_bcs_first(main_code))), 0),
 	    dbgfmt_dwarf2->sizeof_address, 0);
 
 	abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_high_pc, DW_FORM_addr);
 	dwarf2_append_expr(debug_info,
-	    yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
-				yasm_section_bcs_last(main_code)),
+	    yasm_expr_create_ident(yasm_expr_sym(
+		yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
+				    yasm_section_bcs_last(main_code))), 0),
 	    dbgfmt_dwarf2->sizeof_address, 0);
     }
 
@@ -403,7 +406,7 @@ dwarf2_abbrev_bc_resolve(yasm_bytecode *bc, int save,
 
 static int
 dwarf2_abbrev_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-			 yasm_output_expr_func output_expr,
+			 yasm_output_value_func output_value,
 			 yasm_output_reloc_func output_reloc)
 {
     dwarf2_abbrev *abbrev = (dwarf2_abbrev *)bc->contents;

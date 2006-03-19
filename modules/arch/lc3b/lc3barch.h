@@ -42,10 +42,11 @@ typedef enum lc3b_imm_type {
 /* Bytecode types */
 
 typedef struct lc3b_insn {
-    /*@null@*/ yasm_expr *imm;	/* immediate or relative value */
+    yasm_value imm;		/* immediate or relative value */
     lc3b_imm_type imm_type;	/* size of the immediate */
 
-    /*@null@*/ /*@dependent@*/ yasm_symrec *origin; /* PC origin if needed */
+    /* PC origin if needed */
+    /*@null@*/ /*@dependent@*/ yasm_bytecode *origin_prevbc;
 
     unsigned int opcode;	/* opcode */
 } lc3b_insn;
@@ -67,10 +68,6 @@ void yasm_lc3b__finalize_insn
      const unsigned long data[4], int num_operands,
      /*@null@*/ yasm_insn_operands *operands, int num_prefixes,
      unsigned long **prefixes, int num_segregs, const unsigned long *segregs);
-
-int yasm_lc3b__intnum_fixup_rel
-    (yasm_arch *arch, yasm_intnum *intn, size_t valsize,
-     const yasm_bytecode *bc, unsigned long line);
 
 int yasm_lc3b__intnum_tobytes
     (yasm_arch *arch, const yasm_intnum *intn, unsigned char *buf,

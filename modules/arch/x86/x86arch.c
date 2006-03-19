@@ -400,7 +400,6 @@ yasm_arch_module yasm_x86_LTX_arch = {
     x86_get_fill,
     yasm_x86__finalize_insn,
     yasm_x86__floatnum_tobytes,
-    yasm_x86__intnum_fixup_rel,
     yasm_x86__intnum_tobytes,
     yasm_x86__get_reg_size,
     x86_reggroup_get_reg,
