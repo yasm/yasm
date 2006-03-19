@@ -153,6 +153,8 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 			break;	/* stop looking */
 		    }
 		}
+		if (j == e->numterms)
+		    return 1;	/* We didn't find a match! */
 	    }
 
 	    /* Look for unmatched symrecs.  If we've already found one or
