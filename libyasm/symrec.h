@@ -89,18 +89,19 @@ void yasm_symtab_destroy(/*@only@*/ yasm_symtab *symtab);
     (yasm_symtab *symtab, const char *name,
      /*@dependent@*/ yasm_bytecode *precbc, int in_table, unsigned long line);
 
-/** Define a symbol as a label, shortcut (no need to find out symtab, it's
- * determined from precbc).
+/** Define a symbol as a label representing the current assembly position.
+ * This should be used for this purpose instead of yasm_symtab_define_label()
+ * as value_finalize_scan() looks for usage of this symbol type for special
+ * handling.  The symbol created is not inserted into the symbol table.
+ * \param symtab    symbol table
  * \param name	    symbol (label) name
  * \param precbc    bytecode preceding label
- * \param in_table  nonzero if the label should be inserted into the symbol
- *                  table (some specially-generated ones should not be)
  * \param line	    virtual line of label
  * \return Symbol (dependent pointer, do not free).
  */
-/*@dependent@*/ yasm_symrec *yasm_symtab_define_label2
-    (const char *name, /*@dependent@*/ yasm_bytecode *precbc, int in_table,
-     unsigned long line);
+/*@dependent@*/ yasm_symrec *yasm_symtab_define_curpos
+    (yasm_symtab *symtab, const char *name,
+     /*@dependent@*/ yasm_bytecode *precbc, unsigned long line);
 
 /** Define a special symbol that will appear in the symbol table and have a
  * defined name, but have no other data associated with it within the
@@ -206,6 +207,12 @@ int yasm_symrec_get_label(const yasm_symrec *sym,
  * \return 0 if symbol is not a special symbol, nonzero otherwise.
  */
 int yasm_symrec_is_special(const yasm_symrec *sym);
+
+/** Determine if symbol is a label representing the current assembly position.
+ * \param sym	    symbol
+ * \return 0 if symbol is not a current position label, nonzero otherwise.
+ */
+int yasm_symrec_is_curpos(const yasm_symrec *sym);
 
 /** Get associated data for a symbol and data callback.
  * \param sym	    symbol

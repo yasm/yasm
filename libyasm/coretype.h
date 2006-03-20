@@ -133,6 +133,12 @@ typedef struct yasm_value {
      * address of the bytecode containing this value.  Boolean.
      */
     unsigned int curpos_rel : 1;
+
+    /** Indicates that curpos_rel was set due to IP-relative relocation;
+     * in some objfmt/arch combinations (e.g. win64/x86-amd64) this info
+     * is needed to generate special relocations.
+     */
+    unsigned int ip_rel : 1;
 } yasm_value;
 
 /** Maximum value of #yasm_value.rshift */

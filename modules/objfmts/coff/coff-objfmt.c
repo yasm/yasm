@@ -522,10 +522,15 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 	if (value->curpos_rel) {
 	    /* For standard COFF, need to adjust to start of section, e.g.
 	     * subtract out the bytecode offset.
-	     * For Win32 COFF, need to reference to next bytecode.
+	     * For Win32 COFF, need to adjust based on value size and position.
+	     * For Win64 COFF that's IP-relative, adjust to next bytecode;
+	     * the difference between the offset+destsize and BC length is
+	     * taken care of by special relocation types.
 	     */
-	    if (objfmt_coff->win32)
+	    if (objfmt_coff->win64 && value->ip_rel)
 		intn_val += bc->len;
+	    else if (objfmt_coff->win32)
+		intn_val += offset+destsize;
 	    else
 		intn_minus = bc->offset;
 	}
@@ -547,11 +552,35 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 		    return 1;
 		}
 	    } else if (objfmt_coff->machine == COFF_MACHINE_AMD64) {
-		if (valsize == 32)
-		    reloc->type = COFF_RELOC_AMD64_REL32;
-		else {
+		if (valsize != 32) {
 		    yasm__error(bc->line, N_("coff: invalid relocation size"));
 		    return 1;
+		}
+		if (!value->ip_rel)
+		    reloc->type = COFF_RELOC_AMD64_REL32;
+		else switch (bc->len - (offset+destsize)) {
+		    case 0:
+			reloc->type = COFF_RELOC_AMD64_REL32;
+			break;
+		    case 1:
+			reloc->type = COFF_RELOC_AMD64_REL32_1;
+			break;
+		    case 2:
+			reloc->type = COFF_RELOC_AMD64_REL32_2;
+			break;
+		    case 3:
+			reloc->type = COFF_RELOC_AMD64_REL32_3;
+			break;
+		    case 4:
+			reloc->type = COFF_RELOC_AMD64_REL32_4;
+			break;
+		    case 5:
+			reloc->type = COFF_RELOC_AMD64_REL32_5;
+			break;
+		    default:
+			yasm__error(bc->line,
+				    N_("coff: invalid relocation size"));
+			return 1;
 		}
 	    } else
 		yasm_internal_error(N_("coff objfmt: unrecognized machine"));

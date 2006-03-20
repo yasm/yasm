@@ -953,7 +953,7 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		x86_ea->ea.disp.abs = eat.ea.disp.abs;
 	    }
 
-	    if (x86_ea->ea.disp.curpos_rel) {
+	    if (x86_ea->ea.disp.ip_rel) {
 		/* Adjust relative displacement to end of bytecode */
 		/*@only@*/ yasm_intnum *delta;
 		delta = yasm_intnum_create_int(-(long)bc->len);

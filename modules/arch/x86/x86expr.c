@@ -664,12 +664,16 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 		    yasm__error(line, N_("invalid effective address"));
 		    return 1;
 		case 2:
-		    if (pcrel)
+		    if (pcrel) {
 			x86_ea->ea.disp.curpos_rel = 1;
+			x86_ea->ea.disp.ip_rel = 1;
+		    }
 		    return 2;
 		default:
-		    if (pcrel)
+		    if (pcrel) {
 			x86_ea->ea.disp.curpos_rel = 1;
+			x86_ea->ea.disp.ip_rel = 1;
+		    }
 		    break;
 	    }
 	}
@@ -911,12 +915,16 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 		    yasm__error(line, N_("invalid effective address"));
 		    return 1;
 		case 2:
-		    if (pcrel)
+		    if (pcrel) {
 			x86_ea->ea.disp.curpos_rel = 1;
+			x86_ea->ea.disp.ip_rel = 1;
+		    }
 		    return 2;
 		default:
-		    if (pcrel)
+		    if (pcrel) {
 			x86_ea->ea.disp.curpos_rel = 1;
+			x86_ea->ea.disp.ip_rel = 1;
+		    }
 		    break;
 	    }
 	}

@@ -786,8 +786,8 @@ expr: INTNUM		{ $$ = p_expr_new_ident(yasm_expr_int($1)); }
 explabel: expr_id	{
 	/* "." references the current assembly position */
 	if ($1[1] == '\0' && $1[0] == '.')
-	    $$ = yasm_symtab_define_label(p_symtab, ".", parser_gas->prev_bc,
-					  0, cur_line);
+	    $$ = yasm_symtab_define_curpos(p_symtab, ".", parser_gas->prev_bc,
+					   cur_line);
 	else
 	    $$ = yasm_symtab_use(p_symtab, $1, cur_line);
 	yasm_xfree($1);

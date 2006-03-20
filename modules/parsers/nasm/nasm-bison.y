@@ -479,8 +479,8 @@ explabel: ID		{
     }
     | '$'		{
 	/* "$" references the current assembly position */
-	$$ = yasm_symtab_define_label(p_symtab, "$", parser_nasm->prev_bc, 0,
-				      cur_line);
+	$$ = yasm_symtab_define_curpos(p_symtab, "$", parser_nasm->prev_bc,
+				       cur_line);
     }
     | START_SECTION_ID	{
 	/* "$$" references the start of the current section */

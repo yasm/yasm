@@ -144,7 +144,8 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 		for (j=0; j<e->numterms; j++) {
 		    if ((e->terms[j].type == YASM_EXPR_SYM
 			 || e->terms[j].type == YASM_EXPR_SYMEXP)
-			&& yasm_symrec_get_label(e->terms[j].data.sym, &precbc2)
+			&& yasm_symrec_get_label(e->terms[j].data.sym,
+						 &precbc2)
 			&& (sect = yasm_bc_get_section(precbc2))
 			&& sect == sect2
 			&& (used & (1<<j)) == 0) {
@@ -153,13 +154,48 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 			break;	/* stop looking */
 		    }
 		}
+
+		/* We didn't match in the same segment.  If the
+		 * -1*symrec is actually -1*curpos, we can match
+		 * unused symrec terms in other segments and generate
+		 * a curpos-relative reloc.
+		 *
+		 * Don't do this if we've already become curpos-relative.
+		 * The unmatched symrec will be caught below.
+		 */
+		if (j == e->numterms && yasm_symrec_is_curpos(sym)
+		    && !value->curpos_rel) {
+		    for (j=0; j<e->numterms; j++) {
+			if ((e->terms[j].type == YASM_EXPR_SYM
+			    || e->terms[j].type == YASM_EXPR_SYMEXP)
+			    && yasm_symrec_get_label(e->terms[j].data.sym,
+						     &precbc2)
+			    && (used & (1<<j)) == 0) {
+			    /* Mark as used */
+			    used |= 1<<j;
+			    /* Mark value as curpos-relative */
+			    if (value->rel || ssym_not_ok)
+				return 1;
+			    value->rel = e->terms[j].data.sym;
+			    value->curpos_rel = 1;
+			    /* Replace both symrec portions with 0 */
+			    yasm_expr_destroy(sube);
+			    e->terms[i].type = YASM_EXPR_INT;
+			    e->terms[i].data.intn = yasm_intnum_create_uint(0);
+			    e->terms[j].type = YASM_EXPR_INT;
+			    e->terms[j].data.intn = yasm_intnum_create_uint(0);
+			    break;	/* stop looking */
+			}
+		    }
+		}
+
 		if (j == e->numterms)
 		    return 1;	/* We didn't find a match! */
 	    }
 
 	    /* Look for unmatched symrecs.  If we've already found one or
-	    * we don't WANT to find one, error out.
-	    */
+	     * we don't WANT to find one, error out.
+	     */
 	    for (i=0; i<e->numterms; i++) {
 		if ((e->terms[i].type == YASM_EXPR_SYM
 		     || e->terms[i].type == YASM_EXPR_SYMEXP)

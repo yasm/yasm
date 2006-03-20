@@ -134,6 +134,7 @@ void yasm_value_print(const yasm_value *value, FILE *f, int indent_level);
 	(value)->seg_of = 0; \
 	(value)->rshift = 0; \
 	(value)->curpos_rel = 0; \
+	(value)->ip_rel = 0; \
     } while(0)
 
 #define yasm_value_init_sym(value, sym) \
@@ -144,6 +145,7 @@ void yasm_value_print(const yasm_value *value, FILE *f, int indent_level);
 	(value)->seg_of = 0; \
 	(value)->rshift = 0; \
 	(value)->curpos_rel = 0; \
+	(value)->ip_rel = 0; \
     } while(0)
 
 #define yasm_value_delete(value) \
