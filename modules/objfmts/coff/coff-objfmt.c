@@ -447,7 +447,8 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
     }
 
     /* Handle other expressions, with relocation if necessary */
-    if (value->seg_of || value->rshift > 0) {
+    if (value->rshift > 0
+	|| (value->seg_of && (value->wrt || value->curpos_rel))) {
 	yasm__error(bc->line, N_("coff: relocation too complex"));
 	return 1;
     }
@@ -462,8 +463,8 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 
 	/* Sometimes we want the relocation to be generated against one
 	 * symbol but the value generated correspond to a different symbol.
-	 * This is done through (sym being referenced) WRT (sym used for reloc).
-	 * Note both syms need to be in the same section!
+	 * This is done through (sym being referenced) WRT (sym used for
+	 * reloc).  Note both syms need to be in the same section!
 	 */
 	if (value->wrt) {
 	    /*@dependent@*/ /*@null@*/ yasm_bytecode *rel_precbc, *wrt_precbc;
@@ -535,6 +536,12 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 		intn_minus = bc->offset;
 	}
 
+	if (value->seg_of) {
+	    /* Segment generation; zero value. */
+	    intn_val = 0;
+	    intn_minus = 0;
+	}
+
 	/* Generate reloc */
 	reloc = yasm_xmalloc(sizeof(coff_reloc));
 	addr = bc->offset + offset;
@@ -583,6 +590,13 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 			return 1;
 		}
 	    } else
+		yasm_internal_error(N_("coff objfmt: unrecognized machine"));
+	} else if (value->seg_of) {
+	    if (objfmt_coff->machine == COFF_MACHINE_I386)
+		reloc->type = COFF_RELOC_I386_SECTION;
+	    else if (objfmt_coff->machine == COFF_MACHINE_AMD64)
+		reloc->type = COFF_RELOC_AMD64_SECTION;
+	    else
 		yasm_internal_error(N_("coff objfmt: unrecognized machine"));
 	} else {
 	    if (objfmt_coff->machine == COFF_MACHINE_I386) {
