@@ -655,8 +655,10 @@ yasm_dwarf2__generate_line(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2, int asm_source,
 
     /* filename list */
     for (i=0; i<dbgfmt_dwarf2->filenames_size; i++) {
-	if (!dbgfmt_dwarf2->filenames[i].filename)
+	if (!dbgfmt_dwarf2->filenames[i].filename) {
 	    yasm__error(0, N_("dwarf2 file number %d unassigned"), i+1);
+	    continue;
+	}
 	sppbc->len += strlen(dbgfmt_dwarf2->filenames[i].filename) + 1 +
 	    yasm_size_uleb128(dbgfmt_dwarf2->filenames[i].dir) + 2;
     }
