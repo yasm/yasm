@@ -299,7 +299,7 @@ static const x86_insn_info onebyte_insn[] = {
 
 /* One byte opcode instructions with "special" prefix with no operands */
 static const x86_insn_info onebyte_prefix_insn[] = {
-    { CPU_Any, MOD_Op0Add|MOD_PreAdd, 0, 0, 0x00, 2, {0x00, 0, 0}, 0, 0,
+    { CPU_Any, MOD_Op0Add|MOD_PreAdd, 0, 0, 0x00, 1, {0x00, 0, 0}, 0, 0,
       {0, 0, 0} }
 };
 
