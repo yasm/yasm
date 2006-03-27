@@ -188,6 +188,11 @@ xdf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 	    return 0;
     }
 
+    if (value->section_rel) {
+	yasm__error(bc->line, N_("xdf: relocation too complex"));
+	return 1;
+    }
+
     intn_minus = 0;
     if (value->rel) {
 	xdf_reloc *reloc;

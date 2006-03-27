@@ -86,6 +86,7 @@
 #endif
 #include <libyasm/hamt.h>
 #include <libyasm/bitvect.h>
+#include <libyasm/md5.h>
 #endif
 
 #endif

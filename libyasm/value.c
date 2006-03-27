@@ -468,7 +468,7 @@ yasm_value_output_basic(yasm_value *value, /*@out@*/ unsigned char *buf,
 	unsigned long dist;
 
 	sym_local = yasm_symrec_get_label(value->rel, &rel_prevbc);
-	if (value->wrt || value->seg_of || !sym_local)
+	if (value->wrt || value->seg_of || value->section_rel || !sym_local)
 	    return 0;	    /* we can't handle SEG, WRT, or external symbols */
 	if (rel_prevbc->section != bc->section)
 	    return 0;	    /* not in this section */

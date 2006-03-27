@@ -114,6 +114,7 @@ typedef struct coff_section_data {
     unsigned long nreloc;   /* number of relocation entries >64k -> error */
     unsigned long flags2;   /* internal flags (see COFF_FLAG_* above) */
     unsigned long strtab_name;	/* strtab offset of name if name > 8 chars */
+    int isdebug;	    /* is a debug section? */
 } coff_section_data;
 
 typedef enum coff_symrec_sclass {
@@ -357,6 +358,7 @@ coff_objfmt_init_new_section(yasm_objfmt_coff *objfmt_coff, yasm_section *sect,
     data->nreloc = 0;
     data->flags2 = 0;
     data->strtab_name = 0;
+    data->isdebug = 0;
     yasm_section_add_data(sect, &coff_section_data_cb, data);
 
     sym = yasm_symtab_define_label(objfmt_coff->symtab, sectname,
@@ -382,9 +384,16 @@ coff_objfmt_init_remaining_section(yasm_section *sect, /*@null@*/ void *d)
     csd = yasm_section_get_data(sect, &coff_section_data_cb);
     if (!csd) {
 	/* Initialize new one */
-	csd = coff_objfmt_init_new_section(info->objfmt_coff, sect,
-					   yasm_section_get_name(sect), 0);
-	csd->flags = COFF_STYP_TEXT;
+	const char *sectname = yasm_section_get_name(sect);
+	csd = coff_objfmt_init_new_section(info->objfmt_coff, sect, sectname,
+					   0);
+	if (yasm__strncasecmp(sectname, ".debug", 6)==0) {
+	    csd->flags = COFF_STYP_DATA;
+	    if (info->objfmt_coff->win32)
+		csd->flags |= COFF_STYP_DISCARD|COFF_STYP_READ;
+	    csd->isdebug = 1;
+	} else
+	    csd->flags = COFF_STYP_TEXT;
     }
 
     return 0;
@@ -448,7 +457,8 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 
     /* Handle other expressions, with relocation if necessary */
     if (value->rshift > 0
-	|| (value->seg_of && (value->wrt || value->curpos_rel))) {
+	|| (value->seg_of && (value->wrt || value->curpos_rel))
+	|| (value->section_rel && (value->wrt || value->curpos_rel))) {
 	yasm__error(bc->line, N_("coff: relocation too complex"));
 	return 1;
     }
@@ -536,8 +546,8 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 		intn_minus = bc->offset;
 	}
 
-	if (value->seg_of) {
-	    /* Segment generation; zero value. */
+	if (value->seg_of || value->section_rel) {
+	    /* Segment or section-relative generation; zero value. */
 	    intn_val = 0;
 	    intn_minus = 0;
 	}
@@ -596,6 +606,13 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 		reloc->type = COFF_RELOC_I386_SECTION;
 	    else if (objfmt_coff->machine == COFF_MACHINE_AMD64)
 		reloc->type = COFF_RELOC_AMD64_SECTION;
+	    else
+		yasm_internal_error(N_("coff objfmt: unrecognized machine"));
+	} else if (value->section_rel) {
+	    if (objfmt_coff->machine == COFF_MACHINE_I386)
+		reloc->type = COFF_RELOC_I386_SECREL;
+	    else if (objfmt_coff->machine == COFF_MACHINE_AMD64)
+		reloc->type = COFF_RELOC_AMD64_SECREL;
 	    else
 		yasm_internal_error(N_("coff objfmt: unrecognized machine"));
 	} else {
@@ -732,7 +749,8 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 	}
     }
 
-    csd->addr = info->addr;
+    if (!csd->isdebug)
+	csd->addr = info->addr;
 
     if ((csd->flags & COFF_STYP_STD_MASK) == COFF_STYP_BSS) {
 	yasm_bytecode *last = yasm_section_bcs_last(sect);
@@ -766,7 +784,8 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     if (csd->size == 0)
 	return 0;
 
-    info->addr += csd->size;
+    if (!csd->isdebug)
+	info->addr += csd->size;
     csd->scnptr = (unsigned long)pos;
 
     /* No relocations to output?  Go on to next section */
@@ -863,11 +882,16 @@ coff_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     } else
 	strncpy((char *)localbuf, yasm_section_get_name(sect), 8);
     localbuf += 8;
-    YASM_WRITE_32_L(localbuf, csd->addr);	/* physical address */
-    if (COFF_SET_VMA)
-	YASM_WRITE_32_L(localbuf, csd->addr);   /* virtual address */
-    else
+    if (csd->isdebug) {
+	YASM_WRITE_32_L(localbuf, 0);		/* physical address */
 	YASM_WRITE_32_L(localbuf, 0);		/* virtual address */
+    } else {
+	YASM_WRITE_32_L(localbuf, csd->addr);	/* physical address */
+	if (COFF_SET_VMA)
+	    YASM_WRITE_32_L(localbuf, csd->addr);/* virtual address */
+	else
+	    YASM_WRITE_32_L(localbuf, 0);	/* virtual address */
+    }
     YASM_WRITE_32_L(localbuf, csd->size);	/* section size */
     YASM_WRITE_32_L(localbuf, csd->scnptr);	/* file ptr to data */
     YASM_WRITE_32_L(localbuf, csd->relptr);	/* file ptr to relocs */
@@ -1084,8 +1108,7 @@ coff_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
 }
 
 static void
-coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
-		   /*@unused@*/ yasm_dbgfmt *df)
+coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df)
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
     coff_objfmt_output_info info;
@@ -1178,7 +1201,9 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
     YASM_WRITE_32_L(localbuf, symtab_count);		/* number of symtabs */
     YASM_WRITE_16_L(localbuf, 0);	/* size of optional header (none) */
     /* flags */
-    flags = COFF_F_LNNO;
+    flags = 0;
+    if (strcmp(yasm_dbgfmt_keyword(df), "null")==0)
+	flags = COFF_F_LNNO;
     if (!all_syms)
 	flags |= COFF_F_LSYMS;
     if (objfmt_coff->machine != COFF_MACHINE_AMD64)
@@ -1709,13 +1734,21 @@ yasm_objfmt_module yasm_coff_LTX_objfmt = {
     coff_objfmt_directive
 };
 
+/* Define valid debug formats to use with this object format */
+static const char *winXX_objfmt_dbgfmt_keywords[] = {
+    "null",
+    "dwarf2",
+    "cv8",
+    NULL
+};
+
 /* Define objfmt structure -- see objfmt.h for details */
 yasm_objfmt_module yasm_win32_LTX_objfmt = {
     "Win32",
     "win32",
     "obj",
     32,
-    coff_objfmt_dbgfmt_keywords,
+    winXX_objfmt_dbgfmt_keywords,
     "null",
     win32_objfmt_create,
     coff_objfmt_output,
@@ -1734,7 +1767,7 @@ yasm_objfmt_module yasm_win64_LTX_objfmt = {
     "win64",
     "obj",
     64,
-    coff_objfmt_dbgfmt_keywords,
+    winXX_objfmt_dbgfmt_keywords,
     "null",
     win64_objfmt_create,
     coff_objfmt_output,

@@ -322,7 +322,7 @@ elf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
     }
 
     /* Handle other expressions, with relocation if necessary */
-    if (value->seg_of || value->rshift > 0) {
+    if (value->seg_of || value->section_rel || value->rshift > 0) {
 	yasm__error(bc->line, N_("elf: relocation too complex"));
 	return 1;
     }

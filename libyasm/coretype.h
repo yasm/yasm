@@ -139,6 +139,14 @@ typedef struct yasm_value {
      * is needed to generate special relocations.
      */
     unsigned int ip_rel : 1;
+
+    /** Indicates the relative portion of the value should be relocated
+     * relative to its own section start rather than relative to the
+     * section start of the bytecode containing this value.  E.g. the value
+     * resulting from the relative portion should be the offset from its
+     * section start.  Boolean.
+     */
+    unsigned int section_rel : 1;
 } yasm_value;
 
 /** Maximum value of #yasm_value.rshift */
@@ -333,8 +341,14 @@ size_t yasm__splitpath_win(const char *path, /*@out@*/ const char **tail);
  defined (__DJGPP__) || defined (__OS2__) || defined (__CYGWIN__) || \
  defined (__CYGWIN32__)
 #  define yasm__splitpath(path, tail)	yasm__splitpath_win(path, tail)
+#  ifndef YASM_PATHSEP
+#   define YASM_PATHSEP '\\'
+#  endif
 # else
 #  define yasm__splitpath(path, tail)	yasm__splitpath_unix(path, tail)
+#  ifndef YASM_PATHSEP
+#   define YASM_PATHSEP '/'
+#  endif
 # endif
 #endif
 
