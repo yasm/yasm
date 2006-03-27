@@ -289,7 +289,7 @@ enum cv_reservedtype {
     CV_T_PFBOOL08	= 0x0230, /* Far pointer to 8-bit Boolean */
     CV_T_PFBOOL16	= 0x0231, /* Far pointer to 16-bit Boolean */
     CV_T_PFBOOL32	= 0x0232, /* Far pointer to 32-bit Boolean */
-    CV_T_PFBOOL32	= 0x0233, /* Far pointer to 64-bit Boolean */
+    CV_T_PFBOOL64	= 0x0233, /* Far pointer to 64-bit Boolean */
     CV_T_PHBOOL08	= 0x0330, /* Huge pointer to 8-bit Boolean */
     CV_T_PHBOOL16	= 0x0331, /* Huge pointer to 16-bit Boolean */
     CV_T_PHBOOL32	= 0x0332, /* Huge pointer to 32-bit Boolean */
