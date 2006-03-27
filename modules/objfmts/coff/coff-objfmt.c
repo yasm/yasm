@@ -1784,7 +1784,7 @@ yasm_objfmt_module yasm_x64_LTX_objfmt = {
     "x64",
     "obj",
     64,
-    coff_objfmt_dbgfmt_keywords,
+    winXX_objfmt_dbgfmt_keywords,
     "null",
     win64_objfmt_create,
     coff_objfmt_output,
