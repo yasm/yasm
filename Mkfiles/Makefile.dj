@@ -27,6 +27,7 @@ LIBYASM_OBJS= \
  libyasm/hamt.o \
  libyasm/intnum.o \
  libyasm/linemgr.o \
+ libyasm/md5.o \
  libyasm/mergesort.o \
  libyasm/phash.o \
  libyasm/section.o \
@@ -60,6 +61,9 @@ MODULES_ARCH_OBJS= \
 MODULES_DBGFMTS_OBJS= \
  modules/dbgfmts/null/null-dbgfmt.o \
  modules/dbgfmts/stabs/stabs-dbgfmt.o \
+ modules/dbgfmts/codeview/cv-dbgfmt.o \
+ modules/dbgfmts/codeview/cv-symline.o \
+ modules/dbgfmts/codeview/cv-type.o \
  modules/dbgfmts/dwarf2/dwarf2-dbgfmt.o \
  modules/dbgfmts/dwarf2/dwarf2-line.o \
  modules/dbgfmts/dwarf2/dwarf2-info.o \

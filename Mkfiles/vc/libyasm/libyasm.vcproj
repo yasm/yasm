@@ -154,6 +154,9 @@
 				RelativePath="..\..\..\libyasm\linemgr.c">
 			</File>
 			<File
+				RelativePath="..\..\..\libyasm\md5.c">
+			</File>
+			<File
 				RelativePath="..\..\..\libyasm\mergesort.c">
 			</File>
 			<File
@@ -243,6 +246,9 @@
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\linemgr.h">
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\md5.h">
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\objfmt.h">
