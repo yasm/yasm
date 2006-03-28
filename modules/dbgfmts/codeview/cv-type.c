@@ -672,6 +672,7 @@ cv_type_create(yasm_dbgfmt_cv *dbgfmt_cv, unsigned long indx)
     type->dbgfmt_cv = dbgfmt_cv;
     type->indx = indx;
     type->num_leaves = 0;
+    type->leaves = NULL;
 
     return type;
 }
