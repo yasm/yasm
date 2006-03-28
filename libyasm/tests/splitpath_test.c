@@ -34,7 +34,7 @@
 
 #include <stdio.h>
 
-#include "libyasm/splitpath.c"
+#include "libyasm/file.c"
 
 typedef struct Test_Entry {
     /* splitpath function to test */
