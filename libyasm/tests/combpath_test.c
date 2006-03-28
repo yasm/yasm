@@ -89,6 +89,9 @@ static Test_Entry tests[] = {
     {yasm__combpath_win, "/", "../file2", "\\file2"},
     {yasm__combpath_win, "../foo/", "../file2", "..\\file2"},
     {yasm__combpath_win, "../foo/file1", "../..\\bar\\file2", "..\\..\\bar\\file2"},
+    {yasm__combpath_win, "c:/file1.ext", "./file2.ext", "c:\\file2.ext"},
+    {yasm__combpath_win, "e:\\path\\to/file1.ext", ".\\file2.ext", "e:\\path\\to\\file2.ext"},
+    {yasm__combpath_win, ".\\file1.ext", "g:file2.ext", "g:file2.ext"},
 };
 
 static char failed[1000];
