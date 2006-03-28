@@ -35,6 +35,7 @@
  */
 #include <util.h>
 #include <libyasm/coretype.h>
+#include <libyasm/file.h>
 #include <stdarg.h>
 #include <ctype.h>
 #include <limits.h>
@@ -51,7 +52,6 @@ typedef struct Blocks Blocks;
 typedef struct Line Line;
 typedef struct Include Include;
 typedef struct Cond Cond;
-typedef struct IncPath IncPath;
 
 /*
  * Store the definition of a single-line macro.
@@ -192,17 +192,6 @@ struct Include
     char *fname;
     int lineno, lineinc;
     MMacro *mstk;		/* stack of active macros/reps */
-};
-
-/*
- * Include search path. This is simply a list of strings which get
- * prepended, in turn, to the name of an include file, in an
- * attempt to find the file if it's not in the current directory.
- */
-struct IncPath
-{
-    IncPath *next;
-    char *path;
 };
 
 /*
@@ -348,7 +337,8 @@ static int LocalOffset = 4;
 
 static Context *cstk;
 static Include *istk;
-static IncPath *ipath = NULL;
+static size_t num_ipaths = 0;
+static char **ipaths = NULL;
 
 static FILE *first_fp = NULL;
 
@@ -1286,20 +1276,6 @@ get_ctx(char *name, int all_contexts)
     return NULL;
 }
 
-/* Add a slash to the end of a path if it is missing. We use the
- * forward slash to make it compatible with Unix systems.
- */
-static void
-backslash(char *s)
-{
-    int pos = strlen(s);
-    if (s[pos - 1] != '\\' && s[pos - 1] != '/')
-    {
-	s[pos] = '/';
-	s[pos + 1] = '\0';
-    }
-}
-
 /*
  * Open an include file. This routine must always return a valid
  * file pointer if it returns - it's responsible for throwing an
@@ -1308,36 +1284,20 @@ backslash(char *s)
  * the end of the path.
  */
 static FILE *
-inc_fopen(char *file)
+inc_fopen(char *file, char **newname)
 {
     FILE *fp;
     const char *prefix = "";
-    char *combine;
-    IncPath *ip = ipath;
-    int len = strlen(file);
+    char *combine = NULL;
 
-    while (1)
-    {
-	combine = nasm_malloc(strlen(prefix) + 1 + len + 1);
-	strcpy(combine, prefix);
-	if (prefix[0] != 0)
-	    backslash(combine);
-	strcat(combine, file);
-	fp = fopen(combine, "r");
-	if (fp)
-	    nasm_preproc_add_dep(combine);
-	else
-	    nasm_free(combine);
-	if (fp)
-	    return fp;
-	if (!ip)
-	    break;
-	prefix = ip->path;
-	ip = ip->next;
-    }
+    fp = yasm__fopen_include(file, nasm_src_get_fname(), (const char **)ipaths,
+			     "r", &combine);
+    if (!fp)
+	error(ERR_FATAL, "unable to open include file `%s'", file);
+    nasm_preproc_add_dep(combine);
 
-    error(ERR_FATAL, "unable to open include file `%s'", file);
-    return NULL;		/* never reached - placate compilers */
+    *newname = combine;
+    return fp;
 }
 
 /*
@@ -1790,7 +1750,7 @@ do_directive(Token * tline)
 {
     int i, j, k, m, nparam, nolist;
     int offset;
-    char *p, *mname;
+    char *p, *mname, *newname;
     Include *inc;
     Context *ctx;
     Cond *cond;
@@ -2165,8 +2125,8 @@ do_directive(Token * tline)
 	    inc = nasm_malloc(sizeof(Include));
 	    inc->next = istk;
 	    inc->conds = NULL;
-	    inc->fp = inc_fopen(p);
-	    inc->fname = nasm_src_set_fname(p);
+	    inc->fp = inc_fopen(p, &newname);
+	    inc->fname = nasm_src_set_fname(newname);
 	    inc->lineno = nasm_src_set_linnum(0);
 	    inc->lineinc = 1;
 	    inc->expansion = NULL;
@@ -4438,26 +4398,26 @@ pp_cleanup(int pass_)
 	}
 }
 
+static void
+backslash(char *s)
+{
+    int pos = strlen(s);
+    if (s[pos - 1] != '\\' && s[pos - 1] != '/')
+    {
+	s[pos] = '/';
+	s[pos + 1] = '\0';
+    }
+}
+
 void
 pp_include_path(const char *path)
 {
-    IncPath *i;
-/*  by alexfru: order of path inclusion fixed (was reverse order) */
-    i = nasm_malloc(sizeof(IncPath));
-    i->path = nasm_strdup(path);
-    i->next = NULL;
-
-    if (ipath != NULL)
-    { 
-        IncPath *j = ipath; 
-        while (j->next != NULL)
-            j = j->next; 
-        j->next = i; 
-    }
-    else
-    {
-	ipath = i;
-    }
+    num_ipaths++;
+    ipaths = yasm_xrealloc(ipaths, (num_ipaths+1)*sizeof(char *));
+    ipaths[num_ipaths-1] = yasm_xmalloc(strlen(path)+2);
+    strcpy(ipaths[num_ipaths-1], path);
+    backslash(ipaths[num_ipaths-1]);
+    ipaths[num_ipaths] = NULL;
 } 
 
 void

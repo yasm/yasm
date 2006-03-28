@@ -27,18 +27,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#undef HAVE_CONFIG_H
-#endif
-
-/* Need either unistd.h or direct.h (on Windows) to prototype getcwd() */
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#elif defined(WIN32) || defined(_WIN32)
-#include <direct.h>
-#endif
-
 #include <util.h>
 /*@unused@*/ RCSID("$Id$");
 
@@ -344,24 +332,6 @@ cv8_add_sym_data(yasm_dbgfmt_cv *dbgfmt_cv, yasm_section *sect,
     return cvs;
 }
 
-static /*@only@*/ char *
-cv_make_pathname(const char *filename)
-{
-    char *curdir, *pathname;
-    static const char pathsep[2] = { YASM_PATHSEP, '\0' };
-
-    curdir = getcwd(NULL, 0);
-
-    pathname = yasm_xmalloc(strlen(curdir) + strlen(filename) + 2);
-    strcpy(pathname, curdir);
-    strcat(pathname, pathsep);
-    strcat(pathname, filename);
-
-    free(curdir);
-
-    return pathname;
-}
-
 static size_t
 cv_dbgfmt_add_file(yasm_dbgfmt_cv *dbgfmt_cv, size_t filenum,
 		   const char *filename)
@@ -416,7 +386,7 @@ cv_dbgfmt_add_file(yasm_dbgfmt_cv *dbgfmt_cv, size_t filenum,
     if (dbgfmt_cv->filenames[filenum].filename)
 	yasm_xfree(dbgfmt_cv->filenames[filenum].filename);
 
-    pathname = cv_make_pathname(filename);
+    pathname = yasm__abspath(filename);
     dbgfmt_cv->filenames[filenum].pathname = pathname;
     dbgfmt_cv->filenames[filenum].filename = yasm__xstrdup(filename);
 
@@ -665,7 +635,7 @@ yasm_cv__generate_symline(yasm_dbgfmt_cv *dbgfmt_cv)
     head = cv8_add_symhead(dbgfmt_cv, info.debug_symline, CV8_DEBUG_SYMS, 0);
     /* add object and compile flag first */
     cv8_add_sym_objname(dbgfmt_cv, info.debug_symline,
-	cv_make_pathname(yasm_object_get_object_fn(dbgfmt_cv->object)));
+	yasm__abspath(yasm_object_get_object_fn(dbgfmt_cv->object)));
     cv8_add_sym_compile(dbgfmt_cv, info.debug_symline,
 			yasm__xstrdup(PACKAGE_STRING));
     /* then iterate through symbol table */

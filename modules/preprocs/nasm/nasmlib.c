@@ -312,6 +312,11 @@ char *nasm_src_set_fname(char *newname)
     return oldname;
 }
 
+char *nasm_src_get_fname(void)
+{
+    return file_name;
+}
+
 long nasm_src_set_linnum(long newline) 
 {
     long oldline = line_number;

@@ -1,7 +1,8 @@
 /* $Id$ */
 
 #define yasm__splitpath(path, tail)	yasm__splitpath_win(path, tail)
-#define YASM_PATHSEP	'\\'
+#define yasm__abspath(path)		yasm__abspath_win(path)
+#define yasm__combpath(from, to)	yasm__combpath_win(from, to)
 
 /* */
 /* #undef ENABLE_NLS */

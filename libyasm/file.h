@@ -52,7 +52,6 @@ size_t yasm__splitpath_unix(const char *path, /*@out@*/ const char **tail);
  */
 size_t yasm__splitpath_win(const char *path, /*@out@*/ const char **tail);
 
-#ifndef yasm__splitpath
 /** Split a pathname into head (directory) and tail (base filename) portions.
  * Unless otherwise defined, defaults to yasm__splitpath_unix().
  * \internal
@@ -60,6 +59,7 @@ size_t yasm__splitpath_win(const char *path, /*@out@*/ const char **tail);
  * \param tail	(returned) base filename
  * \return Length of head (directory).
  */
+#ifndef yasm__splitpath
 # if defined (_WIN32) || defined (WIN32) || defined (__MSDOS__) || \
  defined (__DJGPP__) || defined (__OS2__) || defined (__CYGWIN__) || \
  defined (__CYGWIN32__)
@@ -69,19 +69,99 @@ size_t yasm__splitpath_win(const char *path, /*@out@*/ const char **tail);
 # endif
 #endif
 
-#ifndef YASM_PATHSEP
-/** Default path separator; used when combining path components.
- * Unless otherwise defined, defaults to the UNIX '/'.
+/** Convert a UNIX relative or absolute pathname into an absolute pathname.
  * \internal
+ * \param path	pathname
+ * \return Absolute version of path (newly allocated).
  */
+/*@only@*/ char *yasm__abspath_unix(const char *path);
+
+/** Convert a Windows relative or absolute pathname into an absolute pathname.
+ * \internal
+ * \param path	pathname
+ * \return Absolute version of path (newly allocated).
+ */
+/*@only@*/ char *yasm__abspath_win(const char *path);
+
+/** Convert a relative or absolute pathname into an absolute pathname.
+ * Unless otherwise defined, defaults to yasm__abspath_unix().
+ * \internal
+ * \param path	pathname
+ * \return Absolute version of path (newly allocated).
+ */
+#ifndef yasm__abspath
 # if defined (_WIN32) || defined (WIN32) || defined (__MSDOS__) || \
  defined (__DJGPP__) || defined (__OS2__) || defined (__CYGWIN__) || \
  defined (__CYGWIN32__)
-#  define YASM_PATHSEP '\\'
+#  define yasm__abspath(path)	yasm__abspath_win(path)
 # else
-#  define YASM_PATHSEP '/'
+#  define yasm__abspath(path)	yasm__abspath_unix(path)
 # endif
 #endif
+
+/** Build a UNIX pathname that is equivalent to accessing the "to" pathname
+ * when you're in the directory containing "from".  Result is relative if both
+ * from and to are relative.
+ * \internal
+ * \param from	from pathname
+ * \param to	to pathname
+ * \return Combined path (newly allocated).
+ */
+char *yasm__combpath_unix(const char *from, const char *to);
+
+/** Build a Windows pathname that is equivalent to accessing the "to" pathname
+ * when you're in the directory containing "from".  Result is relative if both
+ * from and to are relative.
+ * \internal
+ * \param from	from pathname
+ * \param to	to pathname
+ * \return Combined path (newly allocated).
+ */
+char *yasm__combpath_win(const char *from, const char *to);
+
+/** Build a pathname that is equivalent to accessing the "to" pathname
+ * when you're in the directory containing "from".  Result is relative if both
+ * from and to are relative.
+ * Unless otherwise defined, defaults to yasm__combpath_unix().
+ * \internal
+ * \param from	from pathname
+ * \param to	to pathname
+ * \return Combined path (newly allocated).
+ */
+#ifndef yasm__combpath
+# if defined (_WIN32) || defined (WIN32) || defined (__MSDOS__) || \
+ defined (__DJGPP__) || defined (__OS2__) || defined (__CYGWIN__) || \
+ defined (__CYGWIN32__)
+#  define yasm__combpath(from, to)	yasm__combpath_win(from, to)
+# else
+#  define yasm__combpath(from, to)	yasm__combpath_unix(from, to)
+# endif
+#endif
+
+/** Try to find and open an include file, searching through include paths.
+ * First iname is looked for relative to the directory containing "from", then
+ * it's looked for relative to each of the paths.
+ *
+ * All pathnames may be either absolute or relative; from, oname, and paths,
+ * if relative, are relative from the current working directory.
+ *
+ * First match wins; the full pathname (newly allocated) to the opened file
+ * is saved into oname, and the fopen'ed FILE * is returned.  If not found,
+ * NULL is returned.
+ *
+ * \internal
+ * \param iname	    file to include
+ * \param from	    file doing the including
+ * \param paths	    NULL-terminated array of paths to search (relative to from)
+ *                  may be NULL if no extra paths
+ * \param mode	    fopen mode string
+ * \param oname	    full pathname of included file (may be relative)
+ * \return fopen'ed include file, or NULL if not found.
+ */
+/*@null@*/ FILE *yasm__fopen_include(const char *iname, const char *from,
+				     /*@null@*/ const char **paths,
+				     const char *mode,
+				     /*@out@*/ /*@only@*/ char **oname);
 
 /** Write an 8-bit value to a buffer, incrementing buffer pointer.
  * \note Only works properly if ptr is an (unsigned char *).
