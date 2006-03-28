@@ -31,7 +31,6 @@ LIBYASM_OBJS= \
  libyasm/mergesort.o \
  libyasm/phash.o \
  libyasm/section.o \
- libyasm/splitpath.o \
  libyasm/strcasecmp.o \
  libyasm/strsep.o \
  libyasm/symrec.o \

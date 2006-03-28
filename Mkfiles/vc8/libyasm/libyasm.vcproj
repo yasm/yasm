@@ -390,10 +390,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\libyasm\splitpath.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\libyasm\strcasecmp.c"
 				>
 			</File>

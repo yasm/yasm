@@ -1,13 +1,13 @@
 /**
  * \file libyasm/file.h
- * \brief YASM big and little endian file interface.
+ * \brief YASM file helpers.
  *
  * \rcs
  * $Id$
  * \endrcs
  *
  * \license
- *  Copyright (C) 2001  Peter Johnson
+ *  Copyright (C) 2001-2006  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,55 @@
  */
 #ifndef YASM_FILE_H
 #define YASM_FILE_H
+
+/** Split a UNIX pathname into head (directory) and tail (base filename)
+ * portions.
+ * \internal
+ * \param path	pathname
+ * \param tail	(returned) base filename
+ * \return Length of head (directory).
+ */
+size_t yasm__splitpath_unix(const char *path, /*@out@*/ const char **tail);
+
+/** Split a Windows pathname into head (directory) and tail (base filename)
+ * portions.
+ * \internal
+ * \param path	pathname
+ * \param tail	(returned) base filename
+ * \return Length of head (directory).
+ */
+size_t yasm__splitpath_win(const char *path, /*@out@*/ const char **tail);
+
+#ifndef yasm__splitpath
+/** Split a pathname into head (directory) and tail (base filename) portions.
+ * Unless otherwise defined, defaults to yasm__splitpath_unix().
+ * \internal
+ * \param path	pathname
+ * \param tail	(returned) base filename
+ * \return Length of head (directory).
+ */
+# if defined (_WIN32) || defined (WIN32) || defined (__MSDOS__) || \
+ defined (__DJGPP__) || defined (__OS2__) || defined (__CYGWIN__) || \
+ defined (__CYGWIN32__)
+#  define yasm__splitpath(path, tail)	yasm__splitpath_win(path, tail)
+# else
+#  define yasm__splitpath(path, tail)	yasm__splitpath_unix(path, tail)
+# endif
+#endif
+
+#ifndef YASM_PATHSEP
+/** Default path separator; used when combining path components.
+ * Unless otherwise defined, defaults to the UNIX '/'.
+ * \internal
+ */
+# if defined (_WIN32) || defined (WIN32) || defined (__MSDOS__) || \
+ defined (__DJGPP__) || defined (__OS2__) || defined (__CYGWIN__) || \
+ defined (__CYGWIN32__)
+#  define YASM_PATHSEP '\\'
+# else
+#  define YASM_PATHSEP '/'
+# endif
+#endif
 
 /** Write an 8-bit value to a buffer, incrementing buffer pointer.
  * \note Only works properly if ptr is an (unsigned char *).

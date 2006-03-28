@@ -15,7 +15,6 @@ libyasm_a_SOURCES += libyasm/md5.c
 libyasm_a_SOURCES += libyasm/mergesort.c
 libyasm_a_SOURCES += libyasm/phash.c
 libyasm_a_SOURCES += libyasm/section.c
-libyasm_a_SOURCES += libyasm/splitpath.c
 libyasm_a_SOURCES += libyasm/strcasecmp.c
 libyasm_a_SOURCES += libyasm/strsep.c
 libyasm_a_SOURCES += libyasm/symrec.c

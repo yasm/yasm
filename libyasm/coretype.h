@@ -311,47 +311,6 @@ int yasm__strcasecmp(const char *s1, const char *s2);
  */
 int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
 
-/** Split a UNIX pathname into head (directory) and tail (base filename)
- * portions.
- * \internal
- * \param path	pathname
- * \param tail	(returned) base filename
- * \return Length of head (directory).
- */
-size_t yasm__splitpath_unix(const char *path, /*@out@*/ const char **tail);
-
-/** Split a Windows pathname into head (directory) and tail (base filename)
- * portions.
- * \internal
- * \param path	pathname
- * \param tail	(returned) base filename
- * \return Length of head (directory).
- */
-size_t yasm__splitpath_win(const char *path, /*@out@*/ const char **tail);
-
-#ifndef yasm__splitpath
-/** Split a pathname into head (directory) and tail (base filename) portions.
- * Unless otherwise defined, defaults to yasm__splitpath_unix().
- * \internal
- * \param path	pathname
- * \param tail	(returned) base filename
- * \return Length of head (directory).
- */
-# if defined (_WIN32) || defined (WIN32) || defined (__MSDOS__) || \
- defined (__DJGPP__) || defined (__OS2__) || defined (__CYGWIN__) || \
- defined (__CYGWIN32__)
-#  define yasm__splitpath(path, tail)	yasm__splitpath_win(path, tail)
-#  ifndef YASM_PATHSEP
-#   define YASM_PATHSEP '\\'
-#  endif
-# else
-#  define yasm__splitpath(path, tail)	yasm__splitpath_unix(path, tail)
-#  ifndef YASM_PATHSEP
-#   define YASM_PATHSEP '/'
-#  endif
-# endif
-#endif
-
 /** strdup() implementation using yasm_xmalloc().
  * \internal
  * \param str	string

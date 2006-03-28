@@ -1,7 +1,7 @@
 /*
- * Little-endian file functions.
+ * File helper functions.
  *
- *  Copyright (C) 2001  Peter Johnson
+ *  Copyright (C) 2001-2006  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,12 +24,62 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include <ctype.h>
+
 #define YASM_LIB_INTERNAL
 #include "util.h"
 /*@unused@*/ RCSID("$Id$");
 
 #include "file.h"
 
+
+size_t
+yasm__splitpath_unix(const char *path, /*@out@*/ const char **tail)
+{
+    const char *s;
+    s = strrchr(path, '/');
+    if (!s) {
+	/* No head */
+	*tail = path;
+	return 0;
+    }
+    *tail = s+1;
+    /* Strip trailing slashes on path (except leading) */
+    while (s>path && *s == '/')
+	s--;
+    /* Return length of head */
+    return s-path+1;
+}
+
+size_t
+yasm__splitpath_win(const char *path, /*@out@*/ const char **tail)
+{
+    const char *basepath = path;
+    const char *s;
+
+    /* split off drive letter first, if any */
+    if (isalpha(path[0]) && path[1] == ':')
+	basepath += 2;
+
+    s = basepath;
+    while (*s != '\0')
+	s++;
+    while (s >= basepath && *s != '\\' && *s != '/')
+	s--;
+    if (s < basepath) {
+	*tail = basepath;
+	if (path == basepath)
+	    return 0;	/* No head */
+	else
+	    return 2;	/* Drive letter is head */
+    }
+    *tail = s+1;
+    /* Strip trailing slashes on path (except leading) */
+    while (s>basepath && (*s == '/' || *s == '\\'))
+	s--;
+    /* Return length of head */
+    return s-path+1;
+}
 
 size_t
 yasm_fwrite_16_l(unsigned short val, FILE *f)
