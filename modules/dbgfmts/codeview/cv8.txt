@@ -51,7 +51,15 @@ the end (not included in length).
     4 bytes - version
     2 bytes - ?
     0-terminated string containing creator name
-    2 alignment bytes? (0)
+    pairs of 0-terminated strings - keys/values
+    from CL:
+	cwd - current working directory
+	cl - full path of compiler executable
+	cmd - full args (one long string, double-quoted args if needed)
+	src - relative path to source (from cwd)
+	pdb - full path to pdb file
+    ML doesn't output any pairs
+    pairs list terminated with two empty strings
 0x1105 : Code Label 16:32/64
     4 bytes SECREL of symbol
     2 bytes SECTION of symbol

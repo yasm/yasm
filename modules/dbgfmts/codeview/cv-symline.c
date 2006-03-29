@@ -272,7 +272,7 @@ cv8_add_sym_compile(yasm_dbgfmt_cv *dbgfmt_cv, yasm_section *sect,
     cv_sym *cvs = yasm_xmalloc(sizeof(cv_sym));
     cvs->dbgfmt_cv = dbgfmt_cv;
     cvs->type = CV8_S_COMPILE;
-    cvs->format = "wwwwZ";
+    cvs->format = "wwwwZh";
     cvs->args[0].i = 3;		/* language (3=Masm) */
 
     /* target processor; 0xD0 = AMD64 */
@@ -287,6 +287,7 @@ cv8_add_sym_compile(yasm_dbgfmt_cv *dbgfmt_cv, yasm_section *sect,
     cvs->args[2].i = 0;		/* flags (assume 0 for now) */
     cvs->args[3].i = 0;		/* creator version number (assume 0 for now) */
     cvs->args[4].p = creator;	/* creator string */
+    cvs->args[5].i = 0;		/* no pairs of key/value */
 
     bc = yasm_bc_create_common(&cv_sym_bc_callback, cvs, 0);
     bc->len = cv_sym_size(cvs);
@@ -431,7 +432,6 @@ cv_generate_line_bc(yasm_bytecode *bc, /*@null@*/ void *d)
     unsigned long line;
     /*@null@*/ yasm_bytecode *nextbc = yasm_bc__next(bc);
     yasm_section *sect = yasm_bc_get_section(bc);
-    cv8_lineset *ls;
 
     if (nextbc && bc->offset == nextbc->offset)
 	return 0;
@@ -509,9 +509,6 @@ cv_generate_line_section(yasm_section *sect, /*@null@*/ void *d)
 {
     cv_line_info *info = (cv_line_info *)d;
     yasm_dbgfmt_cv *dbgfmt_cv = info->dbgfmt_cv;
-    /*@null@*/ yasm_bytecode *bc;
-    /*cv_line_state state;*/
-    unsigned long addr_delta;
 
     if (!yasm_section_is_code(sect))
 	return 0;	/* not code, so no line data for this section */
@@ -537,19 +534,17 @@ cv_generate_sym(yasm_symrec *sym, void *d)
 {
     cv_line_info *info = (cv_line_info *)d;
     yasm_bytecode *precbc;
-    unsigned long type;
 
     /* only care about labels (for now) */
     if (!yasm_symrec_get_label(sym, &precbc))
 	return 0;
 
-    /* TODO: add data types */
+    /* TODO: add data types; until then, just mark everything as UBYTE */
     if (yasm_section_is_code(yasm_bc_get_section(precbc)))
 	cv8_add_sym_label(info->dbgfmt_cv, info->debug_symline, sym);
     else
-	cv8_add_sym_data(info->dbgfmt_cv, info->debug_symline, 0, sym,
+	cv8_add_sym_data(info->dbgfmt_cv, info->debug_symline, 0x20, sym,
 	    yasm_symrec_get_visibility(sym) & YASM_SYM_GLOBAL?1:0);
-
     return 0;
 }
 
@@ -806,7 +801,7 @@ cv8_fileinfo_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     cv8_fileinfo *fi = (cv8_fileinfo *)bc->contents;
     yasm_dbgfmt_cv *dbgfmt_cv = fi->dbgfmt_cv;
     unsigned char *buf = *bufp;
-    yasm_intnum *intn, *cval;
+    yasm_intnum *cval;
     int i;
 
     /* Offset in filename string table */
@@ -1034,7 +1029,6 @@ cv_sym_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     size_t len;
     int arg = 0;
 
-
     /* Total length of record (following this field) - 2 bytes */
     cval = yasm_intnum_create_uint(bc->len-2);
     yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 2, 16, 0, bc, 1, 0);
@@ -1064,8 +1058,8 @@ cv_sym_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		buf += 4;
 		break;
 	    case 'Y':
-		cv_out_sym((yasm_symrec *)cvs->args[arg++].p, 4, bc, &buf, d,
-			   output_value);
+		cv_out_sym((yasm_symrec *)cvs->args[arg++].p, buf-(*bufp), bc,
+			   &buf, d, output_value);
 		break;
 	    case 'T':
 		yasm_intnum_set_uint(cval, cvs->args[arg++].i);
