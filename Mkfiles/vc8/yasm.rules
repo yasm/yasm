@@ -7,7 +7,7 @@
 		<CustomBuildRule
 			Name="YASM"
 			DisplayName="Yasm Assembler"
-			CommandLine="yasm -Xvc -f $(PlatformName) [ListFileName] [Defines] [UnDefines] [IncludePaths] [ObjectFileName] [inputs]"
+			CommandLine="yasm -Xvc -f $(PlatformName) [Debug] [ListFileName] [Defines] [UnDefines] [IncludePaths] [ObjectFileName] [inputs]"
 			Outputs="[$ObjectFileName]"
 			FileExtensions="*.asm"
 			ExecutionDescription="Assembling ..."
@@ -52,6 +52,11 @@
 					Name="PreIncludeFile"
 					DisplayName="Pre Include File"
 					Switch="-p &quot;[value]&quot;"
+				/>
+				<BooleanProperty
+					Name="Debug"
+					DisplayName="Generate Debug Information"
+					Switch="-g cv8"
 				/>
 			</Properties>
 		</CustomBuildRule>
