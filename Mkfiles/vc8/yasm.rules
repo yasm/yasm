@@ -7,17 +7,18 @@
 		<CustomBuildRule
 			Name="YASM"
 			DisplayName="Yasm Assembler"
-			CommandLine="yasm -Xvc -f $(PlatformName) [Debug] [ListFileName] [Defines] [UnDefines] [IncludePaths] [ObjectFileName] [inputs]"
+			CommandLine="yasm -Xvc -f $(PlatformName) [PreProc] [Parser] [Debug] [ListFileName] [Defines] [UnDefines] [IncludePaths] [ObjectFileName] [inputs]"
 			Outputs="[$ObjectFileName]"
 			FileExtensions="*.asm"
-			ExecutionDescription="Assembling ..."
+			ExecutionDescription="Assembling $(InputFileName)"
 			ShowOnlyRuleProperties="false"
 			>
 			<Properties>
 				<StringProperty
 					Name="Defines"
-					DisplayName="Preprocessor Definitions"
-					Description="Preprocessor Definitions"
+					DisplayName="Definitions"
+					Category="Pre-Defined Symbols"
+					Description="Specify pre-defined symbols (&apos;symbol&apos; or &apos;symbol = value&apos;) "
 					Switch="-D [value]"
 					Delimited="true"
 					Inheritable="true"
@@ -25,14 +26,17 @@
 				<StringProperty
 					Name="IncludePaths"
 					DisplayName="Include Paths"
+					Category="Configuration"
+					Description="Set the paths for any additional include files"
 					Switch="-i &quot;[value]&quot;"
 					Delimited="true"
 					Inheritable="true"
 				/>
 				<StringProperty
 					Name="UnDefines"
-					DisplayName="Remove Preprocessor Definitions"
-					Description="Undefine"
+					DisplayName="Remove Definitions"
+					Category="Pre-Defined Symbols"
+					Description="Remove pre-defined symbols "
 					Switch="-u [value]"
 					Delimited="true"
 					Inheritable="true"
@@ -40,24 +44,70 @@
 				<StringProperty
 					Name="ObjectFileName"
 					DisplayName="Object File Name"
+					Category="Output"
+					Description="Select the output file name"
 					Switch="-o &quot;[value]&quot;"
 					DefaultValue="&quot;$(IntDir)\$(InputName).obj&quot;"
 				/>
 				<StringProperty
 					Name="ListFileName"
 					DisplayName="List File Name"
+					Category="Output"
+					Description="Select an output listing by setting its file name"
 					Switch="-l &quot;[value]&quot;"
 				/>
 				<StringProperty
 					Name="PreIncludeFile"
 					DisplayName="Pre Include File"
-					Switch="-p &quot;[value]&quot;"
+					Category="Configuration"
+					Description="Select a pre-included file by setting its name"
+					Switch="-P &quot;[value]&quot;"
 				/>
 				<BooleanProperty
 					Name="Debug"
-					DisplayName="Generate Debug Information"
+					DisplayName="Debug Information"
+					Category="Output"
+					Description="Generate debugging information"
 					Switch="-g cv8"
 				/>
+				<EnumProperty
+					Name="PreProc"
+					DisplayName="Pre-Processor"
+					Category="Configuration"
+					Description="Select the pre-processor (&apos;nasm&apos; or &apos;raw&apos;)"
+					>
+					<Values>
+						<EnumValue
+							Value="0"
+							Switch="-rnasm"
+							DisplayName="Nasm "
+						/>
+						<EnumValue
+							Value="1"
+							Switch="-rraw"
+							DisplayName="Raw"
+						/>
+					</Values>
+				</EnumProperty>
+				<EnumProperty
+					Name="Parser"
+					DisplayName="Parser"
+					Category="Configuration"
+					Description="Select the parser for Intel (&apos;nasm&apos;) or AT&amp;T ( &apos;gas&apos;) syntax"
+					>
+					<Values>
+						<EnumValue
+							Value="0"
+							Switch="-pnasm"
+							DisplayName="Nasm"
+						/>
+						<EnumValue
+							Value="1"
+							Switch="-pgas"
+							DisplayName="Gas"
+						/>
+					</Values>
+				</EnumProperty>
 			</Properties>
 		</CustomBuildRule>
 	</Rules>

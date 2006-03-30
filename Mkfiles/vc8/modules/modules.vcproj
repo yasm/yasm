@@ -28,7 +28,6 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
-				CommandLine="cmd &lt; build.bat"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -180,7 +179,6 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
-				CommandLine="cmd &lt; build.bat"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"

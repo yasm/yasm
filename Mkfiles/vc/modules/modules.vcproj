@@ -48,7 +48,6 @@
 				Name="VCPostBuildEventTool"/>
 			<Tool
 				Name="VCPreBuildEventTool"
-				CommandLine="cmd &lt;build.bat"/>
 			<Tool
 				Name="VCPreLinkEventTool"/>
 			<Tool
