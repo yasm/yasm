@@ -170,7 +170,7 @@ static opt_option options[] =
 /* version message */
 /*@observer@*/ static const char *version_msg[] = {
     PACKAGE " " VERSION "\n",
-    N_("Copyright (c) 2001-2003 Peter Johnson and other"), " " PACKAGE " ",
+    N_("Copyright (c) 2001-2006 Peter Johnson and other"), " " PACKAGE " ",
     N_("developers.\n"),
     N_("**Licensing summary**\n"),
     N_("Note: This summary does not provide legal advice nor is it the\n"),
