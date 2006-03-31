@@ -479,8 +479,8 @@ explabel: ID		{
     }
     | '$'		{
 	/* "$" references the current assembly position */
-	$$ = yasm_symtab_define_label(p_symtab, "$", parser_nasm->prev_bc, 0,
-				      cur_line);
+	$$ = yasm_symtab_define_curpos(p_symtab, "$", parser_nasm->prev_bc,
+				       cur_line);
     }
     | START_SECTION_ID	{
 	/* "$$" references the start of the current section */
@@ -596,10 +596,50 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 	    vp->param = NULL;
 	}
 	parser_nasm->prev_bc = yasm_section_bcs_last(parser_nasm->cur_section);
+    } else if (yasm__strcasecmp(name, "align") == 0) {
+	/*@only@*/ yasm_expr *boundval;
+	/*@depedent@*/ yasm_intnum *boundintn;
+
+	/* it can be just an ID or a complete expression, so handle both. */
+	vp = yasm_vps_first(valparams);
+	if (vp->val)
+	    boundval = p_expr_new_ident(yasm_expr_sym(
+		yasm_symtab_use(p_symtab, vp->val, line)));
+	else if (vp->param) {
+	    boundval = vp->param;
+	    vp->param = NULL;
+	}
+
+	/* Largest .align in the section specifies section alignment.
+	 * Note: this doesn't match NASM behavior, but is a lot more
+	 * intelligent!
+	 */
+	boundintn = yasm_expr_get_intnum(&boundval, NULL);
+	if (boundintn) {
+	    unsigned long boundint = yasm_intnum_get_uint(boundintn);
+
+	    /* Alignments must be a power of two. */
+	    if ((boundint & (boundint - 1)) == 0) {
+		if (boundint > yasm_section_get_align(parser_nasm->cur_section))
+		    yasm_section_set_align(parser_nasm->cur_section, boundint,
+					   cur_line);
+	    }
+	}
+
+	/* As this directive is called only when nop is used as fill, always
+	 * use arch (nop) fill.
+	 */
+	parser_nasm->prev_bc =
+	    yasm_section_bcs_append(parser_nasm->cur_section,
+		yasm_bc_create_align(boundval, NULL, NULL,
+		    /*yasm_section_is_code(parser_nasm->cur_section) ?*/
+			yasm_arch_get_fill(parser_nasm->arch)/* : NULL*/,
+		    cur_line));
     } else if (yasm__strcasecmp(name, "cpu") == 0) {
 	yasm_vps_foreach(vp, valparams) {
 	    if (vp->val)
-		yasm_arch_parse_cpu(parser_nasm->arch, vp->val, line);
+		yasm_arch_parse_cpu(parser_nasm->arch, vp->val,
+				    strlen(vp->val), line);
 	    else if (vp->param) {
 		const yasm_intnum *intcpu;
 		intcpu = yasm_expr_get_intnum(&vp->param, NULL);
@@ -608,7 +648,8 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 		else {
 		    char strcpu[16];
 		    sprintf(strcpu, "%lu", yasm_intnum_get_uint(intcpu));
-		    yasm_arch_parse_cpu(parser_nasm->arch, strcpu, line);
+		    yasm_arch_parse_cpu(parser_nasm->arch, strcpu,
+					strlen(strcpu), line);
 		}
 	    }
 	}

@@ -159,7 +159,7 @@ x86_get_fill(const yasm_arch *arch)
 	"\x8d\x74\x00"			/* 7 - lea si, [si+byte 0]	*/
 	"\x8d\xbd\x00\x00",		/*     lea di, [di+word 0]	*/
 	"\x8d\xb4\x00\x00"		/* 8 - lea si, [si+word 0]	*/
-	"\x8d\xbd\x00\x00"		/*     lea di, [di+word 0]	*/
+	"\x8d\xbd\x00\x00",		/*     lea di, [di+word 0]	*/
 	"\xeb\x07\x90\x90\x90\x90\x90"	/* 9 - jmp $+9; nop fill	*/
 	"\x90\x90",
 	"\xeb\x08\x90\x90\x90\x90\x90"	/* 10 - jmp $+10; nop fill	*/
@@ -187,6 +187,8 @@ x86_get_fill(const yasm_arch *arch)
 	"\x8d\xb4\x26\x00\x00\x00\x00",	/* 7 - lea esi, [esi*1+dword 0]	*/
 	"\x90"				/* 8 - nop			*/
 	"\x8d\xb4\x26\x00\x00\x00\x00",	/*     lea esi, [esi*1+dword 0]	*/
+#if 0
+	/* GAS uses these */
 	"\x89\xf6"			/* 9 - mov esi, esi		*/
 	"\x8d\xbc\x27\x00\x00\x00\x00",	/*     lea edi, [edi*1+dword 0]	*/
 	"\x8d\x76\x00"			/* 10 - lea esi, [esi+byte 0]	*/
@@ -199,6 +201,21 @@ x86_get_fill(const yasm_arch *arch)
 	"\x8d\xbc\x27\x00\x00\x00\x00",	/*      lea edi, [edi*1+dword 0]*/
 	"\x8d\xb4\x26\x00\x00\x00\x00"	/* 14 - lea esi, [esi*1+dword 0]*/
 	"\x8d\xbc\x27\x00\x00\x00\x00",	/*      lea edi, [edi*1+dword 0]*/
+#else
+	/* But on newer processors, these are recommended */
+	"\xeb\x07\x90\x90\x90\x90\x90"	/* 9 - jmp $+9; nop fill	*/
+	"\x90\x90",
+	"\xeb\x08\x90\x90\x90\x90\x90"	/* 10 - jmp $+10; nop fill	*/
+	"\x90\x90\x90",
+	"\xeb\x09\x90\x90\x90\x90\x90"	/* 11 - jmp $+11; nop fill	*/
+	"\x90\x90\x90\x90",
+	"\xeb\x0a\x90\x90\x90\x90\x90"	/* 12 - jmp $+12; nop fill	*/
+	"\x90\x90\x90\x90\x90",
+	"\xeb\x0b\x90\x90\x90\x90\x90"	/* 13 - jmp $+13; nop fill	*/
+	"\x90\x90\x90\x90\x90\x90",
+	"\xeb\x0c\x90\x90\x90\x90\x90"	/* 14 - jmp $+14; nop fill	*/
+	"\x90\x90\x90\x90\x90\x90\x90",
+#endif
 	"\xeb\x0d\x90\x90\x90\x90\x90"	/* 15 - jmp $+15; nop fill	*/
 	"\x90\x90\x90\x90\x90\x90\x90\x90"
     };
@@ -377,17 +394,12 @@ yasm_arch_module yasm_x86_LTX_arch = {
     x86_get_address_size,
     x86_set_var,
     yasm_x86__parse_cpu,
-    yasm_x86__parse_check_reg,
-    yasm_x86__parse_check_reggroup,
-    yasm_x86__parse_check_segreg,
-    yasm_x86__parse_check_insn,
-    yasm_x86__parse_check_prefix,
-    yasm_x86__parse_check_targetmod,
+    yasm_x86__parse_check_insnprefix,
+    yasm_x86__parse_check_regtmod,
     x86_parse_directive,
     x86_get_fill,
     yasm_x86__finalize_insn,
     yasm_x86__floatnum_tobytes,
-    yasm_x86__intnum_fixup_rel,
     yasm_x86__intnum_tobytes,
     yasm_x86__get_reg_size,
     x86_reggroup_get_reg,

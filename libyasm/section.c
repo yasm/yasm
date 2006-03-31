@@ -64,9 +64,16 @@ struct yasm_section {
 
     union {
 	/* SECTION_GENERAL data */
-	struct general {
+	struct {
 	    /*@owned@*/ char *name;	/* strdup()'ed name (given by user) */
 	} general;
+	/* SECTION_ABSOLUTE data */
+	struct {
+	    /* Internally created first symrec in section.  Used by
+	     * yasm_expr__level_tree during absolute reference expansion.
+	     */
+	    /*@dependent@*/ yasm_symrec *first;
+	} absolute;
     } data;
 
     /* associated data; NULL if none */
@@ -80,6 +87,8 @@ struct yasm_section {
 
     int code;			/* section contains code (instructions) */
     int res_only;		/* allow only resb family of bytecodes? */
+    int def;			/* "default" section, e.g. not specified by
+				   using section directive */
 
     /* the bytecodes for the section's contents */
     /*@reldef@*/ STAILQ_HEAD(yasm_bytecodehead, yasm_bytecode) bcs;
@@ -165,6 +174,7 @@ yasm_object_get_general(yasm_object *object, const char *name,
 
     s->code = code;
     s->res_only = res_only;
+    s->def = 0;
 
     *isnew = 1;
     return s;
@@ -198,7 +208,12 @@ yasm_object_create_absolute(yasm_object *object, yasm_expr *start,
     STAILQ_INIT(&s->relocs);
     s->destroy_reloc = NULL;
 
+    s->data.absolute.first =
+	yasm_symtab_define_label(object->symtab, ".absstart", bc, 0, 0);
+
+    s->code = 0;
     s->res_only = 1;
+    s->def = 0;
 
     return s;
 }
@@ -259,6 +274,18 @@ yasm_section_set_opt_flags(yasm_section *sect, unsigned long opt_flags)
     sect->opt_flags = opt_flags;
 }
 
+int
+yasm_section_is_default(const yasm_section *sect)
+{
+    return sect->def;
+}
+
+void
+yasm_section_set_default(yasm_section *sect, int def)
+{
+    sect->def = def;
+}
+
 yasm_object *
 yasm_section_get_object(const yasm_section *sect)
 {
@@ -291,6 +318,10 @@ yasm_object_destroy(yasm_object *object)
 	yasm_section_destroy(cur);
 	cur = next;
     }
+
+    /* Delete associated filenames */
+    yasm_xfree(object->src_filename);
+    yasm_xfree(object->obj_filename);
 
     /* Delete symbol table and line mappings */
     yasm_symtab_destroy(object->symtab);
@@ -452,6 +483,14 @@ yasm_section_get_name(const yasm_section *sect)
 {
     if (sect->type == SECTION_GENERAL)
 	return sect->data.general.name;
+    return NULL;
+}
+
+yasm_symrec *
+yasm_section_abs_get_sym(const yasm_section *sect)
+{
+    if (sect->type == SECTION_ABSOLUTE)
+	return sect->data.absolute.first;
     return NULL;
 }
 

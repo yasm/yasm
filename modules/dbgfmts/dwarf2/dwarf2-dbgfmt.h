@@ -98,8 +98,8 @@ extern const yasm_assoc_data_callback yasm_dwarf2__section_data_cb;
 
 yasm_bytecode *yasm_dwarf2__append_bc(yasm_section *sect, yasm_bytecode *bc);
 
-/*@only@*/ yasm_expr *yasm_dwarf2__bc_sym(yasm_symtab *symtab,
-					  yasm_bytecode *bc);
+/*@dependent@*/ yasm_symrec *yasm_dwarf2__bc_sym(yasm_symtab *symtab,
+						 yasm_bytecode *bc);
 
 typedef struct dwarf2_head dwarf2_head;
 dwarf2_head *yasm_dwarf2__add_head

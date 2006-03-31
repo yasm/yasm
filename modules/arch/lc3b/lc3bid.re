@@ -119,7 +119,7 @@ typedef struct lc3b_insn_info {
 
 #define RET_INSN(group, mod)	do { \
     DEF_INSN_DATA(group, mod); \
-    return 1; \
+    return YASM_ARCH_INSN; \
     } while (0)
 
 /*
@@ -239,9 +239,9 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 
     /* Copy what we can from info */
     insn = yasm_xmalloc(sizeof(lc3b_insn));
-    insn->imm = NULL;
+    yasm_value_initialize(&insn->imm, NULL);
     insn->imm_type = LC3B_IMM_NONE;
-    insn->origin = NULL;
+    insn->origin_prevbc = NULL;
     insn->opcode = info->opcode;
 
     /* Apply modifiers */
@@ -277,12 +277,17 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		case OPA_Imm:
 		    switch (op->type) {
 			case YASM_INSN__OPERAND_IMM:
-			    insn->imm = op->data.val;
+			    if (yasm_value_finalize_expr(&insn->imm,
+							 op->data.val))
+				yasm__error(bc->line,
+					    N_("immediate expression too complex"));
 			    break;
 			case YASM_INSN__OPERAND_REG:
-			    insn->imm = yasm_expr_create_ident(yasm_expr_int(
-				yasm_intnum_create_uint(op->data.reg & 0x7)),
-				bc->line);
+			    if (yasm_value_finalize_expr(&insn->imm,
+				    yasm_expr_create_ident(yasm_expr_int(
+				    yasm_intnum_create_uint(op->data.reg & 0x7)),
+				    bc->line)))
+				yasm_internal_error(N_("reg expr too complex?"));
 			    break;
 			default:
 			    yasm_internal_error(N_("invalid operand conversion"));
@@ -293,14 +298,15 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	    }
 
 	    insn->imm_type = (info->operands[i] & OPI_MASK)>>3;
-	    if (insn->imm_type == LC3B_IMM_9_PC)
-		insn->origin = yasm_symtab_define_label2("$", prev_bc, 0,
-							 bc->line);
+	    if (insn->imm_type == LC3B_IMM_9_PC) {
+		insn->origin_prevbc = prev_bc;
+		if (insn->imm.seg_of || insn->imm.rshift
+		    || insn->imm.curpos_rel)
+		    yasm__error(bc->line, N_("invalid jump target"));
+		insn->imm.curpos_rel = 1;
+	    }
 	}
     }
-
-    if (!insn->imm)
-	insn->imm_type = LC3B_IMM_NONE;
 
     /* Transform the bytecode */
     yasm_lc3b__bc_transform_insn(bc, insn);
@@ -314,50 +320,39 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 #define YYFILL(n)	(void)(n)
 
 void
-yasm_lc3b__parse_cpu(yasm_arch *arch, const char *id, unsigned long line)
+yasm_lc3b__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len,
+		     unsigned long line)
 {
 }
 
-int
-yasm_lc3b__parse_check_reg(yasm_arch *arch, unsigned long data[1],
-			   const char *id, unsigned long line)
+yasm_arch_regtmod
+yasm_lc3b__parse_check_regtmod(yasm_arch *arch, unsigned long *data,
+			       const char *id, size_t id_len,
+			       unsigned long line)
 {
     const char *oid = id;
     /*const char *marker;*/
     /*!re2c
 	/* integer registers */
 	'r' [0-7]	{
-	    data[0] = (oid[1]-'0');
-	    return 1;
+	    *data = (oid[1]-'0');
+	    return YASM_ARCH_REG;
 	}
 
 	/* catchalls */
 	[\001-\377]+	{
-	    return 0;
+	    return YASM_ARCH_NOTREGTMOD;
 	}
 	[\000]	{
-	    return 0;
+	    return YASM_ARCH_NOTREGTMOD;
 	}
     */
 }
 
-int
-yasm_lc3b__parse_check_reggroup(yasm_arch *arch, unsigned long data[1],
-				const char *id, unsigned long line)
-{
-    return 0;
-}
-
-int
-yasm_lc3b__parse_check_segreg(yasm_arch *arch, unsigned long data[1],
-			      const char *id, unsigned long line)
-{
-    return 0;
-}
-
-int
-yasm_lc3b__parse_check_insn(yasm_arch *arch, unsigned long data[4],
-			    const char *id, unsigned long line)
+yasm_arch_insnprefix
+yasm_lc3b__parse_check_insnprefix(yasm_arch *arch, unsigned long data[4],
+				  const char *id, size_t id_len,
+				  unsigned long line)
 {
     /*const char *oid = id;*/
     /*const char *marker;*/
@@ -403,24 +398,10 @@ yasm_lc3b__parse_check_insn(yasm_arch *arch, unsigned long data[4],
 
 	/* catchalls */
 	[\001-\377]+	{
-	    return 0;
+	    return YASM_ARCH_NOTINSNPREFIX;
 	}
 	[\000]	{
-	    return 0;
+	    return YASM_ARCH_NOTINSNPREFIX;
 	}
     */
-}
-
-int
-yasm_lc3b__parse_check_prefix(yasm_arch *arch, unsigned long data[4],
-			      const char *id, unsigned long line)
-{
-    return 0;
-}
-
-int
-yasm_lc3b__parse_check_targetmod(yasm_arch *arch, unsigned long data[1],
-				 const char *id, unsigned long line)
-{
-    return 0;
 }

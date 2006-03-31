@@ -37,7 +37,7 @@ struct dwarf2_head {
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2;
     yasm_bytecode *start_prevbc;
     yasm_bytecode *end_prevbc;
-    /*@null@*/ yasm_expr *debug_ptr;
+    /*@null@*/ yasm_symrec *debug_ptr;
     int with_address;
     int with_segment;
 };
@@ -50,7 +50,7 @@ static yasm_bc_resolve_flags dwarf2_head_bc_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int dwarf2_head_bc_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
-     yasm_output_expr_func output_expr,
+     yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
 /* Bytecode callback structures */
@@ -155,7 +155,6 @@ static void
 dwarf2_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
 {
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = (yasm_dbgfmt_dwarf2 *)dbgfmt;
-    int new;
     size_t num_line_sections;
     /*@null@*/ yasm_section *debug_info, *debug_line, *main_code;
 
@@ -181,7 +180,7 @@ dwarf2_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
     }
 }
 
-yasm_expr *
+yasm_symrec *
 yasm_dwarf2__bc_sym(yasm_symtab *symtab, yasm_bytecode *bc)
 {
     /*@dependent@*/ yasm_symrec *sym;
@@ -189,7 +188,7 @@ yasm_dwarf2__bc_sym(yasm_symtab *symtab, yasm_bytecode *bc)
 	sym = bc->symrecs[0];
     else
 	sym = yasm_symtab_define_label(symtab, ".bcsym", bc, 0, 0);
-    return yasm_expr_create_ident(yasm_expr_sym(sym), 0);
+    return sym;
 }
 
 dwarf2_head *
@@ -239,8 +238,6 @@ static void
 dwarf2_head_bc_destroy(void *contents)
 {
     dwarf2_head *head = (dwarf2_head *)contents;
-    if (head->debug_ptr)
-	yasm_expr_destroy(head->debug_ptr);
     yasm_xfree(contents);
 }
 
@@ -261,14 +258,13 @@ dwarf2_head_bc_resolve(yasm_bytecode *bc, int save,
 
 static int
 dwarf2_head_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-		       yasm_output_expr_func output_expr,
+		       yasm_output_value_func output_value,
 		       yasm_output_reloc_func output_reloc)
 {
     dwarf2_head *head = (dwarf2_head *)bc->contents;
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = head->dbgfmt_dwarf2;
     unsigned char *buf = *bufp;
     yasm_intnum *intn, *cval;
-    size_t i, len;
 
     if (dbgfmt_dwarf2->format == DWARF2_FORMAT_64BIT) {
 	YASM_WRITE_8(buf, 0xff);
@@ -295,9 +291,11 @@ dwarf2_head_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     /* Pointer to another debug section */
     if (head->debug_ptr) {
-	output_expr(&head->debug_ptr, buf, dbgfmt_dwarf2->sizeof_offset,
-		    dbgfmt_dwarf2->sizeof_offset*8, 0,
-		    (unsigned long)(buf-*bufp), bc, 0, 0, d);
+	yasm_value value;
+	yasm_value_init_sym(&value, head->debug_ptr);
+	output_value(&value, buf, dbgfmt_dwarf2->sizeof_offset,
+		     dbgfmt_dwarf2->sizeof_offset*8, 0,
+		     (unsigned long)(buf-*bufp), bc, 0, d);
 	buf += dbgfmt_dwarf2->sizeof_offset;
     }
 

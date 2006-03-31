@@ -462,6 +462,8 @@ unsigned long elf_secthead_write_to_file(FILE *f, elf_secthead *esd,
 void elf_secthead_append_reloc(yasm_section *sect, elf_secthead *shead,
 			       elf_reloc_entry *reloc);
 elf_section_type elf_secthead_get_type(elf_secthead *shead);
+void elf_secthead_set_typeflags(elf_secthead *shead, elf_section_type type,
+				elf_section_flags flags);
 int elf_secthead_is_empty(elf_secthead *shead);
 struct yasm_symrec *elf_secthead_get_sym(elf_secthead *shead);
 unsigned long elf_secthead_get_align(const elf_secthead *shead);

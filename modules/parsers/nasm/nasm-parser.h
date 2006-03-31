@@ -69,7 +69,8 @@ typedef struct yasm_parser_nasm {
 	DIRECTIVE,
 	DIRECTIVE2,
 	LINECHG,
-	LINECHG2
+	LINECHG2,
+	INSTRUCTION
     } state;
 } yasm_parser_nasm;
 

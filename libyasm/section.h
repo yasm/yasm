@@ -180,6 +180,19 @@ unsigned long yasm_section_get_opt_flags(const yasm_section *sect);
  */
 void yasm_section_set_opt_flags(yasm_section *sect, unsigned long opt_flags);
 
+/** Determine if a section was declared as the "default" section (e.g. not
+ * created through a section directive).
+ * \param sect	    section
+ * \return Nonzero if section was declared as default.
+ */
+int yasm_section_is_default(const yasm_section *sect);
+
+/** Set section "default" flag to a new value.
+ * \param sect	    section
+ * \param def	    new value of default flag
+ */
+void yasm_section_set_default(yasm_section *sect, int def);
+
 /** Get object owner of a section.
  * \param sect	    section
  * \return Object this section is a part of.
@@ -283,6 +296,13 @@ int yasm_section_bcs_traverse
  * \return Section name, or NULL if section is absolute.
  */
 /*@observer@*/ /*@null@*/ const char *yasm_section_get_name
+    (const yasm_section *sect);
+
+/** Get starting symbol of an absolute section.
+ * \param   sect    section
+ * \return Starting symrec, or NULL if section is not absolute.
+ */
+/*@dependent@*/ /*@null@*/ yasm_symrec *yasm_section_abs_get_sym
     (const yasm_section *sect);
 
 /** Change starting address of a section.

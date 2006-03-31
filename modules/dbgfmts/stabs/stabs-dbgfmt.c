@@ -125,7 +125,7 @@ static yasm_bc_resolve_flags stabs_bc_str_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int stabs_bc_str_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
-     yasm_output_expr_func output_expr,
+     yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static void stabs_bc_stab_destroy(void *contents);
@@ -135,7 +135,7 @@ static yasm_bc_resolve_flags stabs_bc_stab_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int stabs_bc_stab_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
-     yasm_output_expr_func output_expr,
+     yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
 /* Bytecode callback structures */
@@ -304,7 +304,9 @@ stabs_dbgfmt_generate_sections(yasm_section *sect, /*@null@*/ void *d)
     if (yasm__strcasecmp(sectname, ".text")==0) {
         /* Close out last function by appending a null SO stab after last bc */
         yasm_bytecode *bc = yasm_section_bcs_last(sect);
-        yasm_symrec *sym = yasm_symtab_define_label2(".n_so", bc, 1, bc->line);
+        yasm_symrec *sym =
+	    yasm_symtab_define_label(yasm_object_get_symtab(
+		yasm_section_get_object(sect)), ".n_so", bc, 1, bc->line);
 	stabs_dbgfmt_append_stab(info, info->stab, 0, N_SO, 0, sym, bc, 0);
     }
 
@@ -396,7 +398,7 @@ stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
 
 static int
 stabs_bc_stab_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-		      yasm_output_expr_func output_expr,
+		      yasm_output_value_func output_value,
 		      yasm_output_reloc_func output_reloc)
 {
     /* This entire function, essentially the core of rendering stabs to a file,
@@ -430,7 +432,7 @@ stabs_bc_stab_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
 static int
 stabs_bc_str_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-		     yasm_output_expr_func output_expr,
+		     yasm_output_value_func output_value,
 		     yasm_output_reloc_func output_reloc)
 {
     const char *str = (const char *)bc->contents;

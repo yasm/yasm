@@ -72,6 +72,7 @@ int nasm_bsi (char *string, const char **array, int size);
 
 
 char *nasm_src_set_fname(char *newname);
+char *nasm_src_get_fname(void);
 long nasm_src_set_linnum(long newline);
 long nasm_src_get_linnum(void);
 /*

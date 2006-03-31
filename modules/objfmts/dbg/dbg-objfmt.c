@@ -95,6 +95,26 @@ dbg_objfmt_destroy(yasm_objfmt *objfmt)
     yasm_xfree(objfmt);
 }
 
+static yasm_section *
+dbg_objfmt_add_default_section(yasm_objfmt *objfmt)
+{
+    yasm_objfmt_dbg *objfmt_dbg = (yasm_objfmt_dbg *)objfmt;
+    yasm_section *retval;
+    int isnew;
+
+    retval = yasm_object_get_general(objfmt_dbg->object, ".text",
+	yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(200)), 0),
+	0, 0, 0, &isnew, 0);
+    if (isnew) {
+	fprintf(objfmt_dbg->dbgfile, "(new) ");
+	yasm_symtab_define_label(
+	    yasm_object_get_symtab(objfmt_dbg->object), ".text",
+	    yasm_section_bcs_first(retval), 1, 0);
+	yasm_section_set_default(retval, 1);
+    }
+    return retval;
+}
+
 static /*@observer@*/ /*@null@*/ yasm_section *
 dbg_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			  /*@unused@*/ /*@null@*/
@@ -122,6 +142,7 @@ dbg_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		yasm_object_get_symtab(objfmt_dbg->object), vp->val,
 		yasm_section_bcs_first(retval), 1, line);
 	}
+	yasm_section_set_default(retval, 0);
 	fprintf(objfmt_dbg->dbgfile, "\"%s\" section\n", vp->val);
 	return retval;
     } else {
@@ -214,13 +235,13 @@ yasm_objfmt_module yasm_dbg_LTX_objfmt = {
     "Trace of all info passed to object format module",
     "dbg",
     "dbg",
-    ".text",
     32,
     dbg_objfmt_dbgfmt_keywords,
     "null",
     dbg_objfmt_create,
     dbg_objfmt_output,
     dbg_objfmt_destroy,
+    dbg_objfmt_add_default_section,
     dbg_objfmt_section_switch,
     dbg_objfmt_extern_declare,
     dbg_objfmt_global_declare,

@@ -567,6 +567,8 @@ elf_secthead_destroy(elf_secthead *shead)
     if (shead == NULL)
 	yasm_internal_error(N_("shead is null"));
 
+    yasm_intnum_destroy(shead->size);
+
     yasm_xfree(shead);
 }
 
@@ -745,6 +747,14 @@ elf_section_type
 elf_secthead_get_type(elf_secthead *shead)
 {
     return shead->type;
+}
+
+void
+elf_secthead_set_typeflags(elf_secthead *shead, elf_section_type type,
+			   elf_section_flags flags)
+{
+    shead->type = type;
+    shead->flags = flags;
 }
 
 int

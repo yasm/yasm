@@ -170,7 +170,7 @@ static opt_option options[] =
 /* version message */
 /*@observer@*/ static const char *version_msg[] = {
     PACKAGE " " VERSION "\n",
-    N_("Copyright (c) 2001-2003 Peter Johnson and other"), " " PACKAGE " ",
+    N_("Copyright (c) 2001-2006 Peter Johnson and other"), " " PACKAGE " ",
     N_("developers.\n"),
     N_("**Licensing summary**\n"),
     N_("Note: This summary does not provide legal advice nor is it the\n"),
@@ -234,6 +234,7 @@ main(int argc, char *argv[])
     yasm_section *def_sect;
     size_t i;
     yasm_arch_create_error arch_error;
+    const char *base_filename;
 
 #if defined(HAVE_SETLOCALE) && defined(HAVE_LC_MESSAGES)
     setlocale(LC_MESSAGES, "");
@@ -328,11 +329,15 @@ main(int argc, char *argv[])
                 if (in == stdin)
                     /* Default to yasm.out if no obj filename specified */
                     obj_filename = yasm__xstrdup("yasm.out");
-                else
-                    /* replace (or add) extension */
-                    obj_filename = replace_extension(in_filename,
-                                                     cur_objfmt_module->extension,
-                                                     "yasm.out");
+                else {
+                    /* replace (or add) extension to base filename */
+		    yasm__splitpath(in_filename, &base_filename);
+		    if (base_filename[0] == '\0')
+			obj_filename = yasm__xstrdup("yasm.out");
+		    else
+			obj_filename = replace_extension(base_filename,
+                            cur_objfmt_module->extension, "yasm.out");
+		}
             }
 	} else {
 	    /* Open output (object) file */
@@ -411,11 +416,16 @@ main(int argc, char *argv[])
 	if (in == stdin)
 	    /* Default to yasm.out if no obj filename specified */
 	    obj_filename = yasm__xstrdup("yasm.out");
-	else
-	    /* replace (or add) extension */
-	    obj_filename = replace_extension(in_filename,
-					     cur_objfmt_module->extension,
-					     "yasm.out");
+	else {
+	    /* replace (or add) extension to base filename */
+	    yasm__splitpath(in_filename, &base_filename);
+	    if (base_filename[0] == '\0')
+		obj_filename = yasm__xstrdup("yasm.out");
+	    else
+		obj_filename = replace_extension(base_filename,
+						 cur_objfmt_module->extension,
+						 "yasm.out");
+	}
     }
 
     /* Create object */
@@ -553,7 +563,7 @@ main(int argc, char *argv[])
     cur_objfmt_module = ((yasm_objfmt_base *)cur_objfmt)->module;
 
     /* Add an initial "default" section to object */
-    def_sect = yasm_objfmt_add_default_section(cur_objfmt, object);
+    def_sect = yasm_objfmt_add_default_section(cur_objfmt);
 
     /* Initialize the debug format */
     cur_dbgfmt = yasm_dbgfmt_create(cur_dbgfmt_module, object, cur_objfmt,

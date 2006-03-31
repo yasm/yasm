@@ -6,6 +6,8 @@
 
 frontends/yasm/yasm-options.c
 frontends/yasm/yasm.c
+gas-bison.c
+gas-token.c
 lc3bid.c
 libyasm/bitvect.c
 libyasm/bytecode.c
@@ -14,7 +16,6 @@ libyasm/expr.c
 libyasm/floatnum.c
 libyasm/hamt.c
 libyasm/intnum.c
-libyasm/linemgr.c
 libyasm/section.c
 libyasm/symrec.c
 libyasm/xmalloc.c
@@ -23,13 +24,23 @@ modules/arch/lc3b/lc3bbc.c
 modules/arch/x86/x86arch.c
 modules/arch/x86/x86bc.c
 modules/arch/x86/x86expr.c
+modules/arch/x86/x86id.c
+modules/dbgfmts/dwarf2/dwarf2-dbgfmt.c
+modules/dbgfmts/dwarf2/dwarf2-info.c
+modules/dbgfmts/dwarf2/dwarf2-line.c
+modules/dbgfmts/stabs/stabs-dbgfmt.c
+modules/listfmts/nasm/nasm-listfmt.c
 modules/objfmts/bin/bin-objfmt.c
 modules/objfmts/coff/coff-objfmt.c
 modules/objfmts/dbg/dbg-objfmt.c
+modules/objfmts/elf/elf-objfmt.c
+modules/objfmts/elf/elf-x86-amd64.c
+modules/objfmts/elf/elf-x86-x86.c
+modules/objfmts/elf/elf.c
+modules/objfmts/xdf/xdf-objfmt.c
 modules/optimizers/basic/basic-optimizer.c
+modules/parsers/gas/gas-parser.c
 modules/preprocs/nasm/nasm-pp.c
-modules/preprocs/nasm/nasm-preproc.c
 modules/preprocs/raw/raw-preproc.c
 nasm-bison.c
 nasm-token.c
-x86id.c

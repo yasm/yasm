@@ -1,5 +1,5 @@
-/*
- * Split a path into directory name and file name.
+/* $Id$
+ * CodeView debugging formats implementation for Yasm
  *
  *  Copyright (C) 2006  Peter Johnson
  *
@@ -24,59 +24,39 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include <ctype.h>
+#ifndef YASM_CV_DBGFMT_H
+#define YASM_CV_DBGFMT_H
 
-#define YASM_LIB_INTERNAL
-#include "util.h"
-/*@unused@*/ RCSID("$Id$");
+typedef struct {
+    char *pathname;		/* full pathname (drive+basepath+filename) */
+    char *filename;		/* filename as yasm knows it internally */
+    unsigned long str_off;	/* offset into pathname string table */
+    unsigned long info_off;	/* offset into source info table */
+    unsigned char digest[16];	/* MD5 digest of source file */
+} cv_filename;
 
-#include "coretype.h"
+/* Global data */
+typedef struct yasm_dbgfmt_cv {
+    yasm_dbgfmt_base dbgfmt;	    /* base structure */
 
-size_t
-yasm__splitpath_unix(const char *path, /*@out@*/ const char **tail)
-{
-    const char *s;
-    s = strrchr(path, '/');
-    if (!s) {
-	/* No head */
-	*tail = path;
-	return 0;
-    }
-    *tail = s+1;
-    /* Strip trailing slashes on path (except leading) */
-    while (s>path && *s == '/')
-	s--;
-    /* Return length of head */
-    return s-path+1;
-}
+    yasm_object *object;
+    yasm_symtab *symtab;
+    yasm_linemap *linemap;
+    yasm_arch *arch;
 
-size_t
-yasm__splitpath_win(const char *path, /*@out@*/ const char **tail)
-{
-    const char *basepath = path;
-    const char *s;
+    cv_filename *filenames;
+    size_t filenames_size;
+    size_t filenames_allocated;
 
-    /* split off drive letter first, if any */
-    if (isalpha(path[0]) && path[1] == ':')
-	basepath += 2;
+    int version;
+} yasm_dbgfmt_cv;
 
-    s = basepath;
-    while (*s != '\0')
-	s++;
-    while (s >= basepath && *s != '\\' && *s != '/')
-	s--;
-    if (s < basepath) {
-	*tail = basepath;
-	if (path == basepath)
-	    return 0;	/* No head */
-	else
-	    return 2;	/* Drive letter is head */
-    }
-    *tail = s+1;
-    /* Strip trailing slashes on path (except leading) */
-    while (s>basepath && (*s == '/' || *s == '\\'))
-	s--;
-    /* Return length of head */
-    return s-path+1;
-}
+yasm_bytecode *yasm_cv__append_bc(yasm_section *sect, yasm_bytecode *bc);
 
+/* Symbol/Line number functions */
+yasm_section *yasm_cv__generate_symline(yasm_dbgfmt_cv *dbgfmt_cv);
+
+/* Type functions */
+yasm_section *yasm_cv__generate_type(yasm_dbgfmt_cv *dbgfmt_cv);
+
+#endif

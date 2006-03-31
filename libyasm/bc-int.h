@@ -27,34 +27,6 @@
 #ifndef YASM_BC_INT_H
 #define YASM_BC_INT_H
 
-typedef struct yasm_effaddr_callback {
-    void (*destroy) (yasm_effaddr *ea);
-    void (*print) (const yasm_effaddr *ea, FILE *f, int indent_level);
-} yasm_effaddr_callback;
-
-struct yasm_effaddr {
-    const yasm_effaddr_callback *callback;	/* callback functions */
-
-    /*@only@*/ /*@null@*/ yasm_expr *disp;	/* address displacement */
-    unsigned long segreg;	/* segment register override (0 if none) */
-    unsigned char len;		/* length of disp (in bytes), 0 if unknown,
-				 * 0xff if unknown and required to be >0.
-				 */
-    unsigned char nosplit;	/* 1 if reg*2 should not be split into
-				   reg+reg. (0 if not) */
-    unsigned char strong;	/* 1 if effective address is *definitely*
-				 * an effective address, e.g. in GAS if
-				 * expr(,1) form is used vs. just expr.
-				 */
-};
-
-struct yasm_immval {
-    /*@only@*/ /*@null@*/ yasm_expr *val;
-
-    unsigned char len;		/* final length (in bytes), 0 if unknown */
-    unsigned char sign;		/* 1 if final imm is treated as signed */
-};
-
 typedef struct yasm_bytecode_callback {
     void (*destroy) (/*@only@*/ void *contents);
     void (*print) (const void *contents, FILE *f, int indent_level);
@@ -62,7 +34,7 @@ typedef struct yasm_bytecode_callback {
     yasm_bc_resolve_flags (*resolve)
 	(yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
     int (*tobytes) (yasm_bytecode *bc, unsigned char **bufp, void *d,
-		    yasm_output_expr_func output_expr,
+		    yasm_output_value_func output_value,
 		    /*@null@*/ yasm_output_reloc_func output_reloc);
 } yasm_bytecode_callback;
 

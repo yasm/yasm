@@ -206,19 +206,17 @@ nasm_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
 }
 
 void
-nasm_preproc_add_dep(/*@only@*/ char *name)
+nasm_preproc_add_dep(char *name)
 {
     preproc_dep *dep;
 
-    /* If not processing dependencies, simply free name and return */
-    if (!preproc_deps) {
-	yasm_xfree(name);
+    /* If not processing dependencies, simply return */
+    if (!preproc_deps)
 	return;
-    }
 
     /* Save in preproc_deps */
     dep = yasm_xmalloc(sizeof(preproc_dep));
-    dep->name = name;
+    dep->name = yasm__xstrdup(name);
     STAILQ_INSERT_TAIL(preproc_deps, dep, link);
 }
 

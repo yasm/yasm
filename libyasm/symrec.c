@@ -59,6 +59,8 @@ typedef enum {
     SYM_UNKNOWN,		/* for unknown type (COMMON/EXTERN) */
     SYM_EQU,			/* for EQU defined symbols (expressions) */
     SYM_LABEL,			/* for labels */
+    SYM_CURPOS,			/* for labels representing the current
+				   assembly position */
     SYM_SPECIAL			/* for special symbols that need to be in
 				   the symbol table but otherwise have no
 				   purpose */
@@ -235,12 +237,13 @@ yasm_symtab_define_label(yasm_symtab *symtab, const char *name,
 }
 
 yasm_symrec *
-yasm_symtab_define_label2(const char *name, yasm_bytecode *precbc,
-			  int in_table, unsigned long line)
+yasm_symtab_define_curpos(yasm_symtab *symtab, const char *name,
+			  yasm_bytecode *precbc, unsigned long line)
 {
-    return yasm_symtab_define_label(yasm_object_get_symtab(
-	yasm_section_get_object(yasm_bc_get_section(precbc))), name, precbc,
-	in_table, line);
+    yasm_symrec *rec;
+    rec = symtab_define(symtab, name, SYM_CURPOS, 0, line);
+    rec->value.precbc = precbc;
+    return rec;
 }
 
 yasm_symrec *
@@ -393,7 +396,8 @@ int
 yasm_symrec_get_label(const yasm_symrec *sym,
 		      yasm_symrec_get_label_bytecodep *precbc)
 {
-    if (sym->type != SYM_LABEL || !sym->value.precbc) {
+    if (!(sym->type == SYM_LABEL || sym->type == SYM_CURPOS)
+	|| !sym->value.precbc) {
 	*precbc = (yasm_symrec_get_label_bytecodep)0xDEADBEEF;
 	return 0;
     }
@@ -405,6 +409,12 @@ int
 yasm_symrec_is_special(const yasm_symrec *sym)
 {
     return (sym->type == SYM_SPECIAL);
+}
+
+int
+yasm_symrec_is_curpos(const yasm_symrec *sym)
+{
+    return (sym->type == SYM_CURPOS);
 }
 
 void *
@@ -435,7 +445,9 @@ yasm_symrec_print(const yasm_symrec *sym, FILE *f, int indent_level)
 	    fprintf(f, "\n");
 	    break;
 	case SYM_LABEL:
-	    fprintf(f, "%*s_Label_\n%*sSection:\n", indent_level, "",
+	case SYM_CURPOS:
+	    fprintf(f, "%*s_%s_\n%*sSection:\n", indent_level, "",
+		    sym->type == SYM_LABEL ? "Label" : "CurPos",
 		    indent_level, "");
 	    yasm_section_print(yasm_bc_get_section(sym->value.precbc), f,
 			       indent_level+1, 0);

@@ -46,13 +46,13 @@ static void define_label(yasm_parser_gas *parser_gas, char *name, int local);
 static void define_lcomm(yasm_parser_gas *parser_gas, /*@only@*/ char *name,
 			 yasm_expr *size, /*@null@*/ yasm_expr *align);
 static yasm_section *gas_get_section
-    (yasm_parser_gas *parser_gas, char *name, /*@null@*/ char *flags,
+    (yasm_parser_gas *parser_gas, /*@only@*/ char *name, /*@null@*/ char *flags,
      /*@null@*/ char *type, /*@null@*/ yasm_valparamhead *objext_valparams,
      int builtin);
-static void gas_switch_section(yasm_parser_gas *parser_gas, char *name,
-			       /*@null@*/ char *flags, /*@null@*/ char *type,
-			       /*@null@*/ yasm_valparamhead *objext_valparams,
-			       int builtin);
+static void gas_switch_section
+    (yasm_parser_gas *parser_gas, /*@only@*/ char *name, /*@null@*/ char *flags,
+     /*@null@*/ char *type, /*@null@*/ yasm_valparamhead *objext_valparams,
+     int builtin);
 static yasm_bytecode *gas_parser_align
     (yasm_parser_gas *parser_gas, yasm_section *sect, yasm_expr *boundval,
      /*@null@*/ yasm_expr *fillval, /*@null@*/ yasm_expr *maxskipval,
@@ -60,6 +60,10 @@ static yasm_bytecode *gas_parser_align
 static yasm_bytecode *gas_parser_dir_align(yasm_parser_gas *parser_gas,
 					   yasm_valparamhead *valparams,
 					   int power2);
+static yasm_bytecode *gas_parser_dir_fill
+    (yasm_parser_gas *parser_gas, /*@only@*/ yasm_expr *repeat,
+     /*@only@*/ /*@null@*/ yasm_expr *size,
+     /*@only@*/ /*@null@*/ yasm_expr *value);
 static void gas_parser_directive
     (yasm_parser_gas *parser_gas, const char *name,
      yasm_valparamhead *valparams,
@@ -112,11 +116,11 @@ static void gas_parser_directive
 %token LINE
 %token DIR_2BYTE DIR_4BYTE DIR_ALIGN DIR_ASCII DIR_ASCIZ DIR_BALIGN
 %token DIR_BSS DIR_BYTE DIR_COMM DIR_DATA DIR_DOUBLE DIR_ENDR DIR_EXTERN
-%token DIR_EQU DIR_FILE DIR_FLOAT DIR_GLOBAL DIR_IDENT DIR_INT DIR_LINE
-%token DIR_LOC DIR_LOCAL DIR_LCOMM DIR_OCTA DIR_ORG DIR_P2ALIGN DIR_REPT
-%token DIR_SECTION DIR_SHORT DIR_SIZE DIR_SKIP DIR_SLEB128 DIR_STRING DIR_TEXT
-%token DIR_TFLOAT DIR_TYPE DIR_QUAD DIR_ULEB128 DIR_VALUE DIR_WEAK DIR_WORD
-%token DIR_ZERO
+%token DIR_EQU DIR_FILE DIR_FILL DIR_FLOAT DIR_GLOBAL DIR_IDENT DIR_INT
+%token DIR_LINE DIR_LOC DIR_LOCAL DIR_LCOMM DIR_OCTA DIR_ORG DIR_P2ALIGN
+%token DIR_REPT DIR_SECTION DIR_SHORT DIR_SIZE DIR_SKIP DIR_SLEB128 DIR_STRING
+%token DIR_TEXT DIR_TFLOAT DIR_TYPE DIR_QUAD DIR_ULEB128 DIR_VALUE DIR_WEAK
+%token DIR_WORD DIR_ZERO
 
 %type <bc> lineexp instr
 
@@ -390,6 +394,16 @@ lineexp: instr
 
 	yasm_bc_set_multiple($$, $2);
     }
+    /* fill data definition directive */
+    | DIR_FILL expr {
+	$$ = gas_parser_dir_fill(parser_gas, $2, NULL, NULL);
+    }
+    | DIR_FILL expr ',' expr {
+	$$ = gas_parser_dir_fill(parser_gas, $2, $4, NULL);
+    }
+    | DIR_FILL expr ',' expr ',' expr {
+	$$ = gas_parser_dir_fill(parser_gas, $2, $4, $6);
+    }
     /* Section directives */
     | DIR_TEXT {
 	gas_switch_section(parser_gas, yasm__xstrdup(".text"), NULL, NULL,
@@ -412,14 +426,17 @@ lineexp: instr
     }
     | DIR_SECTION label_id ',' STRING {
 	gas_switch_section(parser_gas, $2, $4.contents, NULL, NULL, 0);
+	yasm_xfree($4.contents);
 	$$ = NULL;
     }
     | DIR_SECTION label_id ',' STRING ',' '@' label_id {
 	gas_switch_section(parser_gas, $2, $4.contents, $7, NULL, 0);
+	yasm_xfree($4.contents);
 	$$ = NULL;
     }
     | DIR_SECTION label_id ',' STRING ',' '@' label_id ',' dirvals {
 	gas_switch_section(parser_gas, $2, $4.contents, $7, &$9, 0);
+	yasm_xfree($4.contents);
 	$$ = NULL;
     }
     /* Other directives */
@@ -769,8 +786,8 @@ expr: INTNUM		{ $$ = p_expr_new_ident(yasm_expr_int($1)); }
 explabel: expr_id	{
 	/* "." references the current assembly position */
 	if ($1[1] == '\0' && $1[0] == '.')
-	    $$ = yasm_symtab_define_label(p_symtab, ".", parser_gas->prev_bc,
-					  0, cur_line);
+	    $$ = yasm_symtab_define_curpos(p_symtab, ".", parser_gas->prev_bc,
+					   cur_line);
 	else
 	    $$ = yasm_symtab_use(p_symtab, $1, cur_line);
 	yasm_xfree($1);
@@ -845,7 +862,7 @@ gas_get_section(yasm_parser_gas *parser_gas, char *name,
     yasm_section *new_section;
 
     yasm_vps_initialize(&vps);
-    vp = yasm_vp_create(yasm__xstrdup(name), NULL);
+    vp = yasm_vp_create(name, NULL);
     yasm_vps_append(&vps, vp);
 
     if (!builtin) {
@@ -878,13 +895,18 @@ gas_switch_section(yasm_parser_gas *parser_gas, char *name,
 {
     yasm_section *new_section;
 
-    new_section = gas_get_section(parser_gas, name, flags, type,
+    new_section = gas_get_section(parser_gas, yasm__xstrdup(name), flags, type,
 				  objext_valparams, builtin);
     if (new_section) {
 	parser_gas->cur_section = new_section;
 	parser_gas->prev_bc = yasm_section_bcs_last(new_section);
     } else
 	yasm__error(cur_line, N_("invalid section name `%s'"), name);
+
+    yasm_xfree(name);
+
+    if (objext_valparams)
+	yasm_vps_delete(objext_valparams);
 }
 
 static yasm_bytecode *
@@ -950,6 +972,43 @@ gas_parser_dir_align(yasm_parser_gas *parser_gas, yasm_valparamhead *valparams,
 
     return gas_parser_align(parser_gas, parser_gas->cur_section, boundval,
 			    fillval, maxskipval, power2);
+}
+
+static yasm_bytecode *
+gas_parser_dir_fill(yasm_parser_gas *parser_gas, /*@only@*/ yasm_expr *repeat,
+		    /*@only@*/ /*@null@*/ yasm_expr *size,
+		    /*@only@*/ /*@null@*/ yasm_expr *value)
+{
+    yasm_datavalhead dvs;
+    yasm_bytecode *bc;
+    unsigned int ssize;
+
+    if (size) {
+	/*@dependent@*/ /*@null@*/ yasm_intnum *intn;
+	intn = yasm_expr_get_intnum(&size, NULL);
+	if (!intn) {
+	    yasm__error(cur_line, N_("size must be an absolute expression"));
+	    yasm_expr_destroy(repeat);
+	    yasm_expr_destroy(size);
+	    if (value)
+		yasm_expr_destroy(value);
+	    return NULL;
+	}
+	ssize = yasm_intnum_get_uint(intn);
+    } else
+	ssize = 1;
+
+    if (!value)
+	value = yasm_expr_create_ident(
+	    yasm_expr_int(yasm_intnum_create_uint(0)), cur_line);
+
+    yasm_dvs_initialize(&dvs);
+    yasm_dvs_append(&dvs, yasm_dv_create_expr(value));
+    bc = yasm_bc_create_data(&dvs, ssize, 0, cur_line);
+
+    yasm_bc_set_multiple(bc, repeat);
+
+    return bc;
 }
 
 static void

@@ -1,6 +1,8 @@
 /* $Id: config.h 1137 2004-09-04 01:24:57Z peter $ */
 
 #define yasm__splitpath(path, tail)	yasm__splitpath_win(path, tail)
+#define yasm__abspath(path)		yasm__abspath_win(path)
+#define yasm__combpath(from, to)	yasm__combpath_win(from, to)
 
 #define _CRT_SECURE_NO_DEPRECATE 1
 

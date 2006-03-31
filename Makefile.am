@@ -67,6 +67,8 @@ EXTRA_DIST += Mkfiles/vc/libyasm/libyasm.vcproj
 EXTRA_DIST += Mkfiles/vc/modules/modules.vcproj
 EXTRA_DIST += Mkfiles/vc/re2c/re2c.vcproj
 EXTRA_DIST += Mkfiles/vc/re2c/run.bat
+EXTRA_DIST += Mkfiles/vc/gap/gap.vcproj
+EXTRA_DIST += Mkfiles/vc/gap/run.bat
 EXTRA_DIST += Mkfiles/vc8/yasm.sln
 EXTRA_DIST += Mkfiles/vc8/yasm.vcproj
 EXTRA_DIST += Mkfiles/vc8/config.h
@@ -81,6 +83,8 @@ EXTRA_DIST += Mkfiles/vc8/libyasm/libyasm.vcproj
 EXTRA_DIST += Mkfiles/vc8/modules/modules.vcproj
 EXTRA_DIST += Mkfiles/vc8/re2c/re2c.vcproj
 EXTRA_DIST += Mkfiles/vc8/re2c/run.bat
+EXTRA_DIST += Mkfiles/vc8/gap/gap.vcproj
+EXTRA_DIST += Mkfiles/vc8/gap/run.bat
 
 # Until this gets fixed in automake
 DISTCLEANFILES = libyasm/stamp-h libyasm/stamp-h[0-9]*

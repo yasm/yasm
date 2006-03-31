@@ -60,6 +60,7 @@
 #include <libyasm/intnum.h>
 #include <libyasm/floatnum.h>
 #include <libyasm/expr.h>
+#include <libyasm/value.h>
 #include <libyasm/symrec.h>
 
 #include <libyasm/bytecode.h>
@@ -85,6 +86,7 @@
 #endif
 #include <libyasm/hamt.h>
 #include <libyasm/bitvect.h>
+#include <libyasm/md5.h>
 #endif
 
 #endif

@@ -137,7 +137,7 @@ fill(yasm_parser_gas *parser_gas, YYCTYPE *cursor)
     if(!s->eof){
 	size_t cnt = s->tok - s->bot;
 	if(cnt){
-	    memcpy(s->bot, s->tok, (size_t)(s->lim - s->tok));
+	    memmove(s->bot, s->tok, (size_t)(s->lim - s->tok));
 	    s->tok = s->bot;
 	    s->ptr -= cnt;
 	    cursor -= cnt;
@@ -357,6 +357,7 @@ scan:
 	'.equ'		{ parser_gas->state = INSTDIR; RETURN(DIR_EQU); }
 	'.extern'	{ parser_gas->state = INSTDIR; RETURN(DIR_EXTERN); }
 	'.file'		{ parser_gas->state = INSTDIR; RETURN(DIR_FILE); }
+	'.fill'		{ parser_gas->state = INSTDIR; RETURN(DIR_FILL); }
 	'.float'	{ parser_gas->state = INSTDIR; RETURN(DIR_FLOAT); }
 	'.global'	{ parser_gas->state = INSTDIR; RETURN(DIR_GLOBAL); }
 	'.globl'	{ parser_gas->state = INSTDIR; RETURN(DIR_GLOBAL); }
@@ -410,22 +411,20 @@ scan:
 	[%][a-zA-Z0-9]+ {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    if (yasm_arch_parse_check_reg(parser_gas->arch, lvalp->arch_data,
-					  s->tok+1, cur_line)) {
-		s->tok[TOKLEN] = savech;
-		RETURN(REG);
-	    }
-	    if (yasm_arch_parse_check_reggroup(parser_gas->arch,
-					       lvalp->arch_data, s->tok+1,
-					       cur_line)) {
-		s->tok[TOKLEN] = savech;
-		RETURN(REGGROUP);
-	    }
-	    if (yasm_arch_parse_check_segreg(parser_gas->arch,
-					     lvalp->arch_data, s->tok+1,
-					     cur_line)) {
-		s->tok[TOKLEN] = savech;
-		RETURN(SEGREG);
+	    switch (yasm_arch_parse_check_regtmod
+		    (parser_gas->arch, lvalp->arch_data, s->tok+1, TOKLEN-1,
+		     cur_line)) {
+		case YASM_ARCH_REG:
+		    s->tok[TOKLEN] = savech;
+		    RETURN(REG);
+		case YASM_ARCH_REGGROUP:
+		    s->tok[TOKLEN] = savech;
+		    RETURN(REGGROUP);
+		case YASM_ARCH_SEGREG:
+		    s->tok[TOKLEN] = savech;
+		    RETURN(SEGREG);
+		default:
+		    break;
 	    }
 	    yasm__error(cur_line, N_("Unrecognized register name `%s'"),
 			s->tok);
@@ -457,20 +456,19 @@ scan:
 	    if (parser_gas->state != INSTDIR) {
 		savech = s->tok[TOKLEN];
 		s->tok[TOKLEN] = '\0';
-		if (yasm_arch_parse_check_insn(parser_gas->arch,
-					       lvalp->arch_data, s->tok,
-					       cur_line)) {
-		    s->tok[TOKLEN] = savech;
-		    parser_gas->state = INSTDIR;
-		    RETURN(INSN);
+		switch (yasm_arch_parse_check_insnprefix
+			(parser_gas->arch, lvalp->arch_data, s->tok, TOKLEN,
+			 cur_line)) {
+		    case YASM_ARCH_INSN:
+			s->tok[TOKLEN] = savech;
+			parser_gas->state = INSTDIR;
+			RETURN(INSN);
+		    case YASM_ARCH_PREFIX:
+			s->tok[TOKLEN] = savech;
+			RETURN(PREFIX);
+		    default:
+			s->tok[TOKLEN] = savech;
 		}
-		if (yasm_arch_parse_check_prefix(parser_gas->arch,
-						 lvalp->arch_data, s->tok,
-						 cur_line)) {
-		    s->tok[TOKLEN] = savech;
-		    RETURN(PREFIX);
-		}
-		s->tok[TOKLEN] = savech;
 	    }
 	    /* Just an identifier, return as such. */
 	    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);

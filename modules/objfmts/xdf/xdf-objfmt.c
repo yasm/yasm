@@ -157,112 +157,90 @@ xdf_objfmt_create(yasm_object *object, yasm_arch *a)
 }
 
 static int
-xdf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
+xdf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 			size_t valsize, int shift, unsigned long offset,
-			yasm_bytecode *bc, int rel, int warn,
-			/*@null@*/ void *d)
+			yasm_bytecode *bc, int warn, /*@null@*/ void *d)
 {
     /*@null@*/ xdf_objfmt_output_info *info = (xdf_objfmt_output_info *)d;
     yasm_objfmt_xdf *objfmt_xdf;
     /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
-    /*@dependent@*/ /*@null@*/ const yasm_floatnum *flt;
-    /*@dependent@*/ /*@null@*/ yasm_symrec *sym;
-    yasm_expr *shr_expr;
-    yasm_expr *wrt_expr;
-    unsigned int shr = 0;
-    unsigned int seg = 0;
+    unsigned long intn_minus;
+    int retval;
 
     assert(info != NULL);
     objfmt_xdf = info->objfmt_xdf;
 
-    *ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
+    if (value->abs)
+	value->abs = yasm_expr_simplify(value->abs, yasm_common_calc_bc_dist);
 
-    /* Handle floating point expressions */
-    flt = yasm_expr_get_floatnum(ep);
-    if (flt) {
-	if (shift < 0)
-	    yasm_internal_error(N_("attempting to negative shift a float"));
-	return yasm_arch_floatnum_tobytes(objfmt_xdf->arch, flt, buf,
-					  destsize, valsize,
-					  (unsigned int)shift, warn, bc->line);
-    }
-
-    /* Check for a right shift value */
-    shr_expr = yasm_expr_extract_shr(ep);
-    if (shr_expr) {
-	/*@dependent@*/ /*@null@*/ const yasm_intnum *shr_intn;
-	shr_intn = yasm_expr_get_intnum(&shr_expr, NULL);
-	if (!shr_intn) {
-	    yasm__error(bc->line, N_("shift expression too complex"));
+    /* Try to output constant and PC-relative section-local first.
+     * Note this does NOT output any value with a SEG, WRT, external,
+     * cross-section, or non-PC-relative reference (those are handled below).
+     */
+    switch (yasm_value_output_basic(value, buf, destsize, valsize, shift, bc,
+				    warn, info->objfmt_xdf->arch,
+				    yasm_common_calc_bc_dist)) {
+	case -1:
 	    return 1;
-	}
-	shr = yasm_intnum_get_uint(shr_intn);
+	case 0:
+	    break;
+	default:
+	    return 0;
     }
 
-    /* Check for a segment relocation */
-    if (yasm_expr_extract_seg(ep))
-	seg = 1;
+    if (value->section_rel) {
+	yasm__error(bc->line, N_("xdf: relocation too complex"));
+	return 1;
+    }
 
-    /* Check for a WRT relocation */
-    wrt_expr = yasm_expr_extract_wrt(ep);
-
-    /* Handle integer expressions, with relocation if necessary */
-    sym = yasm_expr_extract_symrec(ep, YASM_SYMREC_REPLACE_ZERO,
-				   yasm_common_calc_bc_dist);
-    if (sym) {
+    intn_minus = 0;
+    if (value->rel) {
 	xdf_reloc *reloc;
 
 	reloc = yasm_xmalloc(sizeof(xdf_reloc));
 	reloc->reloc.addr = yasm_intnum_create_uint(bc->offset + offset);
-	reloc->reloc.sym = sym;
+	reloc->reloc.sym = value->rel;
 	reloc->base = NULL;
 	reloc->size = valsize/8;
-	reloc->shift = shr;
+	reloc->shift = value->rshift;
 
-	if (seg)
+	if (value->seg_of)
 	    reloc->type = XDF_RELOC_SEG;
-	else if (wrt_expr) {
-	    reloc->base = yasm_expr_extract_symrec(&wrt_expr,
-						   YASM_SYMREC_REPLACE_ZERO, 
-						   yasm_common_calc_bc_dist);
-	    if (!reloc->base) {
-		yasm__error(bc->line, N_("WRT expression too complex"));
-		return 1;
-	    }
+	else if (value->wrt) {
+	    reloc->base = value->wrt;
 	    reloc->type = XDF_RELOC_WRT;
-	} else if (rel) {
+	} else if (value->curpos_rel) {
 	    reloc->type = XDF_RELOC_RIP;
-	    /* Need to reference to start of section, so add $$ in. */
-	    *ep = yasm_expr_create(YASM_EXPR_ADD, yasm_expr_expr(*ep),
-		yasm_expr_sym(yasm_symtab_define_label2("$$",
-		    yasm_section_bcs_first(info->sect), 0, (*ep)->line)),
-		(*ep)->line);
-	    *ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
+	    /* Adjust to start of section, so subtract out the bytecode
+	     * offset.
+	     */
+	    intn_minus = bc->offset;
 	} else
 	    reloc->type = XDF_RELOC_REL;
 	info->xsd->nreloc++;
 	yasm_section_add_reloc(info->sect, (yasm_reloc *)reloc, yasm_xfree);
     }
-    intn = yasm_expr_get_intnum(ep, NULL);
-    if (intn) {
-	if (rel) {
-	    int retval = yasm_arch_intnum_fixup_rel(objfmt_xdf->arch, intn,
-						    valsize, bc, bc->line);
-	    if (retval)
-		return retval;
+
+    if (intn_minus > 0) {
+	intn = yasm_intnum_create_uint(intn_minus);
+	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL, bc->line);
+    } else
+	intn = yasm_intnum_create_uint(0);
+
+    if (value->abs) {
+	yasm_intnum *intn2 = yasm_expr_get_intnum(&value->abs, NULL);
+	if (!intn2) {
+	    yasm__error(bc->line, N_("xdf: relocation too complex"));
+	    yasm_intnum_destroy(intn);
+	    return 1;
 	}
-	return yasm_arch_intnum_tobytes(objfmt_xdf->arch, intn, buf, destsize,
-					valsize, shift, bc, warn, bc->line);
+	yasm_intnum_calc(intn, YASM_EXPR_ADD, intn2, bc->line);
     }
 
-    /* Check for complex float expressions */
-    if (yasm_expr__contains(*ep, YASM_EXPR_FLOAT)) {
-	yasm__error(bc->line, N_("floating point expression too complex"));
-	return 1;
-    }
-
-    yasm__error(bc->line, N_("xdf: relocation too complex"));
-    return 1;
+    retval = yasm_arch_intnum_tobytes(objfmt_xdf->arch, intn, buf, destsize,
+				      valsize, shift, bc, warn, bc->line);
+    yasm_intnum_destroy(intn);
+    return retval;
 }
 
 static int
@@ -278,7 +256,7 @@ xdf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     assert(info != NULL);
 
     bigbuf = yasm_bc_tobytes(bc, info->buf, &size, &multiple, &gap, info,
-			     xdf_objfmt_output_expr, NULL);
+			     xdf_objfmt_output_value, NULL);
 
     /* Don't bother doing anything else if size ended up being 0. */
     if (size == 0) {
@@ -651,6 +629,48 @@ xdf_objfmt_destroy(yasm_objfmt *objfmt)
     yasm_xfree(objfmt);
 }
 
+static xdf_section_data *
+xdf_objfmt_init_new_section(yasm_objfmt_xdf *objfmt_xdf, yasm_section *sect,
+			    const char *sectname, unsigned long line)
+{
+    xdf_section_data *data;
+    yasm_symrec *sym;
+
+    data = yasm_xmalloc(sizeof(xdf_section_data));
+    data->scnum = objfmt_xdf->parse_scnum++;
+    data->flags = 0;
+    data->addr = NULL;
+    data->vaddr = NULL;
+    data->scnptr = 0;
+    data->size = 0;
+    data->relptr = 0;
+    data->nreloc = 0;
+    STAILQ_INIT(&data->relocs);
+    yasm_section_add_data(sect, &xdf_section_data_cb, data);
+
+    sym = yasm_symtab_define_label(objfmt_xdf->symtab, sectname,
+				   yasm_section_bcs_first(sect), 1, line);
+    data->sym = sym;
+    return data;
+}
+
+static yasm_section *
+xdf_objfmt_add_default_section(yasm_objfmt *objfmt)
+{
+    yasm_objfmt_xdf *objfmt_xdf = (yasm_objfmt_xdf *)objfmt;
+    yasm_section *retval;
+    xdf_section_data *xsd;
+    int isnew;
+
+    retval = yasm_object_get_general(objfmt_xdf->object, ".text", 0, 0, 1, 0,
+				     &isnew, 0);
+    if (isnew) {
+	xsd = xdf_objfmt_init_new_section(objfmt_xdf, retval, ".text", 0);
+	yasm_section_set_default(retval, 1);
+    }
+    return retval;
+}
+
 static /*@observer@*/ /*@null@*/ yasm_section *
 xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			    /*@unused@*/ /*@null@*/
@@ -668,6 +688,7 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     int flags_override = 0;
     char *sectname;
     int resonly = 0;
+    xdf_section_data *xsd;
 
     if (!vp || vp->param || !vp->val)
 	return NULL;
@@ -745,32 +766,25 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     retval = yasm_object_get_general(objfmt_xdf->object, sectname, 0, align, 1,
 				     resonly, &isnew, line);
 
-    if (isnew) {
-	xdf_section_data *data;
-	yasm_symrec *sym;
+    if (isnew)
+	xsd = xdf_objfmt_init_new_section(objfmt_xdf, retval, sectname, line);
+    else
+	xsd = yasm_section_get_data(retval, &xdf_section_data_cb);
 
-	data = yasm_xmalloc(sizeof(xdf_section_data));
-	data->scnum = objfmt_xdf->parse_scnum++;
-	data->flags = flags;
-	if (absaddr)
-	    data->addr = yasm_intnum_copy(absaddr);
-	else
-	    data->addr = NULL;
-	if (vaddr)
-	    data->vaddr = yasm_intnum_copy(vaddr);
-	else
-	    data->vaddr = NULL;
-	data->scnptr = 0;
-	data->size = 0;
-	data->relptr = 0;
-	data->nreloc = 0;
-	STAILQ_INIT(&data->relocs);
-	yasm_section_add_data(retval, &xdf_section_data_cb, data);
-
-	sym =
-	    yasm_symtab_define_label(objfmt_xdf->symtab, sectname,
-				     yasm_section_bcs_first(retval), 1, line);
-	data->sym = sym;
+    if (isnew || yasm_section_is_default(retval)) {
+	yasm_section_set_default(retval, 0);
+	xsd->flags = flags;
+	if (absaddr) {
+	    if (xsd->addr)
+		yasm_intnum_destroy(xsd->addr);
+	    xsd->addr = yasm_intnum_copy(absaddr);
+	}
+	if (vaddr) {
+	    if (xsd->vaddr)
+		yasm_intnum_destroy(xsd->vaddr);
+	    xsd->vaddr = yasm_intnum_copy(vaddr);
+	}
+	yasm_section_set_align(retval, align, line);
     } else if (flags_override)
 	yasm__warning(YASM_WARN_GENERAL, line,
 		      N_("section flags ignored on section redeclaration"));
@@ -883,13 +897,13 @@ yasm_objfmt_module yasm_xdf_LTX_objfmt = {
     "Extended Dynamic Object",
     "xdf",
     "xdf",
-    ".text",
     32,
     xdf_objfmt_dbgfmt_keywords,
     "null",
     xdf_objfmt_create,
     xdf_objfmt_output,
     xdf_objfmt_destroy,
+    xdf_objfmt_add_default_section,
     xdf_objfmt_section_switch,
     xdf_objfmt_extern_declare,
     xdf_objfmt_global_declare,

@@ -122,7 +122,7 @@ typedef struct dwarf2_line_op {
 
     /* extended opcode */
     dwarf_line_number_ext_op ext_opcode;
-    /*@owned@*/ /*@null@*/ yasm_expr *ext_operand;  /* unsigned */
+    /*@null@*/ /*@dependent@*/ yasm_symrec *ext_operand;  /* unsigned */
     unsigned long ext_operandsize;
 } dwarf2_line_op;
 
@@ -134,7 +134,7 @@ static yasm_bc_resolve_flags dwarf2_spp_bc_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int dwarf2_spp_bc_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
-     yasm_output_expr_func output_expr,
+     yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static void dwarf2_line_op_bc_destroy(void *contents);
@@ -144,7 +144,7 @@ static yasm_bc_resolve_flags dwarf2_line_op_bc_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int dwarf2_line_op_bc_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
-     yasm_output_expr_func output_expr,
+     yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
 /* Bytecode callback structures */
@@ -270,7 +270,7 @@ static yasm_bytecode *
 dwarf2_dbgfmt_append_line_ext_op(yasm_section *sect,
 				 dwarf_line_number_ext_op ext_opcode,
 				 unsigned long ext_operandsize,
-				 /*@only@*/ /*@null@*/ yasm_expr *ext_operand)
+				 /*@null@*/ yasm_symrec *ext_operand)
 {
     dwarf2_line_op *line_op = yasm_xmalloc(sizeof(dwarf2_line_op));
     yasm_bytecode *bc;
@@ -380,8 +380,7 @@ dwarf2_dbgfmt_gen_line_op(yasm_section *debug_line, dwarf2_line_state *state,
 	    return 1;
 	}
 	dwarf2_dbgfmt_append_line_ext_op(debug_line, DW_LNE_set_address,
-	    dbgfmt_dwarf2->sizeof_address,
-	    yasm_expr_create_ident(yasm_expr_sym(loc->sym), loc->line));
+	    dbgfmt_dwarf2->sizeof_address, loc->sym);
 	addr_delta = 0;
     } else if (loc->bc) {
 	if (state->precbc->offset > loc->bc->offset)
@@ -656,8 +655,10 @@ yasm_dwarf2__generate_line(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2, int asm_source,
 
     /* filename list */
     for (i=0; i<dbgfmt_dwarf2->filenames_size; i++) {
-	if (!dbgfmt_dwarf2->filenames[i].filename)
+	if (!dbgfmt_dwarf2->filenames[i].filename) {
 	    yasm__error(0, N_("dwarf2 file number %d unassigned"), i+1);
+	    continue;
+	}
 	sppbc->len += strlen(dbgfmt_dwarf2->filenames[i].filename) + 1 +
 	    yasm_size_uleb128(dbgfmt_dwarf2->filenames[i].dir) + 2;
     }
@@ -702,13 +703,13 @@ dwarf2_spp_bc_resolve(yasm_bytecode *bc, int save,
 
 static int
 dwarf2_spp_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-		      yasm_output_expr_func output_expr,
+		      yasm_output_value_func output_value,
 		      yasm_output_reloc_func output_reloc)
 {
     dwarf2_spp *spp = (dwarf2_spp *)bc->contents;
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = spp->dbgfmt_dwarf2;
     unsigned char *buf = *bufp;
-    yasm_intnum *intn, *cval;
+    yasm_intnum *cval;
     size_t i, len;
 
     /* Prologue length (following this field) */
@@ -764,8 +765,6 @@ dwarf2_line_op_bc_destroy(void *contents)
     dwarf2_line_op *line_op = (dwarf2_line_op *)contents;
     if (line_op->operand)
 	yasm_intnum_destroy(line_op->operand);
-    if (line_op->ext_operand)
-	yasm_expr_destroy(line_op->ext_operand);
     yasm_xfree(contents);
 }
 
@@ -786,7 +785,7 @@ dwarf2_line_op_bc_resolve(yasm_bytecode *bc, int save,
 
 static int
 dwarf2_line_op_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-			  yasm_output_expr_func output_expr,
+			  yasm_output_value_func output_value,
 			  yasm_output_reloc_func output_reloc)
 {
     dwarf2_line_op *line_op = (dwarf2_line_op *)bc->contents;
@@ -799,9 +798,11 @@ dwarf2_line_op_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     if (line_op->ext_opcode > 0) {
 	YASM_WRITE_8(buf, line_op->ext_opcode);
 	if (line_op->ext_operand) {
-	    output_expr(&line_op->ext_operand, buf, line_op->ext_operandsize,
-			line_op->ext_operandsize*8, 0,
-			(unsigned long)(buf-*bufp), bc, 0, 0, d);
+	    yasm_value value;
+	    yasm_value_init_sym(&value, line_op->ext_operand);
+	    output_value(&value, buf, line_op->ext_operandsize,
+			 line_op->ext_operandsize*8, 0,
+			 (unsigned long)(buf-*bufp), bc, 0, d);
 	    buf += line_op->ext_operandsize;
 	}
     }

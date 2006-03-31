@@ -34,7 +34,7 @@
 
 #include <stdio.h>
 
-#include "libyasm/splitpath.c"
+#include "libyasm/file.h"
 
 typedef struct Test_Entry {
     /* splitpath function to test */
@@ -53,6 +53,8 @@ typedef struct Test_Entry {
 static Test_Entry tests[] = {
     /* UNIX split */
     {yasm__splitpath_unix, "", 0, ""},
+    {yasm__splitpath_unix, "./file.ext", 0, "file.ext"},
+    {yasm__splitpath_unix, "../../file.ext", 5, "file.ext"},
     {yasm__splitpath_unix, "file.ext", 0, "file.ext"},
     {yasm__splitpath_unix, "/file.ext", 1, "file.ext"},
     {yasm__splitpath_unix, "/foo/file.ext", 4, "file.ext"},
@@ -69,13 +71,16 @@ static Test_Entry tests[] = {
     /* Windows split */
     {yasm__splitpath_win, "", 0, ""},
     {yasm__splitpath_win, "file.ext", 0, "file.ext"},
+    {yasm__splitpath_win, "./file.ext", 0, "file.ext"},
     {yasm__splitpath_win, "/file.ext", 1, "file.ext"},
     {yasm__splitpath_win, "/foo/file.ext", 4, "file.ext"},
     {yasm__splitpath_win, "/foo/bar/file.ext", 8, "file.ext"},
     {yasm__splitpath_win, "foo/file.ext", 3, "file.ext"},
     {yasm__splitpath_win, "foo/bar/file.ext", 7, "file.ext"},
     {yasm__splitpath_win, "foo/bar//file.ext", 7, "file.ext"},
+    {yasm__splitpath_win, "..\\..\\file.ext", 5, "file.ext"},
     {yasm__splitpath_win, "c:file.ext", 2, "file.ext"},
+    {yasm__splitpath_win, "c:.\\file.ext", 2, "file.ext"},
     {yasm__splitpath_win, "d:/file.ext", 3, "file.ext"},
     {yasm__splitpath_win, "e:/foo/file.ext", 6, "file.ext"},
     {yasm__splitpath_win, "f:/foo/bar/file.ext", 10, "file.ext"},

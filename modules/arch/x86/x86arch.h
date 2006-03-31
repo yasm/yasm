@@ -135,16 +135,34 @@ int yasm_x86__set_rex_from_reg(unsigned char *rex, unsigned char *low3,
 			       unsigned long reg, unsigned int bits,
 			       x86_rex_bit_pos rexbit);
 
-void yasm_x86__ea_set_disponly(yasm_effaddr *ea);
-yasm_effaddr *yasm_x86__ea_create_reg(unsigned long reg, unsigned char *rex,
-				      unsigned int bits);
-yasm_effaddr *yasm_x86__ea_create_imm
+/* Effective address type */
+typedef struct x86_effaddr {
+    yasm_effaddr ea;		/* base structure */
+
+    /* How the spare (register) bits in Mod/RM are handled:
+     * Even if valid_modrm=0, the spare bits are still valid (don't overwrite!)
+     * They're set in bytecode_create_insn().
+     */
+    unsigned char modrm;
+    unsigned char valid_modrm;	/* 1 if Mod/RM byte currently valid, 0 if not */
+    unsigned char need_modrm;	/* 1 if Mod/RM byte needed, 0 if not */
+
+    unsigned char sib;
+    unsigned char valid_sib;	/* 1 if SIB byte currently valid, 0 if not */
+    unsigned char need_sib;	/* 1 if SIB byte needed, 0 if not,
+				   0xff if unknown */
+} x86_effaddr;
+
+void yasm_x86__ea_init(x86_effaddr *x86_ea, unsigned int spare,
+		       unsigned long line);
+
+void yasm_x86__ea_set_disponly(x86_effaddr *x86_ea);
+x86_effaddr *yasm_x86__ea_create_reg(unsigned long reg, unsigned char *rex,
+				     unsigned int bits);
+x86_effaddr *yasm_x86__ea_create_imm
     (/*@keep@*/ yasm_expr *imm, unsigned int im_len);
 yasm_effaddr *yasm_x86__ea_create_expr(yasm_arch *arch,
 				       /*@keep@*/ yasm_expr *e);
-
-/*@observer@*/ /*@null@*/ yasm_effaddr *yasm_x86__bc_insn_get_ea
-    (/*@null@*/ yasm_bytecode *bc);
 
 void yasm_x86__bc_insn_opersize_override(yasm_bytecode *bc,
 					 unsigned int opersize);
@@ -172,7 +190,7 @@ typedef struct x86_insn {
     x86_common common;		    /* common x86 information */
     x86_opcode opcode;
 
-    /*@null@*/ yasm_effaddr *ea;    /* effective address */
+    /*@null@*/ x86_effaddr *x86_ea; /* effective address */
 
     /*@null@*/ yasm_immval *imm;    /* immediate or relative value */
 
@@ -231,8 +249,8 @@ typedef struct x86_jmp {
     x86_common common;		/* common x86 information */
     x86_opcode shortop, nearop;
 
-    yasm_expr *target;		/* target location */
-    /*@dependent@*/ yasm_symrec *origin;    /* jump origin */
+    yasm_value target;		/* jump target */
+    /*@dependent@*/ yasm_bytecode *origin_prevbc;   /* jump origin */
 
     /* which opcode are we using? */
     /* The *FORCED forms are specified in the source as such */
@@ -247,8 +265,8 @@ typedef struct x86_jmpfar {
     x86_common common;		/* common x86 information */
     x86_opcode opcode;
 
-    yasm_expr *segment;		/* target segment */
-    yasm_expr *offset;		/* target offset */
+    yasm_value segment;		/* target segment */
+    yasm_value offset;		/* target offset */
 } x86_jmpfar;
 
 void yasm_x86__bc_transform_insn(yasm_bytecode *bc, x86_insn *insn);
@@ -259,41 +277,23 @@ void yasm_x86__bc_apply_prefixes
     (x86_common *common, unsigned char *rex, int num_prefixes,
      unsigned long **prefixes, unsigned long line);
 
-void yasm_x86__ea_init(yasm_effaddr *ea, unsigned int spare,
-		       /*@null@*/ yasm_symrec *origin);
-
 /* Check an effective address.  Returns 0 if EA was successfully determined,
  * 1 if invalid EA, or 2 if indeterminate EA.
  */
 int yasm_x86__expr_checkea
-    (yasm_expr **ep, unsigned char *addrsize, unsigned int bits,
-     unsigned int nosplit, int address16_op, unsigned char *displen,
-     unsigned char *modrm, unsigned char *v_modrm, unsigned char *n_modrm,
-     unsigned char *sib, unsigned char *v_sib, unsigned char *n_sib,
-     unsigned char *pcrel, unsigned char *rex,
-     yasm_calc_bc_dist_func calc_bc_dist);
+    (x86_effaddr *x86_ea, unsigned char *addrsize, unsigned int bits,
+     int address16_op, unsigned char *rex,
+     yasm_calc_bc_dist_func calc_bc_dist, unsigned long line);
 
-void yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid,
+void yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len,
 			 unsigned long line);
 
-int yasm_x86__parse_check_reg
-    (yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
-     unsigned long line);
-int yasm_x86__parse_check_reggroup
-    (yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
-     unsigned long line);
-int yasm_x86__parse_check_segreg
-    (yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
-     unsigned long line);
-int yasm_x86__parse_check_insn
+yasm_arch_insnprefix yasm_x86__parse_check_insnprefix
     (yasm_arch *arch, /*@out@*/ unsigned long data[4], const char *id,
-     unsigned long line);
-int yasm_x86__parse_check_prefix
-    (yasm_arch *arch, /*@out@*/ unsigned long data[4], const char *id,
-     unsigned long line);
-int yasm_x86__parse_check_targetmod
-    (yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
-     unsigned long line);
+     size_t id_len, unsigned long line);
+yasm_arch_regtmod yasm_x86__parse_check_regtmod
+    (yasm_arch *arch, /*@out@*/ unsigned long *data, const char *id,
+     size_t id_len, unsigned long line);
 
 void yasm_x86__finalize_insn
     (yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
@@ -305,9 +305,6 @@ int yasm_x86__floatnum_tobytes
     (yasm_arch *arch, const yasm_floatnum *flt, unsigned char *buf,
      size_t destsize, size_t valsize, size_t shift, int warn,
      unsigned long line);
-int yasm_x86__intnum_fixup_rel
-    (yasm_arch *arch, yasm_intnum *intn, size_t valsize,
-     const yasm_bytecode *bc, unsigned long line);
 int yasm_x86__intnum_tobytes
     (yasm_arch *arch, const yasm_intnum *intn, unsigned char *buf,
      size_t destsize, size_t valsize, int shift, const yasm_bytecode *bc,

@@ -62,7 +62,7 @@ fill(yasm_parser_nasm *parser_nasm, YYCTYPE *cursor)
     if(!s->eof){
 	size_t cnt = s->tok - s->bot;
 	if(cnt){
-	    memcpy(s->bot, s->tok, (size_t)(s->lim - s->tok));
+	    memmove(s->bot, s->tok, (size_t)(s->lim - s->tok));
 	    s->tok = s->bot;
 	    s->ptr -= cnt;
 	    cursor -= cnt;
@@ -197,9 +197,9 @@ scan:
 	    RETURN(INTNUM);
 	}
 
-	/* 777q - octal number */
-	octdigit+ 'q' {
-	    s->tok[TOKLEN-1] = '\0'; /* strip off 'q' */
+	/* 777q or 777o - octal number */
+	octdigit+ [qQoO] {
+	    s->tok[TOKLEN-1] = '\0'; /* strip off 'q' or 'o' */
 	    lvalp->intn = yasm_intnum_create_oct(s->tok, cur_line);
 	    RETURN(INTNUM);
 	}
@@ -382,35 +382,35 @@ scan:
 	[a-zA-Z_?][a-zA-Z0-9_$#@~.?]* {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    if (yasm_arch_parse_check_reg(parser_nasm->arch, lvalp->arch_data,
-					  s->tok, cur_line)) {
-		s->tok[TOKLEN] = savech;
-		RETURN(REG);
+	    if (parser_nasm->state != INSTRUCTION)
+		switch (yasm_arch_parse_check_insnprefix
+			(parser_nasm->arch, lvalp->arch_data, s->tok, TOKLEN,
+			 cur_line)) {
+		    case YASM_ARCH_INSN:
+			parser_nasm->state = INSTRUCTION;
+			s->tok[TOKLEN] = savech;
+			RETURN(INSN);
+		    case YASM_ARCH_PREFIX:
+			s->tok[TOKLEN] = savech;
+			RETURN(PREFIX);
+		    default:
+			break;
+		}
+	    switch (yasm_arch_parse_check_regtmod
+		    (parser_nasm->arch, lvalp->arch_data, s->tok, TOKLEN,
+		     cur_line)) {
+		case YASM_ARCH_REG:
+		    s->tok[TOKLEN] = savech;
+		    RETURN(REG);
+		case YASM_ARCH_SEGREG:
+		    s->tok[TOKLEN] = savech;
+		    RETURN(SEGREG);
+		case YASM_ARCH_TARGETMOD:
+		    s->tok[TOKLEN] = savech;
+		    RETURN(TARGETMOD);
+		default:
+		    s->tok[TOKLEN] = savech;
 	    }
-	    if (yasm_arch_parse_check_insn(parser_nasm->arch, lvalp->arch_data,
-					   s->tok, cur_line)) {
-		s->tok[TOKLEN] = savech;
-		RETURN(INSN);
-	    }
-	    if (yasm_arch_parse_check_segreg(parser_nasm->arch,
-					     lvalp->arch_data, s->tok,
-					     cur_line)) {
-		s->tok[TOKLEN] = savech;
-		RETURN(SEGREG);
-	    }
-	    if (yasm_arch_parse_check_prefix(parser_nasm->arch,
-					     lvalp->arch_data, s->tok,
-					     cur_line)) {
-		s->tok[TOKLEN] = savech;
-		RETURN(PREFIX);
-	    }
-	    if (yasm_arch_parse_check_targetmod(parser_nasm->arch,
-						lvalp->arch_data, s->tok,
-						cur_line)) {
-		s->tok[TOKLEN] = savech;
-		RETURN(TARGETMOD);
-	    }
-	    s->tok[TOKLEN] = savech;
 	    /* Just an identifier, return as such. */
 	    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
 	    RETURN(ID);

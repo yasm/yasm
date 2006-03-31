@@ -24,8 +24,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include <util.h>
-/*@unused@*/ RCSID("$Id$");
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#undef HAVE_CONFIG_H
+#endif
 
 /* Need either unistd.h or direct.h (on Windows) to prototype getcwd() */
 #ifdef HAVE_UNISTD_H
@@ -33,6 +35,9 @@
 #elif defined(WIN32) || defined(_WIN32)
 #include <direct.h>
 #endif
+
+#include <util.h>
+/*@unused@*/ RCSID("$Id$");
 
 #define YASM_LIB_INTERNAL
 #define YASM_BC_INTERNAL
@@ -185,13 +190,6 @@ typedef enum {
     DW_AT_vtable_elem_location = 0x4d
 } dwarf_attribute;
 
-typedef struct dwarf2_info_head {
-    yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2;
-    yasm_bytecode *info_start_prevbc;
-    yasm_bytecode *info_end_prevbc;
-    /*@owned@*/ yasm_expr *debug_abbrev_expr;	/* points to debug_abbrev */
-} dwarf2_info_head;
-
 typedef struct dwarf2_abbrev_attr {
     STAILQ_ENTRY(dwarf2_abbrev_attr) link;
     dwarf_attribute name;
@@ -207,16 +205,6 @@ typedef struct dwarf2_abbrev {
 
 /* Bytecode callback function prototypes */
 
-static void dwarf2_info_head_bc_destroy(void *contents);
-static void dwarf2_info_head_bc_print(const void *contents, FILE *f,
-				      int indent_level);
-static yasm_bc_resolve_flags dwarf2_info_head_bc_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
-static int dwarf2_info_head_bc_tobytes
-    (yasm_bytecode *bc, unsigned char **bufp, void *d,
-     yasm_output_expr_func output_expr,
-     /*@null@*/ yasm_output_reloc_func output_reloc);
-
 static void dwarf2_abbrev_bc_destroy(void *contents);
 static void dwarf2_abbrev_bc_print(const void *contents, FILE *f,
 				   int indent_level);
@@ -224,18 +212,10 @@ static yasm_bc_resolve_flags dwarf2_abbrev_bc_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int dwarf2_abbrev_bc_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
-     yasm_output_expr_func output_expr,
+     yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
 /* Bytecode callback structures */
-
-static const yasm_bytecode_callback dwarf2_info_head_bc_callback = {
-    dwarf2_info_head_bc_destroy,
-    dwarf2_info_head_bc_print,
-    yasm_bc_finalize_common,
-    dwarf2_info_head_bc_resolve,
-    dwarf2_info_head_bc_tobytes
-};
 
 static const yasm_bytecode_callback dwarf2_abbrev_bc_callback = {
     dwarf2_abbrev_bc_destroy,
@@ -304,6 +284,9 @@ yasm_dwarf2__generate_info(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	yasm_object_get_general(dbgfmt_dwarf2->object, ".debug_info", 0, 4, 0,
 				0, &new, 0);
 
+    yasm_section_set_align(debug_abbrev, 0, 0);
+    yasm_section_set_align(debug_info, 0, 0);
+
     /* Create abbreviation table entry for compilation unit */
     abbrev = yasm_xmalloc(sizeof(dwarf2_abbrev));
     abc = yasm_bc_create_common(&dwarf2_abbrev_bc_callback, abbrev, 0);
@@ -330,22 +313,25 @@ yasm_dwarf2__generate_info(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
     /* statement list (line numbers) */
     abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_stmt_list, DW_FORM_data4);
     dwarf2_append_expr(debug_info,
-	yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
-			    yasm_section_bcs_first(debug_line)),
+	yasm_expr_create_ident(yasm_expr_sym(
+	    yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
+				yasm_section_bcs_first(debug_line))), 0),
 	dbgfmt_dwarf2->sizeof_offset, 0);
 
     if (main_code) {
 	/* All code is contiguous in one section */
 	abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_low_pc, DW_FORM_addr);
 	dwarf2_append_expr(debug_info,
-	    yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
-				yasm_section_bcs_first(main_code)),
+	    yasm_expr_create_ident(yasm_expr_sym(
+		yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
+				    yasm_section_bcs_first(main_code))), 0),
 	    dbgfmt_dwarf2->sizeof_address, 0);
 
 	abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_high_pc, DW_FORM_addr);
 	dwarf2_append_expr(debug_info,
-	    yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
-				yasm_section_bcs_last(main_code)),
+	    yasm_expr_create_ident(yasm_expr_sym(
+		yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
+				    yasm_section_bcs_last(main_code))), 0),
 	    dbgfmt_dwarf2->sizeof_address, 0);
     }
 
@@ -387,77 +373,6 @@ yasm_dwarf2__generate_info(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 }
 
 static void
-dwarf2_info_head_bc_destroy(void *contents)
-{
-    dwarf2_info_head *ih = (dwarf2_info_head *)contents;
-    yasm_xfree(contents);
-}
-
-static void
-dwarf2_info_head_bc_print(const void *contents, FILE *f, int indent_level)
-{
-    /* TODO */
-}
-
-static yasm_bc_resolve_flags
-dwarf2_info_head_bc_resolve(yasm_bytecode *bc, int save,
-			    yasm_calc_bc_dist_func calc_bc_dist)
-{
-    yasm_internal_error(N_("tried to resolve a dwarf2 info head bytecode"));
-    /*@notreached@*/
-    return YASM_BC_RESOLVE_MIN_LEN;
-}
-
-static int
-dwarf2_info_head_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-			    yasm_output_expr_func output_expr,
-			    yasm_output_reloc_func output_reloc)
-{
-    dwarf2_info_head *ih = (dwarf2_info_head *)bc->contents;
-    yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = ih->dbgfmt_dwarf2;
-    unsigned char *buf = *bufp;
-    yasm_intnum *intn, *cval;
-    size_t i, len;
-
-    if (dbgfmt_dwarf2->format == DWARF2_FORMAT_64BIT) {
-	YASM_WRITE_8(buf, 0xff);
-	YASM_WRITE_8(buf, 0xff);
-	YASM_WRITE_8(buf, 0xff);
-	YASM_WRITE_8(buf, 0xff);
-    }
-
-    /* Total length of info (following this field) */
-    cval = yasm_intnum_create_uint(dbgfmt_dwarf2->sizeof_offset);
-    intn = yasm_common_calc_bc_dist(ih->info_start_prevbc, ih->info_end_prevbc);
-    yasm_intnum_calc(intn, YASM_EXPR_SUB, cval, bc->line);
-    yasm_arch_intnum_tobytes(dbgfmt_dwarf2->arch, intn, buf,
-			     dbgfmt_dwarf2->sizeof_offset,
-			     dbgfmt_dwarf2->sizeof_offset*8, 0, bc, 0, 0);
-    buf += dbgfmt_dwarf2->sizeof_offset;
-    yasm_intnum_destroy(intn);
-
-    /* DWARF version */
-    yasm_intnum_set_uint(cval, 2);
-    yasm_arch_intnum_tobytes(dbgfmt_dwarf2->arch, cval, buf, 2, 16, 0, bc, 0,
-			     0);
-    buf += 2;
-
-    /* Pointer to our debug_abbrev */
-    output_expr(&ih->debug_abbrev_expr, buf, dbgfmt_dwarf2->sizeof_offset,
-		dbgfmt_dwarf2->sizeof_offset*8, 0, (unsigned long)(buf-*bufp),
-		bc, 0, 0, d);
-    buf += dbgfmt_dwarf2->sizeof_offset;
-
-    /* Size of the offset portion of the address */
-    YASM_WRITE_8(buf, dbgfmt_dwarf2->sizeof_address);
-
-    *bufp = buf;
-
-    yasm_intnum_destroy(cval);
-    return 0;
-}
-
-static void
 dwarf2_abbrev_bc_destroy(void *contents)
 {
     dwarf2_abbrev *abbrev = (dwarf2_abbrev *)contents;
@@ -491,7 +406,7 @@ dwarf2_abbrev_bc_resolve(yasm_bytecode *bc, int save,
 
 static int
 dwarf2_abbrev_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-			 yasm_output_expr_func output_expr,
+			 yasm_output_value_func output_value,
 			 yasm_output_reloc_func output_reloc)
 {
     dwarf2_abbrev *abbrev = (dwarf2_abbrev *)bc->contents;
