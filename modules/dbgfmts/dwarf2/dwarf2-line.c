@@ -633,9 +633,8 @@ yasm_dwarf2__generate_line(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2, int asm_source,
     info.asm_source = asm_source;
     info.dbgfmt_dwarf2 = dbgfmt_dwarf2;
     info.debug_line = yasm_object_get_general(dbgfmt_dwarf2->object,
-					      ".debug_line", 0, 4, 0, 0, &new,
+					      ".debug_line", 0, 1, 0, 0, &new,
 					      0);
-    yasm_section_set_align(info.debug_line, 0, 0);
     last = yasm_section_bcs_last(info.debug_line);
 
     /* header */
