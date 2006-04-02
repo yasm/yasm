@@ -1336,7 +1336,8 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	    align = 16;
 	}
 	iscode = 1;
-    } else if (strcmp(sectname, ".rdata") == 0) {
+    } else if (strcmp(sectname, ".rdata") == 0
+	       || strncmp(sectname, ".rodata", 7) == 0) {
 	flags = COFF_STYP_DATA;
 	if (objfmt_coff->win32) {
 	    flags |= COFF_STYP_READ;
@@ -1359,6 +1360,11 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	flags = COFF_STYP_INFO;
 	if (objfmt_coff->win32)
 	    flags |= COFF_STYP_DISCARD | COFF_STYP_READ;
+    } else if (yasm__strncasecmp(sectname, ".debug", 6)==0) {
+	flags = COFF_STYP_DATA;
+	if (objfmt_coff->win32)
+	    flags |= COFF_STYP_DISCARD|COFF_STYP_READ;
+	align = 1;
     } else {
 	/* Default to code */
 	flags = COFF_STYP_TEXT;
@@ -1424,6 +1430,7 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	    /* GAS-style flags */
 	    int alloc = 0, load = 0, readonly = 0, code = 0, data = 0;
 	    int shared = 0;
+	    iscode = 0;
 	    for (i=4; i<strlen(vp->val); i++) {
 		switch (vp->val[i]) {
 		    case 'a':
@@ -1464,6 +1471,7 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		flags = COFF_STYP_TEXT;
 		if (objfmt_coff->win32)
 		    flags |= COFF_STYP_EXECUTE | COFF_STYP_READ;
+		iscode = 1;
 	    } else if (data) {
 		flags = COFF_STYP_DATA;
 		if (objfmt_coff->win32)
