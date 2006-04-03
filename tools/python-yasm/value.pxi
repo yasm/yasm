@@ -16,8 +16,8 @@ cdef class Value:
         if value is None:
             pass
         elif isinstance(value, Expression):
-            yasm_value_initialize(&self.value, (<Expression>value).expr)
-            (<Expression>value).expr = NULL
+            yasm_value_initialize(&self.value,
+                                  yasm_expr_copy((<Expression>value).expr))
         #elif isinstance(value, Symbol):
         else:
             raise ValueError("Invalid value type '%s'" % type(value))

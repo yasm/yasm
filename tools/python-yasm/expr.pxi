@@ -146,21 +146,15 @@ cdef class Expression:
     cdef yasm_expr__item* __new_item(self, value) except NULL:
         cdef yasm_expr__item *retval
         if isinstance(value, Expression):
-            retval = yasm_expr_expr((<Expression>value).expr)
-            (<Expression>value).expr = NULL
-            return retval
+            return yasm_expr_expr(yasm_expr_copy((<Expression>value).expr))
         #elif isinstance(value, Symbol):
         #    return yasm_expr_sym((<Symbol>value).sym)
         #elif isinstance(value, Register):
         #    return yasm_expr_reg((<Register>value).reg)
         elif isinstance(value, FloatNum):
-            retval = yasm_expr_float((<FloatNum>value).flt)
-            (<FloatNum>value).flt = NULL
-            return retval
+            return yasm_expr_float(yasm_floatnum_copy((<FloatNum>value).flt))
         elif isinstance(value, IntNum):
-            retval = yasm_expr_int((<IntNum>value).intn)
-            (<IntNum>value).intn = NULL
-            return retval
+            return yasm_expr_int(yasm_intnum_copy((<IntNum>value).intn))
         else:
             try:
                 intnum = IntNum(value)
