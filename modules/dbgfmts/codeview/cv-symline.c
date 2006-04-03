@@ -1058,8 +1058,9 @@ cv_sym_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		buf += 4;
 		break;
 	    case 'Y':
-		cv_out_sym((yasm_symrec *)cvs->args[arg++].p, buf-(*bufp), bc,
-			   &buf, d, output_value);
+		cv_out_sym((yasm_symrec *)cvs->args[arg++].p,
+			   (unsigned long)(buf-(*bufp)), bc, &buf, d,
+			   output_value);
 		break;
 	    case 'T':
 		yasm_intnum_set_uint(cval, cvs->args[arg++].i);
