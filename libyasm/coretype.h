@@ -253,7 +253,7 @@ typedef /*@null@*/ /*@only@*/ yasm_intnum * (*yasm_calc_bc_dist_func)
 typedef int (*yasm_output_value_func)
     (yasm_value *value, /*@out@*/ unsigned char *buf, size_t destsize,
      size_t valsize, int shift, unsigned long offset, yasm_bytecode *bc,
-     int warn, /*@null@*/ void *d) /*@uses *ep@*/;
+     int warn, /*@null@*/ void *d);
 
 /** Convert a symbol reference to its byte representation.  Usually implemented
  * by object formats and debug formats to keep track of relocations generated
