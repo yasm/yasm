@@ -237,7 +237,6 @@ yasm_dwarf2__set_head_end(dwarf2_head *head, yasm_bytecode *end_prevbc)
 static void
 dwarf2_head_bc_destroy(void *contents)
 {
-    dwarf2_head *head = (dwarf2_head *)contents;
     yasm_xfree(contents);
 }
 

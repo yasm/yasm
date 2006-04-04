@@ -508,7 +508,6 @@ static int
 cv_generate_line_section(yasm_section *sect, /*@null@*/ void *d)
 {
     cv_line_info *info = (cv_line_info *)d;
-    yasm_dbgfmt_cv *dbgfmt_cv = info->dbgfmt_cv;
 
     if (!yasm_section_is_code(sect))
 	return 0;	/* not code, so no line data for this section */

@@ -1287,7 +1287,6 @@ static FILE *
 inc_fopen(char *file, char **newname)
 {
     FILE *fp;
-    const char *prefix = "";
     char *combine = NULL;
 
     fp = yasm__fopen_include(file, nasm_src_get_fname(), (const char **)ipaths,
