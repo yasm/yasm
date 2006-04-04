@@ -14,7 +14,8 @@ EXTRA_DIST += tools/python-yasm/yasm.pyx
 EXTRA_DIST += $(PYBINDING_DEPS)
 
 yasm_python.c: $(srcdir)/tools/python-yasm/yasm.pyx $(PYBINDING_DEPS)
-	$(PYREX) -o $@ `test -f tools/python-yasm/yasm.pyx || echo '$(srcdir)/'`tools/python-yasm/yasm.pyx
+	$(PYTHON) -c "from Pyrex.Compiler.Main import main; main(command_line=1)" \
+		-o $@ `test -f tools/python-yasm/yasm.pyx || echo '$(srcdir)/'`tools/python-yasm/yasm.pyx
 
 CLEANFILES += yasm_python.c
 

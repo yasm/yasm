@@ -264,13 +264,11 @@ else
     if test -z "$PYTHON" ; then
         AC_MSG_WARN([Python not found])
     else
-        AC_CHECK_PROGS(PYREX, pyrexc)
-
-        if test -z "$PYREX" ; then
-            have_pyrex=no
-        else
-            have_pyrex=yes
-        fi
+        AC_MSG_CHECKING([for Pyrex >= 0.9.3])
+        PYREX_CHECK_VERSION(0.9.3, [AC_MSG_RESULT(yes)
+                                    have_pyrex=yes],
+                                   [AC_MSG_RESULT(no)
+                                    have_pyrex=no])
 
         AM_CHECK_PYTHON_HEADERS(have_python_headers=yes,have_python_headers=no)
 
