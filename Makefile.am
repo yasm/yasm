@@ -93,8 +93,16 @@ ACLOCAL_AMFLAGS = -I m4
 
 distclean-local:
 	-rm -rf results
+if HAVE_PYTHON
+	-rm -rf build
+endif
+
+if HAVE_PYTHON
+all-am: Makefile $(LIBRARIES) $(PROGRAMS) $(MANS) $(HEADERS) config.h python-build
+install-hook: python-install
+uninstall-hook: python-uninstall
+endif
 
 if BUILD_MAN
 MAINTAINERCLEANFILES = $(dist_man_MANS)
 endif
-

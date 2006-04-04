@@ -49,6 +49,14 @@ AC_HELP_STRING([--enable-gcov],[Enable gcov code coverage (requires GCC)]),
   *) AC_MSG_ERROR([bad value ${enableval} for --enable-gcov]) ;;
 esac])
 
+AC_ARG_ENABLE(python,
+AC_HELP_STRING([--enable-python],[Build Python bindings]),
+[case "${enableval}" in
+  yes) enable_python="yes" ;;
+  no)  enable_python="no" ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-python]) ;;
+esac], enable_python="auto")
+
 #
 # Checks for programs.
 #
@@ -244,6 +252,43 @@ AC_SUBST(CCLD_FOR_BUILD)
 HOST_CC="$CC_FOR_BUILD"
 AC_SUBST(HOST_CC)
 
+# Detect if we can build Python bindings
+# (needs Python, Python headers, and Pyrex)
+if test x$enable_python = xno; then
+    have_python=no
+else
+    AC_MSG_NOTICE([Checking to see if we can build Python bindings])
+    have_python=no
+    AM_PATH_PYTHON(2.4)
+
+    if test -z "$PYTHON" ; then
+        AC_MSG_WARN([Python not found])
+    else
+        AC_CHECK_PROGS(PYREX, pyrexc)
+
+        if test -z "$PYREX" ; then
+            have_pyrex=no
+        else
+            have_pyrex=yes
+        fi
+
+        AM_CHECK_PYTHON_HEADERS(have_python_headers=yes,have_python_headers=no)
+
+	if test x$have_pyrex = xyes -a x$have_python_headers = xyes ; then
+	    have_python=yes
+        fi
+    fi
+
+    if test x$have_python = xno ; then
+        if test x$enable_python = xyes ; then
+            AC_MSG_ERROR([Building Python explicitly requested, but can't build Python bindings because either Pyrex, Python headers or a suitable Python version was not found])
+        else
+            AC_MSG_WARN([Couldn't find either Pyrex, the Python headers or a suitable version of Python, not building Python bindings])
+        fi
+    fi               
+fi
+
+AM_CONDITIONAL(HAVE_PYTHON, test x$have_python = xyes)
 
 AC_CONFIG_FILES([Makefile
 	po/Makefile.in
