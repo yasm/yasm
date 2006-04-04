@@ -78,7 +78,7 @@ cdef extern from "libyasm/bytecode.h":
             yasm_output_reloc_func output_reloc)
 
     cdef yasm_dataval* yasm_dv_create_expr(yasm_expr *expn)
-    cdef yasm_dataval* yasm_dv_create_string(char *contents, unsigned long len)
+    cdef yasm_dataval* yasm_dv_create_string(char *contents, size_t len)
 
     cdef void yasm_dvs_initialize(yasm_datavalhead *headp)
     cdef void yasm_dvs_destroy(yasm_datavalhead *headp)
