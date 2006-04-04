@@ -1,3 +1,6 @@
+dnl a macro to check for the installed Pyrex version; note PYTHON needs to
+dnl be set before this function is called.
+dnl  PYREX_CHECK_VERSION([MIN-VERSION], [ACTION-IF-TRUE], [ACTION-IF-FALSE])
 AC_DEFUN([PYREX_CHECK_VERSION],
  [prog="import sys
 from Pyrex.Compiler.Version import version
