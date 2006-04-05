@@ -156,6 +156,7 @@ fi
 # Force x86 architecture only for now.
 ARCH=x86
 AC_SUBST([ARCH])
+AC_SUBST([GCC])
 
 # Require things for --enable-maintainer-mode option.
 if test "$USE_MAINTAINER_MODE" = "yes"; then

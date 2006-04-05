@@ -24,6 +24,7 @@ python-setup.txt: Makefile
 	echo "includes=${DEFAULT_INCLUDES} ${INCLUDES} ${DEFS}" > python-setup.txt
 	echo "sources=${libyasm_a_SOURCES}" >> python-setup.txt
 	echo "srcdir=${srcdir}" >> python-setup.txt
+	echo "gcc=${GCC}" >> python-setup.txt
 
 CLEANFILES += python-setup.txt
 

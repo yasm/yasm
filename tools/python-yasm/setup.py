@@ -112,5 +112,7 @@ if __name__ == "__main__":
     incldir, cppflags = ParseCPPFlags(opts["includes"])
     sources = ParseSources(opts["sources"], opts["srcdir"])
     sources.append('yasm_python.c')
+    if opts["gcc"] == "yes":
+        cppflags.append('-w')
     RunSetup(incldir, cppflags, sources)
 
