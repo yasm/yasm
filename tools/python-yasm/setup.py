@@ -28,54 +28,25 @@ from distutils.core import setup
 from distutils.extension import Extension
 from Pyrex.Distutils import build_ext
 from os.path import basename, join, exists
-import re
 
 def ReadSetup(filename):
     """ReadSetup goes through filename and parses out the values stored
     in the file.  Values need to be stored in a
     \"key=value format\""""
+    return dict(line.split('=', 1) for line in open(filename))
 
-    #return val
-    opts = {}
-
-    fh = open(filename, 'r')
-    reobj = re.compile(r"([a-z]+)=(.+)")
-    for line in fh.readlines():
-        matchobj = reobj.search(line)
-
-        if matchobj is None:
-            raise "Error:  syntaxt error in setup.txt line: %s"%line
-
-        lab, val = matchobj.groups()
-        opts[lab] = val
-    return opts
-
-def ParseCPPFlags(str):
+def ParseCPPFlags(flags):
     """parse the CPPFlags macro"""
-    incl_dir = []
-    cppflags = []
-
-    tokens = str.split()
-    # go through the list of compile flags.  treat search path args
-    # specially; otherwise just add to "extra_compile_args"
-    for tok in tokens:
-        if tok.startswith("-I"):
-            incl_dir.append(tok[2:])
-        else:
-            cppflags.append(tok)
-
+    incl_dir = [x[2:] for x in flags.split() if x.startswith("-I")]
+    cppflags = [x for x in flags.split() if not x.startswith("-I")]
     return (incl_dir, cppflags)
 
-def ParseSources(str, srcdir):
+def ParseSources(src, srcdir):
     """parse the Sources macro"""
-    sources = []
-
-    tokens = str.split()
-    # go through the list of source filenames
     # do the dance of detecting if the source file is in the current
     # directory, and if it's not, prepend srcdir
-    for tok in tokens:
-        fn = None
+    sources = []
+    for tok in src.split():
         if tok.endswith(".c"):
             fn = tok
         elif tok.endswith(".y"):
@@ -112,7 +83,7 @@ if __name__ == "__main__":
     incldir, cppflags = ParseCPPFlags(opts["includes"])
     sources = ParseSources(opts["sources"], opts["srcdir"])
     sources.append('yasm_python.c')
-    if opts["gcc"] == "yes":
+    if opts["gcc"].strip() == "yes":
         cppflags.append('-w')
     RunSetup(incldir, cppflags, sources)
 
