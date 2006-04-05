@@ -137,13 +137,27 @@ YASM_OBJS= \
  $(LIBYASM_OBJS) \
  $(MODULES_OBJS)
 
+genstring: genstring.c
+	$(BUILDCC) -o $@ $<
+
+license.c: COPYING genstring
+	./genstring license_msg $@ COPYING
+
+frontends/yasm/yasm.c: license.c
+
 genmacro: modules/preprocs/nasm/genmacro.c
 	$(BUILDCC) -o $@ $<
 
-nasm-macros.c: modules/preprocs/nasm/standard.mac genmacro
-	./genmacro modules/preprocs/nasm/standard.mac
+nasm-macros.c: modules/preprocs/nasm/standard.mac version.mac genmacro
+	./genmacro modules/preprocs/nasm/standard.mac version.mac
 
 modules/preprocs/nasm/nasm-pp.c: nasm-macros.c
+
+genversion: modules/preprocs/nasm/genversion.c
+	$(BUILDCC) -o $@ $<
+
+version.mac: genversion
+	./genversion $@
 
 genmodule: libyasm/genmodule.c
 	$(BUILDCC) -o $@ $<
