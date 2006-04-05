@@ -81,7 +81,7 @@ def RunSetup(incldir, cppflags, sources):
 if __name__ == "__main__":
     opts = ReadSetup("python-setup.txt")
     incldir, cppflags = ParseCPPFlags(opts["includes"])
-    sources = ParseSources(opts["sources"], opts["srcdir"])
+    sources = ParseSources(opts["sources"], opts["srcdir"].strip())
     sources.append('yasm_python.c')
     if opts["gcc"].strip() == "yes":
         cppflags.append('-w')
