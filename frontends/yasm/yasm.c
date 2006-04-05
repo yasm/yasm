@@ -38,6 +38,7 @@
 
 #include "yasm-options.h"
 
+#include "license.c"
 
 #define DEFAULT_OBJFMT_MODULE	"bin"
 
@@ -118,13 +119,16 @@ static void print_list_keyword_desc(const char *name, const char *keyword);
 /* values for special_options */
 #define SPECIAL_SHOW_HELP 0x01
 #define SPECIAL_SHOW_VERSION 0x02
-#define SPECIAL_LISTED 0x04
+#define SPECIAL_SHOW_LICENSE 0x04
+#define SPECIAL_LISTED 0x08
 
 /* command line options */
 static opt_option options[] =
 {
     { 0, "version", 0, opt_special_handler, SPECIAL_SHOW_VERSION,
       N_("show version text"), NULL },
+    { 0, "license", 0, opt_special_handler, SPECIAL_SHOW_LICENSE,
+      N_("show license text"), NULL },
     { 'h', "help", 0, opt_special_handler, SPECIAL_SHOW_HELP,
       N_("show help text"), NULL },
     { 'a', "arch", 1, opt_arch_handler, 0,
@@ -169,35 +173,10 @@ static opt_option options[] =
 
 /* version message */
 /*@observer@*/ static const char *version_msg[] = {
-    PACKAGE " " VERSION "\n",
-    N_("Copyright (c) 2001-2006 Peter Johnson and other"), " " PACKAGE " ",
-    N_("developers.\n"),
-    N_("**Licensing summary**\n"),
-    N_("Note: This summary does not provide legal advice nor is it the\n"),
-    N_(" actual license.  See the individual licenses for complete\n"),
-    N_(" details.  Consult a laywer for legal advice.\n"),
-    N_("The primary license is the 2-clause BSD license.  Please use this\n"),
-    N_(" license if you plan on submitting code to the project.\n"),
-    N_("Libyasm:\n"),
-    N_(" Libyasm is 2-clause or 3-clause BSD licensed, with the exception\n"),
-    N_(" of bitvect, which is triple-licensed under the Artistic license,\n"),
-    N_(" GPL, and LGPL.  Libyasm is thus GPL and LGPL compatible.  In\n"),
-    N_(" addition, this also means that libyasm is free for binary-only\n"),
-    N_(" distribution as long as the terms of the 3-clause BSD license and\n"),
-    N_(" Artistic license (as it applies to bitvect) are fulfilled.\n"),
-    N_("Modules:\n"),
-    N_(" Most of the modules are 2-clause BSD licensed, except:\n"),
-    N_("  preprocs/nasm - LGPL licensed\n"),
-    N_("Frontends:\n"),
-    N_(" The frontends are 2-clause BSD licensed.\n"),
-    N_("License Texts:\n"),
-    N_(" The full text of all licenses are provided in separate files in\n"),
-    N_(" this program's source distribution.  Each file may include the\n"),
-    N_(" entire license (in the case of the BSD and Artistic licenses), or\n"),
-    N_(" may reference the GPL or LGPL license file.\n"),
-    N_("This program has absolutely no warranty; not even for\n"),
-    N_("merchantibility or fitness for a particular purpose.\n"),
-    N_("Compiled on"), " " __DATE__ ".\n",
+    PACKAGE_STRING,
+    "Compiled on " __DATE__ ".",
+    "Copyright (c) 2001-2006 Peter Johnson and other Yasm developers.",
+    "Run yasm --license for licensing overview and summary."
 };
 
 /* help messages */
@@ -262,8 +241,12 @@ main(int argc, char *argv[])
 	    help_msg(help_head, help_tail, options, NELEMS(options));
 	    return EXIT_SUCCESS;
 	case SPECIAL_SHOW_VERSION:
-	    for (i=0; i<sizeof(version_msg)/sizeof(char *); i++)
-		printf("%s", gettext(version_msg[i]));
+	    for (i=0; i<NELEMS(version_msg); i++)
+		printf("%s\n", version_msg[i]);
+	    return EXIT_SUCCESS;
+	case SPECIAL_SHOW_LICENSE:
+	    for (i=0; i<NELEMS(license_msg); i++)
+		printf("%s\n", license_msg[i]);
 	    return EXIT_SUCCESS;
 	case SPECIAL_LISTED:
 	    /* Printed out earlier */
