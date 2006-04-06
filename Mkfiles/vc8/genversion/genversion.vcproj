@@ -40,6 +40,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories="..\..\vc8"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -120,6 +121,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="3"
+				AdditionalIncludeDirectories="..\..\vc8"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
@@ -186,6 +188,15 @@
 			>
 			<File
 				RelativePath="..\..\..\modules\preprocs\nasm\genversion.c"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl"
+			>
+			<File
+				RelativePath="..\config.h"
 				>
 			</File>
 		</Filter>

@@ -154,7 +154,7 @@ nasm-macros.c: modules/preprocs/nasm/standard.mac version.mac genmacro
 modules/preprocs/nasm/nasm-pp.c: nasm-macros.c
 
 genversion: modules/preprocs/nasm/genversion.c
-	$(BUILDCC) -o $@ $<
+	$(BUILDCC) -IMkfiles -o $@ $<
 
 version.mac: genversion
 	./genversion $@
