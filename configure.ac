@@ -13,7 +13,7 @@ AM_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE(yasm, [HEAD])
 AM_MAINTAINER_MODE
 
-AC_DEFINE(PACKAGE_INTVER, ["0.4.99"],
+AC_DEFINE(PACKAGE_INTVER, ["0.5.99"],
 	  [Define to internal version of this package.])
 AC_DEFINE(PACKAGE_BUILD, ["HEAD"], [Define to build version of this package.])
 
