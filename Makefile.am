@@ -8,7 +8,7 @@ AM_CFLAGS = @MORE_CFLAGS@
 bin_PROGRAMS =
 dist_man_MANS =
 TESTS =
-noinst_PROGRAMS =
+noinst_PROGRAMS = genstring
 
 check_PROGRAMS = test_hd
 
@@ -19,6 +19,7 @@ include_HEADERS = libyasm.h
 noinst_HEADERS = util.h
 
 BUILT_SOURCES =
+
 # configure.lineno doesn't clean up after itself?
 CLEANFILES = configure.lineno
 EXTRA_DIST = config/config.rpath
@@ -105,4 +106,13 @@ distclean-local:
 if BUILD_MAN
 MAINTAINERCLEANFILES = $(dist_man_MANS)
 endif
+
+# genstring build
+genstring_SOURCES =
+EXTRA_DIST += genstring.c
+genstring_LDADD = genstring.$(OBJEXT)
+genstring_LINK = $(CCLD_FOR_BUILD) -o $@
+
+genstring.$(OBJEXT): genstring.c
+	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f genstring.c || echo '$(srcdir)/'`genstring.c
 
