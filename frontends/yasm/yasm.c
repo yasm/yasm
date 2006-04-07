@@ -38,6 +38,7 @@
 
 #include "yasm-options.h"
 
+#include "license.c"
 
 #define DEFAULT_OBJFMT_MODULE	"bin"
 
@@ -118,13 +119,16 @@ static void print_list_keyword_desc(const char *name, const char *keyword);
 /* values for special_options */
 #define SPECIAL_SHOW_HELP 0x01
 #define SPECIAL_SHOW_VERSION 0x02
-#define SPECIAL_LISTED 0x04
+#define SPECIAL_SHOW_LICENSE 0x04
+#define SPECIAL_LISTED 0x08
 
 /* command line options */
 static opt_option options[] =
 {
     { 0, "version", 0, opt_special_handler, SPECIAL_SHOW_VERSION,
       N_("show version text"), NULL },
+    { 0, "license", 0, opt_special_handler, SPECIAL_SHOW_LICENSE,
+      N_("show license text"), NULL },
     { 'h', "help", 0, opt_special_handler, SPECIAL_SHOW_HELP,
       N_("show help text"), NULL },
     { 'a', "arch", 1, opt_arch_handler, 0,
@@ -237,8 +241,12 @@ main(int argc, char *argv[])
 	    help_msg(help_head, help_tail, options, NELEMS(options));
 	    return EXIT_SUCCESS;
 	case SPECIAL_SHOW_VERSION:
-	    for (i=0; i<sizeof(version_msg)/sizeof(char *); i++)
-		printf("%s", gettext(version_msg[i]));
+	    for (i=0; i<NELEMS(version_msg); i++)
+		printf("%s\n", version_msg[i]);
+	    return EXIT_SUCCESS;
+	case SPECIAL_SHOW_LICENSE:
+	    for (i=0; i<NELEMS(license_msg); i++)
+		printf("%s\n", license_msg[i]);
 	    return EXIT_SUCCESS;
 	case SPECIAL_LISTED:
 	    /* Printed out earlier */

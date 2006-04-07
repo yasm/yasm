@@ -12,6 +12,14 @@ yasm_SOURCES  = frontends/yasm/yasm.c
 yasm_SOURCES += frontends/yasm/yasm-options.c
 yasm_SOURCES += frontends/yasm/yasm-options.h
 
+$(srcdir)/frontends/yasm/yasm.c: license.c
+
+license.c: $(srcdir)/COPYING genstring$(EXEEXT)
+	$(top_builddir)/genstring$(EXEEXT) license_msg $@ $(srcdir)/COPYING
+
+BUILT_SOURCES += license.c
+CLEANFILES += license.c
+
 yasm_LDADD = libyasm.a $(INTLLIBS)
 
 EXTRA_DIST += frontends/yasm/yasm.xml
