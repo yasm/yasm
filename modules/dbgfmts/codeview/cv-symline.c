@@ -632,7 +632,8 @@ yasm_cv__generate_symline(yasm_dbgfmt_cv *dbgfmt_cv)
     cv8_add_sym_objname(dbgfmt_cv, info.debug_symline,
 	yasm__abspath(yasm_object_get_object_fn(dbgfmt_cv->object)));
     cv8_add_sym_compile(dbgfmt_cv, info.debug_symline,
-			yasm__xstrdup(PACKAGE_STRING));
+			yasm__xstrdup(PACKAGE_NAME " " PACKAGE_INTVER "."
+				      PACKAGE_BUILD));
     /* then iterate through symbol table */
     yasm_symtab_traverse(dbgfmt_cv->symtab, &info, cv_generate_sym);
     cv8_set_symhead_end(head, yasm_section_bcs_last(info.debug_symline));
