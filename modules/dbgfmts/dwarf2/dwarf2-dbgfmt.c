@@ -37,7 +37,7 @@ struct dwarf2_head {
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2;
     yasm_bytecode *start_prevbc;
     yasm_bytecode *end_prevbc;
-    /*@null@*/ yasm_symrec *debug_ptr;
+    /*@null@*/ yasm_section *debug_ptr;
     int with_address;
     int with_segment;
 };
@@ -209,9 +209,7 @@ yasm_dwarf2__add_head
 	bc->len += 4;
 
     if (debug_ptr) {
-	head->debug_ptr =
-	    yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
-				yasm_section_bcs_first(debug_ptr));
+	head->debug_ptr = debug_ptr;
 	bc->len += dbgfmt_dwarf2->sizeof_offset;
     } else
 	head->debug_ptr = NULL;
@@ -292,7 +290,9 @@ dwarf2_head_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     /* Pointer to another debug section */
     if (head->debug_ptr) {
 	yasm_value value;
-	yasm_value_init_sym(&value, head->debug_ptr);
+	yasm_value_init_sym(&value,
+	    yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
+				yasm_section_bcs_first(head->debug_ptr)));
 	output_value(&value, buf, dbgfmt_dwarf2->sizeof_offset,
 		     dbgfmt_dwarf2->sizeof_offset*8, 0,
 		     (unsigned long)(buf-*bufp), bc, 0, d);

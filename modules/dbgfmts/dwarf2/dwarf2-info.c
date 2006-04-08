@@ -319,19 +319,21 @@ yasm_dwarf2__generate_info(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	dbgfmt_dwarf2->sizeof_offset, 0);
 
     if (main_code) {
+	yasm_symrec *first;
+	first = yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
+				    yasm_section_bcs_first(main_code));
 	/* All code is contiguous in one section */
 	abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_low_pc, DW_FORM_addr);
 	dwarf2_append_expr(debug_info,
-	    yasm_expr_create_ident(yasm_expr_sym(
-		yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
-				    yasm_section_bcs_first(main_code))), 0),
+	    yasm_expr_create_ident(yasm_expr_sym(first), 0),
 	    dbgfmt_dwarf2->sizeof_address, 0);
 
 	abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_high_pc, DW_FORM_addr);
 	dwarf2_append_expr(debug_info,
-	    yasm_expr_create_ident(yasm_expr_sym(
-		yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
-				    yasm_section_bcs_last(main_code))), 0),
+	    yasm_expr_create(YASM_EXPR_ADD, yasm_expr_sym(first),
+		yasm_expr_int(yasm_common_calc_bc_dist(
+		    yasm_section_bcs_first(main_code),
+		    yasm_section_bcs_last(main_code))), 0),
 	    dbgfmt_dwarf2->sizeof_address, 0);
     }
 
