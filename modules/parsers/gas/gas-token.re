@@ -52,14 +52,16 @@ RCSID("$Id$");
 	s->tok = cursor; \
     }
 
+#define TOK		((char *)s->tok)
 #define TOKLEN		(size_t)(cursor-s->tok)
 
 static size_t
-rept_input(yasm_parser_gas *parser_gas, /*@out@*/ char *buf, size_t max_size)
+rept_input(yasm_parser_gas *parser_gas, /*@out@*/ YYCTYPE *buf,
+	   size_t max_size)
 {
     gas_rept *rept = parser_gas->rept;
     size_t numleft = max_size;
-    char *bufp = buf;
+    YYCTYPE *bufp = buf;
 
     /* If numrept is 0, copy out just the line end characters */
     if (rept->numrept == 0) {
@@ -147,7 +149,7 @@ fill(yasm_parser_gas *parser_gas, YYCTYPE *cursor)
 	if (!s->bot)
 	    first = 1;
 	if((s->top - s->lim) < BSIZE){
-	    char *buf = yasm_xmalloc((size_t)(s->lim - s->bot) + BSIZE);
+	    YYCTYPE *buf = yasm_xmalloc((size_t)(s->lim - s->bot) + BSIZE);
 	    memcpy(buf, s->tok, (size_t)(s->lim - s->tok));
 	    s->tok = buf;
 	    s->ptr = &buf[s->ptr - s->bot];
@@ -162,14 +164,14 @@ fill(yasm_parser_gas *parser_gas, YYCTYPE *cursor)
 	if (parser_gas->rept && parser_gas->rept->ended) {
 	    /* Pull from rept lines instead of preproc */
 	    cnt = rept_input(parser_gas, s->lim, BSIZE);
-	} else if((cnt = yasm_preproc_input(parser_gas->preproc, s->lim,
-				     BSIZE)) == 0) {
+	} else if((cnt = yasm_preproc_input(parser_gas->preproc,
+					    (char *)s->lim, BSIZE)) == 0) {
 	    s->eof = &s->lim[cnt]; *s->eof++ = '\n';
 	}
 	s->lim += cnt;
 	if (first && parser_gas->save_input) {
 	    int i;
-	    char *saveline;
+	    YYCTYPE *saveline;
 	    parser_gas->save_last ^= 1;
 	    saveline = parser_gas->save_line[parser_gas->save_last];
 	    /* save next line into cur_line */
@@ -186,7 +188,7 @@ save_line(yasm_parser_gas *parser_gas, YYCTYPE *cursor)
 {
     Scanner *s = &parser_gas->s;
     int i = 0;
-    char *saveline;
+    YYCTYPE *saveline;
 
     parser_gas->save_last ^= 1;
     saveline = parser_gas->save_line[parser_gas->save_last];
@@ -211,7 +213,7 @@ gas_parser_cleanup(yasm_parser_gas *parser_gas)
 #define STRBUF_ALLOC_SIZE	128
 
 /* string buffer used when parsing strings/character constants */
-static char *strbuf = (char *)NULL;
+static YYCTYPE *strbuf = NULL;
 
 /* length of strbuf (including terminating NULL character) */
 static size_t strbuf_size = 0;
@@ -277,7 +279,7 @@ scan:
 	([1-9] digit*) | "0" {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    lvalp->intn = yasm_intnum_create_dec(s->tok, cur_line);
+	    lvalp->intn = yasm_intnum_create_dec(TOK, cur_line);
 	    s->tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -286,7 +288,7 @@ scan:
 	'0b' bindigit+ {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    lvalp->intn = yasm_intnum_create_bin(s->tok+2, cur_line);
+	    lvalp->intn = yasm_intnum_create_bin(TOK+2, cur_line);
 	    s->tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -295,7 +297,7 @@ scan:
 	"0" octdigit+ {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    lvalp->intn = yasm_intnum_create_oct(s->tok, cur_line);
+	    lvalp->intn = yasm_intnum_create_oct(TOK, cur_line);
 	    s->tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -305,7 +307,7 @@ scan:
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    /* skip 0 and x */
-	    lvalp->intn = yasm_intnum_create_hex(s->tok+2, cur_line);
+	    lvalp->intn = yasm_intnum_create_hex(TOK+2, cur_line);
 	    s->tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -314,7 +316,7 @@ scan:
 	"0" [DdEeFfTt] [-+]? (digit+)? ("." digit*)? ('e' [-+]? digit+)? {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    lvalp->flt = yasm_floatnum_create(s->tok+2);
+	    lvalp->flt = yasm_floatnum_create(TOK+2);
 	    s->tok[TOKLEN] = savech;
 	    RETURN(FLTNUM);
 	}
@@ -397,13 +399,13 @@ scan:
 
 	/* label or maybe directive */
 	[.][a-zA-Z0-9_$.]* {
-	    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
+	    lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
 	    RETURN(DIR_ID);
 	}
 
 	/* label */
 	[_][a-zA-Z0-9_$.]* {
-	    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
+	    lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
 	    RETURN(ID);
 	}
 
@@ -412,7 +414,7 @@ scan:
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    switch (yasm_arch_parse_check_regtmod
-		    (parser_gas->arch, lvalp->arch_data, s->tok+1, TOKLEN-1,
+		    (parser_gas->arch, lvalp->arch_data, TOK+1, TOKLEN-1,
 		     cur_line)) {
 		case YASM_ARCH_REG:
 		    s->tok[TOKLEN] = savech;
@@ -444,7 +446,7 @@ scan:
 		   || s->tok[count] == '\r')
 		count--;
 	    /* Just an identifier, return as such. */
-	    lvalp->str_val = yasm__xstrndup(s->tok, count);
+	    lvalp->str_val = yasm__xstrndup(TOK, count);
 	    RETURN(LABEL);
 	}
 
@@ -457,7 +459,7 @@ scan:
 		savech = s->tok[TOKLEN];
 		s->tok[TOKLEN] = '\0';
 		switch (yasm_arch_parse_check_insnprefix
-			(parser_gas->arch, lvalp->arch_data, s->tok, TOKLEN,
+			(parser_gas->arch, lvalp->arch_data, TOK, TOKLEN,
 			 cur_line)) {
 		    case YASM_ARCH_INSN:
 			s->tok[TOKLEN] = savech;
@@ -471,7 +473,7 @@ scan:
 		}
 	    }
 	    /* Just an identifier, return as such. */
-	    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
+	    lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
 	    RETURN(ID);
 	}
 
@@ -500,7 +502,7 @@ section_directive:
 
     /*!re2c
 	[a-zA-Z0-9_$.-]+ {
-	    lvalp->str_val = yasm__xstrndup(s->tok, TOKLEN);
+	    lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
 	    parser_gas->state = INITIAL;
 	    RETURN(ID);
 	}
@@ -567,7 +569,7 @@ stringconst_scan:
 	"\\" digit digit digit	{
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    lvalp->intn = yasm_intnum_create_oct(s->tok+1, cur_line);
+	    lvalp->intn = yasm_intnum_create_oct(TOK+1, cur_line);
 	    s->tok[TOKLEN] = savech;
 
 	    strbuf_append(count++, cursor, s, cur_line,
@@ -578,7 +580,7 @@ stringconst_scan:
 	'\\x' hexdigit+    {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    lvalp->intn = yasm_intnum_create_hex(s->tok+2, cur_line);
+	    lvalp->intn = yasm_intnum_create_hex(TOK+2, cur_line);
 	    s->tok[TOKLEN] = savech;
 
 	    strbuf_append(count++, cursor, s, cur_line,
@@ -601,7 +603,7 @@ stringconst_scan:
 
 	dquot	{
 	    strbuf_append(count, cursor, s, cur_line, '\0');
-	    lvalp->str.contents = strbuf;
+	    lvalp->str.contents = (char *)strbuf;
 	    lvalp->str.len = count;
 	    RETURN(STRING);
 	}
@@ -669,8 +671,9 @@ rept_scan:
 		    /* Add .line as first line to get line numbers correct */
 		    new_line = yasm_xmalloc(sizeof(gas_rept_line));
 		    new_line->data = yasm_xmalloc(40);
-		    sprintf(new_line->data, ".line %lu;", rept->startline+1);
-		    new_line->len = strlen(new_line->data);
+		    sprintf((char *)new_line->data, ".line %lu;",
+			    rept->startline+1);
+		    new_line->len = strlen((char *)new_line->data);
 		    STAILQ_INSERT_HEAD(&rept->lines, new_line, link);
 
 		    /* Save previous fill buffer */

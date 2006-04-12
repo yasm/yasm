@@ -203,11 +203,11 @@ AC_CHECK_TYPE(intmax_t,,,[#include <$ac_cv_header_stdint>])
 
 fi # shortcircut to system "stdint.h"
 # ------------------ PREPARE VARIABLES ------------------------------
-if test "$GCC" = "yes" ; then
-ac_cv_stdint_message="using gnu compiler "`$CC --version | head -1` 
-else
+#if test "$GCC" = "yes" ; then
+#ac_cv_stdint_message="using gnu compiler "`$CC --version | head -1` 
+#else
 ac_cv_stdint_message="using $CC"
-fi
+#fi
 
 AC_MSG_RESULT([make use of $ac_cv_header_stdint in $ac_stdint_h dnl
 $ac_cv_stdint_result])
