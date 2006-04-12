@@ -313,7 +313,7 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 }
 
 
-#define YYCTYPE		char
+#define YYCTYPE		unsigned char
 #define YYCURSOR	id
 #define YYLIMIT		id
 #define YYMARKER	marker
@@ -327,10 +327,10 @@ yasm_lc3b__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len,
 
 yasm_arch_regtmod
 yasm_lc3b__parse_check_regtmod(yasm_arch *arch, unsigned long *data,
-			       const char *id, size_t id_len,
+			       const char *oid, size_t id_len,
 			       unsigned long line)
 {
-    const char *oid = id;
+    const YYCTYPE *id = (const YYCTYPE *)oid;
     /*const char *marker;*/
     /*!re2c
 	/* integer registers */
@@ -351,10 +351,10 @@ yasm_lc3b__parse_check_regtmod(yasm_arch *arch, unsigned long *data,
 
 yasm_arch_insnprefix
 yasm_lc3b__parse_check_insnprefix(yasm_arch *arch, unsigned long data[4],
-				  const char *id, size_t id_len,
+				  const char *oid, size_t id_len,
 				  unsigned long line)
 {
-    /*const char *oid = id;*/
+    const YYCTYPE *id = (const YYCTYPE *)oid;
     /*const char *marker;*/
     /*!re2c
 	/* instructions */

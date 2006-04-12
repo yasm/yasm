@@ -29,7 +29,7 @@
 
 #include "nasm-bison.h"
 
-#define YYCTYPE		char
+#define YYCTYPE		unsigned char
 typedef struct Scanner {
     YYCTYPE		*bot, *tok, *ptr, *cur, *pos, *lim, *top, *eof;
     unsigned int	tchar, tline, cline;

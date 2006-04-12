@@ -144,7 +144,7 @@ input: /* empty */
 	if (parser_gas->save_input)
 	    yasm_linemap_add_source(parser_gas->linemap,
 		parser_gas->prev_bc,
-		parser_gas->save_line[parser_gas->save_last ^ 1]);
+		(char *)parser_gas->save_line[parser_gas->save_last ^ 1]);
 	yasm_linemap_goto_next(parser_gas->linemap);
     }
 ;
