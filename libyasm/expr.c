@@ -373,8 +373,10 @@ expr_xform_neg(/*@returned@*/ /*@only@*/ yasm_expr *e)
 static int
 expr_is_constant(yasm_expr_op op, yasm_intnum *intn)
 {
-    return ((yasm_intnum_is_zero(intn) && op == YASM_EXPR_MUL) ||
-	    (yasm_intnum_is_zero(intn) && op == YASM_EXPR_AND) ||
+    int iszero = yasm_intnum_is_zero(intn);
+    return ((iszero && op == YASM_EXPR_MUL) ||
+	    (iszero && op == YASM_EXPR_AND) ||
+	    (iszero && op == YASM_EXPR_LAND) ||
 	    (yasm_intnum_is_neg1(intn) && op == YASM_EXPR_OR));
 }
 
@@ -382,24 +384,31 @@ expr_is_constant(yasm_expr_op op, yasm_intnum *intn)
 static int
 expr_can_destroy_int_left(yasm_expr_op op, yasm_intnum *intn)
 {
+    int iszero = yasm_intnum_is_zero(intn);
     return ((yasm_intnum_is_pos1(intn) && op == YASM_EXPR_MUL) ||
-	    (yasm_intnum_is_zero(intn) && op == YASM_EXPR_ADD) ||
+	    (iszero && op == YASM_EXPR_ADD) ||
 	    (yasm_intnum_is_neg1(intn) && op == YASM_EXPR_AND) ||
-	    (yasm_intnum_is_zero(intn) && op == YASM_EXPR_OR));
+	    (!iszero && op == YASM_EXPR_LAND) ||
+	    (iszero && op == YASM_EXPR_OR) ||
+	    (iszero && op == YASM_EXPR_LOR));
 }
 
 /* Look for simple "right" identities like x+|-0, x*&/1 */
 static int
 expr_can_destroy_int_right(yasm_expr_op op, yasm_intnum *intn)
 {
-    return ((yasm_intnum_is_pos1(intn) && op == YASM_EXPR_MUL) ||
-	    (yasm_intnum_is_pos1(intn) && op == YASM_EXPR_DIV) ||
-	    (yasm_intnum_is_zero(intn) && op == YASM_EXPR_ADD) ||
-	    (yasm_intnum_is_zero(intn) && op == YASM_EXPR_SUB) ||
+    int iszero = yasm_intnum_is_zero(intn);
+    int ispos1 = yasm_intnum_is_pos1(intn);
+    return ((ispos1 && op == YASM_EXPR_MUL) ||
+	    (ispos1 && op == YASM_EXPR_DIV) ||
+	    (iszero && op == YASM_EXPR_ADD) ||
+	    (iszero && op == YASM_EXPR_SUB) ||
 	    (yasm_intnum_is_neg1(intn) && op == YASM_EXPR_AND) ||
-	    (yasm_intnum_is_zero(intn) && op == YASM_EXPR_OR) ||
-	    (yasm_intnum_is_zero(intn) && op == YASM_EXPR_SHL) ||
-	    (yasm_intnum_is_zero(intn) && op == YASM_EXPR_SHR));
+	    (!iszero && op == YASM_EXPR_LAND) ||
+	    (iszero && op == YASM_EXPR_OR) ||
+	    (iszero && op == YASM_EXPR_LOR) ||
+	    (iszero && op == YASM_EXPR_SHL) ||
+	    (iszero && op == YASM_EXPR_SHR));
 }
 
 /* Check for and simplify identities.  Returns new number of expr terms.
@@ -476,9 +485,10 @@ expr_simplify_identity(yasm_expr *e, int numterms, int int_term,
 	numterms = 1;
     }
 
-    /* Compute NOT and NEG on single intnum. */
+    /* Compute NOT, NEG, and LNOT on single intnum. */
     if (numterms == 1 && int_term == 0 &&
-	(e->op == YASM_EXPR_NOT || e->op == YASM_EXPR_NEG))
+	(e->op == YASM_EXPR_NOT || e->op == YASM_EXPR_NEG ||
+	 e->op == YASM_EXPR_LNOT))
 	yasm_intnum_calc(e->terms[0].data.intn, e->op, NULL, e->line);
 
     /* Change expression to IDENT if possible. */
@@ -598,7 +608,8 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
      */
     if ((e->op != YASM_EXPR_ADD && e->op != YASM_EXPR_MUL &&
 	 e->op != YASM_EXPR_OR && e->op != YASM_EXPR_AND &&
-	 e->op != YASM_EXPR_XOR) ||
+	 e->op != YASM_EXPR_LOR && e->op != YASM_EXPR_LAND &&
+	 e->op != YASM_EXPR_LXOR && e->op != YASM_EXPR_XOR) ||
 	level_numterms <= fold_numterms) {
 	/* Downsize e if necessary */
 	if (fold_numterms < e->numterms && e->numterms > 2)
@@ -846,6 +857,9 @@ yasm_expr__order_terms(yasm_expr *e)
 	case YASM_EXPR_OR:
 	case YASM_EXPR_AND:
 	case YASM_EXPR_XOR:
+	case YASM_EXPR_LOR:
+	case YASM_EXPR_LAND:
+	case YASM_EXPR_LXOR:
 	    /* Use mergesort to sort.  It's fast on already sorted values and a
 	     * stable sort (multiple terms of same type are kept in the same
 	     * order).
@@ -1188,6 +1202,9 @@ yasm_expr_print(const yasm_expr *e, FILE *f)
 	case YASM_EXPR_XOR:
 	    strcpy(opstr, "^");
 	    break;
+	case YASM_EXPR_XNOR:
+	    strcpy(opstr, "XNOR");
+	    break;
 	case YASM_EXPR_NOR:
 	    strcpy(opstr, "NOR");
 	    break;
@@ -1205,6 +1222,15 @@ yasm_expr_print(const yasm_expr *e, FILE *f)
 	    break;
 	case YASM_EXPR_LNOT:
 	    strcpy(opstr, "!");
+	    break;
+	case YASM_EXPR_LXOR:
+	    strcpy(opstr, "^^");
+	    break;
+	case YASM_EXPR_LXNOR:
+	    strcpy(opstr, "LXNOR");
+	    break;
+	case YASM_EXPR_LNOR:
+	    strcpy(opstr, "LNOR");
 	    break;
 	case YASM_EXPR_LT:
 	    strcpy(opstr, "<");

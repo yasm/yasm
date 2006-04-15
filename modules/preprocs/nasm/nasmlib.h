@@ -32,7 +32,7 @@
  * Convert a string into a number, using NASM number rules. Sets
  * `*error' to TRUE if an error occurs, and FALSE otherwise.
  */
-long nasm_readnum(char *str, int *error);
+yasm_intnum *nasm_readnum(char *str, int *error);
 
 /*
  * Convert a character constant into a number. Sets
@@ -40,36 +40,7 @@ long nasm_readnum(char *str, int *error);
  * str points to and length covers the middle of the string,
  * without the quotes.
  */
-long nasm_readstrnum(char *str, int length, int *warn);
-
-/*
- * seg_init: Initialise the segment-number allocator.
- * seg_alloc: allocate a hitherto unused segment number.
- */
-void nasm_seg_init(void);
-long nasm_seg_alloc(void);
-
-#ifdef YASM_NASM_H
-/*
- * Library routines to manipulate expression data types.
- */
-int nasm_is_reloc(nasm_expr *);
-int nasm_is_simple(nasm_expr *);
-int nasm_is_really_simple (nasm_expr *);
-int nasm_is_unknown(nasm_expr *);
-int nasm_is_just_unknown(nasm_expr *);
-long nasm_reloc_value(nasm_expr *);
-long nasm_reloc_seg(nasm_expr *);
-long nasm_reloc_wrt(nasm_expr *);
-#endif
-
-/*
- * Binary search routine. Returns index into `array' of an entry
- * matching `string', or <0 if no match. `array' is taken to
- * contain `size' elements.
- */
-int nasm_bsi (char *string, const char **array, int size);
-
+yasm_intnum *nasm_readstrnum(char *str, int length, int *warn);
 
 char *nasm_src_set_fname(char *newname);
 char *nasm_src_get_fname(void);
@@ -84,6 +55,6 @@ long nasm_src_get_linnum(void);
 int nasm_src_get(long *xline, char **xname);
 
 void nasm_quote(char **str);
-char *nasm_strcat(char *one, char *two);
+char *nasm_strcat(const char *one, const char *two);
 
 #endif

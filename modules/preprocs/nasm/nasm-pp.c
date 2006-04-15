@@ -35,6 +35,8 @@
  */
 #include <util.h>
 #include <libyasm/coretype.h>
+#include <libyasm/intnum.h>
+#include <libyasm/expr.h>
 #include <libyasm/file.h>
 #include <stdarg.h>
 #include <ctype.h>
@@ -88,7 +90,7 @@ struct MMacro
     MMacro *next;
     char *name;
     int casesense;
-    int nparam_min, nparam_max;
+    long nparam_min, nparam_max;
     int plus;			/* is the last parameter greedy? */
     int nolist;			/* is this macro listing-inhibited? */
     int in_progress;
@@ -101,7 +103,7 @@ struct MMacro
     MMacro *rep_nest;		/* used for nesting %rep */
     Token **params;		/* actual parameters */
     Token *iline;		/* invocation line */
-    int nparam, rotate, *paramlen;
+    long nparam, rotate, *paramlen;
     unsigned long unique;
     int lineno;			/* Current line number on expansion */
 };
@@ -415,7 +417,7 @@ static Token *expand_mmac_params(Token * tline);
 static Token *expand_smacro(Token * tline);
 static Token *expand_id(Token * tline);
 static Context *get_ctx(char *name, int all_contexts);
-static void make_tok_num(Token * tok, long val);
+static void make_tok_num(Token * tok, yasm_intnum *val);
 static void error(int severity, const char *fmt, ...);
 static void *new_Block(size_t size);
 static void delete_Blocks(void);
@@ -1422,7 +1424,8 @@ if_condition(Token * tline, int i)
     int j, casesense;
     Token *t, *tt, **tptr, *origline;
     struct tokenval tokval;
-    nasm_expr *evalresult;
+    yasm_expr *evalresult;
+    yasm_intnum *intn;
 
     origline = tline;
 
@@ -1589,8 +1592,10 @@ if_condition(Token * tline, int i)
 	    }
 	    else
 	    {
+		intn = nasm_readnum(tline->text, &j);
 		searching.nparam_min = searching.nparam_max =
-			nasm_readnum(tline->text, &j);
+		    yasm_intnum_get_int(intn);
+		yasm_intnum_destroy(intn);
 		if (j)
 		    error(ERR_NONFATAL,
 			  "unable to parse parameter count `%s'",
@@ -1607,7 +1612,9 @@ if_condition(Token * tline, int i)
 			  directives[i]);
 		else
 		{
-		    searching.nparam_max = nasm_readnum(tline->text, &j);
+		    intn = nasm_readnum(tline->text, &j);
+		    searching.nparam_max = yasm_intnum_get_int(intn);
+		    yasm_intnum_destroy(intn);
 		    if (j)
 			error(ERR_NONFATAL,
 				"unable to parse parameter count `%s'",
@@ -1694,21 +1701,25 @@ if_condition(Token * tline, int i)
 	    t = tline = expand_smacro(tline);
 	    tptr = &t;
 	    tokval.t_type = TOKEN_INVALID;
-	    evalresult = evaluate(ppscan, tptr, &tokval,
-		    NULL, pass | CRITICAL, error, NULL);
+	    evalresult = evaluate(ppscan, tptr, &tokval, pass | CRITICAL,
+				  error);
 	    free_tlist(tline);
 	    if (!evalresult)
 		return -1;
 	    if (tokval.t_type)
 		error(ERR_WARNING,
 			"trailing garbage after expression ignored");
-	    if (!nasm_is_simple(evalresult))
+	    intn = yasm_expr_get_intnum(&evalresult, NULL);
+	    if (!intn)
 	    {
 		error(ERR_NONFATAL,
 			"non-constant value given to `%s'", directives[i]);
+		yasm_expr_destroy(evalresult);
 		return -1;
 	    }
-	    return nasm_reloc_value(evalresult) != 0;
+	    j = !yasm_intnum_is_zero(intn);
+	    yasm_expr_destroy(evalresult);
+	    return j;
 
 	default:
 	    error(ERR_FATAL,
@@ -1758,8 +1769,9 @@ do_directive(Token * tline)
     Token *t, *tt, *param_start, *macro_start, *last, **tptr, *origline;
     Line *l;
     struct tokenval tokval;
-    nasm_expr *evalresult;
+    yasm_expr *evalresult;
     MMacro *tmp_defining;	/* Used when manipulating rep_nest */
+    yasm_intnum *intn;
 
     origline = tline;
 
@@ -2341,8 +2353,10 @@ do_directive(Token * tline)
 	    }
 	    else
 	    {
+		intn = nasm_readnum(tline->text, &j);
 		defining->nparam_min = defining->nparam_max =
-			nasm_readnum(tline->text, &j);
+		    yasm_intnum_get_int(intn);
+		yasm_intnum_destroy(intn);
 		if (j)
 		    error(ERR_NONFATAL,
 			    "unable to parse parameter count `%s'",
@@ -2359,7 +2373,9 @@ do_directive(Token * tline)
 			    (i == PP_IMACRO ? "i" : ""));
 		else
 		{
-		    defining->nparam_max = nasm_readnum(tline->text, &j);
+		    intn = nasm_readnum(tline->text, &j);
+		    defining->nparam_max = yasm_intnum_get_int(intn);
+		    yasm_intnum_destroy(intn);
 		    if (j)
 			error(ERR_NONFATAL,
 				"unable to parse parameter count `%s'",
@@ -2445,17 +2461,18 @@ do_directive(Token * tline)
 	    tline = t;
 	    tptr = &t;
 	    tokval.t_type = TOKEN_INVALID;
-	    evalresult =
-		    evaluate(ppscan, tptr, &tokval, NULL, pass, error, NULL);
+	    evalresult = evaluate(ppscan, tptr, &tokval, pass, error);
 	    free_tlist(tline);
 	    if (!evalresult)
 		return DIRECTIVE_FOUND;
 	    if (tokval.t_type)
 		error(ERR_WARNING,
 			"trailing garbage after expression ignored");
-	    if (!nasm_is_simple(evalresult))
+	    intn = yasm_expr_get_intnum(&evalresult, NULL);
+	    if (!intn)
 	    {
 		error(ERR_NONFATAL, "non-constant value given to `%%rotate'");
+		yasm_expr_destroy(evalresult);
 		return DIRECTIVE_FOUND;
 	    }
 	    mmac = istk->mstk;
@@ -2473,13 +2490,14 @@ do_directive(Token * tline)
 	    }
 	    else
 	    {
-		mmac->rotate = mmac->rotate + nasm_reloc_value(evalresult);
+		mmac->rotate = mmac->rotate + yasm_intnum_get_int(intn);
 		
 		if (mmac->rotate < 0)
 		    mmac->rotate = 
 			mmac->nparam - (-mmac->rotate) % mmac->nparam;
 		mmac->rotate %= mmac->nparam;
 	    }
+	    yasm_expr_destroy(evalresult);
 	    return DIRECTIVE_FOUND;
 
 	case PP_REP:
@@ -2502,8 +2520,7 @@ do_directive(Token * tline)
 		t = expand_smacro(tline);
 		tptr = &t;
 		tokval.t_type = TOKEN_INVALID;
-		evalresult =
-		    evaluate(ppscan, tptr, &tokval, NULL, pass, error, NULL);
+		evalresult = evaluate(ppscan, tptr, &tokval, pass, error);
 		if (!evalresult)
 		{
 		    free_tlist(origline);
@@ -2512,12 +2529,15 @@ do_directive(Token * tline)
 		if (tokval.t_type)
 		    error(ERR_WARNING,
 			  "trailing garbage after expression ignored");
-		if (!nasm_is_simple(evalresult))
+		intn = yasm_expr_get_intnum(&evalresult, NULL);
+		if (!intn)
 		{
 		    error(ERR_NONFATAL, "non-constant value given to `%%rep'");
+		    yasm_expr_destroy(evalresult);
 		    return DIRECTIVE_FOUND;
 		}
-		i = (int)nasm_reloc_value(evalresult) + 1;
+		i = (int)yasm_intnum_get_int(intn) + 1;
+		yasm_expr_destroy(evalresult);
 	    }
 	    else
 	    {
@@ -2816,7 +2836,8 @@ do_directive(Token * tline)
 
 	    macro_start = nasm_malloc(sizeof(*macro_start));
 	    macro_start->next = NULL;
-	    make_tok_num(macro_start, (int)strlen(t->text) - 2);
+	    make_tok_num(macro_start,
+			 yasm_intnum_create_uint(strlen(t->text) - 2));
 	    macro_start->mac = NULL;
 
 	    /*
@@ -2896,34 +2917,36 @@ do_directive(Token * tline)
 	    tt = t->next;
 	    tptr = &tt;
 	    tokval.t_type = TOKEN_INVALID;
-	    evalresult =
-		    evaluate(ppscan, tptr, &tokval, NULL, pass, error, NULL);
+	    evalresult = evaluate(ppscan, tptr, &tokval, pass, error);
 	    if (!evalresult)
 	    {
 		free_tlist(tline);
 		free_tlist(origline);
 		return DIRECTIVE_FOUND;
 	    }
-	    if (!nasm_is_simple(evalresult))
+	    intn = yasm_expr_get_intnum(&evalresult, NULL);
+	    if (!intn)
 	    {
 		error(ERR_NONFATAL, "non-constant value given to `%%substr`");
 		free_tlist(tline);
 		free_tlist(origline);
+		yasm_expr_destroy(evalresult);
 		return DIRECTIVE_FOUND;
 	    }
 
 	    macro_start = nasm_malloc(sizeof(*macro_start));
 	    macro_start->next = NULL;
 	    macro_start->text = nasm_strdup("'''");
-	    if (evalresult->value > 0
-		    && evalresult->value < (int)strlen(t->text) - 1)
+	    if (yasm_intnum_sign(intn) == 1
+		    && yasm_intnum_get_uint(intn) < strlen(t->text) - 1)
 	    {
-		macro_start->text[1] = t->text[evalresult->value];
+		macro_start->text[1] = t->text[yasm_intnum_get_uint(intn)];
 	    }
 	    else
 	    {
 		macro_start->text[2] = '\0';
 	    }
+	    yasm_expr_destroy(evalresult);
 	    macro_start->type = TOK_STRING;
 	    macro_start->mac = NULL;
 
@@ -2993,8 +3016,7 @@ do_directive(Token * tline)
 	    t = tline;
 	    tptr = &t;
 	    tokval.t_type = TOKEN_INVALID;
-	    evalresult =
-		    evaluate(ppscan, tptr, &tokval, NULL, pass, error, NULL);
+	    evalresult = evaluate(ppscan, tptr, &tokval, pass, error);
 	    free_tlist(tline);
 	    if (!evalresult)
 	    {
@@ -3006,18 +3028,21 @@ do_directive(Token * tline)
 		error(ERR_WARNING,
 			"trailing garbage after expression ignored");
 
-	    if (!nasm_is_simple(evalresult))
+	    intn = yasm_expr_get_intnum(&evalresult, NULL);
+	    if (!intn)
 	    {
 		error(ERR_NONFATAL,
 			"non-constant value given to `%%%sassign'",
 			(i == PP_IASSIGN ? "i" : ""));
 		free_tlist(origline);
+		yasm_expr_destroy(evalresult);
 		return DIRECTIVE_FOUND;
 	    }
 
 	    macro_start = nasm_malloc(sizeof(*macro_start));
 	    macro_start->next = NULL;
-	    make_tok_num(macro_start, nasm_reloc_value(evalresult));
+	    make_tok_num(macro_start, yasm_intnum_copy(intn));
+	    yasm_expr_destroy(evalresult);
 	    macro_start->mac = NULL;
 
 	    /*
@@ -3068,7 +3093,9 @@ do_directive(Token * tline)
 		free_tlist(origline);
 		return DIRECTIVE_FOUND;
 	    }
-	    k = nasm_readnum(tline->text, &j);
+	    intn = nasm_readnum(tline->text, &j);
+	    k = yasm_intnum_get_int(intn);
+	    yasm_intnum_destroy(intn);
 	    m = 1;
 	    tline = tline->next;
 	    if (tok_is_(tline, "+"))
@@ -3080,7 +3107,9 @@ do_directive(Token * tline)
 		    free_tlist(origline);
 		    return DIRECTIVE_FOUND;
 		}
-		m = nasm_readnum(tline->text, &j);
+		intn = nasm_readnum(tline->text, &j);
+		m = yasm_intnum_get_int(intn);
+		yasm_intnum_destroy(intn);
 		tline = tline->next;
 	    }
 	    skip_white_(tline);
@@ -3187,7 +3216,7 @@ expand_mmac_params(Token * tline)
 			 */
 		    case '0':
 			type = TOK_NUMBER;
-			sprintf(tmpbuf, "%d", mac->nparam);
+			sprintf(tmpbuf, "%ld", mac->nparam);
 			text = nasm_strdup(tmpbuf);
 			break;
 		    case '%':
@@ -3420,7 +3449,7 @@ expand_smacro(Token * tline)
 			if (!strcmp("__LINE__", m->name))
 			{
 			    nasm_free(tline->text);
-			    make_tok_num(tline, nasm_src_get_linnum());
+			    make_tok_num(tline, yasm_intnum_create_int(nasm_src_get_linnum()));
 			    continue;
 			}
 			tline = delete_Token(tline);
@@ -3901,7 +3930,8 @@ expand_mmacro(Token * tline)
     Token **params, *t, *tt;
     MMacro *m;
     Line *l, *ll;
-    int i, nparam, *paramlen;
+    int i, nparam;
+    long *paramlen;
 
     t = tline;
     skip_white_(t);
@@ -4098,7 +4128,7 @@ pp_reset(FILE *f, const char *file, int apass, efunc errfunc, evalfunc eval,
     istk->mstk = NULL;
     istk->fp = f;
     istk->fname = NULL;
-    nasm_src_set_fname(nasm_strdup(file));
+    nasm_free(nasm_src_set_fname(nasm_strdup(file)));
     nasm_src_set_linnum(0);
     istk->lineinc = 1;
     defining = NULL;
@@ -4506,11 +4536,9 @@ pp_extra_stdmac(const char **macros)
 }
 
 static void
-make_tok_num(Token * tok, long val)
+make_tok_num(Token * tok, yasm_intnum *val)
 {
-    char numbuf[20];
-    sprintf(numbuf, "%ld", val);
-    tok->text = nasm_strdup(numbuf);
+    tok->text = yasm_intnum_get_str(val);
     tok->type = TOK_NUMBER;
 }
 

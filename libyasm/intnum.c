@@ -396,6 +396,10 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
 	case YASM_EXPR_XOR:
 	    Set_ExclusiveOr(result, op1, op2);
 	    break;
+	case YASM_EXPR_XNOR:
+	    Set_ExclusiveOr(result, op1, op2);
+	    Set_Complement(result, result);
+	    break;
 	case YASM_EXPR_NOR:
 	    Set_Union(result, op1, op2);
 	    Set_Complement(result, result);
@@ -427,6 +431,21 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
 	case YASM_EXPR_LNOT:
 	    BitVector_Empty(result);
 	    BitVector_LSB(result, BitVector_is_empty(op1));
+	    break;
+	case YASM_EXPR_LXOR:
+	    BitVector_Empty(result);
+	    BitVector_LSB(result, !BitVector_is_empty(op1) ^
+			  !BitVector_is_empty(op2));
+	    break;
+	case YASM_EXPR_LXNOR:
+	    BitVector_Empty(result);
+	    BitVector_LSB(result, !(!BitVector_is_empty(op1) ^
+			  !BitVector_is_empty(op2)));
+	    break;
+	case YASM_EXPR_LNOR:
+	    BitVector_Empty(result);
+	    BitVector_LSB(result, !(!BitVector_is_empty(op1) ||
+			  !BitVector_is_empty(op2)));
 	    break;
 	case YASM_EXPR_EQ:
 	    BitVector_Empty(result);
@@ -857,6 +876,25 @@ yasm_size_uleb128(unsigned long v)
     BitVector_Empty(val);
     BitVector_Chunk_Store(val, 32, 0, v);
     return size_leb128(val, 0);
+}
+
+char *
+yasm_intnum_get_str(const yasm_intnum *intn)
+{
+    unsigned char *s;
+
+    switch (intn->type) {
+	case INTNUM_UL:
+	    s = yasm_xmalloc(16);
+	    sprintf((char *)s, "%lu", intn->val.ul);
+	    return (char *)s;
+	    break;
+	case INTNUM_BV:
+	    return (char *)BitVector_to_Dec(intn->val.bv);
+	    break;
+    }
+    /*@notreached@*/
+    return NULL;
 }
 
 void

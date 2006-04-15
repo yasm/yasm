@@ -251,6 +251,14 @@ unsigned long yasm_get_uleb128(unsigned long v, unsigned char *ptr);
  */
 unsigned long yasm_size_uleb128(unsigned long v);
 
+/** Get an intnum as a signed decimal string.  The returned string will
+ * contain a leading '-' if the intnum is negative.
+ * \param intn	intnum
+ * \return Newly allocated string containing the decimal representation of
+ *         the intnum.
+ */
+/*@only@*/ char *yasm_intnum_get_str(const yasm_intnum *intn);
+
 /** Print an intnum.  For debugging purposes.
  * \param f	file
  * \param intn	intnum
