@@ -36,6 +36,8 @@ cdef extern from "libyasm/intnum.h":
     cdef yasm_intnum *yasm_intnum_create_int(long i)
     cdef yasm_intnum *yasm_intnum_create_leb128(unsigned char *ptr,
             int sign, unsigned long *size, unsigned long line)
+    cdef yasm_intnum *yasm_intnum_create_sized(unsigned char *ptr, int sign,
+            size_t srcsize, int bigendian, unsigned long line)
     cdef yasm_intnum *yasm_intnum_copy(yasm_intnum *intn)
     cdef void yasm_intnum_destroy(yasm_intnum *intn)
     cdef void yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op,
@@ -63,11 +65,12 @@ cdef extern from "libyasm/intnum.h":
     cdef unsigned long yasm_size_uleb128(unsigned long v)
     cdef void yasm_intnum_print(yasm_intnum *intn, FILE *f)
 
-# TODO: rework __new__ / __int__ / __long__ to support > int values
 cdef class IntNum:
     cdef yasm_intnum *intn
 
     def __new__(self, value, base=None):
+        cdef unsigned char buf[16]
+
         self.intn = NULL
 
         if isinstance(value, IntNum):
@@ -79,29 +82,29 @@ cdef class IntNum:
 
         val = None
         if isinstance(value, str):
-            val = int(value, base)
+            val = long(value, base)
         elif isinstance(value, (int, long)):
-            val = value
+            val = long(value)
 
         if val is None:
             raise ValueError
 
-        if val < 0:
-            self.intn = yasm_intnum_create_int(val)
-        else:
-            self.intn = yasm_intnum_create_uint(val)
+        _PyLong_AsByteArray(val, buf, 16, 1, 1)
+        self.intn = yasm_intnum_create_sized(buf, 1, 16, 0, 0)
 
     def __dealloc__(self):
         if self.intn != NULL: yasm_intnum_destroy(self.intn)
 
+    def __long__(self):
+        cdef unsigned char buf[16]
+        yasm_intnum_get_sized(self.intn, buf, 16, 128, 0, 0, 0, 0)
+        return _PyLong_FromByteArray(buf, 16, 1, 1)
+
     def __int__(self):
-        if yasm_intnum_sign(self.intn) < 0:
-            return yasm_intnum_get_int(self.intn)
-        else:
-            return yasm_intnum_get_uint(self.intn)
+        return int(self.__long__())
 
     def __repr__(self):
-        return str(int(self))
+        return "IntNum(%s)" % str(int(self))
 
     def __op(self, op, o=None):
         lhs = IntNum(self)

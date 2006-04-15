@@ -92,7 +92,7 @@ void yasm_intnum_cleanup(void);
 
 /** Create a new intnum from LEB128-encoded form.
  * \param ptr	pointer to start of LEB128 encoded form
- * \param sign	signed (1) or unsiged (0) LEB128 format
+ * \param sign	signed (1) or unsigned (0) LEB128 format
  * \param size	number of bytes read from ptr (output)
  * \param line	virtual line (where the number came from)
  * \return Newly allocated intnum.  Number of bytes read returned into
@@ -100,6 +100,18 @@ void yasm_intnum_cleanup(void);
  */
 /*@only@*/ yasm_intnum *yasm_intnum_create_leb128
     (const unsigned char *ptr, int sign, /*@out@*/ unsigned long *size,
+     unsigned long line);
+
+/** Create a new intnum from a little-endian or big-endian buffer.
+ * In little endian, the LSB is in ptr[0].
+ * \param ptr	    pointer to start of buffer
+ * \param sign	    signed (1) or unsigned (0) source
+ * \param srcsize   source buffer size (in bytes)
+ * \param bigendian endianness (nonzero=big, zero=little)
+ * \param line      virtual line; may be 0 if warn is 0
+ */
+/*@only@*/ yasm_intnum *yasm_intnum_create_sized
+    (unsigned char *ptr, int sign, size_t srcsize, int bigendian,
      unsigned long line);
 
 /** Duplicate an intnum.

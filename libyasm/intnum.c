@@ -297,6 +297,44 @@ yasm_intnum_create_leb128(const unsigned char *ptr, int sign,
 }
 
 yasm_intnum *
+yasm_intnum_create_sized(unsigned char *ptr, int sign, size_t srcsize,
+			 int bigendian, unsigned long line)
+{
+    yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
+    unsigned long i = 0;
+
+    intn->origsize = 0;
+
+    if (srcsize*8 > BITVECT_NATIVE_SIZE)
+	yasm__warning(YASM_WARN_GENERAL, line,
+		      N_("Numeric constant too large for internal format"));
+
+    /* Read the buffer into a bitvect */
+    BitVector_Empty(conv_bv);
+    if (bigendian) {
+	/* TODO */
+	yasm_internal_error(N_("big endian not implemented"));
+    } else {
+	for (i = 0; i < srcsize; i++)
+	    BitVector_Chunk_Store(conv_bv, 8, i*8, ptr[i]);
+    }
+
+    /* Sign extend if needed */
+    if (srcsize*8 < BITVECT_NATIVE_SIZE && sign && (ptr[i] & 0x80) == 0x80)
+	BitVector_Interval_Fill(conv_bv, i*8, BITVECT_NATIVE_SIZE-1);
+
+    if (Set_Max(conv_bv) < 32) {
+	intn->type = INTNUM_UL;
+	intn->val.ul = BitVector_Chunk_Read(conv_bv, 32, 0);
+    } else {
+	intn->type = INTNUM_BV;
+	intn->val.bv = BitVector_Clone(conv_bv);
+    }
+
+    return intn;
+}
+
+yasm_intnum *
 yasm_intnum_copy(const yasm_intnum *intn)
 {
     yasm_intnum *n = yasm_xmalloc(sizeof(yasm_intnum));
@@ -881,17 +919,30 @@ yasm_size_uleb128(unsigned long v)
 char *
 yasm_intnum_get_str(const yasm_intnum *intn)
 {
-    unsigned char *s;
+    char *s, *s2;
 
     switch (intn->type) {
 	case INTNUM_UL:
-	    s = yasm_xmalloc(16);
-	    sprintf((char *)s, "%lu", intn->val.ul);
-	    return (char *)s;
-	    break;
+	    s = yasm_xmalloc(20);
+	    sprintf(s, "0x%lx", intn->val.ul);
+	    return s;
 	case INTNUM_BV:
-	    return (char *)BitVector_to_Dec(intn->val.bv);
-	    break;
+	    if (BitVector_msb_(intn->val.bv)) {
+		/* it's negative: negate the bitvector to get positive */
+		BitVector_Negate(conv_bv, intn->val.bv);
+		s2 = (char *)BitVector_to_Hex(conv_bv);
+		s = yasm_xmalloc(strlen(s2)+4);
+		strcpy(s, "-0x");
+		strcat(s, s2);
+		yasm_xfree(s2);
+	    } else {
+		s2 = (char *)BitVector_to_Hex(intn->val.bv);
+		s = yasm_xmalloc(strlen(s2)+3);
+		strcpy(s, "0x");
+		strcat(s, s2);
+		yasm_xfree(s2);
+	    }
+	    return s;
     }
     /*@notreached@*/
     return NULL;

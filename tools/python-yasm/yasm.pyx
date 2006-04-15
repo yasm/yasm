@@ -22,6 +22,23 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+"""Interface to the Yasm library.
+
+The Yasm library (aka libyasm) provides the core functionality of the Yasm
+assembler.  Classes in this library provide for manipulation of machine
+instructions and object file constructs such as symbol tables and sections.
+
+Expression objects encapsulate complex expressions containing registers,
+symbols, and operations such as SEG.
+
+Bytecode objects encapsulate data or code objects such as data, reserve,
+align, or instructions.
+
+Section objects encapsulate an object file section, including the section
+name, any Bytecode objects contained within that section, and other
+information.
+
+"""
 
 cdef extern from "Python.h":
     cdef object PyCObject_FromVoidPtr(void *cobj, void (*destr)(void *))
@@ -30,6 +47,11 @@ cdef extern from "Python.h":
     cdef int PyCObject_Check(object)
     cdef void *PyCObject_AsVoidPtr(object)
     cdef void *PyCObject_GetDesc(object)
+
+    cdef object _PyLong_FromByteArray(unsigned char *bytes, unsigned int n,
+                                      int little_endian, int is_signed)
+    cdef int _PyLong_AsByteArray(object v, unsigned char *bytes, unsigned int n,
+                                 int little_endian, int is_signed) except -1
 
 cdef extern from "libyasm/compat-queue.h":
     pass
