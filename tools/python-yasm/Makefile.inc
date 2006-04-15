@@ -28,7 +28,7 @@ python-setup.txt: Makefile
 
 CLEANFILES += python-setup.txt
 
-.python-build: python-setup.txt yasm_python.c
+.python-build: python-setup.txt yasm_python.c ${libyasm_a_SOURCES}
 	$(PYTHON) `test -f tools/python-yasm/setup.py || echo '$(srcdir)/'`tools/python-yasm/setup.py build
 	touch .python-build
 python-build: .python-build
