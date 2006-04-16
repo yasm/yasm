@@ -65,6 +65,32 @@ cdef extern from "libyasm/intnum.h":
     cdef unsigned long yasm_size_uleb128(unsigned long v)
     cdef void yasm_intnum_print(yasm_intnum *intn, FILE *f)
 
+cdef class IntNum
+
+cdef object __intnum_op(object x, yasm_expr_op op, object y):
+    if isinstance(x, IntNum):
+        result = IntNum(x)
+        if y is None:
+            yasm_intnum_calc((<IntNum>result).intn, op, NULL, 0)
+        else:
+            # Coerce to intnum if not already
+            if isinstance(y, IntNum):
+                rhs = y
+            else:
+                rhs = IntNum(y)
+            yasm_intnum_calc((<IntNum>result).intn, op, (<IntNum>rhs).intn, 0)
+        return result
+    elif isinstance(y, IntNum):
+        # Reversed operation - x OP y still, just y is intnum, x isn't.
+        result = IntNum(x)
+        yasm_intnum_calc((<IntNum>result).intn, op, (<IntNum>y).intn, 0)
+        return result
+    else:
+        raise NotImplemented
+
+cdef object __make_intnum(yasm_intnum *intn):
+    return IntNum(PyCObject_FromVoidPtr(intn, NULL))
+
 cdef class IntNum:
     cdef yasm_intnum *intn
 
@@ -100,41 +126,75 @@ cdef class IntNum:
         yasm_intnum_get_sized(self.intn, buf, 16, 128, 0, 0, 0, 0)
         return _PyLong_FromByteArray(buf, 16, 1, 1)
 
-    def __int__(self):
-        return int(self.__long__())
-
     def __repr__(self):
-        return "IntNum(%s)" % str(int(self))
+        return "IntNum(%d)" % self
 
-    def __op(self, op, o=None):
-        lhs = IntNum(self)
-        if o is None:
-            yasm_intnum_calc((<IntNum>lhs).intn, op, NULL, 0)
-        else:
-            if isinstance(o, IntNum): rhs = o
-            else: rhs = IntNum(o)
-            yasm_intnum_calc((<IntNum>lhs).intn, op, (<IntNum>rhs).intn, 0)
-        return lhs
+    def __int__(self): return int(self.__long__())
+    def __complex__(self): return complex(self.__long__())
+    def __float__(self): return float(self.__long__())
 
-    def __add__(IntNum self, o): return self.__op(YASM_EXPR_ADD, o)
-    def __sub__(IntNum self, o): return self.__op(YASM_EXPR_SUB, o)
-    def __mul__(IntNum self, o): return self.__op(YASM_EXPR_MUL, o)
-    def __div__(IntNum self, o): return self.__op(YASM_EXPR_SIGNDIV, o)
-    def __floordiv__(IntNum self, o): return self.__op(YASM_EXPR_SIGNDIV, o)
-    def __mod__(IntNum self, o): return self.__op(YASM_EXPR_SIGNMOD, o)
-    def __neg__(IntNum self): return self.__op(YASM_EXPR_NEG)
-    def __pos__(IntNum self): return self
-    def __abs__(IntNum self):
+    def __oct__(self): return oct(int(self.__long__()))
+    def __hex__(self): return hex(int(self.__long__()))
+
+    def __add__(x, y): return __intnum_op(x, YASM_EXPR_ADD, y)
+    def __sub__(x, y): return __intnum_op(x, YASM_EXPR_SUB, y)
+    def __mul__(x, y): return __intnum_op(x, YASM_EXPR_MUL, y)
+    def __div__(x, y): return __intnum_op(x, YASM_EXPR_SIGNDIV, y)
+    def __floordiv__(x, y): return __intnum_op(x, YASM_EXPR_SIGNDIV, y)
+    def __mod__(x, y): return __intnum_op(x, YASM_EXPR_SIGNMOD, y)
+    def __neg__(self): return __intnum_op(self, YASM_EXPR_NEG, None)
+    def __pos__(self): return self
+    def __abs__(self):
         if yasm_intnum_sign(self.intn) >= 0: return self
-        else: return self.__op(YASM_EXPR_NEG)
-    def __nonzero__(IntNum self): return not yasm_intnum_is_zero(self.intn)
-    def __invert__(IntNum self): return self.__op(YASM_EXPR_NOT)
-    #def __lshift__(IntNum self, o)
-    #def __rshift__(IntNum self, o)
-    def __and__(IntNum self, o): return self.__op(YASM_EXPR_AND, o)
-    def __or__(IntNum self, o): return self.__op(YASM_EXPR_OR, o)
-    def __xor__(IntNum self, o): return self.__op(YASM_EXPR_XOR, o)
+        else: return __intnum_op(self, YASM_EXPR_NEG, None)
+    def __nonzero__(self): return not yasm_intnum_is_zero(self.intn)
+    def __invert__(self): return __intnum_op(self, YASM_EXPR_NOT, None)
+    def __lshift__(x, y): return __intnum_op(x, YASM_EXPR_SHL, y)
+    def __rshift__(x, y): return __intnum_op(x, YASM_EXPR_SHR, y)
+    def __and__(x, y): return __intnum_op(x, YASM_EXPR_AND, y)
+    def __or__(x, y): return __intnum_op(x, YASM_EXPR_OR, y)
+    def __xor__(x, y): return __intnum_op(x, YASM_EXPR_XOR, y)
 
-cdef object __make_intnum(yasm_intnum *intn):
-    return IntNum(PyCObject_FromVoidPtr(intn, NULL))
+    cdef object __op(self, yasm_expr_op op, object x):
+        if isinstance(x, IntNum):
+            rhs = x
+        else:
+            rhs = IntNum(x)
+        yasm_intnum_calc(self.intn, op, (<IntNum>rhs).intn, 0)
+        return self
 
+    def __iadd__(self, x): return self.__op(YASM_EXPR_ADD, x)
+    def __isub__(self, x): return self.__op(YASM_EXPR_SUB, x)
+    def __imul__(self, x): return self.__op(YASM_EXPR_MUL, x)
+    def __idiv__(self, x): return self.__op(YASM_EXPR_SIGNDIV, x)
+    def __ifloordiv__(self, x): return self.__op(YASM_EXPR_SIGNDIV, x)
+    def __imod__(self, x): return self.__op(YASM_EXPR_MOD, x)
+    def __ilshift__(self, x): return self.__op(YASM_EXPR_SHL, x)
+    def __irshift__(self, x): return self.__op(YASM_EXPR_SHR, x)
+    def __iand__(self, x): return self.__op(YASM_EXPR_AND, x)
+    def __ior__(self, x): return self.__op(YASM_EXPR_OR, x)
+    def __ixor__(self, x): return self.__op(YASM_EXPR_XOR, x)
+
+    def __cmp__(self, x):
+        cdef yasm_intnum *t
+        t = yasm_intnum_copy(self.intn)
+        if isinstance(x, IntNum):
+            rhs = x
+        else:
+            rhs = IntNum(x)
+        yasm_intnum_calc(t, YASM_EXPR_SUB, (<IntNum>rhs).intn, 0)
+        result = yasm_intnum_sign(t)
+        yasm_intnum_destroy(t)
+        return result
+
+    def __richcmp__(x, y, op):
+        cdef yasm_expr_op aop
+        if op == 0: aop = YASM_EXPR_LT
+        elif op == 1: aop = YASM_EXPR_LE
+        elif op == 2: aop = YASM_EXPR_EQ
+        elif op == 3: aop = YASM_EXPR_NE
+        elif op == 4: aop = YASM_EXPR_GT
+        elif op == 5: aop = YASM_EXPR_GE
+        else: raise NotImplemented
+        v = __intnum_op(x, aop, y)
+        return bool(not yasm_intnum_is_zero((<IntNum>v).intn))
