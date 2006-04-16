@@ -39,7 +39,7 @@ cdef extern from "libyasm/coretype.h":
 
     cdef struct yasm_assoc_data_callback:
         void (*destroy) (void *data)
-        void (*c_print "print") (void *data, FILE *f, int indent_level)
+        void (*print_ "print") (void *data, FILE *f, int indent_level)
 
     cdef struct yasm_bytecode
     cdef struct yasm_object
@@ -79,12 +79,16 @@ cdef extern from "libyasm/coretype.h":
         YASM_EXPR_OR
         YASM_EXPR_AND
         YASM_EXPR_XOR
+        YASM_EXPR_XNOR
         YASM_EXPR_NOR
         YASM_EXPR_SHL
         YASM_EXPR_SHR
         YASM_EXPR_LOR
         YASM_EXPR_LAND
         YASM_EXPR_LNOT
+        YASM_EXPR_LXOR
+        YASM_EXPR_LXNOR
+        YASM_EXPR_LNOR
         YASM_EXPR_LT
         YASM_EXPR_GT
         YASM_EXPR_EQ

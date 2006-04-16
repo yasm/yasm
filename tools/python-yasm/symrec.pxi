@@ -95,13 +95,61 @@ cdef class Symbol:
     def set_data(self, data): pass # TODO
         #yasm_symrec_set_data(self.sym, PyYasmAssocData, data)
 
+#
+# Use associated data mechanism to keep Symbol reference paired with symrec.
+#
+
+cdef class __assoc_data_callback:
+    cdef yasm_assoc_data_callback *cb
+    def __new__(self, destroy, print_):
+        self.cb = <yasm_assoc_data_callback *>malloc(sizeof(yasm_assoc_data_callback))
+        self.cb.destroy = <void (*) (void *)>PyCObject_AsVoidPtr(destroy)
+        self.cb.print_ = <void (*) (void *, FILE *, int)>PyCObject_AsVoidPtr(print_)
+    def __dealloc__(self):
+        free(self.cb)
+
+cdef void __python_symrec_cb_destroy(void *data):
+    Py_DECREF(<object>data)
+cdef void __python_symrec_cb_print(void *data, FILE *f, int indent_level):
+    pass
+__python_symrec_cb = __assoc_data_callback(
+        PyCObject_FromVoidPtr(&__python_symrec_cb_destroy, NULL),
+        PyCObject_FromVoidPtr(&__python_symrec_cb_print, NULL))
+
 cdef object __make_symbol(yasm_symrec *symrec):
-    return Symbol(PyCObject_FromVoidPtr(symrec, NULL))
+    cdef void *data
+    data = yasm_symrec_get_data(symrec,
+                                (<__assoc_data_callback>__python_symrec_cb).cb)
+    if data != NULL:
+        return <object>data
+    symbol = Symbol(PyCObject_FromVoidPtr(symrec, NULL))
+    yasm_symrec_add_data(symrec,
+                         (<__assoc_data_callback>__python_symrec_cb).cb,
+                         <void *>symbol)
+    Py_INCREF(symbol)       # We're keeping a reference on the C side!
+    return symbol
+
+#
+# Helpers for dict-like functions in SymbolTable.
+#
+
+cdef int __symtab_keys_helper(yasm_symrec *sym, void *d):
+    (<object>d).append(yasm_symrec_get_name(sym))
+    return 0
+
+cdef int __symtab_values_helper(yasm_symrec *sym, void *d):
+    (<object>d).append(__make_symbol(sym))
+    return 0
+
+cdef int __symtab_items_helper(yasm_symrec *sym, void *d):
+    (<object>d).append((yasm_symrec_get_name(sym), __make_symbol(sym)))
+    return 0
 
 cdef class Bytecode
 
 cdef class SymbolTable:
     cdef yasm_symtab *symtab
+
     def __new__(self):
         self.symtab = yasm_symtab_create()
 
@@ -112,25 +160,69 @@ cdef class SymbolTable:
         return __make_symbol(yasm_symtab_use(self.symtab, name, line))
 
     def define_equ(self, name, expr, line):
+        if not isinstance(expr, Expression):
+            raise TypeError
         return __make_symbol(yasm_symtab_define_equ(self.symtab, name,
                 (<Expression>expr).expr, line))
 
     def define_label(self, name, precbc, in_table, line):
+        if not isinstance(precbc, Bytecode):
+            raise TypeError
         return __make_symbol(yasm_symtab_define_label(self.symtab, name,
                 (<Bytecode>precbc).bc, in_table, line))
 
     def define_special(self, name, vis):
-        return __make_symbol(yasm_symtab_define_special(self.symtab, name, vis))
+        return __make_symbol(yasm_symtab_define_special(self.symtab, name,
+                                                        vis))
 
     def declare(self, name, vis, line):
         return __make_symbol(yasm_symtab_declare(self.symtab, name, vis, line))
 
-    #def traverse(self, func, *args, **kw):
-    #    return yasm_symtab_traverse(self.symtab, (args, kw), func)
-
-    #def parser_finalize(self, undef_extern, objfmt):
-    #    yasm_symtab_parser_finalize(self.symtab, undef_extern,
-    #            (<ObjectFormat>objfmt).objfmt)
+    #
+    # Methods to make SymbolTable behave like a dictionary of Symbols.
     #
 
+    def __getitem__(self, key):
+        cdef yasm_symrec *symrec
+        symrec = yasm_symtab_get(self.symtab, key)
+        if symrec == NULL:
+            raise KeyError
+        return __make_symbol(symrec)
+
+    def keys(self):
+        l = []
+        yasm_symtab_traverse(self.symtab, <void *>l, __symtab_keys_helper)
+        return l
+
+    def values(self):
+        l = []
+        yasm_symtab_traverse(self.symtab, <void *>l, __symtab_values_helper)
+        return l
+
+    def items(self):
+        l = []
+        yasm_symtab_traverse(self.symtab, <void *>l, __symtab_items_helper)
+        return l
+
+    def has_key(self, key):
+        cdef yasm_symrec *symrec
+        symrec = yasm_symtab_get(self.symtab, key)
+        return symrec != NULL
+
+    def get(self, key, x):
+        cdef yasm_symrec *symrec
+        symrec = yasm_symtab_get(self.symtab, key)
+        if symrec == NULL:
+            return x
+        return __make_symbol(symrec)
+
+#    def iterkeys(self): pass
+#
+#    def itervalues(self): pass
+
+    # This doesn't follow Python's guideline to make this iterkeys() for
+    # mappings, but makes more sense in this context, e.g. for sym in symtab.
+    #def __iter__(self): return self.itervalues()
+
+#    def iteritems(self): pass
 

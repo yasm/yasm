@@ -53,6 +53,13 @@ cdef extern from "Python.h":
     cdef int _PyLong_AsByteArray(object v, unsigned char *bytes, unsigned int n,
                                  int little_endian, int is_signed) except -1
 
+    cdef void Py_INCREF(object o)
+    cdef void Py_DECREF(object o)
+
+cdef extern from "stdlib.h":
+    cdef void *malloc(int n)
+    cdef void free(void *p)
+
 cdef extern from "libyasm/compat-queue.h":
     pass
 
