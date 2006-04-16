@@ -86,7 +86,7 @@ cdef object __intnum_op(object x, yasm_expr_op op, object y):
         yasm_intnum_calc((<IntNum>result).intn, op, (<IntNum>y).intn, 0)
         return result
     else:
-        raise NotImplemented
+        raise NotImplementedError
 
 cdef object __make_intnum(yasm_intnum *intn):
     return IntNum(PyCObject_FromVoidPtr(intn, NULL))
@@ -195,6 +195,6 @@ cdef class IntNum:
         elif op == 3: aop = YASM_EXPR_NE
         elif op == 4: aop = YASM_EXPR_GT
         elif op == 5: aop = YASM_EXPR_GE
-        else: raise NotImplemented
+        else: raise NotImplementedError
         v = __intnum_op(x, aop, y)
         return bool(not yasm_intnum_is_zero((<IntNum>v).intn))
