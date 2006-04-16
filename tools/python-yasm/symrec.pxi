@@ -189,6 +189,11 @@ cdef class SymbolTable:
             raise KeyError
         return __make_symbol(symrec)
 
+    def __contains__(self, key):
+        cdef yasm_symrec *symrec
+        symrec = yasm_symtab_get(self.symtab, key)
+        return symrec != NULL
+
     def keys(self):
         l = []
         yasm_symtab_traverse(self.symtab, <void *>l, __symtab_keys_helper)
