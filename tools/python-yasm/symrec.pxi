@@ -43,9 +43,14 @@ cdef extern from "libyasm/symrec.h":
             unsigned long line)
 
     ctypedef int (*yasm_symtab_traverse_callback)(yasm_symrec *sym, void *d)
-
     cdef int yasm_symtab_traverse(yasm_symtab *symtab, void *d,
             yasm_symtab_traverse_callback func)
+
+    ctypedef struct yasm_symtab_iter
+    cdef yasm_symtab_iter *yasm_symtab_first(yasm_symtab *symtab)
+    cdef yasm_symtab_iter *yasm_symtab_next(yasm_symtab_iter *prev)
+    cdef yasm_symrec *yasm_symtab_iter_value(yasm_symtab_iter *cur)
+
     cdef void yasm_symtab_parser_finalize(yasm_symtab *symtab,
             int undef_extern, yasm_objfmt *objfmt)
     cdef void yasm_symtab_print(yasm_symtab *symtab, FILE *f, int indent_level)
@@ -129,23 +134,64 @@ cdef object __make_symbol(yasm_symrec *symrec):
     Py_INCREF(symbol)       # We're keeping a reference on the C side!
     return symbol
 
-#
-# Helpers for dict-like functions in SymbolTable.
-#
-
-cdef int __symtab_keys_helper(yasm_symrec *sym, void *d):
-    (<object>d).append(yasm_symrec_get_name(sym))
-    return 0
-
-cdef int __symtab_values_helper(yasm_symrec *sym, void *d):
-    (<object>d).append(__make_symbol(sym))
-    return 0
-
-cdef int __symtab_items_helper(yasm_symrec *sym, void *d):
-    (<object>d).append((yasm_symrec_get_name(sym), __make_symbol(sym)))
-    return 0
-
 cdef class Bytecode
+cdef class SymbolTable
+
+cdef class SymbolTableKeyIterator:
+    cdef yasm_symtab_iter *iter
+
+    def __new__(self, symtab):
+        if not isinstance(symtab, SymbolTable):
+            raise TypeError
+        self.iter = yasm_symtab_first((<SymbolTable>symtab).symtab)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.iter == NULL:
+            raise StopIteration
+        rv = yasm_symrec_get_name(yasm_symtab_iter_value(self.iter))
+        self.iter = yasm_symtab_next(self.iter)
+        return rv
+
+cdef class SymbolTableValueIterator:
+    cdef yasm_symtab_iter *iter
+
+    def __new__(self, symtab):
+        if not isinstance(symtab, SymbolTable):
+            raise TypeError
+        self.iter = yasm_symtab_first((<SymbolTable>symtab).symtab)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.iter == NULL:
+            raise StopIteration
+        rv = __make_symbol(yasm_symtab_iter_value(self.iter))
+        self.iter = yasm_symtab_next(self.iter)
+        return rv
+
+cdef class SymbolTableItemIterator:
+    cdef yasm_symtab_iter *iter
+
+    def __new__(self, symtab):
+        if not isinstance(symtab, SymbolTable):
+            raise TypeError
+        self.iter = yasm_symtab_first((<SymbolTable>symtab).symtab)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        cdef yasm_symrec *sym
+        if self.iter == NULL:
+            raise StopIteration
+        sym = yasm_symtab_iter_value(self.iter)
+        rv = (yasm_symrec_get_name(sym), __make_symbol(sym))
+        self.iter = yasm_symtab_next(self.iter)
+        return rv
 
 cdef class SymbolTable:
     cdef yasm_symtab *symtab
@@ -195,18 +241,34 @@ cdef class SymbolTable:
         return symrec != NULL
 
     def keys(self):
+        cdef yasm_symtab_iter *iter
         l = []
-        yasm_symtab_traverse(self.symtab, <void *>l, __symtab_keys_helper)
+        iter = yasm_symtab_first(self.symtab)
+        while iter != NULL:
+            l.append(yasm_symrec_get_name(yasm_symtab_iter_value(iter)))
+            iter = yasm_symtab_next(iter)
         return l
 
     def values(self):
+        cdef yasm_symtab_iter *iter
         l = []
-        yasm_symtab_traverse(self.symtab, <void *>l, __symtab_values_helper)
+        iter = yasm_symtab_first(self.symtab)
+        while iter != NULL:
+            l.append(__make_symbol(yasm_symtab_iter_value(iter)))
+            l.append(yasm_symrec_get_name(yasm_symtab_iter_value(iter)))
+            iter = yasm_symtab_next(iter)
         return l
 
     def items(self):
+        cdef yasm_symtab_iter *iter
+        cdef yasm_symrec *sym
         l = []
-        yasm_symtab_traverse(self.symtab, <void *>l, __symtab_items_helper)
+        iter = yasm_symtab_first(self.symtab)
+        while iter != NULL:
+            sym = yasm_symtab_iter_value(iter)
+            l.append((yasm_symrec_get_name(sym), __make_symbol(sym)))
+            l.append(yasm_symrec_get_name(yasm_symtab_iter_value(iter)))
+            iter = yasm_symtab_next(iter)
         return l
 
     def has_key(self, key):
@@ -221,13 +283,11 @@ cdef class SymbolTable:
             return x
         return __make_symbol(symrec)
 
-#    def iterkeys(self): pass
-#
-#    def itervalues(self): pass
+    def iterkeys(self): return SymbolTableKeyIterator(self)
+    def itervalues(self): return SymbolTableValueIterator(self)
+    def iteritems(self): return SymbolTableItemIterator(self)
 
     # This doesn't follow Python's guideline to make this iterkeys() for
     # mappings, but makes more sense in this context, e.g. for sym in symtab.
-    #def __iter__(self): return self.itervalues()
-
-#    def iteritems(self): pass
+    def __iter__(self): return SymbolTableValueIterator(self)
 

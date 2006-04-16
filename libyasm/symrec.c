@@ -175,6 +175,24 @@ yasm_symtab_traverse(yasm_symtab *symtab, void *d,
     return HAMT_traverse(symtab->sym_table, d, (int (*) (void *, void *))func);
 }
 
+const yasm_symtab_iter *
+yasm_symtab_first(const yasm_symtab *symtab)
+{
+    return (const yasm_symtab_iter *)HAMT_first(symtab->sym_table);
+}
+
+/*@null@*/ const yasm_symtab_iter *
+yasm_symtab_next(const yasm_symtab_iter *prev)
+{
+    return (const yasm_symtab_iter *)HAMT_next((const HAMTEntry *)prev);
+}
+
+yasm_symrec *
+yasm_symtab_iter_value(const yasm_symtab_iter *cur)
+{
+    return (yasm_symrec *)HAMTEntry_get_data((const HAMTEntry *)cur);
+}
+
 yasm_symrec *
 yasm_symtab_use(yasm_symtab *symtab, const char *name, unsigned long line)
 {

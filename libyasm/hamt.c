@@ -37,11 +37,11 @@
 #include "hamt.h"
 #include "_stdint.h"			/* for uintptr_t */
 
-typedef struct HAMTEntry {
+struct HAMTEntry {
     STAILQ_ENTRY(HAMTEntry) next;	/* next hash table entry */
     /*@dependent@*/ const char *str;	/* string being hashed */
     /*@owned@*/ void *data;		/* data pointer being stored */
-} HAMTEntry;
+};
 
 typedef struct HAMTNode {
     unsigned long BitMapKey;		/* 32 bits, bitmap or hash key */
@@ -158,6 +158,24 @@ HAMT_traverse(HAMT *hamt, void *d,
 	    return retval;
     }
     return 0;
+}
+
+const HAMTEntry *
+HAMT_first(const HAMT *hamt)
+{
+    return STAILQ_FIRST(&hamt->entries);
+}
+
+const HAMTEntry *
+HAMT_next(const HAMTEntry *prev)
+{
+    return STAILQ_NEXT(prev, next);
+}
+
+void *
+HAMTEntry_get_data(const HAMTEntry *entry)
+{
+    return entry->data;
 }
 
 /*@-temptrans -kepttrans -mustfree@*/

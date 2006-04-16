@@ -154,6 +154,28 @@ int /*@alt void@*/ yasm_symtab_traverse
     (yasm_symtab *symtab, /*@null@*/ void *d,
      yasm_symtab_traverse_callback func);
 
+/** Symbol table iterator (opaque type). */
+typedef struct yasm_symtab_iter yasm_symtab_iter;
+
+/** Get an iterator pointing to the first symbol in the symbol table.
+ * \param symtab    symbol table
+ * \return Iterator for the symbol table.
+ */
+const yasm_symtab_iter *yasm_symtab_first(const yasm_symtab *symtab);
+
+/** Move a symbol table iterator to the next symbol in the symbol table.
+ * \param prev		Previous iterator value
+ * \return Next iterator value, or NULL if no more symbols in the table.
+ */
+/*@null@*/ const yasm_symtab_iter *yasm_symtab_next
+    (const yasm_symtab_iter *prev);
+
+/** Get the symbol corresponding to the current symbol table iterator value.
+ * \param cur		iterator value
+ * \return Corresponding symbol.
+ */
+yasm_symrec *yasm_symtab_iter_value(const yasm_symtab_iter *cur);
+
 /** Finalize symbol table after parsing stage.  Checks for symbols that are
  * used but never defined or declared #YASM_SYM_EXTERN or #YASM_SYM_COMMON.
  * \param symtab	symbol table

@@ -36,6 +36,8 @@
 
 /** Hash array mapped trie data structure (opaque type). */
 typedef struct HAMT HAMT;
+/** Hash array mapped trie entry (opaque type). */
+typedef struct HAMTEntry HAMTEntry;
 
 /** Create new, empty, HAMT.  error_func() is called when an internal error is
  * encountered--it should NOT return to the calling function.
@@ -90,5 +92,23 @@ void HAMT_destroy(/*@only@*/ HAMT *hamt,
 int HAMT_traverse(HAMT *hamt, /*@null@*/ void *d,
 		  int (*func) (/*@dependent@*/ /*@null@*/ void *node,
 			       /*@null@*/ void *d));
+
+/** Get the first entry in a HAMT.
+ * \param hamt		Hash array mapped trie
+ * \return First entry in HAMT, or NULL if HAMT is empty.
+ */
+const HAMTEntry *HAMT_first(const HAMT *hamt);
+
+/** Get the next entry in a HAMT.
+ * \param prev		Previous entry in HAMT
+ * \return Next entry in HAMT, or NULL if no more entries.
+ */
+/*@null@*/ const HAMTEntry *HAMT_next(const HAMTEntry *prev);
+
+/** Get the corresponding data for a HAMT entry.
+ * \param entry		HAMT entry (as returned by HAMT_first() and HAMT_next())
+ * \return Corresponding data item.
+ */
+void *HAMTEntry_get_data(const HAMTEntry *entry);
 
 #endif
