@@ -56,27 +56,9 @@ cdef class FloatNum:
     def __dealloc__(self):
         if self.flt != NULL: yasm_floatnum_destroy(self.flt)
 
-    def __op(self, op, o):
-        if isinstance(o, FloatNum): rhs = o
-        else: rhs = FloatNum(o)
-        lhs = FloatNum(self)
-        yasm_floatnum_calc((<FloatNum>lhs).flt, op, (<FloatNum>rhs).flt, 0)
-        return lhs
-
-    def __add__(FloatNum self, o): return self.__op(YASM_EXPR_ADD, o)
-    def __sub__(FloatNum self, o): return self.__op(YASM_EXPR_SUB, o)
-    def __mul__(FloatNum self, o): return self.__op(YASM_EXPR_MUL, o)
-    def __div__(FloatNum self, o): return self.__op(YASM_EXPR_SIGNDIV, o)
-    def __floordiv__(FloatNum self, o): return self.__op(YASM_EXPR_SIGNDIV, o)
-    def __mod__(FloatNum self, o): return self.__op(YASM_EXPR_SIGNMOD, o)
-    def __neg__(FloatNum self): return self.__op(YASM_EXPR_NEG, o)
-    def __pos__(FloatNum self): return self
-    #def __abs__(FloatNum self): return self
-    #def __nonzero__(FloatNum self): return not yasm_floatnum_is_zero(self.intn)
-    def __invert__(FloatNum self): return self.__op(YASM_EXPR_NOT, o)
-    #def __lshift__(FloatNum self, o)
-    #def __rshift__(FloatNum self, o)
-    def __and__(FloatNum self, o): return self.__op(YASM_EXPR_AND, o)
-    def __or__(FloatNum self, o): return self.__op(YASM_EXPR_OR, o)
-    def __xor__(FloatNum self, o): return self.__op(YASM_EXPR_XOR, o)
+    def __neg__(self):
+        result = FloatNum(self)
+        yasm_floatnum_calc((<FloatNum>result).flt, YASM_EXPR_NEG, NULL, 0)
+        return result
+    def __pos__(self): return self
 
