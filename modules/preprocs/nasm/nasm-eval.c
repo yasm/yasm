@@ -299,7 +299,6 @@ static yasm_expr *expr4(void)
 static yasm_expr *expr5(void)
 {
     yasm_expr *e, *f;
-    yasm_intnum *ei, *fi;
 
     e = expr6();
     if (!e)
@@ -337,10 +336,7 @@ static yasm_expr *expr5(void)
 
 static yasm_expr *expr6(void)
 {
-    long type;
     yasm_expr *e = NULL;
-    yasm_intnum *ei;
-    long label_seg, label_ofs;
 
     if (i == '-') {
 	i = scan(scpriv, tokval);
