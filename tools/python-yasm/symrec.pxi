@@ -255,7 +255,6 @@ cdef class SymbolTable:
         iter = yasm_symtab_first(self.symtab)
         while iter != NULL:
             l.append(__make_symbol(yasm_symtab_iter_value(iter)))
-            l.append(yasm_symrec_get_name(yasm_symtab_iter_value(iter)))
             iter = yasm_symtab_next(iter)
         return l
 
@@ -267,7 +266,6 @@ cdef class SymbolTable:
         while iter != NULL:
             sym = yasm_symtab_iter_value(iter)
             l.append((yasm_symrec_get_name(sym), __make_symbol(sym)))
-            l.append(yasm_symrec_get_name(yasm_symtab_iter_value(iter)))
             iter = yasm_symtab_next(iter)
         return l
 
