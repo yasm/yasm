@@ -5,6 +5,9 @@
 
 set -e
 
+test -n "${srcdir}" || srcdir=.
+test -n "${PYTHON}" || PYTHON=python
+
 if test "$1" = "--help" -o "$1" = "-h"; then
     echo "Usage: $0 --sanity | [TestName] ..."
     exit 0
