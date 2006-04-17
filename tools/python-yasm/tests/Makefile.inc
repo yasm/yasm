@@ -7,6 +7,7 @@ EXTRA_DIST += tools/python-yasm/tests/test_symrec.py
 
 if HAVE_PYTHON
 
+TESTS_ENVIRONMENT += PYTHON=${PYTHON}
 TESTS += tools/python-yasm/tests/python_test.sh
 
 endif

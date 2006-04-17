@@ -12,6 +12,6 @@ elif [ "$1" = "--sanity" ]; then
     echo "Running static sanity checks."
     grep "except None:" ${srcdir}/tools/python-yasm/tests/*.py
 else
-    python -c "import sys; import glob; sys.path.insert(0, '${srcdir}/tools/python-yasm'); sys.path.insert(0, glob.glob('build/lib.*')[0]); import tests; raise SystemExit(tests.unit('$*'.split()))"
+    ${PYTHON} -c "import sys; import glob; sys.path.insert(0, '${srcdir}/tools/python-yasm'); sys.path.insert(0, glob.glob('build/lib.*')[0]); import tests; raise SystemExit(tests.unit('$*'.split()))"
 fi
 

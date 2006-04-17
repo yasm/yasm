@@ -8,6 +8,7 @@ AM_CFLAGS = @MORE_CFLAGS@
 bin_PROGRAMS =
 dist_man_MANS =
 TESTS =
+TESTS_ENVIRONMENT =
 noinst_PROGRAMS = genstring
 
 check_PROGRAMS = test_hd
