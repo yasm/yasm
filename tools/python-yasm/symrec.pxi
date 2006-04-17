@@ -63,6 +63,7 @@ cdef extern from "libyasm/symrec.h":
     cdef int yasm_symrec_get_label(yasm_symrec *sym,
             yasm_symrec_get_label_bytecodep *precbc)
     cdef int yasm_symrec_is_special(yasm_symrec *sym)
+    cdef int yasm_symrec_is_curpos(yasm_symrec *sym)
     cdef void* yasm_symrec_get_data(yasm_symrec *sym,
             yasm_assoc_data_callback *callback)
     cdef void yasm_symrec_add_data(yasm_symrec *sym,
@@ -81,18 +82,41 @@ cdef class Symbol:
 
     # no deref or destroy necessary
 
-    def get_name(self): return yasm_symrec_get_name(self.sym)
-    def get_visibility(self): return yasm_symrec_get_visibility(self.sym)
-    def get_equ(self):
-        return __make_expression(yasm_expr_copy(yasm_symrec_get_equ(self.sym)))
-    def get_label(self):
-        cdef yasm_symrec_get_label_bytecodep bc
-        if yasm_symrec_get_label(self.sym, &bc): pass # TODO
-            #return Bytecode(bc)
-        else: raise TypeError("Symbol '%s' is not a label" % self.get_name())
+    property name:
+        def __get__(self): return yasm_symrec_get_name(self.sym)
 
-    def get_is_special(self):
-        return yasm_symrec_is_special(self.sym)
+    property visibility:
+        def __get__(self):
+            cdef yasm_sym_vis vis
+            s = set()
+            vis = yasm_symrec_get_visibility(self.sym)
+            if vis & YASM_SYM_GLOBAL: s.add('global')
+            if vis & YASM_SYM_COMMON: s.add('common')
+            if vis & YASM_SYM_EXTERN: s.add('extern')
+            if vis & YASM_SYM_DLOCAL: s.add('dlocal')
+            return s
+
+    property equ:
+        def __get__(self):
+            cdef yasm_expr *e
+            e = yasm_symrec_get_equ(self.sym)
+            if not e:
+                raise AttributeError("not an EQU")
+            return __make_expression(yasm_expr_copy(e))
+
+    property label:
+        def __get__(self):
+            cdef yasm_symrec_get_label_bytecodep bc
+            if yasm_symrec_get_label(self.sym, &bc):
+                return None #Bytecode(bc)
+            else:
+                raise AttributeError("not a label or not defined")
+
+    property is_special:
+        def __get__(self): return bool(yasm_symrec_is_special(self.sym))
+
+    property is_curpos:
+        def __get__(self): return bool(yasm_symrec_is_curpos(self.sym))
 
     def get_data(self): pass # TODO
         #return <object>(yasm_symrec_get_data(self.sym, PyYasmAssocData))
@@ -222,7 +246,14 @@ cdef class SymbolTable:
                                                         vis))
 
     def declare(self, name, vis, line):
-        return __make_symbol(yasm_symtab_declare(self.symtab, name, vis, line))
+        cdef yasm_sym_vis cvis
+        if not vis or vis == 'local': cvis = YASM_SYM_LOCAL
+        elif vis == 'global': cvis = YASM_SYM_GLOBAL
+        elif vis == 'common': cvis = YASM_SYM_COMMON
+        elif vis == 'extern': cvis = YASM_SYM_EXTERN
+        elif vis == 'dlocal': cvis = YASM_SYM_DLOCAL
+        else: raise ValueError("bad visibility value '%s'" % vis)
+        return __make_symbol(yasm_symtab_declare(self.symtab, name, cvis, line))
 
     #
     # Methods to make SymbolTable behave like a dictionary of Symbols.
@@ -284,8 +315,5 @@ cdef class SymbolTable:
     def iterkeys(self): return SymbolTableKeyIterator(self)
     def itervalues(self): return SymbolTableValueIterator(self)
     def iteritems(self): return SymbolTableItemIterator(self)
-
-    # This doesn't follow Python's guideline to make this iterkeys() for
-    # mappings, but makes more sense in this context, e.g. for sym in symtab.
-    def __iter__(self): return SymbolTableValueIterator(self)
+    def __iter__(self): return SymbolTableKeyIterator(self)
 
