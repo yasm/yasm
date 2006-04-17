@@ -491,19 +491,19 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
 	    break;
 	case YASM_EXPR_LT:
 	    BitVector_Empty(result);
-	    BitVector_LSB(result, BitVector_Lexicompare(op1, op2) < 0);
+	    BitVector_LSB(result, BitVector_Compare(op1, op2) < 0);
 	    break;
 	case YASM_EXPR_GT:
 	    BitVector_Empty(result);
-	    BitVector_LSB(result, BitVector_Lexicompare(op1, op2) > 0);
+	    BitVector_LSB(result, BitVector_Compare(op1, op2) > 0);
 	    break;
 	case YASM_EXPR_LE:
 	    BitVector_Empty(result);
-	    BitVector_LSB(result, BitVector_Lexicompare(op1, op2) <= 0);
+	    BitVector_LSB(result, BitVector_Compare(op1, op2) <= 0);
 	    break;
 	case YASM_EXPR_GE:
 	    BitVector_Empty(result);
-	    BitVector_LSB(result, BitVector_Lexicompare(op1, op2) >= 0);
+	    BitVector_LSB(result, BitVector_Compare(op1, op2) >= 0);
 	    break;
 	case YASM_EXPR_NE:
 	    BitVector_Empty(result);
