@@ -10,6 +10,7 @@ class Mock(object):
     # A generic mocking object.
     def __init__(self, **kwargs): self.__dict__.update(kwargs)
 
+import test_intnum
 import test_symrec
 
 class Result(unittest.TestResult):
