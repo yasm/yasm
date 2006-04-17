@@ -1,5 +1,4 @@
 # $Id$
-if HAVE_PYTHON
 
 PYBINDING_DEPS  = tools/python-yasm/bytecode.pxi
 PYBINDING_DEPS += tools/python-yasm/coretype.pxi
@@ -12,6 +11,8 @@ PYBINDING_DEPS += tools/python-yasm/value.pxi
 EXTRA_DIST += tools/python-yasm/setup.py
 EXTRA_DIST += tools/python-yasm/yasm.pyx
 EXTRA_DIST += $(PYBINDING_DEPS)
+
+if HAVE_PYTHON
 
 yasm_python.c: $(srcdir)/tools/python-yasm/yasm.pyx $(PYBINDING_DEPS)
 	$(PYTHON) -c "from Pyrex.Compiler.Main import main; main(command_line=1)" \
@@ -48,3 +49,6 @@ python-install:
 python-uninstall:
 
 endif
+
+EXTRA_DIST += tools/python-yasm/tests/Makefile.inc
+include tools/python-yasm/tests/Makefile.inc
