@@ -738,6 +738,7 @@ memaddr: expr		    {
 
 operand: memaddr	    { $$ = yasm_operand_create_mem($1); }
     | REG		    { $$ = yasm_operand_create_reg($1[0]); }
+    | SEGREG		    { $$ = yasm_operand_create_segreg($1[0]); }
     | REGGROUP		    { $$ = yasm_operand_create_reg($1[0]); }
     | REGGROUP '(' INTNUM ')'	{
 	unsigned long reg =
