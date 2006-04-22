@@ -169,28 +169,28 @@ nasm_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
 	preproc_nasm->linepos = preproc_nasm->line;
 	preproc_nasm->lineleft = strlen(preproc_nasm->line) + 1;
 	preproc_nasm->line[preproc_nasm->lineleft-1] = '\n';
-    }
 
-    altline = nasm_src_get(&linnum, &preproc_nasm->file_name);
-    if (altline) {
-	if (altline == 1 && preproc_nasm->lineinc == 1) {
-	    *buf++ = '\n';
-	    max_size--;
-	    tot++;
-	} else {
-	    preproc_nasm->lineinc =
-		(altline != -1 || preproc_nasm->lineinc != 1);
-	    n = sprintf(buf, "%%line %ld+%d %s\n", linnum,
-			preproc_nasm->lineinc, preproc_nasm->file_name);
-	    buf += n;
-	    max_size -= n;
-	    tot += n;
+	altline = nasm_src_get(&linnum, &preproc_nasm->file_name);
+	if (altline) {
+	    if (altline == 1 && preproc_nasm->lineinc == 1) {
+		*buf++ = '\n';
+		max_size--;
+		tot++;
+	    } else {
+		preproc_nasm->lineinc =
+		    (altline != -1 || preproc_nasm->lineinc != 1);
+		n = sprintf(buf, "%%line %ld+%d %s\n", linnum,
+			    preproc_nasm->lineinc, preproc_nasm->file_name);
+		buf += n;
+		max_size -= n;
+		tot += n;
+	    }
+	    preproc_nasm->prior_linnum = linnum;
 	}
-	preproc_nasm->prior_linnum = linnum;
-    }
-    if (preproc_nasm->file_name) {
-	yasm_xfree(preproc_nasm->file_name);
-	preproc_nasm->file_name = NULL;
+	if (preproc_nasm->file_name) {
+	    yasm_xfree(preproc_nasm->file_name);
+	    preproc_nasm->file_name = NULL;
+	}
     }
 
     n = preproc_nasm->lineleft<max_size?preproc_nasm->lineleft:max_size;
