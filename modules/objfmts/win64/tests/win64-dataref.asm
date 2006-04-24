@@ -131,10 +131,10 @@ trap:		sub	rsp, 256
 [SECTION .pdata]
 dd	trap
 dd	trap.end wrt trap
-dd	$xdatasym
+dd	$$xdatasym
 
 [SECTION .xdata]
-$xdatasym:
+$$xdatasym:
 db	1, 7, 2, 0, 7, 1, 0x20, 0
 
 [SECTION _FOO]

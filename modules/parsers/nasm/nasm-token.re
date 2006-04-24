@@ -374,8 +374,8 @@ scan:
 	}
 
 	/* forced identifier */
-	"$" [a-zA-Z_?][a-zA-Z0-9_$#@~.?]* {
-	    lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
+	"$" [a-zA-Z0-9_$#@~.?]+ {
+	    lvalp->str_val = yasm__xstrndup(TOK+1, TOKLEN-1);
 	    RETURN(ID);
 	}
 
