@@ -2543,8 +2543,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	    if (mismatch)
 		break;
 
-	    /* Check for 64-bit effective address size */
-	    if (op->type == YASM_INSN__OPERAND_MEMORY) {
+	    /* Check for 64-bit effective address size in NASM mode */
+	    if (suffix == 0 && op->type == YASM_INSN__OPERAND_MEMORY) {
 		if ((info->operands[i] & OPEAS_MASK) == OPEAS_64) {
 		    if (op->data.ea->disp_len != 8)
 			mismatch = 1;

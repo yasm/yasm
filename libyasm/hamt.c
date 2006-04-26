@@ -191,7 +191,8 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 
     for (;;) {
 	if (!(IsSubTrie(node))) {
-	    if (node->BitMapKey == key) {
+	    if (node->BitMapKey == key
+		&& strcmp(((HAMTEntry *)(node->BaseValue))->str, str) == 0) {
 		/*@-branchstate@*/
 		if (*replace) {
 		    deletefunc(((HAMTEntry *)(node->BaseValue))->data);
