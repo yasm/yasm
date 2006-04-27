@@ -656,12 +656,12 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
     } else if (!yasm_arch_parse_directive(parser_nasm->arch, name, valparams,
 		    objext_valparams, parser_nasm->object, line)) {
 	;
-    } else if (!yasm_objfmt_directive(parser_nasm->objfmt, name, valparams,
-				      objext_valparams, line)) {
+    } else if (!yasm_dbgfmt_directive(parser_nasm->dbgfmt, name,
+				      parser_nasm->cur_section, valparams,
+				      line)) {
 	;
-    } else if (yasm_dbgfmt_directive(parser_nasm->dbgfmt, name,
-				     parser_nasm->cur_section, valparams,
-				     line)) {
+    } else if (yasm_objfmt_directive(parser_nasm->objfmt, name, valparams,
+				     objext_valparams, line)) {
 	yasm__error(line, N_("unrecognized directive [%s]"), name);
     }
 
