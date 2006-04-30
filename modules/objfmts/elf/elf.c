@@ -167,9 +167,19 @@ elf_strtab_entry_create(const char *str)
 void
 elf_strtab_entry_set_str(elf_strtab_entry *entry, const char *str)
 {
+    elf_strtab_entry *last;
     if (entry->str)
 	yasm_xfree(entry->str);
     entry->str = yasm__xstrdup(str);
+
+    /* Update all following indices since string length probably changes */
+    last = entry;
+    entry = STAILQ_NEXT(last, qlink);
+    while (entry) {
+	entry->index = last->index + strlen(last->str) + 1;
+	last = entry;
+	entry = STAILQ_NEXT(last, qlink);
+    }
 }
 
 elf_strtab_head *
