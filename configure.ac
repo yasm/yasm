@@ -264,10 +264,10 @@ if test x$enable_python = xno; then
 else
     AC_MSG_NOTICE([Checking to see if we can build Python bindings])
     have_python=no
-    AM_PATH_PYTHON(2.4)
+    AM_PATH_PYTHON(2.4,[],[AC_MSG_WARN([Python not found])])
 
-    if test -z "$PYTHON" ; then
-        AC_MSG_WARN([Python not found])
+    if test -z "$PYTHON" || test "$PYTHON" = : ; then
+        have_python=no
     else
         AC_MSG_CHECKING([for Pyrex >= 0.9.3])
         PYREX_CHECK_VERSION(0.9.3, [AC_MSG_RESULT(yes)
