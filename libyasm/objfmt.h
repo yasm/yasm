@@ -87,7 +87,8 @@ typedef struct yasm_objfmt_module {
     /** Module-level implementation of yasm_objfmt_output().
      * Call yasm_objfmt_output() instead of calling this function.
      */
-    void (*output) (yasm_objfmt *of, FILE *f, int all_syms, yasm_dbgfmt *df);
+    void (*output) (yasm_objfmt *of, FILE *f, int all_syms, yasm_dbgfmt *df,
+		    yasm_errwarns *errwarns);
 
     /** Module-level implementation of yasm_objfmt_destroy().
      * Call yasm_objfmt_destroy() instead of calling this function.
@@ -154,9 +155,11 @@ typedef struct yasm_objfmt_module {
  * \param all_syms	if nonzero, all symbols should be included in
  *			the object file
  * \param df		debug format in use
+ * \param errwarns	error/warning set
+ * \note Errors and warnings are stored into errwarns.
  */
 void yasm_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
-			yasm_dbgfmt *df);
+			yasm_dbgfmt *df, yasm_errwarns *errwarns);
 
 /** Cleans up any allocated object format memory.
  * \param objfmt	object format
@@ -240,8 +243,8 @@ int yasm_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 
 #define yasm_objfmt_create(module, object, a)	module->create(object, a)
 
-#define yasm_objfmt_output(objfmt, f, all_syms, df) \
-    ((yasm_objfmt_base *)objfmt)->module->output(objfmt, f, all_syms, df)
+#define yasm_objfmt_output(objfmt, f, all_syms, df, ews) \
+    ((yasm_objfmt_base *)objfmt)->module->output(objfmt, f, all_syms, df, ews)
 #define yasm_objfmt_destroy(objfmt) \
     ((yasm_objfmt_base *)objfmt)->module->destroy(objfmt)
 #define yasm_objfmt_section_switch(objfmt, vpms, oe_vpms, line) \

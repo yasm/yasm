@@ -79,7 +79,9 @@ static enum {
 
 /*@null@*/ /*@dependent@*/ static FILE *open_file(const char *filename,
 						  const char *mode);
-static void cleanup(/*@null@*/ yasm_object *object);
+static void check_errors(/*@only@*/ yasm_errwarns *errwarns,
+			 /*@only@*/ yasm_object *object);
+static void cleanup(/*@null@*/ /*@only@*/ yasm_object *object);
 
 /* Forward declarations: cmd line parser handlers */
 static int opt_special_handler(char *cmd, /*@null@*/ char *param, int extra);
@@ -108,7 +110,8 @@ static /*@exits@*/ void handle_yasm_int_error(const char *file,
 static /*@exits@*/ void handle_yasm_fatal(const char *message, va_list va);
 static const char *handle_yasm_gettext(const char *msgid);
 static void print_yasm_error(const char *filename, unsigned long line,
-			     const char *msg);
+			     const char *msg, unsigned long xrefline,
+			     /*@null@*/ const char *xrefmsg);
 static void print_yasm_warning(const char *filename, unsigned long line,
 			       const char *msg);
 
@@ -214,6 +217,7 @@ main(int argc, char *argv[])
     size_t i;
     yasm_arch_create_error arch_error;
     const char *base_filename;
+    yasm_errwarns *errwarns;
 
 #if defined(HAVE_SETLOCALE) && defined(HAVE_LC_MESSAGES)
     setlocale(LC_MESSAGES, "");
@@ -228,6 +232,7 @@ main(int argc, char *argv[])
     yasm_fatal = handle_yasm_fatal;
     yasm_gettext_hook = handle_yasm_gettext;
     yasm_errwarn_initialize();
+    errwarns = yasm_errwarns_create();
 
     /* Initialize parameter storage */
     STAILQ_INIT(&preproc_options);
@@ -344,7 +349,7 @@ main(int argc, char *argv[])
 	
 	/* Pre-process until done */
 	cur_preproc = yasm_preproc_create(cur_preproc_module, in, in_filename,
-					  linemap);
+					  linemap, errwarns);
 
 	apply_preproc_builtins();
 	apply_preproc_saved_options();
@@ -378,18 +383,20 @@ main(int argc, char *argv[])
 	if (obj != stdout)
 	    fclose(obj);
 
-	if (yasm_get_num_errors(warning_error) > 0) {
-	    yasm_errwarn_output_all(linemap, warning_error, print_yasm_error,
-				    print_yasm_warning);
+	if (yasm_errwarns_num_errors(errwarns, warning_error) > 0) {
+	    yasm_errwarns_output_all(errwarns, linemap, warning_error,
+				     print_yasm_error, print_yasm_warning);
 	    if (obj != stdout)
 		remove(obj_filename);
 	    yasm_xfree(preproc_buf);
 	    yasm_linemap_destroy(linemap);
+	    yasm_errwarns_destroy(errwarns);
 	    cleanup(NULL);
 	    return EXIT_FAILURE;
 	}
 	yasm_xfree(preproc_buf);
 	yasm_linemap_destroy(linemap);
+	yasm_errwarns_destroy(errwarns);
 	cleanup(NULL);
 	return EXIT_SUCCESS;
     }
@@ -594,7 +601,8 @@ main(int argc, char *argv[])
     }
 
     cur_preproc = cur_preproc_module->create(in, in_filename,
-					     yasm_object_get_linemap(object));
+					     yasm_object_get_linemap(object),
+					     errwarns);
 
     apply_preproc_builtins();
     apply_preproc_saved_options();
@@ -608,46 +616,31 @@ main(int argc, char *argv[])
     /* Parse! */
     cur_parser_module->do_parse(object, cur_preproc, cur_arch, cur_objfmt,
 				cur_dbgfmt, in, in_filename,
-				list_filename != NULL, def_sect);
+				list_filename != NULL, def_sect, errwarns);
 
     /* Close input file */
     if (in != stdin)
 	fclose(in);
 
+    check_errors(errwarns, object);
+
     /* Check for undefined symbols */
     yasm_symtab_parser_finalize(yasm_object_get_symtab(object),
 				strcmp(cur_parser_module->keyword, "gas")==0,
-				cur_objfmt);
-
-    if (yasm_get_num_errors(warning_error) > 0) {
-	yasm_errwarn_output_all(yasm_object_get_linemap(object), warning_error,
-				print_yasm_error, print_yasm_warning);
-	cleanup(object);
-	return EXIT_FAILURE;
-    }
+				cur_objfmt, errwarns);
+    check_errors(errwarns, object);
 
     /* Finalize parse */
-    yasm_object_finalize(object);
-
-    if (yasm_get_num_errors(warning_error) > 0) {
-	yasm_errwarn_output_all(yasm_object_get_linemap(object), warning_error,
-				print_yasm_error, print_yasm_warning);
-	cleanup(object);
-	return EXIT_FAILURE;
-    }
+    yasm_object_finalize(object, errwarns);
+    check_errors(errwarns, object);
 
     /* Optimize */
-    cur_optimizer_module->optimize(object);
-
-    if (yasm_get_num_errors(warning_error) > 0) {
-	yasm_errwarn_output_all(yasm_object_get_linemap(object), warning_error,
-				print_yasm_error, print_yasm_warning);
-	cleanup(object);
-	return EXIT_FAILURE;
-    }
+    cur_optimizer_module->optimize(object, errwarns);
+    check_errors(errwarns, object);
 
     /* generate any debugging information */
-    yasm_dbgfmt_generate(cur_dbgfmt);
+    yasm_dbgfmt_generate(cur_dbgfmt, errwarns);
+    check_errors(errwarns, object);
 
     /* open the object file for output (if not already opened by dbg objfmt) */
     if (!obj && strcmp(cur_objfmt_module->keyword, "dbg") != 0) {
@@ -660,7 +653,8 @@ main(int argc, char *argv[])
 
     /* Write the object file */
     yasm_objfmt_output(cur_objfmt, obj?obj:stderr,
-		       strcmp(cur_dbgfmt_module->keyword, "null"), cur_dbgfmt);
+		       strcmp(cur_dbgfmt_module->keyword, "null"), cur_dbgfmt,
+		       errwarns);
 
     /* Close object file */
     if (obj)
@@ -669,13 +663,9 @@ main(int argc, char *argv[])
     /* If we had an error at this point, we also need to delete the output
      * object file (to make sure it's not left newer than the source).
      */
-    if (yasm_get_num_errors(warning_error) > 0) {
-	yasm_errwarn_output_all(yasm_object_get_linemap(object), warning_error,
-				print_yasm_error, print_yasm_warning);
+    if (yasm_errwarns_num_errors(errwarns, warning_error) > 0)
 	remove(obj_filename);
-	cleanup(object);
-	return EXIT_FAILURE;
-    }
+    check_errors(errwarns, object);
 
     /* Open and write the list file */
     if (list_filename) {
@@ -692,8 +682,9 @@ main(int argc, char *argv[])
 	fclose(list);
     }
 
-    yasm_errwarn_output_all(yasm_object_get_linemap(object), warning_error,
-			    print_yasm_error, print_yasm_warning);
+    yasm_errwarns_output_all(errwarns, yasm_object_get_linemap(object),
+			     warning_error, print_yasm_error,
+			     print_yasm_warning);
 
     cleanup(object);
     return EXIT_SUCCESS;
@@ -710,6 +701,19 @@ open_file(const char *filename, const char *mode)
     if (!f)
 	print_error(_("could not open file `%s'"), filename);
     return f;
+}
+
+static void
+check_errors(yasm_errwarns *errwarns, yasm_object *object)
+{
+    if (yasm_errwarns_num_errors(errwarns, warning_error) > 0) {
+	yasm_errwarns_output_all(errwarns, yasm_object_get_linemap(object),
+				 warning_error, print_yasm_error,
+				 print_yasm_warning);
+	yasm_errwarns_destroy(errwarns);
+	cleanup(object);
+	exit(EXIT_FAILURE);
+    }
 }
 
 /* Define DO_FREE to 1 to enable deallocation of all data structures.
@@ -1172,19 +1176,38 @@ handle_yasm_gettext(const char *msgid)
     return gettext(msgid);
 }
 
-const char *fmt[2] = {
+static const char *fmt[2] = {
 	"%s:%lu: %s%s\n",	/* GNU */
 	"%s(%lu) : %s%s\n"	/* VC */
 };
 
+static const char *fmt_noline[2] = {
+	"%s: %s%s\n",	/* GNU */
+	"%s : %s%s\n"	/* VC */
+};
+
 static void
-print_yasm_error(const char *filename, unsigned long line, const char *msg)
+print_yasm_error(const char *filename, unsigned long line, const char *msg,
+		 unsigned long xrefline, const char *xrefmsg)
 {
-    fprintf(stderr, fmt[ewmsg_style], filename, line, "", msg);
+    if (line)
+	fprintf(stderr, fmt[ewmsg_style], filename, line, "", msg);
+    else
+	fprintf(stderr, fmt_noline[ewmsg_style], filename, "", msg);
+
+    if (xrefmsg) {
+	if (xrefline)
+	    fprintf(stderr, fmt[ewmsg_style], filename, xrefline, "", xrefmsg);
+	else
+	    fprintf(stderr, fmt_noline[ewmsg_style], filename, "", xrefmsg);
+    }
 }
 
 static void
 print_yasm_warning(const char *filename, unsigned long line, const char *msg)
 {
-    fprintf(stderr, fmt[ewmsg_style], filename, line, _("warning: "), msg);
+    if (line)
+	fprintf(stderr, fmt[ewmsg_style], filename, line, _("warning: "), msg);
+    else
+	fprintf(stderr, fmt_noline[ewmsg_style], filename, _("warning: "), msg);
 }

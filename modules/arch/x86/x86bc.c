@@ -146,10 +146,11 @@ yasm_x86__bc_transform_jmpfar(yasm_bytecode *bc, x86_jmpfar *jmpfar)
 }
 
 void
-yasm_x86__ea_init(x86_effaddr *x86_ea, unsigned int spare, unsigned long line)
+yasm_x86__ea_init(x86_effaddr *x86_ea, unsigned int spare)
 {
     if (yasm_value_finalize(&x86_ea->ea.disp))
-	yasm__error(line, N_("effective address too complex"));
+	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+		       N_("effective address too complex"));
     x86_ea->modrm &= 0xC7;		    /* zero spare/reg bits */
     x86_ea->modrm |= (spare << 3) & 0x38;   /* plug in provided bits */
 }
@@ -263,8 +264,7 @@ yasm_x86__ea_create_imm(yasm_expr *imm, unsigned int im_len)
 
 void
 yasm_x86__bc_apply_prefixes(x86_common *common, unsigned char *rex,
-			    int num_prefixes, unsigned long **prefixes,
-			    unsigned long line)
+			    int num_prefixes, unsigned long **prefixes)
 {
     int i;
     int first = 1;
@@ -273,7 +273,7 @@ yasm_x86__bc_apply_prefixes(x86_common *common, unsigned char *rex,
 	switch ((x86_parse_insn_prefix)prefixes[i][0]) {
 	    case X86_LOCKREP:
 		if (common->lockrep_pre != 0)
-		    yasm__warning(YASM_WARN_GENERAL, line,
+		    yasm_warn_set(YASM_WARN_GENERAL,
 			N_("multiple LOCK or REP prefixes, using leftmost"));
 		common->lockrep_pre = (unsigned char)prefixes[i][1];
 		break;
@@ -291,18 +291,18 @@ yasm_x86__bc_apply_prefixes(x86_common *common, unsigned char *rex,
 		break;
 	    case X86_REX:
 		if (!rex)
-		    yasm__warning(YASM_WARN_GENERAL, line,
-			N_("ignoring REX prefix on jump"));
+		    yasm_warn_set(YASM_WARN_GENERAL,
+				  N_("ignoring REX prefix on jump"));
 		else if (*rex == 0xff)
-		    yasm__warning(YASM_WARN_GENERAL, line,
+		    yasm_warn_set(YASM_WARN_GENERAL,
 			N_("REX prefix not allowed on this instruction, ignoring"));
 		else {
 		    if (*rex != 0) {
 			if (first)
-			    yasm__warning(YASM_WARN_GENERAL, line,
+			    yasm_warn_set(YASM_WARN_GENERAL,
 				N_("overriding generated REX prefix"));
 			else
-			    yasm__warning(YASM_WARN_GENERAL, line,
+			    yasm_warn_set(YASM_WARN_GENERAL,
 				N_("multiple REX prefixes, using leftmost"));
 		    }
 		    /* Here we assume that we can't get this prefix in non
@@ -533,7 +533,7 @@ x86_bc_insn_resolve(yasm_bytecode *bc, int save,
 	 */
 	switch (yasm_x86__expr_checkea(&eat, &insn->common.addrsize,
 		insn->common.mode_bits, insn->postop == X86_POSTOP_ADDRESS16,
-		&insn->rex, calc_bc_dist, bc->line)) {
+		&insn->rex, calc_bc_dist)) {
 	    case 1:
 		yasm_expr_destroy(eat.ea.disp.abs);
 		/* failed, don't bother checking rest of insn */
@@ -720,7 +720,8 @@ x86_bc_jmp_resolve(yasm_bytecode *bc, int save,
 	    if (save) {
 		/* does a short form exist? */
 		if (jmp->shortop.len == 0) {
-		    yasm__error(bc->line, N_("short jump does not exist"));
+		    yasm_error_set(YASM_ERROR_TYPE,
+				   N_("short jump does not exist"));
 		    return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
 		}
 
@@ -743,11 +744,12 @@ x86_bc_jmp_resolve(yasm_bytecode *bc, int save,
 		    num2 = yasm_expr_get_intnum(&temp, calc_bc_dist);
 		    if (!num2) {
 			yasm_expr_destroy(temp);
-			yasm__error(bc->line, N_("jump target too complex"));
+			yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+				       N_("jump target too complex"));
 			return YASM_BC_RESOLVE_ERROR |
 			    YASM_BC_RESOLVE_UNKNOWN_LEN;
 		    }
-		    yasm_intnum_calc(num, YASM_EXPR_ADD, num2, bc->line);
+		    yasm_intnum_calc(num, YASM_EXPR_ADD, num2);
 		    yasm_expr_destroy(temp);
 		}
 
@@ -756,7 +758,8 @@ x86_bc_jmp_resolve(yasm_bytecode *bc, int save,
 		rel -= jmp->shortop.len+1;
 		/* short displacement must fit in -128 <= rel <= +127 */
 		if (rel < -128 || rel > 127) {
-		    yasm__error(bc->line, N_("short jump out of range"));
+		    yasm_error_set(YASM_ERROR_OVERFLOW,
+				   N_("short jump out of range"));
 		    return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
 		}
 	    }
@@ -766,7 +769,8 @@ x86_bc_jmp_resolve(yasm_bytecode *bc, int save,
 	    jrtype = JMP_NEAR;
 	    if (save) {
 		if (jmp->nearop.len == 0) {
-		    yasm__error(bc->line, N_("near jump does not exist"));
+		    yasm_error_set(YASM_ERROR_TYPE,
+				   N_("near jump does not exist"));
 		    return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
 		}
 	    }
@@ -796,10 +800,11 @@ x86_bc_jmp_resolve(yasm_bytecode *bc, int save,
 		num2 = yasm_expr_get_intnum(&temp, calc_bc_dist);
 		if (!num2) {
 		    yasm_expr_destroy(temp);
-		    yasm__error(bc->line, N_("jump target too complex"));
+		    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+				   N_("jump target too complex"));
 		    return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
 		}
-		yasm_intnum_calc(num, YASM_EXPR_ADD, num2, bc->line);
+		yasm_intnum_calc(num, YASM_EXPR_ADD, num2);
 		yasm_expr_destroy(temp);
 	    }
 
@@ -948,7 +953,7 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		if (yasm_x86__expr_checkea
 		    (&eat, &addrsize, insn->common.mode_bits,
 		     insn->postop == X86_POSTOP_ADDRESS16, &insn->rex,
-		     yasm_common_calc_bc_dist, bc->line))
+		     yasm_common_calc_bc_dist))
 		    yasm_internal_error(N_("checkea failed"));
 		x86_ea->ea.disp.abs = eat.ea.disp.abs;
 	    }
@@ -1035,7 +1040,8 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	case JMP_NEAR:
 	    /* 2/4 byte relative displacement (depending on operand size) */
 	    if (jmp->nearop.len == 0) {
-		yasm__error(bc->line, N_("near jump does not exist"));
+		yasm_error_set(YASM_ERROR_TYPE,
+			       N_("near jump does not exist"));
 		return 1;
 	    }
 
@@ -1100,11 +1106,9 @@ x86_bc_jmpfar_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 int
 yasm_x86__intnum_tobytes(yasm_arch *arch, const yasm_intnum *intn,
 			 unsigned char *buf, size_t destsize, size_t valsize,
-			 int shift, const yasm_bytecode *bc, int warn,
-			 unsigned long line)
+			 int shift, const yasm_bytecode *bc, int warn)
 {
     /* Write value out. */
-    yasm_intnum_get_sized(intn, buf, destsize, valsize, shift, 0, warn,
-			  line);
+    yasm_intnum_get_sized(intn, buf, destsize, valsize, shift, 0, warn);
     return 0;
 }

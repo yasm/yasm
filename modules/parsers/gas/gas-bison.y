@@ -69,7 +69,8 @@ static void gas_parser_directive
      yasm_valparamhead *valparams,
      /*@null@*/ yasm_valparamhead *objext_valparams);
 
-#define gas_parser_error(s)	yasm__parser_error(cur_line, s)
+#define gas_parser_error(s)	\
+    yasm_error_set(YASM_ERROR_PARSE, "%s", s)
 #define YYPARSE_PARAM	parser_gas_arg
 #define YYLEX_PARAM	parser_gas_arg
 #define parser_gas	((yasm_parser_gas *)parser_gas_arg)
@@ -141,6 +142,7 @@ static void gas_parser_directive
 %%
 input: /* empty */
     | input line    {
+	yasm_errwarn_propagate(parser_gas->errwarns, cur_line);
 	if (parser_gas->save_input)
 	    yasm_linemap_add_source(parser_gas->linemap,
 		parser_gas->prev_bc,
@@ -152,8 +154,8 @@ input: /* empty */
 line: '\n'
     | linebcs '\n'
     | error '\n'	{
-	yasm__error(cur_line,
-		    N_("label or instruction expected at start of line"));
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("label or instruction expected at start of line"));
 	yyerrok;
     }
 ;
@@ -191,7 +193,7 @@ lineexp: instr
     | DIR_LINE INTNUM {
 	$$ = (yasm_bytecode *)NULL;
 	if (yasm_intnum_sign($2) < 0)
-	    yasm__error(cur_line, N_("line number is negative"));
+	    yasm_error_set(YASM_ERROR_SYNTAX, N_("line number is negative"));
 	else
 	    yasm_linemap_set(parser_gas->linemap, NULL,
 			     yasm_intnum_get_uint($2), 1);
@@ -202,9 +204,11 @@ lineexp: instr
 
 	$$ = (yasm_bytecode *)NULL;
 	if (!intn) {
-	    yasm__error(cur_line, N_("rept expression not absolute"));
+	    yasm_error_set(YASM_ERROR_NOT_ABSOLUTE,
+			   N_("rept expression not absolute"));
 	} else if (yasm_intnum_sign(intn) < 0) {
-	    yasm__error(cur_line, N_("rept expression is negative"));
+	    yasm_error_set(YASM_ERROR_VALUE,
+			   N_("rept expression is negative"));
 	} else {
 	    gas_rept *rept = yasm_xmalloc(sizeof(gas_rept));
 	    STAILQ_INIT(&rept->lines);
@@ -223,7 +227,7 @@ lineexp: instr
     | DIR_ENDR {
 	$$ = (yasm_bytecode *)NULL;
 	/* Shouldn't ever get here unless we didn't get a DIR_REPT first */
-	yasm__error(cur_line, N_("endr without matching rept"));
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("endr without matching rept"));
     }
     /* Alignment directives */
     | DIR_ALIGN dirvals2 {
@@ -558,15 +562,15 @@ lineexp: instr
 	$$ = NULL;
     }
     | DIR_ID dirvals	{
-	yasm__warning(YASM_WARN_GENERAL, cur_line,
-		      N_("directive `%s' not recognized"), $1);
+	yasm_warn_set(YASM_WARN_GENERAL, N_("directive `%s' not recognized"),
+		      $1);
 	$$ = (yasm_bytecode *)NULL;
 	yasm_xfree($1);
 	yasm_vps_delete(&$2);
     }
     | DIR_ID error	{
-	yasm__warning(YASM_WARN_GENERAL, cur_line,
-		      N_("directive `%s' not recognized"), $1);
+	yasm_warn_set(YASM_WARN_GENERAL, N_("directive `%s' not recognized"),
+		      $1);
 	$$ = (yasm_bytecode *)NULL;
 	yasm_xfree($1);
     }
@@ -585,7 +589,7 @@ instr: INSN		{
 				 &$2.operands, cur_line);
     }
     | INSN error	{
-	yasm__error(cur_line, N_("expression syntax error"));
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("expression syntax error"));
 	$$ = NULL;
     }
     | PREFIX instr	{
@@ -605,15 +609,18 @@ instr: INSN		{
 	yasm_bc_insn_add_seg_prefix($$, $1[0]);
     }
     | ID {
-	yasm__error(cur_line, N_("instruction not recognized: `%s'"), $1);
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("instruction not recognized: `%s'"), $1);
 	$$ = NULL;
     }
     | ID operands {
-	yasm__error(cur_line, N_("instruction not recognized: `%s'"), $1);
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("instruction not recognized: `%s'"), $1);
 	$$ = NULL;
     }
     | ID error {
-	yasm__error(cur_line, N_("instruction not recognized: `%s'"), $1);
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("instruction not recognized: `%s'"), $1);
 	$$ = NULL;
     }
 ;
@@ -695,7 +702,7 @@ regmemexpr: '(' REG ')'	    {
     }
     | '(' ',' INTNUM ')'    {
 	if (yasm_intnum_get_uint($3) != 1)
-	    yasm__warning(YASM_WARN_GENERAL, cur_line,
+	    yasm_warn_set(YASM_WARN_GENERAL,
 			  N_("scale factor of %u without an index register"),
 			  yasm_intnum_get_uint($3));
 	$$ = p_expr_new(yasm_expr_int(yasm_intnum_create_uint(0)),
@@ -732,7 +739,7 @@ memaddr: expr		    {
     }
     | SEGREG ':' memaddr  {
 	$$ = $3;
-	yasm_ea_set_segreg($$, $1[0], cur_line);
+	yasm_ea_set_segreg($$, $1[0]);
     }
 ;
 
@@ -745,8 +752,8 @@ operand: memaddr	    { $$ = yasm_operand_create_mem($1); }
 	    yasm_arch_reggroup_get_reg(parser_gas->arch, $1[0],
 				       yasm_intnum_get_uint($3));
 	if (reg == 0) {
-	    yasm__error(cur_line, N_("bad register index `%u'"),
-			yasm_intnum_get_uint($3));
+	    yasm_error_set(YASM_ERROR_SYNTAX, N_("bad register index `%u'"),
+			   yasm_intnum_get_uint($3));
 	    $$ = yasm_operand_create_reg($1[0]);
 	} else
 	    $$ = yasm_operand_create_reg(reg);
@@ -902,7 +909,8 @@ gas_switch_section(yasm_parser_gas *parser_gas, char *name,
 	parser_gas->cur_section = new_section;
 	parser_gas->prev_bc = yasm_section_bcs_last(new_section);
     } else
-	yasm__error(cur_line, N_("invalid section name `%s'"), name);
+	yasm_error_set(YASM_ERROR_GENERAL, N_("invalid section name `%s'"),
+		       name);
 
     yasm_xfree(name);
 
@@ -954,7 +962,8 @@ gas_parser_dir_align(yasm_parser_gas *parser_gas, yasm_valparamhead *valparams,
     if (bound && boundval) {
 	fill = yasm_vps_next(bound);
     } else {
-	yasm__error(cur_line, N_("align directive must specify alignment"));
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("align directive must specify alignment"));
 	return NULL;
     }
 
@@ -988,7 +997,8 @@ gas_parser_dir_fill(yasm_parser_gas *parser_gas, /*@only@*/ yasm_expr *repeat,
 	/*@dependent@*/ /*@null@*/ yasm_intnum *intn;
 	intn = yasm_expr_get_intnum(&size, NULL);
 	if (!intn) {
-	    yasm__error(cur_line, N_("size must be an absolute expression"));
+	    yasm_error_set(YASM_ERROR_NOT_ABSOLUTE,
+			   N_("size must be an absolute expression"));
 	    yasm_expr_destroy(repeat);
 	    yasm_expr_destroy(size);
 	    if (value)
@@ -1025,7 +1035,8 @@ gas_parser_directive(yasm_parser_gas *parser_gas, const char *name,
 	;
     } else if (yasm_objfmt_directive(parser_gas->objfmt, name, valparams,
 				     objext_valparams, line)) {
-	yasm__error(line, N_("unrecognized directive [%s]"), name);
+	yasm_error_set(YASM_ERROR_GENERAL, N_("unrecognized directive [%s]"),
+		       name);
     }
 
     yasm_vps_delete(valparams);

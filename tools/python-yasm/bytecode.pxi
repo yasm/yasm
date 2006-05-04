@@ -28,7 +28,7 @@ cdef extern from "libyasm/bytecode.h":
 
     cdef struct yasm_effaddr_callback:
         void (*destroy) (yasm_effaddr *ea)
-        void (*c_print "print") (yasm_effaddr *ea, FILE *f, int indent_level)
+        void (*print_ "print") (yasm_effaddr *ea, FILE *f, int indent_level)
 
     cdef struct yasm_effaddr:
         yasm_effaddr_callback *callback
@@ -58,8 +58,7 @@ cdef extern from "libyasm/bytecode.h":
     cdef void yasm_ea_set_len(yasm_effaddr *ea, unsigned int len)
     cdef void yasm_ea_set_nosplit(yasm_effaddr *ea, unsigned int nosplit)
     cdef void yasm_ea_set_strong(yasm_effaddr *ea, unsigned int strong)
-    cdef void yasm_ea_set_segreg(yasm_effaddr *ea, unsigned long segreg,
-            unsigned long line)
+    cdef void yasm_ea_set_segreg(yasm_effaddr *ea, unsigned long segreg)
     cdef void yasm_ea_destroy(yasm_effaddr *ea)
     cdef void yasm_ea_print(yasm_effaddr *ea, FILE *f, int indent_level)
 
@@ -147,3 +146,29 @@ cdef extern from "libyasm/bc-int.h":
 cdef class Bytecode:
     cdef yasm_bytecode *bc
 
+    property len:
+        def __get__(self): return self.bc.len
+        def __set__(self, value): self.bc.len = value
+    property line:
+        def __get__(self): return self.bc.line
+        def __set__(self, value): self.bc.line = value
+    property offset:
+        def __get__(self): return self.bc.offset
+        def __set__(self, value): self.bc.offset = value
+    property opt_flags:
+        def __get__(self): return self.bc.opt_flags
+        def __set__(self, value): self.bc.opt_flags = value
+    property symbols:
+        # Someday extend this to do something modifiable, e.g. return a
+        # list-like object.
+        def __get__(self):
+            cdef yasm_symrec *sym
+            cdef int i
+            s = []
+            i = 0
+            sym = self.bc.symrecs[i]
+            while sym != NULL:
+                s.append(__make_symbol(sym))
+                i = i+1
+                sym = self.bc.symrecs[i]
+            return s

@@ -42,41 +42,35 @@ void yasm_intnum_cleanup(void);
 
 /** Create a new intnum from a decimal string.
  * \param str	    decimal string
- * \param line	    virtual line (where the number came from)
  * \return Newly allocated intnum.
  */
-/*@only@*/ yasm_intnum *yasm_intnum_create_dec(char *str, unsigned long line);
+/*@only@*/ yasm_intnum *yasm_intnum_create_dec(char *str);
 
 /** Create a new intnum from a binary string.
  * \param str	    binary string
- * \param line	    virtual line (where the number came from)
  * \return Newly allocated intnum.
  */
-/*@only@*/ yasm_intnum *yasm_intnum_create_bin(char *str, unsigned long line);
+/*@only@*/ yasm_intnum *yasm_intnum_create_bin(char *str);
 
 /** Create a new intnum from an octal string.
  * \param str	    octal string
- * \param line	    virtual line (where the number came from)
  * \return Newly allocated intnum.
  */
-/*@only@*/ yasm_intnum *yasm_intnum_create_oct(char *str, unsigned long line);
+/*@only@*/ yasm_intnum *yasm_intnum_create_oct(char *str);
 
 /** Create a new intnum from a hexidecimal string.
  * \param str	    hexidecimal string
- * \param line	    virtual line (where the number came from)
  * \return Newly allocated intnum.
  */
-/*@only@*/ yasm_intnum *yasm_intnum_create_hex(char *str, unsigned long line);
+/*@only@*/ yasm_intnum *yasm_intnum_create_hex(char *str);
 
 /** Convert character constant to integer value, using NASM rules.  NASM syntax
  * supports automatic conversion from strings such as 'abcd' to a 32-bit
  * integer value.  This function performs those conversions.
  * \param str	    character constant string
- * \param line      virtual line (where the number came from)
  * \return Newly allocated intnum.
  */
-/*@only@*/ yasm_intnum *yasm_intnum_create_charconst_nasm(const char *str,
-							  unsigned long line);
+/*@only@*/ yasm_intnum *yasm_intnum_create_charconst_nasm(const char *str);
 
 /** Create a new intnum from an unsigned integer value.
  * \param i	    unsigned integer value
@@ -94,13 +88,11 @@ void yasm_intnum_cleanup(void);
  * \param ptr	pointer to start of LEB128 encoded form
  * \param sign	signed (1) or unsigned (0) LEB128 format
  * \param size	number of bytes read from ptr (output)
- * \param line	virtual line (where the number came from)
  * \return Newly allocated intnum.  Number of bytes read returned into
  *         bytes_read parameter.
  */
 /*@only@*/ yasm_intnum *yasm_intnum_create_leb128
-    (const unsigned char *ptr, int sign, /*@out@*/ unsigned long *size,
-     unsigned long line);
+    (const unsigned char *ptr, int sign, /*@out@*/ unsigned long *size);
 
 /** Create a new intnum from a little-endian or big-endian buffer.
  * In little endian, the LSB is in ptr[0].
@@ -108,11 +100,9 @@ void yasm_intnum_cleanup(void);
  * \param sign	    signed (1) or unsigned (0) source
  * \param srcsize   source buffer size (in bytes)
  * \param bigendian endianness (nonzero=big, zero=little)
- * \param line      virtual line; may be 0 if warn is 0
  */
 /*@only@*/ yasm_intnum *yasm_intnum_create_sized
-    (unsigned char *ptr, int sign, size_t srcsize, int bigendian,
-     unsigned long line);
+    (unsigned char *ptr, int sign, size_t srcsize, int bigendian);
 
 /** Duplicate an intnum.
  * \param intn	intnum
@@ -131,10 +121,9 @@ void yasm_intnum_destroy(/*@only@*/ yasm_intnum *intn);
  * \param acc	    intnum accumulator
  * \param op	    operation
  * \param operand   intnum operand
- * \param line      virtual line (of expression)
+ * \return Nonzero if error occurred.
  */
-void yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand,
-		      unsigned long line);
+int yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand);
 
 /** Zero an intnum.
  * \param intn	    intnum
@@ -201,12 +190,11 @@ long yasm_intnum_get_int(const yasm_intnum *intn);
  *		    shift (standard warnings include truncation to boundary)
  * \param bigendian endianness (nonzero=big, zero=little)
  * \param warn	    enables standard warnings (value doesn't fit into valsize
- *		    bits)
- * \param line      virtual line; may be 0 if warn is 0
+ *		    bits): <0=signed warnings, >0=unsigned warnings, 0=no warn
  */
 void yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
 			   size_t destsize, size_t valsize, int shift,
-			   int bigendian, int warn, unsigned long line);
+			   int bigendian, int warn);
 
 /** Check to see if intnum will fit without overflow into size bits.
  * \param intn	    intnum

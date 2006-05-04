@@ -103,8 +103,10 @@ void yasm_object_print(const yasm_object *object, FILE *f, int indent_level);
 
 /** Finalize an object after parsing.
  * \param object	object
+ * \param errwarns	error/warning set
+ * \note Errors/warnings are stored into errwarns.
  */
-void yasm_object_finalize(yasm_object *object);
+void yasm_object_finalize(yasm_object *object, yasm_errwarns *errwarns);
 
 /** Traverses all sections in an object, calling a function on each section.
  * \param object	object
@@ -281,15 +283,18 @@ yasm_bytecode *yasm_section_bcs_last(yasm_section *sect);
      /*@returned@*/ /*@only@*/ /*@null@*/ yasm_bytecode *bc);
 
 /** Traverses all bytecodes in a section, calling a function on each bytecode.
- * \param sect	section
- * \param d	data pointer passed to func on each call
- * \param func	function
+ * \param sect	    section
+ * \param errwarns  error/warning set (may be NULL)
+ * \param d	    data pointer passed to func on each call (may be NULL)
+ * \param func	    function
  * \return Stops early (and returns func's return value) if func returns a
  *	   nonzero value; otherwise 0.
+ * \note If errwarns is non-NULL, yasm_errwarn_propagate() is called after
+ *       each call to func (with the bytecode's line number).
  */
 int yasm_section_bcs_traverse
-    (yasm_section *sect, /*@null@*/ void *d,
-     int (*func) (yasm_bytecode *bc, /*@null@*/ void *d));
+    (yasm_section *sect, /*@null@*/ yasm_errwarns *errwarns,
+     /*@null@*/ void *d, int (*func) (yasm_bytecode *bc, /*@null@*/ void *d));
 
 /** Get name of a section.
  * \param   sect    section

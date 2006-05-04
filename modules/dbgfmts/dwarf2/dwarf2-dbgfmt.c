@@ -152,7 +152,7 @@ yasm_dwarf2__append_bc(yasm_section *sect, yasm_bytecode *bc)
 }
 
 static void
-dwarf2_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
+dwarf2_dbgfmt_generate(yasm_dbgfmt *dbgfmt, yasm_errwarns *errwarns)
 {
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = (yasm_dbgfmt_dwarf2 *)dbgfmt;
     size_t num_line_sections;
@@ -161,7 +161,7 @@ dwarf2_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
     /* If we don't have any .file directives, generate line information
      * based on the asm source.
      */
-    debug_line = yasm_dwarf2__generate_line(dbgfmt_dwarf2,
+    debug_line = yasm_dwarf2__generate_line(dbgfmt_dwarf2, errwarns,
 					    dbgfmt_dwarf2->filenames_size == 0,
 					    &main_code, &num_line_sections);
 
@@ -273,17 +273,16 @@ dwarf2_head_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     /* Total length of aranges info (following this field) */
     cval = yasm_intnum_create_uint(dbgfmt_dwarf2->sizeof_offset);
     intn = yasm_common_calc_bc_dist(head->start_prevbc, head->end_prevbc);
-    yasm_intnum_calc(intn, YASM_EXPR_SUB, cval, bc->line);
+    yasm_intnum_calc(intn, YASM_EXPR_SUB, cval);
     yasm_arch_intnum_tobytes(dbgfmt_dwarf2->arch, intn, buf,
 			     dbgfmt_dwarf2->sizeof_offset,
-			     dbgfmt_dwarf2->sizeof_offset*8, 0, bc, 0, 0);
+			     dbgfmt_dwarf2->sizeof_offset*8, 0, bc, 0);
     buf += dbgfmt_dwarf2->sizeof_offset;
     yasm_intnum_destroy(intn);
 
     /* DWARF version */
     yasm_intnum_set_uint(cval, 2);
-    yasm_arch_intnum_tobytes(dbgfmt_dwarf2->arch, cval, buf, 2, 16, 0, bc, 0,
-			     0);
+    yasm_arch_intnum_tobytes(dbgfmt_dwarf2->arch, cval, buf, 2, 16, 0, bc, 0);
     buf += 2;
 
     /* Pointer to another debug section */

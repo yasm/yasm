@@ -152,8 +152,6 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
  * \param expr_xform_extra  extra transformation function
  * \param expr_xform_extra_data	data to pass to expr_xform_extra
  * \param eh		    call with NULL (for internal use in recursion)
- * \param error		    if non-NULL, set to 1 if an error is encountered
- *			    (e.g. circular reference errors)
  * \return Leveled expression.
  */
 /*@only@*/ /*@null@*/ yasm_expr *yasm_expr__level_tree
@@ -161,8 +159,7 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
      int simplify_ident, int simplify_reg_mul,
      /*@null@*/ yasm_calc_bc_dist_func calc_bc_dist,
      /*@null@*/ yasm_expr_xform_func expr_xform_extra,
-     /*@null@*/ void *expr_xform_extra_data, /*@null@*/ yasm__exprhead *eh,
-     /*@null@*/ int *error);
+     /*@null@*/ void *expr_xform_extra_data, /*@null@*/ yasm__exprhead *eh);
 
 /** Simplify an expression as much as possible.  Eliminates extraneous
  * branches and simplifies integer-only subexpressions.  Simplified version
@@ -172,7 +169,7 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
  * \return Simplified expression.
  */
 #define yasm_expr_simplify(e, cbd) \
-    yasm_expr__level_tree(e, 1, 1, 1, cbd, NULL, NULL, NULL, NULL)
+    yasm_expr__level_tree(e, 1, 1, 1, cbd, NULL, NULL, NULL)
 
 /** Extract the segment portion of a SEG:OFF expression, leaving the offset.
  * \param ep		expression (pointer to)

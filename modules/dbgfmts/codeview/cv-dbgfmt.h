@@ -54,7 +54,8 @@ typedef struct yasm_dbgfmt_cv {
 yasm_bytecode *yasm_cv__append_bc(yasm_section *sect, yasm_bytecode *bc);
 
 /* Symbol/Line number functions */
-yasm_section *yasm_cv__generate_symline(yasm_dbgfmt_cv *dbgfmt_cv);
+yasm_section *yasm_cv__generate_symline(yasm_dbgfmt_cv *dbgfmt_cv,
+					yasm_errwarns *errwarns);
 
 /* Type functions */
 yasm_section *yasm_cv__generate_type(yasm_dbgfmt_cv *dbgfmt_cv);

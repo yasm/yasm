@@ -2,6 +2,7 @@
 
 PYBINDING_DEPS  = tools/python-yasm/bytecode.pxi
 PYBINDING_DEPS += tools/python-yasm/coretype.pxi
+PYBINDING_DEPS += tools/python-yasm/errwarn.pxi
 PYBINDING_DEPS += tools/python-yasm/expr.pxi
 PYBINDING_DEPS += tools/python-yasm/floatnum.pxi
 PYBINDING_DEPS += tools/python-yasm/intnum.pxi

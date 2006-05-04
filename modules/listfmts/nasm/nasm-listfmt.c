@@ -124,16 +124,17 @@ nasm_listfmt_output_value(yasm_value *value, unsigned char *buf,
 	intn = yasm_expr_get_intnum(&value->abs, NULL);
 	if (intn)
 	    return yasm_arch_intnum_tobytes(info->arch, intn, buf, destsize,
-					    valsize, shift, bc, 0, bc->line);
+					    valsize, shift, bc, 0);
 	else {
-	    yasm__error(bc->line, N_("relocation too complex"));
+	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			   N_("relocation too complex"));
 	    return 1;
 	}
     } else {
 	int retval;
 	intn = yasm_intnum_create_uint(0);
 	retval = yasm_arch_intnum_tobytes(info->arch, intn, buf, destsize,
-					  valsize, shift, bc, 0, bc->line);
+					  valsize, shift, bc, 0);
 	yasm_intnum_destroy(intn);
 	return retval;
     }

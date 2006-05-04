@@ -78,7 +78,7 @@ typedef struct yasm_dbgfmt_module {
     /** Module-level implementation of yasm_dbgfmt_generate().
      * Call yasm_dbgfmt_generate() instead of calling this function.
      */
-    void (*generate) (yasm_dbgfmt *dbgfmt);
+    void (*generate) (yasm_dbgfmt *dbgfmt, yasm_errwarns *errwarns);
 } yasm_dbgfmt_module;
 
 /** Get the keyword used to select a debug format.
@@ -120,8 +120,10 @@ int yasm_dbgfmt_directive(yasm_dbgfmt *dbgfmt, const char *name,
 
 /** Generate debugging information bytecodes.
  * \param dbgfmt	debug format
+ * \param errwarns	error/warning set
+ * \note Errors and warnings are stored into errwarns.
  */
-void yasm_dbgfmt_generate(yasm_dbgfmt *dbgfmt);
+void yasm_dbgfmt_generate(yasm_dbgfmt *dbgfmt, yasm_errwarns *errwarns);
 
 #ifndef YASM_DOXYGEN
 
@@ -138,8 +140,8 @@ void yasm_dbgfmt_generate(yasm_dbgfmt *dbgfmt);
 #define yasm_dbgfmt_directive(dbgfmt, name, sect, valparams, line) \
     ((yasm_dbgfmt_base *)dbgfmt)->module->directive(dbgfmt, name, sect, \
 						    valparams, line)
-#define yasm_dbgfmt_generate(dbgfmt) \
-    ((yasm_dbgfmt_base *)dbgfmt)->module->generate(dbgfmt)
+#define yasm_dbgfmt_generate(dbgfmt, ews) \
+    ((yasm_dbgfmt_base *)dbgfmt)->module->generate(dbgfmt, ews)
 
 #endif
 

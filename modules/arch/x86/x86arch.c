@@ -119,7 +119,8 @@ x86_parse_directive(yasm_arch *arch, const char *name,
 		    yasm_valparamhead *valparams,
 		    /*@unused@*/ /*@null@*/
 		    yasm_valparamhead *objext_valparams,
-		    /*@unused@*/ yasm_object *object, unsigned long line)
+		    /*@unused@*/ yasm_object *object,
+		    /*@unused@*/ unsigned long line)
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     yasm_valparam *vp;
@@ -134,7 +135,8 @@ x86_parse_directive(yasm_arch *arch, const char *name,
 	    (lval == 16 || lval == 32 || lval == 64))
 	    arch_x86->mode_bits = (unsigned char)lval;
 	else
-	    yasm__error(line, N_("invalid argument to [%s]"), "BITS");
+	    yasm_error_set(YASM_ERROR_VALUE, N_("invalid argument to [%s]"),
+			   "BITS");
 	return 0;
     } else
 	return 1;
@@ -253,8 +255,8 @@ x86_get_fill(const yasm_arch *arch)
 	case 64:
 	    return (const unsigned char **)fill64;
 	default:
-	    yasm_internal_error(N_("Invalid mode_bits in x86_get_fill"));
-	    /*@notreached@*/
+	    yasm_error_set(YASM_ERROR_VALUE,
+			   N_("Invalid mode_bits in x86_get_fill"));
 	    return NULL;
     }
 }
@@ -281,7 +283,7 @@ yasm_x86__get_reg_size(yasm_arch *arch, unsigned long reg)
 	case X86_FPUREG:
 	    return 10;
 	default:
-	    yasm_internal_error(N_("unknown register size"));
+	    yasm_error_set(YASM_ERROR_VALUE, N_("unknown register size"));
     }
     return 0;
 }
@@ -305,7 +307,7 @@ x86_reggroup_get_reg(yasm_arch *arch, unsigned long reggroup,
 		return 0;
 	    return reggroup | (regindex & 7);
 	default:
-	    yasm_internal_error(N_("bad register group"));
+	    yasm_error_set(YASM_ERROR_VALUE, N_("bad register group"));
     }
     return 0;
 }
@@ -366,7 +368,7 @@ x86_reg_print(yasm_arch *arch, unsigned long reg, FILE *f)
 	    fprintf(f, "st%d", (int)(reg&0xF));
 	    break;
 	default:
-	    yasm_internal_error(N_("unknown register size"));
+	    yasm_error_set(YASM_ERROR_VALUE, N_("unknown register size"));
     }
 }
 

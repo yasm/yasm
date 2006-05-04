@@ -61,7 +61,8 @@ dbg_objfmt_create(yasm_object *object, yasm_arch *a)
 }
 
 static void
-dbg_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df)
+dbg_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df,
+		  yasm_errwarns *errwarns)
 {
     yasm_objfmt_dbg *objfmt_dbg = (yasm_objfmt_dbg *)objfmt;
     char buf[1024];

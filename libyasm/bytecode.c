@@ -266,7 +266,8 @@ yasm_imm_create_expr(yasm_expr *e)
     yasm_immval *im = yasm_xmalloc(sizeof(yasm_immval));
 
     if (yasm_value_finalize_expr(&im->val, e))
-	yasm__error(e->line, N_("immediate expression too complex"));
+	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+		       N_("immediate expression too complex"));
     im->len = 0;
     im->sign = 0;
 
@@ -311,13 +312,13 @@ yasm_ea_set_strong(yasm_effaddr *ptr, unsigned int strong)
 }
 
 void
-yasm_ea_set_segreg(yasm_effaddr *ea, unsigned long segreg, unsigned long line)
+yasm_ea_set_segreg(yasm_effaddr *ea, unsigned long segreg)
 {
     if (!ea)
 	return;
 
     if (segreg != 0 && ea->segreg != 0)
-	yasm__warning(YASM_WARN_GENERAL, line,
+	yasm_warn_set(YASM_WARN_GENERAL,
 		      N_("multiple segment overrides, using leftmost"));
 
     ea->segreg = segreg;
@@ -425,7 +426,8 @@ bc_data_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     STAILQ_FOREACH(dv, &bc_data->datahead, link) {
 	if (dv->type == DV_VALUE) {
 	    if (yasm_value_finalize(&dv->data.val))
-		yasm__error(bc->line, N_("expression too complex"));
+		yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			       N_("data expression too complex"));
 	}
     }
 }
@@ -552,8 +554,8 @@ bc_leb128_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 	    case DV_VALUE:
 		intn = yasm_expr_get_intnum(&dv->data.val.abs, NULL);
 		if (!intn) {
-		    yasm__error(bc->line,
-				N_("LEB128 requires constant values"));
+		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+				   N_("LEB128 requires constant values"));
 		    return;
 		}
 		/* Warn for negative values in unsigned environment.
@@ -561,14 +563,14 @@ bc_leb128_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 		 * desired is very low!
 		 */
 		if (yasm_intnum_sign(intn) == -1 && !bc_leb128->sign)
-		    yasm__warning(YASM_WARN_GENERAL, bc->line,
+		    yasm_warn_set(YASM_WARN_GENERAL,
 				  N_("negative value in unsigned LEB128"));
 		bc_leb128->len +=
 		    yasm_intnum_size_leb128(intn, bc_leb128->sign);
 		break;
 	    case DV_STRING:
-		yasm__error(bc->line,
-			    N_("LEB128 does not allow string constants"));
+		yasm_error_set(YASM_ERROR_VALUE,
+			       N_("LEB128 does not allow string constants"));
 		return;
 	}
     }
@@ -647,12 +649,14 @@ bc_reserve_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     yasm_value val;
 
     if (yasm_value_finalize_expr(&val, reserve->numitems))
-	yasm__error(bc->line, N_("expression too complex"));
+	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+		       N_("reserve expression too complex"));
     else if (val.rel)
-	yasm__error(bc->line, N_("reserve expression not absolute"));
+	yasm_error_set(YASM_ERROR_NOT_ABSOLUTE,
+		       N_("reserve expression not absolute"));
     else if (val.abs && yasm_expr__contains(val.abs, YASM_EXPR_FLOAT))
-	yasm__error(bc->line,
-		    N_("expression must not contain floating point value"));
+	yasm_error_set(YASM_ERROR_VALUE,
+		       N_("expression must not contain floating point value"));
     reserve->numitems = val.abs;
 }
 
@@ -682,8 +686,8 @@ bc_reserve_resolve(yasm_bytecode *bc, int save,
 	/* For reserve, just say non-constant quantity instead of allowing
 	 * the circular reference error to filter through.
 	 */
-	yasm__error(bc->line,
-		    N_("attempt to reserve non-constant quantity of space"));
+	yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+		       N_("attempt to reserve non-constant quantity of space"));
 	retval = YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
     } else
 	bc->len += yasm_intnum_get_uint(num)*reserve->itemsize;
@@ -752,15 +756,19 @@ bc_incbin_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     yasm_value val;
 
     if (yasm_value_finalize_expr(&val, incbin->start))
-	yasm__error(bc->line, N_("start expression too complex"));
+	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+		       N_("start expression too complex"));
     else if (val.rel)
-	yasm__error(bc->line, N_("start expression not absolute"));
+	yasm_error_set(YASM_ERROR_NOT_ABSOLUTE,
+		       N_("start expression not absolute"));
     incbin->start = val.abs;
 
     if (yasm_value_finalize_expr(&val, incbin->maxlen))
-	yasm__error(bc->line, N_("maximum length expression too complex"));
+	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+		       N_("maximum length expression too complex"));
     else if (val.rel)
-	yasm__error(bc->line, N_("maximum length expression not absolute"));
+	yasm_error_set(YASM_ERROR_NOT_ABSOLUTE,
+		       N_("maximum length expression not absolute"));
     incbin->maxlen = val.abs;
 }
 
@@ -818,13 +826,15 @@ bc_incbin_resolve(yasm_bytecode *bc, int save,
     /* Open file and determine its length */
     f = fopen(incbin->filename, "rb");
     if (!f) {
-	yasm__error(bc->line, N_("`incbin': unable to open file `%s'"),
-		    incbin->filename);
+	yasm_error_set(YASM_ERROR_IO,
+		       N_("`incbin': unable to open file `%s'"),
+		       incbin->filename);
 	return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
     }
     if (fseek(f, 0L, SEEK_END) < 0) {
-	yasm__error(bc->line, N_("`incbin': unable to seek on file `%s'"),
-		    incbin->filename);
+	yasm_error_set(YASM_ERROR_IO,
+		       N_("`incbin': unable to seek on file `%s'"),
+		       incbin->filename);
 	return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
     }
     flen = (unsigned long)ftell(f);
@@ -832,7 +842,7 @@ bc_incbin_resolve(yasm_bytecode *bc, int save,
 
     /* Compute length of incbin from start, maxlen, and len */
     if (start > flen) {
-	yasm__warning(YASM_WARN_GENERAL, bc->line,
+	yasm_warn_set(YASM_WARN_GENERAL,
 		      N_("`incbin': start past end of file `%s'"),
 		      incbin->filename);
 	start = flen;
@@ -867,24 +877,25 @@ bc_incbin_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     /* Open file */
     f = fopen(incbin->filename, "rb");
     if (!f) {
-	yasm__error(bc->line, N_("`incbin': unable to open file `%s'"),
-		    incbin->filename);
+	yasm_error_set(YASM_ERROR_IO, N_("`incbin': unable to open file `%s'"),
+		       incbin->filename);
 	return 1;
     }
 
     /* Seek to start of data */
     if (fseek(f, (long)start, SEEK_SET) < 0) {
-	yasm__error(bc->line, N_("`incbin': unable to seek on file `%s'"),
-		    incbin->filename);
+	yasm_error_set(YASM_ERROR_IO,
+		       N_("`incbin': unable to seek on file `%s'"),
+		       incbin->filename);
 	fclose(f);
 	return 1;
     }
 
     /* Read len bytes */
     if (fread(*bufp, 1, (size_t)bc->len, f) < (size_t)bc->len) {
-	yasm__error(bc->line,
-		    N_("`incbin': unable to read %lu bytes from file `%s'"),
-		    bc->len, incbin->filename);
+	yasm_error_set(YASM_ERROR_IO,
+		       N_("`incbin': unable to read %lu bytes from file `%s'"),
+		       bc->len, incbin->filename);
 	fclose(f);
 	return 1;
     }
@@ -941,11 +952,14 @@ bc_align_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 {
     bytecode_align *align = (bytecode_align *)bc->contents;
     if (!yasm_expr_get_intnum(&align->boundary, NULL))
-	yasm__error(bc->line, N_("align boundary must be a constant"));
+	yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+		       N_("align boundary must be a constant"));
     if (align->fill && !yasm_expr_get_intnum(&align->fill, NULL))
-	yasm__error(bc->line, N_("align fill must be a constant"));
+	yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+		       N_("align fill must be a constant"));
     if (align->maxskip && !yasm_expr_get_intnum(&align->maxskip, NULL))
-	yasm__error(bc->line, N_("align maximum skip must be a constant"));
+	yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+		       N_("align maximum skip must be a constant"));
 }
 
 static yasm_bc_resolve_flags
@@ -1015,7 +1029,8 @@ bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	while (!align->code_fill[maxlen] && maxlen>0)
 	    maxlen--;
 	if (maxlen == 0) {
-	    yasm__error(bc->line, N_("could not find any code alignment size"));
+	    yasm_error_set(YASM_ERROR_GENERAL,
+			   N_("could not find any code alignment size"));
 	    return 1;
 	}
 
@@ -1027,7 +1042,8 @@ bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	}
 
 	if (!align->code_fill[len]) {
-	    yasm__error(bc->line, N_("invalid alignment size %d"), len);
+	    yasm_error_set(YASM_ERROR_VALUE,
+			   N_("invalid alignment size %d"), len);
 	    return 1;
 	}
 	/* Handle rest of code fill */
@@ -1083,7 +1099,8 @@ bc_org_resolve(yasm_bytecode *bc, int save,
 
     /* Check for overrun */
     if (bc->offset > org->start) {
-	yasm__error(bc->line, N_("ORG overlap with already existing data"));
+	yasm_error_set(YASM_ERROR_GENERAL,
+		       N_("ORG overlap with already existing data"));
 	return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
     }
 
@@ -1102,7 +1119,8 @@ bc_org_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     /* Sanity check for overrun */
     if (bc->offset > org->start) {
-	yasm__error(bc->line, N_("ORG overlap with already existing data"));
+	yasm_error_set(YASM_ERROR_GENERAL,
+		       N_("ORG overlap with already existing data"));
 	return 1;
     }
     len = org->start - bc->offset;
@@ -1148,8 +1166,10 @@ bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 {
     bytecode_insn *insn = (bytecode_insn *)bc->contents;
     int i;
-    int error = 0;
     yasm_insn_operand *op;
+    yasm_error_class eclass;
+    char *str, *xrefstr;
+    unsigned long xrefline;
 
     /* Simplify the operands' expressions first. */
     for (i = 0, op = yasm_ops_first(&insn->operands);
@@ -1164,21 +1184,37 @@ bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 		if (op->data.ea)
 		    op->data.ea->disp.abs =
 			yasm_expr__level_tree(op->data.ea->disp.abs, 1, 1, 0,
-					      NULL, NULL, NULL, NULL, &error);
-		if (error) {
-		    /* Follow up error with a pointer to where it was used */
-		    yasm__error(bc->line, N_("(used in memory expression)"));
+					      NULL, NULL, NULL, NULL);
+		if (yasm_error_occurred()) {
+		    /* Add a pointer to where it was used to the error */
+		    yasm_error_fetch(&eclass, &str, &xrefline, &xrefstr);
+		    if (xrefstr) {
+			yasm_error_set_xref(xrefline, "%s", xrefstr);
+			yasm_xfree(xrefstr);
+		    }
+		    if (str) {
+			yasm_error_set(eclass, "%s in memory expression", str);
+			yasm_xfree(str);
+		    }
 		    return;
 		}
 		break;
 	    case YASM_INSN__OPERAND_IMM:
 		op->data.val =
 		    yasm_expr__level_tree(op->data.val, 1, 1, 1, NULL, NULL,
-					  NULL, NULL, &error);
-		if (error) {
-		    /* Follow up error with a pointer to where it was used */
-		    yasm__error(bc->line,
-				N_("(used in immediate expression)"));
+					  NULL, NULL);
+		if (yasm_error_occurred()) {
+		    /* Add a pointer to where it was used to the error */
+		    yasm_error_fetch(&eclass, &str, &xrefline, &xrefstr);
+		    if (xrefstr) {
+			yasm_error_set_xref(xrefline, "%s", xrefstr);
+			yasm_xfree(xrefstr);
+		    }
+		    if (str) {
+			yasm_error_set(eclass, "%s in immediate expression",
+				       str);
+			yasm_xfree(str);
+		    }
 		    return;
 		}
 		break;
@@ -1357,9 +1393,11 @@ yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 	yasm_value val;
 
 	if (yasm_value_finalize_expr(&val, bc->multiple))
-	    yasm__error(bc->line, N_("multiple expression too complex"));
+	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			   N_("multiple expression too complex"));
 	else if (val.rel)
-	    yasm__error(bc->line, N_("multiple expression not absolute"));
+	    yasm_error_set(YASM_ERROR_NOT_ABSOLUTE,
+			   N_("multiple expression not absolute"));
 	bc->multiple = val.abs;
     }
 }
@@ -1376,7 +1414,7 @@ yasm_common_calc_bc_dist(yasm_bytecode *precbc1, yasm_bytecode *precbc2)
     dist = precbc2->offset + precbc2->len;
     if (dist < precbc1->offset + precbc1->len) {
 	intn = yasm_intnum_create_uint(precbc1->offset + precbc1->len - dist);
-	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL, precbc1->line);
+	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
 	return intn;
     }
     dist -= precbc1->offset + precbc1->len;
@@ -1413,7 +1451,7 @@ yasm_bc_resolve(yasm_bytecode *bc, int save,
 	if (!num) {
 	    retval = YASM_BC_RESOLVE_UNKNOWN_LEN;
 	    if (temp && yasm_expr__contains(temp, YASM_EXPR_FLOAT)) {
-		yasm__error(bc->line,
+		yasm_error_set(YASM_ERROR_VALUE,
 		    N_("expression must not contain floating point value"));
 		retval |= YASM_BC_RESOLVE_ERROR;
 	    }
@@ -1452,7 +1490,7 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 	    yasm_internal_error(
 		N_("could not determine multiple in bc_tobytes"));
 	if (yasm_intnum_sign(num) < 0) {
-	    yasm__error(bc->line, N_("multiple is negative"));
+	    yasm_error_set(YASM_ERROR_VALUE, N_("multiple is negative"));
 	    *bufsize = 0;
 	    return NULL;
 	}

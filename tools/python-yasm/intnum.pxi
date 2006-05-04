@@ -26,22 +26,21 @@
 cdef extern from "libyasm/intnum.h":
     cdef void yasm_intnum_initialize()
     cdef void yasm_intnum_cleanup()
-    cdef yasm_intnum *yasm_intnum_create_dec(char *str, unsigned long line)
-    cdef yasm_intnum *yasm_intnum_create_bin(char *str, unsigned long line)
-    cdef yasm_intnum *yasm_intnum_create_oct(char *str, unsigned long line)
-    cdef yasm_intnum *yasm_intnum_create_hex(char *str, unsigned long line)
-    cdef yasm_intnum *yasm_intnum_create_charconst_nasm(char *str,
-            unsigned long line)
+    cdef yasm_intnum *yasm_intnum_create_dec(char *str)
+    cdef yasm_intnum *yasm_intnum_create_bin(char *str)
+    cdef yasm_intnum *yasm_intnum_create_oct(char *str)
+    cdef yasm_intnum *yasm_intnum_create_hex(char *str)
+    cdef yasm_intnum *yasm_intnum_create_charconst_nasm(char *str)
     cdef yasm_intnum *yasm_intnum_create_uint(unsigned long i)
     cdef yasm_intnum *yasm_intnum_create_int(long i)
     cdef yasm_intnum *yasm_intnum_create_leb128(unsigned char *ptr,
-            int sign, unsigned long *size, unsigned long line)
+            int sign, unsigned long *size)
     cdef yasm_intnum *yasm_intnum_create_sized(unsigned char *ptr, int sign,
-            size_t srcsize, int bigendian, unsigned long line)
+            size_t srcsize, int bigendian)
     cdef yasm_intnum *yasm_intnum_copy(yasm_intnum *intn)
     cdef void yasm_intnum_destroy(yasm_intnum *intn)
     cdef void yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op,
-            yasm_intnum *operand, unsigned long line)
+            yasm_intnum *operand)
     cdef void yasm_intnum_zero(yasm_intnum *intn)
     cdef void yasm_intnum_set_uint(yasm_intnum *intn, unsigned long val)
     cdef int yasm_intnum_is_zero(yasm_intnum *acc)
@@ -51,8 +50,7 @@ cdef extern from "libyasm/intnum.h":
     cdef unsigned long yasm_intnum_get_uint(yasm_intnum *intn)
     cdef long yasm_intnum_get_int(yasm_intnum *intn)
     cdef void yasm_intnum_get_sized(yasm_intnum *intn, unsigned char *ptr,
-	    size_t destsize, size_t valsize, int shift, int bigendian, int warn,
-            unsigned long line)
+	    size_t destsize, size_t valsize, int shift, int bigendian, int warn)
     cdef int yasm_intnum_check_size(yasm_intnum *intn, size_t size,
             size_t rshift, int rangetype)
     cdef unsigned long yasm_intnum_get_leb128(yasm_intnum *intn,
@@ -71,19 +69,19 @@ cdef object __intnum_op(object x, yasm_expr_op op, object y):
     if isinstance(x, IntNum):
         result = IntNum(x)
         if y is None:
-            yasm_intnum_calc((<IntNum>result).intn, op, NULL, 0)
+            yasm_intnum_calc((<IntNum>result).intn, op, NULL)
         else:
             # Coerce to intnum if not already
             if isinstance(y, IntNum):
                 rhs = y
             else:
                 rhs = IntNum(y)
-            yasm_intnum_calc((<IntNum>result).intn, op, (<IntNum>rhs).intn, 0)
+            yasm_intnum_calc((<IntNum>result).intn, op, (<IntNum>rhs).intn)
         return result
     elif isinstance(y, IntNum):
         # Reversed operation - x OP y still, just y is intnum, x isn't.
         result = IntNum(x)
-        yasm_intnum_calc((<IntNum>result).intn, op, (<IntNum>y).intn, 0)
+        yasm_intnum_calc((<IntNum>result).intn, op, (<IntNum>y).intn)
         return result
     else:
         raise NotImplementedError
@@ -116,14 +114,14 @@ cdef class IntNum:
             raise ValueError
 
         _PyLong_AsByteArray(val, buf, 16, 1, 1)
-        self.intn = yasm_intnum_create_sized(buf, 1, 16, 0, 0)
+        self.intn = yasm_intnum_create_sized(buf, 1, 16, 0)
 
     def __dealloc__(self):
         if self.intn != NULL: yasm_intnum_destroy(self.intn)
 
     def __long__(self):
         cdef unsigned char buf[16]
-        yasm_intnum_get_sized(self.intn, buf, 16, 128, 0, 0, 0, 0)
+        yasm_intnum_get_sized(self.intn, buf, 16, 128, 0, 0, 0)
         return _PyLong_FromByteArray(buf, 16, 1, 1)
 
     def __repr__(self):
@@ -160,7 +158,7 @@ cdef class IntNum:
             rhs = x
         else:
             rhs = IntNum(x)
-        yasm_intnum_calc(self.intn, op, (<IntNum>rhs).intn, 0)
+        yasm_intnum_calc(self.intn, op, (<IntNum>rhs).intn)
         return self
 
     def __iadd__(self, x): return self.__op(YASM_EXPR_ADD, x)
@@ -182,7 +180,7 @@ cdef class IntNum:
             rhs = x
         else:
             rhs = IntNum(x)
-        yasm_intnum_calc(t, YASM_EXPR_SUB, (<IntNum>rhs).intn, 0)
+        yasm_intnum_calc(t, YASM_EXPR_SUB, (<IntNum>rhs).intn)
         result = yasm_intnum_sign(t)
         yasm_intnum_destroy(t)
         return result

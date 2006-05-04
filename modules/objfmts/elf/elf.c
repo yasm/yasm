@@ -422,7 +422,8 @@ elf_symtab_assign_indices(elf_symtab_head *symtab)
 }
 
 unsigned long
-elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab)
+elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab,
+			 yasm_errwarns *errwarns)
 {
     unsigned char buf[SYMTAB_MAXSIZE], *bufp;
     elf_symtab_entry *entry, *prev;
@@ -441,9 +442,11 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab)
 	if (entry->xsize) {
 	    size_intn = yasm_intnum_copy(
 		yasm_expr_get_intnum(&entry->xsize, yasm_common_calc_bc_dist));
-	    if (!size_intn)
-		yasm__error(entry->xsize->line,
-		    N_("size specifier not an integer expression"));
+	    if (!size_intn) {
+		yasm_error_set(YASM_ERROR_VALUE,
+			       N_("size specifier not an integer expression"));
+		yasm_errwarn_propagate(errwarns, entry->xsize->line);
+	    }
 	}
 	else
 	    size_intn = yasm_intnum_create_uint(entry->size);
@@ -460,8 +463,9 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab)
 						yasm_common_calc_bc_dist);
 
 		if (equ_intn == NULL) {
-		    yasm__error(equ_expr->line,
-				N_("EQU value not an integer expression"));
+		    yasm_error_set(YASM_ERROR_VALUE,
+				   N_("EQU value not an integer expression"));
+		    yasm_errwarn_propagate(errwarns, equ_expr->line);
 		}
 
 		value_intn = yasm_intnum_copy(equ_intn);
@@ -700,7 +704,7 @@ elf_secthead_write_rel_to_file(FILE *f, elf_section_index symtab_idx,
 
 unsigned long
 elf_secthead_write_relocs_to_file(FILE *f, yasm_section *sect,
-				  elf_secthead *shead)
+				  elf_secthead *shead, yasm_errwarns *errwarns)
 {
     elf_reloc_entry *reloc;
     unsigned char buf[RELOC_MAXSIZE], *bufp;
@@ -716,11 +720,16 @@ elf_secthead_write_relocs_to_file(FILE *f, yasm_section *sect,
 
     /* first align section to multiple of 4 */
     pos = ftell(f);
-    if (pos == -1)
-	yasm__error(0, N_("couldn't read position on output stream"));
+    if (pos == -1) {
+	yasm_error_set(YASM_ERROR_IO,
+		       N_("couldn't read position on output stream"));
+	yasm_errwarn_propagate(errwarns, 0);
+    }
     pos = (pos + 3) & ~3;
-    if (fseek(f, pos, SEEK_SET) < 0)
-	yasm__error(0, N_("couldn't seek on output stream"));
+    if (fseek(f, pos, SEEK_SET) < 0) {
+	yasm_error_set(YASM_ERROR_IO, N_("couldn't seek on output stream"));
+	yasm_errwarn_propagate(errwarns, 0);
+    }
     shead->rel_offset = (unsigned long)pos;
 
 
@@ -843,7 +852,7 @@ void
 elf_secthead_add_size(elf_secthead *shead, yasm_intnum *size)
 {
     if (size) {
-	yasm_intnum_calc(shead->size, YASM_EXPR_ADD, size, 0);
+	yasm_intnum_calc(shead->size, YASM_EXPR_ADD, size);
     }
 }
 

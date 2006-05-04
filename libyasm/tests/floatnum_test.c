@@ -295,7 +295,7 @@ test_get_single_normalized(void)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	if (yasm_floatnum_get_sized(flt, outval, 4, 32, 0, 0, 0, 0) !=
+	if (yasm_floatnum_get_sized(flt, outval, 4, 32, 0, 0, 0) !=
 	    vals[i].ret32)
 	    return 1;
 	if (get_common_check_result(4, outval, vals[i].result32) != 0)
@@ -313,7 +313,7 @@ test_get_single_normalized_edgecase(void)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	if (yasm_floatnum_get_sized(flt, outval, 4, 32, 0, 0, 0, 0) !=
+	if (yasm_floatnum_get_sized(flt, outval, 4, 32, 0, 0, 0) !=
 	    vals[i].ret32)
 	    return 1;
 	if (get_common_check_result(4, outval, vals[i].result32) != 0)
@@ -335,7 +335,7 @@ test_get_double_normalized(void)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	if (yasm_floatnum_get_sized(flt, outval, 8, 64, 0, 0, 0, 0) !=
+	if (yasm_floatnum_get_sized(flt, outval, 8, 64, 0, 0, 0) !=
 	    vals[i].ret64)
 	    return 1;
 	if (get_common_check_result(8, outval, vals[i].result64) != 0)
@@ -353,7 +353,7 @@ test_get_double_normalized_edgecase(void)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	if (yasm_floatnum_get_sized(flt, outval, 8, 64, 0, 0, 0, 0) !=
+	if (yasm_floatnum_get_sized(flt, outval, 8, 64, 0, 0, 0) !=
 	    vals[i].ret64)
 	    return 1;
 	if (get_common_check_result(8, outval, vals[i].result64) != 0)
@@ -375,7 +375,7 @@ test_get_extended_normalized(void)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	if (yasm_floatnum_get_sized(flt, outval, 10, 80, 0, 0, 0, 0) !=
+	if (yasm_floatnum_get_sized(flt, outval, 10, 80, 0, 0, 0) !=
 	    vals[i].ret80)
 	    return 1;
 	if (get_common_check_result(10, outval, vals[i].result80) != 0)
@@ -393,7 +393,7 @@ test_get_extended_normalized_edgecase(void)
 
     for (i=0; i<num; i++) {
 	get_common_setup(vals, i);
-	if (yasm_floatnum_get_sized(flt, outval, 10, 80, 0, 0, 0, 0) !=
+	if (yasm_floatnum_get_sized(flt, outval, 10, 80, 0, 0, 0) !=
 	    vals[i].ret80)
 	    return 1;
 	if (get_common_check_result(10, outval, vals[i].result80) != 0)

@@ -98,6 +98,7 @@ typedef struct yasm_objfmt_xdf {
 
 typedef struct xdf_objfmt_output_info {
     yasm_objfmt_xdf *objfmt_xdf;
+    yasm_errwarns *errwarns;
     /*@dependent@*/ FILE *f;
     /*@only@*/ unsigned char *buf;
     yasm_section *sect;
@@ -189,7 +190,8 @@ xdf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
     }
 
     if (value->section_rel) {
-	yasm__error(bc->line, N_("xdf: relocation too complex"));
+	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+		       N_("xdf: relocation too complex"));
 	return 1;
     }
 
@@ -223,22 +225,23 @@ xdf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 
     if (intn_minus > 0) {
 	intn = yasm_intnum_create_uint(intn_minus);
-	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL, bc->line);
+	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
     } else
 	intn = yasm_intnum_create_uint(0);
 
     if (value->abs) {
 	yasm_intnum *intn2 = yasm_expr_get_intnum(&value->abs, NULL);
 	if (!intn2) {
-	    yasm__error(bc->line, N_("xdf: relocation too complex"));
+	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			   N_("xdf: relocation too complex"));
 	    yasm_intnum_destroy(intn);
 	    return 1;
 	}
-	yasm_intnum_calc(intn, YASM_EXPR_ADD, intn2, bc->line);
+	yasm_intnum_calc(intn, YASM_EXPR_ADD, intn2);
     }
 
     retval = yasm_arch_intnum_tobytes(objfmt_xdf->arch, intn, buf, destsize,
-				      valsize, shift, bc, warn, bc->line);
+				      valsize, shift, bc, warn);
     yasm_intnum_destroy(intn);
     return retval;
 }
@@ -270,8 +273,8 @@ xdf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     /* Warn that gaps are converted to 0 and write out the 0's. */
     if (gap) {
 	unsigned long left;
-	yasm__warning(YASM_WARN_UNINIT_CONTENTS, bc->line,
-	    N_("uninitialized space: zeroing"));
+	yasm_warn_set(YASM_WARN_UNINIT_CONTENTS,
+		      N_("uninitialized space: zeroing"));
 	/* Write out in chunks */
 	memset(info->buf, 0, REGULAR_OUTBUF_SIZE);
 	left = multiple*size;
@@ -327,7 +330,8 @@ xdf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 
 	info->sect = sect;
 	info->xsd = xsd;
-	yasm_section_bcs_traverse(sect, info, xdf_objfmt_output_bytecode);
+	yasm_section_bcs_traverse(sect, info->errwarns, info,
+				  xdf_objfmt_output_bytecode);
 
 	/* Sanity check final section size */
 	if (xsd->size != (last->offset + last->len))
@@ -363,7 +367,7 @@ xdf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 	    yasm_internal_error(
 		N_("xdf: no symbol data for relocated symbol"));
 
-	yasm_intnum_get_sized(reloc->reloc.addr, localbuf, 4, 32, 0, 0, 0, 0);
+	yasm_intnum_get_sized(reloc->reloc.addr, localbuf, 4, 32, 0, 0, 0);
 	localbuf += 4;				/* address of relocation */
 	YASM_WRITE_32_L(localbuf, xsymd->index);    /* relocated symbol */
 	if (reloc->base) {
@@ -414,17 +418,17 @@ xdf_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 
     YASM_WRITE_32_L(localbuf, xsymd->index);	/* section name symbol */
     if (xsd->addr) {
-	yasm_intnum_get_sized(xsd->addr, localbuf, 8, 64, 0, 0, 0, 0);
+	yasm_intnum_get_sized(xsd->addr, localbuf, 8, 64, 0, 0, 0);
 	localbuf += 8;				/* physical address */
     } else {
 	YASM_WRITE_32_L(localbuf, 0);
 	YASM_WRITE_32_L(localbuf, 0);
     }
     if (xsd->vaddr) {
-	yasm_intnum_get_sized(xsd->vaddr, localbuf, 8, 64, 0, 0, 0, 0);
+	yasm_intnum_get_sized(xsd->vaddr, localbuf, 8, 64, 0, 0, 0);
 	localbuf += 8;				/* virtual address */
     } else if (xsd->addr) {
-	yasm_intnum_get_sized(xsd->addr, localbuf, 8, 64, 0, 0, 0, 0);
+	yasm_intnum_get_sized(xsd->addr, localbuf, 8, 64, 0, 0, 0);
 	localbuf += 8;				/* VA=PA */
     } else {
 	YASM_WRITE_32_L(localbuf, 0);
@@ -500,10 +504,11 @@ xdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 		    abs_start = yasm_expr_copy(yasm_section_get_start(sect));
 		    intn = yasm_expr_get_intnum(&abs_start,
 						yasm_common_calc_bc_dist);
-		    if (!intn)
-			yasm__error(abs_start->line,
+		    if (!intn) {
+			yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			    N_("absolute section start not an integer expression"));
-		    else
+			yasm_errwarn_propagate(info->errwarns, abs_start->line);
+		    } else
 			value = yasm_intnum_get_uint(intn);
 		    yasm_expr_destroy(abs_start);
 
@@ -519,9 +524,11 @@ xdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	    intn = yasm_expr_get_intnum(&equ_val_copy,
 					yasm_common_calc_bc_dist);
 	    if (!intn) {
-		if (vis & YASM_SYM_GLOBAL)
-		    yasm__error(equ_val->line,
+		if (vis & YASM_SYM_GLOBAL) {
+		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			N_("global EQU value not an integer expression"));
+		    yasm_errwarn_propagate(info->errwarns, equ_val->line);
+		}
 	    } else
 		value = yasm_intnum_get_uint(intn);
 	    yasm_expr_destroy(equ_val_copy);
@@ -564,7 +571,7 @@ xdf_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
 
 static void
 xdf_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
-		  /*@unused@*/ yasm_dbgfmt *df)
+		  /*@unused@*/ yasm_dbgfmt *df, yasm_errwarns *errwarns)
 {
     yasm_objfmt_xdf *objfmt_xdf = (yasm_objfmt_xdf *)objfmt;
     xdf_objfmt_output_info info;
@@ -572,6 +579,7 @@ xdf_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
     unsigned long symtab_count = 0;
 
     info.objfmt_xdf = objfmt_xdf;
+    info.errwarns = errwarns;
     info.f = f;
     info.buf = yasm_xmalloc(REGULAR_OUTBUF_SIZE);
 
@@ -697,7 +705,7 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 
     while ((vp = yasm_vps_next(vp))) {
 	if (!vp->val) {
-	    yasm__warning(YASM_WARN_GENERAL, line,
+	    yasm_warn_set(YASM_WARN_GENERAL,
 			  N_("Unrecognized numeric qualifier"));
 	    continue;
 	}
@@ -723,15 +731,17 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	    flags |= XDF_SECT_ABSOLUTE;
 	    absaddr = yasm_expr_get_intnum(&vp->param, NULL);
 	    if (!absaddr) {
-		yasm__error(line, N_("argument to `%s' is not an integer"),
-			    vp->val);
+		yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+			       N_("argument to `%s' is not an integer"),
+			       vp->val);
 		return NULL;
 	    }
 	} else if (yasm__strcasecmp(vp->val, "virtual") == 0 && vp->param) {
 	    vaddr = yasm_expr_get_intnum(&vp->param, NULL);
 	    if (!vaddr) {
-		yasm__error(line, N_("argument to `%s' is not an integer"),
-			    vp->val);
+		yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+			       N_("argument to `%s' is not an integer"),
+			       vp->val);
 		return NULL;
 	    }
 	} else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
@@ -739,28 +749,30 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 
 	    align_expr = yasm_expr_get_intnum(&vp->param, NULL);
 	    if (!align_expr) {
-		yasm__error(line, N_("argument to `%s' is not a power of two"),
-			    vp->val);
+		yasm_error_set(YASM_ERROR_VALUE,
+			       N_("argument to `%s' is not a power of two"),
+			       vp->val);
 		return NULL;
 	    }
 	    align = yasm_intnum_get_uint(align_expr);
 
             /* Alignments must be a power of two. */
             if ((align & (align - 1)) != 0) {
-		yasm__error(line, N_("argument to `%s' is not a power of two"),
-			    vp->val);
+		yasm_error_set(YASM_ERROR_VALUE,
+			       N_("argument to `%s' is not a power of two"),
+			       vp->val);
 		return NULL;
 	    }
 
 	    /* Check to see if alignment is supported size */
 	    if (align > 4096) {
-		yasm__error(line,
-			    N_("XDF does not support alignments > 4096"));
+		yasm_error_set(YASM_ERROR_VALUE,
+			       N_("XDF does not support alignments > 4096"));
 		return NULL;
 	    }
 	} else
-	    yasm__warning(YASM_WARN_GENERAL, line,
-			  N_("Unrecognized qualifier `%s'"), vp->val);
+	    yasm_warn_set(YASM_WARN_GENERAL, N_("Unrecognized qualifier `%s'"),
+			  vp->val);
     }
 
     retval = yasm_object_get_general(objfmt_xdf->object, sectname, 0, align, 1,
@@ -786,7 +798,7 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	}
 	yasm_section_set_align(retval, align, line);
     } else if (flags_override)
-	yasm__warning(YASM_WARN_GENERAL, line,
+	yasm_warn_set(YASM_WARN_GENERAL,
 		      N_("section flags ignored on section redeclaration"));
     return retval;
 }
@@ -853,7 +865,7 @@ xdf_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
     yasm_objfmt_xdf *objfmt_xdf = (yasm_objfmt_xdf *)objfmt;
 
     yasm_expr_destroy(size);
-    yasm__error(line,
+    yasm_error_set(YASM_ERROR_GENERAL,
 	N_("XDF object format does not support common variables"));
 
     return yasm_symtab_declare(objfmt_xdf->symtab, name, YASM_SYM_COMMON,

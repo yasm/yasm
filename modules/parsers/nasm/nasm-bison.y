@@ -48,7 +48,7 @@ static int fix_directive_symrec(/*@null@*/ yasm_expr__item *ei,
 static void define_label(yasm_parser_nasm *parser_nasm, /*@only@*/ char *name,
 			 int local);
 
-#define nasm_parser_error(s)	yasm__parser_error(cur_line, s)
+#define nasm_parser_error(s)	yasm_error_set(YASM_ERROR_PARSE, "%s", s)
 #define YYPARSE_PARAM	parser_nasm_arg
 #define YYLEX_PARAM	parser_nasm_arg
 #define parser_nasm	((yasm_parser_nasm *)parser_nasm_arg)
@@ -129,6 +129,7 @@ static void define_label(yasm_parser_nasm *parser_nasm, /*@only@*/ char *name,
 %%
 input: /* empty */
     | input line    {
+	yasm_errwarn_propagate(parser_nasm->errwarns, cur_line);
 	parser_nasm->temp_bc =
 	    yasm_section_bcs_append(parser_nasm->cur_section, $2);
 	if (parser_nasm->temp_bc)
@@ -159,8 +160,8 @@ line: '\n'		{ $$ = (yasm_bytecode *)NULL; }
 	$$ = (yasm_bytecode *)NULL;
     }
     | error '\n'	{
-	yasm__error(cur_line,
-		    N_("label or instruction expected at start of line"));
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("label or instruction expected at start of line"));
 	$$ = (yasm_bytecode *)NULL;
 	yyerrok;
     }
@@ -169,8 +170,8 @@ line: '\n'		{ $$ = (yasm_bytecode *)NULL; }
 lineexp: exp
     | TIMES expr exp		{ $$ = $3; yasm_bc_set_multiple($$, $2); }
     | label_id			{
-	yasm__warning(YASM_WARN_ORPHAN_LABEL, cur_line,
-		      N_("label alone on a line without a colon might be in error"));
+	yasm_warn_set(YASM_WARN_ORPHAN_LABEL,
+	    N_("label alone on a line without a colon might be in error"));
 	$$ = (yasm_bytecode *)NULL;
 	define_label(parser_nasm, $1.name, $1.local);
     }
@@ -226,7 +227,7 @@ instr: INSN		{
 				 &$2.operands, cur_line);
     }
     | INSN error	{
-	yasm__error(cur_line, N_("expression syntax error"));
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("expression syntax error"));
 	$$ = NULL;
     }
     | PREFIX instr	{
@@ -252,7 +253,7 @@ dataval: dvexpr		{ $$ = yasm_dv_create_expr($1); }
 	$$ = yasm_dv_create_string($1.contents, $1.len);
     }
     | error		{
-	yasm__error(cur_line, N_("expression syntax error"));
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("expression syntax error"));
 	$$ = (yasm_dataval *)NULL;
     }
 ;
@@ -271,7 +272,7 @@ directive: DIRECTIVE_NAME directive_val	{
 	yasm_xfree($1);
     }
     | DIRECTIVE_NAME error		{
-	yasm__error(cur_line, N_("invalid arguments to [%s]"), $1);
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("invalid arguments to [%s]"), $1);
 	yasm_xfree($1);
     }
 ;
@@ -329,7 +330,7 @@ memaddr: expr		    {
     }
     | SEGREG ':' memaddr    {
 	$$ = $3;
-	yasm_ea_set_segreg($$, $1[0], cur_line);
+	yasm_ea_set_segreg($$, $1[0]);
     }
     | SIZE_OVERRIDE memaddr { $$ = $2; yasm_ea_set_len($$, $1); }
     | NOSPLIT memaddr	    { $$ = $2; yasm_ea_set_nosplit($$, 1); }
@@ -355,7 +356,8 @@ operand: '[' memaddr ']'    { $$ = yasm_operand_create_mem($2); }
 	$$ = $2;
 	if ($$->type == YASM_INSN__OPERAND_REG &&
 	    yasm_arch_get_reg_size(parser_nasm->arch, $$->data.reg) != $1)
-	    yasm__error(cur_line, N_("cannot override register size"));
+	    yasm_error_set(YASM_ERROR_TYPE,
+			   N_("cannot override register size"));
 	else
 	    $$->size = $1;
     }
@@ -431,7 +433,7 @@ expr: INTNUM		{ $$ = p_expr_new_ident(yasm_expr_int($1)); }
     | REG		{ $$ = p_expr_new_ident(yasm_expr_reg($1[0])); }
     | STRING		{
 	$$ = p_expr_new_ident(yasm_expr_int(
-	    yasm_intnum_create_charconst_nasm($1.contents, cur_line)));
+	    yasm_intnum_create_charconst_nasm($1.contents)));
 	yasm_xfree($1.contents);
     }
     | explabel		{ $$ = p_expr_new_ident(yasm_expr_sym($1)); }
@@ -541,21 +543,24 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 	    yasm_objfmt_extern_declare(parser_nasm->objfmt, vp->val,
 				       objext_valparams, line);
 	} else
-	    yasm__error(line, N_("invalid argument to [%s]"), "EXTERN");
+	    yasm_error_set(YASM_ERROR_SYNTAX, N_("invalid argument to [%s]"),
+			   "EXTERN");
     } else if (yasm__strcasecmp(name, "global") == 0) {
 	vp = yasm_vps_first(valparams);
 	if (vp->val) {
 	    yasm_objfmt_global_declare(parser_nasm->objfmt, vp->val,
 				       objext_valparams, line);
 	} else
-	    yasm__error(line, N_("invalid argument to [%s]"), "GLOBAL");
+	    yasm_error_set(YASM_ERROR_SYNTAX, N_("invalid argument to [%s]"),
+			   "GLOBAL");
     } else if (yasm__strcasecmp(name, "common") == 0) {
 	vp = yasm_vps_first(valparams);
 	if (vp->val) {
 	    vp2 = yasm_vps_next(vp);
 	    if (!vp2 || (!vp2->val && !vp2->param))
-		yasm__error(line, N_("no size specified in %s declaration"),
-			    "COMMON");
+		yasm_error_set(YASM_ERROR_SYNTAX,
+			       N_("no size specified in %s declaration"),
+			       "COMMON");
 	    else {
 		if (vp2->val) {
 		    yasm_objfmt_common_declare(parser_nasm->objfmt, vp->val,
@@ -570,7 +575,8 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 		}
 	    }
 	} else
-	    yasm__error(line, N_("invalid argument to [%s]"), "COMMON");
+	    yasm_error_set(YASM_ERROR_SYNTAX, N_("invalid argument to [%s]"),
+			   "COMMON");
     } else if (yasm__strcasecmp(name, "section") == 0 ||
 	       yasm__strcasecmp(name, "segment") == 0) {
 	yasm_section *new_section =
@@ -580,7 +586,8 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 	    parser_nasm->cur_section = new_section;
 	    parser_nasm->prev_bc = yasm_section_bcs_last(new_section);
 	} else
-	    yasm__error(line, N_("invalid argument to [%s]"), "SECTION");
+	    yasm_error_set(YASM_ERROR_SYNTAX, N_("invalid argument to [%s]"),
+			   "SECTION");
     } else if (yasm__strcasecmp(name, "absolute") == 0) {
 	/* it can be just an ID or a complete expression, so handle both. */
 	vp = yasm_vps_first(valparams);
@@ -639,17 +646,18 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 	yasm_vps_foreach(vp, valparams) {
 	    if (vp->val)
 		yasm_arch_parse_cpu(parser_nasm->arch, vp->val,
-				    strlen(vp->val), line);
+				    strlen(vp->val));
 	    else if (vp->param) {
 		const yasm_intnum *intcpu;
 		intcpu = yasm_expr_get_intnum(&vp->param, NULL);
 		if (!intcpu)
-		    yasm__error(line, N_("invalid argument to [%s]"), "CPU");
+		    yasm_error_set(YASM_ERROR_SYNTAX,
+				   N_("invalid argument to [%s]"), "CPU");
 		else {
 		    char strcpu[16];
 		    sprintf(strcpu, "%lu", yasm_intnum_get_uint(intcpu));
 		    yasm_arch_parse_cpu(parser_nasm->arch, strcpu,
-					strlen(strcpu), line);
+					strlen(strcpu));
 		}
 	    }
 	}
@@ -662,7 +670,8 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 	;
     } else if (yasm_objfmt_directive(parser_nasm->objfmt, name, valparams,
 				     objext_valparams, line)) {
-	yasm__error(line, N_("unrecognized directive [%s]"), name);
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("unrecognized directive [%s]"),
+		       name);
     }
 
     yasm_vps_delete(valparams);

@@ -46,6 +46,7 @@ typedef struct yasm_preproc_nasm {
     int lineinc;
 } yasm_preproc_nasm;
 static yasm_linemap *cur_lm;
+static yasm_errwarns *cur_errwarns;
 int tasm_compatible_mode = 0;
 
 typedef struct preproc_dep {
@@ -106,11 +107,10 @@ nasm_efunc(int severity, const char *fmt, ...)
     va_start(va, fmt);
     switch (severity & ERR_MASK) {
 	case ERR_WARNING:
-	    yasm__warning_va(YASM_WARN_PREPROC,
-			     yasm_linemap_get_current(cur_lm), fmt, va);
+	    yasm_warn_set_va(YASM_WARN_PREPROC, fmt, va);
 	    break;
 	case ERR_NONFATAL:
-	    yasm__error_va(yasm_linemap_get_current(cur_lm), fmt, va);
+	    yasm_error_set_va(YASM_ERROR_GENERAL, fmt, va);
 	    break;
 	case ERR_FATAL:
 	    yasm_fatal(fmt, va);
@@ -123,10 +123,12 @@ nasm_efunc(int severity, const char *fmt, ...)
 	    break;
     }
     va_end(va);
+    yasm_errwarn_propagate(cur_errwarns, yasm_linemap_get_current(cur_lm));
 }
 
 static yasm_preproc *
-nasm_preproc_create(FILE *f, const char *in_filename, yasm_linemap *lm)
+nasm_preproc_create(FILE *f, const char *in_filename, yasm_linemap *lm,
+		    yasm_errwarns *errwarns)
 {
     yasm_preproc_nasm *preproc_nasm = yasm_xmalloc(sizeof(yasm_preproc_nasm));
 
@@ -134,6 +136,7 @@ nasm_preproc_create(FILE *f, const char *in_filename, yasm_linemap *lm)
 
     preproc_nasm->in = f;
     cur_lm = lm;
+    cur_errwarns = errwarns;
     preproc_deps = NULL;
     done_dep_preproc = 0;
     preproc_nasm->line = NULL;

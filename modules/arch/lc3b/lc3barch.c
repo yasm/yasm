@@ -147,9 +147,10 @@ lc3b_reg_print(/*@unused@*/ yasm_arch *arch, unsigned long reg, FILE *f)
 static int
 lc3b_floatnum_tobytes(yasm_arch *arch, const yasm_floatnum *flt,
 		      unsigned char *buf, size_t destsize, size_t valsize,
-		      size_t shift, int warn, unsigned long line)
+		      size_t shift, int warn)
 {
-    yasm__error(line, N_("LC-3b does not support floating point"));
+    yasm_error_set(YASM_ERROR_FLOATING_POINT,
+		   N_("LC-3b does not support floating point"));
     return 1;
 }
 

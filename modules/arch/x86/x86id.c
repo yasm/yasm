@@ -2064,7 +2064,8 @@ x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc,
 	    if (yasm_value_finalize_expr(&jmpfar->offset,
 					 yasm_expr_copy(op->data.val))
 		|| yasm_value_finalize_expr(&jmpfar->segment, op->data.val))
-		yasm__error(bc->line, N_("jump target expression too complex"));
+		yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			       N_("jump target expression too complex"));
 	    jmpfar->segment.seg_of = 1;
 	    break;
 	case X86_FAR_SEGOFF:
@@ -2073,16 +2074,18 @@ x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc,
 	    if (!segment)
 		yasm_internal_error(N_("didn't get SEG:OFF expression in jmpfar"));
 	    if (yasm_value_finalize_expr(&jmpfar->segment, segment))
-		yasm__error(bc->line, N_("jump target segment too complex"));
+		yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			       N_("jump target segment too complex"));
 	    if (yasm_value_finalize_expr(&jmpfar->offset, op->data.val))
-		yasm__error(bc->line, N_("jump target offset too complex"));
+		yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			       N_("jump target offset too complex"));
 	    break;
 	default:
 	    yasm_internal_error(N_("didn't get FAR expression in jmpfar"));
     }
 
     yasm_x86__bc_apply_prefixes((x86_common *)jmpfar, NULL, num_prefixes,
-				prefixes, bc->line);
+				prefixes);
 
     /* Transform the bytecode */
     yasm_x86__bc_transform_jmpfar(bc, jmpfar);
@@ -2112,9 +2115,10 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
     jmp = yasm_xmalloc(sizeof(x86_jmp));
     x86_finalize_common(&jmp->common, jinfo, mode_bits);
     if (yasm_value_finalize_expr(&jmp->target, op->data.val))
-	yasm__error(bc->line, N_("jump target expression too complex"));
+	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+		       N_("jump target expression too complex"));
     if (jmp->target.seg_of || jmp->target.rshift || jmp->target.curpos_rel)
-	yasm__error(bc->line, N_("invalid jump target"));
+	yasm_error_set(YASM_ERROR_VALUE, N_("invalid jump target"));
     jmp->target.curpos_rel = 1;
 
     /* Need to save jump origin for relative jumps. */
@@ -2184,11 +2188,11 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
     }
 
     if ((jmp->op_sel == JMP_SHORT_FORCED) && (jmp->nearop.len == 0))
-	yasm__error(bc->line,
-		    N_("no SHORT form of that jump instruction exists"));
+	yasm_error_set(YASM_ERROR_TYPE,
+		       N_("no SHORT form of that jump instruction exists"));
     if ((jmp->op_sel == JMP_NEAR_FORCED) && (jmp->shortop.len == 0))
-	yasm__error(bc->line,
-		    N_("no NEAR form of that jump instruction exists"));
+	yasm_error_set(YASM_ERROR_TYPE,
+		       N_("no NEAR form of that jump instruction exists"));
 
     if (jmp->op_sel == JMP_NONE) {
 	if (jmp->nearop.len == 0)
@@ -2198,7 +2202,7 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
     }
 
     yasm_x86__bc_apply_prefixes((x86_common *)jmp, NULL, num_prefixes,
-				prefixes, bc->line);
+				prefixes);
 
     /* Transform the bytecode */
     yasm_x86__bc_transform_jmp(bc, jmp);
@@ -2239,7 +2243,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
      * of 3 operands.
      */
     if (num_operands > 3) {
-	yasm__error(bc->line, N_("too many operands"));
+	yasm_error_set(YASM_ERROR_TYPE, N_("too many operands"));
 	return;
     }
     ops[0] = ops[1] = ops[2] = ops[3] = NULL;
@@ -2268,7 +2272,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	    if (!op->deref && (op->type == YASM_INSN__OPERAND_REG
 			       || (op->type == YASM_INSN__OPERAND_MEMORY
 				   && op->data.ea->strong)))
-		yasm__warning(YASM_WARN_GENERAL, bc->line,
+		yasm_warn_set(YASM_WARN_GENERAL,
 			      N_("indirect call without `*'"));
 	    if (!op->deref && op->type == YASM_INSN__OPERAND_MEMORY
 		&& !op->data.ea->strong) {
@@ -2276,7 +2280,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		 * actually an immediate for the purposes of relative jumps.
 		 */
 		if (op->data.ea->segreg != 0)
-		    yasm__warning(YASM_WARN_GENERAL, bc->line,
+		    yasm_warn_set(YASM_WARN_GENERAL,
 				  N_("skipping prefixes on this instruction"));
 		imm = op->data.ea->disp.abs;
 		op->data.ea->disp.abs = NULL;
@@ -2591,8 +2595,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 
     if (!found) {
 	/* Didn't find a matching one */
-	yasm__error(bc->line,
-		    N_("invalid combination of opcode and operands"));
+	yasm_error_set(YASM_ERROR_TYPE,
+		       N_("invalid combination of opcode and operands"));
 	return;
     }
 
@@ -2605,10 +2609,12 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	    switch ((int)((info->modifiers & MOD_ExtIndex_MASK)
 			  >> MOD_ExtIndex_SHIFT)) {
 		case 0:
-		    yasm__error(bc->line, N_("mismatch in operand sizes"));
+		    yasm_error_set(YASM_ERROR_TYPE,
+				   N_("mismatch in operand sizes"));
 		    break;
 		case 1:
-		    yasm__error(bc->line, N_("operand size not specified"));
+		    yasm_error_set(YASM_ERROR_TYPE,
+				   N_("operand size not specified"));
 		    break;
 		default:
 		    yasm_internal_error(N_("unrecognized x86 ext mod index"));
@@ -2767,7 +2773,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		    else if (op->type == YASM_INSN__OPERAND_REG) {
 			if (yasm_x86__set_rex_from_reg(&insn->rex, &spare,
 				op->data.reg, mode_bits, X86_REX_R)) {
-			    yasm__error(bc->line,
+			    yasm_error_set(YASM_ERROR_TYPE,
 				N_("invalid combination of opcode and operands"));
 			    return;
 			}
@@ -2779,7 +2785,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 			unsigned char opadd;
 			if (yasm_x86__set_rex_from_reg(&insn->rex, &opadd,
 				op->data.reg, mode_bits, X86_REX_B)) {
-			    yasm__error(bc->line,
+			    yasm_error_set(YASM_ERROR_TYPE,
 				N_("invalid combination of opcode and operands"));
 			    return;
 			}
@@ -2792,7 +2798,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 			unsigned char opadd;
 			if (yasm_x86__set_rex_from_reg(&insn->rex, &opadd,
 				op->data.reg, mode_bits, X86_REX_B)) {
-			    yasm__error(bc->line,
+			    yasm_error_set(YASM_ERROR_TYPE,
 				N_("invalid combination of opcode and operands"));
 			    return;
 			}
@@ -2808,7 +2814,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 			if (!insn->x86_ea ||
 			    yasm_x86__set_rex_from_reg(&insn->rex, &spare,
 				op->data.reg, mode_bits, X86_REX_R)) {
-			    yasm__error(bc->line,
+			    yasm_error_set(YASM_ERROR_TYPE,
 				N_("invalid combination of opcode and operands"));
 			    if (insn->x86_ea)
 				yasm_xfree(insn->x86_ea);
@@ -2851,12 +2857,12 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     }
 
     if (insn->x86_ea) {
-	yasm_x86__ea_init(insn->x86_ea, spare, bc->line);
+	yasm_x86__ea_init(insn->x86_ea, spare);
 	for (i=0; i<num_segregs; i++)
-	    yasm_ea_set_segreg(&insn->x86_ea->ea, segregs[i], bc->line);
+	    yasm_ea_set_segreg(&insn->x86_ea->ea, segregs[i]);
     } else if (num_segregs > 0 && insn->special_prefix == 0) {
 	if (num_segregs > 1)
-	    yasm__warning(YASM_WARN_GENERAL, bc->line,
+	    yasm_warn_set(YASM_WARN_GENERAL,
 			  N_("multiple segment overrides, using leftmost"));
 	insn->special_prefix = segregs[num_segregs-1]>>8;
     }
@@ -2868,11 +2874,10 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	insn->imm = NULL;
 
     yasm_x86__bc_apply_prefixes((x86_common *)insn, &insn->rex, num_prefixes,
-				prefixes, bc->line);
+				prefixes);
 
     if (insn->postop == X86_POSTOP_ADDRESS16 && insn->common.addrsize) {
-	yasm__warning(YASM_WARN_GENERAL, bc->line,
-		      N_("address size override ignored"));
+	yasm_warn_set(YASM_WARN_GENERAL, N_("address size override ignored"));
 	insn->common.addrsize = 0;
     }
 
@@ -2947,8 +2952,7 @@ typedef struct regtmod_parse_data {
 
 yasm_arch_insnprefix
 yasm_x86__parse_check_insnprefix(yasm_arch *arch, unsigned long data[4],
-				 const char *id, size_t id_len,
-				 unsigned long line)
+				 const char *id, size_t id_len)
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     /*@null@*/ const insnprefix_parse_data *pdata;
@@ -2978,12 +2982,13 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, unsigned long data[4],
 	unsigned long cpu = pdata->data2;
 
 	if ((cpu & CPU_64) && arch_x86->mode_bits != 64) {
-	    yasm__warning(YASM_WARN_GENERAL, line,
+	    yasm_warn_set(YASM_WARN_GENERAL,
 			  N_("`%s' is an instruction in 64-bit mode"), id);
 	    return YASM_ARCH_NOTINSNPREFIX;
 	}
 	if ((cpu & CPU_Not64) && arch_x86->mode_bits == 64) {
-	    yasm__error(line, N_("`%s' invalid in 64-bit mode"), id);
+	    yasm_error_set(YASM_ERROR_GENERAL,
+			   N_("`%s' invalid in 64-bit mode"), id);
 	    data[0] = (unsigned long)not64_insn;
 	    data[1] = NELEMS(not64_insn);
 	    data[2] = CPU_Not64;
@@ -3001,13 +3006,13 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, unsigned long data[4],
 	unsigned long value = pdata->data2;
 
 	if (arch_x86->mode_bits == 64 && type == X86_OPERSIZE && value == 32) {
-	    yasm__error(line,
+	    yasm_error_set(YASM_ERROR_GENERAL,
 		N_("Cannot override data size to 32 bits in 64-bit mode"));
 	    return YASM_ARCH_NOTINSNPREFIX;
 	}
 
 	if (arch_x86->mode_bits == 64 && type == X86_ADDRSIZE && value == 16) {
-	    yasm__error(line,
+	    yasm_error_set(YASM_ERROR_GENERAL,
 		N_("Cannot override address size to 16 bits in 64-bit mode"));
 	    return YASM_ARCH_NOTINSNPREFIX;
 	}
@@ -3015,7 +3020,7 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, unsigned long data[4],
 	if ((type == X86_REX ||
 	     (value == 64 && (type == X86_OPERSIZE || type == X86_ADDRSIZE)))
 	    && arch_x86->mode_bits != 64) {
-	    yasm__warning(YASM_WARN_GENERAL, line,
+	    yasm_warn_set(YASM_WARN_GENERAL,
 			  N_("`%s' is a prefix in 64-bit mode"), id);
 	    return YASM_ARCH_NOTINSNPREFIX;
 	}
@@ -3026,8 +3031,7 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, unsigned long data[4],
 }
 
 void
-yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len,
-		    unsigned long line)
+yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len)
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     /*@null@*/ const cpu_parse_data *pdata;
@@ -3042,7 +3046,7 @@ yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len,
 
     pdata = cpu_find(lcaseid, cpuid_len);
     if (!pdata) {
-	yasm__warning(YASM_WARN_GENERAL, line,
+	yasm_warn_set(YASM_WARN_GENERAL,
 		      N_("unrecognized CPU identifier `%s'"), cpuid);
 	return;
     }
@@ -3062,7 +3066,7 @@ yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len,
 
 yasm_arch_regtmod
 yasm_x86__parse_check_regtmod(yasm_arch *arch, unsigned long *data,
-			      const char *id, size_t id_len, unsigned long line)
+			      const char *id, size_t id_len)
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     /*@null@*/ const regtmod_parse_data *pdata;
@@ -3085,13 +3089,13 @@ yasm_x86__parse_check_regtmod(yasm_arch *arch, unsigned long *data,
     bits = (pdata->regtmod >> 16) & 0xFF;
 
     if (type == YASM_ARCH_REG && bits != 0 && arch_x86->mode_bits != bits) {
-	yasm__warning(YASM_WARN_GENERAL, line,
+	yasm_warn_set(YASM_WARN_GENERAL,
 		      N_("`%s' is a register in %u-bit mode"), id, bits);
 	return YASM_ARCH_NOTREGTMOD;
     }
 
     if (type == YASM_ARCH_SEGREG && bits != 0 && arch_x86->mode_bits == bits) {
-	yasm__warning(YASM_WARN_GENERAL, line,
+	yasm_warn_set(YASM_WARN_GENERAL,
 		      N_("`%s' segment register ignored in %u-bit mode"), id,
 		      bits);
     }

@@ -376,7 +376,8 @@ dwarf2_dbgfmt_gen_line_op(yasm_section *debug_line, dwarf2_line_state *state,
 	/* Set the starting address for the section */
 	if (!loc->sym) {
 	    /* shouldn't happen! */
-	    yasm__error(loc->line, N_("could not find label prior to loc"));
+	    yasm_error_set(YASM_ERROR_GENERAL,
+			   N_("could not find label prior to loc"));
 	    return 1;
 	}
 	dwarf2_dbgfmt_append_line_ext_op(debug_line, DW_LNE_set_address,
@@ -496,6 +497,7 @@ dwarf2_generate_line_bc(yasm_bytecode *bc, /*@null@*/ void *d)
 typedef struct dwarf2_line_info {
     yasm_section *debug_line;	/* section to which line number info goes */
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2;
+    yasm_errwarns *errwarns;
 
     /* Generate based on bytecodes (1) or locs (0)?  Use bytecodes if we're
      * generating line numbers for the actual assembly source file.
@@ -569,7 +571,8 @@ dwarf2_generate_line_section(yasm_section *sect, /*@null@*/ void *d)
 	    }
 	}
 
-	yasm_section_bcs_traverse(sect, &bcinfo, dwarf2_generate_line_bc);
+	yasm_section_bcs_traverse(sect, info->errwarns, &bcinfo,
+				  dwarf2_generate_line_bc);
     } else {
 	/*@null@*/ dwarf2_loc *loc;
 
@@ -611,7 +614,8 @@ dwarf2_generate_filename(const char *filename, void *d)
 }
 
 yasm_section *
-yasm_dwarf2__generate_line(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2, int asm_source,
+yasm_dwarf2__generate_line(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
+			   yasm_errwarns *errwarns, int asm_source,
 			   /*@out@*/ yasm_section **main_code,
 			   /*@out@*/ size_t *num_line_sections)
 {
@@ -655,7 +659,9 @@ yasm_dwarf2__generate_line(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2, int asm_source,
     /* filename list */
     for (i=0; i<dbgfmt_dwarf2->filenames_size; i++) {
 	if (!dbgfmt_dwarf2->filenames[i].filename) {
-	    yasm__error(0, N_("dwarf2 file number %d unassigned"), i+1);
+	    yasm_error_set(YASM_ERROR_GENERAL,
+			   N_("dwarf2 file number %d unassigned"), i+1);
+	    yasm_errwarn_propagate(errwarns, 0);
 	    continue;
 	}
 	sppbc->len += strlen(dbgfmt_dwarf2->filenames[i].filename) + 1 +
@@ -716,7 +722,7 @@ dwarf2_spp_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 				   dbgfmt_dwarf2->sizeof_offset);
     yasm_arch_intnum_tobytes(dbgfmt_dwarf2->arch, cval, buf,
 			     dbgfmt_dwarf2->sizeof_offset,
-			     dbgfmt_dwarf2->sizeof_offset*8, 0, bc, 0, 0);
+			     dbgfmt_dwarf2->sizeof_offset*8, 0, bc, 0);
     buf += dbgfmt_dwarf2->sizeof_offset;
 
     YASM_WRITE_8(buf, dbgfmt_dwarf2->min_insn_len);	/* minimum_instr_len */
@@ -823,18 +829,20 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	/* File number (required) */
 	yasm_valparam *vp = yasm_vps_first(valparams);
 	if (!vp || !vp->param) {
-	    yasm__error(line, N_("file number required"));
+	    yasm_error_set(YASM_ERROR_SYNTAX, N_("file number required"));
 	    yasm_xfree(loc);
 	    return 0;
 	}
 	intn = yasm_expr_get_intnum(&vp->param, NULL);
 	if (!intn) {
-	    yasm__error(line, N_("file number is not a constant"));
+	    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+			   N_("file number is not a constant"));
 	    yasm_xfree(loc);
 	    return 0;
 	}
 	if (yasm_intnum_sign(intn) != 1) {
-	    yasm__error(line, N_("file number less than one"));
+	    yasm_error_set(YASM_ERROR_VALUE,
+			   N_("file number less than one"));
 	    yasm_xfree(loc);
 	    return 0;
 	}
@@ -843,13 +851,14 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	/* Line number (required) */
 	vp = yasm_vps_next(vp);
 	if (!vp || !vp->param) {
-	    yasm__error(line, N_("line number required"));
+	    yasm_error_set(YASM_ERROR_SYNTAX, N_("line number required"));
 	    yasm_xfree(loc);
 	    return 0;
 	}
 	intn = yasm_expr_get_intnum(&vp->param, NULL);
 	if (!intn) {
-	    yasm__error(line, N_("file number is not a constant"));
+	    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+			   N_("file number is not a constant"));
 	    yasm_xfree(loc);
 	    return 0;
 	}
@@ -877,7 +886,8 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	if (vp && vp->param) {
 	    intn = yasm_expr_get_intnum(&vp->param, NULL);
 	    if (!intn) {
-		yasm__error(line, N_("column number is not a constant"));
+		yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+			       N_("column number is not a constant"));
 		yasm_xfree(loc);
 		return 0;
 	    }
@@ -895,13 +905,15 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 		loc->epilogue_begin = 1;
 	    else if (yasm__strcasecmp(vp->val, "is_stmt") == 0) {
 		if (!vp->param) {
-		    yasm__error(line, N_("is_stmt requires value"));
+		    yasm_error_set(YASM_ERROR_SYNTAX,
+				   N_("is_stmt requires value"));
 		    yasm_xfree(loc);
 		    return 0;
 		}
 		intn = yasm_expr_get_intnum(&vp->param, NULL);
 		if (!intn) {
-		    yasm__error(line, N_("is_stmt value is not a constant"));
+		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+				   N_("is_stmt value is not a constant"));
 		    yasm_xfree(loc);
 		    return 0;
 		}
@@ -910,31 +922,34 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 		else if (yasm_intnum_is_pos1(intn))
 		    loc->is_stmt = IS_STMT_CLEAR;
 		else {
-		    yasm__error(line, N_("is_stmt value not 0 or 1"));
+		    yasm_error_set(YASM_ERROR_VALUE,
+				   N_("is_stmt value not 0 or 1"));
 		    yasm_xfree(loc);
 		    return 0;
 		}
 	    } else if (yasm__strcasecmp(vp->val, "isa") == 0) {
 		if (!vp->param) {
-		    yasm__error(line, N_("isa requires value"));
+		    yasm_error_set(YASM_ERROR_SYNTAX, N_("isa requires value"));
 		    yasm_xfree(loc);
 		    return 0;
 		}
 		intn = yasm_expr_get_intnum(&vp->param, NULL);
 		if (!intn) {
-		    yasm__error(line, N_("isa value is not a constant"));
+		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+				   N_("isa value is not a constant"));
 		    yasm_xfree(loc);
 		    return 0;
 		}
 		if (yasm_intnum_sign(intn) < 0) {
-		    yasm__error(line, N_("isa value less than zero"));
+		    yasm_error_set(YASM_ERROR_VALUE,
+				   N_("isa value less than zero"));
 		    yasm_xfree(loc);
 		    return 0;
 		}
 		loc->isa_change = 1;
 		loc->isa = yasm_intnum_get_uint(intn);
 	    } else
-		yasm__warning(YASM_WARN_GENERAL, line,
+		yasm_warn_set(YASM_WARN_GENERAL,
 			      N_("unrecognized loc option `%s'"), vp->val);
 	}
 
@@ -960,14 +975,16 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	/* Otherwise.. first vp is the file number */
 	file_intn = yasm_expr_get_intnum(&vp->param, NULL);
 	if (!file_intn) {
-	    yasm__error(line, N_("file number is not a constant"));
+	    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+			   N_("file number is not a constant"));
 	    return 0;
 	}
 	filenum = (size_t)yasm_intnum_get_uint(file_intn);
 
 	vp = yasm_vps_next(vp);
 	if (!vp || !vp->val) {
-	    yasm__error(line, N_("file number given but no filename"));
+	    yasm_error_set(YASM_ERROR_SYNTAX,
+			   N_("file number given but no filename"));
 	    return 0;
 	}
 

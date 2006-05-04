@@ -144,10 +144,8 @@ void yasm_ea_set_strong(yasm_effaddr *ea, unsigned int strong);
  * addresses.  A override of an override will result in a warning.
  * \param ea		effective address
  * \param segreg	segment register (0 if none)
- * \param line		virtual line number
  */
-void yasm_ea_set_segreg(yasm_effaddr *ea, unsigned long segreg,
-			unsigned long line);
+void yasm_ea_set_segreg(yasm_effaddr *ea, unsigned long segreg);
 
 /** Delete (free allocated memory for) an effective address.
  * \param ea	effective address (only pointer to it).

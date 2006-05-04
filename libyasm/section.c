@@ -347,7 +347,7 @@ yasm_object_print(const yasm_object *object, FILE *f, int indent_level)
 }
 
 void
-yasm_object_finalize(yasm_object *object)
+yasm_object_finalize(yasm_object *object, yasm_errwarns *errwarns)
 {
     yasm_section *sect;
 
@@ -364,6 +364,7 @@ yasm_object_finalize(yasm_object *object)
 	while (cur) {
 	    /* Finalize */
 	    yasm_bc_finalize(cur, prev);
+	    yasm_errwarn_propagate(errwarns, cur->line);
 	    prev = cur;
 	    cur = STAILQ_NEXT(cur, link);
 	}
@@ -460,7 +461,9 @@ yasm_section_bcs_append(yasm_section *sect, yasm_bytecode *bc)
 }
 
 int
-yasm_section_bcs_traverse(yasm_section *sect, void *d,
+yasm_section_bcs_traverse(yasm_section *sect,
+			  /*@null@*/ yasm_errwarns *errwarns,
+			  /*@null@*/ void *d,
 			  int (*func) (yasm_bytecode *bc, /*@null@*/ void *d))
 {
     yasm_bytecode *cur = STAILQ_FIRST(&sect->bcs);
@@ -471,6 +474,8 @@ yasm_section_bcs_traverse(yasm_section *sect, void *d,
     /* Iterate through the remainder, if any. */
     while (cur) {
 	int retval = func(cur, d);
+	if (errwarns)
+	    yasm_errwarn_propagate(errwarns, cur->line);
 	if (retval != 0)
 	    return retval;
 	cur = STAILQ_NEXT(cur, link);

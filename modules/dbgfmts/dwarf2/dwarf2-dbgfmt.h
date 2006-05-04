@@ -109,8 +109,9 @@ void yasm_dwarf2__set_head_end(dwarf2_head *head, yasm_bytecode *end_prevbc);
 
 /* Line number functions */
 yasm_section *yasm_dwarf2__generate_line
-    (yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2, int asm_source,
-     /*@out@*/ yasm_section **main_code, /*@out@*/ size_t *num_line_sections);
+    (yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2, yasm_errwarns *errwarns,
+     int asm_source, /*@out@*/ yasm_section **main_code,
+     /*@out@*/ size_t *num_line_sections);
 int yasm_dwarf2__line_directive
     (yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2, const char *name, yasm_section *sect,
      yasm_valparamhead *valparams, unsigned long line);

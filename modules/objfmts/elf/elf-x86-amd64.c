@@ -116,7 +116,7 @@ elf_x86_amd64_write_secthead_rel(unsigned char *bufp,
 
     nreloc = yasm_intnum_create_uint(shead->nreloc);
     relocsize = yasm_intnum_create_uint(RELOC64A_SIZE);
-    yasm_intnum_calc(relocsize, YASM_EXPR_MUL, nreloc, 0);
+    yasm_intnum_calc(relocsize, YASM_EXPR_MUL, nreloc);
     YASM_WRITE_64I_L(bufp, relocsize);		/* size */
     yasm_intnum_destroy(nreloc);
     yasm_intnum_destroy(relocsize);

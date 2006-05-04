@@ -153,8 +153,7 @@ typedef struct x86_effaddr {
 				   0xff if unknown */
 } x86_effaddr;
 
-void yasm_x86__ea_init(x86_effaddr *x86_ea, unsigned int spare,
-		       unsigned long line);
+void yasm_x86__ea_init(x86_effaddr *x86_ea, unsigned int spare);
 
 void yasm_x86__ea_set_disponly(x86_effaddr *x86_ea);
 x86_effaddr *yasm_x86__ea_create_reg(unsigned long reg, unsigned char *rex,
@@ -169,8 +168,7 @@ void yasm_x86__bc_insn_opersize_override(yasm_bytecode *bc,
 void yasm_x86__bc_insn_addrsize_override(yasm_bytecode *bc,
 					 unsigned int addrsize);
 void yasm_x86__bc_insn_set_lockrep_prefix(yasm_bytecode *bc,
-					  unsigned int prefix,
-					  unsigned long line);
+					  unsigned int prefix);
 
 /* Bytecode types */
 typedef struct x86_common {
@@ -275,7 +273,7 @@ void yasm_x86__bc_transform_jmpfar(yasm_bytecode *bc, x86_jmpfar *jmpfar);
 
 void yasm_x86__bc_apply_prefixes
     (x86_common *common, unsigned char *rex, int num_prefixes,
-     unsigned long **prefixes, unsigned long line);
+     unsigned long **prefixes);
 
 /* Check an effective address.  Returns 0 if EA was successfully determined,
  * 1 if invalid EA, or 2 if indeterminate EA.
@@ -283,17 +281,16 @@ void yasm_x86__bc_apply_prefixes
 int yasm_x86__expr_checkea
     (x86_effaddr *x86_ea, unsigned char *addrsize, unsigned int bits,
      int address16_op, unsigned char *rex,
-     yasm_calc_bc_dist_func calc_bc_dist, unsigned long line);
+     yasm_calc_bc_dist_func calc_bc_dist);
 
-void yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len,
-			 unsigned long line);
+void yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len);
 
 yasm_arch_insnprefix yasm_x86__parse_check_insnprefix
     (yasm_arch *arch, /*@out@*/ unsigned long data[4], const char *id,
-     size_t id_len, unsigned long line);
+     size_t id_len);
 yasm_arch_regtmod yasm_x86__parse_check_regtmod
     (yasm_arch *arch, /*@out@*/ unsigned long *data, const char *id,
-     size_t id_len, unsigned long line);
+     size_t id_len);
 
 void yasm_x86__finalize_insn
     (yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
@@ -303,12 +300,11 @@ void yasm_x86__finalize_insn
 
 int yasm_x86__floatnum_tobytes
     (yasm_arch *arch, const yasm_floatnum *flt, unsigned char *buf,
-     size_t destsize, size_t valsize, size_t shift, int warn,
-     unsigned long line);
+     size_t destsize, size_t valsize, size_t shift, int warn);
 int yasm_x86__intnum_tobytes
     (yasm_arch *arch, const yasm_intnum *intn, unsigned char *buf,
      size_t destsize, size_t valsize, int shift, const yasm_bytecode *bc,
-     int warn, unsigned long line);
+     int warn);
 
 unsigned int yasm_x86__get_reg_size(yasm_arch *arch, unsigned long reg);
 #endif

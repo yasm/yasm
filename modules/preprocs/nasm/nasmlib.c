@@ -89,16 +89,16 @@ yasm_intnum *nasm_readnum (char *str, int *error)
     *q = '\0';
     switch (radix) {
 	case 2:
-	    intn = yasm_intnum_create_bin(r, 0);
+	    intn = yasm_intnum_create_bin(r);
 	    break;
 	case 8:
-	    intn = yasm_intnum_create_oct(r, 0);
+	    intn = yasm_intnum_create_oct(r);
 	    break;
 	case 10:
-	    intn = yasm_intnum_create_dec(r, 0);
+	    intn = yasm_intnum_create_dec(r);
 	    break;
 	case 16:
-	    intn = yasm_intnum_create_hex(r, 0);
+	    intn = yasm_intnum_create_hex(r);
 	    break;
 	default:
 	    *error = TRUE;
@@ -108,7 +108,7 @@ yasm_intnum *nasm_readnum (char *str, int *error)
     *q = save;
 
     if (sign)
-	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL, 0);
+	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
     return intn;
 }
 
@@ -121,7 +121,7 @@ yasm_intnum *nasm_readstrnum (char *str, int length, int *warn)
 
     save = str[length];
     str[length] = '\0';
-    intn = yasm_intnum_create_charconst_nasm(str, 0);
+    intn = yasm_intnum_create_charconst_nasm(str);
     str[length] = save;
 
     return intn;

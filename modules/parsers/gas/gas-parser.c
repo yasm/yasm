@@ -40,7 +40,7 @@ static void
 gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
 		    yasm_objfmt *of, yasm_dbgfmt *df, FILE *f,
 		    const char *in_filename, int save_input,
-		    yasm_section *def_sect)
+		    yasm_section *def_sect, yasm_errwarns *errwarns)
 {
     yasm_parser_gas parser_gas;
 
@@ -57,6 +57,7 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
     parser_gas.arch = a;
     parser_gas.objfmt = of;
     parser_gas.dbgfmt = df;
+    parser_gas.errwarns = errwarns;
 
     parser_gas.cur_section = def_sect;
     parser_gas.prev_bc = yasm_section_bcs_first(def_sect);
@@ -87,9 +88,10 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
     gas_parser_parse(&parser_gas);
 
     /* Check for ending inside a rept */
-    if (parser_gas.rept)
-	yasm__error(parser_gas.rept->startline,
-		    N_("rept without matching endr"));
+    if (parser_gas.rept) {
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("rept without matching endr"));
+	yasm_errwarn_propagate(errwarns, parser_gas.rept->startline);
+    }
 
     gas_parser_cleanup(&parser_gas);
 

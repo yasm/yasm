@@ -57,7 +57,7 @@ null_dbgfmt_directive(yasm_dbgfmt *dbgfmt, const char *name,
 }
 
 static void
-null_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
+null_dbgfmt_generate(yasm_dbgfmt *dbgfmt, yasm_errwarns *errwarns)
 {
 }
 

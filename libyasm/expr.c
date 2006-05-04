@@ -304,8 +304,7 @@ expr_xform_neg_helper(/*@returned@*/ /*@only@*/ yasm_expr *e)
 	     * floatnums present below; if there ARE floatnums, recurse.
 	     */
 	    if (e->terms[0].type == YASM_EXPR_FLOAT)
-		yasm_floatnum_calc(e->terms[0].data.flt, YASM_EXPR_NEG, NULL,
-				   e->line);
+		yasm_floatnum_calc(e->terms[0].data.flt, YASM_EXPR_NEG, NULL);
 	    else if (e->terms[0].type == YASM_EXPR_EXPR &&
 		yasm_expr__contains(e->terms[0].data.expn, YASM_EXPR_FLOAT))
 		    expr_xform_neg_helper(e->terms[0].data.expn);
@@ -489,7 +488,7 @@ expr_simplify_identity(yasm_expr *e, int numterms, int int_term,
     if (numterms == 1 && int_term == 0 &&
 	(e->op == YASM_EXPR_NOT || e->op == YASM_EXPR_NEG ||
 	 e->op == YASM_EXPR_LNOT))
-	yasm_intnum_calc(e->terms[0].data.intn, e->op, NULL, e->line);
+	yasm_intnum_calc(e->terms[0].data.intn, e->op, NULL);
 
     /* Change expression to IDENT if possible. */
     if (numterms == 1)
@@ -578,7 +577,7 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
 	for (i=first_int_term+1, o=first_int_term+1; i<e->numterms; i++) {
 	    if (e->terms[i].type == YASM_EXPR_INT) {
 		yasm_intnum_calc(e->terms[first_int_term].data.intn, e->op,
-				 e->terms[i].data.intn, e->line);
+				 e->terms[i].data.intn);
 		fold_numterms--;
 		level_numterms--;
 		/* make sure to delete folded intnum */
@@ -654,8 +653,7 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
 			e->terms[first_int_term] = sube->terms[j];  /* struc */
 		    } else {
 			yasm_intnum_calc(e->terms[first_int_term].data.intn,
-					 e->op, sube->terms[j].data.intn,
-					 e->line);
+					 e->op, sube->terms[j].data.intn);
 			/* make sure to delete folded intnum */
 			yasm_intnum_destroy(sube->terms[j].data.intn);
 		    }
@@ -706,8 +704,7 @@ yasm_expr *
 yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
 		      int simplify_reg_mul, yasm_calc_bc_dist_func calc_bc_dist,
 		      yasm_expr_xform_func expr_xform_extra,
-		      void *expr_xform_extra_data, yasm__exprhead *eh,
-		      int *error)
+		      void *expr_xform_extra_data, yasm__exprhead *eh)
 {
     int i;
     yasm__exprhead eh_local;
@@ -742,10 +739,8 @@ yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
 		/* Check for circular reference */
 		SLIST_FOREACH(np, eh, next) {
 		    if (np->e == equ_expr) {
-			yasm__error(e->line,
-				    N_("circular reference detected"));
-			if (error)
-			    *error = 1;
+			yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+				       N_("circular reference detected"));
 			return e;
 		    }
 		}
@@ -764,10 +759,8 @@ yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
 		/* Check for circular reference */
 		SLIST_FOREACH(np, eh, next) {
 		    if (np->e == start) {
-			yasm__error(e->line,
-				    N_("circular reference detected"));
-			if (error)
-			    *error = 1;
+			yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+				       N_("circular reference detected"));
 			return e;
 		    }
 		}
@@ -804,7 +797,7 @@ yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
 		yasm_expr__level_tree(e->terms[i].data.expn, fold_const,
 				      simplify_ident, simplify_reg_mul,
 				      calc_bc_dist, expr_xform_extra,
-				      expr_xform_extra_data, eh, error);
+				      expr_xform_extra_data, eh);
 
 	if (ee.e) {
 	    SLIST_REMOVE_HEAD(eh, next);
@@ -820,8 +813,7 @@ yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
 	if (expr_xform_extra)
 	    e = expr_xform_extra(e, expr_xform_extra_data);
 	e = yasm_expr__level_tree(e, fold_const, simplify_ident,
-				  simplify_reg_mul, NULL, NULL, NULL, NULL,
-				  error);
+				  simplify_reg_mul, NULL, NULL, NULL, NULL);
     }
     return e;
 }

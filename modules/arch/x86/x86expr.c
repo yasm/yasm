@@ -261,7 +261,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 
     /*@-unqualifiedtrans@*/
     *ep = yasm_expr__level_tree(*ep, 1, 1, indexreg == 0, calc_bc_dist, NULL,
-				NULL, NULL, NULL);
+				NULL, NULL);
 
     /* Check for WRT rip first */
     wrt = yasm_expr_extract_wrt(ep);
@@ -297,7 +297,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 	case 2:
 	    /* Need to simplify again */
 	    *ep = yasm_expr__level_tree(*ep, 1, 1, indexreg == 0, NULL, NULL,
-					NULL, NULL, NULL);
+					NULL, NULL);
 	    e = *ep;
 	    break;
 	default:
@@ -409,7 +409,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 /*@-nullstate@*/
 static int
 x86_checkea_calc_displen(x86_effaddr *x86_ea, unsigned int wordsize, int noreg,
-			 int dispreq, unsigned long line)
+			 int dispreq)
 {
     /*@null@*/ const yasm_intnum *intn = NULL;
     long dispval;
@@ -426,7 +426,7 @@ x86_checkea_calc_displen(x86_effaddr *x86_ea, unsigned int wordsize, int noreg,
 	    /* Byte is not valid override in noreg case; fix it. */
 	    if (noreg) {
 		x86_ea->ea.disp_len = 0;
-		yasm__warning(YASM_WARN_GENERAL, line,
+		yasm_warn_set(YASM_WARN_GENERAL,
 			      N_("invalid displacement size; fixed"));
 	    } else
 		x86_ea->modrm |= 0100;
@@ -435,14 +435,14 @@ x86_checkea_calc_displen(x86_effaddr *x86_ea, unsigned int wordsize, int noreg,
 	case 2:
 	case 4:
 	    if (wordsize != x86_ea->ea.disp_len) {
-		yasm__error(line,
+		yasm_error_set(YASM_ERROR_VALUE,
 		    N_("invalid effective address (displacement size)"));
 		return 1;
 	    }
 	    /* 2/4 is not valid override in noreg case; fix it. */
 	    if (noreg) {
 		if (wordsize != x86_ea->ea.disp_len)
-		    yasm__warning(YASM_WARN_GENERAL, line,
+		    yasm_warn_set(YASM_WARN_GENERAL,
 				  N_("invalid displacement size; fixed"));
 		x86_ea->ea.disp_len = 0;
 	    } else
@@ -562,7 +562,7 @@ x86_expr_checkea_getregsize_callback(yasm_expr__item *ei, void *d)
 int
 yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 		       unsigned int bits, int address16_op, unsigned char *rex,
-		       yasm_calc_bc_dist_func calc_bc_dist, unsigned long line)
+		       yasm_calc_bc_dist_func calc_bc_dist)
 {
     int retval;
 
@@ -582,7 +582,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 		 * otherwise illegal.  It's also illegal in non-64-bit mode.
 		 */
 		if (x86_ea->need_modrm || x86_ea->need_sib) {
-		    yasm__error(line,
+		    yasm_error_set(YASM_ERROR_VALUE,
 			N_("invalid effective address (displacement size)"));
 		    return 1;
 		}
@@ -646,7 +646,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 
 	/* We can only do 64-bit addresses in 64-bit mode. */
 	if (*addrsize == 64 && bits != 64) {
-	    yasm__error(line,
+	    yasm_error_set(YASM_ERROR_TYPE,
 		N_("invalid effective address (64-bit in non-64-bit mode)"));
 	    return 1;
 	}
@@ -661,7 +661,8 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 		     &reg3264_data, x86_expr_checkea_get_reg3264,
 		     calc_bc_dist)) {
 		case 1:
-		    yasm__error(line, N_("invalid effective address"));
+		    yasm_error_set(YASM_ERROR_VALUE,
+				   N_("invalid effective address"));
 		    return 1;
 		case 2:
 		    if (pcrel) {
@@ -691,7 +692,8 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 	 */
 	for (i=0; i<17; i++) {
 	    if (reg3264mult[i] < 0) {
-		yasm__error(line, N_("invalid effective address"));
+		yasm_error_set(YASM_ERROR_VALUE,
+			       N_("invalid effective address"));
 		return 1;
 	    }
 	    if (i != indexreg && reg3264mult[i] == 1 &&
@@ -733,7 +735,8 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 	 */
 	for (i=0; i<17; i++)
 	    if (i != basereg && i != indexreg && reg3264mult[i] != 0) {
-		yasm__error(line, N_("invalid effective address"));
+		yasm_error_set(YASM_ERROR_VALUE,
+			       N_("invalid effective address"));
 		return 1;
 	    }
 
@@ -741,7 +744,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 	if (indexreg != REG3264_NONE && reg3264mult[indexreg] != 1 &&
 	    reg3264mult[indexreg] != 2 && reg3264mult[indexreg] != 4 &&
 	    reg3264mult[indexreg] != 8) {
-	    yasm__error(line, N_("invalid effective address"));
+	    yasm_error_set(YASM_ERROR_VALUE, N_("invalid effective address"));
 	    return 1;
 	}
 
@@ -751,7 +754,8 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 	     * legal.
 	     */
 	    if (reg3264mult[REG3264_ESP] > 1 || basereg == REG3264_ESP) {
-		yasm__error(line, N_("invalid effective address"));
+		yasm_error_set(YASM_ERROR_VALUE,
+			       N_("invalid effective address"));
 		return 1;
 	    }
 	    /* If mult==1 and basereg is not ESP, swap indexreg w/basereg. */
@@ -762,7 +766,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 	/* RIP is only legal if it's the ONLY register used. */
 	if (indexreg == REG64_RIP ||
 	    (basereg == REG64_RIP && indexreg != REG3264_NONE)) {
-	    yasm__error(line, N_("invalid effective address"));
+	    yasm_error_set(YASM_ERROR_VALUE, N_("invalid effective address"));
 	    return 1;
 	}
 
@@ -804,7 +808,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 	    if (yasm_x86__set_rex_from_reg(rex, &low3,
 					   (unsigned int)(X86_REG64 | basereg),
 					   bits, X86_REX_B)) {
-		yasm__error(line,
+		yasm_error_set(YASM_ERROR_TYPE,
 		    N_("invalid combination of operands and effective address"));
 		return 1;
 	    }
@@ -834,7 +838,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 		if (yasm_x86__set_rex_from_reg(rex, &low3, (unsigned int)
 					       (X86_REG64 | basereg), bits,
 					       X86_REX_B)) {
-		    yasm__error(line,
+		    yasm_error_set(YASM_ERROR_TYPE,
 			N_("invalid combination of operands and effective address"));
 		    return 1;
 		}
@@ -849,7 +853,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 		if (yasm_x86__set_rex_from_reg(rex, &low3, (unsigned int)
 					       (X86_REG64 | indexreg), bits,
 					       X86_REX_X)) {
-		    yasm__error(line,
+		    yasm_error_set(YASM_ERROR_TYPE,
 			N_("invalid combination of operands and effective address"));
 		    return 1;
 		}
@@ -874,7 +878,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 	/* Calculate displacement length (if possible) */
 	retval = x86_checkea_calc_displen
 	    (x86_ea, 4, basereg == REG3264_NONE,
-	     basereg == REG3264_EBP || basereg == REG64_R13, line);
+	     basereg == REG3264_EBP || basereg == REG64_R13);
 	return retval;
     } else if (*addrsize == 16 && x86_ea->need_modrm && !x86_ea->valid_modrm) {
 	static const unsigned char modrm16[16] = {
@@ -896,7 +900,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 
 	/* 64-bit mode does not allow 16-bit addresses */
 	if (bits == 64 && !address16_op) {
-	    yasm__error(line,
+	    yasm_error_set(YASM_ERROR_TYPE,
 		N_("16-bit addresses not supported in 64-bit mode"));
 	    return 1;
 	}
@@ -912,7 +916,8 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 		    (&x86_ea->ea.disp.abs, (int *)NULL, &pcrel, bits,
 		     &reg16mult, x86_expr_checkea_get_reg16, calc_bc_dist)) {
 		case 1:
-		    yasm__error(line, N_("invalid effective address"));
+		    yasm_error_set(YASM_ERROR_VALUE,
+				   N_("invalid effective address"));
 		    return 1;
 		case 2:
 		    if (pcrel) {
@@ -932,7 +937,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 	/* reg multipliers not 0 or 1 are illegal. */
 	if (reg16mult.bx & ~1 || reg16mult.si & ~1 || reg16mult.di & ~1 ||
 	    reg16mult.bp & ~1) {
-	    yasm__error(line, N_("invalid effective address"));
+	    yasm_error_set(YASM_ERROR_VALUE, N_("invalid effective address"));
 	    return 1;
 	}
 
@@ -948,7 +953,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 
 	/* Check the modrm value for invalid combinations. */
 	if (modrm16[havereg] & 0070) {
-	    yasm__error(line, N_("invalid effective address"));
+	    yasm_error_set(YASM_ERROR_VALUE, N_("invalid effective address"));
 	    return 1;
 	}
 
@@ -957,14 +962,14 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 
 	/* Calculate displacement length (if possible) */
 	retval = x86_checkea_calc_displen
-	    (x86_ea, 2, havereg == HAVE_NONE, havereg == HAVE_BP, line);
+	    (x86_ea, 2, havereg == HAVE_NONE, havereg == HAVE_BP);
 	return retval;
     } else if (!x86_ea->need_modrm && !x86_ea->need_sib) {
 	/* Special case for MOV MemOffs opcode: displacement but no modrm. */
 	switch (*addrsize) {
 	    case 64:
 		if (bits != 64) {
-		    yasm__error(line,
+		    yasm_error_set(YASM_ERROR_TYPE,
 			N_("invalid effective address (64-bit in non-64-bit mode)"));
 		    return 1;
 		}
@@ -976,7 +981,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 	    case 16:
 		/* 64-bit mode does not allow 16-bit addresses */
 		if (bits == 64 && !address16_op) {
-		    yasm__error(line,
+		    yasm_error_set(YASM_ERROR_TYPE,
 			N_("16-bit addresses not supported in 64-bit mode"));
 		    return 1;
 		}
@@ -990,13 +995,14 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 int
 yasm_x86__floatnum_tobytes(yasm_arch *arch, const yasm_floatnum *flt,
 			   unsigned char *buf, size_t destsize, size_t valsize,
-			   size_t shift, int warn, unsigned long line)
+			   size_t shift, int warn)
 {
     if (!yasm_floatnum_check_size(flt, valsize)) {
-	yasm__error(line, N_("invalid floating point constant size"));
+	yasm_error_set(YASM_ERROR_FLOATING_POINT,
+		       N_("invalid floating point constant size"));
 	return 1;
     }
 
-    yasm_floatnum_get_sized(flt, buf, destsize, valsize, shift, 0, warn, line);
+    yasm_floatnum_get_sized(flt, buf, destsize, valsize, shift, 0, warn);
     return 0;
 }

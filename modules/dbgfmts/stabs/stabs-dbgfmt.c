@@ -104,6 +104,7 @@ typedef struct {
     yasm_bytecode *basebc;      /* base bytecode from which to track SLINEs */
 
     yasm_dbgfmt_stabs *dbgfmt_stabs;
+    yasm_errwarns *errwarns;
 } stabs_info;
 
 typedef struct {
@@ -299,7 +300,8 @@ stabs_dbgfmt_generate_sections(yasm_section *sect, /*@null@*/ void *d)
     /* handle first (pseudo) bc separately */
     stabs_dbgfmt_generate_n_fun(d, yasm_section_bcs_first(sect));
 
-    yasm_section_bcs_traverse(sect, d, stabs_dbgfmt_generate_bcs);
+    yasm_section_bcs_traverse(sect, info->errwarns, d,
+			      stabs_dbgfmt_generate_bcs);
 
     if (yasm__strcasecmp(sectname, ".text")==0) {
         /* Close out last function by appending a null SO stab after last bc */
@@ -314,7 +316,7 @@ stabs_dbgfmt_generate_sections(yasm_section *sect, /*@null@*/ void *d)
 }
 
 static void
-stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
+stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt, yasm_errwarns *errwarns)
 {
     yasm_dbgfmt_stabs *dbgfmt_stabs = (yasm_dbgfmt_stabs *)dbgfmt;
     stabs_info info;
@@ -333,30 +335,39 @@ stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
 	return;
 
     info.dbgfmt_stabs = dbgfmt_stabs;
+    info.errwarns = errwarns;
     info.lastline = 0;
     info.stabcount = 0;
     info.stab = yasm_object_get_general(dbgfmt_stabs->object, ".stab", 0, 4, 0,
 					0, &new, 0);
     if (!new) {
 	yasm_bytecode *last = yasm_section_bcs_last(info.stab);
-	if (last == NULL)
-	    yasm__error(yasm_section_bcs_first(info.stab)->line,
+	if (last == NULL) {
+	    yasm_error_set(YASM_ERROR_GENERAL,
 		N_("stabs debugging conflicts with user-defined section .stab"));
-	else
-	    yasm__warning(YASM_WARN_GENERAL, 0,
+	    yasm_errwarn_propagate(errwarns,
+				   yasm_section_bcs_first(info.stab)->line);
+	} else {
+	    yasm_warn_set(YASM_WARN_GENERAL,
 		N_("stabs debugging overrides empty section .stab"));
+	    yasm_errwarn_propagate(errwarns, 0);
+	}
     }
 
     info.stabstr = yasm_object_get_general(dbgfmt_stabs->object, ".stabstr", 0,
 					   1, 0, 0, &new, 0);
     if (!new) {
 	yasm_bytecode *last = yasm_section_bcs_last(info.stabstr);
-	if (last == NULL)
-	    yasm__error(yasm_section_bcs_first(info.stabstr)->line,
+	if (last == NULL) {
+	    yasm_error_set(YASM_ERROR_GENERAL,
 		N_("stabs debugging conflicts with user-defined section .stabstr"));
-	else
-	    yasm__warning(YASM_WARN_GENERAL, 0,
+	    yasm_errwarn_propagate(errwarns,
+				   yasm_section_bcs_first(info.stab)->line);
+	} else {
+	    yasm_warn_set(YASM_WARN_GENERAL,
 		N_("stabs debugging overrides empty section .stabstr"));
+	    yasm_errwarn_propagate(errwarns, 0);
+	}
     }
 
 

@@ -232,8 +232,8 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 
     if (!found) {
 	/* Didn't find a matching one */
-	yasm__error(bc->line,
-		    N_("invalid combination of opcode and operands"));
+	yasm_error_set(YASM_ERROR_TYPE,
+		       N_("invalid combination of opcode and operands"));
 	return;
     }
 
@@ -279,8 +279,8 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 			case YASM_INSN__OPERAND_IMM:
 			    if (yasm_value_finalize_expr(&insn->imm,
 							 op->data.val))
-				yasm__error(bc->line,
-					    N_("immediate expression too complex"));
+				yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+				    N_("immediate expression too complex"));
 			    break;
 			case YASM_INSN__OPERAND_REG:
 			    if (yasm_value_finalize_expr(&insn->imm,
@@ -302,7 +302,8 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		insn->origin_prevbc = prev_bc;
 		if (insn->imm.seg_of || insn->imm.rshift
 		    || insn->imm.curpos_rel)
-		    yasm__error(bc->line, N_("invalid jump target"));
+		    yasm_error_set(YASM_ERROR_VALUE,
+				   N_("invalid jump target"));
 		insn->imm.curpos_rel = 1;
 	    }
 	}
@@ -320,15 +321,13 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 #define YYFILL(n)	(void)(n)
 
 void
-yasm_lc3b__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len,
-		     unsigned long line)
+yasm_lc3b__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len)
 {
 }
 
 yasm_arch_regtmod
 yasm_lc3b__parse_check_regtmod(yasm_arch *arch, unsigned long *data,
-			       const char *oid, size_t id_len,
-			       unsigned long line)
+			       const char *oid, size_t id_len)
 {
     const YYCTYPE *id = (const YYCTYPE *)oid;
     /*const char *marker;*/
@@ -351,8 +350,7 @@ yasm_lc3b__parse_check_regtmod(yasm_arch *arch, unsigned long *data,
 
 yasm_arch_insnprefix
 yasm_lc3b__parse_check_insnprefix(yasm_arch *arch, unsigned long data[4],
-				  const char *oid, size_t id_len,
-				  unsigned long line)
+				  const char *oid, size_t id_len)
 {
     const YYCTYPE *id = (const YYCTYPE *)oid;
     /*const char *marker;*/

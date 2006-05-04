@@ -56,16 +56,17 @@ typedef struct yasm_preproc_module {
      * Module-level implementation of yasm_preproc_create().
      * Call yasm_preproc_create() instead of calling this function.
      *
-     * The preprocessor needs access to the object format module to find out
-     * any output format specific macros.
-     *
      * \param f			initial starting file
      * \param in_filename	initial starting filename
      * \param lm		line mapping repository
+     * \param errwarns		error/warnning set.
      * \return New preprocessor.
+     *
+     * \note Any preprocessor errors and warnings are stored into errwarns.
      */
     /*@only@*/ yasm_preproc * (*create) (FILE *f, const char *in_filename,
-					 yasm_linemap *lm);
+					 yasm_linemap *lm,
+					 yasm_errwarns *errwarns);
 
     /** Module-level implementation of yasm_preproc_destroy().
      * Call yasm_preproc_destroy() instead of calling this function.
@@ -117,11 +118,13 @@ typedef struct yasm_preproc_module {
  * \param f		initial starting file
  * \param in_filename	initial starting file filename
  * \param lm		line mapping repository
+ * \param errwarns	error/warning set
  * \return New preprocessor.
+ * \note Errors/warnings are stored into errwarns.
  */
 /*@only@*/ yasm_preproc *yasm_preproc_create
     (yasm_preproc_module *module, FILE *f, const char *in_filename,
-     yasm_linemap *lm);
+     yasm_linemap *lm, yasm_errwarns *errwarns);
 
 /** Cleans up any allocated preproc memory.
  * \param preproc	preprocessor
@@ -184,8 +187,8 @@ void yasm_preproc_builtin_define(yasm_preproc *preproc,
 
 /* Inline macro implementations for preproc functions */
 
-#define yasm_preproc_create(module, f, in_filename, lm) \
-    module->create(f, in_filename, lm)
+#define yasm_preproc_create(module, f, in_filename, lm, ews) \
+    module->create(f, in_filename, lm, ews)
 
 #define yasm_preproc_destroy(preproc) \
     ((yasm_preproc_base *)preproc)->module->destroy(preproc)

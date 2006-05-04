@@ -189,6 +189,7 @@ typedef struct yasm_objfmt_coff {
 
 typedef struct coff_objfmt_output_info {
     yasm_objfmt_coff *objfmt_coff;
+    yasm_errwarns *errwarns;
     /*@dependent@*/ FILE *f;
     /*@only@*/ unsigned char *buf;
     yasm_section *sect;
@@ -459,7 +460,8 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
     if (value->rshift > 0
 	|| (value->seg_of && (value->wrt || value->curpos_rel))
 	|| (value->section_rel && (value->wrt || value->curpos_rel))) {
-	yasm__error(bc->line, N_("coff: relocation too complex"));
+	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+		       N_("coff: relocation too complex"));
 	return 1;
     }
 
@@ -480,12 +482,14 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 	    /*@dependent@*/ /*@null@*/ yasm_bytecode *rel_precbc, *wrt_precbc;
 	    if (!yasm_symrec_get_label(sym, &rel_precbc)
 		|| !yasm_symrec_get_label(value->wrt, &wrt_precbc)) {
-		yasm__error(bc->line, N_("coff: wrt expression too complex"));
+		yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			       N_("coff: wrt expression too complex"));
 		return 1;
 	    }
 	    dist = yasm_common_calc_bc_dist(wrt_precbc, rel_precbc);
 	    if (!dist) {
-		yasm__error(bc->line, N_("coff: cannot wrt across sections"));
+		yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			       N_("coff: cannot wrt across sections"));
 		return 1;
 	    }
 	    sym = value->wrt;
@@ -502,12 +506,14 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 		common_size = yasm_expr_get_intnum(&csymd->size,
 						   yasm_common_calc_bc_dist);
 		if (!common_size) {
-		    yasm__error(bc->line, N_("coff: common size too complex"));
+		    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+				   N_("coff: common size too complex"));
 		    return 1;
 		}
 
 		if (yasm_intnum_sign(common_size) < 0) {
-		    yasm__error(bc->line, N_("coff: common size is negative"));
+		    yasm_error_set(YASM_ERROR_VALUE,
+				   N_("coff: common size is negative"));
 		    return 1;
 		}
 
@@ -565,12 +571,14 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 		if (valsize == 32)
 		    reloc->type = COFF_RELOC_I386_REL32;
 		else {
-		    yasm__error(bc->line, N_("coff: invalid relocation size"));
+		    yasm_error_set(YASM_ERROR_TYPE,
+				   N_("coff: invalid relocation size"));
 		    return 1;
 		}
 	    } else if (objfmt_coff->machine == COFF_MACHINE_AMD64) {
 		if (valsize != 32) {
-		    yasm__error(bc->line, N_("coff: invalid relocation size"));
+		    yasm_error_set(YASM_ERROR_TYPE,
+				   N_("coff: invalid relocation size"));
 		    return 1;
 		}
 		if (!value->ip_rel)
@@ -595,8 +603,8 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 			reloc->type = COFF_RELOC_AMD64_REL32_5;
 			break;
 		    default:
-			yasm__error(bc->line,
-				    N_("coff: invalid relocation size"));
+			yasm_error_set(YASM_ERROR_TYPE,
+				       N_("coff: invalid relocation size"));
 			return 1;
 		}
 	    } else
@@ -630,7 +638,8 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 		} else if (valsize == 64)
 		    reloc->type = COFF_RELOC_AMD64_ADDR64;
 		else {
-		    yasm__error(bc->line, N_("coff: invalid relocation size"));
+		    yasm_error_set(YASM_ERROR_TYPE,
+				   N_("coff: invalid relocation size"));
 		    return 1;
 		}
 	    } else
@@ -648,28 +657,29 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 	intn = yasm_intnum_create_uint(intn_val-intn_minus);
     else {
 	intn = yasm_intnum_create_uint(intn_minus-intn_val);
-	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL, bc->line);
+	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
     }
 
     if (value->abs) {
 	yasm_intnum *intn2 = yasm_expr_get_intnum(&value->abs, NULL);
 	if (!intn2) {
-	    yasm__error(bc->line, N_("coff: relocation too complex"));
+	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			   N_("coff: relocation too complex"));
 	    yasm_intnum_destroy(intn);
 	    if (dist)
 		yasm_intnum_destroy(dist);
 	    return 1;
 	}
-	yasm_intnum_calc(intn, YASM_EXPR_ADD, intn2, bc->line);
+	yasm_intnum_calc(intn, YASM_EXPR_ADD, intn2);
     }
 
     if (dist) {
-	yasm_intnum_calc(intn, YASM_EXPR_ADD, dist, bc->line);
+	yasm_intnum_calc(intn, YASM_EXPR_ADD, dist);
 	yasm_intnum_destroy(dist);
     }
 
     retval = yasm_arch_intnum_tobytes(objfmt_coff->arch, intn, buf, destsize,
-				      valsize, shift, bc, warn, bc->line);
+				      valsize, shift, bc, warn);
     yasm_intnum_destroy(intn);
     return retval;
 }
@@ -701,7 +711,7 @@ coff_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     /* Warn that gaps are converted to 0 and write out the 0's. */
     if (gap) {
 	unsigned long left;
-	yasm__warning(YASM_WARN_UNINIT_CONTENTS, bc->line,
+	yasm_warn_set(YASM_WARN_UNINIT_CONTENTS,
 	    N_("uninitialized space declared in code/data section: zeroing"));
 	/* Write out in chunks */
 	memset(info->buf, 0, REGULAR_OUTBUF_SIZE);
@@ -772,7 +782,8 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 
 	info->sect = sect;
 	info->csd = csd;
-	yasm_section_bcs_traverse(sect, info, coff_objfmt_output_bytecode);
+	yasm_section_bcs_traverse(sect, info->errwarns, info,
+				  coff_objfmt_output_bytecode);
 
 	/* Sanity check final section size */
 	if (csd->size != (last->offset + last->len))
@@ -810,7 +821,7 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 	    yasm_internal_error(
 		N_("coff: no symbol data for relocated symbol"));
 
-	yasm_intnum_get_sized(reloc->reloc.addr, localbuf, 4, 32, 0, 0, 0, 0);
+	yasm_intnum_get_sized(reloc->reloc.addr, localbuf, 4, 32, 0, 0, 0);
 	localbuf += 4;				/* address of relocation */
 	YASM_WRITE_32_L(localbuf, csymd->index);    /* relocated symbol */
 	YASM_WRITE_16_L(localbuf, reloc->type);	    /* type of relocation */
@@ -897,9 +908,10 @@ coff_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     YASM_WRITE_32_L(localbuf, csd->relptr);	/* file ptr to relocs */
     YASM_WRITE_32_L(localbuf, 0);		/* file ptr to line nums */
     if (csd->nreloc >= 64*1024) {
-	yasm__warning(YASM_WARN_GENERAL, 0,
+	yasm_warn_set(YASM_WARN_GENERAL,
 		      N_("too many relocations in section `%s'"),
 		      yasm_section_get_name(sect));
+	yasm_errwarn_propagate(info->errwarns, 0);
 	YASM_WRITE_16_L(localbuf, 0xFFFF);	/* max out */
     } else
 	YASM_WRITE_16_L(localbuf, csd->nreloc); /* num of relocation entries */
@@ -984,10 +996,12 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 		    abs_start = yasm_expr_copy(yasm_section_get_start(sect));
 		    intn = yasm_expr_get_intnum(&abs_start,
 						yasm_common_calc_bc_dist);
-		    if (!intn)
-			yasm__error(abs_start->line,
+		    if (!intn) {
+			yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			    N_("absolute section start not an integer expression"));
-		    else
+			yasm_errwarn_propagate(info->errwarns,
+					       abs_start->line);
+		    } else
 			value = yasm_intnum_get_uint(intn);
 		    yasm_expr_destroy(abs_start);
 
@@ -1002,9 +1016,11 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	    intn = yasm_expr_get_intnum(&equ_val_copy,
 					yasm_common_calc_bc_dist);
 	    if (!intn) {
-		if (vis & YASM_SYM_GLOBAL)
-		    yasm__error(equ_val->line,
+		if (vis & YASM_SYM_GLOBAL) {
+		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			N_("global EQU value not an integer expression"));
+		    yasm_errwarn_propagate(info->errwarns, equ_val->line);
+		}
 	    } else
 		value = yasm_intnum_get_uint(intn);
 	    yasm_expr_destroy(equ_val_copy);
@@ -1014,10 +1030,11 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	    if (vis & YASM_SYM_COMMON) {
 		intn = yasm_expr_get_intnum(&csymd->size,
 					    yasm_common_calc_bc_dist);
-		if (!intn)
-		    yasm__error(csymd->size->line,
+		if (!intn) {
+		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			N_("COMMON data size not an integer expression"));
-		else
+		    yasm_errwarn_propagate(info->errwarns, csymd->size->line);
+		} else
 		    value = yasm_intnum_get_uint(intn);
 		scnum = 0;
 	    }
@@ -1108,7 +1125,8 @@ coff_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
 }
 
 static void
-coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df)
+coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df,
+		   yasm_errwarns *errwarns)
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
     coff_objfmt_output_info info;
@@ -1131,6 +1149,7 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df)
 
     info.strtab_offset = 4;
     info.objfmt_coff = objfmt_coff;
+    info.errwarns = errwarns;
     info.f = f;
     info.buf = yasm_xmalloc(REGULAR_OUTBUF_SIZE);
 
@@ -1305,7 +1324,7 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	 * files via "/nnnn" (where nnnn is decimal offset into string table),
 	 * so only warn for regular COFF.
 	 */
-	yasm__warning(YASM_WARN_GENERAL, line,
+	yasm_warn_set(YASM_WARN_GENERAL,
 	    N_("COFF section names limited to 8 characters: truncating"));
 	sectname[8] = '\0';
     }
@@ -1343,7 +1362,7 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	    flags |= COFF_STYP_READ;
 	    align = 8;
 	} else
-	    yasm__warning(YASM_WARN_GENERAL, line,
+	    yasm_warn_set(YASM_WARN_GENERAL,
 		N_("Standard COFF does not support read-only data sections"));
     } else if (strcmp(sectname, ".drectve") == 0) {
 	flags = COFF_STYP_INFO;
@@ -1380,7 +1399,7 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	win32warn = 0;
 
 	if (!vp->val) {
-	    yasm__warning(YASM_WARN_GENERAL, line,
+	    yasm_warn_set(YASM_WARN_GENERAL,
 			  N_("Unrecognized numeric qualifier"));
 	    continue;
 	}
@@ -1462,7 +1481,7 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			readonly = 0;
 			break;
 		    default:
-			yasm__warning(YASM_WARN_GENERAL, line,
+			yasm_warn_set(YASM_WARN_GENERAL,
 				      N_("unrecognized section attribute: `%c'"),
 				      vp->val[i]);
 		}
@@ -1491,24 +1510,24 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		/*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
 		align_expr = yasm_expr_get_intnum(&vp->param, NULL);
 		if (!align_expr) {
-		    yasm__error(line,
-				N_("argument to `%s' is not a power of two"),
-				vp->val);
+		    yasm_error_set(YASM_ERROR_VALUE,
+				   N_("argument to `%s' is not a power of two"),
+				   vp->val);
 		    return NULL;
 		}
 		align = yasm_intnum_get_uint(align_expr);
 
 		/* Alignments must be a power of two. */
 		if ((align & (align - 1)) != 0) {
-		    yasm__error(line,
-				N_("argument to `%s' is not a power of two"),
-				vp->val);
+		    yasm_error_set(YASM_ERROR_VALUE,
+				   N_("argument to `%s' is not a power of two"),
+				   vp->val);
 		    return NULL;
 		}
 
 		/* Check to see if alignment is supported size */
 		if (align > 8192) {
-		    yasm__error(line,
+		    yasm_error_set(YASM_ERROR_VALUE,
 			N_("Win32 does not support alignments > 8192"));
 		    return NULL;
 		}
@@ -1516,11 +1535,11 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	    } else
 		win32warn = 1;
 	} else
-	    yasm__warning(YASM_WARN_GENERAL, line,
-			  N_("Unrecognized qualifier `%s'"), vp->val);
+	    yasm_warn_set(YASM_WARN_GENERAL, N_("Unrecognized qualifier `%s'"),
+			  vp->val);
 
 	if (win32warn)
-	    yasm__warning(YASM_WARN_GENERAL, line,
+	    yasm_warn_set(YASM_WARN_GENERAL,
 		N_("Standard COFF does not support qualifier `%s'"), vp->val);
     }
 
@@ -1538,7 +1557,7 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	csd->flags2 = flags2;
 	yasm_section_set_align(retval, align, line);
     } else if (flags_override)
-	yasm__warning(YASM_WARN_GENERAL, line,
+	yasm_warn_set(YASM_WARN_GENERAL,
 		      N_("section flags ignored on section redeclaration"));
     return retval;
 }
@@ -1683,7 +1702,8 @@ win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	if (vp->val)
 	    yasm_symtab_use(objfmt_coff->symtab, vp->val, line);
 	else {
-	    yasm__error(line, N_("argument to EXPORT must be symbol name"));
+	    yasm_error_set(YASM_ERROR_SYNTAX,
+			   N_("argument to EXPORT must be symbol name"));
 	    return 0;
 	}
 

@@ -217,12 +217,13 @@ symtab_define(yasm_symtab *symtab, const char *name, sym_type type,
 
     /* Has it been defined before (either by DEFINED or COMMON/EXTERN)? */
     if (rec->status & SYM_DEFINED) {
-	yasm__error(line, N_("redefinition of `%s'"), name);
-	yasm__error_at(line, rec->line, N_("`%s' previously defined here"),
+	yasm_error_set_xref(rec->line, N_("`%s' previously defined here"),
+			    name);
+	yasm_error_set(YASM_ERROR_GENERAL, N_("redefinition of `%s'"),
 		       name);
     } else {
 	if (rec->visibility & YASM_SYM_EXTERN)
-	    yasm__warning(YASM_WARN_GENERAL, line,
+	    yasm_warn_set(YASM_WARN_GENERAL,
 			  N_("`%s' both defined and declared extern"), name);
 	rec->line = line;	/* set line number of definition */
 	rec->type = type;
@@ -304,7 +305,7 @@ yasm_symrec_declare(yasm_symrec *rec, yasm_sym_vis vis, unsigned long line)
 	  ((rec->visibility & YASM_SYM_EXTERN) && (vis == YASM_SYM_EXTERN)))))
 	rec->visibility |= vis;
     else
-	yasm__error(line,
+	yasm_error_set(YASM_ERROR_GENERAL,
 	    N_("duplicate definition of `%s'; first defined on line %lu"),
 	    rec->name, rec->line);
 }
@@ -313,6 +314,7 @@ typedef struct symtab_finalize_info {
     unsigned long firstundef_line;
     int undef_extern;
     /*@null@*/ yasm_objfmt *objfmt;
+    yasm_errwarns *errwarns;
 } symtab_finalize_info;
 
 static int
@@ -325,8 +327,9 @@ symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
 	if (info->undef_extern && info->objfmt)
 	    yasm_objfmt_extern_declare(info->objfmt, sym->name, NULL, 1);
 	else {
-	    yasm__error(sym->line, N_("undefined symbol `%s' (first use)"),
-			sym->name);
+	    yasm_error_set(YASM_ERROR_GENERAL,
+			   N_("undefined symbol `%s' (first use)"), sym->name);
+	    yasm_errwarn_propagate(info->errwarns, sym->line);
 	    if (sym->line < info->firstundef_line)
 		info->firstundef_line = sym->line;
 	}
@@ -337,16 +340,19 @@ symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
 
 void
 yasm_symtab_parser_finalize(yasm_symtab *symtab, int undef_extern,
-			    yasm_objfmt *objfmt)
+			    yasm_objfmt *objfmt, yasm_errwarns *errwarns)
 {
     symtab_finalize_info info;
     info.firstundef_line = ULONG_MAX;
     info.undef_extern = undef_extern;
     info.objfmt = objfmt;
+    info.errwarns = errwarns;
     yasm_symtab_traverse(symtab, &info, symtab_parser_finalize_checksym);
-    if (info.firstundef_line < ULONG_MAX)
-	yasm__error(info.firstundef_line,
-		    N_(" (Each undefined symbol is reported only once.)"));
+    if (info.firstundef_line < ULONG_MAX) {
+	yasm_error_set(YASM_ERROR_GENERAL,
+		       N_(" (Each undefined symbol is reported only once.)"));
+	yasm_errwarn_propagate(errwarns, info.firstundef_line);
+    }
 }
 
 void

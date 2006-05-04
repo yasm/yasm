@@ -618,7 +618,7 @@ cv_leaf_tobytes(const cv_leaf *leaf, yasm_bytecode *bc, yasm_arch *arch,
 
     /* leaf type */
     yasm_intnum_set_uint(cval, leaf->type);
-    yasm_arch_intnum_tobytes(arch, cval, buf, 2, 16, 0, bc, 0, 0);
+    yasm_arch_intnum_tobytes(arch, cval, buf, 2, 16, 0, bc, 0);
     buf += 2;
 
     while (*ch) {
@@ -629,12 +629,12 @@ cv_leaf_tobytes(const cv_leaf *leaf, yasm_bytecode *bc, yasm_arch *arch,
 		break;
 	    case 'h':
 		yasm_intnum_set_uint(cval, leaf->args[arg++].i);
-		yasm_arch_intnum_tobytes(arch, cval, buf, 2, 16, 0, bc, 0, 0);
+		yasm_arch_intnum_tobytes(arch, cval, buf, 2, 16, 0, bc, 0);
 		buf += 2;
 		break;
 	    case 'w':
 		yasm_intnum_set_uint(cval, leaf->args[arg++].i);
-		yasm_arch_intnum_tobytes(arch, cval, buf, 4, 32, 0, bc, 0, 0);
+		yasm_arch_intnum_tobytes(arch, cval, buf, 4, 32, 0, bc, 0);
 		buf += 4;
 		break;
 	    case 'L':
@@ -644,7 +644,7 @@ cv_leaf_tobytes(const cv_leaf *leaf, yasm_bytecode *bc, yasm_arch *arch,
 	    case 'T':
 		yasm_intnum_set_uint(cval,
 		    ((const cv_type *)leaf->args[arg++].p)->indx);
-		yasm_arch_intnum_tobytes(arch, cval, buf, 4, 32, 0, bc, 0, 0);
+		yasm_arch_intnum_tobytes(arch, cval, buf, 4, 32, 0, bc, 0);
 		buf += 4;	/* XXX: will be 2 in CV4 */
 		break;
 	    case 'S':
@@ -746,15 +746,14 @@ cv_type_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     cval = yasm_intnum_create_uint(4);	    /* version */
     if (type->indx == CV_FIRST_NONPRIM) {
-	yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 1,
-				 0);
+	yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 1);
 	buf += 4;
 	reclen -= 4;
     }
 
     /* Total length of record (following this field) - 2 bytes */
     yasm_intnum_set_uint(cval, reclen);
-    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 2, 16, 0, bc, 1, 0);
+    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 2, 16, 0, bc, 1);
     buf += 2;
 
     /* Leaves */

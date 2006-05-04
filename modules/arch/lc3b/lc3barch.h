@@ -53,15 +53,12 @@ typedef struct lc3b_insn {
 
 void yasm_lc3b__bc_transform_insn(yasm_bytecode *bc, lc3b_insn *insn);
 
-void yasm_lc3b__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len,
-			  unsigned long line);
+void yasm_lc3b__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len);
 
 yasm_arch_insnprefix yasm_lc3b__parse_check_insnprefix
-    (yasm_arch *arch, unsigned long data[4], const char *id, size_t id_len,
-     unsigned long line);
+    (yasm_arch *arch, unsigned long data[4], const char *id, size_t id_len);
 yasm_arch_regtmod yasm_lc3b__parse_check_regtmod
-    (yasm_arch *arch, unsigned long *data, const char *id, size_t id_len,
-     unsigned long line);
+    (yasm_arch *arch, unsigned long *data, const char *id, size_t id_len);
 
 void yasm_lc3b__finalize_insn
     (yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
@@ -72,5 +69,5 @@ void yasm_lc3b__finalize_insn
 int yasm_lc3b__intnum_tobytes
     (yasm_arch *arch, const yasm_intnum *intn, unsigned char *buf,
      size_t destsize, size_t valsize, int shift, const yasm_bytecode *bc,
-     int warn, unsigned long line);
+     int warn);
 #endif

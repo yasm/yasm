@@ -66,6 +66,11 @@ typedef struct yasm_assoc_data_callback {
     void (*print) (void *data, FILE *f, int indent_level);
 } yasm_assoc_data_callback;
 
+/** Set of collected error/warnings (opaque type).
+ * \see errwarn.h for details.
+ */
+typedef struct yasm_errwarns yasm_errwarns;
+
 /** Bytecode (opaque type).
  * \see bytecode.h for related functions.
  * Define YASM_BC_INTERNAL to get visible internals.

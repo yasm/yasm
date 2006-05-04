@@ -70,6 +70,7 @@ cdef class Register:
 
 include "coretype.pxi"
 
+include "errwarn.pxi"
 include "intnum.pxi"
 include "floatnum.pxi"
 include "expr.pxi"
@@ -87,10 +88,12 @@ def __initialize():
     BitVector_Boot()
     yasm_intnum_initialize()
     yasm_floatnum_initialize()
+    yasm_errwarn_initialize()
 
 def __cleanup():
     yasm_floatnum_cleanup()
     yasm_intnum_cleanup()
+    yasm_errwarn_cleanup()
     BitVector_Shutdown()
 
 __initialize()

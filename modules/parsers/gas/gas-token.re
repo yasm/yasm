@@ -223,7 +223,8 @@ strbuf_append(size_t count, YYCTYPE *cursor, Scanner *s, unsigned long line,
 	      int ch)
 {
     if (cursor == s->eof)
-	yasm__error(line, N_("unexpected end of file in string"));
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("unexpected end of file in string"));
 
     if (count >= strbuf_size) {
 	strbuf = yasm_xrealloc(strbuf, strbuf_size + STRBUF_ALLOC_SIZE);
@@ -279,7 +280,7 @@ scan:
 	([1-9] digit*) | "0" {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    lvalp->intn = yasm_intnum_create_dec(TOK, cur_line);
+	    lvalp->intn = yasm_intnum_create_dec(TOK);
 	    s->tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -288,7 +289,7 @@ scan:
 	'0b' bindigit+ {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    lvalp->intn = yasm_intnum_create_bin(TOK+2, cur_line);
+	    lvalp->intn = yasm_intnum_create_bin(TOK+2);
 	    s->tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -297,7 +298,7 @@ scan:
 	"0" octdigit+ {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    lvalp->intn = yasm_intnum_create_oct(TOK, cur_line);
+	    lvalp->intn = yasm_intnum_create_oct(TOK);
 	    s->tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -307,7 +308,7 @@ scan:
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    /* skip 0 and x */
-	    lvalp->intn = yasm_intnum_create_hex(TOK+2, cur_line);
+	    lvalp->intn = yasm_intnum_create_hex(TOK+2);
 	    s->tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -414,8 +415,7 @@ scan:
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    switch (yasm_arch_parse_check_regtmod
-		    (parser_gas->arch, lvalp->arch_data, TOK+1, TOKLEN-1,
-		     cur_line)) {
+		    (parser_gas->arch, lvalp->arch_data, TOK+1, TOKLEN-1)) {
 		case YASM_ARCH_REG:
 		    s->tok[TOKLEN] = savech;
 		    RETURN(REG);
@@ -428,8 +428,8 @@ scan:
 		default:
 		    break;
 	    }
-	    yasm__error(cur_line, N_("Unrecognized register name `%s'"),
-			s->tok);
+	    yasm_error_set(YASM_ERROR_GENERAL,
+			   N_("Unrecognized register name `%s'"), s->tok);
 	    s->tok[TOKLEN] = savech;
 	    lvalp->arch_data[0] = 0;
 	    lvalp->arch_data[1] = 0;
@@ -459,8 +459,7 @@ scan:
 		savech = s->tok[TOKLEN];
 		s->tok[TOKLEN] = '\0';
 		switch (yasm_arch_parse_check_insnprefix
-			(parser_gas->arch, lvalp->arch_data, TOK, TOKLEN,
-			 cur_line)) {
+			(parser_gas->arch, lvalp->arch_data, TOK, TOKLEN)) {
 		    case YASM_ARCH_INSN:
 			s->tok[TOKLEN] = savech;
 			parser_gas->state = INSTDIR;
@@ -489,7 +488,7 @@ scan:
 	}
 
 	any {
-	    yasm__warning(YASM_WARN_UNREC_CHAR, cur_line,
+	    yasm_warn_set(YASM_WARN_UNREC_CHAR,
 			  N_("ignoring unrecognized character `%s'"),
 			  yasm__conv_unprint(s->tok[0]));
 	    goto scan;
@@ -524,7 +523,7 @@ section_directive:
 	}
 
 	any {
-	    yasm__warning(YASM_WARN_UNREC_CHAR, cur_line,
+	    yasm_warn_set(YASM_WARN_UNREC_CHAR,
 			  N_("ignoring unrecognized character `%s'"),
 			  yasm__conv_unprint(s->tok[0]));
 	    goto section_directive;
@@ -569,7 +568,7 @@ stringconst_scan:
 	"\\" digit digit digit	{
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    lvalp->intn = yasm_intnum_create_oct(TOK+1, cur_line);
+	    lvalp->intn = yasm_intnum_create_oct(TOK+1);
 	    s->tok[TOKLEN] = savech;
 
 	    strbuf_append(count++, cursor, s, cur_line,
@@ -580,7 +579,7 @@ stringconst_scan:
 	'\\x' hexdigit+    {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    lvalp->intn = yasm_intnum_create_hex(TOK+2, cur_line);
+	    lvalp->intn = yasm_intnum_create_hex(TOK+2);
 	    s->tok[TOKLEN] = savech;
 
 	    strbuf_append(count++, cursor, s, cur_line,
@@ -648,7 +647,9 @@ rept_scan:
 	    int i;
 	    if (linestart) {
 		/* We don't support nested right now, error */
-		yasm__error(cur_line, N_("nested rept not supported"));
+		yasm_error_set(YASM_ERROR_GENERAL,
+			       N_("nested rept not supported"));
+		yasm_errwarn_propagate(parser_gas->errwarns, cur_line);
 	    }
 	    for (i=0; i<6; i++)
 		strbuf_append(count++, cursor, s, cur_line, s->tok[i]);

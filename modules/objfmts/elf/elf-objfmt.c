@@ -69,6 +69,7 @@ typedef struct yasm_objfmt_elf {
 
 typedef struct {
     yasm_objfmt_elf *objfmt_elf;
+    yasm_errwarns *errwarns;
     FILE *f;
     elf_secthead *shead;
     yasm_section *sect;
@@ -247,14 +248,16 @@ elf_objfmt_output_align(FILE *f, unsigned int align)
 
     pos = ftell(f);
     if (pos == -1) {
-	yasm__error(0, N_("could not get file position on output file"));
+	yasm_error_set(YASM_ERROR_IO,
+		       N_("could not get file position on output file"));
 	return -1;
     }
     delta = align - (pos & (align-1)); 
     if (delta != align) {
 	pos += delta;
 	if (fseek(f, pos, SEEK_SET) < 0) {
-	    yasm__error(0, N_("could not set file position on output file"));
+	    yasm_error_set(YASM_ERROR_IO,
+			   N_("could not set file position on output file"));
 	    return -1;
 	}
     }
@@ -274,7 +277,7 @@ elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
     reloc = elf_reloc_entry_create(sym, NULL,
 	yasm_intnum_create_uint(bc->offset), 0, valsize);
     if (reloc == NULL) {
-	yasm__error(bc->line, N_("elf: invalid relocation size"));
+	yasm_error_set(YASM_ERROR_TYPE, N_("elf: invalid relocation size"));
 	return 1;
     }
     /* allocate .rel[a] sections on a need-basis */
@@ -283,8 +286,7 @@ elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
     zero = yasm_intnum_create_uint(0);
     elf_handle_reloc_addend(zero, reloc);
     retval = yasm_arch_intnum_tobytes(info->objfmt_elf->arch, zero, buf,
-				      destsize, valsize, 0, bc, warn,
-				      bc->line);
+				      destsize, valsize, 0, bc, warn);
     yasm_intnum_destroy(zero);
     return retval;
 }
@@ -323,7 +325,8 @@ elf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 
     /* Handle other expressions, with relocation if necessary */
     if (value->seg_of || value->section_rel || value->rshift > 0) {
-	yasm__error(bc->line, N_("elf: relocation too complex"));
+	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+		       N_("elf: relocation too complex"));
 	return 1;
     }
 
@@ -366,7 +369,8 @@ elf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 	    yasm_intnum_create_uint(bc->offset + offset), value->curpos_rel,
 	    valsize);
 	if (reloc == NULL) {
-	    yasm__error(bc->line, N_("elf: invalid relocation (WRT or size)"));
+	    yasm_error_set(YASM_ERROR_TYPE,
+			   N_("elf: invalid relocation (WRT or size)"));
 	    return 1;
 	}
 	/* allocate .rel[a] sections on a need-basis */
@@ -378,18 +382,18 @@ elf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
     if (value->abs) {
 	yasm_intnum *intn2 = yasm_expr_get_intnum(&value->abs, NULL);
 	if (!intn2) {
-	    yasm__error(bc->line, N_("elf: relocation too complex"));
+	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			   N_("elf: relocation too complex"));
 	    yasm_intnum_destroy(intn);
 	    return 1;
 	}
-	yasm_intnum_calc(intn, YASM_EXPR_ADD, intn2, bc->line);
+	yasm_intnum_calc(intn, YASM_EXPR_ADD, intn2);
     }
 
     if (reloc)
 	elf_handle_reloc_addend(intn, reloc);
     retval = yasm_arch_intnum_tobytes(info->objfmt_elf->arch, intn, buf,
-				      destsize, valsize, shift, bc, warn,
-				      bc->line);
+				      destsize, valsize, shift, bc, warn);
     yasm_intnum_destroy(intn);
     return retval;
 }
@@ -421,7 +425,7 @@ elf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 	yasm_intnum *bcsize = yasm_intnum_create_uint(size);
 	yasm_intnum *mult = yasm_intnum_create_uint(multiple);
 
-	yasm_intnum_calc(bcsize, YASM_EXPR_MUL, mult, 0);
+	yasm_intnum_calc(bcsize, YASM_EXPR_MUL, mult);
 	elf_secthead_add_size(info->shead, bcsize);
 
 	yasm_intnum_destroy(bcsize);
@@ -431,7 +435,7 @@ elf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     /* Warn that gaps are converted to 0 and write out the 0's. */
     if (gap) {
 	unsigned long left;
-	yasm__warning(YASM_WARN_UNINIT_CONTENTS, bc->line,
+	yasm_warn_set(YASM_WARN_UNINIT_CONTENTS,
 	    N_("uninitialized space declared in code/data section: zeroing"));
 	/* Write out in chunks */
 	memset(buf, 0, 256);
@@ -455,7 +459,7 @@ elf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 }
 
 static int
-elf_objfmt_create_dbg_secthead(yasm_section *sect, void *d)
+elf_objfmt_create_dbg_secthead(yasm_section *sect, /*@null@*/ void *d)
 {
     /*@null@*/ elf_objfmt_output_info *info = (elf_objfmt_output_info *)d;
     elf_secthead *shead;
@@ -530,20 +534,27 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 	return 0;
     }
 
-    if ((pos = ftell(info->f)) == -1)
-	yasm__error(0, N_("couldn't read position on output stream"));
+    if ((pos = ftell(info->f)) == -1) {
+	yasm_error_set(YASM_ERROR_IO,
+		       N_("couldn't read position on output stream"));
+	yasm_errwarn_propagate(info->errwarns, 0);
+    }
     pos = elf_secthead_set_file_offset(shead, pos);
-    if (fseek(info->f, pos, SEEK_SET) < 0)
-	yasm__error(0, N_("couldn't seek on output stream"));
+    if (fseek(info->f, pos, SEEK_SET) < 0) {
+	yasm_error_set(YASM_ERROR_IO, N_("couldn't seek on output stream"));
+	yasm_errwarn_propagate(info->errwarns, 0);
+    }
 
     info->sect = sect;
     info->shead = shead;
-    yasm_section_bcs_traverse(sect, info, elf_objfmt_output_bytecode);
+    yasm_section_bcs_traverse(sect, info->errwarns, info,
+			      elf_objfmt_output_bytecode);
 
     elf_secthead_set_index(shead, ++info->sindex);
 
     /* No relocations to output?  Go on to next section */
-    if (elf_secthead_write_relocs_to_file(info->f, sect, shead) == 0)
+    if (elf_secthead_write_relocs_to_file(info->f, sect, shead,
+					  info->errwarns) == 0)
 	return 0;
     elf_secthead_set_rel_index(shead, ++info->sindex);
 
@@ -587,7 +598,8 @@ elf_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 }
 
 static void
-elf_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df)
+elf_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df,
+		  yasm_errwarns *errwarns)
 {
     yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
     elf_objfmt_output_info info;
@@ -601,6 +613,7 @@ elf_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df)
     unsigned long elf_symtab_nlocal;
 
     info.objfmt_elf = objfmt_elf;
+    info.errwarns = errwarns;
     info.f = f;
 
     /* Update filename strtab */
@@ -609,7 +622,8 @@ elf_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df)
 
     /* Allocate space for Ehdr by seeking forward */
     if (fseek(f, (long)(elf_proghead_get_size()), SEEK_SET) < 0) {
-	yasm__error(0, N_("could not seek on output file"));
+	yasm_error_set(YASM_ERROR_IO, N_("could not seek on output file"));
+	yasm_errwarn_propagate(errwarns, 0);
 	return;
     }
 
@@ -640,26 +654,35 @@ elf_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df)
 					      ".shstrtab");
 
     /* output .shstrtab */
-    if ((pos = elf_objfmt_output_align(f, 4)) == -1)
+    if ((pos = elf_objfmt_output_align(f, 4)) == -1) {
+	yasm_errwarn_propagate(errwarns, 0);
 	return;
+    }
     elf_shstrtab_offset = (unsigned long) pos;
     elf_shstrtab_size = elf_strtab_output_to_file(f, objfmt_elf->shstrtab);
 
     /* output .strtab */
-    if ((pos = elf_objfmt_output_align(f, 4)) == -1)
+    if ((pos = elf_objfmt_output_align(f, 4)) == -1) {
+	yasm_errwarn_propagate(errwarns, 0);
 	return;
+    }
     elf_strtab_offset = (unsigned long) pos;
     elf_strtab_size = elf_strtab_output_to_file(f, objfmt_elf->strtab);
 
     /* output .symtab - last section so all others have indexes */
-    if ((pos = elf_objfmt_output_align(f, 4)) == -1)
+    if ((pos = elf_objfmt_output_align(f, 4)) == -1) {
+	yasm_errwarn_propagate(errwarns, 0);
 	return;
+    }
     elf_symtab_offset = (unsigned long) pos;
-    elf_symtab_size = elf_symtab_write_to_file(f, objfmt_elf->elf_symtab);
+    elf_symtab_size = elf_symtab_write_to_file(f, objfmt_elf->elf_symtab,
+					       errwarns);
 
     /* output section header table */
-    if ((pos = elf_objfmt_output_align(f, 16)) == -1)
+    if ((pos = elf_objfmt_output_align(f, 16)) == -1) {
+	yasm_errwarn_propagate(errwarns, 0);
 	return;
+    }
     elf_shead_addr = (unsigned long) pos;
 
     /* stabs debugging support */
@@ -716,7 +739,8 @@ elf_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df)
 
     /* output Ehdr */
     if (fseek(f, 0, SEEK_SET) < 0) {
-	yasm__error(0, N_("could not seek on output file"));
+	yasm_error_set(YASM_ERROR_IO, N_("could not seek on output file"));
+	yasm_errwarn_propagate(errwarns, 0);
 	return;
     }
 
@@ -831,7 +855,7 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	int match;
 
 	if (!vp->val) {
-	    yasm__warning(YASM_WARN_GENERAL, line,
+	    yasm_warn_set(YASM_WARN_GENERAL,
 			  N_("Unrecognized numeric qualifier"));
 	    continue;
 	}
@@ -880,7 +904,7 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			flags |= SHF_TLS;
 			break;
 		    default:
-			yasm__warning(YASM_WARN_GENERAL, line,
+			yasm_warn_set(YASM_WARN_GENERAL,
 				      N_("unrecognized section attribute: `%c'"),
 				      vp->val[i]);
 		}
@@ -898,22 +922,22 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 
             align_expr = yasm_expr_get_intnum(&vp->param, NULL);
             if (!align_expr) {
-                yasm__error(line,
-                            N_("argument to `%s' is not a power of two"),
-                            vp->val);
+                yasm_error_set(YASM_ERROR_VALUE,
+			       N_("argument to `%s' is not a power of two"),
+			       vp->val);
                 return NULL;
             }
             align = yasm_intnum_get_uint(align_expr);
 
             /* Alignments must be a power of two. */
             if ((align & (align - 1)) != 0) {
-                yasm__error(line,
-                            N_("argument to `%s' is not a power of two"),
-                            vp->val);
+                yasm_error_set(YASM_ERROR_VALUE,
+			       N_("argument to `%s' is not a power of two"),
+                               vp->val);
                 return NULL;
             }
 	} else
-	    yasm__warning(YASM_WARN_GENERAL, line,
+	    yasm_warn_set(YASM_WARN_GENERAL,
 			  N_("Unrecognized qualifier `%s'"), vp->val);
     }
 	/* Handle merge entity size */
@@ -923,10 +947,10 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 
 		merge_intn = yasm_expr_get_intnum(&vp->param, NULL);
 		if (!merge_intn)
-		    yasm__warning(YASM_WARN_GENERAL, line,
+		    yasm_warn_set(YASM_WARN_GENERAL,
 				  N_("invalid merge entity size"));
 	    } else {
-		yasm__warning(YASM_WARN_GENERAL, line,
+		yasm_warn_set(YASM_WARN_GENERAL,
 			      N_("entity size for SHF_MERGE not specified"));
 		flags &= ~SHF_MERGE;
 	    }
@@ -949,7 +973,7 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	    elf_secthead_set_entsize(esd, yasm_intnum_get_uint(merge_intn));
 	yasm_section_set_align(retval, align, line);
     } else if (flags_override)
-	yasm__warning(YASM_WARN_GENERAL, line,
+	yasm_warn_set(YASM_WARN_GENERAL,
 		      N_("section flags ignored on section redeclaration"));
     return retval;
 }
@@ -971,7 +995,8 @@ elf_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
 	for (; vp; vp = yasm_vps_next(vp))
         {
             if (vp->val)
-                yasm__error(line, N_("unrecognized symbol type `%s'"), vp->val);
+                yasm_error_set(YASM_ERROR_TYPE,
+			       N_("unrecognized symbol type `%s'"), vp->val);
         }
     }
     return sym;
@@ -1014,8 +1039,9 @@ elf_objfmt_global_declare(yasm_objfmt *objfmt, const char *name,
                     vis_overrides++;
                 }
                 else
-                    yasm__error(line, N_("unrecognized symbol type `%s'"),
-                                vp->val);
+                    yasm_error_set(YASM_ERROR_TYPE,
+				   N_("unrecognized symbol type `%s'"),
+				   vp->val);
             }
             else if (vp->param && !size) {
                 size = vp->param;
@@ -1023,7 +1049,7 @@ elf_objfmt_global_declare(yasm_objfmt *objfmt, const char *name,
             }
 	}
         if (vis_overrides > 1) {
-            yasm__warning(YASM_WARN_GENERAL, line,
+            yasm_warn_set(YASM_WARN_GENERAL,
                 N_("More than one symbol visibility provided; using last"));
         }
     }
@@ -1054,20 +1080,20 @@ elf_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
 
                 align_expr = yasm_expr_get_intnum(&vp->param, NULL);
                 if (!align_expr) {
-                    yasm__error(line,
-                                N_("alignment constraint is not a power of two"));
+                    yasm_error_set(YASM_ERROR_VALUE,
+			N_("alignment constraint is not a power of two"));
                     return sym;
                 }
                 addralign = yasm_intnum_get_uint(align_expr);
 
                 /* Alignments must be a power of two. */
                 if ((addralign & (addralign - 1)) != 0) {
-                    yasm__error(line,
-                                N_("alignment constraint is not a power of two"));
+                    yasm_error_set(YASM_ERROR_VALUE,
+                        N_("alignment constraint is not a power of two"));
                     return sym;
                 }
             } else if (vp->val)
-                yasm__warning(YASM_WARN_GENERAL, line,
+                yasm_warn_set(YASM_WARN_GENERAL,
                               N_("Unrecognized qualifier `%s'"), vp->val);
         }
     }
@@ -1092,7 +1118,7 @@ elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
     elf_symtab_entry *entry;
 
     if (!symname) {
-	yasm__error(line, N_("Symbol name not specified"));
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("Symbol name not specified"));
 	return 0;
     }
 
@@ -1116,10 +1142,10 @@ elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	    else if (yasm__strcasecmp(vp->val, "object") == 0)
 		elf_sym_set_type(entry, STT_OBJECT);
 	    else
-		yasm__warning(YASM_WARN_GENERAL, line,
+		yasm_warn_set(YASM_WARN_GENERAL,
 			      N_("unrecognized symbol type `%s'"), vp->val);
 	} else
-	    yasm__error(line, N_("no type specified"));
+	    yasm_error_set(YASM_ERROR_SYNTAX, N_("no type specified"));
     } else if (yasm__strcasecmp(name, "size") == 0) {
 	/* Get symbol elf data */
 	sym = yasm_symtab_use(objfmt_elf->symtab, symname, line);
@@ -1141,7 +1167,7 @@ elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	    elf_sym_set_size(entry, yasm_expr_create_ident(yasm_expr_sym(
 		yasm_symtab_use(objfmt_elf->symtab, vp->val, line)), line));
 	else
-	    yasm__error(line, N_("no size specified"));
+	    yasm_error_set(YASM_ERROR_SYNTAX, N_("no size specified"));
     } else if (yasm__strcasecmp(name, "weak") == 0) {
 	sym = yasm_symtab_declare(objfmt_elf->symtab, symname, YASM_SYM_GLOBAL,
 				  line);

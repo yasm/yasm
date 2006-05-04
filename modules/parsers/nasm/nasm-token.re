@@ -186,7 +186,7 @@ scan:
 	digit+ {
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    lvalp->intn = yasm_intnum_create_dec(TOK, cur_line);
+	    lvalp->intn = yasm_intnum_create_dec(TOK);
 	    s->tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -194,21 +194,21 @@ scan:
 
 	bindigit+ 'b' {
 	    s->tok[TOKLEN-1] = '\0'; /* strip off 'b' */
-	    lvalp->intn = yasm_intnum_create_bin(TOK, cur_line);
+	    lvalp->intn = yasm_intnum_create_bin(TOK);
 	    RETURN(INTNUM);
 	}
 
 	/* 777q or 777o - octal number */
 	octdigit+ [qQoO] {
 	    s->tok[TOKLEN-1] = '\0'; /* strip off 'q' or 'o' */
-	    lvalp->intn = yasm_intnum_create_oct(TOK, cur_line);
+	    lvalp->intn = yasm_intnum_create_oct(TOK);
 	    RETURN(INTNUM);
 	}
 
 	/* 0AAh form of hexidecimal number */
 	digit hexdigit* 'h' {
 	    s->tok[TOKLEN-1] = '\0'; /* strip off 'h' */
-	    lvalp->intn = yasm_intnum_create_hex(TOK, cur_line);
+	    lvalp->intn = yasm_intnum_create_hex(TOK);
 	    RETURN(INTNUM);
 	}
 
@@ -218,10 +218,10 @@ scan:
 	    s->tok[TOKLEN] = '\0';
 	    if (s->tok[1] == 'x')
 		/* skip 0 and x */
-		lvalp->intn = yasm_intnum_create_hex(TOK+2, cur_line);
+		lvalp->intn = yasm_intnum_create_hex(TOK+2);
 	    else
 		/* don't skip 0 */
-		lvalp->intn = yasm_intnum_create_hex(TOK+1, cur_line);
+		lvalp->intn = yasm_intnum_create_hex(TOK+1);
 	    s->tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -359,7 +359,7 @@ scan:
 		RETURN(ID);
 	    } else if (!parser_nasm->locallabel_base) {
 		lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
-		yasm__warning(YASM_WARN_GENERAL, cur_line,
+		yasm_warn_set(YASM_WARN_GENERAL,
 			      N_("no non-local label before `%s'"),
 			      lvalp->str_val);
 	    } else {
@@ -385,8 +385,7 @@ scan:
 	    s->tok[TOKLEN] = '\0';
 	    if (parser_nasm->state != INSTRUCTION)
 		switch (yasm_arch_parse_check_insnprefix
-			(parser_nasm->arch, lvalp->arch_data, TOK, TOKLEN,
-			 cur_line)) {
+			(parser_nasm->arch, lvalp->arch_data, TOK, TOKLEN)) {
 		    case YASM_ARCH_INSN:
 			parser_nasm->state = INSTRUCTION;
 			s->tok[TOKLEN] = savech;
@@ -398,8 +397,7 @@ scan:
 			break;
 		}
 	    switch (yasm_arch_parse_check_regtmod
-		    (parser_nasm->arch, lvalp->arch_data, TOK, TOKLEN,
-		     cur_line)) {
+		    (parser_nasm->arch, lvalp->arch_data, TOK, TOKLEN)) {
 		case YASM_ARCH_REG:
 		    s->tok[TOKLEN] = savech;
 		    RETURN(REG);
@@ -429,7 +427,7 @@ scan:
 	}
 
 	any {
-	    yasm__warning(YASM_WARN_UNREC_CHAR, cur_line,
+	    yasm_warn_set(YASM_WARN_UNREC_CHAR,
 			  N_("ignoring unrecognized character `%s'"),
 			  yasm__conv_unprint(s->tok[0]));
 	    goto scan;
@@ -445,7 +443,7 @@ linechg:
 	    linechg_numcount++;
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
-	    lvalp->intn = yasm_intnum_create_dec(TOK, cur_line);
+	    lvalp->intn = yasm_intnum_create_dec(TOK);
 	    s->tok[TOKLEN] = savech;
 	    RETURN(INTNUM);
 	}
@@ -470,7 +468,7 @@ linechg:
 	}
 
 	any {
-	    yasm__warning(YASM_WARN_UNREC_CHAR, cur_line,
+	    yasm_warn_set(YASM_WARN_UNREC_CHAR,
 			  N_("ignoring unrecognized character `%s'"),
 			  yasm__conv_unprint(s->tok[0]));
 	    goto linechg;
@@ -516,7 +514,7 @@ directive:
 	}
 
 	any {
-	    yasm__warning(YASM_WARN_UNREC_CHAR, cur_line,
+	    yasm_warn_set(YASM_WARN_UNREC_CHAR,
 			  N_("ignoring unrecognized character `%s'"),
 			  yasm__conv_unprint(s->tok[0]));
 	    goto directive;
@@ -535,10 +533,10 @@ stringconst_scan:
     /*!re2c
 	"\n"	{
 	    if (cursor == s->eof)
-		yasm__error(cur_line,
-			    N_("unexpected end of file in string"));
+		yasm_error_set(YASM_ERROR_SYNTAX,
+			       N_("unexpected end of file in string"));
 	    else
-		yasm__error(cur_line, N_("unterminated string"));
+		yasm_error_set(YASM_ERROR_SYNTAX, N_("unterminated string"));
 	    strbuf[count] = '\0';
 	    lvalp->str.contents = (char *)strbuf;
 	    lvalp->str.len = count;

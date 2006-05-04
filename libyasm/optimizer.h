@@ -45,10 +45,10 @@ typedef struct yasm_optimizer_module {
     /** Optimize an object.  Takes the unoptimized object and optimizes it.
      * If successful, the object is ready for output to an object file.
      * \param object	object
-     * \note Optimization failures are indicated by this function calling
-     *       yasm__error_at(); see errwarn.h for details.
+     * \param errwarns	error/warning set
+     * \note Optimization failures are stored into errwarns.
      */
-    void (*optimize) (yasm_object *object);
+    void (*optimize) (yasm_object *object, yasm_errwarns *errwarns);
 } yasm_optimizer_module;
 
 #endif

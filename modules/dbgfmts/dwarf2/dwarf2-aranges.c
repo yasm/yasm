@@ -108,6 +108,7 @@ yasm_dwarf2__generate_aranges(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 
     info.debug_aranges = debug_aranges;
     info.dbgfmt_dwarf2 = dbgfmt_dwarf2;
+
     yasm_object_sections_traverse(dbgfmt_dwarf2->object, (void *)&info,
 				  dwarf2_generate_aranges_section);
 

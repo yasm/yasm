@@ -416,6 +416,7 @@ cv_append_str(yasm_section *sect, const char *str)
 typedef struct cv_line_info {
     yasm_section *debug_symline;
     yasm_dbgfmt_cv *dbgfmt_cv;
+    yasm_errwarns *errwarns;
     unsigned int num_lineinfos;
     STAILQ_HEAD(, cv8_lineinfo) cv8_lineinfos;
     /*@null@*/ cv8_lineinfo *cv8_cur_li;
@@ -515,7 +516,7 @@ cv_generate_line_section(yasm_section *sect, /*@null@*/ void *d)
     info->cv8_cur_li = NULL;
     info->cv8_cur_ls = NULL;
 
-    yasm_section_bcs_traverse(sect, info, cv_generate_line_bc);
+    yasm_section_bcs_traverse(sect, info->errwarns, info, cv_generate_line_bc);
 
     return 0;
 }
@@ -548,7 +549,7 @@ cv_generate_sym(yasm_symrec *sym, void *d)
 }
 
 yasm_section *
-yasm_cv__generate_symline(yasm_dbgfmt_cv *dbgfmt_cv)
+yasm_cv__generate_symline(yasm_dbgfmt_cv *dbgfmt_cv, yasm_errwarns *errwarns)
 {
     cv_line_info info;
     int new;
@@ -563,6 +564,7 @@ yasm_cv__generate_symline(yasm_dbgfmt_cv *dbgfmt_cv)
 				    cv_generate_filename);
 
     info.dbgfmt_cv = dbgfmt_cv;
+    info.errwarns = errwarns;
     info.debug_symline = yasm_object_get_general(dbgfmt_cv->object,
 						 ".debug$S", 0, 1, 0, 0, &new,
 						 0);
@@ -577,7 +579,9 @@ yasm_cv__generate_symline(yasm_dbgfmt_cv *dbgfmt_cv)
     off = 1;
     for (i=0; i<dbgfmt_cv->filenames_size; i++) {
 	if (!dbgfmt_cv->filenames[i].pathname) {
-	    yasm__error(0, N_("codeview file number %d unassigned"), i+1);
+	    yasm_error_set(YASM_ERROR_GENERAL,
+			   N_("codeview file number %d unassigned"), i+1);
+	    yasm_errwarn_propagate(errwarns, 0);
 	    continue;
 	}
 	bc = cv_append_str(info.debug_symline,
@@ -730,21 +734,20 @@ cv8_symhead_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     cval = yasm_intnum_create_uint(4);
     /* Output "version" if first */
     if (head->first) {
-	yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 0,
-				 0);
+	yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 0);
 	buf += 4;
     }
 
     /* Type contained - 4 bytes */
     yasm_intnum_set_uint(cval, head->type);
-    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 0, 0);
+    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 0);
     buf += 4;
 
     /* Total length of info (following this field) - 4 bytes */
     yasm_intnum_set_uint(cval, bc->len);
     intn = yasm_common_calc_bc_dist(head->start_prevbc, head->end_prevbc);
-    yasm_intnum_calc(intn, YASM_EXPR_SUB, cval, bc->line);
-    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, intn, buf, 4, 32, 0, bc, 0, 0);
+    yasm_intnum_calc(intn, YASM_EXPR_SUB, cval);
+    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, intn, buf, 4, 32, 0, bc, 0);
     buf += 4;
     yasm_intnum_destroy(intn);
 
@@ -806,12 +809,12 @@ cv8_fileinfo_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     /* Offset in filename string table */
     cval = yasm_intnum_create_uint(fi->fn->str_off);
-    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 0, 0);
+    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 0);
     buf += 4;
 
     /* Checksum type/length */
     yasm_intnum_set_uint(cval, 0x0110);
-    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 2, 16, 0, bc, 0, 0);
+    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 2, 16, 0, bc, 0);
     buf += 2;
 
     /* Checksum */
@@ -882,22 +885,22 @@ cv8_lineinfo_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     /* Section length covered by line number info */
     cval = yasm_common_calc_bc_dist(yasm_section_bcs_first(li->sect),
 				    yasm_section_bcs_last(li->sect));
-    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 0, 0);
+    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 0);
     buf += 4;
 
     /* Offset of source file in info table */
     yasm_intnum_set_uint(cval, li->fn->info_off);
-    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 0, 0);
+    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 0);
     buf += 4;
 
     /* Number of line number pairs */
     yasm_intnum_set_uint(cval, li->num_linenums);
-    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 0, 0);
+    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 0);
     buf += 4;
 
     /* Number of bytes of line number pairs + 12 (no, I don't know why) */
     yasm_intnum_set_uint(cval, li->num_linenums*8+12);
-    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 0, 0);
+    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 0);
     buf += 4;
 
     /* Offset / line number pairs */
@@ -908,13 +911,13 @@ cv8_lineinfo_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	    /* offset in section */
 	    yasm_intnum_set_uint(cval, ls->pairs[j].offset);
 	    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc,
-				     0, 0);
+				     0);
 	    buf += 4;
 
 	    /* line number in file */
 	    yasm_intnum_set_uint(cval, ls->pairs[j].line);
 	    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc,
-				     0, 0);
+				     0);
 	    buf += 4;
 	}
     }
@@ -1031,12 +1034,12 @@ cv_sym_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     /* Total length of record (following this field) - 2 bytes */
     cval = yasm_intnum_create_uint(bc->len-2);
-    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 2, 16, 0, bc, 1, 0);
+    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 2, 16, 0, bc, 1);
     buf += 2;
 
     /* Type contained - 2 bytes */
     yasm_intnum_set_uint(cval, cvs->type);
-    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 2, 16, 0, bc, 0, 0);
+    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 2, 16, 0, bc, 0);
     buf += 2;
 
     while (*ch) {
@@ -1048,13 +1051,13 @@ cv_sym_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	    case 'h':
 		yasm_intnum_set_uint(cval, cvs->args[arg++].i);
 		yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 2, 16, 0,
-					 bc, 0, 0);
+					 bc, 0);
 		buf += 2;
 		break;
 	    case 'w':
 		yasm_intnum_set_uint(cval, cvs->args[arg++].i);
 		yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0,
-					 bc, 0, 0);
+					 bc, 0);
 		buf += 4;
 		break;
 	    case 'Y':
@@ -1065,7 +1068,7 @@ cv_sym_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	    case 'T':
 		yasm_intnum_set_uint(cval, cvs->args[arg++].i);
 		yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0,
-					 bc, 0, 0);
+					 bc, 0);
 		buf += 4;	/* XXX: will be 2 in CV4 */
 		break;
 	    case 'S':

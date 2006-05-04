@@ -28,6 +28,9 @@ cdef extern struct FILE:
 
 ctypedef unsigned long size_t
 
+cdef extern struct va_list:
+    int arglist
+
 cdef extern from "libyasm/coretype.h":
     cdef struct yasm_arch
     cdef struct yasm_preproc
@@ -40,6 +43,8 @@ cdef extern from "libyasm/coretype.h":
     cdef struct yasm_assoc_data_callback:
         void (*destroy) (void *data)
         void (*print_ "print") (void *data, FILE *f, int indent_level)
+
+    cdef struct yasm_errwarns
 
     cdef struct yasm_bytecode
     cdef struct yasm_object

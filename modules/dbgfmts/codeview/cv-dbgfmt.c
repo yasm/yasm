@@ -98,11 +98,11 @@ yasm_cv__append_bc(yasm_section *sect, yasm_bytecode *bc)
 }
 
 static void
-cv_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
+cv_dbgfmt_generate(yasm_dbgfmt *dbgfmt, yasm_errwarns *errwarns)
 {
     yasm_dbgfmt_cv *dbgfmt_cv = (yasm_dbgfmt_cv *)dbgfmt;
 
-    yasm_cv__generate_symline(dbgfmt_cv);
+    yasm_cv__generate_symline(dbgfmt_cv, errwarns);
 
     yasm_cv__generate_type(dbgfmt_cv);
 }

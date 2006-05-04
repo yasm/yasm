@@ -83,7 +83,7 @@ static int
 run_output_test(Test_Entry *test)
 {
     char *valstr = yasm__xstrdup(test->input);
-    yasm_intnum *intn = yasm_intnum_create_hex(valstr, 0);
+    yasm_intnum *intn = yasm_intnum_create_hex(valstr);
     unsigned long size, i;
     unsigned char out[100];
     int bad;
@@ -91,7 +91,7 @@ run_output_test(Test_Entry *test)
     yasm_xfree(valstr);
 
     if (test->negate)
-	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL, 0);
+	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
 
     size = yasm_intnum_size_leb128(intn, test->sign);
     if (size != test->outsize) {
@@ -133,16 +133,16 @@ static int
 run_input_test(Test_Entry *test)
 {
     char *valstr = yasm__xstrdup(test->input);
-    yasm_intnum *intn = yasm_intnum_create_hex(valstr, 0);
+    yasm_intnum *intn = yasm_intnum_create_hex(valstr);
     yasm_intnum *testn;
     unsigned long size;
 
     yasm_xfree(valstr);
 
     if (test->negate)
-	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL, 0);
+	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
 
-    testn = yasm_intnum_create_leb128(test->result, test->sign, &size, 0);
+    testn = yasm_intnum_create_leb128(test->result, test->sign, &size);
     if (size != test->outsize) {
 	yasm_intnum_destroy(testn);
 	yasm_intnum_destroy(intn);
@@ -152,7 +152,7 @@ run_input_test(Test_Entry *test)
 	return 1;
     }
 
-    yasm_intnum_calc(intn, YASM_EXPR_EQ, testn, 0);
+    yasm_intnum_calc(intn, YASM_EXPR_EQ, testn);
     if (!yasm_intnum_is_pos1(intn)) {
 	yasm_intnum_destroy(testn);
 	yasm_intnum_destroy(intn);

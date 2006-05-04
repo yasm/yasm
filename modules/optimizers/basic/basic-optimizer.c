@@ -69,8 +69,7 @@ basic_optimize_calc_bc_dist_1(yasm_bytecode *precbc1, yasm_bytecode *precbc2)
 		    if (dist < precbc1->offset + precbc1->len) {
 			intn = yasm_intnum_create_uint(precbc1->offset +
 						       precbc1->len - dist);
-			yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL,
-					 precbc1->line);
+			yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
 			return intn;
 		    }
 		    dist -= precbc1->offset + precbc1->len;
@@ -86,7 +85,7 @@ basic_optimize_calc_bc_dist_1(yasm_bytecode *precbc1, yasm_bytecode *precbc2)
 	if (precbc1 != yasm_section_bcs_first(precbc1->section)) {
 	    if (precbc1->opt_flags == BCFLAG_DONE) {
 		intn = yasm_intnum_create_uint(precbc1->offset + precbc1->len);
-		yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL, precbc1->line);
+		yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
 		return intn;
 	    } else {
 		return NULL;
@@ -100,6 +99,7 @@ basic_optimize_calc_bc_dist_1(yasm_bytecode *precbc1, yasm_bytecode *precbc2)
 typedef struct basic_optimize_data {
     /*@observer@*/ yasm_bytecode *precbc;
     int saw_unknown;
+    yasm_errwarns *errwarns;
 } basic_optimize_data;
 
 static int
@@ -126,7 +126,8 @@ basic_optimize_bytecode_1(/*@observer@*/ yasm_bytecode *bc, void *d)
     bcr_retval = yasm_bc_resolve(bc, 0, basic_optimize_calc_bc_dist_1);
     if (bcr_retval & YASM_BC_RESOLVE_UNKNOWN_LEN) {
 	if (!(bcr_retval & YASM_BC_RESOLVE_ERROR))
-	    yasm__error(bc->line, N_("circular reference detected."));
+	    yasm_error_set(YASM_ERROR_GENERAL,
+			   N_("circular reference detected."));
 	data->saw_unknown = -1;
 	return 0;
     }
@@ -139,13 +140,18 @@ basic_optimize_bytecode_1(/*@observer@*/ yasm_bytecode *bc, void *d)
 static int
 basic_optimize_section_1(yasm_section *sect, /*@null@*/ void *d)
 {
-    /*@null@*/ int *saw_unknown = (int *)d;
-    basic_optimize_data data;
+    basic_optimize_data *data = (basic_optimize_data *)d;
+    basic_optimize_data localdata;
     unsigned long flags;
     int retval;
 
-    data.precbc = yasm_section_bcs_first(sect);
-    data.saw_unknown = 0;
+    if (!data) {
+	data = &localdata;
+	localdata.saw_unknown = 0;
+	localdata.errwarns = NULL;
+    }
+
+    data->precbc = yasm_section_bcs_first(sect);
 
     /* Don't even bother if we're in-progress or done. */
     flags = yasm_section_get_opt_flags(sect);
@@ -156,12 +162,10 @@ basic_optimize_section_1(yasm_section *sect, /*@null@*/ void *d)
 
     yasm_section_set_opt_flags(sect, SECTFLAG_INPROGRESS);
 
-    retval = yasm_section_bcs_traverse(sect, &data, basic_optimize_bytecode_1);
+    retval = yasm_section_bcs_traverse(sect, data->errwarns, data,
+				       basic_optimize_bytecode_1);
     if (retval != 0)
 	return retval;
-
-    if (data.saw_unknown != 0 && saw_unknown)
-	*saw_unknown = data.saw_unknown;
 
     yasm_section_set_opt_flags(sect, SECTFLAG_DONE);
 
@@ -197,13 +201,17 @@ basic_optimize_section_2(yasm_section *sect, /*@unused@*/ /*@null@*/ void *d)
     if (yasm_section_get_opt_flags(sect) != SECTFLAG_DONE)
 	yasm_internal_error(N_("Optimizer pass 1 missed a section!"));
 
-    return yasm_section_bcs_traverse(sect, &data, basic_optimize_bytecode_2);
+    return yasm_section_bcs_traverse(sect, NULL, &data,
+				     basic_optimize_bytecode_2);
 }
 
 static void
-basic_optimize(yasm_object *object)
+basic_optimize(yasm_object *object, yasm_errwarns *errwarns)
 {
-    int saw_unknown = 0;
+    basic_optimize_data data;
+
+    data.saw_unknown = 0;
+    data.errwarns = errwarns;
 
     /* Optimization process: (essentially NASM's pass 1)
      *  Determine the size of all bytecodes.
@@ -217,9 +225,9 @@ basic_optimize(yasm_object *object)
      *   - not strictly top->bottom scanning; we scan through a section and
      *     hop to other sections as necessary.
      */
-    if (yasm_object_sections_traverse(object, &saw_unknown,
+    if (yasm_object_sections_traverse(object, &data,
 				      basic_optimize_section_1) < 0 ||
-	saw_unknown != 0)
+	data.saw_unknown != 0)
 	return;
 
     /* Check completion of all sections and save bytecode changes */

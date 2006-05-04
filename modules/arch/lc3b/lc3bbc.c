@@ -156,11 +156,12 @@ lc3b_bc_insn_resolve(yasm_bytecode *bc, int save,
 	/*@dependent@*/ /*@null@*/ yasm_intnum *num2;
 	num2 = yasm_expr_get_intnum(&temp, calc_bc_dist);
 	if (!num2) {
-	    yasm__error(bc->line, N_("jump target too complex"));
+	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			   N_("jump target too complex"));
 	    yasm_expr_destroy(temp);
 	    return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
 	}
-	yasm_intnum_calc(num, YASM_EXPR_ADD, num2, bc->line);
+	yasm_intnum_calc(num, YASM_EXPR_ADD, num2);
 	yasm_expr_destroy(temp);
     }
 
@@ -169,7 +170,7 @@ lc3b_bc_insn_resolve(yasm_bytecode *bc, int save,
     rel -= 2;
     /* 9-bit signed, word-multiple displacement */
     if (rel < -512 || rel > 511) {
-	yasm__error(bc->line, N_("target out of range"));
+	yasm_error_set(YASM_ERROR_OVERFLOW, N_("target out of range"));
 	return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
     }
     return YASM_BC_RESOLVE_MIN_LEN;
@@ -240,11 +241,9 @@ lc3b_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 int
 yasm_lc3b__intnum_tobytes(yasm_arch *arch, const yasm_intnum *intn,
 			  unsigned char *buf, size_t destsize, size_t valsize,
-			  int shift, const yasm_bytecode *bc, int warn,
-			  unsigned long line)
+			  int shift, const yasm_bytecode *bc, int warn)
 {
     /* Write value out. */
-    yasm_intnum_get_sized(intn, buf, destsize, valsize, shift, 0, warn,
-			  line);
+    yasm_intnum_get_sized(intn, buf, destsize, valsize, shift, 0, warn);
     return 0;
 }

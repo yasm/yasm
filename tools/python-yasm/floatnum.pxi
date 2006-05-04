@@ -30,11 +30,11 @@ cdef extern from "libyasm/floatnum.h":
     cdef yasm_floatnum* yasm_floatnum_copy(yasm_floatnum *flt)
     cdef void yasm_floatnum_destroy(yasm_floatnum *flt)
     cdef void yasm_floatnum_calc(yasm_floatnum *acc, yasm_expr_op op,
-            yasm_floatnum *operand, size_t line)
+            yasm_floatnum *operand)
     cdef int yasm_floatnum_get_int(yasm_floatnum *flt, size_t *ret_val)
     cdef int yasm_floatnum_get_sized(yasm_floatnum *flt, unsigned char *ptr,
             size_t destsize, size_t valsize, size_t shift, int
-            bigendian, int warn, size_t line)
+            bigendian, int warn)
     cdef int yasm_floatnum_check_size(yasm_floatnum *flt, size_t size)
     cdef void yasm_floatnum_print(yasm_floatnum *flt, FILE *f)
 
@@ -58,7 +58,7 @@ cdef class FloatNum:
 
     def __neg__(self):
         result = FloatNum(self)
-        yasm_floatnum_calc((<FloatNum>result).flt, YASM_EXPR_NEG, NULL, 0)
+        yasm_floatnum_calc((<FloatNum>result).flt, YASM_EXPR_NEG, NULL)
         return result
     def __pos__(self): return self
 
