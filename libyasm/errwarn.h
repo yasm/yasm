@@ -197,15 +197,15 @@ void yasm_warn_clear(void);
 
 /** Add a warning indicator (va_list version).
  * \param wclass    warning class
- * \param message   printf-like-format message
- * \param va	    argument list for message
+ * \param format    printf format string
+ * \param va	    argument list for format
  */
 void yasm_warn_set_va(yasm_warn_class wclass, const char *format, va_list va);
 
 /** Add a warning indicator.
  * \param wclass    warning class
- * \param message   printf-like-format message
- * \param ...	    argument list for message
+ * \param format    printf format string
+ * \param ...	    argument list for format
  */
 void yasm_warn_set(yasm_warn_class wclass, const char *format, ...)
     /*@printflike@*/;
