@@ -21,6 +21,15 @@ class TIntNum(TestCase):
         for i in self.overflow_values:
             self.assertRaises(OverflowError, IntNum, i)
 
+    def test_exceptions(self):
+        self.assertRaises(ZeroDivisionError, IntNum(1).__div__, 0)
+
+        IntNum(1) / 1 # make sure the above error is cleared
+
+        try: IntNum(1) / 0
+        except ZeroDivisionError, err:
+            self.assertEquals('divide by zero', str(err))
+
     def test_xor(self):
         a = IntNum(-234)
         b = IntNum(432)

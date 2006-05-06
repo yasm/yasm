@@ -65,6 +65,11 @@ cdef extern from "libyasm/intnum.h":
 
 cdef class IntNum
 
+cdef object __intnum_op_ex(object x, yasm_expr_op op, object y):
+    value = __intnum_op(x, op, y)
+    __error_check()
+    return value
+
 cdef object __intnum_op(object x, yasm_expr_op op, object y):
     if isinstance(x, IntNum):
         result = IntNum(x)
@@ -137,9 +142,9 @@ cdef class IntNum:
     def __add__(x, y): return __intnum_op(x, YASM_EXPR_ADD, y)
     def __sub__(x, y): return __intnum_op(x, YASM_EXPR_SUB, y)
     def __mul__(x, y): return __intnum_op(x, YASM_EXPR_MUL, y)
-    def __div__(x, y): return __intnum_op(x, YASM_EXPR_SIGNDIV, y)
-    def __floordiv__(x, y): return __intnum_op(x, YASM_EXPR_SIGNDIV, y)
-    def __mod__(x, y): return __intnum_op(x, YASM_EXPR_SIGNMOD, y)
+    def __div__(x, y): return __intnum_op_ex(x, YASM_EXPR_SIGNDIV, y)
+    def __floordiv__(x, y): return __intnum_op_ex(x, YASM_EXPR_SIGNDIV, y)
+    def __mod__(x, y): return __intnum_op_ex(x, YASM_EXPR_SIGNMOD, y)
     def __neg__(self): return __intnum_op(self, YASM_EXPR_NEG, None)
     def __pos__(self): return self
     def __abs__(self):

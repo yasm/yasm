@@ -24,7 +24,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 cdef extern from "libyasm/errwarn.h":
-    cdef enum yasm_warn_class:
+    ctypedef enum yasm_warn_class:
         YASM_WARN_NONE
         YASM_WARN_GENERAL
         YASM_WARN_UNREC_CHAR
@@ -32,7 +32,7 @@ cdef extern from "libyasm/errwarn.h":
         YASM_WARN_ORPHAN_LABEL
         YASM_WARN_UNINIT_CONTENTS
 
-    cdef enum yasm_error_class:
+    ctypedef enum yasm_error_class:
         YASM_ERROR_NONE
         YASM_ERROR_GENERAL
         YASM_ERROR_ARITHMETIC
@@ -100,3 +100,45 @@ cdef extern from "libyasm/errwarn.h":
 
     extern char * (*yasm_gettext_hook) (char *msgid)
 
+class YasmError(Exception): pass
+
+__errormap = [
+    # Order matters here. Go from most to least specific within a class
+    (YASM_ERROR_ZERO_DIVISION, ZeroDivisionError),
+    # Enable these once there are tests that need them.
+    #(YASM_ERROR_OVERFLOW, OverflowError),
+    #(YASM_ERROR_FLOATING_POINT, FloatingPointError),
+    #(YASM_ERROR_ARITHMETIC, ArithmeticError),
+    #(YASM_ERROR_ASSERTION, AssertionError),
+    #(YASM_ERROR_VALUE, ValueError), # include notabs, notconst, toocomplex
+    #(YASM_ERROR_IO, IOError),
+    #(YASM_ERROR_NOT_IMPLEMENTED, NotImplementedError),
+    #(YASM_ERROR_TYPE, TypeError),
+    #(YASM_ERROR_SYNTAX, SyntaxError), #include parse
+]
+
+cdef void __error_check() except *:
+    cdef yasm_error_class errclass
+    cdef unsigned long xrefline
+    cdef char *errstr, *xrefstr
+
+    # short path for the common case
+    if not yasm_error_occurred(): return
+
+    # look up our preferred python error, fall back to YasmError
+    for error_class, exception in __errormap:
+        if yasm_error_matches(error_class):
+            break
+    else:
+        exception = YasmError
+
+    # retrieve info (clears error)
+    yasm_error_fetch(&errclass, &errstr, &xrefline, &xrefstr)
+
+    if xrefline and xrefstr:
+        PyErr_Format(exception, "%s: %d: %s", errstr, xrefline, xrefstr)
+    else:
+        PyErr_SetString(exception, errstr)
+
+    if xrefstr: free(xrefstr)
+    free(errstr)

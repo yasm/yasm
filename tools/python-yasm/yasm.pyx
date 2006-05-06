@@ -56,6 +56,9 @@ cdef extern from "Python.h":
     cdef void Py_INCREF(object o)
     cdef void Py_DECREF(object o)
 
+    cdef void PyErr_SetString(object type, char *message)
+    cdef object PyErr_Format(object type, char *format, ...)
+
 cdef extern from "stdlib.h":
     cdef void *malloc(int n)
     cdef void free(void *p)
