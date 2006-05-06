@@ -99,29 +99,36 @@ static const unsigned char **
 lc3b_get_fill(const yasm_arch *arch)
 {
     /* NOP pattern is all 0's per LC-3b Assembler 3.50 output */
-    static const char *fill[16] = {
+    static const unsigned char *fill[16] = {
 	NULL,		/* unused */
 	NULL,		/* 1 - illegal; all opcodes are 2 bytes long */
+	(const unsigned char *)
 	"\x00\x00",			/* 4 */
 	NULL,				/* 3 - illegal */
+	(const unsigned char *)
 	"\x00\x00\x00\x00",		/* 4 */
 	NULL,				/* 5 - illegal */
+	(const unsigned char *)
 	"\x00\x00\x00\x00\x00\x00",	/* 6 */
 	NULL,				/* 7 - illegal */
+	(const unsigned char *)
 	"\x00\x00\x00\x00\x00\x00"	/* 8 */
 	"\x00\x00",
 	NULL,				/* 9 - illegal */
+	(const unsigned char *)
 	"\x00\x00\x00\x00\x00\x00"	/* 10 */
 	"\x00\x00\x00\x00",
 	NULL,				/* 11 - illegal */
+	(const unsigned char *)
 	"\x00\x00\x00\x00\x00\x00"	/* 12 */
 	"\x00\x00\x00\x00\x00\x00",
 	NULL,				/* 13 - illegal */
+	(const unsigned char *)
 	"\x00\x00\x00\x00\x00\x00"	/* 14 */
 	"\x00\x00\x00\x00\x00\x00\x00\x00",
 	NULL				/* 15 - illegal */
     };
-    return (const unsigned char **)fill;
+    return fill;
 }
 
 static unsigned int

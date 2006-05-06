@@ -183,10 +183,10 @@ static opt_option options[] =
 };
 
 /* help messages */
-/*@observer@*/ static const char help_head[] = N_(
+/*@observer@*/ static const char *help_head = N_(
     "usage: yasm [option]* file\n"
     "Options:\n");
-/*@observer@*/ static const char help_tail[] = N_(
+/*@observer@*/ static const char *help_tail = N_(
     "\n"
     "Files are asm sources to be assembled.\n"
     "\n"
