@@ -147,6 +147,7 @@ __python_symrec_cb = __assoc_data_callback(
 
 cdef object __make_symbol(yasm_symrec *symrec):
     cdef void *data
+    __error_check()
     data = yasm_symrec_get_data(symrec,
                                 (<__assoc_data_callback>__python_symrec_cb).cb)
     if data != NULL:
@@ -217,6 +218,16 @@ cdef class SymbolTableItemIterator:
         self.iter = yasm_symtab_next(self.iter)
         return rv
 
+cdef yasm_sym_vis __parse_vis(vis) except -1:
+    if not vis or vis == 'local': return YASM_SYM_LOCAL
+    if vis == 'global': return YASM_SYM_GLOBAL
+    if vis == 'common': return YASM_SYM_COMMON
+    if vis == 'extern': return YASM_SYM_EXTERN
+    if vis == 'dlocal': return YASM_SYM_DLOCAL
+    msg = "bad visibility value %r" % vis
+    PyErr_SetString(ValueError, msg)
+    return -1
+
 cdef class SymbolTable:
     cdef yasm_symtab *symtab
 
@@ -233,7 +244,7 @@ cdef class SymbolTable:
         if not isinstance(expr, Expression):
             raise TypeError
         return __make_symbol(yasm_symtab_define_equ(self.symtab, name,
-                (<Expression>expr).expr, line))
+                yasm_expr_copy((<Expression>expr).expr), line))
 
     def define_label(self, name, precbc, in_table, line):
         if not isinstance(precbc, Bytecode):
@@ -243,17 +254,11 @@ cdef class SymbolTable:
 
     def define_special(self, name, vis):
         return __make_symbol(yasm_symtab_define_special(self.symtab, name,
-                                                        vis))
+                                                        __parse_vis(vis)))
 
     def declare(self, name, vis, line):
-        cdef yasm_sym_vis cvis
-        if not vis or vis == 'local': cvis = YASM_SYM_LOCAL
-        elif vis == 'global': cvis = YASM_SYM_GLOBAL
-        elif vis == 'common': cvis = YASM_SYM_COMMON
-        elif vis == 'extern': cvis = YASM_SYM_EXTERN
-        elif vis == 'dlocal': cvis = YASM_SYM_DLOCAL
-        else: raise ValueError("bad visibility value '%s'" % vis)
-        return __make_symbol(yasm_symtab_declare(self.symtab, name, cvis, line))
+        return __make_symbol(yasm_symtab_declare(self.symtab, name,
+                                                 __parse_vis(vis), line))
 
     #
     # Methods to make SymbolTable behave like a dictionary of Symbols.

@@ -1,16 +1,44 @@
 # $Id$
 from tests import TestCase, add
-from yasm import SymbolTable
+from yasm import SymbolTable, Expression, YasmError
 
 class TSymbolTable(TestCase):
     def setUp(self):
         self.symtab = SymbolTable()
+
     def test_keys(self):
         self.assertEquals(len(self.symtab.keys()), 0)
         self.symtab.declare("foo", None, 0)
         keys = self.symtab.keys()
         self.assertEquals(len(keys), 1)
         self.assertEquals(keys[0], "foo")
+
+    def test_contains(self):
+        self.assert_("foo" not in self.symtab)
+        self.symtab.declare("foo", None, 0)
+        self.assert_("foo" in self.symtab)
+
+    def test_exception(self):
+        from operator import add
+        expr = Expression(add, 1, 2)
+        self.symtab.define_equ("foo", expr, 0)
+        self.assertRaises(YasmError, self.symtab.define_equ, "foo", expr, 0)
+        self.symtab.define_equ("bar", expr, 0) # cleared
+        self.assertRaises(YasmError, self.symtab.define_special, "bar",
+                'global')
+
+    def test_iters(self):
+        tab = self.symtab
+        tab.declare("foo", None, 0)
+        tab.declare("bar", None, 0)
+        tab.declare("baz", None, 0)
+
+        # while ordering is not known, it must be consistent
+        self.assertEquals(list(tab.keys()), list(tab.iterkeys()))
+        self.assertEquals(list(tab.values()), list(tab.itervalues()))
+        self.assertEquals(list(tab.items()), list(tab.iteritems()))
+        self.assertEquals(list(tab.iteritems()), zip(tab.keys(), tab.values()))
+
 add(TSymbolTable)
 
 class TSymbolAttr(TestCase):
