@@ -97,43 +97,30 @@ cdef extern from "libyasm/expr-int.h":
     cdef int yasm_expr__contains(yasm_expr *e, yasm_expr__type t)
 
 import operator
-__op = {
-    operator.__add__ : YASM_EXPR_ADD,
-    operator.add : YASM_EXPR_ADD,
-    operator.__and__ : YASM_EXPR_AND,
-    operator.and_ : YASM_EXPR_AND,
-    operator.__div__ : YASM_EXPR_SIGNDIV,
-    operator.__floordiv__: YASM_EXPR_SIGNDIV,
-    operator.div : YASM_EXPR_SIGNDIV,
-    operator.floordiv: YASM_EXPR_SIGNDIV,
-    operator.__ge__: YASM_EXPR_GE,
-    operator.ge: YASM_EXPR_GE,
-    operator.__gt__: YASM_EXPR_GT,
-    operator.gt: YASM_EXPR_GT,
-    operator.__inv__: YASM_EXPR_NOT,
-    operator.__invert__: YASM_EXPR_NOT,
-    operator.inv: YASM_EXPR_NOT,
-    operator.invert: YASM_EXPR_NOT,
-    operator.__le__: YASM_EXPR_LE,
-    operator.le: YASM_EXPR_LE,
-    operator.__lt__: YASM_EXPR_LT,
-    operator.lt: YASM_EXPR_LT,
-    operator.__mod__: YASM_EXPR_SIGNMOD,
-    operator.mod: YASM_EXPR_SIGNMOD,
-    operator.__mul__: YASM_EXPR_MUL,
-    operator.mul: YASM_EXPR_MUL,
-    operator.__neg__: YASM_EXPR_NEG,
-    operator.neg: YASM_EXPR_NEG,
-    operator.__not__: YASM_EXPR_LNOT,
-    operator.not_: YASM_EXPR_LNOT,
-    operator.__or__: YASM_EXPR_OR,
-    operator.or_: YASM_EXPR_OR,
-    operator.__sub__: YASM_EXPR_SUB,
-    operator.sub: YASM_EXPR_SUB,
-    operator.__xor__: YASM_EXPR_XOR,
-    operator.xor: YASM_EXPR_XOR,
-}
-del operator
+__op = {}
+for ops, operation in [
+    ((operator.__add__, operator.add, '+'), YASM_EXPR_ADD),
+    ((operator.__and__, operator.and_, '&'), YASM_EXPR_AND),
+    ((operator.__div__, operator.div, '/'), YASM_EXPR_SIGNDIV),
+    ((operator.__floordiv__, operator.floordiv, '//'), YASM_EXPR_SIGNDIV),
+    ((operator.__ge__, operator.ge, '>='), YASM_EXPR_GE),
+    ((operator.__gt__, operator.gt, '>'), YASM_EXPR_GT),
+    ((operator.__inv__, operator.inv, '~'), YASM_EXPR_NOT),
+    ((operator.__invert__, operator.invert), YASM_EXPR_NOT),
+    ((operator.__le__, operator.le, '<='), YASM_EXPR_LE),
+    ((operator.__lt__, operator.lt, '<'), YASM_EXPR_LT),
+    ((operator.__mod__, operator.mod, '%'), YASM_EXPR_SIGNMOD),
+    ((operator.__mul__, operator.mul, '*'), YASM_EXPR_MUL),
+    ((operator.__neg__, operator.neg), YASM_EXPR_NEG),
+    ((operator.__not__, operator.not_, 'not'), YASM_EXPR_LNOT),
+    ((operator.__or__, operator.or_, '|'), YASM_EXPR_OR),
+    ((operator.__sub__, operator.sub, '-'), YASM_EXPR_SUB),
+    ((operator.__xor__, operator.xor, '^'), YASM_EXPR_XOR),
+    ]:
+    for op in ops:
+        __op[op] = operation
+
+del operator, op, ops, operation
 
 cdef class Expression
 cdef object __make_expression(yasm_expr *expr):

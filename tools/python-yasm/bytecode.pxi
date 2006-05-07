@@ -143,6 +143,21 @@ cdef extern from "libyasm/bc-int.h":
 
     cdef yasm_bytecode *yasm_bc__next(yasm_bytecode *bc)
 
+cdef object __make_immval(yasm_immval *imm):
+    return ImmVal(PyCObject_FromVoidPtr(imm, NULL))
+
+cdef class ImmVal:
+    cdef yasm_immval *imm
+
+    def __new__(self, value):
+        if isinstance(value, Expression):
+            self.imm = yasm_imm_create_expr(
+                    yasm_expr_copy((<Expression>value).expr))
+        elif PyCObject_Check(value):
+            self.imm = <yasm_immval *>PyCObject_AsVoidPtr(value)
+        else:
+            raise TypeError
+
 cdef class Bytecode:
     cdef yasm_bytecode *bc
 

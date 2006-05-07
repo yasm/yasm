@@ -19,8 +19,7 @@ class TSymbolTable(TestCase):
         self.assert_("foo" in self.symtab)
 
     def test_exception(self):
-        from operator import add
-        expr = Expression(add, 1, 2)
+        expr = Expression('+', 1, 2)
         self.symtab.define_equ("foo", expr, 0)
         self.assertRaises(YasmError, self.symtab.define_equ, "foo", expr, 0)
         self.symtab.define_equ("bar", expr, 0) # cleared

@@ -12,6 +12,8 @@ class Mock(object):
 
 import test_intnum
 import test_symrec
+import test_bytecode
+import test_expr
 
 class Result(unittest.TestResult):
 
