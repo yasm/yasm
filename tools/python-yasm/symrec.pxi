@@ -75,8 +75,8 @@ cdef class Symbol:
 
     def __new__(self, symrec):
         self.sym = NULL
-        if PyCObject_Check(symrec):  # should check Desc
-            self.sym = <yasm_symrec *>PyCObject_AsVoidPtr(symrec)
+        if PyCObject_Check(symrec):
+            self.sym = <yasm_symrec *>__get_voidp(symrec, Symbol)
         else:
             raise NotImplementedError
 
@@ -152,7 +152,7 @@ cdef object __make_symbol(yasm_symrec *symrec):
                                 (<__assoc_data_callback>__python_symrec_cb).cb)
     if data != NULL:
         return <object>data
-    symbol = Symbol(PyCObject_FromVoidPtr(symrec, NULL))
+    symbol = Symbol(__pass_voidp(symrec, Symbol))
     yasm_symrec_add_data(symrec,
                          (<__assoc_data_callback>__python_symrec_cb).cb,
                          <void *>symbol)

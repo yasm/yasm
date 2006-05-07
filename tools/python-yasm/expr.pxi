@@ -122,9 +122,8 @@ for ops, operation in [
 
 del operator, op, ops, operation
 
-cdef class Expression
 cdef object __make_expression(yasm_expr *expr):
-    return Expression(PyCObject_FromVoidPtr(expr, NULL))
+    return Expression(__pass_voidp(expr, Expression))
 
 cdef class Expression:
     cdef yasm_expr *expr
@@ -135,8 +134,8 @@ cdef class Expression:
         if isinstance(op, Expression):
             self.expr = yasm_expr_copy((<Expression>op).expr)
             return
-        if PyCObject_Check(op):  # should check Desc
-            self.expr = <yasm_expr *>PyCObject_AsVoidPtr(op)
+        if PyCObject_Check(op):
+            self.expr = <yasm_expr *>__get_voidp(op, Expression)
             return
 
         cdef size_t numargs

@@ -44,6 +44,7 @@ cdef extern from "Python.h":
     cdef object PyCObject_FromVoidPtr(void *cobj, void (*destr)(void *))
     cdef object PyCObject_FromVoidPtrAndDesc(void *cobj, void *desc,
                                              void (*destr)(void *, void *))
+    cdef int PyType_Check(object)
     cdef int PyCObject_Check(object)
     cdef void *PyCObject_AsVoidPtr(object)
     cdef void *PyCObject_GetDesc(object)
@@ -58,6 +59,31 @@ cdef extern from "Python.h":
 
     cdef void PyErr_SetString(object type, char *message)
     cdef object PyErr_Format(object type, char *format, ...)
+
+cdef object __pass_voidp(void *obj, object forclass):
+    return PyCObject_FromVoidPtrAndDesc(obj, <void *>forclass, NULL)
+
+cdef void *__get_voidp(object obj, object forclass) except NULL:
+    cdef void* desc
+
+    if not PyCObject_Check(obj):
+        msg = "obj %r is not a CObject" % obj
+        PyErr_SetString(TypeError, msg)
+        return NULL
+
+    desc = PyCObject_GetDesc(obj)
+
+    if desc != <void *>forclass:
+        if desc == NULL:
+            msg = "CObject type is not set (expecting %s)" % forclass
+        elif PyType_Check(<object>desc):
+            msg = "CObject is for %s not %s" % (<object>desc, forclass)
+        else:
+            msg = "CObject is incorrect (expecting %s)" % forclass
+        PyErr_SetString(TypeError, msg)
+        return NULL
+
+    return PyCObject_AsVoidPtr(obj)
 
 cdef extern from "stdlib.h":
     cdef void *malloc(int n)

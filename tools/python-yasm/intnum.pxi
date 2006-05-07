@@ -92,7 +92,7 @@ cdef object __intnum_op(object x, yasm_expr_op op, object y):
         raise NotImplementedError
 
 cdef object __make_intnum(yasm_intnum *intn):
-    return IntNum(PyCObject_FromVoidPtr(intn, NULL))
+    return IntNum(__pass_voidp(intn, IntNum))
 
 cdef class IntNum:
     cdef yasm_intnum *intn
@@ -105,8 +105,8 @@ cdef class IntNum:
         if isinstance(value, IntNum):
             self.intn = yasm_intnum_copy((<IntNum>value).intn)
             return
-        if PyCObject_Check(value):  # should check Desc
-            self.intn = <yasm_intnum *>PyCObject_AsVoidPtr(value)
+        if PyCObject_Check(value):
+            self.intn = <yasm_intnum *>__get_voidp(value, IntNum)
             return
 
         val = None
