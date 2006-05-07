@@ -257,6 +257,16 @@ yasm_error_clear(void)
     yasm_exrefstr = NULL;
 }
 
+int
+yasm_error_matches(yasm_error_class eclass)
+{
+    if (yasm_eclass == YASM_ERROR_NONE)
+	return eclass == YASM_ERROR_NONE;
+    if (yasm_eclass == YASM_ERROR_GENERAL)
+	return eclass == YASM_ERROR_GENERAL;
+    return (yasm_eclass & eclass) == eclass;
+}
+
 void
 yasm_error_set_va(yasm_error_class eclass, const char *format, va_list va)
 {

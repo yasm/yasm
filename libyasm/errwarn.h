@@ -131,9 +131,6 @@ int yasm_error_matches(yasm_error_class eclass);
 #ifndef YASM_DOXYGEN
 extern yasm_error_class yasm_eclass;
 #define yasm_error_occurred()	    yasm_eclass
-#define yasm_error_matches(eclass)  (yasm_eclass != YASM_ERROR_NONE && \
-				     ((eclass) == YASM_ERROR_GENERAL || \
-				      (yasm_eclass & (eclass)) == (eclass)))
 #endif
 
 /** Set the error indicator (va_list version).  Has no effect if the error
