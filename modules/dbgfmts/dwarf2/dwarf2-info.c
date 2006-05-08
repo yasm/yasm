@@ -247,7 +247,7 @@ dwarf2_append_expr(yasm_section *sect, /*@only@*/ yasm_expr *expr, size_t size,
     yasm_dvs_initialize(&dvs);
     yasm_dvs_append(&dvs, yasm_dv_create_expr(expr));
     if (leb == 0)
-	bc = yasm_bc_create_data(&dvs, size, 0, 0);
+	bc = yasm_bc_create_data(&dvs, size, 0, NULL, 0);
     else
 	bc = yasm_bc_create_leb128(&dvs, leb<0, 0);
     yasm_bc_finalize(bc, yasm_dwarf2__append_bc(sect, bc));
@@ -263,7 +263,7 @@ dwarf2_append_str(yasm_section *sect, const char *str)
     yasm_dvs_initialize(&dvs);
     yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(str),
 						strlen(str)));
-    bc = yasm_bc_create_data(&dvs, 1, 1, 0);
+    bc = yasm_bc_create_data(&dvs, 1, 1, NULL, 0);
     yasm_bc_finalize(bc, yasm_dwarf2__append_bc(sect, bc));
     yasm_bc_resolve(bc, 0, NULL);
 }

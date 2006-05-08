@@ -1728,7 +1728,8 @@ win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(vp->val),
 						    strlen(vp->val)));
 	yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(" "), 1));
-	yasm_section_bcs_append(sect, yasm_bc_create_data(&dvs, 1, 0, line));
+	yasm_section_bcs_append(sect, yasm_bc_create_data(&dvs, 1, 0, NULL,
+							  line));
 
 	return 0;
     } else

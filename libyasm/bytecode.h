@@ -172,12 +172,14 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
  * \param size		storage size (in bytes) for each data value
  * \param append_zero	append a single zero byte after each data value
  *			(if non-zero)
+ * \param arch		architecture (optional); if provided, data items
+ *			are directly simplified to bytes if possible
  * \param line		virtual line (from yasm_linemap)
  * \return Newly allocated bytecode.
  */
 /*@only@*/ yasm_bytecode *yasm_bc_create_data
     (yasm_datavalhead *datahead, unsigned int size, int append_zero,
-     unsigned long line);
+     /*@null@*/ yasm_arch *arch, unsigned long line);
 
 /** Create a bytecode containing LEB128-encoded data value(s).
  * \param datahead	list of data values (kept, do not free)
@@ -371,11 +373,24 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
 yasm_dataval *yasm_dv_create_expr(/*@keep@*/ yasm_expr *expn);
 
 /** Create a new data value from a string.
- * \param contents	string (raw, may contain NULs)
+ * \param contents	string (may contain NULs)
  * \param len		length of string
  * \return Newly allocated data value.
  */
 yasm_dataval *yasm_dv_create_string(/*@keep@*/ char *contents, size_t len);
+
+/** Create a new data value from raw bytes data.
+ * \param contents	raw data (may contain NULs)
+ * \param len		length
+ * \return Newly allocated data value.
+ */
+yasm_dataval *yasm_dv_create_raw(/*@keep@*/ unsigned char *contents,
+				 unsigned long len);
+
+#ifndef YASM_DOXYGEN
+#define yasm_dv_create_string(s, l) yasm_dv_create_raw((unsigned char *)(s), \
+						       (unsigned long)(l))
+#endif
 
 /** Initialize a list of data values.
  * \param headp	list of data values

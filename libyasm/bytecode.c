@@ -49,28 +49,25 @@
 struct yasm_dataval {
     /*@reldef@*/ STAILQ_ENTRY(yasm_dataval) link;
 
-    enum { DV_EMPTY, DV_VALUE, DV_STRING } type;
+    enum { DV_EMPTY, DV_VALUE, DV_RAW } type;
 
     union {
 	yasm_value val;
 	struct {
-	    /*@only@*/ char *contents;
-	    size_t len;
-	} str;
+	    /*@only@*/ unsigned char *contents;
+	    unsigned long len;
+	} raw;
     } data;
 };
 
 /* Standard bytecode types */
 
 typedef struct bytecode_data {
-    /* non-converted data (linked list) */
+    /* converted data (linked list) */
     yasm_datavalhead datahead;
 
-    /* final (converted) size of each element (in bytes) */
+    /* final (converted) size of each value element (in bytes) */
     unsigned int size;
-
-    /* append a zero byte after each element? */
-    int append_zero;
 } bytecode_data;
 
 typedef struct bytecode_leb128 {
@@ -410,8 +407,6 @@ bc_data_print(const void *contents, FILE *f, int indent_level)
 {
     const bytecode_data *bc_data = (const bytecode_data *)contents;
     fprintf(f, "%*s_Data_\n", indent_level, "");
-    fprintf(f, "%*sFinal Element Size=%u\n", indent_level+1, "", bc_data->size);
-    fprintf(f, "%*sAppend Zero=%i\n", indent_level+1, "", bc_data->append_zero);
     fprintf(f, "%*sElements:\n", indent_level+1, "");
     yasm_dvs_print(&bc_data->datahead, f, indent_level+2);
 }
@@ -438,7 +433,6 @@ bc_data_resolve(yasm_bytecode *bc, int save,
 {
     bytecode_data *bc_data = (bytecode_data *)bc->contents;
     yasm_dataval *dv;
-    size_t slen;
 
     /* Count up element sizes, rounding up string length. */
     STAILQ_FOREACH(dv, &bc_data->datahead, link) {
@@ -448,15 +442,10 @@ bc_data_resolve(yasm_bytecode *bc, int save,
 	    case DV_VALUE:
 		bc->len += bc_data->size;
 		break;
-	    case DV_STRING:
-		slen = dv->data.str.len;
-		/* find count, rounding up to nearest multiple of size */
-		slen = (slen + bc_data->size - 1) / bc_data->size;
-		bc->len += slen*bc_data->size;
+	    case DV_RAW:
+		bc->len += dv->data.raw.len;
 		break;
 	}
-	if (bc_data->append_zero)
-	    bc->len++;
     }
 
     return YASM_BC_RESOLVE_MIN_LEN;
@@ -469,8 +458,6 @@ bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 {
     bytecode_data *bc_data = (bytecode_data *)bc->contents;
     yasm_dataval *dv;
-    size_t slen;
-    size_t i;
     unsigned char *bufp_orig = *bufp;
 
     STAILQ_FOREACH(dv, &bc_data->datahead, link) {
@@ -484,21 +471,11 @@ bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		    return 1;
 		*bufp += bc_data->size;
 		break;
-	    case DV_STRING:
-		slen = dv->data.str.len;
-		memcpy(*bufp, dv->data.str.contents, slen);
-		*bufp += slen;
-		/* pad with 0's to nearest multiple of size */
-		slen %= bc_data->size;
-		if (slen > 0) {
-		    slen = bc_data->size-slen;
-		    for (i=0; i<slen; i++)
-			YASM_WRITE_8(*bufp, 0);
-		}
+	    case DV_RAW:
+		memcpy(*bufp, dv->data.raw.contents, dv->data.raw.len);
+		*bufp += dv->data.raw.len;
 		break;
 	}
-	if (bc_data->append_zero)
-	    YASM_WRITE_8(*bufp, 0);
     }
 
     return 0;
@@ -506,15 +483,110 @@ bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
 yasm_bytecode *
 yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
-		    int append_zero, unsigned long line)
+		    int append_zero, yasm_arch *arch, unsigned long line)
 {
     bytecode_data *data = yasm_xmalloc(sizeof(bytecode_data));
+    yasm_bytecode *bc = yasm_bc_create_common(&bc_data_callback, data, line);
+    yasm_dataval *dv, *dv2, *dvo;
+    yasm_intnum *intn;
+    unsigned long len = 0, rlen, i;
 
-    data->datahead = *datahead;
+
+    yasm_dvs_initialize(&data->datahead);
     data->size = size;
-    data->append_zero = append_zero;
 
-    return yasm_bc_create_common(&bc_data_callback, data, line);
+    /* Prescan input data for length, etc.  Careful: this needs to be
+     * precisely paired with the second loop.
+     */
+    STAILQ_FOREACH(dv, datahead, link) {
+	switch (dv->type) {
+	    case DV_EMPTY:
+		break;
+	    case DV_VALUE:
+		if ((arch || size == 1) && dv->data.val.abs &&
+		    yasm_expr_get_intnum(&dv->data.val.abs, NULL))
+		    len += size;
+		else {
+		    if (len > 0) {
+			/* Create bytecode for all previous len */
+			dvo = yasm_dv_create_raw(yasm_xmalloc(len), len);
+			STAILQ_INSERT_TAIL(&data->datahead, dvo, link);
+			len = 0;
+		    }
+
+		    /* Create bytecode for this value */
+		    dvo = yasm_xmalloc(sizeof(yasm_dataval));
+		    STAILQ_INSERT_TAIL(&data->datahead, dvo, link);
+		}
+		break;
+	    case DV_RAW:
+		rlen = dv->data.raw.len;
+		/* find count, rounding up to nearest multiple of size */
+		rlen = (rlen + size - 1) / size;
+		len += rlen*size;
+		break;
+	}
+	if (append_zero)
+	    len++;
+    }
+
+    /* Create final dataval for any trailing length */
+    if (len > 0) {
+	dvo = yasm_dv_create_raw(yasm_xmalloc(len), len);
+	STAILQ_INSERT_TAIL(&data->datahead, dvo, link);
+    }
+
+    /* Second iteration: copy data and delete input datavals. */
+    dv = STAILQ_FIRST(datahead);
+    dvo = STAILQ_FIRST(&data->datahead);
+    len = 0;
+    while (dv) {
+	switch (dv->type) {
+	    case DV_EMPTY:
+		break;
+	    case DV_VALUE:
+		if ((arch || size == 1) && dv->data.val.abs &&
+		    (intn = yasm_expr_get_intnum(&dv->data.val.abs, NULL))) {
+		    if (size == 1)
+			yasm_intnum_get_sized(intn,
+					      &dvo->data.raw.contents[len],
+					      1, 8, 0, 0, 1);
+		    else
+			yasm_arch_intnum_tobytes(arch, intn,
+						 &dvo->data.raw.contents[len],
+						 size, size*8, 0, bc, 1);
+		    yasm_value_delete(&dv->data.val);
+		    len += size;
+		} else {
+		    dvo->type = DV_VALUE;
+		    dvo->data.val = dv->data.val;   /* structure copy */
+		    dvo = STAILQ_NEXT(dvo, link);
+		    len = 0;
+		}
+		break;
+	    case DV_RAW:
+		rlen = dv->data.raw.len;
+		memcpy(&dvo->data.raw.contents[len], dv->data.raw.contents,
+		       rlen);
+		yasm_xfree(dv->data.raw.contents);
+		len += rlen;
+		/* pad with 0's to nearest multiple of size */
+		rlen %= size;
+		if (rlen > 0) {
+		    rlen = size-rlen;
+		    for (i=0; i<rlen; i++)
+			dvo->data.raw.contents[len++] = 0;
+		}
+		break;
+	}
+	if (append_zero)
+	    dvo->data.raw.contents[len++] = 0;
+	dv2 = STAILQ_NEXT(dv, link);
+	yasm_xfree(dv);
+	dv = dv2;
+    }
+
+    return bc;
 }
 
 static void
@@ -568,7 +640,7 @@ bc_leb128_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 		bc_leb128->len +=
 		    yasm_intnum_size_leb128(intn, bc_leb128->sign);
 		break;
-	    case DV_STRING:
+	    case DV_RAW:
 		yasm_error_set(YASM_ERROR_VALUE,
 			       N_("LEB128 does not allow string constants"));
 		return;
@@ -604,8 +676,8 @@ bc_leb128_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		    yasm_internal_error(N_("non-constant in leb128_tobytes"));
 		*bufp += yasm_intnum_get_leb128(intn, *bufp, bc_leb128->sign);
 		break;
-	    case DV_STRING:
-		yasm_internal_error(N_("string in leb128_tobytes"));
+	    case DV_RAW:
+		yasm_internal_error(N_("raw in leb128_tobytes"));
 	}
     }
 
@@ -1547,13 +1619,13 @@ yasm_dv_create_expr(yasm_expr *e)
 }
 
 yasm_dataval *
-yasm_dv_create_string(char *contents, size_t len)
+yasm_dv_create_raw(unsigned char *contents, unsigned long len)
 {
     yasm_dataval *retval = yasm_xmalloc(sizeof(yasm_dataval));
 
-    retval->type = DV_STRING;
-    retval->data.str.contents = contents;
-    retval->data.str.len = len;
+    retval->type = DV_RAW;
+    retval->data.raw.contents = contents;
+    retval->data.raw.len = len;
 
     return retval;
 }
@@ -1570,8 +1642,8 @@ yasm_dvs_destroy(yasm_datavalhead *headp)
 	    case DV_VALUE:
 		yasm_value_delete(&cur->data.val);
 		break;
-	    case DV_STRING:
-		yasm_xfree(cur->data.str.contents);
+	    case DV_RAW:
+		yasm_xfree(cur->data.raw.contents);
 		break;
 	    default:
 		break;
@@ -1596,6 +1668,7 @@ void
 yasm_dvs_print(const yasm_datavalhead *head, FILE *f, int indent_level)
 {
     yasm_dataval *cur;
+    unsigned long i;
 
     STAILQ_FOREACH(cur, head, link) {
 	switch (cur->type) {
@@ -1606,11 +1679,13 @@ yasm_dvs_print(const yasm_datavalhead *head, FILE *f, int indent_level)
 		fprintf(f, "%*sValue:\n", indent_level, "");
 		yasm_value_print(&cur->data.val, f, indent_level+1);
 		break;
-	    case DV_STRING:
+	    case DV_RAW:
 		fprintf(f, "%*sLength=%lu\n", indent_level, "",
-			(unsigned long)cur->data.str.len);
-		fprintf(f, "%*sString=\"%s\"\n", indent_level, "",
-			cur->data.str.contents);
+			cur->data.raw.len);
+		fprintf(f, "%*sBytes=[", indent_level, "");
+		for (i=0; i<cur->data.raw.len; i++)
+		    fprintf(f, "0x%02x, ", cur->data.raw.contents[i]);
+		fprintf(f, "]\n");
 		break;
 	}
     }

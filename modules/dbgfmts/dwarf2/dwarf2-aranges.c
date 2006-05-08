@@ -44,7 +44,7 @@ dwarf2_append_arange(yasm_section *debug_aranges, /*@only@*/ yasm_expr *start,
     yasm_dvs_initialize(&dvs);
     yasm_dvs_append(&dvs, yasm_dv_create_expr(start));
     yasm_dvs_append(&dvs, yasm_dv_create_expr(length));
-    bc = yasm_bc_create_data(&dvs, sizeof_address, 0, 0);
+    bc = yasm_bc_create_data(&dvs, sizeof_address, 0, NULL, 0);
     yasm_bc_finalize(bc, yasm_dwarf2__append_bc(debug_aranges, bc));
     yasm_bc_resolve(bc, 0, NULL);
 }

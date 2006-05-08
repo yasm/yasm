@@ -197,7 +197,7 @@ lineexp: exp
 
 exp: instr
     | DECLARE_DATA datavals		{
-	$$ = yasm_bc_create_data(&$2, $1, 0, cur_line);
+	$$ = yasm_bc_create_data(&$2, $1, 0, parser_nasm->arch, cur_line);
     }
     | RESERVE_SPACE expr		{
 	$$ = yasm_bc_create_reserve($2, $1, cur_line);

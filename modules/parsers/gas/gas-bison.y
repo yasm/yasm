@@ -323,41 +323,41 @@ lineexp: instr
     }
     /* Integer data definition directives */
     | DIR_ASCII strvals {
-	$$ = yasm_bc_create_data(&$2, 1, 0, cur_line);
+	$$ = yasm_bc_create_data(&$2, 1, 0, parser_gas->arch, cur_line);
     }
     | DIR_ASCIZ strvals {
-	$$ = yasm_bc_create_data(&$2, 1, 1, cur_line);
+	$$ = yasm_bc_create_data(&$2, 1, 1, parser_gas->arch, cur_line);
     }
     | DIR_BYTE datavals {
-	$$ = yasm_bc_create_data(&$2, 1, 0, cur_line);
+	$$ = yasm_bc_create_data(&$2, 1, 0, parser_gas->arch, cur_line);
     }
     | DIR_SHORT datavals {
 	/* TODO: This should depend on arch */
-	$$ = yasm_bc_create_data(&$2, 2, 0, cur_line);
+	$$ = yasm_bc_create_data(&$2, 2, 0, parser_gas->arch, cur_line);
     }
     | DIR_WORD datavals {
 	$$ = yasm_bc_create_data(&$2, yasm_arch_wordsize(parser_gas->arch), 0,
-				 cur_line);
+				 parser_gas->arch, cur_line);
     }
     | DIR_INT datavals {
 	/* TODO: This should depend on arch */
-	$$ = yasm_bc_create_data(&$2, 4, 0, cur_line);
+	$$ = yasm_bc_create_data(&$2, 4, 0, parser_gas->arch, cur_line);
     }
     | DIR_VALUE datavals {
 	/* XXX: At least on x86, this is two bytes */
-	$$ = yasm_bc_create_data(&$2, 2, 0, cur_line);
+	$$ = yasm_bc_create_data(&$2, 2, 0, parser_gas->arch, cur_line);
     }
     | DIR_2BYTE datavals {
-	$$ = yasm_bc_create_data(&$2, 2, 0, cur_line);
+	$$ = yasm_bc_create_data(&$2, 2, 0, parser_gas->arch, cur_line);
     }
     | DIR_4BYTE datavals {
-	$$ = yasm_bc_create_data(&$2, 4, 0, cur_line);
+	$$ = yasm_bc_create_data(&$2, 4, 0, parser_gas->arch, cur_line);
     }
     | DIR_QUAD datavals {
-	$$ = yasm_bc_create_data(&$2, 8, 0, cur_line);
+	$$ = yasm_bc_create_data(&$2, 8, 0, parser_gas->arch, cur_line);
     }
     | DIR_OCTA datavals {
-	$$ = yasm_bc_create_data(&$2, 16, 0, cur_line);
+	$$ = yasm_bc_create_data(&$2, 16, 0, parser_gas->arch, cur_line);
     }
     | DIR_ZERO expr {
 	yasm_datavalhead dvs;
@@ -365,7 +365,7 @@ lineexp: instr
 	yasm_dvs_initialize(&dvs);
 	yasm_dvs_append(&dvs, yasm_dv_create_expr(
 	    p_expr_new_ident(yasm_expr_int(yasm_intnum_create_uint(0)))));
-	$$ = yasm_bc_create_data(&dvs, 1, 0, cur_line);
+	$$ = yasm_bc_create_data(&dvs, 1, 0, parser_gas->arch, cur_line);
 
 	yasm_bc_set_multiple($$, $2);
     }
@@ -377,13 +377,13 @@ lineexp: instr
     }
     /* Floating point data definition directives */
     | DIR_FLOAT datavals {
-	$$ = yasm_bc_create_data(&$2, 4, 0, cur_line);
+	$$ = yasm_bc_create_data(&$2, 4, 0, parser_gas->arch, cur_line);
     }
     | DIR_DOUBLE datavals {
-	$$ = yasm_bc_create_data(&$2, 8, 0, cur_line);
+	$$ = yasm_bc_create_data(&$2, 8, 0, parser_gas->arch, cur_line);
     }
     | DIR_TFLOAT datavals {
-	$$ = yasm_bc_create_data(&$2, 10, 0, cur_line);
+	$$ = yasm_bc_create_data(&$2, 10, 0, parser_gas->arch, cur_line);
     }
     /* Empty space / fill data definition directives */
     | DIR_SKIP expr {
@@ -394,7 +394,7 @@ lineexp: instr
 
 	yasm_dvs_initialize(&dvs);
 	yasm_dvs_append(&dvs, yasm_dv_create_expr($4));
-	$$ = yasm_bc_create_data(&dvs, 1, 0, cur_line);
+	$$ = yasm_bc_create_data(&dvs, 1, 0, parser_gas->arch, cur_line);
 
 	yasm_bc_set_multiple($$, $2);
     }
@@ -459,10 +459,10 @@ lineexp: instr
 	    yasm_dvs_append(&dvs, yasm_dv_create_expr(
 		p_expr_new_ident(yasm_expr_int(yasm_intnum_create_uint(0)))));
 	    yasm_section_bcs_append(comment,
-				    yasm_bc_create_data(&dvs, 1, 0, cur_line));
+		yasm_bc_create_data(&dvs, 1, 0, parser_gas->arch, cur_line));
 	}
 	yasm_section_bcs_append(comment,
-				yasm_bc_create_data(&$2, 1, 1, cur_line));
+	    yasm_bc_create_data(&$2, 1, 1, parser_gas->arch, cur_line));
 	$$ = NULL;
     }
     | DIR_FILE INTNUM STRING {
@@ -1015,7 +1015,7 @@ gas_parser_dir_fill(yasm_parser_gas *parser_gas, /*@only@*/ yasm_expr *repeat,
 
     yasm_dvs_initialize(&dvs);
     yasm_dvs_append(&dvs, yasm_dv_create_expr(value));
-    bc = yasm_bc_create_data(&dvs, ssize, 0, cur_line);
+    bc = yasm_bc_create_data(&dvs, ssize, 0, parser_gas->arch, cur_line);
 
     yasm_bc_set_multiple(bc, repeat);
 
