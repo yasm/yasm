@@ -50,6 +50,12 @@ static int expr_traverse_nodes_post(/*@null@*/ yasm_expr *e,
 				    int (*func) (/*@null@*/ yasm_expr *e,
 						 /*@null@*/ void *d));
 
+/* Bitmap of used items.  We should really never need more than 2 at a time,
+ * so 31 is pretty much overkill.
+ */
+static unsigned long itempool_used = 0;
+static yasm_expr__item itempool[31];
+
 /* allocate a new expression node, with children as defined.
  * If it's a unary operator, put the element in left and set right=NULL. */
 /*@-compmempass@*/
@@ -58,6 +64,7 @@ yasm_expr_create(yasm_expr_op op, yasm_expr__item *left,
 		 yasm_expr__item *right, unsigned long line)
 {
     yasm_expr *ptr, *sube;
+    unsigned long z;
     ptr = yasm_xmalloc(sizeof(yasm_expr));
 
     ptr->op = op;
@@ -66,7 +73,10 @@ yasm_expr_create(yasm_expr_op op, yasm_expr__item *left,
     ptr->terms[1].type = YASM_EXPR_NONE;
     if (left) {
 	ptr->terms[0] = *left;	/* structure copy */
-	yasm_xfree(left);
+	z = left-itempool;
+	if (z>=31)
+	    yasm_internal_error(N_("could not find expritem in pool"));
+	itempool_used &= ~(1<<z);
 	ptr->numterms++;
 
 	/* Search downward until we find something *other* than an
@@ -86,7 +96,10 @@ yasm_expr_create(yasm_expr_op op, yasm_expr__item *left,
 
     if (right) {
 	ptr->terms[1] = *right;	/* structure copy */
-	yasm_xfree(right);
+	z = right-itempool;
+	if (z>=31)
+	    yasm_internal_error(N_("could not find expritem in pool"));
+	itempool_used &= ~(1<<z);
 	ptr->numterms++;
 
 	/* Search downward until we find something *other* than an
@@ -112,7 +125,18 @@ yasm_expr_create(yasm_expr_op op, yasm_expr__item *left,
 yasm_expr__item *
 yasm_expr_sym(yasm_symrec *s)
 {
-    yasm_expr__item *e = yasm_xmalloc(sizeof(yasm_expr__item));
+    int z = 0;
+    unsigned long v = itempool_used & 0x7fffffff;
+    yasm_expr__item *e;
+
+    while (v & 1) {
+	v >>= 1;
+	z++;
+    }
+    if (z>=31)
+	yasm_internal_error(N_("too many expritems"));
+    itempool_used |= 1<<z;
+    e = &itempool[z];
     e->type = YASM_EXPR_SYM;
     e->data.sym = s;
     return e;
@@ -121,7 +145,18 @@ yasm_expr_sym(yasm_symrec *s)
 yasm_expr__item *
 yasm_expr_expr(yasm_expr *x)
 {
-    yasm_expr__item *e = yasm_xmalloc(sizeof(yasm_expr__item));
+    int z = 0;
+    unsigned long v = itempool_used & 0x7fffffff;
+    yasm_expr__item *e;
+
+    while (v & 1) {
+	v >>= 1;
+	z++;
+    }
+    if (z>=31)
+	yasm_internal_error(N_("too many expritems"));
+    itempool_used |= 1<<z;
+    e = &itempool[z];
     e->type = YASM_EXPR_EXPR;
     e->data.expn = x;
     return e;
@@ -130,7 +165,18 @@ yasm_expr_expr(yasm_expr *x)
 yasm_expr__item *
 yasm_expr_int(yasm_intnum *i)
 {
-    yasm_expr__item *e = yasm_xmalloc(sizeof(yasm_expr__item));
+    int z = 0;
+    unsigned long v = itempool_used & 0x7fffffff;
+    yasm_expr__item *e;
+
+    while (v & 1) {
+	v >>= 1;
+	z++;
+    }
+    if (z>=31)
+	yasm_internal_error(N_("too many expritems"));
+    itempool_used |= 1<<z;
+    e = &itempool[z];
     e->type = YASM_EXPR_INT;
     e->data.intn = i;
     return e;
@@ -139,7 +185,18 @@ yasm_expr_int(yasm_intnum *i)
 yasm_expr__item *
 yasm_expr_float(yasm_floatnum *f)
 {
-    yasm_expr__item *e = yasm_xmalloc(sizeof(yasm_expr__item));
+    int z = 0;
+    unsigned long v = itempool_used & 0x7fffffff;
+    yasm_expr__item *e;
+
+    while (v & 1) {
+	v >>= 1;
+	z++;
+    }
+    if (z>=31)
+	yasm_internal_error(N_("too many expritems"));
+    itempool_used |= 1<<z;
+    e = &itempool[z];
     e->type = YASM_EXPR_FLOAT;
     e->data.flt = f;
     return e;
@@ -148,7 +205,18 @@ yasm_expr_float(yasm_floatnum *f)
 yasm_expr__item *
 yasm_expr_reg(unsigned long reg)
 {
-    yasm_expr__item *e = yasm_xmalloc(sizeof(yasm_expr__item));
+    int z = 0;
+    unsigned long v = itempool_used & 0x7fffffff;
+    yasm_expr__item *e;
+
+    while (v & 1) {
+	v >>= 1;
+	z++;
+    }
+    if (z>=31)
+	yasm_internal_error(N_("too many expritems"));
+    itempool_used |= 1<<z;
+    e = &itempool[z];
     e->type = YASM_EXPR_REG;
     e->data.reg = reg;
     return e;
