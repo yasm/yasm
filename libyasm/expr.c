@@ -122,12 +122,11 @@ yasm_expr_create(yasm_expr_op op, yasm_expr__item *left,
 /*@=compmempass@*/
 
 /* helpers */
-yasm_expr__item *
-yasm_expr_sym(yasm_symrec *s)
+static yasm_expr__item *
+expr_get_item(void)
 {
     int z = 0;
     unsigned long v = itempool_used & 0x7fffffff;
-    yasm_expr__item *e;
 
     while (v & 1) {
 	v >>= 1;
@@ -136,7 +135,13 @@ yasm_expr_sym(yasm_symrec *s)
     if (z>=31)
 	yasm_internal_error(N_("too many expritems"));
     itempool_used |= 1<<z;
-    e = &itempool[z];
+    return &itempool[z];
+}
+
+yasm_expr__item *
+yasm_expr_sym(yasm_symrec *s)
+{
+    yasm_expr__item *e = expr_get_item();
     e->type = YASM_EXPR_SYM;
     e->data.sym = s;
     return e;
@@ -145,18 +150,7 @@ yasm_expr_sym(yasm_symrec *s)
 yasm_expr__item *
 yasm_expr_expr(yasm_expr *x)
 {
-    int z = 0;
-    unsigned long v = itempool_used & 0x7fffffff;
-    yasm_expr__item *e;
-
-    while (v & 1) {
-	v >>= 1;
-	z++;
-    }
-    if (z>=31)
-	yasm_internal_error(N_("too many expritems"));
-    itempool_used |= 1<<z;
-    e = &itempool[z];
+    yasm_expr__item *e = expr_get_item();
     e->type = YASM_EXPR_EXPR;
     e->data.expn = x;
     return e;
@@ -165,18 +159,7 @@ yasm_expr_expr(yasm_expr *x)
 yasm_expr__item *
 yasm_expr_int(yasm_intnum *i)
 {
-    int z = 0;
-    unsigned long v = itempool_used & 0x7fffffff;
-    yasm_expr__item *e;
-
-    while (v & 1) {
-	v >>= 1;
-	z++;
-    }
-    if (z>=31)
-	yasm_internal_error(N_("too many expritems"));
-    itempool_used |= 1<<z;
-    e = &itempool[z];
+    yasm_expr__item *e = expr_get_item();
     e->type = YASM_EXPR_INT;
     e->data.intn = i;
     return e;
@@ -185,18 +168,7 @@ yasm_expr_int(yasm_intnum *i)
 yasm_expr__item *
 yasm_expr_float(yasm_floatnum *f)
 {
-    int z = 0;
-    unsigned long v = itempool_used & 0x7fffffff;
-    yasm_expr__item *e;
-
-    while (v & 1) {
-	v >>= 1;
-	z++;
-    }
-    if (z>=31)
-	yasm_internal_error(N_("too many expritems"));
-    itempool_used |= 1<<z;
-    e = &itempool[z];
+    yasm_expr__item *e = expr_get_item();
     e->type = YASM_EXPR_FLOAT;
     e->data.flt = f;
     return e;
@@ -205,18 +177,7 @@ yasm_expr_float(yasm_floatnum *f)
 yasm_expr__item *
 yasm_expr_reg(unsigned long reg)
 {
-    int z = 0;
-    unsigned long v = itempool_used & 0x7fffffff;
-    yasm_expr__item *e;
-
-    while (v & 1) {
-	v >>= 1;
-	z++;
-    }
-    if (z>=31)
-	yasm_internal_error(N_("too many expritems"));
-    itempool_used |= 1<<z;
-    e = &itempool[z];
+    yasm_expr__item *e = expr_get_item();
     e->type = YASM_EXPR_REG;
     e->data.reg = reg;
     return e;
