@@ -425,8 +425,8 @@ coff_objfmt_set_section_addr(yasm_section *sect, /*@null@*/ void *d)
 
 static int
 coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
-			 size_t valsize, int shift, unsigned long offset,
-			 yasm_bytecode *bc, int warn, /*@null@*/ void *d)
+			 unsigned long offset, yasm_bytecode *bc, int warn,
+			 /*@null@*/ void *d)
 {
     /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
     yasm_objfmt_coff *objfmt_coff;
@@ -434,6 +434,7 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
     /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
     unsigned long intn_val, intn_minus;
     int retval;
+    unsigned int valsize = value->size;
 
     assert(info != NULL);
     objfmt_coff = info->objfmt_coff;
@@ -445,8 +446,8 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
      * Note this does NOT output any value with a SEG, WRT, external,
      * cross-section, or non-PC-relative reference (those are handled below).
      */
-    switch (yasm_value_output_basic(value, buf, destsize, valsize, shift, bc,
-				    warn, info->objfmt_coff->arch,
+    switch (yasm_value_output_basic(value, buf, destsize, bc, warn,
+				    info->objfmt_coff->arch,
 				    yasm_common_calc_bc_dist)) {
 	case -1:
 	    return 1;
@@ -679,7 +680,7 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
     }
 
     retval = yasm_arch_intnum_tobytes(objfmt_coff->arch, intn, buf, destsize,
-				      valsize, shift, bc, warn);
+				      valsize, 0, bc, warn);
     yasm_intnum_destroy(intn);
     return retval;
 }

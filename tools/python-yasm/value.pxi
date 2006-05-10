@@ -24,27 +24,36 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 cdef extern from "libyasm/value.h":
-    cdef void yasm_value_initialize(yasm_value *value, yasm_expr *e)
-    cdef void yasm_value_init_sym(yasm_value *value, yasm_symrec *sym)
+    cdef void yasm_value_initialize(yasm_value *value, yasm_expr *e,
+                                    unsigned int size)
+    cdef void yasm_value_init_sym(yasm_value *value, yasm_symrec *sym,
+                                  unsigned int size)
     cdef void yasm_value_delete(yasm_value *value)
     cdef int yasm_value_finalize(yasm_value *value)
-    cdef int yasm_value_finalize_expr(yasm_value *value, yasm_expr *e)
+    cdef int yasm_value_finalize_expr(yasm_value *value, yasm_expr *e,
+                                      unsigned int size)
     cdef int yasm_value_output_basic(yasm_value *value, unsigned char *buf,
-            size_t destsize, size_t valsize, int shift, yasm_bytecode *bc,
-            int warn, yasm_arch *arch, yasm_calc_bc_dist_func calc_bc_dist)
+            size_t destsize, yasm_bytecode *bc, int warn, yasm_arch *arch,
+            yasm_calc_bc_dist_func calc_bc_dist)
     cdef void yasm_value_print(yasm_value *value, FILE *f, int indent_level)
 
 cdef class Value:
     cdef yasm_value value
-    def __new__(self, value=None):
-        yasm_value_initialize(&self.value, NULL)
+    def __new__(self, value=None, size=None):
+        cdef unsigned int sz
+        if size is None:
+            sz = 0
+        else:
+            sz = size;
+
+        yasm_value_initialize(&self.value, NULL, sz)
         if value is None:
             pass
         elif isinstance(value, Expression):
             yasm_value_initialize(&self.value,
-                                  yasm_expr_copy((<Expression>value).expr))
+                                  yasm_expr_copy((<Expression>value).expr), sz)
         elif isinstance(value, Symbol):
-            yasm_value_init_sym(&self.value, (<Symbol>value).sym)
+            yasm_value_init_sym(&self.value, (<Symbol>value).sym, sz)
         else:
             raise ValueError("Invalid value type '%s'" % type(value))
 

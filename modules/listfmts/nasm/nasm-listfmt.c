@@ -82,18 +82,18 @@ nasm_listfmt_destroy(/*@only@*/ yasm_listfmt *listfmt)
 
 static int
 nasm_listfmt_output_value(yasm_value *value, unsigned char *buf,
-			  size_t destsize, size_t valsize, int shift,
-			  unsigned long offset, yasm_bytecode *bc, int warn,
-			  /*@null@*/ void *d)
+			  size_t destsize, unsigned long offset,
+			  yasm_bytecode *bc, int warn, /*@null@*/ void *d)
 {
     /*@null@*/ nasm_listfmt_output_info *info = (nasm_listfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
+    unsigned int valsize = value->size;
 
     assert(info != NULL);
 
     /* Output */
-    switch (yasm_value_output_basic(value, buf, destsize, valsize, shift, bc,
-				    warn, info->arch, NULL)) {
+    switch (yasm_value_output_basic(value, buf, destsize, bc, warn, info->arch,
+				    NULL)) {
 	case -1:
 	    return 1;
 	case 0:
@@ -124,7 +124,7 @@ nasm_listfmt_output_value(yasm_value *value, unsigned char *buf,
 	intn = yasm_expr_get_intnum(&value->abs, NULL);
 	if (intn)
 	    return yasm_arch_intnum_tobytes(info->arch, intn, buf, destsize,
-					    valsize, shift, bc, 0);
+					    valsize, 0, bc, 0);
 	else {
 	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 			   N_("relocation too complex"));
@@ -134,7 +134,7 @@ nasm_listfmt_output_value(yasm_value *value, unsigned char *buf,
 	int retval;
 	intn = yasm_intnum_create_uint(0);
 	retval = yasm_arch_intnum_tobytes(info->arch, intn, buf, destsize,
-					  valsize, shift, bc, 0);
+					  valsize, 0, bc, 0);
 	yasm_intnum_destroy(intn);
 	return retval;
     }

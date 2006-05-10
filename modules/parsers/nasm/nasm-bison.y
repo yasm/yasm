@@ -197,10 +197,10 @@ lineexp: exp
 
 exp: instr
     | DECLARE_DATA datavals		{
-	$$ = yasm_bc_create_data(&$2, $1, 0, parser_nasm->arch, cur_line);
+	$$ = yasm_bc_create_data(&$2, $1/8, 0, parser_nasm->arch, cur_line);
     }
     | RESERVE_SPACE expr		{
-	$$ = yasm_bc_create_reserve($2, $1, cur_line);
+	$$ = yasm_bc_create_reserve($2, $1/8, cur_line);
     }
     | INCBIN STRING			{
 	$$ = yasm_bc_create_incbin($2.contents, NULL, NULL, cur_line);

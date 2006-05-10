@@ -401,7 +401,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 /* Calculate the displacement length, if possible.
  * Takes several extra inputs so it can be used by both 32-bit and 16-bit
  * expressions:
- *  wordsize=2 for 16-bit, =4 for 32-bit.
+ *  wordsize=16 for 16-bit, =32 for 32-bit.
  *  noreg=1 if the *ModRM byte* has no registers used.
  *  dispreq=1 if a displacement value is *required* (even if =0).
  * Returns 0 if successfully calculated, 1 if not.
@@ -416,35 +416,35 @@ x86_checkea_calc_displen(x86_effaddr *x86_ea, unsigned int wordsize, int noreg,
 
     x86_ea->valid_modrm = 0;	/* default to not yet valid */
 
-    switch (x86_ea->ea.disp_len) {
+    switch (x86_ea->ea.disp.size) {
 	case 0:
 	    break;
 	/* If not 0, the displacement length was forced; set the Mod bits
 	 * appropriately and we're done with the ModRM byte.
 	 */
-	case 1:
+	case 8:
 	    /* Byte is not valid override in noreg case; fix it. */
 	    if (noreg) {
-		x86_ea->ea.disp_len = 0;
+		x86_ea->ea.disp.size = 0;
 		yasm_warn_set(YASM_WARN_GENERAL,
 			      N_("invalid displacement size; fixed"));
 	    } else
 		x86_ea->modrm |= 0100;
 	    x86_ea->valid_modrm = 1;
 	    break;
-	case 2:
-	case 4:
-	    if (wordsize != x86_ea->ea.disp_len) {
+	case 16:
+	case 32:
+	    if (wordsize != x86_ea->ea.disp.size) {
 		yasm_error_set(YASM_ERROR_VALUE,
 		    N_("invalid effective address (displacement size)"));
 		return 1;
 	    }
 	    /* 2/4 is not valid override in noreg case; fix it. */
 	    if (noreg) {
-		if (wordsize != x86_ea->ea.disp_len)
+		if (wordsize != x86_ea->ea.disp.size)
 		    yasm_warn_set(YASM_WARN_GENERAL,
 				  N_("invalid displacement size; fixed"));
-		x86_ea->ea.disp_len = 0;
+		x86_ea->ea.disp.size = 0;
 	    } else
 		x86_ea->modrm |= 0200;
 	    x86_ea->valid_modrm = 1;
@@ -454,7 +454,7 @@ x86_checkea_calc_displen(x86_effaddr *x86_ea, unsigned int wordsize, int noreg,
 	    yasm_internal_error(N_("strange EA displacement size"));
     }
 
-    if (x86_ea->ea.disp_len == 0) {
+    if (x86_ea->ea.disp.size == 0) {
 	/* the displacement length hasn't been forced (or the forcing wasn't
 	 * valid), try to determine what it is.
 	 */
@@ -463,16 +463,14 @@ x86_checkea_calc_displen(x86_effaddr *x86_ea, unsigned int wordsize, int noreg,
 	     * and as the Mod bits are set to 0 by the caller, we're done
 	     * with the ModRM byte.
 	     */
-	    x86_ea->ea.disp_len = wordsize;
+	    x86_ea->ea.disp.size = wordsize;
 	    x86_ea->valid_modrm = 1;
 	    return 0;
 	} else if (dispreq) {
 	    /* for BP/EBP, there *must* be a displacement value, but we
 	     * may not know the size (8 or 16/32) for sure right now.
-	     * We can't leave displen at 0, because that just means
-	     * unknown displacement, including none.
 	     */
-	    x86_ea->ea.disp_len = 0xff;
+	    x86_ea->ea.need_nonzero_len = 1;
 	}
 
 	if (x86_ea->ea.disp.rel ||
@@ -481,7 +479,7 @@ x86_checkea_calc_displen(x86_effaddr *x86_ea, unsigned int wordsize, int noreg,
 	    /* expr still has unknown values or is relative:
 	     * assume 16/32-bit disp
 	     */
-	    x86_ea->ea.disp_len = wordsize;
+	    x86_ea->ea.disp.size = wordsize;
 	    x86_ea->modrm |= 0200;
 	    x86_ea->valid_modrm = 1;
 	    return 0;
@@ -490,8 +488,8 @@ x86_checkea_calc_displen(x86_effaddr *x86_ea, unsigned int wordsize, int noreg,
 	/* don't try to find out what size displacement we have if
 	 * displen is known.
 	 */
-	if (x86_ea->ea.disp_len != 0 && x86_ea->ea.disp_len != 0xff) {
-	    if (x86_ea->ea.disp_len == 1)
+	if (x86_ea->ea.disp.size != 0) {
+	    if (x86_ea->ea.disp.size == 8)
 		x86_ea->modrm |= 0100;
 	    else
 		x86_ea->modrm |= 0200;
@@ -505,7 +503,7 @@ x86_checkea_calc_displen(x86_effaddr *x86_ea, unsigned int wordsize, int noreg,
 	    dispval = 0;
 
 	/* Figure out what size displacement we will have. */
-	if (x86_ea->ea.disp_len != 0xff && dispval == 0) {
+	if (!x86_ea->ea.need_nonzero_len && dispval == 0) {
 	    /* if we know that the displacement is 0 right now,
 	     * go ahead and delete the expr and make it so no
 	     * displacement value is included in the output.
@@ -520,11 +518,11 @@ x86_checkea_calc_displen(x86_effaddr *x86_ea, unsigned int wordsize, int noreg,
 	    x86_ea->ea.need_disp = 0;
 	} else if (dispval >= -128 && dispval <= 127) {
 	    /* It fits into a signed byte */
-	    x86_ea->ea.disp_len = 1;
+	    x86_ea->ea.disp.size = 8;
 	    x86_ea->modrm |= 0100;
 	} else {
 	    /* It's a 16/32-bit displacement */
-	    x86_ea->ea.disp_len = wordsize;
+	    x86_ea->ea.disp.size = wordsize;
 	    x86_ea->modrm |= 0200;
 	}
 	x86_ea->valid_modrm = 1;	/* We're done with ModRM */
@@ -572,12 +570,12 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 	 * - what registers are used in the expression
 	 * - the bits setting
 	 */
-	switch (x86_ea->ea.disp_len) {
-	    case 2:
+	switch (x86_ea->ea.disp.size) {
+	    case 16:
 		/* must be 16-bit */
 		*addrsize = 16;
 		break;
-	    case 8:
+	    case 64:
 		/* We have to support this for the MemOffs case, but it's
 		 * otherwise illegal.  It's also illegal in non-64-bit mode.
 		 */
@@ -588,7 +586,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 		}
 		*addrsize = 64;
 		break;
-	    case 4:
+	    case 32:
 		/* Must be 32-bit in 16-bit or 32-bit modes.  In 64-bit mode,
 		 * we don't know unless we look at the registers, except in the
 		 * MemOffs case (see the end of this function).
@@ -797,7 +795,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 	    x86_ea->need_sib = 0;
 	    /* RIP always requires a 32-bit displacement */
 	    x86_ea->valid_modrm = 1;
-	    x86_ea->ea.disp_len = 4;
+	    x86_ea->ea.disp.size = 32;
 	    return 0;
 	} else if (indexreg == REG3264_NONE) {
 	    /* basereg only */
@@ -877,7 +875,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 
 	/* Calculate displacement length (if possible) */
 	retval = x86_checkea_calc_displen
-	    (x86_ea, 4, basereg == REG3264_NONE,
+	    (x86_ea, 32, basereg == REG3264_NONE,
 	     basereg == REG3264_EBP || basereg == REG64_R13);
 	return retval;
     } else if (*addrsize == 16 && x86_ea->need_modrm && !x86_ea->valid_modrm) {
@@ -962,7 +960,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 
 	/* Calculate displacement length (if possible) */
 	retval = x86_checkea_calc_displen
-	    (x86_ea, 2, havereg == HAVE_NONE, havereg == HAVE_BP);
+	    (x86_ea, 16, havereg == HAVE_NONE, havereg == HAVE_BP);
 	return retval;
     } else if (!x86_ea->need_modrm && !x86_ea->need_sib) {
 	/* Special case for MOV MemOffs opcode: displacement but no modrm. */
@@ -973,10 +971,10 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 			N_("invalid effective address (64-bit in non-64-bit mode)"));
 		    return 1;
 		}
-		x86_ea->ea.disp_len = 8;
+		x86_ea->ea.disp.size = 64;
 		break;
 	    case 32:
-		x86_ea->ea.disp_len = 4;
+		x86_ea->ea.disp.size = 32;
 		break;
 	    case 16:
 		/* 64-bit mode does not allow 16-bit addresses */
@@ -985,7 +983,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 			N_("16-bit addresses not supported in 64-bit mode"));
 		    return 1;
 		}
-		x86_ea->ea.disp_len = 2;
+		x86_ea->ea.disp.size = 16;
 		break;
 	}
     }

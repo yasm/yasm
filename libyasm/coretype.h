@@ -152,6 +152,9 @@ typedef struct yasm_value {
      * section start.  Boolean.
      */
     unsigned int section_rel : 1;
+
+    /** Size of the value, in bits. */
+    unsigned int size : 8;
 } yasm_value;
 
 /** Maximum value of #yasm_value.rshift */
@@ -244,9 +247,6 @@ typedef /*@null@*/ /*@only@*/ yasm_intnum * (*yasm_calc_bc_dist_func)
  * \param value		value
  * \param buf		buffer for byte representation
  * \param destsize	destination size (in bytes)
- * \param valsize	size (in bits)
- * \param shift		left shift (in bits); may be negative to specify right
- *			shift (standard warnings include truncation to boundary)
  * \param offset	offset (in bytes) of the expr contents from the start
  *			of the bytecode (needed for relative)
  * \param bc		current bytecode (usually passed into higher-level
@@ -261,8 +261,7 @@ typedef /*@null@*/ /*@only@*/ yasm_intnum * (*yasm_calc_bc_dist_func)
  */
 typedef int (*yasm_output_value_func)
     (yasm_value *value, /*@out@*/ unsigned char *buf, size_t destsize,
-     size_t valsize, int shift, unsigned long offset, yasm_bytecode *bc,
-     int warn, /*@null@*/ void *d);
+     unsigned long offset, yasm_bytecode *bc, int warn, /*@null@*/ void *d);
 
 /** Convert a symbol reference to its byte representation.  Usually implemented
  * by object formats and debug formats to keep track of relocations generated

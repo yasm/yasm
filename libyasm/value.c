@@ -356,15 +356,15 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 }
 
 int
-yasm_value_finalize_expr(yasm_value *value, yasm_expr *e)
+yasm_value_finalize_expr(yasm_value *value, yasm_expr *e, unsigned int size)
 {
     if (!e) {
-	yasm_value_initialize(value, NULL);
+	yasm_value_initialize(value, NULL, size);
 	return 0;
     }
 
     yasm_value_initialize(value, yasm_expr__level_tree
-			  (e, 1, 1, 0, NULL, NULL, NULL, NULL));
+			  (e, 1, 1, 0, NULL, NULL, NULL, NULL), size);
 
     /* quit early if there was an issue in simplify() */
     if (yasm_error_occurred())
@@ -419,25 +419,29 @@ yasm_value_finalize_expr(yasm_value *value, yasm_expr *e)
 }
 
 int
+yasm_value_finalize(yasm_value *value)
+{
+    unsigned int valsize = value->size;
+    return yasm_value_finalize_expr(value, value->abs, valsize);
+}
+
+int
 yasm_value_output_basic(yasm_value *value, /*@out@*/ unsigned char *buf,
-			size_t destsize, size_t valsize, int shift,
-			yasm_bytecode *bc, int warn, yasm_arch *arch,
-			yasm_calc_bc_dist_func calc_bc_dist)
+			unsigned int destsize, yasm_bytecode *bc, int warn,
+			yasm_arch *arch, yasm_calc_bc_dist_func calc_bc_dist)
 {
     /*@dependent@*/ /*@null@*/ yasm_intnum *intn = NULL;
     /*@only@*/ yasm_intnum *outval;
     int sym_local;
     int retval = 1;
+    unsigned int valsize = value->size;
 
     if (value->abs) {
 	/* Handle floating point expressions */
 	if (!value->rel && value->abs->op == YASM_EXPR_IDENT
 	    && value->abs->terms[0].type == YASM_EXPR_FLOAT) {
-	    if (shift < 0)
-		yasm_internal_error(N_("attempting to negative shift a float"));
 	    if (yasm_arch_floatnum_tobytes(arch, value->abs->terms[0].data.flt,
-					   buf, destsize, valsize,
-					   (unsigned int)shift, warn))
+					   buf, destsize, valsize, 0, warn))
 		return -1;
 	    else
 		return 1;
@@ -494,20 +498,20 @@ yasm_value_output_basic(yasm_value *value, /*@out@*/ unsigned char *buf,
 	if (intn)
 	    yasm_intnum_calc(outval, YASM_EXPR_ADD, intn);
 	/* Output! */
-	if (yasm_arch_intnum_tobytes(arch, outval, buf, destsize, valsize,
-				     shift, bc, warn))
+	if (yasm_arch_intnum_tobytes(arch, outval, buf, destsize, valsize, 0,
+				     bc, warn))
 	    retval = -1;
 	yasm_intnum_destroy(outval);
     } else if (intn) {
 	/* Output just absolute portion */
-	if (yasm_arch_intnum_tobytes(arch, intn, buf, destsize, valsize,
-				     shift, bc, warn))
+	if (yasm_arch_intnum_tobytes(arch, intn, buf, destsize, valsize, 0, bc,
+				     warn))
 	    retval = -1;
     } else {
 	/* No absolute or relative portions: output 0 */
 	outval = yasm_intnum_create_uint(0);
-	if (yasm_arch_intnum_tobytes(arch, outval, buf, destsize, valsize,
-				     shift, bc, warn))
+	if (yasm_arch_intnum_tobytes(arch, outval, buf, destsize, valsize, 0,
+				     bc, warn))
 	    retval = -1;
 	yasm_intnum_destroy(outval);
     }

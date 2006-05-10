@@ -159,14 +159,15 @@ xdf_objfmt_create(yasm_object *object, yasm_arch *a)
 
 static int
 xdf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
-			size_t valsize, int shift, unsigned long offset,
-			yasm_bytecode *bc, int warn, /*@null@*/ void *d)
+			unsigned long offset, yasm_bytecode *bc, int warn,
+			/*@null@*/ void *d)
 {
     /*@null@*/ xdf_objfmt_output_info *info = (xdf_objfmt_output_info *)d;
     yasm_objfmt_xdf *objfmt_xdf;
     /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
     unsigned long intn_minus;
     int retval;
+    unsigned int valsize = value->size;
 
     assert(info != NULL);
     objfmt_xdf = info->objfmt_xdf;
@@ -178,8 +179,8 @@ xdf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
      * Note this does NOT output any value with a SEG, WRT, external,
      * cross-section, or non-PC-relative reference (those are handled below).
      */
-    switch (yasm_value_output_basic(value, buf, destsize, valsize, shift, bc,
-				    warn, info->objfmt_xdf->arch,
+    switch (yasm_value_output_basic(value, buf, destsize, bc, warn,
+				    info->objfmt_xdf->arch,
 				    yasm_common_calc_bc_dist)) {
 	case -1:
 	    return 1;
@@ -241,7 +242,7 @@ xdf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
     }
 
     retval = yasm_arch_intnum_tobytes(objfmt_xdf->arch, intn, buf, destsize,
-				      valsize, shift, bc, warn);
+				      valsize, 0, bc, warn);
     yasm_intnum_destroy(intn);
     return retval;
 }

@@ -193,28 +193,33 @@ lc3b_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	case LC3B_IMM_NONE:
 	    break;
 	case LC3B_IMM_4:
-	    if (output_value(&insn->imm, *bufp, 2, 4, 0, 0, bc, 1, d))
+	    insn->imm.size = 4;
+	    if (output_value(&insn->imm, *bufp, 2, 0, bc, 1, d))
 		return 1;
 	    break;
 	case LC3B_IMM_5:
-	    if (output_value(&insn->imm, *bufp, 2, 5, 0, 0, bc, 1, d))
+	    insn->imm.size = 5;
+	    if (output_value(&insn->imm, *bufp, 2, 0, bc, -1, d))
 		return 1;
 	    break;
 	case LC3B_IMM_6_WORD:
-	    if (output_value(&insn->imm, *bufp, 2, 6, -1, 0, bc, 1, d))
+	    insn->imm.size = 6;
+	    if (output_value(&insn->imm, *bufp, 2, 0, bc, 1, d))
 		return 1;
 	    break;
 	case LC3B_IMM_6_BYTE:
-	    if (output_value(&insn->imm, *bufp, 2, 6, 0, 0, bc, 1, d))
+	    insn->imm.size = 6;
+	    if (output_value(&insn->imm, *bufp, 2, 0, bc, -1, d))
 		return 1;
 	    break;
 	case LC3B_IMM_8:
-	    if (output_value(&insn->imm, *bufp, 2, 8, -1, 0, bc, 1, d))
+	    insn->imm.size = 8;
+	    if (output_value(&insn->imm, *bufp, 2, 0, bc, 1, d))
 		return 1;
 	    break;
 	case LC3B_IMM_9_PC:
 	    /* Adjust relative displacement to end of bytecode */
-	    delta = yasm_intnum_create_int(-(long)bc->len);
+	    delta = yasm_intnum_create_int(-1);
 	    if (!insn->imm.abs)
 		insn->imm.abs = yasm_expr_create_ident(yasm_expr_int(delta),
 						       bc->line);
@@ -224,11 +229,13 @@ lc3b_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 				     yasm_expr_expr(insn->imm.abs),
 				     yasm_expr_int(delta), bc->line);
 
-	    if (output_value(&insn->imm, *bufp, 2, 9, -1, 0, bc, 1, d))
+	    insn->imm.size = 9;
+	    if (output_value(&insn->imm, *bufp, 2, 0, bc, -1, d))
 		return 1;
 	    break;
 	case LC3B_IMM_9:
-	    if (output_value(&insn->imm, *bufp, 2, 9, -1, 0, bc, 1, d))
+	    insn->imm.size = 9;
+	    if (output_value(&insn->imm, *bufp, 2, 0, bc, 1, d))
 		return 1;
 	    break;
 	default:

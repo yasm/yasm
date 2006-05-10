@@ -318,21 +318,21 @@ yasm_x86__get_reg_size(yasm_arch *arch, unsigned long reg)
     switch ((x86_expritem_reg_size)(reg & ~0xFUL)) {
 	case X86_REG8:
 	case X86_REG8X:
-	    return 1;
+	    return 8;
 	case X86_REG16:
-	    return 2;
+	    return 16;
 	case X86_REG32:
 	case X86_CRREG:
 	case X86_DRREG:
 	case X86_TRREG:
-	    return 4;
+	    return 32;
 	case X86_REG64:
 	case X86_MMXREG:
-	    return 8;
+	    return 64;
 	case X86_XMMREG:
-	    return 16;
+	    return 128;
 	case X86_FPUREG:
-	    return 10;
+	    return 80;
 	default:
 	    yasm_error_set(YASM_ERROR_VALUE, N_("unknown register size"));
     }
@@ -461,6 +461,6 @@ yasm_arch_module yasm_x86_LTX_arch = {
     yasm_x86__ea_create_expr,
     x86_machines,
     "x86",
-    2,
+    16,
     1
 };

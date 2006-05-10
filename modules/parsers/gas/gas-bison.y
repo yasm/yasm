@@ -336,7 +336,7 @@ lineexp: instr
 	$$ = yasm_bc_create_data(&$2, 2, 0, parser_gas->arch, cur_line);
     }
     | DIR_WORD datavals {
-	$$ = yasm_bc_create_data(&$2, yasm_arch_wordsize(parser_gas->arch), 0,
+	$$ = yasm_bc_create_data(&$2, yasm_arch_wordsize(parser_gas->arch)/8, 0,
 				 parser_gas->arch, cur_line);
     }
     | DIR_INT datavals {

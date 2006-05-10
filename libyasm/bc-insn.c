@@ -80,10 +80,9 @@ yasm_imm_create_expr(yasm_expr *e)
 {
     yasm_immval *im = yasm_xmalloc(sizeof(yasm_immval));
 
-    if (yasm_value_finalize_expr(&im->val, e))
+    if (yasm_value_finalize_expr(&im->val, e, 0))
 	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 		       N_("immediate expression too complex"));
-    im->len = 0;
     im->sign = 0;
 
     return im;
@@ -105,7 +104,7 @@ yasm_ea_set_len(yasm_effaddr *ptr, unsigned int len)
      * an explicit override, where we expect the user knows what they're doing.
      */
 
-    ptr->disp_len = (unsigned char)len;
+    ptr->disp.size = (unsigned char)len;
 }
 
 void
@@ -155,7 +154,6 @@ yasm_ea_print(const yasm_effaddr *ea, FILE *f, int indent_level)
 {
     fprintf(f, "%*sDisp:\n", indent_level, "");
     yasm_value_print(&ea->disp, f, indent_level+1);
-    fprintf(f, "%*sLen=%u\n", indent_level, "", (unsigned int)ea->disp_len);
     fprintf(f, "%*sNoSplit=%u\n", indent_level, "", (unsigned int)ea->nosplit);
     ea->callback->print(ea, f, indent_level);
 }

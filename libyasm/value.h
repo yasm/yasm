@@ -43,9 +43,11 @@
  * the value.
  * \param value	    value to be initialized
  * \param e	    expression (kept)
+ * \param size	    value size (in bits)
  */
 void yasm_value_initialize(/*@out@*/ yasm_value *value,
-			   /*@null@*/ /*@kept@*/ yasm_expr *e);
+			   /*@null@*/ /*@kept@*/ yasm_expr *e,
+			   unsigned int size);
 
 /** Initialize a #yasm_value with just a symrec.  No processing is performed,
  * the symrec is simply stuck into value.rel and the other fields are
@@ -77,6 +79,7 @@ int yasm_value_finalize(yasm_value *value);
  * symrec offset within the absolute section.
  * \param value		value to store split portions into
  * \param e		expression input
+ * \param size		value size (in bits)
  * \return Nonzero if the expr could not be split into a value for some
  *         reason (e.g. the relative portion was not added, but multiplied,
  *         etc).
@@ -86,7 +89,8 @@ int yasm_value_finalize(yasm_value *value);
  *       before the parse is complete will usually result in an error return.
  */
 int yasm_value_finalize_expr(/*@out@*/ yasm_value *value,
-			     /*@null@*/ /*@kept@*/ yasm_expr *e);
+			     /*@null@*/ /*@kept@*/ yasm_expr *e,
+			     unsigned int size);
 
 /** Output value if constant or PC-relative section-local.  This should be
  * used from objfmt yasm_output_value_func() functions.
@@ -94,9 +98,6 @@ int yasm_value_finalize_expr(/*@out@*/ yasm_value *value,
  * \param value		value
  * \param buf		buffer for byte representation
  * \param destsize	destination size (in bytes)
- * \param valsize	size (in bits)
- * \param shift		left shift (in bits); may be negative to specify right
- *			shift (standard warnings include truncation to boundary)
  * \param bc		current bytecode (usually passed into higher-level
  *			calling function)
  * \param warn		enables standard warnings: zero for none;
@@ -114,7 +115,7 @@ int yasm_value_finalize_expr(/*@out@*/ yasm_value *value,
  */
 int yasm_value_output_basic
     (yasm_value *value, /*@out@*/ unsigned char *buf, size_t destsize,
-     size_t valsize, int shift, yasm_bytecode *bc, int warn, yasm_arch *arch,
+     yasm_bytecode *bc, int warn, yasm_arch *arch,
      yasm_calc_bc_dist_func calc_bc_dist);
 
 /** Print a value.  For debugging purposes.
@@ -126,7 +127,7 @@ void yasm_value_print(const yasm_value *value, FILE *f, int indent_level);
 
 
 #ifndef YASM_DOXYGEN
-#define yasm_value_initialize(value, e) \
+#define yasm_value_initialize(value, e, sz) \
     do { \
 	(value)->abs = e; \
 	(value)->rel = NULL; \
@@ -136,9 +137,10 @@ void yasm_value_print(const yasm_value *value, FILE *f, int indent_level);
 	(value)->curpos_rel = 0; \
 	(value)->ip_rel = 0; \
 	(value)->section_rel = 0; \
+	(value)->size = sz; \
     } while(0)
 
-#define yasm_value_init_sym(value, sym) \
+#define yasm_value_init_sym(value, sym, sz) \
     do { \
 	(value)->abs = NULL; \
 	(value)->rel = sym; \
@@ -148,6 +150,7 @@ void yasm_value_print(const yasm_value *value, FILE *f, int indent_level);
 	(value)->curpos_rel = 0; \
 	(value)->ip_rel = 0; \
 	(value)->section_rel = 0; \
+	(value)->size = sz; \
     } while(0)
 
 #define yasm_value_delete(value) \
@@ -156,9 +159,6 @@ void yasm_value_print(const yasm_value *value, FILE *f, int indent_level);
 	(value)->abs = NULL; \
 	(value)->rel = NULL; \
     } while(0)
-
-#define yasm_value_finalize(value) \
-    yasm_value_finalize_expr(value, (value)->abs)
 #endif
 
 #endif

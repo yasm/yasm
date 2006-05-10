@@ -228,7 +228,7 @@ typedef struct yasm_arch_module {
      */
     const char *default_machine_keyword;
 
-    /** Canonical "word" size in bytes.
+    /** Canonical "word" size in bits.
      * Call yasm_arch_wordsize() to get the word size of a particular
      * #yasm_arch.
      */
@@ -469,7 +469,7 @@ int yasm_arch_intnum_tobytes(yasm_arch *arch, const yasm_intnum *intn,
 			     size_t valsize, int shift,
 			     const yasm_bytecode *bc, int warn);
 
-/** Get the equivalent byte size of a register.
+/** Get the equivalent size of a register in bits.
  * \param arch	architecture
  * \param reg	register
  * \return 0 if there is no suitable equivalent size, otherwise the size.

@@ -60,9 +60,7 @@ struct yasm_effaddr {
 
     unsigned long segreg;	/**< segment register override (0 if none) */
 
-    unsigned char disp_len;	/**< length of disp (in bytes), 0 if unknown,
-				 *   0xff if unknown and required to be >0.
-				 */
+    unsigned char need_nonzero_len; /**< 1 if length of disp must be >0. */
     unsigned char need_disp;	/**< 1 if a displacement should be present
 				 *   in the output.
 				 */
@@ -79,7 +77,6 @@ struct yasm_effaddr {
 typedef struct yasm_immval {
     yasm_value val;		/**< the immediate value itself */
 
-    unsigned char len;		/**< final length (in bytes), 0 if unknown */
     unsigned char sign;		/**< 1 if final imm is treated as signed */
 } yasm_immval;
 
@@ -113,9 +110,9 @@ typedef enum {
 /*@observer@*/ const yasm_expr *yasm_ea_get_disp(const yasm_effaddr *ea);
 
 /** Set the length of the displacement portion of an effective address.
- * The length is specified in bytes.
+ * The length is specified in bits.
  * \param ea	effective address
- * \param len	length in bytes
+ * \param len	length in bits
  */
 void yasm_ea_set_len(yasm_effaddr *ea, unsigned int len);
 

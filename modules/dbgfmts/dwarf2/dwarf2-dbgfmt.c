@@ -291,9 +291,9 @@ dwarf2_head_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	yasm_value value;
 	yasm_value_init_sym(&value,
 	    yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
-				yasm_section_bcs_first(head->debug_ptr)));
+				yasm_section_bcs_first(head->debug_ptr)),
+	    dbgfmt_dwarf2->sizeof_offset*8);
 	output_value(&value, buf, dbgfmt_dwarf2->sizeof_offset,
-		     dbgfmt_dwarf2->sizeof_offset*8, 0,
 		     (unsigned long)(buf-*bufp), bc, 0, d);
 	buf += dbgfmt_dwarf2->sizeof_offset;
     }

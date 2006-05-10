@@ -662,15 +662,15 @@ cv_out_sym(yasm_symrec *sym, unsigned long off, yasm_bytecode *bc,
     yasm_value val;
 
     /* sym in its section */
-    yasm_value_init_sym(&val, sym);
+    yasm_value_init_sym(&val, sym, 32);
     val.section_rel = 1;
-    output_value(&val, *bufp, 4, 32, 0, off, bc, 0, d);
+    output_value(&val, *bufp, 4, off, bc, 0, d);
     *bufp += 4;
 
     /* section index */
-    yasm_value_init_sym(&val, sym);
+    yasm_value_init_sym(&val, sym, 16);
     val.seg_of = 1;
-    output_value(&val, *bufp, 2, 16, 0, off+4, bc, 0, d);
+    output_value(&val, *bufp, 2, off+4, bc, 0, d);
     *bufp += 2;
 }
 

@@ -367,6 +367,7 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand)
 {
     boolean carry = 0;
     wordptr op1, op2 = NULL;
+    N_int count;
 
     /* Always do computations with in full bit vector.
      * Bit vector results must be calculated through intermediate storage.
@@ -475,7 +476,10 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand)
 	case YASM_EXPR_SHR:
 	    if (operand->type == INTNUM_UL) {
 		BitVector_Copy(result, op1);
-		BitVector_Move_Right(result, (N_int)operand->val.ul);
+		carry = BitVector_msb_(op1);
+		count = (N_int)operand->val.ul;
+		while (count-- > 0)
+		    BitVector_shift_right(result, carry);
 	    } else	/* don't even bother, just zero result */
 		BitVector_Empty(result);
 	    break;

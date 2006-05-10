@@ -58,9 +58,6 @@ struct yasm_dataval {
 typedef struct bytecode_data {
     /* converted data (linked list) */
     yasm_datavalhead datahead;
-
-    /* final (converted) size of each value element (in bytes) */
-    unsigned int size;
 } bytecode_data;
 
 static void bc_data_destroy(void *contents);
@@ -152,7 +149,7 @@ bc_data_resolve(yasm_bytecode *bc, int save,
 	    case DV_EMPTY:
 		break;
 	    case DV_VALUE:
-		bc->len += bc_data->size;
+		bc->len += dv->data.val.size/8;
 		break;
 	    case DV_RAW:
 		bc->len += dv->data.raw.len;
@@ -180,17 +177,18 @@ bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     yasm_dataval *dv;
     unsigned char *bufp_orig = *bufp;
     yasm_intnum *intn;
+    unsigned int val_len;
 
     STAILQ_FOREACH(dv, &bc_data->datahead, link) {
 	switch (dv->type) {
 	    case DV_EMPTY:
 		break;
 	    case DV_VALUE:
-		if (output_value(&dv->data.val, *bufp, bc_data->size,
-				 (size_t)(bc_data->size*8), 0,
+		val_len = dv->data.val.size/8;
+		if (output_value(&dv->data.val, *bufp, val_len,
 				 (unsigned long)(*bufp-bufp_orig), bc, 1, d))
 		    return 1;
-		*bufp += bc_data->size;
+		*bufp += val_len;
 		break;
 	    case DV_RAW:
 		memcpy(*bufp, dv->data.raw.contents, dv->data.raw.len);
@@ -221,7 +219,6 @@ yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
 
 
     yasm_dvs_initialize(&data->datahead);
-    data->size = size;
 
     /* Prescan input data for length, etc.  Careful: this needs to be
      * precisely paired with the second loop.
@@ -304,6 +301,7 @@ yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
 		} else {
 		    dvo->type = dv->type;
 		    dvo->data.val = dv->data.val;   /* structure copy */
+		    dvo->data.val.size = size*8;    /* remember size */
 		    dvo = STAILQ_NEXT(dvo, link);
 		    len = 0;
 		}
@@ -362,7 +360,7 @@ yasm_dv_create_expr(yasm_expr *e)
     yasm_dataval *retval = yasm_xmalloc(sizeof(yasm_dataval));
 
     retval->type = DV_VALUE;
-    yasm_value_initialize(&retval->data.val, e);
+    yasm_value_initialize(&retval->data.val, e, 0);
 
     return retval;
 }

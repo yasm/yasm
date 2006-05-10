@@ -806,9 +806,9 @@ dwarf2_line_op_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	YASM_WRITE_8(buf, line_op->ext_opcode);
 	if (line_op->ext_operand) {
 	    yasm_value value;
-	    yasm_value_init_sym(&value, line_op->ext_operand);
+	    yasm_value_init_sym(&value, line_op->ext_operand,
+				line_op->ext_operandsize*8);
 	    output_value(&value, buf, line_op->ext_operandsize,
-			 line_op->ext_operandsize*8, 0,
 			 (unsigned long)(buf-*bufp), bc, 0, d);
 	    buf += line_op->ext_operandsize;
 	}

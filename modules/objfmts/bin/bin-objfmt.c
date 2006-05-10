@@ -136,7 +136,6 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
 
 static int
 bin_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
-			size_t valsize, int shift,
 			/*@unused@*/ unsigned long offset, yasm_bytecode *bc,
 			int warn, /*@null@*/ void *d)
 {
@@ -166,8 +165,8 @@ bin_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 	    (value->abs, 1, 1, 1, NULL, bin_objfmt_expr_xform, NULL, NULL);
 
     /* Output */
-    switch (yasm_value_output_basic(value, buf, destsize, valsize, shift,
-				    bc, warn, info->objfmt_bin->arch, NULL)) {
+    switch (yasm_value_output_basic(value, buf, destsize, bc, warn,
+				    info->objfmt_bin->arch, NULL)) {
 	case -1:
 	    return 1;
 	case 0:

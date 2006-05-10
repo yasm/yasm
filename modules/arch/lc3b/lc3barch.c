@@ -134,7 +134,7 @@ lc3b_get_fill(const yasm_arch *arch)
 static unsigned int
 lc3b_get_reg_size(/*@unused@*/ yasm_arch *arch, /*@unused@*/ unsigned long reg)
 {
-    return 2;
+    return 16;
 }
 
 static unsigned long
@@ -198,6 +198,6 @@ yasm_arch_module yasm_lc3b_LTX_arch = {
     lc3b_ea_create_expr,
     lc3b_machines,
     "lc3b",
-    2,
+    16,
     2
 };

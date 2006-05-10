@@ -2062,8 +2062,8 @@ x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc,
 	case X86_FAR:
 	    /* "FAR imm" target needs to become "seg imm:imm". */
 	    if (yasm_value_finalize_expr(&jmpfar->offset,
-					 yasm_expr_copy(op->data.val))
-		|| yasm_value_finalize_expr(&jmpfar->segment, op->data.val))
+					 yasm_expr_copy(op->data.val), 0)
+		|| yasm_value_finalize_expr(&jmpfar->segment, op->data.val, 16))
 		yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 			       N_("jump target expression too complex"));
 	    jmpfar->segment.seg_of = 1;
@@ -2073,10 +2073,10 @@ x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc,
 	    segment = yasm_expr_extract_segoff(&op->data.val);
 	    if (!segment)
 		yasm_internal_error(N_("didn't get SEG:OFF expression in jmpfar"));
-	    if (yasm_value_finalize_expr(&jmpfar->segment, segment))
+	    if (yasm_value_finalize_expr(&jmpfar->segment, segment, 16))
 		yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 			       N_("jump target segment too complex"));
-	    if (yasm_value_finalize_expr(&jmpfar->offset, op->data.val))
+	    if (yasm_value_finalize_expr(&jmpfar->offset, op->data.val, 0))
 		yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 			       N_("jump target offset too complex"));
 	    break;
@@ -2114,7 +2114,7 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 
     jmp = yasm_xmalloc(sizeof(x86_jmp));
     x86_finalize_common(&jmp->common, jinfo, mode_bits);
-    if (yasm_value_finalize_expr(&jmp->target, op->data.val))
+    if (yasm_value_finalize_expr(&jmp->target, op->data.val, 0))
 	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 		       N_("jump target expression too complex"));
     if (jmp->target.seg_of || jmp->target.rshift || jmp->target.curpos_rel)
@@ -2230,9 +2230,9 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     unsigned char im_sign;
     unsigned char spare;
     int i;
-    unsigned int size_lookup[] = {0, 1, 2, 4, 8, 10, 16, 0};
+    unsigned int size_lookup[] = {0, 8, 16, 32, 64, 80, 128, 0};
 
-    size_lookup[7] = mode_bits>>3;
+    size_lookup[7] = mode_bits;
 
     if (!info) {
 	num_info = 1;
@@ -2550,9 +2550,9 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	    /* Check for 64-bit effective address size in NASM mode */
 	    if (suffix == 0 && op->type == YASM_INSN__OPERAND_MEMORY) {
 		if ((info->operands[i] & OPEAS_MASK) == OPEAS_64) {
-		    if (op->data.ea->disp_len != 8)
+		    if (op->data.ea->disp.size != 64)
 			mismatch = 1;
-		} else if (op->data.ea->disp_len == 8)
+		} else if (op->data.ea->disp.size == 64)
 		    mismatch = 1;
 	    }
 
@@ -2694,7 +2694,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     if (info->modifiers & MOD_Imm8) {
 	imm = yasm_expr_create_ident(yasm_expr_int(
 	    yasm_intnum_create_uint(mod_data & 0xFF)), bc->line);
-	im_len = 1;
+	im_len = 8;
 	mod_data >>= 8;
     }
     if (info->modifiers & MOD_DOpS64R) {
@@ -2868,7 +2868,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     }
     if (imm) {
 	insn->imm = yasm_imm_create_expr(imm);
-	insn->imm->len = im_len;
+	insn->imm->val.size = im_len;
 	insn->imm->sign = im_sign;
     } else
 	insn->imm = NULL;

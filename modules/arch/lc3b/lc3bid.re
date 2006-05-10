@@ -239,7 +239,7 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 
     /* Copy what we can from info */
     insn = yasm_xmalloc(sizeof(lc3b_insn));
-    yasm_value_initialize(&insn->imm, NULL);
+    yasm_value_initialize(&insn->imm, NULL, 0);
     insn->imm_type = LC3B_IMM_NONE;
     insn->origin_prevbc = NULL;
     insn->opcode = info->opcode;
@@ -258,6 +258,7 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     if (operands) {
 	for(i = 0, op = yasm_ops_first(operands); op && i<info->num_operands;
 	    op = yasm_operand_next(op), i++) {
+
 	    switch ((int)(info->operands[i] & OPA_MASK)) {
 		case OPA_None:
 		    /* Throw away the operand contents */
@@ -275,10 +276,19 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		    insn->opcode |= ((unsigned int)(op->data.reg & 0x7)) << 6;
 		    break;
 		case OPA_Imm:
+		    insn->imm_type = (info->operands[i] & OPI_MASK)>>3;
 		    switch (op->type) {
 			case YASM_INSN__OPERAND_IMM:
+			    if (insn->imm_type == LC3B_IMM_6_WORD
+				|| insn->imm_type == LC3B_IMM_8
+				|| insn->imm_type == LC3B_IMM_9
+				|| insn->imm_type == LC3B_IMM_9_PC)
+				op->data.val = yasm_expr_create(YASM_EXPR_SHR,
+				    yasm_expr_expr(op->data.val),
+				    yasm_expr_int(yasm_intnum_create_uint(1)),
+				    op->data.val->line);
 			    if (yasm_value_finalize_expr(&insn->imm,
-							 op->data.val))
+							 op->data.val, 0))
 				yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 				    N_("immediate expression too complex"));
 			    break;
@@ -286,7 +296,7 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 			    if (yasm_value_finalize_expr(&insn->imm,
 				    yasm_expr_create_ident(yasm_expr_int(
 				    yasm_intnum_create_uint(op->data.reg & 0x7)),
-				    bc->line)))
+				    bc->line), 0))
 				yasm_internal_error(N_("reg expr too complex?"));
 			    break;
 			default:
@@ -296,16 +306,14 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		default:
 		    yasm_internal_error(N_("unknown operand action"));
 	    }
+	}
 
-	    insn->imm_type = (info->operands[i] & OPI_MASK)>>3;
-	    if (insn->imm_type == LC3B_IMM_9_PC) {
-		insn->origin_prevbc = prev_bc;
-		if (insn->imm.seg_of || insn->imm.rshift
-		    || insn->imm.curpos_rel)
-		    yasm_error_set(YASM_ERROR_VALUE,
-				   N_("invalid jump target"));
-		insn->imm.curpos_rel = 1;
-	    }
+	if (insn->imm_type == LC3B_IMM_9_PC) {
+	    insn->origin_prevbc = prev_bc;
+	    if (insn->imm.seg_of || insn->imm.rshift > 1
+		|| insn->imm.curpos_rel)
+		yasm_error_set(YASM_ERROR_VALUE, N_("invalid jump target"));
+	    insn->imm.curpos_rel = 1;
 	}
     }
 

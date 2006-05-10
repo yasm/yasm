@@ -64,6 +64,7 @@ cdef extern from "libyasm/coretype.h":
         unsigned int curpos_rel
         unsigned int ip_rel
         unsigned int section_rel
+        unsigned int size
 
     cdef struct yasm_linemap
     cdef struct yasm_valparam
@@ -115,8 +116,8 @@ cdef extern from "libyasm/coretype.h":
     ctypedef yasm_intnum*(*yasm_calc_bc_dist_func)(yasm_bytecode *precbc1,
             yasm_bytecode *precbc2)
     ctypedef int*(*yasm_output_value_func)(yasm_value *value, unsigned char
-            *buf, size_t destsize, size_t valsize, int shift, unsigned
-            long offset, yasm_bytecode *bc, int warn, void *d)
+            *buf, size_t destsize, unsigned long offset, yasm_bytecode *bc,
+            int warn, void *d)
     ctypedef int(*yasm_output_reloc_func)(yasm_symrec *sym,
             yasm_bytecode *bc, unsigned char *buf, size_t destsize,
             size_t valsize, int warn, void *d)

@@ -249,7 +249,7 @@ scan:
 	}
 
 	/* size specifiers */
-	'byte'		{ lvalp->int_info = 1; RETURN(SIZE_OVERRIDE); }
+	'byte'		{ lvalp->int_info = 8; RETURN(SIZE_OVERRIDE); }
 	'hword'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)/2;
 	    RETURN(SIZE_OVERRIDE);
@@ -266,14 +266,14 @@ scan:
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*4;
 	    RETURN(SIZE_OVERRIDE);
 	}
-	'tword'		{ lvalp->int_info = 10; RETURN(SIZE_OVERRIDE); }
+	'tword'		{ lvalp->int_info = 80; RETURN(SIZE_OVERRIDE); }
 	'dqword'	{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*8;
 	    RETURN(SIZE_OVERRIDE);
 	}
 
 	/* pseudo-instructions */
-	'db'		{ lvalp->int_info = 1; RETURN(DECLARE_DATA); }
+	'db'		{ lvalp->int_info = 8; RETURN(DECLARE_DATA); }
 	'dhw'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)/2;
 	    RETURN(DECLARE_DATA);
@@ -290,13 +290,13 @@ scan:
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*4;
 	    RETURN(DECLARE_DATA);
 	}
-	'dt'		{ lvalp->int_info = 10; RETURN(DECLARE_DATA); }
+	'dt'		{ lvalp->int_info = 80; RETURN(DECLARE_DATA); }
 	'ddq'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*8;
 	    RETURN(DECLARE_DATA);
 	}
 
-	'resb'		{ lvalp->int_info = 1; RETURN(RESERVE_SPACE); }
+	'resb'		{ lvalp->int_info = 8; RETURN(RESERVE_SPACE); }
 	'reshw'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)/2;
 	    RETURN(RESERVE_SPACE);
@@ -313,7 +313,7 @@ scan:
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*4;
 	    RETURN(RESERVE_SPACE);
 	}
-	'rest'		{ lvalp->int_info = 10; RETURN(RESERVE_SPACE); }
+	'rest'		{ lvalp->int_info = 80; RETURN(RESERVE_SPACE); }
 	'resdq'		{
 	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*8;
 	    RETURN(RESERVE_SPACE);
