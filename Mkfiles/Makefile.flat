@@ -22,6 +22,12 @@ LIBYASM_OBJS= \
  libyasm/arch.o \
  libyasm/assocdat.o \
  libyasm/bitvect.o \
+ libyasm/bc-align.o \
+ libyasm/bc-data.o \
+ libyasm/bc-incbin.o \
+ libyasm/bc-insn.o \
+ libyasm/bc-org.o \
+ libyasm/bc-reserve.o \
  libyasm/bytecode.o \
  libyasm/errwarn.o \
  libyasm/expr.o \

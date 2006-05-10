@@ -130,6 +130,24 @@
 				RelativePath="..\..\..\libyasm\bitvect.c">
 			</File>
 			<File
+				RelativePath="..\..\..\libyasm\bc-align.c">
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\bc-data.c">
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\bc-incbin.c">
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\bc-insn.c">
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\bc-org.c">
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\bc-reserve.c">
+			</File>
+			<File
 				RelativePath="..\..\..\libyasm\bytecode.c">
 			</File>
 			<File
