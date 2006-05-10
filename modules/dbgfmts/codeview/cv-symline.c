@@ -208,7 +208,8 @@ static const yasm_bytecode_callback cv8_symhead_bc_callback = {
     cv8_symhead_bc_print,
     yasm_bc_finalize_common,
     cv8_symhead_bc_resolve,
-    cv8_symhead_bc_tobytes
+    cv8_symhead_bc_tobytes,
+    0
 };
 
 static const yasm_bytecode_callback cv8_fileinfo_bc_callback = {
@@ -216,7 +217,8 @@ static const yasm_bytecode_callback cv8_fileinfo_bc_callback = {
     cv8_fileinfo_bc_print,
     yasm_bc_finalize_common,
     cv8_fileinfo_bc_resolve,
-    cv8_fileinfo_bc_tobytes
+    cv8_fileinfo_bc_tobytes,
+    0
 };
 
 static const yasm_bytecode_callback cv8_lineinfo_bc_callback = {
@@ -224,7 +226,8 @@ static const yasm_bytecode_callback cv8_lineinfo_bc_callback = {
     cv8_lineinfo_bc_print,
     yasm_bc_finalize_common,
     cv8_lineinfo_bc_resolve,
-    cv8_lineinfo_bc_tobytes
+    cv8_lineinfo_bc_tobytes,
+    0
 };
 
 static const yasm_bytecode_callback cv_sym_bc_callback = {
@@ -232,7 +235,8 @@ static const yasm_bytecode_callback cv_sym_bc_callback = {
     cv_sym_bc_print,
     yasm_bc_finalize_common,
     cv_sym_bc_resolve,
-    cv_sym_bc_tobytes
+    cv_sym_bc_tobytes,
+    0
 };
 
 static cv8_symhead *cv8_add_symhead(yasm_dbgfmt_cv *dbgfmt_cv,

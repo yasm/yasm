@@ -146,7 +146,8 @@ static const yasm_bytecode_callback stabs_bc_str_callback = {
     stabs_bc_str_print,
     yasm_bc_finalize_common,
     stabs_bc_str_resolve,
-    stabs_bc_str_tobytes
+    stabs_bc_str_tobytes,
+    0
 };
 
 static const yasm_bytecode_callback stabs_bc_stab_callback = {
@@ -154,7 +155,8 @@ static const yasm_bytecode_callback stabs_bc_stab_callback = {
     stabs_bc_stab_print,
     yasm_bc_finalize_common,
     stabs_bc_stab_resolve,
-    stabs_bc_stab_tobytes
+    stabs_bc_stab_tobytes,
+    0
 };
 
 yasm_dbgfmt_module yasm_stabs_LTX_dbgfmt;

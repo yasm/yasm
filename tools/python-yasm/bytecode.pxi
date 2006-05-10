@@ -121,6 +121,7 @@ cdef extern from "libyasm/bc-int.h":
         int (*tobytes) (yasm_bytecode *bc, unsigned char **bufp, void *d,
 	                yasm_output_value_func output_value,
 		        yasm_output_reloc_func output_reloc)
+        int reserve
 
     cdef struct yasm_bytecode:
         yasm_bytecode_callback *callback

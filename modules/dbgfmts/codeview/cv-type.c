@@ -496,7 +496,8 @@ static const yasm_bytecode_callback cv_type_bc_callback = {
     cv_type_bc_print,
     yasm_bc_finalize_common,
     cv_type_bc_resolve,
-    cv_type_bc_tobytes
+    cv_type_bc_tobytes,
+    0
 };
 
 static cv_type *cv_type_create(yasm_dbgfmt_cv *dbgfmt_cv, unsigned long indx);

@@ -83,7 +83,8 @@ static const yasm_bytecode_callback x86_bc_callback_insn = {
     x86_bc_insn_print,
     yasm_bc_finalize_common,
     x86_bc_insn_resolve,
-    x86_bc_insn_tobytes
+    x86_bc_insn_tobytes,
+    0
 };
 
 static const yasm_bytecode_callback x86_bc_callback_jmp = {
@@ -91,7 +92,8 @@ static const yasm_bytecode_callback x86_bc_callback_jmp = {
     x86_bc_jmp_print,
     yasm_bc_finalize_common,
     x86_bc_jmp_resolve,
-    x86_bc_jmp_tobytes
+    x86_bc_jmp_tobytes,
+    0
 };
 
 static const yasm_bytecode_callback x86_bc_callback_jmpfar = {
@@ -99,7 +101,8 @@ static const yasm_bytecode_callback x86_bc_callback_jmpfar = {
     x86_bc_jmpfar_print,
     yasm_bc_finalize_common,
     x86_bc_jmpfar_resolve,
-    x86_bc_jmpfar_tobytes
+    x86_bc_jmpfar_tobytes,
+    0
 };
 
 int

@@ -3,6 +3,12 @@
 libyasm_a_SOURCES += libyasm/arch.c
 libyasm_a_SOURCES += libyasm/assocdat.c
 libyasm_a_SOURCES += libyasm/bitvect.c
+libyasm_a_SOURCES += libyasm/bc-align.c
+libyasm_a_SOURCES += libyasm/bc-data.c
+libyasm_a_SOURCES += libyasm/bc-incbin.c
+libyasm_a_SOURCES += libyasm/bc-insn.c
+libyasm_a_SOURCES += libyasm/bc-org.c
+libyasm_a_SOURCES += libyasm/bc-reserve.c
 libyasm_a_SOURCES += libyasm/bytecode.c
 libyasm_a_SOURCES += libyasm/errwarn.c
 libyasm_a_SOURCES += libyasm/expr.c

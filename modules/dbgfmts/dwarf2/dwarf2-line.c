@@ -153,7 +153,8 @@ static const yasm_bytecode_callback dwarf2_spp_bc_callback = {
     dwarf2_spp_bc_print,
     yasm_bc_finalize_common,
     dwarf2_spp_bc_resolve,
-    dwarf2_spp_bc_tobytes
+    dwarf2_spp_bc_tobytes,
+    0
 };
 
 static const yasm_bytecode_callback dwarf2_line_op_bc_callback = {
@@ -161,7 +162,8 @@ static const yasm_bytecode_callback dwarf2_line_op_bc_callback = {
     dwarf2_line_op_bc_print,
     yasm_bc_finalize_common,
     dwarf2_line_op_bc_resolve,
-    dwarf2_line_op_bc_tobytes
+    dwarf2_line_op_bc_tobytes,
+    0
 };
 
 

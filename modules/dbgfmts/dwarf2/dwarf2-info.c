@@ -222,7 +222,8 @@ static const yasm_bytecode_callback dwarf2_abbrev_bc_callback = {
     dwarf2_abbrev_bc_print,
     yasm_bc_finalize_common,
     dwarf2_abbrev_bc_resolve,
-    dwarf2_abbrev_bc_tobytes
+    dwarf2_abbrev_bc_tobytes,
+    0
 };
 
 

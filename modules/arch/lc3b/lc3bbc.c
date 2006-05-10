@@ -52,7 +52,8 @@ static const yasm_bytecode_callback lc3b_bc_callback_insn = {
     lc3b_bc_insn_print,
     yasm_bc_finalize_common,
     lc3b_bc_insn_resolve,
-    lc3b_bc_insn_tobytes
+    lc3b_bc_insn_tobytes,
+    0
 };
 
 

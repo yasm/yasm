@@ -59,7 +59,8 @@ static const yasm_bytecode_callback dwarf2_head_bc_callback = {
     dwarf2_head_bc_print,
     yasm_bc_finalize_common,
     dwarf2_head_bc_resolve,
-    dwarf2_head_bc_tobytes
+    dwarf2_head_bc_tobytes,
+    0
 };
 
 /* Section data callback function prototypes */
