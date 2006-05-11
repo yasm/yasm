@@ -213,9 +213,10 @@ nasm_listfmt_output(yasm_listfmt *listfmt, FILE *f, yasm_linemap *linemap,
 		/* convert bytecode into bytes, recording relocs along the
 		 * way
 		 */
-		bigbuf = yasm_bc_tobytes(bc, buf, &size, &multiple, &gap,
-					 &info, nasm_listfmt_output_value,
-					 NULL);
+		bigbuf = yasm_bc_tobytes(bc, buf, &size, &gap, &info,
+					 nasm_listfmt_output_value, NULL);
+		yasm_bc_get_multiple(bc, &multiple, NULL);
+		size /= multiple;
 
 		/* output bytes with reloc information */
 		origp = bigbuf ? bigbuf : buf;

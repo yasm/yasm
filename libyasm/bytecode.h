@@ -342,8 +342,6 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
  * \param buf		byte representation destination buffer
  * \param bufsize	size of buf (in bytes) prior to call; size of the
  *			generated data after call
- * \param multiple	number of times the data should be duplicated when
- *			written to the object file [output]
  * \param gap		if nonzero, indicates the data does not really need to
  *			exist in the object file; if nonzero, contents of buf
  *			are undefined [output]
@@ -361,10 +359,18 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
  */
 /*@null@*/ /*@only@*/ unsigned char *yasm_bc_tobytes
     (yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
-     /*@out@*/ unsigned long *multiple, /*@out@*/ int *gap, void *d,
-     yasm_output_value_func output_value,
+     /*@out@*/ int *gap, void *d, yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc)
     /*@sets *buf@*/;
+
+/** Get the bytecode multiple value as an unsigned long integer.
+ * \param bc		bytecode
+ * \param multiple	multiple value (output)
+ * \param calc_bc_dist	bytecode distance calculation function (optional)
+ * \return 1 on error (set with yasm__error), 0 on success.
+ */
+int yasm_bc_get_multiple(yasm_bytecode *bc, /*@out@*/ unsigned long *multiple,
+			 /*@null@*/ yasm_calc_bc_dist_func calc_bc_dist);
 
 /** Create a new data value from an expression.
  * \param expn	expression

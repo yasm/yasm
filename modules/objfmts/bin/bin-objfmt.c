@@ -189,13 +189,11 @@ bin_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     /*@null@*/ bin_objfmt_output_info *info = (bin_objfmt_output_info *)d;
     /*@null@*/ /*@only@*/ unsigned char *bigbuf;
     unsigned long size = REGULAR_OUTBUF_SIZE;
-    unsigned long multiple;
-    unsigned long i;
     int gap;
 
     assert(info != NULL);
 
-    bigbuf = yasm_bc_tobytes(bc, info->buf, &size, &multiple, &gap, info,
+    bigbuf = yasm_bc_tobytes(bc, info->buf, &size, &gap, info,
 			     bin_objfmt_output_value, NULL);
 
     /* Don't bother doing anything else if size ended up being 0. */
@@ -212,16 +210,15 @@ bin_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 	    N_("uninitialized space declared in code/data section: zeroing"));
 	/* Write out in chunks */
 	memset(info->buf, 0, REGULAR_OUTBUF_SIZE);
-	left = multiple*size;
+	left = size;
 	while (left > REGULAR_OUTBUF_SIZE) {
 	    fwrite(info->buf, REGULAR_OUTBUF_SIZE, 1, info->f);
 	    left -= REGULAR_OUTBUF_SIZE;
 	}
 	fwrite(info->buf, left, 1, info->f);
     } else {
-	/* Output multiple copies of buf (or bigbuf if non-NULL) to file */
-	for (i=0; i<multiple; i++)
-	    fwrite(bigbuf ? bigbuf : info->buf, (size_t)size, 1, info->f);
+	/* Output buf (or bigbuf if non-NULL) to file */
+	fwrite(bigbuf ? bigbuf : info->buf, (size_t)size, 1, info->f);
     }
 
     /* If bigbuf was allocated, free it */
