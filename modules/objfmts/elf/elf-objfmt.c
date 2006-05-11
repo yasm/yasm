@@ -406,14 +406,12 @@ elf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     unsigned char buf[256];
     /*@null@*/ /*@only@*/ unsigned char *bigbuf;
     unsigned long size = 256;
-    unsigned long multiple;
-    unsigned long i;
     int gap;
 
     if (info == NULL)
 	yasm_internal_error("null info struct");
 
-    bigbuf = yasm_bc_tobytes(bc, buf, &size, &multiple, &gap, info,
+    bigbuf = yasm_bc_tobytes(bc, buf, &size, &gap, info,
 			     elf_objfmt_output_value, elf_objfmt_output_reloc);
 
     /* Don't bother doing anything else if size ended up being 0. */
@@ -424,13 +422,8 @@ elf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     }
     else {
 	yasm_intnum *bcsize = yasm_intnum_create_uint(size);
-	yasm_intnum *mult = yasm_intnum_create_uint(multiple);
-
-	yasm_intnum_calc(bcsize, YASM_EXPR_MUL, mult);
 	elf_secthead_add_size(info->shead, bcsize);
-
 	yasm_intnum_destroy(bcsize);
-	yasm_intnum_destroy(mult);
     }
 
     /* Warn that gaps are converted to 0 and write out the 0's. */
@@ -440,16 +433,15 @@ elf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 	    N_("uninitialized space declared in code/data section: zeroing"));
 	/* Write out in chunks */
 	memset(buf, 0, 256);
-	left = multiple*size;
+	left = size;
 	while (left > 256) {
 	    fwrite(buf, 256, 1, info->f);
 	    left -= 256;
 	}
 	fwrite(buf, left, 1, info->f);
     } else {
-	/* Output multiple copies of buf (or bigbuf if non-NULL) to file */
-	for (i=0; i<multiple; i++)
-	    fwrite(bigbuf ? bigbuf : buf, (size_t)size, 1, info->f);
+	/* Output buf (or bigbuf if non-NULL) to file */
+	fwrite(bigbuf ? bigbuf : buf, (size_t)size, 1, info->f);
     }
 
     /* If bigbuf was allocated, free it */

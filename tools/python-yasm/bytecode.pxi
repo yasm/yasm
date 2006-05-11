@@ -96,10 +96,11 @@ cdef extern from "libyasm/bytecode.h":
     cdef yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
             yasm_calc_bc_dist_func calc_bc_dist)
     cdef unsigned char* yasm_bc_tobytes(yasm_bytecode *bc,
-            unsigned char *buf, unsigned long *bufsize,
-            unsigned long *multiple, int *gap, void *d,
+            unsigned char *buf, unsigned long *bufsize, int *gap, void *d,
             yasm_output_value_func output_value,
             yasm_output_reloc_func output_reloc)
+    cdef int yasm_bc_get_multiple(yasm_bytecode *bc, unsigned long *multiple,
+                                  yasm_calc_bc_dist_func calc_bc_dist)
 
     cdef yasm_dataval* yasm_dv_create_expr(yasm_expr *expn)
     cdef yasm_dataval* yasm_dv_create_string(char *contents, size_t len)

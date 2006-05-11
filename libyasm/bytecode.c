@@ -240,64 +240,72 @@ yasm_bc_resolve(yasm_bytecode *bc, int save,
 
 /*@null@*/ /*@only@*/ unsigned char *
 yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
-		/*@out@*/ unsigned long *multiple, /*@out@*/ int *gap,
-		void *d, yasm_output_value_func output_value,
+		/*@out@*/ int *gap, void *d,
+		yasm_output_value_func output_value,
 		/*@null@*/ yasm_output_reloc_func output_reloc)
     /*@sets *buf@*/
 {
     /*@only@*/ /*@null@*/ unsigned char *mybuf = NULL;
     unsigned char *origbuf, *destbuf;
-    /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
-    unsigned long datasize;
+    unsigned long datasize, multiple, i;
     int error = 0;
 
-    if (bc->multiple) {
-	num = yasm_expr_get_intnum(&bc->multiple, NULL);
-	if (!num)
-	    yasm_internal_error(
-		N_("could not determine multiple in bc_tobytes"));
-	if (yasm_intnum_sign(num) < 0) {
-	    yasm_error_set(YASM_ERROR_VALUE, N_("multiple is negative"));
-	    *bufsize = 0;
-	    return NULL;
-	}
-	*multiple = yasm_intnum_get_uint(num);
-	if (*multiple == 0) {
-	    *bufsize = 0;
-	    return NULL;
-	}
-    } else
-	*multiple = 1;
-
-    datasize = bc->len / (*multiple);
+    if (yasm_bc_get_multiple(bc, &multiple, NULL) || multiple == 0) {
+	*bufsize = 0;
+	return NULL;
+    }
 
     /* special case for reserve bytecodes */
     if (bc->callback->reserve) {
-    	*bufsize = datasize;
+	*bufsize = bc->len;
 	*gap = 1;
 	return NULL;	/* we didn't allocate a buffer */
     }
-
     *gap = 0;
 
-    if (*bufsize < datasize) {
+    if (*bufsize < bc->len) {
 	mybuf = yasm_xmalloc(bc->len);
-	origbuf = mybuf;
 	destbuf = mybuf;
-    } else {
-	origbuf = buf;
+    } else
 	destbuf = buf;
-    }
-    *bufsize = datasize;
+
+    *bufsize = bc->len;
+    datasize = bc->len / multiple;
 
     if (!bc->callback)
 	yasm_internal_error(N_("got empty bytecode in bc_tobytes"));
-    else
+    else for (i=0; i<multiple; i++) {
+	origbuf = destbuf;
 	error = bc->callback->tobytes(bc, &destbuf, d, output_value,
 				      output_reloc);
 
-    if (!error && ((unsigned long)(destbuf - origbuf) != datasize))
-	yasm_internal_error(
-	    N_("written length does not match optimized length"));
+	if (!error && ((unsigned long)(destbuf - origbuf) != datasize))
+	    yasm_internal_error(
+		N_("written length does not match optimized length"));
+    }
+
     return mybuf;
+}
+
+int
+yasm_bc_get_multiple(yasm_bytecode *bc, unsigned long *multiple,
+		     yasm_calc_bc_dist_func calc_bc_dist)
+{
+    /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
+
+    *multiple = 1;
+    if (bc->multiple) {
+	num = yasm_expr_get_intnum(&bc->multiple, calc_bc_dist);
+	if (!num) {
+	    yasm_error_set(YASM_ERROR_VALUE,
+			   N_("could not determine multiple"));
+	    return 1;
+	}
+	if (yasm_intnum_sign(num) < 0) {
+	    yasm_error_set(YASM_ERROR_VALUE, N_("multiple is negative"));
+	    return 1;
+	}
+	*multiple = yasm_intnum_get_uint(num);
+    }
+    return 0;
 }
