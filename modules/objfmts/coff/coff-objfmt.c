@@ -92,6 +92,7 @@ typedef struct coff_reloc {
 #define COFF_STYP_STD_MASK	0x000003FFUL
 #define COFF_STYP_ALIGN_MASK	0x00F00000UL
 #define COFF_STYP_ALIGN_SHIFT	20
+#define COFF_STYP_NRELOC_OVFL	0x01000000UL
 #define COFF_STYP_DISCARD	0x02000000UL
 #define COFF_STYP_NOCACHE	0x04000000UL
 #define COFF_STYP_NOPAGE	0x08000000UL
@@ -99,7 +100,7 @@ typedef struct coff_reloc {
 #define COFF_STYP_EXECUTE	0x20000000UL
 #define COFF_STYP_READ		0x40000000UL
 #define COFF_STYP_WRITE		0x80000000UL
-#define COFF_STYP_WIN32_MASK	0xFE000000UL
+#define COFF_STYP_WIN32_MASK	0xFF000000UL
 
 #define COFF_FLAG_NOBASE	(1UL<<0)    /* Use no-base (NB) relocs */
 
@@ -731,6 +732,7 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     /*@dependent@*/ /*@null@*/ coff_section_data *csd;
     long pos;
     coff_reloc *reloc;
+    unsigned char *localbuf;
 
     /* Don't output absolute sections into the section table */
     if (yasm_section_is_absolute(sect))
@@ -800,10 +802,21 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     }
     csd->relptr = (unsigned long)pos;
 
+    /* If >=64K relocs (for Win32/64), we set a flag in the section header
+     * (NRELOC_OVFL) and the first relocation contains the number of relocs.
+     */
+    if (csd->nreloc >= 64*1024 && info->objfmt_coff->win32) {
+	localbuf = info->buf;
+	YASM_WRITE_32_L(localbuf, csd->nreloc+1);   /* address of relocation */
+	YASM_WRITE_32_L(localbuf, 0);		/* relocated symbol */
+	YASM_WRITE_16_L(localbuf, 0);		/* type of relocation */
+	fwrite(info->buf, 10, 1, info->f);
+    }
+
     reloc = (coff_reloc *)yasm_section_relocs_first(sect);
     while (reloc) {
-	unsigned char *localbuf = info->buf;
 	/*@null@*/ coff_symrec_data *csymd;
+	localbuf = info->buf;
 
 	csymd = yasm_symrec_get_data(reloc->reloc.sym, &coff_symrec_data_cb);
 	if (!csymd)
@@ -897,9 +910,13 @@ coff_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     YASM_WRITE_32_L(localbuf, csd->relptr);	/* file ptr to relocs */
     YASM_WRITE_32_L(localbuf, 0);		/* file ptr to line nums */
     if (csd->nreloc >= 64*1024) {
-	yasm__warning(YASM_WARN_GENERAL, 0,
-		      N_("too many relocations in section `%s'"),
-		      yasm_section_get_name(sect));
+	/* Win32/64 has special handling for this case. */
+	if (objfmt_coff->win32)
+	    csd->flags |= COFF_STYP_NRELOC_OVFL;
+	else
+	    yasm__warning(YASM_WARN_GENERAL, 0,
+			  N_("too many relocations in section `%s'"),
+			  yasm_section_get_name(sect));
 	YASM_WRITE_16_L(localbuf, 0xFFFF);	/* max out */
     } else
 	YASM_WRITE_16_L(localbuf, csd->nreloc); /* num of relocation entries */
