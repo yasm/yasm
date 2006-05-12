@@ -427,7 +427,7 @@ yasm_value_finalize(yasm_value *value)
 
 int
 yasm_value_output_basic(yasm_value *value, /*@out@*/ unsigned char *buf,
-			unsigned int destsize, yasm_bytecode *bc, int warn,
+			size_t destsize, yasm_bytecode *bc, int warn,
 			yasm_arch *arch, yasm_calc_bc_dist_func calc_bc_dist)
 {
     /*@dependent@*/ /*@null@*/ yasm_intnum *intn = NULL;
