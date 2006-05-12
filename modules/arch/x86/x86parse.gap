@@ -880,7 +880,7 @@ CPU_ALIAS	opteron		hammer
 CPU_ALIAS	athlon64	hammer
 CPU_ALIAS	athlon-64	hammer
 CPU		prescott CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
-			CPU_K6|CPU_Athlon|CPU_Hammer|CPU_FPU|CPU_MMX|\
+			CPU_K6|CPU_Athlon|CPU_Hammer|CPU_EM64T|CPU_FPU|CPU_MMX|\
 			CPU_SSE|CPU_SSE2|CPU_SSE3|CPU_3DNow|CPU_SMM|\
 			CPU_Prot|CPU_Priv
 
@@ -903,6 +903,7 @@ CPU_FEATURE	obs	CPU_Obs
 CPU_FEATURE	priv	CPU_Priv
 CPU_FEATURE	svm	CPU_SVM
 CPU_FEATURE	padlock	CPU_PadLock
+CPU_FEATURE	em64t	CPU_EM64T
 
 
 # TARGETMOD parameters:
