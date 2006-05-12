@@ -1186,6 +1186,8 @@ static const x86_insn_info call_insn[] = {
       {OPT_Mem|OPS_16|OPTM_Far|OPA_EA, 0, 0} },
     { CPU_386, 0, 32, 0, 0, 1, {0xFF, 0, 0}, 3, 1,
       {OPT_Mem|OPS_32|OPTM_Far|OPA_EA, 0, 0} },
+    { CPU_EM64T|CPU_64, 0, 64, 0, 0, 1, {0xFF, 0, 0}, 3, 1,
+      {OPT_Mem|OPS_64|OPTM_Far|OPA_EA, 0, 0} },
     { CPU_Any, 0, 0, 0, 0, 1, {0xFF, 0, 0}, 3, 1,
       {OPT_Mem|OPS_Any|OPTM_Far|OPA_EA, 0, 0} }
 };
@@ -1238,6 +1240,8 @@ static const x86_insn_info jmp_insn[] = {
       {OPT_Mem|OPS_16|OPTM_Far|OPA_EA, 0, 0} },
     { CPU_386, 0, 32, 0, 0, 1, {0xFF, 0, 0}, 5, 1,
       {OPT_Mem|OPS_32|OPTM_Far|OPA_EA, 0, 0} },
+    { CPU_EM64T|CPU_64, 0, 64, 0, 0, 1, {0xFF, 0, 0}, 5, 1,
+      {OPT_Mem|OPS_64|OPTM_Far|OPA_EA, 0, 0} },
     { CPU_Any, 0, 0, 0, 0, 1, {0xFF, 0, 0}, 5, 1,
       {OPT_Mem|OPS_Any|OPTM_Far|OPA_EA, 0, 0} }
 };
