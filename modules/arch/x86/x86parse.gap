@@ -80,11 +80,11 @@ INSN	-	clts	NONE	twobyte	0x0F06		CPU_286|CPU_Priv
 INSN	-	cmc	NONE	onebyte	0x00F5		CPU_Any
 INSN	-	lahf	NONE	onebyte	0x009F		CPU_Any
 INSN	-	sahf	NONE	onebyte	0x009E		CPU_Any
-INSN	-	pushf	NONE	onebyte	0x009C		CPU_Any
-INSN	nasm	pushfd	NONE	onebyte	0x209C		CPU_386
-INSN	gas	pushfl	NONE	onebyte	0x209C		CPU_386
-INSN	-	pushfw	NONE	onebyte	0x109C		CPU_Any
-INSN	-	pushfq	NONE	onebyte	0x409C		CPU_Hammer|CPU_64
+INSN	-	pushf	NONE	onebyte	0x40009C	CPU_Any
+INSN	nasm	pushfd	NONE	onebyte	0x00209C	CPU_386|CPU_Not64
+INSN	gas	pushfl	NONE	onebyte	0x00209C	CPU_386|CPU_Not64
+INSN	-	pushfw	NONE	onebyte	0x40109C	CPU_Any
+INSN	-	pushfq	NONE	onebyte	0x40409C	CPU_Hammer|CPU_64
 INSN	-	popf	NONE	onebyte	0x40009D	CPU_Any
 INSN	nasm	popfd	NONE	onebyte	0x00209D	CPU_386|CPU_Not64
 INSN	gas	popfl   NONE	onebyte	0x00209D	CPU_386|CPU_Not64
