@@ -650,6 +650,43 @@ yasm_intnum_check_size(const yasm_intnum *intn, size_t size, size_t rshift,
     return (Set_Max(val) < (long)size);
 }
 
+int
+yasm_intnum_in_range(const yasm_intnum *intn, long low, long high)
+{
+    wordptr val = result;
+    wordptr lval = op1static;
+    wordptr hval = op2static;
+
+    /* If not already a bitvect, convert value to be written to a bitvect */
+    if (intn->type == INTNUM_BV)
+	val = intn->val.bv;
+    else {
+	BitVector_Empty(val);
+	BitVector_Chunk_Store(val, 32, 0, intn->val.ul);
+    }
+
+    /* Convert high and low to bitvects */
+    BitVector_Empty(lval);
+    if (low >= 0)
+	BitVector_Chunk_Store(lval, 32, 0, (unsigned long)low);
+    else {
+	BitVector_Chunk_Store(lval, 32, 0, (unsigned long)(-low));
+	BitVector_Negate(lval, lval);
+    }
+
+    BitVector_Empty(hval);
+    if (high >= 0)
+	BitVector_Chunk_Store(hval, 32, 0, (unsigned long)high);
+    else {
+	BitVector_Chunk_Store(hval, 32, 0, (unsigned long)(-high));
+	BitVector_Negate(hval, hval);
+    }
+
+    /* Compare! */
+    return (BitVector_Compare(val, lval) >= 0
+	    && BitVector_Compare(val, hval) <= 0);
+}
+
 unsigned long
 yasm_intnum_get_leb128(const yasm_intnum *intn, unsigned char *ptr, int sign)
 {

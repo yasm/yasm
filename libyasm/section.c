@@ -28,6 +28,8 @@
 #include "util.h"
 /*@unused@*/ RCSID("$Id$");
 
+#include <limits.h>
+
 #include "coretype.h"
 #include "valparam.h"
 #include "assocdat.h"
@@ -296,14 +298,11 @@ void
 yasm_object_finalize(yasm_object *object)
 {
     yasm_section *sect;
-    unsigned long bc_index = 0;
 
     /* Iterate through sections */
     STAILQ_FOREACH(sect, &object->sections, link) {
 	yasm_bytecode *cur = STAILQ_FIRST(&sect->bcs);
 	yasm_bytecode *prev;
-
-	cur->bc_index = bc_index++;
 
 	/* Skip our locally created empty bytecode first. */
 	prev = cur;
@@ -311,7 +310,6 @@ yasm_object_finalize(yasm_object *object)
 
 	/* Iterate through the remainder, if any. */
 	while (cur) {
-	    cur->bc_index = bc_index++;
 	    /* Finalize */
 	    yasm_bc_finalize(cur, prev);
 	    prev = cur;
@@ -541,7 +539,7 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
 
 /*
  * Robertson (1977) optimizer
- * Based on the algorithm given in:
+ * Based (somewhat loosely) on the algorithm given in:
  *   MRC Technical Summary Report # 1779
  *   CODE GENERATION FOR SHORT/LONG ADDRESS MACHINES
  *   Edward L. Robertson
@@ -567,109 +565,127 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
  *
  * Each span keeps track of:
  *  - Associated bytecode (bytecode that depends on the span length)
+ *  - Active/inactive state (starts out active)
  *  - Sign (negative/positive; negative being "backwards" in address)
  *  - Current length in bytes
  *  - New length in bytes
  *  - Negative/Positive thresholds
  *  - Span ID (unique within each bytecode)
- *    = 0 -- need to update bytecode length on any span length change
- *    > 0 -- only need to update bytecode length if exceeds thresholds
- *    Span ID 0 is reserved for times, org, and align; other IDs can be
- *    arbitrarily chosen by the bytecode.
  *
- * How org, align, and times are handled:
+ * How org and align are handled:
  * Some portions are critical values that must not depend on any bytecode
  * offset (either relative or absolute).
  *
- * ALIGN: Start with 0 length.  Span from 0 to align bytecode, update
- *        on any change (span ID 0).  Alignment is critical value.
- * ORG:   0 length (always).  Bump offset to org value.  Span from 0 to
- *        org bytecode, update on any change (span ID 0).  If span's length
- *        exceeds org value, error.  ORG value is critical value.
+ * ALIGN: 0 length (always).  Bump offset to alignment.  Span from 0 to
+ *        align bytecode, update on any change.  If span length
+ *        increases past alignment, increase offset by alignment and update
+ *        dependent spans.  Alignment is critical value.
+ * ORG:   Same as align, but if span's length exceeds org value, error.
+ *        ORG value is critical value.
+ *
+ * How times is handled:
+ *
  * TIMES: Handled separately from bytecode "raw" size.  If not span-dependent,
  *        trivial (just multiplied in at any bytecode size increase).  Span
- *        dependent times update on any change (span ID 0).
+ *        dependent times update on any change (span ID 0).  If the resultant
+ *        next bytecode offset would be less than the old next bytecode offset,
+ *        error.  Otherwise increase offset and update dependent spans.
+ *
+ * To reduce interval tree size, a first expansion pass is performed
+ * before the spans are added to the tree.
  *
  * Basic algorithm outline:
  *
  * 1. Initialization:
  *  a. Number bytecodes sequentially (via bc_index) and calculate offsets
- *     of all bytecodes assuming minimum length (done in object_finalize).
+ *     of all bytecodes assuming minimum length, building a list of all
+ *     dependent spans as we go.
  *     "minimum" here means absolute minimum:
- *      - align and org bytecodes will be 0 length
+ *      - align 0 length
  *      - times values (with span-dependent values) assumed to be 0
- *  b. Second pass through bytecodes continues to assume absolute minimum
- *     bytecode length but builds spans if necessary.  To reduce interval
- *     tree size, this step avoids building spans for things that are
- *     considered "certainly long" such as inter-section references or if
- *     the distance calculated based on minimum length is already greater
- *     than the long threshold.  If already certainly long, bytecode is
- *     updated with new length and subsequent bytecode offsets are updated
- *     with a running delta.
- *  c. Iterate over spans.  Update span's length based on new bytecode offsets
- *     determined in 1b.  If span's length exceeds long threshold, add that
+ *      - org bumps offset
+ *  b. Iterate over spans.  Set span length based on bytecode offsets
+ *     determined in 1a.  If span is "certainly" long because the span
+ *     is an absolute reference to another section (or external) or the
+ *     distance calculated based on the minimum length is greater than the
+ *     span's threshold, expand the span's bytecode, and if no further
+ *     expansion can result, delete the span.  Otherwise (or if the
+ *     expansion results in another threshold of expansion), add span to
+ *     interval tree.
+ *  c. Iterate over bytecodes to update all bytecode offsets based on new
+ *     (expanded) lengths calculated in 1b.
+ *  d. Iterate over spans.  Update span's length based on new bytecode offsets
+ *     determined in 1c.  If span's length exceeds long threshold, add that
  *     span to Q.
  * 2. Main loop:
  *   While Q not empty:
  *     Expand BC dependent on span at head of Q (and remove span from Q).
- *     For each span that contains BC:
+ *     Update span:
+ *       If BC no longer dependent on span, mark span as inactive.
+ *       If BC has new thresholds for span, update span.
+ *     If BC increased in size, for each active span that contains BC:
  *       Increase span length by difference between short and long BC length.
  *       If span exceeds long threshold (or is flagged to recalculate on any
  *       change), add it to tail of Q.
  * 3. Final pass over bytecodes to generate final offsets.
  */
 
-void
-yasm_object_optimize(yasm_object *object, yasm_arch *arch)
+typedef struct yasm_span {
+    /*@reldef@*/ STAILQ_ENTRY(yasm_span) link;
+
+    /*@dependent@*/ yasm_bytecode *bc;
+
+    /*@owned@*/ yasm_expr *dependent;
+
+    /* Special handling: see descriptions above */
+    enum {
+	NOT_SPECIAL = 0,
+	SPECIAL_ALIGN,
+	SPECIAL_ORG,
+	SPECIAL_TIMES
+    } special;
+
+    long cur_val;
+    long new_val;
+
+    long neg_thres;
+    long pos_thres;
+
+    int id;
+
+    int active;
+} yasm_span;
+
+typedef struct optimize_data {
+    /*@reldef@*/ STAILQ_HEAD(yasm_spanhead, yasm_span) spans;
+} optimize_data;
+
+static void
+optimize_add_span(void *add_span_data, yasm_bytecode *bc, int id,
+		  /*@only@*/ yasm_expr *dependent, long neg_thres,
+		  long pos_thres)
+{
+    optimize_data *optd = (optimize_data *)add_span_data;
+    yasm_span *span = yasm_xmalloc(sizeof(yasm_span));
+
+    span->bc = bc;
+    span->dependent = dependent;
+    span->special = NOT_SPECIAL;
+    span->cur_val = 0;
+    span->new_val = 0;
+    span->neg_thres = neg_thres;
+    span->pos_thres = pos_thres;
+    span->id = id;
+    span->active = 1;
+
+    STAILQ_INSERT_TAIL(&optd->spans, span, link);
+}
+
+static void
+update_all_bc_offsets(yasm_object *object)
 {
     yasm_section *sect;
-    int saw_error = 0;
 
-    /* Step 1b */
-    STAILQ_FOREACH(sect, &object->sections, link) {
-	unsigned long i;
-
-	yasm_bytecode *cur = STAILQ_FIRST(&sect->bcs);
-	yasm_bytecode *prev;
-
-	/* Skip our locally created empty bytecode first. */
-	prev = cur;
-	cur = STAILQ_NEXT(cur, link);
-
-	/* Iterate through the remainder, if any. */
-	while (cur) {
-	    unsigned long long_len;
-	    /*@only@*/ /*@null@*/ yasm_expr *critical;
-	    long neg_thres;
-	    long pos_thres;
-	    int retval;
-
-	    switch (yasm_bc_calc_len(cur, &long_len, &critical, &neg_thres,
-				     &pos_thres)) {
-		case -1:
-		    saw_error = 1;
-		    break;
-		case 0:
-		    /* No special action required */
-		    break;
-		case 1:
-		    /* Need to build a span */
-		    yasm_bc_set_long(cur, long_len);
-		    yasm_expr_destroy(critical);
-		    break;
-		default:
-		    yasm_internal_error(N_("bad return value from bc_calc_len"));
-	    }
-
-	    prev = cur;
-	    cur = STAILQ_NEXT(cur, link);
-	}
-    }
-
-    if (saw_error)
-	return;
-
-    /* Step 3 */
     STAILQ_FOREACH(sect, &object->sections, link) {
 	unsigned long offset = 0;
 
@@ -688,4 +704,97 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch)
 	    cur = STAILQ_NEXT(cur, link);
 	}
     }
+}
+
+void
+yasm_object_optimize(yasm_object *object, yasm_arch *arch)
+{
+    yasm_section *sect;
+    unsigned long bc_index = 0;
+    int saw_error = 0;
+    optimize_data optd;
+    yasm_span *span;
+    long neg_thres, pos_thres;
+
+    STAILQ_INIT(&optd.spans);
+
+    /* Step 1a */
+    STAILQ_FOREACH(sect, &object->sections, link) {
+	unsigned long offset = 0;
+
+	yasm_bytecode *cur = STAILQ_FIRST(&sect->bcs);
+	yasm_bytecode *prev;
+
+	cur->bc_index = bc_index++;
+
+	/* Skip our locally created empty bytecode first. */
+	prev = cur;
+	cur = STAILQ_NEXT(cur, link);
+
+	/* Iterate through the remainder, if any. */
+	while (cur) {
+	    cur->bc_index = bc_index++;
+
+	    if (yasm_bc_calc_len(cur, optimize_add_span, &optd))
+		saw_error = 1;
+
+	    /* TODO: times */
+	    if (cur->multiple)
+		yasm_internal_error("multiple not yet supported");
+
+	    cur->offset = offset;
+	    offset += cur->len;
+	    prev = cur;
+	    cur = STAILQ_NEXT(cur, link);
+	}
+    }
+
+    if (saw_error)
+	return;
+
+    /* Step 1b */
+    STAILQ_FOREACH(span, &optd.spans, link) {
+	yasm_expr *depcopy = yasm_expr_copy(span->dependent);
+	yasm_intnum *intn =
+	    yasm_expr_get_intnum(&depcopy, yasm_common_calc_bc_dist);
+	if (intn)
+	    span->new_val = yasm_intnum_get_int(intn);
+	else {
+	    /* absolute, external, or too complex; force to longer form */
+	    span->new_val = LONG_MAX;
+	    span->active = 0;
+	}
+
+	if (span->new_val < span->neg_thres
+	    || span->new_val > span->pos_thres) {
+	    int retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
+					span->new_val, &neg_thres, &pos_thres);
+	    if (retval < 0)
+		saw_error = 1;
+	    else if (retval > 0) {
+		span->neg_thres = neg_thres;
+		span->pos_thres = pos_thres;
+	    } else
+		span->active = 0;
+	}
+	span->cur_val = span->new_val;
+	yasm_expr_destroy(depcopy);
+    }
+
+    if (saw_error)
+	return;
+
+    /* Step 1c */
+    update_all_bc_offsets(object);
+
+    /* Step 1d */
+    STAILQ_FOREACH(span, &optd.spans, link) {
+	if (!span->active)
+	    continue;
+    }
+
+    /* Step 2 */
+
+    /* Step 3 */
+    update_all_bc_offsets(object);
 }

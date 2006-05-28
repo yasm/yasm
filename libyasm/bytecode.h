@@ -273,40 +273,44 @@ void yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 /*@null@*/ yasm_intnum *yasm_common_calc_bc_dist
     (/*@null@*/ yasm_bytecode *precbc1, /*@null@*/ yasm_bytecode *precbc2);
 
-/** Resolve EQUs in a bytecode and calculate its possible lengths.
- * Tries to minimize the length as much as possible for short_len.
- * The short length is set in the bytecode, and the long length is returned
- * in long_len (if applicable).  Any bytecode multiple is NOT included in
- * the length or critical expression calculations.
+/**
+ * \param critical	dependent expression for bytecode expansion
+ * \param neg_thres	negative threshold for long/short decision
+ * \param pos_thres	positive threshold for long/short decision
+ */
+typedef void (*yasm_bc_add_span_func)
+    (void *add_span_data, yasm_bytecode *bc, int id,
+     /*@only@*/ yasm_expr *dependent, long neg_thres, long pos_thres);
+
+/** Resolve EQUs in a bytecode and calculate its minimum size.
+ * Returns dependent bytecode spans for cases where, if the length spanned
+ * increases, it could cause the bytecode size to increase.
+ * Any bytecode multiple is NOT included in the length or spans generation;
+ * this must be handled at a higher level.
  * \param bc		bytecode
- * \param long_len	longer length (returned).  0 returned if no longer
- *                      length is available (must be short).
- * \param critical	critical expression if bytecode could be longer
- *			(returned).  NULL returned if no critical expression.
- * \param neg_thres	negative threshold for long/short decision (returned)
- * \param pos_thres	positive threshold for long/short decision (returned)
- * \return 0 if length is minimum (no way it can ever increase), negative if
- *	   there was an error recognized (and output) during execution, and
- *	   positive if the length may increase based on the critical expr.
+ * \return 0 if no error occurred, nonzero if there was an error recognized
+ *         (and output) during execution.
  * \note May store to bytecode updated expressions and the short length.
  */
-int yasm_bc_calc_len(yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
-		     /*@out@*/ /*@only@*/ yasm_expr **critical,
-		     /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres);
+int yasm_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		     void *add_span_data);
 
-/** Mark a bytecode as long.  Has no effect if the bytecode does not have
- * a long form.  May return back a new longer threshold that can be reached.
+/** Recalculate a bytecode's length based on an expanded span length.
  * \param bc		bytecode
- * \param long_len	long length (as given by yasm_bc_calc_len)
- * \param longer_len	next stage of lengthening (returned)
+ * \param span		span ID (as given to yasm_bc_add_span_func in
+ *                      yasm_bc_calc_len)
+ * \param old_val	previous span value
+ * \param new_val	new span value
  * \param neg_thres	negative threshold for long/short decision (returned)
  * \param pos_thres	postivie threshold for long/short decision (returned)
- * \return 0 if no longer threshold, positive if length may increase further
- *         based on the new negative and positive thresholds.
+ * \return 0 if bc no longer dependent on this span's length, negative if
+ *         there was an error recognized (and output) during execution, and
+ *         positive if bc size may increase for this span further based on the
+ *         new negative and positive thresholds returned.
+ * \note May store to bytecode updated expressions and the updated length.
  */
-int yasm_bc_set_long(yasm_bytecode *bc, unsigned long long_len,
-		     /*@out@*/ unsigned long *longer_len,
-		     /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres);
+int yasm_bc_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
+		   /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres);
 
 /** Convert a bytecode into its byte representation.
  * \param bc	 	bytecode

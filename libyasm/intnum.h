@@ -192,6 +192,14 @@ void yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
 int yasm_intnum_check_size(const yasm_intnum *intn, size_t size,
 			   size_t rshift, int rangetype);
 
+/** Check to see if intnum will fit into a particular numeric range.
+ * \param intn	    intnum
+ * \param low	    low end of range (inclusive)
+ * \param high	    high end of range (inclusive)
+ * \return Nonzero if intnum is within range.
+ */
+int yasm_intnum_in_range(const yasm_intnum *intn, long low, long high);
+
 /** Output #yasm_intnum to buffer in LEB128-encoded form.
  * \param intn	    intnum
  * \param ptr	    pointer to storage for output bytes

@@ -134,10 +134,8 @@ typedef struct bytecode_insn {
 
 static void bc_data_destroy(void *contents);
 static void bc_data_print(const void *contents, FILE *f, int indent_level);
-static int bc_data_calc_len
-    (yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
-     /*@out@*/ /*@only@*/ yasm_expr **critical, /*@out@*/ long *neg_thres,
-     /*@out@*/ long *pos_thres);
+static int bc_data_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+			    void *add_span_data);
 static int bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			   yasm_output_expr_func output_expr,
 			   /*@null@*/ yasm_output_reloc_func output_reloc);
@@ -145,30 +143,27 @@ static int bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 static void bc_leb128_destroy(void *contents);
 static void bc_leb128_print(const void *contents, FILE *f, int indent_level);
 static void bc_leb128_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
-static int bc_leb128_calc_len
-    (yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
-     /*@out@*/ /*@only@*/ yasm_expr **critical, /*@out@*/ long *neg_thres,
-     /*@out@*/ long *pos_thres);
+static int bc_leb128_calc_len(yasm_bytecode *bc,
+			      yasm_bc_add_span_func add_span,
+			      void *add_span_data);
 static int bc_leb128_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			     yasm_output_expr_func output_expr,
 			     /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static void bc_reserve_destroy(void *contents);
 static void bc_reserve_print(const void *contents, FILE *f, int indent_level);
-static int bc_reserve_calc_len
-    (yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
-     /*@out@*/ /*@only@*/ yasm_expr **critical, /*@out@*/ long *neg_thres,
-     /*@out@*/ long *pos_thres);
+static int bc_reserve_calc_len(yasm_bytecode *bc,
+			       yasm_bc_add_span_func add_span,
+			       void *add_span_data);
 static int bc_reserve_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			      yasm_output_expr_func output_expr,
 			      /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static void bc_incbin_destroy(void *contents);
 static void bc_incbin_print(const void *contents, FILE *f, int indent_level);
-static int bc_incbin_calc_len
-    (yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
-     /*@out@*/ /*@only@*/ yasm_expr **critical, /*@out@*/ long *neg_thres,
-     /*@out@*/ long *pos_thres);
+static int bc_incbin_calc_len(yasm_bytecode *bc,
+			      yasm_bc_add_span_func add_span,
+			      void *add_span_data);
 static int bc_incbin_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			     yasm_output_expr_func output_expr,
 			     /*@null@*/ yasm_output_reloc_func output_reloc);
@@ -176,20 +171,16 @@ static int bc_incbin_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 static void bc_align_destroy(void *contents);
 static void bc_align_print(const void *contents, FILE *f, int indent_level);
 static void bc_align_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
-static int bc_align_calc_len
-    (yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
-     /*@out@*/ /*@only@*/ yasm_expr **critical, /*@out@*/ long *neg_thres,
-     /*@out@*/ long *pos_thres);
+static int bc_align_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+			     void *add_span_data);
 static int bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			    yasm_output_expr_func output_expr,
 			    /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static void bc_org_destroy(void *contents);
 static void bc_org_print(const void *contents, FILE *f, int indent_level);
-static int bc_org_calc_len
-    (yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
-     /*@out@*/ /*@only@*/ yasm_expr **critical, /*@out@*/ long *neg_thres,
-     /*@out@*/ long *pos_thres);
+static int bc_org_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+			   void *add_span_data);
 static int bc_org_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			  yasm_output_expr_func output_expr,
 			  /*@null@*/ yasm_output_reloc_func output_reloc);
@@ -197,10 +188,8 @@ static int bc_org_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 static void bc_insn_destroy(void *contents);
 static void bc_insn_print(const void *contents, FILE *f, int indent_level);
 static void bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
-static int bc_insn_calc_len
-    (yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
-     /*@out@*/ /*@only@*/ yasm_expr **critical, /*@out@*/ long *neg_thres,
-     /*@out@*/ long *pos_thres);
+static int bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+			    void *add_span_data);
 static int bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			   yasm_output_expr_func output_expr,
 			   /*@null@*/ yasm_output_reloc_func output_reloc);
@@ -212,7 +201,7 @@ static const yasm_bytecode_callback bc_data_callback = {
     bc_data_print,
     yasm_bc_finalize_common,
     bc_data_calc_len,
-    yasm_bc_set_long_common,
+    yasm_bc_expand_common,
     bc_data_tobytes
 };
 
@@ -221,7 +210,7 @@ static const yasm_bytecode_callback bc_leb128_callback = {
     bc_leb128_print,
     bc_leb128_finalize,
     bc_leb128_calc_len,
-    yasm_bc_set_long_common,
+    yasm_bc_expand_common,
     bc_leb128_tobytes
 };
 
@@ -230,7 +219,7 @@ static const yasm_bytecode_callback bc_reserve_callback = {
     bc_reserve_print,
     yasm_bc_finalize_common,
     bc_reserve_calc_len,
-    yasm_bc_set_long_common,
+    yasm_bc_expand_common,
     bc_reserve_tobytes
 };
 
@@ -239,7 +228,7 @@ static const yasm_bytecode_callback bc_incbin_callback = {
     bc_incbin_print,
     yasm_bc_finalize_common,
     bc_incbin_calc_len,
-    yasm_bc_set_long_common,
+    yasm_bc_expand_common,
     bc_incbin_tobytes
 };
 
@@ -248,7 +237,7 @@ static const yasm_bytecode_callback bc_align_callback = {
     bc_align_print,
     bc_align_finalize,
     bc_align_calc_len,
-    yasm_bc_set_long_common,
+    yasm_bc_expand_common,
     bc_align_tobytes
 };
 
@@ -257,7 +246,7 @@ static const yasm_bytecode_callback bc_org_callback = {
     bc_org_print,
     yasm_bc_finalize_common,
     bc_org_calc_len,
-    yasm_bc_set_long_common,
+    yasm_bc_expand_common,
     bc_org_tobytes
 };
 
@@ -266,7 +255,7 @@ static const yasm_bytecode_callback bc_insn_callback = {
     bc_insn_print,
     bc_insn_finalize,
     bc_insn_calc_len,
-    yasm_bc_set_long_common,
+    yasm_bc_expand_common,
     bc_insn_tobytes
 };
 
@@ -382,10 +371,13 @@ yasm_bc_finalize_common(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 {
 }
 
-void
-yasm_bc_set_long_common(yasm_bytecode *bc)
+int
+yasm_bc_expand_common(yasm_bytecode *bc, int span, long old_val, long new_val,
+		      /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
-    yasm_internal_error(N_("bytecode does not have a long format"));
+    yasm_internal_error(N_("bytecode does not have any dependent spans"));
+    /*@unreached@*/
+    return 0;
 }
 
 void
@@ -444,8 +436,8 @@ bc_data_print(const void *contents, FILE *f, int indent_level)
 }
 
 static int
-bc_data_calc_len(yasm_bytecode *bc, unsigned long *long_len,
-		 yasm_expr **critical, long *neg_thres, long *pos_thres)
+bc_data_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		 void *add_span_data)
 {
     bytecode_data *bc_data = (bytecode_data *)bc->contents;
     yasm_dataval *dv;
@@ -588,8 +580,8 @@ bc_leb128_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 }
 
 static int
-bc_leb128_calc_len(yasm_bytecode *bc, unsigned long *long_len,
-		   yasm_expr **critical, long *neg_thres, long *pos_thres)
+bc_leb128_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		   void *add_span_data)
 {
     bytecode_leb128 *bc_leb128 = (bytecode_leb128 *)bc->contents;
     bc->len += bc_leb128->len;
@@ -654,8 +646,8 @@ bc_reserve_print(const void *contents, FILE *f, int indent_level)
 }
 
 static int
-bc_reserve_calc_len(yasm_bytecode *bc, unsigned long *long_len,
-		    yasm_expr **critical, long *neg_thres, long *pos_thres)
+bc_reserve_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		    void *add_span_data)
 {
     bytecode_reserve *reserve = (bytecode_reserve *)bc->contents;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
@@ -734,8 +726,8 @@ bc_incbin_print(const void *contents, FILE *f, int indent_level)
 }
 
 static int
-bc_incbin_calc_len(yasm_bytecode *bc, unsigned long *long_len,
-		   yasm_expr **critical, long *neg_thres, long *pos_thres)
+bc_incbin_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		   void *add_span_data)
 {
     bytecode_incbin *incbin = (bytecode_incbin *)bc->contents;
     FILE *f;
@@ -902,8 +894,8 @@ bc_align_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 }
 
 static int
-bc_align_calc_len(yasm_bytecode *bc, unsigned long *long_len,
-		  yasm_expr **critical, long *neg_thres, long *pos_thres)
+bc_align_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		  void *add_span_data)
 {
     yasm_internal_error(N_("align not yet implemented"));
     /*
@@ -1028,8 +1020,8 @@ bc_org_print(const void *contents, FILE *f, int indent_level)
 }
 
 static int
-bc_org_calc_len(yasm_bytecode *bc, unsigned long *long_len,
-		yasm_expr **critical, long *neg_thres, long *pos_thres)
+bc_org_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		void *add_span_data)
 {
     yasm_internal_error(N_("org not yet implemented"));
 #if 0
@@ -1136,8 +1128,8 @@ bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 }
 
 static int
-bc_insn_calc_len(yasm_bytecode *bc, unsigned long *long_len,
-		  yasm_expr **critical, long *neg_thres, long *pos_thres)
+bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		 void *add_span_data)
 {
     yasm_internal_error(N_("bc_insn_calc_len() is not implemented"));
     /*@notreached@*/
@@ -1324,24 +1316,18 @@ yasm_common_calc_bc_dist(/*@null@*/ yasm_bytecode *precbc1,
 }
 
 int
-yasm_bc_calc_len(yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
-		 /*@out@*/ /*@only@*/ yasm_expr **critical,
-		 /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
+yasm_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		 void *add_span_data)
 {
     int retval = 0;
 
     bc->len = 0;
-    *critical = NULL;
-    *neg_thres = 0;
-    *pos_thres = 0;
-    *long_len = 0;
 
     if (!bc->callback)
 	yasm_internal_error(N_("got empty bytecode in bc_resolve"));
     else
-	retval = bc->callback->calc_len(bc, long_len, critical, neg_thres,
-					pos_thres);
-
+	retval = bc->callback->calc_len(bc, add_span, add_span_data);
+#if 0
     /* Check for multiples */
     if (bc->multiple) {
 	/*@dependent@*/ /*@null@*/ const yasm_intnum *num;
@@ -1360,24 +1346,25 @@ yasm_bc_calc_len(yasm_bytecode *bc, /*@out@*/ unsigned long *long_len,
 	    }
 	}
     }
-
+#endif
     /* If we got an error somewhere along the line, clear out any calc len */
-    if (retval < 0) {
+    if (retval < 0)
 	bc->len = 0;
-	*long_len = 0;
-    }
 
     return retval;
 }
 
-void
-yasm_bc_set_long(yasm_bytecode *bc, unsigned long long_len)
+int
+yasm_bc_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
+	       /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
-    if (!bc->callback)
+    if (!bc->callback) {
 	yasm_internal_error(N_("got empty bytecode in bc_set_long"));
-    else
-	bc->callback->set_long(bc);
-    bc->len = long_len;
+	/*@unreached@*/
+	return 0;
+    } else
+	return bc->callback->expand(bc, span, old_val, new_val, neg_thres,
+				    pos_thres);
 }
 
 /*@null@*/ /*@only@*/ unsigned char *

@@ -69,20 +69,24 @@ static void x86_ea_print(const yasm_effaddr *ea, FILE *f, int indent_level);
 static void x86_bc_insn_destroy(void *contents);
 static void x86_bc_insn_print(const void *contents, FILE *f,
 			      int indent_level);
-static int x86_bc_insn_calc_len(yasm_bytecode *bc, unsigned long *long_len,
-				yasm_expr **critical, long *neg_thres,
-				long *pos_thres);
-static void x86_bc_insn_set_long(yasm_bytecode *bc);
+static int x86_bc_insn_calc_len(yasm_bytecode *bc,
+				yasm_bc_add_span_func add_span,
+				void *add_span_data);
+static int x86_bc_insn_expand(yasm_bytecode *bc, int span, long old_val,
+			      long new_val, /*@out@*/ long *neg_thres,
+			      /*@out@*/ long *pos_thres);
 static int x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp,
 			       void *d, yasm_output_expr_func output_expr,
 			       /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static void x86_bc_jmp_destroy(void *contents);
 static void x86_bc_jmp_print(const void *contents, FILE *f, int indent_level);
-static int x86_bc_jmp_calc_len(yasm_bytecode *bc, unsigned long *long_len,
-			       yasm_expr **critical, long *neg_thres,
-			       long *pos_thres);
-static void x86_bc_jmp_set_long(yasm_bytecode *bc);
+static int x86_bc_jmp_calc_len(yasm_bytecode *bc,
+			       yasm_bc_add_span_func add_span,
+			       void *add_span_data);
+static int x86_bc_jmp_expand(yasm_bytecode *bc, int span, long old_val,
+			     long new_val, /*@out@*/ long *neg_thres,
+			     /*@out@*/ long *pos_thres);
 static int x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp,
 			      void *d, yasm_output_expr_func output_expr,
 			      /*@null@*/ yasm_output_reloc_func output_reloc);
@@ -90,9 +94,9 @@ static int x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp,
 static void x86_bc_jmpfar_destroy(void *contents);
 static void x86_bc_jmpfar_print(const void *contents, FILE *f,
 				int indent_level);
-static int x86_bc_jmpfar_calc_len(yasm_bytecode *bc, unsigned long *long_len,
-				  yasm_expr **critical, long *neg_thres,
-				  long *pos_thres);
+static int x86_bc_jmpfar_calc_len(yasm_bytecode *bc,
+				  yasm_bc_add_span_func add_span,
+				  void *add_span_data);
 static int x86_bc_jmpfar_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
      yasm_output_expr_func output_expr,
@@ -112,7 +116,7 @@ static const yasm_bytecode_callback x86_bc_callback_insn = {
     x86_bc_insn_print,
     yasm_bc_finalize_common,
     x86_bc_insn_calc_len,
-    x86_bc_insn_set_long,
+    x86_bc_insn_expand,
     x86_bc_insn_tobytes
 };
 
@@ -121,7 +125,7 @@ static const yasm_bytecode_callback x86_bc_callback_jmp = {
     x86_bc_jmp_print,
     yasm_bc_finalize_common,
     x86_bc_jmp_calc_len,
-    x86_bc_jmp_set_long,
+    x86_bc_jmp_expand,
     x86_bc_jmp_tobytes
 };
 
@@ -130,7 +134,7 @@ static const yasm_bytecode_callback x86_bc_callback_jmpfar = {
     x86_bc_jmpfar_print,
     yasm_bc_finalize_common,
     x86_bc_jmpfar_calc_len,
-    yasm_bc_set_long_common,
+    yasm_bc_expand_common,
     x86_bc_jmpfar_tobytes
 };
 
@@ -534,16 +538,14 @@ x86_common_calc_len(const x86_common *common)
 }
 
 static int
-x86_bc_insn_calc_len(yasm_bytecode *bc, unsigned long *long_len,
-		     yasm_expr **critical, long *neg_thres, long *pos_thres)
+x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		     void *add_span_data)
 {
     x86_insn *insn = (x86_insn *)bc->contents;
     /*@null@*/ yasm_expr *temp;
     x86_effaddr *x86_ea = (x86_effaddr *)insn->ea;
     yasm_effaddr *ea = &x86_ea->ea;
     yasm_immval *imm = insn->imm;
-    int retval = 0;
-    int common_len = 0;
 
     if (ea) {
 	if (ea->disp) {
@@ -579,18 +581,15 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, unsigned long *long_len,
 		 * critical expression.
 		 */
 		bc->len += 1;
-		long_len += (insn->common.addrsize == 16) ? 2U : 4U;
-		*critical = yasm_expr_copy(ea->disp);
-		*neg_thres = -128;
-		*pos_thres = 127;
-		retval = 1;
+		add_span(add_span_data, bc, 1, yasm_expr_copy(ea->disp), -128,
+			 127);
 	    } else
 		bc->len += ea->len;
 	}
 
 	/* Compute length of ea and add to total */
-	common_len += x86_ea->need_modrm + (x86_ea->need_sib ? 1:0);
-	common_len += (x86_ea->ea.segreg != 0) ? 1 : 0;
+	bc->len += x86_ea->need_modrm + (x86_ea->need_sib ? 1:0);
+	bc->len += (x86_ea->ea.segreg != 0) ? 1 : 0;
     }
 
     if (imm) {
@@ -609,6 +608,7 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, unsigned long *long_len,
 			/* We can use the sign-extended byte form: shorten
 			 * the immediate length to 1.
 			 */
+			imm->len = 1;
 			immlen = 1;
 		    } else {
 			/* We can't use the ,1. */
@@ -620,11 +620,8 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, unsigned long *long_len,
 		     * expression.
 		     */
 		    immlen = 1;
-		    long_len += imm->len;
-		    *critical = yasm_expr_copy(imm->val);
-		    *neg_thres = -128;
-		    *pos_thres = 127;
-		    retval = 1;
+		    add_span(add_span_data, bc, 2, yasm_expr_copy(imm->val),
+			     -128, 127);
 		}
 	    }
 
@@ -645,40 +642,32 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, unsigned long *long_len,
 		    }
 		    insn->postop = X86_POSTOP_NONE;
 		} else {
-		    /* Unknown; default to ,1 form and set as critical
-		     * expression.
+		    /* Just assume we can't use the ,1 form: allowing this
+		     * is more work than it's worth.
 		     */
-		    immlen = 0;
-		    long_len += imm->len;
-		    *critical = yasm_expr_copy(imm->val);
-		    *neg_thres = 1;
-		    *pos_thres = 1;
-		    retval = 1;
+		    insn->opcode.opcode[0] = insn->opcode.opcode[1];
+		    insn->postop = X86_POSTOP_NONE;
 		}
 	    }
 	}
 
-	common_len += immlen;
+	bc->len += immlen;
     }
 
-    common_len += insn->opcode.len;
-    common_len += x86_common_calc_len(&insn->common);
-    common_len += (insn->special_prefix != 0) ? 1:0;
+    bc->len += insn->opcode.len;
+    bc->len += x86_common_calc_len(&insn->common);
+    bc->len += (insn->special_prefix != 0) ? 1:0;
     if (insn->rex != 0xff &&
 	(insn->rex != 0 ||
 	 (insn->common.mode_bits == 64 && insn->common.opersize == 64 &&
 	  insn->def_opersize_64 != 64)))
-	common_len++;
-
-    bc->len += common_len;
-    if (retval > 0)
-	*long_len += common_len;
-
-    return retval;
+	bc->len++;
+    return 0;
 }
 
-static void
-x86_bc_insn_set_long(yasm_bytecode *bc)
+static int
+x86_bc_insn_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
+		   /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
     x86_insn *insn = (x86_insn *)bc->contents;
     /*@null@*/ yasm_expr *temp;
@@ -692,31 +681,46 @@ x86_bc_insn_set_long(yasm_bytecode *bc)
 	    ea->len = (insn->common.addrsize == 16) ? 2U : 4U;
 	    x86_ea->modrm &= ~0300;
 	    x86_ea->modrm |= 0200;
+	    bc->len--;
+	    bc->len += ea->len;
 	}
     }
 
     if (imm && imm->val) {
-	/* Handle shift postop special-casing */
-	if (insn->postop == X86_POSTOP_SHIFT) {
-	    /* We can't use the ,1 form. */
-	    insn->opcode.opcode[0] = insn->opcode.opcode[1];
+	if (insn->postop == X86_POSTOP_SIGNEXT_IMM8) {
+	    bc->len--;
+	    bc->len += imm->len;
 	    insn->postop = X86_POSTOP_NONE;
 	}
     }
+
+    return 0;
 }
 
 static int
-x86_bc_jmp_calc_len(yasm_bytecode *bc, unsigned long *long_len,
-		    yasm_expr **critical, long *neg_thres, long *pos_thres)
+x86_bc_jmp_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		    void *add_span_data)
 {
     x86_jmp *jmp = (x86_jmp *)bc->contents;
-    int retval = 0;
-    unsigned int common_len;
     unsigned char opersize;
 
     /* As opersize may be 0, figure out its "real" value. */
     opersize = (jmp->common.opersize == 0) ?
 	jmp->common.mode_bits : jmp->common.opersize;
+
+    bc->len += x86_common_calc_len(&jmp->common);
+
+    if (jmp->op_sel == JMP_NEAR_FORCED || jmp->shortop.len == 0) {
+	if (jmp->nearop.len == 0) {
+	    yasm__error(bc->line, N_("near jump does not exist"));
+	    return -1;
+	}
+
+	/* Near jump, no spans needed */
+	bc->len += jmp->nearop.len;
+	bc->len += (opersize == 16) ? 2 : 4;
+	return 0;
+    }
 
     if (jmp->op_sel == JMP_SHORT_FORCED || jmp->nearop.len == 0) {
 	if (jmp->shortop.len == 0) {
@@ -724,61 +728,52 @@ x86_bc_jmp_calc_len(yasm_bytecode *bc, unsigned long *long_len,
 	    return -1;
 	}
 
-	/* We want to be sure to error if we exceed short length, so still
-	 * put it in as a critical expression, but leave the return value as
-	 * 0.
+	/* We want to be sure to error if we exceed short length, so
+	 * put it in as a dependent expression (falling through).
 	 */
-	bc->len += jmp->shortop.len + 1;
-	*critical = yasm_expr_create(YASM_EXPR_SUB,
-	    yasm_expr_expr(yasm_expr_copy(jmp->target)),
-	    yasm_expr_sym(jmp->origin), bc->line);
-	*neg_thres = -128;
-	*pos_thres = 127;
-    } else if (jmp->op_sel == JMP_NEAR_FORCED || jmp->shortop.len == 0) {
-	if (jmp->nearop.len == 0) {
-	    yasm__error(bc->line, N_("near jump does not exist"));
-	    return -1;
-	}
-
-	bc->len += jmp->nearop.len;
-	bc->len += (opersize == 16) ? 2 : 4;
-    } else {
-	/* short length goes into bytecode */
-	retval = 1;
-	bc->len += jmp->shortop.len + 1;
-	*long_len += jmp->nearop.len;
-	*long_len += (opersize == 16) ? 2 : 4;
-	*critical = yasm_expr_create(YASM_EXPR_SUB,
-	    yasm_expr_expr(yasm_expr_copy(jmp->target)),
-	    yasm_expr_sym(jmp->origin), bc->line);
-	*neg_thres = -128;
-	*pos_thres = 127;
     }
 
-    common_len = x86_common_calc_len(&jmp->common);
-    bc->len += common_len;
-    if (retval > 0)
-	*long_len += common_len;
-
-    return retval;
-}
-
-static void
-x86_bc_jmp_set_long(yasm_bytecode *bc)
-{
-    x86_jmp *jmp = (x86_jmp *)bc->contents;
-
-    if (jmp->nearop.len == 0) {
-	yasm__error(bc->line,
-		    N_("short jump out of range"));
-	return;
-    }
-    jmp->op_sel = JMP_NEAR;
+    /* Short jump, generate span */
+    bc->len += jmp->shortop.len + 1;
+    add_span(add_span_data, bc, 1,
+	     yasm_expr_create(YASM_EXPR_SUB,
+			      yasm_expr_expr(yasm_expr_copy(jmp->target)),
+			      yasm_expr_sym(jmp->origin), bc->line),
+	     -128, 127);
+    return 0;
 }
 
 static int
-x86_bc_jmpfar_calc_len(yasm_bytecode *bc, unsigned long *long_len,
-		       yasm_expr **critical, long *neg_thres, long *pos_thres)
+x86_bc_jmp_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
+		  /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
+{
+    x86_jmp *jmp = (x86_jmp *)bc->contents;
+    unsigned char opersize;
+
+    if (span != 1)
+	yasm_internal_error(N_("unrecognized span id"));
+
+    /* As opersize may be 0, figure out its "real" value. */
+    opersize = (jmp->common.opersize == 0) ?
+	jmp->common.mode_bits : jmp->common.opersize;
+
+    if (jmp->nearop.len == 0) {
+	yasm__error(bc->line, N_("short jump out of range"));
+	return -1;
+    }
+
+    /* Upgrade to a near jump */
+    jmp->op_sel = JMP_NEAR;
+    bc->len -= jmp->shortop.len + 1;
+    bc->len += jmp->nearop.len;
+    bc->len += (opersize == 16) ? 2 : 4;
+
+    return 0;
+}
+
+static int
+x86_bc_jmpfar_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		       void *add_span_data)
 {
     x86_jmpfar *jmpfar = (x86_jmpfar *)bc->contents;
     unsigned char opersize;
