@@ -46,6 +46,58 @@
 #include "expr-int.h"
 #include "bc-int.h"
 
+void
+yasm_value_initialize(/*@out@*/ yasm_value *value,
+		      /*@null@*/ /*@kept@*/ yasm_expr *e, unsigned int size)
+{
+    value->abs = e;
+    value->rel = NULL;
+    value->wrt = NULL;
+    value->seg_of = 0;
+    value->rshift = 0;
+    value->curpos_rel = 0;
+    value->ip_rel = 0;
+    value->section_rel = 0;
+    value->size = size;
+}
+
+void
+yasm_value_init_sym(/*@out@*/ yasm_value *value, /*@null@*/ yasm_symrec *sym,
+		    unsigned int size)
+{
+    value->abs = NULL;
+    value->rel = sym;
+    value->wrt = NULL;
+    value->seg_of = 0;
+    value->rshift = 0;
+    value->curpos_rel = 0;
+    value->ip_rel = 0;
+    value->section_rel = 0;
+    value->size = size;
+}
+
+void
+yasm_value_init_copy(yasm_value *value, const yasm_value *orig)
+{
+    value->abs = orig->abs ? yasm_expr_copy(orig->abs) : NULL;
+    value->rel = orig->rel;
+    value->wrt = orig->wrt;
+    value->seg_of = orig->seg_of;
+    value->rshift = orig->rshift;
+    value->curpos_rel = orig->curpos_rel;
+    value->ip_rel = orig->ip_rel;
+    value->section_rel = orig->section_rel;
+    value->size = orig->size;
+}
+
+void
+yasm_value_delete(yasm_value *value)
+{
+    yasm_expr_destroy((value)->abs);
+    value->abs = NULL;
+    value->rel = NULL;
+}
+
 static int
 value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 {

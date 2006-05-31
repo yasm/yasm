@@ -54,9 +54,17 @@ void yasm_value_initialize(/*@out@*/ yasm_value *value,
  * initialized.
  * \param value	    value to be initialized
  * \param sym	    symrec
+ * \param size	    value size (in bits)
  */
 void yasm_value_init_sym(/*@out@*/ yasm_value *value,
-			 /*@null@*/ yasm_symrec *sym);
+			 /*@null@*/ yasm_symrec *sym, unsigned int size);
+
+/** Initialize a #yasm_value as a copy of another yasm_value.  Any expressions
+ * within orig are copied, so it's safe to delete the copy.
+ * \param value	    value (copy to create)
+ * \param orig	    original value
+ */
+void yasm_value_init_copy(yasm_value *value, const yasm_value *orig);
 
 /** Frees any memory inside value; does not free value itself.
  * \param value	    value
@@ -124,41 +132,5 @@ int yasm_value_output_basic
  * \param f		file
  */
 void yasm_value_print(const yasm_value *value, FILE *f, int indent_level);
-
-
-#ifndef YASM_DOXYGEN
-#define yasm_value_initialize(value, e, sz) \
-    do { \
-	(value)->abs = e; \
-	(value)->rel = NULL; \
-	(value)->wrt = NULL; \
-	(value)->seg_of = 0; \
-	(value)->rshift = 0; \
-	(value)->curpos_rel = 0; \
-	(value)->ip_rel = 0; \
-	(value)->section_rel = 0; \
-	(value)->size = sz; \
-    } while(0)
-
-#define yasm_value_init_sym(value, sym, sz) \
-    do { \
-	(value)->abs = NULL; \
-	(value)->rel = sym; \
-	(value)->wrt = NULL; \
-	(value)->seg_of = 0; \
-	(value)->rshift = 0; \
-	(value)->curpos_rel = 0; \
-	(value)->ip_rel = 0; \
-	(value)->section_rel = 0; \
-	(value)->size = sz; \
-    } while(0)
-
-#define yasm_value_delete(value) \
-    do { \
-	yasm_expr_destroy((value)->abs); \
-	(value)->abs = NULL; \
-	(value)->rel = NULL; \
-    } while(0)
-#endif
 
 #endif
