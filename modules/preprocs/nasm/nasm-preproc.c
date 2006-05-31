@@ -46,6 +46,7 @@ typedef struct yasm_preproc_nasm {
     int lineinc;
 } yasm_preproc_nasm;
 static yasm_linemap *cur_lm;
+static yasm_errwarns *cur_errwarns;
 int tasm_compatible_mode = 0;
 
 typedef struct preproc_dep {
@@ -106,11 +107,10 @@ nasm_efunc(int severity, const char *fmt, ...)
     va_start(va, fmt);
     switch (severity & ERR_MASK) {
 	case ERR_WARNING:
-	    yasm__warning_va(YASM_WARN_PREPROC,
-			     yasm_linemap_get_current(cur_lm), fmt, va);
+	    yasm_warn_set_va(YASM_WARN_PREPROC, fmt, va);
 	    break;
 	case ERR_NONFATAL:
-	    yasm__error_va(yasm_linemap_get_current(cur_lm), fmt, va);
+	    yasm_error_set_va(YASM_ERROR_GENERAL, fmt, va);
 	    break;
 	case ERR_FATAL:
 	    yasm_fatal(fmt, va);
@@ -123,10 +123,12 @@ nasm_efunc(int severity, const char *fmt, ...)
 	    break;
     }
     va_end(va);
+    yasm_errwarn_propagate(cur_errwarns, yasm_linemap_get_current(cur_lm));
 }
 
 static yasm_preproc *
-nasm_preproc_create(FILE *f, const char *in_filename, yasm_linemap *lm)
+nasm_preproc_create(FILE *f, const char *in_filename, yasm_linemap *lm,
+		    yasm_errwarns *errwarns)
 {
     yasm_preproc_nasm *preproc_nasm = yasm_xmalloc(sizeof(yasm_preproc_nasm));
 
@@ -134,6 +136,7 @@ nasm_preproc_create(FILE *f, const char *in_filename, yasm_linemap *lm)
 
     preproc_nasm->in = f;
     cur_lm = lm;
+    cur_errwarns = errwarns;
     preproc_deps = NULL;
     done_dep_preproc = 0;
     preproc_nasm->line = NULL;
@@ -149,7 +152,6 @@ static void
 nasm_preproc_destroy(yasm_preproc *preproc)
 {
     nasmpp.cleanup(0);
-    nasm_eval_cleanup();
     yasm_xfree(preproc);
     if (preproc_deps)
 	yasm_xfree(preproc_deps);
@@ -170,24 +172,28 @@ nasm_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
 	preproc_nasm->linepos = preproc_nasm->line;
 	preproc_nasm->lineleft = strlen(preproc_nasm->line) + 1;
 	preproc_nasm->line[preproc_nasm->lineleft-1] = '\n';
-    }
 
-    altline = nasm_src_get(&linnum, &preproc_nasm->file_name);
-    if (altline) {
-	if (altline == 1 && preproc_nasm->lineinc == 1) {
-	    *buf++ = '\n';
-	    max_size--;
-	    tot++;
-	} else {
-	    preproc_nasm->lineinc =
-		(altline != -1 || preproc_nasm->lineinc != 1);
-	    n = sprintf(buf, "%%line %ld+%d %s\n", linnum,
-			preproc_nasm->lineinc, preproc_nasm->file_name);
-	    buf += n;
-	    max_size -= n;
-	    tot += n;
+	altline = nasm_src_get(&linnum, &preproc_nasm->file_name);
+	if (altline) {
+	    if (altline == 1 && preproc_nasm->lineinc == 1) {
+		*buf++ = '\n';
+		max_size--;
+		tot++;
+	    } else {
+		preproc_nasm->lineinc =
+		    (altline != -1 || preproc_nasm->lineinc != 1);
+		n = sprintf(buf, "%%line %ld+%d %s\n", linnum,
+			    preproc_nasm->lineinc, preproc_nasm->file_name);
+		buf += n;
+		max_size -= n;
+		tot += n;
+	    }
+	    preproc_nasm->prior_linnum = linnum;
 	}
-	preproc_nasm->prior_linnum = linnum;
+	if (preproc_nasm->file_name) {
+	    yasm_xfree(preproc_nasm->file_name);
+	    preproc_nasm->file_name = NULL;
+	}
     }
 
     n = preproc_nasm->lineleft<max_size?preproc_nasm->lineleft:max_size;
@@ -206,19 +212,17 @@ nasm_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
 }
 
 void
-nasm_preproc_add_dep(/*@only@*/ char *name)
+nasm_preproc_add_dep(char *name)
 {
     preproc_dep *dep;
 
-    /* If not processing dependencies, simply free name and return */
-    if (!preproc_deps) {
-	yasm_xfree(name);
+    /* If not processing dependencies, simply return */
+    if (!preproc_deps)
 	return;
-    }
 
     /* Save in preproc_deps */
     dep = yasm_xmalloc(sizeof(preproc_dep));
-    dep->name = name;
+    dep->name = yasm__xstrdup(name);
     STAILQ_INSERT_TAIL(preproc_deps, dep, link);
 }
 

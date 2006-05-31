@@ -22,7 +22,6 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -52,10 +51,10 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderFile="$(PlatformName)\$(ConfigurationName)/yasm.pch"
-				AssemblerListingLocation="$(PlatformName)\$(ConfigurationName)/"
-				ObjectFile="$(PlatformName)\$(ConfigurationName)/"
-				ProgramDataBaseFileName="$(PlatformName)\$(ConfigurationName)/"
+				PrecompiledHeaderFile=""
+				AssemblerListingLocation="$(IntDir)\"
+				ObjectFile="$(IntDir)\"
+				ProgramDataBaseFileName="$(IntDir)\"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
@@ -74,11 +73,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(PlatformName)\$(ConfigurationName)/yasm.exe"
+				OutputFile="$(OutDir)\yasm.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
-				ProgramDatabaseFile="$(PlatformName)\$(ConfigurationName)/yasm.pdb"
+				ProgramDatabaseFile="$(OutDir)\$(ProjectName).pdb"
 				SubSystem="1"
 				TargetMachine="1"
 			/>
@@ -143,10 +142,10 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderFile="$(PlatformName)\$(ConfigurationName)/yasm.pch"
-				AssemblerListingLocation="$(PlatformName)\$(ConfigurationName)/"
-				ObjectFile="$(PlatformName)\$(ConfigurationName)/"
-				ProgramDataBaseFileName="$(PlatformName)\$(ConfigurationName)/"
+				PrecompiledHeaderFile=""
+				AssemblerListingLocation="$(IntDir)\"
+				ObjectFile="$(IntDir)\"
+				ProgramDataBaseFileName="$(IntDir)\"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="3"
@@ -169,7 +168,7 @@
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
-				ProgramDatabaseFile="$(PlatformName)\$(ConfigurationName)/yasm.pdb"
+				ProgramDatabaseFile="$(OutDir)\$(TargetName).pdb"
 				SubSystem="1"
 				TargetMachine="17"
 			/>
@@ -203,7 +202,6 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -227,18 +225,19 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				Optimization="3"
+				InlineFunctionExpansion="0"
+				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories=".,../.."
 				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;HAVE_CONFIG_H;VC"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderFile="$(PlatformName)\$(ConfigurationName)/yasm.pch"
-				AssemblerListingLocation="$(PlatformName)\$(ConfigurationName)/"
-				ObjectFile="$(PlatformName)\$(ConfigurationName)/"
-				ProgramDataBaseFileName="$(PlatformName)\$(ConfigurationName)/"
+				PrecompiledHeaderFile=""
+				AssemblerListingLocation="$(IntDir)\"
+				ObjectFile="$(IntDir)\"
+				ProgramDataBaseFileName="$(IntDir)\"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				CompileAs="0"
@@ -256,10 +255,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(PlatformName)\$(ConfigurationName)/yasm.exe"
+				OutputFile="$(OutDir)\yasm.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
-				ProgramDatabaseFile="$(PlatformName)\$(ConfigurationName)/yasm.pdb"
+				GenerateDebugInformation="false"
+				ProgramDatabaseFile="$(OutDir)\$(ProjectName).pdb"
 				SubSystem="1"
 				TargetMachine="1"
 			/>
@@ -318,7 +318,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
+				Optimization="3"
 				InlineFunctionExpansion="1"
 				AdditionalIncludeDirectories=".,../.."
 				PreprocessorDefinitions="NDEBUG;_LIB;HAVE_CONFIG_H;VC;WIN64"
@@ -326,10 +326,10 @@
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderFile="$(PlatformName)\$(ConfigurationName)/yasm.pch"
-				AssemblerListingLocation="$(PlatformName)\$(ConfigurationName)/"
-				ObjectFile="$(PlatformName)\$(ConfigurationName)/"
-				ProgramDataBaseFileName="$(PlatformName)\$(ConfigurationName)/"
+				PrecompiledHeaderFile=""
+				AssemblerListingLocation="$(IntDir)\"
+				ObjectFile="$(IntDir)\"
+				ProgramDataBaseFileName="$(IntDir)\"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				CompileAs="0"
@@ -350,7 +350,7 @@
 				OutputFile="$(OutDir)\yasm.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
-				ProgramDatabaseFile="$(PlatformName)\$(ConfigurationName)/yasm.pdb"
+				ProgramDatabaseFile="$(OutDir)\$(TargetName).pdb"
 				SubSystem="1"
 				TargetMachine="17"
 			/>
@@ -390,94 +390,10 @@
 			<File
 				RelativePath="..\..\frontends\yasm\yasm-options.c"
 				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\frontends\yasm\yasm.c"
 				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 		</Filter>
 		<Filter

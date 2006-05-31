@@ -32,7 +32,7 @@
 
 #include "gas-bison.h"
 
-#define YYCTYPE		char
+#define YYCTYPE		unsigned char
 typedef struct Scanner {
     YYCTYPE		*bot, *tok, *ptr, *cur, *pos, *lim, *top, *eof;
     unsigned int	tchar, tline, cline;
@@ -55,7 +55,7 @@ typedef struct gas_rept {
     size_t linepos;		/* position to start pulling chars from line */
     int ended;			/* seen endr directive yet? */
 
-    char *oldbuf;		/* saved previous fill buffer */
+    YYCTYPE *oldbuf;		/* saved previous fill buffer */
     size_t oldbuflen;		/* previous fill buffer length */
     size_t oldbufpos;		/* position in previous fill buffer */
 } gas_rept;
@@ -74,6 +74,8 @@ typedef struct yasm_parser_gas {
     /*@dependent@*/ yasm_preproc *preproc;
     /*@dependent@*/ yasm_arch *arch;
     /*@dependent@*/ yasm_objfmt *objfmt;
+    /*@dependent@*/ yasm_dbgfmt *dbgfmt;
+    /*@dependent@*/ yasm_errwarns *errwarns;
 
     /*@dependent@*/ yasm_linemap *linemap;
     /*@dependent@*/ yasm_symtab *symtab;

@@ -50,6 +50,9 @@
 
 
 struct yasm_object {
+    /*@owned@*/ char *src_filename;
+    /*@owned@*/ char *obj_filename;
+
     yasm_symtab	*symtab;
     yasm_linemap *linemap;
 
@@ -65,9 +68,16 @@ struct yasm_section {
 
     union {
 	/* SECTION_GENERAL data */
-	struct general {
+	struct {
 	    /*@owned@*/ char *name;	/* strdup()'ed name (given by user) */
 	} general;
+	/* SECTION_ABSOLUTE data */
+	struct {
+	    /* Internally created first symrec in section.  Used by
+	     * yasm_expr__level_tree during absolute reference expansion.
+	     */
+	    /*@dependent@*/ yasm_symrec *first;
+	} absolute;
     } data;
 
     /* associated data; NULL if none */
@@ -81,6 +91,8 @@ struct yasm_section {
 
     int code;			/* section contains code (instructions) */
     int res_only;		/* allow only resb family of bytecodes? */
+    int def;			/* "default" section, e.g. not specified by
+				   using section directive */
 
     /* the bytecodes for the section's contents */
     /*@reldef@*/ STAILQ_HEAD(yasm_bytecodehead, yasm_bytecode) bcs;
@@ -96,9 +108,12 @@ static void yasm_section_destroy(/*@only@*/ yasm_section *sect);
 
 /*@-compdestroy@*/
 yasm_object *
-yasm_object_create(void)
+yasm_object_create(const char *src_filename, const char *obj_filename)
 {
     yasm_object *object = yasm_xmalloc(sizeof(yasm_object));
+
+    object->src_filename = yasm__xstrdup(src_filename);
+    object->obj_filename = yasm__xstrdup(obj_filename);
 
     /* Create empty symtab and linemap */
     object->symtab = yasm_symtab_create();
@@ -163,6 +178,7 @@ yasm_object_get_general(yasm_object *object, const char *name,
 
     s->code = code;
     s->res_only = res_only;
+    s->def = 0;
 
     *isnew = 1;
     return s;
@@ -196,11 +212,35 @@ yasm_object_create_absolute(yasm_object *object, yasm_expr *start,
     STAILQ_INIT(&s->relocs);
     s->destroy_reloc = NULL;
 
+    s->data.absolute.first =
+	yasm_symtab_define_label(object->symtab, ".absstart", bc, 0, 0);
+
+    s->code = 0;
     s->res_only = 1;
+    s->def = 0;
 
     return s;
 }
 /*@=onlytrans@*/
+
+void
+yasm_object_set_source_fn(yasm_object *object, const char *src_filename)
+{
+    yasm_xfree(object->src_filename);
+    object->src_filename = yasm__xstrdup(src_filename);
+}
+
+const char *
+yasm_object_get_source_fn(const yasm_object *object)
+{
+    return object->src_filename;
+}
+
+const char *
+yasm_object_get_object_fn(const yasm_object *object)
+{
+    return object->obj_filename;
+}
 
 yasm_symtab *
 yasm_object_get_symtab(const yasm_object *object)
@@ -238,6 +278,18 @@ yasm_section_set_opt_flags(yasm_section *sect, unsigned long opt_flags)
     sect->opt_flags = opt_flags;
 }
 
+int
+yasm_section_is_default(const yasm_section *sect)
+{
+    return sect->def;
+}
+
+void
+yasm_section_set_default(yasm_section *sect, int def)
+{
+    sect->def = def;
+}
+
 yasm_object *
 yasm_section_get_object(const yasm_section *sect)
 {
@@ -271,6 +323,10 @@ yasm_object_destroy(yasm_object *object)
 	cur = next;
     }
 
+    /* Delete associated filenames */
+    yasm_xfree(object->src_filename);
+    yasm_xfree(object->obj_filename);
+
     /* Delete symbol table and line mappings */
     yasm_symtab_destroy(object->symtab);
     yasm_linemap_destroy(object->linemap);
@@ -295,7 +351,7 @@ yasm_object_print(const yasm_object *object, FILE *f, int indent_level)
 }
 
 void
-yasm_object_finalize(yasm_object *object)
+yasm_object_finalize(yasm_object *object, yasm_errwarns *errwarns)
 {
     yasm_section *sect;
 
@@ -312,6 +368,7 @@ yasm_object_finalize(yasm_object *object)
 	while (cur) {
 	    /* Finalize */
 	    yasm_bc_finalize(cur, prev);
+	    yasm_errwarn_propagate(errwarns, cur->line);
 	    prev = cur;
 	    cur = STAILQ_NEXT(cur, link);
 	}
@@ -408,7 +465,9 @@ yasm_section_bcs_append(yasm_section *sect, yasm_bytecode *bc)
 }
 
 int
-yasm_section_bcs_traverse(yasm_section *sect, void *d,
+yasm_section_bcs_traverse(yasm_section *sect,
+			  /*@null@*/ yasm_errwarns *errwarns,
+			  /*@null@*/ void *d,
 			  int (*func) (yasm_bytecode *bc, /*@null@*/ void *d))
 {
     yasm_bytecode *cur = STAILQ_FIRST(&sect->bcs);
@@ -419,6 +478,8 @@ yasm_section_bcs_traverse(yasm_section *sect, void *d,
     /* Iterate through the remainder, if any. */
     while (cur) {
 	int retval = func(cur, d);
+	if (errwarns)
+	    yasm_errwarn_propagate(errwarns, cur->line);
 	if (retval != 0)
 	    return retval;
 	cur = STAILQ_NEXT(cur, link);
@@ -431,6 +492,14 @@ yasm_section_get_name(const yasm_section *sect)
 {
     if (sect->type == SECTION_GENERAL)
 	return sect->data.general.name;
+    return NULL;
+}
+
+yasm_symrec *
+yasm_section_abs_get_sym(const yasm_section *sect)
+{
+    if (sect->type == SECTION_ABSOLUTE)
+	return sect->data.absolute.first;
     return NULL;
 }
 
@@ -635,7 +704,8 @@ typedef struct yasm_span {
 
     /*@dependent@*/ yasm_bytecode *bc;
 
-    /*@owned@*/ yasm_expr *dependent;
+    yasm_value *depval;
+    yasm_bytecode *origin_prevbc;
 
     /* Special handling: see descriptions above */
     enum {
@@ -662,14 +732,15 @@ typedef struct optimize_data {
 
 static void
 optimize_add_span(void *add_span_data, yasm_bytecode *bc, int id,
-		  /*@only@*/ yasm_expr *dependent, long neg_thres,
-		  long pos_thres)
+		  yasm_value *value, /*@null@*/ yasm_bytecode *origin_prevbc,
+		  long neg_thres, long pos_thres)
 {
     optimize_data *optd = (optimize_data *)add_span_data;
     yasm_span *span = yasm_xmalloc(sizeof(yasm_span));
 
     span->bc = bc;
-    span->dependent = dependent;
+    span->depval = value;
+    span->origin_prevbc = origin_prevbc;
     span->special = NOT_SPECIAL;
     span->cur_val = 0;
     span->new_val = 0;
@@ -751,18 +822,28 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch)
 
     if (saw_error)
 	return;
-
+#if 0
     /* Step 1b */
     STAILQ_FOREACH(span, &optd.spans, link) {
-	yasm_expr *depcopy = yasm_expr_copy(span->dependent);
-	yasm_intnum *intn =
-	    yasm_expr_get_intnum(&depcopy, yasm_common_calc_bc_dist);
-	if (intn)
-	    span->new_val = yasm_intnum_get_int(intn);
-	else {
-	    /* absolute, external, or too complex; force to longer form */
-	    span->new_val = LONG_MAX;
-	    span->active = 0;
+	/* Handle absolute portion */
+	if (span->depval->abs) {
+	    yasm_expr *depcopy = yasm_expr_copy(span->depval->abs);
+	    yasm_intnum *intn =
+		yasm_expr_get_intnum(&depcopy, yasm_common_calc_bc_dist);
+	    if (intn)
+		span->new_val = yasm_intnum_get_int(intn);
+	    else {
+		/* absolute, external, or too complex; force to longer form */
+		span->new_val = LONG_MAX;
+		span->active = 0;
+	    }
+	    yasm_expr_destroy(depcopy);
+	} else
+	    span->new_val = 0;
+
+	/* Handle relative portion */
+	if (span->depval->rel && span->new_val != LONG_MAX) {
+	    span->new_val += 
 	}
 
 	if (span->new_val < span->neg_thres
@@ -778,9 +859,8 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch)
 		span->active = 0;
 	}
 	span->cur_val = span->new_val;
-	yasm_expr_destroy(depcopy);
     }
-
+#endif
     if (saw_error)
 	return;
 

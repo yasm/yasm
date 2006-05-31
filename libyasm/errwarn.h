@@ -36,12 +36,34 @@
 
 /** Warning classes (that may be enabled/disabled). */
 typedef enum {
-    YASM_WARN_GENERAL = 0,  /**< Non-specific warnings */
+    YASM_WARN_NONE = 0,	    /**< No warning */
+    YASM_WARN_GENERAL,	    /**< Non-specific warnings */
     YASM_WARN_UNREC_CHAR,   /**< Unrecognized characters (while tokenizing) */
     YASM_WARN_PREPROC,	    /**< Preprocessor warnings */
     YASM_WARN_ORPHAN_LABEL, /**< Label alone on a line without a colon */
-    YASM_WARN_UNINIT_CONTENTS	/**< Uninitialized space in code/data section */
+    YASM_WARN_UNINIT_CONTENTS /**< Uninitialized space in code/data section */
 } yasm_warn_class;
+
+/** Error classes.  Bitmask-based to support limited subclassing. */
+typedef enum {
+    YASM_ERROR_NONE		= 0x0000, /**< No error */
+    YASM_ERROR_GENERAL		= 0xFFFF, /**< Non-specific */
+    YASM_ERROR_ARITHMETIC	= 0x0001, /**< Arithmetic error (general) */
+    YASM_ERROR_OVERFLOW		= 0x8001, /**< Arithmetic overflow */
+    YASM_ERROR_FLOATING_POINT	= 0x4001, /**< Floating point error */
+    YASM_ERROR_ZERO_DIVISION	= 0x2001, /**< Divide-by-zero */
+    YASM_ERROR_ASSERTION	= 0x0002, /**< Assertion error */
+    YASM_ERROR_VALUE		= 0x0004, /**< Value inappropriate
+					   *   (e.g. not in range) */
+    YASM_ERROR_NOT_ABSOLUTE	= 0x8004, /**< Absolute expression required */
+    YASM_ERROR_TOO_COMPLEX	= 0x4004, /**< Expression too complex */
+    YASM_ERROR_NOT_CONSTANT	= 0x2004, /**< Constant expression required */
+    YASM_ERROR_IO		= 0x0008, /**< I/O error */
+    YASM_ERROR_NOT_IMPLEMENTED	= 0x0010, /**< Not implemented error */
+    YASM_ERROR_TYPE		= 0x0020, /**< Type error */
+    YASM_ERROR_SYNTAX		= 0x0040, /**< Syntax error */
+    YASM_ERROR_PARSE		= 0x8040  /**< Parser error */
+} yasm_error_class;
 
 /** Initialize any internal data structures. */
 void yasm_errwarn_initialize(void);
@@ -85,101 +107,118 @@ extern /*@exits@*/ void (*yasm_fatal) (const char *message, va_list va);
  */
 /*@exits@*/ void yasm__fatal(const char *message, ...);
 
-/** Log an error at a given line, displaying a different line.  va_list version
- * of yasm__error_at().
- * \internal
- * \param line      virtual line
- * \param displine  displayed virtual line
- * \param message   printf-like-format message
- * \param va	    argument list for message
+/** Unconditionally clear the error indicator, freeing any associated data.
+ * Has no effect if the error indicator is not set.
  */
-void yasm__error_va_at(unsigned long line, unsigned long displine,
-		       const char *message, va_list va);
+void yasm_error_clear(void);
 
-/** Log an error.  va_list version of yasm__error().
- * \internal
- * \param line      virtual line
- * \param message   printf-like-format message
- * \param va	    argument list for message
+/** Get the error indicator.  YASM_ERROR_NONE is returned if no error has
+ * been set.  Note that as YASM_ERROR_NONE is 0, the return value can also
+ * be treated as a boolean value.
+ * \return Current error indicator.
  */
-#define yasm__error_va(line, message, va) \
-    yasm__error_va_at(line, line, message, va)
+yasm_error_class yasm_error_occurred(void);
 
-/** Log a warning at a given line, displaying a different line.  va_list
- * version of yasm__warning_at().
- * \internal
- * \param wclass    warning class
- * \param line      virtual line
- * \param displine  displayed virtual line
- * \param message   printf-like-format message
- * \param va	    argument list for message
+/** Check the error indicator against an error class.  To check if any error
+ * has been set, check against the YASM_ERROR_GENERAL class.  This function
+ * properly checks error subclasses.
+ * \param eclass    base error class to check against
+ * \return Nonzero if error indicator is set and a subclass of eclass, 0
+ *         otherwise.
  */
-void yasm__warning_va_at(yasm_warn_class wclass, unsigned long line,
-			 unsigned long displine, const char *message,
-			 va_list va);
+int yasm_error_matches(yasm_error_class eclass);
 
-/** Log a warning.  va_list version of yasm__warning().
- * \internal
- * \param wclass    warning class
- * \param line      virtual line
- * \param message   printf-like-format message
- * \param va	    argument list for message
- */
-#define yasm__warning_va(wclass, line, message, va) \
-    yasm__warning_va_at(wclass, line, line, message, va)
+#ifndef YASM_DOXYGEN
+extern yasm_error_class yasm_eclass;
+#define yasm_error_occurred()	    yasm_eclass
+#endif
 
-/** Log an error.  Does not print it out immediately; yasm_errwarn_output_all()
- * outputs errors and warnings.
- * \internal
- * \param line      virtual line
- * \param message   printf-like-format message
- * \param ...	    argument list for message
+/** Set the error indicator (va_list version).  Has no effect if the error
+ * indicator is already set.
+ * \param eclass    error class
+ * \param format    printf format string
+ * \param va	    argument list for format
  */
-void yasm__error(unsigned long line, const char *message, ...)
+void yasm_error_set_va(yasm_error_class eclass, const char *format, va_list va);
+
+/** Set the error indicator.  Has no effect if the error indicator is already
+ * set.
+ * \param eclass    error class
+ * \param format    printf format string
+ * \param ...	    argument list for format
+ */
+void yasm_error_set(yasm_error_class eclass, const char *format, ...)
     /*@printflike@*/;
 
-/** Log an error at a given line, displaying a different line.  Does not print
- * it out immediately; yasm_errwarn_output_all() outputs errors and warnings.
- * \internal
- * \param line      virtual line
- * \param displine  displayed virtual line
- * \param message   printf-like-format message
- * \param ...	    argument list for message
+/** Set a cross-reference for a new error (va_list version).  Has no effect
+ * if the error indicator is already set (e.g. with yasm_error_set()).  This
+ * function must be called prior to its corresponding yasm_error_set() call.
+ * \param xrefline  virtual line to cross-reference to (should not be 0)
+ * \param format    printf format string
+ * \param va	    argument list for format
  */
-void yasm__error_at(unsigned long line, unsigned long displine,
-		    const char *message, ...) /*@printflike@*/;
+void yasm_error_set_xref_va(unsigned long xrefline, const char *format,
+			    va_list va);
 
-/** Log a warning.  Does not print it out immediately;
- * yasm_errwarn_output_all() outputs errors and warnings.
- * \internal
- * \param wclass    warning class
- * \param line      virtual line
- * \param message   printf-like-format message
- * \param ...	    argument list for message
+/** Set a cross-reference for a new error.  Has no effect if the error
+ * indicator is already set (e.g. with yasm_error_set()).  This function
+ * must be called prior to its corresponding yasm_error_set() call.
+ * \param xrefline  virtual line to cross-reference to (should not be 0)
+ * \param format    printf format string
+ * \param ...	    argument list for format
  */
-void yasm__warning(yasm_warn_class wclass, unsigned long line,
-		   const char *message, ...) /*@printflike@*/;
-
-/** Log a warning at a given line, displaying a different line.  Does not print
- * it out immediately; yasm_errwarn_output_all() outputs errors and warnings.
- * \internal
- * \param wclass    warning class
- * \param line      virtual line
- * \param displine  displayed virtual line
- * \param message   printf-like-format message
- * \param ...	    argument list for message
- */
-void yasm__warning_at(yasm_warn_class wclass, unsigned long line,
-		      unsigned long displine, const char *message, ...)
+void yasm_error_set_xref(unsigned long xrefline, const char *format, ...)
     /*@printflike@*/;
 
-/** Log a parser error.  Parser errors can be overwritten by non-parser errors
- * on the same line.
- * \internal
- * \param line      virtual line
- * \param message   parser error message
+/** Fetch the error indicator and all associated data.  If the error
+ * indicator is set, the output pointers are set to the current error
+ * indicator values, and the error indicator is cleared.
+ * The code using this function is then responsible for yasm_xfree()'ing
+ * str and xrefstr (if non-NULL).  If the error indicator is not set,
+ * all output values are set to 0 (including eclass, which is set to
+ * YASM_ERROR_NONE).
+ * \param eclass    error class (output)
+ * \param str	    error message
+ * \param xrefline  virtual line used for cross-referencing (0 if no xref)
+ * \param xrefstr   cross-reference error message (NULL if no xref)
  */
-void yasm__parser_error(unsigned long line, const char *message);
+void yasm_error_fetch(/*@out@*/ yasm_error_class *eclass,
+		      /*@out@*/ /*@only@*/ /*@null@*/ char **str,
+		      /*@out@*/ unsigned long *xrefline,
+		      /*@out@*/ /*@only@*/ /*@null@*/ char **xrefstr);
+
+/** Unconditionally clear all warning indicators, freeing any associated data.
+ * Has no effect if no warning indicators have been set.
+ */
+void yasm_warn_clear(void);
+
+/** Add a warning indicator (va_list version).
+ * \param wclass    warning class
+ * \param format    printf format string
+ * \param va	    argument list for format
+ */
+void yasm_warn_set_va(yasm_warn_class wclass, const char *format, va_list va);
+
+/** Add a warning indicator.
+ * \param wclass    warning class
+ * \param format    printf format string
+ * \param ...	    argument list for format
+ */
+void yasm_warn_set(yasm_warn_class wclass, const char *format, ...)
+    /*@printflike@*/;
+
+/** Fetch the first warning indicator and all associated data.  If there
+ * is at least one warning indicator, the output pointers are set to the
+ * first warning indicator values, and first warning indicator is removed.
+ * The code using this function is then responsible for yasm_xfree()'ing
+ * str and xrefstr (if non-NULL).  If there is no warning indicator set,
+ * all output values are set to 0 (including wclass, which is set to
+ * YASM_WARN_NONE).
+ * \param wclass    warning class (output)
+ * \param str	    warning message
+ */
+void yasm_warn_fetch(/*@out@*/ yasm_warn_class *wclass,
+		     /*@out@*/ /*@only@*/ char **str);
 
 /** Enable a class of warnings.
  * \param wclass    warning class
@@ -194,11 +233,35 @@ void yasm_warn_disable(yasm_warn_class wclass);
 /** Disable all classes of warnings. */
 void yasm_warn_disable_all(void);
 
+/** Create an error/warning set for collection of multiple error/warnings.
+ * \return Newly allocated set.
+ */
+/*@only@*/ yasm_errwarns *yasm_errwarns_create(void);
+
+/** Destroy an error/warning set.
+ * \param errwarns  error/warning set
+ */
+void yasm_errwarns_destroy(/*@only@*/ yasm_errwarns *errwarns);
+
+/** Propagate error indicator and warning indicator(s) to an error/warning set.
+ * Has no effect if the error indicator and warning indicator are not set.
+ * Does not print immediately; yasm_errwarn_output_all() outputs
+ * accumulated errors and warnings.
+ * Generally multiple errors on the same line will be reported, but errors
+ * of class YASM_ERROR_PARSE will get overwritten by any other class on the
+ * same line.
+ * \param errwarns  error/warning set
+ * \param line      virtual line
+ */
+void yasm_errwarn_propagate(yasm_errwarns *errwarns, unsigned long line);
+
 /** Get total number of errors logged.
+ * \param errwarns	    error/warning set
  * \param warning_as_error  if nonzero, warnings are treated as errors.
  * \return Number of errors.
  */
-unsigned int yasm_get_num_errors(int warning_as_error);
+unsigned int yasm_errwarns_num_errors(yasm_errwarns *errwarns,
+				      int warning_as_error);
 
 /** Print out an error.
  * \param fn	filename of source file
@@ -206,7 +269,8 @@ unsigned int yasm_get_num_errors(int warning_as_error);
  * \param msg	error message
  */
 typedef void (*yasm_print_error_func)
-    (const char *fn, unsigned long line, const char *msg);
+    (const char *fn, unsigned long line, const char *msg,
+     unsigned long xrefline, /*@null@*/ const char *xrefmsg);
 
 /** Print out a warning.
  * \param fn	filename of source file
@@ -216,15 +280,16 @@ typedef void (*yasm_print_error_func)
 typedef void (*yasm_print_warning_func)
     (const char *fn, unsigned long line, const char *msg);
 
-/** Outputs all errors and warnings.
+/** Outputs error/warning set in sorted order (sorted by virtual line number).
+ * \param errwarns	    error/warning set
  * \param lm	line map (to convert virtual lines into filename/line pairs)
- * \param warning_as_error  if nonzero, treat warnings as errors
+ * \param warning_as_error  if nonzero, treat warnings as errors.
  * \param print_error	    function called to print out errors
  * \param print_warning	    function called to print out warnings
  */
-void yasm_errwarn_output_all
-    (yasm_linemap *lm, int warning_as_error, yasm_print_error_func print_error,
-     yasm_print_warning_func print_warning);
+void yasm_errwarns_output_all
+    (yasm_errwarns *errwarns, yasm_linemap *lm, int warning_as_error,
+     yasm_print_error_func print_error, yasm_print_warning_func print_warning);
 
 /** Convert a possibly unprintable character into a printable string.
  * \internal

@@ -35,8 +35,9 @@
 
 static void
 nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
-		     yasm_objfmt *of, FILE *f, const char *in_filename,
-		     int save_input, yasm_section *def_sect)
+		     yasm_objfmt *of, yasm_dbgfmt *df, FILE *f,
+		     const char *in_filename, int save_input,
+		     yasm_section *def_sect, yasm_errwarns *errwarns)
 {
     yasm_parser_nasm parser_nasm;
 
@@ -52,6 +53,8 @@ nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
     parser_nasm.preproc = pp;
     parser_nasm.arch = a;
     parser_nasm.objfmt = of;
+    parser_nasm.dbgfmt = df;
+    parser_nasm.errwarns = errwarns;
 
     parser_nasm.cur_section = def_sect;
     parser_nasm.prev_bc = yasm_section_bcs_first(def_sect);

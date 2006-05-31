@@ -10,19 +10,9 @@
 #define NASM_EVAL_H
 
 /*
- * Called once to tell the evaluator what output format is
- * providing segment-base details, and what function can be used to
- * look labels up.
- */
-void nasm_eval_global_info (struct ofmt *output, lfunc lookup_label, loc_t *locp);
-
-/*
  * The evaluator itself.
  */
-nasm_expr *nasm_evaluate (scanner sc, void *scprivate, struct tokenval *tv,
-		int *fwref, int critical, efunc report_error,
-		struct eval_hints *hints);
-
-void nasm_eval_cleanup(void);
+yasm_expr *nasm_evaluate (scanner sc, void *scprivate, struct tokenval *tv,
+			  int critical, efunc report_error);
 
 #endif

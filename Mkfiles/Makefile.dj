@@ -19,6 +19,12 @@ LIBYASM_OBJS= \
  libyasm/arch.o \
  libyasm/assocdat.o \
  libyasm/bitvect.o \
+ libyasm/bc-align.o \
+ libyasm/bc-data.o \
+ libyasm/bc-incbin.o \
+ libyasm/bc-insn.o \
+ libyasm/bc-org.o \
+ libyasm/bc-reserve.o \
  libyasm/bytecode.o \
  libyasm/errwarn.o \
  libyasm/expr.o \
@@ -27,13 +33,15 @@ LIBYASM_OBJS= \
  libyasm/hamt.o \
  libyasm/intnum.o \
  libyasm/linemgr.o \
+ libyasm/md5.o \
  libyasm/mergesort.o \
- libyasm/objfmt.o \
+ libyasm/phash.o \
  libyasm/section.o \
  libyasm/strcasecmp.o \
  libyasm/strsep.o \
  libyasm/symrec.o \
  libyasm/valparam.o \
+ libyasm/value.o \
  libyasm/xmalloc.o \
  libyasm/xstrdup.o \
  module.o
@@ -42,7 +50,7 @@ MODULES_ARCH_X86_OBJS= \
  modules/arch/x86/x86arch.o \
  modules/arch/x86/x86bc.o \
  modules/arch/x86/x86expr.o \
- x86id.o
+ modules/arch/x86/x86id.o
 YASM_MODULES=arch_x86
 
 MODULES_ARCH_LC3B_OBJS= \
@@ -57,9 +65,17 @@ MODULES_ARCH_OBJS= \
 
 MODULES_DBGFMTS_OBJS= \
  modules/dbgfmts/null/null-dbgfmt.o \
- modules/dbgfmts/stabs/stabs-dbgfmt.o
+ modules/dbgfmts/stabs/stabs-dbgfmt.o \
+ modules/dbgfmts/codeview/cv-dbgfmt.o \
+ modules/dbgfmts/codeview/cv-symline.o \
+ modules/dbgfmts/codeview/cv-type.o \
+ modules/dbgfmts/dwarf2/dwarf2-dbgfmt.o \
+ modules/dbgfmts/dwarf2/dwarf2-line.o \
+ modules/dbgfmts/dwarf2/dwarf2-info.o \
+ modules/dbgfmts/dwarf2/dwarf2-aranges.o
 YASM_MODULES+=dbgfmt_null
 YASM_MODULES+=dbgfmt_stabs
+YASM_MODULES+=dbgfmt_dwarf2
 
 MODULES_LISTFMTS_OBJS= \
  modules/listfmts/nasm/nasm-listfmt.o
@@ -124,31 +140,47 @@ YASM_OBJS= \
  $(LIBYASM_OBJS) \
  $(MODULES_OBJS)
 
+genstring: genstring.c
+	$(BUILDCC) -o $@ $<
+
+license.c: COPYING genstring
+	./genstring license_msg $@ COPYING
+
+frontends/yasm/yasm.c: license.c
+
 genmacro: modules/preprocs/nasm/genmacro.c
 	$(BUILDCC) -o $@ $<
 
-nasm-macros.c: modules/preprocs/nasm/standard.mac genmacro
-	./genmacro $<
+nasm-macros.c: modules/preprocs/nasm/standard.mac version.mac genmacro
+	./genmacro modules/preprocs/nasm/standard.mac version.mac
 
 modules/preprocs/nasm/nasm-pp.c: nasm-macros.c
+
+genversion: modules/preprocs/nasm/genversion.c
+	$(BUILDCC) -IMkfiles/dj -o $@ $<
+
+version.mac: genversion
+	./genversion $@
 
 genmodule: libyasm/genmodule.c
 	$(BUILDCC) -o $@ $<
 
 module.c: libyasm/module.in genmodule
-	./genmodule $< $(YASM_MODULES)
+	./genmodule libyasm/module.in $(YASM_MODULES)
 
-x86id.c: modules/arch/x86/x86id.re re2c
-	./re2c -s -o $@ $<
+x86parse.c: modules/arch/x86/x86parse.gap gap
+	./gap modules/arch/x86/x86parse.gap $@
+
+modules/arch/x86/x86id.c: x86parse.c
 
 lc3bid.c: modules/arch/lc3b/lc3bid.re re2c
-	./re2c -s -o $@ $<
+	./re2c -s -o $@ modules/arch/lc3b/lc3bid.re
 
 gas-token.c: modules/parsers/gas/gas-token.re re2c
-	./re2c -b -o $@ $<
+	./re2c -b -o $@ modules/parsers/gas/gas-token.re
 
 nasm-token.c: modules/parsers/nasm/nasm-token.re re2c
-	./re2c -b -o $@ $<
+	./re2c -b -o $@ modules/parsers/nasm/nasm-token.re
 
 RE2C_SRCS= \
 	tools/re2c/main.c \
@@ -163,6 +195,16 @@ RE2C_SRCS= \
 
 re2c: $(RE2C_SRCS)
 	$(BUILDCC) -I. -o re2c $(RE2C_SRCS)
+
+GAP_SRCS= \
+	tools/gap/gap.c \
+	tools/gap/perfect.c \
+	libyasm/phash.c \
+	libyasm/xmalloc.c \
+	libyasm/xstrdup.c
+
+gap: $(GAP_SRCS)
+	$(BUILDCC) -I. -o gap $(GAP_SRCS)
 
 yasm: $(YASM_OBJS)
 	$(CC) -o yasm $(YASM_OBJS)

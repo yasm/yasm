@@ -34,10 +34,52 @@
 #ifndef YASM_BYTECODE_H
 #define YASM_BYTECODE_H
 
-/** An effective address (opaque type). */
+/** An effective address. */
 typedef struct yasm_effaddr yasm_effaddr;
-/** An immediate value (opaque type). */
-typedef struct yasm_immval yasm_immval;
+
+/** Callbacks for effective address implementations. */
+typedef struct yasm_effaddr_callback {
+    /** Destroy the effective address (freeing it).
+     * \param ea	effective address
+     */
+    void (*destroy) (/*@only@*/ yasm_effaddr *ea);
+
+    /** Print the effective address.
+     * \param ea		effective address
+     * \param f			file to output to
+     * \param indent_level	indentation level
+     */
+    void (*print) (const yasm_effaddr *ea, FILE *f, int indent_level);
+} yasm_effaddr_callback;
+
+/** An effective address. */
+struct yasm_effaddr {
+    const yasm_effaddr_callback *callback;	/**< callback functions */
+
+    yasm_value disp;		/**< address displacement */
+
+    unsigned long segreg;	/**< segment register override (0 if none) */
+
+    unsigned char need_nonzero_len; /**< 1 if length of disp must be >0. */
+    unsigned char need_disp;	/**< 1 if a displacement should be present
+				 *   in the output.
+				 */
+    unsigned char nosplit;	/**< 1 if reg*2 should not be split into
+				 *   reg+reg. (0 if not)
+				 */
+    unsigned char strong;	/**< 1 if effective address is *definitely*
+				 *   an effective address, e.g. in GAS if
+				 *   expr(,1) form is used vs. just expr.
+				 */
+};
+
+/** An immediate value. */
+typedef struct yasm_immval {
+    yasm_value val;		/**< the immediate value itself */
+
+    unsigned char sign;		/**< 1 if final imm is treated as signed */
+} yasm_immval;
+
 /** A data value (opaque type). */
 typedef struct yasm_dataval yasm_dataval;
 /** A list of data values (opaque type). */
@@ -46,14 +88,6 @@ typedef struct yasm_datavalhead yasm_datavalhead;
 #ifdef YASM_LIB_INTERNAL
 /*@reldef@*/ STAILQ_HEAD(yasm_datavalhead, yasm_dataval);
 #endif
-
-/** Create an immediate value from an unsigned integer.
- * \param int_val   unsigned integer
- * \param line	    virtual line (from yasm_linemap)
- * \return Newly allocated immediate value.
- */
-/*@only@*/ yasm_immval *yasm_imm_create_int(unsigned long int_val,
-					    unsigned long line);
 
 /** Create an immediate value from an expression.
  * \param e	expression (kept, do not free).
@@ -68,9 +102,9 @@ typedef struct yasm_datavalhead yasm_datavalhead;
 /*@observer@*/ const yasm_expr *yasm_ea_get_disp(const yasm_effaddr *ea);
 
 /** Set the length of the displacement portion of an effective address.
- * The length is specified in bytes.
+ * The length is specified in bits.
  * \param ea	effective address
- * \param len	length in bytes
+ * \param len	length in bits
  */
 void yasm_ea_set_len(yasm_effaddr *ea, unsigned int len);
 
@@ -99,10 +133,8 @@ void yasm_ea_set_strong(yasm_effaddr *ea, unsigned int strong);
  * addresses.  A override of an override will result in a warning.
  * \param ea		effective address
  * \param segreg	segment register (0 if none)
- * \param line		virtual line number
  */
-void yasm_ea_set_segreg(yasm_effaddr *ea, unsigned long segreg,
-			unsigned long line);
+void yasm_ea_set_segreg(yasm_effaddr *ea, unsigned long segreg);
 
 /** Delete (free allocated memory for) an effective address.
  * \param ea	effective address (only pointer to it).
@@ -129,12 +161,14 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
  * \param size		storage size (in bytes) for each data value
  * \param append_zero	append a single zero byte after each data value
  *			(if non-zero)
+ * \param arch		architecture (optional); if provided, data items
+ *			are directly simplified to bytes if possible
  * \param line		virtual line (from yasm_linemap)
  * \return Newly allocated bytecode.
  */
 /*@only@*/ yasm_bytecode *yasm_bc_create_data
     (yasm_datavalhead *datahead, unsigned int size, int append_zero,
-     unsigned long line);
+     /*@null@*/ yasm_arch *arch, unsigned long line);
 
 /** Create a bytecode containing LEB128-encoded data value(s).
  * \param datahead	list of data values (kept, do not free)
@@ -270,20 +304,23 @@ void yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
  * yasm_expr output functions.
  * \see yasm_calc_bc_dist_func for parameter descriptions.
  */
-/*@null@*/ yasm_intnum *yasm_common_calc_bc_dist
-    (/*@null@*/ yasm_bytecode *precbc1, /*@null@*/ yasm_bytecode *precbc2);
+/*@null@*/ /*@only@*/ yasm_intnum *yasm_common_calc_bc_dist
+    (yasm_bytecode *precbc1, yasm_bytecode *precbc2);
 
 /**
- * \param critical	dependent expression for bytecode expansion
+ * \param value		dependent value for bytecode expansion
+ * \param origin_prevbc	origin for distance computation to relative portion of
+ *			value; value.rel and origin must be within the same
+ *			section.
  * \param neg_thres	negative threshold for long/short decision
  * \param pos_thres	positive threshold for long/short decision
  */
 typedef void (*yasm_bc_add_span_func)
-    (void *add_span_data, yasm_bytecode *bc, int id,
-     /*@only@*/ yasm_expr *dependent, long neg_thres, long pos_thres);
+    (void *add_span_data, yasm_bytecode *bc, int id, yasm_value *value,
+     /*@null@*/ yasm_bytecode *origin_prevbc, long neg_thres, long pos_thres);
 
 /** Resolve EQUs in a bytecode and calculate its minimum size.
- * Returns dependent bytecode spans for cases where, if the length spanned
+ * Generates dependent bytecode spans for cases where, if the length spanned
  * increases, it could cause the bytecode size to increase.
  * Any bytecode multiple is NOT included in the length or spans generation;
  * this must be handled at a higher level.
@@ -317,13 +354,11 @@ int yasm_bc_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
  * \param buf		byte representation destination buffer
  * \param bufsize	size of buf (in bytes) prior to call; size of the
  *			generated data after call
- * \param multiple	number of times the data should be duplicated when
- *			written to the object file [output]
  * \param gap		if nonzero, indicates the data does not really need to
  *			exist in the object file; if nonzero, contents of buf
  *			are undefined [output]
- * \param d		data to pass to each call to output_expr/output_reloc
- * \param output_expr	function to call to convert expressions into their byte
+ * \param d		data to pass to each call to output_value/output_reloc
+ * \param output_value	function to call to convert values into their byte
  *			representation
  * \param output_reloc	function to call to output relocation entries
  *			for a single sym
@@ -336,10 +371,18 @@ int yasm_bc_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
  */
 /*@null@*/ /*@only@*/ unsigned char *yasm_bc_tobytes
     (yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
-     /*@out@*/ unsigned long *multiple, /*@out@*/ int *gap, void *d,
-     yasm_output_expr_func output_expr,
+     /*@out@*/ int *gap, void *d, yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc)
     /*@sets *buf@*/;
+
+/** Get the bytecode multiple value as an unsigned long integer.
+ * \param bc		bytecode
+ * \param multiple	multiple value (output)
+ * \param calc_bc_dist	bytecode distance calculation function (optional)
+ * \return 1 on error (set with yasm_error_set), 0 on success.
+ */
+int yasm_bc_get_multiple(yasm_bytecode *bc, /*@out@*/ unsigned long *multiple,
+			 /*@null@*/ yasm_calc_bc_dist_func calc_bc_dist);
 
 /** Create a new data value from an expression.
  * \param expn	expression
@@ -348,11 +391,24 @@ int yasm_bc_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 yasm_dataval *yasm_dv_create_expr(/*@keep@*/ yasm_expr *expn);
 
 /** Create a new data value from a string.
- * \param contents	string (raw, may contain NULs)
+ * \param contents	string (may contain NULs)
  * \param len		length of string
  * \return Newly allocated data value.
  */
 yasm_dataval *yasm_dv_create_string(/*@keep@*/ char *contents, size_t len);
+
+/** Create a new data value from raw bytes data.
+ * \param contents	raw data (may contain NULs)
+ * \param len		length
+ * \return Newly allocated data value.
+ */
+yasm_dataval *yasm_dv_create_raw(/*@keep@*/ unsigned char *contents,
+				 unsigned long len);
+
+#ifndef YASM_DOXYGEN
+#define yasm_dv_create_string(s, l) yasm_dv_create_raw((unsigned char *)(s), \
+						       (unsigned long)(l))
+#endif
 
 /** Initialize a list of data values.
  * \param headp	list of data values

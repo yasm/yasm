@@ -55,16 +55,13 @@ typedef struct yasm_dbgfmt_module {
     /** Create debug format.
      * Module-level implementation of yasm_dbgfmt_create().
      * The filenames are provided solely for informational purposes.
-     * \param in_filename   primary input filename
-     * \param obj_filename  object filename
      * \param object	    object
      * \param of	    object format in use
      * \param a		    architecture in use
      * \return NULL if object format does not provide needed support.
      */
     /*@null@*/ /*@only@*/ yasm_dbgfmt * (*create)
-	(const char *in_filename, const char *obj_filename,
-	 yasm_object *object, yasm_objfmt *of, yasm_arch *a);
+	(yasm_object *object, yasm_objfmt *of, yasm_arch *a);
 
     /** Module-level implementation of yasm_dbgfmt_destroy().
      * Call yasm_dbgfmt_destroy() instead of calling this function.
@@ -75,12 +72,13 @@ typedef struct yasm_dbgfmt_module {
      * Call yasm_dbgfmt_directive() instead of calling this function.
      */
     int (*directive) (yasm_dbgfmt *dbgfmt, const char *name,
-		      yasm_valparamhead *valparams, unsigned long line);
+		      yasm_section *sect, yasm_valparamhead *valparams,
+		      unsigned long line);
 
     /** Module-level implementation of yasm_dbgfmt_generate().
      * Call yasm_dbgfmt_generate() instead of calling this function.
      */
-    void (*generate) (yasm_dbgfmt *dbgfmt);
+    void (*generate) (yasm_dbgfmt *dbgfmt, yasm_errwarns *errwarns);
 } yasm_dbgfmt_module;
 
 /** Get the keyword used to select a debug format.
@@ -93,16 +91,13 @@ const char *yasm_dbgfmt_keyword(const yasm_dbgfmt *dbgfmt);
  * format functions.  The filenames are provided solely for informational
  * purposes.
  * \param module	debug format module
- * \param in_filename   primary input filename
- * \param obj_filename  object filename
  * \param object	object to generate debugging information for
  * \param of		object format in use
  * \param a		architecture in use
  * \return NULL if object format does not provide needed support.
  */
 /*@null@*/ /*@only@*/ yasm_dbgfmt *yasm_dbgfmt_create
-    (const yasm_dbgfmt_module *module, const char *in_filename,
-     const char *obj_filename, yasm_object *object, yasm_objfmt *of,
+    (const yasm_dbgfmt_module *module, yasm_object *object, yasm_objfmt *of,
      yasm_arch *a);
 
 /** Cleans up any allocated debug format memory.
@@ -113,18 +108,22 @@ void yasm_dbgfmt_destroy(/*@only@*/ yasm_dbgfmt *dbgfmt);
 /** DEBUG directive support.
  * \param dbgfmt	debug format
  * \param name		directive name
+ * \param sect		current active section
  * \param valparams	value/parameters
  * \param line		virtual line (from yasm_linemap)
  * \return Nonzero if directive was not recognized; 0 if directive was
  *	       recognized even if it wasn't valid.
  */
 int yasm_dbgfmt_directive(yasm_dbgfmt *dbgfmt, const char *name,
-			  yasm_valparamhead *valparams, unsigned long line);
+			  yasm_section *sect, yasm_valparamhead *valparams,
+			  unsigned long line);
 
 /** Generate debugging information bytecodes.
  * \param dbgfmt	debug format
+ * \param errwarns	error/warning set
+ * \note Errors and warnings are stored into errwarns.
  */
-void yasm_dbgfmt_generate(yasm_dbgfmt *dbgfmt);
+void yasm_dbgfmt_generate(yasm_dbgfmt *dbgfmt, yasm_errwarns *errwarns);
 
 #ifndef YASM_DOXYGEN
 
@@ -133,16 +132,16 @@ void yasm_dbgfmt_generate(yasm_dbgfmt *dbgfmt);
 #define yasm_dbgfmt_keyword(dbgfmt) \
     (((yasm_dbgfmt_base *)dbgfmt)->module->keyword)
 
-#define yasm_dbgfmt_create(module, in_filename, obj_filename, object, of, a) \
-    module->create(in_filename, obj_filename, object, of, a)
+#define yasm_dbgfmt_create(module, object, of, a) \
+    module->create(object, of, a)
 
 #define yasm_dbgfmt_destroy(dbgfmt) \
     ((yasm_dbgfmt_base *)dbgfmt)->module->destroy(dbgfmt)
-#define yasm_dbgfmt_directive(dbgfmt, name, valparams, line) \
-    ((yasm_dbgfmt_base *)dbgfmt)->module->directive(dbgfmt, name, valparams, \
-						    line)
-#define yasm_dbgfmt_generate(dbgfmt) \
-    ((yasm_dbgfmt_base *)dbgfmt)->module->generate(dbgfmt)
+#define yasm_dbgfmt_directive(dbgfmt, name, sect, valparams, line) \
+    ((yasm_dbgfmt_base *)dbgfmt)->module->directive(dbgfmt, name, sect, \
+						    valparams, line)
+#define yasm_dbgfmt_generate(dbgfmt, ews) \
+    ((yasm_dbgfmt_base *)dbgfmt)->module->generate(dbgfmt, ews)
 
 #endif
 

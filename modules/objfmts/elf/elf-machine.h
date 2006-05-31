@@ -30,12 +30,12 @@
 
 #define YASM_WRITE_32I_L(p, i) do {\
     assert(yasm_intnum_check_size(i, 32, 0, 2)); \
-    yasm_intnum_get_sized(i, p, 4, 32, 0, 0, 0, 0); \
+    yasm_intnum_get_sized(i, p, 4, 32, 0, 0, 0); \
     p += 4; } while (0)
 
 #define YASM_WRITE_64I_L(p, i) do {\
     assert(yasm_intnum_check_size(i, 64, 0, 2)); \
-    yasm_intnum_get_sized(i, p, 8, 64, 0, 0, 0, 0); \
+    yasm_intnum_get_sized(i, p, 8, 64, 0, 0, 0); \
     p += 8; } while (0)
 
 #define YASM_WRITE_64C_L(p, hi, lo) do {\

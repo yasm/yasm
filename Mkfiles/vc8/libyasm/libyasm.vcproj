@@ -4,7 +4,7 @@
 	Version="8.00"
 	Name="libyasm"
 	ProjectGUID="{29FE7874-1256-4AD6-B889-68E399DC9608}"
-	SignManifests="true"
+	RootNamespace="libyasm"
 	>
 	<Platforms>
 		<Platform
@@ -22,7 +22,6 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -44,18 +43,17 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				Optimization="3"
+				InlineFunctionExpansion="0"
 				AdditionalIncludeDirectories="..,../../.."
 				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;HAVE_CONFIG_H"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderFile="$(PlatformName)\$(ConfigurationName)/libyasm.pch"
-				AssemblerListingLocation="$(PlatformName)\$(ConfigurationName)/"
-				ObjectFile="$(PlatformName)\$(ConfigurationName)/"
-				ProgramDataBaseFileName="$(PlatformName)\$(ConfigurationName)/"
+				AssemblerListingLocation="$(IntDir)\"
+				ObjectFile="$(IntDir)\"
+				ProgramDataBaseFileName="$(IntDir)\"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				CompileAs="0"
@@ -73,7 +71,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(PlatformName)\$(ConfigurationName)\libyasm.lib"
+				OutputFile="$(OutDir)\libyasm.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -120,18 +118,18 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				Optimization="3"
+				InlineFunctionExpansion="0"
 				AdditionalIncludeDirectories="..,../../.."
 				PreprocessorDefinitions="NDEBUG;_LIB;HAVE_CONFIG_H;WIN64"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderFile="$(PlatformName)\$(ConfigurationName)/libyasm.pch"
-				AssemblerListingLocation="$(PlatformName)\$(ConfigurationName)/"
-				ObjectFile="$(PlatformName)\$(ConfigurationName)/"
-				ProgramDataBaseFileName="$(PlatformName)\$(ConfigurationName)/"
+				PrecompiledHeaderFile=""
+				AssemblerListingLocation="$(IntDir)\"
+				ObjectFile="$(IntDir)\"
+				ProgramDataBaseFileName="$(IntDir)\"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				CompileAs="0"
@@ -149,7 +147,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(PlatformName)\$(ConfigurationName)\libyasm.lib"
+				OutputFile="$(OutDir)\libyasm.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -173,7 +171,6 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -201,10 +198,9 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderFile="$(PlatformName)\$(ConfigurationName)/libyasm.pch"
-				AssemblerListingLocation="$(PlatformName)\$(ConfigurationName)/"
-				ObjectFile="$(PlatformName)\$(ConfigurationName)/"
-				ProgramDataBaseFileName="$(PlatformName)\$(ConfigurationName)/"
+				AssemblerListingLocation="$(IntDir)\"
+				ObjectFile="$(IntDir)\"
+				ProgramDataBaseFileName="$(IntDir)\"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
@@ -223,7 +219,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(PlatformName)\$(ConfigurationName)\libyasm.lib"
+				OutputFile="$(OutDir)\libyasm.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -245,7 +241,7 @@
 		<Configuration
 			Name="Debug|x64"
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="x64\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="0"
@@ -276,10 +272,10 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderFile="$(PlatformName)\$(ConfigurationName)/libyasm.pch"
-				AssemblerListingLocation="$(PlatformName)\$(ConfigurationName)/"
-				ObjectFile="$(PlatformName)\$(ConfigurationName)/"
-				ProgramDataBaseFileName="$(PlatformName)\$(ConfigurationName)/"
+				PrecompiledHeaderFile=""
+				AssemblerListingLocation="$(IntDir)\"
+				ObjectFile="$(IntDir)\"
+				ProgramDataBaseFileName="$(IntDir)\"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="3"
@@ -298,7 +294,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(PlatformName)\$(ConfigurationName)\libyasm.lib"
+				OutputFile="$(OutDir)\libyasm.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -328,48 +324,6 @@
 			<File
 				RelativePath="..\..\..\libyasm\arch.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\assocdat.c"
@@ -378,232 +332,46 @@
 			<File
 				RelativePath="..\..\..\libyasm\bitvect.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\bc-align.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\bc-data.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\bc-incbin.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\bc-insn.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\bc-org.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\bc-reserve.c"
+				>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\bytecode.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\errwarn.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\expr.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\file.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\file.h"
@@ -612,562 +380,66 @@
 			<File
 				RelativePath="..\..\..\libyasm\floatnum.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\hamt.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\intnum.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\linemgr.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\md5.c"
+				>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\mergesort.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\module.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\libyasm\objfmt.c"
+				RelativePath="..\..\..\libyasm\phash.c"
 				>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\section.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\strcasecmp.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\strsep.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\symrec.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\valparam.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\value.c"
+				>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\xmalloc.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\xstrdup.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-					/>
-				</FileConfiguration>
 			</File>
 		</Filter>
 		<Filter
@@ -1239,6 +511,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\libyasm\md5.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\libyasm\objfmt.h"
 				>
 			</File>
@@ -1248,6 +524,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\parser.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\phash.h"
 				>
 			</File>
 			<File
@@ -1268,6 +548,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\valparam.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\value.h"
 				>
 			</File>
 		</Filter>

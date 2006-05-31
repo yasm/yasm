@@ -22,14 +22,12 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
-				CommandLine="cmd &lt;build.bat"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -45,18 +43,18 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				Optimization="3"
+				InlineFunctionExpansion="0"
 				AdditionalIncludeDirectories="..,../../.."
 				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;HAVE_CONFIG_H"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderFile="$(PlatformName)\$(ConfigurationName)/modules.pch"
-				AssemblerListingLocation="$(PlatformName)\$(ConfigurationName)/"
-				ObjectFile="$(PlatformName)\$(ConfigurationName)/"
-				ProgramDataBaseFileName="$(PlatformName)\$(ConfigurationName)/"
+				PrecompiledHeaderFile=""
+				AssemblerListingLocation="$(IntDir)\"
+				ObjectFile="$(IntDir)\"
+				ProgramDataBaseFileName="$(IntDir)\"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				CompileAs="0"
@@ -74,7 +72,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(PlatformName)\$(ConfigurationName)\modules.lib"
+				OutputFile="$(OutDir)\modules.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -122,18 +120,18 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				Optimization="3"
+				InlineFunctionExpansion="0"
 				AdditionalIncludeDirectories="..,../../.."
 				PreprocessorDefinitions="NDEBUG;_LIB;HAVE_CONFIG_H;WIN64"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderFile="$(PlatformName)\$(ConfigurationName)/modules.pch"
-				AssemblerListingLocation="$(PlatformName)\$(ConfigurationName)/"
-				ObjectFile="$(PlatformName)\$(ConfigurationName)/"
-				ProgramDataBaseFileName="$(PlatformName)\$(ConfigurationName)/"
+				PrecompiledHeaderFile=""
+				AssemblerListingLocation="$(IntDir)\"
+				ObjectFile="$(IntDir)\"
+				ProgramDataBaseFileName="$(IntDir)\"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				CompileAs="0"
@@ -151,7 +149,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(PlatformName)\$(ConfigurationName)\modules.lib"
+				OutputFile="$(OutDir)\modules.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -175,7 +173,6 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -203,10 +200,10 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderFile="$(PlatformName)\$(ConfigurationName)/modules.pch"
-				AssemblerListingLocation="$(PlatformName)\$(ConfigurationName)/"
-				ObjectFile="$(PlatformName)\$(ConfigurationName)/"
-				ProgramDataBaseFileName="$(PlatformName)\$(ConfigurationName)/"
+				PrecompiledHeaderFile=""
+				AssemblerListingLocation="$(IntDir)\"
+				ObjectFile="$(IntDir)\"
+				ProgramDataBaseFileName="$(IntDir)\"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
@@ -225,7 +222,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(PlatformName)\$(ConfigurationName)\modules.lib"
+				OutputFile="$(OutDir)\modules.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -278,10 +275,10 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderFile="$(PlatformName)\$(ConfigurationName)/modules.pch"
-				AssemblerListingLocation="$(PlatformName)\$(ConfigurationName)/"
-				ObjectFile="$(PlatformName)\$(ConfigurationName)/"
-				ProgramDataBaseFileName="$(PlatformName)\$(ConfigurationName)/"
+				PrecompiledHeaderFile=""
+				AssemblerListingLocation="$(IntDir)\"
+				ObjectFile="$(IntDir)\"
+				ProgramDataBaseFileName="$(IntDir)\"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="3"
@@ -300,7 +297,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(PlatformName)\$(ConfigurationName)\modules.lib"
+				OutputFile="$(OutDir)\modules.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -333,48 +330,6 @@
 				<File
 					RelativePath="..\..\..\modules\arch\lc3b\lc3barch.c"
 					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\..\modules\arch\lc3b\lc3barch.h"
@@ -383,48 +338,6 @@
 				<File
 					RelativePath="..\..\..\modules\arch\lc3b\lc3bbc.c"
 					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\..\lc3bid.c"
@@ -433,48 +346,6 @@
 				<File
 					RelativePath="..\..\..\modules\arch\x86\x86arch.c"
 					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\..\modules\arch\x86\x86arch.h"
@@ -483,97 +354,13 @@
 				<File
 					RelativePath="..\..\..\modules\arch\x86\x86bc.c"
 					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\..\modules\arch\x86\x86expr.c"
 					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\..\x86id.c"
+					RelativePath="..\..\..\modules\arch\x86\x86id.c"
 					>
 				</File>
 			</Filter>
@@ -583,51 +370,45 @@
 				<File
 					RelativePath="..\..\..\modules\dbgfmts\null\null-dbgfmt.c"
 					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\..\modules\dbgfmts\stabs\stabs-dbgfmt.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\dbgfmts\codeview\cv-dbgfmt.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\dbgfmts\codeview\cv-dbgfmt.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\dbgfmts\codeview\cv-symline.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\dbgfmts\codeview\cv-type.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-dbgfmt.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-dbgfmt.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-line.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-info.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-aranges.c"
 					>
 				</File>
 			</Filter>
@@ -637,140 +418,14 @@
 				<File
 					RelativePath="..\..\..\modules\objfmts\bin\bin-objfmt.c"
 					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\..\modules\objfmts\coff\coff-objfmt.c"
 					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\..\modules\objfmts\dbg\dbg-objfmt.c"
 					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\..\modules\objfmts\elf\elf-machine.h"
@@ -779,48 +434,6 @@
 				<File
 					RelativePath="..\..\..\modules\objfmts\elf\elf-objfmt.c"
 					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\..\modules\objfmts\elf\elf-x86-amd64.c"
@@ -833,48 +446,6 @@
 				<File
 					RelativePath="..\..\..\modules\objfmts\elf\elf.c"
 					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\..\modules\objfmts\elf\elf.h"
@@ -891,48 +462,6 @@
 				<File
 					RelativePath="..\..\..\modules\optimizers\basic\basic-optimizer.c"
 					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
 				</File>
 			</Filter>
 			<Filter
@@ -949,20 +478,6 @@
 				<File
 					RelativePath="..\..\..\modules\parsers\gas\gas-defs.h"
 					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCustomBuildTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCustomBuildTool"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\..\modules\parsers\gas\gas-parser.c"
@@ -971,20 +486,6 @@
 				<File
 					RelativePath="..\..\..\modules\parsers\gas\gas-parser.h"
 					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCustomBuildTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCustomBuildTool"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\..\gas-token.c"
@@ -1005,48 +506,6 @@
 				<File
 					RelativePath="..\..\..\modules\parsers\nasm\nasm-parser.c"
 					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BasicRuntimeChecks="3"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\..\modules\parsers\nasm\nasm-parser.h"
@@ -1066,48 +525,6 @@
 					<File
 						RelativePath="..\..\..\modules\preprocs\nasm\nasm-eval.c"
 						>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="2"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="2"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="0"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-								BasicRuntimeChecks="3"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="0"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-								BasicRuntimeChecks="3"
-							/>
-						</FileConfiguration>
 					</File>
 					<File
 						RelativePath="..\..\..\modules\preprocs\nasm\nasm-eval.h"
@@ -1116,48 +533,6 @@
 					<File
 						RelativePath="..\..\..\modules\preprocs\nasm\nasm-pp.c"
 						>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="2"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="2"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="0"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-								BasicRuntimeChecks="3"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="0"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-								BasicRuntimeChecks="3"
-							/>
-						</FileConfiguration>
 					</File>
 					<File
 						RelativePath="..\..\..\modules\preprocs\nasm\nasm-pp.h"
@@ -1166,48 +541,6 @@
 					<File
 						RelativePath="..\..\..\modules\preprocs\nasm\nasm-preproc.c"
 						>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="2"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="2"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="0"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-								BasicRuntimeChecks="3"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="0"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-								BasicRuntimeChecks="3"
-							/>
-						</FileConfiguration>
 					</File>
 					<File
 						RelativePath="..\..\..\modules\preprocs\nasm\nasm.h"
@@ -1216,48 +549,6 @@
 					<File
 						RelativePath="..\..\..\modules\preprocs\nasm\nasmlib.c"
 						>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="2"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="2"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="0"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-								BasicRuntimeChecks="3"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="0"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-								BasicRuntimeChecks="3"
-							/>
-						</FileConfiguration>
 					</File>
 					<File
 						RelativePath="..\..\..\modules\preprocs\nasm\nasmlib.h"
@@ -1270,48 +561,6 @@
 					<File
 						RelativePath="..\..\..\modules\preprocs\raw\raw-preproc.c"
 						>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="2"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="2"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="0"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-								BasicRuntimeChecks="3"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								Optimization="0"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-								BasicRuntimeChecks="3"
-							/>
-						</FileConfiguration>
 					</File>
 				</Filter>
 			</Filter>

@@ -37,11 +37,11 @@
 #include "hamt.h"
 #include "_stdint.h"			/* for uintptr_t */
 
-typedef struct HAMTEntry {
+struct HAMTEntry {
     STAILQ_ENTRY(HAMTEntry) next;	/* next hash table entry */
     /*@dependent@*/ const char *str;	/* string being hashed */
     /*@owned@*/ void *data;		/* data pointer being stored */
-} HAMTEntry;
+};
 
 typedef struct HAMTNode {
     unsigned long BitMapKey;		/* 32 bits, bitmap or hash key */
@@ -114,7 +114,9 @@ HAMT_delete_trie(HAMTNode *node)
 
 	/* Count total number of bits in bitmap to determine size */
 	BitCount(Size, node->BitMapKey);
-	Size &= 0x1F;	/* Clamp to <32 */
+	Size &= 0x1F;
+	if (Size == 0)
+	    Size = 32;
 
 	for (i=0; i<Size; i++)
 	    HAMT_delete_trie(&(GetSubTrie(node))[i]);
@@ -150,10 +152,30 @@ HAMT_traverse(HAMT *hamt, void *d,
 			    /*@null@*/ void *d))
 {
     HAMTEntry *entry;
-    STAILQ_FOREACH(entry, &hamt->entries, next)
-	if (func(entry->data, d) == 0)
-	    return 0;
-    return 1;
+    STAILQ_FOREACH(entry, &hamt->entries, next) {
+	int retval = func(entry->data, d);
+	if (retval != 0)
+	    return retval;
+    }
+    return 0;
+}
+
+const HAMTEntry *
+HAMT_first(const HAMT *hamt)
+{
+    return STAILQ_FIRST(&hamt->entries);
+}
+
+const HAMTEntry *
+HAMT_next(const HAMTEntry *prev)
+{
+    return STAILQ_NEXT(prev, next);
+}
+
+void *
+HAMTEntry_get_data(const HAMTEntry *entry)
+{
+    return entry->data;
 }
 
 /*@-temptrans -kepttrans -mustfree@*/
@@ -187,7 +209,8 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 
     for (;;) {
 	if (!(IsSubTrie(node))) {
-	    if (node->BitMapKey == key) {
+	    if (node->BitMapKey == key
+		&& strcmp(((HAMTEntry *)(node->BaseValue))->str, str) == 0) {
 		/*@-branchstate@*/
 		if (*replace) {
 		    deletefunc(((HAMTEntry *)(node->BaseValue))->data);
@@ -272,7 +295,7 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 
 	    /* Count total number of bits in bitmap to determine new size */
 	    BitCount(Size, node->BitMapKey);
-	    Size &= 0x1F;	/* Clamp to <=32 */
+	    Size &= 0x1F;
 	    if (Size == 0)
 		Size = 32;
 	    newnodes = yasm_xmalloc(Size*sizeof(HAMTNode));

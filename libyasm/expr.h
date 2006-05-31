@@ -147,6 +147,7 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
  * \param e		    expression
  * \param fold_const	    enable constant folding if nonzero
  * \param simplify_ident    simplify identities
+ * \param simplify_reg_mul  simplify REG*1 identities
  * \param calc_bc_dist	    bytecode distance-calculation function
  * \param expr_xform_extra  extra transformation function
  * \param expr_xform_extra_data	data to pass to expr_xform_extra
@@ -155,7 +156,8 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
  */
 /*@only@*/ /*@null@*/ yasm_expr *yasm_expr__level_tree
     (/*@returned@*/ /*@only@*/ /*@null@*/ yasm_expr *e, int fold_const,
-     int simplify_ident, /*@null@*/ yasm_calc_bc_dist_func calc_bc_dist,
+     int simplify_ident, int simplify_reg_mul,
+     /*@null@*/ yasm_calc_bc_dist_func calc_bc_dist,
      /*@null@*/ yasm_expr_xform_func expr_xform_extra,
      /*@null@*/ void *expr_xform_extra_data, /*@null@*/ yasm__exprhead *eh);
 
@@ -167,39 +169,7 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
  * \return Simplified expression.
  */
 #define yasm_expr_simplify(e, cbd) \
-    yasm_expr__level_tree(e, 1, 1, cbd, NULL, NULL, NULL)
-
-/** Relocation actions for yasm_expr_extract_symrec(). */
-typedef enum yasm_symrec_relocate_action {
-    YASM_SYMREC_REPLACE_ZERO = 0,   /**< Replace the symbol with 0 */
-    YASM_SYMREC_REPLACE_VALUE,	    /**< Replace with symbol's value (offset)
-				     * if symbol is a label.
-				     */
-    YASM_SYMREC_REPLACE_VALUE_IF_LOCAL	/**< Replace with symbol's value only
-					 * if symbol is label and declared
-					 * local.
-					 */
-} yasm_symrec_relocate_action;
-
-/** Extract a single symbol out of an expression.  Replaces it with 0, or
- * optionally the symbol's value (if it's a label).
- * \param ep		    expression (pointer to)
- * \param relocate_action   replacement action to take on symbol in expr
- * \param calc_bc_dist	    bytecode distance-calculation function
- * \return NULL if unable to extract a symbol (too complex of expr, none
- *         present, etc); otherwise returns the extracted symbol.
- */
-/*@dependent@*/ /*@null@*/ yasm_symrec *yasm_expr_extract_symrec
-    (yasm_expr **ep, yasm_symrec_relocate_action relocate_action,
-     yasm_calc_bc_dist_func calc_bc_dist);
-
-/** Remove the SEG unary operator if present, leaving the lower level
- * expression.
- * \param ep		expression (pointer to)
- * \return NULL if the expression does not have a top-level operator of SEG;
- * otherwise the modified input expression (without the SEG).
- */
-/*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_seg(yasm_expr **ep);
+    yasm_expr__level_tree(e, 1, 1, 1, cbd, NULL, NULL, NULL)
 
 /** Extract the segment portion of a SEG:OFF expression, leaving the offset.
  * \param ep		expression (pointer to)
@@ -220,16 +190,6 @@ typedef enum yasm_symrec_relocate_action {
  */
 /*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_wrt(yasm_expr **ep);
 
-/** Extract the right portion (y) of a x SHR y expression, leaving the left
- * portion (x).
- * \param ep		expression (pointer to)
- * \return NULL if unable to extract (YASM_EXPR_SHR not the top-level
- *         operator), otherwise the right side of the SHR expression.  The
- *         input expression is modified such that on return, it's the left side
- *         of the SHR expression.
- */
-/*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_shr(yasm_expr **ep);
-
 /** Get the integer value of an expression if it's just an integer.
  * \param ep		expression (pointer to)
  * \param calc_bc_dist	bytecode distance-calculation function
@@ -239,15 +199,6 @@ typedef enum yasm_symrec_relocate_action {
  */
 /*@dependent@*/ /*@null@*/ yasm_intnum *yasm_expr_get_intnum
     (yasm_expr **ep, /*@null@*/ yasm_calc_bc_dist_func calc_bc_dist);
-
-/** Get the floating point value of an expression if it's just an floatnum.
- * \param ep		expression (pointer to)
- * \return NULL if the expression is too complex (contains anything other than
- *         floats, ie integers, non-valued labels, registers); otherwise the
- *         floatnum value of the expression.
- */
-/*@dependent@*/ /*@null@*/ const yasm_floatnum *yasm_expr_get_floatnum
-    (yasm_expr **ep);
 
 /** Get the symbol value of an expression if it's just a symbol.
  * \param ep		expression (pointer to)

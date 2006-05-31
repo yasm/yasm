@@ -75,7 +75,7 @@ void yasm_linemap_add_source(yasm_linemap *linemap,
 			     /*@null@*/ yasm_bytecode *bc,
 			     const char *source);
 
-/** Go to the next line (increments the current virtual line)l
+/** Go to the next line (increments the current virtual line).
  * \param linemap	line mapping repository
  * \return The current (new) virtual line.
  */
@@ -101,4 +101,17 @@ void yasm_linemap_set(yasm_linemap *linemap, /*@null@*/ const char *filename,
 void yasm_linemap_lookup(yasm_linemap *linemap, unsigned long line,
 			 /*@out@*/ const char **filename,
 			 /*@out@*/ unsigned long *file_line);
+
+/** Traverses all filenames used in a linemap, calling a function on each
+ * filename.
+ * \param linemap	line mapping repository
+ * \param d		data pointer passed to func on each call
+ * \param func		function
+ * \return Stops early (and returns func's return value) if func returns a
+ *	   nonzero value; otherwise 0.
+ */
+int yasm_linemap_traverse_filenames
+    (yasm_linemap *linemap, /*@null@*/ void *d,
+     int (*func) (const char *filename, void *d));
+
 #endif

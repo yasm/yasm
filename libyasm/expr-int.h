@@ -34,7 +34,8 @@ typedef enum {
     YASM_EXPR_INT = 1<<1,
     YASM_EXPR_FLOAT = 1<<2,
     YASM_EXPR_SYM = 1<<3,
-    YASM_EXPR_EXPR = 1<<4
+    YASM_EXPR_SYMEXP = 1<<4, /* post-expanded sym (due to absolute expansion) */
+    YASM_EXPR_EXPR = 1<<5
 } yasm_expr__type;
 
 struct yasm_expr__item {

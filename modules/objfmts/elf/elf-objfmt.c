@@ -63,11 +63,13 @@ typedef struct yasm_objfmt_elf {
     yasm_symtab *symtab;
     /*@dependent@*/ yasm_arch *arch;
     
+    elf_strtab_entry *file_strtab_entry;/* .file symbol associated string */
     yasm_symrec *dotdotsym;		/* ..sym symbol */
 } yasm_objfmt_elf;
 
 typedef struct {
     yasm_objfmt_elf *objfmt_elf;
+    yasm_errwarns *errwarns;
     FILE *f;
     elf_secthead *shead;
     yasm_section *sect;
@@ -122,7 +124,7 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
     assert(info != NULL);
 
     if (!yasm_symrec_get_label(sym, &precbc))
-	return 1;
+	return 0;
     sect = yasm_bc_get_section(precbc);
 
     entry = yasm_symrec_get_data(sym, &elf_symrec_data);
@@ -146,20 +148,19 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	yasm_symrec_add_data(sym, &elf_symrec_data, entry);
 
 	if (is_sect)
-	    return 1;
+	    return 0;
     }
 
     if (precbc)
 	value = precbc->offset + precbc->len;
     elf_symtab_set_nonzero(entry, sect, 0, 0, 0, NULL, &value);
 
-    return 1;
+    return 0;
 }
 
 static yasm_objfmt *
-elf_objfmt_create_common(const char *in_filename, yasm_object *object,
-			 yasm_arch *a, yasm_objfmt_module *module,
-			 int bits_pref,
+elf_objfmt_create_common(yasm_object *object, yasm_arch *a,
+			 yasm_objfmt_module *module, int bits_pref,
 			 const elf_machine_handler **elf_march_out)
 {
     yasm_objfmt_elf *objfmt_elf = yasm_xmalloc(sizeof(yasm_objfmt_elf));
@@ -186,8 +187,11 @@ elf_objfmt_create_common(const char *in_filename, yasm_object *object,
     /* FIXME: misuse of NULL bytecode here; it works, but only barely. */
     filesym = yasm_symtab_define_label(objfmt_elf->symtab, ".file", NULL, 0,
 				       0);
-    entry = elf_symtab_entry_create(
-	elf_strtab_append_str(objfmt_elf->strtab, in_filename), filesym);
+    /* Put in current input filename; we'll replace it in output() */
+    objfmt_elf->file_strtab_entry =
+	elf_strtab_append_str(objfmt_elf->strtab,
+			      yasm_object_get_source_fn(object));
+    entry = elf_symtab_entry_create(objfmt_elf->file_strtab_entry, filesym);
     yasm_symrec_add_data(filesym, &elf_symrec_data, entry);
     elf_symtab_set_nonzero(entry, NULL, SHN_ABS, STB_LOCAL, STT_FILE, NULL,
 			   NULL);
@@ -201,14 +205,14 @@ elf_objfmt_create_common(const char *in_filename, yasm_object *object,
 }
 
 static yasm_objfmt *
-elf_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
+elf_objfmt_create(yasm_object *object, yasm_arch *a)
 {
     const elf_machine_handler *elf_march;
     yasm_objfmt *objfmt;
     yasm_objfmt_elf *objfmt_elf;
 
-    objfmt = elf_objfmt_create_common(in_filename, object, a,
-				      &yasm_elf_LTX_objfmt, 0, &elf_march);
+    objfmt = elf_objfmt_create_common(object, a, &yasm_elf_LTX_objfmt, 0,
+				      &elf_march);
     if (objfmt) {
 	objfmt_elf = (yasm_objfmt_elf *)objfmt;
 	/* Figure out which bitness of object format to use */
@@ -221,17 +225,17 @@ elf_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
 }
 
 static yasm_objfmt *
-elf32_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
+elf32_objfmt_create(yasm_object *object, yasm_arch *a)
 {
-    return elf_objfmt_create_common(in_filename, object, a,
-				    &yasm_elf32_LTX_objfmt, 32, NULL);
+    return elf_objfmt_create_common(object, a, &yasm_elf32_LTX_objfmt, 32,
+				    NULL);
 }
 
 static yasm_objfmt *
-elf64_objfmt_create(const char *in_filename, yasm_object *object, yasm_arch *a)
+elf64_objfmt_create(yasm_object *object, yasm_arch *a)
 {
-    return elf_objfmt_create_common(in_filename, object, a,
-				    &yasm_elf64_LTX_objfmt, 64, NULL);
+    return elf_objfmt_create_common(object, a, &yasm_elf64_LTX_objfmt, 64,
+				    NULL);
 }
 
 static long
@@ -244,14 +248,16 @@ elf_objfmt_output_align(FILE *f, unsigned int align)
 
     pos = ftell(f);
     if (pos == -1) {
-	yasm__error(0, N_("could not get file position on output file"));
+	yasm_error_set(YASM_ERROR_IO,
+		       N_("could not get file position on output file"));
 	return -1;
     }
     delta = align - (pos & (align-1)); 
     if (delta != align) {
 	pos += delta;
 	if (fseek(f, pos, SEEK_SET) < 0) {
-	    yasm__error(0, N_("could not set file position on output file"));
+	    yasm_error_set(YASM_ERROR_IO,
+			   N_("could not set file position on output file"));
 	    return -1;
 	}
     }
@@ -271,7 +277,7 @@ elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
     reloc = elf_reloc_entry_create(sym, NULL,
 	yasm_intnum_create_uint(bc->offset), 0, valsize);
     if (reloc == NULL) {
-	yasm__error(bc->line, N_("elf: invalid relocation size"));
+	yasm_error_set(YASM_ERROR_TYPE, N_("elf: invalid relocation size"));
 	return 1;
     }
     /* allocate .rel[a] sections on a need-basis */
@@ -280,130 +286,117 @@ elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
     zero = yasm_intnum_create_uint(0);
     elf_handle_reloc_addend(zero, reloc);
     retval = yasm_arch_intnum_tobytes(info->objfmt_elf->arch, zero, buf,
-				      destsize, valsize, 0, bc, warn,
-				      bc->line);
+				      destsize, valsize, 0, bc, warn);
     yasm_intnum_destroy(zero);
     return retval;
 }
 
 static int
-elf_objfmt_output_expr(yasm_expr **ep, unsigned char *buf, size_t destsize,
-			size_t valsize, int shift, unsigned long offset,
-			yasm_bytecode *bc, int rel, int warn,
+elf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
+			unsigned long offset, yasm_bytecode *bc, int warn,
 			/*@null@*/ void *d)
 {
     /*@null@*/ elf_objfmt_output_info *info = (elf_objfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
-    /*@dependent@*/ /*@null@*/ const yasm_floatnum *flt;
-    /*@dependent@*/ /*@null@*/ yasm_symrec *sym;
+    unsigned long intn_val;
     /*@null@*/ elf_reloc_entry *reloc = NULL;
-    /*@null@*/ yasm_expr *wrt_expr;
-    /*@dependent@*/ /*@null@*/ yasm_symrec *wrt = NULL;
+    int retval;
+    unsigned int valsize = value->size;
 
     if (info == NULL)
 	yasm_internal_error("null info struct");
 
-    *ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
+    if (value->abs)
+	value->abs = yasm_expr_simplify(value->abs, yasm_common_calc_bc_dist);
 
-    /* Handle floating point expressions */
-    flt = yasm_expr_get_floatnum(ep);
-    if (flt) {
-	if (shift < 0)
-	    yasm_internal_error(N_("attempting to negative shift a float"));
-	return yasm_arch_floatnum_tobytes(info->objfmt_elf->arch, flt, buf,
-					  destsize, valsize,
-					  (unsigned int)shift, warn, bc->line);
-    }
-
-    /* Check for a WRT relocation */
-    wrt_expr = yasm_expr_extract_wrt(ep);
-    if (wrt_expr) {
-	wrt = yasm_expr_extract_symrec(&wrt_expr, YASM_SYMREC_REPLACE_ZERO,
-				       yasm_common_calc_bc_dist);
-	yasm_expr_destroy(wrt_expr);
-	if (!wrt) {
-	    yasm__error(bc->line, N_("WRT expression too complex"));
+    /* Try to output constant and PC-relative section-local first.
+     * Note this does NOT output any value with a SEG, WRT, external,
+     * cross-section, or non-PC-relative reference (those are handled below).
+     */
+    switch (yasm_value_output_basic(value, buf, destsize, bc, warn,
+				    info->objfmt_elf->arch,
+				    yasm_common_calc_bc_dist)) {
+	case -1:
 	    return 1;
-	}
+	case 0:
+	    break;
+	default:
+	    return 0;
     }
 
-    /* Handle integer expressions, with relocation if necessary */
-    if (wrt == info->objfmt_elf->dotdotsym
-	|| (wrt && elf_is_wrt_sym_relative(wrt)))
-	sym = yasm_expr_extract_symrec(ep, YASM_SYMREC_REPLACE_ZERO,
-				       yasm_common_calc_bc_dist);
-    else
-	sym = yasm_expr_extract_symrec(ep, YASM_SYMREC_REPLACE_VALUE_IF_LOCAL,
-				       yasm_common_calc_bc_dist);
+    /* Handle other expressions, with relocation if necessary */
+    if (value->seg_of || value->section_rel || value->rshift > 0) {
+	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+		       N_("elf: relocation too complex"));
+	return 1;
+    }
 
-    if (sym) {
-	yasm_sym_vis vis;
+    intn_val = 0;
+    if (value->rel) {
+	yasm_sym_vis vis = yasm_symrec_get_visibility(value->rel);
+	/*@dependent@*/ /*@null@*/ yasm_symrec *sym = value->rel;
+	/*@dependent@*/ /*@null@*/ yasm_symrec *wrt = value->wrt;
 
-	vis = yasm_symrec_get_visibility(sym);
 	if (wrt == info->objfmt_elf->dotdotsym)
 	    wrt = NULL;
 	else if (wrt && elf_is_wrt_sym_relative(wrt))
 	    ;
 	else if (vis == YASM_SYM_LOCAL) {
-	    yasm_bytecode *label_precbc;
-	    /* Local symbols need relocation to their section's start */
-	    if (yasm_symrec_get_label(sym, &label_precbc)) {
-		yasm_section *label_sect = yasm_bc_get_section(label_precbc);
+	    yasm_bytecode *sym_precbc;
+	    /* Local symbols need relocation to their section's start, and
+	     * add in the offset of the bytecode (within the target section)
+	     * into the abs portion.
+	     *
+	     * This is only done if the symbol is relocated against the
+	     * section instead of the symbol itself.
+	     */
+	    if (yasm_symrec_get_label(sym, &sym_precbc)) {
+		/* Relocate to section start */
+		yasm_section *sym_sect = yasm_bc_get_section(sym_precbc);
 		/*@null@*/ elf_secthead *sym_shead;
-		sym_shead =
-		    yasm_section_get_data(label_sect, &elf_section_data);
+		sym_shead = yasm_section_get_data(sym_sect, &elf_section_data);
 		assert(sym_shead != NULL);
 		sym = elf_secthead_get_sym(sym_shead);
+
+		intn_val = sym_precbc->offset + sym_precbc->len;
 	    }
 	}
-
-	if (rel) {
-	    /* Need to reference to start of section, so add $$ in. */
-	    *ep = yasm_expr_create(YASM_EXPR_ADD, yasm_expr_expr(*ep),
-		yasm_expr_sym(yasm_symtab_define_label2("$$",
-		    yasm_section_bcs_first(info->sect), 0, (*ep)->line)),
-		(*ep)->line);
-	    /* HELP: and this seems to have the desired effect. */
-	    *ep = yasm_expr_create(YASM_EXPR_ADD, yasm_expr_expr(*ep),
-		yasm_expr_int(yasm_intnum_create_uint(bc->offset + offset)),
-		(*ep)->line);
-	    *ep = yasm_expr_simplify(*ep, yasm_common_calc_bc_dist);
-	}
+	
+	/* For PC-relative, need to add offset of expression within bc. */
+	if (value->curpos_rel)
+	    intn_val += offset;
 
 	reloc = elf_reloc_entry_create(sym, wrt,
-	    yasm_intnum_create_uint(bc->offset + offset), rel, valsize);
+	    yasm_intnum_create_uint(bc->offset + offset), value->curpos_rel,
+	    valsize);
 	if (reloc == NULL) {
-	    yasm__error(bc->line, N_("elf: invalid relocation (WRT or size)"));
+	    yasm_error_set(YASM_ERROR_TYPE,
+			   N_("elf: invalid relocation (WRT or size)"));
 	    return 1;
 	}
 	/* allocate .rel[a] sections on a need-basis */
 	elf_secthead_append_reloc(info->sect, info->shead, reloc);
     }
 
-    intn = yasm_expr_get_intnum(ep, NULL);
-    if (intn) {
-	if (rel) {
-	    int retval = yasm_arch_intnum_fixup_rel(info->objfmt_elf->arch,
-						    intn, valsize, bc,
-						    bc->line);
-	    if (retval)
-		return retval;
+    intn = yasm_intnum_create_uint(intn_val);
+
+    if (value->abs) {
+	yasm_intnum *intn2 = yasm_expr_get_intnum(&value->abs, NULL);
+	if (!intn2) {
+	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			   N_("elf: relocation too complex"));
+	    yasm_intnum_destroy(intn);
+	    return 1;
 	}
-	if (reloc)
-	    elf_handle_reloc_addend(intn, reloc);
-	return yasm_arch_intnum_tobytes(info->objfmt_elf->arch, intn, buf,
-					destsize, valsize, shift, bc, warn,
-					bc->line);
+	yasm_intnum_calc(intn, YASM_EXPR_ADD, intn2);
     }
 
-    /* Check for complex float expressions */
-    if (yasm_expr__contains(*ep, YASM_EXPR_FLOAT)) {
-	yasm__error(bc->line, N_("floating point expression too complex"));
-	return 1;
-    }
-
-    yasm__error(bc->line, N_("elf: relocation too complex"));
-    return 1;
+    if (reloc)
+	elf_handle_reloc_addend(intn, reloc);
+    retval = yasm_arch_intnum_tobytes(info->objfmt_elf->arch, intn, buf,
+				      destsize, valsize, 0, bc, warn);
+    yasm_intnum_destroy(intn);
+    return retval;
 }
 
 static int
@@ -413,15 +406,13 @@ elf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     unsigned char buf[256];
     /*@null@*/ /*@only@*/ unsigned char *bigbuf;
     unsigned long size = 256;
-    unsigned long multiple;
-    unsigned long i;
     int gap;
 
     if (info == NULL)
 	yasm_internal_error("null info struct");
 
-    bigbuf = yasm_bc_tobytes(bc, buf, &size, &multiple, &gap, info,
-			     elf_objfmt_output_expr, elf_objfmt_output_reloc);
+    bigbuf = yasm_bc_tobytes(bc, buf, &size, &gap, info,
+			     elf_objfmt_output_value, elf_objfmt_output_reloc);
 
     /* Don't bother doing anything else if size ended up being 0. */
     if (size == 0) {
@@ -431,32 +422,26 @@ elf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     }
     else {
 	yasm_intnum *bcsize = yasm_intnum_create_uint(size);
-	yasm_intnum *mult = yasm_intnum_create_uint(multiple);
-
-	yasm_intnum_calc(bcsize, YASM_EXPR_MUL, mult, 0);
 	elf_secthead_add_size(info->shead, bcsize);
-
 	yasm_intnum_destroy(bcsize);
-	yasm_intnum_destroy(mult);
     }
 
     /* Warn that gaps are converted to 0 and write out the 0's. */
     if (gap) {
 	unsigned long left;
-	yasm__warning(YASM_WARN_UNINIT_CONTENTS, bc->line,
+	yasm_warn_set(YASM_WARN_UNINIT_CONTENTS,
 	    N_("uninitialized space declared in code/data section: zeroing"));
 	/* Write out in chunks */
 	memset(buf, 0, 256);
-	left = multiple*size;
+	left = size;
 	while (left > 256) {
 	    fwrite(buf, 256, 1, info->f);
 	    left -= 256;
 	}
 	fwrite(buf, left, 1, info->f);
     } else {
-	/* Output multiple copies of buf (or bigbuf if non-NULL) to file */
-	for (i=0; i<multiple; i++)
-	    fwrite(bigbuf ? bigbuf : buf, (size_t)size, 1, info->f);
+	/* Output buf (or bigbuf if non-NULL) to file */
+	fwrite(bigbuf ? bigbuf : buf, (size_t)size, 1, info->f);
     }
 
     /* If bigbuf was allocated, free it */
@@ -466,31 +451,44 @@ elf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     return 0;
 }
 
-static elf_secthead *
-elf_objfmt_create_dbg_secthead(yasm_section *sect,
-			       elf_objfmt_output_info *info)
+static int
+elf_objfmt_create_dbg_secthead(yasm_section *sect, /*@null@*/ void *d)
 {
+    /*@null@*/ elf_objfmt_output_info *info = (elf_objfmt_output_info *)d;
     elf_secthead *shead;
     elf_section_type type=SHT_PROGBITS;
     elf_size entsize=0;
-    const char *sectname = yasm_section_get_name(sect);
-    elf_strtab_entry *name = elf_strtab_append_str(info->objfmt_elf->shstrtab,
-						   sectname);
+    const char *sectname;
+    /*@dependent@*/ yasm_symrec *sym;
+    elf_strtab_entry *name;
+
+    shead = yasm_section_get_data(sect, &elf_section_data);
+    if (yasm_section_is_absolute(sect) || shead)
+	return 0;   /* only create new secthead if missing and non-absolute */
+
+    sectname = yasm_section_get_name(sect);
+    name = elf_strtab_append_str(info->objfmt_elf->shstrtab, sectname);
 
     if (yasm__strcasecmp(sectname, ".stab")==0) {
 	entsize = 12;
     } else if (yasm__strcasecmp(sectname, ".stabstr")==0) {
 	type = SHT_STRTAB;
-    }
-    else
+    } else if (yasm__strncasecmp(sectname, ".debug_", 7)==0) {
+	;
+    } else
 	yasm_internal_error(N_("Unrecognized section without data"));
 
     shead = elf_secthead_create(name, type, 0, 0, 0);
     elf_secthead_set_entsize(shead, entsize);
 
+    sym = yasm_symtab_define_label(
+	yasm_object_get_symtab(info->objfmt_elf->object), sectname,
+	yasm_section_bcs_first(sect), 1, 0);
+    elf_secthead_set_sym(shead, sym);
+
     yasm_section_add_data(sect, &elf_section_data, shead);
 
-    return shead;
+    return 0;
 }
 
 static int
@@ -510,7 +508,7 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 	yasm_internal_error("null info struct");
     shead = yasm_section_get_data(sect, &elf_section_data);
     if (shead == NULL)
-	shead = elf_objfmt_create_dbg_secthead(sect, info);
+	yasm_internal_error("no associated data");
 
     if (elf_secthead_get_align(shead) == 0)
 	elf_secthead_set_align(shead, yasm_section_get_align(sect));
@@ -529,20 +527,27 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 	return 0;
     }
 
-    if ((pos = ftell(info->f)) == -1)
-	yasm__error(0, N_("couldn't read position on output stream"));
+    if ((pos = ftell(info->f)) == -1) {
+	yasm_error_set(YASM_ERROR_IO,
+		       N_("couldn't read position on output stream"));
+	yasm_errwarn_propagate(info->errwarns, 0);
+    }
     pos = elf_secthead_set_file_offset(shead, pos);
-    if (fseek(info->f, pos, SEEK_SET) < 0)
-	yasm__error(0, N_("couldn't seek on output stream"));
+    if (fseek(info->f, pos, SEEK_SET) < 0) {
+	yasm_error_set(YASM_ERROR_IO, N_("couldn't seek on output stream"));
+	yasm_errwarn_propagate(info->errwarns, 0);
+    }
 
     info->sect = sect;
     info->shead = shead;
-    yasm_section_bcs_traverse(sect, info, elf_objfmt_output_bytecode);
+    yasm_section_bcs_traverse(sect, info->errwarns, info,
+			      elf_objfmt_output_bytecode);
 
     elf_secthead_set_index(shead, ++info->sindex);
 
     /* No relocations to output?  Go on to next section */
-    if (elf_secthead_write_relocs_to_file(info->f, sect, shead) == 0)
+    if (elf_secthead_write_relocs_to_file(info->f, sect, shead,
+					  info->errwarns) == 0)
 	return 0;
     elf_secthead_set_rel_index(shead, ++info->sindex);
 
@@ -586,8 +591,8 @@ elf_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 }
 
 static void
-elf_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
-		  int all_syms, yasm_dbgfmt *df)
+elf_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df,
+		  yasm_errwarns *errwarns)
 {
     yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
     elf_objfmt_output_info info;
@@ -601,18 +606,29 @@ elf_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
     unsigned long elf_symtab_nlocal;
 
     info.objfmt_elf = objfmt_elf;
+    info.errwarns = errwarns;
     info.f = f;
+
+    /* Update filename strtab */
+    elf_strtab_entry_set_str(objfmt_elf->file_strtab_entry,
+			     yasm_object_get_source_fn(objfmt_elf->object));
 
     /* Allocate space for Ehdr by seeking forward */
     if (fseek(f, (long)(elf_proghead_get_size()), SEEK_SET) < 0) {
-	yasm__error(0, N_("could not seek on output file"));
+	yasm_error_set(YASM_ERROR_IO, N_("could not seek on output file"));
+	yasm_errwarn_propagate(errwarns, 0);
 	return;
     }
+
+    /* Create missing section headers */
+    localsym_info.objfmt_elf = objfmt_elf;
+    if (yasm_object_sections_traverse(objfmt_elf->object, &info,
+				      elf_objfmt_create_dbg_secthead))
+	return;
 
     /* add all (local) syms to symtab because relocation needs a symtab index
      * if all_syms, register them by name.  if not, use strtab entry 0 */
     localsym_info.local_names = all_syms;
-    localsym_info.objfmt_elf = objfmt_elf;
     yasm_symtab_traverse(yasm_object_get_symtab(objfmt_elf->object),
 			 &localsym_info, elf_objfmt_append_local_sym);
     elf_symtab_nlocal = elf_symtab_assign_indices(objfmt_elf->elf_symtab);
@@ -631,26 +647,35 @@ elf_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
 					      ".shstrtab");
 
     /* output .shstrtab */
-    if ((pos = elf_objfmt_output_align(f, 4)) == -1)
+    if ((pos = elf_objfmt_output_align(f, 4)) == -1) {
+	yasm_errwarn_propagate(errwarns, 0);
 	return;
+    }
     elf_shstrtab_offset = (unsigned long) pos;
     elf_shstrtab_size = elf_strtab_output_to_file(f, objfmt_elf->shstrtab);
 
     /* output .strtab */
-    if ((pos = elf_objfmt_output_align(f, 4)) == -1)
+    if ((pos = elf_objfmt_output_align(f, 4)) == -1) {
+	yasm_errwarn_propagate(errwarns, 0);
 	return;
+    }
     elf_strtab_offset = (unsigned long) pos;
     elf_strtab_size = elf_strtab_output_to_file(f, objfmt_elf->strtab);
 
     /* output .symtab - last section so all others have indexes */
-    if ((pos = elf_objfmt_output_align(f, 4)) == -1)
+    if ((pos = elf_objfmt_output_align(f, 4)) == -1) {
+	yasm_errwarn_propagate(errwarns, 0);
 	return;
+    }
     elf_symtab_offset = (unsigned long) pos;
-    elf_symtab_size = elf_symtab_write_to_file(f, objfmt_elf->elf_symtab);
+    elf_symtab_size = elf_symtab_write_to_file(f, objfmt_elf->elf_symtab,
+					       errwarns);
 
     /* output section header table */
-    if ((pos = elf_objfmt_output_align(f, 16)) == -1)
+    if ((pos = elf_objfmt_output_align(f, 16)) == -1) {
+	yasm_errwarn_propagate(errwarns, 0);
 	return;
+    }
     elf_shead_addr = (unsigned long) pos;
 
     /* stabs debugging support */
@@ -707,7 +732,8 @@ elf_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
 
     /* output Ehdr */
     if (fseek(f, 0, SEEK_SET) < 0) {
-	yasm__error(0, N_("could not seek on output file"));
+	yasm_error_set(YASM_ERROR_IO, N_("could not seek on output file"));
+	yasm_errwarn_propagate(errwarns, 0);
 	return;
     }
 
@@ -724,6 +750,43 @@ elf_objfmt_destroy(yasm_objfmt *objfmt)
     yasm_xfree(objfmt);
 }
 
+static elf_secthead *
+elf_objfmt_init_new_section(yasm_objfmt_elf *objfmt_elf, yasm_section *sect,
+			    const char *sectname, unsigned long type,
+			    unsigned long flags, unsigned long line)
+{
+    elf_secthead *esd;
+    yasm_symrec *sym;
+    elf_strtab_entry *name = elf_strtab_append_str(objfmt_elf->shstrtab,
+						   sectname);
+
+    esd = elf_secthead_create(name, type, flags, 0, 0);
+    yasm_section_add_data(sect, &elf_section_data, esd);
+    sym = yasm_symtab_define_label(
+	yasm_object_get_symtab(objfmt_elf->object), sectname,
+	yasm_section_bcs_first(sect), 1, line);
+
+    elf_secthead_set_sym(esd, sym);
+
+    return esd;
+}
+
+static yasm_section *
+elf_objfmt_add_default_section(yasm_objfmt *objfmt)
+{
+    yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
+    yasm_section *retval;
+    int isnew;
+    elf_secthead *esd;
+
+    retval = yasm_object_get_general(objfmt_elf->object, ".text", 0, 16, 1, 0,
+				     &isnew, 0);
+    esd = elf_objfmt_init_new_section(objfmt_elf, retval, ".text", SHT_PROGBITS,
+				      SHF_ALLOC + SHF_EXECINSTR, 0);
+    yasm_section_set_default(retval, 1);
+    return retval;
+}
+
 static /*@observer@*/ /*@null@*/ yasm_section *
 elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			  /*@null@*/ yasm_valparamhead *objext_valparams,
@@ -736,7 +799,6 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     unsigned long type = SHT_PROGBITS;
     unsigned long flags = SHF_ALLOC;
     unsigned long align = 4;
-    yasm_intnum *align_intn = NULL;
     int flags_override = 0;
     char *sectname;
     int resonly = 0;
@@ -750,6 +812,8 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	/*{ "progbits",	SHT_PROGBITS },*/
 	/*{ "align",	0 } */
     };
+    /*@dependent@*/ /*@null@*/ const yasm_intnum *merge_intn = NULL;
+    elf_secthead *esd;
 
     if (!vp || vp->param || !vp->val)
 	return NULL;
@@ -784,7 +848,7 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	int match;
 
 	if (!vp->val) {
-	    yasm__warning(YASM_WARN_GENERAL, line,
+	    yasm_warn_set(YASM_WARN_GENERAL,
 			  N_("Unrecognized numeric qualifier"));
 	    continue;
 	}
@@ -833,7 +897,7 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			flags |= SHF_TLS;
 			break;
 		    default:
-			yasm__warning(YASM_WARN_GENERAL, line,
+			yasm_warn_set(YASM_WARN_GENERAL,
 				      N_("unrecognized section attribute: `%c'"),
 				      vp->val[i]);
 		}
@@ -851,64 +915,58 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 
             align_expr = yasm_expr_get_intnum(&vp->param, NULL);
             if (!align_expr) {
-                yasm__error(line,
-                            N_("argument to `%s' is not a power of two"),
-                            vp->val);
+                yasm_error_set(YASM_ERROR_VALUE,
+			       N_("argument to `%s' is not a power of two"),
+			       vp->val);
                 return NULL;
             }
             align = yasm_intnum_get_uint(align_expr);
 
             /* Alignments must be a power of two. */
             if ((align & (align - 1)) != 0) {
-                yasm__error(line,
-                            N_("argument to `%s' is not a power of two"),
-                            vp->val);
+                yasm_error_set(YASM_ERROR_VALUE,
+			       N_("argument to `%s' is not a power of two"),
+                               vp->val);
                 return NULL;
             }
 	} else
-	    yasm__warning(YASM_WARN_GENERAL, line,
+	    yasm_warn_set(YASM_WARN_GENERAL,
 			  N_("Unrecognized qualifier `%s'"), vp->val);
     }
+	/* Handle merge entity size */
+	if (flags & SHF_MERGE) {
+	    if (objext_valparams && (vp = yasm_vps_first(objext_valparams))
+		&& vp->param) {
+
+		merge_intn = yasm_expr_get_intnum(&vp->param, NULL);
+		if (!merge_intn)
+		    yasm_warn_set(YASM_WARN_GENERAL,
+				  N_("invalid merge entity size"));
+	    } else {
+		yasm_warn_set(YASM_WARN_GENERAL,
+			      N_("entity size for SHF_MERGE not specified"));
+		flags &= ~SHF_MERGE;
+	    }
+	}
 
     retval = yasm_object_get_general(objfmt_elf->object, sectname, 0, align,
 				     (flags & SHF_EXECINSTR) != 0, resonly,
 				     &isnew, line);
 
-    if (isnew) {
-	elf_secthead *esd;
-	yasm_symrec *sym;
-	elf_strtab_entry *name = elf_strtab_append_str(objfmt_elf->shstrtab,
-						       sectname);
+    if (isnew)
+	esd = elf_objfmt_init_new_section(objfmt_elf, retval, sectname, type,
+					  flags, line);
+    else
+	esd = yasm_section_get_data(retval, &elf_section_data);
 
-	esd = elf_secthead_create(name, type, flags, 0, 0);
-	yasm_section_add_data(retval, &elf_section_data, esd);
-	sym = yasm_symtab_define_label(
-	    yasm_object_get_symtab(objfmt_elf->object), sectname,
-	    yasm_section_bcs_first(retval), 1, line);
-
-	elf_secthead_set_sym(esd, sym);
-
-	/* Handle merge entity size */
-	if (flags & SHF_MERGE) {
-	    if (objext_valparams && (vp = yasm_vps_first(objext_valparams))
-		&& vp->param) {
-		/*@dependent@*/ /*@null@*/ const yasm_intnum *merge_intn;
-
-		merge_intn = yasm_expr_get_intnum(&vp->param, NULL);
-		if (merge_intn)
-		    elf_secthead_set_entsize(esd,
-					     yasm_intnum_get_uint(merge_intn));
-		else
-		    yasm__warning(YASM_WARN_GENERAL, line,
-				  N_("invalid merge entity size"));
-	    } else {
-		yasm__warning(YASM_WARN_GENERAL, line,
-			      N_("entity size for SHF_MERGE not specified"));
-		flags &= ~SHF_MERGE;
-	    }
-	}
+    if (isnew || yasm_section_is_default(retval)) {
+	yasm_section_set_default(retval, 0);
+	elf_secthead_set_typeflags(esd, type, flags);
+	if (merge_intn)
+	    elf_secthead_set_entsize(esd, yasm_intnum_get_uint(merge_intn));
+	yasm_section_set_align(retval, align, line);
     } else if (flags_override)
-	yasm__warning(YASM_WARN_GENERAL, line,
+	yasm_warn_set(YASM_WARN_GENERAL,
 		      N_("section flags ignored on section redeclaration"));
     return retval;
 }
@@ -930,7 +988,8 @@ elf_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
 	for (; vp; vp = yasm_vps_next(vp))
         {
             if (vp->val)
-                yasm__error(line, N_("unrecognized symbol type `%s'"), vp->val);
+                yasm_error_set(YASM_ERROR_TYPE,
+			       N_("unrecognized symbol type `%s'"), vp->val);
         }
     }
     return sym;
@@ -973,8 +1032,9 @@ elf_objfmt_global_declare(yasm_objfmt *objfmt, const char *name,
                     vis_overrides++;
                 }
                 else
-                    yasm__error(line, N_("unrecognized symbol type `%s'"),
-                                vp->val);
+                    yasm_error_set(YASM_ERROR_TYPE,
+				   N_("unrecognized symbol type `%s'"),
+				   vp->val);
             }
             else if (vp->param && !size) {
                 size = vp->param;
@@ -982,7 +1042,7 @@ elf_objfmt_global_declare(yasm_objfmt *objfmt, const char *name,
             }
 	}
         if (vis_overrides > 1) {
-            yasm__warning(YASM_WARN_GENERAL, line,
+            yasm_warn_set(YASM_WARN_GENERAL,
                 N_("More than one symbol visibility provided; using last"));
         }
     }
@@ -1013,20 +1073,20 @@ elf_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
 
                 align_expr = yasm_expr_get_intnum(&vp->param, NULL);
                 if (!align_expr) {
-                    yasm__error(line,
-                                N_("alignment constraint is not a power of two"));
+                    yasm_error_set(YASM_ERROR_VALUE,
+			N_("alignment constraint is not a power of two"));
                     return sym;
                 }
                 addralign = yasm_intnum_get_uint(align_expr);
 
                 /* Alignments must be a power of two. */
                 if ((addralign & (addralign - 1)) != 0) {
-                    yasm__error(line,
-                                N_("alignment constraint is not a power of two"));
+                    yasm_error_set(YASM_ERROR_VALUE,
+                        N_("alignment constraint is not a power of two"));
                     return sym;
                 }
             } else if (vp->val)
-                yasm__warning(YASM_WARN_GENERAL, line,
+                yasm_warn_set(YASM_WARN_GENERAL,
                               N_("Unrecognized qualifier `%s'"), vp->val);
         }
     }
@@ -1051,7 +1111,7 @@ elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
     elf_symtab_entry *entry;
 
     if (!symname) {
-	yasm__error(line, N_("Symbol name not specified"));
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("Symbol name not specified"));
 	return 0;
     }
 
@@ -1075,10 +1135,10 @@ elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	    else if (yasm__strcasecmp(vp->val, "object") == 0)
 		elf_sym_set_type(entry, STT_OBJECT);
 	    else
-		yasm__warning(YASM_WARN_GENERAL, line,
+		yasm_warn_set(YASM_WARN_GENERAL,
 			      N_("unrecognized symbol type `%s'"), vp->val);
 	} else
-	    yasm__error(line, N_("no type specified"));
+	    yasm_error_set(YASM_ERROR_SYNTAX, N_("no type specified"));
     } else if (yasm__strcasecmp(name, "size") == 0) {
 	/* Get symbol elf data */
 	sym = yasm_symtab_use(objfmt_elf->symtab, symname, line);
@@ -1100,7 +1160,7 @@ elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	    elf_sym_set_size(entry, yasm_expr_create_ident(yasm_expr_sym(
 		yasm_symtab_use(objfmt_elf->symtab, vp->val, line)), line));
 	else
-	    yasm__error(line, N_("no size specified"));
+	    yasm_error_set(YASM_ERROR_SYNTAX, N_("no size specified"));
     } else if (yasm__strcasecmp(name, "weak") == 0) {
 	sym = yasm_symtab_declare(objfmt_elf->symtab, symname, YASM_SYM_GLOBAL,
 				  line);
@@ -1117,6 +1177,7 @@ elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 static const char *elf_objfmt_dbgfmt_keywords[] = {
     "null",
     "stabs",
+    "dwarf2",
     NULL
 };
 
@@ -1125,13 +1186,13 @@ yasm_objfmt_module yasm_elf_LTX_objfmt = {
     "ELF",
     "elf",
     "o",
-    ".text",
     32,
     elf_objfmt_dbgfmt_keywords,
     "null",
     elf_objfmt_create,
     elf_objfmt_output,
     elf_objfmt_destroy,
+    elf_objfmt_add_default_section,
     elf_objfmt_section_switch,
     elf_objfmt_extern_declare,
     elf_objfmt_global_declare,
@@ -1143,13 +1204,13 @@ yasm_objfmt_module yasm_elf32_LTX_objfmt = {
     "ELF (32-bit)",
     "elf32",
     "o",
-    ".text",
     32,
     elf_objfmt_dbgfmt_keywords,
     "null",
     elf32_objfmt_create,
     elf_objfmt_output,
     elf_objfmt_destroy,
+    elf_objfmt_add_default_section,
     elf_objfmt_section_switch,
     elf_objfmt_extern_declare,
     elf_objfmt_global_declare,
@@ -1161,13 +1222,13 @@ yasm_objfmt_module yasm_elf64_LTX_objfmt = {
     "ELF (64-bit)",
     "elf64",
     "o",
-    ".text",
     64,
     elf_objfmt_dbgfmt_keywords,
     "null",
     elf64_objfmt_create,
     elf_objfmt_output,
     elf_objfmt_destroy,
+    elf_objfmt_add_default_section,
     elf_objfmt_section_switch,
     elf_objfmt_extern_declare,
     elf_objfmt_global_declare,

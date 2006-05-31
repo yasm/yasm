@@ -7,6 +7,7 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "modules", "modules\modules.vcproj", "{D715A3D4-EFAA-442E-AD8B-5B4FF64E1DD6}"
 	ProjectSection(ProjectDependencies) = postProject
 		{3C58BE13-50A3-4583-984D-D8902B3D7713} = {3C58BE13-50A3-4583-984D-D8902B3D7713}
+		{5758BF4E-ABC4-11DA-B012-B622A1EF5492} = {5758BF4E-ABC4-11DA-B012-B622A1EF5492}
 		{29FE7874-1256-4AD6-B889-68E399DC9608} = {29FE7874-1256-4AD6-B889-68E399DC9608}
 		{225700A5-07B8-434E-AD61-555278BF6733} = {225700A5-07B8-434E-AD61-555278BF6733}
 	EndProjectSection
@@ -15,9 +16,15 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "yasm", "yasm.vcproj", "{34E
 	ProjectSection(ProjectDependencies) = postProject
 		{29FE7874-1256-4AD6-B889-68E399DC9608} = {29FE7874-1256-4AD6-B889-68E399DC9608}
 		{D715A3D4-EFAA-442E-AD8B-5B4FF64E1DD6} = {D715A3D4-EFAA-442E-AD8B-5B4FF64E1DD6}
+		{021CEB0A-F721-4F59-B349-9CEEAF244459} = {021CEB0A-F721-4F59-B349-9CEEAF244459}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "genmacro", "genmacro\genmacro.vcproj", "{225700A5-07B8-434E-AD61-555278BF6733}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B545983B-8EE0-4A7B-A67A-E749EEAE62A2} = {B545983B-8EE0-4A7B-A67A-E749EEAE62A2}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "genversion", "genversion\genversion.vcproj", "{B545983B-8EE0-4A7B-A67A-E749EEAE62A2}"
 	ProjectSection(ProjectDependencies) = postProject
 	EndProjectSection
 EndProject
@@ -25,7 +32,15 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "re2c", "re2c\re2c.vcproj", 
 	ProjectSection(ProjectDependencies) = postProject
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gap", "gap\gap.vcproj", "{5758BF4E-ABC4-11DA-B012-B622A1EF5492}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "genmodule", "genmodule\genmodule.vcproj", "{F0E8B707-00C5-4FF2-B8EF-7C39817132A0}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "genstring", "genstring\genstring.vcproj", "{021CEB0A-F721-4F59-B349-9CEEAF244459}"
 	ProjectSection(ProjectDependencies) = postProject
 	EndProjectSection
 EndProject
@@ -51,14 +66,26 @@ Global
 		{225700A5-07B8-434E-AD61-555278BF6733}.Debug.Build.0 = Debug|Win32
 		{225700A5-07B8-434E-AD61-555278BF6733}.Release.ActiveCfg = Release|Win32
 		{225700A5-07B8-434E-AD61-555278BF6733}.Release.Build.0 = Release|Win32
+		{B545983B-8EE0-4A7B-A67A-E749EEAE62A2}.Debug.ActiveCfg = Debug|Win32
+		{B545983B-8EE0-4A7B-A67A-E749EEAE62A2}.Debug.Build.0 = Debug|Win32
+		{B545983B-8EE0-4A7B-A67A-E749EEAE62A2}.Release.ActiveCfg = Release|Win32
+		{B545983B-8EE0-4A7B-A67A-E749EEAE62A2}.Release.Build.0 = Release|Win32
 		{3C58BE13-50A3-4583-984D-D8902B3D7713}.Debug.ActiveCfg = Debug|Win32
 		{3C58BE13-50A3-4583-984D-D8902B3D7713}.Debug.Build.0 = Debug|Win32
 		{3C58BE13-50A3-4583-984D-D8902B3D7713}.Release.ActiveCfg = Release|Win32
 		{3C58BE13-50A3-4583-984D-D8902B3D7713}.Release.Build.0 = Release|Win32
+		{5758BF4E-ABC4-11DA-B012-B622A1EF5492}.Debug.ActiveCfg = Debug|Win32
+		{5758BF4E-ABC4-11DA-B012-B622A1EF5492}.Debug.Build.0 = Debug|Win32
+		{5758BF4E-ABC4-11DA-B012-B622A1EF5492}.Release.ActiveCfg = Release|Win32
+		{5758BF4E-ABC4-11DA-B012-B622A1EF5492}.Release.Build.0 = Release|Win32
 		{F0E8B707-00C5-4FF2-B8EF-7C39817132A0}.Debug.ActiveCfg = Debug|Win32
 		{F0E8B707-00C5-4FF2-B8EF-7C39817132A0}.Debug.Build.0 = Debug|Win32
 		{F0E8B707-00C5-4FF2-B8EF-7C39817132A0}.Release.ActiveCfg = Release|Win32
 		{F0E8B707-00C5-4FF2-B8EF-7C39817132A0}.Release.Build.0 = Release|Win32
+		{021CEB0A-F721-4F59-B349-9CEEAF244459}.Debug.ActiveCfg = Debug|Win32
+		{021CEB0A-F721-4F59-B349-9CEEAF244459}.Debug.Build.0 = Debug|Win32
+		{021CEB0A-F721-4F59-B349-9CEEAF244459}.Release.ActiveCfg = Release|Win32
+		{021CEB0A-F721-4F59-B349-9CEEAF244459}.Release.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 	EndGlobalSection

@@ -65,7 +65,11 @@ __SECT__
 %endmacro
 
 %imacro align 1-2+.nolist nop
+%ifidni %2,nop
+	  [align %1]
+%else
 	  times ($$-$) & ((%1)-1) %2
+%endif
 %endmacro
 %imacro alignb 1-2+.nolist resb 1
 	  times ($$-$) & ((%1)-1) %2
@@ -120,6 +124,12 @@ __SECT__
 %endif
 
 %ifidn __YASM_OBJFMT__,win64
+%imacro export 1+.nolist
+[export %1]
+%endmacro
+%endif
+
+%ifidn __YASM_OBJFMT__,x64
 %imacro export 1+.nolist
 [export %1]
 %endmacro

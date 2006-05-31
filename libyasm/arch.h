@@ -41,6 +41,24 @@ typedef enum {
     YASM_ARCH_CREATE_BAD_PARSER		/**< Unrecognized parser name. */
 } yasm_arch_create_error;
 
+/** Return values for yasm_arch_module::parse_check_insnprefix(). */
+typedef enum {
+    YASM_ARCH_NOTINSNPREFIX = 0,	/**< Unrecognized */
+    YASM_ARCH_INSN,			/**< An instruction */
+    YASM_ARCH_PREFIX			/**< An instruction prefix */
+} yasm_arch_insnprefix;
+
+/** Types of registers / target modifiers that may be returned by
+ * yasm_arch_module::parse_check_regtmod().
+ */
+typedef enum {
+    YASM_ARCH_NOTREGTMOD = 0,		/**< Unrecognized */
+    YASM_ARCH_REG,			/**< A "normal" register */
+    YASM_ARCH_REGGROUP,			/**< A group of indexable registers */
+    YASM_ARCH_SEGREG,			/**< A segment register */
+    YASM_ARCH_TARGETMOD			/**< A target modifier (for jumps) */
+} yasm_arch_regtmod;
+
 /** An instruction operand (opaque type). */
 typedef struct yasm_insn_operand yasm_insn_operand;
 #ifdef YASM_LIB_INTERNAL
@@ -105,6 +123,11 @@ typedef struct yasm_arch_module {
      */
     const char * (*get_machine) (const yasm_arch *arch);
 
+    /** Module-level implementation of yasm_arch_get_address_size().
+     * Call yasm_arch_get_address_size() instead of calling this function.
+     */
+    unsigned int (*get_address_size) (const yasm_arch *arch);
+
     /** Module-level implementation of yasm_arch_set_var().
      * Call yasm_arch_set_var() instead of calling this function.
      */
@@ -113,50 +136,21 @@ typedef struct yasm_arch_module {
     /** Module-level implementation of yasm_arch_parse_cpu().
      * Call yasm_arch_parse_cpu() instead of calling this function.
      */
-    void (*parse_cpu) (yasm_arch *arch, const char *cpuid,
-		       unsigned long line);
+    void (*parse_cpu) (yasm_arch *arch, const char *cpuid, size_t cpuid_len);
 
-    /** Module-level implementation of yasm_arch_parse_check_reg().
-     * Call yasm_arch_parse_check_reg() instead of calling this function.
+    /** Module-level implementation of yasm_arch_parse_check_insnprefix().
+     * Call yasm_arch_parse_check_insnprefix() instead of calling this function.
      */
-    int (*parse_check_reg)
-	(yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
-	 unsigned long line);
-
-    /** Module-level implementation of yasm_arch_parse_check_reggroup().
-     * Call yasm_arch_parse_check_reggroup() instead of calling this function.
-     */
-    int (*parse_check_reggroup)
-	(yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
-	 unsigned long line);
-
-    /** Module-level implementation of yasm_arch_parse_check_segreg().
-     * Call yasm_arch_parse_check_segreg() instead of calling this function.
-     */
-    int (*parse_check_segreg)
-	(yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
-	 unsigned long line);
-
-    /** Module-level implementation of yasm_arch_parse_check_insn().
-     * Call yasm_arch_parse_check_insn() instead of calling this function.
-     */
-    int (*parse_check_insn)
+    yasm_arch_insnprefix (*parse_check_insnprefix)
 	(yasm_arch *arch, /*@out@*/ unsigned long data[4], const char *id,
-	 unsigned long line);
+	 size_t id_len);
 
-    /** Module-level implementation of yasm_arch_parse_check_prefix().
-     * Call yasm_arch_parse_check_prefix() instead of calling this function.
+    /** Module-level implementation of yasm_arch_parse_check_regtmod().
+     * Call yasm_arch_parse_check_regtmod() instead of calling this function.
      */
-    int (*parse_check_prefix)
-	(yasm_arch *arch, /*@out@*/ unsigned long data[4], const char *id,
-	 unsigned long line);
-
-    /** Module-level implementation of yasm_arch_parse_check_targetmod().
-     * Call yasm_arch_parse_check_targetmod() instead of calling this function.
-     */
-    int (*parse_check_targetmod)
-	(yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
-	 unsigned long line);
+    yasm_arch_regtmod (*parse_check_regtmod)
+	(yasm_arch *arch, /*@out@*/ unsigned long *data, const char *id,
+	 size_t id_len);
 
     /** Module-level implementation of yasm_arch_parse_directive().
      * Call yasm_arch_parse_directive() instead of calling this function.
@@ -186,15 +180,7 @@ typedef struct yasm_arch_module {
      */
     int (*floatnum_tobytes) (yasm_arch *arch, const yasm_floatnum *flt,
 			     unsigned char *buf, size_t destsize,
-			     size_t valsize, size_t shift, int warn,
-			     unsigned long line);
-
-    /** Module-level implementation of yasm_arch_intnum_fixup_rel().
-     * Call yasm_arch_intnum_fixup_rel() instead of calling this function.
-     */
-    int (*intnum_fixup_rel) (yasm_arch *arch, yasm_intnum *intn,
-			     size_t valsize, const yasm_bytecode *bc,
-			     unsigned long line);
+			     size_t valsize, size_t shift, int warn);
 
     /** Module-level implementation of yasm_arch_intnum_tobytes().
      * Call yasm_arch_intnum_tobytes() instead of calling this function.
@@ -202,7 +188,7 @@ typedef struct yasm_arch_module {
     int (*intnum_tobytes) (yasm_arch *arch, const yasm_intnum *intn,
 			   unsigned char *buf, size_t destsize, size_t valsize,
 			   int shift, const yasm_bytecode *bc,
-			   int warn, unsigned long line);
+			   int warn);
 
     /** Module-level implementation of yasm_arch_get_reg_size().
      * Call yasm_arch_get_reg_size() instead of calling this function.
@@ -242,7 +228,7 @@ typedef struct yasm_arch_module {
      */
     const char *default_machine_keyword;
 
-    /** Canonical "word" size in bytes.
+    /** Canonical "word" size in bits.
      * Call yasm_arch_wordsize() to get the word size of a particular
      * #yasm_arch.
      */
@@ -253,6 +239,12 @@ typedef struct yasm_arch_module {
      * make this extremely large (e.g. >1000).
      */
     const unsigned long jmpsize_threshold;
+
+    /** Worst case minimum instruction length in bytes.
+     * Call yasm_arch_min_insn_len() to get the minimum instruction length of
+     * a particular #yasm_arch.
+     */
+    unsigned int min_insn_len;
 } yasm_arch_module;
 
 #ifdef YASM_LIB_INTERNAL
@@ -312,10 +304,16 @@ const char *yasm_arch_keyword(const yasm_arch *arch);
  */
 unsigned int yasm_arch_wordsize(const yasm_arch *arch);
 
+/** Get the minimum instruction length of an architecture.
+ * \param arch	    architecture
+ * \return Minimum instruction length (in bytes).
+ */
+unsigned int yasm_arch_min_insn_len(const yasm_arch *arch);
+
 /** Create architecture.
  * \param module	architecture module
  * \param machine	keyword of machine in use (must be one listed in
- *			#machines)
+ *			#yasm_arch_module.machines)
  * \param parser	keyword of parser in use
  * \param error		error return value
  * \return NULL on error (error returned in error parameter), otherwise new
@@ -336,6 +334,12 @@ void yasm_arch_destroy(/*@only@*/ yasm_arch *arch);
  */
 const char *yasm_arch_get_machine(const yasm_arch *arch);
 
+/** Get architecture's active address size, in bits.
+ * \param arch	architecture
+ * \return Active address size (in bits).
+ */
+unsigned int yasm_arch_get_address_size(const yasm_arch *arch);
+
 /** Set any arch-specific variables.  For example, "mode_bits" in x86.
  * \param arch	architecture
  * \param var	variable name
@@ -347,108 +351,43 @@ int yasm_arch_set_var(yasm_arch *arch, const char *var, unsigned long val);
 /** Switch available instructions/registers/etc based on a user-specified
  * CPU identifier.  Should modify behavior ONLY of parse_* functions!  The
  * bytecode and output functions should be able to handle any CPU.
- * \param arch	architecture
- * \param cpuid	cpu identifier as in the input file
- * \param line	virtual line (from yasm_linemap)
+ * \param arch		architecture
+ * \param cpuid		cpu identifier as in the input file
+ * \param cpuid_len	length of cpu identifier string
  */
-void yasm_arch_parse_cpu(yasm_arch *arch, const char *cpuid,
-			 unsigned long line);
+void yasm_arch_parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len);
 
 /** Check an generic identifier to see if it matches architecture specific
- * names for registers.  Unrecognized identifiers should return 0
- * so they can be treated as normal symbols.  Any additional data beyond
- * just the type (almost always necessary) should be returned into the
- * space provided by the data parameter.
- * \param arch	architecture
- * \param data	extra identification information (yasm_arch-specific)
- *		[output]
- * \param id	identifier as in the input file
- * \param line	virtual line (from yasm_linemap)
- * \return 1 if id is a register, 0 if not.
+ * names for instructions or instruction prefixes.  Unrecognized identifiers
+ * should return #YASM_ARCH_NOTINSNPREFIX so they can be treated as normal
+ * symbols.  Any additional data beyond just the type (almost always necessary)
+ * should be returned into the space provided by the data parameter.
+ * \param arch		architecture
+ * \param data		extra identification information (yasm_arch-specific)
+ *			[output]
+ * \param id		identifier as in the input file
+ * \param id_len	length of id string
+ * \return Identifier type (#YASM_ARCH_NOTINSNPREFIX if unrecognized)
  */
-int yasm_arch_parse_check_reg
-    (yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
-     unsigned long line);
-
-/** Check an generic identifier to see if it matches architecture specific
- * names for register groups.  Unrecognized identifiers should return 0
- * so they can be treated as normal symbols.  Any additional data beyond
- * just the type (almost always necessary) should be returned into the
- * space provided by the data parameter.
- * \param arch	architecture
- * \param data	extra identification information (yasm_arch-specific)
- *		[output]
- * \param id	identifier as in the input file
- * \param line	virtual line (from yasm_linemap)
- * \return 1 if id is a register, 0 if not.
- */
-int yasm_arch_parse_check_reggroup
-    (yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
-     unsigned long line);
-
-/** Check an generic identifier to see if it matches architecture specific
- * names for segment registers.  Unrecognized identifiers should return 0
- * so they can be treated as normal symbols.  Any additional data beyond
- * just the type (almost always necessary) should be returned into the
- * space provided by the data parameter.
- * \param arch	architecture
- * \param data	extra identification information (yasm_arch-specific)
- *		[output]
- * \param id	identifier as in the input file
- * \param line	virtual line (from yasm_linemap)
- * \return 1 if id is a register, 0 if not.
- */
-int yasm_arch_parse_check_segreg
-    (yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
-     unsigned long line);
-
-/** Check an generic identifier to see if it matches architecture specific
- * names for instructions.  Unrecognized identifiers should return 0
- * so they can be treated as normal symbols.  Any additional data beyond
- * just the type (almost always necessary) should be returned into the
- * space provided by the data parameter.
- * \param arch	architecture
- * \param data	extra identification information (yasm_arch-specific)
- *		[output]
- * \param id	identifier as in the input file
- * \param line	virtual line (from yasm_linemap)
- * \return 1 if id is a register, 0 if not.
- */
-int yasm_arch_parse_check_insn
+yasm_arch_insnprefix yasm_arch_parse_check_insnprefix
     (yasm_arch *arch, /*@out@*/ unsigned long data[4], const char *id,
-     unsigned long line);
+     size_t id_len);
 
 /** Check an generic identifier to see if it matches architecture specific
- * names for prefixes.  Unrecognized identifiers should return 0
- * so they can be treated as normal symbols.  Any additional data beyond
- * just the type (almost always necessary) should be returned into the
- * space provided by the data parameter.
- * \param arch	architecture
- * \param data	extra identification information (yasm_arch-specific)
- *		[output]
- * \param id	identifier as in the input file
- * \param line	virtual line (from yasm_linemap)
- * \return 1 if id is a register, 0 if not.
+ * names for registers or target modifiers.  Unrecognized identifiers should
+ * return #YASM_ARCH_NOTREGTMOD.  Any additional data beyond just the type
+ * (almost always necessary) should be returned into the space provided by the
+ * data parameter.
+ * \param arch		architecture
+ * \param data		extra identification information (yasm_arch-specific)
+ *			[output]
+ * \param id		identifier as in the input file
+ * \param id_len	length of id string
+ * \return Identifier type (#YASM_ARCH_NOTREGTMOD if unrecognized)
  */
-int yasm_arch_parse_check_prefix
-    (yasm_arch *arch, /*@out@*/ unsigned long data[4], const char *id,
-     unsigned long line);
-
-/** Check an generic identifier to see if it matches architecture specific
- * names for target modifiers.  Unrecognized identifiers should return 0
- * so they can be treated as normal symbols.  Any additional data beyond
- * just the type (almost always necessary) should be returned into the
- * space provided by the data parameter.
- * \param arch	architecture
- * \param data	extra identification information (yasm_arch-specific)
- *		[output]
- * \param id	identifier as in the input file
- * \param line	virtual line (from yasm_linemap)
- * \return 1 if id is a register, 0 if not.
- */
-int yasm_arch_parse_check_targetmod
-    (yasm_arch *arch, /*@out@*/ unsigned long data[1], const char *id,
-     unsigned long line);
+yasm_arch_regtmod yasm_arch_parse_check_regtmod
+    (yasm_arch *arch, /*@out@*/ unsigned long *data, const char *id,
+     size_t id_len);
 
 /** Handle architecture-specific directives.
  * Should modify behavior ONLY of parse functions, much like parse_cpu().
@@ -509,26 +448,11 @@ void yasm_arch_finalize_insn
  * \param valsize	size (in bits)
  * \param shift		left shift (in bits)
  * \param warn		enables standard overflow/underflow warnings
- * \param line		virtual line; may be 0 if warn is 0.
  * \return Nonzero on error.
  */
 int yasm_arch_floatnum_tobytes(yasm_arch *arch, const yasm_floatnum *flt,
 			       unsigned char *buf, size_t destsize,
-			       size_t valsize, size_t shift, int warn,
-			       unsigned long line);
-
-/** Adjust #yasm_intnum for relative displacement from bc.  Displacement
- * is modified in-place.
- * \param arch		architecture
- * \param intn		integer value
- * \param valsize	size (in bits)
- * \param bc		bytecode being output ("parent" of value)
- * \param line		virtual line; may be 0 if warn is 0
- * \return Nonzero on error.
- */
-int yasm_arch_intnum_fixup_rel(yasm_arch *arch, yasm_intnum *intn,
-			       size_t valsize, const yasm_bytecode *bc,
-			       unsigned long line);
+			       size_t valsize, size_t shift, int warn);
 
 /** Output #yasm_intnum to buffer.  Puts the value into the least
  * significant bits of the destination, or may be shifted into more
@@ -544,16 +468,14 @@ int yasm_arch_intnum_fixup_rel(yasm_arch *arch, yasm_intnum *intn,
  * \param bc		bytecode being output ("parent" of value)
  * \param warn		enables standard warnings (value doesn't fit into
  *			valsize bits)
- * \param line		virtual line; may be 0 if warn is 0
  * \return Nonzero on error.
  */
 int yasm_arch_intnum_tobytes(yasm_arch *arch, const yasm_intnum *intn,
 			     unsigned char *buf, size_t destsize,
 			     size_t valsize, int shift,
-			     const yasm_bytecode *bc, int warn,
-			     unsigned long line);
+			     const yasm_bytecode *bc, int warn);
 
-/** Get the equivalent byte size of a register.
+/** Get the equivalent size of a register in bits.
  * \param arch	architecture
  * \param reg	register
  * \return 0 if there is no suitable equivalent size, otherwise the size.
@@ -606,6 +528,8 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
     (((yasm_arch_base *)arch)->module->wordsize)
 #define yasm_arch_jmpsize_threshold(arch) \
     (((yasm_arch_base *)arch)->module->jmpsize_threshold)
+#define yasm_arch_min_insn_len(arch) \
+    (((yasm_arch_base *)arch)->module->min_insn_len)
 
 #define yasm_arch_create(module, machine, parser, error) \
     module->create(machine, parser, error)
@@ -614,24 +538,18 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
     ((yasm_arch_base *)arch)->module->destroy(arch)
 #define yasm_arch_get_machine(arch) \
     ((yasm_arch_base *)arch)->module->get_machine(arch)
+#define yasm_arch_get_address_size(arch) \
+    ((yasm_arch_base *)arch)->module->get_address_size(arch)
 #define yasm_arch_set_var(arch, var, val) \
     ((yasm_arch_base *)arch)->module->set_var(arch, var, val)
-#define yasm_arch_parse_cpu(arch, cpuid, line) \
-    ((yasm_arch_base *)arch)->module->parse_cpu(arch, cpuid, line)
-#define yasm_arch_parse_check_reg(arch, data, id, line) \
-    ((yasm_arch_base *)arch)->module->parse_check_reg(arch, data, id, line)
-#define yasm_arch_parse_check_reggroup(arch, data, id, line) \
-    ((yasm_arch_base *)arch)->module->parse_check_reggroup(arch, data, id, \
-							   line)
-#define yasm_arch_parse_check_segreg(arch, data, id, line) \
-    ((yasm_arch_base *)arch)->module->parse_check_segreg(arch, data, id, line)
-#define yasm_arch_parse_check_insn(arch, data, id, line) \
-    ((yasm_arch_base *)arch)->module->parse_check_insn(arch, data, id, line)
-#define yasm_arch_parse_check_prefix(arch, data, id, line) \
-    ((yasm_arch_base *)arch)->module->parse_check_prefix(arch, data, id, line)
-#define yasm_arch_parse_check_targetmod(arch, data, id, line) \
-    ((yasm_arch_base *)arch)->module->parse_check_targetmod(arch, data, id, \
-							    line)
+#define yasm_arch_parse_cpu(arch, cpuid, cpuid_len) \
+    ((yasm_arch_base *)arch)->module->parse_cpu(arch, cpuid, cpuid_len)
+#define yasm_arch_parse_check_insnprefix(arch, data, id, id_len) \
+    ((yasm_arch_base *)arch)->module->parse_check_insnprefix(arch, data, id, \
+							     id_len)
+#define yasm_arch_parse_check_regtmod(arch, data, id, id_len) \
+    ((yasm_arch_base *)arch)->module->parse_check_regtmod(arch, data, id, \
+							  id_len)
 #define yasm_arch_parse_directive(arch, name, valparams, objext_valparams, \
 				  object, line) \
     ((yasm_arch_base *)arch)->module->parse_directive \
@@ -645,16 +563,13 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
 	(arch, bc, prev_bc, data, num_operands, operands, num_prefixes, \
 	 prefixes, num_segregs, segregs)
 #define yasm_arch_floatnum_tobytes(arch, flt, buf, destsize, valsize, shift, \
-				   warn, line) \
+				   warn) \
     ((yasm_arch_base *)arch)->module->floatnum_tobytes \
-	(arch, flt, buf, destsize, valsize, shift, warn, line)
-#define yasm_arch_intnum_fixup_rel(arch, intn, valsize, bc, line) \
-    ((yasm_arch_base *)arch)->module->intnum_fixup_rel \
-	(arch, intn, valsize, bc, line)
+	(arch, flt, buf, destsize, valsize, shift, warn)
 #define yasm_arch_intnum_tobytes(arch, intn, buf, destsize, valsize, shift, \
-				 bc, warn, line) \
+				 bc, warn) \
     ((yasm_arch_base *)arch)->module->intnum_tobytes \
-	(arch, intn, buf, destsize, valsize, shift, bc, warn, line)
+	(arch, intn, buf, destsize, valsize, shift, bc, warn)
 #define yasm_arch_get_reg_size(arch, reg) \
     ((yasm_arch_base *)arch)->module->get_reg_size(arch, reg)
 #define yasm_arch_reggroup_get_reg(arch, regg, regi) \

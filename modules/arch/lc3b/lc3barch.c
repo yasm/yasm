@@ -71,6 +71,12 @@ lc3b_get_machine(/*@unused@*/ const yasm_arch *arch)
     return "lc3b";
 }
 
+static unsigned int
+lc3b_get_address_size(/*@unused@*/ const yasm_arch *arch)
+{
+    return 16;
+}
+
 static int
 lc3b_set_var(yasm_arch *arch, const char *var, unsigned long val)
 {
@@ -93,35 +99,42 @@ static const unsigned char **
 lc3b_get_fill(const yasm_arch *arch)
 {
     /* NOP pattern is all 0's per LC-3b Assembler 3.50 output */
-    static const char *fill[16] = {
+    static const unsigned char *fill[16] = {
 	NULL,		/* unused */
 	NULL,		/* 1 - illegal; all opcodes are 2 bytes long */
+	(const unsigned char *)
 	"\x00\x00",			/* 4 */
 	NULL,				/* 3 - illegal */
+	(const unsigned char *)
 	"\x00\x00\x00\x00",		/* 4 */
 	NULL,				/* 5 - illegal */
+	(const unsigned char *)
 	"\x00\x00\x00\x00\x00\x00",	/* 6 */
 	NULL,				/* 7 - illegal */
+	(const unsigned char *)
 	"\x00\x00\x00\x00\x00\x00"	/* 8 */
 	"\x00\x00",
 	NULL,				/* 9 - illegal */
+	(const unsigned char *)
 	"\x00\x00\x00\x00\x00\x00"	/* 10 */
 	"\x00\x00\x00\x00",
 	NULL,				/* 11 - illegal */
+	(const unsigned char *)
 	"\x00\x00\x00\x00\x00\x00"	/* 12 */
 	"\x00\x00\x00\x00\x00\x00",
 	NULL,				/* 13 - illegal */
+	(const unsigned char *)
 	"\x00\x00\x00\x00\x00\x00"	/* 14 */
 	"\x00\x00\x00\x00\x00\x00\x00\x00",
 	NULL				/* 15 - illegal */
     };
-    return (const unsigned char **)fill;
+    return fill;
 }
 
 static unsigned int
 lc3b_get_reg_size(/*@unused@*/ yasm_arch *arch, /*@unused@*/ unsigned long reg)
 {
-    return 2;
+    return 16;
 }
 
 static unsigned long
@@ -141,9 +154,10 @@ lc3b_reg_print(/*@unused@*/ yasm_arch *arch, unsigned long reg, FILE *f)
 static int
 lc3b_floatnum_tobytes(yasm_arch *arch, const yasm_floatnum *flt,
 		      unsigned char *buf, size_t destsize, size_t valsize,
-		      size_t shift, int warn, unsigned long line)
+		      size_t shift, int warn)
 {
-    yasm__error(line, N_("LC-3b does not support floating point"));
+    yasm_error_set(YASM_ERROR_FLOATING_POINT,
+		   N_("LC-3b does not support floating point"));
     return 1;
 }
 
@@ -167,19 +181,15 @@ yasm_arch_module yasm_lc3b_LTX_arch = {
     lc3b_create,
     lc3b_destroy,
     lc3b_get_machine,
+    lc3b_get_address_size,
     lc3b_set_var,
     yasm_lc3b__parse_cpu,
-    yasm_lc3b__parse_check_reg,
-    yasm_lc3b__parse_check_reggroup,
-    yasm_lc3b__parse_check_segreg,
-    yasm_lc3b__parse_check_insn,
-    yasm_lc3b__parse_check_prefix,
-    yasm_lc3b__parse_check_targetmod,
+    yasm_lc3b__parse_check_insnprefix,
+    yasm_lc3b__parse_check_regtmod,
     lc3b_parse_directive,
     lc3b_get_fill,
     yasm_lc3b__finalize_insn,
     lc3b_floatnum_tobytes,
-    yasm_lc3b__intnum_fixup_rel,
     yasm_lc3b__intnum_tobytes,
     lc3b_get_reg_size,
     lc3b_reggroup_get_reg,
@@ -188,6 +198,7 @@ yasm_arch_module yasm_lc3b_LTX_arch = {
     lc3b_ea_create_expr,
     lc3b_machines,
     "lc3b",
-    2,
-    512
+    16,
+    512,
+    2
 };

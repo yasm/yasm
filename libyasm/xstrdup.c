@@ -39,16 +39,6 @@ static char sccsid[] = "@(#)strdup.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 
 
-#ifndef STDC_HEADERS
-size_t strlen(const char *);
-# ifndef HAVE_MEMCPY
-void bcopy(const void *, void *, size_t);
-#  define memcpy(d, s, n) bcopy((s), (d), (n))
-# else
-void memcpy(void *, const void *, size_t);
-# endif
-#endif
-
 #ifdef WITH_DMALLOC
 #undef yasm__xstrdup
 #endif

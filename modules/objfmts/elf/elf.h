@@ -421,6 +421,7 @@ void elf_reloc_entry_destroy(void *entry);
 
 /* strtab functions */
 elf_strtab_entry *elf_strtab_entry_create(const char *str);
+void elf_strtab_entry_set_str(elf_strtab_entry *entry, const char *str);
 elf_strtab_head *elf_strtab_create(void);
 elf_strtab_entry *elf_strtab_append_str(elf_strtab_head *head, const char *str);
 void elf_strtab_destroy(elf_strtab_head *head);
@@ -435,7 +436,8 @@ void elf_symtab_insert_local_sym(elf_symtab_head *symtab,
 				 elf_symtab_entry *entry);
 void elf_symtab_destroy(elf_symtab_head *head);
 unsigned long elf_symtab_assign_indices(elf_symtab_head *symtab);
-unsigned long elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab);
+unsigned long elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab,
+				       yasm_errwarns *errwarns);
 void elf_symtab_set_nonzero(elf_symtab_entry	*entry,
 			    struct yasm_section *sect,
 			    elf_section_index	 sectidx,
@@ -461,6 +463,8 @@ unsigned long elf_secthead_write_to_file(FILE *f, elf_secthead *esd,
 void elf_secthead_append_reloc(yasm_section *sect, elf_secthead *shead,
 			       elf_reloc_entry *reloc);
 elf_section_type elf_secthead_get_type(elf_secthead *shead);
+void elf_secthead_set_typeflags(elf_secthead *shead, elf_section_type type,
+				elf_section_flags flags);
 int elf_secthead_is_empty(elf_secthead *shead);
 struct yasm_symrec *elf_secthead_get_sym(elf_secthead *shead);
 unsigned long elf_secthead_get_align(const elf_secthead *shead);
@@ -487,7 +491,8 @@ unsigned long elf_secthead_write_rel_to_file(FILE *f, elf_section_index symtab,
 					     elf_secthead *esd,
 					     elf_section_index sindex);
 unsigned long elf_secthead_write_relocs_to_file(FILE *f, yasm_section *sect,
-						elf_secthead *shead);
+						elf_secthead *shead,
+						yasm_errwarns *errwarns);
 long elf_secthead_set_file_offset(elf_secthead *shead, long pos);
 
 /* program header function */

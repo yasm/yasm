@@ -55,18 +55,24 @@ static const char *def_gettext_hook(const char *msgid);
 /*@exits@*/ void (*yasm_fatal) (const char *message, va_list va) = def_fatal;
 const char * (*yasm_gettext_hook) (const char *msgid) = def_gettext_hook;
 
+/* Error indicator */
+/* yasm_eclass is not static so that yasm_error_occurred macro can access it */
+yasm_error_class yasm_eclass;
+static /*@only@*/ /*@null@*/ char *yasm_estr;
+static unsigned long yasm_exrefline;
+static /*@only@*/ /*@null@*/ char *yasm_exrefstr;
+
+/* Warning indicator */
+typedef struct warn {
+    /*@reldef@*/ STAILQ_ENTRY(warn) link;
+
+    yasm_warn_class wclass;
+    /*@owned@*/ /*@null@*/ char *wstr;
+} warn;
+static STAILQ_HEAD(, warn) yasm_warns;
+
 /* Enabled warnings.  See errwarn.h for a list. */
 static unsigned long warn_class_enabled;
-
-/* Total error count */
-static unsigned int error_count;
-
-/* Total warning count */
-static unsigned int warning_count;
-
-typedef /*@reldef@*/ SLIST_HEAD(errwarndatahead_s, errwarn_data)
-    errwarndatahead;
-static /*@only@*/ /*@null@*/ errwarndatahead errwarns;
 
 typedef struct errwarn_data {
     /*@reldef@*/ SLIST_ENTRY(errwarn_data) link;
@@ -74,15 +80,23 @@ typedef struct errwarn_data {
     enum { WE_UNKNOWN, WE_ERROR, WE_WARNING, WE_PARSERERROR } type;
 
     unsigned long line;
-    unsigned long displine;
-
-    /* FIXME: This should not be a fixed size.  But we don't have vasprintf()
-     * right now. */
-    char msg[MSG_MAXSIZE];
+    unsigned long xrefline;
+    /*@owned@*/ char *msg;
+    /*@owned@*/ char *xrefmsg;
 } errwarn_data;
 
-/* Last inserted error/warning.  Used to speed up insertions. */
-static /*@null@*/ errwarn_data *previous_we;
+struct yasm_errwarns {
+    /*@reldef@*/ SLIST_HEAD(, errwarn_data) errwarns;
+
+    /* Total error count */
+    unsigned int ecount;
+
+    /* Total warning count */
+    unsigned int wcount;
+
+    /* Last inserted error/warning.  Used to speed up insertions. */
+    /*@null@*/ errwarn_data *previous_we;
+};
 
 /* Static buffer for use by conv_unprint(). */
 static char unprint[5];
@@ -103,24 +117,19 @@ yasm_errwarn_initialize(void)
 	(1UL<<YASM_WARN_PREPROC) | (0UL<<YASM_WARN_ORPHAN_LABEL) |
 	(1UL<<YASM_WARN_UNINIT_CONTENTS);
 
-    error_count = 0;
-    warning_count = 0;
-    SLIST_INIT(&errwarns);
-    previous_we = NULL;
+    yasm_eclass = YASM_ERROR_NONE;
+    yasm_estr = NULL;
+    yasm_exrefline = 0;
+    yasm_exrefstr = NULL;
+
+    STAILQ_INIT(&yasm_warns);
 }
 
 void
 yasm_errwarn_cleanup(void)
 {
-    errwarn_data *we;
-
-    /* Delete all error/warnings */
-    while (!SLIST_EMPTY(&errwarns)) {
-	we = SLIST_FIRST(&errwarns);
-
-	SLIST_REMOVE_HEAD(&errwarns, link);
-	yasm_xfree(we);
-    }
+    yasm_error_clear();
+    yasm_warn_clear();
 }
 
 /* Convert a possibly unprintable character into a printable string, using
@@ -179,7 +188,7 @@ def_fatal(const char *fmt, va_list va)
  * type is WE_PARSERERROR.
  */
 static errwarn_data *
-errwarn_data_new(unsigned long line, unsigned long displine,
+errwarn_data_new(yasm_errwarns *errwarns, unsigned long line,
 		 int replace_parser_error)
 {
     errwarn_data *first, *next, *ins_we, *we;
@@ -188,8 +197,8 @@ errwarn_data_new(unsigned long line, unsigned long displine,
     /* Find the entry with either line=line or the last one with line<line.
      * Start with the last entry added to speed the search.
      */
-    ins_we = previous_we;
-    first = SLIST_FIRST(&errwarns);
+    ins_we = errwarns->previous_we;
+    first = SLIST_FIRST(&errwarns->errwarns);
     if (!ins_we || !first)
 	action = INS_HEAD;
     while (action == INS_NONE) {
@@ -216,10 +225,12 @@ errwarn_data_new(unsigned long line, unsigned long displine,
 
 	we->type = WE_UNKNOWN;
 	we->line = line;
-	we->displine = displine;
+	we->xrefline = 0;
+	we->msg = NULL;
+	we->xrefmsg = NULL;
 
 	if (action == INS_HEAD)
-	    SLIST_INSERT_HEAD(&errwarns, we, link);
+	    SLIST_INSERT_HEAD(&errwarns->errwarns, we, link);
 	else if (action == INS_AFTER) {
 	    assert(ins_we != NULL);
 	    SLIST_INSERT_AFTER(ins_we, we, link);
@@ -228,114 +239,149 @@ errwarn_data_new(unsigned long line, unsigned long displine,
     }
 
     /* Remember previous err/warn */
-    previous_we = we;
+    errwarns->previous_we = we;
 
     return we;
 }
 
-/* Register an error at line line, displaying line displine.  Does not print
- * the error, only stores it for output_all() to print.
- */
 void
-yasm__error_va_at(unsigned long line, unsigned long displine, const char *fmt,
-		  va_list va)
+yasm_error_clear(void)
 {
-    errwarn_data *we = errwarn_data_new(line, displine, 1);
-
-    we->type = WE_ERROR;
-
-#ifdef HAVE_VSNPRINTF
-    vsnprintf(we->msg, MSG_MAXSIZE, yasm_gettext_hook(fmt), va);
-#else
-    vsprintf(we->msg, yasm_gettext_hook(fmt), va);
-#endif
-
-    error_count++;
+    if (yasm_estr)
+	yasm_xfree(yasm_estr);
+    if (yasm_exrefstr)
+	yasm_xfree(yasm_exrefstr);
+    yasm_eclass = YASM_ERROR_NONE;
+    yasm_estr = NULL;
+    yasm_exrefline = 0;
+    yasm_exrefstr = NULL;
 }
 
-/* Register an warning at line line, displaying line displine.  Does not print
- * the warning, only stores it for output_all() to print.
- */
-void
-yasm__warning_va_at(yasm_warn_class num, unsigned long line,
-		    unsigned long displine, const char *fmt, va_list va)
+int
+yasm_error_matches(yasm_error_class eclass)
 {
-    errwarn_data *we;
+    if (yasm_eclass == YASM_ERROR_NONE)
+	return eclass == YASM_ERROR_NONE;
+    if (yasm_eclass == YASM_ERROR_GENERAL)
+	return eclass == YASM_ERROR_GENERAL;
+    return (yasm_eclass & eclass) == eclass;
+}
 
-    if (!(warn_class_enabled & (1UL<<num)))
+void
+yasm_error_set_va(yasm_error_class eclass, const char *format, va_list va)
+{
+    if (yasm_eclass != YASM_ERROR_NONE)
+	return;
+
+    yasm_eclass = eclass;
+    yasm_estr = yasm_xmalloc(MSG_MAXSIZE+1);
+#ifdef HAVE_VSNPRINTF
+    vsnprintf(yasm_estr, MSG_MAXSIZE, yasm_gettext_hook(format), va);
+#else
+    vsprintf(yasm_estr, yasm_gettext_hook(format), va);
+#endif
+}
+
+void
+yasm_error_set(yasm_error_class eclass, const char *format, ...)
+{
+    va_list va;
+    va_start(va, format);
+    yasm_error_set_va(eclass, format, va);
+    va_end(va);
+}
+
+void
+yasm_error_set_xref_va(unsigned long xrefline, const char *format, va_list va)
+{
+    if (yasm_eclass != YASM_ERROR_NONE)
+	return;
+
+    yasm_exrefline = xrefline;
+
+    yasm_exrefstr = yasm_xmalloc(MSG_MAXSIZE+1);
+#ifdef HAVE_VSNPRINTF
+    vsnprintf(yasm_exrefstr, MSG_MAXSIZE, yasm_gettext_hook(format), va);
+#else
+    vsprintf(yasm_exrefstr, yasm_gettext_hook(format), va);
+#endif
+}
+
+void
+yasm_error_set_xref(unsigned long xrefline, const char *format, ...)
+{
+    va_list va;
+    va_start(va, format);
+    yasm_error_set_xref_va(xrefline, format, va);
+    va_end(va);
+}
+
+void
+yasm_error_fetch(yasm_error_class *eclass, char **str, unsigned long *xrefline,
+		 char **xrefstr)
+{
+    *eclass = yasm_eclass;
+    *str = yasm_estr;
+    *xrefline = yasm_exrefline;
+    *xrefstr = yasm_exrefstr;
+    yasm_eclass = YASM_ERROR_NONE;
+    yasm_estr = NULL;
+    yasm_exrefline = 0;
+    yasm_exrefstr = NULL;
+}
+
+void yasm_warn_clear(void)
+{
+    /* Delete all error/warnings */
+    while (!STAILQ_EMPTY(&yasm_warns)) {
+	warn *w = STAILQ_FIRST(&yasm_warns);
+
+	if (w->wstr)
+	    yasm_xfree(w->wstr);
+
+	STAILQ_REMOVE_HEAD(&yasm_warns, link);
+	yasm_xfree(w);
+    }
+}
+
+void
+yasm_warn_set_va(yasm_warn_class wclass, const char *format, va_list va)
+{
+    warn *w;
+
+    if (!(warn_class_enabled & (1UL<<wclass)))
 	return;	    /* warning is part of disabled class */
 
-    we = errwarn_data_new(line, displine, 0);
-
-    we->type = WE_WARNING;
-
+    w = yasm_xmalloc(sizeof(warn));
+    w->wclass = wclass;
+    w->wstr = yasm_xmalloc(MSG_MAXSIZE+1);
 #ifdef HAVE_VSNPRINTF
-    vsnprintf(we->msg, MSG_MAXSIZE, yasm_gettext_hook(fmt), va);
+    vsnprintf(w->wstr, MSG_MAXSIZE, yasm_gettext_hook(format), va);
 #else
-    vsprintf(we->msg, yasm_gettext_hook(fmt), va);
+    vsprintf(w->wstr, yasm_gettext_hook(format), va);
 #endif
-
-    warning_count++;
+    STAILQ_INSERT_TAIL(&yasm_warns, w, link);
 }
 
-/* Register an error at line line.  Does not print the error, only stores it
- * for output_all() to print.
- */
 void
-yasm__error(unsigned long line, const char *fmt, ...)
+yasm_warn_set(yasm_warn_class wclass, const char *format, ...)
 {
     va_list va;
-    va_start(va, fmt);
-    yasm__error_va_at(line, line, fmt, va);
+    va_start(va, format);
+    yasm_warn_set_va(wclass, format, va);
     va_end(va);
 }
 
-/* Register an error at line line, displaying line displine.  Does not print
- * the error, only stores it for output_all() to print.
- */
 void
-yasm__error_at(unsigned long line, unsigned long displine, const char *fmt,
-	       ...)
+yasm_warn_fetch(yasm_warn_class *wclass, char **str)
 {
-    va_list va;
-    va_start(va, fmt);
-    yasm__error_va_at(line, displine, fmt, va);
-    va_end(va);
-}
+    warn *w = STAILQ_FIRST(&yasm_warns);
 
-/* Register an warning at line line.  Does not print the warning, only stores
- * it for output_all() to print.
- */
-void
-yasm__warning(yasm_warn_class num, unsigned long line, const char *fmt, ...)
-{
-    va_list va;
-    va_start(va, fmt);
-    yasm__warning_va_at(num, line, line, fmt, va);
-    va_end(va);
-}
+    *wclass = w->wclass;
+    *str = w->wstr;
 
-/* Register an warning at line line, displaying line displine.  Does not print
- * the warning, only stores it for output_all() to print.
- */
-void
-yasm__warning_at(yasm_warn_class num, unsigned long line,
-		 unsigned long displine, const char *fmt, ...)
-{
-    va_list va;
-    va_start(va, fmt);
-    yasm__warning_va_at(num, line, line, fmt, va);
-    va_end(va);
-}
-
-/* Parser error handler.  Moves YACC-style error into our error handling
- * system.
- */
-void
-yasm__parser_error(unsigned long line, const char *s)
-{
-    yasm__error(line, N_("parser error: %s"), s);
-    previous_we->type = WE_PARSERERROR;
+    STAILQ_REMOVE_HEAD(&yasm_warns, link);
+    yasm_xfree(w);
 }
 
 void
@@ -356,18 +402,77 @@ yasm_warn_disable_all(void)
     warn_class_enabled = 0;
 }
 
-unsigned int
-yasm_get_num_errors(int warning_as_error)
+yasm_errwarns *
+yasm_errwarns_create(void)
 {
-    if (warning_as_error)
-	return error_count+warning_count;
-    else
-	return error_count;
+    yasm_errwarns *errwarns = yasm_xmalloc(sizeof(yasm_errwarns));
+    SLIST_INIT(&errwarns->errwarns);
+    errwarns->ecount = 0;
+    errwarns->wcount = 0;
+    errwarns->previous_we = NULL;
+    return errwarns;
 }
 
 void
-yasm_errwarn_output_all(yasm_linemap *lm, int warning_as_error,
-     yasm_print_error_func print_error, yasm_print_warning_func print_warning)
+yasm_errwarns_destroy(yasm_errwarns *errwarns)
+{
+    errwarn_data *we;
+
+    /* Delete all error/warnings */
+    while (!SLIST_EMPTY(&errwarns->errwarns)) {
+	we = SLIST_FIRST(&errwarns->errwarns);
+	if (we->msg)
+	    yasm_xfree(we->msg);
+	if (we->xrefmsg)
+	    yasm_xfree(we->xrefmsg);
+
+	SLIST_REMOVE_HEAD(&errwarns->errwarns, link);
+	yasm_xfree(we);
+    }
+
+    yasm_xfree(errwarns);
+}
+
+void
+yasm_errwarn_propagate(yasm_errwarns *errwarns, unsigned long line)
+{
+    if (yasm_eclass != YASM_ERROR_NONE) {
+	errwarn_data *we = errwarn_data_new(errwarns, line, 1);
+	yasm_error_class eclass;
+
+	yasm_error_fetch(&eclass, &we->msg, &we->xrefline, &we->xrefmsg);
+	if (eclass != YASM_ERROR_GENERAL
+	    && (eclass & YASM_ERROR_PARSE) == YASM_ERROR_PARSE)
+	    we->type = WE_PARSERERROR;
+	else
+	    we->type = WE_ERROR;
+	errwarns->ecount++;
+    }
+
+    while (!STAILQ_EMPTY(&yasm_warns)) {
+	errwarn_data *we = errwarn_data_new(errwarns, line, 0);
+	yasm_warn_class wclass;
+
+	yasm_warn_fetch(&wclass, &we->msg);
+	we->type = WE_WARNING;
+	errwarns->wcount++;
+    }
+}
+
+unsigned int
+yasm_errwarns_num_errors(yasm_errwarns *errwarns, int warning_as_error)
+{
+    if (warning_as_error)
+	return errwarns->ecount+errwarns->wcount;
+    else
+	return errwarns->ecount;
+}
+
+void
+yasm_errwarns_output_all(yasm_errwarns *errwarns, yasm_linemap *lm,
+			 int warning_as_error,
+			 yasm_print_error_func print_error,
+			 yasm_print_warning_func print_warning)
 {
     errwarn_data *we;
     const char *filename;
@@ -376,16 +481,17 @@ yasm_errwarn_output_all(yasm_linemap *lm, int warning_as_error,
     /* If we're treating warnings as errors, tell the user about it. */
     if (warning_as_error && warning_as_error != 2) {
 	print_error("", 0,
-		    yasm_gettext_hook(N_("warnings being treated as errors")));
+		    yasm_gettext_hook(N_("warnings being treated as errors")),
+		    0, NULL);
 	warning_as_error = 2;
     }
 
     /* Output error/warnings. */
-    SLIST_FOREACH(we, &errwarns, link) {
+    SLIST_FOREACH(we, &errwarns->errwarns, link) {
 	/* Output error/warning */
-	yasm_linemap_lookup(lm, we->displine, &filename, &line);
-	if (we->type == WE_ERROR)
-	    print_error(filename, line, we->msg);
+	yasm_linemap_lookup(lm, we->line, &filename, &line);
+	if (we->type == WE_ERROR || we->type == WE_PARSERERROR)
+	    print_error(filename, line, we->msg, we->xrefline, we->xrefmsg);
 	else
 	    print_warning(filename, line, we->msg);
     }

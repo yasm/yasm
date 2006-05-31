@@ -42,7 +42,7 @@ static void lc3b_bc_insn_print(const void *contents, FILE *f,
 static yasm_bc_resolve_flags lc3b_bc_insn_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int lc3b_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp,
-				void *d, yasm_output_expr_func output_expr,
+				void *d, yasm_output_value_func output_value,
 				/*@null@*/ yasm_output_reloc_func output_reloc);
 
 /* Bytecode callback structures */
@@ -52,7 +52,8 @@ static const yasm_bytecode_callback lc3b_bc_callback_insn = {
     lc3b_bc_insn_print,
     yasm_bc_finalize_common,
     lc3b_bc_insn_resolve,
-    lc3b_bc_insn_tobytes
+    lc3b_bc_insn_tobytes,
+    0
 };
 
 
@@ -66,8 +67,7 @@ static void
 lc3b_bc_insn_destroy(void *contents)
 {
     lc3b_insn *insn = (lc3b_insn *)contents;
-    if (insn->imm)
-	yasm_expr_destroy(insn->imm);
+    yasm_value_delete(&insn->imm);
     yasm_xfree(contents);
 }
 
@@ -78,13 +78,13 @@ lc3b_bc_insn_print(const void *contents, FILE *f, int indent_level)
 
     fprintf(f, "%*s_Instruction_\n", indent_level, "");
     fprintf(f, "%*sImmediate Value:", indent_level, "");
-    if (!insn->imm)
+    if (!insn->imm.abs)
 	fprintf(f, " (nil)\n");
     else {
 	indent_level++;
-	fprintf(f, "\n%*sVal=", indent_level, "");
-	yasm_expr_print(insn->imm, f);
-	fprintf(f, "\n%*sType=", indent_level, "");
+	fprintf(f, "\n");
+	yasm_value_print(&insn->imm, f, indent_level);
+	fprintf(f, "%*sType=", indent_level, "");
 	switch (insn->imm_type) {
 	    case LC3B_IMM_NONE:
 		fprintf(f, "NONE-SHOULDN'T HAPPEN");
@@ -113,12 +113,14 @@ lc3b_bc_insn_print(const void *contents, FILE *f, int indent_level)
 	}
 	indent_level--;
     }
+    /* FIXME
     fprintf(f, "\n%*sOrigin=", indent_level, "");
     if (insn->origin) {
 	fprintf(f, "\n");
 	yasm_symrec_print(insn->origin, f, indent_level+1);
     } else
 	fprintf(f, "(nil)\n");
+    */
     fprintf(f, "%*sOpcode: %04x\n", indent_level, "",
 	    (unsigned int)insn->opcode);
 }
@@ -128,8 +130,8 @@ lc3b_bc_insn_resolve(yasm_bytecode *bc, int save,
 		     yasm_calc_bc_dist_func calc_bc_dist)
 {
     lc3b_insn *insn = (lc3b_insn *)bc->contents;
-    /*@null@*/ yasm_expr *temp;
-    /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
+    yasm_bytecode *target_prevbc;
+    /*@only@*/ yasm_intnum *num;
     long rel;
 
     /* Fixed size instruction length */
@@ -141,21 +143,35 @@ lc3b_bc_insn_resolve(yasm_bytecode *bc, int save,
     if (insn->imm_type != LC3B_IMM_9_PC || !save)
 	return YASM_BC_RESOLVE_MIN_LEN;
 
-    temp = yasm_expr_copy(insn->imm);
-    temp = yasm_expr_create(YASM_EXPR_SUB, yasm_expr_expr(temp),
-			    yasm_expr_sym(insn->origin), bc->line);
-    num = yasm_expr_get_intnum(&temp, calc_bc_dist);
-    if (!num) {
-	yasm__error(bc->line, N_("target external or out of segment"));
-	yasm_expr_destroy(temp);
-	return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
+    if (!insn->imm.rel)
+	num = yasm_intnum_create_uint(0);
+    else if (!yasm_symrec_get_label(insn->imm.rel, &target_prevbc)
+	     || target_prevbc->section != insn->origin_prevbc->section
+	     || !(num = calc_bc_dist(insn->origin_prevbc, target_prevbc))) {
+	/* External or out of segment, so we can't check distance. */
+	return YASM_BC_RESOLVE_MIN_LEN;
     }
+
+    if (insn->imm.abs) {
+	/*@only@*/ yasm_expr *temp = yasm_expr_copy(insn->imm.abs);
+	/*@dependent@*/ /*@null@*/ yasm_intnum *num2;
+	num2 = yasm_expr_get_intnum(&temp, calc_bc_dist);
+	if (!num2) {
+	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			   N_("jump target too complex"));
+	    yasm_expr_destroy(temp);
+	    return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
+	}
+	yasm_intnum_calc(num, YASM_EXPR_ADD, num2);
+	yasm_expr_destroy(temp);
+    }
+
     rel = yasm_intnum_get_int(num);
+    yasm_intnum_destroy(num);
     rel -= 2;
-    yasm_expr_destroy(temp);
     /* 9-bit signed, word-multiple displacement */
     if (rel < -512 || rel > 511) {
-	yasm__error(bc->line, N_("target out of range"));
+	yasm_error_set(YASM_ERROR_OVERFLOW, N_("target out of range"));
 	return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
     }
     return YASM_BC_RESOLVE_MIN_LEN;
@@ -163,10 +179,11 @@ lc3b_bc_insn_resolve(yasm_bytecode *bc, int save,
 
 static int
 lc3b_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-		     yasm_output_expr_func output_expr,
+		     yasm_output_value_func output_value,
 		     /*@unused@*/ yasm_output_reloc_func output_reloc)
 {
     lc3b_insn *insn = (lc3b_insn *)bc->contents;
+    /*@only@*/ yasm_intnum *delta;
 
     /* Output opcode */
     YASM_SAVE_16_L(*bufp, insn->opcode);
@@ -176,34 +193,49 @@ lc3b_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	case LC3B_IMM_NONE:
 	    break;
 	case LC3B_IMM_4:
-	    if (output_expr(&insn->imm, *bufp, 2, 4, 0, 0, bc, 0, 1, d))
+	    insn->imm.size = 4;
+	    if (output_value(&insn->imm, *bufp, 2, 0, bc, 1, d))
 		return 1;
 	    break;
 	case LC3B_IMM_5:
-	    if (output_expr(&insn->imm, *bufp, 2, 5, 0, 0, bc, 0, 1, d))
+	    insn->imm.size = 5;
+	    if (output_value(&insn->imm, *bufp, 2, 0, bc, -1, d))
 		return 1;
 	    break;
 	case LC3B_IMM_6_WORD:
-	    if (output_expr(&insn->imm, *bufp, 2, 6, -1, 0, bc, 0, 1, d))
+	    insn->imm.size = 6;
+	    if (output_value(&insn->imm, *bufp, 2, 0, bc, 1, d))
 		return 1;
 	    break;
 	case LC3B_IMM_6_BYTE:
-	    if (output_expr(&insn->imm, *bufp, 2, 6, 0, 0, bc, 0, 1, d))
+	    insn->imm.size = 6;
+	    if (output_value(&insn->imm, *bufp, 2, 0, bc, -1, d))
 		return 1;
 	    break;
 	case LC3B_IMM_8:
-	    if (output_expr(&insn->imm, *bufp, 2, 8, -1, 0, bc, 0, 1, d))
+	    insn->imm.size = 8;
+	    if (output_value(&insn->imm, *bufp, 2, 0, bc, 1, d))
 		return 1;
 	    break;
 	case LC3B_IMM_9_PC:
-	    insn->imm = yasm_expr_create(YASM_EXPR_SUB,
-		yasm_expr_expr(insn->imm), yasm_expr_sym(insn->origin),
-		bc->line);
-	    if (output_expr(&insn->imm, *bufp, 2, 9, -1, 0, bc, 1, 1, d))
+	    /* Adjust relative displacement to end of bytecode */
+	    delta = yasm_intnum_create_int(-1);
+	    if (!insn->imm.abs)
+		insn->imm.abs = yasm_expr_create_ident(yasm_expr_int(delta),
+						       bc->line);
+	    else
+		insn->imm.abs =
+		    yasm_expr_create(YASM_EXPR_ADD,
+				     yasm_expr_expr(insn->imm.abs),
+				     yasm_expr_int(delta), bc->line);
+
+	    insn->imm.size = 9;
+	    if (output_value(&insn->imm, *bufp, 2, 0, bc, -1, d))
 		return 1;
 	    break;
 	case LC3B_IMM_9:
-	    if (output_expr(&insn->imm, *bufp, 2, 9, -1, 0, bc, 0, 1, d))
+	    insn->imm.size = 9;
+	    if (output_value(&insn->imm, *bufp, 2, 0, bc, 1, d))
 		return 1;
 	    break;
 	default:
@@ -215,28 +247,11 @@ lc3b_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 }
 
 int
-yasm_lc3b__intnum_fixup_rel(yasm_arch *arch, yasm_intnum *intn,
-			    size_t valsize, const yasm_bytecode *bc,
-			    unsigned long line)
-{
-    yasm_intnum *delta;
-    if (valsize != 9)
-	yasm_internal_error(
-	    N_("tried to do PC-relative offset from invalid sized value"));
-    delta = yasm_intnum_create_uint(bc->len);
-    yasm_intnum_calc(intn, YASM_EXPR_SUB, delta, line);
-    yasm_intnum_destroy(delta);
-    return 0;
-}
-
-int
 yasm_lc3b__intnum_tobytes(yasm_arch *arch, const yasm_intnum *intn,
 			  unsigned char *buf, size_t destsize, size_t valsize,
-			  int shift, const yasm_bytecode *bc, int warn,
-			  unsigned long line)
+			  int shift, const yasm_bytecode *bc, int warn)
 {
     /* Write value out. */
-    yasm_intnum_get_sized(intn, buf, destsize, valsize, shift, 0, warn,
-			  line);
+    yasm_intnum_get_sized(intn, buf, destsize, valsize, shift, 0, warn);
     return 0;
 }

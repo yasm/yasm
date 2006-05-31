@@ -80,7 +80,7 @@ AC_CACHE_CHECK([for stdint uintptr_t], [ac_cv_header_stdint_x],[
    unset ac_cv_type_uint64_t
    AC_CHECK_TYPE(uintptr_t,[ac_cv_header_stdint_x=$i],continue,[#include <$i>])
    AC_CHECK_TYPE(uint64_t,[and64="/uint64_t"],[and64=""],[#include<$i>])
-   m4_ifvaln([$1],[$1]) break
+   break;
   done
   AC_MSG_CHECKING([for stdint uintptr_t])
  ])
@@ -95,7 +95,6 @@ AC_CACHE_CHECK([for stdint uint32_t], [ac_cv_header_stdint_o],[
    unset ac_cv_type_uint64_t
    AC_CHECK_TYPE(uint32_t,[ac_cv_header_stdint_o=$i],continue,[#include <$i>])
    AC_CHECK_TYPE(uint64_t,[and64="/uint64_t"],[and64=""],[#include<$i>])
-   m4_ifvaln([$1],[$1]) break
    break;
   done
   AC_MSG_CHECKING([for stdint uint32_t])
@@ -111,7 +110,6 @@ AC_CACHE_CHECK([for stdint u_int32_t], [ac_cv_header_stdint_u],[
    unset ac_cv_type_u_int64_t
    AC_CHECK_TYPE(u_int32_t,[ac_cv_header_stdint_u=$i],continue,[#include <$i>])
    AC_CHECK_TYPE(u_int64_t,[and64="/u_int64_t"],[and64=""],[#include<$i>])
-   m4_ifvaln([$1],[$1]) break
    break;
   done
   AC_MSG_CHECKING([for stdint u_int32_t])
@@ -203,11 +201,11 @@ AC_CHECK_TYPE(intmax_t,,,[#include <$ac_cv_header_stdint>])
 
 fi # shortcircut to system "stdint.h"
 # ------------------ PREPARE VARIABLES ------------------------------
-if test "$GCC" = "yes" ; then
-ac_cv_stdint_message="using gnu compiler "`$CC --version | head -1` 
-else
+#if test "$GCC" = "yes" ; then
+#ac_cv_stdint_message="using gnu compiler "`$CC --version | head -1` 
+#else
 ac_cv_stdint_message="using $CC"
-fi
+#fi
 
 AC_MSG_RESULT([make use of $ac_cv_header_stdint in $ac_stdint_h dnl
 $ac_cv_stdint_result])
@@ -353,11 +351,11 @@ echo "" >>$ac_stdint
 
 #ifndef _STDINT_HEADER_INTPTR
 #define _STDINT_NEED_INTPTR_T
+#endif
+
 #ifndef _STDINT_HAVE_INTMAX_T
 #define _STDINT_NEED_INTMAX_T
 #endif
-#endif
-
 
 /* .................... definition part ............................ */
 

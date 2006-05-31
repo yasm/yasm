@@ -3,6 +3,11 @@
 TESTS += modules/objfmts/elf/tests/elf_test.sh
 
 EXTRA_DIST += modules/objfmts/elf/tests/elf_test.sh
+EXTRA_DIST += modules/objfmts/elf/tests/curpos.asm
+EXTRA_DIST += modules/objfmts/elf/tests/curpos.hex
+EXTRA_DIST += modules/objfmts/elf/tests/curpos.errwarn
+EXTRA_DIST += modules/objfmts/elf/tests/curpos-err.asm
+EXTRA_DIST += modules/objfmts/elf/tests/curpos-err.errwarn
 EXTRA_DIST += modules/objfmts/elf/tests/elfcond.asm
 EXTRA_DIST += modules/objfmts/elf/tests/elfcond.hex
 EXTRA_DIST += modules/objfmts/elf/tests/elfcond.errwarn
@@ -19,6 +24,9 @@ EXTRA_DIST += modules/objfmts/elf/tests/elftest.errwarn
 EXTRA_DIST += modules/objfmts/elf/tests/elftimes.asm
 EXTRA_DIST += modules/objfmts/elf/tests/elftimes.hex
 EXTRA_DIST += modules/objfmts/elf/tests/elftimes.errwarn
+EXTRA_DIST += modules/objfmts/elf/tests/elf-overdef.asm
+EXTRA_DIST += modules/objfmts/elf/tests/elf-overdef.hex
+EXTRA_DIST += modules/objfmts/elf/tests/elf-overdef.errwarn
 EXTRA_DIST += modules/objfmts/elf/tests/elf-x86id.asm
 EXTRA_DIST += modules/objfmts/elf/tests/elf-x86id.hex
 EXTRA_DIST += modules/objfmts/elf/tests/elf-x86id.errwarn

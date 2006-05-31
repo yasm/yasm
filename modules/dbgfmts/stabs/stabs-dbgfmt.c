@@ -85,7 +85,6 @@ typedef struct yasm_dbgfmt_stabs {
 
     yasm_object *object;
     yasm_symtab *symtab;
-    const char *filename;
     yasm_linemap *linemap;
     yasm_arch *arch;
 } yasm_dbgfmt_stabs;
@@ -105,6 +104,7 @@ typedef struct {
     yasm_bytecode *basebc;      /* base bytecode from which to track SLINEs */
 
     yasm_dbgfmt_stabs *dbgfmt_stabs;
+    yasm_errwarns *errwarns;
 } stabs_info;
 
 typedef struct {
@@ -126,7 +126,7 @@ static yasm_bc_resolve_flags stabs_bc_str_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int stabs_bc_str_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
-     yasm_output_expr_func output_expr,
+     yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static void stabs_bc_stab_destroy(void *contents);
@@ -136,7 +136,7 @@ static yasm_bc_resolve_flags stabs_bc_stab_resolve
     (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
 static int stabs_bc_stab_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
-     yasm_output_expr_func output_expr,
+     yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
 /* Bytecode callback structures */
@@ -146,7 +146,8 @@ static const yasm_bytecode_callback stabs_bc_str_callback = {
     stabs_bc_str_print,
     yasm_bc_finalize_common,
     stabs_bc_str_resolve,
-    stabs_bc_str_tobytes
+    stabs_bc_str_tobytes,
+    0
 };
 
 static const yasm_bytecode_callback stabs_bc_stab_callback = {
@@ -154,19 +155,18 @@ static const yasm_bytecode_callback stabs_bc_stab_callback = {
     stabs_bc_stab_print,
     yasm_bc_finalize_common,
     stabs_bc_stab_resolve,
-    stabs_bc_stab_tobytes
+    stabs_bc_stab_tobytes,
+    0
 };
 
 yasm_dbgfmt_module yasm_stabs_LTX_dbgfmt;
 
 
 static /*@null@*/ /*@only@*/ yasm_dbgfmt *
-stabs_dbgfmt_create(const char *in_filename, const char *obj_filename,
-		    yasm_object *object, yasm_objfmt *of, yasm_arch *a)
+stabs_dbgfmt_create(yasm_object *object, yasm_objfmt *of, yasm_arch *a)
 {
     yasm_dbgfmt_stabs *dbgfmt_stabs = yasm_xmalloc(sizeof(yasm_dbgfmt_stabs));
     dbgfmt_stabs->dbgfmt.module = &yasm_stabs_LTX_dbgfmt;
-    dbgfmt_stabs->filename = in_filename;
     dbgfmt_stabs->object = object;
     dbgfmt_stabs->symtab = yasm_object_get_symtab(object);
     dbgfmt_stabs->linemap = yasm_object_get_linemap(object);
@@ -302,12 +302,15 @@ stabs_dbgfmt_generate_sections(yasm_section *sect, /*@null@*/ void *d)
     /* handle first (pseudo) bc separately */
     stabs_dbgfmt_generate_n_fun(d, yasm_section_bcs_first(sect));
 
-    yasm_section_bcs_traverse(sect, d, stabs_dbgfmt_generate_bcs);
+    yasm_section_bcs_traverse(sect, info->errwarns, d,
+			      stabs_dbgfmt_generate_bcs);
 
     if (yasm__strcasecmp(sectname, ".text")==0) {
         /* Close out last function by appending a null SO stab after last bc */
         yasm_bytecode *bc = yasm_section_bcs_last(sect);
-        yasm_symrec *sym = yasm_symtab_define_label2(".n_so", bc, 1, bc->line);
+        yasm_symrec *sym =
+	    yasm_symtab_define_label(yasm_object_get_symtab(
+		yasm_section_get_object(sect)), ".n_so", bc, 1, bc->line);
 	stabs_dbgfmt_append_stab(info, info->stab, 0, N_SO, 0, sym, bc, 0);
     }
 
@@ -315,7 +318,7 @@ stabs_dbgfmt_generate_sections(yasm_section *sect, /*@null@*/ void *d)
 }
 
 static void
-stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
+stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt, yasm_errwarns *errwarns)
 {
     yasm_dbgfmt_stabs *dbgfmt_stabs = (yasm_dbgfmt_stabs *)dbgfmt;
     stabs_info info;
@@ -334,30 +337,39 @@ stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
 	return;
 
     info.dbgfmt_stabs = dbgfmt_stabs;
+    info.errwarns = errwarns;
     info.lastline = 0;
     info.stabcount = 0;
     info.stab = yasm_object_get_general(dbgfmt_stabs->object, ".stab", 0, 4, 0,
 					0, &new, 0);
     if (!new) {
 	yasm_bytecode *last = yasm_section_bcs_last(info.stab);
-	if (last == NULL)
-	    yasm__error(yasm_section_bcs_first(info.stab)->line,
+	if (last == NULL) {
+	    yasm_error_set(YASM_ERROR_GENERAL,
 		N_("stabs debugging conflicts with user-defined section .stab"));
-	else
-	    yasm__warning(YASM_WARN_GENERAL, 0,
+	    yasm_errwarn_propagate(errwarns,
+				   yasm_section_bcs_first(info.stab)->line);
+	} else {
+	    yasm_warn_set(YASM_WARN_GENERAL,
 		N_("stabs debugging overrides empty section .stab"));
+	    yasm_errwarn_propagate(errwarns, 0);
+	}
     }
 
     info.stabstr = yasm_object_get_general(dbgfmt_stabs->object, ".stabstr", 0,
 					   1, 0, 0, &new, 0);
     if (!new) {
 	yasm_bytecode *last = yasm_section_bcs_last(info.stabstr);
-	if (last == NULL)
-	    yasm__error(yasm_section_bcs_first(info.stabstr)->line,
+	if (last == NULL) {
+	    yasm_error_set(YASM_ERROR_GENERAL,
 		N_("stabs debugging conflicts with user-defined section .stabstr"));
-	else
-	    yasm__warning(YASM_WARN_GENERAL, 0,
+	    yasm_errwarn_propagate(errwarns,
+				   yasm_section_bcs_first(info.stab)->line);
+	} else {
+	    yasm_warn_set(YASM_WARN_GENERAL,
 		N_("stabs debugging overrides empty section .stabstr"));
+	    yasm_errwarn_propagate(errwarns, 0);
+	}
     }
 
 
@@ -370,7 +382,8 @@ stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
 
     /* initial strtab bytecodes */
     nullbc = stabs_dbgfmt_append_bcstr(info.stabstr, "");
-    filebc = stabs_dbgfmt_append_bcstr(info.stabstr, dbgfmt_stabs->filename);
+    filebc = stabs_dbgfmt_append_bcstr(info.stabstr,
+	yasm_object_get_source_fn(dbgfmt_stabs->object));
 
     stext = yasm_object_find_general(dbgfmt_stabs->object, ".text");
     firstsym = yasm_symtab_use(dbgfmt_stabs->symtab, ".text", 0);
@@ -398,7 +411,7 @@ stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt)
 
 static int
 stabs_bc_stab_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-		      yasm_output_expr_func output_expr,
+		      yasm_output_value_func output_value,
 		      yasm_output_reloc_func output_reloc)
 {
     /* This entire function, essentially the core of rendering stabs to a file,
@@ -432,7 +445,7 @@ stabs_bc_stab_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
 static int
 stabs_bc_str_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-		     yasm_output_expr_func output_expr,
+		     yasm_output_value_func output_value,
 		     yasm_output_reloc_func output_reloc)
 {
     const char *str = (const char *)bc->contents;
@@ -493,7 +506,8 @@ stabs_bc_str_resolve(yasm_bytecode *bc, int save,
 
 static int
 stabs_dbgfmt_directive(yasm_dbgfmt *dbgfmt, const char *name,
-		       yasm_valparamhead *valparams, unsigned long line)
+		       yasm_section *sect, yasm_valparamhead *valparams,
+		       unsigned long line)
 {
     return 1;
 }

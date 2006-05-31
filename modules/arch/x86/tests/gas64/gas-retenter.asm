@@ -1,3 +1,4 @@
+ret
 retw
 #retl
 retq
@@ -5,7 +6,10 @@ retw $5
 #retl $5
 retq $5
 lretw
-#lretl
+lretl
+lretq
+lretw $5
+lretl $5
 lretq $5
 
 enterw $5000, $5

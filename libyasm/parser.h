@@ -64,12 +64,13 @@ typedef struct yasm_parser_module {
      *				lines of source into the object's linemap (via
      *				yasm_linemap_add_data()).
      * \param def_sect	default (starting) section in the object
-     * \note Parse failures are indicated by this function calling
-     *       yasm__error(); see errwarn.h for details.
+     * \param errwarns	error/warning set
+     * \note Parse errors and warnings are stored into errwarns.
      */
-    void (*do_parse) (yasm_object *object, yasm_preproc *pp, yasm_arch *a,
-		      yasm_objfmt *of, FILE *f, const char *in_filename,
-		      int save_input, yasm_section *def_sect);
+    void (*do_parse)
+	(yasm_object *object, yasm_preproc *pp, yasm_arch *a, yasm_objfmt *of,
+	 yasm_dbgfmt *df, FILE *f, const char *in_filename, int save_input,
+	 yasm_section *def_sect, yasm_errwarns *errwarns);
 } yasm_parser_module;
 
 #endif

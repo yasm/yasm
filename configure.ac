@@ -13,6 +13,10 @@ AM_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE(yasm, [HEAD])
 AM_MAINTAINER_MODE
 
+AC_DEFINE(PACKAGE_INTVER, ["0.5.99"],
+	  [Define to internal version of this package.])
+AC_DEFINE(PACKAGE_BUILD, ["HEAD"], [Define to build version of this package.])
+
 #
 # autoconf command-line options
 #
@@ -48,6 +52,14 @@ AC_HELP_STRING([--enable-gcov],[Enable gcov code coverage (requires GCC)]),
   no)  gcov="no" ;;
   *) AC_MSG_ERROR([bad value ${enableval} for --enable-gcov]) ;;
 esac])
+
+AC_ARG_ENABLE(python,
+AC_HELP_STRING([--enable-python],[Build Python bindings]),
+[case "${enableval}" in
+  yes) enable_python="yes" ;;
+  no)  enable_python="no" ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-python]) ;;
+esac], enable_python="auto")
 
 #
 # Checks for programs.
@@ -95,7 +107,7 @@ AM_WITH_DMALLOC
 #
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([limits.h sys/param.h libgen.h])
+AC_CHECK_HEADERS([limits.h sys/param.h libgen.h unistd.h])
 
 # REQUIRE standard C headers
 if test "$ac_cv_header_stdc" != yes; then
@@ -116,7 +128,7 @@ AX_CREATE_STDINT_H
 #
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([abort memcpy memmove strrchr toascii vsnprintf])
-AC_CHECK_FUNCS([strsep mergesort])
+AC_CHECK_FUNCS([strsep mergesort getcwd])
 # Look for the case-insensitive comparison functions
 AC_CHECK_FUNCS([strcasecmp strncasecmp stricmp strcmpi])
 
@@ -148,6 +160,7 @@ fi
 # Force x86 architecture only for now.
 ARCH=x86
 AC_SUBST([ARCH])
+AC_SUBST([GCC])
 
 # Require things for --enable-maintainer-mode option.
 if test "$USE_MAINTAINER_MODE" = "yes"; then
@@ -244,6 +257,41 @@ AC_SUBST(CCLD_FOR_BUILD)
 HOST_CC="$CC_FOR_BUILD"
 AC_SUBST(HOST_CC)
 
+# Detect if we can build Python bindings
+# (needs Python, Python headers, and Pyrex)
+if test x$enable_python = xno; then
+    have_python=no
+else
+    AC_MSG_NOTICE([Checking to see if we can build Python bindings])
+    have_python=no
+    AM_PATH_PYTHON(2.4,[],[AC_MSG_WARN([Python not found])])
+
+    if test -z "$PYTHON" || test "$PYTHON" = : ; then
+        have_python=no
+    else
+        AC_MSG_CHECKING([for Pyrex >= 0.9.3])
+        PYREX_CHECK_VERSION(0.9.3, [AC_MSG_RESULT(yes)
+                                    have_pyrex=yes],
+                                   [AC_MSG_RESULT(no)
+                                    have_pyrex=no])
+
+        AM_CHECK_PYTHON_HEADERS(have_python_headers=yes,have_python_headers=no)
+
+	if test x$have_pyrex = xyes -a x$have_python_headers = xyes ; then
+	    have_python=yes
+        fi
+    fi
+
+    if test x$have_python = xno ; then
+        if test x$enable_python = xyes ; then
+            AC_MSG_ERROR([Building Python explicitly requested, but can't build Python bindings because either Pyrex, Python headers or a suitable Python version was not found])
+        else
+            AC_MSG_WARN([Couldn't find either Pyrex, the Python headers or a suitable version of Python, not building Python bindings])
+        fi
+    fi               
+fi
+
+AM_CONDITIONAL(HAVE_PYTHON, test x$have_python = xyes)
 
 AC_CONFIG_FILES([Makefile
 	po/Makefile.in

@@ -1,7 +1,7 @@
-/*
- * Object format interface
+/* $Id$
+ * CodeView debugging formats implementation for Yasm
  *
- *  Copyright (C) 2003  Peter Johnson
+ *  Copyright (C) 2006  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,31 +24,40 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#define YASM_LIB_INTERNAL
-#define YASM_ARCH_INTERNAL
-#include "util.h"
-/*@unused@*/ RCSID("$Id$");
+#ifndef YASM_CV_DBGFMT_H
+#define YASM_CV_DBGFMT_H
 
-#include "coretype.h"
-#include "valparam.h"
+typedef struct {
+    char *pathname;		/* full pathname (drive+basepath+filename) */
+    char *filename;		/* filename as yasm knows it internally */
+    unsigned long str_off;	/* offset into pathname string table */
+    unsigned long info_off;	/* offset into source info table */
+    unsigned char digest[16];	/* MD5 digest of source file */
+} cv_filename;
 
-#include "objfmt.h"
+/* Global data */
+typedef struct yasm_dbgfmt_cv {
+    yasm_dbgfmt_base dbgfmt;	    /* base structure */
 
+    yasm_object *object;
+    yasm_symtab *symtab;
+    yasm_linemap *linemap;
+    yasm_arch *arch;
 
-yasm_section *
-yasm_objfmt_add_default_section(yasm_objfmt *objfmt, yasm_object *object)
-{
-    yasm_objfmt_base *of_base = (yasm_objfmt_base *)objfmt;
-    yasm_section *retval;
-    yasm_valparamhead vps;
-    yasm_valparam *vp;
+    cv_filename *filenames;
+    size_t filenames_size;
+    size_t filenames_allocated;
 
-    vp = yasm_vp_create(yasm__xstrdup(of_base->module->default_section_name),
-			NULL);
-    yasm_vps_initialize(&vps);
-    yasm_vps_append(&vps, vp);
-    retval = yasm_objfmt_section_switch(objfmt, &vps, NULL, 0);
-    yasm_vps_delete(&vps);
+    int version;
+} yasm_dbgfmt_cv;
 
-    return retval;
-}
+yasm_bytecode *yasm_cv__append_bc(yasm_section *sect, yasm_bytecode *bc);
+
+/* Symbol/Line number functions */
+yasm_section *yasm_cv__generate_symline(yasm_dbgfmt_cv *dbgfmt_cv,
+					yasm_errwarns *errwarns);
+
+/* Type functions */
+yasm_section *yasm_cv__generate_type(yasm_dbgfmt_cv *dbgfmt_cv);
+
+#endif

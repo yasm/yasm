@@ -50,9 +50,12 @@ struct yasm_reloc {
 /** Create a new object.  A default section is created as the first section.
  * An empty symbol table (yasm_symtab) and line mapping (yasm_linemap) are
  * automatically created.
+ * \param src_filename	source filename (e.g. "file.asm")
+ * \param obj_filename	object filename (e.g. "file.o")
  * \return Newly allocated object.
  */
-/*@only@*/ yasm_object *yasm_object_create(void);
+/*@only@*/ yasm_object *yasm_object_create(const char *src_filename,
+					   const char *obj_filename);
 
 /** Create a new, or continue an existing, general section.  The section is
  * added to the object if there's not already a section by that name.
@@ -100,8 +103,10 @@ void yasm_object_print(const yasm_object *object, FILE *f, int indent_level);
 
 /** Finalize an object after parsing.
  * \param object	object
+ * \param errwarns	error/warning set
+ * \note Errors/warnings are stored into errwarns.
  */
-void yasm_object_finalize(yasm_object *object);
+void yasm_object_finalize(yasm_object *object, yasm_errwarns *errwarns);
 
 /** Traverses all sections in an object, calling a function on each section.
  * \param object	object
@@ -121,6 +126,24 @@ int yasm_object_sections_traverse
  */
 /*@dependent@*/ /*@null@*/ yasm_section *yasm_object_find_general
     (yasm_object *object, const char *name);
+
+/** Change the source filename for an object.
+ * \param object	object
+ * \param src_filename	new source filename (e.g. "file.asm")
+ */
+void yasm_object_set_source_fn(yasm_object *object, const char *src_filename);
+
+/** Get an object's source filename.
+ * \param object	object
+ * \return Source filename.
+ */
+const char *yasm_object_get_source_fn(const yasm_object *object);
+
+/** Get an object's object filename.
+ * \param object	object
+ * \return Object filename.
+ */
+const char *yasm_object_get_object_fn(const yasm_object *object);
 
 /** Get an object's symbol table (#yasm_symtab).
  * \param object	object
@@ -166,6 +189,19 @@ unsigned long yasm_section_get_opt_flags(const yasm_section *sect);
  * \param opt_flags optimizer-specific flags.
  */
 void yasm_section_set_opt_flags(yasm_section *sect, unsigned long opt_flags);
+
+/** Determine if a section was declared as the "default" section (e.g. not
+ * created through a section directive).
+ * \param sect	    section
+ * \return Nonzero if section was declared as default.
+ */
+int yasm_section_is_default(const yasm_section *sect);
+
+/** Set section "default" flag to a new value.
+ * \param sect	    section
+ * \param def	    new value of default flag
+ */
+void yasm_section_set_default(yasm_section *sect, int def);
 
 /** Get object owner of a section.
  * \param sect	    section
@@ -255,21 +291,31 @@ yasm_bytecode *yasm_section_bcs_last(yasm_section *sect);
      /*@returned@*/ /*@only@*/ /*@null@*/ yasm_bytecode *bc);
 
 /** Traverses all bytecodes in a section, calling a function on each bytecode.
- * \param sect	section
- * \param d	data pointer passed to func on each call
- * \param func	function
+ * \param sect	    section
+ * \param errwarns  error/warning set (may be NULL)
+ * \param d	    data pointer passed to func on each call (may be NULL)
+ * \param func	    function
  * \return Stops early (and returns func's return value) if func returns a
  *	   nonzero value; otherwise 0.
+ * \note If errwarns is non-NULL, yasm_errwarn_propagate() is called after
+ *       each call to func (with the bytecode's line number).
  */
 int yasm_section_bcs_traverse
-    (yasm_section *sect, /*@null@*/ void *d,
-     int (*func) (yasm_bytecode *bc, /*@null@*/ void *d));
+    (yasm_section *sect, /*@null@*/ yasm_errwarns *errwarns,
+     /*@null@*/ void *d, int (*func) (yasm_bytecode *bc, /*@null@*/ void *d));
 
 /** Get name of a section.
  * \param   sect    section
  * \return Section name, or NULL if section is absolute.
  */
 /*@observer@*/ /*@null@*/ const char *yasm_section_get_name
+    (const yasm_section *sect);
+
+/** Get starting symbol of an absolute section.
+ * \param   sect    section
+ * \return Starting symrec, or NULL if section is not absolute.
+ */
+/*@dependent@*/ /*@null@*/ yasm_symrec *yasm_section_abs_get_sym
     (const yasm_section *sect);
 
 /** Change starting address of a section.

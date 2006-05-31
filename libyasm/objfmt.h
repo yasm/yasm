@@ -57,9 +57,6 @@ typedef struct yasm_objfmt_module {
      */
     /*@null@*/ const char *extension;
 
-    /** Default (starting) section name. */
-    const char *default_section_name;
-
     /** Default (starting) x86 BITS setting.  This only appies to the x86
      * architecture; other architectures ignore this setting.
      */
@@ -80,24 +77,28 @@ typedef struct yasm_objfmt_module {
     /** Create object format.
      * Module-level implementation of yasm_objfmt_create().
      * Call yasm_objfmt_create() instead of calling this function.
-     * \param in_filename	main input filename (e.g. "file.asm")
      * \param object		object
      * \param a			architecture in use
      * \return NULL if architecture/machine combination not supported.
      */
-    /*@null@*/ /*@only@*/ yasm_objfmt * (*create)
-	(const char *in_filename, yasm_object *object, yasm_arch *a);
+    /*@null@*/ /*@only@*/ yasm_objfmt * (*create) (yasm_object *object,
+						   yasm_arch *a);
 
     /** Module-level implementation of yasm_objfmt_output().
      * Call yasm_objfmt_output() instead of calling this function.
      */
-    void (*output) (yasm_objfmt *of, FILE *f, const char *obj_filename,
-		    int all_syms, yasm_dbgfmt *df);
+    void (*output) (yasm_objfmt *of, FILE *f, int all_syms, yasm_dbgfmt *df,
+		    yasm_errwarns *errwarns);
 
     /** Module-level implementation of yasm_objfmt_destroy().
      * Call yasm_objfmt_destroy() instead of calling this function.
      */
     void (*destroy) (/*@only@*/ yasm_objfmt *objfmt);
+
+    /** Module-level implementation of yasm_objfmt_add_default_section().
+     * Call yasm_objfmt_add_default_section() instead of calling this function.
+     */
+    yasm_section * (*add_default_section) (yasm_objfmt *objfmt);
 
     /** Module-level implementation of yasm_objfmt_section_switch().
      * Call yasm_objfmt_section_switch() instead of calling this function.
@@ -139,32 +140,37 @@ typedef struct yasm_objfmt_module {
 
 /** Create object format.
  * \param module	object format module
- * \param in_filename	main input filename (e.g. "file.asm")
  * \param object	object
  * \param a		architecture in use
  * \return NULL if architecture/machine combination not supported.
  */
 /*@null@*/ /*@only@*/ yasm_objfmt *yasm_objfmt_create
-    (const yasm_objfmt_module *module, const char *in_filename,
-     yasm_object *object, yasm_arch *a);
+    (const yasm_objfmt_module *module, yasm_object *object, yasm_arch *a);
 
 /** Write out (post-optimized) sections to the object file.
  * This function may call yasm_symrec_* functions as necessary (including
  * yasm_symrec_traverse()) to retrieve symbolic information.
  * \param objfmt	object format
  * \param f		output object file
- * \param obj_filename	output filename (e.g. "file.o")
  * \param all_syms	if nonzero, all symbols should be included in
  *			the object file
  * \param df		debug format in use
+ * \param errwarns	error/warning set
+ * \note Errors and warnings are stored into errwarns.
  */
-void yasm_objfmt_output(yasm_objfmt *objfmt, FILE *f, const char *obj_filename,
-			int all_syms, yasm_dbgfmt *df);
+void yasm_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
+			yasm_dbgfmt *df, yasm_errwarns *errwarns);
 
 /** Cleans up any allocated object format memory.
  * \param objfmt	object format
  */
 void yasm_objfmt_destroy(/*@only@*/ yasm_objfmt *objfmt);
+
+/** Add a default section to an object.
+ * \param objfmt    object format
+ * \return Default section.
+ */
+yasm_section *yasm_objfmt_add_default_section(yasm_objfmt *objfmt);
 
 /** Switch object file sections.  The first val of the valparams should
  * be the section name.  Calls yasm_object_get_general() to actually get
@@ -235,12 +241,10 @@ int yasm_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 
 /* Inline macro implementations for objfmt functions */
 
-#define yasm_objfmt_create(module, in_filename, object, a) \
-    module->create(in_filename, object, a)
+#define yasm_objfmt_create(module, object, a)	module->create(object, a)
 
-#define yasm_objfmt_output(objfmt, f, obj_fn, all_syms, df) \
-    ((yasm_objfmt_base *)objfmt)->module->output(objfmt, f, obj_fn, all_syms, \
-						 df)
+#define yasm_objfmt_output(objfmt, f, all_syms, df, ews) \
+    ((yasm_objfmt_base *)objfmt)->module->output(objfmt, f, all_syms, df, ews)
 #define yasm_objfmt_destroy(objfmt) \
     ((yasm_objfmt_base *)objfmt)->module->destroy(objfmt)
 #define yasm_objfmt_section_switch(objfmt, vpms, oe_vpms, line) \
@@ -258,14 +262,9 @@ int yasm_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 #define yasm_objfmt_directive(objfmt, name, vpms, oe_vpms, line) \
     ((yasm_objfmt_base *)objfmt)->module->directive(objfmt, name, vpms, \
 						    oe_vpms, line)
+#define yasm_objfmt_add_default_section(objfmt) \
+    ((yasm_objfmt_base *)objfmt)->module->add_default_section(objfmt)
 
 #endif
 
-/** Add a default section to an object.
- * \param objfmt    object format
- * \param object    object
- * \return Default section.
- */
-yasm_section *yasm_objfmt_add_default_section(yasm_objfmt *objfmt,
-					      yasm_object *object);
 #endif

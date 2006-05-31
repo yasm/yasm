@@ -29,7 +29,7 @@
 
 #include "nasm-bison.h"
 
-#define YYCTYPE		char
+#define YYCTYPE		unsigned char
 typedef struct Scanner {
     YYCTYPE		*bot, *tok, *ptr, *cur, *pos, *lim, *top, *eof;
     unsigned int	tchar, tline, cline;
@@ -51,6 +51,8 @@ typedef struct yasm_parser_nasm {
     /*@dependent@*/ yasm_preproc *preproc;
     /*@dependent@*/ yasm_arch *arch;
     /*@dependent@*/ yasm_objfmt *objfmt;
+    /*@dependent@*/ yasm_dbgfmt *dbgfmt;
+    /*@dependent@*/ yasm_errwarns *errwarns;
 
     /*@dependent@*/ yasm_linemap *linemap;
     /*@dependent@*/ yasm_symtab *symtab;
@@ -68,7 +70,8 @@ typedef struct yasm_parser_nasm {
 	DIRECTIVE,
 	DIRECTIVE2,
 	LINECHG,
-	LINECHG2
+	LINECHG2,
+	INSTRUCTION
     } state;
 } yasm_parser_nasm;
 

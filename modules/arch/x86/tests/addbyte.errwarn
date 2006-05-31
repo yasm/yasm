@@ -1,2 +1,4 @@
--:15: warning: value does not fit in 8 bit field
--:32: warning: value does not fit in 8 bit field
+-:12: warning: value does not fit in signed 8 bit field
+-:15: warning: value does not fit in signed 8 bit field
+-:29: warning: value does not fit in signed 8 bit field
+-:32: warning: value does not fit in signed 8 bit field

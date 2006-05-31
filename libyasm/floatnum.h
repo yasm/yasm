@@ -66,10 +66,10 @@ void yasm_floatnum_destroy(/*@only@*/ yasm_floatnum *flt);
  * \param acc	    floatnum accumulator
  * \param op	    operation
  * \param operand   floatnum operand
- * \param line      virtual line (of expression)
+ * \return Nonzero on error.
  */
-void yasm_floatnum_calc(yasm_floatnum *acc, yasm_expr_op op,
-			yasm_floatnum *operand, unsigned long line);
+int yasm_floatnum_calc(yasm_floatnum *acc, yasm_expr_op op,
+		       yasm_floatnum *operand);
 
 /** Convert a floatnum to single-precision and return as 32-bit value.
  * The 32-bit value is a "standard" C value (eg, of unknown endian).
@@ -95,13 +95,12 @@ int yasm_floatnum_get_int(const yasm_floatnum *flt,
  * \param shift	    left shift (in bits)
  * \param bigendian endianness (nonzero=big, zero=little)
  * \param warn	    enables standard overflow/underflow warnings
- * \param line      virtual line; may be 0 if warn is 0.
  * \return Nonzero if flt can't fit into the specified precision: -1 if
  *         underflow occurred, 1 if overflow occurred.
  */
 int yasm_floatnum_get_sized(const yasm_floatnum *flt, unsigned char *ptr,
 			    size_t destsize, size_t valsize, size_t shift,
-			    int bigendian, int warn, unsigned long line);
+			    int bigendian, int warn);
 
 /** Basic check to see if size is valid for flt conversion (using
  * yasm_floatnum_get_sized()).  Doesn't actually check for underflow/overflow
