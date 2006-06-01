@@ -91,7 +91,7 @@ static void define_label(yasm_parser_nasm *parser_nasm, /*@only@*/ char *name,
 %token <intn> INTNUM
 %token <flt> FLTNUM
 %token <str_val> DIRECTIVE_NAME FILENAME
-%token <str> STRING
+%token <str> STRING ONECHARSTR
 %token <int_info> SIZE_OVERRIDE
 %token <int_info> DECLARE_DATA
 %token <int_info> RESERVE_SPACE
@@ -114,6 +114,7 @@ static void define_label(yasm_parser_nasm *parser_nasm, /*@only@*/ char *name,
 %type <dir_valparam> directive_valparam
 %type <insn_operands> operands
 %type <insn_operand> operand
+%type <str> string
 
 %left ':'
 %left WRT
@@ -202,19 +203,19 @@ exp: instr
     | RESERVE_SPACE expr		{
 	$$ = yasm_bc_create_reserve($2, $1/8, cur_line);
     }
-    | INCBIN STRING			{
+    | INCBIN string			{
 	$$ = yasm_bc_create_incbin($2.contents, NULL, NULL, cur_line);
     }
-    | INCBIN STRING ','			{
+    | INCBIN string ','			{
 	$$ = yasm_bc_create_incbin($2.contents, NULL, NULL, cur_line);
     }
-    | INCBIN STRING ',' expr		{
+    | INCBIN string ',' expr		{
 	$$ = yasm_bc_create_incbin($2.contents, $4, NULL, cur_line);
     }
-    | INCBIN STRING ',' expr ','	{
+    | INCBIN string ',' expr ','	{
 	$$ = yasm_bc_create_incbin($2.contents, $4, NULL, cur_line);
     }
-    | INCBIN STRING ',' expr ',' expr	{
+    | INCBIN string ',' expr ',' expr	{
 	$$ = yasm_bc_create_incbin($2.contents, $4, $6, cur_line);
     }
 ;
@@ -317,7 +318,7 @@ directive_valparam: direxpr	{
 	    $$ = yasm_vp_create(NULL, $1);
 	}
     }
-    | STRING			{ $$ = yasm_vp_create($1.contents, NULL); }
+    | string			{ $$ = yasm_vp_create($1.contents, NULL); }
     | ID '=' direxpr		{
 	yasm_expr__traverse_leaves_in($3, parser_nasm, fix_directive_symrec);
 	$$ = yasm_vp_create($1, $3);
@@ -394,6 +395,11 @@ direxpr: INTNUM			{ $$ = p_expr_new_ident(yasm_expr_int($1)); }
 
 dvexpr: INTNUM		    { $$ = p_expr_new_ident(yasm_expr_int($1)); }
     | FLTNUM		    { $$ = p_expr_new_ident(yasm_expr_float($1)); }
+    | ONECHARSTR	    {
+	$$ = p_expr_new_ident(yasm_expr_int(
+	    yasm_intnum_create_charconst_nasm($1.contents)));
+	yasm_xfree($1.contents);
+    }
     | explabel		    { $$ = p_expr_new_ident(yasm_expr_sym($1)); }
     /*| dvexpr '||' dvexpr  { $$ = p_expr_new_tree($1, YASM_EXPR_LOR, $3); }*/
     | dvexpr '|' dvexpr	    { $$ = p_expr_new_tree($1, YASM_EXPR_OR, $3); }
@@ -426,12 +432,12 @@ dvexpr: INTNUM		    { $$ = p_expr_new_ident(yasm_expr_int($1)); }
 
 /* Expressions for operands and memory expressions.
  * We don't attempt to check memory expressions for validity here.
- * Essentially the same as expr_no_string above but adds REG and STRING.
+ * Essentially the same as dvexpr above but adds REG and string.
  */
 expr: INTNUM		{ $$ = p_expr_new_ident(yasm_expr_int($1)); }
     | FLTNUM		{ $$ = p_expr_new_ident(yasm_expr_float($1)); }
     | REG		{ $$ = p_expr_new_ident(yasm_expr_reg($1[0])); }
-    | STRING		{
+    | string		{
 	$$ = p_expr_new_ident(yasm_expr_int(
 	    yasm_intnum_create_charconst_nasm($1.contents)));
 	yasm_xfree($1.contents);
@@ -490,6 +496,8 @@ explabel: ID		{
 	    yasm_section_bcs_first(parser_nasm->cur_section), 0, cur_line);
     }
 ;
+
+string: STRING | ONECHARSTR;
 
 %%
 /*@=usedef =nullassign =memtrans =usereleased =compdef =mustfree@*/
