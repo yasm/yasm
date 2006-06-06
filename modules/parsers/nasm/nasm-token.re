@@ -544,6 +544,8 @@ stringconst_scan:
 	    lvalp->str.len = count;
 	    if (parser_nasm->save_input && cursor != s->eof)
 		cursor = save_line(parser_nasm, cursor);
+	    if (count == 1)
+		RETURN(ONECHARSTR);
 	    RETURN(STRING);
 	}
 
@@ -552,6 +554,8 @@ stringconst_scan:
 		strbuf[count] = '\0';
 		lvalp->str.contents = (char *)strbuf;
 		lvalp->str.len = count;
+		if (count == 1)
+		    RETURN(ONECHARSTR);
 		RETURN(STRING);
 	    }
 
