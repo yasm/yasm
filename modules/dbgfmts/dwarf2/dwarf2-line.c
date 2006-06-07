@@ -837,7 +837,7 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	    yasm_xfree(loc);
 	    return 0;
 	}
-	intn = yasm_expr_get_intnum(&vp->param, NULL);
+	intn = yasm_expr_get_intnum(&vp->param, 0);
 	if (!intn) {
 	    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			   N_("file number is not a constant"));
@@ -859,7 +859,7 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	    yasm_xfree(loc);
 	    return 0;
 	}
-	intn = yasm_expr_get_intnum(&vp->param, NULL);
+	intn = yasm_expr_get_intnum(&vp->param, 0);
 	if (!intn) {
 	    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			   N_("file number is not a constant"));
@@ -888,7 +888,7 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	/* Optional column number */
 	vp = yasm_vps_next(vp);
 	if (vp && vp->param) {
-	    intn = yasm_expr_get_intnum(&vp->param, NULL);
+	    intn = yasm_expr_get_intnum(&vp->param, 0);
 	    if (!intn) {
 		yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			       N_("column number is not a constant"));
@@ -914,7 +914,7 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 		    yasm_xfree(loc);
 		    return 0;
 		}
-		intn = yasm_expr_get_intnum(&vp->param, NULL);
+		intn = yasm_expr_get_intnum(&vp->param, 0);
 		if (!intn) {
 		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 				   N_("is_stmt value is not a constant"));
@@ -937,7 +937,7 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 		    yasm_xfree(loc);
 		    return 0;
 		}
-		intn = yasm_expr_get_intnum(&vp->param, NULL);
+		intn = yasm_expr_get_intnum(&vp->param, 0);
 		if (!intn) {
 		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 				   N_("isa value is not a constant"));
@@ -977,7 +977,7 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	}
 
 	/* Otherwise.. first vp is the file number */
-	file_intn = yasm_expr_get_intnum(&vp->param, NULL);
+	file_intn = yasm_expr_get_intnum(&vp->param, 0);
 	if (!file_intn) {
 	    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			   N_("file number is not a constant"));

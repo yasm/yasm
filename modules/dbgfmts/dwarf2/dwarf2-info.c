@@ -333,7 +333,7 @@ yasm_dwarf2__generate_info(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_high_pc, DW_FORM_addr);
 	dwarf2_append_expr(debug_info,
 	    yasm_expr_create(YASM_EXPR_ADD, yasm_expr_sym(first),
-		yasm_expr_int(yasm_common_calc_bc_dist(
+		yasm_expr_int(yasm_calc_bc_dist(
 		    yasm_section_bcs_first(main_code),
 		    yasm_section_bcs_last(main_code))), 0),
 	    dbgfmt_dwarf2->sizeof_address, 0);

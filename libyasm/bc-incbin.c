@@ -134,7 +134,7 @@ bc_incbin_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 
     /* Try to convert start to integer value */
     if (incbin->start) {
-	num = yasm_expr_get_intnum(&incbin->start, NULL);
+	num = yasm_expr_get_intnum(&incbin->start, 0);
 	if (num)
 	    start = yasm_intnum_get_uint(num);
 	if (!num) {
@@ -147,7 +147,7 @@ bc_incbin_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 
     /* Try to convert maxlen to integer value */
     if (incbin->maxlen) {
-	num = yasm_expr_get_intnum(&incbin->maxlen, NULL);
+	num = yasm_expr_get_intnum(&incbin->maxlen, 0);
 	if (num)
 	    maxlen = yasm_intnum_get_uint(num);
 	if (!num) {
@@ -206,7 +206,7 @@ bc_incbin_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     /* Convert start to integer value */
     if (incbin->start) {
-	num = yasm_expr_get_intnum(&incbin->start, NULL);
+	num = yasm_expr_get_intnum(&incbin->start, 0);
 	if (!num)
 	    yasm_internal_error(
 		N_("could not determine start in bc_tobytes_incbin"));

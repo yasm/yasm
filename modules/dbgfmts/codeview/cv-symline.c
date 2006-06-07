@@ -753,7 +753,7 @@ cv8_symhead_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     /* Total length of info (following this field) - 4 bytes */
     yasm_intnum_set_uint(cval, bc->len);
-    intn = yasm_common_calc_bc_dist(head->start_prevbc, head->end_prevbc);
+    intn = yasm_calc_bc_dist(head->start_prevbc, head->end_prevbc);
     yasm_intnum_calc(intn, YASM_EXPR_SUB, cval);
     yasm_arch_intnum_tobytes(dbgfmt_cv->arch, intn, buf, 4, 32, 0, bc, 0);
     buf += 4;
@@ -891,8 +891,8 @@ cv8_lineinfo_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     YASM_WRITE_8(buf, 0);
 
     /* Section length covered by line number info */
-    cval = yasm_common_calc_bc_dist(yasm_section_bcs_first(li->sect),
-				    yasm_section_bcs_last(li->sect));
+    cval = yasm_calc_bc_dist(yasm_section_bcs_first(li->sect),
+			     yasm_section_bcs_last(li->sect));
     yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 0);
     buf += 4;
 

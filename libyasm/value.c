@@ -416,7 +416,7 @@ yasm_value_finalize_expr(yasm_value *value, yasm_expr *e, unsigned int size)
     }
 
     yasm_value_initialize(value, yasm_expr__level_tree
-			  (e, 1, 1, 0, NULL, NULL, NULL, NULL), size);
+			  (e, 1, 1, 0, 0, NULL, NULL, NULL), size);
 
     /* quit early if there was an issue in simplify() */
     if (yasm_error_occurred())
@@ -457,7 +457,7 @@ yasm_value_finalize_expr(yasm_value *value, yasm_expr *e, unsigned int size)
     if (value_finalize_scan(value, value->abs, 0))
 	return 1;
 
-    value->abs = yasm_expr__level_tree(value->abs, 1, 1, 0, NULL, NULL, NULL,
+    value->abs = yasm_expr__level_tree(value->abs, 1, 1, 0, 0, NULL, NULL,
 				       NULL);
 
     /* Simplify 0 in abs to NULL */
@@ -480,7 +480,7 @@ yasm_value_finalize(yasm_value *value)
 int
 yasm_value_output_basic(yasm_value *value, /*@out@*/ unsigned char *buf,
 			size_t destsize, yasm_bytecode *bc, int warn,
-			yasm_arch *arch, yasm_calc_bc_dist_func calc_bc_dist)
+			yasm_arch *arch)
 {
     /*@dependent@*/ /*@null@*/ yasm_intnum *intn = NULL;
     /*@only@*/ yasm_intnum *outval;
@@ -507,7 +507,7 @@ yasm_value_output_basic(yasm_value *value, /*@out@*/ unsigned char *buf,
 	}
 
 	/* Handle integer expressions */
-	intn = yasm_expr_get_intnum(&value->abs, calc_bc_dist);
+	intn = yasm_expr_get_intnum(&value->abs, 1);
 	if (!intn) {
 	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 			   N_("expression too complex"));

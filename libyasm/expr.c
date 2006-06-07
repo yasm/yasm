@@ -187,8 +187,7 @@ yasm_expr_reg(unsigned long reg)
  * possible.  Uses a simple n^2 algorithm because n is usually quite small.
  */
 static /*@only@*/ yasm_expr *
-expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e,
-		   yasm_calc_bc_dist_func calc_bc_dist)
+expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e)
 {
     int i;
     /*@dependent@*/ yasm_section *sect;
@@ -244,7 +243,7 @@ expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e,
 		yasm_symrec_get_label(e->terms[j].data.sym, &precbc2) &&
 		(sect = yasm_bc_get_section(precbc2)) &&
 		sect == sect2 &&
-		(dist = calc_bc_dist(precbc, precbc2))) {
+		(dist = yasm_calc_bc_dist(precbc, precbc2))) {
 		/* Change the symrec term to an integer */
 		e->terms[j].type = YASM_EXPR_INT;
 		e->terms[j].data.intn = dist;
@@ -731,7 +730,7 @@ typedef struct yasm__exprentry {
 /* Level an entire expn tree, expanding equ's as we go */
 yasm_expr *
 yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
-		      int simplify_reg_mul, yasm_calc_bc_dist_func calc_bc_dist,
+		      int simplify_reg_mul, int calc_bc_dist,
 		      yasm_expr_xform_func expr_xform_extra,
 		      void *expr_xform_extra_data, yasm__exprhead *eh)
 {
@@ -838,11 +837,11 @@ yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
     e = expr_level_op(e, fold_const, simplify_ident, simplify_reg_mul);
     if (calc_bc_dist || expr_xform_extra) {
 	if (calc_bc_dist)
-	    e = expr_xform_bc_dist(e, calc_bc_dist);
+	    e = expr_xform_bc_dist(e);
 	if (expr_xform_extra)
 	    e = expr_xform_extra(e, expr_xform_extra_data);
 	e = yasm_expr__level_tree(e, fold_const, simplify_ident,
-				  simplify_reg_mul, NULL, NULL, NULL, NULL);
+				  simplify_reg_mul, 0, NULL, NULL, NULL);
     }
     return e;
 }
@@ -1132,7 +1131,7 @@ yasm_expr_extract_wrt(yasm_expr **ep)
 
 /*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
 yasm_intnum *
-yasm_expr_get_intnum(yasm_expr **ep, yasm_calc_bc_dist_func calc_bc_dist)
+yasm_expr_get_intnum(yasm_expr **ep, int calc_bc_dist)
 {
     *ep = yasm_expr_simplify(*ep, calc_bc_dist);
 
@@ -1148,7 +1147,7 @@ const yasm_symrec *
 yasm_expr_get_symrec(yasm_expr **ep, int simplify)
 {
     if (simplify)
-	*ep = yasm_expr_simplify(*ep, NULL);
+	*ep = yasm_expr_simplify(*ep, 0);
 
     if ((*ep)->op == YASM_EXPR_IDENT &&
 	((*ep)->terms[0].type == YASM_EXPR_SYM ||
@@ -1164,7 +1163,7 @@ const unsigned long *
 yasm_expr_get_reg(yasm_expr **ep, int simplify)
 {
     if (simplify)
-	*ep = yasm_expr_simplify(*ep, NULL);
+	*ep = yasm_expr_simplify(*ep, 0);
 
     if ((*ep)->op == YASM_EXPR_IDENT && (*ep)->terms[0].type == YASM_EXPR_REG)
 	return &((*ep)->terms[0].data.reg);

@@ -307,15 +307,14 @@ elf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 	yasm_internal_error("null info struct");
 
     if (value->abs)
-	value->abs = yasm_expr_simplify(value->abs, yasm_common_calc_bc_dist);
+	value->abs = yasm_expr_simplify(value->abs, 1);
 
     /* Try to output constant and PC-relative section-local first.
      * Note this does NOT output any value with a SEG, WRT, external,
      * cross-section, or non-PC-relative reference (those are handled below).
      */
     switch (yasm_value_output_basic(value, buf, destsize, bc, warn,
-				    info->objfmt_elf->arch,
-				    yasm_common_calc_bc_dist)) {
+				    info->objfmt_elf->arch)) {
 	case -1:
 	    return 1;
 	case 0:
@@ -381,7 +380,7 @@ elf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
     intn = yasm_intnum_create_uint(intn_val);
 
     if (value->abs) {
-	yasm_intnum *intn2 = yasm_expr_get_intnum(&value->abs, NULL);
+	yasm_intnum *intn2 = yasm_expr_get_intnum(&value->abs, 0);
 	if (!intn2) {
 	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 			   N_("elf: relocation too complex"));
@@ -913,7 +912,7 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
             /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
 
-            align_expr = yasm_expr_get_intnum(&vp->param, NULL);
+            align_expr = yasm_expr_get_intnum(&vp->param, 0);
             if (!align_expr) {
                 yasm_error_set(YASM_ERROR_VALUE,
 			       N_("argument to `%s' is not a power of two"),
@@ -938,7 +937,7 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	    if (objext_valparams && (vp = yasm_vps_first(objext_valparams))
 		&& vp->param) {
 
-		merge_intn = yasm_expr_get_intnum(&vp->param, NULL);
+		merge_intn = yasm_expr_get_intnum(&vp->param, 0);
 		if (!merge_intn)
 		    yasm_warn_set(YASM_WARN_GENERAL,
 				  N_("invalid merge entity size"));
@@ -1071,7 +1070,7 @@ elf_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
             if (!vp->val && vp->param) {
                 /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
 
-                align_expr = yasm_expr_get_intnum(&vp->param, NULL);
+                align_expr = yasm_expr_get_intnum(&vp->param, 0);
                 if (!align_expr) {
                     yasm_error_set(YASM_ERROR_VALUE,
 			N_("alignment constraint is not a power of two"));

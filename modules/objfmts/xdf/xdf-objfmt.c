@@ -173,15 +173,14 @@ xdf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
     objfmt_xdf = info->objfmt_xdf;
 
     if (value->abs)
-	value->abs = yasm_expr_simplify(value->abs, yasm_common_calc_bc_dist);
+	value->abs = yasm_expr_simplify(value->abs, 1);
 
     /* Try to output constant and PC-relative section-local first.
      * Note this does NOT output any value with a SEG, WRT, external,
      * cross-section, or non-PC-relative reference (those are handled below).
      */
     switch (yasm_value_output_basic(value, buf, destsize, bc, warn,
-				    info->objfmt_xdf->arch,
-				    yasm_common_calc_bc_dist)) {
+				    info->objfmt_xdf->arch)) {
 	case -1:
 	    return 1;
 	case 0:
@@ -231,7 +230,7 @@ xdf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 	intn = yasm_intnum_create_uint(0);
 
     if (value->abs) {
-	yasm_intnum *intn2 = yasm_expr_get_intnum(&value->abs, NULL);
+	yasm_intnum *intn2 = yasm_expr_get_intnum(&value->abs, 0);
 	if (!intn2) {
 	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 			   N_("xdf: relocation too complex"));
@@ -500,8 +499,7 @@ xdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 		    yasm_expr *abs_start;
 
 		    abs_start = yasm_expr_copy(yasm_section_get_start(sect));
-		    intn = yasm_expr_get_intnum(&abs_start,
-						yasm_common_calc_bc_dist);
+		    intn = yasm_expr_get_intnum(&abs_start, 1);
 		    if (!intn) {
 			yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			    N_("absolute section start not an integer expression"));
@@ -519,8 +517,7 @@ xdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	    }
 	} else if ((equ_val = yasm_symrec_get_equ(sym))) {
 	    yasm_expr *equ_val_copy = yasm_expr_copy(equ_val);
-	    intn = yasm_expr_get_intnum(&equ_val_copy,
-					yasm_common_calc_bc_dist);
+	    intn = yasm_expr_get_intnum(&equ_val_copy, 1);
 	    if (!intn) {
 		if (vis & YASM_SYM_GLOBAL) {
 		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
@@ -727,7 +724,7 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	    flags |= XDF_SECT_FLAT;
 	} else if (yasm__strcasecmp(vp->val, "absolute") == 0 && vp->param) {
 	    flags |= XDF_SECT_ABSOLUTE;
-	    absaddr = yasm_expr_get_intnum(&vp->param, NULL);
+	    absaddr = yasm_expr_get_intnum(&vp->param, 0);
 	    if (!absaddr) {
 		yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			       N_("argument to `%s' is not an integer"),
@@ -735,7 +732,7 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		return NULL;
 	    }
 	} else if (yasm__strcasecmp(vp->val, "virtual") == 0 && vp->param) {
-	    vaddr = yasm_expr_get_intnum(&vp->param, NULL);
+	    vaddr = yasm_expr_get_intnum(&vp->param, 0);
 	    if (!vaddr) {
 		yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			       N_("argument to `%s' is not an integer"),
@@ -745,7 +742,7 @@ xdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	} else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
 	    /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
 
-	    align_expr = yasm_expr_get_intnum(&vp->param, NULL);
+	    align_expr = yasm_expr_get_intnum(&vp->param, 0);
 	    if (!align_expr) {
 		yasm_error_set(YASM_ERROR_VALUE,
 			       N_("argument to `%s' is not a power of two"),

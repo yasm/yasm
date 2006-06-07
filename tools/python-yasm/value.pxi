@@ -33,8 +33,7 @@ cdef extern from "libyasm/value.h":
     cdef int yasm_value_finalize_expr(yasm_value *value, yasm_expr *e,
                                       unsigned int size)
     cdef int yasm_value_output_basic(yasm_value *value, unsigned char *buf,
-            size_t destsize, yasm_bytecode *bc, int warn, yasm_arch *arch,
-            yasm_calc_bc_dist_func calc_bc_dist)
+            size_t destsize, yasm_bytecode *bc, int warn, yasm_arch *arch)
     cdef void yasm_value_print(yasm_value *value, FILE *f, int indent_level)
 
 cdef class Value:

@@ -148,7 +148,8 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
  * \param fold_const	    enable constant folding if nonzero
  * \param simplify_ident    simplify identities
  * \param simplify_reg_mul  simplify REG*1 identities
- * \param calc_bc_dist	    bytecode distance-calculation function
+ * \param calc_bc_dist	    nonzero if distances between bytecodes should be
+ *			    calculated, 0 if they should be left intact
  * \param expr_xform_extra  extra transformation function
  * \param expr_xform_extra_data	data to pass to expr_xform_extra
  * \param eh		    call with NULL (for internal use in recursion)
@@ -156,8 +157,7 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
  */
 /*@only@*/ /*@null@*/ yasm_expr *yasm_expr__level_tree
     (/*@returned@*/ /*@only@*/ /*@null@*/ yasm_expr *e, int fold_const,
-     int simplify_ident, int simplify_reg_mul,
-     /*@null@*/ yasm_calc_bc_dist_func calc_bc_dist,
+     int simplify_ident, int simplify_reg_mul, int calc_bc_dist,
      /*@null@*/ yasm_expr_xform_func expr_xform_extra,
      /*@null@*/ void *expr_xform_extra_data, /*@null@*/ yasm__exprhead *eh);
 
@@ -165,7 +165,7 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
  * branches and simplifies integer-only subexpressions.  Simplified version
  * of yasm_expr__level_tree().
  * \param e	expression
- * \param cbd	bytecode distance-calculation function
+ * \param cbd	if distance between bytecodes should be calculated
  * \return Simplified expression.
  */
 #define yasm_expr_simplify(e, cbd) \
@@ -192,13 +192,14 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
 
 /** Get the integer value of an expression if it's just an integer.
  * \param ep		expression (pointer to)
- * \param calc_bc_dist	bytecode distance-calculation function
+ * \param calc_bc_dist	nonzero if distances between bytecodes should be
+ *			calculated, 0 if NULL should be returned in this case
  * \return NULL if the expression is too complex (contains anything other than
  *         integers, ie floats, non-valued labels, registers); otherwise the
  *         intnum value of the expression.
  */
 /*@dependent@*/ /*@null@*/ yasm_intnum *yasm_expr_get_intnum
-    (yasm_expr **ep, /*@null@*/ yasm_calc_bc_dist_func calc_bc_dist);
+    (yasm_expr **ep, int calc_bc_dist);
 
 /** Get the symbol value of an expression if it's just a symbol.
  * \param ep		expression (pointer to)

@@ -259,8 +259,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
     yasm_expr *e, *wrt;
 
     /*@-unqualifiedtrans@*/
-    *ep = yasm_expr__level_tree(*ep, 1, 1, indexreg == 0, NULL, NULL, NULL,
-				NULL);
+    *ep = yasm_expr__level_tree(*ep, 1, 1, indexreg == 0, 0, NULL, NULL, NULL);
 
     /* Check for WRT rip first */
     wrt = yasm_expr_extract_wrt(ep);
@@ -295,7 +294,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 	    return 1;
 	case 2:
 	    /* Need to simplify again */
-	    *ep = yasm_expr__level_tree(*ep, 1, 1, indexreg == 0, NULL, NULL,
+	    *ep = yasm_expr__level_tree(*ep, 1, 1, indexreg == 0, 0, NULL,
 					NULL, NULL);
 	    e = *ep;
 	    break;
@@ -386,7 +385,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
     /* Simplify expr, which is now really just the displacement. This
      * should get rid of the 0's we put in for registers in the callback.
      */
-    *ep = yasm_expr_simplify(*ep, NULL);
+    *ep = yasm_expr_simplify(*ep, 0);
     /* e = *ep; */
 
     return 0;
@@ -499,7 +498,7 @@ x86_checkea_calc_displen(x86_effaddr *x86_ea, unsigned int wordsize, int noreg,
 	 * equaling zero is probably a rare case, so we ignore it for now.
 	 */
 	if (x86_ea->ea.disp.abs &&
-	    !(intn = yasm_expr_get_intnum(&x86_ea->ea.disp.abs, NULL))) {
+	    !(intn = yasm_expr_get_intnum(&x86_ea->ea.disp.abs, 0))) {
 	    /* expr still has unknown values: treat like BP/EBP above */
 	    x86_ea->ea.need_nonzero_len = 1;
 	    x86_ea->modrm |= 0100;

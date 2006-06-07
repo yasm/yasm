@@ -116,7 +116,7 @@ bc_data_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 		break;
 	    case DV_ULEB128:
 	    case DV_SLEB128:
-		intn = yasm_expr_get_intnum(&dv->data.val.abs, NULL);
+		intn = yasm_expr_get_intnum(&dv->data.val.abs, 0);
 		if (!intn) {
 		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 				   N_("LEB128 requires constant values"));
@@ -157,7 +157,7 @@ bc_data_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 		break;
 	    case DV_ULEB128:
 	    case DV_SLEB128:
-		intn = yasm_expr_get_intnum(&dv->data.val.abs, NULL);
+		intn = yasm_expr_get_intnum(&dv->data.val.abs, 0);
 		if (!intn)
 		    yasm_internal_error(N_("non-constant in data_tobytes"));
 		bc->len +=
@@ -197,7 +197,7 @@ bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		break;
 	    case DV_ULEB128:
 	    case DV_SLEB128:
-		intn = yasm_expr_get_intnum(&dv->data.val.abs, NULL);
+		intn = yasm_expr_get_intnum(&dv->data.val.abs, 234);
 		if (!intn)
 		    yasm_internal_error(N_("non-constant in data_tobytes"));
 		*bufp +=
@@ -231,7 +231,7 @@ yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
 	    case DV_VALUE:
 	    case DV_ULEB128:
 	    case DV_SLEB128:
-		intn = yasm_expr_get_intnum(&dv->data.val.abs, NULL);
+		intn = yasm_expr_get_intnum(&dv->data.val.abs, 0);
 		if (intn && dv->type == DV_VALUE && (arch || size == 1))
 		    len += size;
 		else if (intn && dv->type == DV_ULEB128)
@@ -279,7 +279,7 @@ yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
 	    case DV_VALUE:
 	    case DV_ULEB128:
 	    case DV_SLEB128:
-		intn = yasm_expr_get_intnum(&dv->data.val.abs, NULL);
+		intn = yasm_expr_get_intnum(&dv->data.val.abs, 0);
 		if (intn && dv->type == DV_VALUE && (arch || size == 1)) {
 		    if (size == 1)
 			yasm_intnum_get_sized(intn,

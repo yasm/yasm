@@ -200,7 +200,7 @@ lineexp: instr
     }
     /* Macro directives */
     | DIR_REPT expr {
-	yasm_intnum *intn = yasm_expr_get_intnum(&$2, NULL);
+	yasm_intnum *intn = yasm_expr_get_intnum(&$2, 0);
 
 	$$ = (yasm_bytecode *)NULL;
 	if (!intn) {
@@ -932,7 +932,7 @@ gas_parser_align(yasm_parser_gas *parser_gas, yasm_section *sect,
 				    yasm_expr_expr(boundval), cur_line);
 
     /* Largest .align in the section specifies section alignment. */
-    boundintn = yasm_expr_get_intnum(&boundval, NULL);
+    boundintn = yasm_expr_get_intnum(&boundval, 0);
     if (boundintn) {
 	unsigned long boundint = yasm_intnum_get_uint(boundintn);
 
@@ -995,7 +995,7 @@ gas_parser_dir_fill(yasm_parser_gas *parser_gas, /*@only@*/ yasm_expr *repeat,
 
     if (size) {
 	/*@dependent@*/ /*@null@*/ yasm_intnum *intn;
-	intn = yasm_expr_get_intnum(&size, NULL);
+	intn = yasm_expr_get_intnum(&size, 0);
 	if (!intn) {
 	    yasm_error_set(YASM_ERROR_NOT_ABSOLUTE,
 			   N_("size must be an absolute expression"));

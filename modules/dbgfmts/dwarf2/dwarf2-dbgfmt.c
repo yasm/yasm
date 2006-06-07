@@ -274,7 +274,7 @@ dwarf2_head_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     /* Total length of aranges info (following this field) */
     cval = yasm_intnum_create_uint(dbgfmt_dwarf2->sizeof_offset);
-    intn = yasm_common_calc_bc_dist(head->start_prevbc, head->end_prevbc);
+    intn = yasm_calc_bc_dist(head->start_prevbc, head->end_prevbc);
     yasm_intnum_calc(intn, YASM_EXPR_SUB, cval);
     yasm_arch_intnum_tobytes(dbgfmt_dwarf2->arch, intn, buf,
 			     dbgfmt_dwarf2->sizeof_offset,

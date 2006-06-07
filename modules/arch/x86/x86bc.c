@@ -554,7 +554,7 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 	long val;
 
 	if (imm->val.abs)
-	    num = yasm_expr_get_intnum(&imm->val.abs, NULL);
+	    num = yasm_expr_get_intnum(&imm->val.abs, 0);
 
 	/* TODO: check imm->len vs. sized len from expr? */
 

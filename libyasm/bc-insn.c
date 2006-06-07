@@ -205,7 +205,7 @@ bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 		if (op->data.ea)
 		    op->data.ea->disp.abs =
 			yasm_expr__level_tree(op->data.ea->disp.abs, 1, 1, 0,
-					      NULL, NULL, NULL, NULL);
+					      0, NULL, NULL, NULL);
 		if (yasm_error_occurred()) {
 		    /* Add a pointer to where it was used to the error */
 		    yasm_error_fetch(&eclass, &str, &xrefline, &xrefstr);
@@ -222,8 +222,8 @@ bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 		break;
 	    case YASM_INSN__OPERAND_IMM:
 		op->data.val =
-		    yasm_expr__level_tree(op->data.val, 1, 1, 1, NULL, NULL,
-					  NULL, NULL);
+		    yasm_expr__level_tree(op->data.val, 1, 1, 1, 0, NULL, NULL,
+					  NULL);
 		if (yasm_error_occurred()) {
 		    /* Add a pointer to where it was used to the error */
 		    yasm_error_fetch(&eclass, &str, &xrefline, &xrefstr);

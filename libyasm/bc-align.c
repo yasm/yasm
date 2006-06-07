@@ -106,13 +106,13 @@ static void
 bc_align_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 {
     bytecode_align *align = (bytecode_align *)bc->contents;
-    if (!yasm_expr_get_intnum(&align->boundary, NULL))
+    if (!yasm_expr_get_intnum(&align->boundary, 0))
 	yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 		       N_("align boundary must be a constant"));
-    if (align->fill && !yasm_expr_get_intnum(&align->fill, NULL))
+    if (align->fill && !yasm_expr_get_intnum(&align->fill, 0))
 	yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 		       N_("align fill must be a constant"));
-    if (align->maxskip && !yasm_expr_get_intnum(&align->maxskip, NULL))
+    if (align->maxskip && !yasm_expr_get_intnum(&align->maxskip, 0))
 	yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 		       N_("align maximum skip must be a constant"));
 }
@@ -165,7 +165,7 @@ bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     bytecode_align *align = (bytecode_align *)bc->contents;
     unsigned long len;
     unsigned long boundary =
-	yasm_intnum_get_uint(yasm_expr_get_intnum(&align->boundary, NULL));
+	yasm_intnum_get_uint(yasm_expr_get_intnum(&align->boundary, 0));
 
     if (boundary == 0)
 	return 0;
@@ -178,8 +178,7 @@ bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	    return 0;
 	if (align->maxskip) {
 	    unsigned long maxskip =
-		yasm_intnum_get_uint(yasm_expr_get_intnum(&align->maxskip,
-							  NULL));
+		yasm_intnum_get_uint(yasm_expr_get_intnum(&align->maxskip, 0));
 	    if (len > maxskip)
 		return 0;
 	}
@@ -187,7 +186,7 @@ bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     if (align->fill) {
 	unsigned long v;
-	v = yasm_intnum_get_uint(yasm_expr_get_intnum(&align->fill, NULL));
+	v = yasm_intnum_get_uint(yasm_expr_get_intnum(&align->fill, 0));
 	memset(*bufp, (int)v, len);
 	*bufp += len;
     } else if (align->code_fill) {

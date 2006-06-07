@@ -114,7 +114,7 @@ bc_reserve_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
     if (!reserve->numitems)
 	return 0;
 
-    num = yasm_expr_get_intnum(&reserve->numitems, NULL);
+    num = yasm_expr_get_intnum(&reserve->numitems, 0);
     if (!num) {
 	/* Check for use of floats first. */
 	if (reserve->numitems &&

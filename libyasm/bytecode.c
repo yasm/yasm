@@ -179,7 +179,7 @@ yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 }
 
 /*@null@*/ yasm_intnum *
-yasm_common_calc_bc_dist(yasm_bytecode *precbc1, yasm_bytecode *precbc2)
+yasm_calc_bc_dist(yasm_bytecode *precbc1, yasm_bytecode *precbc2)
 {
     unsigned long dist;
     yasm_intnum *intn;
@@ -261,7 +261,7 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
     unsigned long datasize, multiple, i;
     int error = 0;
 
-    if (yasm_bc_get_multiple(bc, &multiple, NULL) || multiple == 0) {
+    if (yasm_bc_get_multiple(bc, &multiple, 1) || multiple == 0) {
 	*bufsize = 0;
 	return NULL;
     }
@@ -300,7 +300,7 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 
 int
 yasm_bc_get_multiple(yasm_bytecode *bc, unsigned long *multiple,
-		     yasm_calc_bc_dist_func calc_bc_dist)
+		     int calc_bc_dist)
 {
     /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
 

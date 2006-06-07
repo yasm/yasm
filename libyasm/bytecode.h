@@ -299,12 +299,13 @@ void yasm_bc_print(const yasm_bytecode *bc, FILE *f, int indent_level);
  */
 void yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 
-/** Common version of calc_bc_dist that takes offsets from bytecodes.
- * Should be used for the final stages of optimizers as well as in yasm_objfmt
- * yasm_expr output functions.
- * \see yasm_calc_bc_dist_func for parameter descriptions.
+/** Determine the distance between the starting offsets of two bytecodes.
+ * \param precbc1	preceding bytecode to the first bytecode
+ * \param precbc2	preceding bytecode to the second bytecode
+ * \return Distance in bytes between the two bytecodes (bc2-bc1), or NULL if
+ *	   the distance was indeterminate.
  */
-/*@null@*/ /*@only@*/ yasm_intnum *yasm_common_calc_bc_dist
+/*@null@*/ /*@only@*/ yasm_intnum *yasm_calc_bc_dist
     (yasm_bytecode *precbc1, yasm_bytecode *precbc2);
 
 /**
@@ -378,11 +379,12 @@ int yasm_bc_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 /** Get the bytecode multiple value as an unsigned long integer.
  * \param bc		bytecode
  * \param multiple	multiple value (output)
- * \param calc_bc_dist	bytecode distance calculation function (optional)
+ * \param calc_bc_dist	nonzero if distances between bytecodes should be
+ *			calculated, 0 if error should be returned in this case
  * \return 1 on error (set with yasm_error_set), 0 on success.
  */
 int yasm_bc_get_multiple(yasm_bytecode *bc, /*@out@*/ unsigned long *multiple,
-			 /*@null@*/ yasm_calc_bc_dist_func calc_bc_dist);
+			 int calc_bc_dist);
 
 /** Create a new data value from an expression.
  * \param expn	expression

@@ -2513,7 +2513,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		case OPT_Imm1:
 		    if (op->type == YASM_INSN__OPERAND_IMM) {
 			const yasm_intnum *num;
-			num = yasm_expr_get_intnum(&op->data.val, NULL);
+			num = yasm_expr_get_intnum(&op->data.val, 0);
 			if (!num || !yasm_intnum_is_pos1(num))
 			    mismatch = 1;
 		    } else
@@ -2918,8 +2918,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	     */
 	    if (!insn->imm->val.abs ||
 		yasm_intnum_check_size(
-		    yasm_expr_get_intnum(&insn->imm->val.abs, NULL),
-		    32, 0, 1)) {
+		    yasm_expr_get_intnum(&insn->imm->val.abs, 0), 32, 0, 1)) {
 		/* Throwaway REX byte */
 		unsigned char rex_temp = 0;
 
