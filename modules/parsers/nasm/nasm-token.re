@@ -410,6 +410,8 @@ scan:
 		default:
 		    s->tok[TOKLEN] = savech;
 	    }
+	    /* Propagate errors in case we got a warning from the arch */
+	    yasm_errwarn_propagate(parser_nasm->errwarns, cur_line);
 	    /* Just an identifier, return as such. */
 	    lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
 	    RETURN(ID);
