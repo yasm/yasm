@@ -395,7 +395,7 @@ dvexpr: INTNUM		    { $$ = p_expr_new_ident(yasm_expr_int($1)); }
     | FLTNUM		    { $$ = p_expr_new_ident(yasm_expr_float($1)); }
     | ONECHARSTR	    {
 	$$ = p_expr_new_ident(yasm_expr_int(
-	    yasm_intnum_create_charconst_nasm($1.contents)));
+	    yasm_intnum_create_charconst_nasm($1.contents, cur_line)));
 	yasm_xfree($1.contents);
     }
     | explabel		    { $$ = p_expr_new_ident(yasm_expr_sym($1)); }
