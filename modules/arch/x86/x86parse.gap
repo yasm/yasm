@@ -746,6 +746,7 @@ INSN	-	sysret	"lq"	twobyte	0x0F07		CPU_686|CPU_AMD|CPU_Priv
 # AMD x86-64 extensions
 INSN	-	swapgs	NONE	threebyte   0x0F01F8	CPU_Hammer|CPU_64
 INSN	-	rdtscp	NONE	threebyte   0x0F01F9	CPU_686|CPU_AMD|CPU_Priv
+INSN	-	cmpxchg16b NONE	cmpxchg16b	0	CPU_586
 # AMD Pacifica SVM instructions
 INSN	-	clgi	NONE	threebyte   0x0F01DD	CPU_Hammer|CPU_64|CPU_SVM
 INSN	-	invlpga	NONE	invlpga	    0		CPU_Hammer|CPU_64|CPU_SVM

@@ -1952,6 +1952,12 @@ static const x86_insn_info now3d_insn[] = {
       {OPT_SIMDReg|OPS_64|OPA_Spare, OPT_SIMDRM|OPS_64|OPS_Relaxed|OPA_EA, 0} }
 };
 
+/* AMD x86-64 extensions */
+static const x86_insn_info cmpxchg16b_insn[] = {
+    { CPU_64|CPU_Hammer, 0, 64, 0, 0, 2, {0x0F, 0xC7, 0}, 1, 1,
+      {OPT_Mem|OPS_128|OPS_Relaxed|OPA_EA, 0, 0} }
+};
+
 /* AMD Pacifica (SVM) instructions */
 static const x86_insn_info invlpga_insn[] = {
     { CPU_SVM, 0, 0, 0, 0, 3, {0x0F, 0x01, 0xDF}, 0, 0, {0, 0, 0} },
