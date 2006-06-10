@@ -529,14 +529,14 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 	    /* failed, don't bother checking rest of insn */
 	    return -1;
 
-	if (x86_ea->ea.disp.size == 0) {
+	if (x86_ea->ea.disp.size == 0 && x86_ea->ea.need_nonzero_len) {
 	    /* Handle unknown case, default to byte-sized and set as
 	     * critical expression.
 	     */
 	    bc->len += 1;
 	    add_span(add_span_data, bc, 1, &x86_ea->ea.disp, -128, 127);
 	} else
-	    bc->len + x86_ea->ea.disp.size/8;
+	    bc->len += x86_ea->ea.disp.size/8;
 
 	/* Handle address16 postop case */
 	if (insn->postop == X86_POSTOP_ADDRESS16)
@@ -548,46 +548,39 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
     }
 
     if (imm) {
-	yasm_intnum *zero = yasm_intnum_create_uint(0);
-	const yasm_intnum *num = zero;
 	unsigned int immlen = imm->val.size;
-	long val;
-
-	if (imm->val.abs)
-	    num = yasm_expr_get_intnum(&imm->val.abs, 0);
 
 	/* TODO: check imm->len vs. sized len from expr? */
 
 	/* Handle signext_imm8 postop special-casing */
 	if (insn->postop == X86_POSTOP_SIGNEXT_IMM8) {
-	    if (imm->val.rel || num) {
-		if (imm->val.rel)
-		    val = 1000; /* has relative portion, don't collapse */
-		else
-		    val = yasm_intnum_get_int(num);
-		if (val >= -128 && val <= 127) {
+	    /*@null@*/ /*@only@*/ yasm_intnum *num;
+	    num = yasm_value_get_intnum(&imm->val, NULL, 0);
+
+	    if (!num) {
+		/* Unknown; default to byte form and set as critical
+		 * expression.
+		 */
+		immlen = 8;
+		add_span(add_span_data, bc, 2, &imm->val, -128, 127);
+	    } else {
+		if (yasm_intnum_in_range(num, -128, 127)) {
 		    /* We can use the sign-extended byte form: shorten
 		     * the immediate length to 1 and make the byte form
 		     * permanent.
 		     */
 		    imm->val.size = 8;
 		    immlen = 8;
-		    if (insn->opcode.opcode[2] != 0) {
-			insn->opcode.opcode[1] = insn->opcode.opcode[2];
-			insn->opcode.len++;
-		    }
+		} else {
+		    /* We can't.  Copy over the word-sized opcode. */
+		    insn->opcode.opcode[0] =
+			insn->opcode.opcode[insn->opcode.len];
+		    insn->opcode.len = 1;
 		}
 		insn->postop = X86_POSTOP_NONE;
-	    } else {
-		/* Unknown; default to byte form and set as critical
-		 * expression.
-		 */
-		immlen = 8;
-		add_span(add_span_data, bc, 2, &imm->val, -128, 127);
 	    }
+	    yasm_intnum_destroy(num);
 	}
-
-	yasm_intnum_destroy(zero);
 
 	bc->len += immlen/8;
     }
@@ -626,8 +619,13 @@ x86_bc_insn_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 
     if (imm && imm->val.abs) {
 	if (insn->postop == X86_POSTOP_SIGNEXT_IMM8) {
-	    bc->len--;
+	    /* Update bc->len for new opcode and immediate size */
+	    bc->len -= insn->opcode.len;
 	    bc->len += imm->val.size/8;
+
+	    /* Change to the word-sized opcode */
+	    insn->opcode.opcode[0] = insn->opcode.opcode[insn->opcode.len];
+	    insn->opcode.len = 1;
 	    insn->postop = X86_POSTOP_NONE;
 	}
     }
@@ -818,23 +816,7 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	}
 
 	if (x86_ea->ea.need_disp) {
-	    x86_effaddr eat = *x86_ea;  /* structure copy */
-	    unsigned char addrsize = insn->common.addrsize;
 	    unsigned int disp_len = x86_ea->ea.disp.size/8;
-
-	    eat.valid_modrm = 0;    /* force checkea to actually run */
-
-	    if (x86_ea->ea.disp.abs) {
-		/* Call checkea() to simplify the registers out of the
-		 * displacement.  Throw away all of the return values except
-		 * for the modified expr.
-		 */
-		if (yasm_x86__expr_checkea
-		    (&eat, &addrsize, insn->common.mode_bits,
-		     insn->postop == X86_POSTOP_ADDRESS16, &insn->rex))
-		    yasm_internal_error(N_("checkea failed"));
-		x86_ea->ea.disp.abs = eat.ea.disp.abs;
-	    }
 
 	    if (x86_ea->ea.disp.ip_rel) {
 		/* Adjust relative displacement to end of bytecode */

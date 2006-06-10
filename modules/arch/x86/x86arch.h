@@ -206,8 +206,9 @@ typedef struct x86_insn {
 
 	/* Instructions that take a sign-extended imm8 as well as imm values
 	 * (eg, the arith instructions and a subset of the imul instructions)
-	 * should set this and put the imm8 form in the second (and possibly
-	 * third) byte of the opcode.
+	 * should set this and put the imm8 form as the "normal" opcode (in
+	 * the first one or two bytes) and non-imm8 form in the second or
+	 * third byte of the opcode.
 	 */
 	X86_POSTOP_SIGNEXT_IMM8,
 

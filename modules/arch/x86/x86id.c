@@ -53,7 +53,7 @@ RCSID("$Id$");
 #define MOD_Imm8    (1UL<<9)	/* Parameter is included as immediate byte */
 #define MOD_AdSizeR (1UL<<10)	/* Parameter replaces addrsize (jmp only) */
 #define MOD_DOpS64R (1UL<<11)	/* Parameter replaces default 64-bit opersize */
-#define MOD_Op2AddSp (1UL<<12)	/* Parameter is added as "spare" to opcode byte 2 */
+#define MOD_Op1AddSp (1UL<<12)	/* Parameter is added as "spare" to opcode byte 2 */
 
 /* Modifiers that aren't: these are used with the GAS parser to indicate
  * special cases.
@@ -154,7 +154,7 @@ RCSID("$Id$");
  * indicate postponed actions.
  *  - 3 bits = postponed action:
  *             0 = none
- *             1 = large imm16/32 that can become a sign-extended imm8.
+ *             1 = sign-extended imm8 that could expand to a large imm16/32
  *             2 = could become a short opcode mov with bits=64 and a32 prefix
  *             3 = forced 16-bit address size (override ignored, no prefix)
  *             4 = large imm64 that can become a sign-extended imm32.
@@ -223,7 +223,7 @@ RCSID("$Id$");
 #define OPA_MASK	(0xFUL<<13)
 
 #define OPAP_None	(0UL<<17)
-#define OPAP_SImm8Avail	(1UL<<17)
+#define OPAP_SImm8	(1UL<<17)
 #define OPAP_ShortMov	(2UL<<17)
 #define OPAP_A16	(3UL<<17)
 #define OPAP_SImm32Avail (4UL<<17)
@@ -623,17 +623,17 @@ static const x86_insn_info push_insn[] = {
       {OPT_Imm|OPS_32|OPA_SImm, 0, 0} },
     { CPU_Any, MOD_GasOnly|MOD_GasSufB, 0, 64, 0, 1, {0x6A, 0, 0}, 0, 1,
       {OPT_Imm|OPS_8|OPS_Relaxed|OPA_SImm, 0, 0} },
-    { CPU_Any, MOD_GasOnly|MOD_GasSufW, 16, 64, 0, 1, {0x68, 0x6A, 0}, 0, 1,
-      {OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0, 0} },
+    { CPU_Any, MOD_GasOnly|MOD_GasSufW, 16, 64, 0, 1, {0x6A, 0x68, 0}, 0, 1,
+      {OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0, 0} },
     { CPU_386|CPU_Not64, MOD_GasOnly|MOD_GasSufL, 32, 0, 0, 1,
-      {0x68, 0x6A, 0}, 0, 1,
-      {OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0, 0} },
+      {0x6A, 0x68, 0}, 0, 1,
+      {OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0, 0} },
     { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 64, 0, 1,
-      {0x68, 0x6A, 0}, 0, 1,
-      {OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail, 0, 0} },
+      {0x6A, 0x68, 0}, 0, 1,
+      {OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8, 0, 0} },
     { CPU_Any|CPU_Not64, MOD_GasIllegal, 0, 0, 0, 1,
-      {0x68, 0x6A, 0}, 0, 1,
-      {OPT_Imm|OPS_BITS|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0, 0} },
+      {0x6A, 0x68, 0}, 0, 1,
+      {OPT_Imm|OPS_BITS|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0, 0} },
     { CPU_Not64, 0, 0, 0, 0, 1, {0x0E, 0, 0}, 0, 1,
       {OPT_CS|OPS_Any|OPA_None, 0, 0} },
     { CPU_Not64, MOD_GasSufW, 16, 0, 0, 1, {0x0E, 0, 0}, 0, 1,
@@ -843,22 +843,22 @@ static const x86_insn_info arith_insn[] = {
       {OPT_Areg|OPS_8|OPA_None, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
     { CPU_Any, MOD_Op0Add|MOD_GasIllegal, 16, 0, 0, 1, {0x05, 0, 0}, 0, 2,
       {OPT_Areg|OPS_16|OPA_None, OPT_Imm|OPS_16|OPA_Imm, 0} },
-    { CPU_Any, MOD_Op0Add|MOD_Op2AddSp|MOD_GasSufW, 16, 0, 0, 1,
-      {0x05, 0x83, 0xC0}, 0, 2,
+    { CPU_Any, MOD_Op2Add|MOD_Op1AddSp|MOD_GasSufW, 16, 0, 0, 2,
+      {0x83, 0xC0, 0x05}, 0, 2,
       {OPT_Areg|OPS_16|OPA_None,
-       OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
+       OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
     { CPU_386, MOD_Op0Add|MOD_GasIllegal, 32, 0, 0, 1, {0x05, 0, 0}, 0, 2,
       {OPT_Areg|OPS_32|OPA_None, OPT_Imm|OPS_32|OPA_Imm, 0} },
-    { CPU_386, MOD_Op0Add|MOD_Op2AddSp|MOD_GasSufL, 32, 0, 0, 1,
-      {0x05, 0x83, 0xC0}, 0, 2,
+    { CPU_386, MOD_Op2Add|MOD_Op1AddSp|MOD_GasSufL, 32, 0, 0, 2,
+      {0x83, 0xC0, 0x05}, 0, 2,
       {OPT_Areg|OPS_32|OPA_None,
-       OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
     { CPU_Hammer|CPU_64, MOD_Op0Add|MOD_GasIllegal, 64, 0, 0, 1, {0x05, 0, 0},
       0, 2, {OPT_Areg|OPS_64|OPA_None, OPT_Imm|OPS_32|OPA_Imm, 0} },
-    { CPU_Hammer|CPU_64, MOD_Op0Add|MOD_Op2AddSp|MOD_GasSufQ, 64, 0, 0, 1,
-      {0x05, 0x83, 0xC0}, 0,
+    { CPU_Hammer|CPU_64, MOD_Op2Add|MOD_Op1AddSp|MOD_GasSufQ, 64, 0, 0, 2,
+      {0x83, 0xC0, 0x05}, 0,
       2, {OPT_Areg|OPS_64|OPA_None,
-	  OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
+	  OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
 
     /* Also have forced-size forms to override the optimization */
     { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasSufB, 0, 0, 0, 1, {0x80, 0, 0}, 0, 2,
@@ -869,23 +869,23 @@ static const x86_insn_info arith_insn[] = {
       {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_8|OPA_SImm, 0} },
     { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasIllegal, 16, 0, 0, 1, {0x81, 0, 0}, 0,
       2, {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_16|OPA_Imm, 0} },
-    { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasSufW, 16, 0, 0, 1, {0x81, 0x83, 0}, 0,
+    { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasSufW, 16, 0, 0, 1, {0x83, 0x81, 0}, 0,
       2, {OPT_RM|OPS_16|OPA_EA,
-	  OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
+	  OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
     { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasSufL, 32, 0, 0, 1, {0x83, 0, 0}, 0, 2,
       {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_8|OPA_SImm, 0} },
     { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasIllegal, 32, 0, 0, 1, {0x81, 0, 0}, 0,
       2, {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_32|OPA_Imm, 0} },
-    { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasSufL, 32, 0, 0, 1, {0x81, 0x83, 0}, 0,
+    { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasSufL, 32, 0, 0, 1, {0x83, 0x81, 0}, 0,
       2, {OPT_RM|OPS_32|OPA_EA,
-	  OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
+	  OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
     { CPU_Hammer|CPU_64, MOD_Gap0|MOD_SpAdd|MOD_GasSufQ, 64, 0, 0, 1,
       {0x83, 0, 0}, 0, 2,
       {OPT_RM|OPS_64|OPA_EA, OPT_Imm|OPS_8|OPA_SImm, 0} },
     { CPU_Hammer|CPU_64, MOD_Gap0|MOD_SpAdd|MOD_GasSufQ, 64, 0, 0, 1,
-      {0x81, 0x83, 0}, 0, 2,
+      {0x83, 0x81, 0}, 0, 2,
       {OPT_RM|OPS_64|OPA_EA,
-       OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
     { CPU_Hammer|CPU_64, MOD_Gap0|MOD_SpAdd|MOD_GasSufQ, 64, 0, 0, 1,
       {0x81, 0, 0}, 0, 2,
       {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_32|OPA_Imm, 0} },
@@ -1048,25 +1048,25 @@ static const x86_insn_info imul_insn[] = {
     { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0x6B, 0, 0}, 0, 2,
       {OPT_Reg|OPS_64|OPA_SpareEA, OPT_Imm|OPS_8|OPA_SImm, 0} },
 
-    { CPU_186, MOD_GasSufW, 16, 0, 0, 1, {0x69, 0x6B, 0}, 0, 3,
+    { CPU_186, MOD_GasSufW, 16, 0, 0, 1, {0x6B, 0x69, 0}, 0, 3,
       {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA,
-       OPT_Imm|OPS_16|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail} },
-    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0x69, 0x6B, 0}, 0, 3,
+       OPT_Imm|OPS_16|OPS_Relaxed|OPA_SImm|OPAP_SImm8} },
+    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0x6B, 0x69, 0}, 0, 3,
       {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA,
-       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail} },
-    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0x69, 0x6B, 0}, 0, 3,
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8} },
+    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0x6B, 0x69, 0}, 0, 3,
       {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA,
-       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail} },
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8} },
 
-    { CPU_186, MOD_GasSufW, 16, 0, 0, 1, {0x69, 0x6B, 0}, 0, 2,
+    { CPU_186, MOD_GasSufW, 16, 0, 0, 1, {0x6B, 0x69, 0}, 0, 2,
       {OPT_Reg|OPS_16|OPA_SpareEA,
-       OPT_Imm|OPS_16|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail, 0} },
-    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0x69, 0x6B, 0}, 0, 2,
+       OPT_Imm|OPS_16|OPS_Relaxed|OPA_SImm|OPAP_SImm8, 0} },
+    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0x6B, 0x69, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_SpareEA,
-       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail, 0} },
-    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0x69, 0x6B, 0}, 0, 2,
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8, 0} },
+    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0x6B, 0x69, 0}, 0, 2,
       {OPT_Reg|OPS_64|OPA_SpareEA,
-       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail, 0} }
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8, 0} }
 };
 
 /* Shifts - standard */
@@ -2712,8 +2712,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	insn->def_opersize_64 = (unsigned char)(mod_data & 0xFF);
 	mod_data >>= 8;
     }
-    if (info->modifiers & MOD_Op2AddSp) {
-	insn->opcode.opcode[2] += (unsigned char)(mod_data & 0xFF)<<3;
+    if (info->modifiers & MOD_Op1AddSp) {
+	insn->opcode.opcode[1] += (unsigned char)(mod_data & 0xFF)<<3;
 	/*mod_data >>= 8;*/
     }
 
@@ -2845,7 +2845,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	    switch ((int)(info->operands[i] & OPAP_MASK)) {
 		case OPAP_None:
 		    break;
-		case OPAP_SImm8Avail:
+		case OPAP_SImm8:
 		    insn->postop = X86_POSTOP_SIGNEXT_IMM8;
 		    break;
 		case OPAP_ShortMov:

@@ -478,17 +478,17 @@ yasm_value_finalize(yasm_value *value)
 }
 
 yasm_intnum *
-yasm_value_get_intnum(yasm_value *value, yasm_bytecode *bc)
+yasm_value_get_intnum(yasm_value *value, yasm_bytecode *bc, int calc_bc_dist)
 {
     /*@dependent@*/ /*@null@*/ yasm_intnum *intn = NULL;
     /*@only@*/ yasm_intnum *outval;
     int sym_local;
 
     if (value->abs) {
-	/* Handle integer expressions, if non-integer go ahead and return
+	/* Handle integer expressions, if non-integer or too complex, return
 	 * NULL.
 	 */
-	intn = yasm_expr_get_intnum(&value->abs, 1);
+	intn = yasm_expr_get_intnum(&value->abs, calc_bc_dist);
 	if (!intn)
 	    return NULL;
     }
@@ -499,6 +499,9 @@ yasm_value_get_intnum(yasm_value *value, yasm_bytecode *bc)
 	 */
 	/*@dependent@*/ yasm_bytecode *rel_prevbc;
 	unsigned long dist;
+
+	if (!bc)
+	    return NULL;    /* Can't calculate relative value */
 
 	sym_local = yasm_symrec_get_label(value->rel, &rel_prevbc);
 	if (value->wrt || value->seg_of || value->section_rel || !sym_local)

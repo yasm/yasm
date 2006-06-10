@@ -207,6 +207,7 @@ yasm_object_create_absolute(yasm_object *object, yasm_expr *start,
     STAILQ_INIT(&s->bcs);
     bc = yasm_bc_create_common(NULL, NULL, 0);
     bc->section = s;
+    bc->offset = 0;
     STAILQ_INSERT_TAIL(&s->bcs, bc, link);
 
     /* Initialize relocs */
