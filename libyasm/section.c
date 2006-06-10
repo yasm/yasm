@@ -39,6 +39,7 @@
 #include "errwarn.h"
 #include "intnum.h"
 #include "expr.h"
+#include "value.h"
 #include "symrec.h"
 
 #include "bytecode.h"
@@ -672,9 +673,9 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
  *     of all bytecodes assuming minimum length, building a list of all
  *     dependent spans as we go.
  *     "minimum" here means absolute minimum:
- *      - align 0 length
+ *      - align 0 length, but bumps offset
  *      - times values (with span-dependent values) assumed to be 0
- *      - org bumps offset
+ *      - org 0 length, but bumps offset
  *  b. Iterate over spans.  Set span length based on bytecode offsets
  *     determined in 1a.  If span is "certainly" long because the span
  *     is an absolute reference to another section (or external) or the
@@ -785,7 +786,10 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
     int saw_error = 0;
     optimize_data optd;
     yasm_span *span;
+    yasm_value val;
+    /*@only@*/ /*@null@*/ yasm_intnum *num;
     long neg_thres, pos_thres;
+    int retval;
 
     STAILQ_INIT(&optd.spans);
 
@@ -823,45 +827,47 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 
     if (saw_error)
 	return;
-#if 0
+
     /* Step 1b */
     STAILQ_FOREACH(span, &optd.spans, link) {
-	/* Handle absolute portion */
-	if (span->depval->abs) {
-	    yasm_expr *depcopy = yasm_expr_copy(span->depval->abs);
-	    yasm_intnum *intn =
-		yasm_expr_get_intnum(&depcopy, yasm_common_calc_bc_dist);
-	    if (intn)
-		span->new_val = yasm_intnum_get_int(intn);
-	    else {
-		/* absolute, external, or too complex; force to longer form */
-		span->new_val = LONG_MAX;
-		span->active = 0;
-	    }
-	    yasm_expr_destroy(depcopy);
-	} else
-	    span->new_val = 0;
-
-	/* Handle relative portion */
-	if (span->depval->rel && span->new_val != LONG_MAX) {
-	    span->new_val += 
+	if (!span->active)
+	    continue;
+	yasm_value_init_copy(&val, span->depval);
+	num = yasm_value_get_intnum(&val, span->bc, 1);
+	if (num) {
+	    span->new_val = yasm_intnum_get_int(num);
+	    yasm_intnum_destroy(num);
+	} else {
+	    /* external or too complex; force to longer form */
+	    span->new_val = LONG_MAX;
+	    span->active = 0;
 	}
+	yasm_value_delete(&val);
 
-	if (span->new_val < span->neg_thres
-	    || span->new_val > span->pos_thres) {
-	    int retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
-					span->new_val, &neg_thres, &pos_thres);
+	if ((span->id == 0 && span->new_val != span->cur_val) ||
+	    (span->new_val < span->neg_thres
+	     || span->new_val > span->pos_thres)) {
+	    retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
+				    span->new_val, &neg_thres, &pos_thres);
+	    yasm_errwarn_propagate(errwarns, span->bc->line);
 	    if (retval < 0)
 		saw_error = 1;
 	    else if (retval > 0) {
-		span->neg_thres = neg_thres;
-		span->pos_thres = pos_thres;
+		if (!span->active) {
+		    yasm_error_set(YASM_ERROR_VALUE,
+				   N_("secondary expansion of an external/complex value"));
+		    yasm_errwarn_propagate(errwarns, span->bc->line);
+		    saw_error = 1;
+		} else {
+		    span->neg_thres = neg_thres;
+		    span->pos_thres = pos_thres;
+		}
 	    } else
 		span->active = 0;
 	}
 	span->cur_val = span->new_val;
     }
-#endif
+
     if (saw_error)
 	return;
 

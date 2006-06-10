@@ -687,7 +687,7 @@ x86_bc_jmp_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 	 * The objfmt will error if not supported.
 	 */
 	if (jmp->op_sel == JMP_SHORT_FORCED || jmp->nearop.len == 0) {
-	    if (jmp->nearop.len == 0)
+	    if (jmp->op_sel == JMP_NONE)
 		jmp->op_sel = JMP_SHORT;
 	    bc->len += jmp->shortop.len + 1;
 	} else {
@@ -699,9 +699,11 @@ x86_bc_jmp_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
     }
 
     /* Default to short jump and generate span */
-    jmp->op_sel = JMP_SHORT;
+    if (jmp->op_sel == JMP_NONE)
+	jmp->op_sel = JMP_SHORT;
     bc->len += jmp->shortop.len + 1;
-    add_span(add_span_data, bc, 1, &jmp->target, -128, 127);
+    add_span(add_span_data, bc, 1, &jmp->target, -128+(long)bc->len,
+	     127+(long)bc->len);
     return 0;
 }
 
@@ -719,7 +721,7 @@ x86_bc_jmp_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
     opersize = (jmp->common.opersize == 0) ?
 	jmp->common.mode_bits : jmp->common.opersize;
 
-    if (jmp->nearop.len == 0) {
+    if (jmp->op_sel == JMP_SHORT_FORCED || jmp->nearop.len == 0) {
 	yasm_error_set(YASM_ERROR_VALUE, N_("short jump out of range"));
 	return -1;
     }
