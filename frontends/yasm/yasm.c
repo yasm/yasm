@@ -624,7 +624,7 @@ main(int argc, char *argv[])
     check_errors(errwarns, object);
 
     /* Optimize */
-    yasm_object_optimize(object, cur_arch);
+    yasm_object_optimize(object, cur_arch, errwarns);
     check_errors(errwarns, object);
 
     /* generate any debugging information */

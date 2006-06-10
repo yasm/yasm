@@ -578,8 +578,8 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 		    insn->opcode.len = 1;
 		}
 		insn->postop = X86_POSTOP_NONE;
+		yasm_intnum_destroy(num);
 	    }
-	    yasm_intnum_destroy(num);
 	}
 
 	bc->len += immlen/8;

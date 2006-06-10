@@ -777,7 +777,8 @@ update_all_bc_offsets(yasm_object *object)
 }
 
 void
-yasm_object_optimize(yasm_object *object, yasm_arch *arch)
+yasm_object_optimize(yasm_object *object, yasm_arch *arch,
+		     yasm_errwarns *errwarns)
 {
     yasm_section *sect;
     unsigned long bc_index = 0;
@@ -807,6 +808,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch)
 
 	    if (yasm_bc_calc_len(cur, optimize_add_span, &optd))
 		saw_error = 1;
+	    yasm_errwarn_propagate(errwarns, cur->line);
 
 	    /* TODO: times */
 	    if (cur->multiple)
