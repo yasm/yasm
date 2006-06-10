@@ -570,6 +570,7 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 		     * permanent.
 		     */
 		    imm->val.size = 8;
+		    imm->sign = 1;
 		    immlen = 8;
 		} else {
 		    /* We can't.  Copy over the word-sized opcode. */
@@ -845,7 +846,16 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     /* Immediate (if required) */
     if (imm) {
-	unsigned int imm_len = imm->val.size/8;
+	unsigned int imm_len;
+	if (insn->postop == X86_POSTOP_SIGNEXT_IMM8) {
+	    /* If we got here with this postop still set, we need to force
+	     * imm size to 8 here.
+	     */
+	    imm->val.size = 8;
+	    imm->sign = 1;
+	    imm_len = 1;
+	} else
+	    imm_len = imm->val.size/8;
 	if (output_value(&imm->val, *bufp, imm_len,
 			 (unsigned long)(*bufp-bufp_orig), bc, imm->sign?-1:1,
 			 d))
