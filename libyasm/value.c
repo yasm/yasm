@@ -477,6 +477,66 @@ yasm_value_finalize(yasm_value *value)
     return yasm_value_finalize_expr(value, value->abs, valsize);
 }
 
+yasm_intnum *
+yasm_value_get_intnum(yasm_value *value, yasm_bytecode *bc)
+{
+    /*@dependent@*/ /*@null@*/ yasm_intnum *intn = NULL;
+    /*@only@*/ yasm_intnum *outval;
+    int sym_local;
+
+    if (value->abs) {
+	/* Handle integer expressions, if non-integer go ahead and return
+	 * NULL.
+	 */
+	intn = yasm_expr_get_intnum(&value->abs, 1);
+	if (!intn)
+	    return NULL;
+    }
+
+    if (value->rel) {
+	/* If relative portion is not in bc section, return NULL.
+	 * Otherwise get the relative portion's offset.
+	 */
+	/*@dependent@*/ yasm_bytecode *rel_prevbc;
+	unsigned long dist;
+
+	sym_local = yasm_symrec_get_label(value->rel, &rel_prevbc);
+	if (value->wrt || value->seg_of || value->section_rel || !sym_local)
+	    return NULL;    /* we can't handle SEG, WRT, or external symbols */
+	if (rel_prevbc->section != bc->section)
+	    return NULL;    /* not in this section */
+	if (!value->curpos_rel)
+	    return NULL;    /* not PC-relative */
+
+	/* Calculate value relative to current assembly position */
+	dist = rel_prevbc->offset + rel_prevbc->len;
+	if (dist < bc->offset) {
+	    outval = yasm_intnum_create_uint(bc->offset - dist);
+	    yasm_intnum_calc(outval, YASM_EXPR_NEG, NULL);
+	} else {
+	    dist -= bc->offset;
+	    outval = yasm_intnum_create_uint(dist);
+	}
+
+	if (value->rshift > 0) {
+	    /*@only@*/ yasm_intnum *shamt =
+		yasm_intnum_create_uint((unsigned long)value->rshift);
+	    yasm_intnum_calc(outval, YASM_EXPR_SHR, shamt);
+	    yasm_intnum_destroy(shamt);
+	}
+	/* Add in absolute portion */
+	if (intn)
+	    yasm_intnum_calc(outval, YASM_EXPR_ADD, intn);
+	return outval;
+    }
+
+    if (intn)
+	return yasm_intnum_copy(intn);
+    
+    /* No absolute or relative portions: output 0 */
+    return yasm_intnum_create_uint(0);
+}
+
 int
 yasm_value_output_basic(yasm_value *value, /*@out@*/ unsigned char *buf,
 			size_t destsize, yasm_bytecode *bc, int warn,

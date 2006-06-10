@@ -91,7 +91,7 @@ yasm_bc_create_common(const yasm_bytecode_callback *callback, void *contents,
 
     bc->line = line;
 
-    bc->offset = ~0UL;
+    bc->offset = ~0UL;	/* obviously incorrect / uninitialized value */
 
     bc->opt_flags = 0;
 

@@ -170,6 +170,7 @@ yasm_object_get_general(yasm_object *object, const char *name,
     STAILQ_INIT(&s->bcs);
     bc = yasm_bc_create_common(NULL, NULL, 0);
     bc->section = s;
+    bc->offset = 0;
     STAILQ_INSERT_TAIL(&s->bcs, bc, link);
 
     /* Initialize relocs */
@@ -705,7 +706,6 @@ typedef struct yasm_span {
     /*@dependent@*/ yasm_bytecode *bc;
 
     yasm_value *depval;
-    yasm_bytecode *origin_prevbc;
 
     /* Special handling: see descriptions above */
     enum {
@@ -732,15 +732,13 @@ typedef struct optimize_data {
 
 static void
 optimize_add_span(void *add_span_data, yasm_bytecode *bc, int id,
-		  yasm_value *value, /*@null@*/ yasm_bytecode *origin_prevbc,
-		  long neg_thres, long pos_thres)
+		  yasm_value *value, long neg_thres, long pos_thres)
 {
     optimize_data *optd = (optimize_data *)add_span_data;
     yasm_span *span = yasm_xmalloc(sizeof(yasm_span));
 
     span->bc = bc;
     span->depval = value;
-    span->origin_prevbc = origin_prevbc;
     span->special = NOT_SPECIAL;
     span->cur_val = 0;
     span->new_val = 0;

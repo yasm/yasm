@@ -308,17 +308,17 @@ void yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 /*@null@*/ /*@only@*/ yasm_intnum *yasm_calc_bc_dist
     (yasm_bytecode *precbc1, yasm_bytecode *precbc2);
 
-/**
+/** Add a dependent span for a bytecode.
+ * \param add_span_data	add_span_data passed into bc_calc_len()
+ * \param bc		bytecode containing span
+ * \param id		non-zero identifier for span; may be any non-zero value
  * \param value		dependent value for bytecode expansion
- * \param origin_prevbc	origin for distance computation to relative portion of
- *			value; value.rel and origin must be within the same
- *			section.
  * \param neg_thres	negative threshold for long/short decision
  * \param pos_thres	positive threshold for long/short decision
  */
 typedef void (*yasm_bc_add_span_func)
     (void *add_span_data, yasm_bytecode *bc, int id, yasm_value *value,
-     /*@null@*/ yasm_bytecode *origin_prevbc, long neg_thres, long pos_thres);
+     long neg_thres, long pos_thres);
 
 /** Resolve EQUs in a bytecode and calculate its minimum size.
  * Generates dependent bytecode spans for cases where, if the length spanned

@@ -223,7 +223,6 @@ typedef struct x86_jmp {
     x86_opcode shortop, nearop;
 
     yasm_value target;		/* jump target */
-    /*@dependent@*/ yasm_bytecode *origin_prevbc;   /* jump origin */
 
     /* which opcode are we using? */
     /* The *FORCED forms are specified in the source as such */

@@ -534,7 +534,7 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 	     * critical expression.
 	     */
 	    bc->len += 1;
-	    add_span(add_span_data, bc, 1, &x86_ea->ea.disp, NULL, -128, 127);
+	    add_span(add_span_data, bc, 1, &x86_ea->ea.disp, -128, 127);
 	} else
 	    bc->len + x86_ea->ea.disp.size/8;
 
@@ -583,7 +583,7 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 		 * expression.
 		 */
 		immlen = 8;
-		add_span(add_span_data, bc, 2, &imm->val, NULL, -128, 127);
+		add_span(add_span_data, bc, 2, &imm->val, -128, 127);
 	    }
 	}
 
@@ -678,7 +678,7 @@ x86_bc_jmp_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 
     if (jmp->target.rel
 	&& (!yasm_symrec_get_label(jmp->target.rel, &target_prevbc)
-	    || target_prevbc->section != jmp->origin_prevbc->section)) {
+	    || target_prevbc->section != bc->section)) {
 	/* External or out of segment, so we can't check distance.
 	 * Allowing forced short jumps depends on the objfmt supporting
 	 * 8-bit relocs.  While most don't, some might, so allow it here.
@@ -695,8 +695,9 @@ x86_bc_jmp_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
     }
 
     /* Default to short jump and generate span */
+    jmp->op_sel = JMP_SHORT;
     bc->len += jmp->shortop.len + 1;
-    add_span(add_span_data, bc, 1, &jmp->target, jmp->origin_prevbc, -128, 127);
+    add_span(add_span_data, bc, 1, &jmp->target, -128, 127);
     return 0;
 }
 
@@ -945,6 +946,8 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		return 1;
 	    *bufp += i;
 	    break;
+	case JMP_NONE:
+	    yasm_internal_error(N_("jump op_sel cannot be JMP_NONE in tobytes"));
 	default:
 	    yasm_internal_error(N_("unrecognized relative jump op_sel"));
     }

@@ -94,8 +94,8 @@ cdef extern from "libyasm/bytecode.h":
     cdef yasm_intnum *yasm_calc_bc_dist(yasm_bytecode *precbc1,
             yasm_bytecode *precbc2)
     ctypedef void (*yasm_bc_add_span_func) (void *add_span_data,
-            yasm_bytecode *bc, int id, yasm_value *value,
-            yasm_bytecode *origin_prevbc, long neg_thres, long pos_thres)
+            yasm_bytecode *bc, int id, yasm_value *value, long neg_thres,
+            long pos_thres)
     cdef int yasm_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
                               void *add_span_data)
     cdef int yasm_bc_expand(yasm_bytecode *bc, int span, long old_val,
