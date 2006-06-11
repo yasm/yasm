@@ -33,7 +33,6 @@
 #include "coretype.h"
 #include "valparam.h"
 #include "assocdat.h"
-#include "qq.h"
 
 #include "linemgr.h"
 #include "errwarn.h"
@@ -679,14 +678,12 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
  *     is an absolute reference to another section (or external) or the
  *     distance calculated based on the minimum length is greater than the
  *     span's threshold, expand the span's bytecode, and if no further
- *     expansion can result, delete the span.  Otherwise (or if the
- *     expansion results in another threshold of expansion), add span to
- *     interval tree.
+ *     expansion can result, mark span as inactive.
  *  c. Iterate over bytecodes to update all bytecode offsets based on new
  *     (expanded) lengths calculated in 1b.
- *  d. Iterate over spans.  Update span's length based on new bytecode offsets
- *     determined in 1c.  If span's length exceeds long threshold, add that
- *     span to Q.
+ *  d. Iterate over active spans.  Add span to interval tree.  Update span's
+ *     length based on new bytecode offsets determined in 1c.  If span's
+ *     length exceeds long threshold, add that span to Q.
  * 2. Main loop:
  *   While Q not empty:
  *     Expand BC dependent on span at head of Q (and remove span from Q).
@@ -701,7 +698,8 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
  */
 
 typedef struct yasm_span {
-    /*@reldef@*/ STAILQ_ENTRY(yasm_span) link;
+    /*@reldef@*/ STAILQ_ENTRY(yasm_span) link;	/* for allocation tracking */
+    /*@reldef@*/ STAILQ_ENTRY(yasm_span) linkq;	/* for Q */
 
     /*@dependent@*/ yasm_bytecode *bc;
 
@@ -749,6 +747,33 @@ optimize_add_span(void *add_span_data, yasm_bytecode *bc, int id,
     STAILQ_INSERT_TAIL(&optd->spans, span, link);
 }
 
+/* Recalculate span value based on current bytecode offsets.
+ * Returns 1 if span exceeded thresholds.
+ */
+static int
+recalc_normal_span(yasm_span *span)
+{
+    yasm_value val;
+    /*@null@*/ /*@only@*/ yasm_intnum *num;
+
+    yasm_value_init_copy(&val, &span->depval);
+    num = yasm_value_get_intnum(&val, span->bc, 1);
+    if (num) {
+	span->new_val = yasm_intnum_get_int(num);
+	yasm_intnum_destroy(num);
+    } else {
+	/* external or too complex; force to longest form */
+	span->new_val = LONG_MAX;
+	span->active = 0;
+    }
+    yasm_value_delete(&val);
+    return (span->new_val < span->neg_thres
+	    || span->new_val > span->pos_thres);
+}
+
+/* Updates all bytecode offsets.  For offset-based bytecodes, calls expand
+ * to determine new length.
+ */
 static int
 update_all_bc_offsets(yasm_object *object, yasm_errwarns *errwarns)
 {
@@ -796,10 +821,9 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
     int saw_error = 0;
     optimize_data optd;
     yasm_span *span;
-    yasm_value val;
-    /*@only@*/ /*@null@*/ yasm_intnum *num;
     long neg_thres, pos_thres;
     int retval;
+    /*@reldef@*/ STAILQ_HEAD(yasm_spanhead, yasm_span) Q;
 
     STAILQ_INIT(&optd.spans);
 
@@ -832,7 +856,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		    span->bc = bc;
 		    yasm_value_initialize(&span->depval, NULL, 0);
 		    span->special = SPECIAL_BC_OFFSET;
-		    span->cur_val = (long)(prevbc->offset+prevbc->len);
+		    span->cur_val = (long)bc->offset;
 		    span->new_val = 0;
 		    span->neg_thres = 0;
 		    span->pos_thres = (long)(bc->offset+bc->len);
@@ -868,21 +892,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	    continue;
 	switch (span->special) {
 	    case NOT_SPECIAL:
-		yasm_value_init_copy(&val, &span->depval);
-		num = yasm_value_get_intnum(&val, span->bc, 1);
-		if (num) {
-		    span->new_val = yasm_intnum_get_int(num);
-		    yasm_intnum_destroy(num);
-		} else {
-		    /* external or too complex; force to longest form */
-		    span->new_val = LONG_MAX;
-		    span->active = 0;
-		}
-		yasm_value_delete(&val);
-
-		if ((span->id == 0 && span->new_val != span->cur_val) ||
-		    (span->new_val < span->neg_thres
-		     || span->new_val > span->pos_thres)) {
+		if (recalc_normal_span(span)) {
 		    retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
 					    span->new_val, &neg_thres,
 					    &pos_thres);
@@ -903,12 +913,9 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 			span->active = 0;
 		}
 		span->cur_val = span->new_val;
-		if (span->active) {
-		    /* Add to interval tree */
-		}
 		break;
 	    case SPECIAL_BC_OFFSET:
-		/* Add to interval tree; nothing else to do here */
+		/* Nothing to do here */
 		break;
 	    case SPECIAL_TIMES:
 		break;
@@ -923,12 +930,39 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	return;
 
     /* Step 1d */
+    STAILQ_INIT(&Q);
     STAILQ_FOREACH(span, &optd.spans, link) {
 	if (!span->active)
 	    continue;
+	switch (span->special) {
+	    case NOT_SPECIAL:
+		/* Add to interval tree */
+
+		if (recalc_normal_span(span)) {
+		    /* Exceeded threshold, add span to Q */
+		    STAILQ_INSERT_TAIL(&Q, span, linkq);
+		}
+		break;
+	    case SPECIAL_BC_OFFSET:
+		/* Add to interval tree */
+
+		/* It's impossible to exceed any threshold here (as we just
+		 * adjusted this when updating the BC offsets, so just update
+		 * span values and thresholds.
+		 */
+		span->new_val = (long)span->bc->offset;
+		span->pos_thres = (long)(span->bc->offset+span->bc->len);
+		break;
+	    case SPECIAL_TIMES:
+		/* Add to interval tree */
+		break;
+	}
     }
 
     /* Step 2 */
+    while (!STAILQ_EMPTY(&Q)) {
+	yasm_internal_error(N_("second optimization phase not implemented"));
+    }
 
     /* Step 3 */
     update_all_bc_offsets(object, errwarns);

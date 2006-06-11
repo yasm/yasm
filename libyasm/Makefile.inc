@@ -28,7 +28,6 @@ libyasm_a_SOURCES += libyasm/valparam.c
 libyasm_a_SOURCES += libyasm/value.c
 libyasm_a_SOURCES += libyasm/xmalloc.c
 libyasm_a_SOURCES += libyasm/xstrdup.c
-libyasm_a_SOURCES += libyasm/qq.c
 libyasm_a_SOURCES += libyasm/stack.c
 libyasm_a_SOURCES += libyasm/interval_tree.c
 libyasm_a_SOURCES += module.c
@@ -80,7 +79,6 @@ modinclude_HEADERS += libyasm/section.h
 modinclude_HEADERS += libyasm/symrec.h
 modinclude_HEADERS += libyasm/valparam.h
 modinclude_HEADERS += libyasm/value.h
-modinclude_HEADERS += libyasm/qq.h
 modinclude_HEADERS += libyasm/stack.h
 modinclude_HEADERS += libyasm/interval_tree.h
 

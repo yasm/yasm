@@ -142,21 +142,21 @@ bc_align_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 
     if (boundary == 0) {
 	bc->len = 0;
-	*pos_thres = 0;
+	*pos_thres = new_val;
 	return 0;
     }
 
-    end = new_val;
-    if (new_val & (boundary-1))
-	end = (new_val & ~(boundary-1)) + boundary;
+    end = (unsigned long)new_val;
+    if ((unsigned long)new_val & (boundary-1))
+	end = ((unsigned long)new_val & ~(boundary-1)) + boundary;
 
-    *pos_thres = end;
-    bc->len = end - new_val;
+    *pos_thres = (long)end;
+    bc->len = end - (unsigned long)new_val;
 
     if (align->maxskip) {
 	unsigned long maxskip =
 	    yasm_intnum_get_uint(yasm_expr_get_intnum(&align->maxskip, 0));
-	if ((end - new_val) > maxskip)
+	if ((end - (unsigned long)new_val) > maxskip)
 	    bc->len = 0;
     }
     return 1;
