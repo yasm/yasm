@@ -100,15 +100,15 @@ int yasm_value_finalize_expr(/*@out@*/ yasm_value *value,
 			     /*@null@*/ /*@kept@*/ yasm_expr *e,
 			     unsigned int size);
 
-/** Get value if absolute, pure relative, or PC-relative section-local
- * relative.  Returns NULL otherwise.
+/** Get value if absolute or PC-relative section-local relative.  Returns NULL
+ * otherwise.
  * \param value		value
  * \param bc		current bytecode (for PC-relative calculation); if
  *			NULL, NULL is returned for PC-relative values.
  * \param calc_bc_dist	if nonzero, calculates bytecode distances in absolute
  *			portion of value
  * \note Adds in value.rel (correctly) if PC-relative and in the same section
- *       as bc (and there is no WRT or SEG), or if value is pure-relative.
+ *       as bc (and there is no WRT or SEG).
  * \return Intnum if can be resolved to integer value, otherwise NULL.
  */
 /*@null@*/ /*@only@*/ yasm_intnum *yasm_value_get_intnum
