@@ -16,6 +16,7 @@ libyasm_a_SOURCES += libyasm/file.c
 libyasm_a_SOURCES += libyasm/floatnum.c
 libyasm_a_SOURCES += libyasm/hamt.c
 libyasm_a_SOURCES += libyasm/intnum.c
+libyasm_a_SOURCES += libyasm/inttree.c
 libyasm_a_SOURCES += libyasm/linemgr.c
 libyasm_a_SOURCES += libyasm/md5.c
 libyasm_a_SOURCES += libyasm/mergesort.c
@@ -28,8 +29,6 @@ libyasm_a_SOURCES += libyasm/valparam.c
 libyasm_a_SOURCES += libyasm/value.c
 libyasm_a_SOURCES += libyasm/xmalloc.c
 libyasm_a_SOURCES += libyasm/xstrdup.c
-libyasm_a_SOURCES += libyasm/stack.c
-libyasm_a_SOURCES += libyasm/interval_tree.c
 libyasm_a_SOURCES += module.c
 
 module.c: $(top_srcdir)/libyasm/module.in genmodule$(EXEEXT) Makefile
@@ -67,6 +66,7 @@ modinclude_HEADERS += libyasm/file.h
 modinclude_HEADERS += libyasm/floatnum.h
 modinclude_HEADERS += libyasm/hamt.h
 modinclude_HEADERS += libyasm/intnum.h
+modinclude_HEADERS += libyasm/inttree.h
 modinclude_HEADERS += libyasm/linemgr.h
 modinclude_HEADERS += libyasm/listfmt.h
 modinclude_HEADERS += libyasm/md5.h
@@ -79,8 +79,6 @@ modinclude_HEADERS += libyasm/section.h
 modinclude_HEADERS += libyasm/symrec.h
 modinclude_HEADERS += libyasm/valparam.h
 modinclude_HEADERS += libyasm/value.h
-modinclude_HEADERS += libyasm/stack.h
-modinclude_HEADERS += libyasm/interval_tree.h
 
 EXTRA_DIST += libyasm/tests/Makefile.inc
 

@@ -169,6 +169,9 @@
 				RelativePath="..\..\..\libyasm\intnum.c">
 			</File>
 			<File
+				RelativePath="..\..\..\libyasm\inttree.c">
+			</File>
+			<File
 				RelativePath="..\..\..\libyasm\linemgr.c">
 			</File>
 			<File
@@ -258,6 +261,9 @@
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\intnum.h">
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\inttree.h">
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\linemgr.h">

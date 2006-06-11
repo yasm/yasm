@@ -32,6 +32,7 @@ LIBYASM_OBJS= \
  libyasm/floatnum.o \
  libyasm/hamt.o \
  libyasm/intnum.o \
+ libyasm/inttree.o \
  libyasm/linemgr.o \
  libyasm/md5.o \
  libyasm/mergesort.o \
