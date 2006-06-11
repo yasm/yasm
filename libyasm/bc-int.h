@@ -38,7 +38,11 @@ typedef struct yasm_bytecode_callback {
     int (*tobytes) (yasm_bytecode *bc, unsigned char **bufp, void *d,
 		    yasm_output_value_func output_value,
 		    /*@null@*/ yasm_output_reloc_func output_reloc);
-    int reserve;    /* Reserve space instead of outputting data */
+    enum {
+	YASM_BC_SPECIAL_NONE = 0,
+	YASM_BC_SPECIAL_RESERVE,/* Reserves space instead of outputting data */
+	YASM_BC_SPECIAL_OFFSET	/* Adjusts offset instead of calculating len */
+    } special;
 } yasm_bytecode_callback;
 
 struct yasm_bytecode {

@@ -83,20 +83,13 @@ yasm_bc_create_common(const yasm_bytecode_callback *callback, void *contents,
     yasm_bytecode *bc = yasm_xmalloc(sizeof(yasm_bytecode));
 
     bc->callback = callback;
-
     bc->section = NULL;
-
     bc->multiple = (yasm_expr *)NULL;
     bc->len = 0;
-
     bc->line = line;
-
     bc->offset = ~0UL;	/* obviously incorrect / uninitialized value */
-
     bc->opt_flags = 0;
-
     bc->symrecs = NULL;
-
     bc->contents = contents;
 
     return bc;
@@ -206,29 +199,31 @@ yasm_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
     bc->len = 0;
 
     if (!bc->callback)
-	yasm_internal_error(N_("got empty bytecode in bc_resolve"));
+	yasm_internal_error(N_("got empty bytecode in yasm_bc_calc_len"));
     else
 	retval = bc->callback->calc_len(bc, add_span, add_span_data);
-#if 0
+
     /* Check for multiples */
     if (bc->multiple) {
 	/*@dependent@*/ /*@null@*/ const yasm_intnum *num;
 
-	num = yasm_expr_get_intnum(&bc->multiple, NULL);
-	if (!num) {
+	num = yasm_expr_get_intnum(&bc->multiple, 0);
+	if (num)
+	    bc->len *= yasm_intnum_get_uint(num);
+	else {
 	    if (yasm_expr__contains(bc->multiple, YASM_EXPR_FLOAT)) {
 		yasm_error_set(YASM_ERROR_VALUE,
 		    N_("expression must not contain floating point value"));
 		retval = -1;
 	    } else {
 		/* FIXME: Non-constant currently not allowed. */
-		yasm__error(bc->line,
-			    N_("attempt to use non-constant multiple"));
+		yasm_error_set(YASM_ERROR_VALUE,
+			       N_("attempt to use non-constant multiple"));
 		retval = -1;
 	    }
 	}
     }
-#endif
+
     /* If we got an error somewhere along the line, clear out any calc len */
     if (retval < 0)
 	bc->len = 0;
@@ -241,7 +236,7 @@ yasm_bc_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 	       /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
     if (!bc->callback) {
-	yasm_internal_error(N_("got empty bytecode in bc_set_long"));
+	yasm_internal_error(N_("got empty bytecode in yasm_bc_expand"));
 	/*@unreached@*/
 	return 0;
     } else
@@ -267,7 +262,7 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
     }
 
     /* special case for reserve bytecodes */
-    if (bc->callback->reserve) {
+    if (bc->callback->special == YASM_BC_SPECIAL_RESERVE) {
 	*bufsize = bc->len;
 	*gap = 1;
 	return NULL;	/* we didn't allocate a buffer */

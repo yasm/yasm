@@ -47,12 +47,6 @@ cdef extern from "libyasm/bytecode.h":
     cdef struct yasm_dataval
     cdef struct yasm_datavalhead
 
-    cdef enum yasm_bc_resolve_flags:
-        YASM_BC_RESOLVE_NONE
-        YASM_BC_RESOLVE_ERROR
-        YASM_BC_RESOLVE_MIN_LEN
-        YASM_BC_RESOLVE_UNKNOWN_LEN
-
     cdef yasm_immval* yasm_imm_create_expr(yasm_expr *e)
     cdef yasm_expr* yasm_ea_get_disp(yasm_effaddr *ea)
     cdef void yasm_ea_set_len(yasm_effaddr *ea, unsigned int len)
@@ -118,6 +112,11 @@ cdef extern from "libyasm/bytecode.h":
             int indent_level)
 
 cdef extern from "libyasm/bc-int.h":
+    cdef enum yasm_bc_special:
+        YASM_BC_SPECIAL_NONE
+        YASM_BC_SPECIAL_RESERVE
+        YASM_BC_SPECIAL_OFFSET
+
     cdef struct yasm_bytecode_callback:
         void (*destroy) (void *contents)
         void (*c_print "print") (void *contents, FILE *f, int indent_level)
@@ -129,7 +128,7 @@ cdef extern from "libyasm/bc-int.h":
         int (*tobytes) (yasm_bytecode *bc, unsigned char **bufp, void *d,
 	                yasm_output_value_func output_value,
 		        yasm_output_reloc_func output_reloc)
-        int reserve
+        yasm_bc_special special
 
     cdef struct yasm_bytecode:
         yasm_bytecode_callback *callback

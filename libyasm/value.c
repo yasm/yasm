@@ -494,31 +494,33 @@ yasm_value_get_intnum(yasm_value *value, yasm_bytecode *bc, int calc_bc_dist)
     }
 
     if (value->rel) {
-	/* If relative portion is not in bc section, return NULL.
-	 * Otherwise get the relative portion's offset.
-	 */
+	/* Get the relative portion's offset. */
 	/*@dependent@*/ yasm_bytecode *rel_prevbc;
 	unsigned long dist;
 
-	if (!bc)
-	    return NULL;    /* Can't calculate relative value */
+	if (!calc_bc_dist)
+	    return NULL;    /* Don't calculate BC distance */
 
 	sym_local = yasm_symrec_get_label(value->rel, &rel_prevbc);
 	if (value->wrt || value->seg_of || value->section_rel || !sym_local)
 	    return NULL;    /* we can't handle SEG, WRT, or external symbols */
-	if (rel_prevbc->section != bc->section)
-	    return NULL;    /* not in this section */
-	if (!value->curpos_rel)
-	    return NULL;    /* not PC-relative */
 
-	/* Calculate value relative to current assembly position */
+	/* Calculate relative value as integer */
 	dist = rel_prevbc->offset + rel_prevbc->len;
-	if (dist < bc->offset) {
-	    outval = yasm_intnum_create_uint(bc->offset - dist);
-	    yasm_intnum_calc(outval, YASM_EXPR_NEG, NULL);
-	} else {
-	    dist -= bc->offset;
-	    outval = yasm_intnum_create_uint(dist);
+	if (value->curpos_rel) {
+	    /* PC-relative */
+	    if (!bc)
+		return NULL;    /* Can't calculate PC-relative value */
+	    if (rel_prevbc->section != bc->section)
+		return NULL;    /* not in this section */
+
+	    if (dist < bc->offset) {
+		outval = yasm_intnum_create_uint(bc->offset - dist);
+		yasm_intnum_calc(outval, YASM_EXPR_NEG, NULL);
+	    } else {
+		dist -= bc->offset;
+		outval = yasm_intnum_create_uint(dist);
+	    }
 	}
 
 	if (value->rshift > 0) {

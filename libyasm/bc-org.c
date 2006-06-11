@@ -64,7 +64,7 @@ static const yasm_bytecode_callback bc_org_callback = {
     bc_org_calc_len,
     bc_org_expand,
     bc_org_tobytes,
-    0
+    YASM_BC_SPECIAL_OFFSET
 };
 
 
@@ -91,20 +91,13 @@ static int
 bc_org_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 		void *add_span_data)
 {
-    yasm_internal_error(N_("org not yet implemented"));
-#if 0
     bytecode_org *org = (bytecode_org *)bc->contents;
+    long neg_thres = 0;
+    long pos_thres = org->start;
 
-    /* Check for overrun */
-    if (bc->offset > org->start) {
-	yasm_error_set(YASM_ERROR_GENERAL,
-		       N_("ORG overlap with already existing data"));
-	return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
-    }
+    if (bc_org_expand(bc, 0, 0, (long)bc->offset, &neg_thres, &pos_thres) < 0)
+	return -1;
 
-    /* Generate space to start offset */
-    bc->len = org->start - bc->offset;
-#endif
     return 0;
 }
 
@@ -112,8 +105,18 @@ static int
 bc_org_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 	      /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
-    yasm_internal_error(N_("org not yet implemented"));
-    return 0;
+    bytecode_org *org = (bytecode_org *)bc->contents;
+
+    /* Check for overrun */
+    if ((unsigned long)new_val > org->start) {
+	yasm_error_set(YASM_ERROR_GENERAL,
+		       N_("ORG overlap with already existing data"));
+	return -1;
+    }
+
+    /* Generate space to start offset */
+    bc->len = org->start - new_val;
+    return 1;
 }
 
 static int

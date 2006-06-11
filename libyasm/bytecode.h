@@ -317,7 +317,7 @@ void yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
  * \param pos_thres	positive threshold for long/short decision
  */
 typedef void (*yasm_bc_add_span_func)
-    (void *add_span_data, yasm_bytecode *bc, int id, yasm_value *value,
+    (void *add_span_data, yasm_bytecode *bc, int id, const yasm_value *value,
      long neg_thres, long pos_thres);
 
 /** Resolve EQUs in a bytecode and calculate its minimum size.

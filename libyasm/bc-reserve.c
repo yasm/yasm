@@ -63,7 +63,7 @@ static const yasm_bytecode_callback bc_reserve_callback = {
     bc_reserve_calc_len,
     yasm_bc_expand_common,
     bc_reserve_tobytes,
-    1
+    YASM_BC_SPECIAL_RESERVE
 };
 
 

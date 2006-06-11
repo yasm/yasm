@@ -648,20 +648,19 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
  * Some portions are critical values that must not depend on any bytecode
  * offset (either relative or absolute).
  *
- * ALIGN: 0 length (always).  Bump offset to alignment.  Span from 0 to
- *        align bytecode, update on any change.  If span length
- *        increases past alignment, increase offset by alignment and update
- *        dependent spans.  Alignment is critical value.
- * ORG:   Same as align, but if span's length exceeds org value, error.
- *        ORG value is critical value.
+ * ALIGN/ORG/other offset-based bytecodes: Length set to bump offset to
+ *	alignment.  Span from 0 to bytecode, update on any change.  Can
+ *	update to new offset for things like align, which gets propagated
+ *	to update dependent spans.  Alignment/ORG value is critical value.
+ *	Cannot be combined with TIMES.
  *
  * How times is handled:
  *
  * TIMES: Handled separately from bytecode "raw" size.  If not span-dependent,
- *        trivial (just multiplied in at any bytecode size increase).  Span
- *        dependent times update on any change (span ID 0).  If the resultant
- *        next bytecode offset would be less than the old next bytecode offset,
- *        error.  Otherwise increase offset and update dependent spans.
+ *	trivial (just multiplied in at any bytecode size increase).  Span
+ *	dependent times update on any change (span ID 0).  If the resultant
+ *	next bytecode offset would be less than the old next bytecode offset,
+ *	error.  Otherwise increase offset and update dependent spans.
  *
  * To reduce interval tree size, a first expansion pass is performed
  * before the spans are added to the tree.
@@ -673,9 +672,8 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
  *     of all bytecodes assuming minimum length, building a list of all
  *     dependent spans as we go.
  *     "minimum" here means absolute minimum:
- *      - align 0 length, but bumps offset
+ *      - align/org (offset-based) bumps offset as normal
  *      - times values (with span-dependent values) assumed to be 0
- *      - org 0 length, but bumps offset
  *  b. Iterate over spans.  Set span length based on bytecode offsets
  *     determined in 1a.  If span is "certainly" long because the span
  *     is an absolute reference to another section (or external) or the
@@ -707,13 +705,12 @@ typedef struct yasm_span {
 
     /*@dependent@*/ yasm_bytecode *bc;
 
-    yasm_value *depval;
+    yasm_value depval;
 
     /* Special handling: see descriptions above */
     enum {
 	NOT_SPECIAL = 0,
-	SPECIAL_ALIGN,
-	SPECIAL_ORG,
+	SPECIAL_BC_OFFSET,
 	SPECIAL_TIMES
     } special;
 
@@ -734,13 +731,13 @@ typedef struct optimize_data {
 
 static void
 optimize_add_span(void *add_span_data, yasm_bytecode *bc, int id,
-		  yasm_value *value, long neg_thres, long pos_thres)
+		  const yasm_value *value, long neg_thres, long pos_thres)
 {
     optimize_data *optd = (optimize_data *)add_span_data;
     yasm_span *span = yasm_xmalloc(sizeof(yasm_span));
 
     span->bc = bc;
-    span->depval = value;
+    yasm_value_init_copy(&span->depval, value);
     span->special = NOT_SPECIAL;
     span->cur_val = 0;
     span->new_val = 0;
@@ -752,29 +749,42 @@ optimize_add_span(void *add_span_data, yasm_bytecode *bc, int id,
     STAILQ_INSERT_TAIL(&optd->spans, span, link);
 }
 
-static void
-update_all_bc_offsets(yasm_object *object)
+static int
+update_all_bc_offsets(yasm_object *object, yasm_errwarns *errwarns)
 {
     yasm_section *sect;
+    int saw_error = 0;
 
     STAILQ_FOREACH(sect, &object->sections, link) {
 	unsigned long offset = 0;
 
-	yasm_bytecode *cur = STAILQ_FIRST(&sect->bcs);
-	yasm_bytecode *prev;
+	yasm_bytecode *bc = STAILQ_FIRST(&sect->bcs);
+	yasm_bytecode *prevbc;
 
 	/* Skip our locally created empty bytecode first. */
-	prev = cur;
-	cur = STAILQ_NEXT(cur, link);
+	prevbc = bc;
+	bc = STAILQ_NEXT(bc, link);
 
 	/* Iterate through the remainder, if any. */
-	while (cur) {
-	    cur->offset = offset;
-	    offset += cur->len;
-	    prev = cur;
-	    cur = STAILQ_NEXT(cur, link);
+	while (bc) {
+	    if (bc->callback->special == YASM_BC_SPECIAL_OFFSET) {
+		/* Recalculate/adjust len of offset-based bytecodes here */
+		long neg_thres = 0;
+		long pos_thres = bc->offset+bc->len;
+		int retval = yasm_bc_expand(bc, 0, 0,
+					    (long)(prevbc->offset+prevbc->len),
+					    &neg_thres, &pos_thres);
+		yasm_errwarn_propagate(errwarns, bc->line);
+		if (retval < 0)
+		    saw_error = 1;
+	    }
+	    bc->offset = offset;
+	    offset += bc->len;
+	    prevbc = bc;
+	    bc = STAILQ_NEXT(bc, link);
 	}
     }
+    return saw_error;
 }
 
 void
@@ -797,31 +807,55 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
     STAILQ_FOREACH(sect, &object->sections, link) {
 	unsigned long offset = 0;
 
-	yasm_bytecode *cur = STAILQ_FIRST(&sect->bcs);
-	yasm_bytecode *prev;
+	yasm_bytecode *bc = STAILQ_FIRST(&sect->bcs);
+	yasm_bytecode *prevbc;
 
-	cur->bc_index = bc_index++;
+	bc->bc_index = bc_index++;
 
 	/* Skip our locally created empty bytecode first. */
-	prev = cur;
-	cur = STAILQ_NEXT(cur, link);
+	prevbc = bc;
+	bc = STAILQ_NEXT(bc, link);
 
 	/* Iterate through the remainder, if any. */
-	while (cur) {
-	    cur->bc_index = bc_index++;
+	while (bc) {
+	    bc->bc_index = bc_index++;
+	    bc->offset = offset;
 
-	    if (yasm_bc_calc_len(cur, optimize_add_span, &optd))
+	    retval = yasm_bc_calc_len(bc, optimize_add_span, &optd);
+	    yasm_errwarn_propagate(errwarns, bc->line);
+	    if (retval)
 		saw_error = 1;
-	    yasm_errwarn_propagate(errwarns, cur->line);
+	    else {
+		if (bc->callback->special == YASM_BC_SPECIAL_OFFSET) {
+		    span = yasm_xmalloc(sizeof(yasm_span));
 
-	    /* TODO: times */
-	    if (cur->multiple)
-		yasm_internal_error("multiple not yet supported");
+		    span->bc = bc;
+		    yasm_value_initialize(&span->depval, NULL, 0);
+		    span->special = SPECIAL_BC_OFFSET;
+		    span->cur_val = (long)(prevbc->offset+prevbc->len);
+		    span->new_val = 0;
+		    span->neg_thres = 0;
+		    span->pos_thres = (long)(bc->offset+bc->len);
+		    span->id = 0;
+		    span->active = 1;
 
-	    cur->offset = offset;
-	    offset += cur->len;
-	    prev = cur;
-	    cur = STAILQ_NEXT(cur, link);
+		    STAILQ_INSERT_TAIL(&optd.spans, span, link);
+		    if (bc->multiple) {
+			yasm_error_set(YASM_ERROR_VALUE,
+			    N_("cannot combine multiples and setting assembly position"));
+			yasm_errwarn_propagate(errwarns, span->bc->line);
+			saw_error = 1;
+		    }
+		}
+		/* TODO: times */
+		if (bc->len != 0 && bc->multiple) {
+		    yasm_internal_error("multiple not yet supported");
+		}
+		offset += bc->len;
+	    }
+
+	    prevbc = bc;
+	    bc = STAILQ_NEXT(bc, link);
 	}
     }
 
@@ -832,47 +866,61 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
     STAILQ_FOREACH(span, &optd.spans, link) {
 	if (!span->active)
 	    continue;
-	yasm_value_init_copy(&val, span->depval);
-	num = yasm_value_get_intnum(&val, span->bc, 1);
-	if (num) {
-	    span->new_val = yasm_intnum_get_int(num);
-	    yasm_intnum_destroy(num);
-	} else {
-	    /* external or too complex; force to longer form */
-	    span->new_val = LONG_MAX;
-	    span->active = 0;
-	}
-	yasm_value_delete(&val);
-
-	if ((span->id == 0 && span->new_val != span->cur_val) ||
-	    (span->new_val < span->neg_thres
-	     || span->new_val > span->pos_thres)) {
-	    retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
-				    span->new_val, &neg_thres, &pos_thres);
-	    yasm_errwarn_propagate(errwarns, span->bc->line);
-	    if (retval < 0)
-		saw_error = 1;
-	    else if (retval > 0) {
-		if (!span->active) {
-		    yasm_error_set(YASM_ERROR_VALUE,
-				   N_("secondary expansion of an external/complex value"));
-		    yasm_errwarn_propagate(errwarns, span->bc->line);
-		    saw_error = 1;
+	switch (span->special) {
+	    case NOT_SPECIAL:
+		yasm_value_init_copy(&val, &span->depval);
+		num = yasm_value_get_intnum(&val, span->bc, 1);
+		if (num) {
+		    span->new_val = yasm_intnum_get_int(num);
+		    yasm_intnum_destroy(num);
 		} else {
-		    span->neg_thres = neg_thres;
-		    span->pos_thres = pos_thres;
+		    /* external or too complex; force to longest form */
+		    span->new_val = LONG_MAX;
+		    span->active = 0;
 		}
-	    } else
-		span->active = 0;
+		yasm_value_delete(&val);
+
+		if ((span->id == 0 && span->new_val != span->cur_val) ||
+		    (span->new_val < span->neg_thres
+		     || span->new_val > span->pos_thres)) {
+		    retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
+					    span->new_val, &neg_thres,
+					    &pos_thres);
+		    yasm_errwarn_propagate(errwarns, span->bc->line);
+		    if (retval < 0)
+			saw_error = 1;
+		    else if (retval > 0) {
+			if (!span->active) {
+			    yasm_error_set(YASM_ERROR_VALUE,
+				N_("secondary expansion of an external/complex value"));
+			    yasm_errwarn_propagate(errwarns, span->bc->line);
+			    saw_error = 1;
+			} else {
+			    span->neg_thres = neg_thres;
+			    span->pos_thres = pos_thres;
+			}
+		    } else
+			span->active = 0;
+		}
+		span->cur_val = span->new_val;
+		if (span->active) {
+		    /* Add to interval tree */
+		}
+		break;
+	    case SPECIAL_BC_OFFSET:
+		/* Add to interval tree; nothing else to do here */
+		break;
+	    case SPECIAL_TIMES:
+		break;
 	}
-	span->cur_val = span->new_val;
     }
 
     if (saw_error)
 	return;
 
     /* Step 1c */
-    update_all_bc_offsets(object);
+    if (update_all_bc_offsets(object, errwarns))
+	return;
 
     /* Step 1d */
     STAILQ_FOREACH(span, &optd.spans, link) {
@@ -883,5 +931,5 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
     /* Step 2 */
 
     /* Step 3 */
-    update_all_bc_offsets(object);
+    update_all_bc_offsets(object, errwarns);
 }

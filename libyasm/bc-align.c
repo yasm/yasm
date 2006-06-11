@@ -71,7 +71,7 @@ static const yasm_bytecode_callback bc_align_callback = {
     bc_align_calc_len,
     bc_align_expand,
     bc_align_tobytes,
-    0
+    YASM_BC_SPECIAL_OFFSET
 };
 
 
@@ -121,31 +121,13 @@ static int
 bc_align_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 		  void *add_span_data)
 {
-    yasm_internal_error(N_("align not yet implemented"));
-#if 0
-    bytecode_align *align = (bytecode_align *)bc->contents;
-    unsigned long end;
-    unsigned long boundary =
-	yasm_intnum_get_uint(yasm_expr_get_intnum(&align->boundary, NULL));
+    long neg_thres = 0;
+    long pos_thres = 0;
 
-    if (boundary == 0) {
-	bc->len = 0;
-	return YASM_BC_RESOLVE_MIN_LEN;
-    }
+    if (bc_align_expand(bc, 0, 0, (long)bc->offset, &neg_thres,
+			&pos_thres) < 0)
+	return -1;
 
-    end = bc->offset;
-    if (bc->offset & (boundary-1))
-	end = (bc->offset & ~(boundary-1)) + boundary;
-
-    bc->len = end - bc->offset;
-
-    if (align->maxskip) {
-	unsigned long maxskip =
-	    yasm_intnum_get_uint(yasm_expr_get_intnum(&align->maxskip, NULL));
-	if ((end - bc->offset) > maxskip)
-	    bc->len = 0;
-    }
-#endif
     return 0;
 }
 
@@ -153,8 +135,31 @@ static int
 bc_align_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 		/*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
-    yasm_internal_error(N_("align not yet implemented"));
-    return 0;
+    bytecode_align *align = (bytecode_align *)bc->contents;
+    unsigned long end;
+    unsigned long boundary =
+	yasm_intnum_get_uint(yasm_expr_get_intnum(&align->boundary, 0));
+
+    if (boundary == 0) {
+	bc->len = 0;
+	*pos_thres = 0;
+	return 0;
+    }
+
+    end = new_val;
+    if (new_val & (boundary-1))
+	end = (new_val & ~(boundary-1)) + boundary;
+
+    *pos_thres = end;
+    bc->len = end - new_val;
+
+    if (align->maxskip) {
+	unsigned long maxskip =
+	    yasm_intnum_get_uint(yasm_expr_get_intnum(&align->maxskip, 0));
+	if ((end - new_val) > maxskip)
+	    bc->len = 0;
+    }
+    return 1;
 }
 
 static int
