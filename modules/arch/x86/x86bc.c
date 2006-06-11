@@ -607,7 +607,7 @@ x86_bc_insn_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
     yasm_effaddr *ea = &x86_ea->ea;
     yasm_immval *imm = insn->imm;
 
-    if (ea && ea->disp.abs) {
+    if (ea && span == 1) {
 	/* Change displacement length into word-sized */
 	if (ea->disp.size == 0) {
 	    ea->disp.size = (insn->common.addrsize == 16) ? 16 : 32;
@@ -618,7 +618,7 @@ x86_bc_insn_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 	}
     }
 
-    if (imm && imm->val.abs) {
+    if (imm && span == 2) {
 	if (insn->postop == X86_POSTOP_SIGNEXT_IMM8) {
 	    /* Update bc->len for new opcode and immediate size */
 	    bc->len -= insn->opcode.len;
