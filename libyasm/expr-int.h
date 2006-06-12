@@ -32,10 +32,11 @@ typedef enum {
     YASM_EXPR_NONE = 0,
     YASM_EXPR_REG = 1<<0,
     YASM_EXPR_INT = 1<<1,
-    YASM_EXPR_FLOAT = 1<<2,
-    YASM_EXPR_SYM = 1<<3,
-    YASM_EXPR_SYMEXP = 1<<4, /* post-expanded sym (due to absolute expansion) */
-    YASM_EXPR_EXPR = 1<<5
+    YASM_EXPR_SUBST = 1<<2,
+    YASM_EXPR_FLOAT = 1<<3,
+    YASM_EXPR_SYM = 1<<4,
+    YASM_EXPR_SYMEXP = 1<<5, /* post-expanded sym (due to absolute expansion) */
+    YASM_EXPR_EXPR = 1<<6
 } yasm_expr__type;
 
 struct yasm_expr__item {
@@ -46,6 +47,7 @@ struct yasm_expr__item {
 	yasm_intnum *intn;
 	yasm_floatnum *flt;
 	unsigned long reg;
+	unsigned int subst;
     } data;
 };
 
@@ -84,5 +86,29 @@ void yasm_expr__order_terms(yasm_expr *e);
 yasm_expr *yasm_expr__copy_except(const yasm_expr *e, int except);
 
 int yasm_expr__contains(const yasm_expr *e, yasm_expr__type t);
+
+/** Transform symrec-symrec terms in expression into YASM_EXPR_SUBST items.
+ * Calls the callback function for each symrec-symrec term.
+ * \param ep		expression (pointer to)
+ * \param cbd		callback data passed to callback function
+ * \param callback	callback function: given subst index for bytecode
+ *			pair, bytecode pair (bc2-bc1), and cbd (callback data)
+ * \return Number of transformations made.
+ */
+int yasm_expr__bc_dist_subst(yasm_expr **ep, void *cbd,
+			     void (*callback) (unsigned int subst,
+					       yasm_bytecode *precbc,
+					       yasm_bytecode *precbc2,
+					       void *cbd));
+
+/** Substitute items into expr YASM_EXPR_SUBST items (by index).  Items are
+ * copied, so caller is responsible for freeing array of items.
+ * \param e		expression
+ * \param num_items	number of items in items array
+ * \param items		items array
+ * \return 1 on error (index out of range).
+ */
+int yasm_expr__subst(yasm_expr *e, unsigned int num_items,
+		     const yasm_expr__item *items);
 
 #endif

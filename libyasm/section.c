@@ -46,6 +46,7 @@
 #include "section.h"
 #include "objfmt.h"
 
+#include "expr-int.h"
 #include "bc-int.h"
 
 
@@ -697,13 +698,29 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
  * 3. Final pass over bytecodes to generate final offsets.
  */
 
-typedef struct yasm_span {
+typedef struct yasm_span yasm_span;
+
+typedef struct yasm_span_term {
+    yasm_bytecode *precbc, *precbc2;
+    yasm_span *span;	    /* span this term is a member of */
+    long cur_val, new_val;
+    unsigned int subst;
+} yasm_span_term;
+
+struct yasm_span {
     /*@reldef@*/ STAILQ_ENTRY(yasm_span) link;	/* for allocation tracking */
     /*@reldef@*/ STAILQ_ENTRY(yasm_span) linkq;	/* for Q */
 
     /*@dependent@*/ yasm_bytecode *bc;
 
     yasm_value depval;
+
+    /* span term for relative portion of value */
+    yasm_span_term *rel_term;
+    /* span terms in absolute portion of value */
+    yasm_span_term *terms;
+    yasm_expr__item *items;
+    unsigned int num_terms;
 
     /* Special handling: see descriptions above */
     enum {
@@ -721,10 +738,11 @@ typedef struct yasm_span {
     int id;
 
     int active;
-} yasm_span;
+};
 
 typedef struct optimize_data {
-    /*@reldef@*/ STAILQ_HEAD(yasm_spanhead, yasm_span) spans;
+    /*@reldef@*/ STAILQ_HEAD(, yasm_span) spans;
+    /*@reldef@*/ STAILQ_HEAD(, yasm_span) Q;
 } optimize_data;
 
 static void
@@ -736,6 +754,10 @@ optimize_add_span(void *add_span_data, yasm_bytecode *bc, int id,
 
     span->bc = bc;
     yasm_value_init_copy(&span->depval, value);
+    span->rel_term = NULL;
+    span->terms = NULL;
+    span->items = NULL;
+    span->num_terms = 0;
     span->special = NOT_SPECIAL;
     span->cur_val = 0;
     span->new_val = 0;
@@ -747,26 +769,114 @@ optimize_add_span(void *add_span_data, yasm_bytecode *bc, int id,
     STAILQ_INSERT_TAIL(&optd->spans, span, link);
 }
 
-/* Recalculate span value based on current bytecode offsets.
+static void
+add_span_term(unsigned int subst, yasm_bytecode *precbc,
+	      yasm_bytecode *precbc2, void *d)
+{
+    yasm_span *span = d;
+    yasm_intnum *intn;
+
+    if (subst >= span->num_terms) {
+	/* Linear expansion since total number is essentially always small */
+	span->num_terms = subst+1;
+	span->terms = yasm_xrealloc(span->terms,
+				    span->num_terms*sizeof(yasm_span_term));
+    }
+    span->terms[subst].precbc = precbc;
+    span->terms[subst].precbc2 = precbc2;
+    span->terms[subst].span = span;
+    span->terms[subst].subst = subst;
+
+    intn = yasm_calc_bc_dist(precbc, precbc2);
+    if (!intn)
+	yasm_internal_error(N_("could not calculate bc distance"));
+    span->terms[subst].cur_val = 0;
+    span->terms[subst].new_val = yasm_intnum_get_int(intn);
+    yasm_intnum_destroy(intn);
+}
+
+static void
+span_create_terms(yasm_span *span)
+{
+    unsigned int i;
+    yasm_intnum *intn;
+
+    /* Split out sym-sym terms in absolute portion of dependent value */
+    if (span->depval.abs) {
+	span->num_terms = yasm_expr__bc_dist_subst(&span->depval.abs, span,
+						   add_span_term);
+	if (span->num_terms > 0) {
+	    span->items = yasm_xmalloc(span->num_terms*sizeof(yasm_expr__item));
+	    for (i=0; i<span->num_terms; i++) {
+		/* Create items with dummy value */
+		span->items[i].type = YASM_EXPR_INT;
+		span->items[i].data.intn = yasm_intnum_create_int(0);
+	    }
+	}
+    }
+
+    /* Create term for relative portion of dependent value */
+    if (span->depval.rel) {
+	yasm_bytecode *rel_precbc;
+	int sym_local;
+
+	sym_local = yasm_symrec_get_label(span->depval.rel, &rel_precbc);
+	if (span->depval.wrt || span->depval.seg_of || span->depval.section_rel
+	    || !sym_local)
+	    return;	/* we can't handle SEG, WRT, or external symbols */
+	if (rel_precbc->section != span->bc->section)
+	    return;	/* not in this section */
+	if (!span->depval.curpos_rel)
+	    return;	/* not PC-relative */
+
+	span->rel_term = yasm_xmalloc(sizeof(yasm_span_term));
+	span->rel_term->precbc = rel_precbc;
+	span->rel_term->precbc2 = NULL;
+	span->rel_term->span = span;
+	span->rel_term->subst = ~0U;
+
+	span->rel_term->cur_val = 0;
+	span->rel_term->new_val =
+	    rel_precbc->offset + rel_precbc->len - span->bc->offset;
+    }
+}
+
+/* Recalculate span value based on current span replacement values.
  * Returns 1 if span exceeded thresholds.
  */
 static int
 recalc_normal_span(yasm_span *span)
 {
-    yasm_value val;
-    /*@null@*/ /*@only@*/ yasm_intnum *num;
+    span->new_val = 0;
 
-    yasm_value_init_copy(&val, &span->depval);
-    num = yasm_value_get_intnum(&val, span->bc, 1);
-    if (num) {
-	span->new_val = yasm_intnum_get_int(num);
-	yasm_intnum_destroy(num);
-    } else {
-	/* external or too complex; force to longest form */
-	span->new_val = LONG_MAX;
-	span->active = 0;
+    if (span->depval.abs) {
+	yasm_expr *abs_copy = yasm_expr_copy(span->depval.abs);
+	/*@null@*/ /*@dependent@*/ yasm_intnum *num;
+
+	/* Update sym-sym terms and substitute back into expr */
+	unsigned int i;
+	for (i=0; i<span->num_terms; i++)
+	    yasm_intnum_set_int(span->items[i].data.intn,
+				span->terms[i].new_val);
+	yasm_expr__subst(abs_copy, span->num_terms, span->items);
+	num = yasm_expr_get_intnum(&abs_copy, 0);
+	if (num)
+	    span->new_val = yasm_intnum_get_int(num);
+	else
+	    span->new_val = LONG_MAX; /* too complex; force to longest form */
+	yasm_expr_destroy(abs_copy);
     }
-    yasm_value_delete(&val);
+
+    if (span->depval.rel && span->new_val != LONG_MAX) {
+	if (span->rel_term) {
+	    span->new_val += span->rel_term->new_val >> span->depval.rshift;
+	} else
+	    span->new_val = LONG_MAX; /* too complex; force to longest form */
+    }
+
+    if (span->new_val == LONG_MAX)
+	span->active = 0;
+
     return (span->new_val < span->neg_thres
 	    || span->new_val > span->pos_thres);
 }
@@ -823,7 +933,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
     yasm_span *span;
     long neg_thres, pos_thres;
     int retval;
-    /*@reldef@*/ STAILQ_HEAD(yasm_spanhead, yasm_span) Q;
+    unsigned int i;
 
     STAILQ_INIT(&optd.spans);
 
@@ -855,6 +965,10 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 
 		    span->bc = bc;
 		    yasm_value_initialize(&span->depval, NULL, 0);
+		    span->rel_term = NULL;
+		    span->terms = NULL;
+		    span->items = NULL;
+		    span->num_terms = 0;
 		    span->special = SPECIAL_BC_OFFSET;
 		    span->cur_val = (long)bc->offset;
 		    span->new_val = 0;
@@ -890,6 +1004,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
     STAILQ_FOREACH(span, &optd.spans, link) {
 	if (!span->active)
 	    continue;
+	span_create_terms(span);
 	switch (span->special) {
 	    case NOT_SPECIAL:
 		if (recalc_normal_span(span)) {
@@ -930,24 +1045,43 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	return;
 
     /* Step 1d */
-    STAILQ_INIT(&Q);
+    STAILQ_INIT(&optd.Q);
     STAILQ_FOREACH(span, &optd.spans, link) {
+	yasm_intnum *intn;
+
 	if (!span->active)
 	    continue;
+
+	/* Update span terms based on new bc offsets */
+	for (i=0; i<span->num_terms; i++) {
+	    intn = yasm_calc_bc_dist(span->terms[i].precbc,
+				     span->terms[i].precbc2);
+	    if (!intn)
+		yasm_internal_error(N_("could not calculate bc distance"));
+	    span->terms[i].cur_val = span->terms[i].new_val;
+	    span->terms[i].new_val = yasm_intnum_get_int(intn);
+	    yasm_intnum_destroy(intn);
+	}
+	if (span->rel_term) {
+	    span->rel_term->cur_val = span->rel_term->new_val;
+	    span->rel_term->new_val = span->rel_term->precbc->offset
+		+ span->rel_term->precbc->len - span->bc->offset;
+	}
+
 	switch (span->special) {
 	    case NOT_SPECIAL:
 		/* Add to interval tree */
 
 		if (recalc_normal_span(span)) {
 		    /* Exceeded threshold, add span to Q */
-		    STAILQ_INSERT_TAIL(&Q, span, linkq);
+		    STAILQ_INSERT_TAIL(&optd.Q, span, linkq);
 		}
 		break;
 	    case SPECIAL_BC_OFFSET:
 		/* Add to interval tree */
 
 		/* It's impossible to exceed any threshold here (as we just
-		 * adjusted this when updating the BC offsets, so just update
+		 * adjusted this when updating the BC offsets), so just update
 		 * span values and thresholds.
 		 */
 		span->new_val = (long)span->bc->offset;
@@ -960,9 +1094,25 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
     }
 
     /* Step 2 */
-    while (!STAILQ_EMPTY(&Q)) {
+    while (!STAILQ_EMPTY(&optd.Q)) {
 	yasm_internal_error(N_("second optimization phase not implemented"));
+	span = STAILQ_FIRST(&optd.Q);
+	STAILQ_REMOVE_HEAD(&optd.Q, linkq);
+	retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
+				span->new_val, &neg_thres, &pos_thres);
+	yasm_errwarn_propagate(errwarns, span->bc->line);
+	if (retval < 0)
+	    saw_error = 1;
+	else if (retval > 0) {
+	    span->neg_thres = neg_thres;
+	    span->pos_thres = pos_thres;
+	} else
+	    span->active = 0;
+
     }
+
+    if (saw_error)
+	return;
 
     /* Step 3 */
     update_all_bc_offsets(object, errwarns);
