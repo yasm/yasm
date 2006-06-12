@@ -594,6 +594,27 @@ yasm_intnum_set_uint(yasm_intnum *intn, unsigned long val)
     intn->val.ul = val;
 }
 
+void
+yasm_intnum_set_int(yasm_intnum *intn, long val)
+{
+    /* positive numbers can go through the uint() function */
+    if (i >= 0) {
+	yasm_intnum_set_uint(intn, (unsigned long)i);
+	return;
+    }
+
+    BitVector_Empty(conv_bv);
+    BitVector_Chunk_Store(conv_bv, 32, 0, (unsigned long)(-i));
+    BitVector_Negate(conv_bv, conv_bv);
+
+    if (intn->type == INTNUM_BV)
+	BitVector_Copy(intn->val.bv, conv_bv);
+    else {
+	intn->val.bv = BitVector_Clone(conv_bv);
+	intn->type = INTNUM_BV;
+    }
+}
+
 int
 yasm_intnum_is_zero(const yasm_intnum *intn)
 {

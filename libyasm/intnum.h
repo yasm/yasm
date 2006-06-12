@@ -136,6 +136,12 @@ void yasm_intnum_zero(yasm_intnum *intn);
  */
 void yasm_intnum_set_uint(yasm_intnum *intn, unsigned long val);
 
+/** Set an intnum to an signed integer.
+ * \param intn	    intnum
+ * \param val	    integer value
+ */
+void yasm_intnum_set_int(yasm_intnum *intn, long val);
+
 /** Simple value check for 0.
  * \param acc	    intnum
  * \return Nonzero if acc==0.
