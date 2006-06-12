@@ -598,13 +598,13 @@ void
 yasm_intnum_set_int(yasm_intnum *intn, long val)
 {
     /* positive numbers can go through the uint() function */
-    if (i >= 0) {
-	yasm_intnum_set_uint(intn, (unsigned long)i);
+    if (val >= 0) {
+	yasm_intnum_set_uint(intn, (unsigned long)val);
 	return;
     }
 
     BitVector_Empty(conv_bv);
-    BitVector_Chunk_Store(conv_bv, 32, 0, (unsigned long)(-i));
+    BitVector_Chunk_Store(conv_bv, 32, 0, (unsigned long)(-val));
     BitVector_Negate(conv_bv, conv_bv);
 
     if (intn->type == INTNUM_BV)
