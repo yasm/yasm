@@ -746,6 +746,7 @@ typedef struct optimize_data {
     /*@reldef@*/ TAILQ_HEAD(, yasm_span) spans;
     /*@reldef@*/ STAILQ_HEAD(, yasm_span) Q;
     /*@only@*/ IntervalTree *itree;
+    unsigned long len_diff;	/* used only for optimize_term_expand */
 } optimize_data;
 
 static void
@@ -957,6 +958,45 @@ optimize_cleanup(optimize_data *optd)
     }
 }
 
+static void
+optimize_term_expand(IntervalTreeNode *node, void *d)
+{
+    optimize_data *optd = d;
+    yasm_span_term *term = node->data;
+    yasm_span *span = term->span;
+    unsigned long len_diff = optd->len_diff;
+
+    /* Update term length */
+    if (term->precbc2) {
+	if (term->precbc->bc_index > term->precbc2->bc_index)
+	    term->new_val += len_diff;
+	else
+	    term->new_val -= len_diff;
+    } else {
+	if (term->precbc->bc_index > span->bc->bc_index-1)
+	    term->new_val += len_diff;
+	else
+	    term->new_val -= len_diff;
+    }
+
+    /* Update term and check against thresholds */
+    if (!recalc_normal_span(span))
+	return;	/* didn't exceed thresholds, we're done */
+
+    /* Exceeded thresholds, probably need to add to Q for expansion */
+    switch (span->special) {
+	case NOT_SPECIAL:
+	    STAILQ_INSERT_TAIL(&optd->Q, span, linkq);
+	    break;
+	case SPECIAL_BC_OFFSET:
+	    /* Might not have to add to Q */
+	    yasm_internal_error(N_("bc offset expansion not implemented yet"));
+	    break;
+	case SPECIAL_TIMES:
+	    break;
+    }
+}
+
 void
 yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		     yasm_errwarns *errwarns)
@@ -1008,7 +1048,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		    span->special = SPECIAL_BC_OFFSET;
 		    span->cur_val = -((long)bc->offset);
 		    span->new_val = 0;
-		    span->neg_thres = (long)(bc->offset+bc->len);
+		    span->neg_thres = -((long)(bc->offset+bc->len));
 		    span->pos_thres = 0;
 		    span->id = 0;
 		    span->active = 1;
@@ -1128,7 +1168,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		 * span values and thresholds.
 		 */
 		span->new_val = span->rel_term->new_val;
-		span->neg_thres = (long)(span->bc->offset+span->bc->len);
+		span->neg_thres = -((long)(span->bc->offset+span->bc->len));
 		break;
 	    case SPECIAL_TIMES:
 		break;
@@ -1148,25 +1188,38 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		      (long)span->terms[i].precbc2->bc_index, &span->terms[i]);
 	if (span->rel_term)
 	    IT_insert(optd.itree, (long)span->rel_term->precbc->bc_index,
-		      (long)span->bc->bc_index-1, &span->rel_term);
+		      (long)span->bc->bc_index-1, span->rel_term);
     }
 
     /* Step 2 */
     while (!STAILQ_EMPTY(&optd.Q)) {
-	yasm_internal_error(N_("second optimization phase not implemented"));
+	unsigned long orig_len, len_diff;
 	span = STAILQ_FIRST(&optd.Q);
 	STAILQ_REMOVE_HEAD(&optd.Q, linkq);
+	orig_len = span->bc->len;
 	retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
 				span->new_val, &neg_thres, &pos_thres);
 	yasm_errwarn_propagate(errwarns, span->bc->line);
-	if (retval < 0)
+	if (retval < 0) {
 	    saw_error = 1;
-	else if (retval > 0) {
+	    continue;
+	} else if (retval > 0) {
+	    for (i=0; i<span->num_terms; i++)
+		span->terms[i].cur_val = span->terms[i].new_val;
+	    if (span->rel_term)
+		span->rel_term->cur_val = span->rel_term->new_val;
+	    span->cur_val = span->new_val;
 	    span->neg_thres = neg_thres;
 	    span->pos_thres = pos_thres;
 	} else
 	    span->active = 0;
-
+	if (orig_len > span->bc->len)
+	    yasm_internal_error(N_("length decreased during an expansion"));
+	len_diff = span->bc->len - orig_len;
+	if (len_diff == 0)
+	    continue;	/* didn't increase in size; unusual! */
+	IT_enumerate(optd.itree, (long)span->bc->bc_index,
+		     (long)span->bc->bc_index, &optd, optimize_term_expand);
     }
 
     if (saw_error) {
