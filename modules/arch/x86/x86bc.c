@@ -726,6 +726,9 @@ x86_bc_jmp_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 	return -1;
     }
 
+    if (jmp->op_sel == JMP_NEAR)
+	yasm_internal_error(N_("trying to expand an already-near jump"));
+
     /* Upgrade to a near jump */
     jmp->op_sel = JMP_NEAR;
     bc->len -= jmp->shortop.len + 1;

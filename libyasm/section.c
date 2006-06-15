@@ -966,6 +966,10 @@ optimize_term_expand(IntervalTreeNode *node, void *d)
     yasm_span *span = term->span;
     unsigned long len_diff = optd->len_diff;
 
+    /* Don't expand inactive spans */
+    if (!span->active)
+	return;
+
     /* Update term length */
     if (term->precbc2) {
 	if (term->precbc->bc_index > term->precbc2->bc_index)
@@ -1193,7 +1197,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 
     /* Step 2 */
     while (!STAILQ_EMPTY(&optd.Q)) {
-	unsigned long orig_len, len_diff;
+	unsigned long orig_len;
 	span = STAILQ_FIRST(&optd.Q);
 	STAILQ_REMOVE_HEAD(&optd.Q, linkq);
 	orig_len = span->bc->len;
@@ -1215,8 +1219,8 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	    span->active = 0;
 	if (orig_len > span->bc->len)
 	    yasm_internal_error(N_("length decreased during an expansion"));
-	len_diff = span->bc->len - orig_len;
-	if (len_diff == 0)
+	optd.len_diff = span->bc->len - orig_len;
+	if (optd.len_diff == 0)
 	    continue;	/* didn't increase in size; unusual! */
 	IT_enumerate(optd.itree, (long)span->bc->bc_index,
 		     (long)span->bc->bc_index, &optd, optimize_term_expand);

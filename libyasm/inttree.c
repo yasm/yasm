@@ -58,8 +58,13 @@ ITN_create(long low, long high, void *data)
 {
     IntervalTreeNode *itn = yasm_xmalloc(sizeof(IntervalTreeNode));
     itn->data = data;
-    itn->low = low;
-    itn->high = high;
+    if (low < high) {
+	itn->low = low;
+	itn->high = high;
+    } else {
+	itn->low = high;
+	itn->high = low;
+    }
     itn->maxHigh = high;
     return itn;
 }
