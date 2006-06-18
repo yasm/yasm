@@ -744,9 +744,9 @@ struct yasm_span {
 
 typedef struct optimize_data {
     /*@reldef@*/ TAILQ_HEAD(, yasm_span) spans;
-    /*@reldef@*/ STAILQ_HEAD(, yasm_span) Q;
+    /*@reldef@*/ STAILQ_HEAD(, yasm_span) QA, QB;
     /*@only@*/ IntervalTree *itree;
-    unsigned long len_diff;	/* used only for optimize_term_expand */
+    long len_diff;	/* used only for optimize_term_expand */
 } optimize_data;
 
 static void
@@ -964,24 +964,32 @@ optimize_term_expand(IntervalTreeNode *node, void *d)
     optimize_data *optd = d;
     yasm_span_term *term = node->data;
     yasm_span *span = term->span;
-    unsigned long len_diff = optd->len_diff;
+    long len_diff = optd->len_diff;
+    long precbc_index, precbc2_index;
 
     /* Don't expand inactive spans */
     if (!span->active)
 	return;
 
     /* Update term length */
-    if (term->precbc2) {
-	if (term->precbc->bc_index > term->precbc2->bc_index)
-	    term->new_val += len_diff;
-	else
-	    term->new_val -= len_diff;
-    } else {
-	if (term->precbc->bc_index > span->bc->bc_index-1)
-	    term->new_val += len_diff;
-	else
-	    term->new_val -= len_diff;
-    }
+    if (term->precbc)
+	precbc_index = term->precbc->bc_index;
+    else
+	precbc_index = span->bc->bc_index-1;
+
+    if (term->precbc2)
+	precbc2_index = term->precbc2->bc_index;
+    else
+	precbc2_index = span->bc->bc_index-1;
+
+    if (precbc_index > precbc2_index)
+	term->new_val += len_diff;
+    else
+	term->new_val -= len_diff;
+
+    /* If already on Q, don't re-add */
+    if (span->active == 2)
+	return;
 
     /* Update term and check against thresholds */
     if (!recalc_normal_span(span))
@@ -990,11 +998,12 @@ optimize_term_expand(IntervalTreeNode *node, void *d)
     /* Exceeded thresholds, probably need to add to Q for expansion */
     switch (span->special) {
 	case NOT_SPECIAL:
-	    STAILQ_INSERT_TAIL(&optd->Q, span, linkq);
+	    STAILQ_INSERT_TAIL(&optd->QB, span, linkq);
+	    span->active = 2;	    /* Mark as being in Q */
 	    break;
 	case SPECIAL_BC_OFFSET:
-	    /* Might not have to add to Q */
-	    yasm_internal_error(N_("bc offset expansion not implemented yet"));
+	    STAILQ_INSERT_TAIL(&optd->QA, span, linkq);
+	    span->active = 2;	    /* Mark as being in Q */
 	    break;
 	case SPECIAL_TIMES:
 	    break;
@@ -1010,7 +1019,6 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
     int saw_error = 0;
     optimize_data optd;
     yasm_span *span, *span_temp;
-    long neg_thres, pos_thres;
     int retval;
     unsigned int i;
 
@@ -1050,10 +1058,10 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		    span->items = NULL;
 		    span->num_terms = 0;
 		    span->special = SPECIAL_BC_OFFSET;
-		    span->cur_val = -((long)bc->offset);
+		    span->cur_val = (long)bc->offset;
 		    span->new_val = 0;
-		    span->neg_thres = -((long)(bc->offset+bc->len));
-		    span->pos_thres = 0;
+		    span->neg_thres = 0;
+		    span->pos_thres = (long)(bc->offset+bc->len);
 		    span->id = 0;
 		    span->active = 1;
 
@@ -1066,9 +1074,11 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		    }
 		}
 		/* TODO: times */
+#if 0
 		if (bc->len != 0 && bc->multiple) {
 		    yasm_internal_error("multiple not yet supported");
 		}
+#endif
 		offset += bc->len;
 	    }
 
@@ -1089,8 +1099,8 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		span_create_terms(span);
 		if (recalc_normal_span(span)) {
 		    retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
-					    span->new_val, &neg_thres,
-					    &pos_thres);
+					    span->new_val, &span->neg_thres,
+					    &span->pos_thres);
 		    yasm_errwarn_propagate(errwarns, span->bc->line);
 		    if (retval < 0)
 			saw_error = 1;
@@ -1100,9 +1110,6 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 				N_("secondary expansion of an external/complex value"));
 			    yasm_errwarn_propagate(errwarns, span->bc->line);
 			    saw_error = 1;
-			} else {
-			    span->neg_thres = neg_thres;
-			    span->pos_thres = pos_thres;
 			}
 		    } else {
 			TAILQ_REMOVE(&optd.spans, span, link);
@@ -1115,12 +1122,12 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	    case SPECIAL_BC_OFFSET:
 		/* Create term */
 		span->rel_term = yasm_xmalloc(sizeof(yasm_span_term));
-		span->rel_term->precbc = STAILQ_FIRST(&span->bc->section->bcs);
-		span->rel_term->precbc2 = NULL;
+		span->rel_term->precbc = NULL;
+		span->rel_term->precbc2 = STAILQ_FIRST(&span->bc->section->bcs);
 		span->rel_term->span = span;
 		span->rel_term->subst = ~0U;
 		span->rel_term->cur_val = 0;
-		span->rel_term->new_val = -((long)span->bc->offset);
+		span->rel_term->new_val = (long)span->bc->offset;
 		break;
 	    case SPECIAL_TIMES:
 		break;
@@ -1139,7 +1146,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
     }
 
     /* Step 1d */
-    STAILQ_INIT(&optd.Q);
+    STAILQ_INIT(&optd.QB);
     TAILQ_FOREACH(span, &optd.spans, link) {
 	yasm_intnum *intn;
 
@@ -1155,15 +1162,20 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	}
 	if (span->rel_term) {
 	    span->rel_term->cur_val = span->rel_term->new_val;
-	    span->rel_term->new_val = span->rel_term->precbc->offset
-		+ span->rel_term->precbc->len - span->bc->offset;
+	    if (span->rel_term->precbc)
+		span->rel_term->new_val = span->rel_term->precbc->offset
+		    + span->rel_term->precbc->len - span->bc->offset;
+	    else
+		span->rel_term->new_val = span->bc->offset -
+		    (span->rel_term->precbc2->offset +
+		     span->rel_term->precbc2->len);
 	}
 
 	switch (span->special) {
 	    case NOT_SPECIAL:
 		if (recalc_normal_span(span)) {
-		    /* Exceeded threshold, add span to Q */
-		    STAILQ_INSERT_TAIL(&optd.Q, span, linkq);
+		    /* Exceeded threshold, add span to QB */
+		    STAILQ_INSERT_TAIL(&optd.QB, span, linkq);
 		}
 		break;
 	    case SPECIAL_BC_OFFSET:
@@ -1172,7 +1184,10 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		 * span values and thresholds.
 		 */
 		span->new_val = span->rel_term->new_val;
-		span->neg_thres = -((long)(span->bc->offset+span->bc->len));
+		span->pos_thres = (long)(span->bc->offset+span->bc->len);
+
+		span->rel_term->cur_val = span->rel_term->new_val;
+		span->cur_val = span->new_val;
 		break;
 	    case SPECIAL_TIMES:
 		break;
@@ -1180,7 +1195,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
     }
 
     /* Do we need step 2?  If not, go ahead and exit. */
-    if (STAILQ_EMPTY(&optd.Q)) {
+    if (STAILQ_EMPTY(&optd.QB)) {
 	optimize_cleanup(&optd);
 	return;
     }
@@ -1190,38 +1205,70 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	for (i=0; i<span->num_terms; i++)
 	    IT_insert(optd.itree, (long)span->terms[i].precbc->bc_index,
 		      (long)span->terms[i].precbc2->bc_index, &span->terms[i]);
-	if (span->rel_term)
-	    IT_insert(optd.itree, (long)span->rel_term->precbc->bc_index,
-		      (long)span->bc->bc_index-1, span->rel_term);
+	if (span->rel_term) {
+	    if (span->rel_term->precbc)
+		IT_insert(optd.itree, (long)span->rel_term->precbc->bc_index,
+			  (long)span->bc->bc_index-1, span->rel_term);
+	    else
+		IT_insert(optd.itree, (long)span->rel_term->precbc2->bc_index,
+			  (long)span->bc->bc_index-1, span->rel_term);
+	}
     }
 
     /* Step 2 */
-    while (!STAILQ_EMPTY(&optd.Q)) {
+    STAILQ_INIT(&optd.QA);
+    while (!STAILQ_EMPTY(&optd.QA) || !(STAILQ_EMPTY(&optd.QB))) {
 	unsigned long orig_len;
-	span = STAILQ_FIRST(&optd.Q);
-	STAILQ_REMOVE_HEAD(&optd.Q, linkq);
+
+	/* QA is for offset BCs, update those first, then update non-offset.
+	 * This is so that offset BCs can absorb increases before we look at
+	 * expanding non-offset BCs.
+	 */
+	if (!STAILQ_EMPTY(&optd.QA)) {
+	    span = STAILQ_FIRST(&optd.QA);
+	    STAILQ_REMOVE_HEAD(&optd.QA, linkq);
+	} else {
+	    span = STAILQ_FIRST(&optd.QB);
+	    STAILQ_REMOVE_HEAD(&optd.QB, linkq);
+	}
+
+	if (!span->active)
+	    continue;
+	span->active = 1;   /* no longer in Q */
+
+	/* Make sure we ended up ultimately exceeding thresholds; due to
+	 * offset BCs we may have been placed on Q and then reduced in size
+	 * again.
+	 */
+	if (!recalc_normal_span(span))
+	    continue;
+
 	orig_len = span->bc->len;
+
 	retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
-				span->new_val, &neg_thres, &pos_thres);
+				span->new_val, &span->neg_thres,
+				&span->pos_thres);
 	yasm_errwarn_propagate(errwarns, span->bc->line);
+
 	if (retval < 0) {
+	    /* error */
 	    saw_error = 1;
 	    continue;
 	} else if (retval > 0) {
+	    /* another threshold, keep active */
 	    for (i=0; i<span->num_terms; i++)
 		span->terms[i].cur_val = span->terms[i].new_val;
 	    if (span->rel_term)
 		span->rel_term->cur_val = span->rel_term->new_val;
 	    span->cur_val = span->new_val;
-	    span->neg_thres = neg_thres;
-	    span->pos_thres = pos_thres;
 	} else
-	    span->active = 0;
-	if (orig_len > span->bc->len)
-	    yasm_internal_error(N_("length decreased during an expansion"));
+	    span->active = 0;	    /* we're done with this span */
+
 	optd.len_diff = span->bc->len - orig_len;
 	if (optd.len_diff == 0)
-	    continue;	/* didn't increase in size; unusual! */
+	    continue;	/* didn't increase in size */
+
+	/* Iterate over all spans dependent across the bc just expanded */
 	IT_enumerate(optd.itree, (long)span->bc->bc_index,
 		     (long)span->bc->bc_index, &optd, optimize_term_expand);
     }

@@ -156,8 +156,10 @@ bc_align_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
     if (align->maxskip) {
 	unsigned long maxskip =
 	    yasm_intnum_get_uint(yasm_expr_get_intnum(&align->maxskip, 0));
-	if ((end - (unsigned long)new_val) > maxskip)
+	if (bc->len > maxskip) {
+	    *pos_thres = (long)end-maxskip-1;
 	    bc->len = 0;
+	}
     }
     return 1;
 }
