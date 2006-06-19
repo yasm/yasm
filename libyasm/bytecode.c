@@ -216,10 +216,10 @@ yasm_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 		    N_("expression must not contain floating point value"));
 		retval = -1;
 	    } else {
-		/* FIXME: Non-constant currently not allowed. */
-		yasm_error_set(YASM_ERROR_VALUE,
-			       N_("attempt to use non-constant multiple"));
-		retval = -1;
+		yasm_value value;
+		yasm_value_initialize(&value, bc->multiple, 0);
+		add_span(add_span_data, bc, 0, &value, 0, 0);
+		bc->len = 0;
 	    }
 	}
     }
@@ -235,6 +235,8 @@ int
 yasm_bc_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 	       /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
+    if (span == 0)
+	yasm_internal_error(N_("cannot expand multiple yet"));
     if (!bc->callback) {
 	yasm_internal_error(N_("got empty bytecode in yasm_bc_expand"));
 	/*@unreached@*/

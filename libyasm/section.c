@@ -635,7 +635,7 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
  *
  * Data structures:
  *  - Interval tree to store spans and associated data
- *  - Queue Q
+ *  - Queues QA and QB
  *
  * Each span keeps track of:
  *  - Associated bytecode (bytecode that depends on the span length)
@@ -646,15 +646,22 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
  *  - Negative/Positive thresholds
  *  - Span ID (unique within each bytecode)
  *
- * How org and align are handled:
+ * How org and align and any other offset-based bytecodes are handled:
+ *
  * Some portions are critical values that must not depend on any bytecode
  * offset (either relative or absolute).
  *
- * ALIGN/ORG/other offset-based bytecodes: Length set to bump offset to
- *	alignment.  Span from 0 to bytecode, update on any change.  Can
- *	update to new offset for things like align, which gets propagated
- *	to update dependent spans.  Alignment/ORG value is critical value.
- *	Cannot be combined with TIMES.
+ * Length set to bump offset to required position.  Span created from first
+ * bytecode in section to bytecode, update when it exceeds the next offset.
+ * This threshold can update to new offset for things like align, which gets
+ * propagated to update dependent spans.
+ *
+ * Offset-based bytecodes are updated by QA before any expansion of normal
+ * bytecodes (in QB).  This is done because offset-based bytecodes can absorb
+ * expansions.
+ *
+ * Alignment/ORG value is critical value.
+ * Cannot be combined with TIMES.
  *
  * How times is handled:
  *
@@ -727,8 +734,7 @@ struct yasm_span {
     /* Special handling: see descriptions above */
     enum {
 	NOT_SPECIAL = 0,
-	SPECIAL_BC_OFFSET,
-	SPECIAL_TIMES
+	SPECIAL_BC_OFFSET
     } special;
 
     long cur_val;
@@ -749,20 +755,22 @@ typedef struct optimize_data {
     long len_diff;	/* used only for optimize_term_expand */
 } optimize_data;
 
-static void
-optimize_add_span(void *add_span_data, yasm_bytecode *bc, int id,
-		  const yasm_value *value, long neg_thres, long pos_thres)
+static yasm_span *
+create_span(yasm_bytecode *bc, int id, /*@null@*/ const yasm_value *value, 
+	    int special, long neg_thres, long pos_thres)
 {
-    optimize_data *optd = (optimize_data *)add_span_data;
     yasm_span *span = yasm_xmalloc(sizeof(yasm_span));
 
     span->bc = bc;
-    yasm_value_init_copy(&span->depval, value);
+    if (value)
+	yasm_value_init_copy(&span->depval, value);
+    else
+	yasm_value_initialize(&span->depval, NULL, 0);
     span->rel_term = NULL;
     span->terms = NULL;
     span->items = NULL;
     span->num_terms = 0;
-    span->special = NOT_SPECIAL;
+    span->special = special;
     span->cur_val = 0;
     span->new_val = 0;
     span->neg_thres = neg_thres;
@@ -770,6 +778,16 @@ optimize_add_span(void *add_span_data, yasm_bytecode *bc, int id,
     span->id = id;
     span->active = 1;
 
+    return span;
+}
+
+static void
+optimize_add_span(void *add_span_data, yasm_bytecode *bc, int id,
+		  const yasm_value *value, long neg_thres, long pos_thres)
+{
+    optimize_data *optd = (optimize_data *)add_span_data;
+    yasm_span *span;
+    span = create_span(bc, id, value, NOT_SPECIAL, neg_thres, pos_thres);
     TAILQ_INSERT_TAIL(&optd->spans, span, link);
 }
 
@@ -815,6 +833,14 @@ span_create_terms(yasm_span *span)
 		/* Create items with dummy value */
 		span->items[i].type = YASM_EXPR_INT;
 		span->items[i].data.intn = yasm_intnum_create_int(0);
+
+		/* Check for circular references */
+		if ((span->bc->bc_index >= span->terms[i].precbc->bc_index &&
+		     span->bc->bc_index <= span->terms[i].precbc2->bc_index) ||
+		    (span->bc->bc_index >= span->terms[i].precbc2->bc_index &&
+		     span->bc->bc_index <= span->terms[i].precbc->bc_index))
+		    yasm_error_set(YASM_ERROR_VALUE,
+				   N_("circular reference detected"));
 	    }
 	}
     }
@@ -846,7 +872,7 @@ span_create_terms(yasm_span *span)
 }
 
 /* Recalculate span value based on current span replacement values.
- * Returns 1 if span exceeded thresholds.
+ * Returns 1 if span needs expansion (e.g. exceeded thresholds).
  */
 static int
 recalc_normal_span(yasm_span *span)
@@ -882,6 +908,10 @@ recalc_normal_span(yasm_span *span)
     if (span->new_val == LONG_MAX)
 	span->active = 0;
 
+    /* If id=0, flag update on any change */
+    if (span->id == 0)
+	return (span->new_val != span->cur_val);
+
     return (span->new_val < span->neg_thres
 	    || span->new_val > span->pos_thres);
 }
@@ -911,7 +941,7 @@ update_all_bc_offsets(yasm_object *object, yasm_errwarns *errwarns)
 		/* Recalculate/adjust len of offset-based bytecodes here */
 		long neg_thres = 0;
 		long pos_thres = bc->offset+bc->len;
-		int retval = yasm_bc_expand(bc, 0, 0,
+		int retval = yasm_bc_expand(bc, 1, 0,
 					    (long)(prevbc->offset+prevbc->len),
 					    &neg_thres, &pos_thres);
 		yasm_errwarn_propagate(errwarns, bc->line);
@@ -997,19 +1027,16 @@ optimize_term_expand(IntervalTreeNode *node, void *d)
     if (!recalc_normal_span(span))
 	return;	/* didn't exceed thresholds, we're done */
 
-    /* Exceeded thresholds, probably need to add to Q for expansion */
+    /* Exceeded thresholds, need to add to Q for expansion */
     switch (span->special) {
 	case NOT_SPECIAL:
 	    STAILQ_INSERT_TAIL(&optd->QB, span, linkq);
-	    span->active = 2;	    /* Mark as being in Q */
 	    break;
 	case SPECIAL_BC_OFFSET:
 	    STAILQ_INSERT_TAIL(&optd->QA, span, linkq);
-	    span->active = 2;	    /* Mark as being in Q */
-	    break;
-	case SPECIAL_TIMES:
 	    break;
     }
+    span->active = 2;	    /* Mark as being in Q */
 }
 
 void
@@ -1051,22 +1078,8 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		saw_error = 1;
 	    else {
 		if (bc->callback->special == YASM_BC_SPECIAL_OFFSET) {
-		    span = yasm_xmalloc(sizeof(yasm_span));
-
-		    span->bc = bc;
-		    yasm_value_initialize(&span->depval, NULL, 0);
-		    span->rel_term = NULL;
-		    span->terms = NULL;
-		    span->items = NULL;
-		    span->num_terms = 0;
-		    span->special = SPECIAL_BC_OFFSET;
-		    span->cur_val = (long)bc->offset;
-		    span->new_val = 0;
-		    span->neg_thres = 0;
-		    span->pos_thres = (long)(bc->offset+bc->len);
-		    span->id = 0;
-		    span->active = 1;
-
+		    span = create_span(bc, 1, NULL, SPECIAL_BC_OFFSET, 0,
+				       (long)(bc->offset+bc->len));
 		    TAILQ_INSERT_TAIL(&optd.spans, span, link);
 		    if (bc->multiple) {
 			yasm_error_set(YASM_ERROR_VALUE,
@@ -1075,12 +1088,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 			saw_error = 1;
 		    }
 		}
-		/* TODO: times */
-#if 0
-		if (bc->len != 0 && bc->multiple) {
-		    yasm_internal_error("multiple not yet supported");
-		}
-#endif
+
 		offset += bc->len;
 	    }
 
@@ -1099,7 +1107,10 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	switch (span->special) {
 	    case NOT_SPECIAL:
 		span_create_terms(span);
-		if (recalc_normal_span(span)) {
+		if (yasm_error_occurred()) {
+		    yasm_errwarn_propagate(errwarns, span->bc->line);
+		    saw_error = 1;
+		} else if (recalc_normal_span(span)) {
 		    retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
 					    span->new_val, &span->neg_thres,
 					    &span->pos_thres);
@@ -1130,8 +1141,6 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		span->rel_term->subst = ~0U;
 		span->rel_term->cur_val = 0;
 		span->rel_term->new_val = (long)span->bc->offset;
-		break;
-	    case SPECIAL_TIMES:
 		break;
 	}
     }
@@ -1190,8 +1199,6 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 
 		span->rel_term->cur_val = span->rel_term->new_val;
 		span->cur_val = span->new_val;
-		break;
-	    case SPECIAL_TIMES:
 		break;
 	}
     }
