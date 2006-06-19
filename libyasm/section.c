@@ -834,8 +834,8 @@ span_create_terms(yasm_span *span)
 	    return;	/* not PC-relative */
 
 	span->rel_term = yasm_xmalloc(sizeof(yasm_span_term));
-	span->rel_term->precbc = rel_precbc;
-	span->rel_term->precbc2 = NULL;
+	span->rel_term->precbc = NULL;
+	span->rel_term->precbc2 = rel_precbc;
 	span->rel_term->span = span;
 	span->rel_term->subst = ~0U;
 
@@ -871,10 +871,12 @@ recalc_normal_span(yasm_span *span)
 	yasm_expr_destroy(abs_copy);
     }
 
-    if (span->rel_term && span->new_val != LONG_MAX
-	&& span->rel_term->new_val != LONG_MAX)
-	span->new_val += span->rel_term->new_val >> span->depval.rshift;
-    else
+    if (span->rel_term) {
+	if (span->new_val != LONG_MAX && span->rel_term->new_val != LONG_MAX)
+	    span->new_val += span->rel_term->new_val >> span->depval.rshift;
+	else
+	    span->new_val = LONG_MAX;   /* too complex; force to longest form */
+    } else if (span->depval.rel)
 	span->new_val = LONG_MAX;   /* too complex; force to longest form */
 
     if (span->new_val == LONG_MAX)
@@ -982,7 +984,7 @@ optimize_term_expand(IntervalTreeNode *node, void *d)
     else
 	precbc2_index = span->bc->bc_index-1;
 
-    if (precbc_index > precbc2_index)
+    if (precbc_index < precbc2_index)
 	term->new_val += len_diff;
     else
 	term->new_val -= len_diff;
@@ -1122,8 +1124,8 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	    case SPECIAL_BC_OFFSET:
 		/* Create term */
 		span->rel_term = yasm_xmalloc(sizeof(yasm_span_term));
-		span->rel_term->precbc = NULL;
-		span->rel_term->precbc2 = STAILQ_FIRST(&span->bc->section->bcs);
+		span->rel_term->precbc = STAILQ_FIRST(&span->bc->section->bcs);
+		span->rel_term->precbc2 = NULL;
 		span->rel_term->span = span;
 		span->rel_term->subst = ~0U;
 		span->rel_term->cur_val = 0;
@@ -1162,13 +1164,13 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	}
 	if (span->rel_term) {
 	    span->rel_term->cur_val = span->rel_term->new_val;
-	    if (span->rel_term->precbc)
-		span->rel_term->new_val = span->rel_term->precbc->offset
-		    + span->rel_term->precbc->len - span->bc->offset;
+	    if (span->rel_term->precbc2)
+		span->rel_term->new_val = span->rel_term->precbc2->offset
+		    + span->rel_term->precbc2->len - span->bc->offset;
 	    else
 		span->rel_term->new_val = span->bc->offset -
-		    (span->rel_term->precbc2->offset +
-		     span->rel_term->precbc2->len);
+		    (span->rel_term->precbc->offset +
+		     span->rel_term->precbc->len);
 	}
 
 	switch (span->special) {
