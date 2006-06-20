@@ -67,18 +67,13 @@ bin_objfmt_align_section(yasm_section *sect, yasm_section *prevsect,
 			 /*@out@*/ unsigned long *prevsectlen,
 			 /*@out@*/ unsigned long *padamt)
 {
-    /*@dependent@*/ /*@null@*/ yasm_bytecode *last;
     unsigned long start;
     unsigned long align;
 
     /* Figure out the size of .text by looking at the last bytecode's offset
      * plus its length.  Add the start and size together to get the new start.
      */
-    last = yasm_section_bcs_last(prevsect);
-    if (last)
-	*prevsectlen = last->offset + last->len;
-    else
-	*prevsectlen = 0;
+    *prevsectlen = yasm_bc_next_offset(yasm_section_bcs_last(prevsect));
     start = base + *prevsectlen;
 
     /* Round new start up to alignment of .data section, and adjust textlen to

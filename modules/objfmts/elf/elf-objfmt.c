@@ -152,7 +152,7 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
     }
 
     if (precbc)
-	value = precbc->offset + precbc->len;
+	value = yasm_bc_next_offset(precbc);
     elf_symtab_set_nonzero(entry, sect, 0, 0, 0, NULL, &value);
 
     return 0;
@@ -357,7 +357,7 @@ elf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 		assert(sym_shead != NULL);
 		sym = elf_secthead_get_sym(sym_shead);
 
-		intn_val = sym_precbc->offset + sym_precbc->len;
+		intn_val = yasm_bc_next_offset(sym_precbc);
 	    }
 	}
 	
@@ -518,7 +518,7 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 	yasm_bytecode *last = yasm_section_bcs_last(sect);
 	if (last) {
 	    yasm_intnum *sectsize;
-	    sectsize = yasm_intnum_create_uint(last->offset + last->len);
+	    sectsize = yasm_intnum_create_uint(yasm_bc_next_offset(last));
 	    elf_secthead_add_size(shead, sectsize);
 	    yasm_intnum_destroy(sectsize);
 	}

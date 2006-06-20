@@ -86,9 +86,9 @@ yasm_bc_create_common(const yasm_bytecode_callback *callback, void *contents,
     bc->section = NULL;
     bc->multiple = (yasm_expr *)NULL;
     bc->len = 0;
+    bc->mult_int = 1;
     bc->line = line;
     bc->offset = ~0UL;	/* obviously incorrect / uninitialized value */
-    bc->opt_flags = 0;
     bc->symrecs = NULL;
     bc->contents = contents;
 
@@ -174,20 +174,27 @@ yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 /*@null@*/ yasm_intnum *
 yasm_calc_bc_dist(yasm_bytecode *precbc1, yasm_bytecode *precbc2)
 {
-    unsigned long dist;
+    unsigned long dist2, dist1;
     yasm_intnum *intn;
 
     if (precbc1->section != precbc2->section)
 	return NULL;
 
-    dist = precbc2->offset + precbc2->len;
-    if (dist < precbc1->offset + precbc1->len) {
-	intn = yasm_intnum_create_uint(precbc1->offset + precbc1->len - dist);
+    dist1 = yasm_bc_next_offset(precbc1);
+    dist2 = yasm_bc_next_offset(precbc2);
+    if (dist2 < dist1) {
+	intn = yasm_intnum_create_uint(dist1 - dist2);
 	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
 	return intn;
     }
-    dist -= precbc1->offset + precbc1->len;
-    return yasm_intnum_create_uint(dist);
+    dist2 -= dist1;
+    return yasm_intnum_create_uint(dist2);
+}
+
+unsigned long
+yasm_bc_next_offset(yasm_bytecode *precbc)
+{
+    return precbc->offset + precbc->len*precbc->mult_int;
 }
 
 int
@@ -204,13 +211,18 @@ yasm_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 	retval = bc->callback->calc_len(bc, add_span, add_span_data);
 
     /* Check for multiples */
+    bc->mult_int = 1;
     if (bc->multiple) {
 	/*@dependent@*/ /*@null@*/ const yasm_intnum *num;
 
 	num = yasm_expr_get_intnum(&bc->multiple, 0);
-	if (num)
-	    bc->len *= yasm_intnum_get_uint(num);
-	else {
+	if (num) {
+	    if (yasm_intnum_sign(num) < 0) {
+		yasm_error_set(YASM_ERROR_VALUE, N_("multiple is negative"));
+		retval = -1;
+	    } else
+		bc->mult_int = yasm_intnum_get_uint(num);
+	} else {
 	    if (yasm_expr__contains(bc->multiple, YASM_EXPR_FLOAT)) {
 		yasm_error_set(YASM_ERROR_VALUE,
 		    N_("expression must not contain floating point value"));
@@ -219,7 +231,7 @@ yasm_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 		yasm_value value;
 		yasm_value_initialize(&value, bc->multiple, 0);
 		add_span(add_span_data, bc, 0, &value, 0, 0);
-		bc->len = 0;
+		bc->mult_int = 0;   /* assume 0 to start */
 	    }
 	}
     }
@@ -235,12 +247,15 @@ int
 yasm_bc_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 	       /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
-    if (span == 0)
+    if (span == 0) {
 	yasm_internal_error(N_("cannot expand multiple yet"));
+
+	return 1;
+    }
     if (!bc->callback) {
 	yasm_internal_error(N_("got empty bytecode in yasm_bc_expand"));
 	/*@unreached@*/
-	return 0;
+	return -1;
     } else
 	return bc->callback->expand(bc, span, old_val, new_val, neg_thres,
 				    pos_thres);
@@ -255,39 +270,38 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 {
     /*@only@*/ /*@null@*/ unsigned char *mybuf = NULL;
     unsigned char *origbuf, *destbuf;
-    unsigned long datasize, multiple, i;
+    unsigned long i;
     int error = 0;
 
-    if (yasm_bc_get_multiple(bc, &multiple, 1) || multiple == 0) {
+    if (yasm_bc_get_multiple(bc, &bc->mult_int, 1) || bc->mult_int == 0) {
 	*bufsize = 0;
 	return NULL;
     }
 
     /* special case for reserve bytecodes */
     if (bc->callback->special == YASM_BC_SPECIAL_RESERVE) {
-	*bufsize = bc->len;
+	*bufsize = bc->len*bc->mult_int;
 	*gap = 1;
 	return NULL;	/* we didn't allocate a buffer */
     }
     *gap = 0;
 
-    if (*bufsize < bc->len) {
-	mybuf = yasm_xmalloc(bc->len);
+    if (*bufsize < bc->len*bc->mult_int) {
+	mybuf = yasm_xmalloc(bc->len*bc->mult_int);
 	destbuf = mybuf;
     } else
 	destbuf = buf;
 
-    *bufsize = bc->len;
-    datasize = bc->len / multiple;
+    *bufsize = bc->len*bc->mult_int;
 
     if (!bc->callback)
 	yasm_internal_error(N_("got empty bytecode in bc_tobytes"));
-    else for (i=0; i<multiple; i++) {
+    else for (i=0; i<bc->mult_int; i++) {
 	origbuf = destbuf;
 	error = bc->callback->tobytes(bc, &destbuf, d, output_value,
 				      output_reloc);
 
-	if (!error && ((unsigned long)(destbuf - origbuf) != datasize))
+	if (!error && ((unsigned long)(destbuf - origbuf) != bc->len))
 	    yasm_internal_error(
 		N_("written length does not match optimized length"));
     }

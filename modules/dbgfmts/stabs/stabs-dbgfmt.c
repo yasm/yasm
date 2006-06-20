@@ -188,12 +188,11 @@ stabs_dbgfmt_destroy(/*@only@*/ yasm_dbgfmt *dbgfmt)
 static yasm_bytecode *
 stabs_dbgfmt_append_bcstr(yasm_section *sect, const char *str)
 {
-    yasm_bytecode *bc, *precbc;
+    yasm_bytecode *bc;
    
-    precbc = yasm_section_bcs_last(sect);
     bc = yasm_bc_create_common(&stabs_bc_str_callback, yasm__xstrdup(str), 0);
     bc->len = strlen(str)+1;
-    bc->offset = precbc ? precbc->offset + precbc->len : 0;
+    bc->offset = yasm_bc_next_offset(yasm_section_bcs_last(sect));
 
     yasm_section_bcs_append(sect, bc);
 
@@ -209,7 +208,7 @@ stabs_dbgfmt_append_stab(stabs_info *info, yasm_section *sect,
 			 unsigned long desc, /*@null@*/ yasm_symrec *symvalue,
 			 /*@null@*/ yasm_bytecode *bcvalue, unsigned long value)
 {
-    yasm_bytecode *bc, *precbc;
+    yasm_bytecode *bc;
     stabs_stab *stab = yasm_xmalloc(sizeof(stabs_stab));
 
     stab->other = 0;
@@ -220,11 +219,10 @@ stabs_dbgfmt_append_stab(stabs_info *info, yasm_section *sect,
     stab->bcvalue = bcvalue;
     stab->value = value;
 
-    precbc = yasm_section_bcs_last(sect);
     bc = yasm_bc_create_common(&stabs_bc_stab_callback, stab,
 			       bcvalue ? bcvalue->line : 0);
     bc->len = info->stablen;
-    bc->offset = precbc ? precbc->offset + precbc->len : 0;
+    bc->offset = yasm_bc_next_offset(yasm_section_bcs_last(sect));
 
     yasm_section_bcs_append(sect, bc);
 
@@ -405,7 +403,7 @@ stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt, yasm_errwarns *errwarns)
 
     stab->bcvalue = NULL;
     stab->symvalue = NULL;
-    stab->value = laststr->offset + laststr->len;
+    stab->value = yasm_bc_next_offset(laststr);
     stab->bcstr = filebc;
     stab->type = N_UNDF;
     stab->other = 0;

@@ -148,7 +148,7 @@ yasm_bytecode *
 yasm_dwarf2__append_bc(yasm_section *sect, yasm_bytecode *bc)
 {
     yasm_bytecode *precbc = yasm_section_bcs_last(sect);
-    bc->offset = precbc ? precbc->offset + precbc->len : 0;
+    bc->offset = yasm_bc_next_offset(precbc);
     yasm_section_bcs_append(sect, bc);
     return precbc;
 }

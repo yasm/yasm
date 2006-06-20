@@ -512,7 +512,7 @@ yasm_value_get_intnum(yasm_value *value, yasm_bytecode *bc, int calc_bc_dist)
 	    return NULL;    /* not PC-relative */
 
 	/* Calculate value relative to current assembly position */
-	dist = rel_prevbc->offset + rel_prevbc->len;
+	dist = yasm_bc_next_offset(rel_prevbc);
 	if (dist < bc->offset) {
 	    outval = yasm_intnum_create_uint(bc->offset - dist);
 	    yasm_intnum_calc(outval, YASM_EXPR_NEG, NULL);
@@ -594,7 +594,7 @@ yasm_value_output_basic(yasm_value *value, /*@out@*/ unsigned char *buf,
 	    return 0;	    /* not PC-relative */
 
 	/* Calculate value relative to current assembly position */
-	dist = rel_prevbc->offset + rel_prevbc->len;
+	dist = yasm_bc_next_offset(rel_prevbc);
 	if (dist < bc->offset) {
 	    outval = yasm_intnum_create_uint(bc->offset - dist);
 	    yasm_intnum_calc(outval, YASM_EXPR_NEG, NULL);

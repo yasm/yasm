@@ -135,9 +135,10 @@ cdef extern from "libyasm/bc-int.h":
         yasm_section *section
         yasm_expr *multiple
         unsigned long len
+        unsigned long mult_int
         unsigned long line
         unsigned long offset
-        unsigned long opt_flags
+        unsigned long bc_index
         yasm_symrec **symrecs
         void *contents
 
@@ -172,15 +173,18 @@ cdef class Bytecode:
     property len:
         def __get__(self): return self.bc.len
         def __set__(self, value): self.bc.len = value
+    property mult_int:
+        def __get__(self): return self.bc.mult_int
+        def __set__(self, value): self.bc.mult_int = value
     property line:
         def __get__(self): return self.bc.line
         def __set__(self, value): self.bc.line = value
     property offset:
         def __get__(self): return self.bc.offset
         def __set__(self, value): self.bc.offset = value
-    property opt_flags:
-        def __get__(self): return self.bc.opt_flags
-        def __set__(self, value): self.bc.opt_flags = value
+    property bc_index:
+        def __get__(self): return self.bc.bc_index
+        def __set__(self, value): self.bc.bc_index = value
     property symbols:
         # Someday extend this to do something modifiable, e.g. return a
         # list-like object.

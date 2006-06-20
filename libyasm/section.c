@@ -866,8 +866,8 @@ span_create_terms(yasm_span *span)
 	span->rel_term->subst = ~0U;
 
 	span->rel_term->cur_val = 0;
-	span->rel_term->new_val =
-	    rel_precbc->offset + rel_precbc->len - span->bc->offset;
+	span->rel_term->new_val = yasm_bc_next_offset(rel_precbc) -
+	    span->bc->offset;
     }
 }
 
@@ -940,16 +940,16 @@ update_all_bc_offsets(yasm_object *object, yasm_errwarns *errwarns)
 	    if (bc->callback->special == YASM_BC_SPECIAL_OFFSET) {
 		/* Recalculate/adjust len of offset-based bytecodes here */
 		long neg_thres = 0;
-		long pos_thres = bc->offset+bc->len;
+		long pos_thres = (long)yasm_bc_next_offset(bc);
 		int retval = yasm_bc_expand(bc, 1, 0,
-					    (long)(prevbc->offset+prevbc->len),
+					    (long)yasm_bc_next_offset(prevbc),
 					    &neg_thres, &pos_thres);
 		yasm_errwarn_propagate(errwarns, bc->line);
 		if (retval < 0)
 		    saw_error = 1;
 	    }
 	    bc->offset = offset;
-	    offset += bc->len;
+	    offset += bc->len*bc->mult_int;
 	    prevbc = bc;
 	    bc = STAILQ_NEXT(bc, link);
 	}
@@ -1079,7 +1079,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	    else {
 		if (bc->callback->special == YASM_BC_SPECIAL_OFFSET) {
 		    span = create_span(bc, 1, NULL, SPECIAL_BC_OFFSET, 0,
-				       (long)(bc->offset+bc->len));
+				       (long)yasm_bc_next_offset(bc));
 		    TAILQ_INSERT_TAIL(&optd.spans, span, link);
 		    if (bc->multiple) {
 			yasm_error_set(YASM_ERROR_VALUE,
@@ -1089,7 +1089,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		    }
 		}
 
-		offset += bc->len;
+		offset += bc->len*bc->mult_int;
 	    }
 
 	    prevbc = bc;
@@ -1174,12 +1174,12 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	if (span->rel_term) {
 	    span->rel_term->cur_val = span->rel_term->new_val;
 	    if (span->rel_term->precbc2)
-		span->rel_term->new_val = span->rel_term->precbc2->offset
-		    + span->rel_term->precbc2->len - span->bc->offset;
+		span->rel_term->new_val =
+		    yasm_bc_next_offset(span->rel_term->precbc2) -
+		    span->bc->offset;
 	    else
 		span->rel_term->new_val = span->bc->offset -
-		    (span->rel_term->precbc->offset +
-		     span->rel_term->precbc->len);
+		    yasm_bc_next_offset(span->rel_term->precbc);
 	}
 
 	switch (span->special) {
@@ -1195,7 +1195,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		 * span values and thresholds.
 		 */
 		span->new_val = span->rel_term->new_val;
-		span->pos_thres = (long)(span->bc->offset+span->bc->len);
+		span->pos_thres = (long)yasm_bc_next_offset(span->bc);
 
 		span->rel_term->cur_val = span->rel_term->new_val;
 		span->cur_val = span->new_val;
@@ -1252,7 +1252,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	if (!recalc_normal_span(span))
 	    continue;
 
-	orig_len = span->bc->len;
+	orig_len = span->bc->len * span->bc->mult_int;
 
 	retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
 				span->new_val, &span->neg_thres,
@@ -1273,7 +1273,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	} else
 	    span->active = 0;	    /* we're done with this span */
 
-	optd.len_diff = span->bc->len - orig_len;
+	optd.len_diff = span->bc->len * span->bc->mult_int - orig_len;
 	if (optd.len_diff == 0)
 	    continue;	/* didn't increase in size */
 

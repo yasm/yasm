@@ -300,7 +300,6 @@ xdf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     /*@dependent@*/ /*@null@*/ xdf_section_data *xsd;
     long pos;
     xdf_reloc *reloc;
-    yasm_bytecode *last;
 
     /* FIXME: Don't output absolute sections into the section table */
     if (yasm_section_is_absolute(sect))
@@ -310,13 +309,12 @@ xdf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     xsd = yasm_section_get_data(sect, &xdf_section_data_cb);
     assert(xsd != NULL);
 
-    last = yasm_section_bcs_last(sect);
     if (xsd->flags & XDF_SECT_BSS) {
 	/* Don't output BSS sections.
 	 * TODO: Check for non-reserve bytecodes?
 	 */
 	pos = 0;    /* position = 0 because it's not in the file */
-	xsd->size = last->offset + last->len;
+	xsd->size = yasm_bc_next_offset(yasm_section_bcs_last(sect));
     } else {
 	pos = ftell(info->f);
 	if (pos == -1) {
@@ -331,7 +329,7 @@ xdf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 				  xdf_objfmt_output_bytecode);
 
 	/* Sanity check final section size */
-	if (xsd->size != (last->offset + last->len))
+	if (xsd->size != yasm_bc_next_offset(yasm_section_bcs_last(sect)))
 	    yasm_internal_error(
 		N_("xdf: section computed size did not match actual size"));
     }
@@ -513,7 +511,7 @@ xdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 		} else
 		    yasm_internal_error(N_("didn't understand section"));
 		if (precbc)
-		    value += precbc->offset + precbc->len;
+		    value += yasm_bc_next_offset(precbc);
 	    }
 	} else if ((equ_val = yasm_symrec_get_equ(sym))) {
 	    yasm_expr *equ_val_copy = yasm_expr_copy(equ_val);

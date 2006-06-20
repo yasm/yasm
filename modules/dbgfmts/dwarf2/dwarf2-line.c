@@ -596,7 +596,7 @@ dwarf2_generate_line_section(yasm_section *sect, /*@null@*/ void *d)
     if (!state.precbc)
 	state.precbc = yasm_section_bcs_first(sect);
     bc = yasm_section_bcs_last(sect);
-    addr_delta = bc->offset + bc->len - state.precbc->offset;
+    addr_delta = yasm_bc_next_offset(bc) - state.precbc->offset;
     if (addr_delta == DWARF2_MAX_SPECIAL_ADDR_DELTA)
 	dwarf2_dbgfmt_append_line_op(info->debug_line, DW_LNS_const_add_pc,
 				     NULL);

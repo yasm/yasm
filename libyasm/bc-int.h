@@ -58,6 +58,7 @@ struct yasm_bytecode {
 
     unsigned long len;		/* total length of entire bytecode
 				   (not including multiple copies) */
+    unsigned long mult_int;	/* number of copies: integer version */
 
     /* where it came from */
     unsigned long line;
@@ -65,9 +66,6 @@ struct yasm_bytecode {
     /* other assembler state info */
     unsigned long offset;	/* ~0UL if unknown */
     unsigned long bc_index;
-
-    /* optimizer info */
-    unsigned long opt_flags;
 
     /* NULL-terminated array of labels that point to this bytecode (as the
      * bytecode previous to the label).  NULL if no labels point here. */

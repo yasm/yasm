@@ -302,11 +302,20 @@ void yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 /** Determine the distance between the starting offsets of two bytecodes.
  * \param precbc1	preceding bytecode to the first bytecode
  * \param precbc2	preceding bytecode to the second bytecode
+ * \caution Only valid /after/ optimization.
  * \return Distance in bytes between the two bytecodes (bc2-bc1), or NULL if
  *	   the distance was indeterminate.
  */
 /*@null@*/ /*@only@*/ yasm_intnum *yasm_calc_bc_dist
     (yasm_bytecode *precbc1, yasm_bytecode *precbc2);
+
+/** Get the offset of the next bytecode (the next bytecode doesn't have to
+ * actually exist).
+ * \caution Only valid /after/ optimization.
+ * \param precbc	preceding bytecode
+ * \return Offset of the next bytecode in bytes.
+ */
+unsigned long yasm_bc_next_offset(yasm_bytecode *precbc);
 
 /** Add a dependent span for a bytecode.
  * \param add_span_data	add_span_data passed into bc_calc_len()

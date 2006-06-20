@@ -406,7 +406,6 @@ coff_objfmt_set_section_addr(yasm_section *sect, /*@null@*/ void *d)
 {
     /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ coff_section_data *csd;
-    /*@null@*/ yasm_bytecode *last;
 
     /* Don't output absolute sections */
     if (yasm_section_is_absolute(sect))
@@ -417,9 +416,7 @@ coff_objfmt_set_section_addr(yasm_section *sect, /*@null@*/ void *d)
     assert(csd != NULL);
 
     csd->addr = info->addr;
-    last = yasm_section_bcs_last(sect);
-    if (last)
-	info->addr += last->offset + last->len;
+    info->addr += yasm_bc_next_offset(yasm_section_bcs_last(sect));
 
     return 0;
 }
@@ -530,7 +527,7 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 						&coff_section_data_cb);
 		assert(sym_csd != NULL);
 		sym = sym_csd->sym;
-		intn_val = sym_precbc->offset + sym_precbc->len;
+		intn_val = yasm_bc_next_offset(sym_precbc);
 		if (COFF_SET_VMA)
 		    intn_val += sym_csd->addr;
 	    }
@@ -545,7 +542,7 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 	     * taken care of by special relocation types.
 	     */
 	    if (objfmt_coff->win64 && value->ip_rel)
-		intn_val += bc->len;
+		intn_val += bc->len*bc->mult_int;
 	    else if (objfmt_coff->win32)
 		intn_val += offset+destsize;
 	    else
@@ -583,7 +580,7 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 		}
 		if (!value->ip_rel)
 		    reloc->type = COFF_RELOC_AMD64_REL32;
-		else switch (bc->len - (offset+destsize)) {
+		else switch (bc->len*bc->mult_int - (offset+destsize)) {
 		    case 0:
 			reloc->type = COFF_RELOC_AMD64_REL32;
 			break;
@@ -761,16 +758,12 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 	csd->addr = info->addr;
 
     if ((csd->flags & COFF_STYP_STD_MASK) == COFF_STYP_BSS) {
-	yasm_bytecode *last = yasm_section_bcs_last(sect);
-
 	/* Don't output BSS sections.
 	 * TODO: Check for non-reserve bytecodes?
 	 */
 	pos = 0;    /* position = 0 because it's not in the file */
-	csd->size = last->offset + last->len;
+	csd->size = yasm_bc_next_offset(yasm_section_bcs_last(sect));
     } else {
-	yasm_bytecode *last = yasm_section_bcs_last(sect);
-
 	pos = ftell(info->f);
 	if (pos == -1) {
 	    yasm__fatal(N_("could not get file position on output file"));
@@ -784,7 +777,7 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 				  coff_objfmt_output_bytecode);
 
 	/* Sanity check final section size */
-	if (csd->size != (last->offset + last->len))
+	if (csd->size != yasm_bc_next_offset(yasm_section_bcs_last(sect)))
 	    yasm_internal_error(
 		N_("coff: section computed size did not match actual size"));
     }
@@ -1022,7 +1015,7 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 		} else
 		    yasm_internal_error(N_("didn't understand section"));
 		if (precbc)
-		    value += precbc->offset + precbc->len;
+		    value += yasm_bc_next_offset(precbc);
 	    }
 	} else if ((equ_val = yasm_symrec_get_equ(sym))) {
 	    yasm_expr *equ_val_copy = yasm_expr_copy(equ_val);
