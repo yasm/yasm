@@ -1028,14 +1028,10 @@ optimize_term_expand(IntervalTreeNode *node, void *d)
 	return;	/* didn't exceed thresholds, we're done */
 
     /* Exceeded thresholds, need to add to Q for expansion */
-    switch (span->special) {
-	case NOT_SPECIAL:
-	    STAILQ_INSERT_TAIL(&optd->QB, span, linkq);
-	    break;
-	case SPECIAL_BC_OFFSET:
-	    STAILQ_INSERT_TAIL(&optd->QA, span, linkq);
-	    break;
-    }
+    if (span->special == SPECIAL_BC_OFFSET || span->id == 0)
+	STAILQ_INSERT_TAIL(&optd->QA, span, linkq);
+    else
+	STAILQ_INSERT_TAIL(&optd->QB, span, linkq);
     span->active = 2;	    /* Mark as being in Q */
 }
 

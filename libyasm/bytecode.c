@@ -248,8 +248,11 @@ yasm_bc_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 	       /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
     if (span == 0) {
-	yasm_internal_error(N_("cannot expand multiple yet"));
-
+	if (new_val < 0) {
+	    yasm_error_set(YASM_ERROR_VALUE, N_("multiple is negative"));
+	    return -1;
+	}
+	bc->mult_int = (unsigned long)new_val;
 	return 1;
     }
     if (!bc->callback) {
