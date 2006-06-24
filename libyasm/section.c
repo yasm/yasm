@@ -746,6 +746,11 @@ struct yasm_span {
     int id;
 
     int active;
+
+    /* NULL-terminated array of spans that led to this span.  Used only for
+     * checking for circular references (cycles) with id=0 spans.
+     */
+    yasm_span **backtrace;
 };
 
 typedef struct optimize_data {
@@ -753,6 +758,7 @@ typedef struct optimize_data {
     /*@reldef@*/ STAILQ_HEAD(, yasm_span) QA, QB;
     /*@only@*/ IntervalTree *itree;
     long len_diff;	/* used only for optimize_term_expand */
+    yasm_span *span;	/* used only for check_cycle */
 } optimize_data;
 
 static yasm_span *
@@ -777,6 +783,7 @@ create_span(yasm_bytecode *bc, int id, /*@null@*/ const yasm_value *value,
     span->pos_thres = pos_thres;
     span->id = id;
     span->active = 1;
+    span->backtrace = NULL;
 
     return span;
 }
@@ -835,9 +842,9 @@ span_create_terms(yasm_span *span)
 		span->items[i].data.intn = yasm_intnum_create_int(0);
 
 		/* Check for circular references */
-		if ((span->bc->bc_index >= span->terms[i].precbc->bc_index &&
+		if ((span->bc->bc_index > span->terms[i].precbc->bc_index &&
 		     span->bc->bc_index <= span->terms[i].precbc2->bc_index) ||
-		    (span->bc->bc_index >= span->terms[i].precbc2->bc_index &&
+		    (span->bc->bc_index > span->terms[i].precbc2->bc_index &&
 		     span->bc->bc_index <= span->terms[i].precbc->bc_index))
 		    yasm_error_set(YASM_ERROR_VALUE,
 				   N_("circular reference detected"));
@@ -972,6 +979,8 @@ span_destroy(/*@only@*/ yasm_span *span)
 	    yasm_intnum_destroy(span->items[i].data.intn);
 	yasm_xfree(span->items);
     }
+    if (span->backtrace)
+	yasm_xfree(span->backtrace);
     yasm_xfree(span);
 }
 
@@ -988,6 +997,54 @@ optimize_cleanup(optimize_data *optd)
 	span_destroy(s1);
 	s1 = s2;
     }
+}
+
+static void
+check_cycle(IntervalTreeNode *node, void *d)
+{
+    optimize_data *optd = d;
+    yasm_span_term *term = node->data;
+    yasm_span *depspan = term->span;
+    int bt_size = 0, dep_bt_size = 0;
+
+    /* Only check for cycles in id=0 spans */
+    if (depspan->id != 0)
+	return;
+
+    /* Check for a circular reference by looking to see if this dependent
+     * span is in our backtrace.
+     */
+    if (optd->span->backtrace) {
+	yasm_span *s;
+	while ((s = optd->span->backtrace[bt_size])) {
+	    bt_size++;
+	    if (s == depspan)
+		yasm_error_set(YASM_ERROR_VALUE,
+			       N_("circular reference detected"));
+	}
+    }
+
+    /* Add our complete backtrace and ourselves to backtrace of dependent
+     * span.
+     */
+    if (!depspan->backtrace) {
+	depspan->backtrace = yasm_xmalloc((bt_size+2)*sizeof(yasm_span *));
+	memcpy(depspan->backtrace, optd->span->backtrace,
+	       bt_size*sizeof(yasm_span *));
+	depspan->backtrace[bt_size] = optd->span;
+	depspan->backtrace[bt_size+1] = NULL;
+	return;
+    }
+
+    while (depspan->backtrace[dep_bt_size])
+	dep_bt_size++;
+    depspan->backtrace =
+	yasm_xrealloc(depspan->backtrace,
+		      (dep_bt_size+bt_size+2)*sizeof(yasm_span *));
+    memcpy(&depspan->backtrace[dep_bt_size], optd->span->backtrace,
+	   (bt_size-1)*sizeof(yasm_span *));
+    depspan->backtrace[dep_bt_size+bt_size] = optd->span;
+    depspan->backtrace[dep_bt_size+bt_size+1] = NULL;
 }
 
 static void
@@ -1218,6 +1275,24 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		IT_insert(optd.itree, (long)span->rel_term->precbc2->bc_index,
 			  (long)span->bc->bc_index-1, span->rel_term);
 	}
+    }
+
+    /* Look for cycles in times expansion (span.id==0) */
+    TAILQ_FOREACH(span, &optd.spans, link) {
+	if (span->id != 0)
+	    continue;
+	optd.span = span;
+	IT_enumerate(optd.itree, (long)span->bc->bc_index,
+		     (long)span->bc->bc_index, &optd, check_cycle);
+	if (yasm_error_occurred()) {
+	    yasm_errwarn_propagate(errwarns, span->bc->line);
+	    saw_error = 1;
+	}
+    }
+
+    if (saw_error) {
+	optimize_cleanup(&optd);
+	return;
     }
 
     /* Step 2 */
