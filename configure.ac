@@ -10,12 +10,12 @@ AC_INIT([yasm], [HEAD], [bug-yasm@tortall.net])
 AC_CONFIG_AUX_DIR(config)
 AM_CONFIG_HEADER([config.h])
 
-AM_INIT_AUTOMAKE(yasm, [0.5.x])
+AM_INIT_AUTOMAKE(yasm, [0.5.0])
 AM_MAINTAINER_MODE
 
-AC_DEFINE(PACKAGE_INTVER, ["0.5.1"],
+AC_DEFINE(PACKAGE_INTVER, ["0.5.0"],
 	  [Define to internal version of this package.])
-AC_DEFINE(PACKAGE_BUILD, ["BRANCH"], [Define to build version of this package.])
+AC_DEFINE(PACKAGE_BUILD, ["1591"], [Define to build version of this package.])
 
 #
 # autoconf command-line options

@@ -120,22 +120,22 @@
 #define PACKAGE_BUGREPORT "bug-yasm@tortall.net"
 
 /* Define to build version of this package. */
-#define PACKAGE_BUILD "BRANCH"
+#define PACKAGE_BUILD "1591"
 
 /* Define to internal version of this package. */
-#define PACKAGE_INTVER "0.5.1"
+#define PACKAGE_INTVER "0.5.0"
 
 /* Define to the full name of this package. */
 #define PACKAGE_NAME "yasm"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "yasm 0.5.x"
+#define PACKAGE_STRING "yasm 0.5.0"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "yasm"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "0.5.x"
+#define PACKAGE_VERSION "0.5.0"
 
 /* Define if the C compiler supports function prototypes. */
 #define PROTOTYPES 1
