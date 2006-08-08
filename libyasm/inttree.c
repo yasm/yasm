@@ -45,10 +45,12 @@ static void TreeInsertHelp(IntervalTree *, IntervalTreeNode *);
 static void TreePrintHelper(const IntervalTree *, IntervalTreeNode *);
 static void FixUpMaxHigh(IntervalTree *, IntervalTreeNode *);
 static void DeleteFixUp(IntervalTree *, IntervalTreeNode *);
+#ifdef CHECK_INTERVAL_TREE_ASSUMPTIONS
 static void CheckMaxHighFields(const IntervalTree *, IntervalTreeNode *);
 static int CheckMaxHighFieldsHelper(const IntervalTree *, IntervalTreeNode *y, 
 				    const int currentHigh, int match);
 static void IT_CheckAssumptions(const IntervalTree *);
+#endif
 
 /* define a function to find the maximum of two objects. */
 #define ITMax(a, b) ( (a > b) ? a : b )
@@ -838,6 +840,7 @@ IT_enumerate(IntervalTree *it, long low, long high, void *cbd,
 #endif
 }
 
+#ifdef CHECK_INTERVAL_TREE_ASSUMPTIONS
 
 static int
 CheckMaxHighFieldsHelper(const IntervalTree *it, IntervalTreeNode *y, 
@@ -887,3 +890,5 @@ IT_CheckAssumptions(const IntervalTree *it)
     VERIFY(it->root->red == 0);
     CheckMaxHighFields(it, it->root->left);
 }
+#endif
+
