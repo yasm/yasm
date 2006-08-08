@@ -630,7 +630,7 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
  * Major differences from Robertson's algorithm:
  *  - detection of cycles
  *  - any difference of two locations is allowed
- *  - handling of alignment gaps
+ *  - handling of alignment/org gaps (offset setting)
  *  - handling of multiples
  *
  * Data structures:
@@ -651,14 +651,17 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
  * Some portions are critical values that must not depend on any bytecode
  * offset (either relative or absolute).
  *
- * Length set to bump offset to required position.  Span created from first
- * bytecode in section to bytecode, update when it exceeds the next offset.
- * This threshold can update to new offset for things like align, which gets
- * propagated to update dependent spans.
+ * All offset-setters (ORG and ALIGN) are put into a linked list in section
+ * order (e.g. increasing offset order).  Each span keeps track of the next
+ * offset-setter following the span's associated bytecode.
  *
- * Offset-based bytecodes are updated by QA before any expansion of normal
- * bytecodes (in QB).  This is done because offset-based bytecodes can absorb
- * expansions.
+ * When a bytecode is expanded, the next offset-setter is examined.  The
+ * offset-setter may be able to absorb the expansion (e.g. any offset
+ * following it would not change), or it may have to move forward (in the
+ * case of align) or error (in the case of org).  If it has to move forward,
+ * following offset-setters must also be examined for absorption or moving
+ * forward.  In either case, the ongoing offset is updated as well as the
+ * lengths of any spans dependent on the offset-setter.
  *
  * Alignment/ORG value is critical value.
  * Cannot be combined with TIMES.
@@ -709,6 +712,16 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
 
 typedef struct yasm_span yasm_span;
 
+typedef struct yasm_offset_setter {
+    /* Linked list in section order (e.g. offset order) */
+    /*@reldef@*/ STAILQ_ENTRY(yasm_offset_setter) link;
+
+    /*@dependent@*/ yasm_bytecode *bc;
+
+    unsigned long cur_val, new_val;
+    unsigned long thres;
+} yasm_offset_setter;
+
 typedef struct yasm_span_term {
     yasm_bytecode *precbc, *precbc2;
     yasm_span *span;	    /* span this term is a member of */
@@ -731,12 +744,6 @@ struct yasm_span {
     yasm_expr__item *items;
     unsigned int num_terms;
 
-    /* Special handling: see descriptions above */
-    enum {
-	NOT_SPECIAL = 0,
-	SPECIAL_BC_OFFSET
-    } special;
-
     long cur_val;
     long new_val;
 
@@ -751,19 +758,24 @@ struct yasm_span {
      * checking for circular references (cycles) with id=0 spans.
      */
     yasm_span **backtrace;
+
+    /* First offset setter following this span's bytecode */
+    yasm_offset_setter *os;
 };
 
 typedef struct optimize_data {
     /*@reldef@*/ TAILQ_HEAD(, yasm_span) spans;
     /*@reldef@*/ STAILQ_HEAD(, yasm_span) QA, QB;
     /*@only@*/ IntervalTree *itree;
+    /*@reldef@*/ STAILQ_HEAD(, yasm_offset_setter) offset_setters;
     long len_diff;	/* used only for optimize_term_expand */
     yasm_span *span;	/* used only for check_cycle */
+    yasm_offset_setter *os;
 } optimize_data;
 
 static yasm_span *
 create_span(yasm_bytecode *bc, int id, /*@null@*/ const yasm_value *value, 
-	    int special, long neg_thres, long pos_thres)
+	    long neg_thres, long pos_thres, yasm_offset_setter *os)
 {
     yasm_span *span = yasm_xmalloc(sizeof(yasm_span));
 
@@ -776,7 +788,6 @@ create_span(yasm_bytecode *bc, int id, /*@null@*/ const yasm_value *value,
     span->terms = NULL;
     span->items = NULL;
     span->num_terms = 0;
-    span->special = special;
     span->cur_val = 0;
     span->new_val = 0;
     span->neg_thres = neg_thres;
@@ -784,6 +795,7 @@ create_span(yasm_bytecode *bc, int id, /*@null@*/ const yasm_value *value,
     span->id = id;
     span->active = 1;
     span->backtrace = NULL;
+    span->os = os;
 
     return span;
 }
@@ -794,7 +806,7 @@ optimize_add_span(void *add_span_data, yasm_bytecode *bc, int id,
 {
     optimize_data *optd = (optimize_data *)add_span_data;
     yasm_span *span;
-    span = create_span(bc, id, value, NOT_SPECIAL, neg_thres, pos_thres);
+    span = create_span(bc, id, value, neg_thres, pos_thres, optd->os);
     TAILQ_INSERT_TAIL(&optd->spans, span, link);
 }
 
@@ -988,6 +1000,7 @@ static void
 optimize_cleanup(optimize_data *optd)
 {
     yasm_span *s1, *s2;
+    yasm_offset_setter *os1, *os2;
 
     IT_destroy(optd->itree);
 
@@ -997,6 +1010,42 @@ optimize_cleanup(optimize_data *optd)
 	span_destroy(s1);
 	s1 = s2;
     }
+
+    os1 = STAILQ_FIRST(&optd->offset_setters);
+    while (os1) {
+	os2 = STAILQ_NEXT(os1, link);
+	yasm_xfree(os1);
+	os1 = os2;
+    }
+}
+
+static void
+optimize_itree_add(IntervalTree *itree, yasm_span *span, yasm_span_term *term)
+{
+    long precbc_index, precbc2_index;
+    unsigned long low, high;
+
+    /* Update term length */
+    if (term->precbc)
+	precbc_index = term->precbc->bc_index;
+    else
+	precbc_index = span->bc->bc_index-1;
+
+    if (term->precbc2)
+	precbc2_index = term->precbc2->bc_index;
+    else
+	precbc2_index = span->bc->bc_index-1;
+
+    if (precbc_index < precbc2_index) {
+	low = precbc_index+1;
+	high = precbc2_index;
+    } else if (precbc_index > precbc2_index) {
+	low = precbc2_index+1;
+	high = precbc_index;
+    } else
+	return;	    /* difference is same bc - always 0! */
+
+    IT_insert(itree, (long)low, (long)high, term);
 }
 
 static void
@@ -1085,7 +1134,7 @@ optimize_term_expand(IntervalTreeNode *node, void *d)
 	return;	/* didn't exceed thresholds, we're done */
 
     /* Exceeded thresholds, need to add to Q for expansion */
-    if (span->special == SPECIAL_BC_OFFSET || span->id == 0)
+    if (span->id == 0)
 	STAILQ_INSERT_TAIL(&optd->QA, span, linkq);
     else
 	STAILQ_INSERT_TAIL(&optd->QB, span, linkq);
@@ -1101,11 +1150,24 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
     int saw_error = 0;
     optimize_data optd;
     yasm_span *span, *span_temp;
+    yasm_offset_setter *os;
     int retval;
     unsigned int i;
 
     TAILQ_INIT(&optd.spans);
+    STAILQ_INIT(&optd.offset_setters);
     optd.itree = IT_create();
+
+    /* Create an placeholder offset setter for spans to point to; this will
+     * get updated if/when we actually run into one.
+     */
+    os = yasm_xmalloc(sizeof(yasm_offset_setter));
+    os->bc = NULL;
+    os->cur_val = 0;
+    os->new_val = 0;
+    os->thres = 0;
+    STAILQ_INSERT_TAIL(&optd.offset_setters, os, link);
+    optd.os = os;
 
     /* Step 1a */
     STAILQ_FOREACH(sect, &object->sections, link) {
@@ -1131,9 +1193,19 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		saw_error = 1;
 	    else {
 		if (bc->callback->special == YASM_BC_SPECIAL_OFFSET) {
-		    span = create_span(bc, 1, NULL, SPECIAL_BC_OFFSET, 0,
-				       (long)yasm_bc_next_offset(bc));
-		    TAILQ_INSERT_TAIL(&optd.spans, span, link);
+		    /* Remember it as offset setter */
+		    os->bc = bc;
+		    os->thres = yasm_bc_next_offset(bc);
+
+		    /* Create new placeholder */
+		    os = yasm_xmalloc(sizeof(yasm_offset_setter));
+		    os->bc = NULL;
+		    os->cur_val = 0;
+		    os->new_val = 0;
+		    os->thres = 0;
+		    STAILQ_INSERT_TAIL(&optd.offset_setters, os, link);
+		    optd.os = os;
+
 		    if (bc->multiple) {
 			yasm_error_set(YASM_ERROR_VALUE,
 			    N_("cannot combine multiples and setting assembly position"));
@@ -1157,45 +1229,31 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 
     /* Step 1b */
     TAILQ_FOREACH_SAFE(span, &optd.spans, link, span_temp) {
-	switch (span->special) {
-	    case NOT_SPECIAL:
-		span_create_terms(span);
-		if (yasm_error_occurred()) {
+	span_create_terms(span);
+	if (yasm_error_occurred()) {
+	    yasm_errwarn_propagate(errwarns, span->bc->line);
+	    saw_error = 1;
+	} else if (recalc_normal_span(span)) {
+	    retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
+				    span->new_val, &span->neg_thres,
+				    &span->pos_thres);
+	    yasm_errwarn_propagate(errwarns, span->bc->line);
+	    if (retval < 0)
+		saw_error = 1;
+	    else if (retval > 0) {
+		if (!span->active) {
+		    yasm_error_set(YASM_ERROR_VALUE,
+			N_("secondary expansion of an external/complex value"));
 		    yasm_errwarn_propagate(errwarns, span->bc->line);
 		    saw_error = 1;
-		} else if (recalc_normal_span(span)) {
-		    retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
-					    span->new_val, &span->neg_thres,
-					    &span->pos_thres);
-		    yasm_errwarn_propagate(errwarns, span->bc->line);
-		    if (retval < 0)
-			saw_error = 1;
-		    else if (retval > 0) {
-			if (!span->active) {
-			    yasm_error_set(YASM_ERROR_VALUE,
-				N_("secondary expansion of an external/complex value"));
-			    yasm_errwarn_propagate(errwarns, span->bc->line);
-			    saw_error = 1;
-			}
-		    } else {
-			TAILQ_REMOVE(&optd.spans, span, link);
-			span_destroy(span);
-			continue;
-		    }
 		}
-		span->cur_val = span->new_val;
-		break;
-	    case SPECIAL_BC_OFFSET:
-		/* Create term */
-		span->rel_term = yasm_xmalloc(sizeof(yasm_span_term));
-		span->rel_term->precbc = STAILQ_FIRST(&span->bc->section->bcs);
-		span->rel_term->precbc2 = NULL;
-		span->rel_term->span = span;
-		span->rel_term->subst = ~0U;
-		span->rel_term->cur_val = 0;
-		span->rel_term->new_val = (long)span->bc->offset;
-		break;
+	    } else {
+		TAILQ_REMOVE(&optd.spans, span, link);
+		span_destroy(span);
+		continue;
+	    }
 	}
+	span->cur_val = span->new_val;
     }
 
     if (saw_error) {
@@ -1235,24 +1293,9 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		    yasm_bc_next_offset(span->rel_term->precbc);
 	}
 
-	switch (span->special) {
-	    case NOT_SPECIAL:
-		if (recalc_normal_span(span)) {
-		    /* Exceeded threshold, add span to QB */
-		    STAILQ_INSERT_TAIL(&optd.QB, span, linkq);
-		}
-		break;
-	    case SPECIAL_BC_OFFSET:
-		/* It's impossible to exceed any threshold here (as we just
-		 * adjusted this when updating the BC offsets), so just update
-		 * span values and thresholds.
-		 */
-		span->new_val = span->rel_term->new_val;
-		span->pos_thres = (long)yasm_bc_next_offset(span->bc);
-
-		span->rel_term->cur_val = span->rel_term->new_val;
-		span->cur_val = span->new_val;
-		break;
+	if (recalc_normal_span(span)) {
+	    /* Exceeded threshold, add span to QB */
+	    STAILQ_INSERT_TAIL(&optd.QB, span, linkq);
 	}
     }
 
@@ -1262,19 +1305,21 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	return;
     }
 
+    /* Update offset-setters values */
+    STAILQ_FOREACH(os, &optd.offset_setters, link) {
+	if (!os->bc)
+	    continue;
+	os->thres = yasm_bc_next_offset(os->bc);
+	os->new_val = os->bc->offset;
+	os->cur_val = os->new_val;
+    }
+
     /* Build up interval tree */
     TAILQ_FOREACH(span, &optd.spans, link) {
 	for (i=0; i<span->num_terms; i++)
-	    IT_insert(optd.itree, (long)span->terms[i].precbc->bc_index,
-		      (long)span->terms[i].precbc2->bc_index, &span->terms[i]);
-	if (span->rel_term) {
-	    if (span->rel_term->precbc)
-		IT_insert(optd.itree, (long)span->rel_term->precbc->bc_index,
-			  (long)span->bc->bc_index-1, span->rel_term);
-	    else
-		IT_insert(optd.itree, (long)span->rel_term->precbc2->bc_index,
-			  (long)span->bc->bc_index-1, span->rel_term);
-	}
+	    optimize_itree_add(optd.itree, span, &span->terms[i]);
+	if (span->rel_term)
+	    optimize_itree_add(optd.itree, span, span->rel_term);
     }
 
     /* Look for cycles in times expansion (span.id==0) */
@@ -1299,10 +1344,11 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
     STAILQ_INIT(&optd.QA);
     while (!STAILQ_EMPTY(&optd.QA) || !(STAILQ_EMPTY(&optd.QB))) {
 	unsigned long orig_len;
+	long offset_diff;
 
-	/* QA is for offset BCs, update those first, then update non-offset.
-	 * This is so that offset BCs can absorb increases before we look at
-	 * expanding non-offset BCs.
+	/* QA is for TIMES, update those first, then update non-TIMES.
+	 * This is so that TIMES can absorb increases before we look at
+	 * expanding non-TIMES BCs.
 	 */
 	if (!STAILQ_EMPTY(&optd.QA)) {
 	    span = STAILQ_FIRST(&optd.QA);
@@ -1351,6 +1397,38 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	/* Iterate over all spans dependent across the bc just expanded */
 	IT_enumerate(optd.itree, (long)span->bc->bc_index,
 		     (long)span->bc->bc_index, &optd, optimize_term_expand);
+
+	/* Iterate over offset-setters that follow the bc just expanded.
+	 * Stop iteration if:
+	 *  - no more offset-setters in this section
+	 *  - offset-setter didn't move its following offset
+	 */
+	os = span->os;
+	offset_diff = optd.len_diff;
+	while (os->bc && os->bc->section == span->bc->section
+	       && offset_diff != 0) {
+	    unsigned long old_next_offset = os->cur_val + os->bc->len;
+	    long neg_thres_temp;
+
+	    if (offset_diff < 0 && (unsigned long)(-offset_diff) > os->new_val)
+		yasm_internal_error(N_("org/align went to negative offset"));
+	    os->new_val += offset_diff;
+
+	    orig_len = os->bc->len;
+	    retval = yasm_bc_expand(os->bc, 1, (long)os->cur_val,
+				    (long)os->new_val, &neg_thres_temp,
+				    (long *)&os->thres);
+	    yasm_errwarn_propagate(errwarns, os->bc->line);
+
+	    offset_diff = os->new_val + os->bc->len - old_next_offset;
+	    optd.len_diff = os->bc->len - orig_len;
+	    if (optd.len_diff != 0)
+		IT_enumerate(optd.itree, (long)os->bc->bc_index,
+		     (long)os->bc->bc_index, &optd, optimize_term_expand);
+
+	    os->cur_val = os->new_val;
+	    os = STAILQ_NEXT(os, link);
+	}
     }
 
     if (saw_error) {
