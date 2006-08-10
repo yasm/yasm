@@ -48,7 +48,6 @@ modules/objfmts/elf/elf-x86-x86.c
 modules/objfmts/elf/elf.c
 modules/objfmts/xdf/xdf-objfmt.c
 modules/parsers/gas/gas-parser.c
-modules/parsers/nasm/nasm-token.c
 modules/preprocs/nasm/nasm-pp.c
 modules/preprocs/raw/raw-preproc.c
 nasm-bison.c
