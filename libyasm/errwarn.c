@@ -475,14 +475,14 @@ yasm_errwarns_output_all(yasm_errwarns *errwarns, yasm_linemap *lm,
 			 yasm_print_warning_func print_warning)
 {
     errwarn_data *we;
-    const char *filename;
-    unsigned long line;
+    const char *filename, *xref_filename;
+    unsigned long line, xref_line;
 
     /* If we're treating warnings as errors, tell the user about it. */
     if (warning_as_error && warning_as_error != 2) {
 	print_error("", 0,
 		    yasm_gettext_hook(N_("warnings being treated as errors")),
-		    0, NULL);
+		    NULL, 0, NULL);
 	warning_as_error = 2;
     }
 
@@ -490,8 +490,15 @@ yasm_errwarns_output_all(yasm_errwarns *errwarns, yasm_linemap *lm,
     SLIST_FOREACH(we, &errwarns->errwarns, link) {
 	/* Output error/warning */
 	yasm_linemap_lookup(lm, we->line, &filename, &line);
+	if (we->xrefline)
+	    yasm_linemap_lookup(lm, we->xrefline, &xref_filename, &xref_line);
+	else {
+	    xref_filename = NULL;
+	    xref_line = 0;
+	}
 	if (we->type == WE_ERROR || we->type == WE_PARSERERROR)
-	    print_error(filename, line, we->msg, we->xrefline, we->xrefmsg);
+	    print_error(filename, line, we->msg, xref_filename, xref_line,
+			we->xrefmsg);
 	else
 	    print_warning(filename, line, we->msg);
     }

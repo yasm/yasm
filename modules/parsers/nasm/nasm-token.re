@@ -410,6 +410,8 @@ scan:
 		default:
 		    s->tok[TOKLEN] = savech;
 	    }
+	    /* Propagate errors in case we got a warning from the arch */
+	    yasm_errwarn_propagate(parser_nasm->errwarns, cur_line);
 	    /* Just an identifier, return as such. */
 	    lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
 	    RETURN(ID);
@@ -542,6 +544,8 @@ stringconst_scan:
 	    lvalp->str.len = count;
 	    if (parser_nasm->save_input && cursor != s->eof)
 		cursor = save_line(parser_nasm, cursor);
+	    if (count == 1)
+		RETURN(ONECHARSTR);
 	    RETURN(STRING);
 	}
 
@@ -550,6 +554,8 @@ stringconst_scan:
 		strbuf[count] = '\0';
 		lvalp->str.contents = (char *)strbuf;
 		lvalp->str.len = count;
+		if (count == 1)
+		    RETURN(ONECHARSTR);
 		RETURN(STRING);
 	    }
 

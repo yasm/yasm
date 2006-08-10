@@ -349,19 +349,23 @@ INSN	-	faddp	NONE	farithp	0xC0		CPU_FPU
 INSN	-	fiadd	"ls"	fiarith	0x00DA		CPU_FPU
 INSN	-	fsub	"ls"	farith	0x04E0E8	CPU_FPU
 INSN	-	fisub	"ls"	fiarith	0x04DA		CPU_FPU
-INSN	-	fsubp	NONE	farithp	0xE8		CPU_FPU
+INSN	nasm	fsubp	NONE	farithp	0xE8		CPU_FPU
+INSN	gas	fsubp	NONE	farithp	0xE0		CPU_FPU
 INSN	-	fsubr	"ls"	farith	0x05E8E0	CPU_FPU
 INSN	-	fisubr	"ls"	fiarith	0x05DA		CPU_FPU
-INSN	-	fsubrp	NONE	farithp	0xE0		CPU_FPU
+INSN	nasm	fsubrp	NONE	farithp	0xE0		CPU_FPU
+INSN	gas	fsubrp	NONE	farithp	0xE8		CPU_FPU
 INSN	-	fmul	"ls"	farith	0x01C8C8	CPU_FPU
 INSN	-	fimul	"ls"	fiarith	0x01DA		CPU_FPU
 INSN	-	fmulp	NONE	farithp	0xC8		CPU_FPU
 INSN	-	fdiv	"ls"	farith	0x06F0F8	CPU_FPU
 INSN	-	fidiv	"ls"	fiarith	0x06DA		CPU_FPU
-INSN	-	fdivp	NONE	farithp	0xF8		CPU_FPU
+INSN	nasm	fdivp	NONE	farithp	0xF8		CPU_FPU
+INSN	gas	fdivp	NONE	farithp	0xF0		CPU_FPU
 INSN	-	fdivr	"ls"	farith	0x07F8F0	CPU_FPU
 INSN	-	fidivr	"ls"	fiarith	0x07DA		CPU_FPU
-INSN	-	fdivrp	NONE	farithp	0xF0		CPU_FPU
+INSN	nasm	fdivrp	NONE	farithp	0xF0		CPU_FPU
+INSN	gas	fdivrp	NONE	farithp	0xF8		CPU_FPU
 INSN	-	f2xm1	NONE	twobyte	0xD9F0		CPU_FPU
 INSN	-	fyl2x	NONE	twobyte	0xD9F1		CPU_FPU
 INSN	-	fptan	NONE	twobyte	0xD9F2		CPU_FPU
@@ -746,6 +750,7 @@ INSN	-	sysret	"lq"	twobyte	0x0F07		CPU_686|CPU_AMD|CPU_Priv
 # AMD x86-64 extensions
 INSN	-	swapgs	NONE	threebyte   0x0F01F8	CPU_Hammer|CPU_64
 INSN	-	rdtscp	NONE	threebyte   0x0F01F9	CPU_686|CPU_AMD|CPU_Priv
+INSN	-	cmpxchg16b NONE	cmpxchg16b	0	CPU_Hammer|CPU_64
 # AMD Pacifica SVM instructions
 INSN	-	clgi	NONE	threebyte   0x0F01DD	CPU_Hammer|CPU_64|CPU_SVM
 INSN	-	invlpga	NONE	invlpga	    0		CPU_Hammer|CPU_64|CPU_SVM

@@ -272,7 +272,7 @@ yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
     dv = STAILQ_FIRST(datahead);
     dvo = STAILQ_FIRST(&data->datahead);
     len = 0;
-    while (dv) {
+    while (dv && dvo) {
 	switch (dv->type) {
 	    case DV_EMPTY:
 		break;

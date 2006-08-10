@@ -108,8 +108,9 @@ static /*@exits@*/ void handle_yasm_int_error(const char *file,
 static /*@exits@*/ void handle_yasm_fatal(const char *message, va_list va);
 static const char *handle_yasm_gettext(const char *msgid);
 static void print_yasm_error(const char *filename, unsigned long line,
-			     const char *msg, unsigned long xrefline,
-			     /*@null@*/ const char *xrefmsg);
+			     const char *msg, /*@null@*/ const char *xref_fn,
+			     unsigned long xref_line,
+			     /*@null@*/ const char *xref_msg);
 static void print_yasm_warning(const char *filename, unsigned long line,
 			       const char *msg);
 
@@ -1177,18 +1178,19 @@ static const char *fmt_noline[2] = {
 
 static void
 print_yasm_error(const char *filename, unsigned long line, const char *msg,
-		 unsigned long xrefline, const char *xrefmsg)
+		 const char *xref_fn, unsigned long xref_line,
+		 const char *xref_msg)
 {
     if (line)
 	fprintf(stderr, fmt[ewmsg_style], filename, line, "", msg);
     else
 	fprintf(stderr, fmt_noline[ewmsg_style], filename, "", msg);
 
-    if (xrefmsg) {
-	if (xrefline)
-	    fprintf(stderr, fmt[ewmsg_style], filename, xrefline, "", xrefmsg);
+    if (xref_fn && xref_msg) {
+	if (xref_line)
+	    fprintf(stderr, fmt[ewmsg_style], xref_fn, xref_line, "", xref_msg);
 	else
-	    fprintf(stderr, fmt_noline[ewmsg_style], filename, "", xrefmsg);
+	    fprintf(stderr, fmt_noline[ewmsg_style], xref_fn, "", xref_msg);
     }
 }
 

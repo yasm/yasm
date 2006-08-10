@@ -1494,8 +1494,10 @@ static const x86_insn_info farith_insn[] = {
       {OPT_ST0|OPS_80|OPA_None, OPT_Reg|OPS_80|OPA_Op1Add, 0} },
     { CPU_FPU, MOD_Op1Add, 0, 0, 0, 2, {0xDC, 0x00, 0}, 0, 1,
       {OPT_Reg|OPS_80|OPTM_To|OPA_Op1Add, 0, 0} },
-    { CPU_FPU, MOD_Op1Add, 0, 0, 0, 2, {0xDC, 0x00, 0}, 0, 2,
-      {OPT_Reg|OPS_80|OPA_Op1Add, OPT_ST0|OPS_80|OPA_None, 0} }
+    { CPU_FPU, MOD_Op1Add|MOD_GasIllegal, 0, 0, 0, 2, {0xDC, 0x00, 0}, 0, 2,
+      {OPT_Reg|OPS_80|OPA_Op1Add, OPT_ST0|OPS_80|OPA_None, 0} },
+    { CPU_FPU, MOD_Gap0|MOD_Op1Add|MOD_GasOnly, 0, 0, 0, 2, {0xDC, 0x00, 0},
+      0, 2, {OPT_Reg|OPS_80|OPA_Op1Add, OPT_ST0|OPS_80|OPA_None, 0} }
 };
 static const x86_insn_info farithp_insn[] = {
     { CPU_FPU, MOD_Op1Add, 0, 0, 0, 2, {0xDE, 0x01, 0}, 0, 0, {0, 0, 0} },
@@ -1950,6 +1952,12 @@ static const x86_insn_info lddqu_insn[] = {
 static const x86_insn_info now3d_insn[] = {
     { CPU_3DNow, MOD_Imm8, 0, 0, 0, 2, {0x0F, 0x0F, 0}, 0, 2,
       {OPT_SIMDReg|OPS_64|OPA_Spare, OPT_SIMDRM|OPS_64|OPS_Relaxed|OPA_EA, 0} }
+};
+
+/* AMD x86-64 extensions */
+static const x86_insn_info cmpxchg16b_insn[] = {
+    { CPU_64|CPU_Hammer, 0, 64, 0, 0, 2, {0x0F, 0xC7, 0}, 1, 1,
+      {OPT_Mem|OPS_128|OPS_Relaxed|OPA_EA, 0, 0} }
 };
 
 /* AMD Pacifica (SVM) instructions */

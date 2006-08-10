@@ -264,13 +264,17 @@ unsigned int yasm_errwarns_num_errors(yasm_errwarns *errwarns,
 				      int warning_as_error);
 
 /** Print out an error.
- * \param fn	filename of source file
- * \param line	line number
- * \param msg	error message
+ * \param fn		filename of source file
+ * \param line		line number
+ * \param msg		error message
+ * \param xref_fn	cross-referenced source filename
+ * \param xref_line	cross-referenced line number
+ * \param xref_msg	cross-referenced error message
  */
 typedef void (*yasm_print_error_func)
     (const char *fn, unsigned long line, const char *msg,
-     unsigned long xrefline, /*@null@*/ const char *xrefmsg);
+     /*@null@*/ const char *xref_fn, unsigned long xref_line,
+     /*@null@*/ const char *xref_msg);
 
 /** Print out a warning.
  * \param fn	filename of source file
