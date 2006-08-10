@@ -53,8 +53,8 @@ typedef struct bytecode_incbin {
 static void bc_incbin_destroy(void *contents);
 static void bc_incbin_print(const void *contents, FILE *f, int indent_level);
 static void bc_incbin_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
-static yasm_bc_resolve_flags bc_incbin_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int bc_incbin_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+			      void *add_span_data);
 static int bc_incbin_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			     yasm_output_value_func output_value,
 			     /*@null@*/ yasm_output_reloc_func output_reloc);
@@ -63,7 +63,8 @@ static const yasm_bytecode_callback bc_incbin_callback = {
     bc_incbin_destroy,
     bc_incbin_print,
     bc_incbin_finalize,
-    bc_incbin_resolve,
+    bc_incbin_calc_len,
+    yasm_bc_expand_common,
     bc_incbin_tobytes,
     0
 };
@@ -122,51 +123,39 @@ bc_incbin_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     incbin->maxlen = val.abs;
 }
 
-static yasm_bc_resolve_flags
-bc_incbin_resolve(yasm_bytecode *bc, int save,
-		  yasm_calc_bc_dist_func calc_bc_dist)
+static int
+bc_incbin_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		   void *add_span_data)
 {
     bytecode_incbin *incbin = (bytecode_incbin *)bc->contents;
     FILE *f;
-    /*@null@*/ yasm_expr *temp;
-    yasm_expr **tempp;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
     unsigned long start = 0, maxlen = 0xFFFFFFFFUL, flen;
 
     /* Try to convert start to integer value */
     if (incbin->start) {
-	if (save) {
-	    temp = NULL;
-	    tempp = &incbin->start;
-	} else {
-	    temp = yasm_expr_copy(incbin->start);
-	    assert(temp != NULL);
-	    tempp = &temp;
-	}
-	num = yasm_expr_get_intnum(tempp, calc_bc_dist);
+	num = yasm_expr_get_intnum(&incbin->start, 0);
 	if (num)
 	    start = yasm_intnum_get_uint(num);
-	yasm_expr_destroy(temp);
-	if (!num)
-	    return YASM_BC_RESOLVE_UNKNOWN_LEN;
+	if (!num) {
+	    /* FIXME */
+	    yasm_error_set(YASM_ERROR_NOT_IMPLEMENTED,
+			   N_("incbin does not yet understand non-constant"));
+	    return -1;
+	}
     }
 
     /* Try to convert maxlen to integer value */
     if (incbin->maxlen) {
-	if (save) {
-	    temp = NULL;
-	    tempp = &incbin->maxlen;
-	} else {
-	    temp = yasm_expr_copy(incbin->maxlen);
-	    assert(temp != NULL);
-	    tempp = &temp;
-	}
-	num = yasm_expr_get_intnum(tempp, calc_bc_dist);
+	num = yasm_expr_get_intnum(&incbin->maxlen, 0);
 	if (num)
 	    maxlen = yasm_intnum_get_uint(num);
-	yasm_expr_destroy(temp);
-	if (!num)
-	    return YASM_BC_RESOLVE_UNKNOWN_LEN;
+	if (!num) {
+	    /* FIXME */
+	    yasm_error_set(YASM_ERROR_NOT_IMPLEMENTED,
+			   N_("incbin does not yet understand non-constant"));
+	    return -1;
+	}
     }
 
     /* FIXME: Search include path for filename.  Save full path back into
@@ -179,13 +168,13 @@ bc_incbin_resolve(yasm_bytecode *bc, int save,
 	yasm_error_set(YASM_ERROR_IO,
 		       N_("`incbin': unable to open file `%s'"),
 		       incbin->filename);
-	return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
+	return -1;
     }
     if (fseek(f, 0L, SEEK_END) < 0) {
 	yasm_error_set(YASM_ERROR_IO,
 		       N_("`incbin': unable to seek on file `%s'"),
 		       incbin->filename);
-	return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
+	return -1;
     }
     flen = (unsigned long)ftell(f);
     fclose(f);
@@ -202,7 +191,7 @@ bc_incbin_resolve(yasm_bytecode *bc, int save,
 	if (maxlen < flen)
 	    flen = maxlen;
     bc->len += flen;
-    return YASM_BC_RESOLVE_MIN_LEN;
+    return 0;
 }
 
 static int
@@ -217,7 +206,7 @@ bc_incbin_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     /* Convert start to integer value */
     if (incbin->start) {
-	num = yasm_expr_get_intnum(&incbin->start, NULL);
+	num = yasm_expr_get_intnum(&incbin->start, 0);
 	if (!num)
 	    yasm_internal_error(
 		N_("could not determine start in bc_tobytes_incbin"));

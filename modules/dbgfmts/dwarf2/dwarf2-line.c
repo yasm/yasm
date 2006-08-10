@@ -130,8 +130,8 @@ typedef struct dwarf2_line_op {
 static void dwarf2_spp_bc_destroy(void *contents);
 static void dwarf2_spp_bc_print(const void *contents, FILE *f,
 				int indent_level);
-static yasm_bc_resolve_flags dwarf2_spp_bc_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int dwarf2_spp_bc_calc_len
+    (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int dwarf2_spp_bc_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
      yasm_output_value_func output_value,
@@ -140,8 +140,8 @@ static int dwarf2_spp_bc_tobytes
 static void dwarf2_line_op_bc_destroy(void *contents);
 static void dwarf2_line_op_bc_print(const void *contents, FILE *f,
 				    int indent_level);
-static yasm_bc_resolve_flags dwarf2_line_op_bc_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int dwarf2_line_op_bc_calc_len
+    (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int dwarf2_line_op_bc_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
      yasm_output_value_func output_value,
@@ -152,7 +152,8 @@ static const yasm_bytecode_callback dwarf2_spp_bc_callback = {
     dwarf2_spp_bc_destroy,
     dwarf2_spp_bc_print,
     yasm_bc_finalize_common,
-    dwarf2_spp_bc_resolve,
+    dwarf2_spp_bc_calc_len,
+    yasm_bc_expand_common,
     dwarf2_spp_bc_tobytes,
     0
 };
@@ -161,7 +162,8 @@ static const yasm_bytecode_callback dwarf2_line_op_bc_callback = {
     dwarf2_line_op_bc_destroy,
     dwarf2_line_op_bc_print,
     yasm_bc_finalize_common,
-    dwarf2_line_op_bc_resolve,
+    dwarf2_line_op_bc_calc_len,
+    yasm_bc_expand_common,
     dwarf2_line_op_bc_tobytes,
     0
 };
@@ -594,7 +596,7 @@ dwarf2_generate_line_section(yasm_section *sect, /*@null@*/ void *d)
     if (!state.precbc)
 	state.precbc = yasm_section_bcs_first(sect);
     bc = yasm_section_bcs_last(sect);
-    addr_delta = bc->offset + bc->len - state.precbc->offset;
+    addr_delta = yasm_bc_next_offset(bc) - state.precbc->offset;
     if (addr_delta == DWARF2_MAX_SPECIAL_ADDR_DELTA)
 	dwarf2_dbgfmt_append_line_op(info->debug_line, DW_LNS_const_add_pc,
 				     NULL);
@@ -699,13 +701,13 @@ dwarf2_spp_bc_print(const void *contents, FILE *f, int indent_level)
     /* TODO */
 }
 
-static yasm_bc_resolve_flags
-dwarf2_spp_bc_resolve(yasm_bytecode *bc, int save,
-		      yasm_calc_bc_dist_func calc_bc_dist)
+static int
+dwarf2_spp_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		       void *add_span_data)
 {
-    yasm_internal_error(N_("tried to resolve a dwarf2 spp bytecode"));
+    yasm_internal_error(N_("tried to calc_len a dwarf2 spp bytecode"));
     /*@notreached@*/
-    return YASM_BC_RESOLVE_MIN_LEN;
+    return 0;
 }
 
 static int
@@ -781,13 +783,13 @@ dwarf2_line_op_bc_print(const void *contents, FILE *f, int indent_level)
     /* TODO */
 }
 
-static yasm_bc_resolve_flags
-dwarf2_line_op_bc_resolve(yasm_bytecode *bc, int save,
-			  yasm_calc_bc_dist_func calc_bc_dist)
+static int
+dwarf2_line_op_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+			   void *add_span_data)
 {
-    yasm_internal_error(N_("tried to resolve a dwarf2 line_op bytecode"));
+    yasm_internal_error(N_("tried to calc_len a dwarf2 line_op bytecode"));
     /*@notreached@*/
-    return YASM_BC_RESOLVE_MIN_LEN;
+    return 0;
 }
 
 static int
@@ -835,7 +837,7 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	    yasm_xfree(loc);
 	    return 0;
 	}
-	intn = yasm_expr_get_intnum(&vp->param, NULL);
+	intn = yasm_expr_get_intnum(&vp->param, 0);
 	if (!intn) {
 	    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			   N_("file number is not a constant"));
@@ -857,7 +859,7 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	    yasm_xfree(loc);
 	    return 0;
 	}
-	intn = yasm_expr_get_intnum(&vp->param, NULL);
+	intn = yasm_expr_get_intnum(&vp->param, 0);
 	if (!intn) {
 	    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			   N_("file number is not a constant"));
@@ -886,7 +888,7 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	/* Optional column number */
 	vp = yasm_vps_next(vp);
 	if (vp && vp->param) {
-	    intn = yasm_expr_get_intnum(&vp->param, NULL);
+	    intn = yasm_expr_get_intnum(&vp->param, 0);
 	    if (!intn) {
 		yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			       N_("column number is not a constant"));
@@ -912,7 +914,7 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 		    yasm_xfree(loc);
 		    return 0;
 		}
-		intn = yasm_expr_get_intnum(&vp->param, NULL);
+		intn = yasm_expr_get_intnum(&vp->param, 0);
 		if (!intn) {
 		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 				   N_("is_stmt value is not a constant"));
@@ -935,7 +937,7 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 		    yasm_xfree(loc);
 		    return 0;
 		}
-		intn = yasm_expr_get_intnum(&vp->param, NULL);
+		intn = yasm_expr_get_intnum(&vp->param, 0);
 		if (!intn) {
 		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 				   N_("isa value is not a constant"));
@@ -975,7 +977,7 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	}
 
 	/* Otherwise.. first vp is the file number */
-	file_intn = yasm_expr_get_intnum(&vp->param, NULL);
+	file_intn = yasm_expr_get_intnum(&vp->param, 0);
 	if (!file_intn) {
 	    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			   N_("file number is not a constant"));

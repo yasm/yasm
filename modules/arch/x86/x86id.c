@@ -53,7 +53,7 @@ RCSID("$Id$");
 #define MOD_Imm8    (1UL<<9)	/* Parameter is included as immediate byte */
 #define MOD_AdSizeR (1UL<<10)	/* Parameter replaces addrsize (jmp only) */
 #define MOD_DOpS64R (1UL<<11)	/* Parameter replaces default 64-bit opersize */
-#define MOD_Op2AddSp (1UL<<12)	/* Parameter is added as "spare" to opcode byte 2 */
+#define MOD_Op1AddSp (1UL<<12)	/* Parameter is added as "spare" to opcode byte 2 */
 
 /* Modifiers that aren't: these are used with the GAS parser to indicate
  * special cases.
@@ -108,6 +108,7 @@ RCSID("$Id$");
  *             14 = CR4
  *             15 = memory offset (an EA, but with no registers allowed)
  *                  [special case for MOV opcode]
+ *             16 = immediate, value=1 (for special-case shift)
  *  - 3 bits = size (user-specified, or from register size):
  *             0 = any size acceptable/no size spec acceptable (dep. on strict)
  *             1/2/3/4 = 8/16/32/64 bits (from user or reg size)
@@ -147,17 +148,16 @@ RCSID("$Id$");
  *             9 = operand size goes into address size (jmp only)
  *             A = far jump (outputs a farjmp instead of normal insn)
  * The below describes postponed actions: actions which can't be completed at
- * parse-time due to things like EQU and complex expressions.  For these, some
+ * parse-time due to possibly dependent expressions.  For these, some
  * additional data (stored in the second byte of the opcode with a one-byte
  * opcode) is passed to later stages of the assembler with flags set to
  * indicate postponed actions.
  *  - 3 bits = postponed action:
  *             0 = none
- *             1 = shift operation with a ,1 short form (instead of imm8).
- *             2 = large imm16/32 that can become a sign-extended imm8.
- *             3 = could become a short opcode mov with bits=64 and a32 prefix
- *             4 = forced 16-bit address size (override ignored, no prefix)
- *             5 = large imm64 that can become a sign-extended imm32.
+ *             1 = sign-extended imm8 that could expand to a large imm16/32
+ *             2 = could become a short opcode mov with bits=64 and a32 prefix
+ *             3 = forced 16-bit address size (override ignored, no prefix)
+ *             4 = large imm64 that can become a sign-extended imm32.
  */
 #define OPT_Imm		0x0
 #define OPT_Reg		0x1
@@ -181,6 +181,7 @@ RCSID("$Id$");
 #define OPT_SS		0x13
 #define OPT_CR4		0x14
 #define OPT_MemOffs	0x15
+#define OPT_Imm1	0x16
 #define OPT_MASK	0x1F
 
 #define OPS_Any		(0UL<<5)
@@ -222,11 +223,10 @@ RCSID("$Id$");
 #define OPA_MASK	(0xFUL<<13)
 
 #define OPAP_None	(0UL<<17)
-#define OPAP_ShiftOp	(1UL<<17)
-#define OPAP_SImm8Avail	(2UL<<17)
-#define OPAP_ShortMov	(3UL<<17)
-#define OPAP_A16	(4UL<<17)
-#define OPAP_SImm32Avail (5UL<<17)
+#define OPAP_SImm8	(1UL<<17)
+#define OPAP_ShortMov	(2UL<<17)
+#define OPAP_A16	(3UL<<17)
+#define OPAP_SImm32Avail (4UL<<17)
 #define OPAP_MASK	(7UL<<17)
 
 typedef struct x86_insn_info {
@@ -623,17 +623,17 @@ static const x86_insn_info push_insn[] = {
       {OPT_Imm|OPS_32|OPA_SImm, 0, 0} },
     { CPU_Any, MOD_GasOnly|MOD_GasSufB, 0, 64, 0, 1, {0x6A, 0, 0}, 0, 1,
       {OPT_Imm|OPS_8|OPS_Relaxed|OPA_SImm, 0, 0} },
-    { CPU_Any, MOD_GasOnly|MOD_GasSufW, 16, 64, 0, 1, {0x68, 0x6A, 0}, 0, 1,
-      {OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0, 0} },
+    { CPU_Any, MOD_GasOnly|MOD_GasSufW, 16, 64, 0, 1, {0x6A, 0x68, 0}, 0, 1,
+      {OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0, 0} },
     { CPU_386|CPU_Not64, MOD_GasOnly|MOD_GasSufL, 32, 0, 0, 1,
-      {0x68, 0x6A, 0}, 0, 1,
-      {OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0, 0} },
+      {0x6A, 0x68, 0}, 0, 1,
+      {OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0, 0} },
     { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 64, 0, 1,
-      {0x68, 0x6A, 0}, 0, 1,
-      {OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail, 0, 0} },
+      {0x6A, 0x68, 0}, 0, 1,
+      {OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8, 0, 0} },
     { CPU_Any|CPU_Not64, MOD_GasIllegal, 0, 0, 0, 1,
-      {0x68, 0x6A, 0}, 0, 1,
-      {OPT_Imm|OPS_BITS|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0, 0} },
+      {0x6A, 0x68, 0}, 0, 1,
+      {OPT_Imm|OPS_BITS|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0, 0} },
     { CPU_Not64, 0, 0, 0, 0, 1, {0x0E, 0, 0}, 0, 1,
       {OPT_CS|OPS_Any|OPA_None, 0, 0} },
     { CPU_Not64, MOD_GasSufW, 16, 0, 0, 1, {0x0E, 0, 0}, 0, 1,
@@ -843,22 +843,22 @@ static const x86_insn_info arith_insn[] = {
       {OPT_Areg|OPS_8|OPA_None, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
     { CPU_Any, MOD_Op0Add|MOD_GasIllegal, 16, 0, 0, 1, {0x05, 0, 0}, 0, 2,
       {OPT_Areg|OPS_16|OPA_None, OPT_Imm|OPS_16|OPA_Imm, 0} },
-    { CPU_Any, MOD_Op0Add|MOD_Op2AddSp|MOD_GasSufW, 16, 0, 0, 1,
-      {0x05, 0x83, 0xC0}, 0, 2,
+    { CPU_Any, MOD_Op2Add|MOD_Op1AddSp|MOD_GasSufW, 16, 0, 0, 2,
+      {0x83, 0xC0, 0x05}, 0, 2,
       {OPT_Areg|OPS_16|OPA_None,
-       OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
+       OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
     { CPU_386, MOD_Op0Add|MOD_GasIllegal, 32, 0, 0, 1, {0x05, 0, 0}, 0, 2,
       {OPT_Areg|OPS_32|OPA_None, OPT_Imm|OPS_32|OPA_Imm, 0} },
-    { CPU_386, MOD_Op0Add|MOD_Op2AddSp|MOD_GasSufL, 32, 0, 0, 1,
-      {0x05, 0x83, 0xC0}, 0, 2,
+    { CPU_386, MOD_Op2Add|MOD_Op1AddSp|MOD_GasSufL, 32, 0, 0, 2,
+      {0x83, 0xC0, 0x05}, 0, 2,
       {OPT_Areg|OPS_32|OPA_None,
-       OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
     { CPU_Hammer|CPU_64, MOD_Op0Add|MOD_GasIllegal, 64, 0, 0, 1, {0x05, 0, 0},
       0, 2, {OPT_Areg|OPS_64|OPA_None, OPT_Imm|OPS_32|OPA_Imm, 0} },
-    { CPU_Hammer|CPU_64, MOD_Op0Add|MOD_Op2AddSp|MOD_GasSufQ, 64, 0, 0, 1,
-      {0x05, 0x83, 0xC0}, 0,
+    { CPU_Hammer|CPU_64, MOD_Op2Add|MOD_Op1AddSp|MOD_GasSufQ, 64, 0, 0, 2,
+      {0x83, 0xC0, 0x05}, 0,
       2, {OPT_Areg|OPS_64|OPA_None,
-	  OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
+	  OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
 
     /* Also have forced-size forms to override the optimization */
     { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasSufB, 0, 0, 0, 1, {0x80, 0, 0}, 0, 2,
@@ -869,23 +869,23 @@ static const x86_insn_info arith_insn[] = {
       {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_8|OPA_SImm, 0} },
     { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasIllegal, 16, 0, 0, 1, {0x81, 0, 0}, 0,
       2, {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_16|OPA_Imm, 0} },
-    { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasSufW, 16, 0, 0, 1, {0x81, 0x83, 0}, 0,
+    { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasSufW, 16, 0, 0, 1, {0x83, 0x81, 0}, 0,
       2, {OPT_RM|OPS_16|OPA_EA,
-	  OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
+	  OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
     { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasSufL, 32, 0, 0, 1, {0x83, 0, 0}, 0, 2,
       {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_8|OPA_SImm, 0} },
     { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasIllegal, 32, 0, 0, 1, {0x81, 0, 0}, 0,
       2, {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_32|OPA_Imm, 0} },
-    { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasSufL, 32, 0, 0, 1, {0x81, 0x83, 0}, 0,
+    { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasSufL, 32, 0, 0, 1, {0x83, 0x81, 0}, 0,
       2, {OPT_RM|OPS_32|OPA_EA,
-	  OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
+	  OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
     { CPU_Hammer|CPU_64, MOD_Gap0|MOD_SpAdd|MOD_GasSufQ, 64, 0, 0, 1,
       {0x83, 0, 0}, 0, 2,
       {OPT_RM|OPS_64|OPA_EA, OPT_Imm|OPS_8|OPA_SImm, 0} },
     { CPU_Hammer|CPU_64, MOD_Gap0|MOD_SpAdd|MOD_GasSufQ, 64, 0, 0, 1,
-      {0x81, 0x83, 0}, 0, 2,
+      {0x83, 0x81, 0}, 0, 2,
       {OPT_RM|OPS_64|OPA_EA,
-       OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8Avail, 0} },
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
     { CPU_Hammer|CPU_64, MOD_Gap0|MOD_SpAdd|MOD_GasSufQ, 64, 0, 0, 1,
       {0x81, 0, 0}, 0, 2,
       {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_32|OPA_Imm, 0} },
@@ -1048,53 +1048,53 @@ static const x86_insn_info imul_insn[] = {
     { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0x6B, 0, 0}, 0, 2,
       {OPT_Reg|OPS_64|OPA_SpareEA, OPT_Imm|OPS_8|OPA_SImm, 0} },
 
-    { CPU_186, MOD_GasSufW, 16, 0, 0, 1, {0x69, 0x6B, 0}, 0, 3,
+    { CPU_186, MOD_GasSufW, 16, 0, 0, 1, {0x6B, 0x69, 0}, 0, 3,
       {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA,
-       OPT_Imm|OPS_16|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail} },
-    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0x69, 0x6B, 0}, 0, 3,
+       OPT_Imm|OPS_16|OPS_Relaxed|OPA_SImm|OPAP_SImm8} },
+    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0x6B, 0x69, 0}, 0, 3,
       {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA,
-       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail} },
-    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0x69, 0x6B, 0}, 0, 3,
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8} },
+    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0x6B, 0x69, 0}, 0, 3,
       {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA,
-       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail} },
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8} },
 
-    { CPU_186, MOD_GasSufW, 16, 0, 0, 1, {0x69, 0x6B, 0}, 0, 2,
+    { CPU_186, MOD_GasSufW, 16, 0, 0, 1, {0x6B, 0x69, 0}, 0, 2,
       {OPT_Reg|OPS_16|OPA_SpareEA,
-       OPT_Imm|OPS_16|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail, 0} },
-    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0x69, 0x6B, 0}, 0, 2,
+       OPT_Imm|OPS_16|OPS_Relaxed|OPA_SImm|OPAP_SImm8, 0} },
+    { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0x6B, 0x69, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_SpareEA,
-       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail, 0} },
-    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0x69, 0x6B, 0}, 0, 2,
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8, 0} },
+    { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0x6B, 0x69, 0}, 0, 2,
       {OPT_Reg|OPS_64|OPA_SpareEA,
-       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8Avail, 0} }
+       OPT_Imm|OPS_32|OPS_Relaxed|OPA_SImm|OPAP_SImm8, 0} }
 };
 
 /* Shifts - standard */
 static const x86_insn_info shift_insn[] = {
     { CPU_Any, MOD_SpAdd|MOD_GasSufB, 0, 0, 0, 1, {0xD2, 0, 0}, 0, 2,
       {OPT_RM|OPS_8|OPA_EA, OPT_Creg|OPS_8|OPA_None, 0} },
-    /* FIXME: imm8 is only avail on 186+, but we use imm8 to get to postponed
-     * ,1 form, so it has to be marked as Any.  We need to store the active
-     * CPU flags somewhere to pass that parse-time info down the line.
-     */
-    { CPU_Any, MOD_SpAdd|MOD_GasSufB, 0, 0, 0, 1, {0xC0, 0xD0, 0}, 0, 2,
-      {OPT_RM|OPS_8|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm|OPAP_ShiftOp,
-       0} },
+    { CPU_Any, MOD_SpAdd|MOD_GasSufB, 0, 0, 0, 1, {0xD0, 0, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPA_EA, OPT_Imm1|OPS_8|OPS_Relaxed|OPA_None, 0} },
+    { CPU_186, MOD_SpAdd|MOD_GasSufB, 0, 0, 0, 1, {0xC0, 0, 0}, 0, 2,
+      {OPT_RM|OPS_8|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
     { CPU_Any, MOD_SpAdd|MOD_GasSufW, 16, 0, 0, 1, {0xD3, 0, 0}, 0, 2,
       {OPT_RM|OPS_16|OPA_EA, OPT_Creg|OPS_8|OPA_None, 0} },
-    { CPU_Any, MOD_SpAdd|MOD_GasSufW, 16, 0, 0, 1, {0xC1, 0xD1, 0}, 0, 2,
-      {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm|OPAP_ShiftOp,
-       0} },
+    { CPU_Any, MOD_SpAdd|MOD_GasSufW, 16, 0, 0, 1, {0xD1, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPA_EA, OPT_Imm1|OPS_8|OPS_Relaxed|OPA_None, 0} },
+    { CPU_186, MOD_SpAdd|MOD_GasSufW, 16, 0, 0, 1, {0xC1, 0, 0}, 0, 2,
+      {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
     { CPU_Any, MOD_SpAdd|MOD_GasSufL, 32, 0, 0, 1, {0xD3, 0, 0}, 0, 2,
       {OPT_RM|OPS_32|OPA_EA, OPT_Creg|OPS_8|OPA_None, 0} },
-    { CPU_Any, MOD_SpAdd|MOD_GasSufL, 32, 0, 0, 1, {0xC1, 0xD1, 0}, 0, 2,
-      {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm|OPAP_ShiftOp,
-       0} },
+    { CPU_386, MOD_SpAdd|MOD_GasSufL, 32, 0, 0, 1, {0xD1, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPA_EA, OPT_Imm1|OPS_8|OPS_Relaxed|OPA_None, 0} },
+    { CPU_386, MOD_SpAdd|MOD_GasSufL, 32, 0, 0, 1, {0xC1, 0, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
     { CPU_Hammer|CPU_64, MOD_SpAdd|MOD_GasSufQ, 64, 0, 0, 1, {0xD3, 0, 0}, 0,
       2, {OPT_RM|OPS_64|OPA_EA, OPT_Creg|OPS_8|OPA_None, 0} },
-    { CPU_Hammer|CPU_64, MOD_SpAdd|MOD_GasSufQ, 64, 0, 0, 1, {0xC1, 0xD1, 0},
-      0, 2, {OPT_RM|OPS_64|OPA_EA,
-	     OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm|OPAP_ShiftOp, 0} },
+    { CPU_Hammer|CPU_64, MOD_SpAdd|MOD_GasSufQ, 64, 0, 0, 1, {0xD1, 0, 0},
+      0, 2, {OPT_RM|OPS_64|OPA_EA, OPT_Imm1|OPS_8|OPS_Relaxed|OPA_None, 0} },
+    { CPU_Hammer|CPU_64, MOD_SpAdd|MOD_GasSufQ, 64, 0, 0, 1, {0xC1, 0, 0},
+      0, 2, {OPT_RM|OPS_64|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
     /* In GAS mode, single operands are equivalent to shifting by 1 forms */
     { CPU_Any, MOD_SpAdd|MOD_GasOnly|MOD_GasSufB, 0, 0, 0, 1, {0xD0, 0, 0},
       0, 1, {OPT_RM|OPS_8|OPA_EA, 0, 0} },
@@ -2133,9 +2133,6 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 	yasm_error_set(YASM_ERROR_VALUE, N_("invalid jump target"));
     jmp->target.curpos_rel = 1;
 
-    /* Need to save jump origin for relative jumps. */
-    jmp->origin_prevbc = prev_bc;
-
     /* See if the user explicitly specified short/near/far. */
     switch ((int)(jinfo->operands[0] & OPTM_MASK)) {
 	case OPTM_Short:
@@ -2243,6 +2240,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     unsigned char spare;
     int i;
     unsigned int size_lookup[] = {0, 8, 16, 32, 64, 80, 128, 0};
+    unsigned long do_postop = 0;
 
     size_lookup[7] = mode_bits;
 
@@ -2517,6 +2515,15 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 					    YASM_EXPR_REG))
 			mismatch = 1;
 		    break;
+		case OPT_Imm1:
+		    if (op->type == YASM_INSN__OPERAND_IMM) {
+			const yasm_intnum *num;
+			num = yasm_expr_get_intnum(&op->data.val, 0);
+			if (!num || !yasm_intnum_is_pos1(num))
+			    mismatch = 1;
+		    } else
+			mismatch = 1;
+		    break;
 		default:
 		    yasm_internal_error(N_("invalid operand type"));
 	    }
@@ -2713,8 +2720,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	insn->def_opersize_64 = (unsigned char)(mod_data & 0xFF);
 	mod_data >>= 8;
     }
-    if (info->modifiers & MOD_Op2AddSp) {
-	insn->opcode.opcode[2] += (unsigned char)(mod_data & 0xFF)<<3;
+    if (info->modifiers & MOD_Op1AddSp) {
+	insn->opcode.opcode[1] += (unsigned char)(mod_data & 0xFF)<<3;
 	/*mod_data >>= 8;*/
     }
 
@@ -2846,20 +2853,17 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	    switch ((int)(info->operands[i] & OPAP_MASK)) {
 		case OPAP_None:
 		    break;
-		case OPAP_ShiftOp:
-		    insn->postop = X86_POSTOP_SHIFT;
-		    break;
-		case OPAP_SImm8Avail:
+		case OPAP_SImm8:
 		    insn->postop = X86_POSTOP_SIGNEXT_IMM8;
 		    break;
 		case OPAP_ShortMov:
-		    insn->postop = X86_POSTOP_SHORTMOV;
+		    do_postop = OPAP_ShortMov;
 		    break;
 		case OPAP_A16:
 		    insn->postop = X86_POSTOP_ADDRESS16;
 		    break;
 		case OPAP_SImm32Avail:
-		    insn->postop = X86_POSTOP_SIGNEXT_IMM32;
+		    do_postop = OPAP_SImm32Avail;
 		    break;
 		default:
 		    yasm_internal_error(
@@ -2891,6 +2895,52 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     if (insn->postop == X86_POSTOP_ADDRESS16 && insn->common.addrsize) {
 	yasm_warn_set(YASM_WARN_GENERAL, N_("address size override ignored"));
 	insn->common.addrsize = 0;
+    }
+
+    /* Handle non-span-dependent post-ops here */
+    switch (do_postop) {
+	case OPAP_ShortMov:
+	    /* Long (modrm+sib) mov instructions in amd64 can be optimized into
+	     * short mov instructions if a 32-bit address override is applied in
+	     * 64-bit mode to an EA of just an offset (no registers) and the
+	     * target register is al/ax/eax/rax.
+	     */
+	    if (insn->common.mode_bits == 64 && insn->common.addrsize == 32 &&
+		(!insn->x86_ea->ea.disp.abs ||
+		 !yasm_expr__contains(insn->x86_ea->ea.disp.abs,
+				      YASM_EXPR_REG))) {
+		yasm_x86__ea_set_disponly(insn->x86_ea);
+		/* Make the short form permanent. */
+		insn->opcode.opcode[0] = insn->opcode.opcode[1];
+	    }
+	    insn->opcode.opcode[1] = 0;	/* avoid possible confusion */
+	    break;
+	case OPAP_SImm32Avail:
+	    /* Used for 64-bit mov immediate, which can take a sign-extended
+	     * imm32 as well as imm64 values.  The imm32 form is put in the
+	     * second byte of the opcode and its ModRM byte is put in the third
+	     * byte of the opcode.
+	     */
+	    if (!insn->imm->val.abs ||
+		yasm_intnum_check_size(
+		    yasm_expr_get_intnum(&insn->imm->val.abs, 0), 32, 0, 1)) {
+		/* Throwaway REX byte */
+		unsigned char rex_temp = 0;
+
+		/* Build ModRM EA - CAUTION: this depends on
+		 * opcode 0 being a mov instruction!
+		 */
+		insn->x86_ea = yasm_x86__ea_create_reg(
+		    (unsigned long)insn->opcode.opcode[0]-0xB8, &rex_temp, 64);
+
+		/* Make the imm32s form permanent. */
+		insn->opcode.opcode[0] = insn->opcode.opcode[1];
+		insn->imm->val.size = 32;
+	    }
+	    insn->opcode.opcode[1] = 0;	/* avoid possible confusion */
+	    break;
+	default:
+	    break;
     }
 
     /* Transform the bytecode */

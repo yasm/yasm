@@ -113,8 +113,6 @@ cdef extern from "libyasm/coretype.h":
         YASM_SYM_EXTERN
         YASM_SYM_DLOCAL
 
-    ctypedef yasm_intnum*(*yasm_calc_bc_dist_func)(yasm_bytecode *precbc1,
-            yasm_bytecode *precbc2)
     ctypedef int*(*yasm_output_value_func)(yasm_value *value, unsigned char
             *buf, size_t destsize, unsigned long offset, yasm_bytecode *bc,
             int warn, void *d)

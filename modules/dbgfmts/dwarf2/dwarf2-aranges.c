@@ -28,7 +28,6 @@
 /*@unused@*/ RCSID("$Id$");
 
 #define YASM_LIB_INTERNAL
-#define YASM_BC_INTERNAL
 #include <libyasm.h>
 
 #include "dwarf2-dbgfmt.h"
@@ -46,7 +45,7 @@ dwarf2_append_arange(yasm_section *debug_aranges, /*@only@*/ yasm_expr *start,
     yasm_dvs_append(&dvs, yasm_dv_create_expr(length));
     bc = yasm_bc_create_data(&dvs, sizeof_address, 0, NULL, 0);
     yasm_bc_finalize(bc, yasm_dwarf2__append_bc(debug_aranges, bc));
-    yasm_bc_resolve(bc, 0, NULL);
+    yasm_bc_calc_len(bc, NULL, NULL);
 }
 
 typedef struct dwarf2_aranges_info {
@@ -71,8 +70,8 @@ dwarf2_generate_aranges_section(yasm_section *sect, /*@null@*/ void *d)
 	yasm_expr_sym(yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
 					  yasm_section_bcs_first(sect))), 0);
     length = yasm_expr_create_ident(
-	yasm_expr_int(yasm_common_calc_bc_dist(
-	    yasm_section_bcs_first(sect), yasm_section_bcs_last(sect))), 0);
+	yasm_expr_int(yasm_calc_bc_dist(yasm_section_bcs_first(sect),
+					yasm_section_bcs_last(sect))), 0);
     dwarf2_append_arange(info->debug_aranges, start, length,
 			 dbgfmt_dwarf2->sizeof_address);
 
@@ -104,7 +103,7 @@ yasm_dwarf2__generate_aranges(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	    yasm_intnum_create_uint(dbgfmt_dwarf2->sizeof_address*2)), 0),
 	NULL, NULL, NULL, 0);
     yasm_bc_finalize(bc, yasm_dwarf2__append_bc(debug_aranges, bc));
-    yasm_bc_resolve(bc, 0, NULL);
+    yasm_bc_calc_len(bc, NULL, NULL);
 
     info.debug_aranges = debug_aranges;
     info.dbgfmt_dwarf2 = dbgfmt_dwarf2;

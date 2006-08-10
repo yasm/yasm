@@ -49,8 +49,9 @@ typedef struct bytecode_reserve {
 static void bc_reserve_destroy(void *contents);
 static void bc_reserve_print(const void *contents, FILE *f, int indent_level);
 static void bc_reserve_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
-static yasm_bc_resolve_flags bc_reserve_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int bc_reserve_calc_len(yasm_bytecode *bc,
+			       yasm_bc_add_span_func add_span,
+			       void *add_span_data);
 static int bc_reserve_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			      yasm_output_value_func output_value,
 			      /*@null@*/ yasm_output_reloc_func output_reloc);
@@ -59,9 +60,10 @@ static const yasm_bytecode_callback bc_reserve_callback = {
     bc_reserve_destroy,
     bc_reserve_print,
     bc_reserve_finalize,
-    bc_reserve_resolve,
+    bc_reserve_calc_len,
+    yasm_bc_expand_common,
     bc_reserve_tobytes,
-    1
+    YASM_BC_SPECIAL_RESERVE
 };
 
 
@@ -102,39 +104,33 @@ bc_reserve_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     reserve->numitems = val.abs;
 }
 
-static yasm_bc_resolve_flags
-bc_reserve_resolve(yasm_bytecode *bc, int save,
-		   yasm_calc_bc_dist_func calc_bc_dist)
+static int
+bc_reserve_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		    void *add_span_data)
 {
     bytecode_reserve *reserve = (bytecode_reserve *)bc->contents;
-    yasm_bc_resolve_flags retval = YASM_BC_RESOLVE_MIN_LEN;
-    /*@null@*/ yasm_expr *temp;
-    yasm_expr **tempp;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
 
     if (!reserve->numitems)
-	return YASM_BC_RESOLVE_MIN_LEN;
+	return 0;
 
-    if (save) {
-	temp = NULL;
-	tempp = &reserve->numitems;
-    } else {
-	temp = yasm_expr_copy(reserve->numitems);
-	assert(temp != NULL);
-	tempp = &temp;
-    }
-    num = yasm_expr_get_intnum(tempp, calc_bc_dist);
+    num = yasm_expr_get_intnum(&reserve->numitems, 0);
     if (!num) {
-	/* For reserve, just say non-constant quantity instead of allowing
-	 * the circular reference error to filter through.
-	 */
+	/* Check for use of floats first. */
+	if (reserve->numitems &&
+	    yasm_expr__contains(reserve->numitems, YASM_EXPR_FLOAT)) {
+	    yasm_error_set(YASM_ERROR_VALUE,
+		N_("expression must not contain floating point value"));
+	    return -1;
+	}
+	/* FIXME: Non-constant currently not allowed. */
 	yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 		       N_("attempt to reserve non-constant quantity of space"));
-	retval = YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
-    } else
-	bc->len += yasm_intnum_get_uint(num)*reserve->itemsize;
-    yasm_expr_destroy(temp);
-    return retval;
+	return -1;
+    }
+    
+    bc->len += yasm_intnum_get_uint(num)*reserve->itemsize;
+    return 0;
 }
 
 static int

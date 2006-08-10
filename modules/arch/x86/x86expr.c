@@ -249,8 +249,7 @@ x86_expr_checkea_distcheck_reg(yasm_expr **ep, unsigned int bits)
 static int
 x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
     int *pcrel, unsigned int bits, void *data,
-    int *(*get_reg)(yasm_expr__item *ei, int *regnum, void *d),
-    yasm_calc_bc_dist_func calc_bc_dist)
+    int *(*get_reg)(yasm_expr__item *ei, int *regnum, void *d))
 {
     int i;
     int *reg;
@@ -260,8 +259,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
     yasm_expr *e, *wrt;
 
     /*@-unqualifiedtrans@*/
-    *ep = yasm_expr__level_tree(*ep, 1, 1, indexreg == 0, calc_bc_dist, NULL,
-				NULL, NULL);
+    *ep = yasm_expr__level_tree(*ep, 1, 1, indexreg == 0, 0, NULL, NULL, NULL);
 
     /* Check for WRT rip first */
     wrt = yasm_expr_extract_wrt(ep);
@@ -296,7 +294,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 	    return 1;
 	case 2:
 	    /* Need to simplify again */
-	    *ep = yasm_expr__level_tree(*ep, 1, 1, indexreg == 0, NULL, NULL,
+	    *ep = yasm_expr__level_tree(*ep, 1, 1, indexreg == 0, 0, NULL,
 					NULL, NULL);
 	    e = *ep;
 	    break;
@@ -307,12 +305,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
     switch (e->op) {
 	case YASM_EXPR_ADD:
 	    /* Prescan for non-int multipliers against a reg.
-	     * This is because if any of the terms is a more complex
-	     * expr (eg, undetermined value), we don't want to try to
-	     * figure out *any* of the expression, because each register
-	     * lookup overwrites the register with a 0 value!  And storing
-	     * the state of this routine from one excution to the next
-	     * would be a major chore.
+	     * This is invalid due to the optimizer structure.
 	     */
 	    for (i=0; i<e->numterms; i++)
 		if (e->terms[i].type == YASM_EXPR_EXPR) {
@@ -320,10 +313,10 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 		    if (e->terms[i].data.expn->terms[0].type ==
 			YASM_EXPR_REG) {
 			if (e->terms[i].data.expn->numterms > 2)
-			    return 2;
+			    return 1;
 			if (e->terms[i].data.expn->terms[1].type !=
 			    YASM_EXPR_INT)
-			    return 2;
+			    return 1;
 		    }
 		}
 
@@ -373,9 +366,9 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 	    yasm_expr__order_terms(e);
 	    if (e->terms[0].type == YASM_EXPR_REG) {
 		if (e->numterms > 2)
-		    return 2;
+		    return 1;
 		if (e->terms[1].type != YASM_EXPR_INT)
-		    return 2;
+		    return 1;
 		reg = get_reg(&e->terms[0], &regnum, data);
 		if (!reg)
 		    return 1;
@@ -392,7 +385,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
     /* Simplify expr, which is now really just the displacement. This
      * should get rid of the 0's we put in for registers in the callback.
      */
-    *ep = yasm_expr_simplify(*ep, NULL);
+    *ep = yasm_expr_simplify(*ep, 0);
     /* e = *ep; */
 
     return 0;
@@ -411,8 +404,7 @@ static int
 x86_checkea_calc_displen(x86_effaddr *x86_ea, unsigned int wordsize, int noreg,
 			 int dispreq)
 {
-    /*@null@*/ const yasm_intnum *intn = NULL;
-    long dispval;
+    /*@null@*/ /*@only@*/ yasm_intnum *num;
 
     x86_ea->valid_modrm = 0;	/* default to not yet valid */
 
@@ -423,111 +415,107 @@ x86_checkea_calc_displen(x86_effaddr *x86_ea, unsigned int wordsize, int noreg,
 	 * appropriately and we're done with the ModRM byte.
 	 */
 	case 8:
-	    /* Byte is not valid override in noreg case; fix it. */
+	    /* Byte is only a valid override if there are registers in the
+	     * EA.  With no registers, we must have a 16/32 value.
+	     */
 	    if (noreg) {
-		x86_ea->ea.disp.size = 0;
 		yasm_warn_set(YASM_WARN_GENERAL,
 			      N_("invalid displacement size; fixed"));
+		x86_ea->ea.disp.size = wordsize;
 	    } else
 		x86_ea->modrm |= 0100;
 	    x86_ea->valid_modrm = 1;
-	    break;
+	    return 0;
 	case 16:
 	case 32:
+	    /* Don't allow changing displacement different from BITS setting
+	     * directly; require an address-size override to change it.
+	     */
 	    if (wordsize != x86_ea->ea.disp.size) {
 		yasm_error_set(YASM_ERROR_VALUE,
 		    N_("invalid effective address (displacement size)"));
 		return 1;
 	    }
-	    /* 2/4 is not valid override in noreg case; fix it. */
-	    if (noreg) {
-		if (wordsize != x86_ea->ea.disp.size)
-		    yasm_warn_set(YASM_WARN_GENERAL,
-				  N_("invalid displacement size; fixed"));
-		x86_ea->ea.disp.size = 0;
-	    } else
+	    if (!noreg)
 		x86_ea->modrm |= 0200;
 	    x86_ea->valid_modrm = 1;
-	    break;
+	    return 0;
 	default:
 	    /* we shouldn't ever get any other size! */
 	    yasm_internal_error(N_("strange EA displacement size"));
     }
 
-    if (x86_ea->ea.disp.size == 0) {
-	/* the displacement length hasn't been forced (or the forcing wasn't
-	 * valid), try to determine what it is.
+    /* The displacement length hasn't been forced (or the forcing wasn't
+     * valid), try to determine what it is.
+     */
+    if (noreg) {
+	/* No register in ModRM expression, so it must be disp16/32,
+	 * and as the Mod bits are set to 0 by the caller, we're done
+	 * with the ModRM byte.
 	 */
-	if (noreg) {
-	    /* no register in ModRM expression, so it must be disp16/32,
-	     * and as the Mod bits are set to 0 by the caller, we're done
-	     * with the ModRM byte.
-	     */
-	    x86_ea->ea.disp.size = wordsize;
-	    x86_ea->valid_modrm = 1;
-	    return 0;
-	} else if (dispreq) {
-	    /* for BP/EBP, there *must* be a displacement value, but we
-	     * may not know the size (8 or 16/32) for sure right now.
-	     */
-	    x86_ea->ea.need_nonzero_len = 1;
-	}
-
-	if (x86_ea->ea.disp.rel ||
-	    (x86_ea->ea.disp.abs &&
-	     !(intn = yasm_expr_get_intnum(&x86_ea->ea.disp.abs, NULL)))) {
-	    /* expr still has unknown values or is relative:
-	     * assume 16/32-bit disp
-	     */
-	    x86_ea->ea.disp.size = wordsize;
-	    x86_ea->modrm |= 0200;
-	    x86_ea->valid_modrm = 1;
-	    return 0;
-	}	
-
-	/* don't try to find out what size displacement we have if
-	 * displen is known.
-	 */
-	if (x86_ea->ea.disp.size != 0) {
-	    if (x86_ea->ea.disp.size == 8)
-		x86_ea->modrm |= 0100;
-	    else
-		x86_ea->modrm |= 0200;
-	    x86_ea->valid_modrm = 1;
-	    return 0;
-	}
-
-	if (intn)
-	    dispval = yasm_intnum_get_int(intn);
-	else
-	    dispval = 0;
-
-	/* Figure out what size displacement we will have. */
-	if (!x86_ea->ea.need_nonzero_len && dispval == 0) {
-	    /* if we know that the displacement is 0 right now,
-	     * go ahead and delete the expr and make it so no
-	     * displacement value is included in the output.
-	     * The Mod bits of ModRM are set to 0 above, and
-	     * we're done with the ModRM byte!
-	     *
-	     * Don't do this if we came from dispreq check above, so
-	     * check *displen.
-	     */
-	    yasm_expr_destroy(x86_ea->ea.disp.abs);
-	    x86_ea->ea.disp.abs = NULL;
-	    x86_ea->ea.need_disp = 0;
-	} else if (dispval >= -128 && dispval <= 127) {
-	    /* It fits into a signed byte */
-	    x86_ea->ea.disp.size = 8;
-	    x86_ea->modrm |= 0100;
-	} else {
-	    /* It's a 16/32-bit displacement */
-	    x86_ea->ea.disp.size = wordsize;
-	    x86_ea->modrm |= 0200;
-	}
-	x86_ea->valid_modrm = 1;	/* We're done with ModRM */
+	x86_ea->ea.disp.size = wordsize;
+	x86_ea->valid_modrm = 1;
+	return 0;
     }
 
+    if (dispreq) {
+	/* for BP/EBP, there *must* be a displacement value, but we
+	 * may not know the size (8 or 16/32) for sure right now.
+	 */
+	x86_ea->ea.need_nonzero_len = 1;
+    }
+
+    if (x86_ea->ea.disp.rel) {
+	/* Relative displacement; basically all object formats need non-byte
+	 * for relocation here, so just do that. (TODO: handle this
+	 * differently?)
+	 */
+	x86_ea->ea.disp.size = wordsize;
+	x86_ea->modrm |= 0200;
+	x86_ea->valid_modrm = 1;
+	return 0;
+    }
+
+    /* At this point there's 3 possibilities for the displacement:
+     *  - None (if =0)
+     *  - signed 8 bit (if in -128 to 127 range)
+     *  - 16/32 bit (word size)
+     * For now, check intnum value right now; if it's not 0,
+     * assume 8 bit and set up for allowing 16 bit later.
+     * FIXME: The complex expression equaling zero is probably a rare case,
+     * so we ignore it for now.
+     */
+    num = yasm_value_get_intnum(&x86_ea->ea.disp, NULL, 0);
+    if (!num) {
+	/* Still has unknown values. */
+	x86_ea->ea.need_nonzero_len = 1;
+	x86_ea->modrm |= 0100;
+	x86_ea->valid_modrm = 1;
+	return 0;
+    }
+
+    /* Figure out what size displacement we will have. */
+    if (yasm_intnum_is_zero(num) && !x86_ea->ea.need_nonzero_len) {
+	/* If we know that the displacement is 0 right now,
+	 * go ahead and delete the expr and make it so no
+	 * displacement value is included in the output.
+	 * The Mod bits of ModRM are set to 0 above, and
+	 * we're done with the ModRM byte!
+	 */
+	yasm_value_delete(&x86_ea->ea.disp);
+	x86_ea->ea.need_disp = 0;
+    } else if (yasm_intnum_in_range(num, -128, 127)) {
+	/* It fits into a signed byte */
+	x86_ea->ea.disp.size = 8;
+	x86_ea->modrm |= 0100;
+    } else {
+	/* It's a 16/32-bit displacement */
+	x86_ea->ea.disp.size = wordsize;
+	x86_ea->modrm |= 0200;
+    }
+    x86_ea->valid_modrm = 1;	/* We're done with ModRM */
+
+    yasm_intnum_destroy(num);
     return 0;
 }
 /*@=nullstate@*/
@@ -559,8 +547,7 @@ x86_expr_checkea_getregsize_callback(yasm_expr__item *ei, void *d)
 
 int
 yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
-		       unsigned int bits, int address16_op, unsigned char *rex,
-		       yasm_calc_bc_dist_func calc_bc_dist)
+		       unsigned int bits, int address16_op, unsigned char *rex)
 {
     int retval;
 
@@ -656,8 +643,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 	    int pcrel = 0;
 	    switch (x86_expr_checkea_getregusage
 		    (&x86_ea->ea.disp.abs, &indexreg, &pcrel, bits,
-		     &reg3264_data, x86_expr_checkea_get_reg3264,
-		     calc_bc_dist)) {
+		     &reg3264_data, x86_expr_checkea_get_reg3264)) {
 		case 1:
 		    yasm_error_set(YASM_ERROR_VALUE,
 				   N_("invalid effective address"));
@@ -912,7 +898,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 	    int pcrel = 0;
 	    switch (x86_expr_checkea_getregusage
 		    (&x86_ea->ea.disp.abs, (int *)NULL, &pcrel, bits,
-		     &reg16mult, x86_expr_checkea_get_reg16, calc_bc_dist)) {
+		     &reg16mult, x86_expr_checkea_get_reg16)) {
 		case 1:
 		    yasm_error_set(YASM_ERROR_VALUE,
 				   N_("invalid effective address"));

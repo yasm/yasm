@@ -46,8 +46,8 @@ struct dwarf2_head {
 static void dwarf2_head_bc_destroy(void *contents);
 static void dwarf2_head_bc_print(const void *contents, FILE *f,
 				 int indent_level);
-static yasm_bc_resolve_flags dwarf2_head_bc_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int dwarf2_head_bc_calc_len
+    (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int dwarf2_head_bc_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
      yasm_output_value_func output_value,
@@ -58,7 +58,8 @@ static const yasm_bytecode_callback dwarf2_head_bc_callback = {
     dwarf2_head_bc_destroy,
     dwarf2_head_bc_print,
     yasm_bc_finalize_common,
-    dwarf2_head_bc_resolve,
+    dwarf2_head_bc_calc_len,
+    yasm_bc_expand_common,
     dwarf2_head_bc_tobytes,
     0
 };
@@ -147,7 +148,7 @@ yasm_bytecode *
 yasm_dwarf2__append_bc(yasm_section *sect, yasm_bytecode *bc)
 {
     yasm_bytecode *precbc = yasm_section_bcs_last(sect);
-    bc->offset = precbc ? precbc->offset + precbc->len : 0;
+    bc->offset = yasm_bc_next_offset(precbc);
     yasm_section_bcs_append(sect, bc);
     return precbc;
 }
@@ -245,13 +246,13 @@ dwarf2_head_bc_print(const void *contents, FILE *f, int indent_level)
     /* TODO */
 }
 
-static yasm_bc_resolve_flags
-dwarf2_head_bc_resolve(yasm_bytecode *bc, int save,
-		       yasm_calc_bc_dist_func calc_bc_dist)
+static int
+dwarf2_head_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+			void *add_span_data)
 {
-    yasm_internal_error(N_("tried to resolve a dwarf2 head bytecode"));
+    yasm_internal_error(N_("tried to calc_len a dwarf2 head bytecode"));
     /*@notreached@*/
-    return YASM_BC_RESOLVE_MIN_LEN;
+    return 0;
 }
 
 static int
@@ -273,7 +274,7 @@ dwarf2_head_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     /* Total length of aranges info (following this field) */
     cval = yasm_intnum_create_uint(dbgfmt_dwarf2->sizeof_offset);
-    intn = yasm_common_calc_bc_dist(head->start_prevbc, head->end_prevbc);
+    intn = yasm_calc_bc_dist(head->start_prevbc, head->end_prevbc);
     yasm_intnum_calc(intn, YASM_EXPR_SUB, cval);
     yasm_arch_intnum_tobytes(dbgfmt_dwarf2->arch, intn, buf,
 			     dbgfmt_dwarf2->sizeof_offset,

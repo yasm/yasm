@@ -441,7 +441,7 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab,
 	/* get size (if specified); expr overrides stored integer */
 	if (entry->xsize) {
 	    size_intn = yasm_intnum_copy(
-		yasm_expr_get_intnum(&entry->xsize, yasm_common_calc_bc_dist));
+		yasm_expr_get_intnum(&entry->xsize, 1));
 	    if (!size_intn) {
 		yasm_error_set(YASM_ERROR_VALUE,
 			       N_("size specifier not an integer expression"));
@@ -459,8 +459,7 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab,
 	    if (equ_expr_c != NULL) {
 		const yasm_intnum *equ_intn;
 		yasm_expr *equ_expr = yasm_expr_copy(equ_expr_c);
-		equ_intn = yasm_expr_get_intnum(&equ_expr,
-						yasm_common_calc_bc_dist);
+		equ_intn = yasm_expr_get_intnum(&equ_expr, 1);
 
 		if (equ_intn == NULL) {
 		    yasm_error_set(YASM_ERROR_VALUE,

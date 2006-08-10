@@ -629,7 +629,7 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 	 * Note: this doesn't match NASM behavior, but is a lot more
 	 * intelligent!
 	 */
-	boundintn = yasm_expr_get_intnum(&boundval, NULL);
+	boundintn = yasm_expr_get_intnum(&boundval, 0);
 	if (boundintn) {
 	    unsigned long boundint = yasm_intnum_get_uint(boundintn);
 
@@ -657,7 +657,7 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 				    strlen(vp->val));
 	    else if (vp->param) {
 		const yasm_intnum *intcpu;
-		intcpu = yasm_expr_get_intnum(&vp->param, NULL);
+		intcpu = yasm_expr_get_intnum(&vp->param, 0);
 		if (!intcpu)
 		    yasm_error_set(YASM_ERROR_SYNTAX,
 				   N_("invalid argument to [%s]"), "CPU");

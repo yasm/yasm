@@ -31,12 +31,18 @@ typedef struct yasm_bytecode_callback {
     void (*destroy) (/*@only@*/ void *contents);
     void (*print) (const void *contents, FILE *f, int indent_level);
     void (*finalize) (yasm_bytecode *bc, yasm_bytecode *prev_bc);
-    yasm_bc_resolve_flags (*resolve)
-	(yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+    int (*calc_len) (yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		     void *add_span_data);
+    int (*expand) (yasm_bytecode *bc, int span, long old_val, long new_val,
+		   /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres);
     int (*tobytes) (yasm_bytecode *bc, unsigned char **bufp, void *d,
 		    yasm_output_value_func output_value,
 		    /*@null@*/ yasm_output_reloc_func output_reloc);
-    int reserve;    /* Reserve space instead of outputting data */
+    enum {
+	YASM_BC_SPECIAL_NONE = 0,
+	YASM_BC_SPECIAL_RESERVE,/* Reserves space instead of outputting data */
+	YASM_BC_SPECIAL_OFFSET	/* Adjusts offset instead of calculating len */
+    } special;
 } yasm_bytecode_callback;
 
 struct yasm_bytecode {
@@ -50,17 +56,16 @@ struct yasm_bytecode {
     /* number of times bytecode is repeated, NULL=1. */
     /*@only@*/ /*@null@*/ yasm_expr *multiple;
 
-    unsigned long len;		/* total length of entire bytecode (including
-				   multiple copies), 0 if unknown */
+    unsigned long len;		/* total length of entire bytecode
+				   (not including multiple copies) */
+    unsigned long mult_int;	/* number of copies: integer version */
 
     /* where it came from */
     unsigned long line;
 
     /* other assembler state info */
-    unsigned long offset;	/* 0 if unknown */
-
-    /* storage for optimizer flags */
-    unsigned long opt_flags;
+    unsigned long offset;	/* ~0UL if unknown */
+    unsigned long bc_index;
 
     /* NULL-terminated array of labels that point to this bytecode (as the
      * bytecode previous to the label).  NULL if no labels point here. */
@@ -94,6 +99,14 @@ void yasm_bc_transform(yasm_bytecode *bc,
  * is ever required for this type of bytecode.
  */
 void yasm_bc_finalize_common(yasm_bytecode *bc, yasm_bytecode *prev_bc);
+
+/** Common bytecode callback expand function, for where the bytecode is
+ * always short (calc_len never calls add_span).  Causes an internal
+ * error if called.
+ */
+int yasm_bc_expand_common
+    (yasm_bytecode *bc, int span, long old_val, long new_val,
+     /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres);
 
 #define yasm_bc__next(x)		STAILQ_NEXT(x, link)
 

@@ -208,8 +208,8 @@ typedef struct dwarf2_abbrev {
 static void dwarf2_abbrev_bc_destroy(void *contents);
 static void dwarf2_abbrev_bc_print(const void *contents, FILE *f,
 				   int indent_level);
-static yasm_bc_resolve_flags dwarf2_abbrev_bc_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int dwarf2_abbrev_bc_calc_len
+    (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int dwarf2_abbrev_bc_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
      yasm_output_value_func output_value,
@@ -221,7 +221,8 @@ static const yasm_bytecode_callback dwarf2_abbrev_bc_callback = {
     dwarf2_abbrev_bc_destroy,
     dwarf2_abbrev_bc_print,
     yasm_bc_finalize_common,
-    dwarf2_abbrev_bc_resolve,
+    dwarf2_abbrev_bc_calc_len,
+    yasm_bc_expand_common,
     dwarf2_abbrev_bc_tobytes,
     0
 };
@@ -252,7 +253,7 @@ dwarf2_append_expr(yasm_section *sect, /*@only@*/ yasm_expr *expr, size_t size,
     else
 	bc = yasm_bc_create_leb128(&dvs, leb<0, 0);
     yasm_bc_finalize(bc, yasm_dwarf2__append_bc(sect, bc));
-    yasm_bc_resolve(bc, 0, NULL);
+    yasm_bc_calc_len(bc, NULL, NULL);
 }
 
 static void
@@ -266,7 +267,7 @@ dwarf2_append_str(yasm_section *sect, const char *str)
 						strlen(str)));
     bc = yasm_bc_create_data(&dvs, 1, 1, NULL, 0);
     yasm_bc_finalize(bc, yasm_dwarf2__append_bc(sect, bc));
-    yasm_bc_resolve(bc, 0, NULL);
+    yasm_bc_calc_len(bc, NULL, NULL);
 }
 
 yasm_section *
@@ -332,7 +333,7 @@ yasm_dwarf2__generate_info(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_high_pc, DW_FORM_addr);
 	dwarf2_append_expr(debug_info,
 	    yasm_expr_create(YASM_EXPR_ADD, yasm_expr_sym(first),
-		yasm_expr_int(yasm_common_calc_bc_dist(
+		yasm_expr_int(yasm_calc_bc_dist(
 		    yasm_section_bcs_first(main_code),
 		    yasm_section_bcs_last(main_code))), 0),
 	    dbgfmt_dwarf2->sizeof_address, 0);
@@ -398,13 +399,13 @@ dwarf2_abbrev_bc_print(const void *contents, FILE *f, int indent_level)
     /* TODO */
 }
 
-static yasm_bc_resolve_flags
-dwarf2_abbrev_bc_resolve(yasm_bytecode *bc, int save,
-			 yasm_calc_bc_dist_func calc_bc_dist)
+static int
+dwarf2_abbrev_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+			  void *add_span_data)
 {
-    yasm_internal_error(N_("tried to resolve a dwarf2 aranges head bytecode"));
+    yasm_internal_error(N_("tried to calc_len a dwarf2 aranges head bytecode"));
     /*@notreached@*/
-    return YASM_BC_RESOLVE_MIN_LEN;
+    return 0;
 }
 
 static int

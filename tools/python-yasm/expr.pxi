@@ -45,15 +45,13 @@ cdef extern from "libyasm/expr.h":
 
     cdef struct yasm__exprhead
     cdef yasm_expr *yasm_expr__level_tree(yasm_expr *e, int fold_const,
-            int simplify_ident, int simplify_reg_mul,
-            yasm_calc_bc_dist_func calc_bc_dist,
+            int simplify_ident, int simplify_reg_mul, int calc_bc_dist,
             yasm_expr_xform_func expr_xform_extra,
             void *expr_xform_extra_data, yasm__exprhead *eh, int *error)
-    cdef yasm_expr *yasm_expr_simplify(yasm_expr *e, yasm_calc_bc_dist_func cbd)
+    cdef yasm_expr *yasm_expr_simplify(yasm_expr *e, int calc_bc_dist)
     cdef yasm_expr *yasm_expr_extract_segoff(yasm_expr **ep)
     cdef yasm_expr *yasm_expr_extract_wrt(yasm_expr **ep)
-    cdef yasm_intnum *yasm_expr_get_intnum(yasm_expr **ep,
-            yasm_calc_bc_dist_func calc_bc_dist)
+    cdef yasm_intnum *yasm_expr_get_intnum(yasm_expr **ep, int calc_bc_dist)
     cdef yasm_symrec *yasm_expr_get_symrec(yasm_expr **ep, int simplify)
     cdef unsigned long *yasm_expr_get_reg(yasm_expr **ep, int simplify)
     cdef void yasm_expr_print(yasm_expr *e, FILE *f)
@@ -179,8 +177,8 @@ cdef class Expression:
     def __dealloc__(self):
         if self.expr != NULL: yasm_expr_destroy(self.expr)
 
-    def simplify(self):
-        self.expr = yasm_expr_simplify(self.expr, NULL) # TODO: cbd
+    def simplify(self, calc_bc_dist=False):
+        self.expr = yasm_expr_simplify(self.expr, calc_bc_dist)
 
     def extract_segoff(self):
         cdef yasm_expr *retval
@@ -196,9 +194,9 @@ cdef class Expression:
             raise ValueError("not a WRT expression")
         return __make_expression(retval)
 
-    def get_intnum(self):
+    def get_intnum(self, calc_bc_dist=False):
         cdef yasm_intnum *retval
-        retval = yasm_expr_get_intnum(&self.expr, NULL) # TODO: cbd
+        retval = yasm_expr_get_intnum(&self.expr, calc_bc_dist)
         if retval == NULL:
             raise ValueError("not an intnum expression")
         return __make_intnum(yasm_intnum_copy(retval))

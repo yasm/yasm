@@ -594,6 +594,27 @@ yasm_intnum_set_uint(yasm_intnum *intn, unsigned long val)
     intn->val.ul = val;
 }
 
+void
+yasm_intnum_set_int(yasm_intnum *intn, long val)
+{
+    /* positive numbers can go through the uint() function */
+    if (val >= 0) {
+	yasm_intnum_set_uint(intn, (unsigned long)val);
+	return;
+    }
+
+    BitVector_Empty(conv_bv);
+    BitVector_Chunk_Store(conv_bv, 32, 0, (unsigned long)(-val));
+    BitVector_Negate(conv_bv, conv_bv);
+
+    if (intn->type == INTNUM_BV)
+	BitVector_Copy(intn->val.bv, conv_bv);
+    else {
+	intn->val.bv = BitVector_Clone(conv_bv);
+	intn->type = INTNUM_BV;
+    }
+}
+
 int
 yasm_intnum_is_zero(const yasm_intnum *intn)
 {
@@ -787,6 +808,43 @@ yasm_intnum_check_size(const yasm_intnum *intn, size_t size, size_t rshift,
 	    size--;
     }
     return (Set_Max(val) < (long)size);
+}
+
+int
+yasm_intnum_in_range(const yasm_intnum *intn, long low, long high)
+{
+    wordptr val = result;
+    wordptr lval = op1static;
+    wordptr hval = op2static;
+
+    /* If not already a bitvect, convert value to be written to a bitvect */
+    if (intn->type == INTNUM_BV)
+	val = intn->val.bv;
+    else {
+	BitVector_Empty(val);
+	BitVector_Chunk_Store(val, 32, 0, intn->val.ul);
+    }
+
+    /* Convert high and low to bitvects */
+    BitVector_Empty(lval);
+    if (low >= 0)
+	BitVector_Chunk_Store(lval, 32, 0, (unsigned long)low);
+    else {
+	BitVector_Chunk_Store(lval, 32, 0, (unsigned long)(-low));
+	BitVector_Negate(lval, lval);
+    }
+
+    BitVector_Empty(hval);
+    if (high >= 0)
+	BitVector_Chunk_Store(hval, 32, 0, (unsigned long)high);
+    else {
+	BitVector_Chunk_Store(hval, 32, 0, (unsigned long)(-high));
+	BitVector_Negate(hval, hval);
+    }
+
+    /* Compare! */
+    return (BitVector_Compare(val, lval) >= 0
+	    && BitVector_Compare(val, hval) <= 0);
 }
 
 static unsigned long

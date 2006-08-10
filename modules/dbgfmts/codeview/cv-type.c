@@ -483,8 +483,8 @@ typedef struct cv_type {
 /* Bytecode callback function prototypes */
 static void cv_type_bc_destroy(void *contents);
 static void cv_type_bc_print(const void *contents, FILE *f, int indent_level);
-static yasm_bc_resolve_flags cv_type_bc_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int cv_type_bc_calc_len
+    (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int cv_type_bc_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
      yasm_output_value_func output_value,
@@ -495,7 +495,8 @@ static const yasm_bytecode_callback cv_type_bc_callback = {
     cv_type_bc_destroy,
     cv_type_bc_print,
     yasm_bc_finalize_common,
-    cv_type_bc_resolve,
+    cv_type_bc_calc_len,
+    yasm_bc_expand_common,
     cv_type_bc_tobytes,
     0
 };
@@ -531,7 +532,7 @@ yasm_cv__generate_type(yasm_dbgfmt_cv *dbgfmt_cv)
     cv_type_append_leaf(type, cv_leaf_create_label(0));
     bc = yasm_bc_create_common(&cv_type_bc_callback, type, 0);
     yasm_bc_finalize(bc, yasm_cv__append_bc(debug_type, bc));
-    yasm_bc_resolve(bc, 0, NULL);
+    yasm_bc_calc_len(bc, NULL, NULL);
 
     return debug_type;
 }
@@ -711,9 +712,9 @@ cv_type_bc_print(const void *contents, FILE *f, int indent_level)
     /* TODO */
 }
 
-static yasm_bc_resolve_flags
-cv_type_bc_resolve(yasm_bytecode *bc, int save,
-		   yasm_calc_bc_dist_func calc_bc_dist)
+static int
+cv_type_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		    void *add_span_data)
 {
     cv_type *type = (cv_type *)bc->contents;
     size_t i;
@@ -730,7 +731,7 @@ cv_type_bc_resolve(yasm_bytecode *bc, int save,
     if (bc->len & 0x3)
 	bc->len += 4-(bc->len & 0x3);
 
-    return YASM_BC_RESOLVE_MIN_LEN;
+    return 0;
 }
 
 static int

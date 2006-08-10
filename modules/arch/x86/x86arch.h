@@ -204,43 +204,18 @@ typedef struct x86_insn {
 	/* None */
 	X86_POSTOP_NONE = 0,
 
-	/* Shift opcodes have an immediate form and a ,1 form (with no
-	 * immediate).  In the parser, we set this and opcode_len=1, but store
-	 * the ,1 version in the second byte of the opcode array.  We then
-	 * choose between the two versions once we know the actual value of
-	 * imm (because we don't know it in the parser module).
-	 *
-	 * A override to force the imm version should just leave this at
-	 * 0.  Then later code won't know the ,1 version even exists.
-	 * TODO: Figure out how this affects CPU flags processing.
-	 */
-	X86_POSTOP_SHIFT,
-
 	/* Instructions that take a sign-extended imm8 as well as imm values
 	 * (eg, the arith instructions and a subset of the imul instructions)
-	 * should set this and put the imm8 form in the second byte of the
-	 * opcode.
+	 * should set this and put the imm8 form as the "normal" opcode (in
+	 * the first one or two bytes) and non-imm8 form in the second or
+	 * third byte of the opcode.
 	 */
 	X86_POSTOP_SIGNEXT_IMM8,
-
-	/* Long (modrm+sib) mov instructions in amd64 can be optimized into
-	 * short mov instructions if a 32-bit address override is applied in
-	 * 64-bit mode to an EA of just an offset (no registers) and the
-	 * target register is al/ax/eax/rax.
-	 */
-	X86_POSTOP_SHORTMOV,
 
 	/* Override any attempt at address-size override to 16 bits, and never
 	 * generate a prefix.  This is used for the ENTER opcode.
 	 */
-	X86_POSTOP_ADDRESS16,
-
-	/* Used for 64-bit mov immediate, which can take a sign-extended
-	 * imm32 as well as imm64 values.  The imm32 form is put in the
-	 * second byte of the opcode and its ModRM byte is put in the third
-	 * byte of the opcode.
-	 */
-	X86_POSTOP_SIGNEXT_IMM32
+	X86_POSTOP_ADDRESS16
     } postop;
 } x86_insn;
 
@@ -249,7 +224,6 @@ typedef struct x86_jmp {
     x86_opcode shortop, nearop;
 
     yasm_value target;		/* jump target */
-    /*@dependent@*/ yasm_bytecode *origin_prevbc;   /* jump origin */
 
     /* which opcode are we using? */
     /* The *FORCED forms are specified in the source as such */
@@ -281,8 +255,7 @@ void yasm_x86__bc_apply_prefixes
  */
 int yasm_x86__expr_checkea
     (x86_effaddr *x86_ea, unsigned char *addrsize, unsigned int bits,
-     int address16_op, unsigned char *rex,
-     yasm_calc_bc_dist_func calc_bc_dist);
+     int address16_op, unsigned char *rex);
 
 void yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len);
 

@@ -406,7 +406,6 @@ coff_objfmt_set_section_addr(yasm_section *sect, /*@null@*/ void *d)
 {
     /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ coff_section_data *csd;
-    /*@null@*/ yasm_bytecode *last;
 
     /* Don't output absolute sections */
     if (yasm_section_is_absolute(sect))
@@ -417,9 +416,7 @@ coff_objfmt_set_section_addr(yasm_section *sect, /*@null@*/ void *d)
     assert(csd != NULL);
 
     csd->addr = info->addr;
-    last = yasm_section_bcs_last(sect);
-    if (last)
-	info->addr += last->offset + last->len;
+    info->addr += yasm_bc_next_offset(yasm_section_bcs_last(sect));
 
     return 0;
 }
@@ -441,15 +438,14 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
     objfmt_coff = info->objfmt_coff;
 
     if (value->abs)
-	value->abs = yasm_expr_simplify(value->abs, yasm_common_calc_bc_dist);
+	value->abs = yasm_expr_simplify(value->abs, 1);
 
     /* Try to output constant and PC-relative section-local first.
      * Note this does NOT output any value with a SEG, WRT, external,
      * cross-section, or non-PC-relative reference (those are handled below).
      */
     switch (yasm_value_output_basic(value, buf, destsize, bc, warn,
-				    info->objfmt_coff->arch,
-				    yasm_common_calc_bc_dist)) {
+				    info->objfmt_coff->arch)) {
 	case -1:
 	    return 1;
 	case 0:
@@ -488,7 +484,7 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 			       N_("coff: wrt expression too complex"));
 		return 1;
 	    }
-	    dist = yasm_common_calc_bc_dist(wrt_precbc, rel_precbc);
+	    dist = yasm_calc_bc_dist(wrt_precbc, rel_precbc);
 	    if (!dist) {
 		yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 			       N_("coff: cannot wrt across sections"));
@@ -505,8 +501,7 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 
 		csymd = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
 		assert(csymd != NULL);
-		common_size = yasm_expr_get_intnum(&csymd->size,
-						   yasm_common_calc_bc_dist);
+		common_size = yasm_expr_get_intnum(&csymd->size, 1);
 		if (!common_size) {
 		    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 				   N_("coff: common size too complex"));
@@ -532,7 +527,7 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 						&coff_section_data_cb);
 		assert(sym_csd != NULL);
 		sym = sym_csd->sym;
-		intn_val = sym_precbc->offset + sym_precbc->len;
+		intn_val = yasm_bc_next_offset(sym_precbc);
 		if (COFF_SET_VMA)
 		    intn_val += sym_csd->addr;
 	    }
@@ -547,7 +542,7 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 	     * taken care of by special relocation types.
 	     */
 	    if (objfmt_coff->win64 && value->ip_rel)
-		intn_val += bc->len;
+		intn_val += bc->len*bc->mult_int;
 	    else if (objfmt_coff->win32)
 		intn_val += offset+destsize;
 	    else
@@ -585,7 +580,7 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 		}
 		if (!value->ip_rel)
 		    reloc->type = COFF_RELOC_AMD64_REL32;
-		else switch (bc->len - (offset+destsize)) {
+		else switch (bc->len*bc->mult_int - (offset+destsize)) {
 		    case 0:
 			reloc->type = COFF_RELOC_AMD64_REL32;
 			break;
@@ -663,7 +658,7 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
     }
 
     if (value->abs) {
-	yasm_intnum *intn2 = yasm_expr_get_intnum(&value->abs, NULL);
+	yasm_intnum *intn2 = yasm_expr_get_intnum(&value->abs, 0);
 	if (!intn2) {
 	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 			   N_("coff: relocation too complex"));
@@ -763,16 +758,12 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 	csd->addr = info->addr;
 
     if ((csd->flags & COFF_STYP_STD_MASK) == COFF_STYP_BSS) {
-	yasm_bytecode *last = yasm_section_bcs_last(sect);
-
 	/* Don't output BSS sections.
 	 * TODO: Check for non-reserve bytecodes?
 	 */
 	pos = 0;    /* position = 0 because it's not in the file */
-	csd->size = last->offset + last->len;
+	csd->size = yasm_bc_next_offset(yasm_section_bcs_last(sect));
     } else {
-	yasm_bytecode *last = yasm_section_bcs_last(sect);
-
 	pos = ftell(info->f);
 	if (pos == -1) {
 	    yasm__fatal(N_("could not get file position on output file"));
@@ -786,7 +777,7 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 				  coff_objfmt_output_bytecode);
 
 	/* Sanity check final section size */
-	if (csd->size != (last->offset + last->len))
+	if (csd->size != yasm_bc_next_offset(yasm_section_bcs_last(sect)))
 	    yasm_internal_error(
 		N_("coff: section computed size did not match actual size"));
     }
@@ -1010,8 +1001,7 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 		    yasm_expr *abs_start;
 
 		    abs_start = yasm_expr_copy(yasm_section_get_start(sect));
-		    intn = yasm_expr_get_intnum(&abs_start,
-						yasm_common_calc_bc_dist);
+		    intn = yasm_expr_get_intnum(&abs_start, 1);
 		    if (!intn) {
 			yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			    N_("absolute section start not an integer expression"));
@@ -1025,12 +1015,11 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 		} else
 		    yasm_internal_error(N_("didn't understand section"));
 		if (precbc)
-		    value += precbc->offset + precbc->len;
+		    value += yasm_bc_next_offset(precbc);
 	    }
 	} else if ((equ_val = yasm_symrec_get_equ(sym))) {
 	    yasm_expr *equ_val_copy = yasm_expr_copy(equ_val);
-	    intn = yasm_expr_get_intnum(&equ_val_copy,
-					yasm_common_calc_bc_dist);
+	    intn = yasm_expr_get_intnum(&equ_val_copy, 1);
 	    if (!intn) {
 		if (vis & YASM_SYM_GLOBAL) {
 		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
@@ -1044,8 +1033,7 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	    scnum = 0xffff;     /* -1 = absolute symbol */
 	} else {
 	    if (vis & YASM_SYM_COMMON) {
-		intn = yasm_expr_get_intnum(&csymd->size,
-					    yasm_common_calc_bc_dist);
+		intn = yasm_expr_get_intnum(&csymd->size, 1);
 		if (!intn) {
 		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			N_("COMMON data size not an integer expression"));
@@ -1524,7 +1512,7 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	} else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
 	    if (objfmt_coff->win32) {
 		/*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
-		align_expr = yasm_expr_get_intnum(&vp->param, NULL);
+		align_expr = yasm_expr_get_intnum(&vp->param, 0);
 		if (!align_expr) {
 		    yasm_error_set(YASM_ERROR_VALUE,
 				   N_("argument to `%s' is not a power of two"),

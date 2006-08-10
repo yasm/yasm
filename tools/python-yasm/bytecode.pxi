@@ -47,12 +47,6 @@ cdef extern from "libyasm/bytecode.h":
     cdef struct yasm_dataval
     cdef struct yasm_datavalhead
 
-    cdef enum yasm_bc_resolve_flags:
-        YASM_BC_RESOLVE_NONE
-        YASM_BC_RESOLVE_ERROR
-        YASM_BC_RESOLVE_MIN_LEN
-        YASM_BC_RESOLVE_UNKNOWN_LEN
-
     cdef yasm_immval* yasm_imm_create_expr(yasm_expr *e)
     cdef yasm_expr* yasm_ea_get_disp(yasm_effaddr *ea)
     cdef void yasm_ea_set_len(yasm_effaddr *ea, unsigned int len)
@@ -91,16 +85,21 @@ cdef extern from "libyasm/bytecode.h":
     cdef void yasm_bc_destroy(yasm_bytecode *bc)
     cdef void yasm_bc_print(yasm_bytecode *bc, FILE *f, int indent_level)
     cdef void yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
-    cdef yasm_intnum *yasm_common_calc_bc_dist(yasm_bytecode *precbc1,
+    cdef yasm_intnum *yasm_calc_bc_dist(yasm_bytecode *precbc1,
             yasm_bytecode *precbc2)
-    cdef yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
-            yasm_calc_bc_dist_func calc_bc_dist)
+    ctypedef void (*yasm_bc_add_span_func) (void *add_span_data,
+            yasm_bytecode *bc, int id, yasm_value *value, long neg_thres,
+            long pos_thres)
+    cdef int yasm_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+                              void *add_span_data)
+    cdef int yasm_bc_expand(yasm_bytecode *bc, int span, long old_val,
+                            long new_val, long *neg_thres, long *pos_thres)
     cdef unsigned char* yasm_bc_tobytes(yasm_bytecode *bc,
             unsigned char *buf, unsigned long *bufsize, int *gap, void *d,
             yasm_output_value_func output_value,
             yasm_output_reloc_func output_reloc)
     cdef int yasm_bc_get_multiple(yasm_bytecode *bc, unsigned long *multiple,
-                                  yasm_calc_bc_dist_func calc_bc_dist)
+                                  int calc_bc_dist)
 
     cdef yasm_dataval* yasm_dv_create_expr(yasm_expr *expn)
     cdef yasm_dataval* yasm_dv_create_string(char *contents, size_t len)
@@ -113,25 +112,33 @@ cdef extern from "libyasm/bytecode.h":
             int indent_level)
 
 cdef extern from "libyasm/bc-int.h":
+    cdef enum yasm_bc_special:
+        YASM_BC_SPECIAL_NONE
+        YASM_BC_SPECIAL_RESERVE
+        YASM_BC_SPECIAL_OFFSET
+
     cdef struct yasm_bytecode_callback:
         void (*destroy) (void *contents)
         void (*c_print "print") (void *contents, FILE *f, int indent_level)
         void (*finalize) (yasm_bytecode *bc, yasm_bytecode *prev_bc)
-        yasm_bc_resolve_flags (*resolve) (yasm_bytecode *bc, int save,
-                                          yasm_calc_bc_dist_func calc_bc_dist)
+        int (*calc_len) (yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		         void *add_span_data)
+        int (*expand) (yasm_bytecode *bc, int span, long old_val, long new_val,
+		       long *neg_thres, long *pos_thres)
         int (*tobytes) (yasm_bytecode *bc, unsigned char **bufp, void *d,
 	                yasm_output_value_func output_value,
 		        yasm_output_reloc_func output_reloc)
-        int reserve
+        yasm_bc_special special
 
     cdef struct yasm_bytecode:
         yasm_bytecode_callback *callback
         yasm_section *section
         yasm_expr *multiple
         unsigned long len
+        unsigned long mult_int
         unsigned long line
         unsigned long offset
-        unsigned long opt_flags
+        unsigned long bc_index
         yasm_symrec **symrecs
         void *contents
 
@@ -166,15 +173,18 @@ cdef class Bytecode:
     property len:
         def __get__(self): return self.bc.len
         def __set__(self, value): self.bc.len = value
+    property mult_int:
+        def __get__(self): return self.bc.mult_int
+        def __set__(self, value): self.bc.mult_int = value
     property line:
         def __get__(self): return self.bc.line
         def __set__(self, value): self.bc.line = value
     property offset:
         def __get__(self): return self.bc.offset
         def __set__(self, value): self.bc.offset = value
-    property opt_flags:
-        def __get__(self): return self.bc.opt_flags
-        def __set__(self, value): self.bc.opt_flags = value
+    property bc_index:
+        def __get__(self): return self.bc.bc_index
+        def __set__(self, value): self.bc.bc_index = value
     property symbols:
         # Someday extend this to do something modifiable, e.g. return a
         # list-like object.

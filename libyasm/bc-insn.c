@@ -59,8 +59,8 @@ typedef struct bytecode_insn {
 static void bc_insn_destroy(void *contents);
 static void bc_insn_print(const void *contents, FILE *f, int indent_level);
 static void bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
-static yasm_bc_resolve_flags bc_insn_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+			    void *add_span_data);
 static int bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			   yasm_output_value_func output_value,
 			   /*@null@*/ yasm_output_reloc_func output_reloc);
@@ -69,7 +69,8 @@ static const yasm_bytecode_callback bc_insn_callback = {
     bc_insn_destroy,
     bc_insn_print,
     bc_insn_finalize,
-    bc_insn_resolve,
+    bc_insn_calc_len,
+    yasm_bc_expand_common,
     bc_insn_tobytes,
     0
 };
@@ -204,7 +205,7 @@ bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 		if (op->data.ea)
 		    op->data.ea->disp.abs =
 			yasm_expr__level_tree(op->data.ea->disp.abs, 1, 1, 0,
-					      NULL, NULL, NULL, NULL);
+					      0, NULL, NULL, NULL);
 		if (yasm_error_occurred()) {
 		    /* Add a pointer to where it was used to the error */
 		    yasm_error_fetch(&eclass, &str, &xrefline, &xrefstr);
@@ -221,8 +222,8 @@ bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 		break;
 	    case YASM_INSN__OPERAND_IMM:
 		op->data.val =
-		    yasm_expr__level_tree(op->data.val, 1, 1, 1, NULL, NULL,
-					  NULL, NULL);
+		    yasm_expr__level_tree(op->data.val, 1, 1, 1, 0, NULL, NULL,
+					  NULL);
 		if (yasm_error_occurred()) {
 		    /* Add a pointer to where it was used to the error */
 		    yasm_error_fetch(&eclass, &str, &xrefline, &xrefstr);
@@ -249,13 +250,13 @@ bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 			    insn->num_segregs, insn->segregs);
 }
 
-static yasm_bc_resolve_flags
-bc_insn_resolve(yasm_bytecode *bc, int save,
-		yasm_calc_bc_dist_func calc_bc_dist)
+static int
+bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		 void *add_span_data)
 {
-    yasm_internal_error(N_("bc_insn_resolve() is not implemented"));
+    yasm_internal_error(N_("bc_insn_calc_len() is not implemented"));
     /*@notreached@*/
-    return YASM_BC_RESOLVE_ERROR;
+    return 0;
 }
 
 static int

@@ -92,8 +92,8 @@ nasm_listfmt_output_value(yasm_value *value, unsigned char *buf,
     assert(info != NULL);
 
     /* Output */
-    switch (yasm_value_output_basic(value, buf, destsize, bc, warn, info->arch,
-				    NULL)) {
+    switch (yasm_value_output_basic(value, buf, destsize, bc, warn,
+				    info->arch)) {
 	case -1:
 	    return 1;
 	case 0:
@@ -121,7 +121,7 @@ nasm_listfmt_output_value(yasm_value *value, unsigned char *buf,
     }
 
     if (value->abs) {
-	intn = yasm_expr_get_intnum(&value->abs, NULL);
+	intn = yasm_expr_get_intnum(&value->abs, 0);
 	if (intn)
 	    return yasm_arch_intnum_tobytes(info->arch, intn, buf, destsize,
 					    valsize, 0, bc, 0);
@@ -216,7 +216,7 @@ nasm_listfmt_output(yasm_listfmt *listfmt, FILE *f, yasm_linemap *linemap,
 		 */
 		bigbuf = yasm_bc_tobytes(bc, buf, &size, &gap, &info,
 					 nasm_listfmt_output_value, NULL);
-		yasm_bc_get_multiple(bc, &multiple, NULL);
+		yasm_bc_get_multiple(bc, &multiple, 1);
 		size /= multiple;
 
 		/* output bytes with reloc information */

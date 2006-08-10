@@ -183,12 +183,17 @@ yasm_expr_reg(unsigned long reg)
     return e;
 }
 
-/* Transforms instances of symrec-symrec [symrec+(-1*symrec)] into integers if
- * possible.  Uses a simple n^2 algorithm because n is usually quite small.
+/* Transforms instances of symrec-symrec [symrec+(-1*symrec)] into single
+ * expritems if possible.  Uses a simple n^2 algorithm because n is usually
+ * quite small.
  */
 static /*@only@*/ yasm_expr *
-expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e,
-		   yasm_calc_bc_dist_func calc_bc_dist)
+expr_xform_bc_dist_base(/*@returned@*/ /*@only@*/ yasm_expr *e,
+			/*@null@*/ void *cbd,
+			int (*callback) (yasm_expr__item *ei,
+					 yasm_bytecode *precbc,
+					 yasm_bytecode *precbc2,
+					 void *cbd))
 {
     int i;
     /*@dependent@*/ yasm_section *sect;
@@ -244,10 +249,7 @@ expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e,
 		yasm_symrec_get_label(e->terms[j].data.sym, &precbc2) &&
 		(sect = yasm_bc_get_section(precbc2)) &&
 		sect == sect2 &&
-		(dist = calc_bc_dist(precbc, precbc2))) {
-		/* Change the symrec term to an integer */
-		e->terms[j].type = YASM_EXPR_INT;
-		e->terms[j].data.intn = dist;
+		callback(&e->terms[j], precbc, precbc2, cbd)) {
 		/* Delete the matching (-1*symrec) term */
 		yasm_expr_destroy(sube);
 		e->terms[i].type = YASM_EXPR_NONE;
@@ -271,6 +273,65 @@ expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e,
     }
 
     return e;
+}
+
+static int
+expr_xform_bc_dist_cb(yasm_expr__item *ei, yasm_bytecode *precbc,
+		      yasm_bytecode *precbc2, /*@null@*/ void *d)
+{
+    yasm_intnum *dist = yasm_calc_bc_dist(precbc, precbc2);
+    if (!dist)
+	return 0;
+    /* Change the term to an integer */
+    ei->type = YASM_EXPR_INT;
+    ei->data.intn = dist;
+    return 1;
+}
+
+/* Transforms instances of symrec-symrec [symrec+(-1*symrec)] into integers if
+ * possible.
+ */
+static /*@only@*/ yasm_expr *
+expr_xform_bc_dist(/*@returned@*/ /*@only@*/ yasm_expr *e)
+{
+    return expr_xform_bc_dist_base(e, NULL, expr_xform_bc_dist_cb);
+}
+
+typedef struct bc_dist_subst_cbd {
+    void (*callback) (unsigned int subst, yasm_bytecode *precbc,
+		      yasm_bytecode *precbc2, void *cbd);
+    void *cbd;
+    unsigned int subst;
+} bc_dist_subst_cbd;
+
+static int
+expr_bc_dist_subst_cb(yasm_expr__item *ei, yasm_bytecode *precbc,
+		      yasm_bytecode *precbc2, /*@null@*/ void *d)
+{
+    bc_dist_subst_cbd *my_cbd = d;
+    assert(my_cbd != NULL);
+    /* Call higher-level callback */
+    my_cbd->callback(my_cbd->subst, precbc, precbc2, my_cbd->cbd);
+    /* Change the term to an subst */
+    ei->type = YASM_EXPR_SUBST;
+    ei->data.subst = my_cbd->subst;
+    my_cbd->subst++;
+    return 1;
+}
+
+int
+yasm_expr__bc_dist_subst(yasm_expr **ep, void *cbd,
+			 void (*callback) (unsigned int subst,
+					   yasm_bytecode *precbc,
+					   yasm_bytecode *precbc2,
+					   void *cbd))
+{
+    bc_dist_subst_cbd my_cbd;	/* callback info for low-level callback */
+    my_cbd.callback = callback;
+    my_cbd.cbd = cbd;
+    my_cbd.subst = 0;
+    *ep = expr_xform_bc_dist_base(*ep, &my_cbd, expr_bc_dist_subst_cb);
+    return my_cbd.subst;
 }
 
 /* Negate just a single ExprItem by building a -1*ei subexpression */
@@ -731,7 +792,7 @@ typedef struct yasm__exprentry {
 /* Level an entire expn tree, expanding equ's as we go */
 yasm_expr *
 yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
-		      int simplify_reg_mul, yasm_calc_bc_dist_func calc_bc_dist,
+		      int simplify_reg_mul, int calc_bc_dist,
 		      yasm_expr_xform_func expr_xform_extra,
 		      void *expr_xform_extra_data, yasm__exprhead *eh)
 {
@@ -838,11 +899,11 @@ yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
     e = expr_level_op(e, fold_const, simplify_ident, simplify_reg_mul);
     if (calc_bc_dist || expr_xform_extra) {
 	if (calc_bc_dist)
-	    e = expr_xform_bc_dist(e, calc_bc_dist);
+	    e = expr_xform_bc_dist(e);
 	if (expr_xform_extra)
 	    e = expr_xform_extra(e, expr_xform_extra_data);
 	e = yasm_expr__level_tree(e, fold_const, simplify_ident,
-				  simplify_reg_mul, NULL, NULL, NULL, NULL);
+				  simplify_reg_mul, 0, NULL, NULL, NULL);
     }
     return e;
 }
@@ -893,6 +954,36 @@ yasm_expr__order_terms(yasm_expr *e)
     }
 }
 
+static void
+expr_item_copy(yasm_expr__item *dest, const yasm_expr__item *src)
+{
+    dest->type = src->type;
+    switch (src->type) {
+	case YASM_EXPR_SYM:
+	case YASM_EXPR_SYMEXP:
+	    /* Symbols don't need to be copied */
+	    dest->data.sym = src->data.sym;
+	    break;
+	case YASM_EXPR_EXPR:
+	    dest->data.expn = yasm_expr__copy_except(src->data.expn, -1);
+	    break;
+	case YASM_EXPR_INT:
+	    dest->data.intn = yasm_intnum_copy(src->data.intn);
+	    break;
+	case YASM_EXPR_FLOAT:
+	    dest->data.flt = yasm_floatnum_copy(src->data.flt);
+	    break;
+	case YASM_EXPR_REG:
+	    dest->data.reg = src->data.reg;
+	    break;
+	case YASM_EXPR_SUBST:
+	    dest->data.subst = src->data.subst;
+	    break;
+	default:
+	    break;
+    }
+}
+
 /* Copy entire expression EXCEPT for index "except" at *top level only*. */
 yasm_expr *
 yasm_expr__copy_except(const yasm_expr *e, int except)
@@ -907,34 +998,8 @@ yasm_expr__copy_except(const yasm_expr *e, int except)
     n->line = e->line;
     n->numterms = e->numterms;
     for (i=0; i<e->numterms; i++) {
-	yasm_expr__item *dest = &n->terms[i];
-	const yasm_expr__item *src = &e->terms[i];
-
-	if (i != except) {
-	    dest->type = src->type;
-	    switch (src->type) {
-		case YASM_EXPR_SYM:
-		case YASM_EXPR_SYMEXP:
-		    /* Symbols don't need to be copied */
-		    dest->data.sym = src->data.sym;
-		    break;
-		case YASM_EXPR_EXPR:
-		    dest->data.expn =
-			yasm_expr__copy_except(src->data.expn, -1);
-		    break;
-		case YASM_EXPR_INT:
-		    dest->data.intn = yasm_intnum_copy(src->data.intn);
-		    break;
-		case YASM_EXPR_FLOAT:
-		    dest->data.flt = yasm_floatnum_copy(src->data.flt);
-		    break;
-		case YASM_EXPR_REG:
-		    dest->data.reg = src->data.reg;
-		    break;
-		default:
-		    break;
-	    }
-	}
+	if (i != except)
+	    expr_item_copy(&n->terms[i], &e->terms[i]);
     }
 
     return n;
@@ -991,6 +1056,33 @@ int
 yasm_expr__contains(const yasm_expr *e, yasm_expr__type t)
 {
     return yasm_expr__traverse_leaves_in_const(e, &t, expr_contains_callback);
+}
+
+typedef struct subst_cbd {
+    unsigned int num_items;
+    const yasm_expr__item *items;
+} subst_cbd;
+
+static int
+expr_subst_callback(yasm_expr__item *ei, void *d)
+{
+    subst_cbd *cbd = d;
+    if (ei->type != YASM_EXPR_SUBST)
+	return 0;
+    if (ei->data.subst >= cbd->num_items)
+	return 1;   /* error */
+    expr_item_copy(ei, &cbd->items[ei->data.subst]);
+    return 0;
+}
+
+int
+yasm_expr__subst(yasm_expr *e, unsigned int num_items,
+		 const yasm_expr__item *items)
+{
+    subst_cbd cbd;
+    cbd.num_items = num_items;
+    cbd.items = items;
+    return yasm_expr__traverse_leaves_in(e, &cbd, expr_subst_callback);
 }
 
 /* Traverse over expression tree, calling func for each operation AFTER the
@@ -1132,7 +1224,7 @@ yasm_expr_extract_wrt(yasm_expr **ep)
 
 /*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
 yasm_intnum *
-yasm_expr_get_intnum(yasm_expr **ep, yasm_calc_bc_dist_func calc_bc_dist)
+yasm_expr_get_intnum(yasm_expr **ep, int calc_bc_dist)
 {
     *ep = yasm_expr_simplify(*ep, calc_bc_dist);
 
@@ -1148,7 +1240,7 @@ const yasm_symrec *
 yasm_expr_get_symrec(yasm_expr **ep, int simplify)
 {
     if (simplify)
-	*ep = yasm_expr_simplify(*ep, NULL);
+	*ep = yasm_expr_simplify(*ep, 0);
 
     if ((*ep)->op == YASM_EXPR_IDENT &&
 	((*ep)->terms[0].type == YASM_EXPR_SYM ||
@@ -1164,7 +1256,7 @@ const unsigned long *
 yasm_expr_get_reg(yasm_expr **ep, int simplify)
 {
     if (simplify)
-	*ep = yasm_expr_simplify(*ep, NULL);
+	*ep = yasm_expr_simplify(*ep, 0);
 
     if ((*ep)->op == YASM_EXPR_IDENT && (*ep)->terms[0].type == YASM_EXPR_REG)
 	return &((*ep)->terms[0].data.reg);
@@ -1308,6 +1400,9 @@ yasm_expr_print(const yasm_expr *e, FILE *f)
 	    case YASM_EXPR_REG:
 		/* FIXME */
 		/*yasm_arch_reg_print(arch, e->terms[i].data.reg, f);*/
+		break;
+	    case YASM_EXPR_SUBST:
+		fprintf(f, "[%u]", e->terms[i].data.subst);
 		break;
 	    case YASM_EXPR_NONE:
 		break;

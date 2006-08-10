@@ -230,15 +230,6 @@ typedef enum {
     YASM_SYM_DLOCAL = 1 << 3	/**< If symbol is explicitly declared LOCAL */
 } yasm_sym_vis;
 
-/** Determine the distance between the starting offsets of two bytecodes.
- * \param precbc1	preceding bytecode to the first bytecode
- * \param precbc2	preceding bytecode to the second bytecode
- * \return Distance in bytes between the two bytecodes (bc2-bc1), or NULL if
- *	   the distance was indeterminate.
- */
-typedef /*@null@*/ /*@only@*/ yasm_intnum * (*yasm_calc_bc_dist_func)
-    (yasm_bytecode *precbc1, yasm_bytecode *precbc2);
-
 /** Convert yasm_value to its byte representation.  Usually implemented by
  * object formats to keep track of relocations and verify legal expressions.
  * Must put the value into the least significant bits of the destination,

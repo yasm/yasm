@@ -55,8 +55,11 @@ typedef struct bytecode_align {
 static void bc_align_destroy(void *contents);
 static void bc_align_print(const void *contents, FILE *f, int indent_level);
 static void bc_align_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
-static yasm_bc_resolve_flags bc_align_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int bc_align_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+			     void *add_span_data);
+static int bc_align_expand(yasm_bytecode *bc, int span, long old_val,
+			   long new_val, /*@out@*/ long *neg_thres,
+			   /*@out@*/ long *pos_thres);
 static int bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			    yasm_output_value_func output_value,
 			    /*@null@*/ yasm_output_reloc_func output_reloc);
@@ -65,9 +68,10 @@ static const yasm_bytecode_callback bc_align_callback = {
     bc_align_destroy,
     bc_align_print,
     bc_align_finalize,
-    bc_align_resolve,
+    bc_align_calc_len,
+    bc_align_expand,
     bc_align_tobytes,
-    0
+    YASM_BC_SPECIAL_OFFSET
 };
 
 
@@ -102,44 +106,62 @@ static void
 bc_align_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 {
     bytecode_align *align = (bytecode_align *)bc->contents;
-    if (!yasm_expr_get_intnum(&align->boundary, NULL))
+    if (!yasm_expr_get_intnum(&align->boundary, 0))
 	yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 		       N_("align boundary must be a constant"));
-    if (align->fill && !yasm_expr_get_intnum(&align->fill, NULL))
+    if (align->fill && !yasm_expr_get_intnum(&align->fill, 0))
 	yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 		       N_("align fill must be a constant"));
-    if (align->maxskip && !yasm_expr_get_intnum(&align->maxskip, NULL))
+    if (align->maxskip && !yasm_expr_get_intnum(&align->maxskip, 0))
 	yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 		       N_("align maximum skip must be a constant"));
 }
 
-static yasm_bc_resolve_flags
-bc_align_resolve(yasm_bytecode *bc, int save,
-		 yasm_calc_bc_dist_func calc_bc_dist)
+static int
+bc_align_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		  void *add_span_data)
+{
+    long neg_thres = 0;
+    long pos_thres = 0;
+
+    if (bc_align_expand(bc, 0, 0, (long)bc->offset, &neg_thres,
+			&pos_thres) < 0)
+	return -1;
+
+    return 0;
+}
+
+static int
+bc_align_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
+		/*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
     bytecode_align *align = (bytecode_align *)bc->contents;
     unsigned long end;
     unsigned long boundary =
-	yasm_intnum_get_uint(yasm_expr_get_intnum(&align->boundary, NULL));
+	yasm_intnum_get_uint(yasm_expr_get_intnum(&align->boundary, 0));
 
     if (boundary == 0) {
 	bc->len = 0;
-	return YASM_BC_RESOLVE_MIN_LEN;
+	*pos_thres = new_val;
+	return 0;
     }
 
-    end = bc->offset;
-    if (bc->offset & (boundary-1))
-	end = (bc->offset & ~(boundary-1)) + boundary;
+    end = (unsigned long)new_val;
+    if ((unsigned long)new_val & (boundary-1))
+	end = ((unsigned long)new_val & ~(boundary-1)) + boundary;
 
-    bc->len = end - bc->offset;
+    *pos_thres = (long)end;
+    bc->len = end - (unsigned long)new_val;
 
     if (align->maxskip) {
 	unsigned long maxskip =
-	    yasm_intnum_get_uint(yasm_expr_get_intnum(&align->maxskip, NULL));
-	if ((end - bc->offset) > maxskip)
+	    yasm_intnum_get_uint(yasm_expr_get_intnum(&align->maxskip, 0));
+	if (bc->len > maxskip) {
+	    *pos_thres = (long)end-maxskip-1;
 	    bc->len = 0;
+	}
     }
-    return YASM_BC_RESOLVE_MIN_LEN;
+    return 1;
 }
 
 static int
@@ -150,7 +172,7 @@ bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     bytecode_align *align = (bytecode_align *)bc->contents;
     unsigned long len;
     unsigned long boundary =
-	yasm_intnum_get_uint(yasm_expr_get_intnum(&align->boundary, NULL));
+	yasm_intnum_get_uint(yasm_expr_get_intnum(&align->boundary, 0));
 
     if (boundary == 0)
 	return 0;
@@ -163,8 +185,7 @@ bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	    return 0;
 	if (align->maxskip) {
 	    unsigned long maxskip =
-		yasm_intnum_get_uint(yasm_expr_get_intnum(&align->maxskip,
-							  NULL));
+		yasm_intnum_get_uint(yasm_expr_get_intnum(&align->maxskip, 0));
 	    if (len > maxskip)
 		return 0;
 	}
@@ -172,7 +193,7 @@ bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     if (align->fill) {
 	unsigned long v;
-	v = yasm_intnum_get_uint(yasm_expr_get_intnum(&align->fill, NULL));
+	v = yasm_intnum_get_uint(yasm_expr_get_intnum(&align->fill, 0));
 	memset(*bufp, (int)v, len);
 	*bufp += len;
     } else if (align->code_fill) {

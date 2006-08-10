@@ -1709,7 +1709,7 @@ if_condition(Token * tline, int i)
 	    if (tokval.t_type)
 		error(ERR_WARNING,
 			"trailing garbage after expression ignored");
-	    intn = yasm_expr_get_intnum(&evalresult, NULL);
+	    intn = yasm_expr_get_intnum(&evalresult, 0);
 	    if (!intn)
 	    {
 		error(ERR_NONFATAL,
@@ -2468,7 +2468,7 @@ do_directive(Token * tline)
 	    if (tokval.t_type)
 		error(ERR_WARNING,
 			"trailing garbage after expression ignored");
-	    intn = yasm_expr_get_intnum(&evalresult, NULL);
+	    intn = yasm_expr_get_intnum(&evalresult, 0);
 	    if (!intn)
 	    {
 		error(ERR_NONFATAL, "non-constant value given to `%%rotate'");
@@ -2529,7 +2529,7 @@ do_directive(Token * tline)
 		if (tokval.t_type)
 		    error(ERR_WARNING,
 			  "trailing garbage after expression ignored");
-		intn = yasm_expr_get_intnum(&evalresult, NULL);
+		intn = yasm_expr_get_intnum(&evalresult, 0);
 		if (!intn)
 		{
 		    error(ERR_NONFATAL, "non-constant value given to `%%rep'");
@@ -2924,7 +2924,7 @@ do_directive(Token * tline)
 		free_tlist(origline);
 		return DIRECTIVE_FOUND;
 	    }
-	    intn = yasm_expr_get_intnum(&evalresult, NULL);
+	    intn = yasm_expr_get_intnum(&evalresult, 0);
 	    if (!intn)
 	    {
 		error(ERR_NONFATAL, "non-constant value given to `%%substr`");
@@ -3028,7 +3028,7 @@ do_directive(Token * tline)
 		error(ERR_WARNING,
 			"trailing garbage after expression ignored");
 
-	    intn = yasm_expr_get_intnum(&evalresult, NULL);
+	    intn = yasm_expr_get_intnum(&evalresult, 0);
 	    if (!intn)
 	    {
 		error(ERR_NONFATAL,

@@ -122,8 +122,8 @@ typedef struct {
 static void stabs_bc_str_destroy(void *contents);
 static void stabs_bc_str_print(const void *contents, FILE *f, int
 			       indent_level);
-static yasm_bc_resolve_flags stabs_bc_str_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int stabs_bc_str_calc_len
+    (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int stabs_bc_str_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
      yasm_output_value_func output_value,
@@ -132,8 +132,8 @@ static int stabs_bc_str_tobytes
 static void stabs_bc_stab_destroy(void *contents);
 static void stabs_bc_stab_print(const void *contents, FILE *f, int
 				indent_level);
-static yasm_bc_resolve_flags stabs_bc_stab_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int stabs_bc_stab_calc_len
+    (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int stabs_bc_stab_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
      yasm_output_value_func output_value,
@@ -145,7 +145,8 @@ static const yasm_bytecode_callback stabs_bc_str_callback = {
     stabs_bc_str_destroy,
     stabs_bc_str_print,
     yasm_bc_finalize_common,
-    stabs_bc_str_resolve,
+    stabs_bc_str_calc_len,
+    yasm_bc_expand_common,
     stabs_bc_str_tobytes,
     0
 };
@@ -154,7 +155,8 @@ static const yasm_bytecode_callback stabs_bc_stab_callback = {
     stabs_bc_stab_destroy,
     stabs_bc_stab_print,
     yasm_bc_finalize_common,
-    stabs_bc_stab_resolve,
+    stabs_bc_stab_calc_len,
+    yasm_bc_expand_common,
     stabs_bc_stab_tobytes,
     0
 };
@@ -186,12 +188,11 @@ stabs_dbgfmt_destroy(/*@only@*/ yasm_dbgfmt *dbgfmt)
 static yasm_bytecode *
 stabs_dbgfmt_append_bcstr(yasm_section *sect, const char *str)
 {
-    yasm_bytecode *bc, *precbc;
+    yasm_bytecode *bc;
    
-    precbc = yasm_section_bcs_last(sect);
     bc = yasm_bc_create_common(&stabs_bc_str_callback, yasm__xstrdup(str), 0);
     bc->len = strlen(str)+1;
-    bc->offset = precbc ? precbc->offset + precbc->len : 0;
+    bc->offset = yasm_bc_next_offset(yasm_section_bcs_last(sect));
 
     yasm_section_bcs_append(sect, bc);
 
@@ -207,7 +208,7 @@ stabs_dbgfmt_append_stab(stabs_info *info, yasm_section *sect,
 			 unsigned long desc, /*@null@*/ yasm_symrec *symvalue,
 			 /*@null@*/ yasm_bytecode *bcvalue, unsigned long value)
 {
-    yasm_bytecode *bc, *precbc;
+    yasm_bytecode *bc;
     stabs_stab *stab = yasm_xmalloc(sizeof(stabs_stab));
 
     stab->other = 0;
@@ -218,11 +219,10 @@ stabs_dbgfmt_append_stab(stabs_info *info, yasm_section *sect,
     stab->bcvalue = bcvalue;
     stab->value = value;
 
-    precbc = yasm_section_bcs_last(sect);
     bc = yasm_bc_create_common(&stabs_bc_stab_callback, stab,
 			       bcvalue ? bcvalue->line : 0);
     bc->len = info->stablen;
-    bc->offset = precbc ? precbc->offset + precbc->len : 0;
+    bc->offset = yasm_bc_next_offset(yasm_section_bcs_last(sect));
 
     yasm_section_bcs_append(sect, bc);
 
@@ -378,6 +378,7 @@ stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt, yasm_errwarns *errwarns)
     stab = yasm_xmalloc(sizeof(stabs_stab));
     dbgbc = yasm_bc_create_common(&stabs_bc_stab_callback, stab, 0);
     dbgbc->len = info.stablen;
+    dbgbc->offset = 0;
     yasm_section_bcs_append(info.stab, dbgbc);
 
     /* initial strtab bytecodes */
@@ -402,7 +403,7 @@ stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt, yasm_errwarns *errwarns)
 
     stab->bcvalue = NULL;
     stab->symvalue = NULL;
-    stab->value = laststr->offset + laststr->len;
+    stab->value = yasm_bc_next_offset(laststr);
     stab->bcstr = filebc;
     stab->type = N_UNDF;
     stab->other = 0;
@@ -486,22 +487,22 @@ stabs_bc_str_print(const void *contents, FILE *f, int indent_level)
     fprintf(f, "%*s\"%s\"\n", indent_level, "", (const char *)contents);
 }
 
-static yasm_bc_resolve_flags
-stabs_bc_stab_resolve(yasm_bytecode *bc, int save,
-		      yasm_calc_bc_dist_func calc_bc_dist)
+static int
+stabs_bc_stab_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		       void *add_span_data)
 {
     yasm_internal_error(N_("tried to resolve a stabs stab bytecode"));
     /*@notreached@*/
-    return YASM_BC_RESOLVE_MIN_LEN;
+    return 0;
 }
 
-static yasm_bc_resolve_flags
-stabs_bc_str_resolve(yasm_bytecode *bc, int save,
-		     yasm_calc_bc_dist_func calc_bc_dist)
+static int
+stabs_bc_str_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		      void *add_span_data)
 {
     yasm_internal_error(N_("tried to resolve a stabs str bytecode"));
     /*@notreached@*/
-    return YASM_BC_RESOLVE_MIN_LEN;
+    return 0;
 }
 
 static int

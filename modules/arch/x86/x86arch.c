@@ -130,7 +130,7 @@ x86_parse_directive(yasm_arch *arch, const char *name,
     if (yasm__strcasecmp(name, "bits") == 0) {
 	if ((vp = yasm_vps_first(valparams)) && !vp->val &&
 	    vp->param != NULL &&
-	    (intn = yasm_expr_get_intnum(&vp->param, NULL)) != NULL &&
+	    (intn = yasm_expr_get_intnum(&vp->param, 0)) != NULL &&
 	    (lval = yasm_intnum_get_int(intn)) &&
 	    (lval == 16 || lval == 32 || lval == 64))
 	    arch_x86->mode_bits = (unsigned char)lval;
@@ -462,5 +462,6 @@ yasm_arch_module yasm_x86_LTX_arch = {
     x86_machines,
     "x86",
     16,
+    128,
     1
 };

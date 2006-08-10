@@ -199,5 +199,6 @@ yasm_arch_module yasm_lc3b_LTX_arch = {
     lc3b_machines,
     "lc3b",
     16,
+    512,
     2
 };

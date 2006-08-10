@@ -46,6 +46,58 @@
 #include "expr-int.h"
 #include "bc-int.h"
 
+void
+yasm_value_initialize(/*@out@*/ yasm_value *value,
+		      /*@null@*/ /*@kept@*/ yasm_expr *e, unsigned int size)
+{
+    value->abs = e;
+    value->rel = NULL;
+    value->wrt = NULL;
+    value->seg_of = 0;
+    value->rshift = 0;
+    value->curpos_rel = 0;
+    value->ip_rel = 0;
+    value->section_rel = 0;
+    value->size = size;
+}
+
+void
+yasm_value_init_sym(/*@out@*/ yasm_value *value, /*@null@*/ yasm_symrec *sym,
+		    unsigned int size)
+{
+    value->abs = NULL;
+    value->rel = sym;
+    value->wrt = NULL;
+    value->seg_of = 0;
+    value->rshift = 0;
+    value->curpos_rel = 0;
+    value->ip_rel = 0;
+    value->section_rel = 0;
+    value->size = size;
+}
+
+void
+yasm_value_init_copy(yasm_value *value, const yasm_value *orig)
+{
+    value->abs = orig->abs ? yasm_expr_copy(orig->abs) : NULL;
+    value->rel = orig->rel;
+    value->wrt = orig->wrt;
+    value->seg_of = orig->seg_of;
+    value->rshift = orig->rshift;
+    value->curpos_rel = orig->curpos_rel;
+    value->ip_rel = orig->ip_rel;
+    value->section_rel = orig->section_rel;
+    value->size = orig->size;
+}
+
+void
+yasm_value_delete(yasm_value *value)
+{
+    yasm_expr_destroy((value)->abs);
+    value->abs = NULL;
+    value->rel = NULL;
+}
+
 static int
 value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 {
@@ -364,7 +416,7 @@ yasm_value_finalize_expr(yasm_value *value, yasm_expr *e, unsigned int size)
     }
 
     yasm_value_initialize(value, yasm_expr__level_tree
-			  (e, 1, 1, 0, NULL, NULL, NULL, NULL), size);
+			  (e, 1, 1, 0, 0, NULL, NULL, NULL), size);
 
     /* quit early if there was an issue in simplify() */
     if (yasm_error_occurred())
@@ -405,7 +457,7 @@ yasm_value_finalize_expr(yasm_value *value, yasm_expr *e, unsigned int size)
     if (value_finalize_scan(value, value->abs, 0))
 	return 1;
 
-    value->abs = yasm_expr__level_tree(value->abs, 1, 1, 0, NULL, NULL, NULL,
+    value->abs = yasm_expr__level_tree(value->abs, 1, 1, 0, 0, NULL, NULL,
 				       NULL);
 
     /* Simplify 0 in abs to NULL */
@@ -425,10 +477,73 @@ yasm_value_finalize(yasm_value *value)
     return yasm_value_finalize_expr(value, value->abs, valsize);
 }
 
+yasm_intnum *
+yasm_value_get_intnum(yasm_value *value, yasm_bytecode *bc, int calc_bc_dist)
+{
+    /*@dependent@*/ /*@null@*/ yasm_intnum *intn = NULL;
+    /*@only@*/ yasm_intnum *outval;
+    int sym_local;
+
+    if (value->abs) {
+	/* Handle integer expressions, if non-integer or too complex, return
+	 * NULL.
+	 */
+	intn = yasm_expr_get_intnum(&value->abs, calc_bc_dist);
+	if (!intn)
+	    return NULL;
+    }
+
+    if (value->rel) {
+	/* If relative portion is not in bc section, return NULL.
+	 * Otherwise get the relative portion's offset.
+	 */
+	/*@dependent@*/ yasm_bytecode *rel_prevbc;
+	unsigned long dist;
+
+	if (!bc)
+	    return NULL;    /* Can't calculate relative value */
+
+	sym_local = yasm_symrec_get_label(value->rel, &rel_prevbc);
+	if (value->wrt || value->seg_of || value->section_rel || !sym_local)
+	    return NULL;    /* we can't handle SEG, WRT, or external symbols */
+	if (rel_prevbc->section != bc->section)
+	    return NULL;    /* not in this section */
+	if (!value->curpos_rel)
+	    return NULL;    /* not PC-relative */
+
+	/* Calculate value relative to current assembly position */
+	dist = yasm_bc_next_offset(rel_prevbc);
+	if (dist < bc->offset) {
+	    outval = yasm_intnum_create_uint(bc->offset - dist);
+	    yasm_intnum_calc(outval, YASM_EXPR_NEG, NULL);
+	} else {
+	    dist -= bc->offset;
+	    outval = yasm_intnum_create_uint(dist);
+	}
+
+	if (value->rshift > 0) {
+	    /*@only@*/ yasm_intnum *shamt =
+		yasm_intnum_create_uint((unsigned long)value->rshift);
+	    yasm_intnum_calc(outval, YASM_EXPR_SHR, shamt);
+	    yasm_intnum_destroy(shamt);
+	}
+	/* Add in absolute portion */
+	if (intn)
+	    yasm_intnum_calc(outval, YASM_EXPR_ADD, intn);
+	return outval;
+    }
+
+    if (intn)
+	return yasm_intnum_copy(intn);
+    
+    /* No absolute or relative portions: output 0 */
+    return yasm_intnum_create_uint(0);
+}
+
 int
 yasm_value_output_basic(yasm_value *value, /*@out@*/ unsigned char *buf,
 			size_t destsize, yasm_bytecode *bc, int warn,
-			yasm_arch *arch, yasm_calc_bc_dist_func calc_bc_dist)
+			yasm_arch *arch)
 {
     /*@dependent@*/ /*@null@*/ yasm_intnum *intn = NULL;
     /*@only@*/ yasm_intnum *outval;
@@ -455,7 +570,7 @@ yasm_value_output_basic(yasm_value *value, /*@out@*/ unsigned char *buf,
 	}
 
 	/* Handle integer expressions */
-	intn = yasm_expr_get_intnum(&value->abs, calc_bc_dist);
+	intn = yasm_expr_get_intnum(&value->abs, 1);
 	if (!intn) {
 	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 			   N_("expression too complex"));
@@ -479,7 +594,7 @@ yasm_value_output_basic(yasm_value *value, /*@out@*/ unsigned char *buf,
 	    return 0;	    /* not PC-relative */
 
 	/* Calculate value relative to current assembly position */
-	dist = rel_prevbc->offset + rel_prevbc->len;
+	dist = yasm_bc_next_offset(rel_prevbc);
 	if (dist < bc->offset) {
 	    outval = yasm_intnum_create_uint(bc->offset - dist);
 	    yasm_intnum_calc(outval, YASM_EXPR_NEG, NULL);

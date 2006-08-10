@@ -48,8 +48,11 @@ typedef struct bytecode_org {
 static void bc_org_destroy(void *contents);
 static void bc_org_print(const void *contents, FILE *f, int indent_level);
 static void bc_org_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
-static yasm_bc_resolve_flags bc_org_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int bc_org_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+			   void *add_span_data);
+static int bc_org_expand(yasm_bytecode *bc, int span, long old_val,
+			 long new_val, /*@out@*/ long *neg_thres,
+			 /*@out@*/ long *pos_thres);
 static int bc_org_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			  yasm_output_value_func output_value,
 			  /*@null@*/ yasm_output_reloc_func output_reloc);
@@ -58,9 +61,10 @@ static const yasm_bytecode_callback bc_org_callback = {
     bc_org_destroy,
     bc_org_print,
     bc_org_finalize,
-    bc_org_resolve,
+    bc_org_calc_len,
+    bc_org_expand,
     bc_org_tobytes,
-    0
+    YASM_BC_SPECIAL_OFFSET
 };
 
 
@@ -83,22 +87,36 @@ bc_org_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 {
 }
 
-static yasm_bc_resolve_flags
-bc_org_resolve(yasm_bytecode *bc, int save,
-	       yasm_calc_bc_dist_func calc_bc_dist)
+static int
+bc_org_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		void *add_span_data)
+{
+    bytecode_org *org = (bytecode_org *)bc->contents;
+    long neg_thres = 0;
+    long pos_thres = org->start;
+
+    if (bc_org_expand(bc, 0, 0, (long)bc->offset, &neg_thres, &pos_thres) < 0)
+	return -1;
+
+    return 0;
+}
+
+static int
+bc_org_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
+	      /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
     bytecode_org *org = (bytecode_org *)bc->contents;
 
     /* Check for overrun */
-    if (bc->offset > org->start) {
+    if ((unsigned long)new_val > org->start) {
 	yasm_error_set(YASM_ERROR_GENERAL,
 		       N_("ORG overlap with already existing data"));
-	return YASM_BC_RESOLVE_ERROR | YASM_BC_RESOLVE_UNKNOWN_LEN;
+	return -1;
     }
 
     /* Generate space to start offset */
-    bc->len = org->start - bc->offset;
-    return YASM_BC_RESOLVE_MIN_LEN;
+    bc->len = org->start - new_val;
+    return 1;
 }
 
 static int

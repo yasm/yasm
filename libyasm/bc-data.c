@@ -63,8 +63,8 @@ typedef struct bytecode_data {
 static void bc_data_destroy(void *contents);
 static void bc_data_print(const void *contents, FILE *f, int indent_level);
 static void bc_data_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
-static yasm_bc_resolve_flags bc_data_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int bc_data_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+			    void *add_span_data);
 static int bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 			   yasm_output_value_func output_value,
 			   /*@null@*/ yasm_output_reloc_func output_reloc);
@@ -73,7 +73,8 @@ static const yasm_bytecode_callback bc_data_callback = {
     bc_data_destroy,
     bc_data_print,
     bc_data_finalize,
-    bc_data_resolve,
+    bc_data_calc_len,
+    yasm_bc_expand_common,
     bc_data_tobytes,
     0
 };
@@ -115,7 +116,7 @@ bc_data_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 		break;
 	    case DV_ULEB128:
 	    case DV_SLEB128:
-		intn = yasm_expr_get_intnum(&dv->data.val.abs, NULL);
+		intn = yasm_expr_get_intnum(&dv->data.val.abs, 0);
 		if (!intn) {
 		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 				   N_("LEB128 requires constant values"));
@@ -135,9 +136,9 @@ bc_data_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     }
 }
 
-static yasm_bc_resolve_flags
-bc_data_resolve(yasm_bytecode *bc, int save,
-		yasm_calc_bc_dist_func calc_bc_dist)
+static int
+bc_data_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		 void *add_span_data)
 {
     bytecode_data *bc_data = (bytecode_data *)bc->contents;
     yasm_dataval *dv;
@@ -156,7 +157,7 @@ bc_data_resolve(yasm_bytecode *bc, int save,
 		break;
 	    case DV_ULEB128:
 	    case DV_SLEB128:
-		intn = yasm_expr_get_intnum(&dv->data.val.abs, NULL);
+		intn = yasm_expr_get_intnum(&dv->data.val.abs, 0);
 		if (!intn)
 		    yasm_internal_error(N_("non-constant in data_tobytes"));
 		bc->len +=
@@ -165,7 +166,7 @@ bc_data_resolve(yasm_bytecode *bc, int save,
 	}
     }
 
-    return YASM_BC_RESOLVE_MIN_LEN;
+    return 0;
 }
 
 static int
@@ -196,7 +197,7 @@ bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		break;
 	    case DV_ULEB128:
 	    case DV_SLEB128:
-		intn = yasm_expr_get_intnum(&dv->data.val.abs, NULL);
+		intn = yasm_expr_get_intnum(&dv->data.val.abs, 234);
 		if (!intn)
 		    yasm_internal_error(N_("non-constant in data_tobytes"));
 		*bufp +=
@@ -230,7 +231,7 @@ yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
 	    case DV_VALUE:
 	    case DV_ULEB128:
 	    case DV_SLEB128:
-		intn = yasm_expr_get_intnum(&dv->data.val.abs, NULL);
+		intn = yasm_expr_get_intnum(&dv->data.val.abs, 0);
 		if (intn && dv->type == DV_VALUE && (arch || size == 1))
 		    len += size;
 		else if (intn && dv->type == DV_ULEB128)
@@ -278,7 +279,7 @@ yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
 	    case DV_VALUE:
 	    case DV_ULEB128:
 	    case DV_SLEB128:
-		intn = yasm_expr_get_intnum(&dv->data.val.abs, NULL);
+		intn = yasm_expr_get_intnum(&dv->data.val.abs, 0);
 		if (intn && dv->type == DV_VALUE && (arch || size == 1)) {
 		    if (size == 1)
 			yasm_intnum_get_sized(intn,

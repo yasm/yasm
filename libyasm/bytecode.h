@@ -89,14 +89,6 @@ typedef struct yasm_datavalhead yasm_datavalhead;
 /*@reldef@*/ STAILQ_HEAD(yasm_datavalhead, yasm_dataval);
 #endif
 
-/** Return value flags for yasm_bc_resolve(). */
-typedef enum {
-    YASM_BC_RESOLVE_NONE = 0,		/**< Ok, but length is not minimum. */
-    YASM_BC_RESOLVE_ERROR = 1<<0,	/**< Error found, output. */
-    YASM_BC_RESOLVE_MIN_LEN = 1<<1,	/**< Length is minimum possible. */
-    YASM_BC_RESOLVE_UNKNOWN_LEN = 1<<2	/**< Length indeterminate. */
-} yasm_bc_resolve_flags;
-
 /** Create an immediate value from an expression.
  * \param e	expression (kept, do not free).
  * \return Newly allocated immediate value.
@@ -307,32 +299,65 @@ void yasm_bc_print(const yasm_bytecode *bc, FILE *f, int indent_level);
  */
 void yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 
-/** Common version of calc_bc_dist that takes offsets from bytecodes.
- * Should be used for the final stages of optimizers as well as in yasm_objfmt
- * yasm_expr output functions.
- * \see yasm_calc_bc_dist_func for parameter descriptions.
+/** Determine the distance between the starting offsets of two bytecodes.
+ * \param precbc1	preceding bytecode to the first bytecode
+ * \param precbc2	preceding bytecode to the second bytecode
+ * \caution Only valid /after/ optimization.
+ * \return Distance in bytes between the two bytecodes (bc2-bc1), or NULL if
+ *	   the distance was indeterminate.
  */
-/*@null@*/ /*@only@*/ yasm_intnum *yasm_common_calc_bc_dist
+/*@null@*/ /*@only@*/ yasm_intnum *yasm_calc_bc_dist
     (yasm_bytecode *precbc1, yasm_bytecode *precbc2);
 
-/** Resolve labels in a bytecode, and calculate its length.
- * Tries to minimize the length as much as possible.
- * \note Sometimes it's impossible to determine if a length is the minimum
- *       possible.  In this case, this function returns that the length is NOT
- *       the minimum.
- * \param bc		bytecode
- * \param save		when zero, this function does \em not modify bc other
- *			than the length/size values (i.e. it doesn't keep the
- *			values returned by calc_bc_dist except temporarily to
- *			try to minimize the length); when nonzero, all fields
- *			in bc may be modified by this function
- * \param calc_bc_dist	function used to determine bytecode distance
- * \return Flags indicating whether the length is the minimum possible,
- *	   indeterminate, and if there was an error recognized (and output)
- *	   during execution.
+/** Get the offset of the next bytecode (the next bytecode doesn't have to
+ * actually exist).
+ * \caution Only valid /after/ optimization.
+ * \param precbc	preceding bytecode
+ * \return Offset of the next bytecode in bytes.
  */
-yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
-				      yasm_calc_bc_dist_func calc_bc_dist);
+unsigned long yasm_bc_next_offset(yasm_bytecode *precbc);
+
+/** Add a dependent span for a bytecode.
+ * \param add_span_data	add_span_data passed into bc_calc_len()
+ * \param bc		bytecode containing span
+ * \param id		non-zero identifier for span; may be any non-zero value
+ * \param value		dependent value for bytecode expansion
+ * \param neg_thres	negative threshold for long/short decision
+ * \param pos_thres	positive threshold for long/short decision
+ */
+typedef void (*yasm_bc_add_span_func)
+    (void *add_span_data, yasm_bytecode *bc, int id, const yasm_value *value,
+     long neg_thres, long pos_thres);
+
+/** Resolve EQUs in a bytecode and calculate its minimum size.
+ * Generates dependent bytecode spans for cases where, if the length spanned
+ * increases, it could cause the bytecode size to increase.
+ * Any bytecode multiple is NOT included in the length or spans generation;
+ * this must be handled at a higher level.
+ * \param bc		bytecode
+ * \return 0 if no error occurred, nonzero if there was an error recognized
+ *         (and output) during execution.
+ * \note May store to bytecode updated expressions and the short length.
+ */
+int yasm_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		     void *add_span_data);
+
+/** Recalculate a bytecode's length based on an expanded span length.
+ * \param bc		bytecode
+ * \param span		span ID (as given to yasm_bc_add_span_func in
+ *                      yasm_bc_calc_len)
+ * \param old_val	previous span value
+ * \param new_val	new span value
+ * \param neg_thres	negative threshold for long/short decision (returned)
+ * \param pos_thres	postivie threshold for long/short decision (returned)
+ * \return 0 if bc no longer dependent on this span's length, negative if
+ *         there was an error recognized (and output) during execution, and
+ *         positive if bc size may increase for this span further based on the
+ *         new negative and positive thresholds returned.
+ * \note May store to bytecode updated expressions and the updated length.
+ */
+int yasm_bc_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
+		   /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres);
 
 /** Convert a bytecode into its byte representation.
  * \param bc	 	bytecode
@@ -363,11 +388,12 @@ yasm_bc_resolve_flags yasm_bc_resolve(yasm_bytecode *bc, int save,
 /** Get the bytecode multiple value as an unsigned long integer.
  * \param bc		bytecode
  * \param multiple	multiple value (output)
- * \param calc_bc_dist	bytecode distance calculation function (optional)
+ * \param calc_bc_dist	nonzero if distances between bytecodes should be
+ *			calculated, 0 if error should be returned in this case
  * \return 1 on error (set with yasm_error_set), 0 on success.
  */
 int yasm_bc_get_multiple(yasm_bytecode *bc, /*@out@*/ unsigned long *multiple,
-			 /*@null@*/ yasm_calc_bc_dist_func calc_bc_dist);
+			 int calc_bc_dist);
 
 /** Create a new data value from an expression.
  * \param expn	expression

@@ -54,9 +54,17 @@ void yasm_value_initialize(/*@out@*/ yasm_value *value,
  * initialized.
  * \param value	    value to be initialized
  * \param sym	    symrec
+ * \param size	    value size (in bits)
  */
 void yasm_value_init_sym(/*@out@*/ yasm_value *value,
-			 /*@null@*/ yasm_symrec *sym);
+			 /*@null@*/ yasm_symrec *sym, unsigned int size);
+
+/** Initialize a #yasm_value as a copy of another yasm_value.  Any expressions
+ * within orig are copied, so it's safe to delete the copy.
+ * \param value	    value (copy to create)
+ * \param orig	    original value
+ */
+void yasm_value_init_copy(yasm_value *value, const yasm_value *orig);
 
 /** Frees any memory inside value; does not free value itself.
  * \param value	    value
@@ -92,6 +100,20 @@ int yasm_value_finalize_expr(/*@out@*/ yasm_value *value,
 			     /*@null@*/ /*@kept@*/ yasm_expr *e,
 			     unsigned int size);
 
+/** Get value if absolute or PC-relative section-local relative.  Returns NULL
+ * otherwise.
+ * \param value		value
+ * \param bc		current bytecode (for PC-relative calculation); if
+ *			NULL, NULL is returned for PC-relative values.
+ * \param calc_bc_dist	if nonzero, calculates bytecode distances in absolute
+ *			portion of value
+ * \note Adds in value.rel (correctly) if PC-relative and in the same section
+ *       as bc (and there is no WRT or SEG).
+ * \return Intnum if can be resolved to integer value, otherwise NULL.
+ */
+/*@null@*/ /*@only@*/ yasm_intnum *yasm_value_get_intnum
+    (yasm_value *value, /*@null@*/ yasm_bytecode *bc, int calc_bc_dist);
+
 /** Output value if constant or PC-relative section-local.  This should be
  * used from objfmt yasm_output_value_func() functions.
  * functions.
@@ -105,7 +127,6 @@ int yasm_value_finalize_expr(/*@out@*/ yasm_value *value,
  *			negative for signed integer warnings,
  *			positive for unsigned integer warnings
  * \param arch		architecture
- * \param calc_bc_dist	function used to determine bytecode distance
  * \note Adds in value.rel (correctly) if PC-relative and in the same section
  *       as bc (and there is no WRT or SEG); if this is not the desired
  *       behavior, e.g. a reloc is needed in this case, don't use this
@@ -115,8 +136,7 @@ int yasm_value_finalize_expr(/*@out@*/ yasm_value *value,
  */
 int yasm_value_output_basic
     (yasm_value *value, /*@out@*/ unsigned char *buf, size_t destsize,
-     yasm_bytecode *bc, int warn, yasm_arch *arch,
-     yasm_calc_bc_dist_func calc_bc_dist);
+     yasm_bytecode *bc, int warn, yasm_arch *arch);
 
 /** Print a value.  For debugging purposes.
  * \param value		value
@@ -124,41 +144,5 @@ int yasm_value_output_basic
  * \param f		file
  */
 void yasm_value_print(const yasm_value *value, FILE *f, int indent_level);
-
-
-#ifndef YASM_DOXYGEN
-#define yasm_value_initialize(value, e, sz) \
-    do { \
-	(value)->abs = e; \
-	(value)->rel = NULL; \
-	(value)->wrt = NULL; \
-	(value)->seg_of = 0; \
-	(value)->rshift = 0; \
-	(value)->curpos_rel = 0; \
-	(value)->ip_rel = 0; \
-	(value)->section_rel = 0; \
-	(value)->size = sz; \
-    } while(0)
-
-#define yasm_value_init_sym(value, sym, sz) \
-    do { \
-	(value)->abs = NULL; \
-	(value)->rel = sym; \
-	(value)->wrt = NULL; \
-	(value)->seg_of = 0; \
-	(value)->rshift = 0; \
-	(value)->curpos_rel = 0; \
-	(value)->ip_rel = 0; \
-	(value)->section_rel = 0; \
-	(value)->size = sz; \
-    } while(0)
-
-#define yasm_value_delete(value) \
-    do { \
-	yasm_expr_destroy((value)->abs); \
-	(value)->abs = NULL; \
-	(value)->rel = NULL; \
-    } while(0)
-#endif
 
 #endif

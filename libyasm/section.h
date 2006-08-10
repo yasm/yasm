@@ -158,6 +158,16 @@ const char *yasm_object_get_object_fn(const yasm_object *object);
 /*@dependent@*/ yasm_linemap *yasm_object_get_linemap
     (const yasm_object *object);
 
+/** Optimize an object.  Takes the unoptimized object and optimizes it.
+ * If successful, the object is ready for output to an object file.
+ * \param object	object
+ * \param arch		architecture
+ * \param errwarns	error/warning set
+ * \note Optimization failures are stored into errwarns.
+ */
+void yasm_object_optimize(yasm_object *object, yasm_arch *arch,
+			  yasm_errwarns *errwarns);
+
 /** Determine if a section is absolute or general.
  * \param sect	    section
  * \return Nonzero if section is absolute.

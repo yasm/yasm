@@ -166,8 +166,8 @@ typedef struct cv_sym {
 static void cv8_symhead_bc_destroy(void *contents);
 static void cv8_symhead_bc_print(const void *contents, FILE *f,
 				 int indent_level);
-static yasm_bc_resolve_flags cv8_symhead_bc_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int cv8_symhead_bc_calc_len
+    (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int cv8_symhead_bc_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
      yasm_output_value_func output_value,
@@ -176,8 +176,8 @@ static int cv8_symhead_bc_tobytes
 static void cv8_fileinfo_bc_destroy(void *contents);
 static void cv8_fileinfo_bc_print(const void *contents, FILE *f,
 				  int indent_level);
-static yasm_bc_resolve_flags cv8_fileinfo_bc_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int cv8_fileinfo_bc_calc_len
+    (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int cv8_fileinfo_bc_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
      yasm_output_value_func output_value,
@@ -186,8 +186,8 @@ static int cv8_fileinfo_bc_tobytes
 static void cv8_lineinfo_bc_destroy(void *contents);
 static void cv8_lineinfo_bc_print(const void *contents, FILE *f,
 				  int indent_level);
-static yasm_bc_resolve_flags cv8_lineinfo_bc_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int cv8_lineinfo_bc_calc_len
+    (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int cv8_lineinfo_bc_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
      yasm_output_value_func output_value,
@@ -195,8 +195,8 @@ static int cv8_lineinfo_bc_tobytes
 
 static void cv_sym_bc_destroy(void *contents);
 static void cv_sym_bc_print(const void *contents, FILE *f, int indent_level);
-static yasm_bc_resolve_flags cv_sym_bc_resolve
-    (yasm_bytecode *bc, int save, yasm_calc_bc_dist_func calc_bc_dist);
+static int cv_sym_bc_calc_len
+    (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int cv_sym_bc_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
      yasm_output_value_func output_value,
@@ -207,7 +207,8 @@ static const yasm_bytecode_callback cv8_symhead_bc_callback = {
     cv8_symhead_bc_destroy,
     cv8_symhead_bc_print,
     yasm_bc_finalize_common,
-    cv8_symhead_bc_resolve,
+    cv8_symhead_bc_calc_len,
+    yasm_bc_expand_common,
     cv8_symhead_bc_tobytes,
     0
 };
@@ -216,7 +217,8 @@ static const yasm_bytecode_callback cv8_fileinfo_bc_callback = {
     cv8_fileinfo_bc_destroy,
     cv8_fileinfo_bc_print,
     yasm_bc_finalize_common,
-    cv8_fileinfo_bc_resolve,
+    cv8_fileinfo_bc_calc_len,
+    yasm_bc_expand_common,
     cv8_fileinfo_bc_tobytes,
     0
 };
@@ -225,7 +227,8 @@ static const yasm_bytecode_callback cv8_lineinfo_bc_callback = {
     cv8_lineinfo_bc_destroy,
     cv8_lineinfo_bc_print,
     yasm_bc_finalize_common,
-    cv8_lineinfo_bc_resolve,
+    cv8_lineinfo_bc_calc_len,
+    yasm_bc_expand_common,
     cv8_lineinfo_bc_tobytes,
     0
 };
@@ -234,7 +237,8 @@ static const yasm_bytecode_callback cv_sym_bc_callback = {
     cv_sym_bc_destroy,
     cv_sym_bc_print,
     yasm_bc_finalize_common,
-    cv_sym_bc_resolve,
+    cv_sym_bc_calc_len,
+    yasm_bc_expand_common,
     cv_sym_bc_tobytes,
     0
 };
@@ -413,7 +417,7 @@ cv_append_str(yasm_section *sect, const char *str)
 						strlen(str)));
     bc = yasm_bc_create_data(&dvs, 1, 1, NULL, 0);
     yasm_bc_finalize(bc, yasm_cv__append_bc(sect, bc));
-    yasm_bc_resolve(bc, 0, NULL);
+    yasm_bc_calc_len(bc, NULL, NULL);
     return bc;
 }
 
@@ -600,7 +604,7 @@ yasm_cv__generate_symline(yasm_dbgfmt_cv *dbgfmt_cv, yasm_errwarns *errwarns)
 	(yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(4)), 0),
 	 NULL, NULL, NULL, 0);
     yasm_bc_finalize(bc, yasm_cv__append_bc(info.debug_symline, bc));
-    yasm_bc_resolve(bc, 0, NULL);
+    yasm_bc_calc_len(bc, NULL, NULL);
 
     /* source file info table */
     head = cv8_add_symhead(dbgfmt_cv, info.debug_symline, CV8_FILE_INFO, 0);
@@ -650,7 +654,7 @@ yasm_cv__generate_symline(yasm_dbgfmt_cv *dbgfmt_cv, yasm_errwarns *errwarns)
 	(yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(4)), 0),
 	 NULL, NULL, NULL, 0);
     yasm_bc_finalize(bc, yasm_cv__append_bc(info.debug_symline, bc));
-    yasm_bc_resolve(bc, 0, NULL);
+    yasm_bc_calc_len(bc, NULL, NULL);
 
     return info.debug_symline;
 }
@@ -716,13 +720,13 @@ cv8_symhead_bc_print(const void *contents, FILE *f, int indent_level)
     /* TODO */
 }
 
-static yasm_bc_resolve_flags
-cv8_symhead_bc_resolve(yasm_bytecode *bc, int save,
-		       yasm_calc_bc_dist_func calc_bc_dist)
+static int
+cv8_symhead_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+			void *add_span_data)
 {
-    yasm_internal_error(N_("tried to resolve a codeview symhead bytecode"));
+    yasm_internal_error(N_("tried to calc_len a codeview symhead bytecode"));
     /*@notreached@*/
-    return YASM_BC_RESOLVE_MIN_LEN;
+    return 0;
 }
 
 static int
@@ -749,7 +753,7 @@ cv8_symhead_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     /* Total length of info (following this field) - 4 bytes */
     yasm_intnum_set_uint(cval, bc->len);
-    intn = yasm_common_calc_bc_dist(head->start_prevbc, head->end_prevbc);
+    intn = yasm_calc_bc_dist(head->start_prevbc, head->end_prevbc);
     yasm_intnum_calc(intn, YASM_EXPR_SUB, cval);
     yasm_arch_intnum_tobytes(dbgfmt_cv->arch, intn, buf, 4, 32, 0, bc, 0);
     buf += 4;
@@ -791,13 +795,13 @@ cv8_fileinfo_bc_print(const void *contents, FILE *f, int indent_level)
     /* TODO */
 }
 
-static yasm_bc_resolve_flags
-cv8_fileinfo_bc_resolve(yasm_bytecode *bc, int save,
-			yasm_calc_bc_dist_func calc_bc_dist)
+static int
+cv8_fileinfo_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+			 void *add_span_data)
 {
-    yasm_internal_error(N_("tried to resolve a codeview fileinfo bytecode"));
+    yasm_internal_error(N_("tried to calc_len a codeview fileinfo bytecode"));
     /*@notreached@*/
-    return YASM_BC_RESOLVE_MIN_LEN;
+    return 0;
 }
 
 static int
@@ -858,13 +862,13 @@ cv8_lineinfo_bc_print(const void *contents, FILE *f, int indent_level)
     /* TODO */
 }
 
-static yasm_bc_resolve_flags
-cv8_lineinfo_bc_resolve(yasm_bytecode *bc, int save,
-			yasm_calc_bc_dist_func calc_bc_dist)
+static int
+cv8_lineinfo_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+			 void *add_span_data)
 {
-    yasm_internal_error(N_("tried to resolve a codeview linehead bytecode"));
+    yasm_internal_error(N_("tried to calc_len a codeview linehead bytecode"));
     /*@notreached@*/
-    return YASM_BC_RESOLVE_MIN_LEN;
+    return 0;
 }
 
 static int
@@ -887,8 +891,8 @@ cv8_lineinfo_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     YASM_WRITE_8(buf, 0);
 
     /* Section length covered by line number info */
-    cval = yasm_common_calc_bc_dist(yasm_section_bcs_first(li->sect),
-				    yasm_section_bcs_last(li->sect));
+    cval = yasm_calc_bc_dist(yasm_section_bcs_first(li->sect),
+			     yasm_section_bcs_last(li->sect));
     yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 0);
     buf += 4;
 
@@ -1014,13 +1018,13 @@ cv_sym_bc_print(const void *contents, FILE *f, int indent_level)
     /* TODO */
 }
 
-static yasm_bc_resolve_flags
-cv_sym_bc_resolve(yasm_bytecode *bc, int save,
-		  yasm_calc_bc_dist_func calc_bc_dist)
+static int
+cv_sym_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+		   void *add_span_data)
 {
-    yasm_internal_error(N_("tried to resolve a codeview sym bytecode"));
+    yasm_internal_error(N_("tried to calc_len a codeview sym bytecode"));
     /*@notreached@*/
-    return YASM_BC_RESOLVE_MIN_LEN;
+    return 0;
 }
 
 static int

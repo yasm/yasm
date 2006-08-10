@@ -67,18 +67,13 @@ bin_objfmt_align_section(yasm_section *sect, yasm_section *prevsect,
 			 /*@out@*/ unsigned long *prevsectlen,
 			 /*@out@*/ unsigned long *padamt)
 {
-    /*@dependent@*/ /*@null@*/ yasm_bytecode *last;
     unsigned long start;
     unsigned long align;
 
     /* Figure out the size of .text by looking at the last bytecode's offset
      * plus its length.  Add the start and size together to get the new start.
      */
-    last = yasm_section_bcs_last(prevsect);
-    if (last)
-	*prevsectlen = last->offset + last->len;
-    else
-	*prevsectlen = 0;
+    *prevsectlen = yasm_bc_next_offset(yasm_section_bcs_last(prevsect));
     start = base + *prevsectlen;
 
     /* Round new start up to alignment of .data section, and adjust textlen to
@@ -120,8 +115,7 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
 	     e->terms[i].type == YASM_EXPR_SYMEXP) &&
 	    yasm_symrec_get_label(e->terms[i].data.sym, &precbc) &&
 	    (sect = yasm_bc_get_section(precbc)) &&
-	    (dist = yasm_common_calc_bc_dist(yasm_section_bcs_first(sect),
-					     precbc))) {
+	    (dist = yasm_calc_bc_dist(yasm_section_bcs_first(sect), precbc))) {
 	    const yasm_expr *start = yasm_section_get_start(sect);
 	    e->terms[i].type = YASM_EXPR_EXPR;
 	    e->terms[i].data.expn =
@@ -162,11 +156,11 @@ bin_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
     /* Simplify absolute portion of value, transforming symrecs */
     if (value->abs)
 	value->abs = yasm_expr__level_tree
-	    (value->abs, 1, 1, 1, NULL, bin_objfmt_expr_xform, NULL, NULL);
+	    (value->abs, 1, 1, 1, 0, bin_objfmt_expr_xform, NULL, NULL);
 
     /* Output */
     switch (yasm_value_output_basic(value, buf, destsize, bc, warn,
-				    info->objfmt_bin->arch, NULL)) {
+				    info->objfmt_bin->arch)) {
 	case -1:
 	    return 1;
 	case 0:
@@ -261,7 +255,7 @@ bin_objfmt_output(yasm_objfmt *objfmt, FILE *f, /*@unused@*/ int all_syms,
     /* Find out the start of .text */
     startexpr = yasm_expr_copy(yasm_section_get_start(text));
     assert(startexpr != NULL);
-    startnum = yasm_expr_get_intnum(&startexpr, NULL);
+    startnum = yasm_expr_get_intnum(&startexpr, 0);
     if (!startnum) {
 	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 		       N_("ORG expression too complex"));
@@ -404,7 +398,7 @@ bin_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		    return NULL;
 		}
 		
-		align_expr = yasm_expr_get_intnum(&vp->param, NULL);
+		align_expr = yasm_expr_get_intnum(&vp->param, 0);
 		if (!align_expr) {
 		    yasm_error_set(YASM_ERROR_VALUE,
 				N_("argument to `%s' is not a power of two"),
