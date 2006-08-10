@@ -234,12 +234,6 @@ typedef struct yasm_arch_module {
      */
     unsigned int wordsize;
 
-    /** Long/short jump size descriminator.  Number of bytes (+/-) a short
-     * jump can range over.  Used to size optimization FIFOs, so don't
-     * make this extremely large (e.g. >1000).
-     */
-    const unsigned long jmpsize_threshold;
-
     /** Worst case minimum instruction length in bytes.
      * Call yasm_arch_min_insn_len() to get the minimum instruction length of
      * a particular #yasm_arch.
@@ -526,8 +520,6 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
     (((yasm_arch_base *)arch)->module->keyword)
 #define yasm_arch_wordsize(arch) \
     (((yasm_arch_base *)arch)->module->wordsize)
-#define yasm_arch_jmpsize_threshold(arch) \
-    (((yasm_arch_base *)arch)->module->jmpsize_threshold)
 #define yasm_arch_min_insn_len(arch) \
     (((yasm_arch_base *)arch)->module->min_insn_len)
 

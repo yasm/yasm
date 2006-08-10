@@ -462,6 +462,5 @@ yasm_arch_module yasm_x86_LTX_arch = {
     x86_machines,
     "x86",
     16,
-    128,
     1
 };
