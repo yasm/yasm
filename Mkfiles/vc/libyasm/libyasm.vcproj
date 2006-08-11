@@ -275,9 +275,6 @@
 				RelativePath="..\..\..\libyasm\objfmt.h">
 			</File>
 			<File
-				RelativePath="..\..\..\libyasm\optimizer.h">
-			</File>
-			<File
 				RelativePath="..\..\..\libyasm\parser.h">
 			</File>
 			<File

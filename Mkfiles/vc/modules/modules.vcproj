@@ -125,18 +125,6 @@
 				Name="arch"
 				Filter="">
 				<File
-					RelativePath="..\..\..\modules\arch\lc3b\lc3barch.c">
-				</File>
-				<File
-					RelativePath="..\..\..\modules\arch\lc3b\lc3barch.h">
-				</File>
-				<File
-					RelativePath="..\..\..\modules\arch\lc3b\lc3bbc.c">
-				</File>
-				<File
-					RelativePath="..\..\..\lc3bid.c">
-				</File>
-				<File
 					RelativePath="..\..\..\modules\arch\x86\x86arch.c">
 				</File>
 				<File
@@ -221,13 +209,6 @@
 				</File>
 				<File
 					RelativePath="..\..\..\modules\objfmts\xdf\xdf-objfmt.c">
-				</File>
-			</Filter>
-			<Filter
-				Name="optimizers"
-				Filter="">
-				<File
-					RelativePath="..\..\..\modules\optimizers\basic\basic-optimizer.c">
 				</File>
 			</Filter>
 			<Filter
