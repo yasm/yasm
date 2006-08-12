@@ -853,10 +853,11 @@ span_create_terms(yasm_span *span)
 		span->items[i].data.intn = yasm_intnum_create_int(0);
 
 		/* Check for circular references */
-		if ((span->bc->bc_index > span->terms[i].precbc->bc_index &&
-		     span->bc->bc_index <= span->terms[i].precbc2->bc_index) ||
-		    (span->bc->bc_index > span->terms[i].precbc2->bc_index &&
-		     span->bc->bc_index <= span->terms[i].precbc->bc_index))
+		if (span->id == 0 &&
+		    ((span->bc->bc_index > span->terms[i].precbc->bc_index &&
+		      span->bc->bc_index <= span->terms[i].precbc2->bc_index) ||
+		     (span->bc->bc_index > span->terms[i].precbc2->bc_index &&
+		      span->bc->bc_index <= span->terms[i].precbc->bc_index)))
 		    yasm_error_set(YASM_ERROR_VALUE,
 				   N_("circular reference detected"));
 	    }

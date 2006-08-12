@@ -533,10 +533,10 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 	    /* Handle unknown case, default to byte-sized and set as
 	     * critical expression.
 	     */
-	    bc->len += 1;
+	    x86_ea->ea.disp.size = 8;
 	    add_span(add_span_data, bc, 1, &x86_ea->ea.disp, -128, 127);
-	} else
-	    bc->len += x86_ea->ea.disp.size/8;
+	}
+	bc->len += x86_ea->ea.disp.size/8;
 
 	/* Handle address16 postop case */
 	if (insn->postop == X86_POSTOP_ADDRESS16)
@@ -608,7 +608,7 @@ x86_bc_insn_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 
     if (ea && span == 1) {
 	/* Change displacement length into word-sized */
-	if (ea->disp.size == 0) {
+	if (ea->disp.size == 8) {
 	    ea->disp.size = (insn->common.addrsize == 16) ? 16 : 32;
 	    x86_ea->modrm &= ~0300;
 	    x86_ea->modrm |= 0200;
