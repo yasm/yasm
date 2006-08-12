@@ -602,7 +602,6 @@ x86_bc_insn_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 		   /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
     x86_insn *insn = (x86_insn *)bc->contents;
-    /*@null@*/ yasm_expr *temp;
     x86_effaddr *x86_ea = insn->x86_ea;
     yasm_effaddr *ea = &x86_ea->ea;
     yasm_immval *imm = insn->imm;
@@ -640,10 +639,6 @@ x86_bc_jmp_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 {
     x86_jmp *jmp = (x86_jmp *)bc->contents;
     yasm_bytecode *target_prevbc;
-    /*@null@*/ yasm_expr *temp;
-    /*@only@*/ yasm_intnum *num;
-    /*@dependent@*/ /*@null@*/ yasm_intnum *num2;
-    long rel;
     unsigned char opersize;
 
     /* As opersize may be 0, figure out its "real" value. */

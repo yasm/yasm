@@ -198,7 +198,6 @@ expr_xform_bc_dist_base(/*@returned@*/ /*@only@*/ yasm_expr *e,
     int i;
     /*@dependent@*/ yasm_section *sect;
     /*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
-    /*@null@*/ yasm_intnum *dist;
     int numterms;
 
     /* Handle symrec-symrec in ADD exprs by looking for (-1*symrec) and

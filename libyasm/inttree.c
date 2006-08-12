@@ -36,8 +36,6 @@ static void Assert(int assertion, const char *error)
 /*#define CHECK_INTERVAL_TREE_ASSUMPTIONS 1*/
 
 static IntervalTreeNode *ITN_create(long low, long high, void *data);
-static void ITN_Print(const IntervalTreeNode *itn, IntervalTreeNode *nil,
-		      IntervalTreeNode *root);
 
 static void LeftRotate(IntervalTree *, IntervalTreeNode *);
 static void RightRotate(IntervalTree *, IntervalTreeNode *);

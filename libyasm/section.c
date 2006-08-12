@@ -840,7 +840,6 @@ static void
 span_create_terms(yasm_span *span)
 {
     unsigned int i;
-    yasm_intnum *intn;
 
     /* Split out sym-sym terms in absolute portion of dependent value */
     if (span->depval.abs) {
@@ -1209,7 +1208,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 		    if (bc->multiple) {
 			yasm_error_set(YASM_ERROR_VALUE,
 			    N_("cannot combine multiples and setting assembly position"));
-			yasm_errwarn_propagate(errwarns, span->bc->line);
+			yasm_errwarn_propagate(errwarns, bc->line);
 			saw_error = 1;
 		    }
 		}
