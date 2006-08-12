@@ -302,18 +302,18 @@ void yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 /** Determine the distance between the starting offsets of two bytecodes.
  * \param precbc1	preceding bytecode to the first bytecode
  * \param precbc2	preceding bytecode to the second bytecode
- * \caution Only valid /after/ optimization.
  * \return Distance in bytes between the two bytecodes (bc2-bc1), or NULL if
  *	   the distance was indeterminate.
+ * \warning Only valid /after/ optimization.
  */
 /*@null@*/ /*@only@*/ yasm_intnum *yasm_calc_bc_dist
     (yasm_bytecode *precbc1, yasm_bytecode *precbc2);
 
 /** Get the offset of the next bytecode (the next bytecode doesn't have to
  * actually exist).
- * \caution Only valid /after/ optimization.
  * \param precbc	preceding bytecode
  * \return Offset of the next bytecode in bytes.
+ * \warning Only valid /after/ optimization.
  */
 unsigned long yasm_bc_next_offset(yasm_bytecode *precbc);
 
@@ -335,6 +335,8 @@ typedef void (*yasm_bc_add_span_func)
  * Any bytecode multiple is NOT included in the length or spans generation;
  * this must be handled at a higher level.
  * \param bc		bytecode
+ * \param add_span	function to call to add a span
+ * \param add_span_data	extra data to be passed to add_span function
  * \return 0 if no error occurred, nonzero if there was an error recognized
  *         (and output) during execution.
  * \note May store to bytecode updated expressions and the short length.
