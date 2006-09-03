@@ -92,6 +92,9 @@ __SECT__
 %imacro use32 0.nolist
 [bits 32]
 %endmacro
+%imacro use64 0.nolist
+[bits 64]
+%endmacro
 
 %imacro global 1-*.nolist
 %rep %0
