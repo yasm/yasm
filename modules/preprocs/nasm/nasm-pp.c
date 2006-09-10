@@ -1376,7 +1376,7 @@ count_mmac_params(Token * t, int *nparam, Token *** params)
     *params = NULL;
     while (t)
     {
-	if (*nparam >= paramsize)
+	if (*nparam+1 >= paramsize)
 	{
 	    paramsize += PARAM_DELTA;
 	    *params = nasm_realloc(*params, sizeof(**params) * paramsize);
