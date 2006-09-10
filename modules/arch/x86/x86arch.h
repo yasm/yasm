@@ -62,8 +62,8 @@
 /* Technically not CPU capabilities, they do affect what instructions are
  * available.  These are tested against BITS==64.
  */
-#define CPU_64	    (1UL<<26)	/* Only available in 64-bit mode */
-#define CPU_Not64   (1UL<<27)	/* Not available (invalid) in 64-bit mode */
+#define CPU_64	    (1UL<<30)	/* Only available in 64-bit mode */
+#define CPU_Not64   (1UL<<31)	/* Not available (invalid) in 64-bit mode */
 
 typedef struct yasm_arch_x86 {
     yasm_arch_base arch;	/* base structure */
