@@ -1296,6 +1296,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 	if (recalc_normal_span(span)) {
 	    /* Exceeded threshold, add span to QB */
 	    STAILQ_INSERT_TAIL(&optd.QB, span, linkq);
+	    span->active = 2;
 	}
     }
 
