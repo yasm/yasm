@@ -180,7 +180,7 @@ void yasm_preproc_undefine_macro(yasm_preproc *preproc, const char *macroname);
  * \param preproc	preprocessor
  * \param macronameval	"name=value" string
  */
-void yasm_preproc_builtin_define(yasm_preproc *preproc,
+void yasm_preproc_define_builtin(yasm_preproc *preproc,
 				 const char *macronameval);
 
 #ifndef YASM_DOXYGEN
