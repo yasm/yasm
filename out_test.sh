@@ -17,7 +17,7 @@ mkdir results >/dev/null 2>&1
 passedct=0
 failedct=0
 
-echo $ECHO_N "Test $1: "
+echo $ECHO_N "Test $1: $ECHO_C"
 for asm in ${srcdir}/$2/*.asm
 do
     a=`echo ${asm} | sed 's,^.*/,,;s,.asm$,,'`
@@ -35,25 +35,25 @@ do
     status=$?
     if test $status -gt 128; then
 	# We should never get a coredump!
-	echo $ECHO_N "C"
+	echo $ECHO_N "C$ECHO_C"
         eval "failed$failedct='C: ${a} crashed!'"
 	failedct=`expr $failedct + 1`
     elif test $status -gt 0; then
 	echo ${asm} | grep err >/dev/null
        	if test $? -gt 0; then
 	    # YASM detected errors but shouldn't have!
-	    echo $ECHO_N "E"
+	    echo $ECHO_N "E$ECHO_C"
             eval "failed$failedct='E: ${a} returned an error code!'"
 	    failedct=`expr $failedct + 1`
 	else
 	    # We got errors, check to see if they match:
 	    if diff -w ${eg} results/${e} >/dev/null; then
 		# Error/warnings match, it passes!
-		echo $ECHO_N "."
+		echo $ECHO_N ".$ECHO_C"
 		passedct=`expr $passedct + 1`
 	    else
 		# Error/warnings don't match.
-		echo $ECHO_N "W"
+		echo $ECHO_N "W$ECHO_C"
                 eval "failed$failedct='W: ${a} did not match errors and warnings!'"
 		failedct=`expr $failedct + 1`
 	    fi
@@ -62,7 +62,7 @@ do
 	echo ${asm} | grep -v err >/dev/null
        	if test $? -gt 0; then
 	    # YASM detected errors but shouldn't have!
-	    echo $ECHO_N "E"
+	    echo $ECHO_N "E$ECHO_C"
             eval "failed$failedct='E: ${a} returned an error code!'"
 	    failedct=`expr $failedct + 1`
 	else
@@ -70,17 +70,17 @@ do
 	    if diff ${og} results/${oh} >/dev/null; then
 		if diff -w ${eg} results/${e} >/dev/null; then
 		    # Both object file and error/warnings match, it passes!
-		    echo $ECHO_N "."
+		    echo $ECHO_N ".$ECHO_C"
 		    passedct=`expr $passedct + 1`
 		else
 		    # Error/warnings don't match.
-		    echo $ECHO_N "W"
+		    echo $ECHO_N "W$ECHO_C"
                     eval "failed$failedct='W: ${a} did not match errors and warnings!'"
 		    failedct=`expr $failedct + 1`
 		fi
 	    else
 		# Object file doesn't match.
-		echo $ECHO_N "O"
+		echo $ECHO_N "O$ECHO_C"
                 eval "failed$failedct='O: ${a} did not match object file!'"
 		failedct=`expr $failedct + 1`
 	    fi
