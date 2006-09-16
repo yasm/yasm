@@ -29,6 +29,9 @@ do
     og=`echo ${asm} | sed 's,.asm$,.pre,'`
     e=${a}.ew
     eg=`echo ${asm} | sed 's,.asm$,.errwarn,'`
+    if test \! -e ${eg}; then
+	eg=/dev/null
+    fi
 
     # Run within a subshell to prevent signal messages from displaying.
     sh -c "sed \"s,\./,${srcdir}/,\" ${asm} | ./yasm -e -r yapp | sed \"s,${srcdir}/,./,\" > results/${o} 2>results/${e}" >/dev/null 2>/dev/null
@@ -47,16 +50,15 @@ do
 	    failedct=`expr $failedct + 1`
 	else
 	    # We got errors, check to see if they match:
-	    if (test \! -e ${eg} && test -s results/${e}) ||
-	       (test -e ${eg} && diff ${eg} results/${e} >/dev/null); then
+	    if diff -w ${eg} results/${e} >/dev/null; then
+		# Error/warnings match, it passes!
+		echo $ECHO_N "."
+		passedct=`expr $passedct + 1`
+	    else
 		# Error/warnings don't match.
 		echo $ECHO_N "W"
                 eval "failed$failedct='W: ${a} did not match errors and warnings!'"
 		failedct=`expr $failedct + 1`
-	    else
-		# Error/warnings match, it passes!
-		echo $ECHO_N "."
-		passedct=`expr $passedct + 1`
 	    fi
 	fi
     else
@@ -67,18 +69,16 @@ do
             eval "failed$failedct='E: ${a} returned an error code!'"
 	    failedct=`expr $failedct + 1`
 	else
-	    diff -w ${og} results/${o} > /dev/null
-	    if test $? -eq 0; then
-		if (test \! -e ${eg} && test -s results/${e}) ||
-		   (test -e ${eg} && diff ${eg} results/${e} >/dev/null); then
+	    if diff -w ${og} results/${o} >/dev/null; then
+		if diff -w ${eg} results/${e} >/dev/null; then
+		    # Both output file and error/warnings match, it passes!
+		    echo $ECHO_N "."
+		    passedct=`expr $passedct + 1`
+		else
 		    # Error/warnings don't match.
 		    echo $ECHO_N "W"
                     eval "failed$failedct='W: ${a} did not match errors and warnings!'"
 		    failedct=`expr $failedct + 1`
-		else
-		    # Both output file and error/warnings match, it passes!
-		    echo $ECHO_N "."
-		    passedct=`expr $passedct + 1`
 		fi
 	    else
 		# Output file doesn't match.

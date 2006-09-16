@@ -26,6 +26,9 @@ do
     og=`echo ${asm} | sed 's,.asm$,.hex,'`
     e=${a}.ew
     eg=`echo ${asm} | sed 's,.asm$,.errwarn,'`
+    if test \! -e ${eg}; then
+	eg=/dev/null
+    fi
 
     # Run within a subshell to prevent signal messages from displaying.
     sh -c "cat ${asm} | ./yasm $4 -o results/${o} 2>results/${e}" >/dev/null 2>/dev/null
@@ -44,8 +47,7 @@ do
 	    failedct=`expr $failedct + 1`
 	else
 	    # We got errors, check to see if they match:
-	    diff -w ${eg} results/${e} > /dev/null
-	    if test $? -eq 0; then
+	    if diff -w ${eg} results/${e} >/dev/null; then
 		# Error/warnings match, it passes!
 		echo $ECHO_N "."
 		passedct=`expr $passedct + 1`
@@ -65,10 +67,8 @@ do
 	    failedct=`expr $failedct + 1`
 	else
 	    ./test_hd results/${o} > results/${oh}
-	    diff ${og} results/${oh} > /dev/null
-	    if test $? -eq 0; then
-		diff -w ${eg} results/${e} > /dev/null
-		if test $? -eq 0; then
+	    if diff ${og} results/${oh} >/dev/null; then
+		if diff -w ${eg} results/${e} >/dev/null; then
 		    # Both object file and error/warnings match, it passes!
 		    echo $ECHO_N "."
 		    passedct=`expr $passedct + 1`
