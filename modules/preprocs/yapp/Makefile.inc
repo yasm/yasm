@@ -1,15 +1,11 @@
-# $IdPath$
+# $Id$
 
-pkglib_LTLIBRARIES += preproc_yapp.la
+libyasm_a_SOURCES += modules/preprocs/yapp/yapp-preproc.c
+libyasm_a_SOURCES += modules/preprocs/yapp/yapp-preproc.h
+libyasm_a_SOURCES += modules/preprocs/yapp/yapp-token.h
+libyasm_a_SOURCES += modules/preprocs/yapp/yapp-token.l
 
-preproc_yapp_la_SOURCES  = modules/preprocs/yapp/yapp-preproc.c
-preproc_yapp_la_SOURCES += modules/preprocs/yapp/yapp-preproc.h
-preproc_yapp_la_SOURCES += modules/preprocs/yapp/yapp-token.h
-preproc_yapp_la_SOURCES += modules/preprocs/yapp/yapp-token.l
-
-preproc_yapp_la_LDFLAGS = -module -avoid-version -no-undefined
-preproc_yapp_la_LIBADD = libyasm.la
-YASM_MODULES += -dlopen preproc_yapp.la
+YASM_MODULES += preproc_yapp
 
 BUILT_SOURCES += yapp-token.c
 

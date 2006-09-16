@@ -1,26 +1,31 @@
-/* $IdPath: yasm/modules/preprocs/yapp/yapp-preproc.c,v 1.23 2003/03/17 00:03:02 peter Exp $
+/*
  * YAPP preprocessor (mimics NASM's preprocessor)
  *
- *  Copyright (C) 2001  Michael Urman
+ * Copyright (C) 2001  Michael Urman
  *
- *  This file is part of YASM.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
  *
- *  YASM is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  YASM is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND OTHER CONTRIBUTORS ``AS IS''
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR OTHER CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$IdPath: yasm/modules/preprocs/yapp/yapp-preproc.c,v 1.23 2003/03/17 00:03:02 peter Exp $");
+/*@unused@*/ RCSID("$Id$");
 
 #define YASM_LIB_INTERNAL
 #include <libyasm.h>
@@ -30,7 +35,12 @@
 
 #define ydebug(x) /* printf x */
 
-static int is_interactive;
+typedef struct yasm_preproc_yapp {
+    yasm_preproc_base preproc;	    /* base structure */
+} yasm_preproc_yapp;
+
+yasm_preproc_module yasm_yapp_LTX_preproc;
+
 static int saved_length;
 
 static HAMT *macro_table;
@@ -38,9 +48,7 @@ static HAMT *macro_table;
 static YAPP_Output current_output;
 YYSTYPE yapp_preproc_lval;
 
-/*@dependent@*/ yasm_linemgr *yapp_preproc_linemgr;
-
-int isatty(int);
+/*@dependent@*/ yasm_linemap *yapp_preproc_linemap;
 
 /* Build source and macro representations */
 static SLIST_HEAD(source_head, source_s) source_head, macro_head, param_head;
@@ -117,13 +125,13 @@ yapp_macro_insert (char *name, int argc, int fillargs)
 void
 yapp_macro_error_exists (YAPP_Macro *v)
 {
-    if (v) yasm__error(cur_lindex, N_("Redefining macro of the same name %d:%d"), v->type, v->args);
+    if (v) yasm_error_set(YASM_ERROR_VALUE, N_("Redefining macro of the same name %d:%d"), v->type, v->args);
 }
 
 void
 yapp_macro_error_sameargname (YAPP_Macro *v)
 {
-    if (v) yasm__error(cur_lindex, N_("Duplicate argument names in macro"));
+    if (v) yasm_error_set(YASM_ERROR_VALUE, N_("Duplicate argument names in macro"));
 }
 
 YAPP_Macro *
@@ -138,7 +146,7 @@ yapp_define_insert (char *name, int argc, int fillargs)
 	if ((argc >= 0 && ym->args < 0)
 	    || (argc < 0 && ym->args >= 0))
 	{
-	    yasm__warning(YASM_WARN_PREPROC, cur_lindex, N_("Attempted %%define both with and without parameters"));
+	    yasm_warn_set(YASM_WARN_PREPROC, N_("Attempted %%define both with and without parameters"));
 	    return NULL;
 	}
     }
@@ -233,11 +241,15 @@ expand_macro(char *name,
 void
 expand_token_list(struct source_head *paramexp, struct source_head *to_head, source **to_tail);
 
-static void
-yapp_preproc_initialize(FILE *f, const char *in_filename, yasm_linemgr *lm)
+static yasm_preproc *
+yapp_preproc_create(FILE *f, const char *in_filename, yasm_linemap *lm,
+		    yasm_errwarns *errwarns)
 {
-    is_interactive = f ? (isatty(fileno(f)) > 0) : 0;
-    yapp_preproc_linemgr = lm;
+    yasm_preproc_yapp *preproc_yapp = yasm_xmalloc(sizeof(yasm_preproc_yapp));
+
+    preproc_yapp->preproc.module = &yasm_yapp_LTX_preproc;
+
+    yapp_preproc_linemap = lm;
     yapp_preproc_current_file = yasm__xstrdup(in_filename);
     yapp_preproc_line_number = 1;
     yapp_lex_initialize(f);
@@ -249,19 +261,22 @@ yapp_preproc_initialize(FILE *f, const char *in_filename, yasm_linemgr *lm)
     out->out = current_output = YAPP_OUTPUT;
     SLIST_INSERT_HEAD(&output_head, out, next);
 
-    macro_table = HAMT_new(yasm_internal_error_);
+    macro_table = HAMT_create(yasm_internal_error_);
 
     source_tail = SLIST_FIRST(&source_head);
     macro_tail = SLIST_FIRST(&macro_head);
     param_tail = SLIST_FIRST(&param_head);
 
     append_token(LINE, &source_head, &source_tail);
+
+    return (yasm_preproc *)preproc_yapp;
 }
 
 static void
-yapp_preproc_cleanup(void)
+yapp_preproc_destroy(yasm_preproc *preproc)
 {
     /* TODO: clean up */
+    yasm_xfree(preproc);
 }
 
 /* Generate a new level of if* context
@@ -465,7 +480,8 @@ eat_through_return(struct source_head *to_head, source **to_tail)
     while ((token = yapp_preproc_lex()) != '\n') {
 	if (token == 0)
 	    return 0;
-	yasm__error(cur_lindex, N_("Skipping possibly valid %%define stuff"));
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("Skipping possibly valid %%define stuff"));
     }
     append_token('\n', to_head, to_tail);
     return '\n';
@@ -478,7 +494,8 @@ yapp_get_ident(const char *synlvl)
     if (token == WHITESPACE)
 	token = yapp_preproc_lex();
     if (token != IDENT) {
-	yasm__error(cur_lindex, N_("Identifier expected after %%%s"), synlvl);
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("Identifier expected after %%%s"),
+		       synlvl);
     }
     return token;
 }
@@ -587,7 +604,7 @@ expand_macro(char *name,
 			if (token < 256)
 			    yasm_internal_error(N_("Unexpected character token in parameter expansion"));
 			else
-			    yasm__error(cur_lindex, N_("Cannot handle preprocessor items inside possible macro invocation"));
+			    yasm_error_set(YASM_ERROR_SYNTAX, N_("Cannot handle preprocessor items inside possible macro invocation"));
 		}
 	    }
 
@@ -607,7 +624,7 @@ expand_macro(char *name,
 	    ym->expanding = 1;
 
 	    /* so the macro exists. build a HAMT parameter table */
-	    param_table = HAMT_new(yasm_internal_error_);
+	    param_table = HAMT_create(yasm_internal_error_);
 	    /* fill the entries by walking the replay buffer and create
 	     * "macros".  coincidentally, clear the replay buffer. */
 
@@ -747,7 +764,7 @@ expand_token_list(struct source_head *paramexp, struct source_head *to_head, sou
 }
 
 static size_t
-yapp_preproc_input(char *buf, size_t max_size)
+yapp_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
 {
     static YAPP_State state = YAPP_STATE_INITIAL;
     size_t n = 0;
@@ -767,7 +784,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 			append_token(token, &source_head, &source_tail);
 			/*if (append_to_return()==0) state=YAPP_STATE_EOF;*/
 			ydebug(("YAPP: default: '%c' \"%s\"\n", token, yapp_preproc_lval.str_val));
-			/*yasm__error(cur_lindex, N_("YAPP got an unhandled token."));*/
+			/*yasm_error_set(YASM_ERROR_SYNTAX, N_("YAPP got an unhandled token."));*/
 			break;
 
 		    case IDENT:
@@ -789,8 +806,8 @@ yapp_preproc_input(char *buf, size_t max_size)
 			break;
 
 		    case CLEAR:
-			HAMT_delete(macro_table, (void (*)(void *))yapp_macro_delete);
-			macro_table = HAMT_new(yasm_internal_error_);
+			HAMT_destroy(macro_table, (void (*)(void *))yapp_macro_delete);
+			macro_table = HAMT_create(yasm_internal_error_);
 			break;
 
 		    case DEFINE:
@@ -836,7 +853,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 				    break;
 				}
 				else if (last_token == ',' || token != ',')
-				    yasm__error(cur_lindex, N_("Unexpected token in %%define parameters"));
+				    yasm_error_set(YASM_ERROR_SYNTAX, N_("Unexpected token in %%define parameters"));
 				last_token = token;
 			    }
 			    if (token == ')') {
@@ -916,7 +933,7 @@ yapp_preproc_input(char *buf, size_t max_size)
 		}
 		break;
 	    default:
-		yasm__error(cur_lindex, N_("YAPP got into a bad state"));
+		yasm_error_set(YASM_ERROR_PARSE, N_("YAPP got into a bad state"));
 	}
 	if (need_line_directive) {
 	    append_token(LINE, &source_head, &source_tail);
@@ -942,11 +959,55 @@ yapp_preproc_input(char *buf, size_t max_size)
     return n;
 }
 
+static size_t
+yapp_preproc_get_included_file(yasm_preproc *preproc, /*@out@*/ char *buf,
+			       size_t max_size)
+{
+    /* TODO */
+    return 0;
+}
+
+static void
+yapp_preproc_add_include_path(yasm_preproc *preproc, const char *path)
+{
+    /* TODO */
+}
+
+static void
+yapp_preproc_add_include_file(yasm_preproc *preproc, const char *filename)
+{
+    /* TODO */
+}
+
+static void
+yapp_preproc_predefine_macro(yasm_preproc *preproc, const char *macronameval)
+{
+    /* TODO */
+}
+
+static void
+yapp_preproc_undefine_macro(yasm_preproc *preproc, const char *macroname)
+{
+    /* TODO */
+}
+
+static void
+yapp_preproc_define_builtin(yasm_preproc *preproc, const char *macronameval)
+{
+    /* TODO */
+}
+
 /* Define preproc structure -- see preproc.h for details */
-yasm_preproc yasm_yapp_LTX_preproc = {
+yasm_preproc_module yasm_yapp_LTX_preproc = {
     "YAPP preprocessing (NASM style)",
     "yapp",
-    yapp_preproc_initialize,
-    yapp_preproc_cleanup,
-    yapp_preproc_input
+    yapp_preproc_create,
+    yapp_preproc_destroy,
+    yapp_preproc_input,
+    yapp_preproc_get_included_file,
+    yapp_preproc_add_include_path,
+    yapp_preproc_add_include_file,
+    yapp_preproc_predefine_macro,
+    yapp_preproc_undefine_macro,
+    yapp_preproc_define_builtin
 };
