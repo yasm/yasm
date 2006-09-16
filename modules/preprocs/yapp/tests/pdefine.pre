@@ -1,0 +1,5 @@
+%line 3+1 -
+	mov	ax, foo
+	mov	ax, 5+1
+	mov	ax, 5-3
+	mov	ax, foo(5, 6, 7)

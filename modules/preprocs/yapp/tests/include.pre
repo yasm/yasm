@@ -1,0 +1,10 @@
+%line 1+1 -
+	mov	ax, 5
+%line 1+1 ./modules/preprocs/yapp/tests/raw.asm
+	mov	ax, raw
+%line 3+1 -
+	mov	ax, 6
+%line 1+1 ./modules/preprocs/yapp/tests/raw.asm
+	mov	ax, raw
+%line 5+1 -
+	mov	ax, 7

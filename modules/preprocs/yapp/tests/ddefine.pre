@@ -1,0 +1,5 @@
+%line 3+1 -
+	mov	ax, [5+baz]
+
+
+	mov	ax, 9+9
