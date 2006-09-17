@@ -398,6 +398,8 @@ static const char **stdmacpos;
 static const char **extrastdmac = NULL;
 int any_extrastdmac;
 
+static int nested_mac_count, nested_rep_count;
+
 /*
  * Tokens are allocated in blocks to improve speed
  */
@@ -1829,6 +1831,29 @@ do_directive(Token * tline)
 	    (defining->name || (i != PP_ENDREP && i != PP_REP)))
     {
 	return NO_DIRECTIVE_FOUND;
+    }
+
+    if (defining) {
+	if (i == PP_MACRO || i == PP_IMACRO) {
+	    nested_mac_count++;
+	    return NO_DIRECTIVE_FOUND;
+	} else if (nested_mac_count > 0) {
+	    if (i == PP_ENDMACRO) {
+		nested_mac_count--;
+		return NO_DIRECTIVE_FOUND;
+	    }
+	}
+	if (!defining->name) {
+	    if (i == PP_REP) {
+		nested_rep_count++;
+		return NO_DIRECTIVE_FOUND;
+	    } else if (nested_rep_count > 0) {
+		if (i == PP_ENDREP) {
+		    nested_rep_count--;
+		    return NO_DIRECTIVE_FOUND;
+		}
+	    }
+	}
     }
 
     if (j != -2)
@@ -4132,6 +4157,8 @@ pp_reset(FILE *f, const char *file, int apass, efunc errfunc, evalfunc eval,
     nasm_src_set_linnum(0);
     istk->lineinc = 1;
     defining = NULL;
+    nested_mac_count = 0;
+    nested_rep_count = 0;
     for (h = 0; h < NHASH; h++)
     {
 	mmacros[h] = NULL;
