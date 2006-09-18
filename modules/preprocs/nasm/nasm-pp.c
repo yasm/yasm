@@ -2270,9 +2270,9 @@ do_directive(Token * tline)
 	    {
 		j = if_condition(tline->next, i);
 		tline->next = NULL;	/* it got freed */
-		free_tlist(origline);
 		j = j < 0 ? COND_NEVER : j ? COND_IF_TRUE : COND_IF_FALSE;
 	    }
+	    free_tlist(origline);
 	    cond = nasm_malloc(sizeof(Cond));
 	    cond->next = istk->conds;
 	    cond->state = j;
@@ -2311,12 +2311,12 @@ do_directive(Token * tline)
 		 * the normal invocation of expand_mmac_params().  Therefore,
 		 * we have to do it explicitly here.
 		 */
-		 j = if_condition(expand_mmac_params(tline->next), i);
-		 tline->next = NULL; /* it got freed */
-		free_tlist(origline);
+		j = if_condition(expand_mmac_params(tline->next), i);
+		tline->next = NULL; /* it got freed */
 		istk->conds->state =
 			j < 0 ? COND_NEVER : j ? COND_IF_TRUE : COND_IF_FALSE;
 	    }
+	    free_tlist(origline);
 	    return DIRECTIVE_FOUND;
 
 	case PP_ELSE:
@@ -2801,8 +2801,6 @@ do_directive(Token * tline)
 		smhead = &ctx->localmac;
 
 	    mname = tline->text;
-	    last = tline;
-	    last->next = NULL;
 
 	    /*
 	     * We now have a macro name... go hunt for it.
