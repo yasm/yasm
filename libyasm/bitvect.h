@@ -307,6 +307,8 @@ void    Set_Complement       (wordptr X, wordptr Y);            /* X = ~Y    */
 boolean Set_subset           (wordptr X, wordptr Y);            /* X in Y ?  */
 
 N_int   Set_Norm             (wordptr addr);                    /* = | X |   */
+N_int   Set_Norm2            (wordptr addr);                    /* = | X |   */
+N_int   Set_Norm3            (wordptr addr);                    /* = | X |   */
 Z_long  Set_Min              (wordptr addr);                    /* = min(X)  */
 Z_long  Set_Max              (wordptr addr);                    /* = max(X)  */
 
@@ -326,11 +328,12 @@ void    Matrix_Transpose     (wordptr X, N_int rowsX, N_int colsX,
                               wordptr Y, N_int rowsY, N_int colsY);
 
 /*****************************************************************************/
-/*  VERSION:  6.3                                                            */
+/*  VERSION:  6.4                                                            */
 /*****************************************************************************/
 /*  VERSION HISTORY:                                                         */
 /*****************************************************************************/
 /*                                                                           */
+/*    Version 6.4  03.10.04  Added C++ comp. directives. Improved "Norm()".  */
 /*    Version 6.3  28.09.02  Added "Create_List()" and "GCD2()".             */
 /*    Version 6.2  15.09.02  Overhauled error handling. Fixed "GCD()".       */
 /*    Version 6.1  08.10.01  Make VMS linker happy: _lsb,_msb => _lsb_,_msb_ */
@@ -368,7 +371,7 @@ void    Matrix_Transpose     (wordptr X, N_int rowsX, N_int colsX,
 /*  COPYRIGHT:                                                               */
 /*****************************************************************************/
 /*                                                                           */
-/*    Copyright (c) 1995 - 2002 by Steffen Beyer.                            */
+/*    Copyright (c) 1995 - 2004 by Steffen Beyer.                            */
 /*    All rights reserved.                                                   */
 /*                                                                           */
 /*****************************************************************************/
