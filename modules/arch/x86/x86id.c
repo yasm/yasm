@@ -1948,6 +1948,25 @@ static const x86_insn_info lddqu_insn[] = {
       {OPT_SIMDReg|OPS_128|OPA_Spare, OPT_Mem|OPS_Any|OPA_EA, 0} }
 };
 
+/* SSE4 instructions */
+static const x86_insn_info sse4_insn[] = {
+    { CPU_SSE4, MOD_Op2Add, 0, 0, 0, 3, {0x0F, 0x38, 0x00}, 0, 2,
+      {OPT_SIMDReg|OPS_64|OPA_Spare, OPT_SIMDRM|OPS_64|OPS_Relaxed|OPA_EA, 0}
+    },
+    { CPU_SSE4, MOD_Op2Add, 0, 0, 0x66, 3, {0x0F, 0x38, 0x00}, 0, 2,
+      {OPT_SIMDReg|OPS_128|OPA_Spare, OPT_SIMDRM|OPS_128|OPS_Relaxed|OPA_EA, 0}
+    }
+};
+
+static const x86_insn_info palignr_insn[] = {
+    { CPU_SSE4, MOD_Op2Add, 0, 0, 0, 3, {0x0F, 0x3A, 0x00}, 0, 3,
+      {OPT_SIMDReg|OPS_64|OPA_Spare, OPT_SIMDRM|OPS_64|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm}
+    },
+    { CPU_SSE4, MOD_Op2Add, 0, 0, 0x66, 3, {0x0F, 0x3A, 0x00}, 0, 3,
+      {OPT_SIMDReg|OPS_128|OPA_Spare, OPT_SIMDRM|OPS_128|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm}
+    }
+};
+
 /* AMD 3DNow! instructions */
 static const x86_insn_info now3d_insn[] = {
     { CPU_3DNow, MOD_Imm8, 0, 0, 0, 2, {0x0F, 0x0F, 0}, 0, 2,

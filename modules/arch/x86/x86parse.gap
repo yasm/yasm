@@ -716,6 +716,23 @@ INSN	-	movddup	NONE	cvt_xmm_xmm64_ss 0xF212	CPU_SSE3
 INSN	-	movshdup NONE	ssess	0xF316		CPU_SSE3
 INSN	-	movsldup NONE	ssess	0xF312		CPU_SSE3
 INSN	-	mwait	NONE	threebyte   0x0F01C9	CPU_SSE3
+# SSE4 / TNI Tejas New Intructions instructions
+INSN	-	pshufb	NONE	sse4	0x00	CPU_SSE4
+INSN	-	phaddw	NONE	sse4	0x01	CPU_SSE4
+INSN	-	phaddd	NONE	sse4	0x02	CPU_SSE4
+INSN	-	phaddsw	NONE	sse4	0x03	CPU_SSE4
+INSN	-	pmaddubsw	NONE	sse4	0x04	CPU_SSE4
+INSN	-	phsubw	NONE	sse4	0x05	CPU_SSE4
+INSN	-	phsubd	NONE	sse4	0x06	CPU_SSE4
+INSN	-	phsubsw	NONE	sse4	0x07	CPU_SSE4
+INSN	-	psignb	NONE	sse4	0x08	CPU_SSE4
+INSN	-	psignw	NONE	sse4	0x09	CPU_SSE4
+INSN	-	psignd	NONE	sse4	0x0A	CPU_SSE4
+INSN	-	pmulhrsw	NONE	sse4	0x0B	CPU_SSE4
+INSN	-	pabsb	NONE	sse4	0x1C	CPU_SSE4
+INSN	-	pabsw	NONE	sse4	0x1D	CPU_SSE4
+INSN	-	pabsd	NONE	sse4	0x1E	CPU_SSE4
+INSN	-	palignr	NONE	palignr	0x0F	CPU_SSE4
 # AMD 3DNow! instructions
 INSN	-	prefetch NONE	twobytemem  0x000F0D	CPU_3DNow
 INSN	-	prefetchw NONE	twobytemem  0x010F0D	CPU_3DNow
@@ -888,6 +905,10 @@ CPU		prescott CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
 			CPU_K6|CPU_Athlon|CPU_Hammer|CPU_EM64T|CPU_FPU|CPU_MMX|\
 			CPU_SSE|CPU_SSE2|CPU_SSE3|CPU_3DNow|CPU_SMM|\
 			CPU_Prot|CPU_Priv
+CPU		conroe	CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
+			CPU_EM64T|CPU_FPU|CPU_MMX|\
+			CPU_SSE|CPU_SSE2|CPU_SSE3|CPU_SSE4|CPU_SMM|\
+			CPU_Prot|CPU_Priv
 
 # Features have "no" versions to disable them, and only set/reset the
 # specific feature being changed.  All other bits are left alone.
@@ -909,6 +930,8 @@ CPU_FEATURE	priv	CPU_Priv
 CPU_FEATURE	svm	CPU_SVM
 CPU_FEATURE	padlock	CPU_PadLock
 CPU_FEATURE	em64t	CPU_EM64T
+CPU_FEATURE	sse4	CPU_SSE4
+CPU_FEATURE	ssse3	CPU_SSE4
 
 
 # TARGETMOD parameters:

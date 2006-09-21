@@ -58,6 +58,7 @@
 #define CPU_SVM	    (1UL<<25)	/* Secure Virtual Machine instruction */
 #define CPU_PadLock (1UL<<25)	/* VIA PadLock instruction */
 #define CPU_EM64T   (1UL<<26)	/* Intel EM64T or better */
+#define CPU_SSE4    (1UL<<27)   /* Streaming SIMD extensions 4 required */
 
 /* Technically not CPU capabilities, they do affect what instructions are
  * available.  These are tested against BITS==64.
