@@ -151,7 +151,10 @@ nasm_preproc_create(FILE *f, const char *in_filename, yasm_linemap *lm,
 static void
 nasm_preproc_destroy(yasm_preproc *preproc)
 {
+    yasm_preproc_nasm *preproc_nasm = (yasm_preproc_nasm *)preproc;
     nasmpp.cleanup(0);
+    if (preproc_nasm->file_name)
+	yasm_xfree(preproc_nasm->file_name);
     yasm_xfree(preproc);
     if (preproc_deps)
 	yasm_xfree(preproc_deps);
@@ -189,10 +192,6 @@ nasm_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
 		tot += n;
 	    }
 	    preproc_nasm->prior_linnum = linnum;
-	}
-	if (preproc_nasm->file_name) {
-	    yasm_xfree(preproc_nasm->file_name);
-	    preproc_nasm->file_name = NULL;
 	}
     }
 
