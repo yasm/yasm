@@ -422,7 +422,7 @@ scan:
 	ws+			{ goto scan; }
 
 	"\n"			{
-	    if (parser_nasm->save_input && cursor != s->eof)
+	    if (parser_nasm->save_input)
 		cursor = save_line(parser_nasm, cursor);
 	    parser_nasm->state = INITIAL;
 	    RETURN(s->tok[0]);
@@ -451,7 +451,7 @@ linechg:
 	}
 
 	"\n" {
-	    if (parser_nasm->save_input && cursor != s->eof)
+	    if (parser_nasm->save_input)
 		cursor = save_line(parser_nasm, cursor);
 	    parser_nasm->state = INITIAL;
 	    RETURN(s->tok[0]);
@@ -482,7 +482,7 @@ linechg2:
 
     /*!re2c
 	"\n" {
-	    if (parser_nasm->save_input && cursor != s->eof)
+	    if (parser_nasm->save_input)
 		cursor = save_line(parser_nasm, cursor);
 	    parser_nasm->state = INITIAL;
 	    RETURN(s->tok[0]);
@@ -503,7 +503,7 @@ directive:
 
     /*!re2c
 	[\]\n] {
-	    if (parser_nasm->save_input && cursor != s->eof)
+	    if (parser_nasm->save_input)
 		cursor = save_line(parser_nasm, cursor);
 	    parser_nasm->state = INITIAL;
 	    RETURN(s->tok[0]);
@@ -542,7 +542,7 @@ stringconst_scan:
 	    strbuf[count] = '\0';
 	    lvalp->str.contents = (char *)strbuf;
 	    lvalp->str.len = count;
-	    if (parser_nasm->save_input && cursor != s->eof)
+	    if (parser_nasm->save_input)
 		cursor = save_line(parser_nasm, cursor);
 	    if (count == 1)
 		RETURN(ONECHARSTR);

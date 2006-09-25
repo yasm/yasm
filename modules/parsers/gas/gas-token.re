@@ -483,7 +483,7 @@ scan:
 	ws+			{ goto scan; }
 
 	"\n"			{
-	    if (parser_gas->save_input && cursor != s->eof)
+	    if (parser_gas->save_input)
 		cursor = save_line(parser_gas, cursor);
 	    parser_gas->state = INITIAL;
 	    RETURN(s->tok[0]);
@@ -518,7 +518,7 @@ section_directive:
 	}
 
 	"\n"			{
-	    if (parser_gas->save_input && cursor != s->eof)
+	    if (parser_gas->save_input)
 		cursor = save_line(parser_gas, cursor);
 	    parser_gas->state = INITIAL;
 	    RETURN(s->tok[0]);
