@@ -481,8 +481,9 @@ main(int argc, char *argv[])
 		break;
 	    case YASM_ARCH_CREATE_BAD_PARSER:
 		print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
-			    _("FATAL"), machine_name, _("machine"),
-			    _("architecture"), cur_arch_module->keyword);
+			    _("FATAL"), cur_parser_module->keyword,
+			    _("parser"), _("architecture"),
+			    cur_arch_module->keyword);
 		break;
 	    default:
 		print_error(_("%s: unknown architecture error"), _("FATAL"));
