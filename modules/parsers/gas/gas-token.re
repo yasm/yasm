@@ -266,6 +266,8 @@ gas_parser_lex(YYSTYPE *lvalp, yasm_parser_gas *parser_gas)
 
     /* Jump to proper "exclusive" states */
     switch (parser_gas->state) {
+	case COMMENT:
+	    goto comment;
 	case SECTION_DIRECTIVE:
 	    goto section_directive;
 	default:
@@ -478,6 +480,7 @@ scan:
 	    RETURN(ID);
 	}
 
+	"/*"			{ parser_gas->state = COMMENT; goto comment; }
 	"#" (any \ [\n])*	{ goto scan; }
 
 	ws+			{ goto scan; }
@@ -494,6 +497,27 @@ scan:
 			  N_("ignoring unrecognized character `%s'"),
 			  yasm__conv_unprint(s->tok[0]));
 	    goto scan;
+	}
+    */
+
+    /* C-style comment; nesting not supported */
+comment:
+    SCANINIT();
+
+    /*!re2c
+	/* End of comment */
+	"*/"	{ parser_gas->state = INITIAL; goto scan; }
+
+	"\n"			{
+	    if (parser_gas->save_input)
+		cursor = save_line(parser_gas, cursor);
+	    RETURN(s->tok[0]);
+	}
+
+	any	{
+	    if (cursor == s->eof)
+		return 0;
+	    goto comment;
 	}
     */
 

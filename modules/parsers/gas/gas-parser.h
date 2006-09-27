@@ -90,6 +90,7 @@ typedef struct yasm_parser_gas {
     Scanner s;
     enum {
 	INITIAL,
+	COMMENT,
 	SECTION_DIRECTIVE,
 	INSTDIR
     } state;

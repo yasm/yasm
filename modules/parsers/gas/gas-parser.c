@@ -93,6 +93,16 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
 	yasm_errwarn_propagate(errwarns, parser_gas.rept->startline);
     }
 
+    /* Check for ending inside a comment */
+    if (parser_gas.state == COMMENT) {
+	yasm_warn_set(YASM_WARN_GENERAL, N_("end of file in comment"));
+	/* XXX: Minus two to compensate for already having moved past the EOF
+	 * in the linemap.
+	 */
+	yasm_errwarn_propagate(errwarns,
+			       yasm_linemap_get_current(parser_gas.linemap)-2);
+    }
+
     gas_parser_cleanup(&parser_gas);
 
     /* Free locallabel base if necessary */
