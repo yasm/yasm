@@ -27,7 +27,10 @@
 #ifndef YASM_EXPR_INT_H
 #define YASM_EXPR_INT_H
 
-/* Types listed in canonical sorting order.  See expr_order_terms(). */
+/* Types listed in canonical sorting order.  See expr_order_terms().
+ * Note precbc must be used carefully (in a-b pairs), as only symrecs can
+ * become the relative term in a #yasm_value.
+ */
 typedef enum {
     YASM_EXPR_NONE = 0,
     YASM_EXPR_REG = 1<<0,
@@ -35,13 +38,15 @@ typedef enum {
     YASM_EXPR_SUBST = 1<<2,
     YASM_EXPR_FLOAT = 1<<3,
     YASM_EXPR_SYM = 1<<4,
-    YASM_EXPR_SYMEXP = 1<<5, /* post-expanded sym (due to absolute expansion) */
-    YASM_EXPR_EXPR = 1<<6
+    YASM_EXPR_SYMEXP = 1<<5, /* post-expanded sym (due to EQU expansion) */
+    YASM_EXPR_PRECBC = 1<<6, /* direct bytecode ref (rather than via symrec) */
+    YASM_EXPR_EXPR = 1<<7
 } yasm_expr__type;
 
 struct yasm_expr__item {
     yasm_expr__type type;
     union {
+	yasm_bytecode *precbc;
 	yasm_symrec *sym;
 	yasm_expr *expn;
 	yasm_intnum *intn;

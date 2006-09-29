@@ -465,9 +465,8 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab,
 		    yasm_error_set(YASM_ERROR_VALUE,
 				   N_("EQU value not an integer expression"));
 		    yasm_errwarn_propagate(errwarns, equ_expr->line);
-		}
-
-		value_intn = yasm_intnum_copy(equ_intn);
+		} else
+		    value_intn = yasm_intnum_copy(equ_intn);
 		entry->index = SHN_ABS;
 		yasm_expr_destroy(equ_expr);
 	    }

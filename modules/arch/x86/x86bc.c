@@ -525,7 +525,7 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 	 */
 	if (yasm_x86__expr_checkea(x86_ea, &insn->common.addrsize,
 		insn->common.mode_bits, insn->postop == X86_POSTOP_ADDRESS16,
-		&insn->rex))
+		&insn->rex, bc))
 	    /* failed, don't bother checking rest of insn */
 	    return -1;
 

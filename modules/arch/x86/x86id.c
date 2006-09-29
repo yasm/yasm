@@ -109,6 +109,7 @@ RCSID("$Id$");
  *             15 = memory offset (an EA, but with no registers allowed)
  *                  [special case for MOV opcode]
  *             16 = immediate, value=1 (for special-case shift)
+ *             17 = immediate, does not contain SEG:OFF (for jmp/call)
  *  - 3 bits = size (user-specified, or from register size):
  *             0 = any size acceptable/no size spec acceptable (dep. on strict)
  *             1/2/3/4 = 8/16/32/64 bits (from user or reg size)
@@ -182,6 +183,7 @@ RCSID("$Id$");
 #define OPT_CR4		0x14
 #define OPT_MemOffs	0x15
 #define OPT_Imm1	0x16
+#define OPT_ImmNotSegOff 0x17
 #define OPT_MASK	0x1F
 
 #define OPS_Any		(0UL<<5)
@@ -1141,13 +1143,13 @@ static const x86_insn_info shlrd_insn[] = {
 /* Control transfer instructions (unconditional) */
 static const x86_insn_info call_insn[] = {
     { CPU_Any, 0, 0, 0, 0, 0, {0, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_Any|OPA_JmpRel, 0, 0} },
+      {OPT_ImmNotSegOff|OPS_Any|OPA_JmpRel, 0, 0} },
     { CPU_Any, 0, 16, 0, 0, 0, {0, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_16|OPA_JmpRel, 0, 0} },
+      {OPT_ImmNotSegOff|OPS_16|OPA_JmpRel, 0, 0} },
     { CPU_386|CPU_Not64, 0, 32, 0, 0, 0, {0, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_32|OPA_JmpRel, 0, 0} },
+      {OPT_ImmNotSegOff|OPS_32|OPA_JmpRel, 0, 0} },
     { CPU_Hammer|CPU_64, 0, 64, 0, 0, 0, {0, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_32|OPA_JmpRel, 0, 0} },
+      {OPT_ImmNotSegOff|OPS_32|OPA_JmpRel, 0, 0} },
 
     { CPU_Any, 0, 16, 64, 0, 1, {0xE8, 0, 0}, 0, 1,
       {OPT_Imm|OPS_16|OPTM_Near|OPA_JmpRel, 0, 0} },
@@ -1175,13 +1177,7 @@ static const x86_insn_info call_insn[] = {
     { CPU_Any, 0, 0, 64, 0, 1, {0xFF, 0, 0}, 2, 1,
       {OPT_Mem|OPS_Any|OPTM_Near|OPA_EA, 0, 0} },
 
-    { CPU_Not64, 0, 16, 0, 0, 1, {0x9A, 0, 0}, 3, 1,
-      {OPT_Imm|OPS_16|OPTM_Far|OPA_JmpFar, 0, 0} },
-    { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0x9A, 0, 0}, 3, 1,
-      {OPT_Imm|OPS_32|OPTM_Far|OPA_JmpFar, 0, 0} },
-    { CPU_Not64, 0, 0, 0, 0, 1, {0x9A, 0, 0}, 3, 1,
-      {OPT_Imm|OPS_Any|OPTM_Far|OPA_JmpFar, 0, 0} },
-
+    /* Far indirect (through memory).  Needs explicit FAR override. */
     { CPU_Any, 0, 16, 0, 0, 1, {0xFF, 0, 0}, 3, 1,
       {OPT_Mem|OPS_16|OPTM_Far|OPA_EA, 0, 0} },
     { CPU_386, 0, 32, 0, 0, 1, {0xFF, 0, 0}, 3, 1,
@@ -1189,17 +1185,33 @@ static const x86_insn_info call_insn[] = {
     { CPU_EM64T|CPU_64, 0, 64, 0, 0, 1, {0xFF, 0, 0}, 3, 1,
       {OPT_Mem|OPS_64|OPTM_Far|OPA_EA, 0, 0} },
     { CPU_Any, 0, 0, 0, 0, 1, {0xFF, 0, 0}, 3, 1,
-      {OPT_Mem|OPS_Any|OPTM_Far|OPA_EA, 0, 0} }
+      {OPT_Mem|OPS_Any|OPTM_Far|OPA_EA, 0, 0} },
+
+    /* With explicit FAR override */
+    { CPU_Not64, 0, 16, 0, 0, 1, {0x9A, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_16|OPTM_Far|OPA_JmpFar, 0, 0} },
+    { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0x9A, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_32|OPTM_Far|OPA_JmpFar, 0, 0} },
+    { CPU_Not64, 0, 0, 0, 0, 1, {0x9A, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_Any|OPTM_Far|OPA_JmpFar, 0, 0} },
+
+    /* Since not caught by first ImmNotSegOff group, implicitly FAR. */
+    { CPU_Not64, 0, 16, 0, 0, 1, {0x9A, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_16|OPA_JmpFar, 0, 0} },
+    { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0x9A, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_32|OPA_JmpFar, 0, 0} },
+    { CPU_Not64, 0, 0, 0, 0, 1, {0x9A, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_Any|OPA_JmpFar, 0, 0} }
 };
 static const x86_insn_info jmp_insn[] = {
     { CPU_Any, 0, 0, 0, 0, 0, {0, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_Any|OPA_JmpRel, 0, 0} },
+      {OPT_ImmNotSegOff|OPS_Any|OPA_JmpRel, 0, 0} },
     { CPU_Any, 0, 16, 0, 0, 0, {0, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_16|OPA_JmpRel, 0, 0} },
+      {OPT_ImmNotSegOff|OPS_16|OPA_JmpRel, 0, 0} },
     { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_32|OPA_JmpRel, 0, 0} },
+      {OPT_ImmNotSegOff|OPS_32|OPA_JmpRel, 0, 0} },
     { CPU_Hammer|CPU_64, 0, 64, 0, 0, 1, {0, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_32|OPA_JmpRel, 0, 0} },
+      {OPT_ImmNotSegOff|OPS_32|OPA_JmpRel, 0, 0} },
 
     { CPU_Any, 0, 0, 64, 0, 1, {0xEB, 0, 0}, 0, 1,
       {OPT_Imm|OPS_Any|OPTM_Short|OPA_JmpRel, 0, 0} },
@@ -1229,13 +1241,7 @@ static const x86_insn_info jmp_insn[] = {
     { CPU_Any, 0, 0, 64, 0, 1, {0xFF, 0, 0}, 4, 1,
       {OPT_Mem|OPS_Any|OPTM_Near|OPA_EA, 0, 0} },
 
-    { CPU_Not64, 0, 16, 0, 0, 1, {0xEA, 0, 0}, 3, 1,
-      {OPT_Imm|OPS_16|OPTM_Far|OPA_JmpFar, 0, 0} },
-    { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0xEA, 0, 0}, 3, 1,
-      {OPT_Imm|OPS_32|OPTM_Far|OPA_JmpFar, 0, 0} },
-    { CPU_Not64, 0, 0, 0, 0, 1, {0xEA, 0, 0}, 3, 1,
-      {OPT_Imm|OPS_Any|OPTM_Far|OPA_JmpFar, 0, 0} },
-
+    /* Far indirect (through memory).  Needs explicit FAR override. */
     { CPU_Any, 0, 16, 0, 0, 1, {0xFF, 0, 0}, 5, 1,
       {OPT_Mem|OPS_16|OPTM_Far|OPA_EA, 0, 0} },
     { CPU_386, 0, 32, 0, 0, 1, {0xFF, 0, 0}, 5, 1,
@@ -1243,7 +1249,23 @@ static const x86_insn_info jmp_insn[] = {
     { CPU_EM64T|CPU_64, 0, 64, 0, 0, 1, {0xFF, 0, 0}, 5, 1,
       {OPT_Mem|OPS_64|OPTM_Far|OPA_EA, 0, 0} },
     { CPU_Any, 0, 0, 0, 0, 1, {0xFF, 0, 0}, 5, 1,
-      {OPT_Mem|OPS_Any|OPTM_Far|OPA_EA, 0, 0} }
+      {OPT_Mem|OPS_Any|OPTM_Far|OPA_EA, 0, 0} },
+
+    /* With explicit FAR override */
+    { CPU_Not64, 0, 16, 0, 0, 1, {0xEA, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_16|OPTM_Far|OPA_JmpFar, 0, 0} },
+    { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0xEA, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_32|OPTM_Far|OPA_JmpFar, 0, 0} },
+    { CPU_Not64, 0, 0, 0, 0, 1, {0xEA, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_Any|OPTM_Far|OPA_JmpFar, 0, 0} },
+
+    /* Since not caught by first ImmNotSegOff group, implicitly FAR. */
+    { CPU_Not64, 0, 16, 0, 0, 1, {0xEA, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_16|OPA_JmpFar, 0, 0} },
+    { CPU_386|CPU_Not64, 0, 32, 0, 0, 1, {0xEA, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_32|OPA_JmpFar, 0, 0} },
+    { CPU_Not64, 0, 0, 0, 0, 1, {0xEA, 0, 0}, 3, 1,
+      {OPT_Imm|OPS_Any|OPA_JmpFar, 0, 0} }
 };
 static const x86_insn_info retnf_insn[] = {
     { CPU_Not64, MOD_Op0Add, 0, 0, 0, 1,
@@ -2089,31 +2111,28 @@ x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc,
 
     op = yasm_ops_first(operands);
 
-    switch (op->targetmod) {
-	case X86_FAR:
-	    /* "FAR imm" target needs to become "seg imm:imm". */
-	    if (yasm_value_finalize_expr(&jmpfar->offset,
-					 yasm_expr_copy(op->data.val), 0)
-		|| yasm_value_finalize_expr(&jmpfar->segment, op->data.val, 16))
-		yasm_error_set(YASM_ERROR_TOO_COMPLEX,
-			       N_("jump target expression too complex"));
-	    jmpfar->segment.seg_of = 1;
-	    break;
-	case X86_FAR_SEGOFF:
-	    /* SEG:OFF expression; split it. */
-	    segment = yasm_expr_extract_segoff(&op->data.val);
-	    if (!segment)
-		yasm_internal_error(N_("didn't get SEG:OFF expression in jmpfar"));
-	    if (yasm_value_finalize_expr(&jmpfar->segment, segment, 16))
-		yasm_error_set(YASM_ERROR_TOO_COMPLEX,
-			       N_("jump target segment too complex"));
-	    if (yasm_value_finalize_expr(&jmpfar->offset, op->data.val, 0))
-		yasm_error_set(YASM_ERROR_TOO_COMPLEX,
-			       N_("jump target offset too complex"));
-	    break;
-	default:
-	    yasm_internal_error(N_("didn't get FAR expression in jmpfar"));
-    }
+    if (op->type == YASM_INSN__OPERAND_IMM &&
+	yasm_expr_is_op(op->data.val, YASM_EXPR_SEGOFF)) {
+	/* SEG:OFF expression; split it. */
+	segment = yasm_expr_extract_segoff(&op->data.val);
+	if (!segment)
+	    yasm_internal_error(N_("didn't get SEG:OFF expression in jmpfar"));
+	if (yasm_value_finalize_expr(&jmpfar->segment, segment, 16))
+	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			   N_("jump target segment too complex"));
+	if (yasm_value_finalize_expr(&jmpfar->offset, op->data.val, 0))
+	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			   N_("jump target offset too complex"));
+    } else if (op->targetmod == X86_FAR) {
+	/* "FAR imm" target needs to become "seg imm:imm". */
+	if (yasm_value_finalize_expr(&jmpfar->offset,
+				     yasm_expr_copy(op->data.val), 0)
+	    || yasm_value_finalize_expr(&jmpfar->segment, op->data.val, 16))
+	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			   N_("jump target expression too complex"));
+	jmpfar->segment.seg_of = 1;
+    } else
+	yasm_internal_error(N_("didn't get FAR expression in jmpfar"));
 
     yasm_x86__bc_apply_prefixes((x86_common *)jmpfar, NULL, num_prefixes,
 				prefixes);
@@ -2150,7 +2169,7 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 		       N_("jump target expression too complex"));
     if (jmp->target.seg_of || jmp->target.rshift || jmp->target.curpos_rel)
 	yasm_error_set(YASM_ERROR_VALUE, N_("invalid jump target"));
-    jmp->target.curpos_rel = 1;
+    yasm_value_set_curpos_rel(&jmp->target, bc, 0);
 
     /* See if the user explicitly specified short/near/far. */
     switch ((int)(jinfo->operands[0] & OPTM_MASK)) {
@@ -2318,13 +2337,6 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		op->data.val = imm;
 	    }
 	}
-    }
-
-    /* Look for SEG:OFF operands and apply X86_FAR_SEGOFF targetmod. */
-    for (i = 0, op = ops[0]; op; op = ops[++i]) {
-	if (op->type == YASM_INSN__OPERAND_IMM && op->targetmod == 0 &&
-	    yasm_expr_is_op(op->data.val, YASM_EXPR_SEGOFF))
-	    op->targetmod = X86_FAR_SEGOFF;
     }
 
     /* Just do a simple linear search through the info array for a match.
@@ -2543,6 +2555,12 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		    } else
 			mismatch = 1;
 		    break;
+		case OPT_ImmNotSegOff:
+		    if (op->type != YASM_INSN__OPERAND_IMM ||
+			op->targetmod != 0 ||
+			yasm_expr_is_op(op->data.val, YASM_EXPR_SEGOFF))
+			mismatch = 1;
+		    break;
 		default:
 		    yasm_internal_error(N_("invalid operand type"));
 	    }
@@ -2560,7 +2578,9 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		    /* Register size must exactly match */
 		    if (yasm_x86__get_reg_size(arch, op->data.reg) != size)
 			mismatch = 1;
-		} else if ((info->operands[i] & OPT_MASK) == OPT_Imm
+		} else if (((info->operands[i] & OPT_MASK) == OPT_Imm
+			    || (info->operands[i] & OPT_MASK) == OPT_ImmNotSegOff
+			    || (info->operands[i] & OPT_MASK) == OPT_Imm1)
 		    && (info->operands[i] & OPS_RMASK) != OPS_Relaxed
 		    && (info->operands[i] & OPA_MASK) != OPA_JmpRel)
 		    mismatch = 1;
@@ -2612,8 +2632,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 			mismatch = 1;
 		    break;
 		case OPTM_Far:
-		    if (op->targetmod != X86_FAR &&
-			op->targetmod != X86_FAR_SEGOFF)
+		    if (op->targetmod != X86_FAR)
 			mismatch = 1;
 		    break;
 		case OPTM_To:

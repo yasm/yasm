@@ -547,7 +547,8 @@ x86_expr_checkea_getregsize_callback(yasm_expr__item *ei, void *d)
 
 int
 yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
-		       unsigned int bits, int address16_op, unsigned char *rex)
+		       unsigned int bits, int address16_op, unsigned char *rex,
+		       yasm_bytecode *bc)
 {
     int retval;
 
@@ -649,16 +650,12 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 				   N_("invalid effective address"));
 		    return 1;
 		case 2:
-		    if (pcrel) {
-			x86_ea->ea.disp.curpos_rel = 1;
-			x86_ea->ea.disp.ip_rel = 1;
-		    }
+		    if (pcrel)
+			yasm_value_set_curpos_rel(&x86_ea->ea.disp, bc, 1);
 		    return 2;
 		default:
-		    if (pcrel) {
-			x86_ea->ea.disp.curpos_rel = 1;
-			x86_ea->ea.disp.ip_rel = 1;
-		    }
+		    if (pcrel)
+			yasm_value_set_curpos_rel(&x86_ea->ea.disp, bc, 1);
 		    break;
 	    }
 	}
@@ -904,16 +901,12 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 				   N_("invalid effective address"));
 		    return 1;
 		case 2:
-		    if (pcrel) {
-			x86_ea->ea.disp.curpos_rel = 1;
-			x86_ea->ea.disp.ip_rel = 1;
-		    }
+		    if (pcrel)
+			yasm_value_set_curpos_rel(&x86_ea->ea.disp, bc, 1);
 		    return 2;
 		default:
-		    if (pcrel) {
-			x86_ea->ea.disp.curpos_rel = 1;
-			x86_ea->ea.disp.ip_rel = 1;
-		    }
+		    if (pcrel)
+			yasm_value_set_curpos_rel(&x86_ea->ea.disp, bc, 1);
 		    break;
 	    }
 	}

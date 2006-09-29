@@ -98,6 +98,22 @@ yasm_value_delete(yasm_value *value)
     value->rel = NULL;
 }
 
+void
+yasm_value_set_curpos_rel(yasm_value *value, yasm_bytecode *bc,
+			  unsigned int ip_rel)
+{
+    value->curpos_rel = 1;
+    value->ip_rel = ip_rel;
+    /* In order for us to correctly output curpos-relative values, we must
+     * have a relative portion of the value.  If one doesn't exist, point
+     * to a custom absolute symbol.
+     */
+    if (!value->rel) {
+	value->rel = yasm_symtab_abs_sym(yasm_object_get_symtab(
+	    yasm_section_get_object(yasm_bc_get_section(bc))));
+    }
+}
+
 static int
 value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 {
@@ -569,9 +585,22 @@ yasm_value_output_basic(yasm_value *value, /*@out@*/ unsigned char *buf,
 	    return -1;
 	}
 
-	/* Handle integer expressions */
+	/* Handle normal integer expressions */
 	intn = yasm_expr_get_intnum(&value->abs, 1);
+
 	if (!intn) {
+	    /* Second try before erroring: yasm_expr_get_intnum doesn't handle
+	     * SEG:OFF, so try simplifying out any to just the OFF portion,
+	     * then getting the intnum again.
+	     */
+	    yasm_expr *seg = yasm_expr_extract_deep_segoff(&value->abs);
+	    if (seg)
+		yasm_expr_destroy(seg);
+	    intn = yasm_expr_get_intnum(&value->abs, 1);
+	}
+
+	if (!intn) {
+	    /* Still don't have an integer! */
 	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 			   N_("expression too complex"));
 	    return -1;
@@ -617,7 +646,14 @@ yasm_value_output_basic(yasm_value *value, /*@out@*/ unsigned char *buf,
 				     bc, warn))
 	    retval = -1;
 	yasm_intnum_destroy(outval);
-    } else if (intn) {
+	return retval;
+    }
+
+    if (value->seg_of || value->rshift || value->curpos_rel || value->ip_rel
+	|| value->section_rel)
+	return 0;   /* We can't handle this with just an absolute */
+
+    if (intn) {
 	/* Output just absolute portion */
 	if (yasm_arch_intnum_tobytes(arch, intn, buf, destsize, valsize, 0, bc,
 				     warn))

@@ -49,6 +49,7 @@ static int expr_traverse_nodes_post(/*@null@*/ yasm_expr *e,
 				    /*@null@*/ void *d,
 				    int (*func) (/*@null@*/ yasm_expr *e,
 						 /*@null@*/ void *d));
+static void expr_delete_term(yasm_expr__item *term, int recurse);
 
 /* Bitmap of used items.  We should really never need more than 2 at a time,
  * so 31 is pretty much overkill.
@@ -139,6 +140,15 @@ expr_get_item(void)
 }
 
 yasm_expr__item *
+yasm_expr_precbc(yasm_bytecode *precbc)
+{
+    yasm_expr__item *e = expr_get_item();
+    e->type = YASM_EXPR_PRECBC;
+    e->data.precbc = precbc;
+    return e;
+}
+
+yasm_expr__item *
 yasm_expr_sym(yasm_symrec *s)
 {
     yasm_expr__item *e = expr_get_item();
@@ -185,7 +195,8 @@ yasm_expr_reg(unsigned long reg)
 
 /* Transforms instances of symrec-symrec [symrec+(-1*symrec)] into single
  * expritems if possible.  Uses a simple n^2 algorithm because n is usually
- * quite small.
+ * quite small.  Also works for precbc-precbc (or symrec-precbc,
+ * precbc-symrec).
  */
 static /*@only@*/ yasm_expr *
 expr_xform_bc_dist_base(/*@returned@*/ /*@only@*/ yasm_expr *e,
@@ -210,7 +221,7 @@ expr_xform_bc_dist_base(/*@returned@*/ /*@only@*/ yasm_expr *e,
 	int j;
 	yasm_expr *sube;
 	yasm_intnum *intn;
-	yasm_symrec *sym;
+	yasm_symrec *sym = NULL;
 	/*@dependent@*/ yasm_section *sect2;
 	/*@dependent@*/ /*@null@*/ yasm_bytecode *precbc2;
 
@@ -223,13 +234,21 @@ expr_xform_bc_dist_base(/*@returned@*/ /*@only@*/ yasm_expr *e,
 
 	if (sube->terms[0].type == YASM_EXPR_INT &&
 	    (sube->terms[1].type == YASM_EXPR_SYM ||
-	     sube->terms[1].type == YASM_EXPR_SYMEXP)) {
+	     sube->terms[1].type == YASM_EXPR_SYMEXP ||
+	     sube->terms[1].type == YASM_EXPR_PRECBC)) {
 	    intn = sube->terms[0].data.intn;
-	    sym = sube->terms[1].data.sym;
+	    if (sube->terms[1].type == YASM_EXPR_PRECBC)
+		precbc = sube->terms[1].data.precbc;
+	    else
+		sym = sube->terms[1].data.sym;
 	} else if ((sube->terms[0].type == YASM_EXPR_SYM ||
-		    sube->terms[0].type == YASM_EXPR_SYMEXP) &&
+		    sube->terms[0].type == YASM_EXPR_SYMEXP ||
+		    sube->terms[0].type == YASM_EXPR_PRECBC) &&
 		   sube->terms[1].type == YASM_EXPR_INT) {
-	    sym = sube->terms[0].data.sym;
+	    if (sube->terms[0].type == YASM_EXPR_PRECBC)
+		precbc = sube->terms[0].data.precbc;
+	    else
+		sym = sube->terms[0].data.sym;
 	    intn = sube->terms[1].data.intn;
 	} else
 	    continue;
@@ -237,15 +256,17 @@ expr_xform_bc_dist_base(/*@returned@*/ /*@only@*/ yasm_expr *e,
 	if (!yasm_intnum_is_neg1(intn))
 	    continue;
 
-	if (!yasm_symrec_get_label(sym, &precbc))
+	if (sym && !yasm_symrec_get_label(sym, &precbc))
 	    continue;
 	sect2 = yasm_bc_get_section(precbc);
 
 	/* Now look for a symrec term in the same segment */
 	for (j=0; j<e->numterms; j++) {
-	    if ((e->terms[j].type == YASM_EXPR_SYM ||
-		 e->terms[j].type == YASM_EXPR_SYMEXP) &&
-		yasm_symrec_get_label(e->terms[j].data.sym, &precbc2) &&
+	    if ((((e->terms[j].type == YASM_EXPR_SYM ||
+		   e->terms[j].type == YASM_EXPR_SYMEXP) &&
+		  yasm_symrec_get_label(e->terms[j].data.sym, &precbc2)) ||
+	         (e->terms[j].type == YASM_EXPR_PRECBC &&
+		  (precbc2 = e->terms[j].data.precbc)))	&&
 		(sect = yasm_bc_get_section(precbc2)) &&
 		sect == sect2 &&
 		callback(&e->terms[j], precbc, precbc2, cbd)) {
@@ -551,19 +572,7 @@ expr_simplify_identity(yasm_expr *e, int numterms, int int_term,
 	/* Loop through, deleting everything but the integer term */
 	for (i=0; i<e->numterms; i++)
 	    if (i != int_term)
-		switch (e->terms[i].type) {
-		    case YASM_EXPR_INT:
-			yasm_intnum_destroy(e->terms[i].data.intn);
-			break;
-		    case YASM_EXPR_FLOAT:
-			yasm_floatnum_destroy(e->terms[i].data.flt);
-			break;
-		    case YASM_EXPR_EXPR:
-			yasm_expr_destroy(e->terms[i].data.expn);
-			break;
-		    default:
-			break;
-		}
+		expr_delete_term(&e->terms[i], 1);
 
 	/* Move integer term to the first term (if not already there) */
 	if (int_term != 0)
@@ -813,10 +822,7 @@ yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
 
     /* traverse terms */
     for (i=0; i<e->numterms; i++) {
-	/* Expansion stage first: expand equ's, and expand symrecs that
-	 * reference absolute sections into
-	 * absolute start expr + (symrec - first bc in abs section).
-	 */
+	/* Expansion stage first: expand equ's. */
 	if (e->terms[i].type == YASM_EXPR_SYM) {
 	    yasm__exprentry *np;
 	    const yasm_expr *equ_expr =
@@ -839,45 +845,6 @@ yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
 
 		ee.e = equ_expr;
 		SLIST_INSERT_HEAD(eh, &ee, next);
-	    } else if (yasm_symrec_get_label(e->terms[i].data.sym, &precbc) &&
-		       (sect = yasm_bc_get_section(precbc)) &&
-		       yasm_section_is_absolute(sect)) {
-		const yasm_expr *start = yasm_section_get_start(sect);
-		yasm_expr *sube, *sube2;
-
-		/* Check for circular reference */
-		SLIST_FOREACH(np, eh, next) {
-		    if (np->e == start) {
-			yasm_error_set(YASM_ERROR_TOO_COMPLEX,
-				       N_("circular reference detected"));
-			return e;
-		    }
-		}
-
-		sube = yasm_xmalloc(sizeof(yasm_expr));
-		sube->op = YASM_EXPR_SUB;
-		sube->line = e->line;
-		sube->numterms = 2;
-		sube->terms[0].type = YASM_EXPR_SYMEXP;
-		sube->terms[0].data.sym = e->terms[i].data.sym;
-		sube->terms[1].type = YASM_EXPR_SYMEXP;
-		sube->terms[1].data.sym = yasm_section_abs_get_sym(sect);
-		assert(sube->terms[1].data.sym != NULL);
-
-		sube2 = yasm_xmalloc(sizeof(yasm_expr));
-		sube2->op = YASM_EXPR_ADD;
-		sube2->line = e->line;
-		sube2->numterms = 2;
-		sube2->terms[0].type = YASM_EXPR_EXPR;
-		sube2->terms[0].data.expn = yasm_expr_copy(start);
-		sube2->terms[1].type = YASM_EXPR_EXPR;
-		sube2->terms[1].data.expn = sube;
-
-		e->terms[i].type = YASM_EXPR_EXPR;
-		e->terms[i].data.expn = sube2;
-
-		ee.e = start;
-		SLIST_INSERT_HEAD(eh, &ee, next);
 	    }
 	}
 
@@ -892,6 +859,15 @@ yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
 	    SLIST_REMOVE_HEAD(eh, next);
 	    ee.e = NULL;
 	}
+    }
+
+    /* Check for SEG of SEG:OFF, if we match, simplify to just the segment */
+    if (e->op == YASM_EXPR_SEG && e->terms[0].type == YASM_EXPR_EXPR &&
+	e->terms[0].data.expn->op == YASM_EXPR_SEGOFF) {
+	e->op = YASM_EXPR_IDENT;
+	e->terms[0].data.expn->op = YASM_EXPR_IDENT;
+	/* Destroy the second (offset) term */
+	expr_delete_term(&e->terms[1], 1);
     }
 
     /* do callback */
@@ -963,6 +939,10 @@ expr_item_copy(yasm_expr__item *dest, const yasm_expr__item *src)
 	    /* Symbols don't need to be copied */
 	    dest->data.sym = src->data.sym;
 	    break;
+	case YASM_EXPR_PRECBC:
+	    /* Nor do direct bytecode references */
+	    dest->data.precbc = src->data.precbc;
+	    break;
 	case YASM_EXPR_EXPR:
 	    dest->data.expn = yasm_expr__copy_except(src->data.expn, -1);
 	    break;
@@ -1010,22 +990,31 @@ yasm_expr_copy(const yasm_expr *e)
     return yasm_expr__copy_except(e, -1);
 }
 
+static void
+expr_delete_term(yasm_expr__item *term, int recurse)
+{
+    switch (term->type) {
+	case YASM_EXPR_INT:
+	    yasm_intnum_destroy(term->data.intn);
+	    break;
+	case YASM_EXPR_FLOAT:
+	    yasm_floatnum_destroy(term->data.flt);
+	    break;
+	case YASM_EXPR_EXPR:
+	    if (recurse)
+		yasm_expr_destroy(term->data.expn);
+	    break;
+	default:
+	    break;
+    }
+}
+
 static int
 expr_destroy_each(/*@only@*/ yasm_expr *e, /*@unused@*/ void *d)
 {
     int i;
-    for (i=0; i<e->numterms; i++) {
-	switch (e->terms[i].type) {
-	    case YASM_EXPR_INT:
-		yasm_intnum_destroy(e->terms[i].data.intn);
-		break;
-	    case YASM_EXPR_FLOAT:
-		yasm_floatnum_destroy(e->terms[i].data.flt);
-		break;
-	    default:
-		break;	/* none of the other types needs to be deleted */
-	}
-    }
+    for (i=0; i<e->numterms; i++)
+	expr_delete_term(&e->terms[i], 0);
     yasm_xfree(e);	/* free ourselves */
     return 0;	/* don't stop recursion */
 }
@@ -1162,6 +1151,31 @@ yasm_expr__traverse_leaves_in(yasm_expr *e, void *d,
 	}
     }
     return 0;
+}
+
+yasm_expr *
+yasm_expr_extract_deep_segoff(yasm_expr **ep)
+{
+    yasm_expr *retval;
+    yasm_expr *e = *ep;
+    int i;
+
+    /* Try to extract at this level */
+    retval = yasm_expr_extract_segoff(ep);
+    if (retval)
+	return retval;
+
+    /* Not at this level?  Search any expr children. */
+    for (i=0; i<e->numterms; i++) {
+	if (e->terms[i].type == YASM_EXPR_EXPR) {
+	    retval = yasm_expr_extract_deep_segoff(&e->terms[i].data.expn);
+	    if (retval)
+		return retval;
+	}
+    }
+
+    /* Didn't find one */
+    return NULL;
 }
 
 yasm_expr *
@@ -1381,6 +1395,10 @@ yasm_expr_print(const yasm_expr *e, FILE *f)
     }
     for (i=0; i<e->numterms; i++) {
 	switch (e->terms[i].type) {
+	    case YASM_EXPR_PRECBC:
+		fprintf(f, "{%lx}",
+			yasm_bc_next_offset(e->terms[i].data.precbc));
+		break;
 	    case YASM_EXPR_SYM:
 	    case YASM_EXPR_SYMEXP:
 		fprintf(f, "%s", yasm_symrec_get_name(e->terms[i].data.sym));

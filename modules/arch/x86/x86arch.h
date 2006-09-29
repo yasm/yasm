@@ -109,8 +109,7 @@ typedef enum {
     X86_NEAR = 1,
     X86_SHORT,
     X86_FAR,
-    X86_TO,
-    X86_FAR_SEGOFF	    /* FAR due to SEG:OFF immediate */
+    X86_TO
 } x86_parse_targetmod;
 
 typedef enum {
@@ -256,7 +255,7 @@ void yasm_x86__bc_apply_prefixes
  */
 int yasm_x86__expr_checkea
     (x86_effaddr *x86_ea, unsigned char *addrsize, unsigned int bits,
-     int address16_op, unsigned char *rex);
+     int address16_op, unsigned char *rex, yasm_bytecode *bc);
 
 void yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len);
 

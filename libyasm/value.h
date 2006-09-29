@@ -71,6 +71,18 @@ void yasm_value_init_copy(yasm_value *value, const yasm_value *orig);
  */
 void yasm_value_delete(yasm_value *value);
 
+/** Set a value to be relative to the current assembly position rather than
+ * relative to the section start.
+ * \param value	    value
+ * \param bc	    bytecode containing value
+ * \param ip_rel    if nonzero, indicates IP-relative data relocation,
+ *		    sometimes used to generate special relocations
+ * \note If value is just an absolute value, will get an absolute symrec to
+ *       reference to (via bc's symbol table).
+ */
+void yasm_value_set_curpos_rel(yasm_value *value, yasm_bytecode *bc,
+			       unsigned int ip_rel);
+
 /** Perform yasm_value_finalize_expr() on a value that already exists from
  * being initialized with yasm_value_initialize().
  * \param value		value

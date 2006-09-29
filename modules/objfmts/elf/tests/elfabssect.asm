@@ -7,3 +7,6 @@ teststruc:
 teststruc_size:
 %line 3+0 elfabssect.asm
 [section .text]
+;global teststruc
+global teststruc.testlabel
+global teststruc_size

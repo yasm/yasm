@@ -123,14 +123,19 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
 
     assert(info != NULL);
 
-    if (!yasm_symrec_get_label(sym, &precbc))
-	return 0;
-    sect = yasm_bc_get_section(precbc);
+    if (!yasm_symrec_get_label(sym, &precbc)) {
+	if (!yasm_symrec_is_abs(sym))	/* let absolute symbol into output */
+	    return 0;
+	precbc = NULL;
+    }
+
+    if (precbc)
+	sect = yasm_bc_get_section(precbc);
 
     entry = yasm_symrec_get_data(sym, &elf_symrec_data);
     if (!entry || !elf_sym_in_table(entry)) {
 	int is_sect = 0;
-	if (!yasm_section_is_absolute(sect) &&
+	if (sect && !yasm_section_is_absolute(sect) &&
 	    strcmp(yasm_symrec_get_name(sym), yasm_section_get_name(sect))==0)
 	    is_sect = 1;
 

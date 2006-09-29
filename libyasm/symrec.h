@@ -44,6 +44,15 @@ yasm_symtab *yasm_symtab_create(void);
  */
 void yasm_symtab_destroy(/*@only@*/ yasm_symtab *symtab);
 
+/** Get a reference to the symbol table's "absolute" symbol.  This is
+ * essentially an EQU with no name and value 0, and is used for relocating
+ * absolute current-position-relative values.
+ * \see yasm_value_set_curpos_rel().
+ * \param symtab    symbol table
+ * \return Absolute symbol (dependent pointer, do not free).
+ */
+/*@dependent@*/ yasm_symrec *yasm_symtab_abs_sym(yasm_symtab *symtab);
+
 /** Get a reference to (use) a symbol.  The symbol does not necessarily need to
  * be defined before it is used.
  * \param symtab    symbol table
@@ -226,6 +235,13 @@ typedef /*@dependent@*/ yasm_bytecode *yasm_symrec_get_label_bytecodep;
  */
 int yasm_symrec_get_label(const yasm_symrec *sym,
 			  /*@out@*/ yasm_symrec_get_label_bytecodep *precbc);
+
+/** Determine if symbol is the "absolute" symbol created by
+ * yasm_symtab_abs_sym().
+ * \param sym	    symbol
+ * \return 0 if symbol is not the "absolute" symbol, nonzero otherwise.
+ */
+int yasm_symrec_is_abs(const yasm_symrec *sym);
 
 /** Determine if symbol is a special symbol.
  * \param sym	    symbol

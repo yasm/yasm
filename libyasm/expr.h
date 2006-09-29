@@ -48,6 +48,12 @@ typedef struct yasm_expr__item yasm_expr__item;
     (yasm_expr_op op, /*@only@*/ yasm_expr__item *a,
      /*@only@*/ /*@null@*/ yasm_expr__item *b, unsigned long line);
 
+/** Create a new preceding-bytecode expression item.
+ * \param precbc    preceding bytecode
+ * \return Newly allocated expression item.
+ */
+/*@only@*/ yasm_expr__item *yasm_expr_precbc(/*@keep@*/ yasm_bytecode *precbc);
+
 /** Create a new symbol expression item.
  * \param sym	    symbol
  * \return Newly allocated expression item.
@@ -170,6 +176,16 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
  */
 #define yasm_expr_simplify(e, cbd) \
     yasm_expr__level_tree(e, 1, 1, 1, cbd, NULL, NULL, NULL)
+
+/** Extract the segment portion of an expression containing SEG:OFF, leaving
+ * the offset.
+ * \param ep		expression (pointer to)
+ * \return NULL if unable to extract a segment (expr does not contain a
+ *         YASM_EXPR_SEGOFF operator), otherwise the segment expression.
+ *         The input expression is modified such that on return, it's the
+ *         offset expression.
+ */
+/*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_deep_segoff(yasm_expr **ep);
 
 /** Extract the segment portion of a SEG:OFF expression, leaving the offset.
  * \param ep		expression (pointer to)

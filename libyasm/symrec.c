@@ -37,6 +37,7 @@
 #include "assocdat.h"
 
 #include "errwarn.h"
+#include "intnum.h"
 #include "floatnum.h"
 #include "expr.h"
 #include "symrec.h"
@@ -194,6 +195,18 @@ yasm_symtab_iter_value(const yasm_symtab_iter *cur)
 }
 
 yasm_symrec *
+yasm_symtab_abs_sym(yasm_symtab *symtab)
+{
+    yasm_symrec *rec = symtab_get_or_new(symtab, "", 1);
+    rec->line = 0;
+    rec->type = SYM_EQU;
+    rec->value.expn =
+	yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(0)), 0);
+    rec->status |= SYM_DEFINED|SYM_VALUED|SYM_USED;
+    return rec;
+}
+
+yasm_symrec *
 yasm_symtab_use(yasm_symtab *symtab, const char *name, unsigned long line)
 {
     yasm_symrec *rec = symtab_get_or_new(symtab, name, 1);
@@ -321,6 +334,8 @@ static int
 symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
 {
     symtab_finalize_info *info = (symtab_finalize_info *)d;
+    yasm_section *sect;
+
     /* error if a symbol is used but never defined or extern/common declared */
     if ((sym->status & SYM_USED) && !(sym->status & SYM_DEFINED) &&
 	!(sym->visibility & (YASM_SYM_EXTERN | YASM_SYM_COMMON))) {
@@ -333,6 +348,25 @@ symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
 	    if (sym->line < info->firstundef_line)
 		info->firstundef_line = sym->line;
 	}
+    }
+
+    /* Change labels in absolute sections into EQUs with value
+     * absolute start expr + (label bc - first bc in abs section).
+     * Don't worry about possible circular references because that will get
+     * caught in EQU expansion.
+     */
+    if (sym->type == SYM_LABEL && sym->value.precbc
+	&& (sect = yasm_bc_get_section(sym->value.precbc))
+	&& yasm_section_is_absolute(sect)) {
+	sym->type = SYM_EQU;
+	sym->value.expn = yasm_expr_create_tree(
+	    yasm_expr_create(YASM_EXPR_SUB,
+			     yasm_expr_precbc(sym->value.precbc),
+			     yasm_expr_precbc(yasm_section_bcs_first(sect)),
+			     sym->line),
+	    YASM_EXPR_ADD,
+	    yasm_expr_copy(yasm_section_get_start(sect)),
+	    sym->line);
     }
 
     return 0;
@@ -427,6 +461,12 @@ yasm_symrec_get_label(const yasm_symrec *sym,
     }
     *precbc = sym->value.precbc;
     return 1;
+}
+
+int
+yasm_symrec_is_abs(const yasm_symrec *sym)
+{
+    return (sym->line == 0 && sym->type == SYM_EQU && sym->name[0] == '\0');
 }
 
 int

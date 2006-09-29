@@ -95,7 +95,8 @@ typedef struct bin_objfmt_output_info {
     /*@dependent@*/ FILE *f;
     /*@only@*/ unsigned char *buf;
     /*@observer@*/ const yasm_section *sect;
-    unsigned long start;
+    unsigned long start;	/* what normal variables go against */
+    unsigned long abs_start;	/* what absolutes go against */
 } bin_objfmt_output_info;
 
 static /*@only@*/ yasm_expr *
@@ -167,6 +168,36 @@ bin_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
 	    break;
 	default:
 	    return 0;
+    }
+
+    /* Absolute value; handle it here as output_basic won't understand it */
+    if (yasm_symrec_is_abs(value->rel)) {
+	if (value->curpos_rel) {
+	    /* Calculate value relative to current assembly position */
+	    /*@only@*/ yasm_intnum *outval;
+	    unsigned int valsize = value->size;
+	    int retval = 0;
+
+	    outval = yasm_intnum_create_uint(bc->offset + info->abs_start);
+	    yasm_intnum_calc(outval, YASM_EXPR_NEG, NULL);
+
+	    if (value->rshift > 0) {
+		/*@only@*/ yasm_intnum *shamt =
+		    yasm_intnum_create_uint((unsigned long)value->rshift);
+		yasm_intnum_calc(outval, YASM_EXPR_SHR, shamt);
+		yasm_intnum_destroy(shamt);
+	    }
+	    /* Add in absolute portion */
+	    if (value->abs)
+		yasm_intnum_calc(outval, YASM_EXPR_ADD,
+				 yasm_expr_get_intnum(&value->abs, 1));
+	    /* Output! */
+	    if (yasm_arch_intnum_tobytes(info->objfmt_bin->arch, outval, buf,
+					 destsize, valsize, 0, bc, warn))
+		retval = 1;
+	    yasm_intnum_destroy(outval);
+	    return retval;
+	}
     }
 
     /* Couldn't output, assume it contains an external reference. */
@@ -264,6 +295,7 @@ bin_objfmt_output(yasm_objfmt *objfmt, FILE *f, /*@unused@*/ int all_syms,
     }
     start = yasm_intnum_get_uint(startnum);
     yasm_expr_destroy(startexpr);
+    info.abs_start = start;
     textstart = start;
 
     /* Align .data and .bss (if present) by adjusting their starts. */
