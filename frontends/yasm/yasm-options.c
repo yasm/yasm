@@ -85,6 +85,8 @@ parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts,
 			break;
 		    }
 		}
+		if (!got_it && !other_option_handler(argv[0]))
+		    got_it = 1;
 		if (!got_it) {
 		    print_error(_("warning: unrecognized option `%s'"),
 				argv[0]);
@@ -119,6 +121,8 @@ parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts,
 			break;
 		    }
 		}
+		if (!got_it && !other_option_handler(argv[0]))
+		    got_it = 1;
 		if (!got_it) {
 		    print_error(_("warning: unrecognized option `%s'"),
 				argv[0]);

@@ -55,6 +55,9 @@ typedef struct opt_option_s
 /* handle everything that is not an option */
 int not_an_option_handler(char *param);
 
+/* handle possibly other special-case options; no parameters allowed */
+int other_option_handler(char *option);
+
 /* parse command line calling handlers when appropriate
  * argc, argv - pass directly from main(argc,argv)
  * options - array of options

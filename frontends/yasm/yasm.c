@@ -770,6 +770,23 @@ not_an_option_handler(char *param)
     return 0;
 }
 
+int
+other_option_handler(char *option)
+{
+    /* Accept, but ignore, -O and -Onnn, for compatibility with NASM. */
+    if (option[0] == '-' && option[1] == 'O') {
+	int n = 2;
+	for (;;) {
+	    if (option[n] == '\0')
+		return 0;
+	    if (!isdigit(option[n]))
+		return 1;
+	    n++;
+	}
+    }
+    return 1;
+}
+
 static int
 opt_special_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param, int extra)
 {
