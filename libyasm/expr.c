@@ -339,6 +339,12 @@ expr_bc_dist_subst_cb(yasm_expr__item *ei, yasm_bytecode *precbc,
     return 1;
 }
 
+static yasm_expr *
+expr_xform_bc_dist_subst(yasm_expr *e, void *d)
+{
+    return expr_xform_bc_dist_base(e, d, expr_bc_dist_subst_cb);
+}
+
 int
 yasm_expr__bc_dist_subst(yasm_expr **ep, void *cbd,
 			 void (*callback) (unsigned int subst,
@@ -350,7 +356,8 @@ yasm_expr__bc_dist_subst(yasm_expr **ep, void *cbd,
     my_cbd.callback = callback;
     my_cbd.cbd = cbd;
     my_cbd.subst = 0;
-    *ep = expr_xform_bc_dist_base(*ep, &my_cbd, expr_bc_dist_subst_cb);
+    *ep = yasm_expr__level_tree(*ep, 1, 1, 1, 0, &expr_xform_bc_dist_subst,
+				&my_cbd, NULL);
     return my_cbd.subst;
 }
 
