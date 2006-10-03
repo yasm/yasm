@@ -2829,11 +2829,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 			spare = (unsigned char)(op->data.reg&7);
 		    else if (op->type == YASM_INSN__OPERAND_REG) {
 			if (yasm_x86__set_rex_from_reg(&insn->rex, &spare,
-				op->data.reg, mode_bits, X86_REX_R)) {
-			    yasm_error_set(YASM_ERROR_TYPE,
-				N_("invalid combination of opcode and operands"));
+				op->data.reg, mode_bits, X86_REX_R))
 			    return;
-			}
 		    } else
 			yasm_internal_error(N_("invalid operand conversion"));
 		    break;
@@ -2841,11 +2838,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		    if (op->type == YASM_INSN__OPERAND_REG) {
 			unsigned char opadd;
 			if (yasm_x86__set_rex_from_reg(&insn->rex, &opadd,
-				op->data.reg, mode_bits, X86_REX_B)) {
-			    yasm_error_set(YASM_ERROR_TYPE,
-				N_("invalid combination of opcode and operands"));
+				op->data.reg, mode_bits, X86_REX_B))
 			    return;
-			}
 			insn->opcode.opcode[0] += opadd;
 		    } else
 			yasm_internal_error(N_("invalid operand conversion"));
@@ -2854,11 +2848,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		    if (op->type == YASM_INSN__OPERAND_REG) {
 			unsigned char opadd;
 			if (yasm_x86__set_rex_from_reg(&insn->rex, &opadd,
-				op->data.reg, mode_bits, X86_REX_B)) {
-			    yasm_error_set(YASM_ERROR_TYPE,
-				N_("invalid combination of opcode and operands"));
+				op->data.reg, mode_bits, X86_REX_B))
 			    return;
-			}
 			insn->opcode.opcode[1] += opadd;
 		    } else
 			yasm_internal_error(N_("invalid operand conversion"));
@@ -2871,8 +2862,6 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 			if (!insn->x86_ea ||
 			    yasm_x86__set_rex_from_reg(&insn->rex, &spare,
 				op->data.reg, mode_bits, X86_REX_R)) {
-			    yasm_error_set(YASM_ERROR_TYPE,
-				N_("invalid combination of opcode and operands"));
 			    if (insn->x86_ea)
 				yasm_xfree(insn->x86_ea);
 			    yasm_xfree(insn);

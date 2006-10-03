@@ -788,11 +788,8 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 	     */
 	    if (yasm_x86__set_rex_from_reg(rex, &low3,
 					   (unsigned int)(X86_REG64 | basereg),
-					   bits, X86_REX_B)) {
-		yasm_error_set(YASM_ERROR_TYPE,
-		    N_("invalid combination of operands and effective address"));
+					   bits, X86_REX_B))
 		return 1;
-	    }
 	    x86_ea->modrm |= low3;
 	    /* we don't need an SIB *unless* basereg is ESP or R12 */
 	    if (basereg == REG3264_ESP || basereg == REG64_R12)
@@ -818,11 +815,8 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 	    else {
 		if (yasm_x86__set_rex_from_reg(rex, &low3, (unsigned int)
 					       (X86_REG64 | basereg), bits,
-					       X86_REX_B)) {
-		    yasm_error_set(YASM_ERROR_TYPE,
-			N_("invalid combination of operands and effective address"));
+					       X86_REX_B))
 		    return 1;
-		}
 		x86_ea->sib |= low3;
 	    }
 	    
@@ -833,11 +827,8 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
 	    else {
 		if (yasm_x86__set_rex_from_reg(rex, &low3, (unsigned int)
 					       (X86_REG64 | indexreg), bits,
-					       X86_REX_X)) {
-		    yasm_error_set(YASM_ERROR_TYPE,
-			N_("invalid combination of operands and effective address"));
+					       X86_REX_X))
 		    return 1;
-		}
 		x86_ea->sib |= low3 << 3;
 		/* Set scale field, 1 case -> 0, so don't bother. */
 		switch (reg3264mult[indexreg]) {

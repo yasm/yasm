@@ -128,14 +128,21 @@ yasm_x86__set_rex_from_reg(unsigned char *rex, unsigned char *low3,
 	x86_expritem_reg_size size = (x86_expritem_reg_size)(reg & ~0xFUL);
 
 	if (size == X86_REG8X || (reg & 0xF) >= 8) {
-	    if (*rex == 0xff)
+	    /* Check to make sure we can set it */
+	    if (*rex == 0xff) {
+		yasm_error_set(YASM_ERROR_TYPE,
+		    N_("cannot use A/B/C/DH with instruction needing REX"));
 		return 1;
+	    }
 	    *rex |= 0x40 | (((reg & 8) >> 3) << rexbit);
 	} else if (size == X86_REG8 && (reg & 7) >= 4) {
 	    /* AH/BH/CH/DH, so no REX allowed */
-	    if (*rex != 0 && *rex != 0xff)
+	    if (*rex != 0 && *rex != 0xff) {
+		yasm_error_set(YASM_ERROR_TYPE,
+		    N_("cannot use A/B/C/DH with instruction needing REX"));
 		return 1;
-	    *rex = 0xff;
+	    }
+	    *rex = 0xff;    /* Flag so we can NEVER set it (see above) */
 	}
     }
 
