@@ -732,8 +732,15 @@ static const x86_insn_info xchg_insn[] = {
       {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_8|OPA_Spare, 0} },
     { CPU_Any, MOD_GasSufB, 0, 0, 0, 1, {0x86, 0, 0}, 0, 2,
       {OPT_Reg|OPS_8|OPA_Spare, OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_Any|CPU_64, MOD_GasSufW, 16, 0, 0, 1, {0x87, 0, 0}, 0, 2,
-      {OPT_Areg|OPS_16|OPA_EA, OPT_Areg|OPS_16|OPA_Spare, 0} },
+    /* We could be extra-efficient in the 64-bit mode case here.
+     * XCHG AX, AX in 64-bit mode is a NOP, as it doesn't clear the
+     * high 48 bits of RAX. Thus we don't need the operand-size prefix.
+     * But this feels too clever, and probably not what the user really
+     * expects in the generated code, so we don't do it.
+     *
+     * { CPU_Any|CPU_64, MOD_GasSufW, 0, 0, 0, 1, {0x90, 0, 0}, 0, 2,
+     *  {OPT_Areg|OPS_16|OPA_None, OPT_Areg|OPS_16|OPA_Op0Add, 0} },
+     */
     { CPU_Any, MOD_GasSufW, 16, 0, 0, 1, {0x90, 0, 0}, 0, 2,
       {OPT_Areg|OPS_16|OPA_None, OPT_Reg|OPS_16|OPA_Op0Add, 0} },
     { CPU_Any, MOD_GasSufW, 16, 0, 0, 1, {0x90, 0, 0}, 0, 2,
@@ -742,6 +749,11 @@ static const x86_insn_info xchg_insn[] = {
       {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_16|OPA_Spare, 0} },
     { CPU_Any, MOD_GasSufW, 16, 0, 0, 1, {0x87, 0, 0}, 0, 2,
       {OPT_Reg|OPS_16|OPA_Spare, OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, 0} },
+    /* Be careful with XCHG EAX, EAX in 64-bit mode.  This needs to use
+     * the long form rather than the NOP form, as the long form clears
+     * the high 32 bits of RAX.  This makes all 32-bit forms in 64-bit
+     * mode have consistent operation.
+     */
     { CPU_386|CPU_64, MOD_GasSufL, 32, 0, 0, 1, {0x87, 0, 0}, 0, 2,
       {OPT_Areg|OPS_32|OPA_EA, OPT_Areg|OPS_32|OPA_Spare, 0} },
     { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0x90, 0, 0}, 0, 2,
@@ -752,6 +764,11 @@ static const x86_insn_info xchg_insn[] = {
       {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_32|OPA_Spare, 0} },
     { CPU_386, MOD_GasSufL, 32, 0, 0, 1, {0x87, 0, 0}, 0, 2,
       {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} },
+    /* Be efficient with XCHG RAX, RAX.
+     * This is a NOP and thus doesn't need the REX prefix.
+     */
+    { CPU_Hammer|CPU_64, MOD_GasSufQ, 0, 0, 0, 1, {0x90, 0, 0}, 0, 2,
+      {OPT_Areg|OPS_64|OPA_None, OPT_Areg|OPS_64|OPA_Op0Add, 0} },
     { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0x90, 0, 0}, 0, 2,
       {OPT_Areg|OPS_64|OPA_None, OPT_Reg|OPS_64|OPA_Op0Add, 0} },
     { CPU_Hammer|CPU_64, MOD_GasSufQ, 64, 0, 0, 1, {0x90, 0, 0}, 0, 2,
