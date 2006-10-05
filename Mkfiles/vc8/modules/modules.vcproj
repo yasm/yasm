@@ -15,6 +15,9 @@
 		/>
 	</Platforms>
 	<ToolFiles>
+		<ToolFile
+			RelativePath="..\bison.rules"
+		/>
 	</ToolFiles>
 	<Configurations>
 		<Configuration
@@ -22,6 +25,7 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
+			InheritedPropertySheets="..\crt_secure_no_deprecate.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -31,6 +35,9 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="Bison"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -96,7 +103,7 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;..\crt_secure_no_deprecate.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -107,6 +114,9 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="Bison"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -173,6 +183,7 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
+			InheritedPropertySheets="..\crt_secure_no_deprecate.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -182,6 +193,9 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="Bison"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -246,7 +260,7 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;..\crt_secure_no_deprecate.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -256,6 +270,9 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="Bison"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -352,19 +369,11 @@
 				Name="dbgfmts"
 				>
 				<File
-					RelativePath="..\..\..\modules\dbgfmts\null\null-dbgfmt.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\modules\dbgfmts\stabs\stabs-dbgfmt.c"
+					RelativePath="..\..\..\modules\dbgfmts\codeview\cv-dbgfmt.c"
 					>
 				</File>
 				<File
 					RelativePath="..\..\..\modules\dbgfmts\codeview\cv-dbgfmt.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\modules\dbgfmts\codeview\cv-dbgfmt.c"
 					>
 				</File>
 				<File
@@ -376,7 +385,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-dbgfmt.h"
+					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-aranges.c"
 					>
 				</File>
 				<File
@@ -384,7 +393,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-line.c"
+					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-dbgfmt.h"
 					>
 				</File>
 				<File
@@ -392,7 +401,15 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-aranges.c"
+					RelativePath="..\..\..\modules\dbgfmts\dwarf2\dwarf2-line.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\dbgfmts\null\null-dbgfmt.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\dbgfmts\stabs\stabs-dbgfmt.c"
 					>
 				</File>
 			</Filter>
@@ -452,6 +469,44 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\..\modules\parsers\gas\gas-bison.y"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="Bison"
+							OutputStem="../../../gas-bison"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="Bison"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="Bison"
+							OutputStem="../../../gas-bison"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="Bison"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
 					RelativePath="..\..\..\modules\parsers\gas\gas-defs.h"
 					>
 				</File>
@@ -474,6 +529,44 @@
 				<File
 					RelativePath="..\..\..\nasm-bison.h"
 					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\parsers\nasm\nasm-bison.y"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="Bison"
+							OutputStem="../../../nasm-bison"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="Bison"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="Bison"
+							OutputStem="../../../nasm-bison"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="Bison"
+						/>
+					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\..\modules\parsers\nasm\nasm-defs.h"

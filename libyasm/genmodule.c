@@ -1,6 +1,6 @@
 /* $Id$
  *
- * Generate module.c from module.in and list of modules.
+ * Generate module.c from module.in and Makefile.am or Makefile.
  *
  *  Copyright (C) 2004  Peter Johnson
  *
@@ -28,10 +28,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+
+#include "compat-queue.h"
 
 #define OUTPUT	"module.c"
+#define MAXNAME 128
 #define MAXLINE	1024
 #define MAXMODULES 128
+#define MAXINCLUDES 256
+
+typedef struct include {
+    STAILQ_ENTRY(include) link;
+    char *filename;
+} include;
 
 int
 main(int argc, char *argv[])
@@ -39,47 +49,121 @@ main(int argc, char *argv[])
     FILE *in, *out;
     char *str;
     int i;
-    int len;
+    size_t len;
     char *strp;
     char *modules[MAXMODULES];
     int num_modules = 0;
+    STAILQ_HEAD(includehead, include) includes =
+	STAILQ_HEAD_INITIALIZER(includes);
+    include *inc;
+    int isam = 0;
+    int linecont = 0;
 
-    if (argc < 2) {
-	fprintf(stderr, "Usage: %s <file> [module_name ...]\n", argv[0]);
+    if (argc != 3) {
+	fprintf(stderr, "Usage: %s <module.in> <Makefile[.am]>\n", argv[0]);
 	return EXIT_FAILURE;
     }
 
     str = malloc(MAXLINE);
 
-#ifdef FILTERMODE
-    while (fgets(str, MAXLINE, stdin)) {
-	if (strlen(str) < 6)
-	    continue;
-	modules[num_modules] = malloc(strlen(str+5)+1); /* excessive */
-	strp = str+5;	/* skip past the "yasm_" */
-	i = 0;
-	/* copy the module type */
-	while (*strp != '_')
-	    modules[num_modules][i++] = *strp++;
-	modules[num_modules][i++] = *strp++; /* copy the following _ */
-	/* find the next _ */
-	while (*strp++ != '_')
-	    {}
-	/* copy it up until the next _ */
-	do {
-	    modules[num_modules][i++] = *strp++;
-	} while (*strp != '_');
-	/* terminate string */
-	modules[num_modules][i] = '\0';
-	num_modules++;
+    /* Starting with initial input Makefile, look for include <file> or
+     * YASM_MODULES += <module>.  Note this currently doesn't handle
+     * a relative starting path.
+     */
+    len = strlen(argv[2]);
+    inc = malloc(sizeof(include));
+    inc->filename = malloc(len+1);
+    strcpy(inc->filename, argv[2]);
+    STAILQ_INSERT_TAIL(&includes, inc, link);
+
+    isam = argv[2][len-2] == 'a' && argv[2][len-1] == 'm';
+
+    while (!STAILQ_EMPTY(&includes)) {
+	inc = STAILQ_FIRST(&includes);
+	STAILQ_REMOVE_HEAD(&includes, link);
+	in = fopen(inc->filename, "rt");
+	if (!in) {
+	    fprintf(stderr, "Could not open `%s'.\n", inc->filename);
+	    return EXIT_FAILURE;
+	}
+	free(inc->filename);
+	free(inc);
+
+	while (fgets(str, MAXLINE, in)) {
+	    /* Strip off any trailing whitespace */
+	    len = strlen(str);
+	    strp = &str[len-1];
+	    while (isspace(*strp)) {
+		*strp-- = '\0';
+		len--;
+	    }
+
+	    strp = str;
+
+	    /* Skip whitespace */
+	    while (isspace(*strp))
+		strp++;
+
+	    /* Skip comments */
+	    if (*strp == '#')
+		continue;
+
+	    /* If line continuation, skip to continue copy */
+	    if (linecont)
+		goto keepgoing;
+
+	    /* Check for include if original input is .am file */
+	    if (isam && strncmp(strp, "include", 7) == 0 && isspace(strp[7])) {
+		strp += 7;
+		while (isspace(*strp))
+		    strp++;
+		/* Build new include and add to end of list */
+		inc = malloc(sizeof(include));
+		inc->filename = malloc(strlen(strp)+1);
+		strcpy(inc->filename, strp);
+		STAILQ_INSERT_TAIL(&includes, inc, link);
+		continue;
+	    }
+
+	    /* Check for YASM_MODULES = or += */
+	    if (strncmp(strp, "YASM_MODULES", 12) != 0)
+		continue;
+	    strp += 12;
+	    while (isspace(*strp))
+		strp++;
+	    if (strncmp(strp, "+=", 2) != 0 && *strp != '=')
+		continue;
+	    if (*strp == '+')
+		strp++;
+	    strp++;
+	    while (isspace(*strp))
+		strp++;
+
+keepgoing:
+	    /* Check for continuation */
+	    if (str[len-1] == '\\') {
+		str[len-1] = '\0';
+		while (isspace(*strp))
+		    *strp-- = '\0';
+		linecont = 1;
+	    } else
+		linecont = 0;
+
+	    while (*strp != '\0') {
+		/* Copy module name */
+		modules[num_modules] = malloc(MAXNAME);
+		len = 0;
+		while (*strp != '\0' && !isspace(*strp))
+		    modules[num_modules][len++] = *strp++;
+		modules[num_modules][len] = '\0';
+		num_modules++;
+
+		while (isspace(*strp))
+		    strp++;
+	    }
+	}
+	fclose(in);
     }
-#else
-    num_modules = argc-2;
-    for (i=2; i<argc; i++) {
-	modules[i-2] = malloc(strlen(argv[i])+1);
-	strcpy(modules[i-2], argv[i]);
-    }
-#endif
 
     out = fopen(OUTPUT, "wt");
 

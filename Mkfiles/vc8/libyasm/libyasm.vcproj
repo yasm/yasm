@@ -22,6 +22,7 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
+			InheritedPropertySheets="..\crt_secure_no_deprecate.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -95,7 +96,7 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;..\crt_secure_no_deprecate.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -171,6 +172,7 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
+			InheritedPropertySheets="..\crt_secure_no_deprecate.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -243,7 +245,7 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;..\crt_secure_no_deprecate.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -330,10 +332,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\libyasm\bitvect.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\libyasm\bc-align.c"
 				>
 			</File>
@@ -355,6 +353,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\bc-reserve.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\bitvect.c"
 				>
 			</File>
 			<File
@@ -559,6 +561,10 @@
 				>
 			</File>
 		</Filter>
+		<File
+			RelativePath="..\..\..\libyasm\module.in"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

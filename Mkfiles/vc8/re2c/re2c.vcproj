@@ -13,6 +13,9 @@
 		/>
 	</Platforms>
 	<ToolFiles>
+		<ToolFile
+			RelativePath="..\bison.rules"
+		/>
 	</ToolFiles>
 	<Configurations>
 		<Configuration
@@ -20,6 +23,7 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
+			InheritedPropertySheets="..\crt_secure_no_deprecate.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -27,6 +31,9 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="Bison"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -101,6 +108,7 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
+			InheritedPropertySheets="..\crt_secure_no_deprecate.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -108,6 +116,9 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="Bison"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -213,6 +224,28 @@
 			<File
 				RelativePath="..\..\..\re2c-parser.h"
 				>
+			</File>
+			<File
+				RelativePath="..\..\..\tools\re2c\re2c-parser.y"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="Bison"
+						OutputStem="../../../re2c-parser"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="Bison"
+						OutputStem="../../../re2c-parser"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\tools\re2c\scanner.c"

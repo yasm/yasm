@@ -4,6 +4,7 @@
 	Version="8.00"
 	Name="genmodule"
 	ProjectGUID="{F0E8B707-00C5-4FF2-B8EF-7C39817132A0}"
+	RootNamespace="genmodule"
 	Keyword="Win32Proj"
 	>
 	<Platforms>
@@ -19,6 +20,7 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
+			InheritedPropertySheets="..\crt_secure_no_deprecate.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -100,6 +102,7 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
+			InheritedPropertySheets="..\crt_secure_no_deprecate.vsprops"
 			CharacterSet="2"
 			>
 			<Tool

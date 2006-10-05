@@ -4,8 +4,6 @@
 #define yasm__abspath(path)		yasm__abspath_win(path)
 #define yasm__combpath(from, to)	yasm__combpath_win(from, to)
 
-#define _CRT_SECURE_NO_DEPRECATE 1
-
 /* */
 /* #undef ENABLE_NLS */
 

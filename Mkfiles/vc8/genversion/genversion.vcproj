@@ -20,6 +20,7 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
+			InheritedPropertySheets="..\crt_secure_no_deprecate.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -101,6 +102,7 @@
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
+			InheritedPropertySheets="..\crt_secure_no_deprecate.vsprops"
 			CharacterSet="2"
 			>
 			<Tool

@@ -163,7 +163,7 @@ genmodule: libyasm/genmodule.c
 	$(BUILDCC) -o $@ $<
 
 module.c: libyasm/module.in genmodule
-	./genmodule libyasm/module.in $(YASM_MODULES)
+	./genmodule libyasm/module.in Mkfiles/Makefile.dj
 
 x86parse.c: modules/arch/x86/x86parse.gap gap
 	./gap modules/arch/x86/x86parse.gap $@

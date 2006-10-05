@@ -15,9 +15,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "modules", "modules\modules.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "yasm", "yasm.vcproj", "{34EB1BEB-C2D6-4A52-82B7-7ACD714A30D5}"
 	ProjectSection(ProjectDependencies) = postProject
+		{021CEB0A-F721-4F59-B349-9CEEAF244459} = {021CEB0A-F721-4F59-B349-9CEEAF244459}
 		{29FE7874-1256-4AD6-B889-68E399DC9608} = {29FE7874-1256-4AD6-B889-68E399DC9608}
 		{D715A3D4-EFAA-442E-AD8B-5B4FF64E1DD6} = {D715A3D4-EFAA-442E-AD8B-5B4FF64E1DD6}
-		{021CEB0A-F721-4F59-B349-9CEEAF244459} = {021CEB0A-F721-4F59-B349-9CEEAF244459}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "genmacro", "genmacro\genmacro.vcproj", "{225700A5-07B8-434E-AD61-555278BF6733}"
@@ -37,6 +37,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "genstring", "genstring\gens
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{825AC694-358C-4D8D-92DE-33A2691978CE}"
 	ProjectSection(SolutionItems) = preProject
+		crt_secure_no_deprecate.vsprops = crt_secure_no_deprecate.vsprops
 		readme.vc8.txt = readme.vc8.txt
 	EndProjectSection
 EndProject

@@ -13,9 +13,9 @@ the Visual Studio 2005 64-bit tools, which are not installed by default.
 2. YASM Download
 ----------------
 
-The following files are not built on VC++ and are not contained in the
-YASM subversion repository (but they are included in the nightly YASM
-snapshots):
+The following files are not built by default on VC++ and are not contained
+in the YASM subversion repository (but they are included in the nightly
+YASM snapshots):
 
     gas-bison.c
     gas-bison.h
@@ -23,6 +23,19 @@ snapshots):
     nasm-bison.h
     re2c-parser.c
     re2c-parser.h
+
+However, if you want to build these files from source, follow these step:
+  1) Install bison.  This can be done in a number of ways, the easiest is
+     probably to download and run the Win32 Bison Setup program from
+     http://gnuwin32.sourceforge.net/packages/bison.htm
+  2) In Visual Studio, go to Tools|Options,
+     Projects and Solutions|VC++ Directories, and add the directory where
+     you installed Bison to the list of directories.
+  3) For each of the .y files in the build, right click, select Properties,
+     and change the "Excluded From Build" setting to No.  These files are:
+     re2c/Source Files/re2c-parser.y
+     modules/Source Files/gas-bison.y
+     modules/Source Files/nasm-bison.y
 
 If you wish to build from the latest files in the subversion repository,
 you will need to add these files from the latest snapshot to the repository
