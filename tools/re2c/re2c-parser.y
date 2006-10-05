@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include "tools/re2c/globals.h"
 #include "tools/re2c/parse.h"
+
+/* Work around bug in Bison 2.1 */
+#define YYPARSE_PARAM	unused
+
 int yylex(void);
 void yyerror(const char*);
 
@@ -169,7 +173,7 @@ void parse(FILE *i, FILE *o){
     line_source(o, Scanner_line(in));
 
     while(Scanner_echo(in, o)){
-	yyparse();
+	yyparse(NULL);
 	if(spec)
 	    genCode(o, spec);
 	line_source(o, Scanner_line(in));
