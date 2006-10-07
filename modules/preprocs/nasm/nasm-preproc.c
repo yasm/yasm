@@ -123,7 +123,9 @@ nasm_efunc(int severity, const char *fmt, ...)
 	    break;
     }
     va_end(va);
-    yasm_errwarn_propagate(cur_errwarns, yasm_linemap_get_current(cur_lm));
+    yasm_errwarn_propagate(cur_errwarns,
+	yasm_linemap_poke(cur_lm, nasm_src_get_fname(),
+			  (unsigned long)nasm_src_get_linnum()));
 }
 
 static yasm_preproc *

@@ -382,9 +382,10 @@ static yasm_expr *expr6(void)
 	  case TOKEN_ID:
 	  case TOKEN_HERE:
 	  case TOKEN_BASE:
-	    error(ERR_NONFATAL, "%s not supported",
-		  (i == TOKEN_ID ? "symbol references" :
-		   i == TOKEN_HERE ? "`$'" : "`$$'"));
+	    error(ERR_NONFATAL,
+		  "cannot reference symbol `%s' in preprocessor",
+		  (i == TOKEN_ID ? tokval->t_charptr :
+		   i == TOKEN_HERE ? "$" : "$$"));
 	    e = yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_int(1)),
 				       0);
 	    break;

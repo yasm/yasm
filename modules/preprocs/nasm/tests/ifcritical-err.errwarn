@@ -1,1 +1,1 @@
--:4: symbol references not supported
+-:5: cannot reference symbol `teststringlen' in preprocessor

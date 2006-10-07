@@ -92,6 +92,18 @@ unsigned long yasm_linemap_goto_next(yasm_linemap *linemap);
 void yasm_linemap_set(yasm_linemap *linemap, /*@null@*/ const char *filename,
 		      unsigned long file_line, unsigned long line_inc);
 
+/** Poke a single file/line association, restoring the original physical
+ * association starting point.  Caution: increments the current virtual line
+ * twice.
+ * \param linemap	line mapping repository
+ * \param filename	physical file name (if NULL, not changed)
+ * \param file_line	physical line number
+ * \return The virtual line number of the poked association.
+ */
+unsigned long yasm_linemap_poke(yasm_linemap *linemap,
+				/*@null@*/ const char *filename,
+				unsigned long file_line);
+
 /** Look up the associated physical file and line for a virtual line.
  * \param linemap	line mapping repository
  * \param line		virtual line
