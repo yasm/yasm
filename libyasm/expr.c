@@ -834,8 +834,6 @@ yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
 	    yasm__exprentry *np;
 	    const yasm_expr *equ_expr =
 		yasm_symrec_get_equ(e->terms[i].data.sym);
-	    /*@dependent@*/ yasm_section *sect;
-	    /*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
 
 	    if (equ_expr) {
 		/* Check for circular reference */
