@@ -34,7 +34,7 @@
 #include <config.h>
 #endif
 
-#ifdef HAVE_GNU_C_LIBRARY
+#if defined(HAVE_GNU_C_LIBRARY) || defined(__MINGW32__)
 
 /* Work around glibc's non-defining of certain things when using gcc -ansi */
 # ifdef __STRICT_ANSI__
