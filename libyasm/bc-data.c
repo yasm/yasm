@@ -300,6 +300,8 @@ yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
 						  &dvo->data.raw.contents[len],
 						  1);
 		} else {
+		    if (len > 0)
+			dvo = STAILQ_NEXT(dvo, link);
 		    dvo->type = dv->type;
 		    dvo->data.val = dv->data.val;   /* structure copy */
 		    dvo->data.val.size = size*8;    /* remember size */
