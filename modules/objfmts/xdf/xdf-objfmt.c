@@ -41,8 +41,6 @@
 #define XDF_SYM_GLOBAL	2
 #define XDF_SYM_EQU	4
 
-typedef STAILQ_HEAD(xdf_reloc_head, xdf_reloc) xdf_reloc_head;
-
 typedef struct xdf_reloc {
     yasm_reloc reloc;
     /*@null@*/ yasm_symrec *base;   /* base symbol (for WRT) */
@@ -79,7 +77,6 @@ typedef struct xdf_section_data {
     unsigned long size;	    /* size of raw data (section data) in bytes */
     unsigned long relptr;   /* file ptr to relocation */
     unsigned long nreloc;   /* number of relocation entries >64k -> error */
-    /*@owned@*/ xdf_reloc_head relocs;
 } xdf_section_data;
 
 typedef struct xdf_symrec_data {
@@ -646,7 +643,6 @@ xdf_objfmt_init_new_section(yasm_objfmt_xdf *objfmt_xdf, yasm_section *sect,
     data->size = 0;
     data->relptr = 0;
     data->nreloc = 0;
-    STAILQ_INIT(&data->relocs);
     yasm_section_add_data(sect, &xdf_section_data_cb, data);
 
     sym = yasm_symtab_define_label(objfmt_xdf->symtab, sectname,
@@ -824,7 +820,6 @@ xdf_section_data_print(void *data, FILE *f, int indent_level)
     fprintf(f, "%*ssize=%ld\n", indent_level, "", xsd->size);
     fprintf(f, "%*srelptr=0x%lx\n", indent_level, "", xsd->relptr);
     fprintf(f, "%*snreloc=%ld\n", indent_level, "", xsd->nreloc);
-    fprintf(f, "%*srelocs:\n", indent_level, "");
 }
 
 static yasm_symrec *
