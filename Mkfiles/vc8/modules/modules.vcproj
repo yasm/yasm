@@ -453,6 +453,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\..\modules\objfmts\rdf\rdf-objfmt.c"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\modules\objfmts\xdf\xdf-objfmt.c"
 					>
 				</File>

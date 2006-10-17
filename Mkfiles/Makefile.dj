@@ -90,11 +90,13 @@ MODULES_OBJFMTS_OBJS= \
  modules/objfmts/elf/elf-x86-x86.o \
  modules/objfmts/elf/elf-x86-amd64.o \
  modules/objfmts/elf/elf-objfmt.o \
+ modules/objfmts/rdf/rdf-objfmt.o \
  modules/objfmts/xdf/xdf-objfmt.o
 YASM_MODULES+=objfmt_dbg
 YASM_MODULES+=objfmt_bin
 YASM_MODULES+=objfmt_coff objfmt_win32 objfmt_win64 objfmt_x64
 YASM_MODULES+=objfmt_elf objfmt_elf32 objfmt_elf64
+YASM_MODULES+=objfmt_rdf
 YASM_MODULES+=objfmt_xdf
 
 MODULES_PARSERS_OBJS= \
