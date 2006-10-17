@@ -336,7 +336,6 @@ rdf_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 
     /* Warn that gaps are converted to 0 and write out the 0's. */
     if (gap) {
-	unsigned long left;
 	yasm_warn_set(YASM_WARN_UNINIT_CONTENTS,
 		      N_("uninitialized space: zeroing"));
 	/* Write out in chunks */
@@ -362,7 +361,6 @@ rdf_objfmt_output_section_mem(yasm_section *sect, /*@null@*/ void *d)
     /*@null@*/ rdf_objfmt_output_info *info = (rdf_objfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ rdf_section_data *rsd;
     unsigned long size;
-    rdf_reloc *reloc;
 
     /* Don't output absolute sections */
     if (yasm_section_is_absolute(sect))
@@ -408,7 +406,6 @@ rdf_objfmt_output_section_reloc(yasm_section *sect, /*@null@*/ void *d)
 {
     /*@null@*/ rdf_objfmt_output_info *info = (rdf_objfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ rdf_section_data *rsd;
-    long pos;
     rdf_reloc *reloc;
 
     /* Don't output absolute sections */
@@ -506,7 +503,6 @@ rdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
     /*@dependent@*/ /*@null@*/ yasm_section *sect;
     /*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
     unsigned char *localbuf;
-    unsigned int rectype = RDFREC_GENERIC;
     rdf_symrec_data *rsymd;
 
     assert(info != NULL);
@@ -1048,7 +1044,6 @@ rdf_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
 {
     yasm_objfmt_rdf *objfmt_rdf = (yasm_objfmt_rdf *)objfmt;
     yasm_symrec *sym;
-    rdf_symrec_data *rsymd;
     unsigned long addralign = 0;
 
     sym = yasm_symtab_declare(objfmt_rdf->symtab, name, YASM_SYM_COMMON, line);
