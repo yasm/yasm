@@ -575,7 +575,6 @@ directive2:
 	">>"			{ RETURN(RIGHT_OP); }
 	"//"			{ RETURN(SIGNDIV); }
 	"%%"			{ RETURN(SIGNMOD); }
-	"$$"			{ RETURN(START_SECTION_ID); }
 	[-+|^*&/%~$():=,\[]	{ RETURN(s->tok[0]); }
 
 	/* handle ] for directives */
@@ -584,14 +583,8 @@ directive2:
 	    RETURN(s->tok[0]);
 	}
 
-	/* forced identifier */
-	"$" [a-zA-Z0-9_$#@~.?]+ {
-	    lvalp->str_val = yasm__xstrndup(TOK+1, TOKLEN-1);
-	    RETURN(ID);
-	}
-
 	/* identifier; within directive, no local label mechanism */
-	[a-zA-Z_.?][a-zA-Z0-9_$#@~.?]* {
+	[a-zA-Z_$.?][a-zA-Z0-9_$#@~.?]* {
 	    lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
 	    RETURN(ID);
 	}
