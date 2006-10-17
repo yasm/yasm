@@ -217,6 +217,12 @@ void yasm_symtab_print(yasm_symtab *symtab, FILE *f, int indent_level);
  */
 yasm_sym_vis yasm_symrec_get_visibility(const yasm_symrec *sym);
 
+/** Get the virtual line of a symbol (where it was first declared or used).
+ * \param sym	    symbol
+ * \return line	    virtual line
+ */
+unsigned long yasm_symrec_get_line(const yasm_symrec *sym);
+
 /** Get EQU value of a symbol.
  * \param sym	    symbol
  * \return EQU value, or NULL if symbol is not an EQU or is not defined.

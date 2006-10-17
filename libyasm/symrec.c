@@ -442,6 +442,12 @@ yasm_symrec_get_visibility(const yasm_symrec *sym)
     return sym->visibility;
 }
 
+unsigned long
+yasm_symrec_get_line(const yasm_symrec *sym)
+{
+    return sym->line;
+}
+
 const yasm_expr *
 yasm_symrec_get_equ(const yasm_symrec *sym)
 {
