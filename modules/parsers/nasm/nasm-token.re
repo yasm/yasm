@@ -170,6 +170,8 @@ nasm_parser_lex(YYSTYPE *lvalp, yasm_parser_nasm *parser_nasm)
     switch (parser_nasm->state) {
 	case DIRECTIVE:
 	    goto directive;
+	case DIRECTIVE2:
+	    goto directive2;
 	case LINECHG:
 	    goto linechg;
 	case LINECHG2:
@@ -337,13 +339,7 @@ scan:
 	"%%"			{ RETURN(SIGNMOD); }
 	"$$"			{ RETURN(START_SECTION_ID); }
 	[-+|^*&/%~$():=,\[]	{ RETURN(s->tok[0]); }
-
-	/* handle ] separately for directives */
-	"]" {
-	    if (parser_nasm->state == DIRECTIVE2)
-		parser_nasm->state = INITIAL;
-	    RETURN(s->tok[0]);
-	}
+	"]"			{ RETURN(s->tok[0]); }
 
 	/* special non-local ..@label and labels like ..start */
 	".." [a-zA-Z0-9_$#@~.?]+ {
@@ -353,11 +349,7 @@ scan:
 
 	/* local label (.label) */
 	"." [a-zA-Z0-9_$#@~?][a-zA-Z0-9_$#@~.?]* {
-	    /* override local labels in directive state */
-	    if (parser_nasm->state == DIRECTIVE2) {
-		lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
-		RETURN(ID);
-	    } else if (!parser_nasm->locallabel_base) {
+	    if (!parser_nasm->locallabel_base) {
 		lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
 		yasm_warn_set(YASM_WARN_GENERAL,
 			      N_("no non-local label before `%s'"),
@@ -522,6 +514,106 @@ directive:
 	    goto directive;
 	}
     */
+
+    /* inner part of directive */
+directive2:
+    SCANINIT();
+
+    /*!re2c
+	/* standard decimal integer */
+	digit+ {
+	    savech = s->tok[TOKLEN];
+	    s->tok[TOKLEN] = '\0';
+	    lvalp->intn = yasm_intnum_create_dec(TOK);
+	    s->tok[TOKLEN] = savech;
+	    RETURN(INTNUM);
+	}
+	/* 10010011b - binary number */
+
+	bindigit+ 'b' {
+	    s->tok[TOKLEN-1] = '\0'; /* strip off 'b' */
+	    lvalp->intn = yasm_intnum_create_bin(TOK);
+	    RETURN(INTNUM);
+	}
+
+	/* 777q or 777o - octal number */
+	octdigit+ [qQoO] {
+	    s->tok[TOKLEN-1] = '\0'; /* strip off 'q' or 'o' */
+	    lvalp->intn = yasm_intnum_create_oct(TOK);
+	    RETURN(INTNUM);
+	}
+
+	/* 0AAh form of hexidecimal number */
+	digit hexdigit* 'h' {
+	    s->tok[TOKLEN-1] = '\0'; /* strip off 'h' */
+	    lvalp->intn = yasm_intnum_create_hex(TOK);
+	    RETURN(INTNUM);
+	}
+
+	/* $0AA and 0xAA forms of hexidecimal number */
+	(("$" digit) | "0x") hexdigit+ {
+	    savech = s->tok[TOKLEN];
+	    s->tok[TOKLEN] = '\0';
+	    if (s->tok[1] == 'x')
+		/* skip 0 and x */
+		lvalp->intn = yasm_intnum_create_hex(TOK+2);
+	    else
+		/* don't skip 0 */
+		lvalp->intn = yasm_intnum_create_hex(TOK+1);
+	    s->tok[TOKLEN] = savech;
+	    RETURN(INTNUM);
+	}
+
+	/* string/character constant values */
+	quot {
+	    endch = s->tok[0];
+	    goto stringconst;
+	}
+
+	/* operators */
+	"<<"			{ RETURN(LEFT_OP); }
+	">>"			{ RETURN(RIGHT_OP); }
+	"//"			{ RETURN(SIGNDIV); }
+	"%%"			{ RETURN(SIGNMOD); }
+	"$$"			{ RETURN(START_SECTION_ID); }
+	[-+|^*&/%~$():=,\[]	{ RETURN(s->tok[0]); }
+
+	/* handle ] for directives */
+	"]" {
+	    parser_nasm->state = INITIAL;
+	    RETURN(s->tok[0]);
+	}
+
+	/* forced identifier */
+	"$" [a-zA-Z0-9_$#@~.?]+ {
+	    lvalp->str_val = yasm__xstrndup(TOK+1, TOKLEN-1);
+	    RETURN(ID);
+	}
+
+	/* identifier; within directive, no local label mechanism */
+	[a-zA-Z_.?][a-zA-Z0-9_$#@~.?]* {
+	    lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
+	    RETURN(ID);
+	}
+
+	";" (any \ [\n])*	{ goto directive2; }
+
+	ws+			{ goto directive2; }
+
+	"\n"			{
+	    if (parser_nasm->save_input)
+		cursor = save_line(parser_nasm, cursor);
+	    parser_nasm->state = INITIAL;
+	    RETURN(s->tok[0]);
+	}
+
+	any {
+	    yasm_warn_set(YASM_WARN_UNREC_CHAR,
+			  N_("ignoring unrecognized character `%s'"),
+			  yasm__conv_unprint(s->tok[0]));
+	    goto scan;
+	}
+     */
 
     /* string/character constant values */
 stringconst:
