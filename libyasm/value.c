@@ -431,8 +431,9 @@ yasm_value_finalize_expr(yasm_value *value, yasm_expr *e, unsigned int size)
 	return 0;
     }
 
-    yasm_value_initialize(value, yasm_expr__level_tree
-			  (e, 1, 1, 0, 0, NULL, NULL, NULL), size);
+    yasm_value_initialize(value,
+			  yasm_expr__level_tree(e, 1, 1, 0, 0, NULL, NULL),
+			  size);
 
     /* quit early if there was an issue in simplify() */
     if (yasm_error_occurred())
@@ -473,8 +474,7 @@ yasm_value_finalize_expr(yasm_value *value, yasm_expr *e, unsigned int size)
     if (value_finalize_scan(value, value->abs, 0))
 	return 1;
 
-    value->abs = yasm_expr__level_tree(value->abs, 1, 1, 0, 0, NULL, NULL,
-				       NULL);
+    value->abs = yasm_expr__level_tree(value->abs, 1, 1, 0, 0, NULL, NULL);
 
     /* Simplify 0 in abs to NULL */
     if (value->abs->op == YASM_EXPR_IDENT

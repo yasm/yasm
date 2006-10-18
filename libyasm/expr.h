@@ -139,15 +139,6 @@ int yasm_expr_is_op(const yasm_expr *e, yasm_expr_op op);
 typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
     (/*@returned@*/ /*@only@*/ yasm_expr *e, /*@null@*/ void *d);
 
-/** Linked list of expression entries.
- * \internal
- * Used internally by yasm_expr__level_tree().
- */
-typedef struct yasm__exprhead yasm__exprhead;
-#ifdef YASM_LIB_INTERNAL
-SLIST_HEAD(yasm__exprhead, yasm__exprentry);
-#endif
-
 /** Level an entire expression tree.
  * \internal
  * \param e		    expression
@@ -165,7 +156,7 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
     (/*@returned@*/ /*@only@*/ /*@null@*/ yasm_expr *e, int fold_const,
      int simplify_ident, int simplify_reg_mul, int calc_bc_dist,
      /*@null@*/ yasm_expr_xform_func expr_xform_extra,
-     /*@null@*/ void *expr_xform_extra_data, /*@null@*/ yasm__exprhead *eh);
+     /*@null@*/ void *expr_xform_extra_data);
 
 /** Simplify an expression as much as possible.  Eliminates extraneous
  * branches and simplifies integer-only subexpressions.  Simplified version
@@ -175,7 +166,7 @@ SLIST_HEAD(yasm__exprhead, yasm__exprentry);
  * \return Simplified expression.
  */
 #define yasm_expr_simplify(e, cbd) \
-    yasm_expr__level_tree(e, 1, 1, 1, cbd, NULL, NULL, NULL)
+    yasm_expr__level_tree(e, 1, 1, 1, cbd, NULL, NULL)
 
 /** Extract the segment portion of an expression containing SEG:OFF, leaving
  * the offset.

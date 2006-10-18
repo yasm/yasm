@@ -43,11 +43,10 @@ cdef extern from "libyasm/expr.h":
     cdef int yasm_expr_is_op(yasm_expr *e, yasm_expr_op op)
     ctypedef yasm_expr * (*yasm_expr_xform_func) (yasm_expr *e, void *d)
 
-    cdef struct yasm__exprhead
     cdef yasm_expr *yasm_expr__level_tree(yasm_expr *e, int fold_const,
             int simplify_ident, int simplify_reg_mul, int calc_bc_dist,
             yasm_expr_xform_func expr_xform_extra,
-            void *expr_xform_extra_data, yasm__exprhead *eh, int *error)
+            void *expr_xform_extra_data)
     cdef yasm_expr *yasm_expr_simplify(yasm_expr *e, int calc_bc_dist)
     cdef yasm_expr *yasm_expr_extract_segoff(yasm_expr **ep)
     cdef yasm_expr *yasm_expr_extract_wrt(yasm_expr **ep)

@@ -157,7 +157,7 @@ bin_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
     /* Simplify absolute portion of value, transforming symrecs */
     if (value->abs)
 	value->abs = yasm_expr__level_tree
-	    (value->abs, 1, 1, 1, 0, bin_objfmt_expr_xform, NULL, NULL);
+	    (value->abs, 1, 1, 1, 0, bin_objfmt_expr_xform, NULL);
 
     /* Output */
     switch (yasm_value_output_basic(value, buf, destsize, bc, warn,

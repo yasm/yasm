@@ -259,7 +259,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
     yasm_expr *e, *wrt;
 
     /*@-unqualifiedtrans@*/
-    *ep = yasm_expr__level_tree(*ep, 1, 1, indexreg == 0, 0, NULL, NULL, NULL);
+    *ep = yasm_expr__level_tree(*ep, 1, 1, indexreg == 0, 0, NULL, NULL);
 
     /* Check for WRT rip first */
     wrt = yasm_expr_extract_wrt(ep);
@@ -295,7 +295,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
 	case 2:
 	    /* Need to simplify again */
 	    *ep = yasm_expr__level_tree(*ep, 1, 1, indexreg == 0, 0, NULL,
-					NULL, NULL);
+					NULL);
 	    e = *ep;
 	    break;
 	default:

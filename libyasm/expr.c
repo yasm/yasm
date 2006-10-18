@@ -357,7 +357,7 @@ yasm_expr__bc_dist_subst(yasm_expr **ep, void *cbd,
     my_cbd.cbd = cbd;
     my_cbd.subst = 0;
     *ep = yasm_expr__level_tree(*ep, 1, 1, 1, 0, &expr_xform_bc_dist_subst,
-				&my_cbd, NULL);
+				&my_cbd);
     return my_cbd.subst;
 }
 
@@ -799,31 +799,23 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
 }
 /*@=mustfree@*/
 
+typedef SLIST_HEAD(yasm__exprhead, yasm__exprentry) yasm__exprhead;
 typedef struct yasm__exprentry {
     /*@reldef@*/ SLIST_ENTRY(yasm__exprentry) next;
     /*@null@*/ const yasm_expr *e;
 } yasm__exprentry;
 
-/* Level an entire expn tree, expanding equ's as we go */
-yasm_expr *
-yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
-		      int simplify_reg_mul, int calc_bc_dist,
-		      yasm_expr_xform_func expr_xform_extra,
-		      void *expr_xform_extra_data, yasm__exprhead *eh)
+static yasm_expr *
+expr_expand_equ(yasm_expr *e, yasm__exprhead *eh)
 {
     int i;
     yasm__exprhead eh_local;
     yasm__exprentry ee;
 
-    if (!e)
-	return 0;
-
     if (!eh) {
 	eh = &eh_local;
 	SLIST_INIT(eh);
     }
-
-    e = expr_xform_neg(e);
 
     ee.e = NULL;
 
@@ -853,17 +845,37 @@ yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
 	    }
 	}
 
+	/* Recurse */
 	if (e->terms[i].type == YASM_EXPR_EXPR)
-	    e->terms[i].data.expn =
-		yasm_expr__level_tree(e->terms[i].data.expn, fold_const,
-				      simplify_ident, simplify_reg_mul,
-				      calc_bc_dist, expr_xform_extra,
-				      expr_xform_extra_data, eh);
+	    e->terms[i].data.expn = expr_expand_equ(e->terms[i].data.expn, eh);
 
 	if (ee.e) {
 	    SLIST_REMOVE_HEAD(eh, next);
 	    ee.e = NULL;
 	}
+    }
+
+    return e;
+}
+
+static yasm_expr *
+expr_level_tree(yasm_expr *e, int fold_const, int simplify_ident,
+		int simplify_reg_mul, int calc_bc_dist,
+		yasm_expr_xform_func expr_xform_extra,
+		void *expr_xform_extra_data)
+{
+    int i;
+
+    e = expr_xform_neg(e);
+
+    /* traverse terms */
+    for (i=0; i<e->numterms; i++) {
+	/* Recurse */
+	if (e->terms[i].type == YASM_EXPR_EXPR)
+	    e->terms[i].data.expn =
+		expr_level_tree(e->terms[i].data.expn, fold_const,
+				simplify_ident, simplify_reg_mul, calc_bc_dist,
+				expr_xform_extra, expr_xform_extra_data);
     }
 
     /* Check for SEG of SEG:OFF, if we match, simplify to just the segment */
@@ -882,9 +894,26 @@ yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
 	    e = expr_xform_bc_dist(e);
 	if (expr_xform_extra)
 	    e = expr_xform_extra(e, expr_xform_extra_data);
-	e = yasm_expr__level_tree(e, fold_const, simplify_ident,
-				  simplify_reg_mul, 0, NULL, NULL, NULL);
+	e = expr_level_tree(e, fold_const, simplify_ident, simplify_reg_mul,
+			    0, NULL, NULL);
     }
+    return e;
+}
+
+/* Level an entire expn tree, expanding equ's as we go */
+yasm_expr *
+yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
+		      int simplify_reg_mul, int calc_bc_dist,
+		      yasm_expr_xform_func expr_xform_extra,
+		      void *expr_xform_extra_data)
+{
+    if (!e)
+	return 0;
+
+    e = expr_expand_equ(e, NULL);
+    e = expr_level_tree(e, fold_const, simplify_ident, simplify_reg_mul,
+			calc_bc_dist, expr_xform_extra, expr_xform_extra_data);
+
     return e;
 }
 
