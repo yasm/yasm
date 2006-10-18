@@ -252,7 +252,7 @@ INSN	gas	lodsl	NONE	onebyte	0x20AD		CPU_386
 INSN	-	lodsq	NONE	onebyte	0x40AD		CPU_Hammer|CPU_64
 INSN	-	movsb	NONE	onebyte	0x00A4		CPU_Any
 INSN	-	movsw	NONE	onebyte	0x10A5		CPU_Any
-INSN	-	movsd	NONE	movsd	0		CPU_Any
+INSN	-	movsd	NONE	movsd	0		CPU_386
 INSN	gas	movsl	NONE	onebyte	0x20A5		CPU_386
 INSN	-	movsq	NONE	onebyte	0x40A5		CPU_Hammer|CPU_64
 # smov alias for movs in GAS mode
@@ -924,9 +924,13 @@ CPU_FEATURE	cyrix	CPU_Cyrix
 CPU_FEATURE	amd	CPU_AMD
 CPU_FEATURE	smm	CPU_SMM
 CPU_FEATURE	prot	CPU_Prot
+CPU_FEATURE	protected	CPU_Prot
 CPU_FEATURE	undoc	CPU_Undoc
+CPU_FEATURE	undocumented	CPU_Undoc
 CPU_FEATURE	obs	CPU_Obs
+CPU_FEATURE	obsolete	CPU_Obs
 CPU_FEATURE	priv	CPU_Priv
+CPU_FEATURE	privileged	CPU_Priv
 CPU_FEATURE	svm	CPU_SVM
 CPU_FEATURE	padlock	CPU_PadLock
 CPU_FEATURE	em64t	CPU_EM64T

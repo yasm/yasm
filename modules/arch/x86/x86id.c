@@ -2221,7 +2221,7 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
     jmp->nearop.len = 0;
     for (; num_info>0 && (jmp->shortop.len == 0 || jmp->nearop.len == 0);
 	 num_info--, info++) {
-	unsigned long cpu = info->cpu | data[2];
+	unsigned long cpu = info->cpu;
 
 	if ((cpu & CPU_64) && mode_bits != 64)
 	    continue;
@@ -2229,7 +2229,7 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 	    continue;
 	cpu &= ~(CPU_64 | CPU_Not64);
 
-	if ((arch_x86->cpu_enabled & cpu) != cpu)
+	if ((data[2] & cpu) != cpu)
 	    continue;
 
 	if (info->num_operands == 0)
@@ -2369,7 +2369,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	int mismatch = 0;
 
 	/* Match CPU */
-	cpu = info->cpu | data[2];
+	cpu = info->cpu;
 
 	if ((cpu & CPU_64) && mode_bits != 64)
 	    continue;
@@ -2377,7 +2377,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	    continue;
 	cpu &= ~(CPU_64 | CPU_Not64);
 
-	if ((arch_x86->cpu_enabled & cpu) != cpu)
+	if ((data[2] & cpu) != cpu)
 	    continue;
 
 	/* Match # of operands */
@@ -3060,6 +3060,76 @@ typedef struct regtmod_parse_data {
 /* Pull in all parse data */
 #include "x86parse.c"
 
+static const char *
+cpu_find_reverse(unsigned long cpu)
+{
+    static char cpuname[200];
+
+    cpuname[0] = '\0';
+
+    if (cpu & CPU_Prot)
+	strcat(cpuname, " Protected");
+    if (cpu & CPU_Undoc)
+	strcat(cpuname, " Undocumented");
+    if (cpu & CPU_Obs)
+	strcat(cpuname, " Obsolete");
+    if (cpu & CPU_Priv)
+	strcat(cpuname, " Privileged");
+
+    if (cpu & CPU_FPU)
+	strcat(cpuname, " FPU");
+    if (cpu & CPU_MMX)
+	strcat(cpuname, " MMX");
+    if (cpu & CPU_SSE)
+	strcat(cpuname, " SSE");
+    if (cpu & CPU_SSE2)
+	strcat(cpuname, " SSE2");
+    if (cpu & CPU_SSE3)
+	strcat(cpuname, " SSE3");
+    if (cpu & CPU_3DNow)
+	strcat(cpuname, " 3DNow");
+    if (cpu & CPU_Cyrix)
+	strcat(cpuname, " Cyrix");
+    if (cpu & CPU_AMD)
+	strcat(cpuname, " AMD");
+    if (cpu & CPU_SMM)
+	strcat(cpuname, " SMM");
+    if (cpu & CPU_SVM)
+	strcat(cpuname, " SVM");
+    if (cpu & CPU_PadLock)
+	strcat(cpuname, " PadLock");
+    if (cpu & CPU_EM64T)
+	strcat(cpuname, " EM64T");
+    if (cpu & CPU_SSE4)
+	strcat(cpuname, " SSSE3");
+
+    if (cpu & CPU_186)
+	strcat(cpuname, " 186");
+    if (cpu & CPU_286)
+	strcat(cpuname, " 286");
+    if (cpu & CPU_386)
+	strcat(cpuname, " 386");
+    if (cpu & CPU_486)
+	strcat(cpuname, " 486");
+    if (cpu & CPU_586)
+	strcat(cpuname, " 586");
+    if (cpu & CPU_686)
+	strcat(cpuname, " 686");
+    if (cpu & CPU_P3)
+	strcat(cpuname, " P3");
+    if (cpu & CPU_P4)
+	strcat(cpuname, " P4");
+    if (cpu & CPU_IA64)
+	strcat(cpuname, " IA64");
+    if (cpu & CPU_K6)
+	strcat(cpuname, " K6");
+    if (cpu & CPU_Athlon)
+	strcat(cpuname, " Athlon");
+    if (cpu & CPU_Hammer)
+	strcat(cpuname, " Hammer");
+    return cpuname;
+}
+
 yasm_arch_insnprefix
 yasm_x86__parse_check_insnprefix(yasm_arch *arch, unsigned long data[4],
 				 const char *id, size_t id_len)
@@ -3106,9 +3176,17 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, unsigned long data[4],
 	    return YASM_ARCH_INSN;
 	}
 
+	cpu &= ~(CPU_64 | CPU_Not64);
+	if ((arch_x86->cpu_enabled & cpu) != cpu) {
+	    yasm_warn_set(YASM_WARN_GENERAL,
+			  N_("`%s' is an instruction in CPU%s"), id,
+			  cpu_find_reverse(cpu));
+	    return YASM_ARCH_NOTINSNPREFIX;
+	}
+
 	data[0] = (unsigned long)pdata->group;
 	data[1] = pdata->data1;
-	data[2] = cpu;
+	data[2] = arch_x86->cpu_enabled;
 	data[3] = (((unsigned long)pdata->flags)<<8) | arch_x86->mode_bits;
 	return YASM_ARCH_INSN;
     } else {
