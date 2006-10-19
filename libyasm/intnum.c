@@ -1011,30 +1011,17 @@ yasm_size_uleb128(unsigned long v)
 char *
 yasm_intnum_get_str(const yasm_intnum *intn)
 {
-    char *s, *s2;
+    unsigned char *s;
 
     switch (intn->type) {
 	case INTNUM_UL:
-	    s = yasm_xmalloc(20);
-	    sprintf(s, "0x%lx", intn->val.ul);
-	    return s;
+	    s = yasm_xmalloc(16);
+	    sprintf((char *)s, "%lu", intn->val.ul);
+	    return (char *)s;
+	    break;
 	case INTNUM_BV:
-	    if (BitVector_msb_(intn->val.bv)) {
-		/* it's negative: negate the bitvector to get positive */
-		BitVector_Negate(conv_bv, intn->val.bv);
-		s2 = (char *)BitVector_to_Hex(conv_bv);
-		s = yasm_xmalloc(strlen(s2)+4);
-		strcpy(s, "-0x");
-		strcat(s, s2);
-		yasm_xfree(s2);
-	    } else {
-		s2 = (char *)BitVector_to_Hex(intn->val.bv);
-		s = yasm_xmalloc(strlen(s2)+3);
-		strcpy(s, "0x");
-		strcat(s, s2);
-		yasm_xfree(s2);
-	    }
-	    return s;
+	    return (char *)BitVector_to_Dec(intn->val.bv);
+	    break;
     }
     /*@notreached@*/
     return NULL;
