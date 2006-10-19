@@ -149,7 +149,6 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
  *			    calculated, 0 if they should be left intact
  * \param expr_xform_extra  extra transformation function
  * \param expr_xform_extra_data	data to pass to expr_xform_extra
- * \param eh		    call with NULL (for internal use in recursion)
  * \return Leveled expression.
  */
 /*@only@*/ /*@null@*/ yasm_expr *yasm_expr__level_tree
