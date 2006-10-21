@@ -137,7 +137,7 @@
        <replaceable>format</replaceable>.  See
 
        <citerefentry>
-        <refentrytitle>yasm_objfmt</refentrytitle>
+        <refentrytitle>yasm_objfmts</refentrytitle>
         <manvolnum>7</manvolnum>
        </citerefentry>
 
@@ -162,7 +162,7 @@
        <quote>help</quote> as <replaceable>debug</replaceable>.  See
 
        <citerefentry>
-        <refentrytitle>yasm_dbgfmt</refentrytitle>
+        <refentrytitle>yasm_dbgfmts</refentrytitle>
         <manvolnum>7</manvolnum>
        </citerefentry>
 
@@ -514,11 +514,11 @@
     <manvolnum>7</manvolnum>
    </citerefentry>,
    <citerefentry>
-    <refentrytitle>yasm_dbgfmt</refentrytitle>
+    <refentrytitle>yasm_dbgfmts</refentrytitle>
     <manvolnum>7</manvolnum>
    </citerefentry>,
    <citerefentry>
-    <refentrytitle>yasm_objfmt</refentrytitle>
+    <refentrytitle>yasm_objfmts</refentrytitle>
     <manvolnum>7</manvolnum>
    </citerefentry>,
    <citerefentry>

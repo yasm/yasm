@@ -7,9 +7,9 @@
 <refentry id="yasm_arch">
 
  <refentryinfo>
-  <title>Yasm Supported Target Architectures</title>
+  <title>Yasm Supported Architectures</title>
   <date>October 2006</date>
-  <productname>YASM</productname>
+  <productname>Yasm</productname>
   <author>
    <firstname>Peter</firstname>
    <surname>Johnson</surname>

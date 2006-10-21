@@ -1,0 +1,48 @@
+.\"     Title: yasm_parsers
+.\"    Author: Peter Johnson <peter@tortall.net>
+.\" Generator: DocBook XSL Stylesheets v1.70.1 <http://docbook.sf.net/>
+.\"      Date: October 2006
+.\"    Manual: Yasm Supported Parsers
+.\"    Source: Yasm
+.\"
+.TH "YASM_PARSERS" "7" "October 2006" "Yasm" "Yasm Supported Parsers"
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.SH "NAME"
+yasm_parsers \- Yasm Supported Parsers (Assembler Syntaxes)
+.SH "SYNOPSIS"
+.HP 5
+\fByasm\fR \fB\-p\ \fR\fB\fIparser\fR\fR [\fB\-r\ \fR\fB\fIpreproc\fR\fR] \fB\fI...\fR\fR
+.SH "DESCRIPTION"
+.PP
+The standard Yasm distribution includes a number of modules for different parsers (assembler syntaxes).
+.PP
+The parser is selected on the
+\fByasm\fR(1)
+command line by use of the
+\fB\-p \fR\fB\fIparser\fR\fR
+command line option.
+.SH "NASM PARSER"
+.PP
+NASM syntax, selected with
+\fB\-p nasm\fR, is the most full\-featured syntax supported by Yasm. Yasm is nearly 100% compatible with NASM for 16\-bit and 32\-bit x86 code. Yasm additionally supports 64\-bit AMD64 code with Yasm extensions to the NASM syntax; see
+\fByasm_arch\fR(7)
+for details. NASM syntax is the Yasm default.
+.SH "GAS PARSER"
+.PP
+The GNU Assembler (GAS) is the de\-facto cross\-platform assembler for modern Unix systems, and is used as the backend for the GCC compiler. Yasm's support for GAS syntax is moderately good, although immature: not all directives are supported, and only 32\-bit x86 and AMD64 architectures are supported. There is also no support for the GAS preprocessor. Despite these limitations, Yasm's GAS syntax support is good enough to handle essentially all x86 and AMD64 GCC compiler output. The GAS parser can be selected with
+\fB\-p gas\fR.
+.SH "SEE ALSO"
+.PP
+\fByasm\fR(1),
+\fByasm_arch\fR(7)
+.SH "AUTHOR"
+.PP
+\fBPeter\fR \fBJohnson\fR <peter@tortall.net>
+.sp -1n
+.IP "" 3n
+Author.
+.SH "COPYRIGHT"
+Copyright \(co 2006 Peter Johnson
