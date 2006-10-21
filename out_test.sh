@@ -31,7 +31,7 @@ do
     fi
 
     # Run within a subshell to prevent signal messages from displaying.
-    sh -c "cat ${asm} | ./yasm $4 -o results/${o} 2>results/${e}" >/dev/null 2>/dev/null
+    sh -c "cat ${asm} | ./yasm $4 -o results/${o} - 2>results/${e}" >/dev/null 2>/dev/null
     status=$?
     if test $status -gt 128; then
 	# We should never get a coredump!

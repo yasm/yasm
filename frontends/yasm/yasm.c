@@ -263,7 +263,10 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 
-    if (in_filename && strcmp(in_filename, "-") != 0) {
+    if (!in_filename) {
+	print_error(_("No input files specified"));
+	return EXIT_FAILURE;
+    } else if (strcmp(in_filename, "-") != 0) {
 	/* Open the input file (if not standard input) */
 	in = fopen(in_filename, "rt");
 	if (!in) {
@@ -275,10 +278,8 @@ main(int argc, char *argv[])
 	    return EXIT_FAILURE;
 	}
     } else {
-	/* If no files were specified or filename was "-", read stdin */
+	/* Filename was "-", read stdin */
 	in = stdin;
-	if (!in_filename)
-	    in_filename = yasm__xstrdup("-");
     }
 
     /* Initialize intnum and floatnum */

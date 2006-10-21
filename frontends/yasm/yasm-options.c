@@ -58,6 +58,16 @@ parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts,
 	if (argv[0][0] == '-') {	/* opt */
 	    got_it = 0;
 	    if (argv[0][1] == '-') {	/* lopt */
+		if (argv[0][2] == '\0') {   /* --, end of options */
+		    /* Handle rest of args as non-options */
+		    while (--argc) {
+			argv++;
+			if (not_an_option_handler(argv[0]))
+			    errors++;
+		    }
+		    return errors;
+		}
+
 		for (i = 0; i < nopts; i++) {
 		    if (options[i].lopt &&
 			strncmp(&argv[0][2], options[i].lopt,
@@ -92,8 +102,10 @@ parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts,
 				argv[0]);
 		    warnings++;
 		}
+	    } else if (argv[0][1] == '\0') {   /* just -, is non-option */
+		if (not_an_option_handler(argv[0]))
+		    errors++;
 	    } else {		/* sopt */
-
 		for (i = 0; i < nopts; i++) {
 		    if (argv[0][1] == options[i].sopt) {
 			char *cmd = &argv[0][1];
