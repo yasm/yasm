@@ -92,10 +92,12 @@ main(int argc, char *argv[])
 	while (fgets(str, MAXLINE, in)) {
 	    /* Strip off any trailing whitespace */
 	    len = strlen(str);
-	    strp = &str[len-1];
-	    while (isspace(*strp)) {
-		*strp-- = '\0';
-		len--;
+	    if (len > 0) {
+		strp = &str[len-1];
+		while (len > 0 && isspace(*strp)) {
+		    *strp-- = '\0';
+		    len--;
+		}
 	    }
 
 	    strp = str;
@@ -141,7 +143,7 @@ main(int argc, char *argv[])
 
 keepgoing:
 	    /* Check for continuation */
-	    if (str[len-1] == '\\') {
+	    if (len > 0 && str[len-1] == '\\') {
 		str[len-1] = '\0';
 		while (isspace(*strp))
 		    *strp-- = '\0';
@@ -204,10 +206,8 @@ keepgoing:
 	    for (i=0; i<num_modules; i++) {
 		strcpy(str, modules[i]);
 		strp = str;
-		while (*strp != '\0' && *strp != '_') {
-		    len++;
+		while (*strp != '\0' && *strp != '_')
 		    strp++;
-		}
 		*strp++ = '\0';
 
 		fprintf(out, "extern yasm_%s_module yasm_%s_LTX_%s;\n",
