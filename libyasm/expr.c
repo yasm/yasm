@@ -809,50 +809,37 @@ static yasm_expr *
 expr_expand_equ(yasm_expr *e, yasm__exprhead *eh)
 {
     int i;
-    yasm__exprhead eh_local;
     yasm__exprentry ee;
-
-    if (!eh) {
-	eh = &eh_local;
-	SLIST_INIT(eh);
-    }
-
-    ee.e = NULL;
 
     /* traverse terms */
     for (i=0; i<e->numterms; i++) {
-	/* Expansion stage first: expand equ's. */
-	if (e->terms[i].type == YASM_EXPR_SYM) {
+	const yasm_expr *equ_expr;
+
+	/* Expand equ's. */
+	if (e->terms[i].type == YASM_EXPR_SYM &&
+	    (equ_expr = yasm_symrec_get_equ(e->terms[i].data.sym))) {
 	    yasm__exprentry *np;
-	    const yasm_expr *equ_expr =
-		yasm_symrec_get_equ(e->terms[i].data.sym);
 
-	    if (equ_expr) {
-		/* Check for circular reference */
-		SLIST_FOREACH(np, eh, next) {
-		    if (np->e == equ_expr) {
-			yasm_error_set(YASM_ERROR_TOO_COMPLEX,
-				       N_("circular reference detected"));
-			return e;
-		    }
+	    /* Check for circular reference */
+	    SLIST_FOREACH(np, eh, next) {
+		if (np->e == equ_expr) {
+		    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+				   N_("circular reference detected"));
+		    return e;
 		}
-
-		e->terms[i].type = YASM_EXPR_EXPR;
-		e->terms[i].data.expn = yasm_expr_copy(equ_expr);
-
-		ee.e = equ_expr;
-		SLIST_INSERT_HEAD(eh, &ee, next);
 	    }
-	}
 
-	/* Recurse */
-	if (e->terms[i].type == YASM_EXPR_EXPR)
+	    e->terms[i].type = YASM_EXPR_EXPR;
+	    e->terms[i].data.expn = yasm_expr_copy(equ_expr);
+
+	    /* Remember we saw this equ and recurse */
+	    ee.e = equ_expr;
+	    SLIST_INSERT_HEAD(eh, &ee, next);
 	    e->terms[i].data.expn = expr_expand_equ(e->terms[i].data.expn, eh);
-
-	if (ee.e) {
 	    SLIST_REMOVE_HEAD(eh, next);
-	    ee.e = NULL;
-	}
+	} else if (e->terms[i].type == YASM_EXPR_EXPR)
+	    /* Recurse */
+	    e->terms[i].data.expn = expr_expand_equ(e->terms[i].data.expn, eh);
     }
 
     return e;
@@ -907,10 +894,13 @@ yasm_expr__level_tree(yasm_expr *e, int fold_const, int simplify_ident,
 		      yasm_expr_xform_func expr_xform_extra,
 		      void *expr_xform_extra_data)
 {
+    yasm__exprhead eh;
+    SLIST_INIT(&eh);
+
     if (!e)
 	return 0;
 
-    e = expr_expand_equ(e, NULL);
+    e = expr_expand_equ(e, &eh);
     e = expr_level_tree(e, fold_const, simplify_ident, simplify_reg_mul,
 			calc_bc_dist, expr_xform_extra, expr_xform_extra_data);
 
