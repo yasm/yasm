@@ -793,10 +793,10 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     unsigned char *bufp_orig = *bufp;
 
     /* Prefixes */
-    if (insn->special_prefix != 0)
-	YASM_WRITE_8(*bufp, insn->special_prefix);
     x86_common_tobytes(&insn->common, bufp,
 		       x86_ea ? (x86_ea->ea.segreg>>8) : 0);
+    if (insn->special_prefix != 0)
+	YASM_WRITE_8(*bufp, insn->special_prefix);
     if (insn->rex != 0xff) {
 	if (insn->common.mode_bits == 64 && insn->common.opersize == 64 &&
 	    insn->def_opersize_64 != 64)
