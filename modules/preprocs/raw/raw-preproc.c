@@ -104,12 +104,6 @@ raw_preproc_get_included_file(yasm_preproc *preproc, char *buf,
 }
 
 static void
-raw_preproc_add_include_path(yasm_preproc *preproc, const char *path)
-{
-    /* no include paths */
-}
-
-static void
 raw_preproc_add_include_file(yasm_preproc *preproc, const char *filename)
 {
     /* no pre-include files */
@@ -142,7 +136,6 @@ yasm_preproc_module yasm_raw_LTX_preproc = {
     raw_preproc_destroy,
     raw_preproc_input,
     raw_preproc_get_included_file,
-    raw_preproc_add_include_path,
     raw_preproc_add_include_file,
     raw_preproc_predefine_macro,
     raw_preproc_undefine_macro,
