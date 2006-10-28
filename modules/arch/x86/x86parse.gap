@@ -802,7 +802,7 @@ INSN	-	pmvnzb	NONE	cyrixmmx    0x5A	CPU_Cyrix|CPU_MMX
 INSN	-	pmvzb	NONE	cyrixmmx    0x58	CPU_Cyrix|CPU_MMX
 INSN	-	psubsiw	NONE	cyrixmmx    0x55	CPU_Cyrix|CPU_MMX
 # Cyrix extensions
-INSN	-	rdshr	NONE	twobyte	    0x0F36	CPU_686|CPU_Cyrix|CPU_SMM
+INSN	-	rdshr	NONE	rdwrshr	    0x00	CPU_686|CPU_Cyrix|CPU_SMM
 INSN	-	rsdc	NONE	rsdc	    0		CPU_486|CPU_Cyrix|CPU_SMM
 INSN	-	rsldt	NONE	cyrixsmm    0x7B	CPU_486|CPU_Cyrix|CPU_SMM
 INSN	-	rsts	NONE	cyrixsmm    0x7D	CPU_486|CPU_Cyrix|CPU_SMM
@@ -811,7 +811,7 @@ INSN	-	svldt	NONE	cyrixsmm    0x7A	CPU_486|CPU_Cyrix|CPU_SMM
 INSN	-	svts	NONE	cyrixsmm    0x7C	CPU_486|CPU_Cyrix|CPU_SMM
 INSN	-	smint	NONE	twobyte	    0x0F38	CPU_686|CPU_Cyrix
 INSN	-	smintold NONE	twobyte	    0x0F7E	CPU_486|CPU_Cyrix|CPU_Obs
-INSN	-	wrshr	NONE	twobyte	    0x0F37	CPU_686|CPU_Cyrix|CPU_SMM
+INSN	-	wrshr	NONE	rdwrshr	    0x01	CPU_686|CPU_Cyrix|CPU_SMM
 # Obsolete/undocumented instructions
 INSN	-	fsetpm	NONE	twobyte	0xDBE4		CPU_286|CPU_FPU|CPU_Obs
 INSN	-	ibts	NONE	ibts	0		CPU_386|CPU_Undoc|CPU_Obs

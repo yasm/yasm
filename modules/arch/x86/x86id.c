@@ -2055,9 +2055,14 @@ static const x86_insn_info pmachriw_insn[] = {
 };
 
 /* Cyrix extensions */
+static const x86_insn_info rdwrshr_insn[] = {
+    { CPU_486|CPU_Cyrix|CPU_SMM, MOD_Op1Add, 0, 0, 0, 2, {0x0F, 0x36, 0}, 0, 1,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} }
+};
 static const x86_insn_info rsdc_insn[] = {
     { CPU_486|CPU_Cyrix|CPU_SMM, 0, 0, 0, 0, 2, {0x0F, 0x79, 0}, 0, 2,
-      {OPT_SegReg|OPS_16|OPA_Spare, OPT_Mem|OPS_80|OPS_Relaxed|OPA_EA, 0} }
+      {OPT_SegReg|OPS_16|OPS_Relaxed|OPA_Spare,
+       OPT_Mem|OPS_80|OPS_Relaxed|OPA_EA, 0} }
 };
 static const x86_insn_info cyrixsmm_insn[] = {
     { CPU_486|CPU_Cyrix|CPU_SMM, MOD_Op1Add, 0, 0, 0, 2, {0x0F, 0x00, 0}, 0, 1,
@@ -2065,7 +2070,8 @@ static const x86_insn_info cyrixsmm_insn[] = {
 };
 static const x86_insn_info svdc_insn[] = {
     { CPU_486|CPU_Cyrix|CPU_SMM, 0, 0, 0, 0, 2, {0x0F, 0x78, 0}, 0, 2,
-      {OPT_Mem|OPS_80|OPS_Relaxed|OPA_EA, OPT_SegReg|OPS_16|OPA_Spare, 0} }
+      {OPT_Mem|OPS_80|OPS_Relaxed|OPA_EA,
+       OPT_SegReg|OPS_16|OPS_Relaxed|OPA_Spare, 0} }
 };
 
 /* Obsolete/undocumented instructions */
