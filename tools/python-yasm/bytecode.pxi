@@ -64,7 +64,8 @@ cdef extern from "libyasm/bytecode.h":
     cdef yasm_bytecode* yasm_bc_create_reserve(yasm_expr *numitems,
             unsigned int itemsize, unsigned long line)
     cdef yasm_bytecode* yasm_bc_create_incbin(char *filename,
-            yasm_expr *start, yasm_expr *maxlen, unsigned long line)
+            yasm_expr *start, yasm_expr *maxlen, yasm_linemap *linemap,
+            unsigned long line)
     cdef yasm_bytecode* yasm_bc_create_align(yasm_expr *boundary,
             yasm_expr *fill, yasm_expr *maxskip,
             unsigned char **code_fill, unsigned long line)

@@ -204,19 +204,24 @@ exp: instr
 	$$ = yasm_bc_create_reserve($2, $1/8, cur_line);
     }
     | INCBIN string			{
-	$$ = yasm_bc_create_incbin($2.contents, NULL, NULL, cur_line);
+	$$ = yasm_bc_create_incbin($2.contents, NULL, NULL,
+				   parser_nasm->linemap, cur_line);
     }
     | INCBIN string ','			{
-	$$ = yasm_bc_create_incbin($2.contents, NULL, NULL, cur_line);
+	$$ = yasm_bc_create_incbin($2.contents, NULL, NULL,
+				   parser_nasm->linemap, cur_line);
     }
     | INCBIN string ',' expr		{
-	$$ = yasm_bc_create_incbin($2.contents, $4, NULL, cur_line);
+	$$ = yasm_bc_create_incbin($2.contents, $4, NULL,
+				   parser_nasm->linemap, cur_line);
     }
     | INCBIN string ',' expr ','	{
-	$$ = yasm_bc_create_incbin($2.contents, $4, NULL, cur_line);
+	$$ = yasm_bc_create_incbin($2.contents, $4, NULL,
+				   parser_nasm->linemap, cur_line);
     }
     | INCBIN string ',' expr ',' expr	{
-	$$ = yasm_bc_create_incbin($2.contents, $4, $6, cur_line);
+	$$ = yasm_bc_create_incbin($2.contents, $4, $6, parser_nasm->linemap,
+				   cur_line);
     }
 ;
 

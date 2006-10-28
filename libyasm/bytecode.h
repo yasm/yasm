@@ -190,17 +190,19 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
      unsigned long line);
 
 /** Create a bytecode that includes a binary file verbatim.
- * \param filename	full path to binary file (kept, do not free)
+ * \param filename	path to binary file (kept, do not free)
  * \param start		starting location in file (in bytes) to read data from
  *			(kept, do not free); may be NULL to indicate 0
  * \param maxlen	maximum number of bytes to read from the file (kept, do
  *			do not free); may be NULL to indicate no maximum
+ * \param linemap	line mapping repository
  * \param line		virtual line (from yasm_linemap) for the bytecode
  * \return Newly allocated bytecode.
  */
 /*@only@*/ yasm_bytecode *yasm_bc_create_incbin
     (/*@only@*/ char *filename, /*@only@*/ /*@null@*/ yasm_expr *start,
-     /*@only@*/ /*@null@*/ yasm_expr *maxlen, unsigned long line);
+     /*@only@*/ /*@null@*/ yasm_expr *maxlen, yasm_linemap *linemap,
+     unsigned long line);
 
 /** Create a bytecode that aligns the following bytecode to a boundary.
  * \param boundary	byte alignment (must be a power of two)

@@ -30,6 +30,8 @@
 
 #include "coretype.h"
 
+#include "linemgr.h"
+
 #include "errwarn.h"
 #include "intnum.h"
 #include "expr.h"
@@ -37,11 +39,14 @@
 
 #include "bytecode.h"
 
+#include "file.h"
+
 #include "bc-int.h"
 
 
 typedef struct bytecode_incbin {
     /*@only@*/ char *filename;		/* file to include data from */
+    const char *from;		/* filename of what contained incbin */
 
     /* starting offset to read from (NULL=0) */
     /*@only@*/ /*@null@*/ yasm_expr *start;
@@ -158,12 +163,8 @@ bc_incbin_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 	}
     }
 
-    /* FIXME: Search include path for filename.  Save full path back into
-     * filename if save is true.
-     */
-
     /* Open file and determine its length */
-    f = fopen(incbin->filename, "rb");
+    f = yasm_fopen_include(incbin->filename, incbin->from, "rb", NULL);
     if (!f) {
 	yasm_error_set(YASM_ERROR_IO,
 		       N_("`incbin': unable to open file `%s'"),
@@ -214,7 +215,7 @@ bc_incbin_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     }
 
     /* Open file */
-    f = fopen(incbin->filename, "rb");
+    f = yasm_fopen_include(incbin->filename, incbin->from, "rb", NULL);
     if (!f) {
 	yasm_error_set(YASM_ERROR_IO, N_("`incbin': unable to open file `%s'"),
 		       incbin->filename);
@@ -246,9 +247,13 @@ bc_incbin_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
 yasm_bytecode *
 yasm_bc_create_incbin(char *filename, yasm_expr *start, yasm_expr *maxlen,
-		      unsigned long line)
+		      yasm_linemap *linemap, unsigned long line)
 {
     bytecode_incbin *incbin = yasm_xmalloc(sizeof(bytecode_incbin));
+    unsigned long xline;
+
+    /* Find from filename based on line number */
+    yasm_linemap_lookup(linemap, line, &incbin->from, &xline);
 
     /*@-mustfree@*/
     incbin->filename = filename;
