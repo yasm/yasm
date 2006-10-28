@@ -66,17 +66,7 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
     parser_gas.save_last = 0;
 
     /* initialize scanner structure */
-    parser_gas.s.bot = NULL;
-    parser_gas.s.tok = NULL;
-    parser_gas.s.ptr = NULL;
-    parser_gas.s.cur = NULL;
-    parser_gas.s.pos = NULL;
-    parser_gas.s.lim = NULL;
-    parser_gas.s.top = NULL;
-    parser_gas.s.eof = NULL;
-    parser_gas.s.tchar = 0;
-    parser_gas.s.tline = 0;
-    parser_gas.s.cline = 1;
+    yasm_scanner_initialize(&parser_gas.s);
 
     parser_gas.state = INITIAL;
 
@@ -103,7 +93,7 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
 			       yasm_linemap_get_current(parser_gas.linemap)-2);
     }
 
-    gas_parser_cleanup(&parser_gas);
+    yasm_scanner_delete(&parser_gas.s);
 
     /* Free locallabel base if necessary */
     if (parser_gas.locallabel_base)

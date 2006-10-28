@@ -44,6 +44,77 @@
 
 #include "file.h"
 
+#define BSIZE	8192	    /* Fill block size */
+
+
+void
+yasm_scanner_initialize(yasm_scanner *s)
+{
+    s->bot = NULL;
+    s->tok = NULL;
+    s->ptr = NULL;
+    s->cur = NULL;
+    s->pos = NULL;
+    s->lim = NULL;
+    s->top = NULL;
+    s->eof = NULL;
+    s->tchar = 0;
+    s->tline = 0;
+    s->cline = 1;
+}
+
+void
+yasm_scanner_delete(yasm_scanner *s)
+{
+    if (s->bot) {
+	yasm_xfree(s->bot);
+	s->bot = NULL;
+    }
+}
+
+int
+yasm_fill_helper(yasm_scanner *s, unsigned char **cursor,
+		 size_t (*input_func) (void *d, unsigned char *buf,
+				       size_t max),
+		 void *input_func_data)
+{
+    size_t cnt;
+    int first = 0;
+
+    if (s->eof)
+	return 0;
+
+    cnt = s->tok - s->bot;
+    if (cnt > 0) {
+	memmove(s->bot, s->tok, (size_t)(s->lim - s->tok));
+	s->tok = s->bot;
+	s->ptr -= cnt;
+	*cursor -= cnt;
+	s->pos -= cnt;
+	s->lim -= cnt;
+    }
+    if (!s->bot)
+	first = 1;
+    if ((s->top - s->lim) < BSIZE) {
+	unsigned char *buf = yasm_xmalloc((size_t)(s->lim - s->bot) + BSIZE);
+	memcpy(buf, s->tok, (size_t)(s->lim - s->tok));
+	s->tok = buf;
+	s->ptr = &buf[s->ptr - s->bot];
+	*cursor = &buf[*cursor - s->bot];
+	s->pos = &buf[s->pos - s->bot];
+	s->lim = &buf[s->lim - s->bot];
+	s->top = &s->lim[BSIZE];
+	if (s->bot)
+	    yasm_xfree(s->bot);
+	s->bot = buf;
+    }
+    if ((cnt = input_func(input_func_data, s->lim, BSIZE)) == 0) {
+	s->eof = &s->lim[cnt];
+	*s->eof++ = '\n';
+    }
+    s->lim += cnt;
+    return first;
+}
 
 size_t
 yasm__splitpath_unix(const char *path, /*@out@*/ const char **tail)

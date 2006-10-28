@@ -63,17 +63,7 @@ nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
     parser_nasm.save_last = 0;
 
     /* initialize scanner structure */
-    parser_nasm.s.bot = NULL;
-    parser_nasm.s.tok = NULL;
-    parser_nasm.s.ptr = NULL;
-    parser_nasm.s.cur = NULL;
-    parser_nasm.s.pos = NULL;
-    parser_nasm.s.lim = NULL;
-    parser_nasm.s.top = NULL;
-    parser_nasm.s.eof = NULL;
-    parser_nasm.s.tchar = 0;
-    parser_nasm.s.tline = 0;
-    parser_nasm.s.cline = 1;
+    yasm_scanner_initialize(&parser_nasm.s);
 
     parser_nasm.state = INITIAL;
 
@@ -82,7 +72,7 @@ nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
 
     nasm_parser_parse(&parser_nasm);
 
-    nasm_parser_cleanup(&parser_nasm);
+    yasm_scanner_delete(&parser_nasm.s);
 
     /* Free locallabel base if necessary */
     if (parser_nasm.locallabel_base)

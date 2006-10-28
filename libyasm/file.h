@@ -34,6 +34,36 @@
 #ifndef YASM_FILE_H
 #define YASM_FILE_H
 
+/** Re2c scanner state. */
+typedef struct yasm_scanner {
+    unsigned char *bot, *tok, *ptr, *cur, *pos, *lim, *top, *eof;
+    unsigned int tchar, tline, cline;
+} yasm_scanner;
+
+/** Initialize scanner state.
+ * \param scanner   Re2c scanner state
+ */
+void yasm_scanner_initialize(yasm_scanner *scanner);
+
+/** Frees any memory used by scanner state; does not free state itself.
+ * \param scanner   Re2c scanner state
+ */
+void yasm_scanner_delete(yasm_scanner *scanner);
+
+/** Fill a scanner state structure with data coming from an input function.
+ * \param scanner	Re2c scanner state
+ * \param cursor	Re2c scan cursor
+ * \param input_func	Input function to read data; takes buffer and maximum
+ *			number of bytes, returns number of bytes read.
+ * \param input_func_data   Data to pass as the first parameter to input_func
+ * \return 1 if this was the first time this function was called on this
+ *	   scanner state, 0 otherwise.
+ */
+int yasm_fill_helper
+    (yasm_scanner *scanner, unsigned char **cursor,
+     size_t (*input_func) (void *d, unsigned char *buf, size_t max),
+     void *input_func_data);
+
 /** Split a UNIX pathname into head (directory) and tail (base filename)
  * portions.
  * \internal

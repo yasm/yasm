@@ -30,10 +30,6 @@
 #include "nasm-bison.h"
 
 #define YYCTYPE		unsigned char
-typedef struct Scanner {
-    YYCTYPE		*bot, *tok, *ptr, *cur, *pos, *lim, *top, *eof;
-    unsigned int	tchar, tline, cline;
-} Scanner;
 
 #define MAX_SAVED_LINE_LEN  80
 
@@ -64,7 +60,7 @@ typedef struct yasm_parser_nasm {
     YYCTYPE save_line[2][MAX_SAVED_LINE_LEN];
     int save_last;
 
-    Scanner s;
+    yasm_scanner s;
     enum {
 	INITIAL,
 	DIRECTIVE,

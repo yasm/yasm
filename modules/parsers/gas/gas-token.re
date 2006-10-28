@@ -131,10 +131,16 @@ rept_input(yasm_parser_gas *parser_gas, /*@out@*/ YYCTYPE *buf,
     return (max_size-numleft);
 }
 
+static size_t
+fill_input(void *d, unsigned char *buf, size_t max)
+{
+    return yasm_preproc_input((yasm_preproc *)d, (char *)buf, max);
+}
+
 static YYCTYPE *
 fill(yasm_parser_gas *parser_gas, YYCTYPE *cursor)
 {
-    Scanner *s = &parser_gas->s;
+    yasm_scanner *s = &parser_gas->s;
     int first = 0;
     if(!s->eof){
 	size_t cnt = s->tok - s->bot;
@@ -186,7 +192,7 @@ fill(yasm_parser_gas *parser_gas, YYCTYPE *cursor)
 static YYCTYPE *
 save_line(yasm_parser_gas *parser_gas, YYCTYPE *cursor)
 {
-    Scanner *s = &parser_gas->s;
+    yasm_scanner *s = &parser_gas->s;
     int i = 0;
     YYCTYPE *saveline;
 
@@ -202,13 +208,6 @@ save_line(yasm_parser_gas *parser_gas, YYCTYPE *cursor)
     return cursor;
 }
 
-void
-gas_parser_cleanup(yasm_parser_gas *parser_gas)
-{
-    if (parser_gas->s.bot)
-	yasm_xfree(parser_gas->s.bot);
-}
-
 /* starting size of string buffer */
 #define STRBUF_ALLOC_SIZE	128
 
@@ -219,8 +218,8 @@ static YYCTYPE *strbuf = NULL;
 static size_t strbuf_size = 0;
 
 static void
-strbuf_append(size_t count, YYCTYPE *cursor, Scanner *s, unsigned long line,
-	      int ch)
+strbuf_append(size_t count, YYCTYPE *cursor, yasm_scanner *s,
+	      unsigned long line, int ch)
 {
     if (cursor == s->eof)
 	yasm_error_set(YASM_ERROR_SYNTAX,
@@ -249,7 +248,7 @@ int
 gas_parser_lex(YYSTYPE *lvalp, yasm_parser_gas *parser_gas)
 {
     /*@null@*/ gas_rept *rept = parser_gas->rept;
-    Scanner *s = &parser_gas->s;
+    yasm_scanner *s = &parser_gas->s;
     YYCTYPE *cursor = s->cur;
     size_t count;
     YYCTYPE savech;

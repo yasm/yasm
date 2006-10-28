@@ -41,7 +41,7 @@ RCSID("$Id$");
 #define YYCURSOR	cursor
 #define YYLIMIT		(s->lim)
 #define YYMARKER	(s->ptr)
-#define YYFILL(n)	{cursor = fill(parser_nasm, cursor);}
+#define YYFILL(n)	{fill(parser_nasm, &cursor);}
 
 #define RETURN(i)	{s->cur = cursor; return i;}
 
@@ -55,59 +55,33 @@ RCSID("$Id$");
 #define TOKLEN		(size_t)(cursor-s->tok)
 
 
-static YYCTYPE *
-fill(yasm_parser_nasm *parser_nasm, YYCTYPE *cursor)
+static size_t
+fill_input(void *d, unsigned char *buf, size_t max)
 {
-    Scanner *s = &parser_nasm->s;
-    int first = 0;
-    if(!s->eof){
-	size_t cnt = s->tok - s->bot;
-	if(cnt){
-	    memmove(s->bot, s->tok, (size_t)(s->lim - s->tok));
-	    s->tok = s->bot;
-	    s->ptr -= cnt;
-	    cursor -= cnt;
-	    s->pos -= cnt;
-	    s->lim -= cnt;
-	}
-	if (!s->bot)
-	    first = 1;
-	if((s->top - s->lim) < BSIZE){
-	    YYCTYPE *buf = yasm_xmalloc((size_t)(s->lim - s->bot) + BSIZE);
-	    memcpy(buf, s->tok, (size_t)(s->lim - s->tok));
-	    s->tok = buf;
-	    s->ptr = &buf[s->ptr - s->bot];
-	    cursor = &buf[cursor - s->bot];
-	    s->pos = &buf[s->pos - s->bot];
-	    s->lim = &buf[s->lim - s->bot];
-	    s->top = &s->lim[BSIZE];
-	    if (s->bot)
-		yasm_xfree(s->bot);
-	    s->bot = buf;
-	}
-	if((cnt = yasm_preproc_input(parser_nasm->preproc, (char *)s->lim,
-				     BSIZE)) == 0) {
-	    s->eof = &s->lim[cnt]; *s->eof++ = '\n';
-	}
-	s->lim += cnt;
-	if (first && parser_nasm->save_input) {
-	    int i;
-	    YYCTYPE *saveline;
-	    parser_nasm->save_last ^= 1;
-	    saveline = parser_nasm->save_line[parser_nasm->save_last];
-	    /* save next line into cur_line */
-	    for (i=0; i<79 && &s->tok[i] < s->lim && s->tok[i] != '\n'; i++)
-		saveline[i] = s->tok[i];
-	    saveline[i] = '\0';
-	}
+    return yasm_preproc_input((yasm_preproc *)d, (char *)buf, max);
+}
+
+static void
+fill(yasm_parser_nasm *parser_nasm, YYCTYPE **cursor)
+{
+    yasm_scanner *s = &parser_nasm->s;
+    if (yasm_fill_helper(s, cursor, fill_input, parser_nasm->preproc)
+	&& parser_nasm->save_input) {
+	int i;
+	YYCTYPE *saveline;
+	parser_nasm->save_last ^= 1;
+	saveline = parser_nasm->save_line[parser_nasm->save_last];
+	/* save next line into cur_line */
+	for (i=0; i<79 && &s->tok[i] < s->lim && s->tok[i] != '\n'; i++)
+	    saveline[i] = s->tok[i];
+	saveline[i] = '\0';
     }
-    return cursor;
 }
 
 static YYCTYPE *
 save_line(yasm_parser_nasm *parser_nasm, YYCTYPE *cursor)
 {
-    Scanner *s = &parser_nasm->s;
+    yasm_scanner *s = &parser_nasm->s;
     int i = 0;
     YYCTYPE *saveline;
 
@@ -121,13 +95,6 @@ save_line(yasm_parser_nasm *parser_nasm, YYCTYPE *cursor)
 	saveline[i] = cursor[i];
     saveline[i] = '\0';
     return cursor;
-}
-
-void
-nasm_parser_cleanup(yasm_parser_nasm *parser_nasm)
-{
-    if (parser_nasm->s.bot)
-	yasm_xfree(parser_nasm->s.bot);
 }
 
 /* starting size of string buffer */
@@ -156,7 +123,7 @@ static int linechg_numcount;
 int
 nasm_parser_lex(YYSTYPE *lvalp, yasm_parser_nasm *parser_nasm)
 {
-    Scanner *s = &parser_nasm->s;
+    yasm_scanner *s = &parser_nasm->s;
     YYCTYPE *cursor = s->cur;
     YYCTYPE endch;
     size_t count, len;
