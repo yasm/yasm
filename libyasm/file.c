@@ -422,7 +422,10 @@ yasm_fopen_include(const char *iname, const char *from, const char *mode,
 	combine = yasm__combpath(from, iname);
 	f = fopen(combine, mode);
 	if (f) {
-	    *oname = combine;
+	    if (oname)
+		*oname = combine;
+	    else
+		yasm_xfree(combine);
 	    return f;
 	}
 	yasm_xfree(combine);
@@ -432,12 +435,17 @@ yasm_fopen_include(const char *iname, const char *from, const char *mode,
 	combine = yasm__combpath(np->path, iname);
 	f = fopen(combine, mode);
 	if (f) {
-	    *oname = combine;
+	    if (oname)
+		*oname = combine;
+	    else
+		yasm_xfree(combine);
 	    return f;
 	}
 	yasm_xfree(combine);
     }
 
+    if (oname)
+	*oname = NULL;
     return NULL;
 }
 

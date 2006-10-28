@@ -182,12 +182,13 @@ char *yasm__combpath_win(const char *from, const char *to);
  * \param iname	    file to include
  * \param from	    file doing the including
  * \param mode	    fopen mode string
- * \param oname	    full pathname of included file (may be relative)
+ * \param oname	    full pathname of included file (may be relative). NULL
+ *		    may be passed if this is unwanted.
  * \return fopen'ed include file, or NULL if not found.
  */
-/*@null@*/ FILE *yasm_fopen_include(const char *iname, const char *from,
-				    const char *mode,
-				    /*@out@*/ /*@only@*/ char **oname);
+/*@null@*/ FILE *yasm_fopen_include
+    (const char *iname, const char *from, const char *mode,
+     /*@null@*/ /*@out@*/ /*@only@*/ char **oname);
 
 /** Delete any stored include paths added by yasm_add_include_path().
  */
