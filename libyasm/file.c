@@ -468,7 +468,16 @@ void
 yasm_add_include_path(const char *path)
 {
     incpath *np = yasm_xmalloc(sizeof(incpath));
-    np->path = yasm__xstrdup(path);
+    size_t len = strlen(path);
+
+    np->path = yasm_xmalloc(len+2);
+    memcpy(np->path, path, len+1);
+    /* Add trailing slash if it is missing */
+    if (path[len-1] != '\\' && path[len-1] != '/') {
+	np->path[len] = '/';
+	np->path[len+1] = '\0';
+    }
+
     STAILQ_INSERT_TAIL(&incpaths, np, link);
 }
 
