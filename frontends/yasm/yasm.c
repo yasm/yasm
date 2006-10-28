@@ -94,6 +94,7 @@ static int opt_objfile_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_machine_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int preproc_only_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_include_option(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_preproc_option(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_ewmsg_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_makedep_handler(char *cmd, /*@null@*/ char *param, int extra);
@@ -159,15 +160,15 @@ static opt_option options[] =
       N_("generate Makefile dependencies on stdout"), NULL },
     { 'e', "preproc-only", 0, preproc_only_handler, 0,
       N_("preprocess only (writes output to stdout by default)"), NULL },
-    { 'i', NULL, 1, opt_preproc_option, 0,
+    { 'i', NULL, 1, opt_include_option, 0,
       N_("add include path"), N_("path") },
-    { 'I', NULL, 1, opt_preproc_option, 0,
+    { 'I', NULL, 1, opt_include_option, 0,
       N_("add include path"), N_("path") },
-    { 'P', NULL, 1, opt_preproc_option, 1,
+    { 'P', NULL, 1, opt_preproc_option, 0,
       N_("pre-include file"), N_("filename") },
-    { 'D', NULL, 1, opt_preproc_option, 2,
+    { 'D', NULL, 1, opt_preproc_option, 1,
       N_("pre-define a macro, optionally to value"), N_("macro[=value]") },
-    { 'U', NULL, 1, opt_preproc_option, 3,
+    { 'U', NULL, 1, opt_preproc_option, 2,
       N_("undefine a macro"), N_("macro") },
     { 'X', NULL, 1, opt_ewmsg_handler, 0,
       N_("select error/warning message style (`gnu' or `vc')"), N_("style") },
@@ -1009,6 +1010,13 @@ preproc_only_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
 }
 
 static int
+opt_include_option(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
+{
+    yasm_add_include_path(param);
+    return 0;
+}
+
+static int
 opt_preproc_option(/*@unused@*/ char *cmd, char *param, int extra)
 {
     constcharparam *cp;
@@ -1066,14 +1074,13 @@ apply_preproc_saved_options()
 {
     constcharparam *cp, *cpnext;
 
-    void (*funcs[4])(yasm_preproc *, const char *);
-    funcs[0] = cur_preproc_module->add_include_path;
-    funcs[1] = cur_preproc_module->add_include_file;
-    funcs[2] = cur_preproc_module->predefine_macro;
-    funcs[3] = cur_preproc_module->undefine_macro;
+    void (*funcs[3])(yasm_preproc *, const char *);
+    funcs[0] = cur_preproc_module->add_include_file;
+    funcs[1] = cur_preproc_module->predefine_macro;
+    funcs[2] = cur_preproc_module->undefine_macro;
 
     STAILQ_FOREACH(cp, &preproc_options, link) {
-	if (0 <= cp->id && cp->id < 4 && funcs[cp->id])
+	if (0 <= cp->id && cp->id < 3 && funcs[cp->id])
 	    funcs[cp->id](cur_preproc, cp->param);
     }
 

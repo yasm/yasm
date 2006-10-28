@@ -85,11 +85,6 @@ typedef struct yasm_preproc_module {
     size_t (*get_included_file) (yasm_preproc *preproc, /*@out@*/ char *buf,
                                  size_t max_size);
 
-    /** Module-level implementation of yasm_preproc_add_include_path().
-     * Call yasm_preproc_add_include_path() instead of calling this function.
-     */
-    void (*add_include_path) (yasm_preproc *preproc, const char *path);
-
     /** Module-level implementation of yasm_preproc_add_include_file().
      * Call yasm_preproc_add_include_file() instead of calling this function.
      */
@@ -150,12 +145,6 @@ size_t yasm_preproc_input(yasm_preproc *preproc, /*@out@*/ char *buf,
 size_t yasm_preproc_get_included_file(yasm_preproc *preproc,
 				      /*@out@*/ char *buf, size_t max_size);
 
-/** Add a directory to the include search path.
- * \param preproc	preprocessor
- * \param path		pathname
- */
-void yasm_preproc_add_include_path(yasm_preproc *preproc, const char *path);
-
 /** Pre-include a file.
  * \param preproc	preprocessor
  * \param filename	filename
@@ -196,8 +185,6 @@ void yasm_preproc_define_builtin(yasm_preproc *preproc,
     ((yasm_preproc_base *)preproc)->module->input(preproc, buf, max_size)
 #define yasm_preproc_get_included_file(preproc, buf, max_size) \
     ((yasm_preproc_base *)preproc)->module->get_included_file(preproc, buf, max_size)
-#define yasm_preproc_add_include_path(preproc, path) \
-    ((yasm_preproc_base *)preproc)->module->add_include_path(preproc, path)
 #define yasm_preproc_add_include_file(preproc, filename) \
     ((yasm_preproc_base *)preproc)->module->add_include_file(preproc, filename)
 #define yasm_preproc_predefine_macro(preproc, macronameval) \

@@ -267,12 +267,6 @@ nasm_preproc_get_included_file(yasm_preproc *preproc, /*@out@*/ char *buf,
 }
 
 static void
-nasm_preproc_add_include_path(yasm_preproc *preproc, const char *path)
-{
-    pp_include_path(path);
-}
-
-static void
 nasm_preproc_add_include_file(yasm_preproc *preproc, const char *filename)
 {
     pp_pre_include(filename);
@@ -310,7 +304,6 @@ yasm_preproc_module yasm_nasm_LTX_preproc = {
     nasm_preproc_destroy,
     nasm_preproc_input,
     nasm_preproc_get_included_file,
-    nasm_preproc_add_include_path,
     nasm_preproc_add_include_file,
     nasm_preproc_predefine_macro,
     nasm_preproc_undefine_macro,

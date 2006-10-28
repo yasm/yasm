@@ -339,8 +339,6 @@ static int LocalOffset = 4;
 
 static Context *cstk;
 static Include *istk;
-static size_t num_ipaths = 0;
-static char **ipaths = NULL;
 
 static FILE *first_fp = NULL;
 
@@ -1293,8 +1291,7 @@ inc_fopen(char *file, char **newname)
     FILE *fp;
     char *combine = NULL;
 
-    fp = yasm__fopen_include(file, nasm_src_get_fname(), (const char **)ipaths,
-			     "r", &combine);
+    fp = yasm_fopen_include(file, nasm_src_get_fname(), "r", &combine);
     if (!fp)
 	error(ERR_FATAL, "unable to open include file `%s'", file);
     nasm_preproc_add_dep(combine);
@@ -4453,28 +4450,6 @@ pp_cleanup(int pass_)
 		delete_Blocks();
 	}
 }
-
-static void
-backslash(char *s)
-{
-    int pos = strlen(s);
-    if (s[pos - 1] != '\\' && s[pos - 1] != '/')
-    {
-	s[pos] = '/';
-	s[pos + 1] = '\0';
-    }
-}
-
-void
-pp_include_path(const char *path)
-{
-    num_ipaths++;
-    ipaths = yasm_xrealloc(ipaths, (num_ipaths+1)*sizeof(char *));
-    ipaths[num_ipaths-1] = yasm_xmalloc(strlen(path)+2);
-    strcpy(ipaths[num_ipaths-1], path);
-    backslash(ipaths[num_ipaths-1]);
-    ipaths[num_ipaths] = NULL;
-} 
 
 void
 pp_pre_include(const char *fname)

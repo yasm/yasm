@@ -402,30 +402,66 @@ yasm__combpath_win(const char *from, const char *to)
     return out;
 }
 
+typedef struct incpath {
+    STAILQ_ENTRY(incpath) link;
+    /*@owned@*/ char *path;
+} incpath;
+
+STAILQ_HEAD(, incpath) incpaths = STAILQ_HEAD_INITIALIZER(incpaths);
+
 FILE *
-yasm__fopen_include(const char *iname, const char *from, const char **paths,
-		    const char *mode, char **oname)
+yasm_fopen_include(const char *iname, const char *from, const char *mode,
+		   char **oname)
 {
     FILE *f;
     char *combine;
-    const char *path;
+    incpath *np;
 
     /* Try directly relative to from first, then each of the include paths */
-    path = from;
-    while (path) {
-	combine = yasm__combpath(path, iname);
+    if (from) {
+	combine = yasm__combpath(from, iname);
 	f = fopen(combine, mode);
 	if (f) {
 	    *oname = combine;
 	    return f;
 	}
 	yasm_xfree(combine);
-	if (!paths)
-	    break;
-	path = *paths++;
+    }
+
+    STAILQ_FOREACH(np, &incpaths, link) {
+	combine = yasm__combpath(np->path, iname);
+	f = fopen(combine, mode);
+	if (f) {
+	    *oname = combine;
+	    return f;
+	}
+	yasm_xfree(combine);
     }
 
     return NULL;
+}
+
+void
+yasm_delete_include_paths(void)
+{
+    incpath *n1, *n2;
+
+    n1 = STAILQ_FIRST(&incpaths);
+    while (n1) {
+	n2 = STAILQ_NEXT(n1, link);
+	yasm_xfree(n1->path);
+	yasm_xfree(n1);
+	n1 = n2;
+    }
+    STAILQ_INIT(&incpaths);
+}
+
+void
+yasm_add_include_path(const char *path)
+{
+    incpath *np = yasm_xmalloc(sizeof(incpath));
+    np->path = yasm__xstrdup(path);
+    STAILQ_INSERT_TAIL(&incpaths, np, link);
 }
 
 size_t

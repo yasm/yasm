@@ -9,7 +9,6 @@
 #ifndef YASM_NASM_PREPROC_H
 #define YASM_NASM_PREPROC_H
 
-void pp_include_path (const char *);
 void pp_pre_include (const char *);
 void pp_pre_define (char *);
 void pp_pre_undefine (char *);

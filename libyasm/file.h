@@ -170,28 +170,36 @@ char *yasm__combpath_win(const char *from, const char *to);
 
 /** Try to find and open an include file, searching through include paths.
  * First iname is looked for relative to the directory containing "from", then
- * it's looked for relative to each of the paths.
+ * it's looked for relative to each of the include paths.
  *
- * All pathnames may be either absolute or relative; from, oname, and paths,
- * if relative, are relative from the current working directory.
+ * All pathnames may be either absolute or relative; from, oname, and
+ * include paths, if relative, are relative from the current working directory.
  *
  * First match wins; the full pathname (newly allocated) to the opened file
  * is saved into oname, and the fopen'ed FILE * is returned.  If not found,
  * NULL is returned.
  *
- * \internal
  * \param iname	    file to include
  * \param from	    file doing the including
- * \param paths	    NULL-terminated array of paths to search (relative to from)
- *                  may be NULL if no extra paths
  * \param mode	    fopen mode string
  * \param oname	    full pathname of included file (may be relative)
  * \return fopen'ed include file, or NULL if not found.
  */
-/*@null@*/ FILE *yasm__fopen_include(const char *iname, const char *from,
-				     /*@null@*/ const char **paths,
-				     const char *mode,
-				     /*@out@*/ /*@only@*/ char **oname);
+/*@null@*/ FILE *yasm_fopen_include(const char *iname, const char *from,
+				    const char *mode,
+				    /*@out@*/ /*@only@*/ char **oname);
+
+/** Delete any stored include paths added by yasm_add_include_path().
+ */
+void yasm_delete_include_paths(void);
+
+/** Add an include path for use by yasm_fopen_include().
+ * If path is relative, it is treated by yasm_fopen_include() as relative to
+ * the current working directory.
+ *
+ * \param path	    path to add
+ */
+void yasm_add_include_path(const char *path);
 
 /** Write an 8-bit value to a buffer, incrementing buffer pointer.
  * \note Only works properly if ptr is an (unsigned char *).
