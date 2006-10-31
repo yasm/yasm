@@ -196,19 +196,19 @@ yasm_intnum_create_charconst_nasm(const char *str)
 
     switch (len) {
 	case 4:
-	    intn->val.ul |= (unsigned long)str[3];
+	    intn->val.ul |= ((unsigned long)str[3]) & 0xff;
 	    intn->val.ul <<= 8;
 	    /*@fallthrough@*/
 	case 3:
-	    intn->val.ul |= (unsigned long)str[2];
+	    intn->val.ul |= ((unsigned long)str[2]) & 0xff;
 	    intn->val.ul <<= 8;
 	    /*@fallthrough@*/
 	case 2:
-	    intn->val.ul |= (unsigned long)str[1];
+	    intn->val.ul |= ((unsigned long)str[1]) & 0xff;
 	    intn->val.ul <<= 8;
 	    /*@fallthrough@*/
 	case 1:
-	    intn->val.ul |= (unsigned long)str[0];
+	    intn->val.ul |= ((unsigned long)str[0]) & 0xff;
 	case 0:
 	    break;
 	default:
