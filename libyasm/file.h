@@ -36,8 +36,13 @@
 
 /** Re2c scanner state. */
 typedef struct yasm_scanner {
-    unsigned char *bot, *tok, *ptr, *cur, *pos, *lim, *top, *eof;
-    unsigned int tchar, tline, cline;
+    unsigned char *bot;	    /**< Bottom of scan buffer */
+    unsigned char *tok;	    /**< Start of token */
+    unsigned char *ptr;	    /**< Scan marker */
+    unsigned char *cur;	    /**< Cursor (1 past end of token) */
+    unsigned char *lim;	    /**< Limit of good data */
+    unsigned char *top;	    /**< Top of scan buffer */
+    unsigned char *eof;	    /**< End of file */
 } yasm_scanner;
 
 /** Initialize scanner state.

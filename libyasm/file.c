@@ -54,13 +54,9 @@ yasm_scanner_initialize(yasm_scanner *s)
     s->tok = NULL;
     s->ptr = NULL;
     s->cur = NULL;
-    s->pos = NULL;
     s->lim = NULL;
     s->top = NULL;
     s->eof = NULL;
-    s->tchar = 0;
-    s->tline = 0;
-    s->cline = 1;
 }
 
 void
@@ -90,7 +86,6 @@ yasm_fill_helper(yasm_scanner *s, unsigned char **cursor,
 	s->tok = s->bot;
 	s->ptr -= cnt;
 	*cursor -= cnt;
-	s->pos -= cnt;
 	s->lim -= cnt;
     }
     if (!s->bot)
@@ -101,7 +96,6 @@ yasm_fill_helper(yasm_scanner *s, unsigned char **cursor,
 	s->tok = buf;
 	s->ptr = &buf[s->ptr - s->bot];
 	*cursor = &buf[*cursor - s->bot];
-	s->pos = &buf[s->pos - s->bot];
 	s->lim = &buf[s->lim - s->bot];
 	s->top = &s->lim[BSIZE];
 	if (s->bot)

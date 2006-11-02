@@ -45,11 +45,7 @@ RCSID("$Id$");
 
 #define RETURN(i)	{s->cur = cursor; return i;}
 
-#define SCANINIT()	{ \
-	s->tchar = cursor - s->pos; \
-	s->tline = s->cline; \
-	s->tok = cursor; \
-    }
+#define SCANINIT()	{s->tok = cursor;}
 
 #define TOK		((char *)s->tok)
 #define TOKLEN		(size_t)(cursor-s->tok)
