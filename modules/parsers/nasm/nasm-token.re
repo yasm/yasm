@@ -294,6 +294,7 @@ scan:
 	'wrt'		{ RETURN(WRT); }
 
 	'nosplit'	{ RETURN(NOSPLIT); }
+	'strict'	{ RETURN(STRICT); }
 
 	/* operators */
 	"<<"			{ RETURN(LEFT_OP); }

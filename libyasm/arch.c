@@ -48,6 +48,7 @@ yasm_operand_create_reg(unsigned long reg)
     retval->targetmod = 0;
     retval->size = 0;
     retval->deref = 0;
+    retval->strict = 0;
 
     return retval;
 }
@@ -62,6 +63,7 @@ yasm_operand_create_segreg(unsigned long segreg)
     retval->targetmod = 0;
     retval->size = 0;
     retval->deref = 0;
+    retval->strict = 0;
 
     return retval;
 }
@@ -76,6 +78,7 @@ yasm_operand_create_mem(/*@only@*/ yasm_effaddr *ea)
     retval->targetmod = 0;
     retval->size = 0;
     retval->deref = 0;
+    retval->strict = 0;
 
     return retval;
 }
@@ -97,6 +100,7 @@ yasm_operand_create_imm(/*@only@*/ yasm_expr *val)
 	retval->targetmod = 0;
 	retval->size = 0;
 	retval->deref = 0;
+	retval->strict = 0;
     }
 
     return retval;
@@ -129,6 +133,8 @@ yasm_operand_print(const yasm_insn_operand *op, FILE *f, int indent_level,
     }
     fprintf(f, "%*sTargetMod=%lx\n", indent_level+1, "", op->targetmod);
     fprintf(f, "%*sSize=%u\n", indent_level+1, "", op->size);
+    fprintf(f, "%*sDeref=%d, Strict=%d\n", indent_level+1, "", (int)op->deref,
+	    (int)op->strict);
 }
 
 void

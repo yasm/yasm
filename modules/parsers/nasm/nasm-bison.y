@@ -96,7 +96,7 @@ static void define_label(yasm_parser_nasm *parser_nasm, /*@only@*/ char *name,
 %token <int_info> DECLARE_DATA
 %token <int_info> RESERVE_SPACE
 %token INCBIN EQU TIMES
-%token SEG WRT NOSPLIT
+%token SEG WRT NOSPLIT STRICT
 %token <arch_data> INSN PREFIX REG SEGREG TARGETMOD
 %token LEFT_OP RIGHT_OP SIGNDIV SIGNMOD START_SECTION_ID
 %token <str_val> ID LOCAL_ID SPECIAL_ID
@@ -358,6 +358,7 @@ operands: operand	    {
 operand: '[' memaddr ']'    { $$ = yasm_operand_create_mem($2); }
     | expr		    { $$ = yasm_operand_create_imm($1); }
     | SEGREG		    { $$ = yasm_operand_create_segreg($1[0]); }
+    | STRICT operand	    { $$ = $2; $$->strict = 1; }
     | SIZE_OVERRIDE operand {
 	$$ = $2;
 	if ($$->type == YASM_INSN__OPERAND_REG &&

@@ -276,7 +276,18 @@ struct yasm_insn_operand {
      * to indicate the "*" prefix has been used, and the arch needs to adjust
      * the operand type appropriately depending on the instruction type.
      */
-    int deref;
+    int deref:1;
+
+    /** Nonzero if strict.  Used for "strict foo" in NASM.
+     * This is used to inhibit optimization on otherwise "sized" values.
+     * For example, the user may just want to be explicit with the size on
+     * "push dword 4", but not actually want to force the immediate size to
+     * 4 bytes (rather wanting the optimizer to optimize it down to 1 byte as
+     * though "dword" was not specified).  To indicate the immediate should
+     * actually be forced to 4 bytes, the user needs to write
+     * "push strict dword 4", which sets this flag.
+     */
+    int strict:1;
 };
 #endif
 
