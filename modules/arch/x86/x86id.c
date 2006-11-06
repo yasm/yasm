@@ -617,12 +617,6 @@ static const x86_insn_info push_insn[] = {
       {OPT_RM|OPS_64|OPA_EA, 0, 0} },
     { CPU_Any, MOD_GasIllegal, 0, 64, 0, 1, {0x6A, 0, 0}, 0, 1,
       {OPT_Imm|OPS_8|OPA_SImm, 0, 0} },
-    { CPU_Any, MOD_GasIllegal, 16, 64, 0, 1, {0x68, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_16|OPA_Imm, 0, 0} },
-    { CPU_386|CPU_Not64, MOD_GasIllegal, 32, 0, 0, 1, {0x68, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_32|OPA_Imm, 0, 0} },
-    { CPU_Hammer|CPU_64, MOD_GasIllegal, 64, 64, 0, 1, {0x68, 0, 0}, 0, 1,
-      {OPT_Imm|OPS_32|OPA_SImm, 0, 0} },
     { CPU_Any, MOD_GasOnly|MOD_GasSufB, 0, 64, 0, 1, {0x6A, 0, 0}, 0, 1,
       {OPT_Imm|OPS_8|OPS_Relaxed|OPA_SImm, 0, 0} },
     { CPU_Any, MOD_GasOnly|MOD_GasSufW, 16, 64, 0, 1, {0x6A, 0x68, 0}, 0, 1,
@@ -636,6 +630,15 @@ static const x86_insn_info push_insn[] = {
     { CPU_Any|CPU_Not64, MOD_GasIllegal, 0, 0, 0, 1,
       {0x6A, 0x68, 0}, 0, 1,
       {OPT_Imm|OPS_BITS|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0, 0} },
+    /* Need these when we don't match the BITS size, but they need to be
+     * below the above line so the optimizer can kick in by default.
+     */
+    { CPU_Any, MOD_GasIllegal, 16, 64, 0, 1, {0x68, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_16|OPA_Imm, 0, 0} },
+    { CPU_386|CPU_Not64, MOD_GasIllegal, 32, 0, 0, 1, {0x68, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_32|OPA_Imm, 0, 0} },
+    { CPU_Hammer|CPU_64, MOD_GasIllegal, 64, 64, 0, 1, {0x68, 0, 0}, 0, 1,
+      {OPT_Imm|OPS_32|OPA_SImm, 0, 0} },
     { CPU_Not64, 0, 0, 0, 0, 1, {0x0E, 0, 0}, 0, 1,
       {OPT_CS|OPS_Any|OPA_None, 0, 0} },
     { CPU_Not64, MOD_GasSufW, 16, 0, 0, 1, {0x0E, 0, 0}, 0, 1,
@@ -861,47 +864,49 @@ static const x86_insn_info lfgss_insn[] = {
 
 /* Arithmetic - general */
 static const x86_insn_info arith_insn[] = {
-    /* Also have forced-size forms to override the optimization */
     { CPU_Any, MOD_Op0Add|MOD_GasSufB, 0, 0, 0, 1, {0x04, 0, 0}, 0, 2,
       {OPT_Areg|OPS_8|OPA_None, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
-    { CPU_Any, MOD_Op0Add|MOD_GasIllegal, 16, 0, 0, 1, {0x05, 0, 0}, 0, 2,
-      {OPT_Areg|OPS_16|OPA_None, OPT_Imm|OPS_16|OPA_Imm, 0} },
     { CPU_Any, MOD_Op2Add|MOD_Op1AddSp|MOD_GasSufW, 16, 0, 0, 2,
       {0x83, 0xC0, 0x05}, 0, 2,
       {OPT_Areg|OPS_16|OPA_None,
        OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
-    { CPU_386, MOD_Op0Add|MOD_GasIllegal, 32, 0, 0, 1, {0x05, 0, 0}, 0, 2,
-      {OPT_Areg|OPS_32|OPA_None, OPT_Imm|OPS_32|OPA_Imm, 0} },
     { CPU_386, MOD_Op2Add|MOD_Op1AddSp|MOD_GasSufL, 32, 0, 0, 2,
       {0x83, 0xC0, 0x05}, 0, 2,
       {OPT_Areg|OPS_32|OPA_None,
        OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
-    { CPU_Hammer|CPU_64, MOD_Op0Add|MOD_GasIllegal, 64, 0, 0, 1, {0x05, 0, 0},
-      0, 2, {OPT_Areg|OPS_64|OPA_None, OPT_Imm|OPS_32|OPA_Imm, 0} },
     { CPU_Hammer|CPU_64, MOD_Op2Add|MOD_Op1AddSp|MOD_GasSufQ, 64, 0, 0, 2,
       {0x83, 0xC0, 0x05}, 0,
       2, {OPT_Areg|OPS_64|OPA_None,
 	  OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
 
-    /* Also have forced-size forms to override the optimization */
     { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasSufB, 0, 0, 0, 1, {0x80, 0, 0}, 0, 2,
       {OPT_RM|OPS_8|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm, 0} },
     { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasSufB, 0, 0, 0, 1, {0x80, 0, 0}, 0, 2,
       {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_8|OPA_Imm, 0} },
+
     { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasSufW, 16, 0, 0, 1, {0x83, 0, 0}, 0, 2,
       {OPT_RM|OPS_16|OPA_EA, OPT_Imm|OPS_8|OPA_SImm, 0} },
-    { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasIllegal, 16, 0, 0, 1, {0x81, 0, 0}, 0,
-      2, {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_16|OPA_Imm, 0} },
+    { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasIllegal, 16, 0, 0, 1, {0x83, 0x81, 0},
+      0, 2, {OPT_RM|OPS_16|OPS_Relaxed|OPA_EA,
+	     OPT_Imm|OPS_16|OPA_Imm|OPAP_SImm8, 0} },
     { CPU_Any, MOD_Gap0|MOD_SpAdd|MOD_GasSufW, 16, 0, 0, 1, {0x83, 0x81, 0}, 0,
       2, {OPT_RM|OPS_16|OPA_EA,
 	  OPT_Imm|OPS_16|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
+
     { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasSufL, 32, 0, 0, 1, {0x83, 0, 0}, 0, 2,
       {OPT_RM|OPS_32|OPA_EA, OPT_Imm|OPS_8|OPA_SImm, 0} },
-    { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasIllegal, 32, 0, 0, 1, {0x81, 0, 0}, 0,
-      2, {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_32|OPA_Imm, 0} },
+    /* Not64 because we can't tell if mov [], dword in 64-bit mode is supposed
+     * to be a qword destination or a dword destination.
+     */
+    { CPU_386|CPU_Not64, MOD_Gap0|MOD_SpAdd|MOD_GasIllegal, 32, 0, 0, 1,
+      {0x83, 0x81, 0}, 0, 2,
+      {OPT_RM|OPS_32|OPS_Relaxed|OPA_EA,
+       OPT_Imm|OPS_32|OPA_Imm|OPAP_SImm8, 0} },
     { CPU_386, MOD_Gap0|MOD_SpAdd|MOD_GasSufL, 32, 0, 0, 1, {0x83, 0x81, 0}, 0,
       2, {OPT_RM|OPS_32|OPA_EA,
 	  OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
+
+    /* No relaxed-RM mode for 64-bit destinations; see above Not64 comment. */
     { CPU_Hammer|CPU_64, MOD_Gap0|MOD_SpAdd|MOD_GasSufQ, 64, 0, 0, 1,
       {0x83, 0, 0}, 0, 2,
       {OPT_RM|OPS_64|OPA_EA, OPT_Imm|OPS_8|OPA_SImm, 0} },
@@ -909,9 +914,6 @@ static const x86_insn_info arith_insn[] = {
       {0x83, 0x81, 0}, 0, 2,
       {OPT_RM|OPS_64|OPA_EA,
        OPT_Imm|OPS_32|OPS_Relaxed|OPA_Imm|OPAP_SImm8, 0} },
-    { CPU_Hammer|CPU_64, MOD_Gap0|MOD_SpAdd|MOD_GasSufQ, 64, 0, 0, 1,
-      {0x81, 0, 0}, 0, 2,
-      {OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_32|OPA_Imm, 0} },
 
     { CPU_Any, MOD_Op0Add|MOD_GasSufB, 0, 0, 0, 1, {0x00, 0, 0}, 0, 2,
       {OPT_RM|OPS_8|OPS_Relaxed|OPA_EA, OPT_Reg|OPS_8|OPA_Spare, 0} },
@@ -2908,7 +2910,17 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		case OPAP_None:
 		    break;
 		case OPAP_SImm8:
-		    insn->postop = X86_POSTOP_SIGNEXT_IMM8;
+		    /* Check operand strictness; if strict and non-8-bit,
+		     * pre-emptively expand to full size.
+		     * For unspecified size case, still optimize.
+		     */
+		    if (!op->strict || op->size == 0)
+			insn->postop = X86_POSTOP_SIGNEXT_IMM8;
+		    else if (op->size != 8) {
+			insn->opcode.opcode[0] =
+			    insn->opcode.opcode[insn->opcode.len];
+			insn->opcode.len = 1;
+		    }
 		    break;
 		case OPAP_ShortMov:
 		    do_postop = OPAP_ShortMov;
