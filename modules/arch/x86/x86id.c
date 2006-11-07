@@ -2914,7 +2914,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		     * pre-emptively expand to full size.
 		     * For unspecified size case, still optimize.
 		     */
-		    if (!op->strict || op->size == 0)
+		    if (!(arch_x86->force_strict || op->strict)
+			|| op->size == 0)
 			insn->postop = X86_POSTOP_SIGNEXT_IMM8;
 		    else if (op->size != 8) {
 			insn->opcode.opcode[0] =

@@ -77,6 +77,7 @@ typedef struct yasm_arch_x86 {
 	X86_PARSER_GAS
     } parser;
     unsigned char mode_bits;
+    unsigned char force_strict;
 } yasm_arch_x86;
 
 /* 0-15 (low 4 bits) used for register number, stored in same data area.

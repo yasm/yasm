@@ -61,6 +61,7 @@ x86_create(const char *machine, const char *parser,
     arch_x86->cpu_enabled = ~CPU_Any;
     arch_x86->amd64_machine = amd64_machine;
     arch_x86->mode_bits = 0;
+    arch_x86->force_strict = 0;
 
     if (yasm__strcasecmp(parser, "nasm") == 0)
 	arch_x86->parser = X86_PARSER_NASM;
@@ -109,6 +110,8 @@ x86_set_var(yasm_arch *arch, const char *var, unsigned long val)
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     if (yasm__strcasecmp(var, "mode_bits") == 0)
 	arch_x86->mode_bits = val;
+    else if (yasm__strcasecmp(var, "force_strict") == 0)
+	arch_x86->force_strict = val;
     else
 	return 1;
     return 0;

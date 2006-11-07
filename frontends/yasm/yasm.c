@@ -68,6 +68,7 @@ static int special_options = 0;
 /*@null@*/ /*@dependent@*/ static const yasm_listfmt_module *
     cur_listfmt_module = NULL;
 static int preproc_only = 0;
+static unsigned int force_strict = 0;
 static int generate_make_dependencies = 0;
 static int warning_error = 0;	/* warnings being treated as errors */
 static enum {
@@ -92,6 +93,7 @@ static int opt_listfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_listfile_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_objfile_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_machine_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_strict_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int preproc_only_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_include_option(char *cmd, /*@null@*/ char *param, int extra);
@@ -152,6 +154,8 @@ static opt_option options[] =
       N_("name of object-file output"), N_("filename") },
     { 'm', "machine", 1, opt_machine_handler, 0,
       N_("select machine (list with -m help)"), N_("machine") },
+    { 0, "force-strict", 0, opt_strict_handler, 0,
+      N_("treat all sized operands as if `strict' was used"), NULL },
     { 'w', NULL, 0, opt_warning_handler, 1,
       N_("inhibits warning messages"), NULL },
     { 'W', NULL, 0, opt_warning_handler, 0,
@@ -606,6 +610,8 @@ main(int argc, char *argv[])
 			  cur_objfmt_module->default_x86_mode_bits);
     }
 
+    yasm_arch_set_var(cur_arch, "force_strict", force_strict);
+
     /* Parse! */
     cur_parser_module->do_parse(object, cur_preproc, cur_arch, cur_objfmt,
 				cur_dbgfmt, in, in_filename,
@@ -960,6 +966,15 @@ opt_machine_handler(/*@unused@*/ char *cmd, char *param,
     assert(param != NULL);
     machine_name = yasm__xstrdup(param);
 
+    return 0;
+}
+
+static int
+opt_strict_handler(/*@unused@*/ char *cmd,
+		   /*@unused@*/ /*@null@*/ char *param,
+		   /*@unused@*/ int extra)
+{
+    force_strict = 1;
     return 0;
 }
 
