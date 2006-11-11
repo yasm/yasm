@@ -1057,13 +1057,13 @@ rdf_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
                 align_expr = yasm_expr_get_intnum(&vp->param, 0);
                 if (!align_expr) {
                     yasm_error_set(YASM_ERROR_VALUE,
-			N_("alignment constraint is not a power of two"));
+			N_("alignment constraint is not an integer"));
                     return sym;
                 }
                 addralign = yasm_intnum_get_uint(align_expr);
 
                 /* Alignments must be a power of two. */
-                if ((addralign & (addralign - 1)) != 0) {
+                if (!is_exp2(addralign)) {
                     yasm_error_set(YASM_ERROR_VALUE,
                         N_("alignment constraint is not a power of two"));
                     return sym;

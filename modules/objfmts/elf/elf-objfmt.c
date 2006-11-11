@@ -248,7 +248,7 @@ elf_objfmt_output_align(FILE *f, unsigned int align)
 {
     long pos;
     unsigned long delta;
-    if ((align & (align-1)) != 0)
+    if (!is_exp2(align))
 	yasm_internal_error("requested alignment not a power of two");
 
     pos = ftell(f);
@@ -920,14 +920,14 @@ elf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
             align_expr = yasm_expr_get_intnum(&vp->param, 0);
             if (!align_expr) {
                 yasm_error_set(YASM_ERROR_VALUE,
-			       N_("argument to `%s' is not a power of two"),
+			       N_("argument to `%s' is not an integer"),
 			       vp->val);
                 return NULL;
             }
             align = yasm_intnum_get_uint(align_expr);
 
             /* Alignments must be a power of two. */
-            if ((align & (align - 1)) != 0) {
+            if (!is_exp2(align)) {
                 yasm_error_set(YASM_ERROR_VALUE,
 			       N_("argument to `%s' is not a power of two"),
                                vp->val);
@@ -1078,13 +1078,13 @@ elf_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
                 align_expr = yasm_expr_get_intnum(&vp->param, 0);
                 if (!align_expr) {
                     yasm_error_set(YASM_ERROR_VALUE,
-			N_("alignment constraint is not a power of two"));
+			N_("alignment constraint is not an integer"));
                     return sym;
                 }
                 addralign = yasm_intnum_get_uint(align_expr);
 
                 /* Alignments must be a power of two. */
-                if ((addralign & (addralign - 1)) != 0) {
+                if (!is_exp2(addralign)) {
                     yasm_error_set(YASM_ERROR_VALUE,
                         N_("alignment constraint is not a power of two"));
                     return sym;

@@ -151,6 +151,13 @@
 	d = BC_COUNT(d, 4);			\
     } while (0)
 
+/** Determine if a value is exactly a power of 2.  Zero is treated as a power
+ * of two.
+ * \param x	value
+ * \return Nonzero if x is a power of 2.
+ */
+#define is_exp2(x)  ((x & (x - 1)) == 0)
+
 #ifndef NELEMS
 /** Get the number of elements in an array.
  * \internal

@@ -433,14 +433,14 @@ bin_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 		align_expr = yasm_expr_get_intnum(&vp->param, 0);
 		if (!align_expr) {
 		    yasm_error_set(YASM_ERROR_VALUE,
-				N_("argument to `%s' is not a power of two"),
+				N_("argument to `%s' is not an integer"),
 				vp->val);
 		    return NULL;
 		}
 		align = yasm_intnum_get_uint(align_expr);
 
 		/* Alignments must be a power of two. */
-		if ((align & (align - 1)) != 0) {
+		if (!is_exp2(align)) {
 		    yasm_error_set(YASM_ERROR_VALUE,
 				N_("argument to `%s' is not a power of two"),
 				vp->val);
