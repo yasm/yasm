@@ -937,7 +937,7 @@ gas_parser_align(yasm_parser_gas *parser_gas, yasm_section *sect,
 	unsigned long boundint = yasm_intnum_get_uint(boundintn);
 
 	/* Alignments must be a power of two. */
-	if ((boundint & (boundint - 1)) == 0) {
+	if (is_exp2(boundint)) {
 	    if (boundint > yasm_section_get_align(sect))
 		yasm_section_set_align(sect, boundint, cur_line);
 	}
