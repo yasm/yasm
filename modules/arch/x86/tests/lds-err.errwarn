@@ -1,4 +1,4 @@
--:2: invalid combination of opcode and operands
--:3: invalid combination of opcode and operands
--:5: invalid combination of opcode and operands
--:6: invalid combination of opcode and operands
+-:2: invalid size for operand 2
+-:3: invalid size for operand 2
+-:5: invalid size for operand 2
+-:6: invalid size for operand 2
