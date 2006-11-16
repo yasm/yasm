@@ -63,7 +63,7 @@ do
        	if test $? -gt 0; then
 	    # YASM didn't detect errors but should have!
 	    echo $ECHO_N "E$ECHO_C"
-            eval "failed$failedct='E: ${a} didn't return an error code!'"
+            eval "failed$failedct='E: ${a} did not return an error code!'"
 	    failedct=`expr $failedct + 1`
 	else
 	    ./test_hd results/${o} > results/${oh}
