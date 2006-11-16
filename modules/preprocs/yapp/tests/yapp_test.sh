@@ -34,7 +34,7 @@ do
     fi
 
     # Run within a subshell to prevent signal messages from displaying.
-    sh -c "sed \"s,\./,${srcdir}/,\" ${asm} | ./yasm -e -r yapp | sed \"s,${srcdir}/,./,\" > results/${o} 2>results/${e}" >/dev/null 2>/dev/null
+    sh -c "sed \"s,\./,${srcdir}/,\" ${asm} | ./yasm -e -r yapp - | sed \"s,${srcdir}/,./,\" > results/${o} 2>results/${e}" >/dev/null 2>/dev/null
     status=$?
     if test $status -gt 128; then
 	# We should never get a coredump!
@@ -64,9 +64,9 @@ do
     else
 	echo ${asm} | grep -v err >/dev/null
        	if test $? -gt 0; then
-	    # YASM detected errors but shouldn't have!
+	    # YASM didn't detect errors but should have!
 	    echo $ECHO_N "E$ECHO_C"
-            eval "failed$failedct='E: ${a} returned an error code!'"
+            eval "failed$failedct='E: ${a} did not return an error code!'"
 	    failedct=`expr $failedct + 1`
 	else
 	    if diff -w ${og} results/${o} >/dev/null; then
