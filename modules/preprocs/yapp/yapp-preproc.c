@@ -968,12 +968,6 @@ yapp_preproc_get_included_file(yasm_preproc *preproc, /*@out@*/ char *buf,
 }
 
 static void
-yapp_preproc_add_include_path(yasm_preproc *preproc, const char *path)
-{
-    /* TODO */
-}
-
-static void
 yapp_preproc_add_include_file(yasm_preproc *preproc, const char *filename)
 {
     /* TODO */
@@ -1005,7 +999,6 @@ yasm_preproc_module yasm_yapp_LTX_preproc = {
     yapp_preproc_destroy,
     yapp_preproc_input,
     yapp_preproc_get_included_file,
-    yapp_preproc_add_include_path,
     yapp_preproc_add_include_file,
     yapp_preproc_predefine_macro,
     yapp_preproc_undefine_macro,
