@@ -40,8 +40,6 @@
 
 #include "license.c"
 
-#define DEFAULT_OBJFMT_MODULE	"bin"
-
 /* Preprocess-only buffer size */
 #define PREPROC_BUF_SIZE    16384
 
@@ -210,201 +208,114 @@ typedef struct constcharparam {
 
 static constcharparam_head preproc_options;
 
-/* main function */
-/*@-globstate -unrecog@*/
-int
-main(int argc, char *argv[])
+static int
+do_preproc_only(FILE *in)
 {
-    /*@null@*/ FILE *in = NULL, *obj = NULL;
-    yasm_object *object = NULL;
-    yasm_section *def_sect;
-    size_t i;
-    yasm_arch_create_error arch_error;
+    yasm_linemap *linemap;
+    char *preproc_buf = yasm_xmalloc(PREPROC_BUF_SIZE);
+    size_t got;
     const char *base_filename;
-    yasm_errwarns *errwarns;
+    FILE *out = NULL;
+    yasm_errwarns *errwarns = yasm_errwarns_create();
 
-#if defined(HAVE_SETLOCALE) && defined(HAVE_LC_MESSAGES)
-    setlocale(LC_MESSAGES, "");
-#endif
-#if defined(LOCALEDIR)
-    bindtextdomain(PACKAGE, LOCALEDIR);
-#endif
-    textdomain(PACKAGE);
+    /* Initialize line manager */
+    linemap = yasm_linemap_create();
+    yasm_linemap_set(linemap, in_filename, 1, 1);
 
-    /* Initialize errwarn handling */
-    yasm_internal_error_ = handle_yasm_int_error;
-    yasm_fatal = handle_yasm_fatal;
-    yasm_gettext_hook = handle_yasm_gettext;
-    yasm_errwarn_initialize();
-    errwarns = yasm_errwarns_create();
+    /* Default output to stdout if not specified or generating dependency
+       makefiles */
+    if (!obj_filename || generate_make_dependencies) {
+	out = stdout;
 
-    /* Initialize parameter storage */
-    STAILQ_INIT(&preproc_options);
-
-    if (parse_cmdline(argc, argv, options, NELEMS(options), print_error))
-	return EXIT_FAILURE;
-
-    switch (special_options) {
-	case SPECIAL_SHOW_HELP:
-	    /* Does gettext calls internally */
-	    help_msg(help_head, help_tail, options, NELEMS(options));
-	    return EXIT_SUCCESS;
-	case SPECIAL_SHOW_VERSION:
-	    for (i=0; i<NELEMS(version_msg); i++)
-		printf("%s\n", version_msg[i]);
-	    return EXIT_SUCCESS;
-	case SPECIAL_SHOW_LICENSE:
-	    for (i=0; i<NELEMS(license_msg); i++)
-		printf("%s\n", license_msg[i]);
-	    return EXIT_SUCCESS;
-	case SPECIAL_LISTED:
-	    /* Printed out earlier */
-	    return EXIT_SUCCESS;
-    }
-
-    /* Initialize BitVector (needed for floating point). */
-    if (BitVector_Boot() != ErrCode_Ok) {
-	print_error(_("%s: could not initialize BitVector"), _("FATAL"));
-	return EXIT_FAILURE;
-    }
-
-    if (!in_filename) {
-	print_error(_("No input files specified"));
-	return EXIT_FAILURE;
-    } else if (strcmp(in_filename, "-") != 0) {
-	/* Open the input file (if not standard input) */
-	in = fopen(in_filename, "rt");
-	if (!in) {
-	    print_error(_("%s: could not open file `%s'"), _("FATAL"),
-			in_filename);
-	    yasm_xfree(in_filename);
-	    if (obj_filename)
-		yasm_xfree(obj_filename);
-	    return EXIT_FAILURE;
-	}
-    } else {
-	/* Filename was "-", read stdin */
-	in = stdin;
-    }
-
-    /* Initialize intnum and floatnum */
-    yasm_intnum_initialize();
-    yasm_floatnum_initialize();
-    
-    /* If not already specified, default to bin as the object format. */
-    if (!cur_objfmt_module)
-	cur_objfmt_module = yasm_load_objfmt(DEFAULT_OBJFMT_MODULE);
-
-    if (!cur_objfmt_module) {
-	print_error(_("%s: could not load default %s"), _("FATAL"),
-		    _("object format"));
-	return EXIT_FAILURE;
-    }
-
-    /* handle preproc-only case here */
-    if (preproc_only) {
-	yasm_linemap *linemap;
-	char *preproc_buf = yasm_xmalloc(PREPROC_BUF_SIZE);
-	size_t got;
-
-	/* Initialize line manager */
-	linemap = yasm_linemap_create();
-	yasm_linemap_set(linemap, in_filename, 1, 1);
-
-	/* Default output to stdout if not specified or generating dependency
-           makefiles */
-	if (!obj_filename || generate_make_dependencies) {
-	    obj = stdout;
-
-            /* determine the object filename if not specified, but we need a
-               file name for the makefile rule */
-            if (generate_make_dependencies && !obj_filename) {
-                if (in == stdin)
-                    /* Default to yasm.out if no obj filename specified */
-                    obj_filename = yasm__xstrdup("yasm.out");
-                else {
-                    /* replace (or add) extension to base filename */
-		    yasm__splitpath(in_filename, &base_filename);
-		    if (base_filename[0] == '\0')
-			obj_filename = yasm__xstrdup("yasm.out");
-		    else
-			obj_filename = replace_extension(base_filename,
-                            cur_objfmt_module->extension, "yasm.out");
-		}
-            }
-	} else {
-	    /* Open output (object) file */
-	    obj = open_file(obj_filename, "wt");
-	    if (!obj) {
-		yasm_xfree(preproc_buf);
-		return EXIT_FAILURE;
+        /* determine the object filename if not specified, but we need a
+            file name for the makefile rule */
+        if (generate_make_dependencies && !obj_filename) {
+            if (in == stdin)
+                /* Default to yasm.out if no obj filename specified */
+		obj_filename = yasm__xstrdup("yasm.out");
+            else {
+                /* replace (or add) extension to base filename */
+		yasm__splitpath(in_filename, &base_filename);
+		if (base_filename[0] == '\0')
+		    obj_filename = yasm__xstrdup("yasm.out");
+		else
+		    obj_filename = replace_extension(base_filename,
+                        cur_objfmt_module->extension, "yasm.out");
 	    }
-	}
-
-	/* If not already specified, default to nasm preproc. */
-	if (!cur_preproc_module)
-	    cur_preproc_module = yasm_load_preproc("nasm");
-
-	if (!cur_preproc_module) {
-	    print_error(_("%s: could not load default %s"), _("FATAL"),
-			_("preprocessor"));
-	    cleanup(NULL);
-	    return EXIT_FAILURE;
-	}
-	
-	/* Pre-process until done */
-	cur_preproc = yasm_preproc_create(cur_preproc_module, in, in_filename,
-					  linemap, errwarns);
-
-	apply_preproc_builtins();
-	apply_preproc_saved_options();
-
-        if (generate_make_dependencies) {
-	    size_t totlen;
-
-            fprintf(stdout, "%s: %s", obj_filename, in_filename);
-	    totlen = strlen(obj_filename)+2+strlen(in_filename);
-
-            while ((got = yasm_preproc_get_included_file(cur_preproc,
-				preproc_buf, PREPROC_BUF_SIZE)) != 0) {
-		totlen += got;
-		if (totlen > 72) {
-		    fputs(" \\\n  ", stdout);
-		    totlen = 2;
-		}
-		fputc(' ', stdout);
-                fwrite(preproc_buf, got, 1, stdout);
-	    }
-	    fputc('\n', stdout);
-        } else {
-            while ((got = yasm_preproc_input(cur_preproc, preproc_buf,
-					     PREPROC_BUF_SIZE)) != 0)
-	        fwrite(preproc_buf, got, 1, obj);
         }
-
-	if (in != stdin)
-	    fclose(in);
-
-	if (obj != stdout)
-	    fclose(obj);
-
-	if (yasm_errwarns_num_errors(errwarns, warning_error) > 0) {
-	    yasm_errwarns_output_all(errwarns, linemap, warning_error,
-				     print_yasm_error, print_yasm_warning);
-	    if (obj != stdout)
-		remove(obj_filename);
+    } else {
+	/* Open output (object) file */
+	out = open_file(obj_filename, "wt");
+	if (!out) {
 	    yasm_xfree(preproc_buf);
-	    yasm_linemap_destroy(linemap);
-	    yasm_errwarns_destroy(errwarns);
-	    cleanup(NULL);
 	    return EXIT_FAILURE;
 	}
+    }
+
+    /* Pre-process until done */
+    cur_preproc = yasm_preproc_create(cur_preproc_module, in, in_filename,
+				      linemap, errwarns);
+
+    apply_preproc_builtins();
+    apply_preproc_saved_options();
+
+    if (generate_make_dependencies) {
+	size_t totlen;
+
+        fprintf(stdout, "%s: %s", obj_filename, in_filename);
+	totlen = strlen(obj_filename)+2+strlen(in_filename);
+
+	while ((got = yasm_preproc_get_included_file(cur_preproc, preproc_buf,
+						     PREPROC_BUF_SIZE)) != 0) {
+	    totlen += got;
+	    if (totlen > 72) {
+		fputs(" \\\n  ", stdout);
+		totlen = 2;
+	    }
+	    fputc(' ', stdout);
+            fwrite(preproc_buf, got, 1, stdout);
+	}
+	fputc('\n', stdout);
+    } else {
+        while ((got = yasm_preproc_input(cur_preproc, preproc_buf,
+					 PREPROC_BUF_SIZE)) != 0)
+	    fwrite(preproc_buf, got, 1, out);
+    }
+
+    if (in != stdin)
+	fclose(in);
+
+    if (out != stdout)
+	fclose(out);
+
+    if (yasm_errwarns_num_errors(errwarns, warning_error) > 0) {
+	yasm_errwarns_output_all(errwarns, linemap, warning_error,
+				 print_yasm_error, print_yasm_warning);
+	if (out != stdout)
+	    remove(obj_filename);
 	yasm_xfree(preproc_buf);
 	yasm_linemap_destroy(linemap);
 	yasm_errwarns_destroy(errwarns);
 	cleanup(NULL);
-	return EXIT_SUCCESS;
+	return EXIT_FAILURE;
     }
+    yasm_xfree(preproc_buf);
+    yasm_linemap_destroy(linemap);
+    yasm_errwarns_destroy(errwarns);
+    cleanup(NULL);
+    return EXIT_SUCCESS;
+}
+
+static int
+do_assemble(FILE *in)
+{
+    yasm_object *object;
+    yasm_section *def_sect;
+    const char *base_filename;
+    /*@null@*/ FILE *obj = NULL;
+    yasm_arch_create_error arch_error;
+    yasm_errwarns *errwarns = yasm_errwarns_create();
+    int i, matched;
 
     /* determine the object filename if not specified */
     if (!obj_filename) {
@@ -423,34 +334,7 @@ main(int argc, char *argv[])
 	}
     }
 
-    /* Create object */
-    object = yasm_object_create(in_filename, obj_filename);
-    yasm_linemap_set(yasm_object_get_linemap(object), in_filename, 1, 1);
-
-    /* Default to x86 as the architecture */
-    if (!cur_arch_module) {
-	cur_arch_module = yasm_load_arch("x86");
-	if (!cur_arch_module) {
-	    print_error(_("%s: could not load default %s"), _("FATAL"),
-			_("architecture"));
-	    return EXIT_FAILURE;
-	}
-    }
-
-    /* Default to NASM as the parser */
-    if (!cur_parser_module) {
-	cur_parser_module = yasm_load_parser("nasm");
-	if (!cur_parser_module) {
-	    print_error(_("%s: could not load default %s"), _("FATAL"),
-			_("parser"));
-	    cleanup(NULL);
-	    return EXIT_FAILURE;
-	}
-    }
-
-    /* Set up architecture using the selected (or default) machine and
-     * selected (or default nasm) parser.
-     */
+    /* Set up architecture using machine and parser. */
     if (!machine_name) {
 	/* If we're using x86 and the default objfmt bits is 64, default the
 	 * machine to amd64.  When we get more arches with multiple machines,
@@ -468,17 +352,6 @@ main(int argc, char *argv[])
 				       cur_parser_module->keyword,
 				       &arch_error);
     if (!cur_arch) {
-	if (strcmp(machine_name, "help") == 0) {
-	    yasm_arch_machine *m = cur_arch_module->machines;
-	    printf(_("Available %s for %s `%s':\n"), _("machines"),
-		   _("architecture"), cur_arch_module->keyword);
-	    while (m->keyword && m->name) {
-		print_list_keyword_desc(m->name, m->keyword);
-		m++;
-	    }
-	    return EXIT_SUCCESS;
-	}
-
 	switch (arch_error) {
 	    case YASM_ARCH_CREATE_BAD_MACHINE:
 		print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
@@ -498,41 +371,9 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 
-    /* If list file enabled, make sure we have a list format loaded. */
-    if (list_filename) {
-	/* If not already specified, default to nasm as the list format. */
-	if (!cur_listfmt_module)
-	    cur_listfmt_module = yasm_load_listfmt("nasm");
-    }
-
-    /* If not already specified, default to null as the debug format. */
-    if (!cur_dbgfmt_module)
-	cur_dbgfmt_module = yasm_load_dbgfmt("null");
-    else {
-	int matched_dbgfmt = 0;
-	/* Check to see if the requested debug format is in the allowed list
-	 * for the active object format.
-	 */
-	for (i=0; cur_objfmt_module->dbgfmt_keywords[i]; i++)
-	    if (yasm__strcasecmp(cur_objfmt_module->dbgfmt_keywords[i],
-				 cur_dbgfmt_module->keyword) == 0)
-		matched_dbgfmt = 1;
-	if (!matched_dbgfmt) {
-	    print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
-		_("FATAL"), cur_dbgfmt_module->keyword, _("debug format"),
-		_("object format"), cur_objfmt_module->keyword);
-	    if (in != stdin)
-		fclose(in);
-	    /*cleanup(NULL);*/
-	    return EXIT_FAILURE;
-	}
-    }
-
-    if (!cur_dbgfmt_module) {
-	print_error(_("%s: could not load default %s"), _("FATAL"),
-		    _("debug format"));
-	return EXIT_FAILURE;
-    }
+    /* Create object */
+    object = yasm_object_create(in_filename, obj_filename);
+    yasm_linemap_set(yasm_object_get_linemap(object), in_filename, 1, 1);
 
     /* Initialize the object format */
     cur_objfmt = yasm_objfmt_create(cur_objfmt_module, object, cur_arch);
@@ -543,6 +384,7 @@ main(int argc, char *argv[])
 	    machine_name);
 	if (in != stdin)
 	    fclose(in);
+	cleanup(object);
 	return EXIT_FAILURE;
     }
 
@@ -551,6 +393,24 @@ main(int argc, char *argv[])
 
     /* Add an initial "default" section to object */
     def_sect = yasm_objfmt_add_default_section(cur_objfmt);
+
+    /* Check to see if the requested debug format is in the allowed list
+     * for the active object format.
+     */
+    matched = 0;
+    for (i=0; cur_objfmt_module->dbgfmt_keywords[i]; i++)
+	if (yasm__strcasecmp(cur_objfmt_module->dbgfmt_keywords[i],
+			     cur_dbgfmt_module->keyword) == 0)
+	    matched = 1;
+    if (!matched) {
+	print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
+	    _("FATAL"), cur_dbgfmt_module->keyword, _("debug format"),
+	    _("object format"), cur_objfmt_module->keyword);
+	if (in != stdin)
+	    fclose(in);
+	cleanup(object);
+	return EXIT_FAILURE;
+    }
 
     /* Initialize the debug format */
     cur_dbgfmt = yasm_dbgfmt_create(cur_dbgfmt_module, object, cur_objfmt,
@@ -565,35 +425,21 @@ main(int argc, char *argv[])
 	return EXIT_FAILURE;
     }
 
-    /* If not already specified, default to the parser's default preproc. */
-    if (!cur_preproc_module)
-	cur_preproc_module =
-	    yasm_load_preproc(cur_parser_module->default_preproc_keyword);
-    else {
-	int matched_preproc = 0;
-	/* Check to see if the requested preprocessor is in the allowed list
-	 * for the active parser.
-	 */
-	for (i=0; cur_parser_module->preproc_keywords[i]; i++)
-	    if (yasm__strcasecmp(cur_parser_module->preproc_keywords[i],
-				 cur_preproc_module->keyword) == 0)
-		matched_preproc = 1;
-	if (!matched_preproc) {
-	    print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
-			_("FATAL"), cur_preproc_module->keyword,
-			_("preprocessor"), _("parser"),
-			cur_parser_module->keyword);
-	    if (in != stdin)
-		fclose(in);
-	    cleanup(NULL);
-	    return EXIT_FAILURE;
-	}
-    }
-
-    if (!cur_preproc_module) {
-	print_error(_("%s: could not load default %s"), _("FATAL"),
-		    _("preprocessor"));
-	cleanup(NULL);
+    /* Check to see if the requested preprocessor is in the allowed list
+     * for the active parser.
+     */
+    matched = 0;
+    for (i=0; cur_parser_module->preproc_keywords[i]; i++)
+	if (yasm__strcasecmp(cur_parser_module->preproc_keywords[i],
+			     cur_preproc_module->keyword) == 0)
+	    matched = 1;
+    if (!matched) {
+	print_error(_("%s: `%s' is not a valid %s for %s `%s'"), _("FATAL"),
+		    cur_preproc_module->keyword, _("preprocessor"),
+		    _("parser"), cur_parser_module->keyword);
+	if (in != stdin)
+	    fclose(in);
+	cleanup(object);
 	return EXIT_FAILURE;
     }
 
@@ -685,8 +531,172 @@ main(int argc, char *argv[])
 			     warning_error, print_yasm_error,
 			     print_yasm_warning);
 
+    yasm_errwarns_destroy(errwarns);
     cleanup(object);
     return EXIT_SUCCESS;
+}
+
+/* main function */
+/*@-globstate -unrecog@*/
+int
+main(int argc, char *argv[])
+{
+    /*@null@*/ FILE *in = NULL;
+    size_t i;
+
+#if defined(HAVE_SETLOCALE) && defined(HAVE_LC_MESSAGES)
+    setlocale(LC_MESSAGES, "");
+#endif
+#if defined(LOCALEDIR)
+    bindtextdomain(PACKAGE, LOCALEDIR);
+#endif
+    textdomain(PACKAGE);
+
+    /* Initialize errwarn handling */
+    yasm_internal_error_ = handle_yasm_int_error;
+    yasm_fatal = handle_yasm_fatal;
+    yasm_gettext_hook = handle_yasm_gettext;
+    yasm_errwarn_initialize();
+
+    /* Initialize parameter storage */
+    STAILQ_INIT(&preproc_options);
+
+    if (parse_cmdline(argc, argv, options, NELEMS(options), print_error))
+	return EXIT_FAILURE;
+
+    switch (special_options) {
+	case SPECIAL_SHOW_HELP:
+	    /* Does gettext calls internally */
+	    help_msg(help_head, help_tail, options, NELEMS(options));
+	    return EXIT_SUCCESS;
+	case SPECIAL_SHOW_VERSION:
+	    for (i=0; i<NELEMS(version_msg); i++)
+		printf("%s\n", version_msg[i]);
+	    return EXIT_SUCCESS;
+	case SPECIAL_SHOW_LICENSE:
+	    for (i=0; i<NELEMS(license_msg); i++)
+		printf("%s\n", license_msg[i]);
+	    return EXIT_SUCCESS;
+	case SPECIAL_LISTED:
+	    /* Printed out earlier */
+	    return EXIT_SUCCESS;
+    }
+
+    /* Initialize BitVector (needed for intnum/floatnum). */
+    if (BitVector_Boot() != ErrCode_Ok) {
+	print_error(_("%s: could not initialize BitVector"), _("FATAL"));
+	return EXIT_FAILURE;
+    }
+
+    /* Initialize intnum and floatnum */
+    yasm_intnum_initialize();
+    yasm_floatnum_initialize();
+    
+    /* If not already specified, default to bin as the object format. */
+    if (!cur_objfmt_module) {
+	if (!objfmt_keyword)
+	    objfmt_keyword = yasm__xstrdup("bin");
+	cur_objfmt_module = yasm_load_objfmt(objfmt_keyword);
+	if (!cur_objfmt_module) {
+	    print_error(_("%s: could not load default %s"), _("FATAL"),
+			_("object format"));
+	    return EXIT_FAILURE;
+	}
+    }
+
+    /* Default to x86 as the architecture */
+    if (!cur_arch_module) {
+	cur_arch_module = yasm_load_arch("x86");
+	if (!cur_arch_module) {
+	    print_error(_("%s: could not load default %s"), _("FATAL"),
+			_("architecture"));
+	    return EXIT_FAILURE;
+	}
+    }
+
+    /* Check for arch help */
+    if (machine_name && strcmp(machine_name, "help") == 0) {
+	yasm_arch_machine *m = cur_arch_module->machines;
+	printf(_("Available %s for %s `%s':\n"), _("machines"),
+	       _("architecture"), cur_arch_module->keyword);
+	while (m->keyword && m->name) {
+	    print_list_keyword_desc(m->name, m->keyword);
+	    m++;
+	}
+	return EXIT_SUCCESS;
+    }
+
+    /* Default to NASM as the parser */
+    if (!cur_parser_module) {
+	cur_parser_module = yasm_load_parser("nasm");
+	if (!cur_parser_module) {
+	    print_error(_("%s: could not load default %s"), _("FATAL"),
+			_("parser"));
+	    cleanup(NULL);
+	    return EXIT_FAILURE;
+	}
+    }
+
+    /* If not already specified, default to the parser's default preproc. */
+    if (!cur_preproc_module) {
+	cur_preproc_module =
+	    yasm_load_preproc(cur_parser_module->default_preproc_keyword);
+	if (!cur_preproc_module) {
+	    print_error(_("%s: could not load default %s"), _("FATAL"),
+			_("preprocessor"));
+	    cleanup(NULL);
+	    return EXIT_FAILURE;
+	}
+    }
+
+    /* Determine input filename and open input file. */
+    if (!in_filename) {
+	print_error(_("No input files specified"));
+	return EXIT_FAILURE;
+    } else if (strcmp(in_filename, "-") != 0) {
+	/* Open the input file (if not standard input) */
+	in = fopen(in_filename, "rt");
+	if (!in) {
+	    print_error(_("%s: could not open file `%s'"), _("FATAL"),
+			in_filename);
+	    yasm_xfree(in_filename);
+	    if (obj_filename)
+		yasm_xfree(obj_filename);
+	    return EXIT_FAILURE;
+	}
+    } else {
+	/* Filename was "-", read stdin */
+	in = stdin;
+    }
+
+    /* handle preproc-only case here */
+    if (preproc_only)
+	return do_preproc_only(in);
+
+    /* If list file enabled, make sure we have a list format loaded. */
+    if (list_filename) {
+	/* If not already specified, default to nasm as the list format. */
+	if (!cur_listfmt_module) {
+	    cur_listfmt_module = yasm_load_listfmt("nasm");
+	    if (!cur_listfmt_module) {
+		print_error(_("%s: could not load default %s"), _("FATAL"),
+			    _("list format"));
+		return EXIT_FAILURE;
+	    }
+	}
+    }
+
+    /* If not already specified, default to null as the debug format. */
+    if (!cur_dbgfmt_module) {
+	cur_dbgfmt_module = yasm_load_dbgfmt("null");
+	if (!cur_dbgfmt_module) {
+	    print_error(_("%s: could not load default %s"), _("FATAL"),
+			_("debug format"));
+	    return EXIT_FAILURE;
+	}
+    }
+
+    return do_assemble(in);
 }
 /*@=globstate =unrecog@*/
 
@@ -1071,9 +1081,6 @@ static void
 apply_preproc_builtins()
 {
     char *predef;
-
-    if (!objfmt_keyword)
-	objfmt_keyword = yasm__xstrdup(DEFAULT_OBJFMT_MODULE);
 
     /* Define standard YASM assembly-time macro constants */
     predef = yasm_xmalloc(strlen("__YASM_OBJFMT__=")
