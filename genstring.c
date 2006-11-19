@@ -38,7 +38,6 @@ main(int argc, char *argv[])
     int i;
     char *str;
     char *strp;
-    char *charp;
     size_t len;
 
     if (argc < 4) {

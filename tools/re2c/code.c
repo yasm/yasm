@@ -4,6 +4,7 @@
 #include "tools/re2c/substr.h"
 #include "tools/re2c/globals.h"
 #include "tools/re2c/dfa.h"
+#include "tools/re2c/parse.h"
 
 static void useLabel(size_t value) {
     while (value >= vUsedLabelAlloc) {
@@ -849,7 +850,7 @@ void DFA_emit(DFA *d, FILE *o){
 	Go_genGoto(&s->go, tmpo, s, s->next, &readCh);
     }
     fclose(tmpo);
-    unlink("re2c.tmp");
+    remove("re2c.tmp");
     maxFillIndexes = vFillIndexes;
     vFillIndexes = orgVFillIndexes;
     oline = nOrgOline;
@@ -876,7 +877,7 @@ void DFA_emit(DFA *d, FILE *o){
 	oline++;
 	useLabel(label);
     } else {
-	unsigned int i;
+	int i;
 	fputs("\tswitch(YYGETSTATE()) {\n", o);
 	fputs("\t\tcase -1: goto yy0;\n", o);
 
