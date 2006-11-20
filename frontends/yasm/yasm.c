@@ -299,6 +299,9 @@ do_preproc_only(FILE *in)
 	cleanup(NULL);
 	return EXIT_FAILURE;
     }
+
+    yasm_errwarns_output_all(errwarns, linemap, warning_error,
+			     print_yasm_error, print_yasm_warning);
     yasm_xfree(preproc_buf);
     yasm_linemap_destroy(linemap);
     yasm_errwarns_destroy(errwarns);
