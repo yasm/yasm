@@ -212,8 +212,7 @@ static YYCTYPE *strbuf = NULL;
 static size_t strbuf_size = 0;
 
 static void
-strbuf_append(size_t count, YYCTYPE *cursor, yasm_scanner *s,
-	      unsigned long line, int ch)
+strbuf_append(size_t count, YYCTYPE *cursor, yasm_scanner *s, int ch)
 {
     if (cursor == s->eof)
 	yasm_error_set(YASM_ERROR_SYNTAX,
@@ -565,23 +564,23 @@ stringconst_scan:
     /*!re2c
 	/* Escaped constants */
 	"\\b"	{
-	    strbuf_append(count++, cursor, s, cur_line, '\b');
+	    strbuf_append(count++, cursor, s, '\b');
 	    goto stringconst_scan;
 	}
 	"\\f"	{
-	    strbuf_append(count++, cursor, s, cur_line, '\f');
+	    strbuf_append(count++, cursor, s, '\f');
 	    goto stringconst_scan;
 	}
 	"\\n"	{
-	    strbuf_append(count++, cursor, s, cur_line, '\n');
+	    strbuf_append(count++, cursor, s, '\n');
 	    goto stringconst_scan;
 	}
 	"\\r"	{
-	    strbuf_append(count++, cursor, s, cur_line, '\r');
+	    strbuf_append(count++, cursor, s, '\r');
 	    goto stringconst_scan;
 	}
 	"\\t"	{
-	    strbuf_append(count++, cursor, s, cur_line, '\t');
+	    strbuf_append(count++, cursor, s, '\t');
 	    goto stringconst_scan;
 	}
 	"\\" digit digit digit	{
@@ -590,7 +589,7 @@ stringconst_scan:
 	    lvalp->intn = yasm_intnum_create_oct(TOK+1);
 	    s->tok[TOKLEN] = savech;
 
-	    strbuf_append(count++, cursor, s, cur_line,
+	    strbuf_append(count++, cursor, s,
 			  yasm_intnum_get_int(lvalp->intn));
 	    yasm_intnum_destroy(lvalp->intn);
 	    goto stringconst_scan;
@@ -601,33 +600,33 @@ stringconst_scan:
 	    lvalp->intn = yasm_intnum_create_hex(TOK+2);
 	    s->tok[TOKLEN] = savech;
 
-	    strbuf_append(count++, cursor, s, cur_line,
+	    strbuf_append(count++, cursor, s,
 			  yasm_intnum_get_int(lvalp->intn));
 	    yasm_intnum_destroy(lvalp->intn);
 	    goto stringconst_scan;
 	}
 	"\\\\"	    {
-	    strbuf_append(count++, cursor, s, cur_line, '\\');
+	    strbuf_append(count++, cursor, s, '\\');
 	    goto stringconst_scan;
 	}
 	"\\\""	    {
-	    strbuf_append(count++, cursor, s, cur_line, '"');
+	    strbuf_append(count++, cursor, s, '"');
 	    goto stringconst_scan;
 	}
 	/*"\\" any    {
-	    strbuf_append(count++, cursor, s, cur_line, s->tok[0]);
+	    strbuf_append(count++, cursor, s, s->tok[0]);
 	    goto stringconst_scan;
 	}*/
 
 	dquot	{
-	    strbuf_append(count, cursor, s, cur_line, '\0');
+	    strbuf_append(count, cursor, s, '\0');
 	    lvalp->str.contents = (char *)strbuf;
 	    lvalp->str.len = count;
 	    RETURN(STRING);
 	}
 
 	any	{
-	    strbuf_append(count++, cursor, s, cur_line, s->tok[0]);
+	    strbuf_append(count++, cursor, s, s->tok[0]);
 	    goto stringconst_scan;
 	}
     */
@@ -650,7 +649,7 @@ rept_scan:
 		yasm_xfree(strbuf);
 		return 0;
 	    }
-	    strbuf_append(count++, cursor, s, cur_line, s->tok[0]);
+	    strbuf_append(count++, cursor, s, s->tok[0]);
 	    new_line->data = strbuf;
 	    new_line->len = count;
 	    STAILQ_INSERT_TAIL(&rept->lines, new_line, link);
@@ -671,7 +670,7 @@ rept_scan:
 		yasm_errwarn_propagate(parser_gas->errwarns, cur_line);
 	    }
 	    for (i=0; i<6; i++)
-		strbuf_append(count++, cursor, s, cur_line, s->tok[i]);
+		strbuf_append(count++, cursor, s, s->tok[i]);
 	    goto rept_scan;
 	}
 	'.endr'	{
@@ -717,7 +716,7 @@ rept_scan:
 	    } else {
 		int i;
 		for (i=0; i<6; i++)
-		    strbuf_append(count++, cursor, s, cur_line, s->tok[i]);
+		    strbuf_append(count++, cursor, s, s->tok[i]);
 		goto rept_scan;
 	    }
 	}
@@ -727,7 +726,7 @@ rept_scan:
 		yasm_xfree(strbuf);
 		return 0;
 	    }
-	    strbuf_append(count++, cursor, s, cur_line, s->tok[0]);
+	    strbuf_append(count++, cursor, s, s->tok[0]);
 	    linestart = 0;
 	    goto rept_scan;
 	}
