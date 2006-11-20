@@ -33,8 +33,10 @@ do
 	eg=/dev/null
     fi
 
+    srcdir_re=`echo ${srcdir} | sed 's,\.,\\.,'`
+
     # Run within a subshell to prevent signal messages from displaying.
-    sh -c "sed \"s,\./,${srcdir}/,\" ${asm} | ./yasm -e -r yapp - | sed \"s,${srcdir}/,./,\" > results/${o} 2>results/${e}" >/dev/null 2>/dev/null
+    sh -c "sed 's,\./,${srcdir}/,' ${asm} | ./yasm -e -r yapp - 2>results/${e} | sed 's,${srcdir_re}/,./,' > results/${o}" >/dev/null 2>/dev/null
     status=$?
     if test $status -gt 128; then
 	# We should never get a coredump!
