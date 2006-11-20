@@ -449,20 +449,25 @@ lineexp: instr
 	/*@dependent@*/ yasm_section *comment =
 	    gas_get_section(parser_gas, yasm__xstrdup(".comment"), NULL, NULL,
 			    NULL, 1);
-	/* To match GAS output, if the comment section is empty, put an
-	 * initial 0 byte in the section.
-	 */
-	if (yasm_section_bcs_first(comment) == yasm_section_bcs_last(comment)) {
-	    yasm_datavalhead dvs;
+	if (comment) {
+	    /* To match GAS output, if the comment section is empty, put an
+	     * initial 0 byte in the section.
+	     */
+	    if (yasm_section_bcs_first(comment)
+		== yasm_section_bcs_last(comment)) {
+		yasm_datavalhead dvs;
 
-	    yasm_dvs_initialize(&dvs);
-	    yasm_dvs_append(&dvs, yasm_dv_create_expr(
-		p_expr_new_ident(yasm_expr_int(yasm_intnum_create_uint(0)))));
+		yasm_dvs_initialize(&dvs);
+		yasm_dvs_append(&dvs, yasm_dv_create_expr(
+		    p_expr_new_ident(yasm_expr_int(
+			yasm_intnum_create_uint(0)))));
+		yasm_section_bcs_append(comment,
+		    yasm_bc_create_data(&dvs, 1, 0, parser_gas->arch,
+					cur_line));
+	    }
 	    yasm_section_bcs_append(comment,
-		yasm_bc_create_data(&dvs, 1, 0, parser_gas->arch, cur_line));
+		yasm_bc_create_data(&$2, 1, 1, parser_gas->arch, cur_line));
 	}
-	yasm_section_bcs_append(comment,
-	    yasm_bc_create_data(&$2, 1, 1, parser_gas->arch, cur_line));
 	$$ = NULL;
     }
     | DIR_FILE INTNUM STRING {
