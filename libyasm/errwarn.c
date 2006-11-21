@@ -377,6 +377,12 @@ yasm_warn_fetch(yasm_warn_class *wclass, char **str)
 {
     warn *w = STAILQ_FIRST(&yasm_warns);
 
+    if (!w) {
+	*wclass = YASM_WARN_NONE;
+	*str = NULL;
+	return;
+    }
+
     *wclass = w->wclass;
     *str = w->wstr;
 
