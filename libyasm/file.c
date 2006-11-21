@@ -42,6 +42,7 @@
 #include "util.h"
 /*@unused@*/ RCSID("$Id$");
 
+#include "errwarn.h"
 #include "file.h"
 
 #define BSIZE	8192	    /* Fill block size */
@@ -108,6 +109,71 @@ yasm_fill_helper(yasm_scanner *s, unsigned char **cursor,
     }
     s->lim += cnt;
     return first;
+}
+
+void
+yasm_unescape_cstring(unsigned char *str, size_t *len)
+{
+    unsigned char *s = str;
+    unsigned char *o = str;
+    unsigned char t[4];
+
+    while ((size_t)(s-str)<*len) {
+	if (*s == '\\' && (size_t)(&s[1]-str)<*len) {
+	    s++;
+	    switch (*s) {
+		case 'b': *o = '\b'; s++; break;
+		case 'f': *o = '\f'; s++; break;
+		case 'n': *o = '\n'; s++; break;
+		case 'r': *o = '\r'; s++; break;
+		case 't': *o = '\t'; s++; break;
+		case 'x':
+		    /* hex escape; grab last two digits */
+		    s++;
+		    while ((size_t)(&s[2]-str)<*len && isxdigit(s[0])
+			   && isxdigit(s[1]) && isxdigit(s[2]))
+			s++;
+		    if ((size_t)(s-str)<*len && isxdigit(*s)) {
+			t[0] = *s++;
+			t[1] = '\0';
+			t[2] = '\0';
+			if ((size_t)(s-str)<*len && isxdigit(*s))
+			    t[1] = *s++;
+			*o = (unsigned char)strtoul((char *)t, NULL, 16);
+		    } else
+			*o = '\0';
+		    break;
+		default:
+		    if (isdigit(*s)) {
+			int warn = 0;
+			/* octal escape */
+			if (*s > '7')
+			    warn = 1;
+			*o = *s++ - '0';
+			if ((size_t)(s-str)<*len && isdigit(*s)) {
+			    if (*s > '7')
+				warn = 1;
+			    *o <<= 3;
+			    *o += *s++ - '0';
+			    if ((size_t)(s-str)<*len && isdigit(*s)) {
+				if (*s > '7')
+				    warn = 1;
+				*o <<= 3;
+				*o += *s++ - '0';
+			    }
+			}
+			if (warn)
+			    yasm_warn_set(YASM_WARN_GENERAL,
+					  N_("octal value out of range"));
+		    } else
+			*o = *s++;
+		    break;
+	    }
+	    o++;
+	} else
+	    *o++ = *s++;
+    }
+    *len = o-str;
 }
 
 size_t

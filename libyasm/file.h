@@ -69,6 +69,17 @@ int yasm_fill_helper
      size_t (*input_func) (void *d, unsigned char *buf, size_t max),
      void *input_func_data);
 
+/** Unescape a string with C-style escapes.  Handles b, f, n, r, t, and hex
+ * and octal escapes.  String is updated in-place.
+ * Edge cases:
+ * - hex escapes: reads as many hex digits as possible, takes last 2 as value.
+ * - oct escapes: takes up to 3 digits 0-9 and scales appropriately, with
+ *                warning.
+ * \param str		C-style string (updated in place)
+ * \param len		length of string (updated with new length)
+ */
+void yasm_unescape_cstring(unsigned char *str, size_t *len);
+
 /** Split a UNIX pathname into head (directory) and tail (base filename)
  * portions.
  * \internal
