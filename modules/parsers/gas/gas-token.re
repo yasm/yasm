@@ -562,64 +562,15 @@ stringconst_scan:
     SCANINIT();
 
     /*!re2c
-	/* Escaped constants */
-	"\\b"	{
-	    strbuf_append(count++, cursor, s, '\b');
-	    goto stringconst_scan;
-	}
-	"\\f"	{
-	    strbuf_append(count++, cursor, s, '\f');
-	    goto stringconst_scan;
-	}
-	"\\n"	{
-	    strbuf_append(count++, cursor, s, '\n');
-	    goto stringconst_scan;
-	}
-	"\\r"	{
-	    strbuf_append(count++, cursor, s, '\r');
-	    goto stringconst_scan;
-	}
-	"\\t"	{
-	    strbuf_append(count++, cursor, s, '\t');
-	    goto stringconst_scan;
-	}
-	"\\" digit digit digit	{
-	    savech = s->tok[TOKLEN];
-	    s->tok[TOKLEN] = '\0';
-	    lvalp->intn = yasm_intnum_create_oct(TOK+1);
-	    s->tok[TOKLEN] = savech;
-
-	    strbuf_append(count++, cursor, s,
-			  yasm_intnum_get_int(lvalp->intn));
-	    yasm_intnum_destroy(lvalp->intn);
-	    goto stringconst_scan;
-	}
-	'\\x' hexdigit+    {
-	    savech = s->tok[TOKLEN];
-	    s->tok[TOKLEN] = '\0';
-	    lvalp->intn = yasm_intnum_create_hex(TOK+2);
-	    s->tok[TOKLEN] = savech;
-
-	    strbuf_append(count++, cursor, s,
-			  yasm_intnum_get_int(lvalp->intn));
-	    yasm_intnum_destroy(lvalp->intn);
-	    goto stringconst_scan;
-	}
-	"\\\\"	    {
-	    strbuf_append(count++, cursor, s, '\\');
-	    goto stringconst_scan;
-	}
+	/* Handle escaped double-quote by copying and continuing */
 	"\\\""	    {
 	    strbuf_append(count++, cursor, s, '"');
 	    goto stringconst_scan;
 	}
-	/*"\\" any    {
-	    strbuf_append(count++, cursor, s, s->tok[0]);
-	    goto stringconst_scan;
-	}*/
 
 	dquot	{
 	    strbuf_append(count, cursor, s, '\0');
+	    yasm_unescape_cstring(strbuf, &count);
 	    lvalp->str.contents = (char *)strbuf;
 	    lvalp->str.len = count;
 	    RETURN(STRING);
