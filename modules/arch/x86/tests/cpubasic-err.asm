@@ -14,4 +14,4 @@ cpu 8086
 shl ax, 1
 shl ax, 2
 movsd
-
+push 0

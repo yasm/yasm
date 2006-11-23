@@ -3,3 +3,4 @@
 -:7: warning: `fninit' is an instruction in CPU FPU
 -:15: requires CPU 186
 -:16: warning: `movsd' is an instruction in CPU 386
+-:17: requires CPU 186
