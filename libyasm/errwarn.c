@@ -36,7 +36,7 @@
 
 #include "coretype.h"
 
-#include "linemgr.h"
+#include "linemap.h"
 #include "errwarn.h"
 
 

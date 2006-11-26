@@ -160,7 +160,7 @@ typedef struct yasm_value {
 /** Maximum value of #yasm_value.rshift */
 #define YASM_VALUE_RSHIFT_MAX	127
 
-/** Line number mapping repository (opaque type).  \see linemgr.h for related
+/** Line number mapping repository (opaque type).  \see linemap.h for related
  * functions.
  */
 typedef struct yasm_linemap yasm_linemap;

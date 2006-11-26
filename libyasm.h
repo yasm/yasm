@@ -54,7 +54,7 @@
 #include <libyasm/coretype.h>
 #include <libyasm/valparam.h>
 
-#include <libyasm/linemgr.h>
+#include <libyasm/linemap.h>
 
 #include <libyasm/errwarn.h>
 #include <libyasm/intnum.h>

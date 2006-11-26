@@ -396,7 +396,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\libyasm\linemgr.c"
+				RelativePath="..\..\..\libyasm\linemap.c"
 				>
 			</File>
 			<File
@@ -517,7 +517,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\libyasm\linemgr.h"
+				RelativePath="..\..\..\libyasm\linemap.h"
 				>
 			</File>
 			<File

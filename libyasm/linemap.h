@@ -1,6 +1,6 @@
 /**
- * \file libyasm/linemgr.h
- * \brief YASM virtual line mapping management interface.
+ * \file libyasm/linemap.h
+ * \brief YASM virtual line mapping interface.
  *
  * \rcs
  * $Id$
@@ -31,8 +31,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * \endlicense
  */
-#ifndef YASM_LINEMGR_H
-#define YASM_LINEMGR_H
+#ifndef YASM_LINEMAP_H
+#define YASM_LINEMAP_H
 
 /** Create a new line mapping repository.
  * \return New repository.

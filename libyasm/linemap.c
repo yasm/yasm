@@ -1,5 +1,5 @@
 /*
- * YASM assembler line manager (for parse stage)
+ * YASM assembler virtual line mapping handling (for parse stage)
  *
  *  Copyright (C) 2002  Peter Johnson
  *
@@ -32,7 +32,7 @@
 #include "hamt.h"
 
 #include "errwarn.h"
-#include "linemgr.h"
+#include "linemap.h"
 
 
 /* Source lines tracking */

@@ -172,7 +172,7 @@
 				RelativePath="..\..\..\libyasm\inttree.c">
 			</File>
 			<File
-				RelativePath="..\..\..\libyasm\linemgr.c">
+				RelativePath="..\..\..\libyasm\linemap.c">
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\md5.c">
@@ -266,7 +266,7 @@
 				RelativePath="..\..\..\libyasm\inttree.h">
 			</File>
 			<File
-				RelativePath="..\..\..\libyasm\linemgr.h">
+				RelativePath="..\..\..\libyasm\linemap.h">
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\md5.h">
