@@ -344,6 +344,14 @@ void yasm_warn_clear(void)
     }
 }
 
+yasm_warn_class
+yasm_warn_occurred(void)
+{
+    if (STAILQ_EMPTY(&yasm_warns))
+	return YASM_WARN_NONE;
+    return STAILQ_FIRST(&yasm_warns)->wclass;
+}
+
 void
 yasm_warn_set_va(yasm_warn_class wclass, const char *format, va_list va)
 {

@@ -192,6 +192,13 @@ void yasm_error_fetch(/*@out@*/ yasm_error_class *eclass,
  */
 void yasm_warn_clear(void);
 
+/** Get the first warning indicator.  YASM_WARN_NONE is returned if no warning
+ * has been set.  Note that as YASM_WARN_NONE is 0, the return value can also
+ * be treated as a boolean value.
+ * \return First warning indicator.
+ */
+yasm_warn_class yasm_warn_occurred(void);
+
 /** Add a warning indicator (va_list version).
  * \param wclass    warning class
  * \param format    printf format string
