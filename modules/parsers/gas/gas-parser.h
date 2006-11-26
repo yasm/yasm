@@ -67,6 +67,11 @@ typedef struct yasm_parser_gas {
     /*@null@*/ char *locallabel_base;
     size_t locallabel_base_len;
 
+    /* .line/.file: we have to see both to start setting linemap versions */
+    int dir_fileline;
+    /*@null@*/ char *dir_file;
+    unsigned long dir_line;
+
     /*@dependent@*/ yasm_preproc *preproc;
     /*@dependent@*/ yasm_arch *arch;
     /*@dependent@*/ yasm_objfmt *objfmt;

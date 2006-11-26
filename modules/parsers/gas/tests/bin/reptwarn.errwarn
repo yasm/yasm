@@ -1,9 +1,9 @@
--:1: warning: value does not fit in 8 bit field
--:3: warning: value does not fit in 8 bit field
--:6: warning: value does not fit in 8 bit field
--:3: warning: value does not fit in 8 bit field
--:6: warning: value does not fit in 8 bit field
--:3: warning: value does not fit in 8 bit field
--:6: warning: value does not fit in 8 bit field
--:9: warning: value does not fit in 8 bit field
+-:2: warning: value does not fit in 8 bit field
+-:4: warning: value does not fit in 8 bit field
+-:7: warning: value does not fit in 8 bit field
+-:4: warning: value does not fit in 8 bit field
+-:7: warning: value does not fit in 8 bit field
+-:4: warning: value does not fit in 8 bit field
+-:7: warning: value does not fit in 8 bit field
 -:10: warning: value does not fit in 8 bit field
+-:11: warning: value does not fit in 8 bit field

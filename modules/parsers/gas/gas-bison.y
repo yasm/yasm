@@ -148,6 +148,7 @@ input: /* empty */
 		parser_gas->prev_bc,
 		(char *)parser_gas->save_line[parser_gas->save_last ^ 1]);
 	yasm_linemap_goto_next(parser_gas->linemap);
+	parser_gas->dir_line++;	/* keep track for .line followed by .file */
     }
 ;
 
@@ -194,9 +195,24 @@ lineexp: instr
 	$$ = (yasm_bytecode *)NULL;
 	if (yasm_intnum_sign($2) < 0)
 	    yasm_error_set(YASM_ERROR_SYNTAX, N_("line number is negative"));
-	else
-	    yasm_linemap_set(parser_gas->linemap, NULL,
-			     yasm_intnum_get_uint($2), 1);
+	else {
+	    parser_gas->dir_line = yasm_intnum_get_uint($2);
+	    yasm_intnum_destroy($2);
+ 
+	    if (parser_gas->dir_fileline == 3) {
+		/* Have both file and line */
+		yasm_linemap_set(parser_gas->linemap, NULL,
+				 parser_gas->dir_line, 1);
+	    } else if (parser_gas->dir_fileline == 1) {
+		/* Had previous file directive only */
+		parser_gas->dir_fileline = 3;
+		yasm_linemap_set(parser_gas->linemap, parser_gas->dir_file,
+				 parser_gas->dir_line, 1);
+	    } else {
+		/* Didn't see file yet */
+		parser_gas->dir_fileline = 2;
+	    }
+	}
     }
     /* Macro directives */
     | DIR_REPT expr {
@@ -490,6 +506,30 @@ lineexp: instr
 	yasm_valparamhead vps;
 	yasm_valparam *vp;
 
+	/* This form also sets the assembler's internal line number */
+	if (parser_gas->dir_fileline == 3) {
+	    /* Have both file and line */
+	    const char *old_fn;
+	    unsigned long old_line;
+
+	    yasm_linemap_lookup(parser_gas->linemap, cur_line, &old_fn,
+				&old_line);
+	    yasm_linemap_set(parser_gas->linemap, $2.contents,
+			     old_line, 1);
+	} else if (parser_gas->dir_fileline == 2) {
+	    /* Had previous line directive only */
+	    parser_gas->dir_fileline = 3;
+	    yasm_linemap_set(parser_gas->linemap, $2.contents,
+			     parser_gas->dir_line, 1);
+	} else {
+	    /* Didn't see line yet, save file */
+	    parser_gas->dir_fileline = 1;
+	    if (parser_gas->dir_file)
+		yasm_xfree(parser_gas->dir_file);
+	    parser_gas->dir_file = yasm__xstrdup($2.contents);
+	}
+
+	/* Pass change along to debug format */
 	yasm_vps_initialize(&vps);
 	vp = yasm_vp_create($2.contents, NULL);
 	yasm_vps_append(&vps, vp);

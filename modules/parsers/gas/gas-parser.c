@@ -53,6 +53,10 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
     parser_gas.locallabel_base = (char *)NULL;
     parser_gas.locallabel_base_len = 0;
 
+    parser_gas.dir_fileline = 0;
+    parser_gas.dir_file = NULL;
+    parser_gas.dir_line = 0;
+
     parser_gas.preproc = pp;
     parser_gas.arch = a;
     parser_gas.objfmt = of;
@@ -98,6 +102,9 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
     /* Free locallabel base if necessary */
     if (parser_gas.locallabel_base)
 	yasm_xfree(parser_gas.locallabel_base);
+
+    if (parser_gas.dir_file)
+	yasm_xfree(parser_gas.dir_file);
 }
 
 /* Define valid preprocessors to use with this parser */
