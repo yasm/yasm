@@ -62,7 +62,6 @@ cdef extern from "libyasm/expr-int.h":
         YASM_EXPR_INT
         YASM_EXPR_FLOAT
         YASM_EXPR_SYM
-        YASM_EXPR_SYMEXP
         YASM_EXPR_EXPR
 
     cdef union yasm_expr__type_data:
