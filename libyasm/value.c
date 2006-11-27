@@ -180,12 +180,10 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 		}
 
 		if (sube->terms[0].type == YASM_EXPR_INT &&
-		    (sube->terms[1].type == YASM_EXPR_SYM ||
-		     sube->terms[1].type == YASM_EXPR_SYMEXP)) {
+		    sube->terms[1].type == YASM_EXPR_SYM) {
 		    intn = sube->terms[0].data.intn;
 		    sym = sube->terms[1].data.sym;
-		} else if ((sube->terms[0].type == YASM_EXPR_SYM ||
-			    sube->terms[0].type == YASM_EXPR_SYMEXP) &&
+		} else if (sube->terms[0].type == YASM_EXPR_SYM &&
 			   sube->terms[1].type == YASM_EXPR_INT) {
 		    sym = sube->terms[0].data.sym;
 		    intn = sube->terms[1].data.intn;
@@ -210,8 +208,7 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 
 		/* Now look for a unused symrec term in the same segment */
 		for (j=0; j<e->numterms; j++) {
-		    if ((e->terms[j].type == YASM_EXPR_SYM
-			 || e->terms[j].type == YASM_EXPR_SYMEXP)
+		    if (e->terms[j].type == YASM_EXPR_SYM
 			&& yasm_symrec_get_label(e->terms[j].data.sym,
 						 &precbc2)
 			&& (sect = yasm_bc_get_section(precbc2))
@@ -234,8 +231,7 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 		if (j == e->numterms && yasm_symrec_is_curpos(sym)
 		    && !value->curpos_rel) {
 		    for (j=0; j<e->numterms; j++) {
-			if ((e->terms[j].type == YASM_EXPR_SYM
-			    || e->terms[j].type == YASM_EXPR_SYMEXP)
+			if (e->terms[j].type == YASM_EXPR_SYM
 			    && yasm_symrec_get_label(e->terms[j].data.sym,
 						     &precbc2)
 			    && (used & (1<<j)) == 0) {
@@ -265,8 +261,7 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 	     * we don't WANT to find one, error out.
 	     */
 	    for (i=0; i<e->numterms; i++) {
-		if ((e->terms[i].type == YASM_EXPR_SYM
-		     || e->terms[i].type == YASM_EXPR_SYMEXP)
+		if (e->terms[i].type == YASM_EXPR_SYM
 		    && (used & (1<<i)) == 0) {
 		    if (value->rel || ssym_not_ok)
 			return 1;
@@ -290,7 +285,6 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 		case YASM_EXPR_FLOAT:
 		    return 1;		/* not legal */
 		case YASM_EXPR_SYM:
-		case YASM_EXPR_SYMEXP:
 		    return 1;
 		case YASM_EXPR_EXPR:
 		    if (value_finalize_scan(value, e->terms[1].data.expn, 1))
@@ -306,7 +300,6 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 		case YASM_EXPR_FLOAT:
 		    return 1;		/* not legal */
 		case YASM_EXPR_SYM:
-		case YASM_EXPR_SYMEXP:
 		    if (value->rel || ssym_not_ok)
 			return 1;
 		    value->rel = e->terms[0].data.sym;
@@ -341,8 +334,7 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 	     * Not okay for anything BUT a single symrec as an immediate
 	     * child.
 	     */
-	    if (e->terms[0].type != YASM_EXPR_SYM
-		&& e->terms[0].type != YASM_EXPR_SYMEXP)
+	    if (e->terms[0].type != YASM_EXPR_SYM)
 		return 1;
 
 	    if (value->seg_of)
@@ -368,7 +360,6 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 	    /* Handle RHS */
 	    switch (e->terms[1].type) {
 		case YASM_EXPR_SYM:
-		case YASM_EXPR_SYMEXP:
 		    if (value->wrt)
 			return 1;
 		    value->wrt = e->terms[1].data.sym;
@@ -385,7 +376,6 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 	    /* Handle LHS */
 	    switch (e->terms[0].type) {
 		case YASM_EXPR_SYM:
-		case YASM_EXPR_SYMEXP:
 		    if (value->rel || ssym_not_ok)
 			return 1;
 		    value->rel = e->terms[0].data.sym;
@@ -407,7 +397,6 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 	    for (i=0; i<e->numterms; i++) {
 		switch (e->terms[i].type) {
 		    case YASM_EXPR_SYM:
-		    case YASM_EXPR_SYMEXP:
 			return 1;
 		    case YASM_EXPR_EXPR:
 			/* recurse */
@@ -452,7 +441,6 @@ yasm_value_finalize_expr(yasm_value *value, yasm_expr *e, unsigned int size)
 	    case YASM_EXPR_FLOAT:
 		return 0;
 	    case YASM_EXPR_SYM:
-	    case YASM_EXPR_SYMEXP:
 		value->rel = value->abs->terms[0].data.sym;
 		yasm_expr_destroy(value->abs);
 		value->abs = NULL;

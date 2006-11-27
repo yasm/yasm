@@ -112,8 +112,7 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
 	/* Transform symrecs that reference sections into
 	 * start expr + intnum(dist).
 	 */
-	if ((e->terms[i].type == YASM_EXPR_SYM ||
-	     e->terms[i].type == YASM_EXPR_SYMEXP) &&
+	if (e->terms[i].type == YASM_EXPR_SYM &&
 	    yasm_symrec_get_label(e->terms[i].data.sym, &precbc) &&
 	    (sect = yasm_bc_get_section(precbc)) &&
 	    (dist = yasm_calc_bc_dist(yasm_section_bcs_first(sect), precbc))) {

@@ -38,9 +38,8 @@ typedef enum {
     YASM_EXPR_SUBST = 1<<2,
     YASM_EXPR_FLOAT = 1<<3,
     YASM_EXPR_SYM = 1<<4,
-    YASM_EXPR_SYMEXP = 1<<5, /* post-expanded sym (due to EQU expansion) */
-    YASM_EXPR_PRECBC = 1<<6, /* direct bytecode ref (rather than via symrec) */
-    YASM_EXPR_EXPR = 1<<7
+    YASM_EXPR_PRECBC = 1<<5, /* direct bytecode ref (rather than via symrec) */
+    YASM_EXPR_EXPR = 1<<6
 } yasm_expr__type;
 
 struct yasm_expr__item {

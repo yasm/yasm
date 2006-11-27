@@ -234,7 +234,6 @@ expr_xform_bc_dist_base(/*@returned@*/ /*@only@*/ yasm_expr *e,
 
 	if (sube->terms[0].type == YASM_EXPR_INT &&
 	    (sube->terms[1].type == YASM_EXPR_SYM ||
-	     sube->terms[1].type == YASM_EXPR_SYMEXP ||
 	     sube->terms[1].type == YASM_EXPR_PRECBC)) {
 	    intn = sube->terms[0].data.intn;
 	    if (sube->terms[1].type == YASM_EXPR_PRECBC)
@@ -242,7 +241,6 @@ expr_xform_bc_dist_base(/*@returned@*/ /*@only@*/ yasm_expr *e,
 	    else
 		sym = sube->terms[1].data.sym;
 	} else if ((sube->terms[0].type == YASM_EXPR_SYM ||
-		    sube->terms[0].type == YASM_EXPR_SYMEXP ||
 		    sube->terms[0].type == YASM_EXPR_PRECBC) &&
 		   sube->terms[1].type == YASM_EXPR_INT) {
 	    if (sube->terms[0].type == YASM_EXPR_PRECBC)
@@ -262,8 +260,7 @@ expr_xform_bc_dist_base(/*@returned@*/ /*@only@*/ yasm_expr *e,
 
 	/* Now look for a symrec term in the same segment */
 	for (j=0; j<e->numterms; j++) {
-	    if ((((e->terms[j].type == YASM_EXPR_SYM ||
-		   e->terms[j].type == YASM_EXPR_SYMEXP) &&
+	    if (((e->terms[j].type == YASM_EXPR_SYM &&
 		  yasm_symrec_get_label(e->terms[j].data.sym, &precbc2)) ||
 	         (e->terms[j].type == YASM_EXPR_PRECBC &&
 		  (precbc2 = e->terms[j].data.precbc)))	&&
@@ -959,7 +956,6 @@ expr_item_copy(yasm_expr__item *dest, const yasm_expr__item *src)
     dest->type = src->type;
     switch (src->type) {
 	case YASM_EXPR_SYM:
-	case YASM_EXPR_SYMEXP:
 	    /* Symbols don't need to be copied */
 	    dest->data.sym = src->data.sym;
 	    break;
@@ -1279,9 +1275,7 @@ yasm_expr_get_symrec(yasm_expr **ep, int simplify)
     if (simplify)
 	*ep = yasm_expr_simplify(*ep, 0);
 
-    if ((*ep)->op == YASM_EXPR_IDENT &&
-	((*ep)->terms[0].type == YASM_EXPR_SYM ||
-	 (*ep)->terms[0].type == YASM_EXPR_SYMEXP))
+    if ((*ep)->op == YASM_EXPR_IDENT && (*ep)->terms[0].type == YASM_EXPR_SYM)
 	return (*ep)->terms[0].data.sym;
     else
 	return (yasm_symrec *)NULL;
@@ -1424,7 +1418,6 @@ yasm_expr_print(const yasm_expr *e, FILE *f)
 			yasm_bc_next_offset(e->terms[i].data.precbc));
 		break;
 	    case YASM_EXPR_SYM:
-	    case YASM_EXPR_SYMEXP:
 		fprintf(f, "%s", yasm_symrec_get_name(e->terms[i].data.sym));
 		break;
 	    case YASM_EXPR_EXPR:
