@@ -58,8 +58,8 @@ yasm_valparam *yasm_vp_create(/*@keep@*/ char *v, /*@keep@*/ yasm_expr *p);
  */
 yasm_valparamhead *yasm_vps_create(void);
 
-/** Destroy a list of instruction operands (created with yasm_vps_create).
- * \param headp		list of instruction operands
+/** Destroy a list of valparams (created with yasm_vps_create).
+ * \param headp		list of valparams
  */
 void yasm_vps_destroy(yasm_valparamhead *headp);
 
