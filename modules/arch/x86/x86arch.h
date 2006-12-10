@@ -155,7 +155,8 @@ typedef struct x86_effaddr {
 				   0xff if unknown */
 } x86_effaddr;
 
-void yasm_x86__ea_init(x86_effaddr *x86_ea, unsigned int spare);
+void yasm_x86__ea_init(x86_effaddr *x86_ea, unsigned int spare,
+		       yasm_bytecode *precbc);
 
 void yasm_x86__ea_set_disponly(x86_effaddr *x86_ea);
 x86_effaddr *yasm_x86__ea_create_reg(unsigned long reg, unsigned char *rex,

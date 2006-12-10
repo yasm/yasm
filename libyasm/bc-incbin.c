@@ -111,7 +111,7 @@ bc_incbin_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     bytecode_incbin *incbin = (bytecode_incbin *)bc->contents;
     yasm_value val;
 
-    if (yasm_value_finalize_expr(&val, incbin->start, 0))
+    if (yasm_value_finalize_expr(&val, incbin->start, prev_bc, 0))
 	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 		       N_("start expression too complex"));
     else if (val.rel)
@@ -119,7 +119,7 @@ bc_incbin_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 		       N_("start expression not absolute"));
     incbin->start = val.abs;
 
-    if (yasm_value_finalize_expr(&val, incbin->maxlen, 0))
+    if (yasm_value_finalize_expr(&val, incbin->maxlen, prev_bc, 0))
 	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 		       N_("maximum length expression too complex"));
     else if (val.rel)

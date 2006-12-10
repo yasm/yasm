@@ -29,9 +29,9 @@ cdef extern from "libyasm/value.h":
     cdef void yasm_value_init_sym(yasm_value *value, yasm_symrec *sym,
                                   unsigned int size)
     cdef void yasm_value_delete(yasm_value *value)
-    cdef int yasm_value_finalize(yasm_value *value)
+    cdef int yasm_value_finalize(yasm_value *value, yasm_bytecode *precbc)
     cdef int yasm_value_finalize_expr(yasm_value *value, yasm_expr *e,
-                                      unsigned int size)
+                                      yasm_bytecode *precbc, unsigned int size)
     cdef yasm_intnum *yasm_value_get_intnum(yasm_value *value,
                                             yasm_bytecode *bc)
     cdef int yasm_value_output_basic(yasm_value *value, unsigned char *buf,
@@ -56,11 +56,16 @@ cdef class Value:
         elif isinstance(value, Symbol):
             yasm_value_init_sym(&self.value, (<Symbol>value).sym, sz)
         else:
-            raise ValueError("Invalid value type '%s'" % type(value))
+            raise TypeError("Invalid value type '%s'" % type(value))
 
     def __dealloc__(self):
         yasm_value_delete(&self.value)
 
-    def finalize(self):
-        return yasm_value_finalize(&self.value)
+    def finalize(self, precbc=None):
+        if precbc is None:
+            return yasm_value_finalize(&self.value, NULL)
+        elif isinstance(precbc, Bytecode):
+            return yasm_value_finalize(&self.value, (<Bytecode>precbc).bc)
+        else:
+            raise TypeError("Invalid precbc type '%s'" % type(precbc))
 

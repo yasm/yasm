@@ -90,10 +90,12 @@ typedef struct yasm_datavalhead yasm_datavalhead;
 #endif
 
 /** Create an immediate value from an expression.
- * \param e	expression (kept, do not free).
+ * \param e		expression (kept, do not free).
+ * \param precbc	previous bytecode to bytecode containing immediate
  * \return Newly allocated immediate value.
  */
-/*@only@*/ yasm_immval *yasm_imm_create_expr(/*@keep@*/ yasm_expr *e);
+/*@only@*/ yasm_immval *yasm_imm_create_expr(/*@keep@*/ yasm_expr *e,
+					     /*@null@*/ yasm_bytecode *precbc);
 
 /** Get the displacement portion of an effective address.
  * \param ea	effective address

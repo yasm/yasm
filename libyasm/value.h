@@ -86,9 +86,10 @@ void yasm_value_set_curpos_rel(yasm_value *value, yasm_bytecode *bc,
 /** Perform yasm_value_finalize_expr() on a value that already exists from
  * being initialized with yasm_value_initialize().
  * \param value		value
+ * \param precbc	previous bytecode to bytecode containing value
  * \return Nonzero if value could not be split.
  */
-int yasm_value_finalize(yasm_value *value);
+int yasm_value_finalize(yasm_value *value, /*@null@*/ yasm_bytecode *precbc);
 
 /** Break a #yasm_expr into a #yasm_value constituent parts.  Extracts
  * the relative portion of the value, SEG and WRT portions, and top-level
@@ -99,6 +100,7 @@ int yasm_value_finalize(yasm_value *value);
  * symrec offset within the absolute section.
  * \param value		value to store split portions into
  * \param e		expression input
+ * \param precbc	previous bytecode to bytecode containing expression
  * \param size		value size (in bits)
  * \return Nonzero if the expr could not be split into a value for some
  *         reason (e.g. the relative portion was not added, but multiplied,
@@ -110,6 +112,7 @@ int yasm_value_finalize(yasm_value *value);
  */
 int yasm_value_finalize_expr(/*@out@*/ yasm_value *value,
 			     /*@null@*/ /*@kept@*/ yasm_expr *e,
+			     /*@null@*/ yasm_bytecode *precbc,
 			     unsigned int size);
 
 /** Get value if absolute or PC-relative section-local relative.  Returns NULL

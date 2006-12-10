@@ -168,9 +168,10 @@ yasm_x86__bc_transform_jmpfar(yasm_bytecode *bc, x86_jmpfar *jmpfar)
 }
 
 void
-yasm_x86__ea_init(x86_effaddr *x86_ea, unsigned int spare)
+yasm_x86__ea_init(x86_effaddr *x86_ea, unsigned int spare,
+		  yasm_bytecode *precbc)
 {
-    if (yasm_value_finalize(&x86_ea->ea.disp))
+    if (yasm_value_finalize(&x86_ea->ea.disp, precbc))
 	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 		       N_("effective address too complex"));
     x86_ea->modrm &= 0xC7;		    /* zero spare/reg bits */

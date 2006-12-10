@@ -108,7 +108,7 @@ bc_data_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     STAILQ_FOREACH(dv, &bc_data->datahead, link) {
 	switch (dv->type) {
 	    case DV_VALUE:
-		if (yasm_value_finalize(&dv->data.val)) {
+		if (yasm_value_finalize(&dv->data.val, prev_bc)) {
 		    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 				   N_("data expression too complex"));
 		    return;

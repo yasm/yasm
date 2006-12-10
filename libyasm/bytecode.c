@@ -161,7 +161,7 @@ yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     if (bc->multiple) {
 	yasm_value val;
 
-	if (yasm_value_finalize_expr(&val, bc->multiple, 0))
+	if (yasm_value_finalize_expr(&val, bc->multiple, prev_bc, 0))
 	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 			   N_("multiple expression too complex"));
 	else if (val.rel)

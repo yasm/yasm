@@ -92,7 +92,7 @@ bc_reserve_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     bytecode_reserve *reserve = (bytecode_reserve *)bc->contents;
     yasm_value val;
 
-    if (yasm_value_finalize_expr(&val, reserve->numitems, 0))
+    if (yasm_value_finalize_expr(&val, reserve->numitems, prev_bc, 0))
 	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 		       N_("reserve expression too complex"));
     else if (val.rel)

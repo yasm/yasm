@@ -115,7 +115,8 @@ yasm_value_set_curpos_rel(yasm_value *value, yasm_bytecode *bc,
 }
 
 static int
-value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
+value_finalize_scan(yasm_value *value, yasm_expr *e,
+		    /*@null@*/ yasm_bytecode *expr_precbc, int ssym_not_ok)
 {
     int i;
     /*@dependent@*/ yasm_section *sect;
@@ -174,7 +175,8 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 
 		if (sube->op != YASM_EXPR_MUL || sube->numterms != 2) {
 		    /* recurse instead */
-		    if (value_finalize_scan(value, sube, ssym_not_ok))
+		    if (value_finalize_scan(value, sube, expr_precbc,
+					    ssym_not_ok))
 			return 1;
 		    continue;
 		}
@@ -188,19 +190,22 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 		    sym = sube->terms[0].data.sym;
 		    intn = sube->terms[1].data.intn;
 		} else {
-		    if (value_finalize_scan(value, sube, ssym_not_ok))
+		    if (value_finalize_scan(value, sube, expr_precbc,
+					    ssym_not_ok))
 			return 1;
 		    continue;
 		}
 
 		if (!yasm_intnum_is_neg1(intn)) {
-		    if (value_finalize_scan(value, sube, ssym_not_ok))
+		    if (value_finalize_scan(value, sube, expr_precbc,
+					    ssym_not_ok))
 			return 1;
 		    continue;
 		}
 
 		if (!yasm_symrec_get_label(sym, &precbc)) {
-		    if (value_finalize_scan(value, sube, ssym_not_ok))
+		    if (value_finalize_scan(value, sube, expr_precbc,
+					    ssym_not_ok))
 			return 1;
 		    continue;
 		}
@@ -225,11 +230,19 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 		 * unused symrec terms in other segments and generate
 		 * a curpos-relative reloc.
 		 *
+		 * Similarly, handle -1*symrec in other segment via the
+		 * following transformation:
+		 * other-this = (other-.)+(.-this)
+		 * We can only do this transformation if "this" is in
+		 * this expr's segment.
+		 *
 		 * Don't do this if we've already become curpos-relative.
 		 * The unmatched symrec will be caught below.
 		 */
-		if (j == e->numterms && yasm_symrec_is_curpos(sym)
-		    && !value->curpos_rel) {
+		if (j == e->numterms && !value->curpos_rel
+		    && (yasm_symrec_is_curpos(sym)
+			|| (expr_precbc
+			    && sect2 == yasm_bc_get_section(expr_precbc)))) {
 		    for (j=0; j<e->numterms; j++) {
 			if (e->terms[j].type == YASM_EXPR_SYM
 			    && yasm_symrec_get_label(e->terms[j].data.sym,
@@ -242,16 +255,29 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 				return 1;
 			    value->rel = e->terms[j].data.sym;
 			    value->curpos_rel = 1;
-			    /* Replace both symrec portions with 0 */
-			    yasm_expr_destroy(sube);
-			    e->terms[i].type = YASM_EXPR_INT;
-			    e->terms[i].data.intn = yasm_intnum_create_uint(0);
-			    e->terms[j].type = YASM_EXPR_INT;
-			    e->terms[j].data.intn = yasm_intnum_create_uint(0);
+			    if (yasm_symrec_is_curpos(sym)) {
+				/* Replace both symrec portions with 0 */
+				yasm_expr_destroy(sube);
+				e->terms[i].type = YASM_EXPR_INT;
+				e->terms[i].data.intn =
+				    yasm_intnum_create_uint(0);
+				e->terms[j].type = YASM_EXPR_INT;
+				e->terms[j].data.intn =
+				    yasm_intnum_create_uint(0);
+			    } else {
+				/* Replace positive portion with curpos */
+				yasm_symtab *symtab =
+				    yasm_object_get_symtab(
+					yasm_section_get_object(sect2));
+				e->terms[j].data.sym =
+				    yasm_symtab_define_curpos
+				    (symtab, ".", expr_precbc, e->line);
+			    }
 			    break;	/* stop looking */
 			}
 		    }
 		}
+
 
 		if (j == e->numterms)
 		    return 1;	/* We didn't find a match! */
@@ -287,7 +313,8 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 		case YASM_EXPR_SYM:
 		    return 1;
 		case YASM_EXPR_EXPR:
-		    if (value_finalize_scan(value, e->terms[1].data.expn, 1))
+		    if (value_finalize_scan(value, e->terms[1].data.expn,
+					    expr_precbc, 1))
 			return 1;
 		    break;
 		default:
@@ -310,7 +337,7 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 		case YASM_EXPR_EXPR:
 		    /* recurse */
 		    if (value_finalize_scan(value, e->terms[0].data.expn,
-					    ssym_not_ok))
+					    expr_precbc, ssym_not_ok))
 			return 1;
 		    break;
 		default:
@@ -386,7 +413,7 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 		case YASM_EXPR_EXPR:
 		    /* recurse */
 		    return value_finalize_scan(value, e->terms[0].data.expn,
-					       ssym_not_ok);
+					       expr_precbc, ssym_not_ok);
 		default:
 		    break;  /* ignore */
 	    }
@@ -401,7 +428,8 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 		    case YASM_EXPR_EXPR:
 			/* recurse */
 			return value_finalize_scan(value,
-						   e->terms[i].data.expn, 1);
+						   e->terms[i].data.expn,
+						   expr_precbc, 1);
 		    default:
 			break;
 		}
@@ -413,7 +441,8 @@ value_finalize_scan(yasm_value *value, yasm_expr *e, int ssym_not_ok)
 }
 
 int
-yasm_value_finalize_expr(yasm_value *value, yasm_expr *e, unsigned int size)
+yasm_value_finalize_expr(yasm_value *value, yasm_expr *e,
+			 yasm_bytecode *precbc, unsigned int size)
 {
     if (!e) {
 	yasm_value_initialize(value, NULL, size);
@@ -459,7 +488,7 @@ yasm_value_finalize_expr(yasm_value *value, yasm_expr *e, unsigned int size)
 	}
     }
 
-    if (value_finalize_scan(value, value->abs, 0))
+    if (value_finalize_scan(value, value->abs, precbc, 0))
 	return 1;
 
     value->abs = yasm_expr__level_tree(value->abs, 1, 1, 0, 0, NULL, NULL);
@@ -475,10 +504,10 @@ yasm_value_finalize_expr(yasm_value *value, yasm_expr *e, unsigned int size)
 }
 
 int
-yasm_value_finalize(yasm_value *value)
+yasm_value_finalize(yasm_value *value, yasm_bytecode *precbc)
 {
     unsigned int valsize = value->size;
-    return yasm_value_finalize_expr(value, value->abs, valsize);
+    return yasm_value_finalize_expr(value, value->abs, precbc, valsize);
 }
 
 yasm_intnum *

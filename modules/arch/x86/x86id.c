@@ -2115,7 +2115,7 @@ x86_finalize_opcode(x86_opcode *opcode, const x86_insn_info *info)
 }
 
 static void
-x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc,
+x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 		    const unsigned long data[4], int num_operands,
 		    yasm_insn_operands *operands, int num_prefixes,
 		    unsigned long **prefixes, const x86_insn_info *info)
@@ -2136,17 +2136,19 @@ x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc,
 	segment = yasm_expr_extract_segoff(&op->data.val);
 	if (!segment)
 	    yasm_internal_error(N_("didn't get SEG:OFF expression in jmpfar"));
-	if (yasm_value_finalize_expr(&jmpfar->segment, segment, 16))
+	if (yasm_value_finalize_expr(&jmpfar->segment, segment, prev_bc, 16))
 	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 			   N_("jump target segment too complex"));
-	if (yasm_value_finalize_expr(&jmpfar->offset, op->data.val, 0))
+	if (yasm_value_finalize_expr(&jmpfar->offset, op->data.val, prev_bc,
+				     0))
 	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 			   N_("jump target offset too complex"));
     } else if (op->targetmod == X86_FAR) {
 	/* "FAR imm" target needs to become "seg imm:imm". */
 	if (yasm_value_finalize_expr(&jmpfar->offset,
-				     yasm_expr_copy(op->data.val), 0)
-	    || yasm_value_finalize_expr(&jmpfar->segment, op->data.val, 16))
+				     yasm_expr_copy(op->data.val), prev_bc, 0)
+	    || yasm_value_finalize_expr(&jmpfar->segment, op->data.val,
+					prev_bc, 16))
 	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 			   N_("jump target expression too complex"));
 	jmpfar->segment.seg_of = 1;
@@ -2183,7 +2185,7 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 
     jmp = yasm_xmalloc(sizeof(x86_jmp));
     x86_finalize_common(&jmp->common, jinfo, mode_bits);
-    if (yasm_value_finalize_expr(&jmp->target, op->data.val, 0))
+    if (yasm_value_finalize_expr(&jmp->target, op->data.val, prev_bc, 0))
 	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 		       N_("jump target expression too complex"));
     if (jmp->target.seg_of || jmp->target.rshift || jmp->target.curpos_rel)
@@ -2771,8 +2773,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		return;
 	    case OPA_JmpFar:
 		/* Shortcut to JmpFar */
-		x86_finalize_jmpfar(arch, bc, data, num_operands, operands,
-				    num_prefixes, prefixes, info);
+		x86_finalize_jmpfar(arch, bc, prev_bc, data, num_operands,
+				    operands, num_prefixes, prefixes, info);
 		return;
 	}
     }
@@ -2992,7 +2994,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     }
 
     if (insn->x86_ea) {
-	yasm_x86__ea_init(insn->x86_ea, spare);
+	yasm_x86__ea_init(insn->x86_ea, spare, prev_bc);
 	for (i=0; i<num_segregs; i++)
 	    yasm_ea_set_segreg(&insn->x86_ea->ea, segregs[i]);
     } else if (num_segregs > 0 && insn->special_prefix == 0) {
@@ -3004,7 +3006,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	yasm_internal_error(N_("unhandled segment prefix"));
 
     if (imm) {
-	insn->imm = yasm_imm_create_expr(imm);
+	insn->imm = yasm_imm_create_expr(imm, prev_bc);
 	insn->imm->val.size = im_len;
 	insn->imm->sign = im_sign;
     } else
