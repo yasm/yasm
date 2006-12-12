@@ -152,7 +152,7 @@ class Lexer(object):
           is_hex = s[i:i+2]=='0x'
           if is_hex:
             i=i+2
-            assert s[i].isdigit(), self.err_string()
+            assert s[i].isdigit() or s[i] in "abcdefABCDEF", self.err_string()
           j=i+1
           while j<len(s):
             #print "lex ",repr(s[i]),is_float
