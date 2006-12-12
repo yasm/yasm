@@ -1,0 +1,16 @@
+
+pyxelator TODO:
+===============
+
+.) callback functions: these are working but it needs to be thought out some more. Exceptions are not propagated from callbacks.
+.) no nice module structure: it's all in one fat module.
+.) extern symbols and macros are a little tricky to wrap, some have been hardcoded (!!) in petscmacros.py.
+.) type checking
+.) upcasting
+.) adapt system memory usage audit: record and check every malloc/free/memcpy/memcmp
+   and every memory access using those nasty void* pointers
+
+21/10/05
+
+
+

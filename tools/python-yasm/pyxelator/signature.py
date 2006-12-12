@@ -1,0 +1,112 @@
+# parse ('/home/users/simonb/local/petsc-dev/include/petsc.h', '/home/users/simonb/local/petsc-dev/include/petsc.h')
+# gcc -E tmp/728459750.h -I/home/users/simonb/local/petsc-dev/include -I/home/users/simonb/local/petsc-dev/bmake/linux-gnu -I/home/users/simonb/local/petsc-dev/externalpackages/mpich2-1.0.2/src/include  > tmp/728459750.i
+write: output/petsc.pyx
+Array
+   ('Pointer', 'NoneType')
+   ('Pointer', 'str')
+   ('Array', 'NoneType')
+   ('Qualifier', 'Pointer', 'NoneType')
+   ('TypeSpecifiers', 'NoneType')
+   ('TypeSpecifiers', 'str')
+BasicType
+   ('str',)
+Pointer
+   ('Function',)
+   ('TypeSpecifiers',)
+   ('Pointer',)
+AbstractDeclarator
+   ('Identifier', 'Array')
+   ('Identifier', 'Ellipses', 'TypeSpecifiers')
+   ('Identifier', 'TypeSpecifiers')
+   ('Identifier', 'Pointer')
+Identifier
+   ('str', 'int')
+   ('str',)
+Typedef
+   ('Identifier', 'Function')
+   ('Identifier', 'TypeSpecifiers')
+   ('Identifier', 'Pointer')
+Function
+   ('AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'TypeSpecifiers')
+   ('AbstractDeclarator', 'AbstractDeclarator', 'Pointer')
+   ('AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'TypeSpecifiers')
+   ('AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'Pointer')
+   ('AbstractDeclarator', 'AbstractDeclarator', 'TypeSpecifiers')
+   ('AbstractDeclarator', 'Pointer')
+   ('AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'TypeSpecifiers')
+   ('AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'TypeSpecifiers')
+   ('AbstractDeclarator', 'TypeSpecifiers')
+   ('AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'TypeSpecifiers')
+   ('AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'TypeSpecifiers')
+   ('AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'TypeSpecifiers')
+   ('AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'TypeSpecifiers')
+   ('AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'AbstractDeclarator', 'TypeSpecifiers')
+StructDeclarator
+   ('Identifier', 'Array')
+   ('Identifier', 'TypeSpecifiers')
+   ('Identifier', 'Pointer')
+TypeAlias
+   ('str',)
+Ellipses
+   ('str',)
+Declarator
+   ('Identifier', 'Array')
+   ('Identifier', 'Function')
+   ('TypeSpecifiers',)
+   ('Identifier', 'TypeSpecifiers')
+   ('Identifier', 'Pointer')
+TypeSpecifiers
+   ('Qualifier', 'Qualifier')
+   ('Union',)
+   ('BasicType',)
+   ('TypeAlias', 'Qualifier', 'StorageClass')
+   ('Struct',)
+   ('Enum',)
+   ('BasicType', 'Qualifier')
+   ('Struct', 'StorageClass')
+   ('BasicType', 'Qualifier', 'StorageClass')
+   ('BasicType', 'Qualifier', 'Qualifier')
+   ('BasicType', 'Qualifier', 'Qualifier', 'Qualifier')
+   ('TypeAlias', 'StorageClass')
+   ()
+   ('TypeAlias', 'Qualifier')
+   ('TypeAlias',)
+   ('GCCBuiltin',)
+   ('BasicType', 'StorageClass')
+StorageClass
+   ('str',)
+GCCBuiltin
+   ('str',)
+Enum
+   ('Tag', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier')
+   ('Tag', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier')
+   ('Tag', 'Identifier', 'Identifier', 'Identifier', 'Identifier')
+   ('Tag', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier')
+   ('Tag', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier')
+   ('Tag', 'Identifier')
+   ('Tag', 'Identifier', 'Identifier', 'Identifier')
+   ('Tag', 'Identifier', 'Identifier', 'Identifier', 'Identifier', 'Identifier')
+   ('Tag', 'Identifier', 'Identifier')
+Struct
+   ('Tag', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator')
+   ('Tag', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator')
+   ('Tag', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator')
+   ('Tag', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator')
+   ('Tag', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator')
+   ('Tag', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator')
+   ('Tag', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator')
+   ('Tag', 'StructDeclarator')
+   ('Tag', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator')
+   ('Tag', 'StructDeclarator', 'StructDeclarator')
+   ('Tag', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator')
+   ('Tag', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator')
+   ('Tag', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator')
+   ('Tag',)
+   ('Tag', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator', 'StructDeclarator')
+Union
+   ('Tag', 'StructDeclarator', 'StructDeclarator')
+Qualifier
+   ('str',)
+Tag
+   ()
+   ('str',)
