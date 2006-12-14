@@ -1170,6 +1170,40 @@ elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 				  line);
 	elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_WEAK,
 				 0, STV_DEFAULT, NULL, NULL);
+    } else if (yasm__strcasecmp(name, "ident") == 0) {
+	yasm_valparamhead sect_vps;
+	yasm_datavalhead dvs;
+	yasm_section *comment;
+
+	/* Put ident data into .comment section */
+	yasm_vps_initialize(&sect_vps);
+	yasm_vps_append(&sect_vps,
+			yasm_vp_create(yasm__xstrdup(".comment"), NULL));
+	comment = elf_objfmt_section_switch(objfmt, &sect_vps, NULL, line);
+	yasm_vps_delete(&sect_vps);
+
+	/* To match GAS output, if the comment section is empty, put an
+	 * initial 0 byte in the section.
+	 */
+	if (yasm_section_bcs_first(comment)
+	    == yasm_section_bcs_last(comment)) {
+	    yasm_dvs_initialize(&dvs);
+	    yasm_dvs_append(&dvs, yasm_dv_create_expr(
+		yasm_expr_create_ident(
+		    yasm_expr_int(yasm_intnum_create_uint(0)), line)));
+	    yasm_section_bcs_append(comment,
+		yasm_bc_create_data(&dvs, 1, 0, objfmt_elf->arch, line));
+	}
+
+	yasm_dvs_initialize(&dvs);
+	do {
+	    yasm_dvs_append(&dvs, yasm_dv_create_string(vp->val,
+							strlen(vp->val)));
+	    vp->val = NULL;
+	} while ((vp = yasm_vps_next(vp)));
+
+	yasm_section_bcs_append(comment,
+	    yasm_bc_create_data(&dvs, 1, 1, objfmt_elf->arch, line));
     } else
 	return 1;	/* unrecognized */
 

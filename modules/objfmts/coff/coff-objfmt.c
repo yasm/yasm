@@ -1360,7 +1360,8 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	}
 	iscode = 1;
     } else if (strcmp(sectname, ".rdata") == 0
-	       || strncmp(sectname, ".rodata", 7) == 0) {
+	       || strncmp(sectname, ".rodata", 7) == 0
+	       || strncmp(sectname, ".rdata$", 7) == 0) {
 	flags = COFF_STYP_DATA;
 	if (objfmt_coff->win32) {
 	    flags |= COFF_STYP_READ;
@@ -1695,9 +1696,9 @@ win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 		       unsigned long line)
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
+    yasm_valparam *vp = yasm_vps_first(valparams);
 
     if (yasm__strcasecmp(name, "export") == 0) {
-	yasm_valparam *vp = yasm_vps_first(valparams);
 	int isnew;
 	yasm_section *sect;
 	yasm_datavalhead dvs;
@@ -1736,6 +1737,49 @@ win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 							  line));
 
 	return 0;
+    } else if (yasm__strcasecmp(name, "ident") == 0) {
+	yasm_valparamhead sect_vps;
+	yasm_datavalhead dvs;
+	yasm_section *comment;
+	const char *sectname;
+
+	if (objfmt_coff->win32) {
+	    /* Put ident data into .comment section for COFF, or .rdata$zzz
+	     * to be compatible with the GNU linker, which doesn't ignore
+	     * .comment (see binutils/gas/config/obj-coff.c:476-502).
+	     */
+	    sectname = ".rdata$zzz";
+	} else {
+	    sectname = ".comment";
+	}
+	yasm_vps_initialize(&sect_vps);
+	yasm_vps_append(&sect_vps,
+			yasm_vp_create(yasm__xstrdup(sectname), NULL));
+	comment = coff_objfmt_section_switch(objfmt, &sect_vps, NULL, line);
+	yasm_vps_delete(&sect_vps);
+
+	/* To match GAS output, if the comment section is empty, put an
+	 * initial 0 byte in the section.
+	 */
+	if (yasm_section_bcs_first(comment)
+	    == yasm_section_bcs_last(comment)) {
+	    yasm_dvs_initialize(&dvs);
+	    yasm_dvs_append(&dvs, yasm_dv_create_expr(
+		yasm_expr_create_ident(
+		    yasm_expr_int(yasm_intnum_create_uint(0)), line)));
+	    yasm_section_bcs_append(comment,
+		yasm_bc_create_data(&dvs, 1, 0, objfmt_coff->arch, line));
+	}
+
+	yasm_dvs_initialize(&dvs);
+	do {
+	    yasm_dvs_append(&dvs, yasm_dv_create_string(vp->val,
+							strlen(vp->val)));
+	    vp->val = NULL;
+	} while ((vp = yasm_vps_next(vp)));
+
+	yasm_section_bcs_append(comment,
+	    yasm_bc_create_data(&dvs, 1, 1, objfmt_coff->arch, line));
     } else
 	return 1;
 }

@@ -129,7 +129,7 @@ static void gas_parser_directive
 %type <ea> memaddr
 %type <exp> expr regmemexpr
 %type <sym> explabel
-%type <valparams> dirvals dirvals2
+%type <valparams> dirvals dirvals2 dirstrvals dirstrvals2
 %type <datavals> strvals datavals strvals2 datavals2
 %type <insn_operands> operands
 %type <insn_operand> operand
@@ -460,30 +460,10 @@ lineexp: instr
 	$$ = NULL;
     }
     /* Other directives */
-    | DIR_IDENT strvals {
-	/* Put text into .comment section. */
-	/*@dependent@*/ yasm_section *comment =
-	    gas_get_section(parser_gas, yasm__xstrdup(".comment"), NULL, NULL,
-			    NULL, 1);
-	if (comment) {
-	    /* To match GAS output, if the comment section is empty, put an
-	     * initial 0 byte in the section.
-	     */
-	    if (yasm_section_bcs_first(comment)
-		== yasm_section_bcs_last(comment)) {
-		yasm_datavalhead dvs;
-
-		yasm_dvs_initialize(&dvs);
-		yasm_dvs_append(&dvs, yasm_dv_create_expr(
-		    p_expr_new_ident(yasm_expr_int(
-			yasm_intnum_create_uint(0)))));
-		yasm_section_bcs_append(comment,
-		    yasm_bc_create_data(&dvs, 1, 0, parser_gas->arch,
-					cur_line));
-	    }
-	    yasm_section_bcs_append(comment,
-		yasm_bc_create_data(&$2, 1, 1, parser_gas->arch, cur_line));
-	}
+    | DIR_IDENT dirstrvals {
+	yasm_objfmt_directive(parser_gas->objfmt, "ident", &$2, NULL,
+			      cur_line);
+	yasm_vps_delete(&$2);
 	$$ = NULL;
     }
     | DIR_FILE INTNUM STRING {
@@ -688,6 +668,22 @@ dirvals2: expr			{
 	yasm_valparam *vp = yasm_vp_create(NULL, NULL);
 	yasm_vps_append(&$1, vp);
 	vp = yasm_vp_create(NULL, $4);
+	yasm_vps_append(&$1, vp);
+	$$ = $1;
+    }
+;
+
+dirstrvals: /* empty */	{ yasm_vps_initialize(&$$); }
+    | dirstrvals2
+;
+
+dirstrvals2: STRING	{
+	yasm_valparam *vp = yasm_vp_create($1.contents, NULL);
+	yasm_vps_initialize(&$$);
+	yasm_vps_append(&$$, vp);
+    }
+    | dirstrvals2 ',' STRING	{
+	yasm_valparam *vp = yasm_vp_create($3.contents, NULL);
 	yasm_vps_append(&$1, vp);
 	$$ = $1;
     }
