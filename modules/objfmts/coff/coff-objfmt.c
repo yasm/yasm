@@ -1742,6 +1742,7 @@ win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	yasm_datavalhead dvs;
 	yasm_section *comment;
 	const char *sectname;
+	yasm_valparam *vp2;
 
 	if (objfmt_coff->win32) {
 	    /* Put ident data into .comment section for COFF, or .rdata$zzz
@@ -1753,8 +1754,8 @@ win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	    sectname = ".comment";
 	}
 	yasm_vps_initialize(&sect_vps);
-	yasm_vps_append(&sect_vps,
-			yasm_vp_create(yasm__xstrdup(sectname), NULL));
+	vp2 = yasm_vp_create(yasm__xstrdup(sectname), NULL);
+	yasm_vps_append(&sect_vps, vp2);
 	comment = coff_objfmt_section_switch(objfmt, &sect_vps, NULL, line);
 	yasm_vps_delete(&sect_vps);
 

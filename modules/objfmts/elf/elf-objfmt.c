@@ -1174,11 +1174,12 @@ elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	yasm_valparamhead sect_vps;
 	yasm_datavalhead dvs;
 	yasm_section *comment;
+	yasm_valparam *vp2;
 
 	/* Put ident data into .comment section */
 	yasm_vps_initialize(&sect_vps);
-	yasm_vps_append(&sect_vps,
-			yasm_vp_create(yasm__xstrdup(".comment"), NULL));
+	vp2 = yasm_vp_create(yasm__xstrdup(".comment"), NULL);
+	yasm_vps_append(&sect_vps, vp2);
 	comment = elf_objfmt_section_switch(objfmt, &sect_vps, NULL, line);
 	yasm_vps_delete(&sect_vps);
 
