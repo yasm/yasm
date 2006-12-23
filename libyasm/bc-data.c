@@ -84,7 +84,7 @@ static void
 bc_data_destroy(void *contents)
 {
     bytecode_data *bc_data = (bytecode_data *)contents;
-    yasm_dvs_destroy(&bc_data->datahead);
+    yasm_dvs_delete(&bc_data->datahead);
     yasm_xfree(contents);
 }
 
@@ -381,7 +381,7 @@ yasm_dv_create_raw(unsigned char *contents, unsigned long len)
 }
 
 void
-yasm_dvs_destroy(yasm_datavalhead *headp)
+yasm_dvs_delete(yasm_datavalhead *headp)
 {
     yasm_dataval *cur, *next;
 

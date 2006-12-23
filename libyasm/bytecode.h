@@ -438,7 +438,7 @@ void yasm_dvs_initialize(yasm_datavalhead *headp);
 /** Delete (free allocated memory for) a list of data values.
  * \param headp	list of data values
  */
-void yasm_dvs_destroy(yasm_datavalhead *headp);
+void yasm_dvs_delete(yasm_datavalhead *headp);
 
 /** Add data value to the end of a list of data values.
  * \note Does not make a copy of the data value; so don't pass this function
