@@ -527,53 +527,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\nasm-bison.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\nasm-bison.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\modules\parsers\nasm\nasm-bison.y"
-					>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="Bison"
-							OutputStem="../../../nasm-bison"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="Bison"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="Bison"
-							OutputStem="../../../nasm-bison"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="Bison"
-						/>
-					</FileConfiguration>
-				</File>
-				<File
-					RelativePath="..\..\..\modules\parsers\nasm\nasm-defs.h"
+					RelativePath="..\..\..\modules\parsers\nasm\nasm-parse.c"
 					>
 				</File>
 				<File

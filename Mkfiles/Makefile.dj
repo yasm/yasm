@@ -101,7 +101,7 @@ YASM_MODULES+=objfmt_xdf
 
 MODULES_PARSERS_OBJS= \
  modules/parsers/nasm/nasm-parser.o \
- nasm-bison.o \
+ modules/parsers/nasm/nasm-parse.o \
  nasm-token.o \
  modules/parsers/gas/gas-parser.o \
  gas-bison.o \

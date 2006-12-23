@@ -236,13 +236,7 @@
 					RelativePath="..\..\..\gas-token.c">
 				</File>
 				<File
-					RelativePath="..\..\..\nasm-bison.c">
-				</File>
-				<File
-					RelativePath="..\..\..\nasm-bison.h">
-				</File>
-				<File
-					RelativePath="..\..\..\modules\parsers\nasm\nasm-defs.h">
+					RelativePath="..\..\..\modules\parsers\nasm\nasm-parse.c">
 				</File>
 				<File
 					RelativePath="..\..\..\modules\parsers\nasm\nasm-parser.c">
