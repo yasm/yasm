@@ -33,7 +33,6 @@ RCSID("$Id$");
 #include <libyasm.h>
 
 #include "modules/parsers/nasm/nasm-parser.h"
-#include "modules/parsers/nasm/nasm-defs.h"
 
 
 #define BSIZE	8192
@@ -43,7 +42,8 @@ RCSID("$Id$");
 #define YYMARKER	(s->ptr)
 #define YYFILL(n)	{fill(parser_nasm, &cursor);}
 
-#define RETURN(i)	{s->cur = cursor; return i;}
+#define RETURN(i)	{s->cur = cursor; parser_nasm->tokch = s->tok[0]; \
+			 return i;}
 
 #define SCANINIT()	{s->tok = cursor;}
 
@@ -124,6 +124,15 @@ nasm_parser_lex(YYSTYPE *lvalp, yasm_parser_nasm *parser_nasm)
     YYCTYPE endch;
     size_t count, len;
     YYCTYPE savech;
+
+    /* Handle one token of lookahead */
+    if (parser_nasm->peek_token != NONE) {
+	int tok = parser_nasm->peek_token;
+	*lvalp = parser_nasm->peek_tokval;  /* structure copy */
+	parser_nasm->tokch = parser_nasm->peek_tokch;
+	parser_nasm->peek_token = NONE;
+	return tok;
+    }
 
     /* Catch EOF */
     if (s->eof && cursor == s->eof)
@@ -593,8 +602,6 @@ stringconst_scan:
 	    lvalp->str.len = count;
 	    if (parser_nasm->save_input)
 		cursor = save_line(parser_nasm, cursor);
-	    if (count == 1)
-		RETURN(ONECHARSTR);
 	    RETURN(STRING);
 	}
 
@@ -603,8 +610,6 @@ stringconst_scan:
 		strbuf[count] = '\0';
 		lvalp->str.contents = (char *)strbuf;
 		lvalp->str.len = count;
-		if (count == 1)
-		    RETURN(ONECHARSTR);
 		RETURN(STRING);
 	    }
 
