@@ -185,7 +185,7 @@ RE2C_SRCS= \
 	tools/re2c/main.c \
 	tools/re2c/code.c \
 	tools/re2c/dfa.c \
-	re2c-parser.c \
+	tools/re2c/parser.c \
 	tools/re2c/actions.c \
 	tools/re2c/scanner.c \
 	tools/re2c/mbo_getopt.c \

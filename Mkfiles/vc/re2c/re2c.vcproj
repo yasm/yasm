@@ -133,10 +133,7 @@
 				RelativePath="..\..\..\tools\re2c\mbo_getopt.c">
 			</File>
 			<File
-				RelativePath="..\..\..\re2c-parser.c">
-			</File>
-			<File
-				RelativePath="..\..\..\re2c-parser.h">
+				RelativePath="..\..\..\tools\re2c\parser.c">
 			</File>
 			<File
 				RelativePath="..\..\..\tools\re2c\scanner.c">
@@ -169,6 +166,9 @@
 			</File>
 			<File
 				RelativePath="..\..\..\tools\re2c\parse.h">
+			</File>
+			<File
+				RelativePath="..\..\..\tools\re2c\parser.h">
 			</File>
 			<File
 				RelativePath="..\..\..\tools\re2c\re.h">

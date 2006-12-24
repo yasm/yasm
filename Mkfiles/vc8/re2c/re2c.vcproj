@@ -218,34 +218,8 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\re2c-parser.c"
+				RelativePath="..\..\..\tools\re2c\parser.c"
 				>
-			</File>
-			<File
-				RelativePath="..\..\..\re2c-parser.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\tools\re2c\re2c-parser.y"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="Bison"
-						OutputStem="../../../re2c-parser"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="Bison"
-						OutputStem="../../../re2c-parser"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\tools\re2c\scanner.c"
@@ -283,6 +257,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\tools\re2c\parse.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\tools\re2c\parser.h"
 				>
 			</File>
 			<File
