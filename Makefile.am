@@ -110,7 +110,7 @@ if HAVE_PYTHON
 endif
 
 all-local: python-build
-install-hook: python-install
+install-exec-hook: python-install
 uninstall-hook: python-uninstall
 
 if BUILD_MAN

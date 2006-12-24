@@ -39,6 +39,5 @@ splint \
  src/parsers/nasm/nasm-parser.c \
  src/preprocs/raw/raw-preproc.c \
  src/optimizers/basic/basic-optimizer.c \
- nasm-bison.c \
  src/symrec.c \
  src/hamt.c

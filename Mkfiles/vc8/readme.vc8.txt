@@ -19,10 +19,6 @@ YASM snapshots):
 
     gas-bison.c
     gas-bison.h
-    nasm-bison.c
-    nasm-bison.h
-    re2c-parser.c
-    re2c-parser.h
 
 However, if you want to build these files from source, follow these step:
   1) Install bison.  This can be done in a number of ways, the easiest is
@@ -33,9 +29,7 @@ However, if you want to build these files from source, follow these step:
      you installed Bison to the list of directories.
   3) For each of the .y files in the build, right click, select Properties,
      and change the "Excluded From Build" setting to No.  These files are:
-     re2c/Source Files/re2c-parser.y
      modules/Source Files/gas-bison.y
-     modules/Source Files/nasm-bison.y
 
 If you wish to build from the latest files in the subversion repository,
 you will need to add these files from the latest snapshot to the repository

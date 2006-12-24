@@ -50,5 +50,4 @@ modules/objfmts/xdf/xdf-objfmt.c
 modules/parsers/gas/gas-parser.c
 modules/preprocs/nasm/nasm-pp.c
 modules/preprocs/raw/raw-preproc.c
-nasm-bison.c
 nasm-token.c
