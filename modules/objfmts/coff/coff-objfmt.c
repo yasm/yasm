@@ -1781,6 +1781,7 @@ win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 
 	yasm_section_bcs_append(comment,
 	    yasm_bc_create_data(&dvs, 1, 1, objfmt_coff->arch, line));
+	return 0;
     } else
 	return 1;
 }

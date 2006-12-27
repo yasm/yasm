@@ -2168,7 +2168,6 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 		 yasm_insn_operands *operands, int num_prefixes,
 		 unsigned long **prefixes, const x86_insn_info *jinfo)
 {
-    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     x86_jmp *jmp;
     int num_info = (int)(data[1]&0xFF);
     x86_insn_info *info = (x86_insn_info *)data[0];
@@ -2615,7 +2614,6 @@ x86_match_error(yasm_arch *arch, int num_info, const x86_insn_info *info,
 		int num_operands, yasm_insn_operand **ops,
 		yasm_insn_operand **rev_ops, const unsigned int *size_lookup)
 {
-    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     const x86_insn_info *i;
     int ni;
     int found;
@@ -2683,7 +2681,6 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     unsigned long mod_data = data[1] >> 8;
     unsigned char mode_bits = (unsigned char)(data[3] & 0xFF);
     unsigned int suffix = (unsigned int)((data[3]>>8) & 0xFF);
-    int found = 0;
     yasm_insn_operand *op, *ops[4], *rev_ops[4];
     /*@null@*/ yasm_expr *imm;
     unsigned char im_len;

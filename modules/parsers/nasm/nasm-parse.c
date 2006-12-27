@@ -122,9 +122,6 @@ destroy_curtok_(yasm_parser_nasm *parser_nasm)
 static void
 demand_eol_(yasm_parser_nasm *parser_nasm)
 {
-    size_t zero = 0;
-    char ch;
-
     if (is_eol())
 	return;
 
