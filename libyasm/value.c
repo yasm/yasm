@@ -93,7 +93,8 @@ yasm_value_init_copy(yasm_value *value, const yasm_value *orig)
 void
 yasm_value_delete(yasm_value *value)
 {
-    yasm_expr_destroy((value)->abs);
+    if (value->abs)
+	yasm_expr_destroy(value->abs);
     value->abs = NULL;
     value->rel = NULL;
 }
