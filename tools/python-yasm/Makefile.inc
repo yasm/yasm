@@ -23,7 +23,7 @@ CLEANFILES += yasm_python.c
 
 # Now the Python build magic...
 python-setup.txt: Makefile
-	echo "includes=${DEFAULT_INCLUDES} ${INCLUDES} ${DEFS}" > python-setup.txt
+	echo "includes=${DEFS} ${DEFAULT_INCLUDES} ${INCLUDES} ${AM_CPPFLAGS} ${CPPFLAGS}" > python-setup.txt
 	echo "sources=${libyasm_a_SOURCES}" >> python-setup.txt
 	echo "srcdir=${srcdir}" >> python-setup.txt
 	echo "gcc=${GCC}" >> python-setup.txt
