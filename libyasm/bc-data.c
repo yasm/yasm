@@ -295,10 +295,12 @@ yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
 		    len += yasm_intnum_get_leb128(intn,
 						  &dvo->data.raw.contents[len],
 						  0);
+		    yasm_value_delete(&dv->data.val);
 		} else if (intn && dv->type == DV_SLEB128) {
 		    len += yasm_intnum_get_leb128(intn,
 						  &dvo->data.raw.contents[len],
 						  1);
+		    yasm_value_delete(&dv->data.val);
 		} else {
 		    if (len > 0)
 			dvo = STAILQ_NEXT(dvo, link);
