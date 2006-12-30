@@ -112,7 +112,7 @@ destroy_curtok_(yasm_parser_nasm *parser_nasm)
 	default:
 	    break;
     }
-    curtok = 0;	    /* sanity */
+    curtok = NONE;	    /* sanity */
 }
 #define destroy_curtok()    destroy_curtok_(parser_nasm)
 
@@ -130,8 +130,8 @@ demand_eol_(yasm_parser_nasm *parser_nasm)
 	parser_nasm->tokch);
 
     do {
-	get_next_token();
 	destroy_curtok();
+	get_next_token();
     } while (!is_eol());
 }
 #define demand_eol() demand_eol_(parser_nasm)
@@ -219,6 +219,10 @@ static yasm_bytecode *
 parse_line(yasm_parser_nasm *parser_nasm)
 {
     yasm_bytecode *bc;
+
+    bc = parse_exp(parser_nasm);
+    if (bc)
+	return bc;
 
     switch (curtok) {
 	case LINE: /* LINE INTNUM '+' INTNUM FILENAME */
@@ -342,11 +346,9 @@ parse_line(yasm_parser_nasm *parser_nasm)
 	    return bc;
 	}
 	default:
-	    bc = parse_exp(parser_nasm);
-	    if (!bc)
-		yasm_error_set(YASM_ERROR_SYNTAX,
-		    N_("label or instruction expected at start of line"));
-	    return bc;
+	    yasm_error_set(YASM_ERROR_SYNTAX,
+		N_("label or instruction expected at start of line"));
+	    return NULL;
     }
 }
 
@@ -449,6 +451,12 @@ parse_times(yasm_parser_nasm *parser_nasm)
 static yasm_bytecode *
 parse_exp(yasm_parser_nasm *parser_nasm)
 {
+    yasm_bytecode *bc;
+
+    bc = parse_instr(parser_nasm);
+    if (bc)
+	return bc;
+
     switch (curtok) {
 	case DECLARE_DATA:
 	{
@@ -554,7 +562,7 @@ incbin_done:
 					 parser_nasm->linemap, cur_line);
 	}
 	default:
-	    return parse_instr(parser_nasm);
+	    return NULL;
     }
 }
 

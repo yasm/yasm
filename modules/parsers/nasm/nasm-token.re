@@ -142,6 +142,8 @@ nasm_parser_lex(YYSTYPE *lvalp, yasm_parser_nasm *parser_nasm)
     switch (parser_nasm->state) {
 	case DIRECTIVE:
 	    goto directive;
+	case SECTION_DIRECTIVE:
+	    goto section_directive;
 	case DIRECTIVE2:
 	    goto directive2;
 	case LINECHG:
@@ -475,8 +477,12 @@ directive:
 	}
 
 	iletter+ {
-	    parser_nasm->state = DIRECTIVE2;
 	    lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
+	    if (yasm__strcasecmp(lvalp->str_val, "section") == 0 ||
+		yasm__strcasecmp(lvalp->str_val, "segment") == 0)
+		parser_nasm->state = SECTION_DIRECTIVE;
+	    else
+		parser_nasm->state = DIRECTIVE2;
 	    RETURN(DIRECTIVE_NAME);
 	}
 
@@ -485,6 +491,49 @@ directive:
 			  N_("ignoring unrecognized character `%s'"),
 			  yasm__conv_unprint(s->tok[0]));
 	    goto directive;
+	}
+    */
+
+    /* section directive (the section name portion thereof) */
+section_directive:
+    SCANINIT();
+
+    /*!re2c
+	[a-zA-Z0-9_$#@~.?-]+ {
+	    lvalp->str.contents = yasm__xstrndup(TOK, TOKLEN);
+	    lvalp->str.len = TOKLEN;
+	    parser_nasm->state = DIRECTIVE2;
+	    RETURN(STRING);
+	}
+
+	quot		{
+	    parser_nasm->state = DIRECTIVE2;
+	    endch = s->tok[0];
+	    goto stringconst;
+	}
+
+	ws+		{
+	    parser_nasm->state = DIRECTIVE2;
+	    goto section_directive;
+	}
+
+	"]" {
+	    parser_nasm->state = INITIAL;
+	    RETURN(s->tok[0]);
+	}
+
+	"\n"			{
+	    if (parser_nasm->save_input)
+		cursor = save_line(parser_nasm, cursor);
+	    parser_nasm->state = INITIAL;
+	    RETURN(s->tok[0]);
+	}
+
+	any {
+	    yasm_warn_set(YASM_WARN_UNREC_CHAR,
+			  N_("ignoring unrecognized character `%s'"),
+			  yasm__conv_unprint(s->tok[0]));
+	    goto section_directive;
 	}
     */
 

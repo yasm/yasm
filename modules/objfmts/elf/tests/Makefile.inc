@@ -43,6 +43,8 @@ EXTRA_DIST += modules/objfmts/elf/tests/elftypesize.hex
 EXTRA_DIST += modules/objfmts/elf/tests/elfvisibility.asm
 EXTRA_DIST += modules/objfmts/elf/tests/elfvisibility.errwarn
 EXTRA_DIST += modules/objfmts/elf/tests/elfvisibility.hex
+EXTRA_DIST += modules/objfmts/elf/tests/nasm-sectname.asm
+EXTRA_DIST += modules/objfmts/elf/tests/nasm-sectname.hex
 
 EXTRA_DIST += modules/objfmts/elf/tests/amd64/Makefile.inc
 EXTRA_DIST += modules/objfmts/elf/tests/gas64/Makefile.inc

@@ -107,6 +107,7 @@ typedef struct yasm_parser_nasm {
     enum {
 	INITIAL,
 	DIRECTIVE,
+	SECTION_DIRECTIVE,
 	DIRECTIVE2,
 	LINECHG,
 	LINECHG2,
