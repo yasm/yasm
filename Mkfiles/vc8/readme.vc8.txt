@@ -13,39 +13,12 @@ the Visual Studio 2005 64-bit tools, which are not installed by default.
 2. YASM Download
 ----------------
 
-The following files are not built by default on VC++ and are not contained
-in the YASM subversion repository (but they are included in the nightly
-YASM snapshots):
-
-    gas-bison.c
-    gas-bison.h
-
-However, if you want to build these files from source, follow these step:
-  1) Install bison.  This can be done in a number of ways, the easiest is
-     probably to download and run the Win32 Bison Setup program from
-     http://gnuwin32.sourceforge.net/packages/bison.htm
-  2) In Visual Studio, go to Tools|Options,
-     Projects and Solutions|VC++ Directories, and add the directory where
-     you installed Bison to the list of directories.
-  3) For each of the .y files in the build, right click, select Properties,
-     and change the "Excluded From Build" setting to No.  These files are:
-     modules/Source Files/gas-bison.y
-
-If you wish to build from the latest files in the subversion repository,
-you will need to add these files from the latest snapshot to the repository
-files. They should be placed in the YASM root directory.
+First YASM needs to be downloaded and the files placed within a suitable
+directory, which will be called <yasm> here but can be named and located
+as you wish.
 
 3. Building YASM with Microsoft VC8
 -----------------------------------
-
-First YASM needs to be downloaded and the files placed within a suitable
-directory, which will be called <yasm> here but can be named and located
-as you wish. If the Visual Studio 2005 project files have been obtained
-seperately the subdirectory 'vc8' and its subdirectories and files need to
-be placed in the 'Mkfiles' subdirectory within the YASM root directory.
-
-If building from the subversion repository, obtain the additional files
-discussed above and place them in the YASM root directory.
 
 Now locate and double click on the yasm.sln solution file in the 'Mkfiles/vc8'
 subdirectory to open the build project in the Visual Studio 2005 IDE and then

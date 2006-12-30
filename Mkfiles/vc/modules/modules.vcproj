@@ -218,13 +218,7 @@
 				Name="parsers"
 				Filter="">
 				<File
-					RelativePath="..\..\..\gas-bison.c">
-				</File>
-				<File
-					RelativePath="..\..\..\gas-bison.h">
-				</File>
-				<File
-					RelativePath="..\..\..\modules\parsers\gas\gas-defs.h">
+					RelativePath="..\..\..\modules\parsers\gas\gas-parse.c">
 				</File>
 				<File
 					RelativePath="..\..\..\modules\parsers\gas\gas-parser.c">

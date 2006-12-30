@@ -107,7 +107,7 @@ MODULES_PARSERS_OBJS= \
  modules/parsers/nasm/nasm-parse.o \
  nasm-token.o \
  modules/parsers/gas/gas-parser.o \
- gas-bison.o \
+ modules/parsers/gas/gas-parse.o \
  gas-token.o
 YASM_MODULES+=parser_nasm
 YASM_MODULES+=parser_gas

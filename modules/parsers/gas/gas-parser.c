@@ -69,6 +69,8 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
     parser_gas.save_input = save_input;
     parser_gas.save_last = 0;
 
+    parser_gas.peek_token = NONE;
+
     /* initialize scanner structure */
     yasm_scanner_initialize(&parser_gas.s);
 

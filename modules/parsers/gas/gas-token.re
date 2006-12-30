@@ -34,7 +34,6 @@ RCSID("$Id$");
 #include <libyasm.h>
 
 #include "modules/parsers/gas/gas-parser.h"
-#include "modules/parsers/gas/gas-defs.h"
 
 
 #define BSIZE	8192
@@ -44,7 +43,8 @@ RCSID("$Id$");
 #define YYMARKER	(s->ptr)
 #define YYFILL(n)	{cursor = fill(parser_gas, cursor);}
 
-#define RETURN(i)	{s->cur = cursor; return i;}
+#define RETURN(i)	{s->cur = cursor; parser_gas->tokch = s->tok[0]; \
+			 return i;}
 
 #define SCANINIT()	{s->tok = cursor;}
 
@@ -248,6 +248,15 @@ gas_parser_lex(YYSTYPE *lvalp, yasm_parser_gas *parser_gas)
     int linestart;
     gas_rept_line *new_line;
 
+    /* Handle one token of lookahead */
+    if (parser_gas->peek_token != NONE) {
+	int tok = parser_gas->peek_token;
+	*lvalp = parser_gas->peek_tokval;  /* structure copy */
+	parser_gas->tokch = parser_gas->peek_tokch;
+	parser_gas->peek_token = NONE;
+	return tok;
+    }
+
     /* Catch EOF */
     if (s->eof && cursor == s->eof)
 	return 0;
@@ -338,68 +347,172 @@ scan:
 	}
 
 	/* arch-independent directives */
-	'.2byte'	{ parser_gas->state = INSTDIR; RETURN(DIR_2BYTE); }
-	'.4byte'	{ parser_gas->state = INSTDIR; RETURN(DIR_4BYTE); }
-	'.8byte'	{ parser_gas->state = INSTDIR; RETURN(DIR_QUAD); }
-	'.align'	{ parser_gas->state = INSTDIR; RETURN(DIR_ALIGN); }
-	'.ascii'	{ parser_gas->state = INSTDIR; RETURN(DIR_ASCII); }
-	'.asciz'	{ parser_gas->state = INSTDIR; RETURN(DIR_ASCIZ); }
-	'.balign'	{ parser_gas->state = INSTDIR; RETURN(DIR_BALIGN); }
-	'.bss'		{ parser_gas->state = INSTDIR; RETURN(DIR_BSS); }
-	'.byte'		{ parser_gas->state = INSTDIR; RETURN(DIR_BYTE); }
-	'.comm'		{ parser_gas->state = INSTDIR; RETURN(DIR_COMM); }
-	'.data'		{ parser_gas->state = INSTDIR; RETURN(DIR_DATA); }
-	'.double'	{ parser_gas->state = INSTDIR; RETURN(DIR_DOUBLE); }
-	'.endr'		{ parser_gas->state = INSTDIR; RETURN(DIR_ENDR); }
-	'.equ'		{ parser_gas->state = INSTDIR; RETURN(DIR_EQU); }
-	'.extern'	{ parser_gas->state = INSTDIR; RETURN(DIR_EXTERN); }
-	'.file'		{ parser_gas->state = INSTDIR; RETURN(DIR_FILE); }
-	'.fill'		{ parser_gas->state = INSTDIR; RETURN(DIR_FILL); }
-	'.float'	{ parser_gas->state = INSTDIR; RETURN(DIR_FLOAT); }
+	/*  alignment directives */
+	'.align'	{
+	    /* FIXME: Whether this is power-of-two or not depends on arch and
+	     * objfmt.
+	     */
+	    lvalp->int_info = 0;
+	    parser_gas->state = INSTDIR; RETURN(DIR_ALIGN);
+	}
+	'.p2align'	{
+	    lvalp->int_info = 1;
+	    parser_gas->state = INSTDIR; RETURN(DIR_ALIGN);
+	}
+	'.balign'	{
+	    lvalp->int_info = 0;
+	    parser_gas->state = INSTDIR; RETURN(DIR_ALIGN);
+	}
+	'.org'		{ parser_gas->state = INSTDIR; RETURN(DIR_ORG); }
+	/*  data visibility directives */
+	'.local'	{ parser_gas->state = INSTDIR; RETURN(DIR_LOCAL); }
 	'.global'	{ parser_gas->state = INSTDIR; RETURN(DIR_GLOBAL); }
 	'.globl'	{ parser_gas->state = INSTDIR; RETURN(DIR_GLOBAL); }
-	'.hword'	{ parser_gas->state = INSTDIR; RETURN(DIR_SHORT); }
-	'.ident'	{ parser_gas->state = INSTDIR; RETURN(DIR_IDENT); }
-	'.int'		{ parser_gas->state = INSTDIR; RETURN(DIR_INT); }
+	'.comm'		{ parser_gas->state = INSTDIR; RETURN(DIR_COMM); }
 	'.lcomm'	{ parser_gas->state = INSTDIR; RETURN(DIR_LCOMM); }
-	'.line'		{ parser_gas->state = INSTDIR; RETURN(DIR_LINE); }
-	'.loc'		{ parser_gas->state = INSTDIR; RETURN(DIR_LOC); }
-	'.local'	{ parser_gas->state = INSTDIR; RETURN(DIR_LOCAL); }
-	'.long'		{ parser_gas->state = INSTDIR; RETURN(DIR_INT); }
-	'.octa'		{ parser_gas->state = INSTDIR; RETURN(DIR_OCTA); }
-	'.org'		{ parser_gas->state = INSTDIR; RETURN(DIR_ORG); }
-	'.p2align'	{ parser_gas->state = INSTDIR; RETURN(DIR_P2ALIGN); }
-	'.rept'		{ parser_gas->state = INSTDIR; RETURN(DIR_REPT); }
+	'.extern'	{ parser_gas->state = INSTDIR; RETURN(DIR_EXTERN); }
+	'.weak'		{ parser_gas->state = INSTDIR; RETURN(DIR_WEAK); }
+	/*  integer data declaration directives */
+	'.byte'		{
+	    lvalp->int_info = 1;
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	'.2byte'	{
+	    lvalp->int_info = 2;
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	'.4byte'	{
+	    lvalp->int_info = 4;
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	'.8byte'	{
+	    lvalp->int_info = 8;
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	'.16byte'	{
+	    lvalp->int_info = 16;
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	'.short'	{
+	    lvalp->int_info = 2; /* TODO: This should depend on arch */
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	'.int'		{
+	    lvalp->int_info = 4; /* TODO: This should depend on arch */
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	'.long'		{
+	    lvalp->int_info = 4; /* TODO: This should depend on arch */
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	'.hword'	{
+	    lvalp->int_info = 2; /* TODO: This should depend on arch */
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	'.word'		{
+	    lvalp->int_info = yasm_arch_wordsize(parser_gas->arch)/8;
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	'.quad'		{
+	    lvalp->int_info = 8;
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	'.octa'		{
+	    lvalp->int_info = 16;
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	'.value'	{
+	    lvalp->int_info = 2; /* XXX: At least on x86, this is 2 bytes */
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	/*  ASCII data declaration directives */
+	'.ascii'	{
+	    lvalp->int_info = 0; /* do not add terminating zero */
+	    parser_gas->state = INSTDIR; RETURN(DIR_ASCII);
+	}
+	'.asciz'	{
+	    lvalp->int_info = 1; /* add terminating zero */
+	    parser_gas->state = INSTDIR; RETURN(DIR_ASCII);
+	}
+	'.string'	{
+	    lvalp->int_info = 1; /* add terminating zero */
+	    parser_gas->state = INSTDIR; RETURN(DIR_ASCII);
+	}
+	/*  LEB128 integer data declaration directives */
+	'.sleb128'	{
+	    lvalp->int_info = 1; /* signed */
+	    parser_gas->state = INSTDIR; RETURN(DIR_LEB128);
+	}
+	'.uleb128'	{
+	    lvalp->int_info = 0; /* unsigned */
+	    parser_gas->state = INSTDIR; RETURN(DIR_LEB128);
+	}
+	/*  floating point data declaration directives */
+	'.float'	{
+	    lvalp->int_info = 4;
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	'.single'	{
+	    lvalp->int_info = 4;
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	'.double'	{
+	    lvalp->int_info = 8;
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	'.tfloat'	{
+	    lvalp->int_info = 10;
+	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
+	}
+	/*  section directives */
+	'.bss'		{
+	    lvalp->str_val = yasm__xstrdup(".bss");
+	    RETURN(DIR_SECTNAME);
+	}
+	'.data'		{
+	    lvalp->str_val = yasm__xstrdup(".data");
+	    RETURN(DIR_SECTNAME);
+	}
+	'.text'		{
+	    lvalp->str_val = yasm__xstrdup(".text");
+	    RETURN(DIR_SECTNAME);
+	}
 	'.section'	{
 	    parser_gas->state = SECTION_DIRECTIVE;
 	    RETURN(DIR_SECTION);
 	}
-	'.set'		{ parser_gas->state = INSTDIR; RETURN(DIR_EQU); }
-	'.short'	{ parser_gas->state = INSTDIR; RETURN(DIR_SHORT); }
-	'.single'	{ parser_gas->state = INSTDIR; RETURN(DIR_FLOAT); }
-	'.size'		{ parser_gas->state = INSTDIR; RETURN(DIR_SIZE); }
+	/* macro directives */
+	'.rept'		{ parser_gas->state = INSTDIR; RETURN(DIR_REPT); }
+	'.endr'		{ parser_gas->state = INSTDIR; RETURN(DIR_ENDR); }
+	/* empty space/fill directives */
 	'.skip'		{ parser_gas->state = INSTDIR; RETURN(DIR_SKIP); }
-	'.sleb128'	{ parser_gas->state = INSTDIR; RETURN(DIR_SLEB128); }
 	'.space'	{ parser_gas->state = INSTDIR; RETURN(DIR_SKIP); }
-	'.string'	{ parser_gas->state = INSTDIR; RETURN(DIR_ASCIZ); }
-	'.text'		{ parser_gas->state = INSTDIR; RETURN(DIR_TEXT); }
-	'.tfloat'	{ parser_gas->state = INSTDIR; RETURN(DIR_TFLOAT); }
-	'.type'		{ parser_gas->state = INSTDIR; RETURN(DIR_TYPE); }
-	'.quad'		{ parser_gas->state = INSTDIR; RETURN(DIR_QUAD); }
-	'.uleb128'	{ parser_gas->state = INSTDIR; RETURN(DIR_ULEB128); }
-	'.value'	{ parser_gas->state = INSTDIR; RETURN(DIR_VALUE); }
-	'.weak'		{ parser_gas->state = INSTDIR; RETURN(DIR_WEAK); }
-	'.word'		{ parser_gas->state = INSTDIR; RETURN(DIR_WORD); }
+	'.fill'		{ parser_gas->state = INSTDIR; RETURN(DIR_FILL); }
 	'.zero'		{ parser_gas->state = INSTDIR; RETURN(DIR_ZERO); }
+	/* other directives */
+	'.code16'	{
+	    yasm_arch_set_var(parser_gas->arch, "mode_bits", 16);
+	    goto scan;
+	}
+	'.code32'	{
+	    yasm_arch_set_var(parser_gas->arch, "mode_bits", 32);
+	    goto scan;
+	}
+	'.code64'	{
+	    yasm_arch_set_var(parser_gas->arch, "mode_bits", 64);
+	    goto scan;
+	}
+	'.equ'		{ parser_gas->state = INSTDIR; RETURN(DIR_EQU); }
+	'.file'		{ parser_gas->state = INSTDIR; RETURN(DIR_FILE); }
+	'.ident'	{ parser_gas->state = INSTDIR; RETURN(DIR_IDENT); }
+	'.line'		{ parser_gas->state = INSTDIR; RETURN(DIR_LINE); }
+	'.loc'		{ parser_gas->state = INSTDIR; RETURN(DIR_LOC); }
+	'.set'		{ parser_gas->state = INSTDIR; RETURN(DIR_EQU); }
+	'.size'		{ parser_gas->state = INSTDIR; RETURN(DIR_SIZE); }
+	'.type'		{ parser_gas->state = INSTDIR; RETURN(DIR_TYPE); }
 
 	/* label or maybe directive */
-	[.][a-zA-Z0-9_$.]* {
-	    lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
-	    RETURN(DIR_ID);
-	}
-
-	/* label */
-	[_][a-zA-Z0-9_$.]* {
+	[_.][a-zA-Z0-9_$.]* {
 	    lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
 	    RETURN(ID);
 	}

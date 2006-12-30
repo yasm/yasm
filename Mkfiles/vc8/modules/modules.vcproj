@@ -15,9 +15,6 @@
 		/>
 	</Platforms>
 	<ToolFiles>
-		<ToolFile
-			RelativePath="..\bison.rules"
-		/>
 	</ToolFiles>
 	<Configurations>
 		<Configuration
@@ -35,9 +32,6 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="Bison"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -116,9 +110,6 @@
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
-				Name="Bison"
-			/>
-			<Tool
 				Name="VCXMLDataGeneratorTool"
 			/>
 			<Tool
@@ -195,9 +186,6 @@
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
-				Name="Bison"
-			/>
-			<Tool
 				Name="VCXMLDataGeneratorTool"
 			/>
 			<Tool
@@ -270,9 +258,6 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="Bison"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -465,53 +450,7 @@
 				Name="parsers"
 				>
 				<File
-					RelativePath="..\..\..\gas-bison.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\gas-bison.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\modules\parsers\gas\gas-bison.y"
-					>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="Bison"
-							OutputStem="../../../gas-bison"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="Bison"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="Bison"
-							OutputStem="../../../gas-bison"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="Bison"
-						/>
-					</FileConfiguration>
-				</File>
-				<File
-					RelativePath="..\..\..\modules\parsers\gas\gas-defs.h"
+					RelativePath="..\..\..\modules\parsers\gas\gas-parse.c"
 					>
 				</File>
 				<File

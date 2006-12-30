@@ -64,28 +64,6 @@ esac], enable_python="auto")
 #
 # Checks for programs.
 #
-AC_PROG_YACC
-# check for Bison in particular
-if test "$YACC" != "bison -y"; then
-    	AC_MSG_WARN([You will need GNU Bison if you want to regenerate parsers.])
-	YACC=
-else
-    	AC_MSG_CHECKING([bison version])
-	set `bison --version | grep 'GNU Bison' | sed -e 's/^@<:@A-Za-z() @:>@*//g' -e 's/\./ /'`
-	if test -z "$1" -o -z "$2"; then
-		AC_MSG_RESULT([unknown])
-	    	AC_MSG_WARN([You will need GNU Bison 1.25 or better if you want to regenerate parsers.])
-		YACC=
-	else
-		if test "$1" = "1" -a "$2" -lt "25"; then
-			AC_MSG_RESULT([$1.$2])
-			AC_MSG_WARN([You will need GNU Bison 1.25 or better if you want to regenerate parsers (found $1.$2).])
-			YACC=
-		else
-			AC_MSG_RESULT([$1.$2 (ok)])
-		fi
-	fi
-fi
 AC_PROG_CC_STDC
 AC_PROG_INSTALL
 AC_PROG_LN_S

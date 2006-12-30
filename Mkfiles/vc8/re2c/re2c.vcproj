@@ -13,9 +13,6 @@
 		/>
 	</Platforms>
 	<ToolFiles>
-		<ToolFile
-			RelativePath="..\bison.rules"
-		/>
 	</ToolFiles>
 	<Configurations>
 		<Configuration
@@ -31,9 +28,6 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="Bison"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -116,9 +110,6 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="Bison"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"

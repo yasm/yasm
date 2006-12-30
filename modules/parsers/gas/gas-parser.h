@@ -30,11 +30,65 @@
 #ifndef YASM_GAS_PARSER_H
 #define YASM_GAS_PARSER_H
 
-#include "gas-bison.h"
-
 #define YYCTYPE		unsigned char
 
 #define MAX_SAVED_LINE_LEN  80
+
+enum tokentype {
+    INTNUM = 258,
+    FLTNUM,
+    STRING,
+    INSN,
+    PREFIX,
+    REG,
+    REGGROUP,
+    SEGREG,
+    TARGETMOD,
+    LEFT_OP,
+    RIGHT_OP,
+    ID,
+    LABEL,
+    LINE,
+    DIR_ALIGN,
+    DIR_ASCII,
+    DIR_COMM,
+    DIR_DATA,
+    DIR_ENDR,
+    DIR_EXTERN,
+    DIR_EQU,
+    DIR_FILE,
+    DIR_FILL,
+    DIR_GLOBAL,
+    DIR_IDENT,
+    DIR_LEB128,
+    DIR_LINE,
+    DIR_LOC,
+    DIR_LOCAL,
+    DIR_LCOMM,
+    DIR_ORG,
+    DIR_REPT,
+    DIR_SECTION,
+    DIR_SECTNAME,
+    DIR_SIZE,
+    DIR_SKIP,
+    DIR_TYPE,
+    DIR_WEAK,
+    DIR_ZERO,
+    NONE
+};
+
+typedef union {
+    unsigned int int_info;
+    char *str_val;
+    yasm_intnum *intn;
+    yasm_floatnum *flt;
+    unsigned long arch_data[4];
+    struct {
+	char *contents;
+	size_t len;
+    } str;
+} yystype;
+#define YYSTYPE yystype
 
 typedef struct gas_rept_line {
     STAILQ_ENTRY(gas_rept_line) link;
@@ -96,11 +150,39 @@ typedef struct yasm_parser_gas {
 	INSTDIR
     } state;
 
+    int token;		/* enum tokentype or any character */
+    yystype tokval;
+    char tokch;		/* first character of token */
+
+    /* one token of lookahead; used sparingly */
+    int peek_token;	/* NONE if none */
+    yystype peek_tokval;
+    char peek_tokch;
+
     /*@null@*/ gas_rept *rept;
 } yasm_parser_gas;
 
 /* shorter access names to commonly used parser_gas fields */
 #define p_symtab	(parser_gas->symtab)
+#define curtok		(parser_gas->token)
+#define curval		(parser_gas->tokval)
+
+#define INTNUM_val		(curval.intn)
+#define FLTNUM_val		(curval.flt)
+#define STRING_val		(curval.str)
+#define INSN_val		(curval.arch_data)
+#define PREFIX_val		(curval.arch_data)
+#define REG_val			(curval.arch_data)
+#define REGGROUP_val		(curval.arch_data)
+#define SEGREG_val		(curval.arch_data)
+#define TARGETMOD_val		(curval.arch_data)
+#define ID_val			(curval.str_val)
+#define LABEL_val		(curval.str_val)
+#define DIR_ALIGN_val		(curval.int_info)
+#define DIR_ASCII_val		(curval.int_info)
+#define DIR_DATA_val		(curval.int_info)
+#define DIR_LEB128_val		(curval.int_info)
+#define DIR_SECTNAME_val	(curval.str_val)
 
 #define cur_line	(yasm_linemap_get_current(parser_gas->linemap))
 
@@ -109,7 +191,7 @@ typedef struct yasm_parser_gas {
 #define p_expr_new_branch(o,r)	yasm_expr_create_branch(o,r,cur_line)
 #define p_expr_new_ident(r)	yasm_expr_create_ident(r,cur_line)
 
-int gas_parser_parse(void *parser_gas_arg);
+void gas_parser_parse(yasm_parser_gas *parser_gas);
 void gas_parser_cleanup(yasm_parser_gas *parser_gas);
 int gas_parser_lex(YYSTYPE *lvalp, yasm_parser_gas *parser_gas);
 
