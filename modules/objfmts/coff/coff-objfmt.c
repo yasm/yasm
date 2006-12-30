@@ -1243,6 +1243,9 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df,
 static void
 coff_objfmt_destroy(yasm_objfmt *objfmt)
 {
+    yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
+    if (objfmt_coff->filesym_data->aux[0].fname)
+	yasm_xfree(objfmt_coff->filesym_data->aux[0].fname);
     yasm_xfree(objfmt);
 }
 
