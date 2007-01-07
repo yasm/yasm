@@ -109,9 +109,9 @@ x86_set_var(yasm_arch *arch, const char *var, unsigned long val)
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     if (yasm__strcasecmp(var, "mode_bits") == 0)
-	arch_x86->mode_bits = val;
+	arch_x86->mode_bits = (unsigned char)val;
     else if (yasm__strcasecmp(var, "force_strict") == 0)
-	arch_x86->force_strict = val;
+	arch_x86->force_strict = (unsigned char)val;
     else
 	return 1;
     return 0;

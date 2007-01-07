@@ -372,8 +372,6 @@ stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt, yasm_errwarns *errwarns)
 	}
     }
 
-
-
     /* initial pseudo-stab */
     stab = yasm_xmalloc(sizeof(stabs_stab));
     dbgbc = yasm_bc_create_common(&stabs_bc_stab_callback, stab, 0);
@@ -407,7 +405,12 @@ stabs_dbgfmt_generate(yasm_dbgfmt *dbgfmt, yasm_errwarns *errwarns)
     stab->bcstr = filebc;
     stab->type = N_UNDF;
     stab->other = 0;
-    stab->desc = info.stabcount;
+    if (info.stabcount > 0xffff) {
+	yasm_warn_set(YASM_WARN_GENERAL, N_("over 65535 stabs"));
+	yasm_errwarn_propagate(errwarns, 0);
+	stab->desc = 0xffff;
+    } else
+	stab->desc = (unsigned short)info.stabcount;
 }
 
 static int

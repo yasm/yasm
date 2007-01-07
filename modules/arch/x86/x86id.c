@@ -2998,7 +2998,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	if (num_segregs > 1)
 	    yasm_warn_set(YASM_WARN_GENERAL,
 			  N_("multiple segment overrides, using leftmost"));
-	insn->special_prefix = segregs[num_segregs-1]>>8;
+	insn->special_prefix = (unsigned char)(segregs[num_segregs-1]>>8);
     } else if (num_segregs > 0)
 	yasm_internal_error(N_("unhandled segment prefix"));
 
