@@ -571,7 +571,6 @@ parse_line(yasm_parser_gas *parser_gas)
 	{
 	    /* DIR_SECTION ID ',' STRING ',' '@' ID ',' dirvals */
 	    char *sectname, *flags = NULL, *type = NULL;
-	    yasm_valparamhead objext_vps;
 	    int have_vps = 0;
 
 	    get_next_token(); /* DIR_SECTION */
@@ -892,7 +891,6 @@ parse_dirvals(yasm_parser_gas *parser_gas, yasm_valparamhead *vps)
 static int
 parse_dirstrvals(yasm_parser_gas *parser_gas, yasm_valparamhead *vps)
 {
-    char *s;
     yasm_valparam *vp;
     int num = 0;
 
@@ -944,7 +942,6 @@ parse_datavals(yasm_parser_gas *parser_gas, yasm_datavalhead *dvs)
 static int
 parse_strvals(yasm_parser_gas *parser_gas, yasm_datavalhead *dvs)
 {
-    char *s;
     yasm_dataval *dv;
     int num = 0;
 
