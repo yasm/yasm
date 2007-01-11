@@ -40,8 +40,6 @@ typedef struct yasm_arch yasm_arch;
 typedef struct yasm_preproc yasm_preproc;
 /** Parser instance (mostly opaque type).  \see parser.h for details. */
 typedef struct yasm_parser yasm_parser;
-/** Optimizer interface.  \see optimizer.h for details. */
-typedef struct yasm_optimizer yasm_optimizer;
 /** Object format interface.  \see objfmt.h for details. */
 typedef struct yasm_objfmt yasm_objfmt;
 /** Debug format interface.  \see dbgfmt.h for details. */
