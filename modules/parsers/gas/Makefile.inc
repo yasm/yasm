@@ -5,7 +5,7 @@ libyasm_a_SOURCES += modules/parsers/gas/gas-parser.h
 libyasm_a_SOURCES += modules/parsers/gas/gas-parse.c
 libyasm_a_SOURCES += gas-token.c
 
-YASM_MODULES += parser_gas
+YASM_MODULES += parser_gas parser_gnu
 
 gas-token.c: $(srcdir)/modules/parsers/gas/gas-token.re re2c$(EXEEXT)
 	$(top_builddir)/re2c$(EXEEXT) -b -o $@ $(srcdir)/modules/parsers/gas/gas-token.re

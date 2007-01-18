@@ -109,7 +109,7 @@ MODULES_PARSERS_OBJS= \
  modules/parsers/gas/gas-parse.o \
  gas-token.o
 YASM_MODULES+=parser_nasm
-YASM_MODULES+=parser_gas
+YASM_MODULES+=parser_gas parser_gnu
 
 MODULES_PREPROCS_NASM_OBJS= \
  modules/preprocs/nasm/nasm-eval.o \

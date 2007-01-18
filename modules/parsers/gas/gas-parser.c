@@ -123,3 +123,10 @@ yasm_parser_module yasm_gas_LTX_parser = {
     "raw",
     gas_parser_do_parse
 };
+yasm_parser_module yasm_gnu_LTX_parser = {
+    "GNU AS (GAS)-compatible parser",
+    "gnu",
+    gas_parser_preproc_keywords,
+    "raw",
+    gas_parser_do_parse
+};
