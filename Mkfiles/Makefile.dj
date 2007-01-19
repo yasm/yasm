@@ -76,6 +76,7 @@ MODULES_DBGFMTS_OBJS= \
  modules/dbgfmts/dwarf2/dwarf2-aranges.o
 YASM_MODULES+=dbgfmt_null
 YASM_MODULES+=dbgfmt_stabs
+YASM_MODULES+=dbgfmt_cv8
 YASM_MODULES+=dbgfmt_dwarf2
 
 MODULES_LISTFMTS_OBJS= \
