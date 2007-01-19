@@ -1290,11 +1290,61 @@ inc_fopen(char *file, char **newname)
 {
     FILE *fp;
     char *combine = NULL;
+    char *pb, *p1, *p2, *file2 = NULL;
 
-    fp = yasm_fopen_include(file, nasm_src_get_fname(), "r", &combine);
+    /* Try to expand all %ENVVAR% in filename.  Warn, and leave %string%
+     * intact, if ENVVAR is not set in the environment.
+     */
+    pb = file;
+    for (;;) {
+	char *env;
+	p1 = pb;
+	while (*p1 != '\0' && *p1 != '%')
+	    p1++;
+	if (*p1 == '\0')
+	    break;
+	p2 = p1+1;
+	while (*p2 != '\0' && *p2 != '%')
+	    p2++;
+	if (*p2 == '\0')
+	    break;
+	/* Okay, we have a %...%, with p1 pointing to the first %, and p2
+	 * pointing to the second %.
+	 */
+	*p2 = '\0';
+	env = getenv(p1+1);
+	if (!env) {
+	    /* warn, restore %, and continue looking */
+	    error(ERR_WARNING, "environment variable `%s' does not exist",
+		  p1+1);
+	    *p2 = '%';
+	    pb = p2+1;
+	    continue;
+	}
+	/* need to expand */
+	if (!file2) {
+	    file2 = nasm_malloc(strlen(file)+strlen(env)+1);
+	    file2[0] = '\0';
+	} else
+	    file2 = nasm_realloc(file2, strlen(file2)+strlen(env)+1);
+	*p1 = '\0';
+	strcat(file2, pb);
+	strcat(file2, env);
+	pb = p2+1;
+    }
+    /* add tail end; string is long enough that we don't need to realloc */
+    if (file2)
+	strcat(file2, pb);
+
+    fp = yasm_fopen_include(file2 ? file2 : file, nasm_src_get_fname(), "r",
+			    &combine);
     if (!fp)
-	error(ERR_FATAL, "unable to open include file `%s'", file);
+	error(ERR_FATAL, "unable to open include file `%s'",
+	      file2 ? file2 : file);
     nasm_preproc_add_dep(combine);
+
+    if (file2)
+	nasm_free(file2);
 
     *newname = combine;
     return fp;
