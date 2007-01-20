@@ -1296,9 +1296,9 @@ inc_fopen(char *file, char **newname)
      * intact, if ENVVAR is not set in the environment.
      */
     pb = file;
+    p1 = pb;
     for (;;) {
 	char *env;
-	p1 = pb;
 	while (*p1 != '\0' && *p1 != '%')
 	    p1++;
 	if (*p1 == '\0')
@@ -1318,7 +1318,7 @@ inc_fopen(char *file, char **newname)
 	    error(ERR_WARNING, "environment variable `%s' does not exist",
 		  p1+1);
 	    *p2 = '%';
-	    pb = p2+1;
+	    p1 = p2+1;
 	    continue;
 	}
 	/* need to expand */
@@ -1331,6 +1331,7 @@ inc_fopen(char *file, char **newname)
 	strcat(file2, pb);
 	strcat(file2, env);
 	pb = p2+1;
+	p1 = pb;
     }
     /* add tail end; string is long enough that we don't need to realloc */
     if (file2)
