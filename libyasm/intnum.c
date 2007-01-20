@@ -89,10 +89,18 @@ yasm_intnum_create_dec(char *str)
 
     intn->origsize = 0;	    /* no reliable way to figure this out */
 
-    if (BitVector_from_Dec_static(from_dec_data, conv_bv,
-				  (unsigned char *)str) == ErrCode_Ovfl)
-	yasm_warn_set(YASM_WARN_GENERAL,
-		      N_("Numeric constant too large for internal format"));
+    switch (BitVector_from_Dec_static(from_dec_data, conv_bv,
+				      (unsigned char *)str)) {
+	case ErrCode_Pars:
+	    yasm_error_set(YASM_ERROR_VALUE, N_("invalid decimal literal"));
+	    break;
+	case ErrCode_Ovfl:
+	    yasm_error_set(YASM_ERROR_OVERFLOW,
+		N_("Numeric constant too large for internal format"));
+	    break;
+	default:
+	    break;
+    }
     if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
 	intn->val.ul = BitVector_Chunk_Read(conv_bv, 32, 0);
@@ -111,11 +119,17 @@ yasm_intnum_create_bin(char *str)
 
     intn->origsize = (unsigned char)strlen(str);
 
-    if(intn->origsize > BITVECT_NATIVE_SIZE)
-	yasm_warn_set(YASM_WARN_GENERAL,
-		      N_("Numeric constant too large for internal format"));
-
-    BitVector_from_Bin(conv_bv, (unsigned char *)str);
+    switch (BitVector_from_Bin(conv_bv, (unsigned char *)str)) {
+	case ErrCode_Pars:
+	    yasm_error_set(YASM_ERROR_VALUE, N_("invalid binary literal"));
+	    break;
+	case ErrCode_Ovfl:
+	    yasm_error_set(YASM_ERROR_OVERFLOW,
+		N_("Numeric constant too large for internal format"));
+	    break;
+	default:
+	    break;
+    }
     if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
 	intn->val.ul = BitVector_Chunk_Read(conv_bv, 32, 0);
@@ -134,11 +148,17 @@ yasm_intnum_create_oct(char *str)
 
     intn->origsize = strlen(str)*3;
 
-    if(intn->origsize > BITVECT_NATIVE_SIZE)
-	yasm_warn_set(YASM_WARN_GENERAL,
-		      N_("Numeric constant too large for internal format"));
-
-    BitVector_from_Oct(conv_bv, (unsigned char *)str);
+    switch (BitVector_from_Oct(conv_bv, (unsigned char *)str)) {
+	case ErrCode_Pars:
+	    yasm_error_set(YASM_ERROR_VALUE, N_("invalid octal literal"));
+	    break;
+	case ErrCode_Ovfl:
+	    yasm_error_set(YASM_ERROR_OVERFLOW,
+		N_("Numeric constant too large for internal format"));
+	    break;
+	default:
+	    break;
+    }
     if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
 	intn->val.ul = BitVector_Chunk_Read(conv_bv, 32, 0);
@@ -157,11 +177,17 @@ yasm_intnum_create_hex(char *str)
 
     intn->origsize = strlen(str)*4;
 
-    if(intn->origsize > BITVECT_NATIVE_SIZE)
-	yasm_warn_set(YASM_WARN_GENERAL,
-		      N_("Numeric constant too large for internal format"));
-
-    BitVector_from_Hex(conv_bv, (unsigned char *)str);
+    switch (BitVector_from_Hex(conv_bv, (unsigned char *)str)) {
+	case ErrCode_Pars:
+	    yasm_error_set(YASM_ERROR_VALUE, N_("invalid hex literal"));
+	    break;
+	case ErrCode_Ovfl:
+	    yasm_error_set(YASM_ERROR_OVERFLOW,
+			   N_("Numeric constant too large for internal format"));
+	    break;
+	default:
+	    break;
+    }
     if (Set_Max(conv_bv) < 32) {
 	intn->type = INTNUM_UL;
 	intn->val.ul = BitVector_Chunk_Read(conv_bv, 32, 0);
@@ -183,8 +209,8 @@ yasm_intnum_create_charconst_nasm(const char *str)
     intn->origsize = len*8;
 
     if(intn->origsize > BITVECT_NATIVE_SIZE)
-	yasm_warn_set(YASM_WARN_GENERAL,
-		      N_("Character constant too large for internal format"));
+	yasm_error_set(YASM_ERROR_OVERFLOW,
+		       N_("Character constant too large for internal format"));
 
     if (len > 4) {
 	BitVector_Empty(conv_bv);
@@ -280,8 +306,8 @@ yasm_intnum_create_leb128(const unsigned char *ptr, int sign,
     *size = (ptr-ptr_orig)+1;
 
     if(i > BITVECT_NATIVE_SIZE)
-	yasm_warn_set(YASM_WARN_GENERAL,
-		      N_("Numeric constant too large for internal format"));
+	yasm_error_set(YASM_ERROR_OVERFLOW,
+		       N_("Numeric constant too large for internal format"));
     else if (sign && (*ptr & 0x40) == 0x40)
 	BitVector_Interval_Fill(conv_bv, i, BITVECT_NATIVE_SIZE-1);
 
@@ -306,8 +332,8 @@ yasm_intnum_create_sized(unsigned char *ptr, int sign, size_t srcsize,
     intn->origsize = 0;
 
     if (srcsize*8 > BITVECT_NATIVE_SIZE)
-	yasm_warn_set(YASM_WARN_GENERAL,
-		      N_("Numeric constant too large for internal format"));
+	yasm_error_set(YASM_ERROR_OVERFLOW,
+		       N_("Numeric constant too large for internal format"));
 
     /* Read the buffer into a bitvect */
     BitVector_Empty(conv_bv);

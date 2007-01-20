@@ -16,10 +16,22 @@ class TIntNum(TestCase):
     def test_to_from(self):
         for i in self.legal_values:
             self.assertEquals(i, int(IntNum(i)))
+            self.assertEquals(i, long(IntNum(i)))
 
     def test_overflow(self):
         for i in self.overflow_values:
             self.assertRaises(OverflowError, IntNum, i)
+
+    str_values = [
+        "0", "00000", "1234", "87654321", "010101010", "FADCBEEF"
+    ]
+    base_values = [2, 8, 10, 12, 16, None, "nasm", "foo"]
+
+    def test_from_str(self):
+        pass
+
+    def test_from_str_base(self):
+        pass
 
     def test_exceptions(self):
         self.assertRaises(ZeroDivisionError, IntNum(1).__div__, 0)

@@ -109,17 +109,24 @@ cdef class IntNum:
             self.intn = <yasm_intnum *>__get_voidp(value, IntNum)
             return
 
-        val = None
         if isinstance(value, str):
-            val = long(value, base)
+            if base == 2:
+                self.intn = yasm_intnum_create_bin(value)
+            elif base == 8:
+                self.intn = yasm_intnum_create_oct(value)
+            elif base == 10 or base is None:
+                self.intn = yasm_intnum_create_dec(value)
+            elif base == 16:
+                self.intn = yasm_intnum_create_hex(value)
+            elif base == "nasm":
+                self.intn = yasm_intnum_create_charconst_nasm(value)
+            else:
+                raise ValueError("base must be 2, 8, 10, 16, or \"nasm\"")
         elif isinstance(value, (int, long)):
-            val = long(value)
-
-        if val is None:
+            _PyLong_AsByteArray(long(value), buf, 16, 1, 1)
+            self.intn = yasm_intnum_create_sized(buf, 1, 16, 0)
+        else:
             raise ValueError
-
-        _PyLong_AsByteArray(val, buf, 16, 1, 1)
-        self.intn = yasm_intnum_create_sized(buf, 1, 16, 0)
 
     def __dealloc__(self):
         if self.intn != NULL: yasm_intnum_destroy(self.intn)
