@@ -193,7 +193,7 @@ typedef struct x86_insn {
 
     /*@null@*/ x86_effaddr *x86_ea; /* effective address */
 
-    /*@null@*/ yasm_immval *imm;    /* immediate or relative value */
+    /*@null@*/ yasm_value *imm;	    /* immediate or relative value */
 
     unsigned char def_opersize_64;  /* default operand size in 64-bit mode */
     unsigned char special_prefix;   /* "special" prefix (0=none) */

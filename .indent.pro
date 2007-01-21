@@ -61,7 +61,6 @@
 -Tyasm_expr_xform_func
 -Tyasm_expr__item
 -Tyasm_floatnum
--Tyasm_immval
 -Tyasm_intnum
 -Tyasm_insn_operand
 -Tyasm_insn_operands

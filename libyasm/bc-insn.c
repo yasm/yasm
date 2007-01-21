@@ -76,19 +76,6 @@ static const yasm_bytecode_callback bc_insn_callback = {
 };
 
 
-yasm_immval *
-yasm_imm_create_expr(yasm_expr *e, yasm_bytecode *precbc)
-{
-    yasm_immval *im = yasm_xmalloc(sizeof(yasm_immval));
-
-    if (yasm_value_finalize_expr(&im->val, e, precbc, 0))
-	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
-		       N_("immediate expression too complex"));
-    im->sign = 0;
-
-    return im;
-}
-
 const yasm_expr *
 yasm_ea_get_disp(const yasm_effaddr *ea)
 {

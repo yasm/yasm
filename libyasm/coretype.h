@@ -151,6 +151,11 @@ typedef struct yasm_value {
      */
     unsigned int section_rel : 1;
 
+    /** Sign of the value.  Nonzero if the final value should be treated as
+     * signed, 0 if it should be treated as signed.
+     */
+    unsigned int sign : 1;
+
     /** Size of the value, in bits. */
     unsigned int size : 8;
 } yasm_value;

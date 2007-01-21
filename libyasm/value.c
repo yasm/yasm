@@ -58,6 +58,7 @@ yasm_value_initialize(/*@out@*/ yasm_value *value,
     value->curpos_rel = 0;
     value->ip_rel = 0;
     value->section_rel = 0;
+    value->sign = 0;
     value->size = size;
 }
 
@@ -73,6 +74,7 @@ yasm_value_init_sym(/*@out@*/ yasm_value *value, /*@null@*/ yasm_symrec *sym,
     value->curpos_rel = 0;
     value->ip_rel = 0;
     value->section_rel = 0;
+    value->sign = 0;
     value->size = size;
 }
 
@@ -87,6 +89,7 @@ yasm_value_init_copy(yasm_value *value, const yasm_value *orig)
     value->curpos_rel = orig->curpos_rel;
     value->ip_rel = orig->ip_rel;
     value->section_rel = orig->section_rel;
+    value->sign = orig->sign;
     value->size = orig->size;
 }
 
@@ -625,6 +628,10 @@ yasm_value_output_basic(yasm_value *value, /*@out@*/ unsigned char *buf,
 	}
     }
 
+    /* Adjust warn for signed/unsigned integer warnings */
+    if (warn != 0)
+	warn = value->sign ? -1 : 1;
+
     if (value->rel) {
 	/* If relative portion is not in bc section, don't try to handle it
 	 * here.  Otherwise get the relative portion's offset.
@@ -690,6 +697,8 @@ yasm_value_output_basic(yasm_value *value, /*@out@*/ unsigned char *buf,
 void
 yasm_value_print(const yasm_value *value, FILE *f, int indent_level)
 {
+    fprintf(f, "%*s%u-bit, %ssigned", indent_level, "", value->size,
+	    value->sign ? "" : "un");
     fprintf(f, "%*sAbsolute portion=", indent_level, "");
     yasm_expr_print(value->abs, f);
     fprintf(f, "\n");
@@ -706,5 +715,9 @@ yasm_value_print(const yasm_value *value, FILE *f, int indent_level)
 	if (value->curpos_rel)
 	    fprintf(f, "%*s(Relative to current position)\n", indent_level,
 		    "");
+	if (value->ip_rel)
+	    fprintf(f, "%*s(IP-relative)\n", indent_level, "");
+	if (value->section_rel)
+	    fprintf(f, "%*s(Section-relative)\n", indent_level, "");
     }
 }

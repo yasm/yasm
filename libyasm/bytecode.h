@@ -73,13 +73,6 @@ struct yasm_effaddr {
 				 */
 };
 
-/** An immediate value. */
-typedef struct yasm_immval {
-    yasm_value val;		/**< the immediate value itself */
-
-    unsigned char sign;		/**< 1 if final imm is treated as signed */
-} yasm_immval;
-
 /** A data value (opaque type). */
 typedef struct yasm_dataval yasm_dataval;
 /** A list of data values (opaque type). */
@@ -88,14 +81,6 @@ typedef struct yasm_datavalhead yasm_datavalhead;
 #ifdef YASM_LIB_INTERNAL
 /*@reldef@*/ STAILQ_HEAD(yasm_datavalhead, yasm_dataval);
 #endif
-
-/** Create an immediate value from an expression.
- * \param e		expression (kept, do not free).
- * \param precbc	previous bytecode to bytecode containing immediate
- * \return Newly allocated immediate value.
- */
-/*@only@*/ yasm_immval *yasm_imm_create_expr(/*@keep@*/ yasm_expr *e,
-					     /*@null@*/ yasm_bytecode *precbc);
 
 /** Get the displacement portion of an effective address.
  * \param ea	effective address

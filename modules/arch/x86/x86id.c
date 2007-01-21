@@ -3003,8 +3003,11 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	yasm_internal_error(N_("unhandled segment prefix"));
 
     if (imm) {
-	insn->imm = yasm_imm_create_expr(imm, prev_bc);
-	insn->imm->val.size = im_len;
+	insn->imm = yasm_xmalloc(sizeof(yasm_value));
+	if (yasm_value_finalize_expr(insn->imm, imm, prev_bc, 0))
+	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			   N_("immediate expression too complex"));
+	insn->imm->size = im_len;
 	insn->imm->sign = im_sign;
     } else
 	insn->imm = NULL;
@@ -3041,9 +3044,9 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	     * second byte of the opcode and its ModRM byte is put in the third
 	     * byte of the opcode.
 	     */
-	    if (!insn->imm->val.abs ||
+	    if (!insn->imm->abs ||
 		yasm_intnum_check_size(
-		    yasm_expr_get_intnum(&insn->imm->val.abs, 0), 32, 0, 1)) {
+		    yasm_expr_get_intnum(&insn->imm->abs, 0), 32, 0, 1)) {
 		/* Throwaway REX byte */
 		unsigned char rex_temp = 0;
 
@@ -3055,7 +3058,7 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 
 		/* Make the imm32s form permanent. */
 		insn->opcode.opcode[0] = insn->opcode.opcode[1];
-		insn->imm->val.size = 32;
+		insn->imm->size = 32;
 	    }
 	    insn->opcode.opcode[1] = 0;	/* avoid possible confusion */
 	    break;

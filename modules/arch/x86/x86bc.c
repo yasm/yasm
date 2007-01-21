@@ -346,7 +346,7 @@ x86_bc_insn_destroy(void *contents)
     if (insn->x86_ea)
 	yasm_ea_destroy((yasm_effaddr *)insn->x86_ea);
     if (insn->imm) {
-	yasm_value_delete(&insn->imm->val);
+	yasm_value_delete(insn->imm);
 	yasm_xfree(insn->imm);
     }
     yasm_xfree(contents);
@@ -427,9 +427,7 @@ x86_bc_insn_print(const void *contents, FILE *f, int indent_level)
     else {
 	indent_level++;
 	fprintf(f, "\n");
-	yasm_value_print(&insn->imm->val, f, indent_level);
-	fprintf(f, "%*sSign=%u\n", indent_level, "",
-		(unsigned int)insn->imm->sign);
+	yasm_value_print(insn->imm, f, indent_level);
 	indent_level--;
     }
     x86_opcode_print(&insn->opcode, f, indent_level);
@@ -523,7 +521,7 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 {
     x86_insn *insn = (x86_insn *)bc->contents;
     x86_effaddr *x86_ea = insn->x86_ea;
-    yasm_immval *imm = insn->imm;
+    yasm_value *imm = insn->imm;
 
     if (x86_ea) {
 	/* Check validity of effective address and calc R/M bits of
@@ -556,28 +554,28 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
     }
 
     if (imm) {
-	unsigned int immlen = imm->val.size;
+	unsigned int immlen = imm->size;
 
 	/* TODO: check imm->len vs. sized len from expr? */
 
 	/* Handle signext_imm8 postop special-casing */
 	if (insn->postop == X86_POSTOP_SIGNEXT_IMM8) {
 	    /*@null@*/ /*@only@*/ yasm_intnum *num;
-	    num = yasm_value_get_intnum(&imm->val, NULL, 0);
+	    num = yasm_value_get_intnum(imm, NULL, 0);
 
 	    if (!num) {
 		/* Unknown; default to byte form and set as critical
 		 * expression.
 		 */
 		immlen = 8;
-		add_span(add_span_data, bc, 2, &imm->val, -128, 127);
+		add_span(add_span_data, bc, 2, imm, -128, 127);
 	    } else {
 		if (yasm_intnum_in_range(num, -128, 127)) {
 		    /* We can use the sign-extended byte form: shorten
 		     * the immediate length to 1 and make the byte form
 		     * permanent.
 		     */
-		    imm->val.size = 8;
+		    imm->size = 8;
 		    imm->sign = 1;
 		    immlen = 8;
 		} else {
@@ -612,7 +610,7 @@ x86_bc_insn_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
     x86_insn *insn = (x86_insn *)bc->contents;
     x86_effaddr *x86_ea = insn->x86_ea;
     yasm_effaddr *ea = &x86_ea->ea;
-    yasm_immval *imm = insn->imm;
+    yasm_value *imm = insn->imm;
 
     if (ea && span == 1) {
 	/* Change displacement length into word-sized */
@@ -629,7 +627,7 @@ x86_bc_insn_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 	if (insn->postop == X86_POSTOP_SIGNEXT_IMM8) {
 	    /* Update bc->len for new opcode and immediate size */
 	    bc->len -= insn->opcode.len;
-	    bc->len += imm->val.size/8;
+	    bc->len += imm->size/8;
 
 	    /* Change to the word-sized opcode */
 	    insn->opcode.opcode[0] = insn->opcode.opcode[insn->opcode.len];
@@ -790,7 +788,7 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 {
     x86_insn *insn = (x86_insn *)bc->contents;
     /*@null@*/ x86_effaddr *x86_ea = (x86_effaddr *)insn->x86_ea;
-    yasm_immval *imm = insn->imm;
+    yasm_value *imm = insn->imm;
     unsigned char *bufp_orig = *bufp;
 
     /* Prefixes */
@@ -859,14 +857,13 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	    /* If we got here with this postop still set, we need to force
 	     * imm size to 8 here.
 	     */
-	    imm->val.size = 8;
+	    imm->size = 8;
 	    imm->sign = 1;
 	    imm_len = 1;
 	} else
-	    imm_len = imm->val.size/8;
-	if (output_value(&imm->val, *bufp, imm_len,
-			 (unsigned long)(*bufp-bufp_orig), bc, imm->sign?-1:1,
-			 d))
+	    imm_len = imm->size/8;
+	if (output_value(imm, *bufp, imm_len, (unsigned long)(*bufp-bufp_orig),
+			 bc, 1, d))
 	    return 1;
 	*bufp += imm_len;
     }

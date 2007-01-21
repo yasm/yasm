@@ -40,7 +40,7 @@
  * processing into a #yasm_value.  This function is intended for use during
  * parsing simply to ensure all fields of the value are initialized; after
  * the parse is complete, yasm_value_extract() should be called to finalize
- * the value.
+ * the value.  The value defaults to unsigned.
  * \param value	    value to be initialized
  * \param e	    expression (kept)
  * \param size	    value size (in bits)
@@ -138,9 +138,8 @@ int yasm_value_finalize_expr(/*@out@*/ yasm_value *value,
  * \param bc		current bytecode (usually passed into higher-level
  *			calling function)
  * \param warn		enables standard warnings: zero for none;
- *			nonzero for overflow/underflow floating point warnings;
- *			negative for signed integer warnings,
- *			positive for unsigned integer warnings
+ *			nonzero for overflow/underflow floating point and
+ *			integer warnings
  * \param arch		architecture
  * \note Adds in value.rel (correctly) if PC-relative and in the same section
  *       as bc (and there is no WRT or SEG); if this is not the desired

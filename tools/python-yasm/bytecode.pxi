@@ -39,15 +39,9 @@ cdef extern from "libyasm/bytecode.h":
         unsigned int nosplit
         unsigned int strong
 
-    cdef struct yasm_immval:
-        yasm_value val
-        unsigned int len
-        unsigned int sign
-
     cdef struct yasm_dataval
     cdef struct yasm_datavalhead
 
-    cdef yasm_immval* yasm_imm_create_expr(yasm_expr *e, yasm_bytecode *precbc)
     cdef yasm_expr* yasm_ea_get_disp(yasm_effaddr *ea)
     cdef void yasm_ea_set_len(yasm_effaddr *ea, unsigned int len)
     cdef void yasm_ea_set_nosplit(yasm_effaddr *ea, unsigned int nosplit)
@@ -152,28 +146,6 @@ cdef extern from "libyasm/bc-int.h":
     cdef void yasm_bc_finalize_common(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 
     cdef yasm_bytecode *yasm_bc__next(yasm_bytecode *bc)
-
-cdef object __make_immval(yasm_immval *imm):
-    return ImmVal(__pass_voidp(imm, ImmVal))
-
-cdef class ImmVal:
-    cdef yasm_immval *imm
-
-    def __new__(self, value, precbc=None):
-        if isinstance(value, Expression):
-            if precbc is None:
-                self.imm = yasm_imm_create_expr(
-                    yasm_expr_copy((<Expression>value).expr), NULL)
-            elif isinstance(precbc, Bytecode):
-                self.imm = yasm_imm_create_expr(
-                    yasm_expr_copy((<Expression>value).expr),
-                    (<Bytecode>precbc).bc)
-            else:
-                raise TypeError("Invalid precbc type '%s'" % type(precbc))
-        elif PyCObject_Check(value):
-            self.imm = <yasm_immval *>__get_voidp(value, ImmVal)
-        else:
-            raise TypeError("Invalid value type '%s'" % type(value))
 
 cdef class Bytecode:
     cdef yasm_bytecode *bc
