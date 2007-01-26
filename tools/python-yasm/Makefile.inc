@@ -38,10 +38,10 @@ python-build: .python-build
 CLEANFILES += .python-build
 
 python-install: .python-build
-	$(PYTHON) `test -f tools/python-yasm/setup.py || echo '$(srcdir)/'`tools/python-yasm/setup.py install "--install-lib=$(pythondir)"
+	$(PYTHON) `test -f tools/python-yasm/setup.py || echo '$(srcdir)/'`tools/python-yasm/setup.py install "--install-lib=$(DESTDIR)$(pythondir)"
 
 python-uninstall:
-	rm -f `$(PYTHON) -c "import sys;sys.path.insert(0, '${pythondir}'); import yasm; print yasm.__file__"`
+	rm -f `$(PYTHON) -c "import sys;sys.path.insert(0, '${DESTDIR}${pythondir}'); import yasm; print yasm.__file__"`
 
 else
 
