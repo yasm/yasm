@@ -24,6 +24,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include <time.h>
 #include <util.h>
 /*@unused@*/ RCSID("$Id$");
 
@@ -1139,6 +1140,7 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df,
     unsigned long symtab_pos;
     unsigned long symtab_count;
     unsigned int flags;
+    unsigned long ts;
 
     if (objfmt_coff->filesym_data->aux[0].fname)
 	yasm_xfree(objfmt_coff->filesym_data->aux[0].fname);
@@ -1219,7 +1221,11 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df,
     localbuf = info.buf;
     YASM_WRITE_16_L(localbuf, objfmt_coff->machine);	/* magic number */
     YASM_WRITE_16_L(localbuf, objfmt_coff->parse_scnum-1);/* number of sects */
-    YASM_WRITE_32_L(localbuf, 0);			/* time/date stamp */
+    if (getenv("YASM_TEST_SUITE"))
+	ts = 0;
+    else
+	ts = (unsigned long)time(NULL);
+    YASM_WRITE_32_L(localbuf, ts);			/* time/date stamp */
     YASM_WRITE_32_L(localbuf, symtab_pos);		/* file ptr to symtab */
     YASM_WRITE_32_L(localbuf, symtab_count);		/* number of symtabs */
     YASM_WRITE_16_L(localbuf, 0);	/* size of optional header (none) */

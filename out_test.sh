@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /usr/bin/env YASM_TEST_SUITE=1 /bin/sh
 # $Id$
 
 case `echo "testing\c"; echo 1,2,3`,`echo -n testing; echo 1,2,3` in
