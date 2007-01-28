@@ -1,5 +1,8 @@
-#! /usr/bin/env YASM_TEST_SUITE=1 /bin/sh
+#! /bin/sh
 # $Id$
+
+YASM_TEST_SUITE=1
+export YASM_TEST_SUITE
 
 case `echo "testing\c"; echo 1,2,3`,`echo -n testing; echo 1,2,3` in
   *c*,-n*) ECHO_N= ECHO_C='
