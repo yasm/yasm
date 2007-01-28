@@ -28,3 +28,5 @@ EXTRA_DIST += modules/objfmts/bin/tests/reserve.hex
 EXTRA_DIST += modules/objfmts/bin/tests/reserve.errwarn
 EXTRA_DIST += modules/objfmts/bin/tests/reserve-err.asm
 EXTRA_DIST += modules/objfmts/bin/tests/reserve-err.errwarn
+EXTRA_DIST += modules/objfmts/bin/tests/shr.asm
+EXTRA_DIST += modules/objfmts/bin/tests/shr.hex

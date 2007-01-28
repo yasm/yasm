@@ -143,14 +143,22 @@ bin_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
     if (value->rel && !value->curpos_rel
 	&& yasm_symrec_get_label(value->rel, &precbc)
 	&& (sect = yasm_bc_get_section(precbc))) {
+	unsigned int rshift = (unsigned int)value->rshift;
+	yasm_expr *syme;
+	if (value->rshift > 0)
+	    syme = yasm_expr_create(YASM_EXPR_SHR, yasm_expr_sym(value->rel),
+		yasm_expr_int(yasm_intnum_create_uint(rshift)), bc->line);
+	else
+	    syme = yasm_expr_create_ident(yasm_expr_sym(value->rel), bc->line);
+
 	if (!value->abs)
-	    value->abs = yasm_expr_create_ident(yasm_expr_sym(value->rel),
-						bc->line);
+	    value->abs = syme;
 	else
 	    value->abs =
 		yasm_expr_create(YASM_EXPR_ADD, yasm_expr_expr(value->abs),
-				 yasm_expr_sym(value->rel), bc->line);
+				 yasm_expr_expr(syme), bc->line);
 	value->rel = NULL;
+	value->rshift = 0;
     }
 
     /* Simplify absolute portion of value, transforming symrecs */
@@ -170,7 +178,7 @@ bin_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
     }
 
     /* Absolute value; handle it here as output_basic won't understand it */
-    if (yasm_symrec_is_abs(value->rel)) {
+    if (value->rel && yasm_symrec_is_abs(value->rel)) {
 	if (value->curpos_rel) {
 	    /* Calculate value relative to current assembly position */
 	    /*@only@*/ yasm_intnum *outval;
