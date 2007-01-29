@@ -35,9 +35,8 @@ CLEANFILES += _yasm.pxi
 # Need to build a local copy of the main Pyrex input file to include _yasm.pxi
 # from the build directory.  Also need to fixup the other .pxi include paths.
 yasm.pyx: $(srcdir)/tools/python-yasm/yasm.pyx
-	cat $(srcdir)/tools/python-yasm/yasm.pyx \
-		| sed -e 's,^include "\([^_]\),include "${srcdir}/tools/python-yasm/\1,' \
-		> $@
+	sed -e 's,^include "\([^_]\),include "${srcdir}/tools/python-yasm/\1,' \
+		$(srcdir)/tools/python-yasm/yasm.pyx > $@
 
 CLEANFILES += yasm.pyx
 
