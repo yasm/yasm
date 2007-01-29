@@ -23,7 +23,7 @@ EXTRA_DIST += $(PYBINDING_DEPS)
 if HAVE_PYTHON
 
 # Use Pyxelator to generate Pyrex function headers.
-_yasm.pxi: ${libyasm_a_SOURCES}
+_yasm.pxi: ${HEADERS}
 	@rm -rf .tmp
 	@mkdir .tmp
 	$(PYTHON) $(srcdir)/tools/python-yasm/pyxelator/wrap_yasm.py \
