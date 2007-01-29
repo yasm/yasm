@@ -23,21 +23,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-cdef extern from "libyasm/floatnum.h":
-    cdef void yasm_floatnum_initialize()
-    cdef void yasm_floatnum_cleanup()
-    cdef yasm_floatnum* yasm_floatnum_create(char *str)
-    cdef yasm_floatnum* yasm_floatnum_copy(yasm_floatnum *flt)
-    cdef void yasm_floatnum_destroy(yasm_floatnum *flt)
-    cdef void yasm_floatnum_calc(yasm_floatnum *acc, yasm_expr_op op,
-            yasm_floatnum *operand)
-    cdef int yasm_floatnum_get_int(yasm_floatnum *flt, size_t *ret_val)
-    cdef int yasm_floatnum_get_sized(yasm_floatnum *flt, unsigned char *ptr,
-            size_t destsize, size_t valsize, size_t shift, int
-            bigendian, int warn)
-    cdef int yasm_floatnum_check_size(yasm_floatnum *flt, size_t size)
-    cdef void yasm_floatnum_print(yasm_floatnum *flt, FILE *f)
-
 cdef class FloatNum:
     cdef yasm_floatnum *flt
     def __new__(self, value):

@@ -35,14 +35,14 @@
 #define YASM_ARCH_H
 
 /** Errors that may be returned by yasm_arch_module::create(). */
-typedef enum {
+typedef enum yasm_arch_create_error {
     YASM_ARCH_CREATE_OK = 0,		/**< No error. */
     YASM_ARCH_CREATE_BAD_MACHINE,	/**< Unrecognized machine name. */
     YASM_ARCH_CREATE_BAD_PARSER		/**< Unrecognized parser name. */
 } yasm_arch_create_error;
 
 /** Return values for yasm_arch_module::parse_check_insnprefix(). */
-typedef enum {
+typedef enum yasm_arch_insnprefix {
     YASM_ARCH_NOTINSNPREFIX = 0,	/**< Unrecognized */
     YASM_ARCH_INSN,			/**< An instruction */
     YASM_ARCH_PREFIX			/**< An instruction prefix */
@@ -51,7 +51,7 @@ typedef enum {
 /** Types of registers / target modifiers that may be returned by
  * yasm_arch_module::parse_check_regtmod().
  */
-typedef enum {
+typedef enum yasm_arch_regtmod {
     YASM_ARCH_NOTREGTMOD = 0,		/**< Unrecognized */
     YASM_ARCH_REG,			/**< A "normal" register */
     YASM_ARCH_REGGROUP,			/**< A group of indexable registers */
@@ -248,7 +248,7 @@ struct yasm_insn_operand {
     /*@reldef@*/ STAILQ_ENTRY(yasm_insn_operand) link;
 
     /** Operand type. */
-    enum {
+    enum yasm_insn_operand_type {
 	YASM_INSN__OPERAND_REG = 1,	/**< A register. */
 	YASM_INSN__OPERAND_SEGREG,	/**< A segment register. */
 	YASM_INSN__OPERAND_MEMORY,	/**< An effective address

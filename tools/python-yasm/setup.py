@@ -39,6 +39,9 @@ def ParseCPPFlags(flags):
     """parse the CPPFlags macro"""
     incl_dir = [x[2:] for x in flags.split() if x.startswith("-I")]
     cppflags = [x for x in flags.split() if not x.startswith("-I")]
+    cppflags.append("-DYASM_LIB_INTERNAL")
+    cppflags.append("-DYASM_BC_INTERNAL")
+    cppflags.append("-DYASM_EXPR_INTERNAL")
     return (incl_dir, cppflags)
 
 def ParseSources(src, srcdir):

@@ -34,6 +34,19 @@
 #ifndef YASM_SYMREC_H
 #define YASM_SYMREC_H
 
+/** Symbol status.  YASM_SYM_DEFINED is set by yasm_symtab_define_label(),
+ * yasm_symtab_define_equ(), or yasm_symtab_declare()/yasm_symrec_declare()
+ * with a visibility of #YASM_SYM_EXTERN or #YASM_SYM_COMMON.
+ */
+typedef enum yasm_sym_status {
+    YASM_SYM_NOSTATUS = 0,	    /**< no status */
+    YASM_SYM_USED = 1 << 0,	    /**< for use before definition */
+    YASM_SYM_DEFINED = 1 << 1,	    /**< once it's been defined in the file */
+    YASM_SYM_VALUED = 1 << 2,	    /**< once its value has been determined */
+    YASM_SYM_NOTINTABLE = 1 << 3    /**< if it's not in sym_table (ex. '$') */
+} yasm_sym_status;
+
+
 /** Create a new symbol table. */
 yasm_symtab *yasm_symtab_create(void);
 
@@ -216,6 +229,12 @@ void yasm_symtab_print(yasm_symtab *symtab, FILE *f, int indent_level);
  * \return Symbol visibility.
  */
 yasm_sym_vis yasm_symrec_get_visibility(const yasm_symrec *sym);
+
+/** Get the status of a symbol.
+ * \param sym	    symbol
+ * \return Symbol status.
+ */
+yasm_sym_status yasm_symrec_get_status(const yasm_symrec *sym);
 
 /** Get the virtual line of a symbol (where it was first declared or used).
  * \param sym	    symbol

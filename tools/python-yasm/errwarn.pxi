@@ -23,112 +23,40 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-cdef extern from "libyasm/errwarn.h":
-    ctypedef enum yasm_warn_class:
-        YASM_WARN_NONE
-        YASM_WARN_GENERAL
-        YASM_WARN_UNREC_CHAR
-        YASM_WARN_PREPROC
-        YASM_WARN_ORPHAN_LABEL
-        YASM_WARN_UNINIT_CONTENTS
-
-    ctypedef enum yasm_error_class:
-        YASM_ERROR_NONE
-        YASM_ERROR_GENERAL
-        YASM_ERROR_ARITHMETIC
-        YASM_ERROR_OVERFLOW
-        YASM_ERROR_FLOATING_POINT
-        YASM_ERROR_ZERO_DIVISION
-        YASM_ERROR_ASSERTION
-        YASM_ERROR_VALUE
-        YASM_ERROR_NOT_ABSOLUTE
-        YASM_ERROR_TOO_COMPLEX
-        YASM_ERROR_NOT_CONSTANT
-        YASM_ERROR_IO
-        YASM_ERROR_NOT_IMPLEMENTED
-        YASM_ERROR_TYPE
-        YASM_ERROR_SYNTAX
-        YASM_ERROR_PARSE
-
-    void yasm_errwarn_initialize()
-    void yasm_errwarn_cleanup()
-    extern void (*yasm_internal_error_) (char *file, unsigned int line,
-                                         char *message)
-    void yasm_internal_error(char *message)
-    extern void (*yasm_fatal) (char *message, va_list va)
-    void yasm__fatal(char *message, ...)
-
-    void yasm_error_clear()
-    yasm_error_class yasm_error_occurred()
-    int yasm_error_matches(yasm_error_class eclass)
-
-    void yasm_error_set_va(yasm_error_class eclass, char *format, va_list va)
-    void yasm_error_set(yasm_error_class eclass, char *format, ...)
-    void yasm_error_set_xref_va(unsigned long xrefline, char *format,
-                                va_list va)
-    void yasm_error_set_xref(unsigned long xrefline, char *format, ...)
-    void yasm_error_fetch(yasm_error_class *eclass, char **str,
-                          unsigned long *xrefline, char **xrefstr)
-
-    void yasm_warn_clear()
-    void yasm_warn_set_va(yasm_warn_class wclass, char *format, va_list va)
-    void yasm_warn_set(yasm_warn_class wclass, char *format, ...)
-    void yasm_warn_fetch(yasm_warn_class *wclass, char **str)
-
-    void yasm_warn_enable(yasm_warn_class wclass)
-    void yasm_warn_disable(yasm_warn_class wclass)
-
-    void yasm_warn_disable_all()
-
-    yasm_errwarns *yasm_errwarns_create()
-    void yasm_errwarns_destroy(yasm_errwarns *errwarns)
-    void yasm_errwarn_propagate(yasm_errwarns *errwarns, unsigned long line)
-    unsigned int yasm_errwarns_num_errors(yasm_errwarns *errwarns,
-                                          int warning_as_error)
-
-    ctypedef void (*yasm_print_error_func) (char *fn, unsigned long line,
-                                            char *msg, unsigned long xrefline,
-                                            char *xrefmsg)
-    ctypedef void (*yasm_print_warning_func) (char *fn, unsigned long line,
-                                              char *msg)
-    void yasm_errwarns_output_all(yasm_errwarns *errwarns, yasm_linemap *lm,
-                                  int warning_as_error,
-                                  yasm_print_error_func print_error,
-                                  yasm_print_warning_func print_warning)
-
-    char *yasm__conv_unprint(int ch)
-
-    extern char * (*yasm_gettext_hook) (char *msgid)
-
 class YasmError(Exception): pass
 
-__errormap = [
-    # Order matters here. Go from most to least specific within a class
-    (YASM_ERROR_ZERO_DIVISION, ZeroDivisionError),
-    # Enable these once there are tests that need them.
-    #(YASM_ERROR_OVERFLOW, OverflowError),
-    #(YASM_ERROR_FLOATING_POINT, FloatingPointError),
-    #(YASM_ERROR_ARITHMETIC, ArithmeticError),
-    #(YASM_ERROR_ASSERTION, AssertionError),
-    #(YASM_ERROR_VALUE, ValueError), # include notabs, notconst, toocomplex
-    #(YASM_ERROR_IO, IOError),
-    #(YASM_ERROR_NOT_IMPLEMENTED, NotImplementedError),
-    #(YASM_ERROR_TYPE, TypeError),
-    #(YASM_ERROR_SYNTAX, SyntaxError), #include parse
-]
-
-cdef void __error_check() except *:
+cdef int __error_check() except 1:
     cdef yasm_error_class errclass
     cdef unsigned long xrefline
     cdef char *errstr, *xrefstr
 
     # short path for the common case
-    if not yasm_error_occurred(): return
+    if not <int>yasm_error_occurred():
+        return 0
 
     # look up our preferred python error, fall back to YasmError
-    for error_class, exception in __errormap:
-        if yasm_error_matches(error_class):
-            break
+    # Order matters here. Go from most to least specific within a class
+    if yasm_error_matches(YASM_ERROR_ZERO_DIVISION):
+        exception = ZeroDivisionError
+    # Enable these once there are tests that need them.
+    #elif yasm_error_matches(YASM_ERROR_OVERFLOW):
+    #   exception = OverflowError
+    #elif yasm_error_matches(YASM_ERROR_FLOATING_POINT):
+    #   exception = FloatingPointError
+    #elif yasm_error_matches(YASM_ERROR_ARITHMETIC):
+    #   exception = ArithmeticError
+    #elif yasm_error_matches(YASM_ERROR_ASSERTION):
+    #   exception = AssertionError
+    #elif yasm_error_matches(YASM_ERROR_VALUE):
+    #   exception = ValueError # include notabs, notconst, toocomplex
+    #elif yasm_error_matches(YASM_ERROR_IO):
+    #   exception = IOError
+    #elif yasm_error_matches(YASM_ERROR_NOT_IMPLEMENTED):
+    #   exception = NotImplementedError
+    #elif yasm_error_matches(YASM_ERROR_TYPE):
+    #   exception = TypeError
+    #elif yasm_error_matches(YASM_ERROR_SYNTAX):
+    #   exception = SyntaxError #include parse
     else:
         exception = YasmError
 
@@ -142,3 +70,4 @@ cdef void __error_check() except *:
 
     if xrefstr: free(xrefstr)
     free(errstr)
+    return 1

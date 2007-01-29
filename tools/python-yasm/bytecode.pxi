@@ -23,132 +23,23 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-cdef extern from "libyasm/bytecode.h":
-    cdef struct yasm_effaddr
-
-    cdef struct yasm_effaddr_callback:
-        void (*destroy) (yasm_effaddr *ea)
-        void (*print_ "print") (yasm_effaddr *ea, FILE *f, int indent_level)
-
-    cdef struct yasm_effaddr:
-        yasm_effaddr_callback *callback
-        yasm_value disp
-        unsigned long segreg
-        unsigned int disp_len
-        unsigned int need_disp
-        unsigned int nosplit
-        unsigned int strong
-
-    cdef struct yasm_dataval
-    cdef struct yasm_datavalhead
-
-    cdef yasm_expr* yasm_ea_get_disp(yasm_effaddr *ea)
-    cdef void yasm_ea_set_len(yasm_effaddr *ea, unsigned int len)
-    cdef void yasm_ea_set_nosplit(yasm_effaddr *ea, unsigned int nosplit)
-    cdef void yasm_ea_set_strong(yasm_effaddr *ea, unsigned int strong)
-    cdef void yasm_ea_set_segreg(yasm_effaddr *ea, unsigned long segreg)
-    cdef void yasm_ea_destroy(yasm_effaddr *ea)
-    cdef void yasm_ea_print(yasm_effaddr *ea, FILE *f, int indent_level)
-
-    cdef void yasm_bc_set_multiple(yasm_bytecode *bc, yasm_expr *e)
-    cdef yasm_bytecode* yasm_bc_create_data(yasm_datavalhead *datahead,
-            unsigned int size, int append_zero, unsigned long line)
-    cdef yasm_bytecode* yasm_bc_create_leb128(yasm_datavalhead *datahead,
-            int sign, unsigned long line)
-    cdef yasm_bytecode* yasm_bc_create_reserve(yasm_expr *numitems,
-            unsigned int itemsize, unsigned long line)
-    cdef yasm_bytecode* yasm_bc_create_incbin(char *filename,
-            yasm_expr *start, yasm_expr *maxlen, yasm_linemap *linemap,
-            unsigned long line)
-    cdef yasm_bytecode* yasm_bc_create_align(yasm_expr *boundary,
-            yasm_expr *fill, yasm_expr *maxskip,
-            unsigned char **code_fill, unsigned long line)
-    cdef yasm_bytecode* yasm_bc_create_org(unsigned long start,
-            unsigned long line)
-    cdef yasm_bytecode* yasm_bc_create_insn(yasm_arch *arch,
-            unsigned long insn_data[4], int num_operands,
-            yasm_insn_operands *operands, unsigned long line)
-    cdef yasm_bytecode* yasm_bc_create_empty_insn(yasm_arch *arch,
-            unsigned long insn_data[4], int num_operands,
-            yasm_insn_operands *operands, unsigned long line)
-    cdef void yasm_bc_insn_add_prefix(yasm_bytecode *bc,
-            unsigned long prefix_data[4])
-    cdef void yasm_bc_insn_add_seg_prefix(yasm_bytecode *bc,
-            unsigned long segreg)
-    cdef yasm_section* yasm_bc_get_section(yasm_bytecode *bc)
-    cdef void yasm_bc__add_symrec(yasm_bytecode *bc, yasm_symrec *sym)
-    cdef void yasm_bc_destroy(yasm_bytecode *bc)
-    cdef void yasm_bc_print(yasm_bytecode *bc, FILE *f, int indent_level)
-    cdef void yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
-    cdef yasm_intnum *yasm_calc_bc_dist(yasm_bytecode *precbc1,
-            yasm_bytecode *precbc2)
-    ctypedef void (*yasm_bc_add_span_func) (void *add_span_data,
-            yasm_bytecode *bc, int id, yasm_value *value, long neg_thres,
-            long pos_thres)
-    cdef int yasm_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
-                              void *add_span_data)
-    cdef int yasm_bc_expand(yasm_bytecode *bc, int span, long old_val,
-                            long new_val, long *neg_thres, long *pos_thres)
-    cdef unsigned char* yasm_bc_tobytes(yasm_bytecode *bc,
-            unsigned char *buf, unsigned long *bufsize, int *gap, void *d,
-            yasm_output_value_func output_value,
-            yasm_output_reloc_func output_reloc)
-    cdef int yasm_bc_get_multiple(yasm_bytecode *bc, unsigned long *multiple,
-                                  int calc_bc_dist)
-
-    cdef yasm_dataval* yasm_dv_create_expr(yasm_expr *expn)
-    cdef yasm_dataval* yasm_dv_create_string(char *contents, size_t len)
-
-    cdef void yasm_dvs_initialize(yasm_datavalhead *headp)
-    cdef void yasm_dvs_destroy(yasm_datavalhead *headp)
-    cdef yasm_dataval* yasm_dvs_append(yasm_datavalhead *headp,
-            yasm_dataval *dv)
-    cdef void yasm_dvs_print(yasm_datavalhead *headp, FILE *f,
-            int indent_level)
-
-cdef extern from "libyasm/bc-int.h":
-    cdef enum yasm_bc_special:
-        YASM_BC_SPECIAL_NONE
-        YASM_BC_SPECIAL_RESERVE
-        YASM_BC_SPECIAL_OFFSET
-
-    cdef struct yasm_bytecode_callback:
-        void (*destroy) (void *contents)
-        void (*c_print "print") (void *contents, FILE *f, int indent_level)
-        void (*finalize) (yasm_bytecode *bc, yasm_bytecode *prev_bc)
-        int (*calc_len) (yasm_bytecode *bc, yasm_bc_add_span_func add_span,
-		         void *add_span_data)
-        int (*expand) (yasm_bytecode *bc, int span, long old_val, long new_val,
-		       long *neg_thres, long *pos_thres)
-        int (*tobytes) (yasm_bytecode *bc, unsigned char **bufp, void *d,
-	                yasm_output_value_func output_value,
-		        yasm_output_reloc_func output_reloc)
-        yasm_bc_special special
-
-    cdef struct yasm_bytecode:
-        yasm_bytecode_callback *callback
-        yasm_section *section
-        yasm_expr *multiple
-        unsigned long len
-        unsigned long mult_int
-        unsigned long line
-        unsigned long offset
-        unsigned long bc_index
-        yasm_symrec **symrecs
-        void *contents
-
-    cdef yasm_bytecode *yasm_bc_create_common(yasm_bytecode_callback *callback,
-            void *contents, unsigned long line)
-
-    cdef void yasm_bc_transform(yasm_bytecode *bc,
-            yasm_bytecode_callback *callback, void *contents)
-
-    cdef void yasm_bc_finalize_common(yasm_bytecode *bc, yasm_bytecode *prev_bc)
-
-    cdef yasm_bytecode *yasm_bc__next(yasm_bytecode *bc)
-
 cdef class Bytecode:
     cdef yasm_bytecode *bc
+
+    cdef object __weakref__     # make weak-referenceable
+
+    def __new__(self, bc):
+        self.bc = NULL
+        if PyCObject_Check(bc):
+            self.bc = <yasm_bytecode *>__get_voidp(bc, Bytecode)
+        else:
+            raise NotImplementedError
+
+    def __dealloc__(self):
+        # Only free if we're not part of a section; if we're part of a section
+        # the section takes care of freeing the bytecodes.
+        if self.bc.section == NULL:
+            yasm_bc_destroy(self.bc)
 
     property len:
         def __get__(self): return self.bc.len
@@ -171,6 +62,8 @@ cdef class Bytecode:
         def __get__(self):
             cdef yasm_symrec *sym
             cdef int i
+            if self.bc.symrecs == NULL:
+                return []
             s = []
             i = 0
             sym = self.bc.symrecs[i]
@@ -179,3 +72,36 @@ cdef class Bytecode:
                 i = i+1
                 sym = self.bc.symrecs[i]
             return s
+
+#
+# Keep Bytecode reference paired with bc using weak references.
+# This is broken in Pyrex 0.9.4.1; Pyrex 0.9.5 has a working version.
+#
+
+from weakref import WeakValueDictionary as __weakvaldict
+__bytecode_map = __weakvaldict()
+#__bytecode_map = {}
+
+cdef object __make_bytecode(yasm_bytecode *bc):
+    __error_check()
+    vptr = PyCObject_FromVoidPtr(bc, NULL)
+    data = __bytecode_map.get(vptr, None)
+    if data:
+        return data
+    bcobj = Bytecode(__pass_voidp(bc, Bytecode))
+    __bytecode_map[vptr] = bcobj
+    return bcobj
+
+# Org bytecode
+def __org__new__(cls, start, line=0):
+    cdef yasm_bytecode *bc
+    bc = yasm_bc_create_org(start, line)
+    obj = Bytecode.__new__(cls, __pass_voidp(bc, Bytecode))
+    __bytecode_map[PyCObject_FromVoidPtr(bc, NULL)] = obj
+    return obj
+__org__new__ = staticmethod(__org__new__)
+class Org(Bytecode):
+    __new__ = __org__new__
+
+
+#cdef class Section:

@@ -257,8 +257,8 @@ else
     if test -z "$PYTHON" || test "$PYTHON" = : ; then
         have_python=no
     else
-        AC_MSG_CHECKING([for Pyrex >= 0.9.3])
-        PYREX_CHECK_VERSION(0.9.3, [AC_MSG_RESULT(yes)
+        AC_MSG_CHECKING([for Pyrex >= 0.9.5])
+        PYREX_CHECK_VERSION(0.9.5, [AC_MSG_RESULT(yes)
                                     have_pyrex=yes],
                                    [AC_MSG_RESULT(no)
                                     have_pyrex=no])

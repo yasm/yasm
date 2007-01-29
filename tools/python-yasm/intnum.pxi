@@ -23,46 +23,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-cdef extern from "libyasm/intnum.h":
-    cdef void yasm_intnum_initialize()
-    cdef void yasm_intnum_cleanup()
-    cdef yasm_intnum *yasm_intnum_create_dec(char *str)
-    cdef yasm_intnum *yasm_intnum_create_bin(char *str)
-    cdef yasm_intnum *yasm_intnum_create_oct(char *str)
-    cdef yasm_intnum *yasm_intnum_create_hex(char *str)
-    cdef yasm_intnum *yasm_intnum_create_charconst_nasm(char *str)
-    cdef yasm_intnum *yasm_intnum_create_uint(unsigned long i)
-    cdef yasm_intnum *yasm_intnum_create_int(long i)
-    cdef yasm_intnum *yasm_intnum_create_leb128(unsigned char *ptr,
-            int sign, unsigned long *size)
-    cdef yasm_intnum *yasm_intnum_create_sized(unsigned char *ptr, int sign,
-            size_t srcsize, int bigendian)
-    cdef yasm_intnum *yasm_intnum_copy(yasm_intnum *intn)
-    cdef void yasm_intnum_destroy(yasm_intnum *intn)
-    cdef void yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op,
-            yasm_intnum *operand)
-    cdef void yasm_intnum_zero(yasm_intnum *intn)
-    cdef void yasm_intnum_set_uint(yasm_intnum *intn, unsigned long val)
-    cdef int yasm_intnum_is_zero(yasm_intnum *acc)
-    cdef int yasm_intnum_is_pos1(yasm_intnum *acc)
-    cdef int yasm_intnum_is_neg1(yasm_intnum *acc)
-    cdef int yasm_intnum_sign(yasm_intnum *acc)
-    cdef unsigned long yasm_intnum_get_uint(yasm_intnum *intn)
-    cdef long yasm_intnum_get_int(yasm_intnum *intn)
-    cdef void yasm_intnum_get_sized(yasm_intnum *intn, unsigned char *ptr,
-	    size_t destsize, size_t valsize, int shift, int bigendian, int warn)
-    cdef int yasm_intnum_check_size(yasm_intnum *intn, size_t size,
-            size_t rshift, int rangetype)
-    cdef unsigned long yasm_intnum_get_leb128(yasm_intnum *intn,
-            unsigned char *ptr, int sign)
-    cdef unsigned long yasm_intnum_size_leb128(yasm_intnum *intn,
-            int sign)
-    cdef unsigned long yasm_get_sleb128(long v, unsigned char *ptr)
-    cdef unsigned long yasm_size_sleb128(long v)
-    cdef unsigned long yasm_get_uleb128(unsigned long v, unsigned char *ptr)
-    cdef unsigned long yasm_size_uleb128(unsigned long v)
-    cdef void yasm_intnum_print(yasm_intnum *intn, FILE *f)
-
 cdef class IntNum
 
 cdef object __intnum_op_ex(object x, yasm_expr_op op, object y):

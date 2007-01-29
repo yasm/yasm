@@ -23,53 +23,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-cdef extern from "libyasm/symrec.h":
-    cdef yasm_symtab* yasm_symtab_create()
-    cdef void yasm_symtab_destroy(yasm_symtab *symtab)
-    cdef yasm_symrec* yasm_symtab_use(yasm_symtab *symtab, char *name,
-            unsigned long line)
-    cdef yasm_symrec* yasm_symtab_get(yasm_symtab *symtab, char *name)
-    cdef yasm_symrec* yasm_symtab_define_equ(yasm_symtab *symtab,
-            char *name, yasm_expr *e, unsigned long line)
-    cdef yasm_symrec* yasm_symtab_define_label(yasm_symtab *symtab,
-            char *name, yasm_bytecode *precbc, int in_table, unsigned long line)
-    cdef yasm_symrec* yasm_symtab_define_curpos(yasm_symtab *symtab, char *name,
-            yasm_bytecode *precbc, unsigned long line)
-    cdef yasm_symrec* yasm_symtab_define_special(yasm_symtab *symtab,
-            char *name, yasm_sym_vis vis)
-    cdef yasm_symrec* yasm_symtab_declare(yasm_symtab *symtab,
-            char *name, yasm_sym_vis vis, unsigned long line)
-    cdef void yasm_symrec_declare(yasm_symrec *symrec, yasm_sym_vis vis,
-            unsigned long line)
-
-    ctypedef int (*yasm_symtab_traverse_callback)(yasm_symrec *sym, void *d)
-    cdef int yasm_symtab_traverse(yasm_symtab *symtab, void *d,
-            yasm_symtab_traverse_callback func)
-
-    ctypedef struct yasm_symtab_iter
-    cdef yasm_symtab_iter *yasm_symtab_first(yasm_symtab *symtab)
-    cdef yasm_symtab_iter *yasm_symtab_next(yasm_symtab_iter *prev)
-    cdef yasm_symrec *yasm_symtab_iter_value(yasm_symtab_iter *cur)
-
-    cdef void yasm_symtab_parser_finalize(yasm_symtab *symtab,
-            int undef_extern, yasm_objfmt *objfmt)
-    cdef void yasm_symtab_print(yasm_symtab *symtab, FILE *f, int indent_level)
-    cdef char* yasm_symrec_get_name(yasm_symrec *sym)
-    cdef yasm_sym_vis yasm_symrec_get_visibility(yasm_symrec *sym)
-    cdef yasm_expr* yasm_symrec_get_equ(yasm_symrec *sym)
-
-    ctypedef yasm_bytecode *yasm_symrec_get_label_bytecodep
-
-    cdef int yasm_symrec_get_label(yasm_symrec *sym,
-            yasm_symrec_get_label_bytecodep *precbc)
-    cdef int yasm_symrec_is_special(yasm_symrec *sym)
-    cdef int yasm_symrec_is_curpos(yasm_symrec *sym)
-    cdef void* yasm_symrec_get_data(yasm_symrec *sym,
-            yasm_assoc_data_callback *callback)
-    cdef void yasm_symrec_add_data(yasm_symrec *sym,
-            yasm_assoc_data_callback *callback, void *data)
-    cdef void yasm_symrec_print(yasm_symrec *sym, FILE *f, int indent_level)
-
 cdef class Symbol:
     cdef yasm_symrec *sym
 
@@ -85,15 +38,30 @@ cdef class Symbol:
     property name:
         def __get__(self): return yasm_symrec_get_name(self.sym)
 
+    property status:
+        def __get__(self):
+            cdef yasm_sym_status status
+            s = set()
+            status = yasm_symrec_get_status(self.sym)
+            if <int>status & <int>SYM_USED: s.add('used')
+            if <int>status & <int>SYM_DEFINED: s.add('defined')
+            if <int>status & <int>SYM_VALUED: s.add('valued')
+            return s
+
+    property in_table:
+        def __get__(self):
+            return bool(<int>yasm_symrec_get_status(self.sym) &
+                        <int>SYM_NOTINTABLE)
+
     property visibility:
         def __get__(self):
             cdef yasm_sym_vis vis
             s = set()
             vis = yasm_symrec_get_visibility(self.sym)
-            if vis & YASM_SYM_GLOBAL: s.add('global')
-            if vis & YASM_SYM_COMMON: s.add('common')
-            if vis & YASM_SYM_EXTERN: s.add('extern')
-            if vis & YASM_SYM_DLOCAL: s.add('dlocal')
+            if <int>vis & <int>YASM_SYM_GLOBAL: s.add('global')
+            if <int>vis & <int>YASM_SYM_COMMON: s.add('common')
+            if <int>vis & <int>YASM_SYM_EXTERN: s.add('extern')
+            if <int>vis & <int>YASM_SYM_DLOCAL: s.add('dlocal')
             return s
 
     property equ:
@@ -127,15 +95,6 @@ cdef class Symbol:
 #
 # Use associated data mechanism to keep Symbol reference paired with symrec.
 #
-
-cdef class __assoc_data_callback:
-    cdef yasm_assoc_data_callback *cb
-    def __new__(self, destroy, print_):
-        self.cb = <yasm_assoc_data_callback *>malloc(sizeof(yasm_assoc_data_callback))
-        self.cb.destroy = <void (*) (void *)>PyCObject_AsVoidPtr(destroy)
-        self.cb.print_ = <void (*) (void *, FILE *, int)>PyCObject_AsVoidPtr(print_)
-    def __dealloc__(self):
-        free(self.cb)
 
 cdef void __python_symrec_cb_destroy(void *data):
     Py_DECREF(<object>data)
@@ -218,7 +177,7 @@ cdef class SymbolTableItemIterator:
         self.iter = yasm_symtab_next(self.iter)
         return rv
 
-cdef yasm_sym_vis __parse_vis(vis) except -1:
+cdef int __parse_vis(vis) except -1:
     if not vis or vis == 'local': return YASM_SYM_LOCAL
     if vis == 'global': return YASM_SYM_GLOBAL
     if vis == 'common': return YASM_SYM_COMMON
@@ -253,12 +212,14 @@ cdef class SymbolTable:
                 (<Bytecode>precbc).bc, in_table, line))
 
     def define_special(self, name, vis):
-        return __make_symbol(yasm_symtab_define_special(self.symtab, name,
-                                                        __parse_vis(vis)))
+        return __make_symbol(
+            yasm_symtab_define_special(self.symtab, name,
+                                       <yasm_sym_vis>__parse_vis(vis)))
 
     def declare(self, name, vis, line):
-        return __make_symbol(yasm_symtab_declare(self.symtab, name,
-                                                 __parse_vis(vis), line))
+        return __make_symbol(
+            yasm_symtab_declare(self.symtab, name,
+                                <yasm_sym_vis>__parse_vis(vis), line))
 
     #
     # Methods to make SymbolTable behave like a dictionary of Symbols.

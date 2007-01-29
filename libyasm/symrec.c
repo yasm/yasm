@@ -47,15 +47,6 @@
 #include "objfmt.h"
 
 
-/* DEFINED is set with EXTERN and COMMON below */
-typedef enum {
-    SYM_NOSTATUS = 0,
-    SYM_USED = 1 << 0,		/* for using variables before definition */
-    SYM_DEFINED = 1 << 1,	/* once it's been defined in the file */
-    SYM_VALUED = 1 << 2,	/* once its value has been determined */
-    SYM_NOTINTABLE = 1 << 3	/* if it's not in sym_table (ex. '$') */
-} sym_status;
-
 typedef enum {
     SYM_UNKNOWN,		/* for unknown type (COMMON/EXTERN) */
     SYM_EQU,			/* for EQU defined symbols (expressions) */
@@ -70,7 +61,7 @@ typedef enum {
 struct yasm_symrec {
     char *name;
     sym_type type;
-    sym_status status;
+    yasm_sym_status status;
     yasm_sym_vis visibility;
     unsigned long line;		/*  symbol was first declared or used on */
     union {
@@ -136,7 +127,7 @@ symtab_get_or_new_in_table(yasm_symtab *symtab, /*@only@*/ char *name)
     yasm_symrec *rec = symrec_new_common(name);
     int replace = 0;
 
-    rec->status = SYM_NOSTATUS;
+    rec->status = YASM_SYM_NOSTATUS;
 
     return HAMT_insert(symtab->sym_table, name, rec, &replace,
 		       symrec_destroy_one);
@@ -148,7 +139,7 @@ symtab_get_or_new_not_in_table(yasm_symtab *symtab, /*@only@*/ char *name)
     non_table_symrec *sym = yasm_xmalloc(sizeof(non_table_symrec));
     sym->rec = symrec_new_common(name);
 
-    sym->rec->status = SYM_NOTINTABLE;
+    sym->rec->status = YASM_SYM_NOTINTABLE;
 
     SLIST_INSERT_HEAD(&symtab->non_table_syms, sym, link);
 
@@ -202,7 +193,7 @@ yasm_symtab_abs_sym(yasm_symtab *symtab)
     rec->type = SYM_EQU;
     rec->value.expn =
 	yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(0)), 0);
-    rec->status |= SYM_DEFINED|SYM_VALUED|SYM_USED;
+    rec->status |= YASM_SYM_DEFINED|YASM_SYM_VALUED|YASM_SYM_USED;
     return rec;
 }
 
@@ -212,7 +203,7 @@ yasm_symtab_use(yasm_symtab *symtab, const char *name, unsigned long line)
     yasm_symrec *rec = symtab_get_or_new(symtab, name, 1);
     if (rec->line == 0)
 	rec->line = line;	/* set line number of first use */
-    rec->status |= SYM_USED;
+    rec->status |= YASM_SYM_USED;
     return rec;
 }
 
@@ -229,7 +220,7 @@ symtab_define(yasm_symtab *symtab, const char *name, sym_type type,
     yasm_symrec *rec = symtab_get_or_new(symtab, name, in_table);
 
     /* Has it been defined before (either by DEFINED or COMMON/EXTERN)? */
-    if (rec->status & SYM_DEFINED) {
+    if (rec->status & YASM_SYM_DEFINED) {
 	yasm_error_set_xref(rec->line, N_("`%s' previously defined here"),
 			    name);
 	yasm_error_set(YASM_ERROR_GENERAL, N_("redefinition of `%s'"),
@@ -240,7 +231,7 @@ symtab_define(yasm_symtab *symtab, const char *name, sym_type type,
 			  N_("`%s' both defined and declared extern"), name);
 	rec->line = line;	/* set line number of definition */
 	rec->type = type;
-	rec->status |= SYM_DEFINED;
+	rec->status |= YASM_SYM_DEFINED;
     }
     return rec;
 }
@@ -251,7 +242,7 @@ yasm_symtab_define_equ(yasm_symtab *symtab, const char *name, yasm_expr *e,
 {
     yasm_symrec *rec = symtab_define(symtab, name, SYM_EQU, 1, line);
     rec->value.expn = e;
-    rec->status |= SYM_VALUED;
+    rec->status |= YASM_SYM_VALUED;
     return rec;
 }
 
@@ -283,7 +274,7 @@ yasm_symtab_define_special(yasm_symtab *symtab, const char *name,
 			   yasm_sym_vis vis)
 {
     yasm_symrec *rec = symtab_define(symtab, name, SYM_SPECIAL, 1, 0);
-    rec->status |= SYM_VALUED;
+    rec->status |= YASM_SYM_VALUED;
     rec->visibility = vis;
     return rec;
 }
@@ -312,7 +303,7 @@ yasm_symrec_declare(yasm_symrec *rec, yasm_sym_vis vis, unsigned long line)
      * X   1      -      1      -
      */
     if ((vis == YASM_SYM_GLOBAL) ||
-	(!(rec->status & SYM_DEFINED) &&
+	(!(rec->status & YASM_SYM_DEFINED) &&
 	 (!(rec->visibility & (YASM_SYM_COMMON | YASM_SYM_EXTERN)) ||
 	  ((rec->visibility & YASM_SYM_COMMON) && (vis == YASM_SYM_COMMON)) ||
 	  ((rec->visibility & YASM_SYM_EXTERN) && (vis == YASM_SYM_EXTERN)))))
@@ -337,7 +328,7 @@ symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
     yasm_section *sect;
 
     /* error if a symbol is used but never defined or extern/common declared */
-    if ((sym->status & SYM_USED) && !(sym->status & SYM_DEFINED) &&
+    if ((sym->status & YASM_SYM_USED) && !(sym->status & YASM_SYM_DEFINED) &&
 	!(sym->visibility & (YASM_SYM_EXTERN | YASM_SYM_COMMON))) {
 	if (info->undef_extern && info->objfmt)
 	    yasm_objfmt_extern_declare(info->objfmt, sym->name, NULL, 1);
@@ -442,6 +433,12 @@ yasm_symrec_get_visibility(const yasm_symrec *sym)
     return sym->visibility;
 }
 
+yasm_sym_status
+yasm_symrec_get_status(const yasm_symrec *sym)
+{
+    return sym->status;
+}
+
 unsigned long
 yasm_symrec_get_line(const yasm_symrec *sym)
 {
@@ -530,16 +527,16 @@ yasm_symrec_print(const yasm_symrec *sym, FILE *f, int indent_level)
     }
 
     fprintf(f, "%*sStatus=", indent_level, "");
-    if (sym->status == SYM_NOSTATUS)
+    if (sym->status == YASM_SYM_NOSTATUS)
 	fprintf(f, "None\n");
     else {
-	if (sym->status & SYM_USED)
+	if (sym->status & YASM_SYM_USED)
 	    fprintf(f, "Used,");
-	if (sym->status & SYM_DEFINED)
+	if (sym->status & YASM_SYM_DEFINED)
 	    fprintf(f, "Defined,");
-	if (sym->status & SYM_VALUED)
+	if (sym->status & YASM_SYM_VALUED)
 	    fprintf(f, "Valued,");
-	if (sym->status & SYM_NOTINTABLE)
+	if (sym->status & YASM_SYM_NOTINTABLE)
 	    fprintf(f, "Not in Table,");
 	fprintf(f, "\n");
     }

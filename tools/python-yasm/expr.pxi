@@ -23,74 +23,9 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-cdef extern from "libyasm/expr.h":
-    cdef struct yasm_expr__item
-
-    cdef yasm_expr *yasm_expr_create(yasm_expr_op op, yasm_expr__item *a,
-            yasm_expr__item *b, unsigned long line)
-    cdef yasm_expr__item *yasm_expr_sym(yasm_symrec *sym)
-    cdef yasm_expr__item *yasm_expr_expr(yasm_expr *e)
-    cdef yasm_expr__item *yasm_expr_int(yasm_intnum *intn)
-    cdef yasm_expr__item *yasm_expr_float(yasm_floatnum *flt)
-    cdef yasm_expr__item *yasm_expr_reg(unsigned long reg)
-    cdef yasm_expr *yasm_expr_create_tree(yasm_expr *l, yasm_expr_op op,
-            yasm_expr *r, unsigned long line)
-    cdef yasm_expr *yasm_expr_create_branch(yasm_expr_op op,
-            yasm_expr *r, unsigned long line)
-    cdef yasm_expr *yasm_expr_create_ident(yasm_expr *r, unsigned long line)
-    cdef yasm_expr *yasm_expr_copy(yasm_expr *e)
-    cdef void yasm_expr_destroy(yasm_expr *e)
-    cdef int yasm_expr_is_op(yasm_expr *e, yasm_expr_op op)
-    ctypedef yasm_expr * (*yasm_expr_xform_func) (yasm_expr *e, void *d)
-
-    cdef yasm_expr *yasm_expr__level_tree(yasm_expr *e, int fold_const,
-            int simplify_ident, int simplify_reg_mul, int calc_bc_dist,
-            yasm_expr_xform_func expr_xform_extra,
-            void *expr_xform_extra_data)
+cdef extern from *:
+    # Defined as a macro, so not automatically brought in by pyxelator
     cdef yasm_expr *yasm_expr_simplify(yasm_expr *e, int calc_bc_dist)
-    cdef yasm_expr *yasm_expr_extract_segoff(yasm_expr **ep)
-    cdef yasm_expr *yasm_expr_extract_wrt(yasm_expr **ep)
-    cdef yasm_intnum *yasm_expr_get_intnum(yasm_expr **ep, int calc_bc_dist)
-    cdef yasm_symrec *yasm_expr_get_symrec(yasm_expr **ep, int simplify)
-    cdef unsigned long *yasm_expr_get_reg(yasm_expr **ep, int simplify)
-    cdef void yasm_expr_print(yasm_expr *e, FILE *f)
-
-cdef extern from "libyasm/expr-int.h":
-    cdef enum yasm_expr__type:
-        YASM_EXPR_NONE
-        YASM_EXPR_REG
-        YASM_EXPR_INT
-        YASM_EXPR_FLOAT
-        YASM_EXPR_SYM
-        YASM_EXPR_EXPR
-
-    cdef union yasm_expr__type_data:
-        yasm_symrec *sym
-        yasm_expr *expn
-        yasm_intnum *intn
-        yasm_floatnum *flt
-        unsigned long reg
-
-    cdef struct yasm_expr__item:
-        yasm_expr__type type
-        yasm_expr__type_data data
-
-    cdef struct yasm_expr:
-        yasm_expr_op op
-        unsigned long line
-        int numterms
-        yasm_expr__item terms[2]
-
-    cdef int yasm_expr__traverse_leaves_in_const(yasm_expr *e,
-            void *d, int (*func) (yasm_expr__item *ei, void *d))
-    cdef int yasm_expr__traverse_leaves_in(yasm_expr *e, void *d,
-            int (*func) (yasm_expr__item *ei, void *d))
-
-    cdef void yasm_expr__order_terms(yasm_expr *e)
-
-    cdef yasm_expr *yasm_expr__copy_except(yasm_expr *e, int excpt)
-
-    cdef int yasm_expr__contains(yasm_expr *e, yasm_expr__type t)
 
 import operator
 __op = {}

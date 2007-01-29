@@ -17,16 +17,15 @@ from work_unit import WorkUnit, get_syms
 import ir
 
 
-def mk_tao(CPPFLAGS = "", CPP = "gcc -E", modname = '_yasm', oname = None, **options):
+def mk_tao(CPPFLAGS = "", CPP = "gcc -E", modname = '_yasm', oname = None, YASM_DIR = ".", **options):
     if oname is None:
         oname = modname+'.pyx'
-    YASM_DIR = "../../.."
     CPPFLAGS += " -I"+YASM_DIR
     CPPFLAGS += " -DYASM_PYXELATOR"
     CPPFLAGS += " -DYASM_LIB_INTERNAL"
     CPPFLAGS += " -DYASM_BC_INTERNAL"
     CPPFLAGS += " -DYASM_EXPR_INTERNAL"
-    files = [ 'libyasm.h', 'libyasm/assocdat.h', 'libyasm/section-int.h', 'libyasm/symrec-int.h' ]
+    files = [ 'libyasm.h', 'libyasm/assocdat.h' ]
 
     syms = get_syms( ['yasm'], [YASM_DIR] )
     def cb(trans_unit, node, *args):
@@ -46,7 +45,7 @@ def main():
     options = {}
     for i,arg in enumerate(sys.argv[1:]):
         if arg.count('='):
-            key,val = arg.split('=')
+            key,val = arg.split('=', 1)
             options[key]=val
     mk_tao(**options)
 

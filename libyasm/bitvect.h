@@ -82,7 +82,7 @@ typedef  Z_longword         *Z_longwordptr;
     #ifdef MACOS_TRADITIONAL
         #define boolean Boolean
     #else
-        typedef enum { false = FALSE, true = TRUE } boolean;
+        typedef enum boolean { false = FALSE, true = TRUE } boolean;
     #endif
 #endif
 
@@ -90,7 +90,7 @@ typedef  Z_longword         *Z_longwordptr;
 /*  MODULE INTERFACE:                                                        */
 /*****************************************************************************/
 
-typedef enum
+typedef enum ErrCode
     {
         ErrCode_Ok = 0,    /* everything went allright                       */
 

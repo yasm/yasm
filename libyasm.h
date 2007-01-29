@@ -44,8 +44,14 @@
 #ifndef YASM_LIB_H
 #define YASM_LIB_H
 
+#ifdef YASM_PYXELATOR
+typedef struct __FILE FILE;
+typedef struct __va_list va_list;
+typedef unsigned long size_t;
+#else
 #include <stdio.h>
 #include <stdarg.h>
+#endif
 
 #ifdef YASM_LIB_INTERNAL
 # include <libyasm/compat-queue.h>

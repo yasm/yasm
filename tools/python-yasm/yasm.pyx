@@ -60,6 +60,12 @@ cdef extern from "Python.h":
     cdef void PyErr_SetString(object type, char *message)
     cdef object PyErr_Format(object type, char *format, ...)
 
+cdef extern from "stdlib.h":
+    cdef void *malloc(int n)
+    cdef void free(void *p)
+
+include "_yasm.pxi"
+
 cdef object __pass_voidp(void *obj, object forclass):
     return PyCObject_FromVoidPtrAndDesc(obj, <void *>forclass, NULL)
 
@@ -85,19 +91,24 @@ cdef void *__get_voidp(object obj, object forclass) except NULL:
 
     return PyCObject_AsVoidPtr(obj)
 
-cdef extern from "stdlib.h":
-    cdef void *malloc(int n)
-    cdef void free(void *p)
+#
+# Link to associated data mechanism to keep Python references paired with
+# yasm objects.
+#
+cdef class __assoc_data_callback:
+    cdef yasm_assoc_data_callback *cb
+    def __new__(self, destroy, print_):
+        self.cb = <yasm_assoc_data_callback *>malloc(sizeof(yasm_assoc_data_callback))
+        self.cb.destroy = <void (*) (void *)>PyCObject_AsVoidPtr(destroy)
+        #self.cb.print_ = <void (*) (void *, FILE *, int)>PyCObject_AsVoidPtr(print_)
+    def __dealloc__(self):
+        free(self.cb)
 
-cdef extern from "libyasm/compat-queue.h":
-    pass
 
 cdef class Register:
     cdef unsigned long reg
     def __new__(self, reg):
         self.reg = reg
-
-include "coretype.pxi"
 
 include "errwarn.pxi"
 include "intnum.pxi"
@@ -108,12 +119,7 @@ include "value.pxi"
 
 include "bytecode.pxi"
 
-
-cdef extern from "libyasm/bitvect.h":
-    cdef void BitVector_Boot()
-    cdef void BitVector_Shutdown()
-
-def __initialize():
+cdef __initialize():
     BitVector_Boot()
     yasm_intnum_initialize()
     yasm_floatnum_initialize()

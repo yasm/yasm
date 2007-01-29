@@ -35,7 +35,7 @@
 #define YASM_ERRWARN_H
 
 /** Warning classes (that may be enabled/disabled). */
-typedef enum {
+typedef enum yasm_warn_class {
     YASM_WARN_NONE = 0,	    /**< No warning */
     YASM_WARN_GENERAL,	    /**< Non-specific warnings */
     YASM_WARN_UNREC_CHAR,   /**< Unrecognized characters (while tokenizing) */
@@ -45,7 +45,7 @@ typedef enum {
 } yasm_warn_class;
 
 /** Error classes.  Bitmask-based to support limited subclassing. */
-typedef enum {
+typedef enum yasm_error_class {
     YASM_ERROR_NONE		= 0x0000, /**< No error */
     YASM_ERROR_GENERAL		= 0xFFFF, /**< Non-specific */
     YASM_ERROR_ARITHMETIC	= 0x0001, /**< Arithmetic error (general) */

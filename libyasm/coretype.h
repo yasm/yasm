@@ -184,7 +184,7 @@ typedef struct yasm_valparamhead yasm_valparamhead;
 typedef struct yasm_insn_operands yasm_insn_operands;
 
 /** Expression operators usable in #yasm_expr expressions. */
-typedef enum {
+typedef enum yasm_expr_op {
     YASM_EXPR_IDENT,	/**< No operation, just a value. */
     YASM_EXPR_ADD,	/**< Arithmetic addition (+). */
     YASM_EXPR_SUB,	/**< Arithmetic subtraction (-). */
@@ -225,7 +225,7 @@ typedef enum {
  * \see symrec.h for related functions.
  * \note YASM_SYM_EXTERN and YASM_SYM_COMMON are mutually exclusive.
  */
-typedef enum {
+typedef enum yasm_sym_vis {
     YASM_SYM_LOCAL = 0,		/**< Default, local only */
     YASM_SYM_GLOBAL = 1 << 0,	/**< If symbol is declared GLOBAL */
     YASM_SYM_COMMON = 1 << 1,	/**< If symbol is declared COMMON */

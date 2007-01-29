@@ -1,7 +1,6 @@
 # $Id$
 
 PYBINDING_DEPS  = tools/python-yasm/bytecode.pxi
-PYBINDING_DEPS += tools/python-yasm/coretype.pxi
 PYBINDING_DEPS += tools/python-yasm/errwarn.pxi
 PYBINDING_DEPS += tools/python-yasm/expr.pxi
 PYBINDING_DEPS += tools/python-yasm/floatnum.pxi
@@ -9,15 +8,43 @@ PYBINDING_DEPS += tools/python-yasm/intnum.pxi
 PYBINDING_DEPS += tools/python-yasm/symrec.pxi
 PYBINDING_DEPS += tools/python-yasm/value.pxi
 
+EXTRA_DIST += tools/python-yasm/pyxelator/cparse.py
+EXTRA_DIST += tools/python-yasm/pyxelator/genpyx.py
+EXTRA_DIST += tools/python-yasm/pyxelator/ir.py
+EXTRA_DIST += tools/python-yasm/pyxelator/lexer.py
+EXTRA_DIST += tools/python-yasm/pyxelator/node.py
+EXTRA_DIST += tools/python-yasm/pyxelator/parse_core.py
+EXTRA_DIST += tools/python-yasm/pyxelator/work_unit.py
+EXTRA_DIST += tools/python-yasm/pyxelator/wrap_yasm.py
 EXTRA_DIST += tools/python-yasm/setup.py
 EXTRA_DIST += tools/python-yasm/yasm.pyx
 EXTRA_DIST += $(PYBINDING_DEPS)
 
 if HAVE_PYTHON
 
-yasm_python.c: $(srcdir)/tools/python-yasm/yasm.pyx $(PYBINDING_DEPS)
+# Use Pyxelator to generate Pyrex function headers.
+_yasm.pxi: ${libyasm_a_SOURCES}
+	@rm -rf .tmp
+	@mkdir .tmp
+	$(PYTHON) $(srcdir)/tools/python-yasm/pyxelator/wrap_yasm.py \
+		"YASM_DIR=${srcdir}" "CPP=${CPP}" "CPPFLAGS=${CPPFLAGS}"
+	@rm -rf .tmp
+
+CLEANFILES += _yasm.pxi
+
+# Need to build a local copy of the main Pyrex input file to include _yasm.pxi
+# from the build directory.  Also need to fixup the other .pxi include paths.
+yasm.pyx: $(srcdir)/tools/python-yasm/yasm.pyx
+	cat $(srcdir)/tools/python-yasm/yasm.pyx \
+		| sed -e 's,^include "\([^_]\),include "${srcdir}/tools/python-yasm/\1,' \
+		> $@
+
+CLEANFILES += yasm.pyx
+
+# Actually run Pyrex
+yasm_python.c: yasm.pyx _yasm.pxi $(PYBINDING_DEPS)
 	$(PYTHON) -c "from Pyrex.Compiler.Main import main; main(command_line=1)" \
-		-o $@ `test -f tools/python-yasm/yasm.pyx || echo '$(srcdir)/'`tools/python-yasm/yasm.pyx
+		-o $@ yasm.pyx
 
 CLEANFILES += yasm_python.c
 

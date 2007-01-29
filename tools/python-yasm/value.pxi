@@ -23,21 +23,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-cdef extern from "libyasm/value.h":
-    cdef void yasm_value_initialize(yasm_value *value, yasm_expr *e,
-                                    unsigned int size)
-    cdef void yasm_value_init_sym(yasm_value *value, yasm_symrec *sym,
-                                  unsigned int size)
-    cdef void yasm_value_delete(yasm_value *value)
-    cdef int yasm_value_finalize(yasm_value *value, yasm_bytecode *precbc)
-    cdef int yasm_value_finalize_expr(yasm_value *value, yasm_expr *e,
-                                      yasm_bytecode *precbc, unsigned int size)
-    cdef yasm_intnum *yasm_value_get_intnum(yasm_value *value,
-                                            yasm_bytecode *bc)
-    cdef int yasm_value_output_basic(yasm_value *value, unsigned char *buf,
-            size_t destsize, yasm_bytecode *bc, int warn, yasm_arch *arch)
-    cdef void yasm_value_print(yasm_value *value, FILE *f, int indent_level)
-
 cdef class Value:
     cdef yasm_value value
     def __new__(self, value=None, size=None):

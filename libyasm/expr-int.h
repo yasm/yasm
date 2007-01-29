@@ -31,7 +31,7 @@
  * Note precbc must be used carefully (in a-b pairs), as only symrecs can
  * become the relative term in a #yasm_value.
  */
-typedef enum {
+typedef enum yasm_expr__type {
     YASM_EXPR_NONE = 0,
     YASM_EXPR_REG = 1<<0,
     YASM_EXPR_INT = 1<<1,
