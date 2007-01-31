@@ -257,11 +257,11 @@ else
     if test -z "$PYTHON" || test "$PYTHON" = : ; then
         have_python=no
     else
-        AC_MSG_CHECKING([for Pyrex >= 0.9.5])
-        PYREX_CHECK_VERSION(0.9.5, [AC_MSG_RESULT(yes)
-                                    have_pyrex=yes],
-                                   [AC_MSG_RESULT(no)
-                                    have_pyrex=no])
+        AC_MSG_CHECKING([for Pyrex >= 0.9.5.1])
+        PYREX_CHECK_VERSION(0.9.5.1, [AC_MSG_RESULT(yes)
+                                      have_pyrex=yes],
+                                     [AC_MSG_RESULT(no)
+                                      have_pyrex=no])
 
         AM_CHECK_PYTHON_HEADERS(have_python_headers=yes,have_python_headers=no)
 
