@@ -65,7 +65,8 @@ x86_create(const char *machine, const char *parser,
 
     if (yasm__strcasecmp(parser, "nasm") == 0)
 	arch_x86->parser = X86_PARSER_NASM;
-    else if (yasm__strcasecmp(parser, "gas") == 0)
+    else if (yasm__strcasecmp(parser, "gas") == 0
+	     || yasm__strcasecmp(parser, "gnu") == 0)
 	arch_x86->parser = X86_PARSER_GAS;
     else {
 	yasm_xfree(arch_x86);
