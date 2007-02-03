@@ -167,7 +167,16 @@ yasm_bc_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 	else if (val.rel)
 	    yasm_error_set(YASM_ERROR_NOT_ABSOLUTE,
 			   N_("multiple expression not absolute"));
-	bc->multiple = val.abs;
+	/* Finalize creates NULL output if value=0, but bc->multiple is NULL
+	 * if value=1 (this difference is to make the common case small).
+	 * However, this means we need to set bc->multiple explicitly to 0
+	 * here if val.abs is NULL.
+	 */
+	if (val.abs)
+	    bc->multiple = val.abs;
+	else
+	    bc->multiple = yasm_expr_create_ident(
+		yasm_expr_int(yasm_intnum_create_uint(0)), bc->line);
     }
 }
 
