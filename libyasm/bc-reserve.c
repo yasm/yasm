@@ -90,18 +90,13 @@ static void
 bc_reserve_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 {
     bytecode_reserve *reserve = (bytecode_reserve *)bc->contents;
-    yasm_value val;
-
-    if (yasm_value_finalize_expr(&val, reserve->numitems, prev_bc, 0))
-	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
-		       N_("reserve expression too complex"));
-    else if (val.rel)
-	yasm_error_set(YASM_ERROR_NOT_ABSOLUTE,
-		       N_("reserve expression not absolute"));
-    else if (val.abs && yasm_expr__contains(val.abs, YASM_EXPR_FLOAT))
-	yasm_error_set(YASM_ERROR_VALUE,
-		       N_("expression must not contain floating point value"));
-    reserve->numitems = val.abs;
+    /* multiply reserve expression into multiple */
+    if (!bc->multiple)
+	bc->multiple = reserve->numitems;
+    else
+	bc->multiple = yasm_expr_create_tree(bc->multiple, YASM_EXPR_MUL,
+					     reserve->numitems, bc->line);
+    reserve->numitems = NULL;
 }
 
 static int
@@ -109,27 +104,7 @@ bc_reserve_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 		    void *add_span_data)
 {
     bytecode_reserve *reserve = (bytecode_reserve *)bc->contents;
-    /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
-
-    if (!reserve->numitems)
-	return 0;
-
-    num = yasm_expr_get_intnum(&reserve->numitems, 0);
-    if (!num) {
-	/* Check for use of floats first. */
-	if (reserve->numitems &&
-	    yasm_expr__contains(reserve->numitems, YASM_EXPR_FLOAT)) {
-	    yasm_error_set(YASM_ERROR_VALUE,
-		N_("expression must not contain floating point value"));
-	    return -1;
-	}
-	/* FIXME: Non-constant currently not allowed. */
-	yasm_error_set(YASM_ERROR_NOT_CONSTANT,
-		       N_("attempt to reserve non-constant quantity of space"));
-	return -1;
-    }
-    
-    bc->len += yasm_intnum_get_uint(num)*reserve->itemsize;
+    bc->len += reserve->itemsize;
     return 0;
 }
 

@@ -1,6 +1,6 @@
+-:3: multiple is negative
 -:4: expression must not contain floating point value
 -:5: expression must not contain floating point value
--:7: reserve expression not absolute
+-:10: multiple is negative
 -:11: expression must not contain floating point value
 -:12: expression must not contain floating point value
--:14: reserve expression not absolute
