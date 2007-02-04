@@ -1078,8 +1078,9 @@ check_cycle(IntervalTreeNode *node, void *d)
      */
     if (!depspan->backtrace) {
 	depspan->backtrace = yasm_xmalloc((bt_size+2)*sizeof(yasm_span *));
-	memcpy(depspan->backtrace, optd->span->backtrace,
-	       bt_size*sizeof(yasm_span *));
+	if (bt_size > 0)
+	    memcpy(depspan->backtrace, optd->span->backtrace,
+		   bt_size*sizeof(yasm_span *));
 	depspan->backtrace[bt_size] = optd->span;
 	depspan->backtrace[bt_size+1] = NULL;
 	return;
@@ -1090,8 +1091,9 @@ check_cycle(IntervalTreeNode *node, void *d)
     depspan->backtrace =
 	yasm_xrealloc(depspan->backtrace,
 		      (dep_bt_size+bt_size+2)*sizeof(yasm_span *));
-    memcpy(&depspan->backtrace[dep_bt_size], optd->span->backtrace,
-	   (bt_size-1)*sizeof(yasm_span *));
+    if (bt_size > 0)
+	memcpy(&depspan->backtrace[dep_bt_size], optd->span->backtrace,
+	       (bt_size-1)*sizeof(yasm_span *));
     depspan->backtrace[dep_bt_size+bt_size] = optd->span;
     depspan->backtrace[dep_bt_size+bt_size+1] = NULL;
 }
