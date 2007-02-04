@@ -230,7 +230,7 @@ yasm_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 		yasm_error_set(YASM_ERROR_VALUE, N_("multiple is negative"));
 		retval = -1;
 	    } else
-		bc->mult_int = yasm_intnum_get_uint(num);
+		bc->mult_int = yasm_intnum_get_int(num);
 	} else {
 	    if (yasm_expr__contains(bc->multiple, YASM_EXPR_FLOAT)) {
 		yasm_error_set(YASM_ERROR_VALUE,
@@ -257,11 +257,7 @@ yasm_bc_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 	       /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
     if (span == 0) {
-	if (new_val < 0) {
-	    yasm_error_set(YASM_ERROR_VALUE, N_("multiple is negative"));
-	    return -1;
-	}
-	bc->mult_int = (unsigned long)new_val;
+	bc->mult_int = new_val;
 	return 1;
     }
     if (!bc->callback) {
@@ -282,7 +278,7 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 {
     /*@only@*/ /*@null@*/ unsigned char *mybuf = NULL;
     unsigned char *origbuf, *destbuf;
-    unsigned long i;
+    long i;
     int error = 0;
 
     if (yasm_bc_get_multiple(bc, &bc->mult_int, 1) || bc->mult_int == 0) {
@@ -322,8 +318,7 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
 }
 
 int
-yasm_bc_get_multiple(yasm_bytecode *bc, unsigned long *multiple,
-		     int calc_bc_dist)
+yasm_bc_get_multiple(yasm_bytecode *bc, long *multiple, int calc_bc_dist)
 {
     /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
 
@@ -339,7 +334,7 @@ yasm_bc_get_multiple(yasm_bytecode *bc, unsigned long *multiple,
 	    yasm_error_set(YASM_ERROR_VALUE, N_("multiple is negative"));
 	    return 1;
 	}
-	*multiple = yasm_intnum_get_uint(num);
+	*multiple = yasm_intnum_get_int(num);
     }
     return 0;
 }

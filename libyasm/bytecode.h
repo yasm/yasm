@@ -383,7 +383,7 @@ int yasm_bc_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
  *			calculated, 0 if error should be returned in this case
  * \return 1 on error (set with yasm_error_set), 0 on success.
  */
-int yasm_bc_get_multiple(yasm_bytecode *bc, /*@out@*/ unsigned long *multiple,
+int yasm_bc_get_multiple(yasm_bytecode *bc, /*@out@*/ long *multiple,
 			 int calc_bc_dist);
 
 /** Create a new data value from an expression.

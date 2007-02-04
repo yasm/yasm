@@ -58,7 +58,7 @@ struct yasm_bytecode {
 
     unsigned long len;		/* total length of entire bytecode
 				   (not including multiple copies) */
-    unsigned long mult_int;	/* number of copies: integer version */
+    long mult_int;		/* number of copies: integer version */
 
     /* where it came from */
     unsigned long line;
