@@ -1117,7 +1117,6 @@ macho_objfmt_output_symtable(yasm_symrec *sym, /*@null@*/ void *d)
     assert(info != NULL);
 
     if (info->all_syms || vis != YASM_SYM_LOCAL) {
-	const char *name = yasm_symrec_get_name(sym);
 	const yasm_expr *equ_val;
 	const yasm_intnum *intn;
 	unsigned long value = 0;
