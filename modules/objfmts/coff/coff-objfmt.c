@@ -1699,13 +1699,13 @@ coff_objfmt_directive(/*@unused@*/ yasm_objfmt *objfmt,
 
 static int
 win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
-		       yasm_valparamhead *valparams,
+		       /*@null@*/ yasm_valparamhead *valparams,
 		       /*@unused@*/ /*@null@*/
 		       yasm_valparamhead *objext_valparams,
 		       unsigned long line)
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
-    yasm_valparam *vp = yasm_vps_first(valparams);
+    yasm_valparam *vp;
 
     if (yasm__strcasecmp(name, "export") == 0) {
 	int isnew;
@@ -1713,7 +1713,7 @@ win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	yasm_datavalhead dvs;
 
 	/* Reference exported symbol (to generate error if not declared) */
-	if (vp->val)
+	if (valparams && (vp = yasm_vps_first(valparams)) && vp->val)
 	    yasm_symtab_use(objfmt_coff->symtab, vp->val, line);
 	else {
 	    yasm_error_set(YASM_ERROR_SYNTAX,
@@ -1752,6 +1752,13 @@ win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 	yasm_section *comment;
 	const char *sectname;
 	yasm_valparam *vp2;
+
+	if (!valparams) {
+	    yasm_error_set(YASM_ERROR_SYNTAX, N_("[%s] requires an argument"),
+			   "IDENT");
+	    return 0;
+	}
+	vp = yasm_vps_first(valparams);
 
 	if (objfmt_coff->win32) {
 	    /* Put ident data into .comment section for COFF, or .rdata$zzz
