@@ -72,7 +72,8 @@ typedef struct yasm_dbgfmt_module {
      * Call yasm_dbgfmt_directive() instead of calling this function.
      */
     int (*directive) (yasm_dbgfmt *dbgfmt, const char *name,
-		      yasm_section *sect, yasm_valparamhead *valparams,
+		      yasm_section *sect,
+		      /*@null@*/ yasm_valparamhead *valparams,
 		      unsigned long line);
 
     /** Module-level implementation of yasm_dbgfmt_generate().
@@ -115,7 +116,8 @@ void yasm_dbgfmt_destroy(/*@only@*/ yasm_dbgfmt *dbgfmt);
  *	       recognized even if it wasn't valid.
  */
 int yasm_dbgfmt_directive(yasm_dbgfmt *dbgfmt, const char *name,
-			  yasm_section *sect, yasm_valparamhead *valparams,
+			  yasm_section *sect,
+			  /*@null@*/ yasm_valparamhead *valparams,
 			  unsigned long line);
 
 /** Generate debugging information bytecodes.

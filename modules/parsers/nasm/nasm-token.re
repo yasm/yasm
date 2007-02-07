@@ -476,7 +476,7 @@ directive:
 	    RETURN(s->tok[0]);
 	}
 
-	iletter+ {
+	[a-zA-Z_][a-zA-Z_0-9]* {
 	    lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
 	    if (yasm__strcasecmp(lvalp->str_val, "section") == 0 ||
 		yasm__strcasecmp(lvalp->str_val, "segment") == 0)

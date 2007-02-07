@@ -156,7 +156,7 @@ typedef struct yasm_arch_module {
      * Call yasm_arch_parse_directive() instead of calling this function.
      */
     int (*parse_directive) (yasm_arch *arch, const char *name,
-			    yasm_valparamhead *valparams,
+			    /*@null@*/ yasm_valparamhead *valparams,
 			    /*@null@*/ yasm_valparamhead *objext_valparams,
 			    yasm_object *object, unsigned long line);
 
@@ -407,7 +407,7 @@ yasm_arch_regtmod yasm_arch_parse_check_regtmod
  *	   recognized, even if it wasn't valid.
  */
 int yasm_arch_parse_directive(yasm_arch *arch, const char *name,
-			      yasm_valparamhead *valparams,
+			      /*@null@*/ yasm_valparamhead *valparams,
 			      /*@null@*/ yasm_valparamhead *objext_valparams,
 			      yasm_object *object, unsigned long line);
 

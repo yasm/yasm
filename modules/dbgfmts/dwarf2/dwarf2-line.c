@@ -825,14 +825,14 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 			    const char *name, yasm_section *sect,
 			    yasm_valparamhead *valparams, unsigned long line)
 {
+    yasm_valparam *vp;
     if (yasm__strcasecmp(name, "loc") == 0) {
 	/*@dependent@*/ /*@null@*/ const yasm_intnum *intn;
 	dwarf2_section_data *dsd;
 	dwarf2_loc *loc = yasm_xmalloc(sizeof(dwarf2_loc));
 
 	/* File number (required) */
-	yasm_valparam *vp = yasm_vps_first(valparams);
-	if (!vp || !vp->param) {
+	if (!valparams || !(vp = yasm_vps_first(valparams)) || !vp->param) {
 	    yasm_error_set(YASM_ERROR_SYNTAX, N_("file number required"));
 	    yasm_xfree(loc);
 	    return 0;
@@ -968,8 +968,13 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	/*@dependent@*/ /*@null@*/ const yasm_intnum *file_intn;
 	size_t filenum;
 
-	yasm_valparam *vp = yasm_vps_first(valparams);
+	if (!valparams) {
+	    yasm_error_set(YASM_ERROR_SYNTAX, N_("[%s] requires an argument"),
+			   "FILE");
+	    return 0;
+	}
 
+	vp = yasm_vps_first(valparams);
 	if (vp->val) {
 	    /* Just a bare filename */
 	    yasm_object_set_source_fn(dbgfmt_dwarf2->object, vp->val);

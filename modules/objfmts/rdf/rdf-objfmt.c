@@ -1104,7 +1104,7 @@ rdf_symrec_data_print(void *data, FILE *f, int indent_level)
 
 static int
 rdf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
-		     yasm_valparamhead *valparams,
+		     /*@null@*/ yasm_valparamhead *valparams,
 		     /*@unused@*/ /*@null@*/
 		     yasm_valparamhead *objext_valparams, unsigned long line)
 {
@@ -1120,6 +1120,11 @@ rdf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
     else
 	return 1;
 
+    if (!valparams) {
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("[%s] requires an argument"),
+		       name);
+	return 0;
+    }
     vp = yasm_vps_first(valparams);
     if (!vp->val) {
 	yasm_error_set(YASM_ERROR_SYNTAX, N_("argument to [%s] must be name"),

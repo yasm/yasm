@@ -1835,7 +1835,7 @@ macho_symrec_data_print(void *data, FILE *f, int indent_level)
 static int
 macho_objfmt_directive(/*@unused@*/ yasm_objfmt *objfmt,
 		       /*@unused@*/ const char *name,
-		       /*@unused@*/ yasm_valparamhead *valparams,
+		       /*@unused@*/ /*@null@*/ yasm_valparamhead *valparams,
 		       /*@unused@*/ /*@null@*/
 		       yasm_valparamhead *objext_valparams,
 		       /*@unused@*/ unsigned long line)

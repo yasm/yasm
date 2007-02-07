@@ -133,7 +133,7 @@ typedef struct yasm_objfmt_module {
      * Call yasm_objfmt_directive() instead of calling this function.
      */
     int (*directive) (yasm_objfmt *objfmt, const char *name,
-		      yasm_valparamhead *valparams,
+		      /*@null@*/ yasm_valparamhead *valparams,
 		      /*@null@*/ yasm_valparamhead *objext_valparams,
 		      unsigned long line);
 } yasm_objfmt_module;
@@ -233,7 +233,7 @@ yasm_symrec *yasm_objfmt_common_declare
  *         recognized, even if it wasn't valid.
  */
 int yasm_objfmt_directive(yasm_objfmt *objfmt, const char *name,
-			  yasm_valparamhead *valparams,
+			  /*@null@*/ yasm_valparamhead *valparams,
 			  /*@null@*/ yasm_valparamhead *objext_valparams,
 			  unsigned long line);
 

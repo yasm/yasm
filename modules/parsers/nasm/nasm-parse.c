@@ -63,7 +63,7 @@ static yasm_expr *parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type);
 
 static void nasm_parser_directive
     (yasm_parser_nasm *parser_nasm, const char *name,
-     yasm_valparamhead *valparams,
+     /*@null@*/ yasm_valparamhead *valparams,
      /*@null@*/ yasm_valparamhead *objext_valparams);
 static int fix_directive_symrec(/*@null@*/ yasm_expr__item *ei,
 				/*@null@*/ void *d);
@@ -262,6 +262,7 @@ parse_line(yasm_parser_nasm *parser_nasm)
 	{
 	    char *dirname;
 	    yasm_valparamhead dir_vps;
+	    int have_vps = 1;
 
 	    parser_nasm->state = DIRECTIVE;
 	    get_next_token();
@@ -271,7 +272,9 @@ parse_line(yasm_parser_nasm *parser_nasm)
 	    dirname = DIRECTIVE_NAME_val;
 	    get_next_token();
 
-	    if (!parse_directive_valparams(parser_nasm, &dir_vps)) {
+	    if (curtok == ']' || curtok == ':')
+		have_vps = 0;
+	    else if (!parse_directive_valparams(parser_nasm, &dir_vps)) {
 		yasm_error_set(YASM_ERROR_SYNTAX,
 			       N_("invalid arguments to [%s]"), dirname);
 		yasm_xfree(dirname);
@@ -286,10 +289,11 @@ parse_line(yasm_parser_nasm *parser_nasm)
 		    yasm_xfree(dirname);
 		    return NULL;
 		}
-		nasm_parser_directive(parser_nasm, dirname, &dir_vps,
-				      &ext_vps);
+		nasm_parser_directive(parser_nasm, dirname,
+				      have_vps ? &dir_vps : NULL, &ext_vps);
 	    } else
-		nasm_parser_directive(parser_nasm, dirname, &dir_vps, NULL);
+		nasm_parser_directive(parser_nasm, dirname,
+				      have_vps ? &dir_vps : NULL, NULL);
 	    yasm_xfree(dirname);
 	    expect(']');
 	    get_next_token();
@@ -930,6 +934,9 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
 	case INTNUM:
 	    e = p_expr_new_ident(yasm_expr_int(INTNUM_val));
 	    break;
+	case REG:
+	    e = p_expr_new_ident(yasm_expr_reg(REG_val[0]));
+	    break;
 	case ID:
 	    e = p_expr_new_ident(yasm_expr_sym(
 		yasm_symtab_define_label(p_symtab, ID_val,
@@ -1051,138 +1058,198 @@ fix_directive_symrec(yasm_expr__item *ei, void *d)
 }
 
 static void
+dir_extern(yasm_parser_nasm *parser_nasm, yasm_valparamhead *valparams,
+	   yasm_valparamhead *objext_valparams)
+{
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    yasm_objfmt_extern_declare(parser_nasm->objfmt, vp->val, objext_valparams,
+			       cur_line);
+}
+
+static void
+dir_global(yasm_parser_nasm *parser_nasm, yasm_valparamhead *valparams,
+	   yasm_valparamhead *objext_valparams)
+{
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    yasm_objfmt_global_declare(parser_nasm->objfmt, vp->val, objext_valparams,
+			       cur_line);
+}
+
+static void
+dir_common(yasm_parser_nasm *parser_nasm, yasm_valparamhead *valparams,
+	   yasm_valparamhead *objext_valparams)
+{
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    yasm_valparam *vp2 = yasm_vps_next(vp);
+    unsigned long line = cur_line;
+
+    if (!vp2 || (!vp2->val && !vp2->param)) {
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("no size specified in %s declaration"), "COMMON");
+	return;
+    }
+    if (vp2->val) {
+	yasm_objfmt_common_declare(parser_nasm->objfmt, vp->val,
+	    p_expr_new_ident(yasm_expr_sym(
+		yasm_symtab_use(p_symtab, vp2->val, line))),
+	    objext_valparams, line);
+    } else if (vp2->param) {
+	yasm_objfmt_common_declare(parser_nasm->objfmt, vp->val, vp2->param,
+				   objext_valparams, line);
+	vp2->param = NULL;
+    }
+}
+
+static void
+dir_section(yasm_parser_nasm *parser_nasm, yasm_valparamhead *valparams,
+	    yasm_valparamhead *objext_valparams)
+{
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    yasm_section *new_section =
+	yasm_objfmt_section_switch(parser_nasm->objfmt, valparams,
+				   objext_valparams, cur_line);
+    if (new_section) {
+	parser_nasm->cur_section = new_section;
+	parser_nasm->prev_bc = yasm_section_bcs_last(new_section);
+    } else
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("invalid argument to [%s]"),
+		       "SECTION");
+}
+
+static void
+dir_absolute(yasm_parser_nasm *parser_nasm, yasm_valparamhead *valparams,
+	     yasm_valparamhead *objext_valparams)
+{
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    unsigned long line = cur_line;
+    /* it can be just an ID or a complete expression, so handle both. */
+    if (vp->val)
+	parser_nasm->cur_section =
+	    yasm_object_create_absolute(parser_nasm->object,
+		p_expr_new_ident(yasm_expr_sym(
+		    yasm_symtab_use(p_symtab, vp->val, line))), line);
+    else if (vp->param) {
+	parser_nasm->cur_section =
+	    yasm_object_create_absolute(parser_nasm->object, vp->param, line);
+	vp->param = NULL;
+    }
+    parser_nasm->prev_bc = yasm_section_bcs_last(parser_nasm->cur_section);
+}
+
+static void
+dir_align(yasm_parser_nasm *parser_nasm, yasm_valparamhead *valparams,
+	  yasm_valparamhead *objext_valparams)
+{
+    /*@only@*/ yasm_expr *boundval;
+    /*@depedent@*/ yasm_intnum *boundintn;
+    yasm_valparam *vp = yasm_vps_first(valparams);
+
+    /* it can be just an ID or a complete expression, so handle both. */
+    vp = yasm_vps_first(valparams);
+    if (vp->val)
+	boundval = p_expr_new_ident(yasm_expr_sym(
+	    yasm_symtab_use(p_symtab, vp->val, cur_line)));
+    else if (vp->param) {
+	boundval = vp->param;
+	vp->param = NULL;
+    }
+
+    /* Largest .align in the section specifies section alignment.
+     * Note: this doesn't match NASM behavior, but is a lot more
+     * intelligent!
+     */
+    boundintn = yasm_expr_get_intnum(&boundval, 0);
+    if (boundintn) {
+	unsigned long boundint = yasm_intnum_get_uint(boundintn);
+
+	/* Alignments must be a power of two. */
+	if (is_exp2(boundint)) {
+	    if (boundint > yasm_section_get_align(parser_nasm->cur_section))
+		yasm_section_set_align(parser_nasm->cur_section, boundint,
+				       cur_line);
+	}
+    }
+
+    /* As this directive is called only when nop is used as fill, always
+     * use arch (nop) fill.
+     */
+    parser_nasm->prev_bc =
+	yasm_section_bcs_append(parser_nasm->cur_section,
+	    yasm_bc_create_align(boundval, NULL, NULL,
+		/*yasm_section_is_code(parser_nasm->cur_section) ?*/
+		    yasm_arch_get_fill(parser_nasm->arch)/* : NULL*/,
+		cur_line));
+}
+
+static void
+dir_cpu(yasm_parser_nasm *parser_nasm, yasm_valparamhead *valparams,
+	yasm_valparamhead *objext_valparams)
+{
+    yasm_valparam *vp;
+    yasm_vps_foreach(vp, valparams) {
+	if (vp->val)
+	    yasm_arch_parse_cpu(parser_nasm->arch, vp->val, strlen(vp->val));
+	else if (vp->param) {
+	    const yasm_intnum *intcpu;
+	    intcpu = yasm_expr_get_intnum(&vp->param, 0);
+	    if (!intcpu)
+		yasm_error_set(YASM_ERROR_SYNTAX,
+			       N_("invalid argument to [%s]"), "CPU");
+	    else {
+		char strcpu[16];
+		sprintf(strcpu, "%lu", yasm_intnum_get_uint(intcpu));
+		yasm_arch_parse_cpu(parser_nasm->arch, strcpu, strlen(strcpu));
+	    }
+	}
+    }
+}
+
+static void
 nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 		      yasm_valparamhead *valparams,
 		      yasm_valparamhead *objext_valparams)
 {
     yasm_valparam *vp, *vp2;
     unsigned long line = cur_line;
+    static const struct {
+	const char *name;
+	int required_arg:1;
+	int id_only:1;
+	void (*func) (yasm_parser_nasm *, yasm_valparamhead *,
+		      yasm_valparamhead *);
+    } dirs[] = {
+	{"EXTERN", 1, 1, dir_extern},
+	{"GLOBAL", 1, 1, dir_global},
+	{"COMMON", 1, 1, dir_common},
+	{"SECTION", 1, 0, dir_section},
+	{"SEGMENT", 1, 0, dir_section},
+	{"ABSOLUTE", 1, 0, dir_absolute},
+	{"ALIGN", 1, 0, dir_align},
+	{"CPU", 1, 0, dir_cpu}
+    };
+    size_t i;
 
     /* Handle (mostly) output-format independent directives here */
-    if (yasm__strcasecmp(name, "extern") == 0) {
-	vp = yasm_vps_first(valparams);
-	if (vp->val) {
-	    yasm_objfmt_extern_declare(parser_nasm->objfmt, vp->val,
-				       objext_valparams, line);
-	} else
-	    yasm_error_set(YASM_ERROR_SYNTAX, N_("invalid argument to [%s]"),
-			   "EXTERN");
-    } else if (yasm__strcasecmp(name, "global") == 0) {
-	vp = yasm_vps_first(valparams);
-	if (vp->val) {
-	    yasm_objfmt_global_declare(parser_nasm->objfmt, vp->val,
-				       objext_valparams, line);
-	} else
-	    yasm_error_set(YASM_ERROR_SYNTAX, N_("invalid argument to [%s]"),
-			   "GLOBAL");
-    } else if (yasm__strcasecmp(name, "common") == 0) {
-	vp = yasm_vps_first(valparams);
-	if (vp->val) {
-	    vp2 = yasm_vps_next(vp);
-	    if (!vp2 || (!vp2->val && !vp2->param))
+    for (i=0; i<NELEMS(dirs); i++) {
+	if (yasm__strcasecmp(name, dirs[i].name) == 0) {
+	    if (dirs[i].required_arg && !valparams) {
 		yasm_error_set(YASM_ERROR_SYNTAX,
-			       N_("no size specified in %s declaration"),
-			       "COMMON");
-	    else {
-		if (vp2->val) {
-		    yasm_objfmt_common_declare(parser_nasm->objfmt, vp->val,
-			p_expr_new_ident(yasm_expr_sym(
-			    yasm_symtab_use(p_symtab, vp2->val, line))),
-			objext_valparams, line);
-		} else if (vp2->param) {
-		    yasm_objfmt_common_declare(parser_nasm->objfmt, vp->val,
-					       vp2->param, objext_valparams,
-					       line);
-		    vp2->param = NULL;
-		}
+			       N_("[%s] requires an argument"), dirs[i].name);
+		break;
 	    }
-	} else
-	    yasm_error_set(YASM_ERROR_SYNTAX, N_("invalid argument to [%s]"),
-			   "COMMON");
-    } else if (yasm__strcasecmp(name, "section") == 0 ||
-	       yasm__strcasecmp(name, "segment") == 0) {
-	yasm_section *new_section =
-	    yasm_objfmt_section_switch(parser_nasm->objfmt, valparams,
-				       objext_valparams, line);
-	if (new_section) {
-	    parser_nasm->cur_section = new_section;
-	    parser_nasm->prev_bc = yasm_section_bcs_last(new_section);
-	} else
-	    yasm_error_set(YASM_ERROR_SYNTAX, N_("invalid argument to [%s]"),
-			   "SECTION");
-    } else if (yasm__strcasecmp(name, "absolute") == 0) {
-	/* it can be just an ID or a complete expression, so handle both. */
-	vp = yasm_vps_first(valparams);
-	if (vp->val)
-	    parser_nasm->cur_section =
-		yasm_object_create_absolute(parser_nasm->object,
-		    p_expr_new_ident(yasm_expr_sym(
-			yasm_symtab_use(p_symtab, vp->val, line))), line);
-	else if (vp->param) {
-	    parser_nasm->cur_section =
-		yasm_object_create_absolute(parser_nasm->object, vp->param,
-					    line);
-	    vp->param = NULL;
-	}
-	parser_nasm->prev_bc = yasm_section_bcs_last(parser_nasm->cur_section);
-    } else if (yasm__strcasecmp(name, "align") == 0) {
-	/*@only@*/ yasm_expr *boundval;
-	/*@depedent@*/ yasm_intnum *boundintn;
-
-	/* it can be just an ID or a complete expression, so handle both. */
-	vp = yasm_vps_first(valparams);
-	if (vp->val)
-	    boundval = p_expr_new_ident(yasm_expr_sym(
-		yasm_symtab_use(p_symtab, vp->val, line)));
-	else if (vp->param) {
-	    boundval = vp->param;
-	    vp->param = NULL;
-	}
-
-	/* Largest .align in the section specifies section alignment.
-	 * Note: this doesn't match NASM behavior, but is a lot more
-	 * intelligent!
-	 */
-	boundintn = yasm_expr_get_intnum(&boundval, 0);
-	if (boundintn) {
-	    unsigned long boundint = yasm_intnum_get_uint(boundintn);
-
-	    /* Alignments must be a power of two. */
-	    if (is_exp2(boundint)) {
-		if (boundint > yasm_section_get_align(parser_nasm->cur_section))
-		    yasm_section_set_align(parser_nasm->cur_section, boundint,
-					   cur_line);
+	    if (dirs[i].id_only && (vp = yasm_vps_first(valparams))
+		&& !vp->val) {
+		yasm_error_set(YASM_ERROR_SYNTAX,
+			       N_("invalid argument to [%s]"), dirs[i].name);
+		break;
 	    }
+	    dirs[i].func(parser_nasm, valparams, objext_valparams);
+	    break;
 	}
+    }
 
-	/* As this directive is called only when nop is used as fill, always
-	 * use arch (nop) fill.
-	 */
-	parser_nasm->prev_bc =
-	    yasm_section_bcs_append(parser_nasm->cur_section,
-		yasm_bc_create_align(boundval, NULL, NULL,
-		    /*yasm_section_is_code(parser_nasm->cur_section) ?*/
-			yasm_arch_get_fill(parser_nasm->arch)/* : NULL*/,
-		    cur_line));
-    } else if (yasm__strcasecmp(name, "cpu") == 0) {
-	yasm_vps_foreach(vp, valparams) {
-	    if (vp->val)
-		yasm_arch_parse_cpu(parser_nasm->arch, vp->val,
-				    strlen(vp->val));
-	    else if (vp->param) {
-		const yasm_intnum *intcpu;
-		intcpu = yasm_expr_get_intnum(&vp->param, 0);
-		if (!intcpu)
-		    yasm_error_set(YASM_ERROR_SYNTAX,
-				   N_("invalid argument to [%s]"), "CPU");
-		else {
-		    char strcpu[16];
-		    sprintf(strcpu, "%lu", yasm_intnum_get_uint(intcpu));
-		    yasm_arch_parse_cpu(parser_nasm->arch, strcpu,
-					strlen(strcpu));
-		}
-	    }
-	}
+    if (i != NELEMS(dirs)) {
+	;
     } else if (!yasm_arch_parse_directive(parser_nasm->arch, name, valparams,
 		    objext_valparams, parser_nasm->object, line)) {
 	;
@@ -1196,7 +1263,9 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 		       name);
     }
 
-    yasm_vps_delete(valparams);
+done:
+    if (valparams)
+	yasm_vps_delete(valparams);
     if (objext_valparams)
 	yasm_vps_delete(objext_valparams);
 }

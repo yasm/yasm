@@ -1101,114 +1101,143 @@ elf_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
     return sym;
 }
 
+static void
+dir_type(yasm_objfmt_elf *objfmt_elf, yasm_valparam *vp, unsigned long line)
+{
+    char *symname = vp->val;
+    /* Get symbol elf data */
+    yasm_symrec *sym = yasm_symtab_use(objfmt_elf->symtab, symname, line);
+    elf_symtab_entry *entry = yasm_symrec_get_data(sym, &elf_symrec_data);
+
+    /* Create entry if necessary */
+    if (!entry) {
+	entry = elf_symtab_entry_create(
+	    elf_strtab_append_str(objfmt_elf->strtab, symname), sym);
+	yasm_symrec_add_data(sym, &elf_symrec_data, entry);
+    }
+
+    /* Pull new type from val */
+    vp = yasm_vps_next(vp);
+    if (vp->val) {
+	if (yasm__strcasecmp(vp->val, "function") == 0)
+	    elf_sym_set_type(entry, STT_FUNC);
+	else if (yasm__strcasecmp(vp->val, "object") == 0)
+	    elf_sym_set_type(entry, STT_OBJECT);
+	else
+	    yasm_warn_set(YASM_WARN_GENERAL,
+			  N_("unrecognized symbol type `%s'"), vp->val);
+    } else
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("no type specified"));
+}
+
+static void
+dir_size(yasm_objfmt_elf *objfmt_elf, yasm_valparam *vp, unsigned long line)
+{
+    char *symname = vp->val;
+    /* Get symbol elf data */
+    yasm_symrec *sym = yasm_symtab_use(objfmt_elf->symtab, symname, line);
+    elf_symtab_entry *entry = yasm_symrec_get_data(sym, &elf_symrec_data);
+
+    /* Create entry if necessary */
+    if (!entry) {
+	entry = elf_symtab_entry_create(
+	    elf_strtab_append_str(objfmt_elf->strtab, symname), sym);
+	yasm_symrec_add_data(sym, &elf_symrec_data, entry);
+    }
+
+    /* Pull new size from either param (expr) or val */
+    vp = yasm_vps_next(vp);
+    if (vp->param) {
+	elf_sym_set_size(entry, vp->param);
+	vp->param = NULL;
+    } else if (vp->val)
+	elf_sym_set_size(entry, yasm_expr_create_ident(yasm_expr_sym(
+	    yasm_symtab_use(objfmt_elf->symtab, vp->val, line)), line));
+    else
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("no size specified"));
+}
+
+static void
+dir_weak(yasm_objfmt_elf *objfmt_elf, yasm_valparam *vp, unsigned long line)
+{
+    char *symname = vp->val;
+    yasm_symrec *sym = yasm_symtab_declare(objfmt_elf->symtab, symname,
+					   YASM_SYM_GLOBAL, line);
+    elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_WEAK, 0,
+			     STV_DEFAULT, NULL, NULL);
+}
+
+static void
+dir_ident(yasm_objfmt_elf *objfmt_elf, yasm_valparam *vp, unsigned long line)
+{
+    char *symname = vp->val;
+    yasm_valparamhead sect_vps;
+    yasm_datavalhead dvs;
+    yasm_section *comment;
+    yasm_valparam *vp2;
+
+    /* Put ident data into .comment section */
+    yasm_vps_initialize(&sect_vps);
+    vp2 = yasm_vp_create(yasm__xstrdup(".comment"), NULL);
+    yasm_vps_append(&sect_vps, vp2);
+    comment = elf_objfmt_section_switch((yasm_objfmt *)objfmt_elf, &sect_vps,
+					NULL, line);
+    yasm_vps_delete(&sect_vps);
+
+    /* To match GAS output, if the comment section is empty, put an
+     * initial 0 byte in the section.
+     */
+    if (yasm_section_bcs_first(comment) == yasm_section_bcs_last(comment)) {
+	yasm_dvs_initialize(&dvs);
+	yasm_dvs_append(&dvs, yasm_dv_create_expr(
+	    yasm_expr_create_ident(
+		yasm_expr_int(yasm_intnum_create_uint(0)), line)));
+	yasm_section_bcs_append(comment,
+	    yasm_bc_create_data(&dvs, 1, 0, objfmt_elf->arch, line));
+    }
+
+    yasm_dvs_initialize(&dvs);
+    do {
+	yasm_dvs_append(&dvs, yasm_dv_create_string(vp->val, strlen(vp->val)));
+	vp->val = NULL;
+    } while ((vp = yasm_vps_next(vp)));
+
+    yasm_section_bcs_append(comment,
+	yasm_bc_create_data(&dvs, 1, 1, objfmt_elf->arch, line));
+}
+
 static int
 elf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
-		     yasm_valparamhead *valparams,
+		     /*@null@*/ yasm_valparamhead *valparams,
 		     /*@unused@*/ /*@null@*/
 		     yasm_valparamhead *objext_valparams,
 		     unsigned long line)
 {
     yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)objfmt;
-    yasm_symrec *sym;
-    yasm_valparam *vp = yasm_vps_first(valparams);
-    char *symname = vp->val;
-    elf_symtab_entry *entry;
+    static const struct {
+	const char *name;
+	void (*func) (yasm_objfmt_elf *, yasm_valparam *, unsigned long);
+    } dirs[] = {
+	{"TYPE", dir_type},
+	{"SIZE", dir_size},
+	{"WEAK", dir_weak},
+	{"IDENT", dir_ident}
+    };
+    size_t i;
 
-    if (!symname) {
-	yasm_error_set(YASM_ERROR_SYNTAX, N_("Symbol name not specified"));
-	return 0;
+    for (i=0; i<NELEMS(dirs); i++) {
+	if (yasm__strcasecmp(name, dirs[i].name) == 0) {
+	    yasm_valparam *vp;
+	    if (!valparams || !(vp = yasm_vps_first(valparams)) || !vp->val) {
+		yasm_error_set(YASM_ERROR_SYNTAX,
+			       N_("Symbol name not specified"));
+		return 0;
+	    }
+	    dirs[i].func(objfmt_elf, vp, line);
+	    return 0;
+	}
     }
-
-    if (yasm__strcasecmp(name, "type") == 0) {
-	/* Get symbol elf data */
-	sym = yasm_symtab_use(objfmt_elf->symtab, symname, line);
-	entry = yasm_symrec_get_data(sym, &elf_symrec_data);
-
-	/* Create entry if necessary */
-	if (!entry) {
-	    entry = elf_symtab_entry_create(
-		elf_strtab_append_str(objfmt_elf->strtab, symname), sym);
-	    yasm_symrec_add_data(sym, &elf_symrec_data, entry);
-	}
-
-	/* Pull new type from val */
-	vp = yasm_vps_next(vp);
-	if (vp->val) {
-	    if (yasm__strcasecmp(vp->val, "function") == 0)
-		elf_sym_set_type(entry, STT_FUNC);
-	    else if (yasm__strcasecmp(vp->val, "object") == 0)
-		elf_sym_set_type(entry, STT_OBJECT);
-	    else
-		yasm_warn_set(YASM_WARN_GENERAL,
-			      N_("unrecognized symbol type `%s'"), vp->val);
-	} else
-	    yasm_error_set(YASM_ERROR_SYNTAX, N_("no type specified"));
-    } else if (yasm__strcasecmp(name, "size") == 0) {
-	/* Get symbol elf data */
-	sym = yasm_symtab_use(objfmt_elf->symtab, symname, line);
-	entry = yasm_symrec_get_data(sym, &elf_symrec_data);
-
-	/* Create entry if necessary */
-	if (!entry) {
-	    entry = elf_symtab_entry_create(
-		elf_strtab_append_str(objfmt_elf->strtab, symname), sym);
-	    yasm_symrec_add_data(sym, &elf_symrec_data, entry);
-	}
-
-	/* Pull new size from either param (expr) or val */
-	vp = yasm_vps_next(vp);
-	if (vp->param) {
-	    elf_sym_set_size(entry, vp->param);
-	    vp->param = NULL;
-	} else if (vp->val)
-	    elf_sym_set_size(entry, yasm_expr_create_ident(yasm_expr_sym(
-		yasm_symtab_use(objfmt_elf->symtab, vp->val, line)), line));
-	else
-	    yasm_error_set(YASM_ERROR_SYNTAX, N_("no size specified"));
-    } else if (yasm__strcasecmp(name, "weak") == 0) {
-	sym = yasm_symtab_declare(objfmt_elf->symtab, symname, YASM_SYM_GLOBAL,
-				  line);
-	elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_WEAK,
-				 0, STV_DEFAULT, NULL, NULL);
-    } else if (yasm__strcasecmp(name, "ident") == 0) {
-	yasm_valparamhead sect_vps;
-	yasm_datavalhead dvs;
-	yasm_section *comment;
-	yasm_valparam *vp2;
-
-	/* Put ident data into .comment section */
-	yasm_vps_initialize(&sect_vps);
-	vp2 = yasm_vp_create(yasm__xstrdup(".comment"), NULL);
-	yasm_vps_append(&sect_vps, vp2);
-	comment = elf_objfmt_section_switch(objfmt, &sect_vps, NULL, line);
-	yasm_vps_delete(&sect_vps);
-
-	/* To match GAS output, if the comment section is empty, put an
-	 * initial 0 byte in the section.
-	 */
-	if (yasm_section_bcs_first(comment)
-	    == yasm_section_bcs_last(comment)) {
-	    yasm_dvs_initialize(&dvs);
-	    yasm_dvs_append(&dvs, yasm_dv_create_expr(
-		yasm_expr_create_ident(
-		    yasm_expr_int(yasm_intnum_create_uint(0)), line)));
-	    yasm_section_bcs_append(comment,
-		yasm_bc_create_data(&dvs, 1, 0, objfmt_elf->arch, line));
-	}
-
-	yasm_dvs_initialize(&dvs);
-	do {
-	    yasm_dvs_append(&dvs, yasm_dv_create_string(vp->val,
-							strlen(vp->val)));
-	    vp->val = NULL;
-	} while ((vp = yasm_vps_next(vp)));
-
-	yasm_section_bcs_append(comment,
-	    yasm_bc_create_data(&dvs, 1, 1, objfmt_elf->arch, line));
-    } else
-	return 1;	/* unrecognized */
-
-    return 0;
+    return 1;	/* unrecognized */
 }
 
 

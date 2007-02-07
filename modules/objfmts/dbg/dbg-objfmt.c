@@ -211,7 +211,7 @@ dbg_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
 
 static int
 dbg_objfmt_directive(yasm_objfmt *objfmt, const char *name,
-		     yasm_valparamhead *valparams,
+		     /*@null@*/ yasm_valparamhead *valparams,
 		     /*@null@*/ yasm_valparamhead *objext_valparams,
 		     unsigned long line)
 {

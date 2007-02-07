@@ -529,7 +529,7 @@ bin_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
 
 static int
 bin_objfmt_directive(yasm_objfmt *objfmt, const char *name,
-		     yasm_valparamhead *valparams,
+		     /*@null@*/ yasm_valparamhead *valparams,
 		     /*@unused@*/ /*@null@*/
 		     yasm_valparamhead *objext_valparams, unsigned long line)
 {
@@ -539,6 +539,12 @@ bin_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 
     if (yasm__strcasecmp(name, "org") == 0) {
 	/*@null@*/ yasm_expr *start = NULL;
+
+	if (!valparams) {
+	    yasm_error_set(YASM_ERROR_SYNTAX, N_("[%s] requires an argument"),
+			   "ORG");
+	    return 0;
+	}
 
 	/* ORG takes just a simple integer as param */
 	vp = yasm_vps_first(valparams);

@@ -120,7 +120,7 @@ x86_set_var(yasm_arch *arch, const char *var, unsigned long val)
 
 static int
 x86_parse_directive(yasm_arch *arch, const char *name,
-		    yasm_valparamhead *valparams,
+		    /*@null@*/ yasm_valparamhead *valparams,
 		    /*@unused@*/ /*@null@*/
 		    yasm_valparamhead *objext_valparams,
 		    /*@unused@*/ yasm_object *object,
@@ -132,7 +132,10 @@ x86_parse_directive(yasm_arch *arch, const char *name,
     long lval;
 
     if (yasm__strcasecmp(name, "bits") == 0) {
-	if ((vp = yasm_vps_first(valparams)) && !vp->val &&
+	if (!valparams)
+	    yasm_error_set(YASM_ERROR_VALUE, N_("[%s] requires an argument"),
+			   "BITS");
+	else if ((vp = yasm_vps_first(valparams)) && !vp->val &&
 	    vp->param != NULL &&
 	    (intn = yasm_expr_get_intnum(&vp->param, 0)) != NULL &&
 	    (lval = yasm_intnum_get_int(intn)) &&

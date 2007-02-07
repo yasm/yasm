@@ -86,7 +86,7 @@ lc3b_set_var(yasm_arch *arch, const char *var, unsigned long val)
 static int
 lc3b_parse_directive(/*@unused@*/ yasm_arch *arch,
 		     /*@unused@*/ const char *name,
-		     /*@unused@*/ yasm_valparamhead *valparams,
+		     /*@unused@*/ /*@null@*/ yasm_valparamhead *valparams,
 		     /*@unused@*/ /*@null@*/
 		     yasm_valparamhead *objext_valparams,
 		     /*@unused@*/ yasm_object *object,
