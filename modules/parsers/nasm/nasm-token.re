@@ -613,6 +613,19 @@ directive2:
 
 	/* identifier; within directive, no local label mechanism */
 	[a-zA-Z_.?][a-zA-Z0-9_$#@~.?]* {
+	    savech = s->tok[TOKLEN];
+	    s->tok[TOKLEN] = '\0';
+	    switch (yasm_arch_parse_check_regtmod
+		    (parser_nasm->arch, lvalp->arch_data, TOK, TOKLEN)) {
+		case YASM_ARCH_REG:
+		    s->tok[TOKLEN] = savech;
+		    RETURN(REG);
+		default:
+		    s->tok[TOKLEN] = savech;
+	    }
+	    /* Propagate errors in case we got a warning from the arch */
+	    yasm_errwarn_propagate(parser_nasm->errwarns, cur_line);
+	    /* Just an identifier, return as such. */
 	    lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
 	    RETURN(ID);
 	}
