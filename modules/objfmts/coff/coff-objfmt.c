@@ -1686,15 +1686,115 @@ coff_symrec_data_print(void *data, FILE *f, int indent_level)
     fprintf(f, "\n");
 }
 
+static void
+dir_export(yasm_objfmt_coff *objfmt_coff, yasm_valparamhead *valparams,
+	   unsigned long line)
+{
+    yasm_valparam *vp;
+    int isnew;
+    yasm_section *sect;
+    yasm_datavalhead dvs;
+
+    /* Reference exported symbol (to generate error if not declared) */
+    vp = yasm_vps_first(valparams);
+    if (vp->val)
+	yasm_symtab_use(objfmt_coff->symtab, vp->val, line);
+    else {
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("argument to EXPORT must be symbol name"));
+	return;
+    }
+
+    /* Add to end of linker directives */
+    sect = yasm_object_get_general(objfmt_coff->object, ".drectve", 0, 0, 0,
+				   0, &isnew, line);
+
+    /* Initialize directive section if needed */
+    if (isnew) {
+	coff_section_data *csd;
+	csd = coff_objfmt_init_new_section(objfmt_coff, sect,
+					   yasm_section_get_name(sect), line);
+	csd->flags = COFF_STYP_INFO | COFF_STYP_DISCARD | COFF_STYP_READ;
+    }
+
+    /* Add text as data bytecode */
+    yasm_dvs_initialize(&dvs);
+    yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup("-export:"),
+						strlen("-export:")));
+    yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(vp->val),
+						strlen(vp->val)));
+    yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(" "), 1));
+    yasm_section_bcs_append(sect, yasm_bc_create_data(&dvs, 1, 0, NULL, line));
+}
+
+static void
+dir_ident(yasm_objfmt_coff *objfmt_coff, yasm_valparamhead *valparams,
+	  unsigned long line)
+{
+    yasm_valparamhead sect_vps;
+    yasm_datavalhead dvs;
+    yasm_section *comment;
+    const char *sectname;
+    yasm_valparam *vp, *vp2;
+
+    vp = yasm_vps_first(valparams);
+
+    if (objfmt_coff->win32) {
+	/* Put ident data into .comment section for COFF, or .rdata$zzz
+	 * to be compatible with the GNU linker, which doesn't ignore
+	 * .comment (see binutils/gas/config/obj-coff.c:476-502).
+	 */
+	sectname = ".rdata$zzz";
+    } else {
+	sectname = ".comment";
+    }
+    yasm_vps_initialize(&sect_vps);
+    vp2 = yasm_vp_create(yasm__xstrdup(sectname), NULL);
+    yasm_vps_append(&sect_vps, vp2);
+    comment = coff_objfmt_section_switch((yasm_objfmt *)objfmt_coff,
+					 &sect_vps, NULL, line);
+    yasm_vps_delete(&sect_vps);
+
+    /* To match GAS output, if the comment section is empty, put an
+     * initial 0 byte in the section.
+     */
+    if (yasm_section_bcs_first(comment) == yasm_section_bcs_last(comment)) {
+	yasm_dvs_initialize(&dvs);
+	yasm_dvs_append(&dvs, yasm_dv_create_expr(
+	    yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(0)),
+				   line)));
+	yasm_section_bcs_append(comment,
+	    yasm_bc_create_data(&dvs, 1, 0, objfmt_coff->arch, line));
+    }
+
+    yasm_dvs_initialize(&dvs);
+    do {
+	yasm_dvs_append(&dvs, yasm_dv_create_string(vp->val, strlen(vp->val)));
+	vp->val = NULL;
+    } while ((vp = yasm_vps_next(vp)));
+
+    yasm_section_bcs_append(comment,
+	yasm_bc_create_data(&dvs, 1, 1, objfmt_coff->arch, line));
+}
+
 static int
-coff_objfmt_directive(/*@unused@*/ yasm_objfmt *objfmt,
-		      /*@unused@*/ const char *name,
-		      /*@unused@*/ /*@null@*/ yasm_valparamhead *valparams,
+coff_objfmt_directive(yasm_objfmt *objfmt, const char *name,
+		      /*@null@*/ yasm_valparamhead *valparams,
 		      /*@unused@*/ /*@null@*/
 		      yasm_valparamhead *objext_valparams,
-		      /*@unused@*/ unsigned long line)
+		      unsigned long line)
 {
-    return 1;	/* no objfmt directives */
+    yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
+    if (yasm__strcasecmp(name, "IDENT") == 0) {
+	if (!valparams) {
+	    yasm_error_set(YASM_ERROR_SYNTAX, N_("[%s] requires an argument"),
+			   "IDENT");
+	    return 0;
+	}
+	dir_ident(objfmt_coff, valparams, line);
+	return 0;
+    }
+    return 1;
 }
 
 static int
@@ -1705,101 +1805,28 @@ win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
 		       unsigned long line)
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
-    yasm_valparam *vp;
+    static const struct {
+	const char *name;
+	int required_arg;
+	void (*func) (yasm_objfmt_coff *, yasm_valparamhead *, unsigned long);
+    } dirs[] = {
+	{"EXPORT", 1, dir_export},
+	{"IDENT", 1, dir_ident}
+    };
+    size_t i;
 
-    if (yasm__strcasecmp(name, "export") == 0) {
-	int isnew;
-	yasm_section *sect;
-	yasm_datavalhead dvs;
-
-	/* Reference exported symbol (to generate error if not declared) */
-	if (valparams && (vp = yasm_vps_first(valparams)) && vp->val)
-	    yasm_symtab_use(objfmt_coff->symtab, vp->val, line);
-	else {
-	    yasm_error_set(YASM_ERROR_SYNTAX,
-			   N_("argument to EXPORT must be symbol name"));
+    for (i=0; i<NELEMS(dirs); i++) {
+	if (yasm__strcasecmp(name, dirs[i].name) == 0) {
+	    if (dirs[i].required_arg && !valparams) {
+		yasm_error_set(YASM_ERROR_SYNTAX,
+			       N_("[%s] requires an argument"), dirs[i].name);
+		return 0;
+	    }
+	    dirs[i].func(objfmt_coff, valparams, line);
 	    return 0;
 	}
-
-	/* Add to end of linker directives */
-	sect = yasm_object_get_general(objfmt_coff->object, ".drectve", 0, 0,
-				       0, 0, &isnew, line);
-
-	/* Initialize directive section if needed */
-	if (isnew) {
-	    coff_section_data *csd;
-	    csd = coff_objfmt_init_new_section(objfmt_coff, sect,
-					       yasm_section_get_name(sect),
-					       line);
-	    csd->flags = COFF_STYP_INFO | COFF_STYP_DISCARD | COFF_STYP_READ;
-	}
-
-	/* Add text as data bytecode */
-	yasm_dvs_initialize(&dvs);
-	yasm_dvs_append(&dvs,
-			yasm_dv_create_string(yasm__xstrdup("-export:"),
-					      strlen("-export:")));
-	yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(vp->val),
-						    strlen(vp->val)));
-	yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(" "), 1));
-	yasm_section_bcs_append(sect, yasm_bc_create_data(&dvs, 1, 0, NULL,
-							  line));
-
-	return 0;
-    } else if (yasm__strcasecmp(name, "ident") == 0) {
-	yasm_valparamhead sect_vps;
-	yasm_datavalhead dvs;
-	yasm_section *comment;
-	const char *sectname;
-	yasm_valparam *vp2;
-
-	if (!valparams) {
-	    yasm_error_set(YASM_ERROR_SYNTAX, N_("[%s] requires an argument"),
-			   "IDENT");
-	    return 0;
-	}
-	vp = yasm_vps_first(valparams);
-
-	if (objfmt_coff->win32) {
-	    /* Put ident data into .comment section for COFF, or .rdata$zzz
-	     * to be compatible with the GNU linker, which doesn't ignore
-	     * .comment (see binutils/gas/config/obj-coff.c:476-502).
-	     */
-	    sectname = ".rdata$zzz";
-	} else {
-	    sectname = ".comment";
-	}
-	yasm_vps_initialize(&sect_vps);
-	vp2 = yasm_vp_create(yasm__xstrdup(sectname), NULL);
-	yasm_vps_append(&sect_vps, vp2);
-	comment = coff_objfmt_section_switch(objfmt, &sect_vps, NULL, line);
-	yasm_vps_delete(&sect_vps);
-
-	/* To match GAS output, if the comment section is empty, put an
-	 * initial 0 byte in the section.
-	 */
-	if (yasm_section_bcs_first(comment)
-	    == yasm_section_bcs_last(comment)) {
-	    yasm_dvs_initialize(&dvs);
-	    yasm_dvs_append(&dvs, yasm_dv_create_expr(
-		yasm_expr_create_ident(
-		    yasm_expr_int(yasm_intnum_create_uint(0)), line)));
-	    yasm_section_bcs_append(comment,
-		yasm_bc_create_data(&dvs, 1, 0, objfmt_coff->arch, line));
-	}
-
-	yasm_dvs_initialize(&dvs);
-	do {
-	    yasm_dvs_append(&dvs, yasm_dv_create_string(vp->val,
-							strlen(vp->val)));
-	    vp->val = NULL;
-	} while ((vp = yasm_vps_next(vp)));
-
-	yasm_section_bcs_append(comment,
-	    yasm_bc_create_data(&dvs, 1, 1, objfmt_coff->arch, line));
-	return 0;
-    } else
-	return 1;
+    }
+    return 1;
 }
 
 
