@@ -1,10 +1,15 @@
-Yasm is Copyright (c) 2001-2006 Peter Johnson and other Yasm developers.
+Yasm is Copyright (c) 2001-2007 Peter Johnson and other Yasm developers.
 
 Yasm developers and/or contributors include:
   Peter Johnson
   Michael Urman
-  Stanislav Karchebny
-  Brian Gladman
+  Brian Gladman (VC8 build files, other fixes)
+  Stanislav Karchebny (options parser)
+  Mathieu Monnier (SSE4 instruction patches)
+  Anonymous "NASM64" developer (NASM preprocessor fixes)
+  Stephen Polkowski (x86 instruction patches)
+  Henryk Richter (Mach-O object format)
+  Ben Skeggs (patches, bug reports)
 
 -----------------------------------
 Yasm licensing overview and summary
