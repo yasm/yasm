@@ -6,7 +6,7 @@ AC_DEFUN([PYREX_CHECK_VERSION],
 from Pyrex.Compiler.Version import version
 # split strings by '.' and convert to numeric.  Append some zeros
 # because we need at least 4 digits for the hex conversion.
-pyrexver = map(int, version.split('.')) + [[0, 0, 0]]
+pyrexver = map(int, version.rstrip('abcdefghijklmnopqrstuvwxyz').split('.')) + [[0, 0, 0]]
 pyrexverhex = 0
 for i in xrange(0, 4): pyrexverhex = (pyrexverhex << 8) + pyrexver[[i]]
 minver = map(int, '$1'.split('.')) + [[0, 0, 0]]
