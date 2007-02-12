@@ -187,6 +187,12 @@
 					RelativePath="..\..\..\modules\objfmts\coff\coff-objfmt.c">
 				</File>
 				<File
+					RelativePath="..\..\..\modules\objfmts\coff\coff-objfmt.h">
+				</File>
+				<File
+					RelativePath="..\..\..\modules\objfmts\coff\win64-except.c">
+				</File>
+				<File
 					RelativePath="..\..\..\modules\objfmts\dbg\dbg-objfmt.c">
 				</File>
 				<File

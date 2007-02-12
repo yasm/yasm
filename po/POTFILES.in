@@ -41,11 +41,13 @@ modules/dbgfmts/stabs/stabs-dbgfmt.c
 modules/listfmts/nasm/nasm-listfmt.c
 modules/objfmts/bin/bin-objfmt.c
 modules/objfmts/coff/coff-objfmt.c
+modules/objfmts/coff/win64-except.c
 modules/objfmts/dbg/dbg-objfmt.c
 modules/objfmts/elf/elf-objfmt.c
 modules/objfmts/elf/elf-x86-amd64.c
 modules/objfmts/elf/elf-x86-x86.c
 modules/objfmts/elf/elf.c
+modules/objfmts/macho/macho-objfmt.c
 modules/objfmts/rdf/rdf-objfmt.c
 modules/objfmts/xdf/xdf-objfmt.c
 modules/parsers/gas/gas-parse.c

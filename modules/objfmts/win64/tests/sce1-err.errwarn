@@ -1,0 +1,8 @@
+-:9: ended procedure without ending prologue
+-:1: procedure started here
+-:20: nested procedures not supported (didn't use [ENDPROC_FRAME]?)
+-:11: previous procedure started here
+-:27: [SAVEREG] after end of prologue
+-:26: prologue ended here
+-:31: [ENDPROLOG] without preceding [PROC_FRAME]
+-:32: [SAVEREG] without preceding [PROC_FRAME]

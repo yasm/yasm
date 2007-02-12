@@ -33,6 +33,8 @@
 #define YASM_EXPR_INTERNAL
 #include <libyasm.h>
 
+#include "coff-objfmt.h"
+
 
 #define REGULAR_OUTBUF_SIZE	1024
 
@@ -174,7 +176,7 @@ typedef struct coff_symrec_data {
 } coff_symrec_data;
 
 typedef struct yasm_objfmt_coff {
-    yasm_objfmt_base objfmt;		    /* base structure*/
+    yasm_objfmt_base objfmt;		    /* base structure */
 
     unsigned int parse_scnum;		    /* sect numbering in parser */
     int win32;				    /* nonzero for win32/64 output */
@@ -187,6 +189,17 @@ typedef struct yasm_objfmt_coff {
     /*@dependent@*/ yasm_arch *arch;
 
     coff_symrec_data *filesym_data;	    /* Data for .file symbol */
+
+    /* Last switched-to section.  Used by proc_frame directives to help
+     * them determine the current assembly position.
+     * XXX: There should be a better way to do this.
+     */
+    yasm_section *cursect;
+
+    /* data for win64 proc_frame and related directives */
+    unsigned long proc_frame;	/* Line number of start of proc, or 0 */
+    unsigned long done_prolog;	/* Line number of end of prologue, or 0 */
+    /*@null@*/ coff_unwind_info *unwind;	/* Unwind info */
 } yasm_objfmt_coff;
 
 typedef struct coff_objfmt_output_info {
@@ -270,6 +283,12 @@ coff_common_create(yasm_object *object, yasm_arch *a)
 				 COFF_SYMTAB_AUX_FILE);
     /* Filename is set in coff_objfmt_output */
     objfmt_coff->filesym_data->aux[0].fname = NULL;
+
+    objfmt_coff->cursect = NULL;
+
+    objfmt_coff->proc_frame = 0;
+    objfmt_coff->done_prolog = 0;
+    objfmt_coff->unwind = NULL;
 
     return objfmt_coff;
 }
@@ -1142,6 +1161,15 @@ coff_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms, yasm_dbgfmt *df,
     unsigned int flags;
     unsigned long ts;
 
+    if (objfmt_coff->proc_frame) {
+	yasm_error_set_xref(objfmt_coff->proc_frame,
+			    N_("procedure started here"));
+	yasm_error_set(YASM_ERROR_GENERAL,
+		       N_("end of file in procedure frame"));
+	yasm_errwarn_propagate(errwarns, 0);
+	return;
+    }
+
     if (objfmt_coff->filesym_data->aux[0].fname)
 	yasm_xfree(objfmt_coff->filesym_data->aux[0].fname);
     objfmt_coff->filesym_data->aux[0].fname =
@@ -1252,6 +1280,8 @@ coff_objfmt_destroy(yasm_objfmt *objfmt)
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
     if (objfmt_coff->filesym_data->aux[0].fname)
 	yasm_xfree(objfmt_coff->filesym_data->aux[0].fname);
+    if (objfmt_coff->unwind)
+	yasm_win64__uwinfo_destroy(objfmt_coff->unwind);
     yasm_xfree(objfmt);
 }
 
@@ -1272,6 +1302,7 @@ coff_objfmt_add_default_section(yasm_objfmt *objfmt)
 	    csd->flags |= COFF_STYP_EXECUTE | COFF_STYP_READ;
 	yasm_section_set_default(retval, 1);
     }
+    objfmt_coff->cursect = retval;
     return retval;
 }
 
@@ -1573,6 +1604,7 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
     } else if (flags_override)
 	yasm_warn_set(YASM_WARN_GENERAL,
 		      N_("section flags ignored on section redeclaration"));
+    objfmt_coff->cursect = retval;
     return retval;
 }
 
@@ -1829,6 +1861,396 @@ win32_objfmt_directive(yasm_objfmt *objfmt, const char *name,
     return 1;
 }
 
+static void
+dir_proc_frame(yasm_objfmt_coff *objfmt_coff,
+	       /*@null@*/ yasm_valparamhead *valparams, unsigned long line)
+{
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    if (objfmt_coff->proc_frame) {
+	yasm_error_set_xref(objfmt_coff->proc_frame,
+			    N_("previous procedure started here"));
+	yasm_error_set(YASM_ERROR_SYNTAX,
+	    N_("nested procedures not supported (didn't use [ENDPROC_FRAME]?)"));
+	return;
+    }
+    if (!vp || !vp->val) {
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("[%s] requires a procedure symbol name"),
+		       "PROC_FRAME");
+	return;
+    }
+    objfmt_coff->proc_frame = line;
+    objfmt_coff->done_prolog = 0;
+    objfmt_coff->unwind = yasm_win64__uwinfo_create();
+    objfmt_coff->unwind->proc =
+	yasm_symtab_use(objfmt_coff->symtab, vp->val, line);
+
+    /* Optional error handler */
+    vp = yasm_vps_next(vp);
+    if (!vp || !vp->val)
+	return;
+    objfmt_coff->unwind->ehandler =
+	yasm_symtab_use(objfmt_coff->symtab, vp->val, line);
+}
+
+static int
+procframe_checkstate(yasm_objfmt_coff *objfmt_coff, const char *dirname)
+{
+    if (!objfmt_coff->proc_frame) {
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("[%s] without preceding [PROC_FRAME]"), dirname);
+	return 0;
+    }
+    if (objfmt_coff->done_prolog) {
+	yasm_error_set_xref(objfmt_coff->done_prolog,
+			    N_("prologue ended here"));
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("[%s] after end of prologue"),
+		       dirname);
+	return 0;
+    }
+    if (!objfmt_coff->unwind)
+	yasm_internal_error(N_("unwind info not present"));
+    return 1;
+}
+
+/* Get current assembly position.
+ * XXX: There should be a better way to do this.
+ */
+static yasm_symrec *
+get_curpos(yasm_objfmt_coff *objfmt_coff, unsigned long line)
+{
+    return yasm_symtab_define_curpos(objfmt_coff->symtab, "$",
+	yasm_section_bcs_last(objfmt_coff->cursect), line);
+}
+
+static void
+dir_pushreg(yasm_objfmt_coff *objfmt_coff, yasm_valparamhead *valparams,
+	    unsigned long line)
+{
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    coff_unwind_code *code;
+    const unsigned long *reg;
+
+    if (!procframe_checkstate(objfmt_coff, "PUSHREG"))
+	return;
+
+    if (!vp || !vp->param || !(reg = yasm_expr_get_reg(&vp->param, 0))) {
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("[%s] requires a register as the first parameter"),
+		       "PUSHREG");
+	return;
+    }
+
+    /* Generate a PUSH_NONVOL unwind code. */
+    code = yasm_xmalloc(sizeof(coff_unwind_code));
+    code->proc = objfmt_coff->unwind->proc;
+    code->loc = get_curpos(objfmt_coff, line);
+    code->opcode = UWOP_PUSH_NONVOL;
+    code->info = (unsigned int)(*reg & 0xF);
+    yasm_value_initialize(&code->off, NULL, 0);
+    SLIST_INSERT_HEAD(&objfmt_coff->unwind->codes, code, link);
+}
+
+static void
+dir_setframe(yasm_objfmt_coff *objfmt_coff, yasm_valparamhead *valparams,
+	     unsigned long line)
+{
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    coff_unwind_code *code;
+    const unsigned long *reg;
+    yasm_expr *off = NULL;
+
+    if (!procframe_checkstate(objfmt_coff, "SETFRAME"))
+	return;
+
+    if (!vp || !vp->param || !(reg = yasm_expr_get_reg(&vp->param, 0))) {
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("[%s] requires a register as the first parameter"),
+		       "SETFRAME");
+	return;
+    }
+
+    vp = yasm_vps_next(vp);
+    if (vp && vp->param) {
+	off = vp->param;
+	vp->param = NULL;
+    }
+
+    /* Set the frame fields in the unwind info */
+    objfmt_coff->unwind->framereg = *reg;
+    yasm_value_initialize(&objfmt_coff->unwind->frameoff, off, 8);
+
+    /* Generate a SET_FPREG unwind code */
+    code = yasm_xmalloc(sizeof(coff_unwind_code));
+    code->proc = objfmt_coff->unwind->proc;
+    code->loc = get_curpos(objfmt_coff, line);
+    code->opcode = UWOP_SET_FPREG;
+    code->info = (unsigned int)(*reg & 0xF);
+    yasm_value_initialize(&code->off, yasm_expr_copy(off), 8);
+    SLIST_INSERT_HEAD(&objfmt_coff->unwind->codes, code, link);
+}
+
+static void
+dir_allocstack(yasm_objfmt_coff *objfmt_coff, yasm_valparamhead *valparams,
+	       unsigned long line)
+{
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    coff_unwind_code *code;
+
+    if (!procframe_checkstate(objfmt_coff, "ALLOCSTACK"))
+	return;
+
+    /* Transform ID to expression if needed */
+    if (vp && vp->val && !vp->param) {
+	vp->param = yasm_expr_create_ident(yasm_expr_sym(
+	    yasm_symtab_use(objfmt_coff->symtab, vp->val, line)), line);
+    }
+
+    if (!vp || !vp->param) {
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("[%s] requires a size"),
+		       "ALLOCSTACK");
+	return;
+    }
+
+    /* Generate an ALLOC_SMALL unwind code; this will get enlarged to an
+     * ALLOC_LARGE if necessary.
+     */
+    code = yasm_xmalloc(sizeof(coff_unwind_code));
+    code->proc = objfmt_coff->unwind->proc;
+    code->loc = get_curpos(objfmt_coff, line);
+    code->opcode = UWOP_ALLOC_SMALL;
+    code->info = 0;
+    yasm_value_initialize(&code->off, vp->param, 7);
+    vp->param = NULL;
+    SLIST_INSERT_HEAD(&objfmt_coff->unwind->codes, code, link);
+}
+
+static void
+dir_save_common(yasm_objfmt_coff *objfmt_coff, yasm_valparamhead *valparams,
+		unsigned long line, const char *name, int op)
+{
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    coff_unwind_code *code;
+    const unsigned long *reg;
+
+    if (!procframe_checkstate(objfmt_coff, name))
+	return;
+
+    if (!vp || !vp->param || !(reg = yasm_expr_get_reg(&vp->param, 0))) {
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("[%s] requires a register as the first parameter"),
+		       name);
+	return;
+    }
+
+    vp = yasm_vps_next(vp);
+
+    /* Transform ID to expression if needed */
+    if (vp && vp->val && !vp->param) {
+	vp->param = yasm_expr_create_ident(yasm_expr_sym(
+	    yasm_symtab_use(objfmt_coff->symtab, vp->val, line)), line);
+    }
+
+    if (!vp || !vp->param) {
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("[%s] requires an offset as the second parameter"),
+		       name);
+	return;
+    }
+
+    /* Generate a SAVE_XXX unwind code; this will get enlarged to a
+     * SAVE_XXX_FAR if necessary.
+     */
+    code = yasm_xmalloc(sizeof(coff_unwind_code));
+    code->proc = objfmt_coff->unwind->proc;
+    code->loc = get_curpos(objfmt_coff, line);
+    code->opcode = op;
+    code->info = (unsigned int)(*reg & 0xF);
+    yasm_value_initialize(&code->off, vp->param, 16);
+    vp->param = NULL;
+    SLIST_INSERT_HEAD(&objfmt_coff->unwind->codes, code, link);
+}
+
+static void
+dir_savereg(yasm_objfmt_coff *objfmt_coff, yasm_valparamhead *valparams,
+	    unsigned long line)
+{
+    dir_save_common(objfmt_coff, valparams, line, "SAVEREG", UWOP_SAVE_NONVOL);
+}
+
+static void
+dir_savexmm128(yasm_objfmt_coff *objfmt_coff, yasm_valparamhead *valparams,
+	       unsigned long line)
+{
+    dir_save_common(objfmt_coff, valparams, line, "SAVEXMM128",
+		    UWOP_SAVE_XMM128);
+}
+
+static void
+dir_pushframe(yasm_objfmt_coff *objfmt_coff,
+	      /*@null@*/ yasm_valparamhead *valparams, unsigned long line)
+{
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    coff_unwind_code *code;
+
+    if (!procframe_checkstate(objfmt_coff, "PUSHFRAME"))
+	return;
+
+    /* Generate a PUSH_MACHFRAME unwind code.  If there's any parameter,
+     * we set info to 1.  Otherwise we set info to 0.
+     */
+    code = yasm_xmalloc(sizeof(coff_unwind_code));
+    code->proc = objfmt_coff->unwind->proc;
+    code->loc = get_curpos(objfmt_coff, line);
+    code->opcode = UWOP_PUSH_MACHFRAME;
+    code->info = vp && (vp->val || vp->param);
+    yasm_value_initialize(&code->off, NULL, 0);
+    SLIST_INSERT_HEAD(&objfmt_coff->unwind->codes, code, link);
+}
+
+static void
+dir_endprolog(yasm_objfmt_coff *objfmt_coff,
+	      /*@null@*/ yasm_valparamhead *valparams, unsigned long line)
+{
+    if (!procframe_checkstate(objfmt_coff, "ENDPROLOG"))
+	return;
+    objfmt_coff->done_prolog = line;
+
+    objfmt_coff->unwind->prolog = get_curpos(objfmt_coff, line);
+}
+
+static void
+dir_endproc_frame(yasm_objfmt_coff *objfmt_coff,
+		  /*@null@*/ yasm_valparamhead *valparams, unsigned long line)
+{
+    yasm_section *sect;
+    coff_section_data *csd;
+    yasm_datavalhead dvs;
+    int isnew;
+    /*@dependent@*/ yasm_symrec *curpos, *unwindpos, *proc_sym, *xdata_sym;
+
+    if (!objfmt_coff->proc_frame) {
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("[%s] without preceding [PROC_FRAME]"),
+		       "ENDPROC_FRAME");
+	return;
+    }
+    if (!objfmt_coff->done_prolog) {
+	yasm_error_set_xref(objfmt_coff->proc_frame,
+			    N_("procedure started here"));
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("ended procedure without ending prologue"),
+		       "ENDPROC_FRAME");
+	objfmt_coff->proc_frame = 0;
+	yasm_win64__uwinfo_destroy(objfmt_coff->unwind);
+	objfmt_coff->unwind = NULL;
+	return;
+    }
+    if (!objfmt_coff->unwind)
+	yasm_internal_error(N_("unwind info not present"));
+
+    proc_sym = objfmt_coff->unwind->proc;
+
+    curpos = get_curpos(objfmt_coff, line);
+
+    /*
+     * Add unwind info to end of .xdata section.
+     */
+
+    sect = yasm_object_get_general(objfmt_coff->object, ".xdata", 0, 0, 0, 0,
+				   &isnew, line);
+
+    /* Initialize xdata section if needed */
+    if (isnew) {
+	csd = coff_objfmt_init_new_section(objfmt_coff, sect, ".xdata", line);
+	csd->flags = COFF_STYP_DATA | COFF_STYP_READ;
+	yasm_section_set_align(sect, 8, line);
+    }
+
+    /* Get current position in .xdata section */
+    unwindpos = yasm_symtab_define_curpos(objfmt_coff->symtab, "$",
+	yasm_section_bcs_last(sect), line);
+    /* Get symbol for .xdata as we'll want to reference it with WRT */
+    csd = yasm_section_get_data(sect, &coff_section_data_cb);
+    xdata_sym = csd->sym;
+
+    /* Add unwind info.  Use line number of start of procedure. */
+    yasm_win64__unwind_generate(sect, objfmt_coff->unwind,
+				objfmt_coff->proc_frame);
+    objfmt_coff->unwind = NULL;	/* generate keeps the unwind pointer */
+
+    /*
+     * Add function lookup to end of .pdata section.
+     */
+
+    sect = yasm_object_get_general(objfmt_coff->object, ".pdata", 0, 0, 0, 0,
+				   &isnew, line);
+
+    /* Initialize pdata section if needed */
+    if (isnew) {
+	csd = coff_objfmt_init_new_section(objfmt_coff, sect, ".pdata", line);
+	csd->flags = COFF_STYP_DATA | COFF_STYP_READ;
+	csd->flags2 = COFF_FLAG_NOBASE;
+	yasm_section_set_align(sect, 4, line);
+    }
+
+    /* Add function structure as data bytecode */
+    yasm_dvs_initialize(&dvs);
+    yasm_dvs_append(&dvs, yasm_dv_create_expr(
+	yasm_expr_create_ident(yasm_expr_sym(proc_sym), line)));
+    yasm_dvs_append(&dvs, yasm_dv_create_expr(
+	yasm_expr_create(YASM_EXPR_WRT, yasm_expr_sym(curpos),
+			 yasm_expr_sym(proc_sym), line)));
+    yasm_dvs_append(&dvs, yasm_dv_create_expr(
+	yasm_expr_create(YASM_EXPR_WRT, yasm_expr_sym(unwindpos),
+			 yasm_expr_sym(xdata_sym), line)));
+    yasm_section_bcs_append(sect, yasm_bc_create_data(&dvs, 4, 0, NULL, line));
+
+    objfmt_coff->proc_frame = 0;
+    objfmt_coff->done_prolog = 0;
+}
+
+static int
+win64_objfmt_directive(yasm_objfmt *objfmt, const char *name,
+		       /*@null@*/ yasm_valparamhead *valparams,
+		       /*@unused@*/ /*@null@*/
+		       yasm_valparamhead *objext_valparams,
+		       unsigned long line)
+{
+    yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)objfmt;
+    static const struct {
+	const char *name;
+	int required_arg;
+	void (*func) (yasm_objfmt_coff *, yasm_valparamhead *, unsigned long);
+    } dirs[] = {
+	{"EXPORT", 1, dir_export},
+	{"IDENT", 1, dir_ident},
+	{"PROC_FRAME", 0, dir_proc_frame},
+	{"PUSHREG", 1, dir_pushreg},
+	{"SETFRAME", 1, dir_setframe},
+	{"ALLOCSTACK", 1, dir_allocstack},
+	{"SAVEREG", 1, dir_savereg},
+	{"SAVEXMM128", 1, dir_savexmm128},
+	{"PUSHFRAME", 0, dir_pushframe},
+	{"ENDPROLOG", 0, dir_endprolog},
+	{"ENDPROC_FRAME", 0, dir_endproc_frame}
+    };
+    size_t i;
+
+    for (i=0; i<NELEMS(dirs); i++) {
+	if (yasm__strcasecmp(name, dirs[i].name) == 0) {
+	    if (dirs[i].required_arg && !valparams) {
+		yasm_error_set(YASM_ERROR_SYNTAX,
+			       N_("[%s] requires an argument"), dirs[i].name);
+		return 0;
+	    }
+	    dirs[i].func(objfmt_coff, valparams, line);
+	    return 0;
+	}
+    }
+    return 1;
+}
+
 
 /* Define valid debug formats to use with this object format */
 static const char *coff_objfmt_dbgfmt_keywords[] = {
@@ -1899,7 +2321,7 @@ yasm_objfmt_module yasm_win64_LTX_objfmt = {
     coff_objfmt_extern_declare,
     coff_objfmt_global_declare,
     coff_objfmt_common_declare,
-    win32_objfmt_directive
+    win64_objfmt_directive
 };
 yasm_objfmt_module yasm_x64_LTX_objfmt = {
     "Win64",
@@ -1916,5 +2338,5 @@ yasm_objfmt_module yasm_x64_LTX_objfmt = {
     coff_objfmt_extern_declare,
     coff_objfmt_global_declare,
     coff_objfmt_common_declare,
-    win32_objfmt_directive
+    win64_objfmt_directive
 };

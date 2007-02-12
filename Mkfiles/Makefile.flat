@@ -90,6 +90,7 @@ MODULES_OBJFMTS_OBJS= \
  modules/objfmts/dbg/dbg-objfmt.o \
  modules/objfmts/bin/bin-objfmt.o \
  modules/objfmts/coff/coff-objfmt.o \
+ modules/objfmts/coff/win64-except.o \
  modules/objfmts/elf/elf.o \
  modules/objfmts/elf/elf-x86-x86.o \
  modules/objfmts/elf/elf-x86-amd64.o \
