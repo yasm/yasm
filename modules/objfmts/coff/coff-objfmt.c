@@ -1413,11 +1413,11 @@ coff_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 	flags = COFF_STYP_INFO;
 	if (objfmt_coff->win32)
 	    flags |= COFF_STYP_DISCARD | COFF_STYP_READ;
-    } else if (objfmt_coff->win32 && strcmp(sectname, ".pdata") == 0) {
+    } else if (objfmt_coff->win64 && strcmp(sectname, ".pdata") == 0) {
 	flags = COFF_STYP_DATA | COFF_STYP_READ;
 	align = 4;
 	flags2 = COFF_FLAG_NOBASE;
-    } else if (objfmt_coff->win32 && strcmp(sectname, ".xdata") == 0) {
+    } else if (objfmt_coff->win64 && strcmp(sectname, ".xdata") == 0) {
 	flags = COFF_STYP_DATA | COFF_STYP_READ;
 	align = 8;
     } else if (strcmp(sectname, ".comment") == 0) {
