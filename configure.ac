@@ -217,8 +217,10 @@ if test "$gcov" = "yes"; then
 fi
 
 # If we're using GCC, then we can turn on -ansi -pedantic -Wall too.
-if test "$GCC" = yes; then
-  MORE_CFLAGS="-ansi -pedantic -Wall $MORE_CFLAGS"
+if test "$USE_MAINTAINER_MODE" = "yes"; then
+  if test "$GCC" = yes; then
+    MORE_CFLAGS="-ansi -pedantic -Wall $MORE_CFLAGS"
+  fi
 fi
 AC_SUBST(MORE_CFLAGS)
 
