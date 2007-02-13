@@ -396,6 +396,8 @@ win64_uwcode_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 	    break;
 	default:
 	    yasm_internal_error(N_("unrecognied unwind opcode"));
+	    /*@unreached@*/
+	    return 0;
     }
 
     intn = yasm_value_get_intnum(&code->off, bc, 0);
@@ -512,6 +514,10 @@ win64_uwcode_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 	case UWOP_SAVE_XMM128_FAR:
 	    size = 4; low = high = 0; shift = 0; mask = 0xF;
 	    break;
+	default:
+	    yasm_internal_error(N_("unrecognied unwind opcode"));
+	    /*@unreached@*/
+	    return 1;
     }
 
     /* Check for overflow */
