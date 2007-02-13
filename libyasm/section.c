@@ -853,7 +853,7 @@ span_create_terms(yasm_span *span)
 		span->items[i].data.intn = yasm_intnum_create_int(0);
 
 		/* Check for circular references */
-		if (span->id == 0 &&
+		if (span->id <= 0 &&
 		    ((span->bc->bc_index > span->terms[i].precbc->bc_index &&
 		      span->bc->bc_index <= span->terms[i].precbc2->bc_index) ||
 		     (span->bc->bc_index > span->terms[i].precbc2->bc_index &&
@@ -927,8 +927,8 @@ recalc_normal_span(yasm_span *span)
     if (span->new_val == LONG_MAX)
 	span->active = 0;
 
-    /* If id=0, flag update on any change */
-    if (span->id == 0)
+    /* If id<=0, flag update on any change */
+    if (span->id <= 0)
 	return (span->new_val != span->cur_val);
 
     return (span->new_val < span->neg_thres
@@ -1057,7 +1057,7 @@ check_cycle(IntervalTreeNode *node, void *d)
     int bt_size = 0, dep_bt_size = 0;
 
     /* Only check for cycles in id=0 spans */
-    if (depspan->id != 0)
+    if (depspan->id > 0)
 	return;
 
     /* Check for a circular reference by looking to see if this dependent
@@ -1136,7 +1136,7 @@ optimize_term_expand(IntervalTreeNode *node, void *d)
 	return;	/* didn't exceed thresholds, we're done */
 
     /* Exceeded thresholds, need to add to Q for expansion */
-    if (span->id == 0)
+    if (span->id <= 0)
 	STAILQ_INSERT_TAIL(&optd->QA, span, linkq);
     else
 	STAILQ_INSERT_TAIL(&optd->QB, span, linkq);
@@ -1327,7 +1327,7 @@ yasm_object_optimize(yasm_object *object, yasm_arch *arch,
 
     /* Look for cycles in times expansion (span.id==0) */
     TAILQ_FOREACH(span, &optd.spans, link) {
-	if (span->id != 0)
+	if (span->id > 0)
 	    continue;
 	optd.span = span;
 	IT_enumerate(optd.itree, (long)span->bc->bc_index,

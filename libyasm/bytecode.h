@@ -310,6 +310,8 @@ unsigned long yasm_bc_next_offset(yasm_bytecode *precbc);
  * \param add_span_data	add_span_data passed into bc_calc_len()
  * \param bc		bytecode containing span
  * \param id		non-zero identifier for span; may be any non-zero value
+ *			if <0, expand is called for any change;
+ *			if >0, expand is only called when exceeds threshold
  * \param value		dependent value for bytecode expansion
  * \param neg_thres	negative threshold for long/short decision
  * \param pos_thres	positive threshold for long/short decision
