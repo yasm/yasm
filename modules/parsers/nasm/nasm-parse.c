@@ -1213,8 +1213,8 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
     unsigned long line = cur_line;
     static const struct {
 	const char *name;
-	int required_arg:1;
-	int id_only:1;
+	unsigned int required_arg:1;
+	unsigned int id_only:1;
 	void (*func) (yasm_parser_nasm *, yasm_valparamhead *,
 		      yasm_valparamhead *);
     } dirs[] = {
