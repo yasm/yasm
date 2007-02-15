@@ -24,10 +24,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#undef HAVE_CONFIG_H
-#endif
+#include <util.h>
+/*@unused@*/ RCSID("$Id$");
 
 /* Need either unistd.h or direct.h (on Windows) to prototype getcwd() */
 #ifdef HAVE_UNISTD_H
@@ -37,10 +35,6 @@
 #endif
 
 #include <ctype.h>
-
-#define YASM_LIB_INTERNAL
-#include "util.h"
-/*@unused@*/ RCSID("$Id$");
 
 #include "errwarn.h"
 #include "file.h"
