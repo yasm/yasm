@@ -3045,8 +3045,9 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 	     * byte of the opcode.
 	     */
 	    if (!insn->imm->abs ||
-		yasm_intnum_check_size(
-		    yasm_expr_get_intnum(&insn->imm->abs, 0), 32, 0, 1)) {
+		(yasm_expr_get_intnum(&insn->imm->abs, 0) &&
+		 yasm_intnum_check_size(
+		    yasm_expr_get_intnum(&insn->imm->abs, 0), 32, 0, 1))) {
 		/* Throwaway REX byte */
 		unsigned char rex_temp = 0;
 
