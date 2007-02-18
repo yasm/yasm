@@ -42,18 +42,18 @@
 
 typedef struct bytecode_insn {
     /*@dependent@*/ yasm_arch *arch;
-    unsigned long insn_data[4];
+    uintptr_t insn_data[4];
 
     int num_operands;
     /*@null@*/ yasm_insn_operands operands;
 
     /* array of 4-element prefix_data arrays */
     int num_prefixes;
-    /*@null@*/ unsigned long **prefixes;
+    /*@null@*/ uintptr_t **prefixes;
 
     /* array of segment prefixes */
     int num_segregs;
-    /*@null@*/ unsigned long *segregs;
+    /*@null@*/ uintptr_t *segregs;
 } bytecode_insn;
 
 static void bc_insn_destroy(void *contents);
@@ -114,7 +114,7 @@ yasm_ea_set_strong(yasm_effaddr *ptr, unsigned int strong)
 }
 
 void
-yasm_ea_set_segreg(yasm_effaddr *ea, unsigned long segreg)
+yasm_ea_set_segreg(yasm_effaddr *ea, uintptr_t segreg)
 {
     if (!ea)
 	return;
@@ -257,7 +257,7 @@ bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 }
 
 yasm_bytecode *
-yasm_bc_create_insn(yasm_arch *arch, const unsigned long insn_data[4],
+yasm_bc_create_insn(yasm_arch *arch, const uintptr_t insn_data[4],
 		    int num_operands, /*@null@*/ yasm_insn_operands *operands,
 		    unsigned long line)
 {
@@ -302,7 +302,7 @@ yasm_bc_create_empty_insn(yasm_arch *arch, unsigned long line)
 }
 
 void
-yasm_bc_insn_add_prefix(yasm_bytecode *bc, const unsigned long prefix_data[4])
+yasm_bc_insn_add_prefix(yasm_bytecode *bc, const uintptr_t prefix_data[4])
 {
     bytecode_insn *insn = (bytecode_insn *)bc->contents;
 
@@ -310,9 +310,8 @@ yasm_bc_insn_add_prefix(yasm_bytecode *bc, const unsigned long prefix_data[4])
 
     insn->prefixes =
 	yasm_xrealloc(insn->prefixes,
-		      (insn->num_prefixes+1)*sizeof(unsigned long *));
-    insn->prefixes[insn->num_prefixes] =
-	yasm_xmalloc(4*sizeof(unsigned long));
+		      (insn->num_prefixes+1)*sizeof(uintptr_t *));
+    insn->prefixes[insn->num_prefixes] = yasm_xmalloc(4*sizeof(uintptr_t));
     insn->prefixes[insn->num_prefixes][0] = prefix_data[0];
     insn->prefixes[insn->num_prefixes][1] = prefix_data[1];
     insn->prefixes[insn->num_prefixes][2] = prefix_data[2];
@@ -321,15 +320,14 @@ yasm_bc_insn_add_prefix(yasm_bytecode *bc, const unsigned long prefix_data[4])
 }
 
 void
-yasm_bc_insn_add_seg_prefix(yasm_bytecode *bc, unsigned long segreg)
+yasm_bc_insn_add_seg_prefix(yasm_bytecode *bc, uintptr_t segreg)
 {
     bytecode_insn *insn = (bytecode_insn *)bc->contents;
 
     assert(bc->callback == bc_insn_callback);
 
     insn->segregs =
-	yasm_xrealloc(insn->segregs,
-		      (insn->num_segregs+1)*sizeof(unsigned long));
+	yasm_xrealloc(insn->segregs, (insn->num_segregs+1)*sizeof(uintptr_t));
     insn->segregs[insn->num_segregs] = segreg;
     insn->num_segregs++;
 }

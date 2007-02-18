@@ -142,14 +142,14 @@ typedef struct yasm_arch_module {
      * Call yasm_arch_parse_check_insnprefix() instead of calling this function.
      */
     yasm_arch_insnprefix (*parse_check_insnprefix)
-	(yasm_arch *arch, /*@out@*/ unsigned long data[4], const char *id,
+	(yasm_arch *arch, /*@out@*/ uintptr_t data[4], const char *id,
 	 size_t id_len);
 
     /** Module-level implementation of yasm_arch_parse_check_regtmod().
      * Call yasm_arch_parse_check_regtmod() instead of calling this function.
      */
     yasm_arch_regtmod (*parse_check_regtmod)
-	(yasm_arch *arch, /*@out@*/ unsigned long *data, const char *id,
+	(yasm_arch *arch, /*@out@*/ uintptr_t *data, const char *id,
 	 size_t id_len);
 
     /** Module-level implementation of yasm_arch_parse_directive().
@@ -170,10 +170,9 @@ typedef struct yasm_arch_module {
      */
     void (*finalize_insn)
 	(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
-	 const unsigned long data[4], int num_operands,
+	 const uintptr_t data[4], int num_operands,
 	 /*@null@*/ yasm_insn_operands *operands, int num_prefixes,
-	 unsigned long **prefixes, int num_segregs,
-	 const unsigned long *segregs);
+	 uintptr_t **prefixes, int num_segregs, const uintptr_t *segregs);
 
     /** Module-level implementation of yasm_arch_floatnum_tobytes().
      * Call yasm_arch_floatnum_tobytes() instead of calling this function.
@@ -193,23 +192,23 @@ typedef struct yasm_arch_module {
     /** Module-level implementation of yasm_arch_get_reg_size().
      * Call yasm_arch_get_reg_size() instead of calling this function.
      */
-    unsigned int (*get_reg_size) (yasm_arch *arch, unsigned long reg);
+    unsigned int (*get_reg_size) (yasm_arch *arch, uintptr_t reg);
 
     /** Module-level implementation of yasm_arch_reggroup_get_reg().
      * Call yasm_arch_reggroup_get_reg() instead of calling this function.
      */
-    unsigned long (*reggroup_get_reg) (yasm_arch *arch, unsigned long reggroup,
-				       unsigned long regindex);
+    uintptr_t (*reggroup_get_reg) (yasm_arch *arch, uintptr_t reggroup,
+				   unsigned long regindex);
 
     /** Module-level implementation of yasm_arch_reg_print().
      * Call yasm_arch_reg_print() instead of calling this function.
      */
-    void (*reg_print) (yasm_arch *arch, unsigned long reg, FILE *f);
+    void (*reg_print) (yasm_arch *arch, uintptr_t reg, FILE *f);
 
     /** Module-level implementation of yasm_arch_segreg_print().
      * Call yasm_arch_segreg_print() instead of calling this function.
      */
-    void (*segreg_print) (yasm_arch *arch, unsigned long segreg, FILE *f);
+    void (*segreg_print) (yasm_arch *arch, uintptr_t segreg, FILE *f);
 
     /** Module-level implementation of yasm_arch_ea_create().
      * Call yasm_arch_ea_create() instead of calling this function.
@@ -258,15 +257,15 @@ struct yasm_insn_operand {
 
     /** Operand data. */
     union {
-	unsigned long reg;  /**< Arch data for reg/segreg. */
+	uintptr_t reg;	    /**< Arch data for reg/segreg. */
 	yasm_effaddr *ea;   /**< Effective address for memory references. */
 	yasm_expr *val;	    /**< Value of immediate or jump target. */
     } data;
 
-    unsigned long targetmod;	/**< Arch target modifier, 0 if none. */
+    uintptr_t targetmod;	/**< Arch target modifier, 0 if none. */
 
     /** Specified size of the operand, in bytes.  0 if not user-specified. */
-    unsigned int size;
+    unsigned int size:8;
 
     /** Nonzero if dereference.  Used for "*foo" in GAS.
      * The reason for this is that by default in GAS, an unprefixed value
@@ -375,7 +374,7 @@ void yasm_arch_parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len);
  * \return Identifier type (#YASM_ARCH_NOTINSNPREFIX if unrecognized)
  */
 yasm_arch_insnprefix yasm_arch_parse_check_insnprefix
-    (yasm_arch *arch, /*@out@*/ unsigned long data[4], const char *id,
+    (yasm_arch *arch, /*@out@*/ uintptr_t data[4], const char *id,
      size_t id_len);
 
 /** Check an generic identifier to see if it matches architecture specific
@@ -391,7 +390,7 @@ yasm_arch_insnprefix yasm_arch_parse_check_insnprefix
  * \return Identifier type (#YASM_ARCH_NOTREGTMOD if unrecognized)
  */
 yasm_arch_regtmod yasm_arch_parse_check_regtmod
-    (yasm_arch *arch, /*@out@*/ unsigned long *data, const char *id,
+    (yasm_arch *arch, /*@out@*/ uintptr_t *data, const char *id,
      size_t id_len);
 
 /** Handle architecture-specific directives.
@@ -436,10 +435,9 @@ const unsigned char **yasm_arch_get_fill(const yasm_arch *arch);
  */
 void yasm_arch_finalize_insn
     (yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
-     const unsigned long data[4], int num_operands,
+     const uintptr_t data[4], int num_operands,
      /*@null@*/ yasm_insn_operands *operands, int num_prefixes,
-     const unsigned long **prefixes, int num_segregs,
-     const unsigned long *segregs);
+     const uintptr_t **prefixes, int num_segregs, const uintptr_t *segregs);
 
 /** Output #yasm_floatnum to buffer.  Puts the value into the least
  * significant bits of the destination, or may be shifted into more
@@ -485,7 +483,7 @@ int yasm_arch_intnum_tobytes(yasm_arch *arch, const yasm_intnum *intn,
  * \param reg	register
  * \return 0 if there is no suitable equivalent size, otherwise the size.
  */
-unsigned int yasm_arch_get_reg_size(yasm_arch *arch, unsigned long reg);
+unsigned int yasm_arch_get_reg_size(yasm_arch *arch, uintptr_t reg);
 
 /** Get a specific register of a register group, based on the register
  * group and the index within the group.
@@ -495,23 +493,22 @@ unsigned int yasm_arch_get_reg_size(yasm_arch *arch, unsigned long reg);
  * \return 0 if regindex is not valid for that register group, otherwise the
  *         specific register value.
  */
-unsigned long yasm_arch_reggroup_get_reg(yasm_arch *arch,
-					 unsigned long reggroup,
-					 unsigned long regindex);
+uintptr_t yasm_arch_reggroup_get_reg(yasm_arch *arch, uintptr_t reggroup,
+				     unsigned long regindex);
 
 /** Print a register.  For debugging purposes.
  * \param arch		architecture
  * \param reg		register
  * \param f		file
  */
-void yasm_arch_reg_print(yasm_arch *arch, unsigned long reg, FILE *f);
+void yasm_arch_reg_print(yasm_arch *arch, uintptr_t reg, FILE *f);
 
 /** Print a segment register.  For debugging purposes.
  * \param arch		architecture
  * \param segreg	segment register
  * \param f		file
  */
-void yasm_arch_segreg_print(yasm_arch *arch, unsigned long segreg, FILE *f);
+void yasm_arch_segreg_print(yasm_arch *arch, uintptr_t segreg, FILE *f);
 
 /** Create an effective address from an expression.
  * \param arch	architecture
@@ -590,13 +587,13 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
  * \param reg	register
  * \return Newly allocated operand.
  */
-yasm_insn_operand *yasm_operand_create_reg(unsigned long reg);
+yasm_insn_operand *yasm_operand_create_reg(uintptr_t reg);
 
 /** Create an instruction operand from a segment register.
  * \param segreg	segment register
  * \return Newly allocated operand.
  */
-yasm_insn_operand *yasm_operand_create_segreg(unsigned long segreg);
+yasm_insn_operand *yasm_operand_create_segreg(uintptr_t segreg);
 
 /** Create an instruction operand from an effective address.
  * \param ea	effective address

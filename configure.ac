@@ -109,7 +109,7 @@ AC_C_CONST
 AC_C_INLINE
 AC_C_PROTOTYPES
 AC_TYPE_SIZE_T
-AX_CREATE_STDINT_H
+AX_CREATE_STDINT_H([libyasm-stdint.h])
 
 #
 # Checks for library functions.

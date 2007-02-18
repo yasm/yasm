@@ -58,7 +58,7 @@ struct yasm_effaddr {
 
     yasm_value disp;		/**< address displacement */
 
-    unsigned long segreg;	/**< segment register override (0 if none) */
+    uintptr_t segreg;		/**< segment register override (0 if none) */
 
     unsigned char need_nonzero_len; /**< 1 if length of disp must be >0. */
     unsigned char need_disp;	/**< 1 if a displacement should be present
@@ -121,7 +121,7 @@ void yasm_ea_set_strong(yasm_effaddr *ea, unsigned int strong);
  * \param ea		effective address
  * \param segreg	segment register (0 if none)
  */
-void yasm_ea_set_segreg(yasm_effaddr *ea, unsigned long segreg);
+void yasm_ea_set_segreg(yasm_effaddr *ea, uintptr_t segreg);
 
 /** Delete (free allocated memory for) an effective address.
  * \param ea	effective address (only pointer to it).
@@ -228,7 +228,7 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
  *       giving operands to this function.
  */
 /*@only@*/ yasm_bytecode *yasm_bc_create_insn
-    (yasm_arch *arch, const unsigned long insn_data[4], int num_operands,
+    (yasm_arch *arch, const uintptr_t insn_data[4], int num_operands,
      /*@null@*/ yasm_insn_operands *operands, unsigned long line);
 
 /** Create a bytecode that represents a single empty (0 length) instruction.
@@ -245,13 +245,13 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
  * \param prefix_data	data the identifies the prefix
  */
 void yasm_bc_insn_add_prefix(yasm_bytecode *bc,
-			     const unsigned long prefix_data[4]);
+			     const uintptr_t prefix_data[4]);
 
 /** Associate a segment prefix with an instruction bytecode.
  * \param bc		instruction bytecode
  * \param segreg	data the identifies the segment register
  */
-void yasm_bc_insn_add_seg_prefix(yasm_bytecode *bc, unsigned long segreg);
+void yasm_bc_insn_add_seg_prefix(yasm_bytecode *bc, uintptr_t segreg);
 
 /** Get the section that contains a particular bytecode.
  * \param bc	bytecode
@@ -378,7 +378,7 @@ int yasm_bc_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
      /*@null@*/ yasm_output_reloc_func output_reloc)
     /*@sets *buf@*/;
 
-/** Get the bytecode multiple value as an unsigned long integer.
+/** Get the bytecode multiple value as an integer.
  * \param bc		bytecode
  * \param multiple	multiple value (output)
  * \param calc_bc_dist	nonzero if distances between bytecodes should be

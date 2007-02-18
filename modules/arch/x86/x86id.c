@@ -2116,9 +2116,9 @@ x86_finalize_opcode(x86_opcode *opcode, const x86_insn_info *info)
 
 static void
 x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
-		    const unsigned long data[4], int num_operands,
+		    const uintptr_t data[4], int num_operands,
 		    yasm_insn_operands *operands, int num_prefixes,
-		    unsigned long **prefixes, const x86_insn_info *info)
+		    uintptr_t **prefixes, const x86_insn_info *info)
 {
     x86_jmpfar *jmpfar;
     yasm_insn_operand *op;
@@ -2164,9 +2164,9 @@ x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 
 static void
 x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
-		 const unsigned long data[4], int num_operands,
+		 const uintptr_t data[4], int num_operands,
 		 yasm_insn_operands *operands, int num_prefixes,
-		 unsigned long **prefixes, const x86_insn_info *jinfo)
+		 uintptr_t **prefixes, const x86_insn_info *jinfo)
 {
     x86_jmp *jmp;
     int num_info = (int)(data[1]&0xFF);
@@ -2669,11 +2669,11 @@ x86_match_error(yasm_arch *arch, int num_info, const x86_insn_info *info,
 
 void
 yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
-			yasm_bytecode *prev_bc, const unsigned long data[4],
+			yasm_bytecode *prev_bc, const uintptr_t data[4],
 			int num_operands,
 			/*@null@*/ yasm_insn_operands *operands,
-			int num_prefixes, unsigned long **prefixes,
-			int num_segregs, const unsigned long *segregs)
+			int num_prefixes, uintptr_t **prefixes,
+			int num_segregs, const uintptr_t *segregs)
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     x86_insn *insn;
@@ -3208,7 +3208,7 @@ cpu_find_reverse(unsigned long cpu)
 }
 
 yasm_arch_insnprefix
-yasm_x86__parse_check_insnprefix(yasm_arch *arch, unsigned long data[4],
+yasm_x86__parse_check_insnprefix(yasm_arch *arch, uintptr_t data[4],
 				 const char *id, size_t id_len)
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
@@ -3246,7 +3246,7 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, unsigned long data[4],
 	if ((cpu & CPU_Not64) && arch_x86->mode_bits == 64) {
 	    yasm_error_set(YASM_ERROR_GENERAL,
 			   N_("`%s' invalid in 64-bit mode"), id);
-	    data[0] = (unsigned long)not64_insn;
+	    data[0] = (uintptr_t)not64_insn;
 	    data[1] = NELEMS(not64_insn);
 	    data[2] = CPU_Not64;
 	    data[3] = arch_x86->mode_bits;
@@ -3261,7 +3261,7 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, unsigned long data[4],
 	    return YASM_ARCH_NOTINSNPREFIX;
 	}
 
-	data[0] = (unsigned long)pdata->group;
+	data[0] = (uintptr_t)pdata->group;
 	data[1] = pdata->data1;
 	data[2] = arch_x86->cpu_enabled;
 	data[3] = (((unsigned long)pdata->flags)<<8) | arch_x86->mode_bits;
@@ -3330,7 +3330,7 @@ yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len)
 }
 
 yasm_arch_regtmod
-yasm_x86__parse_check_regtmod(yasm_arch *arch, unsigned long *data,
+yasm_x86__parse_check_regtmod(yasm_arch *arch, uintptr_t *data,
 			      const char *id, size_t id_len)
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;

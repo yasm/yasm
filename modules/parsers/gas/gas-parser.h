@@ -82,7 +82,7 @@ typedef union {
     char *str_val;
     yasm_intnum *intn;
     yasm_floatnum *flt;
-    unsigned long arch_data[4];
+    uintptr_t arch_data[4];
     struct {
 	char *contents;
 	size_t len;

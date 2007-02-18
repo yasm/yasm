@@ -39,7 +39,7 @@
 
 
 yasm_insn_operand *
-yasm_operand_create_reg(unsigned long reg)
+yasm_operand_create_reg(uintptr_t reg)
 {
     yasm_insn_operand *retval = yasm_xmalloc(sizeof(yasm_insn_operand));
 
@@ -54,7 +54,7 @@ yasm_operand_create_reg(unsigned long reg)
 }
 
 yasm_insn_operand *
-yasm_operand_create_segreg(unsigned long segreg)
+yasm_operand_create_segreg(uintptr_t segreg)
 {
     yasm_insn_operand *retval = yasm_xmalloc(sizeof(yasm_insn_operand));
 
@@ -87,7 +87,7 @@ yasm_insn_operand *
 yasm_operand_create_imm(/*@only@*/ yasm_expr *val)
 {
     yasm_insn_operand *retval;
-    const unsigned long *reg;
+    const uintptr_t *reg;
 
     reg = yasm_expr_get_reg(&val, 0);
     if (reg) {

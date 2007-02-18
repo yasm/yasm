@@ -35,7 +35,6 @@
 
 #include "coretype.h"
 #include "hamt.h"
-#include "_stdint.h"			/* for uintptr_t */
 
 struct HAMTEntry {
     STAILQ_ENTRY(HAMTEntry) next;	/* next hash table entry */

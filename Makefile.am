@@ -16,6 +16,7 @@ check_PROGRAMS = test_hd
 test_hd_SOURCES = test_hd.c
 
 include_HEADERS = libyasm.h
+include_HEADERS += libyasm-stdint.h
 
 noinst_HEADERS = util.h
 
@@ -25,8 +26,8 @@ BUILT_SOURCES =
 CLEANFILES = configure.lineno
 EXTRA_DIST = config/config.rpath
 
-# _stdint.h doesn't clean up after itself?
-CONFIG_CLEAN_FILES = _stdint.h
+# libyasm-stdint.h doesn't clean up after itself?
+CONFIG_CLEAN_FILES = libyasm-stdint.h
 
 # automake doesn't distribute mkinstalldirs?
 EXTRA_DIST += config/mkinstalldirs
@@ -56,11 +57,11 @@ EXTRA_DIST += splint.sh
 EXTRA_DIST += Mkfiles/Makefile.flat
 EXTRA_DIST += Mkfiles/Makefile.dj
 EXTRA_DIST += Mkfiles/dj/config.h
-EXTRA_DIST += Mkfiles/dj/_stdint.h
+EXTRA_DIST += Mkfiles/dj/libyasm-stdint.h
 EXTRA_DIST += Mkfiles/vc/yasm.sln
 EXTRA_DIST += Mkfiles/vc/yasm.vcproj
 EXTRA_DIST += Mkfiles/vc/config.h
-EXTRA_DIST += Mkfiles/vc/_stdint.h
+EXTRA_DIST += Mkfiles/vc/libyasm-stdint.h
 EXTRA_DIST += Mkfiles/vc/genmacro/genmacro.vcproj
 EXTRA_DIST += Mkfiles/vc/genmacro/run.bat
 EXTRA_DIST += Mkfiles/vc/genmodule/genmodule.vcproj
@@ -79,7 +80,7 @@ EXTRA_DIST += Mkfiles/vc8/crt_secure_no_deprecate.vsprops
 EXTRA_DIST += Mkfiles/vc8/yasm.sln
 EXTRA_DIST += Mkfiles/vc8/yasm.vcproj
 EXTRA_DIST += Mkfiles/vc8/config.h
-EXTRA_DIST += Mkfiles/vc8/_stdint.h
+EXTRA_DIST += Mkfiles/vc8/libyasm-stdint.h
 EXTRA_DIST += Mkfiles/vc8/readme.vc8.txt
 EXTRA_DIST += Mkfiles/vc8/yasm.rules
 EXTRA_DIST += Mkfiles/vc8/genmacro/genmacro.vcproj

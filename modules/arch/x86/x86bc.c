@@ -119,7 +119,7 @@ static const yasm_bytecode_callback x86_bc_callback_jmpfar = {
 
 int
 yasm_x86__set_rex_from_reg(unsigned char *rex, unsigned char *low3,
-			   unsigned long reg, unsigned int bits,
+			   uintptr_t reg, unsigned int bits,
 			   x86_rex_bit_pos rexbit)
 {
     *low3 = (unsigned char)(reg&7);
@@ -286,7 +286,7 @@ yasm_x86__ea_create_imm(yasm_expr *imm, unsigned int im_len)
 
 void
 yasm_x86__bc_apply_prefixes(x86_common *common, unsigned char *rex,
-			    int num_prefixes, unsigned long **prefixes)
+			    int num_prefixes, uintptr_t **prefixes)
 {
     int i;
     int first = 1;

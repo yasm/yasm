@@ -320,7 +320,7 @@ x86_get_fill(const yasm_arch *arch)
 }
 
 unsigned int
-yasm_x86__get_reg_size(yasm_arch *arch, unsigned long reg)
+yasm_x86__get_reg_size(yasm_arch *arch, uintptr_t reg)
 {
     switch ((x86_expritem_reg_size)(reg & ~0xFUL)) {
 	case X86_REG8:
@@ -346,8 +346,8 @@ yasm_x86__get_reg_size(yasm_arch *arch, unsigned long reg)
     return 0;
 }
 
-static unsigned long
-x86_reggroup_get_reg(yasm_arch *arch, unsigned long reggroup,
+static uintptr_t
+x86_reggroup_get_reg(yasm_arch *arch, uintptr_t reggroup,
 		     unsigned long regindex)
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
@@ -371,7 +371,7 @@ x86_reggroup_get_reg(yasm_arch *arch, unsigned long reggroup,
 }
 
 static void
-x86_reg_print(yasm_arch *arch, unsigned long reg, FILE *f)
+x86_reg_print(yasm_arch *arch, uintptr_t reg, FILE *f)
 {
     static const char *name8[] = {"al","cl","dl","bl","ah","ch","dh","bh"};
     static const char *name8x[] = {
@@ -431,7 +431,7 @@ x86_reg_print(yasm_arch *arch, unsigned long reg, FILE *f)
 }
 
 static void
-x86_segreg_print(yasm_arch *arch, unsigned long segreg, FILE *f)
+x86_segreg_print(yasm_arch *arch, uintptr_t segreg, FILE *f)
 {
     static const char *name[] = {"es","cs","ss","ds","fs","gs"};
     fprintf(f, "%s", name[segreg&7]);

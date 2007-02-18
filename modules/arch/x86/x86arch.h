@@ -134,7 +134,7 @@ typedef enum {
  * in 64-bit mode or if it wasn't needed to express reg.
  */
 int yasm_x86__set_rex_from_reg(unsigned char *rex, unsigned char *low3,
-			       unsigned long reg, unsigned int bits,
+			       uintptr_t reg, unsigned int bits,
 			       x86_rex_bit_pos rexbit);
 
 /* Effective address type */
@@ -250,7 +250,7 @@ void yasm_x86__bc_transform_jmpfar(yasm_bytecode *bc, x86_jmpfar *jmpfar);
 
 void yasm_x86__bc_apply_prefixes
     (x86_common *common, unsigned char *rex, int num_prefixes,
-     unsigned long **prefixes);
+     uintptr_t **prefixes);
 
 /* Check an effective address.  Returns 0 if EA was successfully determined,
  * 1 if invalid EA, or 2 if indeterminate EA.
@@ -262,17 +262,17 @@ int yasm_x86__expr_checkea
 void yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len);
 
 yasm_arch_insnprefix yasm_x86__parse_check_insnprefix
-    (yasm_arch *arch, /*@out@*/ unsigned long data[4], const char *id,
+    (yasm_arch *arch, /*@out@*/ uintptr_t data[4], const char *id,
      size_t id_len);
 yasm_arch_regtmod yasm_x86__parse_check_regtmod
-    (yasm_arch *arch, /*@out@*/ unsigned long *data, const char *id,
+    (yasm_arch *arch, /*@out@*/ uintptr_t *data, const char *id,
      size_t id_len);
 
 void yasm_x86__finalize_insn
     (yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
-     const unsigned long data[4], int num_operands,
+     const uintptr_t data[4], int num_operands,
      /*@null@*/ yasm_insn_operands *operands, int num_prefixes,
-     unsigned long **prefixes, int num_segregs, const unsigned long *segregs);
+     uintptr_t **prefixes, int num_segregs, const uintptr_t *segregs);
 
 int yasm_x86__floatnum_tobytes
     (yasm_arch *arch, const yasm_floatnum *flt, unsigned char *buf,
@@ -282,5 +282,5 @@ int yasm_x86__intnum_tobytes
      size_t destsize, size_t valsize, int shift, const yasm_bytecode *bc,
      int warn);
 
-unsigned int yasm_x86__get_reg_size(yasm_arch *arch, unsigned long reg);
+unsigned int yasm_x86__get_reg_size(yasm_arch *arch, uintptr_t reg);
 #endif
