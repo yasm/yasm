@@ -57,6 +57,7 @@ yasm_value_initialize(/*@out@*/ yasm_value *value,
     value->rshift = 0;
     value->curpos_rel = 0;
     value->ip_rel = 0;
+    value->jump_target = 0;
     value->section_rel = 0;
     value->sign = 0;
     value->size = size;
@@ -73,6 +74,7 @@ yasm_value_init_sym(/*@out@*/ yasm_value *value, /*@null@*/ yasm_symrec *sym,
     value->rshift = 0;
     value->curpos_rel = 0;
     value->ip_rel = 0;
+    value->jump_target = 0;
     value->section_rel = 0;
     value->sign = 0;
     value->size = size;
@@ -88,6 +90,7 @@ yasm_value_init_copy(yasm_value *value, const yasm_value *orig)
     value->rshift = orig->rshift;
     value->curpos_rel = orig->curpos_rel;
     value->ip_rel = orig->ip_rel;
+    value->jump_target = orig->jump_target;
     value->section_rel = orig->section_rel;
     value->sign = orig->sign;
     value->size = orig->size;
@@ -717,6 +720,8 @@ yasm_value_print(const yasm_value *value, FILE *f, int indent_level)
 		    "");
 	if (value->ip_rel)
 	    fprintf(f, "%*s(IP-relative)\n", indent_level, "");
+	if (value->jump_target)
+	    fprintf(f, "%*s(Jump target)\n", indent_level, "");
 	if (value->section_rel)
 	    fprintf(f, "%*s(Section-relative)\n", indent_level, "");
     }

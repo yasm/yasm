@@ -143,6 +143,12 @@ typedef struct yasm_value {
      */
     unsigned int ip_rel : 1;
 
+    /** Indicates the value is a jump target address (rather than a simple
+     * data address).  In some objfmt/arch combinations (e.g. macho/amd64)
+     * this info is needed to generate special relocations.
+     */
+    unsigned int jump_target : 1;
+
     /** Indicates the relative portion of the value should be relocated
      * relative to its own section start rather than relative to the
      * section start of the bytecode containing this value.  E.g. the value

@@ -2190,6 +2190,7 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
     if (jmp->target.seg_of || jmp->target.rshift || jmp->target.curpos_rel)
 	yasm_error_set(YASM_ERROR_VALUE, N_("invalid jump target"));
     yasm_value_set_curpos_rel(&jmp->target, bc, 0);
+    jmp->target.jump_target = 1;
 
     /* See if the user explicitly specified short/near/far. */
     switch ((int)(jinfo->operands[0] & OPTM_MASK)) {
