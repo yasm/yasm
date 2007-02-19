@@ -25,9 +25,8 @@ aha3	dq	blah-uhoh
 	mov rax, $$
 	mov rax, $
 	mov rax, $+4
-; the line below crashes yasm...
-;	mov rax, $-$$
-;mov eax, uhoh wrt $$
+	mov rax, $-$$
+mov eax, uhoh wrt $$
 ;mov eax, hi+bye
 ;mov eax, bye+$
 ;mov eax, hi-$

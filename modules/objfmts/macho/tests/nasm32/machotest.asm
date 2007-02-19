@@ -60,6 +60,10 @@ _greet
 	  add esp,16
 	  ret
 
+; some internal calls
+	call _greet
+	call _lrotate.label
+
 [SECTION .data]
 
 ; a string

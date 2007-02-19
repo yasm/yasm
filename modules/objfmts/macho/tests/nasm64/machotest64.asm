@@ -80,6 +80,10 @@ _greet	  mov rax,[_integer wrt rip]	; [14]
 	pop rdi
 	  ret
 
+; some internal calls
+	call _greet
+	call _retrievelabel
+
 [SECTION .data]
 
 ; a string for Printf 

@@ -133,9 +133,32 @@
 /* Mach-O file header values */
 #define MH_MAGIC		0xfeedface
 #define MH_MAGIC_64		0xfeedfacf
+
+/* CPU machine type */
 #define CPU_TYPE_I386		7	/* x86 platform */
-#define CPU_SUBTYPE_I386_ALL	3	/* all-x86 compatible */
+#define CPU_TYPE_X86_64		(CPU_TYPE_I386|CPU_ARCH_ABI64)
 #define CPU_ARCH_ABI64		0x01000000	/* 64 bit ABI */
+
+/* CPU machine subtype, e.g. processor */
+#define CPU_SUBTYPE_I386_ALL	3	/* all-x86 compatible */
+#define	CPU_SUBTYPE_X86_64_ALL	CPU_SUBTYPE_I386_ALL
+#define CPU_SUBTYPE_386		3
+#define CPU_SUBTYPE_486		4
+#define CPU_SUBTYPE_486SX	(4 + 128)
+#define CPU_SUBTYPE_586		5
+#define CPU_SUBTYPE_INTEL(f, m)	((f) + ((m) << 4))
+#define CPU_SUBTYPE_PENT	CPU_SUBTYPE_INTEL(5, 0)
+#define CPU_SUBTYPE_PENTPRO	CPU_SUBTYPE_INTEL(6, 1)
+#define CPU_SUBTYPE_PENTII_M3	CPU_SUBTYPE_INTEL(6, 3)
+#define CPU_SUBTYPE_PENTII_M5	CPU_SUBTYPE_INTEL(6, 5)
+#define CPU_SUBTYPE_PENTIUM_4	CPU_SUBTYPE_INTEL(10, 0)
+
+#define CPU_SUBTYPE_INTEL_FAMILY(x)	((x) & 15)
+#define CPU_SUBTYPE_INTEL_FAMILY_MAX	15
+
+#define CPU_SUBTYPE_INTEL_MODEL(x)	((x) >> 4)
+#define CPU_SUBTYPE_INTEL_MODEL_ALL	0
+
 #define MH_OBJECT		0x1	/* object file */
 
 #define LC_SEGMENT		0x1	/* segment load command */
@@ -211,75 +234,49 @@
 #define align32(x) \
     align(x, 4)			/* align x to 32 bit boundary */
 
-
-#define REGULAR_OUTBUF_SIZE	1024
-
 #define macho_MAGIC	0x87654322
 
+/* Symbol table type field bit masks */
+#define N_STAB	0xe0		/* mask indicating stab entry */
+#define N_PEXT	0x10		/* private external bit */
+#define	N_TYPE	0x0e		/* mask for all the type bits */
+#define	N_EXT	0x01		/* external (global) bit */
+
+/* Symbol table type field values */
 #define	N_UNDF	0x00		/* undefined */
 #define	N_ABS	0x02		/* absolute address */
-#define	N_TEXT	0x04		/* text segment */
-#define	N_DATA	0x06		/* data segment */
-#define	N_BSS	0x08		/* bss segment */
-#define	N_COMM	0x12		/* common reference */
-#define	N_FN	0x1e		/* file name */
-#define	N_EXT	0x01		/* external (global) bit, OR'ed in */
-#define	N_TYPE	0x1e		/* mask for all the type bits */
-#define NO_SECT 0x00		/* no section for symbol in nlist */
 #define N_SECT  0x0e		/* symbol is defined in a section */
 
-#define macho_SYM_EXTERN	1
-#define macho_SYM_GLOBAL	2
-#define macho_SYM_EQU		4
+#define NO_SECT 0		/* no section for symbol in nlist */
 
-enum reloc_type_x86_64 {
-    X86_64_RELOC_UNSIGNED,	/* for absolute addresses */
-    X86_64_RELOC_SIGNED,	/* for signed 32-bit displacement */
-    X86_64_RELOC_BRANCH,	/* a CALL/JMP instruction with 32-bit displacement */
-    X86_64_RELOC_GOT_LOAD,	/* a MOVQ load of a GOT entry */
-    X86_64_RELOC_GOT,		/* other GOT references */
-    X86_64_RELOC_SUBTRACTOR,	/* must be followed by a X86_64_RELOC_UNSIGNED */
-    X86_64_RELOC_SIGNED_1,	/* for signed 32-bit displacement with a -1 addend */
-    X86_64_RELOC_SIGNED_2,	/* for signed 32-bit displacement with a -2 addend */
-    X86_64_RELOC_SIGNED_4	/* for signed 32-bit displacement with a -4 addend */
-};
+#define REGULAR_OUTBUF_SIZE	1024
 
 
 typedef struct macho_reloc {
     yasm_reloc reloc;
-    unsigned long line;		/* source code line */
-    /*@null@*/ yasm_symrec *base; /* base symbol (for WRT) */
-    yasm_intnum *file_symbol;	/* symbol written to file before fixing */
-    yasm_intnum *bcoffset;	/* byte code base (i.e. current instruction
-				 * for code, probably obsolete assumption)
-				 */
-    enum {
-	macho_RELOC_REL = 1,	/* relative to segment */
-	macho_RELOC_WRT = 2,	/* relative to symbol */
-	macho_RELOC_RIP = 4,	/* RIP-relative */
-	macho_RELOC_SEG = 8,	/* segment containing symbol */
-	macho_RELOC_EXT = 16,	/* external symbol */
-	macho_RELOC_SECTINT = 32, /* relative to current section (probably obsolete assumption) */
-	macho_RELOC_SECTINTL = 64 /* relative to current instruction (probably obsolete assumption) */
-    } type;			/* type of relocation */
-    enum {
-	macho_RELOC_8 = 1,
-	macho_RELOC_16 = 2,
-	macho_RELOC_32 = 4,
-	macho_RELOC_64 = 8
-    } size;			/* size of relocation */
-    unsigned int shift;		/* relocation shift (0,4,8,16,24,32) */
+    int pcrel;
+    int length;
+    int ext;
+    enum reloc_type_x86_64 {
+	/* x86 relocations */
+	GENERIC_RELOC_VANILLA = 0,	/* generic relocation */
+	GENERIC_RELOC_PAIR = 1,		/* Only follows a GENERIC_RELOC_SECTDIFF */
+	GENERIC_RELOC_SECTDIFF = 2,
+	GENERIC_RELOC_PB_LA_PTR = 3,	/* prebound lazy pointer */
+	GENERIC_RELOC_LOCAL_SECTDIFF = 4,
 
-    unsigned int rdummy;	/* dummy */
-    unsigned int rsnum:24;	/* contains symbol index if ext otherwise
-				 * in-file section number
-				 */
-    unsigned int rpcrel:1;	/* relative relocation */
-    unsigned int rlength:2;	/* 0=byte, 1=word, 2=long */
-    unsigned int rext:1;	/* external symbol referenced */
-    unsigned int rtype:4;	/* reloc type, 0 for us */
+	/* x86-64 relocations */
+	X86_64_RELOC_UNSIGNED = 0,	/* for absolute addresses */
+	X86_64_RELOC_SIGNED = 1,	/* for signed 32-bit displacement */
+	X86_64_RELOC_BRANCH = 2,	/* a CALL/JMP insn with 32-bit disp */
+	X86_64_RELOC_GOT_LOAD = 3,	/* a MOVQ load of a GOT entry */
+	X86_64_RELOC_GOT = 4,		/* other GOT references */
+	X86_64_RELOC_SUBTRACTOR = 5,	/* must be followed by a X86_64_RELOC_UNSIGNED */
+	X86_64_RELOC_SIGNED_1 = 6,	/* signed 32-bit disp, -1 addend */
+	X86_64_RELOC_SIGNED_2 = 7,	/* signed 32-bit disp, -2 addend */
+	X86_64_RELOC_SIGNED_4 = 8	/* signed 32-bit disp, -4 addend */
+    } type;
 } macho_reloc;
-
 
 typedef struct macho_section_data {
     /*@dependent@*/ yasm_symrec *sym; /* symbol created for this section */
@@ -288,10 +285,8 @@ typedef struct macho_section_data {
     const char *sectname;	/* section name in file */
     unsigned long flags;	/* S_* flags */
     unsigned long size;		/* size of raw data (section data) in bytes */
-    unsigned long offset;	/* offset in raw data within file in bytes, 
-				 * beginning with first section at offset 0 
-				 * (see raw_section_off in macho_objfmt_output_info),
-				 * this entry is excluding BSS */
+    unsigned long offset;	/* offset in raw data within file in bytes */
+    unsigned long vmoff;	/* memory offset */
     unsigned long nreloc;	/* number of relocation entries */
     unsigned int extreloc;	/* external relocations present (0/1) */
 } macho_section_data;
@@ -302,7 +297,7 @@ typedef struct macho_symrec_data {
     unsigned long index;	/* index in output order */
     yasm_intnum *value;		/* valid after writing symtable to file */
     unsigned long length;	/* length + 1 (plus auto underscore) */
-    unsigned long add_uscore;	/* add underscore (0/1) */
+    int add_uscore;		/* add underscore (0/1) */
 } macho_symrec_data;
 
 
@@ -330,12 +325,10 @@ typedef struct macho_objfmt_output_info {
 
     /* vmsize and filesize available after traversing section count routine */
     unsigned long vmsize;	/* raw size of all sections (including BSS) */
-    unsigned long filesize;	/* sections in file (excluding BSS) */
-    unsigned long raw_section_off; /* offset from start of file to raw section data */
+    unsigned long filesize;	/* size of sections in file (excluding BSS) */
+    unsigned long offset;	/* offset within file */
 
     /* forward offset tracking */
-    unsigned long offset;	/* current file offset */
-    unsigned long s_addr;	/* section offset in memory */
     unsigned long rel_base;	/* first relocation in file */
     unsigned long s_reloff;	/* in-file offset to relocations */
 
@@ -437,7 +430,7 @@ macho_objfmt_output_value(yasm_value *value, unsigned char *buf,
     /*@null@*/ macho_objfmt_output_info *info = (macho_objfmt_output_info *)d;
     yasm_objfmt_macho *objfmt_macho;
     /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
-    unsigned long intn_minus, intn_plus = 0;
+    unsigned long intn_minus = 0, intn_plus = 0;
     int retval;
     unsigned int valsize = value->size;
     macho_reloc *reloc = NULL;
@@ -468,73 +461,99 @@ macho_objfmt_output_value(yasm_value *value, unsigned char *buf,
 	return 1;
     }
 
-    intn_minus = 0;
     if (value->rel) {
 	yasm_sym_vis vis = yasm_symrec_get_visibility(value->rel);
 
 	reloc = yasm_xcalloc(sizeof(macho_reloc), 1);
 	reloc->reloc.addr = yasm_intnum_create_uint(bc->offset + offset);
 	reloc->reloc.sym = value->rel;
-	reloc->base = NULL;
-	reloc->line = bc->line;
-	reloc->bcoffset = yasm_intnum_create_uint(bc->offset);
 	switch (valsize) {
 	    case 64:
-		reloc->rlength = 3;
+		reloc->length = 3;
 		break;
 	    case 32:
-		reloc->rlength = 2;
+		reloc->length = 2;
 		break;
 	    case 16:
-		reloc->rlength = 1;
+		reloc->length = 1;
 		break;
 	    case 8:
-		reloc->rlength = 0;
+		reloc->length = 0;
 		break;
 	    default:
-		reloc->rlength = 0;
 		yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 			       N_("macho: relocation size unsupported"));
-		break;
+		yasm_xfree(reloc);
+		return 1;
 	}
-	reloc->size = valsize / 8;
-	reloc->shift = value->rshift;
+	reloc->pcrel = 0;
+	reloc->ext = 0;
+	reloc->type = GENERIC_RELOC_VANILLA;
 	/* R_ABS */
+
+	if (value->rshift > 0) {
+	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			   N_("macho: shifted relocations not supported"));
+	    yasm_xfree(reloc);
+	    return 1;
+	}
 
 	if (value->seg_of) {
 	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
-		N_("macho: Sorry, segment relocation types not supported by now."));
-
-	    reloc->type = macho_RELOC_SEG;
-	} else if (value->wrt) {
-	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
-		N_("macho: Sorry, wrt relocation types not supported by now."));
-	    reloc->base = value->wrt;
-	    reloc->type = macho_RELOC_WRT;
-	} else {
-	    if (value->curpos_rel) {
-		reloc->type = macho_RELOC_RIP;
-		if (!info->is_64) {
-		    /* Adjust to start of section, so subtract out the bytecode
-		     * offset.
-		     */
-		    intn_minus = bc->offset;
-		    reloc->rpcrel = 1;
-		} else {
-		    /* In 64 bit mode, the negative section offset is omitted
-		     * for pcrel, but instruction offset is encoded in
-		     * value->abs. Skip known instruction...
-		     */
-		    intn_plus = offset + valsize;
-		    reloc->rpcrel = 1;
-		}
-	    } else
-		reloc->type = macho_RELOC_REL;
+			   N_("macho: SEG not supported"));
+	    yasm_xfree(reloc);
+	    return 1;
 	}
 
+	if (value->wrt) {
+	    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+			   N_("macho: WRT not supported"));
+	    yasm_xfree(reloc);
+	    return 1;
+	}
+
+	if (value->curpos_rel) {
+	    reloc->pcrel = 1;
+	    if (!info->is_64) {
+		/* Adjust to start of section, so subtract out the bytecode
+		 * offset.
+		 */
+		intn_minus = bc->offset;
+	    } else {
+		/* Add in the offset plus value size to end up with 0. */
+		intn_plus = offset+destsize;
+		if (value->jump_target)
+		    reloc->type = X86_64_RELOC_BRANCH;
+		else
+		    reloc->type = X86_64_RELOC_SIGNED;
+	    }
+	} else if (info->is_64) {
+	    if (valsize == 32) {
+		yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+		    N_("macho: sorry, cannot apply 32 bit absolute relocations in 64 bit mode, consider \"[_symbol wrt rip]\" for mem access, \"qword\" and \"dq _foo\" for pointers."));
+		return 1;
+	    }
+	    reloc->type = X86_64_RELOC_UNSIGNED;
+	}
+
+	/* It seems that x86-64 objects need to have all extern relocs? */
+	if (info->is_64)
+	    reloc->ext = 1;
+
 	if ((vis & YASM_SYM_EXTERN) || (vis & YASM_SYM_COMMON)) {
-	    reloc->type |= macho_RELOC_EXT;
-	    info->msd->extreloc = 1;	/* this section has external relocations */
+	    reloc->ext = 1;
+	    info->msd->extreloc = 1;	/* section has external relocations */
+	} else if (!value->curpos_rel && !info->is_64) {
+	    /*@dependent@*/ /*@null@*/ yasm_bytecode *sym_precbc;
+
+	    /* Local symbols need valued to their actual address */
+	    if (yasm_symrec_get_label(value->rel, &sym_precbc)) {
+		yasm_section *sym_sect = yasm_bc_get_section(sym_precbc);
+		/*@null@*/ macho_section_data *msd;
+		msd = yasm_section_get_data(sym_sect, &macho_section_data_cb);
+		assert(msd != NULL);
+		intn_plus += msd->vmoff + yasm_bc_next_offset(sym_precbc);
+	    }
 	}
 
 	info->msd->nreloc++;
@@ -542,18 +561,14 @@ macho_objfmt_output_value(yasm_value *value, unsigned char *buf,
 	yasm_section_add_reloc(info->sect, (yasm_reloc *)reloc, yasm_xfree);
     }
 
-    if (intn_minus > 0) {
-	intn = yasm_intnum_create_uint(intn_minus);
+    if (intn_minus <= intn_plus)
+	intn = yasm_intnum_create_uint(intn_plus-intn_minus);
+    else {
+	intn = yasm_intnum_create_uint(intn_minus-intn_plus);
 	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
-    } else
-	intn = yasm_intnum_create_uint(0);
+    }
 
-    if (intn_plus > 0) {
-	yasm_intnum *intn_plus1 = yasm_intnum_create_uint(intn_plus);
-
-	yasm_intnum_calc(intn, YASM_EXPR_NEG, intn_plus1);
-	yasm_intnum_destroy(intn_plus1);
-    } else if (value->abs) {
+    if (value->abs) {
 	yasm_intnum *intn2 = yasm_expr_get_intnum(&value->abs, 0);
 
 	if (!intn2) {
@@ -568,10 +583,7 @@ macho_objfmt_output_value(yasm_value *value, unsigned char *buf,
     retval = yasm_arch_intnum_tobytes(objfmt_macho->arch, intn, buf, destsize,
 				      valsize, 0, bc, warn);
     /*printf("val %ld\n",yasm_intnum_get_int(intn));*/
-    if (reloc)
-	reloc->file_symbol = intn;
-    else
-	yasm_intnum_destroy(intn);
+    yasm_intnum_destroy(intn);
     return retval;
 }
 
@@ -613,7 +625,6 @@ macho_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
 	/* Output buf (or bigbuf if non-NULL) to file */
 	fwrite(bigbuf ? bigbuf : info->buf, (size_t) size, 1, info->f);
     }
-    info->msd->size += size;
 
     /* If bigbuf was allocated, free it */
     if (bigbuf)
@@ -637,136 +648,13 @@ macho_objfmt_output_section(yasm_section *sect, /*@null@ */ void *d)
     msd = yasm_section_get_data(sect, &macho_section_data_cb);
     assert(msd != NULL);
 
-    if (msd->flags & S_ZEROFILL) {
-	/* Don't output BSS sections */
-	msd->size = yasm_bc_next_offset(yasm_section_bcs_last(sect));
-    } else {
+    if (!(msd->flags & S_ZEROFILL)) {
+	/* Output non-BSS sections */
 	info->sect = sect;
 	info->msd = msd;
 	yasm_section_bcs_traverse(sect, info->errwarns, info,
 				  macho_objfmt_output_bytecode);
-	/* Sanity check final section size */
-	if (msd->size != yasm_bc_next_offset(yasm_section_bcs_last(sect)))
-	    yasm_internal_error(
-		N_("macho: section computed size did not match actual size"));
-
-	/* offset to section in file is current file size */
-	msd->offset = info->filesize;
-	info->filesize += msd->size;
     }
-
-    /* accumulate size in memory */
-    info->vmsize += msd->size;
-
-    return 0;
-}
-
-static int
-macho_objfmt_output_relocs64(yasm_section *sect, /*@null@ */ void *d)
-{
-    /*@null@*/ macho_objfmt_output_info *info = (macho_objfmt_output_info *)d;
-    /*@dependent@ *//*@null@ */ macho_section_data *msd;
-    macho_reloc *reloc;
-
-    /* FIXME: Don't output absolute sections into the section table */
-    if (yasm_section_is_absolute(sect))
-	return 0;
-
-    assert(info != NULL);
-    msd = yasm_section_get_data(sect, &macho_section_data_cb);
-    assert(msd != NULL);
-
-    /* No relocations to output?  Go on to next section */
-    if (msd->nreloc == 0)
-	return 0;
-
-    reloc = (macho_reloc *)yasm_section_relocs_first(sect);
-    while (reloc) {
-	unsigned char *localbuf = info->buf;
-	/*@null@ */ macho_symrec_data *xsymd;
-
-	xsymd = yasm_symrec_get_data(reloc->reloc.sym, &macho_symrec_data_cb);
-	if (!xsymd) {
-	    /* hmpf: there must be a better way than string compare ... */
-	    const char *chk = yasm_symrec_get_name(reloc->reloc.sym);
-
-	    if (strcmp(chk, "$") == 0 || strcmp(chk, "$$") == 0) {
-		reloc->rsnum = msd->scnum + 1;
-		reloc->type |= macho_RELOC_SECTINT;
-		if (strcmp(chk, "$") == 0)
-		    reloc->type |= macho_RELOC_SECTINTL;
-	    } else
-		yasm_internal_error(N_("macho: no symbol data for relocated symbol"));
-	}
-	yasm_intnum_get_sized(reloc->reloc.addr, localbuf, 4, 32, 0, 0, 0);
-	localbuf += 4;		/* address of relocation */
-
-	/* find section where the symbol relates to
-	 * (TODO: move elsewhere, duplicated code)
-	 */
-	if (reloc->type & macho_RELOC_EXT) {
-	    reloc->rext = 1;
-	    reloc->rsnum = xsymd->index;
-	    /* 32 bit relocations require RIP relative */
-	    if (reloc->rlength < 3) {
-		if (reloc->type & macho_RELOC_RIP) {
-		    reloc->rpcrel = 1;
-		    reloc->rtype = X86_64_RELOC_BRANCH;
-		} else {
-		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
-				   N_("macho: sorry, cannot apply 32 bit absolute relocations in 64 bit mode.\n"));
-		    yasm_errwarn_propagate(info->errwarns, reloc->line);
-		    return -1;
-		}
-	    }
-	} else {
-	    if (!(reloc->type & macho_RELOC_SECTINT)) {
-		reloc->rsnum = xsymd->index;
-		reloc->rext = 1;
-		/* futile attempt to get 32 bit relocations working */
-		if (reloc->rlength < 3) {
-		    if (reloc->type & macho_RELOC_RIP) {
-			reloc->rpcrel = 1;
-			reloc->rtype = X86_64_RELOC_BRANCH;
-		    } else {
-			yasm_error_set(YASM_ERROR_NOT_CONSTANT,
-				       N_("macho: sorry, cannot apply 32 bit absolute relocations in 64 bit mode, consider \"[_symbol wrt rip]\" for mem access, \"dq _foo\" for pointers.\n"));
-			yasm_errwarn_propagate(info->errwarns, reloc->line);
-			return -1;
-		    }
-		}
-#if 0
-		/*@dependent@ *//*@null@ */ yasm_section *dsect;
-		/*@dependent@ *//*@null@ */ yasm_bytecode *precbc;
-		int scnum = -1;
-
-		dsect = NULL;
-		if (yasm_symrec_get_label(reloc->reloc.sym, &precbc)) {
-		    if (precbc)
-			dsect = yasm_bc_get_section(precbc);
-		}
-		if (dsect) {
-		    /*@dependent@ *//*@null@ */ macho_section_data *csectd;
-
-		    csectd =
-			yasm_section_get_data(dsect, &macho_section_data_cb);
-		    if (csectd)
-			scnum = csectd->scnum;
-		}
-		if (scnum >= 0) {
-		    /* section found, apply to struct */
-		    reloc->rsnum = scnum + 1;	/* 0=ABSOLUTE, >0 section number for internal symbols */
-		}
-#endif
-	    }
-	}
-
-	YASM_WRITE_32_L(localbuf, (&reloc->rdummy)[1]);	/* *urgh*, what kinda mess did I create here :-(  */
-	fwrite(info->buf, 8, 1, info->f);
-
-	reloc = (macho_reloc *) yasm_section_reloc_next((yasm_reloc *)reloc);
-    }
-
     return 0;
 }
 
@@ -781,183 +669,40 @@ macho_objfmt_output_relocs(yasm_section *sect, /*@null@*/ void *d)
     if (yasm_section_is_absolute(sect))
 	return 0;
 
-    assert(info != NULL);
-    msd = yasm_section_get_data(sect, &macho_section_data_cb);
-    assert(msd != NULL);
-
-    /* No relocations to output?  Go on to next section */
-    if (msd->nreloc == 0)
-	return 0;
-
-    reloc = (macho_reloc *) yasm_section_relocs_first(sect);
+    reloc = (macho_reloc *)yasm_section_relocs_first(sect);
     while (reloc) {
 	unsigned char *localbuf = info->buf;
-	/*@null@ */ macho_symrec_data *xsymd;
+	/*@null@*/ macho_symrec_data *xsymd;
+	unsigned long symnum;
 
 	xsymd = yasm_symrec_get_data(reloc->reloc.sym, &macho_symrec_data_cb);
-	if (!xsymd) {
-	    /* hmpf: there must be a better way than string compare ... */
-	    const char *chk = yasm_symrec_get_name(reloc->reloc.sym);
-
-	    if ((strcmp(chk, "$") == 0) || (strcmp(chk, "$$") == 0)) {
-		reloc->rsnum = msd->scnum + 1;
-		reloc->type |= macho_RELOC_SECTINT;
-		if (strcmp(chk, "$") == 0)
-		    reloc->type |= macho_RELOC_SECTINTL;
-	    } else {
-		yasm_internal_error(N_
-				    ("macho: no symbol data for relocated symbol"));
-	    }
-	}
 	yasm_intnum_get_sized(reloc->reloc.addr, localbuf, 4, 32, 0, 0, 0);
 	localbuf += 4;		/* address of relocation */
 
-	/* find section where the symbol relates to (TODO: move elsewhere, duplicated code) */
-	if (reloc->type & macho_RELOC_EXT) {
-	    reloc->rext = 1;
-	    reloc->rsnum = xsymd->index;
-	} else {
-	    if (!(reloc->type & macho_RELOC_SECTINT)) {
-		/*@dependent@ *//*@null@ */ yasm_section *dsect;
-		/*@dependent@ *//*@null@ */ yasm_bytecode *precbc;
-		int scnum = -1;
-
-		dsect = NULL;
-		if (yasm_symrec_get_label(reloc->reloc.sym, &precbc)) {
-		    if (precbc)
-			dsect = yasm_bc_get_section(precbc);
-		}
-		if (dsect) {
-		    /*@dependent@ *//*@null@ */ macho_section_data *csectd;
-
-		    csectd =
-			yasm_section_get_data(dsect, &macho_section_data_cb);
-		    if (csectd)
-			scnum = csectd->scnum;
-		}
-		if (scnum >= 0) {
-		    /* section found, apply to struct */
-		    reloc->rsnum = scnum + 1;	/* 0=ABSOLUTE, >0 section number for internal symbols */
-		}
-	    }
+	if (reloc->ext)
+	    symnum = xsymd->index;
+	else {
+	    /* find section where the symbol relates to */
+	    /*@dependent@*/ /*@null@*/ yasm_section *dsect;
+	    /*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
+	    symnum = 0;	/* default to absolute */
+	    if (yasm_symrec_get_label(reloc->reloc.sym, &precbc) &&
+		(dsect = yasm_bc_get_section(precbc)) &&
+		(msd = yasm_section_get_data(dsect, &macho_section_data_cb)))
+		symnum = msd->scnum+1;
 	}
-
-	YASM_WRITE_32_L(localbuf, (&reloc->rdummy)[1]);	/* *urgh*, what kinda mess did I create here :-(  */
+	YASM_WRITE_32_L(localbuf,
+			(symnum & 0x00ffffff) |
+			(((unsigned long)reloc->pcrel & 1) << 24) |
+			(((unsigned long)reloc->length & 3) << 25) |
+			(((unsigned long)reloc->ext & 1) << 27) |
+			(((unsigned long)reloc->type & 0xf) << 28));
 	fwrite(info->buf, 8, 1, info->f);
-
-	reloc = (macho_reloc *) yasm_section_reloc_next((yasm_reloc *)reloc);
-    }
-
-    return 0;
-}
-
-static void
-macho_objfmt_patch_withinfile(macho_reloc * reloc, yasm_intnum *value,
-			      macho_objfmt_output_info *info, long pos)
-{
-    unsigned char *localbuf = info->buf;
-    unsigned long bytes;
-
-    /* seek in file to current symbol scheduled for resetting */
-    fseek(info->f, pos, SEEK_SET);
-    /* select type, write either 1,2 or 4 bytes to relocation (note: 64 bit relocations are apparently not supported in macho ?!) */
-    bytes = 1 << reloc->rlength;	/* 1,2,4 */
-    yasm_intnum_get_sized(value, localbuf, bytes, bytes << 3, 0, 0, 0);
-
-    fwrite(localbuf, 1, bytes, info->f);
-}
-
-/* fix relocated symbols in file*/
-static int
-macho_objfmt_fixup_relocs(yasm_section *sect, /*@null@*/ void *d)
-{
-    /*@null@*/ macho_objfmt_output_info *info = (macho_objfmt_output_info *)d;
-    /*@dependent@*/ /*@null@*/ macho_section_data *msd;
-    macho_reloc *reloc;
-    long filepos, sectpos;
-    yasm_intnum *val;
-
-    /* no relocation fixes for 64 bit mode right now */
-    if (info->is_64)
-	return 0;
-
-    /* FIXME: Don't output absolute sections into the section table */
-    if (yasm_section_is_absolute(sect))
-	return 0;
-
-    assert(info != NULL);
-    msd = yasm_section_get_data(sect, &macho_section_data_cb);
-    assert(msd != NULL);
-
-    /* No relocations to output?  Go on to next section */
-    if (msd->nreloc == 0)
-	return 0;
-
-    filepos = ftell(info->f);
-    if (filepos == -1) {
-	yasm__fatal(N_("could not get file position on output file"));
-	/*@notreached@ */
-	return 1;
-    }
-
-    sectpos = info->raw_section_off;	/* first section in file */
-    sectpos += msd->offset;	/* first byte of current section in file */
-
-    reloc = (macho_reloc *)yasm_section_relocs_first(sect);
-    while (reloc) {
-	/*@null@ */ macho_symrec_data *xsymd;
-
-	if (reloc->type & macho_RELOC_SECTINT) {
-	    val = yasm_intnum_copy(reloc->file_symbol);
-	    if (reloc->type & macho_RELOC_SECTINTL)
-		yasm_intnum_calc(val, YASM_EXPR_ADD, reloc->bcoffset);
-	    /* patch */
-	    macho_objfmt_patch_withinfile(reloc, val, info,
-		(long)(sectpos + yasm_intnum_get_uint(reloc->reloc.addr)));
-	    yasm_intnum_destroy(val);
-	} else {
-	    xsymd =
-		yasm_symrec_get_data(reloc->reloc.sym, &macho_symrec_data_cb);
-	    if (!xsymd) {
-		yasm_internal_error(N_
-				    ("macho: no symbol data for relocated symbol"));
-	    }
-	    if (reloc->type & macho_RELOC_EXT) {
-		/* no change for external symbols */
-	    } else {
-		/* FIXME: ABS SYMBOLS ?! */
-
-		/* retrieve symbol location in file */
-		if (xsymd->value) {
-		    val = yasm_intnum_copy(xsymd->value);
-		    yasm_intnum_calc(val, YASM_EXPR_ADD, reloc->file_symbol);	/* is this necessary ? */
-		    /* patch */
-		    macho_objfmt_patch_withinfile(reloc, val, info,
-			(long)(sectpos +
-			       yasm_intnum_get_uint(reloc->reloc.addr)));
-		    yasm_intnum_destroy(val);
-		} else {
-		    yasm_warn_set(YASM_WARN_GENERAL,
-			N_("macho: cannot relocate symbol for macho file"));
-		}
-	    }
-	}
-
 	reloc = (macho_reloc *)yasm_section_reloc_next((yasm_reloc *)reloc);
     }
 
-    /* return file pos to original */
-    filepos = (long)fseek(info->f, filepos, SEEK_SET);
-    if (filepos == -1) {
-	yasm__fatal(N_("could not get file position on output file"));
-	/*@notreached@ */
-	return 1;
-    }
-
     return 0;
 }
-
-
 
 static int
 exp2_to_bits(unsigned long val)
@@ -972,7 +717,6 @@ exp2_to_bits(unsigned long val)
 
     return ret;
 }
-
 
 static int
 macho_objfmt_is_section_label(yasm_symrec *sym)
@@ -1020,7 +764,7 @@ macho_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     fwrite(msd->sectname, 16, 1, info->f);
     fwrite(msd->segname, 16, 1, info->f);
     /* section address, size depend on 32/64 bit mode */
-    YASM_WRITE_32_L(localbuf, info->s_addr);	/* address in memory */
+    YASM_WRITE_32_L(localbuf, msd->vmoff);	/* address in memory */
     if (info->is_64)
 	YASM_WRITE_32_L(localbuf, 0);	/* 64-bit mode: upper 32 bits = 0 */
     YASM_WRITE_32_L(localbuf, msd->size);	/* size in memory */
@@ -1029,7 +773,7 @@ macho_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 
     /* offset,align,reloff,nreloc,flags,reserved1,reserved2 are 32 bit */
     if ((msd->flags & SECTION_TYPE) != S_ZEROFILL) {
-	YASM_WRITE_32_L(localbuf, info->offset);
+	YASM_WRITE_32_L(localbuf, msd->offset);
 	YASM_WRITE_32_L(localbuf, exp2_to_bits(yasm_section_get_align(sect)));
 	if (msd->nreloc) {
 	    msd->flags |= S_ATTR_LOC_RELOC;
@@ -1043,7 +787,6 @@ macho_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 	    YASM_WRITE_32_L(localbuf, 0);
 	}
 
-	info->offset += msd->size;	/* section size */
 	info->s_reloff += msd->nreloc * MACHO_RELINFO_SIZE;	/* nreloc */
     } else {
 	YASM_WRITE_32_L(localbuf, 0);	/* these are zero in BSS */
@@ -1055,8 +798,6 @@ macho_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     YASM_WRITE_32_L(localbuf, msd->flags);	/* flags */
     YASM_WRITE_32_L(localbuf, 0);	/* reserved 1 */
     YASM_WRITE_32_L(localbuf, 0);	/* reserved 2 */
-
-    info->s_addr += msd->size;	/* offset in memory */
 
     if (info->is_64)
 	fwrite(info->buf, MACHO_SECTCMD64_SIZE - 32, 1, info->f);	/* 2*16 byte strings already written */
@@ -1072,13 +813,11 @@ macho_objfmt_count_sym(yasm_symrec *sym, /*@null@*/ void *d)
 {
     /*@null@*/ macho_objfmt_output_info *info = (macho_objfmt_output_info *)d;
     const char *name;
-
-#ifdef AUTO_UNDERSCORE
-    yasm_sym_vis vis;
-#endif
+    yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
 
     assert(info != NULL);
-    if (info->all_syms || yasm_symrec_get_visibility(sym) != YASM_SYM_LOCAL) {
+    if (info->all_syms ||
+	vis & (YASM_SYM_GLOBAL | YASM_SYM_COMMON | YASM_SYM_EXTERN)) {
 	if (0 == macho_objfmt_is_section_label(sym)) {
 	    /* Save index in symrec data */
 	    macho_symrec_data *sym_data =
@@ -1093,7 +832,6 @@ macho_objfmt_count_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	    name = yasm_symrec_get_name(sym);	/*printf("%s\n",name); */
 	    sym_data->add_uscore = 0;
 #ifdef AUTO_UNDERSCORE
-	    vis = yasm_symrec_get_visibility(sym);
 	    if (vis & (YASM_SYM_EXTERN | YASM_SYM_COMMON | YASM_SYM_GLOBAL)) {
 		if (name[0] != '_')
 		    sym_data->add_uscore = 1;
@@ -1116,14 +854,14 @@ macho_objfmt_output_symtable(yasm_symrec *sym, /*@null@*/ void *d)
 
     assert(info != NULL);
 
-    if (info->all_syms || vis != YASM_SYM_LOCAL) {
+    if (info->all_syms ||
+	vis & (YASM_SYM_GLOBAL | YASM_SYM_COMMON | YASM_SYM_EXTERN)) {
 	const yasm_expr *equ_val;
 	const yasm_intnum *intn;
 	unsigned long value = 0;
 	long scnum = -3;	/* -3 = debugging symbol */
 	/*@dependent@*/ /*@null@*/ yasm_section *sect;
 	/*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
-	unsigned long flags = 0;
 	unsigned char *localbuf;
 	yasm_intnum *val;
 	unsigned int long_int_bytes = (info->is_64) ? 8 : 4;
@@ -1144,18 +882,17 @@ macho_objfmt_output_symtable(yasm_symrec *sym, /*@null@*/ void *d)
 	     * If there is not a section, leave as debugging symbol.
 	     */
 	    if (sect) {
-		/*@dependent@*/ /*@null@*/ macho_section_data *csectd;
+		/*@dependent@*/ /*@null@*/ macho_section_data *msd;
 
-		if (strcmp
-		    (yasm_symrec_get_name(sym),
-		     yasm_section_get_name(sect)) == 0) {
+		if (strcmp(yasm_symrec_get_name(sym),
+			   yasm_section_get_name(sect)) == 0) {
 		    /* don't store section names */
 		    yasm_intnum_destroy(val);
 		    return 0;
 		}
-		csectd = yasm_section_get_data(sect, &macho_section_data_cb);
-		if (csectd) {
-		    scnum = csectd->scnum;
+		msd = yasm_section_get_data(sect, &macho_section_data_cb);
+		if (msd) {
+		    scnum = msd->scnum;
 		    n_type = N_SECT;
 		} else {
 		    if (yasm_section_is_absolute(sect)) {
@@ -1173,7 +910,6 @@ macho_objfmt_output_symtable(yasm_symrec *sym, /*@null@*/ void *d)
 			    value = yasm_intnum_get_uint(intn);
 			yasm_expr_destroy(abs_start);
 
-			flags |= macho_SYM_EQU;
 			scnum = -2;	/* -2 = absolute symbol */
 		    } else
 			yasm_internal_error(N_("didn't understand section"));
@@ -1183,8 +919,8 @@ macho_objfmt_output_symtable(yasm_symrec *sym, /*@null@*/ void *d)
 		/* all values are subject to correction: base offset is first
 		 * raw section, therefore add section offset
 		 */
-		if (csectd)
-		    value += csectd->offset;
+		if (msd)
+		    value += msd->vmoff;
 		yasm_intnum_set_uint(val, value);
 		/*printf("%s offset %lx\n",name,value);*/
 	    }
@@ -1195,15 +931,13 @@ macho_objfmt_output_symtable(yasm_symrec *sym, /*@null@*/ void *d)
 	    if (!intn) {
 		if (vis & YASM_SYM_GLOBAL) {
 		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
-				   N_
-				   ("global EQU value not an integer expression"));
+			N_("global EQU value not an integer expression"));
 		    yasm_errwarn_propagate(info->errwarns, equ_val->line);
 		}
 	    } else
 		value = yasm_intnum_get_uint(intn);
 	    yasm_expr_destroy(equ_val_copy);
 	    yasm_intnum_set_uint(val, value);
-	    flags |= macho_SYM_EQU;
 	    n_type = N_ABS;
 	    scnum = -2;		/* -2 = absolute symbol */
 	}
@@ -1211,29 +945,21 @@ macho_objfmt_output_symtable(yasm_symrec *sym, /*@null@*/ void *d)
 	if (vis & YASM_SYM_EXTERN) {
 	    n_type = N_EXT;
 	    scnum = -1;
-	    n_desc = REFERENCE_FLAG_UNDEFINED_LAZY;	/* FIXME: see definition of REFERENCE_FLAG_* above */
-	} else {
-	    if (vis & YASM_SYM_COMMON) {
-		n_type = N_UNDF | N_EXT;
-		if (symd) {
-		    intn = yasm_expr_get_intnum(&symd->size, 1);
-		    if (!intn) {
-			yasm_error_set(YASM_ERROR_NOT_CONSTANT,
-				       N_
-				       ("COMMON data size not an integer expression"));
-			yasm_errwarn_propagate(info->errwarns,
-					       symd->size->line);
-		    } else {
-			yasm_intnum_set_uint(val, yasm_intnum_get_uint(intn));
-		    }
-		}
-		/*printf("common symbol %s val %lu\n", name, yasm_intnum_get_uint(val));*/
-	    } else {
-		if (vis & YASM_SYM_GLOBAL) {
-		    flags = macho_SYM_GLOBAL;
-		    n_type |= N_EXT;
-		}
+	    /*n_desc = REFERENCE_FLAG_UNDEFINED_LAZY;	* FIXME: see definition of REFERENCE_FLAG_* above */
+	} else if (vis & YASM_SYM_COMMON) {
+	    n_type = N_UNDF | N_EXT;
+	    if (symd) {
+		intn = yasm_expr_get_intnum(&symd->size, 1);
+		if (!intn) {
+		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+				   N_("COMMON data size not an integer expression"));
+		    yasm_errwarn_propagate(info->errwarns, symd->size->line);
+		} else
+		    yasm_intnum_set_uint(val, yasm_intnum_get_uint(intn));
 	    }
+	    /*printf("common symbol %s val %lu\n", name, yasm_intnum_get_uint(val));*/
+	} else if (vis & YASM_SYM_GLOBAL) {
+	    n_type |= N_EXT;
 	}
 
 	localbuf = info->buf;
@@ -1268,7 +994,8 @@ macho_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
 
     assert(info != NULL);
 
-    if (info->all_syms || vis != YASM_SYM_LOCAL) {
+    if (info->all_syms ||
+	vis & (YASM_SYM_GLOBAL | YASM_SYM_COMMON | YASM_SYM_EXTERN)) {
 	if (0 == macho_objfmt_is_section_label(sym)) {
 	    const char *name = yasm_symrec_get_name(sym);
 	    size_t len = strlen(name);
@@ -1282,7 +1009,34 @@ macho_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
     return 0;
 }
 
+static int
+macho_objfmt_calc_sectsize(yasm_section *sect, /*@null@ */ void *d)
+{
+    /*@null@ */ macho_objfmt_output_info *info =
+	(macho_objfmt_output_info *) d;
+    /*@dependent@ *//*@null@ */ macho_section_data *msd;
 
+    /* FIXME: Don't output absolute sections into the section table */
+    if (yasm_section_is_absolute(sect))
+	return 0;
+
+    assert(info != NULL);
+    msd = yasm_section_get_data(sect, &macho_section_data_cb);
+    assert(msd != NULL);
+
+    msd->size = yasm_bc_next_offset(yasm_section_bcs_last(sect));
+    if (!(msd->flags & S_ZEROFILL)) {
+	msd->offset = info->offset;
+	info->offset += msd->size;
+	info->filesize += msd->size;
+    }
+
+    /* accumulate size in memory */
+    msd->vmoff = info->vmsize;
+    info->vmsize += msd->size;
+
+    return 0;
+}
 
 /* write object */
 static void
@@ -1348,7 +1102,8 @@ macho_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
     info.symindex = 0;
     info.indx = 0;
     info.strlength = 1;		/* string table starts with a zero byte */
-    info.all_syms = 1;		/* force all syms into symbol table */
+    info.all_syms = all_syms || info.is_64;
+    /*info.all_syms = 1;		* force all syms into symbol table */
     yasm_symtab_traverse(objfmt_macho->symtab, &info, macho_objfmt_count_sym);
     symtab_count = info.indx;
 
@@ -1364,7 +1119,11 @@ macho_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
      */
     info.vmsize = 0;
     info.filesize = 0;
-    info.raw_section_off = headsize;	/* first section in file */
+    info.offset = headsize;
+    yasm_object_sections_traverse(objfmt_macho->object, &info,
+				  macho_objfmt_calc_sectsize);
+
+    /* output sections to file */
     yasm_object_sections_traverse(objfmt_macho->object, &info,
 				  macho_objfmt_output_section);
 
@@ -1459,8 +1218,6 @@ macho_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
     fwrite(info.buf, (size_t) (localbuf - info.buf), 1, f);
 
     /* next: section headers */
-    info.offset = fileoffset;	/* store offset of first section */
-    info.s_addr = 0;		/* first section starts at address 0 */
     /* offset to relocs for first section */
     info.rel_base = align32((long)fileoffset + (long)info.filesize);
     info.s_reloff = 0;		/* offset for relocs of following sections */
@@ -1487,7 +1244,7 @@ macho_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
     /* get back to end of raw section data */
     if (fseek(f, (long)fileoff_sections, SEEK_SET) < 0) {
 	yasm__fatal(N_("could not seek on output file"));
-	/*@notreached@ */
+	/*@notreached@*/
 	return;
     }
 
@@ -1497,12 +1254,8 @@ macho_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
     }
 
     /* relocation data */
-    if (info.is_64)
-	yasm_object_sections_traverse(objfmt_macho->object, &info,
-				      macho_objfmt_output_relocs64);
-    else
-	yasm_object_sections_traverse(objfmt_macho->object, &info,
-				      macho_objfmt_output_relocs);
+    yasm_object_sections_traverse(objfmt_macho->object, &info,
+				  macho_objfmt_output_relocs);
 
     /* symbol table (NLIST) */
     info.indx = 1;		/* restart symbol table indices */
@@ -1513,13 +1266,13 @@ macho_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
     fwrite(pad_data, 1, 1, f);
     yasm_symtab_traverse(objfmt_macho->symtab, &info,
 			 macho_objfmt_output_str);
-
+#if 0
     /* relocation fixup: set internal symbol locations into byte code within
      * file.
      */
     yasm_object_sections_traverse(objfmt_macho->object, &info,
 				  macho_objfmt_fixup_relocs);
-
+#endif
     yasm_intnum_destroy(val);
     yasm_xfree(info.buf);
 }
@@ -1567,6 +1320,10 @@ macho_objfmt_add_default_section(yasm_objfmt *objfmt)
 				&isnew, 0);
     if (isnew) {
 	msd = macho_objfmt_init_new_section(objfmt_macho, retval, ".text", 0);
+	msd->segname = "__TEXT";
+	msd->sectname = "__text";
+	msd->flags = S_ATTR_PURE_INSTRUCTIONS;
+	yasm_section_set_align(retval, 0, 0);
 	yasm_section_set_default(retval, 1);
     }
     return retval;
