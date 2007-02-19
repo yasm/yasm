@@ -241,6 +241,9 @@ parse_line(yasm_parser_gas *parser_gas)
     unsigned int ival;
     char *id;
 
+    if (is_eol())
+	return NULL;
+
     bc = parse_instr(parser_gas);
     if (bc)
 	return bc;
@@ -253,7 +256,7 @@ parse_line(yasm_parser_gas *parser_gas)
 		/* Label */
 		get_next_token(); /* : */
 		define_label(parser_gas, id, 0);
-		return parse_instr(parser_gas);
+		return parse_line(parser_gas);
 	    } else if (curtok == '=') {
 		/* EQU */
 		get_next_token(); /* = */
@@ -278,7 +281,7 @@ parse_line(yasm_parser_gas *parser_gas)
 	case LABEL:
 	    define_label(parser_gas, LABEL_val, 0);
 	    get_next_token(); /* LABEL */
-	    return parse_instr(parser_gas);
+	    return parse_line(parser_gas);
 
 	/* Line directive */
 	case DIR_LINE:
