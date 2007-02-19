@@ -28,6 +28,8 @@ EXTRA_DIST += modules/arch/x86/tests/gas64/gas-retenter.asm
 EXTRA_DIST += modules/arch/x86/tests/gas64/gas-retenter.hex
 EXTRA_DIST += modules/arch/x86/tests/gas64/gas-shift.asm
 EXTRA_DIST += modules/arch/x86/tests/gas64/gas-shift.hex
+EXTRA_DIST += modules/arch/x86/tests/gas64/gas64-jmpcall.asm
+EXTRA_DIST += modules/arch/x86/tests/gas64/gas64-jmpcall.hex
 EXTRA_DIST += modules/arch/x86/tests/gas64/riprel.asm
 EXTRA_DIST += modules/arch/x86/tests/gas64/riprel.hex
 

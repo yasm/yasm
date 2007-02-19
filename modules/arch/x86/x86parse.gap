@@ -145,6 +145,8 @@ INSN	-	shld	"wlq"	shlrd	0xA4		CPU_386
 INSN	-	shrd	"wlq"	shlrd	0xAC		CPU_386
 # Control transfer instructions unconditional)
 INSN	-	call	NONE	call	0		CPU_Any
+INSN	gas	calll	NONE	call	0		CPU_Not64
+INSN	gas	callq	NONE	call	0		CPU_Hammer|CPU_64
 INSN	-	jmp	NONE	jmp	0		CPU_Any
 INSN	-	ret	NONE	retnf	0x00C2		CPU_Any
 INSN	gas	retw	NONE	retnf	0x10C2		CPU_Any
