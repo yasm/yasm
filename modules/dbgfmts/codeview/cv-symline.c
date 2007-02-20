@@ -542,9 +542,13 @@ cv_generate_sym(yasm_symrec *sym, void *d)
 {
     cv_line_info *info = (cv_line_info *)d;
     yasm_bytecode *precbc;
+    const char *name = yasm_symrec_get_name(sym);
 
-    /* only care about labels (for now) */
-    if (!yasm_symrec_get_label(sym, &precbc))
+    /* only care about labels (for now).  Don't put in symbols starting with
+     * ".", as these are typically internally generated ones (like section
+     * symbols).
+     */
+    if (name[0] == '.' || !yasm_symrec_get_label(sym, &precbc))
 	return 0;
 
     /* TODO: add data types; until then, just mark everything as UBYTE */
