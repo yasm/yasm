@@ -6,7 +6,6 @@
 
 frontends/yasm/yasm-options.c
 frontends/yasm/yasm.c
-gas-token.c
 #lc3bid.c
 libyasm/bc-align.c
 libyasm/bc-data.c
@@ -52,7 +51,8 @@ modules/objfmts/rdf/rdf-objfmt.c
 modules/objfmts/xdf/xdf-objfmt.c
 modules/parsers/gas/gas-parse.c
 modules/parsers/gas/gas-parser.c
+modules/parsers/gas/gas-token.re
 modules/parsers/nasm/nasm-parse.c
+modules/parsers/nasm/nasm-token.re
 modules/preprocs/nasm/nasm-pp.c
 modules/preprocs/raw/raw-preproc.c
-nasm-token.c

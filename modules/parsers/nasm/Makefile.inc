@@ -3,7 +3,7 @@
 libyasm_a_SOURCES += modules/parsers/nasm/nasm-parser.c
 libyasm_a_SOURCES += modules/parsers/nasm/nasm-parser.h
 libyasm_a_SOURCES += modules/parsers/nasm/nasm-parse.c
-libyasm_a_SOURCES += nasm-token.c
+nodist_libyasm_a_SOURCES += nasm-token.c
 
 YASM_MODULES += parser_nasm
 

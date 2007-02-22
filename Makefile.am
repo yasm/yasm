@@ -16,7 +16,7 @@ check_PROGRAMS = test_hd
 test_hd_SOURCES = test_hd.c
 
 include_HEADERS = libyasm.h
-include_HEADERS += libyasm-stdint.h
+nodist_include_HEADERS = libyasm-stdint.h
 
 noinst_HEADERS = util.h
 
@@ -42,6 +42,7 @@ include tools/Makefile.inc
 YASM_MODULES = 
 lib_LIBRARIES = libyasm.a
 libyasm_a_SOURCES =
+nodist_libyasm_a_SOURCES =
 include modules/Makefile.inc
 
 include libyasm/Makefile.inc
