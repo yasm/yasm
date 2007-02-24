@@ -424,7 +424,7 @@ macho64_objfmt_create(yasm_object *object, yasm_arch *a)
 
 static int
 macho_objfmt_output_value(yasm_value *value, unsigned char *buf,
-			  size_t destsize, unsigned long offset,
+			  unsigned int destsize, unsigned long offset,
 			  yasm_bytecode *bc, int warn, /*@null@*/ void *d)
 {
     /*@null@*/ macho_objfmt_output_info *info = (macho_objfmt_output_info *)d;
@@ -837,7 +837,9 @@ macho_objfmt_count_sym(yasm_symrec *sym, /*@null@*/ void *d)
 		    sym_data->add_uscore = 1;
 	    }
 #endif
-	    sym_data->length = strlen(name) + sym_data->add_uscore + 1;	/* name length + delimiter */
+	    /* name length + delimiter */
+	    sym_data->length =
+		(unsigned long)strlen(name) + sym_data->add_uscore + 1;
 	    info->strlength += sym_data->length;
 	    info->indx++;
 	}

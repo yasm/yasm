@@ -170,12 +170,12 @@ static const yasm_bytecode_callback dwarf2_line_op_bc_callback = {
 
 
 static size_t
-dwarf2_dbgfmt_add_file(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2, size_t filenum,
+dwarf2_dbgfmt_add_file(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2, unsigned long filenum,
 		       const char *pathname)
 {
     size_t dirlen;
     const char *filename;
-    size_t i, dir;
+    unsigned long i, dir;
 
     /* Put the directory into the directory table */
     dir = 0;
@@ -214,7 +214,7 @@ dwarf2_dbgfmt_add_file(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2, size_t filenum,
 
     /* Realloc table if necessary */
     if (filenum >= dbgfmt_dwarf2->filenames_allocated) {
-	size_t old_allocated = dbgfmt_dwarf2->filenames_allocated;
+	unsigned long old_allocated = dbgfmt_dwarf2->filenames_allocated;
 	dbgfmt_dwarf2->filenames_allocated = filenum+32;
 	dbgfmt_dwarf2->filenames = yasm_xrealloc(dbgfmt_dwarf2->filenames,
 	    sizeof(dwarf2_filename)*dbgfmt_dwarf2->filenames_allocated);
@@ -448,7 +448,7 @@ typedef struct dwarf2_line_bc_info {
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2;
     dwarf2_line_state *state;
     dwarf2_loc loc;
-    size_t lastfile;
+    unsigned long lastfile;
 } dwarf2_line_bc_info;
 
 static int
@@ -456,7 +456,7 @@ dwarf2_generate_line_bc(yasm_bytecode *bc, /*@null@*/ void *d)
 {
     dwarf2_line_bc_info *info = (dwarf2_line_bc_info *)d;
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = info->dbgfmt_dwarf2;
-    size_t i;
+    unsigned long i;
     const char *filename;
     /*@null@*/ yasm_bytecode *nextbc = yasm_bc__next(bc);
 
@@ -657,7 +657,7 @@ yasm_dwarf2__generate_line(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 
     /* directory list */
     for (i=0; i<dbgfmt_dwarf2->dirs_size; i++)
-	sppbc->len += strlen(dbgfmt_dwarf2->dirs[i])+1;
+	sppbc->len += (unsigned long)strlen(dbgfmt_dwarf2->dirs[i])+1;
     sppbc->len++;
 
     /* filename list */
@@ -668,7 +668,8 @@ yasm_dwarf2__generate_line(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	    yasm_errwarn_propagate(errwarns, 0);
 	    continue;
 	}
-	sppbc->len += strlen(dbgfmt_dwarf2->filenames[i].filename) + 1 +
+	sppbc->len +=
+	    (unsigned long)strlen(dbgfmt_dwarf2->filenames[i].filename) + 1 +
 	    yasm_size_uleb128(dbgfmt_dwarf2->filenames[i].dir) + 2;
     }
     sppbc->len++;
@@ -722,7 +723,7 @@ dwarf2_spp_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     size_t i, len;
 
     /* Prologue length (following this field) */
-    cval = yasm_intnum_create_uint(bc->len - (buf-*bufp) -
+    cval = yasm_intnum_create_uint(bc->len - (unsigned long)(buf-*bufp) -
 				   dbgfmt_dwarf2->sizeof_offset);
     yasm_arch_intnum_tobytes(dbgfmt_dwarf2->arch, cval, buf,
 			     dbgfmt_dwarf2->sizeof_offset,
@@ -966,7 +967,7 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	return 0;
     } else if (yasm__strcasecmp(name, "file") == 0) {
 	/*@dependent@*/ /*@null@*/ const yasm_intnum *file_intn;
-	size_t filenum;
+	unsigned long filenum;
 
 	if (!valparams) {
 	    yasm_error_set(YASM_ERROR_SYNTAX, N_("[%s] requires an argument"),
@@ -988,7 +989,7 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 			   N_("file number is not a constant"));
 	    return 0;
 	}
-	filenum = (size_t)yasm_intnum_get_uint(file_intn);
+	filenum = yasm_intnum_get_uint(file_intn);
 
 	vp = yasm_vps_next(vp);
 	if (!vp || !vp->val) {

@@ -75,7 +75,7 @@ yasm_expr_create(yasm_expr_op op, yasm_expr__item *left,
     ptr->terms[1].type = YASM_EXPR_NONE;
     if (left) {
 	ptr->terms[0] = *left;	/* structure copy */
-	z = left-itempool;
+	z = (unsigned long)(left-itempool);
 	if (z>=31)
 	    yasm_internal_error(N_("could not find expritem in pool"));
 	itempool_used &= ~(1<<z);
@@ -98,7 +98,7 @@ yasm_expr_create(yasm_expr_op op, yasm_expr__item *left,
 
     if (right) {
 	ptr->terms[1] = *right;	/* structure copy */
-	z = right-itempool;
+	z = (unsigned long)(right-itempool);
 	if (z>=31)
 	    yasm_internal_error(N_("could not find expritem in pool"));
 	itempool_used &= ~(1<<z);

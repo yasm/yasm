@@ -621,7 +621,7 @@ parse_instr(yasm_parser_nasm *parser_nasm)
 	    return bc;
 	}
 	case SEGREG: {
-	    unsigned long segreg = SEGREG_val[0];
+	    uintptr_t segreg = SEGREG_val[0];
 	    yasm_bytecode *bc;
 	    get_next_token();
 	    bc = parse_instr(parser_nasm);
@@ -686,7 +686,7 @@ parse_operand(yasm_parser_nasm *parser_nasm)
 	}
 	case TARGETMOD:
 	{
-	    unsigned long tmod = TARGETMOD_val[0];
+	    uintptr_t tmod = TARGETMOD_val[0];
 	    get_next_token();
 	    op = parse_operand(parser_nasm);
 	    if (op)
@@ -711,7 +711,7 @@ parse_memaddr(yasm_parser_nasm *parser_nasm)
     switch (curtok) {
 	case SEGREG:
 	{
-	    unsigned long segreg = SEGREG_val[0];
+	    uintptr_t segreg = SEGREG_val[0];
 	    get_next_token();
 	    if (!expect(':')) {
 		yasm_error_set(YASM_ERROR_SYNTAX,
@@ -1209,7 +1209,7 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 		      yasm_valparamhead *valparams,
 		      yasm_valparamhead *objext_valparams)
 {
-    yasm_valparam *vp, *vp2;
+    yasm_valparam *vp;
     unsigned long line = cur_line;
     static const struct {
 	const char *name;
@@ -1263,7 +1263,6 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 		       name);
     }
 
-done:
     if (valparams)
 	yasm_vps_delete(valparams);
     if (objext_valparams)

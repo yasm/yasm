@@ -271,8 +271,8 @@ elf_objfmt_output_align(FILE *f, unsigned int align)
 
 static int
 elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
-			unsigned char *buf, size_t destsize, size_t valsize,
-			int warn, void *d)
+			unsigned char *buf, unsigned int destsize,
+			unsigned int valsize, int warn, void *d)
 {
     elf_reloc_entry *reloc;
     elf_objfmt_output_info *info = d;
@@ -297,9 +297,9 @@ elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
 }
 
 static int
-elf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
-			unsigned long offset, yasm_bytecode *bc, int warn,
-			/*@null@*/ void *d)
+elf_objfmt_output_value(yasm_value *value, unsigned char *buf,
+			unsigned int destsize, unsigned long offset,
+			yasm_bytecode *bc, int warn, /*@null@*/ void *d)
 {
     /*@null@*/ elf_objfmt_output_info *info = (elf_objfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ yasm_intnum *intn;

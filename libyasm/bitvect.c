@@ -1497,7 +1497,7 @@ ErrCode BitVector_from_Hex(wordptr addr, charptr string)
     N_word  size = size_(addr);
     N_word  mask = mask_(addr);
     boolean ok = TRUE;
-    N_word  length;
+    size_t  length;
     N_word  value;
     N_word  count;
     int     digit;
@@ -1534,7 +1534,7 @@ ErrCode BitVector_from_Oct(wordptr addr, charptr string)
     N_word  size = size_(addr);
     N_word  mask = mask_(addr);
     boolean ok = TRUE;
-    N_word  length;
+    size_t  length;
     N_word  value;
     N_word  value_fill = 0;
     N_word  count;
@@ -1609,7 +1609,7 @@ ErrCode BitVector_from_Bin(wordptr addr, charptr string)
     N_word  size = size_(addr);
     N_word  mask = mask_(addr);
     boolean ok = TRUE;
-    N_word  length;
+    size_t  length;
     N_word  value;
     N_word  count;
     int     digit;
@@ -1819,7 +1819,7 @@ ErrCode BitVector_from_Dec_static(BitVector_from_Dec_static_data *data,
     N_word  accu;
     N_word  powr;
     N_word  count;
-    N_word  length;
+    size_t  length;
     int     digit;
 
     if (bits > 0)
@@ -1930,7 +1930,7 @@ ErrCode BitVector_from_Dec(wordptr addr, charptr string)
     N_word  accu;
     N_word  powr;
     N_word  count;
-    N_word  length;
+    size_t  length;
     int     digit;
 
     if (bits > 0)

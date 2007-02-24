@@ -40,7 +40,7 @@ yasm_intnum *nasm_readnum(char *str, int *error);
  * str points to and length covers the middle of the string,
  * without the quotes.
  */
-yasm_intnum *nasm_readstrnum(char *str, int length, int *warn);
+yasm_intnum *nasm_readstrnum(char *str, size_t length, int *warn);
 
 char *nasm_src_set_fname(char *newname);
 char *nasm_src_get_fname(void);

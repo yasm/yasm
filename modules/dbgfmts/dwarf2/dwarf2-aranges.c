@@ -35,7 +35,7 @@
 
 static void
 dwarf2_append_arange(yasm_section *debug_aranges, /*@only@*/ yasm_expr *start,
-		     /*@only@*/ yasm_expr *length, size_t sizeof_address)
+		     /*@only@*/ yasm_expr *length, unsigned int sizeof_address)
 {
     yasm_datavalhead dvs;
     yasm_bytecode *bc;

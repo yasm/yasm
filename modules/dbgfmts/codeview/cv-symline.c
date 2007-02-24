@@ -384,7 +384,7 @@ cv_dbgfmt_add_file(yasm_dbgfmt_cv *dbgfmt_cv, size_t filenum,
     if (!f)
 	yasm__fatal(N_("codeview: could not open source file"));
     while ((len = fread(buf, 1, 1024, f)) > 0)
-	yasm_md5_update(&context, buf, len);
+	yasm_md5_update(&context, buf, (unsigned long)len);
     yasm_md5_final(dbgfmt_cv->filenames[filenum].digest, &context);
     fclose(f);
     yasm_xfree(buf);
@@ -972,11 +972,12 @@ cv_sym_size(const cv_sym *cvs)
 		break;
 	    case 'S':
 		len += 1;	/* XXX: is this 1 or 2? */
-		slen = strlen((const char *)cvs->args[arg++].p);
+		slen = (unsigned long)strlen((const char *)cvs->args[arg++].p);
 		len += slen <= 0xff ? slen : 0xff;
 		break;
 	    case 'Z':
-		len += strlen((const char *)cvs->args[arg++].p) + 1;
+		len +=
+		    (unsigned long)strlen((const char *)cvs->args[arg++].p) + 1;
 		break;
 	    default:
 		yasm_internal_error(N_("unknown sym format character"));

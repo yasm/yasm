@@ -53,12 +53,12 @@ x86_expr_checkea_get_reg3264(yasm_expr__item *ei, int *regnum,
 	case X86_REG32:
 	    if (data->addrsize != 32)
 		return 0;
-	    *regnum = ei->data.reg & 0xF;
+	    *regnum = (unsigned int)(ei->data.reg & 0xF);
 	    break;
 	case X86_REG64:
 	    if (data->addrsize != 64)
 		return 0;
-	    *regnum = ei->data.reg & 0xF;
+	    *regnum = (unsigned int)(ei->data.reg & 0xF);
 	    break;
 	case X86_RIP:
 	    if (data->bits != 64)
@@ -103,7 +103,7 @@ x86_expr_checkea_get_reg16(yasm_expr__item *ei, int *regnum, void *d)
 	return 0;
 
     /* & 7 for sanity check */
-    *regnum = ei->data.reg & 0x7;
+    *regnum = (unsigned int)(ei->data.reg & 0x7);
 
     /* only allow BX, SI, DI, BP */
     if (!reg16[*regnum])

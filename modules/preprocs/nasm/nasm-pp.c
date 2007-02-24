@@ -422,7 +422,8 @@ static void make_tok_num(Token * tok, yasm_intnum *val);
 static void error(int severity, const char *fmt, ...);
 static void *new_Block(size_t size);
 static void delete_Blocks(void);
-static Token *new_Token(Token * next, int type, const char *text, int txtlen);
+static Token *new_Token(Token * next, int type, const char *text,
+			size_t txtlen);
 static Token *delete_Token(Token * t);
 
 /*
@@ -709,7 +710,7 @@ read_line(void)
     continued_count = 0;
     while (1)
     {
-	q = fgets(p, bufsize - (p - buffer), istk->fp);
+	q = fgets(p, bufsize - (int)(p - buffer), istk->fp);
 	if (!q)
 	    break;
 	p += strlen(p);
@@ -735,7 +736,7 @@ read_line(void)
 	}
 	if (p - buffer > bufsize - 10)
 	{
-	    long offset = p - buffer;
+	    long offset = (long)(p - buffer);
 	    bufsize += BUF_DELTA;
 	    buffer = nasm_realloc(buffer, (size_t)bufsize);
 	    p = buffer + offset;	/* prevent stale-pointer problems */
@@ -920,13 +921,13 @@ tokenise(char *line)
 	/* Handle unterminated string */
 	if (type == -1)
 	{
-	    *tail = t = new_Token(NULL, TOK_STRING, line, p-line+1);
+	    *tail = t = new_Token(NULL, TOK_STRING, line, (size_t)(p-line)+1);
 	    t->text[p-line] = *line;
 	    tail = &t->next;
 	}
 	else if (type != TOK_COMMENT)
 	{
-	    *tail = t = new_Token(NULL, type, line, p - line);
+	    *tail = t = new_Token(NULL, type, line, (size_t)(p - line));
 	    tail = &t->next;
 	}
 	line = p;
@@ -988,7 +989,7 @@ delete_Blocks(void)
  *  also the mac and next elements to NULL.
  */
 static Token *
-new_Token(Token * next, int type, const char *text, int txtlen)
+new_Token(Token * next, int type, const char *text, size_t txtlen)
 {
     Token *t;
     int i;
@@ -1013,8 +1014,8 @@ new_Token(Token * next, int type, const char *text, int txtlen)
     {
 	if (txtlen == 0)
 	    txtlen = strlen(text);
-	t->text = nasm_malloc(1 + (size_t)txtlen);
-	strncpy(t->text, text, (size_t)txtlen);
+	t->text = nasm_malloc(1 + txtlen);
+	strncpy(t->text, text, txtlen);
 	t->text[txtlen] = '\0';
     }
     return t;
@@ -1039,7 +1040,7 @@ static char *
 detoken(Token * tlist, int expand_locals)
 {
     Token *t;
-    int len;
+    size_t len;
     char *line, *p;
 
     len = 0;
@@ -1081,7 +1082,7 @@ detoken(Token * tlist, int expand_locals)
 	    len += strlen(t->text);
 	}
     }
-    p = line = nasm_malloc((size_t)len + 1);
+    p = line = nasm_malloc(len + 1);
     for (t = tlist; t; t = t->next)
     {
 	if (t->type == TOK_WHITESPACE)
@@ -1162,7 +1163,7 @@ ppscan(void *private_data, struct tokenval *tokval)
     {
 	int rn_warn;
 	char q, *r;
-	int l;
+	size_t l;
 
 	r = tline->text;
 	q = *r++;
@@ -1238,7 +1239,7 @@ get_ctx(char *name, int all_contexts)
 {
     Context *ctx;
     SMacro *m;
-    int i;
+    size_t i;
 
     if (!name || name[0] != '%' || name[1] != '$')
 	return NULL;
@@ -2909,7 +2910,7 @@ do_directive(Token * tline)
 	    macro_start = nasm_malloc(sizeof(*macro_start));
 	    macro_start->next = NULL;
 	    make_tok_num(macro_start,
-			 yasm_intnum_create_uint(strlen(t->text) - 2));
+		yasm_intnum_create_uint((unsigned long)(strlen(t->text) - 2)));
 	    macro_start->mac = NULL;
 
 	    /*

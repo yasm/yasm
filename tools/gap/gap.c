@@ -642,7 +642,7 @@ perfect_dir(FILE *out, const char *which, const char *parser, dir_list *dirs)
 	key *k = yasm_xmalloc(sizeof(key));
 
 	k->name_k = yasm__xstrdup(d->name);
-	k->len_k = strlen(d->name);
+	k->len_k = (ub4)strlen(d->name);
 	k->next_k = keys;
 	keys = k;
 	nkeys++;

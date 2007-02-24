@@ -515,7 +515,7 @@ static int augment(
       /* add childb to the queue of reachable things */
       if (childb) childb->water_b = highwater;
       tabq[tail].b_q      = childb;
-      tabq[tail].newval_q = i;     /* how to make parent (myb) use this hash */
+      tabq[tail].newval_q = (ub2)i; /* how to make parent (myb) use this hash */
       tabq[tail].oldval_q = myb->val_b;            /* need this for rollback */
       tabq[tail].parent_q = q;
       ++tail;

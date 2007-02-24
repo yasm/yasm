@@ -278,7 +278,8 @@ setup(unsigned char *list1, unsigned char *list2, size_t n, size_t size,
 {
 	size_t i;
 	unsigned int tmp;
-	int length, size2, sense;
+	int length, sense;
+	size_t size2;
 	unsigned char *f1, *f2, *s, *l2, *last, *p2;
 
 	size2 = size*2;

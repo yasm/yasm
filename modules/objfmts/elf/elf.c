@@ -176,7 +176,7 @@ elf_strtab_entry_set_str(elf_strtab_entry *entry, const char *str)
     last = entry;
     entry = STAILQ_NEXT(last, qlink);
     while (entry) {
-	entry->index = last->index + strlen(last->str) + 1;
+	entry->index = last->index + (unsigned long)strlen(last->str) + 1;
 	last = entry;
 	entry = STAILQ_NEXT(last, qlink);
     }
@@ -209,7 +209,7 @@ elf_strtab_append_str(elf_strtab_head *strtab, const char *str)
     last = STAILQ_LAST(strtab, elf_strtab_entry, qlink);
 
     entry = elf_strtab_entry_create(str);
-    entry->index = last->index + strlen(last->str) + 1;
+    entry->index = last->index + (unsigned long)strlen(last->str) + 1;
 
     STAILQ_INSERT_TAIL(strtab, entry, qlink);
     return entry;
@@ -248,7 +248,7 @@ elf_strtab_output_to_file(FILE *f, elf_strtab_head *strtab)
     STAILQ_FOREACH(entry, strtab, qlink) {
 	size_t len = 1 + strlen(entry->str);
 	fwrite(entry->str, len, 1, f);
-	size += len;
+	size += (unsigned long)len;
     }
     return size;
 }
@@ -660,7 +660,7 @@ elf_secthead_name_reloc_section(const char *basesect)
     }
     else
     {
-        int prepend_length = strlen(elf_march->reloc_section_prefix);
+        size_t prepend_length = strlen(elf_march->reloc_section_prefix);
         char *sectname = yasm_xmalloc(prepend_length + strlen(basesect) + 1);
         strcpy(sectname, elf_march->reloc_section_prefix);
         strcat(sectname, basesect);

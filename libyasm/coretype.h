@@ -260,7 +260,7 @@ typedef enum yasm_sym_vis {
  * \return Nonzero if an error occurred, 0 otherwise.
  */
 typedef int (*yasm_output_value_func)
-    (yasm_value *value, /*@out@*/ unsigned char *buf, size_t destsize,
+    (yasm_value *value, /*@out@*/ unsigned char *buf, unsigned int destsize,
      unsigned long offset, yasm_bytecode *bc, int warn, /*@null@*/ void *d);
 
 /** Convert a symbol reference to its byte representation.  Usually implemented
@@ -281,8 +281,8 @@ typedef int (*yasm_output_value_func)
  * \return Nonzero if an error occurred, 0 otherwise.
  */
 typedef int (*yasm_output_reloc_func)
-    (yasm_symrec *sym, yasm_bytecode *bc, unsigned char *buf, size_t destsize,
-     size_t valsize, int warn, void *d);
+    (yasm_symrec *sym, yasm_bytecode *bc, unsigned char *buf,
+     unsigned int destsize, unsigned int valsize, int warn, void *d);
 
 /** Sort an array using merge sort algorithm.
  * \internal

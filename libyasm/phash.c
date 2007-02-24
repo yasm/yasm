@@ -96,10 +96,11 @@ acceptable.  Do NOT use for cryptographic purposes.
 unsigned long
 phash_lookup(
     register const char *sk, /* the key */
-    register unsigned long length,   /* the length of the key */
+    register size_t length,   /* the length of the key */
     register unsigned long level) /* the previous hash, or an arbitrary value */
 {
-    register unsigned long a,b,c,len;
+    register unsigned long a,b,c;
+    register size_t len;
     register const unsigned char *k = (const unsigned char *)sk;
 
     /* Set up the internal state */
@@ -121,7 +122,7 @@ phash_lookup(
     }
 
     /*------------------------------------- handle the last 11 bytes */
-    c += length;
+    c += (ub4)length;
     switch(len)              /* all the case statements fall through */
     {
 	case 11: c+=((ub4)k[10]<<24);
@@ -192,10 +193,11 @@ is trying to cause collisions.  Do NOT use for cryptography.
 void
 phash_checksum(
     register const char *sk,
-    register unsigned long len,
+    register size_t len,
     register unsigned long *state)
 {
-    register unsigned long a,b,c,d,e,f,g,h,length;
+    register unsigned long a,b,c,d,e,f,g,h;
+    register size_t length;
     register const unsigned char *k = (const unsigned char *)sk;
 
     /* Use the length and level; add in the golden ratio. */
@@ -222,7 +224,7 @@ phash_checksum(
     }
 
     /*------------------------------------- handle the last 31 bytes */
-    h += length;
+    h += (ub4)length;
     switch(len)
     {
 	case 31: h+=(k[30]<<24);

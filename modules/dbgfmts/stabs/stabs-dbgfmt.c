@@ -191,7 +191,7 @@ stabs_dbgfmt_append_bcstr(yasm_section *sect, const char *str)
     yasm_bytecode *bc;
    
     bc = yasm_bc_create_common(&stabs_bc_str_callback, yasm__xstrdup(str), 0);
-    bc->len = strlen(str)+1;
+    bc->len = (unsigned long)(strlen(str)+1);
     bc->offset = yasm_bc_next_offset(yasm_section_bcs_last(sect));
 
     yasm_section_bcs_append(sect, bc);

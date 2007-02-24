@@ -21,7 +21,7 @@ typedef struct yasm_md5_context {
 
 void yasm_md5_init(yasm_md5_context *context);
 void yasm_md5_update(yasm_md5_context *context, unsigned char const *buf,
-		     unsigned len);
+		     unsigned long len);
 void yasm_md5_final(unsigned char digest[16], yasm_md5_context *context);
 void yasm_md5_transform(unsigned long buf[4], const unsigned char in[64]);
 
