@@ -48,7 +48,6 @@ struct yasm_intnum {
 	wordptr bv;		/* bit vector (for integers >32 bits) */
     } val;
     enum { INTNUM_UL, INTNUM_BV } type;
-    unsigned char origsize;	/* original (parsed) size, in bits */
 };
 
 /* static bitvect used for conversions */
@@ -87,8 +86,6 @@ yasm_intnum_create_dec(char *str)
 {
     yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
 
-    intn->origsize = 0;	    /* no reliable way to figure this out */
-
     switch (BitVector_from_Dec_static(from_dec_data, conv_bv,
 				      (unsigned char *)str)) {
 	case ErrCode_Pars:
@@ -117,8 +114,6 @@ yasm_intnum_create_bin(char *str)
 {
     yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
 
-    intn->origsize = (unsigned char)strlen(str);
-
     switch (BitVector_from_Bin(conv_bv, (unsigned char *)str)) {
 	case ErrCode_Pars:
 	    yasm_error_set(YASM_ERROR_VALUE, N_("invalid binary literal"));
@@ -146,8 +141,6 @@ yasm_intnum_create_oct(char *str)
 {
     yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
 
-    intn->origsize = strlen(str)*3;
-
     switch (BitVector_from_Oct(conv_bv, (unsigned char *)str)) {
 	case ErrCode_Pars:
 	    yasm_error_set(YASM_ERROR_VALUE, N_("invalid octal literal"));
@@ -174,8 +167,6 @@ yasm_intnum *
 yasm_intnum_create_hex(char *str)
 {
     yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
-
-    intn->origsize = strlen(str)*4;
 
     switch (BitVector_from_Hex(conv_bv, (unsigned char *)str)) {
 	case ErrCode_Pars:
@@ -206,9 +197,7 @@ yasm_intnum_create_charconst_nasm(const char *str)
     yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
     size_t len = strlen(str);
 
-    intn->origsize = len*8;
-
-    if(intn->origsize > BITVECT_NATIVE_SIZE)
+    if(len*8 > BITVECT_NATIVE_SIZE)
 	yasm_error_set(YASM_ERROR_OVERFLOW,
 		       N_("Character constant too large for internal format"));
 
@@ -258,7 +247,6 @@ yasm_intnum_create_uint(unsigned long i)
 
     intn->val.ul = i;
     intn->type = INTNUM_UL;
-    intn->origsize = 0;
 
     return intn;
 }
@@ -279,7 +267,6 @@ yasm_intnum_create_int(long i)
     intn = yasm_xmalloc(sizeof(yasm_intnum));
     intn->val.bv = BitVector_Clone(conv_bv);
     intn->type = INTNUM_BV;
-    intn->origsize = 0;
 
     return intn;
 }
@@ -291,8 +278,6 @@ yasm_intnum_create_leb128(const unsigned char *ptr, int sign,
     yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
     const unsigned char *ptr_orig = ptr;
     unsigned long i = 0;
-
-    intn->origsize = 0;
 
     BitVector_Empty(conv_bv);
     for (;;) {
@@ -328,8 +313,6 @@ yasm_intnum_create_sized(unsigned char *ptr, int sign, size_t srcsize,
 {
     yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
     unsigned long i = 0;
-
-    intn->origsize = 0;
 
     if (srcsize*8 > BITVECT_NATIVE_SIZE)
 	yasm_error_set(YASM_ERROR_OVERFLOW,
@@ -374,7 +357,6 @@ yasm_intnum_copy(const yasm_intnum *intn)
 	    break;
     }
     n->type = intn->type;
-    n->origsize = intn->origsize;
 
     return n;
 }
@@ -1060,11 +1042,11 @@ yasm_intnum_print(const yasm_intnum *intn, FILE *f)
 
     switch (intn->type) {
 	case INTNUM_UL:
-	    fprintf(f, "0x%lx/%u", intn->val.ul, (unsigned int)intn->origsize);
+	    fprintf(f, "0x%lx", intn->val.ul);
 	    break;
 	case INTNUM_BV:
 	    s = BitVector_to_Hex(intn->val.bv);
-	    fprintf(f, "0x%s/%u", (char *)s, (unsigned int)intn->origsize);
+	    fprintf(f, "0x%s", (char *)s);
 	    yasm_xfree(s);
 	    break;
     }
