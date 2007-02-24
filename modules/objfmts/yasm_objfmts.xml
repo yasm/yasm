@@ -8,7 +8,7 @@
 
  <refentryinfo>
   <title>Yasm Supported Object Formats</title>
-  <date>October 2006</date>
+  <date>February 2007</date>
   <productname>Yasm</productname>
   <author>
    <firstname>Peter</firstname>
@@ -103,6 +103,17 @@
    (for 64-bit targets).  ELF is a standard object format in common
    use on modern Unix and compatible systems (e.g. Linux, FreeBSD).
    ELF has complex support for relocatable and shared objects.</para>
+ </refsect1>
+
+ <refsect1>
+  <title>macho</title>
+
+  <para>The Mach-O object format really comes in two flavors:
+   <quote>macho32</quote> (for 32-bit targets) and
+   <quote>macho64</quote> (for 64-bit targets).  Mach-O is used as
+   the object format on MacOS X.  As Yasm currently only supports
+   x86 and AMD64 instruction sets, it can only generate Mach-O
+   objects for Intel-based Macs.</para>
  </refsect1>
 
  <refsect1>
