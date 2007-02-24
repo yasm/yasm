@@ -1209,7 +1209,7 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 		      yasm_valparamhead *valparams,
 		      yasm_valparamhead *objext_valparams)
 {
-    yasm_valparam *vp, *vp2;
+    yasm_valparam *vp;
     unsigned long line = cur_line;
     static const struct {
 	const char *name;
@@ -1263,7 +1263,6 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 		       name);
     }
 
-done:
     if (valparams)
 	yasm_vps_delete(valparams);
     if (objext_valparams)
