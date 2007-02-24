@@ -112,7 +112,7 @@ yasm_intnum *nasm_readnum (char *str, int *error)
     return intn;
 }
 
-yasm_intnum *nasm_readstrnum (char *str, int length, int *warn) 
+yasm_intnum *nasm_readstrnum (char *str, size_t length, int *warn) 
 {
     char save;
     yasm_intnum *intn;
@@ -193,7 +193,7 @@ void nasm_quote(char **str)
 char *nasm_strcat(const char *one, const char *two) 
 {
     char *rslt;
-    int l1=strlen(one);
+    size_t l1=strlen(one);
     rslt = nasm_malloc(l1+strlen(two)+1);
     strcpy(rslt, one);
     strcpy(rslt+l1, two);

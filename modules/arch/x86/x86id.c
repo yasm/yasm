@@ -2097,7 +2097,7 @@ static const x86_insn_info xbts_insn[] = {
 
 static void
 x86_finalize_common(x86_common *common, const x86_insn_info *info,
-		    unsigned int mode_bits)
+		    uintptr_t mode_bits)
 {
     common->addrsize = 0;
     common->opersize = info->opersize;
@@ -2171,8 +2171,8 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
     x86_jmp *jmp;
     int num_info = (int)(data[1]&0xFF);
     x86_insn_info *info = (x86_insn_info *)data[0];
-    unsigned long mod_data = data[1] >> 8;
-    unsigned char mode_bits = (unsigned char)(data[3] & 0xFF);
+    unsigned long mod_data = (unsigned long)(data[1] >> 8);
+    unsigned int mode_bits = (unsigned int)(data[3] & 0xFF);
     /*unsigned char suffix = (unsigned char)((data[3]>>8) & 0xFF);*/
     yasm_insn_operand *op;
     static const unsigned char size_lookup[] = {0, 8, 16, 32, 64, 80, 128, 0};
@@ -2278,7 +2278,7 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
 
 static const x86_insn_info *
 x86_find_match(yasm_arch *arch, int num_info, const x86_insn_info *info,
-	       unsigned long cpu, unsigned int mode_bits, unsigned int suffix,
+	       uintptr_t cpu, unsigned int mode_bits, unsigned int suffix,
 	       int num_operands, yasm_insn_operand **ops,
 	       yasm_insn_operand **rev_ops, const unsigned int *size_lookup,
 	       int bypass)
@@ -2611,7 +2611,7 @@ x86_find_match(yasm_arch *arch, int num_info, const x86_insn_info *info,
 
 static void
 x86_match_error(yasm_arch *arch, int num_info, const x86_insn_info *info,
-		unsigned long cpu, unsigned int mode_bits, unsigned int suffix,
+		uintptr_t cpu, unsigned int mode_bits, unsigned int suffix,
 		int num_operands, yasm_insn_operand **ops,
 		yasm_insn_operand **rev_ops, const unsigned int *size_lookup)
 {
@@ -2679,8 +2679,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     x86_insn *insn;
     int num_info = (int)(data[1]&0xFF);
     const x86_insn_info *info = (const x86_insn_info *)data[0];
-    unsigned long mod_data = data[1] >> 8;
-    unsigned char mode_bits = (unsigned char)(data[3] & 0xFF);
+    unsigned long mod_data = (unsigned long)(data[1] >> 8);
+    unsigned int mode_bits = (unsigned int)(data[3] & 0xFF);
     unsigned int suffix = (unsigned int)((data[3]>>8) & 0xFF);
     yasm_insn_operand *op, *ops[4], *rev_ops[4];
     /*@null@*/ yasm_expr *imm;
@@ -2866,10 +2866,9 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		case OPA_EA:
 		    switch (op->type) {
 			case YASM_INSN__OPERAND_REG:
-			    insn->x86_ea =
-				yasm_x86__ea_create_reg(op->data.reg,
-							&insn->rex,
-							mode_bits);
+			    insn->x86_ea = yasm_x86__ea_create_reg(
+				(unsigned long)op->data.reg, &insn->rex,
+				mode_bits);
 			    break;
 			case YASM_INSN__OPERAND_SEGREG:
 			    yasm_internal_error(
@@ -2937,9 +2936,9 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 		    break;
 		case OPA_SpareEA:
 		    if (op->type == YASM_INSN__OPERAND_REG) {
-			insn->x86_ea = yasm_x86__ea_create_reg(op->data.reg,
-							       &insn->rex,
-							       mode_bits);
+			insn->x86_ea =
+			    yasm_x86__ea_create_reg((unsigned long)op->data.reg,
+						    &insn->rex, mode_bits);
 			if (!insn->x86_ea ||
 			    yasm_x86__set_rex_from_reg(&insn->rex, &spare,
 				op->data.reg, mode_bits, X86_REX_R)) {

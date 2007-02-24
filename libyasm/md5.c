@@ -77,7 +77,7 @@ yasm_md5_init(yasm_md5_context *ctx)
  */
 void
 yasm_md5_update(yasm_md5_context *ctx, unsigned char const *buf,
-		unsigned len)
+		unsigned long len)
 {
 	unsigned long t;
 

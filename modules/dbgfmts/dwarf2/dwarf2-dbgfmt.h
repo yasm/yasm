@@ -32,7 +32,7 @@
 typedef struct {
     char *pathname;	    /* full filename */
     char *filename;	    /* basename of full filename */
-    size_t dir;		    /* index into directories array for relative path;
+    unsigned long dir;	    /* index into directories array for relative path;
 			     * 0 for current directory. */
 } dwarf2_filename;
 
@@ -46,19 +46,19 @@ typedef struct yasm_dbgfmt_dwarf2 {
     yasm_arch *arch;
 
     char **dirs;
-    size_t dirs_size;
-    size_t dirs_allocated;
+    unsigned long dirs_size;
+    unsigned long dirs_allocated;
 
     dwarf2_filename *filenames;
-    size_t filenames_size;
-    size_t filenames_allocated;
+    unsigned long filenames_size;
+    unsigned long filenames_allocated;
 
     enum {
 	DWARF2_FORMAT_32BIT,
 	DWARF2_FORMAT_64BIT
     } format;
 
-    size_t sizeof_address, sizeof_offset, min_insn_len;
+    unsigned int sizeof_address, sizeof_offset, min_insn_len;
 } yasm_dbgfmt_dwarf2;
 
 /* .loc directive data */

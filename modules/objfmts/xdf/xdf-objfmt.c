@@ -155,9 +155,9 @@ xdf_objfmt_create(yasm_object *object, yasm_arch *a)
 }
 
 static int
-xdf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
-			unsigned long offset, yasm_bytecode *bc, int warn,
-			/*@null@*/ void *d)
+xdf_objfmt_output_value(yasm_value *value, unsigned char *buf,
+			unsigned int destsize, unsigned long offset,
+			yasm_bytecode *bc, int warn, /*@null@*/ void *d)
 {
     /*@null@*/ xdf_objfmt_output_info *info = (xdf_objfmt_output_info *)d;
     yasm_objfmt_xdf *objfmt_xdf;
@@ -536,7 +536,7 @@ xdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	YASM_WRITE_32_L(localbuf, scnum);	/* section number */
 	YASM_WRITE_32_L(localbuf, value);	/* value */
 	YASM_WRITE_32_L(localbuf, info->strtab_offset);
-	info->strtab_offset += len+1;
+	info->strtab_offset += (unsigned long)(len+1);
 	YASM_WRITE_32_L(localbuf, flags);	/* flags */
 	fwrite(info->buf, 16, 1, info->f);
     }

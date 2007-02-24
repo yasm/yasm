@@ -235,8 +235,8 @@ dwarf2_add_abbrev_attr(dwarf2_abbrev *abbrev, dwarf_attribute name,
 }
 
 static void
-dwarf2_append_expr(yasm_section *sect, /*@only@*/ yasm_expr *expr, size_t size,
-		   int leb)
+dwarf2_append_expr(yasm_section *sect, /*@only@*/ yasm_expr *expr,
+		   unsigned int size, int leb)
 {
     yasm_datavalhead dvs;
     yasm_bytecode *bc;

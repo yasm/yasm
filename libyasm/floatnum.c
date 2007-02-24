@@ -226,7 +226,7 @@ floatnum_normalize(yasm_floatnum *flt)
     if (norm_amt > (long)flt->exponent)
 	norm_amt = (long)flt->exponent;
     BitVector_Move_Left(flt->mantissa, (N_int)norm_amt);
-    flt->exponent -= norm_amt;
+    flt->exponent -= (unsigned short)norm_amt;
 }
 
 /* acc *= op */
@@ -291,7 +291,7 @@ floatnum_mul(yasm_floatnum *acc, const yasm_floatnum *op)
     if (norm_amt > (long)acc->exponent)
 	norm_amt = (long)acc->exponent;
     BitVector_Move_Left(product, (N_int)norm_amt);
-    acc->exponent -= norm_amt;
+    acc->exponent -= (unsigned short)norm_amt;
 
     /* Store the highest bits of the result */
     BitVector_Interval_Copy(acc->mantissa, product, 0, MANT_BITS, MANT_BITS);

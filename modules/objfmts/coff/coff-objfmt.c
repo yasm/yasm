@@ -442,9 +442,9 @@ coff_objfmt_set_section_addr(yasm_section *sect, /*@null@*/ void *d)
 }
 
 static int
-coff_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
-			 unsigned long offset, yasm_bytecode *bc, int warn,
-			 /*@null@*/ void *d)
+coff_objfmt_output_value(yasm_value *value, unsigned char *buf,
+			 unsigned int destsize, unsigned long offset,
+			 yasm_bytecode *bc, int warn, /*@null@*/ void *d)
 {
     /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
     yasm_objfmt_coff *objfmt_coff;
@@ -770,7 +770,7 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
 	size_t namelen = strlen(yasm_section_get_name(sect));
 	if (namelen > 8) {
 	    csd->strtab_name = info->strtab_offset;
-	    info->strtab_offset += namelen + 1;
+	    info->strtab_offset += (unsigned long)(namelen + 1);
 	}
     }
 
@@ -1070,7 +1070,7 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	if (len > 8) {
 	    YASM_WRITE_32_L(localbuf, 0);	/* "zeros" field */
 	    YASM_WRITE_32_L(localbuf, info->strtab_offset); /* strtab offset */
-	    info->strtab_offset += len+1;
+	    info->strtab_offset += (unsigned long)(len+1);
 	} else {
 	    /* <8 chars, so no string table entry needed */
 	    strncpy((char *)localbuf, name, 8);
@@ -1098,7 +1098,7 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 		    if (len > 14) {
 			YASM_WRITE_32_L(localbuf, 0);
 			YASM_WRITE_32_L(localbuf, info->strtab_offset);
-			info->strtab_offset += len+1;
+			info->strtab_offset += (unsigned long)(len+1);
 		    } else
 			strncpy((char *)localbuf, csymd->aux[0].fname, 14);
 		    break;
@@ -1977,7 +1977,7 @@ dir_setframe(yasm_objfmt_coff *objfmt_coff, yasm_valparamhead *valparams,
     }
 
     /* Set the frame fields in the unwind info */
-    objfmt_coff->unwind->framereg = *reg;
+    objfmt_coff->unwind->framereg = (unsigned long)(*reg);
     yasm_value_initialize(&objfmt_coff->unwind->frameoff, off, 8);
 
     /* Generate a SET_FPREG unwind code */

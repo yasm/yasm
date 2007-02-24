@@ -858,7 +858,7 @@ parse_instr(yasm_parser_gas *parser_gas)
 	}
 	case SEGREG:
 	{
-	    unsigned long segreg = SEGREG_val[0];
+	    uintptr_t segreg = SEGREG_val[0];
 	    get_next_token(); /* SEGREG */
 	    bc = parse_instr(parser_gas);
 	    if (!bc)
@@ -977,7 +977,7 @@ parse_memaddr(yasm_parser_gas *parser_gas)
     int strong = 0;
 
     if (curtok == SEGREG) {
-	unsigned long segreg = SEGREG_val[0];
+	uintptr_t segreg = SEGREG_val[0];
 	get_next_token(); /* SEGREG */
 	if (!expect(':')) return NULL;
 	get_next_token(); /* ':' */
@@ -1000,7 +1000,8 @@ parse_memaddr(yasm_parser_gas *parser_gas)
 	e1 = NULL;
 
     if (curtok == '(') {
-	unsigned long reg = ULONG_MAX;
+	int havereg = 0;
+	uintptr_t reg;
 	yasm_intnum *scale = NULL;
 
 	get_next_token(); /* '(' */
@@ -1029,6 +1030,7 @@ parse_memaddr(yasm_parser_gas *parser_gas)
 	/* index register */
 	if (curtok == REG) {
 	    reg = REG_val[0];
+	    havereg = 1;
 	    get_next_token(); /* REG */
 	    if (curtok != ',') {
 		scale = yasm_intnum_create_uint(1);
@@ -1058,7 +1060,7 @@ done:
 	get_next_token(); /* ')' */
 
 	if (scale) {
-	    if (reg == ULONG_MAX) {
+	    if (!havereg) {
 		if (yasm_intnum_get_uint(scale) != 1)
 		    yasm_warn_set(YASM_WARN_GENERAL,
 			N_("scale factor of %u without an index register"),
@@ -1093,7 +1095,7 @@ parse_operand(yasm_parser_gas *parser_gas)
 {
     yasm_effaddr *ea;
     yasm_insn_operand *op;
-    unsigned long reg;
+    uintptr_t reg;
 
     switch (curtok) {
 	case REG:

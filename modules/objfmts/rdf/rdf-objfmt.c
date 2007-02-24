@@ -198,9 +198,9 @@ rdf_objfmt_create(yasm_object *object, yasm_arch *a)
 }
 
 static int
-rdf_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
-			unsigned long offset, yasm_bytecode *bc, int warn,
-			/*@null@*/ void *d)
+rdf_objfmt_output_value(yasm_value *value, unsigned char *buf,
+			unsigned int destsize, unsigned long offset,
+			yasm_bytecode *bc, int warn, /*@null@*/ void *d)
 {
     /*@null@*/ rdf_objfmt_output_info *info = (rdf_objfmt_output_info *)d;
     yasm_objfmt_rdf *objfmt_rdf;

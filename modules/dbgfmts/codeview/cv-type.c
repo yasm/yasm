@@ -597,7 +597,7 @@ cv_leaf_size(const cv_leaf *leaf)
 		break;
 	    case 'S':
 		len += 1;	/* XXX: is this 1 or 2? */
-		slen = strlen((const char *)leaf->args[arg++].p);
+		slen = (unsigned long)strlen((const char *)leaf->args[arg++].p);
 		len += slen <= 0xff ? slen : 0xff;
 		break;
 	    default:

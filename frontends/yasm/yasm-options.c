@@ -161,8 +161,8 @@ help_msg(const char *msg, const char *tail, opt_option *options, size_t nopts)
     printf("%s", gettext(msg));
 
     for (i = 0; i < nopts; i++) {
-	int shortopt_len = 0;
-	int longopt_len = 0;
+	size_t shortopt_len = 0;
+	size_t longopt_len = 0;
 
 	optbuf[0] = 0;
 	optopt[0] = 0;

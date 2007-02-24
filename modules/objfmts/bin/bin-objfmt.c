@@ -129,7 +129,8 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
 }
 
 static int
-bin_objfmt_output_value(yasm_value *value, unsigned char *buf, size_t destsize,
+bin_objfmt_output_value(yasm_value *value, unsigned char *buf,
+			unsigned int destsize,
 			/*@unused@*/ unsigned long offset, yasm_bytecode *bc,
 			int warn, /*@null@*/ void *d)
 {

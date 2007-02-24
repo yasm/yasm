@@ -288,7 +288,7 @@ yasm_intnum_create_leb128(const unsigned char *ptr, int sign,
 	ptr++;
     }
 
-    *size = (ptr-ptr_orig)+1;
+    *size = (unsigned long)(ptr-ptr_orig)+1;
 
     if(i > BITVECT_NATIVE_SIZE)
 	yasm_error_set(YASM_ERROR_OVERFLOW,
@@ -730,7 +730,7 @@ yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
 	/* TODO */
 	yasm_internal_error(N_("big endian not implemented"));
     } else
-	BitVector_Block_Store(op1, ptr, destsize);
+	BitVector_Block_Store(op1, ptr, (N_int)destsize);
 
     /* If not already a bitvect, convert value to be written to a bitvect */
     if (intn->type == INTNUM_BV)
@@ -744,7 +744,7 @@ yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
     /* Check low bits if right shifting and warnings enabled */
     if (warn && rshift > 0) {
 	BitVector_Copy(conv_bv, op2);
-	BitVector_Move_Left(conv_bv, BITVECT_NATIVE_SIZE-rshift);
+	BitVector_Move_Left(conv_bv, (N_int)(BITVECT_NATIVE_SIZE-rshift));
 	if (!BitVector_is_empty(conv_bv))
 	    yasm_warn_set(YASM_WARN_GENERAL,
 			  N_("misaligned value, truncating to boundary"));
@@ -759,7 +759,7 @@ yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
     }
 
     /* Write the new value into the destination bitvect */
-    BitVector_Interval_Copy(op1, op2, (unsigned int)shift, 0, valsize);
+    BitVector_Interval_Copy(op1, op2, (unsigned int)shift, 0, (N_int)valsize);
 
     /* Write out the new data */
     buf = BitVector_Block_Read(op1, &len);

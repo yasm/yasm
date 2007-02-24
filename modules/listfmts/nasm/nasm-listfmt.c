@@ -82,7 +82,7 @@ nasm_listfmt_destroy(/*@only@*/ yasm_listfmt *listfmt)
 
 static int
 nasm_listfmt_output_value(yasm_value *value, unsigned char *buf,
-			  size_t destsize, unsigned long offset,
+			  unsigned int destsize, unsigned long offset,
 			  yasm_bytecode *bc, int warn, /*@null@*/ void *d)
 {
     /*@null@*/ nasm_listfmt_output_info *info = (nasm_listfmt_output_info *)d;
