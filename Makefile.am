@@ -106,13 +106,6 @@ ACLOCAL_AMFLAGS = -I m4
 
 distclean-local:
 	-rm -rf results
-if HAVE_PYTHON
-	-rm -rf build
-endif
-
-all-local: python-build
-install-exec-hook: python-install
-uninstall-hook: python-uninstall
 
 if BUILD_MAN
 MAINTAINERCLEANFILES = $(dist_man_MANS)
