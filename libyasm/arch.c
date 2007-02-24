@@ -29,6 +29,7 @@
 #include "util.h"
 /*@unused@*/ RCSID("$Id$");
 
+#include "libyasm-stdint.h"
 #include "coretype.h"
 
 #include "expr.h"
@@ -131,7 +132,8 @@ yasm_operand_print(const yasm_insn_operand *op, FILE *f, int indent_level,
 	    fprintf(f, "\n");
 	    break;
     }
-    fprintf(f, "%*sTargetMod=%lx\n", indent_level+1, "", op->targetmod);
+    fprintf(f, "%*sTargetMod=%lx\n", indent_level+1, "",
+	    (unsigned long)op->targetmod);
     fprintf(f, "%*sSize=%u\n", indent_level+1, "", op->size);
     fprintf(f, "%*sDeref=%d, Strict=%d\n", indent_level+1, "", (int)op->deref,
 	    (int)op->strict);

@@ -30,6 +30,7 @@
 
 #include <limits.h>
 
+#include "libyasm-stdint.h"
 #include "coretype.h"
 #include "valparam.h"
 #include "assocdat.h"

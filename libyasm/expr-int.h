@@ -50,7 +50,7 @@ struct yasm_expr__item {
 	yasm_expr *expn;
 	yasm_intnum *intn;
 	yasm_floatnum *flt;
-	unsigned long reg;
+	uintptr_t reg;
 	unsigned int subst;
     } data;
 };

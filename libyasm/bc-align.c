@@ -28,6 +28,7 @@
 #include "util.h"
 /*@unused@*/ RCSID("$Id$");
 
+#include "libyasm-stdint.h"
 #include "coretype.h"
 
 #include "errwarn.h"

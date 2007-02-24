@@ -34,6 +34,7 @@
  * detoken is used to convert the line back to text
  */
 #include <util.h>
+#include <libyasm-stdint.h>
 #include <libyasm/coretype.h>
 #include <libyasm/intnum.h>
 #include <libyasm/expr.h>

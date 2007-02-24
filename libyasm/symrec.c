@@ -32,6 +32,7 @@
 # include <limits.h>
 #endif
 
+#include "libyasm-stdint.h"
 #include "coretype.h"
 #include "hamt.h"
 #include "assocdat.h"

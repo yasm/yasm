@@ -60,8 +60,6 @@
 #include <string.h>
 #include <assert.h>
 
-#include <libyasm-stdint.h>
-
 #include <libyasm/coretype.h>
 
 #ifdef lint

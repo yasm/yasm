@@ -28,6 +28,7 @@
 #include "util.h"
 /*@unused@*/ RCSID("$Id$");
 
+#include "libyasm-stdint.h"
 #include "coretype.h"
 #include "bitvect.h"
 
@@ -185,7 +186,7 @@ yasm_expr_float(yasm_floatnum *f)
 }
 
 yasm_expr__item *
-yasm_expr_reg(unsigned long reg)
+yasm_expr_reg(uintptr_t reg)
 {
     yasm_expr__item *e = expr_get_item();
     e->type = YASM_EXPR_REG;
@@ -1283,7 +1284,7 @@ yasm_expr_get_symrec(yasm_expr **ep, int simplify)
 /*@=unqualifiedtrans =nullderef -nullstate -onlytrans@*/
 
 /*@-unqualifiedtrans -nullderef -nullstate -onlytrans@*/
-const unsigned long *
+const uintptr_t *
 yasm_expr_get_reg(yasm_expr **ep, int simplify)
 {
     if (simplify)

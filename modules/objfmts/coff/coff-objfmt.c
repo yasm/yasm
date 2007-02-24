@@ -1929,7 +1929,7 @@ dir_pushreg(yasm_objfmt_coff *objfmt_coff, yasm_valparamhead *valparams,
 {
     yasm_valparam *vp = yasm_vps_first(valparams);
     coff_unwind_code *code;
-    const unsigned long *reg;
+    const uintptr_t *reg;
 
     if (!procframe_checkstate(objfmt_coff, "PUSHREG"))
 	return;
@@ -1957,7 +1957,7 @@ dir_setframe(yasm_objfmt_coff *objfmt_coff, yasm_valparamhead *valparams,
 {
     yasm_valparam *vp = yasm_vps_first(valparams);
     coff_unwind_code *code;
-    const unsigned long *reg;
+    const uintptr_t *reg;
     yasm_expr *off = NULL;
 
     if (!procframe_checkstate(objfmt_coff, "SETFRAME"))
@@ -2031,7 +2031,7 @@ dir_save_common(yasm_objfmt_coff *objfmt_coff, yasm_valparamhead *valparams,
 {
     yasm_valparam *vp = yasm_vps_first(valparams);
     coff_unwind_code *code;
-    const unsigned long *reg;
+    const uintptr_t *reg;
 
     if (!procframe_checkstate(objfmt_coff, name))
 	return;

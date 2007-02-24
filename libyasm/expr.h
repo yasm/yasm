@@ -82,7 +82,7 @@ typedef struct yasm_expr__item yasm_expr__item;
  * \param reg	    register
  * \return Newly allocated expression item.
  */
-/*@only@*/ yasm_expr__item *yasm_expr_reg(unsigned long reg);
+/*@only@*/ yasm_expr__item *yasm_expr_reg(uintptr_t reg);
 
 /** Create a new expression tree e=l op r.
  * \param l	expression for left side of new expression
@@ -222,7 +222,7 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
  * \return NULL if the expression is too complex; otherwise the register value
  *         of the expression.
  */
-/*@dependent@*/ /*@null@*/ const unsigned long *yasm_expr_get_reg
+/*@dependent@*/ /*@null@*/ const uintptr_t *yasm_expr_get_reg
     (yasm_expr **ep, int simplify);
 
 /** Print an expression.  For debugging purposes.
