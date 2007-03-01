@@ -1001,7 +1001,7 @@ parse_memaddr(yasm_parser_gas *parser_gas)
 
     if (curtok == '(') {
 	int havereg = 0;
-	uintptr_t reg;
+	uintptr_t reg = 0;
 	yasm_intnum *scale = NULL;
 
 	get_next_token(); /* '(' */
