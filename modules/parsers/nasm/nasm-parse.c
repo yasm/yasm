@@ -680,8 +680,25 @@ parse_operand(yasm_parser_nasm *parser_nasm)
 		yasm_arch_get_reg_size(parser_nasm->arch, op->data.reg) != size)
 		yasm_error_set(YASM_ERROR_TYPE,
 			       N_("cannot override register size"));
-	    else
+	    else {
+		/* Silently override others unless a warning is turned on.
+		 * This is to allow overrides such as:
+		 *   %define arg1 dword [bp+4]
+		 *   cmp word arg1, 2
+		 * Which expands to:
+		 *   cmp word dword [bp+4], 2
+		 */
+		if (op->size != 0) {
+		    if (op->size != size)
+			yasm_warn_set(YASM_WARN_SIZE_OVERRIDE,
+			    N_("overriding operand size from %u-bit to %u-bit"),
+			    op->size, size);
+		    else
+			yasm_warn_set(YASM_WARN_SIZE_OVERRIDE,
+				      N_("double operand size override"));
+		}
 		op->size = size;
+	    }
 	    return op;
 	}
 	case TARGETMOD:
