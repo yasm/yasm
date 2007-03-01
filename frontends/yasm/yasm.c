@@ -69,6 +69,8 @@ static int preproc_only = 0;
 static unsigned int force_strict = 0;
 static int generate_make_dependencies = 0;
 static int warning_error = 0;	/* warnings being treated as errors */
+static FILE *errfile;
+/*@null@*/ /*@only@*/ static char *error_filename = NULL;
 static enum {
     EWSTYLE_GNU = 0,
     EWSTYLE_VC
@@ -93,6 +95,8 @@ static int opt_objfile_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_machine_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_strict_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_error_file(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_error_stdout(char *cmd, /*@null@*/ char *param, int extra);
 static int preproc_only_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_include_option(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_preproc_option(char *cmd, /*@null@*/ char *param, int extra);
@@ -160,6 +164,10 @@ static opt_option options[] =
       N_("enables/disables warning"), NULL },
     { 'M', NULL, 0, opt_makedep_handler, 0,
       N_("generate Makefile dependencies on stdout"), NULL },
+    { 'E', NULL, 1, opt_error_file, 0,
+      N_("redirect error messages to file"), N_("file") },
+    { 's', NULL, 0, opt_error_stdout, 0,
+      N_("redirect error messages to stdout"), NULL },
     { 'e', "preproc-only", 0, preproc_only_handler, 0,
       N_("preprocess only (writes output to stdout by default)"), NULL },
     { 'i', NULL, 1, opt_include_option, 0,
@@ -548,6 +556,8 @@ main(int argc, char *argv[])
     /*@null@*/ FILE *in = NULL;
     size_t i;
 
+    errfile = stderr;
+
 #if defined(HAVE_SETLOCALE) && defined(HAVE_LC_MESSAGES)
     setlocale(LC_MESSAGES, "");
 #endif
@@ -584,6 +594,13 @@ main(int argc, char *argv[])
 	case SPECIAL_LISTED:
 	    /* Printed out earlier */
 	    return EXIT_SUCCESS;
+    }
+
+    /* Open error file if specified. */
+    if (error_filename) {
+	errfile = open_file(error_filename, "wt");
+	if (!errfile)
+	    return EXIT_FAILURE;
     }
 
     /* Initialize BitVector (needed for intnum/floatnum). */
@@ -773,6 +790,9 @@ cleanup(yasm_object *object)
 	if (objfmt_keyword)
 	    yasm_xfree(objfmt_keyword);
     }
+
+    if (errfile != stderr && errfile != stdout)
+	fclose(errfile);
 }
 
 /*
@@ -1031,6 +1051,34 @@ opt_warning_handler(char *cmd, /*@unused@*/ char *param, int extra)
 }
 
 static int
+opt_error_file(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
+{
+    if (error_filename) {
+	print_error(
+	    _("warning: can output to only one error file, last specified used"));
+	yasm_xfree(error_filename);
+    }
+
+    assert(param != NULL);
+    error_filename = yasm__xstrdup(param);
+
+    return 0;
+}
+
+static int
+opt_error_stdout(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
+		 /*@unused@*/ int extra)
+{
+    /* Clear any specified error filename */
+    if (error_filename) {
+	yasm_xfree(error_filename);
+	error_filename = NULL;
+    }
+    errfile = stdout;
+    return 0;
+}
+
+static int
 preproc_only_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
 		     /*@unused@*/ int extra)
 {
@@ -1184,11 +1232,11 @@ static void
 print_error(const char *fmt, ...)
 {
     va_list va;
-    fprintf(stderr, "yasm: ");
+    fprintf(errfile, "yasm: ");
     va_start(va, fmt);
-    vfprintf(stderr, fmt, va);
+    vfprintf(errfile, fmt, va);
     va_end(va);
-    fputc('\n', stderr);
+    fputc('\n', errfile);
 }
 
 static /*@exits@*/ void
@@ -1206,9 +1254,9 @@ handle_yasm_int_error(const char *file, unsigned int line, const char *message)
 static /*@exits@*/ void
 handle_yasm_fatal(const char *fmt, va_list va)
 {
-    fprintf(stderr, "yasm: %s: ", _("FATAL"));
-    vfprintf(stderr, gettext(fmt), va);
-    fputc('\n', stderr);
+    fprintf(errfile, "yasm: %s: ", _("FATAL"));
+    vfprintf(errfile, gettext(fmt), va);
+    fputc('\n', errfile);
     exit(EXIT_FAILURE);
 }
 
@@ -1234,15 +1282,16 @@ print_yasm_error(const char *filename, unsigned long line, const char *msg,
 		 const char *xref_msg)
 {
     if (line)
-	fprintf(stderr, fmt[ewmsg_style], filename, line, "", msg);
+	fprintf(errfile, fmt[ewmsg_style], filename, line, "", msg);
     else
-	fprintf(stderr, fmt_noline[ewmsg_style], filename, "", msg);
+	fprintf(errfile, fmt_noline[ewmsg_style], filename, "", msg);
 
     if (xref_fn && xref_msg) {
 	if (xref_line)
-	    fprintf(stderr, fmt[ewmsg_style], xref_fn, xref_line, "", xref_msg);
+	    fprintf(errfile, fmt[ewmsg_style], xref_fn, xref_line, "",
+		    xref_msg);
 	else
-	    fprintf(stderr, fmt_noline[ewmsg_style], xref_fn, "", xref_msg);
+	    fprintf(errfile, fmt_noline[ewmsg_style], xref_fn, "", xref_msg);
     }
 }
 
@@ -1250,7 +1299,9 @@ static void
 print_yasm_warning(const char *filename, unsigned long line, const char *msg)
 {
     if (line)
-	fprintf(stderr, fmt[ewmsg_style], filename, line, _("warning: "), msg);
+	fprintf(errfile, fmt[ewmsg_style], filename, line, _("warning: "),
+		msg);
     else
-	fprintf(stderr, fmt_noline[ewmsg_style], filename, _("warning: "), msg);
+	fprintf(errfile, fmt_noline[ewmsg_style], filename, _("warning: "),
+		msg);
 }
