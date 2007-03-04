@@ -1118,7 +1118,7 @@ dir_type(yasm_objfmt_elf *objfmt_elf, yasm_valparam *vp, unsigned long line)
 
     /* Pull new type from val */
     vp = yasm_vps_next(vp);
-    if (vp->val) {
+    if (vp && vp->val) {
 	if (yasm__strcasecmp(vp->val, "function") == 0)
 	    elf_sym_set_type(entry, STT_FUNC);
 	else if (yasm__strcasecmp(vp->val, "object") == 0)
@@ -1147,10 +1147,10 @@ dir_size(yasm_objfmt_elf *objfmt_elf, yasm_valparam *vp, unsigned long line)
 
     /* Pull new size from either param (expr) or val */
     vp = yasm_vps_next(vp);
-    if (vp->param) {
+    if (vp && vp->param) {
 	elf_sym_set_size(entry, vp->param);
 	vp->param = NULL;
-    } else if (vp->val)
+    } else if (vp && vp->val)
 	elf_sym_set_size(entry, yasm_expr_create_ident(yasm_expr_sym(
 	    yasm_symtab_use(objfmt_elf->symtab, vp->val, line)), line));
     else
