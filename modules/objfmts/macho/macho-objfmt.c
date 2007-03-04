@@ -761,8 +761,12 @@ macho_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 
     localbuf = info->buf;
 
-    fwrite(msd->sectname, 16, 1, info->f);
-    fwrite(msd->segname, 16, 1, info->f);
+    memset(localbuf, 0, 16);
+    strncpy((char *)localbuf, msd->sectname, 16);
+    localbuf += 16;
+    memset(localbuf, 0, 16);
+    strncpy((char *)localbuf, msd->segname, 16);
+    localbuf += 16;
     /* section address, size depend on 32/64 bit mode */
     YASM_WRITE_32_L(localbuf, msd->vmoff);	/* address in memory */
     if (info->is_64)
@@ -800,9 +804,9 @@ macho_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     YASM_WRITE_32_L(localbuf, 0);	/* reserved 2 */
 
     if (info->is_64)
-	fwrite(info->buf, MACHO_SECTCMD64_SIZE - 32, 1, info->f);	/* 2*16 byte strings already written */
+	fwrite(info->buf, MACHO_SECTCMD64_SIZE, 1, info->f);
     else
-	fwrite(info->buf, MACHO_SECTCMD_SIZE - 32, 1, info->f);	/* 2*16 byte strings already written */
+	fwrite(info->buf, MACHO_SECTCMD_SIZE, 1, info->f);
 
     return 0;
 }
