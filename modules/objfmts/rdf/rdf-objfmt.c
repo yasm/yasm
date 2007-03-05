@@ -118,15 +118,12 @@ typedef struct yasm_objfmt_rdf {
 
     long parse_scnum;		    /* sect numbering in parser */
 
-    yasm_object *object;
-    yasm_symtab *symtab;
-    /*@dependent@*/ yasm_arch *arch;
-
     /*@owned@*/ xdf_str_head module_names;
     /*@owned@*/ xdf_str_head library_names;
 } yasm_objfmt_rdf;
 
 typedef struct rdf_objfmt_output_info {
+    yasm_object *object;
     yasm_objfmt_rdf *objfmt_rdf;
     yasm_errwarns *errwarns;
     /*@dependent@*/ FILE *f;
@@ -175,13 +172,9 @@ rdf_objfmt_sym_set_data(yasm_symrec *sym,
 }
 
 static yasm_objfmt *
-rdf_objfmt_create(yasm_object *object, yasm_arch *a)
+rdf_objfmt_create(yasm_object *object)
 {
     yasm_objfmt_rdf *objfmt_rdf = yasm_xmalloc(sizeof(yasm_objfmt_rdf));
-
-    objfmt_rdf->object = object;
-    objfmt_rdf->symtab = yasm_object_get_symtab(object);
-    objfmt_rdf->arch = a;
 
     /* We theoretically support all arches, so don't check.
      * Really we only support byte-addressable ones.
@@ -221,7 +214,7 @@ rdf_objfmt_output_value(yasm_value *value, unsigned char *buf,
      * cross-section, or non-PC-relative reference (those are handled below).
      */
     switch (yasm_value_output_basic(value, buf, destsize, bc, warn,
-				    info->objfmt_rdf->arch)) {
+				    info->object->arch)) {
 	case -1:
 	    return 1;
 	case 0:
@@ -308,7 +301,7 @@ rdf_objfmt_output_value(yasm_value *value, unsigned char *buf,
 	yasm_intnum_calc(intn, YASM_EXPR_ADD, intn2);
     }
 
-    retval = yasm_arch_intnum_tobytes(objfmt_rdf->arch, intn, buf, destsize,
+    retval = yasm_arch_intnum_tobytes(info->object->arch, intn, buf, destsize,
 				      valsize, 0, bc, warn);
     yasm_intnum_destroy(intn);
     return retval;
@@ -612,16 +605,17 @@ rdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 }
 
 static void
-rdf_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
-		  /*@unused@*/ yasm_dbgfmt *df, yasm_errwarns *errwarns)
+rdf_objfmt_output(yasm_object *object, FILE *f, int all_syms,
+		  yasm_errwarns *errwarns)
 {
-    yasm_objfmt_rdf *objfmt_rdf = (yasm_objfmt_rdf *)objfmt;
+    yasm_objfmt_rdf *objfmt_rdf = (yasm_objfmt_rdf *)object->objfmt;
     rdf_objfmt_output_info info;
     unsigned char *localbuf;
     long headerlen, filelen;
     xdf_str *cur;
     size_t len;
 
+    info.object = object;
     info.objfmt_rdf = objfmt_rdf;
     info.errwarns = errwarns;
     info.f = f;
@@ -660,7 +654,7 @@ rdf_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
 
     /* Output symbol table */
     info.indx = objfmt_rdf->parse_scnum;
-    yasm_symtab_traverse(objfmt_rdf->symtab, &info, rdf_objfmt_output_sym);
+    yasm_symtab_traverse(object->symtab, &info, rdf_objfmt_output_sym);
 
     /* UGH! Due to the fact the relocs go at the beginning of the file, and
      * we only know if we have relocs when we output the sections, we have
@@ -674,12 +668,12 @@ rdf_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
      *
      * We also calculate the total size of all BSS sections here.
      */
-    if (yasm_object_sections_traverse(objfmt_rdf->object, &info,
+    if (yasm_object_sections_traverse(object, &info,
 				      rdf_objfmt_output_section_mem))
 	return;
 
     /* Output all relocs */
-    if (yasm_object_sections_traverse(objfmt_rdf->object, &info,
+    if (yasm_object_sections_traverse(object, &info,
 				      rdf_objfmt_output_section_reloc))
 	return;
 
@@ -701,7 +695,7 @@ rdf_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
     }
 
     /* Section data (to file) */
-    if (yasm_object_sections_traverse(objfmt_rdf->object, &info,
+    if (yasm_object_sections_traverse(object, &info,
 				      rdf_objfmt_output_section_file))
 	return;
 
@@ -759,9 +753,10 @@ rdf_objfmt_destroy(yasm_objfmt *objfmt)
 }
 
 static rdf_section_data *
-rdf_objfmt_init_new_section(yasm_objfmt_rdf *objfmt_rdf, yasm_section *sect,
+rdf_objfmt_init_new_section(yasm_object *object, yasm_section *sect,
 			    const char *sectname, unsigned long line)
 {
+    yasm_objfmt_rdf *objfmt_rdf = (yasm_objfmt_rdf *)object->objfmt;
     rdf_section_data *data;
     yasm_symrec *sym;
 
@@ -773,24 +768,22 @@ rdf_objfmt_init_new_section(yasm_objfmt_rdf *objfmt_rdf, yasm_section *sect,
     data->raw_data = NULL;
     yasm_section_add_data(sect, &rdf_section_data_cb, data);
 
-    sym = yasm_symtab_define_label(objfmt_rdf->symtab, sectname,
+    sym = yasm_symtab_define_label(object->symtab, sectname,
 				   yasm_section_bcs_first(sect), 1, line);
     data->sym = sym;
     return data;
 }
 
 static yasm_section *
-rdf_objfmt_add_default_section(yasm_objfmt *objfmt)
+rdf_objfmt_add_default_section(yasm_object *object)
 {
-    yasm_objfmt_rdf *objfmt_rdf = (yasm_objfmt_rdf *)objfmt;
     yasm_section *retval;
     rdf_section_data *rsd;
     int isnew;
 
-    retval = yasm_object_get_general(objfmt_rdf->object, ".text", 0, 0, 1, 0,
-				     &isnew, 0);
+    retval = yasm_object_get_general(object, ".text", 0, 0, 1, 0, &isnew, 0);
     if (isnew) {
-	rsd = rdf_objfmt_init_new_section(objfmt_rdf, retval, ".text", 0);
+	rsd = rdf_objfmt_init_new_section(object, retval, ".text", 0);
 	rsd->type = RDF_SECT_CODE;
 	rsd->reserved = 0;
 	yasm_section_set_default(retval, 1);
@@ -799,12 +792,11 @@ rdf_objfmt_add_default_section(yasm_objfmt *objfmt)
 }
 
 static /*@observer@*/ /*@null@*/ yasm_section *
-rdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
-			    /*@unused@*/ /*@null@*/
-			    yasm_valparamhead *objext_valparams,
-			    unsigned long line)
+rdf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
+			  /*@unused@*/ /*@null@*/
+			  yasm_valparamhead *objext_valparams,
+			  unsigned long line)
 {
-    yasm_objfmt_rdf *objfmt_rdf = (yasm_objfmt_rdf *)objfmt;
     yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_section *retval;
     int isnew;
@@ -885,11 +877,11 @@ rdf_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			  vp->val);
     }
 
-    retval = yasm_object_get_general(objfmt_rdf->object, sectname, 0, 0, 1,
+    retval = yasm_object_get_general(object, sectname, 0, 0, 1,
 				     type == RDF_SECT_BSS, &isnew, line);
 
     if (isnew)
-	rsd = rdf_objfmt_init_new_section(objfmt_rdf, retval, sectname, line);
+	rsd = rdf_objfmt_init_new_section(object, retval, sectname, line);
     else
 	rsd = yasm_section_get_data(retval, &rdf_section_data_cb);
 
@@ -926,11 +918,10 @@ rdf_section_data_print(void *data, FILE *f, int indent_level)
 }
 
 static yasm_symrec *
-rdf_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
-			   /*@null@*/ yasm_valparamhead *objext_valparams,
-			   unsigned long line)
+rdf_objfmt_extern_declare(yasm_object *object, const char *name, /*@unused@*/
+			  /*@null@*/ yasm_valparamhead *objext_valparams,
+			  unsigned long line)
 {
-    yasm_objfmt_rdf *objfmt_rdf = (yasm_objfmt_rdf *)objfmt;
     yasm_symrec *sym;
     unsigned int flags = 0;
 
@@ -946,7 +937,7 @@ rdf_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
 	{ "far", SYM_FAR },
     };
 
-    sym = yasm_symtab_declare(objfmt_rdf->symtab, name, YASM_SYM_EXTERN, line);
+    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_EXTERN, line);
 
     if (objext_valparams) {
 	yasm_valparam *vp = yasm_vps_first(objext_valparams);
@@ -985,11 +976,10 @@ rdf_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
 }
 
 static yasm_symrec *
-rdf_objfmt_global_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
-			   /*@null@*/ yasm_valparamhead *objext_valparams,
-			   unsigned long line)
+rdf_objfmt_global_declare(yasm_object *object, const char *name, /*@unused@*/
+			  /*@null@*/ yasm_valparamhead *objext_valparams,
+			  unsigned long line)
 {
-    yasm_objfmt_rdf *objfmt_rdf = (yasm_objfmt_rdf *)objfmt;
     yasm_symrec *sym;
     unsigned int flags = 0;
 
@@ -1004,7 +994,7 @@ rdf_objfmt_global_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
 	{ "export", SYM_GLOBAL },
     };
 
-    sym = yasm_symtab_declare(objfmt_rdf->symtab, name, YASM_SYM_GLOBAL, line);
+    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_GLOBAL, line);
 
     if (objext_valparams) {
 	yasm_valparam *vp = yasm_vps_first(objext_valparams);
@@ -1037,16 +1027,15 @@ rdf_objfmt_global_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
 }
 
 static yasm_symrec *
-rdf_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
-			   /*@only@*/ yasm_expr *size,
-			   yasm_valparamhead *objext_valparams,
-			   unsigned long line)
+rdf_objfmt_common_declare(yasm_object *object, const char *name,
+			  /*@only@*/ yasm_expr *size,
+			  yasm_valparamhead *objext_valparams,
+			  unsigned long line)
 {
-    yasm_objfmt_rdf *objfmt_rdf = (yasm_objfmt_rdf *)objfmt;
     yasm_symrec *sym;
     unsigned long addralign = 0;
 
-    sym = yasm_symtab_declare(objfmt_rdf->symtab, name, YASM_SYM_COMMON, line);
+    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_COMMON, line);
 
     if (objext_valparams) {
 	yasm_valparam *vp = yasm_vps_first(objext_valparams);
@@ -1103,12 +1092,12 @@ rdf_symrec_data_print(void *data, FILE *f, int indent_level)
 }
 
 static int
-rdf_objfmt_directive(yasm_objfmt *objfmt, const char *name,
+rdf_objfmt_directive(yasm_object *object, const char *name,
 		     /*@null@*/ yasm_valparamhead *valparams,
 		     /*@unused@*/ /*@null@*/
 		     yasm_valparamhead *objext_valparams, unsigned long line)
 {
-    yasm_objfmt_rdf *objfmt_rdf = (yasm_objfmt_rdf *)objfmt;
+    yasm_objfmt_rdf *objfmt_rdf = (yasm_objfmt_rdf *)object->objfmt;
     int lib;
     yasm_valparam *vp;
     xdf_str *str;

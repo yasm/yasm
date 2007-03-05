@@ -72,10 +72,12 @@ static yasm_bytecode *gas_parser_dir_fill
     (yasm_parser_gas *parser_gas, /*@only@*/ yasm_expr *repeat,
      /*@only@*/ /*@null@*/ yasm_expr *size,
      /*@only@*/ /*@null@*/ yasm_expr *value);
+#if 0
 static void gas_parser_directive
     (yasm_parser_gas *parser_gas, const char *name,
      yasm_valparamhead *valparams,
      /*@null@*/ yasm_valparamhead *objext_valparams);
+#endif
 
 #define is_eol_tok(tok)	((tok) == '\n' || (tok) == ';' || (tok) == 0)
 #define is_eol()	is_eol_tok(curtok)
@@ -215,7 +217,7 @@ gas_parser_parse(yasm_parser_gas *parser_gas)
 
 	yasm_errwarn_propagate(parser_gas->errwarns, cur_line);
 
-	temp_bc = yasm_section_bcs_append(parser_gas->cur_section, bc);
+	temp_bc = yasm_section_bcs_append(cursect, bc);
 	if (temp_bc)
 	    parser_gas->prev_bc = temp_bc;
 	if (curtok == ';')
@@ -377,8 +379,8 @@ parse_line(yasm_parser_gas *parser_gas)
 		}
 	    }
 
-	    return gas_parser_align(parser_gas, parser_gas->cur_section, bound,
-				    fill, maxskip, (int)ival);
+	    return gas_parser_align(parser_gas, cursect, bound, fill, maxskip,
+				    (int)ival);
 	}
 	case DIR_ORG:
 	    get_next_token(); /* DIR_ORG */
@@ -393,16 +395,14 @@ parse_line(yasm_parser_gas *parser_gas)
 	case DIR_LOCAL:
 	    get_next_token(); /* DIR_LOCAL */
 	    if (!expect(ID)) return NULL;
-	    yasm_symtab_declare(parser_gas->symtab, ID_val, YASM_SYM_DLOCAL,
-				cur_line);
+	    yasm_symtab_declare(p_symtab, ID_val, YASM_SYM_DLOCAL, cur_line);
 	    yasm_xfree(ID_val);
 	    get_next_token(); /* ID */
 	    return NULL;
 	case DIR_GLOBAL:
 	    get_next_token(); /* DIR_GLOBAL */
 	    if (!expect(ID)) return NULL;
-	    yasm_objfmt_global_declare(parser_gas->objfmt, ID_val, NULL,
-				       cur_line);
+	    yasm_objfmt_global_declare(p_object, ID_val, NULL, cur_line);
 	    yasm_xfree(ID_val);
 	    get_next_token(); /* ID */
 	    return NULL;
@@ -436,7 +436,7 @@ parse_line(yasm_parser_gas *parser_gas)
 	    }
 	    /* If already explicitly declared local, treat like LCOMM */
 	    if (is_lcomm
-		|| ((sym = yasm_symtab_get(parser_gas->symtab, id))
+		|| ((sym = yasm_symtab_get(p_symtab, id))
 		    && yasm_symrec_get_visibility(sym) == YASM_SYM_DLOCAL)) {
 		define_lcomm(parser_gas, id, e, align);
 	    } else if (align) {
@@ -445,14 +445,12 @@ parse_line(yasm_parser_gas *parser_gas)
 		vp = yasm_vp_create(NULL, align);
 		yasm_vps_append(&vps, vp);
 
-		yasm_objfmt_common_declare(parser_gas->objfmt, id, e, &vps,
-					   cur_line);
+		yasm_objfmt_common_declare(p_object, id, e, &vps, cur_line);
 
 		yasm_vps_delete(&vps);
 		yasm_xfree(id);
 	    } else {
-		yasm_objfmt_common_declare(parser_gas->objfmt, id, e, NULL,
-					   cur_line);
+		yasm_objfmt_common_declare(p_object, id, e, NULL, cur_line);
 		yasm_xfree(id);
 	    }
 	    return NULL;
@@ -461,8 +459,7 @@ parse_line(yasm_parser_gas *parser_gas)
 	    get_next_token(); /* DIR_EXTERN */
 	    if (!expect(ID)) return NULL;
 	    /* Go ahead and do it, even though all undef become extern */
-	    yasm_objfmt_extern_declare(parser_gas->objfmt, ID_val, NULL,
-				       cur_line);
+	    yasm_objfmt_extern_declare(p_object, ID_val, NULL, cur_line);
 	    yasm_xfree(ID_val);
 	    get_next_token(); /* ID */
 	    return NULL;
@@ -475,8 +472,7 @@ parse_line(yasm_parser_gas *parser_gas)
 	    yasm_vps_append(&vps, vp);
 	    get_next_token(); /* ID */
 
-	    yasm_objfmt_directive(parser_gas->objfmt, "weak", &vps, NULL,
-				  cur_line);
+	    yasm_objfmt_directive(p_object, "weak", &vps, NULL, cur_line);
 
 	    yasm_vps_delete(&vps);
 	    return NULL;
@@ -487,14 +483,14 @@ parse_line(yasm_parser_gas *parser_gas)
 	    get_next_token(); /* DIR_ASCII */
 	    if (!parse_strvals(parser_gas, &dvs))
 		return NULL;
-	    return yasm_bc_create_data(&dvs, 1, (int)ival, parser_gas->arch,
+	    return yasm_bc_create_data(&dvs, 1, (int)ival, p_object->arch,
 				       cur_line);
 	case DIR_DATA:
 	    ival = DIR_DATA_val;
 	    get_next_token(); /* DIR_DATA */
 	    if (!parse_datavals(parser_gas, &dvs))
 		return NULL;
-	    return yasm_bc_create_data(&dvs, ival, 0, parser_gas->arch,
+	    return yasm_bc_create_data(&dvs, ival, 0, p_object->arch,
 				       cur_line);
 	case DIR_LEB128:
 	    ival = DIR_LEB128_val;
@@ -516,7 +512,7 @@ parse_line(yasm_parser_gas *parser_gas)
 	    yasm_dvs_initialize(&dvs);
 	    yasm_dvs_append(&dvs, yasm_dv_create_expr(
 		p_expr_new_ident(yasm_expr_int(yasm_intnum_create_uint(0)))));
-	    bc = yasm_bc_create_data(&dvs, 1, 0, parser_gas->arch, cur_line);
+	    bc = yasm_bc_create_data(&dvs, 1, 0, p_object->arch, cur_line);
 	    yasm_bc_set_multiple(bc, e);
 	    return bc;
 	case DIR_SKIP:
@@ -536,7 +532,7 @@ parse_line(yasm_parser_gas *parser_gas)
 	    e_val = parse_expr(parser_gas);
 	    yasm_dvs_initialize(&dvs);
 	    yasm_dvs_append(&dvs, yasm_dv_create_expr(e_val));
-	    bc = yasm_bc_create_data(&dvs, 1, 0, parser_gas->arch, cur_line);
+	    bc = yasm_bc_create_data(&dvs, 1, 0, p_object->arch, cur_line);
 
 	    yasm_bc_set_multiple(bc, e);
 	    return bc;
@@ -628,8 +624,7 @@ parse_line(yasm_parser_gas *parser_gas)
 	    get_next_token(); /* DIR_IDENT */
 	    if (!parse_dirstrvals(parser_gas, &vps))
 		return NULL;
-	    yasm_objfmt_directive(parser_gas->objfmt, "ident", &vps, NULL,
-				  cur_line);
+	    yasm_objfmt_directive(p_object, "ident", &vps, NULL, cur_line);
 	    yasm_vps_delete(&vps);
 	    return NULL;
 	case DIR_FILE:
@@ -667,8 +662,7 @@ parse_line(yasm_parser_gas *parser_gas)
 		vp = yasm_vp_create(filename, NULL);
 		yasm_vps_append(&vps, vp);
 
-		yasm_dbgfmt_directive(parser_gas->dbgfmt, "file",
-				      parser_gas->cur_section, &vps, cur_line);
+		yasm_dbgfmt_directive(p_object, "file", &vps, cur_line);
 
 		yasm_vps_delete(&vps);
 		return NULL;
@@ -691,8 +685,7 @@ parse_line(yasm_parser_gas *parser_gas)
 	    yasm_vps_append(&vps, vp);
 	    get_next_token(); /* STRING */
 
-	    yasm_dbgfmt_directive(parser_gas->dbgfmt, "file",
-				  parser_gas->cur_section, &vps, cur_line);
+	    yasm_dbgfmt_directive(p_object, "file", &vps, cur_line);
 
 	    yasm_vps_delete(&vps);
 	    return NULL;
@@ -725,8 +718,7 @@ parse_line(yasm_parser_gas *parser_gas)
 	    yasm_vps_append(&vps, vp);
 	    get_next_token(); /* INTNUM */
 
-	    yasm_dbgfmt_directive(parser_gas->dbgfmt, "loc",
-				  parser_gas->cur_section, &vps, cur_line);
+	    yasm_dbgfmt_directive(p_object, "loc", &vps, cur_line);
 
 	    yasm_vps_delete(&vps);
 	    return NULL;
@@ -760,8 +752,7 @@ parse_line(yasm_parser_gas *parser_gas)
 	    yasm_vps_append(&vps, vp);
 	    get_next_token(); /* ID */
 
-	    yasm_objfmt_directive(parser_gas->objfmt, "type", &vps, NULL,
-				  cur_line);
+	    yasm_objfmt_directive(p_object, "type", &vps, NULL, cur_line);
 
 	    yasm_vps_delete(&vps);
 	    return NULL;
@@ -791,8 +782,7 @@ parse_line(yasm_parser_gas *parser_gas)
 	    vp = yasm_vp_create(NULL, e);
 	    yasm_vps_append(&vps, vp);
 
-	    yasm_objfmt_directive(parser_gas->objfmt, "size", &vps, NULL,
-				  cur_line);
+	    yasm_objfmt_directive(p_object, "size", &vps, NULL, cur_line);
 
 	    yasm_vps_delete(&vps);
 	    return NULL;
@@ -818,7 +808,7 @@ parse_instr(yasm_parser_gas *parser_gas)
 	    get_next_token();
 	    if (is_eol()) {
 		/* no operands */
-		return yasm_bc_create_insn(parser_gas->arch, insn.arch_data,
+		return yasm_bc_create_insn(p_object->arch, insn.arch_data,
 					   0, NULL, cur_line);
 	    }
 
@@ -843,7 +833,7 @@ parse_instr(yasm_parser_gas *parser_gas)
 		}
 		get_next_token();
 	    }
-	    return yasm_bc_create_insn(parser_gas->arch, insn.arch_data,
+	    return yasm_bc_create_insn(p_object->arch, insn.arch_data,
 				       num_operands, &operands, cur_line);
 	}
 	case PREFIX:
@@ -852,7 +842,7 @@ parse_instr(yasm_parser_gas *parser_gas)
 	    get_next_token(); /* PREFIX */
 	    bc = parse_instr(parser_gas);
 	    if (!bc)
-		bc = yasm_bc_create_empty_insn(parser_gas->arch, cur_line);
+		bc = yasm_bc_create_empty_insn(p_object->arch, cur_line);
 	    yasm_bc_insn_add_prefix(bc, prefix.arch_data);
 	    return bc;
 	}
@@ -862,7 +852,7 @@ parse_instr(yasm_parser_gas *parser_gas)
 	    get_next_token(); /* SEGREG */
 	    bc = parse_instr(parser_gas);
 	    if (!bc)
-		bc = yasm_bc_create_empty_insn(parser_gas->arch, cur_line);
+		bc = yasm_bc_create_empty_insn(p_object->arch, cur_line);
 	    yasm_bc_insn_add_seg_prefix(bc, segreg);
 	}
 	default:
@@ -1084,7 +1074,7 @@ done:
 
     if (!e1)
 	return NULL;
-    ea = yasm_arch_ea_create(parser_gas->arch, e1);
+    ea = yasm_arch_ea_create(p_object->arch, e1);
     if (strong)
 	yasm_ea_set_strong(ea, 1);
     return ea;
@@ -1135,7 +1125,7 @@ parse_operand(yasm_parser_gas *parser_gas)
 		return NULL;
 	    }
 	    get_next_token(); /* ')' */
-	    reg = yasm_arch_reggroup_get_reg(parser_gas->arch, reg, regindex);
+	    reg = yasm_arch_reggroup_get_reg(p_object->arch, reg, regindex);
 	    if (reg == 0) {
 		yasm_error_set(YASM_ERROR_SYNTAX, N_("bad register index `%u'"),
 			       regindex);
@@ -1414,8 +1404,8 @@ gas_get_section(yasm_parser_gas *parser_gas, char *name,
 	}
     }
 
-    new_section = yasm_objfmt_section_switch(parser_gas->objfmt, &vps,
-					     objext_valparams, cur_line);
+    new_section = yasm_objfmt_section_switch(p_object, &vps, objext_valparams,
+					     cur_line);
 
     yasm_vps_delete(&vps);
     return new_section;
@@ -1432,7 +1422,7 @@ gas_switch_section(yasm_parser_gas *parser_gas, char *name,
     new_section = gas_get_section(parser_gas, yasm__xstrdup(name), flags, type,
 				  objext_valparams, builtin);
     if (new_section) {
-	parser_gas->cur_section = new_section;
+	cursect = new_section;
 	parser_gas->prev_bc = yasm_section_bcs_last(new_section);
     } else
 	yasm_error_set(YASM_ERROR_GENERAL, N_("invalid section name `%s'"),
@@ -1471,7 +1461,7 @@ gas_parser_align(yasm_parser_gas *parser_gas, yasm_section *sect,
 
     return yasm_bc_create_align(boundval, fillval, maxskipval,
 				yasm_section_is_code(sect) ?
-				    yasm_arch_get_fill(parser_gas->arch) : NULL,
+				    yasm_arch_get_fill(p_object->arch) : NULL,
 				cur_line);
 }
 
@@ -1506,13 +1496,13 @@ gas_parser_dir_fill(yasm_parser_gas *parser_gas, /*@only@*/ yasm_expr *repeat,
 
     yasm_dvs_initialize(&dvs);
     yasm_dvs_append(&dvs, yasm_dv_create_expr(value));
-    bc = yasm_bc_create_data(&dvs, ssize, 0, parser_gas->arch, cur_line);
+    bc = yasm_bc_create_data(&dvs, ssize, 0, p_object->arch, cur_line);
 
     yasm_bc_set_multiple(bc, repeat);
 
     return bc;
 }
-
+#if 0
 static void
 gas_parser_directive(yasm_parser_gas *parser_gas, const char *name,
 		      yasm_valparamhead *valparams,
@@ -1521,10 +1511,10 @@ gas_parser_directive(yasm_parser_gas *parser_gas, const char *name,
     unsigned long line = cur_line;
 
     /* Handle (mostly) output-format independent directives here */
-    if (!yasm_arch_parse_directive(parser_gas->arch, name, valparams,
+    if (!yasm_arch_parse_directive(p_object->arch, name, valparams,
 		    objext_valparams, parser_gas->object, line)) {
 	;
-    } else if (yasm_objfmt_directive(parser_gas->objfmt, name, valparams,
+    } else if (yasm_objfmt_directive(p_object, name, valparams,
 				     objext_valparams, line)) {
 	yasm_error_set(YASM_ERROR_GENERAL, N_("unrecognized directive [%s]"),
 		       name);
@@ -1534,3 +1524,4 @@ gas_parser_directive(yasm_parser_gas *parser_gas, const char *name,
     if (objext_valparams)
 	yasm_vps_delete(objext_valparams);
 }
+#endif

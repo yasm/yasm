@@ -111,7 +111,6 @@ typedef struct dwarf2_line_state {
 } dwarf2_line_state;
 
 typedef struct dwarf2_spp {
-    yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2;
     yasm_bytecode *line_start_prevbc;
     yasm_bytecode *line_end_prevbc;
 } dwarf2_spp;
@@ -445,6 +444,8 @@ dwarf2_dbgfmt_gen_line_op(yasm_section *debug_line, dwarf2_line_state *state,
 
 typedef struct dwarf2_line_bc_info {
     yasm_section *debug_line;
+    yasm_object *object;
+    yasm_linemap *linemap;
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2;
     dwarf2_line_state *state;
     dwarf2_loc loc;
@@ -475,8 +476,7 @@ dwarf2_generate_line_bc(yasm_bytecode *bc, /*@null@*/ void *d)
 	}
     }
 
-    yasm_linemap_lookup(dbgfmt_dwarf2->linemap, bc->line, &filename,
-			&info->loc.line);
+    yasm_linemap_lookup(info->linemap, bc->line, &filename, &info->loc.line);
     /* Find file index; just linear search it unless it was the last used */
     if (info->lastfile > 0
 	&& strcmp(filename, dbgfmt_dwarf2->filenames[info->lastfile-1].pathname)
@@ -500,6 +500,8 @@ dwarf2_generate_line_bc(yasm_bytecode *bc, /*@null@*/ void *d)
 
 typedef struct dwarf2_line_info {
     yasm_section *debug_line;	/* section to which line number info goes */
+    yasm_object *object;
+    yasm_linemap *linemap;
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2;
     yasm_errwarns *errwarns;
 
@@ -552,6 +554,8 @@ dwarf2_generate_line_section(yasm_section *sect, /*@null@*/ void *d)
 	dwarf2_line_bc_info bcinfo;
 
 	bcinfo.debug_line = info->debug_line;
+	bcinfo.object = info->object;
+	bcinfo.linemap = info->linemap;
 	bcinfo.dbgfmt_dwarf2 = dbgfmt_dwarf2;
 	bcinfo.state = &state;
 	bcinfo.lastfile = 0;
@@ -618,11 +622,12 @@ dwarf2_generate_filename(const char *filename, void *d)
 }
 
 yasm_section *
-yasm_dwarf2__generate_line(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
+yasm_dwarf2__generate_line(yasm_object *object, yasm_linemap *linemap,
 			   yasm_errwarns *errwarns, int asm_source,
 			   /*@out@*/ yasm_section **main_code,
 			   /*@out@*/ size_t *num_line_sections)
 {
+    yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = (yasm_dbgfmt_dwarf2 *)object->dbgfmt;
     dwarf2_line_info info;
     int new;
     size_t i;
@@ -632,17 +637,18 @@ yasm_dwarf2__generate_line(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 
     if (asm_source) {
 	/* Generate dirs and filenames based on linemap */
-	yasm_linemap_traverse_filenames(dbgfmt_dwarf2->linemap, dbgfmt_dwarf2,
+	yasm_linemap_traverse_filenames(linemap, dbgfmt_dwarf2,
 					dwarf2_generate_filename);
     }
 
     info.num_sections = 0;
     info.last_code = NULL;
     info.asm_source = asm_source;
+    info.object = object;
+    info.linemap = linemap;
     info.dbgfmt_dwarf2 = dbgfmt_dwarf2;
-    info.debug_line = yasm_object_get_general(dbgfmt_dwarf2->object,
-					      ".debug_line", 0, 1, 0, 0, &new,
-					      0);
+    info.debug_line = yasm_object_get_general(object, ".debug_line", 0, 1, 0,
+					      0, &new, 0);
     last = yasm_section_bcs_last(info.debug_line);
 
     /* header */
@@ -650,7 +656,6 @@ yasm_dwarf2__generate_line(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 
     /* statement program prologue */
     spp = yasm_xmalloc(sizeof(dwarf2_spp));
-    spp->dbgfmt_dwarf2 = dbgfmt_dwarf2;
     sppbc = yasm_bc_create_common(&dwarf2_spp_bc_callback, spp, 0);
     sppbc->len = dbgfmt_dwarf2->sizeof_offset + 5 +
 	NELEMS(line_opcode_num_operands);
@@ -676,7 +681,7 @@ yasm_dwarf2__generate_line(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
     yasm_dwarf2__append_bc(info.debug_line, sppbc);
 
     /* statement program */
-    yasm_object_sections_traverse(dbgfmt_dwarf2->object, (void *)&info,
+    yasm_object_sections_traverse(object, (void *)&info,
 				  dwarf2_generate_line_section);
 
     /* mark end of line information */
@@ -716,8 +721,8 @@ dwarf2_spp_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		      yasm_output_value_func output_value,
 		      yasm_output_reloc_func output_reloc)
 {
-    dwarf2_spp *spp = (dwarf2_spp *)bc->contents;
-    yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = spp->dbgfmt_dwarf2;
+    yasm_object *object = yasm_section_get_object(bc->section);
+    yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = (yasm_dbgfmt_dwarf2 *)object->dbgfmt;
     unsigned char *buf = *bufp;
     yasm_intnum *cval;
     size_t i, len;
@@ -725,7 +730,7 @@ dwarf2_spp_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     /* Prologue length (following this field) */
     cval = yasm_intnum_create_uint(bc->len - (unsigned long)(buf-*bufp) -
 				   dbgfmt_dwarf2->sizeof_offset);
-    yasm_arch_intnum_tobytes(dbgfmt_dwarf2->arch, cval, buf,
+    yasm_arch_intnum_tobytes(object->arch, cval, buf,
 			     dbgfmt_dwarf2->sizeof_offset,
 			     dbgfmt_dwarf2->sizeof_offset*8, 0, bc, 0);
     buf += dbgfmt_dwarf2->sizeof_offset;
@@ -822,10 +827,10 @@ dwarf2_line_op_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 }
 
 int
-yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
-			    const char *name, yasm_section *sect,
+yasm_dwarf2__line_directive(yasm_object *object, const char *name,
 			    yasm_valparamhead *valparams, unsigned long line)
 {
+    yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = (yasm_dbgfmt_dwarf2 *)object->dbgfmt;
     yasm_valparam *vp;
     if (yasm__strcasecmp(name, "loc") == 0) {
 	/*@dependent@*/ /*@null@*/ const yasm_intnum *intn;
@@ -870,11 +875,13 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	loc->line = yasm_intnum_get_uint(intn);
 
 	/* Generate new section data if it doesn't already exist */
-	dsd = yasm_section_get_data(sect, &yasm_dwarf2__section_data_cb);
+	dsd = yasm_section_get_data(object->cur_section,
+				    &yasm_dwarf2__section_data_cb);
 	if (!dsd) {
 	    dsd = yasm_xmalloc(sizeof(dwarf2_section_data));
 	    STAILQ_INIT(&dsd->locs);
-	    yasm_section_add_data(sect, &yasm_dwarf2__section_data_cb, dsd);
+	    yasm_section_add_data(object->cur_section,
+				  &yasm_dwarf2__section_data_cb, dsd);
 	}
 
 	/* Defaults for optional settings */
@@ -978,7 +985,7 @@ yasm_dwarf2__line_directive(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 	vp = yasm_vps_first(valparams);
 	if (vp->val) {
 	    /* Just a bare filename */
-	    yasm_object_set_source_fn(dbgfmt_dwarf2->object, vp->val);
+	    yasm_object_set_source_fn(object, vp->val);
 	    return 0;
 	}
 

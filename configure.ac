@@ -180,8 +180,8 @@ if test "$USE_MAINTAINER_MODE" = "yes"; then
     MORE_CFLAGS="$MORE_CFLAGS -Wswitch"
     MORE_CFLAGS="$MORE_CFLAGS -Wwrite-strings"
     MORE_CFLAGS="$MORE_CFLAGS -Wno-undef"
-    MORE_CFLAGS="$MORE_CFLAGS -Wno-unused"
-#    MORE_CFLAGS="$MORE_CFLAGS -Wno-unused-parameter"
+#    MORE_CFLAGS="$MORE_CFLAGS -Wno-unused"
+    MORE_CFLAGS="$MORE_CFLAGS -Wno-unused-parameter"
   fi
 fi
 

@@ -40,11 +40,6 @@ typedef struct {
 typedef struct yasm_dbgfmt_dwarf2 {
     yasm_dbgfmt_base dbgfmt;	    /* base structure */
 
-    yasm_object *object;
-    yasm_symtab *symtab;
-    yasm_linemap *linemap;
-    yasm_arch *arch;
-
     char **dirs;
     unsigned long dirs_size;
     unsigned long dirs_allocated;
@@ -109,24 +104,24 @@ void yasm_dwarf2__set_head_end(dwarf2_head *head, yasm_bytecode *end_prevbc);
 
 /* Line number functions */
 yasm_section *yasm_dwarf2__generate_line
-    (yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2, yasm_errwarns *errwarns,
+    (yasm_object *object, yasm_linemap *linemap, yasm_errwarns *errwarns,
      int asm_source, /*@out@*/ yasm_section **main_code,
      /*@out@*/ size_t *num_line_sections);
 int yasm_dwarf2__line_directive
-    (yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2, const char *name, yasm_section *sect,
-     yasm_valparamhead *valparams, unsigned long line);
+    (yasm_object *object, const char *name, yasm_valparamhead *valparams,
+     unsigned long line);
 
 /* Address range table functions */
-yasm_section *yasm_dwarf2__generate_aranges(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
+yasm_section *yasm_dwarf2__generate_aranges(yasm_object *object,
 					    yasm_section *debug_info);
 
 /* Name lookup table functions */
-yasm_section *yasm_dwarf2__generate_pubnames(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
+yasm_section *yasm_dwarf2__generate_pubnames(yasm_object *object,
 					     yasm_section *debug_info);
 
 /* Information functions */
 yasm_section *yasm_dwarf2__generate_info
-    (yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2, yasm_section *debug_line,
+    (yasm_object *object, yasm_section *debug_line,
      /*@null@*/ yasm_section *main_code);
 
 #endif

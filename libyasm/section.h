@@ -47,15 +47,38 @@ struct yasm_reloc {
 };
 #endif
 
+struct yasm_object {
+    /*@owned@*/ char *src_filename;	/**< Source filename */
+    /*@owned@*/ char *obj_filename;	/**< Object filename */
+
+    /*@owned@*/ yasm_symtab *symtab;	/**< Symbol table */
+    /*@owned@*/ yasm_arch *arch;	/**< Target architecture */
+    /*@owned@*/ yasm_objfmt *objfmt;	/**< Object format */
+    /*@owned@*/ yasm_dbgfmt *dbgfmt;	/**< Debug format */
+
+    /** Currently active section.  Used by some directives. */
+    /*@dependent@*/ yasm_section *cur_section;
+
+#ifdef YASM_LIB_INTERNAL
+    /*@reldef@*/ STAILQ_HEAD(yasm_sectionhead, yasm_section) sections;
+#endif
+};
+
 /** Create a new object.  A default section is created as the first section.
  * An empty symbol table (yasm_symtab) and line mapping (yasm_linemap) are
  * automatically created.
  * \param src_filename	source filename (e.g. "file.asm")
  * \param obj_filename	object filename (e.g. "file.o")
- * \return Newly allocated object.
+ * \param arch		architecture
+ * \param objfmt_module	object format module
+ * \param dbgfmt_module	debug format module
+ * \return Newly allocated object, or NULL on error.
  */
-/*@only@*/ yasm_object *yasm_object_create(const char *src_filename,
-					   const char *obj_filename);
+/*@null@*/ /*@only@*/ yasm_object *yasm_object_create
+    (const char *src_filename, const char *obj_filename,
+     /*@kept@*/ yasm_arch *arch,
+     const yasm_objfmt_module *objfmt_module,
+     const yasm_dbgfmt_module *dbgfmt_module);
 
 /** Create a new, or continue an existing, general section.  The section is
  * added to the object if there's not already a section by that name.
@@ -133,40 +156,13 @@ int yasm_object_sections_traverse
  */
 void yasm_object_set_source_fn(yasm_object *object, const char *src_filename);
 
-/** Get an object's source filename.
- * \param object	object
- * \return Source filename.
- */
-const char *yasm_object_get_source_fn(const yasm_object *object);
-
-/** Get an object's object filename.
- * \param object	object
- * \return Object filename.
- */
-const char *yasm_object_get_object_fn(const yasm_object *object);
-
-/** Get an object's symbol table (#yasm_symtab).
- * \param object	object
- * \return Symbol table.
- */
-/*@dependent@*/ yasm_symtab *yasm_object_get_symtab(const yasm_object *object);
-
-/** Get an object's line mappings (#yasm_linemap).
- * \param object	object
- * \return Line mappings.
- */
-/*@dependent@*/ yasm_linemap *yasm_object_get_linemap
-    (const yasm_object *object);
-
 /** Optimize an object.  Takes the unoptimized object and optimizes it.
  * If successful, the object is ready for output to an object file.
  * \param object	object
- * \param arch		architecture
  * \param errwarns	error/warning set
  * \note Optimization failures are stored into errwarns.
  */
-void yasm_object_optimize(yasm_object *object, yasm_arch *arch,
-			  yasm_errwarns *errwarns);
+void yasm_object_optimize(yasm_object *object, yasm_errwarns *errwarns);
 
 /** Determine if a section is absolute or general.
  * \param sect	    section

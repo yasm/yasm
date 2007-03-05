@@ -37,16 +37,14 @@
 
 
 static void
-gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
-		    yasm_objfmt *of, yasm_dbgfmt *df, FILE *f,
-		    const char *in_filename, int save_input,
-		    yasm_section *def_sect, yasm_errwarns *errwarns)
+gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
+		    int save_input, yasm_linemap *linemap,
+		    yasm_errwarns *errwarns)
 {
     yasm_parser_gas parser_gas;
 
     parser_gas.object = object;
-    parser_gas.linemap = yasm_object_get_linemap(parser_gas.object);
-    parser_gas.symtab = yasm_object_get_symtab(parser_gas.object);
+    parser_gas.linemap = linemap;
 
     parser_gas.in = f;
 
@@ -58,13 +56,9 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
     parser_gas.dir_line = 0;
 
     parser_gas.preproc = pp;
-    parser_gas.arch = a;
-    parser_gas.objfmt = of;
-    parser_gas.dbgfmt = df;
     parser_gas.errwarns = errwarns;
 
-    parser_gas.cur_section = def_sect;
-    parser_gas.prev_bc = yasm_section_bcs_first(def_sect);
+    parser_gas.prev_bc = yasm_section_bcs_first(object->cur_section);
 
     parser_gas.save_input = save_input;
     parser_gas.save_last = 0;

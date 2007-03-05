@@ -306,14 +306,11 @@ typedef struct yasm_objfmt_macho {
 
     long parse_scnum;		/* sect numbering in parser */
     int bits;			/* 32 / 64 */
-
-    yasm_object *object;
-    yasm_symtab *symtab;
-    /*@dependent@ */ yasm_arch *arch;
 } yasm_objfmt_macho;
 
 
 typedef struct macho_objfmt_output_info {
+    yasm_object *object;
     yasm_objfmt_macho *objfmt_macho;
     yasm_errwarns *errwarns;
     /*@dependent@ */ FILE *f;
@@ -360,27 +357,25 @@ yasm_objfmt_module yasm_macho32_LTX_objfmt;
 yasm_objfmt_module yasm_macho64_LTX_objfmt;
 
 static yasm_objfmt *
-macho_objfmt_create_common(yasm_object *object, yasm_arch *a,
-			   yasm_objfmt_module *module, int bits_pref)
+macho_objfmt_create_common(yasm_object *object, yasm_objfmt_module *module,
+			   int bits_pref)
 {
     yasm_objfmt_macho *objfmt_macho = yasm_xmalloc(sizeof(yasm_objfmt_macho));
 
     objfmt_macho->objfmt.module = module;
-    objfmt_macho->object = object;
-    objfmt_macho->symtab = yasm_object_get_symtab(object);
-    objfmt_macho->arch = a;
 
     /* Only support x86 arch for now */
-    if (yasm__strcasecmp(yasm_arch_keyword(a), "x86") != 0) {
+    if (yasm__strcasecmp(yasm_arch_keyword(object->arch), "x86") != 0) {
 	yasm_xfree(objfmt_macho);
 	return NULL;
     }
 
     /* Support x86 and amd64 machines of x86 arch */
-    if (yasm__strcasecmp(yasm_arch_get_machine(a), "x86") == 0 &&
+    if (yasm__strcasecmp(yasm_arch_get_machine(object->arch), "x86") == 0 &&
 	(bits_pref == 0 || bits_pref == 32))
 	objfmt_macho->bits = 32;
-    else if (yasm__strcasecmp(yasm_arch_get_machine(a), "amd64") == 0 &&
+    else if (yasm__strcasecmp(yasm_arch_get_machine(object->arch),
+			      "amd64") == 0 &&
 	     (bits_pref == 0 || bits_pref == 64))
 	objfmt_macho->bits = 64;
     else {
@@ -393,12 +388,12 @@ macho_objfmt_create_common(yasm_object *object, yasm_arch *a,
 }
 
 static yasm_objfmt *
-macho_objfmt_create(yasm_object *object, yasm_arch *a)
+macho_objfmt_create(yasm_object *object)
 {
     yasm_objfmt *objfmt;
     yasm_objfmt_macho *objfmt_macho;
 
-    objfmt = macho_objfmt_create_common(object, a, &yasm_macho_LTX_objfmt, 0);
+    objfmt = macho_objfmt_create_common(object, &yasm_macho_LTX_objfmt, 0);
     if (objfmt) {
 	objfmt_macho = (yasm_objfmt_macho *)objfmt;
 	/* Figure out which bitness of object format to use */
@@ -411,15 +406,15 @@ macho_objfmt_create(yasm_object *object, yasm_arch *a)
 }
 
 static yasm_objfmt *
-macho32_objfmt_create(yasm_object *object, yasm_arch *a)
+macho32_objfmt_create(yasm_object *object)
 {
-    return macho_objfmt_create_common(object, a, &yasm_macho32_LTX_objfmt, 32);
+    return macho_objfmt_create_common(object, &yasm_macho32_LTX_objfmt, 32);
 }
 
 static yasm_objfmt *
-macho64_objfmt_create(yasm_object *object, yasm_arch *a)
+macho64_objfmt_create(yasm_object *object)
 {
-    return macho_objfmt_create_common(object, a, &yasm_macho64_LTX_objfmt, 64);
+    return macho_objfmt_create_common(object, &yasm_macho64_LTX_objfmt, 64);
 }
 
 static int
@@ -446,7 +441,7 @@ macho_objfmt_output_value(yasm_value *value, unsigned char *buf,
      * cross-section, or non-PC-relative reference (those are handled below).
      */
     switch (yasm_value_output_basic(value, buf, destsize, bc, warn,
-				    info->objfmt_macho->arch)) {
+				    info->object->arch)) {
 	case -1:
 	    return 1;
 	case 0:
@@ -580,7 +575,7 @@ macho_objfmt_output_value(yasm_value *value, unsigned char *buf,
 	yasm_intnum_calc(intn, YASM_EXPR_ADD, intn2);
     }
 
-    retval = yasm_arch_intnum_tobytes(objfmt_macho->arch, intn, buf, destsize,
+    retval = yasm_arch_intnum_tobytes(info->object->arch, intn, buf, destsize,
 				      valsize, 0, bc, warn);
     /*printf("val %ld\n",yasm_intnum_get_int(intn));*/
     yasm_intnum_destroy(intn);
@@ -1046,10 +1041,10 @@ macho_objfmt_calc_sectsize(yasm_section *sect, /*@null@ */ void *d)
 
 /* write object */
 static void
-macho_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
-		    /*@unused@*/ yasm_dbgfmt *df, yasm_errwarns *errwarns)
+macho_objfmt_output(yasm_object *object, FILE *f, int all_syms,
+		    yasm_errwarns *errwarns)
 {
-    yasm_objfmt_macho *objfmt_macho = (yasm_objfmt_macho *) objfmt;
+    yasm_objfmt_macho *objfmt_macho = (yasm_objfmt_macho *)object->objfmt;
     macho_objfmt_output_info info;
     unsigned char *localbuf;
     unsigned long symtab_count = 0;
@@ -1062,6 +1057,7 @@ macho_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
     unsigned long long_int_bytes;
     const char pad_data[3] = "\0\0\0";
 
+    info.object = object;
     info.objfmt_macho = objfmt_macho;
     info.errwarns = errwarns;
     info.f = f;
@@ -1110,7 +1106,7 @@ macho_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
     info.strlength = 1;		/* string table starts with a zero byte */
     info.all_syms = all_syms || info.is_64;
     /*info.all_syms = 1;		* force all syms into symbol table */
-    yasm_symtab_traverse(objfmt_macho->symtab, &info, macho_objfmt_count_sym);
+    yasm_symtab_traverse(object->symtab, &info, macho_objfmt_count_sym);
     symtab_count = info.indx;
 
     /* write raw section data first */
@@ -1126,12 +1122,10 @@ macho_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
     info.vmsize = 0;
     info.filesize = 0;
     info.offset = headsize;
-    yasm_object_sections_traverse(objfmt_macho->object, &info,
-				  macho_objfmt_calc_sectsize);
+    yasm_object_sections_traverse(object, &info, macho_objfmt_calc_sectsize);
 
     /* output sections to file */
-    yasm_object_sections_traverse(objfmt_macho->object, &info,
-				  macho_objfmt_output_section);
+    yasm_object_sections_traverse(object, &info, macho_objfmt_output_section);
 
     fileoff_sections = ftell(f);
 
@@ -1227,8 +1221,7 @@ macho_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
     /* offset to relocs for first section */
     info.rel_base = align32((long)fileoffset + (long)info.filesize);
     info.s_reloff = 0;		/* offset for relocs of following sections */
-    yasm_object_sections_traverse(objfmt_macho->object, &info,
-				  macho_objfmt_output_secthead);
+    yasm_object_sections_traverse(object, &info, macho_objfmt_output_secthead);
 
     localbuf = info.buf;
     /* write out symbol command */
@@ -1260,25 +1253,16 @@ macho_objfmt_output(yasm_objfmt *objfmt, FILE *f, int all_syms,
     }
 
     /* relocation data */
-    yasm_object_sections_traverse(objfmt_macho->object, &info,
-				  macho_objfmt_output_relocs);
+    yasm_object_sections_traverse(object, &info, macho_objfmt_output_relocs);
 
     /* symbol table (NLIST) */
     info.indx = 1;		/* restart symbol table indices */
-    yasm_symtab_traverse(objfmt_macho->symtab, &info,
-			 macho_objfmt_output_symtable);
+    yasm_symtab_traverse(object->symtab, &info, macho_objfmt_output_symtable);
 
     /* symbol strings */
     fwrite(pad_data, 1, 1, f);
-    yasm_symtab_traverse(objfmt_macho->symtab, &info,
-			 macho_objfmt_output_str);
-#if 0
-    /* relocation fixup: set internal symbol locations into byte code within
-     * file.
-     */
-    yasm_object_sections_traverse(objfmt_macho->object, &info,
-				  macho_objfmt_fixup_relocs);
-#endif
+    yasm_symtab_traverse(object->symtab, &info, macho_objfmt_output_str);
+
     yasm_intnum_destroy(val);
     yasm_xfree(info.buf);
 }
@@ -1290,10 +1274,10 @@ macho_objfmt_destroy(yasm_objfmt *objfmt)
 }
 
 static macho_section_data *
-macho_objfmt_init_new_section(yasm_objfmt_macho * objfmt_macho,
-			      yasm_section *sect, const char *sectname,
-			      unsigned long line)
+macho_objfmt_init_new_section(yasm_object *object, yasm_section *sect,
+			      const char *sectname, unsigned long line)
 {
+    yasm_objfmt_macho *objfmt_macho = (yasm_objfmt_macho *)object->objfmt;
     macho_section_data *data;
     yasm_symrec *sym;
 
@@ -1307,25 +1291,22 @@ macho_objfmt_init_new_section(yasm_objfmt_macho * objfmt_macho,
     data->offset = 0;
     yasm_section_add_data(sect, &macho_section_data_cb, data);
 
-    sym = yasm_symtab_define_label(objfmt_macho->symtab, sectname,
+    sym = yasm_symtab_define_label(object->symtab, sectname,
 				   yasm_section_bcs_first(sect), 1, line);
     data->sym = sym;
     return data;
 }
 
 static yasm_section *
-macho_objfmt_add_default_section(yasm_objfmt *objfmt)
+macho_objfmt_add_default_section(yasm_object *object)
 {
-    yasm_objfmt_macho *objfmt_macho = (yasm_objfmt_macho *) objfmt;
     yasm_section *retval;
     macho_section_data *msd;
     int isnew;
 
-    retval =
-	yasm_object_get_general(objfmt_macho->object, ".text", 0, 0, 1, 0,
-				&isnew, 0);
+    retval = yasm_object_get_general(object, ".text", 0, 0, 1, 0, &isnew, 0);
     if (isnew) {
-	msd = macho_objfmt_init_new_section(objfmt_macho, retval, ".text", 0);
+	msd = macho_objfmt_init_new_section(object, retval, ".text", 0);
 	msd->segname = "__TEXT";
 	msd->sectname = "__text";
 	msd->flags = S_ATTR_PURE_INSTRUCTIONS;
@@ -1336,12 +1317,11 @@ macho_objfmt_add_default_section(yasm_objfmt *objfmt)
 }
 
 static /*@observer@*/ /*@null@*/ yasm_section *
-macho_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
+macho_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
 			    /*@unused@*/ /*@null@*/
 			    yasm_valparamhead *objext_valparams,
 			    unsigned long line)
 {
-    yasm_objfmt_macho *objfmt_macho = (yasm_objfmt_macho *) objfmt;
     yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_section *retval;
     int isnew;
@@ -1480,13 +1460,11 @@ macho_objfmt_section_switch(yasm_objfmt *objfmt, yasm_valparamhead *valparams,
 			  N_("Unrecognized qualifier `%s'"), vp->val);
     }
 
-    retval =
-	yasm_object_get_general(objfmt_macho->object, sectname, 0, align, 1,
-				resonly, &isnew, line);
+    retval = yasm_object_get_general(object, sectname, 0, align, 1, resonly,
+				     &isnew, line);
 
     if (isnew)
-	msd = macho_objfmt_init_new_section(objfmt_macho, retval, sectname,
-					    line);
+	msd = macho_objfmt_init_new_section(object, retval, sectname, line);
     else
 	msd = yasm_section_get_data(retval, &macho_section_data_cb);
 
@@ -1523,40 +1501,32 @@ macho_section_data_print(void *data, FILE *f, int indent_level)
 }
 
 static yasm_symrec *
-macho_objfmt_extern_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
+macho_objfmt_extern_declare(yasm_object *object, const char *name, /*@unused@*/
 			    /*@null@*/ yasm_valparamhead *objext_valparams,
 			    unsigned long line)
 {
-    yasm_objfmt_macho *objfmt_macho = (yasm_objfmt_macho *)objfmt;
-
-    return yasm_symtab_declare(objfmt_macho->symtab, name, YASM_SYM_EXTERN,
-			       line);
+    return yasm_symtab_declare(object->symtab, name, YASM_SYM_EXTERN, line);
 }
 
 static yasm_symrec *
-macho_objfmt_global_declare(yasm_objfmt *objfmt, const char *name, /*@unused@*/
+macho_objfmt_global_declare(yasm_object *object, const char *name, /*@unused@*/
 			    /*@null@*/ yasm_valparamhead *objext_valparams,
 			    unsigned long line)
 {
-    yasm_objfmt_macho *objfmt_macho = (yasm_objfmt_macho *)objfmt;
-
-    return yasm_symtab_declare(objfmt_macho->symtab, name, YASM_SYM_GLOBAL,
-			       line);
+    return yasm_symtab_declare(object->symtab, name, YASM_SYM_GLOBAL, line);
 }
 
 static yasm_symrec *
-macho_objfmt_common_declare(yasm_objfmt *objfmt, const char *name,
+macho_objfmt_common_declare(yasm_object *object, const char *name,
 			    /*@only@*/ yasm_expr *size,
 			    /*@unused@*/ /*@null@*/
 			    yasm_valparamhead *objext_valparams,
 			    unsigned long line)
 {
-    yasm_objfmt_macho *objfmt_macho = (yasm_objfmt_macho *)objfmt;
     yasm_symrec *sym;
     macho_symrec_data *sym_data;
 
-    sym = yasm_symtab_declare(objfmt_macho->symtab, name, YASM_SYM_COMMON,
-			      line);
+    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_COMMON, line);
 
     sym_data = yasm_xmalloc(sizeof(macho_symrec_data));
 
@@ -1596,7 +1566,7 @@ macho_symrec_data_print(void *data, FILE *f, int indent_level)
 
 
 static int
-macho_objfmt_directive(/*@unused@*/ yasm_objfmt *objfmt,
+macho_objfmt_directive(/*@unused@*/ yasm_object *object,
 		       /*@unused@*/ const char *name,
 		       /*@unused@*/ /*@null@*/ yasm_valparamhead *valparams,
 		       /*@unused@*/ /*@null@*/

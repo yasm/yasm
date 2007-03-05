@@ -47,6 +47,11 @@ typedef struct yasm_dbgfmt yasm_dbgfmt;
 /** List format interface.  \see listfmt.h for details. */
 typedef struct yasm_listfmt yasm_listfmt;
 
+/** Object format module interface.  \see objfmt.h for details. */
+typedef struct yasm_objfmt_module yasm_objfmt_module;
+/** Debug format module interface.  \see dbgfmt.h for details. */
+typedef struct yasm_dbgfmt_module yasm_dbgfmt_module;
+
 /** YASM associated data callback structure.  Many data structures can have
  * arbitrary data associated with them.
  */
@@ -75,7 +80,7 @@ typedef struct yasm_errwarns yasm_errwarns;
  */
 typedef struct yasm_bytecode yasm_bytecode;
 
-/** Object (opaque type).  \see section.h for related functions. */
+/** Object.  \see section.h for details and related functions. */
 typedef struct yasm_object yasm_object;
 
 /** Section (opaque type).  \see section.h for related functions. */

@@ -266,20 +266,19 @@ dwarf2_append_str(yasm_section *sect, const char *str)
 }
 
 yasm_section *
-yasm_dwarf2__generate_info(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
-			   yasm_section *debug_line, yasm_section *main_code)
+yasm_dwarf2__generate_info(yasm_object *object, yasm_section *debug_line,
+			   yasm_section *main_code)
 {
+    yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = (yasm_dbgfmt_dwarf2 *)object->dbgfmt;
     int new;
     yasm_bytecode *abc;
     dwarf2_abbrev *abbrev;
     dwarf2_head *head;
     char *buf;
     yasm_section *debug_abbrev =
-	yasm_object_get_general(dbgfmt_dwarf2->object, ".debug_abbrev", 0,
-				4, 0, 0, &new, 0);
+	yasm_object_get_general(object, ".debug_abbrev", 0, 4, 0, 0, &new, 0);
     yasm_section *debug_info =
-	yasm_object_get_general(dbgfmt_dwarf2->object, ".debug_info", 0, 4, 0,
-				0, &new, 0);
+	yasm_object_get_general(object, ".debug_info", 0, 4, 0, 0, &new, 0);
 
     yasm_section_set_align(debug_abbrev, 0, 0);
     yasm_section_set_align(debug_info, 0, 0);
@@ -311,13 +310,13 @@ yasm_dwarf2__generate_info(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
     abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_stmt_list, DW_FORM_data4);
     dwarf2_append_expr(debug_info,
 	yasm_expr_create_ident(yasm_expr_sym(
-	    yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
+	    yasm_dwarf2__bc_sym(object->symtab,
 				yasm_section_bcs_first(debug_line))), 0),
 	dbgfmt_dwarf2->sizeof_offset, 0);
 
     if (main_code) {
 	yasm_symrec *first;
-	first = yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
+	first = yasm_dwarf2__bc_sym(object->symtab,
 				    yasm_section_bcs_first(main_code));
 	/* All code is contiguous in one section */
 	abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_low_pc, DW_FORM_addr);
@@ -336,8 +335,7 @@ yasm_dwarf2__generate_info(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
 
     /* input filename */
     abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_name, DW_FORM_string);
-    dwarf2_append_str(debug_info,
-		      yasm_object_get_source_fn(dbgfmt_dwarf2->object));
+    dwarf2_append_str(debug_info, object->src_filename);
 
     /* compile directory (current working directory) */
     abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_comp_dir, DW_FORM_string);

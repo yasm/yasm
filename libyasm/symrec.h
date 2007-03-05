@@ -202,13 +202,13 @@ yasm_symrec *yasm_symtab_iter_value(const yasm_symtab_iter *cur);
  * used but never defined or declared #YASM_SYM_EXTERN or #YASM_SYM_COMMON.
  * \param symtab	symbol table
  * \param undef_extern	if nonzero, all undef syms should be declared extern
- * \param objfmt	object format to notify about new extern decls
+ * \param object	object to notify about new extern decls
  *			(may be NULL if undef_extern is 0)
  * \param errwarns	error/warning set
  * \note Errors/warnings are stored into errwarns.
  */
 void yasm_symtab_parser_finalize(yasm_symtab *symtab, int undef_extern,
-				 /*@null@*/ yasm_objfmt *objfmt,
+				 /*@null@*/ yasm_object *object,
 				 yasm_errwarns *errwarns);
 
 /** Print the symbol table.  For debugging purposes.

@@ -117,8 +117,8 @@ yasm_value_set_curpos_rel(yasm_value *value, yasm_bytecode *bc,
      * to a custom absolute symbol.
      */
     if (!value->rel) {
-	value->rel = yasm_symtab_abs_sym(yasm_object_get_symtab(
-	    yasm_section_get_object(yasm_bc_get_section(bc))));
+	yasm_object *object = yasm_section_get_object(yasm_bc_get_section(bc));
+	value->rel = yasm_symtab_abs_sym(object->symtab);
     }
 }
 
@@ -274,9 +274,9 @@ value_finalize_scan(yasm_value *value, yasm_expr *e,
 				    yasm_intnum_create_uint(0);
 			    } else {
 				/* Replace positive portion with curpos */
-				yasm_symtab *symtab =
-				    yasm_object_get_symtab(
-					yasm_section_get_object(sect2));
+				yasm_object *object =
+				    yasm_section_get_object(sect2);
+				yasm_symtab *symtab = object->symtab;
 				e->terms[j].data.sym =
 				    yasm_symtab_define_curpos
 				    (symtab, ".", expr_precbc, e->line);

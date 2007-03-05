@@ -126,13 +126,13 @@ rept_input(yasm_parser_gas *parser_gas, /*@out@*/ YYCTYPE *buf,
 
     return (max_size-numleft);
 }
-
+#if 0
 static size_t
 fill_input(void *d, unsigned char *buf, size_t max)
 {
     return yasm_preproc_input((yasm_preproc *)d, (char *)buf, max);
 }
-
+#endif
 static YYCTYPE *
 fill(yasm_parser_gas *parser_gas, YYCTYPE *cursor)
 {
@@ -406,7 +406,7 @@ scan:
 	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
 	}
 	'.word'		{
-	    lvalp->int_info = yasm_arch_wordsize(parser_gas->arch)/8;
+	    lvalp->int_info = yasm_arch_wordsize(p_object->arch)/8;
 	    parser_gas->state = INSTDIR; RETURN(DIR_DATA);
 	}
 	'.quad'		{
@@ -487,15 +487,15 @@ scan:
 	'.zero'		{ parser_gas->state = INSTDIR; RETURN(DIR_ZERO); }
 	/* other directives */
 	'.code16'	{
-	    yasm_arch_set_var(parser_gas->arch, "mode_bits", 16);
+	    yasm_arch_set_var(p_object->arch, "mode_bits", 16);
 	    goto scan;
 	}
 	'.code32'	{
-	    yasm_arch_set_var(parser_gas->arch, "mode_bits", 32);
+	    yasm_arch_set_var(p_object->arch, "mode_bits", 32);
 	    goto scan;
 	}
 	'.code64'	{
-	    yasm_arch_set_var(parser_gas->arch, "mode_bits", 64);
+	    yasm_arch_set_var(p_object->arch, "mode_bits", 64);
 	    goto scan;
 	}
 	'.equ'		{ parser_gas->state = INSTDIR; RETURN(DIR_EQU); }
@@ -518,7 +518,7 @@ scan:
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    switch (yasm_arch_parse_check_regtmod
-		    (parser_gas->arch, lvalp->arch_data, TOK+1, TOKLEN-1)) {
+		    (p_object->arch, lvalp->arch_data, TOK+1, TOKLEN-1)) {
 		case YASM_ARCH_REG:
 		    s->tok[TOKLEN] = savech;
 		    RETURN(REG);
@@ -562,7 +562,7 @@ scan:
 		savech = s->tok[TOKLEN];
 		s->tok[TOKLEN] = '\0';
 		switch (yasm_arch_parse_check_insnprefix
-			(parser_gas->arch, lvalp->arch_data, TOK, TOKLEN)) {
+			(p_object->arch, lvalp->arch_data, TOK, TOKLEN)) {
 		    case YASM_ARCH_INSN:
 			s->tok[TOKLEN] = savech;
 			parser_gas->state = INSTDIR;

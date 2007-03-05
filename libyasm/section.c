@@ -45,6 +45,8 @@
 #include "bytecode.h"
 #include "arch.h"
 #include "section.h"
+
+#include "dbgfmt.h"
 #include "objfmt.h"
 
 #include "expr-int.h"
@@ -52,16 +54,6 @@
 
 #include "inttree.h"
 
-
-struct yasm_object {
-    /*@owned@*/ char *src_filename;
-    /*@owned@*/ char *obj_filename;
-
-    yasm_symtab	*symtab;
-    yasm_linemap *linemap;
-
-    /*@reldef@*/ STAILQ_HEAD(yasm_sectionhead, yasm_section) sections;
-};
 
 struct yasm_section {
     /*@reldef@*/ STAILQ_ENTRY(yasm_section) link;
@@ -112,21 +104,74 @@ static void yasm_section_destroy(/*@only@*/ yasm_section *sect);
 
 /*@-compdestroy@*/
 yasm_object *
-yasm_object_create(const char *src_filename, const char *obj_filename)
+yasm_object_create(const char *src_filename, const char *obj_filename,
+		   /*@kept@*/ yasm_arch *arch,
+		   const yasm_objfmt_module *objfmt_module,
+		   const yasm_dbgfmt_module *dbgfmt_module)
 {
     yasm_object *object = yasm_xmalloc(sizeof(yasm_object));
+    int matched, i;
 
     object->src_filename = yasm__xstrdup(src_filename);
     object->obj_filename = yasm__xstrdup(obj_filename);
 
-    /* Create empty symtab and linemap */
+    /* Create empty symbol table */
     object->symtab = yasm_symtab_create();
-    object->linemap = yasm_linemap_create();
 
     /* Initialize sections linked list */
     STAILQ_INIT(&object->sections);
 
+    /* Initialize the target architecture */
+    object->arch = arch;
+
+    /* Initialize things to NULL in case of error */
+    object->dbgfmt = NULL;
+
+    /* Initialize the object format */
+    object->objfmt = yasm_objfmt_create(objfmt_module, object);
+    if (!object->objfmt) {
+	yasm_error_set(YASM_ERROR_GENERAL,
+	    N_("object format `%s' does not support architecture `%s' machine `%s'"),
+	    objfmt_module->keyword, ((yasm_arch_base *)arch)->module->keyword,
+	    yasm_arch_get_machine(arch));
+	goto error;
+    }
+
+    /* Get a fresh copy of objfmt_module as it may have changed. */
+    objfmt_module = ((yasm_objfmt_base *)object->objfmt)->module;
+
+    /* Add an initial "default" section to object */
+    object->cur_section = yasm_objfmt_add_default_section(object);
+
+    /* Check to see if the requested debug format is in the allowed list
+     * for the active object format.
+     */
+    matched = 0;
+    for (i=0; objfmt_module->dbgfmt_keywords[i]; i++)
+	if (yasm__strcasecmp(objfmt_module->dbgfmt_keywords[i],
+			     dbgfmt_module->keyword) == 0)
+	    matched = 1;
+    if (!matched) {
+	yasm_error_set(YASM_ERROR_GENERAL,
+	    N_("`%s' is not a valid debug format for object format `%s'"),
+	    dbgfmt_module->keyword, objfmt_module->keyword);
+	goto error;
+    }
+
+    /* Initialize the debug format */
+    object->dbgfmt = yasm_dbgfmt_create(dbgfmt_module, object);
+    if (!object->dbgfmt) {
+	yasm_error_set(YASM_ERROR_GENERAL,
+	    N_("debug format `%s' does not work with object format `%s'"),
+	    dbgfmt_module->keyword, objfmt_module->keyword);
+	goto error;
+    }
+
     return object;
+
+error:
+    yasm_object_destroy(object);
+    return NULL;
 }
 /*@=compdestroy@*/
 
@@ -236,30 +281,6 @@ yasm_object_set_source_fn(yasm_object *object, const char *src_filename)
     object->src_filename = yasm__xstrdup(src_filename);
 }
 
-const char *
-yasm_object_get_source_fn(const yasm_object *object)
-{
-    return object->src_filename;
-}
-
-const char *
-yasm_object_get_object_fn(const yasm_object *object)
-{
-    return object->obj_filename;
-}
-
-yasm_symtab *
-yasm_object_get_symtab(const yasm_object *object)
-{
-    return object->symtab;
-}
-
-yasm_linemap *
-yasm_object_get_linemap(const yasm_object *object)
-{
-    return object->linemap;
-}
-
 int
 yasm_section_is_absolute(yasm_section *sect)
 {
@@ -321,6 +342,14 @@ yasm_object_destroy(yasm_object *object)
 {
     yasm_section *cur, *next;
 
+    /* Delete object format, debug format, and arch.  This can be called
+     * due to an error in yasm_object_create(), so look out for NULLs.
+     */
+    if (object->objfmt)
+	yasm_objfmt_destroy(object->objfmt);
+    if (object->dbgfmt)
+	yasm_dbgfmt_destroy(object->dbgfmt);
+
     /* Delete sections */
     cur = STAILQ_FIRST(&object->sections);
     while (cur) {
@@ -333,9 +362,12 @@ yasm_object_destroy(yasm_object *object)
     yasm_xfree(object->src_filename);
     yasm_xfree(object->obj_filename);
 
-    /* Delete symbol table and line mappings */
+    /* Delete symbol table */
     yasm_symtab_destroy(object->symtab);
-    yasm_linemap_destroy(object->linemap);
+
+    /* Delete architecture */
+    if (object->arch)
+	yasm_arch_destroy(object->arch);
 
     yasm_xfree(object);
 }
@@ -1145,8 +1177,7 @@ optimize_term_expand(IntervalTreeNode *node, void *d)
 }
 
 void
-yasm_object_optimize(yasm_object *object, yasm_arch *arch,
-		     yasm_errwarns *errwarns)
+yasm_object_optimize(yasm_object *object, yasm_errwarns *errwarns)
 {
     yasm_section *sect;
     unsigned long bc_index = 0;
