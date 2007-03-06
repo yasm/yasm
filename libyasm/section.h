@@ -47,6 +47,7 @@ struct yasm_reloc {
 };
 #endif
 
+/** An object.  This is the internal representation of an object file. */
 struct yasm_object {
     /*@owned@*/ char *src_filename;	/**< Source filename */
     /*@owned@*/ char *obj_filename;	/**< Object filename */

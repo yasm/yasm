@@ -90,8 +90,6 @@ const char *yasm_dbgfmt_keyword(const yasm_dbgfmt *dbgfmt);
  * purposes.
  * \param module	debug format module
  * \param object	object to generate debugging information for
- * \param of		object format in use
- * \param a		architecture in use
  * \return NULL if object format does not provide needed support.
  */
 /*@null@*/ /*@only@*/ yasm_dbgfmt *yasm_dbgfmt_create
