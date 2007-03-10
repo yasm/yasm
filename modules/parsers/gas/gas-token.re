@@ -214,10 +214,6 @@ static size_t strbuf_size = 0;
 static void
 strbuf_append(size_t count, YYCTYPE *cursor, yasm_scanner *s, int ch)
 {
-    if (cursor == s->eof)
-	yasm_error_set(YASM_ERROR_SYNTAX,
-		       N_("unexpected end of file in string"));
-
     if (count >= strbuf_size) {
 	strbuf = yasm_xrealloc(strbuf, strbuf_size + STRBUF_ALLOC_SIZE);
 	strbuf_size += STRBUF_ALLOC_SIZE;
@@ -677,6 +673,13 @@ stringconst_scan:
     /*!re2c
 	/* Handle escaped double-quote by copying and continuing */
 	"\\\""	    {
+	    if (cursor == s->eof) {
+		yasm_error_set(YASM_ERROR_SYNTAX,
+			       N_("unexpected end of file in string"));
+		lvalp->str.contents = (char *)strbuf;
+		lvalp->str.len = count;
+		RETURN(STRING);
+	    }
 	    strbuf_append(count++, cursor, s, '"');
 	    goto stringconst_scan;
 	}
@@ -690,6 +693,13 @@ stringconst_scan:
 	}
 
 	any	{
+	    if (cursor == s->eof) {
+		yasm_error_set(YASM_ERROR_SYNTAX,
+			       N_("unexpected end of file in string"));
+		lvalp->str.contents = (char *)strbuf;
+		lvalp->str.len = count;
+		RETURN(STRING);
+	    }
 	    strbuf_append(count++, cursor, s, s->tok[0]);
 	    goto stringconst_scan;
 	}

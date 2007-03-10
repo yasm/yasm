@@ -104,7 +104,7 @@ symrec_destroy_one(/*@only@*/ void *d)
 {
     yasm_symrec *sym = d;
     yasm_xfree(sym->name);
-    if (sym->type == SYM_EQU)
+    if (sym->type == SYM_EQU && (sym->status & YASM_SYM_VALUED))
 	yasm_expr_destroy(sym->value.expn);
     yasm__assoc_data_destroy(sym->assoc_data);
     yasm_xfree(sym);
@@ -242,6 +242,8 @@ yasm_symtab_define_equ(yasm_symtab *symtab, const char *name, yasm_expr *e,
 		       unsigned long line)
 {
     yasm_symrec *rec = symtab_define(symtab, name, SYM_EQU, 1, line);
+    if (yasm_error_occurred())
+	return rec;
     rec->value.expn = e;
     rec->status |= YASM_SYM_VALUED;
     return rec;
@@ -252,8 +254,9 @@ yasm_symtab_define_label(yasm_symtab *symtab, const char *name,
 			 yasm_bytecode *precbc, int in_table,
 			 unsigned long line)
 {
-    yasm_symrec *rec;
-    rec = symtab_define(symtab, name, SYM_LABEL, in_table, line);
+    yasm_symrec *rec = symtab_define(symtab, name, SYM_LABEL, in_table, line);
+    if (yasm_error_occurred())
+	return rec;
     rec->value.precbc = precbc;
     if (in_table && precbc)
 	yasm_bc__add_symrec(precbc, rec);
@@ -264,8 +267,9 @@ yasm_symrec *
 yasm_symtab_define_curpos(yasm_symtab *symtab, const char *name,
 			  yasm_bytecode *precbc, unsigned long line)
 {
-    yasm_symrec *rec;
-    rec = symtab_define(symtab, name, SYM_CURPOS, 0, line);
+    yasm_symrec *rec = symtab_define(symtab, name, SYM_CURPOS, 0, line);
+    if (yasm_error_occurred())
+	return rec;
     rec->value.precbc = precbc;
     return rec;
 }
@@ -275,6 +279,8 @@ yasm_symtab_define_special(yasm_symtab *symtab, const char *name,
 			   yasm_sym_vis vis)
 {
     yasm_symrec *rec = symtab_define(symtab, name, SYM_SPECIAL, 1, 0);
+    if (yasm_error_occurred())
+	return rec;
     rec->status |= YASM_SYM_VALUED;
     rec->visibility = vis;
     return rec;
@@ -359,6 +365,7 @@ symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
 	    YASM_EXPR_ADD,
 	    yasm_expr_copy(yasm_section_get_start(sect)),
 	    sym->line);
+	sym->status |= YASM_SYM_VALUED;
     }
 
     return 0;
@@ -449,7 +456,7 @@ yasm_symrec_get_line(const yasm_symrec *sym)
 const yasm_expr *
 yasm_symrec_get_equ(const yasm_symrec *sym)
 {
-    if (sym->type == SYM_EQU)
+    if (sym->type == SYM_EQU && (sym->status & YASM_SYM_VALUED))
 	return sym->value.expn;
     return (const yasm_expr *)NULL;
 }
@@ -509,7 +516,10 @@ yasm_symrec_print(const yasm_symrec *sym, FILE *f, int indent_level)
 	case SYM_EQU:
 	    fprintf(f, "%*s_EQU_\n", indent_level, "");
 	    fprintf(f, "%*sExpn=", indent_level, "");
-	    yasm_expr_print(sym->value.expn, f);
+	    if (sym->status & YASM_SYM_VALUED)
+		yasm_expr_print(sym->value.expn, f);
+	    else
+		fprintf(f, "***UNVALUED***");
 	    fprintf(f, "\n");
 	    break;
 	case SYM_LABEL:

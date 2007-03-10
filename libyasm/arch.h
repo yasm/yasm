@@ -264,7 +264,7 @@ struct yasm_insn_operand {
 
     uintptr_t targetmod;	/**< Arch target modifier, 0 if none. */
 
-    /** Specified size of the operand, in bytes.  0 if not user-specified. */
+    /** Specified size of the operand, in bits.  0 if not user-specified. */
     unsigned int size:8;
 
     /** Nonzero if dereference.  Used for "*foo" in GAS.

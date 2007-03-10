@@ -41,7 +41,8 @@ typedef enum yasm_warn_class {
     YASM_WARN_UNREC_CHAR,   /**< Unrecognized characters (while tokenizing) */
     YASM_WARN_PREPROC,	    /**< Preprocessor warnings */
     YASM_WARN_ORPHAN_LABEL, /**< Label alone on a line without a colon */
-    YASM_WARN_UNINIT_CONTENTS /**< Uninitialized space in code/data section */
+    YASM_WARN_UNINIT_CONTENTS, /**< Uninitialized space in code/data section */
+    YASM_WARN_SIZE_OVERRIDE /**< Double size override */
 } yasm_warn_class;
 
 /** Error classes.  Bitmask-based to support limited subclassing. */

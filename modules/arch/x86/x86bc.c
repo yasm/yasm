@@ -761,16 +761,16 @@ static void
 x86_common_tobytes(const x86_common *common, unsigned char **bufp,
 		   unsigned int segreg)
 {
-    if (common->lockrep_pre != 0)
-	YASM_WRITE_8(*bufp, common->lockrep_pre);
     if (segreg != 0)
 	YASM_WRITE_8(*bufp, (unsigned char)segreg);
+    if (common->addrsize != 0 && common->addrsize != common->mode_bits)
+	YASM_WRITE_8(*bufp, 0x67);
     if (common->opersize != 0 &&
 	((common->mode_bits != 64 && common->opersize != common->mode_bits) ||
 	 (common->mode_bits == 64 && common->opersize == 16)))
 	YASM_WRITE_8(*bufp, 0x66);
-    if (common->addrsize != 0 && common->addrsize != common->mode_bits)
-	YASM_WRITE_8(*bufp, 0x67);
+    if (common->lockrep_pre != 0)
+	YASM_WRITE_8(*bufp, common->lockrep_pre);
 }
 
 static void

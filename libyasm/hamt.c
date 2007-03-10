@@ -45,7 +45,7 @@ struct HAMTEntry {
 
 typedef struct HAMTNode {
     unsigned long BitMapKey;		/* 32 bits, bitmap or hash key */
-    void *BaseValue;			/* Base of HAMTNode list or value */
+    uintptr_t BaseValue;		/* Base of HAMTNode list or value */
 } HAMTNode;
 
 struct HAMT {
@@ -59,14 +59,20 @@ struct HAMT {
  * 4 or 2-byte aligned (as it uses the LSB of the pointer variable to store
  * the subtrie flag!
  */
-#define IsSubTrie(n)		((uintptr_t)((n)->BaseValue) & 1)
+#define IsSubTrie(n)		((n)->BaseValue & 1)
 #define SetSubTrie(h, n, v)	do {				\
-	if ((uintptr_t)(v) & 1)				\
+	if ((uintptr_t)(v) & 1)					\
 	    h->error_func(__FILE__, __LINE__,			\
 			  N_("Subtrie is seen as subtrie before flag is set (misaligned?)"));	\
-	(n)->BaseValue = (void *)((uintptr_t)(v) | 1);	\
+	(n)->BaseValue = (uintptr_t)(v) | 1;	\
     } while (0)
-#define GetSubTrie(n)		(HAMTNode *)((uintptr_t)((n)->BaseValue)&~1UL)
+#define SetValue(h, n, v)	do {				\
+	if ((uintptr_t)(v) & 1)					\
+	    h->error_func(__FILE__, __LINE__,			\
+			  N_("Value is seen as subtrie (misaligned?)")); \
+	(n)->BaseValue = (uintptr_t)(v);	\
+    } while (0)
+#define GetSubTrie(n)		(HAMTNode *)(((n)->BaseValue | 1) ^ 1)
 
 static unsigned long
 HashKey(const char *key)
@@ -98,7 +104,7 @@ HAMT_create(/*@exits@*/ void (*error_func)
 
     for (i=0; i<32; i++) {
 	hamt->root[i].BitMapKey = 0;
-	hamt->root[i].BaseValue = NULL;
+	hamt->root[i].BaseValue = 0;
     }
 
     hamt->error_func = error_func;
@@ -199,7 +205,7 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 	entry->str = str;
 	entry->data = data;
 	STAILQ_INSERT_TAIL(&hamt->entries, entry, next);
-	node->BaseValue = entry;
+	SetValue(hamt, node, entry);
 	if (IsSubTrie(node))
 	    hamt->error_func(__FILE__, __LINE__,
 			     N_("Data is seen as subtrie (misaligned?)"));
@@ -261,10 +267,10 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 			if (keypart2 < keypart) {
 			    newnodes[0] = *node;    /* structure copy */
 			    newnodes[1].BitMapKey = key;
-			    newnodes[1].BaseValue = entry;
+			    SetValue(hamt, &newnodes[1], entry);
 			} else {
 			    newnodes[0].BitMapKey = key;
-			    newnodes[0].BaseValue = entry;
+			    SetValue(hamt, &newnodes[0], entry);
 			    newnodes[1] = *node;    /* structure copy */
 			}
 
@@ -315,7 +321,7 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 	    entry->str = str;
 	    entry->data = data;
 	    STAILQ_INSERT_TAIL(&hamt->entries, entry, next);
-	    newnodes[Map].BaseValue = entry;
+	    SetValue(hamt, &newnodes[Map], entry);
 	    SetSubTrie(hamt, node, newnodes);
 
 	    *replace = 1;
