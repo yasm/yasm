@@ -52,6 +52,9 @@ struct yasm_dbgfmt_module {
     /** Keyword used to select debug format. */
     const char *keyword;
 
+    /** NULL-terminated list of directives.  NULL if none. */
+    /*@null@*/ const yasm_directive *directives;
+
     /** Create debug format.
      * Module-level implementation of yasm_dbgfmt_create().
      * The filenames are provided solely for informational purposes.
@@ -64,13 +67,6 @@ struct yasm_dbgfmt_module {
      * Call yasm_dbgfmt_destroy() instead of calling this function.
      */
     void (*destroy) (/*@only@*/ yasm_dbgfmt *dbgfmt);
-
-    /** Module-level implementation of yasm_dbgfmt_directive().
-     * Call yasm_dbgfmt_directive() instead of calling this function.
-     */
-    int (*directive) (yasm_object *object, const char *name,
-		      /*@null@*/ yasm_valparamhead *valparams,
-		      unsigned long line);
 
     /** Module-level implementation of yasm_dbgfmt_generate().
      * Call yasm_dbgfmt_generate() instead of calling this function.
@@ -100,18 +96,6 @@ const char *yasm_dbgfmt_keyword(const yasm_dbgfmt *dbgfmt);
  */
 void yasm_dbgfmt_destroy(/*@only@*/ yasm_dbgfmt *dbgfmt);
 
-/** DEBUG directive support.
- * \param object	object
- * \param name		directive name
- * \param valparams	value/parameters
- * \param line		virtual line (from yasm_linemap)
- * \return Nonzero if directive was not recognized; 0 if directive was
- *	       recognized even if it wasn't valid.
- */
-int yasm_dbgfmt_directive(yasm_object *object, const char *name,
-			  /*@null@*/ yasm_valparamhead *valparams,
-			  unsigned long line);
-
 /** Generate debugging information bytecodes.
  * \param object	object
  * \param linemap	virtual/physical line mapping
@@ -133,9 +117,6 @@ void yasm_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
 
 #define yasm_dbgfmt_destroy(dbgfmt) \
     ((yasm_dbgfmt_base *)dbgfmt)->module->destroy(dbgfmt)
-#define yasm_dbgfmt_directive(object, name, valparams, line) \
-    ((yasm_dbgfmt_base *)((object)->dbgfmt))->module->directive \
-	(object, name, valparams, line)
 #define yasm_dbgfmt_generate(object, linemap, ews) \
     ((yasm_dbgfmt_base *)((object)->dbgfmt))->module->generate \
 	(object, linemap, ews)

@@ -99,19 +99,12 @@ cv_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
     yasm_cv__generate_type(object);
 }
 
-static int
-cv_dbgfmt_directive(yasm_object *object, const char *name,
-		    yasm_valparamhead *valparams, unsigned long line)
-{
-    return 1;	    /* TODO */
-}
-
 /* Define dbgfmt structure -- see dbgfmt.h for details */
 yasm_dbgfmt_module yasm_cv8_LTX_dbgfmt = {
     "CodeView debugging format for VC8",
     "cv8",
+    NULL,   /* no directives */
     cv8_dbgfmt_create,
     cv_dbgfmt_destroy,
-    cv_dbgfmt_directive,
     cv_dbgfmt_generate
 };

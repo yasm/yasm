@@ -1,2 +1,2 @@
--:2: warning: rdf does not support exporting EQU/absolute values
--:4: warning: rdf does not support exporting EQU/absolute values
+-:6: warning: rdf does not support exporting EQU/absolute values
+-:7: warning: rdf does not support exporting EQU/absolute values

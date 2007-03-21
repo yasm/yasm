@@ -33,6 +33,8 @@
 #include "util.h"
 /*@unused@*/ RCSID("$Id$");
 
+#include <ctype.h>
+
 #include "libyasm-stdint.h"
 #include "coretype.h"
 #include "hamt.h"
@@ -53,6 +55,8 @@ struct HAMT {
     HAMTNode *root;
     /*@exits@*/ void (*error_func) (const char *file, unsigned int line,
 				    const char *message);
+    unsigned long (*HashKey) (const char *key);
+    unsigned long (*ReHashKey) (const char *key, int Level);
 };
 
 /* XXX make a portable version of this.  This depends on the pointer being
@@ -92,8 +96,26 @@ ReHashKey(const char *key, int Level)
     return vHash;
 }
 
+static unsigned long
+HashKey_nocase(const char *key)
+{
+    unsigned long a=31415, b=27183, vHash;
+    for (vHash=0; *key; key++, a*=b)
+	vHash = a*vHash + tolower(*key);
+    return vHash;
+}
+
+static unsigned long
+ReHashKey_nocase(const char *key, int Level)
+{
+    unsigned long a=31415, b=27183, vHash;
+    for (vHash=0; *key; key++, a*=b)
+	vHash = a*vHash*(unsigned long)Level + tolower(*key);
+    return vHash;
+}
+
 HAMT *
-HAMT_create(/*@exits@*/ void (*error_func)
+HAMT_create(int nocase, /*@exits@*/ void (*error_func)
     (const char *file, unsigned int line, const char *message))
 {
     /*@out@*/ HAMT *hamt = yasm_xmalloc(sizeof(HAMT));
@@ -108,6 +130,13 @@ HAMT_create(/*@exits@*/ void (*error_func)
     }
 
     hamt->error_func = error_func;
+    if (nocase) {
+	hamt->HashKey = HashKey_nocase;
+	hamt->ReHashKey = ReHashKey_nocase;
+    } else {
+	hamt->HashKey = HashKey;
+	hamt->ReHashKey = ReHashKey;
+    }
 
     return hamt;
 }
@@ -195,7 +224,7 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
     int keypartbits = 0;
     int level = 0;
 
-    key = HashKey(str);
+    key = hamt->HashKey(str);
     keypart = key & 0x1F;
     node = &hamt->root[keypart];
 
@@ -236,9 +265,9 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 		    keypartbits += 5;
 		    if (keypartbits > 30) {
 			/* Exceeded 32 bits: rehash */
-			key = ReHashKey(str, level);
-			key2 = ReHashKey(((HAMTEntry *)(node->BaseValue))->str,
-					 level);
+			key = hamt->ReHashKey(str, level);
+			key2 = hamt->ReHashKey(
+			    ((HAMTEntry *)(node->BaseValue))->str, level);
 			keypartbits = 0;
 		    }
 		    keypart = (key >> keypartbits) & 0x1F;
@@ -288,7 +317,7 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 	keypartbits += 5;
 	if (keypartbits > 30) {
 	    /* Exceeded 32 bits of current key: rehash */
-	    key = ReHashKey(str, level);
+	    key = hamt->ReHashKey(str, level);
 	    keypartbits = 0;
 	}
 	keypart = (key >> keypartbits) & 0x1F;
@@ -347,7 +376,7 @@ HAMT_search(HAMT *hamt, const char *str)
     int keypartbits = 0;
     int level = 0;
     
-    key = HashKey(str);
+    key = hamt->HashKey(str);
     keypart = key & 0x1F;
     node = &hamt->root[keypart];
 
@@ -366,7 +395,7 @@ HAMT_search(HAMT *hamt, const char *str)
 	keypartbits += 5;
 	if (keypartbits > 30) {
 	    /* Exceeded 32 bits of current key: rehash */
-	    key = ReHashKey(str, level);
+	    key = hamt->ReHashKey(str, level);
 	    keypartbits = 0;
 	}
 	keypart = (key >> keypartbits) & 0x1F;

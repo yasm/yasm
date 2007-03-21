@@ -32,6 +32,7 @@
 
 #include "libyasm-stdint.h"
 #include "coretype.h"
+#include "hamt.h"
 #include "valparam.h"
 #include "assocdat.h"
 
@@ -101,6 +102,130 @@ struct yasm_section {
 
 static void yasm_section_destroy(/*@only@*/ yasm_section *sect);
 
+/* Wrapper around directive for HAMT insertion */
+typedef struct yasm_directive_wrap {
+    const yasm_directive *directive;
+} yasm_directive_wrap;
+
+/*
+ * Standard "builtin" object directives.
+ */
+
+static void
+dir_extern(yasm_object *object, yasm_valparamhead *valparams,
+	   yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    yasm_symrec *sym;
+    sym = yasm_symtab_declare(object->symtab, vp->val, YASM_SYM_EXTERN, line);
+    if (objext_valparams) {
+	yasm_valparamhead *vps = yasm_vps_create();
+	*vps = *objext_valparams;   /* structure copy */
+	yasm_vps_initialize(objext_valparams);	/* don't double-free */
+	yasm_symrec_set_objext_valparams(sym, vps);
+    }
+}
+
+static void
+dir_global(yasm_object *object, yasm_valparamhead *valparams,
+	   yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    yasm_symrec *sym;
+    sym = yasm_symtab_declare(object->symtab, vp->val, YASM_SYM_GLOBAL, line);
+    if (objext_valparams) {
+	yasm_valparamhead *vps = yasm_vps_create();
+	*vps = *objext_valparams;   /* structure copy */
+	yasm_vps_initialize(objext_valparams);	/* don't double-free */
+	yasm_symrec_set_objext_valparams(sym, vps);
+    }
+}
+
+static void
+dir_common(yasm_object *object, yasm_valparamhead *valparams,
+	   yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    yasm_valparam *vp2 = yasm_vps_next(vp);
+    yasm_expr *size = yasm_vp_expr(vp2, object->symtab, line);
+    yasm_symrec *sym;
+
+    if (!size) {
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("no size specified in %s declaration"), "COMMON");
+	return;
+    }
+    sym = yasm_symtab_declare(object->symtab, vp->val, YASM_SYM_COMMON, line);
+    yasm_symrec_set_common_size(sym, size);
+    if (objext_valparams) {
+	yasm_valparamhead *vps = yasm_vps_create();
+	*vps = *objext_valparams;   /* structure copy */
+	yasm_vps_initialize(objext_valparams);	/* don't double-free */
+	yasm_symrec_set_objext_valparams(sym, vps);
+    }
+}
+
+static void
+dir_section(yasm_object *object, yasm_valparamhead *valparams,
+	    yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_section *new_section =
+	yasm_objfmt_section_switch(object, valparams, objext_valparams, line);
+    if (new_section)
+	object->cur_section = new_section;
+    else
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("invalid argument to directive `%s'"), "SECTION");
+}
+
+static const yasm_directive object_directives[] = {
+    { ".extern",	"gas",	dir_extern,	YASM_DIR_ID_REQUIRED },
+    { ".global",	"gas",	dir_global,	YASM_DIR_ID_REQUIRED },
+    { ".globl",		"gas",	dir_global,	YASM_DIR_ID_REQUIRED },
+    { "extern",		"nasm",	dir_extern,	YASM_DIR_ID_REQUIRED },
+    { "global",		"nasm",	dir_global,	YASM_DIR_ID_REQUIRED },
+    { "common",		"nasm",	dir_common,	YASM_DIR_ID_REQUIRED },
+    { "section",	"nasm",	dir_section,	YASM_DIR_ARG_REQUIRED },
+    { "segment",	"nasm",	dir_section,	YASM_DIR_ARG_REQUIRED },
+    { NULL, NULL, NULL, 0 }
+};
+
+static void
+directive_level2_delete(/*@only@*/ void *data)
+{
+    yasm_xfree(data);
+}
+
+static void
+directive_level1_delete(/*@only@*/ void *data)
+{
+    HAMT_destroy(data, directive_level2_delete);
+}
+
+static void
+directives_add(yasm_object *object, /*@null@*/ const yasm_directive *dir)
+{
+    if (!dir)
+	return;
+
+    while (dir->name) {
+	HAMT *level2 = HAMT_search(object->directives, dir->parser);
+	int replace;
+	yasm_directive_wrap *wrap = yasm_xmalloc(sizeof(yasm_directive_wrap));
+
+	if (!level2) {
+	    replace = 0;
+	    level2 = HAMT_insert(object->directives, dir->parser,
+				 HAMT_create(1, yasm_internal_error_),
+				 &replace, directive_level1_delete);
+	}
+	replace = 0;
+	wrap->directive = dir;
+	HAMT_insert(level2, dir->name, wrap, &replace,
+		    directive_level2_delete);
+	dir++;
+    }
+}
 
 /*@-compdestroy@*/
 yasm_object *
@@ -120,6 +245,9 @@ yasm_object_create(const char *src_filename, const char *obj_filename,
 
     /* Initialize sections linked list */
     STAILQ_INIT(&object->sections);
+
+    /* Create directives HAMT */
+    object->directives = HAMT_create(1, yasm_internal_error_);
 
     /* Initialize the target architecture */
     object->arch = arch;
@@ -166,6 +294,15 @@ yasm_object_create(const char *src_filename, const char *obj_filename,
 	    dbgfmt_module->keyword, objfmt_module->keyword);
 	goto error;
     }
+
+    /* Add directives to HAMT.  Note ordering here determines priority. */
+    directives_add(object,
+		   ((yasm_objfmt_base *)object->objfmt)->module->directives);
+    directives_add(object,
+		   ((yasm_dbgfmt_base *)object->dbgfmt)->module->directives);
+    directives_add(object,
+		   ((yasm_arch_base *)object->arch)->module->directives);
+    directives_add(object, object_directives);
 
     return object;
 
@@ -274,6 +411,28 @@ yasm_object_create_absolute(yasm_object *object, yasm_expr *start,
 }
 /*@=onlytrans@*/
 
+int
+yasm_object_directive(yasm_object *object, const char *name,
+		      const char *parser, yasm_valparamhead *valparams,
+		      yasm_valparamhead *objext_valparams,
+		      unsigned long line)
+{
+    HAMT *level2;
+    yasm_directive_wrap *wrap;
+
+    level2 = HAMT_search(object->directives, parser);
+    if (!level2)
+	return 1;
+
+    wrap = HAMT_search(level2, name);
+    if (!wrap)
+	return 1;
+
+    yasm_call_directive(wrap->directive, object, valparams, objext_valparams,
+			line);
+    return 0;
+}
+
 void
 yasm_object_set_source_fn(yasm_object *object, const char *src_filename)
 {
@@ -357,6 +516,9 @@ yasm_object_destroy(yasm_object *object)
 	yasm_section_destroy(cur);
 	cur = next;
     }
+
+    /* Delete directives HAMT */
+    HAMT_destroy(object->directives, directive_level1_delete);
 
     /* Delete associated filenames */
     yasm_xfree(object->src_filename);

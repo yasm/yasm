@@ -48,13 +48,6 @@ null_dbgfmt_destroy(/*@only@*/ yasm_dbgfmt *dbgfmt)
     yasm_xfree(dbgfmt);
 }
 
-static int
-null_dbgfmt_directive(yasm_object *object, const char *name,
-		      yasm_valparamhead *valparams, unsigned long line)
-{
-    return 1;
-}
-
 static void
 null_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
 		     yasm_errwarns *errwarns)
@@ -66,8 +59,8 @@ null_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
 yasm_dbgfmt_module yasm_null_LTX_dbgfmt = {
     "No debugging info",
     "null",
+    NULL,	/* no directives */
     null_dbgfmt_create,
     null_dbgfmt_destroy,
-    null_dbgfmt_directive,
     null_dbgfmt_generate
 };

@@ -453,7 +453,7 @@ do_assemble(FILE *in)
     yasm_symtab_parser_finalize(object->symtab,
 				strcmp(cur_parser_module->keyword, "gas")==0 ||
 				strcmp(cur_parser_module->keyword, "gnu")==0,
-				object, errwarns);
+				errwarns);
     check_errors(errwarns, object, linemap);
 
     /* Finalize parse */
@@ -604,7 +604,7 @@ main(int argc, char *argv[])
 
     /* Check for arch help */
     if (machine_name && strcmp(machine_name, "help") == 0) {
-	yasm_arch_machine *m = cur_arch_module->machines;
+	const yasm_arch_machine *m = cur_arch_module->machines;
 	printf(_("Available %s for %s `%s':\n"), _("machines"),
 	       _("architecture"), cur_arch_module->keyword);
 	while (m->keyword && m->name) {

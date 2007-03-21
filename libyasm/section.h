@@ -61,7 +61,13 @@ struct yasm_object {
     /*@dependent@*/ yasm_section *cur_section;
 
 #ifdef YASM_LIB_INTERNAL
+    /** Linked list of sections. */
     /*@reldef@*/ STAILQ_HEAD(yasm_sectionhead, yasm_section) sections;
+
+    /** Directives, organized as two level HAMT; first level is parser,
+     * second level is directive name.
+     */
+    /*@owned@*/ struct HAMT *directives;
 #endif
 };
 
@@ -111,6 +117,21 @@ struct yasm_object {
  */
 /*@dependent@*/ yasm_section *yasm_object_create_absolute
     (yasm_object *object, /*@keep@*/ yasm_expr *start, unsigned long line);
+
+/** Handle a directive.  Passed down to object format, debug format, or
+ * architecture as appropriate.
+ * \param object		object
+ * \param name			directive name
+ * \param parser		parser keyword
+ * \param valparams		value/parameters
+ * \param objext_valparams	"object format-specific" value/parameters
+ * \param line			virtual line (from yasm_linemap)
+ * \return 0 if directive recognized, nonzero if unrecognized.
+ */
+int yasm_object_directive(yasm_object *object, const char *name,
+			  const char *parser, yasm_valparamhead *valparams,
+			  yasm_valparamhead *objext_valparams,
+			  unsigned long line);
 
 /** Delete (free allocated memory for) an object.  All sections in the
  * object and all bytecodes within those sections are also deleted.

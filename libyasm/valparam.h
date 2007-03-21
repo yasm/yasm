@@ -46,12 +46,64 @@ struct yasm_valparam {
 /*@reldef@*/ STAILQ_HEAD(yasm_valparamhead, yasm_valparam);
 #endif
 
+/** Directive list entry structure. */
+struct yasm_directive {
+    /** Directive name.  GAS directives should include the ".", NASM
+     * directives should just be the raw name (not including the []).
+     * NULL entry required to terminate list of directives.
+     */
+    /*@null@*/ const char *name;
+
+    const char *parser;			    /**< Parser keyword */
+
+    /** Handler callback function for the directive.
+     * \param object		object 
+     * \param valparams		value/parameters
+     * \param objext_valparams	object format-specific value/parameters
+     * \param line		virtual line (from yasm_linemap)
+     */
+    void (*handler) (yasm_object *object, yasm_valparamhead *valparams,
+		     yasm_valparamhead *objext_valparams, unsigned long line);
+
+    /* Flags for pre-handler parameter checking. */
+    enum yasm_directive_flags {
+	YASM_DIR_ANY = 0,	    /**< Any valparams accepted */
+	YASM_DIR_ARG_REQUIRED = 1,  /**< Require at least 1 valparam */
+	YASM_DIR_ID_REQUIRED = 2    /**< First valparam must be ID */
+    } flags;
+};
+
+/** Call a directive.  Performs any valparam checks asked for by the
+ * directive prior to call.  Note that for a variety of reasons, a directive
+ * can generate an error.
+ * \param directive		directive
+ * \param object		object 
+ * \param valparams		value/parameters
+ * \param objext_valparams	object format-specific value/parameters
+ * \param line			virtual line (from yasm_linemap)
+ */
+void yasm_call_directive(const yasm_directive *directive, yasm_object *object,
+			 yasm_valparamhead *valparams,
+			 yasm_valparamhead *objext_valparams,
+			 unsigned long line);
+
 /** Create a new valparam.
  * \param v	value
  * \param p	parameter
  * \return Newly allocated valparam.
  */
 yasm_valparam *yasm_vp_create(/*@keep@*/ char *v, /*@keep@*/ yasm_expr *p);
+
+/** Get a valparam as an expr.  If the valparam is a value, it's treated
+ * as a symbol (yasm_symtab_use() is called to convert it).  The valparam
+ * is modified as necessary to avoid double-frees.
+ * \param vp		valparam
+ * \param symtab	symbol table
+ * \param line		virtual line
+ * \return Expression, or NULL if vp is NULL or if val and param are both NULL.
+ */
+/*@null@*/ /*@only@*/ yasm_expr *yasm_vp_expr
+    (yasm_valparam *vp, yasm_symtab *symtab, unsigned long line);
 
 /** Create a new linked list of valparams.
  * \return Newly allocated valparam list.

@@ -85,6 +85,7 @@ bin_objfmt_align_section(yasm_section *sect, yasm_section *prevsect,
 
 typedef struct bin_objfmt_output_info {
     yasm_object *object;
+    yasm_errwarns *errwarns;
     /*@dependent@*/ FILE *f;
     /*@only@*/ unsigned char *buf;
     /*@observer@*/ const yasm_section *sect;
@@ -252,6 +253,29 @@ bin_objfmt_output_bytecode(yasm_bytecode *bc, /*@null@*/ void *d)
     return 0;
 }
 
+static int
+bin_objfmt_check_sym(yasm_symrec *sym, /*@null@*/ void *d)
+{
+    /*@null@*/ bin_objfmt_output_info *info = (bin_objfmt_output_info *)d;
+    yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
+    assert(info != NULL);
+
+    if (vis & YASM_SYM_EXTERN) {
+	yasm_warn_set(YASM_WARN_GENERAL,
+	    N_("binary object format does not support extern variables"));
+	yasm_errwarn_propagate(info->errwarns, yasm_symrec_get_decl_line(sym));
+    } else if (vis & YASM_SYM_GLOBAL) {
+	yasm_warn_set(YASM_WARN_GENERAL,
+	    N_("binary object format does not support global variables"));
+	yasm_errwarn_propagate(info->errwarns, yasm_symrec_get_decl_line(sym));
+    } else if (vis & YASM_SYM_COMMON) {
+	yasm_error_set(YASM_ERROR_TYPE,
+	    N_("binary object format does not support common variables"));
+	yasm_errwarn_propagate(info->errwarns, yasm_symrec_get_decl_line(sym));
+    }
+    return 0;
+}
+
 static void
 bin_objfmt_output(yasm_object *object, FILE *f, /*@unused@*/ int all_syms,
 		  yasm_errwarns *errwarns)
@@ -266,8 +290,12 @@ bin_objfmt_output(yasm_object *object, FILE *f, /*@unused@*/ int all_syms,
     bin_objfmt_output_info info;
 
     info.object = object;
+    info.errwarns = errwarns;
     info.f = f;
     info.buf = yasm_xmalloc(REGULAR_OUTBUF_SIZE);
+
+    /* Check symbol table */
+    yasm_symtab_traverse(object->symtab, &info, bin_objfmt_check_sym);
 
     text = yasm_object_find_general(object, ".text");
     data = yasm_object_find_general(object, ".data");
@@ -467,96 +495,45 @@ bin_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
 	return NULL;
 }
 
-static yasm_symrec *
-bin_objfmt_extern_declare(yasm_object *object, const char *name,
-			  /*@unused@*/ /*@null@*/
-			  yasm_valparamhead *objext_valparams,
-			  unsigned long line)
-{
-    yasm_symrec *sym;
-
-    yasm_warn_set(YASM_WARN_GENERAL,
-		  N_("binary object format does not support extern variables"));
-
-    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_EXTERN, line);
-    return sym;
-}
-
-static yasm_symrec *
-bin_objfmt_global_declare(yasm_object *object, const char *name,
-			  /*@unused@*/ /*@null@*/
-			  yasm_valparamhead *objext_valparams,
-			  unsigned long line)
-{
-    yasm_symrec *sym;
-
-    yasm_warn_set(YASM_WARN_GENERAL,
-		  N_("binary object format does not support global variables"));
-
-    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_GLOBAL, line);
-    return sym;
-}
-
-static yasm_symrec *
-bin_objfmt_common_declare(yasm_object *object, const char *name,
-			  /*@only@*/ yasm_expr *size, /*@unused@*/ /*@null@*/
-			  yasm_valparamhead *objext_valparams,
-			  unsigned long line)
-{
-    yasm_symrec *sym;
-
-    yasm_expr_destroy(size);
-    yasm_error_set(YASM_ERROR_TYPE,
-	N_("binary object format does not support common variables"));
-
-    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_COMMON, line);
-    return sym;
-}
-
-static int
-bin_objfmt_directive(yasm_object *object, const char *name,
-		     /*@null@*/ yasm_valparamhead *valparams,
-		     /*@unused@*/ /*@null@*/
-		     yasm_valparamhead *objext_valparams, unsigned long line)
+static void
+bin_objfmt_dir_org(yasm_object *object,
+		   /*@null@*/ yasm_valparamhead *valparams,
+		   /*@unused@*/ /*@null@*/
+		   yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_section *sect;
     yasm_valparam *vp;
 
-    if (yasm__strcasecmp(name, "org") == 0) {
-	/*@null@*/ yasm_expr *start = NULL;
+    /*@null@*/ yasm_expr *start = NULL;
 
-	if (!valparams) {
-	    yasm_error_set(YASM_ERROR_SYNTAX, N_("[%s] requires an argument"),
-			   "ORG");
-	    return 0;
-	}
+    if (!valparams) {
+	yasm_error_set(YASM_ERROR_SYNTAX, N_("[%s] requires an argument"),
+		       "ORG");
+	return;
+    }
 
-	/* ORG takes just a simple integer as param */
-	vp = yasm_vps_first(valparams);
-	if (vp->val)
-	    start = yasm_expr_create_ident(yasm_expr_sym(yasm_symtab_use(
-		object->symtab, vp->val, line)), line);
-	else if (vp->param) {
-	    start = vp->param;
-	    vp->param = NULL;	/* Don't let valparams delete it */
-	}
+    /* ORG takes just a simple integer as param */
+    vp = yasm_vps_first(valparams);
+    if (vp->val)
+	start = yasm_expr_create_ident(yasm_expr_sym(yasm_symtab_use(
+	    object->symtab, vp->val, line)), line);
+    else if (vp->param) {
+	start = vp->param;
+	vp->param = NULL;	/* Don't let valparams delete it */
+    }
 
-	if (!start) {
-	    yasm_error_set(YASM_ERROR_SYNTAX,
-			   N_("argument to ORG must be expression"));
-	    return 0;
-	}
+    if (!start) {
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("argument to ORG must be expression"));
+	return;
+    }
 
-	/* ORG changes the start of the .text section */
-	sect = yasm_object_find_general(object, ".text");
-	if (!sect)
-	    yasm_internal_error(
-		N_("bin objfmt: .text section does not exist before ORG is called?"));
-	yasm_section_set_start(sect, start, line);
-
-	return 0;	    /* directive recognized */
-    } else
-	return 1;	    /* directive unrecognized */
+    /* ORG changes the start of the .text section */
+    sect = yasm_object_find_general(object, ".text");
+    if (!sect)
+	yasm_internal_error(
+	    N_("bin objfmt: .text section does not exist before ORG is called?"));
+    yasm_section_set_start(sect, start, line);
 }
 
 
@@ -564,6 +541,11 @@ bin_objfmt_directive(yasm_object *object, const char *name,
 static const char *bin_objfmt_dbgfmt_keywords[] = {
     "null",
     NULL
+};
+
+static const yasm_directive bin_objfmt_directives[] = {
+    { "org",	"nasm",	bin_objfmt_dir_org,	YASM_DIR_ARG_REQUIRED },
+    { NULL, NULL, NULL, 0 }
 };
 
 /* Define objfmt structure -- see objfmt.h for details */
@@ -574,13 +556,10 @@ yasm_objfmt_module yasm_bin_LTX_objfmt = {
     16,
     bin_objfmt_dbgfmt_keywords,
     "null",
+    bin_objfmt_directives,
     bin_objfmt_create,
     bin_objfmt_output,
     bin_objfmt_destroy,
     bin_objfmt_add_default_section,
-    bin_objfmt_section_switch,
-    bin_objfmt_extern_declare,
-    bin_objfmt_global_declare,
-    bin_objfmt_common_declare,
-    bin_objfmt_directive
+    bin_objfmt_section_switch
 };

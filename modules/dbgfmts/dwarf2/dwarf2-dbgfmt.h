@@ -107,9 +107,12 @@ yasm_section *yasm_dwarf2__generate_line
     (yasm_object *object, yasm_linemap *linemap, yasm_errwarns *errwarns,
      int asm_source, /*@out@*/ yasm_section **main_code,
      /*@out@*/ size_t *num_line_sections);
-int yasm_dwarf2__line_directive
-    (yasm_object *object, const char *name, yasm_valparamhead *valparams,
-     unsigned long line);
+void yasm_dwarf2__dir_loc(yasm_object *object, yasm_valparamhead *valparams,
+			  yasm_valparamhead *objext_valparams,
+			  unsigned long line);
+void yasm_dwarf2__dir_file(yasm_object *object, yasm_valparamhead *valparams,
+			   yasm_valparamhead *objext_valparams,
+			   unsigned long line);
 
 /* Address range table functions */
 yasm_section *yasm_dwarf2__generate_aranges(yasm_object *object,

@@ -259,7 +259,8 @@ int yasm_x86__expr_checkea
     (x86_effaddr *x86_ea, unsigned char *addrsize, unsigned int bits,
      int address16_op, unsigned char *rex, yasm_bytecode *bc);
 
-void yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len);
+void yasm_x86__parse_cpu(yasm_arch_x86 *arch_x86, const char *cpuid,
+			 size_t cpuid_len);
 
 yasm_arch_insnprefix yasm_x86__parse_check_insnprefix
     (yasm_arch *arch, /*@out@*/ uintptr_t data[4], const char *id,

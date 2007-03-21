@@ -100,10 +100,6 @@ typedef struct rdf_section_data {
 } rdf_section_data;
 
 typedef struct rdf_symrec_data {
-    /*@owned@*/ /*@null@*/ yasm_expr *size; /* size if COMMON declaration */
-    unsigned long align;		/* alignment if COMMON declaration */
-
-    unsigned int flags;			/* import/export/type flags */
     unsigned int segment;		/* assigned RDF "segment" index */
 } rdf_symrec_data;
 
@@ -156,16 +152,11 @@ yasm_objfmt_module yasm_rdf_LTX_objfmt;
 
 
 static /*@dependent@*/ rdf_symrec_data *
-rdf_objfmt_sym_set_data(yasm_symrec *sym,
-			/*@only@*/ /*@null@*/ yasm_expr *size,
-			unsigned long align, unsigned int flags)
+rdf_objfmt_sym_set_data(yasm_symrec *sym, unsigned int segment)
 {
     rdf_symrec_data *rsymd = yasm_xmalloc(sizeof(rdf_symrec_data));
 
-    rsymd->size = size;
-    rsymd->align = align;
-    rsymd->flags = flags;
-    rsymd->segment = 0;
+    rsymd->segment = segment;
 
     yasm_symrec_add_data(sym, &rdf_symrec_data_cb, rsymd);
     return rsymd;
@@ -484,6 +475,72 @@ rdf_objfmt_output_section_file(yasm_section *sect, /*@null@*/ void *d)
     return 0;
 }
 
+static unsigned int
+rdf_parse_flags(yasm_symrec *sym)
+{
+    yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
+    /*@dependent@*/ /*@null@*/ yasm_valparamhead *objext_valparams =
+	yasm_symrec_get_objext_valparams(sym);
+    yasm_valparam *vp;
+    unsigned int flags = 0;
+
+    static const struct {
+	enum {
+	    FLAG_EXT = 1,
+	    FLAG_GLOB = 2
+	} type;
+	enum {
+	    FLAG_SET = 1,
+	    FLAG_CLR = 2
+	} action;
+	const char *name;
+	unsigned int flags;
+    } flagtbl[] = {
+	{ FLAG_EXT|FLAG_GLOB, FLAG_SET, "data", SYM_DATA },
+	{ FLAG_EXT|FLAG_GLOB, FLAG_SET, "object", SYM_DATA },
+	{ FLAG_EXT|FLAG_GLOB, FLAG_SET, "proc", SYM_FUNCTION },
+	{ FLAG_EXT|FLAG_GLOB, FLAG_SET, "function", SYM_FUNCTION },
+	{ FLAG_EXT, FLAG_SET, "import", SYM_IMPORT },
+	{ FLAG_GLOB, FLAG_SET, "export", SYM_GLOBAL },
+	{ FLAG_EXT, FLAG_SET, "far", SYM_FAR },
+	{ FLAG_EXT, FLAG_CLR, "near", SYM_FAR },
+    };
+
+    if (!objext_valparams)
+	return 0;
+
+    vp = yasm_vps_first(objext_valparams);
+    for (; vp; vp = yasm_vps_next(vp)) {
+	size_t i;
+	int match;
+
+	if (!vp->val) {
+	    yasm_warn_set(YASM_WARN_GENERAL,
+			  N_("Unrecognized numeric qualifier"));
+	    continue;
+	}
+
+	match = 0;
+	for (i=0; i<NELEMS(flagtbl) && !match; i++) {
+	    if ((((vis & YASM_SYM_GLOBAL) && (flagtbl[i].type & FLAG_GLOB)) ||
+		 ((vis & YASM_SYM_EXTERN) && (flagtbl[i].type & FLAG_EXT))) &&
+		yasm__strcasecmp(vp->val, flagtbl[i].name) == 0) {
+		if (flagtbl[i].action == FLAG_SET)
+		    flags |= flagtbl[i].flags;
+		else if (flagtbl[i].action == FLAG_CLR)
+		    flags &= ~flagtbl[i].flags;
+		match = 1;
+	    }
+	}
+
+	if (!match)
+	    yasm_warn_set(YASM_WARN_GENERAL, N_("Unrecognized qualifier `%s'"),
+			  vp->val);
+    }
+
+    return flags;
+}
+
 static int
 rdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 {
@@ -496,7 +553,6 @@ rdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
     /*@dependent@*/ /*@null@*/ yasm_section *sect;
     /*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
     unsigned char *localbuf;
-    rdf_symrec_data *rsymd;
 
     assert(info != NULL);
 
@@ -521,15 +577,16 @@ rdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	} else if (yasm_section_is_absolute(sect)) {
 	    yasm_warn_set(YASM_WARN_GENERAL,
 			  N_("rdf does not support exporting absolutes"));
-	    yasm_errwarn_propagate(info->errwarns, yasm_symrec_get_line(sym));
+	    yasm_errwarn_propagate(info->errwarns,
+				   yasm_symrec_get_decl_line(sym));
 	    return 0;
 	} else
 	    yasm_internal_error(N_("didn't understand section"));
 	value = yasm_bc_next_offset(precbc);
     } else if (yasm_symrec_get_equ(sym)) {
 	yasm_warn_set(YASM_WARN_GENERAL,
-		      N_("rdf does not support exporting EQU/absolute values"));
-	yasm_errwarn_propagate(info->errwarns, yasm_symrec_get_line(sym));
+	    N_("rdf does not support exporting EQU/absolute values"));
+	yasm_errwarn_propagate(info->errwarns, yasm_symrec_get_decl_line(sym));
 	return 0;
     }
 
@@ -540,50 +597,72 @@ rdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	yasm_warn_set(YASM_WARN_GENERAL,
 		      N_("label name too long, truncating to %d bytes"),
 		      EXIM_LABEL_MAX);
-	yasm_errwarn_propagate(info->errwarns, yasm_symrec_get_line(sym));
 	len = EXIM_LABEL_MAX-1;
     }
 
     localbuf = info->buf;
     if (vis & YASM_SYM_GLOBAL) {
-	rsymd = yasm_symrec_get_data(sym, &rdf_symrec_data_cb);
-	if (!rsymd)
-	    yasm_internal_error(N_("rdf: no symbol data for global symbol"));
 	YASM_WRITE_8(localbuf, RDFREC_GLOBAL);
 	YASM_WRITE_8(localbuf, 6+len+1);	/* record length */
-	YASM_WRITE_8(localbuf, rsymd->flags);	/* flags */
+	YASM_WRITE_8(localbuf, rdf_parse_flags(sym));	/* flags */
 	YASM_WRITE_8(localbuf, scnum);		/* segment referred to */
 	YASM_WRITE_32_L(localbuf, value);	/* offset */
     } else {
-	/* Create new symrec data if it doesn't already exist */
-	rsymd = yasm_symrec_get_data(sym, &rdf_symrec_data_cb);
-	if (!rsymd)
-	    rsymd = rdf_objfmt_sym_set_data(sym, NULL, 0, 0);
-
 	/* Save symbol segment in symrec data (for later reloc gen) */
-	rsymd->segment = info->indx++;
-	scnum = rsymd->segment;
+	scnum = info->indx++;
+	rdf_objfmt_sym_set_data(sym, scnum);
 
 	if (vis & YASM_SYM_COMMON) {
+	    /*@dependent@*/ /*@null@*/ yasm_expr **csize_expr;
 	    const yasm_intnum *intn;
+	    /*@dependent@*/ /*@null@*/ yasm_valparamhead *objext_valparams =
+		yasm_symrec_get_objext_valparams(sym);
+	    unsigned long addralign = 0;
 
 	    YASM_WRITE_8(localbuf, RDFREC_COMMON);
 	    YASM_WRITE_8(localbuf, 8+len+1);	/* record length */
 	    YASM_WRITE_16_L(localbuf, scnum);	/* segment allocated */
 
 	    /* size */
-	    intn = yasm_expr_get_intnum(&rsymd->size, 1);
+	    csize_expr = yasm_symrec_get_common_size(sym);
+	    assert(csize_expr != NULL);
+	    intn = yasm_expr_get_intnum(csize_expr, 1);
 	    if (!intn) {
 		yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 		    N_("COMMON data size not an integer expression"));
-		yasm_errwarn_propagate(info->errwarns,
-				       yasm_symrec_get_line(sym));
 	    } else
 		value = yasm_intnum_get_uint(intn);
 	    YASM_WRITE_32_L(localbuf, value);
-	    YASM_WRITE_16_L(localbuf, rsymd->align);	/* alignment */
+
+	    /* alignment */
+	    if (objext_valparams) {
+		yasm_valparam *vp = yasm_vps_first(objext_valparams);
+		for (; vp; vp = yasm_vps_next(vp)) {
+		    if (!vp->val && vp->param) {
+			/*@null@*/ const yasm_intnum *align_expr;
+
+			align_expr = yasm_expr_get_intnum(&vp->param, 0);
+			if (!align_expr) {
+			    yasm_error_set(YASM_ERROR_VALUE,
+				N_("alignment constraint is not an integer"));
+			    continue;
+			}
+			addralign = yasm_intnum_get_uint(align_expr);
+
+			/* Alignments must be a power of two. */
+			if (!is_exp2(addralign)) {
+			    yasm_error_set(YASM_ERROR_VALUE,
+				N_("alignment constraint is not a power of two"));
+			    continue;
+			}
+		    } else if (vp->val)
+			yasm_warn_set(YASM_WARN_GENERAL,
+                            N_("Unrecognized qualifier `%s'"), vp->val);
+		}
+	    }
+	    YASM_WRITE_16_L(localbuf, addralign);
 	} else if (vis & YASM_SYM_EXTERN) {
-	    unsigned int flags = rsymd->flags;
+	    unsigned int flags = rdf_parse_flags(sym);
 	    if (flags & SYM_FAR) {
 		YASM_WRITE_8(localbuf, RDFREC_FARIMPORT);
 		flags &= ~SYM_FAR;
@@ -601,6 +680,8 @@ rdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
     YASM_WRITE_8(localbuf, 0);		/* 0-terminated name */
 
     fwrite(info->buf, (unsigned long)(localbuf-info->buf), 1, info->f);
+
+    yasm_errwarn_propagate(info->errwarns, yasm_symrec_get_decl_line(sym));
     return 0;
 }
 
@@ -917,163 +998,9 @@ rdf_section_data_print(void *data, FILE *f, int indent_level)
     fprintf(f, "%*ssize=%ld\n", indent_level, "", rsd->size);
 }
 
-static yasm_symrec *
-rdf_objfmt_extern_declare(yasm_object *object, const char *name, /*@unused@*/
-			  /*@null@*/ yasm_valparamhead *objext_valparams,
-			  unsigned long line)
-{
-    yasm_symrec *sym;
-    unsigned int flags = 0;
-
-    static const struct {
-	const char *name;
-	unsigned int flags;
-    } flagnames[] = {
-	{ "data", SYM_DATA },
-	{ "object", SYM_DATA },
-	{ "proc", SYM_FUNCTION },
-	{ "function", SYM_FUNCTION },
-	{ "import", SYM_IMPORT },
-	{ "far", SYM_FAR },
-    };
-
-    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_EXTERN, line);
-
-    if (objext_valparams) {
-	yasm_valparam *vp = yasm_vps_first(objext_valparams);
-        for (; vp; vp = yasm_vps_next(vp)) {
-	    size_t i;
-	    int match;
-
-	    if (!vp->val) {
-		yasm_warn_set(YASM_WARN_GENERAL,
-			      N_("Unrecognized numeric qualifier"));
-		continue;
-	    }
-
-	    match = 0;
-	    for (i=0; i<NELEMS(flagnames) && !match; i++) {
-		if (yasm__strcasecmp(vp->val, flagnames[i].name) == 0) {
-		    flags |= flagnames[i].flags;
-		    match = 1;
-		}
-	    }
-
-	    if (yasm__strcasecmp(vp->val, "near") == 0) {
-		flags &= ~SYM_FAR;
-		match = 1;
-	    }
-
-	    if (!match)
-		yasm_warn_set(YASM_WARN_GENERAL,
-			      N_("Unrecognized qualifier `%s'"), vp->val);
-	}
-    }
-
-    /* Remember flags */
-    rdf_objfmt_sym_set_data(sym, NULL, 0, flags);
-    return sym;
-}
-
-static yasm_symrec *
-rdf_objfmt_global_declare(yasm_object *object, const char *name, /*@unused@*/
-			  /*@null@*/ yasm_valparamhead *objext_valparams,
-			  unsigned long line)
-{
-    yasm_symrec *sym;
-    unsigned int flags = 0;
-
-    static const struct {
-	const char *name;
-	unsigned int flags;
-    } flagnames[] = {
-	{ "data", SYM_DATA },
-	{ "object", SYM_DATA },
-	{ "proc", SYM_FUNCTION },
-	{ "function", SYM_FUNCTION },
-	{ "export", SYM_GLOBAL },
-    };
-
-    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_GLOBAL, line);
-
-    if (objext_valparams) {
-	yasm_valparam *vp = yasm_vps_first(objext_valparams);
-        for (; vp; vp = yasm_vps_next(vp)) {
-	    size_t i;
-	    int match;
-
-	    if (!vp->val) {
-		yasm_warn_set(YASM_WARN_GENERAL,
-			      N_("Unrecognized numeric qualifier"));
-		continue;
-	    }
-
-	    match = 0;
-	    for (i=0; i<NELEMS(flagnames) && !match; i++) {
-		if (yasm__strcasecmp(vp->val, flagnames[i].name) == 0) {
-		    flags |= flagnames[i].flags;
-		    match = 1;
-		}
-	    }
-	    if (!match)
-		yasm_warn_set(YASM_WARN_GENERAL,
-			      N_("Unrecognized qualifier `%s'"), vp->val);
-	}
-    }
-
-    /* Remember flags */
-    rdf_objfmt_sym_set_data(sym, NULL, 0, flags);
-    return sym;
-}
-
-static yasm_symrec *
-rdf_objfmt_common_declare(yasm_object *object, const char *name,
-			  /*@only@*/ yasm_expr *size,
-			  yasm_valparamhead *objext_valparams,
-			  unsigned long line)
-{
-    yasm_symrec *sym;
-    unsigned long addralign = 0;
-
-    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_COMMON, line);
-
-    if (objext_valparams) {
-	yasm_valparam *vp = yasm_vps_first(objext_valparams);
-        for (; vp; vp = yasm_vps_next(vp)) {
-            if (!vp->val && vp->param) {
-                /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
-
-                align_expr = yasm_expr_get_intnum(&vp->param, 0);
-                if (!align_expr) {
-                    yasm_error_set(YASM_ERROR_VALUE,
-			N_("alignment constraint is not an integer"));
-                    return sym;
-                }
-                addralign = yasm_intnum_get_uint(align_expr);
-
-                /* Alignments must be a power of two. */
-                if (!is_exp2(addralign)) {
-                    yasm_error_set(YASM_ERROR_VALUE,
-                        N_("alignment constraint is not a power of two"));
-                    return sym;
-                }
-            } else if (vp->val)
-                yasm_warn_set(YASM_WARN_GENERAL,
-                              N_("Unrecognized qualifier `%s'"), vp->val);
-        }
-    }
-
-    /* Remember size and alignment */
-    rdf_objfmt_sym_set_data(sym, size, addralign, 0);
-    return sym;
-}
-
 static void
 rdf_symrec_data_destroy(void *data)
 {
-    rdf_symrec_data *rsymd = (rdf_symrec_data *)data;
-    if (rsymd->size)
-	yasm_expr_destroy(rsymd->size);
     yasm_xfree(data);
 }
 
@@ -1083,47 +1010,17 @@ rdf_symrec_data_print(void *data, FILE *f, int indent_level)
     rdf_symrec_data *rsymd = (rdf_symrec_data *)data;
 
     fprintf(f, "%*ssymtab segment=%u\n", indent_level, "", rsymd->segment);
-    fprintf(f, "%*ssize=", indent_level, "");
-    if (rsymd->size)
-	yasm_expr_print(rsymd->size, f);
-    else
-	fprintf(f, "nil");
-    fprintf(f, "%*salign=%lu\n", indent_level, "", rsymd->align);
 }
 
-static int
-rdf_objfmt_directive(yasm_object *object, const char *name,
-		     /*@null@*/ yasm_valparamhead *valparams,
-		     /*@unused@*/ /*@null@*/
-		     yasm_valparamhead *objext_valparams, unsigned long line)
+static void
+rdf_objfmt_add_libmodule(yasm_object *object, char *name, int lib)
 {
     yasm_objfmt_rdf *objfmt_rdf = (yasm_objfmt_rdf *)object->objfmt;
-    int lib;
-    yasm_valparam *vp;
     xdf_str *str;
-
-    if (yasm__strcasecmp(name, "library") == 0)
-	lib = 1;
-    else if (yasm__strcasecmp(name, "module") == 0)
-	lib = 0;
-    else
-	return 1;
-
-    if (!valparams) {
-	yasm_error_set(YASM_ERROR_SYNTAX, N_("[%s] requires an argument"),
-		       name);
-	return 0;
-    }
-    vp = yasm_vps_first(valparams);
-    if (!vp->val) {
-	yasm_error_set(YASM_ERROR_SYNTAX, N_("argument to [%s] must be name"),
-		       name);
-	return 0;
-    }
 
     /* Add to list */
     str = yasm_xmalloc(sizeof(xdf_str));
-    str->str = vp->val;
+    str->str = name;
     if (lib)
 	STAILQ_INSERT_TAIL(&objfmt_rdf->library_names, str, link);
     else
@@ -1135,16 +1032,36 @@ rdf_objfmt_directive(yasm_object *object, const char *name,
 		      MODLIB_NAME_MAX);
 	str->str[MODLIB_NAME_MAX-1] = '\0';
     }
-
-    vp->val = NULL;	/* don't free it */
-    return 0;
 }
 
+static void
+dir_library(yasm_object *object, yasm_valparamhead *valparams,
+	    yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    rdf_objfmt_add_libmodule(object, vp->val, 1);
+    vp->val = NULL;	/* don't free it */
+}
+
+static void
+dir_module(yasm_object *object, yasm_valparamhead *valparams,
+	   yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    rdf_objfmt_add_libmodule(object, vp->val, 0);
+    vp->val = NULL;	/* don't free it */
+}
 
 /* Define valid debug formats to use with this object format */
 static const char *rdf_objfmt_dbgfmt_keywords[] = {
     "null",
     NULL
+};
+
+static const yasm_directive rdf_objfmt_directives[] = {
+    { "library",	"nasm",	dir_library,	YASM_DIR_ID_REQUIRED },
+    { "module",		"nasm",	dir_module,	YASM_DIR_ID_REQUIRED },
+    { NULL, NULL, NULL, 0 }
 };
 
 /* Define objfmt structure -- see objfmt.h for details */
@@ -1155,13 +1072,10 @@ yasm_objfmt_module yasm_rdf_LTX_objfmt = {
     32,
     rdf_objfmt_dbgfmt_keywords,
     "null",
+    rdf_objfmt_directives,
     rdf_objfmt_create,
     rdf_objfmt_output,
     rdf_objfmt_destroy,
     rdf_objfmt_add_default_section,
-    rdf_objfmt_section_switch,
-    rdf_objfmt_extern_declare,
-    rdf_objfmt_global_declare,
-    rdf_objfmt_common_declare,
-    rdf_objfmt_directive
+    rdf_objfmt_section_switch
 };

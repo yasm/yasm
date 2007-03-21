@@ -75,8 +75,9 @@ typedef struct {
 
 typedef struct {
     yasm_objfmt_elf *objfmt_elf;
+    yasm_errwarns *errwarns;
     int local_names;
-} append_local_sym_info;
+} build_symtab_info;
 
 yasm_objfmt_module yasm_elf_LTX_objfmt;
 yasm_objfmt_module yasm_elf32_LTX_objfmt;
@@ -89,18 +90,19 @@ elf_objfmt_symtab_append(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym,
 			 elf_symbol_type type, elf_symbol_vis vis,
                          yasm_expr *size, elf_address *value)
 {
-    /* Only append to table if not already appended */
     elf_symtab_entry *entry = yasm_symrec_get_data(sym, &elf_symrec_data);
-    if (!entry || !elf_sym_in_table(entry)) {
-	if (!entry) {
-	    elf_strtab_entry *name =
-		elf_strtab_append_str(objfmt_elf->strtab,
-				      yasm_symrec_get_name(sym));
-	    entry = elf_symtab_entry_create(name, sym);
-	}
-	elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
+
+    if (!entry) {
+	elf_strtab_entry *name =
+	    elf_strtab_append_str(objfmt_elf->strtab,
+				  yasm_symrec_get_name(sym));
+	entry = elf_symtab_entry_create(name, sym);
 	yasm_symrec_add_data(sym, &elf_symrec_data, entry);
     }
+
+    /* Only append to table if not already appended */
+    if (!elf_sym_in_table(entry))
+	elf_symtab_append_entry(objfmt_elf->elf_symtab, entry);
 
     elf_symtab_set_nonzero(entry, NULL, sectidx, bind, type, size, value);
     elf_sym_set_visibility(entry, vis);
@@ -108,19 +110,150 @@ elf_objfmt_symtab_append(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym,
     return entry;
 }
 
-static int
-elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
+static elf_symtab_entry *
+build_extern(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym)
 {
-    append_local_sym_info *info = (append_local_sym_info *)d;
-    elf_symtab_entry *entry;
+    yasm_valparamhead *objext_valparams =
+	yasm_symrec_get_objext_valparams(sym);
+
+    if (objext_valparams) {
+	yasm_valparam *vp = yasm_vps_first(objext_valparams);
+	for (; vp; vp = yasm_vps_next(vp)) {
+	    if (vp->val)
+		yasm_error_set(YASM_ERROR_TYPE,
+			       N_("unrecognized symbol type `%s'"), vp->val);
+	}
+    }
+
+    return elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_GLOBAL, 0,
+				    STV_DEFAULT, NULL, NULL);
+}
+
+static elf_symtab_entry *
+build_global(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym)
+{
+    yasm_valparamhead *objext_valparams =
+	yasm_symrec_get_objext_valparams(sym);
+    elf_symbol_type type = 0;
+    yasm_expr *size = NULL;
+    elf_symbol_vis vis = STV_DEFAULT;
+    unsigned int vis_overrides = 0;
+
+    if (objext_valparams) {
+	yasm_valparam *vp = yasm_vps_first(objext_valparams);
+	for (; vp; vp = yasm_vps_next(vp))
+        {
+            if (vp->val) {
+                if (yasm__strcasecmp(vp->val, "function") == 0)
+                    type = STT_FUNC;
+                else if (yasm__strcasecmp(vp->val, "data") == 0 ||
+                         yasm__strcasecmp(vp->val, "object") == 0)
+                    type = STT_OBJECT;
+                else if (yasm__strcasecmp(vp->val, "internal") == 0) {
+                    vis = STV_INTERNAL;
+                    vis_overrides++;
+                }
+                else if (yasm__strcasecmp(vp->val, "hidden") == 0) {
+                    vis = STV_HIDDEN;
+                    vis_overrides++;
+                }
+                else if (yasm__strcasecmp(vp->val, "protected") == 0) {
+                    vis = STV_PROTECTED;
+                    vis_overrides++;
+                }
+                else
+                    yasm_error_set(YASM_ERROR_TYPE,
+				   N_("unrecognized symbol type `%s'"),
+				   vp->val);
+            }
+            else if (vp->param && !size) {
+                size = vp->param;
+                vp->param = NULL;	/* to avoid double-free of expr */
+            }
+	}
+        if (vis_overrides > 1) {
+            yasm_warn_set(YASM_WARN_GENERAL,
+                N_("More than one symbol visibility provided; using last"));
+        }
+    }
+
+    return elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_GLOBAL,
+				    type, vis, size, NULL);
+}
+
+static /*@null@*/ elf_symtab_entry *
+build_common(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym)
+{
+    yasm_expr **size = yasm_symrec_get_common_size(sym);
+    yasm_valparamhead *objext_valparams =
+	yasm_symrec_get_objext_valparams(sym);
+    unsigned long addralign = 0;
+
+    if (objext_valparams) {
+	yasm_valparam *vp = yasm_vps_first(objext_valparams);
+        for (; vp; vp = yasm_vps_next(vp)) {
+            if (!vp->val && vp->param) {
+                /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
+
+                align_expr = yasm_expr_get_intnum(&vp->param, 0);
+                if (!align_expr) {
+                    yasm_error_set(YASM_ERROR_VALUE,
+			N_("alignment constraint is not an integer"));
+                    return NULL;
+                }
+                addralign = yasm_intnum_get_uint(align_expr);
+
+                /* Alignments must be a power of two. */
+                if (!is_exp2(addralign)) {
+                    yasm_error_set(YASM_ERROR_VALUE,
+                        N_("alignment constraint is not a power of two"));
+                    return NULL;
+                }
+            } else if (vp->val)
+                yasm_warn_set(YASM_WARN_GENERAL,
+                              N_("Unrecognized qualifier `%s'"), vp->val);
+        }
+    }
+
+    return elf_objfmt_symtab_append(objfmt_elf, sym, SHN_COMMON, STB_GLOBAL,
+				    0, STV_DEFAULT, *size, &addralign);
+}
+
+static int
+elf_objfmt_build_symtab(yasm_symrec *sym, /*@null@*/ void *d)
+{
+    build_symtab_info *info = (build_symtab_info *)d;
+    yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
+    yasm_sym_status status = yasm_symrec_get_status(sym);
+    elf_symtab_entry *entry = yasm_symrec_get_data(sym, &elf_symrec_data);
     elf_address value=0;
     yasm_section *sect=NULL;
     yasm_bytecode *precbc=NULL;
 
     assert(info != NULL);
 
+    if (vis & YASM_SYM_EXTERN) {
+	entry = build_extern(info->objfmt_elf, sym);
+	yasm_errwarn_propagate(info->errwarns,
+			       yasm_symrec_get_decl_line(sym));
+	return 0;
+    }
+
+    if (vis & YASM_SYM_COMMON) {
+	entry = build_common(info->objfmt_elf, sym);
+	yasm_errwarn_propagate(info->errwarns,
+			       yasm_symrec_get_decl_line(sym));
+	/* If the COMMON variable was actually defined, fall through. */
+	if (!(status & YASM_SYM_DEFINED))
+	    return 0;
+    }
+
+    /* Ignore any undefined at this point. */
+    if (!(status & YASM_SYM_DEFINED))
+	return 0;
+
     if (!yasm_symrec_get_label(sym, &precbc)) {
-	if (!yasm_symrec_is_abs(sym))	/* let absolute symbol into output */
+	if (!yasm_symrec_get_equ(sym) && !yasm_symrec_is_abs(sym))
 	    return 0;
 	precbc = NULL;
     }
@@ -128,25 +261,44 @@ elf_objfmt_append_local_sym(yasm_symrec *sym, /*@null@*/ void *d)
     if (precbc)
 	sect = yasm_bc_get_section(precbc);
 
-    entry = yasm_symrec_get_data(sym, &elf_symrec_data);
-    if (!entry || !elf_sym_in_table(entry)) {
+    if (entry && elf_sym_in_table(entry))
+	;
+    else if (vis & YASM_SYM_GLOBAL) {
+	entry = build_global(info->objfmt_elf, sym);
+	yasm_errwarn_propagate(info->errwarns, yasm_symrec_get_decl_line(sym));
+    } else {
 	int is_sect = 0;
+
+	/* Locals (except when debugging) do not need to be
+	 * in the symbol table, unless they're a section.
+	 */
 	if (sect && !yasm_section_is_absolute(sect) &&
 	    strcmp(yasm_symrec_get_name(sym), yasm_section_get_name(sect))==0)
 	    is_sect = 1;
-
-	/* neither sections nor locals (except when debugging) need names */
+#if 0
+	/* FIXME: to enable this we must have handling in place for special
+	 * symbols.
+	 */
+	if (!info->local_names && !is_sect)
+	    return 0;
+#else
+	if (yasm_symrec_get_equ(sym) && !yasm_symrec_is_abs(sym))
+	    return 0;
+#endif
+	entry = yasm_symrec_get_data(sym, &elf_symrec_data);
 	if (!entry) {
-	    elf_strtab_entry *name = info->local_names && !is_sect
-		? elf_strtab_append_str(info->objfmt_elf->strtab,
-					yasm_symrec_get_name(sym))
-		: NULL;
+	    elf_strtab_entry *name = !info->local_names || is_sect ? NULL :
+		elf_strtab_append_str(info->objfmt_elf->strtab,
+				      yasm_symrec_get_name(sym));
 	    entry = elf_symtab_entry_create(name, sym);
+	    yasm_symrec_add_data(sym, &elf_symrec_data, entry);
 	}
-	elf_symtab_insert_local_sym(info->objfmt_elf->elf_symtab, entry);
+
+	if (!elf_sym_in_table(entry))
+	    elf_symtab_insert_local_sym(info->objfmt_elf->elf_symtab, entry);
+
 	elf_symtab_set_nonzero(entry, sect, 0, STB_LOCAL,
 			       is_sect ? STT_SECTION : 0, NULL, 0);
-	yasm_symrec_add_data(sym, &elf_symrec_data, entry);
 
 	if (is_sect)
 	    return 0;
@@ -588,7 +740,7 @@ elf_objfmt_output(yasm_object *object, FILE *f, int all_syms,
 {
     yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)object->objfmt;
     elf_objfmt_output_info info;
-    append_local_sym_info localsym_info;
+    build_symtab_info buildsym_info;
     long pos;
     unsigned long elf_shead_addr;
     elf_secthead *esdn;
@@ -614,16 +766,17 @@ elf_objfmt_output(yasm_object *object, FILE *f, int all_syms,
     }
 
     /* Create missing section headers */
-    localsym_info.objfmt_elf = objfmt_elf;
     if (yasm_object_sections_traverse(object, &info,
 				      elf_objfmt_create_dbg_secthead))
 	return;
 
     /* add all (local) syms to symtab because relocation needs a symtab index
      * if all_syms, register them by name.  if not, use strtab entry 0 */
-    localsym_info.local_names = all_syms;
-    yasm_symtab_traverse(object->symtab, &localsym_info,
-			 elf_objfmt_append_local_sym);
+    buildsym_info.objfmt_elf = objfmt_elf;
+    buildsym_info.errwarns = errwarns;
+    buildsym_info.local_names = all_syms;
+    yasm_symtab_traverse(object->symtab, &buildsym_info,
+			 elf_objfmt_build_symtab);
     elf_symtab_nlocal = elf_symtab_assign_indices(objfmt_elf->elf_symtab);
 
     /* output known sections - includes reloc sections which aren't in yasm's
@@ -959,135 +1112,11 @@ elf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     return retval;
 }
 
-static yasm_symrec *
-elf_objfmt_extern_declare(yasm_object *object, const char *name, /*@unused@*/
-			  /*@null@*/ yasm_valparamhead *objext_valparams,
-			  unsigned long line)
-{
-    yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)object->objfmt;
-    yasm_symrec *sym;
-
-    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_EXTERN, line);
-    elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_GLOBAL,
-                             0, STV_DEFAULT, NULL, NULL);
-
-    if (objext_valparams) {
-	yasm_valparam *vp = yasm_vps_first(objext_valparams);
-	for (; vp; vp = yasm_vps_next(vp))
-        {
-            if (vp->val)
-                yasm_error_set(YASM_ERROR_TYPE,
-			       N_("unrecognized symbol type `%s'"), vp->val);
-        }
-    }
-    return sym;
-}
-
-static yasm_symrec *
-elf_objfmt_global_declare(yasm_object *object, const char *name,
-			  /*@null@*/ yasm_valparamhead *objext_valparams,
-			  unsigned long line)
-{
-    yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)object->objfmt;
-    yasm_symrec *sym;
-    elf_symbol_type type = 0;
-    yasm_expr *size = NULL;
-    elf_symbol_vis vis = STV_DEFAULT;
-    unsigned int vis_overrides = 0;
-
-    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_GLOBAL, line);
-
-    if (objext_valparams) {
-	yasm_valparam *vp = yasm_vps_first(objext_valparams);
-	for (; vp; vp = yasm_vps_next(vp))
-        {
-            if (vp->val) {
-                if (yasm__strcasecmp(vp->val, "function") == 0)
-                    type = STT_FUNC;
-                else if (yasm__strcasecmp(vp->val, "data") == 0 ||
-                         yasm__strcasecmp(vp->val, "object") == 0)
-                    type = STT_OBJECT;
-                else if (yasm__strcasecmp(vp->val, "internal") == 0) {
-                    vis = STV_INTERNAL;
-                    vis_overrides++;
-                }
-                else if (yasm__strcasecmp(vp->val, "hidden") == 0) {
-                    vis = STV_HIDDEN;
-                    vis_overrides++;
-                }
-                else if (yasm__strcasecmp(vp->val, "protected") == 0) {
-                    vis = STV_PROTECTED;
-                    vis_overrides++;
-                }
-                else
-                    yasm_error_set(YASM_ERROR_TYPE,
-				   N_("unrecognized symbol type `%s'"),
-				   vp->val);
-            }
-            else if (vp->param && !size) {
-                size = vp->param;
-                vp->param = NULL;	/* to avoid deleting the expr */
-            }
-	}
-        if (vis_overrides > 1) {
-            yasm_warn_set(YASM_WARN_GENERAL,
-                N_("More than one symbol visibility provided; using last"));
-        }
-    }
-
-    elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_GLOBAL,
-                             type, vis, size, NULL);
-
-    return sym;
-}
-
-static yasm_symrec *
-elf_objfmt_common_declare(yasm_object *object, const char *name,
-			  /*@only@*/ yasm_expr *size, /*@null@*/
-			  yasm_valparamhead *objext_valparams,
-			  unsigned long line)
-{
-    yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)object->objfmt;
-    yasm_symrec *sym;
-    unsigned long addralign = 0;
-
-    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_COMMON, line);
-
-    if (objext_valparams) {
-	yasm_valparam *vp = yasm_vps_first(objext_valparams);
-        for (; vp; vp = yasm_vps_next(vp)) {
-            if (!vp->val && vp->param) {
-                /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
-
-                align_expr = yasm_expr_get_intnum(&vp->param, 0);
-                if (!align_expr) {
-                    yasm_error_set(YASM_ERROR_VALUE,
-			N_("alignment constraint is not an integer"));
-                    return sym;
-                }
-                addralign = yasm_intnum_get_uint(align_expr);
-
-                /* Alignments must be a power of two. */
-                if (!is_exp2(addralign)) {
-                    yasm_error_set(YASM_ERROR_VALUE,
-                        N_("alignment constraint is not a power of two"));
-                    return sym;
-                }
-            } else if (vp->val)
-                yasm_warn_set(YASM_WARN_GENERAL,
-                              N_("Unrecognized qualifier `%s'"), vp->val);
-        }
-    }
-
-    elf_objfmt_symtab_append(objfmt_elf, sym, SHN_COMMON, STB_GLOBAL,
-                             0, STV_DEFAULT, size, &addralign);
-
-    return sym;
-}
-
 static void
-dir_type(yasm_object *object, yasm_valparam *vp, unsigned long line)
+dir_type(yasm_object *object, yasm_valparamhead *valparams,
+	 yasm_valparamhead *objext_valparams, unsigned long line)
 {
+    yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)object->objfmt;
     char *symname = vp->val;
     /* Get symbol elf data */
@@ -1116,8 +1145,10 @@ dir_type(yasm_object *object, yasm_valparam *vp, unsigned long line)
 }
 
 static void
-dir_size(yasm_object *object, yasm_valparam *vp, unsigned long line)
+dir_size(yasm_object *object, yasm_valparamhead *valparams,
+	 yasm_valparamhead *objext_valparams, unsigned long line)
 {
+    yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)object->objfmt;
     char *symname = vp->val;
     /* Get symbol elf data */
@@ -1144,8 +1175,10 @@ dir_size(yasm_object *object, yasm_valparam *vp, unsigned long line)
 }
 
 static void
-dir_weak(yasm_object *object, yasm_valparam *vp, unsigned long line)
+dir_weak(yasm_object *object, yasm_valparamhead *valparams,
+	 yasm_valparamhead *objext_valparams, unsigned long line)
 {
+    yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)object->objfmt;
     char *symname = vp->val;
     yasm_symrec *sym = yasm_symtab_declare(object->symtab, symname,
@@ -1155,11 +1188,13 @@ dir_weak(yasm_object *object, yasm_valparam *vp, unsigned long line)
 }
 
 static void
-dir_ident(yasm_object *object, yasm_valparam *vp, unsigned long line)
+dir_ident(yasm_object *object, yasm_valparamhead *valparams,
+	  yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_valparamhead sect_vps;
     yasm_datavalhead dvs;
     yasm_section *comment;
+    yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_valparam *vp2;
 
     /* Put ident data into .comment section */
@@ -1191,46 +1226,24 @@ dir_ident(yasm_object *object, yasm_valparam *vp, unsigned long line)
 	yasm_bc_create_data(&dvs, 1, 1, object->arch, line));
 }
 
-static int
-elf_objfmt_directive(yasm_object *object, const char *name,
-		     /*@null@*/ yasm_valparamhead *valparams,
-		     /*@unused@*/ /*@null@*/
-		     yasm_valparamhead *objext_valparams,
-		     unsigned long line)
-{
-    static const struct {
-	const char *name;
-	void (*func) (yasm_object *, yasm_valparam *, unsigned long);
-    } dirs[] = {
-	{"TYPE", dir_type},
-	{"SIZE", dir_size},
-	{"WEAK", dir_weak},
-	{"IDENT", dir_ident}
-    };
-    size_t i;
-
-    for (i=0; i<NELEMS(dirs); i++) {
-	if (yasm__strcasecmp(name, dirs[i].name) == 0) {
-	    yasm_valparam *vp;
-	    if (!valparams || !(vp = yasm_vps_first(valparams)) || !vp->val) {
-		yasm_error_set(YASM_ERROR_SYNTAX,
-			       N_("Symbol name not specified"));
-		return 0;
-	    }
-	    dirs[i].func(object, vp, line);
-	    return 0;
-	}
-    }
-    return 1;	/* unrecognized */
-}
-
-
 /* Define valid debug formats to use with this object format */
 static const char *elf_objfmt_dbgfmt_keywords[] = {
     "null",
     "stabs",
     "dwarf2",
     NULL
+};
+
+static const yasm_directive elf_objfmt_directives[] = {
+    { ".type",		"gas",	dir_type,	YASM_DIR_ID_REQUIRED },
+    { ".size",		"gas",	dir_size,	YASM_DIR_ID_REQUIRED },
+    { ".weak",		"gas",	dir_weak,	YASM_DIR_ID_REQUIRED },
+    { ".ident",		"gas",	dir_ident,	YASM_DIR_ARG_REQUIRED },
+    { "type",		"nasm",	dir_type,	YASM_DIR_ID_REQUIRED },
+    { "size",		"nasm",	dir_size,	YASM_DIR_ID_REQUIRED },
+    { "weak",		"nasm",	dir_weak,	YASM_DIR_ID_REQUIRED },
+    { "ident",		"nasm",	dir_ident,	YASM_DIR_ARG_REQUIRED },
+    { NULL, NULL, NULL, 0 }
 };
 
 /* Define objfmt structure -- see objfmt.h for details */
@@ -1241,15 +1254,12 @@ yasm_objfmt_module yasm_elf_LTX_objfmt = {
     32,
     elf_objfmt_dbgfmt_keywords,
     "null",
+    elf_objfmt_directives,
     elf_objfmt_create,
     elf_objfmt_output,
     elf_objfmt_destroy,
     elf_objfmt_add_default_section,
-    elf_objfmt_section_switch,
-    elf_objfmt_extern_declare,
-    elf_objfmt_global_declare,
-    elf_objfmt_common_declare,
-    elf_objfmt_directive
+    elf_objfmt_section_switch
 };
 
 yasm_objfmt_module yasm_elf32_LTX_objfmt = {
@@ -1259,15 +1269,12 @@ yasm_objfmt_module yasm_elf32_LTX_objfmt = {
     32,
     elf_objfmt_dbgfmt_keywords,
     "null",
+    elf_objfmt_directives,
     elf32_objfmt_create,
     elf_objfmt_output,
     elf_objfmt_destroy,
     elf_objfmt_add_default_section,
-    elf_objfmt_section_switch,
-    elf_objfmt_extern_declare,
-    elf_objfmt_global_declare,
-    elf_objfmt_common_declare,
-    elf_objfmt_directive
+    elf_objfmt_section_switch
 };
 
 yasm_objfmt_module yasm_elf64_LTX_objfmt = {
@@ -1277,13 +1284,10 @@ yasm_objfmt_module yasm_elf64_LTX_objfmt = {
     64,
     elf_objfmt_dbgfmt_keywords,
     "null",
+    elf_objfmt_directives,
     elf64_objfmt_create,
     elf_objfmt_output,
     elf_objfmt_destroy,
     elf_objfmt_add_default_section,
-    elf_objfmt_section_switch,
-    elf_objfmt_extern_declare,
-    elf_objfmt_global_declare,
-    elf_objfmt_common_declare,
-    elf_objfmt_directive
+    elf_objfmt_section_switch
 };

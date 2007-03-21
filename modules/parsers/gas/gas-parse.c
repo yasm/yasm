@@ -42,8 +42,6 @@ RCSID("$Id$");
 static yasm_bytecode *parse_line(yasm_parser_gas *parser_gas);
 static yasm_bytecode *parse_instr(yasm_parser_gas *parser_gas);
 static int parse_dirvals(yasm_parser_gas *parser_gas, yasm_valparamhead *vps);
-static int parse_dirstrvals(yasm_parser_gas *parser_gas,
-			    yasm_valparamhead *vps);
 static int parse_datavals(yasm_parser_gas *parser_gas, yasm_datavalhead *dvs);
 static int parse_strvals(yasm_parser_gas *parser_gas, yasm_datavalhead *dvs);
 static yasm_effaddr *parse_memaddr(yasm_parser_gas *parser_gas);
@@ -171,25 +169,18 @@ expect_(yasm_parser_gas *parser_gas, int token)
 	case DIR_COMM:
 	case DIR_DATA:
 	case DIR_ENDR:
-	case DIR_EXTERN:
 	case DIR_EQU:
 	case DIR_FILE:
 	case DIR_FILL:
-	case DIR_GLOBAL:
-	case DIR_IDENT:
 	case DIR_LEB128:
 	case DIR_LINE:
-	case DIR_LOC:
 	case DIR_LOCAL:
 	case DIR_LCOMM:
 	case DIR_ORG:
 	case DIR_REPT:
 	case DIR_SECTION:
 	case DIR_SECTNAME:
-	case DIR_SIZE:
 	case DIR_SKIP:
-	case DIR_TYPE:
-	case DIR_WEAK:
 	case DIR_ZERO:
 	    str = "expected directive";
 	    break;
@@ -253,14 +244,18 @@ parse_line(yasm_parser_gas *parser_gas)
     switch (curtok) {
 	case ID:
 	    id = ID_val;
+	    parser_gas->state = INSTDIR;
 	    get_next_token(); /* ID */
 	    if (curtok == ':') {
 		/* Label */
+		parser_gas->state = INITIAL;
 		get_next_token(); /* : */
 		define_label(parser_gas, id, 0);
 		return parse_line(parser_gas);
 	    } else if (curtok == '=') {
 		/* EQU */
+		/* TODO: allow redefinition, assigning to . (same as .org) */
+		parser_gas->state = INITIAL;
 		get_next_token(); /* = */
 		e = parse_expr(parser_gas);
 		if (e)
@@ -271,7 +266,16 @@ parse_line(yasm_parser_gas *parser_gas)
 		yasm_xfree(id);
 		return NULL;
 	    }
-	    /* must be an error at this point */
+
+	    /* possibly a directive; try to parse it */
+	    parse_dirvals(parser_gas, &vps);
+	    if (!yasm_object_directive(p_object, id, "gas", &vps, NULL,
+				       cur_line)) {
+		yasm_vps_delete(&vps);
+		yasm_xfree(id);
+		return NULL;
+	    }
+	    yasm_vps_delete(&vps);
 	    if (id[0] == '.')
 		yasm_warn_set(YASM_WARN_GENERAL,
 			      N_("directive `%s' not recognized"), id);
@@ -399,13 +403,6 @@ parse_line(yasm_parser_gas *parser_gas)
 	    yasm_xfree(ID_val);
 	    get_next_token(); /* ID */
 	    return NULL;
-	case DIR_GLOBAL:
-	    get_next_token(); /* DIR_GLOBAL */
-	    if (!expect(ID)) return NULL;
-	    yasm_objfmt_global_declare(p_object, ID_val, NULL, cur_line);
-	    yasm_xfree(ID_val);
-	    get_next_token(); /* ID */
-	    return NULL;
 	case DIR_COMM:
 	case DIR_LCOMM:
 	{
@@ -441,41 +438,24 @@ parse_line(yasm_parser_gas *parser_gas)
 		define_lcomm(parser_gas, id, e, align);
 	    } else if (align) {
 		/* Give third parameter as objext valparam */
-		yasm_vps_initialize(&vps);
+		yasm_valparamhead *extvps = yasm_vps_create();
 		vp = yasm_vp_create(NULL, align);
-		yasm_vps_append(&vps, vp);
+		yasm_vps_append(extvps, vp);
 
-		yasm_objfmt_common_declare(p_object, id, e, &vps, cur_line);
+		sym = yasm_symtab_declare(p_symtab, id, YASM_SYM_COMMON,
+					  cur_line);
+		yasm_symrec_set_common_size(sym, e);
+		yasm_symrec_set_objext_valparams(sym, extvps);
 
-		yasm_vps_delete(&vps);
 		yasm_xfree(id);
 	    } else {
-		yasm_objfmt_common_declare(p_object, id, e, NULL, cur_line);
+		sym = yasm_symtab_declare(p_symtab, id, YASM_SYM_COMMON,
+					  cur_line);
+		yasm_symrec_set_common_size(sym, e);
 		yasm_xfree(id);
 	    }
 	    return NULL;
 	}
-	case DIR_EXTERN:
-	    get_next_token(); /* DIR_EXTERN */
-	    if (!expect(ID)) return NULL;
-	    /* Go ahead and do it, even though all undef become extern */
-	    yasm_objfmt_extern_declare(p_object, ID_val, NULL, cur_line);
-	    yasm_xfree(ID_val);
-	    get_next_token(); /* ID */
-	    return NULL;
-	case DIR_WEAK:
-	    get_next_token(); /* DIR_EXTERN */
-	    if (!expect(ID)) return NULL;
-
-	    yasm_vps_initialize(&vps);
-	    vp = yasm_vp_create(ID_val, NULL);
-	    yasm_vps_append(&vps, vp);
-	    get_next_token(); /* ID */
-
-	    yasm_objfmt_directive(p_object, "weak", &vps, NULL, cur_line);
-
-	    yasm_vps_delete(&vps);
-	    return NULL;
 
 	/* Integer data definition directives */
 	case DIR_ASCII:
@@ -620,13 +600,6 @@ parse_line(yasm_parser_gas *parser_gas)
 	}
 
 	/* Other directives */
-	case DIR_IDENT:
-	    get_next_token(); /* DIR_IDENT */
-	    if (!parse_dirstrvals(parser_gas, &vps))
-		return NULL;
-	    yasm_objfmt_directive(p_object, "ident", &vps, NULL, cur_line);
-	    yasm_vps_delete(&vps);
-	    return NULL;
 	case DIR_FILE:
 	    get_next_token(); /* DIR_FILE */
 	    if (curtok == STRING) {
@@ -662,7 +635,8 @@ parse_line(yasm_parser_gas *parser_gas)
 		vp = yasm_vp_create(filename, NULL);
 		yasm_vps_append(&vps, vp);
 
-		yasm_dbgfmt_directive(p_object, "file", &vps, cur_line);
+		yasm_object_directive(p_object, ".file", "gas", &vps, NULL,
+				      cur_line);
 
 		yasm_vps_delete(&vps);
 		return NULL;
@@ -685,104 +659,8 @@ parse_line(yasm_parser_gas *parser_gas)
 	    yasm_vps_append(&vps, vp);
 	    get_next_token(); /* STRING */
 
-	    yasm_dbgfmt_directive(p_object, "file", &vps, cur_line);
-
-	    yasm_vps_delete(&vps);
-	    return NULL;
-	case DIR_LOC:
-	    /* INTNUM INTNUM INTNUM */
-	    get_next_token(); /* DIR_LOC */
-	    yasm_vps_initialize(&vps);
-
-	    if (!expect(INTNUM)) return NULL;
-	    vp = yasm_vp_create(NULL,
-				p_expr_new_ident(yasm_expr_int(INTNUM_val)));
-	    yasm_vps_append(&vps, vp);
-	    get_next_token(); /* INTNUM */
-
-	    if (!expect(INTNUM)) {
-		yasm_vps_delete(&vps);
-		return NULL;
-	    }
-	    vp = yasm_vp_create(NULL,
-				p_expr_new_ident(yasm_expr_int(INTNUM_val)));
-	    yasm_vps_append(&vps, vp);
-	    get_next_token(); /* INTNUM */
-
-	    if (!expect(INTNUM)) {
-		yasm_vps_delete(&vps);
-		return NULL;
-	    }
-	    vp = yasm_vp_create(NULL,
-				p_expr_new_ident(yasm_expr_int(INTNUM_val)));
-	    yasm_vps_append(&vps, vp);
-	    get_next_token(); /* INTNUM */
-
-	    yasm_dbgfmt_directive(p_object, "loc", &vps, cur_line);
-
-	    yasm_vps_delete(&vps);
-	    return NULL;
-	case DIR_TYPE:
-	    /* ID ',' '@' ID */
-	    get_next_token(); /* DIR_TYPE */
-	    yasm_vps_initialize(&vps);
-
-	    if (!expect(ID)) return NULL;
-	    vp = yasm_vp_create(ID_val, NULL);
-	    yasm_vps_append(&vps, vp);
-	    get_next_token(); /* ID */
-
-	    if (!expect(',')) {
-		yasm_vps_delete(&vps);
-		return NULL;
-	    }
-	    get_next_token(); /* ',' */
-
-	    if (!expect('@')) {
-		yasm_vps_delete(&vps);
-		return NULL;
-	    }
-	    get_next_token(); /* '@' */
-
-	    if (!expect(ID)) {
-		yasm_vps_delete(&vps);
-		return NULL;
-	    }
-	    vp = yasm_vp_create(ID_val, NULL);
-	    yasm_vps_append(&vps, vp);
-	    get_next_token(); /* ID */
-
-	    yasm_objfmt_directive(p_object, "type", &vps, NULL, cur_line);
-
-	    yasm_vps_delete(&vps);
-	    return NULL;
-	case DIR_SIZE:
-	    /* ID ',' expr */
-	    get_next_token(); /* DIR_SIZE */
-	    yasm_vps_initialize(&vps);
-
-	    if (!expect(ID)) return NULL;
-	    vp = yasm_vp_create(ID_val, NULL);
-	    yasm_vps_append(&vps, vp);
-	    get_next_token(); /* ID */
-
-	    if (!expect(',')) {
-		yasm_vps_delete(&vps);
-		return NULL;
-	    }
-	    get_next_token(); /* ',' */
-
-	    e = parse_expr(parser_gas);
-	    if (!e) {
-		yasm_error_set(YASM_ERROR_SYNTAX,
-			       N_("expression expected for `.size'"));
-		yasm_vps_delete(&vps);
-		return NULL;
-	    }
-	    vp = yasm_vp_create(NULL, e);
-	    yasm_vps_append(&vps, vp);
-
-	    yasm_objfmt_directive(p_object, "size", &vps, NULL, cur_line);
+	    yasm_object_directive(p_object, ".file", "gas", &vps, NULL,
+				  cur_line);
 
 	    yasm_vps_delete(&vps);
 	    return NULL;
@@ -863,45 +741,45 @@ parse_instr(yasm_parser_gas *parser_gas)
 static int
 parse_dirvals(yasm_parser_gas *parser_gas, yasm_valparamhead *vps)
 {
+    yasm_valparam *vp;
     yasm_expr *e;
-    yasm_valparam *vp;
     int num = 0;
 
     yasm_vps_initialize(vps);
 
     for (;;) {
-	e = parse_expr(parser_gas);
-	vp = yasm_vp_create(NULL, e);
-	yasm_vps_append(vps, vp);
-	num++;
-	if (curtok != ',')
-	    break;
-	get_next_token(); /* ',' */
-    }
-    return num;
-}
-
-static int
-parse_dirstrvals(yasm_parser_gas *parser_gas, yasm_valparamhead *vps)
-{
-    yasm_valparam *vp;
-    int num = 0;
-
-    yasm_vps_initialize(vps);
-
-    for (;;) {
-	if (!expect(STRING)) {
-	    yasm_vps_delete(vps);
-	    yasm_vps_initialize(vps);
-	    return 0;
+	switch (curtok) {
+	    case ID:
+		get_peek_token(parser_gas);
+		if (parser_gas->peek_token == ',' ||
+		    is_eol_tok(parser_gas->peek_token)) {
+		    /* Just an ID */
+		    vp = yasm_vp_create(ID_val, NULL);
+		    get_next_token(); /* ID */
+		} else {
+		    e = parse_expr(parser_gas);
+		    vp = yasm_vp_create(NULL, e);
+		}
+		break;
+	    case STRING:
+		vp = yasm_vp_create(STRING_val.contents, NULL);
+		get_next_token(); /* STRING */
+		break;
+	    case '@':
+		/* XXX: is throwing it away *really* the right thing? */
+		get_next_token(); /* @ */
+		continue;
+	    default:
+		e = parse_expr(parser_gas);
+		if (!e)
+		    return num;
+		vp = yasm_vp_create(NULL, e);
+		break;
 	}
-	vp = yasm_vp_create(STRING_val.contents, NULL);
 	yasm_vps_append(vps, vp);
-	get_next_token(); /* STRING */
 	num++;
-	if (curtok != ',')
-	    break;
-	get_next_token(); /* ',' */
+	if (curtok == ',')
+	    get_next_token(); /* ',' */
     }
     return num;
 }

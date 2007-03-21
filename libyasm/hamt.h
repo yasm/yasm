@@ -41,10 +41,11 @@ typedef struct HAMTEntry HAMTEntry;
 
 /** Create new, empty, HAMT.  error_func() is called when an internal error is
  * encountered--it should NOT return to the calling function.
+ * \param   nocase	    nonzero if HAMT should be case-insensitive
  * \param   error_func	    function called on internal error
  * \return New, empty, hash array mapped trie.
  */
-HAMT *HAMT_create(/*@exits@*/ void (*error_func)
+HAMT *HAMT_create(int nocase, /*@exits@*/ void (*error_func)
     (const char *file, unsigned int line, const char *message));
 
 /** Delete HAMT and all data associated with it.  Uses deletefunc() to delete

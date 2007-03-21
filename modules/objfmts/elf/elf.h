@@ -391,7 +391,7 @@ struct elf_symtab_entry {
     yasm_section	*sect;
     elf_strtab_entry	*name;
     elf_address		 value;
-    yasm_expr		*xsize;
+    /*@dependent@*/ yasm_expr *xsize;
     elf_size		 size;
     elf_section_index	 index;
     elf_symbol_binding	 bind;
