@@ -65,7 +65,7 @@ struct yasm_directive {
     void (*handler) (yasm_object *object, yasm_valparamhead *valparams,
 		     yasm_valparamhead *objext_valparams, unsigned long line);
 
-    /* Flags for pre-handler parameter checking. */
+    /** Flags for pre-handler parameter checking. */
     enum yasm_directive_flags {
 	YASM_DIR_ANY = 0,	    /**< Any valparams accepted */
 	YASM_DIR_ARG_REQUIRED = 1,  /**< Require at least 1 valparam */

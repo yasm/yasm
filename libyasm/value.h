@@ -105,7 +105,7 @@ int yasm_value_finalize(yasm_value *value, /*@null@*/ yasm_bytecode *precbc);
  * \return Nonzero if the expr could not be split into a value for some
  *         reason (e.g. the relative portion was not added, but multiplied,
  *         etc).
- * \caution Do not use e after this call.  Even if an error is returned, e
+ * \warning Do not use e after this call.  Even if an error is returned, e
  *          is stored into value.
  * \note This should only be called after the parse is complete.  Calling
  *       before the parse is complete will usually result in an error return.
