@@ -1126,9 +1126,9 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
     if (!yasm_object_directive(p_object, name, "nasm", valparams,
 			       objext_valparams, line))
 	;
-    else if (strcasecmp(name, "absolute") == 0)
+    else if (yasm__strcasecmp(name, "absolute") == 0)
 	dir_absolute(p_object, valparams, objext_valparams, line);
-    else if (strcasecmp(name, "align") == 0)
+    else if (yasm__strcasecmp(name, "align") == 0)
 	dir_align(p_object, valparams, objext_valparams, line);
     else
 	yasm_error_set(YASM_ERROR_SYNTAX, N_("unrecognized directive `%s'"),
