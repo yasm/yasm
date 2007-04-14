@@ -239,6 +239,10 @@ lea %1, [rsp+%2]
 [setframe %1 %2]
 %endmacro
 
+%imacro end_prolog 0.nolist
+[endprolog]
+%endmacro
+
 %imacro end_prologue 0.nolist
 [endprolog]
 %endmacro
