@@ -8,7 +8,7 @@
 
  <refentryinfo>
   <title>The Yasm Modular Assembler</title>
-  <date>October 2006</date>
+  <date>April 2007</date>
   <productname>Yasm</productname>
   <author>
    <firstname>Peter</firstname>
@@ -22,6 +22,7 @@
    <year>2004</year>
    <year>2005</year>
    <year>2006</year>
+   <year>2007</year>
    <holder>Peter Johnson</holder>
   </copyright>
  </refentryinfo>
@@ -548,9 +549,6 @@
    easy to generate AMD64 code (using the <userinput>BITS
     64</userinput> directive) and generate a 32-bit object file (by
    failing to specify <option>-m amd64</option> or selecting a 64-bit
-   object format such as ELF64 on the command line).  Similarly,
-   specifying <option>-m amd64</option> does not default the BITS
-   setting to 64.  An easy way to avoid this is by directly specifying
-   a 64-bit object format such as <option>-f elf64</option>.</para>
+   object format such as ELF64 on the command line).</para>
  </refsect1>
 </refentry>
