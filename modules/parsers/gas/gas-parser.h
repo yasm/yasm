@@ -1,7 +1,7 @@
 /* $Id$
  * GAS-compatible parser header file
  *
- *  Copyright (C) 2005  Peter Johnson
+ *  Copyright (C) 2005-2007  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

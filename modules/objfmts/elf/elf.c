@@ -1,7 +1,7 @@
 /*
  * ELF object format helpers
  *
- *  Copyright (C) 2003  Michael Urman
+ *  Copyright (C) 2003-2007  Michael Urman
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

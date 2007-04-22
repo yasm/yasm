@@ -1,7 +1,7 @@
 /* $Id:$
  * ELF object machine specific format helpers
  *
- *  Copyright (C) 2004  Michael Urman
+ *  Copyright (C) 2004-2007  Michael Urman
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

@@ -1,7 +1,7 @@
 /*
  * CodeView debugging format - type information
  *
- *  Copyright (C) 2006  Peter Johnson
+ *  Copyright (C) 2006-2007  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

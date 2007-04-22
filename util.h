@@ -4,7 +4,7 @@
  * Includes standard headers and defines prototypes for replacement functions
  * if needed.
  *
- *  Copyright (C) 2001  Peter Johnson
+ *  Copyright (C) 2001-2007  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
