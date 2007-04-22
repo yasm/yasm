@@ -45,12 +45,12 @@ static int
 elf_x86_amd64_accepts_reloc(size_t val, yasm_symrec *wrt, yasm_symrec **ssyms)
 {
     if (wrt) {
-	if ((wrt == ssyms[SSYM_GOTPCREL] && val == 32)
-	    || (wrt == ssyms[SSYM_GOT] && val == 32)
-	    || (wrt == ssyms[SSYM_PLT] && val == 32))
-	    return 1;
-	else
-	    return 0;
+        if ((wrt == ssyms[SSYM_GOTPCREL] && val == 32)
+            || (wrt == ssyms[SSYM_GOT] && val == 32)
+            || (wrt == ssyms[SSYM_PLT] && val == 32))
+            return 1;
+        else
+            return 0;
     }
     return (val&(val-1)) ? 0 : ((val & (8|16|32|64)) != 0);
 }
@@ -88,7 +88,7 @@ elf_x86_amd64_write_secthead(unsigned char *bufp, elf_secthead *shead)
     YASM_WRITE_32_L(bufp, shead->name ? shead->name->index : 0);
     YASM_WRITE_32_L(bufp, shead->type);
     YASM_WRITE_64Z_L(bufp, shead->flags);
-    YASM_WRITE_64Z_L(bufp, 0);		/* vmem address */
+    YASM_WRITE_64Z_L(bufp, 0);          /* vmem address */
     YASM_WRITE_64Z_L(bufp, shead->offset);
     YASM_WRITE_64I_L(bufp, shead->size);
 
@@ -117,14 +117,14 @@ elf_x86_amd64_write_secthead_rel(unsigned char *bufp,
     nreloc = yasm_intnum_create_uint(shead->nreloc);
     relocsize = yasm_intnum_create_uint(RELOC64A_SIZE);
     yasm_intnum_calc(relocsize, YASM_EXPR_MUL, nreloc);
-    YASM_WRITE_64I_L(bufp, relocsize);		/* size */
+    YASM_WRITE_64I_L(bufp, relocsize);          /* size */
     yasm_intnum_destroy(nreloc);
     yasm_intnum_destroy(relocsize);
 
-    YASM_WRITE_32_L(bufp, symtab_idx);		/* link: symtab index */
-    YASM_WRITE_32_L(bufp, shead->index);	/* info: relocated's index */
-    YASM_WRITE_64Z_L(bufp, RELOC64_ALIGN);	/* align */
-    YASM_WRITE_64Z_L(bufp, RELOC64A_SIZE);	/* entity size */
+    YASM_WRITE_32_L(bufp, symtab_idx);          /* link: symtab index */
+    YASM_WRITE_32_L(bufp, shead->index);        /* info: relocated's index */
+    YASM_WRITE_64Z_L(bufp, RELOC64_ALIGN);      /* align */
+    YASM_WRITE_64Z_L(bufp, RELOC64A_SIZE);      /* entity size */
 }
 
 static void
@@ -137,17 +137,17 @@ elf_x86_amd64_handle_reloc_addend(yasm_intnum *intn, elf_reloc_entry *reloc)
 
 static unsigned int
 elf_x86_amd64_map_reloc_info_to_type(elf_reloc_entry *reloc,
-				     yasm_symrec **ssyms)
+                                     yasm_symrec **ssyms)
 {
     if (reloc->wrt) {
-	if (reloc->wrt == ssyms[SSYM_GOTPCREL] && reloc->valsize == 32)
-	    return (unsigned char) R_X86_64_GOTPCREL;
-	else if (reloc->wrt == ssyms[SSYM_GOT] && reloc->valsize == 32)
-	    return (unsigned char) R_X86_64_GOT32;
-	else if (reloc->wrt == ssyms[SSYM_PLT] && reloc->valsize == 32)
-	    return (unsigned char) R_X86_64_PLT32;
-	else
-	    yasm_internal_error(N_("Unsupported WRT"));
+        if (reloc->wrt == ssyms[SSYM_GOTPCREL] && reloc->valsize == 32)
+            return (unsigned char) R_X86_64_GOTPCREL;
+        else if (reloc->wrt == ssyms[SSYM_GOT] && reloc->valsize == 32)
+            return (unsigned char) R_X86_64_GOT32;
+        else if (reloc->wrt == ssyms[SSYM_PLT] && reloc->valsize == 32)
+            return (unsigned char) R_X86_64_PLT32;
+        else
+            yasm_internal_error(N_("Unsupported WRT"));
     } else if (reloc->rtype_rel) {
         switch (reloc->valsize) {
             case 8: return (unsigned char) R_X86_64_PC8;
@@ -175,10 +175,10 @@ elf_x86_amd64_write_reloc(unsigned char *bufp, elf_reloc_entry *reloc,
     /*YASM_WRITE_64_L(bufp, ELF64_R_INFO(r_sym, r_type));*/
     YASM_WRITE_64C_L(bufp, r_sym, r_type);
     if (reloc->addend)
-	YASM_WRITE_64I_L(bufp, reloc->addend);
+        YASM_WRITE_64I_L(bufp, reloc->addend);
     else {
-	YASM_WRITE_32_L(bufp, 0);
-	YASM_WRITE_32_L(bufp, 0);
+        YASM_WRITE_32_L(bufp, 0);
+        YASM_WRITE_32_L(bufp, 0);
     }
 }
 
@@ -190,26 +190,26 @@ elf_x86_amd64_write_proghead(unsigned char **bufpp,
 {
     unsigned char *bufp = *bufpp;
     unsigned char *buf = bufp-4;
-    YASM_WRITE_8(bufp, ELFCLASS64);	    /* elf class */
-    YASM_WRITE_8(bufp, ELFDATA2LSB);	    /* data encoding :: MSB? */
-    YASM_WRITE_8(bufp, EV_CURRENT);	    /* elf version */
-    YASM_WRITE_8(bufp, ELFOSABI_SYSV);	    /* os/abi */
-    YASM_WRITE_8(bufp, 0);		    /* SYSV v3 ABI=0 */
-    while (bufp-buf < EI_NIDENT)	    /* e_ident padding */
+    YASM_WRITE_8(bufp, ELFCLASS64);         /* elf class */
+    YASM_WRITE_8(bufp, ELFDATA2LSB);        /* data encoding :: MSB? */
+    YASM_WRITE_8(bufp, EV_CURRENT);         /* elf version */
+    YASM_WRITE_8(bufp, ELFOSABI_SYSV);      /* os/abi */
+    YASM_WRITE_8(bufp, 0);                  /* SYSV v3 ABI=0 */
+    while (bufp-buf < EI_NIDENT)            /* e_ident padding */
         YASM_WRITE_8(bufp, 0);
 
-    YASM_WRITE_16_L(bufp, ET_REL);	    /* e_type - object file */
-    YASM_WRITE_16_L(bufp, EM_X86_64);	    /* e_machine - or others */
-    YASM_WRITE_32_L(bufp, EV_CURRENT);	    /* elf version */
-    YASM_WRITE_64Z_L(bufp, 0);		    /* e_entry */
-    YASM_WRITE_64Z_L(bufp, 0);		    /* e_phoff */
+    YASM_WRITE_16_L(bufp, ET_REL);          /* e_type - object file */
+    YASM_WRITE_16_L(bufp, EM_X86_64);       /* e_machine - or others */
+    YASM_WRITE_32_L(bufp, EV_CURRENT);      /* elf version */
+    YASM_WRITE_64Z_L(bufp, 0);              /* e_entry */
+    YASM_WRITE_64Z_L(bufp, 0);              /* e_phoff */
     YASM_WRITE_64Z_L(bufp, secthead_addr);  /* e_shoff secthead off */
 
-    YASM_WRITE_32_L(bufp, 0);		    /* e_flags */
-    YASM_WRITE_16_L(bufp, EHDR64_SIZE);	    /* e_ehsize */
-    YASM_WRITE_16_L(bufp, 0);		    /* e_phentsize */
-    YASM_WRITE_16_L(bufp, 0);		    /* e_phnum */
-    YASM_WRITE_16_L(bufp, SHDR64_SIZE);	    /* e_shentsize */
+    YASM_WRITE_32_L(bufp, 0);               /* e_flags */
+    YASM_WRITE_16_L(bufp, EHDR64_SIZE);     /* e_ehsize */
+    YASM_WRITE_16_L(bufp, 0);               /* e_phentsize */
+    YASM_WRITE_16_L(bufp, 0);               /* e_phnum */
+    YASM_WRITE_16_L(bufp, SHDR64_SIZE);     /* e_shentsize */
     YASM_WRITE_16_L(bufp, secthead_count);  /* e_shnum */
     YASM_WRITE_16_L(bufp, shstrtab_index);  /* e_shstrndx */
     *bufpp = bufp;

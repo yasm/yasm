@@ -66,7 +66,7 @@ static int special_options = 0;
 static int preproc_only = 0;
 static unsigned int force_strict = 0;
 static int generate_make_dependencies = 0;
-static int warning_error = 0;	/* warnings being treated as errors */
+static int warning_error = 0;   /* warnings being treated as errors */
 static FILE *errfile;
 /*@null@*/ /*@only@*/ static char *error_filename = NULL;
 static enum {
@@ -75,10 +75,10 @@ static enum {
 } ewmsg_style = EWSTYLE_GNU;
 
 /*@null@*/ /*@dependent@*/ static FILE *open_file(const char *filename,
-						  const char *mode);
+                                                  const char *mode);
 static void check_errors(/*@only@*/ yasm_errwarns *errwarns,
-			 /*@only@*/ yasm_object *object,
-			 /*@only@*/ yasm_linemap *linemap);
+                         /*@only@*/ yasm_object *object,
+                         /*@only@*/ yasm_linemap *linemap);
 static void cleanup(/*@null@*/ /*@only@*/ yasm_object *object);
 
 /* Forward declarations: cmd line parser handlers */
@@ -103,20 +103,20 @@ static int opt_ewmsg_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_makedep_handler(char *cmd, /*@null@*/ char *param, int extra);
 
 static /*@only@*/ char *replace_extension(const char *orig, /*@null@*/
-					  const char *ext, const char *def);
+                                          const char *ext, const char *def);
 static void print_error(const char *fmt, ...);
 
 static /*@exits@*/ void handle_yasm_int_error(const char *file,
-					      unsigned int line,
-					      const char *message);
+                                              unsigned int line,
+                                              const char *message);
 static /*@exits@*/ void handle_yasm_fatal(const char *message, va_list va);
 static const char *handle_yasm_gettext(const char *msgid);
 static void print_yasm_error(const char *filename, unsigned long line,
-			     const char *msg, /*@null@*/ const char *xref_fn,
-			     unsigned long xref_line,
-			     /*@null@*/ const char *xref_msg);
+                             const char *msg, /*@null@*/ const char *xref_fn,
+                             unsigned long xref_line,
+                             /*@null@*/ const char *xref_msg);
 static void print_yasm_warning(const char *filename, unsigned long line,
-			       const char *msg);
+                               const char *msg);
 
 static void apply_preproc_builtins(void);
 static void apply_preproc_saved_options(void);
@@ -232,83 +232,83 @@ do_preproc_only(FILE *in)
     /* Default output to stdout if not specified or generating dependency
        makefiles */
     if (!obj_filename || generate_make_dependencies) {
-	out = stdout;
+        out = stdout;
 
         /* determine the object filename if not specified, but we need a
             file name for the makefile rule */
         if (generate_make_dependencies && !obj_filename) {
             if (in == stdin)
                 /* Default to yasm.out if no obj filename specified */
-		obj_filename = yasm__xstrdup("yasm.out");
+                obj_filename = yasm__xstrdup("yasm.out");
             else {
                 /* replace (or add) extension to base filename */
-		yasm__splitpath(in_filename, &base_filename);
-		if (base_filename[0] == '\0')
-		    obj_filename = yasm__xstrdup("yasm.out");
-		else
-		    obj_filename = replace_extension(base_filename,
+                yasm__splitpath(in_filename, &base_filename);
+                if (base_filename[0] == '\0')
+                    obj_filename = yasm__xstrdup("yasm.out");
+                else
+                    obj_filename = replace_extension(base_filename,
                         cur_objfmt_module->extension, "yasm.out");
-	    }
+            }
         }
     } else {
-	/* Open output (object) file */
-	out = open_file(obj_filename, "wt");
-	if (!out) {
-	    yasm_xfree(preproc_buf);
-	    return EXIT_FAILURE;
-	}
+        /* Open output (object) file */
+        out = open_file(obj_filename, "wt");
+        if (!out) {
+            yasm_xfree(preproc_buf);
+            return EXIT_FAILURE;
+        }
     }
 
     /* Pre-process until done */
     cur_preproc = yasm_preproc_create(cur_preproc_module, in, in_filename,
-				      linemap, errwarns);
+                                      linemap, errwarns);
 
     apply_preproc_builtins();
     apply_preproc_saved_options();
 
     if (generate_make_dependencies) {
-	size_t totlen;
+        size_t totlen;
 
         fprintf(stdout, "%s: %s", obj_filename, in_filename);
-	totlen = strlen(obj_filename)+2+strlen(in_filename);
+        totlen = strlen(obj_filename)+2+strlen(in_filename);
 
-	while ((got = yasm_preproc_get_included_file(cur_preproc, preproc_buf,
-						     PREPROC_BUF_SIZE)) != 0) {
-	    totlen += got;
-	    if (totlen > 72) {
-		fputs(" \\\n  ", stdout);
-		totlen = 2;
-	    }
-	    fputc(' ', stdout);
+        while ((got = yasm_preproc_get_included_file(cur_preproc, preproc_buf,
+                                                     PREPROC_BUF_SIZE)) != 0) {
+            totlen += got;
+            if (totlen > 72) {
+                fputs(" \\\n  ", stdout);
+                totlen = 2;
+            }
+            fputc(' ', stdout);
             fwrite(preproc_buf, got, 1, stdout);
-	}
-	fputc('\n', stdout);
+        }
+        fputc('\n', stdout);
     } else {
         while ((got = yasm_preproc_input(cur_preproc, preproc_buf,
-					 PREPROC_BUF_SIZE)) != 0)
-	    fwrite(preproc_buf, got, 1, out);
+                                         PREPROC_BUF_SIZE)) != 0)
+            fwrite(preproc_buf, got, 1, out);
     }
 
     if (in != stdin)
-	fclose(in);
+        fclose(in);
 
     if (out != stdout)
-	fclose(out);
+        fclose(out);
 
     if (yasm_errwarns_num_errors(errwarns, warning_error) > 0) {
-	yasm_errwarns_output_all(errwarns, linemap, warning_error,
-				 print_yasm_error, print_yasm_warning);
-	if (out != stdout)
-	    remove(obj_filename);
-	yasm_xfree(preproc_buf);
-	yasm_linemap_destroy(linemap);
-	yasm_errwarns_destroy(errwarns);
-	cleanup(NULL);
-	return EXIT_FAILURE;
+        yasm_errwarns_output_all(errwarns, linemap, warning_error,
+                                 print_yasm_error, print_yasm_warning);
+        if (out != stdout)
+            remove(obj_filename);
+        yasm_xfree(preproc_buf);
+        yasm_linemap_destroy(linemap);
+        yasm_errwarns_destroy(errwarns);
+        cleanup(NULL);
+        return EXIT_FAILURE;
     }
 
     yasm_errwarns_output_all(errwarns, linemap, warning_error,
-			     print_yasm_error, print_yasm_warning);
+                             print_yasm_error, print_yasm_warning);
     yasm_xfree(preproc_buf);
     yasm_linemap_destroy(linemap);
     yasm_errwarns_destroy(errwarns);
@@ -333,75 +333,75 @@ do_assemble(FILE *in)
 
     /* determine the object filename if not specified */
     if (!obj_filename) {
-	if (in == stdin)
-	    /* Default to yasm.out if no obj filename specified */
-	    obj_filename = yasm__xstrdup("yasm.out");
-	else {
-	    /* replace (or add) extension to base filename */
-	    yasm__splitpath(in_filename, &base_filename);
-	    if (base_filename[0] == '\0')
-		obj_filename = yasm__xstrdup("yasm.out");
-	    else
-		obj_filename = replace_extension(base_filename,
-						 cur_objfmt_module->extension,
-						 "yasm.out");
-	}
+        if (in == stdin)
+            /* Default to yasm.out if no obj filename specified */
+            obj_filename = yasm__xstrdup("yasm.out");
+        else {
+            /* replace (or add) extension to base filename */
+            yasm__splitpath(in_filename, &base_filename);
+            if (base_filename[0] == '\0')
+                obj_filename = yasm__xstrdup("yasm.out");
+            else
+                obj_filename = replace_extension(base_filename,
+                                                 cur_objfmt_module->extension,
+                                                 "yasm.out");
+        }
     }
 
     /* Set up architecture using machine and parser. */
     if (!machine_name) {
-	/* If we're using x86 and the default objfmt bits is 64, default the
-	 * machine to amd64.  When we get more arches with multiple machines,
-	 * we should do this in a more modular fashion.
-	 */
-	if (strcmp(cur_arch_module->keyword, "x86") == 0 &&
-	    cur_objfmt_module->default_x86_mode_bits == 64)
-	    machine_name = yasm__xstrdup("amd64");
-	else
-	    machine_name =
-		yasm__xstrdup(cur_arch_module->default_machine_keyword);
+        /* If we're using x86 and the default objfmt bits is 64, default the
+         * machine to amd64.  When we get more arches with multiple machines,
+         * we should do this in a more modular fashion.
+         */
+        if (strcmp(cur_arch_module->keyword, "x86") == 0 &&
+            cur_objfmt_module->default_x86_mode_bits == 64)
+            machine_name = yasm__xstrdup("amd64");
+        else
+            machine_name =
+                yasm__xstrdup(cur_arch_module->default_machine_keyword);
     }
 
     cur_arch = cur_arch_module->create(machine_name,
-				       cur_parser_module->keyword,
-				       &arch_error);
+                                       cur_parser_module->keyword,
+                                       &arch_error);
     if (!cur_arch) {
-	switch (arch_error) {
-	    case YASM_ARCH_CREATE_BAD_MACHINE:
-		print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
-			    _("FATAL"), machine_name, _("machine"),
-			    _("architecture"), cur_arch_module->keyword);
-		break;
-	    case YASM_ARCH_CREATE_BAD_PARSER:
-		print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
-			    _("FATAL"), cur_parser_module->keyword,
-			    _("parser"), _("architecture"),
-			    cur_arch_module->keyword);
-		break;
-	    default:
-		print_error(_("%s: unknown architecture error"), _("FATAL"));
-	}
+        switch (arch_error) {
+            case YASM_ARCH_CREATE_BAD_MACHINE:
+                print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
+                            _("FATAL"), machine_name, _("machine"),
+                            _("architecture"), cur_arch_module->keyword);
+                break;
+            case YASM_ARCH_CREATE_BAD_PARSER:
+                print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
+                            _("FATAL"), cur_parser_module->keyword,
+                            _("parser"), _("architecture"),
+                            cur_arch_module->keyword);
+                break;
+            default:
+                print_error(_("%s: unknown architecture error"), _("FATAL"));
+        }
 
-	return EXIT_FAILURE;
+        return EXIT_FAILURE;
     }
 
     /* Create object */
     object = yasm_object_create(in_filename, obj_filename, cur_arch,
-				cur_objfmt_module, cur_dbgfmt_module);
+                                cur_objfmt_module, cur_dbgfmt_module);
     if (!object) {
-	yasm_error_class eclass;
-	unsigned long xrefline;
-	/*@only@*/ /*@null@*/ char *estr, *xrefstr;
+        yasm_error_class eclass;
+        unsigned long xrefline;
+        /*@only@*/ /*@null@*/ char *estr, *xrefstr;
 
-	yasm_error_fetch(&eclass, &estr, &xrefline, &xrefstr);
-	print_error("%s: %s", _("FATAL"), estr);
-	yasm_xfree(estr);
-	yasm_xfree(xrefstr);
+        yasm_error_fetch(&eclass, &estr, &xrefline, &xrefstr);
+        print_error("%s: %s", _("FATAL"), estr);
+        yasm_xfree(estr);
+        yasm_xfree(xrefstr);
 
-	if (in != stdin)
-	    fclose(in);
-	cleanup(object);
-	return EXIT_FAILURE;
+        if (in != stdin)
+            fclose(in);
+        cleanup(object);
+        return EXIT_FAILURE;
     }
 
     /* Get a fresh copy of objfmt_module as it may have changed. */
@@ -412,48 +412,48 @@ do_assemble(FILE *in)
      */
     matched = 0;
     for (i=0; cur_parser_module->preproc_keywords[i]; i++)
-	if (yasm__strcasecmp(cur_parser_module->preproc_keywords[i],
-			     cur_preproc_module->keyword) == 0)
-	    matched = 1;
+        if (yasm__strcasecmp(cur_parser_module->preproc_keywords[i],
+                             cur_preproc_module->keyword) == 0)
+            matched = 1;
     if (!matched) {
-	print_error(_("%s: `%s' is not a valid %s for %s `%s'"), _("FATAL"),
-		    cur_preproc_module->keyword, _("preprocessor"),
-		    _("parser"), cur_parser_module->keyword);
-	if (in != stdin)
-	    fclose(in);
-	cleanup(object);
-	return EXIT_FAILURE;
+        print_error(_("%s: `%s' is not a valid %s for %s `%s'"), _("FATAL"),
+                    cur_preproc_module->keyword, _("preprocessor"),
+                    _("parser"), cur_parser_module->keyword);
+        if (in != stdin)
+            fclose(in);
+        cleanup(object);
+        return EXIT_FAILURE;
     }
 
     cur_preproc = cur_preproc_module->create(in, in_filename, linemap,
-					     errwarns);
+                                             errwarns);
 
     apply_preproc_builtins();
     apply_preproc_saved_options();
 
     /* Get initial x86 BITS setting from object format */
     if (strcmp(cur_arch_module->keyword, "x86") == 0) {
-	yasm_arch_set_var(cur_arch, "mode_bits",
-			  cur_objfmt_module->default_x86_mode_bits);
+        yasm_arch_set_var(cur_arch, "mode_bits",
+                          cur_objfmt_module->default_x86_mode_bits);
     }
 
     yasm_arch_set_var(cur_arch, "force_strict", force_strict);
 
     /* Parse! */
     cur_parser_module->do_parse(object, cur_preproc, in, list_filename != NULL,
-				linemap, errwarns);
+                                linemap, errwarns);
 
     /* Close input file */
     if (in != stdin)
-	fclose(in);
+        fclose(in);
 
     check_errors(errwarns, object, linemap);
 
     /* Check for undefined symbols */
     yasm_symtab_parser_finalize(object->symtab,
-				strcmp(cur_parser_module->keyword, "gas")==0 ||
-				strcmp(cur_parser_module->keyword, "gnu")==0,
-				errwarns);
+                                strcmp(cur_parser_module->keyword, "gas")==0 ||
+                                strcmp(cur_parser_module->keyword, "gnu")==0,
+                                errwarns);
     check_errors(errwarns, object, linemap);
 
     /* Finalize parse */
@@ -470,44 +470,44 @@ do_assemble(FILE *in)
 
     /* open the object file for output (if not already opened by dbg objfmt) */
     if (!obj && strcmp(cur_objfmt_module->keyword, "dbg") != 0) {
-	obj = open_file(obj_filename, "wb");
-	if (!obj) {
-	    cleanup(object);
-	    return EXIT_FAILURE;
-	}
+        obj = open_file(obj_filename, "wb");
+        if (!obj) {
+            cleanup(object);
+            return EXIT_FAILURE;
+        }
     }
 
     /* Write the object file */
     yasm_objfmt_output(object, obj?obj:stderr,
-		       strcmp(cur_dbgfmt_module->keyword, "null"), errwarns);
+                       strcmp(cur_dbgfmt_module->keyword, "null"), errwarns);
 
     /* Close object file */
     if (obj)
-	fclose(obj);
+        fclose(obj);
 
     /* If we had an error at this point, we also need to delete the output
      * object file (to make sure it's not left newer than the source).
      */
     if (yasm_errwarns_num_errors(errwarns, warning_error) > 0)
-	remove(obj_filename);
+        remove(obj_filename);
     check_errors(errwarns, object, linemap);
 
     /* Open and write the list file */
     if (list_filename) {
-	FILE *list = open_file(list_filename, "wt");
-	if (!list) {
-	    cleanup(object);
-	    return EXIT_FAILURE;
-	}
-	/* Initialize the list format */
-	cur_listfmt = yasm_listfmt_create(cur_listfmt_module, in_filename,
-					  obj_filename);
-	yasm_listfmt_output(cur_listfmt, list, linemap, cur_arch);
-	fclose(list);
+        FILE *list = open_file(list_filename, "wt");
+        if (!list) {
+            cleanup(object);
+            return EXIT_FAILURE;
+        }
+        /* Initialize the list format */
+        cur_listfmt = yasm_listfmt_create(cur_listfmt_module, in_filename,
+                                          obj_filename);
+        yasm_listfmt_output(cur_listfmt, list, linemap, cur_arch);
+        fclose(list);
     }
 
     yasm_errwarns_output_all(errwarns, linemap, warning_error,
-			     print_yasm_error, print_yasm_warning);
+                             print_yasm_error, print_yasm_warning);
 
     yasm_linemap_destroy(linemap);
     yasm_errwarns_destroy(errwarns);
@@ -543,37 +543,37 @@ main(int argc, char *argv[])
     STAILQ_INIT(&preproc_options);
 
     if (parse_cmdline(argc, argv, options, NELEMS(options), print_error))
-	return EXIT_FAILURE;
+        return EXIT_FAILURE;
 
     switch (special_options) {
-	case SPECIAL_SHOW_HELP:
-	    /* Does gettext calls internally */
-	    help_msg(help_head, help_tail, options, NELEMS(options));
-	    return EXIT_SUCCESS;
-	case SPECIAL_SHOW_VERSION:
-	    for (i=0; i<NELEMS(version_msg); i++)
-		printf("%s\n", version_msg[i]);
-	    return EXIT_SUCCESS;
-	case SPECIAL_SHOW_LICENSE:
-	    for (i=0; i<NELEMS(license_msg); i++)
-		printf("%s\n", license_msg[i]);
-	    return EXIT_SUCCESS;
-	case SPECIAL_LISTED:
-	    /* Printed out earlier */
-	    return EXIT_SUCCESS;
+        case SPECIAL_SHOW_HELP:
+            /* Does gettext calls internally */
+            help_msg(help_head, help_tail, options, NELEMS(options));
+            return EXIT_SUCCESS;
+        case SPECIAL_SHOW_VERSION:
+            for (i=0; i<NELEMS(version_msg); i++)
+                printf("%s\n", version_msg[i]);
+            return EXIT_SUCCESS;
+        case SPECIAL_SHOW_LICENSE:
+            for (i=0; i<NELEMS(license_msg); i++)
+                printf("%s\n", license_msg[i]);
+            return EXIT_SUCCESS;
+        case SPECIAL_LISTED:
+            /* Printed out earlier */
+            return EXIT_SUCCESS;
     }
 
     /* Open error file if specified. */
     if (error_filename) {
-	errfile = open_file(error_filename, "wt");
-	if (!errfile)
-	    return EXIT_FAILURE;
+        errfile = open_file(error_filename, "wt");
+        if (!errfile)
+            return EXIT_FAILURE;
     }
 
     /* Initialize BitVector (needed for intnum/floatnum). */
     if (BitVector_Boot() != ErrCode_Ok) {
-	print_error(_("%s: could not initialize BitVector"), _("FATAL"));
-	return EXIT_FAILURE;
+        print_error(_("%s: could not initialize BitVector"), _("FATAL"));
+        return EXIT_FAILURE;
     }
 
     /* Initialize intnum and floatnum */
@@ -582,106 +582,106 @@ main(int argc, char *argv[])
     
     /* If not already specified, default to bin as the object format. */
     if (!cur_objfmt_module) {
-	if (!objfmt_keyword)
-	    objfmt_keyword = yasm__xstrdup("bin");
-	cur_objfmt_module = yasm_load_objfmt(objfmt_keyword);
-	if (!cur_objfmt_module) {
-	    print_error(_("%s: could not load default %s"), _("FATAL"),
-			_("object format"));
-	    return EXIT_FAILURE;
-	}
+        if (!objfmt_keyword)
+            objfmt_keyword = yasm__xstrdup("bin");
+        cur_objfmt_module = yasm_load_objfmt(objfmt_keyword);
+        if (!cur_objfmt_module) {
+            print_error(_("%s: could not load default %s"), _("FATAL"),
+                        _("object format"));
+            return EXIT_FAILURE;
+        }
     }
 
     /* Default to x86 as the architecture */
     if (!cur_arch_module) {
-	cur_arch_module = yasm_load_arch("x86");
-	if (!cur_arch_module) {
-	    print_error(_("%s: could not load default %s"), _("FATAL"),
-			_("architecture"));
-	    return EXIT_FAILURE;
-	}
+        cur_arch_module = yasm_load_arch("x86");
+        if (!cur_arch_module) {
+            print_error(_("%s: could not load default %s"), _("FATAL"),
+                        _("architecture"));
+            return EXIT_FAILURE;
+        }
     }
 
     /* Check for arch help */
     if (machine_name && strcmp(machine_name, "help") == 0) {
-	const yasm_arch_machine *m = cur_arch_module->machines;
-	printf(_("Available %s for %s `%s':\n"), _("machines"),
-	       _("architecture"), cur_arch_module->keyword);
-	while (m->keyword && m->name) {
-	    print_list_keyword_desc(m->name, m->keyword);
-	    m++;
-	}
-	return EXIT_SUCCESS;
+        const yasm_arch_machine *m = cur_arch_module->machines;
+        printf(_("Available %s for %s `%s':\n"), _("machines"),
+               _("architecture"), cur_arch_module->keyword);
+        while (m->keyword && m->name) {
+            print_list_keyword_desc(m->name, m->keyword);
+            m++;
+        }
+        return EXIT_SUCCESS;
     }
 
     /* Default to NASM as the parser */
     if (!cur_parser_module) {
-	cur_parser_module = yasm_load_parser("nasm");
-	if (!cur_parser_module) {
-	    print_error(_("%s: could not load default %s"), _("FATAL"),
-			_("parser"));
-	    cleanup(NULL);
-	    return EXIT_FAILURE;
-	}
+        cur_parser_module = yasm_load_parser("nasm");
+        if (!cur_parser_module) {
+            print_error(_("%s: could not load default %s"), _("FATAL"),
+                        _("parser"));
+            cleanup(NULL);
+            return EXIT_FAILURE;
+        }
     }
 
     /* If not already specified, default to the parser's default preproc. */
     if (!cur_preproc_module) {
-	cur_preproc_module =
-	    yasm_load_preproc(cur_parser_module->default_preproc_keyword);
-	if (!cur_preproc_module) {
-	    print_error(_("%s: could not load default %s"), _("FATAL"),
-			_("preprocessor"));
-	    cleanup(NULL);
-	    return EXIT_FAILURE;
-	}
+        cur_preproc_module =
+            yasm_load_preproc(cur_parser_module->default_preproc_keyword);
+        if (!cur_preproc_module) {
+            print_error(_("%s: could not load default %s"), _("FATAL"),
+                        _("preprocessor"));
+            cleanup(NULL);
+            return EXIT_FAILURE;
+        }
     }
 
     /* Determine input filename and open input file. */
     if (!in_filename) {
-	print_error(_("No input files specified"));
-	return EXIT_FAILURE;
+        print_error(_("No input files specified"));
+        return EXIT_FAILURE;
     } else if (strcmp(in_filename, "-") != 0) {
-	/* Open the input file (if not standard input) */
-	in = fopen(in_filename, "rt");
-	if (!in) {
-	    print_error(_("%s: could not open file `%s'"), _("FATAL"),
-			in_filename);
-	    yasm_xfree(in_filename);
-	    if (obj_filename)
-		yasm_xfree(obj_filename);
-	    return EXIT_FAILURE;
-	}
+        /* Open the input file (if not standard input) */
+        in = fopen(in_filename, "rt");
+        if (!in) {
+            print_error(_("%s: could not open file `%s'"), _("FATAL"),
+                        in_filename);
+            yasm_xfree(in_filename);
+            if (obj_filename)
+                yasm_xfree(obj_filename);
+            return EXIT_FAILURE;
+        }
     } else {
-	/* Filename was "-", read stdin */
-	in = stdin;
+        /* Filename was "-", read stdin */
+        in = stdin;
     }
 
     /* handle preproc-only case here */
     if (preproc_only)
-	return do_preproc_only(in);
+        return do_preproc_only(in);
 
     /* If list file enabled, make sure we have a list format loaded. */
     if (list_filename) {
-	/* If not already specified, default to nasm as the list format. */
-	if (!cur_listfmt_module) {
-	    cur_listfmt_module = yasm_load_listfmt("nasm");
-	    if (!cur_listfmt_module) {
-		print_error(_("%s: could not load default %s"), _("FATAL"),
-			    _("list format"));
-		return EXIT_FAILURE;
-	    }
-	}
+        /* If not already specified, default to nasm as the list format. */
+        if (!cur_listfmt_module) {
+            cur_listfmt_module = yasm_load_listfmt("nasm");
+            if (!cur_listfmt_module) {
+                print_error(_("%s: could not load default %s"), _("FATAL"),
+                            _("list format"));
+                return EXIT_FAILURE;
+            }
+        }
     }
 
     /* If not already specified, default to null as the debug format. */
     if (!cur_dbgfmt_module) {
-	cur_dbgfmt_module = yasm_load_dbgfmt("null");
-	if (!cur_dbgfmt_module) {
-	    print_error(_("%s: could not load default %s"), _("FATAL"),
-			_("debug format"));
-	    return EXIT_FAILURE;
-	}
+        cur_dbgfmt_module = yasm_load_dbgfmt("null");
+        if (!cur_dbgfmt_module) {
+            print_error(_("%s: could not load default %s"), _("FATAL"),
+                        _("debug format"));
+            return EXIT_FAILURE;
+        }
     }
 
     return do_assemble(in);
@@ -696,21 +696,21 @@ open_file(const char *filename, const char *mode)
 
     f = fopen(filename, mode);
     if (!f)
-	print_error(_("could not open file `%s'"), filename);
+        print_error(_("could not open file `%s'"), filename);
     return f;
 }
 
 static void
 check_errors(yasm_errwarns *errwarns, yasm_object *object,
-	     yasm_linemap *linemap)
+             yasm_linemap *linemap)
 {
     if (yasm_errwarns_num_errors(errwarns, warning_error) > 0) {
-	yasm_errwarns_output_all(errwarns, linemap, warning_error,
-				 print_yasm_error, print_yasm_warning);
-	yasm_linemap_destroy(linemap);
-	yasm_errwarns_destroy(errwarns);
-	cleanup(object);
-	exit(EXIT_FAILURE);
+        yasm_errwarns_output_all(errwarns, linemap, warning_error,
+                                 print_yasm_error, print_yasm_warning);
+        yasm_linemap_destroy(linemap);
+        yasm_errwarns_destroy(errwarns);
+        cleanup(object);
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -718,43 +718,43 @@ check_errors(yasm_errwarns *errwarns, yasm_object *object,
  * Useful for detecting memory leaks, but slows down execution unnecessarily
  * (as the OS will free everything we miss here).
  */
-#define DO_FREE		1
+#define DO_FREE         1
 
 /* Cleans up all allocated structures. */
 static void
 cleanup(yasm_object *object)
 {
     if (DO_FREE) {
-	if (cur_listfmt)
-	    yasm_listfmt_destroy(cur_listfmt);
-	if (cur_preproc)
-	    yasm_preproc_destroy(cur_preproc);
-	if (object)
-	    yasm_object_destroy(object);
+        if (cur_listfmt)
+            yasm_listfmt_destroy(cur_listfmt);
+        if (cur_preproc)
+            yasm_preproc_destroy(cur_preproc);
+        if (object)
+            yasm_object_destroy(object);
 
-	yasm_floatnum_cleanup();
-	yasm_intnum_cleanup();
+        yasm_floatnum_cleanup();
+        yasm_intnum_cleanup();
 
-	yasm_errwarn_cleanup();
+        yasm_errwarn_cleanup();
 
-	BitVector_Shutdown();
+        BitVector_Shutdown();
     }
 
     if (DO_FREE) {
-	if (in_filename)
-	    yasm_xfree(in_filename);
-	if (obj_filename)
-	    yasm_xfree(obj_filename);
-	if (list_filename)
-	    yasm_xfree(list_filename);
-	if (machine_name)
-	    yasm_xfree(machine_name);
-	if (objfmt_keyword)
-	    yasm_xfree(objfmt_keyword);
+        if (in_filename)
+            yasm_xfree(in_filename);
+        if (obj_filename)
+            yasm_xfree(obj_filename);
+        if (list_filename)
+            yasm_xfree(list_filename);
+        if (machine_name)
+            yasm_xfree(machine_name);
+        if (objfmt_keyword)
+            yasm_xfree(objfmt_keyword);
     }
 
     if (errfile != stderr && errfile != stdout)
-	fclose(errfile);
+        fclose(errfile);
 }
 
 /*
@@ -764,9 +764,9 @@ int
 not_an_option_handler(char *param)
 {
     if (in_filename) {
-	print_error(
-	    _("warning: can open only one input file, only the last file will be processed"));
-	yasm_xfree(in_filename);
+        print_error(
+            _("warning: can open only one input file, only the last file will be processed"));
+        yasm_xfree(in_filename);
     }
 
     in_filename = yasm__xstrdup(param);
@@ -779,14 +779,14 @@ other_option_handler(char *option)
 {
     /* Accept, but ignore, -O and -Onnn, for compatibility with NASM. */
     if (option[0] == '-' && option[1] == 'O') {
-	int n = 2;
-	for (;;) {
-	    if (option[n] == '\0')
-		return 0;
-	    if (!isdigit(option[n]))
-		return 1;
-	    n++;
-	}
+        int n = 2;
+        for (;;) {
+            if (option[n] == '\0')
+                return 0;
+            if (!isdigit(option[n]))
+                return 1;
+            n++;
+        }
     }
     return 1;
 }
@@ -795,7 +795,7 @@ static int
 opt_special_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param, int extra)
 {
     if (special_options == 0)
-	special_options = extra;
+        special_options = extra;
     return 0;
 }
 
@@ -805,15 +805,15 @@ opt_arch_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_arch_module = yasm_load_arch(param);
     if (!cur_arch_module) {
-	if (!strcmp("help", param)) {
-	    printf(_("Available yasm %s:\n"), _("architectures"));
-	    yasm_list_arch(print_list_keyword_desc);
-	    special_options = SPECIAL_LISTED;
-	    return 0;
-	}
-	print_error(_("%s: unrecognized %s `%s'"), _("FATAL"),
-		    _("architecture"), param);
-	exit(EXIT_FAILURE);
+        if (!strcmp("help", param)) {
+            printf(_("Available yasm %s:\n"), _("architectures"));
+            yasm_list_arch(print_list_keyword_desc);
+            special_options = SPECIAL_LISTED;
+            return 0;
+        }
+        print_error(_("%s: unrecognized %s `%s'"), _("FATAL"),
+                    _("architecture"), param);
+        exit(EXIT_FAILURE);
     }
     return 0;
 }
@@ -824,15 +824,15 @@ opt_parser_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_parser_module = yasm_load_parser(param);
     if (!cur_parser_module) {
-	if (!strcmp("help", param)) {
-	    printf(_("Available yasm %s:\n"), _("parsers"));
-	    yasm_list_parser(print_list_keyword_desc);
-	    special_options = SPECIAL_LISTED;
-	    return 0;
-	}
-	print_error(_("%s: unrecognized %s `%s'"), _("FATAL"), _("parser"),
-		    param);
-	exit(EXIT_FAILURE);
+        if (!strcmp("help", param)) {
+            printf(_("Available yasm %s:\n"), _("parsers"));
+            yasm_list_parser(print_list_keyword_desc);
+            special_options = SPECIAL_LISTED;
+            return 0;
+        }
+        print_error(_("%s: unrecognized %s `%s'"), _("FATAL"), _("parser"),
+                    param);
+        exit(EXIT_FAILURE);
     }
     return 0;
 }
@@ -843,15 +843,15 @@ opt_preproc_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_preproc_module = yasm_load_preproc(param);
     if (!cur_preproc_module) {
-	if (!strcmp("help", param)) {
-	    printf(_("Available yasm %s:\n"), _("preprocessors"));
-	    yasm_list_preproc(print_list_keyword_desc);
-	    special_options = SPECIAL_LISTED;
-	    return 0;
-	}
-	print_error(_("%s: unrecognized %s `%s'"), _("FATAL"),
-		    _("preprocessor"), param);
-	exit(EXIT_FAILURE);
+        if (!strcmp("help", param)) {
+            printf(_("Available yasm %s:\n"), _("preprocessors"));
+            yasm_list_preproc(print_list_keyword_desc);
+            special_options = SPECIAL_LISTED;
+            return 0;
+        }
+        print_error(_("%s: unrecognized %s `%s'"), _("FATAL"),
+                    _("preprocessor"), param);
+        exit(EXIT_FAILURE);
     }
     return 0;
 }
@@ -863,21 +863,21 @@ opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_objfmt_module = yasm_load_objfmt(param);
     if (!cur_objfmt_module) {
-	if (!strcmp("help", param)) {
-	    printf(_("Available yasm %s:\n"), _("object formats"));
-	    yasm_list_objfmt(print_list_keyword_desc);
-	    special_options = SPECIAL_LISTED;
-	    return 0;
-	}
-	print_error(_("%s: unrecognized %s `%s'"), _("FATAL"),
-		    _("object format"), param);
-	exit(EXIT_FAILURE);
+        if (!strcmp("help", param)) {
+            printf(_("Available yasm %s:\n"), _("object formats"));
+            yasm_list_objfmt(print_list_keyword_desc);
+            special_options = SPECIAL_LISTED;
+            return 0;
+        }
+        print_error(_("%s: unrecognized %s `%s'"), _("FATAL"),
+                    _("object format"), param);
+        exit(EXIT_FAILURE);
     }
     if (objfmt_keyword)
-	yasm_xfree(objfmt_keyword);
+        yasm_xfree(objfmt_keyword);
     objfmt_keyword = yasm__xstrdup(param);
     for (i=0; i<strlen(objfmt_keyword); i++)
-	objfmt_keyword[i] = tolower(objfmt_keyword[i]);
+        objfmt_keyword[i] = tolower(objfmt_keyword[i]);
     return 0;
 }
 
@@ -887,47 +887,47 @@ opt_dbgfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     assert(param != NULL);
     cur_dbgfmt_module = yasm_load_dbgfmt(param);
     if (!cur_dbgfmt_module) {
-	if (!strcmp("help", param)) {
-	    printf(_("Available yasm %s:\n"), _("debug formats"));
-	    yasm_list_dbgfmt(print_list_keyword_desc);
-	    special_options = SPECIAL_LISTED;
-	    return 0;
-	}
-	print_error(_("%s: unrecognized %s `%s'"), _("FATAL"),
-		    _("debug format"), param);
-	exit(EXIT_FAILURE);
+        if (!strcmp("help", param)) {
+            printf(_("Available yasm %s:\n"), _("debug formats"));
+            yasm_list_dbgfmt(print_list_keyword_desc);
+            special_options = SPECIAL_LISTED;
+            return 0;
+        }
+        print_error(_("%s: unrecognized %s `%s'"), _("FATAL"),
+                    _("debug format"), param);
+        exit(EXIT_FAILURE);
     }
     return 0;
 }
 
 static int
 opt_listfmt_handler(/*@unused@*/ char *cmd, char *param,
-		    /*@unused@*/ int extra)
+                    /*@unused@*/ int extra)
 {
     assert(param != NULL);
     cur_listfmt_module = yasm_load_listfmt(param);
     if (!cur_listfmt_module) {
-	if (!strcmp("help", param)) {
-	    printf(_("Available yasm %s:\n"), _("list formats"));
-	    yasm_list_listfmt(print_list_keyword_desc);
-	    special_options = SPECIAL_LISTED;
-	    return 0;
-	}
-	print_error(_("%s: unrecognized %s `%s'"), _("FATAL"),
-		    _("list format"), param);
-	exit(EXIT_FAILURE);
+        if (!strcmp("help", param)) {
+            printf(_("Available yasm %s:\n"), _("list formats"));
+            yasm_list_listfmt(print_list_keyword_desc);
+            special_options = SPECIAL_LISTED;
+            return 0;
+        }
+        print_error(_("%s: unrecognized %s `%s'"), _("FATAL"),
+                    _("list format"), param);
+        exit(EXIT_FAILURE);
     }
     return 0;
 }
 
 static int
 opt_listfile_handler(/*@unused@*/ char *cmd, char *param,
-		     /*@unused@*/ int extra)
+                     /*@unused@*/ int extra)
 {
     if (list_filename) {
-	print_error(
-	    _("warning: can output to only one list file, last specified used"));
-	yasm_xfree(list_filename);
+        print_error(
+            _("warning: can output to only one list file, last specified used"));
+        yasm_xfree(list_filename);
     }
 
     assert(param != NULL);
@@ -938,12 +938,12 @@ opt_listfile_handler(/*@unused@*/ char *cmd, char *param,
 
 static int
 opt_objfile_handler(/*@unused@*/ char *cmd, char *param,
-		    /*@unused@*/ int extra)
+                    /*@unused@*/ int extra)
 {
     if (obj_filename) {
-	print_error(
-	    _("warning: can output to only one object file, last specified used"));
-	yasm_xfree(obj_filename);
+        print_error(
+            _("warning: can output to only one object file, last specified used"));
+        yasm_xfree(obj_filename);
     }
 
     assert(param != NULL);
@@ -954,10 +954,10 @@ opt_objfile_handler(/*@unused@*/ char *cmd, char *param,
 
 static int
 opt_machine_handler(/*@unused@*/ char *cmd, char *param,
-		    /*@unused@*/ int extra)
+                    /*@unused@*/ int extra)
 {
     if (machine_name)
-	yasm_xfree(machine_name);
+        yasm_xfree(machine_name);
 
     assert(param != NULL);
     machine_name = yasm__xstrdup(param);
@@ -967,8 +967,8 @@ opt_machine_handler(/*@unused@*/ char *cmd, char *param,
 
 static int
 opt_strict_handler(/*@unused@*/ char *cmd,
-		   /*@unused@*/ /*@null@*/ char *param,
-		   /*@unused@*/ int extra)
+                   /*@unused@*/ /*@null@*/ char *param,
+                   /*@unused@*/ int extra)
 {
     force_strict = 1;
     return 0;
@@ -981,9 +981,9 @@ opt_warning_handler(char *cmd, /*@unused@*/ char *param, int extra)
     void (*action)(yasm_warn_class wclass) = yasm_warn_enable;
 
     if (extra == 1) {
-	/* -w, disable warnings */
-	yasm_warn_disable_all();
-	return 0;
+        /* -w, disable warnings */
+        yasm_warn_disable_all();
+        return 0;
     }
 
     /* skip past 'W' */
@@ -991,25 +991,25 @@ opt_warning_handler(char *cmd, /*@unused@*/ char *param, int extra)
 
     /* detect no- prefix to disable the warning */
     if (cmd[0] == 'n' && cmd[1] == 'o' && cmd[2] == '-') {
-	action = yasm_warn_disable;
-	cmd += 3;   /* skip past it to get to the warning name */
+        action = yasm_warn_disable;
+        cmd += 3;   /* skip past it to get to the warning name */
     }
 
     if (cmd[0] == '\0')
-	/* just -W or -Wno-, so definitely not valid */
-	return 1;
+        /* just -W or -Wno-, so definitely not valid */
+        return 1;
     else if (strcmp(cmd, "error") == 0)
-	warning_error = (action == yasm_warn_enable);
+        warning_error = (action == yasm_warn_enable);
     else if (strcmp(cmd, "unrecognized-char") == 0)
-	action(YASM_WARN_UNREC_CHAR);
+        action(YASM_WARN_UNREC_CHAR);
     else if (strcmp(cmd, "orphan-labels") == 0)
-	action(YASM_WARN_ORPHAN_LABEL);
+        action(YASM_WARN_ORPHAN_LABEL);
     else if (strcmp(cmd, "uninit-contents") == 0)
-	action(YASM_WARN_UNINIT_CONTENTS);
+        action(YASM_WARN_UNINIT_CONTENTS);
     else if (strcmp(cmd, "size-override") == 0)
-	action(YASM_WARN_SIZE_OVERRIDE);
+        action(YASM_WARN_SIZE_OVERRIDE);
     else
-	return 1;
+        return 1;
 
     return 0;
 }
@@ -1018,9 +1018,9 @@ static int
 opt_error_file(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     if (error_filename) {
-	print_error(
-	    _("warning: can output to only one error file, last specified used"));
-	yasm_xfree(error_filename);
+        print_error(
+            _("warning: can output to only one error file, last specified used"));
+        yasm_xfree(error_filename);
     }
 
     assert(param != NULL);
@@ -1031,12 +1031,12 @@ opt_error_file(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 
 static int
 opt_error_stdout(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
-		 /*@unused@*/ int extra)
+                 /*@unused@*/ int extra)
 {
     /* Clear any specified error filename */
     if (error_filename) {
-	yasm_xfree(error_filename);
-	error_filename = NULL;
+        yasm_xfree(error_filename);
+        error_filename = NULL;
     }
     errfile = stdout;
     return 0;
@@ -1044,7 +1044,7 @@ opt_error_stdout(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
 
 static int
 preproc_only_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
-		     /*@unused@*/ int extra)
+                     /*@unused@*/ int extra)
 {
     preproc_only = 1;
     return 0;
@@ -1072,19 +1072,19 @@ static int
 opt_ewmsg_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     if (yasm__strcasecmp(param, "gnu") == 0 ||
-	yasm__strcasecmp(param, "gcc") == 0) {
-	ewmsg_style = EWSTYLE_GNU;
+        yasm__strcasecmp(param, "gcc") == 0) {
+        ewmsg_style = EWSTYLE_GNU;
     } else if (yasm__strcasecmp(param, "vc") == 0) {
-	ewmsg_style = EWSTYLE_VC;
+        ewmsg_style = EWSTYLE_VC;
     } else
-	print_error(_("warning: unrecognized message style `%s'"), param);
+        print_error(_("warning: unrecognized message style `%s'"), param);
 
     return 0;
 }
 
 static int
 opt_makedep_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
-		    /*@unused@*/ int extra)
+                    /*@unused@*/ int extra)
 {
     /* Also set preproc_only to 1, we don't want to generate code */
     preproc_only = 1;
@@ -1100,7 +1100,7 @@ apply_preproc_builtins()
 
     /* Define standard YASM assembly-time macro constants */
     predef = yasm_xmalloc(strlen("__YASM_OBJFMT__=")
-			  + strlen(objfmt_keyword) + 1);
+                          + strlen(objfmt_keyword) + 1);
     strcpy(predef, "__YASM_OBJFMT__=");
     strcat(predef, objfmt_keyword);
     yasm_preproc_define_builtin(cur_preproc, predef);
@@ -1118,15 +1118,15 @@ apply_preproc_saved_options()
     funcs[2] = cur_preproc_module->undefine_macro;
 
     STAILQ_FOREACH(cp, &preproc_options, link) {
-	if (0 <= cp->id && cp->id < 3 && funcs[cp->id])
-	    funcs[cp->id](cur_preproc, cp->param);
+        if (0 <= cp->id && cp->id < 3 && funcs[cp->id])
+            funcs[cp->id](cur_preproc, cp->param);
     }
 
     cp = STAILQ_FIRST(&preproc_options);
     while (cp != NULL) {
-	cpnext = STAILQ_NEXT(cp, link);
-	yasm_xfree(cp);
-	cp = cpnext;
+        cpnext = STAILQ_NEXT(cp, link);
+        yasm_xfree(cp);
+        cp = cpnext;
     }
     STAILQ_INIT(&preproc_options);
 }
@@ -1139,7 +1139,7 @@ apply_preproc_saved_options()
  */
 static char *
 replace_extension(const char *orig, /*@null@*/ const char *ext,
-		  const char *def)
+                  const char *def)
 {
     char *out, *outext;
 
@@ -1148,40 +1148,40 @@ replace_extension(const char *orig, /*@null@*/ const char *ext,
     strcpy(out, orig);
     outext = strrchr(out, '.');
     if (outext) {
-	/* Existing extension: make sure it's not the same as the replacement
-	 * (as we don't want to overwrite the source file).
-	 */
-	outext++;   /* advance past '.' */
-	if (ext && strcmp(outext, ext) == 0) {
-	    outext = NULL;  /* indicate default should be used */
-	    print_error(
-		_("file name already ends in `.%s': output will be in `%s'"),
-		ext, def);
-	}
+        /* Existing extension: make sure it's not the same as the replacement
+         * (as we don't want to overwrite the source file).
+         */
+        outext++;   /* advance past '.' */
+        if (ext && strcmp(outext, ext) == 0) {
+            outext = NULL;  /* indicate default should be used */
+            print_error(
+                _("file name already ends in `.%s': output will be in `%s'"),
+                ext, def);
+        }
     } else {
-	/* No extension: make sure the output extension is not empty
-	 * (again, we don't want to overwrite the source file).
-	 */
-	if (!ext)
-	    print_error(
-		_("file name already has no extension: output will be in `%s'"),
-		def);
-	else {
-	    outext = strrchr(out, '\0');    /* point to end of the string */
-	    *outext++ = '.';		    /* append '.' */
-	}
+        /* No extension: make sure the output extension is not empty
+         * (again, we don't want to overwrite the source file).
+         */
+        if (!ext)
+            print_error(
+                _("file name already has no extension: output will be in `%s'"),
+                def);
+        else {
+            outext = strrchr(out, '\0');    /* point to end of the string */
+            *outext++ = '.';                /* append '.' */
+        }
     }
 
     /* replace extension or use default name */
     if (outext) {
-	if (!ext) {
-	    /* Back up and replace '.' with string terminator */
-	    outext--;
-	    *outext = '\0';
-	} else
-	    strcpy(outext, ext);
+        if (!ext) {
+            /* Back up and replace '.' with string terminator */
+            outext--;
+            *outext = '\0';
+        } else
+            strcpy(outext, ext);
     } else
-	strcpy(out, def);
+        strcpy(out, def);
 
     return out;
 }
@@ -1207,7 +1207,7 @@ static /*@exits@*/ void
 handle_yasm_int_error(const char *file, unsigned int line, const char *message)
 {
     fprintf(stderr, _("INTERNAL ERROR at %s, line %u: %s\n"), file, line,
-	    gettext(message));
+            gettext(message));
 #ifdef HAVE_ABORT
     abort();
 #else
@@ -1231,31 +1231,31 @@ handle_yasm_gettext(const char *msgid)
 }
 
 static const char *fmt[2] = {
-	"%s:%lu: %s%s\n",	/* GNU */
-	"%s(%lu) : %s%s\n"	/* VC */
+        "%s:%lu: %s%s\n",       /* GNU */
+        "%s(%lu) : %s%s\n"      /* VC */
 };
 
 static const char *fmt_noline[2] = {
-	"%s: %s%s\n",	/* GNU */
-	"%s : %s%s\n"	/* VC */
+        "%s: %s%s\n",   /* GNU */
+        "%s : %s%s\n"   /* VC */
 };
 
 static void
 print_yasm_error(const char *filename, unsigned long line, const char *msg,
-		 const char *xref_fn, unsigned long xref_line,
-		 const char *xref_msg)
+                 const char *xref_fn, unsigned long xref_line,
+                 const char *xref_msg)
 {
     if (line)
-	fprintf(errfile, fmt[ewmsg_style], filename, line, "", msg);
+        fprintf(errfile, fmt[ewmsg_style], filename, line, "", msg);
     else
-	fprintf(errfile, fmt_noline[ewmsg_style], filename, "", msg);
+        fprintf(errfile, fmt_noline[ewmsg_style], filename, "", msg);
 
     if (xref_fn && xref_msg) {
-	if (xref_line)
-	    fprintf(errfile, fmt[ewmsg_style], xref_fn, xref_line, "",
-		    xref_msg);
-	else
-	    fprintf(errfile, fmt_noline[ewmsg_style], xref_fn, "", xref_msg);
+        if (xref_line)
+            fprintf(errfile, fmt[ewmsg_style], xref_fn, xref_line, "",
+                    xref_msg);
+        else
+            fprintf(errfile, fmt_noline[ewmsg_style], xref_fn, "", xref_msg);
     }
 }
 
@@ -1263,9 +1263,9 @@ static void
 print_yasm_warning(const char *filename, unsigned long line, const char *msg)
 {
     if (line)
-	fprintf(errfile, fmt[ewmsg_style], filename, line, _("warning: "),
-		msg);
+        fprintf(errfile, fmt[ewmsg_style], filename, line, _("warning: "),
+                msg);
     else
-	fprintf(errfile, fmt_noline[ewmsg_style], filename, _("warning: "),
-		msg);
+        fprintf(errfile, fmt_noline[ewmsg_style], filename, _("warning: "),
+                msg);
 }

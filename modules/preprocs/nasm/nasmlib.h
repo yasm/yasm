@@ -1,4 +1,4 @@
-/* nasmlib.h	header file for nasmlib.c
+/* nasmlib.h    header file for nasmlib.c
  *
  * The Netwide Assembler is copyright (C) 1996 Simon Tatham and
  * Julian Hall. All rights reserved. The software is

@@ -45,13 +45,13 @@ typedef enum yasm_expr__type {
 struct yasm_expr__item {
     yasm_expr__type type;
     union {
-	yasm_bytecode *precbc;
-	yasm_symrec *sym;
-	yasm_expr *expn;
-	yasm_intnum *intn;
-	yasm_floatnum *flt;
-	uintptr_t reg;
-	unsigned int subst;
+        yasm_bytecode *precbc;
+        yasm_symrec *sym;
+        yasm_expr *expn;
+        yasm_intnum *intn;
+        yasm_floatnum *flt;
+        uintptr_t reg;
+        unsigned int subst;
     } data;
 };
 
@@ -62,7 +62,7 @@ struct yasm_expr {
     yasm_expr_op op;
     unsigned long line;
     int numterms;
-    yasm_expr__item terms[2];	/* structure may be extended to include more */
+    yasm_expr__item terms[2];   /* structure may be extended to include more */
 };
 
 /* Traverse over expression tree in order, calling func for each leaf
@@ -93,26 +93,26 @@ int yasm_expr__contains(const yasm_expr *e, yasm_expr__type t);
 
 /** Transform symrec-symrec terms in expression into YASM_EXPR_SUBST items.
  * Calls the callback function for each symrec-symrec term.
- * \param ep		expression (pointer to)
- * \param cbd		callback data passed to callback function
- * \param callback	callback function: given subst index for bytecode
- *			pair, bytecode pair (bc2-bc1), and cbd (callback data)
+ * \param ep            expression (pointer to)
+ * \param cbd           callback data passed to callback function
+ * \param callback      callback function: given subst index for bytecode
+ *                      pair, bytecode pair (bc2-bc1), and cbd (callback data)
  * \return Number of transformations made.
  */
 int yasm_expr__bc_dist_subst(yasm_expr **ep, void *cbd,
-			     void (*callback) (unsigned int subst,
-					       yasm_bytecode *precbc,
-					       yasm_bytecode *precbc2,
-					       void *cbd));
+                             void (*callback) (unsigned int subst,
+                                               yasm_bytecode *precbc,
+                                               yasm_bytecode *precbc2,
+                                               void *cbd));
 
 /** Substitute items into expr YASM_EXPR_SUBST items (by index).  Items are
  * copied, so caller is responsible for freeing array of items.
- * \param e		expression
- * \param num_items	number of items in items array
- * \param items		items array
+ * \param e             expression
+ * \param num_items     number of items in items array
+ * \param items         items array
  * \return 1 on error (index out of range).
  */
 int yasm_expr__subst(yasm_expr *e, unsigned int num_items,
-		     const yasm_expr__item *items);
+                     const yasm_expr__item *items);
 
 #endif

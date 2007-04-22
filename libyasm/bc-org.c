@@ -43,20 +43,20 @@
 
 
 typedef struct bytecode_org {
-    unsigned long start;	/* target starting offset within section */
+    unsigned long start;        /* target starting offset within section */
 } bytecode_org;
 
 static void bc_org_destroy(void *contents);
 static void bc_org_print(const void *contents, FILE *f, int indent_level);
 static void bc_org_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 static int bc_org_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
-			   void *add_span_data);
+                           void *add_span_data);
 static int bc_org_expand(yasm_bytecode *bc, int span, long old_val,
-			 long new_val, /*@out@*/ long *neg_thres,
-			 /*@out@*/ long *pos_thres);
+                         long new_val, /*@out@*/ long *neg_thres,
+                         /*@out@*/ long *pos_thres);
 static int bc_org_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-			  yasm_output_value_func output_value,
-			  /*@null@*/ yasm_output_reloc_func output_reloc);
+                          yasm_output_value_func output_value,
+                          /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static const yasm_bytecode_callback bc_org_callback = {
     bc_org_destroy,
@@ -90,29 +90,29 @@ bc_org_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 
 static int
 bc_org_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
-		void *add_span_data)
+                void *add_span_data)
 {
     bytecode_org *org = (bytecode_org *)bc->contents;
     long neg_thres = 0;
     long pos_thres = org->start;
 
     if (bc_org_expand(bc, 0, 0, (long)bc->offset, &neg_thres, &pos_thres) < 0)
-	return -1;
+        return -1;
 
     return 0;
 }
 
 static int
 bc_org_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
-	      /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
+              /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
     bytecode_org *org = (bytecode_org *)bc->contents;
 
     /* Check for overrun */
     if ((unsigned long)new_val > org->start) {
-	yasm_error_set(YASM_ERROR_GENERAL,
-		       N_("ORG overlap with already existing data"));
-	return -1;
+        yasm_error_set(YASM_ERROR_GENERAL,
+                       N_("ORG overlap with already existing data"));
+        return -1;
     }
 
     /* Generate space to start offset */
@@ -122,21 +122,21 @@ bc_org_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 
 static int
 bc_org_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-	       yasm_output_value_func output_value,
-	       /*@unused@*/ yasm_output_reloc_func output_reloc)
+               yasm_output_value_func output_value,
+               /*@unused@*/ yasm_output_reloc_func output_reloc)
 {
     bytecode_org *org = (bytecode_org *)bc->contents;
     unsigned long len, i;
 
     /* Sanity check for overrun */
     if (bc->offset > org->start) {
-	yasm_error_set(YASM_ERROR_GENERAL,
-		       N_("ORG overlap with already existing data"));
-	return 1;
+        yasm_error_set(YASM_ERROR_GENERAL,
+                       N_("ORG overlap with already existing data"));
+        return 1;
     }
     len = org->start - bc->offset;
     for (i=0; i<len; i++)
-	YASM_WRITE_8(*bufp, 0);
+        YASM_WRITE_8(*bufp, 0);
     return 0;
 }
 

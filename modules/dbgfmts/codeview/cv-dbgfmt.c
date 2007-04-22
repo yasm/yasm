@@ -47,12 +47,12 @@ cv_dbgfmt_create(yasm_object *object, yasm_dbgfmt_module *module, int version)
     dbgfmt_cv->filenames_allocated = 32;
     dbgfmt_cv->filenames_size = 0;
     dbgfmt_cv->filenames =
-	yasm_xmalloc(sizeof(cv_filename)*dbgfmt_cv->filenames_allocated);
+        yasm_xmalloc(sizeof(cv_filename)*dbgfmt_cv->filenames_allocated);
     for (i=0; i<dbgfmt_cv->filenames_allocated; i++) {
-	dbgfmt_cv->filenames[i].pathname = NULL;
-	dbgfmt_cv->filenames[i].filename = NULL;
-	dbgfmt_cv->filenames[i].str_off = 0;
-	dbgfmt_cv->filenames[i].info_off = 0;
+        dbgfmt_cv->filenames[i].pathname = NULL;
+        dbgfmt_cv->filenames[i].filename = NULL;
+        dbgfmt_cv->filenames[i].str_off = 0;
+        dbgfmt_cv->filenames[i].info_off = 0;
     }
 
     dbgfmt_cv->version = version;
@@ -72,8 +72,8 @@ cv_dbgfmt_destroy(/*@only@*/ yasm_dbgfmt *dbgfmt)
     yasm_dbgfmt_cv *dbgfmt_cv = (yasm_dbgfmt_cv *)dbgfmt;
     size_t i;
     for (i=0; i<dbgfmt_cv->filenames_size; i++) {
-	if (dbgfmt_cv->filenames[i].pathname)
-	    yasm_xfree(dbgfmt_cv->filenames[i].pathname);
+        if (dbgfmt_cv->filenames[i].pathname)
+            yasm_xfree(dbgfmt_cv->filenames[i].pathname);
     }
     yasm_xfree(dbgfmt_cv->filenames);
     yasm_xfree(dbgfmt);
@@ -93,7 +93,7 @@ yasm_cv__append_bc(yasm_section *sect, yasm_bytecode *bc)
 
 static void
 cv_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
-		   yasm_errwarns *errwarns)
+                   yasm_errwarns *errwarns)
 {
     yasm_cv__generate_symline(object, linemap, errwarns);
     yasm_cv__generate_type(object);

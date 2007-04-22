@@ -30,9 +30,9 @@ typedef struct YAPP_Token_s {
     unsigned int type;
     char *str;
     union {
-	unsigned int int_val;
-	double double_val;
-	char *str_val;
+        unsigned int int_val;
+        double double_val;
+        char *str_val;
     } val;
 } YAPP_Token;
 
@@ -48,9 +48,9 @@ typedef enum {
 
 /* tracks nested %if* %elif* %else %endif structures */
 typedef enum {
-    YAPP_OUTPUT,	/* this level+module outputs */
-    YAPP_NO_OUTPUT,	/* this would never output */
-    YAPP_OLD_OUTPUT,	/* this level has already output */
+    YAPP_OUTPUT,        /* this level+module outputs */
+    YAPP_NO_OUTPUT,     /* this would never output */
+    YAPP_OLD_OUTPUT,    /* this level has already output */
     YAPP_BLOCKED_OUTPUT /* the surrounding level is not outputting */
 } YAPP_Output;
 
@@ -58,5 +58,5 @@ void yapp_lex_initialize(FILE *f);
 void set_inhibit(void);
 
 extern /*@dependent@*/ yasm_linemap *yapp_preproc_linemap;
-#define cur_lindex	yasm_linemap_get_current(yapp_preproc_linemap)
+#define cur_lindex      yasm_linemap_get_current(yapp_preproc_linemap)
 

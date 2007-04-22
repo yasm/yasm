@@ -29,8 +29,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define OUTPUT	"nasm-macros.c"
-#define MAXLINE	1024
+#define OUTPUT  "nasm-macros.c"
+#define MAXLINE 1024
 
 int
 main(int argc, char *argv[])
@@ -47,95 +47,95 @@ main(int argc, char *argv[])
     size_t len;
 
     if (argc < 2) {
-	fprintf(stderr, "Usage: %s <file> [<file> ...]\n", argv[0]);
-	return EXIT_FAILURE;
+        fprintf(stderr, "Usage: %s <file> [<file> ...]\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
     out = fopen(OUTPUT, "wt");
 
     if (!out) {
-	fprintf(stderr, "Could not open `%s'.\n", OUTPUT);
-	return EXIT_FAILURE;
+        fprintf(stderr, "Could not open `%s'.\n", OUTPUT);
+        return EXIT_FAILURE;
     }
 
     str = malloc(MAXLINE);
 
     fprintf(out, "/* This file auto-generated from standard.mac by genmacro.c"
-		 " - don't edit it */\n\n#include <stddef.h>\n\n"
-		 "static const char *stdmac[] = {\n");
+                 " - don't edit it */\n\n#include <stddef.h>\n\n"
+                 "static const char *stdmac[] = {\n");
 
     for (i=1; i<argc; i++) {
-	in = fopen(argv[i], "rt");
-	if (!in) {
-	    fprintf(stderr, "Could not open `%s'.\n", argv[i]);
-	    fclose(out);
-	    remove(OUTPUT);
-	    return EXIT_FAILURE;
-	}
+        in = fopen(argv[i], "rt");
+        if (!in) {
+            fprintf(stderr, "Could not open `%s'.\n", argv[i]);
+            fclose(out);
+            remove(OUTPUT);
+            return EXIT_FAILURE;
+        }
 
-	fline = 0;
+        fline = 0;
 
-	while (fgets(str, MAXLINE, in)) {
-	    line++;
-	    fline++;
+        while (fgets(str, MAXLINE, in)) {
+            line++;
+            fline++;
 
-	    strp = str;
+            strp = str;
 
-	    /* check for unterminated quotes and delete comments */
-	    charp = strp;
-	    while ((charp = strpbrk(charp, "'\";"))) {
-		if (charp[0] == ';') {
-		    *charp = '\0';
-		    break;
-		}
-		if ((charp = strchr(charp+1, charp[0])) == NULL) {
-		    fprintf(stderr, "%s:%d: error: unterminated quote\n",
-			    argv[i], fline);
-		    fclose(out);
-		    remove(OUTPUT);
-		    return EXIT_FAILURE;
-		}
-		charp++;
-	    }
+            /* check for unterminated quotes and delete comments */
+            charp = strp;
+            while ((charp = strpbrk(charp, "'\";"))) {
+                if (charp[0] == ';') {
+                    *charp = '\0';
+                    break;
+                }
+                if ((charp = strchr(charp+1, charp[0])) == NULL) {
+                    fprintf(stderr, "%s:%d: error: unterminated quote\n",
+                            argv[i], fline);
+                    fclose(out);
+                    remove(OUTPUT);
+                    return EXIT_FAILURE;
+                }
+                charp++;
+            }
 
-	    /* strip off leading and trailing whitespace */
-	    while (*strp == ' ' || *strp == '\t')
-		strp++;
-	    len = strlen(strp);
-	    while (len > 0 && (strp[len-1] == ' ' || strp[len-1] == '\t' ||
-			       strp[len-1] == '\n')) {
-		strp[len-1] = '\0';
-		len--;
-	    }
+            /* strip off leading and trailing whitespace */
+            while (*strp == ' ' || *strp == '\t')
+                strp++;
+            len = strlen(strp);
+            while (len > 0 && (strp[len-1] == ' ' || strp[len-1] == '\t' ||
+                               strp[len-1] == '\n')) {
+                strp[len-1] = '\0';
+                len--;
+            }
 
-	    /* skip blank lines */
-	    if (len == 0)
-		continue;
+            /* skip blank lines */
+            if (len == 0)
+                continue;
 
-	    /* check for special TASM ending token */
-	    if (strcmp(strp, "*END*TASM*MACROS*") == 0) {
-		tasm_count = lindex;
-		continue;
-	    }
+            /* check for special TASM ending token */
+            if (strcmp(strp, "*END*TASM*MACROS*") == 0) {
+                tasm_count = lindex;
+                continue;
+            }
 
-	    /* output as string to output file */
-	    fprintf(out, "    \"");
-	    while (*strp != '\0') {
-		if (*strp == '\\' || *strp == '"')
-		    fputc('\\', out);
-		fputc(*strp, out);
-		strp++;
-	    }
-	    fprintf(out, "\",\n");
-	    lindex++;
-	}
+            /* output as string to output file */
+            fprintf(out, "    \"");
+            while (*strp != '\0') {
+                if (*strp == '\\' || *strp == '"')
+                    fputc('\\', out);
+                fputc(*strp, out);
+                strp++;
+            }
+            fprintf(out, "\",\n");
+            lindex++;
+        }
 
-	fclose(in);
+        fclose(in);
     }
 
     fprintf(out, "    NULL\n};\n");
     if (tasm_count == -1)
-	tasm_count = lindex;
+        tasm_count = lindex;
     fprintf(out, "#define TASM_MACRO_COUNT %d\n", tasm_count);
     fclose(out);
 

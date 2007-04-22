@@ -28,16 +28,16 @@
 #define YASM_CV_DBGFMT_H
 
 typedef struct {
-    char *pathname;		/* full pathname (drive+basepath+filename) */
-    char *filename;		/* filename as yasm knows it internally */
-    unsigned long str_off;	/* offset into pathname string table */
-    unsigned long info_off;	/* offset into source info table */
-    unsigned char digest[16];	/* MD5 digest of source file */
+    char *pathname;             /* full pathname (drive+basepath+filename) */
+    char *filename;             /* filename as yasm knows it internally */
+    unsigned long str_off;      /* offset into pathname string table */
+    unsigned long info_off;     /* offset into source info table */
+    unsigned char digest[16];   /* MD5 digest of source file */
 } cv_filename;
 
 /* Global data */
 typedef struct yasm_dbgfmt_cv {
-    yasm_dbgfmt_base dbgfmt;	    /* base structure */
+    yasm_dbgfmt_base dbgfmt;        /* base structure */
 
     cv_filename *filenames;
     size_t filenames_size;

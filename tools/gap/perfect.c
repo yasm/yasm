@@ -122,10 +122,10 @@ static void checkdup(
   {
   case STRING_HT:
     if ((key1->len_k == key2->len_k) &&
-	!memcmp(key1->name_k, key2->name_k, (size_t)key1->len_k))
+        !memcmp(key1->name_k, key2->name_k, (size_t)key1->len_k))
     {
       fprintf(stderr, "perfect.c: Duplicates keys!  %.*s\n",
-	      (int)key1->len_k, key1->name_k);
+              (int)key1->len_k, key1->name_k);
       exit(EXIT_FAILURE);
     }
     break;
@@ -138,7 +138,7 @@ static void checkdup(
     break;
   case AB_HT:
     fprintf(stderr, "perfect.c: Duplicate keys!  %.8lx %.8lx\n",
-	    key1->a_k, key1->b_k);
+            key1->a_k, key1->b_k);
     exit(EXIT_FAILURE);
     break;
   default:
@@ -171,15 +171,15 @@ static int inittab(
     key *otherkey;
 
     for (otherkey=tabb[mykey->b_k].list_b; 
-	 otherkey; 
-	 otherkey=otherkey->nextb_k)
+         otherkey; 
+         otherkey=otherkey->nextb_k)
     {
       if (mykey->a_k == otherkey->a_k)
       {
         nocollision = FALSE;
-	checkdup(mykey, otherkey, form);
-	if (!complete)
-	  return FALSE;
+        checkdup(mykey, otherkey, form);
+        if (!complete)
+          return FALSE;
       }
     }
     ++tabb[mykey->b_k].listlen_b;
@@ -216,14 +216,14 @@ static void initnorm(
     }
     final->used = 4;
     sprintf(final->line[0], 
-	    "  unsigned long i,state[CHECKSTATE],rsl;\n");
+            "  unsigned long i,state[CHECKSTATE],rsl;\n");
     sprintf(final->line[1], 
-	    "  for (i=0; i<CHECKSTATE; ++i) state[i]=0x%lx;\n",initlev);
+            "  for (i=0; i<CHECKSTATE; ++i) state[i]=0x%lx;\n",initlev);
     sprintf(final->line[2],
-	    "  phash_checksum(key, len, state);\n");
+            "  phash_checksum(key, len, state);\n");
     sprintf(final->line[3], 
-	    "  rsl = ((state[0]&0x%lx)^scramble[tab[state[1]&0x%lx]]);\n",
-	    alen-1, blen-1);
+            "  rsl = ((state[0]&0x%lx)^scramble[tab[state[1]&0x%lx]]);\n",
+            alen-1, blen-1);
   }
   else
   {
@@ -238,7 +238,7 @@ static void initnorm(
     }
     final->used = 2;
     sprintf(final->line[0], 
-	    "  unsigned long rsl, val = phash_lookup(key, len, 0x%lxUL);\n", initlev);
+            "  unsigned long rsl, val = phash_lookup(key, len, 0x%lxUL);\n", initlev);
     if (smax <= 1)
     {
       sprintf(final->line[1], "  rsl = 0;\n");
@@ -246,12 +246,12 @@ static void initnorm(
     else if (blen < USE_SCRAMBLE)
     {
       sprintf(final->line[1], "  rsl = ((val>>%ld)^tab[val&0x%lx]);\n",
-	      UB4BITS-phash_log2(alen), blen-1);
+              UB4BITS-phash_log2(alen), blen-1);
     }
     else
     {
       sprintf(final->line[1], "  rsl = ((val>>%ld)^scramble[tab[val&0x%lx]]);\n",
-	      UB4BITS-phash_log2(alen), blen-1);
+              UB4BITS-phash_log2(alen), blen-1);
     }
   }
 }
@@ -293,12 +293,12 @@ static void initinl(
   else if (blen < USE_SCRAMBLE)
   {
     sprintf(final->line[0], "  unsigned long rsl = ((val & 0x%lx) ^ tab[val >> %ld]);\n",
-	    amask, UB4BITS-blog);
+            amask, UB4BITS-blog);
   }
   else
   {
     sprintf(final->line[0], "  unsigned long rsl = ((val & 0x%lx) ^ scramble[tab[val >> %ld]]);\n",
-	    amask, UB4BITS-blog);
+            amask, UB4BITS-blog);
   }
 }
 
@@ -369,7 +369,7 @@ static void duplicates(
   for (i=0; i<blen; ++i)
     for (key1=tabb[i].list_b; key1; key1=key1->nextb_k)
       for (key2=key1->nextb_k; key2; key2=key2->nextb_k)
-	checkdup(key1, key2, form);
+        checkdup(key1, key2, form);
 }
 
 
@@ -403,7 +403,7 @@ static int apply(
       hash = mykey->a_k^stabb;
       if (mykey == tabh[hash].key_h)
       {                            /* erase hash for all of child's siblings */
-	tabh[hash].key_h = (key *)0;
+        tabh[hash].key_h = (key *)0;
       }
     }
 
@@ -417,13 +417,13 @@ static int apply(
       hash = mykey->a_k^stabb;
       if (rollback)
       {
-	if (parent == 0) continue;                  /* root never had a hash */
+        if (parent == 0) continue;                  /* root never had a hash */
       }
       else if (tabh[hash].key_h)
       {
-	/* very rare: roll back any changes */
-	apply(tabb, tabh, tabq, blen, scramble, tail, TRUE);
-	return FALSE;                                  /* failure, collision */
+        /* very rare: roll back any changes */
+        apply(tabb, tabh, tabq, blen, scramble, tail, TRUE);
+        return FALSE;                                  /* failure, collision */
       }
       tabh[hash].key_h = mykey;
     }
@@ -489,26 +489,26 @@ static int augment(
 
       for (mykey = myb->list_b; mykey; mykey=mykey->nextb_k)
       {
-	key    *childkey;
-	ub4 hash = mykey->a_k^scramble[i];
+        key    *childkey;
+        ub4 hash = mykey->a_k^scramble[i];
 
-	if (hash >= highhash) break;                        /* out of bounds */
-	childkey = tabh[hash].key_h;
+        if (hash >= highhash) break;                        /* out of bounds */
+        childkey = tabh[hash].key_h;
 
-	if (childkey)
-	{
-	  bstuff *hitb = &tabb[childkey->b_k];
+        if (childkey)
+        {
+          bstuff *hitb = &tabb[childkey->b_k];
 
-	  if (childb)
-	  {
-	    if (childb != hitb) break;            /* hit at most one child b */
-	  }
-	  else
-	  {
-	    childb = hitb;                        /* remember this as childb */
-	    if (childb->water_b == highwater) break;     /* already explored */
-	  }
-	}
+          if (childb)
+          {
+            if (childb != hitb) break;            /* hit at most one child b */
+          }
+          else
+          {
+            childb = hitb;                        /* remember this as childb */
+            if (childb->water_b == highwater) break;     /* already explored */
+          }
+        }
       }
       if (mykey) continue;             /* myb with i has multiple collisions */
 
@@ -522,11 +522,11 @@ static int augment(
 
       if (!childb)
       {                                  /* found an *i* with no collisions? */
-	/* try to apply the augmenting path */
-	if (apply(tabb, tabh, tabq, blen, scramble, tail, FALSE))
-	  return TRUE;        /* success, item was added to the perfect hash */
+        /* try to apply the augmenting path */
+        if (apply(tabb, tabh, tabq, blen, scramble, tail, FALSE))
+          return TRUE;        /* success, item was added to the perfect hash */
 
-	--tail;                    /* don't know how to handle such a child! */
+        --tail;                    /* don't know how to handle such a child! */
       }
     }
   }
@@ -550,8 +550,8 @@ static int perfect(
 
   /* clear any state from previous attempts */
   memset((void *)tabh, 0, 
-	 (size_t)(sizeof(hstuff)*
-		  ((form->perfect == MINIMAL_HP) ? nkeys : smax)));
+         (size_t)(sizeof(hstuff)*
+                  ((form->perfect == MINIMAL_HP) ? nkeys : smax)));
   memset((void *)tabq, 0, (size_t)(sizeof(qstuff)*(blen+1)));
 
   for (maxkeys=0,i=0; i<blen; ++i) 
@@ -562,12 +562,12 @@ static int perfect(
   for (j=maxkeys; j>0; --j)
     for (i=0; i<blen; ++i)
       if (tabb[i].listlen_b == j)
-	if (!augment(tabb, tabh, tabq, blen, scramble, smax, &tabb[i], nkeys, 
-		     i+1, form))
-	{
-	  printf("fail to map group of size %ld for tab size %ld\n", j, blen);
-	  return FALSE;
-	}
+        if (!augment(tabb, tabh, tabq, blen, scramble, smax, &tabb[i], nkeys, 
+                     i+1, form))
+        {
+          printf("fail to map group of size %ld for tab size %ld\n", j, blen);
+          return FALSE;
+        }
 
   /* Success!  We found a perfect hash of all keys into 0..nkeys-1. */
   return TRUE;
@@ -621,7 +621,7 @@ static void hash_ab(
   *tabb = (bstuff *)yasm_xmalloc((size_t)(sizeof(bstuff)*(*blen)));
   tabq  = (qstuff *)yasm_xmalloc(sizeof(qstuff)*(*blen+1));
   tabh  = (hstuff *)yasm_xmalloc(sizeof(hstuff)*(form->perfect == MINIMAL_HP ? 
-					     nkeys : *smax));
+                                             nkeys : *smax));
 
   /* check that (a,b) are distinct and put them in tabb indexed by b */
   (void)inittab(*tabb, *blen, keys, form, FALSE);
@@ -641,11 +641,11 @@ static void hash_ab(
       *smax = *smax * 2;
       scrambleinit(scramble, *smax);
       tabh = (hstuff *)yasm_xmalloc(sizeof(hstuff)*(form->perfect == MINIMAL_HP ?
-						nkeys : *smax));
+                                                nkeys : *smax));
       if (!perfect(*tabb, tabh, tabq, *blen, *smax, scramble, nkeys, form))
       {
-	printf("fatal error: Cannot find perfect hash for user (A,B) pairs\n");
-	exit(EXIT_FAILURE);
+        printf("fatal error: Cannot find perfect hash for user (A,B) pairs\n");
+        exit(EXIT_FAILURE);
       }
     }
   }
@@ -736,10 +736,10 @@ static void initalen(
       *blen = *smax;                      /* go for function speed not space */
     else if (*smax/4 <= (1<<14))
       *blen = ((nkeys <= *smax*0.56) ? *smax/32 :
-	       (nkeys <= *smax*0.74) ? *smax/16 : *smax/8);
+               (nkeys <= *smax*0.74) ? *smax/16 : *smax/8);
     else
       *blen = ((nkeys <= *smax*0.6) ? *smax/16 : 
-	       (nkeys <= *smax*0.8) ? *smax/8 : *smax/4);
+               (nkeys <= *smax*0.8) ? *smax/8 : *smax/4);
 
     if ((form->speed == FAST_HS) && (*blen < *smax/8))
       *blen = *smax/8;
@@ -769,31 +769,31 @@ static void initalen(
     case 17:
       if (form->speed == FAST_HS)
       {
-	*alen = *smax/2;
-	*blen = *smax/4;
+        *alen = *smax/2;
+        *blen = *smax/4;
       }
       else if (*smax/4 < USE_SCRAMBLE)
       {
-	*alen = ((nkeys <= *smax*0.52) ? *smax/8 : *smax/4);
-	*blen = ((nkeys <= *smax*0.52) ? *smax/8 : *smax/4);
+        *alen = ((nkeys <= *smax*0.52) ? *smax/8 : *smax/4);
+        *blen = ((nkeys <= *smax*0.52) ? *smax/8 : *smax/4);
       }
       else
       {
-	*alen = ((nkeys <= *smax*(5.0/8.0)) ? *smax/8 : 
-		 (nkeys <= *smax*(3.0/4.0)) ? *smax/4 : *smax/2);
-	*blen = *smax/4;                /* always give the small size a shot */
+        *alen = ((nkeys <= *smax*(5.0/8.0)) ? *smax/8 : 
+                 (nkeys <= *smax*(3.0/4.0)) ? *smax/4 : *smax/2);
+        *blen = *smax/4;                /* always give the small size a shot */
       }
       break;
     case 18:
       if (form->speed == FAST_HS)
       {
-	*alen = *smax/2;
-	*blen = *smax/2;
+        *alen = *smax/2;
+        *blen = *smax/2;
       }
       else
       {
-	*alen = *smax/8;                 /* never require the multiword hash */
-	*blen = (nkeys <= *smax*(5.0/8.0)) ? *smax/4 : *smax/2;
+        *alen = *smax/8;                 /* never require the multiword hash */
+        *blen = (nkeys <= *smax*(5.0/8.0)) ? *smax/4 : *smax/2;
       }
       break;
     case 19:
@@ -816,7 +816,7 @@ static void initalen(
 */
 void findhash(
     bstuff  **tabb,       /* output, tab[] of the perfect hash, length *blen */
-    hstuff  **tabh,	  /* output, table of keys indexed by hash value */
+    hstuff  **tabh,       /* output, table of keys indexed by hash value */
     ub4      *alen,             /* output, 0..alen-1 is range for a of (a,b) */
     ub4      *blen,             /* output, 0..blen-1 is range for b of (a,b) */
     ub4      *salt,                     /* output, initializes initial hash */
@@ -837,7 +837,7 @@ void findhash(
   if (form->hashtype == AB_HT)
   {
     hash_ab(tabb, alen, blen, salt, final, 
-	    scramble, smax, keys, nkeys, form);
+            scramble, smax, keys, nkeys, form);
     return;
   }
 
@@ -853,7 +853,7 @@ void findhash(
   *tabb = (bstuff *)yasm_xmalloc((size_t)(sizeof(bstuff)*(*blen)));
   tabq  = (qstuff *)yasm_xmalloc(sizeof(qstuff)*(*blen+1));
   *tabh  = (hstuff *)yasm_xmalloc(sizeof(hstuff)*(form->perfect == MINIMAL_HP ? 
-					     nkeys : *smax));
+                                             nkeys : *smax));
 
   /* Actually find the perfect hash */
   *salt = 0;
@@ -865,7 +865,7 @@ void findhash(
     /* Try to find distinct (A,B) for all keys */
     
     rslinit = initkey(keys, nkeys, *tabb, *alen, *blen, *smax, trysalt,
-		      form, final);
+                      form, final);
 
     if (rslinit == 2)
     {      /* initkey actually found a perfect hash, not just distinct (a,b) */
@@ -878,27 +878,27 @@ void findhash(
       /* didn't find distinct (a,b) */
       if (++bad_initkey >= RETRY_INITKEY)
       {
-	/* Try to put more bits in (A,B) to make distinct (A,B) more likely */
-	if (*alen < maxalen)
-	{
-	  *alen *= 2;
-	} 
-	else if (*blen < *smax)
-	{
-	  *blen *= 2;
-	  free(tabq);
-	  free(*tabb);
-	  *tabb  = (bstuff *)yasm_xmalloc((size_t)(sizeof(bstuff)*(*blen)));
-	  tabq  = (qstuff *)yasm_xmalloc((size_t)(sizeof(qstuff)*(*blen+1)));
-	}
-	else
-	{
-	  duplicates(*tabb, *blen, keys, form);      /* check for duplicates */
-	  printf("fatal error: Cannot perfect hash: cannot find distinct (A,B)\n");
-	  exit(EXIT_FAILURE);
-	}
-	bad_initkey = 0;
-	bad_perfect = 0;
+        /* Try to put more bits in (A,B) to make distinct (A,B) more likely */
+        if (*alen < maxalen)
+        {
+          *alen *= 2;
+        } 
+        else if (*blen < *smax)
+        {
+          *blen *= 2;
+          free(tabq);
+          free(*tabb);
+          *tabb  = (bstuff *)yasm_xmalloc((size_t)(sizeof(bstuff)*(*blen)));
+          tabq  = (qstuff *)yasm_xmalloc((size_t)(sizeof(qstuff)*(*blen+1)));
+        }
+        else
+        {
+          duplicates(*tabb, *blen, keys, form);      /* check for duplicates */
+          printf("fatal error: Cannot perfect hash: cannot find distinct (A,B)\n");
+          exit(EXIT_FAILURE);
+        }
+        bad_initkey = 0;
+        bad_perfect = 0;
       }
       continue;                             /* two keys have same (a,b) pair */
     }
@@ -909,23 +909,23 @@ void findhash(
     if (!perfect(*tabb, *tabh, tabq, *blen, *smax, scramble, nkeys, form))
     {
       if ((form->hashtype != INT_HT && ++bad_perfect >= RETRY_PERFECT) || 
-	  (form->hashtype == INT_HT && ++bad_perfect >= RETRY_HEX))
+          (form->hashtype == INT_HT && ++bad_perfect >= RETRY_HEX))
       {
-	if (*blen < *smax)
-	{
-	  *blen *= 2;
-	  free(*tabb);
-	  free(tabq);
-	  *tabb  = (bstuff *)yasm_xmalloc((size_t)(sizeof(bstuff)*(*blen)));
-	  tabq  = (qstuff *)yasm_xmalloc((size_t)(sizeof(qstuff)*(*blen+1)));
-	  --trysalt;               /* we know this salt got distinct (A,B) */
-	}
-	else
-	{
-	  printf("fatal error: Cannot perfect hash: cannot build tab[]\n");
-	  exit(EXIT_FAILURE);
-	}
-	bad_perfect = 0;
+        if (*blen < *smax)
+        {
+          *blen *= 2;
+          free(*tabb);
+          free(tabq);
+          *tabb  = (bstuff *)yasm_xmalloc((size_t)(sizeof(bstuff)*(*blen)));
+          tabq  = (qstuff *)yasm_xmalloc((size_t)(sizeof(qstuff)*(*blen+1)));
+          --trysalt;               /* we know this salt got distinct (A,B) */
+        }
+        else
+        {
+          printf("fatal error: Cannot perfect hash: cannot build tab[]\n");
+          exit(EXIT_FAILURE);
+        }
+        bad_perfect = 0;
       }
       continue;
     }
@@ -1045,37 +1045,37 @@ hashform *form;                                           /* user directives */
     else if (blen <= 1024)
     {
       for (i=0; i<blen; i+=16)
-	fprintf(f, "%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,\n",
-		scramble[tab[i+0].val_b], scramble[tab[i+1].val_b], 
-		scramble[tab[i+2].val_b], scramble[tab[i+3].val_b], 
-		scramble[tab[i+4].val_b], scramble[tab[i+5].val_b], 
-		scramble[tab[i+6].val_b], scramble[tab[i+7].val_b], 
-		scramble[tab[i+8].val_b], scramble[tab[i+9].val_b], 
-		scramble[tab[i+10].val_b], scramble[tab[i+11].val_b], 
-		scramble[tab[i+12].val_b], scramble[tab[i+13].val_b], 
-		scramble[tab[i+14].val_b], scramble[tab[i+15].val_b]); 
+        fprintf(f, "%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,\n",
+                scramble[tab[i+0].val_b], scramble[tab[i+1].val_b], 
+                scramble[tab[i+2].val_b], scramble[tab[i+3].val_b], 
+                scramble[tab[i+4].val_b], scramble[tab[i+5].val_b], 
+                scramble[tab[i+6].val_b], scramble[tab[i+7].val_b], 
+                scramble[tab[i+8].val_b], scramble[tab[i+9].val_b], 
+                scramble[tab[i+10].val_b], scramble[tab[i+11].val_b], 
+                scramble[tab[i+12].val_b], scramble[tab[i+13].val_b], 
+                scramble[tab[i+14].val_b], scramble[tab[i+15].val_b]); 
     }
     else if (blen < USE_SCRAMBLE)
     {
       for (i=0; i<blen; i+=8)
-	fprintf(f, "%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,\n",
-		scramble[tab[i+0].val_b], scramble[tab[i+1].val_b], 
-		scramble[tab[i+2].val_b], scramble[tab[i+3].val_b], 
-		scramble[tab[i+4].val_b], scramble[tab[i+5].val_b], 
-		scramble[tab[i+6].val_b], scramble[tab[i+7].val_b]); 
+        fprintf(f, "%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,\n",
+                scramble[tab[i+0].val_b], scramble[tab[i+1].val_b], 
+                scramble[tab[i+2].val_b], scramble[tab[i+3].val_b], 
+                scramble[tab[i+4].val_b], scramble[tab[i+5].val_b], 
+                scramble[tab[i+6].val_b], scramble[tab[i+7].val_b]); 
     }
     else 
     {
       for (i=0; i<blen; i+=16)
-	fprintf(f, "%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,\n",
-		tab[i+0].val_b, tab[i+1].val_b, 
-		tab[i+2].val_b, tab[i+3].val_b, 
-		tab[i+4].val_b, tab[i+5].val_b, 
-		tab[i+6].val_b, tab[i+7].val_b, 
-		tab[i+8].val_b, tab[i+9].val_b, 
-		tab[i+10].val_b, tab[i+11].val_b, 
-		tab[i+12].val_b, tab[i+13].val_b, 
-		tab[i+14].val_b, tab[i+15].val_b); 
+        fprintf(f, "%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,\n",
+                tab[i+0].val_b, tab[i+1].val_b, 
+                tab[i+2].val_b, tab[i+3].val_b, 
+                tab[i+4].val_b, tab[i+5].val_b, 
+                tab[i+6].val_b, tab[i+7].val_b, 
+                tab[i+8].val_b, tab[i+9].val_b, 
+                tab[i+10].val_b, tab[i+11].val_b, 
+                tab[i+12].val_b, tab[i+13].val_b, 
+                tab[i+14].val_b, tab[i+15].val_b); 
     }
     fprintf(f, "};\n");
     fprintf(f, "\n");
@@ -1149,7 +1149,7 @@ hashform *form;                                           /* user directives */
 
   /* find the hash */
   findhash(&tab, &alen, &blen, &salt, &final, 
-	   scramble, &smax, keys, nkeys, form);
+           scramble, &smax, keys, nkeys, form);
 
   /* generate the phash.c file */
   make_c(tab, smax, blen, scramble, &final, form);

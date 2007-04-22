@@ -50,14 +50,14 @@
 
 
 typedef enum {
-    SYM_UNKNOWN,		/* for unknown type (COMMON/EXTERN) */
-    SYM_EQU,			/* for EQU defined symbols (expressions) */
-    SYM_LABEL,			/* for labels */
-    SYM_CURPOS,			/* for labels representing the current
-				   assembly position */
-    SYM_SPECIAL			/* for special symbols that need to be in
-				   the symbol table but otherwise have no
-				   purpose */
+    SYM_UNKNOWN,                /* for unknown type (COMMON/EXTERN) */
+    SYM_EQU,                    /* for EQU defined symbols (expressions) */
+    SYM_LABEL,                  /* for labels */
+    SYM_CURPOS,                 /* for labels representing the current
+                                   assembly position */
+    SYM_SPECIAL                 /* for special symbols that need to be in
+                                   the symbol table but otherwise have no
+                                   purpose */
 } sym_type;
 
 struct yasm_symrec {
@@ -65,14 +65,14 @@ struct yasm_symrec {
     sym_type type;
     yasm_sym_status status;
     yasm_sym_vis visibility;
-    unsigned long def_line;	/* line where symbol was first defined */
-    unsigned long decl_line;	/* line where symbol was first declared */
-    unsigned long use_line;	/* line where symbol was first used */
+    unsigned long def_line;     /* line where symbol was first defined */
+    unsigned long decl_line;    /* line where symbol was first declared */
+    unsigned long use_line;     /* line where symbol was first used */
     union {
-	yasm_expr *expn;	/* equ value */
+        yasm_expr *expn;        /* equ value */
 
-	/* bytecode immediately preceding a label */
-	/*@dependent@*/ yasm_bytecode *precbc;
+        /* bytecode immediately preceding a label */
+        /*@dependent@*/ yasm_bytecode *precbc;
     } value;
 
     /* associated data; NULL if none */
@@ -144,7 +144,7 @@ symrec_destroy_one(/*@only@*/ void *d)
     yasm_symrec *sym = d;
     yasm_xfree(sym->name);
     if (sym->type == SYM_EQU && (sym->status & YASM_SYM_VALUED))
-	yasm_expr_destroy(sym->value.expn);
+        yasm_expr_destroy(sym->value.expn);
     yasm__assoc_data_destroy(sym->assoc_data);
     yasm_xfree(sym);
 }
@@ -172,7 +172,7 @@ symtab_get_or_new_in_table(yasm_symtab *symtab, /*@only@*/ char *name)
     rec->status = YASM_SYM_NOSTATUS;
 
     return HAMT_insert(symtab->sym_table, name, rec, &replace,
-		       symrec_destroy_one);
+                       symrec_destroy_one);
 }
 
 static /*@partial@*/ /*@dependent@*/ yasm_symrec *
@@ -196,15 +196,15 @@ symtab_get_or_new(yasm_symtab *symtab, const char *name, int in_table)
     char *symname = yasm__xstrdup(name);
 
     if (in_table)
-	return symtab_get_or_new_in_table(symtab, symname);
+        return symtab_get_or_new_in_table(symtab, symname);
     else
-	return symtab_get_or_new_not_in_table(symtab, symname);
+        return symtab_get_or_new_not_in_table(symtab, symname);
 }
 /*@=freshtrans =mustfree@*/
 
 int
 yasm_symtab_traverse(yasm_symtab *symtab, void *d,
-		     int (*func) (yasm_symrec *sym, void *d))
+                     int (*func) (yasm_symrec *sym, void *d))
 {
     return HAMT_traverse(symtab->sym_table, d, (int (*) (void *, void *))func);
 }
@@ -236,7 +236,7 @@ yasm_symtab_abs_sym(yasm_symtab *symtab)
     rec->use_line = 0;
     rec->type = SYM_EQU;
     rec->value.expn =
-	yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(0)), 0);
+        yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(0)), 0);
     rec->status |= YASM_SYM_DEFINED|YASM_SYM_VALUED|YASM_SYM_USED;
     return rec;
 }
@@ -246,7 +246,7 @@ yasm_symtab_use(yasm_symtab *symtab, const char *name, unsigned long line)
 {
     yasm_symrec *rec = symtab_get_or_new(symtab, name, 1);
     if (rec->use_line == 0)
-	rec->use_line = line;	/* set line number of first use */
+        rec->use_line = line;   /* set line number of first use */
     rec->status |= YASM_SYM_USED;
     return rec;
 }
@@ -259,34 +259,34 @@ yasm_symtab_get(yasm_symtab *symtab, const char *name)
 
 static /*@dependent@*/ yasm_symrec *
 symtab_define(yasm_symtab *symtab, const char *name, sym_type type,
-	      int in_table, unsigned long line)
+              int in_table, unsigned long line)
 {
     yasm_symrec *rec = symtab_get_or_new(symtab, name, in_table);
 
     /* Has it been defined before (either by DEFINED or COMMON/EXTERN)? */
     if (rec->status & YASM_SYM_DEFINED) {
-	yasm_error_set_xref(rec->def_line!=0 ? rec->def_line : rec->decl_line,
-			    N_("`%s' previously defined here"), name);
-	yasm_error_set(YASM_ERROR_GENERAL, N_("redefinition of `%s'"),
-		       name);
+        yasm_error_set_xref(rec->def_line!=0 ? rec->def_line : rec->decl_line,
+                            N_("`%s' previously defined here"), name);
+        yasm_error_set(YASM_ERROR_GENERAL, N_("redefinition of `%s'"),
+                       name);
     } else {
-	if (rec->visibility & YASM_SYM_EXTERN)
-	    yasm_warn_set(YASM_WARN_GENERAL,
-			  N_("`%s' both defined and declared extern"), name);
-	rec->def_line = line;	/* set line number of definition */
-	rec->type = type;
-	rec->status |= YASM_SYM_DEFINED;
+        if (rec->visibility & YASM_SYM_EXTERN)
+            yasm_warn_set(YASM_WARN_GENERAL,
+                          N_("`%s' both defined and declared extern"), name);
+        rec->def_line = line;   /* set line number of definition */
+        rec->type = type;
+        rec->status |= YASM_SYM_DEFINED;
     }
     return rec;
 }
 
 yasm_symrec *
 yasm_symtab_define_equ(yasm_symtab *symtab, const char *name, yasm_expr *e,
-		       unsigned long line)
+                       unsigned long line)
 {
     yasm_symrec *rec = symtab_define(symtab, name, SYM_EQU, 1, line);
     if (yasm_error_occurred())
-	return rec;
+        return rec;
     rec->value.expn = e;
     rec->status |= YASM_SYM_VALUED;
     return rec;
@@ -294,36 +294,36 @@ yasm_symtab_define_equ(yasm_symtab *symtab, const char *name, yasm_expr *e,
 
 yasm_symrec *
 yasm_symtab_define_label(yasm_symtab *symtab, const char *name,
-			 yasm_bytecode *precbc, int in_table,
-			 unsigned long line)
+                         yasm_bytecode *precbc, int in_table,
+                         unsigned long line)
 {
     yasm_symrec *rec = symtab_define(symtab, name, SYM_LABEL, in_table, line);
     if (yasm_error_occurred())
-	return rec;
+        return rec;
     rec->value.precbc = precbc;
     if (in_table && precbc)
-	yasm_bc__add_symrec(precbc, rec);
+        yasm_bc__add_symrec(precbc, rec);
     return rec;
 }
 
 yasm_symrec *
 yasm_symtab_define_curpos(yasm_symtab *symtab, const char *name,
-			  yasm_bytecode *precbc, unsigned long line)
+                          yasm_bytecode *precbc, unsigned long line)
 {
     yasm_symrec *rec = symtab_define(symtab, name, SYM_CURPOS, 0, line);
     if (yasm_error_occurred())
-	return rec;
+        return rec;
     rec->value.precbc = precbc;
     return rec;
 }
 
 yasm_symrec *
 yasm_symtab_define_special(yasm_symtab *symtab, const char *name,
-			   yasm_sym_vis vis)
+                           yasm_sym_vis vis)
 {
     yasm_symrec *rec = symtab_define(symtab, name, SYM_SPECIAL, 1, 0);
     if (yasm_error_occurred())
-	return rec;
+        return rec;
     rec->status |= YASM_SYM_VALUED;
     rec->visibility = vis;
     return rec;
@@ -331,7 +331,7 @@ yasm_symtab_define_special(yasm_symtab *symtab, const char *name,
 
 yasm_symrec *
 yasm_symtab_declare(yasm_symtab *symtab, const char *name, yasm_sym_vis vis,
-		    unsigned long line)
+                    unsigned long line)
 {
     yasm_symrec *rec = symtab_get_or_new(symtab, name, 1);
     yasm_symrec_declare(rec, vis, line);
@@ -353,16 +353,16 @@ yasm_symrec_declare(yasm_symrec *rec, yasm_sym_vis vis, unsigned long line)
      * X   1      -      1      -
      */
     if ((vis == YASM_SYM_GLOBAL) ||
-	(!(rec->status & YASM_SYM_DEFINED) &&
-	 (!(rec->visibility & (YASM_SYM_COMMON | YASM_SYM_EXTERN)) ||
-	  ((rec->visibility & YASM_SYM_COMMON) && (vis == YASM_SYM_COMMON)) ||
-	  ((rec->visibility & YASM_SYM_EXTERN) && (vis == YASM_SYM_EXTERN))))) {
-	rec->decl_line = line;
-	rec->visibility |= vis;
+        (!(rec->status & YASM_SYM_DEFINED) &&
+         (!(rec->visibility & (YASM_SYM_COMMON | YASM_SYM_EXTERN)) ||
+          ((rec->visibility & YASM_SYM_COMMON) && (vis == YASM_SYM_COMMON)) ||
+          ((rec->visibility & YASM_SYM_EXTERN) && (vis == YASM_SYM_EXTERN))))) {
+        rec->decl_line = line;
+        rec->visibility |= vis;
     } else
-	yasm_error_set(YASM_ERROR_GENERAL,
-	    N_("duplicate definition of `%s'; first defined on line %lu"),
-	    rec->name, rec->def_line!=0 ? rec->def_line : rec->decl_line);
+        yasm_error_set(YASM_ERROR_GENERAL,
+            N_("duplicate definition of `%s'; first defined on line %lu"),
+            rec->name, rec->def_line!=0 ? rec->def_line : rec->decl_line);
 }
 
 typedef struct symtab_finalize_info {
@@ -379,16 +379,16 @@ symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
 
     /* error if a symbol is used but never defined or extern/common declared */
     if ((sym->status & YASM_SYM_USED) && !(sym->status & YASM_SYM_DEFINED) &&
-	!(sym->visibility & (YASM_SYM_EXTERN | YASM_SYM_COMMON))) {
-	if (info->undef_extern)
-	    sym->visibility |= YASM_SYM_EXTERN;
-	else {
-	    yasm_error_set(YASM_ERROR_GENERAL,
-			   N_("undefined symbol `%s' (first use)"), sym->name);
-	    yasm_errwarn_propagate(info->errwarns, sym->use_line);
-	    if (sym->use_line < info->firstundef_line)
-		info->firstundef_line = sym->use_line;
-	}
+        !(sym->visibility & (YASM_SYM_EXTERN | YASM_SYM_COMMON))) {
+        if (info->undef_extern)
+            sym->visibility |= YASM_SYM_EXTERN;
+        else {
+            yasm_error_set(YASM_ERROR_GENERAL,
+                           N_("undefined symbol `%s' (first use)"), sym->name);
+            yasm_errwarn_propagate(info->errwarns, sym->use_line);
+            if (sym->use_line < info->firstundef_line)
+                info->firstundef_line = sym->use_line;
+        }
     }
 
     /* Change labels in absolute sections into EQUs with value
@@ -397,18 +397,18 @@ symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
      * caught in EQU expansion.
      */
     if (sym->type == SYM_LABEL && sym->value.precbc
-	&& (sect = yasm_bc_get_section(sym->value.precbc))
-	&& yasm_section_is_absolute(sect)) {
-	sym->type = SYM_EQU;
-	sym->value.expn = yasm_expr_create_tree(
-	    yasm_expr_create(YASM_EXPR_SUB,
-			     yasm_expr_precbc(sym->value.precbc),
-			     yasm_expr_precbc(yasm_section_bcs_first(sect)),
-			     sym->def_line),
-	    YASM_EXPR_ADD,
-	    yasm_expr_copy(yasm_section_get_start(sect)),
-	    sym->def_line);
-	sym->status |= YASM_SYM_VALUED;
+        && (sect = yasm_bc_get_section(sym->value.precbc))
+        && yasm_section_is_absolute(sect)) {
+        sym->type = SYM_EQU;
+        sym->value.expn = yasm_expr_create_tree(
+            yasm_expr_create(YASM_EXPR_SUB,
+                             yasm_expr_precbc(sym->value.precbc),
+                             yasm_expr_precbc(yasm_section_bcs_first(sect)),
+                             sym->def_line),
+            YASM_EXPR_ADD,
+            yasm_expr_copy(yasm_section_get_start(sect)),
+            sym->def_line);
+        sym->status |= YASM_SYM_VALUED;
     }
 
     return 0;
@@ -416,7 +416,7 @@ symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
 
 void
 yasm_symtab_parser_finalize(yasm_symtab *symtab, int undef_extern,
-			    yasm_errwarns *errwarns)
+                            yasm_errwarns *errwarns)
 {
     symtab_finalize_info info;
     info.firstundef_line = ULONG_MAX;
@@ -424,9 +424,9 @@ yasm_symtab_parser_finalize(yasm_symtab *symtab, int undef_extern,
     info.errwarns = errwarns;
     yasm_symtab_traverse(symtab, &info, symtab_parser_finalize_checksym);
     if (info.firstundef_line < ULONG_MAX) {
-	yasm_error_set(YASM_ERROR_GENERAL,
-		       N_(" (Each undefined symbol is reported only once.)"));
-	yasm_errwarn_propagate(errwarns, info.firstundef_line);
+        yasm_error_set(YASM_ERROR_GENERAL,
+                       N_(" (Each undefined symbol is reported only once.)"));
+        yasm_errwarn_propagate(errwarns, info.firstundef_line);
     }
 }
 
@@ -436,10 +436,10 @@ yasm_symtab_destroy(yasm_symtab *symtab)
     HAMT_destroy(symtab->sym_table, symrec_destroy_one);
 
     while (!SLIST_EMPTY(&symtab->non_table_syms)) {
-	non_table_symrec *sym = SLIST_FIRST(&symtab->non_table_syms);
-	SLIST_REMOVE_HEAD(&symtab->non_table_syms, link);
-	symrec_destroy_one(sym->rec);
-	yasm_xfree(sym);
+        non_table_symrec *sym = SLIST_FIRST(&symtab->non_table_syms);
+        SLIST_REMOVE_HEAD(&symtab->non_table_syms, link);
+        symrec_destroy_one(sym->rec);
+        yasm_xfree(sym);
     }
 
     yasm_xfree(symtab);
@@ -511,18 +511,18 @@ const yasm_expr *
 yasm_symrec_get_equ(const yasm_symrec *sym)
 {
     if (sym->type == SYM_EQU && (sym->status & YASM_SYM_VALUED))
-	return sym->value.expn;
+        return sym->value.expn;
     return (const yasm_expr *)NULL;
 }
 
 int
 yasm_symrec_get_label(const yasm_symrec *sym,
-		      yasm_symrec_get_label_bytecodep *precbc)
+                      yasm_symrec_get_label_bytecodep *precbc)
 {
     if (!(sym->type == SYM_LABEL || sym->type == SYM_CURPOS)
-	|| !sym->value.precbc) {
-	*precbc = (yasm_symrec_get_label_bytecodep)0xDEADBEEF;
-	return 0;
+        || !sym->value.precbc) {
+        *precbc = (yasm_symrec_get_label_bytecodep)0xDEADBEEF;
+        return 0;
     }
     *precbc = sym->value.precbc;
     return 1;
@@ -532,7 +532,7 @@ int
 yasm_symrec_is_abs(const yasm_symrec *sym)
 {
     return (sym->def_line == 0 && sym->type == SYM_EQU &&
-	    sym->name[0] == '\0');
+            sym->name[0] == '\0');
 }
 
 int
@@ -549,7 +549,7 @@ yasm_symrec_is_curpos(const yasm_symrec *sym)
 
 void
 yasm_symrec_set_objext_valparams(yasm_symrec *sym,
-				 /*@only@*/ yasm_valparamhead *objext_valparams)
+                                 /*@only@*/ yasm_valparamhead *objext_valparams)
 {
     yasm_symrec_add_data(sym, &objext_valparams_cb, objext_valparams);
 }
@@ -562,7 +562,7 @@ yasm_symrec_get_objext_valparams(yasm_symrec *sym)
 
 void
 yasm_symrec_set_common_size(yasm_symrec *sym,
-			    /*@only@*/ yasm_expr *common_size)
+                            /*@only@*/ yasm_expr *common_size)
 {
     yasm_expr **ep = yasm_xmalloc(sizeof(yasm_expr *));
     *ep = common_size;
@@ -577,14 +577,14 @@ yasm_symrec_get_common_size(yasm_symrec *sym)
 
 void *
 yasm_symrec_get_data(yasm_symrec *sym,
-		     const yasm_assoc_data_callback *callback)
+                     const yasm_assoc_data_callback *callback)
 {
     return yasm__assoc_data_get(sym->assoc_data, callback);
 }
 
 void
 yasm_symrec_add_data(yasm_symrec *sym,
-		     const yasm_assoc_data_callback *callback, void *data)
+                     const yasm_assoc_data_callback *callback, void *data)
 {
     sym->assoc_data = yasm__assoc_data_add(sym->assoc_data, callback, data);
 }
@@ -593,69 +593,69 @@ void
 yasm_symrec_print(const yasm_symrec *sym, FILE *f, int indent_level)
 {
     switch (sym->type) {
-	case SYM_UNKNOWN:
-	    fprintf(f, "%*s-Unknown (Common/Extern)-\n", indent_level, "");
-	    break;
-	case SYM_EQU:
-	    fprintf(f, "%*s_EQU_\n", indent_level, "");
-	    fprintf(f, "%*sExpn=", indent_level, "");
-	    if (sym->status & YASM_SYM_VALUED)
-		yasm_expr_print(sym->value.expn, f);
-	    else
-		fprintf(f, "***UNVALUED***");
-	    fprintf(f, "\n");
-	    break;
-	case SYM_LABEL:
-	case SYM_CURPOS:
-	    fprintf(f, "%*s_%s_\n%*sSection:\n", indent_level, "",
-		    sym->type == SYM_LABEL ? "Label" : "CurPos",
-		    indent_level, "");
-	    yasm_section_print(yasm_bc_get_section(sym->value.precbc), f,
-			       indent_level+1, 0);
-	    fprintf(f, "%*sPreceding bytecode:\n", indent_level, "");
-	    yasm_bc_print(sym->value.precbc, f, indent_level+1);
-	    break;
-	case SYM_SPECIAL:
-	    fprintf(f, "%*s-Special-\n", indent_level, "");
-	    break;
+        case SYM_UNKNOWN:
+            fprintf(f, "%*s-Unknown (Common/Extern)-\n", indent_level, "");
+            break;
+        case SYM_EQU:
+            fprintf(f, "%*s_EQU_\n", indent_level, "");
+            fprintf(f, "%*sExpn=", indent_level, "");
+            if (sym->status & YASM_SYM_VALUED)
+                yasm_expr_print(sym->value.expn, f);
+            else
+                fprintf(f, "***UNVALUED***");
+            fprintf(f, "\n");
+            break;
+        case SYM_LABEL:
+        case SYM_CURPOS:
+            fprintf(f, "%*s_%s_\n%*sSection:\n", indent_level, "",
+                    sym->type == SYM_LABEL ? "Label" : "CurPos",
+                    indent_level, "");
+            yasm_section_print(yasm_bc_get_section(sym->value.precbc), f,
+                               indent_level+1, 0);
+            fprintf(f, "%*sPreceding bytecode:\n", indent_level, "");
+            yasm_bc_print(sym->value.precbc, f, indent_level+1);
+            break;
+        case SYM_SPECIAL:
+            fprintf(f, "%*s-Special-\n", indent_level, "");
+            break;
     }
 
     fprintf(f, "%*sStatus=", indent_level, "");
     if (sym->status == YASM_SYM_NOSTATUS)
-	fprintf(f, "None\n");
+        fprintf(f, "None\n");
     else {
-	if (sym->status & YASM_SYM_USED)
-	    fprintf(f, "Used,");
-	if (sym->status & YASM_SYM_DEFINED)
-	    fprintf(f, "Defined,");
-	if (sym->status & YASM_SYM_VALUED)
-	    fprintf(f, "Valued,");
-	if (sym->status & YASM_SYM_NOTINTABLE)
-	    fprintf(f, "Not in Table,");
-	fprintf(f, "\n");
+        if (sym->status & YASM_SYM_USED)
+            fprintf(f, "Used,");
+        if (sym->status & YASM_SYM_DEFINED)
+            fprintf(f, "Defined,");
+        if (sym->status & YASM_SYM_VALUED)
+            fprintf(f, "Valued,");
+        if (sym->status & YASM_SYM_NOTINTABLE)
+            fprintf(f, "Not in Table,");
+        fprintf(f, "\n");
     }
 
     fprintf(f, "%*sVisibility=", indent_level, "");
     if (sym->visibility == YASM_SYM_LOCAL)
-	fprintf(f, "Local\n");
+        fprintf(f, "Local\n");
     else {
-	if (sym->visibility & YASM_SYM_GLOBAL)
-	    fprintf(f, "Global,");
-	if (sym->visibility & YASM_SYM_COMMON)
-	    fprintf(f, "Common,");
-	if (sym->visibility & YASM_SYM_EXTERN)
-	    fprintf(f, "Extern,");
-	fprintf(f, "\n");
+        if (sym->visibility & YASM_SYM_GLOBAL)
+            fprintf(f, "Global,");
+        if (sym->visibility & YASM_SYM_COMMON)
+            fprintf(f, "Common,");
+        if (sym->visibility & YASM_SYM_EXTERN)
+            fprintf(f, "Extern,");
+        fprintf(f, "\n");
     }
 
     if (sym->assoc_data) {
-	fprintf(f, "%*sAssociated data:\n", indent_level, "");
-	yasm__assoc_data_print(sym->assoc_data, f, indent_level+1);
+        fprintf(f, "%*sAssociated data:\n", indent_level, "");
+        yasm__assoc_data_print(sym->assoc_data, f, indent_level+1);
     }
 
     fprintf(f, "%*sLine Index (Defined)=%lu\n", indent_level, "",
-	    sym->def_line);
+            sym->def_line);
     fprintf(f, "%*sLine Index (Declared)=%lu\n", indent_level, "",
-	    sym->decl_line);
+            sym->decl_line);
     fprintf(f, "%*sLine Index (Used)=%lu\n", indent_level, "", sym->use_line);
 }

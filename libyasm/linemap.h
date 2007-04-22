@@ -40,43 +40,43 @@
 yasm_linemap *yasm_linemap_create(void);
 
 /** Clean up any memory allocated for a repository.
- * \param linemap	line mapping repository
+ * \param linemap       line mapping repository
  */
 void yasm_linemap_destroy(yasm_linemap *linemap);
 
 /** Get the current line position in a repository.
- * \param linemap	line mapping repository
+ * \param linemap       line mapping repository
  * \return Current virtual line.
  */
 unsigned long yasm_linemap_get_current(yasm_linemap *linemap);
 
 /** Get bytecode and source line information, if any, for a virtual line.
- * \param linemap	line mapping repository
- * \param line		virtual line
- * \param bcp		pointer to return bytecode into
- * \param sourcep	pointer to return source code line pointer into
+ * \param linemap       line mapping repository
+ * \param line          virtual line
+ * \param bcp           pointer to return bytecode into
+ * \param sourcep       pointer to return source code line pointer into
  * \return Zero if source line information available for line, nonzero if not.
  * \note If source line information is not available, bcp and sourcep targets
  * are set to NULL.
  */
 int yasm_linemap_get_source(yasm_linemap *linemap, unsigned long line,
-			    /*@null@*/ yasm_bytecode **bcp,
-			    const char **sourcep);
+                            /*@null@*/ yasm_bytecode **bcp,
+                            const char **sourcep);
 
 /** Add bytecode and source line information to the current virtual line.
  * \attention Deletes any existing bytecode and source line information for
  *            the current virtual line.
- * \param linemap	line mapping repository
- * \param bc		bytecode (if any)
- * \param source	source code line
+ * \param linemap       line mapping repository
+ * \param bc            bytecode (if any)
+ * \param source        source code line
  * \note The source code line pointer is NOT kept, it is strdup'ed.
  */
 void yasm_linemap_add_source(yasm_linemap *linemap,
-			     /*@null@*/ yasm_bytecode *bc,
-			     const char *source);
+                             /*@null@*/ yasm_bytecode *bc,
+                             const char *source);
 
 /** Go to the next line (increments the current virtual line).
- * \param linemap	line mapping repository
+ * \param linemap       line mapping repository
  * \return The current (new) virtual line.
  */
 unsigned long yasm_linemap_goto_next(yasm_linemap *linemap);
@@ -84,43 +84,43 @@ unsigned long yasm_linemap_goto_next(yasm_linemap *linemap);
 /** Set a new file/line physical association starting point at the current
  * virtual line.  line_inc indicates how much the "real" line is incremented
  * by for each virtual line increment (0 is perfectly legal).
- * \param linemap	line mapping repository
- * \param filename	physical file name (if NULL, not changed)
- * \param file_line	physical line number
- * \param line_inc	line increment
+ * \param linemap       line mapping repository
+ * \param filename      physical file name (if NULL, not changed)
+ * \param file_line     physical line number
+ * \param line_inc      line increment
  */
 void yasm_linemap_set(yasm_linemap *linemap, /*@null@*/ const char *filename,
-		      unsigned long file_line, unsigned long line_inc);
+                      unsigned long file_line, unsigned long line_inc);
 
 /** Poke a single file/line association, restoring the original physical
  * association starting point.  Caution: increments the current virtual line
  * twice.
- * \param linemap	line mapping repository
- * \param filename	physical file name (if NULL, not changed)
- * \param file_line	physical line number
+ * \param linemap       line mapping repository
+ * \param filename      physical file name (if NULL, not changed)
+ * \param file_line     physical line number
  * \return The virtual line number of the poked association.
  */
 unsigned long yasm_linemap_poke(yasm_linemap *linemap,
-				/*@null@*/ const char *filename,
-				unsigned long file_line);
+                                /*@null@*/ const char *filename,
+                                unsigned long file_line);
 
 /** Look up the associated physical file and line for a virtual line.
- * \param linemap	line mapping repository
- * \param line		virtual line
- * \param filename	physical file name (output)
- * \param file_line	physical line number (output)
+ * \param linemap       line mapping repository
+ * \param line          virtual line
+ * \param filename      physical file name (output)
+ * \param file_line     physical line number (output)
  */
 void yasm_linemap_lookup(yasm_linemap *linemap, unsigned long line,
-			 /*@out@*/ const char **filename,
-			 /*@out@*/ unsigned long *file_line);
+                         /*@out@*/ const char **filename,
+                         /*@out@*/ unsigned long *file_line);
 
 /** Traverses all filenames used in a linemap, calling a function on each
  * filename.
- * \param linemap	line mapping repository
- * \param d		data pointer passed to func on each call
- * \param func		function
+ * \param linemap       line mapping repository
+ * \param d             data pointer passed to func on each call
+ * \param func          function
  * \return Stops early (and returns func's return value) if func returns a
- *	   nonzero value; otherwise 0.
+ *         nonzero value; otherwise 0.
  */
 int yasm_linemap_traverse_filenames
     (yasm_linemap *linemap, /*@null@*/ void *d,

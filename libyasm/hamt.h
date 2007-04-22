@@ -41,8 +41,8 @@ typedef struct HAMTEntry HAMTEntry;
 
 /** Create new, empty, HAMT.  error_func() is called when an internal error is
  * encountered--it should NOT return to the calling function.
- * \param   nocase	    nonzero if HAMT should be case-insensitive
- * \param   error_func	    function called on internal error
+ * \param   nocase          nonzero if HAMT should be case-insensitive
+ * \param   error_func      function called on internal error
  * \return New, empty, hash array mapped trie.
  */
 HAMT *HAMT_create(int nocase, /*@exits@*/ void (*error_func)
@@ -50,11 +50,11 @@ HAMT *HAMT_create(int nocase, /*@exits@*/ void (*error_func)
 
 /** Delete HAMT and all data associated with it.  Uses deletefunc() to delete
  * each data item.
- * \param hamt		Hash array mapped trie
- * \param deletefunc	Data deletion function
+ * \param hamt          Hash array mapped trie
+ * \param deletefunc    Data deletion function
  */
 void HAMT_destroy(/*@only@*/ HAMT *hamt,
-		  void (*deletefunc) (/*@only@*/ void *data));
+                  void (*deletefunc) (/*@only@*/ void *data));
 
 /** Insert key into HAMT, associating it with data. 
  * If the key is not present in the HAMT, inserts it, sets *replace to 1, and
@@ -65,49 +65,49 @@ void HAMT_destroy(/*@only@*/ HAMT *hamt,
  * If the key is already present and *replace is 1, deletes the data currently
  *  associated with the key using deletefunc() and replaces it with the data
  *  passed in.
- * \param hamt		Hash array mapped trie
- * \param str		Key
- * \param data		Data to associate with key
- * \param replace	See above description
- * \param deletefunc	Data deletion function if data is replaced
+ * \param hamt          Hash array mapped trie
+ * \param str           Key
+ * \param data          Data to associate with key
+ * \param replace       See above description
+ * \param deletefunc    Data deletion function if data is replaced
  * \return Data now associated with key.
  */
 /*@dependent@*/ void *HAMT_insert(HAMT *hamt, /*@dependent@*/ const char *str,
-				  /*@only@*/ void *data, int *replace,
-				  void (*deletefunc) (/*@only@*/ void *data));
+                                  /*@only@*/ void *data, int *replace,
+                                  void (*deletefunc) (/*@only@*/ void *data));
 
 /** Search for the data associated with a key in the HAMT.
- * \param hamt		Hash array mapped trie
- * \param str		Key
+ * \param hamt          Hash array mapped trie
+ * \param str           Key
  * \return NULL if key/data not present in HAMT, otherwise associated data.
  */
 /*@dependent@*/ /*@null@*/ void *HAMT_search(HAMT *hamt, const char *str);
 
 /** Traverse over all keys in HAMT, calling function on each data item. 
- * \param hamt		Hash array mapped trie
- * \param d		Data to pass to each call to func.
- * \param func		Function to call
+ * \param hamt          Hash array mapped trie
+ * \param d             Data to pass to each call to func.
+ * \param func          Function to call
  * \return Stops early (and returns func's return value) if func returns a
- *	   nonzero value; otherwise 0.
+ *         nonzero value; otherwise 0.
  */
 int HAMT_traverse(HAMT *hamt, /*@null@*/ void *d,
-		  int (*func) (/*@dependent@*/ /*@null@*/ void *node,
-			       /*@null@*/ void *d));
+                  int (*func) (/*@dependent@*/ /*@null@*/ void *node,
+                               /*@null@*/ void *d));
 
 /** Get the first entry in a HAMT.
- * \param hamt		Hash array mapped trie
+ * \param hamt          Hash array mapped trie
  * \return First entry in HAMT, or NULL if HAMT is empty.
  */
 const HAMTEntry *HAMT_first(const HAMT *hamt);
 
 /** Get the next entry in a HAMT.
- * \param prev		Previous entry in HAMT
+ * \param prev          Previous entry in HAMT
  * \return Next entry in HAMT, or NULL if no more entries.
  */
 /*@null@*/ const HAMTEntry *HAMT_next(const HAMTEntry *prev);
 
 /** Get the corresponding data for a HAMT entry.
- * \param entry		HAMT entry (as returned by HAMT_first() and HAMT_next())
+ * \param entry         HAMT entry (as returned by HAMT_first() and HAMT_next())
  * \return Corresponding data item.
  */
 void *HAMTEntry_get_data(const HAMTEntry *entry);

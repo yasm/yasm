@@ -80,8 +80,8 @@ struct yasm_objfmt_module {
     /** Create object format.
      * Module-level implementation of yasm_objfmt_create().
      * Call yasm_objfmt_create() instead of calling this function.
-     * \param object		object
-     * \param a			architecture in use
+     * \param object            object
+     * \param a                 architecture in use
      * \return NULL if architecture/machine combination not supported.
      */
     /*@null@*/ /*@only@*/ yasm_objfmt * (*create) (yasm_object *object);
@@ -90,7 +90,7 @@ struct yasm_objfmt_module {
      * Call yasm_objfmt_output() instead of calling this function.
      */
     void (*output) (yasm_object *o, FILE *f, int all_syms,
-		    yasm_errwarns *errwarns);
+                    yasm_errwarns *errwarns);
 
     /** Module-level implementation of yasm_objfmt_destroy().
      * Call yasm_objfmt_destroy() instead of calling this function.
@@ -106,14 +106,14 @@ struct yasm_objfmt_module {
      * Call yasm_objfmt_section_switch() instead of calling this function.
      */
     /*@observer@*/ /*@null@*/ yasm_section *
-	(*section_switch)(yasm_object *object, yasm_valparamhead *valparams,
-			  /*@null@*/ yasm_valparamhead *objext_valparams,
-			  unsigned long line);
+        (*section_switch)(yasm_object *object, yasm_valparamhead *valparams,
+                          /*@null@*/ yasm_valparamhead *objext_valparams,
+                          unsigned long line);
 };
 
 /** Create object format.
- * \param module	object format module
- * \param object	object
+ * \param module        object format module
+ * \param object        object
  * \return NULL if architecture/machine combination not supported.
  */
 /*@null@*/ /*@only@*/ yasm_objfmt *yasm_objfmt_create
@@ -122,18 +122,18 @@ struct yasm_objfmt_module {
 /** Write out (post-optimized) sections to the object file.
  * This function may call yasm_symrec_* functions as necessary (including
  * yasm_symrec_traverse()) to retrieve symbolic information.
- * \param object	object
- * \param f		output object file
- * \param all_syms	if nonzero, all symbols should be included in
- *			the object file
- * \param errwarns	error/warning set
+ * \param object        object
+ * \param f             output object file
+ * \param all_syms      if nonzero, all symbols should be included in
+ *                      the object file
+ * \param errwarns      error/warning set
  * \note Errors and warnings are stored into errwarns.
  */
 void yasm_objfmt_output(yasm_object *object, FILE *f, int all_syms,
-			yasm_errwarns *errwarns);
+                        yasm_errwarns *errwarns);
 
 /** Cleans up any allocated object format memory.
- * \param objfmt	object format
+ * \param objfmt        object format
  */
 void yasm_objfmt_destroy(/*@only@*/ yasm_objfmt *objfmt);
 
@@ -146,10 +146,10 @@ yasm_section *yasm_objfmt_add_default_section(yasm_object *object);
 /** Switch object file sections.  The first val of the valparams should
  * be the section name.  Calls yasm_object_get_general() to actually get
  * the section.
- * \param object		object
- * \param valparams		value/parameters
- * \param objext_valparams	object format-specific value/parameters
- * \param line			virtual line (from yasm_linemap)
+ * \param object                object
+ * \param valparams             value/parameters
+ * \param objext_valparams      object format-specific value/parameters
+ * \param line                  virtual line (from yasm_linemap)
  * \return NULL on error, otherwise new section.
  */
 /*@observer@*/ /*@null@*/ yasm_section *yasm_objfmt_section_switch
@@ -164,15 +164,15 @@ yasm_section *yasm_objfmt_add_default_section(yasm_object *object);
 
 #define yasm_objfmt_output(object, f, all_syms, ews) \
     ((yasm_objfmt_base *)((object)->objfmt))->module->output \
-	(object, f, all_syms, ews)
+        (object, f, all_syms, ews)
 #define yasm_objfmt_destroy(objfmt) \
     ((yasm_objfmt_base *)objfmt)->module->destroy(objfmt)
 #define yasm_objfmt_section_switch(object, vpms, oe_vpms, line) \
     ((yasm_objfmt_base *)((object)->objfmt))->module->section_switch \
-	(object, vpms, oe_vpms, line)
+        (object, vpms, oe_vpms, line)
 #define yasm_objfmt_add_default_section(object) \
     ((yasm_objfmt_base *)((object)->objfmt))->module->add_default_section \
-	(object)
+        (object)
 
 #endif
 

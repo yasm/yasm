@@ -43,7 +43,7 @@
 /* Options Parser */
 int
 parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts,
-	      void (*print_error) (const char *fmt, ...))
+              void (*print_error) (const char *fmt, ...))
 {
     int errors = 0, warnings = 0;
     size_t i;
@@ -53,99 +53,99 @@ parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts,
 
   fail:
     while (--argc) {
-	argv++;
+        argv++;
 
-	if (argv[0][0] == '-') {	/* opt */
-	    got_it = 0;
-	    if (argv[0][1] == '-') {	/* lopt */
-		if (argv[0][2] == '\0') {   /* --, end of options */
-		    /* Handle rest of args as non-options */
-		    while (--argc) {
-			argv++;
-			if (not_an_option_handler(argv[0]))
-			    errors++;
-		    }
-		    return errors;
-		}
+        if (argv[0][0] == '-') {        /* opt */
+            got_it = 0;
+            if (argv[0][1] == '-') {    /* lopt */
+                if (argv[0][2] == '\0') {   /* --, end of options */
+                    /* Handle rest of args as non-options */
+                    while (--argc) {
+                        argv++;
+                        if (not_an_option_handler(argv[0]))
+                            errors++;
+                    }
+                    return errors;
+                }
 
-		for (i = 0; i < nopts; i++) {
-		    if (options[i].lopt &&
-			strncmp(&argv[0][2], options[i].lopt,
-				strlen(options[i].lopt)) == 0) {
-			char *param;
+                for (i = 0; i < nopts; i++) {
+                    if (options[i].lopt &&
+                        strncmp(&argv[0][2], options[i].lopt,
+                                strlen(options[i].lopt)) == 0) {
+                        char *param;
 
-			if (options[i].takes_param) {
-			    param = strchr(&argv[0][2], '=');
-			    if (!param) {
-				print_error(
-				    _("option `--%s' needs an argument!"),
-				    options[i].lopt);
-				errors++;
-				goto fail;
-			    } else {
-				*param = '\0';
-				param++;
-			    }
-			} else
-			    param = NULL;
+                        if (options[i].takes_param) {
+                            param = strchr(&argv[0][2], '=');
+                            if (!param) {
+                                print_error(
+                                    _("option `--%s' needs an argument!"),
+                                    options[i].lopt);
+                                errors++;
+                                goto fail;
+                            } else {
+                                *param = '\0';
+                                param++;
+                            }
+                        } else
+                            param = NULL;
 
-			if (!options[i].
-			    handler(&argv[0][2], param, options[i].extra))
-			    got_it = 1;
-			break;
-		    }
-		}
-		if (!got_it && !other_option_handler(argv[0]))
-		    got_it = 1;
-		if (!got_it) {
-		    print_error(_("warning: unrecognized option `%s'"),
-				argv[0]);
-		    warnings++;
-		}
-	    } else if (argv[0][1] == '\0') {   /* just -, is non-option */
-		if (not_an_option_handler(argv[0]))
-		    errors++;
-	    } else {		/* sopt */
-		for (i = 0; i < nopts; i++) {
-		    if (argv[0][1] == options[i].sopt) {
-			char *cmd = &argv[0][1];
-			char *param;
+                        if (!options[i].
+                            handler(&argv[0][2], param, options[i].extra))
+                            got_it = 1;
+                        break;
+                    }
+                }
+                if (!got_it && !other_option_handler(argv[0]))
+                    got_it = 1;
+                if (!got_it) {
+                    print_error(_("warning: unrecognized option `%s'"),
+                                argv[0]);
+                    warnings++;
+                }
+            } else if (argv[0][1] == '\0') {   /* just -, is non-option */
+                if (not_an_option_handler(argv[0]))
+                    errors++;
+            } else {            /* sopt */
+                for (i = 0; i < nopts; i++) {
+                    if (argv[0][1] == options[i].sopt) {
+                        char *cmd = &argv[0][1];
+                        char *param;
 
-			if (options[i].takes_param) {
-			    param = argv[1];
-			    if (argv[0][2] != '\0')
-				param = &argv[0][2];
-			    else if (param == NULL || *param == '-') {
-				print_error(
-				    _("option `-%c' needs an argument!"),
-				    options[i].sopt);
-				errors++;
-				goto fail;
-			    } else {
-				argc--;
-				argv++;
-			    }
-			} else
-			    param = NULL;
+                        if (options[i].takes_param) {
+                            param = argv[1];
+                            if (argv[0][2] != '\0')
+                                param = &argv[0][2];
+                            else if (param == NULL || *param == '-') {
+                                print_error(
+                                    _("option `-%c' needs an argument!"),
+                                    options[i].sopt);
+                                errors++;
+                                goto fail;
+                            } else {
+                                argc--;
+                                argv++;
+                            }
+                        } else
+                            param = NULL;
 
-			if (!options[i].handler(cmd, param, options[i].extra))
-			    got_it = 1;
-			break;
-		    }
-		}
-		if (!got_it && !other_option_handler(argv[0]))
-		    got_it = 1;
-		if (!got_it) {
-		    print_error(_("warning: unrecognized option `%s'"),
-				argv[0]);
-		    warnings++;
-		}
-	    }
-	} else {    /* not an option, then it should be a file or something */
+                        if (!options[i].handler(cmd, param, options[i].extra))
+                            got_it = 1;
+                        break;
+                    }
+                }
+                if (!got_it && !other_option_handler(argv[0]))
+                    got_it = 1;
+                if (!got_it) {
+                    print_error(_("warning: unrecognized option `%s'"),
+                                argv[0]);
+                    warnings++;
+                }
+            }
+        } else {    /* not an option, then it should be a file or something */
 
-	    if (not_an_option_handler(argv[0]))
-		errors++;
-	}
+            if (not_an_option_handler(argv[0]))
+                errors++;
+        }
     }
 
     DEBUG((stderr, "parse_cmdline: finished\n"));
@@ -161,50 +161,50 @@ help_msg(const char *msg, const char *tail, opt_option *options, size_t nopts)
     printf("%s", gettext(msg));
 
     for (i = 0; i < nopts; i++) {
-	size_t shortopt_len = 0;
-	size_t longopt_len = 0;
+        size_t shortopt_len = 0;
+        size_t longopt_len = 0;
 
-	optbuf[0] = 0;
-	optopt[0] = 0;
+        optbuf[0] = 0;
+        optopt[0] = 0;
 
-	if (options[i].takes_param) {
-	    if (options[i].sopt) {
-		sprintf(optbuf, "-%c <%s>", options[i].sopt,
-			options[i].param_desc ? options[i].
-			param_desc : _("param"));
-		shortopt_len = strlen(optbuf);
-	    }
-	    if (options[i].sopt && options[i].lopt)
-		strcat(optbuf, ", ");
-	    if (options[i].lopt) {
-		sprintf(optopt, "--%s=<%s>", options[i].lopt,
-			options[i].param_desc ? options[i].
-			param_desc : _("param"));
-		strcat(optbuf, optopt);
-		longopt_len = strlen(optbuf);
-	    }
-	} else {
-	    if (options[i].sopt) {
-		sprintf(optbuf, "-%c", options[i].sopt);
-		shortopt_len = strlen(optbuf);
-	    }
-	    if (options[i].sopt && options[i].lopt)
-		strcat(optbuf, ", ");
-	    if (options[i].lopt) {
-		sprintf(optopt, "--%s", options[i].lopt);
-		strcat(optbuf, optopt);
-		longopt_len = strlen(optbuf);
-	    }
-	}
+        if (options[i].takes_param) {
+            if (options[i].sopt) {
+                sprintf(optbuf, "-%c <%s>", options[i].sopt,
+                        options[i].param_desc ? options[i].
+                        param_desc : _("param"));
+                shortopt_len = strlen(optbuf);
+            }
+            if (options[i].sopt && options[i].lopt)
+                strcat(optbuf, ", ");
+            if (options[i].lopt) {
+                sprintf(optopt, "--%s=<%s>", options[i].lopt,
+                        options[i].param_desc ? options[i].
+                        param_desc : _("param"));
+                strcat(optbuf, optopt);
+                longopt_len = strlen(optbuf);
+            }
+        } else {
+            if (options[i].sopt) {
+                sprintf(optbuf, "-%c", options[i].sopt);
+                shortopt_len = strlen(optbuf);
+            }
+            if (options[i].sopt && options[i].lopt)
+                strcat(optbuf, ", ");
+            if (options[i].lopt) {
+                sprintf(optopt, "--%s", options[i].lopt);
+                strcat(optbuf, optopt);
+                longopt_len = strlen(optbuf);
+            }
+        }
 
-	/* split [-s <desc>], [--long <desc>] if it destroys columns */
-	if (shortopt_len && longopt_len && longopt_len > 22) {
-	    optbuf[shortopt_len] = '\0';
-	    printf("    %-22s  %s\n", optopt, gettext(options[i].description));
-	    printf("     %s\n", optbuf);
-	}
-	else
-	    printf("    %-22s  %s\n", optbuf, gettext(options[i].description));
+        /* split [-s <desc>], [--long <desc>] if it destroys columns */
+        if (shortopt_len && longopt_len && longopt_len > 22) {
+            optbuf[shortopt_len] = '\0';
+            printf("    %-22s  %s\n", optopt, gettext(options[i].description));
+            printf("     %s\n", optbuf);
+        }
+        else
+            printf("    %-22s  %s\n", optbuf, gettext(options[i].description));
     }
 
     printf("%s", gettext(tail));

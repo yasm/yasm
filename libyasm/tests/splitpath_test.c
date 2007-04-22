@@ -114,24 +114,24 @@ run_test(Test_Entry *test)
     const char *funcname;
 
     if (test->splitpath == &yasm__splitpath_unix)
-	funcname = "unix";
+        funcname = "unix";
     else
-	funcname = "win";
+        funcname = "win";
 
     headlen = test->splitpath(test->input, &tail);
     if (headlen != test->headlen) {
-	sprintf(failmsg,
-		"splitpath_%s(\"%s\") bad head len: expected %lu, got %lu!",
-		funcname, test->input, (unsigned long)test->headlen,
-		(unsigned long)headlen);
-	return 1;
+        sprintf(failmsg,
+                "splitpath_%s(\"%s\") bad head len: expected %lu, got %lu!",
+                funcname, test->input, (unsigned long)test->headlen,
+                (unsigned long)headlen);
+        return 1;
     }
 
     if (strcmp(tail, test->tail) != 0) {
-	sprintf(failmsg,
-		"splitpath_%s(\"%s\") bad tail: expected \"%s\", got \"%s\"!",
-		funcname, test->input, test->tail, tail);
-	return 1;
+        sprintf(failmsg,
+                "splitpath_%s(\"%s\") bad tail: expected \"%s\", got \"%s\"!",
+                funcname, test->input, test->tail, tail);
+        return 1;
     }
 
     return 0;
@@ -147,15 +147,15 @@ main(void)
     failed[0] = '\0';
     printf("Test splitpath_test: ");
     for (i=0; i<numtests; i++) {
-	int fail = run_test(&tests[i]);
-	printf("%c", fail>0 ? 'F':'.');
-	fflush(stdout);
-	if (fail)
-	    sprintf(failed, "%s ** F: %s\n", failed, failmsg);
-	nf += fail;
+        int fail = run_test(&tests[i]);
+        printf("%c", fail>0 ? 'F':'.');
+        fflush(stdout);
+        if (fail)
+            sprintf(failed, "%s ** F: %s\n", failed, failmsg);
+        nf += fail;
     }
 
     printf(" +%d-%d/%d %d%%\n%s",
-	   numtests-nf, nf, numtests, 100*(numtests-nf)/numtests, failed);
+           numtests-nf, nf, numtests, 100*(numtests-nf)/numtests, failed);
     return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

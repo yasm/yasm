@@ -122,11 +122,11 @@ ub4 phash_log2(ub4 x);
 
 /* Given the keys, scramble[], and hash mode, find the perfect hash */
 void findhash(bstuff **tabb, hstuff **tabh, ub4 *alen, ub4 *blen, ub4 *salt,
-		gencode *final, ub4 *scramble, ub4 *smax, key *keys, ub4 nkeys, 
-		hashform *form);
+                gencode *final, ub4 *scramble, ub4 *smax, key *keys, ub4 nkeys, 
+                hashform *form);
 
 /* private, but in a different file because it's excessively verbose */
 int inithex(key *keys, ub4 nkeys, ub4 alen, ub4 blen, ub4 smax, ub4 salt,
-	    gencode *final, hashform *form);
+            gencode *final, hashform *form);
 
 #endif /* PERFECT */

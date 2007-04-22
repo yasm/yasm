@@ -92,16 +92,16 @@ yasm_operand_create_imm(/*@only@*/ yasm_expr *val)
 
     reg = yasm_expr_get_reg(&val, 0);
     if (reg) {
-	retval = yasm_operand_create_reg(*reg);
-	yasm_expr_destroy(val);
+        retval = yasm_operand_create_reg(*reg);
+        yasm_expr_destroy(val);
     } else {
-	retval = yasm_xmalloc(sizeof(yasm_insn_operand));
-	retval->type = YASM_INSN__OPERAND_IMM;
-	retval->data.val = val;
-	retval->targetmod = 0;
-	retval->size = 0;
-	retval->deref = 0;
-	retval->strict = 0;
+        retval = yasm_xmalloc(sizeof(yasm_insn_operand));
+        retval->type = YASM_INSN__OPERAND_IMM;
+        retval->data.val = val;
+        retval->targetmod = 0;
+        retval->size = 0;
+        retval->deref = 0;
+        retval->strict = 0;
     }
 
     return retval;
@@ -109,34 +109,34 @@ yasm_operand_create_imm(/*@only@*/ yasm_expr *val)
 
 void
 yasm_operand_print(const yasm_insn_operand *op, FILE *f, int indent_level,
-		   yasm_arch *arch)
+                   yasm_arch *arch)
 {
     switch (op->type) {
-	case YASM_INSN__OPERAND_REG:
-	    fprintf(f, "%*sReg=", indent_level, "");
-	    yasm_arch_reg_print(arch, op->data.reg, f);
-	    fprintf(f, "\n");
-	    break;
-	case YASM_INSN__OPERAND_SEGREG:
-	    fprintf(f, "%*sSegReg=", indent_level, "");
-	    yasm_arch_segreg_print(arch, op->data.reg, f);
-	    fprintf(f, "\n");
-	    break;
-	case YASM_INSN__OPERAND_MEMORY:
-	    fprintf(f, "%*sMemory=\n", indent_level, "");
-	    yasm_ea_print(op->data.ea, f, indent_level);
-	    break;
-	case YASM_INSN__OPERAND_IMM:
-	    fprintf(f, "%*sImm=", indent_level, "");
-	    yasm_expr_print(op->data.val, f);
-	    fprintf(f, "\n");
-	    break;
+        case YASM_INSN__OPERAND_REG:
+            fprintf(f, "%*sReg=", indent_level, "");
+            yasm_arch_reg_print(arch, op->data.reg, f);
+            fprintf(f, "\n");
+            break;
+        case YASM_INSN__OPERAND_SEGREG:
+            fprintf(f, "%*sSegReg=", indent_level, "");
+            yasm_arch_segreg_print(arch, op->data.reg, f);
+            fprintf(f, "\n");
+            break;
+        case YASM_INSN__OPERAND_MEMORY:
+            fprintf(f, "%*sMemory=\n", indent_level, "");
+            yasm_ea_print(op->data.ea, f, indent_level);
+            break;
+        case YASM_INSN__OPERAND_IMM:
+            fprintf(f, "%*sImm=", indent_level, "");
+            yasm_expr_print(op->data.val, f);
+            fprintf(f, "\n");
+            break;
     }
     fprintf(f, "%*sTargetMod=%lx\n", indent_level+1, "",
-	    (unsigned long)op->targetmod);
+            (unsigned long)op->targetmod);
     fprintf(f, "%*sSize=%u\n", indent_level+1, "", op->size);
     fprintf(f, "%*sDeref=%d, Strict=%d\n", indent_level+1, "", (int)op->deref,
-	    (int)op->strict);
+            (int)op->strict);
 }
 
 void
@@ -146,43 +146,43 @@ yasm_ops_delete(yasm_insn_operands *headp, int content)
 
     cur = STAILQ_FIRST(headp);
     while (cur) {
-	next = STAILQ_NEXT(cur, link);
-	if (content)
-	    switch (cur->type) {
-		case YASM_INSN__OPERAND_MEMORY:
-		    yasm_ea_destroy(cur->data.ea);
-		    break;
-		case YASM_INSN__OPERAND_IMM:
-		    yasm_expr_destroy(cur->data.val);
-		    break;
-		default:
-		    break;
-	    }
-	yasm_xfree(cur);
-	cur = next;
+        next = STAILQ_NEXT(cur, link);
+        if (content)
+            switch (cur->type) {
+                case YASM_INSN__OPERAND_MEMORY:
+                    yasm_ea_destroy(cur->data.ea);
+                    break;
+                case YASM_INSN__OPERAND_IMM:
+                    yasm_expr_destroy(cur->data.val);
+                    break;
+                default:
+                    break;
+            }
+        yasm_xfree(cur);
+        cur = next;
     }
     STAILQ_INIT(headp);
 }
 
 /*@null@*/ yasm_insn_operand *
 yasm_ops_append(yasm_insn_operands *headp,
-		/*@returned@*/ /*@null@*/ yasm_insn_operand *op)
+                /*@returned@*/ /*@null@*/ yasm_insn_operand *op)
 {
     if (op) {
-	STAILQ_INSERT_TAIL(headp, op, link);
-	return op;
+        STAILQ_INSERT_TAIL(headp, op, link);
+        return op;
     }
     return (yasm_insn_operand *)NULL;
 }
 
 void
 yasm_ops_print(const yasm_insn_operands *headp, FILE *f, int indent_level,
-	       yasm_arch *arch)
+               yasm_arch *arch)
 {
     yasm_insn_operand *cur;
 
     STAILQ_FOREACH (cur, headp, link)
-	yasm_operand_print(cur, f, indent_level, arch);
+        yasm_operand_print(cur, f, indent_level, arch);
 }
 
 yasm_insn_operands *

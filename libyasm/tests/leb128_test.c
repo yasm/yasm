@@ -91,38 +91,38 @@ run_output_test(Test_Entry *test)
     yasm_xfree(valstr);
 
     if (test->negate)
-	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
+        yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
 
     size = yasm_intnum_size_leb128(intn, test->sign);
     if (size != test->outsize) {
-	yasm_intnum_destroy(intn);
-	sprintf(failmsg, "%ssigned %s%s size() bad size: expected %lu, got %lu!",
-		test->sign?"":"un", test->negate?"-":"", test->input,
-		test->outsize, size);
-	return 1;
+        yasm_intnum_destroy(intn);
+        sprintf(failmsg, "%ssigned %s%s size() bad size: expected %lu, got %lu!",
+                test->sign?"":"un", test->negate?"-":"", test->input,
+                test->outsize, size);
+        return 1;
     }
 
     for (i=0; i<sizeof(out); i++)
-	out[i] = 0xFF;
+        out[i] = 0xFF;
     size = yasm_intnum_get_leb128(intn, out, test->sign);
     if (size != test->outsize) {
-	yasm_intnum_destroy(intn);
-	sprintf(failmsg, "%ssigned %s%s get() bad size: expected %lu, got %lu!",
-		test->sign?"":"un", test->negate?"-":"", test->input,
-		test->outsize, size);
-	return 1;
+        yasm_intnum_destroy(intn);
+        sprintf(failmsg, "%ssigned %s%s get() bad size: expected %lu, got %lu!",
+                test->sign?"":"un", test->negate?"-":"", test->input,
+                test->outsize, size);
+        return 1;
     }
 
     bad = 0;
     for (i=0; i<test->outsize && !bad; i++) {
-	if (out[i] != test->result[i])
-	    bad = 1;
+        if (out[i] != test->result[i])
+            bad = 1;
     }
     if (bad) {
-	yasm_intnum_destroy(intn);
-	sprintf(failmsg, "%ssigned %s%s get() bad output!",
-		test->sign?"":"un", test->negate?"-":"", test->input);
-	return 1;
+        yasm_intnum_destroy(intn);
+        sprintf(failmsg, "%ssigned %s%s get() bad output!",
+                test->sign?"":"un", test->negate?"-":"", test->input);
+        return 1;
     }
 
     yasm_intnum_destroy(intn);
@@ -140,25 +140,25 @@ run_input_test(Test_Entry *test)
     yasm_xfree(valstr);
 
     if (test->negate)
-	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
+        yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
 
     testn = yasm_intnum_create_leb128(test->result, test->sign, &size);
     if (size != test->outsize) {
-	yasm_intnum_destroy(testn);
-	yasm_intnum_destroy(intn);
-	sprintf(failmsg, "%ssigned %s%s create() bad size: expected %lu, got %lu!",
-		test->sign?"":"un", test->negate?"-":"", test->input,
-		test->outsize, size);
-	return 1;
+        yasm_intnum_destroy(testn);
+        yasm_intnum_destroy(intn);
+        sprintf(failmsg, "%ssigned %s%s create() bad size: expected %lu, got %lu!",
+                test->sign?"":"un", test->negate?"-":"", test->input,
+                test->outsize, size);
+        return 1;
     }
 
     yasm_intnum_calc(intn, YASM_EXPR_EQ, testn);
     if (!yasm_intnum_is_pos1(intn)) {
-	yasm_intnum_destroy(testn);
-	yasm_intnum_destroy(intn);
-	sprintf(failmsg, "%ssigned %s%s create() bad output!",
-		test->sign?"":"un", test->negate?"-":"", test->input);
-	return 1;
+        yasm_intnum_destroy(testn);
+        yasm_intnum_destroy(intn);
+        sprintf(failmsg, "%ssigned %s%s create() bad output!",
+                test->sign?"":"un", test->negate?"-":"", test->input);
+        return 1;
     }
 
     yasm_intnum_destroy(testn);
@@ -174,33 +174,33 @@ main(void)
     int i;
 
     if (BitVector_Boot() != ErrCode_Ok)
-	return EXIT_FAILURE;
+        return EXIT_FAILURE;
     yasm_intnum_initialize();
 
     failed[0] = '\0';
     printf("Test leb128_test: ");
     for (i=0; i<numtests; i++) {
-	int fail;
+        int fail;
 
-	fail = run_output_test(&tests[i]);
-	printf("%c", fail>0 ? 'F':'.');
-	fflush(stdout);
-	if (fail)
-	    sprintf(failed, "%s ** F: %s\n", failed, failmsg);
-	nf += fail;
+        fail = run_output_test(&tests[i]);
+        printf("%c", fail>0 ? 'F':'.');
+        fflush(stdout);
+        if (fail)
+            sprintf(failed, "%s ** F: %s\n", failed, failmsg);
+        nf += fail;
 
-	fail = run_input_test(&tests[i]);
-	printf("%c", fail>0 ? 'F':'.');
-	fflush(stdout);
-	if (fail)
-	    sprintf(failed, "%s ** F: %s\n", failed, failmsg);
-	nf += fail;
+        fail = run_input_test(&tests[i]);
+        printf("%c", fail>0 ? 'F':'.');
+        fflush(stdout);
+        if (fail)
+            sprintf(failed, "%s ** F: %s\n", failed, failmsg);
+        nf += fail;
     }
 
     yasm_intnum_cleanup();
 
     printf(" +%d-%d/%d %d%%\n%s",
-	   numtests*2-nf, nf, numtests*2, 100*(numtests*2-nf)/(numtests*2),
-	   failed);
+           numtests*2-nf, nf, numtests*2, 100*(numtests*2-nf)/(numtests*2),
+           failed);
     return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

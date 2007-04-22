@@ -86,7 +86,7 @@ filename_delete_one(/*@only@*/ void *d)
 
 void
 yasm_linemap_set(yasm_linemap *linemap, const char *filename,
-		 unsigned long file_line, unsigned long line_inc)
+                 unsigned long file_line, unsigned long line_inc)
 {
     char *copy;
     int replace = 0;
@@ -94,11 +94,11 @@ yasm_linemap_set(yasm_linemap *linemap, const char *filename,
 
     /* Create a new mapping in the map */
     if (linemap->map->size >= linemap->map->allocated) {
-	/* allocate another size bins when full for 2x space */
-	linemap->map->vector =
-	    yasm_xrealloc(linemap->map->vector, 2*linemap->map->allocated
-			  *sizeof(line_mapping));
-	linemap->map->allocated *= 2;
+        /* allocate another size bins when full for 2x space */
+        linemap->map->vector =
+            yasm_xrealloc(linemap->map->vector, 2*linemap->map->allocated
+                          *sizeof(line_mapping));
+        linemap->map->allocated *= 2;
     }
     mapping = &linemap->map->vector[linemap->map->size];
     linemap->map->size++;
@@ -106,19 +106,19 @@ yasm_linemap_set(yasm_linemap *linemap, const char *filename,
     /* Fill it */
 
     if (!filename) {
-	if (linemap->map->size >= 2)
-	    mapping->filename =
-		linemap->map->vector[linemap->map->size-2].filename;
-	else
-	    filename = "unknown";
+        if (linemap->map->size >= 2)
+            mapping->filename =
+                linemap->map->vector[linemap->map->size-2].filename;
+        else
+            filename = "unknown";
     }
     if (filename) {
-	/* Copy the filename (via shared storage) */
-	copy = yasm__xstrdup(filename);
-	/*@-aliasunique@*/
-	mapping->filename = HAMT_insert(linemap->filenames, copy, copy,
-					&replace, filename_delete_one);
-	/*@=aliasunique@*/
+        /* Copy the filename (via shared storage) */
+        copy = yasm__xstrdup(filename);
+        /*@-aliasunique@*/
+        mapping->filename = HAMT_insert(linemap->filenames, copy, copy,
+                                        &replace, filename_delete_one);
+        /*@=aliasunique@*/
     }
 
     mapping->line = linemap->current;
@@ -128,7 +128,7 @@ yasm_linemap_set(yasm_linemap *linemap, const char *filename,
 
 unsigned long
 yasm_linemap_poke(yasm_linemap *linemap, const char *filename,
-		  unsigned long file_line)
+                  unsigned long file_line)
 {
     unsigned long line;
     line_mapping *mapping = &linemap->map->vector[linemap->map->size-1];
@@ -140,7 +140,7 @@ yasm_linemap_poke(yasm_linemap *linemap, const char *filename,
 
     linemap->current++;
     yasm_linemap_set(linemap, mapping->filename, mapping->file_line,
-		     mapping->line_inc);
+                     mapping->line_inc);
 
     return line;
 }
@@ -164,10 +164,10 @@ yasm_linemap_create(void)
     /* initialize source line information array */
     linemap->source_info_size = 2;
     linemap->source_info = yasm_xmalloc(linemap->source_info_size *
-					sizeof(line_source_info));
+                                        sizeof(line_source_info));
     for (i=0; i<linemap->source_info_size; i++) {
-	linemap->source_info[i].bc = NULL;
-	linemap->source_info[i].source = NULL;
+        linemap->source_info[i].bc = NULL;
+        linemap->source_info[i].source = NULL;
     }
 
     return linemap;
@@ -178,18 +178,18 @@ yasm_linemap_destroy(yasm_linemap *linemap)
 {
     size_t i;
     for (i=0; i<linemap->source_info_size; i++) {
-	if (linemap->source_info[i].source)
-	    yasm_xfree(linemap->source_info[i].source);
+        if (linemap->source_info[i].source)
+            yasm_xfree(linemap->source_info[i].source);
     }
     yasm_xfree(linemap->source_info);
 
     if (linemap->map) {
-	yasm_xfree(linemap->map->vector);
-	yasm_xfree(linemap->map);
+        yasm_xfree(linemap->map->vector);
+        yasm_xfree(linemap->map);
     }
 
     if (linemap->filenames)
-	HAMT_destroy(linemap->filenames, filename_delete_one);
+        HAMT_destroy(linemap->filenames, filename_delete_one);
 
     yasm_xfree(linemap);
 }
@@ -202,24 +202,24 @@ yasm_linemap_get_current(yasm_linemap *linemap)
 
 void
 yasm_linemap_add_source(yasm_linemap *linemap, yasm_bytecode *bc,
-			const char *source)
+                        const char *source)
 {
     size_t i;
 
     while (linemap->current > linemap->source_info_size) {
-	/* allocate another size bins when full for 2x space */
-	linemap->source_info = yasm_xrealloc(linemap->source_info,
-	    2*linemap->source_info_size*sizeof(line_source_info));
-	for (i=linemap->source_info_size; i<linemap->source_info_size*2; i++) {
-	    linemap->source_info[i].bc = NULL;
-	    linemap->source_info[i].source = NULL;
-	}
-	linemap->source_info_size *= 2;
+        /* allocate another size bins when full for 2x space */
+        linemap->source_info = yasm_xrealloc(linemap->source_info,
+            2*linemap->source_info_size*sizeof(line_source_info));
+        for (i=linemap->source_info_size; i<linemap->source_info_size*2; i++) {
+            linemap->source_info[i].bc = NULL;
+            linemap->source_info[i].source = NULL;
+        }
+        linemap->source_info_size *= 2;
     }
 
     /* Delete existing info for that line (if any) */
     if (linemap->source_info[linemap->current-1].source)
-	yasm_xfree(linemap->source_info[linemap->current-1].source);
+        yasm_xfree(linemap->source_info[linemap->current-1].source);
 
     linemap->source_info[linemap->current-1].bc = bc;
     linemap->source_info[linemap->current-1].source = yasm__xstrdup(source);
@@ -233,7 +233,7 @@ yasm_linemap_goto_next(yasm_linemap *linemap)
 
 void
 yasm_linemap_lookup(yasm_linemap *linemap, unsigned long line,
-		    const char **filename, unsigned long *file_line)
+                    const char **filename, unsigned long *file_line)
 {
     line_mapping *mapping;
     unsigned long vindex, step;
@@ -246,12 +246,12 @@ yasm_linemap_lookup(yasm_linemap *linemap, unsigned long line,
     /* start step as the greatest power of 2 <= size */
     step = 1;
     while (step*2<=linemap->map->size)
-	step*=2;
+        step*=2;
     while (step>0) {
-	if (vindex+step < linemap->map->size
-		&& linemap->map->vector[vindex+step].line <= line)
-	    vindex += step;
-	step /= 2;
+        if (vindex+step < linemap->map->size
+                && linemap->map->vector[vindex+step].line <= line)
+            vindex += step;
+        step /= 2;
     }
     mapping = &linemap->map->vector[vindex];
 
@@ -261,19 +261,19 @@ yasm_linemap_lookup(yasm_linemap *linemap, unsigned long line,
 
 int
 yasm_linemap_traverse_filenames(yasm_linemap *linemap, /*@null@*/ void *d,
-				int (*func) (const char *filename, void *d))
+                                int (*func) (const char *filename, void *d))
 {
     return HAMT_traverse(linemap->filenames, d, (int (*) (void *, void *))func);
 }
 
 int
 yasm_linemap_get_source(yasm_linemap *linemap, unsigned long line,
-			yasm_bytecode **bcp, const char **sourcep)
+                        yasm_bytecode **bcp, const char **sourcep)
 {
     if (line > linemap->source_info_size) {
-	*bcp = NULL;
-	*sourcep = NULL;
-	return 1;
+        *bcp = NULL;
+        *sourcep = NULL;
+        return 1;
     }
 
     *bcp = linemap->source_info[line-1].bc;

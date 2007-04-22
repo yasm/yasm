@@ -52,30 +52,30 @@ yasm__assoc_data_create(void)
     assoc_data->size = 0;
     assoc_data->alloc = 2;
     assoc_data->vector = yasm_xmalloc(assoc_data->alloc *
-				      sizeof(assoc_data_item));
+                                      sizeof(assoc_data_item));
 
     return assoc_data;
 }
 
 void *
 yasm__assoc_data_get(yasm__assoc_data *assoc_data,
-		     const yasm_assoc_data_callback *callback)
+                     const yasm_assoc_data_callback *callback)
 {
     size_t i;
 
     if (!assoc_data)
-	return NULL;
+        return NULL;
 
     for (i=0; i<assoc_data->size; i++) {
-	if (assoc_data->vector[i].callback == callback)
-	    return assoc_data->vector[i].data;
+        if (assoc_data->vector[i].callback == callback)
+            return assoc_data->vector[i].data;
     }
     return NULL;
 }
 
 yasm__assoc_data *
 yasm__assoc_data_add(yasm__assoc_data *assoc_data_arg,
-		     const yasm_assoc_data_callback *callback, void *data)
+                     const yasm_assoc_data_callback *callback, void *data)
 {
     yasm__assoc_data *assoc_data;
     assoc_data_item *item = NULL;
@@ -83,33 +83,33 @@ yasm__assoc_data_add(yasm__assoc_data *assoc_data_arg,
 
     /* Create a new assoc_data if necessary */
     if (assoc_data_arg)
-	assoc_data = assoc_data_arg;
+        assoc_data = assoc_data_arg;
     else
-	assoc_data = yasm__assoc_data_create();
+        assoc_data = yasm__assoc_data_create();
 
     /* See if there's already assocated data for this callback */
     for (i=0; i<assoc_data->size; i++) {
-	if (assoc_data->vector[i].callback == callback)
-	    item = &assoc_data->vector[i];
+        if (assoc_data->vector[i].callback == callback)
+            item = &assoc_data->vector[i];
     }
 
     /* No?  Then append a new one */
     if (!item) {
-	assoc_data->size++;
-	if (assoc_data->size > assoc_data->alloc) {
-	    assoc_data->alloc *= 2;
-	    assoc_data->vector =
-		yasm_xrealloc(assoc_data->vector,
-			      assoc_data->alloc * sizeof(assoc_data_item));
-	}
-	item = &assoc_data->vector[assoc_data->size-1];
-	item->callback = callback;
-	item->data = NULL;
+        assoc_data->size++;
+        if (assoc_data->size > assoc_data->alloc) {
+            assoc_data->alloc *= 2;
+            assoc_data->vector =
+                yasm_xrealloc(assoc_data->vector,
+                              assoc_data->alloc * sizeof(assoc_data_item));
+        }
+        item = &assoc_data->vector[assoc_data->size-1];
+        item->callback = callback;
+        item->data = NULL;
     }
 
     /* Delete existing data (if any) */
     if (item->data && item->data != data)
-	item->callback->destroy(item->data);
+        item->callback->destroy(item->data);
 
     item->data = data;
 
@@ -122,17 +122,17 @@ yasm__assoc_data_destroy(yasm__assoc_data *assoc_data)
     size_t i;
 
     if (!assoc_data)
-	return;
+        return;
 
     for (i=0; i<assoc_data->size; i++)
-	assoc_data->vector[i].callback->destroy(assoc_data->vector[i].data);
+        assoc_data->vector[i].callback->destroy(assoc_data->vector[i].data);
     yasm_xfree(assoc_data->vector);
     yasm_xfree(assoc_data);
 }
 
 void
 yasm__assoc_data_print(const yasm__assoc_data *assoc_data, FILE *f,
-		       int indent_level)
+                       int indent_level)
 {
     /*TODO*/
 }

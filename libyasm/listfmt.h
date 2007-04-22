@@ -60,7 +60,7 @@ typedef struct yasm_listfmt_module {
      * \return NULL if unable to initialize.
      */
     /*@null@*/ /*@only@*/ yasm_listfmt * (*create)
-	(const char *in_filename, const char *obj_filename);
+        (const char *in_filename, const char *obj_filename);
 
     /** Module-level implementation of yasm_listfmt_destroy().
      * Call yasm_listfmt_destroy() instead of calling this function.
@@ -71,7 +71,7 @@ typedef struct yasm_listfmt_module {
      * Call yasm_listfmt_output() instead of calling this function.
      */
     void (*output) (yasm_listfmt *listfmt, FILE *f, yasm_linemap *linemap,
-		    yasm_arch *arch);
+                    yasm_arch *arch);
 } yasm_listfmt_module;
 
 /** Get the keyword used to select a list format.
@@ -83,7 +83,7 @@ const char *yasm_listfmt_keyword(const yasm_listfmt *listfmt);
 /** Initialize list format for use.  Must call before any other list
  * format functions.  The filenames are provided solely for informational
  * purposes.
- * \param module	list format module
+ * \param module        list format module
  * \param in_filename   primary input filename
  * \param obj_filename  object filename
  * \return NULL if object format does not provide needed support.
@@ -93,19 +93,19 @@ const char *yasm_listfmt_keyword(const yasm_listfmt *listfmt);
      const char *obj_filename);
 
 /** Cleans up any allocated list format memory.
- * \param listfmt	list format
+ * \param listfmt       list format
  */
 void yasm_listfmt_destroy(/*@only@*/ yasm_listfmt *listfmt);
 
 /** Write out list to the list file.
  * This function may call all read-only yasm_* functions as necessary.
- * \param listfmt	list format
- * \param f		output list file
- * \param linemap	line mapping repository
- * \param arch		architecture
+ * \param listfmt       list format
+ * \param f             output list file
+ * \param linemap       line mapping repository
+ * \param arch          architecture
  */
 void yasm_listfmt_output(yasm_listfmt *listfmt, FILE *f,
-			 yasm_linemap *linemap, yasm_arch *arch);
+                         yasm_linemap *linemap, yasm_arch *arch);
 
 #ifndef YASM_DOXYGEN
 

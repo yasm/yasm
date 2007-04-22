@@ -57,14 +57,14 @@ typedef struct yasm_dbgfmt_module yasm_dbgfmt_module;
  */
 typedef struct yasm_assoc_data_callback {
     /** Free memory allocated for associated data.
-     * \param data	associated data
+     * \param data      associated data
      */
     void (*destroy) (/*@only@*/ void *data);
 
     /** Print a description of allocated data.  For debugging purposes.
-     * \param data		associated data
-     * \param f			output file
-     * \param indent_level	indentation level
+     * \param data              associated data
+     * \param f                 output file
+     * \param indent_level      indentation level
      */
     void (*print) (void *data, FILE *f, int indent_level);
 } yasm_assoc_data_callback;
@@ -172,7 +172,7 @@ typedef struct yasm_value {
 } yasm_value;
 
 /** Maximum value of #yasm_value.rshift */
-#define YASM_VALUE_RSHIFT_MAX	127
+#define YASM_VALUE_RSHIFT_MAX   127
 
 /** Line number mapping repository (opaque type).  \see linemap.h for related
  * functions.
@@ -200,40 +200,40 @@ typedef struct yasm_insn_operands yasm_insn_operands;
 
 /** Expression operators usable in #yasm_expr expressions. */
 typedef enum yasm_expr_op {
-    YASM_EXPR_IDENT,	/**< No operation, just a value. */
-    YASM_EXPR_ADD,	/**< Arithmetic addition (+). */
-    YASM_EXPR_SUB,	/**< Arithmetic subtraction (-). */
-    YASM_EXPR_MUL,	/**< Arithmetic multiplication (*). */
-    YASM_EXPR_DIV,	/**< Arithmetic unsigned division. */
-    YASM_EXPR_SIGNDIV,	/**< Arithmetic signed division. */
-    YASM_EXPR_MOD,	/**< Arithmetic unsigned modulus. */
-    YASM_EXPR_SIGNMOD,	/**< Arithmetic signed modulus. */
-    YASM_EXPR_NEG,	/**< Arithmetic negation (-). */
-    YASM_EXPR_NOT,	/**< Bitwise negation. */
-    YASM_EXPR_OR,	/**< Bitwise OR. */
-    YASM_EXPR_AND,	/**< Bitwise AND. */
-    YASM_EXPR_XOR,	/**< Bitwise XOR. */
-    YASM_EXPR_XNOR,	/**< Bitwise XNOR. */
-    YASM_EXPR_NOR,	/**< Bitwise NOR. */
-    YASM_EXPR_SHL,	/**< Shift left (logical). */
-    YASM_EXPR_SHR,	/**< Shift right (logical). */
-    YASM_EXPR_LOR,	/**< Logical OR. */
-    YASM_EXPR_LAND,	/**< Logical AND. */
-    YASM_EXPR_LNOT,	/**< Logical negation. */
-    YASM_EXPR_LXOR,	/**< Logical XOR. */
-    YASM_EXPR_LXNOR,	/**< Logical XNOR. */
-    YASM_EXPR_LNOR,	/**< Logical NOR. */
-    YASM_EXPR_LT,	/**< Less than comparison. */
-    YASM_EXPR_GT,	/**< Greater than comparison. */
-    YASM_EXPR_EQ,	/**< Equality comparison. */
-    YASM_EXPR_LE,	/**< Less than or equal to comparison. */
-    YASM_EXPR_GE,	/**< Greater than or equal to comparison. */
-    YASM_EXPR_NE,	/**< Not equal comparison. */
-    YASM_EXPR_NONNUM,	/**< Start of non-numeric operations (not an op). */
-    YASM_EXPR_SEG,	/**< SEG operator (gets segment portion of address). */
-    YASM_EXPR_WRT,	/**< WRT operator (gets offset of address relative to
-			 *   some other segment). */
-    YASM_EXPR_SEGOFF	/**< The ':' in segment:offset. */
+    YASM_EXPR_IDENT,    /**< No operation, just a value. */
+    YASM_EXPR_ADD,      /**< Arithmetic addition (+). */
+    YASM_EXPR_SUB,      /**< Arithmetic subtraction (-). */
+    YASM_EXPR_MUL,      /**< Arithmetic multiplication (*). */
+    YASM_EXPR_DIV,      /**< Arithmetic unsigned division. */
+    YASM_EXPR_SIGNDIV,  /**< Arithmetic signed division. */
+    YASM_EXPR_MOD,      /**< Arithmetic unsigned modulus. */
+    YASM_EXPR_SIGNMOD,  /**< Arithmetic signed modulus. */
+    YASM_EXPR_NEG,      /**< Arithmetic negation (-). */
+    YASM_EXPR_NOT,      /**< Bitwise negation. */
+    YASM_EXPR_OR,       /**< Bitwise OR. */
+    YASM_EXPR_AND,      /**< Bitwise AND. */
+    YASM_EXPR_XOR,      /**< Bitwise XOR. */
+    YASM_EXPR_XNOR,     /**< Bitwise XNOR. */
+    YASM_EXPR_NOR,      /**< Bitwise NOR. */
+    YASM_EXPR_SHL,      /**< Shift left (logical). */
+    YASM_EXPR_SHR,      /**< Shift right (logical). */
+    YASM_EXPR_LOR,      /**< Logical OR. */
+    YASM_EXPR_LAND,     /**< Logical AND. */
+    YASM_EXPR_LNOT,     /**< Logical negation. */
+    YASM_EXPR_LXOR,     /**< Logical XOR. */
+    YASM_EXPR_LXNOR,    /**< Logical XNOR. */
+    YASM_EXPR_LNOR,     /**< Logical NOR. */
+    YASM_EXPR_LT,       /**< Less than comparison. */
+    YASM_EXPR_GT,       /**< Greater than comparison. */
+    YASM_EXPR_EQ,       /**< Equality comparison. */
+    YASM_EXPR_LE,       /**< Less than or equal to comparison. */
+    YASM_EXPR_GE,       /**< Greater than or equal to comparison. */
+    YASM_EXPR_NE,       /**< Not equal comparison. */
+    YASM_EXPR_NONNUM,   /**< Start of non-numeric operations (not an op). */
+    YASM_EXPR_SEG,      /**< SEG operator (gets segment portion of address). */
+    YASM_EXPR_WRT,      /**< WRT operator (gets offset of address relative to
+                         *   some other segment). */
+    YASM_EXPR_SEGOFF    /**< The ':' in segment:offset. */
 } yasm_expr_op;
 
 /** Convert yasm_value to its byte representation.  Usually implemented by
@@ -241,19 +241,19 @@ typedef enum yasm_expr_op {
  * Must put the value into the least significant bits of the destination,
  * unless shifted into more significant bits by the shift parameter.  The
  * destination bits must be cleared before being set.
- * \param value		value
- * \param buf		buffer for byte representation
- * \param destsize	destination size (in bytes)
- * \param offset	offset (in bytes) of the expr contents from the start
- *			of the bytecode (needed for relative)
- * \param bc		current bytecode (usually passed into higher-level
- *			calling function)
- * \param warn		enables standard warnings: zero for none;
- *			nonzero for overflow/underflow floating point warnings;
- *			negative for signed integer warnings,
- *			positive for unsigned integer warnings
- * \param d		objfmt-specific data (passed into higher-level calling
- *			function)
+ * \param value         value
+ * \param buf           buffer for byte representation
+ * \param destsize      destination size (in bytes)
+ * \param offset        offset (in bytes) of the expr contents from the start
+ *                      of the bytecode (needed for relative)
+ * \param bc            current bytecode (usually passed into higher-level
+ *                      calling function)
+ * \param warn          enables standard warnings: zero for none;
+ *                      nonzero for overflow/underflow floating point warnings;
+ *                      negative for signed integer warnings,
+ *                      positive for unsigned integer warnings
+ * \param d             objfmt-specific data (passed into higher-level calling
+ *                      function)
  * \return Nonzero if an error occurred, 0 otherwise.
  */
 typedef int (*yasm_output_value_func)
@@ -263,18 +263,18 @@ typedef int (*yasm_output_value_func)
 /** Convert a symbol reference to its byte representation.  Usually implemented
  * by object formats and debug formats to keep track of relocations generated
  * by themselves.
- * \param sym		symbol
- * \param bc		current bytecode (usually passed into higher-level
- *			calling function)
- * \param buf		buffer for byte representation
- * \param destsize	destination size (in bytes)
- * \param valsize	size (in bits)
- * \param warn		enables standard warnings: zero for none;
- *			nonzero for overflow/underflow floating point warnings;
- *			negative for signed integer warnings,
- *			positive for unsigned integer warnings
- * \param d		objfmt-specific data (passed into higher-level calling
- *			function)
+ * \param sym           symbol
+ * \param bc            current bytecode (usually passed into higher-level
+ *                      calling function)
+ * \param buf           buffer for byte representation
+ * \param destsize      destination size (in bytes)
+ * \param valsize       size (in bits)
+ * \param warn          enables standard warnings: zero for none;
+ *                      nonzero for overflow/underflow floating point warnings;
+ *                      negative for signed integer warnings,
+ *                      positive for unsigned integer warnings
+ * \param d             objfmt-specific data (passed into higher-level calling
+ *                      function)
  * \return Nonzero if an error occurred, 0 otherwise.
  */
 typedef int (*yasm_output_reloc_func)
@@ -283,50 +283,50 @@ typedef int (*yasm_output_reloc_func)
 
 /** Sort an array using merge sort algorithm.
  * \internal
- * \param base	    base of array
- * \param nmemb	    number of elements in array
- * \param size	    size of each array element
+ * \param base      base of array
+ * \param nmemb     number of elements in array
+ * \param size      size of each array element
  * \param compar    element comparison function
  */
 int yasm__mergesort(void *base, size_t nmemb, size_t size,
-		    int (*compar)(const void *, const void *));
+                    int (*compar)(const void *, const void *));
 
 /** Separate string by delimiters.
  * \internal
  * \param stringp   string
- * \param delim	    set of 1 or more delimiters
+ * \param delim     set of 1 or more delimiters
  * \return First/next substring.
  */
 /*@null@*/ char *yasm__strsep(char **stringp, const char *delim);
 
 /** Compare two strings, ignoring case differences.
  * \internal
- * \param s1	string 1
- * \param s2	string 2
+ * \param s1    string 1
+ * \param s2    string 2
  * \return 0 if strings are equal, -1 if s1<s2, 1 if s1>s2.
  */
 int yasm__strcasecmp(const char *s1, const char *s2);
 
 /** Compare portion of two strings, ignoring case differences.
  * \internal
- * \param s1	string 1
- * \param s2	string 2
- * \param n	maximum number of characters to compare
+ * \param s1    string 1
+ * \param s2    string 2
+ * \param n     maximum number of characters to compare
  * \return 0 if strings are equal, -1 if s1<s2, 1 if s1>s2.
  */
 int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
 
 /** strdup() implementation using yasm_xmalloc().
  * \internal
- * \param str	string
+ * \param str   string
  * \return Newly allocated duplicate string.
  */
 /*@only@*/ char *yasm__xstrdup(const char *str);
 
 /** strndup() implementation using yasm_xmalloc().
  * \internal
- * \param str	string
- * \param len	maximum number of characters to copy
+ * \param str   string
+ * \param len   maximum number of characters to copy
  * \return Newly allocated duplicate string.
  */
 /*@only@*/ char *yasm__xstrndup(const char *str, size_t len);
@@ -334,7 +334,7 @@ int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
 /** Error-checking memory allocation.  A default implementation is provided
  * that calls yasm_fatal() on allocation errors.
  * A replacement should \em never return NULL.
- * \param size	    number of bytes to allocate
+ * \param size      number of bytes to allocate
  * \return Allocated memory block.
  */
 extern /*@only@*/ /*@out@*/ void * (*yasm_xmalloc) (size_t size);
@@ -342,7 +342,7 @@ extern /*@only@*/ /*@out@*/ void * (*yasm_xmalloc) (size_t size);
 /** Error-checking memory allocation (with clear-to-0).  A default
  * implementation is provided that calls yasm_fatal() on allocation errors.
  * A replacement should \em never return NULL.
- * \param size	    number of elements to allocate
+ * \param size      number of elements to allocate
  * \param elsize    size (in bytes) of each element
  * \return Allocated and cleared memory block.
  */
@@ -361,7 +361,7 @@ extern /*@only@*/ void * (*yasm_xrealloc)
 
 /** Error-checking memory deallocation.  A default implementation is provided
  * that calls yasm_fatal() on allocation errors.
- * \param p	memory block to free
+ * \param p     memory block to free
  */
 extern void (*yasm_xfree) (/*@only@*/ /*@out@*/ /*@null@*/ void *p)
     /*@modifies p@*/;

@@ -18,11 +18,11 @@
 #include "nasmlib.h"
 #include "nasm-eval.h"
 
-static scanner scan;	/* Address of scanner routine */
-static efunc error;	/* Address of error reporting routine */
+static scanner scan;    /* Address of scanner routine */
+static efunc error;     /* Address of error reporting routine */
 
-static struct tokenval *tokval;	  /* The current token */
-static int i;			  /* The t_type of tokval */
+static struct tokenval *tokval;   /* The current token */
+static int i;                     /* The t_type of tokval */
 
 static void *scpriv;
 
@@ -72,18 +72,18 @@ static yasm_expr *rexp0(void)
 
     e = rexp1();
     if (!e)
-	return NULL;
+        return NULL;
 
     while (i == TOKEN_DBL_OR) 
-    {	
-	i = scan(scpriv, tokval);
-	f = rexp1();
-	if (!f) {
-	    yasm_expr_destroy(e);
-	    return NULL;
-	}
+    {   
+        i = scan(scpriv, tokval);
+        f = rexp1();
+        if (!f) {
+            yasm_expr_destroy(e);
+            return NULL;
+        }
 
-	e = yasm_expr_create_tree(e, YASM_EXPR_LOR, f, 0);
+        e = yasm_expr_create_tree(e, YASM_EXPR_LOR, f, 0);
     }
     return e;
 }
@@ -94,18 +94,18 @@ static yasm_expr *rexp1(void)
 
     e = rexp2();
     if (!e)
-	return NULL;
+        return NULL;
     
     while (i == TOKEN_DBL_XOR) 
     {
-	i = scan(scpriv, tokval);
-	f = rexp2();
-	if (!f) {
-	    yasm_expr_destroy(e);
-	    return NULL;
-	}
+        i = scan(scpriv, tokval);
+        f = rexp2();
+        if (!f) {
+            yasm_expr_destroy(e);
+            return NULL;
+        }
 
-	e = yasm_expr_create_tree(e, YASM_EXPR_LXOR, f, 0);
+        e = yasm_expr_create_tree(e, YASM_EXPR_LXOR, f, 0);
     }
     return e;
 }
@@ -116,17 +116,17 @@ static yasm_expr *rexp2(void)
 
     e = rexp3();
     if (!e)
-	return NULL;
+        return NULL;
     while (i == TOKEN_DBL_AND) 
     {
-	i = scan(scpriv, tokval);
-	f = rexp3();
-	if (!f) {
-	    yasm_expr_destroy(e);
-	    return NULL;
-	}
+        i = scan(scpriv, tokval);
+        f = rexp3();
+        if (!f) {
+            yasm_expr_destroy(e);
+            return NULL;
+        }
 
-	e = yasm_expr_create_tree(e, YASM_EXPR_LAND, f, 0);
+        e = yasm_expr_create_tree(e, YASM_EXPR_LAND, f, 0);
     }
     return e;
 }
@@ -137,40 +137,40 @@ static yasm_expr *rexp3(void)
 
     e = expr0();
     if (!e)
-	return NULL;
+        return NULL;
 
     while (i == TOKEN_EQ || i == TOKEN_LT || i == TOKEN_GT ||
-	   i == TOKEN_NE || i == TOKEN_LE || i == TOKEN_GE) 
+           i == TOKEN_NE || i == TOKEN_LE || i == TOKEN_GE) 
     {
-	int j = i;
-	i = scan(scpriv, tokval);
-	f = expr0();
-	if (!f) {
-	    yasm_expr_destroy(e);
-	    return NULL;
-	}
+        int j = i;
+        i = scan(scpriv, tokval);
+        f = expr0();
+        if (!f) {
+            yasm_expr_destroy(e);
+            return NULL;
+        }
 
-	switch (j) 
-	{
-	    case TOKEN_EQ:
-		e = yasm_expr_create_tree(e, YASM_EXPR_EQ, f, 0);
-		break;
-	    case TOKEN_LT:
-		e = yasm_expr_create_tree(e, YASM_EXPR_LT, f, 0);
-		break;
-	    case TOKEN_GT:
-		e = yasm_expr_create_tree(e, YASM_EXPR_GT, f, 0);
-		break;
-	    case TOKEN_NE:
-		e = yasm_expr_create_tree(e, YASM_EXPR_NE, f, 0);
-		break;
-	    case TOKEN_LE:
-		e = yasm_expr_create_tree(e, YASM_EXPR_LE, f, 0);
-		break;
-	    case TOKEN_GE:
-		e = yasm_expr_create_tree(e, YASM_EXPR_GE, f, 0);
-		break;
-	}
+        switch (j) 
+        {
+            case TOKEN_EQ:
+                e = yasm_expr_create_tree(e, YASM_EXPR_EQ, f, 0);
+                break;
+            case TOKEN_LT:
+                e = yasm_expr_create_tree(e, YASM_EXPR_LT, f, 0);
+                break;
+            case TOKEN_GT:
+                e = yasm_expr_create_tree(e, YASM_EXPR_GT, f, 0);
+                break;
+            case TOKEN_NE:
+                e = yasm_expr_create_tree(e, YASM_EXPR_NE, f, 0);
+                break;
+            case TOKEN_LE:
+                e = yasm_expr_create_tree(e, YASM_EXPR_LE, f, 0);
+                break;
+            case TOKEN_GE:
+                e = yasm_expr_create_tree(e, YASM_EXPR_GE, f, 0);
+                break;
+        }
     }
     return e;
 }
@@ -181,18 +181,18 @@ static yasm_expr *expr0(void)
 
     e = expr1();
     if (!e)
-	return NULL;
+        return NULL;
 
     while (i == '|') 
     {
-	i = scan(scpriv, tokval);
-	f = expr1();
-	if (!f) {
-	    yasm_expr_destroy(e);
-	    return NULL;
-	}
+        i = scan(scpriv, tokval);
+        f = expr1();
+        if (!f) {
+            yasm_expr_destroy(e);
+            return NULL;
+        }
 
-	e = yasm_expr_create_tree(e, YASM_EXPR_OR, f, 0);
+        e = yasm_expr_create_tree(e, YASM_EXPR_OR, f, 0);
     }
     return e;
 }
@@ -203,17 +203,17 @@ static yasm_expr *expr1(void)
 
     e = expr2();
     if (!e)
-	return NULL;
+        return NULL;
 
     while (i == '^') {
-	i = scan(scpriv, tokval);
-	f = expr2();
-	if (!f) {
-	    yasm_expr_destroy(e);
-	    return NULL;
-	}
+        i = scan(scpriv, tokval);
+        f = expr2();
+        if (!f) {
+            yasm_expr_destroy(e);
+            return NULL;
+        }
 
-	e = yasm_expr_create_tree(e, YASM_EXPR_XOR, f, 0);
+        e = yasm_expr_create_tree(e, YASM_EXPR_XOR, f, 0);
     }
     return e;
 }
@@ -224,17 +224,17 @@ static yasm_expr *expr2(void)
 
     e = expr3();
     if (!e)
-	return NULL;
+        return NULL;
 
     while (i == '&') {
-	i = scan(scpriv, tokval);
-	f = expr3();
-	if (!f) {
-	    yasm_expr_destroy(e);
-	    return NULL;
-	}
+        i = scan(scpriv, tokval);
+        f = expr3();
+        if (!f) {
+            yasm_expr_destroy(e);
+            return NULL;
+        }
 
-	e = yasm_expr_create_tree(e, YASM_EXPR_AND, f, 0);
+        e = yasm_expr_create_tree(e, YASM_EXPR_AND, f, 0);
     }
     return e;
 }
@@ -245,26 +245,26 @@ static yasm_expr *expr3(void)
 
     e = expr4();
     if (!e)
-	return NULL;
+        return NULL;
 
     while (i == TOKEN_SHL || i == TOKEN_SHR) 
     {
-	int j = i;
-	i = scan(scpriv, tokval);
-	f = expr4();
-	if (!f) {
-	    yasm_expr_destroy(e);
-	    return NULL;
-	}
+        int j = i;
+        i = scan(scpriv, tokval);
+        f = expr4();
+        if (!f) {
+            yasm_expr_destroy(e);
+            return NULL;
+        }
 
-	switch (j) {
-	    case TOKEN_SHL:
-		e = yasm_expr_create_tree(e, YASM_EXPR_SHL, f, 0);
-		break;
-	    case TOKEN_SHR:
-		e = yasm_expr_create_tree(e, YASM_EXPR_SHR, f, 0);
-		break;
-	}
+        switch (j) {
+            case TOKEN_SHL:
+                e = yasm_expr_create_tree(e, YASM_EXPR_SHL, f, 0);
+                break;
+            case TOKEN_SHR:
+                e = yasm_expr_create_tree(e, YASM_EXPR_SHR, f, 0);
+                break;
+        }
     }
     return e;
 }
@@ -275,24 +275,24 @@ static yasm_expr *expr4(void)
 
     e = expr5();
     if (!e)
-	return NULL;
+        return NULL;
     while (i == '+' || i == '-') 
     {
-	int j = i;
-	i = scan(scpriv, tokval);
-	f = expr5();
-	if (!f) {
-	    yasm_expr_destroy(e);
-	    return NULL;
-	}
-	switch (j) {
-	  case '+':
-	    e = yasm_expr_create_tree(e, YASM_EXPR_ADD, f, 0);
-	    break;
-	  case '-':
-	    e = yasm_expr_create_tree(e, YASM_EXPR_SUB, f, 0);
-	    break;
-	}
+        int j = i;
+        i = scan(scpriv, tokval);
+        f = expr5();
+        if (!f) {
+            yasm_expr_destroy(e);
+            return NULL;
+        }
+        switch (j) {
+          case '+':
+            e = yasm_expr_create_tree(e, YASM_EXPR_ADD, f, 0);
+            break;
+          case '-':
+            e = yasm_expr_create_tree(e, YASM_EXPR_SUB, f, 0);
+            break;
+        }
     }
     return e;
 }
@@ -303,34 +303,34 @@ static yasm_expr *expr5(void)
 
     e = expr6();
     if (!e)
-	return NULL;
+        return NULL;
     while (i == '*' || i == '/' || i == '%' ||
-	   i == TOKEN_SDIV || i == TOKEN_SMOD) 
+           i == TOKEN_SDIV || i == TOKEN_SMOD) 
     {
-	int j = i;
-	i = scan(scpriv, tokval);
-	f = expr6();
-	if (!f) {
-	    yasm_expr_destroy(e);
-	    return NULL;
-	}
-	switch (j) {
-	  case '*':
-	    e = yasm_expr_create_tree(e, YASM_EXPR_MUL, f, 0);
-	    break;
-	  case '/':
-	    e = yasm_expr_create_tree(e, YASM_EXPR_DIV, f, 0);
-	    break;
-	  case '%':
-	    e = yasm_expr_create_tree(e, YASM_EXPR_MOD, f, 0);
-	    break;
-	  case TOKEN_SDIV:
-	    e = yasm_expr_create_tree(e, YASM_EXPR_SIGNDIV, f, 0);
-	    break;
-	  case TOKEN_SMOD:
-	    e = yasm_expr_create_tree(e, YASM_EXPR_SIGNMOD, f, 0);
-	    break;
-	}
+        int j = i;
+        i = scan(scpriv, tokval);
+        f = expr6();
+        if (!f) {
+            yasm_expr_destroy(e);
+            return NULL;
+        }
+        switch (j) {
+          case '*':
+            e = yasm_expr_create_tree(e, YASM_EXPR_MUL, f, 0);
+            break;
+          case '/':
+            e = yasm_expr_create_tree(e, YASM_EXPR_DIV, f, 0);
+            break;
+          case '%':
+            e = yasm_expr_create_tree(e, YASM_EXPR_MOD, f, 0);
+            break;
+          case TOKEN_SDIV:
+            e = yasm_expr_create_tree(e, YASM_EXPR_SIGNDIV, f, 0);
+            break;
+          case TOKEN_SMOD:
+            e = yasm_expr_create_tree(e, YASM_EXPR_SIGNMOD, f, 0);
+            break;
+        }
     }
     return e;
 }
@@ -340,73 +340,73 @@ static yasm_expr *expr6(void)
     yasm_expr *e = NULL;
 
     if (i == '-') {
-	i = scan(scpriv, tokval);
-	e = expr6();
-	if (!e)
-	    return NULL;
-	return yasm_expr_create_branch(YASM_EXPR_NEG, e, 0);
+        i = scan(scpriv, tokval);
+        e = expr6();
+        if (!e)
+            return NULL;
+        return yasm_expr_create_branch(YASM_EXPR_NEG, e, 0);
     } else if (i == '+') {
-	i = scan(scpriv, tokval);
-	return expr6();
+        i = scan(scpriv, tokval);
+        return expr6();
     } else if (i == '~') {
-	i = scan(scpriv, tokval);
-	e = expr6();
-	if (!e)
-	    return NULL;
-	return yasm_expr_create_branch(YASM_EXPR_NOT, e, 0);
+        i = scan(scpriv, tokval);
+        e = expr6();
+        if (!e)
+            return NULL;
+        return yasm_expr_create_branch(YASM_EXPR_NOT, e, 0);
     } else if (i == TOKEN_SEG) {
-	i = scan(scpriv, tokval);
-	e = expr6();
-	if (!e)
-	    return NULL;
-	error(ERR_NONFATAL, "%s not supported", "SEG");
-	return e;
+        i = scan(scpriv, tokval);
+        e = expr6();
+        if (!e)
+            return NULL;
+        error(ERR_NONFATAL, "%s not supported", "SEG");
+        return e;
     } else if (i == '(') {
-	i = scan(scpriv, tokval);
-	e = bexpr();
-	if (!e)
-	    return NULL;
-	if (i != ')') {
-	    error(ERR_NONFATAL, "expecting `)'");
-	    return NULL;
-	}
-	i = scan(scpriv, tokval);
-	return e;
+        i = scan(scpriv, tokval);
+        e = bexpr();
+        if (!e)
+            return NULL;
+        if (i != ')') {
+            error(ERR_NONFATAL, "expecting `)'");
+            return NULL;
+        }
+        i = scan(scpriv, tokval);
+        return e;
     } 
     else if (i == TOKEN_NUM || i == TOKEN_ID ||
-	     i == TOKEN_HERE || i == TOKEN_BASE) 
+             i == TOKEN_HERE || i == TOKEN_BASE) 
     {
-	switch (i) {
-	  case TOKEN_NUM:
-	    e = yasm_expr_create_ident(yasm_expr_int(tokval->t_integer), 0);
-	    break;
-	  case TOKEN_ID:
-	  case TOKEN_HERE:
-	  case TOKEN_BASE:
-	    error(ERR_NONFATAL,
-		  "cannot reference symbol `%s' in preprocessor",
-		  (i == TOKEN_ID ? tokval->t_charptr :
-		   i == TOKEN_HERE ? "$" : "$$"));
-	    e = yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_int(1)),
-				       0);
-	    break;
-	}
-	i = scan(scpriv, tokval);
-	return e;
+        switch (i) {
+          case TOKEN_NUM:
+            e = yasm_expr_create_ident(yasm_expr_int(tokval->t_integer), 0);
+            break;
+          case TOKEN_ID:
+          case TOKEN_HERE:
+          case TOKEN_BASE:
+            error(ERR_NONFATAL,
+                  "cannot reference symbol `%s' in preprocessor",
+                  (i == TOKEN_ID ? tokval->t_charptr :
+                   i == TOKEN_HERE ? "$" : "$$"));
+            e = yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_int(1)),
+                                       0);
+            break;
+        }
+        i = scan(scpriv, tokval);
+        return e;
     } else {
-	error(ERR_NONFATAL, "expression syntax error");
-	return NULL;
+        error(ERR_NONFATAL, "expression syntax error");
+        return NULL;
     }
 }
 
 yasm_expr *nasm_evaluate (scanner sc, void *scprivate, struct tokenval *tv,
-			  int critical, efunc report_error)
+                          int critical, efunc report_error)
 {
     if (critical & CRITICAL) {
-	critical &= ~CRITICAL;
-	bexpr = rexp0;
+        critical &= ~CRITICAL;
+        bexpr = rexp0;
     } else
-	bexpr = expr0;
+        bexpr = expr0;
 
     scan = sc;
     scpriv = scprivate;
@@ -414,9 +414,9 @@ yasm_expr *nasm_evaluate (scanner sc, void *scprivate, struct tokenval *tv,
     error = report_error;
 
     if (tokval->t_type == TOKEN_INVALID)
-	i = scan(scpriv, tokval);
+        i = scan(scpriv, tokval);
     else
-	i = tokval->t_type;
+        i = tokval->t_type;
 
     return bexpr ();
 }

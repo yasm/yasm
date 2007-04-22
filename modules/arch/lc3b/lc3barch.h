@@ -29,26 +29,26 @@
 
 /* Types of immediate.  All immediates are stored in the LSBs of the insn. */
 typedef enum lc3b_imm_type {
-    LC3B_IMM_NONE = 0,	/* no immediate */
-    LC3B_IMM_4,		/* 4-bit */
-    LC3B_IMM_5,		/* 5-bit */
-    LC3B_IMM_6_WORD,	/* 6-bit, word-multiple (byte>>1) */
-    LC3B_IMM_6_BYTE,	/* 6-bit, byte-multiple */
-    LC3B_IMM_8,		/* 8-bit, word-multiple (byte>>1) */
-    LC3B_IMM_9,		/* 9-bit, signed, word-multiple (byte>>1) */
-    LC3B_IMM_9_PC	/* 9-bit, signed, word-multiple, PC relative */
+    LC3B_IMM_NONE = 0,  /* no immediate */
+    LC3B_IMM_4,         /* 4-bit */
+    LC3B_IMM_5,         /* 5-bit */
+    LC3B_IMM_6_WORD,    /* 6-bit, word-multiple (byte>>1) */
+    LC3B_IMM_6_BYTE,    /* 6-bit, byte-multiple */
+    LC3B_IMM_8,         /* 8-bit, word-multiple (byte>>1) */
+    LC3B_IMM_9,         /* 9-bit, signed, word-multiple (byte>>1) */
+    LC3B_IMM_9_PC       /* 9-bit, signed, word-multiple, PC relative */
 } lc3b_imm_type;
 
 /* Bytecode types */
 
 typedef struct lc3b_insn {
-    yasm_value imm;		/* immediate or relative value */
-    lc3b_imm_type imm_type;	/* size of the immediate */
+    yasm_value imm;             /* immediate or relative value */
+    lc3b_imm_type imm_type;     /* size of the immediate */
 
     /* PC origin if needed */
     /*@null@*/ /*@dependent@*/ yasm_bytecode *origin_prevbc;
 
-    unsigned int opcode;	/* opcode */
+    unsigned int opcode;        /* opcode */
 } lc3b_insn;
 
 void yasm_lc3b__bc_transform_insn(yasm_bytecode *bc, lc3b_insn *insn);

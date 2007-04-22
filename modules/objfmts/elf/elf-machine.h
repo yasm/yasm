@@ -42,10 +42,10 @@
     YASM_WRITE_32_L(p, lo); \
     YASM_WRITE_32_L(p, hi); } while (0)
 
-#define YASM_WRITE_64Z_L(p, i)		YASM_WRITE_64C_L(p, 0, i)
+#define YASM_WRITE_64Z_L(p, i)          YASM_WRITE_64C_L(p, 0, i)
 
 typedef int(*func_accepts_reloc)(size_t val, yasm_symrec *wrt,
-				 yasm_symrec **ssyms);
+                                 yasm_symrec **ssyms);
 typedef void(*func_write_symtab_entry)(unsigned char *bufp,
                                        elf_symtab_entry *entry,
                                        yasm_intnum *value_intn,
@@ -59,7 +59,7 @@ typedef void(*func_write_secthead_rel)(unsigned char *bufp,
 typedef void(*func_handle_reloc_addend)(yasm_intnum *intn,
                                         elf_reloc_entry *reloc);
 typedef unsigned int(*func_map_reloc_info_to_type)(elf_reloc_entry *reloc,
-						   yasm_symrec **ssyms);
+                                                   yasm_symrec **ssyms);
 typedef void(*func_write_reloc)(unsigned char *bufp,
                                 elf_reloc_entry *reloc,
                                 unsigned int r_type,
@@ -70,8 +70,8 @@ typedef void (*func_write_proghead)(unsigned char **bufpp,
                                     elf_section_index shstrtab_index);
 
 typedef struct {
-    const char *name;	    /* should be something like ..name */
-    const int sym_rel;	    /* symbol or section-relative? */
+    const char *name;       /* should be something like ..name */
+    const int sym_rel;      /* symbol or section-relative? */
 } elf_machine_ssym;
 
 struct elf_machine_handler {
@@ -92,10 +92,10 @@ struct elf_machine_handler {
     func_write_reloc write_reloc;
     func_write_proghead write_proghead;
 
-    const elf_machine_ssym *ssyms;	/* array of "special" syms */
-    const size_t num_ssyms;		/* size of array */
+    const elf_machine_ssym *ssyms;      /* array of "special" syms */
+    const size_t num_ssyms;             /* size of array */
 
-    const int bits;			/* usually 32 or 64 */
+    const int bits;                     /* usually 32 or 64 */
 };
 
 #endif /* ELF_MACHINE_H_INCLUDED */

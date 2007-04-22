@@ -2,7 +2,7 @@
  * strdup() implementation with error checking (using xmalloc).
  *
  * Copyright (c) 1988, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *      The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@ RCSID("$Id$");
 #include "coretype.h"
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static char sccsid[] = "@(#)strdup.c	8.1 (Berkeley) 6/4/93";
+static char sccsid[] = "@(#)strdup.c    8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 
 
@@ -46,22 +46,22 @@ static char sccsid[] = "@(#)strdup.c	8.1 (Berkeley) 6/4/93";
 char *
 yasm__xstrdup(const char *str)
 {
-	size_t len;
-	char *copy;
+        size_t len;
+        char *copy;
 
-	len = strlen(str) + 1;
-	copy = yasm_xmalloc(len);
-	memcpy(copy, str, len);
-	return (copy);
+        len = strlen(str) + 1;
+        copy = yasm_xmalloc(len);
+        memcpy(copy, str, len);
+        return (copy);
 }
 
 char *
 yasm__xstrndup(const char *str, size_t len)
 {
-	char *copy;
+        char *copy;
 
-	copy = yasm_xmalloc(len+1);
-	memcpy(copy, str, len);
-	copy[len] = '\0';
-	return (copy);
+        copy = yasm_xmalloc(len+1);
+        memcpy(copy, str, len);
+        copy[len] = '\0';
+        return (copy);
 }

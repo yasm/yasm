@@ -44,35 +44,35 @@ static void x86_ea_print(const yasm_effaddr *ea, FILE *f, int indent_level);
 
 static void x86_bc_insn_destroy(void *contents);
 static void x86_bc_insn_print(const void *contents, FILE *f,
-			      int indent_level);
+                              int indent_level);
 static int x86_bc_insn_calc_len(yasm_bytecode *bc,
-				yasm_bc_add_span_func add_span,
-				void *add_span_data);
+                                yasm_bc_add_span_func add_span,
+                                void *add_span_data);
 static int x86_bc_insn_expand(yasm_bytecode *bc, int span, long old_val,
-			      long new_val, /*@out@*/ long *neg_thres,
-			      /*@out@*/ long *pos_thres);
+                              long new_val, /*@out@*/ long *neg_thres,
+                              /*@out@*/ long *pos_thres);
 static int x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp,
-			       void *d, yasm_output_value_func output_value,
-			       /*@null@*/ yasm_output_reloc_func output_reloc);
+                               void *d, yasm_output_value_func output_value,
+                               /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static void x86_bc_jmp_destroy(void *contents);
 static void x86_bc_jmp_print(const void *contents, FILE *f, int indent_level);
 static int x86_bc_jmp_calc_len(yasm_bytecode *bc,
-			       yasm_bc_add_span_func add_span,
-			       void *add_span_data);
+                               yasm_bc_add_span_func add_span,
+                               void *add_span_data);
 static int x86_bc_jmp_expand(yasm_bytecode *bc, int span, long old_val,
-			     long new_val, /*@out@*/ long *neg_thres,
-			     /*@out@*/ long *pos_thres);
+                             long new_val, /*@out@*/ long *neg_thres,
+                             /*@out@*/ long *pos_thres);
 static int x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp,
-			      void *d, yasm_output_value_func output_value,
-			      /*@null@*/ yasm_output_reloc_func output_reloc);
+                              void *d, yasm_output_value_func output_value,
+                              /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static void x86_bc_jmpfar_destroy(void *contents);
 static void x86_bc_jmpfar_print(const void *contents, FILE *f,
-				int indent_level);
+                                int indent_level);
 static int x86_bc_jmpfar_calc_len(yasm_bytecode *bc,
-				  yasm_bc_add_span_func add_span,
-				  void *add_span_data);
+                                  yasm_bc_add_span_func add_span,
+                                  void *add_span_data);
 static int x86_bc_jmpfar_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
      yasm_output_value_func output_value,
@@ -119,31 +119,31 @@ static const yasm_bytecode_callback x86_bc_callback_jmpfar = {
 
 int
 yasm_x86__set_rex_from_reg(unsigned char *rex, unsigned char *low3,
-			   uintptr_t reg, unsigned int bits,
-			   x86_rex_bit_pos rexbit)
+                           uintptr_t reg, unsigned int bits,
+                           x86_rex_bit_pos rexbit)
 {
     *low3 = (unsigned char)(reg&7);
 
     if (bits == 64) {
-	x86_expritem_reg_size size = (x86_expritem_reg_size)(reg & ~0xFUL);
+        x86_expritem_reg_size size = (x86_expritem_reg_size)(reg & ~0xFUL);
 
-	if (size == X86_REG8X || (reg & 0xF) >= 8) {
-	    /* Check to make sure we can set it */
-	    if (*rex == 0xff) {
-		yasm_error_set(YASM_ERROR_TYPE,
-		    N_("cannot use A/B/C/DH with instruction needing REX"));
-		return 1;
-	    }
-	    *rex |= 0x40 | (((reg & 8) >> 3) << rexbit);
-	} else if (size == X86_REG8 && (reg & 7) >= 4) {
-	    /* AH/BH/CH/DH, so no REX allowed */
-	    if (*rex != 0 && *rex != 0xff) {
-		yasm_error_set(YASM_ERROR_TYPE,
-		    N_("cannot use A/B/C/DH with instruction needing REX"));
-		return 1;
-	    }
-	    *rex = 0xff;    /* Flag so we can NEVER set it (see above) */
-	}
+        if (size == X86_REG8X || (reg & 0xF) >= 8) {
+            /* Check to make sure we can set it */
+            if (*rex == 0xff) {
+                yasm_error_set(YASM_ERROR_TYPE,
+                    N_("cannot use A/B/C/DH with instruction needing REX"));
+                return 1;
+            }
+            *rex |= 0x40 | (((reg & 8) >> 3) << rexbit);
+        } else if (size == X86_REG8 && (reg & 7) >= 4) {
+            /* AH/BH/CH/DH, so no REX allowed */
+            if (*rex != 0 && *rex != 0xff) {
+                yasm_error_set(YASM_ERROR_TYPE,
+                    N_("cannot use A/B/C/DH with instruction needing REX"));
+                return 1;
+            }
+            *rex = 0xff;    /* Flag so we can NEVER set it (see above) */
+        }
     }
 
     return 0;
@@ -169,12 +169,12 @@ yasm_x86__bc_transform_jmpfar(yasm_bytecode *bc, x86_jmpfar *jmpfar)
 
 void
 yasm_x86__ea_init(x86_effaddr *x86_ea, unsigned int spare,
-		  yasm_bytecode *precbc)
+                  yasm_bytecode *precbc)
 {
     if (yasm_value_finalize(&x86_ea->ea.disp, precbc))
-	yasm_error_set(YASM_ERROR_TOO_COMPLEX,
-		       N_("effective address too complex"));
-    x86_ea->modrm &= 0xC7;		    /* zero spare/reg bits */
+        yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+                       N_("effective address too complex"));
+    x86_ea->modrm &= 0xC7;                  /* zero spare/reg bits */
     x86_ea->modrm |= (spare << 3) & 0x38;   /* plug in provided bits */
 }
 
@@ -189,13 +189,13 @@ yasm_x86__ea_set_disponly(x86_effaddr *x86_ea)
 
 x86_effaddr *
 yasm_x86__ea_create_reg(unsigned long reg, unsigned char *rex,
-			unsigned int bits)
+                        unsigned int bits)
 {
     x86_effaddr *x86_ea;
     unsigned char rm;
 
     if (yasm_x86__set_rex_from_reg(rex, &rm, reg, bits, X86_REX_B))
-	return NULL;
+        return NULL;
 
     x86_ea = yasm_xmalloc(sizeof(x86_effaddr));
 
@@ -206,7 +206,7 @@ yasm_x86__ea_create_reg(unsigned long reg, unsigned char *rex,
     x86_ea->ea.nosplit = 0;
     x86_ea->ea.strong = 0;
     x86_ea->ea.segreg = 0;
-    x86_ea->modrm = 0xC0 | rm;	/* Mod=11, R/M=Reg, Reg=0 */
+    x86_ea->modrm = 0xC0 | rm;  /* Mod=11, R/M=Reg, Reg=0 */
     x86_ea->valid_modrm = 1;
     x86_ea->need_modrm = 1;
     x86_ea->sib = 0;
@@ -226,19 +226,19 @@ yasm_x86__ea_create_expr(yasm_arch *arch, yasm_expr *e)
 
     x86_ea->ea.callback = &x86_ea_callback;
     if (arch_x86->parser == X86_PARSER_GAS) {
-	/* Need to change foo+rip into foo wrt rip.
-	 * Note this assumes a particular ordering coming from the parser
-	 * to work (it's not very smart)!
-	 */
-	if (e->op == YASM_EXPR_ADD && e->terms[0].type == YASM_EXPR_REG
-	    && e->terms[0].data.reg == X86_RIP) {
-	    /* replace register with 0 */
-	    e->terms[0].type = YASM_EXPR_INT;
-	    e->terms[0].data.intn = yasm_intnum_create_uint(0);
-	    /* build new wrt expression */
-	    e = yasm_expr_create(YASM_EXPR_WRT, yasm_expr_expr(e),
-				 yasm_expr_reg(X86_RIP), e->line);
-	}
+        /* Need to change foo+rip into foo wrt rip.
+         * Note this assumes a particular ordering coming from the parser
+         * to work (it's not very smart)!
+         */
+        if (e->op == YASM_EXPR_ADD && e->terms[0].type == YASM_EXPR_REG
+            && e->terms[0].data.reg == X86_RIP) {
+            /* replace register with 0 */
+            e->terms[0].type = YASM_EXPR_INT;
+            e->terms[0].data.intn = yasm_intnum_create_uint(0);
+            /* build new wrt expression */
+            e = yasm_expr_create(YASM_EXPR_WRT, yasm_expr_expr(e),
+                                 yasm_expr_reg(X86_RIP), e->line);
+        }
     }
     yasm_value_initialize(&x86_ea->ea.disp, e, 0);
     x86_ea->ea.need_nonzero_len = 0;
@@ -286,56 +286,56 @@ yasm_x86__ea_create_imm(yasm_expr *imm, unsigned int im_len)
 
 void
 yasm_x86__bc_apply_prefixes(x86_common *common, unsigned char *rex,
-			    int num_prefixes, uintptr_t **prefixes)
+                            int num_prefixes, uintptr_t **prefixes)
 {
     int i;
     int first = 1;
 
     for (i=0; i<num_prefixes; i++) {
-	switch ((x86_parse_insn_prefix)prefixes[i][0]) {
-	    case X86_LOCKREP:
-		if (common->lockrep_pre != 0)
-		    yasm_warn_set(YASM_WARN_GENERAL,
-			N_("multiple LOCK or REP prefixes, using leftmost"));
-		common->lockrep_pre = (unsigned char)prefixes[i][1];
-		break;
-	    case X86_ADDRSIZE:
-		common->addrsize = (unsigned char)prefixes[i][1];
-		break;
-	    case X86_OPERSIZE:
-		common->opersize = (unsigned char)prefixes[i][1];
-		break;
-	    case X86_SEGREG:
-		/* This is a hack.. we should really be putting this in the
-		 * the effective address!
-		 */
-		common->lockrep_pre = (unsigned char)prefixes[i][1];
-		break;
-	    case X86_REX:
-		if (!rex)
-		    yasm_warn_set(YASM_WARN_GENERAL,
-				  N_("ignoring REX prefix on jump"));
-		else if (*rex == 0xff)
-		    yasm_warn_set(YASM_WARN_GENERAL,
-			N_("REX prefix not allowed on this instruction, ignoring"));
-		else {
-		    if (*rex != 0) {
-			if (first)
-			    yasm_warn_set(YASM_WARN_GENERAL,
-				N_("overriding generated REX prefix"));
-			else
-			    yasm_warn_set(YASM_WARN_GENERAL,
-				N_("multiple REX prefixes, using leftmost"));
-		    }
-		    /* Here we assume that we can't get this prefix in non
-		     * 64 bit mode due to checks in parse_check_prefix().
-		     */
-		    common->mode_bits = 64;
-		    *rex = (unsigned char)prefixes[i][1];
-		}
-		first = 0;
-		break;
-	}
+        switch ((x86_parse_insn_prefix)prefixes[i][0]) {
+            case X86_LOCKREP:
+                if (common->lockrep_pre != 0)
+                    yasm_warn_set(YASM_WARN_GENERAL,
+                        N_("multiple LOCK or REP prefixes, using leftmost"));
+                common->lockrep_pre = (unsigned char)prefixes[i][1];
+                break;
+            case X86_ADDRSIZE:
+                common->addrsize = (unsigned char)prefixes[i][1];
+                break;
+            case X86_OPERSIZE:
+                common->opersize = (unsigned char)prefixes[i][1];
+                break;
+            case X86_SEGREG:
+                /* This is a hack.. we should really be putting this in the
+                 * the effective address!
+                 */
+                common->lockrep_pre = (unsigned char)prefixes[i][1];
+                break;
+            case X86_REX:
+                if (!rex)
+                    yasm_warn_set(YASM_WARN_GENERAL,
+                                  N_("ignoring REX prefix on jump"));
+                else if (*rex == 0xff)
+                    yasm_warn_set(YASM_WARN_GENERAL,
+                        N_("REX prefix not allowed on this instruction, ignoring"));
+                else {
+                    if (*rex != 0) {
+                        if (first)
+                            yasm_warn_set(YASM_WARN_GENERAL,
+                                N_("overriding generated REX prefix"));
+                        else
+                            yasm_warn_set(YASM_WARN_GENERAL,
+                                N_("multiple REX prefixes, using leftmost"));
+                    }
+                    /* Here we assume that we can't get this prefix in non
+                     * 64 bit mode due to checks in parse_check_prefix().
+                     */
+                    common->mode_bits = 64;
+                    *rex = (unsigned char)prefixes[i][1];
+                }
+                first = 0;
+                break;
+        }
     }
 }
 
@@ -344,10 +344,10 @@ x86_bc_insn_destroy(void *contents)
 {
     x86_insn *insn = (x86_insn *)contents;
     if (insn->x86_ea)
-	yasm_ea_destroy((yasm_effaddr *)insn->x86_ea);
+        yasm_ea_destroy((yasm_effaddr *)insn->x86_ea);
     if (insn->imm) {
-	yasm_value_delete(insn->imm);
-	yasm_xfree(insn->imm);
+        yasm_value_delete(insn->imm);
+        yasm_xfree(insn->imm);
     }
     yasm_xfree(contents);
 }
@@ -379,34 +379,34 @@ x86_ea_print(const yasm_effaddr *ea, FILE *f, int indent_level)
 {
     const x86_effaddr *x86_ea = (const x86_effaddr *)ea;
     fprintf(f, "%*sSegmentOv=%02x\n", indent_level, "",
-	    (unsigned int)x86_ea->ea.segreg);
+            (unsigned int)x86_ea->ea.segreg);
     fprintf(f, "%*sModRM=%03o ValidRM=%u NeedRM=%u\n", indent_level, "",
-	    (unsigned int)x86_ea->modrm, (unsigned int)x86_ea->valid_modrm,
-	    (unsigned int)x86_ea->need_modrm);
+            (unsigned int)x86_ea->modrm, (unsigned int)x86_ea->valid_modrm,
+            (unsigned int)x86_ea->need_modrm);
     fprintf(f, "%*sSIB=%03o ValidSIB=%u NeedSIB=%u\n", indent_level, "",
-	    (unsigned int)x86_ea->sib, (unsigned int)x86_ea->valid_sib,
-	    (unsigned int)x86_ea->need_sib);
+            (unsigned int)x86_ea->sib, (unsigned int)x86_ea->valid_sib,
+            (unsigned int)x86_ea->need_sib);
 }
 
 static void
 x86_common_print(const x86_common *common, FILE *f, int indent_level)
 {
     fprintf(f, "%*sAddrSize=%u OperSize=%u LockRepPre=%02x BITS=%u\n",
-	    indent_level, "",
-	    (unsigned int)common->addrsize,
-	    (unsigned int)common->opersize,
-	    (unsigned int)common->lockrep_pre,
-	    (unsigned int)common->mode_bits);
+            indent_level, "",
+            (unsigned int)common->addrsize,
+            (unsigned int)common->opersize,
+            (unsigned int)common->lockrep_pre,
+            (unsigned int)common->mode_bits);
 }
 
 static void
 x86_opcode_print(const x86_opcode *opcode, FILE *f, int indent_level)
 {
     fprintf(f, "%*sOpcode: %02x %02x %02x OpLen=%u\n", indent_level, "",
-	    (unsigned int)opcode->opcode[0],
-	    (unsigned int)opcode->opcode[1],
-	    (unsigned int)opcode->opcode[2],
-	    (unsigned int)opcode->len);
+            (unsigned int)opcode->opcode[0],
+            (unsigned int)opcode->opcode[1],
+            (unsigned int)opcode->opcode[2],
+            (unsigned int)opcode->len);
 }
 
 static void
@@ -417,25 +417,25 @@ x86_bc_insn_print(const void *contents, FILE *f, int indent_level)
     fprintf(f, "%*s_Instruction_\n", indent_level, "");
     fprintf(f, "%*sEffective Address:", indent_level, "");
     if (insn->x86_ea) {
-	fprintf(f, "\n");
-	yasm_ea_print((yasm_effaddr *)insn->x86_ea, f, indent_level+1);
+        fprintf(f, "\n");
+        yasm_ea_print((yasm_effaddr *)insn->x86_ea, f, indent_level+1);
     } else
-	fprintf(f, " (nil)\n");
+        fprintf(f, " (nil)\n");
     fprintf(f, "%*sImmediate Value:", indent_level, "");
     if (!insn->imm)
-	fprintf(f, " (nil)\n");
+        fprintf(f, " (nil)\n");
     else {
-	indent_level++;
-	fprintf(f, "\n");
-	yasm_value_print(insn->imm, f, indent_level);
-	indent_level--;
+        indent_level++;
+        fprintf(f, "\n");
+        yasm_value_print(insn->imm, f, indent_level);
+        indent_level--;
     }
     x86_opcode_print(&insn->opcode, f, indent_level);
     x86_common_print(&insn->common, f, indent_level);
     fprintf(f, "%*sSpPre=%02x REX=%03o PostOp=%u\n", indent_level, "",
-	    (unsigned int)insn->special_prefix,
-	    (unsigned int)insn->rex,
-	    (unsigned int)insn->postop);
+            (unsigned int)insn->special_prefix,
+            (unsigned int)insn->rex,
+            (unsigned int)insn->postop);
 }
 
 static void
@@ -452,34 +452,34 @@ x86_bc_jmp_print(const void *contents, FILE *f, int indent_level)
     */
     fprintf(f, "\n%*sShort Form:\n", indent_level, "");
     if (jmp->shortop.len == 0)
-	fprintf(f, "%*sNone\n", indent_level+1, "");
+        fprintf(f, "%*sNone\n", indent_level+1, "");
     else
-	x86_opcode_print(&jmp->shortop, f, indent_level+1);
+        x86_opcode_print(&jmp->shortop, f, indent_level+1);
     fprintf(f, "%*sNear Form:\n", indent_level, "");
     if (jmp->nearop.len == 0)
-	fprintf(f, "%*sNone\n", indent_level+1, "");
+        fprintf(f, "%*sNone\n", indent_level+1, "");
     else
-	x86_opcode_print(&jmp->nearop, f, indent_level+1);
+        x86_opcode_print(&jmp->nearop, f, indent_level+1);
     fprintf(f, "%*sOpSel=", indent_level, "");
     switch (jmp->op_sel) {
-	case JMP_NONE:
-	    fprintf(f, "None");
-	    break;
-	case JMP_SHORT:
-	    fprintf(f, "Short");
-	    break;
-	case JMP_NEAR:
-	    fprintf(f, "Near");
-	    break;
-	case JMP_SHORT_FORCED:
-	    fprintf(f, "Forced Short");
-	    break;
-	case JMP_NEAR_FORCED:
-	    fprintf(f, "Forced Near");
-	    break;
-	default:
-	    fprintf(f, "UNKNOWN!!");
-	    break;
+        case JMP_NONE:
+            fprintf(f, "None");
+            break;
+        case JMP_SHORT:
+            fprintf(f, "Short");
+            break;
+        case JMP_NEAR:
+            fprintf(f, "Near");
+            break;
+        case JMP_SHORT_FORCED:
+            fprintf(f, "Forced Short");
+            break;
+        case JMP_NEAR_FORCED:
+            fprintf(f, "Forced Near");
+            break;
+        default:
+            fprintf(f, "UNKNOWN!!");
+            break;
     }
     x86_common_print(&jmp->common, f, indent_level);
 }
@@ -504,108 +504,108 @@ x86_common_calc_len(const x86_common *common)
     unsigned int len = 0;
 
     if (common->addrsize != 0 && common->addrsize != common->mode_bits)
-	len++;
+        len++;
     if (common->opersize != 0 &&
-	((common->mode_bits != 64 && common->opersize != common->mode_bits) ||
-	 (common->mode_bits == 64 && common->opersize == 16)))
-	len++;
+        ((common->mode_bits != 64 && common->opersize != common->mode_bits) ||
+         (common->mode_bits == 64 && common->opersize == 16)))
+        len++;
     if (common->lockrep_pre != 0)
-	len++;
+        len++;
 
     return len;
 }
 
 static int
 x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
-		     void *add_span_data)
+                     void *add_span_data)
 {
     x86_insn *insn = (x86_insn *)bc->contents;
     x86_effaddr *x86_ea = insn->x86_ea;
     yasm_value *imm = insn->imm;
 
     if (x86_ea) {
-	/* Check validity of effective address and calc R/M bits of
-	 * Mod/RM byte and SIB byte.  We won't know the Mod field
-	 * of the Mod/RM byte until we know more about the
-	 * displacement.
-	 */
-	if (yasm_x86__expr_checkea(x86_ea, &insn->common.addrsize,
-		insn->common.mode_bits, insn->postop == X86_POSTOP_ADDRESS16,
-		&insn->rex, bc))
-	    /* failed, don't bother checking rest of insn */
-	    return -1;
+        /* Check validity of effective address and calc R/M bits of
+         * Mod/RM byte and SIB byte.  We won't know the Mod field
+         * of the Mod/RM byte until we know more about the
+         * displacement.
+         */
+        if (yasm_x86__expr_checkea(x86_ea, &insn->common.addrsize,
+                insn->common.mode_bits, insn->postop == X86_POSTOP_ADDRESS16,
+                &insn->rex, bc))
+            /* failed, don't bother checking rest of insn */
+            return -1;
 
-	if (x86_ea->ea.disp.size == 0 && x86_ea->ea.need_nonzero_len) {
-	    /* Handle unknown case, default to byte-sized and set as
-	     * critical expression.
-	     */
-	    x86_ea->ea.disp.size = 8;
-	    add_span(add_span_data, bc, 1, &x86_ea->ea.disp, -128, 127);
-	}
-	bc->len += x86_ea->ea.disp.size/8;
+        if (x86_ea->ea.disp.size == 0 && x86_ea->ea.need_nonzero_len) {
+            /* Handle unknown case, default to byte-sized and set as
+             * critical expression.
+             */
+            x86_ea->ea.disp.size = 8;
+            add_span(add_span_data, bc, 1, &x86_ea->ea.disp, -128, 127);
+        }
+        bc->len += x86_ea->ea.disp.size/8;
 
-	/* Handle address16 postop case */
-	if (insn->postop == X86_POSTOP_ADDRESS16)
-	    insn->common.addrsize = 0;
+        /* Handle address16 postop case */
+        if (insn->postop == X86_POSTOP_ADDRESS16)
+            insn->common.addrsize = 0;
 
-	/* Compute length of ea and add to total */
-	bc->len += x86_ea->need_modrm + (x86_ea->need_sib ? 1:0);
-	bc->len += (x86_ea->ea.segreg != 0) ? 1 : 0;
+        /* Compute length of ea and add to total */
+        bc->len += x86_ea->need_modrm + (x86_ea->need_sib ? 1:0);
+        bc->len += (x86_ea->ea.segreg != 0) ? 1 : 0;
     }
 
     if (imm) {
-	unsigned int immlen = imm->size;
+        unsigned int immlen = imm->size;
 
-	/* TODO: check imm->len vs. sized len from expr? */
+        /* TODO: check imm->len vs. sized len from expr? */
 
-	/* Handle signext_imm8 postop special-casing */
-	if (insn->postop == X86_POSTOP_SIGNEXT_IMM8) {
-	    /*@null@*/ /*@only@*/ yasm_intnum *num;
-	    num = yasm_value_get_intnum(imm, NULL, 0);
+        /* Handle signext_imm8 postop special-casing */
+        if (insn->postop == X86_POSTOP_SIGNEXT_IMM8) {
+            /*@null@*/ /*@only@*/ yasm_intnum *num;
+            num = yasm_value_get_intnum(imm, NULL, 0);
 
-	    if (!num) {
-		/* Unknown; default to byte form and set as critical
-		 * expression.
-		 */
-		immlen = 8;
-		add_span(add_span_data, bc, 2, imm, -128, 127);
-	    } else {
-		if (yasm_intnum_in_range(num, -128, 127)) {
-		    /* We can use the sign-extended byte form: shorten
-		     * the immediate length to 1 and make the byte form
-		     * permanent.
-		     */
-		    imm->size = 8;
-		    imm->sign = 1;
-		    immlen = 8;
-		} else {
-		    /* We can't.  Copy over the word-sized opcode. */
-		    insn->opcode.opcode[0] =
-			insn->opcode.opcode[insn->opcode.len];
-		    insn->opcode.len = 1;
-		}
-		insn->postop = X86_POSTOP_NONE;
-		yasm_intnum_destroy(num);
-	    }
-	}
+            if (!num) {
+                /* Unknown; default to byte form and set as critical
+                 * expression.
+                 */
+                immlen = 8;
+                add_span(add_span_data, bc, 2, imm, -128, 127);
+            } else {
+                if (yasm_intnum_in_range(num, -128, 127)) {
+                    /* We can use the sign-extended byte form: shorten
+                     * the immediate length to 1 and make the byte form
+                     * permanent.
+                     */
+                    imm->size = 8;
+                    imm->sign = 1;
+                    immlen = 8;
+                } else {
+                    /* We can't.  Copy over the word-sized opcode. */
+                    insn->opcode.opcode[0] =
+                        insn->opcode.opcode[insn->opcode.len];
+                    insn->opcode.len = 1;
+                }
+                insn->postop = X86_POSTOP_NONE;
+                yasm_intnum_destroy(num);
+            }
+        }
 
-	bc->len += immlen/8;
+        bc->len += immlen/8;
     }
 
     bc->len += insn->opcode.len;
     bc->len += x86_common_calc_len(&insn->common);
     bc->len += (insn->special_prefix != 0) ? 1:0;
     if (insn->rex != 0xff &&
-	(insn->rex != 0 ||
-	 (insn->common.mode_bits == 64 && insn->common.opersize == 64 &&
-	  insn->def_opersize_64 != 64)))
-	bc->len++;
+        (insn->rex != 0 ||
+         (insn->common.mode_bits == 64 && insn->common.opersize == 64 &&
+          insn->def_opersize_64 != 64)))
+        bc->len++;
     return 0;
 }
 
 static int
 x86_bc_insn_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
-		   /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
+                   /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
     x86_insn *insn = (x86_insn *)bc->contents;
     x86_effaddr *x86_ea = insn->x86_ea;
@@ -613,27 +613,27 @@ x86_bc_insn_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
     yasm_value *imm = insn->imm;
 
     if (ea && span == 1) {
-	/* Change displacement length into word-sized */
-	if (ea->disp.size == 8) {
-	    ea->disp.size = (insn->common.addrsize == 16) ? 16 : 32;
-	    x86_ea->modrm &= ~0300;
-	    x86_ea->modrm |= 0200;
-	    bc->len--;
-	    bc->len += ea->disp.size/8;
-	}
+        /* Change displacement length into word-sized */
+        if (ea->disp.size == 8) {
+            ea->disp.size = (insn->common.addrsize == 16) ? 16 : 32;
+            x86_ea->modrm &= ~0300;
+            x86_ea->modrm |= 0200;
+            bc->len--;
+            bc->len += ea->disp.size/8;
+        }
     }
 
     if (imm && span == 2) {
-	if (insn->postop == X86_POSTOP_SIGNEXT_IMM8) {
-	    /* Update bc->len for new opcode and immediate size */
-	    bc->len -= insn->opcode.len;
-	    bc->len += imm->size/8;
+        if (insn->postop == X86_POSTOP_SIGNEXT_IMM8) {
+            /* Update bc->len for new opcode and immediate size */
+            bc->len -= insn->opcode.len;
+            bc->len += imm->size/8;
 
-	    /* Change to the word-sized opcode */
-	    insn->opcode.opcode[0] = insn->opcode.opcode[insn->opcode.len];
-	    insn->opcode.len = 1;
-	    insn->postop = X86_POSTOP_NONE;
-	}
+            /* Change to the word-sized opcode */
+            insn->opcode.opcode[0] = insn->opcode.opcode[insn->opcode.len];
+            insn->opcode.len = 1;
+            insn->postop = X86_POSTOP_NONE;
+        }
     }
 
     return 0;
@@ -641,7 +641,7 @@ x86_bc_insn_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 
 static int
 x86_bc_jmp_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
-		    void *add_span_data)
+                    void *add_span_data)
 {
     x86_jmp *jmp = (x86_jmp *)bc->contents;
     yasm_bytecode *target_prevbc;
@@ -649,86 +649,86 @@ x86_bc_jmp_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 
     /* As opersize may be 0, figure out its "real" value. */
     opersize = (jmp->common.opersize == 0) ?
-	jmp->common.mode_bits : jmp->common.opersize;
+        jmp->common.mode_bits : jmp->common.opersize;
 
     bc->len += x86_common_calc_len(&jmp->common);
 
     if (jmp->op_sel == JMP_NEAR_FORCED || jmp->shortop.len == 0) {
-	if (jmp->nearop.len == 0) {
-	    yasm_error_set(YASM_ERROR_TYPE, N_("near jump does not exist"));
-	    return -1;
-	}
+        if (jmp->nearop.len == 0) {
+            yasm_error_set(YASM_ERROR_TYPE, N_("near jump does not exist"));
+            return -1;
+        }
 
-	/* Near jump, no spans needed */
-	if (jmp->shortop.len == 0)
-	    jmp->op_sel = JMP_NEAR;
-	bc->len += jmp->nearop.len;
-	bc->len += (opersize == 16) ? 2 : 4;
-	return 0;
+        /* Near jump, no spans needed */
+        if (jmp->shortop.len == 0)
+            jmp->op_sel = JMP_NEAR;
+        bc->len += jmp->nearop.len;
+        bc->len += (opersize == 16) ? 2 : 4;
+        return 0;
     }
 
     if (jmp->op_sel == JMP_SHORT_FORCED || jmp->nearop.len == 0) {
-	if (jmp->shortop.len == 0) {
-	    yasm_error_set(YASM_ERROR_TYPE, N_("short jump does not exist"));
-	    return -1;
-	}
+        if (jmp->shortop.len == 0) {
+            yasm_error_set(YASM_ERROR_TYPE, N_("short jump does not exist"));
+            return -1;
+        }
 
-	/* We want to be sure to error if we exceed short length, so
-	 * put it in as a dependent expression (falling through).
-	 */
+        /* We want to be sure to error if we exceed short length, so
+         * put it in as a dependent expression (falling through).
+         */
     }
 
     if (jmp->target.rel
-	&& (!yasm_symrec_get_label(jmp->target.rel, &target_prevbc)
-	    || target_prevbc->section != bc->section)) {
-	/* External or out of segment, so we can't check distance.
-	 * Allowing short jumps depends on the objfmt supporting
-	 * 8-bit relocs.  While most don't, some might, so allow it here.
-	 * Otherwise default to word-sized.
-	 * The objfmt will error if not supported.
-	 */
-	if (jmp->op_sel == JMP_SHORT_FORCED || jmp->nearop.len == 0) {
-	    if (jmp->op_sel == JMP_NONE)
-		jmp->op_sel = JMP_SHORT;
-	    bc->len += jmp->shortop.len + 1;
-	} else {
-	    jmp->op_sel = JMP_NEAR;
-	    bc->len += jmp->nearop.len;
-	    bc->len += (opersize == 16) ? 2 : 4;
-	}
-	return 0;
+        && (!yasm_symrec_get_label(jmp->target.rel, &target_prevbc)
+            || target_prevbc->section != bc->section)) {
+        /* External or out of segment, so we can't check distance.
+         * Allowing short jumps depends on the objfmt supporting
+         * 8-bit relocs.  While most don't, some might, so allow it here.
+         * Otherwise default to word-sized.
+         * The objfmt will error if not supported.
+         */
+        if (jmp->op_sel == JMP_SHORT_FORCED || jmp->nearop.len == 0) {
+            if (jmp->op_sel == JMP_NONE)
+                jmp->op_sel = JMP_SHORT;
+            bc->len += jmp->shortop.len + 1;
+        } else {
+            jmp->op_sel = JMP_NEAR;
+            bc->len += jmp->nearop.len;
+            bc->len += (opersize == 16) ? 2 : 4;
+        }
+        return 0;
     }
 
     /* Default to short jump and generate span */
     if (jmp->op_sel == JMP_NONE)
-	jmp->op_sel = JMP_SHORT;
+        jmp->op_sel = JMP_SHORT;
     bc->len += jmp->shortop.len + 1;
     add_span(add_span_data, bc, 1, &jmp->target, -128+(long)bc->len,
-	     127+(long)bc->len);
+             127+(long)bc->len);
     return 0;
 }
 
 static int
 x86_bc_jmp_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
-		  /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
+                  /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
     x86_jmp *jmp = (x86_jmp *)bc->contents;
     unsigned char opersize;
 
     if (span != 1)
-	yasm_internal_error(N_("unrecognized span id"));
+        yasm_internal_error(N_("unrecognized span id"));
 
     /* As opersize may be 0, figure out its "real" value. */
     opersize = (jmp->common.opersize == 0) ?
-	jmp->common.mode_bits : jmp->common.opersize;
+        jmp->common.mode_bits : jmp->common.opersize;
 
     if (jmp->op_sel == JMP_SHORT_FORCED || jmp->nearop.len == 0) {
-	yasm_error_set(YASM_ERROR_VALUE, N_("short jump out of range"));
-	return -1;
+        yasm_error_set(YASM_ERROR_VALUE, N_("short jump out of range"));
+        return -1;
     }
 
     if (jmp->op_sel == JMP_NEAR)
-	yasm_internal_error(N_("trying to expand an already-near jump"));
+        yasm_internal_error(N_("trying to expand an already-near jump"));
 
     /* Upgrade to a near jump */
     jmp->op_sel = JMP_NEAR;
@@ -741,16 +741,16 @@ x86_bc_jmp_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 
 static int
 x86_bc_jmpfar_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
-		       void *add_span_data)
+                       void *add_span_data)
 {
     x86_jmpfar *jmpfar = (x86_jmpfar *)bc->contents;
     unsigned char opersize;
    
     opersize = (jmpfar->common.opersize == 0) ?
-	jmpfar->common.mode_bits : jmpfar->common.opersize;
+        jmpfar->common.mode_bits : jmpfar->common.opersize;
 
     bc->len += jmpfar->opcode.len;
-    bc->len += 2;	/* segment */
+    bc->len += 2;       /* segment */
     bc->len += (opersize == 16) ? 2 : 4;
     bc->len += x86_common_calc_len(&jmpfar->common);
 
@@ -759,18 +759,18 @@ x86_bc_jmpfar_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 
 static void
 x86_common_tobytes(const x86_common *common, unsigned char **bufp,
-		   unsigned int segreg)
+                   unsigned int segreg)
 {
     if (segreg != 0)
-	YASM_WRITE_8(*bufp, (unsigned char)segreg);
+        YASM_WRITE_8(*bufp, (unsigned char)segreg);
     if (common->addrsize != 0 && common->addrsize != common->mode_bits)
-	YASM_WRITE_8(*bufp, 0x67);
+        YASM_WRITE_8(*bufp, 0x67);
     if (common->opersize != 0 &&
-	((common->mode_bits != 64 && common->opersize != common->mode_bits) ||
-	 (common->mode_bits == 64 && common->opersize == 16)))
-	YASM_WRITE_8(*bufp, 0x66);
+        ((common->mode_bits != 64 && common->opersize != common->mode_bits) ||
+         (common->mode_bits == 64 && common->opersize == 16)))
+        YASM_WRITE_8(*bufp, 0x66);
     if (common->lockrep_pre != 0)
-	YASM_WRITE_8(*bufp, common->lockrep_pre);
+        YASM_WRITE_8(*bufp, common->lockrep_pre);
 }
 
 static void
@@ -778,13 +778,13 @@ x86_opcode_tobytes(const x86_opcode *opcode, unsigned char **bufp)
 {
     unsigned int i;
     for (i=0; i<opcode->len; i++)
-	YASM_WRITE_8(*bufp, opcode->opcode[i]);
+        YASM_WRITE_8(*bufp, opcode->opcode[i]);
 }
 
 static int
 x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-		    yasm_output_value_func output_value,
-		    /*@unused@*/ yasm_output_reloc_func output_reloc)
+                    yasm_output_value_func output_value,
+                    /*@unused@*/ yasm_output_reloc_func output_reloc)
 {
     x86_insn *insn = (x86_insn *)bc->contents;
     /*@null@*/ x86_effaddr *x86_ea = (x86_effaddr *)insn->x86_ea;
@@ -793,19 +793,19 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     /* Prefixes */
     x86_common_tobytes(&insn->common, bufp,
-		       x86_ea ? (unsigned int)(x86_ea->ea.segreg>>8) : 0);
+                       x86_ea ? (unsigned int)(x86_ea->ea.segreg>>8) : 0);
     if (insn->special_prefix != 0)
-	YASM_WRITE_8(*bufp, insn->special_prefix);
+        YASM_WRITE_8(*bufp, insn->special_prefix);
     if (insn->rex != 0xff) {
-	if (insn->common.mode_bits == 64 && insn->common.opersize == 64 &&
-	    insn->def_opersize_64 != 64)
-	    insn->rex |= 0x48;
-	if (insn->rex != 0) {
-	    if (insn->common.mode_bits != 64)
-		yasm_internal_error(
-		    N_("x86: got a REX prefix in non-64-bit mode"));
-	    YASM_WRITE_8(*bufp, insn->rex);
-	}
+        if (insn->common.mode_bits == 64 && insn->common.opersize == 64 &&
+            insn->def_opersize_64 != 64)
+            insn->rex |= 0x48;
+        if (insn->rex != 0) {
+            if (insn->common.mode_bits != 64)
+                yasm_internal_error(
+                    N_("x86: got a REX prefix in non-64-bit mode"));
+            YASM_WRITE_8(*bufp, insn->rex);
+        }
     }
 
     /* Opcode */
@@ -815,57 +815,57 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
      * displacement (if required).
      */
     if (x86_ea) {
-	if (x86_ea->need_modrm) {
-	    if (!x86_ea->valid_modrm)
-		yasm_internal_error(N_("invalid Mod/RM in x86 tobytes_insn"));
-	    YASM_WRITE_8(*bufp, x86_ea->modrm);
-	}
+        if (x86_ea->need_modrm) {
+            if (!x86_ea->valid_modrm)
+                yasm_internal_error(N_("invalid Mod/RM in x86 tobytes_insn"));
+            YASM_WRITE_8(*bufp, x86_ea->modrm);
+        }
 
-	if (x86_ea->need_sib) {
-	    if (!x86_ea->valid_sib)
-		yasm_internal_error(N_("invalid SIB in x86 tobytes_insn"));
-	    YASM_WRITE_8(*bufp, x86_ea->sib);
-	}
+        if (x86_ea->need_sib) {
+            if (!x86_ea->valid_sib)
+                yasm_internal_error(N_("invalid SIB in x86 tobytes_insn"));
+            YASM_WRITE_8(*bufp, x86_ea->sib);
+        }
 
-	if (x86_ea->ea.need_disp) {
-	    unsigned int disp_len = x86_ea->ea.disp.size/8;
+        if (x86_ea->ea.need_disp) {
+            unsigned int disp_len = x86_ea->ea.disp.size/8;
 
-	    if (x86_ea->ea.disp.ip_rel) {
-		/* Adjust relative displacement to end of bytecode */
-		/*@only@*/ yasm_intnum *delta;
-		delta = yasm_intnum_create_int(-(long)bc->len);
-		if (!x86_ea->ea.disp.abs)
-		    x86_ea->ea.disp.abs =
-			yasm_expr_create_ident(yasm_expr_int(delta), bc->line);
-		else
-		    x86_ea->ea.disp.abs =
-			yasm_expr_create(YASM_EXPR_ADD,
-					 yasm_expr_expr(x86_ea->ea.disp.abs),
-					 yasm_expr_int(delta), bc->line);
-	    }
-	    if (output_value(&x86_ea->ea.disp, *bufp, disp_len,
-			     (unsigned long)(*bufp-bufp_orig), bc, 1, d))
-		return 1;
-	    *bufp += disp_len;
-	}
+            if (x86_ea->ea.disp.ip_rel) {
+                /* Adjust relative displacement to end of bytecode */
+                /*@only@*/ yasm_intnum *delta;
+                delta = yasm_intnum_create_int(-(long)bc->len);
+                if (!x86_ea->ea.disp.abs)
+                    x86_ea->ea.disp.abs =
+                        yasm_expr_create_ident(yasm_expr_int(delta), bc->line);
+                else
+                    x86_ea->ea.disp.abs =
+                        yasm_expr_create(YASM_EXPR_ADD,
+                                         yasm_expr_expr(x86_ea->ea.disp.abs),
+                                         yasm_expr_int(delta), bc->line);
+            }
+            if (output_value(&x86_ea->ea.disp, *bufp, disp_len,
+                             (unsigned long)(*bufp-bufp_orig), bc, 1, d))
+                return 1;
+            *bufp += disp_len;
+        }
     }
 
     /* Immediate (if required) */
     if (imm) {
-	unsigned int imm_len;
-	if (insn->postop == X86_POSTOP_SIGNEXT_IMM8) {
-	    /* If we got here with this postop still set, we need to force
-	     * imm size to 8 here.
-	     */
-	    imm->size = 8;
-	    imm->sign = 1;
-	    imm_len = 1;
-	} else
-	    imm_len = imm->size/8;
-	if (output_value(imm, *bufp, imm_len, (unsigned long)(*bufp-bufp_orig),
-			 bc, 1, d))
-	    return 1;
-	*bufp += imm_len;
+        unsigned int imm_len;
+        if (insn->postop == X86_POSTOP_SIGNEXT_IMM8) {
+            /* If we got here with this postop still set, we need to force
+             * imm size to 8 here.
+             */
+            imm->size = 8;
+            imm->sign = 1;
+            imm_len = 1;
+        } else
+            imm_len = imm->size/8;
+        if (output_value(imm, *bufp, imm_len, (unsigned long)(*bufp-bufp_orig),
+                         bc, 1, d))
+            return 1;
+        *bufp += imm_len;
     }
 
     return 0;
@@ -873,8 +873,8 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
 static int
 x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-		   yasm_output_value_func output_value,
-		   /*@unused@*/ yasm_output_reloc_func output_reloc)
+                   yasm_output_value_func output_value,
+                   /*@unused@*/ yasm_output_reloc_func output_reloc)
 {
     x86_jmp *jmp = (x86_jmp *)bc->contents;
     unsigned char opersize;
@@ -887,79 +887,79 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     /* As opersize may be 0, figure out its "real" value. */
     opersize = (jmp->common.opersize == 0) ?
-	jmp->common.mode_bits : jmp->common.opersize;
+        jmp->common.mode_bits : jmp->common.opersize;
 
     /* Check here again to see if forms are actually legal. */
     switch (jmp->op_sel) {
-	case JMP_SHORT_FORCED:
-	case JMP_SHORT:
-	    /* 1 byte relative displacement */
-	    if (jmp->shortop.len == 0)
-		yasm_internal_error(N_("short jump does not exist"));
+        case JMP_SHORT_FORCED:
+        case JMP_SHORT:
+            /* 1 byte relative displacement */
+            if (jmp->shortop.len == 0)
+                yasm_internal_error(N_("short jump does not exist"));
 
-	    /* Opcode */
-	    x86_opcode_tobytes(&jmp->shortop, bufp);
+            /* Opcode */
+            x86_opcode_tobytes(&jmp->shortop, bufp);
 
-	    /* Adjust relative displacement to end of bytecode */
-	    delta = yasm_intnum_create_int(-(long)bc->len);
-	    if (!jmp->target.abs)
-		jmp->target.abs = yasm_expr_create_ident(yasm_expr_int(delta),
-							 bc->line);
-	    else
-		jmp->target.abs =
-		    yasm_expr_create(YASM_EXPR_ADD,
-				     yasm_expr_expr(jmp->target.abs),
-				     yasm_expr_int(delta), bc->line);
+            /* Adjust relative displacement to end of bytecode */
+            delta = yasm_intnum_create_int(-(long)bc->len);
+            if (!jmp->target.abs)
+                jmp->target.abs = yasm_expr_create_ident(yasm_expr_int(delta),
+                                                         bc->line);
+            else
+                jmp->target.abs =
+                    yasm_expr_create(YASM_EXPR_ADD,
+                                     yasm_expr_expr(jmp->target.abs),
+                                     yasm_expr_int(delta), bc->line);
 
-	    jmp->target.size = 8;
-	    if (output_value(&jmp->target, *bufp, 1,
-			     (unsigned long)(*bufp-bufp_orig), bc, -1, d))
-		return 1;
-	    *bufp += 1;
-	    break;
-	case JMP_NEAR_FORCED:
-	case JMP_NEAR:
-	    /* 2/4 byte relative displacement (depending on operand size) */
-	    if (jmp->nearop.len == 0) {
-		yasm_error_set(YASM_ERROR_TYPE,
-			       N_("near jump does not exist"));
-		return 1;
-	    }
+            jmp->target.size = 8;
+            if (output_value(&jmp->target, *bufp, 1,
+                             (unsigned long)(*bufp-bufp_orig), bc, -1, d))
+                return 1;
+            *bufp += 1;
+            break;
+        case JMP_NEAR_FORCED:
+        case JMP_NEAR:
+            /* 2/4 byte relative displacement (depending on operand size) */
+            if (jmp->nearop.len == 0) {
+                yasm_error_set(YASM_ERROR_TYPE,
+                               N_("near jump does not exist"));
+                return 1;
+            }
 
-	    /* Opcode */
-	    x86_opcode_tobytes(&jmp->nearop, bufp);
+            /* Opcode */
+            x86_opcode_tobytes(&jmp->nearop, bufp);
 
-	    i = (opersize == 16) ? 2 : 4;
+            i = (opersize == 16) ? 2 : 4;
 
-	    /* Adjust relative displacement to end of bytecode */
-	    delta = yasm_intnum_create_int(-(long)bc->len);
-	    if (!jmp->target.abs)
-		jmp->target.abs = yasm_expr_create_ident(yasm_expr_int(delta),
-							 bc->line);
-	    else
-		jmp->target.abs =
-		    yasm_expr_create(YASM_EXPR_ADD,
-				     yasm_expr_expr(jmp->target.abs),
-				     yasm_expr_int(delta), bc->line);
+            /* Adjust relative displacement to end of bytecode */
+            delta = yasm_intnum_create_int(-(long)bc->len);
+            if (!jmp->target.abs)
+                jmp->target.abs = yasm_expr_create_ident(yasm_expr_int(delta),
+                                                         bc->line);
+            else
+                jmp->target.abs =
+                    yasm_expr_create(YASM_EXPR_ADD,
+                                     yasm_expr_expr(jmp->target.abs),
+                                     yasm_expr_int(delta), bc->line);
 
-	    jmp->target.size = i*8;
-	    if (output_value(&jmp->target, *bufp, i,
-			     (unsigned long)(*bufp-bufp_orig), bc, -1, d))
-		return 1;
-	    *bufp += i;
-	    break;
-	case JMP_NONE:
-	    yasm_internal_error(N_("jump op_sel cannot be JMP_NONE in tobytes"));
-	default:
-	    yasm_internal_error(N_("unrecognized relative jump op_sel"));
+            jmp->target.size = i*8;
+            if (output_value(&jmp->target, *bufp, i,
+                             (unsigned long)(*bufp-bufp_orig), bc, -1, d))
+                return 1;
+            *bufp += i;
+            break;
+        case JMP_NONE:
+            yasm_internal_error(N_("jump op_sel cannot be JMP_NONE in tobytes"));
+        default:
+            yasm_internal_error(N_("unrecognized relative jump op_sel"));
     }
     return 0;
 }
 
 static int
 x86_bc_jmpfar_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-		      yasm_output_value_func output_value,
-		      /*@unused@*/ yasm_output_reloc_func output_reloc)
+                      yasm_output_value_func output_value,
+                      /*@unused@*/ yasm_output_reloc_func output_reloc)
 {
     x86_jmpfar *jmpfar = (x86_jmpfar *)bc->contents;
     unsigned int i;
@@ -971,19 +971,19 @@ x86_bc_jmpfar_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     /* As opersize may be 0, figure out its "real" value. */
     opersize = (jmpfar->common.opersize == 0) ?
-	jmpfar->common.mode_bits : jmpfar->common.opersize;
+        jmpfar->common.mode_bits : jmpfar->common.opersize;
 
     /* Absolute displacement: segment and offset */
     i = (opersize == 16) ? 2 : 4;
     jmpfar->offset.size = i*8;
     if (output_value(&jmpfar->offset, *bufp, i,
-		     (unsigned long)(*bufp-bufp_orig), bc, 1, d))
-	return 1;
+                     (unsigned long)(*bufp-bufp_orig), bc, 1, d))
+        return 1;
     *bufp += i;
     jmpfar->segment.size = 16;
     if (output_value(&jmpfar->segment, *bufp, 2,
-		     (unsigned long)(*bufp-bufp_orig), bc, 1, d))
-	return 1;
+                     (unsigned long)(*bufp-bufp_orig), bc, 1, d))
+        return 1;
     *bufp += 2;
 
     return 0;
@@ -991,8 +991,8 @@ x86_bc_jmpfar_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
 int
 yasm_x86__intnum_tobytes(yasm_arch *arch, const yasm_intnum *intn,
-			 unsigned char *buf, size_t destsize, size_t valsize,
-			 int shift, const yasm_bytecode *bc, int warn)
+                         unsigned char *buf, size_t destsize, size_t valsize,
+                         int shift, const yasm_bytecode *bc, int warn)
 {
     /* Write value out. */
     yasm_intnum_get_sized(intn, buf, destsize, valsize, shift, 0, warn);

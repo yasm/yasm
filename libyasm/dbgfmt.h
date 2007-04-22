@@ -58,7 +58,7 @@ struct yasm_dbgfmt_module {
     /** Create debug format.
      * Module-level implementation of yasm_dbgfmt_create().
      * The filenames are provided solely for informational purposes.
-     * \param object	    object
+     * \param object        object
      * \return NULL if object format does not provide needed support.
      */
     /*@null@*/ /*@only@*/ yasm_dbgfmt * (*create) (yasm_object *object);
@@ -72,7 +72,7 @@ struct yasm_dbgfmt_module {
      * Call yasm_dbgfmt_generate() instead of calling this function.
      */
     void (*generate) (yasm_object *object, yasm_linemap *linemap,
-		      yasm_errwarns *errwarns);
+                      yasm_errwarns *errwarns);
 };
 
 /** Get the keyword used to select a debug format.
@@ -84,26 +84,26 @@ const char *yasm_dbgfmt_keyword(const yasm_dbgfmt *dbgfmt);
 /** Initialize debug output for use.  Must call before any other debug
  * format functions.  The filenames are provided solely for informational
  * purposes.
- * \param module	debug format module
- * \param object	object to generate debugging information for
+ * \param module        debug format module
+ * \param object        object to generate debugging information for
  * \return NULL if object format does not provide needed support.
  */
 /*@null@*/ /*@only@*/ yasm_dbgfmt *yasm_dbgfmt_create
     (const yasm_dbgfmt_module *module, yasm_object *object);
 
 /** Cleans up any allocated debug format memory.
- * \param dbgfmt	debug format
+ * \param dbgfmt        debug format
  */
 void yasm_dbgfmt_destroy(/*@only@*/ yasm_dbgfmt *dbgfmt);
 
 /** Generate debugging information bytecodes.
- * \param object	object
- * \param linemap	virtual/physical line mapping
- * \param errwarns	error/warning set
+ * \param object        object
+ * \param linemap       virtual/physical line mapping
+ * \param errwarns      error/warning set
  * \note Errors and warnings are stored into errwarns.
  */
 void yasm_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
-			  yasm_errwarns *errwarns);
+                          yasm_errwarns *errwarns);
 
 #ifndef YASM_DOXYGEN
 
@@ -119,7 +119,7 @@ void yasm_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
     ((yasm_dbgfmt_base *)dbgfmt)->module->destroy(dbgfmt)
 #define yasm_dbgfmt_generate(object, linemap, ews) \
     ((yasm_dbgfmt_base *)((object)->dbgfmt))->module->generate \
-	(object, linemap, ews)
+        (object, linemap, ews)
 
 #endif
 

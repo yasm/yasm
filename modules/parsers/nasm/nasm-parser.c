@@ -35,8 +35,8 @@
 
 static void
 nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
-		     int save_input, yasm_linemap *linemap,
-		     yasm_errwarns *errwarns)
+                     int save_input, yasm_linemap *linemap,
+                     yasm_errwarns *errwarns)
 {
     yasm_parser_nasm parser_nasm;
 
@@ -72,7 +72,7 @@ nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
 
     /* Free locallabel base if necessary */
     if (parser_nasm.locallabel_base)
-	yasm_xfree(parser_nasm.locallabel_base);
+        yasm_xfree(parser_nasm.locallabel_base);
 }
 
 /* Define valid preprocessors to use with this parser */

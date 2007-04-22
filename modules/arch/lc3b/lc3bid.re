@@ -39,8 +39,8 @@ RCSID("$Id$");
  * parameters are read from the arch-specific data in LSB->MSB order.
  * (only for asthetic reasons in the lexer code below, no practical reason).
  */
-#define MOD_OpHAdd  (1UL<<0)	/* Parameter adds to upper 8 bits of insn */
-#define MOD_OpLAdd  (1UL<<1)	/* Parameter adds to lower 8 bits of insn */
+#define MOD_OpHAdd  (1UL<<0)    /* Parameter adds to upper 8 bits of insn */
+#define MOD_OpLAdd  (1UL<<1)    /* Parameter adds to lower 8 bits of insn */
 
 /* Operand types.  These are more detailed than the "general" types for all
  * architectures, as they include the size, for instance.
@@ -71,25 +71,25 @@ RCSID("$Id$");
  *             6 = 9-bit signed immediate, word-multiple
  *             7 = 9-bit signed offset from next PC ($+2), word-multiple
  */
-#define OPT_Imm		0x0
-#define OPT_Reg		0x1
-#define OPT_MASK	0x1
+#define OPT_Imm         0x0
+#define OPT_Reg         0x1
+#define OPT_MASK        0x1
 
-#define OPA_None	(0<<1)
-#define OPA_DR		(1<<1)
-#define OPA_SR		(2<<1)
-#define OPA_Imm		(3<<1)
-#define OPA_MASK	(3<<1)
+#define OPA_None        (0<<1)
+#define OPA_DR          (1<<1)
+#define OPA_SR          (2<<1)
+#define OPA_Imm         (3<<1)
+#define OPA_MASK        (3<<1)
 
-#define OPI_None	(LC3B_IMM_NONE<<3)
-#define OPI_4		(LC3B_IMM_4<<3)
-#define OPI_5		(LC3B_IMM_5<<3)
-#define OPI_6W		(LC3B_IMM_6_WORD<<3)
-#define OPI_6B		(LC3B_IMM_6_BYTE<<3)
-#define OPI_8		(LC3B_IMM_8<<3)
-#define OPI_9		(LC3B_IMM_9<<3)
-#define OPI_9PC		(LC3B_IMM_9_PC<<3)
-#define OPI_MASK	(7<<3)
+#define OPI_None        (LC3B_IMM_NONE<<3)
+#define OPI_4           (LC3B_IMM_4<<3)
+#define OPI_5           (LC3B_IMM_5<<3)
+#define OPI_6W          (LC3B_IMM_6_WORD<<3)
+#define OPI_6B          (LC3B_IMM_6_BYTE<<3)
+#define OPI_8           (LC3B_IMM_8<<3)
+#define OPI_9           (LC3B_IMM_9<<3)
+#define OPI_9PC         (LC3B_IMM_9_PC<<3)
+#define OPI_MASK        (7<<3)
 
 typedef struct lc3b_insn_info {
     /* Opcode modifiers for variations of instruction.  As each modifier reads
@@ -111,13 +111,13 @@ typedef struct lc3b_insn_info {
 } lc3b_insn_info;
 
 /* Define lexer arch-specific data with 0-3 modifiers. */
-#define DEF_INSN_DATA(group, mod)	do { \
+#define DEF_INSN_DATA(group, mod)       do { \
     data[0] = (unsigned long)group##_insn; \
     data[1] = ((mod)<<8) | \
-    	      ((unsigned char)(sizeof(group##_insn)/sizeof(lc3b_insn_info))); \
+              ((unsigned char)(sizeof(group##_insn)/sizeof(lc3b_insn_info))); \
     } while (0)
 
-#define RET_INSN(group, mod)	do { \
+#define RET_INSN(group, mod)    do { \
     DEF_INSN_DATA(group, mod); \
     return YASM_ARCH_INSN; \
     } while (0)
@@ -174,11 +174,11 @@ static const lc3b_insn_info trap_insn[] = {
 
 void
 yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
-			 yasm_bytecode *prev_bc, const unsigned long data[4],
-			 int num_operands,
-			 /*@null@*/ yasm_insn_operands *operands,
-			 int num_prefixes, unsigned long **prefixes,
-			 int num_segregs, const unsigned long *segregs)
+                         yasm_bytecode *prev_bc, const unsigned long data[4],
+                         int num_operands,
+                         /*@null@*/ yasm_insn_operands *operands,
+                         int num_prefixes, unsigned long **prefixes,
+                         int num_segregs, const unsigned long *segregs)
 {
     lc3b_insn *insn;
     int num_info = (int)(data[1]&0xFF);
@@ -192,49 +192,49 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
      * First match wins.
      */
     for (; num_info>0 && !found; num_info--, info++) {
-	int mismatch = 0;
+        int mismatch = 0;
 
-	/* Match # of operands */
-	if (num_operands != info->num_operands)
-	    continue;
+        /* Match # of operands */
+        if (num_operands != info->num_operands)
+            continue;
 
-	if (!operands) {
-	    found = 1;	    /* no operands -> must have a match here. */
-	    break;
-	}
+        if (!operands) {
+            found = 1;      /* no operands -> must have a match here. */
+            break;
+        }
 
-	/* Match each operand type and size */
-	for(i = 0, op = yasm_ops_first(operands); op && i<info->num_operands &&
-	    !mismatch; op = yasm_operand_next(op), i++) {
-	    /* Check operand type */
-	    switch ((int)(info->operands[i] & OPT_MASK)) {
-		case OPT_Imm:
-		    if (op->type != YASM_INSN__OPERAND_IMM)
-			mismatch = 1;
-		    break;
-		case OPT_Reg:
-		    if (op->type != YASM_INSN__OPERAND_REG)
-			mismatch = 1;
-		    break;
-		default:
-		    yasm_internal_error(N_("invalid operand type"));
-	    }
+        /* Match each operand type and size */
+        for(i = 0, op = yasm_ops_first(operands); op && i<info->num_operands &&
+            !mismatch; op = yasm_operand_next(op), i++) {
+            /* Check operand type */
+            switch ((int)(info->operands[i] & OPT_MASK)) {
+                case OPT_Imm:
+                    if (op->type != YASM_INSN__OPERAND_IMM)
+                        mismatch = 1;
+                    break;
+                case OPT_Reg:
+                    if (op->type != YASM_INSN__OPERAND_REG)
+                        mismatch = 1;
+                    break;
+                default:
+                    yasm_internal_error(N_("invalid operand type"));
+            }
 
-	    if (mismatch)
-		break;
-	}
+            if (mismatch)
+                break;
+        }
 
-	if (!mismatch) {
-	    found = 1;
-	    break;
-	}
+        if (!mismatch) {
+            found = 1;
+            break;
+        }
     }
 
     if (!found) {
-	/* Didn't find a matching one */
-	yasm_error_set(YASM_ERROR_TYPE,
-		       N_("invalid combination of opcode and operands"));
-	return;
+        /* Didn't find a matching one */
+        yasm_error_set(YASM_ERROR_TYPE,
+                       N_("invalid combination of opcode and operands"));
+        return;
     }
 
     /* Copy what we can from info */
@@ -246,75 +246,75 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 
     /* Apply modifiers */
     if (info->modifiers & MOD_OpHAdd) {
-	insn->opcode += ((unsigned int)(mod_data & 0xFF))<<8;
-	mod_data >>= 8;
+        insn->opcode += ((unsigned int)(mod_data & 0xFF))<<8;
+        mod_data >>= 8;
     }
     if (info->modifiers & MOD_OpLAdd) {
-	insn->opcode += (unsigned int)(mod_data & 0xFF);
-	/*mod_data >>= 8;*/
+        insn->opcode += (unsigned int)(mod_data & 0xFF);
+        /*mod_data >>= 8;*/
     }
 
     /* Go through operands and assign */
     if (operands) {
-	for(i = 0, op = yasm_ops_first(operands); op && i<info->num_operands;
-	    op = yasm_operand_next(op), i++) {
+        for(i = 0, op = yasm_ops_first(operands); op && i<info->num_operands;
+            op = yasm_operand_next(op), i++) {
 
-	    switch ((int)(info->operands[i] & OPA_MASK)) {
-		case OPA_None:
-		    /* Throw away the operand contents */
-		    if (op->type == YASM_INSN__OPERAND_IMM)
-			yasm_expr_destroy(op->data.val);
-		    break;
-		case OPA_DR:
-		    if (op->type != YASM_INSN__OPERAND_REG)
-			yasm_internal_error(N_("invalid operand conversion"));
-		    insn->opcode |= ((unsigned int)(op->data.reg & 0x7)) << 9;
-		    break;
-		case OPA_SR:
-		    if (op->type != YASM_INSN__OPERAND_REG)
-			yasm_internal_error(N_("invalid operand conversion"));
-		    insn->opcode |= ((unsigned int)(op->data.reg & 0x7)) << 6;
-		    break;
-		case OPA_Imm:
-		    insn->imm_type = (info->operands[i] & OPI_MASK)>>3;
-		    switch (op->type) {
-			case YASM_INSN__OPERAND_IMM:
-			    if (insn->imm_type == LC3B_IMM_6_WORD
-				|| insn->imm_type == LC3B_IMM_8
-				|| insn->imm_type == LC3B_IMM_9
-				|| insn->imm_type == LC3B_IMM_9_PC)
-				op->data.val = yasm_expr_create(YASM_EXPR_SHR,
-				    yasm_expr_expr(op->data.val),
-				    yasm_expr_int(yasm_intnum_create_uint(1)),
-				    op->data.val->line);
-			    if (yasm_value_finalize_expr(&insn->imm,
-							 op->data.val, 0))
-				yasm_error_set(YASM_ERROR_TOO_COMPLEX,
-				    N_("immediate expression too complex"));
-			    break;
-			case YASM_INSN__OPERAND_REG:
-			    if (yasm_value_finalize_expr(&insn->imm,
-				    yasm_expr_create_ident(yasm_expr_int(
-				    yasm_intnum_create_uint(op->data.reg & 0x7)),
-				    bc->line), 0))
-				yasm_internal_error(N_("reg expr too complex?"));
-			    break;
-			default:
-			    yasm_internal_error(N_("invalid operand conversion"));
-		    }
-		    break;
-		default:
-		    yasm_internal_error(N_("unknown operand action"));
-	    }
-	}
+            switch ((int)(info->operands[i] & OPA_MASK)) {
+                case OPA_None:
+                    /* Throw away the operand contents */
+                    if (op->type == YASM_INSN__OPERAND_IMM)
+                        yasm_expr_destroy(op->data.val);
+                    break;
+                case OPA_DR:
+                    if (op->type != YASM_INSN__OPERAND_REG)
+                        yasm_internal_error(N_("invalid operand conversion"));
+                    insn->opcode |= ((unsigned int)(op->data.reg & 0x7)) << 9;
+                    break;
+                case OPA_SR:
+                    if (op->type != YASM_INSN__OPERAND_REG)
+                        yasm_internal_error(N_("invalid operand conversion"));
+                    insn->opcode |= ((unsigned int)(op->data.reg & 0x7)) << 6;
+                    break;
+                case OPA_Imm:
+                    insn->imm_type = (info->operands[i] & OPI_MASK)>>3;
+                    switch (op->type) {
+                        case YASM_INSN__OPERAND_IMM:
+                            if (insn->imm_type == LC3B_IMM_6_WORD
+                                || insn->imm_type == LC3B_IMM_8
+                                || insn->imm_type == LC3B_IMM_9
+                                || insn->imm_type == LC3B_IMM_9_PC)
+                                op->data.val = yasm_expr_create(YASM_EXPR_SHR,
+                                    yasm_expr_expr(op->data.val),
+                                    yasm_expr_int(yasm_intnum_create_uint(1)),
+                                    op->data.val->line);
+                            if (yasm_value_finalize_expr(&insn->imm,
+                                                         op->data.val, 0))
+                                yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+                                    N_("immediate expression too complex"));
+                            break;
+                        case YASM_INSN__OPERAND_REG:
+                            if (yasm_value_finalize_expr(&insn->imm,
+                                    yasm_expr_create_ident(yasm_expr_int(
+                                    yasm_intnum_create_uint(op->data.reg & 0x7)),
+                                    bc->line), 0))
+                                yasm_internal_error(N_("reg expr too complex?"));
+                            break;
+                        default:
+                            yasm_internal_error(N_("invalid operand conversion"));
+                    }
+                    break;
+                default:
+                    yasm_internal_error(N_("unknown operand action"));
+            }
+        }
 
-	if (insn->imm_type == LC3B_IMM_9_PC) {
-	    insn->origin_prevbc = prev_bc;
-	    if (insn->imm.seg_of || insn->imm.rshift > 1
-		|| insn->imm.curpos_rel)
-		yasm_error_set(YASM_ERROR_VALUE, N_("invalid jump target"));
-	    insn->imm.curpos_rel = 1;
-	}
+        if (insn->imm_type == LC3B_IMM_9_PC) {
+            insn->origin_prevbc = prev_bc;
+            if (insn->imm.seg_of || insn->imm.rshift > 1
+                || insn->imm.curpos_rel)
+                yasm_error_set(YASM_ERROR_VALUE, N_("invalid jump target"));
+            insn->imm.curpos_rel = 1;
+        }
     }
 
     /* Transform the bytecode */
@@ -322,11 +322,11 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 }
 
 
-#define YYCTYPE		unsigned char
-#define YYCURSOR	id
-#define YYLIMIT		id
-#define YYMARKER	marker
-#define YYFILL(n)	(void)(n)
+#define YYCTYPE         unsigned char
+#define YYCURSOR        id
+#define YYLIMIT         id
+#define YYMARKER        marker
+#define YYFILL(n)       (void)(n)
 
 void
 yasm_lc3b__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len)
@@ -335,79 +335,79 @@ yasm_lc3b__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len)
 
 yasm_arch_regtmod
 yasm_lc3b__parse_check_regtmod(yasm_arch *arch, unsigned long *data,
-			       const char *oid, size_t id_len)
+                               const char *oid, size_t id_len)
 {
     const YYCTYPE *id = (const YYCTYPE *)oid;
     /*const char *marker;*/
     /*!re2c
-	/* integer registers */
-	'r' [0-7]	{
-	    *data = (oid[1]-'0');
-	    return YASM_ARCH_REG;
-	}
+        /* integer registers */
+        'r' [0-7]       {
+            *data = (oid[1]-'0');
+            return YASM_ARCH_REG;
+        }
 
-	/* catchalls */
-	[\001-\377]+	{
-	    return YASM_ARCH_NOTREGTMOD;
-	}
-	[\000]	{
-	    return YASM_ARCH_NOTREGTMOD;
-	}
+        /* catchalls */
+        [\001-\377]+    {
+            return YASM_ARCH_NOTREGTMOD;
+        }
+        [\000]  {
+            return YASM_ARCH_NOTREGTMOD;
+        }
     */
 }
 
 yasm_arch_insnprefix
 yasm_lc3b__parse_check_insnprefix(yasm_arch *arch, unsigned long data[4],
-				  const char *oid, size_t id_len)
+                                  const char *oid, size_t id_len)
 {
     const YYCTYPE *id = (const YYCTYPE *)oid;
     /*const char *marker;*/
     /*!re2c
-	/* instructions */
+        /* instructions */
 
-	'add' { RET_INSN(addand, 0x00); }
-	'and' { RET_INSN(addand, 0x40); }
+        'add' { RET_INSN(addand, 0x00); }
+        'and' { RET_INSN(addand, 0x40); }
 
-	'br' { RET_INSN(br, 0x00); }
-	'brn' { RET_INSN(br, 0x08); }
-	'brz' { RET_INSN(br, 0x04); }
-	'brp' { RET_INSN(br, 0x02); }
-	'brnz' { RET_INSN(br, 0x0C); }
-	'brnp' { RET_INSN(br, 0x0A); }
-	'brzp' { RET_INSN(br, 0x06); }
-	'brnzp' { RET_INSN(br, 0x0E); }
-	'jsr' { RET_INSN(br, 0x40); }
+        'br' { RET_INSN(br, 0x00); }
+        'brn' { RET_INSN(br, 0x08); }
+        'brz' { RET_INSN(br, 0x04); }
+        'brp' { RET_INSN(br, 0x02); }
+        'brnz' { RET_INSN(br, 0x0C); }
+        'brnp' { RET_INSN(br, 0x0A); }
+        'brzp' { RET_INSN(br, 0x06); }
+        'brnzp' { RET_INSN(br, 0x0E); }
+        'jsr' { RET_INSN(br, 0x40); }
 
-	'jmp' { RET_INSN(jmp, 0); }
+        'jmp' { RET_INSN(jmp, 0); }
 
-	'lea' { RET_INSN(lea, 0); }
+        'lea' { RET_INSN(lea, 0); }
 
-	'ld' { RET_INSN(ldst, 0x20); }
-	'ldi' { RET_INSN(ldst, 0xA0); }
-	'st' { RET_INSN(ldst, 0x30); }
-	'sti' { RET_INSN(ldst, 0xB0); }
+        'ld' { RET_INSN(ldst, 0x20); }
+        'ldi' { RET_INSN(ldst, 0xA0); }
+        'st' { RET_INSN(ldst, 0x30); }
+        'sti' { RET_INSN(ldst, 0xB0); }
 
-	'ldb' { RET_INSN(ldstb, 0x60); }
-	'stb' { RET_INSN(ldstb, 0x70); }
+        'ldb' { RET_INSN(ldstb, 0x60); }
+        'stb' { RET_INSN(ldstb, 0x70); }
 
-	'not' { RET_INSN(not, 0); }
+        'not' { RET_INSN(not, 0); }
 
-	'ret' { RET_INSN(nooperand, 0xCE); }
-	'rti' { RET_INSN(nooperand, 0x80); }
-	'nop' { RET_INSN(nooperand, 0); }
+        'ret' { RET_INSN(nooperand, 0xCE); }
+        'rti' { RET_INSN(nooperand, 0x80); }
+        'nop' { RET_INSN(nooperand, 0); }
 
-	'lshf' { RET_INSN(shift, 0x00); }
-	'rshfl' { RET_INSN(shift, 0x10); }
-	'rshfa' { RET_INSN(shift, 0x30); }
+        'lshf' { RET_INSN(shift, 0x00); }
+        'rshfl' { RET_INSN(shift, 0x10); }
+        'rshfa' { RET_INSN(shift, 0x30); }
 
-	'trap' { RET_INSN(trap, 0); }
+        'trap' { RET_INSN(trap, 0); }
 
-	/* catchalls */
-	[\001-\377]+	{
-	    return YASM_ARCH_NOTINSNPREFIX;
-	}
-	[\000]	{
-	    return YASM_ARCH_NOTINSNPREFIX;
-	}
+        /* catchalls */
+        [\001-\377]+    {
+            return YASM_ARCH_NOTINSNPREFIX;
+        }
+        [\000]  {
+            return YASM_ARCH_NOTINSNPREFIX;
+        }
     */
 }

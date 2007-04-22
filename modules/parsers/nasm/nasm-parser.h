@@ -27,7 +27,7 @@
 #ifndef YASM_NASM_PARSER_H
 #define YASM_NASM_PARSER_H
 
-#define YYCTYPE		unsigned char
+#define YYCTYPE         unsigned char
 
 #define MAX_SAVED_LINE_LEN  80
 
@@ -61,7 +61,7 @@ enum tokentype {
     LOCAL_ID,
     SPECIAL_ID,
     LINE,
-    NONE		/* special token for lookahead */
+    NONE                /* special token for lookahead */
 };
 
 typedef union {
@@ -71,8 +71,8 @@ typedef union {
     yasm_floatnum *flt;
     uintptr_t arch_data[4];
     struct {
-	char *contents;
-	size_t len;
+        char *contents;
+        size_t len;
     } str;
 } yystype;
 #define YYSTYPE yystype
@@ -100,52 +100,52 @@ typedef struct yasm_parser_nasm {
 
     yasm_scanner s;
     enum {
-	INITIAL,
-	DIRECTIVE,
-	SECTION_DIRECTIVE,
-	DIRECTIVE2,
-	LINECHG,
-	LINECHG2,
-	INSTRUCTION
+        INITIAL,
+        DIRECTIVE,
+        SECTION_DIRECTIVE,
+        DIRECTIVE2,
+        LINECHG,
+        LINECHG2,
+        INSTRUCTION
     } state;
 
-    int token;		/* enum tokentype or any character */
+    int token;          /* enum tokentype or any character */
     yystype tokval;
-    char tokch;		/* first character of token */
+    char tokch;         /* first character of token */
 
     /* one token of lookahead; used sparingly */
-    int peek_token;	/* NONE if none */
+    int peek_token;     /* NONE if none */
     yystype peek_tokval;
     char peek_tokch;
 } yasm_parser_nasm;
 
 /* shorter access names to commonly used parser_nasm fields */
-#define p_object	(parser_nasm->object)
-#define p_symtab	(parser_nasm->object->symtab)
-#define cursect		(parser_nasm->object->cur_section)
-#define curtok		(parser_nasm->token)
-#define curval		(parser_nasm->tokval)
+#define p_object        (parser_nasm->object)
+#define p_symtab        (parser_nasm->object->symtab)
+#define cursect         (parser_nasm->object->cur_section)
+#define curtok          (parser_nasm->token)
+#define curval          (parser_nasm->tokval)
 
-#define INTNUM_val		(curval.intn)
-#define FLTNUM_val		(curval.flt)
-#define DIRECTIVE_NAME_val	(curval.str_val)
-#define FILENAME_val		(curval.str_val)
-#define STRING_val		(curval.str)
-#define SIZE_OVERRIDE_val	(curval.int_info)
-#define DECLARE_DATA_val	(curval.int_info)
-#define RESERVE_SPACE_val	(curval.int_info)
-#define INSN_val		(curval.arch_data)
-#define PREFIX_val		(curval.arch_data)
-#define REG_val			(curval.arch_data)
-#define SEGREG_val		(curval.arch_data)
-#define TARGETMOD_val		(curval.arch_data)
-#define ID_val			(curval.str_val)
+#define INTNUM_val              (curval.intn)
+#define FLTNUM_val              (curval.flt)
+#define DIRECTIVE_NAME_val      (curval.str_val)
+#define FILENAME_val            (curval.str_val)
+#define STRING_val              (curval.str)
+#define SIZE_OVERRIDE_val       (curval.int_info)
+#define DECLARE_DATA_val        (curval.int_info)
+#define RESERVE_SPACE_val       (curval.int_info)
+#define INSN_val                (curval.arch_data)
+#define PREFIX_val              (curval.arch_data)
+#define REG_val                 (curval.arch_data)
+#define SEGREG_val              (curval.arch_data)
+#define TARGETMOD_val           (curval.arch_data)
+#define ID_val                  (curval.str_val)
 
-#define cur_line	(yasm_linemap_get_current(parser_nasm->linemap))
+#define cur_line        (yasm_linemap_get_current(parser_nasm->linemap))
 
-#define p_expr_new_tree(l,o,r)	yasm_expr_create_tree(l,o,r,cur_line)
-#define p_expr_new_branch(o,r)	yasm_expr_create_branch(o,r,cur_line)
-#define p_expr_new_ident(r)	yasm_expr_create_ident(r,cur_line)
+#define p_expr_new_tree(l,o,r)  yasm_expr_create_tree(l,o,r,cur_line)
+#define p_expr_new_branch(o,r)  yasm_expr_create_branch(o,r,cur_line)
+#define p_expr_new_ident(r)     yasm_expr_create_ident(r,cur_line)
 
 void nasm_parser_parse(yasm_parser_nasm *parser_nasm);
 void nasm_parser_cleanup(yasm_parser_nasm *parser_nasm);

@@ -50,24 +50,24 @@
  * Mantissa does NOT have an implied one bit (it's explicit).
  */
 struct yasm_floatnum {
-    /*@only@*/ wordptr mantissa;	/* Allocated to MANT_BITS bits */
+    /*@only@*/ wordptr mantissa;        /* Allocated to MANT_BITS bits */
     unsigned short exponent;
     unsigned char sign;
     unsigned char flags;
 };
 
 /* constants describing parameters of internal floating point format */
-#define MANT_BITS	80
-#define MANT_BYTES	10
-#define MANT_SIGDIGITS	24
-#define EXP_BIAS	0x7FFF
-#define EXP_INF		0xFFFF
-#define EXP_MAX		0xFFFE
-#define EXP_MIN		1
-#define EXP_ZERO	0
+#define MANT_BITS       80
+#define MANT_BYTES      10
+#define MANT_SIGDIGITS  24
+#define EXP_BIAS        0x7FFF
+#define EXP_INF         0xFFFF
+#define EXP_MAX         0xFFFE
+#define EXP_MIN         1
+#define EXP_ZERO        0
 
 /* Flag settings for flags field */
-#define FLAG_ISZERO	1<<0
+#define FLAG_ISZERO     1<<0
 
 /* Note this structure integrates the floatnum structure */
 typedef struct POT_Entry_s {
@@ -77,8 +77,8 @@ typedef struct POT_Entry_s {
 
 /* "Source" for POT_Entry. */
 typedef struct POT_Entry_Source_s {
-    unsigned char mantissa[MANT_BYTES];	    /* little endian mantissa */
-    unsigned short exponent;		    /* Bias 32767 exponent */
+    unsigned char mantissa[MANT_BYTES];     /* little endian mantissa */
+    unsigned short exponent;                /* Bias 32767 exponent */
 } POT_Entry_Source;
 
 /* Power of ten tables used by the floating point I/O routines.
@@ -173,9 +173,9 @@ yasm_floatnum_initialize(void)
 
     /* Initialize entry[0..12] */
     for (i=12; i>=0; i--) {
-	POT_Table_Init_Entry(&POT_TableN[i], &POT_TableN_Source[i], 0-dec_exp);
-	POT_Table_Init_Entry(&POT_TableP[i+1], &POT_TableP_Source[i], dec_exp);
-	dec_exp *= 2;	    /* Update decimal exponent */
+        POT_Table_Init_Entry(&POT_TableN[i], &POT_TableN_Source[i], 0-dec_exp);
+        POT_Table_Init_Entry(&POT_TableP[i+1], &POT_TableP_Source[i], dec_exp);
+        dec_exp *= 2;       /* Update decimal exponent */
     }
 
     /* Initialize entry[13] */
@@ -200,8 +200,8 @@ yasm_floatnum_cleanup(void)
     POT_TableP--;
 
     for (i=0; i<14; i++) {
-	BitVector_Destroy(POT_TableN[i].f.mantissa);
-	BitVector_Destroy(POT_TableP[i].f.mantissa);
+        BitVector_Destroy(POT_TableN[i].f.mantissa);
+        BitVector_Destroy(POT_TableP[i].f.mantissa);
     }
     BitVector_Destroy(POT_TableP[14].f.mantissa);
 
@@ -216,15 +216,15 @@ floatnum_normalize(yasm_floatnum *flt)
     long norm_amt;
 
     if (BitVector_is_empty(flt->mantissa)) {
-	flt->exponent = 0;
-	return;
+        flt->exponent = 0;
+        return;
     }
 
     /* Look for the highest set bit, shift to make it the MSB, and adjust
      * exponent.  Don't let exponent go negative. */
     norm_amt = (MANT_BITS-1)-Set_Max(flt->mantissa);
     if (norm_amt > (long)flt->exponent)
-	norm_amt = (long)flt->exponent;
+        norm_amt = (long)flt->exponent;
     BitVector_Move_Left(flt->mantissa, (N_int)norm_amt);
     flt->exponent -= (unsigned short)norm_amt;
 }
@@ -242,24 +242,24 @@ floatnum_mul(yasm_floatnum *acc, const yasm_floatnum *op)
 
     /* Check for multiply by 0 */
     if (BitVector_is_empty(acc->mantissa) || BitVector_is_empty(op->mantissa)) {
-	BitVector_Empty(acc->mantissa);
-	acc->exponent = EXP_ZERO;
-	return;
+        BitVector_Empty(acc->mantissa);
+        acc->exponent = EXP_ZERO;
+        return;
     }
 
     /* Add exponents, checking for overflow/underflow. */
     expon = (((int)acc->exponent)-EXP_BIAS) + (((int)op->exponent)-EXP_BIAS);
     expon += EXP_BIAS;
     if (expon > EXP_MAX) {
-	/* Overflow; return infinity. */
-	BitVector_Empty(acc->mantissa);
-	acc->exponent = EXP_INF;
-	return;
+        /* Overflow; return infinity. */
+        BitVector_Empty(acc->mantissa);
+        acc->exponent = EXP_INF;
+        return;
     } else if (expon < EXP_MIN) {
-	/* Underflow; return zero. */
-	BitVector_Empty(acc->mantissa);
-	acc->exponent = EXP_ZERO;
-	return;
+        /* Underflow; return zero. */
+        BitVector_Empty(acc->mantissa);
+        acc->exponent = EXP_ZERO;
+        return;
     }
 
     /* Add one to the final exponent, as the multiply shifts one extra time. */
@@ -289,7 +289,7 @@ floatnum_mul(yasm_floatnum *acc, const yasm_floatnum *op)
      */
     norm_amt = (MANT_BITS*2-1)-Set_Max(product);
     if (norm_amt > (long)acc->exponent)
-	norm_amt = (long)acc->exponent;
+        norm_amt = (long)acc->exponent;
     BitVector_Move_Left(product, (N_int)norm_amt);
     acc->exponent -= (unsigned short)norm_amt;
 
@@ -306,7 +306,7 @@ yasm_floatnum *
 yasm_floatnum_create(const char *str)
 {
     yasm_floatnum *flt;
-    int dec_exponent, dec_exp_add;	/* decimal (powers of 10) exponent */
+    int dec_exponent, dec_exp_add;      /* decimal (powers of 10) exponent */
     int POT_index;
     wordptr operand[2];
     int sig_digits;
@@ -329,17 +329,17 @@ yasm_floatnum_create(const char *str)
 
     /* check for + or - character and skip */
     if (*str == '-') {
-	flt->sign = 1;
-	str++;
+        flt->sign = 1;
+        str++;
     } else if (*str == '+') {
-	flt->sign = 0;
-	str++;
+        flt->sign = 0;
+        str++;
     } else
-	flt->sign = 0;
+        flt->sign = 0;
 
     /* eliminate any leading zeros (which do not count as significant digits) */
     while (*str == '0')
-	str++;
+        str++;
 
     /* When we reach the end of the leading zeros, first check for a decimal
      * point.  If the number is of the form "0---0.0000" we need to get rid
@@ -347,78 +347,78 @@ yasm_floatnum_create(const char *str)
      * digits.
      */
     if (*str == '.') {
-	str++;
-	while (*str == '0') {
-	    str++;
-	    dec_exponent--;
-	}
+        str++;
+        while (*str == '0') {
+            str++;
+            dec_exponent--;
+        }
     } else {
-	/* The number is of the form "yyy.xxxx" (where y <> 0). */
-	while (isdigit(*str)) {
-	    /* See if we've processed more than the max significant digits: */
-	    if (sig_digits < MANT_SIGDIGITS) {
-		/* Multiply mantissa by 10 [x = (x<<1)+(x<<3)] */
-		BitVector_shift_left(flt->mantissa, 0);
-		BitVector_Copy(operand[0], flt->mantissa);
-		BitVector_Move_Left(flt->mantissa, 2);
-		carry = 0;
-		BitVector_add(operand[1], operand[0], flt->mantissa, &carry);
+        /* The number is of the form "yyy.xxxx" (where y <> 0). */
+        while (isdigit(*str)) {
+            /* See if we've processed more than the max significant digits: */
+            if (sig_digits < MANT_SIGDIGITS) {
+                /* Multiply mantissa by 10 [x = (x<<1)+(x<<3)] */
+                BitVector_shift_left(flt->mantissa, 0);
+                BitVector_Copy(operand[0], flt->mantissa);
+                BitVector_Move_Left(flt->mantissa, 2);
+                carry = 0;
+                BitVector_add(operand[1], operand[0], flt->mantissa, &carry);
 
-		/* Add in current digit */
-		BitVector_Empty(operand[0]);
-		BitVector_Chunk_Store(operand[0], 4, 0, (N_long)(*str-'0'));
-		carry = 0;
-		BitVector_add(flt->mantissa, operand[1], operand[0], &carry);
-	    } else {
-		/* Can't integrate more digits with mantissa, so instead just
-		 * raise by a power of ten.
-		 */
-		dec_exponent++;
-	    }
-	    sig_digits++;
-	    str++;
-	}
+                /* Add in current digit */
+                BitVector_Empty(operand[0]);
+                BitVector_Chunk_Store(operand[0], 4, 0, (N_long)(*str-'0'));
+                carry = 0;
+                BitVector_add(flt->mantissa, operand[1], operand[0], &carry);
+            } else {
+                /* Can't integrate more digits with mantissa, so instead just
+                 * raise by a power of ten.
+                 */
+                dec_exponent++;
+            }
+            sig_digits++;
+            str++;
+        }
 
-	if (*str == '.')
-	    str++;
-	else
-	    decimal_pt = 0;
+        if (*str == '.')
+            str++;
+        else
+            decimal_pt = 0;
     }
 
     if (decimal_pt) {
-	/* Process the digits to the right of the decimal point. */
-	while (isdigit(*str)) {
-	    /* See if we've processed more than 19 significant digits: */
-	    if (sig_digits < 19) {
-		/* Raise by a power of ten */
-		dec_exponent--;
+        /* Process the digits to the right of the decimal point. */
+        while (isdigit(*str)) {
+            /* See if we've processed more than 19 significant digits: */
+            if (sig_digits < 19) {
+                /* Raise by a power of ten */
+                dec_exponent--;
 
-		/* Multiply mantissa by 10 [x = (x<<1)+(x<<3)] */
-		BitVector_shift_left(flt->mantissa, 0);
-		BitVector_Copy(operand[0], flt->mantissa);
-		BitVector_Move_Left(flt->mantissa, 2);
-		carry = 0;
-		BitVector_add(operand[1], operand[0], flt->mantissa, &carry);
+                /* Multiply mantissa by 10 [x = (x<<1)+(x<<3)] */
+                BitVector_shift_left(flt->mantissa, 0);
+                BitVector_Copy(operand[0], flt->mantissa);
+                BitVector_Move_Left(flt->mantissa, 2);
+                carry = 0;
+                BitVector_add(operand[1], operand[0], flt->mantissa, &carry);
 
-		/* Add in current digit */
-		BitVector_Empty(operand[0]);
-		BitVector_Chunk_Store(operand[0], 4, 0, (N_long)(*str-'0'));
-		carry = 0;
-		BitVector_add(flt->mantissa, operand[1], operand[0], &carry);
-	    }
-	    sig_digits++;
-	    str++;
-	}
+                /* Add in current digit */
+                BitVector_Empty(operand[0]);
+                BitVector_Chunk_Store(operand[0], 4, 0, (N_long)(*str-'0'));
+                carry = 0;
+                BitVector_add(flt->mantissa, operand[1], operand[0], &carry);
+            }
+            sig_digits++;
+            str++;
+        }
     }
 
     if (*str == 'e' || *str == 'E') {
-	str++;
-	/* We just saw the "E" character, now read in the exponent value and
-	 * add it into dec_exponent.
-	 */
-	dec_exp_add = 0;
-	sscanf(str, "%d", &dec_exp_add);
-	dec_exponent += dec_exp_add;
+        str++;
+        /* We just saw the "E" character, now read in the exponent value and
+         * add it into dec_exponent.
+         */
+        dec_exp_add = 0;
+        sscanf(str, "%d", &dec_exp_add);
+        dec_exponent += dec_exp_add;
     }
 
     /* Free calculation variables. */
@@ -427,12 +427,12 @@ yasm_floatnum_create(const char *str)
 
     /* Normalize the number, checking for 0 first. */
     if (BitVector_is_empty(flt->mantissa)) {
-	/* Mantissa is 0, zero exponent too. */
-	flt->exponent = 0;
-	/* Set zero flag so output functions don't see 0 value as underflow. */
-	flt->flags |= FLAG_ISZERO;
-	/* Return 0 value. */
-	return flt;
+        /* Mantissa is 0, zero exponent too. */
+        flt->exponent = 0;
+        /* Set zero flag so output functions don't see 0 value as underflow. */
+        flt->flags |= FLAG_ISZERO;
+        /* Return 0 value. */
+        return flt;
     }
     /* Exponent if already norm. */
     flt->exponent = (unsigned short)(0x7FFF+(MANT_BITS-1));
@@ -443,48 +443,48 @@ yasm_floatnum_create(const char *str)
      * up this operation (and make it more accurate).
      */
     if (dec_exponent > 0) {
-	POT_index = 0;
-	/* Until we hit 1.0 or finish exponent or overflow */
-	while ((POT_index < 14) && (dec_exponent != 0) &&
-	       (flt->exponent != EXP_INF)) {
-	    /* Find the first power of ten in the table which is just less than
-	     * the exponent.
-	     */
-	    while (dec_exponent < POT_TableP[POT_index].dec_exponent)
-		POT_index++;
+        POT_index = 0;
+        /* Until we hit 1.0 or finish exponent or overflow */
+        while ((POT_index < 14) && (dec_exponent != 0) &&
+               (flt->exponent != EXP_INF)) {
+            /* Find the first power of ten in the table which is just less than
+             * the exponent.
+             */
+            while (dec_exponent < POT_TableP[POT_index].dec_exponent)
+                POT_index++;
 
-	    if (POT_index < 14) {
-		/* Subtract out what we're multiplying in from exponent */
-		dec_exponent -= POT_TableP[POT_index].dec_exponent;
+            if (POT_index < 14) {
+                /* Subtract out what we're multiplying in from exponent */
+                dec_exponent -= POT_TableP[POT_index].dec_exponent;
 
-		/* Multiply by current power of 10 */
-		floatnum_mul(flt, &POT_TableP[POT_index].f);
-	    }
-	}
+                /* Multiply by current power of 10 */
+                floatnum_mul(flt, &POT_TableP[POT_index].f);
+            }
+        }
     } else if (dec_exponent < 0) {
-	POT_index = 0;
-	/* Until we hit 1.0 or finish exponent or underflow */
-	while ((POT_index < 14) && (dec_exponent != 0) &&
-	       (flt->exponent != EXP_ZERO)) {
-	    /* Find the first power of ten in the table which is just less than
-	     * the exponent.
-	     */
-	    while (dec_exponent > POT_TableN[POT_index].dec_exponent)
-		POT_index++;
+        POT_index = 0;
+        /* Until we hit 1.0 or finish exponent or underflow */
+        while ((POT_index < 14) && (dec_exponent != 0) &&
+               (flt->exponent != EXP_ZERO)) {
+            /* Find the first power of ten in the table which is just less than
+             * the exponent.
+             */
+            while (dec_exponent > POT_TableN[POT_index].dec_exponent)
+                POT_index++;
 
-	    if (POT_index < 14) {
-		/* Subtract out what we're multiplying in from exponent */
-		dec_exponent -= POT_TableN[POT_index].dec_exponent;
+            if (POT_index < 14) {
+                /* Subtract out what we're multiplying in from exponent */
+                dec_exponent -= POT_TableN[POT_index].dec_exponent;
 
-		/* Multiply by current power of 10 */
-		floatnum_mul(flt, &POT_TableN[POT_index].f);
-	    }
-	}
+                /* Multiply by current power of 10 */
+                floatnum_mul(flt, &POT_TableN[POT_index].f);
+            }
+        }
     }
 
     /* Round the result. (Don't round underflow or overflow). */
     if ((flt->exponent != EXP_INF) && (flt->exponent != EXP_ZERO))
-	BitVector_increment(flt->mantissa);
+        BitVector_increment(flt->mantissa);
 
     return flt;
 }
@@ -511,12 +511,12 @@ yasm_floatnum_destroy(yasm_floatnum *flt)
 
 int
 yasm_floatnum_calc(yasm_floatnum *acc, yasm_expr_op op,
-		   /*@unused@*/ yasm_floatnum *operand)
+                   /*@unused@*/ yasm_floatnum *operand)
 {
     if (op != YASM_EXPR_NEG) {
-	yasm_error_set(YASM_ERROR_FLOATING_POINT,
-		       N_("Unsupported floating-point arithmetic operation"));
-	return 1;
+        yasm_error_set(YASM_ERROR_FLOATING_POINT,
+                       N_("Unsupported floating-point arithmetic operation"));
+        return 1;
     }
     acc->sign ^= 1;
     return 0;
@@ -528,8 +528,8 @@ yasm_floatnum_get_int(const yasm_floatnum *flt, unsigned long *ret_val)
     unsigned char t[4];
 
     if (yasm_floatnum_get_sized(flt, t, 4, 32, 0, 0, 0)) {
-	*ret_val = 0xDEADBEEFUL;    /* Obviously incorrect return value */
-	return 1;
+        *ret_val = 0xDEADBEEFUL;    /* Obviously incorrect return value */
+        return 1;
     }
 
     YASM_LOAD_32_L(*ret_val, &t[0]);
@@ -549,8 +549,8 @@ yasm_floatnum_get_int(const yasm_floatnum *flt, unsigned long *ret_val)
  */
 static int
 floatnum_get_common(const yasm_floatnum *flt, /*@out@*/ unsigned char *ptr,
-		    N_int byte_size, N_int mant_bits, int implicit1,
-		    N_int exp_bits)
+                    N_int byte_size, N_int mant_bits, int implicit1,
+                    N_int exp_bits)
 {
     long exponent = (long)flt->exponent;
     wordptr output;
@@ -565,45 +565,45 @@ floatnum_get_common(const yasm_floatnum *flt, /*@out@*/ unsigned char *ptr,
 
     /* copy mantissa */
     BitVector_Interval_Copy(output, flt->mantissa, 0,
-			    (N_int)((MANT_BITS-implicit1)-mant_bits),
-			    mant_bits);
+                            (N_int)((MANT_BITS-implicit1)-mant_bits),
+                            mant_bits);
 
     /* round mantissa */
     if (BitVector_bit_test(flt->mantissa, (MANT_BITS-implicit1)-(mant_bits+1)))
-	BitVector_increment(output);
+        BitVector_increment(output);
 
     if (BitVector_bit_test(output, mant_bits)) {
-	/* overflowed, so zero mantissa (and set explicit bit if necessary) */
-	BitVector_Empty(output);
-	BitVector_Bit_Copy(output, mant_bits-1, !implicit1);
-	/* and up the exponent (checking for overflow) */
-	if (exponent+1 >= EXP_INF)
-	    overflow = 1;
-	else
-	    exponent++;
+        /* overflowed, so zero mantissa (and set explicit bit if necessary) */
+        BitVector_Empty(output);
+        BitVector_Bit_Copy(output, mant_bits-1, !implicit1);
+        /* and up the exponent (checking for overflow) */
+        if (exponent+1 >= EXP_INF)
+            overflow = 1;
+        else
+            exponent++;
     }
 
     /* adjust the exponent to the output bias, checking for overflow */
     exponent -= EXP_BIAS-exp_bias;
     if (exponent >= exp_inf)
-	overflow = 1;
+        overflow = 1;
     else if (exponent <= 0)
-	underflow = 1;
+        underflow = 1;
 
     /* underflow and overflow both set!? */
     if (underflow && overflow)
-	yasm_internal_error(N_("Both underflow and overflow set"));
+        yasm_internal_error(N_("Both underflow and overflow set"));
 
     /* check for underflow or overflow and set up appropriate output */
     if (underflow) {
-	BitVector_Empty(output);
-	exponent = 0;
-	if (!(flt->flags & FLAG_ISZERO))
-	    retval = -1;
+        BitVector_Empty(output);
+        exponent = 0;
+        if (!(flt->flags & FLAG_ISZERO))
+            retval = -1;
     } else if (overflow) {
-	BitVector_Empty(output);
-	exponent = exp_inf;
-	retval = 1;
+        BitVector_Empty(output);
+        exponent = exp_inf;
+        retval = 1;
     }
 
     /* move exponent into place */
@@ -615,8 +615,8 @@ floatnum_get_common(const yasm_floatnum *flt, /*@out@*/ unsigned char *ptr,
     /* get little-endian bytes */
     buf = BitVector_Block_Read(output, &len);
     if (len < byte_size)
-	yasm_internal_error(
-	    N_("Byte length of BitVector does not match bit length"));
+        yasm_internal_error(
+            N_("Byte length of BitVector does not match bit length"));
 
     /* copy to output */
     memcpy(ptr, buf, byte_size*sizeof(unsigned char));
@@ -661,36 +661,36 @@ floatnum_get_common(const yasm_floatnum *flt, /*@out@*/ unsigned char *ptr,
  */
 int
 yasm_floatnum_get_sized(const yasm_floatnum *flt, unsigned char *ptr,
-			size_t destsize, size_t valsize, size_t shift,
-			int bigendian, int warn)
+                        size_t destsize, size_t valsize, size_t shift,
+                        int bigendian, int warn)
 {
     int retval;
     if (destsize*8 != valsize || shift>0 || bigendian) {
-	/* TODO */
-	yasm_internal_error(N_("unsupported floatnum functionality"));
+        /* TODO */
+        yasm_internal_error(N_("unsupported floatnum functionality"));
     }
     switch (destsize) {
-	case 4:
-	    retval = floatnum_get_common(flt, ptr, 4, 23, 1, 8);
-	    break;
-	case 8:
-	    retval = floatnum_get_common(flt, ptr, 8, 52, 1, 11);
-	    break;
-	case 10:
-	    retval = floatnum_get_common(flt, ptr, 10, 64, 0, 15);
-	    break;
-	default:
-	    yasm_internal_error(N_("Invalid float conversion size"));
-	    /*@notreached@*/
-	    return 1;
+        case 4:
+            retval = floatnum_get_common(flt, ptr, 4, 23, 1, 8);
+            break;
+        case 8:
+            retval = floatnum_get_common(flt, ptr, 8, 52, 1, 11);
+            break;
+        case 10:
+            retval = floatnum_get_common(flt, ptr, 10, 64, 0, 15);
+            break;
+        default:
+            yasm_internal_error(N_("Invalid float conversion size"));
+            /*@notreached@*/
+            return 1;
     }
     if (warn) {
-	if (retval < 0)
-	    yasm_warn_set(YASM_WARN_GENERAL,
-			  N_("underflow in floating point expression"));
-	else if (retval > 0)
-	    yasm_warn_set(YASM_WARN_GENERAL,
-			  N_("overflow in floating point expression"));
+        if (retval < 0)
+            yasm_warn_set(YASM_WARN_GENERAL,
+                          N_("underflow in floating point expression"));
+        else if (retval > 0)
+            yasm_warn_set(YASM_WARN_GENERAL,
+                          N_("overflow in floating point expression"));
     }
     return retval;
 }
@@ -700,12 +700,12 @@ int
 yasm_floatnum_check_size(/*@unused@*/ const yasm_floatnum *flt, size_t size)
 {
     switch (size) {
-	case 32:
-	case 64:
-	case 80:
-	    return 1;
-	default:
-	    return 0;
+        case 32:
+        case 64:
+        case 80:
+            return 1;
+        default:
+            return 0;
     }
 }
 
@@ -719,27 +719,27 @@ yasm_floatnum_print(const yasm_floatnum *flt, FILE *f)
     /* Internal format */
     str = BitVector_to_Hex(flt->mantissa);
     fprintf(f, "%c %s *2^%04x\n", flt->sign?'-':'+', (char *)str,
-	    flt->exponent);
+            flt->exponent);
     yasm_xfree(str);
 
     /* 32-bit (single precision) format */
     fprintf(f, "32-bit: %d: ",
-	    yasm_floatnum_get_sized(flt, out, 4, 32, 0, 0, 0));
+            yasm_floatnum_get_sized(flt, out, 4, 32, 0, 0, 0));
     for (i=0; i<4; i++)
-	fprintf(f, "%02x ", out[i]);
+        fprintf(f, "%02x ", out[i]);
     fprintf(f, "\n");
 
     /* 64-bit (double precision) format */
     fprintf(f, "64-bit: %d: ",
-	    yasm_floatnum_get_sized(flt, out, 8, 64, 0, 0, 0));
+            yasm_floatnum_get_sized(flt, out, 8, 64, 0, 0, 0));
     for (i=0; i<8; i++)
-	fprintf(f, "%02x ", out[i]);
+        fprintf(f, "%02x ", out[i]);
     fprintf(f, "\n");
 
     /* 80-bit (extended precision) format */
     fprintf(f, "80-bit: %d: ",
-	    yasm_floatnum_get_sized(flt, out, 10, 80, 0, 0, 0));
+            yasm_floatnum_get_sized(flt, out, 10, 80, 0, 0, 0));
     for (i=0; i<10; i++)
-	fprintf(f, "%02x ", out[i]);
+        fprintf(f, "%02x ", out[i]);
     fprintf(f, "\n");
 }

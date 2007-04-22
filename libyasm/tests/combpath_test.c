@@ -104,18 +104,18 @@ run_test(Test_Entry *test)
     const char *funcname;
 
     if (test->combpath == &yasm__combpath_unix)
-	funcname = "unix";
+        funcname = "unix";
     else
-	funcname = "win";
+        funcname = "win";
 
     out = test->combpath(test->from, test->to);
 
     if (strcmp(out, test->out) != 0) {
-	sprintf(failmsg,
-		"combpath_%s(\"%s\", \"%s\"): expected \"%s\", got \"%s\"!",
-		funcname, test->from, test->to, test->out, out);
-	yasm_xfree(out);
-	return 1;
+        sprintf(failmsg,
+                "combpath_%s(\"%s\", \"%s\"): expected \"%s\", got \"%s\"!",
+                funcname, test->from, test->to, test->out, out);
+        yasm_xfree(out);
+        return 1;
     }
 
     yasm_xfree(out);
@@ -132,15 +132,15 @@ main(void)
     failed[0] = '\0';
     printf("Test combpath_test: ");
     for (i=0; i<numtests; i++) {
-	int fail = run_test(&tests[i]);
-	printf("%c", fail>0 ? 'F':'.');
-	fflush(stdout);
-	if (fail)
-	    sprintf(failed, "%s ** F: %s\n", failed, failmsg);
-	nf += fail;
+        int fail = run_test(&tests[i]);
+        printf("%c", fail>0 ? 'F':'.');
+        fflush(stdout);
+        if (fail)
+            sprintf(failed, "%s ** F: %s\n", failed, failmsg);
+        nf += fail;
     }
 
     printf(" +%d-%d/%d %d%%\n%s",
-	   numtests-nf, nf, numtests, 100*(numtests-nf)/numtests, failed);
+           numtests-nf, nf, numtests, 100*(numtests-nf)/numtests, failed);
     return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

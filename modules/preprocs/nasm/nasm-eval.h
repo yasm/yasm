@@ -13,6 +13,6 @@
  * The evaluator itself.
  */
 yasm_expr *nasm_evaluate (scanner sc, void *scprivate, struct tokenval *tv,
-			  int critical, efunc report_error);
+                          int critical, efunc report_error);
 
 #endif
