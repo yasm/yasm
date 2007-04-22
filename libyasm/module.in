@@ -31,8 +31,8 @@
 
 
 typedef struct module {
-    const char *keyword;	    /* module keyword */
-    void *data;			    /* associated data */
+    const char *keyword;            /* module keyword */
+    void *data;                     /* associated data */
 } module;
 
 EXTERN_LIST
@@ -82,8 +82,8 @@ yasm_load_module(yasm_module_type type, const char *keyword)
 
     /* Look for the module/symbol. */
     for (i=0; i<n; i++) {
-	if (yasm__strcasecmp(modules[i].keyword, keyword) == 0)
-	    return modules[i].data;
+        if (yasm__strcasecmp(modules[i].keyword, keyword) == 0)
+            return modules[i].data;
     }
 
     return NULL;
@@ -91,7 +91,7 @@ yasm_load_module(yasm_module_type type, const char *keyword)
 
 void
 yasm_list_modules(yasm_module_type type,
-		  void (*printfunc) (const char *name, const char *keyword))
+                  void (*printfunc) (const char *name, const char *keyword))
 {
     size_t i;
     module *modules = module_types[type].m;
@@ -105,31 +105,31 @@ yasm_list_modules(yasm_module_type type,
 
     /* Go through available list, and try to load each one */
     for (i=0; i<n; i++) {
-	switch (type) {
-	    case YASM_MODULE_ARCH:
-		arch = modules[i].data;
-		printfunc(arch->name, arch->keyword);
-		break;
-	    case YASM_MODULE_DBGFMT:
-		dbgfmt = modules[i].data;
-		printfunc(dbgfmt->name, dbgfmt->keyword);
-		break;
-	    case YASM_MODULE_OBJFMT:
-		objfmt = modules[i].data;
-		printfunc(objfmt->name, objfmt->keyword);
-		break;
-	    case YASM_MODULE_LISTFMT:
-		listfmt = modules[i].data;
-		printfunc(listfmt->name, listfmt->keyword);
-		break;
-	    case YASM_MODULE_PARSER:
-		parser = modules[i].data;
-		printfunc(parser->name, parser->keyword);
-		break;
-	    case YASM_MODULE_PREPROC:
-		preproc = modules[i].data;
-		printfunc(preproc->name, preproc->keyword);
-		break;
-	}
+        switch (type) {
+            case YASM_MODULE_ARCH:
+                arch = modules[i].data;
+                printfunc(arch->name, arch->keyword);
+                break;
+            case YASM_MODULE_DBGFMT:
+                dbgfmt = modules[i].data;
+                printfunc(dbgfmt->name, dbgfmt->keyword);
+                break;
+            case YASM_MODULE_OBJFMT:
+                objfmt = modules[i].data;
+                printfunc(objfmt->name, objfmt->keyword);
+                break;
+            case YASM_MODULE_LISTFMT:
+                listfmt = modules[i].data;
+                printfunc(listfmt->name, listfmt->keyword);
+                break;
+            case YASM_MODULE_PARSER:
+                parser = modules[i].data;
+                printfunc(parser->name, parser->keyword);
+                break;
+            case YASM_MODULE_PREPROC:
+                preproc = modules[i].data;
+                printfunc(preproc->name, preproc->keyword);
+                break;
+        }
     }
 }
