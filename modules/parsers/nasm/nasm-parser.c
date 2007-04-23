@@ -73,6 +73,9 @@ nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
     /* Free locallabel base if necessary */
     if (parser_nasm.locallabel_base)
         yasm_xfree(parser_nasm.locallabel_base);
+
+    /* Check for undefined symbols */
+    yasm_symtab_parser_finalize(object->symtab, 0, errwarns);
 }
 
 /* Define valid preprocessors to use with this parser */
