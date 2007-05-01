@@ -125,7 +125,7 @@ static void test_pmulhrsw_c(short *pDst, short *pSrc, int xmm)
    for ( i = 0; i < (4 << xmm); i++ )
    {
       int a = pSrc[ i ] * pDst[ i ];
-	 pDst[i] = (short)(((a >> 14) + 1) >> 1);
+         pDst[i] = (short)(((a >> 14) + 1) >> 1);
    }
 }
 
@@ -136,7 +136,7 @@ static void test_pmaddubsw_c(unsigned char *pDst, signed char *pSrc, int xmm)
    for ( i = 0; i < (4 << xmm); i++ )
    {
       int a = pSrc[ 2 * i ] * pDst[ 2 * i ] + pSrc[ 2 * i + 1 ] * pDst[ 2 * i + 1];
-	 ((signed short *)pDst)[i] = SAT(a);
+         ((signed short *)pDst)[i] = SAT(a);
    }
 }
 
@@ -215,9 +215,9 @@ void main(int nArgC, char *pArgv[])
       CHECK_FUNCTIONS( phsubd );
 
       CHECK_FUNCTIONS( pmulhrsw );
-	 CHECK_FUNCTIONS( pmaddubsw );
+         CHECK_FUNCTIONS( pmaddubsw );
       
-	 CHECK_FUNCTIONS( pshufb );
+         CHECK_FUNCTIONS( pshufb );
       CHECK_FUNCTIONS( palignr );
    }
 }

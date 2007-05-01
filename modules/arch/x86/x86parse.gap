@@ -1,5 +1,28 @@
 # GAP (gen_arch_parse) input file for x86 architecture
 # $Id$
+#
+#  Copyright (C) 2001-2007  Peter Johnson
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND OTHER CONTRIBUTORS ``AS IS''
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR OTHER CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 
 # Configure GAP for x86 generation mode
 ARCH	x86
@@ -718,23 +741,80 @@ INSN	-	movddup	NONE	cvt_xmm_xmm64_ss 0xF212	CPU_SSE3
 INSN	-	movshdup NONE	ssess	0xF316		CPU_SSE3
 INSN	-	movsldup NONE	ssess	0xF312		CPU_SSE3
 INSN	-	mwait	NONE	threebyte   0x0F01C9	CPU_SSE3
-# SSE4 / TNI Tejas New Intructions instructions
-INSN	-	pshufb	NONE	sse4	0x00	CPU_SSE4
-INSN	-	phaddw	NONE	sse4	0x01	CPU_SSE4
-INSN	-	phaddd	NONE	sse4	0x02	CPU_SSE4
-INSN	-	phaddsw	NONE	sse4	0x03	CPU_SSE4
-INSN	-	pmaddubsw	NONE	sse4	0x04	CPU_SSE4
-INSN	-	phsubw	NONE	sse4	0x05	CPU_SSE4
-INSN	-	phsubd	NONE	sse4	0x06	CPU_SSE4
-INSN	-	phsubsw	NONE	sse4	0x07	CPU_SSE4
-INSN	-	psignb	NONE	sse4	0x08	CPU_SSE4
-INSN	-	psignw	NONE	sse4	0x09	CPU_SSE4
-INSN	-	psignd	NONE	sse4	0x0A	CPU_SSE4
-INSN	-	pmulhrsw	NONE	sse4	0x0B	CPU_SSE4
-INSN	-	pabsb	NONE	sse4	0x1C	CPU_SSE4
-INSN	-	pabsw	NONE	sse4	0x1D	CPU_SSE4
-INSN	-	pabsd	NONE	sse4	0x1E	CPU_SSE4
-INSN	-	palignr	NONE	palignr	0x0F	CPU_SSE4
+# SSSE3 / TNI Tejas New Intructions instructions
+INSN	-	pshufb	NONE	ssse3		0x00	CPU_SSSE3
+INSN	-	phaddw	NONE	ssse3		0x01	CPU_SSSE3
+INSN	-	phaddd	NONE	ssse3		0x02	CPU_SSSE3
+INSN	-	phaddsw	NONE	ssse3		0x03	CPU_SSSE3
+INSN	-	pmaddubsw	NONE	ssse3	0x04	CPU_SSSE3
+INSN	-	phsubw	NONE	ssse3		0x05	CPU_SSSE3
+INSN	-	phsubd	NONE	ssse3		0x06	CPU_SSSE3
+INSN	-	phsubsw	NONE	ssse3		0x07	CPU_SSSE3
+INSN	-	psignb	NONE	ssse3		0x08	CPU_SSSE3
+INSN	-	psignw	NONE	ssse3		0x09	CPU_SSSE3
+INSN	-	psignd	NONE	ssse3		0x0A	CPU_SSSE3
+INSN	-	pmulhrsw	NONE	ssse3	0x0B	CPU_SSSE3
+INSN	-	pabsb	NONE	ssse3		0x1C	CPU_SSSE3
+INSN	-	pabsw	NONE	ssse3		0x1D	CPU_SSSE3
+INSN	-	pabsd	NONE	ssse3		0x1E	CPU_SSSE3
+INSN	-	palignr	NONE	ssse3imm	0x0F	CPU_SSSE3
+# SSE4.1 / SSE4.2 instructions
+INSN	-	blendpd	NONE	sse4imm		0x0D	CPU_SSE41
+INSN	-	blendps	NONE	sse4imm		0x0C	CPU_SSE41
+INSN	-	blendvpd NONE	sse4xmm0	0x15	CPU_SSE41
+INSN	-	blendvps NONE	sse4xmm0	0x14	CPU_SSE41
+INSN	-	crc32	"bwlq"	crc32		0	CPU_SSE42
+INSN	-	dppd	NONE	sse4imm		0x41	CPU_SSE41
+INSN	-	dpps	NONE	sse4imm		0x40	CPU_SSE41
+INSN	-	extractps NONE	extractps	0	CPU_SSE41
+INSN	-	insertps NONE	insertps	0	CPU_SSE41
+INSN	-	movntdqa NONE	movntdqa	0	CPU_SSE41
+INSN	-	mpsadbw	NONE	sse4imm		0x42	CPU_SSE41
+INSN	-	packusdw NONE	sse4		0x2B	CPU_SSE41
+INSN	-	pblendvb NONE	sse4xmm0	0x10	CPU_SSE41
+INSN	-	pblendw	NONE	sse4imm		0x0E	CPU_SSE41
+INSN	-	pcmpeqq	NONE	sse4		0x29	CPU_SSE41
+INSN	-	pcmpestri "wlq"	sse4pcmpstr	0x61	CPU_SSE42
+INSN	-	pcmpestrm "wlq"	sse4pcmpstr	0x60	CPU_SSE42
+INSN	-	pcmpistri "wlq"	sse4pcmpstr	0x63	CPU_SSE42
+INSN	-	pcmpistrm "wlq"	sse4pcmpstr	0x62	CPU_SSE42
+INSN	-	pcmpgtq	NONE	sse4		0x37	CPU_SSE42
+INSN	-	pextrb	NONE	pextrb		0	CPU_SSE41
+INSN	-	pextrd	NONE	pextrd		0	CPU_SSE41
+INSN	-	pextrq	NONE	pextrq		0	CPU_SSE41
+#INSN	-	pextrw	NONE	pextrw		0	CPU_SSE41
+INSN	-	phminposuw NONE	sse4		0x41	CPU_SSE41
+INSN	-	pinsrb	NONE	pinsrb		0	CPU_SSE41
+INSN	-	pinsrd	NONE	pinsrd		0	CPU_SSE41
+INSN	-	pinsrq	NONE	pinsrq		0	CPU_SSE41
+INSN	-	pmaxsb	NONE	sse4		0x3C	CPU_SSE41
+INSN	-	pmaxsd	NONE	sse4		0x3D	CPU_SSE41
+INSN	-	pmaxud	NONE	sse4		0x3F	CPU_SSE41
+INSN	-	pmaxuw	NONE	sse4		0x3E	CPU_SSE41
+INSN	-	pminsb	NONE	sse4		0x38	CPU_SSE41
+INSN	-	pminsd	NONE	sse4		0x39	CPU_SSE41
+INSN	-	pminud	NONE	sse4		0x3B	CPU_SSE41
+INSN	-	pminuw	NONE	sse4		0x3A	CPU_SSE41
+INSN	-	pmovsxbw NONE	sse4m64		0x20	CPU_SSE41
+INSN	-	pmovsxbd NONE	sse4m32		0x21	CPU_SSE41
+INSN	-	pmovsxbq NONE	sse4m16		0x22	CPU_SSE41
+INSN	-	pmovsxwd NONE	sse4m64		0x23	CPU_SSE41
+INSN	-	pmovsxwq NONE	sse4m32		0x24	CPU_SSE41
+INSN	-	pmovsxdq NONE	sse4m64		0x25	CPU_SSE41
+INSN	-	pmovzxbw NONE	sse4m64		0x30	CPU_SSE41
+INSN	-	pmovzxbd NONE	sse4m32		0x31	CPU_SSE41
+INSN	-	pmovzxbq NONE	sse4m16		0x32	CPU_SSE41
+INSN	-	pmovzxwd NONE	sse4m64		0x33	CPU_SSE41
+INSN	-	pmovzxwq NONE	sse4m32		0x34	CPU_SSE41
+INSN	-	pmovzxdq NONE	sse4m64		0x35	CPU_SSE41
+INSN	-	pmuldq	NONE	sse4		0x28	CPU_SSE41
+INSN	-	pmulld	NONE	sse4		0x40	CPU_SSE41
+INSN	-	popcnt	"wlq"	popcnt		0	CPU_SSE42
+INSN	-	ptest	NONE	sse4		0x17	CPU_SSE41
+INSN	-	roundpd	NONE	sse4imm		0x09	CPU_SSE41
+INSN	-	roundps	NONE	sse4imm		0x08	CPU_SSE41
+INSN	-	roundsd	NONE	sse4imm		0x0B	CPU_SSE41
+INSN	-	roundss	NONE	sse4imm		0x0A	CPU_SSE41
 # AMD 3DNow! instructions
 INSN	-	prefetch NONE	twobytemem  0x000F0D	CPU_3DNow
 INSN	-	prefetchw NONE	twobytemem  0x010F0D	CPU_3DNow
@@ -909,8 +989,16 @@ CPU		prescott CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
 			CPU_Prot|CPU_Priv
 CPU		conroe	CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
 			CPU_EM64T|CPU_FPU|CPU_MMX|\
-			CPU_SSE|CPU_SSE2|CPU_SSE3|CPU_SSE4|CPU_SMM|\
+			CPU_SSE|CPU_SSE2|CPU_SSE3|CPU_SSSE3|CPU_SMM|\
 			CPU_Prot|CPU_Priv
+CPU		penryn	CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
+			CPU_EM64T|CPU_FPU|CPU_MMX|\
+			CPU_SSE|CPU_SSE2|CPU_SSE3|CPU_SSSE3|CPU_SSE41|CPU_SMM|\
+			CPU_Prot|CPU_Priv
+CPU		nehalem	CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
+			CPU_EM64T|CPU_FPU|CPU_MMX|\
+			CPU_SSE|CPU_SSE2|CPU_SSE3|CPU_SSSE3|CPU_SSE41|\
+			CPU_SSE42|CPU_SMM|CPU_Prot|CPU_Priv
 
 # Features have "no" versions to disable them, and only set/reset the
 # specific feature being changed.  All other bits are left alone.
@@ -936,8 +1024,10 @@ CPU_FEATURE	privileged	CPU_Priv
 CPU_FEATURE	svm	CPU_SVM
 CPU_FEATURE	padlock	CPU_PadLock
 CPU_FEATURE	em64t	CPU_EM64T
+CPU_FEATURE	ssse3	CPU_SSSE3
+CPU_FEATURE	sse4.1	CPU_SSE41
+CPU_FEATURE	sse4.2	CPU_SSE42
 CPU_FEATURE	sse4	CPU_SSE4
-CPU_FEATURE	ssse3	CPU_SSE4
 
 
 # TARGETMOD parameters:
