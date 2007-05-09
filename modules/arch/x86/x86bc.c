@@ -286,7 +286,8 @@ yasm_x86__ea_create_imm(yasm_expr *imm, unsigned int im_len)
 
 void
 yasm_x86__bc_apply_prefixes(x86_common *common, unsigned char *rex,
-                            int num_prefixes, uintptr_t **prefixes)
+                            unsigned int def_opersize_64, int num_prefixes,
+                            uintptr_t **prefixes)
 {
     int i;
     int first = 1;
@@ -304,6 +305,14 @@ yasm_x86__bc_apply_prefixes(x86_common *common, unsigned char *rex,
                 break;
             case X86_OPERSIZE:
                 common->opersize = (unsigned char)prefixes[i][1];
+                if (common->mode_bits == 64 && common->opersize == 64 &&
+                    def_opersize_64 != 64) {
+                    if (*rex == 0xff)
+                        yasm_warn_set(YASM_WARN_GENERAL,
+                            N_("REX prefix not allowed on this instruction, ignoring"));
+                    else
+                        *rex = 0x48;
+                }
                 break;
             case X86_SEGREG:
                 /* This is a hack.. we should really be putting this in the
@@ -595,10 +604,7 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
     bc->len += insn->opcode.len;
     bc->len += x86_common_calc_len(&insn->common);
     bc->len += (insn->special_prefix != 0) ? 1:0;
-    if (insn->rex != 0xff &&
-        (insn->rex != 0 ||
-         (insn->common.mode_bits == 64 && insn->common.opersize == 64 &&
-          insn->def_opersize_64 != 64)))
+    if (insn->rex != 0xff && insn->rex != 0)
         bc->len++;
     return 0;
 }
@@ -796,16 +802,10 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
                        x86_ea ? (unsigned int)(x86_ea->ea.segreg>>8) : 0);
     if (insn->special_prefix != 0)
         YASM_WRITE_8(*bufp, insn->special_prefix);
-    if (insn->rex != 0xff) {
-        if (insn->common.mode_bits == 64 && insn->common.opersize == 64 &&
-            insn->def_opersize_64 != 64)
-            insn->rex |= 0x48;
-        if (insn->rex != 0) {
-            if (insn->common.mode_bits != 64)
-                yasm_internal_error(
-                    N_("x86: got a REX prefix in non-64-bit mode"));
-            YASM_WRITE_8(*bufp, insn->rex);
-        }
+    if (insn->rex != 0xff && insn->rex != 0) {
+        if (insn->common.mode_bits != 64)
+            yasm_internal_error(N_("x86: got a REX prefix in non-64-bit mode"));
+        YASM_WRITE_8(*bufp, insn->rex);
     }
 
     /* Opcode */

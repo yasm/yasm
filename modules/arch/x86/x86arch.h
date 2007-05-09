@@ -252,8 +252,8 @@ void yasm_x86__bc_transform_jmp(yasm_bytecode *bc, x86_jmp *jmp);
 void yasm_x86__bc_transform_jmpfar(yasm_bytecode *bc, x86_jmpfar *jmpfar);
 
 void yasm_x86__bc_apply_prefixes
-    (x86_common *common, unsigned char *rex, int num_prefixes,
-     uintptr_t **prefixes);
+    (x86_common *common, unsigned char *rex, unsigned int def_opersize_64,
+     int num_prefixes, uintptr_t **prefixes);
 
 /* Check an effective address.  Returns 0 if EA was successfully determined,
  * 1 if invalid EA, or 2 if indeterminate EA.

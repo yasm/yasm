@@ -2047,7 +2047,7 @@ static const x86_insn_info crc32_insn[] = {
       {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_16|OPA_EA, 0} },
     { CPU_SSE42, MOD_GasSufL, 32, 0, 0xF2, 3, {0x0F, 0x38, 0xF1}, 0, 2,
       {OPT_Reg|OPS_32|OPA_Spare, OPT_RM|OPS_32|OPS_Relaxed|OPA_EA, 0} },
-    { CPU_SSE42|CPU_64, MOD_GasSufB, 0, 0, 0xF2, 3, {0x0F, 0x38, 0xF0}, 0, 2,
+    { CPU_SSE42|CPU_64, MOD_GasSufB, 64, 0, 0xF2, 3, {0x0F, 0x38, 0xF0}, 0, 2,
       {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_8|OPA_EA, 0} },
     { CPU_SSE42|CPU_64, MOD_GasSufQ, 64, 0, 0xF2, 3, {0x0F, 0x38, 0xF1}, 0, 2,
       {OPT_Reg|OPS_64|OPA_Spare, OPT_RM|OPS_64|OPS_Relaxed|OPA_EA, 0} }
@@ -2325,7 +2325,8 @@ x86_finalize_jmpfar(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
     } else
         yasm_internal_error(N_("didn't get FAR expression in jmpfar"));
 
-    yasm_x86__bc_apply_prefixes((x86_common *)jmpfar, NULL, num_prefixes,
+    yasm_x86__bc_apply_prefixes((x86_common *)jmpfar, NULL,
+                                info->def_opersize_64, num_prefixes,
                                 prefixes);
 
     /* Transform the bytecode */
@@ -2439,8 +2440,8 @@ x86_finalize_jmp(yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
             jmp->op_sel = JMP_NEAR_FORCED;
     }
 
-    yasm_x86__bc_apply_prefixes((x86_common *)jmp, NULL, num_prefixes,
-                                prefixes);
+    yasm_x86__bc_apply_prefixes((x86_common *)jmp, NULL, info->def_opersize_64,
+                                num_prefixes, prefixes);
 
     /* Transform the bytecode */
     yasm_x86__bc_transform_jmp(bc, jmp);
@@ -3012,6 +3013,11 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
         /*mod_data >>= 8;*/
     }
 
+    /* In 64-bit mode, if opersize is 64 and default is not 64, force REX byte */
+    if (mode_bits == 64 && insn->common.opersize == 64 &&
+        insn->def_opersize_64 != 64)
+        insn->rex = 0x48;
+
     /* Go through operands and assign */
     if (operands) {
         yasm_insn_operand **use_ops = ops;
@@ -3187,8 +3193,8 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     } else
         insn->imm = NULL;
 
-    yasm_x86__bc_apply_prefixes((x86_common *)insn, &insn->rex, num_prefixes,
-                                prefixes);
+    yasm_x86__bc_apply_prefixes((x86_common *)insn, &insn->rex,
+                                insn->def_opersize_64, num_prefixes, prefixes);
 
     if (insn->postop == X86_POSTOP_ADDRESS16 && insn->common.addrsize) {
         yasm_warn_set(YASM_WARN_GENERAL, N_("address size override ignored"));
