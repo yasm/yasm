@@ -34,7 +34,7 @@ crc32 r8d, ebx
 crc32 r8d, dword [0]
 
 crc32 rax, bl
-crc32 rax, bh			; error
+;crc32 rax, bh			; error
 crc32 rax, r9b
 crc32 rax, byte [0]
 crc32 rax, rbx
