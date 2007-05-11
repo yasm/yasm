@@ -482,8 +482,11 @@ yasm_floatnum_create(const char *str)
         }
     }
 
-    /* Round the result. (Don't round underflow or overflow). */
-    if ((flt->exponent != EXP_INF) && (flt->exponent != EXP_ZERO))
+    /* Round the result. (Don't round underflow or overflow).  Also don't
+     * increment if this would cause the mantissa to wrap.
+     */
+    if ((flt->exponent != EXP_INF) && (flt->exponent != EXP_ZERO) &&
+        !BitVector_is_full(flt->mantissa))
         BitVector_increment(flt->mantissa);
 
     return flt;
