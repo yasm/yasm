@@ -143,26 +143,26 @@ demand_eol_(yasm_parser_gas *parser_gas)
 static int
 expect_(yasm_parser_gas *parser_gas, int token)
 {
-    static char strch[] = "expected ` '";
+    static char strch[] = "` '";
     const char *str;
 
     if (curtok == token)
         return 1;
 
     switch (token) {
-        case INTNUM:            str = "expected integer"; break;
-        case FLTNUM:            str = "expected floating point value"; break;
-        case STRING:            str = "expected string"; break;
-        case INSN:              str = "expected instruction"; break;
-        case PREFIX:            str = "expected instruction prefix"; break;
-        case REG:               str = "expected register"; break;
-        case REGGROUP:          str = "expected register group"; break;
-        case SEGREG:            str = "expected segment register"; break;
-        case TARGETMOD:         str = "expected target modifier"; break;
-        case LEFT_OP:           str = "expected <<"; break;
-        case RIGHT_OP:          str = "expected >>"; break;
-        case ID:                str = "expected identifier"; break;
-        case LABEL:             str = "expected label"; break;
+        case INTNUM:            str = "integer"; break;
+        case FLTNUM:            str = "floating point value"; break;
+        case STRING:            str = "string"; break;
+        case INSN:              str = "instruction"; break;
+        case PREFIX:            str = "instruction prefix"; break;
+        case REG:               str = "register"; break;
+        case REGGROUP:          str = "register group"; break;
+        case SEGREG:            str = "segment register"; break;
+        case TARGETMOD:         str = "target modifier"; break;
+        case LEFT_OP:           str = "<<"; break;
+        case RIGHT_OP:          str = ">>"; break;
+        case ID:                str = "identifier"; break;
+        case LABEL:             str = "label"; break;
         case LINE:
         case DIR_ALIGN:
         case DIR_ASCII:
@@ -182,14 +182,14 @@ expect_(yasm_parser_gas *parser_gas, int token)
         case DIR_SECTNAME:
         case DIR_SKIP:
         case DIR_ZERO:
-            str = "expected directive";
+            str = "directive";
             break;
         default:
-            strch[10] = token;
+            strch[1] = token;
             str = strch;
             break;
     }
-    yasm_error_set(YASM_ERROR_PARSE, str);
+    yasm_error_set(YASM_ERROR_PARSE, "expected %s", str);
     destroy_curtok();
     return 0;
 }

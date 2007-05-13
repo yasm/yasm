@@ -139,48 +139,48 @@ demand_eol_(yasm_parser_nasm *parser_nasm)
 static int
 expect_(yasm_parser_nasm *parser_nasm, int token)
 {
-    static char strch[] = "expected ` '";
+    static char strch[] = "` '";
     const char *str;
 
     if (curtok == token)
         return 1;
 
     switch (token) {
-        case INTNUM:            str = "expected integer"; break;
-        case FLTNUM:            str = "expected floating point value"; break;
-        case DIRECTIVE_NAME:    str = "expected directive name"; break;
-        case FILENAME:          str = "expected filename"; break;
-        case STRING:            str = "expected string"; break;
-        case SIZE_OVERRIDE:     str = "expected size override"; break;
-        case DECLARE_DATA:      str = "expected DB/DW/etc."; break;
-        case RESERVE_SPACE:     str = "expected RESB/RESW/etc."; break;
-        case INCBIN:            str = "expected INCBIN"; break;
-        case EQU:               str = "expected EQU"; break;
-        case TIMES:             str = "expected TIMES"; break;
-        case SEG:               str = "expected SEG"; break;
-        case WRT:               str = "expected WRT"; break;
-        case NOSPLIT:           str = "expected NOSPLIT"; break;
-        case STRICT:            str = "expected STRICT"; break;
-        case INSN:              str = "expected instruction"; break;
-        case PREFIX:            str = "expected instruction prefix"; break;
-        case REG:               str = "expected register"; break;
-        case SEGREG:            str = "expected segment register"; break;
-        case TARGETMOD:         str = "expected target modifier"; break;
-        case LEFT_OP:           str = "expected <<"; break;
-        case RIGHT_OP:          str = "expected >>"; break;
-        case SIGNDIV:           str = "expected //"; break;
-        case SIGNMOD:           str = "expected %%"; break;
-        case START_SECTION_ID:  str = "expected $$"; break;
-        case ID:                str = "expected identifier"; break;
-        case LOCAL_ID:          str = "expected .identifier"; break;
-        case SPECIAL_ID:        str = "expected ..identifier"; break;
-        case LINE:              str = "expected %line"; break;
+        case INTNUM:            str = "integer"; break;
+        case FLTNUM:            str = "floating point value"; break;
+        case DIRECTIVE_NAME:    str = "directive name"; break;
+        case FILENAME:          str = "filename"; break;
+        case STRING:            str = "string"; break;
+        case SIZE_OVERRIDE:     str = "size override"; break;
+        case DECLARE_DATA:      str = "DB/DW/etc."; break;
+        case RESERVE_SPACE:     str = "RESB/RESW/etc."; break;
+        case INCBIN:            str = "INCBIN"; break;
+        case EQU:               str = "EQU"; break;
+        case TIMES:             str = "TIMES"; break;
+        case SEG:               str = "SEG"; break;
+        case WRT:               str = "WRT"; break;
+        case NOSPLIT:           str = "NOSPLIT"; break;
+        case STRICT:            str = "STRICT"; break;
+        case INSN:              str = "instruction"; break;
+        case PREFIX:            str = "instruction prefix"; break;
+        case REG:               str = "register"; break;
+        case SEGREG:            str = "segment register"; break;
+        case TARGETMOD:         str = "target modifier"; break;
+        case LEFT_OP:           str = "<<"; break;
+        case RIGHT_OP:          str = ">>"; break;
+        case SIGNDIV:           str = "//"; break;
+        case SIGNMOD:           str = "%%"; break;
+        case START_SECTION_ID:  str = "$$"; break;
+        case ID:                str = "identifier"; break;
+        case LOCAL_ID:          str = ".identifier"; break;
+        case SPECIAL_ID:        str = "..identifier"; break;
+        case LINE:              str = "%line"; break;
         default:
-            strch[10] = token;
+            strch[1] = token;
             str = strch;
             break;
     }
-    yasm_error_set(YASM_ERROR_PARSE, str);
+    yasm_error_set(YASM_ERROR_PARSE, "expected %s", str);
     destroy_curtok();
     return 0;
 }
