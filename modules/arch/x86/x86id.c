@@ -101,6 +101,10 @@ static const char *cpu_find_reverse(unsigned long cpu);
  *             16 = immediate, value=1 (for special-case shift)
  *             17 = immediate, does not contain SEG:OFF (for jmp/call),
  *             18 = XMM0
+ *             19 = AX/EAX/RAX memory operand only (EA)
+ *                  [special case for SVM opcodes]
+ *             20 = EAX memory operand only (EA)
+ *                  [special case for SVM skinit opcode]
  *  - 3 bits = size (user-specified, or from register size):
  *             0 = any size acceptable/no size spec acceptable (dep. on strict)
  *             1/2/3/4 = 8/16/32/64 bits (from user or reg size)
@@ -139,6 +143,7 @@ static const char *cpu_find_reverse(unsigned long cpu);
  *             8 = relative jump (outputs a jmp instead of normal insn)
  *             9 = operand size goes into address size (jmp only)
  *             A = far jump (outputs a farjmp instead of normal insn)
+ *             B = ea operand only sets address size (no actual ea field)
  * The below describes postponed actions: actions which can't be completed at
  * parse-time due to possibly dependent expressions.  For these, some
  * additional data (stored in the second byte of the opcode with a one-byte
@@ -176,6 +181,8 @@ static const char *cpu_find_reverse(unsigned long cpu);
 #define OPT_Imm1        0x16
 #define OPT_ImmNotSegOff 0x17
 #define OPT_XMM0        0x18
+#define OPT_MemrAX      0x19
+#define OPT_MemEAX      0x1A
 #define OPT_MASK        0x1F
 
 #define OPS_Any         (0UL<<5)
@@ -214,6 +221,7 @@ static const char *cpu_find_reverse(unsigned long cpu);
 #define OPA_JmpRel      (8UL<<13)
 #define OPA_AdSizeR     (9UL<<13)
 #define OPA_JmpFar      (0xAUL<<13)
+#define OPA_AdSizeEA    (0xBUL<<13)
 #define OPA_MASK        (0xFUL<<13)
 
 #define OPAP_None       (0UL<<17)
@@ -2188,17 +2196,17 @@ static const x86_insn_info cmpxchg16b_insn[] = {
 static const x86_insn_info invlpga_insn[] = {
     { CPU_SVM, 0, 0, 0, 0, 3, {0x0F, 0x01, 0xDF}, 0, 0, {0, 0, 0} },
     { CPU_SVM, 0, 0, 0, 0, 3, {0x0F, 0x01, 0xDF}, 0, 2,
-      {OPT_Areg|OPS_64|OPA_None, OPT_Creg|OPS_32|OPA_None, 0} }
+      {OPT_MemrAX|OPS_Any|OPA_AdSizeEA, OPT_Creg|OPS_32|OPA_None, 0} }
 };
 static const x86_insn_info skinit_insn[] = {
     { CPU_SVM, 0, 0, 0, 0, 3, {0x0F, 0x01, 0xDE}, 0, 0, {0, 0, 0} },
     { CPU_SVM, 0, 0, 0, 0, 3, {0x0F, 0x01, 0xDE}, 0, 1,
-      {OPT_Areg|OPS_32|OPA_None, 0, 0} }
+      {OPT_MemEAX|OPS_Any|OPA_None, 0, 0} }
 };
 static const x86_insn_info svm_rax_insn[] = {
     { CPU_SVM, MOD_Op2Add, 0, 0, 0, 3, {0x0F, 0x01, 0x00}, 0, 0, {0, 0, 0} },
     { CPU_SVM, MOD_Op2Add, 0, 0, 0, 3, {0x0F, 0x01, 0x00}, 0, 1,
-      {OPT_Areg|OPS_64|OPA_None, 0, 0} }
+      {OPT_MemrAX|OPS_Any|OPA_AdSizeEA, 0, 0} }
 };
 /* VIA PadLock instructions */
 static const x86_insn_info padlock_insn[] = {
@@ -2684,6 +2692,24 @@ x86_find_match(yasm_arch *arch, int num_info, const x86_insn_info *info,
                         op->data.reg != X86_XMMREG)
                         mismatch = 1;
                     break;
+                case OPT_MemrAX: {
+                    const uintptr_t *regp;
+                    if (op->type != YASM_INSN__OPERAND_MEMORY ||
+                        !(regp = yasm_expr_get_reg(&op->data.ea->disp.abs, 0)) ||
+                        (*regp != (X86_REG16 | 0) &&
+                         *regp != (X86_REG32 | 0) &&
+                         *regp != (X86_REG64 | 0)))
+                        mismatch = 1;
+                    break;
+                }
+                case OPT_MemEAX: {
+                    const uintptr_t *regp;
+                    if (op->type != YASM_INSN__OPERAND_MEMORY ||
+                        !(regp = yasm_expr_get_reg(&op->data.ea->disp.abs, 0)) ||
+                        *regp != (X86_REG32 | 0))
+                        mismatch = 1;
+                    break;
+                }
                 default:
                     yasm_internal_error(N_("invalid operand type"));
             }
@@ -3131,6 +3157,30 @@ yasm_x86__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
                     } else
                         yasm_internal_error(N_("invalid operand conversion"));
                     break;
+                case OPA_AdSizeEA: {
+                    const uintptr_t *regp = NULL;
+                    /* Only implement this for OPT_MemrAX and OPT_MemEAX
+                     * for now.
+                     */
+                    if (op->type != YASM_INSN__OPERAND_MEMORY ||
+                        !(regp = yasm_expr_get_reg(&op->data.ea->disp.abs, 0)))
+                        yasm_internal_error(N_("invalid operand conversion"));
+                    /* 64-bit mode does not allow 16-bit addresses */
+                    if (mode_bits == 64 && *regp == (X86_REG16 | 0))
+                        yasm_error_set(YASM_ERROR_TYPE,
+                            N_("16-bit addresses not supported in 64-bit mode"));
+                    else if (*regp == (X86_REG16 | 0))
+                        insn->common.addrsize = 16;
+                    else if (*regp == (X86_REG32 | 0))
+                        insn->common.addrsize = 32;
+                    else if (mode_bits == 64 && *regp == (X86_REG64 | 0))
+                        insn->common.addrsize = 64;
+                    else
+                        yasm_error_set(YASM_ERROR_TYPE,
+                            N_("unsupported address size"));
+                    yasm_ea_destroy(op->data.ea);
+                    break;
+                }
                 default:
                     yasm_internal_error(N_("unknown operand action"));
             }
