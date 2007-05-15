@@ -176,6 +176,16 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
     (/*@only@*/ yasm_expr *numitems, unsigned int itemsize,
      unsigned long line);
 
+/** Get the number of items and itemsize for a reserve bytecode.  If bc
+ * is not a reserve bytecode, returns NULL.
+ * \param bc            bytecode
+ * \param itemsize      reserved size (in bytes) for each item (returned)
+ * \return NULL if bc is not a reserve bytecode, otherwise an expression
+ *         for the number of items to reserve.
+ */
+/*@null@*/ const yasm_expr *yasm_bc_reserve_numitems
+    (yasm_bytecode *bc, /*@out@*/ unsigned int *itemsize);
+
 /** Create a bytecode that includes a binary file verbatim.
  * \param filename      path to binary file (kept, do not free)
  * \param start         starting location in file (in bytes) to read data from
@@ -387,6 +397,12 @@ int yasm_bc_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
  */
 int yasm_bc_get_multiple(yasm_bytecode *bc, /*@out@*/ long *multiple,
                          int calc_bc_dist);
+
+/** Get the bytecode multiple value as an expression.
+ * \param bc            bytecode
+ * \return Bytecode multiple, NULL if =1.
+ */
+const yasm_expr *yasm_bc_get_multiple_expr(const yasm_bytecode *bc);
 
 /** Create a new data value from an expression.
  * \param expn  expression

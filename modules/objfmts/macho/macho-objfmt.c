@@ -634,10 +634,6 @@ macho_objfmt_output_section(yasm_section *sect, /*@null@ */ void *d)
         (macho_objfmt_output_info *) d;
     /*@dependent@ *//*@null@ */ macho_section_data *msd;
 
-    /* FIXME: Don't output absolute sections into the section table */
-    if (yasm_section_is_absolute(sect))
-        return 0;
-
     assert(info != NULL);
     msd = yasm_section_get_data(sect, &macho_section_data_cb);
     assert(msd != NULL);
@@ -658,10 +654,6 @@ macho_objfmt_output_relocs(yasm_section *sect, /*@null@*/ void *d)
     /*@null@*/ macho_objfmt_output_info *info = (macho_objfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ macho_section_data *msd;
     macho_reloc *reloc;
-
-    /* FIXME: Don't output absolute sections into the section table */
-    if (yasm_section_is_absolute(sect))
-        return 0;
 
     reloc = (macho_reloc *)yasm_section_relocs_first(sect);
     while (reloc) {
@@ -743,10 +735,6 @@ macho_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     yasm_objfmt_macho *objfmt_macho;
     /*@dependent@*/ /*@null@*/ macho_section_data *msd;
     unsigned char *localbuf;
-
-    /* Don't output absolute sections into the section table */
-    if (yasm_section_is_absolute(sect))
-        return 0;
 
     assert(info != NULL);
     objfmt_macho = info->objfmt_macho;
@@ -894,26 +882,8 @@ macho_objfmt_output_symtable(yasm_symrec *sym, /*@null@*/ void *d)
                 if (msd) {
                     scnum = msd->scnum;
                     n_type = N_SECT;
-                } else {
-                    if (yasm_section_is_absolute(sect)) {
-                        yasm_expr *abs_start;
-
-                        abs_start =
-                            yasm_expr_copy(yasm_section_get_start(sect));
-                        intn = yasm_expr_get_intnum(&abs_start, 1);
-                        if (!intn) {
-                            yasm_error_set(YASM_ERROR_NOT_CONSTANT,
-                                N_("absolute section start not an integer expression"));
-                            yasm_errwarn_propagate(info->errwarns,
-                                                   abs_start->line);
-                        } else
-                            value = yasm_intnum_get_uint(intn);
-                        yasm_expr_destroy(abs_start);
-
-                        scnum = -2;     /* -2 = absolute symbol */
-                    } else
-                        yasm_internal_error(N_("didn't understand section"));
-                }
+                } else
+                    yasm_internal_error(N_("didn't understand section"));
                 if (precbc)
                     value += yasm_bc_next_offset(precbc);
                 /* all values are subject to correction: base offset is first
@@ -1016,10 +986,6 @@ macho_objfmt_calc_sectsize(yasm_section *sect, /*@null@ */ void *d)
     /*@null@ */ macho_objfmt_output_info *info =
         (macho_objfmt_output_info *) d;
     /*@dependent@ *//*@null@ */ macho_section_data *msd;
-
-    /* FIXME: Don't output absolute sections into the section table */
-    if (yasm_section_is_absolute(sect))
-        return 0;
 
     assert(info != NULL);
     msd = yasm_section_get_data(sect, &macho_section_data_cb);

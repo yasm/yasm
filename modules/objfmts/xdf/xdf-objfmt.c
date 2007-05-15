@@ -291,10 +291,6 @@ xdf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     long pos;
     xdf_reloc *reloc;
 
-    /* FIXME: Don't output absolute sections into the section table */
-    if (yasm_section_is_absolute(sect))
-        return 0;
-
     assert(info != NULL);
     xsd = yasm_section_get_data(sect, &xdf_section_data_cb);
     assert(xsd != NULL);
@@ -387,10 +383,6 @@ xdf_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     /*@dependent@*/ /*@null@*/ xdf_section_data *xsd;
     /*@null@*/ xdf_symrec_data *xsymd;
     unsigned char *localbuf;
-
-    /* Don't output absolute sections into the section table */
-    if (yasm_section_is_absolute(sect))
-        return 0;
 
     assert(info != NULL);
     objfmt_xdf = info->objfmt_xdf;
@@ -489,24 +481,9 @@ xdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
             if (sect) {
                 /*@dependent@*/ /*@null@*/ xdf_section_data *csectd;
                 csectd = yasm_section_get_data(sect, &xdf_section_data_cb);
-                if (csectd) {
+                if (csectd)
                     scnum = csectd->scnum;
-                } else if (yasm_section_is_absolute(sect)) {
-                    yasm_expr *abs_start;
-
-                    abs_start = yasm_expr_copy(yasm_section_get_start(sect));
-                    intn = yasm_expr_get_intnum(&abs_start, 1);
-                    if (!intn) {
-                        yasm_error_set(YASM_ERROR_NOT_CONSTANT,
-                            N_("absolute section start not an integer expression"));
-                        yasm_errwarn_propagate(info->errwarns, abs_start->line);
-                    } else
-                        value = yasm_intnum_get_uint(intn);
-                    yasm_expr_destroy(abs_start);
-
-                    flags |= XDF_SYM_EQU;
-                    scnum = -2; /* -2 = absolute symbol */
-                } else
+                else
                     yasm_internal_error(N_("didn't understand section"));
                 if (precbc)
                     value += yasm_bc_next_offset(precbc);

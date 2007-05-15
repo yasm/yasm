@@ -346,10 +346,6 @@ rdf_objfmt_output_section_mem(yasm_section *sect, /*@null@*/ void *d)
     /*@dependent@*/ /*@null@*/ rdf_section_data *rsd;
     unsigned long size;
 
-    /* Don't output absolute sections */
-    if (yasm_section_is_absolute(sect))
-        return 0;
-
     assert(info != NULL);
     rsd = yasm_section_get_data(sect, &rdf_section_data_cb);
     assert(rsd != NULL);
@@ -391,10 +387,6 @@ rdf_objfmt_output_section_reloc(yasm_section *sect, /*@null@*/ void *d)
     /*@null@*/ rdf_objfmt_output_info *info = (rdf_objfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ rdf_section_data *rsd;
     rdf_reloc *reloc;
-
-    /* Don't output absolute sections */
-    if (yasm_section_is_absolute(sect))
-        return 0;
 
     assert(info != NULL);
     rsd = yasm_section_get_data(sect, &rdf_section_data_cb);
@@ -439,10 +431,6 @@ rdf_objfmt_output_section_file(yasm_section *sect, /*@null@*/ void *d)
     /*@null@*/ rdf_objfmt_output_info *info = (rdf_objfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ rdf_section_data *rsd;
     unsigned char *localbuf;
-
-    /* Don't output absolute sections */
-    if (yasm_section_is_absolute(sect))
-        return 0;
 
     assert(info != NULL);
     rsd = yasm_section_get_data(sect, &rdf_section_data_cb);
@@ -572,15 +560,9 @@ rdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 
         /* it's a label: get value and offset. */
         csectd = yasm_section_get_data(sect, &rdf_section_data_cb);
-        if (csectd) {
+        if (csectd)
             scnum = csectd->scnum;
-        } else if (yasm_section_is_absolute(sect)) {
-            yasm_warn_set(YASM_WARN_GENERAL,
-                          N_("rdf does not support exporting absolutes"));
-            yasm_errwarn_propagate(info->errwarns,
-                                   yasm_symrec_get_decl_line(sym));
-            return 0;
-        } else
+        else
             yasm_internal_error(N_("didn't understand section"));
         value = yasm_bc_next_offset(precbc);
     } else if (yasm_symrec_get_equ(sym)) {

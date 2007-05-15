@@ -339,3 +339,9 @@ yasm_bc_get_multiple(yasm_bytecode *bc, long *multiple, int calc_bc_dist)
     }
     return 0;
 }
+
+const yasm_expr *
+yasm_bc_get_multiple_expr(const yasm_bytecode *bc)
+{
+    return bc->multiple;
+}

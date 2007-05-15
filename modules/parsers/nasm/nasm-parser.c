@@ -58,6 +58,9 @@ nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
 
     parser_nasm.peek_token = NONE;
 
+    parser_nasm.absstart = NULL;
+    parser_nasm.abspos = NULL;
+
     /* initialize scanner structure */
     yasm_scanner_initialize(&parser_nasm.s);
 

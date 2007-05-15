@@ -272,7 +272,7 @@ elf_objfmt_build_symtab(yasm_symrec *sym, /*@null@*/ void *d)
         /* Locals (except when debugging) do not need to be
          * in the symbol table, unless they're a section.
          */
-        if (sect && !yasm_section_is_absolute(sect) &&
+        if (sect &&
             strcmp(yasm_symrec_get_name(sym), yasm_section_get_name(sect))==0)
             is_sect = 1;
 #if 0
@@ -608,8 +608,8 @@ elf_objfmt_create_dbg_secthead(yasm_section *sect, /*@null@*/ void *d)
     elf_strtab_entry *name;
 
     shead = yasm_section_get_data(sect, &elf_section_data);
-    if (yasm_section_is_absolute(sect) || shead)
-        return 0;   /* only create new secthead if missing and non-absolute */
+    if (shead)
+        return 0;   /* only create new secthead if missing */
 
     sectname = yasm_section_get_name(sect);
     name = elf_strtab_append_str(info->objfmt_elf->shstrtab, sectname);
@@ -643,10 +643,6 @@ elf_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     long pos;
     char *relname;
     const char *sectname;
-
-    /* Don't output absolute sections into the section table */
-    if (yasm_section_is_absolute(sect))
-        return 0;
 
     if (info == NULL)
         yasm_internal_error("null info struct");
@@ -710,10 +706,6 @@ elf_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 {
     /*@null@*/ elf_objfmt_output_info *info = (elf_objfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ elf_secthead *shead;
-
-    /* Don't output absolute sections into the section table */
-    if (yasm_section_is_absolute(sect))
-        return 0;
 
     if (info == NULL)
         yasm_internal_error("null info struct");
