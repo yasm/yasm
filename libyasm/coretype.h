@@ -326,10 +326,10 @@ int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
 /** strndup() implementation using yasm_xmalloc().
  * \internal
  * \param str   string
- * \param len   maximum number of characters to copy
+ * \param max   maximum number of characters to copy
  * \return Newly allocated duplicate string.
  */
-/*@only@*/ char *yasm__xstrndup(const char *str, size_t len);
+/*@only@*/ char *yasm__xstrndup(const char *str, size_t max);
 
 /** Error-checking memory allocation.  A default implementation is provided
  * that calls yasm_fatal() on allocation errors.
