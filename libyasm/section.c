@@ -61,21 +61,7 @@ struct yasm_section {
 
     /*@dependent@*/ yasm_object *object;    /* Pointer to parent object */
 
-    enum { SECTION_GENERAL, SECTION_ABSOLUTE } type;
-
-    union {
-	/* SECTION_GENERAL data */
-	struct {
-	    /*@owned@*/ char *name;	/* strdup()'ed name (given by user) */
-	} general;
-	/* SECTION_ABSOLUTE data */
-	struct {
-	    /* Internally created first symrec in section.  Used by
-	     * yasm_expr__level_tree during absolute reference expansion.
-	     */
-	    /*@dependent@*/ yasm_symrec *first;
-	} absolute;
-    } data;
+    /*@owned@*/ char *name;     /* strdup()'ed name (given by user) */
 
     /* associated data; NULL if none */
     /*@null@*/ /*@only@*/ yasm__assoc_data *assoc_data;
@@ -325,8 +311,7 @@ yasm_object_get_general(yasm_object *object, const char *name,
      * that name.
      */
     STAILQ_FOREACH(s, &object->sections, link) {
-	if (s->type == SECTION_GENERAL &&
-	    strcmp(s->data.general.name, name) == 0) {
+	if (strcmp(s->name, name) == 0) {
 	    *isnew = 0;
 	    return s;
 	}
@@ -339,8 +324,7 @@ yasm_object_get_general(yasm_object *object, const char *name,
     STAILQ_INSERT_TAIL(&object->sections, s, link);
 
     s->object = object;
-    s->type = SECTION_GENERAL;
-    s->data.general.name = yasm__xstrdup(name);
+    s->name = yasm__xstrdup(name);
     s->assoc_data = NULL;
     if (start)
 	s->start = start;
@@ -372,45 +356,6 @@ yasm_object_get_general(yasm_object *object, const char *name,
 }
 /*@=onlytrans@*/
 
-/*@-onlytrans@*/
-yasm_section *
-yasm_object_create_absolute(yasm_object *object, yasm_expr *start,
-			    unsigned long line)
-{
-    yasm_section *s;
-    yasm_bytecode *bc;
-
-    s = yasm_xcalloc(1, sizeof(yasm_section));
-    STAILQ_INSERT_TAIL(&object->sections, s, link);
-
-    s->object = object;
-    s->type = SECTION_ABSOLUTE;
-    s->start = start;
-
-    /* Initialize bytecodes with one empty bytecode (acts as "prior" for first
-     * real bytecode in section.
-     */
-    STAILQ_INIT(&s->bcs);
-    bc = yasm_bc_create_common(NULL, NULL, 0);
-    bc->section = s;
-    bc->offset = 0;
-    STAILQ_INSERT_TAIL(&s->bcs, bc, link);
-
-    /* Initialize relocs */
-    STAILQ_INIT(&s->relocs);
-    s->destroy_reloc = NULL;
-
-    s->data.absolute.first =
-	yasm_symtab_define_label(object->symtab, ".absstart", bc, 0, 0);
-
-    s->code = 0;
-    s->res_only = 1;
-    s->def = 0;
-
-    return s;
-}
-/*@=onlytrans@*/
-
 int
 yasm_object_directive(yasm_object *object, const char *name,
 		      const char *parser, yasm_valparamhead *valparams,
@@ -438,12 +383,6 @@ yasm_object_set_source_fn(yasm_object *object, const char *src_filename)
 {
     yasm_xfree(object->src_filename);
     object->src_filename = yasm__xstrdup(src_filename);
-}
-
-int
-yasm_section_is_absolute(yasm_section *sect)
-{
-    return (sect->type == SECTION_ABSOLUTE);
 }
 
 int
@@ -597,8 +536,7 @@ yasm_object_find_general(yasm_object *object, const char *name)
     yasm_section *cur;
 
     STAILQ_FOREACH(cur, &object->sections, link) {
-	if (cur->type == SECTION_GENERAL &&
-	    strcmp(cur->data.general.name, name) == 0)
+	if (strcmp(cur->name, name) == 0)
 	    return cur;
     }
     return NULL;
@@ -690,17 +628,7 @@ yasm_section_bcs_traverse(yasm_section *sect,
 const char *
 yasm_section_get_name(const yasm_section *sect)
 {
-    if (sect->type == SECTION_GENERAL)
-	return sect->data.general.name;
-    return NULL;
-}
-
-yasm_symrec *
-yasm_section_abs_get_sym(const yasm_section *sect)
-{
-    if (sect->type == SECTION_ABSOLUTE)
-	return sect->data.absolute.first;
-    return NULL;
+    return sect->name;
 }
 
 void
@@ -739,9 +667,7 @@ yasm_section_destroy(yasm_section *sect)
     if (!sect)
 	return;
 
-    if (sect->type == SECTION_GENERAL) {
-	yasm_xfree(sect->data.general.name);
-    }
+    yasm_xfree(sect->name);
     yasm__assoc_data_destroy(sect->assoc_data);
     yasm_expr_destroy(sect->start);
 
@@ -774,17 +700,7 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
 	return;
     }
 
-    fprintf(f, "%*stype=", indent_level, "");
-    switch (sect->type) {
-	case SECTION_GENERAL:
-	    fprintf(f, "general\n%*sname=%s\n", indent_level, "",
-		    sect->data.general.name);
-	    break;
-	case SECTION_ABSOLUTE:
-	    fprintf(f, "absolute\n");
-	    break;
-    }
-
+    fprintf(f, "%*sname=%s\n", indent_level, "", sect->name);
     fprintf(f, "%*sstart=", indent_level, "");
     yasm_expr_print(sect->start, f);
     fprintf(f, "\n");

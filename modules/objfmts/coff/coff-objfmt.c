@@ -383,10 +383,6 @@ coff_objfmt_init_remaining_section(yasm_section *sect, /*@null@*/ void *d)
     /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ coff_section_data *csd;
 
-    /* Skip absolute sections */
-    if (yasm_section_is_absolute(sect))
-	return 0;
-
     assert(info != NULL);
     csd = yasm_section_get_data(sect, &coff_section_data_cb);
     if (!csd) {
@@ -410,10 +406,6 @@ coff_objfmt_set_section_addr(yasm_section *sect, /*@null@*/ void *d)
 {
     /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
     /*@dependent@*/ /*@null@*/ coff_section_data *csd;
-
-    /* Don't output absolute sections */
-    if (yasm_section_is_absolute(sect))
-	return 0;
 
     assert(info != NULL);
     csd = yasm_section_get_data(sect, &coff_section_data_cb);
@@ -744,10 +736,6 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
     coff_reloc *reloc;
     unsigned char *localbuf;
 
-    /* Don't output absolute sections into the section table */
-    if (yasm_section_is_absolute(sect))
-	return 0;
-
     assert(info != NULL);
     csd = yasm_section_get_data(sect, &coff_section_data_cb);
     assert(csd != NULL);
@@ -849,10 +837,6 @@ coff_objfmt_output_sectstr(yasm_section *sect, /*@null@*/ void *d)
     const char *name;
     size_t len;
 
-    /* Don't output absolute sections into the section table */
-    if (yasm_section_is_absolute(sect))
-	return 0;
-
     /* Add to strtab if in win32 format and name > 8 chars */
     if (!info->objfmt_coff->win32)
        return 0;
@@ -872,10 +856,6 @@ coff_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     /*@dependent@*/ /*@null@*/ coff_section_data *csd;
     unsigned char *localbuf;
     unsigned long align = yasm_section_get_align(sect);
-
-    /* Don't output absolute sections into the section table */
-    if (yasm_section_is_absolute(sect))
-	return 0;
 
     assert(info != NULL);
     objfmt_coff = info->objfmt_coff;
@@ -1011,21 +991,6 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 		    nreloc = csectd->nreloc;
 		    if (COFF_SET_VMA)
 			value = csectd->addr;
-		} else if (yasm_section_is_absolute(sect)) {
-		    yasm_expr *abs_start;
-
-		    abs_start = yasm_expr_copy(yasm_section_get_start(sect));
-		    intn = yasm_expr_get_intnum(&abs_start, 1);
-		    if (!intn) {
-			yasm_error_set(YASM_ERROR_NOT_CONSTANT,
-			    N_("absolute section start not an integer expression"));
-			yasm_errwarn_propagate(info->errwarns,
-					       abs_start->line);
-		    } else
-			value = yasm_intnum_get_uint(intn);
-		    yasm_expr_destroy(abs_start);
-
-		    scnum = 0xffff;	/* -1 = absolute symbol */
 		} else
 		    yasm_internal_error(N_("didn't understand section"));
 		if (precbc)
@@ -1807,8 +1772,14 @@ procframe_checkstate(yasm_objfmt_coff *objfmt_coff, const char *dirname)
  * XXX: There should be a better way to do this.
  */
 static yasm_symrec *
-get_curpos(yasm_object *object, unsigned long line)
+get_curpos(yasm_object *object, const char *dirname, unsigned long line)
 {
+    if (!object->cur_section) {
+        yasm_error_set(YASM_ERROR_SYNTAX,
+                       N_("[%s] can only be used inside of a section"),
+                       dirname);
+        return NULL;
+    }
     return yasm_symtab_define_curpos(object->symtab, "$",
 	yasm_section_bcs_last(object->cur_section), line);
 }
@@ -1835,7 +1806,7 @@ dir_pushreg(yasm_object *object, yasm_valparamhead *valparams,
     /* Generate a PUSH_NONVOL unwind code. */
     code = yasm_xmalloc(sizeof(coff_unwind_code));
     code->proc = objfmt_coff->unwind->proc;
-    code->loc = get_curpos(object, line);
+    code->loc = get_curpos(object, "PUSHREG", line);
     code->opcode = UWOP_PUSH_NONVOL;
     code->info = (unsigned int)(*reg & 0xF);
     yasm_value_initialize(&code->off, NULL, 0);
@@ -1875,7 +1846,7 @@ dir_setframe(yasm_object *object, yasm_valparamhead *valparams,
     /* Generate a SET_FPREG unwind code */
     code = yasm_xmalloc(sizeof(coff_unwind_code));
     code->proc = objfmt_coff->unwind->proc;
-    code->loc = get_curpos(object, line);
+    code->loc = get_curpos(object, "SETFRAME", line);
     code->opcode = UWOP_SET_FPREG;
     code->info = (unsigned int)(*reg & 0xF);
     yasm_value_initialize(&code->off, yasm_expr_copy(off), 8);
@@ -1910,7 +1881,7 @@ dir_allocstack(yasm_object *object, yasm_valparamhead *valparams,
      */
     code = yasm_xmalloc(sizeof(coff_unwind_code));
     code->proc = objfmt_coff->unwind->proc;
-    code->loc = get_curpos(object, line);
+    code->loc = get_curpos(object, "ALLOCSTACK", line);
     code->opcode = UWOP_ALLOC_SMALL;
     code->info = 0;
     yasm_value_initialize(&code->off, vp->param, 7);
@@ -1957,7 +1928,7 @@ dir_save_common(yasm_object *object, yasm_valparamhead *valparams,
      */
     code = yasm_xmalloc(sizeof(coff_unwind_code));
     code->proc = objfmt_coff->unwind->proc;
-    code->loc = get_curpos(object, line);
+    code->loc = get_curpos(object, name, line);
     code->opcode = op;
     code->info = (unsigned int)(*reg & 0xF);
     yasm_value_initialize(&code->off, vp->param, 16);
@@ -1995,7 +1966,7 @@ dir_pushframe(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
      */
     code = yasm_xmalloc(sizeof(coff_unwind_code));
     code->proc = objfmt_coff->unwind->proc;
-    code->loc = get_curpos(object, line);
+    code->loc = get_curpos(object, "PUSHFRAME", line);
     code->opcode = UWOP_PUSH_MACHFRAME;
     code->info = vp && (vp->val || vp->param);
     yasm_value_initialize(&code->off, NULL, 0);
@@ -2011,7 +1982,7 @@ dir_endprolog(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
 	return;
     objfmt_coff->done_prolog = line;
 
-    objfmt_coff->unwind->prolog = get_curpos(object, line);
+    objfmt_coff->unwind->prolog = get_curpos(object, "ENDPROLOG", line);
 }
 
 static void
@@ -2047,7 +2018,7 @@ dir_endproc_frame(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
 
     proc_sym = objfmt_coff->unwind->proc;
 
-    curpos = get_curpos(object, line);
+    curpos = get_curpos(object, "ENDPROC_FRAME", line);
 
     /*
      * Add unwind info to end of .xdata section.

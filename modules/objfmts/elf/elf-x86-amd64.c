@@ -65,16 +65,11 @@ elf_x86_amd64_write_symtab_entry(unsigned char *bufp,
     YASM_WRITE_8(bufp, ELF64_ST_INFO(entry->bind, entry->type));
     YASM_WRITE_8(bufp, ELF64_ST_OTHER(entry->vis));
     if (entry->sect) {
-        if (yasm_section_is_absolute(entry->sect)) {
-            YASM_WRITE_16_L(bufp, SHN_ABS);
-        } else {
-            elf_secthead *shead = yasm_section_get_data(entry->sect,
-                &elf_section_data);
-            if (!shead)
-                yasm_internal_error(
-                    N_("symbol references section without data"));
-            YASM_WRITE_16_L(bufp, shead->index);
-        }
+        elf_secthead *shead =
+            yasm_section_get_data(entry->sect, &elf_section_data);
+        if (!shead)
+            yasm_internal_error(N_("symbol references section without data"));
+        YASM_WRITE_16_L(bufp, shead->index);
     } else {
         YASM_WRITE_16_L(bufp, entry->index);
     }

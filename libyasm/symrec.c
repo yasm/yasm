@@ -375,7 +375,6 @@ static int
 symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
 {
     symtab_finalize_info *info = (symtab_finalize_info *)d;
-    yasm_section *sect;
 
     /* error if a symbol is used but never defined or extern/common declared */
     if ((sym->status & YASM_SYM_USED) && !(sym->status & YASM_SYM_DEFINED) &&
@@ -389,26 +388,6 @@ symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
 	    if (sym->use_line < info->firstundef_line)
 		info->firstundef_line = sym->use_line;
 	}
-    }
-
-    /* Change labels in absolute sections into EQUs with value
-     * absolute start expr + (label bc - first bc in abs section).
-     * Don't worry about possible circular references because that will get
-     * caught in EQU expansion.
-     */
-    if (sym->type == SYM_LABEL && sym->value.precbc
-	&& (sect = yasm_bc_get_section(sym->value.precbc))
-	&& yasm_section_is_absolute(sect)) {
-	sym->type = SYM_EQU;
-	sym->value.expn = yasm_expr_create_tree(
-	    yasm_expr_create(YASM_EXPR_SUB,
-			     yasm_expr_precbc(sym->value.precbc),
-			     yasm_expr_precbc(yasm_section_bcs_first(sect)),
-			     sym->def_line),
-	    YASM_EXPR_ADD,
-	    yasm_expr_copy(yasm_section_get_start(sect)),
-	    sym->def_line);
-	sym->status |= YASM_SYM_VALUED;
     }
 
     return 0;

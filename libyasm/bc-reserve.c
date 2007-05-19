@@ -44,7 +44,7 @@
 
 typedef struct bytecode_reserve {
     /*@only@*/ /*@null@*/ yasm_expr *numitems; /* number of items to reserve */
-    unsigned char itemsize;	    /* size of each item (in bytes) */
+    unsigned int itemsize;          /* size of each item (in bytes) */
 } bytecode_reserve;
 
 static void bc_reserve_destroy(void *contents);
@@ -83,8 +83,7 @@ bc_reserve_print(const void *contents, FILE *f, int indent_level)
     fprintf(f, "%*s_Reserve_\n", indent_level, "");
     fprintf(f, "%*sNum Items=", indent_level, "");
     yasm_expr_print(reserve->numitems, f);
-    fprintf(f, "\n%*sItem Size=%u\n", indent_level, "",
-	    (unsigned int)reserve->itemsize);
+    fprintf(f, "\n%*sItem Size=%u\n", indent_level, "", reserve->itemsize);
 }
 
 static void
@@ -128,7 +127,20 @@ yasm_bc_create_reserve(yasm_expr *numitems, unsigned int itemsize,
     /*@-mustfree@*/
     reserve->numitems = numitems;
     /*@=mustfree@*/
-    reserve->itemsize = (unsigned char)itemsize;
+    reserve->itemsize = itemsize;
 
     return yasm_bc_create_common(&bc_reserve_callback, reserve, line);
+}
+
+const yasm_expr *
+yasm_bc_reserve_numitems(yasm_bytecode *bc, unsigned int *itemsize)
+{
+    bytecode_reserve *reserve;
+
+    if (bc->callback != &bc_reserve_callback)
+        return NULL;
+
+    reserve = (bytecode_reserve *)bc->contents;
+    *itemsize = reserve->itemsize;
+    return reserve->numitems;
 }

@@ -57,8 +57,10 @@ struct yasm_object {
     /*@owned@*/ yasm_objfmt *objfmt;	/**< Object format */
     /*@owned@*/ yasm_dbgfmt *dbgfmt;	/**< Debug format */
 
-    /** Currently active section.  Used by some directives. */
-    /*@dependent@*/ yasm_section *cur_section;
+    /** Currently active section.  Used by some directives.  NULL if no
+     * section active.
+     */
+    /*@dependent@*/ /*@null@*/ yasm_section *cur_section;
 
 #ifdef YASM_LIB_INTERNAL
     /** Linked list of sections. */
@@ -107,16 +109,6 @@ struct yasm_object {
     (yasm_object *object, const char *name,
      /*@null@*/ /*@only@*/ yasm_expr *start, unsigned long align, int code,
      int res_only, /*@out@*/ int *isnew, unsigned long line);
-
-/** Create a new absolute section.  No checking is performed at creation to
- * check for overlaps with other absolute sections.
- * \param object    object
- * \param start	    starting address (expression)
- * \param line	    virtual line of section declaration
- * \return New section.
- */
-/*@dependent@*/ yasm_section *yasm_object_create_absolute
-    (yasm_object *object, /*@keep@*/ yasm_expr *start, unsigned long line);
 
 /** Handle a directive.  Passed down to object format, debug format, or
  * architecture as appropriate.
@@ -185,12 +177,6 @@ void yasm_object_set_source_fn(yasm_object *object, const char *src_filename);
  * \note Optimization failures are stored into errwarns.
  */
 void yasm_object_optimize(yasm_object *object, yasm_errwarns *errwarns);
-
-/** Determine if a section is absolute or general.
- * \param sect	    section
- * \return Nonzero if section is absolute.
- */
-int yasm_section_is_absolute(yasm_section *sect);
 
 /** Determine if a section is flagged to contain code.
  * \param sect	    section
@@ -326,17 +312,9 @@ int yasm_section_bcs_traverse
 
 /** Get name of a section.
  * \param   sect    section
- * \return Section name, or NULL if section is absolute.
+ * \return Section name.
  */
-/*@observer@*/ /*@null@*/ const char *yasm_section_get_name
-    (const yasm_section *sect);
-
-/** Get starting symbol of an absolute section.
- * \param   sect    section
- * \return Starting symrec, or NULL if section is not absolute.
- */
-/*@dependent@*/ /*@null@*/ yasm_symrec *yasm_section_abs_get_sym
-    (const yasm_section *sect);
+/*@observer@*/ const char *yasm_section_get_name(const yasm_section *sect);
 
 /** Change starting address of a section.
  * \param sect	    section
@@ -348,8 +326,7 @@ void yasm_section_set_start(yasm_section *sect, /*@only@*/ yasm_expr *start,
 
 /** Get starting address of a section.
  * \param sect	    section
- * \return Starting address (may be a complex expression if section is
- *	   absolute).
+ * \return Starting address.
  */
 /*@observer@*/ const yasm_expr *yasm_section_get_start
     (const yasm_section *sect);

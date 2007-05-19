@@ -197,11 +197,41 @@ nasm_parser_parse(yasm_parser_nasm *parser_nasm)
 	    demand_eol();
 	}
 
+	if (parser_nasm->abspos) {
+	    /* If we're inside an absolute section, just add to the absolute
+	     * position rather than appending bytecodes to a section.
+	     * Only RES* are allowed in an absolute section, so this is easy.
+	     */
+	    if (bc) {
+		/*@null@*/ const yasm_expr *numitems, *multiple;
+		unsigned int itemsize;
+		numitems = yasm_bc_reserve_numitems(bc, &itemsize);
+		if (numitems) {
+		    yasm_expr *e;
+		    e = yasm_expr_create(YASM_EXPR_MUL,
+			yasm_expr_expr(yasm_expr_copy(numitems)),
+			yasm_expr_int(yasm_intnum_create_uint(itemsize)),
+			cur_line);
+		    multiple = yasm_bc_get_multiple_expr(bc);
+		    if (multiple)
+			e = yasm_expr_create_tree(e, YASM_EXPR_MUL,
+						  yasm_expr_copy(multiple),
+						  cur_line);
+		    parser_nasm->abspos = yasm_expr_create_tree(
+			parser_nasm->abspos, YASM_EXPR_ADD, e, cur_line);
+		} else
+		    yasm_error_set(YASM_ERROR_SYNTAX,
+			N_("only RES* allowed within absolute section"));
+		yasm_bc_destroy(bc);
+	    }
+	    temp_bc = NULL;
+	} else {
+	    temp_bc = yasm_section_bcs_append(cursect, bc);
+	    if (temp_bc)
+		parser_nasm->prev_bc = temp_bc;
+	}
 	yasm_errwarn_propagate(parser_nasm->errwarns, cur_line);
 
-	temp_bc = yasm_section_bcs_append(cursect, bc);
-	if (temp_bc)
-	    parser_nasm->prev_bc = temp_bc;
 	if (parser_nasm->save_input)
 	    yasm_linemap_add_source(parser_nasm->linemap,
 		temp_bc,
@@ -1024,15 +1054,23 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
 	    break;
 	case '$':
 	    /* "$" references the current assembly position */
-	    sym = yasm_symtab_define_curpos(p_symtab, "$",
-					    parser_nasm->prev_bc, cur_line);
-	    e = p_expr_new_ident(yasm_expr_sym(sym));
+	    if (parser_nasm->abspos)
+		e = yasm_expr_copy(parser_nasm->abspos);
+	    else {
+		sym = yasm_symtab_define_curpos(p_symtab, "$",
+		    parser_nasm->prev_bc, cur_line);
+		e = p_expr_new_ident(yasm_expr_sym(sym));
+	    }
 	    break;
 	case START_SECTION_ID:
 	    /* "$$" references the start of the current section */
-	    sym = yasm_symtab_define_label(p_symtab, "$$",
-		yasm_section_bcs_first(cursect), 0, cur_line);
-	    e = p_expr_new_ident(yasm_expr_sym(sym));
+	    if (parser_nasm->absstart)
+		e = yasm_expr_copy(parser_nasm->absstart);
+	    else {
+		sym = yasm_symtab_define_label(p_symtab, "$$",
+		    yasm_section_bcs_first(cursect), 0, cur_line);
+		e = p_expr_new_ident(yasm_expr_sym(sym));
+	    }
 	    break;
 	default:
 	    return NULL;
@@ -1053,8 +1091,12 @@ define_label(yasm_parser_nasm *parser_nasm, char *name, int local)
 	strcpy(parser_nasm->locallabel_base, name);
     }
 
-    yasm_symtab_define_label(p_symtab, name, parser_nasm->prev_bc, 1,
-			     cur_line);
+    if (parser_nasm->abspos)
+	yasm_symtab_define_equ(p_symtab, name,
+			       yasm_expr_copy(parser_nasm->abspos), cur_line);
+    else
+	yasm_symtab_define_label(p_symtab, name, parser_nasm->prev_bc, 1,
+				 cur_line);
     yasm_xfree(name);
 }
 
@@ -1071,16 +1113,6 @@ fix_directive_symrec(yasm_expr__item *ei, void *d)
 			cur_line);
 
     return 0;
-}
-
-static void
-dir_absolute(yasm_object *object, yasm_valparamhead *valparams,
-	     yasm_valparamhead *objext_valparams, unsigned long line)
-{
-    yasm_valparam *vp = yasm_vps_first(valparams);
-    yasm_expr *start = yasm_vp_expr(vp, object->symtab, line);
-
-    object->cur_section = yasm_object_create_absolute(object, start, line);
 }
 
 static void
@@ -1122,20 +1154,62 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 		      yasm_valparamhead *objext_valparams)
 {
     unsigned long line = cur_line;
+    yasm_valparam *vp;
 
     if (!yasm_object_directive(p_object, name, "nasm", valparams,
 			       objext_valparams, line))
 	;
-    else if (yasm__strcasecmp(name, "absolute") == 0)
-	dir_absolute(p_object, valparams, objext_valparams, line);
-    else if (yasm__strcasecmp(name, "align") == 0)
-	dir_align(p_object, valparams, objext_valparams, line);
-    else
+    else if (yasm__strcasecmp(name, "absolute") == 0) {
+	vp = yasm_vps_first(valparams);
+	if (parser_nasm->absstart)
+	    yasm_expr_destroy(parser_nasm->absstart);
+	if (parser_nasm->abspos)
+	    yasm_expr_destroy(parser_nasm->abspos);
+	parser_nasm->absstart = yasm_vp_expr(vp, p_object->symtab, line);
+	parser_nasm->abspos = yasm_expr_copy(parser_nasm->absstart);
+	cursect = NULL;
+	parser_nasm->prev_bc = NULL;
+    } else if (yasm__strcasecmp(name, "align") == 0) {
+	/* Really, we shouldn't end up with an align directive in an absolute
+	 * section (as it's supposed to be only used for nop fill, but handle
+	 * it gracefully anyway.
+	 */
+	if (parser_nasm->abspos) {
+	    yasm_expr *boundval, *e;
+	    vp = yasm_vps_first(valparams);
+	    boundval = yasm_vp_expr(vp, p_object->symtab, line);
+	    e = yasm_expr_create_tree(
+		yasm_expr_create_tree(yasm_expr_copy(parser_nasm->absstart),
+				      YASM_EXPR_SUB,
+				      yasm_expr_copy(parser_nasm->abspos),
+				      cur_line),
+		YASM_EXPR_AND,
+		yasm_expr_create(YASM_EXPR_SUB, yasm_expr_expr(boundval),
+				 yasm_expr_int(yasm_intnum_create_uint(1)),
+				 cur_line),
+		cur_line);
+	    parser_nasm->abspos = yasm_expr_create_tree(
+		parser_nasm->abspos, YASM_EXPR_ADD, e, cur_line);
+	} else
+	    dir_align(p_object, valparams, objext_valparams, line);
+    } else
 	yasm_error_set(YASM_ERROR_SYNTAX, N_("unrecognized directive `%s'"),
 		       name);
 
-    /* In case cursect changed or a bytecode was added, update prev_bc. */
-    parser_nasm->prev_bc = yasm_section_bcs_last(cursect);
+    if (parser_nasm->absstart && cursect) {
+        /* We switched to a new section.  Get out of absolute section mode. */
+        yasm_expr_destroy(parser_nasm->absstart);
+        parser_nasm->absstart = NULL;
+        if (parser_nasm->abspos) {
+            yasm_expr_destroy(parser_nasm->abspos);
+            parser_nasm->abspos = NULL;
+        }
+    }
+
+    if (cursect) {
+        /* In case cursect changed or a bytecode was added, update prev_bc. */
+        parser_nasm->prev_bc = yasm_section_bcs_last(cursect);
+    }
 
     if (valparams)
 	yasm_vps_delete(valparams);

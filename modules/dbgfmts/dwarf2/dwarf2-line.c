@@ -873,6 +873,12 @@ yasm_dwarf2__dir_loc(yasm_object *object, yasm_valparamhead *valparams,
     loc->line = yasm_intnum_get_uint(intn);
 
     /* Generate new section data if it doesn't already exist */
+    if (!object->cur_section) {
+        yasm_error_set(YASM_ERROR_SYNTAX,
+                       N_("[%s] can only be used inside of a section"), "loc");
+        yasm_xfree(loc);
+        return;
+    }
     dsd = yasm_section_get_data(object->cur_section,
 				&yasm_dwarf2__section_data_cb);
     if (!dsd) {

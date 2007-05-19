@@ -117,6 +117,16 @@ typedef struct yasm_parser_nasm {
     int peek_token;	/* NONE if none */
     yystype peek_tokval;
     char peek_tokch;
+
+    /* Starting point of the absolute section.  NULL if not in an absolute
+     * section.
+     */
+    /*@null@*/ yasm_expr *absstart;
+
+    /* Current location inside an absolute section (including the start).
+     * NULL if not in an absolute section.
+     */
+    /*@null@*/ yasm_expr *abspos;
 } yasm_parser_nasm;
 
 /* shorter access names to commonly used parser_nasm fields */

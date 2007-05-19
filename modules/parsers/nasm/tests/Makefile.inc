@@ -24,6 +24,10 @@ EXTRA_DIST += modules/parsers/nasm/tests/orphannowarn.hex
 EXTRA_DIST += modules/parsers/nasm/tests/prevlocalwarn.asm
 EXTRA_DIST += modules/parsers/nasm/tests/prevlocalwarn.errwarn
 EXTRA_DIST += modules/parsers/nasm/tests/prevlocalwarn.hex
+EXTRA_DIST += modules/parsers/nasm/tests/strucalign.asm
+EXTRA_DIST += modules/parsers/nasm/tests/strucalign.hex
+EXTRA_DIST += modules/parsers/nasm/tests/struczero.asm
+EXTRA_DIST += modules/parsers/nasm/tests/struczero.hex
 
 EXTRA_DIST += modules/parsers/nasm/tests/worphan/Makefile.inc
 
