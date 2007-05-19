@@ -851,14 +851,14 @@ INSN	-	swapgs	NONE	threebyte   0x0F01F8	CPU_Hammer|CPU_64
 INSN	-	rdtscp	NONE	threebyte   0x0F01F9	CPU_686|CPU_AMD|CPU_Priv
 INSN	-	cmpxchg16b NONE	cmpxchg16b	0	CPU_Hammer|CPU_64
 # AMD Pacifica SVM instructions
-INSN	-	clgi	NONE	threebyte   0x0F01DD	CPU_Hammer|CPU_64|CPU_SVM
-INSN	-	invlpga	NONE	invlpga	    0		CPU_Hammer|CPU_64|CPU_SVM
-INSN	-	skinit	NONE	skinit	    0		CPU_Hammer|CPU_64|CPU_SVM
-INSN	-	stgi	NONE	threebyte   0x0F01DC	CPU_Hammer|CPU_64|CPU_SVM
-INSN	-	vmload	NONE	svm_rax	    0xDA	CPU_Hammer|CPU_64|CPU_SVM
-INSN	-	vmmcall	NONE	threebyte   0x0F01D9	CPU_Hammer|CPU_64|CPU_SVM
-INSN	-	vmrun	NONE	svm_rax	    0xD8	CPU_Hammer|CPU_64|CPU_SVM
-INSN	-	vmsave	NONE	svm_rax	    0xDB	CPU_Hammer|CPU_64|CPU_SVM
+INSN	-	clgi	NONE	threebyte   0x0F01DD	CPU_SVM
+INSN	-	invlpga	NONE	invlpga	    0		CPU_SVM
+INSN	-	skinit	NONE	skinit	    0		CPU_SVM
+INSN	-	stgi	NONE	threebyte   0x0F01DC	CPU_SVM
+INSN	-	vmload	NONE	svm_rax	    0xDA	CPU_SVM
+INSN	-	vmmcall	NONE	threebyte   0x0F01D9	CPU_SVM
+INSN	-	vmrun	NONE	svm_rax	    0xD8	CPU_SVM
+INSN	-	vmsave	NONE	svm_rax	    0xDB	CPU_SVM
 # VIA PadLock instructions
 INSN	-	xstore	NONE	padlock	0xC000A7   CPU_PadLock
 INSN	-	xstorerng NONE	padlock	0xC000A7   CPU_PadLock
