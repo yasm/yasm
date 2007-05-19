@@ -152,7 +152,7 @@ yasm_win64__unwind_generate(yasm_section *xdata, coff_unwind_info *info,
     /* Code array */
     SLIST_FOREACH(code, &info->codes, link) {
 	codebc = yasm_bc_create_common(&win64_uwcode_bc_callback, code,
-				       yasm_symrec_get_line(code->loc));
+				       yasm_symrec_get_def_line(code->loc));
 	yasm_section_bcs_append(xdata, codebc);
     }
 
@@ -259,7 +259,7 @@ win64_uwinfo_bc_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
     coff_unwind_info *info = (coff_unwind_info *)bc->contents;
     switch (span) {
 	case 1:
-	    yasm_error_set_xref(yasm_symrec_get_line(info->prolog),
+	    yasm_error_set_xref(yasm_symrec_get_def_line(info->prolog),
 				N_("prologue ended here"));
 	    yasm_error_set(YASM_ERROR_VALUE,
 			   N_("prologue %ld bytes, must be <256"), new_val);

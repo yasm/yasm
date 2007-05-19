@@ -151,7 +151,7 @@ yasm_linemap_create(void)
     size_t i;
     yasm_linemap *linemap = yasm_xmalloc(sizeof(yasm_linemap));
 
-    linemap->filenames = HAMT_create(yasm_internal_error_);
+    linemap->filenames = HAMT_create(0, yasm_internal_error_);
 
     linemap->current = 1;
 

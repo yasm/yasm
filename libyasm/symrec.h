@@ -46,6 +46,16 @@ typedef enum yasm_sym_status {
     YASM_SYM_NOTINTABLE = 1 << 3    /**< if it's not in sym_table (ex. '$') */
 } yasm_sym_status;
 
+/** Symbol record visibility.
+ * \note YASM_SYM_EXTERN and YASM_SYM_COMMON are mutually exclusive.
+ */
+typedef enum yasm_sym_vis {
+    YASM_SYM_LOCAL = 0,		/**< Default, local only */
+    YASM_SYM_GLOBAL = 1 << 0,	/**< If symbol is declared GLOBAL */
+    YASM_SYM_COMMON = 1 << 1,	/**< If symbol is declared COMMON */
+    YASM_SYM_EXTERN = 1 << 2,	/**< If symbol is declared EXTERN */
+    YASM_SYM_DLOCAL = 1 << 3	/**< If symbol is explicitly declared LOCAL */
+} yasm_sym_vis;
 
 /** Create a new symbol table. */
 yasm_symtab *yasm_symtab_create(void);
@@ -202,13 +212,10 @@ yasm_symrec *yasm_symtab_iter_value(const yasm_symtab_iter *cur);
  * used but never defined or declared #YASM_SYM_EXTERN or #YASM_SYM_COMMON.
  * \param symtab	symbol table
  * \param undef_extern	if nonzero, all undef syms should be declared extern
- * \param object	object to notify about new extern decls
- *			(may be NULL if undef_extern is 0)
  * \param errwarns	error/warning set
  * \note Errors/warnings are stored into errwarns.
  */
 void yasm_symtab_parser_finalize(yasm_symtab *symtab, int undef_extern,
-				 /*@null@*/ yasm_object *object,
 				 yasm_errwarns *errwarns);
 
 /** Print the symbol table.  For debugging purposes.
@@ -236,11 +243,23 @@ yasm_sym_vis yasm_symrec_get_visibility(const yasm_symrec *sym);
  */
 yasm_sym_status yasm_symrec_get_status(const yasm_symrec *sym);
 
-/** Get the virtual line of a symbol (where it was first declared or used).
+/** Get the virtual line of where a symbol was first defined.
  * \param sym	    symbol
  * \return line	    virtual line
  */
-unsigned long yasm_symrec_get_line(const yasm_symrec *sym);
+unsigned long yasm_symrec_get_def_line(const yasm_symrec *sym);
+
+/** Get the virtual line of where a symbol was first declared.
+ * \param sym	    symbol
+ * \return line	    virtual line
+ */
+unsigned long yasm_symrec_get_decl_line(const yasm_symrec *sym);
+
+/** Get the virtual line of where a symbol was first used.
+ * \param sym	    symbol
+ * \return line	    virtual line
+ */
+unsigned long yasm_symrec_get_use_line(const yasm_symrec *sym);
 
 /** Get EQU value of a symbol.
  * \param sym	    symbol
@@ -279,6 +298,36 @@ int yasm_symrec_is_special(const yasm_symrec *sym);
  * \return 0 if symbol is not a current position label, nonzero otherwise.
  */
 int yasm_symrec_is_curpos(const yasm_symrec *sym);
+
+/** Set object-extended valparams.
+ * \param sym			symbol
+ * \param objext_valparams	object-extended valparams
+ */
+void yasm_symrec_set_objext_valparams
+    (yasm_symrec *sym, /*@only@*/ yasm_valparamhead *objext_valparams);
+
+/** Get object-extended valparams, if any, associated with symbol's
+ * declaration.
+ * \param sym	    symbol
+ * \return Object-extended valparams (NULL if none).
+ */
+/*@null@*/ /*@dependent@*/ yasm_valparamhead *yasm_symrec_get_objext_valparams
+    (yasm_symrec *sym);
+
+/** Set common size of symbol.
+ * \param sym		symbol
+ * \param common_size	common size expression
+ */
+void yasm_symrec_set_common_size
+    (yasm_symrec *sym, /*@only@*/ yasm_expr *common_size);
+
+/** Get common size of symbol, if symbol is declared COMMON and a size was set
+ * for it.
+ * \param sym	    symbol
+ * \return Common size (NULL if none).
+ */
+/*@dependent@*/ /*@null@*/ yasm_expr **yasm_symrec_get_common_size
+    (yasm_symrec *sym);
 
 /** Get associated data for a symbol and data callback.
  * \param sym	    symbol

@@ -330,19 +330,20 @@ dwarf2_section_data_print(void *data, FILE *f, int indent_level)
     /* TODO */
 }
 
-static int
-dwarf2_dbgfmt_directive(yasm_object *object, const char *name,
-			yasm_valparamhead *valparams, unsigned long line)
-{
-    return yasm_dwarf2__line_directive(object, name, valparams, line);
-}
+static const yasm_directive dwarf2_directives[] = {
+    { ".loc",	"gas",	yasm_dwarf2__dir_loc,	YASM_DIR_ARG_REQUIRED },
+    { ".file",	"gas",	yasm_dwarf2__dir_file,	YASM_DIR_ARG_REQUIRED },
+    { "loc",	"nasm",	yasm_dwarf2__dir_loc,	YASM_DIR_ARG_REQUIRED },
+    { "file",	"nasm",	yasm_dwarf2__dir_file,	YASM_DIR_ARG_REQUIRED },
+    { NULL, NULL, NULL, 0 }
+};
 
 /* Define dbgfmt structure -- see dbgfmt.h for details */
 yasm_dbgfmt_module yasm_dwarf2_LTX_dbgfmt = {
     "DWARF2 debugging format",
     "dwarf2",
+    dwarf2_directives,
     dwarf2_dbgfmt_create,
     dwarf2_dbgfmt_destroy,
-    dwarf2_dbgfmt_directive,
     dwarf2_dbgfmt_generate
 };

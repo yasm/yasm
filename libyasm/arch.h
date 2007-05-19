@@ -106,6 +106,9 @@ typedef struct yasm_arch_module {
      */
     const char *keyword;
 
+    /** NULL-terminated list of directives.  NULL if none. */
+    /*@null@*/ const yasm_directive *directives;
+
     /** Create architecture.
      * Module-level implementation of yasm_arch_create().
      * Call yasm_arch_create() instead of calling this function.
@@ -133,11 +136,6 @@ typedef struct yasm_arch_module {
      */
     int (*set_var) (yasm_arch *arch, const char *var, unsigned long val);
 
-    /** Module-level implementation of yasm_arch_parse_cpu().
-     * Call yasm_arch_parse_cpu() instead of calling this function.
-     */
-    void (*parse_cpu) (yasm_arch *arch, const char *cpuid, size_t cpuid_len);
-
     /** Module-level implementation of yasm_arch_parse_check_insnprefix().
      * Call yasm_arch_parse_check_insnprefix() instead of calling this function.
      */
@@ -151,14 +149,6 @@ typedef struct yasm_arch_module {
     yasm_arch_regtmod (*parse_check_regtmod)
 	(yasm_arch *arch, /*@out@*/ uintptr_t *data, const char *id,
 	 size_t id_len);
-
-    /** Module-level implementation of yasm_arch_parse_directive().
-     * Call yasm_arch_parse_directive() instead of calling this function.
-     */
-    int (*parse_directive) (yasm_arch *arch, const char *name,
-			    /*@null@*/ yasm_valparamhead *valparams,
-			    /*@null@*/ yasm_valparamhead *objext_valparams,
-			    yasm_object *object, unsigned long line);
 
     /** Module-level implementation of yasm_arch_get_fill().
      * Call yasm_arch_get_fill() instead of calling this function.
@@ -219,7 +209,7 @@ typedef struct yasm_arch_module {
      * Call yasm_arch_get_machine() to get the active machine of a particular
      * #yasm_arch.
      */
-    yasm_arch_machine *machines;
+    const yasm_arch_machine *machines;
 
     /** Default machine keyword.
      * Call yasm_arch_get_machine() to get the active machine of a particular
@@ -352,15 +342,6 @@ unsigned int yasm_arch_get_address_size(const yasm_arch *arch);
  */
 int yasm_arch_set_var(yasm_arch *arch, const char *var, unsigned long val);
 
-/** Switch available instructions/registers/etc based on a user-specified
- * CPU identifier.  Should modify behavior ONLY of parse_* functions!  The
- * bytecode and output functions should be able to handle any CPU.
- * \param arch		architecture
- * \param cpuid		cpu identifier as in the input file
- * \param cpuid_len	length of cpu identifier string
- */
-void yasm_arch_parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len);
-
 /** Check an generic identifier to see if it matches architecture specific
  * names for instructions or instruction prefixes.  Unrecognized identifiers
  * should return #YASM_ARCH_NOTINSNPREFIX so they can be treated as normal
@@ -392,23 +373,6 @@ yasm_arch_insnprefix yasm_arch_parse_check_insnprefix
 yasm_arch_regtmod yasm_arch_parse_check_regtmod
     (yasm_arch *arch, /*@out@*/ uintptr_t *data, const char *id,
      size_t id_len);
-
-/** Handle architecture-specific directives.
- * Should modify behavior ONLY of parse functions, much like parse_cpu().
- * \param arch			architecture
- * \param name			directive name
- * \param valparams		value/parameters
- * \param objext_valparams	object format extensions
- *				value/parameters
- * \param object		object
- * \param line			virtual line (as from yasm_linemap)
- * \return Nonzero if directive was not recognized; 0 if directive was
- *	   recognized, even if it wasn't valid.
- */
-int yasm_arch_parse_directive(yasm_arch *arch, const char *name,
-			      /*@null@*/ yasm_valparamhead *valparams,
-			      /*@null@*/ yasm_valparamhead *objext_valparams,
-			      yasm_object *object, unsigned long line);
 
 /** Get NOP fill patterns for 1-15 bytes of fill.
  * \param arch		architecture
@@ -542,18 +506,12 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
     ((yasm_arch_base *)arch)->module->get_address_size(arch)
 #define yasm_arch_set_var(arch, var, val) \
     ((yasm_arch_base *)arch)->module->set_var(arch, var, val)
-#define yasm_arch_parse_cpu(arch, cpuid, cpuid_len) \
-    ((yasm_arch_base *)arch)->module->parse_cpu(arch, cpuid, cpuid_len)
 #define yasm_arch_parse_check_insnprefix(arch, data, id, id_len) \
     ((yasm_arch_base *)arch)->module->parse_check_insnprefix(arch, data, id, \
 							     id_len)
 #define yasm_arch_parse_check_regtmod(arch, data, id, id_len) \
     ((yasm_arch_base *)arch)->module->parse_check_regtmod(arch, data, id, \
 							  id_len)
-#define yasm_arch_parse_directive(arch, name, valparams, objext_valparams, \
-				  object, line) \
-    ((yasm_arch_base *)arch)->module->parse_directive \
-	(arch, name, valparams, objext_valparams, object, line)
 #define yasm_arch_get_fill(arch) \
     ((yasm_arch_base *)arch)->module->get_fill(arch)
 #define yasm_arch_finalize_insn(arch, bc, prev_bc, data, num_operands, \

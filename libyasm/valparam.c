@@ -32,8 +32,36 @@
 #include "coretype.h"
 #include "valparam.h"
 
+#include "errwarn.h"
 #include "expr.h"
+#include "symrec.h"
 
+
+void
+yasm_call_directive(const yasm_directive *directive, yasm_object *object,
+		    yasm_valparamhead *valparams,
+		    yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_valparam *vp;
+
+    if ((directive->flags & (YASM_DIR_ARG_REQUIRED|YASM_DIR_ID_REQUIRED)) &&
+	(!valparams || !yasm_vps_first(valparams))) {
+	yasm_error_set(YASM_ERROR_SYNTAX,
+		       N_("directive `%s' requires an argument"),
+		       directive->name);
+	return;
+    }
+    if (valparams) {
+	vp = yasm_vps_first(valparams);
+	if ((directive->flags & YASM_DIR_ID_REQUIRED) && !vp->val) {
+	    yasm_error_set(YASM_ERROR_SYNTAX,
+		N_("directive `%s' requires an identifier parameter"),
+		directive->name);
+	    return;
+	}
+    }
+    directive->handler(object, valparams, objext_valparams, line);
+}
 
 yasm_valparam *
 yasm_vp_create(/*@keep@*/ char *v, /*@keep@*/ yasm_expr *p)
@@ -42,6 +70,22 @@ yasm_vp_create(/*@keep@*/ char *v, /*@keep@*/ yasm_expr *p)
     r->val = v;
     r->param = p;
     return r;
+}
+
+/*@null@*/ /*@only@*/ yasm_expr *
+yasm_vp_expr(yasm_valparam *vp, yasm_symtab *symtab, unsigned long line)
+{
+    if (!vp)
+	return NULL;
+    if (vp->val) {
+	return yasm_expr_create_ident(yasm_expr_sym(
+	    yasm_symtab_use(symtab, vp->val, line)), line);
+    } else if (vp->param) {
+	yasm_expr *e = vp->param;
+	vp->param = NULL;   /* to avoid double-free */
+	return e;
+    } else
+	return NULL;
 }
 
 void

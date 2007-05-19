@@ -283,8 +283,6 @@ elf_symtab_entry_destroy(elf_symtab_entry *entry)
     if (entry == NULL)
 	yasm_internal_error("symtab entry is null");
 
-    if (entry->xsize)
-	yasm_expr_destroy(entry->xsize);
     yasm_xfree(entry);
 }
 

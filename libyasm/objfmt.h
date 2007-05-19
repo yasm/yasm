@@ -74,6 +74,9 @@ struct yasm_objfmt_module {
      */
     const char *default_dbgfmt_keyword;
 
+    /** NULL-terminated list of directives.  NULL if none. */
+    /*@null@*/ const yasm_directive *directives;
+
     /** Create object format.
      * Module-level implementation of yasm_objfmt_create().
      * Call yasm_objfmt_create() instead of calling this function.
@@ -106,35 +109,6 @@ struct yasm_objfmt_module {
 	(*section_switch)(yasm_object *object, yasm_valparamhead *valparams,
 			  /*@null@*/ yasm_valparamhead *objext_valparams,
 			  unsigned long line);
-
-    /** Module-level implementation of yasm_objfmt_extern_declare().
-     * Call yasm_objfmt_extern_declare() instead of calling this function.
-     */
-    yasm_symrec * (*extern_declare)
-	(yasm_object *object, const char *name,
-	 /*@null@*/ yasm_valparamhead *objext_valparams, unsigned long line);
-
-    /** Module-level implementation of yasm_objfmt_global_declare().
-     * Call yasm_objfmt_global_declare() instead of calling this function.
-     */
-    yasm_symrec * (*global_declare)
-	(yasm_object *object, const char *name,
-	 /*@null@*/ yasm_valparamhead *objext_valparams, unsigned long line);
-
-    /** Module-level implementation of yasm_objfmt_common_declare().
-     * Call yasm_objfmt_common_declare() instead of calling this function.
-     */
-    yasm_symrec * (*common_declare)
-	(yasm_object *object, const char *name, /*@only@*/ yasm_expr *size,
-	 /*@null@*/ yasm_valparamhead *objext_valparams, unsigned long line);
-
-    /** Module-level implementation of yasm_objfmt_directive().
-     * Call yasm_objfmt_directive() instead of calling this function.
-     */
-    int (*directive) (yasm_object *object, const char *name,
-		      /*@null@*/ yasm_valparamhead *valparams,
-		      /*@null@*/ yasm_valparamhead *objext_valparams,
-		      unsigned long line);
 };
 
 /** Create object format.
@@ -182,58 +156,6 @@ yasm_section *yasm_objfmt_add_default_section(yasm_object *object);
     (yasm_object *object, yasm_valparamhead *valparams,
      /*@null@*/ yasm_valparamhead *objext_valparams, unsigned long line);
 
-/** Declare an "extern" (importing from another module) symbol.  Should
- * call yasm_symtab_declare().
- * \param object		object
- * \param name			symbol name
- * \param objext_valparams	object format-specific value/paramaters
- * \param line			virtual line (from yasm_linemap)
- * \return Declared symbol.
- */
-yasm_symrec *yasm_objfmt_extern_declare
-    (yasm_object *object, const char *name,
-     /*@null@*/ yasm_valparamhead *objext_valparams, unsigned long line);
-
-/** Declare a "global" (exporting to other modules) symbol.  Should call
- * yasm_symtab_declare().
- * \param object		object
- * \param name			symbol name
- * \param objext_valparams	object format-specific value/paramaters
- * \param line			virtual line (from yasm_linemap)
- * \return Declared symbol.
- */
-yasm_symrec *yasm_objfmt_global_declare
-    (yasm_object *object, const char *name,
-     /*@null@*/ yasm_valparamhead *objext_valparams, unsigned long line);
-
-/** Declare a "common" (shared space with other modules) symbol.  Should
- * call yasm_symtab_declare().
- * declaration.
- * \param object		object
- * \param name			symbol name
- * \param size			common data size
- * \param objext_valparams	object format-specific value/paramaters
- * \param line			virtual line (from yasm_linemap)
- * \return Declared symbol.
- */
-yasm_symrec *yasm_objfmt_common_declare
-    (yasm_object *object, const char *name, /*@only@*/ yasm_expr *size,
-     /*@null@*/ yasm_valparamhead *objext_valparams, unsigned long line);
-
-/** Handle object format-specific directives.
- * \param object		object
- * \param name			directive name
- * \param valparams		value/parameters
- * \param objext_valparams	object format-specific value/parameters
- * \param line			virtual line (from yasm_linemap)
- * \return Nonzero if directive was not recognized; 0 if directive was
- *         recognized, even if it wasn't valid.
- */
-int yasm_objfmt_directive(yasm_object *object, const char *name,
-			  /*@null@*/ yasm_valparamhead *valparams,
-			  /*@null@*/ yasm_valparamhead *objext_valparams,
-			  unsigned long line);
-
 #ifndef YASM_DOXYGEN
 
 /* Inline macro implementations for objfmt functions */
@@ -248,18 +170,6 @@ int yasm_objfmt_directive(yasm_object *object, const char *name,
 #define yasm_objfmt_section_switch(object, vpms, oe_vpms, line) \
     ((yasm_objfmt_base *)((object)->objfmt))->module->section_switch \
 	(object, vpms, oe_vpms, line)
-#define yasm_objfmt_extern_declare(object, name, oe_vpms, line) \
-    ((yasm_objfmt_base *)((object)->objfmt))->module->extern_declare \
-	(object, name, oe_vpms, line)
-#define yasm_objfmt_global_declare(object, name, oe_vpms, line) \
-    ((yasm_objfmt_base *)((object)->objfmt))->module->global_declare \
-	(object, name, oe_vpms, line)
-#define yasm_objfmt_common_declare(object, name, size, oe_vpms, line) \
-    ((yasm_objfmt_base *)((object)->objfmt))->module->common_declare \
-	(object, name, size, oe_vpms, line)
-#define yasm_objfmt_directive(object, name, vpms, oe_vpms, line) \
-    ((yasm_objfmt_base *)((object)->objfmt))->module->directive \
-	(object, name, vpms, oe_vpms, line)
 #define yasm_objfmt_add_default_section(object) \
     ((yasm_objfmt_base *)((object)->objfmt))->module->add_default_section \
 	(object)

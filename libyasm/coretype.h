@@ -187,6 +187,10 @@ typedef struct yasm_valparam yasm_valparam;
  * \see valparam.h for related functions.
  */
 typedef struct yasm_valparamhead yasm_valparamhead;
+/** Directive list entry.
+ * \see valparam.h for details and related functions.
+ */
+typedef struct yasm_directive yasm_directive;
 
 /** A list of instruction operands (opaque type).
  * The list goes from left-to-right as parsed.
@@ -231,18 +235,6 @@ typedef enum yasm_expr_op {
 			 *   some other segment). */
     YASM_EXPR_SEGOFF	/**< The ':' in segment:offset. */
 } yasm_expr_op;
-
-/** Symbol record visibility.
- * \see symrec.h for related functions.
- * \note YASM_SYM_EXTERN and YASM_SYM_COMMON are mutually exclusive.
- */
-typedef enum yasm_sym_vis {
-    YASM_SYM_LOCAL = 0,		/**< Default, local only */
-    YASM_SYM_GLOBAL = 1 << 0,	/**< If symbol is declared GLOBAL */
-    YASM_SYM_COMMON = 1 << 1,	/**< If symbol is declared COMMON */
-    YASM_SYM_EXTERN = 1 << 2,	/**< If symbol is declared EXTERN */
-    YASM_SYM_DLOCAL = 1 << 3	/**< If symbol is explicitly declared LOCAL */
-} yasm_sym_vis;
 
 /** Convert yasm_value to its byte representation.  Usually implemented by
  * object formats to keep track of relocations and verify legal expressions.

@@ -499,19 +499,12 @@ stabs_bc_str_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
     return 0;
 }
 
-static int
-stabs_dbgfmt_directive(yasm_object *object, const char *name,
-		       yasm_valparamhead *valparams, unsigned long line)
-{
-    return 1;
-}
-
 /* Define dbgfmt structure -- see dbgfmt.h for details */
 yasm_dbgfmt_module yasm_stabs_LTX_dbgfmt = {
     "Stabs debugging format",
     "stabs",
+    NULL,	/* no directives */
     stabs_dbgfmt_create,
     stabs_dbgfmt_destroy,
-    stabs_dbgfmt_directive,
     stabs_dbgfmt_generate
 };

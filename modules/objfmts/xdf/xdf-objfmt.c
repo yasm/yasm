@@ -434,8 +434,16 @@ static int
 xdf_objfmt_count_sym(yasm_symrec *sym, /*@null@*/ void *d)
 {
     /*@null@*/ xdf_objfmt_output_info *info = (xdf_objfmt_output_info *)d;
+    yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
     assert(info != NULL);
-    if (info->all_syms || yasm_symrec_get_visibility(sym) != YASM_SYM_LOCAL) {
+    if (vis & YASM_SYM_COMMON) {
+	yasm_error_set(YASM_ERROR_GENERAL,
+	    N_("XDF object format does not support common variables"));
+	yasm_errwarn_propagate(info->errwarns, yasm_symrec_get_decl_line(sym));
+	return 0;
+    }
+    if (info->all_syms ||
+	(vis != YASM_SYM_LOCAL && !(vis & YASM_SYM_DLOCAL))) {
 	/* Save index in symrec data */
 	xdf_symrec_data *sym_data = yasm_xmalloc(sizeof(xdf_symrec_data));
 	sym_data->index = info->indx;
@@ -813,35 +821,6 @@ xdf_section_data_print(void *data, FILE *f, int indent_level)
     fprintf(f, "%*snreloc=%ld\n", indent_level, "", xsd->nreloc);
 }
 
-static yasm_symrec *
-xdf_objfmt_extern_declare(yasm_object *object, const char *name, /*@unused@*/
-			  /*@null@*/ yasm_valparamhead *objext_valparams,
-			  unsigned long line)
-{
-    return yasm_symtab_declare(object->symtab, name, YASM_SYM_EXTERN, line);
-}
-
-static yasm_symrec *
-xdf_objfmt_global_declare(yasm_object *object, const char *name, /*@unused@*/
-			  /*@null@*/ yasm_valparamhead *objext_valparams,
-			  unsigned long line)
-{
-    return yasm_symtab_declare(object->symtab, name, YASM_SYM_GLOBAL, line);
-}
-
-static yasm_symrec *
-xdf_objfmt_common_declare(yasm_object *object, const char *name,
-			  /*@only@*/ yasm_expr *size, /*@unused@*/ /*@null@*/
-			  yasm_valparamhead *objext_valparams,
-			  unsigned long line)
-{
-    yasm_expr_destroy(size);
-    yasm_error_set(YASM_ERROR_GENERAL,
-	N_("XDF object format does not support common variables"));
-
-    return yasm_symtab_declare(object->symtab, name, YASM_SYM_COMMON, line);
-}
-
 static void
 xdf_symrec_data_destroy(void *data)
 {
@@ -855,18 +834,6 @@ xdf_symrec_data_print(void *data, FILE *f, int indent_level)
 
     fprintf(f, "%*ssymtab index=%lu\n", indent_level, "", xsd->index);
 }
-
-static int
-xdf_objfmt_directive(/*@unused@*/ yasm_object *object,
-		      /*@unused@*/ const char *name,
-		      /*@unused@*/ /*@null@*/ yasm_valparamhead *valparams,
-		      /*@unused@*/ /*@null@*/
-		      yasm_valparamhead *objext_valparams,
-		      /*@unused@*/ unsigned long line)
-{
-    return 1;	/* no objfmt directives */
-}
-
 
 /* Define valid debug formats to use with this object format */
 static const char *xdf_objfmt_dbgfmt_keywords[] = {
@@ -882,13 +849,10 @@ yasm_objfmt_module yasm_xdf_LTX_objfmt = {
     32,
     xdf_objfmt_dbgfmt_keywords,
     "null",
+    NULL,	/* no directives */
     xdf_objfmt_create,
     xdf_objfmt_output,
     xdf_objfmt_destroy,
     xdf_objfmt_add_default_section,
-    xdf_objfmt_section_switch,
-    xdf_objfmt_extern_declare,
-    xdf_objfmt_global_declare,
-    xdf_objfmt_common_declare,
-    xdf_objfmt_directive
+    xdf_objfmt_section_switch
 };

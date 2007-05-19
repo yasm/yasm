@@ -293,7 +293,6 @@ typedef struct macho_section_data {
 
 
 typedef struct macho_symrec_data {
-    /*@owned@*/ /*@null@*/ yasm_expr *size; /* size if COMMON declaration */
     unsigned long index;	/* index in output order */
     yasm_intnum *value;		/* valid after writing symtable to file */
     unsigned long length;	/* length + 1 (plus auto underscore) */
@@ -948,13 +947,14 @@ macho_objfmt_output_symtable(yasm_symrec *sym, /*@null@*/ void *d)
 	    scnum = -1;
 	    /*n_desc = REFERENCE_FLAG_UNDEFINED_LAZY;	* FIXME: see definition of REFERENCE_FLAG_* above */
 	} else if (vis & YASM_SYM_COMMON) {
+	    yasm_expr **csize = yasm_symrec_get_common_size(sym);
 	    n_type = N_UNDF | N_EXT;
-	    if (symd) {
-		intn = yasm_expr_get_intnum(&symd->size, 1);
+	    if (csize) {
+		intn = yasm_expr_get_intnum(csize, 1);
 		if (!intn) {
 		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 				   N_("COMMON data size not an integer expression"));
-		    yasm_errwarn_propagate(info->errwarns, symd->size->line);
+		    yasm_errwarn_propagate(info->errwarns, (*csize)->line);
 		} else
 		    yasm_intnum_set_uint(val, yasm_intnum_get_uint(intn));
 	    }
@@ -1500,48 +1500,9 @@ macho_section_data_print(void *data, FILE *f, int indent_level)
     fprintf(f, "%*soffset=%ld\n", indent_level, "", msd->offset);
 }
 
-static yasm_symrec *
-macho_objfmt_extern_declare(yasm_object *object, const char *name, /*@unused@*/
-			    /*@null@*/ yasm_valparamhead *objext_valparams,
-			    unsigned long line)
-{
-    return yasm_symtab_declare(object->symtab, name, YASM_SYM_EXTERN, line);
-}
-
-static yasm_symrec *
-macho_objfmt_global_declare(yasm_object *object, const char *name, /*@unused@*/
-			    /*@null@*/ yasm_valparamhead *objext_valparams,
-			    unsigned long line)
-{
-    return yasm_symtab_declare(object->symtab, name, YASM_SYM_GLOBAL, line);
-}
-
-static yasm_symrec *
-macho_objfmt_common_declare(yasm_object *object, const char *name,
-			    /*@only@*/ yasm_expr *size,
-			    /*@unused@*/ /*@null@*/
-			    yasm_valparamhead *objext_valparams,
-			    unsigned long line)
-{
-    yasm_symrec *sym;
-    macho_symrec_data *sym_data;
-
-    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_COMMON, line);
-
-    sym_data = yasm_xmalloc(sizeof(macho_symrec_data));
-
-    sym_data->size = size;
-    yasm_symrec_add_data(sym, &macho_symrec_data_cb, sym_data);
-    return sym;
-}
-
 static void
 macho_symrec_data_destroy(void *data)
 {
-    macho_symrec_data *csymd = (macho_symrec_data *)data;
-
-    if (csymd->size)
-	yasm_expr_destroy(csymd->size);
     yasm_xfree(data);
 }
 
@@ -1550,30 +1511,12 @@ macho_symrec_data_print(void *data, FILE *f, int indent_level)
 {
     macho_symrec_data *msd = (macho_symrec_data *)data;
 
-    fprintf(f, "%*ssize=", indent_level, "");
-    if (msd->size)
-	yasm_expr_print(msd->size, f);
-    else
-	fprintf(f, "nil");
-    fprintf(f, "\n");
     fprintf(f, "%*sindex=%ld\n", indent_level, "", msd->index);
     fprintf(f, "%*svalue=", indent_level, "");
     if (msd->value)
 	fprintf(f, "%ld\n", yasm_intnum_get_int(msd->value));
     else
 	fprintf(f, "nil\n");
-}
-
-
-static int
-macho_objfmt_directive(/*@unused@*/ yasm_object *object,
-		       /*@unused@*/ const char *name,
-		       /*@unused@*/ /*@null@*/ yasm_valparamhead *valparams,
-		       /*@unused@*/ /*@null@*/
-		       yasm_valparamhead *objext_valparams,
-		       /*@unused@*/ unsigned long line)
-{
-    return 1;			/* no objfmt directives */
 }
 
 
@@ -1591,15 +1534,12 @@ yasm_objfmt_module yasm_macho_LTX_objfmt = {
     32,
     macho_objfmt_dbgfmt_keywords,
     "null",
+    NULL,   /* no directives */
     macho_objfmt_create,
     macho_objfmt_output,
     macho_objfmt_destroy,
     macho_objfmt_add_default_section,
-    macho_objfmt_section_switch,
-    macho_objfmt_extern_declare,
-    macho_objfmt_global_declare,
-    macho_objfmt_common_declare,
-    macho_objfmt_directive
+    macho_objfmt_section_switch
 };
 
 yasm_objfmt_module yasm_macho32_LTX_objfmt = {
@@ -1609,15 +1549,12 @@ yasm_objfmt_module yasm_macho32_LTX_objfmt = {
     32,
     macho_objfmt_dbgfmt_keywords,
     "null",
+    NULL,   /* no directives */
     macho32_objfmt_create,
     macho_objfmt_output,
     macho_objfmt_destroy,
     macho_objfmt_add_default_section,
-    macho_objfmt_section_switch,
-    macho_objfmt_extern_declare,
-    macho_objfmt_global_declare,
-    macho_objfmt_common_declare,
-    macho_objfmt_directive
+    macho_objfmt_section_switch
 };
 
 yasm_objfmt_module yasm_macho64_LTX_objfmt = {
@@ -1627,13 +1564,10 @@ yasm_objfmt_module yasm_macho64_LTX_objfmt = {
     64,
     macho_objfmt_dbgfmt_keywords,
     "null",
+    NULL,   /* no directives */
     macho64_objfmt_create,
     macho_objfmt_output,
     macho_objfmt_destroy,
     macho_objfmt_add_default_section,
-    macho_objfmt_section_switch,
-    macho_objfmt_extern_declare,
-    macho_objfmt_global_declare,
-    macho_objfmt_common_declare,
-    macho_objfmt_directive
+    macho_objfmt_section_switch
 };

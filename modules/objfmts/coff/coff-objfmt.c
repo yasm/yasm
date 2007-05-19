@@ -168,8 +168,6 @@ typedef struct coff_symrec_data {
     unsigned long index;		/* assigned COFF symbol table index */
     coff_symrec_sclass sclass;		/* storage class */
 
-    /*@owned@*/ /*@null@*/ yasm_expr *size; /* size if COMMON declaration */
-
     int numaux;			/* number of auxiliary entries */
     coff_symtab_auxtype auxtype;    /* type of aux entries */
     coff_symtab_auxent aux[1];	/* actually may be any size (including 0) */
@@ -230,8 +228,7 @@ yasm_objfmt_module yasm_win64_LTX_objfmt;
 
 static /*@dependent@*/ coff_symrec_data *
 coff_objfmt_sym_set_data(yasm_symrec *sym, coff_symrec_sclass sclass,
-			 /*@only@*/ /*@null@*/ yasm_expr *size, int numaux,
-			 coff_symtab_auxtype auxtype)
+			 int numaux, coff_symtab_auxtype auxtype)
 {
     coff_symrec_data *sym_data;
 
@@ -239,7 +236,6 @@ coff_objfmt_sym_set_data(yasm_symrec *sym, coff_symrec_sclass sclass,
 			    (numaux-1)*sizeof(coff_symtab_auxent));
     sym_data->index = 0;
     sym_data->sclass = sclass;
-    sym_data->size = size;
     sym_data->numaux = numaux;
     sym_data->auxtype = auxtype;
 
@@ -266,7 +262,7 @@ coff_common_create(yasm_object *object)
     filesym = yasm_symtab_define_special(object->symtab, ".file",
 					 YASM_SYM_GLOBAL);
     objfmt_coff->filesym_data =
-	coff_objfmt_sym_set_data(filesym, COFF_SCL_FILE, NULL, 1,
+	coff_objfmt_sym_set_data(filesym, COFF_SCL_FILE, 1,
 				 COFF_SYMTAB_AUX_FILE);
     /* Filename is set in coff_objfmt_output */
     objfmt_coff->filesym_data->aux[0].fname = NULL;
@@ -376,8 +372,7 @@ coff_objfmt_init_new_section(yasm_object *object, yasm_section *sect,
     sym = yasm_symtab_define_label(object->symtab, sectname,
 				   yasm_section_bcs_first(sect), 1, line);
     yasm_symrec_declare(sym, YASM_SYM_GLOBAL, line);
-    coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, NULL, 1,
-			     COFF_SYMTAB_AUX_SECT);
+    coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, 1, COFF_SYMTAB_AUX_SECT);
     data->sym = sym;
     return data;
 }
@@ -506,11 +501,14 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf,
 	    /* In standard COFF, COMMON symbols have their length added in */
 	    if (!objfmt_coff->win32) {
 		/*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
+		/*@dependent@*/ /*@null@*/ yasm_expr **csize_expr;
 		/*@dependent@*/ /*@null@*/ yasm_intnum *common_size;
 
 		csymd = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
 		assert(csymd != NULL);
-		common_size = yasm_expr_get_intnum(&csymd->size, 1);
+		csize_expr = yasm_symrec_get_common_size(sym);
+		assert(csize_expr != NULL);
+		common_size = yasm_expr_get_intnum(csize_expr, 1);
 		if (!common_size) {
 		    yasm_error_set(YASM_ERROR_TOO_COMPLEX,
 				   N_("coff: common size too complex"));
@@ -942,13 +940,20 @@ static int
 coff_objfmt_count_sym(yasm_symrec *sym, /*@null@*/ void *d)
 {
     /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
+    yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
+    coff_symrec_data *sym_data;
+
     assert(info != NULL);
-    if (info->all_syms || yasm_symrec_get_visibility(sym) != YASM_SYM_LOCAL) {
+
+    sym_data = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
+    if ((vis & (YASM_SYM_EXTERN|YASM_SYM_GLOBAL|YASM_SYM_COMMON)) && !sym_data)
+	sym_data = coff_objfmt_sym_set_data(sym, COFF_SCL_EXT, 0,
+			     COFF_SYMTAB_AUX_NONE);
+
+    if (info->all_syms || vis != YASM_SYM_LOCAL) {
 	/* Save index in symrec data */
-	coff_symrec_data *sym_data =
-	    yasm_symrec_get_data(sym, &coff_symrec_data_cb);
 	if (!sym_data) {
-	    sym_data = coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, NULL, 0,
+	    sym_data = coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, 0,
 						COFF_SYMTAB_AUX_NONE);
 	}
 	sym_data->index = info->indx;
@@ -1042,11 +1047,15 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 	    scnum = 0xffff;     /* -1 = absolute symbol */
 	} else {
 	    if (vis & YASM_SYM_COMMON) {
-		intn = yasm_expr_get_intnum(&csymd->size, 1);
+		/*@dependent@*/ /*@null@*/ yasm_expr **csize_expr;
+		csize_expr = yasm_symrec_get_common_size(sym);
+		assert(csize_expr != NULL);
+		intn = yasm_expr_get_intnum(csize_expr, 1);
 		if (!intn) {
 		    yasm_error_set(YASM_ERROR_NOT_CONSTANT,
 			N_("COMMON data size not an integer expression"));
-		    yasm_errwarn_propagate(info->errwarns, csymd->size->line);
+		    yasm_errwarn_propagate(info->errwarns,
+					   (*csize_expr)->line);
 		} else
 		    value = yasm_intnum_get_uint(intn);
 		scnum = 0;
@@ -1630,55 +1639,9 @@ coff_section_data_print(void *data, FILE *f, int indent_level)
     fprintf(f, "%*srelocs:\n", indent_level, "");
 }
 
-static yasm_symrec *
-coff_objfmt_extern_declare(yasm_object *object, const char *name, /*@unused@*/
-			   /*@null@*/ yasm_valparamhead *objext_valparams,
-			   unsigned long line)
-{
-    yasm_symrec *sym;
-
-    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_EXTERN, line);
-    coff_objfmt_sym_set_data(sym, COFF_SCL_EXT, NULL, 0,
-			     COFF_SYMTAB_AUX_NONE);
-
-    return sym;
-}
-
-static yasm_symrec *
-coff_objfmt_global_declare(yasm_object *object, const char *name, /*@unused@*/
-			   /*@null@*/ yasm_valparamhead *objext_valparams,
-			   unsigned long line)
-{
-    yasm_symrec *sym;
-
-    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_GLOBAL, line);
-    coff_objfmt_sym_set_data(sym, COFF_SCL_EXT, NULL, 0,
-			     COFF_SYMTAB_AUX_NONE);
-
-    return sym;
-}
-
-static yasm_symrec *
-coff_objfmt_common_declare(yasm_object *object, const char *name,
-			   /*@only@*/ yasm_expr *size, /*@unused@*/ /*@null@*/
-			   yasm_valparamhead *objext_valparams,
-			   unsigned long line)
-{
-    yasm_symrec *sym;
-
-    sym = yasm_symtab_declare(object->symtab, name, YASM_SYM_COMMON, line);
-    coff_objfmt_sym_set_data(sym, COFF_SCL_EXT, size, 0,
-			     COFF_SYMTAB_AUX_NONE);
-
-    return sym;
-}
-
 static void
 coff_symrec_data_destroy(void *data)
 {
-    coff_symrec_data *csymd = (coff_symrec_data *)data;
-    if (csymd->size)
-	yasm_expr_destroy(csymd->size);
     yasm_xfree(data);
 }
 
@@ -1689,17 +1652,11 @@ coff_symrec_data_print(void *data, FILE *f, int indent_level)
 
     fprintf(f, "%*ssymtab index=%lu\n", indent_level, "", csd->index);
     fprintf(f, "%*ssclass=%d\n", indent_level, "", csd->sclass);
-    fprintf(f, "%*ssize=", indent_level, "");
-    if (csd->size)
-	yasm_expr_print(csd->size, f);
-    else
-	fprintf(f, "nil");
-    fprintf(f, "\n");
 }
 
 static void
 dir_export(yasm_object *object, yasm_valparamhead *valparams,
-	   unsigned long line)
+	   yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_valparam *vp;
     int isnew;
@@ -1740,7 +1697,7 @@ dir_export(yasm_object *object, yasm_valparamhead *valparams,
 
 static void
 dir_ident(yasm_object *object, yasm_valparamhead *valparams,
-	  unsigned long line)
+	  yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
     yasm_valparamhead sect_vps;
@@ -1749,7 +1706,13 @@ dir_ident(yasm_object *object, yasm_valparamhead *valparams,
     const char *sectname;
     yasm_valparam *vp, *vp2;
 
+    /* Accept, but do nothing with empty ident */
+    if (!valparams)
+	return;
+
     vp = yasm_vps_first(valparams);
+    if (!vp)
+	return;
 
     if (objfmt_coff->win32) {
 	/* Put ident data into .comment section for COFF, or .rdata$zzz
@@ -1788,59 +1751,9 @@ dir_ident(yasm_object *object, yasm_valparamhead *valparams,
 	yasm_bc_create_data(&dvs, 1, 1, object->arch, line));
 }
 
-static int
-coff_objfmt_directive(yasm_object *object, const char *name,
-		      /*@null@*/ yasm_valparamhead *valparams,
-		      /*@unused@*/ /*@null@*/
-		      yasm_valparamhead *objext_valparams,
-		      unsigned long line)
-{
-    if (yasm__strcasecmp(name, "IDENT") == 0) {
-	if (!valparams) {
-	    yasm_error_set(YASM_ERROR_SYNTAX, N_("[%s] requires an argument"),
-			   "IDENT");
-	    return 0;
-	}
-	dir_ident(object, valparams, line);
-	return 0;
-    }
-    return 1;
-}
-
-static int
-win32_objfmt_directive(yasm_object *object, const char *name,
-		       /*@null@*/ yasm_valparamhead *valparams,
-		       /*@unused@*/ /*@null@*/
-		       yasm_valparamhead *objext_valparams,
-		       unsigned long line)
-{
-    static const struct {
-	const char *name;
-	int required_arg;
-	void (*func) (yasm_object *, yasm_valparamhead *, unsigned long);
-    } dirs[] = {
-	{"EXPORT", 1, dir_export},
-	{"IDENT", 1, dir_ident}
-    };
-    size_t i;
-
-    for (i=0; i<NELEMS(dirs); i++) {
-	if (yasm__strcasecmp(name, dirs[i].name) == 0) {
-	    if (dirs[i].required_arg && !valparams) {
-		yasm_error_set(YASM_ERROR_SYNTAX,
-			       N_("[%s] requires an argument"), dirs[i].name);
-		return 0;
-	    }
-	    dirs[i].func(object, valparams, line);
-	    return 0;
-	}
-    }
-    return 1;
-}
-
 static void
 dir_proc_frame(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
-	       unsigned long line)
+	       yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
     yasm_valparam *vp = yasm_vps_first(valparams);
@@ -1902,7 +1815,7 @@ get_curpos(yasm_object *object, unsigned long line)
 
 static void
 dir_pushreg(yasm_object *object, yasm_valparamhead *valparams,
-	    unsigned long line)
+	    yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
     yasm_valparam *vp = yasm_vps_first(valparams);
@@ -1931,7 +1844,7 @@ dir_pushreg(yasm_object *object, yasm_valparamhead *valparams,
 
 static void
 dir_setframe(yasm_object *object, yasm_valparamhead *valparams,
-	     unsigned long line)
+	     yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
     yasm_valparam *vp = yasm_vps_first(valparams);
@@ -1971,7 +1884,7 @@ dir_setframe(yasm_object *object, yasm_valparamhead *valparams,
 
 static void
 dir_allocstack(yasm_object *object, yasm_valparamhead *valparams,
-	       unsigned long line)
+	       yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
     yasm_valparam *vp = yasm_vps_first(valparams);
@@ -2054,21 +1967,21 @@ dir_save_common(yasm_object *object, yasm_valparamhead *valparams,
 
 static void
 dir_savereg(yasm_object *object, yasm_valparamhead *valparams,
-	    unsigned long line)
+	    yasm_valparamhead *objext_valparams, unsigned long line)
 {
     dir_save_common(object, valparams, line, "SAVEREG", UWOP_SAVE_NONVOL);
 }
 
 static void
 dir_savexmm128(yasm_object *object, yasm_valparamhead *valparams,
-	       unsigned long line)
+	       yasm_valparamhead *objext_valparams, unsigned long line)
 {
     dir_save_common(object, valparams, line, "SAVEXMM128", UWOP_SAVE_XMM128);
 }
 
 static void
 dir_pushframe(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
-	      unsigned long line)
+	      yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
     yasm_valparam *vp = yasm_vps_first(valparams);
@@ -2091,7 +2004,7 @@ dir_pushframe(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
 
 static void
 dir_endprolog(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
-	      unsigned long line)
+	      yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
     if (!procframe_checkstate(objfmt_coff, "ENDPROLOG"))
@@ -2103,7 +2016,7 @@ dir_endprolog(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
 
 static void
 dir_endproc_frame(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
-		  unsigned long line)
+		  yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
     yasm_section *sect;
@@ -2191,52 +2104,17 @@ dir_endproc_frame(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
     objfmt_coff->done_prolog = 0;
 }
 
-static int
-win64_objfmt_directive(yasm_object *object, const char *name,
-		       /*@null@*/ yasm_valparamhead *valparams,
-		       /*@unused@*/ /*@null@*/
-		       yasm_valparamhead *objext_valparams,
-		       unsigned long line)
-{
-    static const struct {
-	const char *name;
-	int required_arg;
-	void (*func) (yasm_object *, yasm_valparamhead *, unsigned long);
-    } dirs[] = {
-	{"EXPORT", 1, dir_export},
-	{"IDENT", 1, dir_ident},
-	{"PROC_FRAME", 0, dir_proc_frame},
-	{"PUSHREG", 1, dir_pushreg},
-	{"SETFRAME", 1, dir_setframe},
-	{"ALLOCSTACK", 1, dir_allocstack},
-	{"SAVEREG", 1, dir_savereg},
-	{"SAVEXMM128", 1, dir_savexmm128},
-	{"PUSHFRAME", 0, dir_pushframe},
-	{"ENDPROLOG", 0, dir_endprolog},
-	{"ENDPROC_FRAME", 0, dir_endproc_frame}
-    };
-    size_t i;
-
-    for (i=0; i<NELEMS(dirs); i++) {
-	if (yasm__strcasecmp(name, dirs[i].name) == 0) {
-	    if (dirs[i].required_arg && !valparams) {
-		yasm_error_set(YASM_ERROR_SYNTAX,
-			       N_("[%s] requires an argument"), dirs[i].name);
-		return 0;
-	    }
-	    dirs[i].func(object, valparams, line);
-	    return 0;
-	}
-    }
-    return 1;
-}
-
-
 /* Define valid debug formats to use with this object format */
 static const char *coff_objfmt_dbgfmt_keywords[] = {
     "null",
     "dwarf2",
     NULL
+};
+
+static const yasm_directive coff_objfmt_directives[] = {
+    { ".ident",		"gas",	dir_ident,	YASM_DIR_ANY },
+    { "ident",		"nasm",	dir_ident,	YASM_DIR_ANY },
+    { NULL, NULL, NULL, 0 }
 };
 
 /* Define objfmt structure -- see objfmt.h for details */
@@ -2247,15 +2125,12 @@ yasm_objfmt_module yasm_coff_LTX_objfmt = {
     32,
     coff_objfmt_dbgfmt_keywords,
     "null",
+    coff_objfmt_directives,
     coff_objfmt_create,
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_add_default_section,
-    coff_objfmt_section_switch,
-    coff_objfmt_extern_declare,
-    coff_objfmt_global_declare,
-    coff_objfmt_common_declare,
-    coff_objfmt_directive
+    coff_objfmt_section_switch
 };
 
 /* Define valid debug formats to use with this object format */
@@ -2266,6 +2141,14 @@ static const char *winXX_objfmt_dbgfmt_keywords[] = {
     NULL
 };
 
+static const yasm_directive win32_objfmt_directives[] = {
+    { ".ident",		"gas",	dir_ident,	YASM_DIR_ANY },
+    { ".export",	"gas",	dir_export,	YASM_DIR_ID_REQUIRED },
+    { "ident",		"nasm",	dir_ident,	YASM_DIR_ANY },
+    { "export",		"nasm",	dir_export,	YASM_DIR_ID_REQUIRED },
+    { NULL, NULL, NULL, 0 }
+};
+
 /* Define objfmt structure -- see objfmt.h for details */
 yasm_objfmt_module yasm_win32_LTX_objfmt = {
     "Win32",
@@ -2274,15 +2157,29 @@ yasm_objfmt_module yasm_win32_LTX_objfmt = {
     32,
     winXX_objfmt_dbgfmt_keywords,
     "null",
+    win32_objfmt_directives,
     win32_objfmt_create,
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_add_default_section,
-    coff_objfmt_section_switch,
-    coff_objfmt_extern_declare,
-    coff_objfmt_global_declare,
-    coff_objfmt_common_declare,
-    win32_objfmt_directive
+    coff_objfmt_section_switch
+};
+
+static const yasm_directive win64_objfmt_directives[] = {
+    { ".ident",		"gas",	dir_ident,	YASM_DIR_ANY },
+    { "ident",		"nasm",	dir_ident,	YASM_DIR_ANY },
+    { ".export",	"gas",	dir_export,	YASM_DIR_ID_REQUIRED },
+    { "export",		"nasm",	dir_export,	YASM_DIR_ID_REQUIRED },
+    { "proc_frame",	"nasm",	dir_proc_frame,	YASM_DIR_ANY },
+    { "pushreg",	"nasm",	dir_pushreg,	YASM_DIR_ARG_REQUIRED },
+    { "setframe",	"nasm",	dir_setframe,	YASM_DIR_ARG_REQUIRED },
+    { "allocstack",	"nasm",	dir_allocstack,	YASM_DIR_ARG_REQUIRED },
+    { "savereg",	"nasm",	dir_savereg,	YASM_DIR_ARG_REQUIRED },
+    { "savexmm128",	"nasm",	dir_savexmm128,	YASM_DIR_ARG_REQUIRED },
+    { "pushframe",	"nasm",	dir_pushframe,	YASM_DIR_ANY },
+    { "endprolog",	"nasm",	dir_endprolog,	YASM_DIR_ANY },
+    { "endproc_frame",	"nasm",	dir_endproc_frame, YASM_DIR_ANY },
+    { NULL, NULL, NULL, 0 }
 };
 
 /* Define objfmt structure -- see objfmt.h for details */
@@ -2293,15 +2190,12 @@ yasm_objfmt_module yasm_win64_LTX_objfmt = {
     64,
     winXX_objfmt_dbgfmt_keywords,
     "null",
+    win64_objfmt_directives,
     win64_objfmt_create,
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_add_default_section,
-    coff_objfmt_section_switch,
-    coff_objfmt_extern_declare,
-    coff_objfmt_global_declare,
-    coff_objfmt_common_declare,
-    win64_objfmt_directive
+    coff_objfmt_section_switch
 };
 yasm_objfmt_module yasm_x64_LTX_objfmt = {
     "Win64",
@@ -2310,13 +2204,10 @@ yasm_objfmt_module yasm_x64_LTX_objfmt = {
     64,
     winXX_objfmt_dbgfmt_keywords,
     "null",
+    win64_objfmt_directives,
     win64_objfmt_create,
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_add_default_section,
-    coff_objfmt_section_switch,
-    coff_objfmt_extern_declare,
-    coff_objfmt_global_declare,
-    coff_objfmt_common_declare,
-    win64_objfmt_directive
+    coff_objfmt_section_switch
 };

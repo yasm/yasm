@@ -3530,9 +3530,9 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, uintptr_t data[4],
 }
 
 void
-yasm_x86__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len)
+yasm_x86__parse_cpu(yasm_arch_x86 *arch_x86, const char *cpuid,
+		    size_t cpuid_len)
 {
-    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     /*@null@*/ const cpu_parse_data *pdata;
     size_t i;
     static char lcaseid[16];

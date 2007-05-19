@@ -118,35 +118,72 @@ x86_set_var(yasm_arch *arch, const char *var, unsigned long val)
     return 0;
 }
 
-static int
-x86_parse_directive(yasm_arch *arch, const char *name,
-		    /*@null@*/ yasm_valparamhead *valparams,
-		    /*@unused@*/ /*@null@*/
-		    yasm_valparamhead *objext_valparams,
-		    /*@unused@*/ yasm_object *object,
-		    /*@unused@*/ unsigned long line)
+static void
+x86_dir_cpu(yasm_object *object, yasm_valparamhead *valparams,
+	    yasm_valparamhead *objext_valparams, unsigned long line)
 {
-    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
+    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)object->arch;
+
+    yasm_valparam *vp;
+    yasm_vps_foreach(vp, valparams) {
+	if (vp->val)
+	    yasm_x86__parse_cpu(arch_x86, vp->val, strlen(vp->val));
+	else if (vp->param) {
+	    const yasm_intnum *intcpu;
+	    intcpu = yasm_expr_get_intnum(&vp->param, 0);
+	    if (!intcpu)
+		yasm_error_set(YASM_ERROR_SYNTAX,
+			       N_("invalid argument to [%s]"), "CPU");
+	    else {
+		char strcpu[16];
+		sprintf(strcpu, "%lu", yasm_intnum_get_uint(intcpu));
+		yasm_x86__parse_cpu(arch_x86, strcpu, strlen(strcpu));
+	    }
+	}
+    }
+}
+
+static void
+x86_dir_bits(yasm_object *object, yasm_valparamhead *valparams,
+	     yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)object->arch;
     yasm_valparam *vp;
     const yasm_intnum *intn;
     long lval;
 
-    if (yasm__strcasecmp(name, "bits") == 0) {
-	if (!valparams)
-	    yasm_error_set(YASM_ERROR_VALUE, N_("[%s] requires an argument"),
-			   "BITS");
-	else if ((vp = yasm_vps_first(valparams)) && !vp->val &&
-	    vp->param != NULL &&
-	    (intn = yasm_expr_get_intnum(&vp->param, 0)) != NULL &&
-	    (lval = yasm_intnum_get_int(intn)) &&
-	    (lval == 16 || lval == 32 || lval == 64))
-	    arch_x86->mode_bits = (unsigned char)lval;
-	else
-	    yasm_error_set(YASM_ERROR_VALUE, N_("invalid argument to [%s]"),
-			   "BITS");
-	return 0;
-    } else
-	return 1;
+    if ((vp = yasm_vps_first(valparams)) && !vp->val && vp->param != NULL &&
+	(intn = yasm_expr_get_intnum(&vp->param, 0)) != NULL &&
+	(lval = yasm_intnum_get_int(intn)) &&
+	(lval == 16 || lval == 32 || lval == 64))
+	arch_x86->mode_bits = (unsigned char)lval;
+    else
+	yasm_error_set(YASM_ERROR_VALUE, N_("invalid argument to [%s]"),
+		       "BITS");
+}
+
+static void
+x86_dir_code16(yasm_object *object, yasm_valparamhead *valparams,
+	       yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)object->arch;
+    arch_x86->mode_bits = 16;
+}
+
+static void
+x86_dir_code32(yasm_object *object, yasm_valparamhead *valparams,
+	       yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)object->arch;
+    arch_x86->mode_bits = 32;
+}
+
+static void
+x86_dir_code64(yasm_object *object, yasm_valparamhead *valparams,
+	       yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)object->arch;
+    arch_x86->mode_bits = 64;
 }
 
 static const unsigned char **
@@ -438,25 +475,33 @@ x86_segreg_print(yasm_arch *arch, uintptr_t segreg, FILE *f)
 }
 
 /* Define x86 machines -- see arch.h for details */
-static yasm_arch_machine x86_machines[] = {
+static const yasm_arch_machine x86_machines[] = {
     { "IA-32 and derivatives", "x86" },
     { "AMD64", "amd64" },
     { NULL, NULL }
+};
+
+static const yasm_directive x86_directives[] = {
+    { "cpu",		"nasm",	x86_dir_cpu,	YASM_DIR_ARG_REQUIRED },
+    { "bits",		"nasm",	x86_dir_bits,	YASM_DIR_ARG_REQUIRED },
+    { ".code16",	"gas",	x86_dir_code16,	YASM_DIR_ANY },
+    { ".code32",	"gas",	x86_dir_code32,	YASM_DIR_ANY },
+    { ".code64",	"gas",	x86_dir_code64,	YASM_DIR_ANY },
+    { NULL, NULL, NULL, 0 }
 };
 
 /* Define arch structure -- see arch.h for details */
 yasm_arch_module yasm_x86_LTX_arch = {
     "x86 (IA-32 and derivatives), AMD64",
     "x86",
+    x86_directives,
     x86_create,
     x86_destroy,
     x86_get_machine,
     x86_get_address_size,
     x86_set_var,
-    yasm_x86__parse_cpu,
     yasm_x86__parse_check_insnprefix,
     yasm_x86__parse_check_regtmod,
-    x86_parse_directive,
     x86_get_fill,
     yasm_x86__finalize_insn,
     yasm_x86__floatnum_tobytes,
