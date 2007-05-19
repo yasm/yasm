@@ -474,7 +474,6 @@ typedef struct cv_leaf {
 } cv_leaf;
 
 typedef struct cv_type {
-    yasm_dbgfmt_cv *dbgfmt_cv;
     unsigned long indx;	    /* type # (must be same as output order) */
     size_t num_leaves;
     /*@null@*/ /*@only@*/ cv_leaf **leaves;
@@ -501,7 +500,7 @@ static const yasm_bytecode_callback cv_type_bc_callback = {
     0
 };
 
-static cv_type *cv_type_create(yasm_dbgfmt_cv *dbgfmt_cv, unsigned long indx);
+static cv_type *cv_type_create(unsigned long indx);
 static void cv_type_append_leaf(cv_type *type, /*@keep@*/ cv_leaf *leaf);
 
 
@@ -516,7 +515,7 @@ cv_leaf_create_label(int is_far)
 }
 
 yasm_section *
-yasm_cv__generate_type(yasm_dbgfmt_cv *dbgfmt_cv)
+yasm_cv__generate_type(yasm_object *object)
 {
     int new;
     unsigned long indx = CV_FIRST_NONPRIM;
@@ -524,11 +523,11 @@ yasm_cv__generate_type(yasm_dbgfmt_cv *dbgfmt_cv)
     yasm_bytecode *bc;
     cv_type *type;
 
-    debug_type = yasm_object_get_general(dbgfmt_cv->object, ".debug$T", 0, 1,
-					 0, 0, &new, 0);
+    debug_type =
+	yasm_object_get_general(object, ".debug$T", 0, 1, 0, 0, &new, 0);
 
     /* Add label type */
-    type = cv_type_create(dbgfmt_cv, indx++);
+    type = cv_type_create(indx++);
     cv_type_append_leaf(type, cv_leaf_create_label(0));
     bc = yasm_bc_create_common(&cv_type_bc_callback, type, 0);
     yasm_bc_finalize(bc, yasm_cv__append_bc(debug_type, bc));
@@ -667,11 +666,10 @@ cv_leaf_tobytes(const cv_leaf *leaf, yasm_bytecode *bc, yasm_arch *arch,
 }
 
 static cv_type *
-cv_type_create(yasm_dbgfmt_cv *dbgfmt_cv, unsigned long indx)
+cv_type_create(unsigned long indx)
 {
     cv_type *type = yasm_xmalloc(sizeof(cv_type));
 
-    type->dbgfmt_cv = dbgfmt_cv;
     type->indx = indx;
     type->num_leaves = 0;
     type->leaves = NULL;
@@ -739,8 +737,8 @@ cv_type_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 		   yasm_output_value_func output_value,
 		   yasm_output_reloc_func output_reloc)
 {
+    yasm_object *object = yasm_section_get_object(bc->section);
     cv_type *type = (cv_type *)bc->contents;
-    yasm_dbgfmt_cv *dbgfmt_cv = type->dbgfmt_cv;
     unsigned char *buf = *bufp;
     yasm_intnum *cval;
     size_t i;
@@ -748,19 +746,19 @@ cv_type_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     cval = yasm_intnum_create_uint(4);	    /* version */
     if (type->indx == CV_FIRST_NONPRIM) {
-	yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 4, 32, 0, bc, 1);
+	yasm_arch_intnum_tobytes(object->arch, cval, buf, 4, 32, 0, bc, 1);
 	buf += 4;
 	reclen -= 4;
     }
 
     /* Total length of record (following this field) - 2 bytes */
     yasm_intnum_set_uint(cval, reclen);
-    yasm_arch_intnum_tobytes(dbgfmt_cv->arch, cval, buf, 2, 16, 0, bc, 1);
+    yasm_arch_intnum_tobytes(object->arch, cval, buf, 2, 16, 0, bc, 1);
     buf += 2;
 
     /* Leaves */
     for (i=0; i<type->num_leaves; i++)
-	cv_leaf_tobytes(type->leaves[i], bc, dbgfmt_cv->arch, &buf, cval);
+	cv_leaf_tobytes(type->leaves[i], bc, object->arch, &buf, cval);
 
     /* Pad to multiple of 4 */
     switch ((buf-(*bufp)) & 0x3) {

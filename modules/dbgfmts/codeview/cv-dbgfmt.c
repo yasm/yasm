@@ -37,18 +37,12 @@ yasm_dbgfmt_module yasm_cv8_LTX_dbgfmt;
 
 
 static /*@null@*/ /*@only@*/ yasm_dbgfmt *
-cv_dbgfmt_create(yasm_object *object, yasm_objfmt *of, yasm_arch *a,
-		 yasm_dbgfmt_module *module, int version)
+cv_dbgfmt_create(yasm_object *object, yasm_dbgfmt_module *module, int version)
 {
     yasm_dbgfmt_cv *dbgfmt_cv = yasm_xmalloc(sizeof(yasm_dbgfmt_cv));
     size_t i;
 
     dbgfmt_cv->dbgfmt.module = module;
-
-    dbgfmt_cv->object = object;
-    dbgfmt_cv->symtab = yasm_object_get_symtab(object);
-    dbgfmt_cv->linemap = yasm_object_get_linemap(object);
-    dbgfmt_cv->arch = a;
 
     dbgfmt_cv->filenames_allocated = 32;
     dbgfmt_cv->filenames_size = 0;
@@ -67,9 +61,9 @@ cv_dbgfmt_create(yasm_object *object, yasm_objfmt *of, yasm_arch *a,
 }
 
 static /*@null@*/ /*@only@*/ yasm_dbgfmt *
-cv8_dbgfmt_create(yasm_object *object, yasm_objfmt *of, yasm_arch *a)
+cv8_dbgfmt_create(yasm_object *object)
 {
-    return cv_dbgfmt_create(object, of, a, &yasm_cv8_LTX_dbgfmt, 8);
+    return cv_dbgfmt_create(object, &yasm_cv8_LTX_dbgfmt, 8);
 }
 
 static void
@@ -98,19 +92,16 @@ yasm_cv__append_bc(yasm_section *sect, yasm_bytecode *bc)
 }
 
 static void
-cv_dbgfmt_generate(yasm_dbgfmt *dbgfmt, yasm_errwarns *errwarns)
+cv_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
+		   yasm_errwarns *errwarns)
 {
-    yasm_dbgfmt_cv *dbgfmt_cv = (yasm_dbgfmt_cv *)dbgfmt;
-
-    yasm_cv__generate_symline(dbgfmt_cv, errwarns);
-
-    yasm_cv__generate_type(dbgfmt_cv);
+    yasm_cv__generate_symline(object, linemap, errwarns);
+    yasm_cv__generate_type(object);
 }
 
 static int
-cv_dbgfmt_directive(yasm_dbgfmt *dbgfmt, const char *name,
-		    yasm_section *sect, yasm_valparamhead *valparams,
-		    unsigned long line)
+cv_dbgfmt_directive(yasm_object *object, const char *name,
+		    yasm_valparamhead *valparams, unsigned long line)
 {
     return 1;	    /* TODO */
 }

@@ -324,7 +324,7 @@ yasm_symrec_declare(yasm_symrec *rec, yasm_sym_vis vis, unsigned long line)
 typedef struct symtab_finalize_info {
     unsigned long firstundef_line;
     int undef_extern;
-    /*@null@*/ yasm_objfmt *objfmt;
+    /*@null@*/ yasm_object *object;
     yasm_errwarns *errwarns;
 } symtab_finalize_info;
 
@@ -337,8 +337,8 @@ symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
     /* error if a symbol is used but never defined or extern/common declared */
     if ((sym->status & YASM_SYM_USED) && !(sym->status & YASM_SYM_DEFINED) &&
 	!(sym->visibility & (YASM_SYM_EXTERN | YASM_SYM_COMMON))) {
-	if (info->undef_extern && info->objfmt)
-	    yasm_objfmt_extern_declare(info->objfmt, sym->name, NULL, 1);
+	if (info->undef_extern && info->object)
+	    yasm_objfmt_extern_declare(info->object, sym->name, NULL, 1);
 	else {
 	    yasm_error_set(YASM_ERROR_GENERAL,
 			   N_("undefined symbol `%s' (first use)"), sym->name);
@@ -373,12 +373,12 @@ symtab_parser_finalize_checksym(yasm_symrec *sym, /*@null@*/ void *d)
 
 void
 yasm_symtab_parser_finalize(yasm_symtab *symtab, int undef_extern,
-			    yasm_objfmt *objfmt, yasm_errwarns *errwarns)
+			    yasm_object *object, yasm_errwarns *errwarns)
 {
     symtab_finalize_info info;
     info.firstundef_line = ULONG_MAX;
     info.undef_extern = undef_extern;
-    info.objfmt = objfmt;
+    info.object = object;
     info.errwarns = errwarns;
     yasm_symtab_traverse(symtab, &info, symtab_parser_finalize_checksym);
     if (info.firstundef_line < ULONG_MAX) {

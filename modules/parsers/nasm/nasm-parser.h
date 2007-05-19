@@ -82,20 +82,15 @@ typedef struct yasm_parser_nasm {
     int debug;
 
     /*@only@*/ yasm_object *object;
-    /*@dependent@*/ yasm_section *cur_section;
 
     /* last "base" label for local (.) labels */
     /*@null@*/ char *locallabel_base;
     size_t locallabel_base_len;
 
     /*@dependent@*/ yasm_preproc *preproc;
-    /*@dependent@*/ yasm_arch *arch;
-    /*@dependent@*/ yasm_objfmt *objfmt;
-    /*@dependent@*/ yasm_dbgfmt *dbgfmt;
     /*@dependent@*/ yasm_errwarns *errwarns;
 
     /*@dependent@*/ yasm_linemap *linemap;
-    /*@dependent@*/ yasm_symtab *symtab;
 
     /*@null@*/ yasm_bytecode *prev_bc;
 
@@ -125,7 +120,9 @@ typedef struct yasm_parser_nasm {
 } yasm_parser_nasm;
 
 /* shorter access names to commonly used parser_nasm fields */
-#define p_symtab	(parser_nasm->symtab)
+#define p_object	(parser_nasm->object)
+#define p_symtab	(parser_nasm->object->symtab)
+#define cursect		(parser_nasm->object->cur_section)
 #define curtok		(parser_nasm->token)
 #define curval		(parser_nasm->tokval)
 

@@ -39,11 +39,6 @@ typedef struct {
 typedef struct yasm_dbgfmt_cv {
     yasm_dbgfmt_base dbgfmt;	    /* base structure */
 
-    yasm_object *object;
-    yasm_symtab *symtab;
-    yasm_linemap *linemap;
-    yasm_arch *arch;
-
     cv_filename *filenames;
     size_t filenames_size;
     size_t filenames_allocated;
@@ -54,10 +49,10 @@ typedef struct yasm_dbgfmt_cv {
 yasm_bytecode *yasm_cv__append_bc(yasm_section *sect, yasm_bytecode *bc);
 
 /* Symbol/Line number functions */
-yasm_section *yasm_cv__generate_symline(yasm_dbgfmt_cv *dbgfmt_cv,
-					yasm_errwarns *errwarns);
+yasm_section *yasm_cv__generate_symline
+    (yasm_object *object, yasm_linemap *linemap, yasm_errwarns *errwarns);
 
 /* Type functions */
-yasm_section *yasm_cv__generate_type(yasm_dbgfmt_cv *dbgfmt_cv);
+yasm_section *yasm_cv__generate_type(yasm_object *object);
 
 #endif

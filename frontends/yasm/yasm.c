@@ -56,10 +56,8 @@ static int special_options = 0;
 /*@null@*/ /*@dependent@*/ static const yasm_preproc_module *
     cur_preproc_module = NULL;
 /*@null@*/ static char *objfmt_keyword = NULL;
-/*@null@*/ /*@dependent@*/ static yasm_objfmt *cur_objfmt = NULL;
 /*@null@*/ /*@dependent@*/ static const yasm_objfmt_module *
     cur_objfmt_module = NULL;
-/*@null@*/ /*@dependent@*/ static yasm_dbgfmt *cur_dbgfmt = NULL;
 /*@null@*/ /*@dependent@*/ static const yasm_dbgfmt_module *
     cur_dbgfmt_module = NULL;
 /*@null@*/ /*@dependent@*/ static yasm_listfmt *cur_listfmt = NULL;
@@ -79,7 +77,8 @@ static enum {
 /*@null@*/ /*@dependent@*/ static FILE *open_file(const char *filename,
 						  const char *mode);
 static void check_errors(/*@only@*/ yasm_errwarns *errwarns,
-			 /*@only@*/ yasm_object *object);
+			 /*@only@*/ yasm_object *object,
+			 /*@only@*/ yasm_linemap *linemap);
 static void cleanup(/*@null@*/ /*@only@*/ yasm_object *object);
 
 /* Forward declarations: cmd line parser handlers */
@@ -226,7 +225,7 @@ do_preproc_only(FILE *in)
     FILE *out = NULL;
     yasm_errwarns *errwarns = yasm_errwarns_create();
 
-    /* Initialize line manager */
+    /* Initialize line map */
     linemap = yasm_linemap_create();
     yasm_linemap_set(linemap, in_filename, 1, 1);
 
@@ -321,12 +320,16 @@ static int
 do_assemble(FILE *in)
 {
     yasm_object *object;
-    yasm_section *def_sect;
     const char *base_filename;
     /*@null@*/ FILE *obj = NULL;
     yasm_arch_create_error arch_error;
+    yasm_linemap *linemap;
     yasm_errwarns *errwarns = yasm_errwarns_create();
     int i, matched;
+
+    /* Initialize line map */
+    linemap = yasm_linemap_create();
+    yasm_linemap_set(linemap, in_filename, 1, 1);
 
     /* determine the object filename if not specified */
     if (!obj_filename) {
@@ -383,16 +386,18 @@ do_assemble(FILE *in)
     }
 
     /* Create object */
-    object = yasm_object_create(in_filename, obj_filename);
-    yasm_linemap_set(yasm_object_get_linemap(object), in_filename, 1, 1);
+    object = yasm_object_create(in_filename, obj_filename, cur_arch,
+				cur_objfmt_module, cur_dbgfmt_module);
+    if (!object) {
+	yasm_error_class eclass;
+	unsigned long xrefline;
+	/*@only@*/ /*@null@*/ char *estr, *xrefstr;
 
-    /* Initialize the object format */
-    cur_objfmt = yasm_objfmt_create(cur_objfmt_module, object, cur_arch);
-    if (!cur_objfmt) {
-	print_error(
-	    _("%s: object format `%s' does not support architecture `%s' machine `%s'"),
-	    _("FATAL"), cur_objfmt_module->keyword, cur_arch_module->keyword,
-	    machine_name);
+	yasm_error_fetch(&eclass, &estr, &xrefline, &xrefstr);
+	print_error("%s: %s", _("FATAL"), estr);
+	yasm_xfree(estr);
+	yasm_xfree(xrefstr);
+
 	if (in != stdin)
 	    fclose(in);
 	cleanup(object);
@@ -400,41 +405,7 @@ do_assemble(FILE *in)
     }
 
     /* Get a fresh copy of objfmt_module as it may have changed. */
-    cur_objfmt_module = ((yasm_objfmt_base *)cur_objfmt)->module;
-
-    /* Add an initial "default" section to object */
-    def_sect = yasm_objfmt_add_default_section(cur_objfmt);
-
-    /* Check to see if the requested debug format is in the allowed list
-     * for the active object format.
-     */
-    matched = 0;
-    for (i=0; cur_objfmt_module->dbgfmt_keywords[i]; i++)
-	if (yasm__strcasecmp(cur_objfmt_module->dbgfmt_keywords[i],
-			     cur_dbgfmt_module->keyword) == 0)
-	    matched = 1;
-    if (!matched) {
-	print_error(_("%s: `%s' is not a valid %s for %s `%s'"),
-	    _("FATAL"), cur_dbgfmt_module->keyword, _("debug format"),
-	    _("object format"), cur_objfmt_module->keyword);
-	if (in != stdin)
-	    fclose(in);
-	cleanup(object);
-	return EXIT_FAILURE;
-    }
-
-    /* Initialize the debug format */
-    cur_dbgfmt = yasm_dbgfmt_create(cur_dbgfmt_module, object, cur_objfmt,
-				    cur_arch);
-    if (!cur_dbgfmt) {
-	print_error(
-	    _("%s: debug format `%s' does not work with object format `%s'"),
-	    _("FATAL"), cur_dbgfmt_module->keyword,
-	    cur_objfmt_module->keyword);
-	if (in != stdin)
-	    fclose(in);
-	return EXIT_FAILURE;
-    }
+    cur_objfmt_module = ((yasm_objfmt_base *)object->objfmt)->module;
 
     /* Check to see if the requested preprocessor is in the allowed list
      * for the active parser.
@@ -454,8 +425,7 @@ do_assemble(FILE *in)
 	return EXIT_FAILURE;
     }
 
-    cur_preproc = cur_preproc_module->create(in, in_filename,
-					     yasm_object_get_linemap(object),
+    cur_preproc = cur_preproc_module->create(in, in_filename, linemap,
 					     errwarns);
 
     apply_preproc_builtins();
@@ -470,34 +440,33 @@ do_assemble(FILE *in)
     yasm_arch_set_var(cur_arch, "force_strict", force_strict);
 
     /* Parse! */
-    cur_parser_module->do_parse(object, cur_preproc, cur_arch, cur_objfmt,
-				cur_dbgfmt, in, in_filename,
-				list_filename != NULL, def_sect, errwarns);
+    cur_parser_module->do_parse(object, cur_preproc, in, list_filename != NULL,
+				linemap, errwarns);
 
     /* Close input file */
     if (in != stdin)
 	fclose(in);
 
-    check_errors(errwarns, object);
+    check_errors(errwarns, object, linemap);
 
     /* Check for undefined symbols */
-    yasm_symtab_parser_finalize(yasm_object_get_symtab(object),
+    yasm_symtab_parser_finalize(object->symtab,
 				strcmp(cur_parser_module->keyword, "gas")==0 ||
 				strcmp(cur_parser_module->keyword, "gnu")==0,
-				cur_objfmt, errwarns);
-    check_errors(errwarns, object);
+				object, errwarns);
+    check_errors(errwarns, object, linemap);
 
     /* Finalize parse */
     yasm_object_finalize(object, errwarns);
-    check_errors(errwarns, object);
+    check_errors(errwarns, object, linemap);
 
     /* Optimize */
-    yasm_object_optimize(object, cur_arch, errwarns);
-    check_errors(errwarns, object);
+    yasm_object_optimize(object, errwarns);
+    check_errors(errwarns, object, linemap);
 
     /* generate any debugging information */
-    yasm_dbgfmt_generate(cur_dbgfmt, errwarns);
-    check_errors(errwarns, object);
+    yasm_dbgfmt_generate(object, linemap, errwarns);
+    check_errors(errwarns, object, linemap);
 
     /* open the object file for output (if not already opened by dbg objfmt) */
     if (!obj && strcmp(cur_objfmt_module->keyword, "dbg") != 0) {
@@ -509,9 +478,8 @@ do_assemble(FILE *in)
     }
 
     /* Write the object file */
-    yasm_objfmt_output(cur_objfmt, obj?obj:stderr,
-		       strcmp(cur_dbgfmt_module->keyword, "null"), cur_dbgfmt,
-		       errwarns);
+    yasm_objfmt_output(object, obj?obj:stderr,
+		       strcmp(cur_dbgfmt_module->keyword, "null"), errwarns);
 
     /* Close object file */
     if (obj)
@@ -522,7 +490,7 @@ do_assemble(FILE *in)
      */
     if (yasm_errwarns_num_errors(errwarns, warning_error) > 0)
 	remove(obj_filename);
-    check_errors(errwarns, object);
+    check_errors(errwarns, object, linemap);
 
     /* Open and write the list file */
     if (list_filename) {
@@ -534,15 +502,14 @@ do_assemble(FILE *in)
 	/* Initialize the list format */
 	cur_listfmt = yasm_listfmt_create(cur_listfmt_module, in_filename,
 					  obj_filename);
-	yasm_listfmt_output(cur_listfmt, list,
-			    yasm_object_get_linemap(object), cur_arch);
+	yasm_listfmt_output(cur_listfmt, list, linemap, cur_arch);
 	fclose(list);
     }
 
-    yasm_errwarns_output_all(errwarns, yasm_object_get_linemap(object),
-			     warning_error, print_yasm_error,
-			     print_yasm_warning);
+    yasm_errwarns_output_all(errwarns, linemap, warning_error,
+			     print_yasm_error, print_yasm_warning);
 
+    yasm_linemap_destroy(linemap);
     yasm_errwarns_destroy(errwarns);
     cleanup(object);
     return EXIT_SUCCESS;
@@ -734,12 +701,13 @@ open_file(const char *filename, const char *mode)
 }
 
 static void
-check_errors(yasm_errwarns *errwarns, yasm_object *object)
+check_errors(yasm_errwarns *errwarns, yasm_object *object,
+	     yasm_linemap *linemap)
 {
     if (yasm_errwarns_num_errors(errwarns, warning_error) > 0) {
-	yasm_errwarns_output_all(errwarns, yasm_object_get_linemap(object),
-				 warning_error, print_yasm_error,
-				 print_yasm_warning);
+	yasm_errwarns_output_all(errwarns, linemap, warning_error,
+				 print_yasm_error, print_yasm_warning);
+	yasm_linemap_destroy(linemap);
 	yasm_errwarns_destroy(errwarns);
 	cleanup(object);
 	exit(EXIT_FAILURE);
@@ -757,18 +725,12 @@ static void
 cleanup(yasm_object *object)
 {
     if (DO_FREE) {
-	if (cur_objfmt)
-	    yasm_objfmt_destroy(cur_objfmt);
-	if (cur_dbgfmt)
-	    yasm_dbgfmt_destroy(cur_dbgfmt);
 	if (cur_listfmt)
 	    yasm_listfmt_destroy(cur_listfmt);
 	if (cur_preproc)
 	    yasm_preproc_destroy(cur_preproc);
 	if (object)
 	    yasm_object_destroy(object);
-	if (cur_arch)
-	    yasm_arch_destroy(cur_arch);
 
 	yasm_floatnum_cleanup();
 	yasm_intnum_cleanup();

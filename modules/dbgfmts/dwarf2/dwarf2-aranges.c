@@ -50,6 +50,7 @@ dwarf2_append_arange(yasm_section *debug_aranges, /*@only@*/ yasm_expr *start,
 
 typedef struct dwarf2_aranges_info {
     yasm_section *debug_aranges;    /* section to which address ranges go */
+    yasm_object *object;
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2;
 } dwarf2_aranges_info;
 
@@ -67,7 +68,7 @@ dwarf2_generate_aranges_section(yasm_section *sect, /*@null@*/ void *d)
 
     /* Create address range descriptor */
     start = yasm_expr_create_ident(
-	yasm_expr_sym(yasm_dwarf2__bc_sym(dbgfmt_dwarf2->symtab,
+	yasm_expr_sym(yasm_dwarf2__bc_sym(info->object->symtab,
 					  yasm_section_bcs_first(sect))), 0);
     length = yasm_expr_create_ident(
 	yasm_expr_int(yasm_calc_bc_dist(yasm_section_bcs_first(sect),
@@ -79,9 +80,9 @@ dwarf2_generate_aranges_section(yasm_section *sect, /*@null@*/ void *d)
 }
 
 yasm_section *
-yasm_dwarf2__generate_aranges(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
-			      yasm_section *debug_info)
+yasm_dwarf2__generate_aranges(yasm_object *object, yasm_section *debug_info)
 {
+    yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = (yasm_dbgfmt_dwarf2 *)object->dbgfmt;
     int new;
     yasm_section *debug_aranges;
     yasm_bytecode *bc;
@@ -89,7 +90,7 @@ yasm_dwarf2__generate_aranges(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
     dwarf2_aranges_info info;
 
     debug_aranges =
-	yasm_object_get_general(dbgfmt_dwarf2->object, ".debug_aranges", 0,
+	yasm_object_get_general(object, ".debug_aranges", 0,
 				2*dbgfmt_dwarf2->sizeof_address, 0, 0, &new,
 				0);
 
@@ -106,9 +107,10 @@ yasm_dwarf2__generate_aranges(yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2,
     yasm_bc_calc_len(bc, NULL, NULL);
 
     info.debug_aranges = debug_aranges;
+    info.object = object;
     info.dbgfmt_dwarf2 = dbgfmt_dwarf2;
 
-    yasm_object_sections_traverse(dbgfmt_dwarf2->object, (void *)&info,
+    yasm_object_sections_traverse(object, (void *)&info,
 				  dwarf2_generate_aranges_section);
 
     /* Terminate with empty address range descriptor */

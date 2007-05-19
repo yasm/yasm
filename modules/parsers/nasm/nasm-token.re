@@ -227,71 +227,71 @@ scan:
 	/* size specifiers */
 	'byte'		{ lvalp->int_info = 8; RETURN(SIZE_OVERRIDE); }
 	'hword'		{
-	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)/2;
+	    lvalp->int_info = yasm_arch_wordsize(p_object->arch)/2;
 	    RETURN(SIZE_OVERRIDE);
 	}
 	'word'		{
-	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch);
+	    lvalp->int_info = yasm_arch_wordsize(p_object->arch);
 	    RETURN(SIZE_OVERRIDE);
 	}
 	'dword' | 'long'	{
-	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*2;
+	    lvalp->int_info = yasm_arch_wordsize(p_object->arch)*2;
 	    RETURN(SIZE_OVERRIDE);
 	}
 	'qword'		{
-	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*4;
+	    lvalp->int_info = yasm_arch_wordsize(p_object->arch)*4;
 	    RETURN(SIZE_OVERRIDE);
 	}
 	'tword'		{ lvalp->int_info = 80; RETURN(SIZE_OVERRIDE); }
 	'dqword'	{
-	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*8;
+	    lvalp->int_info = yasm_arch_wordsize(p_object->arch)*8;
 	    RETURN(SIZE_OVERRIDE);
 	}
 
 	/* pseudo-instructions */
 	'db'		{ lvalp->int_info = 8; RETURN(DECLARE_DATA); }
 	'dhw'		{
-	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)/2;
+	    lvalp->int_info = yasm_arch_wordsize(p_object->arch)/2;
 	    RETURN(DECLARE_DATA);
 	}
 	'dw'		{
-	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch);
+	    lvalp->int_info = yasm_arch_wordsize(p_object->arch);
 	    RETURN(DECLARE_DATA);
 	}
 	'dd'		{
-	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*2;
+	    lvalp->int_info = yasm_arch_wordsize(p_object->arch)*2;
 	    RETURN(DECLARE_DATA);
 	}
 	'dq'		{
-	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*4;
+	    lvalp->int_info = yasm_arch_wordsize(p_object->arch)*4;
 	    RETURN(DECLARE_DATA);
 	}
 	'dt'		{ lvalp->int_info = 80; RETURN(DECLARE_DATA); }
 	'ddq'		{
-	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*8;
+	    lvalp->int_info = yasm_arch_wordsize(p_object->arch)*8;
 	    RETURN(DECLARE_DATA);
 	}
 
 	'resb'		{ lvalp->int_info = 8; RETURN(RESERVE_SPACE); }
 	'reshw'		{
-	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)/2;
+	    lvalp->int_info = yasm_arch_wordsize(p_object->arch)/2;
 	    RETURN(RESERVE_SPACE);
 	}
 	'resw'		{
-	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch);
+	    lvalp->int_info = yasm_arch_wordsize(p_object->arch);
 	    RETURN(RESERVE_SPACE);
 	}
 	'resd'		{
-	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*2;
+	    lvalp->int_info = yasm_arch_wordsize(p_object->arch)*2;
 	    RETURN(RESERVE_SPACE);
 	}
 	'resq'		{
-	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*4;
+	    lvalp->int_info = yasm_arch_wordsize(p_object->arch)*4;
 	    RETURN(RESERVE_SPACE);
 	}
 	'rest'		{ lvalp->int_info = 80; RETURN(RESERVE_SPACE); }
 	'resdq'		{
-	    lvalp->int_info = yasm_arch_wordsize(parser_nasm->arch)*8;
+	    lvalp->int_info = yasm_arch_wordsize(p_object->arch)*8;
 	    RETURN(RESERVE_SPACE);
 	}
 
@@ -352,7 +352,7 @@ scan:
 	    s->tok[TOKLEN] = '\0';
 	    if (parser_nasm->state != INSTRUCTION)
 		switch (yasm_arch_parse_check_insnprefix
-			(parser_nasm->arch, lvalp->arch_data, TOK, TOKLEN)) {
+			(p_object->arch, lvalp->arch_data, TOK, TOKLEN)) {
 		    case YASM_ARCH_INSN:
 			parser_nasm->state = INSTRUCTION;
 			s->tok[TOKLEN] = savech;
@@ -364,7 +364,7 @@ scan:
 			break;
 		}
 	    switch (yasm_arch_parse_check_regtmod
-		    (parser_nasm->arch, lvalp->arch_data, TOK, TOKLEN)) {
+		    (p_object->arch, lvalp->arch_data, TOK, TOKLEN)) {
 		case YASM_ARCH_REG:
 		    s->tok[TOKLEN] = savech;
 		    RETURN(REG);
@@ -616,7 +616,7 @@ directive2:
 	    savech = s->tok[TOKLEN];
 	    s->tok[TOKLEN] = '\0';
 	    switch (yasm_arch_parse_check_regtmod
-		    (parser_nasm->arch, lvalp->arch_data, TOK, TOKLEN)) {
+		    (p_object->arch, lvalp->arch_data, TOK, TOKLEN)) {
 		case YASM_ARCH_REG:
 		    s->tok[TOKLEN] = savech;
 		    RETURN(REG);

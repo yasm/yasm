@@ -115,7 +115,6 @@ typedef struct yasm_parser_gas {
     int debug;
 
     /*@only@*/ yasm_object *object;
-    /*@dependent@*/ yasm_section *cur_section;
 
     /* last "base" label for local (.) labels */
     /*@null@*/ char *locallabel_base;
@@ -127,13 +126,9 @@ typedef struct yasm_parser_gas {
     unsigned long dir_line;
 
     /*@dependent@*/ yasm_preproc *preproc;
-    /*@dependent@*/ yasm_arch *arch;
-    /*@dependent@*/ yasm_objfmt *objfmt;
-    /*@dependent@*/ yasm_dbgfmt *dbgfmt;
     /*@dependent@*/ yasm_errwarns *errwarns;
 
     /*@dependent@*/ yasm_linemap *linemap;
-    /*@dependent@*/ yasm_symtab *symtab;
 
     /*@null@*/ yasm_bytecode *prev_bc;
     yasm_bytecode *temp_bc;
@@ -163,7 +158,9 @@ typedef struct yasm_parser_gas {
 } yasm_parser_gas;
 
 /* shorter access names to commonly used parser_gas fields */
-#define p_symtab	(parser_gas->symtab)
+#define p_object	(parser_gas->object)
+#define p_symtab	(parser_gas->object->symtab)
+#define cursect		(parser_gas->object->cur_section)
 #define curtok		(parser_gas->token)
 #define curval		(parser_gas->tokval)
 

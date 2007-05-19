@@ -34,16 +34,14 @@
 
 
 static void
-nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
-		     yasm_objfmt *of, yasm_dbgfmt *df, FILE *f,
-		     const char *in_filename, int save_input,
-		     yasm_section *def_sect, yasm_errwarns *errwarns)
+nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
+		     int save_input, yasm_linemap *linemap,
+		     yasm_errwarns *errwarns)
 {
     yasm_parser_nasm parser_nasm;
 
     parser_nasm.object = object;
-    parser_nasm.linemap = yasm_object_get_linemap(parser_nasm.object);
-    parser_nasm.symtab = yasm_object_get_symtab(parser_nasm.object);
+    parser_nasm.linemap = linemap;
 
     parser_nasm.in = f;
 
@@ -51,13 +49,9 @@ nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp, yasm_arch *a,
     parser_nasm.locallabel_base_len = 0;
 
     parser_nasm.preproc = pp;
-    parser_nasm.arch = a;
-    parser_nasm.objfmt = of;
-    parser_nasm.dbgfmt = df;
     parser_nasm.errwarns = errwarns;
 
-    parser_nasm.cur_section = def_sect;
-    parser_nasm.prev_bc = yasm_section_bcs_first(def_sect);
+    parser_nasm.prev_bc = yasm_section_bcs_first(object->cur_section);
 
     parser_nasm.save_input = save_input;
     parser_nasm.save_last = 0;
