@@ -58,12 +58,11 @@ yasm__xstrdup(const char *str)
 char *
 yasm__xstrndup(const char *str, size_t max)
 {
-        size_t len;
+        size_t len = 0;
         char *copy;
 
-        len = strlen(str);
-        if (len > max)
-            len = max;
+        while (len < max && str[len] != '\0')
+            len++;
         copy = yasm_xmalloc(len+1);
         memcpy(copy, str, len);
         copy[len] = '\0';
