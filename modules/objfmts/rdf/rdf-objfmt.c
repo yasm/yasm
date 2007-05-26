@@ -463,68 +463,57 @@ rdf_objfmt_output_section_file(yasm_section *sect, /*@null@*/ void *d)
     return 0;
 }
 
+#define FLAG_EXT    0x1000
+#define FLAG_GLOB   0x2000
+#define FLAG_SET    0x4000
+#define FLAG_CLR    0x8000
+#define FLAG_MASK   0x0fff
+
+static int
+rdf_helper_flag(void *obj, yasm_valparam *vp, unsigned long line, void *d,
+                uintptr_t flag)
+{
+    yasm_symrec *sym = (yasm_symrec *)obj;
+    yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
+    unsigned int *flags = (unsigned int *)d;
+
+    if (((vis & YASM_SYM_GLOBAL) && (flag & FLAG_GLOB)) ||
+        ((vis & YASM_SYM_EXTERN) && (flag & FLAG_EXT))) {
+        if (flag & FLAG_SET)
+            *flags |= flag & FLAG_MASK;
+        else if (flag & FLAG_CLR)
+            *flags &= ~(flag & FLAG_MASK);
+    }
+    return 0;
+}
+
 static unsigned int
 rdf_parse_flags(yasm_symrec *sym)
 {
-    yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
     /*@dependent@*/ /*@null@*/ yasm_valparamhead *objext_valparams =
         yasm_symrec_get_objext_valparams(sym);
-    yasm_valparam *vp;
     unsigned int flags = 0;
 
-    static const struct {
-        enum {
-            FLAG_EXT = 1,
-            FLAG_GLOB = 2
-        } type;
-        enum {
-            FLAG_SET = 1,
-            FLAG_CLR = 2
-        } action;
-        const char *name;
-        unsigned int flags;
-    } flagtbl[] = {
-        { FLAG_EXT|FLAG_GLOB, FLAG_SET, "data", SYM_DATA },
-        { FLAG_EXT|FLAG_GLOB, FLAG_SET, "object", SYM_DATA },
-        { FLAG_EXT|FLAG_GLOB, FLAG_SET, "proc", SYM_FUNCTION },
-        { FLAG_EXT|FLAG_GLOB, FLAG_SET, "function", SYM_FUNCTION },
-        { FLAG_EXT, FLAG_SET, "import", SYM_IMPORT },
-        { FLAG_GLOB, FLAG_SET, "export", SYM_GLOBAL },
-        { FLAG_EXT, FLAG_SET, "far", SYM_FAR },
-        { FLAG_EXT, FLAG_CLR, "near", SYM_FAR },
+    static const yasm_dir_help help[] = {
+        { "data", 0, rdf_helper_flag, 0,
+          FLAG_EXT|FLAG_GLOB|FLAG_SET|SYM_DATA },
+        { "object", 0, rdf_helper_flag, 0,
+          FLAG_EXT|FLAG_GLOB|FLAG_SET|SYM_DATA },
+        { "proc", 0, rdf_helper_flag, 0,
+          FLAG_EXT|FLAG_GLOB|FLAG_SET|SYM_FUNCTION },
+        { "function", 0, rdf_helper_flag, 0,
+          FLAG_EXT|FLAG_GLOB|FLAG_SET|SYM_FUNCTION },
+        { "import", 0, rdf_helper_flag, 0, FLAG_EXT|FLAG_SET|SYM_IMPORT },
+        { "export", 0, rdf_helper_flag, 0, FLAG_GLOB|FLAG_SET|SYM_GLOBAL },
+        { "far", 0, rdf_helper_flag, 0, FLAG_EXT|FLAG_SET|SYM_FAR },
+        { "near", 0, rdf_helper_flag, 0, FLAG_EXT|FLAG_CLR|SYM_FAR }
     };
 
     if (!objext_valparams)
         return 0;
 
-    vp = yasm_vps_first(objext_valparams);
-    for (; vp; vp = yasm_vps_next(vp)) {
-        size_t i;
-        int match;
-
-        if (!vp->val) {
-            yasm_warn_set(YASM_WARN_GENERAL,
-                          N_("Unrecognized numeric qualifier"));
-            continue;
-        }
-
-        match = 0;
-        for (i=0; i<NELEMS(flagtbl) && !match; i++) {
-            if ((((vis & YASM_SYM_GLOBAL) && (flagtbl[i].type & FLAG_GLOB)) ||
-                 ((vis & YASM_SYM_EXTERN) && (flagtbl[i].type & FLAG_EXT))) &&
-                yasm__strcasecmp(vp->val, flagtbl[i].name) == 0) {
-                if (flagtbl[i].action == FLAG_SET)
-                    flags |= flagtbl[i].flags;
-                else if (flagtbl[i].action == FLAG_CLR)
-                    flags &= ~flagtbl[i].flags;
-                match = 1;
-            }
-        }
-
-        if (!match)
-            yasm_warn_set(YASM_WARN_GENERAL, N_("Unrecognized qualifier `%s'"),
-                          vp->val);
-    }
+    yasm_dir_helper(sym, yasm_vps_first(objext_valparams), 0, help,
+                    NELEMS(help), &flags, yasm_dir_helper_valparam_warn);
 
     return flags;
 }
@@ -620,16 +609,25 @@ rdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
             if (objext_valparams) {
                 yasm_valparam *vp = yasm_vps_first(objext_valparams);
                 for (; vp; vp = yasm_vps_next(vp)) {
-                    if (!vp->val && vp->param) {
-                        /*@null@*/ const yasm_intnum *align_expr;
+                    if (!vp->val) {
+                        /*@only@*/ /*@null@*/ yasm_expr *align_expr;
+                        /*@dependent@*/ /*@null@*/
+                        const yasm_intnum *align_intn;
 
-                        align_expr = yasm_expr_get_intnum(&vp->param, 0);
-                        if (!align_expr) {
+                        if (!(align_expr = yasm_vp_expr(vp,
+                                info->object->symtab,
+                                yasm_symrec_get_decl_line(sym))) ||
+                            !(align_intn = yasm_expr_get_intnum(&align_expr,
+                                                                0))) {
                             yasm_error_set(YASM_ERROR_VALUE,
-                                N_("alignment constraint is not an integer"));
+                                N_("argument to `%s' is not an integer"),
+                                vp->val);
+                            if (align_expr)
+                                yasm_expr_destroy(align_expr);
                             continue;
                         }
-                        addralign = yasm_intnum_get_uint(align_expr);
+                        addralign = yasm_intnum_get_uint(align_intn);
+                        yasm_expr_destroy(align_expr);
 
                         /* Alignments must be a power of two. */
                         if (!is_exp2(addralign)) {
@@ -637,7 +635,7 @@ rdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
                                 N_("alignment constraint is not a power of two"));
                             continue;
                         }
-                    } else if (vp->val)
+                    } else
                         yasm_warn_set(YASM_WARN_GENERAL,
                             N_("Unrecognized qualifier `%s'"), vp->val);
                 }
@@ -854,6 +852,32 @@ rdf_objfmt_add_default_section(yasm_object *object)
     return retval;
 }
 
+static int
+rdf_helper_set_type(void *obj, yasm_valparam *vp, unsigned long line,
+                    void *d, uintptr_t newtype)
+{
+    unsigned int *type = (unsigned int *)d;
+    *type = newtype;
+    return 0;
+}
+
+struct rdf_section_switch_data {
+    /*@only@*/ /*@null@*/ yasm_intnum *reserved_intn;
+    unsigned int type;
+};
+
+static int
+rdf_helper_set_reserved(void *obj, yasm_valparam *vp, unsigned long line,
+                        void *d)
+{
+    struct rdf_section_switch_data *data = (struct rdf_section_switch_data *)d;
+
+    if (!vp->val && vp->type == YASM_PARAM_EXPR)
+        return yasm_dir_helper_intn(obj, vp, line, &data->reserved_intn, 0);
+    else
+        return yasm_dir_helper_valparam_warn(obj, vp, line, d);
+}
+
 static /*@observer@*/ /*@null@*/ yasm_section *
 rdf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
                           /*@unused@*/ /*@null@*/
@@ -863,85 +887,70 @@ rdf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_section *retval;
     int isnew;
-    unsigned int type = 0xffff;
     unsigned int reserved = 0;
     int flags_override = 0;
-    char *sectname;
+    const char *sectname;
     rdf_section_data *rsd;
 
-    static const struct {
-        const char *name;
-        unsigned int type;
-    } typenames[] = {
-        { "bss", RDF_SECT_BSS },
-        { "code", RDF_SECT_CODE },
-        { "text", RDF_SECT_CODE },
-        { "data", RDF_SECT_DATA },
-        { "comment", RDF_SECT_COMMENT },
-        { "lcomment", RDF_SECT_LCOMMENT },
-        { "pcomment", RDF_SECT_PCOMMENT },
-        { "symdebug", RDF_SECT_SYMDEBUG },
-        { "linedebug", RDF_SECT_LINEDEBUG },
+    struct rdf_section_switch_data data;
+
+    static const yasm_dir_help help[] = {
+        { "bss", 0, rdf_helper_set_type,
+          offsetof(struct rdf_section_switch_data, type), RDF_SECT_BSS },
+        { "code", 0, rdf_helper_set_type,
+          offsetof(struct rdf_section_switch_data, type), RDF_SECT_CODE },
+        { "text", 0, rdf_helper_set_type,
+          offsetof(struct rdf_section_switch_data, type), RDF_SECT_CODE },
+        { "data", 0, rdf_helper_set_type,
+          offsetof(struct rdf_section_switch_data, type), RDF_SECT_DATA },
+        { "comment", 0, rdf_helper_set_type,
+          offsetof(struct rdf_section_switch_data, type), RDF_SECT_COMMENT },
+        { "lcomment", 0, rdf_helper_set_type,
+          offsetof(struct rdf_section_switch_data, type), RDF_SECT_LCOMMENT },
+        { "pcomment", 0, rdf_helper_set_type,
+          offsetof(struct rdf_section_switch_data, type), RDF_SECT_PCOMMENT },
+        { "symdebug", 0, rdf_helper_set_type,
+          offsetof(struct rdf_section_switch_data, type), RDF_SECT_SYMDEBUG },
+        { "linedebug", 0, rdf_helper_set_type,
+          offsetof(struct rdf_section_switch_data, type), RDF_SECT_LINEDEBUG },
+        { "reserved", 1, yasm_dir_helper_intn,
+          offsetof(struct rdf_section_switch_data, reserved_intn), 0 }
     };
 
-    if (!vp || vp->param || !vp->val)
-        return NULL;
+    data.reserved_intn = NULL;
+    data.type = 0xffff;
 
-    sectname = vp->val;
+    vp = yasm_vps_first(valparams);
+    sectname = yasm_vp_string(vp);
+    if (!sectname)
+        return NULL;
+    vp = yasm_vps_next(vp);
 
     if (strcmp(sectname, ".text") == 0)
-        type = RDF_SECT_CODE;
+        data.type = RDF_SECT_CODE;
     else if (strcmp(sectname, ".data") == 0)
-        type = RDF_SECT_DATA;
+        data.type = RDF_SECT_DATA;
     else if (strcmp(sectname, ".bss") == 0)
-        type = RDF_SECT_BSS;
+        data.type = RDF_SECT_BSS;
 
-    /* Look for section type */
-    if ((vp = yasm_vps_next(vp))) {
-        size_t i;
-        int match;
-        if (vp->val) {
-            match = 0;
-            for (i=0; i<NELEMS(typenames) && !match; i++) {
-                if (yasm__strcasecmp(vp->val, typenames[i].name) == 0) {
-                    type = typenames[i].type;
-                    flags_override = 1;
-                    match = 1;
-                }
-            }
-            if (!match)
-                yasm_warn_set(YASM_WARN_GENERAL,
-                              N_("Unrecognized RDF segment type `%s'"),
-                              vp->val);
-        } else
-            yasm_warn_set(YASM_WARN_GENERAL,
-                          N_("Unrecognized numeric qualifier"));
-    }
+    flags_override = yasm_dir_helper(object, vp, line, help, NELEMS(help),
+                                     &data, rdf_helper_set_reserved);
+    if (flags_override < 0)
+        return NULL;    /* error occurred */
 
-    if (type == 0xffff) {
+    if (data.type == 0xffff) {
         yasm_error_set(YASM_ERROR_VALUE,
                        N_("new segment declared without type code"));
-        type = RDF_SECT_DATA;
+        data.type = RDF_SECT_DATA;
     }
 
-    /* Look for reserved value */
-    if (vp && (vp = yasm_vps_next(vp))) {
-        if (!vp->val && vp->param) {
-            /*@dependent@*/ /*@null@*/ const yasm_intnum *reserved_expr;
-
-            reserved_expr = yasm_expr_get_intnum(&vp->param, 0);
-            if (!reserved_expr)
-                yasm_error_set(YASM_ERROR_VALUE,
-                    N_("reserved value must be numeric"));
-            else
-                reserved = yasm_intnum_get_uint(reserved_expr);
-        } else if (vp->val)
-            yasm_warn_set(YASM_WARN_GENERAL, N_("Unrecognized qualifier `%s'"),
-                          vp->val);
+    if (data.reserved_intn) {
+        reserved = yasm_intnum_get_uint(data.reserved_intn);
+        yasm_intnum_destroy(data.reserved_intn);
     }
 
     retval = yasm_object_get_general(object, sectname, 0, 0, 1,
-                                     type == RDF_SECT_BSS, &isnew, line);
+                                     data.type == RDF_SECT_BSS, &isnew, line);
 
     if (isnew)
         rsd = rdf_objfmt_init_new_section(object, retval, sectname, line);
@@ -950,7 +959,7 @@ rdf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
 
     if (isnew || yasm_section_is_default(retval)) {
         yasm_section_set_default(retval, 0);
-        rsd->type = type;
+        rsd->type = data.type;
         rsd->reserved = reserved;
     } else if (flags_override)
         yasm_warn_set(YASM_WARN_GENERAL,
@@ -1021,8 +1030,7 @@ dir_library(yasm_object *object, yasm_valparamhead *valparams,
             yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_valparam *vp = yasm_vps_first(valparams);
-    rdf_objfmt_add_libmodule(object, vp->val, 1);
-    vp->val = NULL;     /* don't free it */
+    rdf_objfmt_add_libmodule(object, yasm__xstrdup(yasm_vp_string(vp)), 1);
 }
 
 static void
@@ -1030,8 +1038,7 @@ dir_module(yasm_object *object, yasm_valparamhead *valparams,
            yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_valparam *vp = yasm_vps_first(valparams);
-    rdf_objfmt_add_libmodule(object, vp->val, 0);
-    vp->val = NULL;     /* don't free it */
+    rdf_objfmt_add_libmodule(object, yasm__xstrdup(yasm_vp_string(vp)), 0);
 }
 
 /* Define valid debug formats to use with this object format */
@@ -1041,8 +1048,8 @@ static const char *rdf_objfmt_dbgfmt_keywords[] = {
 };
 
 static const yasm_directive rdf_objfmt_directives[] = {
-    { "library",        "nasm", dir_library,    YASM_DIR_ID_REQUIRED },
-    { "module",         "nasm", dir_module,     YASM_DIR_ID_REQUIRED },
+    { "library",        "nasm", dir_library,    YASM_DIR_ARG_REQUIRED },
+    { "module",         "nasm", dir_module,     YASM_DIR_ARG_REQUIRED },
     { NULL, NULL, NULL, 0 }
 };
 

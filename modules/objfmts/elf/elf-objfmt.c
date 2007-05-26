@@ -74,6 +74,7 @@ typedef struct {
 } elf_objfmt_output_info;
 
 typedef struct {
+    yasm_object *object;
     yasm_objfmt_elf *objfmt_elf;
     yasm_errwarns *errwarns;
     int local_names;
@@ -119,9 +120,10 @@ build_extern(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym)
     if (objext_valparams) {
         yasm_valparam *vp = yasm_vps_first(objext_valparams);
         for (; vp; vp = yasm_vps_next(vp)) {
-            if (vp->val)
+            if (yasm_vp_string(vp))
                 yasm_error_set(YASM_ERROR_TYPE,
-                               N_("unrecognized symbol type `%s'"), vp->val);
+                               N_("unrecognized symbol type `%s'"),
+                               yasm_vp_string(vp));
         }
     }
 
@@ -129,60 +131,84 @@ build_extern(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym)
                                     STV_DEFAULT, NULL, NULL);
 }
 
+struct elf_build_global_data {
+    yasm_expr *size;
+    unsigned long type; /* elf_symbol_type */
+    elf_symbol_vis vis;
+    unsigned int vis_overrides;
+};
+
+static int
+elf_global_helper_valparam(void *obj, yasm_valparam *vp, unsigned long line,
+                           void *d)
+
+{
+    struct elf_build_global_data *data = (struct elf_build_global_data *)d;
+    const char *s;
+
+    if (!vp->val && (s = yasm_vp_id(vp))) {
+        yasm_error_set(YASM_ERROR_TYPE, N_("unrecognized symbol type `%s'"),
+                       s);
+        return -1;
+    } else if (!vp->val && vp->type == YASM_PARAM_EXPR && !data->size) {
+        data->size = yasm_expr_copy(vp->param.e);
+        return 0;
+    } else
+        return yasm_dir_helper_valparam_warn(obj, vp, line, d);
+}
+
+static int
+elf_global_helper_vis(void *obj, yasm_valparam *vp, unsigned long line,
+                      void *d, uintptr_t vis)
+{
+    struct elf_build_global_data *data = (struct elf_build_global_data *)d;
+    data->vis = vis;
+    data->vis_overrides++;
+    return 0;
+}
+
+
 static elf_symtab_entry *
 build_global(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym)
 {
     yasm_valparamhead *objext_valparams =
         yasm_symrec_get_objext_valparams(sym);
-    elf_symbol_type type = 0;
-    yasm_expr *size = NULL;
-    elf_symbol_vis vis = STV_DEFAULT;
-    unsigned int vis_overrides = 0;
 
-    if (objext_valparams) {
-        yasm_valparam *vp = yasm_vps_first(objext_valparams);
-        for (; vp; vp = yasm_vps_next(vp))
-        {
-            if (vp->val) {
-                if (yasm__strcasecmp(vp->val, "function") == 0)
-                    type = STT_FUNC;
-                else if (yasm__strcasecmp(vp->val, "data") == 0 ||
-                         yasm__strcasecmp(vp->val, "object") == 0)
-                    type = STT_OBJECT;
-                else if (yasm__strcasecmp(vp->val, "internal") == 0) {
-                    vis = STV_INTERNAL;
-                    vis_overrides++;
-                }
-                else if (yasm__strcasecmp(vp->val, "hidden") == 0) {
-                    vis = STV_HIDDEN;
-                    vis_overrides++;
-                }
-                else if (yasm__strcasecmp(vp->val, "protected") == 0) {
-                    vis = STV_PROTECTED;
-                    vis_overrides++;
-                }
-                else
-                    yasm_error_set(YASM_ERROR_TYPE,
-                                   N_("unrecognized symbol type `%s'"),
-                                   vp->val);
-            }
-            else if (vp->param && !size) {
-                size = vp->param;
-                vp->param = NULL;       /* to avoid double-free of expr */
-            }
-        }
-        if (vis_overrides > 1) {
-            yasm_warn_set(YASM_WARN_GENERAL,
-                N_("More than one symbol visibility provided; using last"));
-        }
+    struct elf_build_global_data data;
+
+    static const yasm_dir_help help[] = {
+        { "function", 0, yasm_dir_helper_flag_set,
+          offsetof(struct elf_build_global_data, type), STT_FUNC },
+        { "data", 0, yasm_dir_helper_flag_set,
+          offsetof(struct elf_build_global_data, type), STT_OBJECT },
+        { "object", 0, yasm_dir_helper_flag_set,
+          offsetof(struct elf_build_global_data, type), STT_OBJECT },
+        { "internal", 0, elf_global_helper_vis, 0, STV_INTERNAL },
+        { "hidden", 0, elf_global_helper_vis, 0, STV_HIDDEN },
+        { "protected", 0, elf_global_helper_vis, 0, STV_PROTECTED },
+    };
+
+    data.size = NULL;
+    data.type = 0;
+    data.vis = STV_DEFAULT;
+    data.vis_overrides = 0;
+
+    if (objext_valparams)
+        yasm_dir_helper(sym, yasm_vps_first(objext_valparams),
+                        yasm_symrec_get_decl_line(sym), help, NELEMS(help),
+                        &data, elf_global_helper_valparam);
+
+    if (data.vis_overrides > 1) {
+        yasm_warn_set(YASM_WARN_GENERAL,
+            N_("More than one symbol visibility provided; using last"));
     }
 
     return elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_GLOBAL,
-                                    type, vis, size, NULL);
+                                    data.type, data.vis, data.size, NULL);
 }
 
 static /*@null@*/ elf_symtab_entry *
-build_common(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym)
+build_common(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym, yasm_object *object)
 {
     yasm_expr **size = yasm_symrec_get_common_size(sym);
     yasm_valparamhead *objext_valparams =
@@ -192,16 +218,21 @@ build_common(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym)
     if (objext_valparams) {
         yasm_valparam *vp = yasm_vps_first(objext_valparams);
         for (; vp; vp = yasm_vps_next(vp)) {
-            if (!vp->val && vp->param) {
-                /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
+            if (!vp->val) {
+                /*@only@*/ /*@null@*/ yasm_expr *align_expr;
+                /*@dependent@*/ /*@null@*/ const yasm_intnum *align_intn;
 
-                align_expr = yasm_expr_get_intnum(&vp->param, 0);
-                if (!align_expr) {
+                if (!(align_expr = yasm_vp_expr(vp, object->symtab,
+                                                yasm_symrec_get_def_line(sym)))
+                    || !(align_intn = yasm_expr_get_intnum(&align_expr, 0))) {
                     yasm_error_set(YASM_ERROR_VALUE,
                         N_("alignment constraint is not an integer"));
+                    if (align_expr)
+                        yasm_expr_destroy(align_expr);
                     return NULL;
                 }
-                addralign = yasm_intnum_get_uint(align_expr);
+                addralign = yasm_intnum_get_uint(align_intn);
+                yasm_expr_destroy(align_expr);
 
                 /* Alignments must be a power of two. */
                 if (!is_exp2(addralign)) {
@@ -209,7 +240,7 @@ build_common(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym)
                         N_("alignment constraint is not a power of two"));
                     return NULL;
                 }
-            } else if (vp->val)
+            } else
                 yasm_warn_set(YASM_WARN_GENERAL,
                               N_("Unrecognized qualifier `%s'"), vp->val);
         }
@@ -240,7 +271,7 @@ elf_objfmt_build_symtab(yasm_symrec *sym, /*@null@*/ void *d)
     }
 
     if (vis & YASM_SYM_COMMON) {
-        entry = build_common(info->objfmt_elf, sym);
+        entry = build_common(info->objfmt_elf, sym, info->object);
         yasm_errwarn_propagate(info->errwarns,
                                yasm_symrec_get_decl_line(sym));
         /* If the COMMON variable was actually defined, fall through. */
@@ -764,6 +795,7 @@ elf_objfmt_output(yasm_object *object, FILE *f, int all_syms,
 
     /* add all (local) syms to symtab because relocation needs a symtab index
      * if all_syms, register them by name.  if not, use strtab entry 0 */
+    buildsym_info.object = object;
     buildsym_info.objfmt_elf = objfmt_elf;
     buildsym_info.errwarns = errwarns;
     buildsym_info.local_names = all_syms;
@@ -921,186 +953,193 @@ elf_objfmt_add_default_section(yasm_object *object)
     return retval;
 }
 
+struct elf_section_switch_data {
+    /*@only@*/ /*@null@*/ yasm_intnum *align_intn;
+    unsigned long flags;
+    unsigned long type;
+    int gasflags;
+};
+
+/* GAS-style flags */
+static int
+elf_helper_gasflags(void *obj, yasm_valparam *vp, unsigned long line, void *d,
+                    /*@unused@*/ uintptr_t arg)
+{
+    struct elf_section_switch_data *data = (struct elf_section_switch_data *)d;
+    const char *s = yasm_vp_string(vp);
+    size_t i;
+
+    if (!s) {
+        yasm_error_set(YASM_ERROR_VALUE,
+                       N_("non-string section attribute"));
+        return -1;
+    }
+
+    data->flags = 0;
+    for (i=0; i<strlen(s); i++) {
+        switch (s[i]) {
+            case 'a':
+                data->flags |= SHF_ALLOC;
+                break;
+            case 'w':
+                data->flags |= SHF_WRITE;
+                break;
+            case 'x':
+                data->flags |= SHF_EXECINSTR;
+                break;
+            case 'M':
+                data->flags |= SHF_MERGE;
+                break;
+            case 'S':
+                data->flags |= SHF_STRINGS;
+                break;
+            case 'G':
+                data->flags |= SHF_GROUP;
+                break;
+            case 'T':
+                data->flags |= SHF_TLS;
+                break;
+            default:
+                yasm_warn_set(YASM_WARN_GENERAL,
+                              N_("unrecognized section attribute: `%c'"),
+                              s[i]);
+        }
+    }
+
+    data->gasflags = 1;
+    return 0;
+}
+
 static /*@observer@*/ /*@null@*/ yasm_section *
 elf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
                           /*@null@*/ yasm_valparamhead *objext_valparams,
                           unsigned long line)
 {
-    yasm_valparam *vp = yasm_vps_first(valparams);
+    yasm_valparam *vp;
     yasm_section *retval;
     int isnew;
-    unsigned long type = SHT_PROGBITS;
-    unsigned long flags = SHF_ALLOC;
     unsigned long align = 4;
     int flags_override = 0;
-    char *sectname;
+    const char *sectname;
     int resonly = 0;
-    static const struct {
-        const char *name;
-        unsigned long flags;
-    } flagquals[] = {
-        { "alloc",      SHF_ALLOC },
-        { "exec",       SHF_EXECINSTR },
-        { "write",      SHF_WRITE },
-        /*{ "progbits", SHT_PROGBITS },*/
-        /*{ "align",    0 } */
+
+    struct elf_section_switch_data data;
+
+    static const yasm_dir_help help[] = {
+        { "alloc", 0, yasm_dir_helper_flag_or,
+          offsetof(struct elf_section_switch_data, flags), SHF_ALLOC },
+        { "exec", 0, yasm_dir_helper_flag_or,
+          offsetof(struct elf_section_switch_data, flags), SHF_EXECINSTR },
+        { "write", 0, yasm_dir_helper_flag_or,
+          offsetof(struct elf_section_switch_data, flags), SHF_WRITE },
+        { "progbits", 0, yasm_dir_helper_flag_set,
+          offsetof(struct elf_section_switch_data, type), SHT_PROGBITS },
+        { "noalloc", 0, yasm_dir_helper_flag_and,
+          offsetof(struct elf_section_switch_data, flags), SHF_ALLOC },
+        { "noexec", 0, yasm_dir_helper_flag_and,
+          offsetof(struct elf_section_switch_data, flags), SHF_EXECINSTR },
+        { "nowrite",  0, yasm_dir_helper_flag_and,
+          offsetof(struct elf_section_switch_data, flags), SHF_WRITE },
+        { "noprogbits", 0, yasm_dir_helper_flag_set,
+          offsetof(struct elf_section_switch_data, type), SHT_NOBITS },
+        { "nobits", 0, yasm_dir_helper_flag_set,
+          offsetof(struct elf_section_switch_data, type), SHT_NOBITS },
+        { "gasflags", 1, elf_helper_gasflags, 0, 0 },
+        { "align", 1, yasm_dir_helper_intn,
+          offsetof(struct elf_section_switch_data, align_intn), 0 }
     };
+    /*@only@*/ /*@null@*/ yasm_expr *merge_expr = NULL;
     /*@dependent@*/ /*@null@*/ const yasm_intnum *merge_intn = NULL;
     elf_secthead *esd;
 
-    if (!vp || vp->param || !vp->val)
-        return NULL;
+    data.align_intn = NULL;
+    data.flags = SHF_ALLOC;
+    data.type = SHT_PROGBITS;
+    data.gasflags = 0;
 
-    sectname = vp->val;
+    vp = yasm_vps_first(valparams);
+    sectname = yasm_vp_string(vp);
+    if (!sectname)
+        return NULL;
+    vp = yasm_vps_next(vp);
 
     if (strcmp(sectname, ".bss") == 0) {
-        type = SHT_NOBITS;
-        flags = SHF_ALLOC + SHF_WRITE;
+        data.type = SHT_NOBITS;
+        data.flags = SHF_ALLOC + SHF_WRITE;
         resonly = 1;
     } else if (strcmp(sectname, ".data") == 0) {
-        type = SHT_PROGBITS;
-        flags = SHF_ALLOC + SHF_WRITE;
+        data.type = SHT_PROGBITS;
+        data.flags = SHF_ALLOC + SHF_WRITE;
     } else if (strcmp(sectname, ".rodata") == 0) {
-        type = SHT_PROGBITS;
-        flags = SHF_ALLOC;
+        data.type = SHT_PROGBITS;
+        data.flags = SHF_ALLOC;
     } else if (strcmp(sectname, ".text") == 0) {
         align = 16;
-        type = SHT_PROGBITS;
-        flags = SHF_ALLOC + SHF_EXECINSTR;
+        data.type = SHT_PROGBITS;
+        data.flags = SHF_ALLOC + SHF_EXECINSTR;
     } else if (strcmp(sectname, ".comment") == 0) {
         align = 0;
-        type = SHT_PROGBITS;
-        flags = 0;
+        data.type = SHT_PROGBITS;
+        data.flags = 0;
     } else {
         /* Default to code */
         align = 1;
     }
 
-    while ((vp = yasm_vps_next(vp))) {
-        size_t i;
-        int match;
+    flags_override = yasm_dir_helper(object, vp, line, help, NELEMS(help),
+                                     &data, yasm_dir_helper_valparam_warn);
+    if (flags_override < 0)
+        return NULL;    /* error occurred */
 
-        if (!vp->val) {
-            yasm_warn_set(YASM_WARN_GENERAL,
-                          N_("Unrecognized numeric qualifier"));
-            continue;
+    if (data.align_intn) {
+        align = yasm_intnum_get_uint(data.align_intn);
+        yasm_intnum_destroy(data.align_intn);
+
+        /* Alignments must be a power of two. */
+        if (!is_exp2(align)) {
+            yasm_error_set(YASM_ERROR_VALUE,
+                           N_("argument to `%s' is not a power of two"),
+                           "align");
+            return NULL;
         }
-
-        match = 0;
-        for (i=0; i<NELEMS(flagquals) && !match; i++) {
-            if (yasm__strcasecmp(vp->val, flagquals[i].name) == 0) {
-                flags_override = 1;
-                match = 1;
-                flags |= flagquals[i].flags;
-            }
-            else if (yasm__strcasecmp(vp->val+2, flagquals[i].name) == 0
-                  && yasm__strncasecmp(vp->val, "no", 2) == 0) {
-                flags &= ~flagquals[i].flags;
-                flags_override = 1;
-                match = 1;
-            }
-        }
-
-        if (match)
-            ;
-        else if (yasm__strncasecmp(vp->val, "gas_", 4) == 0) {
-            /* GAS-style flags */
-            flags = 0;
-            for (i=4; i<strlen(vp->val); i++) {
-                switch (vp->val[i]) {
-                    case 'a':
-                        flags |= SHF_ALLOC;
-                        break;
-                    case 'w':
-                        flags |= SHF_WRITE;
-                        break;
-                    case 'x':
-                        flags |= SHF_EXECINSTR;
-                        break;
-                    case 'M':
-                        flags |= SHF_MERGE;
-                        break;
-                    case 'S':
-                        flags |= SHF_STRINGS;
-                        break;
-                    case 'G':
-                        flags |= SHF_GROUP;
-                        break;
-                    case 'T':
-                        flags |= SHF_TLS;
-                        break;
-                    default:
-                        yasm_warn_set(YASM_WARN_GENERAL,
-                                      N_("unrecognized section attribute: `%c'"),
-                                      vp->val[i]);
-                }
-            }
-        } else if (yasm__strcasecmp(vp->val, "progbits") == 0) {
-            type |= SHT_PROGBITS;
-        }
-        else if (yasm__strcasecmp(vp->val, "noprogbits") == 0 ||
-                 yasm__strcasecmp(vp->val, "nobits") == 0) {
-            type &= ~SHT_PROGBITS;
-            type |= SHT_NOBITS;
-        }
-        else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
-            /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
-
-            align_expr = yasm_expr_get_intnum(&vp->param, 0);
-            if (!align_expr) {
-                yasm_error_set(YASM_ERROR_VALUE,
-                               N_("argument to `%s' is not an integer"),
-                               vp->val);
-                return NULL;
-            }
-            align = yasm_intnum_get_uint(align_expr);
-
-            /* Alignments must be a power of two. */
-            if (!is_exp2(align)) {
-                yasm_error_set(YASM_ERROR_VALUE,
-                               N_("argument to `%s' is not a power of two"),
-                               vp->val);
-                return NULL;
-            }
-        } else
-            yasm_warn_set(YASM_WARN_GENERAL,
-                          N_("Unrecognized qualifier `%s'"), vp->val);
     }
-        /* Handle merge entity size */
-        if (flags & SHF_MERGE) {
-            if (objext_valparams && (vp = yasm_vps_first(objext_valparams))
-                && vp->param) {
 
-                merge_intn = yasm_expr_get_intnum(&vp->param, 0);
-                if (!merge_intn)
-                    yasm_warn_set(YASM_WARN_GENERAL,
-                                  N_("invalid merge entity size"));
-            } else {
+    /* Handle merge entity size */
+    if (data.flags & SHF_MERGE) {
+        if (objext_valparams && (vp = yasm_vps_first(objext_valparams))
+            && !vp->val) {
+            if (!(merge_expr = yasm_vp_expr(vp, object->symtab, line)) ||
+                !(merge_intn = yasm_expr_get_intnum(&merge_expr, 0)))
                 yasm_warn_set(YASM_WARN_GENERAL,
-                              N_("entity size for SHF_MERGE not specified"));
-                flags &= ~SHF_MERGE;
-            }
+                              N_("invalid merge entity size"));
+        } else {
+            yasm_warn_set(YASM_WARN_GENERAL,
+                          N_("entity size for SHF_MERGE not specified"));
+            data.flags &= ~SHF_MERGE;
         }
+    }
 
     retval = yasm_object_get_general(object, sectname, 0, align,
-                                     (flags & SHF_EXECINSTR) != 0, resonly,
-                                     &isnew, line);
+                                     (data.flags & SHF_EXECINSTR) != 0,
+                                     resonly, &isnew, line);
 
     if (isnew)
-        esd = elf_objfmt_init_new_section(object, retval, sectname, type,
-                                          flags, line);
+        esd = elf_objfmt_init_new_section(object, retval, sectname, data.type,
+                                          data.flags, line);
     else
         esd = yasm_section_get_data(retval, &elf_section_data);
 
     if (isnew || yasm_section_is_default(retval)) {
         yasm_section_set_default(retval, 0);
-        elf_secthead_set_typeflags(esd, type, flags);
+        elf_secthead_set_typeflags(esd, data.type, data.flags);
         if (merge_intn)
             elf_secthead_set_entsize(esd, yasm_intnum_get_uint(merge_intn));
         yasm_section_set_align(retval, align, line);
-    } else if (flags_override)
+    } else if (flags_override && !data.gasflags)
         yasm_warn_set(YASM_WARN_GENERAL,
                       N_("section flags ignored on section redeclaration"));
+    if (merge_expr)
+        yasm_expr_destroy(merge_expr);
     return retval;
 }
 
@@ -1108,12 +1147,13 @@ static void
 dir_type(yasm_object *object, yasm_valparamhead *valparams,
          yasm_valparamhead *objext_valparams, unsigned long line)
 {
-    yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)object->objfmt;
-    char *symname = vp->val;
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    const char *symname = yasm_vp_id(vp);
     /* Get symbol elf data */
     yasm_symrec *sym = yasm_symtab_use(object->symtab, symname, line);
     elf_symtab_entry *entry = yasm_symrec_get_data(sym, &elf_symrec_data);
+    /*@null@*/ const char *type;
 
     /* Create entry if necessary */
     if (!entry) {
@@ -1122,16 +1162,16 @@ dir_type(yasm_object *object, yasm_valparamhead *valparams,
         yasm_symrec_add_data(sym, &elf_symrec_data, entry);
     }
 
-    /* Pull new type from val */
+    /* Pull new type from param */
     vp = yasm_vps_next(vp);
-    if (vp && vp->val) {
-        if (yasm__strcasecmp(vp->val, "function") == 0)
+    if (vp && !vp->val && (type = yasm_vp_id(vp))) {
+        if (yasm__strcasecmp(type, "function") == 0)
             elf_sym_set_type(entry, STT_FUNC);
-        else if (yasm__strcasecmp(vp->val, "object") == 0)
+        else if (yasm__strcasecmp(type, "object") == 0)
             elf_sym_set_type(entry, STT_OBJECT);
         else
             yasm_warn_set(YASM_WARN_GENERAL,
-                          N_("unrecognized symbol type `%s'"), vp->val);
+                          N_("unrecognized symbol type `%s'"), type);
     } else
         yasm_error_set(YASM_ERROR_SYNTAX, N_("no type specified"));
 }
@@ -1140,12 +1180,13 @@ static void
 dir_size(yasm_object *object, yasm_valparamhead *valparams,
          yasm_valparamhead *objext_valparams, unsigned long line)
 {
-    yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)object->objfmt;
-    char *symname = vp->val;
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    const char *symname = yasm_vp_id(vp);
     /* Get symbol elf data */
     yasm_symrec *sym = yasm_symtab_use(object->symtab, symname, line);
     elf_symtab_entry *entry = yasm_symrec_get_data(sym, &elf_symrec_data);
+    /*@only@*/ /*@null@*/ yasm_expr *size;
 
     /* Create entry if necessary */
     if (!entry) {
@@ -1154,14 +1195,10 @@ dir_size(yasm_object *object, yasm_valparamhead *valparams,
         yasm_symrec_add_data(sym, &elf_symrec_data, entry);
     }
 
-    /* Pull new size from either param (expr) or val */
+    /* Pull new size from param */
     vp = yasm_vps_next(vp);
-    if (vp && vp->param) {
-        elf_sym_set_size(entry, vp->param);
-        vp->param = NULL;
-    } else if (vp && vp->val)
-        elf_sym_set_size(entry, yasm_expr_create_ident(yasm_expr_sym(
-            yasm_symtab_use(object->symtab, vp->val, line)), line));
+    if (vp && !vp->val && (size = yasm_vp_expr(vp, object->symtab, line)))
+        elf_sym_set_size(entry, size);
     else
         yasm_error_set(YASM_ERROR_SYNTAX, N_("no size specified"));
 }
@@ -1170,9 +1207,9 @@ static void
 dir_weak(yasm_object *object, yasm_valparamhead *valparams,
          yasm_valparamhead *objext_valparams, unsigned long line)
 {
-    yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)object->objfmt;
-    char *symname = vp->val;
+    yasm_valparam *vp = yasm_vps_first(valparams);
+    const char *symname = yasm_vp_id(vp);
     yasm_symrec *sym = yasm_symtab_declare(object->symtab, symname,
                                            YASM_SYM_GLOBAL, line);
     elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_WEAK, 0,
@@ -1186,12 +1223,19 @@ dir_ident(yasm_object *object, yasm_valparamhead *valparams,
     yasm_valparamhead sect_vps;
     yasm_datavalhead dvs;
     yasm_section *comment;
-    yasm_valparam *vp = yasm_vps_first(valparams);
+    yasm_valparam *vp;
     yasm_valparam *vp2;
+
+    /* Accept, but do nothing with empty ident */
+    if (!valparams)
+        return;
+    vp = yasm_vps_first(valparams);
+    if (!vp)
+        return;
 
     /* Put ident data into .comment section */
     yasm_vps_initialize(&sect_vps);
-    vp2 = yasm_vp_create(yasm__xstrdup(".comment"), NULL);
+    vp2 = yasm_vp_create_string(NULL, yasm__xstrdup(".comment"));
     yasm_vps_append(&sect_vps, vp2);
     comment = elf_objfmt_section_switch(object, &sect_vps, NULL, line);
     yasm_vps_delete(&sect_vps);
@@ -1210,8 +1254,15 @@ dir_ident(yasm_object *object, yasm_valparamhead *valparams,
 
     yasm_dvs_initialize(&dvs);
     do {
-        yasm_dvs_append(&dvs, yasm_dv_create_string(vp->val, strlen(vp->val)));
-        vp->val = NULL;
+        const char *s = yasm_vp_string(vp);
+        if (!s) {
+            yasm_error_set(YASM_ERROR_VALUE,
+                           N_(".comment requires string parameters"));
+            yasm_dvs_delete(&dvs);
+            return;
+        }
+        yasm_dvs_append(&dvs,
+                        yasm_dv_create_string(yasm__xstrdup(s), strlen(s)));
     } while ((vp = yasm_vps_next(vp)));
 
     yasm_section_bcs_append(comment,
@@ -1230,11 +1281,11 @@ static const yasm_directive elf_objfmt_directives[] = {
     { ".type",          "gas",  dir_type,       YASM_DIR_ID_REQUIRED },
     { ".size",          "gas",  dir_size,       YASM_DIR_ID_REQUIRED },
     { ".weak",          "gas",  dir_weak,       YASM_DIR_ID_REQUIRED },
-    { ".ident",         "gas",  dir_ident,      YASM_DIR_ARG_REQUIRED },
+    { ".ident",         "gas",  dir_ident,      YASM_DIR_ANY },
     { "type",           "nasm", dir_type,       YASM_DIR_ID_REQUIRED },
     { "size",           "nasm", dir_size,       YASM_DIR_ID_REQUIRED },
     { "weak",           "nasm", dir_weak,       YASM_DIR_ID_REQUIRED },
-    { "ident",          "nasm", dir_ident,      YASM_DIR_ARG_REQUIRED },
+    { "ident",          "nasm", dir_ident,      YASM_DIR_ANY },
     { NULL, NULL, NULL, 0 }
 };
 

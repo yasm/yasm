@@ -33,9 +33,11 @@
 #include "valparam.h"
 
 #include "errwarn.h"
+#include "intnum.h"
 #include "expr.h"
 #include "symrec.h"
 
+#include "section.h"
 
 void
 yasm_call_directive(const yasm_directive *directive, yasm_object *object,
@@ -53,7 +55,8 @@ yasm_call_directive(const yasm_directive *directive, yasm_object *object,
     }
     if (valparams) {
         vp = yasm_vps_first(valparams);
-        if ((directive->flags & YASM_DIR_ID_REQUIRED) && !vp->val) {
+        if ((directive->flags & YASM_DIR_ID_REQUIRED) &&
+            vp->type != YASM_PARAM_ID) {
             yasm_error_set(YASM_ERROR_SYNTAX,
                 N_("directive `%s' requires an identifier parameter"),
                 directive->name);
@@ -64,28 +67,81 @@ yasm_call_directive(const yasm_directive *directive, yasm_object *object,
 }
 
 yasm_valparam *
-yasm_vp_create(/*@keep@*/ char *v, /*@keep@*/ yasm_expr *p)
+yasm_vp_create_id(/*@keep@*/ char *v, /*@keep@*/ char *p, int id_prefix)
 {
     yasm_valparam *r = yasm_xmalloc(sizeof(yasm_valparam));
     r->val = v;
-    r->param = p;
+    r->type = YASM_PARAM_ID;
+    r->param.id = p;
+    r->id_prefix = (char)id_prefix;
+    return r;
+}
+
+yasm_valparam *
+yasm_vp_create_string(/*@keep@*/ char *v, /*@keep@*/ char *p)
+{
+    yasm_valparam *r = yasm_xmalloc(sizeof(yasm_valparam));
+    r->val = v;
+    r->type = YASM_PARAM_STRING;
+    r->param.str = p;
+    r->id_prefix = '\0';
+    return r;
+}
+
+yasm_valparam *
+yasm_vp_create_expr(/*@keep@*/ char *v, /*@keep@*/ yasm_expr *p)
+{
+    yasm_valparam *r = yasm_xmalloc(sizeof(yasm_valparam));
+    r->val = v;
+    r->type = YASM_PARAM_EXPR;
+    r->param.e = p;
+    r->id_prefix = '\0';
     return r;
 }
 
 /*@null@*/ /*@only@*/ yasm_expr *
-yasm_vp_expr(yasm_valparam *vp, yasm_symtab *symtab, unsigned long line)
+yasm_vp_expr(const yasm_valparam *vp, yasm_symtab *symtab, unsigned long line)
 {
     if (!vp)
         return NULL;
-    if (vp->val) {
-        return yasm_expr_create_ident(yasm_expr_sym(
-            yasm_symtab_use(symtab, vp->val, line)), line);
-    } else if (vp->param) {
-        yasm_expr *e = vp->param;
-        vp->param = NULL;   /* to avoid double-free */
-        return e;
-    } else
+    switch (vp->type) {
+        case YASM_PARAM_ID:
+            return yasm_expr_create_ident(yasm_expr_sym(
+                yasm_symtab_use(symtab, yasm_vp_id(vp), line)), line);
+        case YASM_PARAM_EXPR:
+            return yasm_expr_copy(vp->param.e);
+        default:
+            return NULL;
+    }
+}
+
+/*@null@*/ /*@dependent@*/ const char *
+yasm_vp_string(const yasm_valparam *vp)
+{
+    if (!vp)
         return NULL;
+    switch (vp->type) {
+        case YASM_PARAM_ID:
+            return vp->param.id;
+        case YASM_PARAM_STRING:
+            return vp->param.str;
+        default:
+            return NULL;
+    }
+}
+
+/*@null@*/ /*@dependent@*/ const char *
+yasm_vp_id(const yasm_valparam *vp)
+{
+    if (!vp)
+        return NULL;
+    if (vp->type == YASM_PARAM_ID) {
+        if (vp->param.id[0] == vp->id_prefix)
+            return &vp->param.id[1];
+        else
+            return vp->param.id;
+    }
+    return NULL;
 }
 
 void
@@ -98,8 +154,17 @@ yasm_vps_delete(yasm_valparamhead *headp)
         next = STAILQ_NEXT(cur, link);
         if (cur->val)
             yasm_xfree(cur->val);
-        if (cur->param)
-            yasm_expr_destroy(cur->param);
+        switch (cur->type) {
+            case YASM_PARAM_ID:
+                yasm_xfree(cur->param.id);
+                break;
+            case YASM_PARAM_STRING:
+                yasm_xfree(cur->param.str);
+                break;
+            case YASM_PARAM_EXPR:
+                yasm_expr_destroy(cur->param.e);
+                break;
+        }
         yasm_xfree(cur);
         cur = next;
     }
@@ -121,10 +186,17 @@ yasm_vps_print(const yasm_valparamhead *headp, FILE *f)
             fprintf(f, "(\"%s\",", vp->val);
         else
             fprintf(f, "((nil),");
-        if (vp->param)
-            yasm_expr_print(vp->param, f);
-        else
-            fprintf(f, "(nil)");
+        switch (vp->type) {
+            case YASM_PARAM_ID:
+                fprintf(f, "%s", vp->param.id);
+                break;
+            case YASM_PARAM_STRING:
+                fprintf(f, "\"%s\"", vp->param.str);
+                break;
+            case YASM_PARAM_EXPR:
+                yasm_expr_print(vp->param.e, f);
+                break;
+        }
         fprintf(f, ")");
         if (yasm_vps_next(vp))
             fprintf(f, ",");
@@ -169,4 +241,136 @@ yasm_vps_first(yasm_valparamhead *headp)
 yasm_vps_next(yasm_valparam *cur)
 {
     return STAILQ_NEXT(cur, link);
+}
+
+int
+yasm_dir_helper(void *obj, yasm_valparam *vp_first, unsigned long line,
+                const yasm_dir_help *help, size_t nhelp, void *data,
+                int (*helper_valparam) (void *obj, yasm_valparam *vp,
+                                        unsigned long line, void *data))
+{
+    yasm_valparam *vp = vp_first;
+    int anymatched = 0;
+    int matched;
+
+    if (!vp)
+        return 0;
+
+    do {
+        const char *s;
+        size_t i;
+
+        matched = 0;
+        if (!vp->val && (s = yasm_vp_id(vp))) {
+            for (i=0; i<nhelp; i++) {
+                if (help[i].needsparam == 0 &&
+                    yasm__strcasecmp(s, help[i].name) == 0) {
+                    if (help[i].helper(obj, vp, line,
+                                       ((char *)data)+help[i].off,
+                                       help[i].arg) != 0)
+                        return -1;
+                    matched = 1;
+                    anymatched = 1;
+                    break;
+                }
+            }
+        } else if (vp->val) {
+            for (i=0; i<nhelp; i++) {
+                if (help[i].needsparam == 1 &&
+                    yasm__strcasecmp(vp->val, help[i].name) == 0) {
+                    if (help[i].helper(obj, vp, line,
+                                       ((char *)data)+help[i].off,
+                                       help[i].arg) != 0)
+                        return -1;
+                    matched = 1;
+                    anymatched = 1;
+                    break;
+                }
+            }
+        }
+
+        if (!matched) {
+            int final = helper_valparam(obj, vp, line, data);
+            if (final < 0)
+                return -1;
+            if (final > 0)
+                anymatched = 1;
+        }
+    } while((vp = yasm_vps_next(vp)));
+
+    return anymatched;
+}
+
+int
+yasm_dir_helper_flag_or(void *obj, yasm_valparam *vp, unsigned long line,
+                        void *d, uintptr_t flag)
+{
+    unsigned long *flags = (unsigned long *)d;
+    *flags |= flag;
+    return 0;
+}
+
+int
+yasm_dir_helper_flag_and(void *obj, yasm_valparam *vp, unsigned long line,
+                         void *d, uintptr_t flag)
+{
+    unsigned long *flags = (unsigned long *)d;
+    *flags &= ~flag;
+    return 0;
+}
+
+int
+yasm_dir_helper_flag_set(void *obj, yasm_valparam *vp, unsigned long line,
+                         void *d, uintptr_t flag)
+{
+    unsigned long *flags = (unsigned long *)d;
+    *flags = flag;
+    return 0;
+}
+
+int
+yasm_dir_helper_intn(void *obj, yasm_valparam *vp, unsigned long line,
+                     void *data, uintptr_t arg)
+{
+    yasm_object *object = (yasm_object *)obj;
+    /*@only@*/ /*@null@*/ yasm_expr *e;
+    /*@dependent@*/ /*@null@*/ yasm_intnum *local;
+    yasm_intnum **intn = (yasm_intnum **)data;
+
+    if (*intn)
+        yasm_intnum_destroy(*intn);
+    if (!(e = yasm_vp_expr(vp, object->symtab, line)) ||
+        !(local = yasm_expr_get_intnum(&e, 0))) {
+        yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+                       N_("argument to `%s' is not an integer"),
+                       vp->val);
+        if (e)
+            yasm_expr_destroy(e);
+        return -1;
+    }
+    *intn = yasm_intnum_copy(local);
+    yasm_expr_destroy(e);
+    return 0;
+}
+
+int
+yasm_dir_helper_valparam_warn(void *obj, yasm_valparam *vp,
+                              unsigned long line, void *data)
+{
+    const char *s;
+
+    if (vp->val) {
+        yasm_warn_set(YASM_WARN_GENERAL, N_("Unrecognized qualifier `%s'"),
+                      vp->val);
+        return 0;
+    }
+
+    if ((s = yasm_vp_id(vp)))
+        yasm_warn_set(YASM_WARN_GENERAL, N_("Unrecognized qualifier `%s'"), s);
+    else if (vp->type == YASM_PARAM_STRING)
+        yasm_warn_set(YASM_WARN_GENERAL, N_("Unrecognized string qualifier"));
+    else
+        yasm_warn_set(YASM_WARN_GENERAL, N_("Unrecognized numeric qualifier"));
+
+    return 0;
 }

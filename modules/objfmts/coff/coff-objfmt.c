@@ -1266,6 +1266,90 @@ coff_objfmt_add_default_section(yasm_object *object)
     return retval;
 }
 
+struct coff_section_switch_data {
+    int isdefault;
+    int gasflags;
+    unsigned long flags;
+    unsigned long flags2;
+    /*@only@*/ /*@null@*/ yasm_intnum *align_intn;
+};
+
+/* GAS-style flags */
+static int
+coff_helper_gasflags(void *obj, yasm_valparam *vp, unsigned long line, void *d,
+                     /*@unused@*/ uintptr_t arg)
+{
+    struct coff_section_switch_data *data =
+        (struct coff_section_switch_data *)d;
+    int alloc = 0, load = 0, readonly = 0, code = 0, datasect = 0;
+    int shared = 0;
+    const char *s = yasm_vp_string(vp);
+    size_t i;
+
+    if (!s) {
+        yasm_error_set(YASM_ERROR_VALUE, N_("non-string section attribute"));
+        return -1;
+    }
+
+    /* For GAS, default to read/write data */
+    if (data->isdefault)
+        data->flags = COFF_STYP_TEXT | COFF_STYP_READ | COFF_STYP_WRITE;
+
+    for (i=0; i<strlen(s); i++) {
+        switch (s[i]) {
+            case 'a':
+                break;
+            case 'b':
+                alloc = 1;
+                load = 0;
+                break;
+            case 'n':
+                load = 0;
+                break;
+            case 's':
+                shared = 1;
+                /*@fallthrough@*/
+            case 'd':
+                datasect = 1;
+                load = 1;
+                readonly = 0;
+            case 'x':
+                code = 1;
+                load = 1;
+                break;
+            case 'r':
+                datasect = 1;
+                load = 1;
+                readonly = 1;
+                break;
+            case 'w':
+                readonly = 0;
+                break;
+            default:
+                yasm_warn_set(YASM_WARN_GENERAL,
+                              N_("unrecognized section attribute: `%c'"),
+                              s[i]);
+        }
+    }
+
+    if (code)
+        data->flags = COFF_STYP_TEXT | COFF_STYP_EXECUTE | COFF_STYP_READ;
+    else if (datasect)
+        data->flags = COFF_STYP_DATA | COFF_STYP_READ | COFF_STYP_WRITE;
+    else if (readonly)
+        data->flags = COFF_STYP_DATA | COFF_STYP_READ;
+    else if (load)
+        data->flags = COFF_STYP_TEXT;
+    else if (alloc)
+        data->flags = COFF_STYP_BSS;
+
+    if (shared)
+        data->flags |= COFF_STYP_SHARED;
+
+    data->gasflags = 1;
+    return 0;
+}
+
 static /*@observer@*/ /*@null@*/ yasm_section *
 coff_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
                             /*@unused@*/ /*@null@*/
@@ -1273,79 +1357,99 @@ coff_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
                             unsigned long line)
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
-    yasm_valparam *vp = yasm_vps_first(valparams);
+    yasm_valparam *vp;
     yasm_section *retval;
     int isnew;
     int iscode = 0;
-    unsigned long flags;
-    unsigned long flags2 = 0;
-    int flags_override = 0;
-    char *sectname;
+    int flags_override;
+    const char *sectname;
+    char *realname;
     int resonly = 0;
     unsigned long align = 0;
     coff_section_data *csd;
 
-    static const struct {
-        const char *name;
-        unsigned long stdflags; /* if 0, win32 only qualifier */
-        unsigned long win32flags;
-        unsigned long flags2;
-        /* Mode: 0 => clear specified bits
-         *       1 => set specified bits
-         *       2 => clear all bits, then set specified bits
-         */
-        int mode;
-    } flagquals[] = {
-        { "code", COFF_STYP_TEXT, COFF_STYP_EXECUTE | COFF_STYP_READ, 0, 2 },
-        { "text", COFF_STYP_TEXT, COFF_STYP_EXECUTE | COFF_STYP_READ, 0, 2 },
-        { "data", COFF_STYP_DATA, COFF_STYP_READ | COFF_STYP_WRITE, 0, 2 },
-        { "bss", COFF_STYP_BSS, COFF_STYP_READ | COFF_STYP_WRITE, 0, 2 },
-        { "info", COFF_STYP_INFO, COFF_STYP_DISCARD | COFF_STYP_READ, 0, 2 },
-        { "discard", 0, COFF_STYP_DISCARD, 0, 1 },
-        { "nodiscard", 0, COFF_STYP_DISCARD, 0, 0 },
-        { "cache", 0, COFF_STYP_NOCACHE, 0, 0 },
-        { "nocache", 0, COFF_STYP_NOCACHE, 0, 1 },
-        { "page", 0, COFF_STYP_NOPAGE, 0, 0 },
-        { "nopage", 0, COFF_STYP_NOPAGE, 0, 1 },
-        { "share", 0, COFF_STYP_SHARED, 0, 1 },
-        { "noshare", 0, COFF_STYP_SHARED, 0, 0 },
-        { "execute", 0, COFF_STYP_EXECUTE, 0, 1 },
-        { "noexecute", 0, COFF_STYP_EXECUTE, 0, 0 },
-        { "read", 0, COFF_STYP_READ, 0, 1 },
-        { "noread", 0, COFF_STYP_READ, 0, 0 },
-        { "write", 0, COFF_STYP_WRITE, 0, 1 },
-        { "nowrite", 0, COFF_STYP_WRITE, 0, 0 },
-        { "base", 0, 0, COFF_FLAG_NOBASE, 0 },
-        { "nobase", 0, 0, COFF_FLAG_NOBASE, 1 },
+    struct coff_section_switch_data data;
+
+    static const yasm_dir_help help[] = {
+        { "code", 0, yasm_dir_helper_flag_set,
+          offsetof(struct coff_section_switch_data, flags),
+          COFF_STYP_TEXT | COFF_STYP_EXECUTE | COFF_STYP_READ },
+        { "text", 0, yasm_dir_helper_flag_set,
+          offsetof(struct coff_section_switch_data, flags),
+          COFF_STYP_TEXT | COFF_STYP_EXECUTE | COFF_STYP_READ },
+        { "data", 0, yasm_dir_helper_flag_set,
+          offsetof(struct coff_section_switch_data, flags),
+          COFF_STYP_DATA | COFF_STYP_READ | COFF_STYP_WRITE },
+        { "rdata", 0, yasm_dir_helper_flag_set,
+          offsetof(struct coff_section_switch_data, flags),
+          COFF_STYP_DATA | COFF_STYP_READ },
+        { "bss", 0, yasm_dir_helper_flag_set,
+          offsetof(struct coff_section_switch_data, flags),
+          COFF_STYP_BSS | COFF_STYP_READ | COFF_STYP_WRITE },
+        { "info", 0, yasm_dir_helper_flag_set,
+          offsetof(struct coff_section_switch_data, flags),
+          COFF_STYP_INFO | COFF_STYP_DISCARD | COFF_STYP_READ },
+        { "gasflags", 1, coff_helper_gasflags, 0, 0 },
+        /* Win32 only below this point */
+        { "discard", 0, yasm_dir_helper_flag_or,
+          offsetof(struct coff_section_switch_data, flags), COFF_STYP_DISCARD},
+        { "nodiscard", 0, yasm_dir_helper_flag_and,
+          offsetof(struct coff_section_switch_data, flags), COFF_STYP_DISCARD},
+        { "cache", 0, yasm_dir_helper_flag_and,
+          offsetof(struct coff_section_switch_data, flags), COFF_STYP_NOCACHE},
+        { "nocache", 0, yasm_dir_helper_flag_or,
+          offsetof(struct coff_section_switch_data, flags), COFF_STYP_NOCACHE},
+        { "page", 0, yasm_dir_helper_flag_and,
+          offsetof(struct coff_section_switch_data, flags), COFF_STYP_NOPAGE },
+        { "nopage", 0, yasm_dir_helper_flag_or,
+          offsetof(struct coff_section_switch_data, flags), COFF_STYP_NOPAGE },
+        { "share", 0, yasm_dir_helper_flag_or,
+          offsetof(struct coff_section_switch_data, flags), COFF_STYP_SHARED },
+        { "noshare", 0, yasm_dir_helper_flag_and,
+          offsetof(struct coff_section_switch_data, flags), COFF_STYP_SHARED },
+        { "execute", 0, yasm_dir_helper_flag_or,
+          offsetof(struct coff_section_switch_data, flags), COFF_STYP_EXECUTE},
+        { "noexecute", 0, yasm_dir_helper_flag_and,
+          offsetof(struct coff_section_switch_data, flags), COFF_STYP_EXECUTE},
+        { "read", 0, yasm_dir_helper_flag_or,
+          offsetof(struct coff_section_switch_data, flags), COFF_STYP_READ },
+        { "noread", 0, yasm_dir_helper_flag_and,
+          offsetof(struct coff_section_switch_data, flags), COFF_STYP_READ },
+        { "write", 0, yasm_dir_helper_flag_or,
+          offsetof(struct coff_section_switch_data, flags), COFF_STYP_WRITE },
+        { "nowrite", 0, yasm_dir_helper_flag_and,
+          offsetof(struct coff_section_switch_data, flags), COFF_STYP_WRITE },
+        { "base", 0, yasm_dir_helper_flag_and,
+          offsetof(struct coff_section_switch_data, flags2), COFF_FLAG_NOBASE},
+        { "nobase", 0, yasm_dir_helper_flag_or,
+          offsetof(struct coff_section_switch_data, flags2), COFF_FLAG_NOBASE},
+        { "align", 1, yasm_dir_helper_intn,
+          offsetof(struct coff_section_switch_data, align_intn), 0 }
     };
 
-    if (!vp || vp->param || !vp->val)
+    vp = yasm_vps_first(valparams);
+    sectname = yasm_vp_string(vp);
+    if (!sectname)
         return NULL;
+    vp = yasm_vps_next(vp);
 
-    sectname = vp->val;
-    if (strlen(sectname) > 8 && !objfmt_coff->win32) {
-        /* win32 format supports >8 character section names in object
-         * files via "/nnnn" (where nnnn is decimal offset into string table),
-         * so only warn for regular COFF.
-         */
-        yasm_warn_set(YASM_WARN_GENERAL,
-            N_("COFF section names limited to 8 characters: truncating"));
-        sectname[8] = '\0';
-    }
+    data.isdefault = 0;
+    data.gasflags = 0;
+    data.flags = 0;
+    data.flags2 = 0;
+    data.align_intn = NULL;
 
     if (strcmp(sectname, ".data") == 0) {
-        flags = COFF_STYP_DATA;
+        data.flags = COFF_STYP_DATA | COFF_STYP_READ | COFF_STYP_WRITE;
         if (objfmt_coff->win32) {
-            flags |= COFF_STYP_READ | COFF_STYP_WRITE;
             if (objfmt_coff->machine == COFF_MACHINE_AMD64)
                 align = 16;
             else
                 align = 4;
         }
     } else if (strcmp(sectname, ".bss") == 0) {
-        flags = COFF_STYP_BSS;
+        data.flags = COFF_STYP_BSS | COFF_STYP_READ | COFF_STYP_WRITE;
         if (objfmt_coff->win32) {
-            flags |= COFF_STYP_READ | COFF_STYP_WRITE;
             if (objfmt_coff->machine == COFF_MACHINE_AMD64)
                 align = 16;
             else
@@ -1353,215 +1457,101 @@ coff_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
         }
         resonly = 1;
     } else if (strcmp(sectname, ".text") == 0) {
-        flags = COFF_STYP_TEXT;
-        if (objfmt_coff->win32) {
-            flags |= COFF_STYP_EXECUTE | COFF_STYP_READ;
+        data.flags = COFF_STYP_TEXT | COFF_STYP_EXECUTE | COFF_STYP_READ;
+        if (objfmt_coff->win32)
             align = 16;
-        }
-        iscode = 1;
     } else if (strcmp(sectname, ".rdata") == 0
                || strncmp(sectname, ".rodata", 7) == 0
                || strncmp(sectname, ".rdata$", 7) == 0) {
-        flags = COFF_STYP_DATA;
-        if (objfmt_coff->win32) {
-            flags |= COFF_STYP_READ;
+        data.flags = COFF_STYP_DATA | COFF_STYP_READ;
+        if (objfmt_coff->win32)
             align = 8;
-        } else
+        else
             yasm_warn_set(YASM_WARN_GENERAL,
                 N_("Standard COFF does not support read-only data sections"));
     } else if (strcmp(sectname, ".drectve") == 0) {
-        flags = COFF_STYP_INFO;
+        data.flags = COFF_STYP_INFO;
         if (objfmt_coff->win32)
-            flags |= COFF_STYP_DISCARD | COFF_STYP_READ;
+            data.flags |= COFF_STYP_DISCARD | COFF_STYP_READ;
     } else if (objfmt_coff->win64 && strcmp(sectname, ".pdata") == 0) {
-        flags = COFF_STYP_DATA | COFF_STYP_READ;
+        data.flags = COFF_STYP_DATA | COFF_STYP_READ;
         align = 4;
-        flags2 = COFF_FLAG_NOBASE;
+        data.flags2 = COFF_FLAG_NOBASE;
     } else if (objfmt_coff->win64 && strcmp(sectname, ".xdata") == 0) {
-        flags = COFF_STYP_DATA | COFF_STYP_READ;
+        data.flags = COFF_STYP_DATA | COFF_STYP_READ;
         align = 8;
     } else if (strcmp(sectname, ".comment") == 0) {
-        flags = COFF_STYP_INFO;
-        if (objfmt_coff->win32)
-            flags |= COFF_STYP_DISCARD | COFF_STYP_READ;
+        data.flags = COFF_STYP_INFO | COFF_STYP_DISCARD | COFF_STYP_READ;
     } else if (yasm__strncasecmp(sectname, ".debug", 6)==0) {
-        flags = COFF_STYP_DATA;
-        if (objfmt_coff->win32)
-            flags |= COFF_STYP_DISCARD|COFF_STYP_READ;
+        data.flags = COFF_STYP_DATA | COFF_STYP_DISCARD | COFF_STYP_READ;
         align = 1;
     } else {
-        /* Default to code */
-        flags = COFF_STYP_TEXT;
-        if (objfmt_coff->win32)
-            flags |= COFF_STYP_EXECUTE | COFF_STYP_READ;
+        /* Default to code, but set a flag so if we get gasflags we can
+         * change it (NASM and GAS have different defaults).
+         */
+        data.isdefault = 1;
+        data.flags = COFF_STYP_TEXT | COFF_STYP_EXECUTE | COFF_STYP_READ;
+    }
+
+    flags_override = yasm_dir_helper(object, vp, line, help,
+                                     objfmt_coff->win32 ? NELEMS(help) : 7,
+                                     &data, yasm_dir_helper_valparam_warn);
+    if (flags_override < 0)
+        return NULL;    /* error occurred */
+
+    if (data.flags & COFF_STYP_EXECUTE)
         iscode = 1;
-    }
 
-    while ((vp = yasm_vps_next(vp))) {
-        size_t i;
-        int match, win32warn;
+    if (!objfmt_coff->win32)
+        data.flags &= ~COFF_STYP_WIN32_MASK;
 
-        win32warn = 0;
+    if (data.align_intn) {
+        align = yasm_intnum_get_uint(data.align_intn);
+        yasm_intnum_destroy(data.align_intn);
 
-        if (!vp->val) {
-            yasm_warn_set(YASM_WARN_GENERAL,
-                          N_("Unrecognized numeric qualifier"));
-            continue;
+        /* Alignments must be a power of two. */
+        if (!is_exp2(align)) {
+            yasm_error_set(YASM_ERROR_VALUE,
+                           N_("argument to `%s' is not a power of two"),
+                           "align");
+            return NULL;
         }
 
-        match = 0;
-        for (i=0; i<NELEMS(flagquals) && !match; i++) {
-            if (yasm__strcasecmp(vp->val, flagquals[i].name) == 0) {
-                if (!objfmt_coff->win32 && flagquals[i].stdflags == 0)
-                    win32warn = 1;
-                else switch (flagquals[i].mode) {
-                    case 0:
-                        flags &= ~flagquals[i].stdflags;
-                        flags2 &= ~flagquals[i].flags2;
-                        if (objfmt_coff->win32)
-                            flags &= ~flagquals[i].win32flags;
-                        if (flagquals[i].win32flags & COFF_STYP_EXECUTE)
-                            iscode = 0;
-                        break;
-                    case 1:
-                        flags |= flagquals[i].stdflags;
-                        flags2 |= flagquals[i].flags2;
-                        if (objfmt_coff->win32)
-                            flags |= flagquals[i].win32flags;
-                        if (flagquals[i].win32flags & COFF_STYP_EXECUTE)
-                            iscode = 1;
-                        break;
-                    case 2:
-                        flags &= ~COFF_STYP_STD_MASK;
-                        flags |= flagquals[i].stdflags;
-                        flags2 = flagquals[i].flags2;
-                        if (objfmt_coff->win32) {
-                            flags &= ~COFF_STYP_WIN32_MASK;
-                            flags |= flagquals[i].win32flags;
-                        }
-                        if (flagquals[i].win32flags & COFF_STYP_EXECUTE)
-                            iscode = 1;
-                        break;
-                }
-                flags_override = 1;
-                match = 1;
-            }
+        /* Check to see if alignment is supported size */
+        if (align > 8192) {
+            yasm_error_set(YASM_ERROR_VALUE,
+                N_("Win32 does not support alignments > 8192"));
+            return NULL;
         }
-
-        if (match)
-            ;
-        else if (yasm__strncasecmp(vp->val, "gas_", 4) == 0) {
-            /* GAS-style flags */
-            int alloc = 0, load = 0, readonly = 0, code = 0, data = 0;
-            int shared = 0;
-            iscode = 0;
-            for (i=4; i<strlen(vp->val); i++) {
-                switch (vp->val[i]) {
-                    case 'a':
-                        break;
-                    case 'b':
-                        alloc = 1;
-                        load = 0;
-                        break;
-                    case 'n':
-                        load = 0;
-                        break;
-                    case 's':
-                        shared = 1;
-                        /*@fallthrough@*/
-                    case 'd':
-                        data = 1;
-                        load = 1;
-                        readonly = 0;
-                    case 'x':
-                        code = 1;
-                        load = 1;
-                        break;
-                    case 'r':
-                        data = 1;
-                        load = 1;
-                        readonly = 1;
-                        break;
-                    case 'w':
-                        readonly = 0;
-                        break;
-                    default:
-                        yasm_warn_set(YASM_WARN_GENERAL,
-                                      N_("unrecognized section attribute: `%c'"),
-                                      vp->val[i]);
-                }
-            }
-            if (code) {
-                flags = COFF_STYP_TEXT;
-                if (objfmt_coff->win32)
-                    flags |= COFF_STYP_EXECUTE | COFF_STYP_READ;
-                iscode = 1;
-            } else if (data) {
-                flags = COFF_STYP_DATA;
-                if (objfmt_coff->win32)
-                    flags |= COFF_STYP_READ | COFF_STYP_WRITE;
-            } else if (readonly) {
-                flags = COFF_STYP_DATA;
-                if (objfmt_coff->win32)
-                    flags |= COFF_STYP_READ;
-            } else if (load)
-                flags = COFF_STYP_TEXT;
-            else if (alloc)
-                flags = COFF_STYP_BSS;
-            if (shared && objfmt_coff->win32)
-                flags |= COFF_STYP_SHARED;
-        } else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
-            if (objfmt_coff->win32) {
-                /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
-                align_expr = yasm_expr_get_intnum(&vp->param, 0);
-                if (!align_expr) {
-                    yasm_error_set(YASM_ERROR_VALUE,
-                                   N_("argument to `%s' is not an integer"),
-                                   vp->val);
-                    return NULL;
-                }
-                align = yasm_intnum_get_uint(align_expr);
-
-                /* Alignments must be a power of two. */
-                if (!is_exp2(align)) {
-                    yasm_error_set(YASM_ERROR_VALUE,
-                                   N_("argument to `%s' is not a power of two"),
-                                   vp->val);
-                    return NULL;
-                }
-
-                /* Check to see if alignment is supported size */
-                if (align > 8192) {
-                    yasm_error_set(YASM_ERROR_VALUE,
-                        N_("Win32 does not support alignments > 8192"));
-                    return NULL;
-                }
-
-            } else
-                win32warn = 1;
-        } else
-            yasm_warn_set(YASM_WARN_GENERAL, N_("Unrecognized qualifier `%s'"),
-                          vp->val);
-
-        if (win32warn)
-            yasm_warn_set(YASM_WARN_GENERAL,
-                N_("Standard COFF does not support qualifier `%s'"), vp->val);
     }
 
-    retval = yasm_object_get_general(object, sectname, 0, align, iscode,
+    realname = yasm__xstrdup(sectname);
+    if (strlen(sectname) > 8 && !objfmt_coff->win32) {
+        /* win32 format supports >8 character section names in object
+         * files via "/nnnn" (where nnnn is decimal offset into string table),
+         * so only warn for regular COFF.
+         */
+        yasm_warn_set(YASM_WARN_GENERAL,
+            N_("COFF section names limited to 8 characters: truncating"));
+        realname[8] = '\0';
+    }
+
+    retval = yasm_object_get_general(object, realname, 0, align, iscode,
                                      resonly, &isnew, line);
 
     if (isnew)
-        csd = coff_objfmt_init_new_section(object, retval, sectname, line);
+        csd = coff_objfmt_init_new_section(object, retval, realname, line);
     else
         csd = yasm_section_get_data(retval, &coff_section_data_cb);
 
+    yasm_xfree(realname);
+
     if (isnew || yasm_section_is_default(retval)) {
         yasm_section_set_default(retval, 0);
-        csd->flags = flags;
-        csd->flags2 = flags2;
+        csd->flags = data.flags;
+        csd->flags2 = data.flags2;
         yasm_section_set_align(retval, align, line);
-    } else if (flags_override)
+    } else if (flags_override && !data.gasflags)
         yasm_warn_set(YASM_WARN_GENERAL,
                       N_("section flags ignored on section redeclaration"));
     return retval;
@@ -1624,14 +1614,16 @@ dir_export(yasm_object *object, yasm_valparamhead *valparams,
            yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_valparam *vp;
+    /*@null@*/ const char *symname;
     int isnew;
     yasm_section *sect;
     yasm_datavalhead dvs;
 
     /* Reference exported symbol (to generate error if not declared) */
     vp = yasm_vps_first(valparams);
-    if (vp->val)
-        yasm_symtab_use(object->symtab, vp->val, line);
+    symname = yasm_vp_id(vp);
+    if (symname)
+        yasm_symtab_use(object->symtab, symname, line);
     else {
         yasm_error_set(YASM_ERROR_SYNTAX,
                        N_("argument to EXPORT must be symbol name"));
@@ -1654,8 +1646,8 @@ dir_export(yasm_object *object, yasm_valparamhead *valparams,
     yasm_dvs_initialize(&dvs);
     yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup("-export:"),
                                                 strlen("-export:")));
-    yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(vp->val),
-                                                strlen(vp->val)));
+    yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(symname),
+                                                strlen(symname)));
     yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(" "), 1));
     yasm_section_bcs_append(sect, yasm_bc_create_data(&dvs, 1, 0, NULL, line));
 }
@@ -1689,7 +1681,7 @@ dir_ident(yasm_object *object, yasm_valparamhead *valparams,
         sectname = ".comment";
     }
     yasm_vps_initialize(&sect_vps);
-    vp2 = yasm_vp_create(yasm__xstrdup(sectname), NULL);
+    vp2 = yasm_vp_create_id(NULL, yasm__xstrdup(sectname), '\0');
     yasm_vps_append(&sect_vps, vp2);
     comment = coff_objfmt_section_switch(object, &sect_vps, NULL, line);
     yasm_vps_delete(&sect_vps);
@@ -1708,8 +1700,15 @@ dir_ident(yasm_object *object, yasm_valparamhead *valparams,
 
     yasm_dvs_initialize(&dvs);
     do {
-        yasm_dvs_append(&dvs, yasm_dv_create_string(vp->val, strlen(vp->val)));
-        vp->val = NULL;
+        const char *s = yasm_vp_string(vp);
+        if (!s) {
+            yasm_error_set(YASM_ERROR_VALUE,
+                           N_(".comment requires string parameters"));
+            yasm_dvs_delete(&dvs);
+            return;
+        }
+        yasm_dvs_append(&dvs,
+                        yasm_dv_create_string(yasm__xstrdup(s), strlen(s)));
     } while ((vp = yasm_vps_next(vp)));
 
     yasm_section_bcs_append(comment,
@@ -1722,6 +1721,8 @@ dir_proc_frame(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
     yasm_valparam *vp = yasm_vps_first(valparams);
+    const char *name = yasm_vp_id(vp);
+
     if (objfmt_coff->proc_frame) {
         yasm_error_set_xref(objfmt_coff->proc_frame,
                             N_("previous procedure started here"));
@@ -1729,23 +1730,17 @@ dir_proc_frame(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
             N_("nested procedures not supported (didn't use [ENDPROC_FRAME]?)"));
         return;
     }
-    if (!vp || !vp->val) {
-        yasm_error_set(YASM_ERROR_SYNTAX,
-                       N_("[%s] requires a procedure symbol name"),
-                       "PROC_FRAME");
-        return;
-    }
     objfmt_coff->proc_frame = line;
     objfmt_coff->done_prolog = 0;
     objfmt_coff->unwind = yasm_win64__uwinfo_create();
-    objfmt_coff->unwind->proc = yasm_symtab_use(object->symtab, vp->val, line);
+    objfmt_coff->unwind->proc = yasm_symtab_use(object->symtab, name, line);
 
     /* Optional error handler */
     vp = yasm_vps_next(vp);
-    if (!vp || !vp->val)
+    if (!vp || !(name = yasm_vp_id(vp)))
         return;
     objfmt_coff->unwind->ehandler =
-        yasm_symtab_use(object->symtab, vp->val, line);
+        yasm_symtab_use(object->symtab, name, line);
 }
 
 static int
@@ -1796,7 +1791,8 @@ dir_pushreg(yasm_object *object, yasm_valparamhead *valparams,
     if (!procframe_checkstate(objfmt_coff, "PUSHREG"))
         return;
 
-    if (!vp || !vp->param || !(reg = yasm_expr_get_reg(&vp->param, 0))) {
+    if (vp->type != YASM_PARAM_EXPR ||
+        !(reg = yasm_expr_get_reg(&vp->param.e, 0))) {
         yasm_error_set(YASM_ERROR_SYNTAX,
                        N_("[%s] requires a register as the first parameter"),
                        "PUSHREG");
@@ -1826,7 +1822,8 @@ dir_setframe(yasm_object *object, yasm_valparamhead *valparams,
     if (!procframe_checkstate(objfmt_coff, "SETFRAME"))
         return;
 
-    if (!vp || !vp->param || !(reg = yasm_expr_get_reg(&vp->param, 0))) {
+    if (vp->type != YASM_PARAM_EXPR ||
+        !(reg = yasm_expr_get_reg(&vp->param.e, 0))) {
         yasm_error_set(YASM_ERROR_SYNTAX,
                        N_("[%s] requires a register as the first parameter"),
                        "SETFRAME");
@@ -1834,10 +1831,8 @@ dir_setframe(yasm_object *object, yasm_valparamhead *valparams,
     }
 
     vp = yasm_vps_next(vp);
-    if (vp && vp->param) {
-        off = vp->param;
-        vp->param = NULL;
-    }
+    if (vp)
+        off = yasm_vp_expr(vp, object->symtab, line);
 
     /* Set the frame fields in the unwind info */
     objfmt_coff->unwind->framereg = (unsigned long)(*reg);
@@ -1859,18 +1854,14 @@ dir_allocstack(yasm_object *object, yasm_valparamhead *valparams,
 {
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
     yasm_valparam *vp = yasm_vps_first(valparams);
+    /*@null@*/ /*@only@*/ yasm_expr *size;
     coff_unwind_code *code;
 
     if (!procframe_checkstate(objfmt_coff, "ALLOCSTACK"))
         return;
 
-    /* Transform ID to expression if needed */
-    if (vp && vp->val && !vp->param) {
-        vp->param = yasm_expr_create_ident(yasm_expr_sym(
-            yasm_symtab_use(object->symtab, vp->val, line)), line);
-    }
-
-    if (!vp || !vp->param) {
+    size = yasm_vp_expr(vp, object->symtab, line);
+    if (!size) {
         yasm_error_set(YASM_ERROR_SYNTAX, N_("[%s] requires a size"),
                        "ALLOCSTACK");
         return;
@@ -1884,8 +1875,7 @@ dir_allocstack(yasm_object *object, yasm_valparamhead *valparams,
     code->loc = get_curpos(object, "ALLOCSTACK", line);
     code->opcode = UWOP_ALLOC_SMALL;
     code->info = 0;
-    yasm_value_initialize(&code->off, vp->param, 7);
-    vp->param = NULL;
+    yasm_value_initialize(&code->off, size, 7);
     SLIST_INSERT_HEAD(&objfmt_coff->unwind->codes, code, link);
 }
 
@@ -1897,11 +1887,13 @@ dir_save_common(yasm_object *object, yasm_valparamhead *valparams,
     yasm_valparam *vp = yasm_vps_first(valparams);
     coff_unwind_code *code;
     const uintptr_t *reg;
+    /*@only@*/ /*@null@*/ yasm_expr *offset;
 
     if (!procframe_checkstate(objfmt_coff, name))
         return;
 
-    if (!vp || !vp->param || !(reg = yasm_expr_get_reg(&vp->param, 0))) {
+    if (vp->type != YASM_PARAM_EXPR ||
+        !(reg = yasm_expr_get_reg(&vp->param.e, 0))) {
         yasm_error_set(YASM_ERROR_SYNTAX,
                        N_("[%s] requires a register as the first parameter"),
                        name);
@@ -1909,14 +1901,8 @@ dir_save_common(yasm_object *object, yasm_valparamhead *valparams,
     }
 
     vp = yasm_vps_next(vp);
-
-    /* Transform ID to expression if needed */
-    if (vp && vp->val && !vp->param) {
-        vp->param = yasm_expr_create_ident(yasm_expr_sym(
-            yasm_symtab_use(object->symtab, vp->val, line)), line);
-    }
-
-    if (!vp || !vp->param) {
+    offset = yasm_vp_expr(vp, object->symtab, line);
+    if (!offset) {
         yasm_error_set(YASM_ERROR_SYNTAX,
                        N_("[%s] requires an offset as the second parameter"),
                        name);
@@ -1931,8 +1917,7 @@ dir_save_common(yasm_object *object, yasm_valparamhead *valparams,
     code->loc = get_curpos(object, name, line);
     code->opcode = op;
     code->info = (unsigned int)(*reg & 0xF);
-    yasm_value_initialize(&code->off, vp->param, 16);
-    vp->param = NULL;
+    yasm_value_initialize(&code->off, offset, 16);
     SLIST_INSERT_HEAD(&objfmt_coff->unwind->codes, code, link);
 }
 
@@ -1968,7 +1953,7 @@ dir_pushframe(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
     code->proc = objfmt_coff->unwind->proc;
     code->loc = get_curpos(object, "PUSHFRAME", line);
     code->opcode = UWOP_PUSH_MACHFRAME;
-    code->info = vp && (vp->val || vp->param);
+    code->info = vp != NULL;
     yasm_value_initialize(&code->off, NULL, 0);
     SLIST_INSERT_HEAD(&objfmt_coff->unwind->codes, code, link);
 }
@@ -2141,7 +2126,7 @@ static const yasm_directive win64_objfmt_directives[] = {
     { "ident",          "nasm", dir_ident,      YASM_DIR_ANY },
     { ".export",        "gas",  dir_export,     YASM_DIR_ID_REQUIRED },
     { "export",         "nasm", dir_export,     YASM_DIR_ID_REQUIRED },
-    { "proc_frame",     "nasm", dir_proc_frame, YASM_DIR_ANY },
+    { "proc_frame",     "nasm", dir_proc_frame, YASM_DIR_ID_REQUIRED },
     { "pushreg",        "nasm", dir_pushreg,    YASM_DIR_ARG_REQUIRED },
     { "setframe",       "nasm", dir_setframe,   YASM_DIR_ARG_REQUIRED },
     { "allocstack",     "nasm", dir_allocstack, YASM_DIR_ARG_REQUIRED },

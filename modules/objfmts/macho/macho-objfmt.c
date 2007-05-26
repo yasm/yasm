@@ -1288,14 +1288,14 @@ macho_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
                             yasm_valparamhead *objext_valparams,
                             unsigned long line)
 {
-    yasm_valparam *vp = yasm_vps_first(valparams);
+    yasm_valparam *vp;
     yasm_section *retval;
     int isnew;
     const char *f_segname, *f_sectname;
     unsigned long flags;
     unsigned long align;
     int flags_override = 0;
-    char *sectname;
+    const char *sectname;
     int resonly = 0;
     macho_section_data *msd;
     size_t i;
@@ -1365,10 +1365,22 @@ macho_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
             S_ATTR_NO_DEAD_STRIP, 0}
     };
 
-    if (!vp || vp->param || !vp->val)
-        return NULL;
+    struct macho_section_switch_data {
+        /*@only@*/ /*@null@*/ yasm_intnum *align_intn;
+    } data;
 
-    sectname = vp->val;
+    static const yasm_dir_help help[] = {
+        { "align", 1, yasm_dir_helper_intn,
+          offsetof(struct macho_section_switch_data, align_intn), 0 }
+    };
+
+    data.align_intn = NULL;
+
+    vp = yasm_vps_first(valparams);
+    sectname = yasm_vp_string(vp);
+    if (!sectname)
+        return NULL;
+    vp = yasm_vps_next(vp);
 
     /* translate .text,.data,.bss to __text,__data,__bss... */
     for (i=0; i<NELEMS(section_name_translation); i++) {
@@ -1387,43 +1399,29 @@ macho_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     flags = section_name_translation[i].flags;
     align = section_name_translation[i].align;
 
-    while ((vp = yasm_vps_next(vp))) {
-        if (!vp->val) {
-            yasm_warn_set(YASM_WARN_GENERAL,
-                          N_("Unrecognized numeric qualifier"));
-            continue;
+    flags_override = yasm_dir_helper(object, vp, line, help, NELEMS(help),
+                                     &data, yasm_dir_helper_valparam_warn);
+    if (flags_override < 0)
+        return NULL;    /* error occurred */
+
+    if (data.align_intn) {
+        align = yasm_intnum_get_uint(data.align_intn);
+        yasm_intnum_destroy(data.align_intn);
+
+        /* Alignments must be a power of two. */
+        if (!is_exp2(align)) {
+            yasm_error_set(YASM_ERROR_VALUE,
+                           N_("argument to `%s' is not a power of two"),
+                           vp->val);
+            return NULL;
         }
 
-        flags_override = 1;
-        if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
-            /*@dependent@ *//*@null@ */ const yasm_intnum *align_expr;
-
-            align_expr = yasm_expr_get_intnum(&vp->param, 0);
-            if (!align_expr) {
-                yasm_error_set(YASM_ERROR_VALUE,
-                               N_("argument to `%s' is not an integer"),
-                               vp->val);
-                return NULL;
-            }
-            align = yasm_intnum_get_uint(align_expr);
-
-            /* Alignments must be a power of two. */
-            if (!is_exp2(align)) {
-                yasm_error_set(YASM_ERROR_VALUE,
-                               N_("argument to `%s' is not a power of two"),
-                               vp->val);
-                return NULL;
-            }
-
-            /* Check to see if alignment is supported size */
-            if (align > 16384) {
-                yasm_error_set(YASM_ERROR_VALUE,
-                    N_("macho implementation does not support alignments > 16384"));
-                return NULL;
-            }
-        } else
-            yasm_warn_set(YASM_WARN_GENERAL,
-                          N_("Unrecognized qualifier `%s'"), vp->val);
+        /* Check to see if alignment is supported size */
+        if (align > 16384) {
+            yasm_error_set(YASM_ERROR_VALUE,
+                N_("macho implementation does not support alignments > 16384"));
+            return NULL;
+        }
     }
 
     retval = yasm_object_get_general(object, sectname, 0, align, 1, resonly,

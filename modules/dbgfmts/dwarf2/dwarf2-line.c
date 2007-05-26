@@ -831,18 +831,20 @@ yasm_dwarf2__dir_loc(yasm_object *object, yasm_valparamhead *valparams,
                      yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_valparam *vp;
+    int in_is_stmt = 0, in_isa = 0;
 
     /*@dependent@*/ /*@null@*/ const yasm_intnum *intn;
     dwarf2_section_data *dsd;
     dwarf2_loc *loc = yasm_xmalloc(sizeof(dwarf2_loc));
 
     /* File number (required) */
-    if (!valparams || !(vp = yasm_vps_first(valparams)) || !vp->param) {
+    if (!valparams || !(vp = yasm_vps_first(valparams)) ||
+        vp->val || vp->type != YASM_PARAM_EXPR) {
         yasm_error_set(YASM_ERROR_SYNTAX, N_("file number required"));
         yasm_xfree(loc);
         return;
     }
-    intn = yasm_expr_get_intnum(&vp->param, 0);
+    intn = yasm_expr_get_intnum(&vp->param.e, 0);
     if (!intn) {
         yasm_error_set(YASM_ERROR_NOT_CONSTANT,
                        N_("file number is not a constant"));
@@ -858,15 +860,15 @@ yasm_dwarf2__dir_loc(yasm_object *object, yasm_valparamhead *valparams,
 
     /* Line number (required) */
     vp = yasm_vps_next(vp);
-    if (!vp || !vp->param) {
+    if (!vp || vp->val || vp->type != YASM_PARAM_EXPR) {
         yasm_error_set(YASM_ERROR_SYNTAX, N_("line number required"));
         yasm_xfree(loc);
         return;
     }
-    intn = yasm_expr_get_intnum(&vp->param, 0);
+    intn = yasm_expr_get_intnum(&vp->param.e, 0);
     if (!intn) {
         yasm_error_set(YASM_ERROR_NOT_CONSTANT,
-                       N_("file number is not a constant"));
+                       N_("line number is not a constant"));
         yasm_xfree(loc);
         return;
     }
@@ -899,8 +901,8 @@ yasm_dwarf2__dir_loc(yasm_object *object, yasm_valparamhead *valparams,
 
     /* Optional column number */
     vp = yasm_vps_next(vp);
-    if (vp && vp->param) {
-        intn = yasm_expr_get_intnum(&vp->param, 0);
+    if (vp && !vp->val && vp->type == YASM_PARAM_EXPR) {
+        intn = yasm_expr_get_intnum(&vp->param.e, 0);
         if (!intn) {
             yasm_error_set(YASM_ERROR_NOT_CONSTANT,
                            N_("column number is not a constant"));
@@ -911,26 +913,24 @@ yasm_dwarf2__dir_loc(yasm_object *object, yasm_valparamhead *valparams,
         vp = yasm_vps_next(vp);
     }
 
-    /* Other options */
-    while (vp && vp->val) {
-        if (yasm__strcasecmp(vp->val, "basic_block") == 0)
-            loc->basic_block = 1;
-        else if (yasm__strcasecmp(vp->val, "prologue_end") == 0)
-            loc->prologue_end = 1;
-        else if (yasm__strcasecmp(vp->val, "epilogue_begin") == 0)
-            loc->epilogue_begin = 1;
-        else if (yasm__strcasecmp(vp->val, "is_stmt") == 0) {
-            if (!vp->param) {
-                yasm_error_set(YASM_ERROR_SYNTAX,
-                               N_("is_stmt requires value"));
-                yasm_xfree(loc);
-                return;
-            }
-            intn = yasm_expr_get_intnum(&vp->param, 0);
-            if (!intn) {
+    /* Other options; note for GAS compatibility we need to support both:
+     * is_stmt=1 (NASM) and
+     * is_stmt 1 (GAS)
+     */
+    while (vp) {
+        /*@null@*/ /*@dependent@*/ const char *s;
+        /*@null@*/ /*@only@*/ yasm_expr *e;
+
+restart:
+        if (in_is_stmt) {
+            in_is_stmt = 0;
+            if (!(e = yasm_vp_expr(vp, object->symtab, line)) ||
+                !(intn = yasm_expr_get_intnum(&e, 0))) {
                 yasm_error_set(YASM_ERROR_NOT_CONSTANT,
                                N_("is_stmt value is not a constant"));
                 yasm_xfree(loc);
+                if (e)
+                    yasm_expr_destroy(e);
                 return;
             }
             if (yasm_intnum_is_zero(intn))
@@ -941,32 +941,65 @@ yasm_dwarf2__dir_loc(yasm_object *object, yasm_valparamhead *valparams,
                 yasm_error_set(YASM_ERROR_VALUE,
                                N_("is_stmt value not 0 or 1"));
                 yasm_xfree(loc);
+                yasm_expr_destroy(e);
                 return;
             }
-        } else if (yasm__strcasecmp(vp->val, "isa") == 0) {
-            if (!vp->param) {
-                yasm_error_set(YASM_ERROR_SYNTAX, N_("isa requires value"));
-                yasm_xfree(loc);
-                return;
-            }
-            intn = yasm_expr_get_intnum(&vp->param, 0);
-            if (!intn) {
+            yasm_expr_destroy(e);
+        } else if (in_isa) {
+            in_isa = 0;
+            if (!(e = yasm_vp_expr(vp, object->symtab, line)) ||
+                !(intn = yasm_expr_get_intnum(&e, 0))) {
                 yasm_error_set(YASM_ERROR_NOT_CONSTANT,
                                N_("isa value is not a constant"));
                 yasm_xfree(loc);
+                if (e)
+                    yasm_expr_destroy(e);
                 return;
             }
             if (yasm_intnum_sign(intn) < 0) {
                 yasm_error_set(YASM_ERROR_VALUE,
                                N_("isa value less than zero"));
                 yasm_xfree(loc);
+                yasm_expr_destroy(e);
                 return;
             }
             loc->isa_change = 1;
             loc->isa = yasm_intnum_get_uint(intn);
+            yasm_expr_destroy(e);
+        } else if (!vp->val && (s = yasm_vp_id(vp))) {
+            if (yasm__strcasecmp(s, "is_stmt") == 0)
+                in_is_stmt = 1;
+            else if (yasm__strcasecmp(s, "isa") == 0)
+                in_isa = 1;
+            else if (yasm__strcasecmp(s, "basic_block") == 0)
+                loc->basic_block = 1;
+            else if (yasm__strcasecmp(s, "prologue_end") == 0)
+                loc->prologue_end = 1;
+            else if (yasm__strcasecmp(s, "epilogue_begin") == 0)
+                loc->epilogue_begin = 1;
+            else
+                yasm_warn_set(YASM_WARN_GENERAL,
+                              N_("unrecognized loc option `%s'"), s);
+        } else if (!vp->val) {
+            yasm_warn_set(YASM_WARN_GENERAL,
+                          N_("unrecognized numeric qualifier"));
+        } else if (yasm__strcasecmp(vp->val, "is_stmt") == 0) {
+            in_is_stmt = 1;
+            goto restart; /* don't go to the next valparam */
+        } else if (yasm__strcasecmp(vp->val, "isa") == 0) {
+            in_isa = 1;
+            goto restart; /* don't go to the next valparam */
         } else
             yasm_warn_set(YASM_WARN_GENERAL,
                           N_("unrecognized loc option `%s'"), vp->val);
+        vp = yasm_vps_next(vp);
+    }
+
+    if (in_is_stmt || in_isa) {
+        yasm_error_set(YASM_ERROR_SYNTAX, N_("%s requires value"),
+                       in_is_stmt ? "is_stmt" : "isa");
+        yasm_xfree(loc);
+        return;
     }
 
     /* Append new location */
@@ -992,15 +1025,15 @@ yasm_dwarf2__dir_file(yasm_object *object, yasm_valparamhead *valparams,
     }
 
     vp = yasm_vps_first(valparams);
-    if (vp->val) {
+    if (yasm_vp_string(vp)) {
         /* Just a bare filename */
-        yasm_object_set_source_fn(object, vp->val);
+        yasm_object_set_source_fn(object, yasm_vp_string(vp));
         return;
     }
 
     /* Otherwise.. first vp is the file number */
-    file_intn = yasm_expr_get_intnum(&vp->param, 0);
-    if (!file_intn) {
+    if (vp->type != YASM_PARAM_EXPR ||
+        !(file_intn = yasm_expr_get_intnum(&vp->param.e, 0))) {
         yasm_error_set(YASM_ERROR_NOT_CONSTANT,
                        N_("file number is not a constant"));
         return;
@@ -1008,11 +1041,11 @@ yasm_dwarf2__dir_file(yasm_object *object, yasm_valparamhead *valparams,
     filenum = yasm_intnum_get_uint(file_intn);
 
     vp = yasm_vps_next(vp);
-    if (!vp || !vp->val) {
+    if (!yasm_vp_string(vp)) {
         yasm_error_set(YASM_ERROR_SYNTAX,
                        N_("file number given but no filename"));
         return;
     }
 
-    dwarf2_dbgfmt_add_file(dbgfmt_dwarf2, filenum, vp->val);
+    dwarf2_dbgfmt_add_file(dbgfmt_dwarf2, filenum, yasm_vp_string(vp));
 }

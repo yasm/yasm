@@ -412,87 +412,73 @@ bin_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     yasm_section *retval;
     int isnew;
     unsigned long start;
-    char *sectname;
+    const char *sectname;
     int resonly = 0;
+    /*@only@*/ /*@null@*/ yasm_intnum *align_intn = NULL;
     unsigned long align = 4;
     int have_align = 0;
 
-    if ((vp = yasm_vps_first(valparams)) && !vp->param && vp->val != NULL) {
-        /* If it's the first section output (.text) start at 0, otherwise
-         * make sure the start is > 128.
-         */
-        sectname = vp->val;
-        if (strcmp(sectname, ".text") == 0)
-            start = 0;
-        else if (strcmp(sectname, ".data") == 0)
-            start = 200;
-        else if (strcmp(sectname, ".bss") == 0) {
-            start = 200;
-            resonly = 1;
-        } else {
-            /* other section names not recognized. */
-            yasm_error_set(YASM_ERROR_GENERAL,
-                           N_("segment name `%s' not recognized"), sectname);
+    static const yasm_dir_help help[] = {
+        { "align", 1, yasm_dir_helper_intn, 0, 0 }
+    };
+
+    vp = yasm_vps_first(valparams);
+    sectname = yasm_vp_string(vp);
+    if (!sectname)
+        return NULL;
+    vp = yasm_vps_next(vp);
+
+    /* If it's the first section output (.text) start at 0, otherwise
+     * make sure the start is > 128.
+     */
+    if (strcmp(sectname, ".text") == 0)
+        start = 0;
+    else if (strcmp(sectname, ".data") == 0)
+        start = 200;
+    else if (strcmp(sectname, ".bss") == 0) {
+        start = 200;
+        resonly = 1;
+    } else {
+        /* other section names not recognized. */
+        yasm_error_set(YASM_ERROR_GENERAL,
+                       N_("segment name `%s' not recognized"), sectname);
+        return NULL;
+    }
+
+    have_align = yasm_dir_helper(object, vp, line, help, NELEMS(help),
+                                 &align_intn, yasm_dir_helper_valparam_warn);
+    if (have_align < 0)
+        return NULL;    /* error occurred */
+
+    if (align_intn) {
+        align = yasm_intnum_get_uint(align_intn);
+        yasm_intnum_destroy(align_intn);
+
+        /* Alignments must be a power of two. */
+        if (!is_exp2(align)) {
+            yasm_error_set(YASM_ERROR_VALUE,
+                           N_("argument to `%s' is not a power of two"),
+                           "align");
             return NULL;
         }
+    }
 
-        /* Check for ALIGN qualifier */
-        while ((vp = yasm_vps_next(vp))) {
-            if (!vp->val) {
-                yasm_warn_set(YASM_WARN_GENERAL,
-                              N_("Unrecognized numeric qualifier"));
-                continue;
-            }
+    retval = yasm_object_get_general(object, sectname,
+        yasm_expr_create_ident(
+            yasm_expr_int(yasm_intnum_create_uint(start)), line), align,
+        strcmp(sectname, ".text") == 0, resonly, &isnew, line);
 
-            if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
-                /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
+    if (isnew)
+        bin_objfmt_init_new_section(object, retval, sectname, line);
 
-                if (strcmp(sectname, ".text") == 0) {
-                    yasm_error_set(YASM_ERROR_GENERAL,
-                        N_("cannot specify an alignment to the `%s' section"),
-                        sectname);
-                    return NULL;
-                }
-                
-                align_expr = yasm_expr_get_intnum(&vp->param, 0);
-                if (!align_expr) {
-                    yasm_error_set(YASM_ERROR_VALUE,
-                                N_("argument to `%s' is not an integer"),
-                                vp->val);
-                    return NULL;
-                }
-                align = yasm_intnum_get_uint(align_expr);
+    if (isnew || yasm_section_is_default(retval)) {
+        yasm_section_set_default(retval, 0);
+        yasm_section_set_align(retval, align, line);
+    } else if (have_align)
+        yasm_warn_set(YASM_WARN_GENERAL,
+            N_("alignment value ignored on section redeclaration"));
 
-                /* Alignments must be a power of two. */
-                if (!is_exp2(align)) {
-                    yasm_error_set(YASM_ERROR_VALUE,
-                                N_("argument to `%s' is not a power of two"),
-                                vp->val);
-                    return NULL;
-                }
-
-                have_align = 1;
-            }
-        }
-
-        retval = yasm_object_get_general(object, sectname,
-            yasm_expr_create_ident(
-                yasm_expr_int(yasm_intnum_create_uint(start)), line), align,
-            strcmp(sectname, ".text") == 0, resonly, &isnew, line);
-
-        if (isnew)
-            bin_objfmt_init_new_section(object, retval, sectname, line);
-
-        if (isnew || yasm_section_is_default(retval)) {
-            yasm_section_set_default(retval, 0);
-            yasm_section_set_align(retval, align, line);
-        } else if (have_align)
-            yasm_warn_set(YASM_WARN_GENERAL,
-                N_("alignment value ignored on section redeclaration"));
-
-        return retval;
-    } else
-        return NULL;
+    return retval;
 }
 
 static void
@@ -503,25 +489,11 @@ bin_objfmt_dir_org(yasm_object *object,
 {
     yasm_section *sect;
     yasm_valparam *vp;
-
-    /*@null@*/ yasm_expr *start = NULL;
-
-    if (!valparams) {
-        yasm_error_set(YASM_ERROR_SYNTAX, N_("[%s] requires an argument"),
-                       "ORG");
-        return;
-    }
+    /*@only@*/ /*@null@*/ yasm_expr *start;
 
     /* ORG takes just a simple integer as param */
     vp = yasm_vps_first(valparams);
-    if (vp->val)
-        start = yasm_expr_create_ident(yasm_expr_sym(yasm_symtab_use(
-            object->symtab, vp->val, line)), line);
-    else if (vp->param) {
-        start = vp->param;
-        vp->param = NULL;       /* Don't let valparams delete it */
-    }
-
+    start = yasm_vp_expr(vp, object->symtab, line);
     if (!start) {
         yasm_error_set(YASM_ERROR_SYNTAX,
                        N_("argument to ORG must be expression"));

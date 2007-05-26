@@ -65,8 +65,6 @@ static void nasm_parser_directive
     (yasm_parser_nasm *parser_nasm, const char *name,
      /*@null@*/ yasm_valparamhead *valparams,
      /*@null@*/ yasm_valparamhead *objext_valparams);
-static int fix_directive_symrec(/*@null@*/ yasm_expr__item *ei,
-                                /*@null@*/ void *d);
 static void define_label(yasm_parser_nasm *parser_nasm, /*@only@*/ char *name,
                          int local);
 
@@ -394,63 +392,54 @@ parse_directive_valparams(yasm_parser_nasm *parser_nasm,
     for (;;) {
         yasm_valparam *vp;
         yasm_expr *e;
+        char *id = NULL;
 
-        switch (curtok) {
-            case STRING:
-                vp = yasm_vp_create(STRING_val.contents, NULL);
-                get_next_token();
-                break;
-            case ID:
-            {
-                char *id = ID_val;
-                get_peek_token(parser_nasm);
-                if (parser_nasm->peek_token == '=') {
-                    get_next_token(); /* id */
-                    get_next_token(); /* = */
-                    e = parse_expr(parser_nasm, DIR_EXPR);
-                    if (!e) {
-                        yasm_vps_delete(vps);
-                        return 0;
-                    }
-                    yasm_expr__traverse_leaves_in(e, parser_nasm,
-                                                  fix_directive_symrec);
-                    vp = yasm_vp_create(id, e);
-                    break;
-                }
-                if (parser_nasm->peek_token == ','
-                    || parser_nasm->peek_token == ']'
-                    || parser_nasm->peek_token == ':') {
-                    /* Try to catch just IDs here first */
-                    get_next_token(); /* id */
-                    vp = yasm_vp_create(id, NULL);
-                    break;
-                }
-                /*@fallthrough@*/
-            }
-            default:
-            {
-                /* If direxpr is just an ID, put it in val and delete the expr.
-                 * Otherwise, we need to go through the expr and replace the
-                 * current (local) symrecs with the use of global ones.
-                 */
-                const /*@null@*/ yasm_symrec *vp_symrec;
-                e = parse_expr(parser_nasm, DIR_EXPR);
-                if (!e) {
-                    yasm_vps_delete(vps);
-                    return 0;
-                }
-                if ((vp_symrec = yasm_expr_get_symrec(&e, 0))) {
-                    vp = yasm_vp_create(
-                        yasm__xstrdup(yasm_symrec_get_name(vp_symrec)), NULL);
-                    yasm_expr_destroy(e);
-                } else {
-                    yasm_expr__traverse_leaves_in(e, parser_nasm,
-                                                  fix_directive_symrec);
-                    vp = yasm_vp_create(NULL, e);
-                }
+        /* Look for value first */
+        if (curtok == ID) {
+            get_peek_token(parser_nasm);
+            if (parser_nasm->peek_token == '=') {
+                id = ID_val;
+                get_next_token(); /* id */
+                get_next_token(); /* '=' */
             }
         }
 
+        /* Look for parameter */
+        switch (curtok) {
+            case STRING:
+                vp = yasm_vp_create_string(id, STRING_val.contents);
+                get_next_token();
+                break;
+            case ID:
+                /* We need a peek token, but avoid error if we have one
+                 * already; we need to work whether or not we hit the
+                 * "value=" if test above.
+                 *
+                 * We cheat and peek ahead to see if this is just an ID or
+                 * the ID is part of an expression.  We assume a + or - means
+                 * that it's part of an expression (e.g. "x+y" is parsed as
+                 * the expression "x+y" and not as "x", "+y").
+                 */
+                if (parser_nasm->peek_token == NONE)
+                    get_peek_token(parser_nasm);
+                switch (parser_nasm->peek_token) {
+                    case '|': case '^': case '&': case LEFT_OP: case RIGHT_OP:
+                    case '+': case '-':
+                    case '*': case '/': case '%': case SIGNDIV: case SIGNMOD:
+                        break;
+                    default:
+                        /* Just an id */
+                        vp = yasm_vp_create_id(id, ID_val, '$');
+                        get_next_token();
+                        goto next;
+                }
+                /*@fallthrough@*/
+            default:
+                e = parse_expr(parser_nasm, DIR_EXPR);
+                vp = yasm_vp_create_expr(id, e);
+                break;
+        }
+next:
         yasm_vps_append(vps, vp);
         if (curtok == ',')
             get_next_token();
@@ -985,9 +974,8 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
             e = p_expr_new_ident(yasm_expr_reg(REG_val[0]));
             break;
         case ID:
-            e = p_expr_new_ident(yasm_expr_sym(
-                yasm_symtab_define_label(p_symtab, ID_val,
-                    yasm_section_bcs_first(cursect), 0, cur_line)));
+            sym = yasm_symtab_use(p_symtab, ID_val, cur_line);
+            e = p_expr_new_ident(yasm_expr_sym(sym));
             yasm_xfree(ID_val);
             break;
         default:
@@ -1098,21 +1086,6 @@ define_label(yasm_parser_nasm *parser_nasm, char *name, int local)
         yasm_symtab_define_label(p_symtab, name, parser_nasm->prev_bc, 1,
                                  cur_line);
     yasm_xfree(name);
-}
-
-static int
-fix_directive_symrec(yasm_expr__item *ei, void *d)
-{
-    yasm_parser_nasm *parser_nasm = (yasm_parser_nasm *)d;
-    if (!ei || ei->type != YASM_EXPR_SYM)
-        return 0;
-
-    /* FIXME: Delete current symrec */
-    ei->data.sym =
-        yasm_symtab_use(p_symtab, yasm_symrec_get_name(ei->data.sym),
-                        cur_line);
-
-    return 0;
 }
 
 static void

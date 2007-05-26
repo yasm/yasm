@@ -645,99 +645,107 @@ xdf_objfmt_add_default_section(yasm_object *object)
     return retval;
 }
 
+static int
+xdf_helper_use(void *obj, yasm_valparam *vp, unsigned long line, void *d,
+               uintptr_t bits)
+{
+    yasm_object *object = (yasm_object *)obj;
+    unsigned long *flags = (unsigned long *)d;
+    *flags &= ~(XDF_SECT_USE_16|XDF_SECT_USE_32|XDF_SECT_USE_64);
+    switch (bits) {
+        case 16: *flags |= XDF_SECT_USE_16; break;
+        case 32: *flags |= XDF_SECT_USE_32; break;
+        case 64: *flags |= XDF_SECT_USE_64; break;
+    };
+    yasm_arch_set_var(object->arch, "mode_bits", bits);
+    return 0;
+}
+
 static /*@observer@*/ /*@null@*/ yasm_section *
 xdf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
                           /*@unused@*/ /*@null@*/
                           yasm_valparamhead *objext_valparams,
                           unsigned long line)
 {
-    yasm_valparam *vp = yasm_vps_first(valparams);
+    yasm_valparam *vp;
     yasm_section *retval;
     int isnew;
-    /*@dependent@*/ /*@null@*/ const yasm_intnum *absaddr = NULL;
-    /*@dependent@*/ /*@null@*/ const yasm_intnum *vaddr = NULL;
-    unsigned long align = 0;
-    unsigned long flags = 0;
     int flags_override = 0;
-    char *sectname;
+    const char *sectname;
     int resonly = 0;
     xdf_section_data *xsd;
+    unsigned long align = 0;
 
-    if (!vp || vp->param || !vp->val)
+    struct xdf_section_switch_data {
+        /*@only@*/ /*@null@*/ yasm_intnum *absaddr;
+        /*@only@*/ /*@null@*/ yasm_intnum *vaddr;
+        /*@only@*/ /*@null@*/ yasm_intnum *align_intn;
+        unsigned long flags;
+    } data;
+
+    static const yasm_dir_help help[] = {
+        { "use16", 0, xdf_helper_use,
+          offsetof(struct xdf_section_switch_data, flags), 16 },
+        { "use32", 0, xdf_helper_use,
+          offsetof(struct xdf_section_switch_data, flags), 32 },
+        { "use64", 0, xdf_helper_use,
+          offsetof(struct xdf_section_switch_data, flags), 64 },
+        { "bss", 0, yasm_dir_helper_flag_or,
+          offsetof(struct xdf_section_switch_data, flags), XDF_SECT_BSS },
+        { "flat", 0, yasm_dir_helper_flag_or,
+          offsetof(struct xdf_section_switch_data, flags), XDF_SECT_FLAT },
+        { "absolute", 1, yasm_dir_helper_intn,
+          offsetof(struct xdf_section_switch_data, absaddr), 0 },
+        { "virtual", 1, yasm_dir_helper_intn,
+          offsetof(struct xdf_section_switch_data, vaddr), 0 },
+        { "align", 1, yasm_dir_helper_intn,
+          offsetof(struct xdf_section_switch_data, align_intn), 0 }
+    };
+
+    data.absaddr = NULL;
+    data.vaddr = NULL;
+    data.align_intn = NULL;
+    data.flags = 0;
+
+    vp = yasm_vps_first(valparams);
+    sectname = yasm_vp_string(vp);
+    if (!sectname)
         return NULL;
+    vp = yasm_vps_next(vp);
 
-    sectname = vp->val;
+    flags_override = yasm_dir_helper(object, vp, line, help, NELEMS(help),
+                                     &data, yasm_dir_helper_valparam_warn);
+    if (flags_override < 0)
+        return NULL;    /* error occurred */
 
-    while ((vp = yasm_vps_next(vp))) {
-        if (!vp->val) {
-            yasm_warn_set(YASM_WARN_GENERAL,
-                          N_("Unrecognized numeric qualifier"));
-            continue;
+    if (data.absaddr)
+        data.flags |= XDF_SECT_ABSOLUTE;
+    if (data.align_intn) {
+        align = yasm_intnum_get_uint(data.align_intn);
+        yasm_intnum_destroy(data.align_intn);
+
+        /* Alignments must be a power of two. */
+        if (!is_exp2(align)) {
+            yasm_error_set(YASM_ERROR_VALUE,
+                           N_("argument to `%s' is not a power of two"),
+                           "align");
+            if (data.vaddr)
+                yasm_intnum_destroy(data.vaddr);
+            if (data.absaddr)
+                yasm_intnum_destroy(data.absaddr);
+            return NULL;
         }
 
-        flags_override = 1;
-        if (yasm__strcasecmp(vp->val, "use16") == 0) {
-            flags &= ~(XDF_SECT_USE_32|XDF_SECT_USE_64);
-            flags |= XDF_SECT_USE_16;
-            yasm_arch_set_var(object->arch, "mode_bits", 16);
-        } else if (yasm__strcasecmp(vp->val, "use32") == 0) {
-            flags &= ~(XDF_SECT_USE_16|XDF_SECT_USE_64);
-            flags |= XDF_SECT_USE_32;
-            yasm_arch_set_var(object->arch, "mode_bits", 32);
-        } else if (yasm__strcasecmp(vp->val, "use64") == 0) {
-            flags &= ~(XDF_SECT_USE_16|XDF_SECT_USE_32);
-            flags |= XDF_SECT_USE_64;
-            yasm_arch_set_var(object->arch, "mode_bits", 64);
-        } else if (yasm__strcasecmp(vp->val, "bss") == 0) {
-            flags |= XDF_SECT_BSS;
-        } else if (yasm__strcasecmp(vp->val, "flat") == 0) {
-            flags |= XDF_SECT_FLAT;
-        } else if (yasm__strcasecmp(vp->val, "absolute") == 0 && vp->param) {
-            flags |= XDF_SECT_ABSOLUTE;
-            absaddr = yasm_expr_get_intnum(&vp->param, 0);
-            if (!absaddr) {
-                yasm_error_set(YASM_ERROR_NOT_CONSTANT,
-                               N_("argument to `%s' is not an integer"),
-                               vp->val);
-                return NULL;
-            }
-        } else if (yasm__strcasecmp(vp->val, "virtual") == 0 && vp->param) {
-            vaddr = yasm_expr_get_intnum(&vp->param, 0);
-            if (!vaddr) {
-                yasm_error_set(YASM_ERROR_NOT_CONSTANT,
-                               N_("argument to `%s' is not an integer"),
-                               vp->val);
-                return NULL;
-            }
-        } else if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
-            /*@dependent@*/ /*@null@*/ const yasm_intnum *align_expr;
-
-            align_expr = yasm_expr_get_intnum(&vp->param, 0);
-            if (!align_expr) {
-                yasm_error_set(YASM_ERROR_VALUE,
-                               N_("argument to `%s' is not an integer"),
-                               vp->val);
-                return NULL;
-            }
-            align = yasm_intnum_get_uint(align_expr);
-
-            /* Alignments must be a power of two. */
-            if (!is_exp2(align)) {
-                yasm_error_set(YASM_ERROR_VALUE,
-                               N_("argument to `%s' is not a power of two"),
-                               vp->val);
-                return NULL;
-            }
-
-            /* Check to see if alignment is supported size */
-            if (align > 4096) {
-                yasm_error_set(YASM_ERROR_VALUE,
-                               N_("XDF does not support alignments > 4096"));
-                return NULL;
-            }
-        } else
-            yasm_warn_set(YASM_WARN_GENERAL, N_("Unrecognized qualifier `%s'"),
-                          vp->val);
+        /* Check to see if alignment is supported size */
+        if (align > 4096) {
+            yasm_error_set(YASM_ERROR_VALUE,
+                           N_("XDF does not support alignments > 4096"));
+            if (data.vaddr)
+                yasm_intnum_destroy(data.vaddr);
+            if (data.absaddr)
+                yasm_intnum_destroy(data.absaddr);
+            return NULL;
+        }
     }
 
     retval = yasm_object_get_general(object, sectname, 0, align, 1, resonly,
@@ -750,16 +758,16 @@ xdf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
 
     if (isnew || yasm_section_is_default(retval)) {
         yasm_section_set_default(retval, 0);
-        xsd->flags = flags;
-        if (absaddr) {
+        xsd->flags = data.flags;
+        if (data.absaddr) {
             if (xsd->addr)
                 yasm_intnum_destroy(xsd->addr);
-            xsd->addr = yasm_intnum_copy(absaddr);
+            xsd->addr = data.absaddr;
         }
-        if (vaddr) {
+        if (data.vaddr) {
             if (xsd->vaddr)
                 yasm_intnum_destroy(xsd->vaddr);
-            xsd->vaddr = yasm_intnum_copy(vaddr);
+            xsd->vaddr = data.vaddr;
         }
         yasm_section_set_align(retval, align, line);
     } else if (flags_override)
