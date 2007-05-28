@@ -340,6 +340,22 @@ int yasm_dir_helper_flag_and(void *obj, yasm_valparam *vp, unsigned long line,
 int yasm_dir_helper_intn(void *obj, yasm_valparam *vp, unsigned long line,
                          void *data, uintptr_t arg);
 
+/** Standard helper for yasm_dir_helper() that parses an string (or
+ * standalone identifier) parameter.
+ * The #yasm_dir_help structure that uses this function should have
+ * needsparam=1.  The data parameter that is ultimately passed to this
+ * function (e.g. yasm_dir_helper() data parameter plus #yasm_dir_help.off)
+ * must point to a char * initialized to NULL.
+ * \param obj   unused
+ * \param vp    valparam
+ * \param line  unused
+ * \param data  pointer to char *
+ * \param arg   unused
+ * \return -1 on error, 0 otherwise.
+ */
+int yasm_dir_helper_string(void *obj, yasm_valparam *vp, unsigned long line,
+                           void *data, uintptr_t arg);
+
 /** Standard catch-all callback fro yasm_dir_helper().  Generates standard
  * warning for all valparams.
  * \param obj   unused

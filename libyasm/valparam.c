@@ -354,6 +354,25 @@ yasm_dir_helper_intn(void *obj, yasm_valparam *vp, unsigned long line,
 }
 
 int
+yasm_dir_helper_string(void *obj, yasm_valparam *vp, unsigned long line,
+                       void *data, uintptr_t arg)
+{
+    /*@dependent@*/ /*@null@*/ const char *local;
+    char **s = (char **)data;
+
+    if (*s)
+        yasm_xfree(*s);
+    if (!(local = yasm_vp_string(vp))) {
+        yasm_error_set(YASM_ERROR_VALUE,
+                       N_("argument to `%s' is not a string or identifier"),
+                       vp->val);
+        return -1;
+    }
+    *s = yasm__xstrdup(local);
+    return 0;
+}
+
+int
 yasm_dir_helper_valparam_warn(void *obj, yasm_valparam *vp,
                               unsigned long line, void *data)
 {
