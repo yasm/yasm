@@ -600,6 +600,26 @@ parse_line(yasm_parser_gas *parser_gas)
 	}
 
 	/* Other directives */
+        case DIR_EQU:
+            /* ID ',' expr */
+            get_next_token(); /* DIR_EQU */
+            if (!expect(ID)) return NULL;
+            id = ID_val;
+            get_next_token(); /* ID */
+            if (!expect(',')) {
+                yasm_xfree(id);
+                return NULL;
+            }
+            get_next_token(); /* ',' */
+            e = parse_expr(parser_gas);
+            if (e)
+                yasm_symtab_define_equ(p_symtab, id, e, cur_line);
+            else
+                yasm_error_set(YASM_ERROR_SYNTAX,
+                               N_("expression expected after `%s'"), ",");
+            yasm_xfree(id);
+            return NULL;
+
 	case DIR_FILE:
 	    get_next_token(); /* DIR_FILE */
 	    if (curtok == STRING) {
