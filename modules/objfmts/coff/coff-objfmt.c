@@ -1844,7 +1844,7 @@ dir_setframe(yasm_object *object, yasm_valparamhead *valparams,
     code->loc = get_curpos(object, "SETFRAME", line);
     code->opcode = UWOP_SET_FPREG;
     code->info = (unsigned int)(*reg & 0xF);
-    yasm_value_initialize(&code->off, yasm_expr_copy(off), 8);
+    yasm_value_initialize(&code->off, off ? yasm_expr_copy(off) : NULL, 8);
     SLIST_INSERT_HEAD(&objfmt_coff->unwind->codes, code, link);
 }
 
