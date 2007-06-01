@@ -131,10 +131,12 @@ yasm_linemap_poke(yasm_linemap *linemap, const char *filename,
                   unsigned long file_line)
 {
     unsigned long line;
-    line_mapping *mapping = &linemap->map->vector[linemap->map->size-1];
+    line_mapping *mapping;
 
     linemap->current++;
     yasm_linemap_set(linemap, filename, file_line, 0);
+
+    mapping = &linemap->map->vector[linemap->map->size-1];
 
     line = linemap->current;
 
