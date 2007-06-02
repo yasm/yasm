@@ -103,7 +103,8 @@ dir_extern(yasm_object *object, yasm_valparamhead *valparams,
 {
     yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_symrec *sym;
-    sym = yasm_symtab_declare(object->symtab, vp->val, YASM_SYM_EXTERN, line);
+    sym = yasm_symtab_declare(object->symtab, yasm_vp_id(vp), YASM_SYM_EXTERN,
+                              line);
     if (objext_valparams) {
 	yasm_valparamhead *vps = yasm_vps_create();
 	*vps = *objext_valparams;   /* structure copy */
@@ -118,7 +119,8 @@ dir_global(yasm_object *object, yasm_valparamhead *valparams,
 {
     yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_symrec *sym;
-    sym = yasm_symtab_declare(object->symtab, vp->val, YASM_SYM_GLOBAL, line);
+    sym = yasm_symtab_declare(object->symtab, yasm_vp_id(vp), YASM_SYM_GLOBAL,
+                              line);
     if (objext_valparams) {
 	yasm_valparamhead *vps = yasm_vps_create();
 	*vps = *objext_valparams;   /* structure copy */
@@ -141,7 +143,8 @@ dir_common(yasm_object *object, yasm_valparamhead *valparams,
 		       N_("no size specified in %s declaration"), "COMMON");
 	return;
     }
-    sym = yasm_symtab_declare(object->symtab, vp->val, YASM_SYM_COMMON, line);
+    sym = yasm_symtab_declare(object->symtab, yasm_vp_id(vp), YASM_SYM_COMMON,
+                              line);
     yasm_symrec_set_common_size(sym, size);
     if (objext_valparams) {
 	yasm_valparamhead *vps = yasm_vps_create();

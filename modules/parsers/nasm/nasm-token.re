@@ -605,9 +605,11 @@ directive2:
 	    RETURN(s->tok[0]);
 	}
 
-	/* forced identifier */
+        /* forced identifier; within directive, don't strip '$', this is
+         * handled later.
+         */
 	"$" [a-zA-Z0-9_$#@~.?]+ {
-	    lvalp->str_val = yasm__xstrndup(TOK+1, TOKLEN-1);
+            lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
 	    RETURN(ID);
 	}
 

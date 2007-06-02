@@ -101,6 +101,9 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
 
     if (parser_gas.dir_file)
 	yasm_xfree(parser_gas.dir_file);
+
+    /* Convert all undefined symbols into extern symbols */
+    yasm_symtab_parser_finalize(object->symtab, 1, errwarns);
 }
 
 /* Define valid preprocessors to use with this parser */

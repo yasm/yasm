@@ -439,7 +439,7 @@ parse_line(yasm_parser_gas *parser_gas)
 	    } else if (align) {
 		/* Give third parameter as objext valparam */
 		yasm_valparamhead *extvps = yasm_vps_create();
-		vp = yasm_vp_create(NULL, align);
+                vp = yasm_vp_create_expr(NULL, align);
 		yasm_vps_append(extvps, vp);
 
 		sym = yasm_symtab_declare(p_symtab, id, YASM_SYM_COMMON,
@@ -652,7 +652,7 @@ parse_line(yasm_parser_gas *parser_gas)
 
 		/* Pass change along to debug format */
 		yasm_vps_initialize(&vps);
-		vp = yasm_vp_create(filename, NULL);
+                vp = yasm_vp_create_string(NULL, filename);
 		yasm_vps_append(&vps, vp);
 
 		yasm_object_directive(p_object, ".file", "gas", &vps, NULL,
@@ -666,7 +666,7 @@ parse_line(yasm_parser_gas *parser_gas)
 	    yasm_vps_initialize(&vps);
 
 	    if (!expect(INTNUM)) return NULL;
-	    vp = yasm_vp_create(NULL,
+            vp = yasm_vp_create_expr(NULL,
 				p_expr_new_ident(yasm_expr_int(INTNUM_val)));
 	    yasm_vps_append(&vps, vp);
 	    get_next_token(); /* INTNUM */
@@ -675,7 +675,7 @@ parse_line(yasm_parser_gas *parser_gas)
 		yasm_vps_delete(&vps);
 		return NULL;
 	    }
-	    vp = yasm_vp_create(STRING_val.contents, NULL);
+            vp = yasm_vp_create_string(NULL, STRING_val.contents);
 	    yasm_vps_append(&vps, vp);
 	    get_next_token(); /* STRING */
 
@@ -771,18 +771,22 @@ parse_dirvals(yasm_parser_gas *parser_gas, yasm_valparamhead *vps)
 	switch (curtok) {
 	    case ID:
 		get_peek_token(parser_gas);
-		if (parser_gas->peek_token == ',' ||
-		    is_eol_tok(parser_gas->peek_token)) {
+                switch (parser_gas->peek_token) {
+                    case '+': case '-':
+                    case '|': case '^': case '&': case '!':
+                    case '*': case '/': case '%': case LEFT_OP: case RIGHT_OP:
+                        e = parse_expr(parser_gas);
+                        vp = yasm_vp_create_expr(NULL, e);
+                        break;
+                    default:
 		    /* Just an ID */
-		    vp = yasm_vp_create(ID_val, NULL);
+                        vp = yasm_vp_create_id(NULL, ID_val, '\0');
 		    get_next_token(); /* ID */
-		} else {
-		    e = parse_expr(parser_gas);
-		    vp = yasm_vp_create(NULL, e);
+                        break;
 		}
 		break;
 	    case STRING:
-		vp = yasm_vp_create(STRING_val.contents, NULL);
+                vp = yasm_vp_create_string(NULL, STRING_val.contents);
 		get_next_token(); /* STRING */
 		break;
 	    case '@':
@@ -793,7 +797,7 @@ parse_dirvals(yasm_parser_gas *parser_gas, yasm_valparamhead *vps)
 		e = parse_expr(parser_gas);
 		if (!e)
 		    return num;
-		vp = yasm_vp_create(NULL, e);
+                vp = yasm_vp_create_expr(NULL, e);
 		break;
 	}
 	yasm_vps_append(vps, vp);
@@ -1284,20 +1288,18 @@ gas_get_section(yasm_parser_gas *parser_gas, char *name,
     yasm_section *new_section;
 
     yasm_vps_initialize(&vps);
-    vp = yasm_vp_create(name, NULL);
+    vp = yasm_vp_create_id(NULL, name, '\0');
     yasm_vps_append(&vps, vp);
 
     if (!builtin) {
-	if (flags) {
-	    gasflags = yasm_xmalloc(5+strlen(flags));
-	    strcpy(gasflags, "gas_");
-	    strcat(gasflags, flags);
-	} else
-	    gasflags = yasm__xstrdup("gas_");
-	vp = yasm_vp_create(gasflags, NULL);
+        if (flags)
+            gasflags = yasm__xstrdup(flags);
+        else
+            gasflags = yasm__xstrdup("");
+        vp = yasm_vp_create_string(yasm__xstrdup("gasflags"), gasflags);
 	yasm_vps_append(&vps, vp);
 	if (type) {
-	    vp = yasm_vp_create(type, NULL);
+            vp = yasm_vp_create_id(NULL, type, '\0');
 	    yasm_vps_append(&vps, vp);
 	}
     }

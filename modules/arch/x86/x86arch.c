@@ -126,11 +126,12 @@ x86_dir_cpu(yasm_object *object, yasm_valparamhead *valparams,
 
     yasm_valparam *vp;
     yasm_vps_foreach(vp, valparams) {
-	if (vp->val)
-	    yasm_x86__parse_cpu(arch_x86, vp->val, strlen(vp->val));
-	else if (vp->param) {
+        /*@null@*/ /*@dependent@*/ const char *s = yasm_vp_string(vp);
+        if (s)
+            yasm_x86__parse_cpu(arch_x86, s, strlen(s));
+        else if (vp->type == YASM_PARAM_EXPR) {
 	    const yasm_intnum *intcpu;
-	    intcpu = yasm_expr_get_intnum(&vp->param, 0);
+            intcpu = yasm_expr_get_intnum(&vp->param.e, 0);
 	    if (!intcpu)
 		yasm_error_set(YASM_ERROR_SYNTAX,
 			       N_("invalid argument to [%s]"), "CPU");
@@ -139,8 +140,10 @@ x86_dir_cpu(yasm_object *object, yasm_valparamhead *valparams,
 		sprintf(strcpu, "%lu", yasm_intnum_get_uint(intcpu));
 		yasm_x86__parse_cpu(arch_x86, strcpu, strlen(strcpu));
 	    }
+        } else
+            yasm_error_set(YASM_ERROR_SYNTAX, N_("invalid argument to [%s]"),
+                           "CPU");
 	}
-    }
 }
 
 static void
@@ -149,17 +152,21 @@ x86_dir_bits(yasm_object *object, yasm_valparamhead *valparams,
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)object->arch;
     yasm_valparam *vp;
+    /*@only@*/ /*@null@*/ yasm_expr *e = NULL;
     const yasm_intnum *intn;
     long lval;
 
-    if ((vp = yasm_vps_first(valparams)) && !vp->val && vp->param != NULL &&
-	(intn = yasm_expr_get_intnum(&vp->param, 0)) != NULL &&
+    if ((vp = yasm_vps_first(valparams)) && !vp->val &&
+        (e = yasm_vp_expr(vp, object->symtab, line)) != NULL &&
+        (intn = yasm_expr_get_intnum(&e, 0)) != NULL &&
 	(lval = yasm_intnum_get_int(intn)) &&
 	(lval == 16 || lval == 32 || lval == 64))
 	arch_x86->mode_bits = (unsigned char)lval;
     else
 	yasm_error_set(YASM_ERROR_VALUE, N_("invalid argument to [%s]"),
 		       "BITS");
+    if (e)
+        yasm_expr_destroy(e);
 }
 
 static void

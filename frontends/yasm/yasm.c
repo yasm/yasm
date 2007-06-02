@@ -449,13 +449,6 @@ do_assemble(FILE *in)
 
     check_errors(errwarns, object, linemap);
 
-    /* Check for undefined symbols */
-    yasm_symtab_parser_finalize(object->symtab,
-				strcmp(cur_parser_module->keyword, "gas")==0 ||
-				strcmp(cur_parser_module->keyword, "gnu")==0,
-				errwarns);
-    check_errors(errwarns, object, linemap);
-
     /* Finalize parse */
     yasm_object_finalize(object, errwarns);
     check_errors(errwarns, object, linemap);

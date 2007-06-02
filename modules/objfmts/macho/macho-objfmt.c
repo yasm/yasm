@@ -281,8 +281,8 @@ typedef struct macho_reloc {
 typedef struct macho_section_data {
     /*@dependent@*/ yasm_symrec *sym; /* symbol created for this section */
     long scnum;			/* section number (0=first section) */
-    const char *segname;	/* segment name in file */
-    const char *sectname;	/* section name in file */
+    /*@only@*/ char *segname;   /* segment name in file */
+    /*@only@*/ char *sectname;  /* section name in file */
     unsigned long flags;	/* S_* flags */
     unsigned long size;		/* size of raw data (section data) in bytes */
     unsigned long offset;	/* offset in raw data within file in bytes */
@@ -720,10 +720,14 @@ macho_objfmt_is_section_label(yasm_symrec *sym)
 	 * If there is not a section, leave as debugging symbol.
 	 */
 	if (sect) {
-	    if (strcmp(yasm_symrec_get_name(sym),
-		       yasm_section_get_name(sect)) == 0)
+            /*@dependent@*/ /*@null@*/ macho_section_data *msd;
+
+            msd = yasm_section_get_data(sect, &macho_section_data_cb);
+            if (msd) {
+                if (msd->sym == sym)
 		return 1;	/* don't store section names */
 	}
+    }
     }
     return 0;
 }
@@ -872,14 +876,13 @@ macho_objfmt_output_symtable(yasm_symrec *sym, /*@null@*/ void *d)
 	    if (sect) {
 		/*@dependent@*/ /*@null@*/ macho_section_data *msd;
 
-		if (strcmp(yasm_symrec_get_name(sym),
-			   yasm_section_get_name(sect)) == 0) {
+                msd = yasm_section_get_data(sect, &macho_section_data_cb);
+                if (msd) {
+                    if (msd->sym == sym) {
 		    /* don't store section names */
 		    yasm_intnum_destroy(val);
 		    return 0;
 		}
-		msd = yasm_section_get_data(sect, &macho_section_data_cb);
-		if (msd) {
 		    scnum = msd->scnum;
 		    n_type = N_SECT;
 		} else
@@ -1249,8 +1252,8 @@ macho_objfmt_init_new_section(yasm_object *object, yasm_section *sect,
 
     data = yasm_xmalloc(sizeof(macho_section_data));
     data->scnum = objfmt_macho->parse_scnum++;
-    data->segname = "";
-    data->sectname = "";
+    data->segname = yasm__xstrdup("");
+    data->sectname = yasm__xstrdup("");
     data->flags = S_REGULAR;
     data->size = 0;
     data->nreloc = 0;
@@ -1270,11 +1273,12 @@ macho_objfmt_add_default_section(yasm_object *object)
     macho_section_data *msd;
     int isnew;
 
-    retval = yasm_object_get_general(object, ".text", 0, 0, 1, 0, &isnew, 0);
+    retval = yasm_object_get_general(object, "LC_SEGMENT.__TEXT.__text", 0, 0, 1, 0,
+                                     &isnew, 0);
     if (isnew) {
 	msd = macho_objfmt_init_new_section(object, retval, ".text", 0);
-	msd->segname = "__TEXT";
-	msd->sectname = "__text";
+        msd->segname = yasm__xstrdup("__TEXT");
+        msd->sectname = yasm__xstrdup("__text");
 	msd->flags = S_ATTR_PURE_INSTRUCTIONS;
 	yasm_section_set_align(retval, 0, 0);
 	yasm_section_set_default(retval, 1);
@@ -1288,14 +1292,15 @@ macho_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
 			    yasm_valparamhead *objext_valparams,
 			    unsigned long line)
 {
-    yasm_valparam *vp = yasm_vps_first(valparams);
+    yasm_valparam *vp;
     yasm_section *retval;
     int isnew;
-    const char *f_segname, *f_sectname;
+    /*@only@*/ char *f_sectname;
     unsigned long flags;
     unsigned long align;
     int flags_override = 0;
-    char *sectname;
+    const char *sectname;
+    char *realname;
     int resonly = 0;
     macho_section_data *msd;
     size_t i;
@@ -1365,10 +1370,26 @@ macho_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
 	    S_ATTR_NO_DEAD_STRIP, 0}
     };
 
-    if (!vp || vp->param || !vp->val)
-	return NULL;
+    struct macho_section_switch_data {
+        /*@only@*/ /*@null@*/ char *f_segname;
+        /*@only@*/ /*@null@*/ yasm_intnum *align_intn;
+    } data;
 
-    sectname = vp->val;
+    static const yasm_dir_help help[] = {
+        { "segname", 1, yasm_dir_helper_string,
+          offsetof(struct macho_section_switch_data, f_segname), 0 },
+        { "align", 1, yasm_dir_helper_intn,
+          offsetof(struct macho_section_switch_data, align_intn), 0 }
+    };
+
+    data.f_segname = NULL;
+    data.align_intn = NULL;
+
+    vp = yasm_vps_first(valparams);
+    sectname = yasm_vp_string(vp);
+    if (!sectname)
+        return NULL;
+    vp = yasm_vps_next(vp);
 
     /* translate .text,.data,.bss to __text,__data,__bss... */
     for (i=0; i<NELEMS(section_name_translation); i++) {
@@ -1377,35 +1398,46 @@ macho_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     }
 
     if (i == NELEMS(section_name_translation)) {
+        const char *s;
+        if (vp && !vp->val && (s = yasm_vp_string(vp))) {
+            /* Treat as SEGNAME, SECTNAME */
+            if (strlen(sectname) > 16)
 	yasm_warn_set(YASM_WARN_GENERAL,
-		      N_("Unknown section type, defaulting to .text"));
-	i = 0;
-    }
+                    N_("segment name is too long, max 16 chars; truncating"));
+            data.f_segname = yasm__xstrndup(sectname, 16);
+            if (strlen(s) > 16)
+                yasm_warn_set(YASM_WARN_GENERAL,
+                    N_("section name is too long, max 16 chars; truncating"));
+            f_sectname = yasm__xstrndup(s, 16);
+            flags = S_REGULAR;
+            align = 0;
 
-    f_segname = section_name_translation[i].seg;
-    f_sectname = section_name_translation[i].sect;
+            sectname = s;
+            vp = yasm_vps_next(vp);
+        } else {
+            data.f_segname = NULL;
+            if (strlen(sectname) > 16)
+                yasm_warn_set(YASM_WARN_GENERAL,
+                    N_("section name is too long, max 16 chars; truncating"));
+            f_sectname = yasm__xstrndup(sectname, 16);
+            flags = S_ATTR_SOME_INSTRUCTIONS;
+            align = 0;
+    }
+    } else {
+        data.f_segname = yasm__xstrdup(section_name_translation[i].seg);
+        f_sectname = yasm__xstrdup(section_name_translation[i].sect);
     flags = section_name_translation[i].flags;
     align = section_name_translation[i].align;
+    }
 
-    while ((vp = yasm_vps_next(vp))) {
-	if (!vp->val) {
-	    yasm_warn_set(YASM_WARN_GENERAL,
-			  N_("Unrecognized numeric qualifier"));
-	    continue;
-	}
+    flags_override = yasm_dir_helper(object, vp, line, help, NELEMS(help),
+                                     &data, yasm_dir_helper_valparam_warn);
+    if (flags_override < 0)
+        return NULL;    /* error occurred */
 
-	flags_override = 1;
-	if (yasm__strcasecmp(vp->val, "align") == 0 && vp->param) {
-	    /*@dependent@ *//*@null@ */ const yasm_intnum *align_expr;
-
-	    align_expr = yasm_expr_get_intnum(&vp->param, 0);
-	    if (!align_expr) {
-		yasm_error_set(YASM_ERROR_VALUE,
-			       N_("argument to `%s' is not an integer"),
-			       vp->val);
-		return NULL;
-	    }
-	    align = yasm_intnum_get_uint(align_expr);
+    if (data.align_intn) {
+        align = yasm_intnum_get_uint(data.align_intn);
+        yasm_intnum_destroy(data.align_intn);
 
 	    /* Alignments must be a power of two. */
 	    if (!is_exp2(align)) {
@@ -1421,13 +1453,21 @@ macho_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
 		    N_("macho implementation does not support alignments > 16384"));
 		return NULL;
 	    }
-	} else
-	    yasm_warn_set(YASM_WARN_GENERAL,
-			  N_("Unrecognized qualifier `%s'"), vp->val);
     }
 
-    retval = yasm_object_get_general(object, sectname, 0, align, 1, resonly,
+    if (!data.f_segname) {
+        yasm_warn_set(YASM_WARN_GENERAL,
+                      N_("Unknown section name, defaulting to __TEXT segment"));
+        data.f_segname = yasm__xstrdup("__TEXT");
+    }
+
+    /* Build a unique sectname from f_segname and f_sectname. */
+    realname = yasm_xmalloc(strlen("LC_SEGMENT") + 1 + strlen(data.f_segname) + 1 +
+                            strlen(f_sectname) + 1);
+    sprintf(realname, "LC_SEGMENT.%s.%s", data.f_segname, f_sectname);
+    retval = yasm_object_get_general(object, realname, 0, align, 1, resonly,
 				     &isnew, line);
+    yasm_xfree(realname);
 
     if (isnew)
 	msd = macho_objfmt_init_new_section(object, retval, sectname, line);
@@ -1436,7 +1476,7 @@ macho_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
 
     if (isnew || yasm_section_is_default(retval)) {
 	yasm_section_set_default(retval, 0);
-	msd->segname = f_segname;
+        msd->segname = data.f_segname;
 	msd->sectname = f_sectname;
 	msd->flags = flags;
 	yasm_section_set_align(retval, align, line);
@@ -1449,6 +1489,9 @@ macho_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
 static void
 macho_section_data_destroy(void *data)
 {
+    macho_section_data *msd = (macho_section_data *) data;
+    yasm_xfree(msd->segname);
+    yasm_xfree(msd->sectname);
     yasm_xfree(data);
 }
 

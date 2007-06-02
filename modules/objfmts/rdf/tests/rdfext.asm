@@ -1,5 +1,5 @@
 module thismodule
-module "$thismodule"
+module $thismodule
 global foo:export
 global bar:export proc
 global bar2:export function

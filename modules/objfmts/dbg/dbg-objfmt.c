@@ -126,8 +126,12 @@ dbg_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     yasm_vps_print(objext_valparams, objfmt_dbg->dbgfile);
     fprintf(objfmt_dbg->dbgfile, ", %lu), returning ", line);
 
-    if ((vp = yasm_vps_first(valparams)) && !vp->param && vp->val != NULL) {
-	retval = yasm_object_get_general(object, vp->val,
+    vp = yasm_vps_first(valparams);
+    if (!yasm_vp_string(vp)) {
+        fprintf(objfmt_dbg->dbgfile, "NULL\n");
+        return NULL;
+    }
+    retval = yasm_object_get_general(object, yasm_vp_string(vp),
 	    yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(200)),
 				   line), 0, 0, 0, &isnew, line);
 	if (isnew) {
@@ -138,10 +142,6 @@ dbg_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
 	yasm_section_set_default(retval, 0);
 	fprintf(objfmt_dbg->dbgfile, "\"%s\" section\n", vp->val);
 	return retval;
-    } else {
-	fprintf(objfmt_dbg->dbgfile, "NULL\n");
-	return NULL;
-    }
 }
 
 /* Define valid debug formats to use with this object format */
