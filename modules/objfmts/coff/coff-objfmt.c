@@ -311,6 +311,7 @@ win32_objfmt_create(yasm_object *object)
                              "x86") == 0) {
             objfmt_coff->machine = COFF_MACHINE_I386;
             objfmt_coff->objfmt.module = &yasm_win32_LTX_objfmt;
+            objfmt_coff->win64 = 0;
         } else if (yasm__strcasecmp(yasm_arch_get_machine(object->arch),
                                     "amd64") == 0) {
             objfmt_coff->machine = COFF_MACHINE_AMD64;
