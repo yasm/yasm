@@ -1,7 +1,7 @@
 /*
  * Null debugging format (creates NO debugging information)
  *
- *  Copyright (C) 2002  Peter Johnson
+ *  Copyright (C) 2002-2007  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

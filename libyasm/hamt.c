@@ -1,7 +1,7 @@
 /*
  * Hash Array Mapped Trie (HAMT) implementation
  *
- *  Copyright (C) 2001  Peter Johnson
+ *  Copyright (C) 2001-2007  Peter Johnson
  *
  *  Based on the paper "Ideal Hash Tries" by Phil Bagwell [2000].
  *  One algorithmic change from that described in the paper: we use the LSB's

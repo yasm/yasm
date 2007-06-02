@@ -1,7 +1,7 @@
 /* $Id$
  * LC-3b Architecture header file
  *
- *  Copyright (C) 2003  Peter Johnson
+ *  Copyright (C) 2003-2007  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

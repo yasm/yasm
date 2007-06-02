@@ -1,7 +1,7 @@
 /*
  * Floating point number functions.
  *
- *  Copyright (C) 2001  Peter Johnson
+ *  Copyright (C) 2001-2007  Peter Johnson
  *
  *  Based on public-domain x86 assembly code by Randall Hyde (8/28/91).
  *

@@ -1,7 +1,7 @@
 /*
  * NASM-compatible re2c lexer
  *
- *  Copyright (C) 2001  Peter Johnson
+ *  Copyright (C) 2001-2007  Peter Johnson
  *
  *  Portions based on re2c's example code.
  *

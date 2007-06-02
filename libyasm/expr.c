@@ -1,7 +1,7 @@
 /*
  * Expression handling
  *
- *  Copyright (C) 2001  Michael Urman, Peter Johnson
+ *  Copyright (C) 2001-2007  Michael Urman, Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

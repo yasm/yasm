@@ -1,7 +1,7 @@
 /*
  * File helper functions.
  *
- *  Copyright (C) 2001-2006  Peter Johnson
+ *  Copyright (C) 2001-2007  Peter Johnson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
