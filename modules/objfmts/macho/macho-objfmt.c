@@ -1252,12 +1252,14 @@ macho_objfmt_init_new_section(yasm_object *object, yasm_section *sect,
 
     data = yasm_xmalloc(sizeof(macho_section_data));
     data->scnum = objfmt_macho->parse_scnum++;
-    data->segname = yasm__xstrdup("");
-    data->sectname = yasm__xstrdup("");
+    data->segname = NULL;
+    data->sectname = NULL;
     data->flags = S_REGULAR;
     data->size = 0;
-    data->nreloc = 0;
     data->offset = 0;
+    data->vmoff = 0;
+    data->nreloc = 0;
+    data->extreloc = 0;
     yasm_section_add_data(sect, &macho_section_data_cb, data);
 
     sym = yasm_symtab_define_label(object->symtab, sectname,
@@ -1504,9 +1506,10 @@ macho_section_data_print(void *data, FILE *f, int indent_level)
     yasm_symrec_print(msd->sym, f, indent_level + 1);
     fprintf(f, "%*sscnum=%ld\n", indent_level, "", msd->scnum);
     fprintf(f, "%*sflags=0x%lx\n", indent_level, "", msd->flags);
-    fprintf(f, "%*ssize=%ld\n", indent_level, "", msd->size);
-    fprintf(f, "%*snreloc=%ld\n", indent_level, "", msd->nreloc);
-    fprintf(f, "%*soffset=%ld\n", indent_level, "", msd->offset);
+    fprintf(f, "%*ssize=%lu\n", indent_level, "", msd->size);
+    fprintf(f, "%*snreloc=%lu\n", indent_level, "", msd->nreloc);
+    fprintf(f, "%*soffset=%lu\n", indent_level, "", msd->offset);
+    fprintf(f, "%*sextreloc=%u\n", indent_level, "", msd->extreloc);
 }
 
 static void

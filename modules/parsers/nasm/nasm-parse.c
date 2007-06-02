@@ -436,6 +436,10 @@ parse_directive_valparams(yasm_parser_nasm *parser_nasm,
 		/*@fallthrough@*/
 	    default:
 		e = parse_expr(parser_nasm, DIR_EXPR);
+                if (!e) {
+                    yasm_vps_delete(vps);
+                    return 0;
+                }
                 vp = yasm_vp_create_expr(id, e);
                 break;
 		}
@@ -1100,8 +1104,7 @@ dir_align(yasm_object *object, yasm_valparamhead *valparams,
      * Note: this doesn't match NASM behavior, but is a lot more
      * intelligent!
      */
-    boundintn = yasm_expr_get_intnum(&boundval, 0);
-    if (boundintn) {
+    if (boundval && (boundintn = yasm_expr_get_intnum(&boundval, 0))) {
 	unsigned long boundint = yasm_intnum_get_uint(boundintn);
 
 	/* Alignments must be a power of two. */
@@ -1144,7 +1147,7 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 	parser_nasm->prev_bc = NULL;
     } else if (yasm__strcasecmp(name, "align") == 0) {
 	/* Really, we shouldn't end up with an align directive in an absolute
-	 * section (as it's supposed to be only used for nop fill, but handle
+         * section (as it's supposed to be only used for nop fill), but handle
 	 * it gracefully anyway.
 	 */
 	if (parser_nasm->abspos) {
@@ -1163,6 +1166,9 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
 		cur_line);
 	    parser_nasm->abspos = yasm_expr_create_tree(
 		parser_nasm->abspos, YASM_EXPR_ADD, e, cur_line);
+        } else if (!valparams) {
+            yasm_error_set(YASM_ERROR_SYNTAX,
+                           N_("directive `%s' requires an argument"), "align");
 	} else
 	    dir_align(p_object, valparams, objext_valparams, line);
     } else
