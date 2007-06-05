@@ -103,11 +103,13 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
     /*@null@*/ yasm_intnum *dist;
 
     for (i=0; i<e->numterms; i++) {
-	/* Transform symrecs that reference sections into
+        /* Transform symrecs or precbcs that reference sections into
 	 * start expr + intnum(dist).
 	 */
-	if (e->terms[i].type == YASM_EXPR_SYM &&
-	    yasm_symrec_get_label(e->terms[i].data.sym, &precbc) &&
+        if (((e->terms[i].type == YASM_EXPR_SYM &&
+             yasm_symrec_get_label(e->terms[i].data.sym, &precbc)) ||
+            (e->terms[i].type == YASM_EXPR_PRECBC &&
+             (precbc = e->terms[i].data.precbc))) &&
 	    (sect = yasm_bc_get_section(precbc)) &&
 	    (dist = yasm_calc_bc_dist(yasm_section_bcs_first(sect), precbc))) {
 	    const yasm_expr *start = yasm_section_get_start(sect);
@@ -135,17 +137,36 @@ bin_objfmt_output_value(yasm_value *value, unsigned char *buf,
     assert(info != NULL);
 
     /* Binary objects we need to resolve against object, not against section. */
-    if (value->rel && !value->curpos_rel
-	&& yasm_symrec_get_label(value->rel, &precbc)
-	&& (sect = yasm_bc_get_section(precbc))) {
+    if (value->rel) {
 	unsigned int rshift = (unsigned int)value->rshift;
 	yasm_expr *syme;
-	if (value->rshift > 0)
-	    syme = yasm_expr_create(YASM_EXPR_SHR, yasm_expr_sym(value->rel),
-		yasm_expr_int(yasm_intnum_create_uint(rshift)), bc->line);
-	else
-	    syme = yasm_expr_create_ident(yasm_expr_sym(value->rel), bc->line);
 
+        if (yasm_symrec_is_abs(value->rel)) {
+            syme = yasm_expr_create_ident(yasm_expr_int(
+                yasm_intnum_create_uint(0)), bc->line);
+        } else if (yasm_symrec_get_label(value->rel, &precbc)
+                   && (sect = yasm_bc_get_section(precbc))) {
+            syme = yasm_expr_create_ident(yasm_expr_sym(value->rel), bc->line);
+        } else
+            goto done;
+
+        /* Handle PC-relative */
+        if (value->curpos_rel) {
+            yasm_expr *sube;
+            sube = yasm_expr_create(YASM_EXPR_SUB, yasm_expr_precbc(bc),
+                yasm_expr_int(yasm_intnum_create_uint(bc->len*bc->mult_int)),
+                bc->line);
+            syme = yasm_expr_create(YASM_EXPR_SUB, yasm_expr_expr(syme),
+                                    yasm_expr_expr(sube), bc->line);
+            value->curpos_rel = 0;
+            value->ip_rel = 0;
+        } else
+
+	if (value->rshift > 0)
+            syme = yasm_expr_create(YASM_EXPR_SHR, yasm_expr_expr(syme),
+		yasm_expr_int(yasm_intnum_create_uint(rshift)), bc->line);
+
+        /* Add into absolute portion */
 	if (!value->abs)
 	    value->abs = syme;
 	else
@@ -155,7 +176,7 @@ bin_objfmt_output_value(yasm_value *value, unsigned char *buf,
 	value->rel = NULL;
 	value->rshift = 0;
     }
-
+done:
     /* Simplify absolute portion of value, transforming symrecs */
     if (value->abs)
 	value->abs = yasm_expr__level_tree
@@ -170,36 +191,6 @@ bin_objfmt_output_value(yasm_value *value, unsigned char *buf,
 	    break;
 	default:
 	    return 0;
-    }
-
-    /* Absolute value; handle it here as output_basic won't understand it */
-    if (value->rel && yasm_symrec_is_abs(value->rel)) {
-	if (value->curpos_rel) {
-	    /* Calculate value relative to current assembly position */
-	    /*@only@*/ yasm_intnum *outval;
-	    unsigned int valsize = value->size;
-	    int retval = 0;
-
-	    outval = yasm_intnum_create_uint(bc->offset + info->abs_start);
-	    yasm_intnum_calc(outval, YASM_EXPR_NEG, NULL);
-
-	    if (value->rshift > 0) {
-		/*@only@*/ yasm_intnum *shamt =
-		    yasm_intnum_create_uint((unsigned long)value->rshift);
-		yasm_intnum_calc(outval, YASM_EXPR_SHR, shamt);
-		yasm_intnum_destroy(shamt);
-	    }
-	    /* Add in absolute portion */
-	    if (value->abs)
-		yasm_intnum_calc(outval, YASM_EXPR_ADD,
-				 yasm_expr_get_intnum(&value->abs, 1));
-	    /* Output! */
-	    if (yasm_arch_intnum_tobytes(info->object->arch, outval, buf,
-					 destsize, valsize, 0, bc, warn))
-		retval = 1;
-	    yasm_intnum_destroy(outval);
-	    return retval;
-	}
     }
 
     /* Couldn't output, assume it contains an external reference. */
