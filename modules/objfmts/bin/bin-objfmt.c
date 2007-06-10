@@ -160,7 +160,7 @@ bin_objfmt_output_value(yasm_value *value, unsigned char *buf,
                                     yasm_expr_expr(sube), bc->line);
             value->curpos_rel = 0;
             value->ip_rel = 0;
-        } else
+        }
 
         if (value->rshift > 0)
             syme = yasm_expr_create(YASM_EXPR_SHR, yasm_expr_expr(syme),
