@@ -1135,9 +1135,17 @@ replace_extension(const char *orig, /*@null@*/ const char *ext,
                   const char *def)
 {
     char *out, *outext;
+    size_t deflen, outlen;
 
     /* allocate enough space for full existing name + extension */
-    out = yasm_xmalloc(strlen(orig)+(ext ? (strlen(ext)+2) : 1));
+    outlen = strlen(orig) + 2;
+    if (ext)
+        outlen += strlen(ext) + 1;
+    deflen = strlen(def) + 1;
+    if (outlen < deflen)
+        outlen = deflen;
+    out = yasm_xmalloc(outlen);
+
     strcpy(out, orig);
     outext = strrchr(out, '.');
     if (outext) {
