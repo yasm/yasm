@@ -869,7 +869,8 @@ expr_level_tree(yasm_expr *e, int fold_const, int simplify_ident,
         e->op = YASM_EXPR_IDENT;
         e->terms[0].data.expn->op = YASM_EXPR_IDENT;
         /* Destroy the second (offset) term */
-        expr_delete_term(&e->terms[1], 1);
+        e->terms[0].data.expn->numterms = 1;
+        expr_delete_term(&e->terms[0].data.expn->terms[1], 1);
     }
 
     /* do callback */
