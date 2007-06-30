@@ -420,6 +420,8 @@ expr_xform_neg_helper(/*@returned@*/ /*@only@*/ yasm_expr *e)
              */
             if (e->terms[0].type == YASM_EXPR_FLOAT)
                 yasm_floatnum_calc(e->terms[0].data.flt, YASM_EXPR_NEG, NULL);
+            else if (e->terms[0].type == YASM_EXPR_INT)
+                yasm_intnum_calc(e->terms[0].data.intn, YASM_EXPR_NEG, NULL);
             else if (e->terms[0].type == YASM_EXPR_EXPR &&
                 yasm_expr__contains(e->terms[0].data.expn, YASM_EXPR_FLOAT))
                     expr_xform_neg_helper(e->terms[0].data.expn);
