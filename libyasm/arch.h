@@ -114,7 +114,7 @@ typedef struct yasm_arch_module {
      * Call yasm_arch_create() instead of calling this function.
      */
     /*@only@*/ yasm_arch * (*create) (const char *machine, const char *parser,
-                                      yasm_arch_create_error *error);
+                                      /*@out@*/ yasm_arch_create_error *error);
 
     /** Module-level implementation of yasm_arch_destroy().
      * Call yasm_arch_destroy() instead of calling this function.
