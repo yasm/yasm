@@ -110,9 +110,9 @@ x86_set_var(yasm_arch *arch, const char *var, unsigned long val)
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     if (yasm__strcasecmp(var, "mode_bits") == 0)
-        arch_x86->mode_bits = (unsigned char)val;
+        arch_x86->mode_bits = (unsigned int)val;
     else if (yasm__strcasecmp(var, "force_strict") == 0)
-        arch_x86->force_strict = (unsigned char)val;
+        arch_x86->force_strict = (unsigned int)val;
     else
         return 1;
     return 0;
@@ -364,7 +364,7 @@ x86_get_fill(const yasm_arch *arch)
 }
 
 unsigned int
-yasm_x86__get_reg_size(yasm_arch *arch, uintptr_t reg)
+yasm_x86__get_reg_size(uintptr_t reg)
 {
     switch ((x86_expritem_reg_size)(reg & ~0xFUL)) {
         case X86_REG8:
@@ -388,6 +388,12 @@ yasm_x86__get_reg_size(yasm_arch *arch, uintptr_t reg)
             yasm_error_set(YASM_ERROR_VALUE, N_("unknown register size"));
     }
     return 0;
+}
+
+static unsigned int
+x86_get_reg_size(yasm_arch *arch, uintptr_t reg)
+{
+    return yasm_x86__get_reg_size(reg);
 }
 
 static uintptr_t
@@ -510,14 +516,16 @@ yasm_arch_module yasm_x86_LTX_arch = {
     yasm_x86__parse_check_insnprefix,
     yasm_x86__parse_check_regtmod,
     x86_get_fill,
-    yasm_x86__finalize_insn,
     yasm_x86__floatnum_tobytes,
     yasm_x86__intnum_tobytes,
-    yasm_x86__get_reg_size,
+    x86_get_reg_size,
     x86_reggroup_get_reg,
     x86_reg_print,
     x86_segreg_print,
     yasm_x86__ea_create_expr,
+    yasm_x86__ea_destroy,
+    yasm_x86__ea_print,
+    yasm_x86__create_empty_insn,
     x86_machines,
     "x86",
     16,

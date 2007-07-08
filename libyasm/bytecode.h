@@ -34,45 +34,6 @@
 #ifndef YASM_BYTECODE_H
 #define YASM_BYTECODE_H
 
-/** An effective address. */
-typedef struct yasm_effaddr yasm_effaddr;
-
-/** Callbacks for effective address implementations. */
-typedef struct yasm_effaddr_callback {
-    /** Destroy the effective address (freeing it).
-     * \param ea        effective address
-     */
-    void (*destroy) (/*@only@*/ yasm_effaddr *ea);
-
-    /** Print the effective address.
-     * \param ea                effective address
-     * \param f                 file to output to
-     * \param indent_level      indentation level
-     */
-    void (*print) (const yasm_effaddr *ea, FILE *f, int indent_level);
-} yasm_effaddr_callback;
-
-/** An effective address. */
-struct yasm_effaddr {
-    const yasm_effaddr_callback *callback;      /**< callback functions */
-
-    yasm_value disp;            /**< address displacement */
-
-    uintptr_t segreg;           /**< segment register override (0 if none) */
-
-    unsigned char need_nonzero_len; /**< 1 if length of disp must be >0. */
-    unsigned char need_disp;    /**< 1 if a displacement should be present
-                                 *   in the output.
-                                 */
-    unsigned char nosplit;      /**< 1 if reg*2 should not be split into
-                                 *   reg+reg. (0 if not)
-                                 */
-    unsigned char strong;       /**< 1 if effective address is *definitely*
-                                 *   an effective address, e.g. in GAS if
-                                 *   expr(,1) form is used vs. just expr.
-                                 */
-};
-
 /** A data value (opaque type). */
 typedef struct yasm_dataval yasm_dataval;
 /** A list of data values (opaque type). */
@@ -81,59 +42,6 @@ typedef struct yasm_datavalhead yasm_datavalhead;
 #ifdef YASM_LIB_INTERNAL
 /*@reldef@*/ STAILQ_HEAD(yasm_datavalhead, yasm_dataval);
 #endif
-
-/** Get the displacement portion of an effective address.
- * \param ea    effective address
- * \return Expression representing the displacement (read-only).
- */
-/*@observer@*/ const yasm_expr *yasm_ea_get_disp(const yasm_effaddr *ea);
-
-/** Set the length of the displacement portion of an effective address.
- * The length is specified in bits.
- * \param ea    effective address
- * \param len   length in bits
- */
-void yasm_ea_set_len(yasm_effaddr *ea, unsigned int len);
-
-/** Set/clear nosplit flag of an effective address.
- * The nosplit flag indicates (for architectures that support complex effective
- * addresses such as x86) if various types of complex effective addresses can
- * be split into different forms in order to minimize instruction length.
- * \param ea            effective address
- * \param nosplit       nosplit flag setting (0=splits allowed, nonzero=splits
- *                      not allowed)
- */
-void yasm_ea_set_nosplit(yasm_effaddr *ea, unsigned int nosplit);
-
-/** Set/clear strong flag of an effective address.
- * The strong flag indicates if an effective address is *definitely* an
- * effective address.  This is used in e.g. the GAS parser to differentiate
- * between "expr" (which might or might not be an effective address) and
- * "expr(,1)" (which is definitely an effective address).
- * \param ea            effective address
- * \param strong        strong flag setting (0=not strong, nonzero=strong)
- */
-void yasm_ea_set_strong(yasm_effaddr *ea, unsigned int strong);
-
-/** Set segment override for an effective address.
- * Some architectures (such as x86) support segment overrides on effective
- * addresses.  A override of an override will result in a warning.
- * \param ea            effective address
- * \param segreg        segment register (0 if none)
- */
-void yasm_ea_set_segreg(yasm_effaddr *ea, uintptr_t segreg);
-
-/** Delete (free allocated memory for) an effective address.
- * \param ea    effective address (only pointer to it).
- */
-void yasm_ea_destroy(/*@only@*/ yasm_effaddr *ea);
-
-/** Print an effective address.  For debugging purposes.
- * \param f             file
- * \param indent_level  indentation level
- * \param ea            effective address
- */
-void yasm_ea_print(const yasm_effaddr *ea, FILE *f, int indent_level);
 
 /** Set multiple field of a bytecode.
  * A bytecode can be repeated a number of times when output.  This function
@@ -226,42 +134,6 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
  */
 /*@only@*/ yasm_bytecode *yasm_bc_create_org
     (unsigned long start, unsigned long line);
-
-/** Create a bytecode that represents a single instruction.
- * \param arch          instruction's architecture
- * \param insn_data     data that identifies the type of instruction
- * \param num_operands  number of operands
- * \param operands      instruction operands (may be NULL if no operands)
- * \param line          virtual line (from yasm_linemap)
- * \return Newly allocated bytecode.
- * \note Keeps the list of operands; do not call yasm_ops_delete() after
- *       giving operands to this function.
- */
-/*@only@*/ yasm_bytecode *yasm_bc_create_insn
-    (yasm_arch *arch, const uintptr_t insn_data[4], int num_operands,
-     /*@null@*/ yasm_insn_operands *operands, unsigned long line);
-
-/** Create a bytecode that represents a single empty (0 length) instruction.
- * This is used for handling solitary prefixes.
- * \param arch          instruction's architecture
- * \param line          virtual line (from yasm_linemap)
- * \return Newly allocated bytecode.
- */
-/*@only@*/ yasm_bytecode *yasm_bc_create_empty_insn(yasm_arch *arch,
-                                                    unsigned long line);
-
-/** Associate a prefix with an instruction bytecode.
- * \param bc            instruction bytecode
- * \param prefix_data   data the identifies the prefix
- */
-void yasm_bc_insn_add_prefix(yasm_bytecode *bc,
-                             const uintptr_t prefix_data[4]);
-
-/** Associate a segment prefix with an instruction bytecode.
- * \param bc            instruction bytecode
- * \param segreg        data the identifies the segment register
- */
-void yasm_bc_insn_add_seg_prefix(yasm_bytecode *bc, uintptr_t segreg);
 
 /** Get the section that contains a particular bytecode.
  * \param bc    bytecode
@@ -403,6 +275,13 @@ int yasm_bc_get_multiple(yasm_bytecode *bc, /*@out@*/ long *multiple,
  * \return Bytecode multiple, NULL if =1.
  */
 const yasm_expr *yasm_bc_get_multiple_expr(const yasm_bytecode *bc);
+
+/** Get a #yasm_insn structure from an instruction bytecode (if possible).
+ * \param bc            bytecode
+ * \return Instruction details if bytecode is an instruction bytecode,
+ *         otherwise NULL.
+ */
+/*@dependent@*/ /*@null@*/ yasm_insn *yasm_bc_get_insn(yasm_bytecode *bc);
 
 /** Create a new data value from an expression.
  * \param expn  expression

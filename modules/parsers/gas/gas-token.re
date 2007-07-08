@@ -498,7 +498,7 @@ scan:
             savech = s->tok[TOKLEN];
             s->tok[TOKLEN] = '\0';
             switch (yasm_arch_parse_check_regtmod
-                    (p_object->arch, lvalp->arch_data, TOK+1, TOKLEN-1)) {
+                    (p_object->arch, TOK+1, TOKLEN-1, &lvalp->arch_data)) {
                 case YASM_ARCH_REG:
                     s->tok[TOKLEN] = savech;
                     RETURN(REG);
@@ -514,10 +514,7 @@ scan:
             yasm_error_set(YASM_ERROR_GENERAL,
                            N_("Unrecognized register name `%s'"), s->tok);
             s->tok[TOKLEN] = savech;
-            lvalp->arch_data[0] = 0;
-            lvalp->arch_data[1] = 0;
-            lvalp->arch_data[2] = 0;
-            lvalp->arch_data[3] = 0;
+            lvalp->arch_data = 0;
             RETURN(REG);
         }
 
@@ -539,15 +536,18 @@ scan:
              * instruction or directive.
              */
             if (parser_gas->state != INSTDIR) {
+                uintptr_t prefix;
                 savech = s->tok[TOKLEN];
                 s->tok[TOKLEN] = '\0';
                 switch (yasm_arch_parse_check_insnprefix
-                        (p_object->arch, lvalp->arch_data, TOK, TOKLEN)) {
+                        (p_object->arch, TOK, TOKLEN, cur_line, &lvalp->bc,
+                         &prefix)) {
                     case YASM_ARCH_INSN:
                         s->tok[TOKLEN] = savech;
                         parser_gas->state = INSTDIR;
                         RETURN(INSN);
                     case YASM_ARCH_PREFIX:
+                        lvalp->arch_data = prefix;
                         s->tok[TOKLEN] = savech;
                         RETURN(PREFIX);
                     default:

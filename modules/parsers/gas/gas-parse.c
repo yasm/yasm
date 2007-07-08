@@ -113,6 +113,9 @@ destroy_curtok_(yasm_parser_gas *parser_gas)
         case STRING:
             yasm_xfree(curval.str.contents);
             break;
+        case INSN:
+            yasm_bc_destroy(curval.bc);
+            break;
         default:
             break;
     }
@@ -699,59 +702,53 @@ parse_instr(yasm_parser_gas *parser_gas)
     switch (curtok) {
         case INSN:
         {
-            yystype insn = curval;      /* structure copy */
-            yasm_insn_operands operands;
-            int num_operands = 0;
+            yasm_insn *insn;
+            bc = INSN_val;
+            insn = yasm_bc_get_insn(bc);
 
             get_next_token();
-            if (is_eol()) {
-                /* no operands */
-                return yasm_bc_create_insn(p_object->arch, insn.arch_data,
-                                           0, NULL, cur_line);
-            }
+            if (is_eol())
+                return bc;      /* no operands */
 
             /* parse operands */
-            yasm_ops_initialize(&operands);
             for (;;) {
                 yasm_insn_operand *op = parse_operand(parser_gas);
                 if (!op) {
                     yasm_error_set(YASM_ERROR_SYNTAX,
                                    N_("expression syntax error"));
-                    yasm_ops_delete(&operands, 1);
+                    yasm_bc_destroy(bc);
                     return NULL;
                 }
-                yasm_ops_append(&operands, op);
-                num_operands++;
+                yasm_insn_ops_append(insn, op);
 
                 if (is_eol())
                     break;
                 if (!expect(',')) {
-                    yasm_ops_delete(&operands, 1);
+                    yasm_bc_destroy(bc);
                     return NULL;
                 }
                 get_next_token();
             }
-            return yasm_bc_create_insn(p_object->arch, insn.arch_data,
-                                       num_operands, &operands, cur_line);
+            return bc;
         }
         case PREFIX:
         {
-            yystype prefix = curval;    /* structure copy */
+            uintptr_t prefix = PREFIX_val;
             get_next_token(); /* PREFIX */
             bc = parse_instr(parser_gas);
             if (!bc)
-                bc = yasm_bc_create_empty_insn(p_object->arch, cur_line);
-            yasm_bc_insn_add_prefix(bc, prefix.arch_data);
+                bc = yasm_arch_create_empty_insn(p_object->arch, cur_line);
+            yasm_insn_add_prefix(yasm_bc_get_insn(bc), prefix);
             return bc;
         }
         case SEGREG:
         {
-            uintptr_t segreg = SEGREG_val[0];
+            uintptr_t segreg = SEGREG_val;
             get_next_token(); /* SEGREG */
             bc = parse_instr(parser_gas);
             if (!bc)
-                bc = yasm_bc_create_empty_insn(p_object->arch, cur_line);
-            yasm_bc_insn_add_seg_prefix(bc, segreg);
+                bc = yasm_arch_create_empty_insn(p_object->arch, cur_line);
+            yasm_insn_add_seg_prefix(yasm_bc_get_insn(bc), segreg);
         }
         default:
             return NULL;
@@ -869,7 +866,7 @@ parse_memaddr(yasm_parser_gas *parser_gas)
     int strong = 0;
 
     if (curtok == SEGREG) {
-        uintptr_t segreg = SEGREG_val[0];
+        uintptr_t segreg = SEGREG_val;
         get_next_token(); /* SEGREG */
         if (!expect(':')) return NULL;
         get_next_token(); /* ':' */
@@ -900,7 +897,7 @@ parse_memaddr(yasm_parser_gas *parser_gas)
 
         /* base register */
         if (curtok == REG) {
-            e2 = p_expr_new_ident(yasm_expr_reg(REG_val[0]));
+            e2 = p_expr_new_ident(yasm_expr_reg(REG_val));
             get_next_token(); /* REG */
         } else
             e2 = p_expr_new_ident(yasm_expr_int(yasm_intnum_create_uint(0)));
@@ -921,7 +918,7 @@ parse_memaddr(yasm_parser_gas *parser_gas)
 
         /* index register */
         if (curtok == REG) {
-            reg = REG_val[0];
+            reg = REG_val;
             havereg = 1;
             get_next_token(); /* REG */
             if (curtok != ',') {
@@ -978,7 +975,7 @@ done:
         return NULL;
     ea = yasm_arch_ea_create(p_object->arch, e1);
     if (strong)
-        yasm_ea_set_strong(ea, 1);
+        ea->strong = 1;
     return ea;
 }
 
@@ -991,7 +988,7 @@ parse_operand(yasm_parser_gas *parser_gas)
 
     switch (curtok) {
         case REG:
-            reg = REG_val[0];
+            reg = REG_val;
             get_next_token(); /* REG */
             return yasm_operand_create_reg(reg);
         case SEGREG:
@@ -1003,13 +1000,13 @@ parse_operand(yasm_parser_gas *parser_gas)
                     return NULL;
                 return yasm_operand_create_mem(ea);
             }
-            reg = SEGREG_val[0];
+            reg = SEGREG_val;
             get_next_token(); /* SEGREG */
             return yasm_operand_create_segreg(reg);
         case REGGROUP:
         {
             unsigned long regindex;
-            reg = REGGROUP_val[0];
+            reg = REGGROUP_val;
             get_next_token(); /* REGGROUP */
             if (curtok != '(')
                 return yasm_operand_create_reg(reg);
@@ -1050,7 +1047,7 @@ parse_operand(yasm_parser_gas *parser_gas)
         case '*':
             get_next_token(); /* '*' */
             if (curtok == REG) {
-                op = yasm_operand_create_reg(REG_val[0]);
+                op = yasm_operand_create_reg(REG_val);
                 get_next_token(); /* REG */
             } else {
                 ea = parse_memaddr(parser_gas);

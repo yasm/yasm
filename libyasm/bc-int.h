@@ -41,7 +41,8 @@ typedef struct yasm_bytecode_callback {
     enum yasm_bytecode_special_type {
         YASM_BC_SPECIAL_NONE = 0,
         YASM_BC_SPECIAL_RESERVE,/* Reserves space instead of outputting data */
-        YASM_BC_SPECIAL_OFFSET  /* Adjusts offset instead of calculating len */
+        YASM_BC_SPECIAL_OFFSET, /* Adjusts offset instead of calculating len */
+        YASM_BC_SPECIAL_INSN    /* Instruction bytecode */
     } special;
 } yasm_bytecode_callback;
 
@@ -100,6 +101,12 @@ void yasm_bc_transform(yasm_bytecode *bc,
  */
 void yasm_bc_finalize_common(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 
+/** Common bytecode callback calc_len function, for where the bytecode has
+ * no calculatable length.  Causes an internal error if called.
+ */
+int yasm_bc_calc_len_common(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+                            void *add_span_data);
+
 /** Common bytecode callback expand function, for where the bytecode is
  * always short (calc_len never calls add_span).  Causes an internal
  * error if called.
@@ -107,6 +114,14 @@ void yasm_bc_finalize_common(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 int yasm_bc_expand_common
     (yasm_bytecode *bc, int span, long old_val, long new_val,
      /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres);
+
+/** Common bytecode callback tobytes function, for where the bytecode
+ * cannot be converted to bytes.  Causes an internal error if called.
+ */
+int yasm_bc_tobytes_common
+    (yasm_bytecode *bc, unsigned char **bufp, void *d,
+     yasm_output_value_func output_value,
+     /*@null@*/ yasm_output_reloc_func output_reloc);
 
 #define yasm_bc__next(x)                STAILQ_NEXT(x, link)
 

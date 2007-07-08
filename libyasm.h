@@ -73,6 +73,7 @@ typedef unsigned long uintptr_t;
 
 #include <libyasm/bytecode.h>
 #include <libyasm/section.h>
+#include <libyasm/insn.h>
 
 #include <libyasm/arch.h>
 #include <libyasm/dbgfmt.h>

@@ -69,7 +69,8 @@ typedef union {
     char *str_val;
     yasm_intnum *intn;
     yasm_floatnum *flt;
-    uintptr_t arch_data[4];
+    yasm_bytecode *bc;
+    uintptr_t arch_data;
     struct {
         char *contents;
         size_t len;
@@ -144,7 +145,7 @@ typedef struct yasm_parser_nasm {
 #define SIZE_OVERRIDE_val       (curval.int_info)
 #define DECLARE_DATA_val        (curval.int_info)
 #define RESERVE_SPACE_val       (curval.int_info)
-#define INSN_val                (curval.arch_data)
+#define INSN_val                (curval.bc)
 #define PREFIX_val              (curval.arch_data)
 #define REG_val                 (curval.arch_data)
 #define SEGREG_val              (curval.arch_data)

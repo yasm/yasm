@@ -75,7 +75,8 @@ typedef union {
     char *str_val;
     yasm_intnum *intn;
     yasm_floatnum *flt;
-    uintptr_t arch_data[4];
+    yasm_bytecode *bc;
+    uintptr_t arch_data;
     struct {
         char *contents;
         size_t len;
@@ -160,7 +161,7 @@ typedef struct yasm_parser_gas {
 #define INTNUM_val              (curval.intn)
 #define FLTNUM_val              (curval.flt)
 #define STRING_val              (curval.str)
-#define INSN_val                (curval.arch_data)
+#define INSN_val                (curval.bc)
 #define PREFIX_val              (curval.arch_data)
 #define REG_val                 (curval.arch_data)
 #define REGGROUP_val            (curval.arch_data)

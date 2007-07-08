@@ -59,12 +59,6 @@ typedef enum yasm_arch_regtmod {
     YASM_ARCH_TARGETMOD                 /**< A target modifier (for jumps) */
 } yasm_arch_regtmod;
 
-/** An instruction operand (opaque type). */
-typedef struct yasm_insn_operand yasm_insn_operand;
-#ifdef YASM_LIB_INTERNAL
-/*@reldef@*/ STAILQ_HEAD(yasm_insn_operands, yasm_insn_operand);
-#endif
-
 #ifndef YASM_DOXYGEN
 /** Base #yasm_arch structure.  Must be present as the first element in any
  * #yasm_arch implementation.
@@ -140,29 +134,20 @@ typedef struct yasm_arch_module {
      * Call yasm_arch_parse_check_insnprefix() instead of calling this function.
      */
     yasm_arch_insnprefix (*parse_check_insnprefix)
-        (yasm_arch *arch, /*@out@*/ uintptr_t data[4], const char *id,
-         size_t id_len);
+        (yasm_arch *arch, const char *id, size_t id_len, unsigned long line,
+         /*@out@*/ /*@only@*/ yasm_bytecode **bc, /*@out@*/ uintptr_t *prefix);
 
     /** Module-level implementation of yasm_arch_parse_check_regtmod().
      * Call yasm_arch_parse_check_regtmod() instead of calling this function.
      */
     yasm_arch_regtmod (*parse_check_regtmod)
-        (yasm_arch *arch, /*@out@*/ uintptr_t *data, const char *id,
-         size_t id_len);
+        (yasm_arch *arch, const char *id, size_t id_len,
+         /*@out@*/ uintptr_t *data);
 
     /** Module-level implementation of yasm_arch_get_fill().
      * Call yasm_arch_get_fill() instead of calling this function.
      */
     const unsigned char ** (*get_fill) (const yasm_arch *arch);
-
-    /** Module-level implementation of yasm_arch_finalize_insn().
-     * Call yasm_arch_finalize_insn() instead of calling this function.
-     */
-    void (*finalize_insn)
-        (yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
-         const uintptr_t data[4], int num_operands,
-         /*@null@*/ yasm_insn_operands *operands, int num_prefixes,
-         uintptr_t **prefixes, int num_segregs, const uintptr_t *segregs);
 
     /** Module-level implementation of yasm_arch_floatnum_tobytes().
      * Call yasm_arch_floatnum_tobytes() instead of calling this function.
@@ -205,6 +190,22 @@ typedef struct yasm_arch_module {
      */
     yasm_effaddr * (*ea_create) (yasm_arch *arch, /*@keep@*/ yasm_expr *e);
 
+    /** Module-level implementation of yasm_arch_ea_destroy().
+     * Call yasm_arch_ea_destroy() instead of calling this function.
+     */
+    void (*ea_destroy) (/*@only@*/ yasm_effaddr *ea);
+
+    /** Module-level implementation of yasm_arch_ea_print().
+     * Call yasm_arch_ea_print() instead of calling this function.
+     */
+    void (*ea_print) (const yasm_effaddr *ea, FILE *f, int indent_level);
+
+    /** Module-level implementation of yasm_arch_create_empty_insn().
+     * Call yasm_arch_create_empty_insn() instead of calling this function.
+     */
+    /*@only@*/ yasm_bytecode * (*create_empty_insn) (yasm_arch *arch,
+                                                     unsigned long line);
+
     /** NULL-terminated list of machines for this architecture.
      * Call yasm_arch_get_machine() to get the active machine of a particular
      * #yasm_arch.
@@ -229,56 +230,6 @@ typedef struct yasm_arch_module {
      */
     unsigned int min_insn_len;
 } yasm_arch_module;
-
-#ifdef YASM_LIB_INTERNAL
-/** An instruction operand.  \internal */
-struct yasm_insn_operand {
-    /** Link for building linked list of operands.  \internal */
-    /*@reldef@*/ STAILQ_ENTRY(yasm_insn_operand) link;
-
-    /** Operand type. */
-    enum yasm_insn_operand_type {
-        YASM_INSN__OPERAND_REG = 1,     /**< A register. */
-        YASM_INSN__OPERAND_SEGREG,      /**< A segment register. */
-        YASM_INSN__OPERAND_MEMORY,      /**< An effective address
-                                         *   (memory reference). */
-        YASM_INSN__OPERAND_IMM          /**< An immediate or jump target. */
-    } type;
-
-    /** Operand data. */
-    union {
-        uintptr_t reg;      /**< Arch data for reg/segreg. */
-        yasm_effaddr *ea;   /**< Effective address for memory references. */
-        yasm_expr *val;     /**< Value of immediate or jump target. */
-    } data;
-
-    uintptr_t targetmod;        /**< Arch target modifier, 0 if none. */
-
-    /** Specified size of the operand, in bits.  0 if not user-specified. */
-    unsigned int size:8;
-
-    /** Nonzero if dereference.  Used for "*foo" in GAS.
-     * The reason for this is that by default in GAS, an unprefixed value
-     * is a memory address, except for jumps/calls, in which case it needs a
-     * "*" prefix to become a memory address (otherwise it's an immediate).
-     * This isn't knowable in the parser stage, so the parser sets this flag
-     * to indicate the "*" prefix has been used, and the arch needs to adjust
-     * the operand type appropriately depending on the instruction type.
-     */
-    unsigned int deref:1;
-
-    /** Nonzero if strict.  Used for "strict foo" in NASM.
-     * This is used to inhibit optimization on otherwise "sized" values.
-     * For example, the user may just want to be explicit with the size on
-     * "push dword 4", but not actually want to force the immediate size to
-     * 4 bytes (rather wanting the optimizer to optimize it down to 1 byte as
-     * though "dword" was not specified).  To indicate the immediate should
-     * actually be forced to 4 bytes, the user needs to write
-     * "push strict dword 4", which sets this flag.
-     */
-    unsigned int strict:1;
-};
-#endif
 
 /** Get the one-line description of an architecture.
  * \param arch      architecture
@@ -348,15 +299,18 @@ int yasm_arch_set_var(yasm_arch *arch, const char *var, unsigned long val);
  * symbols.  Any additional data beyond just the type (almost always necessary)
  * should be returned into the space provided by the data parameter.
  * \param arch          architecture
- * \param data          extra identification information (yasm_arch-specific)
- *                      [output]
  * \param id            identifier as in the input file
  * \param id_len        length of id string
+ * \param line          virtual line
+ * \param bc            for instructions, yasm_insn-based bytecode is returned
+ *                      (and NULL otherwise)
+ * \param prefix        for prefixes, yasm_arch-specific value is returned
+ *                      (and 0 otherwise)
  * \return Identifier type (#YASM_ARCH_NOTINSNPREFIX if unrecognized)
  */
 yasm_arch_insnprefix yasm_arch_parse_check_insnprefix
-    (yasm_arch *arch, /*@out@*/ uintptr_t data[4], const char *id,
-     size_t id_len);
+    (yasm_arch *arch, const char *id, size_t id_len, unsigned long line,
+     /*@out@*/ /*@only@*/ yasm_bytecode **bc, /*@out@*/ uintptr_t *prefix);
 
 /** Check an generic identifier to see if it matches architecture specific
  * names for registers or target modifiers.  Unrecognized identifiers should
@@ -364,15 +318,15 @@ yasm_arch_insnprefix yasm_arch_parse_check_insnprefix
  * (almost always necessary) should be returned into the space provided by the
  * data parameter.
  * \param arch          architecture
- * \param data          extra identification information (yasm_arch-specific)
- *                      [output]
  * \param id            identifier as in the input file
  * \param id_len        length of id string
+ * \param data          extra identification information (yasm_arch-specific)
+ *                      [output]
  * \return Identifier type (#YASM_ARCH_NOTREGTMOD if unrecognized)
  */
 yasm_arch_regtmod yasm_arch_parse_check_regtmod
-    (yasm_arch *arch, /*@out@*/ uintptr_t *data, const char *id,
-     size_t id_len);
+    (yasm_arch *arch, const char *id, size_t id_len,
+     /*@out@*/ uintptr_t *data);
 
 /** Get NOP fill patterns for 1-15 bytes of fill.
  * \param arch          architecture
@@ -380,28 +334,6 @@ yasm_arch_regtmod yasm_arch_parse_check_regtmod
  * of 1-15 bytes (respectively) in length.
  */
 const unsigned char **yasm_arch_get_fill(const yasm_arch *arch);
-
-/** Finalize an instruction from a semi-generic insn description.  Note an
- * existing bytecode is required.
- * \param arch          architecture
- * \param bc            bytecode to finalize
- * \param prev_bc       previous bytecode in section
- * \param data          instruction data (from parse_check_id()); all
- *                              zero indicates an empty instruction
- * \param num_operands  number of operands
- * \param operands      list of operands (in parse order)
- * \param num_prefixes  number of prefixes
- * \param prefixes      array of 4-element prefix data
- * \param num_segregs   number of segment register prefixes
- * \param segregs       array of segment register data
- * \return If no match is found (the instruction is invalid), no action is
- *         performed and an error is recorded.
- */
-void yasm_arch_finalize_insn
-    (yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
-     const uintptr_t data[4], int num_operands,
-     /*@null@*/ yasm_insn_operands *operands, int num_prefixes,
-     const uintptr_t **prefixes, int num_segregs, const uintptr_t *segregs);
 
 /** Output #yasm_floatnum to buffer.  Puts the value into the least
  * significant bits of the destination, or may be shifted into more
@@ -481,6 +413,29 @@ void yasm_arch_segreg_print(yasm_arch *arch, uintptr_t segreg, FILE *f);
  */
 yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
 
+/** Delete (free allocated memory for) an effective address.
+ * \param arch  architecture
+ * \param ea    effective address (only pointer to it).
+ */
+void yasm_arch_ea_destroy(yasm_arch *arch, /*@only@*/ yasm_effaddr *ea);
+
+/** Print an effective address.  For debugging purposes.
+ * \param arch          architecture
+ * \param ea            effective address
+ * \param f             file
+ * \param indent_level  indentation level
+ */
+void yasm_arch_ea_print(const yasm_arch *arch, const yasm_effaddr *ea,
+                        FILE *f, int indent_level);
+
+/** Create a bytecode that represents a single empty (0 length) instruction.
+ * This is used for handling solitary prefixes.
+ * \param arch          architecture
+ * \param line          virtual line (from yasm_linemap)
+ * \return Newly allocated bytecode.
+ */
+/*@only@*/ yasm_bytecode *yasm_arch_create_empty_insn(yasm_arch *arch,
+                                                      unsigned long line);
 
 #ifndef YASM_DOXYGEN
 
@@ -506,20 +461,14 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
     ((yasm_arch_base *)arch)->module->get_address_size(arch)
 #define yasm_arch_set_var(arch, var, val) \
     ((yasm_arch_base *)arch)->module->set_var(arch, var, val)
-#define yasm_arch_parse_check_insnprefix(arch, data, id, id_len) \
-    ((yasm_arch_base *)arch)->module->parse_check_insnprefix(arch, data, id, \
-                                                             id_len)
-#define yasm_arch_parse_check_regtmod(arch, data, id, id_len) \
-    ((yasm_arch_base *)arch)->module->parse_check_regtmod(arch, data, id, \
-                                                          id_len)
+#define yasm_arch_parse_check_insnprefix(arch, id, id_len, line, bc, prefix) \
+    ((yasm_arch_base *)arch)->module->parse_check_insnprefix \
+        (arch, id, id_len, line, bc, prefix)
+#define yasm_arch_parse_check_regtmod(arch, id, id_len, data) \
+    ((yasm_arch_base *)arch)->module->parse_check_regtmod \
+        (arch, id, id_len, data)
 #define yasm_arch_get_fill(arch) \
     ((yasm_arch_base *)arch)->module->get_fill(arch)
-#define yasm_arch_finalize_insn(arch, bc, prev_bc, data, num_operands, \
-                                operands, num_prefixes, prefixes, \
-                                num_segregs, segregs) \
-    ((yasm_arch_base *)arch)->module->finalize_insn \
-        (arch, bc, prev_bc, data, num_operands, operands, num_prefixes, \
-         prefixes, num_segregs, segregs)
 #define yasm_arch_floatnum_tobytes(arch, flt, buf, destsize, valsize, shift, \
                                    warn) \
     ((yasm_arch_base *)arch)->module->floatnum_tobytes \
@@ -538,100 +487,13 @@ yasm_effaddr *yasm_arch_ea_create(yasm_arch *arch, /*@keep@*/ yasm_expr *e);
     ((yasm_arch_base *)arch)->module->segreg_print(arch, segreg, f)
 #define yasm_arch_ea_create(arch, e) \
     ((yasm_arch_base *)arch)->module->ea_create(arch, e)
+#define yasm_arch_ea_destroy(arch, ea) \
+    ((yasm_arch_base *)arch)->module->ea_destroy(ea)
+#define yasm_arch_ea_print(arch, ea, f, i) \
+    ((yasm_arch_base *)arch)->module->ea_print(ea, f, i)
+#define yasm_arch_create_empty_insn(arch, line) \
+    ((yasm_arch_base *)arch)->module->create_empty_insn(arch, line)
 
 #endif
-
-/** Create an instruction operand from a register.
- * \param reg   register
- * \return Newly allocated operand.
- */
-yasm_insn_operand *yasm_operand_create_reg(uintptr_t reg);
-
-/** Create an instruction operand from a segment register.
- * \param segreg        segment register
- * \return Newly allocated operand.
- */
-yasm_insn_operand *yasm_operand_create_segreg(uintptr_t segreg);
-
-/** Create an instruction operand from an effective address.
- * \param ea    effective address
- * \return Newly allocated operand.
- */
-yasm_insn_operand *yasm_operand_create_mem(/*@only@*/ yasm_effaddr *ea);
-
-/** Create an instruction operand from an immediate expression.
- * Looks for cases of a single register and creates a register variant of
- * #yasm_insn_operand.
- * \param val   immediate expression
- * \return Newly allocated operand.
- */
-yasm_insn_operand *yasm_operand_create_imm(/*@only@*/ yasm_expr *val);
-
-/** Print an instruction operand.  For debugging purposes.
- * \param arch          architecture
- * \param f             file
- * \param indent_level  indentation level
- * \param op            instruction operand
- */
-void yasm_operand_print(const yasm_insn_operand *op, FILE *f, int indent_level,
-                        yasm_arch *arch);
-
-/** Create a new list of instruction operands.
- * \return Newly allocated list.
- */
-yasm_insn_operands *yasm_ops_create(void);
-
-/** Destroy a list of instruction operands (created with yasm_ops_create()).
- * \param headp         list of instruction operands
- * \param content       if nonzero, deletes content of each operand
- */
-void yasm_ops_destroy(yasm_insn_operands *headp, int content);
-
-/** Get the first operand in a list of instruction operands.
- * \param headp         list of instruction operands
- * \return First operand in list (NULL if list is empty).
- */
-yasm_insn_operand *yasm_ops_first(yasm_insn_operands *headp);
-
-/** Get the next operand in a list of instruction operands.
- * \param cur           previous operand
- * \return Next operand in list (NULL if cur was the last operand).
- */
-yasm_insn_operand *yasm_operand_next(yasm_insn_operand *cur);
-
-#ifdef YASM_LIB_INTERNAL
-#define yasm_ops_initialize(headp)      STAILQ_INIT(headp)
-#define yasm_ops_first(headp)           STAILQ_FIRST(headp)
-#define yasm_operand_next(cur)          STAILQ_NEXT(cur, link)
-
-/** Delete (free allocated memory for) a list of instruction operands (created
- * with yasm_ops_initialize()).
- * \param headp         list of instruction operands
- * \param content       if nonzero, deletes content of each operand
- */
-void yasm_ops_delete(yasm_insn_operands *headp, int content);
-#endif
-
-/** Add data value to the end of a list of instruction operands.
- * \note Does not make a copy of the operand; so don't pass this function
- *       static or local variables, and discard the op pointer after calling
- *       this function.
- * \param headp         list of instruction operands
- * \param op            operand (may be NULL)
- * \return If operand was actually appended (it wasn't NULL), the operand;
- *         otherwise NULL.
- */
-/*@null@*/ yasm_insn_operand *yasm_ops_append
-    (yasm_insn_operands *headp,
-     /*@returned@*/ /*@null@*/ yasm_insn_operand *op);
-
-/** Print a list of instruction operands.  For debugging purposes.
- * \param arch          architecture
- * \param f             file
- * \param indent_level  indentation level
- * \param headp         list of instruction operands
- */
-void yasm_ops_print(const yasm_insn_operands *headp, FILE *f, int indent_level,
-                    yasm_arch *arch);
 
 #endif

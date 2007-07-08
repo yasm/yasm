@@ -192,11 +192,15 @@ typedef struct yasm_valparamhead yasm_valparamhead;
  */
 typedef struct yasm_directive yasm_directive;
 
-/** A list of instruction operands (opaque type).
- * The list goes from left-to-right as parsed.
- * \see arch.h for related functions.
+/** An effective address.
+ * \see insn.h for related functions.
  */
-typedef struct yasm_insn_operands yasm_insn_operands;
+typedef struct yasm_effaddr yasm_effaddr;
+
+/** An instruction.
+ * \see insn.h for related functions.
+ */
+typedef struct yasm_insn yasm_insn;
 
 /** Expression operators usable in #yasm_expr expressions. */
 typedef enum yasm_expr_op {

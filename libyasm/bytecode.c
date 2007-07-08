@@ -59,10 +59,29 @@ yasm_bc_finalize_common(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 }
 
 int
+yasm_bc_calc_len_common(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+                        void *add_span_data)
+{
+    yasm_internal_error(N_("bytecode length cannot be calculated"));
+    /*@unreached@*/
+    return 0;
+}
+
+int
 yasm_bc_expand_common(yasm_bytecode *bc, int span, long old_val, long new_val,
                       /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
     yasm_internal_error(N_("bytecode does not have any dependent spans"));
+    /*@unreached@*/
+    return 0;
+}
+
+int
+yasm_bc_tobytes_common(yasm_bytecode *bc, unsigned char **bufp, void *d,
+                       yasm_output_value_func output_value,
+                       /*@null@*/ yasm_output_reloc_func output_reloc)
+{
+    yasm_internal_error(N_("bytecode cannot be converted to bytes"));
     /*@unreached@*/
     return 0;
 }
@@ -344,4 +363,12 @@ const yasm_expr *
 yasm_bc_get_multiple_expr(const yasm_bytecode *bc)
 {
     return bc->multiple;
+}
+
+yasm_insn *
+yasm_bc_get_insn(yasm_bytecode *bc)
+{
+    if (bc->callback->special != YASM_BC_SPECIAL_INSN)
+        return NULL;
+    return (yasm_insn *)bc->contents;
 }
