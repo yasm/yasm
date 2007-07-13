@@ -23,16 +23,9 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
-#ifdef STDC_HEADERS
-# include <stdlib.h>
-# include <string.h>
-#endif
-
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "libyasm/file.h"
 #include "libyasm/coretype.h"

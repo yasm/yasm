@@ -29,10 +29,7 @@
 /*@unused@*/ RCSID("$Id$");
 
 #include <ctype.h>
-
-#ifdef STDC_HEADERS
-# include <stdarg.h>
-#endif
+#include <stdarg.h>
 
 #include "coretype.h"
 

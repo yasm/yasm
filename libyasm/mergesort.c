@@ -58,10 +58,8 @@ static char sccsid[] = "@(#)merge.c     8.2 (Berkeley) 2/14/94";
  * (The default is pairwise merging.)
  */
 
-#ifdef STDC_HEADERS
-# include <errno.h>
-# include <string.h>
-#endif
+#include <errno.h>
+#include <string.h>
 
 static void setup(unsigned char *, unsigned char *, size_t, size_t,
                   int (*)(const void *, const void *));

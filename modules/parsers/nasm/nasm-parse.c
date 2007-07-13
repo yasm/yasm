@@ -31,9 +31,7 @@ RCSID("$Id$");
 #define YASM_EXPR_INTERNAL
 #include <libyasm.h>
 
-#ifdef STDC_HEADERS
-# include <math.h>
-#endif
+#include <math.h>
 
 #include "modules/parsers/nasm/nasm-parser.h"
 

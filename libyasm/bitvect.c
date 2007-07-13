@@ -10,10 +10,8 @@ RCSID("$Id$");
 /*  MODULE IMPORTS:                                                          */
 /*****************************************************************************/
 #include <ctype.h>                                  /*  MODULE TYPE:  (sys)  */
-#ifdef STDC_HEADERS
 #include <limits.h>                                 /*  MODULE TYPE:  (sys)  */
 #include <string.h>                                 /*  MODULE TYPE:  (sys)  */
-#endif
 /*****************************************************************************/
 /*  MODULE INTERFACE:                                                        */
 /*****************************************************************************/

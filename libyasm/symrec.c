@@ -28,9 +28,7 @@
 #include "util.h"
 /*@unused@*/ RCSID("$Id$");
 
-#ifdef STDC_HEADERS
-# include <limits.h>
-#endif
+#include <limits.h>
 
 #include "libyasm-stdint.h"
 #include "coretype.h"
