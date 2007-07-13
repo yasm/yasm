@@ -324,10 +324,6 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath="..\..\..\libyasm\arch.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\libyasm\assocdat.c"
 				>
 			</File>
@@ -341,10 +337,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\bc-incbin.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\libyasm\bc-insn.c"
 				>
 			</File>
 			<File
@@ -385,6 +377,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\hamt.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\insn.c"
 				>
 			</File>
 			<File
@@ -506,6 +502,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\libyasm\hamt.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\libyasm\insn.h"
 				>
 			</File>
 			<File
