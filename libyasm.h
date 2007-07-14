@@ -30,10 +30,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * \endlicense
- *
- * Additional parts may be included via:
- *  - YASM_EXPR_INTERNAL: reveal expr internal structures via expr-int.h
- *                        inclusion
  */
 #ifndef YASM_LIB_H
 #define YASM_LIB_H
@@ -77,9 +73,6 @@ typedef unsigned long uintptr_t;
 #include <libyasm/file.h>
 #include <libyasm/module.h>
 
-#ifdef YASM_EXPR_INTERNAL
-#include <libyasm/expr-int.h>
-#endif
 #include <libyasm/hamt.h>
 #include <libyasm/md5.h>
 

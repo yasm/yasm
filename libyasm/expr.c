@@ -42,8 +42,6 @@
 
 #include "arch.h"
 
-#include "expr-int.h"
-
 
 static int expr_traverse_nodes_post(/*@null@*/ yasm_expr *e,
                                     /*@null@*/ void *d,
@@ -1005,12 +1003,6 @@ yasm_expr__copy_except(const yasm_expr *e, int except)
     }
 
     return n;
-}
-
-yasm_expr *
-yasm_expr_copy(const yasm_expr *e)
-{
-    return yasm_expr__copy_except(e, -1);
 }
 
 static void

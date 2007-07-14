@@ -59,7 +59,6 @@ modinclude_HEADERS += libyasm/coretype.h
 modinclude_HEADERS += libyasm/dbgfmt.h
 modinclude_HEADERS += libyasm/errwarn.h
 modinclude_HEADERS += libyasm/expr.h
-modinclude_HEADERS += libyasm/expr-int.h
 modinclude_HEADERS += libyasm/file.h
 modinclude_HEADERS += libyasm/floatnum.h
 modinclude_HEADERS += libyasm/hamt.h

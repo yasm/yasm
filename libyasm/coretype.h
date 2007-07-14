@@ -74,7 +74,7 @@ typedef struct yasm_assoc_data_callback {
  */
 typedef struct yasm_errwarns yasm_errwarns;
 
-/** Bytecode.  \see bytecode.h for defails and related functions. */
+/** Bytecode.  \see bytecode.h for details and related functions. */
 typedef struct yasm_bytecode yasm_bytecode;
 
 /** Object.  \see section.h for details and related functions. */
@@ -89,10 +89,7 @@ typedef struct yasm_symtab yasm_symtab;
 /** Symbol record (opaque type).  \see symrec.h for related functions. */
 typedef struct yasm_symrec yasm_symrec;
 
-/** Expression (opaque type).
- * \see expr.h for related functions.
- * Define YASM_EXPR_INTERNAL to get visible internals.
- */
+/** Expression.  \see expr.h for details and related functions. */
 typedef struct yasm_expr yasm_expr;
 /** Integer value (opaque type).  \see intnum.h for related functions. */
 typedef struct yasm_intnum yasm_intnum;

@@ -44,7 +44,6 @@
  * Each Section is spatially disjoint, and has exactly one SHT entry.
  */
 
-#define YASM_EXPR_INTERNAL
 #include <libyasm.h>
 
 #include "elf.h"

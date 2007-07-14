@@ -49,8 +49,6 @@
 #include "dbgfmt.h"
 #include "objfmt.h"
 
-#include "expr-int.h"
-
 #include "inttree.h"
 
 

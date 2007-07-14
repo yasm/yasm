@@ -38,8 +38,6 @@
 
 #include "bytecode.h"
 
-#include "expr-int.h"
-
 
 void
 yasm_bc_set_multiple(yasm_bytecode *bc, yasm_expr *e)

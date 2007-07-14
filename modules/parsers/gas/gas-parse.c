@@ -30,7 +30,6 @@
 #include <util.h>
 RCSID("$Id$");
 
-#define YASM_EXPR_INTERNAL
 #include <libyasm.h>
 
 #include <limits.h>

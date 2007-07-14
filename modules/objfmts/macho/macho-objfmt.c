@@ -108,7 +108,6 @@
 /* optional: automatically prefix underscores to global exported symbols */
 /*#define AUTO_UNDERSCORE*/
 
-#define YASM_EXPR_INTERNAL
 #include <libyasm.h>
 
 /* MACH-O DEFINES */

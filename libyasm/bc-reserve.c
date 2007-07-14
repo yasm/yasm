@@ -37,8 +37,6 @@
 
 #include "bytecode.h"
 
-#include "expr-int.h"
-
 
 typedef struct bytecode_reserve {
     /*@only@*/ /*@null@*/ yasm_expr *numitems; /* number of items to reserve */
