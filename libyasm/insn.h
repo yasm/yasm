@@ -69,7 +69,6 @@ struct yasm_effaddr {
 /** An instruction operand (opaque type). */
 typedef struct yasm_insn_operand yasm_insn_operand;
 
-#ifdef YASM_LIB_INTERNAL
 /** An instruction operand. */
 struct yasm_insn_operand {
     /** Link for building linked list of operands.  \internal */
@@ -137,7 +136,6 @@ struct yasm_insn {
     unsigned int num_prefixes;       /**< Number of prefixes. */
     unsigned int num_segregs;        /**< Number of segment prefixes. */
 };
-#endif
 
 /** Set segment override for an effective address.
  * Some architectures (such as x86) support segment overrides on effective
@@ -178,17 +176,14 @@ yasm_insn_operand *yasm_operand_create_imm(/*@only@*/ yasm_expr *val);
  * \return First operand (NULL if no operands).
  */
 yasm_insn_operand *yasm_insn_ops_first(yasm_insn *insn);
+#define yasm_insn_ops_first(insn)   STAILQ_FIRST(&((insn)->operands))
 
 /** Get the next operand in an instruction.
  * \param op            previous operand
  * \return Next operand (NULL if op was the last operand).
  */
 yasm_insn_operand *yasm_insn_op_next(yasm_insn_operand *op);
-
-#if defined(YASM_LIB_INTERNAL) && !defined(YASM_DOXYGEN)
-#define yasm_insn_ops_first(insn)   STAILQ_FIRST(&(insn)->operands)
 #define yasm_insn_op_next(cur)      STAILQ_NEXT(cur, link)
-#endif
 
 /** Add operand to the end of an instruction.
  * \note Does not make a copy of the operand; so don't pass this function

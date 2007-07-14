@@ -34,7 +34,6 @@
 #ifndef YASM_VALPARAM_H
 #define YASM_VALPARAM_H
 
-#ifdef YASM_LIB_INTERNAL
 /** Value/parameter pair.  \internal */
 struct yasm_valparam {
     /*@reldef@*/ STAILQ_ENTRY(yasm_valparam) link;  /**< Next pair in list */
@@ -63,7 +62,6 @@ struct yasm_valparam {
 
 /** Linked list of value/parameter pairs.  \internal */
 /*@reldef@*/ STAILQ_HEAD(yasm_valparamhead, yasm_valparam);
-#endif
 
 /** Directive list entry structure. */
 struct yasm_directive {
@@ -166,10 +164,10 @@ yasm_valparamhead *yasm_vps_create(void);
  */
 void yasm_vps_destroy(yasm_valparamhead *headp);
 
-#ifdef YASM_LIB_INTERNAL
 /** Initialize linked list of valparams.
  * \param headp linked list
  */
+void yasm_vps_initialize(/*@out@*/ yasm_valparamhead *headp);
 #define yasm_vps_initialize(headp)      STAILQ_INIT(headp)
 
 /** Destroy (free allocated memory for) linked list of valparams (created with
@@ -178,19 +176,16 @@ void yasm_vps_destroy(yasm_valparamhead *headp);
  * \param headp linked list
  */
 void yasm_vps_delete(yasm_valparamhead *headp);
-#endif
 
 /** Append valparam to tail of linked list.
  * \param headp linked list
  * \param vp    valparam
  */
 void yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp);
-#ifdef YASM_LIB_INTERNAL
 #define yasm_vps_append(headp, vp)      do {        \
         if (vp)                                     \
             STAILQ_INSERT_TAIL(headp, vp, link);    \
     } while(0)
-#endif
 
 /** Get first valparam in linked list.
  * \param headp linked list
@@ -198,16 +193,13 @@ void yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp);
  */
 /*@null@*/ /*@dependent@*/ yasm_valparam *yasm_vps_first
     (yasm_valparamhead *headp);
-#ifdef YASM_LIB_INTERNAL
 #define yasm_vps_first(headp)       STAILQ_FIRST(headp)
-#endif
 
 /** Get next valparam in linked list.
  * \param cur   previous valparam in linked list
  * \return Next valparam in linked list.
  */
 /*@null@*/ /*@dependent@*/ yasm_valparam *yasm_vps_next(yasm_valparam *cur);
-#ifdef YASM_LIB_INTERNAL
 #define yasm_vps_next(cur)          STAILQ_NEXT(cur, link)
 
 /** Iterate through linked list of valparams.
@@ -216,7 +208,6 @@ void yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp);
  * \param headp     linked list
  */
 #define yasm_vps_foreach(iter, headp)   STAILQ_FOREACH(iter, headp, link)
-#endif
 
 /** Print linked list of valparams.  For debugging purposes.
  * \param f     file

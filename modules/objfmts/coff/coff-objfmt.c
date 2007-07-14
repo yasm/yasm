@@ -28,7 +28,6 @@
 #include <time.h>
 /*@unused@*/ RCSID("$Id$");
 
-#define YASM_LIB_INTERNAL
 #define YASM_BC_INTERNAL
 #define YASM_EXPR_INTERNAL
 #include <libyasm.h>

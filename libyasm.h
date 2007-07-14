@@ -31,10 +31,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * \endlicense
  *
- * Define YASM_LIB_INTERNAL to include many internal function and variable
- * definitions that violate the yasm_* namespace.  This includes
- * compat-queue.h, bitvect.h, and hamt.h.
- *
  * Additional parts may be included via:
  *  - YASM_BC_INTERNAL: reveal bytecode internal structures via bc-int.h
  *                      inclusion
@@ -55,9 +51,7 @@ typedef unsigned long uintptr_t;
 #include <libyasm-stdint.h>
 #endif
 
-#ifdef YASM_LIB_INTERNAL
-# include <libyasm/compat-queue.h>
-#endif
+#include <libyasm/compat-queue.h>
 
 #include <libyasm/coretype.h>
 #include <libyasm/valparam.h>
@@ -85,7 +79,6 @@ typedef unsigned long uintptr_t;
 #include <libyasm/file.h>
 #include <libyasm/module.h>
 
-#ifdef YASM_LIB_INTERNAL
 #ifdef YASM_BC_INTERNAL
 #include <libyasm/bc-int.h>
 #endif
@@ -93,8 +86,6 @@ typedef unsigned long uintptr_t;
 #include <libyasm/expr-int.h>
 #endif
 #include <libyasm/hamt.h>
-#include <libyasm/bitvect.h>
 #include <libyasm/md5.h>
-#endif
 
 #endif

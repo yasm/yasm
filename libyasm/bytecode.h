@@ -39,9 +39,7 @@ typedef struct yasm_dataval yasm_dataval;
 /** A list of data values (opaque type). */
 typedef struct yasm_datavalhead yasm_datavalhead;
 
-#ifdef YASM_LIB_INTERNAL
 /*@reldef@*/ STAILQ_HEAD(yasm_datavalhead, yasm_dataval);
-#endif
 
 /** Set multiple field of a bytecode.
  * A bytecode can be repeated a number of times when output.  This function
@@ -143,15 +141,13 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
 /*@dependent@*/ /*@null@*/ yasm_section *yasm_bc_get_section
     (yasm_bytecode *bc);
 
-#ifdef YASM_LIB_INTERNAL
 /** Add to the list of symrecs that reference a bytecode.  For symrec use
  * only.
  * \param bc    bytecode
  * \param sym   symbol
  */
 void yasm_bc__add_symrec(yasm_bytecode *bc, /*@dependent@*/ yasm_symrec *sym);
-#endif
-    
+
 /** Delete (free allocated memory for) a bytecode.
  * \param bc    bytecode (only pointer to it); may be NULL
  */
@@ -313,9 +309,7 @@ yasm_dataval *yasm_dv_create_raw(/*@keep@*/ unsigned char *contents,
  * \param headp list of data values
  */
 void yasm_dvs_initialize(yasm_datavalhead *headp);
-#ifdef YASM_LIB_INTERNAL
 #define yasm_dvs_initialize(headp)      STAILQ_INIT(headp)
-#endif
 
 /** Delete (free allocated memory for) a list of data values.
  * \param headp list of data values

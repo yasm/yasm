@@ -39,13 +39,11 @@
  */
 typedef struct yasm_reloc yasm_reloc;
 
-#ifdef YASM_LIB_INTERNAL
 struct yasm_reloc {
     /*@reldef@*/ STAILQ_ENTRY(yasm_reloc) link;
     yasm_intnum *addr;          /**< Offset (address) within section */
     /*@dependent@*/ yasm_symrec *sym;       /**< Relocated symbol */
 };
-#endif
 
 /** An object.  This is the internal representation of an object file. */
 struct yasm_object {
@@ -62,7 +60,6 @@ struct yasm_object {
      */
     /*@dependent@*/ /*@null@*/ yasm_section *cur_section;
 
-#ifdef YASM_LIB_INTERNAL
     /** Linked list of sections. */
     /*@reldef@*/ STAILQ_HEAD(yasm_sectionhead, yasm_section) sections;
 
@@ -70,7 +67,6 @@ struct yasm_object {
      * second level is directive name.
      */
     /*@owned@*/ struct HAMT *directives;
-#endif
 };
 
 /** Create a new object.  A default section is created as the first section.
@@ -256,10 +252,7 @@ void yasm_section_add_reloc(yasm_section *sect, yasm_reloc *reloc,
  * \return Next relocation for section.  NULL if no more relocations.
  */
 /*@null@*/ yasm_reloc *yasm_section_reloc_next(yasm_reloc *reloc);
-
-#ifdef YASM_LIB_INTERNAL
 #define yasm_section_reloc_next(x)      STAILQ_NEXT((x), link)
-#endif
 
 /** Get the basic relocation information for a relocation.
  * \param reloc         relocation

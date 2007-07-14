@@ -29,7 +29,6 @@
 #include <util.h>
 RCSID("$Id$");
 
-#define YASM_LIB_INTERNAL
 #include <libyasm.h>
 
 #include "modules/parsers/nasm/nasm-parser.h"

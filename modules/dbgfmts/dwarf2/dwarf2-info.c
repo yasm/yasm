@@ -34,7 +34,6 @@
 #include <direct.h>
 #endif
 
-#define YASM_LIB_INTERNAL
 #define YASM_BC_INTERNAL
 #include <libyasm.h>
 

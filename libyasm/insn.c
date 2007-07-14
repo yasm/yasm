@@ -24,7 +24,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#define YASM_LIB_INTERNAL
 #include "util.h"
 /*@unused@*/ RCSID("$Id$");
 
@@ -291,20 +290,4 @@ yasm_insn_finalize(yasm_insn *insn)
                 break;
         }
     }
-}
-
-/* Non-macro yasm_insn_ops_first() for non-YASM_LIB_INTERNAL users. */
-#undef yasm_insn_ops_first
-yasm_insn_operand *
-yasm_insn_ops_first(yasm_insn *insn)
-{
-    return STAILQ_FIRST(&insn->operands);
-}
-
-/* Non-macro yasm_insn_op_next() for non-YASM_LIB_INTERNAL users. */
-#undef yasm_insn_op_next
-yasm_insn_operand *
-yasm_insn_op_next(yasm_insn_operand *cur)
-{
-    return STAILQ_NEXT(cur, link);
 }
