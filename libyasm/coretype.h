@@ -74,10 +74,7 @@ typedef struct yasm_assoc_data_callback {
  */
 typedef struct yasm_errwarns yasm_errwarns;
 
-/** Bytecode (opaque type).
- * \see bytecode.h for related functions.
- * Define YASM_BC_INTERNAL to get visible internals.
- */
+/** Bytecode.  \see bytecode.h for defails and related functions. */
 typedef struct yasm_bytecode yasm_bytecode;
 
 /** Object.  \see section.h for details and related functions. */

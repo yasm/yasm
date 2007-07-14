@@ -52,7 +52,6 @@ modincludedir = $(includedir)/libyasm
 
 modinclude_HEADERS  = libyasm/arch.h
 modinclude_HEADERS += libyasm/assocdat.h
-modinclude_HEADERS += libyasm/bc-int.h
 modinclude_HEADERS += libyasm/bitvect.h
 modinclude_HEADERS += libyasm/bytecode.h
 modinclude_HEADERS += libyasm/compat-queue.h

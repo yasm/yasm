@@ -50,7 +50,6 @@
 #include "objfmt.h"
 
 #include "expr-int.h"
-#include "bc-int.h"
 
 #include "inttree.h"
 

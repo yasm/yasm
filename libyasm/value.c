@@ -44,7 +44,6 @@
 #include "arch.h"
 
 #include "expr-int.h"
-#include "bc-int.h"
 
 void
 yasm_value_initialize(/*@out@*/ yasm_value *value,

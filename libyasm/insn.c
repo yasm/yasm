@@ -38,8 +38,6 @@
 #include "insn.h"
 #include "arch.h"
 
-#include "bc-int.h"
-
 
 void
 yasm_ea_set_segreg(yasm_effaddr *ea, uintptr_t segreg)

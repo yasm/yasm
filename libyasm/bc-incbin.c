@@ -41,8 +41,6 @@
 
 #include "file.h"
 
-#include "bc-int.h"
-
 
 typedef struct bytecode_incbin {
     /*@only@*/ char *filename;          /* file to include data from */

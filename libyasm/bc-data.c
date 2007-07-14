@@ -38,8 +38,6 @@
 #include "bytecode.h"
 #include "arch.h"
 
-#include "bc-int.h"
-
 
 struct yasm_dataval {
     /*@reldef@*/ STAILQ_ENTRY(yasm_dataval) link;

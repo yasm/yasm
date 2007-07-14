@@ -27,7 +27,6 @@
 #include <util.h>
 /*@unused@*/ RCSID("$Id$");
 
-#define YASM_BC_INTERNAL
 #define YASM_EXPR_INTERNAL
 #include <libyasm.h>
 

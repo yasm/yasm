@@ -38,8 +38,6 @@
 
 #include "bytecode.h"
 
-#include "bc-int.h"
-
 
 typedef struct bytecode_org {
     unsigned long start;        /* target starting offset within section */

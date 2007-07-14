@@ -38,7 +38,6 @@
 
 #include "bytecode.h"
 
-#include "bc-int.h"
 #include "expr-int.h"
 
 

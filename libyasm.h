@@ -32,8 +32,6 @@
  * \endlicense
  *
  * Additional parts may be included via:
- *  - YASM_BC_INTERNAL: reveal bytecode internal structures via bc-int.h
- *                      inclusion
  *  - YASM_EXPR_INTERNAL: reveal expr internal structures via expr-int.h
  *                        inclusion
  */
@@ -79,9 +77,6 @@ typedef unsigned long uintptr_t;
 #include <libyasm/file.h>
 #include <libyasm/module.h>
 
-#ifdef YASM_BC_INTERNAL
-#include <libyasm/bc-int.h>
-#endif
 #ifdef YASM_EXPR_INTERNAL
 #include <libyasm/expr-int.h>
 #endif

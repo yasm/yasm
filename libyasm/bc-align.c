@@ -36,8 +36,6 @@
 
 #include "bytecode.h"
 
-#include "bc-int.h"
-
 
 typedef struct bytecode_align {
     /*@only@*/ yasm_expr *boundary;     /* alignment boundary */
