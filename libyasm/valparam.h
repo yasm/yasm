@@ -39,23 +39,25 @@ struct yasm_valparam {
     /*@reldef@*/ STAILQ_ENTRY(yasm_valparam) link;  /**< Next pair in list */
     /*@owned@*/ /*@null@*/ char *val;           /**< Value */
 
+    /** Parameter type. */
     enum yasm_param_type {
         YASM_PARAM_ID,                          /**< Identifier */
         YASM_PARAM_STRING,                      /**< String */
         YASM_PARAM_EXPR                         /**< Expression */
     } type;                                     /**< Parameter type */
 
+    /** Parameter value. */
     union yasm_param {
         /*@owned@*/ char *id;                   /**< Identifier */
         /*@owned@*/ char *str;                  /**< String */
         /*@owned@*/ yasm_expr *e;               /**< Expression */
     } param;                                    /**< Parameter */
 
-    /* Prefix character that indicates a raw identifier.  When yasm_vp_string()
-     * is called on a #YASM_PARAM_ID, all characters are returned.  When
-     * yasm_vp_id() is called on a #YASM_PARAM_ID, if the identifier begins
-     * with this character, this character is stripped from the returned
-     * value.
+    /** Prefix character that indicates a raw identifier.  When
+     * yasm_vp_string() is called on a #YASM_PARAM_ID, all characters are
+     * returned.  When yasm_vp_id() is called on a #YASM_PARAM_ID, if the
+     * identifier begins with this character, this character is stripped
+     * from the returned value.
      */
     char id_prefix;
 };
@@ -168,7 +170,9 @@ void yasm_vps_destroy(yasm_valparamhead *headp);
  * \param headp linked list
  */
 void yasm_vps_initialize(/*@out@*/ yasm_valparamhead *headp);
+#ifndef YASM_DOXYGEN
 #define yasm_vps_initialize(headp)      STAILQ_INIT(headp)
+#endif
 
 /** Destroy (free allocated memory for) linked list of valparams (created with
  * yasm_vps_initialize).
@@ -182,10 +186,12 @@ void yasm_vps_delete(yasm_valparamhead *headp);
  * \param vp    valparam
  */
 void yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp);
+#ifndef YASM_DOXYGEN
 #define yasm_vps_append(headp, vp)      do {        \
         if (vp)                                     \
             STAILQ_INSERT_TAIL(headp, vp, link);    \
     } while(0)
+#endif
 
 /** Get first valparam in linked list.
  * \param headp linked list
@@ -193,21 +199,27 @@ void yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp);
  */
 /*@null@*/ /*@dependent@*/ yasm_valparam *yasm_vps_first
     (yasm_valparamhead *headp);
+#ifndef YASM_DOXYGEN
 #define yasm_vps_first(headp)       STAILQ_FIRST(headp)
+#endif
 
 /** Get next valparam in linked list.
  * \param cur   previous valparam in linked list
  * \return Next valparam in linked list.
  */
 /*@null@*/ /*@dependent@*/ yasm_valparam *yasm_vps_next(yasm_valparam *cur);
+#ifndef YASM_DOXYGEN
 #define yasm_vps_next(cur)          STAILQ_NEXT(cur, link)
+#endif
 
 /** Iterate through linked list of valparams.
  * \internal
  * \param iter      iterator variable
  * \param headp     linked list
  */
+#ifndef YASM_DOXYGEN
 #define yasm_vps_foreach(iter, headp)   STAILQ_FOREACH(iter, headp, link)
+#endif
 
 /** Print linked list of valparams.  For debugging purposes.
  * \param f     file

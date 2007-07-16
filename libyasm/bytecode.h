@@ -36,9 +36,10 @@
 
 /** A data value (opaque type). */
 typedef struct yasm_dataval yasm_dataval;
-/** A list of data values (opaque type). */
+/** A list of data values. */
 typedef struct yasm_datavalhead yasm_datavalhead;
 
+/** Linked list of data values. */
 /*@reldef@*/ STAILQ_HEAD(yasm_datavalhead, yasm_dataval);
 
 /** Add a dependent span for a bytecode.
@@ -128,21 +129,19 @@ typedef struct yasm_bytecode_callback {
      * A generic fill-in for this is yasm_bc_tobytes_common(), but as this
      * function internal errors when called, be very careful when using it!
      * \param bc            bytecode
-     * \param buf           byte representation destination buffer
-     * \param bufsize       size of buf (in bytes) prior to call; size of the
-     *                      generated data after call
-     * \param gap           if nonzero, indicates the data does not really
-     *                      need to exist in the object file; if nonzero,
-     *                      contents of buf are undefined [output]
+     * \param bufp          byte representation destination buffer;
+     *                      should be incremented as it's written to,
+     *                      so that on return its delta from the
+     *                      passed-in buf matches the bytecode length
+     *                      (it's okay not to do this if an error
+     *                      indication is returned)
      * \param d             data to pass to each call to
      *                      output_value/output_reloc
      * \param output_value  function to call to convert values into their byte
      *                      representation
      * \param output_reloc  function to call to output relocation entries
      *                      for a single sym
-     * \return Newly allocated buffer that should be used instead of buf for
-     *         reading the byte representation, or NULL if buf was big enough
-     *         to hold the entire byte representation.
+     * \return Nonzero on error, 0 on success.
      * \note May result in non-reversible changes to the bytecode, but it's
      *       preferable if calling this function twice would result in the
      *       same output.
@@ -520,7 +519,9 @@ yasm_dataval *yasm_dv_create_raw(/*@keep@*/ unsigned char *contents,
  * \param headp list of data values
  */
 void yasm_dvs_initialize(yasm_datavalhead *headp);
+#ifndef YASM_DOXYGEN
 #define yasm_dvs_initialize(headp)      STAILQ_INIT(headp)
+#endif
 
 /** Delete (free allocated memory for) a list of data values.
  * \param headp list of data values

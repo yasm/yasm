@@ -158,7 +158,9 @@ struct yasm_expr {
  * \return Newly allocated expression identical to e.
  */
 yasm_expr *yasm_expr_copy(const yasm_expr *e);
+#ifndef YASM_DOXYGEN
 #define yasm_expr_copy(e)   yasm_expr__copy_except(e, -1)
+#endif
 
 /** Destroy (free allocated memory for) an expression.
  * \param e     expression

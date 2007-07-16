@@ -40,7 +40,7 @@
 typedef struct yasm_reloc yasm_reloc;
 
 struct yasm_reloc {
-    /*@reldef@*/ STAILQ_ENTRY(yasm_reloc) link;
+    /*@reldef@*/ STAILQ_ENTRY(yasm_reloc) link; /**< Link to next reloc */
     yasm_intnum *addr;          /**< Offset (address) within section */
     /*@dependent@*/ yasm_symrec *sym;       /**< Relocated symbol */
 };
@@ -252,7 +252,9 @@ void yasm_section_add_reloc(yasm_section *sect, yasm_reloc *reloc,
  * \return Next relocation for section.  NULL if no more relocations.
  */
 /*@null@*/ yasm_reloc *yasm_section_reloc_next(yasm_reloc *reloc);
+#ifndef YASM_DOXYGEN
 #define yasm_section_reloc_next(x)      STAILQ_NEXT((x), link)
+#endif
 
 /** Get the basic relocation information for a relocation.
  * \param reloc         relocation
