@@ -351,11 +351,12 @@ void yasm_bc_set_multiple(yasm_bytecode *bc, /*@keep@*/ yasm_expr *e);
 /** Create a bytecode that puts the following bytecode at a fixed section
  * offset.
  * \param start         section offset of following bytecode
+ * \param fill          fill value
  * \param line          virtual line (from yasm_linemap)
  * \return Newly allocated bytecode.
  */
 /*@only@*/ yasm_bytecode *yasm_bc_create_org
-    (unsigned long start, unsigned long line);
+    (unsigned long start, unsigned long fill, unsigned long line);
 
 /** Get the section that contains a particular bytecode.
  * \param bc    bytecode

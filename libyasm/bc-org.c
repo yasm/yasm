@@ -41,6 +41,7 @@
 
 typedef struct bytecode_org {
     unsigned long start;        /* target starting offset within section */
+    unsigned long fill;         /* fill value */
 } bytecode_org;
 
 static void bc_org_destroy(void *contents);
@@ -133,16 +134,17 @@ bc_org_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     }
     len = org->start - bc->offset;
     for (i=0; i<len; i++)
-        YASM_WRITE_8(*bufp, 0);
+        YASM_WRITE_8(*bufp, org->fill);     /* XXX: handle more than 8 bit? */
     return 0;
 }
 
 yasm_bytecode *
-yasm_bc_create_org(unsigned long start, unsigned long line)
+yasm_bc_create_org(unsigned long start, unsigned long fill, unsigned long line)
 {
     bytecode_org *org = yasm_xmalloc(sizeof(bytecode_org));
 
     org->start = start;
+    org->fill = fill;
 
     return yasm_bc_create_common(&bc_org_callback, org, line);
 }

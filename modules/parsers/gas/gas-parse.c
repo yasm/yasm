@@ -388,14 +388,32 @@ parse_line(yasm_parser_gas *parser_gas)
                                     (int)ival);
         }
         case DIR_ORG:
+        {
+            yasm_intnum *start, *value=NULL;
             get_next_token(); /* DIR_ORG */
-            if (!expect(INTNUM)) return NULL;
+
             /* TODO: support expr instead of intnum */
-            bc = yasm_bc_create_org(yasm_intnum_get_uint(INTNUM_val), cur_line);
-            yasm_intnum_destroy(INTNUM_val);
+            if (!expect(INTNUM)) return NULL;
+            start = INTNUM_val;
             get_next_token(); /* INTNUM */
+
+            if (curtok == ',') {
+                get_next_token(); /* ',' */
+                /* TODO: support expr instead of intnum */
+                if (!expect(INTNUM)) return NULL;
+                value = INTNUM_val;
+                get_next_token(); /* INTNUM */
+            }
+            if (value) {
+                bc = yasm_bc_create_org(yasm_intnum_get_uint(start),
+                                        yasm_intnum_get_uint(value), cur_line);
+                yasm_intnum_destroy(value);
+            } else
+                bc = yasm_bc_create_org(yasm_intnum_get_uint(start), 0,
+                                        cur_line);
+            yasm_intnum_destroy(start);
             return bc;
-    
+        }
         /* Data visibility directives */
         case DIR_LOCAL:
             get_next_token(); /* DIR_LOCAL */

@@ -93,9 +93,9 @@ cdef object __make_bytecode(yasm_bytecode *bc):
     return bcobj
 
 # Org bytecode
-def __org__new__(cls, start, line=0):
+def __org__new__(cls, start, value=0, line=0):
     cdef yasm_bytecode *bc
-    bc = yasm_bc_create_org(start, line)
+    bc = yasm_bc_create_org(start, line, value)
     obj = Bytecode.__new__(cls, __pass_voidp(bc, Bytecode))
     __bytecode_map[PyCObject_FromVoidPtr(bc, NULL)] = obj
     return obj
