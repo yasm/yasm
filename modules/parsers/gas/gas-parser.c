@@ -41,6 +41,7 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
                     yasm_errwarns *errwarns)
 {
     yasm_parser_gas parser_gas;
+    int i;
 
     parser_gas.object = object;
     parser_gas.linemap = linemap;
@@ -70,6 +71,9 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
     parser_gas.state = INITIAL;
 
     parser_gas.rept = NULL;
+
+    for (i=0; i<10; i++)
+        parser_gas.local[i] = 0;
 
     /* yacc debugging, needs YYDEBUG set in bison.y.in to work */
     parser_gas.debug = 1;

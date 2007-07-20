@@ -149,6 +149,11 @@ typedef struct yasm_parser_gas {
     char peek_tokch;
 
     /*@null@*/ gas_rept *rept;
+
+    /* Index of local labels; what's stored here is the /next/ index,
+     * so these are all 0 at start.
+     */
+    unsigned long local[10];
 } yasm_parser_gas;
 
 /* shorter access names to commonly used parser_gas fields */

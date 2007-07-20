@@ -529,6 +529,35 @@ scan:
             RETURN(LABEL);
         }
 
+        /* local label */
+        [0-9] ':' {
+            /* increment label index */
+            parser_gas->local[s->tok[0]-'0']++;
+            /* build local label name */
+            lvalp->str_val = yasm_xmalloc(30);
+            sprintf(lvalp->str_val, "L%c\001%lu", s->tok[0],
+                    parser_gas->local[s->tok[0]-'0']);
+            RETURN(LABEL);
+        }
+
+        /* local label forward reference */
+        [0-9] 'f' {
+            /* build local label name */
+            lvalp->str_val = yasm_xmalloc(30);
+            sprintf(lvalp->str_val, "L%c\001%lu", s->tok[0],
+                    parser_gas->local[s->tok[0]-'0']+1);
+            RETURN(ID);
+        }
+
+        /* local label backward reference */
+        [0-9] 'b' {
+            /* build local label name */
+            lvalp->str_val = yasm_xmalloc(30);
+            sprintf(lvalp->str_val, "L%c\001%lu", s->tok[0],
+                    parser_gas->local[s->tok[0]-'0']);
+            RETURN(ID);
+        }
+
         /* identifier that may be an instruction, etc. */
         [a-zA-Z][a-zA-Z0-9_$.]* {
             /* Can only be an instruction/prefix when not inside an
