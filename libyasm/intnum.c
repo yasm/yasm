@@ -712,18 +712,7 @@ yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
         BitVector_Block_Store(op1, ptr, (N_int)destsize);
 
     /* If not already a bitvect, convert value to be written to a bitvect */
-    if (intn->type == INTNUM_BV)
-        op2 = intn->val.bv;
-    else {
-        op2 = op2static;
-        BitVector_Empty(op2);
-        if (intn->val.l < 0) {
-            BitVector_Chunk_Store(op2, 32, 0, (unsigned long)-intn->val.l);
-            BitVector_Negate(op2, op2);
-        } else {
-            BitVector_Chunk_Store(op2, 32, 0, (unsigned long)intn->val.l);
-        }
-    }
+    op2 = intnum_tobv(op2static, intn);
 
     /* Check low bits if right shifting and warnings enabled */
     if (warn && rshift > 0) {
@@ -769,16 +758,8 @@ yasm_intnum_check_size(const yasm_intnum *intn, size_t size, size_t rshift,
             BitVector_Copy(val, intn->val.bv);
         } else
             val = intn->val.bv;
-    } else {
-        val = conv_bv;
-        BitVector_Empty(val);
-        if (intn->val.l < 0) {
-            BitVector_Chunk_Store(val, 32, 0, (unsigned long)-intn->val.l);
-            BitVector_Negate(val, val);
-        } else {
-            BitVector_Chunk_Store(val, 32, 0, (unsigned long)intn->val.l);
-        }
-    }
+    } else
+        val = intnum_tobv(conv_bv, intn);
 
     if (size >= BITVECT_NATIVE_SIZE)
         return 1;
