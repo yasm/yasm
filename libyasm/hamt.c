@@ -56,6 +56,7 @@ struct HAMT {
                                     const char *message);
     unsigned long (*HashKey) (const char *key);
     unsigned long (*ReHashKey) (const char *key, int Level);
+    int (*CmpKey) (const char *s1, const char *s2);
 };
 
 /* XXX make a portable version of this.  This depends on the pointer being
@@ -132,9 +133,11 @@ HAMT_create(int nocase, /*@exits@*/ void (*error_func)
     if (nocase) {
         hamt->HashKey = HashKey_nocase;
         hamt->ReHashKey = ReHashKey_nocase;
+        hamt->CmpKey = strcasecmp;
     } else {
         hamt->HashKey = HashKey;
         hamt->ReHashKey = ReHashKey;
+        hamt->CmpKey = strcmp;
     }
 
     return hamt;
@@ -244,7 +247,8 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
     for (;;) {
         if (!(IsSubTrie(node))) {
             if (node->BitMapKey == key
-                && strcmp(((HAMTEntry *)(node->BaseValue))->str, str) == 0) {
+                && hamt->CmpKey(((HAMTEntry *)(node->BaseValue))->str,
+                                str) == 0) {
                 /*@-branchstate@*/
                 if (*replace) {
                     deletefunc(((HAMTEntry *)(node->BaseValue))->data);
@@ -384,7 +388,9 @@ HAMT_search(HAMT *hamt, const char *str)
 
     for (;;) {
         if (!(IsSubTrie(node))) {
-            if (node->BitMapKey == key)
+            if (node->BitMapKey == key
+                && hamt->CmpKey(((HAMTEntry *)(node->BaseValue))->str,
+                                str) == 0)
                 return ((HAMTEntry *)(node->BaseValue))->data;
             else
                 return NULL;
