@@ -102,7 +102,7 @@
 /* #undef HAVE_VSNPRINTF */
 
 /* Define to 1 if you have the `_stricmp' function. */
-#undef HAVE__STRICMP 1
+#define HAVE__STRICMP 1
 
 /* Name of package */
 #define PACKAGE "yasm"
