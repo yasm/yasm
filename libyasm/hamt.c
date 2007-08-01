@@ -281,7 +281,8 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
                          * downward.
                          */
                         newnodes = yasm_xmalloc(sizeof(HAMTNode));
-                        newnodes[0] = *node;    /* structure copy */
+                        newnodes[0].BitMapKey = key2;
+                        newnodes[0].BaseValue = node->BaseValue;
                         node->BitMapKey = 1<<keypart;
                         SetSubTrie(hamt, node, newnodes);
                         node = &newnodes[0];
@@ -297,13 +298,15 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 
                         /* Copy nodes into subtrie based on order */
                         if (keypart2 < keypart) {
-                            newnodes[0] = *node;    /* structure copy */
+                            newnodes[0].BitMapKey = key2;
+                            newnodes[0].BaseValue = node->BaseValue;
                             newnodes[1].BitMapKey = key;
                             SetValue(hamt, &newnodes[1], entry);
                         } else {
                             newnodes[0].BitMapKey = key;
                             SetValue(hamt, &newnodes[0], entry);
-                            newnodes[1] = *node;    /* structure copy */
+                            newnodes[1].BitMapKey = key2;
+                            newnodes[1].BaseValue = node->BaseValue;
                         }
 
                         /* Set bits in bitmap corresponding to keys */
