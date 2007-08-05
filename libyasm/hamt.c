@@ -133,7 +133,7 @@ HAMT_create(int nocase, /*@exits@*/ void (*error_func)
     if (nocase) {
         hamt->HashKey = HashKey_nocase;
         hamt->ReHashKey = ReHashKey_nocase;
-        hamt->CmpKey = strcasecmp;
+        hamt->CmpKey = yasm__strcasecmp;
     } else {
         hamt->HashKey = HashKey;
         hamt->ReHashKey = ReHashKey;
