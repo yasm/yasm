@@ -163,10 +163,10 @@ void yasm_x86__ea_init(x86_effaddr *x86_ea, unsigned int spare,
                        yasm_bytecode *precbc);
 
 void yasm_x86__ea_set_disponly(x86_effaddr *x86_ea);
-x86_effaddr *yasm_x86__ea_create_reg(unsigned long reg, unsigned char *rex,
-                                     unsigned int bits);
+x86_effaddr *yasm_x86__ea_create_reg(x86_effaddr *x86_ea, unsigned long reg,
+                                     unsigned char *rex, unsigned int bits);
 x86_effaddr *yasm_x86__ea_create_imm
-    (/*@keep@*/ yasm_expr *imm, unsigned int im_len);
+    (x86_effaddr *x86_ea, /*@keep@*/ yasm_expr *imm, unsigned int im_len);
 yasm_effaddr *yasm_x86__ea_create_expr(yasm_arch *arch,
                                        /*@keep@*/ yasm_expr *e);
 void yasm_x86__ea_destroy(yasm_effaddr *ea);

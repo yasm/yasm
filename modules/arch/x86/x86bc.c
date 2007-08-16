@@ -172,17 +172,10 @@ yasm_x86__ea_set_disponly(x86_effaddr *x86_ea)
     x86_ea->need_sib = 0;
 }
 
-x86_effaddr *
-yasm_x86__ea_create_reg(unsigned long reg, unsigned char *rex,
-                        unsigned int bits)
+static x86_effaddr *
+ea_create(void)
 {
-    x86_effaddr *x86_ea;
-    unsigned char rm;
-
-    if (yasm_x86__set_rex_from_reg(rex, &rm, reg, bits, X86_REX_B))
-        return NULL;
-
-    x86_ea = yasm_xmalloc(sizeof(x86_effaddr));
+    x86_effaddr *x86_ea = yasm_xmalloc(sizeof(x86_effaddr));
 
     yasm_value_initialize(&x86_ea->ea.disp, NULL, 0);
     x86_ea->ea.need_nonzero_len = 0;
@@ -190,12 +183,30 @@ yasm_x86__ea_create_reg(unsigned long reg, unsigned char *rex,
     x86_ea->ea.nosplit = 0;
     x86_ea->ea.strong = 0;
     x86_ea->ea.segreg = 0;
-    x86_ea->modrm = 0xC0 | rm;  /* Mod=11, R/M=Reg, Reg=0 */
-    x86_ea->valid_modrm = 1;
-    x86_ea->need_modrm = 1;
+    x86_ea->modrm = 0;
+    x86_ea->valid_modrm = 0;
+    x86_ea->need_modrm = 0;
     x86_ea->sib = 0;
     x86_ea->valid_sib = 0;
     x86_ea->need_sib = 0;
+
+    return x86_ea;
+}
+
+x86_effaddr *
+yasm_x86__ea_create_reg(x86_effaddr *x86_ea, unsigned long reg,
+                        unsigned char *rex, unsigned int bits)
+{
+    unsigned char rm;
+
+    if (yasm_x86__set_rex_from_reg(rex, &rm, reg, bits, X86_REX_B))
+        return NULL;
+
+    if (!x86_ea)
+        x86_ea = ea_create();
+    x86_ea->modrm = 0xC0 | rm;  /* Mod=11, R/M=Reg, Reg=0 */
+    x86_ea->valid_modrm = 1;
+    x86_ea->need_modrm = 1;
 
     return x86_ea;
 }
@@ -206,7 +217,7 @@ yasm_x86__ea_create_expr(yasm_arch *arch, yasm_expr *e)
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     x86_effaddr *x86_ea;
 
-    x86_ea = yasm_xmalloc(sizeof(x86_effaddr));
+    x86_ea = ea_create();
 
     if (arch_x86->parser == X86_PARSER_GAS) {
         /* Need to change foo+rip into foo wrt rip.
@@ -224,16 +235,8 @@ yasm_x86__ea_create_expr(yasm_arch *arch, yasm_expr *e)
         }
     }
     yasm_value_initialize(&x86_ea->ea.disp, e, 0);
-    x86_ea->ea.need_nonzero_len = 0;
     x86_ea->ea.need_disp = 1;
-    x86_ea->ea.nosplit = 0;
-    x86_ea->ea.strong = 0;
-    x86_ea->ea.segreg = 0;
-    x86_ea->modrm = 0;
-    x86_ea->valid_modrm = 0;
     x86_ea->need_modrm = 1;
-    x86_ea->sib = 0;
-    x86_ea->valid_sib = 0;
     /* We won't know whether we need an SIB until we know more about expr and
      * the BITS/address override setting.
      */
@@ -244,23 +247,13 @@ yasm_x86__ea_create_expr(yasm_arch *arch, yasm_expr *e)
 
 /*@-compmempass@*/
 x86_effaddr *
-yasm_x86__ea_create_imm(yasm_expr *imm, unsigned int im_len)
+yasm_x86__ea_create_imm(x86_effaddr *x86_ea, yasm_expr *imm,
+                        unsigned int im_len)
 {
-    x86_effaddr *x86_ea;
-
-    x86_ea = yasm_xmalloc(sizeof(x86_effaddr));
-
+    if (!x86_ea)
+        x86_ea = ea_create();
     yasm_value_initialize(&x86_ea->ea.disp, imm, im_len);
     x86_ea->ea.need_disp = 1;
-    x86_ea->ea.nosplit = 0;
-    x86_ea->ea.strong = 0;
-    x86_ea->ea.segreg = 0;
-    x86_ea->modrm = 0;
-    x86_ea->valid_modrm = 0;
-    x86_ea->need_modrm = 0;
-    x86_ea->sib = 0;
-    x86_ea->valid_sib = 0;
-    x86_ea->need_sib = 0;
 
     return x86_ea;
 }
