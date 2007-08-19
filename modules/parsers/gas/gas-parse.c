@@ -37,7 +37,13 @@ RCSID("$Id$");
 
 #include "modules/parsers/gas/gas-parser.h"
 
-static yasm_bytecode *parse_line(yasm_parser_gas *parser_gas);
+typedef struct dir_lookup {
+    const char *name;
+    yasm_bytecode * (*handler) (yasm_parser_gas *, unsigned int);
+    unsigned int param;
+    enum gas_parser_state newstate;
+} dir_lookup;
+
 static yasm_bytecode *parse_instr(yasm_parser_gas *parser_gas);
 static int parse_dirvals(yasm_parser_gas *parser_gas, yasm_valparamhead *vps);
 static int parse_datavals(yasm_parser_gas *parser_gas, yasm_datavalhead *dvs);
@@ -57,9 +63,9 @@ static yasm_section *gas_get_section
      /*@null@*/ char *type, /*@null@*/ yasm_valparamhead *objext_valparams,
      int builtin);
 static void gas_switch_section
-    (yasm_parser_gas *parser_gas, /*@only@*/ char *name, /*@null@*/ char *flags,
-     /*@null@*/ char *type, /*@null@*/ yasm_valparamhead *objext_valparams,
-     int builtin);
+    (yasm_parser_gas *parser_gas, /*@only@*/ const char *name,
+     /*@null@*/ char *flags, /*@null@*/ char *type,
+     /*@null@*/ yasm_valparamhead *objext_valparams, int builtin);
 static yasm_bytecode *gas_parser_align
     (yasm_parser_gas *parser_gas, yasm_section *sect, yasm_expr *boundval,
      /*@null@*/ yasm_expr *fillval, /*@null@*/ yasm_expr *maxskipval,
@@ -68,12 +74,6 @@ static yasm_bytecode *gas_parser_dir_fill
     (yasm_parser_gas *parser_gas, /*@only@*/ yasm_expr *repeat,
      /*@only@*/ /*@null@*/ yasm_expr *size,
      /*@only@*/ /*@null@*/ yasm_expr *value);
-#if 0
-static void gas_parser_directive
-    (yasm_parser_gas *parser_gas, const char *name,
-     yasm_valparamhead *valparams,
-     /*@null@*/ yasm_valparamhead *objext_valparams);
-#endif
 
 #define is_eol_tok(tok) ((tok) == '\n' || (tok) == ';' || (tok) == 0)
 #define is_eol()        is_eol_tok(curtok)
@@ -164,27 +164,6 @@ expect_(yasm_parser_gas *parser_gas, int token)
         case RIGHT_OP:          str = ">>"; break;
         case ID:                str = "identifier"; break;
         case LABEL:             str = "label"; break;
-        case LINE:
-        case DIR_ALIGN:
-        case DIR_ASCII:
-        case DIR_COMM:
-        case DIR_DATA:
-        case DIR_ENDR:
-        case DIR_EQU:
-        case DIR_FILE:
-        case DIR_FILL:
-        case DIR_LEB128:
-        case DIR_LINE:
-        case DIR_LOCAL:
-        case DIR_LCOMM:
-        case DIR_ORG:
-        case DIR_REPT:
-        case DIR_SECTION:
-        case DIR_SECTNAME:
-        case DIR_SKIP:
-        case DIR_ZERO:
-            str = "directive";
-            break;
         default:
             strch[1] = token;
             str = strch;
@@ -196,44 +175,14 @@ expect_(yasm_parser_gas *parser_gas, int token)
 }
 #define expect(token) expect_(parser_gas, token)
 
-void
-gas_parser_parse(yasm_parser_gas *parser_gas)
-{
-    while (get_next_token() != 0) {
-        yasm_bytecode *bc = NULL, *temp_bc;
-        
-        if (!is_eol()) {
-            bc = parse_line(parser_gas);
-            demand_eol();
-        }
-
-        yasm_errwarn_propagate(parser_gas->errwarns, cur_line);
-
-        temp_bc = yasm_section_bcs_append(cursect, bc);
-        if (temp_bc)
-            parser_gas->prev_bc = temp_bc;
-        if (curtok == ';')
-            continue;       /* don't advance line number until \n */
-        if (parser_gas->save_input)
-            yasm_linemap_add_source(parser_gas->linemap,
-                temp_bc,
-                (char *)parser_gas->save_line[parser_gas->save_last ^ 1]);
-        yasm_linemap_goto_next(parser_gas->linemap);
-        parser_gas->dir_line++; /* keep track for .line followed by .file */
-    }
-}
-
 static yasm_bytecode *
 parse_line(yasm_parser_gas *parser_gas)
 {
     yasm_bytecode *bc;
     yasm_expr *e;
-    yasm_intnum *intn;
-    yasm_datavalhead dvs;
     yasm_valparamhead vps;
-    yasm_valparam *vp;
-    unsigned int ival;
     char *id;
+    const dir_lookup *dir;
 
     if (is_eol())
         return NULL;
@@ -245,6 +194,15 @@ parse_line(yasm_parser_gas *parser_gas)
     switch (curtok) {
         case ID:
             id = ID_val;
+
+            /* See if it's a gas-specific directive */
+            dir = (const dir_lookup *)HAMT_search(parser_gas->dirs, id);
+            if (dir) {
+                parser_gas->state = dir->newstate;
+                get_next_token(); /* ID */
+                return dir->handler(parser_gas, dir->param);
+            }
+
             parser_gas->state = INSTDIR;
             get_next_token(); /* ID */
             if (curtok == ':') {
@@ -289,425 +247,485 @@ parse_line(yasm_parser_gas *parser_gas)
             define_label(parser_gas, LABEL_val, 0);
             get_next_token(); /* LABEL */
             return parse_line(parser_gas);
-
-        /* Line directive */
-        case DIR_LINE:
-            get_next_token(); /* DIR_LINE */
-
-            if (!expect(INTNUM)) return NULL;
-            if (yasm_intnum_sign(INTNUM_val) < 0) {
-                get_next_token(); /* INTNUM */
-                yasm_error_set(YASM_ERROR_SYNTAX,
-                               N_("line number is negative"));
-                return NULL;
-            }
-
-            parser_gas->dir_line = yasm_intnum_get_uint(INTNUM_val);
-            yasm_intnum_destroy(INTNUM_val);
-            get_next_token(); /* INTNUM */
- 
-            if (parser_gas->dir_fileline == 3) {
-                /* Have both file and line */
-                yasm_linemap_set(parser_gas->linemap, NULL,
-                                 parser_gas->dir_line, 1);
-            } else if (parser_gas->dir_fileline == 1) {
-                /* Had previous file directive only */
-                parser_gas->dir_fileline = 3;
-                yasm_linemap_set(parser_gas->linemap, parser_gas->dir_file,
-                                 parser_gas->dir_line, 1);
-            } else {
-                /* Didn't see file yet */
-                parser_gas->dir_fileline = 2;
-            }
-            return NULL;
-
-        /* Macro directives */
-        case DIR_REPT:
-            get_next_token(); /* DIR_REPT */
-            e = parse_expr(parser_gas);
-            if (!e) {
-                yasm_error_set(YASM_ERROR_SYNTAX,
-                               N_("expression expected after `%s'"),
-                               ".rept");
-                return NULL;
-            }
-            intn = yasm_expr_get_intnum(&e, 0);
-
-            if (!intn) {
-                yasm_error_set(YASM_ERROR_NOT_ABSOLUTE,
-                               N_("rept expression not absolute"));
-            } else if (yasm_intnum_sign(intn) < 0) {
-                yasm_error_set(YASM_ERROR_VALUE,
-                               N_("rept expression is negative"));
-            } else {
-                gas_rept *rept = yasm_xmalloc(sizeof(gas_rept));
-                STAILQ_INIT(&rept->lines);
-                rept->startline = cur_line;
-                rept->numrept = yasm_intnum_get_uint(intn);
-                rept->numdone = 0;
-                rept->line = NULL;
-                rept->linepos = 0;
-                rept->ended = 0;
-                rept->oldbuf = NULL;
-                rept->oldbuflen = 0;
-                rept->oldbufpos = 0;
-                parser_gas->rept = rept;
-            }
-            return NULL;
-        case DIR_ENDR:
-            get_next_token(); /* DIR_ENDR */
-            /* Shouldn't ever get here unless we didn't get a DIR_REPT first */
-            yasm_error_set(YASM_ERROR_SYNTAX, N_("endr without matching rept"));
-            return NULL;
-
-        /* Alignment directives */
-        case DIR_ALIGN:
-        {
-            yasm_expr *bound, *fill=NULL, *maxskip=NULL;
-
-            ival = DIR_ALIGN_val;
-            get_next_token(); /* DIR_ALIGN */
-
-            bound = parse_expr(parser_gas);
-            if (!bound) {
-                yasm_error_set(YASM_ERROR_SYNTAX,
-                               N_(".align directive must specify alignment"));
-                return NULL;
-            }
-
-            if (curtok == ',') {
-                get_next_token(); /* ',' */
-                fill = parse_expr(parser_gas);
-                if (curtok == ',') {
-                    get_next_token(); /* ',' */
-                    maxskip = parse_expr(parser_gas);
-                }
-            }
-
-            return gas_parser_align(parser_gas, cursect, bound, fill, maxskip,
-                                    (int)ival);
-        }
-        case DIR_ORG:
-        {
-            yasm_intnum *start, *value=NULL;
-            get_next_token(); /* DIR_ORG */
-
-            /* TODO: support expr instead of intnum */
-            if (!expect(INTNUM)) return NULL;
-            start = INTNUM_val;
-            get_next_token(); /* INTNUM */
-
-            if (curtok == ',') {
-                get_next_token(); /* ',' */
-                /* TODO: support expr instead of intnum */
-                if (!expect(INTNUM)) return NULL;
-                value = INTNUM_val;
-                get_next_token(); /* INTNUM */
-            }
-            if (value) {
-                bc = yasm_bc_create_org(yasm_intnum_get_uint(start),
-                                        yasm_intnum_get_uint(value), cur_line);
-                yasm_intnum_destroy(value);
-            } else
-                bc = yasm_bc_create_org(yasm_intnum_get_uint(start), 0,
-                                        cur_line);
-            yasm_intnum_destroy(start);
-            return bc;
-        }
-        /* Data visibility directives */
-        case DIR_LOCAL:
-            get_next_token(); /* DIR_LOCAL */
-            if (!expect(ID)) return NULL;
-            yasm_symtab_declare(p_symtab, ID_val, YASM_SYM_DLOCAL, cur_line);
-            yasm_xfree(ID_val);
-            get_next_token(); /* ID */
-            return NULL;
-        case DIR_COMM:
-        case DIR_LCOMM:
-        {
-            yasm_expr *align = NULL;
-            /*@null@*/ /*@dependent@*/ yasm_symrec *sym;
-            int is_lcomm = curtok == DIR_LCOMM;
-
-            get_next_token(); /* DIR_LOCAL */
-
-            if (!expect(ID)) return NULL;
-            id = ID_val;
-            get_next_token(); /* ID */
-            if (!expect(',')) {
-                yasm_xfree(id);
-                return NULL;
-            }
-            get_next_token(); /* , */
-            e = parse_expr(parser_gas);
-            if (!e) {
-                yasm_error_set(YASM_ERROR_SYNTAX, N_("size expected for `%s'"),
-                               ".COMM");
-                return NULL;
-            }
-            if (curtok == ',') {
-                /* Optional alignment expression */
-                get_next_token(); /* ',' */
-                align = parse_expr(parser_gas);
-            }
-            /* If already explicitly declared local, treat like LCOMM */
-            if (is_lcomm
-                || ((sym = yasm_symtab_get(p_symtab, id))
-                    && yasm_symrec_get_visibility(sym) == YASM_SYM_DLOCAL)) {
-                define_lcomm(parser_gas, id, e, align);
-            } else if (align) {
-                /* Give third parameter as objext valparam */
-                yasm_valparamhead *extvps = yasm_vps_create();
-                vp = yasm_vp_create_expr(NULL, align);
-                yasm_vps_append(extvps, vp);
-
-                sym = yasm_symtab_declare(p_symtab, id, YASM_SYM_COMMON,
-                                          cur_line);
-                yasm_symrec_set_common_size(sym, e);
-                yasm_symrec_set_objext_valparams(sym, extvps);
-
-                yasm_xfree(id);
-            } else {
-                sym = yasm_symtab_declare(p_symtab, id, YASM_SYM_COMMON,
-                                          cur_line);
-                yasm_symrec_set_common_size(sym, e);
-                yasm_xfree(id);
-            }
-            return NULL;
-        }
-
-        /* Integer data definition directives */
-        case DIR_ASCII:
-            ival = DIR_ASCII_val;
-            get_next_token(); /* DIR_ASCII */
-            if (!parse_strvals(parser_gas, &dvs))
-                return NULL;
-            return yasm_bc_create_data(&dvs, 1, (int)ival, p_object->arch,
-                                       cur_line);
-        case DIR_DATA:
-            ival = DIR_DATA_val;
-            get_next_token(); /* DIR_DATA */
-            if (!parse_datavals(parser_gas, &dvs))
-                return NULL;
-            return yasm_bc_create_data(&dvs, ival, 0, p_object->arch,
-                                       cur_line);
-        case DIR_LEB128:
-            ival = DIR_LEB128_val;
-            get_next_token(); /* DIR_LEB128 */
-            if (!parse_datavals(parser_gas, &dvs))
-                return NULL;
-            return yasm_bc_create_leb128(&dvs, (int)ival, cur_line);
-
-        /* Empty space / fill data definition directives */
-        case DIR_ZERO:
-            get_next_token(); /* DIR_ZERO */
-            e = parse_expr(parser_gas);
-            if (!e) {
-                yasm_error_set(YASM_ERROR_SYNTAX,
-                               N_("expression expected after `%s'"), ".ZERO");
-                return NULL;
-            }
-
-            yasm_dvs_initialize(&dvs);
-            yasm_dvs_append(&dvs, yasm_dv_create_expr(
-                p_expr_new_ident(yasm_expr_int(yasm_intnum_create_uint(0)))));
-            bc = yasm_bc_create_data(&dvs, 1, 0, p_object->arch, cur_line);
-            yasm_bc_set_multiple(bc, e);
-            return bc;
-        case DIR_SKIP:
-        {
-            yasm_expr *e_val;
-
-            get_next_token(); /* DIR_SKIP */
-            e = parse_expr(parser_gas);
-            if (!e) {
-                yasm_error_set(YASM_ERROR_SYNTAX,
-                               N_("expression expected after `%s'"), ".SKIP");
-                return NULL;
-            }
-            if (curtok != ',')
-                return yasm_bc_create_reserve(e, 1, cur_line);
-            get_next_token(); /* ',' */
-            e_val = parse_expr(parser_gas);
-            yasm_dvs_initialize(&dvs);
-            yasm_dvs_append(&dvs, yasm_dv_create_expr(e_val));
-            bc = yasm_bc_create_data(&dvs, 1, 0, p_object->arch, cur_line);
-
-            yasm_bc_set_multiple(bc, e);
-            return bc;
-        }
-
-        /* fill data definition directive */
-        case DIR_FILL:
-        {
-            yasm_expr *sz=NULL, *val=NULL;
-            get_next_token(); /* DIR_FILL */
-            e = parse_expr(parser_gas);
-            if (!e) {
-                yasm_error_set(YASM_ERROR_SYNTAX,
-                               N_("expression expected after `%s'"), ".FILL");
-                return NULL;
-            }
-            if (curtok == ',') {
-                get_next_token(); /* ',' */
-                sz = parse_expr(parser_gas);
-                if (curtok == ',') {
-                    get_next_token(); /* ',' */
-                    val = parse_expr(parser_gas);
-                }
-            }
-            return gas_parser_dir_fill(parser_gas, e, sz, val);
-        }
-
-        /* Section directives */
-        case DIR_SECTNAME:
-            gas_switch_section(parser_gas, DIR_SECTNAME_val, NULL, NULL, NULL,
-                               1);
-            get_next_token(); /* DIR_SECTNAME */
-            return NULL;
-        case DIR_SECTION:
-        {
-            /* DIR_SECTION ID ',' STRING ',' '@' ID ',' dirvals */
-            char *sectname, *flags = NULL, *type = NULL;
-            int have_vps = 0;
-
-            get_next_token(); /* DIR_SECTION */
-
-            if (!expect(ID)) return NULL;
-            sectname = ID_val;
-            get_next_token(); /* ID */
-
-            if (curtok == ',') {
-                get_next_token(); /* ',' */
-                if (!expect(STRING)) {
-                    yasm_error_set(YASM_ERROR_SYNTAX,
-                                   N_("flag string expected"));
-                    yasm_xfree(sectname);
-                    return NULL;
-                }
-                flags = STRING_val.contents;
-                get_next_token(); /* STRING */
-            }
-
-            if (curtok == ',') {
-                get_next_token(); /* ',' */
-                if (!expect('@')) {
-                    yasm_xfree(sectname);
-                    yasm_xfree(flags);
-                    return NULL;
-                }
-                get_next_token(); /* '@' */
-                if (!expect(ID)) {
-                    yasm_xfree(sectname);
-                    yasm_xfree(flags);
-                    return NULL;
-                }
-                type = ID_val;
-                get_next_token(); /* ID */
-            }
-
-            if (curtok == ',') {
-                get_next_token(); /* ',' */
-                if (parse_dirvals(parser_gas, &vps))
-                    have_vps = 1;
-            }
-
-            gas_switch_section(parser_gas, sectname, flags, type,
-                               have_vps ? &vps : NULL, 0);
-            yasm_xfree(flags);
-            return NULL;
-        }
-
-        /* Other directives */
-        case DIR_EQU:
-            /* ID ',' expr */
-            get_next_token(); /* DIR_EQU */
-            if (!expect(ID)) return NULL;
-            id = ID_val;
-            get_next_token(); /* ID */
-            if (!expect(',')) {
-                yasm_xfree(id);
-                return NULL;
-            }
-            get_next_token(); /* ',' */
-            e = parse_expr(parser_gas);
-            if (e)
-                yasm_symtab_define_equ(p_symtab, id, e, cur_line);
-            else
-                yasm_error_set(YASM_ERROR_SYNTAX,
-                               N_("expression expected after `%s'"), ",");
-            yasm_xfree(id);
-            return NULL;
-
-        case DIR_FILE:
-            get_next_token(); /* DIR_FILE */
-            if (curtok == STRING) {
-                /* No file number; this form also sets the assembler's
-                 * internal line number.
-                 */
-                char *filename = STRING_val.contents;
-                get_next_token(); /* STRING */
-                if (parser_gas->dir_fileline == 3) {
-                    /* Have both file and line */
-                    const char *old_fn;
-                    unsigned long old_line;
-
-                    yasm_linemap_lookup(parser_gas->linemap, cur_line, &old_fn,
-                                        &old_line);
-                    yasm_linemap_set(parser_gas->linemap, filename, old_line,
-                                     1);
-                } else if (parser_gas->dir_fileline == 2) {
-                    /* Had previous line directive only */
-                    parser_gas->dir_fileline = 3;
-                    yasm_linemap_set(parser_gas->linemap, filename,
-                                     parser_gas->dir_line, 1);
-                } else {
-                    /* Didn't see line yet, save file */
-                    parser_gas->dir_fileline = 1;
-                    if (parser_gas->dir_file)
-                        yasm_xfree(parser_gas->dir_file);
-                    parser_gas->dir_file = yasm__xstrdup(filename);
-                }
-
-                /* Pass change along to debug format */
-                yasm_vps_initialize(&vps);
-                vp = yasm_vp_create_string(NULL, filename);
-                yasm_vps_append(&vps, vp);
-
-                yasm_object_directive(p_object, ".file", "gas", &vps, NULL,
-                                      cur_line);
-
-                yasm_vps_delete(&vps);
-                return NULL;
-            }
-
-            /* fileno filename form */
-            yasm_vps_initialize(&vps);
-
-            if (!expect(INTNUM)) return NULL;
-            vp = yasm_vp_create_expr(NULL,
-                p_expr_new_ident(yasm_expr_int(INTNUM_val)));
-            yasm_vps_append(&vps, vp);
-            get_next_token(); /* INTNUM */
-
-            if (!expect(STRING)) {
-                yasm_vps_delete(&vps);
-                return NULL;
-            }
-            vp = yasm_vp_create_string(NULL, STRING_val.contents);
-            yasm_vps_append(&vps, vp);
-            get_next_token(); /* STRING */
-
-            yasm_object_directive(p_object, ".file", "gas", &vps, NULL,
-                                  cur_line);
-
-            yasm_vps_delete(&vps);
-            return NULL;
         default:
             yasm_error_set(YASM_ERROR_SYNTAX,
                 N_("label or instruction expected at start of line"));
             return NULL;
     }
+}
+
+/* Line directive */
+static yasm_bytecode *
+dir_line(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    if (!expect(INTNUM)) return NULL;
+    if (yasm_intnum_sign(INTNUM_val) < 0) {
+        get_next_token(); /* INTNUM */
+        yasm_error_set(YASM_ERROR_SYNTAX,
+                       N_("line number is negative"));
+        return NULL;
+    }
+
+    parser_gas->dir_line = yasm_intnum_get_uint(INTNUM_val);
+    yasm_intnum_destroy(INTNUM_val);
+    get_next_token(); /* INTNUM */
+
+    if (parser_gas->dir_fileline == 3) {
+        /* Have both file and line */
+        yasm_linemap_set(parser_gas->linemap, NULL,
+                         parser_gas->dir_line, 1);
+    } else if (parser_gas->dir_fileline == 1) {
+        /* Had previous file directive only */
+        parser_gas->dir_fileline = 3;
+        yasm_linemap_set(parser_gas->linemap, parser_gas->dir_file,
+                         parser_gas->dir_line, 1);
+    } else {
+        /* Didn't see file yet */
+        parser_gas->dir_fileline = 2;
+    }
+    return NULL;
+}
+
+/* Macro directives */
+
+static yasm_bytecode *
+dir_rept(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    yasm_intnum *intn;
+    yasm_expr *e = parse_expr(parser_gas);
+
+    if (!e) {
+        yasm_error_set(YASM_ERROR_SYNTAX,
+                       N_("expression expected after `%s'"),
+                       ".rept");
+        return NULL;
+    }
+    intn = yasm_expr_get_intnum(&e, 0);
+
+    if (!intn) {
+        yasm_error_set(YASM_ERROR_NOT_ABSOLUTE,
+                       N_("rept expression not absolute"));
+    } else if (yasm_intnum_sign(intn) < 0) {
+        yasm_error_set(YASM_ERROR_VALUE,
+                       N_("rept expression is negative"));
+    } else {
+        gas_rept *rept = yasm_xmalloc(sizeof(gas_rept));
+        STAILQ_INIT(&rept->lines);
+        rept->startline = cur_line;
+        rept->numrept = yasm_intnum_get_uint(intn);
+        rept->numdone = 0;
+        rept->line = NULL;
+        rept->linepos = 0;
+        rept->ended = 0;
+        rept->oldbuf = NULL;
+        rept->oldbuflen = 0;
+        rept->oldbufpos = 0;
+        parser_gas->rept = rept;
+    }
+    return NULL;
+}
+
+static yasm_bytecode *
+dir_endr(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    /* Shouldn't ever get here unless we didn't get a DIR_REPT first */
+    yasm_error_set(YASM_ERROR_SYNTAX, N_("endr without matching rept"));
+    return NULL;
+}
+
+/* Alignment directives */
+
+static yasm_bytecode *
+dir_align(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    yasm_expr *bound, *fill=NULL, *maxskip=NULL;
+
+    bound = parse_expr(parser_gas);
+    if (!bound) {
+        yasm_error_set(YASM_ERROR_SYNTAX,
+                       N_(".align directive must specify alignment"));
+        return NULL;
+    }
+
+    if (curtok == ',') {
+        get_next_token(); /* ',' */
+        fill = parse_expr(parser_gas);
+        if (curtok == ',') {
+            get_next_token(); /* ',' */
+            maxskip = parse_expr(parser_gas);
+        }
+    }
+
+    return gas_parser_align(parser_gas, cursect, bound, fill, maxskip,
+                            (int)param);
+}
+
+static yasm_bytecode *
+dir_org(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    yasm_intnum *start, *value=NULL;
+    yasm_bytecode *bc;
+
+    /* TODO: support expr instead of intnum */
+    if (!expect(INTNUM)) return NULL;
+    start = INTNUM_val;
+    get_next_token(); /* INTNUM */
+
+    if (curtok == ',') {
+        get_next_token(); /* ',' */
+        /* TODO: support expr instead of intnum */
+        if (!expect(INTNUM)) return NULL;
+        value = INTNUM_val;
+        get_next_token(); /* INTNUM */
+    }
+    if (value) {
+        bc = yasm_bc_create_org(yasm_intnum_get_uint(start),
+                                yasm_intnum_get_uint(value), cur_line);
+        yasm_intnum_destroy(value);
+    } else
+        bc = yasm_bc_create_org(yasm_intnum_get_uint(start), 0,
+                                cur_line);
+    yasm_intnum_destroy(start);
+    return bc;
+}
+
+/* Data visibility directives */
+
+static yasm_bytecode *
+dir_local(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    if (!expect(ID)) return NULL;
+    yasm_symtab_declare(p_symtab, ID_val, YASM_SYM_DLOCAL, cur_line);
+    yasm_xfree(ID_val);
+    get_next_token(); /* ID */
+    return NULL;
+}
+
+static yasm_bytecode *
+dir_comm(yasm_parser_gas *parser_gas, unsigned int is_lcomm)
+{
+    yasm_expr *align = NULL;
+    /*@null@*/ /*@dependent@*/ yasm_symrec *sym;
+    char *id;
+    yasm_expr *e;
+
+    if (!expect(ID)) return NULL;
+    id = ID_val;
+    get_next_token(); /* ID */
+    if (!expect(',')) {
+        yasm_xfree(id);
+        return NULL;
+    }
+    get_next_token(); /* , */
+    e = parse_expr(parser_gas);
+    if (!e) {
+        yasm_error_set(YASM_ERROR_SYNTAX, N_("size expected for `%s'"),
+                       ".COMM");
+        return NULL;
+    }
+    if (curtok == ',') {
+        /* Optional alignment expression */
+        get_next_token(); /* ',' */
+        align = parse_expr(parser_gas);
+    }
+    /* If already explicitly declared local, treat like LCOMM */
+    if (is_lcomm
+        || ((sym = yasm_symtab_get(p_symtab, id))
+            && yasm_symrec_get_visibility(sym) == YASM_SYM_DLOCAL)) {
+        define_lcomm(parser_gas, id, e, align);
+    } else if (align) {
+        /* Give third parameter as objext valparam */
+        yasm_valparamhead *extvps = yasm_vps_create();
+        yasm_valparam *vp = yasm_vp_create_expr(NULL, align);
+        yasm_vps_append(extvps, vp);
+
+        sym = yasm_symtab_declare(p_symtab, id, YASM_SYM_COMMON,
+                                  cur_line);
+        yasm_symrec_set_common_size(sym, e);
+        yasm_symrec_set_objext_valparams(sym, extvps);
+
+        yasm_xfree(id);
+    } else {
+        sym = yasm_symtab_declare(p_symtab, id, YASM_SYM_COMMON,
+                                  cur_line);
+        yasm_symrec_set_common_size(sym, e);
+        yasm_xfree(id);
+    }
+    return NULL;
+}
+
+/* Integer data definition directives */
+
+static yasm_bytecode *
+dir_ascii(yasm_parser_gas *parser_gas, unsigned int withzero)
+{
+    yasm_datavalhead dvs;
+    if (!parse_strvals(parser_gas, &dvs))
+        return NULL;
+    return yasm_bc_create_data(&dvs, 1, (int)withzero, p_object->arch,
+                               cur_line);
+}
+
+static yasm_bytecode *
+dir_data(yasm_parser_gas *parser_gas, unsigned int size)
+{
+    yasm_datavalhead dvs;
+    if (!parse_datavals(parser_gas, &dvs))
+        return NULL;
+    return yasm_bc_create_data(&dvs, size, 0, p_object->arch, cur_line);
+}
+
+static yasm_bytecode *
+dir_leb128(yasm_parser_gas *parser_gas, unsigned int sign)
+{
+    yasm_datavalhead dvs;
+    if (!parse_datavals(parser_gas, &dvs))
+        return NULL;
+    return yasm_bc_create_leb128(&dvs, (int)sign, cur_line);
+}
+
+/* Empty space / fill data definition directives */
+
+static yasm_bytecode *
+dir_zero(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    yasm_bytecode *bc;
+    yasm_datavalhead dvs;
+    yasm_expr *e = parse_expr(parser_gas);
+    if (!e) {
+        yasm_error_set(YASM_ERROR_SYNTAX,
+                       N_("expression expected after `%s'"), ".ZERO");
+        return NULL;
+    }
+
+    yasm_dvs_initialize(&dvs);
+    yasm_dvs_append(&dvs, yasm_dv_create_expr(
+        p_expr_new_ident(yasm_expr_int(yasm_intnum_create_uint(0)))));
+    bc = yasm_bc_create_data(&dvs, 1, 0, p_object->arch, cur_line);
+    yasm_bc_set_multiple(bc, e);
+    return bc;
+}
+
+static yasm_bytecode *
+dir_skip(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    yasm_expr *e, *e_val;
+    yasm_bytecode *bc;
+    yasm_datavalhead dvs;
+
+    e = parse_expr(parser_gas);
+    if (!e) {
+        yasm_error_set(YASM_ERROR_SYNTAX,
+                       N_("expression expected after `%s'"), ".SKIP");
+        return NULL;
+    }
+    if (curtok != ',')
+        return yasm_bc_create_reserve(e, 1, cur_line);
+    get_next_token(); /* ',' */
+    e_val = parse_expr(parser_gas);
+    yasm_dvs_initialize(&dvs);
+    yasm_dvs_append(&dvs, yasm_dv_create_expr(e_val));
+    bc = yasm_bc_create_data(&dvs, 1, 0, p_object->arch, cur_line);
+
+    yasm_bc_set_multiple(bc, e);
+    return bc;
+}
+
+/* fill data definition directive */
+static yasm_bytecode *
+dir_fill(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    yasm_expr *sz=NULL, *val=NULL;
+    yasm_expr *e = parse_expr(parser_gas);
+    if (!e) {
+        yasm_error_set(YASM_ERROR_SYNTAX,
+                       N_("expression expected after `%s'"), ".FILL");
+        return NULL;
+    }
+    if (curtok == ',') {
+        get_next_token(); /* ',' */
+        sz = parse_expr(parser_gas);
+        if (curtok == ',') {
+            get_next_token(); /* ',' */
+            val = parse_expr(parser_gas);
+        }
+    }
+    return gas_parser_dir_fill(parser_gas, e, sz, val);
+}
+
+/* Section directives */
+
+static yasm_bytecode *
+dir_bss_section(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    gas_switch_section(parser_gas, ".bss", NULL, NULL, NULL, 1);
+    return NULL;
+}
+
+static yasm_bytecode *
+dir_data_section(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    gas_switch_section(parser_gas, ".data", NULL, NULL, NULL, 1);
+    return NULL;
+}
+
+static yasm_bytecode *
+dir_text_section(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    gas_switch_section(parser_gas, ".text", NULL, NULL, NULL, 1);
+    return NULL;
+}
+
+static yasm_bytecode *
+dir_section(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    /* DIR_SECTION ID ',' STRING ',' '@' ID ',' dirvals */
+    char *sectname, *flags = NULL, *type = NULL;
+    yasm_valparamhead vps;
+    int have_vps = 0;
+
+    if (!expect(ID)) return NULL;
+    sectname = ID_val;
+    get_next_token(); /* ID */
+
+    if (curtok == ',') {
+        get_next_token(); /* ',' */
+        if (!expect(STRING)) {
+            yasm_error_set(YASM_ERROR_SYNTAX,
+                           N_("flag string expected"));
+            yasm_xfree(sectname);
+            return NULL;
+        }
+        flags = STRING_val.contents;
+        get_next_token(); /* STRING */
+    }
+
+    if (curtok == ',') {
+        get_next_token(); /* ',' */
+        if (!expect('@')) {
+            yasm_xfree(sectname);
+            yasm_xfree(flags);
+            return NULL;
+        }
+        get_next_token(); /* '@' */
+        if (!expect(ID)) {
+            yasm_xfree(sectname);
+            yasm_xfree(flags);
+            return NULL;
+        }
+        type = ID_val;
+        get_next_token(); /* ID */
+    }
+
+    if (curtok == ',') {
+        get_next_token(); /* ',' */
+        if (parse_dirvals(parser_gas, &vps))
+            have_vps = 1;
+    }
+
+    gas_switch_section(parser_gas, sectname, flags, type,
+                       have_vps ? &vps : NULL, 0);
+    yasm_xfree(sectname);
+    yasm_xfree(flags);
+    return NULL;
+}
+
+/* Other directives */
+
+static yasm_bytecode *
+dir_equ(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    yasm_expr *e;
+    char *id;
+
+    /* ID ',' expr */
+    if (!expect(ID)) return NULL;
+    id = ID_val;
+    get_next_token(); /* ID */
+    if (!expect(',')) {
+        yasm_xfree(id);
+        return NULL;
+    }
+    get_next_token(); /* ',' */
+    e = parse_expr(parser_gas);
+    if (e)
+        yasm_symtab_define_equ(p_symtab, id, e, cur_line);
+    else
+        yasm_error_set(YASM_ERROR_SYNTAX,
+                       N_("expression expected after `%s'"), ",");
+    yasm_xfree(id);
+    return NULL;
+}
+
+static yasm_bytecode *
+dir_file(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    yasm_valparamhead vps;
+    yasm_valparam *vp;
+
+    if (curtok == STRING) {
+        /* No file number; this form also sets the assembler's
+         * internal line number.
+         */
+        char *filename = STRING_val.contents;
+
+        get_next_token(); /* STRING */
+        if (parser_gas->dir_fileline == 3) {
+            /* Have both file and line */
+            const char *old_fn;
+            unsigned long old_line;
+
+            yasm_linemap_lookup(parser_gas->linemap, cur_line, &old_fn,
+                                &old_line);
+            yasm_linemap_set(parser_gas->linemap, filename, old_line,
+                             1);
+        } else if (parser_gas->dir_fileline == 2) {
+            /* Had previous line directive only */
+            parser_gas->dir_fileline = 3;
+            yasm_linemap_set(parser_gas->linemap, filename,
+                             parser_gas->dir_line, 1);
+        } else {
+            /* Didn't see line yet, save file */
+            parser_gas->dir_fileline = 1;
+            if (parser_gas->dir_file)
+                yasm_xfree(parser_gas->dir_file);
+            parser_gas->dir_file = yasm__xstrdup(filename);
+        }
+
+        /* Pass change along to debug format */
+        yasm_vps_initialize(&vps);
+        vp = yasm_vp_create_string(NULL, filename);
+        yasm_vps_append(&vps, vp);
+
+        yasm_object_directive(p_object, ".file", "gas", &vps, NULL,
+                              cur_line);
+
+        yasm_vps_delete(&vps);
+        return NULL;
+    }
+
+    /* fileno filename form */
+    yasm_vps_initialize(&vps);
+
+    if (!expect(INTNUM)) return NULL;
+    vp = yasm_vp_create_expr(NULL,
+        p_expr_new_ident(yasm_expr_int(INTNUM_val)));
+    yasm_vps_append(&vps, vp);
+    get_next_token(); /* INTNUM */
+
+    if (!expect(STRING)) {
+        yasm_vps_delete(&vps);
+        return NULL;
+    }
+    vp = yasm_vp_create_string(NULL, STRING_val.contents);
+    yasm_vps_append(&vps, vp);
+    get_next_token(); /* STRING */
+
+    yasm_object_directive(p_object, ".file", "gas", &vps, NULL,
+                          cur_line);
+
+    yasm_vps_delete(&vps);
+    return NULL;
 }
 
 static yasm_bytecode *
@@ -1218,7 +1236,6 @@ parse_expr2(yasm_parser_gas *parser_gas)
             get_next_token();
             return e;
         case ID:
-        case DIR_SECTNAME:
         {
             char *name = ID_val;
             get_next_token(); /* ID */
@@ -1325,7 +1342,7 @@ gas_get_section(yasm_parser_gas *parser_gas, char *name,
 }
 
 static void
-gas_switch_section(yasm_parser_gas *parser_gas, char *name,
+gas_switch_section(yasm_parser_gas *parser_gas, const char *name,
                    /*@null@*/ char *flags, /*@null@*/ char *type,
                    /*@null@*/ yasm_valparamhead *objext_valparams,
                    int builtin)
@@ -1340,8 +1357,6 @@ gas_switch_section(yasm_parser_gas *parser_gas, char *name,
     } else
         yasm_error_set(YASM_ERROR_GENERAL, N_("invalid section name `%s'"),
                        name);
-
-    yasm_xfree(name);
 
     if (objext_valparams)
         yasm_vps_delete(objext_valparams);
@@ -1415,26 +1430,112 @@ gas_parser_dir_fill(yasm_parser_gas *parser_gas, /*@only@*/ yasm_expr *repeat,
 
     return bc;
 }
-#if 0
-static void
-gas_parser_directive(yasm_parser_gas *parser_gas, const char *name,
-                      yasm_valparamhead *valparams,
-                      yasm_valparamhead *objext_valparams)
-{
-    unsigned long line = cur_line;
 
-    /* Handle (mostly) output-format independent directives here */
-    if (!yasm_arch_parse_directive(p_object->arch, name, valparams,
-                    objext_valparams, parser_gas->object, line)) {
-        ;
-    } else if (yasm_objfmt_directive(p_object, name, valparams,
-                                     objext_valparams, line)) {
-        yasm_error_set(YASM_ERROR_GENERAL, N_("unrecognized directive [%s]"),
-                       name);
+static dir_lookup dirs_static[] = {
+    /* FIXME: Whether this is power-of-two or not depends on arch and objfmt. */
+    {".align",      dir_align,  0,  INSTDIR},
+    {".p2align",    dir_align,  1,  INSTDIR},
+    {".balign",     dir_align,  0,  INSTDIR},
+    {".org",        dir_org,    0,  INSTDIR},
+    /* data visibility directives */
+    {".local",      dir_local,  0,  INSTDIR},
+    {".comm",       dir_comm,   0,  INSTDIR},
+    {".lcomm",      dir_comm,   1,  INSTDIR},
+    /* integer data declaration directives */
+    {".byte",       dir_data,   1,  INSTDIR},
+    {".2byte",      dir_data,   2,  INSTDIR},
+    {".4byte",      dir_data,   4,  INSTDIR},
+    {".8byte",      dir_data,   8,  INSTDIR},
+    {".16byte",     dir_data,   16, INSTDIR},
+    /* TODO: These should depend on arch */
+    {".short",      dir_data,   2,  INSTDIR},
+    {".int",        dir_data,   4,  INSTDIR},
+    {".long",       dir_data,   4,  INSTDIR},
+    {".hword",      dir_data,   2,  INSTDIR},
+    {".quad",       dir_data,   8,  INSTDIR},
+    {".octa",       dir_data,   16, INSTDIR},
+    /* XXX: At least on x86, this is 2 bytes */
+    {".value",      dir_data,   2,  INSTDIR},
+    /* ASCII data declaration directives */
+    {".ascii",      dir_ascii,  0,  INSTDIR},   /* no terminating zero */
+    {".asciz",      dir_ascii,  1,  INSTDIR},   /* add terminating zero */
+    {".string",     dir_ascii,  1,  INSTDIR},   /* add terminating zero */
+    /* LEB128 integer data declaration directives */
+    {".sleb128",    dir_leb128, 1,  INSTDIR},   /* signed */
+    {".uleb128",    dir_leb128, 0,  INSTDIR},   /* unsigned */
+    /* floating point data declaration directives */
+    {".float",      dir_data,   4,  INSTDIR},
+    {".single",     dir_data,   4,  INSTDIR},
+    {".double",     dir_data,   8,  INSTDIR},
+    {".tfloat",     dir_data,   10, INSTDIR},
+    /* section directives */
+    {".bss",        dir_bss_section,    0,  INITIAL},
+    {".data",       dir_data_section,   0,  INITIAL},
+    {".text",       dir_text_section,   0,  INITIAL},
+    {".section",    dir_section,        0, SECTION_DIRECTIVE},
+    /* macro directives */
+    {".rept",       dir_rept,   0,  INSTDIR},
+    {".endr",       dir_endr,   0,  INSTDIR},
+    /* empty space/fill directives */
+    {".skip",       dir_skip,   0,  INSTDIR},
+    {".space",      dir_skip,   0,  INSTDIR},
+    {".fill",       dir_fill,   0,  INSTDIR},
+    {".zero",       dir_zero,   0,  INSTDIR},
+    /* other directives */
+    {".equ",        dir_equ,    0,  INSTDIR},
+    {".file",       dir_file,   0,  INSTDIR},
+    {".line",       dir_line,   0,  INSTDIR},
+    {".set",        dir_equ,    0,  INSTDIR}
+};
+
+static void
+no_delete(void *data)
+{
+}
+
+void
+gas_parser_parse(yasm_parser_gas *parser_gas)
+{
+    dir_lookup word;
+    unsigned int i;
+    int replace = 1;
+
+    word.name = ".word";
+    word.handler = dir_data;
+    word.param = yasm_arch_wordsize(p_object->arch)/8;
+    word.newstate = INSTDIR;
+
+    /* Create directive lookup */
+    parser_gas->dirs = HAMT_create(1, yasm_internal_error_);
+    HAMT_insert(parser_gas->dirs, word.name, &word, &replace, no_delete);
+    for (i=0; i<NELEMS(dirs_static); i++) {
+        replace = 1;
+        HAMT_insert(parser_gas->dirs, dirs_static[i].name,
+                    &dirs_static[i], &replace, no_delete);
     }
 
-    yasm_vps_delete(valparams);
-    if (objext_valparams)
-        yasm_vps_delete(objext_valparams);
+    while (get_next_token() != 0) {
+        yasm_bytecode *bc = NULL, *temp_bc;
+        
+        if (!is_eol()) {
+            bc = parse_line(parser_gas);
+            demand_eol();
+        }
+
+        yasm_errwarn_propagate(parser_gas->errwarns, cur_line);
+
+        temp_bc = yasm_section_bcs_append(cursect, bc);
+        if (temp_bc)
+            parser_gas->prev_bc = temp_bc;
+        if (curtok == ';')
+            continue;       /* don't advance line number until \n */
+        if (parser_gas->save_input)
+            yasm_linemap_add_source(parser_gas->linemap,
+                temp_bc,
+                (char *)parser_gas->save_line[parser_gas->save_last ^ 1]);
+        yasm_linemap_goto_next(parser_gas->linemap);
+        parser_gas->dir_line++; /* keep track for .line followed by .file */
+    }
+
+    HAMT_destroy(parser_gas->dirs, no_delete);
 }
-#endif

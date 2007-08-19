@@ -48,25 +48,6 @@ enum tokentype {
     RIGHT_OP,
     ID,
     LABEL,
-    LINE,
-    DIR_ALIGN,
-    DIR_ASCII,
-    DIR_COMM,
-    DIR_DATA,
-    DIR_ENDR,
-    DIR_EQU,
-    DIR_FILE,
-    DIR_FILL,
-    DIR_LEB128,
-    DIR_LINE,
-    DIR_LOCAL,
-    DIR_LCOMM,
-    DIR_ORG,
-    DIR_REPT,
-    DIR_SECTION,
-    DIR_SECTNAME,
-    DIR_SKIP,
-    DIR_ZERO,
     NONE
 };
 
@@ -104,6 +85,13 @@ typedef struct gas_rept {
     size_t oldbufpos;           /* position in previous fill buffer */
 } gas_rept;
 
+enum gas_parser_state {
+    INITIAL,
+    COMMENT,
+    SECTION_DIRECTIVE,
+    INSTDIR
+};
+
 typedef struct yasm_parser_gas {
     FILE *in;
     int debug;
@@ -132,12 +120,7 @@ typedef struct yasm_parser_gas {
     int save_last;
 
     yasm_scanner s;
-    enum {
-        INITIAL,
-        COMMENT,
-        SECTION_DIRECTIVE,
-        INSTDIR
-    } state;
+    enum gas_parser_state state;
 
     int token;          /* enum tokentype or any character */
     yystype tokval;
@@ -154,6 +137,9 @@ typedef struct yasm_parser_gas {
      * so these are all 0 at start.
      */
     unsigned long local[10];
+
+    /* Parser-handled directives HAMT lookup */
+    HAMT *dirs;
 } yasm_parser_gas;
 
 /* shorter access names to commonly used parser_gas fields */
@@ -174,11 +160,6 @@ typedef struct yasm_parser_gas {
 #define TARGETMOD_val           (curval.arch_data)
 #define ID_val                  (curval.str_val)
 #define LABEL_val               (curval.str_val)
-#define DIR_ALIGN_val           (curval.int_info)
-#define DIR_ASCII_val           (curval.int_info)
-#define DIR_DATA_val            (curval.int_info)
-#define DIR_LEB128_val          (curval.int_info)
-#define DIR_SECTNAME_val        (curval.str_val)
 
 #define cur_line        (yasm_linemap_get_current(parser_gas->linemap))
 
