@@ -892,8 +892,9 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
                                      yasm_expr_int(delta), bc->line);
 
             jmp->target.size = 8;
+            jmp->target.sign = 1;
             if (output_value(&jmp->target, *bufp, 1,
-                             (unsigned long)(*bufp-bufp_orig), bc, -1, d))
+                             (unsigned long)(*bufp-bufp_orig), bc, 1, d))
                 return 1;
             *bufp += 1;
             break;
@@ -923,8 +924,9 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
                                      yasm_expr_int(delta), bc->line);
 
             jmp->target.size = i*8;
+            jmp->target.sign = 1;
             if (output_value(&jmp->target, *bufp, i,
-                             (unsigned long)(*bufp-bufp_orig), bc, -1, d))
+                             (unsigned long)(*bufp-bufp_orig), bc, 1, d))
                 return 1;
             *bufp += i;
             break;
