@@ -107,21 +107,40 @@ typedef struct lc3b_insn_info {
     unsigned int operands[3];
 } lc3b_insn_info;
 
-/* Define lexer arch-specific data with 0-3 modifiers. */
-#define DEF_INSN_DATA(group, mod)       do { \
-    data[0] = (unsigned long)group##_insn; \
-    data[1] = ((mod)<<8) | \
-              ((unsigned char)(sizeof(group##_insn)/sizeof(lc3b_insn_info))); \
-    } while (0)
+typedef struct lc3b_id_insn {
+    yasm_insn insn;     /* base structure */
 
-#define RET_INSN(group, mod)    do { \
-    DEF_INSN_DATA(group, mod); \
-    return YASM_ARCH_INSN; \
-    } while (0)
+    /* instruction parse group - NULL if empty instruction (just prefixes) */
+    /*@null@*/ const lc3b_insn_info *group;
+
+    /* Modifier data */
+    unsigned long mod_data;
+
+    /* Number of elements in the instruction parse group */
+    unsigned int num_info:8;
+} lc3b_id_insn;
+
+static void lc3b_id_insn_destroy(void *contents);
+static void lc3b_id_insn_print(const void *contents, FILE *f, int indent_level);
+static void lc3b_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
+
+static const yasm_bytecode_callback lc3b_id_insn_callback = {
+    lc3b_id_insn_destroy,
+    lc3b_id_insn_print,
+    lc3b_id_insn_finalize,
+    yasm_bc_calc_len_common,
+    yasm_bc_expand_common,
+    yasm_bc_tobytes_common,
+    YASM_BC_SPECIAL_INSN
+};
 
 /*
  * Instruction groupings
  */
+
+static const lc3b_insn_info empty_insn[] = {
+    { 0, 0, 0, {0, 0, 0} }
+};
 
 static const lc3b_insn_info addand_insn[] = {
     { MOD_OpHAdd, 0x1000, 3,
@@ -169,21 +188,19 @@ static const lc3b_insn_info trap_insn[] = {
     { 0, 0xF000, 1, {OPT_Imm|OPA_Imm|OPI_8, 0, 0} }
 };
 
-void
-yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
-                         yasm_bytecode *prev_bc, const unsigned long data[4],
-                         int num_operands,
-                         /*@null@*/ yasm_insn_operands *operands,
-                         int num_prefixes, unsigned long **prefixes,
-                         int num_segregs, const unsigned long *segregs)
+static void
+lc3b_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 {
+    lc3b_id_insn *id_insn = (lc3b_id_insn *)bc->contents;
     lc3b_insn *insn;
-    int num_info = (int)(data[1]&0xFF);
-    lc3b_insn_info *info = (lc3b_insn_info *)data[0];
-    unsigned long mod_data = data[1] >> 8;
+    int num_info = id_insn->num_info;
+    const lc3b_insn_info *info = id_insn->group;
+    unsigned long mod_data = id_insn->mod_data;
     int found = 0;
     yasm_insn_operand *op;
     int i;
+
+    yasm_insn_finalize(&id_insn->insn);
 
     /* Just do a simple linear search through the info array for a match.
      * First match wins.
@@ -192,17 +209,18 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
         int mismatch = 0;
 
         /* Match # of operands */
-        if (num_operands != info->num_operands)
+        if (id_insn->insn.num_operands != info->num_operands)
             continue;
 
-        if (!operands) {
+        if (id_insn->insn.num_operands == 0) {
             found = 1;      /* no operands -> must have a match here. */
             break;
         }
 
         /* Match each operand type and size */
-        for(i = 0, op = yasm_ops_first(operands); op && i<info->num_operands &&
-            !mismatch; op = yasm_operand_next(op), i++) {
+        for(i = 0, op = yasm_insn_ops_first(&id_insn->insn);
+            op && i<info->num_operands && !mismatch;
+            op = yasm_insn_op_next(op), i++) {
             /* Check operand type */
             switch ((int)(info->operands[i] & OPT_MASK)) {
                 case OPT_Imm:
@@ -238,7 +256,6 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     insn = yasm_xmalloc(sizeof(lc3b_insn));
     yasm_value_initialize(&insn->imm, NULL, 0);
     insn->imm_type = LC3B_IMM_NONE;
-    insn->origin_prevbc = NULL;
     insn->opcode = info->opcode;
 
     /* Apply modifiers */
@@ -252,9 +269,9 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
     }
 
     /* Go through operands and assign */
-    if (operands) {
-        for(i = 0, op = yasm_ops_first(operands); op && i<info->num_operands;
-            op = yasm_operand_next(op), i++) {
+    if (id_insn->insn.num_operands > 0) {
+        for(i = 0, op = yasm_insn_ops_first(&id_insn->insn);
+            op && i<info->num_operands; op = yasm_insn_op_next(op), i++) {
 
             switch ((int)(info->operands[i] & OPA_MASK)) {
                 case OPA_None:
@@ -285,7 +302,8 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
                                     yasm_expr_int(yasm_intnum_create_uint(1)),
                                     op->data.val->line);
                             if (yasm_value_finalize_expr(&insn->imm,
-                                                         op->data.val, 0))
+                                                         op->data.val,
+                                                         prev_bc, 0))
                                 yasm_error_set(YASM_ERROR_TOO_COMPLEX,
                                     N_("immediate expression too complex"));
                             break;
@@ -293,7 +311,7 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
                             if (yasm_value_finalize_expr(&insn->imm,
                                     yasm_expr_create_ident(yasm_expr_int(
                                     yasm_intnum_create_uint(op->data.reg & 0x7)),
-                                    bc->line), 0))
+                                    bc->line), prev_bc, 0))
                                 yasm_internal_error(N_("reg expr too complex?"));
                             break;
                         default:
@@ -303,10 +321,12 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
                 default:
                     yasm_internal_error(N_("unknown operand action"));
             }
+
+            /* Clear so it doesn't get destroyed */
+            op->type = YASM_INSN__OPERAND_REG;
         }
 
         if (insn->imm_type == LC3B_IMM_9_PC) {
-            insn->origin_prevbc = prev_bc;
             if (insn->imm.seg_of || insn->imm.rshift > 1
                 || insn->imm.curpos_rel)
                 yasm_error_set(YASM_ERROR_VALUE, N_("invalid jump target"));
@@ -325,14 +345,9 @@ yasm_lc3b__finalize_insn(yasm_arch *arch, yasm_bytecode *bc,
 #define YYMARKER        marker
 #define YYFILL(n)       (void)(n)
 
-void
-yasm_lc3b__parse_cpu(yasm_arch *arch, const char *cpuid, size_t cpuid_len)
-{
-}
-
 yasm_arch_regtmod
-yasm_lc3b__parse_check_regtmod(yasm_arch *arch, unsigned long *data,
-                               const char *oid, size_t id_len)
+yasm_lc3b__parse_check_regtmod(yasm_arch *arch, const char *oid, size_t id_len,
+                               uintptr_t *data)
 {
     const YYCTYPE *id = (const YYCTYPE *)oid;
     /*const char *marker;*/
@@ -353,11 +368,28 @@ yasm_lc3b__parse_check_regtmod(yasm_arch *arch, unsigned long *data,
     */
 }
 
+#define RET_INSN(g, m) \
+    do { \
+        group = g##_insn; \
+        mod = m; \
+        nelems = NELEMS(g##_insn); \
+        goto done; \
+    } while(0)
+
 yasm_arch_insnprefix
-yasm_lc3b__parse_check_insnprefix(yasm_arch *arch, unsigned long data[4],
-                                  const char *oid, size_t id_len)
+yasm_lc3b__parse_check_insnprefix(yasm_arch *arch, const char *oid,
+                                  size_t id_len, unsigned long line,
+                                  yasm_bytecode **bc, uintptr_t *prefix)
 {
     const YYCTYPE *id = (const YYCTYPE *)oid;
+    const lc3b_insn_info *group = empty_insn;
+    unsigned long mod = 0;
+    unsigned int nelems = NELEMS(empty_insn);
+    lc3b_id_insn *id_insn;
+
+    *bc = (yasm_bytecode *)NULL;
+    *prefix = 0;
+
     /*const char *marker;*/
     /*!re2c
         /* instructions */
@@ -407,4 +439,42 @@ yasm_lc3b__parse_check_insnprefix(yasm_arch *arch, unsigned long data[4],
             return YASM_ARCH_NOTINSNPREFIX;
         }
     */
+
+done:
+    id_insn = yasm_xmalloc(sizeof(lc3b_id_insn));
+    yasm_insn_initialize(&id_insn->insn);
+    id_insn->group = group;
+    id_insn->mod_data = mod;
+    id_insn->num_info = nelems;
+    *bc = yasm_bc_create_common(&lc3b_id_insn_callback, id_insn, line);
+    return YASM_ARCH_INSN;
+}
+
+static void
+lc3b_id_insn_destroy(void *contents)
+{
+    lc3b_id_insn *id_insn = (lc3b_id_insn *)contents;
+    yasm_insn_delete(&id_insn->insn, yasm_lc3b__ea_destroy);
+    yasm_xfree(contents);
+}
+
+static void
+lc3b_id_insn_print(const void *contents, FILE *f, int indent_level)
+{
+    const lc3b_id_insn *id_insn = (const lc3b_id_insn *)contents;
+    yasm_insn_print(&id_insn->insn, f, indent_level);
+    /*TODO*/
+}
+
+/*@only@*/ yasm_bytecode *
+yasm_lc3b__create_empty_insn(yasm_arch *arch, unsigned long line)
+{
+    lc3b_id_insn *id_insn = yasm_xmalloc(sizeof(lc3b_id_insn));
+
+    yasm_insn_initialize(&id_insn->insn);
+    id_insn->group = empty_insn;
+    id_insn->mod_data = 0;
+    id_insn->num_info = NELEMS(empty_insn);
+
+    return yasm_bc_create_common(&lc3b_id_insn_callback, id_insn, line);
 }

@@ -82,18 +82,6 @@ lc3b_set_var(yasm_arch *arch, const char *var, unsigned long val)
     return 1;
 }
 
-static int
-lc3b_parse_directive(/*@unused@*/ yasm_arch *arch,
-                     /*@unused@*/ const char *name,
-                     /*@unused@*/ /*@null@*/ yasm_valparamhead *valparams,
-                     /*@unused@*/ /*@null@*/
-                     yasm_valparamhead *objext_valparams,
-                     /*@unused@*/ yasm_object *object,
-                     /*@unused@*/ unsigned long line)
-{
-    return 1;
-}
-
 static const unsigned char **
 lc3b_get_fill(const yasm_arch *arch)
 {
@@ -131,21 +119,21 @@ lc3b_get_fill(const yasm_arch *arch)
 }
 
 static unsigned int
-lc3b_get_reg_size(/*@unused@*/ yasm_arch *arch, /*@unused@*/ unsigned long reg)
+lc3b_get_reg_size(/*@unused@*/ yasm_arch *arch, /*@unused@*/ uintptr_t reg)
 {
     return 16;
 }
 
-static unsigned long
+static uintptr_t
 lc3b_reggroup_get_reg(/*@unused@*/ yasm_arch *arch,
-                      /*@unused@*/ unsigned long reggroup,
+                      /*@unused@*/ uintptr_t reggroup,
                       /*@unused@*/ unsigned long regindex)
 {
     return 0;
 }
 
 static void
-lc3b_reg_print(/*@unused@*/ yasm_arch *arch, unsigned long reg, FILE *f)
+lc3b_reg_print(/*@unused@*/ yasm_arch *arch, uintptr_t reg, FILE *f)
 {
     fprintf(f, "r%u", (unsigned int)(reg&7));
 }
@@ -163,8 +151,28 @@ lc3b_floatnum_tobytes(yasm_arch *arch, const yasm_floatnum *flt,
 static yasm_effaddr *
 lc3b_ea_create_expr(yasm_arch *arch, yasm_expr *e)
 {
-    yasm_expr_destroy(e);
-    return NULL;
+    yasm_effaddr *ea = yasm_xmalloc(sizeof(yasm_effaddr));
+    yasm_value_initialize(&ea->disp, e, 0);
+    ea->need_nonzero_len = 0;
+    ea->need_disp = 1;
+    ea->nosplit = 0;
+    ea->strong = 0;
+    ea->segreg = 0;
+    return ea;
+}
+
+void
+yasm_lc3b__ea_destroy(/*@only@*/ yasm_effaddr *ea)
+{
+    yasm_value_delete(&ea->disp);
+    yasm_xfree(ea);
+}
+
+static void
+lc3b_ea_print(const yasm_effaddr *ea, FILE *f, int indent_level)
+{
+    fprintf(f, "%*sDisp:\n", indent_level, "");
+    yasm_value_print(&ea->disp, f, indent_level+1);
 }
 
 /* Define lc3b machines -- see arch.h for details */
@@ -177,17 +185,15 @@ static yasm_arch_machine lc3b_machines[] = {
 yasm_arch_module yasm_lc3b_LTX_arch = {
     "LC-3b",
     "lc3b",
+    NULL,
     lc3b_create,
     lc3b_destroy,
     lc3b_get_machine,
     lc3b_get_address_size,
     lc3b_set_var,
-    yasm_lc3b__parse_cpu,
     yasm_lc3b__parse_check_insnprefix,
     yasm_lc3b__parse_check_regtmod,
-    lc3b_parse_directive,
     lc3b_get_fill,
-    yasm_lc3b__finalize_insn,
     lc3b_floatnum_tobytes,
     yasm_lc3b__intnum_tobytes,
     lc3b_get_reg_size,
@@ -195,9 +201,11 @@ yasm_arch_module yasm_lc3b_LTX_arch = {
     lc3b_reg_print,
     NULL,       /*yasm_lc3b__segreg_print*/
     lc3b_ea_create_expr,
+    yasm_lc3b__ea_destroy,
+    lc3b_ea_print,
+    yasm_lc3b__create_empty_insn,
     lc3b_machines,
     "lc3b",
     16,
-    512,
     2
 };
