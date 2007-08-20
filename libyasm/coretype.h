@@ -247,9 +247,7 @@ typedef enum yasm_expr_op {
  * \param bc            current bytecode (usually passed into higher-level
  *                      calling function)
  * \param warn          enables standard warnings: zero for none;
- *                      nonzero for overflow/underflow floating point warnings;
- *                      negative for signed integer warnings,
- *                      positive for unsigned integer warnings
+ *                      nonzero for overflow/underflow floating point warnings
  * \param d             objfmt-specific data (passed into higher-level calling
  *                      function)
  * \return Nonzero if an error occurred, 0 otherwise.
