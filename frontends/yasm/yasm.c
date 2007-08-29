@@ -366,9 +366,8 @@ do_assemble(FILE *in)
                 yasm__xstrdup(cur_arch_module->default_machine_keyword);
     }
 
-    cur_arch = cur_arch_module->create(machine_name,
-                                       cur_parser_module->keyword,
-                                       &arch_error);
+    cur_arch = yasm_arch_create(cur_arch_module, machine_name,
+                                cur_parser_module->keyword, &arch_error);
     if (!cur_arch) {
         switch (arch_error) {
             case YASM_ARCH_CREATE_BAD_MACHINE:
@@ -429,8 +428,8 @@ do_assemble(FILE *in)
         return EXIT_FAILURE;
     }
 
-    cur_preproc = cur_preproc_module->create(in, in_filename, linemap,
-                                             errwarns);
+    cur_preproc = yasm_preproc_create(cur_preproc_module, in, in_filename,
+                                      linemap, errwarns);
 
     apply_preproc_builtins();
     apply_preproc_saved_options();
@@ -576,7 +575,7 @@ main(int argc, char *argv[])
     /* Initialize intnum and floatnum */
     yasm_intnum_initialize();
     yasm_floatnum_initialize();
-    
+
     /* If not already specified, default to bin as the object format. */
     if (!cur_objfmt_module) {
         if (!objfmt_keyword)
@@ -1086,7 +1085,7 @@ opt_makedep_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
     /* Also set preproc_only to 1, we don't want to generate code */
     preproc_only = 1;
     generate_make_dependencies = 1;
-    
+
     return 0;
 }
 
