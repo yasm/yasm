@@ -64,6 +64,18 @@ yasm_preproc_module yasm_cpp_LTX_preproc;
 static const char *in_filename = ".cpp.in";
 static const char *out_filename = ".cpp.out";
 
+/*
+    Append a string to the command line, ensuring that we don't overflow the
+    buffer.
+*/
+#define APPEND(s) do {                              \
+    size_t _len = strlen(s);                        \
+    if (p + _len >= limit)                          \
+        yasm__fatal("command line too long!");      \
+    strcpy(p, s);                                   \
+    p += _len;                                      \
+} while (0)
+
 /* Invoke the c preprocessor. */
 static void
 cpp_invoke(yasm_preproc_cpp *pp)
@@ -73,7 +85,10 @@ cpp_invoke(yasm_preproc_cpp *pp)
     cpp_arg_entry *arg;
     size_t op_len, param_len, sz;
 
-    /* Initialize command line. */
+    /*
+        Initialize command line. We can assume there will be enough space to
+        store "cpp".
+    */
     cmdline = p = yasm_xmalloc(CMDLINE_SIZE);
     limit = p + CMDLINE_SIZE;
     strcpy(p, "cpp");
@@ -81,41 +96,19 @@ cpp_invoke(yasm_preproc_cpp *pp)
 
     /* Append arguments from the list. */
     TAILQ_FOREACH(arg, (&pp->cpp_args), entry) {
-        /*
-            We need a space before arg->op and a space before arg->param, so
-            2 extra characters.
-        */
-        op_len = strlen(arg->op);
-        param_len = strlen(arg->param);
-        sz = op_len + param_len + 2;
-
-        if (p + sz >= limit)
-            yasm__fatal("command line too long");
-
-        *p++ = ' ';
-        strcpy(p, arg->op);
-        p += op_len;
-        *p++ = ' ';
-        strcpy(p, arg->param);
-        p += param_len;
+        APPEND(" ");
+        APPEND(arg->op);
+        APPEND(" ");
+        APPEND(arg->param);
 
         yasm_xfree(arg->param);
     }
 
     /* Append final arguments. */
-    r = asprintf(&tmp, " -x assembler-with-cpp -o %s %s",
-                      out_filename, in_filename);
-    if (r == -1)
-        yasm__fatal("failed to construct command line for cpp");
-
-    /* r is the length of the string stored in tmp. */
-    if (p + r + 1 >= limit)
-        yasm__fatal("command line too long");
-
-    strcpy(p, tmp);
-    yasm_xfree(tmp);
-    p += r;
-    *p = '\0';
+    APPEND(" -x assembler-with-cpp -o ");
+    APPEND(out_filename);
+    APPEND(" ");
+    APPEND(in_filename);
 
 #if 0
     /* Print the command line before executing. */
