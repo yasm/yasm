@@ -29,40 +29,61 @@
 #include <util.h>
 #include <libyasm.h>
 
-/* TODO: Find some non-arbitrary values for these constants. */
-#define TMP_BUF_SIZE 4096
+/* TODO: Use autoconf to get the limit on the command line length. */
 #define CMDLINE_SIZE 32770
 
 extern int isatty(int);
 
-/* Flags. */
-#define CPP_HAS_BEEN_INVOKED 0x01
+/* Pre-declare the preprocessor module object. */
+yasm_preproc_module yasm_cpp_LTX_preproc;
 
+/* TODO: Use a pipe rather than a temporary file? */
+static const char *out_filename = ".cpp.out";
+
+/*******************************************************************************
+    Structures.
+*******************************************************************************/
+
+/* An entry in a list of arguments to pass to cpp. */
 typedef struct cpp_arg_entry {
     TAILQ_ENTRY(cpp_arg_entry) entry;
 
-    char *op;
+    /*
+        The operator (eg "-I") and the parameter (eg "include/"). op is expected
+        to point to a string literal, whereas param is expected to be a copy of
+        the parameter which is free'd when no-longer needed (in
+        cpp_build_cmdline()).
+    */
+    const char *op;
     char *param;
 } cpp_arg_entry;
 
 typedef struct yasm_preproc_cpp {
     yasm_preproc_base preproc;   /* base structure */
 
-    TAILQ_HEAD(, cpp_arg_entry) cpp_args;
-    cpp_arg_entry *pos;
+    /*
+        List of arguments to pass to cpp.
 
-    FILE *f_in, *f_out;
+        TODO: We should properly destroy this list and free all memory
+        associated with it once we have finished with it (ie. at the end of
+        cpp_build_cmdline()).
+    */
+    TAILQ_HEAD(, cpp_arg_entry) cpp_args;
+
+    char *filename;
+    FILE *f;
     yasm_linemap *cur_lm;
     yasm_errwarns *errwarns;
 
     int flags;
 } yasm_preproc_cpp;
 
-yasm_preproc_module yasm_cpp_LTX_preproc;
+/* Flag values for yasm_preproc_cpp->flags. */
+#define CPP_HAS_BEEN_INVOKED 0x01
 
-/* TODO: Make these filenames safer and more portable, maybe using tmpnam()? */
-static const char *in_filename = ".cpp.in";
-static const char *out_filename = ".cpp.out";
+/*******************************************************************************
+    Internal functions and helpers.
+*******************************************************************************/
 
 /*
     Append a string to the command line, ensuring that we don't overflow the
@@ -76,14 +97,15 @@ static const char *out_filename = ".cpp.out";
     p += _len;                                      \
 } while (0)
 
-/* Invoke the c preprocessor. */
-static void
-cpp_invoke(yasm_preproc_cpp *pp)
+/*
+    Put all the options together into a command line that can be used to invoke
+    cpp.
+*/
+static char *
+cpp_build_cmdline(yasm_preproc_cpp *pp)
 {
-    int r;
-    char *cmdline, *p, *limit, *tmp;
+    char *cmdline, *p, *limit;
     cpp_arg_entry *arg;
-    size_t op_len, param_len, sz;
 
     /*
         Initialize command line. We can assume there will be enough space to
@@ -108,19 +130,42 @@ cpp_invoke(yasm_preproc_cpp *pp)
     APPEND(" -x assembler-with-cpp -o ");
     APPEND(out_filename);
     APPEND(" ");
-    APPEND(in_filename);
+    APPEND(pp->filename);
+
+    return cmdline;
+}
+
+/* Invoke the c preprocessor. */
+static void
+cpp_invoke(yasm_preproc_cpp *pp)
+{
+    int r;
+    char *cmdline;
+
+    cmdline = cpp_build_cmdline(pp);
 
 #if 0
     /* Print the command line before executing. */
     printf("%s\n", cmdline);
 #endif
+
     r = system(cmdline);
     if (r)
         yasm__fatal("C preprocessor failed");
 
     yasm_xfree(cmdline);
+
+    /* Open the preprocessed file. */
+    pp->f = fopen(out_filename, "r");
+
+    if (!pp->f) {
+        yasm__fatal("Could not open preprocessed file \"%s\"", out_filename);
+    }
 }
 
+/*******************************************************************************
+    Interface functions.
+*******************************************************************************/
 static yasm_preproc *
 cpp_preproc_create(FILE *f, const char *in, yasm_linemap *lm,
                    yasm_errwarns *errwarns)
@@ -128,14 +173,24 @@ cpp_preproc_create(FILE *f, const char *in, yasm_linemap *lm,
     yasm_preproc_cpp *pp = yasm_xmalloc(sizeof(yasm_preproc_cpp));
 
     pp->preproc.module = &yasm_cpp_LTX_preproc;
-    pp->f_in = f;
-    pp->f_out = NULL;
+    pp->f = NULL;
     pp->cur_lm = lm;
     pp->errwarns = errwarns;
     pp->flags = 0;
+    pp->filename = yasm__xstrdup(in);
 
-    pp->pos = NULL;
     TAILQ_INIT(&pp->cpp_args);
+
+    /* We can't handle reading from a tty yet. */
+    if (isatty(fileno(f)) > 0)
+        yasm__fatal("incapable of reading from a tty");
+
+    /*
+        We don't need the FILE* given by yasm since we will simply pass the
+        filename to cpp, but closing it causes a segfault.
+
+        TODO: Change the preprocessor interface, so no FILE* is given.
+    */
 
     return (yasm_preproc *)pp;
 }
@@ -145,71 +200,35 @@ cpp_preproc_destroy(yasm_preproc *preproc)
 {
     yasm_preproc_cpp *pp = (yasm_preproc_cpp *)preproc;
 
-    if (pp->f_out) {
-        fclose(pp->f_out);
+    if (pp->f) {
+        fclose(pp->f);
     }
 
-    /* Remove both temporary files. */
-    remove(in_filename);
+    /* Remove temporary file. */
     remove(out_filename);
 
-    yasm_xfree(preproc);
+    yasm_xfree(pp->filename);
+    yasm_xfree(pp);
 }
 
 static size_t
 cpp_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
 {
     size_t n;
-    FILE *f_tmp;
-    int tty;
-    char *tmp_buf;
     yasm_preproc_cpp *pp = (yasm_preproc_cpp *)preproc;
 
     if (! (pp->flags & CPP_HAS_BEEN_INVOKED) ) {
         pp->flags |= CPP_HAS_BEEN_INVOKED;
 
-        tmp_buf = (char *)yasm_xmalloc(TMP_BUF_SIZE);
-
-        f_tmp = fopen(in_filename, "w");
-
-        tty = (isatty(fileno(f_tmp)) > 0);
-        while (!feof(pp->f_in)) {
-            if (tty) {
-                /* TODO: Handle reading from tty into tmp_buf. */
-                yasm__fatal("incapable of reading from a tty");
-            } else {
-                if (((n = fread(tmp_buf, 1, TMP_BUF_SIZE, pp->f_in)) == 0) &&
-                        ferror(pp->f_in)) {
-                    yasm_error_set(YASM_ERROR_IO,
-                                   N_("error when reading from input file"));
-                    yasm_errwarn_propagate(pp->errwarns,
-                                          yasm_linemap_get_current(pp->cur_lm));
-                }
-            }
-
-            if (fwrite(tmp_buf, 1, n, f_tmp) != n) {
-                yasm__fatal("error writing to temporary file");
-            }
-        }
-
-        yasm_xfree(tmp_buf);
-        fclose(f_tmp);
-
         cpp_invoke(pp);
-
-        pp->f_out = fopen(out_filename, "r");
-
-        if (!pp->f_out) {
-            yasm__fatal("Could not open preprocessed file \"%s\"", out_filename);
-        }
     }
 
     /*
         Once the preprocessor has been run, we're just dealing with a normal
         file.
     */
-    if (((n = fread(buf, 1, max_size, pp->f_out)) == 0) &&
-               ferror(pp->f_out)) {
+    if (((n = fread(buf, 1, max_size, pp->f)) == 0) &&
+               ferror(pp->f)) {
         yasm_error_set(YASM_ERROR_IO, N_("error when reading from preprocessed file"));
         yasm_errwarn_propagate(pp->errwarns,
                                yasm_linemap_get_current(pp->cur_lm));
@@ -269,6 +288,10 @@ cpp_preproc_define_builtin(yasm_preproc *preproc, const char *macronameval)
     /* Handle a builtin as if it were a predefine. */
     cpp_preproc_predefine_macro(preproc, macronameval);
 }
+
+/*******************************************************************************
+    Preprocessor module object.
+*******************************************************************************/
 
 yasm_preproc_module yasm_cpp_LTX_preproc = {
     "Run input through enternal C preprocessor",
