@@ -112,6 +112,7 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
 /* Define valid preprocessors to use with this parser */
 static const char *gas_parser_preproc_keywords[] = {
     "raw",
+    "cpp",
     NULL
 };
 
