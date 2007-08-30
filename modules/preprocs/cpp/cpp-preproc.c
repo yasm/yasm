@@ -37,9 +37,6 @@ extern int isatty(int);
 /* Pre-declare the preprocessor module object. */
 yasm_preproc_module yasm_cpp_LTX_preproc;
 
-/* TODO: Use a pipe rather than a temporary file? */
-static const char *out_filename = ".cpp.out";
-
 /*******************************************************************************
     Structures.
 *******************************************************************************/
@@ -127,9 +124,7 @@ cpp_build_cmdline(yasm_preproc_cpp *pp)
     }
 
     /* Append final arguments. */
-    APPEND(" -x assembler-with-cpp -o ");
-    APPEND(out_filename);
-    APPEND(" ");
+    APPEND(" -x assembler-with-cpp ");
     APPEND(pp->filename);
 
     return cmdline;
@@ -149,18 +144,11 @@ cpp_invoke(yasm_preproc_cpp *pp)
     printf("%s\n", cmdline);
 #endif
 
-    r = system(cmdline);
-    if (r)
-        yasm__fatal("C preprocessor failed");
+    pp->f = popen(cmdline, "r");
+    if (!pp->f)
+        yasm__fatal("Failed to execute preprocessor");
 
     yasm_xfree(cmdline);
-
-    /* Open the preprocessed file. */
-    pp->f = fopen(out_filename, "r");
-
-    if (!pp->f) {
-        yasm__fatal("Could not open preprocessed file \"%s\"", out_filename);
-    }
 }
 
 /*******************************************************************************
@@ -201,11 +189,9 @@ cpp_preproc_destroy(yasm_preproc *preproc)
     yasm_preproc_cpp *pp = (yasm_preproc_cpp *)preproc;
 
     if (pp->f) {
-        fclose(pp->f);
+        if (pclose(pp->f) != 0)
+            yasm__fatal("Preprocessor exited with failure");
     }
-
-    /* Remove temporary file. */
-    remove(out_filename);
 
     yasm_xfree(pp->filename);
     yasm_xfree(pp);
@@ -229,7 +215,7 @@ cpp_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
     */
     if (((n = fread(buf, 1, max_size, pp->f)) == 0) &&
                ferror(pp->f)) {
-        yasm_error_set(YASM_ERROR_IO, N_("error when reading from preprocessed file"));
+        yasm_error_set(YASM_ERROR_IO, N_("error reading from pipe"));
         yasm_errwarn_propagate(pp->errwarns,
                                yasm_linemap_get_current(pp->cur_lm));
     }
