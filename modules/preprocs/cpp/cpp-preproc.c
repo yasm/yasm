@@ -58,13 +58,7 @@ typedef struct cpp_arg_entry {
 typedef struct yasm_preproc_cpp {
     yasm_preproc_base preproc;   /* base structure */
 
-    /*
-        List of arguments to pass to cpp.
-
-        TODO: We should properly destroy this list and free all memory
-        associated with it once we have finished with it (ie. at the end of
-        cpp_build_cmdline()).
-    */
+    /* List of arguments to pass to cpp. */
     TAILQ_HEAD(, cpp_arg_entry) cpp_args;
 
     char *filename;
@@ -114,13 +108,16 @@ cpp_build_cmdline(yasm_preproc_cpp *pp)
     p += 3;
 
     /* Append arguments from the list. */
-    TAILQ_FOREACH(arg, (&pp->cpp_args), entry) {
+    while ( (arg = TAILQ_FIRST(&pp->cpp_args)) ) {
         APPEND(" ");
         APPEND(arg->op);
         APPEND(" ");
         APPEND(arg->param);
 
+        /* Remove this element from the list and free it. */
+        TAILQ_REMOVE(&pp->cpp_args, arg, entry);
         yasm_xfree(arg->param);
+        yasm_xfree(arg);
     }
 
     /* Append final arguments. */
@@ -134,7 +131,6 @@ cpp_build_cmdline(yasm_preproc_cpp *pp)
 static void
 cpp_invoke(yasm_preproc_cpp *pp)
 {
-    int r;
     char *cmdline;
 
     cmdline = cpp_build_cmdline(pp);
