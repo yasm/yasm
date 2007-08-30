@@ -56,15 +56,15 @@ typedef struct yasm_preproc_module {
      * Module-level implementation of yasm_preproc_create().
      * Call yasm_preproc_create() instead of calling this function.
      *
-     * \param f                 initial starting file
-     * \param in_filename       initial starting filename
+     * \param in_filename       initial starting filename, or NULL to read from
+     *                          stdin
      * \param lm                line mapping repository
      * \param errwarns          error/warnning set.
      * \return New preprocessor.
      *
      * \note Any preprocessor errors and warnings are stored into errwarns.
      */
-    /*@only@*/ yasm_preproc * (*create) (FILE *f, const char *in_filename,
+    /*@only@*/ yasm_preproc * (*create) (const char *in_filename,
                                          yasm_linemap *lm,
                                          yasm_errwarns *errwarns);
 
@@ -110,15 +110,14 @@ typedef struct yasm_preproc_module {
  * The preprocessor needs access to the object format module to find out
  * any output format specific macros.
  * \param module        preprocessor module
- * \param f             initial starting file
- * \param in_filename   initial starting file filename
+ * \param in_filename   initial starting filename, or NULL to read from stdin
  * \param lm            line mapping repository
  * \param errwarns      error/warning set
  * \return New preprocessor.
  * \note Errors/warnings are stored into errwarns.
  */
 /*@only@*/ yasm_preproc *yasm_preproc_create
-    (yasm_preproc_module *module, FILE *f, const char *in_filename,
+    (yasm_preproc_module *module, const char *in_filename,
      yasm_linemap *lm, yasm_errwarns *errwarns);
 
 /** Cleans up any allocated preproc memory.
@@ -176,8 +175,8 @@ void yasm_preproc_define_builtin(yasm_preproc *preproc,
 
 /* Inline macro implementations for preproc functions */
 
-#define yasm_preproc_create(module, f, in_filename, lm, ews) \
-    module->create(f, in_filename, lm, ews)
+#define yasm_preproc_create(module, in_filename, lm, ews) \
+    module->create(in_filename, lm, ews)
 
 #define yasm_preproc_destroy(preproc) \
     ((yasm_preproc_base *)preproc)->module->destroy(preproc)

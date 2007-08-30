@@ -44,10 +44,19 @@ yasm_preproc_module yasm_raw_LTX_preproc;
 int isatty(int);
 
 static yasm_preproc *
-raw_preproc_create(FILE *f, const char *in_filename, yasm_linemap *lm,
+raw_preproc_create(const char *in_filename, yasm_linemap *lm,
                    yasm_errwarns *errwarns)
 {
+    FILE *f;
     yasm_preproc_raw *preproc_raw = yasm_xmalloc(sizeof(yasm_preproc_raw));
+
+    if (strcmp(in_filename, "-") != 0) {
+        f = fopen(in_filename, "r");
+        if (!f)
+            yasm__fatal("Could not open input file");
+    }
+    else
+        f = stdin;
 
     preproc_raw->preproc.module = &yasm_raw_LTX_preproc;
     preproc_raw->in = f;

@@ -32,8 +32,6 @@
 /* TODO: Use autoconf to get the limit on the command line length. */
 #define CMDLINE_SIZE 32770
 
-extern int isatty(int);
-
 /* Pre-declare the preprocessor module object. */
 yasm_preproc_module yasm_cpp_LTX_preproc;
 
@@ -151,8 +149,7 @@ cpp_invoke(yasm_preproc_cpp *pp)
     Interface functions.
 *******************************************************************************/
 static yasm_preproc *
-cpp_preproc_create(FILE *f, const char *in, yasm_linemap *lm,
-                   yasm_errwarns *errwarns)
+cpp_preproc_create(const char *in, yasm_linemap *lm, yasm_errwarns *errwarns)
 {
     yasm_preproc_cpp *pp = yasm_xmalloc(sizeof(yasm_preproc_cpp));
 
@@ -164,17 +161,6 @@ cpp_preproc_create(FILE *f, const char *in, yasm_linemap *lm,
     pp->filename = yasm__xstrdup(in);
 
     TAILQ_INIT(&pp->cpp_args);
-
-    /* We can't handle reading from a tty yet. */
-    if (isatty(fileno(f)) > 0)
-        yasm__fatal("incapable of reading from a tty");
-
-    /*
-        We don't need the FILE* given by yasm since we will simply pass the
-        filename to cpp, but closing it causes a segfault.
-
-        TODO: Change the preprocessor interface, so no FILE* is given.
-    */
 
     return (yasm_preproc *)pp;
 }
