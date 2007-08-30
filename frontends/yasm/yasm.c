@@ -443,7 +443,7 @@ do_assemble(FILE *in)
     yasm_arch_set_var(cur_arch, "force_strict", force_strict);
 
     /* Parse! */
-    cur_parser_module->do_parse(object, cur_preproc, in, list_filename != NULL,
+    cur_parser_module->do_parse(object, cur_preproc, list_filename != NULL,
                                 linemap, errwarns);
 
     /* Close input file */

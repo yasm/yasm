@@ -93,7 +93,6 @@ enum gas_parser_state {
 };
 
 typedef struct yasm_parser_gas {
-    FILE *in;
     int debug;
 
     /*@only@*/ yasm_object *object;

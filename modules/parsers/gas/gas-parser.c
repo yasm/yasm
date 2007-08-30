@@ -36,7 +36,7 @@
 
 
 static void
-gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
+gas_parser_do_parse(yasm_object *object, yasm_preproc *pp,
                     int save_input, yasm_linemap *linemap,
                     yasm_errwarns *errwarns)
 {
@@ -45,8 +45,6 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
 
     parser_gas.object = object;
     parser_gas.linemap = linemap;
-
-    parser_gas.in = f;
 
     parser_gas.locallabel_base = (char *)NULL;
     parser_gas.locallabel_base_len = 0;
