@@ -56,7 +56,7 @@ typedef struct yasm_preproc_module {
      * Module-level implementation of yasm_preproc_create().
      * Call yasm_preproc_create() instead of calling this function.
      *
-     * \param in_filename       initial starting filename, or NULL to read from
+     * \param in_filename       initial starting filename, or "-" to read from
      *                          stdin
      * \param lm                line mapping repository
      * \param errwarns          error/warnning set.
@@ -110,7 +110,7 @@ typedef struct yasm_preproc_module {
  * The preprocessor needs access to the object format module to find out
  * any output format specific macros.
  * \param module        preprocessor module
- * \param in_filename   initial starting filename, or NULL to read from stdin
+ * \param in_filename   initial starting filename, or "-" to read from stdin
  * \param lm            line mapping repository
  * \param errwarns      error/warning set
  * \return New preprocessor.
