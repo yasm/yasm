@@ -140,7 +140,7 @@ cpp_invoke(yasm_preproc_cpp *pp)
 
     pp->f = popen(cmdline, "r");
     if (!pp->f)
-        yasm__fatal("Failed to execute preprocessor");
+        yasm__fatal( N_("Failed to execute preprocessor") );
 
     yasm_xfree(cmdline);
 }
@@ -172,7 +172,7 @@ cpp_preproc_destroy(yasm_preproc *preproc)
 
     if (pp->f) {
         if (pclose(pp->f) != 0)
-            yasm__fatal("Preprocessor exited with failure");
+            yasm__fatal( N_("Preprocessor exited with failure") );
     }
 
     yasm_xfree(pp->filename);

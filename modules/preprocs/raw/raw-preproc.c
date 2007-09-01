@@ -53,7 +53,7 @@ raw_preproc_create(const char *in_filename, yasm_linemap *lm,
     if (strcmp(in_filename, "-") != 0) {
         f = fopen(in_filename, "r");
         if (!f)
-            yasm__fatal("Could not open input file");
+            yasm__fatal( N_("Could not open input file") );
     }
     else
         f = stdin;
