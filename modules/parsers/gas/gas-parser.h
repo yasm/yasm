@@ -48,6 +48,7 @@ enum tokentype {
     RIGHT_OP,
     ID,
     LABEL,
+    LINE_MARKER,
     NONE
 };
 
