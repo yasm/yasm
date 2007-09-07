@@ -25,7 +25,7 @@ def mk_tao(CPPFLAGS = "", CPP = "gcc -E", modname = '_yasm', oname = None, YASM_
     CPPFLAGS += " -DYASM_LIB_INTERNAL"
     CPPFLAGS += " -DYASM_BC_INTERNAL"
     CPPFLAGS += " -DYASM_EXPR_INTERNAL"
-    files = [ 'libyasm.h', 'libyasm/assocdat.h' ]
+    files = [ 'libyasm.h', 'libyasm/assocdat.h', 'libyasm/bitvect.h' ]
 
     syms = get_syms( ['yasm'], [YASM_DIR] )
     def cb(trans_unit, node, *args):
