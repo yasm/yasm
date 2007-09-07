@@ -3417,41 +3417,12 @@ typedef struct insnprefix_parse_data {
         WEAK = 0x80     /* Relaxed operand mode for GAS */
     } flags;
 } insnprefix_parse_data;
-#define INSN(name, flags, group, mod, cpu) \
-    { name, group##_insn, (mod##UL<<8)|NELEMS(group##_insn), cpu, flags }
 #define PREFIX(name, type, value) \
     { name, NULL, type, value, NONE }
 
-/* Static parse data structure for CPU feature flags */
-typedef struct cpu_parse_data {
-    const char *name;
-
-    unsigned long cpu;
-    enum {
-        CPU_MODE_VERBATIM,
-        CPU_MODE_SET,
-        CPU_MODE_CLEAR
-    } mode;
-} cpu_parse_data;
-
-typedef struct regtmod_parse_data {
-    const char *name;
-
-    unsigned long regtmod;
-} regtmod_parse_data;
-#define REG(name, type, index, bits) \
-    { name, (((unsigned long)YASM_ARCH_REG) << 24) | \
-            (((unsigned long)bits) << 16) | (type | index) }
-#define REGGROUP(name, group) \
-    { name, (((unsigned long)YASM_ARCH_REGGROUP) << 24) | (group) }
-#define SEGREG(name, prefix, num, bits) \
-    { name, (((unsigned long)YASM_ARCH_SEGREG) << 24) | \
-            (((unsigned long)bits) << 16) | (prefix << 8) | (num) }
-#define TARGETMOD(name, mod) \
-    { name, (((unsigned long)YASM_ARCH_TARGETMOD) << 24) | (mod) }
-
 /* Pull in all parse data */
-#include "x86parse.c"
+#include "x86insn_nasm.c"
+#include "x86insn_gas.c"
 
 static const char *
 cpu_find_reverse(unsigned long cpu)
@@ -3631,80 +3602,6 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
         *prefix = type|value;
         return YASM_ARCH_PREFIX;
     }
-}
-
-void
-yasm_x86__parse_cpu(yasm_arch_x86 *arch_x86, const char *cpuid,
-                    size_t cpuid_len)
-{
-    /*@null@*/ const cpu_parse_data *pdata;
-    size_t i;
-    static char lcaseid[16];
-
-    if (cpuid_len > 15)
-        return;
-    for (i=0; i<cpuid_len; i++)
-        lcaseid[i] = tolower(cpuid[i]);
-    lcaseid[cpuid_len] = '\0';
-
-    pdata = cpu_find(lcaseid, cpuid_len);
-    if (!pdata) {
-        yasm_warn_set(YASM_WARN_GENERAL,
-                      N_("unrecognized CPU identifier `%s'"), cpuid);
-        return;
-    }
-
-    switch (pdata->mode) {
-        case CPU_MODE_VERBATIM:
-            arch_x86->cpu_enabled = pdata->cpu;
-            break;
-        case CPU_MODE_SET:
-            arch_x86->cpu_enabled |= pdata->cpu;
-            break;
-        case CPU_MODE_CLEAR:
-            arch_x86->cpu_enabled &= ~pdata->cpu;
-            break;
-    }
-}
-
-yasm_arch_regtmod
-yasm_x86__parse_check_regtmod(yasm_arch *arch, const char *id, size_t id_len,
-                              uintptr_t *data)
-{
-    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
-    /*@null@*/ const regtmod_parse_data *pdata;
-    size_t i;
-    static char lcaseid[8];
-    unsigned int bits;
-    yasm_arch_regtmod type;
-
-    if (id_len > 7)
-        return YASM_ARCH_NOTREGTMOD;
-    for (i=0; i<id_len; i++)
-        lcaseid[i] = tolower(id[i]);
-    lcaseid[id_len] = '\0';
-
-    pdata = regtmod_find(lcaseid, id_len);
-    if (!pdata)
-        return YASM_ARCH_NOTREGTMOD;
-
-    type = (yasm_arch_regtmod)(pdata->regtmod >> 24);
-    bits = (pdata->regtmod >> 16) & 0xFF;
-
-    if (type == YASM_ARCH_REG && bits != 0 && arch_x86->mode_bits != bits) {
-        yasm_warn_set(YASM_WARN_GENERAL,
-                      N_("`%s' is a register in %u-bit mode"), id, bits);
-        return YASM_ARCH_NOTREGTMOD;
-    }
-
-    if (type == YASM_ARCH_SEGREG && bits != 0 && arch_x86->mode_bits == bits) {
-        yasm_warn_set(YASM_WARN_GENERAL,
-                      N_("`%s' segment register ignored in %u-bit mode"), id,
-                      bits);
-    }
-
-    *data = pdata->regtmod & 0x0000FFFFUL;
-    return type;
 }
 
 static void
