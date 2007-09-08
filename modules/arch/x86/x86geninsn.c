@@ -140,7 +140,6 @@ int
 main(int argc, char *argv[])
 {
     FILE *in, *out_nasm, *out_gas;
-    size_t i;
     char *tok;
 
     if (argc != 4) {
@@ -170,8 +169,6 @@ main(int argc, char *argv[])
 
     /* Parse input file */
     while (fgets(line, 1024, in)) {
-        int found;
-        /*printf("%s\n", line);*/
         tok = strtok(line, " \t\n");
         if (!tok)
             continue;

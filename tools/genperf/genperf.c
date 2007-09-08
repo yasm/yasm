@@ -259,6 +259,7 @@ main(int argc, char *argv[])
     static char language[16] = "";
     static char delimiters[16] = ",\r\n";
     static char name[128];
+    static char filename[768];
     int need_struct = 0;
     int have_struct = 0;
     int go_keywords = 0;
@@ -280,6 +281,17 @@ main(int argc, char *argv[])
         fprintf(stderr, "Could not open `%s' for reading\n", argv[1]);
         return EXIT_FAILURE;
     }
+
+    ch = argv[1];
+    i = 0;
+    while (*ch && i < 767) {
+        if (*ch == '\\') {
+            filename[i++] = '/';
+            ch++;
+        } else
+            filename[i++] = *ch++;
+    }
+    filename[i] = '\0';
 
     STAILQ_INIT(&usercode);
     STAILQ_INIT(&usercode2);
@@ -321,7 +333,7 @@ main(int argc, char *argv[])
             struct_name[i] = '\0';
 
             sv = yasm_xmalloc(sizeof(sval));
-            snprintf(tmp, 1024, "#line %u \"%s\"\n", cur_line, argv[1]);
+            sprintf(tmp, "#line %u \"%s\"\n", cur_line, filename);
             sv->str = yasm__xstrdup(tmp);
             STAILQ_INSERT_TAIL(&usercode, sv, link);
 
@@ -366,7 +378,7 @@ main(int argc, char *argv[])
         /* %{ begins a verbatim code section that ends with %} */
         if (line[1] == '{') {
             sv = yasm_xmalloc(sizeof(sval));
-            snprintf(tmp, 1024, "#line %u \"%s\"\n\n", cur_line, argv[1]);
+            sprintf(tmp, "#line %u \"%s\"\n\n", cur_line, filename);
             sv->str = yasm__xstrdup(tmp);
             STAILQ_INSERT_TAIL(&usercode, sv, link);
 
@@ -487,7 +499,7 @@ main(int argc, char *argv[])
     /* Pull in any end code */
     if (!feof(in)) {
         sv = yasm_xmalloc(sizeof(sval));
-        snprintf(tmp, 1024, "#line %u \"%s\"\n\n", cur_line, argv[1]);
+        sprintf(tmp, "#line %u \"%s\"\n\n", cur_line, filename);
         sv->str = yasm__xstrdup(tmp);
         STAILQ_INSERT_TAIL(&usercode2, sv, link);
 
@@ -506,7 +518,7 @@ main(int argc, char *argv[])
         printf("%s", sv->str);
 
     /* Get perfect hash */
-    perfect_gen(stdout, lookup_function_name, struct_name, &keywords, argv[1]);
+    perfect_gen(stdout, lookup_function_name, struct_name, &keywords, filename);
 
     STAILQ_FOREACH(sv, &usercode2, link)
         printf("%s", sv->str);
