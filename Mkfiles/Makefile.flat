@@ -58,15 +58,15 @@ MODULES_ARCH_X86_OBJS= \
  x86regtmod.o
 YASM_MODULES=arch_x86
 
-#MODULES_ARCH_LC3B_OBJS= \
-# modules/arch/lc3b/lc3barch.o \
-# modules/arch/lc3b/lc3bbc.o \
-# lc3bid.o
-#YASM_MODULES+=arch_lc3b
+MODULES_ARCH_LC3B_OBJS= \
+ modules/arch/lc3b/lc3barch.o \
+ modules/arch/lc3b/lc3bbc.o \
+ lc3bid.o
+YASM_MODULES+=arch_lc3b
 
 MODULES_ARCH_OBJS= \
  $(MODULES_ARCH_X86_OBJS) \
-# $(MODULES_ARCH_LC3B_OBJS)
+ $(MODULES_ARCH_LC3B_OBJS)
 
 MODULES_DBGFMTS_OBJS= \
  modules/dbgfmts/null/null-dbgfmt.o \
