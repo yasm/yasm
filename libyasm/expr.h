@@ -56,13 +56,13 @@ typedef struct yasm_expr__item {
 
     /** Expression item data.  Correct value depends on type. */
     union {
-        yasm_bytecode *precbc;  /**< Direct bytecode ref (#YASM_EXPR_PRECBC) */
-        yasm_symrec *sym;       /**< Symbol (#YASM_EXPR_SYM) */
-        yasm_expr *expn;        /**< Subexpression (#YASM_EXPR_EXPR) */
-        yasm_intnum *intn;      /**< Integer value (#YASM_EXPR_INT) */
-        yasm_floatnum *flt;     /**< Floating point value (#YASM_EXPR_FLOAT) */
-        uintptr_t reg;          /**< Register (#YASM_EXPR_REG) */
-        unsigned int subst;     /**< Subst placeholder (#YASM_EXPR_SUBST) */
+        yasm_bytecode *precbc;  /**< Direct bytecode ref (YASM_EXPR_PRECBC) */
+        yasm_symrec *sym;       /**< Symbol (YASM_EXPR_SYM) */
+        yasm_expr *expn;        /**< Subexpression (YASM_EXPR_EXPR) */
+        yasm_intnum *intn;      /**< Integer value (YASM_EXPR_INT) */
+        yasm_floatnum *flt;     /**< Floating point value (YASM_EXPR_FLOAT) */
+        uintptr_t reg;          /**< Register (YASM_EXPR_REG) */
+        unsigned int subst;     /**< Subst placeholder (YASM_EXPR_SUBST) */
     } data;
 } yasm_expr__item;
 
