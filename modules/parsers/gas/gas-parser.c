@@ -52,6 +52,7 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp,
     parser_gas.dir_fileline = 0;
     parser_gas.dir_file = NULL;
     parser_gas.dir_line = 0;
+    parser_gas.seen_line_marker = 0;
 
     parser_gas.preproc = pp;
     parser_gas.errwarns = errwarns;

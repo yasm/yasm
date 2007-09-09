@@ -107,6 +107,9 @@ typedef struct yasm_parser_gas {
     /*@null@*/ char *dir_file;
     unsigned long dir_line;
 
+    /* Have we seen a line marker? */
+    int seen_line_marker;
+
     /*@dependent@*/ yasm_preproc *preproc;
     /*@dependent@*/ yasm_errwarns *errwarns;
 

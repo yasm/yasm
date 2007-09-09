@@ -86,7 +86,7 @@ get_peek_token(yasm_parser_gas *parser_gas)
 {
     char savech = parser_gas->tokch;
     if (parser_gas->peek_token != NONE)
-        yasm_internal_error(N_("only can have one token of lookahead"));
+        yasm_internal_error(N_("can only have one token of lookahead"));
     parser_gas->peek_token =
         gas_parser_lex(&parser_gas->peek_tokval, parser_gas);
     parser_gas->peek_tokch = parser_gas->tokch;
@@ -324,14 +324,22 @@ cpp_line_marker(yasm_parser_gas *parser_gas)
     /* Set linemap. */
     yasm_linemap_set(parser_gas->linemap, filename, line, 1);
 
-    /* Pass change along to debug format */
-    yasm_vps_initialize(&vps);
-    vp = yasm_vp_create_string(NULL, filename);
-    yasm_vps_append(&vps, vp);
+    /*
+        The first line marker in the file (which should be on the first line
+        of the file) will give us the name of the source file. This information
+        needs to be passed on to the debug format module.
+    */
+    if (parser_gas->seen_line_marker == 0) {
+        parser_gas->seen_line_marker = 1;
 
-    yasm_object_directive(p_object, ".file", "gas", &vps, NULL, cur_line);
+        yasm_vps_initialize(&vps);
+        vp = yasm_vp_create_string(NULL, filename);
+        yasm_vps_append(&vps, vp);
 
-    yasm_vps_delete(&vps);
+        yasm_object_directive(p_object, ".file", "gas", &vps, NULL, cur_line);
+
+        yasm_vps_delete(&vps);
+    }
 
     /* Skip flags. */
     while (1) {
