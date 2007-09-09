@@ -212,7 +212,7 @@ void yasm_delete_include_paths(void);
 
 /** Iterate through include paths.
 */
-const char * yasm_get_include_dir(void **iter)
+const char * yasm_get_include_dir(void **iter);
 
 /** Add an include path for use by yasm_fopen_include().
  * If path is relative, it is treated by yasm_fopen_include() as relative to
