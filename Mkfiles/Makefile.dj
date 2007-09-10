@@ -172,11 +172,9 @@ genmodule: libyasm/genmodule.c
 module.c: libyasm/module.in genmodule
 	./genmodule libyasm/module.in Mkfiles/Makefile.dj
 
-x86geninsn: modules/arch/x86/x86geninsn.c
-	$(BUILDCC) -o $@ $<
-
-x86insn_nasm.gperf x86insn_gas.gperf: modules/arch/x86/x86insn.in x86geninsn
-	./x86geninsn modules/arch/x86/x86insn.in x86insn_nasm.gperf x86insn_gas.gperf
+x86insn_nasm.gperf x86insn_gas.gperf x86insns.c: modules/arch/x86/gen_x86_insn.py
+	# ignore error in case python is not installed
+	-python modules/arch/x86/gen_x86_insn.py
 
 x86insn_nasm.c: x86insn_nasm.gperf genperf
 	./genperf x86insn_nasm.gperf > $@
@@ -190,7 +188,7 @@ x86cpu.c: modules/arch/x86/x86cpu.gperf genperf
 x86regtmod.c: modules/arch/x86/x86regtmod.gperf genperf
 	./genperf modules/arch/x86/x86regtmod.gperf > $@
 
-modules/arch/x86/x86id.c: x86insn_nasm.c x86insn_gas.c
+modules/arch/x86/x86id.c: x86insn_nasm.c x86insn_gas.c x86insns.c
 
 lc3bid.c: modules/arch/lc3b/lc3bid.re re2c
 	./re2c -s -o $@ modules/arch/lc3b/lc3bid.re

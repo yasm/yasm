@@ -5,6 +5,11 @@
 
 noinst_PROGRAMS += genperf
 
+# Suffix rule for genperf
+SUFFIXES += .gperf
+.gperf.c: genperf$(EXEEXT)
+	$(top_builddir)/genperf$(EXEEXT) $< > $@
+
 genperf_SOURCES =
 EXTRA_DIST += tools/genperf/genperf.c
 EXTRA_DIST += tools/genperf/perfect.c
