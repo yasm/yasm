@@ -60,7 +60,7 @@ typedef struct yasm_preproc_cpp {
     TAILQ_HEAD(, cpp_arg_entry) cpp_args;
 
     char *filename;
-    FILE *f;
+    FILE *f, *f_deps;
     yasm_linemap *cur_lm;
     yasm_errwarns *errwarns;
 
@@ -68,7 +68,8 @@ typedef struct yasm_preproc_cpp {
 } yasm_preproc_cpp;
 
 /* Flag values for yasm_preproc_cpp->flags. */
-#define CPP_HAS_BEEN_INVOKED 0x01
+#define CPP_HAS_BEEN_INVOKED        0x01
+#define CPP_HAS_GENERATED_DEPS      0x02
 
 /*******************************************************************************
     Internal functions and helpers.
@@ -91,7 +92,7 @@ typedef struct yasm_preproc_cpp {
     cpp.
 */
 static char *
-cpp_build_cmdline(yasm_preproc_cpp *pp)
+cpp_build_cmdline(yasm_preproc_cpp *pp, const char *extra)
 {
     char *cmdline, *p, *limit;
     cpp_arg_entry *arg;
@@ -105,14 +106,23 @@ cpp_build_cmdline(yasm_preproc_cpp *pp)
     strcpy(p, "cpp");
     p += 3;
 
+    arg = TAILQ_FIRST(&pp->cpp_args);
+
     /* Append arguments from the list. */
-    while ( (arg = TAILQ_FIRST(&pp->cpp_args)) ) {
+    while ( arg ) {
         APPEND(" ");
         APPEND(arg->op);
         APPEND(" ");
         APPEND(arg->param);
+
+        arg = TAILQ_NEXT(arg, entry);
     }
 
+    /* Append extra arguments. */
+    if (extra) {
+        APPEND(" ");
+        APPEND(extra);
+    }
     /* Append final arguments. */
     APPEND(" -x assembler-with-cpp ");
     APPEND(pp->filename);
@@ -126,7 +136,7 @@ cpp_invoke(yasm_preproc_cpp *pp)
 {
     char *cmdline;
 
-    cmdline = cpp_build_cmdline(pp);
+    cmdline = cpp_build_cmdline(pp, NULL);
 
     pp->f = popen(cmdline, "r");
     if (!pp->f)
@@ -148,6 +158,21 @@ cpp_destroy_args(yasm_preproc_cpp *pp)
     }
 }
 
+/* Invoke the c preprocessor to generate dependency info. */
+static void
+cpp_generate_deps(yasm_preproc_cpp *pp)
+{
+    char *cmdline;
+
+    cmdline = cpp_build_cmdline(pp, "-M");
+
+    pp->f_deps = popen(cmdline, "r");
+    if (!pp->f_deps)
+        yasm__fatal( N_("Failed to execute preprocessor") );
+
+    yasm_xfree(cmdline);
+}
+
 /*******************************************************************************
     Interface functions.
 *******************************************************************************/
@@ -157,7 +182,7 @@ cpp_preproc_create(const char *in, yasm_linemap *lm, yasm_errwarns *errwarns)
     yasm_preproc_cpp *pp = yasm_xmalloc(sizeof(yasm_preproc_cpp));
 
     pp->preproc.module = &yasm_cpp_LTX_preproc;
-    pp->f = NULL;
+    pp->f = pp->f_deps = NULL;
     pp->cur_lm = lm;
     pp->errwarns = errwarns;
     pp->flags = 0;
@@ -214,9 +239,48 @@ static size_t
 cpp_preproc_get_included_file(yasm_preproc *preproc, char *buf,
                               size_t max_size)
 {
-    /* TODO */
+    char *p = buf;
+    int ch = '\0';
+    size_t n = 0;
+    yasm_preproc_cpp *pp = (yasm_preproc_cpp *)preproc;
 
-    return 0;
+    if (! (pp->flags & CPP_HAS_GENERATED_DEPS) ) {
+        pp->flags |= CPP_HAS_GENERATED_DEPS;
+
+        cpp_generate_deps(pp);
+
+        /* Skip target name and first dependency. */
+        while (ch != ':')
+            ch = fgetc(pp->f_deps);
+
+        fgetc(pp->f_deps);      /* Discard space after colon. */
+
+        while (ch != ' ' && ch != EOF)
+            ch = fgetc(pp->f_deps);
+
+        if (ch == EOF)
+            return 0;
+    }
+
+    while (n < max_size) {
+        ch = fgetc(pp->f_deps);
+
+        if (ch == ' ' || ch == EOF) {
+            *p = '\0';
+            return n;
+        }
+
+        /* Eat any silly characters. */
+        if (ch < ' ')
+            continue;
+
+        *p++ = ch;
+        n++;
+    }
+
+    /* Ensure the buffer is null-terminated. */
+    *(p - 1) = '\0';
+    return n;
 }
 
 static void
