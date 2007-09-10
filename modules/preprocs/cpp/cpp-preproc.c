@@ -111,11 +111,6 @@ cpp_build_cmdline(yasm_preproc_cpp *pp)
         APPEND(arg->op);
         APPEND(" ");
         APPEND(arg->param);
-
-        /* Remove this element from the list and free it. */
-        TAILQ_REMOVE(&pp->cpp_args, arg, entry);
-        yasm_xfree(arg->param);
-        yasm_xfree(arg);
     }
 
     /* Append final arguments. */
@@ -133,16 +128,24 @@ cpp_invoke(yasm_preproc_cpp *pp)
 
     cmdline = cpp_build_cmdline(pp);
 
-#if 0
-    /* Print the command line before executing. */
-    printf("%s\n", cmdline);
-#endif
-
     pp->f = popen(cmdline, "r");
     if (!pp->f)
         yasm__fatal( N_("Failed to execute preprocessor") );
 
     yasm_xfree(cmdline);
+}
+
+/* Free memory used by the list of arguments. */
+static void
+cpp_destroy_args(yasm_preproc_cpp *pp)
+{
+    cpp_arg_entry *arg;
+
+    while ( (arg = TAILQ_FIRST(&pp->cpp_args)) ) {
+        TAILQ_REMOVE(&pp->cpp_args, arg, entry);
+        yasm_xfree(arg->param);
+        yasm_xfree(arg);
+    }
 }
 
 /*******************************************************************************
@@ -174,6 +177,8 @@ cpp_preproc_destroy(yasm_preproc *preproc)
         if (pclose(pp->f) != 0)
             yasm__fatal( N_("Preprocessor exited with failure") );
     }
+
+    cpp_destroy_args(pp);
 
     yasm_xfree(pp->filename);
     yasm_xfree(pp);
