@@ -43,9 +43,9 @@ EXTRA_DIST += modules/arch/x86/x86regtmod.gperf
 x86insn_nasm.c: x86insn_nasm.gperf genperf$(EXEEXT)
 x86insn_gas.c: x86insn_gas.gperf genperf$(EXEEXT)
 x86cpu.c: $(srcdir)/modules/arch/x86/x86cpu.gperf genperf$(EXEEXT)
-	$(top_builddir)/genperf$(EXEEXT) $(srcdir)/modules/arch/x86/x86cpu.gperf > $@
+	$(top_builddir)/genperf$(EXEEXT) $(srcdir)/modules/arch/x86/x86cpu.gperf $@
 x86regtmod.c: $(srcdir)/modules/arch/x86/x86regtmod.gperf genperf$(EXEEXT)
-	$(top_builddir)/genperf$(EXEEXT) $(srcdir)/modules/arch/x86/x86regtmod.gperf > $@
+	$(top_builddir)/genperf$(EXEEXT) $(srcdir)/modules/arch/x86/x86regtmod.gperf $@
 
 BUILT_SOURCES += x86insn_nasm.c
 BUILT_SOURCES += x86insn_gas.c

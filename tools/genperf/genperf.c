@@ -250,7 +250,7 @@ perfect_gen(FILE *out, const char *lookup_function_name,
 int
 main(int argc, char *argv[])
 {
-    FILE *in;
+    FILE *in, *out;
     size_t i;
     char *ch;
     static char line[1024], tmp[1024];
@@ -271,8 +271,8 @@ main(int argc, char *argv[])
     sval *sv;
     keyword *kw;
 
-    if (argc != 2) {
-        fprintf(stderr, "Usage: genperf <in>\n");
+    if (argc != 3) {
+        fprintf(stderr, "Usage: genperf <in> <out>\n");
         return EXIT_FAILURE;
     }
 
@@ -511,20 +511,30 @@ main(int argc, char *argv[])
     }
 
     /* output code */
-    printf("/* %s code produced by genperf */\n", language);
-    printf("/* Command-line: genperf %s */\n", argv[1]);
+    out = fopen(argv[2], "wt");
+    if (!out) {
+        fprintf(stderr, "Could not open `%s' for writing\n", argv[2]);
+        return EXIT_FAILURE;
+    }
+
+    fprintf(out, "/* %s code produced by genperf */\n", language);
+    fprintf(out, "/* Command-line: genperf %s %s */\n", argv[1], argv[2]);
 
     STAILQ_FOREACH(sv, &usercode, link)
-        printf("%s", sv->str);
+        fprintf(out, "%s", sv->str);
 
     /* Get perfect hash */
-    perfect_gen(stdout, lookup_function_name, struct_name, &keywords, filename);
+    perfect_gen(out, lookup_function_name, struct_name, &keywords, filename);
 
     STAILQ_FOREACH(sv, &usercode2, link)
-        printf("%s", sv->str);
+        fprintf(out, "%s", sv->str);
 
-    if (errors > 0)
+    fclose(out);
+
+    if (errors > 0) {
+        remove(argv[2]);
         return EXIT_FAILURE;
+    }
 
     return EXIT_SUCCESS;
 }
