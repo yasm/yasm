@@ -270,10 +270,12 @@ typedef struct x86_insn_info {
     unsigned char spare;
 
     /* The number of operands this form of the instruction takes */
-    unsigned char num_operands;
+    unsigned int num_operands:4;
 
-    /* The types of each operand, see above */
-    unsigned long operands[3];
+    /* The index into the insn_operands array which contains the type of each
+     * operand, see above
+     */
+    unsigned int operands_index:12;
 } x86_insn_info;
 
 typedef struct x86_id_insn {
@@ -320,17 +322,13 @@ static const yasm_bytecode_callback x86_id_insn_callback = {
 
 /* Empty instruction */
 static const x86_insn_info empty_insn[] = {
-    { CPU_Any, 0, 0, 0, 0, 0, {0, 0, 0}, 0, 0, {0, 0, 0} }
+    { CPU_Any, 0, 0, 0, 0, 0, {0, 0, 0}, 0, 0, 0 }
 };
 
 /* Placeholder for instructions invalid in 64-bit mode */
 static const x86_insn_info not64_insn[] = {
-    { CPU_Not64, 0, 0, 0, 0, 0, {0, 0, 0}, 0, 0, {0, 0, 0} }
+    { CPU_Not64, 0, 0, 0, 0, 0, {0, 0, 0}, 0, 0, 0 }
 };
-
-static const unsigned long insertq_4operands[] =
-    {OPT_SIMDReg|OPS_128|OPA_Spare, OPT_SIMDReg|OPS_128|OPA_EA,
-     OPT_Imm|OPS_8|OPS_Relaxed|OPA_EA, OPT_Imm|OPS_8|OPS_Relaxed|OPA_Imm};
 
 #include "x86insns.c"
 
@@ -446,7 +444,7 @@ x86_finalize_jmp(yasm_bytecode *bc, yasm_bytecode *prev_bc,
     jmp->target.jump_target = 1;
 
     /* See if the user explicitly specified short/near/far. */
-    switch ((int)(jinfo->operands[0] & OPTM_MASK)) {
+    switch ((int)(insn_operands[jinfo->operands_index+0] & OPTM_MASK)) {
         case OPTM_Short:
             jmp->op_sel = JMP_SHORT_FORCED;
             break;
@@ -459,9 +457,10 @@ x86_finalize_jmp(yasm_bytecode *bc, yasm_bytecode *prev_bc,
 
     /* Check for address size setting in second operand, if present */
     if (jinfo->num_operands > 1 &&
-        (jinfo->operands[1] & OPA_MASK) == OPA_AdSizeR)
+        (insn_operands[jinfo->operands_index+1] & OPA_MASK) == OPA_AdSizeR)
         jmp->common.addrsize = (unsigned char)
-            size_lookup[(jinfo->operands[1] & OPS_MASK)>>OPS_SHIFT];
+            size_lookup[(insn_operands[jinfo->operands_index+1]
+                         & OPS_MASK)>>OPS_SHIFT];
 
     /* Check for address size override */
     if (jinfo->modifiers & MOD_AdSizeR)
@@ -488,13 +487,13 @@ x86_finalize_jmp(yasm_bytecode *bc, yasm_bytecode *prev_bc,
         if (info->num_operands == 0)
             continue;
 
-        if ((info->operands[0] & OPA_MASK) != OPA_JmpRel)
+        if ((insn_operands[info->operands_index+0] & OPA_MASK) != OPA_JmpRel)
             continue;
 
         if (info->opersize != jmp->common.opersize)
             continue;
 
-        switch ((int)(info->operands[0] & OPTM_MASK)) {
+        switch ((int)(insn_operands[info->operands_index+0] & OPTM_MASK)) {
             case OPTM_Short:
                 x86_finalize_opcode(&jmp->shortop, info);
                 if (info->modifiers & MOD_Op0Add)
@@ -547,7 +546,7 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
      */
     for (; num_info>0 && !found; num_info--, info++) {
         yasm_insn_operand *op, **use_ops;
-        const unsigned long *info_ops = info->operands;
+        const unsigned long *info_ops = &insn_operands[info->operands_index];
         unsigned long icpu;
         unsigned int size;
         int mismatch = 0;
@@ -592,10 +591,6 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
             found = 1;      /* no operands -> must have a match here. */
             break;
         }
-
-        /* 4-operand special case for insertq */
-        if (info->num_operands > 3)
-            info_ops = insertq_4operands;
 
         /* Match each operand type and size */
         for (i = 0, op = use_ops[0]; op && i<info->num_operands && !mismatch;
@@ -969,11 +964,9 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     yasm_insn_finalize(&id_insn->insn);
 
     /* Build local array of operands from list, since we know we have a max
-     * of 3 operands.
+     * of 4 operands.
      */
-    if (id_insn->insn.num_operands == 4 && info == insertq_insn)
-        ;
-    else if (id_insn->insn.num_operands > 3) {
+    if (id_insn->insn.num_operands > 4) {
         yasm_error_set(YASM_ERROR_TYPE, N_("too many operands"));
         return;
     }
@@ -999,7 +992,7 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
      * operands and adjust for dereferences / lack thereof.
      */
     if (id_insn->parser == X86_PARSER_GAS
-        && (info->operands[0] & OPA_MASK) == OPA_JmpRel) {
+        && (insn_operands[info->operands_index+0] & OPA_MASK) == OPA_JmpRel) {
         for (i = 0, op = ops[0]; op; op = ops[++i]) {
             if (!op->deref && (op->type == YASM_INSN__OPERAND_REG
                                || (op->type == YASM_INSN__OPERAND_MEMORY
@@ -1032,7 +1025,7 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     }
 
     if (id_insn->insn.num_operands > 0) {
-        switch (info->operands[0] & OPA_MASK) {
+        switch (insn_operands[info->operands_index+0] & OPA_MASK) {
             case OPA_JmpRel:
                 /* Shortcut to JmpRel */
                 x86_finalize_jmp(bc, prev_bc, info);
@@ -1114,16 +1107,12 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     /* Go through operands and assign */
     if (id_insn->insn.num_operands > 0) {
         yasm_insn_operand **use_ops = ops;
-        const unsigned long *info_ops = info->operands;
+        const unsigned long *info_ops = &insn_operands[info->operands_index];
 
         /* Use reversed operands in GAS mode if not otherwise specified */
         if (id_insn->parser == X86_PARSER_GAS
             && !(info->modifiers & MOD_GasNoRev))
             use_ops = rev_ops;
-
-        /* 4-operand special case for insertq */
-        if (info->num_operands > 3)
-            info_ops = insertq_4operands;
 
         for (i = 0, op = use_ops[0]; op && i<info->num_operands;
              op = use_ops[++i]) {

@@ -122,6 +122,22 @@ class Operand(object):
 
         return '|'.join(op_str)
 
+    def __eq__(self, other):
+        return (self.type == other.type and
+                self.size == other.size and
+                self.relaxed == other.relaxed and
+                self.dest == other.dest and
+                self.tmod == other.tmod and
+                self.opt == other.opt)
+
+    def __ne__(self, other):
+        return (self.type != other.type or
+                self.size != other.size or
+                self.relaxed != other.relaxed or
+                self.dest != other.dest or
+                self.tmod != other.tmod or
+                self.opt != other.opt)
+
 class GroupForm(object):
     def __init__(self, **kwargs):
         # Parsers
@@ -235,11 +251,6 @@ class GroupForm(object):
         opcodes_str.extend(["0", "0", "0"])
         opcodes_str = "{" + ', '.join(opcodes_str[0:3]) + "}"
 
-        operands_str = [str(x) for x in self.operands]
-        # Ensure operands initializer string is 3 long
-        operands_str.extend(["0", "0", "0"])
-        operands_str = "{" + ', '.join(operands_str[0:3]) + "}"
-
         cpus_str = "|".join("CPU_%s" % x for x in sorted(self.cpu))
 
         if len(self.modifiers) > 3:
@@ -281,7 +292,7 @@ class GroupForm(object):
                                 opcodes_str,
                                 "%d" % (self.spare or 0),
                                 "%d" % len(self.operands),
-                                operands_str]) + " }"
+                                "%d" % self.all_operands_index]) + " }"
 
 groups = {}
 groupnames_ordered = []
@@ -395,8 +406,8 @@ class Insn(object):
             modifier_str = "0"
 
         return ",\t".join(["%s_insn" % self.groupname,
-                           "(%sUL<<8)|NELEMS(%s_insn)" % \
-                                (modifier_str, self.groupname),
+                           "(%sUL<<8)|%d" % \
+                                (modifier_str, len(groups[self.groupname])),
                            cpu_str or "CPU_Any",
                            suffix_str])
 
@@ -491,6 +502,27 @@ def output_nasm_insns(f):
     output_insns(f, "nasm", nasm_insns)
 
 def output_groups(f):
+    # Merge all operand lists into single list
+    # Sort by number of operands to shorten output
+    all_operands = []
+    for form in sorted((form for g in groups.itervalues() for form in g),
+                       key=lambda x:len(x.operands), reverse=True):
+        num_operands = len(form.operands)
+        for i in xrange(len(all_operands)):
+            if all_operands[i:i+num_operands] == form.operands:
+                form.all_operands_index = i
+                break
+        else:
+            form.all_operands_index = len(all_operands)
+            all_operands.extend(form.operands)
+
+    # Output operands list
+    print >>f, "static const unsigned long insn_operands[] = {"
+    print >>f, "   ",
+    print >>f, ",\n    ".join(str(x) for x in all_operands)
+    print >>f, "};\n"
+
+    # Output groups
     seen = set()
     for name in groupnames_ordered:
         if name in seen:
