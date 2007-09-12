@@ -32,7 +32,7 @@ ordered_cpus = [
     "P4", "IA64", "Hammer"]
 ordered_cpu_features = [
     "FPU", "Cyrix", "AMD", "MMX", "3DNow", "SMM", "SSE", "SSE2",
-    "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42"]
+    "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42", "SSE4a"]
 unordered_cpu_features = ["Priv", "Prot", "Undoc", "Obs"]
 
 def cpu_lcd(cpu1, cpu2):
@@ -4961,18 +4961,18 @@ for sfx, sz in zip("wlq", [16, 32, 64]):
 add_insn("popcnt", "cnt", modifiers=[0xB8], cpu=["SSE42"])
 
 #####################################################################
-# AMD SSE4.1 instructions
+# AMD SSE4a instructions
 #####################################################################
 
 add_group("extrq",
-    cpu=["SSE41"],
+    cpu=["SSE4a"],
     prefix=0x66,
     opcode=[0x0F, 0x78],
     operands=[Operand(type="SIMDReg", size=128, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 add_group("extrq",
-    cpu=["SSE41"],
+    cpu=["SSE4a"],
     prefix=0x66,
     opcode=[0x0F, 0x79],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
@@ -4981,7 +4981,7 @@ add_group("extrq",
 add_insn("extrq", "extrq")
 
 add_group("insertq",
-    cpu=["SSE41"],
+    cpu=["SSE4a"],
     prefix=0xF2,
     opcode=[0x0F, 0x78],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
@@ -4989,7 +4989,7 @@ add_group("insertq",
               Operand(type="Imm", size=8, relaxed=True, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 add_group("insertq",
-    cpu=["SSE41"],
+    cpu=["SSE4a"],
     prefix=0xF2,
     opcode=[0x0F, 0x79],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
@@ -4998,7 +4998,7 @@ add_group("insertq",
 add_insn("insertq", "insertq")
 
 add_group("movntsd",
-    cpu=["SSE41"],
+    cpu=["SSE4a"],
     prefix=0xF2,
     opcode=[0x0F, 0x2B],
     operands=[Operand(type="Mem", size=64, relaxed=True, dest="EA"),
@@ -5007,7 +5007,7 @@ add_group("movntsd",
 add_insn("movntsd", "movntsd")
 
 add_group("movntss",
-    cpu=["SSE41"],
+    cpu=["SSE4a"],
     prefix=0xF3,
     opcode=[0x0F, 0x2B],
     operands=[Operand(type="Mem", size=32, relaxed=True, dest="EA"),

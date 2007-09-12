@@ -63,6 +63,7 @@
 #define CPU_SSSE3   29      /* Streaming SIMD extensions 3 required */
 #define CPU_SSE41   30      /* Streaming SIMD extensions 4.1 required */
 #define CPU_SSE42   31      /* Streaming SIMD extensions 4.2 required */
+#define CPU_SSE4a   32      /* AMD Streaming SIMD extensions 4a required */
 
 /* Technically not CPU capabilities, they do affect what instructions are
  * available.  These are tested against BITS==64.
