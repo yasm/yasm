@@ -256,6 +256,17 @@ class GroupForm(object):
         if len(self.modifiers) > 3:
             raise ValueError("too many modifiers: %s" % (self.modifiers,))
 
+        cpus_str = []
+        if self.cpu is not None:
+            if len(self.cpu) > 3:
+                raise ValueError("too many CPUs: %s" % (self.cpu,))
+
+            # Ensure CPUs initializer string is at least 3 long
+            cpus_str.extend("CPU_%s" % x for x in sorted(self.cpu))
+
+        # Ensure cpus initializer string is 3 long; 0=CPU_Any
+        cpus_str.extend(["0", "0", "0"])
+
         # Number gap elements as we copy
         modnames = []
         n = 0
@@ -283,7 +294,9 @@ class GroupForm(object):
         mod_str = "|".join("MOD_%s" % x for x in mods)
 
         # Build instruction info structure initializer
-        return "{ "+ ", ".join([cpus_str or "CPU_Any",
+        return "{ "+ ", ".join([cpus_str[0],
+                                cpus_str[1],
+                                cpus_str[2],
                                 mod_str or "0",
                                 "%d" % (self.opersize or 0),
                                 "%d" % (self.def_opersize_64 or 0),
@@ -366,10 +379,16 @@ class Insn(object):
         else:
             suffix_str = self.suffix
 
-        if self.cpu is None:
-            cpu_str = ""
-        else:
-            cpu_str = "|".join("CPU_%s" % x for x in sorted(self.cpu))
+        cpus_str = []
+        if self.cpu is not None:
+            if len(self.cpu) > 3:
+                raise ValueError("too many CPUs: %s" % (self.cpu,))
+
+            # Ensure CPUs initializer string is at least 3 long
+            cpus_str.extend("CPU_%s" % x for x in sorted(self.cpu))
+
+        # Ensure cpus initializer string is 3 long
+        cpus_str.extend(["0", "0", "0"])
 
         if len(self.modifiers) > 3:
             raise ValueError("too many modifiers")
@@ -408,8 +427,10 @@ class Insn(object):
         return ",\t".join(["%s_insn" % self.groupname,
                            "(%sUL<<8)|%d" % \
                                 (modifier_str, len(groups[self.groupname])),
-                           cpu_str or "CPU_Any",
-                           suffix_str])
+                           suffix_str,
+                           cpus_str[0],
+                           cpus_str[1],
+                           cpus_str[2]])
 
 insns = {}
 def add_insn(name, groupname, **kwargs):
@@ -426,7 +447,9 @@ class Prefix(object):
         return ",\t".join(["NULL",
                            "X86_" + self.groupname,
                            "0x%02X" % self.value,
-                           "NONE"])
+                           self.only64 and "CPU_64" or "0",
+                           "0",
+                           "0"])
 
 gas_insns = {}
 nasm_insns = {}
@@ -536,6 +559,16 @@ def output_groups(f):
 #####################################################################
 # General instruction groupings
 #####################################################################
+
+#
+# Empty instruction
+#
+add_group("empty", opcode=[], operands=[])
+
+#
+# Placeholder for instructions invalid in 64-bit mode
+#
+add_group("not64", opcode=[], operands=[], not64=True)
 
 #
 # One byte opcode instructions with no operands

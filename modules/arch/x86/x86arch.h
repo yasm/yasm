@@ -27,53 +27,57 @@
 #ifndef YASM_X86ARCH_H
 #define YASM_X86ARCH_H
 
+#include <libyasm/bitvect.h>
+
 /* Available CPU feature flags */
-#define CPU_Any     (0UL)       /* Any old cpu will do */
+#define CPU_Any     0       /* Any old cpu will do */
 #define CPU_086     CPU_Any
-#define CPU_186     (1UL<<0)    /* i186 or better required */
-#define CPU_286     (1UL<<1)    /* i286 or better required */
-#define CPU_386     (1UL<<2)    /* i386 or better required */
-#define CPU_486     (1UL<<3)    /* i486 or better required */
-#define CPU_586     (1UL<<4)    /* i585 or better required */
-#define CPU_686     (1UL<<5)    /* i686 or better required */
-#define CPU_P3      (1UL<<6)    /* Pentium3 or better required */
-#define CPU_P4      (1UL<<7)    /* Pentium4 or better required */
-#define CPU_IA64    (1UL<<8)    /* IA-64 or better required */
-#define CPU_K6      (1UL<<9)    /* AMD K6 or better required */
-#define CPU_Athlon  (1UL<<10)   /* AMD Athlon or better required */
-#define CPU_Hammer  (1UL<<11)   /* AMD Sledgehammer or better required */
-#define CPU_FPU     (1UL<<12)   /* FPU support required */
-#define CPU_MMX     (1UL<<13)   /* MMX support required */
-#define CPU_SSE     (1UL<<14)   /* Streaming SIMD extensions required */
-#define CPU_SSE2    (1UL<<15)   /* Streaming SIMD extensions 2 required */
-#define CPU_SSE3    (1UL<<16)   /* Streaming SIMD extensions 3 required */
-#define CPU_3DNow   (1UL<<17)   /* 3DNow! support required */
-#define CPU_Cyrix   (1UL<<18)   /* Cyrix-specific instruction */
-#define CPU_AMD     (1UL<<19)   /* AMD-specific inst. (older than K6) */
-#define CPU_SMM     (1UL<<20)   /* System Management Mode instruction */
-#define CPU_Prot    (1UL<<21)   /* Protected mode only instruction */
-#define CPU_Undoc   (1UL<<22)   /* Undocumented instruction */
-#define CPU_Obs     (1UL<<23)   /* Obsolete instruction */
-#define CPU_Priv    (1UL<<24)   /* Priveleged instruction */
-#define CPU_SVM     (1UL<<25)   /* Secure Virtual Machine instruction */
-#define CPU_PadLock (1UL<<25)   /* VIA PadLock instruction */
-#define CPU_EM64T   (1UL<<26)   /* Intel EM64T or better */
-#define CPU_SSSE3   (1UL<<27)   /* Streaming SIMD extensions 3 required */
-#define CPU_SSE41   (1UL<<28)   /* Streaming SIMD extensions 4.1 required */
-#define CPU_SSE42   (1UL<<29)   /* Streaming SIMD extensions 4.2 required */
-#define CPU_SSE4    (CPU_SSE41|CPU_SSE42)
+#define CPU_186     1       /* i186 or better required */
+#define CPU_286     2       /* i286 or better required */
+#define CPU_386     3       /* i386 or better required */
+#define CPU_486     4       /* i486 or better required */
+#define CPU_586     5       /* i585 or better required */
+#define CPU_686     6       /* i686 or better required */
+#define CPU_P3      7       /* Pentium3 or better required */
+#define CPU_P4      8       /* Pentium4 or better required */
+#define CPU_IA64    9       /* IA-64 or better required */
+#define CPU_K6      10      /* AMD K6 or better required */
+#define CPU_Athlon  11      /* AMD Athlon or better required */
+#define CPU_Hammer  12      /* AMD Sledgehammer or better required */
+#define CPU_FPU     13      /* FPU support required */
+#define CPU_MMX     14      /* MMX support required */
+#define CPU_SSE     15      /* Streaming SIMD extensions required */
+#define CPU_SSE2    16      /* Streaming SIMD extensions 2 required */
+#define CPU_SSE3    17      /* Streaming SIMD extensions 3 required */
+#define CPU_3DNow   18      /* 3DNow! support required */
+#define CPU_Cyrix   19      /* Cyrix-specific instruction */
+#define CPU_AMD     20      /* AMD-specific inst. (older than K6) */
+#define CPU_SMM     21      /* System Management Mode instruction */
+#define CPU_Prot    22      /* Protected mode only instruction */
+#define CPU_Undoc   23      /* Undocumented instruction */
+#define CPU_Obs     24      /* Obsolete instruction */
+#define CPU_Priv    25      /* Priveleged instruction */
+#define CPU_SVM     26      /* Secure Virtual Machine instruction */
+#define CPU_PadLock 27      /* VIA PadLock instruction */
+#define CPU_EM64T   28      /* Intel EM64T or better */
+#define CPU_SSSE3   29      /* Streaming SIMD extensions 3 required */
+#define CPU_SSE41   30      /* Streaming SIMD extensions 4.1 required */
+#define CPU_SSE42   31      /* Streaming SIMD extensions 4.2 required */
 
 /* Technically not CPU capabilities, they do affect what instructions are
  * available.  These are tested against BITS==64.
  */
-#define CPU_64      (1UL<<30)   /* Only available in 64-bit mode */
-#define CPU_Not64   (1UL<<31)   /* Not available (invalid) in 64-bit mode */
+#define CPU_64      120     /* Only available in 64-bit mode */
+#define CPU_Not64   121     /* Not available (invalid) in 64-bit mode */
 
 typedef struct yasm_arch_x86 {
     yasm_arch_base arch;        /* base structure */
 
     /* What instructions/features are enabled? */
-    unsigned long cpu_enabled;
+    unsigned int active_cpu;        /* active index into cpu_enables table */
+    unsigned int cpu_enables_size;  /* size of cpu_enables table */
+    wordptr *cpu_enables;
+
     unsigned int amd64_machine;
     enum {
         X86_PARSER_NASM = 0,

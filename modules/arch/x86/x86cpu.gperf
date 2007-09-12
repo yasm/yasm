@@ -32,58 +32,153 @@ RCSID("$Id$");
 
 #include "modules/arch/x86/x86arch.h"
 
-enum cpu_mode {
-    CPU_MODE_VERBATIM = 1,
-    CPU_MODE_SET,
-    CPU_MODE_CLEAR
-};
+#define PROC_8086	0
+#define PROC_186	1
+#define PROC_286	2
+#define PROC_386	3
+#define PROC_486	4
+#define PROC_586	5
+#define PROC_686	6
+#define PROC_p2		7
+#define PROC_p3		8
+#define PROC_p4		9
+#define PROC_prescott	10
+#define PROC_conroe	11
+#define PROC_penryn	12
+#define PROC_nehalem	13
 
-#define PROC_186	CPU_186|CPU_Priv
-#define PROC_286	CPU_186|CPU_286|CPU_Priv
-#define PROC_386	CPU_186|CPU_286|CPU_386|CPU_SMM|CPU_Prot|CPU_Priv
-#define PROC_486	CPU_186|CPU_286|CPU_386|CPU_486|CPU_FPU|CPU_SMM|\
-			CPU_Prot|CPU_Priv
-#define PROC_586	CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_FPU|\
-			CPU_SMM|CPU_Prot|CPU_Priv
-#define PROC_686	CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
-			CPU_FPU|CPU_SMM|CPU_Prot|CPU_Priv
-#define PROC_p2		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
-			CPU_FPU|CPU_MMX|CPU_SMM|CPU_Prot|CPU_Priv
-#define PROC_p3		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
-			CPU_P3|CPU_FPU|CPU_MMX|CPU_SSE|CPU_SMM|CPU_Prot|\
-			CPU_Priv
-#define PROC_p4		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
-			CPU_P3|CPU_P4|CPU_FPU|CPU_MMX|CPU_SSE|CPU_SSE2|\
-			CPU_SMM|CPU_Prot|CPU_Priv
-#define PROC_ia64	CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
-			CPU_P3|CPU_P4|CPU_IA64|CPU_FPU|CPU_MMX|CPU_SSE|\
-			CPU_SSE2|CPU_SMM|CPU_Prot|CPU_Priv
-#define PROC_k6		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
-			CPU_K6|CPU_FPU|CPU_MMX|CPU_3DNow|CPU_SMM|CPU_Prot|\
-			CPU_Priv
-#define PROC_k7		CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
-			CPU_K6|CPU_Athlon|CPU_FPU|CPU_MMX|CPU_SSE|CPU_3DNow|\
-			CPU_SMM|CPU_Prot|CPU_Priv
-#define PROC_hammer	CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
-			CPU_K6|CPU_Athlon|CPU_Hammer|CPU_FPU|CPU_MMX|\
-			CPU_SSE|CPU_SSE2|CPU_3DNow|CPU_SMM|CPU_Prot|\
-			CPU_Priv
-#define PROC_prescott	CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
-			CPU_Hammer|CPU_EM64T|CPU_FPU|CPU_MMX|\
-			CPU_SSE|CPU_SSE2|CPU_SSE3|CPU_SMM|\
-			CPU_Prot|CPU_Priv
-#define PROC_conroe	CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
-			CPU_Hammer|CPU_EM64T|CPU_FPU|CPU_MMX|\
-			CPU_SSE|CPU_SSE2|CPU_SSE3|CPU_SSSE3|CPU_SMM|\
-			CPU_Prot|CPU_Priv
-#define PROC_penryn	CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
-			CPU_Hammer|CPU_EM64T|CPU_FPU|CPU_MMX|\
-			CPU_SSE|CPU_SSE2|CPU_SSE3|CPU_SSSE3|CPU_SSE41|CPU_SMM|\
-			CPU_Prot|CPU_Priv
-#define PROC_nehalem	CPU_186|CPU_286|CPU_386|CPU_486|CPU_586|CPU_686|\
-			CPU_Hammer|CPU_EM64T|CPU_FPU|CPU_MMX|\
-			CPU_SSE|CPU_SSE2|CPU_SSE3|CPU_SSSE3|CPU_SSE41|\
-			CPU_SSE42|CPU_SMM|CPU_Prot|CPU_Priv
+static void
+x86_cpu_intel(wordptr cpu, unsigned int data)
+{
+    BitVector_Empty(cpu);
+
+    BitVector_Bit_On(cpu, CPU_Priv);
+    if (data >= PROC_286)
+        BitVector_Bit_On(cpu, CPU_Prot);
+    if (data >= PROC_386)
+        BitVector_Bit_On(cpu, CPU_SMM);
+    if (data >= PROC_nehalem)
+        BitVector_Bit_On(cpu, CPU_SSE42);
+    if (data >= PROC_penryn)
+        BitVector_Bit_On(cpu, CPU_SSE41);
+    if (data >= PROC_conroe)
+        BitVector_Bit_On(cpu, CPU_SSSE3);
+    if (data >= PROC_prescott)
+        BitVector_Bit_On(cpu, CPU_SSE3);
+    if (data >= PROC_p4)
+        BitVector_Bit_On(cpu, CPU_SSE2);
+    if (data >= PROC_p3)
+        BitVector_Bit_On(cpu, CPU_SSE);
+    if (data >= PROC_p2)
+        BitVector_Bit_On(cpu, CPU_MMX);
+    if (data >= PROC_486)
+        BitVector_Bit_On(cpu, CPU_FPU);
+    if (data >= PROC_prescott)
+        BitVector_Bit_On(cpu, CPU_EM64T);
+
+    if (data >= PROC_p4)
+        BitVector_Bit_On(cpu, CPU_P4);
+    if (data >= PROC_p3)
+        BitVector_Bit_On(cpu, CPU_P3);
+    if (data >= PROC_686)
+        BitVector_Bit_On(cpu, CPU_686);
+    if (data >= PROC_586)
+        BitVector_Bit_On(cpu, CPU_586);
+    if (data >= PROC_486)
+        BitVector_Bit_On(cpu, CPU_486);
+    if (data >= PROC_386)
+        BitVector_Bit_On(cpu, CPU_386);
+    if (data >= PROC_286)
+        BitVector_Bit_On(cpu, CPU_286);
+    if (data >= PROC_186)
+        BitVector_Bit_On(cpu, CPU_186);
+    BitVector_Bit_On(cpu, CPU_086);
+}
+
+static void
+x86_cpu_ia64(wordptr cpu, unsigned int data)
+{
+    BitVector_Empty(cpu);
+    BitVector_Bit_On(cpu, CPU_Priv);
+    BitVector_Bit_On(cpu, CPU_Prot);
+    BitVector_Bit_On(cpu, CPU_SMM);
+    BitVector_Bit_On(cpu, CPU_SSE2);
+    BitVector_Bit_On(cpu, CPU_SSE);
+    BitVector_Bit_On(cpu, CPU_MMX);
+    BitVector_Bit_On(cpu, CPU_FPU);
+    BitVector_Bit_On(cpu, CPU_IA64);
+    BitVector_Bit_On(cpu, CPU_P4);
+    BitVector_Bit_On(cpu, CPU_P3);
+    BitVector_Bit_On(cpu, CPU_686);
+    BitVector_Bit_On(cpu, CPU_586);
+    BitVector_Bit_On(cpu, CPU_486);
+    BitVector_Bit_On(cpu, CPU_386);
+    BitVector_Bit_On(cpu, CPU_286);
+    BitVector_Bit_On(cpu, CPU_186);
+    BitVector_Bit_On(cpu, CPU_086);
+}
+
+#define PROC_hammer 8
+#define PROC_k7     7
+#define PROC_k6     6
+
+static void
+x86_cpu_amd(wordptr cpu, unsigned int data)
+{
+    BitVector_Empty(cpu);
+
+    BitVector_Bit_On(cpu, CPU_Priv);
+    BitVector_Bit_On(cpu, CPU_Prot);
+    BitVector_Bit_On(cpu, CPU_SMM);
+    BitVector_Bit_On(cpu, CPU_3DNow);
+    if (data >= PROC_hammer)
+        BitVector_Bit_On(cpu, CPU_SSE2);
+    if (data >= PROC_k7)
+        BitVector_Bit_On(cpu, CPU_SSE);
+    if (data >= PROC_k6)
+        BitVector_Bit_On(cpu, CPU_MMX);
+    BitVector_Bit_On(cpu, CPU_FPU);
+
+    if (data >= PROC_hammer)
+        BitVector_Bit_On(cpu, CPU_Hammer);
+    if (data >= PROC_k7)
+        BitVector_Bit_On(cpu, CPU_Athlon);
+    if (data >= PROC_k6)
+        BitVector_Bit_On(cpu, CPU_K6);
+    BitVector_Bit_On(cpu, CPU_686);
+    BitVector_Bit_On(cpu, CPU_586);
+    BitVector_Bit_On(cpu, CPU_486);
+    BitVector_Bit_On(cpu, CPU_386);
+    BitVector_Bit_On(cpu, CPU_286);
+    BitVector_Bit_On(cpu, CPU_186);
+    BitVector_Bit_On(cpu, CPU_086);
+}
+
+static void
+x86_cpu_set(wordptr cpu, unsigned int data)
+{
+    BitVector_Bit_On(cpu, data);
+}
+
+static void
+x86_cpu_clear(wordptr cpu, unsigned int data)
+{
+    BitVector_Bit_Off(cpu, data);
+}
+
+static void
+x86_cpu_set_sse4(wordptr cpu, unsigned int data)
+{
+    BitVector_Bit_On(cpu, CPU_SSE41);
+    BitVector_Bit_On(cpu, CPU_SSE42);
+}
+
+static void
+x86_cpu_clear_sse4(wordptr cpu, unsigned int data)
+{
+    BitVector_Bit_Off(cpu, CPU_SSE41);
+    BitVector_Bit_Off(cpu, CPU_SSE42);
+}
 
 %}
 %ignore-case
@@ -96,118 +191,118 @@ enum cpu_mode {
 %define lookup-function-name cpu_find
 struct cpu_parse_data {
     const char *name;
-    enum cpu_mode mode;
-    unsigned long cpu;
+    void (*handler) (wordptr cpu, unsigned int data);
+    unsigned int data;
 };
 %%
-8086,		CPU_MODE_VERBATIM,	CPU_Priv
-186,		CPU_MODE_VERBATIM,	PROC_186
-80186,		CPU_MODE_VERBATIM,	PROC_186
-i186,		CPU_MODE_VERBATIM,	PROC_186
-286,		CPU_MODE_VERBATIM,	PROC_286
-80286,		CPU_MODE_VERBATIM,	PROC_286
-i286,		CPU_MODE_VERBATIM,	PROC_286
-386,		CPU_MODE_VERBATIM,	PROC_386
-80386,		CPU_MODE_VERBATIM,	PROC_386
-i386,		CPU_MODE_VERBATIM,	PROC_386
-486,		CPU_MODE_VERBATIM,	PROC_486
-80486,		CPU_MODE_VERBATIM,	PROC_486
-i486,		CPU_MODE_VERBATIM,	PROC_486
-586,		CPU_MODE_VERBATIM,	PROC_586
-i586,		CPU_MODE_VERBATIM,	PROC_586
-pentium,	CPU_MODE_VERBATIM,	PROC_586
-p5,		CPU_MODE_VERBATIM,	PROC_586
-686,		CPU_MODE_VERBATIM,	PROC_686
-i686,		CPU_MODE_VERBATIM,	PROC_686
-p6,		CPU_MODE_VERBATIM,	PROC_686
-ppro,		CPU_MODE_VERBATIM,	PROC_686
-pentiumpro,	CPU_MODE_VERBATIM,	PROC_686
-p2,		CPU_MODE_VERBATIM,	PROC_p2
-pentium2,	CPU_MODE_VERBATIM,	PROC_p2
-pentium-2,	CPU_MODE_VERBATIM,	PROC_p2
-pentiumii,	CPU_MODE_VERBATIM,	PROC_p2
-pentium-ii,	CPU_MODE_VERBATIM,	PROC_p2
-p3,		CPU_MODE_VERBATIM,	PROC_p3
-pentium3,	CPU_MODE_VERBATIM,	PROC_p3
-pentium-3,	CPU_MODE_VERBATIM,	PROC_p3
-pentiumiii,	CPU_MODE_VERBATIM,	PROC_p3
-pentium-iii,	CPU_MODE_VERBATIM,	PROC_p3
-katmai,		CPU_MODE_VERBATIM,	PROC_p3
-p4,		CPU_MODE_VERBATIM,	PROC_p4
-pentium4,	CPU_MODE_VERBATIM,	PROC_p4
-pentium-4,	CPU_MODE_VERBATIM,	PROC_p4
-pentiumiv,	CPU_MODE_VERBATIM,	PROC_p4
-pentium-iv,	CPU_MODE_VERBATIM,	PROC_p4
-williamette,	CPU_MODE_VERBATIM,	PROC_p4
-ia64,		CPU_MODE_VERBATIM,	PROC_ia64
-ia-64,		CPU_MODE_VERBATIM,	PROC_ia64
-itanium,	CPU_MODE_VERBATIM,	PROC_ia64
-k6,		CPU_MODE_VERBATIM,	PROC_k6
-k7,		CPU_MODE_VERBATIM,	PROC_k7
-athlon,		CPU_MODE_VERBATIM,	PROC_k7
-hammer,		CPU_MODE_VERBATIM,	PROC_hammer
-sledgehammer,	CPU_MODE_VERBATIM,	PROC_hammer
-opteron,	CPU_MODE_VERBATIM,	PROC_hammer
-athlon64,	CPU_MODE_VERBATIM,	PROC_hammer
-athlon-64,	CPU_MODE_VERBATIM,	PROC_hammer
-prescott,	CPU_MODE_VERBATIM,	PROC_prescott
-conroe,		CPU_MODE_VERBATIM,	PROC_conroe
-penryn,		CPU_MODE_VERBATIM,	PROC_penryn
-nehalem,	CPU_MODE_VERBATIM,	PROC_nehalem
+8086,		x86_cpu_intel,	PROC_8086
+186,		x86_cpu_intel,	PROC_186
+80186,		x86_cpu_intel,	PROC_186
+i186,		x86_cpu_intel,	PROC_186
+286,		x86_cpu_intel,	PROC_286
+80286,		x86_cpu_intel,	PROC_286
+i286,		x86_cpu_intel,	PROC_286
+386,		x86_cpu_intel,	PROC_386
+80386,		x86_cpu_intel,	PROC_386
+i386,		x86_cpu_intel,	PROC_386
+486,		x86_cpu_intel,	PROC_486
+80486,		x86_cpu_intel,	PROC_486
+i486,		x86_cpu_intel,	PROC_486
+586,		x86_cpu_intel,	PROC_586
+i586,		x86_cpu_intel,	PROC_586
+pentium,	x86_cpu_intel,	PROC_586
+p5,		x86_cpu_intel,	PROC_586
+686,		x86_cpu_intel,	PROC_686
+i686,		x86_cpu_intel,	PROC_686
+p6,		x86_cpu_intel,	PROC_686
+ppro,		x86_cpu_intel,	PROC_686
+pentiumpro,	x86_cpu_intel,	PROC_686
+p2,		x86_cpu_intel,	PROC_p2
+pentium2,	x86_cpu_intel,	PROC_p2
+pentium-2,	x86_cpu_intel,	PROC_p2
+pentiumii,	x86_cpu_intel,	PROC_p2
+pentium-ii,	x86_cpu_intel,	PROC_p2
+p3,		x86_cpu_intel,	PROC_p3
+pentium3,	x86_cpu_intel,	PROC_p3
+pentium-3,	x86_cpu_intel,	PROC_p3
+pentiumiii,	x86_cpu_intel,	PROC_p3
+pentium-iii,	x86_cpu_intel,	PROC_p3
+katmai,		x86_cpu_intel,	PROC_p3
+p4,		x86_cpu_intel,	PROC_p4
+pentium4,	x86_cpu_intel,	PROC_p4
+pentium-4,	x86_cpu_intel,	PROC_p4
+pentiumiv,	x86_cpu_intel,	PROC_p4
+pentium-iv,	x86_cpu_intel,	PROC_p4
+williamette,	x86_cpu_intel,	PROC_p4
+ia64,		x86_cpu_ia64,	0
+ia-64,		x86_cpu_ia64,	0
+itanium,	x86_cpu_ia64,	0
+k6,		x86_cpu_amd,	PROC_k6
+k7,		x86_cpu_amd,	PROC_k7
+athlon,		x86_cpu_amd,	PROC_k7
+hammer,		x86_cpu_amd,	PROC_hammer
+sledgehammer,	x86_cpu_amd,	PROC_hammer
+opteron,	x86_cpu_amd,	PROC_hammer
+athlon64,	x86_cpu_amd,	PROC_hammer
+athlon-64,	x86_cpu_amd,	PROC_hammer
+prescott,	x86_cpu_intel,	PROC_prescott
+conroe,		x86_cpu_intel,	PROC_conroe
+penryn,		x86_cpu_intel,	PROC_penryn
+nehalem,	x86_cpu_intel,	PROC_nehalem
 #
 # Features have "no" versions to disable them, and only set/reset the
 # specific feature being changed.  All other bits are left alone.
 #
-fpu,		CPU_MODE_SET,	CPU_FPU
-nofpu,		CPU_MODE_CLEAR,	CPU_FPU
-mmx,		CPU_MODE_SET,	CPU_MMX
-nommx,		CPU_MODE_CLEAR,	CPU_MMX
-sse,		CPU_MODE_SET,	CPU_SSE
-nosse,		CPU_MODE_CLEAR,	CPU_SSE
-sse2,		CPU_MODE_SET,	CPU_SSE2
-nosse2,		CPU_MODE_CLEAR,	CPU_SSE2
-sse3,		CPU_MODE_SET,	CPU_SSE3
-nosse3,		CPU_MODE_CLEAR,	CPU_SSE3
-#pni,		CPU_MODE_SET,	CPU_PNI
-#nopni,		CPU_MODE_CLEAR,	CPU_PNI
-3dnow,		CPU_MODE_SET,	CPU_3DNow
-no3dnow,	CPU_MODE_CLEAR,	CPU_3DNow
-cyrix,		CPU_MODE_SET,	CPU_Cyrix
-nocyrix,	CPU_MODE_CLEAR,	CPU_Cyrix
-amd,		CPU_MODE_SET,	CPU_AMD
-noamd,		CPU_MODE_CLEAR,	CPU_AMD
-smm,		CPU_MODE_SET,	CPU_SMM
-nosmm,		CPU_MODE_CLEAR,	CPU_SMM
-prot,		CPU_MODE_SET,	CPU_Prot
-noprot,		CPU_MODE_CLEAR,	CPU_Prot
-protected,	CPU_MODE_SET,	CPU_Prot
-noprotected,	CPU_MODE_CLEAR,	CPU_Prot
-undoc,		CPU_MODE_SET,	CPU_Undoc
-noundoc,	CPU_MODE_CLEAR,	CPU_Undoc
-undocumented,	CPU_MODE_SET,	CPU_Undoc
-noundocumented,	CPU_MODE_CLEAR,	CPU_Undoc
-obs,		CPU_MODE_SET,	CPU_Obs
-noobs,		CPU_MODE_CLEAR,	CPU_Obs
-obsolete,	CPU_MODE_SET,	CPU_Obs
-noobsolete,	CPU_MODE_CLEAR,	CPU_Obs
-priv,		CPU_MODE_SET,	CPU_Priv
-nopriv,		CPU_MODE_CLEAR,	CPU_Priv
-privileged,	CPU_MODE_SET,	CPU_Priv
-noprivileged,	CPU_MODE_CLEAR,	CPU_Priv
-svm,		CPU_MODE_SET,	CPU_SVM
-nosvm,		CPU_MODE_CLEAR,	CPU_SVM
-padlock,	CPU_MODE_SET,	CPU_PadLock
-nopadlock,	CPU_MODE_CLEAR,	CPU_PadLock
-em64t,		CPU_MODE_SET,	CPU_EM64T
-noem64t,	CPU_MODE_CLEAR,	CPU_EM64T
-ssse3,		CPU_MODE_SET,	CPU_SSSE3
-nossse3,	CPU_MODE_CLEAR,	CPU_SSSE3
-sse4.1,		CPU_MODE_SET,	CPU_SSE41
-nosse4.1,	CPU_MODE_CLEAR,	CPU_SSE41
-sse4.2,		CPU_MODE_SET,	CPU_SSE42
-nosse4.2,	CPU_MODE_CLEAR,	CPU_SSE42
-sse4,		CPU_MODE_SET,	CPU_SSE4
-nosse4,		CPU_MODE_CLEAR,	CPU_SSE4
+fpu,		x86_cpu_set,	CPU_FPU
+nofpu,		x86_cpu_clear,	CPU_FPU
+mmx,		x86_cpu_set,	CPU_MMX
+nommx,		x86_cpu_clear,	CPU_MMX
+sse,		x86_cpu_set,	CPU_SSE
+nosse,		x86_cpu_clear,	CPU_SSE
+sse2,		x86_cpu_set,	CPU_SSE2
+nosse2,		x86_cpu_clear,	CPU_SSE2
+sse3,		x86_cpu_set,	CPU_SSE3
+nosse3,		x86_cpu_clear,	CPU_SSE3
+#pni,		x86_cpu_set,	CPU_PNI
+#nopni,		x86_cpu_clear,	CPU_PNI
+3dnow,		x86_cpu_set,	CPU_3DNow
+no3dnow,	x86_cpu_clear,	CPU_3DNow
+cyrix,		x86_cpu_set,	CPU_Cyrix
+nocyrix,	x86_cpu_clear,	CPU_Cyrix
+amd,		x86_cpu_set,	CPU_AMD
+noamd,		x86_cpu_clear,	CPU_AMD
+smm,		x86_cpu_set,	CPU_SMM
+nosmm,		x86_cpu_clear,	CPU_SMM
+prot,		x86_cpu_set,	CPU_Prot
+noprot,		x86_cpu_clear,	CPU_Prot
+protected,	x86_cpu_set,	CPU_Prot
+noprotected,	x86_cpu_clear,	CPU_Prot
+undoc,		x86_cpu_set,	CPU_Undoc
+noundoc,	x86_cpu_clear,	CPU_Undoc
+undocumented,	x86_cpu_set,	CPU_Undoc
+noundocumented,	x86_cpu_clear,	CPU_Undoc
+obs,		x86_cpu_set,	CPU_Obs
+noobs,		x86_cpu_clear,	CPU_Obs
+obsolete,	x86_cpu_set,	CPU_Obs
+noobsolete,	x86_cpu_clear,	CPU_Obs
+priv,		x86_cpu_set,	CPU_Priv
+nopriv,		x86_cpu_clear,	CPU_Priv
+privileged,	x86_cpu_set,	CPU_Priv
+noprivileged,	x86_cpu_clear,	CPU_Priv
+svm,		x86_cpu_set,	CPU_SVM
+nosvm,		x86_cpu_clear,	CPU_SVM
+padlock,	x86_cpu_set,	CPU_PadLock
+nopadlock,	x86_cpu_clear,	CPU_PadLock
+em64t,		x86_cpu_set,	CPU_EM64T
+noem64t,	x86_cpu_clear,	CPU_EM64T
+ssse3,		x86_cpu_set,	CPU_SSSE3
+nossse3,	x86_cpu_clear,	CPU_SSSE3
+sse4.1,		x86_cpu_set,	CPU_SSE41
+nosse4.1,	x86_cpu_clear,	CPU_SSE41
+sse4.2,		x86_cpu_set,	CPU_SSE42
+nosse4.2,	x86_cpu_clear,	CPU_SSE42
+sse4,		x86_cpu_set_sse4,	0
+nosse4,		x86_cpu_clear_sse4,	0
 %%
 
 void
@@ -215,6 +310,8 @@ yasm_x86__parse_cpu(yasm_arch_x86 *arch_x86, const char *cpuid,
                     size_t cpuid_len)
 {
     /*@null@*/ const struct cpu_parse_data *pdata;
+    wordptr new_cpu;
+    unsigned int i;
 
     if (cpuid_len > 15)
         return;
@@ -226,15 +323,22 @@ yasm_x86__parse_cpu(yasm_arch_x86 *arch_x86, const char *cpuid,
         return;
     }
 
-    switch (pdata->mode) {
-        case CPU_MODE_VERBATIM:
-            arch_x86->cpu_enabled = pdata->cpu;
-            break;
-        case CPU_MODE_SET:
-            arch_x86->cpu_enabled |= pdata->cpu;
-            break;
-        case CPU_MODE_CLEAR:
-            arch_x86->cpu_enabled &= ~pdata->cpu;
-            break;
+    new_cpu = BitVector_Clone(arch_x86->cpu_enables[arch_x86->active_cpu]);
+    pdata->handler(new_cpu, pdata->data);
+
+    /* try to find an existing match in the CPU table first */
+    for (i=0; i<arch_x86->cpu_enables_size; i++) {
+        if (BitVector_equal(arch_x86->cpu_enables[i], new_cpu)) {
+            arch_x86->active_cpu = i;
+            BitVector_Destroy(new_cpu);
+            return;
+        }
     }
+
+    /* not found, need to add a new entry */
+    arch_x86->active_cpu = arch_x86->cpu_enables_size++;
+    arch_x86->cpu_enables =
+        yasm_xrealloc(arch_x86->cpu_enables,
+                      arch_x86->cpu_enables_size*sizeof(wordptr));
+    arch_x86->cpu_enables[arch_x86->active_cpu] = new_cpu;
 }

@@ -34,7 +34,8 @@ RCSID("$Id$");
 #include "modules/arch/x86/x86arch.h"
 
 
-static const char *cpu_find_reverse(unsigned long cpu);
+static const char *cpu_find_reverse(unsigned int cpu0, unsigned int cpu1,
+                                    unsigned int cpu2);
 
 /* Opcode modifiers.  The opcode bytes are in "reverse" order because the
  * parameters are read from the arch-specific data in LSB->MSB order.
@@ -234,7 +235,9 @@ typedef struct x86_insn_info {
      * cpu_enabled to see if all bits set here are set in cpu_enabled--if so,
      * the instruction is available on this CPU.
      */
-    unsigned long cpu;
+    unsigned int cpu0:8;
+    unsigned int cpu1:8;
+    unsigned int cpu2:8;
 
     /* Opcode modifiers for variations of instruction.  As each modifier reads
      * its parameter in LSB->MSB order from the arch-specific data[1] from the
@@ -285,7 +288,7 @@ typedef struct x86_id_insn {
     /*@null@*/ const x86_insn_info *group;
 
     /* CPU feature flags enabled at the time of parsing the instruction */
-    unsigned long cpu_enabled;
+    wordptr cpu_enabled;
 
     /* Modifier data */
     unsigned long mod_data;
@@ -318,16 +321,6 @@ static const yasm_bytecode_callback x86_id_insn_callback = {
     yasm_bc_expand_common,
     yasm_bc_tobytes_common,
     YASM_BC_SPECIAL_INSN
-};
-
-/* Empty instruction */
-static const x86_insn_info empty_insn[] = {
-    { CPU_Any, 0, 0, 0, 0, 0, {0, 0, 0}, 0, 0, 0 }
-};
-
-/* Placeholder for instructions invalid in 64-bit mode */
-static const x86_insn_info not64_insn[] = {
-    { CPU_Not64, 0, 0, 0, 0, 0, {0, 0, 0}, 0, 0, 0 }
 };
 
 #include "x86insns.c"
@@ -473,15 +466,27 @@ x86_finalize_jmp(yasm_bytecode *bc, yasm_bytecode *prev_bc,
     jmp->nearop.len = 0;
     for (; num_info>0 && (jmp->shortop.len == 0 || jmp->nearop.len == 0);
          num_info--, info++) {
-        unsigned long cpu = info->cpu;
+        unsigned int cpu0 = info->cpu0;
+        unsigned int cpu1 = info->cpu1;
+        unsigned int cpu2 = info->cpu2;
 
-        if ((cpu & CPU_64) && mode_bits != 64)
+        /* Match CPU */
+        if (mode_bits != 64 &&
+            (cpu0 == CPU_64 || cpu1 == CPU_64 || cpu2 == CPU_64))
             continue;
-        if ((cpu & CPU_Not64) && mode_bits == 64)
+        if (mode_bits == 64 &&
+            (cpu0 == CPU_Not64 || cpu1 == CPU_Not64 || cpu2 == CPU_Not64))
             continue;
-        cpu &= ~(CPU_64 | CPU_Not64);
 
-        if ((id_insn->cpu_enabled & cpu) != cpu)
+        if (cpu0 == CPU_64 || cpu0 == CPU_Not64)
+            cpu0 = CPU_Any;
+        if (cpu1 == CPU_64 || cpu1 == CPU_Not64)
+            cpu1 = CPU_Any;
+        if (cpu2 == CPU_64 || cpu2 == CPU_Not64)
+            cpu2 = CPU_Any;
+        if (!BitVector_bit_test(id_insn->cpu_enabled, cpu0) ||
+            !BitVector_bit_test(id_insn->cpu_enabled, cpu1) ||
+            !BitVector_bit_test(id_insn->cpu_enabled, cpu2))
             continue;
 
         if (info->num_operands == 0)
@@ -539,6 +544,7 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
     const x86_insn_info *info = id_insn->group;
     unsigned int num_info = id_insn->num_info;
     unsigned int suffix = id_insn->suffix;
+    unsigned int mode_bits = id_insn->mode_bits;
     int found = 0;
 
     /* Just do a simple linear search through the info array for a match.
@@ -547,21 +553,30 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
     for (; num_info>0 && !found; num_info--, info++) {
         yasm_insn_operand *op, **use_ops;
         const unsigned long *info_ops = &insn_operands[info->operands_index];
-        unsigned long icpu;
+        unsigned int cpu0 = info->cpu0;
+        unsigned int cpu1 = info->cpu1;
+        unsigned int cpu2 = info->cpu2;
         unsigned int size;
         int mismatch = 0;
         int i;
 
         /* Match CPU */
-        icpu = info->cpu;
-
-        if ((icpu & CPU_64) && id_insn->mode_bits != 64)
+        if (mode_bits != 64 &&
+            (cpu0 == CPU_64 || cpu1 == CPU_64 || cpu2 == CPU_64))
             continue;
-        if ((icpu & CPU_Not64) && id_insn->mode_bits == 64)
+        if (mode_bits == 64 &&
+            (cpu0 == CPU_Not64 || cpu1 == CPU_Not64 || cpu2 == CPU_Not64))
             continue;
-        icpu &= ~(CPU_64 | CPU_Not64);
 
-        if (bypass != 7 && (id_insn->cpu_enabled & icpu) != icpu)
+        if (cpu0 == CPU_64 || cpu0 == CPU_Not64)
+            cpu0 = CPU_Any;
+        if (cpu1 == CPU_64 || cpu1 == CPU_Not64)
+            cpu1 = CPU_Any;
+        if (cpu2 == CPU_64 || cpu2 == CPU_Not64)
+            cpu2 = CPU_Any;
+        if (bypass != 7 && (!BitVector_bit_test(id_insn->cpu_enabled, cpu0) ||
+                            !BitVector_bit_test(id_insn->cpu_enabled, cpu1) ||
+                            !BitVector_bit_test(id_insn->cpu_enabled, cpu2)))
             continue;
 
         /* Match # of operands */
@@ -932,10 +947,13 @@ x86_match_error(x86_id_insn *id_insn, yasm_insn_operand **ops,
                            N_("invalid size for operand %d"), 3);
             break;
         case 7:
+        {
+            unsigned int cpu0 = i->cpu0, cpu1 = i->cpu1, cpu2 = i->cpu2;
             yasm_error_set(YASM_ERROR_TYPE,
                           N_("requires CPU%s"),
-                          cpu_find_reverse(i->cpu & ~(CPU_64 | CPU_Not64)));
+                          cpu_find_reverse(cpu0, cpu1, cpu2));
             break;
+        }
         default:
             yasm_error_set(YASM_ERROR_TYPE,
                            N_("invalid combination of opcode and operands"));
@@ -1371,6 +1389,17 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     yasm_x86__bc_transform_insn(bc, insn);
 }
 
+/* suffix flags for instructions */
+enum {
+    NONE = 0,
+    SUF_B = (MOD_GasSufB >> MOD_GasSuf_SHIFT),
+    SUF_W = (MOD_GasSufW >> MOD_GasSuf_SHIFT),
+    SUF_L = (MOD_GasSufL >> MOD_GasSuf_SHIFT),
+    SUF_Q = (MOD_GasSufQ >> MOD_GasSuf_SHIFT),
+    SUF_S = (MOD_GasSufS >> MOD_GasSuf_SHIFT),
+    WEAK = 0x80     /* Relaxed operand mode for GAS */
+} flags;
+
 /* Static parse data structure for instructions */
 typedef struct insnprefix_parse_data {
     const char *name;
@@ -1384,100 +1413,102 @@ typedef struct insnprefix_parse_data {
      */
     unsigned long data1;
 
-    /* For instruction, cpu flags.
+    /* For instruction, suffix flags.
      * For prefix, prefix value.
      */
-    unsigned long data2;
+    unsigned int flags:8;
 
-    /* suffix flags for instructions */
-    enum {
-        NONE = 0,
-        SUF_B = (MOD_GasSufB >> MOD_GasSuf_SHIFT),
-        SUF_W = (MOD_GasSufW >> MOD_GasSuf_SHIFT),
-        SUF_L = (MOD_GasSufL >> MOD_GasSuf_SHIFT),
-        SUF_Q = (MOD_GasSufQ >> MOD_GasSuf_SHIFT),
-        SUF_S = (MOD_GasSufS >> MOD_GasSuf_SHIFT),
-        WEAK = 0x80     /* Relaxed operand mode for GAS */
-    } flags;
+    /* CPU flags */
+    unsigned int cpu0:8;
+    unsigned int cpu1:8;
+    unsigned int cpu2:8;
 } insnprefix_parse_data;
-#define PREFIX(name, type, value) \
-    { name, NULL, type, value, NONE }
 
 /* Pull in all parse data */
 #include "x86insn_nasm.c"
 #include "x86insn_gas.c"
 
 static const char *
-cpu_find_reverse(unsigned long cpu)
+cpu_find_reverse(unsigned int cpu0, unsigned int cpu1, unsigned int cpu2)
 {
     static char cpuname[200];
+    wordptr cpu = BitVector_Create(128, TRUE);
+
+    if (cpu0 != CPU_Any)
+        BitVector_Bit_On(cpu, cpu0);
+    if (cpu1 != CPU_Any)
+        BitVector_Bit_On(cpu, cpu1);
+    if (cpu2 != CPU_Any)
+        BitVector_Bit_On(cpu, cpu2);
 
     cpuname[0] = '\0';
 
-    if (cpu & CPU_Prot)
+    if (BitVector_bit_test(cpu, CPU_Prot))
         strcat(cpuname, " Protected");
-    if (cpu & CPU_Undoc)
+    if (BitVector_bit_test(cpu, CPU_Undoc))
         strcat(cpuname, " Undocumented");
-    if (cpu & CPU_Obs)
+    if (BitVector_bit_test(cpu, CPU_Obs))
         strcat(cpuname, " Obsolete");
-    if (cpu & CPU_Priv)
+    if (BitVector_bit_test(cpu, CPU_Priv))
         strcat(cpuname, " Privileged");
 
-    if (cpu & CPU_FPU)
+    if (BitVector_bit_test(cpu, CPU_FPU))
         strcat(cpuname, " FPU");
-    if (cpu & CPU_MMX)
+    if (BitVector_bit_test(cpu, CPU_MMX))
         strcat(cpuname, " MMX");
-    if (cpu & CPU_SSE)
+    if (BitVector_bit_test(cpu, CPU_SSE))
         strcat(cpuname, " SSE");
-    if (cpu & CPU_SSE2)
+    if (BitVector_bit_test(cpu, CPU_SSE2))
         strcat(cpuname, " SSE2");
-    if (cpu & CPU_SSE3)
+    if (BitVector_bit_test(cpu, CPU_SSE3))
         strcat(cpuname, " SSE3");
-    if (cpu & CPU_3DNow)
+    if (BitVector_bit_test(cpu, CPU_3DNow))
         strcat(cpuname, " 3DNow");
-    if (cpu & CPU_Cyrix)
+    if (BitVector_bit_test(cpu, CPU_Cyrix))
         strcat(cpuname, " Cyrix");
-    if (cpu & CPU_AMD)
+    if (BitVector_bit_test(cpu, CPU_AMD))
         strcat(cpuname, " AMD");
-    if (cpu & CPU_SMM)
+    if (BitVector_bit_test(cpu, CPU_SMM))
         strcat(cpuname, " SMM");
-    if (cpu & CPU_SVM)
+    if (BitVector_bit_test(cpu, CPU_SVM))
         strcat(cpuname, " SVM");
-    if (cpu & CPU_PadLock)
+    if (BitVector_bit_test(cpu, CPU_PadLock))
         strcat(cpuname, " PadLock");
-    if (cpu & CPU_EM64T)
+    if (BitVector_bit_test(cpu, CPU_EM64T))
         strcat(cpuname, " EM64T");
-    if (cpu & CPU_SSSE3)
+    if (BitVector_bit_test(cpu, CPU_SSSE3))
         strcat(cpuname, " SSSE3");
-    if (cpu & CPU_SSE41)
+    if (BitVector_bit_test(cpu, CPU_SSE41))
         strcat(cpuname, " SSE4.1");
-    if (cpu & CPU_SSE42)
+    if (BitVector_bit_test(cpu, CPU_SSE42))
         strcat(cpuname, " SSE4.2");
 
-    if (cpu & CPU_186)
+    if (BitVector_bit_test(cpu, CPU_186))
         strcat(cpuname, " 186");
-    if (cpu & CPU_286)
+    if (BitVector_bit_test(cpu, CPU_286))
         strcat(cpuname, " 286");
-    if (cpu & CPU_386)
+    if (BitVector_bit_test(cpu, CPU_386))
         strcat(cpuname, " 386");
-    if (cpu & CPU_486)
+    if (BitVector_bit_test(cpu, CPU_486))
         strcat(cpuname, " 486");
-    if (cpu & CPU_586)
+    if (BitVector_bit_test(cpu, CPU_586))
         strcat(cpuname, " 586");
-    if (cpu & CPU_686)
+    if (BitVector_bit_test(cpu, CPU_686))
         strcat(cpuname, " 686");
-    if (cpu & CPU_P3)
+    if (BitVector_bit_test(cpu, CPU_P3))
         strcat(cpuname, " P3");
-    if (cpu & CPU_P4)
+    if (BitVector_bit_test(cpu, CPU_P4))
         strcat(cpuname, " P4");
-    if (cpu & CPU_IA64)
+    if (BitVector_bit_test(cpu, CPU_IA64))
         strcat(cpuname, " IA64");
-    if (cpu & CPU_K6)
+    if (BitVector_bit_test(cpu, CPU_K6))
         strcat(cpuname, " K6");
-    if (cpu & CPU_Athlon)
+    if (BitVector_bit_test(cpu, CPU_Athlon))
         strcat(cpuname, " Athlon");
-    if (cpu & CPU_Hammer)
+    if (BitVector_bit_test(cpu, CPU_Hammer))
         strcat(cpuname, " Hammer");
+
+    BitVector_Destroy(cpu);
     return cpuname;
 }
 
@@ -1488,6 +1519,7 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     /*@null@*/ const insnprefix_parse_data *pdata;
+    unsigned int cpu0, cpu1, cpu2;
     size_t i;
     static char lcaseid[16];
 
@@ -1513,22 +1545,28 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
     if (!pdata)
         return YASM_ARCH_NOTINSNPREFIX;
 
-    if (pdata->group) {
-        unsigned long cpu = pdata->data2;
-        x86_id_insn *id_insn;
+    cpu0 = pdata->cpu0;
+    cpu1 = pdata->cpu1;
+    cpu2 = pdata->cpu2;
 
-        if ((cpu & CPU_64) && arch_x86->mode_bits != 64) {
+    if (pdata->group) {
+        x86_id_insn *id_insn;
+        wordptr cpu_enabled = arch_x86->cpu_enables[arch_x86->active_cpu];
+
+        if (arch_x86->mode_bits != 64 &&
+            (cpu0 == CPU_64 || cpu1 == CPU_64 || cpu2 == CPU_64)) {
             yasm_warn_set(YASM_WARN_GENERAL,
                           N_("`%s' is an instruction in 64-bit mode"), id);
             return YASM_ARCH_NOTINSNPREFIX;
         }
-        if ((cpu & CPU_Not64) && arch_x86->mode_bits == 64) {
+        if (arch_x86->mode_bits == 64 &&
+            (cpu0 == CPU_Not64 || cpu1 == CPU_Not64 || cpu2 == CPU_Not64)) {
             yasm_error_set(YASM_ERROR_GENERAL,
                            N_("`%s' invalid in 64-bit mode"), id);
             id_insn = yasm_xmalloc(sizeof(x86_id_insn));
             yasm_insn_initialize(&id_insn->insn);
             id_insn->group = not64_insn;
-            id_insn->cpu_enabled = CPU_Not64;
+            id_insn->cpu_enabled = cpu_enabled;
             id_insn->mod_data = 0;
             id_insn->num_info = NELEMS(not64_insn);
             id_insn->mode_bits = arch_x86->mode_bits;
@@ -1539,18 +1577,25 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
             return YASM_ARCH_INSN;
         }
 
-        cpu &= ~(CPU_64 | CPU_Not64);
-        if ((arch_x86->cpu_enabled & cpu) != cpu) {
+        if (cpu0 == CPU_64 || cpu0 == CPU_Not64)
+            cpu0 = CPU_Any;
+        if (cpu1 == CPU_64 || cpu1 == CPU_Not64)
+            cpu1 = CPU_Any;
+        if (cpu2 == CPU_64 || cpu2 == CPU_Not64)
+            cpu2 = CPU_Any;
+        if (!BitVector_bit_test(cpu_enabled, cpu0) ||
+            !BitVector_bit_test(cpu_enabled, cpu1) ||
+            !BitVector_bit_test(cpu_enabled, cpu2)) {
             yasm_warn_set(YASM_WARN_GENERAL,
                           N_("`%s' is an instruction in CPU%s"), id,
-                          cpu_find_reverse(cpu));
+                          cpu_find_reverse(cpu0, cpu1, cpu2));
             return YASM_ARCH_NOTINSNPREFIX;
         }
 
         id_insn = yasm_xmalloc(sizeof(x86_id_insn));
         yasm_insn_initialize(&id_insn->insn);
         id_insn->group = pdata->group;
-        id_insn->cpu_enabled = arch_x86->cpu_enabled;
+        id_insn->cpu_enabled = cpu_enabled;
         id_insn->mod_data = pdata->data1 >> 8;
         id_insn->num_info = pdata->data1 & 0xff;
         id_insn->mode_bits = arch_x86->mode_bits;
@@ -1561,7 +1606,7 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
         return YASM_ARCH_INSN;
     } else {
         unsigned long type = pdata->data1;
-        unsigned long value = pdata->data2;
+        unsigned long value = pdata->flags;
 
         if (arch_x86->mode_bits == 64 && type == X86_OPERSIZE && value == 32) {
             yasm_error_set(YASM_ERROR_GENERAL,
@@ -1575,9 +1620,8 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
             return YASM_ARCH_NOTINSNPREFIX;
         }
 
-        if ((type == X86_REX ||
-             (value == 64 && (type == X86_OPERSIZE || type == X86_ADDRSIZE)))
-            && arch_x86->mode_bits != 64) {
+        if (arch_x86->mode_bits != 64 &&
+            (cpu0 == CPU_64 || cpu1 == CPU_64 || cpu2 == CPU_64)) {
             yasm_warn_set(YASM_WARN_GENERAL,
                           N_("`%s' is a prefix in 64-bit mode"), id);
             return YASM_ARCH_NOTINSNPREFIX;
@@ -1611,7 +1655,7 @@ yasm_x86__create_empty_insn(yasm_arch *arch, unsigned long line)
 
     yasm_insn_initialize(&id_insn->insn);
     id_insn->group = empty_insn;
-    id_insn->cpu_enabled = arch_x86->cpu_enabled;
+    id_insn->cpu_enabled = arch_x86->cpu_enables[arch_x86->active_cpu];
     id_insn->mod_data = 0;
     id_insn->num_info = NELEMS(empty_insn);
     id_insn->mode_bits = arch_x86->mode_bits;
