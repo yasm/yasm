@@ -267,37 +267,29 @@ class GroupForm(object):
         # Ensure cpus initializer string is 3 long; 0=CPU_Any
         cpus_str.extend(["0", "0", "0"])
 
-        # Number gap elements as we copy
-        modnames = []
-        n = 0
-        for mod in self.modifiers:
-            if mod == "Gap":
-                modnames.append("Gap%d" % n)
-                n += 1
-            else:
-                modnames.append(mod)
 
-        # Order by priority
-        mods = [x for x in ["Gap0", "Op2Add", "Gap1", "Op1Add", "Gap2",
-                            "Op0Add", "PreAdd", "SpAdd", "OpSizeR", "Imm8",
-                            "AdSizeR", "DOpS64R", "Op1AddSp"]
-                if x in modnames]
+        mods = ["MOD_%s" % x for x in self.modifiers]
+        # Ensure mods initializer string is 3 long
+        mods.extend(["0", "0", "0"])
+        mod_str = "{" + ', '.join(mods[0:3]) + "}"
 
+        gas_flags = []
         if self.gas_only:
-            mods.append("GasOnly")
+            gas_flags.append("GAS_ONLY")
         if self.gas_illegal:
-            mods.append("GasIllegal")
+            gas_flags.append("GAS_ILLEGAL")
         if self.gas_no_rev:
-            mods.append("GasNoRev")
+            gas_flags.append("GAS_NO_REV")
         if self.suffixes:
-            mods.extend("GasSuf%s" % x for x in sorted(self.suffixes))
-        mod_str = "|".join("MOD_%s" % x for x in mods)
+            gas_flags.extend("SUF_%s" % x for x in sorted(self.suffixes))
+        gas_flags = "|".join(gas_flags)
 
         # Build instruction info structure initializer
-        return "{ "+ ", ".join([cpus_str[0],
+        return "{ "+ ", ".join([gas_flags or "0",
+                                cpus_str[0],
                                 cpus_str[1],
                                 cpus_str[2],
-                                mod_str or "0",
+                                mod_str,
                                 "%d" % (self.opersize or 0),
                                 "%d" % (self.def_opersize_64 or 0),
                                 self.special_prefix or "0",
@@ -383,8 +375,6 @@ class Insn(object):
         if self.cpu is not None:
             if len(self.cpu) > 3:
                 raise ValueError("too many CPUs: %s" % (self.cpu,))
-
-            # Ensure CPUs initializer string is at least 3 long
             cpus_str.extend("CPU_%s" % x for x in sorted(self.cpu))
 
         # Ensure cpus initializer string is 3 long
@@ -392,42 +382,17 @@ class Insn(object):
 
         if len(self.modifiers) > 3:
             raise ValueError("too many modifiers")
+        mods_str = ["0x%02X" % x for x in self.modifiers]
 
         # Ensure modifiers is at least 3 long
-        modifiers = [x for x in self.modifiers]
-        modifiers.extend([0, 0, 0])
-
-        # Find longest list of modifiers in groups
-        modnames = []
-        for group in groups[self.groupname]:
-            if group.modifiers is not None and len(group.modifiers) > len(modnames):
-                # Number gap elements as we copy
-                modnames = []
-                n = 0
-                for mod in group.modifiers:
-                    if mod == "Gap":
-                        modnames.append("Gap%d" % n)
-                        n += 1
-                    else:
-                        modnames.append(mod)
-
-        # Match up and order by priority
-        mods = dict(zip(modnames, modifiers))
-
-        modifier_str = "".join(reversed(["%02X" % mods[x] for x in
-                                         ["Gap0", "Op2Add", "Gap1", "Op1Add",
-                                          "Gap2", "Op0Add", "PreAdd", "SpAdd",
-                                          "OpSizeR", "Imm8", "AdSizeR", "DOpS64R",
-                                          "Op1AddSp"] if x in mods]))
-        if modifier_str:
-            modifier_str = "0x" + modifier_str
-        else:
-            modifier_str = "0"
+        mods_str.extend(["0", "0", "0"])
 
         return ",\t".join(["%s_insn" % self.groupname,
-                           "(%sUL<<8)|%d" % \
-                                (modifier_str, len(groups[self.groupname])),
+                           "%d" % len(groups[self.groupname]),
                            suffix_str,
+                           mods_str[0],
+                           mods_str[1],
+                           mods_str[2],
                            cpus_str[0],
                            cpus_str[1],
                            cpus_str[2]])
@@ -445,8 +410,11 @@ class Prefix(object):
 
     def __str__(self):
         return ",\t".join(["NULL",
-                           "X86_" + self.groupname,
+                           "X86_%s>>8" % self.groupname,
                            "0x%02X" % self.value,
+                           "0",
+                           "0",
+                           "0",
                            self.only64 and "CPU_64" or "0",
                            "0",
                            "0"])

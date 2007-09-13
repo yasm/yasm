@@ -37,37 +37,37 @@ RCSID("$Id$");
 static const char *cpu_find_reverse(unsigned int cpu0, unsigned int cpu1,
                                     unsigned int cpu2);
 
-/* Opcode modifiers.  The opcode bytes are in "reverse" order because the
- * parameters are read from the arch-specific data in LSB->MSB order.
- * (only for asthetic reasons in the lexer code below, no practical reason).
- */
-#define MOD_Gap0    (1UL<<0)    /* Eats a parameter */
-#define MOD_Op2Add  (1UL<<1)    /* Parameter adds to opcode byte 2 */
-#define MOD_Gap1    (1UL<<2)    /* Eats a parameter */
-#define MOD_Op1Add  (1UL<<3)    /* Parameter adds to opcode byte 1 */
-#define MOD_Gap2    (1UL<<4)    /* Eats a parameter */
-#define MOD_Op0Add  (1UL<<5)    /* Parameter adds to opcode byte 0 */
-#define MOD_PreAdd  (1UL<<6)    /* Parameter adds to "special" prefix */
-#define MOD_SpAdd   (1UL<<7)    /* Parameter adds to "spare" value */
-#define MOD_OpSizeR (1UL<<8)    /* Parameter replaces opersize */
-#define MOD_Imm8    (1UL<<9)    /* Parameter is included as immediate byte */
-#define MOD_AdSizeR (1UL<<10)   /* Parameter replaces addrsize (jmp only) */
-#define MOD_DOpS64R (1UL<<11)   /* Parameter replaces default 64-bit opersize */
-#define MOD_Op1AddSp (1UL<<12)  /* Parameter is added as "spare" to opcode byte 2 */
+/* Opcode modifiers. */
+#define MOD_Gap     0   /* Eats a parameter / does nothing */
+#define MOD_PreAdd  1   /* Parameter adds to "special" prefix */
+#define MOD_Op0Add  2   /* Parameter adds to opcode byte 0 */
+#define MOD_Op1Add  3   /* Parameter adds to opcode byte 1 */
+#define MOD_Op2Add  4   /* Parameter adds to opcode byte 2 */
+#define MOD_SpAdd   5   /* Parameter adds to "spare" value */
+#define MOD_OpSizeR 6   /* Parameter replaces opersize */
+#define MOD_Imm8    7   /* Parameter is included as immediate byte */
+#define MOD_AdSizeR 8   /* Parameter replaces addrsize (jmp only) */
+#define MOD_DOpS64R 9   /* Parameter replaces default 64-bit opersize */
+#define MOD_Op1AddSp 10 /* Parameter is added as "spare" to opcode byte 2 */
 
-/* Modifiers that aren't: these are used with the GAS parser to indicate
- * special cases.
- */
-#define MOD_GasOnly     (1UL<<13)       /* Only available in GAS mode */
-#define MOD_GasIllegal  (1UL<<14)       /* Illegal in GAS mode */
-#define MOD_GasNoRev    (1UL<<15)       /* Don't reverse operands */
-#define MOD_GasSufB     (1UL<<16)       /* GAS B suffix ok */
-#define MOD_GasSufW     (1UL<<17)       /* GAS W suffix ok */
-#define MOD_GasSufL     (1UL<<18)       /* GAS L suffix ok */
-#define MOD_GasSufQ     (1UL<<19)       /* GAS Q suffix ok */
-#define MOD_GasSufS     (1UL<<20)       /* GAS S suffix ok */
-#define MOD_GasSuf_SHIFT 16
-#define MOD_GasSuf_MASK (0x1FUL<<16)
+/* GAS suffix flags for instructions */
+enum {
+    NONE = 0,
+    SUF_B = 1<<0,
+    SUF_W = 1<<1,
+    SUF_L = 1<<2,
+    SUF_Q = 1<<3,
+    SUF_S = 1<<4,
+    SUF_MASK = SUF_B|SUF_W|SUF_L|SUF_Q|SUF_S,
+
+    /* Flags only used in x86_insn_info */
+    GAS_ONLY = 1<<5,        /* Only available in GAS mode */
+    GAS_ILLEGAL = 1<<6,     /* Illegal in GAS mode */
+    GAS_NO_REV = 1<<7,      /* Don't reverse operands in GAS mode */
+
+    /* Flags only used in insnprefix_parse_data */
+    WEAK = 1<<5             /* Relaxed operand mode for GAS */
+} gas_suffix_flags;
 
 /* Operand types.  These are more detailed than the "general" types for all
  * architectures, as they include the size, for instance.
@@ -230,6 +230,9 @@ static const char *cpu_find_reverse(unsigned int cpu0, unsigned int cpu1,
 #define OPAP_MASK       (7UL<<17)
 
 typedef struct x86_insn_info {
+    /* GAS suffix flags */
+    unsigned int gas_flags:8;      /* Enabled for these GAS suffixes */
+
     /* The CPU feature flags needed to execute this instruction.  This is OR'ed
      * with arch-specific data[2].  This combined value is compared with
      * cpu_enabled to see if all bits set here are set in cpu_enabled--if so,
@@ -245,7 +248,7 @@ typedef struct x86_insn_info {
      * count of insn_info structures in the instruction grouping, there can
      * only be a maximum of 3 modifiers.
      */
-    unsigned long modifiers;
+    unsigned char modifiers[3];
 
     /* Operand Size */
     unsigned char opersize;
@@ -291,7 +294,7 @@ typedef struct x86_id_insn {
     wordptr cpu_enabled;
 
     /* Modifier data */
-    unsigned long mod_data;
+    unsigned char mod_data[3];
 
     /* Number of elements in the instruction parse group */
     unsigned int num_info:8;
@@ -415,11 +418,12 @@ x86_finalize_jmp(yasm_bytecode *bc, yasm_bytecode *prev_bc,
     x86_jmp *jmp;
     int num_info = id_insn->num_info;
     const x86_insn_info *info = id_insn->group;
-    unsigned long mod_data = id_insn->mod_data;
+    unsigned char *mod_data = id_insn->mod_data;
     unsigned int mode_bits = id_insn->mode_bits;
     /*unsigned char suffix = id_insn->suffix;*/
     yasm_insn_operand *op;
     static const unsigned char size_lookup[] = {0, 8, 16, 32, 64, 80, 128, 0};
+    unsigned int i;
 
     /* We know the target is in operand 0, but sanity check for Imm. */
     op = yasm_insn_ops_first(&id_insn->insn);
@@ -456,8 +460,10 @@ x86_finalize_jmp(yasm_bytecode *bc, yasm_bytecode *prev_bc,
                          & OPS_MASK)>>OPS_SHIFT];
 
     /* Check for address size override */
-    if (jinfo->modifiers & MOD_AdSizeR)
-        jmp->common.addrsize = (unsigned char)(mod_data & 0xFF);
+    for (i=0; i<NELEMS(info->modifiers); i++) {
+        if (jinfo->modifiers[i] == MOD_AdSizeR)
+            jmp->common.addrsize = mod_data[i];
+    }
 
     /* Scan through other infos for this insn looking for short/near versions.
      * Needs to match opersize and number of operands, also be within CPU.
@@ -501,13 +507,17 @@ x86_finalize_jmp(yasm_bytecode *bc, yasm_bytecode *prev_bc,
         switch ((int)(insn_operands[info->operands_index+0] & OPTM_MASK)) {
             case OPTM_Short:
                 x86_finalize_opcode(&jmp->shortop, info);
-                if (info->modifiers & MOD_Op0Add)
-                    jmp->shortop.opcode[0] += (unsigned char)(mod_data & 0xFF);
+                for (i=0; i<NELEMS(info->modifiers); i++) {
+                    if (info->modifiers[i] == MOD_Op0Add)
+                        jmp->shortop.opcode[0] += mod_data[i];
+                }
                 break;
             case OPTM_Near:
                 x86_finalize_opcode(&jmp->nearop, info);
-                if (info->modifiers & MOD_Op1Add)
-                    jmp->nearop.opcode[1] += (unsigned char)(mod_data & 0xFF);
+                for (i=0; i<NELEMS(info->modifiers); i++) {
+                    if (info->modifiers[i] == MOD_Op1Add)
+                        jmp->nearop.opcode[1] += mod_data[i];
+                }
                 break;
         }
     }
@@ -556,6 +566,7 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
         unsigned int cpu0 = info->cpu0;
         unsigned int cpu1 = info->cpu1;
         unsigned int cpu2 = info->cpu2;
+        unsigned int gas_flags = info->gas_flags;
         unsigned int size;
         int mismatch = 0;
         int i;
@@ -584,22 +595,19 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
             continue;
 
         /* Match parser mode */
-        if ((info->modifiers & MOD_GasOnly)
-            && id_insn->parser != X86_PARSER_GAS)
+        if ((gas_flags & GAS_ONLY) && id_insn->parser != X86_PARSER_GAS)
             continue;
-        if ((info->modifiers & MOD_GasIllegal)
-            && id_insn->parser == X86_PARSER_GAS)
+        if ((gas_flags & GAS_ILLEGAL) && id_insn->parser == X86_PARSER_GAS)
             continue;
 
         /* Match suffix (if required) */
-        if (suffix != 0 && suffix != 0x80
-            && ((suffix<<MOD_GasSuf_SHIFT) & info->modifiers) == 0)
+        if (suffix != 0 && suffix != WEAK
+            && ((suffix & SUF_MASK) & (gas_flags & SUF_MASK)) == 0)
             continue;
 
         /* Use reversed operands in GAS mode if not otherwise specified */
         use_ops = ops;
-        if (id_insn->parser == X86_PARSER_GAS
-            && !(info->modifiers & MOD_GasNoRev))
+        if (id_insn->parser == X86_PARSER_GAS && !(gas_flags & GAS_NO_REV))
             use_ops = rev_ops;
 
         if (id_insn->insn.num_operands == 0) {
@@ -966,8 +974,8 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     x86_id_insn *id_insn = (x86_id_insn *)bc->contents;
     x86_insn *insn;
     const x86_insn_info *info = id_insn->group;
-    unsigned long mod_data = id_insn->mod_data;
     unsigned int mode_bits = id_insn->mode_bits;
+    unsigned char *mod_data = id_insn->mod_data;
     yasm_insn_operand *op, *ops[4], *rev_ops[4];
     /*@null@*/ yasm_expr *imm;
     unsigned char im_len;
@@ -1070,49 +1078,42 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     insn->rex = 0;
 
     /* Apply modifiers */
-    if (info->modifiers & MOD_Gap0)
-        mod_data >>= 8;
-    if (info->modifiers & MOD_Op2Add) {
-        insn->opcode.opcode[2] += (unsigned char)(mod_data & 0xFF);
-        mod_data >>= 8;
-    }
-    if (info->modifiers & MOD_Gap1)
-        mod_data >>= 8;
-    if (info->modifiers & MOD_Op1Add) {
-        insn->opcode.opcode[1] += (unsigned char)(mod_data & 0xFF);
-        mod_data >>= 8;
-    }
-    if (info->modifiers & MOD_Gap2)
-        mod_data >>= 8;
-    if (info->modifiers & MOD_Op0Add) {
-        insn->opcode.opcode[0] += (unsigned char)(mod_data & 0xFF);
-        mod_data >>= 8;
-    }
-    if (info->modifiers & MOD_PreAdd) {
-        insn->special_prefix += (unsigned char)(mod_data & 0xFF);
-        mod_data >>= 8;
-    }
-    if (info->modifiers & MOD_SpAdd) {
-        spare += (unsigned char)(mod_data & 0xFF);
-        mod_data >>= 8;
-    }
-    if (info->modifiers & MOD_OpSizeR) {
-        insn->common.opersize = (unsigned char)(mod_data & 0xFF);
-        mod_data >>= 8;
-    }
-    if (info->modifiers & MOD_Imm8) {
-        imm = yasm_expr_create_ident(yasm_expr_int(
-            yasm_intnum_create_uint(mod_data & 0xFF)), bc->line);
-        im_len = 8;
-        mod_data >>= 8;
-    }
-    if (info->modifiers & MOD_DOpS64R) {
-        insn->def_opersize_64 = (unsigned char)(mod_data & 0xFF);
-        mod_data >>= 8;
-    }
-    if (info->modifiers & MOD_Op1AddSp) {
-        insn->opcode.opcode[1] += (unsigned char)(mod_data & 0xFF)<<3;
-        /*mod_data >>= 8;*/
+    for (i=0; i<NELEMS(info->modifiers); i++) {
+        switch (info->modifiers[i]) {
+            case MOD_Gap:
+                break;
+            case MOD_PreAdd:
+                insn->special_prefix += mod_data[i];
+                break;
+            case MOD_Op0Add:
+                insn->opcode.opcode[0] += mod_data[i];
+                break;
+            case MOD_Op1Add:
+                insn->opcode.opcode[1] += mod_data[i];
+                break;
+            case MOD_Op2Add:
+                insn->opcode.opcode[2] += mod_data[i];
+                break;
+            case MOD_SpAdd:
+                spare += mod_data[i];
+                break;
+            case MOD_OpSizeR:
+                insn->common.opersize = mod_data[i];
+                break;
+            case MOD_Imm8:
+                imm = yasm_expr_create_ident(yasm_expr_int(
+                    yasm_intnum_create_uint(mod_data[i])), bc->line);
+                im_len = 8;
+                break;
+            case MOD_DOpS64R:
+                insn->def_opersize_64 = mod_data[i];
+                break;
+            case MOD_Op1AddSp:
+                insn->opcode.opcode[1] += mod_data[i]<<3;
+                break;
+            default:
+                break;
+        }
     }
 
     /* In 64-bit mode, if opersize is 64 and default is not 64,
@@ -1129,7 +1130,7 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 
         /* Use reversed operands in GAS mode if not otherwise specified */
         if (id_insn->parser == X86_PARSER_GAS
-            && !(info->modifiers & MOD_GasNoRev))
+            && !(info->gas_flags & GAS_NO_REV))
             use_ops = rev_ops;
 
         for (i = 0, op = use_ops[0]; op && i<info->num_operands;
@@ -1389,17 +1390,6 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     yasm_x86__bc_transform_insn(bc, insn);
 }
 
-/* suffix flags for instructions */
-enum {
-    NONE = 0,
-    SUF_B = (MOD_GasSufB >> MOD_GasSuf_SHIFT),
-    SUF_W = (MOD_GasSufW >> MOD_GasSuf_SHIFT),
-    SUF_L = (MOD_GasSufL >> MOD_GasSuf_SHIFT),
-    SUF_Q = (MOD_GasSufQ >> MOD_GasSuf_SHIFT),
-    SUF_S = (MOD_GasSufS >> MOD_GasSuf_SHIFT),
-    WEAK = 0x80     /* Relaxed operand mode for GAS */
-} flags;
-
 /* Static parse data structure for instructions */
 typedef struct insnprefix_parse_data {
     const char *name;
@@ -1407,16 +1397,20 @@ typedef struct insnprefix_parse_data {
     /* instruction parse group - NULL if prefix */
     /*@null@*/ const x86_insn_info *group;
 
-    /* For instruction, modifier in upper 24 bits, number of elements in group
-     * in lower 8 bits.
-     * For prefix, prefix type.
+    /* For instruction, number of elements in group in lower 8 bits.
+     * For prefix, prefix type shifted right by 8.
      */
-    unsigned long data1;
+    unsigned int num_info:8;
 
-    /* For instruction, suffix flags.
+    /* For instruction, GAS suffix flags.
      * For prefix, prefix value.
      */
     unsigned int flags:8;
+
+    /* Instruction modifier data. */
+    unsigned int mod_data0:8;
+    unsigned int mod_data1:8;
+    unsigned int mod_data2:8;
 
     /* CPU flags */
     unsigned int cpu0:8;
@@ -1567,7 +1561,9 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
             yasm_insn_initialize(&id_insn->insn);
             id_insn->group = not64_insn;
             id_insn->cpu_enabled = cpu_enabled;
-            id_insn->mod_data = 0;
+            id_insn->mod_data[0] = 0;
+            id_insn->mod_data[1] = 0;
+            id_insn->mod_data[2] = 0;
             id_insn->num_info = NELEMS(not64_insn);
             id_insn->mode_bits = arch_x86->mode_bits;
             id_insn->suffix = 0;
@@ -1596,8 +1592,10 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
         yasm_insn_initialize(&id_insn->insn);
         id_insn->group = pdata->group;
         id_insn->cpu_enabled = cpu_enabled;
-        id_insn->mod_data = pdata->data1 >> 8;
-        id_insn->num_info = pdata->data1 & 0xff;
+        id_insn->mod_data[0] = pdata->mod_data0;
+        id_insn->mod_data[1] = pdata->mod_data1;
+        id_insn->mod_data[2] = pdata->mod_data2;
+        id_insn->num_info = pdata->num_info;
         id_insn->mode_bits = arch_x86->mode_bits;
         id_insn->suffix = pdata->flags;
         id_insn->parser = arch_x86->parser;
@@ -1605,7 +1603,7 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
         *bc = yasm_bc_create_common(&x86_id_insn_callback, id_insn, line);
         return YASM_ARCH_INSN;
     } else {
-        unsigned long type = pdata->data1;
+        unsigned long type = pdata->num_info<<8;
         unsigned long value = pdata->flags;
 
         if (arch_x86->mode_bits == 64 && type == X86_OPERSIZE && value == 32) {
@@ -1656,7 +1654,9 @@ yasm_x86__create_empty_insn(yasm_arch *arch, unsigned long line)
     yasm_insn_initialize(&id_insn->insn);
     id_insn->group = empty_insn;
     id_insn->cpu_enabled = arch_x86->cpu_enables[arch_x86->active_cpu];
-    id_insn->mod_data = 0;
+    id_insn->mod_data[0] = 0;
+    id_insn->mod_data[1] = 0;
+    id_insn->mod_data[2] = 0;
     id_insn->num_info = NELEMS(empty_insn);
     id_insn->mode_bits = arch_x86->mode_bits;
     id_insn->suffix = 0;
