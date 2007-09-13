@@ -20,7 +20,7 @@ EXTRA_DIST += tools/python-yasm/setup.py
 EXTRA_DIST += tools/python-yasm/yasm.pyx
 EXTRA_DIST += $(PYBINDING_DEPS)
 
-if HAVE_PYTHON
+if HAVE_PYTHON_BINDINGS
 
 # Use Pyxelator to generate Pyrex function headers.
 _yasm.pxi: ${HEADERS}
