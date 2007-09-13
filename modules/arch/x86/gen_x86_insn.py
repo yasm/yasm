@@ -100,27 +100,14 @@ class Operand(object):
                 print "Warning: unrecognized arg %s" % arg
 
     def __str__(self):
-        op_str = []
-
-        op_str.append("OPT_%s" % self.type)
-        op_str.append("OPS_%s" % self.size)
-
-        if self.relaxed:
-            op_str.append("OPS_Relaxed")
-
-        if self.tmod is not None:
-            op_str.append("OPTM_%s" % self.tmod)
-
-        if self.dest == "EA64":
-            op_str.append("OPEAS_64")
-            op_str.append("OPA_EA")
-        else:
-            op_str.append("OPA_%s" % self.dest)
-
-        if self.opt is not None:
-            op_str.append("OPAP_%s" % self.opt)
-
-        return '|'.join(op_str)
+        return "{"+ ", ".join(["OPT_%s" % self.type,
+                               "OPS_%s" % self.size,
+                               "%d" % self.relaxed,
+                               self.dest == "EA64" and "1" or "0",
+                               "OPTM_%s" % self.tmod,
+                               "OPA_%s" % (self.dest == "EA64"
+                                           and "EA" or self.dest),
+                               "OPAP_%s" % self.opt]) + "}"
 
     def __eq__(self, other):
         return (self.type == other.type and
@@ -508,7 +495,7 @@ def output_groups(f):
             all_operands.extend(form.operands)
 
     # Output operands list
-    print >>f, "static const unsigned long insn_operands[] = {"
+    print >>f, "static const x86_info_operand insn_operands[] = {"
     print >>f, "   ",
     print >>f, ",\n    ".join(str(x) for x in all_operands)
     print >>f, "};\n"

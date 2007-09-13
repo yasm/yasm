@@ -51,7 +51,7 @@ static const char *cpu_find_reverse(unsigned int cpu0, unsigned int cpu1,
 #define MOD_Op1AddSp 10 /* Parameter is added as "spare" to opcode byte 2 */
 
 /* GAS suffix flags for instructions */
-enum {
+enum x86_gas_suffix_flags {
     NONE = 0,
     SUF_B = 1<<0,
     SUF_W = 1<<1,
@@ -67,167 +67,147 @@ enum {
 
     /* Flags only used in insnprefix_parse_data */
     WEAK = 1<<5             /* Relaxed operand mode for GAS */
-} gas_suffix_flags;
+};
 
-/* Operand types.  These are more detailed than the "general" types for all
- * architectures, as they include the size, for instance.
- * Bit Breakdown (from LSB to MSB):
- *  - 5 bits = general type (must be exact match, except for =3):
- *             0 = immediate
- *             1 = any general purpose or FPU register
- *             2 = memory
- *             3 = any general purpose or FPU register OR memory
- *             4 = any MMX or XMM register
- *             5 = any MMX or XMM register OR memory
- *             6 = any segment register
- *             7 = any CR register
- *             8 = any DR register
- *             9 = any TR register
- *             A = ST0
- *             B = AL/AX/EAX/RAX (depending on size)
- *             C = CL/CX/ECX/RCX (depending on size)
- *             D = DL/DX/EDX/RDX (depending on size)
- *             E = CS
- *             F = DS
- *             10 = ES
- *             11 = FS
- *             12 = GS
- *             13 = SS
- *             14 = CR4
- *             15 = memory offset (an EA, but with no registers allowed)
- *                  [special case for MOV opcode]
- *             16 = immediate, value=1 (for special-case shift)
- *             17 = immediate, does not contain SEG:OFF (for jmp/call),
- *             18 = XMM0
- *             19 = AX/EAX/RAX memory operand only (EA)
- *                  [special case for SVM opcodes]
- *             20 = EAX memory operand only (EA)
- *                  [special case for SVM skinit opcode]
- *  - 3 bits = size (user-specified, or from register size):
- *             0 = any size acceptable/no size spec acceptable (dep. on strict)
- *             1/2/3/4 = 8/16/32/64 bits (from user or reg size)
- *             5/6 = 80/128 bits (from user)
- *             7 = current BITS setting; when this is used the size matched
- *                 gets stored into the opersize as well.
- *  - 1 bit = size implicit or explicit ("strictness" of size matching on
- *            non-registers -- registers are always strictly matched):
- *            0 = user size must exactly match size above.
- *            1 = user size either unspecified or exactly match size above.
- *  - 3 bits = target modification.
- *            0 = no target mod acceptable
- *            1 = NEAR
- *            2 = SHORT
- *            3 = FAR (or SEG:OFF immediate)
- *            4 = TO
- *  - 1 bit = effective address size
- *            0 = any address size allowed except for 64-bit
- *            1 = only 64-bit address size allowed
- *
- * MSBs than the above are actions: what to do with the operand if the
- * instruction matches.  Essentially describes what part of the output bytecode
- * gets the operand.  This may require conversion (e.g. a register going into
- * an ea field).  Naturally, only one of each of these may be contained in the
- * operands of a single insn_info structure.
- *  - 4 bits = action:
- *             0 = does nothing (operand data is discarded)
- *             1 = operand data goes into ea field
- *             2 = operand data goes into imm field
- *             3 = operand data goes into sign-extended imm field
- *             4 = operand data goes into "spare" field
- *             5 = operand data is added to opcode byte 0
- *             6 = operand data is added to opcode byte 1
- *             7 = operand data goes into BOTH ea and spare
- *                 [special case for imul opcode]
- *             8 = relative jump (outputs a jmp instead of normal insn)
- *             9 = operand size goes into address size (jmp only)
- *             A = far jump (outputs a farjmp instead of normal insn)
- *             B = ea operand only sets address size (no actual ea field)
- * The below describes postponed actions: actions which can't be completed at
- * parse-time due to possibly dependent expressions.  For these, some
- * additional data (stored in the second byte of the opcode with a one-byte
- * opcode) is passed to later stages of the assembler with flags set to
- * indicate postponed actions.
- *  - 3 bits = postponed action:
- *             0 = none
- *             1 = sign-extended imm8 that could expand to a large imm16/32
- *             2 = could become a short opcode mov with bits=64 and a32 prefix
- *             3 = forced 16-bit address size (override ignored, no prefix)
- *             4 = large imm64 that can become a sign-extended imm32.
- */
-#define OPT_Imm         0x0
-#define OPT_Reg         0x1
-#define OPT_Mem         0x2
-#define OPT_RM          0x3
-#define OPT_SIMDReg     0x4
-#define OPT_SIMDRM      0x5
-#define OPT_SegReg      0x6
-#define OPT_CRReg       0x7
-#define OPT_DRReg       0x8
-#define OPT_TRReg       0x9
-#define OPT_ST0         0xA
-#define OPT_Areg        0xB
-#define OPT_Creg        0xC
-#define OPT_Dreg        0xD
-#define OPT_CS          0xE
-#define OPT_DS          0xF
-#define OPT_ES          0x10
-#define OPT_FS          0x11
-#define OPT_GS          0x12
-#define OPT_SS          0x13
-#define OPT_CR4         0x14
-#define OPT_MemOffs     0x15
-#define OPT_Imm1        0x16
-#define OPT_ImmNotSegOff 0x17
-#define OPT_XMM0        0x18
-#define OPT_MemrAX      0x19
-#define OPT_MemEAX      0x1A
-#define OPT_MASK        0x1F
+enum x86_operand_type {
+    OPT_Imm = 0,        /* immediate */
+    OPT_Reg = 1,        /* any general purpose or FPU register */
+    OPT_Mem = 2,        /* memory */
+    OPT_RM = 3,         /* any general purpose or FPU register OR memory */
+    OPT_SIMDReg = 4,    /* any MMX or XMM register */
+    OPT_SIMDRM = 5,     /* any MMX or XMM register OR memory */
+    OPT_SegReg = 6,     /* any segment register */
+    OPT_CRReg = 7,      /* any CR register */
+    OPT_DRReg = 8,      /* any DR register */
+    OPT_TRReg = 9,      /* any TR register */
+    OPT_ST0 = 10,       /* ST0 */
+    OPT_Areg = 11,      /* AL/AX/EAX/RAX (depending on size) */
+    OPT_Creg = 12,      /* CL/CX/ECX/RCX (depending on size) */
+    OPT_Dreg = 13,      /* DL/DX/EDX/RDX (depending on size) */
+    OPT_CS = 14,        /* CS */
+    OPT_DS = 15,        /* DS */
+    OPT_ES = 16,        /* ES */
+    OPT_FS = 17,        /* FS */
+    OPT_GS = 18,        /* GS */
+    OPT_SS = 19,        /* SS */
+    OPT_CR4 = 20,       /* CR4 */
+    /* memory offset (an EA, but with no registers allowed)
+     * [special case for MOV opcode]
+     */
+    OPT_MemOffs = 21,
+    OPT_Imm1 = 22,      /* immediate, value=1 (for special-case shift) */
+    /* immediate, does not contain SEG:OFF (for jmp/call) */
+    OPT_ImmNotSegOff = 23,
+    OPT_XMM0 = 24,      /* XMM0 */
+    /* AX/EAX/RAX memory operand only (EA) [special case for SVM opcodes]
+     */
+    OPT_MemrAX = 25,
+    /* EAX memory operand only (EA) [special case for SVM skinit opcode] */
+    OPT_MemEAX = 26
+};
 
-#define OPS_Any         (0UL<<5)
-#define OPS_8           (1UL<<5)
-#define OPS_16          (2UL<<5)
-#define OPS_32          (3UL<<5)
-#define OPS_64          (4UL<<5)
-#define OPS_80          (5UL<<5)
-#define OPS_128         (6UL<<5)
-#define OPS_BITS        (7UL<<5)
-#define OPS_MASK        (7UL<<5)
-#define OPS_SHIFT       5
+enum x86_operand_size {
+    /* any size acceptable/no size spec acceptable (dep. on strict) */
+    OPS_Any = 0,
+    /* 8/16/32/64 bits (from user or reg size) */
+    OPS_8 = 1,
+    OPS_16 = 2,
+    OPS_32 = 3,
+    OPS_64 = 4,
+    /* 80/128 bits (from user) */
+    OPS_80 = 5,
+    OPS_128 = 6,
+    /* current BITS setting; when this is used the size matched
+     * gets stored into the opersize as well.
+     */
+    OPS_BITS = 7
+};
 
-#define OPS_Relaxed     (1UL<<8)
-#define OPS_RMASK       (1UL<<8)
+enum x86_operand_targetmod {
+    OPTM_None = 0,  /* no target mod acceptable */
+    OPTM_Near = 1,  /* NEAR */
+    OPTM_Short = 2, /* SHORT */
+    OPTM_Far = 3,   /* FAR (or SEG:OFF immediate) */
+    OPTM_To = 4     /* TO */
+};
 
-#define OPEAS_Not64     (0UL<<9)
-#define OPEAS_64        (1UL<<9)
-#define OPEAS_MASK      (1UL<<9)
+enum x86_operand_action {
+    OPA_None = 0,   /* does nothing (operand data is discarded) */
+    OPA_EA = 1,     /* operand data goes into ea field */
+    OPA_Imm = 2,    /* operand data goes into imm field */
+    OPA_SImm = 3,   /* operand data goes into sign-extended imm field */
+    OPA_Spare = 4,  /* operand data goes into "spare" field */
+    OPA_Op0Add = 5, /* operand data is added to opcode byte 0 */
+    OPA_Op1Add = 6, /* operand data is added to opcode byte 1 */
+    /* operand data goes into BOTH ea and spare
+     * (special case for imul opcode)
+     */
+    OPA_SpareEA = 7,
+    /* relative jump (outputs a jmp instead of normal insn) */
+    OPA_JmpRel = 8,
+    /* operand size goes into address size (jmp only) */
+    OPA_AdSizeR = 9,
+    /* far jump (outputs a farjmp instead of normal insn) */
+    OPA_JmpFar = 10,
+    /* ea operand only sets address size (no actual ea field) */
+    OPA_AdSizeEA = 11
+};
 
-#define OPTM_None       (0UL<<10)
-#define OPTM_Near       (1UL<<10)
-#define OPTM_Short      (2UL<<10)
-#define OPTM_Far        (3UL<<10)
-#define OPTM_To         (4UL<<10)
-#define OPTM_MASK       (7UL<<10)
+enum x86_operand_post_action {
+    OPAP_None = 0,
+    /* sign-extended imm8 that could expand to a large imm16/32 */
+    OPAP_SImm8 = 1,
+    /* could become a short opcode mov with bits=64 and a32 prefix */
+    OPAP_ShortMov = 2,
+    /* forced 16-bit address size (override ignored, no prefix) */
+    OPAP_A16 = 3,
+    /* large imm64 that can become a sign-extended imm32 */
+    OPAP_SImm32Avail = 4
+};
 
-#define OPA_None        (0UL<<13)
-#define OPA_EA          (1UL<<13)
-#define OPA_Imm         (2UL<<13)
-#define OPA_SImm        (3UL<<13)
-#define OPA_Spare       (4UL<<13)
-#define OPA_Op0Add      (5UL<<13)
-#define OPA_Op1Add      (6UL<<13)
-#define OPA_SpareEA     (7UL<<13)
-#define OPA_JmpRel      (8UL<<13)
-#define OPA_AdSizeR     (9UL<<13)
-#define OPA_JmpFar      (0xAUL<<13)
-#define OPA_AdSizeEA    (0xBUL<<13)
-#define OPA_MASK        (0xFUL<<13)
+typedef struct x86_info_operand {
+    /* Operand types.  These are more detailed than the "general" types for all
+     * architectures, as they include the size, for instance.
+     */
 
-#define OPAP_None       (0UL<<17)
-#define OPAP_SImm8      (1UL<<17)
-#define OPAP_ShortMov   (2UL<<17)
-#define OPAP_A16        (3UL<<17)
-#define OPAP_SImm32Avail (4UL<<17)
-#define OPAP_MASK       (7UL<<17)
+    /* general type (must be exact match, except for RM types): */
+    unsigned int type:5;
+
+    /* size (user-specified, or from register size) */
+    unsigned int size:3;
+
+    /* size implicit or explicit ("strictness" of size matching on
+     * non-registers -- registers are always strictly matched):
+     * 0 = user size must exactly match size above.
+     * 1 = user size either unspecified or exactly match size above.
+     */
+    unsigned int relaxed:1;
+
+    /* effective address size
+     * 0 = any address size allowed except for 64-bit
+     * 1 = only 64-bit address size allowed
+     */
+    unsigned int eas64:1;
+
+    /* target modification */
+    unsigned int targetmod:3;
+
+    /* Actions: what to do with the operand if the instruction matches.
+     * Essentially describes what part of the output bytecode gets the
+     * operand.  This may require conversion (e.g. a register going into
+     * an ea field).  Naturally, only one of each of these may be contained
+     * in the operands of a single insn_info structure.
+     */
+    unsigned int action:4;
+
+    /* Postponed actions: actions which can't be completed at
+     * parse-time due to possibly dependent expressions.  For these, some
+     * additional data (stored in the second byte of the opcode with a
+     * one-byte opcode) is passed to later stages of the assembler with
+     * flags set to indicate postponed actions.
+     */
+    unsigned int post_action:3;
+} x86_info_operand;
 
 typedef struct x86_insn_info {
     /* GAS suffix flags */
@@ -441,7 +421,7 @@ x86_finalize_jmp(yasm_bytecode *bc, yasm_bytecode *prev_bc,
     jmp->target.jump_target = 1;
 
     /* See if the user explicitly specified short/near/far. */
-    switch ((int)(insn_operands[jinfo->operands_index+0] & OPTM_MASK)) {
+    switch (insn_operands[jinfo->operands_index+0].targetmod) {
         case OPTM_Short:
             jmp->op_sel = JMP_SHORT_FORCED;
             break;
@@ -454,10 +434,9 @@ x86_finalize_jmp(yasm_bytecode *bc, yasm_bytecode *prev_bc,
 
     /* Check for address size setting in second operand, if present */
     if (jinfo->num_operands > 1 &&
-        (insn_operands[jinfo->operands_index+1] & OPA_MASK) == OPA_AdSizeR)
+        insn_operands[jinfo->operands_index+1].action == OPA_AdSizeR)
         jmp->common.addrsize = (unsigned char)
-            size_lookup[(insn_operands[jinfo->operands_index+1]
-                         & OPS_MASK)>>OPS_SHIFT];
+            size_lookup[insn_operands[jinfo->operands_index+1].size];
 
     /* Check for address size override */
     for (i=0; i<NELEMS(info->modifiers); i++) {
@@ -498,13 +477,13 @@ x86_finalize_jmp(yasm_bytecode *bc, yasm_bytecode *prev_bc,
         if (info->num_operands == 0)
             continue;
 
-        if ((insn_operands[info->operands_index+0] & OPA_MASK) != OPA_JmpRel)
+        if (insn_operands[info->operands_index+0].action != OPA_JmpRel)
             continue;
 
         if (info->opersize != jmp->common.opersize)
             continue;
 
-        switch ((int)(insn_operands[info->operands_index+0] & OPTM_MASK)) {
+        switch (insn_operands[info->operands_index+0].targetmod) {
             case OPTM_Short:
                 x86_finalize_opcode(&jmp->shortop, info);
                 for (i=0; i<NELEMS(info->modifiers); i++) {
@@ -562,7 +541,8 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
      */
     for (; num_info>0 && !found; num_info--, info++) {
         yasm_insn_operand *op, **use_ops;
-        const unsigned long *info_ops = &insn_operands[info->operands_index];
+        const x86_info_operand *info_ops =
+            &insn_operands[info->operands_index];
         unsigned int cpu0 = info->cpu0;
         unsigned int cpu1 = info->cpu1;
         unsigned int cpu2 = info->cpu2;
@@ -619,7 +599,7 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
         for (i = 0, op = use_ops[0]; op && i<info->num_operands && !mismatch;
              op = use_ops[++i]) {
             /* Check operand type */
-            switch ((int)(info_ops[i] & OPT_MASK)) {
+            switch (info_ops[i].type) {
                 case OPT_Imm:
                     if (op->type != YASM_INSN__OPERAND_IMM)
                         mismatch = 1;
@@ -694,40 +674,40 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
                     break;
                 case OPT_Areg:
                     if (op->type != YASM_INSN__OPERAND_REG ||
-                        ((info_ops[i] & OPS_MASK) == OPS_8 &&
+                        (info_ops[i].size == OPS_8 &&
                          op->data.reg != (X86_REG8 | 0) &&
                          op->data.reg != (X86_REG8X | 0)) ||
-                        ((info_ops[i] & OPS_MASK) == OPS_16 &&
+                        (info_ops[i].size == OPS_16 &&
                          op->data.reg != (X86_REG16 | 0)) ||
-                        ((info_ops[i] & OPS_MASK) == OPS_32 &&
+                        (info_ops[i].size == OPS_32 &&
                          op->data.reg != (X86_REG32 | 0)) ||
-                        ((info_ops[i] & OPS_MASK) == OPS_64 &&
+                        (info_ops[i].size == OPS_64 &&
                          op->data.reg != (X86_REG64 | 0)))
                         mismatch = 1;
                     break;
                 case OPT_Creg:
                     if (op->type != YASM_INSN__OPERAND_REG ||
-                        ((info_ops[i] & OPS_MASK) == OPS_8 &&
+                        (info_ops[i].size == OPS_8 &&
                          op->data.reg != (X86_REG8 | 1) &&
                          op->data.reg != (X86_REG8X | 1)) ||
-                        ((info_ops[i] & OPS_MASK) == OPS_16 &&
+                        (info_ops[i].size == OPS_16 &&
                          op->data.reg != (X86_REG16 | 1)) ||
-                        ((info_ops[i] & OPS_MASK) == OPS_32 &&
+                        (info_ops[i].size == OPS_32 &&
                          op->data.reg != (X86_REG32 | 1)) ||
-                        ((info_ops[i] & OPS_MASK) == OPS_64 &&
+                        (info_ops[i].size == OPS_64 &&
                          op->data.reg != (X86_REG64 | 1)))
                         mismatch = 1;
                     break;
                 case OPT_Dreg:
                     if (op->type != YASM_INSN__OPERAND_REG ||
-                        ((info_ops[i] & OPS_MASK) == OPS_8 &&
+                        (info_ops[i].size == OPS_8 &&
                          op->data.reg != (X86_REG8 | 2) &&
                          op->data.reg != (X86_REG8X | 2)) ||
-                        ((info_ops[i] & OPS_MASK) == OPS_16 &&
+                        (info_ops[i].size == OPS_16 &&
                          op->data.reg != (X86_REG16 | 2)) ||
-                        ((info_ops[i] & OPS_MASK) == OPS_32 &&
+                        (info_ops[i].size == OPS_32 &&
                          op->data.reg != (X86_REG32 | 2)) ||
-                        ((info_ops[i] & OPS_MASK) == OPS_64 &&
+                        (info_ops[i].size == OPS_64 &&
                          op->data.reg != (X86_REG64 | 2)))
                         mismatch = 1;
                     break;
@@ -818,7 +798,7 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
                 break;
 
             /* Check operand size */
-            size = size_lookup[(info_ops[i] & OPS_MASK)>>OPS_SHIFT];
+            size = size_lookup[info_ops[i].size];
             if (suffix != 0) {
                 /* Require relaxed operands for GAS mode (don't allow
                  * per-operand sizing).
@@ -827,11 +807,11 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
                     /* Register size must exactly match */
                     if (yasm_x86__get_reg_size(op->data.reg) != size)
                         mismatch = 1;
-                } else if (((info_ops[i] & OPT_MASK) == OPT_Imm
-                            || (info_ops[i] & OPT_MASK) == OPT_ImmNotSegOff
-                            || (info_ops[i] & OPT_MASK) == OPT_Imm1)
-                    && (info_ops[i] & OPS_RMASK) != OPS_Relaxed
-                    && (info_ops[i] & OPA_MASK) != OPA_JmpRel)
+                } else if ((info_ops[i].type == OPT_Imm
+                            || info_ops[i].type == OPT_ImmNotSegOff
+                            || info_ops[i].type == OPT_Imm1)
+                    && !info_ops[i].relaxed
+                    && info_ops[i].action != OPA_JmpRel)
                     mismatch = 1;
             } else {
                 if (op->type == YASM_INSN__OPERAND_REG && op->size == 0) {
@@ -845,7 +825,7 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
                     if ((bypass == 1 && i == 0) || (bypass == 2 && i == 1)
                         || (bypass == 3 && i == 3))
                         ;
-                    else if ((info_ops[i] & OPS_RMASK) == OPS_Relaxed) {
+                    else if (info_ops[i].relaxed) {
                         /* Relaxed checking */
                         if (size != 0 && op->size != size && op->size != 0)
                             mismatch = 1;
@@ -862,7 +842,7 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
 
             /* Check for 64-bit effective address size in NASM mode */
             if (suffix == 0 && op->type == YASM_INSN__OPERAND_MEMORY) {
-                if ((info_ops[i] & OPEAS_MASK) == OPEAS_64) {
+                if (info_ops[i].eas64) {
                     if (op->data.ea->disp.size != 64)
                         mismatch = 1;
                 } else if (op->data.ea->disp.size == 64)
@@ -873,7 +853,7 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
                 break;
 
             /* Check target modifier */
-            switch ((int)(info_ops[i] & OPTM_MASK)) {
+            switch (info_ops[i].targetmod) {
                 case OPTM_None:
                     if (op->targetmod != 0)
                         mismatch = 1;
@@ -1018,7 +998,7 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
      * operands and adjust for dereferences / lack thereof.
      */
     if (id_insn->parser == X86_PARSER_GAS
-        && (insn_operands[info->operands_index+0] & OPA_MASK) == OPA_JmpRel) {
+        && insn_operands[info->operands_index+0].action == OPA_JmpRel) {
         for (i = 0, op = ops[0]; op; op = ops[++i]) {
             if (!op->deref && (op->type == YASM_INSN__OPERAND_REG
                                || (op->type == YASM_INSN__OPERAND_MEMORY
@@ -1051,7 +1031,7 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     }
 
     if (id_insn->insn.num_operands > 0) {
-        switch (insn_operands[info->operands_index+0] & OPA_MASK) {
+        switch (insn_operands[info->operands_index+0].action) {
             case OPA_JmpRel:
                 /* Shortcut to JmpRel */
                 x86_finalize_jmp(bc, prev_bc, info);
@@ -1126,7 +1106,8 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     /* Go through operands and assign */
     if (id_insn->insn.num_operands > 0) {
         yasm_insn_operand **use_ops = ops;
-        const unsigned long *info_ops = &insn_operands[info->operands_index];
+        const x86_info_operand *info_ops =
+            &insn_operands[info->operands_index];
 
         /* Use reversed operands in GAS mode if not otherwise specified */
         if (id_insn->parser == X86_PARSER_GAS
@@ -1135,7 +1116,7 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 
         for (i = 0, op = use_ops[0]; op && i<info->num_operands;
              op = use_ops[++i]) {
-            switch ((int)(info_ops[i] & OPA_MASK)) {
+            switch (info_ops[i].action) {
                 case OPA_None:
                     /* Throw away the operand contents */
                     switch (op->type) {
@@ -1163,7 +1144,7 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                                 N_("invalid operand conversion"));
                         case YASM_INSN__OPERAND_MEMORY:
                             insn->x86_ea = (x86_effaddr *)op->data.ea;
-                            if ((info_ops[i] & OPT_MASK) == OPT_MemOffs)
+                            if (info_ops[i].type == OPT_MemOffs)
                                 /* Special-case for MOV MemOffs instruction */
                                 yasm_x86__ea_set_disponly(insn->x86_ea);
                             break;
@@ -1171,24 +1152,21 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                             insn->x86_ea =
                                 yasm_x86__ea_create_imm(insn->x86_ea,
                                     op->data.val,
-                                    size_lookup[(info_ops[i] &
-                                                OPS_MASK)>>OPS_SHIFT]);
+                                    size_lookup[info_ops[i].size]);
                             break;
                     }
                     break;
                 case OPA_Imm:
                     if (op->type == YASM_INSN__OPERAND_IMM) {
                         imm = op->data.val;
-                        im_len = size_lookup[(info_ops[i] &
-                                              OPS_MASK)>>OPS_SHIFT];
+                        im_len = size_lookup[info_ops[i].size];
                     } else
                         yasm_internal_error(N_("invalid operand conversion"));
                     break;
                 case OPA_SImm:
                     if (op->type == YASM_INSN__OPERAND_IMM) {
                         imm = op->data.val;
-                        im_len = size_lookup[(info_ops[i] &
-                                              OPS_MASK)>>OPS_SHIFT];
+                        im_len = size_lookup[info_ops[i].size];
                         im_sign = 1;
                     } else
                         yasm_internal_error(N_("invalid operand conversion"));
@@ -1268,10 +1246,10 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                     yasm_internal_error(N_("unknown operand action"));
             }
 
-            if ((info_ops[i] & OPS_MASK) == OPS_BITS)
+            if (info_ops[i].size == OPS_BITS)
                 insn->common.opersize = (unsigned char)mode_bits;
 
-            switch ((int)(info_ops[i] & OPAP_MASK)) {
+            switch (info_ops[i].post_action) {
                 case OPAP_None:
                     break;
                 case OPAP_SImm8:
