@@ -412,6 +412,7 @@ const elf_machine_handler *elf_set_arch(struct yasm_arch *arch,
 
 /* reloc functions */
 int elf_is_wrt_sym_relative(yasm_symrec *wrt);
+int elf_is_wrt_pos_adjusted(yasm_symrec *wrt);
 elf_reloc_entry *elf_reloc_entry_create(yasm_symrec *sym,
                                         /*@null@*/ yasm_symrec *wrt,
                                         yasm_intnum *addr,
