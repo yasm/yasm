@@ -631,7 +631,17 @@ floatnum_get_common(const yasm_floatnum *flt, /*@out@*/ unsigned char *ptr,
     return retval;
 }
 
-/* IEEE-754 (Intel) "single precision" format:
+/* IEEE-754r "half precision" format:
+ * 16 bits:
+ * 15     9      Bit 0
+ * |      |          |
+ * seee eemm mmmm mmmm
+ *
+ * e = bias 15 exponent
+ * s = sign bit
+ * m = mantissa bits, bit 10 is an implied one bit.
+ *
+ * IEEE-754 (Intel) "single precision" format:
  * 32 bits:
  * Bit 31    Bit 22              Bit 0
  * |         |                       |
@@ -672,6 +682,9 @@ yasm_floatnum_get_sized(const yasm_floatnum *flt, unsigned char *ptr,
         yasm_internal_error(N_("unsupported floatnum functionality"));
     }
     switch (destsize) {
+        case 2:
+            retval = floatnum_get_common(flt, ptr, 2, 10, 1, 5);
+            break;
         case 4:
             retval = floatnum_get_common(flt, ptr, 4, 23, 1, 8);
             break;
@@ -702,6 +715,7 @@ int
 yasm_floatnum_check_size(/*@unused@*/ const yasm_floatnum *flt, size_t size)
 {
     switch (size) {
+        case 16:
         case 32:
         case 64:
         case 80:
