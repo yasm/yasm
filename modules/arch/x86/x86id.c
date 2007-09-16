@@ -103,7 +103,9 @@ enum x86_operand_type {
      */
     OPT_MemrAX = 25,
     /* EAX memory operand only (EA) [special case for SVM skinit opcode] */
-    OPT_MemEAX = 26
+    OPT_MemEAX = 26,
+    /* SIMDReg with value equal to operand 0 SIMDReg */
+    OPT_SIMDRegMatch0 = 27
 };
 
 enum x86_operand_size {
@@ -150,7 +152,8 @@ enum x86_operand_action {
     /* far jump (outputs a farjmp instead of normal insn) */
     OPA_JmpFar = 10,
     /* ea operand only sets address size (no actual ea field) */
-    OPA_AdSizeEA = 11
+    OPA_AdSizeEA = 11,
+    OPA_DREX = 12   /* operand data goes into DREX "dest" field */
 };
 
 enum x86_operand_post_action {
@@ -243,6 +246,14 @@ typedef struct x86_insn_info {
      * (0=no special prefix)
      */
     unsigned char special_prefix;
+
+    /* The DREX base byte value (almost).  The only bit kept from this
+     * value is the OC0 bit (0x08).  The MSB (0x80) of this value indicates
+     * if the DREX byte needs to be present in the instruction.
+     */
+#define NEED_DREX_MASK 0x80
+#define DREX_OC0_MASK 0x08
+    unsigned char drex_oc0;
 
     /* The length of the basic opcode */
     unsigned char opcode_len;
@@ -565,7 +576,7 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
             cpu1 = CPU_Any;
         if (cpu2 == CPU_64 || cpu2 == CPU_Not64)
             cpu2 = CPU_Any;
-        if (bypass != 7 && (!BitVector_bit_test(id_insn->cpu_enabled, cpu0) ||
+        if (bypass != 8 && (!BitVector_bit_test(id_insn->cpu_enabled, cpu0) ||
                             !BitVector_bit_test(id_insn->cpu_enabled, cpu1) ||
                             !BitVector_bit_test(id_insn->cpu_enabled, cpu2)))
             continue;
@@ -634,6 +645,7 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
                     if (op->type == YASM_INSN__OPERAND_MEMORY)
                         break;
                     /*@fallthrough@*/
+                case OPT_SIMDRegMatch0:
                 case OPT_SIMDReg:
                     if (op->type != YASM_INSN__OPERAND_REG)
                         mismatch = 1;
@@ -647,6 +659,9 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
                                 break;
                         }
                     }
+                    if (!mismatch && info_ops[i].type == OPT_SIMDRegMatch0 &&
+                        bypass != 7 && op->data.reg != use_ops[0]->data.reg)
+                        mismatch = 1;
                     break;
                 case OPT_SegReg:
                     if (op->type != YASM_INSN__OPERAND_SEGREG)
@@ -912,7 +927,7 @@ x86_match_error(x86_id_insn *id_insn, yasm_insn_operand **ops,
         return;
     }
 
-    for (bypass=1; bypass<8; bypass++) {
+    for (bypass=1; bypass<9; bypass++) {
         i = x86_find_match(id_insn, ops, rev_ops, size_lookup, bypass);
         if (i)
             break;
@@ -935,6 +950,10 @@ x86_match_error(x86_id_insn *id_insn, yasm_insn_operand **ops,
                            N_("invalid size for operand %d"), 3);
             break;
         case 7:
+            yasm_error_set(YASM_ERROR_TYPE,
+                N_("one of source operand 1 or 3 must match dest operand"));
+            break;
+        case 8:
         {
             unsigned int cpu0 = i->cpu0, cpu1 = i->cpu1, cpu2 = i->cpu2;
             yasm_error_set(YASM_ERROR_TYPE,
@@ -961,6 +980,8 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     unsigned char im_len;
     unsigned char im_sign;
     unsigned char spare;
+    unsigned char drex;
+    unsigned char *pdrex;
     unsigned int i;
     unsigned int size_lookup[] = {0, 8, 16, 32, 64, 80, 128, 0};
     unsigned long do_postop = 0;
@@ -1052,10 +1073,12 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     insn->def_opersize_64 = info->def_opersize_64;
     insn->special_prefix = info->special_prefix;
     spare = info->spare;
+    drex = info->drex_oc0 & DREX_OC0_MASK;
     im_len = 0;
     im_sign = 0;
     insn->postop = X86_POSTOP_NONE;
     insn->rex = 0;
+    pdrex = (info->drex_oc0 & NEED_DREX_MASK) ? &drex : NULL;
 
     /* Apply modifiers */
     for (i=0; i<NELEMS(info->modifiers); i++) {
@@ -1137,7 +1160,7 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                             insn->x86_ea =
                                 yasm_x86__ea_create_reg(insn->x86_ea,
                                     (unsigned long)op->data.reg, &insn->rex,
-                                    mode_bits);
+                                    pdrex, mode_bits);
                             break;
                         case YASM_INSN__OPERAND_SEGREG:
                             yasm_internal_error(
@@ -1175,8 +1198,8 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                     if (op->type == YASM_INSN__OPERAND_SEGREG)
                         spare = (unsigned char)(op->data.reg&7);
                     else if (op->type == YASM_INSN__OPERAND_REG) {
-                        if (yasm_x86__set_rex_from_reg(&insn->rex, &spare,
-                                op->data.reg, mode_bits, X86_REX_R))
+                        if (yasm_x86__set_rex_from_reg(&insn->rex, pdrex,
+                                &spare, op->data.reg, mode_bits, X86_REX_R))
                             return;
                     } else
                         yasm_internal_error(N_("invalid operand conversion"));
@@ -1184,8 +1207,8 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                 case OPA_Op0Add:
                     if (op->type == YASM_INSN__OPERAND_REG) {
                         unsigned char opadd;
-                        if (yasm_x86__set_rex_from_reg(&insn->rex, &opadd,
-                                op->data.reg, mode_bits, X86_REX_B))
+                        if (yasm_x86__set_rex_from_reg(&insn->rex, pdrex,
+                                &opadd, op->data.reg, mode_bits, X86_REX_B))
                             return;
                         insn->opcode.opcode[0] += opadd;
                     } else
@@ -1194,8 +1217,8 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                 case OPA_Op1Add:
                     if (op->type == YASM_INSN__OPERAND_REG) {
                         unsigned char opadd;
-                        if (yasm_x86__set_rex_from_reg(&insn->rex, &opadd,
-                                op->data.reg, mode_bits, X86_REX_B))
+                        if (yasm_x86__set_rex_from_reg(&insn->rex, pdrex,
+                                &opadd, op->data.reg, mode_bits, X86_REX_B))
                             return;
                         insn->opcode.opcode[1] += opadd;
                     } else
@@ -1205,11 +1228,11 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                     if (op->type == YASM_INSN__OPERAND_REG) {
                         insn->x86_ea =
                             yasm_x86__ea_create_reg(insn->x86_ea,
-                                                    (unsigned long)op->data.reg,
-                                                    &insn->rex, mode_bits);
+                                (unsigned long)op->data.reg, &insn->rex,
+                                pdrex, mode_bits);
                         if (!insn->x86_ea ||
-                            yasm_x86__set_rex_from_reg(&insn->rex, &spare,
-                                op->data.reg, mode_bits, X86_REX_R)) {
+                            yasm_x86__set_rex_from_reg(&insn->rex, pdrex,
+                                &spare, op->data.reg, mode_bits, X86_REX_R)) {
                             if (insn->x86_ea)
                                 yasm_xfree(insn->x86_ea);
                             yasm_xfree(insn);
@@ -1242,6 +1265,10 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                     yasm_x86__ea_destroy(op->data.ea);
                     break;
                 }
+                case OPA_DREX:
+                    drex &= 0x0F;
+                    drex |= (op->data.reg << 4) & 0xF0;
+                    break;
                 default:
                     yasm_internal_error(N_("unknown operand action"));
             }
@@ -1283,7 +1310,9 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     }
 
     if (insn->x86_ea) {
-        yasm_x86__ea_init(insn->x86_ea, spare, prev_bc);
+        yasm_x86__ea_init(insn->x86_ea, spare, drex,
+                          (unsigned int)(info->drex_oc0 & NEED_DREX_MASK),
+                          prev_bc);
         for (i=0; i<id_insn->insn.num_segregs; i++)
             yasm_ea_set_segreg(&insn->x86_ea->ea, id_insn->insn.segregs[i]);
     } else if (id_insn->insn.num_segregs > 0 && insn->special_prefix == 0) {
@@ -1350,7 +1379,8 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                  * opcode 0 being a mov instruction!
                  */
                 insn->x86_ea = yasm_x86__ea_create_reg(insn->x86_ea,
-                    (unsigned long)insn->opcode.opcode[0]-0xB8, &rex_temp, 64);
+                    (unsigned long)insn->opcode.opcode[0]-0xB8, &rex_temp,
+                    NULL, 64);
 
                 /* Make the imm32s form permanent. */
                 insn->opcode.opcode[0] = insn->opcode.opcode[1];

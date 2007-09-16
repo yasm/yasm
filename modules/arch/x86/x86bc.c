@@ -103,9 +103,9 @@ static const yasm_bytecode_callback x86_bc_callback_jmpfar = {
 };
 
 int
-yasm_x86__set_rex_from_reg(unsigned char *rex, unsigned char *low3,
-                           uintptr_t reg, unsigned int bits,
-                           x86_rex_bit_pos rexbit)
+yasm_x86__set_rex_from_reg(unsigned char *rex, unsigned char *drex,
+                           unsigned char *low3, uintptr_t reg,
+                           unsigned int bits, x86_rex_bit_pos rexbit)
 {
     *low3 = (unsigned char)(reg&7);
 
@@ -113,13 +113,17 @@ yasm_x86__set_rex_from_reg(unsigned char *rex, unsigned char *low3,
         x86_expritem_reg_size size = (x86_expritem_reg_size)(reg & ~0xFUL);
 
         if (size == X86_REG8X || (reg & 0xF) >= 8) {
-            /* Check to make sure we can set it */
-            if (*rex == 0xff) {
-                yasm_error_set(YASM_ERROR_TYPE,
-                    N_("cannot use A/B/C/DH with instruction needing REX"));
-                return 1;
+            if (drex) {
+                *drex |= ((reg & 8) >> 3) << rexbit;
+            } else {
+                /* Check to make sure we can set it */
+                if (*rex == 0xff) {
+                    yasm_error_set(YASM_ERROR_TYPE,
+                        N_("cannot use A/B/C/DH with instruction needing REX"));
+                    return 1;
+                }
+                *rex |= 0x40 | (((reg & 8) >> 3) << rexbit);
             }
-            *rex |= 0x40 | (((reg & 8) >> 3) << rexbit);
         } else if (size == X86_REG8 && (reg & 7) >= 4) {
             /* AH/BH/CH/DH, so no REX allowed */
             if (*rex != 0 && *rex != 0xff) {
@@ -153,14 +157,16 @@ yasm_x86__bc_transform_jmpfar(yasm_bytecode *bc, x86_jmpfar *jmpfar)
 }
 
 void
-yasm_x86__ea_init(x86_effaddr *x86_ea, unsigned int spare,
-                  yasm_bytecode *precbc)
+yasm_x86__ea_init(x86_effaddr *x86_ea, unsigned int spare, unsigned int drex,
+                  unsigned int need_drex, yasm_bytecode *precbc)
 {
     if (yasm_value_finalize(&x86_ea->ea.disp, precbc))
         yasm_error_set(YASM_ERROR_TOO_COMPLEX,
                        N_("effective address too complex"));
     x86_ea->modrm &= 0xC7;                  /* zero spare/reg bits */
     x86_ea->modrm |= (spare << 3) & 0x38;   /* plug in provided bits */
+    x86_ea->drex = (unsigned char)drex;
+    x86_ea->need_drex = (unsigned char)need_drex;
 }
 
 void
@@ -170,6 +176,7 @@ yasm_x86__ea_set_disponly(x86_effaddr *x86_ea)
     x86_ea->need_modrm = 0;
     x86_ea->valid_sib = 0;
     x86_ea->need_sib = 0;
+    x86_ea->need_drex = 0;
 }
 
 static x86_effaddr *
@@ -189,17 +196,20 @@ ea_create(void)
     x86_ea->sib = 0;
     x86_ea->valid_sib = 0;
     x86_ea->need_sib = 0;
+    x86_ea->drex = 0;
+    x86_ea->need_drex = 0;
 
     return x86_ea;
 }
 
 x86_effaddr *
 yasm_x86__ea_create_reg(x86_effaddr *x86_ea, unsigned long reg,
-                        unsigned char *rex, unsigned int bits)
+                        unsigned char *rex, unsigned char *drex,
+                        unsigned int bits)
 {
     unsigned char rm;
 
-    if (yasm_x86__set_rex_from_reg(rex, &rm, reg, bits, X86_REX_B))
+    if (yasm_x86__set_rex_from_reg(rex, drex, &rm, reg, bits, X86_REX_B))
         return NULL;
 
     if (!x86_ea)
@@ -539,6 +549,7 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 
         /* Compute length of ea and add to total */
         bc->len += x86_ea->need_modrm + (x86_ea->need_sib ? 1:0);
+        bc->len += x86_ea->need_drex ? 1:0;
         bc->len += (x86_ea->ea.segreg != 0) ? 1 : 0;
     }
 
@@ -806,6 +817,9 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
                 yasm_internal_error(N_("invalid SIB in x86 tobytes_insn"));
             YASM_WRITE_8(*bufp, x86_ea->sib);
         }
+
+        if (x86_ea->need_drex)
+            YASM_WRITE_8(*bufp, x86_ea->drex);
 
         if (x86_ea->ea.need_disp) {
             unsigned int disp_len = x86_ea->ea.disp.size/8;

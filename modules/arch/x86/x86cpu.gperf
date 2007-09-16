@@ -118,6 +118,7 @@ x86_cpu_ia64(wordptr cpu, unsigned int data)
     BitVector_Bit_On(cpu, CPU_086);
 }
 
+#define PROC_bulldozer	11
 #define PROC_k10    10
 #define PROC_venice 9
 #define PROC_hammer 8
@@ -133,6 +134,8 @@ x86_cpu_amd(wordptr cpu, unsigned int data)
     BitVector_Bit_On(cpu, CPU_Prot);
     BitVector_Bit_On(cpu, CPU_SMM);
     BitVector_Bit_On(cpu, CPU_3DNow);
+    if (data >= PROC_bulldozer)
+        BitVector_Bit_On(cpu, CPU_SSE5);
     if (data >= PROC_k10)
         BitVector_Bit_On(cpu, CPU_SSE4a);
     if (data >= PROC_venice)
@@ -254,6 +257,7 @@ athlon64,	x86_cpu_amd,	PROC_hammer
 athlon-64,	x86_cpu_amd,	PROC_hammer
 venice,		x86_cpu_amd,	PROC_venice
 k10,		x86_cpu_amd,	PROC_k10
+bulldozer,	x86_cpu_amd,	PROC_bulldozer
 prescott,	x86_cpu_intel,	PROC_prescott
 conroe,		x86_cpu_intel,	PROC_conroe
 penryn,		x86_cpu_intel,	PROC_penryn
@@ -318,6 +322,8 @@ sse4a,		x86_cpu_set,	CPU_SSE4a
 nosse4a,	x86_cpu_clear,	CPU_SSE4a
 sse4,		x86_cpu_set_sse4,	0
 nosse4,		x86_cpu_clear_sse4,	0
+sse5,		x86_cpu_set,	CPU_SSE5
+nosse5,		x86_cpu_clear,	CPU_SSE5
 %%
 
 void

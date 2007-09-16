@@ -549,6 +549,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
                        yasm_bytecode *bc)
 {
     int retval;
+    unsigned char *drex = x86_ea->need_drex ? &x86_ea->drex : NULL;
 
     if (*addrsize == 0) {
         /* we need to figure out the address size from what we know about:
@@ -784,7 +785,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
              * of register basereg is, as x86_set_rex_from_reg doesn't pay
              * much attention.
              */
-            if (yasm_x86__set_rex_from_reg(rex, &low3,
+            if (yasm_x86__set_rex_from_reg(rex, drex, &low3,
                                            (unsigned int)(X86_REG64 | basereg),
                                            bits, X86_REX_B))
                 return 1;
@@ -811,7 +812,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
             if (basereg == REG3264_NONE)
                 x86_ea->sib |= 5;
             else {
-                if (yasm_x86__set_rex_from_reg(rex, &low3, (unsigned int)
+                if (yasm_x86__set_rex_from_reg(rex, drex, &low3, (unsigned int)
                                                (X86_REG64 | basereg), bits,
                                                X86_REX_B))
                     return 1;
@@ -823,7 +824,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
                 x86_ea->sib |= 040;
                 /* Any scale field is valid, just leave at 0. */
             else {
-                if (yasm_x86__set_rex_from_reg(rex, &low3, (unsigned int)
+                if (yasm_x86__set_rex_from_reg(rex, drex, &low3, (unsigned int)
                                                (X86_REG64 | indexreg), bits,
                                                X86_REX_X))
                     return 1;
