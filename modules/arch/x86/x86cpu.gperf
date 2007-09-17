@@ -27,6 +27,7 @@
 #include <util.h>
 RCSID("$Id$");
 
+#include <ctype.h>
 #include <libyasm.h>
 #include <libyasm/phash.h>
 
