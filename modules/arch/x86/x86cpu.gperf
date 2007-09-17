@@ -332,12 +332,16 @@ yasm_x86__parse_cpu(yasm_arch_x86 *arch_x86, const char *cpuid,
 {
     /*@null@*/ const struct cpu_parse_data *pdata;
     wordptr new_cpu;
-    unsigned int i;
+    size_t i;
+    static char lcaseid[16];
 
     if (cpuid_len > 15)
         return;
+    for (i=0; i<cpuid_len; i++)
+        lcaseid[i] = tolower(cpuid[i]);
+    lcaseid[cpuid_len] = '\0';
 
-    pdata = cpu_find(cpuid, cpuid_len);
+    pdata = cpu_find(lcaseid, cpuid_len);
     if (!pdata) {
         yasm_warn_set(YASM_WARN_GENERAL,
                       N_("unrecognized CPU identifier `%s'"), cpuid);

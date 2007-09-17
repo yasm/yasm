@@ -241,13 +241,18 @@ yasm_x86__parse_check_regtmod(yasm_arch *arch, const char *id, size_t id_len,
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     /*@null@*/ const struct regtmod_parse_data *pdata;
+    size_t i;
+    static char lcaseid[8];
     unsigned int bits;
     yasm_arch_regtmod type;
 
     if (id_len > 7)
         return YASM_ARCH_NOTREGTMOD;
+    for (i=0; i<id_len; i++)
+        lcaseid[i] = tolower(id[i]);
+    lcaseid[id_len] = '\0';
 
-    pdata = regtmod_find(id, id_len);
+    pdata = regtmod_find(lcaseid, id_len);
     if (!pdata)
         return YASM_ARCH_NOTREGTMOD;
 
