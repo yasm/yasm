@@ -3,13 +3,13 @@ cd ..\..\..
 reg query HKCR\Python.File\shell\open\command >nul: 2>&1
 goto answer%errorlevel%
 :answer0
-echo Python found!
+echo ... building with Python ...
 @echo on
 modules\arch\x86\gen_x86_insn.py
 @echo off
 goto end
 :answer1
-echo Python not found!
+echo ... building without Python ...
 goto end
 :end
 @echo on
