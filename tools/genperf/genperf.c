@@ -208,7 +208,6 @@ perfect_gen(FILE *out, const char *lookup_function_name,
     fprintf(out, "  static const struct %s pd[%lu] = {\n", struct_name, nkeys);
     for (i=0; i<nkeys; i++) {
         if (tabh[i].key_h) {
-            sval *sv;
             STAILQ_FOREACH(kw, kws, link) {
                 if (strcmp(kw->name, tabh[i].key_h->name_k) == 0)
                     break;
