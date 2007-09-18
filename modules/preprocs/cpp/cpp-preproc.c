@@ -47,7 +47,7 @@ typedef struct cpp_arg_entry {
         The operator (eg "-I") and the parameter (eg "include/"). op is expected
         to point to a string literal, whereas param is expected to be a copy of
         the parameter which is free'd when no-longer needed (in
-        cpp_build_cmdline()).
+        cpp_preproc_destroy()).
     */
     const char *op;
     char *param;
@@ -82,7 +82,7 @@ typedef struct yasm_preproc_cpp {
 #define APPEND(s) do {                              \
     size_t _len = strlen(s);                        \
     if (p + _len >= limit)                          \
-        yasm__fatal("command line too long!");      \
+        yasm__fatal(N_("command line too long!"));  \
     strcpy(p, s);                                   \
     p += _len;                                      \
 } while (0)
@@ -180,6 +180,8 @@ static yasm_preproc *
 cpp_preproc_create(const char *in, yasm_linemap *lm, yasm_errwarns *errwarns)
 {
     yasm_preproc_cpp *pp = yasm_xmalloc(sizeof(yasm_preproc_cpp));
+    void * iter;
+    const char * inc_dir;
 
     pp->preproc.module = &yasm_cpp_LTX_preproc;
     pp->f = pp->f_deps = NULL;
@@ -189,6 +191,16 @@ cpp_preproc_create(const char *in, yasm_linemap *lm, yasm_errwarns *errwarns)
     pp->filename = yasm__xstrdup(in);
 
     TAILQ_INIT(&pp->cpp_args);
+
+    /* Iterate through the list of include dirs. */
+    iter = NULL;
+    while ((inc_dir = yasm_get_include_dir(&iter)) != NULL) {
+        cpp_arg_entry *arg = yasm_xmalloc(sizeof(cpp_arg_entry));
+        arg->op = "-I";
+        arg->param = yasm__xstrdup(inc_dir);
+
+        TAILQ_INSERT_TAIL(&pp->cpp_args, arg, entry);
+    }
 
     return (yasm_preproc *)pp;
 }
@@ -342,8 +354,3 @@ yasm_preproc_module yasm_cpp_LTX_preproc = {
     cpp_preproc_undefine_macro,
     cpp_preproc_define_builtin
 };
-
-/*
-    TODO: We will need to pass the list of include directories to the external
-            preprocessor.
-*/
