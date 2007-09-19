@@ -209,8 +209,8 @@ elf_x86_amd64_write_proghead(unsigned char **bufpp,
 }
 
 static elf_machine_ssym elf_x86_amd64_ssyms[] = {
-    {"..gotpcrel", 1},
-    {"..got", 1},
+    {"..gotpcrel", ELF_SSYM_SYM_RELATIVE},
+    {"..got", ELF_SSYM_SYM_RELATIVE},
     {"..plt", 0}
 };
 

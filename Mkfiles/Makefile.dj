@@ -50,18 +50,20 @@ MODULES_ARCH_X86_OBJS= \
  modules/arch/x86/x86arch.o \
  modules/arch/x86/x86bc.o \
  modules/arch/x86/x86expr.o \
- modules/arch/x86/x86id.o
+ modules/arch/x86/x86id.o \
+ x86cpu.o \
+ x86regtmod.o
 YASM_MODULES=arch_x86
 
-#MODULES_ARCH_LC3B_OBJS= \
-# modules/arch/lc3b/lc3barch.o \
-# modules/arch/lc3b/lc3bbc.o \
-# lc3bid.o
-#YASM_MODULES+=arch_lc3b
+MODULES_ARCH_LC3B_OBJS= \
+ modules/arch/lc3b/lc3barch.o \
+ modules/arch/lc3b/lc3bbc.o \
+ lc3bid.o
+YASM_MODULES+=arch_lc3b
 
 MODULES_ARCH_OBJS= \
  $(MODULES_ARCH_X86_OBJS) \
-# $(MODULES_ARCH_LC3B_OBJS)
+ $(MODULES_ARCH_LC3B_OBJS)
 
 MODULES_DBGFMTS_OBJS= \
  modules/dbgfmts/null/null-dbgfmt.o \
@@ -170,10 +172,23 @@ genmodule: libyasm/genmodule.c
 module.c: libyasm/module.in genmodule
 	./genmodule libyasm/module.in Mkfiles/Makefile.dj
 
-x86parse.c: modules/arch/x86/x86parse.gap gap
-	./gap modules/arch/x86/x86parse.gap $@
+x86insn_nasm.gperf x86insn_gas.gperf x86insns.c: modules/arch/x86/gen_x86_insn.py
+	# ignore error in case python is not installed
+	-python modules/arch/x86/gen_x86_insn.py
 
-modules/arch/x86/x86id.c: x86parse.c
+x86insn_nasm.c: x86insn_nasm.gperf genperf
+	./genperf x86insn_nasm.gperf > $@
+
+x86insn_gas.c: x86insn_gas.gperf genperf
+	./genperf x86insn_gas.gperf > $@
+
+x86cpu.c: modules/arch/x86/x86cpu.gperf genperf
+	./genperf modules/arch/x86/x86cpu.gperf > $@
+
+x86regtmod.c: modules/arch/x86/x86regtmod.gperf genperf
+	./genperf modules/arch/x86/x86regtmod.gperf > $@
+
+modules/arch/x86/x86id.c: x86insn_nasm.c x86insn_gas.c x86insns.c
 
 lc3bid.c: modules/arch/lc3b/lc3bid.re re2c
 	./re2c -s -o $@ modules/arch/lc3b/lc3bid.re
@@ -198,15 +213,15 @@ RE2C_SRCS= \
 re2c: $(RE2C_SRCS)
 	$(BUILDCC) -I. -o re2c $(RE2C_SRCS)
 
-GAP_SRCS= \
-	tools/gap/gap.c \
-	tools/gap/perfect.c \
+GENPERF_SRCS= \
+	tools/genperf/genperf.c \
+	tools/genperf/perfect.c \
 	libyasm/phash.c \
 	libyasm/xmalloc.c \
 	libyasm/xstrdup.c
 
-gap: $(GAP_SRCS)
-	$(BUILDCC) -I. -o gap $(GAP_SRCS)
+genperf: $(GENPERF_SRCS)
+	$(BUILDCC) -I. -o genperf $(GENPERF_SRCS)
 
 yasm: $(YASM_OBJS)
 	$(CC) -o yasm $(YASM_OBJS)

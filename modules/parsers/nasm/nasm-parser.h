@@ -45,6 +45,8 @@ enum tokentype {
     TIMES,
     SEG,
     WRT,
+    ABS,
+    REL,
     NOSPLIT,
     STRICT,
     INSN,

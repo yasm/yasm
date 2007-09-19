@@ -50,10 +50,10 @@ determined a perfect hash for the whole set of keys.
 */
 
 #include <string.h>
-#include "tools/gap/standard.h"
+#include "tools/genperf/standard.h"
 #include "libyasm/coretype.h"
 #include "libyasm/phash.h"
-#include "tools/gap/perfect.h"
+#include "tools/genperf/perfect.h"
 
 #define CHECKSTATE 8
 
@@ -565,7 +565,7 @@ static int perfect(
         if (!augment(tabb, tabh, tabq, blen, scramble, smax, &tabb[i], nkeys, 
                      i+1, form))
         {
-          printf("fail to map group of size %ld for tab size %ld\n", j, blen);
+          fprintf(stderr, "fail to map group of size %ld for tab size %ld\n", j, blen);
           return FALSE;
         }
 
@@ -631,7 +631,7 @@ static void hash_ab(
   {
     if (form->perfect == MINIMAL_HP)
     {
-      printf("fatal error: Cannot find perfect hash for user (A,B) pairs\n");
+      fprintf(stderr, "fatal error: Cannot find perfect hash for user (A,B) pairs\n");
       exit(EXIT_FAILURE);
     }
     else
@@ -644,7 +644,7 @@ static void hash_ab(
                                                 nkeys : *smax));
       if (!perfect(*tabb, tabh, tabq, *blen, *smax, scramble, nkeys, form))
       {
-        printf("fatal error: Cannot find perfect hash for user (A,B) pairs\n");
+        fprintf(stderr, "fatal error: Cannot find perfect hash for user (A,B) pairs\n");
         exit(EXIT_FAILURE);
       }
     }
@@ -894,7 +894,7 @@ void findhash(
         else
         {
           duplicates(*tabb, *blen, keys, form);      /* check for duplicates */
-          printf("fatal error: Cannot perfect hash: cannot find distinct (A,B)\n");
+          fprintf(stderr, "fatal error: Cannot perfect hash: cannot find distinct (A,B)\n");
           exit(EXIT_FAILURE);
         }
         bad_initkey = 0;
@@ -922,7 +922,7 @@ void findhash(
         }
         else
         {
-          printf("fatal error: Cannot perfect hash: cannot build tab[]\n");
+          fprintf(stderr, "fatal error: Cannot perfect hash: cannot build tab[]\n");
           exit(EXIT_FAILURE);
         }
         bad_perfect = 0;

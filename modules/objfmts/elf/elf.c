@@ -99,13 +99,27 @@ elf_set_arch(yasm_arch *arch, yasm_symtab *symtab, int bits_pref)
 }
 
 /* reloc functions */
+int elf_ssym_has_flag(yasm_symrec *wrt, int flag);
+
 int
 elf_is_wrt_sym_relative(yasm_symrec *wrt)
+{
+    return elf_ssym_has_flag(wrt, ELF_SSYM_SYM_RELATIVE);
+}
+
+int
+elf_is_wrt_pos_adjusted(yasm_symrec *wrt)
+{
+    return elf_ssym_has_flag(wrt, ELF_SSYM_CURPOS_ADJUST);
+}
+
+int
+elf_ssym_has_flag(yasm_symrec *wrt, int flag)
 {
     int i;
     for (i=0; (unsigned int)i<elf_march->num_ssyms; i++) {
         if (elf_ssyms[i] == wrt)
-            return elf_march->ssyms[i].sym_rel;
+            return (elf_march->ssyms[i].sym_rel & flag) != 0;
     }
     return 0;
 }

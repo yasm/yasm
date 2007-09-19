@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="gap"
-	ProjectGUID="{5758BF4E-ABC4-11DA-B012-B622A1EF5492}"
-	RootNamespace="gap"
+	Name="genperf"
+	ProjectGUID="{C45A8B59-8B59-4D5D-A8E8-FB090F8DD619}"
+	RootNamespace="genperf"
 	Keyword="Win32Proj"
 	>
 	<Platforms>
@@ -64,7 +64,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)/gap.exe"
+				OutputFile="$(OutDir)/genperf.exe"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(OutDir)\$(TargetName).pdb"
@@ -144,7 +144,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)/gap.exe"
+				OutputFile="$(OutDir)/genperf.exe"
 				LinkIncremental="1"
 				GenerateDebugInformation="false"
 				ProgramDatabaseFile="$(OutDir)\$(TargetName).pdb"
@@ -186,14 +186,14 @@
 		<Filter
 			Name="Source Files"
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx"
-			UniqueIdentifier="{7D996CB2-ABC4-11DA-B012-B622A1EF5492}"
+			UniqueIdentifier="{1062695D-1C50-4068-8313-73A409885BC1}"
 			>
 			<File
-				RelativePath="..\..\..\tools\gap\gap.c"
+				RelativePath="..\..\..\tools\genperf\genperf.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\tools\gap\perfect.c"
+				RelativePath="..\..\..\tools\genperf\perfect.c"
 				>
 			</File>
 			<File
@@ -212,14 +212,14 @@
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
-			UniqueIdentifier="{85DD7A94-ABC4-11DA-B012-B622A1EF5492}"
+			UniqueIdentifier="{3C1E9AA8-6338-4CED-99F1-BEBA80607BD5}"
 			>
 			<File
-				RelativePath="..\..\..\tools\gap\perfect.h"
+				RelativePath="..\..\..\tools\genperf\perfect.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\tools\gap\standard.h"
+				RelativePath="..\..\..\tools\genperf\standard.h"
 				>
 			</File>
 		</Filter>
