@@ -190,6 +190,8 @@ ea_create(void)
     x86_ea->ea.nosplit = 0;
     x86_ea->ea.strong = 0;
     x86_ea->ea.segreg = 0;
+    x86_ea->ea.pc_rel = 0;
+    x86_ea->ea.not_pc_rel = 0;
     x86_ea->modrm = 0;
     x86_ea->valid_modrm = 0;
     x86_ea->need_modrm = 0;

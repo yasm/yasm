@@ -67,6 +67,7 @@ x86_create(const char *machine, const char *parser,
     arch_x86->amd64_machine = amd64_machine;
     arch_x86->mode_bits = 0;
     arch_x86->force_strict = 0;
+    arch_x86->default_rel = 0;
 
     if (yasm__strcasecmp(parser, "nasm") == 0)
         arch_x86->parser = X86_PARSER_NASM;
@@ -123,7 +124,13 @@ x86_set_var(yasm_arch *arch, const char *var, unsigned long val)
         arch_x86->mode_bits = (unsigned int)val;
     else if (yasm__strcasecmp(var, "force_strict") == 0)
         arch_x86->force_strict = (unsigned int)val;
-    else
+    else if (yasm__strcasecmp(var, "default_rel") == 0) {
+        if (arch_x86->mode_bits != 64)
+            yasm_warn_set(YASM_WARN_GENERAL,
+                          N_("ignoring default rel in non-64-bit mode"));
+        else
+            arch_x86->default_rel = (unsigned int)val;
+    } else
         return 1;
     return 0;
 }

@@ -158,6 +158,8 @@ lc3b_ea_create_expr(yasm_arch *arch, yasm_expr *e)
     ea->nosplit = 0;
     ea->strong = 0;
     ea->segreg = 0;
+    ea->pc_rel = 0;
+    ea->not_pc_rel = 0;
     return ea;
 }
 

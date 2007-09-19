@@ -315,6 +315,9 @@ scan:
         'seg'           { RETURN(SEG); }
         'wrt'           { RETURN(WRT); }
 
+        'abs'           { RETURN(ABS); }
+        'rel'           { RETURN(REL); }
+
         'nosplit'       { RETURN(NOSPLIT); }
         'strict'        { RETURN(STRICT); }
 

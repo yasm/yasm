@@ -64,6 +64,12 @@ struct yasm_effaddr {
      * "expr(,1)" (which is definitely an effective address).
      */
     unsigned int strong:1;
+
+    /** 1 if effective address is forced PC-relative. */
+    unsigned int pc_rel:1;
+
+    /** 1 if effective address is forced non-PC-relative. */
+    unsigned int not_pc_rel:1;
 };
 
 /** An instruction operand (opaque type). */

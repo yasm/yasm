@@ -114,6 +114,10 @@ __SECT__
 [cpu %1]
 %endmacro
 
+%imacro default 1+.nolist
+[default %1]
+%endmacro
+
 ; NASM compatibility shim
 %define __OUTPUT_FORMAT__ __YASM_OBJFMT__
 
