@@ -246,6 +246,10 @@ scan:
             lvalp->int_info = yasm_arch_wordsize(p_object->arch)*8;
             RETURN(SIZE_OVERRIDE);
         }
+        'oword'        {
+            lvalp->int_info = yasm_arch_wordsize(p_object->arch)*8;
+            RETURN(SIZE_OVERRIDE);
+        }
 
         /* pseudo-instructions */
         'db'            { lvalp->int_info = 8; RETURN(DECLARE_DATA); }
@@ -270,6 +274,10 @@ scan:
             lvalp->int_info = yasm_arch_wordsize(p_object->arch)*8;
             RETURN(DECLARE_DATA);
         }
+        'do'           {
+            lvalp->int_info = yasm_arch_wordsize(p_object->arch)*8;
+            RETURN(DECLARE_DATA);
+        }
 
         'resb'          { lvalp->int_info = 8; RETURN(RESERVE_SPACE); }
         'reshw'         {
@@ -290,6 +298,10 @@ scan:
         }
         'rest'          { lvalp->int_info = 80; RETURN(RESERVE_SPACE); }
         'resdq'         {
+            lvalp->int_info = yasm_arch_wordsize(p_object->arch)*8;
+            RETURN(RESERVE_SPACE);
+        }
+        'reso'         {
             lvalp->int_info = yasm_arch_wordsize(p_object->arch)*8;
             RETURN(RESERVE_SPACE);
         }
