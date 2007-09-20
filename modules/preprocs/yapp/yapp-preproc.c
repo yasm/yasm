@@ -241,10 +241,19 @@ void
 expand_token_list(struct source_head *paramexp, struct source_head *to_head, source **to_tail);
 
 static yasm_preproc *
-yapp_preproc_create(FILE *f, const char *in_filename, yasm_linemap *lm,
+yapp_preproc_create(const char *in_filename, yasm_linemap *lm,
                     yasm_errwarns *errwarns)
 {
+    FILE *f;
     yasm_preproc_yapp *preproc_yapp = yasm_xmalloc(sizeof(yasm_preproc_yapp));
+
+    if (strcmp(in_filename, "-") != 0) {
+        f = fopen(in_filename, "r");
+        if (!f)
+            yasm__fatal( N_("Could not open input file") );
+    }
+    else
+        f = stdin;
 
     preproc_yapp->preproc.module = &yasm_yapp_LTX_preproc;
 
@@ -468,7 +477,7 @@ append_to_return(struct source_head *to_head, source **to_tail)
             return 0;
         append_token(token, to_head, to_tail);
         token = yapp_preproc_lex();
-    } 
+    }
     return '\n';
 }
 

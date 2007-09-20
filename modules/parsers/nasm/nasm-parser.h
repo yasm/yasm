@@ -81,7 +81,6 @@ typedef union {
 #define YYSTYPE yystype
 
 typedef struct yasm_parser_nasm {
-    FILE *in;
     int debug;
 
     /*@only@*/ yasm_object *object;

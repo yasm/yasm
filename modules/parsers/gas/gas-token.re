@@ -42,8 +42,8 @@ RCSID("$Id$");
 #define YYMARKER        (s->ptr)
 #define YYFILL(n)       {cursor = fill(parser_gas, cursor);}
 
-#define RETURN(i)       {s->cur = cursor; parser_gas->tokch = s->tok[0]; \
-                         return i;}
+#define RETURN(i)       do {s->cur = cursor; parser_gas->tokch = s->tok[0]; \
+                         return i;} while (0)
 
 #define SCANINIT()      {s->tok = cursor;}
 
@@ -445,7 +445,14 @@ scan:
         }
 
         "/*"                    { parser_gas->state = COMMENT; goto comment; }
-        "#" (any \ [\n])*       { goto scan; }
+        "#"                     {
+            if (strcmp(((yasm_preproc_base*)parser_gas->preproc)->module->keyword,
+                 "cpp") == 0)
+            {
+                RETURN(LINE_MARKER);
+            } else
+                goto line_comment;
+        }
 
         ws+                     { goto scan; }
 
@@ -483,6 +490,12 @@ comment:
                 return 0;
             goto comment;
         }
+    */
+
+    /* Single line comment. */
+line_comment:
+    /*!re2c
+        (any \ [\n])*   { goto scan; }
     */
 
     /* .section directive (the section name portion thereof) */

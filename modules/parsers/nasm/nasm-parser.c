@@ -33,7 +33,7 @@
 
 
 static void
-nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
+nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp,
                      int save_input, yasm_linemap *linemap,
                      yasm_errwarns *errwarns)
 {
@@ -41,8 +41,6 @@ nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
 
     parser_nasm.object = object;
     parser_nasm.linemap = linemap;
-
-    parser_nasm.in = f;
 
     parser_nasm.locallabel_base = (char *)NULL;
     parser_nasm.locallabel_base_len = 0;

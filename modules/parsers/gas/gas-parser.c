@@ -36,7 +36,7 @@
 
 
 static void
-gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
+gas_parser_do_parse(yasm_object *object, yasm_preproc *pp,
                     int save_input, yasm_linemap *linemap,
                     yasm_errwarns *errwarns)
 {
@@ -46,14 +46,13 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
     parser_gas.object = object;
     parser_gas.linemap = linemap;
 
-    parser_gas.in = f;
-
     parser_gas.locallabel_base = (char *)NULL;
     parser_gas.locallabel_base_len = 0;
 
     parser_gas.dir_fileline = 0;
     parser_gas.dir_file = NULL;
     parser_gas.dir_line = 0;
+    parser_gas.seen_line_marker = 0;
 
     parser_gas.preproc = pp;
     parser_gas.errwarns = errwarns;
@@ -112,6 +111,7 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
 /* Define valid preprocessors to use with this parser */
 static const char *gas_parser_preproc_keywords[] = {
     "raw",
+    "cpp",
     NULL
 };
 

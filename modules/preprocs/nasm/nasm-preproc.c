@@ -128,12 +128,21 @@ nasm_efunc(int severity, const char *fmt, ...)
 }
 
 static yasm_preproc *
-nasm_preproc_create(FILE *f, const char *in_filename, yasm_linemap *lm,
+nasm_preproc_create(const char *in_filename, yasm_linemap *lm,
                     yasm_errwarns *errwarns)
 {
+    FILE *f;
     yasm_preproc_nasm *preproc_nasm = yasm_xmalloc(sizeof(yasm_preproc_nasm));
 
     preproc_nasm->preproc.module = &yasm_nasm_LTX_preproc;
+
+    if (strcmp(in_filename, "-") != 0) {
+        f = fopen(in_filename, "r");
+        if (!f)
+            yasm__fatal( N_("Could not open input file") );
+    }
+    else
+        f = stdin;
 
     preproc_nasm->in = f;
     cur_lm = lm;

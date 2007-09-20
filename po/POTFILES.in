@@ -6,7 +6,6 @@
 
 frontends/yasm/yasm-options.c
 frontends/yasm/yasm.c
-#lc3bid.c
 libyasm/bc-align.c
 libyasm/bc-data.c
 libyasm/bc-incbin.c
@@ -23,10 +22,11 @@ libyasm/insn.c
 libyasm/intnum.c
 libyasm/section.c
 libyasm/symrec.c
+libyasm/valparam.c
 libyasm/value.c
 libyasm/xmalloc.c
-#modules/arch/lc3b/lc3barch.c
-#modules/arch/lc3b/lc3bbc.c
+modules/arch/lc3b/lc3barch.c
+modules/arch/lc3b/lc3bbc.c
 modules/arch/x86/x86arch.c
 modules/arch/x86/x86bc.c
 modules/arch/x86/x86expr.c
@@ -54,5 +54,8 @@ modules/parsers/gas/gas-parser.c
 modules/parsers/gas/gas-token.re
 modules/parsers/nasm/nasm-parse.c
 modules/parsers/nasm/nasm-token.re
+modules/preprocs/cpp/cpp-preproc.c
+modules/preprocs/yapp/yapp-preproc.c
+modules/preprocs/nasm/nasm-preproc.c
 modules/preprocs/nasm/nasm-pp.c
 modules/preprocs/raw/raw-preproc.c
