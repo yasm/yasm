@@ -97,13 +97,10 @@ cpp_build_cmdline(yasm_preproc_cpp *pp, const char *extra)
     char *cmdline, *p, *limit;
     cpp_arg_entry *arg;
 
-    /*
-        Initialize command line. We can assume there will be enough space to
-        store "cpp".
-    */
-    cmdline = p = yasm_xmalloc(CMDLINE_SIZE);
+    /* Initialize command line. */
+    cmdline = p = yasm_xmalloc(strlen(CPP_PROG)+CMDLINE_SIZE);
     limit = p + CMDLINE_SIZE;
-    strcpy(p, "cpp");
+    strcpy(p, CPP_PROG);
     p += 3;
 
     arg = TAILQ_FIRST(&pp->cpp_args);
@@ -138,9 +135,13 @@ cpp_invoke(yasm_preproc_cpp *pp)
 
     cmdline = cpp_build_cmdline(pp, NULL);
 
+#ifdef HAVE_POPEN
     pp->f = popen(cmdline, "r");
     if (!pp->f)
         yasm__fatal( N_("Failed to execute preprocessor") );
+#else
+    yasm__fatal( N_("Cannot execute preprocessor, no popen available") );
+#endif
 
     yasm_xfree(cmdline);
 }
@@ -166,9 +167,13 @@ cpp_generate_deps(yasm_preproc_cpp *pp)
 
     cmdline = cpp_build_cmdline(pp, "-M");
 
+#ifdef HAVE_POPEN
     pp->f_deps = popen(cmdline, "r");
     if (!pp->f_deps)
         yasm__fatal( N_("Failed to execute preprocessor") );
+#else
+    yasm__fatal( N_("Cannot execute preprocessor, no popen available") );
+#endif
 
     yasm_xfree(cmdline);
 }
@@ -211,8 +216,10 @@ cpp_preproc_destroy(yasm_preproc *preproc)
     yasm_preproc_cpp *pp = (yasm_preproc_cpp *)preproc;
 
     if (pp->f) {
+#ifdef HAVE_POPEN
         if (pclose(pp->f) != 0)
             yasm__fatal( N_("Preprocessor exited with failure") );
+#endif
     }
 
     cpp_destroy_args(pp);
