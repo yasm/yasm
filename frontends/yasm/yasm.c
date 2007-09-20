@@ -220,7 +220,7 @@ typedef struct constcharparam {
 static constcharparam_head preproc_options;
 
 static int
-do_preproc_only()
+do_preproc_only(void)
 {
     yasm_linemap *linemap;
     char *preproc_buf = yasm_xmalloc(PREPROC_BUF_SIZE);
@@ -318,7 +318,7 @@ do_preproc_only()
 }
 
 static int
-do_assemble()
+do_assemble(void)
 {
     yasm_object *object;
     const char *base_filename;
