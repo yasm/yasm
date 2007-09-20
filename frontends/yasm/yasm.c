@@ -505,7 +505,6 @@ do_assemble(void)
 int
 main(int argc, char *argv[])
 {
-    /*@null@*/ FILE *in = NULL;
     size_t i;
 
     errfile = stderr;
@@ -630,7 +629,7 @@ main(int argc, char *argv[])
 
     /* handle preproc-only case here */
     if (preproc_only)
-        return do_preproc_only(in);
+        return do_preproc_only();
 
     /* If list file enabled, make sure we have a list format loaded. */
     if (list_filename) {
@@ -655,7 +654,7 @@ main(int argc, char *argv[])
         }
     }
 
-    return do_assemble(in);
+    return do_assemble();
 }
 /*@=globstate =unrecog@*/
 
