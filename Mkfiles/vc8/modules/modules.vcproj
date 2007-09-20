@@ -565,6 +565,14 @@
 						>
 					</File>
 				</Filter>
+				<Filter
+					Name="cpp"
+					>
+					<File
+						RelativePath="..\..\..\modules\preprocs\cpp\cpp-preproc.c"
+						>
+					</File>
+				</Filter>
 			</Filter>
 			<Filter
 				Name="listfmts"

@@ -310,6 +310,13 @@
 						RelativePath="..\..\..\modules\preprocs\raw\raw-preproc.c">
 					</File>
 				</Filter>
+				<Filter
+					Name="cpp"
+					Filter="">
+					<File
+						RelativePath="..\..\..\modules\preprocs\cpp\cpp-preproc.c">
+					</File>
+				</Filter>
 			</Filter>
 			<Filter
 				Name="listfmts"
