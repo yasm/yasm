@@ -1178,10 +1178,13 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                                 yasm_x86__ea_set_disponly(insn->x86_ea);
                             else if (id_insn->default_rel &&
                                      !op->data.ea->not_pc_rel &&
-                                     op->data.ea->segreg == 0 &&
+                                     op->data.ea->segreg != 0x6404 &&
+                                     op->data.ea->segreg != 0x6505 &&
                                      !yasm_expr__contains(
                                         op->data.ea->disp.abs, YASM_EXPR_REG))
-                                /* Enable default PC-rel if no regs/segregs */
+                                /* Enable default PC-rel if no regs and segreg
+                                 * is not FS or GS.
+                                 */
                                 insn->x86_ea->ea.pc_rel = 1;
                             break;
                         case YASM_INSN__OPERAND_IMM:

@@ -755,11 +755,8 @@ parse_memaddr(yasm_parser_nasm *parser_nasm)
             }
             get_next_token();
             ea = parse_memaddr(parser_nasm);
-            if (ea) {
+            if (ea)
                 yasm_ea_set_segreg(ea, segreg);
-                ea->pc_rel = 0;
-                ea->not_pc_rel = 1;
-            }
             return ea;
         }
         case SIZE_OVERRIDE:

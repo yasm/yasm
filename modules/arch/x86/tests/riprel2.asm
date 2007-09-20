@@ -69,7 +69,7 @@
 	mov rax,[abs dword foo]
 	mov rax,[abs qword foo]
 
-	; all of these are abs due to es:, except for explicit rel
+	; all of these are default rel, except for 64-bit displacements
 	mov rax,[es:foo]
 	mov rax,[qword es:123456789abcdef0h]
 	mov rbx,[es:foo]
