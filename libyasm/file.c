@@ -39,7 +39,7 @@
 #include "errwarn.h"
 #include "file.h"
 
-#define BSIZE	8192	    /* Fill block size */
+#define BSIZE   8192        /* Fill block size */
 
 
 void
@@ -58,48 +58,48 @@ void
 yasm_scanner_delete(yasm_scanner *s)
 {
     if (s->bot) {
-	yasm_xfree(s->bot);
-	s->bot = NULL;
+        yasm_xfree(s->bot);
+        s->bot = NULL;
     }
 }
 
 int
 yasm_fill_helper(yasm_scanner *s, unsigned char **cursor,
-		 size_t (*input_func) (void *d, unsigned char *buf,
-				       size_t max),
-		 void *input_func_data)
+                 size_t (*input_func) (void *d, unsigned char *buf,
+                                       size_t max),
+                 void *input_func_data)
 {
     size_t cnt;
     int first = 0;
 
     if (s->eof)
-	return 0;
+        return 0;
 
     cnt = s->tok - s->bot;
     if (cnt > 0) {
-	memmove(s->bot, s->tok, (size_t)(s->lim - s->tok));
-	s->tok = s->bot;
-	s->ptr -= cnt;
-	*cursor -= cnt;
-	s->lim -= cnt;
+        memmove(s->bot, s->tok, (size_t)(s->lim - s->tok));
+        s->tok = s->bot;
+        s->ptr -= cnt;
+        *cursor -= cnt;
+        s->lim -= cnt;
     }
     if (!s->bot)
-	first = 1;
+        first = 1;
     if ((s->top - s->lim) < BSIZE) {
-	unsigned char *buf = yasm_xmalloc((size_t)(s->lim - s->bot) + BSIZE);
-	memcpy(buf, s->tok, (size_t)(s->lim - s->tok));
-	s->tok = buf;
-	s->ptr = &buf[s->ptr - s->bot];
-	*cursor = &buf[*cursor - s->bot];
-	s->lim = &buf[s->lim - s->bot];
-	s->top = &s->lim[BSIZE];
-	if (s->bot)
-	    yasm_xfree(s->bot);
-	s->bot = buf;
+        unsigned char *buf = yasm_xmalloc((size_t)(s->lim - s->bot) + BSIZE);
+        memcpy(buf, s->tok, (size_t)(s->lim - s->tok));
+        s->tok = buf;
+        s->ptr = &buf[s->ptr - s->bot];
+        *cursor = &buf[*cursor - s->bot];
+        s->lim = &buf[s->lim - s->bot];
+        s->top = &s->lim[BSIZE];
+        if (s->bot)
+            yasm_xfree(s->bot);
+        s->bot = buf;
     }
     if ((cnt = input_func(input_func_data, s->lim, BSIZE)) == 0) {
-	s->eof = &s->lim[cnt];
-	*s->eof++ = '\n';
+        s->eof = &s->lim[cnt];
+        *s->eof++ = '\n';
     }
     s->lim += cnt;
     return first;
@@ -113,59 +113,59 @@ yasm_unescape_cstring(unsigned char *str, size_t *len)
     unsigned char t[4];
 
     while ((size_t)(s-str)<*len) {
-	if (*s == '\\' && (size_t)(&s[1]-str)<*len) {
-	    s++;
-	    switch (*s) {
-		case 'b': *o = '\b'; s++; break;
-		case 'f': *o = '\f'; s++; break;
-		case 'n': *o = '\n'; s++; break;
-		case 'r': *o = '\r'; s++; break;
-		case 't': *o = '\t'; s++; break;
-		case 'x':
-		    /* hex escape; grab last two digits */
-		    s++;
-		    while ((size_t)(&s[2]-str)<*len && isxdigit(s[0])
-			   && isxdigit(s[1]) && isxdigit(s[2]))
-			s++;
-		    if ((size_t)(s-str)<*len && isxdigit(*s)) {
-			t[0] = *s++;
-			t[1] = '\0';
-			t[2] = '\0';
-			if ((size_t)(s-str)<*len && isxdigit(*s))
-			    t[1] = *s++;
-			*o = (unsigned char)strtoul((char *)t, NULL, 16);
-		    } else
-			*o = '\0';
-		    break;
-		default:
-		    if (isdigit(*s)) {
-			int warn = 0;
-			/* octal escape */
-			if (*s > '7')
-			    warn = 1;
-			*o = *s++ - '0';
-			if ((size_t)(s-str)<*len && isdigit(*s)) {
-			    if (*s > '7')
-				warn = 1;
-			    *o <<= 3;
-			    *o += *s++ - '0';
-			    if ((size_t)(s-str)<*len && isdigit(*s)) {
-				if (*s > '7')
-				    warn = 1;
-				*o <<= 3;
-				*o += *s++ - '0';
-			    }
-			}
-			if (warn)
-			    yasm_warn_set(YASM_WARN_GENERAL,
-					  N_("octal value out of range"));
-		    } else
-			*o = *s++;
-		    break;
-	    }
-	    o++;
-	} else
-	    *o++ = *s++;
+        if (*s == '\\' && (size_t)(&s[1]-str)<*len) {
+            s++;
+            switch (*s) {
+                case 'b': *o = '\b'; s++; break;
+                case 'f': *o = '\f'; s++; break;
+                case 'n': *o = '\n'; s++; break;
+                case 'r': *o = '\r'; s++; break;
+                case 't': *o = '\t'; s++; break;
+                case 'x':
+                    /* hex escape; grab last two digits */
+                    s++;
+                    while ((size_t)(&s[2]-str)<*len && isxdigit(s[0])
+                           && isxdigit(s[1]) && isxdigit(s[2]))
+                        s++;
+                    if ((size_t)(s-str)<*len && isxdigit(*s)) {
+                        t[0] = *s++;
+                        t[1] = '\0';
+                        t[2] = '\0';
+                        if ((size_t)(s-str)<*len && isxdigit(*s))
+                            t[1] = *s++;
+                        *o = (unsigned char)strtoul((char *)t, NULL, 16);
+                    } else
+                        *o = '\0';
+                    break;
+                default:
+                    if (isdigit(*s)) {
+                        int warn = 0;
+                        /* octal escape */
+                        if (*s > '7')
+                            warn = 1;
+                        *o = *s++ - '0';
+                        if ((size_t)(s-str)<*len && isdigit(*s)) {
+                            if (*s > '7')
+                                warn = 1;
+                            *o <<= 3;
+                            *o += *s++ - '0';
+                            if ((size_t)(s-str)<*len && isdigit(*s)) {
+                                if (*s > '7')
+                                    warn = 1;
+                                *o <<= 3;
+                                *o += *s++ - '0';
+                            }
+                        }
+                        if (warn)
+                            yasm_warn_set(YASM_WARN_GENERAL,
+                                          N_("octal value out of range"));
+                    } else
+                        *o = *s++;
+                    break;
+            }
+            o++;
+        } else
+            *o++ = *s++;
     }
     *len = o-str;
 }
@@ -176,18 +176,18 @@ yasm__splitpath_unix(const char *path, /*@out@*/ const char **tail)
     const char *s;
     s = strrchr(path, '/');
     if (!s) {
-	/* No head */
-	*tail = path;
-	return 0;
+        /* No head */
+        *tail = path;
+        return 0;
     }
     *tail = s+1;
     /* Strip trailing ./ on path */
     while ((s-1)>=path && *(s-1) == '.' && *s == '/'
-	   && !((s-2)>=path && *(s-2) == '.'))
-	s -= 2;
+           && !((s-2)>=path && *(s-2) == '.'))
+        s -= 2;
     /* Strip trailing slashes on path (except leading) */
     while (s>path && *s == '/')
-	s--;
+        s--;
     /* Return length of head */
     return s-path+1;
 }
@@ -200,28 +200,28 @@ yasm__splitpath_win(const char *path, /*@out@*/ const char **tail)
 
     /* split off drive letter first, if any */
     if (isalpha(path[0]) && path[1] == ':')
-	basepath += 2;
+        basepath += 2;
 
     s = basepath;
     while (*s != '\0')
-	s++;
+        s++;
     while (s >= basepath && *s != '\\' && *s != '/')
-	s--;
+        s--;
     if (s < basepath) {
-	*tail = basepath;
-	if (path == basepath)
-	    return 0;	/* No head */
-	else
-	    return 2;	/* Drive letter is head */
+        *tail = basepath;
+        if (path == basepath)
+            return 0;   /* No head */
+        else
+            return 2;   /* Drive letter is head */
     }
     *tail = s+1;
     /* Strip trailing .\ or ./ on path */
     while ((s-1)>=basepath && *(s-1) == '.' && (*s == '/' || *s == '\\')
-	   && !((s-2)>=basepath && *(s-2) == '.'))
-	s -= 2;
+           && !((s-2)>=basepath && *(s-2) == '.'))
+        s -= 2;
     /* Strip trailing slashes on path (except leading) */
     while (s>basepath && (*s == '/' || *s == '\\'))
-	s--;
+        s--;
     /* Return length of head */
     return s-path+1;
 }
@@ -264,9 +264,9 @@ yasm__abspath_win(const char *path)
     /* Replace all / with \ */
     ch = abspath;
     while (*ch) {
-	if (*ch == '/')
-	    *ch = '\\';
-	ch++;
+        if (*ch == '/')
+            *ch = '\\';
+        ch++;
     }
 
     return abspath;
@@ -280,34 +280,34 @@ yasm__combpath_unix(const char *from, const char *to)
     char *out;
 
     if (to[0] == '/') {
-	/* absolute "to" */
-	out = yasm_xmalloc(strlen(to)+1);
-	/* Combine any double slashes when copying */
-	for (j=0; *to; to++) {
-	    if (*to == '/' && *(to+1) == '/')
-		continue;
-	    out[j++] = *to;
-	}
-	out[j++] = '\0';
-	return out;
+        /* absolute "to" */
+        out = yasm_xmalloc(strlen(to)+1);
+        /* Combine any double slashes when copying */
+        for (j=0; *to; to++) {
+            if (*to == '/' && *(to+1) == '/')
+                continue;
+            out[j++] = *to;
+        }
+        out[j++] = '\0';
+        return out;
     }
 
     /* Get path component; note this strips trailing slash */
     pathlen = yasm__splitpath_unix(from, &tail);
 
-    out = yasm_xmalloc(pathlen+strlen(to)+2);	/* worst case maximum len */
+    out = yasm_xmalloc(pathlen+strlen(to)+2);   /* worst case maximum len */
 
     /* Combine any double slashes when copying */
     for (i=0, j=0; i<pathlen; i++) {
-	if (i<pathlen-1 && from[i] == '/' && from[i+1] == '/')
-	    continue;
-	out[j++] = from[i];
+        if (i<pathlen-1 && from[i] == '/' && from[i+1] == '/')
+            continue;
+        out[j++] = from[i];
     }
     pathlen = j;
 
     /* Add trailing slash back in */
     if (pathlen > 0 && out[pathlen-1] != '/')
-	out[pathlen++] = '/';
+        out[pathlen++] = '/';
 
     /* Now scan from left to right through "to", stripping off "." and "..";
      * if we see "..", back up one directory in out unless last directory in
@@ -318,39 +318,39 @@ yasm__combpath_unix(const char *from, const char *to)
      * the same as "foo").
      */
     for (;;) {
-	if (to[0] == '.' && to[1] == '/') {
-	    to += 2;	    /* current directory */
-	    while (*to == '/')
-		to++;		/* strip off any additional slashes */
-	} else if (pathlen == 0)
-	    break;	    /* no more "from" path left, we're done */
-	else if (to[0] == '.' && to[1] == '.' && to[2] == '/') {
-	    if (pathlen >= 3 && out[pathlen-1] == '/' && out[pathlen-2] == '.'
-		&& out[pathlen-3] == '.') {
-		/* can't ".." against a "..", so we're done. */
-		break;
-	    }
+        if (to[0] == '.' && to[1] == '/') {
+            to += 2;        /* current directory */
+            while (*to == '/')
+                to++;           /* strip off any additional slashes */
+        } else if (pathlen == 0)
+            break;          /* no more "from" path left, we're done */
+        else if (to[0] == '.' && to[1] == '.' && to[2] == '/') {
+            if (pathlen >= 3 && out[pathlen-1] == '/' && out[pathlen-2] == '.'
+                && out[pathlen-3] == '.') {
+                /* can't ".." against a "..", so we're done. */
+                break;
+            }
 
-	    to += 3;	/* throw away "../" */
-	    while (*to == '/')
-		to++;		/* strip off any additional slashes */
+            to += 3;    /* throw away "../" */
+            while (*to == '/')
+                to++;           /* strip off any additional slashes */
 
-	    /* and back out last directory in "out" if not already at root */
-	    if (pathlen > 1) {
-		pathlen--;	/* strip off trailing '/' */
-		while (pathlen > 0 && out[pathlen-1] != '/')
-		    pathlen--;
-	    }
-	} else
-	    break;
+            /* and back out last directory in "out" if not already at root */
+            if (pathlen > 1) {
+                pathlen--;      /* strip off trailing '/' */
+                while (pathlen > 0 && out[pathlen-1] != '/')
+                    pathlen--;
+            }
+        } else
+            break;
     }
 
     /* Copy "to" to tail of output, and we're done */
     /* Combine any double slashes when copying */
     for (j=pathlen; *to; to++) {
-	if (*to == '/' && *(to+1) == '/')
-	    continue;
-	out[j++] = *to;
+        if (*to == '/' && *(to+1) == '/')
+            continue;
+        out[j++] = *to;
     }
     out[j++] = '\0';
 
@@ -365,43 +365,43 @@ yasm__combpath_win(const char *from, const char *to)
     char *out;
 
     if ((isalpha(to[0]) && to[1] == ':') || (to[0] == '/' || to[0] == '\\')) {
-	/* absolute or drive letter "to" */
-	out = yasm_xmalloc(strlen(to)+1);
-	/* Combine any double slashes when copying */
-	for (j=0; *to; to++) {
-	    if ((*to == '/' || *to == '\\')
-		&& (*(to+1) == '/' || *(to+1) == '\\'))
-		continue;
-	    if (*to == '/')
-		out[j++] = '\\';
-	    else
-		out[j++] = *to;
-	}
-	out[j++] = '\0';
-	return out;
+        /* absolute or drive letter "to" */
+        out = yasm_xmalloc(strlen(to)+1);
+        /* Combine any double slashes when copying */
+        for (j=0; *to; to++) {
+            if ((*to == '/' || *to == '\\')
+                && (*(to+1) == '/' || *(to+1) == '\\'))
+                continue;
+            if (*to == '/')
+                out[j++] = '\\';
+            else
+                out[j++] = *to;
+        }
+        out[j++] = '\0';
+        return out;
     }
 
     /* Get path component; note this strips trailing slash */
     pathlen = yasm__splitpath_win(from, &tail);
 
-    out = yasm_xmalloc(pathlen+strlen(to)+2);	/* worst case maximum len */
+    out = yasm_xmalloc(pathlen+strlen(to)+2);   /* worst case maximum len */
 
     /* Combine any double slashes when copying */
     for (i=0, j=0; i<pathlen; i++) {
-	if (i<pathlen-1 && (from[i] == '/' || from[i] == '\\')
-	    && (from[i+1] == '/' || from[i+1] == '\\'))
-	    continue;
-	if (from[i] == '/')
-	    out[j++] = '\\';
-	else
-	    out[j++] = from[i];
+        if (i<pathlen-1 && (from[i] == '/' || from[i] == '\\')
+            && (from[i+1] == '/' || from[i+1] == '\\'))
+            continue;
+        if (from[i] == '/')
+            out[j++] = '\\';
+        else
+            out[j++] = from[i];
     }
     pathlen = j;
 
     /* Add trailing slash back in, unless it's only a raw drive letter */
     if (pathlen > 0 && out[pathlen-1] != '\\'
-	&& !(pathlen == 2 && isalpha(out[0]) && out[1] == ':'))
-	out[pathlen++] = '\\';
+        && !(pathlen == 2 && isalpha(out[0]) && out[1] == ':'))
+        out[pathlen++] = '\\';
 
     /* Now scan from left to right through "to", stripping off "." and "..";
      * if we see "..", back up one directory in out unless last directory in
@@ -412,44 +412,44 @@ yasm__combpath_win(const char *from, const char *to)
      * the same as "foo").
      */
     for (;;) {
-	if (to[0] == '.' && (to[1] == '/' || to[1] == '\\')) {
-	    to += 2;	    /* current directory */
-	    while (*to == '/' || *to == '\\')
-		to++;		/* strip off any additional slashes */
-	} else if (pathlen == 0
-		 || (pathlen == 2 && isalpha(out[0]) && out[1] == ':'))
-	    break;	    /* no more "from" path left, we're done */
-	else if (to[0] == '.' && to[1] == '.'
-		 && (to[2] == '/' || to[2] == '\\')) {
-	    if (pathlen >= 3 && out[pathlen-1] == '\\'
-		&& out[pathlen-2] == '.' && out[pathlen-3] == '.') {
-		/* can't ".." against a "..", so we're done. */
-		break;
-	    }
+        if (to[0] == '.' && (to[1] == '/' || to[1] == '\\')) {
+            to += 2;        /* current directory */
+            while (*to == '/' || *to == '\\')
+                to++;           /* strip off any additional slashes */
+        } else if (pathlen == 0
+                 || (pathlen == 2 && isalpha(out[0]) && out[1] == ':'))
+            break;          /* no more "from" path left, we're done */
+        else if (to[0] == '.' && to[1] == '.'
+                 && (to[2] == '/' || to[2] == '\\')) {
+            if (pathlen >= 3 && out[pathlen-1] == '\\'
+                && out[pathlen-2] == '.' && out[pathlen-3] == '.') {
+                /* can't ".." against a "..", so we're done. */
+                break;
+            }
 
-	    to += 3;	/* throw away "../" (or "..\") */
-	    while (*to == '/' || *to == '\\')
-		to++;		/* strip off any additional slashes */
+            to += 3;    /* throw away "../" (or "..\") */
+            while (*to == '/' || *to == '\\')
+                to++;           /* strip off any additional slashes */
 
-	    /* and back out last directory in "out" if not already at root */
-	    if (pathlen > 1) {
-		pathlen--;	/* strip off trailing '/' */
-		while (pathlen > 0 && out[pathlen-1] != '\\')
-		    pathlen--;
-	    }
-	} else
-	    break;
+            /* and back out last directory in "out" if not already at root */
+            if (pathlen > 1) {
+                pathlen--;      /* strip off trailing '/' */
+                while (pathlen > 0 && out[pathlen-1] != '\\')
+                    pathlen--;
+            }
+        } else
+            break;
     }
 
     /* Copy "to" to tail of output, and we're done */
     /* Combine any double slashes when copying */
     for (j=pathlen; *to; to++) {
-	if ((*to == '/' || *to == '\\') && (*(to+1) == '/' || *(to+1) == '\\'))
-	    continue;
-	if (*to == '/')
-	    out[j++] = '\\';
-	else
-	    out[j++] = *to;
+        if ((*to == '/' || *to == '\\') && (*(to+1) == '/' || *(to+1) == '\\'))
+            continue;
+        if (*to == '/')
+            out[j++] = '\\';
+        else
+            out[j++] = *to;
     }
     out[j++] = '\0';
 
@@ -465,7 +465,7 @@ STAILQ_HEAD(, incpath) incpaths = STAILQ_HEAD_INITIALIZER(incpaths);
 
 FILE *
 yasm_fopen_include(const char *iname, const char *from, const char *mode,
-		   char **oname)
+                   char **oname)
 {
     FILE *f;
     char *combine;
@@ -473,33 +473,33 @@ yasm_fopen_include(const char *iname, const char *from, const char *mode,
 
     /* Try directly relative to from first, then each of the include paths */
     if (from) {
-	combine = yasm__combpath(from, iname);
-	f = fopen(combine, mode);
-	if (f) {
-	    if (oname)
-		*oname = combine;
-	    else
-		yasm_xfree(combine);
-	    return f;
-	}
-	yasm_xfree(combine);
+        combine = yasm__combpath(from, iname);
+        f = fopen(combine, mode);
+        if (f) {
+            if (oname)
+                *oname = combine;
+            else
+                yasm_xfree(combine);
+            return f;
+        }
+        yasm_xfree(combine);
     }
 
     STAILQ_FOREACH(np, &incpaths, link) {
-	combine = yasm__combpath(np->path, iname);
-	f = fopen(combine, mode);
-	if (f) {
-	    if (oname)
-		*oname = combine;
-	    else
-		yasm_xfree(combine);
-	    return f;
-	}
-	yasm_xfree(combine);
+        combine = yasm__combpath(np->path, iname);
+        f = fopen(combine, mode);
+        if (f) {
+            if (oname)
+                *oname = combine;
+            else
+                yasm_xfree(combine);
+            return f;
+        }
+        yasm_xfree(combine);
     }
 
     if (oname)
-	*oname = NULL;
+        *oname = NULL;
     return NULL;
 }
 
@@ -510,10 +510,10 @@ yasm_delete_include_paths(void)
 
     n1 = STAILQ_FIRST(&incpaths);
     while (n1) {
-	n2 = STAILQ_NEXT(n1, link);
-	yasm_xfree(n1->path);
-	yasm_xfree(n1);
-	n1 = n2;
+        n2 = STAILQ_NEXT(n1, link);
+        yasm_xfree(n1->path);
+        yasm_xfree(n1);
+        n1 = n2;
     }
     STAILQ_INIT(&incpaths);
 }
@@ -528,8 +528,8 @@ yasm_add_include_path(const char *path)
     memcpy(np->path, path, len+1);
     /* Add trailing slash if it is missing */
     if (path[len-1] != '\\' && path[len-1] != '/') {
-	np->path[len] = '/';
-	np->path[len+1] = '\0';
+        np->path[len] = '/';
+        np->path[len+1] = '\0';
     }
 
     STAILQ_INSERT_TAIL(&incpaths, np, link);
@@ -539,9 +539,9 @@ size_t
 yasm_fwrite_16_l(unsigned short val, FILE *f)
 {
     if (fputc(val & 0xFF, f) == EOF)
-	return 0;
+        return 0;
     if (fputc((val >> 8) & 0xFF, f) == EOF)
-	return 0;
+        return 0;
     return 1;
 }
 
@@ -549,13 +549,13 @@ size_t
 yasm_fwrite_32_l(unsigned long val, FILE *f)
 {
     if (fputc((int)(val & 0xFF), f) == EOF)
-	return 0;
+        return 0;
     if (fputc((int)((val >> 8) & 0xFF), f) == EOF)
-	return 0;
+        return 0;
     if (fputc((int)((val >> 16) & 0xFF), f) == EOF)
-	return 0;
+        return 0;
     if (fputc((int)((val >> 24) & 0xFF), f) == EOF)
-	return 0;
+        return 0;
     return 1;
 }
 
@@ -563,9 +563,9 @@ size_t
 yasm_fwrite_16_b(unsigned short val, FILE *f)
 {
     if (fputc((val >> 8) & 0xFF, f) == EOF)
-	return 0;
+        return 0;
     if (fputc(val & 0xFF, f) == EOF)
-	return 0;
+        return 0;
     return 1;
 }
 
@@ -573,12 +573,12 @@ size_t
 yasm_fwrite_32_b(unsigned long val, FILE *f)
 {
     if (fputc((int)((val >> 24) & 0xFF), f) == EOF)
-	return 0;
+        return 0;
     if (fputc((int)((val >> 16) & 0xFF), f) == EOF)
-	return 0;
+        return 0;
     if (fputc((int)((val >> 8) & 0xFF), f) == EOF)
-	return 0;
+        return 0;
     if (fputc((int)(val & 0xFF), f) == EOF)
-	return 0;
+        return 0;
     return 1;
 }

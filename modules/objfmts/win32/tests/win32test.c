@@ -28,7 +28,7 @@ int main(void) {
     greet();
 
     printf("These pointers should be equal: %p and %p\n",
-	   &greet, textptr);
+           &greet, textptr);
 
     printf("So should these: %p and %p\n", selfptr, &selfptr);
 }

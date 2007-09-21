@@ -52,18 +52,18 @@ typedef struct yasm_parser_module {
     const char *default_preproc_keyword;
 
     /** Parse a source file into an object.
-     * \param object	object to parse into (already created)
-     * \param pp	preprocessor
-     * \param f		initial starting file
-     * \param save_input	nonzero if the parser should save the original
-     *				lines of source into the object's linemap (via
-     *				yasm_linemap_add_data()).
-     * \param errwarns	error/warning set
+     * \param object    object to parse into (already created)
+     * \param pp        preprocessor
+     * \param f         initial starting file
+     * \param save_input        nonzero if the parser should save the original
+     *                          lines of source into the object's linemap (via
+     *                          yasm_linemap_add_data()).
+     * \param errwarns  error/warning set
      * \note Parse errors and warnings are stored into errwarns.
      */
     void (*do_parse)
-	(yasm_object *object, yasm_preproc *pp, FILE *f, int save_input,
-	 yasm_linemap *linemap, yasm_errwarns *errwarns);
+        (yasm_object *object, yasm_preproc *pp, FILE *f, int save_input,
+         yasm_linemap *linemap, yasm_errwarns *errwarns);
 } yasm_parser_module;
 
 #endif

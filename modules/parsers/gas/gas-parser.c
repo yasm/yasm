@@ -38,8 +38,8 @@
 
 static void
 gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
-		    int save_input, yasm_linemap *linemap,
-		    yasm_errwarns *errwarns)
+                    int save_input, yasm_linemap *linemap,
+                    yasm_errwarns *errwarns)
 {
     yasm_parser_gas parser_gas;
 
@@ -79,28 +79,28 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp, FILE *f,
 
     /* Check for ending inside a rept */
     if (parser_gas.rept) {
-	yasm_error_set(YASM_ERROR_SYNTAX, N_("rept without matching endr"));
-	yasm_errwarn_propagate(errwarns, parser_gas.rept->startline);
+        yasm_error_set(YASM_ERROR_SYNTAX, N_("rept without matching endr"));
+        yasm_errwarn_propagate(errwarns, parser_gas.rept->startline);
     }
 
     /* Check for ending inside a comment */
     if (parser_gas.state == COMMENT) {
-	yasm_warn_set(YASM_WARN_GENERAL, N_("end of file in comment"));
-	/* XXX: Minus two to compensate for already having moved past the EOF
-	 * in the linemap.
-	 */
-	yasm_errwarn_propagate(errwarns,
-			       yasm_linemap_get_current(parser_gas.linemap)-2);
+        yasm_warn_set(YASM_WARN_GENERAL, N_("end of file in comment"));
+        /* XXX: Minus two to compensate for already having moved past the EOF
+         * in the linemap.
+         */
+        yasm_errwarn_propagate(errwarns,
+                               yasm_linemap_get_current(parser_gas.linemap)-2);
     }
 
     yasm_scanner_delete(&parser_gas.s);
 
     /* Free locallabel base if necessary */
     if (parser_gas.locallabel_base)
-	yasm_xfree(parser_gas.locallabel_base);
+        yasm_xfree(parser_gas.locallabel_base);
 
     if (parser_gas.dir_file)
-	yasm_xfree(parser_gas.dir_file);
+        yasm_xfree(parser_gas.dir_file);
 
     /* Convert all undefined symbols into extern symbols */
     yasm_symtab_parser_finalize(object->symtab, 1, errwarns);

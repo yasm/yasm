@@ -1,4 +1,4 @@
-/* nasmlib.c	library routines for the Netwide Assembler
+/* nasmlib.c    library routines for the Netwide Assembler
  *
  * The Netwide Assembler is copyright (C) 1996 Simon Tatham and
  * Julian Hall. All rights reserved. The software is
@@ -12,7 +12,7 @@
 
 #include "nasm.h"
 #include "nasmlib.h"
-/*#include "insns.h"*/		/* For MAX_KEYWORD */
+/*#include "insns.h"*/          /* For MAX_KEYWORD */
 
 #define lib_isnumchar(c)   ( isalnum(c) || (c) == '$')
 #define numvalue(c)  ((c)>='a' ? (c)-'a'+10 : (c)>='A' ? (c)-'A'+10 : (c)-'0')
@@ -28,7 +28,7 @@ yasm_intnum *nasm_readnum (char *str, int *error)
 
     *error = FALSE;
 
-    while (isspace(*r)) r++;	       /* find start of number */
+    while (isspace(*r)) r++;           /* find start of number */
 
     /*
      * If the number came from make_tok_num (as a result of an %assign), it
@@ -36,8 +36,8 @@ yasm_intnum *nasm_readnum (char *str, int *error)
      */
     if (*r == '-')
     {
-	r++;
-	sign = 1;
+        r++;
+        sign = 1;
     }
 
     q = r;
@@ -50,17 +50,17 @@ yasm_intnum *nasm_readnum (char *str, int *error)
      * Otherwise, it's ordinary decimal.
      */
     if (*r=='0' && (r[1]=='x' || r[1]=='X'))
-	radix = 16, r += 2;
+        radix = 16, r += 2;
     else if (*r=='$')
-	radix = 16, r++;
+        radix = 16, r++;
     else if (q[-1]=='H' || q[-1]=='h')
-	radix = 16 , q--;
+        radix = 16 , q--;
     else if (q[-1]=='Q' || q[-1]=='q' || q[-1]=='O' || q[-1]=='o')
-	radix = 8 , q--;
+        radix = 8 , q--;
     else if (q[-1]=='B' || q[-1]=='b')
-	radix = 2 , q--;
+        radix = 2 , q--;
     else
-	radix = 10;
+        radix = 10;
 
     /*
      * If this number has been found for us by something other than
@@ -69,46 +69,46 @@ yasm_intnum *nasm_readnum (char *str, int *error)
      * now.
      */
     if (r >= q) {
-	*error = TRUE;
-	return yasm_intnum_create_uint(0);
+        *error = TRUE;
+        return yasm_intnum_create_uint(0);
     }
 
     /* Check for valid number of that radix */
     p = r;
     while (*p && p < q) {
-	if (*p<'0' || (*p>'9' && *p<'A') || (digit = numvalue(*p)) >= radix) 
-	{
-	    *error = TRUE;
-	    return yasm_intnum_create_uint(0);
-	}
-	p++;
+        if (*p<'0' || (*p>'9' && *p<'A') || (digit = numvalue(*p)) >= radix) 
+        {
+            *error = TRUE;
+            return yasm_intnum_create_uint(0);
+        }
+        p++;
     }
 
     /* Use intnum to actually do the conversion */
     save = *q;
     *q = '\0';
     switch (radix) {
-	case 2:
-	    intn = yasm_intnum_create_bin(r);
-	    break;
-	case 8:
-	    intn = yasm_intnum_create_oct(r);
-	    break;
-	case 10:
-	    intn = yasm_intnum_create_dec(r);
-	    break;
-	case 16:
-	    intn = yasm_intnum_create_hex(r);
-	    break;
-	default:
-	    *error = TRUE;
-	    intn = yasm_intnum_create_uint(0);
-	    break;
+        case 2:
+            intn = yasm_intnum_create_bin(r);
+            break;
+        case 8:
+            intn = yasm_intnum_create_oct(r);
+            break;
+        case 10:
+            intn = yasm_intnum_create_dec(r);
+            break;
+        case 16:
+            intn = yasm_intnum_create_hex(r);
+            break;
+        default:
+            *error = TRUE;
+            intn = yasm_intnum_create_uint(0);
+            break;
     }
     *q = save;
 
     if (sign)
-	yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
+        yasm_intnum_calc(intn, YASM_EXPR_NEG, NULL);
     return intn;
 }
 
@@ -158,16 +158,16 @@ int nasm_src_get(long *xline, char **xname)
 {
     if (!file_name || !*xname || strcmp(*xname, file_name)) 
     {
-	nasm_free(*xname);
-	*xname = file_name ? nasm_strdup(file_name) : NULL;
-	*xline = line_number;
-	return -2;
+        nasm_free(*xname);
+        *xname = file_name ? nasm_strdup(file_name) : NULL;
+        *xline = line_number;
+        return -2;
     }
     if (*xline != line_number) 
     {
-	long tmp = line_number - *xline;
-	*xline = line_number;
-	return tmp;
+        long tmp = line_number - *xline;
+        *xline = line_number;
+        return tmp;
     }
     return 0;
 }
@@ -178,10 +178,10 @@ void nasm_quote(char **str)
     char q=(*str)[0];
     char *p;
     if (ln>1 && (*str)[ln-1]==q && (q=='"' || q=='\''))
-	return;
+        return;
     q = '"';
     if (strchr(*str,q))
-	q = '\'';
+        q = '\'';
     p = nasm_malloc(ln+3);
     strcpy(p+1, *str);
     nasm_free(*str);

@@ -41,25 +41,25 @@ void yasm_intnum_initialize(void);
 void yasm_intnum_cleanup(void);
 
 /** Create a new intnum from a decimal string.
- * \param str	    decimal string
+ * \param str       decimal string
  * \return Newly allocated intnum.
  */
 /*@only@*/ yasm_intnum *yasm_intnum_create_dec(char *str);
 
 /** Create a new intnum from a binary string.
- * \param str	    binary string
+ * \param str       binary string
  * \return Newly allocated intnum.
  */
 /*@only@*/ yasm_intnum *yasm_intnum_create_bin(char *str);
 
 /** Create a new intnum from an octal string.
- * \param str	    octal string
+ * \param str       octal string
  * \return Newly allocated intnum.
  */
 /*@only@*/ yasm_intnum *yasm_intnum_create_oct(char *str);
 
 /** Create a new intnum from a hexidecimal string.
- * \param str	    hexidecimal string
+ * \param str       hexidecimal string
  * \return Newly allocated intnum.
  */
 /*@only@*/ yasm_intnum *yasm_intnum_create_hex(char *str);
@@ -67,27 +67,27 @@ void yasm_intnum_cleanup(void);
 /** Convert character constant to integer value, using NASM rules.  NASM syntax
  * supports automatic conversion from strings such as 'abcd' to a 32-bit
  * integer value.  This function performs those conversions.
- * \param str	    character constant string
+ * \param str       character constant string
  * \return Newly allocated intnum.
  */
 /*@only@*/ yasm_intnum *yasm_intnum_create_charconst_nasm(const char *str);
 
 /** Create a new intnum from an unsigned integer value.
- * \param i	    unsigned integer value
+ * \param i         unsigned integer value
  * \return Newly allocated intnum.
  */
 /*@only@*/ yasm_intnum *yasm_intnum_create_uint(unsigned long i);
 
 /** Create a new intnum from an signed integer value.
- * \param i	    signed integer value
+ * \param i         signed integer value
  * \return Newly allocated intnum.
  */
 /*@only@*/ yasm_intnum *yasm_intnum_create_int(long i);
 
 /** Create a new intnum from LEB128-encoded form.
- * \param ptr	pointer to start of LEB128 encoded form
- * \param sign	signed (1) or unsigned (0) LEB128 format
- * \param size	number of bytes read from ptr (output)
+ * \param ptr   pointer to start of LEB128 encoded form
+ * \param sign  signed (1) or unsigned (0) LEB128 format
+ * \param size  number of bytes read from ptr (output)
  * \return Newly allocated intnum.  Number of bytes read returned into
  *         bytes_read parameter.
  */
@@ -96,8 +96,8 @@ void yasm_intnum_cleanup(void);
 
 /** Create a new intnum from a little-endian or big-endian buffer.
  * In little endian, the LSB is in ptr[0].
- * \param ptr	    pointer to start of buffer
- * \param sign	    signed (1) or unsigned (0) source
+ * \param ptr       pointer to start of buffer
+ * \param sign      signed (1) or unsigned (0) source
  * \param srcsize   source buffer size (in bytes)
  * \param bigendian endianness (nonzero=big, zero=little)
  */
@@ -105,63 +105,63 @@ void yasm_intnum_cleanup(void);
     (unsigned char *ptr, int sign, size_t srcsize, int bigendian);
 
 /** Duplicate an intnum.
- * \param intn	intnum
+ * \param intn  intnum
  * \return Newly allocated intnum with the same value as intn.
  */
 /*@only@*/ yasm_intnum *yasm_intnum_copy(const yasm_intnum *intn);
 
 /** Destroy (free allocated memory for) an intnum.
- * \param intn	intnum
+ * \param intn  intnum
  */
 void yasm_intnum_destroy(/*@only@*/ yasm_intnum *intn);
 
 /** Floating point calculation function: acc = acc op operand.
  * \note Not all operations in yasm_expr_op may be supported; unsupported
  *       operations will result in an error.
- * \param acc	    intnum accumulator
- * \param op	    operation
+ * \param acc       intnum accumulator
+ * \param op        operation
  * \param operand   intnum operand
  * \return Nonzero if error occurred.
  */
 int yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand);
 
 /** Zero an intnum.
- * \param intn	    intnum
+ * \param intn      intnum
  */
 void yasm_intnum_zero(yasm_intnum *intn);
 
 /** Set an intnum to an unsigned integer.
- * \param intn	    intnum
- * \param val	    integer value
+ * \param intn      intnum
+ * \param val       integer value
  */
 void yasm_intnum_set_uint(yasm_intnum *intn, unsigned long val);
 
 /** Set an intnum to an signed integer.
- * \param intn	    intnum
- * \param val	    integer value
+ * \param intn      intnum
+ * \param val       integer value
  */
 void yasm_intnum_set_int(yasm_intnum *intn, long val);
 
 /** Simple value check for 0.
- * \param acc	    intnum
+ * \param acc       intnum
  * \return Nonzero if acc==0.
  */
 int yasm_intnum_is_zero(const yasm_intnum *acc);
 
 /** Simple value check for 1.
- * \param acc	    intnum
+ * \param acc       intnum
  * \return Nonzero if acc==1.
  */
 int yasm_intnum_is_pos1(const yasm_intnum *acc);
 
 /** Simple value check for -1.
- * \param acc	    intnum
+ * \param acc       intnum
  * \return Nonzero if acc==-1.
  */
 int yasm_intnum_is_neg1(const yasm_intnum *acc);
 
 /** Simple sign check.
- * \param acc	    intnum
+ * \param acc       intnum
  * \return -1 if negative, 0 if zero, +1 if positive
  */
 int yasm_intnum_sign(const yasm_intnum *acc);
@@ -170,7 +170,7 @@ int yasm_intnum_sign(const yasm_intnum *acc);
  * C format (eg, of unknown endian).
  * \note Parameter intnum is truncated to fit into 32 bits.  Use
  *       intnum_check_size() to check for overflow.
- * \param intn	intnum
+ * \param intn  intnum
  * \return Unsigned 32-bit value of intn.
  */
 unsigned long yasm_intnum_get_uint(const yasm_intnum *intn);
@@ -179,7 +179,7 @@ unsigned long yasm_intnum_get_uint(const yasm_intnum *intn);
  * format (eg, of unknown endian).
  * \note Parameter intnum is truncated to fit into 32 bits.  Use
  *       intnum_check_size() to check for overflow.
- * \param intn	intnum
+ * \param intn  intnum
  * \return Signed 32-bit value of intn.
  */
 long yasm_intnum_get_int(const yasm_intnum *intn);
@@ -188,94 +188,94 @@ long yasm_intnum_get_int(const yasm_intnum *intn);
  * value into the least significant bits of the destination, or may be shifted
  * into more significant bits by the shift parameter.  The destination bits are
  * cleared before being set.  [0] should be the first byte output to the file.
- * \param intn	    intnum
- * \param ptr	    pointer to storage for size bytes of output
+ * \param intn      intnum
+ * \param ptr       pointer to storage for size bytes of output
  * \param destsize  destination size (in bytes)
  * \param valsize   size (in bits)
- * \param shift	    left shift (in bits); may be negative to specify right
- *		    shift (standard warnings include truncation to boundary)
+ * \param shift     left shift (in bits); may be negative to specify right
+ *                  shift (standard warnings include truncation to boundary)
  * \param bigendian endianness (nonzero=big, zero=little)
- * \param warn	    enables standard warnings (value doesn't fit into valsize
- *		    bits): <0=signed warnings, >0=unsigned warnings, 0=no warn
+ * \param warn      enables standard warnings (value doesn't fit into valsize
+ *                  bits): <0=signed warnings, >0=unsigned warnings, 0=no warn
  */
 void yasm_intnum_get_sized(const yasm_intnum *intn, unsigned char *ptr,
-			   size_t destsize, size_t valsize, int shift,
-			   int bigendian, int warn);
+                           size_t destsize, size_t valsize, int shift,
+                           int bigendian, int warn);
 
 /** Check to see if intnum will fit without overflow into size bits.
- * \param intn	    intnum
- * \param size	    number of bits of output space
+ * \param intn      intnum
+ * \param size      number of bits of output space
  * \param rshift    right shift
  * \param rangetype signed/unsigned range selection:
- *		    0 => (0, unsigned max);
- *		    1 => (signed min, signed max);
- *		    2 => (signed min, unsigned max)
+ *                  0 => (0, unsigned max);
+ *                  1 => (signed min, signed max);
+ *                  2 => (signed min, unsigned max)
  * \return Nonzero if intnum will fit.
  */
 int yasm_intnum_check_size(const yasm_intnum *intn, size_t size,
-			   size_t rshift, int rangetype);
+                           size_t rshift, int rangetype);
 
 /** Check to see if intnum will fit into a particular numeric range.
- * \param intn	    intnum
- * \param low	    low end of range (inclusive)
- * \param high	    high end of range (inclusive)
+ * \param intn      intnum
+ * \param low       low end of range (inclusive)
+ * \param high      high end of range (inclusive)
  * \return Nonzero if intnum is within range.
  */
 int yasm_intnum_in_range(const yasm_intnum *intn, long low, long high);
 
 /** Output #yasm_intnum to buffer in LEB128-encoded form.
- * \param intn	    intnum
- * \param ptr	    pointer to storage for output bytes
- * \param sign	    signedness of LEB128 encoding (0=unsigned, 1=signed)
+ * \param intn      intnum
+ * \param ptr       pointer to storage for output bytes
+ * \param sign      signedness of LEB128 encoding (0=unsigned, 1=signed)
  * \return Number of bytes generated.
  */
 unsigned long yasm_intnum_get_leb128(const yasm_intnum *intn,
-				     unsigned char *ptr, int sign);
+                                     unsigned char *ptr, int sign);
 
 /** Calculate number of bytes LEB128-encoded form of #yasm_intnum will take.
- * \param intn	    intnum
- * \param sign	    signedness of LEB128 encoding (0=unsigned, 1=signed)
+ * \param intn      intnum
+ * \param sign      signedness of LEB128 encoding (0=unsigned, 1=signed)
  * \return Number of bytes.
  */
 unsigned long yasm_intnum_size_leb128(const yasm_intnum *intn, int sign);
 
 /** Output integer to buffer in signed LEB128-encoded form.
- * \param v	    integer
- * \param ptr	    pointer to storage for output bytes
+ * \param v         integer
+ * \param ptr       pointer to storage for output bytes
  * \return Number of bytes generated.
  */
 unsigned long yasm_get_sleb128(long v, unsigned char *ptr);
 
 /** Calculate number of bytes signed LEB128-encoded form of integer will take.
- * \param v	    integer
+ * \param v         integer
  * \return Number of bytes.
  */
 unsigned long yasm_size_sleb128(long v);
 
 /** Output integer to buffer in unsigned LEB128-encoded form.
- * \param v	    integer
- * \param ptr	    pointer to storage for output bytes
+ * \param v         integer
+ * \param ptr       pointer to storage for output bytes
  * \return Number of bytes generated.
  */
 unsigned long yasm_get_uleb128(unsigned long v, unsigned char *ptr);
 
 /** Calculate number of bytes unsigned LEB128-encoded form of integer will take.
- * \param v	    integer
+ * \param v         integer
  * \return Number of bytes.
  */
 unsigned long yasm_size_uleb128(unsigned long v);
 
 /** Get an intnum as a signed decimal string.  The returned string will
  * contain a leading '-' if the intnum is negative.
- * \param intn	intnum
+ * \param intn  intnum
  * \return Newly allocated string containing the decimal representation of
  *         the intnum.
  */
 /*@only@*/ char *yasm_intnum_get_str(const yasm_intnum *intn);
 
 /** Print an intnum.  For debugging purposes.
- * \param f	file
- * \param intn	intnum
+ * \param f     file
+ * \param intn  intnum
  */
 void yasm_intnum_print(const yasm_intnum *intn, FILE *f);
 

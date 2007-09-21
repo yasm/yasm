@@ -68,14 +68,14 @@ struct yasm_section {
 
     /*@owned@*/ yasm_expr *start;   /* Starting address of section contents */
 
-    unsigned long align;	/* Section alignment */
+    unsigned long align;        /* Section alignment */
 
-    unsigned long opt_flags;	/* storage for optimizer flags */
+    unsigned long opt_flags;    /* storage for optimizer flags */
 
-    int code;			/* section contains code (instructions) */
-    int res_only;		/* allow only resb family of bytecodes? */
-    int def;			/* "default" section, e.g. not specified by
-				   using section directive */
+    int code;                   /* section contains code (instructions) */
+    int res_only;               /* allow only resb family of bytecodes? */
+    int def;                    /* "default" section, e.g. not specified by
+                                   using section directive */
 
     /* the bytecodes for the section's contents */
     /*@reldef@*/ STAILQ_HEAD(yasm_bytecodehead, yasm_bytecode) bcs;
@@ -99,39 +99,39 @@ typedef struct yasm_directive_wrap {
 
 static void
 dir_extern(yasm_object *object, yasm_valparamhead *valparams,
-	   yasm_valparamhead *objext_valparams, unsigned long line)
+           yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_symrec *sym;
     sym = yasm_symtab_declare(object->symtab, yasm_vp_id(vp), YASM_SYM_EXTERN,
                               line);
     if (objext_valparams) {
-	yasm_valparamhead *vps = yasm_vps_create();
-	*vps = *objext_valparams;   /* structure copy */
-	yasm_vps_initialize(objext_valparams);	/* don't double-free */
-	yasm_symrec_set_objext_valparams(sym, vps);
+        yasm_valparamhead *vps = yasm_vps_create();
+        *vps = *objext_valparams;   /* structure copy */
+        yasm_vps_initialize(objext_valparams);  /* don't double-free */
+        yasm_symrec_set_objext_valparams(sym, vps);
     }
 }
 
 static void
 dir_global(yasm_object *object, yasm_valparamhead *valparams,
-	   yasm_valparamhead *objext_valparams, unsigned long line)
+           yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_symrec *sym;
     sym = yasm_symtab_declare(object->symtab, yasm_vp_id(vp), YASM_SYM_GLOBAL,
                               line);
     if (objext_valparams) {
-	yasm_valparamhead *vps = yasm_vps_create();
-	*vps = *objext_valparams;   /* structure copy */
-	yasm_vps_initialize(objext_valparams);	/* don't double-free */
-	yasm_symrec_set_objext_valparams(sym, vps);
+        yasm_valparamhead *vps = yasm_vps_create();
+        *vps = *objext_valparams;   /* structure copy */
+        yasm_vps_initialize(objext_valparams);  /* don't double-free */
+        yasm_symrec_set_objext_valparams(sym, vps);
     }
 }
 
 static void
 dir_common(yasm_object *object, yasm_valparamhead *valparams,
-	   yasm_valparamhead *objext_valparams, unsigned long line)
+           yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_valparam *vp = yasm_vps_first(valparams);
     yasm_valparam *vp2 = yasm_vps_next(vp);
@@ -139,43 +139,43 @@ dir_common(yasm_object *object, yasm_valparamhead *valparams,
     yasm_symrec *sym;
 
     if (!size) {
-	yasm_error_set(YASM_ERROR_SYNTAX,
-		       N_("no size specified in %s declaration"), "COMMON");
-	return;
+        yasm_error_set(YASM_ERROR_SYNTAX,
+                       N_("no size specified in %s declaration"), "COMMON");
+        return;
     }
     sym = yasm_symtab_declare(object->symtab, yasm_vp_id(vp), YASM_SYM_COMMON,
                               line);
     yasm_symrec_set_common_size(sym, size);
     if (objext_valparams) {
-	yasm_valparamhead *vps = yasm_vps_create();
-	*vps = *objext_valparams;   /* structure copy */
-	yasm_vps_initialize(objext_valparams);	/* don't double-free */
-	yasm_symrec_set_objext_valparams(sym, vps);
+        yasm_valparamhead *vps = yasm_vps_create();
+        *vps = *objext_valparams;   /* structure copy */
+        yasm_vps_initialize(objext_valparams);  /* don't double-free */
+        yasm_symrec_set_objext_valparams(sym, vps);
     }
 }
 
 static void
 dir_section(yasm_object *object, yasm_valparamhead *valparams,
-	    yasm_valparamhead *objext_valparams, unsigned long line)
+            yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_section *new_section =
-	yasm_objfmt_section_switch(object, valparams, objext_valparams, line);
+        yasm_objfmt_section_switch(object, valparams, objext_valparams, line);
     if (new_section)
-	object->cur_section = new_section;
+        object->cur_section = new_section;
     else
-	yasm_error_set(YASM_ERROR_SYNTAX,
-		       N_("invalid argument to directive `%s'"), "SECTION");
+        yasm_error_set(YASM_ERROR_SYNTAX,
+                       N_("invalid argument to directive `%s'"), "SECTION");
 }
 
 static const yasm_directive object_directives[] = {
-    { ".extern",	"gas",	dir_extern,	YASM_DIR_ID_REQUIRED },
-    { ".global",	"gas",	dir_global,	YASM_DIR_ID_REQUIRED },
-    { ".globl",		"gas",	dir_global,	YASM_DIR_ID_REQUIRED },
-    { "extern",		"nasm",	dir_extern,	YASM_DIR_ID_REQUIRED },
-    { "global",		"nasm",	dir_global,	YASM_DIR_ID_REQUIRED },
-    { "common",		"nasm",	dir_common,	YASM_DIR_ID_REQUIRED },
-    { "section",	"nasm",	dir_section,	YASM_DIR_ARG_REQUIRED },
-    { "segment",	"nasm",	dir_section,	YASM_DIR_ARG_REQUIRED },
+    { ".extern",        "gas",  dir_extern,     YASM_DIR_ID_REQUIRED },
+    { ".global",        "gas",  dir_global,     YASM_DIR_ID_REQUIRED },
+    { ".globl",         "gas",  dir_global,     YASM_DIR_ID_REQUIRED },
+    { "extern",         "nasm", dir_extern,     YASM_DIR_ID_REQUIRED },
+    { "global",         "nasm", dir_global,     YASM_DIR_ID_REQUIRED },
+    { "common",         "nasm", dir_common,     YASM_DIR_ID_REQUIRED },
+    { "section",        "nasm", dir_section,    YASM_DIR_ARG_REQUIRED },
+    { "segment",        "nasm", dir_section,    YASM_DIR_ARG_REQUIRED },
     { NULL, NULL, NULL, 0 }
 };
 
@@ -195,33 +195,33 @@ static void
 directives_add(yasm_object *object, /*@null@*/ const yasm_directive *dir)
 {
     if (!dir)
-	return;
+        return;
 
     while (dir->name) {
-	HAMT *level2 = HAMT_search(object->directives, dir->parser);
-	int replace;
-	yasm_directive_wrap *wrap = yasm_xmalloc(sizeof(yasm_directive_wrap));
+        HAMT *level2 = HAMT_search(object->directives, dir->parser);
+        int replace;
+        yasm_directive_wrap *wrap = yasm_xmalloc(sizeof(yasm_directive_wrap));
 
-	if (!level2) {
-	    replace = 0;
-	    level2 = HAMT_insert(object->directives, dir->parser,
-				 HAMT_create(1, yasm_internal_error_),
-				 &replace, directive_level1_delete);
-	}
-	replace = 0;
-	wrap->directive = dir;
-	HAMT_insert(level2, dir->name, wrap, &replace,
-		    directive_level2_delete);
-	dir++;
+        if (!level2) {
+            replace = 0;
+            level2 = HAMT_insert(object->directives, dir->parser,
+                                 HAMT_create(1, yasm_internal_error_),
+                                 &replace, directive_level1_delete);
+        }
+        replace = 0;
+        wrap->directive = dir;
+        HAMT_insert(level2, dir->name, wrap, &replace,
+                    directive_level2_delete);
+        dir++;
     }
 }
 
 /*@-compdestroy@*/
 yasm_object *
 yasm_object_create(const char *src_filename, const char *obj_filename,
-		   /*@kept@*/ yasm_arch *arch,
-		   const yasm_objfmt_module *objfmt_module,
-		   const yasm_dbgfmt_module *dbgfmt_module)
+                   /*@kept@*/ yasm_arch *arch,
+                   const yasm_objfmt_module *objfmt_module,
+                   const yasm_dbgfmt_module *dbgfmt_module)
 {
     yasm_object *object = yasm_xmalloc(sizeof(yasm_object));
     int matched, i;
@@ -247,11 +247,11 @@ yasm_object_create(const char *src_filename, const char *obj_filename,
     /* Initialize the object format */
     object->objfmt = yasm_objfmt_create(objfmt_module, object);
     if (!object->objfmt) {
-	yasm_error_set(YASM_ERROR_GENERAL,
-	    N_("object format `%s' does not support architecture `%s' machine `%s'"),
-	    objfmt_module->keyword, ((yasm_arch_base *)arch)->module->keyword,
-	    yasm_arch_get_machine(arch));
-	goto error;
+        yasm_error_set(YASM_ERROR_GENERAL,
+            N_("object format `%s' does not support architecture `%s' machine `%s'"),
+            objfmt_module->keyword, ((yasm_arch_base *)arch)->module->keyword,
+            yasm_arch_get_machine(arch));
+        goto error;
     }
 
     /* Get a fresh copy of objfmt_module as it may have changed. */
@@ -265,32 +265,32 @@ yasm_object_create(const char *src_filename, const char *obj_filename,
      */
     matched = 0;
     for (i=0; objfmt_module->dbgfmt_keywords[i]; i++)
-	if (yasm__strcasecmp(objfmt_module->dbgfmt_keywords[i],
-			     dbgfmt_module->keyword) == 0)
-	    matched = 1;
+        if (yasm__strcasecmp(objfmt_module->dbgfmt_keywords[i],
+                             dbgfmt_module->keyword) == 0)
+            matched = 1;
     if (!matched) {
-	yasm_error_set(YASM_ERROR_GENERAL,
-	    N_("`%s' is not a valid debug format for object format `%s'"),
-	    dbgfmt_module->keyword, objfmt_module->keyword);
-	goto error;
+        yasm_error_set(YASM_ERROR_GENERAL,
+            N_("`%s' is not a valid debug format for object format `%s'"),
+            dbgfmt_module->keyword, objfmt_module->keyword);
+        goto error;
     }
 
     /* Initialize the debug format */
     object->dbgfmt = yasm_dbgfmt_create(dbgfmt_module, object);
     if (!object->dbgfmt) {
-	yasm_error_set(YASM_ERROR_GENERAL,
-	    N_("debug format `%s' does not work with object format `%s'"),
-	    dbgfmt_module->keyword, objfmt_module->keyword);
-	goto error;
+        yasm_error_set(YASM_ERROR_GENERAL,
+            N_("debug format `%s' does not work with object format `%s'"),
+            dbgfmt_module->keyword, objfmt_module->keyword);
+        goto error;
     }
 
     /* Add directives to HAMT.  Note ordering here determines priority. */
     directives_add(object,
-		   ((yasm_objfmt_base *)object->objfmt)->module->directives);
+                   ((yasm_objfmt_base *)object->objfmt)->module->directives);
     directives_add(object,
-		   ((yasm_dbgfmt_base *)object->dbgfmt)->module->directives);
+                   ((yasm_dbgfmt_base *)object->dbgfmt)->module->directives);
     directives_add(object,
-		   ((yasm_arch_base *)object->arch)->module->directives);
+                   ((yasm_arch_base *)object->arch)->module->directives);
     directives_add(object, object_directives);
 
     return object;
@@ -304,8 +304,8 @@ error:
 /*@-onlytrans@*/
 yasm_section *
 yasm_object_get_general(yasm_object *object, const char *name,
-			yasm_expr *start, unsigned long align, int code,
-			int res_only, int *isnew, unsigned long line)
+                        yasm_expr *start, unsigned long align, int code,
+                        int res_only, int *isnew, unsigned long line)
 {
     yasm_section *s;
     yasm_bytecode *bc;
@@ -314,10 +314,10 @@ yasm_object_get_general(yasm_object *object, const char *name,
      * that name.
      */
     STAILQ_FOREACH(s, &object->sections, link) {
-	if (strcmp(s->name, name) == 0) {
-	    *isnew = 0;
-	    return s;
-	}
+        if (strcmp(s->name, name) == 0) {
+            *isnew = 0;
+            return s;
+        }
     }
 
     /* No: we have to allocate and create a new one. */
@@ -330,11 +330,11 @@ yasm_object_get_general(yasm_object *object, const char *name,
     s->name = yasm__xstrdup(name);
     s->assoc_data = NULL;
     if (start)
-	s->start = start;
+        s->start = start;
     else
-	s->start =
-	    yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(0)),
-				   line);
+        s->start =
+            yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(0)),
+                                   line);
     s->align = align;
 
     /* Initialize bytecodes with one empty bytecode (acts as "prior" for first
@@ -361,23 +361,23 @@ yasm_object_get_general(yasm_object *object, const char *name,
 
 int
 yasm_object_directive(yasm_object *object, const char *name,
-		      const char *parser, yasm_valparamhead *valparams,
-		      yasm_valparamhead *objext_valparams,
-		      unsigned long line)
+                      const char *parser, yasm_valparamhead *valparams,
+                      yasm_valparamhead *objext_valparams,
+                      unsigned long line)
 {
     HAMT *level2;
     yasm_directive_wrap *wrap;
 
     level2 = HAMT_search(object->directives, parser);
     if (!level2)
-	return 1;
+        return 1;
 
     wrap = HAMT_search(level2, name);
     if (!wrap)
-	return 1;
+        return 1;
 
     yasm_call_directive(wrap->directive, object, valparams, objext_valparams,
-			line);
+                        line);
     return 0;
 }
 
@@ -426,14 +426,14 @@ yasm_section_get_object(const yasm_section *sect)
 
 void *
 yasm_section_get_data(yasm_section *sect,
-		      const yasm_assoc_data_callback *callback)
+                      const yasm_assoc_data_callback *callback)
 {
     return yasm__assoc_data_get(sect->assoc_data, callback);
 }
 
 void
 yasm_section_add_data(yasm_section *sect,
-		      const yasm_assoc_data_callback *callback, void *data)
+                      const yasm_assoc_data_callback *callback, void *data)
 {
     sect->assoc_data = yasm__assoc_data_add(sect->assoc_data, callback, data);
 }
@@ -447,16 +447,16 @@ yasm_object_destroy(yasm_object *object)
      * due to an error in yasm_object_create(), so look out for NULLs.
      */
     if (object->objfmt)
-	yasm_objfmt_destroy(object->objfmt);
+        yasm_objfmt_destroy(object->objfmt);
     if (object->dbgfmt)
-	yasm_dbgfmt_destroy(object->dbgfmt);
+        yasm_dbgfmt_destroy(object->dbgfmt);
 
     /* Delete sections */
     cur = STAILQ_FIRST(&object->sections);
     while (cur) {
-	next = STAILQ_NEXT(cur, link);
-	yasm_section_destroy(cur);
-	cur = next;
+        next = STAILQ_NEXT(cur, link);
+        yasm_section_destroy(cur);
+        cur = next;
     }
 
     /* Delete directives HAMT */
@@ -471,7 +471,7 @@ yasm_object_destroy(yasm_object *object)
 
     /* Delete architecture */
     if (object->arch)
-	yasm_arch_destroy(object->arch);
+        yasm_arch_destroy(object->arch);
 
     yasm_xfree(object);
 }
@@ -487,8 +487,8 @@ yasm_object_print(const yasm_object *object, FILE *f, int indent_level)
 
     /* Print sections and bytecodes */
     STAILQ_FOREACH(cur, &object->sections, link) {
-	fprintf(f, "%*sSection:\n", indent_level, "");
-	yasm_section_print(cur, f, indent_level+1, 1);
+        fprintf(f, "%*sSection:\n", indent_level, "");
+        yasm_section_print(cur, f, indent_level+1, 1);
     }
 }
 
@@ -499,35 +499,35 @@ yasm_object_finalize(yasm_object *object, yasm_errwarns *errwarns)
 
     /* Iterate through sections */
     STAILQ_FOREACH(sect, &object->sections, link) {
-	yasm_bytecode *cur = STAILQ_FIRST(&sect->bcs);
-	yasm_bytecode *prev;
+        yasm_bytecode *cur = STAILQ_FIRST(&sect->bcs);
+        yasm_bytecode *prev;
 
-	/* Skip our locally created empty bytecode first. */
-	prev = cur;
-	cur = STAILQ_NEXT(cur, link);
+        /* Skip our locally created empty bytecode first. */
+        prev = cur;
+        cur = STAILQ_NEXT(cur, link);
 
-	/* Iterate through the remainder, if any. */
-	while (cur) {
-	    /* Finalize */
-	    yasm_bc_finalize(cur, prev);
-	    yasm_errwarn_propagate(errwarns, cur->line);
-	    prev = cur;
-	    cur = STAILQ_NEXT(cur, link);
-	}
+        /* Iterate through the remainder, if any. */
+        while (cur) {
+            /* Finalize */
+            yasm_bc_finalize(cur, prev);
+            yasm_errwarn_propagate(errwarns, cur->line);
+            prev = cur;
+            cur = STAILQ_NEXT(cur, link);
+        }
     }
 }
 
 int
 yasm_object_sections_traverse(yasm_object *object, /*@null@*/ void *d,
-			      int (*func) (yasm_section *sect,
-					   /*@null@*/ void *d))
+                              int (*func) (yasm_section *sect,
+                                           /*@null@*/ void *d))
 {
     yasm_section *cur;
 
     STAILQ_FOREACH(cur, &object->sections, link) {
-	int retval = func(cur, d);
-	if (retval != 0)
-	    return retval;
+        int retval = func(cur, d);
+        if (retval != 0)
+            return retval;
     }
     return 0;
 }
@@ -539,8 +539,8 @@ yasm_object_find_general(yasm_object *object, const char *name)
     yasm_section *cur;
 
     STAILQ_FOREACH(cur, &object->sections, link) {
-	if (strcmp(cur->name, name) == 0)
-	    return cur;
+        if (strcmp(cur->name, name) == 0)
+            return cur;
     }
     return NULL;
 }
@@ -548,13 +548,13 @@ yasm_object_find_general(yasm_object *object, const char *name)
 
 void
 yasm_section_add_reloc(yasm_section *sect, yasm_reloc *reloc,
-		       void (*destroy_func) (/*@only@*/ void *reloc))
+                       void (*destroy_func) (/*@only@*/ void *reloc))
 {
     STAILQ_INSERT_TAIL(&sect->relocs, reloc, link);
     if (!destroy_func)
-	yasm_internal_error(N_("NULL destroy function given to add_reloc"));
+        yasm_internal_error(N_("NULL destroy function given to add_reloc"));
     else if (sect->destroy_reloc && destroy_func != sect->destroy_reloc)
-	yasm_internal_error(N_("different destroy function given to add_reloc"));
+        yasm_internal_error(N_("different destroy function given to add_reloc"));
     sect->destroy_reloc = destroy_func;
 }
 
@@ -595,21 +595,21 @@ yasm_bytecode *
 yasm_section_bcs_append(yasm_section *sect, yasm_bytecode *bc)
 {
     if (bc) {
-	if (bc->callback) {
-	    bc->section = sect;	    /* record parent section */
-	    STAILQ_INSERT_TAIL(&sect->bcs, bc, link);
-	    return bc;
-	} else
-	    yasm_xfree(bc);
+        if (bc->callback) {
+            bc->section = sect;     /* record parent section */
+            STAILQ_INSERT_TAIL(&sect->bcs, bc, link);
+            return bc;
+        } else
+            yasm_xfree(bc);
     }
     return (yasm_bytecode *)NULL;
 }
 
 int
 yasm_section_bcs_traverse(yasm_section *sect,
-			  /*@null@*/ yasm_errwarns *errwarns,
-			  /*@null@*/ void *d,
-			  int (*func) (yasm_bytecode *bc, /*@null@*/ void *d))
+                          /*@null@*/ yasm_errwarns *errwarns,
+                          /*@null@*/ void *d,
+                          int (*func) (yasm_bytecode *bc, /*@null@*/ void *d))
 {
     yasm_bytecode *cur = STAILQ_FIRST(&sect->bcs);
 
@@ -618,12 +618,12 @@ yasm_section_bcs_traverse(yasm_section *sect,
 
     /* Iterate through the remainder, if any. */
     while (cur) {
-	int retval = func(cur, d);
-	if (errwarns)
-	    yasm_errwarn_propagate(errwarns, cur->line);
-	if (retval != 0)
-	    return retval;
-	cur = STAILQ_NEXT(cur, link);
+        int retval = func(cur, d);
+        if (errwarns)
+            yasm_errwarn_propagate(errwarns, cur->line);
+        if (retval != 0)
+            return retval;
+        cur = STAILQ_NEXT(cur, link);
     }
     return 0;
 }
@@ -636,7 +636,7 @@ yasm_section_get_name(const yasm_section *sect)
 
 void
 yasm_section_set_start(yasm_section *sect, yasm_expr *start,
-		       unsigned long line)
+                       unsigned long line)
 {
     yasm_expr_destroy(sect->start);
     sect->start = start;
@@ -650,7 +650,7 @@ yasm_section_get_start(const yasm_section *sect)
 
 void
 yasm_section_set_align(yasm_section *sect, unsigned long align,
-		       unsigned long line)
+                       unsigned long line)
 {
     sect->align = align;
 }
@@ -668,7 +668,7 @@ yasm_section_destroy(yasm_section *sect)
     yasm_reloc *r_cur, *r_next;
 
     if (!sect)
-	return;
+        return;
 
     yasm_xfree(sect->name);
     yasm__assoc_data_destroy(sect->assoc_data);
@@ -677,18 +677,18 @@ yasm_section_destroy(yasm_section *sect)
     /* Delete bytecodes */
     cur = STAILQ_FIRST(&sect->bcs);
     while (cur) {
-	next = STAILQ_NEXT(cur, link);
-	yasm_bc_destroy(cur);
-	cur = next;
+        next = STAILQ_NEXT(cur, link);
+        yasm_bc_destroy(cur);
+        cur = next;
     }
 
     /* Delete relocations */
     r_cur = STAILQ_FIRST(&sect->relocs);
     while (r_cur) {
-	r_next = STAILQ_NEXT(r_cur, link);
-	yasm_intnum_destroy(r_cur->addr);
-	sect->destroy_reloc(r_cur);
-	r_cur = r_next;
+        r_next = STAILQ_NEXT(r_cur, link);
+        yasm_intnum_destroy(r_cur->addr);
+        sect->destroy_reloc(r_cur);
+        r_cur = r_next;
     }
 
     yasm_xfree(sect);
@@ -696,11 +696,11 @@ yasm_section_destroy(yasm_section *sect)
 
 void
 yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
-		   int print_bcs)
+                   int print_bcs)
 {
     if (!sect) {
-	fprintf(f, "%*s(none)\n", indent_level, "");
-	return;
+        fprintf(f, "%*s(none)\n", indent_level, "");
+        return;
     }
 
     fprintf(f, "%*sname=%s\n", indent_level, "", sect->name);
@@ -709,19 +709,19 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
     fprintf(f, "\n");
 
     if (sect->assoc_data) {
-	fprintf(f, "%*sAssociated data:\n", indent_level, "");
-	yasm__assoc_data_print(sect->assoc_data, f, indent_level+1);
+        fprintf(f, "%*sAssociated data:\n", indent_level, "");
+        yasm__assoc_data_print(sect->assoc_data, f, indent_level+1);
     }
 
     if (print_bcs) {
-	yasm_bytecode *cur;
+        yasm_bytecode *cur;
 
-	fprintf(f, "%*sBytecodes:\n", indent_level, "");
+        fprintf(f, "%*sBytecodes:\n", indent_level, "");
 
-	STAILQ_FOREACH(cur, &sect->bcs, link) {
-	    fprintf(f, "%*sNext Bytecode:\n", indent_level+1, "");
-	    yasm_bc_print(cur, f, indent_level+2);
-	}
+        STAILQ_FOREACH(cur, &sect->bcs, link) {
+            fprintf(f, "%*sNext Bytecode:\n", indent_level+1, "");
+            yasm_bc_print(cur, f, indent_level+2);
+        }
     }
 }
 
@@ -783,10 +783,10 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
  * How times is handled:
  *
  * TIMES: Handled separately from bytecode "raw" size.  If not span-dependent,
- *	trivial (just multiplied in at any bytecode size increase).  Span
- *	dependent times update on any change (span ID 0).  If the resultant
- *	next bytecode offset would be less than the old next bytecode offset,
- *	error.  Otherwise increase offset and update dependent spans.
+ *      trivial (just multiplied in at any bytecode size increase).  Span
+ *      dependent times update on any change (span ID 0).  If the resultant
+ *      next bytecode offset would be less than the old next bytecode offset,
+ *      error.  Otherwise increase offset and update dependent spans.
  *
  * To reduce interval tree size, a first expansion pass is performed
  * before the spans are added to the tree.
@@ -838,14 +838,14 @@ typedef struct yasm_offset_setter {
 
 typedef struct yasm_span_term {
     yasm_bytecode *precbc, *precbc2;
-    yasm_span *span;	    /* span this term is a member of */
+    yasm_span *span;        /* span this term is a member of */
     long cur_val, new_val;
     unsigned int subst;
 } yasm_span_term;
 
 struct yasm_span {
-    /*@reldef@*/ TAILQ_ENTRY(yasm_span) link;	/* for allocation tracking */
-    /*@reldef@*/ STAILQ_ENTRY(yasm_span) linkq;	/* for Q */
+    /*@reldef@*/ TAILQ_ENTRY(yasm_span) link;   /* for allocation tracking */
+    /*@reldef@*/ STAILQ_ENTRY(yasm_span) linkq; /* for Q */
 
     /*@dependent@*/ yasm_bytecode *bc;
 
@@ -882,22 +882,22 @@ typedef struct optimize_data {
     /*@reldef@*/ STAILQ_HEAD(, yasm_span) QA, QB;
     /*@only@*/ IntervalTree *itree;
     /*@reldef@*/ STAILQ_HEAD(, yasm_offset_setter) offset_setters;
-    long len_diff;	/* used only for optimize_term_expand */
-    yasm_span *span;	/* used only for check_cycle */
+    long len_diff;      /* used only for optimize_term_expand */
+    yasm_span *span;    /* used only for check_cycle */
     yasm_offset_setter *os;
 } optimize_data;
 
 static yasm_span *
 create_span(yasm_bytecode *bc, int id, /*@null@*/ const yasm_value *value, 
-	    long neg_thres, long pos_thres, yasm_offset_setter *os)
+            long neg_thres, long pos_thres, yasm_offset_setter *os)
 {
     yasm_span *span = yasm_xmalloc(sizeof(yasm_span));
 
     span->bc = bc;
     if (value)
-	yasm_value_init_copy(&span->depval, value);
+        yasm_value_init_copy(&span->depval, value);
     else
-	yasm_value_initialize(&span->depval, NULL, 0);
+        yasm_value_initialize(&span->depval, NULL, 0);
     span->rel_term = NULL;
     span->terms = NULL;
     span->items = NULL;
@@ -916,7 +916,7 @@ create_span(yasm_bytecode *bc, int id, /*@null@*/ const yasm_value *value,
 
 static void
 optimize_add_span(void *add_span_data, yasm_bytecode *bc, int id,
-		  const yasm_value *value, long neg_thres, long pos_thres)
+                  const yasm_value *value, long neg_thres, long pos_thres)
 {
     optimize_data *optd = (optimize_data *)add_span_data;
     yasm_span *span;
@@ -926,16 +926,16 @@ optimize_add_span(void *add_span_data, yasm_bytecode *bc, int id,
 
 static void
 add_span_term(unsigned int subst, yasm_bytecode *precbc,
-	      yasm_bytecode *precbc2, void *d)
+              yasm_bytecode *precbc2, void *d)
 {
     yasm_span *span = d;
     yasm_intnum *intn;
 
     if (subst >= span->num_terms) {
-	/* Linear expansion since total number is essentially always small */
-	span->num_terms = subst+1;
-	span->terms = yasm_xrealloc(span->terms,
-				    span->num_terms*sizeof(yasm_span_term));
+        /* Linear expansion since total number is essentially always small */
+        span->num_terms = subst+1;
+        span->terms = yasm_xrealloc(span->terms,
+                                    span->num_terms*sizeof(yasm_span_term));
     }
     span->terms[subst].precbc = precbc;
     span->terms[subst].precbc2 = precbc2;
@@ -944,7 +944,7 @@ add_span_term(unsigned int subst, yasm_bytecode *precbc,
 
     intn = yasm_calc_bc_dist(precbc, precbc2);
     if (!intn)
-	yasm_internal_error(N_("could not calculate bc distance"));
+        yasm_internal_error(N_("could not calculate bc distance"));
     span->terms[subst].cur_val = 0;
     span->terms[subst].new_val = yasm_intnum_get_int(intn);
     yasm_intnum_destroy(intn);
@@ -957,50 +957,50 @@ span_create_terms(yasm_span *span)
 
     /* Split out sym-sym terms in absolute portion of dependent value */
     if (span->depval.abs) {
-	span->num_terms = yasm_expr__bc_dist_subst(&span->depval.abs, span,
-						   add_span_term);
-	if (span->num_terms > 0) {
-	    span->items = yasm_xmalloc(span->num_terms*sizeof(yasm_expr__item));
-	    for (i=0; i<span->num_terms; i++) {
-		/* Create items with dummy value */
-		span->items[i].type = YASM_EXPR_INT;
-		span->items[i].data.intn = yasm_intnum_create_int(0);
+        span->num_terms = yasm_expr__bc_dist_subst(&span->depval.abs, span,
+                                                   add_span_term);
+        if (span->num_terms > 0) {
+            span->items = yasm_xmalloc(span->num_terms*sizeof(yasm_expr__item));
+            for (i=0; i<span->num_terms; i++) {
+                /* Create items with dummy value */
+                span->items[i].type = YASM_EXPR_INT;
+                span->items[i].data.intn = yasm_intnum_create_int(0);
 
-		/* Check for circular references */
-		if (span->id <= 0 &&
-		    ((span->bc->bc_index > span->terms[i].precbc->bc_index &&
-		      span->bc->bc_index <= span->terms[i].precbc2->bc_index) ||
-		     (span->bc->bc_index > span->terms[i].precbc2->bc_index &&
-		      span->bc->bc_index <= span->terms[i].precbc->bc_index)))
-		    yasm_error_set(YASM_ERROR_VALUE,
-				   N_("circular reference detected"));
-	    }
-	}
+                /* Check for circular references */
+                if (span->id <= 0 &&
+                    ((span->bc->bc_index > span->terms[i].precbc->bc_index &&
+                      span->bc->bc_index <= span->terms[i].precbc2->bc_index) ||
+                     (span->bc->bc_index > span->terms[i].precbc2->bc_index &&
+                      span->bc->bc_index <= span->terms[i].precbc->bc_index)))
+                    yasm_error_set(YASM_ERROR_VALUE,
+                                   N_("circular reference detected"));
+            }
+        }
     }
 
     /* Create term for relative portion of dependent value */
     if (span->depval.rel) {
-	yasm_bytecode *rel_precbc;
-	int sym_local;
+        yasm_bytecode *rel_precbc;
+        int sym_local;
 
-	sym_local = yasm_symrec_get_label(span->depval.rel, &rel_precbc);
-	if (span->depval.wrt || span->depval.seg_of || span->depval.section_rel
-	    || !sym_local)
-	    return;	/* we can't handle SEG, WRT, or external symbols */
-	if (rel_precbc->section != span->bc->section)
-	    return;	/* not in this section */
-	if (!span->depval.curpos_rel)
-	    return;	/* not PC-relative */
+        sym_local = yasm_symrec_get_label(span->depval.rel, &rel_precbc);
+        if (span->depval.wrt || span->depval.seg_of || span->depval.section_rel
+            || !sym_local)
+            return;     /* we can't handle SEG, WRT, or external symbols */
+        if (rel_precbc->section != span->bc->section)
+            return;     /* not in this section */
+        if (!span->depval.curpos_rel)
+            return;     /* not PC-relative */
 
-	span->rel_term = yasm_xmalloc(sizeof(yasm_span_term));
-	span->rel_term->precbc = NULL;
-	span->rel_term->precbc2 = rel_precbc;
-	span->rel_term->span = span;
-	span->rel_term->subst = ~0U;
+        span->rel_term = yasm_xmalloc(sizeof(yasm_span_term));
+        span->rel_term->precbc = NULL;
+        span->rel_term->precbc2 = rel_precbc;
+        span->rel_term->span = span;
+        span->rel_term->subst = ~0U;
 
-	span->rel_term->cur_val = 0;
-	span->rel_term->new_val = yasm_bc_next_offset(rel_precbc) -
-	    span->bc->offset;
+        span->rel_term->cur_val = 0;
+        span->rel_term->new_val = yasm_bc_next_offset(rel_precbc) -
+            span->bc->offset;
     }
 }
 
@@ -1013,40 +1013,40 @@ recalc_normal_span(yasm_span *span)
     span->new_val = 0;
 
     if (span->depval.abs) {
-	yasm_expr *abs_copy = yasm_expr_copy(span->depval.abs);
-	/*@null@*/ /*@dependent@*/ yasm_intnum *num;
+        yasm_expr *abs_copy = yasm_expr_copy(span->depval.abs);
+        /*@null@*/ /*@dependent@*/ yasm_intnum *num;
 
-	/* Update sym-sym terms and substitute back into expr */
-	unsigned int i;
-	for (i=0; i<span->num_terms; i++)
-	    yasm_intnum_set_int(span->items[i].data.intn,
-				span->terms[i].new_val);
-	yasm_expr__subst(abs_copy, span->num_terms, span->items);
-	num = yasm_expr_get_intnum(&abs_copy, 0);
-	if (num)
-	    span->new_val = yasm_intnum_get_int(num);
-	else
-	    span->new_val = LONG_MAX; /* too complex; force to longest form */
-	yasm_expr_destroy(abs_copy);
+        /* Update sym-sym terms and substitute back into expr */
+        unsigned int i;
+        for (i=0; i<span->num_terms; i++)
+            yasm_intnum_set_int(span->items[i].data.intn,
+                                span->terms[i].new_val);
+        yasm_expr__subst(abs_copy, span->num_terms, span->items);
+        num = yasm_expr_get_intnum(&abs_copy, 0);
+        if (num)
+            span->new_val = yasm_intnum_get_int(num);
+        else
+            span->new_val = LONG_MAX; /* too complex; force to longest form */
+        yasm_expr_destroy(abs_copy);
     }
 
     if (span->rel_term) {
-	if (span->new_val != LONG_MAX && span->rel_term->new_val != LONG_MAX)
-	    span->new_val += span->rel_term->new_val >> span->depval.rshift;
-	else
-	    span->new_val = LONG_MAX;   /* too complex; force to longest form */
+        if (span->new_val != LONG_MAX && span->rel_term->new_val != LONG_MAX)
+            span->new_val += span->rel_term->new_val >> span->depval.rshift;
+        else
+            span->new_val = LONG_MAX;   /* too complex; force to longest form */
     } else if (span->depval.rel)
-	span->new_val = LONG_MAX;   /* too complex; force to longest form */
+        span->new_val = LONG_MAX;   /* too complex; force to longest form */
 
     if (span->new_val == LONG_MAX)
-	span->active = 0;
+        span->active = 0;
 
     /* If id<=0, flag update on any change */
     if (span->id <= 0)
-	return (span->new_val != span->cur_val);
+        return (span->new_val != span->cur_val);
 
     return (span->new_val < span->neg_thres
-	    || span->new_val > span->pos_thres);
+            || span->new_val > span->pos_thres);
 }
 
 /* Updates all bytecode offsets.  For offset-based bytecodes, calls expand
@@ -1059,33 +1059,33 @@ update_all_bc_offsets(yasm_object *object, yasm_errwarns *errwarns)
     int saw_error = 0;
 
     STAILQ_FOREACH(sect, &object->sections, link) {
-	unsigned long offset = 0;
+        unsigned long offset = 0;
 
-	yasm_bytecode *bc = STAILQ_FIRST(&sect->bcs);
-	yasm_bytecode *prevbc;
+        yasm_bytecode *bc = STAILQ_FIRST(&sect->bcs);
+        yasm_bytecode *prevbc;
 
-	/* Skip our locally created empty bytecode first. */
-	prevbc = bc;
-	bc = STAILQ_NEXT(bc, link);
+        /* Skip our locally created empty bytecode first. */
+        prevbc = bc;
+        bc = STAILQ_NEXT(bc, link);
 
-	/* Iterate through the remainder, if any. */
-	while (bc) {
-	    if (bc->callback->special == YASM_BC_SPECIAL_OFFSET) {
-		/* Recalculate/adjust len of offset-based bytecodes here */
-		long neg_thres = 0;
-		long pos_thres = (long)yasm_bc_next_offset(bc);
-		int retval = yasm_bc_expand(bc, 1, 0,
-					    (long)yasm_bc_next_offset(prevbc),
-					    &neg_thres, &pos_thres);
-		yasm_errwarn_propagate(errwarns, bc->line);
-		if (retval < 0)
-		    saw_error = 1;
-	    }
-	    bc->offset = offset;
-	    offset += bc->len*bc->mult_int;
-	    prevbc = bc;
-	    bc = STAILQ_NEXT(bc, link);
-	}
+        /* Iterate through the remainder, if any. */
+        while (bc) {
+            if (bc->callback->special == YASM_BC_SPECIAL_OFFSET) {
+                /* Recalculate/adjust len of offset-based bytecodes here */
+                long neg_thres = 0;
+                long pos_thres = (long)yasm_bc_next_offset(bc);
+                int retval = yasm_bc_expand(bc, 1, 0,
+                                            (long)yasm_bc_next_offset(prevbc),
+                                            &neg_thres, &pos_thres);
+                yasm_errwarn_propagate(errwarns, bc->line);
+                if (retval < 0)
+                    saw_error = 1;
+            }
+            bc->offset = offset;
+            offset += bc->len*bc->mult_int;
+            prevbc = bc;
+            bc = STAILQ_NEXT(bc, link);
+        }
     }
     return saw_error;
 }
@@ -1097,16 +1097,16 @@ span_destroy(/*@only@*/ yasm_span *span)
 
     yasm_value_delete(&span->depval);
     if (span->rel_term)
-	yasm_xfree(span->rel_term);
+        yasm_xfree(span->rel_term);
     if (span->terms)
-	yasm_xfree(span->terms);
+        yasm_xfree(span->terms);
     if (span->items) {
-	for (i=0; i<span->num_terms; i++)
-	    yasm_intnum_destroy(span->items[i].data.intn);
-	yasm_xfree(span->items);
+        for (i=0; i<span->num_terms; i++)
+            yasm_intnum_destroy(span->items[i].data.intn);
+        yasm_xfree(span->items);
     }
     if (span->backtrace)
-	yasm_xfree(span->backtrace);
+        yasm_xfree(span->backtrace);
     yasm_xfree(span);
 }
 
@@ -1120,16 +1120,16 @@ optimize_cleanup(optimize_data *optd)
 
     s1 = TAILQ_FIRST(&optd->spans);
     while (s1) {
-	s2 = TAILQ_NEXT(s1, link);
-	span_destroy(s1);
-	s1 = s2;
+        s2 = TAILQ_NEXT(s1, link);
+        span_destroy(s1);
+        s1 = s2;
     }
 
     os1 = STAILQ_FIRST(&optd->offset_setters);
     while (os1) {
-	os2 = STAILQ_NEXT(os1, link);
-	yasm_xfree(os1);
-	os1 = os2;
+        os2 = STAILQ_NEXT(os1, link);
+        yasm_xfree(os1);
+        os1 = os2;
     }
 }
 
@@ -1141,23 +1141,23 @@ optimize_itree_add(IntervalTree *itree, yasm_span *span, yasm_span_term *term)
 
     /* Update term length */
     if (term->precbc)
-	precbc_index = term->precbc->bc_index;
+        precbc_index = term->precbc->bc_index;
     else
-	precbc_index = span->bc->bc_index-1;
+        precbc_index = span->bc->bc_index-1;
 
     if (term->precbc2)
-	precbc2_index = term->precbc2->bc_index;
+        precbc2_index = term->precbc2->bc_index;
     else
-	precbc2_index = span->bc->bc_index-1;
+        precbc2_index = span->bc->bc_index-1;
 
     if (precbc_index < precbc2_index) {
-	low = precbc_index+1;
-	high = precbc2_index;
+        low = precbc_index+1;
+        high = precbc2_index;
     } else if (precbc_index > precbc2_index) {
-	low = precbc2_index+1;
-	high = precbc_index;
+        low = precbc2_index+1;
+        high = precbc_index;
     } else
-	return;	    /* difference is same bc - always 0! */
+        return;     /* difference is same bc - always 0! */
 
     IT_insert(itree, (long)low, (long)high, term);
 }
@@ -1172,42 +1172,42 @@ check_cycle(IntervalTreeNode *node, void *d)
 
     /* Only check for cycles in id=0 spans */
     if (depspan->id > 0)
-	return;
+        return;
 
     /* Check for a circular reference by looking to see if this dependent
      * span is in our backtrace.
      */
     if (optd->span->backtrace) {
-	yasm_span *s;
-	while ((s = optd->span->backtrace[bt_size])) {
-	    bt_size++;
-	    if (s == depspan)
-		yasm_error_set(YASM_ERROR_VALUE,
-			       N_("circular reference detected"));
-	}
+        yasm_span *s;
+        while ((s = optd->span->backtrace[bt_size])) {
+            bt_size++;
+            if (s == depspan)
+                yasm_error_set(YASM_ERROR_VALUE,
+                               N_("circular reference detected"));
+        }
     }
 
     /* Add our complete backtrace and ourselves to backtrace of dependent
      * span.
      */
     if (!depspan->backtrace) {
-	depspan->backtrace = yasm_xmalloc((bt_size+2)*sizeof(yasm_span *));
-	if (bt_size > 0)
-	    memcpy(depspan->backtrace, optd->span->backtrace,
-		   bt_size*sizeof(yasm_span *));
-	depspan->backtrace[bt_size] = optd->span;
-	depspan->backtrace[bt_size+1] = NULL;
-	return;
+        depspan->backtrace = yasm_xmalloc((bt_size+2)*sizeof(yasm_span *));
+        if (bt_size > 0)
+            memcpy(depspan->backtrace, optd->span->backtrace,
+                   bt_size*sizeof(yasm_span *));
+        depspan->backtrace[bt_size] = optd->span;
+        depspan->backtrace[bt_size+1] = NULL;
+        return;
     }
 
     while (depspan->backtrace[dep_bt_size])
-	dep_bt_size++;
+        dep_bt_size++;
     depspan->backtrace =
-	yasm_xrealloc(depspan->backtrace,
-		      (dep_bt_size+bt_size+2)*sizeof(yasm_span *));
+        yasm_xrealloc(depspan->backtrace,
+                      (dep_bt_size+bt_size+2)*sizeof(yasm_span *));
     if (bt_size > 0)
-	memcpy(&depspan->backtrace[dep_bt_size], optd->span->backtrace,
-	       (bt_size-1)*sizeof(yasm_span *));
+        memcpy(&depspan->backtrace[dep_bt_size], optd->span->backtrace,
+               (bt_size-1)*sizeof(yasm_span *));
     depspan->backtrace[dep_bt_size+bt_size] = optd->span;
     depspan->backtrace[dep_bt_size+bt_size+1] = NULL;
 }
@@ -1223,38 +1223,38 @@ optimize_term_expand(IntervalTreeNode *node, void *d)
 
     /* Don't expand inactive spans */
     if (!span->active)
-	return;
+        return;
 
     /* Update term length */
     if (term->precbc)
-	precbc_index = term->precbc->bc_index;
+        precbc_index = term->precbc->bc_index;
     else
-	precbc_index = span->bc->bc_index-1;
+        precbc_index = span->bc->bc_index-1;
 
     if (term->precbc2)
-	precbc2_index = term->precbc2->bc_index;
+        precbc2_index = term->precbc2->bc_index;
     else
-	precbc2_index = span->bc->bc_index-1;
+        precbc2_index = span->bc->bc_index-1;
 
     if (precbc_index < precbc2_index)
-	term->new_val += len_diff;
+        term->new_val += len_diff;
     else
-	term->new_val -= len_diff;
+        term->new_val -= len_diff;
 
     /* If already on Q, don't re-add */
     if (span->active == 2)
-	return;
+        return;
 
     /* Update term and check against thresholds */
     if (!recalc_normal_span(span))
-	return;	/* didn't exceed thresholds, we're done */
+        return; /* didn't exceed thresholds, we're done */
 
     /* Exceeded thresholds, need to add to Q for expansion */
     if (span->id <= 0)
-	STAILQ_INSERT_TAIL(&optd->QA, span, linkq);
+        STAILQ_INSERT_TAIL(&optd->QA, span, linkq);
     else
-	STAILQ_INSERT_TAIL(&optd->QB, span, linkq);
-    span->active = 2;	    /* Mark as being in Q */
+        STAILQ_INSERT_TAIL(&optd->QB, span, linkq);
+    span->active = 2;       /* Mark as being in Q */
 }
 
 void
@@ -1286,270 +1286,270 @@ yasm_object_optimize(yasm_object *object, yasm_errwarns *errwarns)
 
     /* Step 1a */
     STAILQ_FOREACH(sect, &object->sections, link) {
-	unsigned long offset = 0;
+        unsigned long offset = 0;
 
-	yasm_bytecode *bc = STAILQ_FIRST(&sect->bcs);
-	yasm_bytecode *prevbc;
+        yasm_bytecode *bc = STAILQ_FIRST(&sect->bcs);
+        yasm_bytecode *prevbc;
 
-	bc->bc_index = bc_index++;
+        bc->bc_index = bc_index++;
 
-	/* Skip our locally created empty bytecode first. */
-	prevbc = bc;
-	bc = STAILQ_NEXT(bc, link);
+        /* Skip our locally created empty bytecode first. */
+        prevbc = bc;
+        bc = STAILQ_NEXT(bc, link);
 
-	/* Iterate through the remainder, if any. */
-	while (bc) {
-	    bc->bc_index = bc_index++;
-	    bc->offset = offset;
+        /* Iterate through the remainder, if any. */
+        while (bc) {
+            bc->bc_index = bc_index++;
+            bc->offset = offset;
 
-	    retval = yasm_bc_calc_len(bc, optimize_add_span, &optd);
-	    yasm_errwarn_propagate(errwarns, bc->line);
-	    if (retval)
-		saw_error = 1;
-	    else {
-		if (bc->callback->special == YASM_BC_SPECIAL_OFFSET) {
-		    /* Remember it as offset setter */
-		    os->bc = bc;
-		    os->thres = yasm_bc_next_offset(bc);
+            retval = yasm_bc_calc_len(bc, optimize_add_span, &optd);
+            yasm_errwarn_propagate(errwarns, bc->line);
+            if (retval)
+                saw_error = 1;
+            else {
+                if (bc->callback->special == YASM_BC_SPECIAL_OFFSET) {
+                    /* Remember it as offset setter */
+                    os->bc = bc;
+                    os->thres = yasm_bc_next_offset(bc);
 
-		    /* Create new placeholder */
-		    os = yasm_xmalloc(sizeof(yasm_offset_setter));
-		    os->bc = NULL;
-		    os->cur_val = 0;
-		    os->new_val = 0;
-		    os->thres = 0;
-		    STAILQ_INSERT_TAIL(&optd.offset_setters, os, link);
-		    optd.os = os;
+                    /* Create new placeholder */
+                    os = yasm_xmalloc(sizeof(yasm_offset_setter));
+                    os->bc = NULL;
+                    os->cur_val = 0;
+                    os->new_val = 0;
+                    os->thres = 0;
+                    STAILQ_INSERT_TAIL(&optd.offset_setters, os, link);
+                    optd.os = os;
 
-		    if (bc->multiple) {
-			yasm_error_set(YASM_ERROR_VALUE,
-			    N_("cannot combine multiples and setting assembly position"));
-			yasm_errwarn_propagate(errwarns, bc->line);
-			saw_error = 1;
-		    }
-		}
+                    if (bc->multiple) {
+                        yasm_error_set(YASM_ERROR_VALUE,
+                            N_("cannot combine multiples and setting assembly position"));
+                        yasm_errwarn_propagate(errwarns, bc->line);
+                        saw_error = 1;
+                    }
+                }
 
-		offset += bc->len*bc->mult_int;
-	    }
+                offset += bc->len*bc->mult_int;
+            }
 
-	    prevbc = bc;
-	    bc = STAILQ_NEXT(bc, link);
-	}
+            prevbc = bc;
+            bc = STAILQ_NEXT(bc, link);
+        }
     }
 
     if (saw_error) {
-	optimize_cleanup(&optd);
-	return;
+        optimize_cleanup(&optd);
+        return;
     }
 
     /* Step 1b */
     TAILQ_FOREACH_SAFE(span, &optd.spans, link, span_temp) {
-	span_create_terms(span);
-	if (yasm_error_occurred()) {
-	    yasm_errwarn_propagate(errwarns, span->bc->line);
-	    saw_error = 1;
-	} else if (recalc_normal_span(span)) {
-	    retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
-				    span->new_val, &span->neg_thres,
-				    &span->pos_thres);
-	    yasm_errwarn_propagate(errwarns, span->bc->line);
-	    if (retval < 0)
-		saw_error = 1;
-	    else if (retval > 0) {
-		if (!span->active) {
-		    yasm_error_set(YASM_ERROR_VALUE,
-			N_("secondary expansion of an external/complex value"));
-		    yasm_errwarn_propagate(errwarns, span->bc->line);
-		    saw_error = 1;
-		}
-	    } else {
-		TAILQ_REMOVE(&optd.spans, span, link);
-		span_destroy(span);
-		continue;
-	    }
-	}
-	span->cur_val = span->new_val;
+        span_create_terms(span);
+        if (yasm_error_occurred()) {
+            yasm_errwarn_propagate(errwarns, span->bc->line);
+            saw_error = 1;
+        } else if (recalc_normal_span(span)) {
+            retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
+                                    span->new_val, &span->neg_thres,
+                                    &span->pos_thres);
+            yasm_errwarn_propagate(errwarns, span->bc->line);
+            if (retval < 0)
+                saw_error = 1;
+            else if (retval > 0) {
+                if (!span->active) {
+                    yasm_error_set(YASM_ERROR_VALUE,
+                        N_("secondary expansion of an external/complex value"));
+                    yasm_errwarn_propagate(errwarns, span->bc->line);
+                    saw_error = 1;
+                }
+            } else {
+                TAILQ_REMOVE(&optd.spans, span, link);
+                span_destroy(span);
+                continue;
+            }
+        }
+        span->cur_val = span->new_val;
     }
 
     if (saw_error) {
-	optimize_cleanup(&optd);
-	return;
+        optimize_cleanup(&optd);
+        return;
     }
 
     /* Step 1c */
     if (update_all_bc_offsets(object, errwarns)) {
-	optimize_cleanup(&optd);
-	return;
+        optimize_cleanup(&optd);
+        return;
     }
 
     /* Step 1d */
     STAILQ_INIT(&optd.QB);
     TAILQ_FOREACH(span, &optd.spans, link) {
-	yasm_intnum *intn;
+        yasm_intnum *intn;
 
-	/* Update span terms based on new bc offsets */
-	for (i=0; i<span->num_terms; i++) {
-	    intn = yasm_calc_bc_dist(span->terms[i].precbc,
-				     span->terms[i].precbc2);
-	    if (!intn)
-		yasm_internal_error(N_("could not calculate bc distance"));
-	    span->terms[i].cur_val = span->terms[i].new_val;
-	    span->terms[i].new_val = yasm_intnum_get_int(intn);
-	    yasm_intnum_destroy(intn);
-	}
-	if (span->rel_term) {
-	    span->rel_term->cur_val = span->rel_term->new_val;
-	    if (span->rel_term->precbc2)
-		span->rel_term->new_val =
-		    yasm_bc_next_offset(span->rel_term->precbc2) -
-		    span->bc->offset;
-	    else
-		span->rel_term->new_val = span->bc->offset -
-		    yasm_bc_next_offset(span->rel_term->precbc);
-	}
+        /* Update span terms based on new bc offsets */
+        for (i=0; i<span->num_terms; i++) {
+            intn = yasm_calc_bc_dist(span->terms[i].precbc,
+                                     span->terms[i].precbc2);
+            if (!intn)
+                yasm_internal_error(N_("could not calculate bc distance"));
+            span->terms[i].cur_val = span->terms[i].new_val;
+            span->terms[i].new_val = yasm_intnum_get_int(intn);
+            yasm_intnum_destroy(intn);
+        }
+        if (span->rel_term) {
+            span->rel_term->cur_val = span->rel_term->new_val;
+            if (span->rel_term->precbc2)
+                span->rel_term->new_val =
+                    yasm_bc_next_offset(span->rel_term->precbc2) -
+                    span->bc->offset;
+            else
+                span->rel_term->new_val = span->bc->offset -
+                    yasm_bc_next_offset(span->rel_term->precbc);
+        }
 
-	if (recalc_normal_span(span)) {
-	    /* Exceeded threshold, add span to QB */
-	    STAILQ_INSERT_TAIL(&optd.QB, span, linkq);
-	    span->active = 2;
-	}
+        if (recalc_normal_span(span)) {
+            /* Exceeded threshold, add span to QB */
+            STAILQ_INSERT_TAIL(&optd.QB, span, linkq);
+            span->active = 2;
+        }
     }
 
     /* Do we need step 2?  If not, go ahead and exit. */
     if (STAILQ_EMPTY(&optd.QB)) {
-	optimize_cleanup(&optd);
-	return;
+        optimize_cleanup(&optd);
+        return;
     }
 
     /* Update offset-setters values */
     STAILQ_FOREACH(os, &optd.offset_setters, link) {
-	if (!os->bc)
-	    continue;
-	os->thres = yasm_bc_next_offset(os->bc);
-	os->new_val = os->bc->offset;
-	os->cur_val = os->new_val;
+        if (!os->bc)
+            continue;
+        os->thres = yasm_bc_next_offset(os->bc);
+        os->new_val = os->bc->offset;
+        os->cur_val = os->new_val;
     }
 
     /* Build up interval tree */
     TAILQ_FOREACH(span, &optd.spans, link) {
-	for (i=0; i<span->num_terms; i++)
-	    optimize_itree_add(optd.itree, span, &span->terms[i]);
-	if (span->rel_term)
-	    optimize_itree_add(optd.itree, span, span->rel_term);
+        for (i=0; i<span->num_terms; i++)
+            optimize_itree_add(optd.itree, span, &span->terms[i]);
+        if (span->rel_term)
+            optimize_itree_add(optd.itree, span, span->rel_term);
     }
 
     /* Look for cycles in times expansion (span.id==0) */
     TAILQ_FOREACH(span, &optd.spans, link) {
-	if (span->id > 0)
-	    continue;
-	optd.span = span;
-	IT_enumerate(optd.itree, (long)span->bc->bc_index,
-		     (long)span->bc->bc_index, &optd, check_cycle);
-	if (yasm_error_occurred()) {
-	    yasm_errwarn_propagate(errwarns, span->bc->line);
-	    saw_error = 1;
-	}
+        if (span->id > 0)
+            continue;
+        optd.span = span;
+        IT_enumerate(optd.itree, (long)span->bc->bc_index,
+                     (long)span->bc->bc_index, &optd, check_cycle);
+        if (yasm_error_occurred()) {
+            yasm_errwarn_propagate(errwarns, span->bc->line);
+            saw_error = 1;
+        }
     }
 
     if (saw_error) {
-	optimize_cleanup(&optd);
-	return;
+        optimize_cleanup(&optd);
+        return;
     }
 
     /* Step 2 */
     STAILQ_INIT(&optd.QA);
     while (!STAILQ_EMPTY(&optd.QA) || !(STAILQ_EMPTY(&optd.QB))) {
-	unsigned long orig_len;
-	long offset_diff;
+        unsigned long orig_len;
+        long offset_diff;
 
-	/* QA is for TIMES, update those first, then update non-TIMES.
-	 * This is so that TIMES can absorb increases before we look at
-	 * expanding non-TIMES BCs.
-	 */
-	if (!STAILQ_EMPTY(&optd.QA)) {
-	    span = STAILQ_FIRST(&optd.QA);
-	    STAILQ_REMOVE_HEAD(&optd.QA, linkq);
-	} else {
-	    span = STAILQ_FIRST(&optd.QB);
-	    STAILQ_REMOVE_HEAD(&optd.QB, linkq);
-	}
+        /* QA is for TIMES, update those first, then update non-TIMES.
+         * This is so that TIMES can absorb increases before we look at
+         * expanding non-TIMES BCs.
+         */
+        if (!STAILQ_EMPTY(&optd.QA)) {
+            span = STAILQ_FIRST(&optd.QA);
+            STAILQ_REMOVE_HEAD(&optd.QA, linkq);
+        } else {
+            span = STAILQ_FIRST(&optd.QB);
+            STAILQ_REMOVE_HEAD(&optd.QB, linkq);
+        }
 
-	if (!span->active)
-	    continue;
-	span->active = 1;   /* no longer in Q */
+        if (!span->active)
+            continue;
+        span->active = 1;   /* no longer in Q */
 
-	/* Make sure we ended up ultimately exceeding thresholds; due to
-	 * offset BCs we may have been placed on Q and then reduced in size
-	 * again.
-	 */
-	if (!recalc_normal_span(span))
-	    continue;
+        /* Make sure we ended up ultimately exceeding thresholds; due to
+         * offset BCs we may have been placed on Q and then reduced in size
+         * again.
+         */
+        if (!recalc_normal_span(span))
+            continue;
 
-	orig_len = span->bc->len * span->bc->mult_int;
+        orig_len = span->bc->len * span->bc->mult_int;
 
-	retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
-				span->new_val, &span->neg_thres,
-				&span->pos_thres);
-	yasm_errwarn_propagate(errwarns, span->bc->line);
+        retval = yasm_bc_expand(span->bc, span->id, span->cur_val,
+                                span->new_val, &span->neg_thres,
+                                &span->pos_thres);
+        yasm_errwarn_propagate(errwarns, span->bc->line);
 
-	if (retval < 0) {
-	    /* error */
-	    saw_error = 1;
-	    continue;
-	} else if (retval > 0) {
-	    /* another threshold, keep active */
-	    for (i=0; i<span->num_terms; i++)
-		span->terms[i].cur_val = span->terms[i].new_val;
-	    if (span->rel_term)
-		span->rel_term->cur_val = span->rel_term->new_val;
-	    span->cur_val = span->new_val;
-	} else
-	    span->active = 0;	    /* we're done with this span */
+        if (retval < 0) {
+            /* error */
+            saw_error = 1;
+            continue;
+        } else if (retval > 0) {
+            /* another threshold, keep active */
+            for (i=0; i<span->num_terms; i++)
+                span->terms[i].cur_val = span->terms[i].new_val;
+            if (span->rel_term)
+                span->rel_term->cur_val = span->rel_term->new_val;
+            span->cur_val = span->new_val;
+        } else
+            span->active = 0;       /* we're done with this span */
 
-	optd.len_diff = span->bc->len * span->bc->mult_int - orig_len;
-	if (optd.len_diff == 0)
-	    continue;	/* didn't increase in size */
+        optd.len_diff = span->bc->len * span->bc->mult_int - orig_len;
+        if (optd.len_diff == 0)
+            continue;   /* didn't increase in size */
 
-	/* Iterate over all spans dependent across the bc just expanded */
-	IT_enumerate(optd.itree, (long)span->bc->bc_index,
-		     (long)span->bc->bc_index, &optd, optimize_term_expand);
+        /* Iterate over all spans dependent across the bc just expanded */
+        IT_enumerate(optd.itree, (long)span->bc->bc_index,
+                     (long)span->bc->bc_index, &optd, optimize_term_expand);
 
-	/* Iterate over offset-setters that follow the bc just expanded.
-	 * Stop iteration if:
-	 *  - no more offset-setters in this section
-	 *  - offset-setter didn't move its following offset
-	 */
-	os = span->os;
-	offset_diff = optd.len_diff;
-	while (os->bc && os->bc->section == span->bc->section
-	       && offset_diff != 0) {
-	    unsigned long old_next_offset = os->cur_val + os->bc->len;
-	    long neg_thres_temp;
+        /* Iterate over offset-setters that follow the bc just expanded.
+         * Stop iteration if:
+         *  - no more offset-setters in this section
+         *  - offset-setter didn't move its following offset
+         */
+        os = span->os;
+        offset_diff = optd.len_diff;
+        while (os->bc && os->bc->section == span->bc->section
+               && offset_diff != 0) {
+            unsigned long old_next_offset = os->cur_val + os->bc->len;
+            long neg_thres_temp;
 
-	    if (offset_diff < 0 && (unsigned long)(-offset_diff) > os->new_val)
-		yasm_internal_error(N_("org/align went to negative offset"));
-	    os->new_val += offset_diff;
+            if (offset_diff < 0 && (unsigned long)(-offset_diff) > os->new_val)
+                yasm_internal_error(N_("org/align went to negative offset"));
+            os->new_val += offset_diff;
 
-	    orig_len = os->bc->len;
-	    retval = yasm_bc_expand(os->bc, 1, (long)os->cur_val,
-				    (long)os->new_val, &neg_thres_temp,
-				    (long *)&os->thres);
-	    yasm_errwarn_propagate(errwarns, os->bc->line);
+            orig_len = os->bc->len;
+            retval = yasm_bc_expand(os->bc, 1, (long)os->cur_val,
+                                    (long)os->new_val, &neg_thres_temp,
+                                    (long *)&os->thres);
+            yasm_errwarn_propagate(errwarns, os->bc->line);
 
-	    offset_diff = os->new_val + os->bc->len - old_next_offset;
-	    optd.len_diff = os->bc->len - orig_len;
-	    if (optd.len_diff != 0)
-		IT_enumerate(optd.itree, (long)os->bc->bc_index,
-		     (long)os->bc->bc_index, &optd, optimize_term_expand);
+            offset_diff = os->new_val + os->bc->len - old_next_offset;
+            optd.len_diff = os->bc->len - orig_len;
+            if (optd.len_diff != 0)
+                IT_enumerate(optd.itree, (long)os->bc->bc_index,
+                     (long)os->bc->bc_index, &optd, optimize_term_expand);
 
-	    os->cur_val = os->new_val;
-	    os = STAILQ_NEXT(os, link);
-	}
+            os->cur_val = os->new_val;
+            os = STAILQ_NEXT(os, link);
+        }
     }
 
     if (saw_error) {
-	optimize_cleanup(&optd);
-	return;
+        optimize_cleanup(&optd);
+        return;
     }
 
     /* Step 3 */

@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAXLINE	1024
+#define MAXLINE 1024
 
 int
 main(int argc, char *argv[])
@@ -41,56 +41,56 @@ main(int argc, char *argv[])
     size_t len;
 
     if (argc < 4) {
-	fprintf(stderr, "Usage: %s <string> <outfile> <file> [<file> ...]\n",
-		argv[0]);
-	return EXIT_FAILURE;
+        fprintf(stderr, "Usage: %s <string> <outfile> <file> [<file> ...]\n",
+                argv[0]);
+        return EXIT_FAILURE;
     }
 
     out = fopen(argv[2], "wt");
 
     if (!out) {
-	fprintf(stderr, "Could not open `%s'.\n", argv[2]);
-	return EXIT_FAILURE;
+        fprintf(stderr, "Could not open `%s'.\n", argv[2]);
+        return EXIT_FAILURE;
     }
 
     str = malloc(MAXLINE);
 
     fprintf(out, "/* This file auto-generated from %s by genstring.c"
-		 " - don't edit it */\n\n"
-		 "static const char *%s[] = {\n", argv[3], argv[1]);
+                 " - don't edit it */\n\n"
+                 "static const char *%s[] = {\n", argv[3], argv[1]);
 
     for (i=3; i<argc; i++) {
-	in = fopen(argv[i], "rt");
-	if (!in) {
-	    fprintf(stderr, "Could not open `%s'.\n", argv[i]);
-	    fclose(out);
-	    remove(argv[2]);
-	    return EXIT_FAILURE;
-	}
+        in = fopen(argv[i], "rt");
+        if (!in) {
+            fprintf(stderr, "Could not open `%s'.\n", argv[i]);
+            fclose(out);
+            remove(argv[2]);
+            return EXIT_FAILURE;
+        }
 
-	while (fgets(str, MAXLINE, in)) {
-	    strp = str;
+        while (fgets(str, MAXLINE, in)) {
+            strp = str;
 
-	    /* strip off trailing whitespace */
-	    len = strlen(strp);
-	    while (len > 0 && (strp[len-1] == ' ' || strp[len-1] == '\t' ||
-			       strp[len-1] == '\n')) {
-		strp[len-1] = '\0';
-		len--;
-	    }
+            /* strip off trailing whitespace */
+            len = strlen(strp);
+            while (len > 0 && (strp[len-1] == ' ' || strp[len-1] == '\t' ||
+                               strp[len-1] == '\n')) {
+                strp[len-1] = '\0';
+                len--;
+            }
 
-	    /* output as string to output file */
-	    fprintf(out, "    \"");
-	    while (*strp != '\0') {
-		if (*strp == '\\' || *strp == '"')
-		    fputc('\\', out);
-		fputc(*strp, out);
-		strp++;
-	    }
-	    fprintf(out, "\",\n");
-	}
+            /* output as string to output file */
+            fprintf(out, "    \"");
+            while (*strp != '\0') {
+                if (*strp == '\\' || *strp == '"')
+                    fputc('\\', out);
+                fputc(*strp, out);
+                strp++;
+            }
+            fprintf(out, "\",\n");
+        }
 
-	fclose(in);
+        fclose(in);
     }
 
     fprintf(out, "};\n");

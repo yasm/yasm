@@ -1780,11 +1780,11 @@ BitVector_from_Dec_static_data *BitVector_from_Dec_static_Boot(N_word bits)
         data->rank = BitVector_Create(bits,FALSE);
         data->temp = BitVector_Create(bits,FALSE);
     } else {
-	data->term = NULL;
-	data->base = NULL;
-	data->prod = NULL;
-	data->rank = NULL;
-	data->temp = NULL;
+        data->term = NULL;
+        data->base = NULL;
+        data->prod = NULL;
+        data->rank = NULL;
+        data->temp = NULL;
     }
     return data;
 }
@@ -1802,7 +1802,7 @@ void BitVector_from_Dec_static_Shutdown(BitVector_from_Dec_static_data *data)
 }
 
 ErrCode BitVector_from_Dec_static(BitVector_from_Dec_static_data *data,
-				  wordptr addr, charptr string)
+                                  wordptr addr, charptr string)
 {
     ErrCode error = ErrCode_Ok;
     N_word  bits = bits_(addr);
@@ -1824,11 +1824,11 @@ ErrCode BitVector_from_Dec_static(BitVector_from_Dec_static_data *data,
 
     if (bits > 0)
     {
-	term = data->term;
-	base = data->base;
-	prod = data->prod;
-	rank = data->rank;
-	temp = data->temp;
+        term = data->term;
+        base = data->base;
+        prod = data->prod;
+        rank = data->rank;
+        temp = data->temp;
 
         length = strlen((char *) string);
         if (length == 0) return(ErrCode_Pars);
@@ -1840,10 +1840,10 @@ ErrCode BitVector_from_Dec_static(BitVector_from_Dec_static_data *data,
             if (--length == 0) return(ErrCode_Pars);
         }
         string += length;
-	if (init)
-	{
-	    BitVector_Empty(prod);
-	    BitVector_Empty(rank);
+        if (init)
+        {
+            BitVector_Empty(prod);
+            BitVector_Empty(rank);
         }
         BitVector_Empty(addr);
         *base = EXP10;
@@ -3873,9 +3873,9 @@ void Matrix_Transpose(wordptr X, N_int rowsX, N_int colsX,
 /*  ARTISTIC LICENSE:                                                        */
 /*****************************************************************************/
 /*
-			 The "Artistic License"
+                         The "Artistic License"
 
-				Preamble
+                                Preamble
 
 The intent of this document is to state the conditions under which a
 Package may be copied, such that the Copyright Holder maintains some
@@ -3886,30 +3886,30 @@ reasonable modifications.
 
 Definitions:
 
-	"Package" refers to the collection of files distributed by the
-	Copyright Holder, and derivatives of that collection of files
-	created through textual modification.
+        "Package" refers to the collection of files distributed by the
+        Copyright Holder, and derivatives of that collection of files
+        created through textual modification.
 
-	"Standard Version" refers to such a Package if it has not been
-	modified, or has been modified in accordance with the wishes
-	of the Copyright Holder as specified below.
+        "Standard Version" refers to such a Package if it has not been
+        modified, or has been modified in accordance with the wishes
+        of the Copyright Holder as specified below.
 
-	"Copyright Holder" is whoever is named in the copyright or
-	copyrights for the package.
+        "Copyright Holder" is whoever is named in the copyright or
+        copyrights for the package.
 
-	"You" is you, if you're thinking about copying or distributing
-	this Package.
+        "You" is you, if you're thinking about copying or distributing
+        this Package.
 
-	"Reasonable copying fee" is whatever you can justify on the
-	basis of media cost, duplication charges, time of people involved,
-	and so on.  (You will not be required to justify it to the
-	Copyright Holder, but only to the computing community at large
-	as a market that must bear the fee.)
+        "Reasonable copying fee" is whatever you can justify on the
+        basis of media cost, duplication charges, time of people involved,
+        and so on.  (You will not be required to justify it to the
+        Copyright Holder, but only to the computing community at large
+        as a market that must bear the fee.)
 
-	"Freely Available" means that no fee is charged for the item
-	itself, though there may be fees involved in handling the item.
-	It also means that recipients of the item may redistribute it
-	under the same conditions they received it.
+        "Freely Available" means that no fee is charged for the item
+        itself, though there may be fees involved in handling the item.
+        It also means that recipients of the item may redistribute it
+        under the same conditions they received it.
 
 1. You may make and give away verbatim copies of the source form of the
 Standard Version of this Package without restriction, provided that you
@@ -3999,7 +3999,7 @@ products derived from this software without specific prior written permission.
 IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
 WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 
-				The End
+                                The End
 */
 /*****************************************************************************/
 /*  GNU GENERAL PUBLIC LICENSE:                                              */

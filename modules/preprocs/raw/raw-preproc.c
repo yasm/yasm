@@ -46,7 +46,7 @@ int isatty(int);
 
 static yasm_preproc *
 raw_preproc_create(FILE *f, const char *in_filename, yasm_linemap *lm,
-		   yasm_errwarns *errwarns)
+                   yasm_errwarns *errwarns)
 {
     yasm_preproc_raw *preproc_raw = yasm_xmalloc(sizeof(yasm_preproc_raw));
 
@@ -75,21 +75,21 @@ raw_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
     size_t n;
 
     if (preproc_raw->is_interactive) {
-	for (n = 0; n < max_size && (c = getc(preproc_raw->in)) != EOF &&
-	     c != '\n'; n++)
-	    buf[n] = (char)c;
-	if (c == '\n')
-	    buf[n++] = (char)c;
-	if (c == EOF && ferror(preproc_raw->in)) {
-	    yasm_error_set(YASM_ERROR_IO, N_("error when reading from file"));
-	    yasm_errwarn_propagate(preproc_raw->errwarns,
-				   yasm_linemap_get_current(preproc_raw->cur_lm));
-	}
+        for (n = 0; n < max_size && (c = getc(preproc_raw->in)) != EOF &&
+             c != '\n'; n++)
+            buf[n] = (char)c;
+        if (c == '\n')
+            buf[n++] = (char)c;
+        if (c == EOF && ferror(preproc_raw->in)) {
+            yasm_error_set(YASM_ERROR_IO, N_("error when reading from file"));
+            yasm_errwarn_propagate(preproc_raw->errwarns,
+                                   yasm_linemap_get_current(preproc_raw->cur_lm));
+        }
     } else if (((n = fread(buf, 1, max_size, preproc_raw->in)) == 0) &&
-	       ferror(preproc_raw->in)) {
-	yasm_error_set(YASM_ERROR_IO, N_("error when reading from file"));
-	yasm_errwarn_propagate(preproc_raw->errwarns,
-			       yasm_linemap_get_current(preproc_raw->cur_lm));
+               ferror(preproc_raw->in)) {
+        yasm_error_set(YASM_ERROR_IO, N_("error when reading from file"));
+        yasm_errwarn_propagate(preproc_raw->errwarns,
+                               yasm_linemap_get_current(preproc_raw->cur_lm));
     }
 
     return n;
@@ -97,7 +97,7 @@ raw_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
 
 static size_t
 raw_preproc_get_included_file(yasm_preproc *preproc, char *buf,
-			      size_t max_size)
+                              size_t max_size)
 {
     /* no included files */
     return 0;

@@ -41,27 +41,27 @@
 
 void
 yasm_call_directive(const yasm_directive *directive, yasm_object *object,
-		    yasm_valparamhead *valparams,
-		    yasm_valparamhead *objext_valparams, unsigned long line)
+                    yasm_valparamhead *valparams,
+                    yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_valparam *vp;
 
     if ((directive->flags & (YASM_DIR_ARG_REQUIRED|YASM_DIR_ID_REQUIRED)) &&
-	(!valparams || !yasm_vps_first(valparams))) {
-	yasm_error_set(YASM_ERROR_SYNTAX,
-		       N_("directive `%s' requires an argument"),
-		       directive->name);
-	return;
+        (!valparams || !yasm_vps_first(valparams))) {
+        yasm_error_set(YASM_ERROR_SYNTAX,
+                       N_("directive `%s' requires an argument"),
+                       directive->name);
+        return;
     }
     if (valparams) {
-	vp = yasm_vps_first(valparams);
+        vp = yasm_vps_first(valparams);
         if ((directive->flags & YASM_DIR_ID_REQUIRED) &&
             vp->type != YASM_PARAM_ID) {
-	    yasm_error_set(YASM_ERROR_SYNTAX,
-		N_("directive `%s' requires an identifier parameter"),
-		directive->name);
-	    return;
-	}
+            yasm_error_set(YASM_ERROR_SYNTAX,
+                N_("directive `%s' requires an identifier parameter"),
+                directive->name);
+            return;
+        }
     }
     directive->handler(object, valparams, objext_valparams, line);
 }
@@ -103,15 +103,15 @@ yasm_vp_create_expr(/*@keep@*/ char *v, /*@keep@*/ yasm_expr *p)
 yasm_vp_expr(const yasm_valparam *vp, yasm_symtab *symtab, unsigned long line)
 {
     if (!vp)
-	return NULL;
+        return NULL;
     switch (vp->type) {
         case YASM_PARAM_ID:
-	return yasm_expr_create_ident(yasm_expr_sym(
+            return yasm_expr_create_ident(yasm_expr_sym(
                 yasm_symtab_use(symtab, yasm_vp_id(vp), line)), line);
         case YASM_PARAM_EXPR:
             return yasm_expr_copy(vp->param.e);
         default:
-	return NULL;
+            return NULL;
     }
 }
 
@@ -151,9 +151,9 @@ yasm_vps_delete(yasm_valparamhead *headp)
 
     cur = STAILQ_FIRST(headp);
     while (cur) {
-	next = STAILQ_NEXT(cur, link);
-	if (cur->val)
-	    yasm_xfree(cur->val);
+        next = STAILQ_NEXT(cur, link);
+        if (cur->val)
+            yasm_xfree(cur->val);
         switch (cur->type) {
             case YASM_PARAM_ID:
                 yasm_xfree(cur->param.id);
@@ -165,8 +165,8 @@ yasm_vps_delete(yasm_valparamhead *headp)
                 yasm_expr_destroy(cur->param.e);
                 break;
         }
-	yasm_xfree(cur);
-	cur = next;
+        yasm_xfree(cur);
+        cur = next;
     }
     STAILQ_INIT(headp);
 }
@@ -177,15 +177,15 @@ yasm_vps_print(const yasm_valparamhead *headp, FILE *f)
     const yasm_valparam *vp;
 
     if(!headp) {
-	fprintf(f, "(none)");
-	return;
+        fprintf(f, "(none)");
+        return;
     }
 
     yasm_vps_foreach(vp, headp) {
-	if (vp->val)
-	    fprintf(f, "(\"%s\",", vp->val);
-	else
-	    fprintf(f, "((nil),");
+        if (vp->val)
+            fprintf(f, "(\"%s\",", vp->val);
+        else
+            fprintf(f, "((nil),");
         switch (vp->type) {
             case YASM_PARAM_ID:
                 fprintf(f, "%s", vp->param.id);
@@ -197,9 +197,9 @@ yasm_vps_print(const yasm_valparamhead *headp, FILE *f)
                 yasm_expr_print(vp->param.e, f);
                 break;
         }
-	fprintf(f, ")");
-	if (yasm_vps_next(vp))
-	    fprintf(f, ",");
+        fprintf(f, ")");
+        if (yasm_vps_next(vp))
+            fprintf(f, ",");
     }
 }
 
@@ -224,7 +224,7 @@ void
 yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp)
 {
     if (vp)
-	STAILQ_INSERT_TAIL(headp, vp, link);
+        STAILQ_INSERT_TAIL(headp, vp, link);
 }
 
 /* Non-macro yasm_vps_first() for non-YASM_LIB_INTERNAL users. */

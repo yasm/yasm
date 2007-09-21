@@ -21,8 +21,8 @@ abort();}
 static void Assert(int assertion, const char *error)
 {
     if (!assertion) {
-	fprintf(stderr, "Assertion Failed: %s\n", error);
-	abort();
+        fprintf(stderr, "Assertion Failed: %s\n", error);
+        abort();
     }
 }
 #endif
@@ -46,7 +46,7 @@ static void DeleteFixUp(IntervalTree *, IntervalTreeNode *);
 #ifdef CHECK_INTERVAL_TREE_ASSUMPTIONS
 static void CheckMaxHighFields(const IntervalTree *, IntervalTreeNode *);
 static int CheckMaxHighFieldsHelper(const IntervalTree *, IntervalTreeNode *y, 
-				    const int currentHigh, int match);
+                                    const int currentHigh, int match);
 static void IT_CheckAssumptions(const IntervalTree *);
 #endif
 
@@ -59,11 +59,11 @@ ITN_create(long low, long high, void *data)
     IntervalTreeNode *itn = yasm_xmalloc(sizeof(IntervalTreeNode));
     itn->data = data;
     if (low < high) {
-	itn->low = low;
-	itn->high = high;
+        itn->low = low;
+        itn->high = high;
     } else {
-	itn->low = high;
-	itn->high = low;
+        itn->low = high;
+        itn->high = low;
     }
     itn->maxHigh = high;
     return itn;
@@ -89,7 +89,7 @@ IT_create(void)
     /* the following are used for the Enumerate function */
     it->recursionNodeStackSize = 128;
     it->recursionNodeStack = (it_recursion_node *) 
-	yasm_xmalloc(it->recursionNodeStackSize*sizeof(it_recursion_node));
+        yasm_xmalloc(it->recursionNodeStackSize*sizeof(it_recursion_node));
     it->recursionNodeStackTop = 1;
     it->recursionNodeStack[0].start_node = NULL;
 
@@ -133,7 +133,7 @@ LeftRotate(IntervalTree *it, IntervalTreeNode *x)
     x->right=y->left;
 
     if (y->left != it->nil)
-	y->left->parent=x; /* used to use sentinel here */
+        y->left->parent=x; /* used to use sentinel here */
     /* and do an unconditional assignment instead of testing for nil */
   
     y->parent=x->parent;   
@@ -142,9 +142,9 @@ LeftRotate(IntervalTree *it, IntervalTreeNode *x)
      * count on the root sentinel to implicitly take care of this case
      */
     if (x == x->parent->left)
-	x->parent->left=y;
+        x->parent->left=y;
     else
-	x->parent->right=y;
+        x->parent->right=y;
     y->left=x;
     x->parent=y;
 
@@ -155,7 +155,7 @@ LeftRotate(IntervalTree *it, IntervalTreeNode *x)
 #elif defined(DEBUG_ASSERT)
     Assert(!it->nil->red,"nil not red in ITLeftRotate");
     Assert((it->nil->maxHigh=LONG_MIN),
-	   "nil->maxHigh != LONG_MIN in ITLeftRotate");
+           "nil->maxHigh != LONG_MIN in ITLeftRotate");
 #endif
 }
 
@@ -198,7 +198,7 @@ RightRotate(IntervalTree *it, IntervalTreeNode *y)
     y->left=x->right;
 
     if (it->nil != x->right)
-	x->right->parent=y; /*used to use sentinel here */
+        x->right->parent=y; /*used to use sentinel here */
     /* and do an unconditional assignment instead of testing for nil */
 
     /* Instead of checking if x->parent is the root as in the book, we
@@ -206,9 +206,9 @@ RightRotate(IntervalTree *it, IntervalTreeNode *y)
      */
     x->parent=y->parent;
     if (y == y->parent->left)
-	y->parent->left=x;
+        y->parent->left=x;
     else
-	y->parent->right=x;
+        y->parent->right=x;
     x->right=y;
     y->parent=x;
 
@@ -219,7 +219,7 @@ RightRotate(IntervalTree *it, IntervalTreeNode *y)
 #elif defined(DEBUG_ASSERT)
     Assert(!it->nil->red,"nil not red in ITRightRotate");
     Assert((it->nil->maxHigh=LONG_MIN),
-	   "nil->maxHigh != LONG_MIN in ITRightRotate");
+           "nil->maxHigh != LONG_MIN in ITRightRotate");
 #endif
 }
 
@@ -249,22 +249,22 @@ TreeInsertHelp(IntervalTree *it, IntervalTreeNode *z)
     y=it->root;
     x=it->root->left;
     while( x != it->nil) {
-	y=x;
-	if (x->low > z->low)
-	    x=x->left;
-	else /* x->low <= z->low */
-	    x=x->right;
+        y=x;
+        if (x->low > z->low)
+            x=x->left;
+        else /* x->low <= z->low */
+            x=x->right;
     }
     z->parent=y;
     if ((y == it->root) || (y->low > z->low))
-	y->left=z;
+        y->left=z;
     else
-	y->right=z;
+        y->right=z;
 
 #if defined(DEBUG_ASSERT)
     Assert(!it->nil->red,"nil not red in ITTreeInsertHelp");
     Assert((it->nil->maxHigh=INT_MIN),
-	   "nil->maxHigh != INT_MIN in ITTreeInsertHelp");
+           "nil->maxHigh != INT_MIN in ITTreeInsertHelp");
 #endif
 }
 
@@ -286,8 +286,8 @@ static void
 FixUpMaxHigh(IntervalTree *it, IntervalTreeNode *x)
 {
     while(x != it->root) {
-	x->maxHigh=ITMax(x->high,ITMax(x->left->maxHigh,x->right->maxHigh));
-	x=x->parent;
+        x->maxHigh=ITMax(x->high,ITMax(x->left->maxHigh,x->right->maxHigh));
+        x=x->parent;
     }
 #ifdef CHECK_INTERVAL_TREE_ASSUMPTIONS
     IT_CheckAssumptions(it);
@@ -324,41 +324,41 @@ IT_insert(IntervalTree *it, long low, long high, void *data)
     newNode = x;
     x->red=1;
     while(x->parent->red) { /* use sentinel instead of checking for root */
-	if (x->parent == x->parent->parent->left) {
-	    y=x->parent->parent->right;
-	    if (y->red) {
-		x->parent->red=0;
-		y->red=0;
-		x->parent->parent->red=1;
-		x=x->parent->parent;
-	    } else {
-		if (x == x->parent->right) {
-		    x=x->parent;
-		    LeftRotate(it, x);
-		}
-		x->parent->red=0;
-		x->parent->parent->red=1;
-		RightRotate(it, x->parent->parent);
-	    } 
-	} else { /* case for x->parent == x->parent->parent->right */
+        if (x->parent == x->parent->parent->left) {
+            y=x->parent->parent->right;
+            if (y->red) {
+                x->parent->red=0;
+                y->red=0;
+                x->parent->parent->red=1;
+                x=x->parent->parent;
+            } else {
+                if (x == x->parent->right) {
+                    x=x->parent;
+                    LeftRotate(it, x);
+                }
+                x->parent->red=0;
+                x->parent->parent->red=1;
+                RightRotate(it, x->parent->parent);
+            } 
+        } else { /* case for x->parent == x->parent->parent->right */
              /* this part is just like the section above with */
              /* left and right interchanged */
-	    y=x->parent->parent->left;
-	    if (y->red) {
-		x->parent->red=0;
-		y->red=0;
-		x->parent->parent->red=1;
-		x=x->parent->parent;
-	    } else {
-		if (x == x->parent->left) {
-		    x=x->parent;
-		    RightRotate(it, x);
-		}
-		x->parent->red=0;
-		x->parent->parent->red=1;
-		LeftRotate(it, x->parent->parent);
-	    } 
-	}
+            y=x->parent->parent->left;
+            if (y->red) {
+                x->parent->red=0;
+                y->red=0;
+                x->parent->parent->red=1;
+                x=x->parent->parent;
+            } else {
+                if (x == x->parent->left) {
+                    x=x->parent;
+                    RightRotate(it, x);
+                }
+                x->parent->red=0;
+                x->parent->parent->red=1;
+                LeftRotate(it, x->parent->parent);
+            } 
+        }
     }
     it->root->left->red=0;
 
@@ -368,7 +368,7 @@ IT_insert(IntervalTree *it, long low, long high, void *data)
     Assert(!it->nil->red,"nil not red in ITTreeInsert");
     Assert(!it->root->red,"root not red in ITTreeInsert");
     Assert((it->nil->maxHigh=LONG_MIN),
-	   "nil->maxHigh != LONG_MIN in ITTreeInsert");
+           "nil->maxHigh != LONG_MIN in ITTreeInsert");
 #endif
     return newNode;
 }
@@ -392,18 +392,18 @@ IT_get_successor(const IntervalTree *it, IntervalTreeNode *x)
     IntervalTreeNode *y;
 
     if (it->nil != (y = x->right)) { /* assignment to y is intentional */
-	while(y->left != it->nil) /* returns the minium of the right subtree of x */
-	    y=y->left;
-	return y;
+        while(y->left != it->nil) /* returns the minium of the right subtree of x */
+            y=y->left;
+        return y;
     } else {
-	y=x->parent;
-	while(x == y->right) { /* sentinel used instead of checking for nil */
-	    x=y;
-	    y=y->parent;
-	}
-	if (y == it->root)
-	    return(it->nil);
-	return y;
+        y=x->parent;
+        while(x == y->right) { /* sentinel used instead of checking for nil */
+            x=y;
+            y=y->parent;
+        }
+        if (y == it->root)
+            return(it->nil);
+        return y;
     }
 }
 
@@ -426,18 +426,18 @@ IT_get_predecessor(const IntervalTree *it, IntervalTreeNode *x)
     IntervalTreeNode *y;
 
     if (it->nil != (y = x->left)) { /* assignment to y is intentional */
-	while(y->right != it->nil) /* returns the maximum of the left subtree of x */
-	    y=y->right;
-	return y;
+        while(y->right != it->nil) /* returns the maximum of the left subtree of x */
+            y=y->right;
+        return y;
     } else {
-	y=x->parent;
-	while(x == y->left) { 
-	    if (y == it->root)
-		return(it->nil); 
-	    x=y;
-	    y=y->parent;
-	}
-	return y;
+        y=x->parent;
+        while(x == y->left) { 
+            if (y == it->root)
+                return(it->nil); 
+            x=y;
+            y=y->parent;
+        }
+        return y;
     }
 }
 
@@ -458,24 +458,24 @@ IT_get_predecessor(const IntervalTree *it, IntervalTreeNode *x)
 
 static void
 ITN_print(const IntervalTreeNode *itn, IntervalTreeNode *nil,
-	  IntervalTreeNode *root)
+          IntervalTreeNode *root)
 {
     printf(", l=%li, h=%li, mH=%li", itn->low, itn->high, itn->maxHigh);
     printf("  l->low=");
     if (itn->left == nil)
-	printf("NULL");
+        printf("NULL");
     else
-	printf("%li", itn->left->low);
+        printf("%li", itn->left->low);
     printf("  r->low=");
     if (itn->right == nil)
-	printf("NULL");
+        printf("NULL");
     else
-	printf("%li", itn->right->low);
+        printf("%li", itn->right->low);
     printf("  p->low=");
     if (itn->parent == root)
-	printf("NULL");
+        printf("NULL");
     else
-	printf("%li", itn->parent->low);
+        printf("%li", itn->parent->low);
     printf("  red=%i\n", itn->red);
 }
 
@@ -483,9 +483,9 @@ static void
 TreePrintHelper(const IntervalTree *it, IntervalTreeNode *x)
 {
     if (x != it->nil) {
-	TreePrintHelper(it, x->left);
-	ITN_print(x, it->nil, it->root);
-	TreePrintHelper(it, x->right);
+        TreePrintHelper(it, x->left);
+        ITN_print(x, it->nil, it->root);
+        TreePrintHelper(it, x->right);
     }
 }
 
@@ -495,40 +495,40 @@ IT_destroy(IntervalTree *it)
     IntervalTreeNode *x = it->root->left;
     SLIST_HEAD(, nodeent) stuffToFree = SLIST_HEAD_INITIALIZER(stuffToFree);
     struct nodeent {
-	SLIST_ENTRY(nodeent) link;
-	struct IntervalTreeNode *node;
+        SLIST_ENTRY(nodeent) link;
+        struct IntervalTreeNode *node;
     } *np;
 
     if (x != it->nil) {
-	if (x->left != it->nil) {
-	    np = yasm_xmalloc(sizeof(struct nodeent));
-	    np->node = x->left;
-	    SLIST_INSERT_HEAD(&stuffToFree, np, link);
-	}
-	if (x->right != it->nil) {
-	    np = yasm_xmalloc(sizeof(struct nodeent));
-	    np->node = x->right;
-	    SLIST_INSERT_HEAD(&stuffToFree, np, link);
-	}
-	yasm_xfree(x);
-	while (!SLIST_EMPTY(&stuffToFree)) {
-	    np = SLIST_FIRST(&stuffToFree);
-	    x = np->node;
-	    SLIST_REMOVE_HEAD(&stuffToFree, link);
-	    yasm_xfree(np);
+        if (x->left != it->nil) {
+            np = yasm_xmalloc(sizeof(struct nodeent));
+            np->node = x->left;
+            SLIST_INSERT_HEAD(&stuffToFree, np, link);
+        }
+        if (x->right != it->nil) {
+            np = yasm_xmalloc(sizeof(struct nodeent));
+            np->node = x->right;
+            SLIST_INSERT_HEAD(&stuffToFree, np, link);
+        }
+        yasm_xfree(x);
+        while (!SLIST_EMPTY(&stuffToFree)) {
+            np = SLIST_FIRST(&stuffToFree);
+            x = np->node;
+            SLIST_REMOVE_HEAD(&stuffToFree, link);
+            yasm_xfree(np);
 
-	    if (x->left != it->nil) {
-		np = yasm_xmalloc(sizeof(struct nodeent));
-		np->node = x->left;
-		SLIST_INSERT_HEAD(&stuffToFree, np, link);
-	    }
-	    if (x->right != it->nil) {
-		np = yasm_xmalloc(sizeof(struct nodeent));
-		np->node = x->right;
-		SLIST_INSERT_HEAD(&stuffToFree, np, link);
-	    }
-	    yasm_xfree(x);
-	}
+            if (x->left != it->nil) {
+                np = yasm_xmalloc(sizeof(struct nodeent));
+                np->node = x->left;
+                SLIST_INSERT_HEAD(&stuffToFree, np, link);
+            }
+            if (x->right != it->nil) {
+                np = yasm_xmalloc(sizeof(struct nodeent));
+                np->node = x->right;
+                SLIST_INSERT_HEAD(&stuffToFree, np, link);
+            }
+            yasm_xfree(x);
+        }
     }
 
     yasm_xfree(it->nil);
@@ -581,55 +581,55 @@ DeleteFixUp(IntervalTree *it, IntervalTreeNode *x)
     IntervalTreeNode *rootLeft = it->root->left;
 
     while ((!x->red) && (rootLeft != x)) {
-	if (x == x->parent->left) {
-	    w=x->parent->right;
-	    if (w->red) {
-		w->red=0;
-		x->parent->red=1;
-		LeftRotate(it, x->parent);
-		w=x->parent->right;
-	    }
-	    if ( (!w->right->red) && (!w->left->red) ) { 
-		w->red=1;
-		x=x->parent;
-	    } else {
-		if (!w->right->red) {
-		    w->left->red=0;
-		    w->red=1;
-		    RightRotate(it, w);
-		    w=x->parent->right;
-		}
-		w->red=x->parent->red;
-		x->parent->red=0;
-		w->right->red=0;
-		LeftRotate(it, x->parent);
-		x=rootLeft; /* this is to exit while loop */
-	    }
-	} else { /* the code below is has left and right switched from above */
-	    w=x->parent->left;
-	    if (w->red) {
-		w->red=0;
-		x->parent->red=1;
-		RightRotate(it, x->parent);
-		w=x->parent->left;
-	    }
-	    if ((!w->right->red) && (!w->left->red)) { 
-		w->red=1;
-		x=x->parent;
-	    } else {
-		if (!w->left->red) {
-		    w->right->red=0;
-		    w->red=1;
-		    LeftRotate(it, w);
-		    w=x->parent->left;
-		}
-		w->red=x->parent->red;
-		x->parent->red=0;
-		w->left->red=0;
-		RightRotate(it, x->parent);
-		x=rootLeft; /* this is to exit while loop */
-	    }
-	}
+        if (x == x->parent->left) {
+            w=x->parent->right;
+            if (w->red) {
+                w->red=0;
+                x->parent->red=1;
+                LeftRotate(it, x->parent);
+                w=x->parent->right;
+            }
+            if ( (!w->right->red) && (!w->left->red) ) { 
+                w->red=1;
+                x=x->parent;
+            } else {
+                if (!w->right->red) {
+                    w->left->red=0;
+                    w->red=1;
+                    RightRotate(it, w);
+                    w=x->parent->right;
+                }
+                w->red=x->parent->red;
+                x->parent->red=0;
+                w->right->red=0;
+                LeftRotate(it, x->parent);
+                x=rootLeft; /* this is to exit while loop */
+            }
+        } else { /* the code below is has left and right switched from above */
+            w=x->parent->left;
+            if (w->red) {
+                w->red=0;
+                x->parent->red=1;
+                RightRotate(it, x->parent);
+                w=x->parent->left;
+            }
+            if ((!w->right->red) && (!w->left->red)) { 
+                w->red=1;
+                x=x->parent;
+            } else {
+                if (!w->left->red) {
+                    w->right->red=0;
+                    w->red=1;
+                    LeftRotate(it, w);
+                    w=x->parent->left;
+                }
+                w->red=x->parent->red;
+                x->parent->red=0;
+                w->left->red=0;
+                RightRotate(it, x->parent);
+                x=rootLeft; /* this is to exit while loop */
+            }
+        }
     }
     x->red=0;
 
@@ -638,7 +638,7 @@ DeleteFixUp(IntervalTree *it, IntervalTreeNode *x)
 #elif defined(DEBUG_ASSERT)
     Assert(!it->nil->red,"nil not black in ITDeleteFixUp");
     Assert((it->nil->maxHigh=LONG_MIN),
-	   "nil->maxHigh != LONG_MIN in ITDeleteFixUp");
+           "nil->maxHigh != LONG_MIN in ITDeleteFixUp");
 #endif
 }
 
@@ -665,61 +665,61 @@ IT_delete_node(IntervalTree *it, IntervalTreeNode *z, long *low, long *high)
     IntervalTreeNode *x, *y;
     void *returnValue = z->data;
     if (low)
-	*low = z->low;
+        *low = z->low;
     if (high)
-	*high = z->high;
+        *high = z->high;
 
     y= ((z->left == it->nil) || (z->right == it->nil)) ?
-	z : IT_get_successor(it, z);
+        z : IT_get_successor(it, z);
     x= (y->left == it->nil) ? y->right : y->left;
     if (it->root == (x->parent = y->parent))
-	/* assignment of y->p to x->p is intentional */
-	it->root->left=x;
+        /* assignment of y->p to x->p is intentional */
+        it->root->left=x;
     else {
-	if (y == y->parent->left)
-	    y->parent->left=x;
-	else
-	    y->parent->right=x;
+        if (y == y->parent->left)
+            y->parent->left=x;
+        else
+            y->parent->right=x;
     }
     if (y != z) { /* y should not be nil in this case */
 
 #ifdef DEBUG_ASSERT
-	Assert( (y!=it->nil),"y is nil in DeleteNode \n");
+        Assert( (y!=it->nil),"y is nil in DeleteNode \n");
 #endif
-	/* y is the node to splice out and x is its child */
+        /* y is the node to splice out and x is its child */
   
-	y->maxHigh = INT_MIN;
-	y->left=z->left;
-	y->right=z->right;
-	y->parent=z->parent;
-	z->left->parent=z->right->parent=y;
-	if (z == z->parent->left)
-	    z->parent->left=y; 
-	else
-	    z->parent->right=y;
-	FixUpMaxHigh(it, x->parent); 
-	if (!(y->red)) {
-	    y->red = z->red;
-	    DeleteFixUp(it, x);
-	} else
-	    y->red = z->red; 
-	yasm_xfree(z);
+        y->maxHigh = INT_MIN;
+        y->left=z->left;
+        y->right=z->right;
+        y->parent=z->parent;
+        z->left->parent=z->right->parent=y;
+        if (z == z->parent->left)
+            z->parent->left=y; 
+        else
+            z->parent->right=y;
+        FixUpMaxHigh(it, x->parent); 
+        if (!(y->red)) {
+            y->red = z->red;
+            DeleteFixUp(it, x);
+        } else
+            y->red = z->red; 
+        yasm_xfree(z);
 #ifdef CHECK_INTERVAL_TREE_ASSUMPTIONS
-	IT_CheckAssumptions(it);
+        IT_CheckAssumptions(it);
 #elif defined(DEBUG_ASSERT)
-	Assert(!it->nil->red,"nil not black in ITDelete");
-	Assert((it->nil->maxHigh=LONG_MIN),"nil->maxHigh != LONG_MIN in ITDelete");
+        Assert(!it->nil->red,"nil not black in ITDelete");
+        Assert((it->nil->maxHigh=LONG_MIN),"nil->maxHigh != LONG_MIN in ITDelete");
 #endif
     } else {
-	FixUpMaxHigh(it, x->parent);
-	if (!(y->red))
-	    DeleteFixUp(it, x);
-	yasm_xfree(y);
+        FixUpMaxHigh(it, x->parent);
+        if (!(y->red))
+            DeleteFixUp(it, x);
+        yasm_xfree(y);
 #ifdef CHECK_INTERVAL_TREE_ASSUMPTIONS
-	IT_CheckAssumptions(it);
+        IT_CheckAssumptions(it);
 #elif defined(DEBUG_ASSERT)
-	Assert(!it->nil->red,"nil not black in ITDelete");
-	Assert((it->nil->maxHigh=LONG_MIN),"nil->maxHigh != LONG_MIN in ITDelete");
+        Assert(!it->nil->red,"nil not black in ITDelete");
+        Assert((it->nil->maxHigh=LONG_MIN),"nil->maxHigh != LONG_MIN in ITDelete");
 #endif
     }
     return returnValue;
@@ -743,9 +743,9 @@ static int
 Overlap(int a1, int a2, int b1, int b2)
 {
     if (a1 <= b1)
-	return (b1 <= a2);
+        return (b1 <= a2);
     else
-	return (a1 <= b2);
+        return (a1 <= b2);
 }
 
 
@@ -789,7 +789,7 @@ Overlap(int a1, int a2, int b1, int b2)
  */
 void
 IT_enumerate(IntervalTree *it, long low, long high, void *cbd,
-	     void (*callback) (IntervalTreeNode *node, void *cbd))
+             void (*callback) (IntervalTreeNode *node, void *cbd))
 {
     IntervalTreeNode *x=it->root->left;
     int stuffToDo = (x != it->nil);
@@ -798,43 +798,43 @@ IT_enumerate(IntervalTree *it, long low, long high, void *cbd,
 
 #ifdef DEBUG_ASSERT
     Assert((it->recursionNodeStackTop == 1),
-	   "recursionStack not empty when entering IntervalTree::Enumerate");
+           "recursionStack not empty when entering IntervalTree::Enumerate");
 #endif
     it->currentParent = 0;
 
     while (stuffToDo) {
-	if (Overlap(low,high,x->low,x->high) ) {
-	    callback(x, cbd);
-	    it->recursionNodeStack[it->currentParent].tryRightBranch=1;
-	}
-	if(x->left->maxHigh >= low) { /* implies x != nil */
-	    if (it->recursionNodeStackTop == it->recursionNodeStackSize) {
-		it->recursionNodeStackSize *= 2;
-		it->recursionNodeStack = (it_recursion_node *) 
-		    yasm_xrealloc(it->recursionNodeStack,
-				  it->recursionNodeStackSize * sizeof(it_recursion_node));
-	    }
-	    it->recursionNodeStack[it->recursionNodeStackTop].start_node = x;
-	    it->recursionNodeStack[it->recursionNodeStackTop].tryRightBranch = 0;
-	    it->recursionNodeStack[it->recursionNodeStackTop].parentIndex = it->currentParent;
-	    it->currentParent = it->recursionNodeStackTop++;
-	    x = x->left;
-	} else {
-	    x = x->right;
-	}
-	stuffToDo = (x != it->nil);
-	while (!stuffToDo && (it->recursionNodeStackTop > 1)) {
-	    if (it->recursionNodeStack[--it->recursionNodeStackTop].tryRightBranch) {
-		x=it->recursionNodeStack[it->recursionNodeStackTop].start_node->right;
-		it->currentParent=it->recursionNodeStack[it->recursionNodeStackTop].parentIndex;
-		it->recursionNodeStack[it->currentParent].tryRightBranch=1;
-		stuffToDo = (x != it->nil);
-	    }
-	}
+        if (Overlap(low,high,x->low,x->high) ) {
+            callback(x, cbd);
+            it->recursionNodeStack[it->currentParent].tryRightBranch=1;
+        }
+        if(x->left->maxHigh >= low) { /* implies x != nil */
+            if (it->recursionNodeStackTop == it->recursionNodeStackSize) {
+                it->recursionNodeStackSize *= 2;
+                it->recursionNodeStack = (it_recursion_node *) 
+                    yasm_xrealloc(it->recursionNodeStack,
+                                  it->recursionNodeStackSize * sizeof(it_recursion_node));
+            }
+            it->recursionNodeStack[it->recursionNodeStackTop].start_node = x;
+            it->recursionNodeStack[it->recursionNodeStackTop].tryRightBranch = 0;
+            it->recursionNodeStack[it->recursionNodeStackTop].parentIndex = it->currentParent;
+            it->currentParent = it->recursionNodeStackTop++;
+            x = x->left;
+        } else {
+            x = x->right;
+        }
+        stuffToDo = (x != it->nil);
+        while (!stuffToDo && (it->recursionNodeStackTop > 1)) {
+            if (it->recursionNodeStack[--it->recursionNodeStackTop].tryRightBranch) {
+                x=it->recursionNodeStack[it->recursionNodeStackTop].start_node->right;
+                it->currentParent=it->recursionNodeStack[it->recursionNodeStackTop].parentIndex;
+                it->recursionNodeStack[it->currentParent].tryRightBranch=1;
+                stuffToDo = (x != it->nil);
+            }
+        }
     }
 #ifdef DEBUG_ASSERT
     Assert((it->recursionNodeStackTop == 1),
-	   "recursionStack not empty when exiting IntervalTree::Enumerate");
+           "recursionStack not empty when exiting IntervalTree::Enumerate");
 #endif
 }
 
@@ -842,21 +842,21 @@ IT_enumerate(IntervalTree *it, long low, long high, void *cbd,
 
 static int
 CheckMaxHighFieldsHelper(const IntervalTree *it, IntervalTreeNode *y, 
-			 int currentHigh, int match)
+                         int currentHigh, int match)
 {
     if (y != it->nil) {
-	match = CheckMaxHighFieldsHelper(it, y->left, currentHigh, match) ?
-	    1 : match;
-	VERIFY(y->high <= currentHigh);
-	if (y->high == currentHigh)
-	    match = 1;
-	match = CheckMaxHighFieldsHelper(it, y->right, currentHigh, match) ?
-	    1 : match;
+        match = CheckMaxHighFieldsHelper(it, y->left, currentHigh, match) ?
+            1 : match;
+        VERIFY(y->high <= currentHigh);
+        if (y->high == currentHigh)
+            match = 1;
+        match = CheckMaxHighFieldsHelper(it, y->right, currentHigh, match) ?
+            1 : match;
     }
     return match;
 }
 
-	  
+          
 
 /* Make sure the maxHigh fields for everything makes sense. *
  * If something is wrong, print a warning and exit */
@@ -864,12 +864,12 @@ static void
 CheckMaxHighFields(const IntervalTree *it, IntervalTreeNode *x)
 {
     if (x != it->nil) {
-	CheckMaxHighFields(it, x->left);
-	if(!(CheckMaxHighFieldsHelper(it, x, x->maxHigh, 0) > 0)) {
-	    fprintf(stderr, "error found in CheckMaxHighFields.\n");
-	    abort();
-	}
-	CheckMaxHighFields(it, x->right);
+        CheckMaxHighFields(it, x->left);
+        if(!(CheckMaxHighFieldsHelper(it, x, x->maxHigh, 0) > 0)) {
+            fprintf(stderr, "error found in CheckMaxHighFields.\n");
+            abort();
+        }
+        CheckMaxHighFields(it, x->right);
     }
 }
 

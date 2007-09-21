@@ -41,7 +41,7 @@
 
 
 typedef struct bytecode_align {
-    /*@only@*/ yasm_expr *boundary;	/* alignment boundary */
+    /*@only@*/ yasm_expr *boundary;     /* alignment boundary */
 
     /* What to fill intervening locations with, NULL if using code_fill */
     /*@only@*/ /*@null@*/ yasm_expr *fill;
@@ -57,13 +57,13 @@ static void bc_align_destroy(void *contents);
 static void bc_align_print(const void *contents, FILE *f, int indent_level);
 static void bc_align_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 static int bc_align_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
-			     void *add_span_data);
+                             void *add_span_data);
 static int bc_align_expand(yasm_bytecode *bc, int span, long old_val,
-			   long new_val, /*@out@*/ long *neg_thres,
-			   /*@out@*/ long *pos_thres);
+                           long new_val, /*@out@*/ long *neg_thres,
+                           /*@out@*/ long *pos_thres);
 static int bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-			    yasm_output_value_func output_value,
-			    /*@null@*/ yasm_output_reloc_func output_reloc);
+                            yasm_output_value_func output_value,
+                            /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static const yasm_bytecode_callback bc_align_callback = {
     bc_align_destroy,
@@ -81,11 +81,11 @@ bc_align_destroy(void *contents)
 {
     bytecode_align *align = (bytecode_align *)contents;
     if (align->boundary)
-	yasm_expr_destroy(align->boundary);
+        yasm_expr_destroy(align->boundary);
     if (align->fill)
-	yasm_expr_destroy(align->fill);
+        yasm_expr_destroy(align->fill);
     if (align->maxskip)
-	yasm_expr_destroy(align->maxskip);
+        yasm_expr_destroy(align->maxskip);
     yasm_xfree(contents);
 }
 
@@ -108,132 +108,132 @@ bc_align_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 {
     bytecode_align *align = (bytecode_align *)bc->contents;
     if (!yasm_expr_get_intnum(&align->boundary, 0))
-	yasm_error_set(YASM_ERROR_NOT_CONSTANT,
-		       N_("align boundary must be a constant"));
+        yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+                       N_("align boundary must be a constant"));
     if (align->fill && !yasm_expr_get_intnum(&align->fill, 0))
-	yasm_error_set(YASM_ERROR_NOT_CONSTANT,
-		       N_("align fill must be a constant"));
+        yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+                       N_("align fill must be a constant"));
     if (align->maxskip && !yasm_expr_get_intnum(&align->maxskip, 0))
-	yasm_error_set(YASM_ERROR_NOT_CONSTANT,
-		       N_("align maximum skip must be a constant"));
+        yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+                       N_("align maximum skip must be a constant"));
 }
 
 static int
 bc_align_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
-		  void *add_span_data)
+                  void *add_span_data)
 {
     long neg_thres = 0;
     long pos_thres = 0;
 
     if (bc_align_expand(bc, 0, 0, (long)bc->offset, &neg_thres,
-			&pos_thres) < 0)
-	return -1;
+                        &pos_thres) < 0)
+        return -1;
 
     return 0;
 }
 
 static int
 bc_align_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
-		/*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
+                /*@out@*/ long *neg_thres, /*@out@*/ long *pos_thres)
 {
     bytecode_align *align = (bytecode_align *)bc->contents;
     unsigned long end;
     unsigned long boundary =
-	yasm_intnum_get_uint(yasm_expr_get_intnum(&align->boundary, 0));
+        yasm_intnum_get_uint(yasm_expr_get_intnum(&align->boundary, 0));
 
     if (boundary == 0) {
-	bc->len = 0;
-	*pos_thres = new_val;
-	return 0;
+        bc->len = 0;
+        *pos_thres = new_val;
+        return 0;
     }
 
     end = (unsigned long)new_val;
     if ((unsigned long)new_val & (boundary-1))
-	end = ((unsigned long)new_val & ~(boundary-1)) + boundary;
+        end = ((unsigned long)new_val & ~(boundary-1)) + boundary;
 
     *pos_thres = (long)end;
     bc->len = end - (unsigned long)new_val;
 
     if (align->maxskip) {
-	unsigned long maxskip =
-	    yasm_intnum_get_uint(yasm_expr_get_intnum(&align->maxskip, 0));
-	if (bc->len > maxskip) {
-	    *pos_thres = (long)end-maxskip-1;
-	    bc->len = 0;
-	}
+        unsigned long maxskip =
+            yasm_intnum_get_uint(yasm_expr_get_intnum(&align->maxskip, 0));
+        if (bc->len > maxskip) {
+            *pos_thres = (long)end-maxskip-1;
+            bc->len = 0;
+        }
     }
     return 1;
 }
 
 static int
 bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-		 yasm_output_value_func output_value,
-		 /*@unused@*/ yasm_output_reloc_func output_reloc)
+                 yasm_output_value_func output_value,
+                 /*@unused@*/ yasm_output_reloc_func output_reloc)
 {
     bytecode_align *align = (bytecode_align *)bc->contents;
     unsigned long len;
     unsigned long boundary =
-	yasm_intnum_get_uint(yasm_expr_get_intnum(&align->boundary, 0));
+        yasm_intnum_get_uint(yasm_expr_get_intnum(&align->boundary, 0));
 
     if (boundary == 0)
-	return 0;
+        return 0;
     else {
-	unsigned long end = bc->offset;
-	if (bc->offset & (boundary-1))
-	    end = (bc->offset & ~(boundary-1)) + boundary;
-	len = end - bc->offset;
-	if (len == 0)
-	    return 0;
-	if (align->maxskip) {
-	    unsigned long maxskip =
-		yasm_intnum_get_uint(yasm_expr_get_intnum(&align->maxskip, 0));
-	    if (len > maxskip)
-		return 0;
-	}
+        unsigned long end = bc->offset;
+        if (bc->offset & (boundary-1))
+            end = (bc->offset & ~(boundary-1)) + boundary;
+        len = end - bc->offset;
+        if (len == 0)
+            return 0;
+        if (align->maxskip) {
+            unsigned long maxskip =
+                yasm_intnum_get_uint(yasm_expr_get_intnum(&align->maxskip, 0));
+            if (len > maxskip)
+                return 0;
+        }
     }
 
     if (align->fill) {
-	unsigned long v;
-	v = yasm_intnum_get_uint(yasm_expr_get_intnum(&align->fill, 0));
-	memset(*bufp, (int)v, len);
-	*bufp += len;
+        unsigned long v;
+        v = yasm_intnum_get_uint(yasm_expr_get_intnum(&align->fill, 0));
+        memset(*bufp, (int)v, len);
+        *bufp += len;
     } else if (align->code_fill) {
-	unsigned long maxlen = 15;
-	while (!align->code_fill[maxlen] && maxlen>0)
-	    maxlen--;
-	if (maxlen == 0) {
-	    yasm_error_set(YASM_ERROR_GENERAL,
-			   N_("could not find any code alignment size"));
-	    return 1;
-	}
+        unsigned long maxlen = 15;
+        while (!align->code_fill[maxlen] && maxlen>0)
+            maxlen--;
+        if (maxlen == 0) {
+            yasm_error_set(YASM_ERROR_GENERAL,
+                           N_("could not find any code alignment size"));
+            return 1;
+        }
 
-	/* Fill with maximum code fill as much as possible */
-	while (len > maxlen) {
-	    memcpy(*bufp, align->code_fill[maxlen], maxlen);
-	    *bufp += maxlen;
-	    len -= maxlen;
-	}
+        /* Fill with maximum code fill as much as possible */
+        while (len > maxlen) {
+            memcpy(*bufp, align->code_fill[maxlen], maxlen);
+            *bufp += maxlen;
+            len -= maxlen;
+        }
 
-	if (!align->code_fill[len]) {
-	    yasm_error_set(YASM_ERROR_VALUE,
-			   N_("invalid alignment size %d"), len);
-	    return 1;
-	}
-	/* Handle rest of code fill */
-	memcpy(*bufp, align->code_fill[len], len);
-	*bufp += len;
+        if (!align->code_fill[len]) {
+            yasm_error_set(YASM_ERROR_VALUE,
+                           N_("invalid alignment size %d"), len);
+            return 1;
+        }
+        /* Handle rest of code fill */
+        memcpy(*bufp, align->code_fill[len], len);
+        *bufp += len;
     } else {
-	/* Just fill with 0 */
-	memset(*bufp, 0, len);
-	*bufp += len;
+        /* Just fill with 0 */
+        memset(*bufp, 0, len);
+        *bufp += len;
     }
     return 0;
 }
 
 yasm_bytecode *
 yasm_bc_create_align(yasm_expr *boundary, yasm_expr *fill,
-		     yasm_expr *maxskip, const unsigned char **code_fill,
-		     unsigned long line)
+                     yasm_expr *maxskip, const unsigned char **code_fill,
+                     unsigned long line)
 {
     bytecode_align *align = yasm_xmalloc(sizeof(bytecode_align));
 

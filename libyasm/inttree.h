@@ -49,11 +49,11 @@ IntervalTree *IT_create(void);
 void IT_destroy(IntervalTree *);
 void IT_print(const IntervalTree *);
 void *IT_delete_node(IntervalTree *, IntervalTreeNode *, long *low,
-		     long *high);
+                     long *high);
 IntervalTreeNode *IT_insert(IntervalTree *, long low, long high, void *data);
 IntervalTreeNode *IT_get_predecessor(const IntervalTree *, IntervalTreeNode *);
 IntervalTreeNode *IT_get_successor(const IntervalTree *, IntervalTreeNode *);
 void IT_enumerate(IntervalTree *, long low, long high, void *cbd,
-		  void (*callback) (IntervalTreeNode *node, void *cbd));
+                  void (*callback) (IntervalTreeNode *node, void *cbd));
 
 #endif

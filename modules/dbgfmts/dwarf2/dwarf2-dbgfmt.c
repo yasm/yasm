@@ -44,7 +44,7 @@ struct dwarf2_head {
 /* Bytecode callback function prototypes */
 static void dwarf2_head_bc_destroy(void *contents);
 static void dwarf2_head_bc_print(const void *contents, FILE *f,
-				 int indent_level);
+                                 int indent_level);
 static int dwarf2_head_bc_calc_len
     (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int dwarf2_head_bc_tobytes
@@ -80,7 +80,7 @@ static /*@null@*/ /*@only@*/ yasm_dbgfmt *
 dwarf2_dbgfmt_create(yasm_object *object)
 {
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 =
-	yasm_xmalloc(sizeof(yasm_dbgfmt_dwarf2));
+        yasm_xmalloc(sizeof(yasm_dbgfmt_dwarf2));
     size_t i;
 
     dbgfmt_dwarf2->dbgfmt.module = &yasm_dwarf2_LTX_dbgfmt;
@@ -88,28 +88,28 @@ dwarf2_dbgfmt_create(yasm_object *object)
     dbgfmt_dwarf2->dirs_allocated = 32;
     dbgfmt_dwarf2->dirs_size = 0;
     dbgfmt_dwarf2->dirs =
-	yasm_xmalloc(sizeof(char *)*dbgfmt_dwarf2->dirs_allocated);
+        yasm_xmalloc(sizeof(char *)*dbgfmt_dwarf2->dirs_allocated);
 
     dbgfmt_dwarf2->filenames_allocated = 32;
     dbgfmt_dwarf2->filenames_size = 0;
     dbgfmt_dwarf2->filenames =
-	yasm_xmalloc(sizeof(dwarf2_filename)*dbgfmt_dwarf2->filenames_allocated);
+        yasm_xmalloc(sizeof(dwarf2_filename)*dbgfmt_dwarf2->filenames_allocated);
     for (i=0; i<dbgfmt_dwarf2->filenames_allocated; i++) {
-	dbgfmt_dwarf2->filenames[i].pathname = NULL;
-	dbgfmt_dwarf2->filenames[i].filename = NULL;
-	dbgfmt_dwarf2->filenames[i].dir = 0;
+        dbgfmt_dwarf2->filenames[i].pathname = NULL;
+        dbgfmt_dwarf2->filenames[i].filename = NULL;
+        dbgfmt_dwarf2->filenames[i].dir = 0;
     }
 
     dbgfmt_dwarf2->format = DWARF2_FORMAT_32BIT;    /* TODO: flexible? */
 
     dbgfmt_dwarf2->sizeof_address = yasm_arch_get_address_size(object->arch)/8;
     switch (dbgfmt_dwarf2->format) {
-	case DWARF2_FORMAT_32BIT:
-	    dbgfmt_dwarf2->sizeof_offset = 4;
-	    break;
-	case DWARF2_FORMAT_64BIT:
-	    dbgfmt_dwarf2->sizeof_offset = 8;
-	    break;
+        case DWARF2_FORMAT_32BIT:
+            dbgfmt_dwarf2->sizeof_offset = 4;
+            break;
+        case DWARF2_FORMAT_64BIT:
+            dbgfmt_dwarf2->sizeof_offset = 8;
+            break;
     }
     dbgfmt_dwarf2->min_insn_len = yasm_arch_min_insn_len(object->arch);
 
@@ -122,14 +122,14 @@ dwarf2_dbgfmt_destroy(/*@only@*/ yasm_dbgfmt *dbgfmt)
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = (yasm_dbgfmt_dwarf2 *)dbgfmt;
     size_t i;
     for (i=0; i<dbgfmt_dwarf2->dirs_size; i++)
-	if (dbgfmt_dwarf2->dirs[i])
-	    yasm_xfree(dbgfmt_dwarf2->dirs[i]);
+        if (dbgfmt_dwarf2->dirs[i])
+            yasm_xfree(dbgfmt_dwarf2->dirs[i]);
     yasm_xfree(dbgfmt_dwarf2->dirs);
     for (i=0; i<dbgfmt_dwarf2->filenames_size; i++) {
-	if (dbgfmt_dwarf2->filenames[i].pathname)
-	    yasm_xfree(dbgfmt_dwarf2->filenames[i].pathname);
-	if (dbgfmt_dwarf2->filenames[i].filename)
-	    yasm_xfree(dbgfmt_dwarf2->filenames[i].filename);
+        if (dbgfmt_dwarf2->filenames[i].pathname)
+            yasm_xfree(dbgfmt_dwarf2->filenames[i].pathname);
+        if (dbgfmt_dwarf2->filenames[i].filename)
+            yasm_xfree(dbgfmt_dwarf2->filenames[i].filename);
     }
     yasm_xfree(dbgfmt_dwarf2->filenames);
     yasm_xfree(dbgfmt);
@@ -149,7 +149,7 @@ yasm_dwarf2__append_bc(yasm_section *sect, yasm_bytecode *bc)
 
 static void
 dwarf2_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
-		       yasm_errwarns *errwarns)
+                       yasm_errwarns *errwarns)
 {
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = (yasm_dbgfmt_dwarf2 *)object->dbgfmt;
     size_t num_line_sections;
@@ -159,8 +159,8 @@ dwarf2_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
      * based on the asm source.
      */
     debug_line = yasm_dwarf2__generate_line(object, linemap, errwarns,
-					    dbgfmt_dwarf2->filenames_size == 0,
-					    &main_code, &num_line_sections);
+                                            dbgfmt_dwarf2->filenames_size == 0,
+                                            &main_code, &num_line_sections);
 
     /* If we don't have a .debug_info (or it's empty), generate the minimal
      * set of .debug_info, .debug_aranges, and .debug_abbrev so that the
@@ -168,11 +168,11 @@ dwarf2_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
      */
     debug_info = yasm_object_find_general(object, ".debug_info");
     if (num_line_sections > 0 &&
-	(!debug_info || yasm_section_bcs_first(debug_info)
-			== yasm_section_bcs_last(debug_info))) {
-	debug_info = yasm_dwarf2__generate_info(object, debug_line, main_code);
-	yasm_dwarf2__generate_aranges(object, debug_info);
-	/*yasm_dwarf2__generate_pubnames(object, debug_info);*/
+        (!debug_info || yasm_section_bcs_first(debug_info)
+                        == yasm_section_bcs_last(debug_info))) {
+        debug_info = yasm_dwarf2__generate_info(object, debug_line, main_code);
+        yasm_dwarf2__generate_aranges(object, debug_info);
+        /*yasm_dwarf2__generate_pubnames(object, debug_info);*/
     }
 }
 
@@ -181,9 +181,9 @@ yasm_dwarf2__bc_sym(yasm_symtab *symtab, yasm_bytecode *bc)
 {
     /*@dependent@*/ yasm_symrec *sym;
     if (bc->symrecs && bc->symrecs[0])
-	sym = bc->symrecs[0];
+        sym = bc->symrecs[0];
     else
-	sym = yasm_symtab_define_label(symtab, ".bcsym", bc, 0, 0);
+        sym = yasm_symtab_define_label(symtab, ".bcsym", bc, 0, 0);
     return sym;
 }
 
@@ -201,20 +201,20 @@ yasm_dwarf2__add_head
     bc = yasm_bc_create_common(&dwarf2_head_bc_callback, head, 0);
     bc->len = dbgfmt_dwarf2->sizeof_offset + 2;
     if (dbgfmt_dwarf2->format == DWARF2_FORMAT_64BIT)
-	bc->len += 4;
+        bc->len += 4;
 
     if (debug_ptr) {
-	head->debug_ptr = debug_ptr;
-	bc->len += dbgfmt_dwarf2->sizeof_offset;
+        head->debug_ptr = debug_ptr;
+        bc->len += dbgfmt_dwarf2->sizeof_offset;
     } else
-	head->debug_ptr = NULL;
+        head->debug_ptr = NULL;
 
     head->with_address = with_address;
     head->with_segment = with_segment;
     if (with_address)
-	bc->len++;
+        bc->len++;
     if (with_segment)
-	bc->len++;
+        bc->len++;
 
     head->end_prevbc = bc;
     yasm_dwarf2__append_bc(sect, bc);
@@ -241,7 +241,7 @@ dwarf2_head_bc_print(const void *contents, FILE *f, int indent_level)
 
 static int
 dwarf2_head_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
-			void *add_span_data)
+                        void *add_span_data)
 {
     yasm_internal_error(N_("tried to calc_len a dwarf2 head bytecode"));
     /*@notreached@*/
@@ -250,8 +250,8 @@ dwarf2_head_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 
 static int
 dwarf2_head_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-		       yasm_output_value_func output_value,
-		       yasm_output_reloc_func output_reloc)
+                       yasm_output_value_func output_value,
+                       yasm_output_reloc_func output_reloc)
 {
     yasm_object *object = yasm_section_get_object(bc->section);
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = (yasm_dbgfmt_dwarf2 *)object->dbgfmt;
@@ -260,10 +260,10 @@ dwarf2_head_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     yasm_intnum *intn, *cval;
 
     if (dbgfmt_dwarf2->format == DWARF2_FORMAT_64BIT) {
-	YASM_WRITE_8(buf, 0xff);
-	YASM_WRITE_8(buf, 0xff);
-	YASM_WRITE_8(buf, 0xff);
-	YASM_WRITE_8(buf, 0xff);
+        YASM_WRITE_8(buf, 0xff);
+        YASM_WRITE_8(buf, 0xff);
+        YASM_WRITE_8(buf, 0xff);
+        YASM_WRITE_8(buf, 0xff);
     }
 
     /* Total length of aranges info (following this field) */
@@ -271,8 +271,8 @@ dwarf2_head_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     intn = yasm_calc_bc_dist(head->start_prevbc, head->end_prevbc);
     yasm_intnum_calc(intn, YASM_EXPR_SUB, cval);
     yasm_arch_intnum_tobytes(object->arch, intn, buf,
-			     dbgfmt_dwarf2->sizeof_offset,
-			     dbgfmt_dwarf2->sizeof_offset*8, 0, bc, 0);
+                             dbgfmt_dwarf2->sizeof_offset,
+                             dbgfmt_dwarf2->sizeof_offset*8, 0, bc, 0);
     buf += dbgfmt_dwarf2->sizeof_offset;
     yasm_intnum_destroy(intn);
 
@@ -283,23 +283,23 @@ dwarf2_head_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
     /* Pointer to another debug section */
     if (head->debug_ptr) {
-	yasm_value value;
-	yasm_value_init_sym(&value,
-	    yasm_dwarf2__bc_sym(object->symtab,
-				yasm_section_bcs_first(head->debug_ptr)),
-	    dbgfmt_dwarf2->sizeof_offset*8);
-	output_value(&value, buf, dbgfmt_dwarf2->sizeof_offset,
-		     (unsigned long)(buf-*bufp), bc, 0, d);
-	buf += dbgfmt_dwarf2->sizeof_offset;
+        yasm_value value;
+        yasm_value_init_sym(&value,
+            yasm_dwarf2__bc_sym(object->symtab,
+                                yasm_section_bcs_first(head->debug_ptr)),
+            dbgfmt_dwarf2->sizeof_offset*8);
+        output_value(&value, buf, dbgfmt_dwarf2->sizeof_offset,
+                     (unsigned long)(buf-*bufp), bc, 0, d);
+        buf += dbgfmt_dwarf2->sizeof_offset;
     }
 
     /* Size of the offset portion of the address */
     if (head->with_address)
-	YASM_WRITE_8(buf, dbgfmt_dwarf2->sizeof_address);
+        YASM_WRITE_8(buf, dbgfmt_dwarf2->sizeof_address);
 
     /* Size of a segment descriptor.  0 = flat address space */
     if (head->with_segment)
-	YASM_WRITE_8(buf, 0);
+        YASM_WRITE_8(buf, 0);
 
     *bufp = buf;
 
@@ -316,9 +316,9 @@ dwarf2_section_data_destroy(void *data)
     /* Delete locations */
     n1 = STAILQ_FIRST(&dsd->locs);
     while (n1) {
-	n2 = STAILQ_NEXT(n1, link);
-	yasm_xfree(n1);
-	n1 = n2;
+        n2 = STAILQ_NEXT(n1, link);
+        yasm_xfree(n1);
+        n1 = n2;
     }
 
     yasm_xfree(data);
@@ -331,10 +331,10 @@ dwarf2_section_data_print(void *data, FILE *f, int indent_level)
 }
 
 static const yasm_directive dwarf2_directives[] = {
-    { ".loc",	"gas",	yasm_dwarf2__dir_loc,	YASM_DIR_ARG_REQUIRED },
-    { ".file",	"gas",	yasm_dwarf2__dir_file,	YASM_DIR_ARG_REQUIRED },
-    { "loc",	"nasm",	yasm_dwarf2__dir_loc,	YASM_DIR_ARG_REQUIRED },
-    { "file",	"nasm",	yasm_dwarf2__dir_file,	YASM_DIR_ARG_REQUIRED },
+    { ".loc",   "gas",  yasm_dwarf2__dir_loc,   YASM_DIR_ARG_REQUIRED },
+    { ".file",  "gas",  yasm_dwarf2__dir_file,  YASM_DIR_ARG_REQUIRED },
+    { "loc",    "nasm", yasm_dwarf2__dir_loc,   YASM_DIR_ARG_REQUIRED },
+    { "file",   "nasm", yasm_dwarf2__dir_file,  YASM_DIR_ARG_REQUIRED },
     { NULL, NULL, NULL, 0 }
 };
 

@@ -38,10 +38,10 @@
 typedef struct yasm_expr__item yasm_expr__item;
 
 /** Create a new expression e=a op b.
- * \param op	    operation
- * \param a	    expression item a
- * \param b	    expression item b (optional depending on op)
- * \param line	    virtual line (where expression defined)
+ * \param op        operation
+ * \param a         expression item a
+ * \param b         expression item b (optional depending on op)
+ * \param line      virtual line (where expression defined)
  * \return Newly allocated expression.
  */
 /*@only@*/ yasm_expr *yasm_expr_create
@@ -55,85 +55,85 @@ typedef struct yasm_expr__item yasm_expr__item;
 /*@only@*/ yasm_expr__item *yasm_expr_precbc(/*@keep@*/ yasm_bytecode *precbc);
 
 /** Create a new symbol expression item.
- * \param sym	    symbol
+ * \param sym       symbol
  * \return Newly allocated expression item.
  */
 /*@only@*/ yasm_expr__item *yasm_expr_sym(/*@keep@*/ yasm_symrec *sym);
 
 /** Create a new expression expression item.
- * \param e	    expression
+ * \param e         expression
  * \return Newly allocated expression item.
  */
 /*@only@*/ yasm_expr__item *yasm_expr_expr(/*@keep@*/ yasm_expr *e);
 
 /** Create a new intnum expression item.
- * \param intn	    intnum
+ * \param intn      intnum
  * \return Newly allocated expression item.
  */
 /*@only@*/ yasm_expr__item *yasm_expr_int(/*@keep@*/ yasm_intnum *intn);
 
 /** Create a new floatnum expression item.
- * \param flt	    floatnum
+ * \param flt       floatnum
  * \return Newly allocated expression item.
  */
 /*@only@*/ yasm_expr__item *yasm_expr_float(/*@keep@*/ yasm_floatnum *flt);
 
 /** Create a new register expression item.
- * \param reg	    register
+ * \param reg       register
  * \return Newly allocated expression item.
  */
 /*@only@*/ yasm_expr__item *yasm_expr_reg(uintptr_t reg);
 
 /** Create a new expression tree e=l op r.
- * \param l	expression for left side of new expression
- * \param o	operation
- * \param r	expression for right side of new expression
- * \param i	line index
+ * \param l     expression for left side of new expression
+ * \param o     operation
+ * \param r     expression for right side of new expression
+ * \param i     line index
  * \return Newly allocated expression.
  */
 #define yasm_expr_create_tree(l,o,r,i) \
     yasm_expr_create ((o), yasm_expr_expr(l), yasm_expr_expr(r), i)
 
 /** Create a new expression branch e=op r.
- * \param o	operation
- * \param r	expression for right side of new expression
- * \param i	line index
+ * \param o     operation
+ * \param r     expression for right side of new expression
+ * \param i     line index
  * \return Newly allocated expression.
  */
 #define yasm_expr_create_branch(o,r,i) \
     yasm_expr_create ((o), yasm_expr_expr(r), (yasm_expr__item *)NULL, i)
 
 /** Create a new expression identity e=r.
- * \param r	expression for identity within new expression
- * \param i	line index
+ * \param r     expression for identity within new expression
+ * \param i     line index
  * \return Newly allocated expression.
  */
 #define yasm_expr_create_ident(r,i) \
     yasm_expr_create (YASM_EXPR_IDENT, (r), (yasm_expr__item *)NULL, i)
 
 /** Duplicate an expression.
- * \param e	expression
+ * \param e     expression
  * \return Newly allocated expression identical to e.
  */
 yasm_expr *yasm_expr_copy(const yasm_expr *e);
 
 /** Destroy (free allocated memory for) an expression.
- * \param e	expression
+ * \param e     expression
  */
 void yasm_expr_destroy(/*@only@*/ /*@null@*/ yasm_expr *e);
 
 /** Determine if an expression is a specified operation (at the top level).
- * \param e		expression
- * \param op		operator
+ * \param e             expression
+ * \param op            operator
  * \return Nonzero if the expression was the specified operation at the top
  *         level, zero otherwise.
  */
 int yasm_expr_is_op(const yasm_expr *e, yasm_expr_op op);
 
 /** Extra transformation function for yasm_expr__level_tree().
- * \param e	expression being simplified
- * \param d	data provided as expr_xform_extra_data to
- *		yasm_expr__level_tree()
+ * \param e     expression being simplified
+ * \param d     data provided as expr_xform_extra_data to
+ *              yasm_expr__level_tree()
  * \return Transformed e.
  */
 typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
@@ -141,14 +141,14 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
 
 /** Level an entire expression tree.
  * \internal
- * \param e		    expression
- * \param fold_const	    enable constant folding if nonzero
+ * \param e                 expression
+ * \param fold_const        enable constant folding if nonzero
  * \param simplify_ident    simplify identities
  * \param simplify_reg_mul  simplify REG*1 identities
- * \param calc_bc_dist	    nonzero if distances between bytecodes should be
- *			    calculated, 0 if they should be left intact
+ * \param calc_bc_dist      nonzero if distances between bytecodes should be
+ *                          calculated, 0 if they should be left intact
  * \param expr_xform_extra  extra transformation function
- * \param expr_xform_extra_data	data to pass to expr_xform_extra
+ * \param expr_xform_extra_data data to pass to expr_xform_extra
  * \return Leveled expression.
  */
 /*@only@*/ /*@null@*/ yasm_expr *yasm_expr__level_tree
@@ -160,8 +160,8 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
 /** Simplify an expression as much as possible.  Eliminates extraneous
  * branches and simplifies integer-only subexpressions.  Simplified version
  * of yasm_expr__level_tree().
- * \param e	expression
- * \param cbd	if distance between bytecodes should be calculated
+ * \param e     expression
+ * \param cbd   if distance between bytecodes should be calculated
  * \return Simplified expression.
  */
 #define yasm_expr_simplify(e, cbd) \
@@ -169,7 +169,7 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
 
 /** Extract the segment portion of an expression containing SEG:OFF, leaving
  * the offset.
- * \param ep		expression (pointer to)
+ * \param ep            expression (pointer to)
  * \return NULL if unable to extract a segment (expr does not contain a
  *         YASM_EXPR_SEGOFF operator), otherwise the segment expression.
  *         The input expression is modified such that on return, it's the
@@ -178,7 +178,7 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
 /*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_deep_segoff(yasm_expr **ep);
 
 /** Extract the segment portion of a SEG:OFF expression, leaving the offset.
- * \param ep		expression (pointer to)
+ * \param ep            expression (pointer to)
  * \return NULL if unable to extract a segment (YASM_EXPR_SEGOFF not the
  *         top-level operator), otherwise the segment expression.  The input
  *         expression is modified such that on return, it's the offset
@@ -188,7 +188,7 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
 
 /** Extract the right portion (y) of a x WRT y expression, leaving the left
  * portion (x).
- * \param ep		expression (pointer to)
+ * \param ep            expression (pointer to)
  * \return NULL if unable to extract (YASM_EXPR_WRT not the top-level
  *         operator), otherwise the right side of the WRT expression.  The
  *         input expression is modified such that on return, it's the left side
@@ -197,9 +197,9 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
 /*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_wrt(yasm_expr **ep);
 
 /** Get the integer value of an expression if it's just an integer.
- * \param ep		expression (pointer to)
- * \param calc_bc_dist	nonzero if distances between bytecodes should be
- *			calculated, 0 if NULL should be returned in this case
+ * \param ep            expression (pointer to)
+ * \param calc_bc_dist  nonzero if distances between bytecodes should be
+ *                      calculated, 0 if NULL should be returned in this case
  * \return NULL if the expression is too complex (contains anything other than
  *         integers, ie floats, non-valued labels, registers); otherwise the
  *         intnum value of the expression.
@@ -208,8 +208,8 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
     (yasm_expr **ep, int calc_bc_dist);
 
 /** Get the symbol value of an expression if it's just a symbol.
- * \param ep		expression (pointer to)
- * \param simplify	if nonzero, simplify the expression first
+ * \param ep            expression (pointer to)
+ * \param simplify      if nonzero, simplify the expression first
  * \return NULL if the expression is too complex; otherwise the symbol value of
  *         the expression.
  */
@@ -217,8 +217,8 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
     (yasm_expr **ep, int simplify);
 
 /** Get the register value of an expression if it's just a register.
- * \param ep		expression (pointer to)
- * \param simplify	if nonzero, simplify the expression first
+ * \param ep            expression (pointer to)
+ * \param simplify      if nonzero, simplify the expression first
  * \return NULL if the expression is too complex; otherwise the register value
  *         of the expression.
  */
@@ -226,8 +226,8 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
     (yasm_expr **ep, int simplify);
 
 /** Print an expression.  For debugging purposes.
- * \param e	expression
- * \param f	file
+ * \param e     expression
+ * \param f     file
  */
 void yasm_expr_print(/*@null@*/ const yasm_expr *e, FILE *f);
 

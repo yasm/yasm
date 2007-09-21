@@ -57,7 +57,7 @@ typedef struct Test_Entry {
 
 static Test_Entry tests[] = {
     {"noescape", 8, "noescape", 8, NULL},
-    {"noescape2", 10, "noescape2", 10, NULL},	/* includes trailing zero */
+    {"noescape2", 10, "noescape2", 10, NULL},   /* includes trailing zero */
     {"\\\\\\b\\f\\n\\r\\t\\\"", 14, "\\\b\f\n\r\t\"", 7, NULL},
     {"\\a", 2, "a", 1, NULL},
     /* hex tests */
@@ -97,38 +97,38 @@ run_test(Test_Entry *test)
 
     yasm_unescape_cstring((unsigned char *)str, &len);
     if (len != test->result_len) {
-	sprintf(failmsg,
-		"unescape_cstring(\"%s\", %lu) bad output len: expected %lu, got %lu!",
-		test->input, (unsigned long)test->in_len,
-		(unsigned long)test->result_len, (unsigned long)len);
-	return 1;
+        sprintf(failmsg,
+                "unescape_cstring(\"%s\", %lu) bad output len: expected %lu, got %lu!",
+                test->input, (unsigned long)test->in_len,
+                (unsigned long)test->result_len, (unsigned long)len);
+        return 1;
     }
 
     if (strncmp(str, test->result, len) != 0) {
-	sprintf(failmsg,
-		"unescape_cstring(\"%s\", %lu) bad output: expected \"%s\", got \"%s\"!",
-		test->input, (unsigned long)test->in_len, test->result, str);
-	return 1;
+        sprintf(failmsg,
+                "unescape_cstring(\"%s\", %lu) bad output: expected \"%s\", got \"%s\"!",
+                test->input, (unsigned long)test->in_len, test->result, str);
+        return 1;
     }
 
     yasm_warn_fetch(&wclass, &wstr);
     if (wstr != NULL && test->warn == NULL) {
-	sprintf(failmsg,
-		"unescape_cstring(\"%s\", %lu) unexpected warning: %s!",
-		test->input, (unsigned long)test->in_len, wstr);
-	return 1;
+        sprintf(failmsg,
+                "unescape_cstring(\"%s\", %lu) unexpected warning: %s!",
+                test->input, (unsigned long)test->in_len, wstr);
+        return 1;
     }
     if (wstr == NULL && test->warn != NULL) {
-	sprintf(failmsg,
-		"unescape_cstring(\"%s\", %lu) expected warning: %s, did not get it!",
-		test->input, (unsigned long)test->in_len, test->warn);
-	return 1;
+        sprintf(failmsg,
+                "unescape_cstring(\"%s\", %lu) expected warning: %s, did not get it!",
+                test->input, (unsigned long)test->in_len, test->warn);
+        return 1;
     }
     if (wstr && test->warn && strcmp(wstr, test->warn) != 0) {
-	sprintf(failmsg,
-		"unescape_cstring(\"%s\", %lu) expected warning: %s, got %s!",
-		test->input, (unsigned long)test->in_len, test->warn, wstr);
-	return 1;
+        sprintf(failmsg,
+                "unescape_cstring(\"%s\", %lu) expected warning: %s, got %s!",
+                test->input, (unsigned long)test->in_len, test->warn, wstr);
+        return 1;
     }
     yasm_xfree(wstr);
 
@@ -147,16 +147,16 @@ main(void)
     failed[0] = '\0';
     printf("Test uncstring_test: ");
     for (i=0; i<numtests; i++) {
-	int fail = run_test(&tests[i]);
-	printf("%c", fail>0 ? 'F':'.');
-	fflush(stdout);
-	if (fail)
-	    sprintf(failed, "%s ** F: %s\n", failed, failmsg);
-	nf += fail;
+        int fail = run_test(&tests[i]);
+        printf("%c", fail>0 ? 'F':'.');
+        fflush(stdout);
+        if (fail)
+            sprintf(failed, "%s ** F: %s\n", failed, failmsg);
+        nf += fail;
     }
 
     printf(" +%d-%d/%d %d%%\n%s",
-	   numtests-nf, nf, numtests, 100*(numtests-nf)/numtests, failed);
+           numtests-nf, nf, numtests, 100*(numtests-nf)/numtests, failed);
 
     yasm_errwarn_cleanup();
     return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;

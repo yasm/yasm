@@ -26,10 +26,10 @@ int main(void) {
 
     printf("This string should read `hello, world': `%s'\n", asmstr);
     {
-	long a,b;
-	a = (long)asmstr;
-	b = (long)getstr();
-	printf("The pointers %lx and %lx should be equal\n",a,b);
+        long a,b;
+        a = (long)asmstr;
+        b = (long)getstr();
+        printf("The pointers %lx and %lx should be equal\n",a,b);
     }
    printf("This string should read `hello, world': `%s'\n", getstr());
 
@@ -40,7 +40,7 @@ int main(void) {
     printf("The absolute addressing to the asm-local integer should yield in 1235:\n%ld\n",readgreet());
 
     printf("These pointers should be equal: %p and %p\n",
-	   &greet, textptr);
+           &greet, textptr);
 
     printf("So should these: %p and %p\n", selfptr, &selfptr);
 }

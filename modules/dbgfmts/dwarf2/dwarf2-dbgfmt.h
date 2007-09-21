@@ -30,15 +30,15 @@
 #define WITH_DWARF3 1
 
 typedef struct {
-    char *pathname;	    /* full filename */
-    char *filename;	    /* basename of full filename */
-    unsigned long dir;	    /* index into directories array for relative path;
-			     * 0 for current directory. */
+    char *pathname;         /* full filename */
+    char *filename;         /* basename of full filename */
+    unsigned long dir;      /* index into directories array for relative path;
+                             * 0 for current directory. */
 } dwarf2_filename;
 
 /* Global data */
 typedef struct yasm_dbgfmt_dwarf2 {
-    yasm_dbgfmt_base dbgfmt;	    /* base structure */
+    yasm_dbgfmt_base dbgfmt;        /* base structure */
 
     char **dirs;
     unsigned long dirs_size;
@@ -49,8 +49,8 @@ typedef struct yasm_dbgfmt_dwarf2 {
     unsigned long filenames_allocated;
 
     enum {
-	DWARF2_FORMAT_32BIT,
-	DWARF2_FORMAT_64BIT
+        DWARF2_FORMAT_32BIT,
+        DWARF2_FORMAT_64BIT
     } format;
 
     unsigned int sizeof_address, sizeof_offset, min_insn_len;
@@ -63,22 +63,22 @@ typedef struct dwarf2_loc {
     unsigned long vline;    /* virtual line number of .loc directive */
 
     /* source information */
-    unsigned long file;	    /* index into table of filenames */
-    unsigned long line;	    /* source line number */
+    unsigned long file;     /* index into table of filenames */
+    unsigned long line;     /* source line number */
     unsigned long column;   /* source column */
     int isa_change;
     unsigned long isa;
     enum {
-	IS_STMT_NOCHANGE = 0,
-	IS_STMT_SET,
-	IS_STMT_CLEAR
+        IS_STMT_NOCHANGE = 0,
+        IS_STMT_SET,
+        IS_STMT_CLEAR
     } is_stmt;
     int basic_block;
     int prologue_end;
     int epilogue_begin;
 
-    yasm_bytecode *bc;	    /* first bytecode following */
-    yasm_symrec *sym;	    /* last symbol preceding */
+    yasm_bytecode *bc;      /* first bytecode following */
+    yasm_symrec *sym;       /* last symbol preceding */
 } dwarf2_loc;
 
 /* Per-section data */
@@ -94,7 +94,7 @@ extern const yasm_assoc_data_callback yasm_dwarf2__section_data_cb;
 yasm_bytecode *yasm_dwarf2__append_bc(yasm_section *sect, yasm_bytecode *bc);
 
 /*@dependent@*/ yasm_symrec *yasm_dwarf2__bc_sym(yasm_symtab *symtab,
-						 yasm_bytecode *bc);
+                                                 yasm_bytecode *bc);
 
 typedef struct dwarf2_head dwarf2_head;
 dwarf2_head *yasm_dwarf2__add_head
@@ -108,19 +108,19 @@ yasm_section *yasm_dwarf2__generate_line
      int asm_source, /*@out@*/ yasm_section **main_code,
      /*@out@*/ size_t *num_line_sections);
 void yasm_dwarf2__dir_loc(yasm_object *object, yasm_valparamhead *valparams,
-			  yasm_valparamhead *objext_valparams,
-			  unsigned long line);
+                          yasm_valparamhead *objext_valparams,
+                          unsigned long line);
 void yasm_dwarf2__dir_file(yasm_object *object, yasm_valparamhead *valparams,
-			   yasm_valparamhead *objext_valparams,
-			   unsigned long line);
+                           yasm_valparamhead *objext_valparams,
+                           unsigned long line);
 
 /* Address range table functions */
 yasm_section *yasm_dwarf2__generate_aranges(yasm_object *object,
-					    yasm_section *debug_info);
+                                            yasm_section *debug_info);
 
 /* Name lookup table functions */
 yasm_section *yasm_dwarf2__generate_pubnames(yasm_object *object,
-					     yasm_section *debug_info);
+                                             yasm_section *debug_info);
 
 /* Information functions */
 yasm_section *yasm_dwarf2__generate_info

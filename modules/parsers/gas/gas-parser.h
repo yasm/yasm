@@ -30,7 +30,7 @@
 #ifndef YASM_GAS_PARSER_H
 #define YASM_GAS_PARSER_H
 
-#define YYCTYPE		unsigned char
+#define YYCTYPE         unsigned char
 
 #define MAX_SAVED_LINE_LEN  80
 
@@ -77,30 +77,30 @@ typedef union {
     yasm_floatnum *flt;
     uintptr_t arch_data[4];
     struct {
-	char *contents;
-	size_t len;
+        char *contents;
+        size_t len;
     } str;
 } yystype;
 #define YYSTYPE yystype
 
 typedef struct gas_rept_line {
     STAILQ_ENTRY(gas_rept_line) link;
-    YYCTYPE *data;		/* line characters */
-    size_t len;			/* length of data */
+    YYCTYPE *data;              /* line characters */
+    size_t len;                 /* length of data */
 } gas_rept_line;
 
 typedef struct gas_rept {
-    STAILQ_HEAD(reptlinelist, gas_rept_line) lines;	/* repeated lines */
-    unsigned long startline;	/* line number of rept directive */
-    unsigned long numrept;	/* number of repititions to generate */
-    unsigned long numdone;	/* number of repititions executed so far */
-    /*@null@*/ gas_rept_line *line;	/* next line to repeat */
-    size_t linepos;		/* position to start pulling chars from line */
-    int ended;			/* seen endr directive yet? */
+    STAILQ_HEAD(reptlinelist, gas_rept_line) lines;     /* repeated lines */
+    unsigned long startline;    /* line number of rept directive */
+    unsigned long numrept;      /* number of repititions to generate */
+    unsigned long numdone;      /* number of repititions executed so far */
+    /*@null@*/ gas_rept_line *line;     /* next line to repeat */
+    size_t linepos;             /* position to start pulling chars from line */
+    int ended;                  /* seen endr directive yet? */
 
-    YYCTYPE *oldbuf;		/* saved previous fill buffer */
-    size_t oldbuflen;		/* previous fill buffer length */
-    size_t oldbufpos;		/* position in previous fill buffer */
+    YYCTYPE *oldbuf;            /* saved previous fill buffer */
+    size_t oldbuflen;           /* previous fill buffer length */
+    size_t oldbufpos;           /* position in previous fill buffer */
 } gas_rept;
 
 typedef struct yasm_parser_gas {
@@ -132,18 +132,18 @@ typedef struct yasm_parser_gas {
 
     yasm_scanner s;
     enum {
-	INITIAL,
-	COMMENT,
-	SECTION_DIRECTIVE,
-	INSTDIR
+        INITIAL,
+        COMMENT,
+        SECTION_DIRECTIVE,
+        INSTDIR
     } state;
 
-    int token;		/* enum tokentype or any character */
+    int token;          /* enum tokentype or any character */
     yystype tokval;
-    char tokch;		/* first character of token */
+    char tokch;         /* first character of token */
 
     /* one token of lookahead; used sparingly */
-    int peek_token;	/* NONE if none */
+    int peek_token;     /* NONE if none */
     yystype peek_tokval;
     char peek_tokch;
 
@@ -151,35 +151,35 @@ typedef struct yasm_parser_gas {
 } yasm_parser_gas;
 
 /* shorter access names to commonly used parser_gas fields */
-#define p_object	(parser_gas->object)
-#define p_symtab	(parser_gas->object->symtab)
-#define cursect		(parser_gas->object->cur_section)
-#define curtok		(parser_gas->token)
-#define curval		(parser_gas->tokval)
+#define p_object        (parser_gas->object)
+#define p_symtab        (parser_gas->object->symtab)
+#define cursect         (parser_gas->object->cur_section)
+#define curtok          (parser_gas->token)
+#define curval          (parser_gas->tokval)
 
-#define INTNUM_val		(curval.intn)
-#define FLTNUM_val		(curval.flt)
-#define STRING_val		(curval.str)
-#define INSN_val		(curval.arch_data)
-#define PREFIX_val		(curval.arch_data)
-#define REG_val			(curval.arch_data)
-#define REGGROUP_val		(curval.arch_data)
-#define SEGREG_val		(curval.arch_data)
-#define TARGETMOD_val		(curval.arch_data)
-#define ID_val			(curval.str_val)
-#define LABEL_val		(curval.str_val)
-#define DIR_ALIGN_val		(curval.int_info)
-#define DIR_ASCII_val		(curval.int_info)
-#define DIR_DATA_val		(curval.int_info)
-#define DIR_LEB128_val		(curval.int_info)
-#define DIR_SECTNAME_val	(curval.str_val)
+#define INTNUM_val              (curval.intn)
+#define FLTNUM_val              (curval.flt)
+#define STRING_val              (curval.str)
+#define INSN_val                (curval.arch_data)
+#define PREFIX_val              (curval.arch_data)
+#define REG_val                 (curval.arch_data)
+#define REGGROUP_val            (curval.arch_data)
+#define SEGREG_val              (curval.arch_data)
+#define TARGETMOD_val           (curval.arch_data)
+#define ID_val                  (curval.str_val)
+#define LABEL_val               (curval.str_val)
+#define DIR_ALIGN_val           (curval.int_info)
+#define DIR_ASCII_val           (curval.int_info)
+#define DIR_DATA_val            (curval.int_info)
+#define DIR_LEB128_val          (curval.int_info)
+#define DIR_SECTNAME_val        (curval.str_val)
 
-#define cur_line	(yasm_linemap_get_current(parser_gas->linemap))
+#define cur_line        (yasm_linemap_get_current(parser_gas->linemap))
 
-#define p_expr_new(l,o,r)	yasm_expr_create(o,l,r,cur_line)
-#define p_expr_new_tree(l,o,r)	yasm_expr_create_tree(l,o,r,cur_line)
-#define p_expr_new_branch(o,r)	yasm_expr_create_branch(o,r,cur_line)
-#define p_expr_new_ident(r)	yasm_expr_create_ident(r,cur_line)
+#define p_expr_new(l,o,r)       yasm_expr_create(o,l,r,cur_line)
+#define p_expr_new_tree(l,o,r)  yasm_expr_create_tree(l,o,r,cur_line)
+#define p_expr_new_branch(o,r)  yasm_expr_create_branch(o,r,cur_line)
+#define p_expr_new_ident(r)     yasm_expr_create_ident(r,cur_line)
 
 void gas_parser_parse(yasm_parser_gas *parser_gas);
 void gas_parser_cleanup(yasm_parser_gas *parser_gas);

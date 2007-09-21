@@ -32,7 +32,7 @@
 
 
 typedef struct yasm_objfmt_dbg {
-    yasm_objfmt_base objfmt;	    /* base structure */
+    yasm_objfmt_base objfmt;        /* base structure */
 
     FILE *dbgfile;
 } yasm_objfmt_dbg;
@@ -49,8 +49,8 @@ dbg_objfmt_create(yasm_object *object)
 
     objfmt_dbg->dbgfile = tmpfile();
     if (!objfmt_dbg->dbgfile) {
-	fprintf(stderr, N_("could not open temporary file"));
-	return 0;
+        fprintf(stderr, N_("could not open temporary file"));
+        return 0;
     }
     fprintf(objfmt_dbg->dbgfile, "create()\n");
     return (yasm_objfmt *)objfmt_dbg;
@@ -58,7 +58,7 @@ dbg_objfmt_create(yasm_object *object)
 
 static void
 dbg_objfmt_output(yasm_object *object, FILE *f, int all_syms,
-		  yasm_errwarns *errwarns)
+                  yasm_errwarns *errwarns)
 {
     yasm_objfmt_dbg *objfmt_dbg = (yasm_objfmt_dbg *)object->objfmt;
     char buf[1024];
@@ -67,8 +67,8 @@ dbg_objfmt_output(yasm_object *object, FILE *f, int all_syms,
     /* Copy temp file to real output file */
     rewind(objfmt_dbg->dbgfile);
     while ((i = fread(buf, 1, 1024, objfmt_dbg->dbgfile))) {
-	if (fwrite(buf, 1, i, f) != i)
-	    break;
+        if (fwrite(buf, 1, i, f) != i)
+            break;
     }
 
     /* Reassign objfmt debug file to output file */
@@ -98,22 +98,22 @@ dbg_objfmt_add_default_section(yasm_object *object)
     int isnew;
 
     retval = yasm_object_get_general(object, ".text",
-	yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(200)), 0),
-	0, 0, 0, &isnew, 0);
+        yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(200)), 0),
+        0, 0, 0, &isnew, 0);
     if (isnew) {
-	fprintf(objfmt_dbg->dbgfile, "(new) ");
-	yasm_symtab_define_label(object->symtab, ".text",
-	    yasm_section_bcs_first(retval), 1, 0);
-	yasm_section_set_default(retval, 1);
+        fprintf(objfmt_dbg->dbgfile, "(new) ");
+        yasm_symtab_define_label(object->symtab, ".text",
+            yasm_section_bcs_first(retval), 1, 0);
+        yasm_section_set_default(retval, 1);
     }
     return retval;
 }
 
 static /*@observer@*/ /*@null@*/ yasm_section *
 dbg_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
-			  /*@unused@*/ /*@null@*/
-			  yasm_valparamhead *objext_valparams,
-			  unsigned long line)
+                          /*@unused@*/ /*@null@*/
+                          yasm_valparamhead *objext_valparams,
+                          unsigned long line)
 {
     yasm_objfmt_dbg *objfmt_dbg = (yasm_objfmt_dbg *)object->objfmt;
     yasm_valparam *vp;
@@ -132,16 +132,16 @@ dbg_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
         return NULL;
     }
     retval = yasm_object_get_general(object, yasm_vp_string(vp),
-	    yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(200)),
-				   line), 0, 0, 0, &isnew, line);
-	if (isnew) {
-	    fprintf(objfmt_dbg->dbgfile, "(new) ");
-	    yasm_symtab_define_label(object->symtab, vp->val,
-		yasm_section_bcs_first(retval), 1, line);
-	}
-	yasm_section_set_default(retval, 0);
-	fprintf(objfmt_dbg->dbgfile, "\"%s\" section\n", vp->val);
-	return retval;
+        yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(200)),
+                               line), 0, 0, 0, &isnew, line);
+    if (isnew) {
+        fprintf(objfmt_dbg->dbgfile, "(new) ");
+        yasm_symtab_define_label(object->symtab, vp->val,
+                                 yasm_section_bcs_first(retval), 1, line);
+    }
+    yasm_section_set_default(retval, 0);
+    fprintf(objfmt_dbg->dbgfile, "\"%s\" section\n", vp->val);
+    return retval;
 }
 
 /* Define valid debug formats to use with this object format */
@@ -158,7 +158,7 @@ yasm_objfmt_module yasm_dbg_LTX_objfmt = {
     32,
     dbg_objfmt_dbgfmt_keywords,
     "null",
-    NULL,	/* no directives */
+    NULL,       /* no directives */
     dbg_objfmt_create,
     dbg_objfmt_output,
     dbg_objfmt_destroy,

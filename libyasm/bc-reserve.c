@@ -51,11 +51,11 @@ static void bc_reserve_destroy(void *contents);
 static void bc_reserve_print(const void *contents, FILE *f, int indent_level);
 static void bc_reserve_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 static int bc_reserve_calc_len(yasm_bytecode *bc,
-			       yasm_bc_add_span_func add_span,
-			       void *add_span_data);
+                               yasm_bc_add_span_func add_span,
+                               void *add_span_data);
 static int bc_reserve_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-			      yasm_output_value_func output_value,
-			      /*@null@*/ yasm_output_reloc_func output_reloc);
+                              yasm_output_value_func output_value,
+                              /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static const yasm_bytecode_callback bc_reserve_callback = {
     bc_reserve_destroy,
@@ -92,16 +92,16 @@ bc_reserve_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     bytecode_reserve *reserve = (bytecode_reserve *)bc->contents;
     /* multiply reserve expression into multiple */
     if (!bc->multiple)
-	bc->multiple = reserve->numitems;
+        bc->multiple = reserve->numitems;
     else
-	bc->multiple = yasm_expr_create_tree(bc->multiple, YASM_EXPR_MUL,
-					     reserve->numitems, bc->line);
+        bc->multiple = yasm_expr_create_tree(bc->multiple, YASM_EXPR_MUL,
+                                             reserve->numitems, bc->line);
     reserve->numitems = NULL;
 }
 
 static int
 bc_reserve_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
-		    void *add_span_data)
+                    void *add_span_data)
 {
     bytecode_reserve *reserve = (bytecode_reserve *)bc->contents;
     bc->len += reserve->itemsize;
@@ -110,8 +110,8 @@ bc_reserve_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 
 static int
 bc_reserve_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-		   yasm_output_value_func output_value,
-		   /*@unused@*/ yasm_output_reloc_func output_reloc)
+                   yasm_output_value_func output_value,
+                   /*@unused@*/ yasm_output_reloc_func output_reloc)
 {
     yasm_internal_error(N_("bc_reserve_tobytes called"));
     /*@notreached@*/
@@ -120,7 +120,7 @@ bc_reserve_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
 yasm_bytecode *
 yasm_bc_create_reserve(yasm_expr *numitems, unsigned int itemsize,
-		       unsigned long line)
+                       unsigned long line)
 {
     bytecode_reserve *reserve = yasm_xmalloc(sizeof(bytecode_reserve));
 

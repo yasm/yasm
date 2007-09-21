@@ -61,10 +61,10 @@ static void bc_insn_destroy(void *contents);
 static void bc_insn_print(const void *contents, FILE *f, int indent_level);
 static void bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
 static int bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
-			    void *add_span_data);
+                            void *add_span_data);
 static int bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-			   yasm_output_value_func output_value,
-			   /*@null@*/ yasm_output_reloc_func output_reloc);
+                           yasm_output_value_func output_value,
+                           /*@null@*/ yasm_output_reloc_func output_reloc);
 
 static const yasm_bytecode_callback bc_insn_callback = {
     bc_insn_destroy,
@@ -87,7 +87,7 @@ void
 yasm_ea_set_len(yasm_effaddr *ptr, unsigned int len)
 {
     if (!ptr)
-	return;
+        return;
 
     /* Currently don't warn if length truncated, as this is called only from
      * an explicit override, where we expect the user knows what they're doing.
@@ -100,7 +100,7 @@ void
 yasm_ea_set_nosplit(yasm_effaddr *ptr, unsigned int nosplit)
 {
     if (!ptr)
-	return;
+        return;
 
     ptr->nosplit = (unsigned char)nosplit;
 }
@@ -109,7 +109,7 @@ void
 yasm_ea_set_strong(yasm_effaddr *ptr, unsigned int strong)
 {
     if (!ptr)
-	return;
+        return;
 
     ptr->strong = (unsigned char)strong;
 }
@@ -118,11 +118,11 @@ void
 yasm_ea_set_segreg(yasm_effaddr *ea, uintptr_t segreg)
 {
     if (!ea)
-	return;
+        return;
 
     if (segreg != 0 && ea->segreg != 0)
-	yasm_warn_set(YASM_WARN_GENERAL,
-		      N_("multiple segment overrides, using leftmost"));
+        yasm_warn_set(YASM_WARN_GENERAL,
+                      N_("multiple segment overrides, using leftmost"));
 
     ea->segreg = segreg;
 }
@@ -153,15 +153,15 @@ bc_insn_destroy(void *contents)
 {
     bytecode_insn *insn = (bytecode_insn *)contents;
     if (insn->num_operands > 0)
-	yasm_ops_delete(&insn->operands, 0);
+        yasm_ops_delete(&insn->operands, 0);
     if (insn->num_prefixes > 0) {
-	int i;
-	for (i=0; i<insn->num_prefixes; i++)
-	    yasm_xfree(insn->prefixes[i]);
-	yasm_xfree(insn->prefixes);
+        int i;
+        for (i=0; i<insn->num_prefixes; i++)
+            yasm_xfree(insn->prefixes[i]);
+        yasm_xfree(insn->prefixes);
     }
     if (insn->num_segregs > 0)
-	yasm_xfree(insn->segregs);
+        yasm_xfree(insn->segregs);
     yasm_xfree(contents);
 }
 
@@ -182,65 +182,65 @@ bc_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 
     /* Simplify the operands' expressions first. */
     for (i = 0, op = yasm_ops_first(&insn->operands);
-	 op && i<insn->num_operands; op = yasm_operand_next(op), i++) {
-	/* Check operand type */
-	switch (op->type) {
-	    case YASM_INSN__OPERAND_MEMORY:
-		/* Don't get over-ambitious here; some archs' memory expr
-		 * parser are sensitive to the presence of *1, etc, so don't
-		 * simplify reg*1 identities.
-		 */
-		if (op->data.ea)
-		    op->data.ea->disp.abs =
-			yasm_expr__level_tree(op->data.ea->disp.abs, 1, 1, 0,
-					      0, NULL, NULL);
-		if (yasm_error_occurred()) {
-		    /* Add a pointer to where it was used to the error */
-		    yasm_error_fetch(&eclass, &str, &xrefline, &xrefstr);
-		    if (xrefstr) {
-			yasm_error_set_xref(xrefline, "%s", xrefstr);
-			yasm_xfree(xrefstr);
-		    }
-		    if (str) {
-			yasm_error_set(eclass, "%s in memory expression", str);
-			yasm_xfree(str);
-		    }
-		    return;
-		}
-		break;
-	    case YASM_INSN__OPERAND_IMM:
-		op->data.val =
-		    yasm_expr__level_tree(op->data.val, 1, 1, 1, 0, NULL,
-					  NULL);
-		if (yasm_error_occurred()) {
-		    /* Add a pointer to where it was used to the error */
-		    yasm_error_fetch(&eclass, &str, &xrefline, &xrefstr);
-		    if (xrefstr) {
-			yasm_error_set_xref(xrefline, "%s", xrefstr);
-			yasm_xfree(xrefstr);
-		    }
-		    if (str) {
-			yasm_error_set(eclass, "%s in immediate expression",
-				       str);
-			yasm_xfree(str);
-		    }
-		    return;
-		}
-		break;
-	    default:
-		break;
-	}
+         op && i<insn->num_operands; op = yasm_operand_next(op), i++) {
+        /* Check operand type */
+        switch (op->type) {
+            case YASM_INSN__OPERAND_MEMORY:
+                /* Don't get over-ambitious here; some archs' memory expr
+                 * parser are sensitive to the presence of *1, etc, so don't
+                 * simplify reg*1 identities.
+                 */
+                if (op->data.ea)
+                    op->data.ea->disp.abs =
+                        yasm_expr__level_tree(op->data.ea->disp.abs, 1, 1, 0,
+                                              0, NULL, NULL);
+                if (yasm_error_occurred()) {
+                    /* Add a pointer to where it was used to the error */
+                    yasm_error_fetch(&eclass, &str, &xrefline, &xrefstr);
+                    if (xrefstr) {
+                        yasm_error_set_xref(xrefline, "%s", xrefstr);
+                        yasm_xfree(xrefstr);
+                    }
+                    if (str) {
+                        yasm_error_set(eclass, "%s in memory expression", str);
+                        yasm_xfree(str);
+                    }
+                    return;
+                }
+                break;
+            case YASM_INSN__OPERAND_IMM:
+                op->data.val =
+                    yasm_expr__level_tree(op->data.val, 1, 1, 1, 0, NULL,
+                                          NULL);
+                if (yasm_error_occurred()) {
+                    /* Add a pointer to where it was used to the error */
+                    yasm_error_fetch(&eclass, &str, &xrefline, &xrefstr);
+                    if (xrefstr) {
+                        yasm_error_set_xref(xrefline, "%s", xrefstr);
+                        yasm_xfree(xrefstr);
+                    }
+                    if (str) {
+                        yasm_error_set(eclass, "%s in immediate expression",
+                                       str);
+                        yasm_xfree(str);
+                    }
+                    return;
+                }
+                break;
+            default:
+                break;
+        }
     }
 
     yasm_arch_finalize_insn(insn->arch, bc, prev_bc, insn->insn_data,
-			    insn->num_operands, &insn->operands,
-			    insn->num_prefixes, insn->prefixes,
-			    insn->num_segregs, insn->segregs);
+                            insn->num_operands, &insn->operands,
+                            insn->num_prefixes, insn->prefixes,
+                            insn->num_segregs, insn->segregs);
 }
 
 static int
 bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
-		 void *add_span_data)
+                 void *add_span_data)
 {
     yasm_internal_error(N_("bc_insn_calc_len() is not implemented"));
     /*@notreached@*/
@@ -249,8 +249,8 @@ bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 
 static int
 bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
-		yasm_output_value_func output_value,
-		/*@unused@*/ yasm_output_reloc_func output_reloc)
+                yasm_output_value_func output_value,
+                /*@unused@*/ yasm_output_reloc_func output_reloc)
 {
     yasm_internal_error(N_("bc_insn_tobytes() is not implemented"));
     /*@notreached@*/
@@ -259,8 +259,8 @@ bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
 yasm_bytecode *
 yasm_bc_create_insn(yasm_arch *arch, const uintptr_t insn_data[4],
-		    int num_operands, /*@null@*/ yasm_insn_operands *operands,
-		    unsigned long line)
+                    int num_operands, /*@null@*/ yasm_insn_operands *operands,
+                    unsigned long line)
 {
     bytecode_insn *insn = yasm_xmalloc(sizeof(bytecode_insn));
 
@@ -271,9 +271,9 @@ yasm_bc_create_insn(yasm_arch *arch, const uintptr_t insn_data[4],
     insn->insn_data[3] = insn_data[3];
     insn->num_operands = num_operands;
     if (operands)
-	insn->operands = *operands;	/* structure copy */
+        insn->operands = *operands;     /* structure copy */
     else
-	yasm_ops_initialize(&insn->operands);
+        yasm_ops_initialize(&insn->operands);
     insn->num_prefixes = 0;
     insn->prefixes = NULL;
     insn->num_segregs = 0;
@@ -310,8 +310,8 @@ yasm_bc_insn_add_prefix(yasm_bytecode *bc, const uintptr_t prefix_data[4])
     assert(bc->callback == bc_insn_callback);
 
     insn->prefixes =
-	yasm_xrealloc(insn->prefixes,
-		      (insn->num_prefixes+1)*sizeof(uintptr_t *));
+        yasm_xrealloc(insn->prefixes,
+                      (insn->num_prefixes+1)*sizeof(uintptr_t *));
     insn->prefixes[insn->num_prefixes] = yasm_xmalloc(4*sizeof(uintptr_t));
     insn->prefixes[insn->num_prefixes][0] = prefix_data[0];
     insn->prefixes[insn->num_prefixes][1] = prefix_data[1];
@@ -328,7 +328,7 @@ yasm_bc_insn_add_seg_prefix(yasm_bytecode *bc, uintptr_t segreg)
     assert(bc->callback == bc_insn_callback);
 
     insn->segregs =
-	yasm_xrealloc(insn->segregs, (insn->num_segregs+1)*sizeof(uintptr_t));
+        yasm_xrealloc(insn->segregs, (insn->num_segregs+1)*sizeof(uintptr_t));
     insn->segregs[insn->num_segregs] = segreg;
     insn->num_segregs++;
 }

@@ -35,23 +35,23 @@ main(int argc, char *argv[])
     int ch;
 
     if (argc != 2) {
-	fprintf(stderr, "Usage: %s <file>\n", argv[0]);
-	return EXIT_FAILURE;
+        fprintf(stderr, "Usage: %s <file>\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
     bfile = fopen(argv[1], "rb");
 
     if (!bfile) {
-	fprintf(stderr, "Could not open `%s'.\n", argv[1]);
-	return EXIT_FAILURE;
+        fprintf(stderr, "Could not open `%s'.\n", argv[1]);
+        return EXIT_FAILURE;
     }
 
     while ((ch = fgetc(bfile)) != EOF)
-	printf("%02x \n", ch);
+        printf("%02x \n", ch);
 
     if (ferror(bfile)) {
-	fprintf(stderr, "Error reading from `%s'.\n", argv[1]);
-	return EXIT_FAILURE;
+        fprintf(stderr, "Error reading from `%s'.\n", argv[1]);
+        return EXIT_FAILURE;
     }
 
     fclose(bfile);

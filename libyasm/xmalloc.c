@@ -63,10 +63,10 @@ def_xmalloc(size_t size)
     void *newmem;
 
     if (size == 0)
-	size = 1;
+        size = 1;
     newmem = malloc(size);
     if (!newmem)
-	yasm__fatal(N_("out of memory"));
+        yasm__fatal(N_("out of memory"));
 
     return newmem;
 }
@@ -77,11 +77,11 @@ def_xcalloc(size_t nelem, size_t elsize)
     void *newmem;
 
     if (nelem == 0 || elsize == 0)
-	nelem = elsize = 1;
+        nelem = elsize = 1;
 
     newmem = calloc(nelem, elsize);
     if (!newmem)
-	yasm__fatal(N_("out of memory"));
+        yasm__fatal(N_("out of memory"));
 
     return newmem;
 }
@@ -92,13 +92,13 @@ def_xrealloc(void *oldmem, size_t size)
     void *newmem;
 
     if (size == 0)
-	size = 1;
+        size = 1;
     if (!oldmem)
-	newmem = malloc(size);
+        newmem = malloc(size);
     else
-	newmem = realloc(oldmem, size);
+        newmem = realloc(oldmem, size);
     if (!newmem)
-	yasm__fatal(N_("out of memory"));
+        yasm__fatal(N_("out of memory"));
 
     return newmem;
 }
@@ -107,6 +107,6 @@ static void
 def_xfree(void *p)
 {
     if (!p)
-	return;
+        return;
     free(p);
 }

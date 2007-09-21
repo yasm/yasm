@@ -38,20 +38,20 @@ yasm_arch_module yasm_lc3b_LTX_arch;
 
 static /*@only@*/ yasm_arch *
 lc3b_create(const char *machine, const char *parser,
-	    /*@out@*/ yasm_arch_create_error *error)
+            /*@out@*/ yasm_arch_create_error *error)
 {
     yasm_arch_base *arch;
 
     *error = YASM_ARCH_CREATE_OK;
 
     if (yasm__strcasecmp(machine, "lc3b") != 0) {
-	*error = YASM_ARCH_CREATE_BAD_MACHINE;
-	return NULL;
+        *error = YASM_ARCH_CREATE_BAD_MACHINE;
+        return NULL;
     }
 
     if (yasm__strcasecmp(parser, "nasm") != 0) {
-	*error = YASM_ARCH_CREATE_BAD_PARSER;
-	return NULL;
+        *error = YASM_ARCH_CREATE_BAD_PARSER;
+        return NULL;
     }
 
     arch = yasm_xmalloc(sizeof(yasm_arch_base));
@@ -85,12 +85,12 @@ lc3b_set_var(yasm_arch *arch, const char *var, unsigned long val)
 
 static int
 lc3b_parse_directive(/*@unused@*/ yasm_arch *arch,
-		     /*@unused@*/ const char *name,
-		     /*@unused@*/ /*@null@*/ yasm_valparamhead *valparams,
-		     /*@unused@*/ /*@null@*/
-		     yasm_valparamhead *objext_valparams,
-		     /*@unused@*/ yasm_object *object,
-		     /*@unused@*/ unsigned long line)
+                     /*@unused@*/ const char *name,
+                     /*@unused@*/ /*@null@*/ yasm_valparamhead *valparams,
+                     /*@unused@*/ /*@null@*/
+                     yasm_valparamhead *objext_valparams,
+                     /*@unused@*/ yasm_object *object,
+                     /*@unused@*/ unsigned long line)
 {
     return 1;
 }
@@ -100,33 +100,33 @@ lc3b_get_fill(const yasm_arch *arch)
 {
     /* NOP pattern is all 0's per LC-3b Assembler 3.50 output */
     static const unsigned char *fill[16] = {
-	NULL,		/* unused */
-	NULL,		/* 1 - illegal; all opcodes are 2 bytes long */
-	(const unsigned char *)
-	"\x00\x00",			/* 4 */
-	NULL,				/* 3 - illegal */
-	(const unsigned char *)
-	"\x00\x00\x00\x00",		/* 4 */
-	NULL,				/* 5 - illegal */
-	(const unsigned char *)
-	"\x00\x00\x00\x00\x00\x00",	/* 6 */
-	NULL,				/* 7 - illegal */
-	(const unsigned char *)
-	"\x00\x00\x00\x00\x00\x00"	/* 8 */
-	"\x00\x00",
-	NULL,				/* 9 - illegal */
-	(const unsigned char *)
-	"\x00\x00\x00\x00\x00\x00"	/* 10 */
-	"\x00\x00\x00\x00",
-	NULL,				/* 11 - illegal */
-	(const unsigned char *)
-	"\x00\x00\x00\x00\x00\x00"	/* 12 */
-	"\x00\x00\x00\x00\x00\x00",
-	NULL,				/* 13 - illegal */
-	(const unsigned char *)
-	"\x00\x00\x00\x00\x00\x00"	/* 14 */
-	"\x00\x00\x00\x00\x00\x00\x00\x00",
-	NULL				/* 15 - illegal */
+        NULL,           /* unused */
+        NULL,           /* 1 - illegal; all opcodes are 2 bytes long */
+        (const unsigned char *)
+        "\x00\x00",                     /* 4 */
+        NULL,                           /* 3 - illegal */
+        (const unsigned char *)
+        "\x00\x00\x00\x00",             /* 4 */
+        NULL,                           /* 5 - illegal */
+        (const unsigned char *)
+        "\x00\x00\x00\x00\x00\x00",     /* 6 */
+        NULL,                           /* 7 - illegal */
+        (const unsigned char *)
+        "\x00\x00\x00\x00\x00\x00"      /* 8 */
+        "\x00\x00",
+        NULL,                           /* 9 - illegal */
+        (const unsigned char *)
+        "\x00\x00\x00\x00\x00\x00"      /* 10 */
+        "\x00\x00\x00\x00",
+        NULL,                           /* 11 - illegal */
+        (const unsigned char *)
+        "\x00\x00\x00\x00\x00\x00"      /* 12 */
+        "\x00\x00\x00\x00\x00\x00",
+        NULL,                           /* 13 - illegal */
+        (const unsigned char *)
+        "\x00\x00\x00\x00\x00\x00"      /* 14 */
+        "\x00\x00\x00\x00\x00\x00\x00\x00",
+        NULL                            /* 15 - illegal */
     };
     return fill;
 }
@@ -139,8 +139,8 @@ lc3b_get_reg_size(/*@unused@*/ yasm_arch *arch, /*@unused@*/ unsigned long reg)
 
 static unsigned long
 lc3b_reggroup_get_reg(/*@unused@*/ yasm_arch *arch,
-		      /*@unused@*/ unsigned long reggroup,
-		      /*@unused@*/ unsigned long regindex)
+                      /*@unused@*/ unsigned long reggroup,
+                      /*@unused@*/ unsigned long regindex)
 {
     return 0;
 }
@@ -153,11 +153,11 @@ lc3b_reg_print(/*@unused@*/ yasm_arch *arch, unsigned long reg, FILE *f)
 
 static int
 lc3b_floatnum_tobytes(yasm_arch *arch, const yasm_floatnum *flt,
-		      unsigned char *buf, size_t destsize, size_t valsize,
-		      size_t shift, int warn)
+                      unsigned char *buf, size_t destsize, size_t valsize,
+                      size_t shift, int warn)
 {
     yasm_error_set(YASM_ERROR_FLOATING_POINT,
-		   N_("LC-3b does not support floating point"));
+                   N_("LC-3b does not support floating point"));
     return 1;
 }
 
@@ -194,7 +194,7 @@ yasm_arch_module yasm_lc3b_LTX_arch = {
     lc3b_get_reg_size,
     lc3b_reggroup_get_reg,
     lc3b_reg_print,
-    NULL,	/*yasm_lc3b__segreg_print*/
+    NULL,       /*yasm_lc3b__segreg_print*/
     lc3b_ea_create_expr,
     lc3b_machines,
     "lc3b",

@@ -42,7 +42,7 @@ typedef struct opt_option_s
     int takes_param;
 
     int (*handler) (char *cmd, /*@null@*/ char *param, int extra);
-    int extra;			/* extra value for handler */
+    int extra;                  /* extra value for handler */
 
     /* description to use in help_msg() */
     /*@observer@*/ const char *description;
@@ -64,12 +64,12 @@ int other_option_handler(char *option);
  * nopts - options count
  */
 int parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts,
-		  void (*print_error) (const char *fmt, ...));
+                  void (*print_error) (const char *fmt, ...));
 
 /* display help message msg followed by list of options in options and followed
  * by tail
  */
 void help_msg(const char *msg, const char *tail, opt_option *options,
-	      size_t nopts);
+              size_t nopts);
 
 #endif

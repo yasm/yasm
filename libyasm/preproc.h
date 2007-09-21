@@ -56,17 +56,17 @@ typedef struct yasm_preproc_module {
      * Module-level implementation of yasm_preproc_create().
      * Call yasm_preproc_create() instead of calling this function.
      *
-     * \param f			initial starting file
-     * \param in_filename	initial starting filename
-     * \param lm		line mapping repository
-     * \param errwarns		error/warnning set.
+     * \param f                 initial starting file
+     * \param in_filename       initial starting filename
+     * \param lm                line mapping repository
+     * \param errwarns          error/warnning set.
      * \return New preprocessor.
      *
      * \note Any preprocessor errors and warnings are stored into errwarns.
      */
     /*@only@*/ yasm_preproc * (*create) (FILE *f, const char *in_filename,
-					 yasm_linemap *lm,
-					 yasm_errwarns *errwarns);
+                                         yasm_linemap *lm,
+                                         yasm_errwarns *errwarns);
 
     /** Module-level implementation of yasm_preproc_destroy().
      * Call yasm_preproc_destroy() instead of calling this function.
@@ -77,7 +77,7 @@ typedef struct yasm_preproc_module {
      * Call yasm_preproc_input() instead of calling this function.
      */
     size_t (*input) (yasm_preproc *preproc, /*@out@*/ char *buf,
-		     size_t max_size);
+                     size_t max_size);
 
     /** Module-level implementation of yasm_preproc_get_included_file().
      * Call yasm_preproc_get_included_file() instead of calling this function.
@@ -109,11 +109,11 @@ typedef struct yasm_preproc_module {
 /** Initialize preprocessor.
  * The preprocessor needs access to the object format module to find out
  * any output format specific macros.
- * \param module	preprocessor module
- * \param f		initial starting file
- * \param in_filename	initial starting file filename
- * \param lm		line mapping repository
- * \param errwarns	error/warning set
+ * \param module        preprocessor module
+ * \param f             initial starting file
+ * \param in_filename   initial starting file filename
+ * \param lm            line mapping repository
+ * \param errwarns      error/warning set
  * \return New preprocessor.
  * \note Errors/warnings are stored into errwarns.
  */
@@ -122,55 +122,55 @@ typedef struct yasm_preproc_module {
      yasm_linemap *lm, yasm_errwarns *errwarns);
 
 /** Cleans up any allocated preproc memory.
- * \param preproc	preprocessor
+ * \param preproc       preprocessor
  */
 void yasm_preproc_destroy(/*@only@*/ yasm_preproc *preproc);
 
 /** Gets more preprocessed source code (up to max_size bytes) into buf.
  * More than a single line may be returned in buf.
- * \param preproc	preprocessor
- * \param buf		destination buffer for preprocessed source
- * \param max_size	maximum number of bytes that can be returned in buf
+ * \param preproc       preprocessor
+ * \param buf           destination buffer for preprocessed source
+ * \param max_size      maximum number of bytes that can be returned in buf
  * \return Actual number of bytes returned in buf.
  */
 size_t yasm_preproc_input(yasm_preproc *preproc, /*@out@*/ char *buf,
-			  size_t max_size);
+                          size_t max_size);
 
 /** Get the next filename included by the source code.
- * \param preproc	preprocessor
- * \param buf		destination buffer for filename
- * \param max_size	maximum number of bytes that can be returned in buf
+ * \param preproc       preprocessor
+ * \param buf           destination buffer for filename
+ * \param max_size      maximum number of bytes that can be returned in buf
  * \return Actual number of bytes returned in buf.
  */
 size_t yasm_preproc_get_included_file(yasm_preproc *preproc,
-				      /*@out@*/ char *buf, size_t max_size);
+                                      /*@out@*/ char *buf, size_t max_size);
 
 /** Pre-include a file.
- * \param preproc	preprocessor
- * \param filename	filename
+ * \param preproc       preprocessor
+ * \param filename      filename
  */
 void yasm_preproc_add_include_file(yasm_preproc *preproc,
-				   const char *filename);
+                                   const char *filename);
 
 /** Pre-define a macro.
- * \param preproc	preprocessor
- * \param macronameval	"name=value" string
+ * \param preproc       preprocessor
+ * \param macronameval  "name=value" string
  */
 void yasm_preproc_predefine_macro(yasm_preproc *preproc,
-				  const char *macronameval);
+                                  const char *macronameval);
 
 /** Un-define a macro.
- * \param preproc	preprocessor
- * \param macroname	macro name
+ * \param preproc       preprocessor
+ * \param macroname     macro name
  */
 void yasm_preproc_undefine_macro(yasm_preproc *preproc, const char *macroname);
 
 /** Define a builtin macro, preprocessed before the "standard" macros.
- * \param preproc	preprocessor
- * \param macronameval	"name=value" string
+ * \param preproc       preprocessor
+ * \param macronameval  "name=value" string
  */
 void yasm_preproc_define_builtin(yasm_preproc *preproc,
-				 const char *macronameval);
+                                 const char *macronameval);
 
 #ifndef YASM_DOXYGEN
 
@@ -189,12 +189,12 @@ void yasm_preproc_define_builtin(yasm_preproc *preproc,
     ((yasm_preproc_base *)preproc)->module->add_include_file(preproc, filename)
 #define yasm_preproc_predefine_macro(preproc, macronameval) \
     ((yasm_preproc_base *)preproc)->module->predefine_macro(preproc, \
-							    macronameval)
+                                                            macronameval)
 #define yasm_preproc_undefine_macro(preproc, macroname) \
     ((yasm_preproc_base *)preproc)->module->undefine_macro(preproc, macroname)
 #define yasm_preproc_define_builtin(preproc, macronameval) \
     ((yasm_preproc_base *)preproc)->module->define_builtin(preproc, \
-							   macronameval)
+                                                           macronameval)
 
 #endif
 
