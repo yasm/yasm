@@ -185,16 +185,16 @@ x86insn_nasm.gperf x86insn_gas.gperf x86insns.c: modules/arch/x86/gen_x86_insn.p
 	-python modules/arch/x86/gen_x86_insn.py
 
 x86insn_nasm.c: x86insn_nasm.gperf genperf
-	./genperf x86insn_nasm.gperf > $@
+	./genperf x86insn_nasm.gperf $@
 
 x86insn_gas.c: x86insn_gas.gperf genperf
-	./genperf x86insn_gas.gperf > $@
+	./genperf x86insn_gas.gperf $@
 
 x86cpu.c: modules/arch/x86/x86cpu.gperf genperf
-	./genperf modules/arch/x86/x86cpu.gperf > $@
+	./genperf modules/arch/x86/x86cpu.gperf $@
 
 x86regtmod.c: modules/arch/x86/x86regtmod.gperf genperf
-	./genperf modules/arch/x86/x86regtmod.gperf > $@
+	./genperf modules/arch/x86/x86regtmod.gperf $@
 
 modules/arch/x86/x86id.c: x86insn_nasm.c x86insn_gas.c x86insns.c
 
