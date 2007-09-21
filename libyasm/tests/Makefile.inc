@@ -9,6 +9,8 @@ TESTS += uncstring_test
 TESTS += libyasm/tests/libyasm_test.sh
 
 EXTRA_DIST += libyasm/tests/libyasm_test.sh
+EXTRA_DIST += libyasm/tests/1shl0.asm
+EXTRA_DIST += libyasm/tests/1shl0.hex
 EXTRA_DIST += libyasm/tests/absloop-err.asm
 EXTRA_DIST += libyasm/tests/absloop-err.errwarn
 EXTRA_DIST += libyasm/tests/charconst64.asm
