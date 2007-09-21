@@ -263,7 +263,11 @@ int yasm_bc_tobytes_common
      yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
-#define yasm_bc__next(x)                STAILQ_NEXT(x, link)
+/** Get the next bytecode in a linked list of bytecodes.
+ * \param bc    bytecode
+ * \return Next bytecode.
+ */
+#define yasm_bc__next(bc)               STAILQ_NEXT(bc, link)
 
 /** Set multiple field of a bytecode.
  * A bytecode can be repeated a number of times when output.  This function

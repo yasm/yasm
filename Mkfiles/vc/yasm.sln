@@ -32,8 +32,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "re2c", "re2c\re2c.vcproj", 
 	ProjectSection(ProjectDependencies) = postProject
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gap", "gap\gap.vcproj", "{5758BF4E-ABC4-11DA-B012-B622A1EF5492}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "genperf", "genperf\genperf.vcproj", "{C45A8B59-8B59-4D5D-A8E8-FB090F8DD619}"
 	ProjectSection(ProjectDependencies) = postProject
+		{22294DC7-C6DF-4C34-A178-8751B43867B7} = {22294DC7-C6DF-4C34-A178-8751B43867B7}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "genmodule", "genmodule\genmodule.vcproj", "{F0E8B707-00C5-4FF2-B8EF-7C39817132A0}"
@@ -41,6 +42,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "genmodule", "genmodule\genm
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "genstring", "genstring\genstring.vcproj", "{021CEB0A-F721-4F59-B349-9CEEAF244459}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "x86geninsn", "x86geninsn\x86geninsn.vcproj", "{22294DC7-C6DF-4C34-A178-8751B43867B7}"
 	ProjectSection(ProjectDependencies) = postProject
 	EndProjectSection
 EndProject
@@ -74,10 +79,10 @@ Global
 		{3C58BE13-50A3-4583-984D-D8902B3D7713}.Debug.Build.0 = Debug|Win32
 		{3C58BE13-50A3-4583-984D-D8902B3D7713}.Release.ActiveCfg = Release|Win32
 		{3C58BE13-50A3-4583-984D-D8902B3D7713}.Release.Build.0 = Release|Win32
-		{5758BF4E-ABC4-11DA-B012-B622A1EF5492}.Debug.ActiveCfg = Debug|Win32
-		{5758BF4E-ABC4-11DA-B012-B622A1EF5492}.Debug.Build.0 = Debug|Win32
-		{5758BF4E-ABC4-11DA-B012-B622A1EF5492}.Release.ActiveCfg = Release|Win32
-		{5758BF4E-ABC4-11DA-B012-B622A1EF5492}.Release.Build.0 = Release|Win32
+		{C45A8B59-8B59-4D5D-A8E8-FB090F8DD619}.Debug.ActiveCfg = Debug|Win32
+		{C45A8B59-8B59-4D5D-A8E8-FB090F8DD619}.Debug.Build.0 = Debug|Win32
+		{C45A8B59-8B59-4D5D-A8E8-FB090F8DD619}.Release.ActiveCfg = Release|Win32
+		{C45A8B59-8B59-4D5D-A8E8-FB090F8DD619}.Release.Build.0 = Release|Win32
 		{F0E8B707-00C5-4FF2-B8EF-7C39817132A0}.Debug.ActiveCfg = Debug|Win32
 		{F0E8B707-00C5-4FF2-B8EF-7C39817132A0}.Debug.Build.0 = Debug|Win32
 		{F0E8B707-00C5-4FF2-B8EF-7C39817132A0}.Release.ActiveCfg = Release|Win32
@@ -86,6 +91,10 @@ Global
 		{021CEB0A-F721-4F59-B349-9CEEAF244459}.Debug.Build.0 = Debug|Win32
 		{021CEB0A-F721-4F59-B349-9CEEAF244459}.Release.ActiveCfg = Release|Win32
 		{021CEB0A-F721-4F59-B349-9CEEAF244459}.Release.Build.0 = Release|Win32
+		{22294DC7-C6DF-4C34-A178-8751B43867B7}.Debug.ActiveCfg = Debug|Win32
+		{22294DC7-C6DF-4C34-A178-8751B43867B7}.Debug.Build.0 = Debug|Win32
+		{22294DC7-C6DF-4C34-A178-8751B43867B7}.Release.ActiveCfg = Release|Win32
+		{22294DC7-C6DF-4C34-A178-8751B43867B7}.Release.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 	EndGlobalSection

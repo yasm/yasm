@@ -75,8 +75,10 @@ EXTRA_DIST += Mkfiles/vc/libyasm/libyasm.vcproj
 EXTRA_DIST += Mkfiles/vc/modules/modules.vcproj
 EXTRA_DIST += Mkfiles/vc/re2c/re2c.vcproj
 EXTRA_DIST += Mkfiles/vc/re2c/run.bat
-EXTRA_DIST += Mkfiles/vc/gap/gap.vcproj
-EXTRA_DIST += Mkfiles/vc/gap/run.bat
+EXTRA_DIST += Mkfiles/vc/genperf/genperf.vcproj
+EXTRA_DIST += Mkfiles/vc/genperf/run.bat
+EXTRA_DIST += Mkfiles/vc/x86geninsn/x86geninsn.vcproj
+EXTRA_DIST += Mkfiles/vc/x86geninsn/run.bat
 EXTRA_DIST += Mkfiles/vc8/crt_secure_no_deprecate.vsprops
 EXTRA_DIST += Mkfiles/vc8/yasm.sln
 EXTRA_DIST += Mkfiles/vc8/yasm.vcproj
@@ -96,8 +98,10 @@ EXTRA_DIST += Mkfiles/vc8/libyasm/libyasm.vcproj
 EXTRA_DIST += Mkfiles/vc8/modules/modules.vcproj
 EXTRA_DIST += Mkfiles/vc8/re2c/re2c.vcproj
 EXTRA_DIST += Mkfiles/vc8/re2c/run.bat
-EXTRA_DIST += Mkfiles/vc8/gap/gap.vcproj
-EXTRA_DIST += Mkfiles/vc8/gap/run.bat
+EXTRA_DIST += Mkfiles/vc8/genperf/genperf.vcproj
+EXTRA_DIST += Mkfiles/vc8/genperf/run.bat
+EXTRA_DIST += Mkfiles/vc8/x86geninsn/x86geninsn.vcproj
+EXTRA_DIST += Mkfiles/vc8/x86geninsn/run.bat
 
 # Until this gets fixed in automake
 DISTCLEANFILES = libyasm/stamp-h libyasm/stamp-h[0-9]*

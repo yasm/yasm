@@ -125,6 +125,18 @@
 				Name="arch"
 				Filter="">
 				<File
+					RelativePath="..\..\..\modules\arch\lc3b\lc3barch.c">
+				</File>
+				<File
+					RelativePath="..\..\..\modules\arch\lc3b\lc3barch.h">
+				</File>
+				<File
+					RelativePath="..\..\..\modules\arch\lc3b\lc3bbc.c">
+				</File>
+				<File
+					RelativePath="..\..\..\lc3bid.c">
+				</File>
+				<File
 					RelativePath="..\..\..\modules\arch\x86\x86arch.c">
 				</File>
 				<File
@@ -138,6 +150,12 @@
 				</File>
 				<File
 					RelativePath="..\..\..\modules\arch\x86\x86id.c">
+				</File>
+				<File
+					RelativePath="..\..\..\x86cpu.c">
+				</File>
+				<File
+					RelativePath="..\..\..\x86regtmod.c">
 				</File>
 			</Filter>
 			<Filter
