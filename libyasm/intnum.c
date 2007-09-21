@@ -462,14 +462,14 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand)
             Set_Complement(result, result);
             break;
         case YASM_EXPR_SHL:
-            if (operand->type == INTNUM_L && operand->val.l > 0) {
+            if (operand->type == INTNUM_L && operand->val.l >= 0) {
                 BitVector_Copy(result, op1);
                 BitVector_Move_Left(result, (N_int)operand->val.l);
             } else      /* don't even bother, just zero result */
                 BitVector_Empty(result);
             break;
         case YASM_EXPR_SHR:
-            if (operand->type == INTNUM_L && operand->val.l > 0) {
+            if (operand->type == INTNUM_L && operand->val.l >= 0) {
                 BitVector_Copy(result, op1);
                 carry = BitVector_msb_(op1);
                 count = (N_int)operand->val.l;
