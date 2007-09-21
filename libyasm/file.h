@@ -210,6 +210,10 @@ char *yasm__combpath_win(const char *from, const char *to);
  */
 void yasm_delete_include_paths(void);
 
+/** Iterate through include paths.
+*/
+const char * yasm_get_include_dir(void **iter);
+
 /** Add an include path for use by yasm_fopen_include().
  * If path is relative, it is treated by yasm_fopen_include() as relative to
  * the current working directory.

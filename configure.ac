@@ -64,6 +64,8 @@ esac], enable_python="auto")
 #
 # Checks for programs.
 #
+AC_PROG_CPP
+AC_DEFINE_UNQUOTED([CPP_PROG], "${CPP}", [Command name to run C preprocessor])
 AC_PROG_CC_STDC
 AC_PROG_INSTALL
 AC_PROG_LN_S
@@ -115,6 +117,7 @@ AX_CREATE_STDINT_H([libyasm-stdint.h])
 #
 AC_CHECK_FUNCS([abort toascii vsnprintf])
 AC_CHECK_FUNCS([strsep mergesort getcwd])
+AC_CHECK_FUNCS([popen])
 # Look for the case-insensitive comparison functions
 AC_CHECK_FUNCS([strcasecmp strncasecmp stricmp _stricmp strcmpi])
 

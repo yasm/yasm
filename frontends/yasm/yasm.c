@@ -220,7 +220,7 @@ typedef struct constcharparam {
 static constcharparam_head preproc_options;
 
 static int
-do_preproc_only(FILE *in)
+do_preproc_only(void)
 {
     yasm_linemap *linemap;
     char *preproc_buf = yasm_xmalloc(PREPROC_BUF_SIZE);
@@ -241,7 +241,7 @@ do_preproc_only(FILE *in)
         /* determine the object filename if not specified, but we need a
             file name for the makefile rule */
         if (generate_make_dependencies && !obj_filename) {
-            if (in == stdin)
+            if (in_filename == NULL)
                 /* Default to yasm.out if no obj filename specified */
                 obj_filename = yasm__xstrdup("yasm.out");
             else {
@@ -264,7 +264,7 @@ do_preproc_only(FILE *in)
     }
 
     /* Pre-process until done */
-    cur_preproc = yasm_preproc_create(cur_preproc_module, in, in_filename,
+    cur_preproc = yasm_preproc_create(cur_preproc_module, in_filename,
                                       linemap, errwarns);
 
     apply_preproc_builtins();
@@ -293,9 +293,6 @@ do_preproc_only(FILE *in)
             fwrite(preproc_buf, got, 1, out);
     }
 
-    if (in != stdin)
-        fclose(in);
-
     if (out != stdout)
         fclose(out);
 
@@ -321,7 +318,7 @@ do_preproc_only(FILE *in)
 }
 
 static int
-do_assemble(FILE *in)
+do_assemble(void)
 {
     yasm_object *object;
     const char *base_filename;
@@ -337,7 +334,7 @@ do_assemble(FILE *in)
 
     /* determine the object filename if not specified */
     if (!obj_filename) {
-        if (in == stdin)
+        if (in_filename == NULL)
             /* Default to yasm.out if no obj filename specified */
             obj_filename = yasm__xstrdup("yasm.out");
         else {
@@ -366,9 +363,8 @@ do_assemble(FILE *in)
                 yasm__xstrdup(cur_arch_module->default_machine_keyword);
     }
 
-    cur_arch = cur_arch_module->create(machine_name,
-                                       cur_parser_module->keyword,
-                                       &arch_error);
+    cur_arch = yasm_arch_create(cur_arch_module, machine_name,
+                                cur_parser_module->keyword, &arch_error);
     if (!cur_arch) {
         switch (arch_error) {
             case YASM_ARCH_CREATE_BAD_MACHINE:
@@ -402,8 +398,6 @@ do_assemble(FILE *in)
         yasm_xfree(estr);
         yasm_xfree(xrefstr);
 
-        if (in != stdin)
-            fclose(in);
         cleanup(object);
         return EXIT_FAILURE;
     }
@@ -423,14 +417,12 @@ do_assemble(FILE *in)
         print_error(_("%s: `%s' is not a valid %s for %s `%s'"), _("FATAL"),
                     cur_preproc_module->keyword, _("preprocessor"),
                     _("parser"), cur_parser_module->keyword);
-        if (in != stdin)
-            fclose(in);
         cleanup(object);
         return EXIT_FAILURE;
     }
 
-    cur_preproc = cur_preproc_module->create(in, in_filename, linemap,
-                                             errwarns);
+    cur_preproc = yasm_preproc_create(cur_preproc_module, in_filename,
+                                      linemap, errwarns);
 
     apply_preproc_builtins();
     apply_preproc_saved_options();
@@ -444,12 +436,8 @@ do_assemble(FILE *in)
     yasm_arch_set_var(cur_arch, "force_strict", force_strict);
 
     /* Parse! */
-    cur_parser_module->do_parse(object, cur_preproc, in, list_filename != NULL,
+    cur_parser_module->do_parse(object, cur_preproc, list_filename != NULL,
                                 linemap, errwarns);
-
-    /* Close input file */
-    if (in != stdin)
-        fclose(in);
 
     check_errors(errwarns, object, linemap);
 
@@ -517,7 +505,6 @@ do_assemble(FILE *in)
 int
 main(int argc, char *argv[])
 {
-    /*@null@*/ FILE *in = NULL;
     size_t i;
 
     errfile = stderr;
@@ -576,7 +563,7 @@ main(int argc, char *argv[])
     /* Initialize intnum and floatnum */
     yasm_intnum_initialize();
     yasm_floatnum_initialize();
-    
+
     /* If not already specified, default to bin as the object format. */
     if (!cur_objfmt_module) {
         if (!objfmt_keyword)
@@ -638,25 +625,11 @@ main(int argc, char *argv[])
     if (!in_filename) {
         print_error(_("No input files specified"));
         return EXIT_FAILURE;
-    } else if (strcmp(in_filename, "-") != 0) {
-        /* Open the input file (if not standard input) */
-        in = fopen(in_filename, "rt");
-        if (!in) {
-            print_error(_("%s: could not open file `%s'"), _("FATAL"),
-                        in_filename);
-            yasm_xfree(in_filename);
-            if (obj_filename)
-                yasm_xfree(obj_filename);
-            return EXIT_FAILURE;
-        }
-    } else {
-        /* Filename was "-", read stdin */
-        in = stdin;
     }
 
     /* handle preproc-only case here */
     if (preproc_only)
-        return do_preproc_only(in);
+        return do_preproc_only();
 
     /* If list file enabled, make sure we have a list format loaded. */
     if (list_filename) {
@@ -681,7 +654,7 @@ main(int argc, char *argv[])
         }
     }
 
-    return do_assemble(in);
+    return do_assemble();
 }
 /*@=globstate =unrecog@*/
 
@@ -1086,7 +1059,7 @@ opt_makedep_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
     /* Also set preproc_only to 1, we don't want to generate code */
     preproc_only = 1;
     generate_make_dependencies = 1;
-    
+
     return 0;
 }
 

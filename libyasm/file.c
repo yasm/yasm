@@ -518,6 +518,23 @@ yasm_delete_include_paths(void)
     STAILQ_INIT(&incpaths);
 }
 
+const char *
+yasm_get_include_dir(void **iter)
+{
+    incpath *p = (incpath *)*iter;
+
+    if (!p)
+        p = STAILQ_FIRST(&incpaths);
+    else
+        p = STAILQ_NEXT(p, link);
+
+    *iter = p;
+    if (p)
+        return p->path;
+    else
+        return NULL;
+}
+
 void
 yasm_add_include_path(const char *path)
 {

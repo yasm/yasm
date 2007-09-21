@@ -4,6 +4,9 @@
 #define yasm__abspath(path)             yasm__abspath_win(path)
 #define yasm__combpath(from, to)        yasm__combpath_win(from, to)
 
+/* Command name to run C preprocessor */
+#define CPP_PROG "cpp"
+
 /* */
 /* #undef ENABLE_NLS */
 
@@ -52,8 +55,11 @@
 /* Define if you have the <memory.h> header file. */
 /* #undef HAVE_MEMORY_H */
 
-/* Define if you have the `mergesort function. */
+/* Define if you have the `mergesort' function. */
 /* #undef HAVE_MERGESORT */
+
+/* Define to 1 if you have the `popen' function. */
+/* #undef HAVE_POPEN */
 
 /* Define if you have the <stdint.h> header file. */
 /* #undef HAVE_STDINT_H */

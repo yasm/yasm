@@ -48,6 +48,7 @@ enum tokentype {
     RIGHT_OP,
     ID,
     LABEL,
+    LINE_MARKER,
     NONE
 };
 
@@ -93,7 +94,6 @@ enum gas_parser_state {
 };
 
 typedef struct yasm_parser_gas {
-    FILE *in;
     int debug;
 
     /*@only@*/ yasm_object *object;
@@ -106,6 +106,9 @@ typedef struct yasm_parser_gas {
     int dir_fileline;
     /*@null@*/ char *dir_file;
     unsigned long dir_line;
+
+    /* Have we seen a line marker? */
+    int seen_line_marker;
 
     /*@dependent@*/ yasm_preproc *preproc;
     /*@dependent@*/ yasm_errwarns *errwarns;
