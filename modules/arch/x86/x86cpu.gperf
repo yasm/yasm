@@ -261,6 +261,7 @@ k10,		x86_cpu_amd,	PROC_k10
 bulldozer,	x86_cpu_amd,	PROC_bulldozer
 prescott,	x86_cpu_intel,	PROC_prescott
 conroe,		x86_cpu_intel,	PROC_conroe
+core2,		x86_cpu_intel,	PROC_conroe
 penryn,		x86_cpu_intel,	PROC_penryn
 nehalem,	x86_cpu_intel,	PROC_nehalem
 #
