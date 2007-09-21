@@ -673,7 +673,7 @@ static void hash_ab(
     sprintf(final->line[0], "  unsigned long rsl = (a ^ scramble[tab[b]]);\n");
   }
 
-  fprintf(stderr, "success, found a perfect hash\n");
+  printf("success, found a perfect hash\n");
 
   free((void *)tabq);
   free((void *)tabh);
@@ -903,7 +903,7 @@ void findhash(
       continue;                             /* two keys have same (a,b) pair */
     }
 
-    fprintf(stderr, "found distinct (A,B) on attempt %ld\n", trysalt);
+    printf("found distinct (A,B) on attempt %ld\n", trysalt);
 
     /* Given distinct (A,B) for all keys, build a perfect hash */
     if (!perfect(*tabb, *tabh, tabq, *blen, *smax, scramble, nkeys, form))
@@ -934,7 +934,7 @@ void findhash(
     break;
   }
 
-  fprintf(stderr, "built perfect hash table of size %ld\n", *blen);
+  printf("built perfect hash table of size %ld\n", *blen);
 
   /* free working memory */
   free((void *)tabq);

@@ -514,6 +514,8 @@ elf_objfmt_output_value(yasm_value *value, unsigned char *buf,
             wrt = NULL;
         else if (wrt && elf_is_wrt_sym_relative(wrt))
             ;
+        else if (wrt && elf_is_wrt_pos_adjusted(wrt))
+            intn_val = offset + bc->offset;
         else if (vis == YASM_SYM_LOCAL) {
             yasm_bytecode *sym_precbc;
             /* Local symbols need relocation to their section's start, and

@@ -69,6 +69,11 @@ typedef void (*func_write_proghead)(unsigned char **bufpp,
                                     unsigned long secthead_count,
                                     elf_section_index shstrtab_index);
 
+enum {
+    ELF_SSYM_SYM_RELATIVE = 1 << 0,
+    ELF_SSYM_CURPOS_ADJUST = 1 << 1
+};
+
 typedef struct {
     const char *name;       /* should be something like ..name */
     const int sym_rel;      /* symbol or section-relative? */

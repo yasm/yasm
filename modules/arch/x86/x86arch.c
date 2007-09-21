@@ -57,7 +57,13 @@ x86_create(const char *machine, const char *parser,
 
     arch_x86->arch.module = &yasm_x86_LTX_arch;
 
-    arch_x86->cpu_enabled = ~CPU_Any;
+    /* default to all instructions/features enabled */
+    arch_x86->active_cpu = 0;
+    arch_x86->cpu_enables_size = 1;
+    arch_x86->cpu_enables = yasm_xmalloc(sizeof(wordptr));
+    arch_x86->cpu_enables[0] = BitVector_Create(64, FALSE);
+    BitVector_Fill(arch_x86->cpu_enables[0]);
+
     arch_x86->amd64_machine = amd64_machine;
     arch_x86->mode_bits = 0;
     arch_x86->force_strict = 0;
@@ -79,6 +85,11 @@ x86_create(const char *machine, const char *parser,
 static void
 x86_destroy(/*@only@*/ yasm_arch *arch)
 {
+    yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
+    unsigned int i;
+    for (i=0; i<arch_x86->cpu_enables_size; i++)
+        BitVector_Destroy(arch_x86->cpu_enables[i]);
+    yasm_xfree(arch_x86->cpu_enables);
     yasm_xfree(arch);
 }
 
