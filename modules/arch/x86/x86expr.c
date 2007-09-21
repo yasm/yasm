@@ -636,6 +636,12 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
             return 1;
         }
 
+        if (x86_ea->ea.pc_rel && bits != 64) {
+            yasm_warn_set(YASM_WARN_GENERAL,
+                N_("RIP-relative directive ignored in non-64-bit mode"));
+            x86_ea->ea.pc_rel = 0;
+        }
+
         reg3264_data.regs = reg3264mult;
         reg3264_data.bits = bits;
         reg3264_data.addrsize = *addrsize;
@@ -754,6 +760,15 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
          * memory expression is (essentially) valid.  Now build the ModRM and
          * (optional) SIB bytes.
          */
+
+        /* If we're supposed to be RIP-relative and there's no register
+         * usage, change to RIP-relative.
+         */
+        if (basereg == REG3264_NONE && indexreg == REG3264_NONE &&
+            x86_ea->ea.pc_rel) {
+            basereg = REG64_RIP;
+            yasm_value_set_curpos_rel(&x86_ea->ea.disp, bc, 1);
+        }
 
         /* First determine R/M (Mod is later determined from disp size) */
         x86_ea->need_modrm = 1; /* we always need ModRM */

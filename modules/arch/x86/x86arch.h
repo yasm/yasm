@@ -87,6 +87,7 @@ typedef struct yasm_arch_x86 {
     } parser;
     unsigned int mode_bits;
     unsigned int force_strict;
+    unsigned int default_rel;
 } yasm_arch_x86;
 
 /* 0-15 (low 4 bits) used for register number, stored in same data area.

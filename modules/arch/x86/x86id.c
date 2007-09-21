@@ -301,6 +301,9 @@ typedef struct x86_id_insn {
 
     /* Strict forced setting at the time of parsing the instruction */
     unsigned int force_strict:1;
+
+    /* Default rel setting at the time of parsing the instruction */
+    unsigned int default_rel:1;
 } x86_id_insn;
 
 static void x86_id_insn_destroy(void *contents);
@@ -764,7 +767,10 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
                 case OPT_MemOffs:
                     if (op->type != YASM_INSN__OPERAND_MEMORY ||
                         yasm_expr__contains(op->data.ea->disp.abs,
-                                            YASM_EXPR_REG))
+                                            YASM_EXPR_REG) ||
+                        op->data.ea->pc_rel ||
+                        (!op->data.ea->not_pc_rel && id_insn->default_rel &&
+                         op->data.ea->disp.size != 64))
                         mismatch = 1;
                     break;
                 case OPT_Imm1:
@@ -1170,6 +1176,16 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                             if (info_ops[i].type == OPT_MemOffs)
                                 /* Special-case for MOV MemOffs instruction */
                                 yasm_x86__ea_set_disponly(insn->x86_ea);
+                            else if (id_insn->default_rel &&
+                                     !op->data.ea->not_pc_rel &&
+                                     op->data.ea->segreg != 0x6404 &&
+                                     op->data.ea->segreg != 0x6505 &&
+                                     !yasm_expr__contains(
+                                        op->data.ea->disp.abs, YASM_EXPR_REG))
+                                /* Enable default PC-rel if no regs and segreg
+                                 * is not FS or GS.
+                                 */
+                                insn->x86_ea->ea.pc_rel = 1;
                             break;
                         case YASM_INSN__OPERAND_IMM:
                             insn->x86_ea =
@@ -1351,8 +1367,12 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
              * short mov instructions if a 32-bit address override is applied in
              * 64-bit mode to an EA of just an offset (no registers) and the
              * target register is al/ax/eax/rax.
+             *
+             * We don't want to do this if we're in default rel mode.
              */
-            if (insn->common.mode_bits == 64 && insn->common.addrsize == 32 &&
+            if (!id_insn->default_rel &&
+                insn->common.mode_bits == 64 &&
+                insn->common.addrsize == 32 &&
                 (!insn->x86_ea->ea.disp.abs ||
                  !yasm_expr__contains(insn->x86_ea->ea.disp.abs,
                                       YASM_EXPR_REG))) {
@@ -1577,6 +1597,7 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
             id_insn->suffix = 0;
             id_insn->parser = arch_x86->parser;
             id_insn->force_strict = arch_x86->force_strict != 0;
+            id_insn->default_rel = arch_x86->default_rel != 0;
             *bc = yasm_bc_create_common(&x86_id_insn_callback, id_insn, line);
             return YASM_ARCH_INSN;
         }
@@ -1608,6 +1629,7 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
         id_insn->suffix = pdata->flags;
         id_insn->parser = arch_x86->parser;
         id_insn->force_strict = arch_x86->force_strict != 0;
+        id_insn->default_rel = arch_x86->default_rel != 0;
         *bc = yasm_bc_create_common(&x86_id_insn_callback, id_insn, line);
         return YASM_ARCH_INSN;
     } else {
@@ -1670,6 +1692,7 @@ yasm_x86__create_empty_insn(yasm_arch *arch, unsigned long line)
     id_insn->suffix = 0;
     id_insn->parser = arch_x86->parser;
     id_insn->force_strict = arch_x86->force_strict != 0;
+    id_insn->default_rel = arch_x86->default_rel != 0;
 
     return yasm_bc_create_common(&x86_id_insn_callback, id_insn, line);
 }

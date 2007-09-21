@@ -774,6 +774,22 @@ parse_memaddr(yasm_parser_nasm *parser_nasm)
             if (ea)
                 ea->nosplit = 1;
             return ea;
+        case REL:
+            get_next_token();
+            ea = parse_memaddr(parser_nasm);
+            if (ea) {
+                ea->pc_rel = 1;
+                ea->not_pc_rel = 0;
+            }
+            return ea;
+        case ABS:
+            get_next_token();
+            ea = parse_memaddr(parser_nasm);
+            if (ea) {
+                ea->pc_rel = 0;
+                ea->not_pc_rel = 1;
+            }
+            return ea;
         default:
         {
             yasm_expr *e = parse_expr(parser_nasm, NORM_EXPR);
@@ -1131,15 +1147,21 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
                                objext_valparams, line))
         ;
     else if (yasm__strcasecmp(name, "absolute") == 0) {
-        vp = yasm_vps_first(valparams);
-        if (parser_nasm->absstart)
-            yasm_expr_destroy(parser_nasm->absstart);
-        if (parser_nasm->abspos)
-            yasm_expr_destroy(parser_nasm->abspos);
-        parser_nasm->absstart = yasm_vp_expr(vp, p_object->symtab, line);
-        parser_nasm->abspos = yasm_expr_copy(parser_nasm->absstart);
-        cursect = NULL;
-        parser_nasm->prev_bc = NULL;
+        if (!valparams) {
+            yasm_error_set(YASM_ERROR_SYNTAX,
+                           N_("directive `%s' requires an argument"),
+                           "absolute");
+        } else {
+            vp = yasm_vps_first(valparams);
+            if (parser_nasm->absstart)
+                yasm_expr_destroy(parser_nasm->absstart);
+            if (parser_nasm->abspos)
+                yasm_expr_destroy(parser_nasm->abspos);
+            parser_nasm->absstart = yasm_vp_expr(vp, p_object->symtab, line);
+            parser_nasm->abspos = yasm_expr_copy(parser_nasm->absstart);
+            cursect = NULL;
+            parser_nasm->prev_bc = NULL;
+        }
     } else if (yasm__strcasecmp(name, "align") == 0) {
         /* Really, we shouldn't end up with an align directive in an absolute
          * section (as it's supposed to be only used for nop fill), but handle
@@ -1166,6 +1188,27 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
                            N_("directive `%s' requires an argument"), "align");
         } else
             dir_align(p_object, valparams, objext_valparams, line);
+    } else if (yasm__strcasecmp(name, "default") == 0) {
+        if (!valparams)
+            ;
+        else {
+            vp = yasm_vps_first(valparams);
+            while (vp) {
+                const char *id = yasm_vp_id(vp);
+                if (id) {
+                    if (yasm__strcasecmp(id, "rel") == 0)
+                        yasm_arch_set_var(p_object->arch, "default_rel", 1);
+                    else if (yasm__strcasecmp(id, "abs") == 0)
+                        yasm_arch_set_var(p_object->arch, "default_rel", 0);
+                    else
+                        yasm_error_set(YASM_ERROR_SYNTAX,
+                                       N_("unrecognized default `%s'"), id);
+                } else
+                    yasm_error_set(YASM_ERROR_SYNTAX,
+                                   N_("unrecognized default value"));
+                vp = yasm_vps_next(vp);
+            }
+        }
     } else
         yasm_error_set(YASM_ERROR_SYNTAX, N_("unrecognized directive `%s'"),
                        name);
