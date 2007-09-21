@@ -10,7 +10,6 @@ frontends/yasm/yasm.c
 libyasm/bc-align.c
 libyasm/bc-data.c
 libyasm/bc-incbin.c
-libyasm/bc-insn.c
 libyasm/bc-org.c
 libyasm/bc-reserve.c
 libyasm/bitvect.c
@@ -20,6 +19,7 @@ libyasm/expr.c
 libyasm/file.c
 libyasm/floatnum.c
 libyasm/hamt.c
+libyasm/insn.c
 libyasm/intnum.c
 libyasm/section.c
 libyasm/symrec.c

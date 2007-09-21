@@ -28,9 +28,9 @@
 /*@unused@*/ RCSID("$Id$");
 
 /* Need either unistd.h or direct.h (on Windows) to prototype getcwd() */
-#ifdef HAVE_UNISTD_H
+#if defined(HAVE_UNISTD_H)
 #include <unistd.h>
-#elif defined(WIN32) || defined(_WIN32)
+#elif defined(HAVE_DIRECT_H)
 #include <direct.h>
 #endif
 

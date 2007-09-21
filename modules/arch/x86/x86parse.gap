@@ -809,12 +809,17 @@ INSN	-	pmovzxwq NONE	sse4m32		0x34	CPU_SSE41
 INSN	-	pmovzxdq NONE	sse4m64		0x35	CPU_SSE41
 INSN	-	pmuldq	NONE	sse4		0x28	CPU_SSE41
 INSN	-	pmulld	NONE	sse4		0x40	CPU_SSE41
-INSN	-	popcnt	"wlq"	popcnt		0	CPU_SSE42
+INSN	-	popcnt	"wlq"	cnt		0xB8	CPU_SSE42
 INSN	-	ptest	NONE	sse4		0x17	CPU_SSE41
 INSN	-	roundpd	NONE	sse4imm		0x09	CPU_SSE41
 INSN	-	roundps	NONE	sse4imm		0x08	CPU_SSE41
 INSN	-	roundsd	NONE	sse4imm		0x0B	CPU_SSE41
 INSN	-	roundss	NONE	sse4imm		0x0A	CPU_SSE41
+# AMD SSE4.1 instructions
+INSN	-	extrq	NONE	extrq		0	CPU_SSE41
+INSN	-	insertq	NONE	insertq		0	CPU_SSE41
+INSN	-	movntsd	NONE	movntsd		0	CPU_SSE41
+INSN	-	movntss	NONE	movntss		0	CPU_SSE41
 # AMD 3DNow! instructions
 INSN	-	prefetch NONE	twobytemem  0x000F0D	CPU_3DNow
 INSN	-	prefetchw NONE	twobytemem  0x010F0D	CPU_3DNow
@@ -846,6 +851,7 @@ INSN	-	pswapd	NONE	now3d	0xBB		CPU_Athlon|CPU_3DNow
 # AMD extensions
 INSN	-	syscall	NONE	twobyte	0x0F05		CPU_686|CPU_AMD
 INSN	-	sysret	"lq"	twobyte	0x0F07		CPU_686|CPU_AMD|CPU_Priv
+INSN	-	lzcnt	"wlq"	cnt		0xBD	CPU_686|CPU_AMD
 # AMD x86-64 extensions
 INSN	-	swapgs	NONE	threebyte   0x0F01F8	CPU_Hammer|CPU_64
 INSN	-	rdtscp	NONE	threebyte   0x0F01F9	CPU_686|CPU_AMD|CPU_Priv

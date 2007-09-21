@@ -24,7 +24,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#define YASM_LIB_INTERNAL
 #include "util.h"
 /*@unused@*/ RCSID("$Id$");
 
@@ -216,31 +215,6 @@ yasm_vps_destroy(yasm_valparamhead *headp)
 {
     yasm_vps_delete(headp);
     yasm_xfree(headp);
-}
-
-/* Non-macro yasm_vps_append() for non-YASM_LIB_INTERNAL users. */
-#undef yasm_vps_append
-void
-yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp)
-{
-    if (vp)
-        STAILQ_INSERT_TAIL(headp, vp, link);
-}
-
-/* Non-macro yasm_vps_first() for non-YASM_LIB_INTERNAL users. */
-#undef yasm_vps_first
-/*@null@*/ /*@dependent@*/ yasm_valparam *
-yasm_vps_first(yasm_valparamhead *headp)
-{
-    return STAILQ_FIRST(headp);
-}
-
-/* Non-macro yasm_vps_next() for non-YASM_LIB_INTERNAL users. */
-#undef yasm_vps_next
-/*@null@*/ /*@dependent@*/ yasm_valparam *
-yasm_vps_next(yasm_valparam *cur)
-{
-    return STAILQ_NEXT(cur, link);
 }
 
 int

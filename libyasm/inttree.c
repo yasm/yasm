@@ -1,4 +1,3 @@
-#define YASM_LIB_INTERNAL
 #include "util.h"
 /*@unused@*/ RCSID("$Id$");
 

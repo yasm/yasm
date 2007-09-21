@@ -86,8 +86,7 @@ AM_WITH_DMALLOC
 # Checks for header files.
 #
 AC_HEADER_STDC
-AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([limits.h sys/param.h libgen.h unistd.h])
+AC_CHECK_HEADERS([strings.h libgen.h unistd.h direct.h])
 
 # REQUIRE standard C headers
 if test "$ac_cv_header_stdc" != yes; then
@@ -106,11 +105,10 @@ AX_CREATE_STDINT_H([libyasm-stdint.h])
 #
 # Checks for library functions.
 #
-AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([abort memcpy memmove strrchr toascii vsnprintf])
+AC_CHECK_FUNCS([abort toascii vsnprintf])
 AC_CHECK_FUNCS([strsep mergesort getcwd])
 # Look for the case-insensitive comparison functions
-AC_CHECK_FUNCS([strcasecmp strncasecmp stricmp strcmpi])
+AC_CHECK_FUNCS([strcasecmp strncasecmp stricmp _stricmp strcmpi])
 
 #
 # Check for gettext() and other i18n/l10n things.
@@ -125,7 +123,7 @@ AH_TEMPLATE([HAVE_LC_MESSAGES], [])
 AH_TEMPLATE([HAVE_STPCPY], [])
 
 # Check for GNU C Library
-AH_TEMPLATE([HAVE_GNU_C_LIBRARY], [Define if you have the GNU C Library])
+AH_TEMPLATE([HAVE_GNU_C_LIBRARY], [Define to 1 if you have the GNU C Library])
 AC_CACHE_CHECK([for GNU C Library], yasm_cv_header_gnulib,
 	AC_EGREP_CPP(gnulib,
 	[#include <features.h>

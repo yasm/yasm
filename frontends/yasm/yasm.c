@@ -175,8 +175,12 @@ static opt_option options[] =
       N_("add include path"), N_("path") },
     { 'P', NULL, 1, opt_preproc_option, 0,
       N_("pre-include file"), N_("filename") },
+    { 'd', NULL, 1, opt_preproc_option, 1,
+      N_("pre-define a macro, optionally to value"), N_("macro[=value]") },
     { 'D', NULL, 1, opt_preproc_option, 1,
       N_("pre-define a macro, optionally to value"), N_("macro[=value]") },
+    { 'u', NULL, 1, opt_preproc_option, 2,
+      N_("undefine a macro"), N_("macro") },
     { 'U', NULL, 1, opt_preproc_option, 2,
       N_("undefine a macro"), N_("macro") },
     { 'X', NULL, 1, opt_ewmsg_handler, 0,
@@ -1135,9 +1139,17 @@ replace_extension(const char *orig, /*@null@*/ const char *ext,
                   const char *def)
 {
     char *out, *outext;
+    size_t deflen, outlen;
 
     /* allocate enough space for full existing name + extension */
-    out = yasm_xmalloc(strlen(orig)+(ext ? (strlen(ext)+2) : 1));
+    outlen = strlen(orig) + 2;
+    if (ext)
+        outlen += strlen(ext) + 1;
+    deflen = strlen(def) + 1;
+    if (outlen < deflen)
+        outlen = deflen;
+    out = yasm_xmalloc(outlen);
+
     strcpy(out, orig);
     outext = strrchr(out, '.');
     if (outext) {

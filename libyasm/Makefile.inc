@@ -1,12 +1,10 @@
 # $Id$
 
-libyasm_a_SOURCES += libyasm/arch.c
 libyasm_a_SOURCES += libyasm/assocdat.c
 libyasm_a_SOURCES += libyasm/bitvect.c
 libyasm_a_SOURCES += libyasm/bc-align.c
 libyasm_a_SOURCES += libyasm/bc-data.c
 libyasm_a_SOURCES += libyasm/bc-incbin.c
-libyasm_a_SOURCES += libyasm/bc-insn.c
 libyasm_a_SOURCES += libyasm/bc-org.c
 libyasm_a_SOURCES += libyasm/bc-reserve.c
 libyasm_a_SOURCES += libyasm/bytecode.c
@@ -15,6 +13,7 @@ libyasm_a_SOURCES += libyasm/expr.c
 libyasm_a_SOURCES += libyasm/file.c
 libyasm_a_SOURCES += libyasm/floatnum.c
 libyasm_a_SOURCES += libyasm/hamt.c
+libyasm_a_SOURCES += libyasm/insn.c
 libyasm_a_SOURCES += libyasm/intnum.c
 libyasm_a_SOURCES += libyasm/inttree.c
 libyasm_a_SOURCES += libyasm/linemap.c
@@ -53,7 +52,6 @@ modincludedir = $(includedir)/libyasm
 
 modinclude_HEADERS  = libyasm/arch.h
 modinclude_HEADERS += libyasm/assocdat.h
-modinclude_HEADERS += libyasm/bc-int.h
 modinclude_HEADERS += libyasm/bitvect.h
 modinclude_HEADERS += libyasm/bytecode.h
 modinclude_HEADERS += libyasm/compat-queue.h
@@ -61,10 +59,10 @@ modinclude_HEADERS += libyasm/coretype.h
 modinclude_HEADERS += libyasm/dbgfmt.h
 modinclude_HEADERS += libyasm/errwarn.h
 modinclude_HEADERS += libyasm/expr.h
-modinclude_HEADERS += libyasm/expr-int.h
 modinclude_HEADERS += libyasm/file.h
 modinclude_HEADERS += libyasm/floatnum.h
 modinclude_HEADERS += libyasm/hamt.h
+modinclude_HEADERS += libyasm/insn.h
 modinclude_HEADERS += libyasm/intnum.h
 modinclude_HEADERS += libyasm/inttree.h
 modinclude_HEADERS += libyasm/linemap.h

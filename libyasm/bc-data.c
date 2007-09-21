@@ -24,7 +24,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#define YASM_LIB_INTERNAL
 #include "util.h"
 /*@unused@*/ RCSID("$Id$");
 
@@ -38,8 +37,6 @@
 
 #include "bytecode.h"
 #include "arch.h"
-
-#include "bc-int.h"
 
 
 struct yasm_dataval {
@@ -450,12 +447,4 @@ yasm_dvs_print(const yasm_datavalhead *head, FILE *f, int indent_level)
                 break;
         }
     }
-}
-
-/* Non-macro yasm_dvs_initialize() for non-YASM_LIB_INTERNAL users. */
-#undef yasm_dvs_initialize
-void
-yasm_dvs_initialize(yasm_datavalhead *headp)
-{
-    STAILQ_INIT(headp);
 }

@@ -29,7 +29,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#define YASM_LIB_INTERNAL
 #include "util.h"
 /*@unused@*/ RCSID("$Id$");
 
@@ -57,6 +56,7 @@ struct HAMT {
                                     const char *message);
     unsigned long (*HashKey) (const char *key);
     unsigned long (*ReHashKey) (const char *key, int Level);
+    int (*CmpKey) (const char *s1, const char *s2);
 };
 
 /* XXX make a portable version of this.  This depends on the pointer being
@@ -133,9 +133,11 @@ HAMT_create(int nocase, /*@exits@*/ void (*error_func)
     if (nocase) {
         hamt->HashKey = HashKey_nocase;
         hamt->ReHashKey = ReHashKey_nocase;
+        hamt->CmpKey = yasm__strcasecmp;
     } else {
         hamt->HashKey = HashKey;
         hamt->ReHashKey = ReHashKey;
+        hamt->CmpKey = strcmp;
     }
 
     return hamt;
@@ -245,7 +247,8 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
     for (;;) {
         if (!(IsSubTrie(node))) {
             if (node->BitMapKey == key
-                && strcmp(((HAMTEntry *)(node->BaseValue))->str, str) == 0) {
+                && hamt->CmpKey(((HAMTEntry *)(node->BaseValue))->str,
+                                str) == 0) {
                 /*@-branchstate@*/
                 if (*replace) {
                     deletefunc(((HAMTEntry *)(node->BaseValue))->data);
@@ -278,7 +281,8 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
                          * downward.
                          */
                         newnodes = yasm_xmalloc(sizeof(HAMTNode));
-                        newnodes[0] = *node;    /* structure copy */
+                        newnodes[0].BitMapKey = key2;
+                        newnodes[0].BaseValue = node->BaseValue;
                         node->BitMapKey = 1<<keypart;
                         SetSubTrie(hamt, node, newnodes);
                         node = &newnodes[0];
@@ -294,13 +298,15 @@ HAMT_insert(HAMT *hamt, const char *str, void *data, int *replace,
 
                         /* Copy nodes into subtrie based on order */
                         if (keypart2 < keypart) {
-                            newnodes[0] = *node;    /* structure copy */
+                            newnodes[0].BitMapKey = key2;
+                            newnodes[0].BaseValue = node->BaseValue;
                             newnodes[1].BitMapKey = key;
                             SetValue(hamt, &newnodes[1], entry);
                         } else {
                             newnodes[0].BitMapKey = key;
                             SetValue(hamt, &newnodes[0], entry);
-                            newnodes[1] = *node;    /* structure copy */
+                            newnodes[1].BitMapKey = key2;
+                            newnodes[1].BaseValue = node->BaseValue;
                         }
 
                         /* Set bits in bitmap corresponding to keys */
@@ -385,7 +391,9 @@ HAMT_search(HAMT *hamt, const char *str)
 
     for (;;) {
         if (!(IsSubTrie(node))) {
-            if (node->BitMapKey == key)
+            if (node->BitMapKey == key
+                && hamt->CmpKey(((HAMTEntry *)(node->BaseValue))->str,
+                                str) == 0)
                 return ((HAMTEntry *)(node->BaseValue))->data;
             else
                 return NULL;

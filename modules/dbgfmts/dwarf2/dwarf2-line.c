@@ -30,8 +30,6 @@
 #include <util.h>
 /*@unused@*/ RCSID("$Id$");
 
-#define YASM_LIB_INTERNAL
-#define YASM_BC_INTERNAL
 #include <libyasm.h>
 
 #include "dwarf2-dbgfmt.h"

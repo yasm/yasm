@@ -30,7 +30,6 @@
 #include <util.h>
 RCSID("$Id$");
 
-#define YASM_LIB_INTERNAL
 #include <libyasm.h>
 
 #include "modules/parsers/gas/gas-parser.h"
@@ -342,151 +341,6 @@ scan:
             RETURN(s->tok[0]);
         }
 
-        /* arch-independent directives */
-        /*  alignment directives */
-        '.align'        {
-            /* FIXME: Whether this is power-of-two or not depends on arch and
-             * objfmt.
-             */
-            lvalp->int_info = 0;
-            parser_gas->state = INSTDIR; RETURN(DIR_ALIGN);
-        }
-        '.p2align'      {
-            lvalp->int_info = 1;
-            parser_gas->state = INSTDIR; RETURN(DIR_ALIGN);
-        }
-        '.balign'       {
-            lvalp->int_info = 0;
-            parser_gas->state = INSTDIR; RETURN(DIR_ALIGN);
-        }
-        '.org'          { parser_gas->state = INSTDIR; RETURN(DIR_ORG); }
-        /*  data visibility directives */
-        '.local'        { parser_gas->state = INSTDIR; RETURN(DIR_LOCAL); }
-        '.comm'         { parser_gas->state = INSTDIR; RETURN(DIR_COMM); }
-        '.lcomm'        { parser_gas->state = INSTDIR; RETURN(DIR_LCOMM); }
-        /*  integer data declaration directives */
-        '.byte'         {
-            lvalp->int_info = 1;
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        '.2byte'        {
-            lvalp->int_info = 2;
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        '.4byte'        {
-            lvalp->int_info = 4;
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        '.8byte'        {
-            lvalp->int_info = 8;
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        '.16byte'       {
-            lvalp->int_info = 16;
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        '.short'        {
-            lvalp->int_info = 2; /* TODO: This should depend on arch */
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        '.int'          {
-            lvalp->int_info = 4; /* TODO: This should depend on arch */
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        '.long'         {
-            lvalp->int_info = 4; /* TODO: This should depend on arch */
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        '.hword'        {
-            lvalp->int_info = 2; /* TODO: This should depend on arch */
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        '.word'         {
-            lvalp->int_info = yasm_arch_wordsize(p_object->arch)/8;
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        '.quad'         {
-            lvalp->int_info = 8;
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        '.octa'         {
-            lvalp->int_info = 16;
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        '.value'        {
-            lvalp->int_info = 2; /* XXX: At least on x86, this is 2 bytes */
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        /*  ASCII data declaration directives */
-        '.ascii'        {
-            lvalp->int_info = 0; /* do not add terminating zero */
-            parser_gas->state = INSTDIR; RETURN(DIR_ASCII);
-        }
-        '.asciz'        {
-            lvalp->int_info = 1; /* add terminating zero */
-            parser_gas->state = INSTDIR; RETURN(DIR_ASCII);
-        }
-        '.string'       {
-            lvalp->int_info = 1; /* add terminating zero */
-            parser_gas->state = INSTDIR; RETURN(DIR_ASCII);
-        }
-        /*  LEB128 integer data declaration directives */
-        '.sleb128'      {
-            lvalp->int_info = 1; /* signed */
-            parser_gas->state = INSTDIR; RETURN(DIR_LEB128);
-        }
-        '.uleb128'      {
-            lvalp->int_info = 0; /* unsigned */
-            parser_gas->state = INSTDIR; RETURN(DIR_LEB128);
-        }
-        /*  floating point data declaration directives */
-        '.float'        {
-            lvalp->int_info = 4;
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        '.single'       {
-            lvalp->int_info = 4;
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        '.double'       {
-            lvalp->int_info = 8;
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        '.tfloat'       {
-            lvalp->int_info = 10;
-            parser_gas->state = INSTDIR; RETURN(DIR_DATA);
-        }
-        /*  section directives */
-        '.bss'          {
-            lvalp->str_val = yasm__xstrdup(".bss");
-            RETURN(DIR_SECTNAME);
-        }
-        '.data'         {
-            lvalp->str_val = yasm__xstrdup(".data");
-            RETURN(DIR_SECTNAME);
-        }
-        '.text'         {
-            lvalp->str_val = yasm__xstrdup(".text");
-            RETURN(DIR_SECTNAME);
-        }
-        '.section'      {
-            parser_gas->state = SECTION_DIRECTIVE;
-            RETURN(DIR_SECTION);
-        }
-        /* macro directives */
-        '.rept'         { parser_gas->state = INSTDIR; RETURN(DIR_REPT); }
-        '.endr'         { parser_gas->state = INSTDIR; RETURN(DIR_ENDR); }
-        /* empty space/fill directives */
-        '.skip'         { parser_gas->state = INSTDIR; RETURN(DIR_SKIP); }
-        '.space'        { parser_gas->state = INSTDIR; RETURN(DIR_SKIP); }
-        '.fill'         { parser_gas->state = INSTDIR; RETURN(DIR_FILL); }
-        '.zero'         { parser_gas->state = INSTDIR; RETURN(DIR_ZERO); }
-        /* other directives */
-        '.equ'          { parser_gas->state = INSTDIR; RETURN(DIR_EQU); }
-        '.file'         { parser_gas->state = INSTDIR; RETURN(DIR_FILE); }
-        '.line'         { parser_gas->state = INSTDIR; RETURN(DIR_LINE); }
-        '.set'          { parser_gas->state = INSTDIR; RETURN(DIR_EQU); }
-
         /* label or maybe directive */
         [_.][a-zA-Z0-9_$.]* {
             lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
@@ -498,7 +352,7 @@ scan:
             savech = s->tok[TOKLEN];
             s->tok[TOKLEN] = '\0';
             switch (yasm_arch_parse_check_regtmod
-                    (p_object->arch, lvalp->arch_data, TOK+1, TOKLEN-1)) {
+                    (p_object->arch, TOK+1, TOKLEN-1, &lvalp->arch_data)) {
                 case YASM_ARCH_REG:
                     s->tok[TOKLEN] = savech;
                     RETURN(REG);
@@ -514,10 +368,7 @@ scan:
             yasm_error_set(YASM_ERROR_GENERAL,
                            N_("Unrecognized register name `%s'"), s->tok);
             s->tok[TOKLEN] = savech;
-            lvalp->arch_data[0] = 0;
-            lvalp->arch_data[1] = 0;
-            lvalp->arch_data[2] = 0;
-            lvalp->arch_data[3] = 0;
+            lvalp->arch_data = 0;
             RETURN(REG);
         }
 
@@ -533,21 +384,53 @@ scan:
             RETURN(LABEL);
         }
 
+        /* local label */
+        [0-9] ':' {
+            /* increment label index */
+            parser_gas->local[s->tok[0]-'0']++;
+            /* build local label name */
+            lvalp->str_val = yasm_xmalloc(30);
+            sprintf(lvalp->str_val, "L%c\001%lu", s->tok[0],
+                    parser_gas->local[s->tok[0]-'0']);
+            RETURN(LABEL);
+        }
+
+        /* local label forward reference */
+        [0-9] 'f' {
+            /* build local label name */
+            lvalp->str_val = yasm_xmalloc(30);
+            sprintf(lvalp->str_val, "L%c\001%lu", s->tok[0],
+                    parser_gas->local[s->tok[0]-'0']+1);
+            RETURN(ID);
+        }
+
+        /* local label backward reference */
+        [0-9] 'b' {
+            /* build local label name */
+            lvalp->str_val = yasm_xmalloc(30);
+            sprintf(lvalp->str_val, "L%c\001%lu", s->tok[0],
+                    parser_gas->local[s->tok[0]-'0']);
+            RETURN(ID);
+        }
+
         /* identifier that may be an instruction, etc. */
         [a-zA-Z][a-zA-Z0-9_$.]* {
             /* Can only be an instruction/prefix when not inside an
              * instruction or directive.
              */
             if (parser_gas->state != INSTDIR) {
+                uintptr_t prefix;
                 savech = s->tok[TOKLEN];
                 s->tok[TOKLEN] = '\0';
                 switch (yasm_arch_parse_check_insnprefix
-                        (p_object->arch, lvalp->arch_data, TOK, TOKLEN)) {
+                        (p_object->arch, TOK, TOKLEN, cur_line, &lvalp->bc,
+                         &prefix)) {
                     case YASM_ARCH_INSN:
                         s->tok[TOKLEN] = savech;
                         parser_gas->state = INSTDIR;
                         RETURN(INSN);
                     case YASM_ARCH_PREFIX:
+                        lvalp->arch_data = prefix;
                         s->tok[TOKLEN] = savech;
                         RETURN(PREFIX);
                     default:

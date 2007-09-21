@@ -13,12 +13,20 @@
 /* */
 /* #undef HAVE_CATGETS */
 
+/* Define to 1 if you have the MacOS X function CFLocaleCopyCurrent in the
+   CoreFoundation framework. */
+/* #undef HAVE_CFLOCALECOPYCURRENT */
+
+/* Define to 1 if you have the MacOS X function CFPreferencesCopyAppValue in
+   the CoreFoundation framework. */
+/* #undef HAVE_CFPREFERENCESCOPYAPPVALUE */
+
 /* Define if the GNU dcgettext() function is already present or preinstalled.
    */
 /* #undef HAVE_DCGETTEXT */
 
-/* Define if you don't have `vprintf' but do have `_doprnt'. */
-/* #undef HAVE_DOPRNT */
+/* Define to 1 if you have the <direct.h> header file. */
+#define HAVE_DIRECT_H 1
 
 /* Define to 1 if you have the `getcwd' function. */
 #define HAVE_GETCWD 1
@@ -40,15 +48,6 @@
 
 /* Define to 1 if you have the <libgen.h> header file. */
 /* #undef HAVE_LIBGEN_H */
-
-/* Define if you have the <limits.h> header file. */
-#define HAVE_LIMITS_H 1
-
-/* Define if you have the `memcpy' function. */
-#define HAVE_MEMCPY 1
-
-/* Define if you have the `memmove' function. */
-#define HAVE_MEMMOVE 1
 
 /* Define if you have the <memory.h> header file. */
 /* #undef HAVE_MEMORY_H */
@@ -72,7 +71,7 @@
 /* #undefine HAVE_STRCMPI */
 
 /* Define if you have the `stricmp' function. */
-#define HAVE__STRICMP 1
+/* #undefine HAVE_STRICMP */
 
 /* Define if you have the <strings.h> header file. */
 /* #undef HAVE_STRINGS_H */
@@ -83,23 +82,14 @@
 /* Define if you have the `strncasecmp' function. */
 /* #undef HAVE_STRNCASECMP */
 
-/* Define if you have the `strrchr' function. */
-/* #undef HAVE_STRRCHR */
-
 /* Define if you have the `strsep' function. */
 /* #undef HAVE_STRSEP */
-
-/* Define if you have the <sys/param.h> header file. */
-/* #undef HAVE_SYS_PARAM_H */
 
 /* Define if you have the <sys/stat.h> header file. */
 /* #undef HAVE_SYS_STAT_H */
 
 /* Define if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H 1
-
-/* Define if you have <sys/wait.h> that is POSIX.1 compatible. */
-/* #undef HAVE_SYS_WAIT_H */
 
 /* Define if you have the `toascii' function. */
 #define HAVE_TOASCII 1
@@ -108,11 +98,11 @@
 /* Define if you have the <unistd.h> header file. */
 /* #undef HAVE_UNISTD_H */
 
-/* Define if you have the vprintf function. */
-#define HAVE_VPRINTF 1
-
 /* Define to 1 if you have the `vsnprintf' function. */
 /* #undef HAVE_VSNPRINTF */
+
+/* Define to 1 if you have the `_stricmp' function. */
+#define HAVE__STRICMP 1
 
 /* Name of package */
 #define PACKAGE "yasm"

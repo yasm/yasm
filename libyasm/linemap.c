@@ -24,7 +24,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#define YASM_LIB_INTERNAL
 #include "util.h"
 /*@unused@*/ RCSID("$Id$");
 
@@ -34,13 +33,6 @@
 #include "errwarn.h"
 #include "linemap.h"
 
-
-/* Source lines tracking */
-typedef struct {
-    struct line_mapping *vector;
-    unsigned long size;
-    unsigned long allocated;
-} line_mapping_head;
 
 typedef struct line_mapping {
     /* monotonically increasing virtual line */
@@ -71,7 +63,9 @@ struct yasm_linemap {
     unsigned long current;
 
     /* Mappings from virtual to physical line numbers */
-    /*@only@*/ /*@null@*/ line_mapping_head *map;
+    struct line_mapping *map_vector;
+    unsigned long map_size;
+    unsigned long map_allocated;
 
     /* Bytecode and source line information */
     /*@only@*/ line_source_info *source_info;
@@ -93,22 +87,22 @@ yasm_linemap_set(yasm_linemap *linemap, const char *filename,
     line_mapping *mapping;
 
     /* Create a new mapping in the map */
-    if (linemap->map->size >= linemap->map->allocated) {
+    if (linemap->map_size >= linemap->map_allocated) {
         /* allocate another size bins when full for 2x space */
-        linemap->map->vector =
-            yasm_xrealloc(linemap->map->vector, 2*linemap->map->allocated
+        linemap->map_vector =
+            yasm_xrealloc(linemap->map_vector, 2*linemap->map_allocated
                           *sizeof(line_mapping));
-        linemap->map->allocated *= 2;
+        linemap->map_allocated *= 2;
     }
-    mapping = &linemap->map->vector[linemap->map->size];
-    linemap->map->size++;
+    mapping = &linemap->map_vector[linemap->map_size];
+    linemap->map_size++;
 
     /* Fill it */
 
     if (!filename) {
-        if (linemap->map->size >= 2)
+        if (linemap->map_size >= 2)
             mapping->filename =
-                linemap->map->vector[linemap->map->size-2].filename;
+                linemap->map_vector[linemap->map_size-2].filename;
         else
             filename = "unknown";
     }
@@ -136,12 +130,14 @@ yasm_linemap_poke(yasm_linemap *linemap, const char *filename,
     linemap->current++;
     yasm_linemap_set(linemap, filename, file_line, 0);
 
-    mapping = &linemap->map->vector[linemap->map->size-1];
+    mapping = &linemap->map_vector[linemap->map_size-1];
 
     line = linemap->current;
 
     linemap->current++;
-    yasm_linemap_set(linemap, mapping->filename, mapping->file_line,
+    yasm_linemap_set(linemap, mapping->filename,
+                     mapping->file_line +
+                     mapping->line_inc*(linemap->current-2-mapping->line),
                      mapping->line_inc);
 
     return line;
@@ -158,10 +154,9 @@ yasm_linemap_create(void)
     linemap->current = 1;
 
     /* initialize mapping vector */
-    linemap->map = yasm_xmalloc(sizeof(line_mapping_head));
-    linemap->map->vector = yasm_xmalloc(8*sizeof(line_mapping));
-    linemap->map->size = 0;
-    linemap->map->allocated = 8;
+    linemap->map_vector = yasm_xmalloc(8*sizeof(line_mapping));
+    linemap->map_size = 0;
+    linemap->map_allocated = 8;
     
     /* initialize source line information array */
     linemap->source_info_size = 2;
@@ -185,10 +180,7 @@ yasm_linemap_destroy(yasm_linemap *linemap)
     }
     yasm_xfree(linemap->source_info);
 
-    if (linemap->map) {
-        yasm_xfree(linemap->map->vector);
-        yasm_xfree(linemap->map);
-    }
+    yasm_xfree(linemap->map_vector);
 
     if (linemap->filenames)
         HAMT_destroy(linemap->filenames, filename_delete_one);
@@ -243,19 +235,18 @@ yasm_linemap_lookup(yasm_linemap *linemap, unsigned long line,
     assert(line <= linemap->current);
 
     /* Binary search through map to find highest line_index <= index */
-    assert(linemap->map != NULL);
     vindex = 0;
     /* start step as the greatest power of 2 <= size */
     step = 1;
-    while (step*2<=linemap->map->size)
+    while (step*2<=linemap->map_size)
         step*=2;
     while (step>0) {
-        if (vindex+step < linemap->map->size
-                && linemap->map->vector[vindex+step].line <= line)
+        if (vindex+step < linemap->map_size
+                && linemap->map_vector[vindex+step].line <= line)
             vindex += step;
         step /= 2;
     }
-    mapping = &linemap->map->vector[vindex];
+    mapping = &linemap->map_vector[vindex];
 
     *filename = mapping->filename;
     *file_line = mapping->file_line + mapping->line_inc*(line-mapping->line);

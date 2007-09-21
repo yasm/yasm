@@ -29,7 +29,6 @@
 #include <util.h>
 RCSID("$Id$");
 
-#define YASM_LIB_INTERNAL
 #include <libyasm.h>
 
 #include "modules/parsers/nasm/nasm-parser.h"
@@ -350,21 +349,25 @@ scan:
         [a-zA-Z_?][a-zA-Z0-9_$#@~.?]* {
             savech = s->tok[TOKLEN];
             s->tok[TOKLEN] = '\0';
-            if (parser_nasm->state != INSTRUCTION)
+            if (parser_nasm->state != INSTRUCTION) {
+                uintptr_t prefix;
                 switch (yasm_arch_parse_check_insnprefix
-                        (p_object->arch, lvalp->arch_data, TOK, TOKLEN)) {
+                        (p_object->arch, TOK, TOKLEN, cur_line, &lvalp->bc,
+                         &prefix)) {
                     case YASM_ARCH_INSN:
                         parser_nasm->state = INSTRUCTION;
                         s->tok[TOKLEN] = savech;
                         RETURN(INSN);
                     case YASM_ARCH_PREFIX:
+                        lvalp->arch_data = prefix;
                         s->tok[TOKLEN] = savech;
                         RETURN(PREFIX);
                     default:
                         break;
                 }
+            }
             switch (yasm_arch_parse_check_regtmod
-                    (p_object->arch, lvalp->arch_data, TOK, TOKLEN)) {
+                    (p_object->arch, TOK, TOKLEN, &lvalp->arch_data)) {
                 case YASM_ARCH_REG:
                     s->tok[TOKLEN] = savech;
                     RETURN(REG);
@@ -618,7 +621,7 @@ directive2:
             savech = s->tok[TOKLEN];
             s->tok[TOKLEN] = '\0';
             switch (yasm_arch_parse_check_regtmod
-                    (p_object->arch, lvalp->arch_data, TOK, TOKLEN)) {
+                    (p_object->arch, TOK, TOKLEN, &lvalp->arch_data)) {
                 case YASM_ARCH_REG:
                     s->tok[TOKLEN] = savech;
                     RETURN(REG);

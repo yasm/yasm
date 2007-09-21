@@ -27,18 +27,10 @@
 #include <util.h>
 /*@unused@*/ RCSID("$Id$");
 
-#define YASM_LIB_INTERNAL
-#define YASM_BC_INTERNAL
-#define YASM_EXPR_INTERNAL
 #include <libyasm.h>
 
 #include "x86arch.h"
 
-
-/* Effective address callback function prototypes */
-
-static void x86_ea_destroy(yasm_effaddr *ea);
-static void x86_ea_print(const yasm_effaddr *ea, FILE *f, int indent_level);
 
 /* Bytecode callback function prototypes */
 
@@ -77,13 +69,6 @@ static int x86_bc_jmpfar_tobytes
     (yasm_bytecode *bc, unsigned char **bufp, void *d,
      yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
-
-/* Effective address callback structures */
-
-static const yasm_effaddr_callback x86_ea_callback = {
-    x86_ea_destroy,
-    x86_ea_print
-};
 
 /* Bytecode callback structures */
 
@@ -187,31 +172,41 @@ yasm_x86__ea_set_disponly(x86_effaddr *x86_ea)
     x86_ea->need_sib = 0;
 }
 
-x86_effaddr *
-yasm_x86__ea_create_reg(unsigned long reg, unsigned char *rex,
-                        unsigned int bits)
+static x86_effaddr *
+ea_create(void)
 {
-    x86_effaddr *x86_ea;
-    unsigned char rm;
+    x86_effaddr *x86_ea = yasm_xmalloc(sizeof(x86_effaddr));
 
-    if (yasm_x86__set_rex_from_reg(rex, &rm, reg, bits, X86_REX_B))
-        return NULL;
-
-    x86_ea = yasm_xmalloc(sizeof(x86_effaddr));
-
-    x86_ea->ea.callback = &x86_ea_callback;
     yasm_value_initialize(&x86_ea->ea.disp, NULL, 0);
     x86_ea->ea.need_nonzero_len = 0;
     x86_ea->ea.need_disp = 0;
     x86_ea->ea.nosplit = 0;
     x86_ea->ea.strong = 0;
     x86_ea->ea.segreg = 0;
-    x86_ea->modrm = 0xC0 | rm;  /* Mod=11, R/M=Reg, Reg=0 */
-    x86_ea->valid_modrm = 1;
-    x86_ea->need_modrm = 1;
+    x86_ea->modrm = 0;
+    x86_ea->valid_modrm = 0;
+    x86_ea->need_modrm = 0;
     x86_ea->sib = 0;
     x86_ea->valid_sib = 0;
     x86_ea->need_sib = 0;
+
+    return x86_ea;
+}
+
+x86_effaddr *
+yasm_x86__ea_create_reg(x86_effaddr *x86_ea, unsigned long reg,
+                        unsigned char *rex, unsigned int bits)
+{
+    unsigned char rm;
+
+    if (yasm_x86__set_rex_from_reg(rex, &rm, reg, bits, X86_REX_B))
+        return NULL;
+
+    if (!x86_ea)
+        x86_ea = ea_create();
+    x86_ea->modrm = 0xC0 | rm;  /* Mod=11, R/M=Reg, Reg=0 */
+    x86_ea->valid_modrm = 1;
+    x86_ea->need_modrm = 1;
 
     return x86_ea;
 }
@@ -222,9 +217,8 @@ yasm_x86__ea_create_expr(yasm_arch *arch, yasm_expr *e)
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     x86_effaddr *x86_ea;
 
-    x86_ea = yasm_xmalloc(sizeof(x86_effaddr));
+    x86_ea = ea_create();
 
-    x86_ea->ea.callback = &x86_ea_callback;
     if (arch_x86->parser == X86_PARSER_GAS) {
         /* Need to change foo+rip into foo wrt rip.
          * Note this assumes a particular ordering coming from the parser
@@ -241,16 +235,8 @@ yasm_x86__ea_create_expr(yasm_arch *arch, yasm_expr *e)
         }
     }
     yasm_value_initialize(&x86_ea->ea.disp, e, 0);
-    x86_ea->ea.need_nonzero_len = 0;
     x86_ea->ea.need_disp = 1;
-    x86_ea->ea.nosplit = 0;
-    x86_ea->ea.strong = 0;
-    x86_ea->ea.segreg = 0;
-    x86_ea->modrm = 0;
-    x86_ea->valid_modrm = 0;
     x86_ea->need_modrm = 1;
-    x86_ea->sib = 0;
-    x86_ea->valid_sib = 0;
     /* We won't know whether we need an SIB until we know more about expr and
      * the BITS/address override setting.
      */
@@ -261,24 +247,13 @@ yasm_x86__ea_create_expr(yasm_arch *arch, yasm_expr *e)
 
 /*@-compmempass@*/
 x86_effaddr *
-yasm_x86__ea_create_imm(yasm_expr *imm, unsigned int im_len)
+yasm_x86__ea_create_imm(x86_effaddr *x86_ea, yasm_expr *imm,
+                        unsigned int im_len)
 {
-    x86_effaddr *x86_ea;
-
-    x86_ea = yasm_xmalloc(sizeof(x86_effaddr));
-
-    x86_ea->ea.callback = &x86_ea_callback;
+    if (!x86_ea)
+        x86_ea = ea_create();
     yasm_value_initialize(&x86_ea->ea.disp, imm, im_len);
     x86_ea->ea.need_disp = 1;
-    x86_ea->ea.nosplit = 0;
-    x86_ea->ea.strong = 0;
-    x86_ea->ea.segreg = 0;
-    x86_ea->modrm = 0;
-    x86_ea->valid_modrm = 0;
-    x86_ea->need_modrm = 0;
-    x86_ea->sib = 0;
-    x86_ea->valid_sib = 0;
-    x86_ea->need_sib = 0;
 
     return x86_ea;
 }
@@ -286,25 +261,25 @@ yasm_x86__ea_create_imm(yasm_expr *imm, unsigned int im_len)
 
 void
 yasm_x86__bc_apply_prefixes(x86_common *common, unsigned char *rex,
-                            unsigned int def_opersize_64, int num_prefixes,
-                            uintptr_t **prefixes)
+                            unsigned int def_opersize_64,
+                            unsigned int num_prefixes, uintptr_t *prefixes)
 {
-    int i;
+    unsigned int i;
     int first = 1;
 
     for (i=0; i<num_prefixes; i++) {
-        switch ((x86_parse_insn_prefix)prefixes[i][0]) {
+        switch ((x86_parse_insn_prefix)(prefixes[i] & 0xff00)) {
             case X86_LOCKREP:
                 if (common->lockrep_pre != 0)
                     yasm_warn_set(YASM_WARN_GENERAL,
                         N_("multiple LOCK or REP prefixes, using leftmost"));
-                common->lockrep_pre = (unsigned char)prefixes[i][1];
+                common->lockrep_pre = (unsigned char)prefixes[i] & 0xff;
                 break;
             case X86_ADDRSIZE:
-                common->addrsize = (unsigned char)prefixes[i][1];
+                common->addrsize = (unsigned char)prefixes[i] & 0xff;
                 break;
             case X86_OPERSIZE:
-                common->opersize = (unsigned char)prefixes[i][1];
+                common->opersize = (unsigned char)prefixes[i] & 0xff;
                 if (common->mode_bits == 64 && common->opersize == 64 &&
                     def_opersize_64 != 64) {
                     if (*rex == 0xff)
@@ -318,7 +293,7 @@ yasm_x86__bc_apply_prefixes(x86_common *common, unsigned char *rex,
                 /* This is a hack.. we should really be putting this in the
                  * the effective address!
                  */
-                common->lockrep_pre = (unsigned char)prefixes[i][1];
+                common->lockrep_pre = (unsigned char)prefixes[i] & 0xff;
                 break;
             case X86_REX:
                 if (!rex)
@@ -340,7 +315,7 @@ yasm_x86__bc_apply_prefixes(x86_common *common, unsigned char *rex,
                      * 64 bit mode due to checks in parse_check_prefix().
                      */
                     common->mode_bits = 64;
-                    *rex = (unsigned char)prefixes[i][1];
+                    *rex = (unsigned char)prefixes[i] & 0xff;
                 }
                 first = 0;
                 break;
@@ -353,7 +328,7 @@ x86_bc_insn_destroy(void *contents)
 {
     x86_insn *insn = (x86_insn *)contents;
     if (insn->x86_ea)
-        yasm_ea_destroy((yasm_effaddr *)insn->x86_ea);
+        yasm_x86__ea_destroy((yasm_effaddr *)insn->x86_ea);
     if (insn->imm) {
         yasm_value_delete(insn->imm);
         yasm_xfree(insn->imm);
@@ -378,15 +353,20 @@ x86_bc_jmpfar_destroy(void *contents)
     yasm_xfree(contents);
 }
 
-static void
-x86_ea_destroy(yasm_effaddr *ea)
+void
+yasm_x86__ea_destroy(yasm_effaddr *ea)
 {
+    yasm_value_delete(&ea->disp);
+    yasm_xfree(ea);
 }
 
-static void
-x86_ea_print(const yasm_effaddr *ea, FILE *f, int indent_level)
+void
+yasm_x86__ea_print(const yasm_effaddr *ea, FILE *f, int indent_level)
 {
     const x86_effaddr *x86_ea = (const x86_effaddr *)ea;
+    fprintf(f, "%*sDisp:\n", indent_level, "");
+    yasm_value_print(&ea->disp, f, indent_level+1);
+    fprintf(f, "%*sNoSplit=%u\n", indent_level, "", (unsigned int)ea->nosplit);
     fprintf(f, "%*sSegmentOv=%02x\n", indent_level, "",
             (unsigned int)x86_ea->ea.segreg);
     fprintf(f, "%*sModRM=%03o ValidRM=%u NeedRM=%u\n", indent_level, "",
@@ -427,7 +407,7 @@ x86_bc_insn_print(const void *contents, FILE *f, int indent_level)
     fprintf(f, "%*sEffective Address:", indent_level, "");
     if (insn->x86_ea) {
         fprintf(f, "\n");
-        yasm_ea_print((yasm_effaddr *)insn->x86_ea, f, indent_level+1);
+        yasm_x86__ea_print((yasm_effaddr *)insn->x86_ea, f, indent_level+1);
     } else
         fprintf(f, " (nil)\n");
     fprintf(f, "%*sImmediate Value:", indent_level, "");
@@ -912,8 +892,9 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
                                      yasm_expr_int(delta), bc->line);
 
             jmp->target.size = 8;
+            jmp->target.sign = 1;
             if (output_value(&jmp->target, *bufp, 1,
-                             (unsigned long)(*bufp-bufp_orig), bc, -1, d))
+                             (unsigned long)(*bufp-bufp_orig), bc, 1, d))
                 return 1;
             *bufp += 1;
             break;
@@ -943,8 +924,9 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
                                      yasm_expr_int(delta), bc->line);
 
             jmp->target.size = i*8;
+            jmp->target.sign = 1;
             if (output_value(&jmp->target, *bufp, i,
-                             (unsigned long)(*bufp-bufp_orig), bc, -1, d))
+                             (unsigned long)(*bufp-bufp_orig), bc, 1, d))
                 return 1;
             *bufp += i;
             break;

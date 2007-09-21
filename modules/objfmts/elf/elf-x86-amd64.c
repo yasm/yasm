@@ -28,8 +28,6 @@
 #include <util.h>
 /*@unused@*/ RCSID("$Id$");
 
-#define YASM_LIB_INTERNAL
-#define YASM_EXPR_INTERNAL
 #include <libyasm.h>
 #define YASM_OBJFMT_ELF_INTERNAL
 #include "elf.h"

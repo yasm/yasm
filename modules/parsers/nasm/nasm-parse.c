@@ -27,13 +27,9 @@
 #include <util.h>
 RCSID("$Id$");
 
-#define YASM_LIB_INTERNAL
-#define YASM_EXPR_INTERNAL
 #include <libyasm.h>
 
-#ifdef STDC_HEADERS
-# include <math.h>
-#endif
+#include <math.h>
 
 #include "modules/parsers/nasm/nasm-parser.h"
 
@@ -106,6 +102,9 @@ destroy_curtok_(yasm_parser_nasm *parser_nasm)
             break;
         case STRING:
             yasm_xfree(curval.str.contents);
+            break;
+        case INSN:
+            yasm_bc_destroy(curval.bc);
             break;
         default:
             break;
@@ -596,60 +595,56 @@ incbin_done:
 static yasm_bytecode *
 parse_instr(yasm_parser_nasm *parser_nasm)
 {
+    yasm_bytecode *bc;
+
     switch (curtok) {
         case INSN:
         {
-            yystype insn = curval;      /* structure copy */
-            yasm_insn_operands operands;
-            int num_operands = 0;
+            yasm_insn *insn;
+            bc = INSN_val;
+            insn = yasm_bc_get_insn(bc);
 
             get_next_token();
-            if (is_eol()) {
-                /* no operands */
-                return yasm_bc_create_insn(p_object->arch, insn.arch_data, 0,
-                                           NULL, cur_line);
-            }
+            if (is_eol())
+                return bc;      /* no operands */
 
             /* parse operands */
-            yasm_ops_initialize(&operands);
             for (;;) {
                 yasm_insn_operand *op = parse_operand(parser_nasm);
                 if (!op) {
                     yasm_error_set(YASM_ERROR_SYNTAX,
                                    N_("expression syntax error"));
-                    yasm_ops_delete(&operands, 1);
+                    yasm_bc_destroy(bc);
                     return NULL;
                 }
-                yasm_ops_append(&operands, op);
-                num_operands++;
+                yasm_insn_ops_append(insn, op);
 
                 if (is_eol())
                     break;
                 if (!expect(',')) {
-                    yasm_ops_delete(&operands, 1);
+                    yasm_bc_destroy(bc);
                     return NULL;
                 }
                 get_next_token();
             }
-            return yasm_bc_create_insn(p_object->arch, insn.arch_data,
-                                       num_operands, &operands, cur_line);
-        }
-        case PREFIX: {
-            yystype prefix = curval;    /* structure copy */
-            yasm_bytecode *bc;
-            get_next_token();
-            bc = parse_instr(parser_nasm);
-            if (bc)
-                yasm_bc_insn_add_prefix(bc, prefix.arch_data);
             return bc;
         }
-        case SEGREG: {
-            uintptr_t segreg = SEGREG_val[0];
-            yasm_bytecode *bc;
+        case PREFIX:
+        {
+            uintptr_t prefix = PREFIX_val;
             get_next_token();
             bc = parse_instr(parser_nasm);
             if (bc)
-                yasm_bc_insn_add_seg_prefix(bc, segreg);
+                yasm_insn_add_prefix(yasm_bc_get_insn(bc), prefix);
+            return bc;
+        }
+        case SEGREG:
+        {
+            uintptr_t segreg = SEGREG_val;
+            get_next_token();
+            bc = parse_instr(parser_nasm);
+            if (bc)
+                yasm_insn_add_seg_prefix(yasm_bc_get_insn(bc), segreg);
             return bc;
         }
         default:
@@ -679,11 +674,11 @@ parse_operand(yasm_parser_nasm *parser_nasm)
             return yasm_operand_create_mem(ea);
         }
         case SEGREG:
-            op = yasm_operand_create_segreg(SEGREG_val[0]);
+            op = yasm_operand_create_segreg(SEGREG_val);
             get_next_token();
             return op;
         case REG:
-            op = yasm_operand_create_reg(REG_val[0]);
+            op = yasm_operand_create_reg(REG_val);
             get_next_token();
             return op;
         case STRICT:
@@ -726,7 +721,7 @@ parse_operand(yasm_parser_nasm *parser_nasm)
         }
         case TARGETMOD:
         {
-            uintptr_t tmod = TARGETMOD_val[0];
+            uintptr_t tmod = TARGETMOD_val;
             get_next_token();
             op = parse_operand(parser_nasm);
             if (op)
@@ -751,7 +746,7 @@ parse_memaddr(yasm_parser_nasm *parser_nasm)
     switch (curtok) {
         case SEGREG:
         {
-            uintptr_t segreg = SEGREG_val[0];
+            uintptr_t segreg = SEGREG_val;
             get_next_token();
             if (!expect(':')) {
                 yasm_error_set(YASM_ERROR_SYNTAX,
@@ -770,14 +765,14 @@ parse_memaddr(yasm_parser_nasm *parser_nasm)
             get_next_token();
             ea = parse_memaddr(parser_nasm);
             if (ea)
-                yasm_ea_set_len(ea, size);
+                ea->disp.size = size;
             return ea;
         }
         case NOSPLIT:
             get_next_token();
             ea = parse_memaddr(parser_nasm);
             if (ea)
-                yasm_ea_set_nosplit(ea, 1);
+                ea->nosplit = 1;
             return ea;
         default:
         {
@@ -975,7 +970,7 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
             e = p_expr_new_ident(yasm_expr_int(INTNUM_val));
             break;
         case REG:
-            e = p_expr_new_ident(yasm_expr_reg(REG_val[0]));
+            e = p_expr_new_ident(yasm_expr_reg(REG_val));
             break;
         case ID:
             sym = yasm_symtab_use(p_symtab, ID_val, cur_line);
@@ -1030,7 +1025,7 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
                                N_("data values can't have registers"));
                 return NULL;
             }
-            e = p_expr_new_ident(yasm_expr_reg(REG_val[0]));
+            e = p_expr_new_ident(yasm_expr_reg(REG_val));
             break;
         case STRING:
             e = p_expr_new_ident(yasm_expr_int(

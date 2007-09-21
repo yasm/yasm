@@ -74,10 +74,7 @@ typedef struct yasm_assoc_data_callback {
  */
 typedef struct yasm_errwarns yasm_errwarns;
 
-/** Bytecode (opaque type).
- * \see bytecode.h for related functions.
- * Define YASM_BC_INTERNAL to get visible internals.
- */
+/** Bytecode.  \see bytecode.h for details and related functions. */
 typedef struct yasm_bytecode yasm_bytecode;
 
 /** Object.  \see section.h for details and related functions. */
@@ -92,10 +89,7 @@ typedef struct yasm_symtab yasm_symtab;
 /** Symbol record (opaque type).  \see symrec.h for related functions. */
 typedef struct yasm_symrec yasm_symrec;
 
-/** Expression (opaque type).
- * \see expr.h for related functions.
- * Define YASM_EXPR_INTERNAL to get visible internals.
- */
+/** Expression.  \see expr.h for details and related functions. */
 typedef struct yasm_expr yasm_expr;
 /** Integer value (opaque type).  \see intnum.h for related functions. */
 typedef struct yasm_intnum yasm_intnum;
@@ -192,11 +186,15 @@ typedef struct yasm_valparamhead yasm_valparamhead;
  */
 typedef struct yasm_directive yasm_directive;
 
-/** A list of instruction operands (opaque type).
- * The list goes from left-to-right as parsed.
- * \see arch.h for related functions.
+/** An effective address.
+ * \see insn.h for related functions.
  */
-typedef struct yasm_insn_operands yasm_insn_operands;
+typedef struct yasm_effaddr yasm_effaddr;
+
+/** An instruction.
+ * \see insn.h for related functions.
+ */
+typedef struct yasm_insn yasm_insn;
 
 /** Expression operators usable in #yasm_expr expressions. */
 typedef enum yasm_expr_op {
@@ -249,9 +247,7 @@ typedef enum yasm_expr_op {
  * \param bc            current bytecode (usually passed into higher-level
  *                      calling function)
  * \param warn          enables standard warnings: zero for none;
- *                      nonzero for overflow/underflow floating point warnings;
- *                      negative for signed integer warnings,
- *                      positive for unsigned integer warnings
+ *                      nonzero for overflow/underflow floating point warnings
  * \param d             objfmt-specific data (passed into higher-level calling
  *                      function)
  * \return Nonzero if an error occurred, 0 otherwise.

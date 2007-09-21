@@ -24,13 +24,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#define YASM_LIB_INTERNAL
 #include "util.h"
 /*@unused@*/ RCSID("$Id$");
 
-#ifdef STDC_HEADERS
-# include <limits.h>
-#endif
+#include <limits.h>
 
 #include "libyasm-stdint.h"
 #include "coretype.h"

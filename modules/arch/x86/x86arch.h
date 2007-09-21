@@ -76,11 +76,11 @@ typedef struct yasm_arch_x86 {
     unsigned long cpu_enabled;
     unsigned int amd64_machine;
     enum {
-        X86_PARSER_NASM,
-        X86_PARSER_GAS
+        X86_PARSER_NASM = 0,
+        X86_PARSER_GAS = 1
     } parser;
-    unsigned char mode_bits;
-    unsigned char force_strict;
+    unsigned int mode_bits;
+    unsigned int force_strict;
 } yasm_arch_x86;
 
 /* 0-15 (low 4 bits) used for register number, stored in same data area.
@@ -101,12 +101,13 @@ typedef enum {
     X86_RIP = 0xC<<4        /* 64-bit mode only, always RIP (regnum ignored) */
 } x86_expritem_reg_size;
 
+/* Low 8 bits are used for the prefix value, stored in same data area. */
 typedef enum {
-    X86_LOCKREP = 1,
-    X86_ADDRSIZE,
-    X86_OPERSIZE,
-    X86_SEGREG,
-    X86_REX
+    X86_LOCKREP = 1<<8,
+    X86_ADDRSIZE = 2<<8,
+    X86_OPERSIZE = 3<<8,
+    X86_SEGREG = 4<<8,
+    X86_REX = 5<<8
 } x86_parse_insn_prefix;
 
 typedef enum {
@@ -162,12 +163,14 @@ void yasm_x86__ea_init(x86_effaddr *x86_ea, unsigned int spare,
                        yasm_bytecode *precbc);
 
 void yasm_x86__ea_set_disponly(x86_effaddr *x86_ea);
-x86_effaddr *yasm_x86__ea_create_reg(unsigned long reg, unsigned char *rex,
-                                     unsigned int bits);
+x86_effaddr *yasm_x86__ea_create_reg(x86_effaddr *x86_ea, unsigned long reg,
+                                     unsigned char *rex, unsigned int bits);
 x86_effaddr *yasm_x86__ea_create_imm
-    (/*@keep@*/ yasm_expr *imm, unsigned int im_len);
+    (x86_effaddr *x86_ea, /*@keep@*/ yasm_expr *imm, unsigned int im_len);
 yasm_effaddr *yasm_x86__ea_create_expr(yasm_arch *arch,
                                        /*@keep@*/ yasm_expr *e);
+void yasm_x86__ea_destroy(yasm_effaddr *ea);
+void yasm_x86__ea_print(const yasm_effaddr *ea, FILE *f, int indent_level);
 
 void yasm_x86__bc_insn_opersize_override(yasm_bytecode *bc,
                                          unsigned int opersize);
@@ -253,7 +256,7 @@ void yasm_x86__bc_transform_jmpfar(yasm_bytecode *bc, x86_jmpfar *jmpfar);
 
 void yasm_x86__bc_apply_prefixes
     (x86_common *common, unsigned char *rex, unsigned int def_opersize_64,
-     int num_prefixes, uintptr_t **prefixes);
+     unsigned int num_prefixes, uintptr_t *prefixes);
 
 /* Check an effective address.  Returns 0 if EA was successfully determined,
  * 1 if invalid EA, or 2 if indeterminate EA.
@@ -266,17 +269,11 @@ void yasm_x86__parse_cpu(yasm_arch_x86 *arch_x86, const char *cpuid,
                          size_t cpuid_len);
 
 yasm_arch_insnprefix yasm_x86__parse_check_insnprefix
-    (yasm_arch *arch, /*@out@*/ uintptr_t data[4], const char *id,
-     size_t id_len);
+    (yasm_arch *arch, const char *id, size_t id_len, unsigned long line,
+     /*@out@*/ yasm_bytecode **bc, /*@out@*/ uintptr_t *prefix);
 yasm_arch_regtmod yasm_x86__parse_check_regtmod
-    (yasm_arch *arch, /*@out@*/ uintptr_t *data, const char *id,
-     size_t id_len);
-
-void yasm_x86__finalize_insn
-    (yasm_arch *arch, yasm_bytecode *bc, yasm_bytecode *prev_bc,
-     const uintptr_t data[4], int num_operands,
-     /*@null@*/ yasm_insn_operands *operands, int num_prefixes,
-     uintptr_t **prefixes, int num_segregs, const uintptr_t *segregs);
+    (yasm_arch *arch, const char *id, size_t id_len,
+     /*@out@*/ uintptr_t *data);
 
 int yasm_x86__floatnum_tobytes
     (yasm_arch *arch, const yasm_floatnum *flt, unsigned char *buf,
@@ -286,5 +283,8 @@ int yasm_x86__intnum_tobytes
      size_t destsize, size_t valsize, int shift, const yasm_bytecode *bc,
      int warn);
 
-unsigned int yasm_x86__get_reg_size(yasm_arch *arch, uintptr_t reg);
+unsigned int yasm_x86__get_reg_size(uintptr_t reg);
+
+/*@only@*/ yasm_bytecode *yasm_x86__create_empty_insn(yasm_arch *arch,
+                                                      unsigned long line);
 #endif

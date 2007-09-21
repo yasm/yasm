@@ -24,7 +24,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#define YASM_LIB_INTERNAL
 #include "util.h"
 /*@unused@*/ RCSID("$Id$");
 
@@ -42,8 +41,6 @@
 #include "section.h"
 
 #include "arch.h"
-
-#include "expr-int.h"
 
 
 static int expr_traverse_nodes_post(/*@null@*/ yasm_expr *e,
@@ -420,6 +417,8 @@ expr_xform_neg_helper(/*@returned@*/ /*@only@*/ yasm_expr *e)
              */
             if (e->terms[0].type == YASM_EXPR_FLOAT)
                 yasm_floatnum_calc(e->terms[0].data.flt, YASM_EXPR_NEG, NULL);
+            else if (e->terms[0].type == YASM_EXPR_INT)
+                yasm_intnum_calc(e->terms[0].data.intn, YASM_EXPR_NEG, NULL);
             else if (e->terms[0].type == YASM_EXPR_EXPR &&
                 yasm_expr__contains(e->terms[0].data.expn, YASM_EXPR_FLOAT))
                     expr_xform_neg_helper(e->terms[0].data.expn);
@@ -869,7 +868,8 @@ expr_level_tree(yasm_expr *e, int fold_const, int simplify_ident,
         e->op = YASM_EXPR_IDENT;
         e->terms[0].data.expn->op = YASM_EXPR_IDENT;
         /* Destroy the second (offset) term */
-        expr_delete_term(&e->terms[1], 1);
+        e->terms[0].data.expn->numterms = 1;
+        expr_delete_term(&e->terms[0].data.expn->terms[1], 1);
     }
 
     /* do callback */
@@ -1003,12 +1003,6 @@ yasm_expr__copy_except(const yasm_expr *e, int except)
     }
 
     return n;
-}
-
-yasm_expr *
-yasm_expr_copy(const yasm_expr *e)
-{
-    return yasm_expr__copy_except(e, -1);
 }
 
 static void
