@@ -22,6 +22,7 @@
    <year>2004</year>
    <year>2005</year>
    <year>2006</year>
+   <year>2007</year>
    <holder>Peter Johnson</holder>
   </copyright>
  </refentryinfo>
@@ -229,6 +230,23 @@
     <screen>mov ecx, -1          ; 5 byte, equivalent to above</screen>
     <screen>mov rcx, sym         ; 5 byte, 32-bit size default for symbols</screen>
     <screen>mov rcx, qword sym   ; 10 byte, override default size</screen>
+
+    <para>The handling of mov reg64, unsized immediate is different
+     between YASM and NASM 2.x; YASM follows the above behavior, while
+     NASM 2.x does the following:</para>
+
+    <screen>add rax, 0xffffffff  ; sign-extended 32-bit immediate</screen>
+    <screen>add rax, -1          ; same as above</screen>
+    <screen>add rax, 0xffffffffffffffff ; truncated 32-bit (warning)</screen>
+    <screen>add rax, sym         ; sign-extended 32-bit immediate</screen>
+    <screen>mov eax, 1           ; 5 byte (32-bit immediate)</screen>
+    <screen>mov rax, 1           ; 10 byte (64-bit immediate)</screen>
+    <screen>mov rbx, 0x1234567890abcdef ; 10 byte instruction</screen>
+    <screen>mov rcx, 0xffffffff  ; 10 byte instruction</screen>
+    <screen>mov ecx, -1          ; 5 byte, equivalent to above</screen>
+    <screen>mov ecx, sym         ; 5 byte (32-bit immediate)</screen>
+    <screen>mov rcx, sym         ; 10 byte instruction</screen>
+    <screen>mov rcx, qword sym   ; 10 byte (64-bit immediate)</screen>
    </refsect3>
 
    <refsect3>
@@ -280,6 +298,67 @@
      value 1 there.  If <userinput>symb</userinput> is a variable,
      this will <emphasis>not</emphasis> store the value 1 into the
      <userinput>symb</userinput> variable!</para>
+
+    <para>Yasm also supports the following syntax for RIP-relative
+     addressing:</para>
+
+    <screen>mov [rel sym], rax  ; RIP-relative</screen>
+    <screen>mov [abs sym], rax  ; not RIP-relative</screen>
+
+    <para>The behavior of:</para>
+
+    <screen>mov [sym], rax</screen>
+
+    <para>Depends on a mode set by the DEFAULT directive, as follows.
+     The default mode is always "abs", and in "rel" mode, use of
+     registers, an fs or gs segment override, or an explicit "abs"
+     override will result in a non-RIP-relative effective
+     address.</para>
+  
+    <screen>default rel</screen>
+    <screen>mov [sym], rbx      ; RIP-relative</screen>
+    <screen>mov [abs sym], rbx  ; not RIP-relative (explicit override)</screen>
+    <screen>mov [rbx+1], rbx    ; not RIP-relative (register use)</screen>
+    <screen>mov [fs:sym], rbx   ; not RIP-relative (fs or gs use)</screen>
+    <screen>mov [ds:sym], rbx   ; RIP-relative (segment, but not fs or gs)</screen>
+    <screen>mov [rel sym], rbx  ; RIP-relative (redundant override)</screen>
+
+    <screen>default abs</screen>
+    <screen>mov [sym], rbx      ; not RIP-relative</screen>
+    <screen>mov [abs sym], rbx  ; not RIP-relative</screen>
+    <screen>mov [rbx+1], rbx    ; not RIP-relative</screen>
+    <screen>mov [fs:sym], rbx   ; not RIP-relative</screen>
+    <screen>mov [ds:sym], rbx   ; not RIP-relative</screen>
+    <screen>mov [rel sym], rbx  ; RIP-relative (explicit override)</screen>
+   </refsect3>
+
+   <refsect3>
+    <title>Memory references</title>
+
+    <para>Usually the size of a memory reference can be deduced by
+     which registers you're moving--for example, "mov [rax],ecx" is a
+     32-bit move, because ecx is 32 bits.  YASM currently gives the
+     non-obvious "invalid combination of opcode and operands" error if
+     it can't figure out how much memory you're moving.  The fix in
+     this case is to add a memory size specifier: qword, dword, word,
+     or byte.</para>
+
+    <para>Here's a 64-bit memory move, which sets 8 bytes starting at
+     rax:</para>
+
+    <screen>mov qword [rax], 1</screen>
+
+    <para>Here's a 32-bit memory move, which sets 4 bytes:</para>
+
+    <screen>mov dword [rax], 1</screen>
+
+    <para>Here's a 16-bit memory move, which sets 2 bytes:</para>
+
+    <screen>mov word [rax], 1</screen>
+
+    <para>Here's an 8-bit memory move, which sets 1 byte:</para>
+
+    <screen>mov byte [rax], 1</screen>
    </refsect3>
   </refsect2>
  </refsect1>
