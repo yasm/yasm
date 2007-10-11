@@ -839,13 +839,13 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
                 if (op->type == YASM_INSN__OPERAND_REG && op->size == 0) {
                     /* Register size must exactly match */
                     if ((bypass == 4 && i == 0) || (bypass == 5 && i == 1)
-                        || (bypass == 6 && i == 3))
+                        || (bypass == 6 && i == 2))
                         ;
                     else if (yasm_x86__get_reg_size(op->data.reg) != size)
                         mismatch = 1;
                 } else {
                     if ((bypass == 1 && i == 0) || (bypass == 2 && i == 1)
-                        || (bypass == 3 && i == 3))
+                        || (bypass == 3 && i == 2))
                         ;
                     else if (info_ops[i].relaxed) {
                         /* Relaxed checking */
