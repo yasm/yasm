@@ -515,10 +515,10 @@ x86_finalize_jmp(yasm_bytecode *bc, yasm_bytecode *prev_bc,
         }
     }
 
-    if ((jmp->op_sel == JMP_SHORT_FORCED) && (jmp->nearop.len == 0))
+    if ((jmp->op_sel == JMP_SHORT_FORCED) && (jmp->shortop.len == 0))
         yasm_error_set(YASM_ERROR_TYPE,
                        N_("no SHORT form of that jump instruction exists"));
-    if ((jmp->op_sel == JMP_NEAR_FORCED) && (jmp->shortop.len == 0))
+    if ((jmp->op_sel == JMP_NEAR_FORCED) && (jmp->nearop.len == 0))
         yasm_error_set(YASM_ERROR_TYPE,
                        N_("no NEAR form of that jump instruction exists"));
 

@@ -168,6 +168,9 @@ jmp near label
 jmp far [label]
 jmp far dword [label]
 call far word [label]
+loop short label
+jcxz short label
+jecxz short label
 [bits 16]
 push si
 push esi
