@@ -453,7 +453,7 @@ x86_finalize_jmp(yasm_bytecode *bc, yasm_bytecode *prev_bc,
             size_lookup[insn_operands[jinfo->operands_index+1].size];
 
     /* Check for address size override */
-    for (i=0; i<NELEMS(info->modifiers); i++) {
+    for (i=0; i<NELEMS(jinfo->modifiers); i++) {
         if (jinfo->modifiers[i] == MOD_AdSizeR)
             jmp->common.addrsize = mod_data[i];
     }
@@ -529,7 +529,8 @@ x86_finalize_jmp(yasm_bytecode *bc, yasm_bytecode *prev_bc,
             jmp->op_sel = JMP_NEAR_FORCED;
     }
 
-    yasm_x86__bc_apply_prefixes((x86_common *)jmp, NULL, info->def_opersize_64,
+    yasm_x86__bc_apply_prefixes((x86_common *)jmp, NULL,
+                                jinfo->def_opersize_64,
                                 id_insn->insn.num_prefixes,
                                 id_insn->insn.prefixes);
 
