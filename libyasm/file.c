@@ -35,6 +35,7 @@
 #endif
 
 #include <ctype.h>
+#include <errno.h>
 
 #include "errwarn.h"
 #include "file.h"
@@ -226,6 +227,26 @@ yasm__splitpath_win(const char *path, /*@out@*/ const char **tail)
     return s-path+1;
 }
 
+char *
+yasm__getcwd(void)
+{
+    char *buf;
+    size_t size;
+
+    size = 1024;
+    buf = yasm_xmalloc(size);
+    while (getcwd(buf, size) == NULL) {
+        if (errno != ERANGE) {
+            yasm__fatal(N_("could not determine current working directory"));
+            yasm_xfree(buf);
+            return NULL;
+        }
+        size *= 2;
+        buf = yasm_xrealloc(buf, size);
+    }
+    return buf;
+}
+
 /* FIXME: dumb way for now */
 char *
 yasm__abspath_unix(const char *path)
@@ -233,14 +254,14 @@ yasm__abspath_unix(const char *path)
     char *curdir, *abspath;
     static const char pathsep[2] = "/";
 
-    curdir = getcwd(NULL, 0);
+    curdir = yasm__getcwd();
 
     abspath = yasm_xmalloc(strlen(curdir) + strlen(path) + 2);
     strcpy(abspath, curdir);
     strcat(abspath, pathsep);
     strcat(abspath, path);
 
-    free(curdir);
+    yasm_xfree(curdir);
 
     return abspath;
 }
@@ -252,14 +273,14 @@ yasm__abspath_win(const char *path)
     char *curdir, *abspath, *ch;
     static const char pathsep[2] = "\\";
 
-    curdir = getcwd(NULL, 0);
+    curdir = yasm__getcwd();
 
     abspath = yasm_xmalloc(strlen(curdir) + strlen(path) + 2);
     strcpy(abspath, curdir);
     strcat(abspath, pathsep);
     strcat(abspath, path);
 
-    free(curdir);
+    yasm_xfree(curdir);
 
     /* Replace all / with \ */
     ch = abspath;

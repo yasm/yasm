@@ -27,13 +27,6 @@
 #include <util.h>
 /*@unused@*/ RCSID("$Id$");
 
-/* Need either unistd.h or direct.h (on Windows) to prototype getcwd() */
-#if defined(HAVE_UNISTD_H)
-#include <unistd.h>
-#elif defined(HAVE_DIRECT_H)
-#include <direct.h>
-#endif
-
 #include <libyasm.h>
 
 #include "dwarf2-dbgfmt.h"
@@ -337,9 +330,9 @@ yasm_dwarf2__generate_info(yasm_object *object, yasm_section *debug_line,
 
     /* compile directory (current working directory) */
     abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_comp_dir, DW_FORM_string);
-    buf = getcwd(NULL, 0);
+    buf = yasm__getcwd();
     dwarf2_append_str(debug_info, buf);
-    free(buf);
+    yasm_xfree(buf);
 
     /* producer - assembler name */
     abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_producer, DW_FORM_string);

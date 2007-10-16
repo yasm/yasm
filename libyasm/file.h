@@ -115,6 +115,12 @@ size_t yasm__splitpath_win(const char *path, /*@out@*/ const char **tail);
 # endif
 #endif
 
+/** Get the current working directory.
+ * \internal
+ * \return Current working directory pathname (newly allocated).
+ */
+/*@only@*/ char *yasm__getcwd(void);
+
 /** Convert a UNIX relative or absolute pathname into an absolute pathname.
  * \internal
  * \param path  pathname
