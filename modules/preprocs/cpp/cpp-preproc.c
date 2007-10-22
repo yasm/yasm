@@ -350,7 +350,7 @@ cpp_preproc_define_builtin(yasm_preproc *preproc, const char *macronameval)
 *******************************************************************************/
 
 yasm_preproc_module yasm_cpp_LTX_preproc = {
-    "Run input through enternal C preprocessor",
+    "Run input through external C preprocessor",
     "cpp",
     cpp_preproc_create,
     cpp_preproc_destroy,
