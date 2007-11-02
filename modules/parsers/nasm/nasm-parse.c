@@ -577,7 +577,7 @@ dv_done:
             if (is_eol())
                 goto incbin_done;
             maxlen = parse_expr(parser_nasm, DV_EXPR);
-            if (!start) {
+            if (!maxlen) {
                 yasm_error_set(YASM_ERROR_SYNTAX,
                     N_("expression expected for INCBIN maximum length"));
                 return NULL;
