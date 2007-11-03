@@ -64,7 +64,7 @@ static void nasm_parser_directive
 static void define_label(yasm_parser_nasm *parser_nasm, /*@only@*/ char *name,
                          int local);
 
-#define is_eol_tok(tok) ((tok) == '\n' || (tok) == 0)
+#define is_eol_tok(tok) ((tok) == 0)
 #define is_eol()        is_eol_tok(curtok)
 
 #define get_next_token()    (curtok = nasm_parser_lex(&curval, parser_nasm))
@@ -186,9 +186,19 @@ expect_(yasm_parser_nasm *parser_nasm, int token)
 void
 nasm_parser_parse(yasm_parser_nasm *parser_nasm)
 {
-    while (get_next_token() != 0) {
+    unsigned char *line;
+    while ((line = (unsigned char *)
+            yasm_preproc_get_line(parser_nasm->preproc)) != NULL) {
         yasm_bytecode *bc = NULL, *temp_bc;
-        
+
+        parser_nasm->s.bot = line;
+        parser_nasm->s.tok = line;
+        parser_nasm->s.ptr = line;
+        parser_nasm->s.cur = line;
+        parser_nasm->s.lim = line + strlen((char *)line)+1;
+        parser_nasm->s.top = parser_nasm->s.lim;
+
+        get_next_token();
         if (!is_eol()) {
             bc = parse_line(parser_nasm);
             demand_eol();
@@ -230,10 +240,10 @@ nasm_parser_parse(yasm_parser_nasm *parser_nasm)
         yasm_errwarn_propagate(parser_nasm->errwarns, cur_line);
 
         if (parser_nasm->save_input)
-            yasm_linemap_add_source(parser_nasm->linemap,
-                temp_bc,
-                (char *)parser_nasm->save_line[parser_nasm->save_last ^ 1]);
+            yasm_linemap_add_source(parser_nasm->linemap, temp_bc,
+                                    (char *)line);
         yasm_linemap_goto_next(parser_nasm->linemap);
+        yasm_xfree(line);
     }
 }
 

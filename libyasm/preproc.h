@@ -73,11 +73,10 @@ typedef struct yasm_preproc_module {
      */
     void (*destroy) (/*@only@*/ yasm_preproc *preproc);
 
-    /** Module-level implementation of yasm_preproc_input().
-     * Call yasm_preproc_input() instead of calling this function.
+    /** Module-level implementation of yasm_preproc_get_line().
+     * Call yasm_preproc_get_line() instead of calling this function.
      */
-    size_t (*input) (yasm_preproc *preproc, /*@out@*/ char *buf,
-                     size_t max_size);
+    char * (*get_line) (yasm_preproc *preproc);
 
     /** Module-level implementation of yasm_preproc_get_included_file().
      * Call yasm_preproc_get_included_file() instead of calling this function.
@@ -125,15 +124,11 @@ typedef struct yasm_preproc_module {
  */
 void yasm_preproc_destroy(/*@only@*/ yasm_preproc *preproc);
 
-/** Gets more preprocessed source code (up to max_size bytes) into buf.
- * More than a single line may be returned in buf.
+/** Gets a single line of preprocessed source code.
  * \param preproc       preprocessor
- * \param buf           destination buffer for preprocessed source
- * \param max_size      maximum number of bytes that can be returned in buf
- * \return Actual number of bytes returned in buf.
+ * \return Allocated line of code, without the trailing \n.
  */
-size_t yasm_preproc_input(yasm_preproc *preproc, /*@out@*/ char *buf,
-                          size_t max_size);
+char *yasm_preproc_get_line(yasm_preproc *preproc);
 
 /** Get the next filename included by the source code.
  * \param preproc       preprocessor
@@ -180,8 +175,8 @@ void yasm_preproc_define_builtin(yasm_preproc *preproc,
 
 #define yasm_preproc_destroy(preproc) \
     ((yasm_preproc_base *)preproc)->module->destroy(preproc)
-#define yasm_preproc_input(preproc, buf, max_size) \
-    ((yasm_preproc_base *)preproc)->module->input(preproc, buf, max_size)
+#define yasm_preproc_get_line(preproc) \
+    ((yasm_preproc_base *)preproc)->module->get_line(preproc)
 #define yasm_preproc_get_included_file(preproc, buf, max_size) \
     ((yasm_preproc_base *)preproc)->module->get_included_file(preproc, buf, max_size)
 #define yasm_preproc_add_include_file(preproc, filename) \

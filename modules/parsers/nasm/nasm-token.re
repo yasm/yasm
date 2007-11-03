@@ -34,12 +34,10 @@ RCSID("$Id$");
 #include "modules/parsers/nasm/nasm-parser.h"
 
 
-#define BSIZE   8192
-
 #define YYCURSOR        cursor
 #define YYLIMIT         (s->lim)
 #define YYMARKER        (s->ptr)
-#define YYFILL(n)       {fill(parser_nasm, &cursor);}
+#define YYFILL(n)       {}
 
 #define RETURN(i)       {s->cur = cursor; parser_nasm->tokch = s->tok[0]; \
                          return i;}
@@ -49,48 +47,6 @@ RCSID("$Id$");
 #define TOK             ((char *)s->tok)
 #define TOKLEN          (size_t)(cursor-s->tok)
 
-
-static size_t
-fill_input(void *d, unsigned char *buf, size_t max)
-{
-    return yasm_preproc_input((yasm_preproc *)d, (char *)buf, max);
-}
-
-static void
-fill(yasm_parser_nasm *parser_nasm, YYCTYPE **cursor)
-{
-    yasm_scanner *s = &parser_nasm->s;
-    if (yasm_fill_helper(s, cursor, fill_input, parser_nasm->preproc)
-        && parser_nasm->save_input) {
-        int i;
-        YYCTYPE *saveline;
-        parser_nasm->save_last ^= 1;
-        saveline = parser_nasm->save_line[parser_nasm->save_last];
-        /* save next line into cur_line */
-        for (i=0; i<79 && &s->tok[i] < s->lim && s->tok[i] != '\n'; i++)
-            saveline[i] = s->tok[i];
-        saveline[i] = '\0';
-    }
-}
-
-static YYCTYPE *
-save_line(yasm_parser_nasm *parser_nasm, YYCTYPE *cursor)
-{
-    yasm_scanner *s = &parser_nasm->s;
-    int i = 0;
-    YYCTYPE *saveline;
-
-    parser_nasm->save_last ^= 1;
-    saveline = parser_nasm->save_line[parser_nasm->save_last];
-
-    /* save next line into cur_line */
-    if ((YYLIMIT - YYCURSOR) < 80)
-        YYFILL(80);
-    for (i=0; i<79 && &cursor[i] < s->lim && cursor[i] != '\n'; i++)
-        saveline[i] = cursor[i];
-    saveline[i] = '\0';
-    return cursor;
-}
 
 /* starting size of string buffer */
 #define STRBUF_ALLOC_SIZE       128
@@ -104,7 +60,7 @@ static size_t strbuf_size = 0;
 static int linechg_numcount;
 
 /*!re2c
-  any = [\000-\377];
+  any = [\001-\377];
   digit = [0-9];
   iletter = [a-zA-Z];
   bindigit = [01];
@@ -133,7 +89,7 @@ nasm_parser_lex(YYSTYPE *lvalp, yasm_parser_nasm *parser_nasm)
         return tok;
     }
 
-    /* Catch EOF */
+    /* Catch EOL (EOF from the scanner perspective) */
     if (s->eof && cursor == s->eof)
         return 0;
 
@@ -406,9 +362,7 @@ scan:
 
         ws+                     { goto scan; }
 
-        "\n"                    {
-            if (parser_nasm->save_input)
-                cursor = save_line(parser_nasm, cursor);
+        [\000]                  {
             parser_nasm->state = INITIAL;
             RETURN(s->tok[0]);
         }
@@ -435,9 +389,7 @@ linechg:
             RETURN(INTNUM);
         }
 
-        "\n" {
-            if (parser_nasm->save_input)
-                cursor = save_line(parser_nasm, cursor);
+        [\000] {
             parser_nasm->state = INITIAL;
             RETURN(s->tok[0]);
         }
@@ -466,9 +418,7 @@ linechg2:
     SCANINIT();
 
     /*!re2c
-        "\n" {
-            if (parser_nasm->save_input)
-                cursor = save_line(parser_nasm, cursor);
+        [\000] {
             parser_nasm->state = INITIAL;
             RETURN(s->tok[0]);
         }
@@ -487,9 +437,7 @@ directive:
     SCANINIT();
 
     /*!re2c
-        [\]\n] {
-            if (parser_nasm->save_input)
-                cursor = save_line(parser_nasm, cursor);
+        [\]\000] {
             parser_nasm->state = INITIAL;
             RETURN(s->tok[0]);
         }
@@ -540,9 +488,7 @@ section_directive:
             RETURN(s->tok[0]);
         }
 
-        "\n"                    {
-            if (parser_nasm->save_input)
-                cursor = save_line(parser_nasm, cursor);
+        [\000]          {
             parser_nasm->state = INITIAL;
             RETURN(s->tok[0]);
         }
@@ -654,9 +600,7 @@ directive2:
 
         ws+                     { goto directive2; }
 
-        "\n"                    {
-            if (parser_nasm->save_input)
-                cursor = save_line(parser_nasm, cursor);
+        [\000]                  {
             parser_nasm->state = INITIAL;
             RETURN(s->tok[0]);
         }
@@ -679,17 +623,11 @@ stringconst_scan:
     SCANINIT();
 
     /*!re2c
-        "\n"    {
-            if (cursor == s->eof)
-                yasm_error_set(YASM_ERROR_SYNTAX,
-                               N_("unexpected end of file in string"));
-            else
-                yasm_error_set(YASM_ERROR_SYNTAX, N_("unterminated string"));
+        [\000]  {
+            yasm_error_set(YASM_ERROR_SYNTAX, N_("unterminated string"));
             strbuf[count] = '\0';
             lvalp->str.contents = (char *)strbuf;
             lvalp->str.len = count;
-            if (parser_nasm->save_input)
-                cursor = save_line(parser_nasm, cursor);
             RETURN(STRING);
         }
 

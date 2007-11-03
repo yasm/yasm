@@ -51,7 +51,6 @@ nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp,
     parser_nasm.prev_bc = yasm_section_bcs_first(object->cur_section);
 
     parser_nasm.save_input = save_input;
-    parser_nasm.save_last = 0;
 
     parser_nasm.peek_token = NONE;
 
@@ -68,7 +67,7 @@ nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp,
 
     nasm_parser_parse(&parser_nasm);
 
-    yasm_scanner_delete(&parser_nasm.s);
+    /*yasm_scanner_delete(&parser_nasm.s);*/
 
     /* Free locallabel base if necessary */
     if (parser_nasm.locallabel_base)

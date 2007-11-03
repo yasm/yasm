@@ -122,6 +122,10 @@ typedef struct yasm_parser_gas {
     YYCTYPE save_line[2][MAX_SAVED_LINE_LEN];
     int save_last;
 
+    /* Line data storage used in preproc_input(). */
+    char *line, *linepos;
+    size_t lineleft;
+
     yasm_scanner s;
     enum gas_parser_state state;
 

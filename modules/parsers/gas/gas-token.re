@@ -125,6 +125,43 @@ rept_input(yasm_parser_gas *parser_gas, /*@out@*/ YYCTYPE *buf,
 
     return (max_size-numleft);
 }
+
+/* Bridge function to convert byte-oriented parser with line-oriented
+ * preprocessor.
+ */
+static size_t
+preproc_input(yasm_parser_gas *parser_gas, /*@out@*/ YYCTYPE *buf,
+              size_t max_size)
+{
+    size_t tot=0;
+    while (max_size > 0) {
+        size_t n;
+
+        if (!parser_gas->line) {
+            parser_gas->line = yasm_preproc_get_line(parser_gas->preproc);
+            if (!parser_gas->line)
+                return tot; /* EOF */
+            parser_gas->linepos = parser_gas->line;
+            parser_gas->lineleft = strlen(parser_gas->line) + 1;
+            parser_gas->line[parser_gas->lineleft-1] = '\n';
+        }
+
+        n = parser_gas->lineleft<max_size ? parser_gas->lineleft : max_size;
+        strncpy((char *)buf+tot, parser_gas->linepos, n);
+
+        if (n == parser_gas->lineleft) {
+            yasm_xfree(parser_gas->line);
+            parser_gas->line = NULL;
+        } else {
+            parser_gas->lineleft -= n;
+            parser_gas->linepos += n;
+        }
+
+        tot += n;
+        max_size -= n;
+    }
+    return tot;
+}
 #if 0
 static size_t
 fill_input(void *d, unsigned char *buf, size_t max)
@@ -163,8 +200,7 @@ fill(yasm_parser_gas *parser_gas, YYCTYPE *cursor)
         if (parser_gas->rept && parser_gas->rept->ended) {
             /* Pull from rept lines instead of preproc */
             cnt = rept_input(parser_gas, s->lim, BSIZE);
-        } else if((cnt = yasm_preproc_input(parser_gas->preproc,
-                                            (char *)s->lim, BSIZE)) == 0) {
+        } else if((cnt = preproc_input(parser_gas, s->lim, BSIZE)) == 0) {
             s->eof = &s->lim[cnt]; *s->eof++ = '\n';
         }
         s->lim += cnt;

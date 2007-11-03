@@ -223,7 +223,7 @@ static int
 do_preproc_only(void)
 {
     yasm_linemap *linemap;
-    char *preproc_buf = yasm_xmalloc(PREPROC_BUF_SIZE);
+    char *preproc_buf;
     size_t got;
     const char *base_filename;
     FILE *out = NULL;
@@ -257,10 +257,8 @@ do_preproc_only(void)
     } else {
         /* Open output (object) file */
         out = open_file(obj_filename, "wt");
-        if (!out) {
-            yasm_xfree(preproc_buf);
+        if (!out)
             return EXIT_FAILURE;
-        }
     }
 
     /* Pre-process until done */
@@ -272,6 +270,8 @@ do_preproc_only(void)
 
     if (generate_make_dependencies) {
         size_t totlen;
+
+        preproc_buf = yasm_xmalloc(PREPROC_BUF_SIZE);
 
         fprintf(stdout, "%s: %s", obj_filename, in_filename);
         totlen = strlen(obj_filename)+2+strlen(in_filename);
@@ -287,10 +287,13 @@ do_preproc_only(void)
             fwrite(preproc_buf, got, 1, stdout);
         }
         fputc('\n', stdout);
+        yasm_xfree(preproc_buf);
     } else {
-        while ((got = yasm_preproc_input(cur_preproc, preproc_buf,
-                                         PREPROC_BUF_SIZE)) != 0)
-            fwrite(preproc_buf, got, 1, out);
+        while ((preproc_buf = yasm_preproc_get_line(cur_preproc)) != NULL) {
+            fputs(preproc_buf, out);
+            fputc('\n', out);
+            yasm_xfree(preproc_buf);
+        }
     }
 
     if (out != stdout)
@@ -301,7 +304,6 @@ do_preproc_only(void)
                                  print_yasm_error, print_yasm_warning);
         if (out != stdout)
             remove(obj_filename);
-        yasm_xfree(preproc_buf);
         yasm_linemap_destroy(linemap);
         yasm_errwarns_destroy(errwarns);
         cleanup(NULL);
@@ -310,7 +312,6 @@ do_preproc_only(void)
 
     yasm_errwarns_output_all(errwarns, linemap, warning_error,
                              print_yasm_error, print_yasm_warning);
-    yasm_xfree(preproc_buf);
     yasm_linemap_destroy(linemap);
     yasm_errwarns_destroy(errwarns);
     cleanup(NULL);

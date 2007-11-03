@@ -32,6 +32,8 @@
 /* TODO: Use autoconf to get the limit on the command line length. */
 #define CMDLINE_SIZE 32770
 
+#define BSIZE 512
+
 /* Pre-declare the preprocessor module object. */
 yasm_preproc_module yasm_cpp_LTX_preproc;
 
@@ -228,11 +230,12 @@ cpp_preproc_destroy(yasm_preproc *preproc)
     yasm_xfree(pp);
 }
 
-static size_t
-cpp_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
+static char *
+cpp_preproc_get_line(yasm_preproc *preproc)
 {
-    size_t n;
     yasm_preproc_cpp *pp = (yasm_preproc_cpp *)preproc;
+    int bufsize = BSIZE;
+    char *buf, *p;
 
     if (! (pp->flags & CPP_HAS_BEEN_INVOKED) ) {
         pp->flags |= CPP_HAS_BEEN_INVOKED;
@@ -244,14 +247,42 @@ cpp_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
         Once the preprocessor has been run, we're just dealing with a normal
         file.
     */
-    if (((n = fread(buf, 1, max_size, pp->f)) == 0) &&
-               ferror(pp->f)) {
-        yasm_error_set(YASM_ERROR_IO, N_("error reading from pipe"));
-        yasm_errwarn_propagate(pp->errwarns,
-                               yasm_linemap_get_current(pp->cur_lm));
+
+    /* Loop to ensure entire line is read (don't want to limit line length). */
+    buf = yasm_xmalloc((size_t)bufsize);
+    p = buf;
+    for (;;) {
+        if (!fgets(p, bufsize-(p-buf), pp->f)) {
+            if (ferror(pp->f)) {
+                yasm_error_set(YASM_ERROR_IO,
+                               N_("error when reading from file"));
+                yasm_errwarn_propagate(pp->errwarns,
+                    yasm_linemap_get_current(pp->cur_lm));
+            }
+            break;
+        }
+        p += strlen(p);
+        if (p > buf && p[-1] == '\n')
+            break;
+        if ((p-buf) >= bufsize) {
+            /* Increase size of buffer */
+            char *oldbuf = buf;
+            bufsize *= 2;
+            buf = yasm_xrealloc(buf, (size_t)bufsize);
+            p = buf + (p-oldbuf);
+        }
     }
 
-    return n;
+    if (p == buf) {
+        /* No data; must be at EOF */
+        yasm_xfree(buf);
+        return NULL;
+    }
+
+    /* Strip the line ending */
+    buf[strcspn(buf, "\r\n")] = '\0';
+
+    return buf;
 }
 
 static size_t
@@ -354,7 +385,7 @@ yasm_preproc_module yasm_cpp_LTX_preproc = {
     "cpp",
     cpp_preproc_create,
     cpp_preproc_destroy,
-    cpp_preproc_input,
+    cpp_preproc_get_line,
     cpp_preproc_get_included_file,
     cpp_preproc_add_include_file,
     cpp_preproc_predefine_macro,

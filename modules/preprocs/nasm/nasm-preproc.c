@@ -38,8 +38,7 @@ typedef struct yasm_preproc_nasm {
     yasm_preproc_base preproc;   /* Base structure */
 
     FILE *in;
-    char *line, *linepos;
-    size_t lineleft;
+    char *line;
     char *file_name;
     long prior_linnum;
     int lineinc;
@@ -129,7 +128,7 @@ nasm_efunc(int severity, const char *fmt, ...)
 
 static yasm_preproc *
 nasm_preproc_create(const char *in_filename, yasm_linemap *lm,
-                    yasm_errwarns *errwarns)
+		    yasm_errwarns *errwarns)
 {
     FILE *f;
     yasm_preproc_nasm *preproc_nasm = yasm_xmalloc(sizeof(yasm_preproc_nasm));
@@ -163,6 +162,8 @@ nasm_preproc_destroy(yasm_preproc *preproc)
 {
     yasm_preproc_nasm *preproc_nasm = (yasm_preproc_nasm *)preproc;
     nasmpp.cleanup(0);
+    if (preproc_nasm->line)
+        yasm_xfree(preproc_nasm->line);
     if (preproc_nasm->file_name)
         yasm_xfree(preproc_nasm->file_name);
     yasm_xfree(preproc);
@@ -170,54 +171,37 @@ nasm_preproc_destroy(yasm_preproc *preproc)
         yasm_xfree(preproc_deps);
 }
 
-static size_t
-nasm_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
+static char *
+nasm_preproc_get_line(yasm_preproc *preproc)
 {
     yasm_preproc_nasm *preproc_nasm = (yasm_preproc_nasm *)preproc;
-    size_t tot = 0, n;
-    long linnum = preproc_nasm->prior_linnum += preproc_nasm->lineinc;
+    long linnum;
     int altline;
+    char *line;
 
-    if (!preproc_nasm->line) {
-        preproc_nasm->line = nasmpp.getline();
-        if (!preproc_nasm->line)
-            return 0;
-        preproc_nasm->linepos = preproc_nasm->line;
-        preproc_nasm->lineleft = strlen(preproc_nasm->line) + 1;
-        preproc_nasm->line[preproc_nasm->lineleft-1] = '\n';
-
-        altline = nasm_src_get(&linnum, &preproc_nasm->file_name);
-        if (altline) {
-            if (altline == 1 && preproc_nasm->lineinc == 1) {
-                *buf++ = '\n';
-                max_size--;
-                tot++;
-            } else {
-                preproc_nasm->lineinc =
-                    (altline != -1 || preproc_nasm->lineinc != 1);
-                n = sprintf(buf, "%%line %ld+%d %s\n", linnum,
-                            preproc_nasm->lineinc, preproc_nasm->file_name);
-                buf += n;
-                max_size -= n;
-                tot += n;
-            }
-            preproc_nasm->prior_linnum = linnum;
-        }
-    }
-
-    n = preproc_nasm->lineleft<max_size?preproc_nasm->lineleft:max_size;
-    strncpy(buf, preproc_nasm->linepos, n);
-    tot += n;
-
-    if (n == preproc_nasm->lineleft) {
-        yasm_xfree(preproc_nasm->line);
+    if (preproc_nasm->line) {
+        char *retval = preproc_nasm->line;
         preproc_nasm->line = NULL;
-    } else {
-        preproc_nasm->lineleft -= n;
-        preproc_nasm->linepos += n;
+        return retval;
     }
 
-    return tot;
+    line = nasmpp.getline();
+    if (!line)
+        return NULL;    /* EOF */
+
+    linnum = preproc_nasm->prior_linnum += preproc_nasm->lineinc;
+    altline = nasm_src_get(&linnum, &preproc_nasm->file_name);
+    if (altline != 0) {
+        preproc_nasm->lineinc =
+            (altline != -1 || preproc_nasm->lineinc != 1);
+        preproc_nasm->line = line;
+        line = yasm_xmalloc(40+strlen(preproc_nasm->file_name));
+        sprintf(line, "%%line %ld+%d %s", linnum,
+                preproc_nasm->lineinc, preproc_nasm->file_name);
+        preproc_nasm->prior_linnum = linnum;
+    }
+
+    return line;
 }
 
 void
@@ -310,7 +294,7 @@ yasm_preproc_module yasm_nasm_LTX_preproc = {
     "nasm",
     nasm_preproc_create,
     nasm_preproc_destroy,
-    nasm_preproc_input,
+    nasm_preproc_get_line,
     nasm_preproc_get_included_file,
     nasm_preproc_add_include_file,
     nasm_preproc_predefine_macro,

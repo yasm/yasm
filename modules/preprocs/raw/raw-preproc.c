@@ -30,18 +30,17 @@
 #include <libyasm.h>
 
 
+#define BSIZE 512
+
 typedef struct yasm_preproc_raw {
     yasm_preproc_base preproc;   /* base structure */
 
-    int is_interactive;
     FILE *in;
     yasm_linemap *cur_lm;
     yasm_errwarns *errwarns;
 } yasm_preproc_raw;
 
 yasm_preproc_module yasm_raw_LTX_preproc;
-
-int isatty(int);
 
 static yasm_preproc *
 raw_preproc_create(const char *in_filename, yasm_linemap *lm,
@@ -62,9 +61,6 @@ raw_preproc_create(const char *in_filename, yasm_linemap *lm,
     preproc_raw->in = f;
     preproc_raw->cur_lm = lm;
     preproc_raw->errwarns = errwarns;
-    /*@-unrecog@*/
-    preproc_raw->is_interactive = f ? (isatty(fileno(f)) > 0) : 0;
-    /*@=unrecog@*/
 
     return (yasm_preproc *)preproc_raw;
 }
@@ -75,32 +71,48 @@ raw_preproc_destroy(yasm_preproc *preproc)
     yasm_xfree(preproc);
 }
 
-static size_t
-raw_preproc_input(yasm_preproc *preproc, char *buf, size_t max_size)
+static char *
+raw_preproc_get_line(yasm_preproc *preproc)
 {
     yasm_preproc_raw *preproc_raw = (yasm_preproc_raw *)preproc;
-    int c = '*';
-    size_t n;
+    int bufsize = BSIZE;
+    char *buf = yasm_xmalloc((size_t)bufsize);
+    char *p;
 
-    if (preproc_raw->is_interactive) {
-        for (n = 0; n < max_size && (c = getc(preproc_raw->in)) != EOF &&
-             c != '\n'; n++)
-            buf[n] = (char)c;
-        if (c == '\n')
-            buf[n++] = (char)c;
-        if (c == EOF && ferror(preproc_raw->in)) {
-            yasm_error_set(YASM_ERROR_IO, N_("error when reading from file"));
-            yasm_errwarn_propagate(preproc_raw->errwarns,
-                                   yasm_linemap_get_current(preproc_raw->cur_lm));
+    /* Loop to ensure entire line is read (don't want to limit line length). */
+    p = buf;
+    for (;;) {
+        if (!fgets(p, bufsize-(p-buf), preproc_raw->in)) {
+            if (ferror(preproc_raw->in)) {
+                yasm_error_set(YASM_ERROR_IO,
+                               N_("error when reading from file"));
+                yasm_errwarn_propagate(preproc_raw->errwarns,
+                    yasm_linemap_get_current(preproc_raw->cur_lm));
+            }
+            break;
         }
-    } else if (((n = fread(buf, 1, max_size, preproc_raw->in)) == 0) &&
-               ferror(preproc_raw->in)) {
-        yasm_error_set(YASM_ERROR_IO, N_("error when reading from file"));
-        yasm_errwarn_propagate(preproc_raw->errwarns,
-                               yasm_linemap_get_current(preproc_raw->cur_lm));
+        p += strlen(p);
+        if (p > buf && p[-1] == '\n')
+            break;
+        if ((p-buf) >= bufsize) {
+            /* Increase size of buffer */
+            char *oldbuf = buf;
+            bufsize *= 2;
+            buf = yasm_xrealloc(buf, (size_t)bufsize);
+            p = buf + (p-oldbuf);
+        }
     }
 
-    return n;
+    if (p == buf) {
+        /* No data; must be at EOF */
+        yasm_xfree(buf);
+        return NULL;
+    }
+
+    /* Strip the line ending */
+    buf[strcspn(buf, "\r\n")] = '\0';
+
+    return buf;
 }
 
 static size_t
@@ -142,7 +154,7 @@ yasm_preproc_module yasm_raw_LTX_preproc = {
     "raw",
     raw_preproc_create,
     raw_preproc_destroy,
-    raw_preproc_input,
+    raw_preproc_get_line,
     raw_preproc_get_included_file,
     raw_preproc_add_include_file,
     raw_preproc_predefine_macro,
