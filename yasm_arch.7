@@ -1,6 +1,6 @@
 .\"     Title: yasm_arch
 .\"    Author: Peter Johnson <peter@tortall.net>
-.\" Generator: DocBook XSL Stylesheets v1.70.1 <http://docbook.sf.net/>
+.\" Generator: DocBook XSL Stylesheets v1.71.1 <http://docbook.sf.net/>
 .\"      Date: October 2006
 .\"    Manual: Yasm Supported Architectures
 .\"    Source: Yasm
@@ -56,7 +56,6 @@ The x86 architecture BITS setting specifies to Yasm the processor mode in which 
 The BITS setting can be changed in a variety of ways. When using the NASM\-compatible parser, the BITS setting can be changed directly via the use of the
 \fBBITS xx\fR
 assembler directive. The default BITS setting is determined by the object format in use.
-.\" end of SS subsection "BITS Setting"
 .SS "BITS 64 Extensions"
 .PP
 The AMD64 architecture is a new 64\-bit architecture developed by AMD, based on the 32\-bit x86 architecture. It extends the original x86 architecture by doubling the number of general purpose and SIMD registers, extending the arithmetic operations and address space to 64 bits, as well as other features.
@@ -84,7 +83,7 @@ The additional 64\-bit general purpose registers are named r8\-r15. There are al
 .PP
 New 8\-bit registers are also available that map to the 8 least significant bits of rsi, rdi, rsp, and rbp. These are called sil, dil, spl, and bpl respectively. Unfortunately, due to the way instructions are encoded, these new 8\-bit registers are encoded the same as the old 8\-bit registers ah, dh, ch, and bh. The processor tells which is being used by the presence of the new REX prefix that is used to specify the other extended registers. This means it is illegal to mix the use of ah, dh, ch, and bh with an instruction that requires the REX prefix for other reasons. For instance:
 .sp
-.RS 3n
+.RS 4
 .nf
 add ah, [r10]
 .fi
@@ -94,7 +93,6 @@ add ah, [r10]
 .PP
 In 64\-bit mode, an additional 8 SSE2 registers are also available. These are named xmm8\-xmm15.
 .RE
-.\" end of subsection "Register Changes"
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -107,13 +105,13 @@ By default, most operations in 64\-bit mode remain 32\-bit; operations that are 
 \(lqfor free\(rq
 (as the REX prefix is already present). Examples in NASM syntax:
 .sp
-.RS 3n
+.RS 4
 .nf
 mov eax, 1  ; 32\-bit instruction
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 mov rcx, 1  ; 64\-bit instruction
 .fi
@@ -121,25 +119,24 @@ mov rcx, 1  ; 64\-bit instruction
 .PP
 Instructions that modify the stack (push, pop, call, ret, enter, and leave) are implicitly 64\-bit. Their 32\-bit counterparts are not available, but their 16\-bit counterparts are. Examples in NASM syntax:
 .sp
-.RS 3n
+.RS 4
 .nf
 push eax  ; illegal instruction
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 push rbx  ; 1\-byte instruction
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 push r11  ; 2\-byte instruction with REX prefix
 .fi
 .RE
 .RE
-.\" end of subsection "64 Bit Instructions"
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -150,19 +147,18 @@ push r11  ; 2\-byte instruction with REX prefix
 .PP
 Results of 32\-bit operations are implicitly zero\-extended to the upper 32 bits of the corresponding 64\-bit register. 16 and 8 bit operations, on the other hand, do not affect upper bits of the register (just as in 32\-bit and 16\-bit modes). This can be used to generate smaller code in some instances. Examples in NASM syntax:
 .sp
-.RS 3n
+.RS 4
 .nf
 mov ecx, 1  ; 1 byte shorter than mov rcx, 1
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 and edx, 3  ; equivalent to and rdx, 3
 .fi
 .RE
 .RE
-.\" end of subsection "Implicit Zero Extension"
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -173,85 +169,158 @@ and edx, 3  ; equivalent to and rdx, 3
 .PP
 For most instructions in 64\-bit mode, immediate values remain 32 bits; their value is sign\-extended into the upper 32 bits of the target register prior to being used. The exception is the mov instruction, which can take a 64\-bit immediate when the destination is a 64\-bit register. Examples in NASM syntax:
 .sp
-.RS 3n
+.RS 4
 .nf
 add rax, 1           ; optimized down to signed 8\-bit
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 add rax, dword 1     ; force size to 32\-bit
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 add rax, 0xffffffff  ; sign\-extended 32\-bit
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 add rax, \-1          ; same as above
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 add rax, 0xffffffffffffffff ; truncated to 32\-bit (warning)
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 mov eax, 1           ; 5 byte
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 mov rax, 1           ; 5 byte (optimized to signed 32\-bit)
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 mov rax, qword 1     ; 10 byte (forced 64\-bit)
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 mov rbx, 0x1234567890abcdef ; 10 byte
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 mov rcx, 0xffffffff  ; 10 byte (does not fit in signed 32\-bit)
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 mov ecx, \-1          ; 5 byte, equivalent to above
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 mov rcx, sym         ; 5 byte, 32\-bit size default for symbols
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 mov rcx, qword sym   ; 10 byte, override default size
 .fi
 .RE
+.PP
+The handling of mov reg64, unsized immediate is different between YASM and NASM 2.x; YASM follows the above behavior, while NASM 2.x does the following:
+.sp
+.RS 4
+.nf
+add rax, 0xffffffff  ; sign\-extended 32\-bit immediate
+.fi
 .RE
-.\" end of subsection "Immediates"
+.sp
+.RS 4
+.nf
+add rax, \-1          ; same as above
+.fi
+.RE
+.sp
+.RS 4
+.nf
+add rax, 0xffffffffffffffff ; truncated 32\-bit (warning)
+.fi
+.RE
+.sp
+.RS 4
+.nf
+add rax, sym         ; sign\-extended 32\-bit immediate
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov eax, 1           ; 5 byte (32\-bit immediate)
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov rax, 1           ; 10 byte (64\-bit immediate)
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov rbx, 0x1234567890abcdef ; 10 byte instruction
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov rcx, 0xffffffff  ; 10 byte instruction
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov ecx, \-1          ; 5 byte, equivalent to above
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov ecx, sym         ; 5 byte (32\-bit immediate)
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov rcx, sym         ; 10 byte instruction
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov rcx, qword sym   ; 10 byte (64\-bit immediate)
+.fi
+.RE
+.RE
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -263,31 +332,30 @@ mov rcx, qword sym   ; 10 byte, override default size
 Just like immediates, displacements, for the most part, remain 32 bits and are sign extended prior to use. Again, the exception is one restricted form of the mov instruction: between the al/ax/eax/rax register and a 64\-bit absolute address (no registers allowed in the effective address). In NASM syntax, use of the 64\-bit absolute form requires
 \fB[qword]\fR. Examples in NASM syntax:
 .sp
-.RS 3n
+.RS 4
 .nf
 mov eax, [1]    ; 32 bit, with sign extension
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 mov al, [rax\-1] ; 32 bit, with sign extension
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 mov al, [qword 0x1122334455667788] ; 64\-bit absolute
 .fi
 .RE
 .sp
-.RS 3n
+.RS 4
 .nf
 mov al, [0x1122334455667788] ; truncated to 32\-bit (warning)
 .fi
 .RE
 .RE
-.\" end of subsection "Displacements"
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -300,7 +368,7 @@ In 64\-bit mode, a new form of effective addressing is available to make it easi
 .PP
 In NASM syntax, there are two ways to specify RIP\-relative addressing:
 .sp
-.RS 3n
+.RS 4
 .nf
 mov dword [rip+10], 1
 .fi
@@ -310,7 +378,7 @@ stores the value 1 ten bytes after the end of the instruction.
 \fB10\fR
 can also be a symbolic constant, and will be treated the same way. On the other hand,
 .sp
-.RS 3n
+.RS 4
 .nf
 mov dword [symb wrt rip], 1
 .fi
@@ -319,7 +387,7 @@ mov dword [symb wrt rip], 1
 stores the value 1 into the address of symbol
 \fBsymb\fR. This is distinctly different than the behavior of:
 .sp
-.RS 3n
+.RS 4
 .nf
 mov dword [symb+rip], 1
 .fi
@@ -334,9 +402,157 @@ is a variable, this will
 store the value 1 into the
 \fBsymb\fR
 variable!
+.PP
+Yasm also supports the following syntax for RIP\-relative addressing:
+.sp
+.RS 4
+.nf
+mov [rel sym], rax  ; RIP\-relative
+.fi
 .RE
-.\" end of subsection "RIP Relative Addressing"
-.\" end of SS subsection "BITS 64 Extensions"
+.sp
+.RS 4
+.nf
+mov [abs sym], rax  ; not RIP\-relative
+.fi
+.RE
+.PP
+The behavior of:
+.sp
+.RS 4
+.nf
+mov [sym], rax
+.fi
+.RE
+.PP
+Depends on a mode set by the DEFAULT directive, as follows. The default mode is always "abs", and in "rel" mode, use of registers, an fs or gs segment override, or an explicit "abs" override will result in a non\-RIP\-relative effective address.
+.sp
+.RS 4
+.nf
+default rel
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov [sym], rbx      ; RIP\-relative
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov [abs sym], rbx  ; not RIP\-relative (explicit override)
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov [rbx+1], rbx    ; not RIP\-relative (register use)
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov [fs:sym], rbx   ; not RIP\-relative (fs or gs use)
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov [ds:sym], rbx   ; RIP\-relative (segment, but not fs or gs)
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov [rel sym], rbx  ; RIP\-relative (redundant override)
+.fi
+.RE
+.sp
+.RS 4
+.nf
+default abs
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov [sym], rbx      ; not RIP\-relative
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov [abs sym], rbx  ; not RIP\-relative
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov [rbx+1], rbx    ; not RIP\-relative
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov [fs:sym], rbx   ; not RIP\-relative
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov [ds:sym], rbx   ; not RIP\-relative
+.fi
+.RE
+.sp
+.RS 4
+.nf
+mov [rel sym], rbx  ; RIP\-relative (explicit override)
+.fi
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+\fBMemory references\fR
+.RS
+.PP
+Usually the size of a memory reference can be deduced by which registers you're moving\-\-for example, "mov [rax],ecx" is a 32\-bit move, because ecx is 32 bits. YASM currently gives the non\-obvious "invalid combination of opcode and operands" error if it can't figure out how much memory you're moving. The fix in this case is to add a memory size specifier: qword, dword, word, or byte.
+.PP
+Here's a 64\-bit memory move, which sets 8 bytes starting at rax:
+.sp
+.RS 4
+.nf
+mov qword [rax], 1
+.fi
+.RE
+.PP
+Here's a 32\-bit memory move, which sets 4 bytes:
+.sp
+.RS 4
+.nf
+mov dword [rax], 1
+.fi
+.RE
+.PP
+Here's a 16\-bit memory move, which sets 2 bytes:
+.sp
+.RS 4
+.nf
+mov word [rax], 1
+.fi
+.RE
+.PP
+Here's an 8\-bit memory move, which sets 1 byte:
+.sp
+.RS 4
+.nf
+mov byte [rax], 1
+.fi
+.RE
+.RE
 .SH "LC3B ARCHITECTURE"
 .PP
 The
@@ -364,9 +580,11 @@ does not default the BITS setting to 64. An easy way to avoid this is by directl
 \fB\-f elf64\fR.
 .SH "AUTHOR"
 .PP
-\fBPeter\fR \fBJohnson\fR <peter@tortall.net>
+\fBPeter Johnson\fR <\&peter@tortall.net\&>
 .sp -1n
-.IP "" 3n
+.IP "" 4
 Author.
 .SH "COPYRIGHT"
-Copyright \(co 2004, 2005, 2006 Peter Johnson
+Copyright \(co 2004, 2005, 2006, 2007 Peter Johnson
+.br
+
