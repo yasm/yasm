@@ -262,7 +262,7 @@ do_preproc_only(void)
     }
 
     /* Pre-process until done */
-    cur_preproc = yasm_preproc_create(cur_preproc_module, in_filename,
+    cur_preproc = yasm_preproc_create(cur_preproc_module, in_filename, NULL,
                                       linemap, errwarns);
 
     apply_preproc_builtins();
@@ -423,7 +423,7 @@ do_assemble(void)
     }
 
     cur_preproc = yasm_preproc_create(cur_preproc_module, in_filename,
-                                      linemap, errwarns);
+                                      object->symtab, linemap, errwarns);
 
     apply_preproc_builtins();
     apply_preproc_saved_options();

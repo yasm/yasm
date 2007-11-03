@@ -184,7 +184,8 @@ cpp_generate_deps(yasm_preproc_cpp *pp)
     Interface functions.
 *******************************************************************************/
 static yasm_preproc *
-cpp_preproc_create(const char *in, yasm_linemap *lm, yasm_errwarns *errwarns)
+cpp_preproc_create(const char *in, yasm_symtab *symtab, yasm_linemap *lm,
+                   yasm_errwarns *errwarns)
 {
     yasm_preproc_cpp *pp = yasm_xmalloc(sizeof(yasm_preproc_cpp));
     void * iter;

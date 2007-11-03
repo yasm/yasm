@@ -58,6 +58,7 @@ typedef struct yasm_preproc_module {
      *
      * \param in_filename       initial starting filename, or "-" to read from
      *                          stdin
+     * \param symtab            symbol table (may be NULL if none)
      * \param lm                line mapping repository
      * \param errwarns          error/warnning set.
      * \return New preprocessor.
@@ -65,6 +66,7 @@ typedef struct yasm_preproc_module {
      * \note Any preprocessor errors and warnings are stored into errwarns.
      */
     /*@only@*/ yasm_preproc * (*create) (const char *in_filename,
+                                         yasm_symtab *symtab,
                                          yasm_linemap *lm,
                                          yasm_errwarns *errwarns);
 
@@ -110,6 +112,7 @@ typedef struct yasm_preproc_module {
  * any output format specific macros.
  * \param module        preprocessor module
  * \param in_filename   initial starting filename, or "-" to read from stdin
+ * \param symtab        symbol table (may be NULL if none)
  * \param lm            line mapping repository
  * \param errwarns      error/warning set
  * \return New preprocessor.
@@ -117,7 +120,7 @@ typedef struct yasm_preproc_module {
  */
 /*@only@*/ yasm_preproc *yasm_preproc_create
     (yasm_preproc_module *module, const char *in_filename,
-     yasm_linemap *lm, yasm_errwarns *errwarns);
+     yasm_symtab *symtab, yasm_linemap *lm, yasm_errwarns *errwarns);
 
 /** Cleans up any allocated preproc memory.
  * \param preproc       preprocessor
@@ -170,8 +173,8 @@ void yasm_preproc_define_builtin(yasm_preproc *preproc,
 
 /* Inline macro implementations for preproc functions */
 
-#define yasm_preproc_create(module, in_filename, lm, ews) \
-    module->create(in_filename, lm, ews)
+#define yasm_preproc_create(module, in_filename, symtab, lm, ews) \
+    module->create(in_filename, symtab, lm, ews)
 
 #define yasm_preproc_destroy(preproc) \
     ((yasm_preproc_base *)preproc)->module->destroy(preproc)

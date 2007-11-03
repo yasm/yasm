@@ -43,8 +43,8 @@ typedef struct yasm_preproc_raw {
 yasm_preproc_module yasm_raw_LTX_preproc;
 
 static yasm_preproc *
-raw_preproc_create(const char *in_filename, yasm_linemap *lm,
-                   yasm_errwarns *errwarns)
+raw_preproc_create(const char *in_filename, yasm_symtab *symtab,
+                   yasm_linemap *lm, yasm_errwarns *errwarns)
 {
     FILE *f;
     yasm_preproc_raw *preproc_raw = yasm_xmalloc(sizeof(yasm_preproc_raw));

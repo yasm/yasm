@@ -43,6 +43,7 @@ typedef struct yasm_preproc_nasm {
     long prior_linnum;
     int lineinc;
 } yasm_preproc_nasm;
+yasm_symtab *nasm_symtab;
 static yasm_linemap *cur_lm;
 static yasm_errwarns *cur_errwarns;
 int tasm_compatible_mode = 0;
@@ -127,8 +128,8 @@ nasm_efunc(int severity, const char *fmt, ...)
 }
 
 static yasm_preproc *
-nasm_preproc_create(const char *in_filename, yasm_linemap *lm,
-		    yasm_errwarns *errwarns)
+nasm_preproc_create(const char *in_filename, yasm_symtab *symtab,
+                    yasm_linemap *lm, yasm_errwarns *errwarns)
 {
     FILE *f;
     yasm_preproc_nasm *preproc_nasm = yasm_xmalloc(sizeof(yasm_preproc_nasm));
@@ -144,6 +145,7 @@ nasm_preproc_create(const char *in_filename, yasm_linemap *lm,
         f = stdin;
 
     preproc_nasm->in = f;
+    nasm_symtab = symtab;
     cur_lm = lm;
     cur_errwarns = errwarns;
     preproc_deps = NULL;

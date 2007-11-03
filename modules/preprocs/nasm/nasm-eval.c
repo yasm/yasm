@@ -12,11 +12,15 @@
 #include <libyasm/coretype.h>
 #include <libyasm/intnum.h>
 #include <libyasm/expr.h>
+#include <libyasm/symrec.h>
 #include <ctype.h>
 
 #include "nasm.h"
 #include "nasmlib.h"
 #include "nasm-eval.h"
+
+/* The assembler symbol table. */
+extern yasm_symtab *nasm_symtab;
 
 static scanner scan;    /* Address of scanner routine */
 static efunc error;     /* Address of error reporting routine */
@@ -381,6 +385,21 @@ static yasm_expr *expr6(void)
             e = yasm_expr_create_ident(yasm_expr_int(tokval->t_integer), 0);
             break;
           case TOKEN_ID:
+            if (nasm_symtab) {
+                yasm_symrec *sym =
+                    yasm_symtab_get(nasm_symtab, tokval->t_charptr);
+                if (sym) {
+                    e = yasm_expr_create_ident(yasm_expr_sym(sym), 0);
+                } else {
+                    error(ERR_NONFATAL,
+                          "undefined symbol `%s' in preprocessor",
+                          tokval->t_charptr);
+                    e = yasm_expr_create_ident(yasm_expr_int(
+                        yasm_intnum_create_int(1)), 0);
+                }
+                break;
+            }
+            /*fallthrough*/
           case TOKEN_HERE:
           case TOKEN_BASE:
             error(ERR_NONFATAL,
