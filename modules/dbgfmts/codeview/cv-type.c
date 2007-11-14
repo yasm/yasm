@@ -522,7 +522,7 @@ yasm_cv__generate_type(yasm_object *object)
     cv_type *type;
 
     debug_type =
-        yasm_object_get_general(object, ".debug$T", 0, 1, 0, 0, &new, 0);
+        yasm_object_get_general(object, ".debug$T", 1, 0, 0, &new, 0);
 
     /* Add label type */
     type = cv_type_create(indx++);

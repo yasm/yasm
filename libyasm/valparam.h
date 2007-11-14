@@ -326,6 +326,23 @@ int yasm_dir_helper_flag_or(void *obj, yasm_valparam *vp, unsigned long line,
 int yasm_dir_helper_flag_and(void *obj, yasm_valparam *vp, unsigned long line,
                              void *data, uintptr_t arg);
 
+/** Standard helper for yasm_dir_helper() that parses an expr parameter.
+ * The #yasm_dir_help structure that uses this function should have
+ * needsparam=1.  The obj parameter to yasm_dir_helper() when this helper
+ * is used MUST point to a #yasm_object.  In addition, the data parameter
+ * that is ultimately passed to this function (e.g. yasm_dir_helper() data
+ * parameter plus #yasm_dir_help.off) must point to a #yasm_expr *
+ * initialized to NULL.
+ * \param obj   object; must be #yasm_object
+ * \param vp    valparam
+ * \param line  virtual line number
+ * \param data  pointer to #yasm_expr *
+ * \param arg   unused argument
+ * \return -1 on error, 0 otherwise.
+ */
+int yasm_dir_helper_expr(void *obj, yasm_valparam *vp, unsigned long line,
+                         void *data, uintptr_t arg);
+
 /** Standard helper for yasm_dir_helper() that parses an intnum parameter.
  * The #yasm_dir_help structure that uses this function should have
  * needsparam=1.  The obj parameter to yasm_dir_helper() when this helper

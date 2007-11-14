@@ -1253,7 +1253,7 @@ coff_objfmt_add_default_section(yasm_object *object)
     coff_section_data *csd;
     int isnew;
 
-    retval = yasm_object_get_general(object, ".text", 0, 16, 1, 0, &isnew, 0);
+    retval = yasm_object_get_general(object, ".text", 16, 1, 0, &isnew, 0);
     if (isnew) {
         csd = coff_objfmt_init_new_section(object, retval, ".text", 0);
         csd->flags = COFF_STYP_TEXT;
@@ -1534,7 +1534,7 @@ coff_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
         realname[8] = '\0';
     }
 
-    retval = yasm_object_get_general(object, realname, 0, align, iscode,
+    retval = yasm_object_get_general(object, realname, align, iscode,
                                      resonly, &isnew, line);
 
     if (isnew)
@@ -1629,8 +1629,7 @@ dir_export(yasm_object *object, yasm_valparamhead *valparams,
     }
 
     /* Add to end of linker directives */
-    sect = yasm_object_get_general(object, ".drectve", 0, 0, 0, 0, &isnew,
-                                   line);
+    sect = yasm_object_get_general(object, ".drectve", 0, 0, 0, &isnew, line);
 
     /* Initialize directive section if needed */
     if (isnew) {
@@ -2007,7 +2006,7 @@ dir_endproc_frame(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
      * Add unwind info to end of .xdata section.
      */
 
-    sect = yasm_object_get_general(object, ".xdata", 0, 0, 0, 0, &isnew, line);
+    sect = yasm_object_get_general(object, ".xdata", 0, 0, 0, &isnew, line);
 
     /* Initialize xdata section if needed */
     if (isnew) {
@@ -2032,7 +2031,7 @@ dir_endproc_frame(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
      * Add function lookup to end of .pdata section.
      */
 
-    sect = yasm_object_get_general(object, ".pdata", 0, 0, 0, 0, &isnew, line);
+    sect = yasm_object_get_general(object, ".pdata", 0, 0, 0, &isnew, line);
 
     /* Initialize pdata section if needed */
     if (isnew) {

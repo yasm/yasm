@@ -303,6 +303,23 @@ yasm_dir_helper_flag_set(void *obj, yasm_valparam *vp, unsigned long line,
 }
 
 int
+yasm_dir_helper_expr(void *obj, yasm_valparam *vp, unsigned long line,
+                     void *data, uintptr_t arg)
+{
+    yasm_object *object = (yasm_object *)obj;
+    yasm_expr **expr = (yasm_expr **)data;
+
+    if (*expr)
+        yasm_expr_destroy(*expr);
+    if (!(*expr = yasm_vp_expr(vp, object->symtab, line))) {
+        yasm_error_set(YASM_ERROR_VALUE, N_("argument to `%s' is not an expression"),
+                       vp->val);
+        return -1;
+    }
+    return 0;
+}
+
+int
 yasm_dir_helper_intn(void *obj, yasm_valparam *vp, unsigned long line,
                      void *data, uintptr_t arg)
 {

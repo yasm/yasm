@@ -839,7 +839,7 @@ rdf_objfmt_add_default_section(yasm_object *object)
     rdf_section_data *rsd;
     int isnew;
 
-    retval = yasm_object_get_general(object, ".text", 0, 0, 1, 0, &isnew, 0);
+    retval = yasm_object_get_general(object, ".text", 0, 1, 0, &isnew, 0);
     if (isnew) {
         rsd = rdf_objfmt_init_new_section(object, retval, ".text", 0);
         rsd->type = RDF_SECT_CODE;
@@ -946,7 +946,7 @@ rdf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
         yasm_intnum_destroy(data.reserved_intn);
     }
 
-    retval = yasm_object_get_general(object, sectname, 0, 0, 1,
+    retval = yasm_object_get_general(object, sectname, 0, 1,
                                      data.type == RDF_SECT_BSS, &isnew, line);
 
     if (isnew)

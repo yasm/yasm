@@ -30,3 +30,7 @@ EXTRA_DIST += modules/objfmts/bin/tests/reserve.hex
 EXTRA_DIST += modules/objfmts/bin/tests/reserve.errwarn
 EXTRA_DIST += modules/objfmts/bin/tests/shr.asm
 EXTRA_DIST += modules/objfmts/bin/tests/shr.hex
+
+EXTRA_DIST += modules/objfmts/bin/tests/multisect/Makefile.inc
+
+include modules/objfmts/bin/tests/multisect/Makefile.inc

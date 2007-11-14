@@ -331,7 +331,7 @@ stabs_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
     info.errwarns = errwarns;
     info.lastline = 0;
     info.stabcount = 0;
-    info.stab = yasm_object_get_general(object, ".stab", 0, 4, 0, 0, &new, 0);
+    info.stab = yasm_object_get_general(object, ".stab", 4, 0, 0, &new, 0);
     if (!new) {
         yasm_bytecode *last = yasm_section_bcs_last(info.stab);
         if (last == NULL) {
@@ -347,7 +347,7 @@ stabs_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
     }
 
     info.stabstr =
-        yasm_object_get_general(object, ".stabstr", 0, 1, 0, 0, &new, 0);
+        yasm_object_get_general(object, ".stabstr", 1, 0, 0, &new, 0);
     if (!new) {
         yasm_bytecode *last = yasm_section_bcs_last(info.stabstr);
         if (last == NULL) {

@@ -96,9 +96,7 @@ dbg_objfmt_add_default_section(yasm_object *object)
     yasm_section *retval;
     int isnew;
 
-    retval = yasm_object_get_general(object, ".text",
-        yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(200)), 0),
-        0, 0, 0, &isnew, 0);
+    retval = yasm_object_get_general(object, ".text", 0, 0, 0, &isnew, 0);
     if (isnew) {
         fprintf(objfmt_dbg->dbgfile, "(new) ");
         yasm_symtab_define_label(object->symtab, ".text",
@@ -130,9 +128,8 @@ dbg_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
         fprintf(objfmt_dbg->dbgfile, "NULL\n");
         return NULL;
     }
-    retval = yasm_object_get_general(object, yasm_vp_string(vp),
-        yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(200)),
-                               line), 0, 0, 0, &isnew, line);
+    retval = yasm_object_get_general(object, yasm_vp_string(vp), 0, 0, 0,
+                                     &isnew, line);
     if (isnew) {
         fprintf(objfmt_dbg->dbgfile, "(new) ");
         yasm_symtab_define_label(object->symtab, vp->val,

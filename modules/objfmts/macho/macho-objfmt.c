@@ -1272,8 +1272,8 @@ macho_objfmt_add_default_section(yasm_object *object)
     macho_section_data *msd;
     int isnew;
 
-    retval = yasm_object_get_general(object, "LC_SEGMENT.__TEXT.__text", 0, 0, 1, 0,
-                                     &isnew, 0);
+    retval = yasm_object_get_general(object, "LC_SEGMENT.__TEXT.__text", 0, 1,
+                                     0, &isnew, 0);
     if (isnew) {
         msd = macho_objfmt_init_new_section(object, retval, ".text", 0);
         msd->segname = yasm__xstrdup("__TEXT");
@@ -1464,7 +1464,7 @@ macho_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     realname = yasm_xmalloc(strlen("LC_SEGMENT") + 1 + strlen(data.f_segname) + 1 +
                             strlen(f_sectname) + 1);
     sprintf(realname, "LC_SEGMENT.%s.%s", data.f_segname, f_sectname);
-    retval = yasm_object_get_general(object, realname, 0, align, 1, resonly,
+    retval = yasm_object_get_general(object, realname, align, 1, resonly,
                                      &isnew, line);
     yasm_xfree(realname);
 

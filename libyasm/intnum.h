@@ -125,10 +125,23 @@ void yasm_intnum_destroy(/*@only@*/ yasm_intnum *intn);
  */
 int yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand);
 
+/** Compare two intnums.
+ * \param intn1     first intnum
+ * \param intn2     second intnum
+ * \return -1 if intn1 < intn2, 0 if intn1 == intn2, 1 if intn1 > intn2.
+ */
+int yasm_intnum_compare(const yasm_intnum *intn1, const yasm_intnum *intn2);
+
 /** Zero an intnum.
  * \param intn      intnum
  */
 void yasm_intnum_zero(yasm_intnum *intn);
+
+/** Set an intnum to the value of another intnum.
+ * \param intn      intnum
+ * \param val       intnum to get value from
+ */
+void yasm_intnum_set(yasm_intnum *intn, const yasm_intnum *val);
 
 /** Set an intnum to an unsigned integer.
  * \param intn      intnum

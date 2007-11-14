@@ -634,7 +634,7 @@ xdf_objfmt_add_default_section(yasm_object *object)
     xdf_section_data *xsd;
     int isnew;
 
-    retval = yasm_object_get_general(object, ".text", 0, 0, 1, 0, &isnew, 0);
+    retval = yasm_object_get_general(object, ".text", 0, 1, 0, &isnew, 0);
     if (isnew) {
         xsd = xdf_objfmt_init_new_section(object, retval, ".text", 0);
         yasm_section_set_default(retval, 1);
@@ -745,7 +745,7 @@ xdf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
         }
     }
 
-    retval = yasm_object_get_general(object, sectname, 0, align, 1, resonly,
+    retval = yasm_object_get_general(object, sectname, align, 1, resonly,
                                      &isnew, line);
 
     if (isnew)

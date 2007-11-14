@@ -267,9 +267,9 @@ yasm_dwarf2__generate_info(yasm_object *object, yasm_section *debug_line,
     dwarf2_head *head;
     char *buf;
     yasm_section *debug_abbrev =
-        yasm_object_get_general(object, ".debug_abbrev", 0, 4, 0, 0, &new, 0);
+        yasm_object_get_general(object, ".debug_abbrev", 4, 0, 0, &new, 0);
     yasm_section *debug_info =
-        yasm_object_get_general(object, ".debug_info", 0, 4, 0, 0, &new, 0);
+        yasm_object_get_general(object, ".debug_info", 4, 0, 0, &new, 0);
 
     yasm_section_set_align(debug_abbrev, 0, 0);
     yasm_section_set_align(debug_info, 0, 0);

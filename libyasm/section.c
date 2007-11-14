@@ -62,8 +62,6 @@ struct yasm_section {
     /* associated data; NULL if none */
     /*@null@*/ /*@only@*/ yasm__assoc_data *assoc_data;
 
-    /*@owned@*/ yasm_expr *start;   /* Starting address of section contents */
-
     unsigned long align;        /* Section alignment */
 
     unsigned long opt_flags;    /* storage for optimizer flags */
@@ -300,8 +298,8 @@ error:
 /*@-onlytrans@*/
 yasm_section *
 yasm_object_get_general(yasm_object *object, const char *name,
-                        yasm_expr *start, unsigned long align, int code,
-                        int res_only, int *isnew, unsigned long line)
+                        unsigned long align, int code, int res_only,
+                        int *isnew, unsigned long line)
 {
     yasm_section *s;
     yasm_bytecode *bc;
@@ -325,12 +323,6 @@ yasm_object_get_general(yasm_object *object, const char *name,
     s->object = object;
     s->name = yasm__xstrdup(name);
     s->assoc_data = NULL;
-    if (start)
-        s->start = start;
-    else
-        s->start =
-            yasm_expr_create_ident(yasm_expr_int(yasm_intnum_create_uint(0)),
-                                   line);
     s->align = align;
 
     /* Initialize bytecodes with one empty bytecode (acts as "prior" for first
@@ -631,20 +623,6 @@ yasm_section_get_name(const yasm_section *sect)
 }
 
 void
-yasm_section_set_start(yasm_section *sect, yasm_expr *start,
-                       unsigned long line)
-{
-    yasm_expr_destroy(sect->start);
-    sect->start = start;
-}
-
-const yasm_expr *
-yasm_section_get_start(const yasm_section *sect)
-{
-    return sect->start;
-}
-
-void
 yasm_section_set_align(yasm_section *sect, unsigned long align,
                        unsigned long line)
 {
@@ -668,7 +646,6 @@ yasm_section_destroy(yasm_section *sect)
 
     yasm_xfree(sect->name);
     yasm__assoc_data_destroy(sect->assoc_data);
-    yasm_expr_destroy(sect->start);
 
     /* Delete bytecodes */
     cur = STAILQ_FIRST(&sect->bcs);
@@ -700,9 +677,6 @@ yasm_section_print(const yasm_section *sect, FILE *f, int indent_level,
     }
 
     fprintf(f, "%*sname=%s\n", indent_level, "", sect->name);
-    fprintf(f, "%*sstart=", indent_level, "");
-    yasm_expr_print(sect->start, f);
-    fprintf(f, "\n");
 
     if (sect->assoc_data) {
         fprintf(f, "%*sAssociated data:\n", indent_level, "");

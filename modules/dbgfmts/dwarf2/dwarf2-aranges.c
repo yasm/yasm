@@ -89,7 +89,7 @@ yasm_dwarf2__generate_aranges(yasm_object *object, yasm_section *debug_info)
     dwarf2_aranges_info info;
 
     debug_aranges =
-        yasm_object_get_general(object, ".debug_aranges", 0,
+        yasm_object_get_general(object, ".debug_aranges",
                                 2*dbgfmt_dwarf2->sizeof_address, 0, 0, &new,
                                 0);
 

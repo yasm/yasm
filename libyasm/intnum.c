@@ -562,10 +562,54 @@ yasm_intnum_calc(yasm_intnum *acc, yasm_expr_op op, yasm_intnum *operand)
 }
 /*@=nullderef =nullpass =branchstate@*/
 
+int
+yasm_intnum_compare(const yasm_intnum *intn1, const yasm_intnum *intn2)
+{
+    wordptr op1, op2;
+
+    if (intn1->type == INTNUM_L && intn2->type == INTNUM_L) {
+        if (intn1->val.l < intn2->val.l)
+            return -1;
+        if (intn1->val.l > intn2->val.l)
+            return 1;
+        return 0;
+    }
+
+    op1 = intnum_tobv(op1static, intn1);
+    op2 = intnum_tobv(op2static, intn2);
+    return BitVector_Compare(op1, op2);
+}
+
 void
 yasm_intnum_zero(yasm_intnum *intn)
 {
     yasm_intnum_set_int(intn, 0);
+}
+
+void
+yasm_intnum_set(yasm_intnum *intn, const yasm_intnum *val)
+{
+    if (intn->type == val->type) {
+        switch (val->type) {
+            case INTNUM_L:
+                intn->val.l = val->val.l;
+                break;
+            case INTNUM_BV:
+                BitVector_Copy(intn->val.bv, val->val.bv);
+                break;
+        }
+    } else {
+        switch (val->type) {
+            case INTNUM_L:
+                BitVector_Destroy(intn->val.bv);
+                intn->val.l = val->val.l;
+                break;
+            case INTNUM_BV:
+                intn->val.bv = BitVector_Clone(val->val.bv);
+                break;
+        }
+        intn->type = val->type;
+    }
 }
 
 void

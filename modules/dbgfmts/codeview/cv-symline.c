@@ -569,7 +569,7 @@ yasm_cv__generate_symline(yasm_object *object, yasm_linemap *linemap,
     info.linemap = linemap;
     info.errwarns = errwarns;
     info.debug_symline =
-        yasm_object_get_general(object, ".debug$S", 0, 1, 0, 0, &new, 0);
+        yasm_object_get_general(object, ".debug$S", 1, 0, 0, &new, 0);
     info.num_lineinfos = 0;
     STAILQ_INIT(&info.cv8_lineinfos);
     info.cv8_cur_li = NULL;

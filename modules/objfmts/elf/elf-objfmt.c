@@ -945,7 +945,7 @@ elf_objfmt_add_default_section(yasm_object *object)
     int isnew;
     elf_secthead *esd;
 
-    retval = yasm_object_get_general(object, ".text", 0, 16, 1, 0, &isnew, 0);
+    retval = yasm_object_get_general(object, ".text", 16, 1, 0, &isnew, 0);
     esd = elf_objfmt_init_new_section(object, retval, ".text", SHT_PROGBITS,
                                       SHF_ALLOC + SHF_EXECINSTR, 0);
     yasm_section_set_default(retval, 1);
@@ -1118,7 +1118,7 @@ elf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
         }
     }
 
-    retval = yasm_object_get_general(object, sectname, 0, align,
+    retval = yasm_object_get_general(object, sectname, align,
                                      (data.flags & SHF_EXECINSTR) != 0,
                                      resonly, &isnew, line);
 

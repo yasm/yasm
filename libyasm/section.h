@@ -89,8 +89,6 @@ struct yasm_object {
  * added to the object if there's not already a section by that name.
  * \param object    object
  * \param name      section name
- * \param start     starting address (ignored if section already exists),
- *                  NULL if 0 or don't care.
  * \param align     alignment in bytes (0 if none)
  * \param code      if nonzero, section is intended to contain code
  *                  (e.g. alignment should be made with NOP instructions, not 0)
@@ -102,8 +100,7 @@ struct yasm_object {
  * \return New section.
  */
 /*@dependent@*/ yasm_section *yasm_object_get_general
-    (yasm_object *object, const char *name,
-     /*@null@*/ /*@only@*/ yasm_expr *start, unsigned long align, int code,
+    (yasm_object *object, const char *name, unsigned long align, int code,
      int res_only, /*@out@*/ int *isnew, unsigned long line);
 
 /** Handle a directive.  Passed down to object format, debug format, or
@@ -310,21 +307,6 @@ int yasm_section_bcs_traverse
  * \return Section name.
  */
 /*@observer@*/ const char *yasm_section_get_name(const yasm_section *sect);
-
-/** Change starting address of a section.
- * \param sect      section
- * \param start     starting address
- * \param line      virtual line
- */
-void yasm_section_set_start(yasm_section *sect, /*@only@*/ yasm_expr *start,
-                            unsigned long line);
-
-/** Get starting address of a section.
- * \param sect      section
- * \return Starting address.
- */
-/*@observer@*/ const yasm_expr *yasm_section_get_start
-    (const yasm_section *sect);
 
 /** Change alignment of a section.
  * \param sect      section

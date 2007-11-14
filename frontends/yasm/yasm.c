@@ -44,7 +44,7 @@
 #define PREPROC_BUF_SIZE    16384
 
 /*@null@*/ /*@only@*/ static char *obj_filename = NULL, *in_filename = NULL;
-/*@null@*/ /*@only@*/ static char *list_filename = NULL;
+/*@null@*/ /*@only@*/ static char *list_filename = NULL, *map_filename = NULL;
 /*@null@*/ /*@only@*/ static char *machine_name = NULL;
 static int special_options = 0;
 /*@null@*/ /*@dependent@*/ static yasm_arch *cur_arch = NULL;
@@ -91,6 +91,7 @@ static int opt_dbgfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_listfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_listfile_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_objfile_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_mapfile_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_machine_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_strict_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
@@ -153,6 +154,8 @@ static opt_option options[] =
       N_("name of list-file output"), N_("listfile") },
     { 'o', "objfile", 1, opt_objfile_handler, 0,
       N_("name of object-file output"), N_("filename") },
+    { 0, "mapfile", 1, opt_mapfile_handler, 0,
+      N_("name of map-file output"), N_("filename") },
     { 'm', "machine", 1, opt_machine_handler, 0,
       N_("select machine (list with -m help)"), N_("machine") },
     { 0, "force-strict", 0, opt_strict_handler, 0,
@@ -436,6 +439,32 @@ do_assemble(void)
 
     yasm_arch_set_var(cur_arch, "force_strict", force_strict);
 
+    /* Try to enable the map file via a map NASM directive.  This is
+     * somewhat of a hack.
+     */
+    if (map_filename && cur_objfmt_module->directives) {
+        const yasm_directive *dir = &cur_objfmt_module->directives[0];
+        matched = 0;
+        for (; dir->name; dir++) {
+            if (yasm__strcasecmp(dir->name, "map") == 0 &&
+                yasm__strcasecmp(dir->parser, "nasm") == 0) {
+                yasm_valparamhead vps;
+                yasm_valparam *vp;
+                matched = 1;
+                yasm_vps_initialize(&vps);
+                vp = yasm_vp_create_string(NULL, yasm__xstrdup(map_filename));
+                yasm_vps_append(&vps, vp);
+                dir->handler(object, &vps, NULL, 0);
+                yasm_vps_delete(&vps);
+            }
+        }
+        if (!matched) {
+            print_error(
+                _("warning: object format `%s' does not support map files"),
+                cur_objfmt_module->keyword);
+        }
+    }
+
     /* Parse! */
     cur_parser_module->do_parse(object, cur_preproc, list_filename != NULL,
                                 linemap, errwarns);
@@ -718,6 +747,8 @@ cleanup(yasm_object *object)
             yasm_xfree(obj_filename);
         if (list_filename)
             yasm_xfree(list_filename);
+        if (map_filename)
+            yasm_xfree(map_filename);
         if (machine_name)
             yasm_xfree(machine_name);
         if (objfmt_keyword)
@@ -919,6 +950,22 @@ opt_objfile_handler(/*@unused@*/ char *cmd, char *param,
 
     assert(param != NULL);
     obj_filename = yasm__xstrdup(param);
+
+    return 0;
+}
+
+static int
+opt_mapfile_handler(/*@unused@*/ char *cmd, char *param,
+                    /*@unused@*/ int extra)
+{
+    if (map_filename) {
+        print_error(
+            _("warning: can output to only one map file, last specified used"));
+        yasm_xfree(map_filename);
+    }
+
+    assert(param != NULL);
+    map_filename = yasm__xstrdup(param);
 
     return 0;
 }

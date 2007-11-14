@@ -645,8 +645,8 @@ yasm_dwarf2__generate_line(yasm_object *object, yasm_linemap *linemap,
     info.object = object;
     info.linemap = linemap;
     info.dbgfmt_dwarf2 = dbgfmt_dwarf2;
-    info.debug_line = yasm_object_get_general(object, ".debug_line", 0, 1, 0,
-                                              0, &new, 0);
+    info.debug_line = yasm_object_get_general(object, ".debug_line", 1, 0, 0,
+                                              &new, 0);
     last = yasm_section_bcs_last(info.debug_line);
 
     /* header */
