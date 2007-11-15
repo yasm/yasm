@@ -1069,7 +1069,8 @@ bin_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
             yasm_errwarn_propagate(info->errwarns, 0);
             return 0;
         }
-        fseek(info->f, yasm_intnum_get_int(info->tmp_intn), SEEK_SET);
+        if (fseek(info->f, yasm_intnum_get_int(info->tmp_intn), SEEK_SET) < 0)
+            yasm__fatal(N_("could not seek on output file"));
         yasm_section_bcs_traverse(sect, info->errwarns,
                                   info, bin_objfmt_output_bytecode);
     }
