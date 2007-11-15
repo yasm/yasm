@@ -103,7 +103,7 @@ bin_objfmt_create(yasm_object *object)
     yasm_objfmt_bin *objfmt_bin = yasm_xmalloc(sizeof(yasm_objfmt_bin));
     objfmt_bin->objfmt.module = &yasm_bin_LTX_objfmt;
 
-    objfmt_bin->map_flags = MAP_NONE;
+    objfmt_bin->map_flags = NO_MAP;
     objfmt_bin->map_filename = NULL;
     objfmt_bin->org = NULL;
 
