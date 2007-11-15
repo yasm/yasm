@@ -442,10 +442,10 @@ do_assemble(void)
     /* Try to enable the map file via a map NASM directive.  This is
      * somewhat of a hack.
      */
-    if (map_filename && cur_objfmt_module->directives) {
+    if (map_filename) {
         const yasm_directive *dir = &cur_objfmt_module->directives[0];
         matched = 0;
-        for (; dir->name; dir++) {
+        for (; dir && dir->name; dir++) {
             if (yasm__strcasecmp(dir->name, "map") == 0 &&
                 yasm__strcasecmp(dir->parser, "nasm") == 0) {
                 yasm_valparamhead vps;
