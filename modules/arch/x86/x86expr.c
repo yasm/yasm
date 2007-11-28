@@ -375,6 +375,11 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
                     *indexreg = regnum;
             }
             break;
+        case YASM_EXPR_SEGOFF:
+            /* No registers are allowed on either side. */
+            if (yasm_expr__contains(e, YASM_EXPR_REG))
+                return 1;
+            break;
         default:
             /* Should never get here! */
             yasm_internal_error(N_("unexpected expr op"));
