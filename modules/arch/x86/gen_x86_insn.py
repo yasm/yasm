@@ -3710,29 +3710,29 @@ add_insn("prefetcht2", "twobytemem", modifiers=[3, 0x0F, 0x18], cpu=["P3"])
 
 add_insn("sfence", "threebyte", modifiers=[0x0F, 0xAE, 0xF8], cpu=["P3"])
 
-add_group("sseps",
+add_group("xmm_xmm128",
     cpu=["SSE"],
-    modifiers=["Op1Add"],
+    modifiers=["PreAdd", "Op1Add"],
+    prefix=0x00,
     opcode=[0x0F, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
 
-add_insn("addps",    "sseps", modifiers=[0x58])
-add_insn("andnps",   "sseps", modifiers=[0x55])
-add_insn("andps",    "sseps", modifiers=[0x54])
-add_insn("comiss",   "sseps", modifiers=[0x2F])
-add_insn("divps",    "sseps", modifiers=[0x5E])
-add_insn("maxps",    "sseps", modifiers=[0x5F])
-add_insn("minps",    "sseps", modifiers=[0x5D])
-add_insn("mulps",    "sseps", modifiers=[0x59])
-add_insn("orps",     "sseps", modifiers=[0x56])
-add_insn("rcpps",    "sseps", modifiers=[0x53])
-add_insn("rsqrtps",  "sseps", modifiers=[0x52])
-add_insn("sqrtps",   "sseps", modifiers=[0x51])
-add_insn("subps",    "sseps", modifiers=[0x5C])
-add_insn("unpckhps", "sseps", modifiers=[0x15])
-add_insn("unpcklps", "sseps", modifiers=[0x14])
-add_insn("xorps",    "sseps", modifiers=[0x57])
+add_insn("addps",    "xmm_xmm128", modifiers=[0, 0x58])
+add_insn("andnps",   "xmm_xmm128", modifiers=[0, 0x55])
+add_insn("andps",    "xmm_xmm128", modifiers=[0, 0x54])
+add_insn("divps",    "xmm_xmm128", modifiers=[0, 0x5E])
+add_insn("maxps",    "xmm_xmm128", modifiers=[0, 0x5F])
+add_insn("minps",    "xmm_xmm128", modifiers=[0, 0x5D])
+add_insn("mulps",    "xmm_xmm128", modifiers=[0, 0x59])
+add_insn("orps",     "xmm_xmm128", modifiers=[0, 0x56])
+add_insn("rcpps",    "xmm_xmm128", modifiers=[0, 0x53])
+add_insn("rsqrtps",  "xmm_xmm128", modifiers=[0, 0x52])
+add_insn("sqrtps",   "xmm_xmm128", modifiers=[0, 0x51])
+add_insn("subps",    "xmm_xmm128", modifiers=[0, 0x5C])
+add_insn("unpckhps", "xmm_xmm128", modifiers=[0, 0x15])
+add_insn("unpcklps", "xmm_xmm128", modifiers=[0, 0x14])
+add_insn("xorps",    "xmm_xmm128", modifiers=[0, 0x57])
 
 add_group("cvt_rx_xmm32",
     suffix="l",
@@ -3819,79 +3819,104 @@ add_group("cvt_xmm_rmx",
 
 add_insn("cvtsi2ss", "cvt_xmm_rmx", modifiers=[0xF3, 0x2A])
 
-add_group("ssess",
+add_group("xmm_xmm32",
     cpu=["SSE"],
     modifiers=["PreAdd", "Op1Add"],
     prefix=0x00,
     opcode=[0x0F, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
-
-add_insn("addss",   "ssess", modifiers=[0xF3, 0x58])
-add_insn("divss",   "ssess", modifiers=[0xF3, 0x5E])
-add_insn("maxss",   "ssess", modifiers=[0xF3, 0x5F])
-add_insn("minss",   "ssess", modifiers=[0xF3, 0x5D])
-add_insn("mulss",   "ssess", modifiers=[0xF3, 0x59])
-add_insn("rcpss",   "ssess", modifiers=[0xF3, 0x53])
-add_insn("rsqrtss", "ssess", modifiers=[0xF3, 0x52])
-add_insn("sqrtss",  "ssess", modifiers=[0xF3, 0x51])
-add_insn("subss",   "ssess", modifiers=[0xF3, 0x5C])
-add_insn("ucomiss", "ssess", modifiers=[0, 0x2E])
-
-add_group("ssecmpps",
+              Operand(type="SIMDReg", size=128, dest="EA")])
+add_group("xmm_xmm32",
     cpu=["SSE"],
-    modifiers=["Imm8"],
+    modifiers=["PreAdd", "Op1Add"],
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="Mem", size=32, relaxed=True, dest="EA")])
+
+add_insn("addss",   "xmm_xmm32", modifiers=[0xF3, 0x58])
+add_insn("comiss",  "xmm_xmm32", modifiers=[0, 0x2F])
+add_insn("divss",   "xmm_xmm32", modifiers=[0xF3, 0x5E])
+add_insn("maxss",   "xmm_xmm32", modifiers=[0xF3, 0x5F])
+add_insn("minss",   "xmm_xmm32", modifiers=[0xF3, 0x5D])
+add_insn("mulss",   "xmm_xmm32", modifiers=[0xF3, 0x59])
+add_insn("rcpss",   "xmm_xmm32", modifiers=[0xF3, 0x53])
+add_insn("rsqrtss", "xmm_xmm32", modifiers=[0xF3, 0x52])
+add_insn("sqrtss",  "xmm_xmm32", modifiers=[0xF3, 0x51])
+add_insn("subss",   "xmm_xmm32", modifiers=[0xF3, 0x5C])
+add_insn("ucomiss", "xmm_xmm32", modifiers=[0, 0x2E])
+
+add_group("ssecmp_128",
+    cpu=["SSE"],
+    modifiers=["Imm8", "PreAdd"],
     opcode=[0x0F, 0xC2],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
 
-add_insn("cmpeqps",    "ssecmpps", modifiers=[0x00])
-add_insn("cmpleps",    "ssecmpps", modifiers=[0x02])
-add_insn("cmpltps",    "ssecmpps", modifiers=[0x01])
-add_insn("cmpneqps",   "ssecmpps", modifiers=[0x04])
-add_insn("cmpnleps",   "ssecmpps", modifiers=[0x06])
-add_insn("cmpnltps",   "ssecmpps", modifiers=[0x05])
-add_insn("cmpordps",   "ssecmpps", modifiers=[0x07])
-add_insn("cmpunordps", "ssecmpps", modifiers=[0x03])
+add_insn("cmpeqps",    "ssecmp_128", modifiers=[0])
+add_insn("cmpleps",    "ssecmp_128", modifiers=[2])
+add_insn("cmpltps",    "ssecmp_128", modifiers=[1])
+add_insn("cmpneqps",   "ssecmp_128", modifiers=[4])
+add_insn("cmpnleps",   "ssecmp_128", modifiers=[6])
+add_insn("cmpnltps",   "ssecmp_128", modifiers=[5])
+add_insn("cmpordps",   "ssecmp_128", modifiers=[7])
+add_insn("cmpunordps", "ssecmp_128", modifiers=[3])
 
-add_group("ssecmpss",
+add_group("ssecmp_32",
     cpu=["SSE"],
     modifiers=["Imm8", "PreAdd"],
     prefix=0x00,
     opcode=[0x0F, 0xC2],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+              Operand(type="SIMDReg", size=128, dest="EA")])
 
-add_insn("cmpeqss",    "ssecmpss", modifiers=[0, 0xF3])
-add_insn("cmpless",    "ssecmpss", modifiers=[2, 0xF3])
-add_insn("cmpltss",    "ssecmpss", modifiers=[1, 0xF3])
-add_insn("cmpneqss",   "ssecmpss", modifiers=[4, 0xF3])
-add_insn("cmpnless",   "ssecmpss", modifiers=[6, 0xF3])
-add_insn("cmpnltss",   "ssecmpss", modifiers=[5, 0xF3])
-add_insn("cmpordss",   "ssecmpss", modifiers=[7, 0xF3])
-add_insn("cmpunordss", "ssecmpss", modifiers=[3, 0xF3])
-
-add_group("ssepsimm",
+add_group("ssecmp_32",
     cpu=["SSE"],
-    modifiers=["Op1Add"],
+    modifiers=["Imm8", "PreAdd"],
+    prefix=0x00,
+    opcode=[0x0F, 0xC2],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="Mem", size=32, relaxed=True, dest="EA")])
+
+add_insn("cmpeqss",    "ssecmp_32", modifiers=[0, 0xF3])
+add_insn("cmpless",    "ssecmp_32", modifiers=[2, 0xF3])
+add_insn("cmpltss",    "ssecmp_32", modifiers=[1, 0xF3])
+add_insn("cmpneqss",   "ssecmp_32", modifiers=[4, 0xF3])
+add_insn("cmpnless",   "ssecmp_32", modifiers=[6, 0xF3])
+add_insn("cmpnltss",   "ssecmp_32", modifiers=[5, 0xF3])
+add_insn("cmpordss",   "ssecmp_32", modifiers=[7, 0xF3])
+add_insn("cmpunordss", "ssecmp_32", modifiers=[3, 0xF3])
+
+add_group("xmm_xmm128_imm",
+    cpu=["SSE"],
+    modifiers=["PreAdd", "Op1Add"],
     opcode=[0x0F, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
-add_insn("cmpps", "ssepsimm", modifiers=[0xC2])
-add_insn("shufps", "ssepsimm", modifiers=[0xC6])
+add_insn("cmpps", "xmm_xmm128_imm", modifiers=[0, 0xC2])
+add_insn("shufps", "xmm_xmm128_imm", modifiers=[0, 0xC6])
 
-add_group("ssessimm",
+add_group("xmm_xmm32_imm",
     cpu=["SSE"],
     modifiers=["PreAdd", "Op1Add"],
     prefix=0x00,
     opcode=[0x0F, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
-add_insn("cmpss", "ssessimm", modifiers=[0xF3, 0xC2])
+add_group("xmm_xmm32_imm",
+    cpu=["SSE"],
+    modifiers=["PreAdd", "Op1Add"],
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="Mem", size=32, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+
+add_insn("cmpss", "xmm_xmm32_imm", modifiers=[0xF3, 0xC2])
 
 add_group("ldstmxcsr",
     cpu=["SSE"],
@@ -4158,88 +4183,90 @@ add_insn("pshufw", "pshufw")
 #####################################################################
 # SSE2 instructions
 #####################################################################
-add_insn("addpd",    "ssess", modifiers=[0x66, 0x58], cpu=["SSE2"])
-add_insn("addsd",    "ssess", modifiers=[0xF2, 0x58], cpu=["SSE2"])
-add_insn("andnpd",   "ssess", modifiers=[0x66, 0x55], cpu=["SSE2"])
-add_insn("andpd",    "ssess", modifiers=[0x66, 0x54], cpu=["SSE2"])
-add_insn("comisd",   "ssess", modifiers=[0x66, 0x2F], cpu=["SSE2"])
-add_insn("divpd",    "ssess", modifiers=[0x66, 0x5E], cpu=["SSE2"])
-add_insn("divsd",    "ssess", modifiers=[0xF2, 0x5E], cpu=["SSE2"])
-add_insn("maxpd",    "ssess", modifiers=[0x66, 0x5F], cpu=["SSE2"])
-add_insn("maxsd",    "ssess", modifiers=[0xF2, 0x5F], cpu=["SSE2"])
-add_insn("minpd",    "ssess", modifiers=[0x66, 0x5D], cpu=["SSE2"])
-add_insn("minsd",    "ssess", modifiers=[0xF2, 0x5D], cpu=["SSE2"])
-add_insn("mulpd",    "ssess", modifiers=[0x66, 0x59], cpu=["SSE2"])
-add_insn("mulsd",    "ssess", modifiers=[0xF2, 0x59], cpu=["SSE2"])
-add_insn("orpd",     "ssess", modifiers=[0x66, 0x56], cpu=["SSE2"])
-add_insn("sqrtpd",   "ssess", modifiers=[0x66, 0x51], cpu=["SSE2"])
-add_insn("sqrtsd",   "ssess", modifiers=[0xF2, 0x51], cpu=["SSE2"])
-add_insn("subpd",    "ssess", modifiers=[0x66, 0x5C], cpu=["SSE2"])
-add_insn("subsd",    "ssess", modifiers=[0xF2, 0x5C], cpu=["SSE2"])
-add_insn("ucomisd",  "ssess", modifiers=[0x66, 0x2E], cpu=["SSE2"])
-add_insn("unpckhpd", "ssess", modifiers=[0x66, 0x15], cpu=["SSE2"])
-add_insn("unpcklpd", "ssess", modifiers=[0x66, 0x14], cpu=["SSE2"])
-add_insn("xorpd",    "ssess", modifiers=[0x66, 0x57], cpu=["SSE2"])
-add_insn("cvtpd2dq", "ssess", modifiers=[0xF2, 0xE6], cpu=["SSE2"])
-add_insn("cvtpd2ps", "ssess", modifiers=[0x66, 0x5A], cpu=["SSE2"])
-add_insn("cvtps2dq", "ssess", modifiers=[0x66, 0x5B], cpu=["SSE2"])
+add_group("xmm_xmm64",
+    cpu=["SSE2"],
+    modifiers=["PreAdd", "Op1Add"],
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="EA")])
+add_group("xmm_xmm64",
+    cpu=["SSE2"],
+    modifiers=["PreAdd", "Op1Add"],
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="Mem", size=64, relaxed=True, dest="EA")])
 
-add_insn("cvtdq2ps", "sseps", modifiers=[0x5B], cpu=["SSE2"])
+add_insn("addsd",    "xmm_xmm64", modifiers=[0xF2, 0x58])
+add_insn("comisd",   "xmm_xmm64", modifiers=[0x66, 0x2F])
+add_insn("cvtdq2pd", "xmm_xmm64", modifiers=[0xF3, 0xE6])
+add_insn("cvtps2pd", "xmm_xmm64", modifiers=[0, 0x5A])
+add_insn("cvtsd2ss", "xmm_xmm64", modifiers=[0xF2, 0x5A])
+add_insn("divsd",    "xmm_xmm64", modifiers=[0xF2, 0x5E])
+add_insn("maxsd",    "xmm_xmm64", modifiers=[0xF2, 0x5F])
+add_insn("minsd",    "xmm_xmm64", modifiers=[0xF2, 0x5D])
+add_insn("mulsd",    "xmm_xmm64", modifiers=[0xF2, 0x59])
+add_insn("subsd",    "xmm_xmm64", modifiers=[0xF2, 0x5C])
+add_insn("sqrtsd",   "xmm_xmm64", modifiers=[0xF2, 0x51])
+add_insn("ucomisd",  "xmm_xmm64", modifiers=[0x66, 0x2E])
 
-add_insn("cmpeqpd",    "ssecmpss", modifiers=[0x00, 0x66], cpu=["SSE2"])
-add_insn("cmpeqsd",    "ssecmpss", modifiers=[0x00, 0xF2], cpu=["SSE2"])
-add_insn("cmplepd",    "ssecmpss", modifiers=[0x02, 0x66], cpu=["SSE2"])
-add_insn("cmplesd",    "ssecmpss", modifiers=[0x02, 0xF2], cpu=["SSE2"])
-add_insn("cmpltpd",    "ssecmpss", modifiers=[0x01, 0x66], cpu=["SSE2"])
-add_insn("cmpltsd",    "ssecmpss", modifiers=[0x01, 0xF2], cpu=["SSE2"])
-add_insn("cmpneqpd",   "ssecmpss", modifiers=[0x04, 0x66], cpu=["SSE2"])
-add_insn("cmpneqsd",   "ssecmpss", modifiers=[0x04, 0xF2], cpu=["SSE2"])
-add_insn("cmpnlepd",   "ssecmpss", modifiers=[0x06, 0x66], cpu=["SSE2"])
-add_insn("cmpnlesd",   "ssecmpss", modifiers=[0x06, 0xF2], cpu=["SSE2"])
-add_insn("cmpnltpd",   "ssecmpss", modifiers=[0x05, 0x66], cpu=["SSE2"])
-add_insn("cmpnltsd",   "ssecmpss", modifiers=[0x05, 0xF2], cpu=["SSE2"])
-add_insn("cmpordpd",   "ssecmpss", modifiers=[0x07, 0x66], cpu=["SSE2"])
-add_insn("cmpordsd",   "ssecmpss", modifiers=[0x07, 0xF2], cpu=["SSE2"])
-add_insn("cmpunordpd", "ssecmpss", modifiers=[0x03, 0x66], cpu=["SSE2"])
-add_insn("cmpunordsd", "ssecmpss", modifiers=[0x03, 0xF2], cpu=["SSE2"])
+add_insn("addpd",    "xmm_xmm128", modifiers=[0x66, 0x58], cpu=["SSE2"])
+add_insn("andnpd",   "xmm_xmm128", modifiers=[0x66, 0x55], cpu=["SSE2"])
+add_insn("andpd",    "xmm_xmm128", modifiers=[0x66, 0x54], cpu=["SSE2"])
+add_insn("cvtdq2ps", "xmm_xmm128", modifiers=[0, 0x5B], cpu=["SSE2"])
+add_insn("cvtpd2dq", "xmm_xmm128", modifiers=[0xF2, 0xE6], cpu=["SSE2"])
+add_insn("cvtpd2ps", "xmm_xmm128", modifiers=[0x66, 0x5A], cpu=["SSE2"])
+add_insn("cvtps2dq", "xmm_xmm128", modifiers=[0x66, 0x5B], cpu=["SSE2"])
+add_insn("divpd",    "xmm_xmm128", modifiers=[0x66, 0x5E], cpu=["SSE2"])
+add_insn("maxpd",    "xmm_xmm128", modifiers=[0x66, 0x5F], cpu=["SSE2"])
+add_insn("minpd",    "xmm_xmm128", modifiers=[0x66, 0x5D], cpu=["SSE2"])
+add_insn("mulpd",    "xmm_xmm128", modifiers=[0x66, 0x59], cpu=["SSE2"])
+add_insn("orpd",     "xmm_xmm128", modifiers=[0x66, 0x56], cpu=["SSE2"])
+add_insn("sqrtpd",   "xmm_xmm128", modifiers=[0x66, 0x51], cpu=["SSE2"])
+add_insn("subpd",    "xmm_xmm128", modifiers=[0x66, 0x5C], cpu=["SSE2"])
+add_insn("unpckhpd", "xmm_xmm128", modifiers=[0x66, 0x15], cpu=["SSE2"])
+add_insn("unpcklpd", "xmm_xmm128", modifiers=[0x66, 0x14], cpu=["SSE2"])
+add_insn("xorpd",    "xmm_xmm128", modifiers=[0x66, 0x57], cpu=["SSE2"])
 
-add_insn("cmppd",  "ssessimm", modifiers=[0x66, 0xC2], cpu=["SSE2"])
-add_insn("shufpd", "ssessimm", modifiers=[0x66, 0xC6], cpu=["SSE2"])
+add_group("ssecmp_64",
+    cpu=["SSE2"],
+    modifiers=["Imm8", "PreAdd"],
+    prefix=0x00,
+    opcode=[0x0F, 0xC2],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="EA")])
+
+add_group("ssecmp_64",
+    cpu=["SSE2"],
+    modifiers=["Imm8", "PreAdd"],
+    prefix=0x00,
+    opcode=[0x0F, 0xC2],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="Mem", size=64, relaxed=True, dest="EA")])
+
+add_insn("cmpeqsd",    "ssecmp_64", modifiers=[0, 0xF2])
+add_insn("cmplesd",    "ssecmp_64", modifiers=[2, 0xF2])
+add_insn("cmpltsd",    "ssecmp_64", modifiers=[1, 0xF2])
+add_insn("cmpneqsd",   "ssecmp_64", modifiers=[4, 0xF2])
+add_insn("cmpnlesd",   "ssecmp_64", modifiers=[6, 0xF2])
+add_insn("cmpnltsd",   "ssecmp_64", modifiers=[5, 0xF2])
+add_insn("cmpordsd",   "ssecmp_64", modifiers=[7, 0xF2])
+add_insn("cmpunordsd", "ssecmp_64", modifiers=[3, 0xF2])
+
+add_insn("cmpeqpd",    "ssecmp_128", modifiers=[0, 0x66], cpu=["SSE2"])
+add_insn("cmplepd",    "ssecmp_128", modifiers=[2, 0x66], cpu=["SSE2"])
+add_insn("cmpltpd",    "ssecmp_128", modifiers=[1, 0x66], cpu=["SSE2"])
+add_insn("cmpneqpd",   "ssecmp_128", modifiers=[4, 0x66], cpu=["SSE2"])
+add_insn("cmpnlepd",   "ssecmp_128", modifiers=[6, 0x66], cpu=["SSE2"])
+add_insn("cmpnltpd",   "ssecmp_128", modifiers=[5, 0x66], cpu=["SSE2"])
+add_insn("cmpordpd",   "ssecmp_128", modifiers=[7, 0x66], cpu=["SSE2"])
+add_insn("cmpunordpd", "ssecmp_128", modifiers=[3, 0x66], cpu=["SSE2"])
+
+add_insn("cmppd",  "xmm_xmm128_imm", modifiers=[0x66, 0xC2], cpu=["SSE2"])
+add_insn("shufpd", "xmm_xmm128_imm", modifiers=[0x66, 0xC6], cpu=["SSE2"])
 
 add_insn("cvtsi2sd", "cvt_xmm_rmx", modifiers=[0xF2, 0x2A], cpu=["SSE2"])
-
-add_group("cvt_xmm_xmm64_ss",
-    cpu=["SSE2"],
-    modifiers=["PreAdd", "Op1Add"],
-    prefix=0x00,
-    opcode=[0x0F, 0x00],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDReg", size=128, dest="EA")])
-add_group("cvt_xmm_xmm64_ss",
-    cpu=["SSE2"],
-    modifiers=["PreAdd", "Op1Add"],
-    prefix=0x00,
-    opcode=[0x0F, 0x00],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="Mem", size=64, relaxed=True, dest="EA")])
-
-add_insn("cvtdq2pd", "cvt_xmm_xmm64_ss", modifiers=[0xF3, 0xE6])
-add_insn("cvtsd2ss", "cvt_xmm_xmm64_ss", modifiers=[0xF2, 0x5A])
-
-add_group("cvt_xmm_xmm64_ps",
-    cpu=["SSE2"],
-    modifiers=["Op1Add"],
-    opcode=[0x0F, 0x00],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDReg", size=128, dest="EA")])
-add_group("cvt_xmm_xmm64_ps",
-    cpu=["SSE2"],
-    modifiers=["Op1Add"],
-    opcode=[0x0F, 0x00],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="Mem", size=64, relaxed=True, dest="EA")])
-
-add_insn("cvtps2pd", "cvt_xmm_xmm64_ps", modifiers=[0x5A])
 
 add_group("cvt_rx_xmm64",
     suffix="l",
@@ -4305,7 +4332,15 @@ add_group("cmpsd",
     prefix=0xF2,
     opcode=[0x0F, 0xC2],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+
+add_group("cmpsd",
+    cpu=["SSE2"],
+    prefix=0xF2,
+    opcode=[0x0F, 0xC2],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="Mem", size=64, relaxed=True, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 # cmpsd is added in string instructions above, so don't re-add_insn()
 
@@ -4460,31 +4495,16 @@ add_insn("vmxon", "vmxthreebytemem", modifiers=[0xF3])
 
 add_insn("cvttpd2pi", "cvt_mm_xmm", modifiers=[0x66, 0x2C], cpu=["SSE2"])
 add_insn("cvttsd2si", "cvt_rx_xmm64", modifiers=[0xF2, 0x2C], cpu=["SSE2"])
-add_insn("cvttpd2dq", "ssess", modifiers=[0x66, 0xE6], cpu=["SSE2"])
-add_insn("cvttps2dq", "ssess", modifiers=[0xF3, 0x5B], cpu=["SSE2"])
+add_insn("cvttpd2dq", "xmm_xmm128", modifiers=[0x66, 0xE6], cpu=["SSE2"])
+add_insn("cvttps2dq", "xmm_xmm128", modifiers=[0xF3, 0x5B], cpu=["SSE2"])
 add_insn("pmuludq", "mmxsse2", modifiers=[0xF4], cpu=["SSE2"])
-add_insn("pshufd", "ssessimm", modifiers=[0x66, 0x70], cpu=["SSE2"])
-add_insn("pshufhw", "ssessimm", modifiers=[0xF3, 0x70], cpu=["SSE2"])
-add_insn("pshuflw", "ssessimm", modifiers=[0xF2, 0x70], cpu=["SSE2"])
-add_insn("punpckhqdq", "ssess", modifiers=[0x66, 0x6D], cpu=["SSE2"])
-add_insn("punpcklqdq", "ssess", modifiers=[0x66, 0x6C], cpu=["SSE2"])
+add_insn("pshufd", "xmm_xmm128_imm", modifiers=[0x66, 0x70], cpu=["SSE2"])
+add_insn("pshufhw", "xmm_xmm128_imm", modifiers=[0xF3, 0x70], cpu=["SSE2"])
+add_insn("pshuflw", "xmm_xmm128_imm", modifiers=[0xF2, 0x70], cpu=["SSE2"])
+add_insn("punpckhqdq", "xmm_xmm128", modifiers=[0x66, 0x6D], cpu=["SSE2"])
+add_insn("punpcklqdq", "xmm_xmm128", modifiers=[0x66, 0x6C], cpu=["SSE2"])
 
-add_group("cvt_xmm_xmm32",
-    cpu=["SSE2"],
-    modifiers=["PreAdd", "Op1Add"],
-    prefix=0x00,
-    opcode=[0x0F, 0x00],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDReg", size=128, dest="EA")])
-add_group("cvt_xmm_xmm32",
-    cpu=["SSE2"],
-    modifiers=["PreAdd", "Op1Add"],
-    prefix=0x00,
-    opcode=[0x0F, 0x00],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="Mem", size=32, relaxed=True, dest="EA")])
-
-add_insn("cvtss2sd", "cvt_xmm_xmm32", modifiers=[0xF3, 0x5A])
+add_insn("cvtss2sd", "xmm_xmm32", modifiers=[0xF3, 0x5A], cpu=["SSE2"])
 
 add_group("maskmovdqu",
     cpu=["SSE2"],
@@ -4546,17 +4566,17 @@ add_insn("psrldq", "pslrldq", modifiers=[3])
 #####################################################################
 # SSE3 / PNI Prescott New Instructions instructions
 #####################################################################
-add_insn("addsubpd", "ssess", modifiers=[0x66, 0xD0], cpu=["SSE3"])
-add_insn("addsubps", "ssess", modifiers=[0xF2, 0xD0], cpu=["SSE3"])
-add_insn("haddpd",   "ssess", modifiers=[0x66, 0x7C], cpu=["SSE3"])
-add_insn("haddps",   "ssess", modifiers=[0xF2, 0x7C], cpu=["SSE3"])
-add_insn("hsubpd",   "ssess", modifiers=[0x66, 0x7D], cpu=["SSE3"])
-add_insn("hsubps",   "ssess", modifiers=[0xF2, 0x7D], cpu=["SSE3"])
-add_insn("movshdup", "ssess", modifiers=[0xF3, 0x16], cpu=["SSE3"])
-add_insn("movsldup", "ssess", modifiers=[0xF3, 0x12], cpu=["SSE3"])
+add_insn("addsubpd", "xmm_xmm128", modifiers=[0x66, 0xD0], cpu=["SSE3"])
+add_insn("addsubps", "xmm_xmm128", modifiers=[0xF2, 0xD0], cpu=["SSE3"])
+add_insn("haddpd",   "xmm_xmm128", modifiers=[0x66, 0x7C], cpu=["SSE3"])
+add_insn("haddps",   "xmm_xmm128", modifiers=[0xF2, 0x7C], cpu=["SSE3"])
+add_insn("hsubpd",   "xmm_xmm128", modifiers=[0x66, 0x7D], cpu=["SSE3"])
+add_insn("hsubps",   "xmm_xmm128", modifiers=[0xF2, 0x7D], cpu=["SSE3"])
+add_insn("movshdup", "xmm_xmm128", modifiers=[0xF3, 0x16], cpu=["SSE3"])
+add_insn("movsldup", "xmm_xmm128", modifiers=[0xF3, 0x12], cpu=["SSE3"])
 add_insn("fisttp",   "fildstp", modifiers=[1, 0, 1], cpu=["SSE3"])
 add_insn("fisttpll", "fildstp", suffix="q", modifiers=[7], cpu=["SSE3"])
-add_insn("movddup", "cvt_xmm_xmm64_ss", modifiers=[0xF2, 0x12], cpu=["SSE3"])
+add_insn("movddup", "xmm_xmm64", modifiers=[0xF2, 0x12], cpu=["SSE3"])
 add_insn("monitor", "threebyte", modifiers=[0x0F, 0x01, 0xC8], cpu=["SSE3"])
 add_insn("mwait",   "threebyte", modifiers=[0x0F, 0x01, 0xC9], cpu=["SSE3"])
 
@@ -4565,7 +4585,7 @@ add_group("lddqu",
     prefix=0xF2,
     opcode=[0x0F, 0xF0],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="Mem", dest="EA")])
+              Operand(type="Mem", size=128, relaxed=True, dest="EA")])
 
 add_insn("lddqu", "lddqu")
 
