@@ -208,6 +208,29 @@ value_finalize_scan(yasm_value *value, yasm_expr *e,
                     continue;
                 }
 
+                /* Look for the same symrec term; even if both are external,
+                 * they should cancel out.
+                 */
+                for (j=0; j<e->numterms; j++) {
+                    if (e->terms[j].type == YASM_EXPR_SYM
+                        && e->terms[j].data.sym == sym
+                        && (used & (1<<j)) == 0) {
+                        /* Mark as used */
+                        used |= 1<<j;
+
+                        /* Replace both symrec portions with 0 */
+                        yasm_expr_destroy(sube);
+                        e->terms[i].type = YASM_EXPR_INT;
+                        e->terms[i].data.intn = yasm_intnum_create_uint(0);
+                        e->terms[j].type = YASM_EXPR_INT;
+                        e->terms[j].data.intn = yasm_intnum_create_uint(0);
+
+                        break;  /* stop looking */
+                    }
+                }
+                if (j != e->numterms)
+                    continue;
+
                 if (!yasm_symrec_get_label(sym, &precbc)) {
                     if (value_finalize_scan(value, sube, expr_precbc,
                                             ssym_not_ok))
