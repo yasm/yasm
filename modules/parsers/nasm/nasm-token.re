@@ -144,10 +144,10 @@ scan:
         }
 
         /* $0AA and 0xAA forms of hexidecimal number */
-        (("$" digit) | "0x") hexdigit+ {
+        (("$" digit) | '0x') hexdigit+ {
             savech = s->tok[TOKLEN];
             s->tok[TOKLEN] = '\0';
-            if (s->tok[1] == 'x')
+            if (s->tok[1] == 'x' || s->tok[1] == 'X')
                 /* skip 0 and x */
                 lvalp->intn = yasm_intnum_create_hex(TOK+2);
             else
