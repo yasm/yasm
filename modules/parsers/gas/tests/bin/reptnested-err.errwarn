@@ -1,7 +1,7 @@
--:2: nested rept not supported
--:3: rept without matching endr
--:4: nested rept not supported
--:4: nested rept not supported
--:4: nested rept not supported
--:4: nested rept not supported
--:4: nested rept not supported
+-:2: error: nested rept not supported
+-:3: error: rept without matching endr
+-:4: error: nested rept not supported
+-:4: error: nested rept not supported
+-:4: error: nested rept not supported
+-:4: error: nested rept not supported
+-:4: error: nested rept not supported

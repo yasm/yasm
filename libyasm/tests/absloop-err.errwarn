@@ -1,1 +1,1 @@
--:6: circular reference detected in memory expression
+-:6: error: circular reference detected in memory expression

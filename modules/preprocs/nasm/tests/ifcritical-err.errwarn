@@ -1,1 +1,1 @@
--:5: non-constant value given to `%if'
+-:5: error: non-constant value given to `%if'

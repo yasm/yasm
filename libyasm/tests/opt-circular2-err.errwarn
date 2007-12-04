@@ -1,1 +1,1 @@
--:1: circular reference detected
+-:1: error: circular reference detected

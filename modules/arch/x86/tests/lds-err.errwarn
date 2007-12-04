@@ -1,4 +1,4 @@
--:2: invalid size for operand 2
--:3: invalid size for operand 2
--:5: invalid size for operand 2
--:6: invalid size for operand 2
+-:2: error: invalid size for operand 2
+-:3: error: invalid size for operand 2
+-:5: error: invalid size for operand 2
+-:6: error: invalid size for operand 2

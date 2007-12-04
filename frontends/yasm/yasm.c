@@ -1272,16 +1272,17 @@ print_yasm_error(const char *filename, unsigned long line, const char *msg,
                  const char *xref_msg)
 {
     if (line)
-        fprintf(errfile, fmt[ewmsg_style], filename, line, "", msg);
+        fprintf(errfile, fmt[ewmsg_style], filename, line, _("error: "), msg);
     else
-        fprintf(errfile, fmt_noline[ewmsg_style], filename, "", msg);
+        fprintf(errfile, fmt_noline[ewmsg_style], filename, _("error: "), msg);
 
     if (xref_fn && xref_msg) {
         if (xref_line)
-            fprintf(errfile, fmt[ewmsg_style], xref_fn, xref_line, "",
+            fprintf(errfile, fmt[ewmsg_style], xref_fn, xref_line, _("error: "),
                     xref_msg);
         else
-            fprintf(errfile, fmt_noline[ewmsg_style], xref_fn, "", xref_msg);
+            fprintf(errfile, fmt_noline[ewmsg_style], xref_fn, _("error: "),
+                    xref_msg);
     }
 }
 

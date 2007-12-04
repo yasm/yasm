@@ -1,1 +1,1 @@
--: vfollows loop between section `sect' and section `sect'
+-: error: vfollows loop between section `sect' and section `sect'

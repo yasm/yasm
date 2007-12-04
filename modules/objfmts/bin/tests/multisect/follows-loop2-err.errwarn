@@ -1,1 +1,1 @@
--: follows loop between section `sect' and section `sect'
+-: error: follows loop between section `sect' and section `sect'

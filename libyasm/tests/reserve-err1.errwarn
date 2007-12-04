@@ -1,2 +1,2 @@
--:7: multiple expression not absolute
--:14: multiple expression not absolute
+-:7: error: multiple expression not absolute
+-:14: error: multiple expression not absolute
