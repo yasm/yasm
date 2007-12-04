@@ -658,8 +658,9 @@ parse_instr(yasm_parser_nasm *parser_nasm)
             uintptr_t prefix = PREFIX_val;
             get_next_token();
             bc = parse_instr(parser_nasm);
-            if (bc)
-                yasm_insn_add_prefix(yasm_bc_get_insn(bc), prefix);
+            if (!bc)
+                bc = yasm_arch_create_empty_insn(p_object->arch, cur_line);
+            yasm_insn_add_prefix(yasm_bc_get_insn(bc), prefix);
             return bc;
         }
         case SEGREG:
@@ -667,8 +668,9 @@ parse_instr(yasm_parser_nasm *parser_nasm)
             uintptr_t segreg = SEGREG_val;
             get_next_token();
             bc = parse_instr(parser_nasm);
-            if (bc)
-                yasm_insn_add_seg_prefix(yasm_bc_get_insn(bc), segreg);
+            if (!bc)
+                bc = yasm_arch_create_empty_insn(p_object->arch, cur_line);
+            yasm_insn_add_seg_prefix(yasm_bc_get_insn(bc), segreg);
             return bc;
         }
         default:
