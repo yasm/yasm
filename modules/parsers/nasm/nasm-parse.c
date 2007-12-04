@@ -133,16 +133,14 @@ demand_eol_(yasm_parser_nasm *parser_nasm)
 }
 #define demand_eol() demand_eol_(parser_nasm)
 
-static int
-expect_(yasm_parser_nasm *parser_nasm, int token)
+static const char *
+describe_token(int token)
 {
     static char strch[] = "` '";
     const char *str;
 
-    if (curtok == token)
-        return 1;
-
     switch (token) {
+        case 0:                 str = "end of line"; break;
         case INTNUM:            str = "integer"; break;
         case FLTNUM:            str = "floating point value"; break;
         case DIRECTIVE_NAME:    str = "directive name"; break;
@@ -177,7 +175,17 @@ expect_(yasm_parser_nasm *parser_nasm, int token)
             str = strch;
             break;
     }
-    yasm_error_set(YASM_ERROR_PARSE, "expected %s", str);
+
+    return str;
+}
+
+static int
+expect_(yasm_parser_nasm *parser_nasm, int token)
+{
+    if (curtok == token)
+        return 1;
+
+    yasm_error_set(YASM_ERROR_PARSE, "expected %s", describe_token(token));
     destroy_curtok();
     return 0;
 }
@@ -622,8 +630,14 @@ parse_instr(yasm_parser_nasm *parser_nasm)
             for (;;) {
                 yasm_insn_operand *op = parse_operand(parser_nasm);
                 if (!op) {
-                    yasm_error_set(YASM_ERROR_SYNTAX,
-                                   N_("expression syntax error"));
+                    if (insn->num_operands == 0)
+                        yasm_error_set(YASM_ERROR_SYNTAX,
+                                       N_("unexpected %s after instruction"),
+                                       describe_token(curtok));
+                    else
+                        yasm_error_set(YASM_ERROR_SYNTAX,
+                                       N_("expected operand, got %s"),
+                                       describe_token(curtok));
                     yasm_bc_destroy(bc);
                     return NULL;
                 }
@@ -838,6 +852,9 @@ parse_memaddr(yasm_parser_nasm *parser_nasm)
             get_next_token();                           \
             f = rightfunc(parser_nasm, type);           \
             if (!f) {                                   \
+                yasm_error_set(YASM_ERROR_SYNTAX,       \
+                               N_("expected expression after %s"), \
+                               describe_token(op));     \
                 yasm_expr_destroy(e);                   \
                 return NULL;                            \
             }                                           \
@@ -900,6 +917,9 @@ parse_expr3(yasm_parser_nasm *parser_nasm, expr_type type)
         get_next_token();
         f = parse_expr4(parser_nasm, type);
         if (!f) {
+            yasm_error_set(YASM_ERROR_SYNTAX,
+                           N_("expected expression after %s"),
+                           describe_token(op));
             yasm_expr_destroy(e);
             return NULL;
         }
@@ -925,6 +945,9 @@ parse_expr4(yasm_parser_nasm *parser_nasm, expr_type type)
         get_next_token();
         f = parse_expr5(parser_nasm, type);
         if (!f) {
+            yasm_error_set(YASM_ERROR_SYNTAX,
+                           N_("expected expression after %s"),
+                           describe_token(op));
             yasm_expr_destroy(e);
             return NULL;
         }
@@ -951,6 +974,9 @@ parse_expr5(yasm_parser_nasm *parser_nasm, expr_type type)
         get_next_token();
         f = parse_expr6(parser_nasm, type);
         if (!f) {
+            yasm_error_set(YASM_ERROR_SYNTAX,
+                           N_("expected expression after %s"),
+                           describe_token(op));
             yasm_expr_destroy(e);
             return NULL;
         }
@@ -978,14 +1004,20 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
         case '~':
             get_next_token();
             e = parse_expr6(parser_nasm, type);
-            if (!e)
+            if (!e) {
+                yasm_error_set(YASM_ERROR_SYNTAX,
+                               N_("expected expression after %s"), "`~'");
                 return NULL;
+            }
             return p_expr_new_branch(YASM_EXPR_NOT, e);
         case '(':
             get_next_token();
             e = parse_expr(parser_nasm, type);
-            if (!e)
+            if (!e) {
+                yasm_error_set(YASM_ERROR_SYNTAX,
+                               N_("expected expression after %s"), "`('");
                 return NULL;
+            }
             if (!expect(')')) {
                 yasm_error_set(YASM_ERROR_SYNTAX, N_("missing parenthesis"));
                 return NULL;
@@ -1009,30 +1041,47 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
     } else switch (curtok) {
         case '+':
             get_next_token();
-            return parse_expr6(parser_nasm, type);
+            e = parse_expr6(parser_nasm, type);
+            if (!e) {
+                yasm_error_set(YASM_ERROR_SYNTAX,
+                               N_("expected expression after %s"), "`+'");
+            }
+            return e;
         case '-':
             get_next_token();
             e = parse_expr6(parser_nasm, type);
-            if (!e)
+            if (!e) {
+                yasm_error_set(YASM_ERROR_SYNTAX,
+                               N_("expected expression after %s"), "`-'");
                 return NULL;
+            }
             return p_expr_new_branch(YASM_EXPR_NEG, e);
         case '~':
             get_next_token();
             e = parse_expr6(parser_nasm, type);
-            if (!e)
+            if (!e) {
+                yasm_error_set(YASM_ERROR_SYNTAX,
+                               N_("expected expression after %s"), "`~'");
                 return NULL;
+            }
             return p_expr_new_branch(YASM_EXPR_NOT, e);
         case SEG:
             get_next_token();
             e = parse_expr6(parser_nasm, type);
-            if (!e)
+            if (!e) {
+                yasm_error_set(YASM_ERROR_SYNTAX,
+                               N_("expected expression after %s"), "SEG");
                 return NULL;
+            }
             return p_expr_new_branch(YASM_EXPR_SEG, e);
         case '(':
             get_next_token();
             e = parse_expr(parser_nasm, type);
-            if (!e)
+            if (!e) {
+                yasm_error_set(YASM_ERROR_SYNTAX,
+                               N_("expected expression after %s"), "`('");
                 return NULL;
+            }
             if (!expect(')')) {
                 yasm_error_set(YASM_ERROR_SYNTAX, N_("missing parenthesis"));
                 return NULL;

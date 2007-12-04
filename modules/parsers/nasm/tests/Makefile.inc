@@ -30,6 +30,8 @@ EXTRA_DIST += modules/parsers/nasm/tests/strucalign.asm
 EXTRA_DIST += modules/parsers/nasm/tests/strucalign.hex
 EXTRA_DIST += modules/parsers/nasm/tests/struczero.asm
 EXTRA_DIST += modules/parsers/nasm/tests/struczero.hex
+EXTRA_DIST += modules/parsers/nasm/tests/syntax-err.asm
+EXTRA_DIST += modules/parsers/nasm/tests/syntax-err.errwarn
 
 EXTRA_DIST += modules/parsers/nasm/tests/worphan/Makefile.inc
 
