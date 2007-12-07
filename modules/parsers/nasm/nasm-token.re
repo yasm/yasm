@@ -358,7 +358,7 @@ scan:
             RETURN(ID);
         }
 
-        ";" (any \ [\n])*       { goto scan; }
+        ";" (any \ [\000])*     { goto scan; }
 
         ws+                     { goto scan; }
 
@@ -425,7 +425,7 @@ linechg2:
 
         "\r" { }
 
-        (any \ [\r\n])+ {
+        (any \ [\000])+ {
             parser_nasm->state = LINECHG;
             lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
             RETURN(FILENAME);
@@ -596,7 +596,7 @@ directive2:
             RETURN(ID);
         }
 
-        ";" (any \ [\n])*       { goto directive2; }
+        ";" (any \ [\000])*     { goto directive2; }
 
         ws+                     { goto directive2; }
 
