@@ -294,7 +294,10 @@ yasm_x86__bc_apply_prefixes(x86_common *common, unsigned char *rex,
                 common->opersize = (unsigned char)prefixes[i] & 0xff;
                 if (common->mode_bits == 64 && common->opersize == 64 &&
                     def_opersize_64 != 64) {
-                    if (*rex == 0xff)
+                    if (!rex)
+                        yasm_warn_set(YASM_WARN_GENERAL,
+                                      N_("ignoring REX prefix on jump"));
+                    else if (*rex == 0xff)
                         yasm_warn_set(YASM_WARN_GENERAL,
                             N_("REX prefix not allowed on this instruction, ignoring"));
                     else
