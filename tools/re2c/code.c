@@ -146,11 +146,11 @@ void BitMap_gen(FILE *o, unsigned int lb, unsigned int ub){
 	unsigned int n = ub - lb;
 	unsigned int i;
 	unsigned char *bm = malloc(sizeof(unsigned char)*n);
-	memset(bm, 0, n);
 	fputs("\tstatic unsigned char yybm[] = {", o);
 	for(i = 0; b; i += n){
 	    unsigned char m;
 	    unsigned int j;
+	    memset(bm, 0, n);
 	    for(m = 0x80; b && m; b = b->next, m >>= 1){
 		b->i = i; b->m = m;
 		doGen(b->go, b->on, bm-lb, m);
@@ -161,6 +161,7 @@ void BitMap_gen(FILE *o, unsigned int lb, unsigned int ub){
 	    }
 	}
 	fputs("\n\t};\n", o); oline+=2;
+        free(bm);
     }
 }
 
