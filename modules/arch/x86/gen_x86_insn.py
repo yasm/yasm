@@ -2679,7 +2679,7 @@ add_insn("movsw", "onebyte", modifiers=[0xA5, 16])
 
 # movsd has to be non-onebyte for SSE2 forms below
 add_group("movsd",
-    parsers=["nasm"],
+    parsers=["nasm", "gas"],
     opersize=32,
     opcode=[0xA5],
     operands=[])
