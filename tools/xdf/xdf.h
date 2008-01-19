@@ -18,10 +18,12 @@
 #ifndef XDF_H_INCLUDED
 #define XDF_H_INCLUDED
 
-typedef unsigned char      u8;
-typedef unsigned short     u16;
-typedef unsigned int       u32;
-typedef unsigned long long u64;
+#include <stdint.h>
+
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
 
 typedef enum {
 
@@ -78,6 +80,7 @@ typedef struct {      /* 16 bytes */
 
 } FILE_HEADER;
 
+#define FILE_HEADER_SIZE (4+4+4+4)
 
 typedef struct {     /* 40 bytes */
 
@@ -94,6 +97,7 @@ typedef struct {     /* 40 bytes */
 
 } SECTION_HEADER;
 
+#define SECTION_HEADER_SIZE (4+8+8+2+2+4+4+4+4)
 
 typedef struct {     /* 16 bytes */
 
@@ -104,6 +108,7 @@ typedef struct {     /* 16 bytes */
 
 } SYMBOL_ENTRY;
 
+#define SYMBOL_ENTRY_SIZE (4+4+4+4)
 
 typedef struct {     /* 16 bytes */
 

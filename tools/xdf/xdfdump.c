@@ -39,6 +39,15 @@ print_file_header(const FILE_HEADER *filehead)
     printf("\tTotal Headers Size=%d\n", filehead->f_size);
 }
 
+void
+read_syment(SYMBOL_ENTRY *syment, FILE *f)
+{
+    fread(&syment->e_sect_idx, sizeof(syment->e_sect_idx), 1, f);
+    fread(&syment->e_sect_off, sizeof(syment->e_sect_off), 1, f);
+    fread(&syment->e_name_off, sizeof(syment->e_name_off), 1, f);
+    fread(&syment->e_flags, sizeof(syment->e_flags), 1, f);
+}
+
 const char *
 get_syment_name(const SYMBOL_ENTRY *syment, FILE *f)
 {
@@ -56,8 +65,8 @@ get_sym_name(u32 idx, FILE *f, size_t symtab_off)
 {
     SYMBOL_ENTRY syment;
     long oldpos = ftell(f);
-    fseek(f, symtab_off+idx*sizeof(SYMBOL_ENTRY), SEEK_SET);
-    fread(&syment, sizeof(syment), 1, f);
+    fseek(f, symtab_off+idx*SYMBOL_ENTRY_SIZE, SEEK_SET);
+    read_syment(&syment, f);
     fseek(f, oldpos, SEEK_SET);
     return get_syment_name(&syment, f);
 }
@@ -67,8 +76,8 @@ get_sect_name(u32 idx, FILE *f, size_t symtab_off, size_t secttab_off)
 {
     SECTION_HEADER secthead;
     long oldpos = ftell(f);
-    fseek(f, secttab_off+idx*sizeof(SECTION_HEADER), SEEK_SET);
-    fread(&secthead, sizeof(secthead), 1, f);
+    fseek(f, secttab_off+idx*SECTION_HEADER_SIZE, SEEK_SET);
+    fread(&secthead.s_name_idx, sizeof(secthead.s_name_idx), 1, f);
     fseek(f, oldpos, SEEK_SET);
     return get_sym_name(secthead.s_name_idx, f, symtab_off);
 }
@@ -88,7 +97,7 @@ print_symbol(const SYMBOL_ENTRY *syment, FILE *f, size_t symtab_off,
     if (first>0)
         printf("None");
     printf(" Name=`%s' Section=", get_syment_name(syment, f));
-    if ((long)syment->e_sect_idx < 0)
+    if (syment->e_sect_idx >= 0x80000000)
         printf("%d\n", syment->e_sect_idx);
     else
         printf("`%s' (%d)\n",
@@ -201,7 +210,10 @@ main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    fread(&filehead, sizeof(filehead), 1, f);
+    fread(&filehead.f_magic, sizeof(filehead.f_magic), 1, f);
+    fread(&filehead.f_nsect, sizeof(filehead.f_nsect), 1, f);
+    fread(&filehead.f_nsyms, sizeof(filehead.f_nsyms), 1, f);
+    fread(&filehead.f_size, sizeof(filehead.f_size), 1, f);
 
     if (filehead.f_magic != XDF_MAGIC) {
         fprintf(stderr, "Magic number mismatch (expected %08X, got %08X\n",
@@ -210,17 +222,25 @@ main(int argc, char **argv)
     }
 
     print_file_header(&filehead);
-    symtab_off = sizeof(FILE_HEADER)+filehead.f_nsect*sizeof(SECTION_HEADER);
+    symtab_off = FILE_HEADER_SIZE+filehead.f_nsect*SECTION_HEADER_SIZE;
     for (i=0; i<filehead.f_nsect; i++) {
         SECTION_HEADER secthead;
-        fread(&secthead, sizeof(secthead), 1, f);
+        fread(&secthead.s_name_idx, sizeof(secthead.s_name_idx), 1, f);
+        fread(&secthead.s_addr, sizeof(secthead.s_addr), 1, f);
+        fread(&secthead.s_vaddr, sizeof(secthead.s_vaddr), 1, f);
+        fread(&secthead.s_align, sizeof(secthead.s_align), 1, f);
+        fread(&secthead.s_flags, sizeof(secthead.s_flags), 1, f);
+        fread(&secthead.s_data_off, sizeof(secthead.s_data_off), 1, f);
+        fread(&secthead.s_data_size, sizeof(secthead.s_data_size), 1, f);
+        fread(&secthead.s_reltab_off, sizeof(secthead.s_reltab_off), 1, f);
+        fread(&secthead.s_num_reloc, sizeof(secthead.s_num_reloc), 1, f);
         print_section(&secthead, f, symtab_off);
     }
 
     printf("Symbol Table:\n");
     for (i=0; i<filehead.f_nsyms; i++) {
         SYMBOL_ENTRY syment;
-        fread(&syment, sizeof(syment), 1, f);
+        read_syment(&syment, f);
         print_symbol(&syment, f, symtab_off, sizeof(FILE_HEADER));
     }
 
