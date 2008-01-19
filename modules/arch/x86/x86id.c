@@ -360,7 +360,6 @@ x86_finalize_jmpfar(yasm_bytecode *bc, yasm_bytecode *prev_bc,
     unsigned int mode_bits = id_insn->mode_bits;
     x86_jmpfar *jmpfar;
     yasm_insn_operand *op;
-    /*@only@*/ yasm_expr *segment;
 
     jmpfar = yasm_xmalloc(sizeof(x86_jmpfar));
     x86_finalize_common(&jmpfar->common, info, mode_bits);
@@ -368,13 +367,9 @@ x86_finalize_jmpfar(yasm_bytecode *bc, yasm_bytecode *prev_bc,
 
     op = yasm_insn_ops_first(&id_insn->insn);
 
-    if (op->type == YASM_INSN__OPERAND_IMM &&
-        yasm_expr_is_op(op->data.val, YASM_EXPR_SEGOFF)) {
-        /* SEG:OFF expression; split it. */
-        segment = yasm_expr_extract_segoff(&op->data.val);
-        if (!segment)
-            yasm_internal_error(N_("didn't get SEG:OFF expression in jmpfar"));
-        if (yasm_value_finalize_expr(&jmpfar->segment, segment, prev_bc, 16))
+    if (op->type == YASM_INSN__OPERAND_IMM && op->seg) {
+        /* SEG:OFF */
+        if (yasm_value_finalize_expr(&jmpfar->segment, op->seg, prev_bc, 16))
             yasm_error_set(YASM_ERROR_TOO_COMPLEX,
                            N_("jump target segment too complex"));
         if (yasm_value_finalize_expr(&jmpfar->offset, op->data.val, prev_bc,
@@ -383,13 +378,13 @@ x86_finalize_jmpfar(yasm_bytecode *bc, yasm_bytecode *prev_bc,
                            N_("jump target offset too complex"));
     } else if (op->targetmod == X86_FAR) {
         /* "FAR imm" target needs to become "seg imm:imm". */
-        if (yasm_value_finalize_expr(&jmpfar->offset,
-                                     yasm_expr_copy(op->data.val), prev_bc, 0)
-            || yasm_value_finalize_expr(&jmpfar->segment, op->data.val,
-                                        prev_bc, 16))
+        yasm_expr *e = yasm_expr_create_branch(YASM_EXPR_SEG,
+                                               yasm_expr_copy(op->data.val),
+                                               op->data.val->line);
+        if (yasm_value_finalize_expr(&jmpfar->offset, op->data.val, prev_bc, 0)
+            || yasm_value_finalize_expr(&jmpfar->segment, e, prev_bc, 16))
             yasm_error_set(YASM_ERROR_TOO_COMPLEX,
                            N_("jump target expression too complex"));
-        jmpfar->segment.seg_of = 1;
     } else
         yasm_internal_error(N_("didn't get FAR expression in jmpfar"));
 
@@ -785,8 +780,7 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
                     break;
                 case OPT_ImmNotSegOff:
                     if (op->type != YASM_INSN__OPERAND_IMM ||
-                        op->targetmod != 0 ||
-                        yasm_expr_is_op(op->data.val, YASM_EXPR_SEGOFF))
+                        op->targetmod != 0 || op->seg)
                         mismatch = 1;
                     break;
                 case OPT_XMM0:
@@ -1173,6 +1167,9 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                             yasm_internal_error(
                                 N_("invalid operand conversion"));
                         case YASM_INSN__OPERAND_MEMORY:
+                            if (op->seg)
+                                yasm_error_set(YASM_ERROR_VALUE,
+                                    N_("invalid segment in effective address"));
                             insn->x86_ea = (x86_effaddr *)op->data.ea;
                             if (info_ops[i].type == OPT_MemOffs)
                                 /* Special-case for MOV MemOffs instruction */
@@ -1197,6 +1194,9 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                     }
                     break;
                 case OPA_Imm:
+                    if (op->seg)
+                        yasm_error_set(YASM_ERROR_VALUE,
+                                       N_("immediate does not support segment"));
                     if (op->type == YASM_INSN__OPERAND_IMM) {
                         imm = op->data.val;
                         im_len = size_lookup[info_ops[i].size];
@@ -1204,6 +1204,9 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                         yasm_internal_error(N_("invalid operand conversion"));
                     break;
                 case OPA_SImm:
+                    if (op->seg)
+                        yasm_error_set(YASM_ERROR_VALUE,
+                                       N_("immediate does not support segment"));
                     if (op->type == YASM_INSN__OPERAND_IMM) {
                         imm = op->data.val;
                         im_len = size_lookup[info_ops[i].size];

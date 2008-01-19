@@ -14,14 +14,16 @@ mov es, ax
 
 ; Use without seg should yield just the offset part.
 mov bx, keybuf
-mov bx, 0040h:001Eh		; Illegal in NASM ("invalid combination...")
+;mov bx, 0040h:001Eh		; Illegal
 
 ; Each of the below pairs should be equivalent (and legal) in Yasm.
 ; There are some differences from NASM here!
 
+; Defaults to near jump (on both NASM and Yasm)
+jmp keybuf
+
 ; Direct far jump.
-jmp keybuf		; Results in a near jump in NASM
-jmp 0040h:001Eh		; But Yasm sees the equ value as equivalent to this
+jmp 0040h:001Eh
 
 ; Force near (non-far) jump (just offset, no segment).
 jmp near keybuf

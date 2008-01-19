@@ -35,8 +35,8 @@ RCSID("$Id$");
 
 typedef enum {
     NORM_EXPR,
-    DIR_EXPR,
-    DV_EXPR
+    DIR_EXPR,       /* Can't have seg:off or WRT anywhere */
+    DV_EXPR         /* Can't have registers anywhere */
 } expr_type;
 
 static yasm_bytecode *parse_line(yasm_parser_nasm *parser_nasm);
@@ -46,7 +46,7 @@ static yasm_bytecode *parse_times(yasm_parser_nasm *parser_nasm);
 static yasm_bytecode *parse_exp(yasm_parser_nasm *parser_nasm);
 static yasm_bytecode *parse_instr(yasm_parser_nasm *parser_nasm);
 static yasm_insn_operand *parse_operand(yasm_parser_nasm *parser_nasm);
-static yasm_effaddr *parse_memaddr(yasm_parser_nasm *parser_nasm);
+static yasm_insn_operand *parse_memaddr(yasm_parser_nasm *parser_nasm);
 static yasm_expr *parse_expr(yasm_parser_nasm *parser_nasm, expr_type type);
 static yasm_expr *parse_bexpr(yasm_parser_nasm *parser_nasm, expr_type type);
 static yasm_expr *parse_expr0(yasm_parser_nasm *parser_nasm, expr_type type);
@@ -475,7 +475,7 @@ parse_times(yasm_parser_nasm *parser_nasm)
     yasm_expr *multiple;
     yasm_bytecode *bc;
 
-    multiple = parse_expr(parser_nasm, DV_EXPR);
+    multiple = parse_bexpr(parser_nasm, DV_EXPR);
     if (!multiple) {
         yasm_error_set(YASM_ERROR_SYNTAX, N_("expression expected after %s"),
                        "TIMES");
@@ -526,7 +526,7 @@ parse_exp(yasm_parser_nasm *parser_nasm)
                         goto dv_done;
                     }
                 }
-                if ((e = parse_expr(parser_nasm, DV_EXPR)))
+                if ((e = parse_bexpr(parser_nasm, DV_EXPR)))
                     dv = yasm_dv_create_expr(e);
                 else {
                     yasm_error_set(YASM_ERROR_SYNTAX,
@@ -554,7 +554,7 @@ dv_done:
             unsigned int size = RESERVE_SPACE_val/8;
             yasm_expr *e;
             get_next_token();
-            e = parse_expr(parser_nasm, DV_EXPR);
+            e = parse_bexpr(parser_nasm, DV_EXPR);
             if (!e) {
                 yasm_error_set(YASM_ERROR_SYNTAX,
                                N_("expression expected after %s"), "RESx");
@@ -582,7 +582,7 @@ dv_done:
                 get_next_token();
             if (is_eol())
                 goto incbin_done;
-            start = parse_expr(parser_nasm, DV_EXPR);
+            start = parse_bexpr(parser_nasm, DV_EXPR);
             if (!start) {
                 yasm_error_set(YASM_ERROR_SYNTAX,
                                N_("expression expected for INCBIN start"));
@@ -594,7 +594,7 @@ dv_done:
                 get_next_token();
             if (is_eol())
                 goto incbin_done;
-            maxlen = parse_expr(parser_nasm, DV_EXPR);
+            maxlen = parse_bexpr(parser_nasm, DV_EXPR);
             if (!maxlen) {
                 yasm_error_set(YASM_ERROR_SYNTAX,
                     N_("expression expected for INCBIN maximum length"));
@@ -685,19 +685,18 @@ parse_operand(yasm_parser_nasm *parser_nasm)
     switch (curtok) {
         case '[':
         {
-            yasm_effaddr *ea;
             get_next_token();
-            ea = parse_memaddr(parser_nasm);
+            op = parse_memaddr(parser_nasm);
 
             expect(']');
             get_next_token();
 
-            if (!ea) {
+            if (!op) {
                 yasm_error_set(YASM_ERROR_SYNTAX,
                                N_("memory address expected"));
                 return NULL;
             }
-            return yasm_operand_create_mem(ea);
+            return op;
         }
         case SEGREG:
             op = yasm_operand_create_segreg(SEGREG_val);
@@ -756,19 +755,32 @@ parse_operand(yasm_parser_nasm *parser_nasm)
         }
         default:
         {
-            yasm_expr *e = parse_expr(parser_nasm, NORM_EXPR);
+            yasm_expr *e = parse_bexpr(parser_nasm, NORM_EXPR);
             if (!e)
                 return NULL;
-            return yasm_operand_create_imm(e);
+            if (curtok != ':')
+                return yasm_operand_create_imm(e);
+            else {
+                yasm_expr *off;
+                get_next_token();
+                off = parse_bexpr(parser_nasm, NORM_EXPR);
+                if (!off) {
+                    yasm_expr_destroy(e);
+                    return NULL;
+                }
+                op = yasm_operand_create_imm(off);
+                op->seg = e;
+                return op;
+            }
         }
     }
 }
 
 /* memory addresses */
-static yasm_effaddr *
+static yasm_insn_operand *
 parse_memaddr(yasm_parser_nasm *parser_nasm)
 {
-    yasm_effaddr *ea;
+    yasm_insn_operand *op;
     switch (curtok) {
         case SEGREG:
         {
@@ -780,48 +792,63 @@ parse_memaddr(yasm_parser_nasm *parser_nasm)
                 return NULL;
             }
             get_next_token();
-            ea = parse_memaddr(parser_nasm);
-            if (ea)
-                yasm_ea_set_segreg(ea, segreg);
-            return ea;
+            op = parse_memaddr(parser_nasm);
+            if (op)
+                yasm_ea_set_segreg(op->data.ea, segreg);
+            return op;
         }
         case SIZE_OVERRIDE:
         {
             unsigned int size = SIZE_OVERRIDE_val;
             get_next_token();
-            ea = parse_memaddr(parser_nasm);
-            if (ea)
-                ea->disp.size = size;
-            return ea;
+            op = parse_memaddr(parser_nasm);
+            if (op)
+                op->data.ea->disp.size = size;
+            return op;
         }
         case NOSPLIT:
             get_next_token();
-            ea = parse_memaddr(parser_nasm);
-            if (ea)
-                ea->nosplit = 1;
-            return ea;
+            op = parse_memaddr(parser_nasm);
+            if (op)
+                op->data.ea->nosplit = 1;
+            return op;
         case REL:
             get_next_token();
-            ea = parse_memaddr(parser_nasm);
-            if (ea) {
-                ea->pc_rel = 1;
-                ea->not_pc_rel = 0;
+            op = parse_memaddr(parser_nasm);
+            if (op) {
+                op->data.ea->pc_rel = 1;
+                op->data.ea->not_pc_rel = 0;
             }
-            return ea;
+            return op;
         case ABS:
             get_next_token();
-            ea = parse_memaddr(parser_nasm);
-            if (ea) {
-                ea->pc_rel = 0;
-                ea->not_pc_rel = 1;
+            op = parse_memaddr(parser_nasm);
+            if (op) {
+                op->data.ea->pc_rel = 0;
+                op->data.ea->not_pc_rel = 1;
             }
-            return ea;
+            return op;
         default:
         {
-            yasm_expr *e = parse_expr(parser_nasm, NORM_EXPR);
+            yasm_expr *e = parse_bexpr(parser_nasm, NORM_EXPR);
             if (!e)
                 return NULL;
-            return yasm_arch_ea_create(p_object->arch, e);
+            if (curtok != ':')
+                return yasm_operand_create_mem(
+                    yasm_arch_ea_create(p_object->arch, e));
+            else {
+                yasm_expr *off;
+                get_next_token();
+                off = parse_bexpr(parser_nasm, NORM_EXPR);
+                if (!off) {
+                    yasm_expr_destroy(e);
+                    return NULL;
+                }
+                op = yasm_operand_create_mem(
+                    yasm_arch_ea_create(p_object->arch, off));
+                op->seg = e;
+                return op;
+            }
         }
     }
 }
@@ -869,14 +896,11 @@ static yasm_expr *
 parse_expr(yasm_parser_nasm *parser_nasm, expr_type type)
 {
     switch (type) {
-        case NORM_EXPR:
-            parse_expr_common(parse_bexpr, ':', parse_bexpr, YASM_EXPR_SEGOFF);
-        case DV_EXPR:
-            /* dataval expressions can't handle seg:off */
-            return parse_bexpr(parser_nasm, type);
         case DIR_EXPR:
             /* directive expressions can't handle seg:off or WRT */
             return parse_expr0(parser_nasm, type);
+        default:
+            parse_expr_common(parse_bexpr, ':', parse_bexpr, YASM_EXPR_SEGOFF);
     }
     /*@notreached@*/
     return NULL;

@@ -2,7 +2,7 @@
 
 jmp 5:4
 
-jmp equval
+jmp far equval
 
 equval equ 6:7
 

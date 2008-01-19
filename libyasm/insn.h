@@ -75,19 +75,19 @@ struct yasm_effaddr {
 /** An instruction operand (opaque type). */
 typedef struct yasm_insn_operand yasm_insn_operand;
 
+/** The type of an instruction operand. */
+typedef enum yasm_insn_operand_type {
+    YASM_INSN__OPERAND_REG = 1,     /**< A register. */
+    YASM_INSN__OPERAND_SEGREG,      /**< A segment register. */
+    YASM_INSN__OPERAND_MEMORY,      /**< An effective address
+                                     *   (memory reference). */
+    YASM_INSN__OPERAND_IMM          /**< An immediate or jump target. */
+} yasm_insn_operand_type;
+
 /** An instruction operand. */
 struct yasm_insn_operand {
     /** Link for building linked list of operands.  \internal */
     /*@reldef@*/ STAILQ_ENTRY(yasm_insn_operand) link;
-
-    /** Operand type. */
-    enum yasm_insn_operand_type {
-        YASM_INSN__OPERAND_REG = 1,     /**< A register. */
-        YASM_INSN__OPERAND_SEGREG,      /**< A segment register. */
-        YASM_INSN__OPERAND_MEMORY,      /**< An effective address
-                                         *   (memory reference). */
-        YASM_INSN__OPERAND_IMM          /**< An immediate or jump target. */
-    } type;
 
     /** Operand data. */
     union {
@@ -95,6 +95,8 @@ struct yasm_insn_operand {
         yasm_effaddr *ea;   /**< Effective address for memory references. */
         yasm_expr *val;     /**< Value of immediate or jump target. */
     } data;
+
+    yasm_expr *seg;         /**< Segment expression */
 
     uintptr_t targetmod;        /**< Arch target modifier, 0 if none. */
 
@@ -121,6 +123,9 @@ struct yasm_insn_operand {
      * "push strict dword 4", which sets this flag.
      */
     unsigned int strict:1;
+
+    /** Operand type. */
+    unsigned int type:4;
 };
 
 /** Base structure for "instruction" bytecodes.  These are the mnenomic

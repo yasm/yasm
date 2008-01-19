@@ -59,6 +59,7 @@ yasm_operand_create_reg(uintptr_t reg)
 
     retval->type = YASM_INSN__OPERAND_REG;
     retval->data.reg = reg;
+    retval->seg = 0;
     retval->targetmod = 0;
     retval->size = 0;
     retval->deref = 0;
@@ -74,6 +75,7 @@ yasm_operand_create_segreg(uintptr_t segreg)
 
     retval->type = YASM_INSN__OPERAND_SEGREG;
     retval->data.reg = segreg;
+    retval->seg = 0;
     retval->targetmod = 0;
     retval->size = 0;
     retval->deref = 0;
@@ -89,6 +91,7 @@ yasm_operand_create_mem(/*@only@*/ yasm_effaddr *ea)
 
     retval->type = YASM_INSN__OPERAND_MEMORY;
     retval->data.ea = ea;
+    retval->seg = 0;
     retval->targetmod = 0;
     retval->size = 0;
     retval->deref = 0;
@@ -111,6 +114,7 @@ yasm_operand_create_imm(/*@only@*/ yasm_expr *val)
         retval = yasm_xmalloc(sizeof(yasm_insn_operand));
         retval->type = YASM_INSN__OPERAND_IMM;
         retval->data.val = val;
+        retval->seg = 0;
         retval->targetmod = 0;
         retval->size = 0;
         retval->deref = 0;
