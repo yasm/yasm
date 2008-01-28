@@ -1357,12 +1357,12 @@ add_group("xchg",
     opersize=16,
     opcode=[0x90],
     operands=[Operand(type="Areg", size=16, dest=None),
-              Operand(type="Reg", size=16, dest="Op0Add")])
+              Operand(type="RegNotR8", size=16, dest="Op0Add")])
 add_group("xchg",
     suffix="w",
     opersize=16,
     opcode=[0x90],
-    operands=[Operand(type="Reg", size=16, dest="Op0Add"),
+    operands=[Operand(type="RegNotR8", size=16, dest="Op0Add"),
               Operand(type="Areg", size=16, dest=None)])
 add_group("xchg",
     suffix="w",
@@ -1396,12 +1396,12 @@ add_group("xchg",
     opersize=32,
     opcode=[0x90],
     operands=[Operand(type="Areg", size=32, dest=None),
-              Operand(type="Reg", size=32, dest="Op0Add")])
+              Operand(type="RegNotR8", size=32, dest="Op0Add")])
 add_group("xchg",
     suffix="l",
     opersize=32,
     opcode=[0x90],
-    operands=[Operand(type="Reg", size=32, dest="Op0Add"),
+    operands=[Operand(type="RegNotR8", size=32, dest="Op0Add"),
               Operand(type="Areg", size=32, dest=None)])
 add_group("xchg",
     suffix="l",
@@ -1428,12 +1428,12 @@ add_group("xchg",
     opersize=64,
     opcode=[0x90],
     operands=[Operand(type="Areg", size=64, dest=None),
-              Operand(type="Reg", size=64, dest="Op0Add")])
+              Operand(type="RegNotR8", size=64, dest="Op0Add")])
 add_group("xchg",
     suffix="q",
     opersize=64,
     opcode=[0x90],
-    operands=[Operand(type="Reg", size=64, dest="Op0Add"),
+    operands=[Operand(type="RegNotR8", size=64, dest="Op0Add"),
               Operand(type="Areg", size=64, dest=None)])
 add_group("xchg",
     suffix="q",

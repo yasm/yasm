@@ -105,7 +105,9 @@ enum x86_operand_type {
     /* EAX memory operand only (EA) [special case for SVM skinit opcode] */
     OPT_MemEAX = 26,
     /* SIMDReg with value equal to operand 0 SIMDReg */
-    OPT_SIMDRegMatch0 = 27
+    OPT_SIMDRegMatch0 = 27,
+    /* Reg with value != 8 [special case for xchg r8, rax] */
+    OPT_RegNotR8 = 28
 };
 
 enum x86_operand_size {
@@ -806,6 +808,25 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
                         mismatch = 1;
                     break;
                 }
+                case OPT_RegNotR8:
+                    if (op->type != YASM_INSN__OPERAND_REG ||
+                        ((op->data.reg&0xFUL) == 8))
+                        mismatch = 1;
+                    else {
+                        switch ((x86_expritem_reg_size)(op->data.reg&~0xFUL)) {
+                            case X86_REG8:
+                            case X86_REG8X:
+                            case X86_REG16:
+                            case X86_REG32:
+                            case X86_REG64:
+                            case X86_FPUREG:
+                                break;
+                            default:
+                                mismatch = 1;
+                                break;
+                        }
+                    }
+                    break;
                 default:
                     yasm_internal_error(N_("invalid operand type"));
             }
