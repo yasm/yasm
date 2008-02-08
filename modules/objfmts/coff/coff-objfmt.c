@@ -218,6 +218,28 @@ static const yasm_assoc_data_callback coff_symrec_data_cb = {
     coff_symrec_data_print
 };
 
+/* Bytecode callback function prototypes */
+static void win32_sxdata_bc_destroy(void *contents);
+static void win32_sxdata_bc_print(const void *contents, FILE *f,
+                                  int indent_level);
+static int win32_sxdata_bc_calc_len
+    (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
+static int win32_sxdata_bc_tobytes
+    (yasm_bytecode *bc, unsigned char **bufp, void *d,
+     yasm_output_value_func output_value,
+     /*@null@*/ yasm_output_reloc_func output_reloc);
+
+/* Bytecode callback structures */
+static const yasm_bytecode_callback win32_sxdata_bc_callback = {
+    win32_sxdata_bc_destroy,
+    win32_sxdata_bc_print,
+    yasm_bc_finalize_common,
+    win32_sxdata_bc_calc_len,
+    yasm_bc_expand_common,
+    win32_sxdata_bc_tobytes,
+    0
+};
+
 yasm_objfmt_module yasm_coff_LTX_objfmt;
 yasm_objfmt_module yasm_win32_LTX_objfmt;
 yasm_objfmt_module yasm_win64_LTX_objfmt;
@@ -1478,6 +1500,8 @@ coff_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     } else if (objfmt_coff->win64 && strcmp(sectname, ".xdata") == 0) {
         data.flags = COFF_STYP_DATA | COFF_STYP_READ;
         align = 8;
+    } else if (objfmt_coff->win32 && strcmp(sectname, ".sxdata") == 0) {
+        data.flags = COFF_STYP_INFO;
     } else if (strcmp(sectname, ".comment") == 0) {
         data.flags = COFF_STYP_INFO | COFF_STYP_DISCARD | COFF_STYP_READ;
     } else if (yasm__strncasecmp(sectname, ".debug", 6)==0) {
@@ -1647,6 +1671,88 @@ dir_export(yasm_object *object, yasm_valparamhead *valparams,
                                                 strlen(symname)));
     yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(" "), 1));
     yasm_section_bcs_append(sect, yasm_bc_create_data(&dvs, 1, 0, NULL, line));
+}
+
+static void
+dir_safeseh(yasm_object *object, yasm_valparamhead *valparams,
+            yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_valparam *vp;
+    /*@null@*/ const char *symname;
+    yasm_symrec *sym;
+    int isnew;
+    yasm_section *sect;
+
+    /* Reference symbol (to generate error if not declared).
+     * Also, symbol must be externally visible, so force global.
+     */
+    vp = yasm_vps_first(valparams);
+    symname = yasm_vp_id(vp);
+    if (symname) {
+        sym = yasm_symtab_use(object->symtab, symname, line);
+        yasm_symrec_declare(sym, YASM_SYM_GLOBAL, line);
+    } else {
+        yasm_error_set(YASM_ERROR_SYNTAX,
+                       N_("argument to SAFESEH must be symbol name"));
+        return;
+    }
+
+    /*
+     * Add symbol number to end of .sxdata section.
+     */
+
+    sect = yasm_object_get_general(object, ".sxdata", 0, 0, 0, &isnew, line);
+
+    /* Initialize sxdata section if needed */
+    if (isnew) {
+        coff_section_data *csd;
+        csd = coff_objfmt_init_new_section(object, sect, ".sxdata", line);
+        csd->flags = COFF_STYP_INFO;
+    }
+
+    /* Add as sxdata bytecode */
+    yasm_section_bcs_append(sect,
+                            yasm_bc_create_common(&win32_sxdata_bc_callback,
+                                                  sym, line));
+}
+
+static void
+win32_sxdata_bc_destroy(void *contents)
+{
+    /* Contents is just the symbol pointer, so no need to delete */
+}
+
+static void
+win32_sxdata_bc_print(const void *contents, FILE *f, int indent_level)
+{
+    /* TODO */
+}
+
+static int
+win32_sxdata_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
+                         void *add_span_data)
+{
+    bc->len += 4;
+    return 0;
+}
+
+static int
+win32_sxdata_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+                        yasm_output_value_func output_value,
+                        yasm_output_reloc_func output_reloc)
+{
+    yasm_symrec *sym = (yasm_symrec *)bc->contents;
+    unsigned char *buf = *bufp;
+    coff_symrec_data *csymd;
+
+    csymd = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
+    if (!csymd)
+        yasm_internal_error(N_("coff: no symbol data for SAFESEH symbol"));
+
+    YASM_WRITE_32_L(buf, csymd->index);
+
+    *bufp = buf;
+    return 0;
 }
 
 static void
@@ -2099,6 +2205,7 @@ static const yasm_directive win32_objfmt_directives[] = {
     { ".export",        "gas",  dir_export,     YASM_DIR_ID_REQUIRED },
     { "ident",          "nasm", dir_ident,      YASM_DIR_ANY },
     { "export",         "nasm", dir_export,     YASM_DIR_ID_REQUIRED },
+    { "safeseh",        "nasm", dir_safeseh,    YASM_DIR_ID_REQUIRED },
     { NULL, NULL, NULL, 0 }
 };
 

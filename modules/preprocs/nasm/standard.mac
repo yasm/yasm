@@ -131,6 +131,10 @@ __SECT__
 %imacro export 1+.nolist
 [export %1]
 %endmacro
+
+%imacro safeseh 1+.nolist
+[safeseh %1]
+%endmacro
 %endif
 
 %ifidn __YASM_OBJFMT__,win64
