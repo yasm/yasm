@@ -57,6 +57,7 @@ yasm_value_initialize(/*@out@*/ yasm_value *value,
     value->ip_rel = 0;
     value->jump_target = 0;
     value->section_rel = 0;
+    value->no_warn = 0;
     value->sign = 0;
     value->size = size;
 }
@@ -74,6 +75,7 @@ yasm_value_init_sym(/*@out@*/ yasm_value *value, /*@null@*/ yasm_symrec *sym,
     value->ip_rel = 0;
     value->jump_target = 0;
     value->section_rel = 0;
+    value->no_warn = 0;
     value->sign = 0;
     value->size = size;
 }
@@ -90,6 +92,7 @@ yasm_value_init_copy(yasm_value *value, const yasm_value *orig)
     value->ip_rel = orig->ip_rel;
     value->jump_target = orig->jump_target;
     value->section_rel = orig->section_rel;
+    value->no_warn = orig->no_warn;
     value->sign = orig->sign;
     value->size = orig->size;
 }
@@ -485,6 +488,47 @@ yasm_value_finalize_expr(yasm_value *value, yasm_expr *e,
     if (yasm_error_occurred())
         return 1;
 
+    /* Strip top-level AND masking to an all-1s mask the same size
+     * of the value size.  This allows forced avoidance of overflow warnings.
+     */
+    if (value->abs->op == YASM_EXPR_AND) {
+        int term;
+
+        /* Calculate 1<<size - 1 value */
+        yasm_intnum *mask = yasm_intnum_create_uint(1);
+        yasm_intnum *mask_tmp = yasm_intnum_create_uint(value->size);
+        yasm_intnum_calc(mask, YASM_EXPR_SHL, mask_tmp);
+        yasm_intnum_set_uint(mask_tmp, 1);
+        yasm_intnum_calc(mask, YASM_EXPR_SUB, mask_tmp);
+        yasm_intnum_destroy(mask_tmp);
+
+        /* Walk terms and delete matching masks */
+        for (term=value->abs->numterms-1; term>=0; term--) {
+            if (value->abs->terms[term].type == YASM_EXPR_INT &&
+                yasm_intnum_compare(value->abs->terms[term].data.intn,
+                                    mask) == 0) {
+                /* Delete the intnum */
+                yasm_intnum_destroy(value->abs->terms[term].data.intn);
+
+                /* Slide everything to its right over by 1 */
+                if (term != value->abs->numterms-1) /* if it wasn't last.. */
+                    memmove(&value->abs->terms[term],
+                            &value->abs->terms[term+1],
+                            (value->abs->numterms-1-term)*
+                                sizeof(yasm_expr__item));
+
+                /* Update numterms */
+                value->abs->numterms--;
+
+                /* Indicate warnings have been disabled */
+                value->no_warn = 1;
+            }
+        }
+        if (value->abs->numterms == 1)
+            value->abs->op = YASM_EXPR_IDENT;
+        yasm_intnum_destroy(mask);
+    }
+
     /* Handle trivial (IDENT) cases immediately */
     if (value->abs->op == YASM_EXPR_IDENT) {
         switch (value->abs->terms[0].type) {
@@ -611,6 +655,9 @@ yasm_value_output_basic(yasm_value *value, /*@out@*/ unsigned char *buf,
     int sym_local;
     int retval = 1;
     unsigned int valsize = value->size;
+
+    if (value->no_warn)
+        warn = 0;
 
     if (value->abs) {
         /* Handle floating point expressions */
@@ -745,5 +792,7 @@ yasm_value_print(const yasm_value *value, FILE *f, int indent_level)
             fprintf(f, "%*s(Jump target)\n", indent_level, "");
         if (value->section_rel)
             fprintf(f, "%*s(Section-relative)\n", indent_level, "");
+        if (value->no_warn)
+            fprintf(f, "%*s(Overflow warnings disabled)\n", indent_level, "");
     }
 }

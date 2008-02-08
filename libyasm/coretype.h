@@ -156,6 +156,9 @@ typedef struct yasm_value {
      */
     unsigned int section_rel : 1;
 
+    /** Indicates overflow warnings have been disabled for this value. */
+    unsigned int no_warn : 1;
+
     /** Sign of the value.  Nonzero if the final value should be treated as
      * signed, 0 if it should be treated as signed.
      */
