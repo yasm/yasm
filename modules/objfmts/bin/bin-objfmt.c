@@ -523,7 +523,7 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
 
 typedef struct map_output_info {
     /* address width */
-    size_t bytes;
+    int bytes;
 
     /* intnum output static data areas */
     unsigned char *buf;
