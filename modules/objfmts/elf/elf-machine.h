@@ -77,6 +77,8 @@ enum {
 typedef struct {
     const char *name;       /* should be something like ..name */
     const int sym_rel;      /* symbol or section-relative? */
+    const unsigned int reloc;   /* relocation type */
+    const unsigned int size;    /* legal data size */
 } elf_machine_ssym;
 
 struct elf_machine_handler {

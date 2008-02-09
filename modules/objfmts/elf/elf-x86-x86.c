@@ -33,24 +33,32 @@
 #include "elf.h"
 #include "elf-machine.h"
 
-enum ssym_index {
-    SSYM_GOTPC = 0,
-    SSYM_GOTOFF,
-    SSYM_GOT,
-    SSYM_PLT
+static const elf_machine_ssym elf_x86_x86_ssyms[] = {
+    {"plt",         ELF_SSYM_SYM_RELATIVE,  R_386_PLT32,        32},
+    {"gotoff",      0,                      R_386_GOTOFF,       32},
+    /* special one for NASM */
+    {"gotpc",       ELF_SSYM_CURPOS_ADJUST, R_386_GOTPC,        32},
+    {"tlsgd",       ELF_SSYM_SYM_RELATIVE,  R_386_TLS_GD,       32},
+    {"tlsldm",      ELF_SSYM_SYM_RELATIVE,  R_386_TLS_LDM,      32},
+    {"gottpoff",    ELF_SSYM_SYM_RELATIVE,  R_386_TLS_IE_32,    32},
+    {"tpoff",       ELF_SSYM_SYM_RELATIVE,  R_386_TLS_LE_32,    32},
+    {"ntpoff",      ELF_SSYM_SYM_RELATIVE,  R_386_TLS_LE,       32},
+    {"dtpoff",      ELF_SSYM_SYM_RELATIVE,  R_386_TLS_LDO_32,   32},
+    {"gotntpoff",   ELF_SSYM_SYM_RELATIVE,  R_386_TLS_GOTIE,    32},
+    {"indntpoff",   ELF_SSYM_SYM_RELATIVE,  R_386_TLS_IE,       32},
+    {"got",         ELF_SSYM_SYM_RELATIVE,  R_386_GOT32,        32}
 };
 
 static int
 elf_x86_x86_accepts_reloc(size_t val, yasm_symrec *wrt, yasm_symrec **ssyms)
 {
     if (wrt) {
-        if ((wrt == ssyms[SSYM_GOTPC] && val == 32)
-            || (wrt == ssyms[SSYM_GOTOFF] && val == 32)
-            || (wrt == ssyms[SSYM_GOT] && val == 32)
-            || (wrt == ssyms[SSYM_PLT] && val == 32))
-            return 1;
-        else
-            return 0;
+        size_t i;
+        for (i=0; i<NELEMS(elf_x86_x86_ssyms); i++) {
+            if (wrt == ssyms[i] && val == elf_x86_x86_ssyms[i].size)
+                return 1;
+        }
+        return 0;
     }
     return (val&(val-1)) ? 0 : ((val & (8|16|32)) != 0);
 }
@@ -127,16 +135,13 @@ elf_x86_x86_map_reloc_info_to_type(elf_reloc_entry *reloc,
                                    yasm_symrec **ssyms)
 {
     if (reloc->wrt) {
-        if (reloc->wrt == ssyms[SSYM_GOTPC] && reloc->valsize == 32)
-            return (unsigned char) R_386_GOTPC;
-        else if (reloc->wrt == ssyms[SSYM_GOTOFF] && reloc->valsize == 32)
-            return (unsigned char) R_386_GOTOFF;
-        else if (reloc->wrt == ssyms[SSYM_GOT] && reloc->valsize == 32)
-            return (unsigned char) R_386_GOT32;
-        else if (reloc->wrt == ssyms[SSYM_PLT] && reloc->valsize == 32)
-            return (unsigned char) R_386_PLT32;
-        else
-            yasm_internal_error(N_("Unsupported WRT"));
+        size_t i;
+        for (i=0; i<NELEMS(elf_x86_x86_ssyms); i++) {
+            if (reloc->wrt == ssyms[i] &&
+                reloc->valsize == elf_x86_x86_ssyms[i].size)
+                return (unsigned char) elf_x86_x86_ssyms[i].reloc;
+        }
+        yasm_internal_error(N_("Unsupported WRT"));
     } else if (reloc->rtype_rel) {
         switch (reloc->valsize) {
             case 8: return (unsigned char) R_386_PC8;
@@ -192,13 +197,6 @@ elf_x86_x86_write_proghead(unsigned char **bufpp,
     YASM_WRITE_16_L(bufp, shstrtab_index);  /* e_shstrndx */
     *bufpp = bufp;
 }
-
-static elf_machine_ssym elf_x86_x86_ssyms[] = {
-    {"..gotpc", ELF_SSYM_CURPOS_ADJUST},
-    {"..gotoff", 0},
-    {"..got", ELF_SSYM_SYM_RELATIVE},
-    {"..plt", 0}
-};
 
 const elf_machine_handler
 elf_machine_handler_x86_x86 = {
