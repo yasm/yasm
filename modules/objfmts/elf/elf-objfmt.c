@@ -375,7 +375,7 @@ elf_objfmt_create_common(yasm_object *object, yasm_objfmt_module *module,
 
     /* FIXME: misuse of NULL bytecode */
     objfmt_elf->dotdotsym =
-        yasm_symtab_define_label(object->symtab, "..sym", NULL, 1, 0);
+        yasm_symtab_define_label(object->symtab, "..sym", NULL, 0, 0);
 
     return (yasm_objfmt *)objfmt_elf;
 }
@@ -1146,6 +1146,10 @@ static /*@observer@*/ /*@null@*/ yasm_symrec *
 elf_objfmt_get_special_sym(yasm_object *object, const char *name,
                            const char *parser)
 {
+    if (yasm__strcasecmp(name, "sym") == 0) {
+        yasm_objfmt_elf *objfmt_elf = (yasm_objfmt_elf *)object->objfmt;
+        return objfmt_elf->dotdotsym;
+    }
     return elf_get_special_sym(name, parser);
 }
 
