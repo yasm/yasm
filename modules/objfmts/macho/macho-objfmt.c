@@ -1485,6 +1485,13 @@ macho_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     return retval;
 }
 
+static /*@observer@*/ /*@null@*/ yasm_symrec *
+macho_objfmt_get_special_sym(yasm_object *object, const char *name,
+                             const char *parser)
+{
+    return NULL;
+}
+
 static void
 macho_section_data_destroy(void *data)
 {
@@ -1548,7 +1555,8 @@ yasm_objfmt_module yasm_macho_LTX_objfmt = {
     macho_objfmt_output,
     macho_objfmt_destroy,
     macho_objfmt_add_default_section,
-    macho_objfmt_section_switch
+    macho_objfmt_section_switch,
+    macho_objfmt_get_special_sym
 };
 
 yasm_objfmt_module yasm_macho32_LTX_objfmt = {
@@ -1563,7 +1571,8 @@ yasm_objfmt_module yasm_macho32_LTX_objfmt = {
     macho_objfmt_output,
     macho_objfmt_destroy,
     macho_objfmt_add_default_section,
-    macho_objfmt_section_switch
+    macho_objfmt_section_switch,
+    macho_objfmt_get_special_sym
 };
 
 yasm_objfmt_module yasm_macho64_LTX_objfmt = {
@@ -1578,5 +1587,6 @@ yasm_objfmt_module yasm_macho64_LTX_objfmt = {
     macho_objfmt_output,
     macho_objfmt_destroy,
     macho_objfmt_add_default_section,
-    macho_objfmt_section_switch
+    macho_objfmt_section_switch,
+    macho_objfmt_get_special_sym
 };

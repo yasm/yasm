@@ -1579,6 +1579,13 @@ coff_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     return retval;
 }
 
+static /*@observer@*/ /*@null@*/ yasm_symrec *
+coff_objfmt_get_special_sym(yasm_object *object, const char *name,
+                            const char *parser)
+{
+    return NULL;
+}
+
 static void
 coff_section_data_destroy(void *data)
 {
@@ -2189,7 +2196,8 @@ yasm_objfmt_module yasm_coff_LTX_objfmt = {
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_add_default_section,
-    coff_objfmt_section_switch
+    coff_objfmt_section_switch,
+    coff_objfmt_get_special_sym
 };
 
 /* Define valid debug formats to use with this object format */
@@ -2222,7 +2230,8 @@ yasm_objfmt_module yasm_win32_LTX_objfmt = {
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_add_default_section,
-    coff_objfmt_section_switch
+    coff_objfmt_section_switch,
+    coff_objfmt_get_special_sym
 };
 
 static const yasm_directive win64_objfmt_directives[] = {
@@ -2255,7 +2264,8 @@ yasm_objfmt_module yasm_win64_LTX_objfmt = {
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_add_default_section,
-    coff_objfmt_section_switch
+    coff_objfmt_section_switch,
+    coff_objfmt_get_special_sym
 };
 yasm_objfmt_module yasm_x64_LTX_objfmt = {
     "Win64",
@@ -2269,5 +2279,6 @@ yasm_objfmt_module yasm_x64_LTX_objfmt = {
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_add_default_section,
-    coff_objfmt_section_switch
+    coff_objfmt_section_switch,
+    coff_objfmt_get_special_sym
 };

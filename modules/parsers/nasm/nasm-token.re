@@ -286,8 +286,14 @@ scan:
         [-+|^*&/%~$():=,\[]     { RETURN(s->tok[0]); }
         "]"                     { RETURN(s->tok[0]); }
 
-        /* special non-local ..@label and labels like ..start */
-        ".." [a-zA-Z0-9_$#@~.?]+ {
+        /* special non-local ..@label */
+        "..@" [a-zA-Z0-9_$#@~.?]+ {
+            lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
+            RETURN(ID);
+        }
+
+        /* special non-local labels like ..start */
+        ".." [a-zA-Z0-9_$#~.?]+ {
             lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
             RETURN(SPECIAL_ID);
         }

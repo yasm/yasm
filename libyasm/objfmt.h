@@ -109,6 +109,13 @@ struct yasm_objfmt_module {
         (*section_switch)(yasm_object *object, yasm_valparamhead *valparams,
                           /*@null@*/ yasm_valparamhead *objext_valparams,
                           unsigned long line);
+
+    /** Module-level implementation of yasm_objfmt_get_special_sym().
+     * Call yasm_objfmt_get_special_sym() instead of calling this function.
+     */
+    /*@observer@*/ /*@null@*/ yasm_symrec *
+        (*get_special_sym)(yasm_object *object, const char *name,
+                           const char *parser);
 };
 
 /** Create object format.
@@ -156,6 +163,16 @@ yasm_section *yasm_objfmt_add_default_section(yasm_object *object);
     (yasm_object *object, yasm_valparamhead *valparams,
      /*@null@*/ yasm_valparamhead *objext_valparams, unsigned long line);
 
+/** Get a special symbol.  Special symbols are generally used to generate
+ * special relocation types via the WRT mechanism.
+ * \param object        object
+ * \param name          symbol name (not including any parser-specific prefix)
+ * \param parser        parser keyword
+ * \return NULL if unrecognized, otherwise special symbol.
+ */
+/*@observer@*/ /*@null@*/ yasm_symrec *yasm_objfmt_get_special_sym
+    (yasm_object *object, const char *name, const char *parser);
+
 #ifndef YASM_DOXYGEN
 
 /* Inline macro implementations for objfmt functions */
@@ -173,6 +190,9 @@ yasm_section *yasm_objfmt_add_default_section(yasm_object *object);
 #define yasm_objfmt_add_default_section(object) \
     ((yasm_objfmt_base *)((object)->objfmt))->module->add_default_section \
         (object)
+#define yasm_objfmt_get_special_sym(object, name, parser) \
+    ((yasm_objfmt_base *)((object)->objfmt))->module->get_special_sym \
+        (object, name, parser)
 
 #endif
 

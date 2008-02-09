@@ -91,11 +91,22 @@ elf_set_arch(yasm_arch *arch, yasm_symtab *symtab, int bits_pref)
             /* FIXME: misuse of NULL bytecode */
             elf_ssyms[i] = yasm_symtab_define_label(symtab,
                                                     elf_march->ssyms[i].name,
-                                                    NULL, 1, 0);
+                                                    NULL, 0, 0);
         }
     }
 
     return elf_march;
+}
+
+yasm_symrec *
+elf_get_special_sym(const char *name, const char *parser)
+{
+    int i;
+    for (i=0; (unsigned int)i<elf_march->num_ssyms; i++) {
+        if (yasm__strcasecmp(name, elf_march->ssyms[i].name) == 0)
+            return elf_ssyms[i];
+    }
+    return NULL;
 }
 
 /* reloc functions */

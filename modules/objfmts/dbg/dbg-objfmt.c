@@ -140,6 +140,16 @@ dbg_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     return retval;
 }
 
+static /*@observer@*/ /*@null@*/ yasm_symrec *
+dbg_objfmt_get_special_sym(yasm_object *object, const char *name,
+                           const char *parser)
+{
+    yasm_objfmt_dbg *objfmt_dbg = (yasm_objfmt_dbg *)object->objfmt;
+    fprintf(objfmt_dbg->dbgfile, "get_special_sym(object, \"%s\", \"%s\")\n",
+            name, parser);
+    return NULL;
+}
+
 /* Define valid debug formats to use with this object format */
 static const char *dbg_objfmt_dbgfmt_keywords[] = {
     "null",
@@ -159,5 +169,6 @@ yasm_objfmt_module yasm_dbg_LTX_objfmt = {
     dbg_objfmt_output,
     dbg_objfmt_destroy,
     dbg_objfmt_add_default_section,
-    dbg_objfmt_section_switch
+    dbg_objfmt_section_switch,
+    dbg_objfmt_get_special_sym
 };

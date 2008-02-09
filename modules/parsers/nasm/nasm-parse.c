@@ -1133,8 +1133,15 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
                 yasm_intnum_create_charconst_nasm(STRING_val.contents)));
             yasm_xfree(STRING_val.contents);
             break;
-        case ID:
         case SPECIAL_ID:
+            sym = yasm_objfmt_get_special_sym(p_object, ID_val+2, "nasm");
+            if (sym) {
+                e = p_expr_new_ident(yasm_expr_sym(sym));
+                yasm_xfree(ID_val);
+                break;
+            }
+            /*@fallthrough@*/
+        case ID:
         case LOCAL_ID:
             sym = yasm_symtab_use(p_symtab, ID_val, cur_line);
             e = p_expr_new_ident(yasm_expr_sym(sym));

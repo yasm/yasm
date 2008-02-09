@@ -1142,6 +1142,13 @@ elf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     return retval;
 }
 
+static /*@observer@*/ /*@null@*/ yasm_symrec *
+elf_objfmt_get_special_sym(yasm_object *object, const char *name,
+                           const char *parser)
+{
+    return elf_get_special_sym(name, parser);
+}
+
 static void
 dir_type(yasm_object *object, yasm_valparamhead *valparams,
          yasm_valparamhead *objext_valparams, unsigned long line)
@@ -1301,7 +1308,8 @@ yasm_objfmt_module yasm_elf_LTX_objfmt = {
     elf_objfmt_output,
     elf_objfmt_destroy,
     elf_objfmt_add_default_section,
-    elf_objfmt_section_switch
+    elf_objfmt_section_switch,
+    elf_objfmt_get_special_sym
 };
 
 yasm_objfmt_module yasm_elf32_LTX_objfmt = {
@@ -1316,7 +1324,8 @@ yasm_objfmt_module yasm_elf32_LTX_objfmt = {
     elf_objfmt_output,
     elf_objfmt_destroy,
     elf_objfmt_add_default_section,
-    elf_objfmt_section_switch
+    elf_objfmt_section_switch,
+    elf_objfmt_get_special_sym
 };
 
 yasm_objfmt_module yasm_elf64_LTX_objfmt = {
@@ -1331,5 +1340,6 @@ yasm_objfmt_module yasm_elf64_LTX_objfmt = {
     elf_objfmt_output,
     elf_objfmt_destroy,
     elf_objfmt_add_default_section,
-    elf_objfmt_section_switch
+    elf_objfmt_section_switch,
+    elf_objfmt_get_special_sym
 };

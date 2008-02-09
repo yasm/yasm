@@ -964,6 +964,13 @@ rdf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     return retval;
 }
 
+static /*@observer@*/ /*@null@*/ yasm_symrec *
+rdf_objfmt_get_special_sym(yasm_object *object, const char *name,
+                           const char *parser)
+{
+    return NULL;
+}
+
 static void
 rdf_section_data_destroy(void *data)
 {
@@ -1063,5 +1070,6 @@ yasm_objfmt_module yasm_rdf_LTX_objfmt = {
     rdf_objfmt_output,
     rdf_objfmt_destroy,
     rdf_objfmt_add_default_section,
-    rdf_objfmt_section_switch
+    rdf_objfmt_section_switch,
+    rdf_objfmt_get_special_sym
 };

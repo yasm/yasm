@@ -1347,21 +1347,6 @@ parse_expr2(yasm_parser_gas *parser_gas)
         {
             char *name = ID_val;
             get_next_token(); /* ID */
-            if (curtok == '@') {
-                /* TODO: this is needed for shared objects, e.g. sym@PLT */
-                get_next_token(); /* '@' */
-                if (!expect(ID)) {
-                    yasm_error_set(YASM_ERROR_SYNTAX,
-                                   N_("expected identifier after `@'"));
-                    yasm_xfree(name);
-                    return NULL;
-                }
-                yasm_xfree(ID_val);
-                get_next_token(); /* ID */
-                sym = yasm_symtab_use(p_symtab, name, cur_line);
-                yasm_xfree(name);
-                return p_expr_new_ident(yasm_expr_sym(sym));
-            }
 
             /* "." references the current assembly position */
             if (name[1] == '\0' && name[0] == '.')
@@ -1370,6 +1355,29 @@ parse_expr2(yasm_parser_gas *parser_gas)
             else
                 sym = yasm_symtab_use(p_symtab, name, cur_line);
             yasm_xfree(name);
+
+            if (curtok == '@') {
+                yasm_symrec *wrt;
+                /* TODO: this is needed for shared objects, e.g. sym@PLT */
+                get_next_token(); /* '@' */
+                if (!expect(ID)) {
+                    yasm_error_set(YASM_ERROR_SYNTAX,
+                                   N_("expected identifier after `@'"));
+                    yasm_xfree(name);
+                    return NULL;
+                }
+                wrt = yasm_objfmt_get_special_sym(p_object, ID_val, "gas");
+                yasm_xfree(ID_val);
+                get_next_token(); /* ID */
+                if (!wrt) {
+                    yasm_warn_set(YASM_WARN_GENERAL,
+                                  N_("unrecognized identifier after `@'"));
+                    return p_expr_new_ident(yasm_expr_sym(sym));
+                }
+                return p_expr_new(yasm_expr_sym(sym), YASM_EXPR_WRT,
+                                  yasm_expr_sym(wrt));
+            }
+
             return p_expr_new_ident(yasm_expr_sym(sym));
         }
         default:

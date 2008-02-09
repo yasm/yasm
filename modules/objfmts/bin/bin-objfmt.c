@@ -1568,6 +1568,13 @@ bin_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     return retval;
 }
 
+static /*@observer@*/ /*@null@*/ yasm_symrec *
+bin_objfmt_get_special_sym(yasm_object *object, const char *name,
+                           const char *parser)
+{
+    return NULL;
+}
+
 static void
 bin_objfmt_dir_org(yasm_object *object,
                    /*@null@*/ yasm_valparamhead *valparams,
@@ -1777,5 +1784,6 @@ yasm_objfmt_module yasm_bin_LTX_objfmt = {
     bin_objfmt_output,
     bin_objfmt_destroy,
     bin_objfmt_add_default_section,
-    bin_objfmt_section_switch
+    bin_objfmt_section_switch,
+    bin_objfmt_get_special_sym
 };
