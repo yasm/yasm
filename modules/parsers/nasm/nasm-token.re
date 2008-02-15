@@ -323,7 +323,7 @@ scan:
         }
 
         /* identifier that may be a register, instruction, etc. */
-        [a-zA-Z_?][a-zA-Z0-9_$#@~.?]* {
+        [a-zA-Z_?@][a-zA-Z0-9_$#@~.?]* {
             savech = s->tok[TOKLEN];
             s->tok[TOKLEN] = '\0';
             if (parser_nasm->state != INSTRUCTION) {
