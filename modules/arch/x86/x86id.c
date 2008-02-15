@@ -1346,10 +1346,9 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 
     if (imm) {
         insn->imm = yasm_xmalloc(sizeof(yasm_value));
-        if (yasm_value_finalize_expr(insn->imm, imm, prev_bc, 0))
+        if (yasm_value_finalize_expr(insn->imm, imm, prev_bc, im_len))
             yasm_error_set(YASM_ERROR_TOO_COMPLEX,
                            N_("immediate expression too complex"));
-        insn->imm->size = im_len;
         insn->imm->sign = im_sign;
     } else
         insn->imm = NULL;
