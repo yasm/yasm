@@ -36,11 +36,16 @@
 static elf_machine_ssym elf_x86_amd64_ssyms[] = {
     {"plt",         ELF_SSYM_SYM_RELATIVE,  R_X86_64_PLT32,     32},
     {"gotpcrel",    ELF_SSYM_SYM_RELATIVE,  R_X86_64_GOTPCREL,  32},
-    {"tlsgd",       ELF_SSYM_SYM_RELATIVE,  R_X86_64_TLSGD,     32},
-    {"tlsld",       ELF_SSYM_SYM_RELATIVE,  R_X86_64_TLSLD,     32},
-    {"gottpoff",    ELF_SSYM_SYM_RELATIVE,  R_X86_64_GOTTPOFF,  32},
-    {"tpoff",       ELF_SSYM_SYM_RELATIVE,  R_X86_64_TPOFF32,   32},
-    {"dtpoff",      ELF_SSYM_SYM_RELATIVE,  R_X86_64_DTPOFF32,  32},
+    {"tlsgd",       ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_X86_64_TLSGD,     32},
+    {"tlsld",       ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_X86_64_TLSLD,     32},
+    {"gottpoff",    ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_X86_64_GOTTPOFF,  32},
+    {"tpoff",       ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_X86_64_TPOFF32,   32},
+    {"dtpoff",      ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_X86_64_DTPOFF32,  32},
     {"got",         ELF_SSYM_SYM_RELATIVE,  R_X86_64_GOT32,     32}
 };
 
@@ -141,8 +146,18 @@ elf_x86_amd64_map_reloc_info_to_type(elf_reloc_entry *reloc,
         size_t i;
         for (i=0; i<NELEMS(elf_x86_amd64_ssyms); i++) {
             if (reloc->wrt == ssyms[i] &&
-                reloc->valsize == elf_x86_amd64_ssyms[i].size)
+                reloc->valsize == elf_x86_amd64_ssyms[i].size) {
+                /* Force TLS type; this is required by the linker. */
+                if (elf_x86_amd64_ssyms[i].sym_rel & ELF_SSYM_THREAD_LOCAL) {
+                    elf_symtab_entry *esym;
+
+                    esym = yasm_symrec_get_data(reloc->reloc.sym,
+                                                &elf_symrec_data);
+                    if (esym)
+                        esym->type = STT_TLS;
+                }
                 return (unsigned char) elf_x86_amd64_ssyms[i].reloc;
+            }
         }
         yasm_internal_error(N_("Unsupported WRT"));
     } else if (reloc->rtype_rel) {

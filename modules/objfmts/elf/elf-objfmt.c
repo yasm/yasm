@@ -1069,6 +1069,9 @@ elf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     } else if (strcmp(sectname, ".data") == 0) {
         data.type = SHT_PROGBITS;
         data.flags = SHF_ALLOC + SHF_WRITE;
+    } else if (strcmp(sectname, ".tdata") == 0) {
+        data.type = SHT_PROGBITS;
+        data.flags = SHF_ALLOC + SHF_WRITE;
     } else if (strcmp(sectname, ".rodata") == 0) {
         data.type = SHT_PROGBITS;
         data.flags = SHF_ALLOC;
@@ -1179,6 +1182,10 @@ dir_type(yasm_object *object, yasm_valparamhead *valparams,
             elf_sym_set_type(entry, STT_FUNC);
         else if (yasm__strcasecmp(type, "object") == 0)
             elf_sym_set_type(entry, STT_OBJECT);
+        else if (yasm__strcasecmp(type, "tls_object") == 0)
+            elf_sym_set_type(entry, STT_TLS);
+        else if (yasm__strcasecmp(type, "notype") == 0)
+            elf_sym_set_type(entry, STT_NOTYPE);
         else
             yasm_warn_set(YASM_WARN_GENERAL,
                           N_("unrecognized symbol type `%s'"), type);

@@ -38,14 +38,22 @@ static const elf_machine_ssym elf_x86_x86_ssyms[] = {
     {"gotoff",      0,                      R_386_GOTOFF,       32},
     /* special one for NASM */
     {"gotpc",       ELF_SSYM_CURPOS_ADJUST, R_386_GOTPC,        32},
-    {"tlsgd",       ELF_SSYM_SYM_RELATIVE,  R_386_TLS_GD,       32},
-    {"tlsldm",      ELF_SSYM_SYM_RELATIVE,  R_386_TLS_LDM,      32},
-    {"gottpoff",    ELF_SSYM_SYM_RELATIVE,  R_386_TLS_IE_32,    32},
-    {"tpoff",       ELF_SSYM_SYM_RELATIVE,  R_386_TLS_LE_32,    32},
-    {"ntpoff",      ELF_SSYM_SYM_RELATIVE,  R_386_TLS_LE,       32},
-    {"dtpoff",      ELF_SSYM_SYM_RELATIVE,  R_386_TLS_LDO_32,   32},
-    {"gotntpoff",   ELF_SSYM_SYM_RELATIVE,  R_386_TLS_GOTIE,    32},
-    {"indntpoff",   ELF_SSYM_SYM_RELATIVE,  R_386_TLS_IE,       32},
+    {"tlsgd",       ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_386_TLS_GD,       32},
+    {"tlsldm",      ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_386_TLS_LDM,      32},
+    {"gottpoff",    ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_386_TLS_IE_32,    32},
+    {"tpoff",       ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_386_TLS_LE_32,    32},
+    {"ntpoff",      ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_386_TLS_LE,       32},
+    {"dtpoff",      ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_386_TLS_LDO_32,   32},
+    {"gotntpoff",   ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_386_TLS_GOTIE,    32},
+    {"indntpoff",   ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_386_TLS_IE,       32},
     {"got",         ELF_SSYM_SYM_RELATIVE,  R_386_GOT32,        32}
 };
 
@@ -138,8 +146,18 @@ elf_x86_x86_map_reloc_info_to_type(elf_reloc_entry *reloc,
         size_t i;
         for (i=0; i<NELEMS(elf_x86_x86_ssyms); i++) {
             if (reloc->wrt == ssyms[i] &&
-                reloc->valsize == elf_x86_x86_ssyms[i].size)
+                reloc->valsize == elf_x86_x86_ssyms[i].size) {
+                /* Force TLS type; this is required by the linker. */
+                if (elf_x86_x86_ssyms[i].sym_rel & ELF_SSYM_THREAD_LOCAL) {
+                    elf_symtab_entry *esym;
+
+                    esym = yasm_symrec_get_data(reloc->reloc.sym,
+                                                &elf_symrec_data);
+                    if (esym)
+                        esym->type = STT_TLS;
+                }
                 return (unsigned char) elf_x86_x86_ssyms[i].reloc;
+            }
         }
         yasm_internal_error(N_("Unsupported WRT"));
     } else if (reloc->rtype_rel) {

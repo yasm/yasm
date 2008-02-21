@@ -495,6 +495,18 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab,
         if (value_intn == NULL)
             value_intn = yasm_intnum_create_uint(entry->value);
 
+        /* If symbol is in a TLS section, force its type to TLS. */
+        if (entry->sym) {
+            yasm_bytecode *precbc;
+            yasm_section *sect;
+            elf_secthead *shead;
+            if (yasm_symrec_get_label(entry->sym, &precbc) &&
+                (sect = yasm_bc_get_section(precbc)) &&
+                (shead = yasm_section_get_data(sect, &elf_section_data)) &&
+                shead->flags & SHF_TLS) {
+                entry->type = STT_TLS;
+            }
+        }
 
         if (!elf_march->write_symtab_entry || !elf_march->symtab_entry_size)
             yasm_internal_error(N_("Unsupported machine for ELF output"));

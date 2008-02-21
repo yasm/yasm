@@ -191,6 +191,9 @@ typedef enum {
     STT_FUNC = 2,               /* a function or executable code */
     STT_SECTION = 3,            /* a section: often for relocation, STB_LOCAL */
     STT_FILE = 4,               /* often source filename: STB_LOCAL, SHN_ABS */
+    STT_COMMON = 5,             /* Uninitialized common block. */
+    STT_TLS = 6,                /* TLS object. */
+    STT_NUM = 7,
 
     STT_LOOS = 10,              /* Environment specific use */
     STT_HIOS = 12,

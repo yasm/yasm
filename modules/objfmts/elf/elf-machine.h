@@ -71,7 +71,8 @@ typedef void (*func_write_proghead)(unsigned char **bufpp,
 
 enum {
     ELF_SSYM_SYM_RELATIVE = 1 << 0,
-    ELF_SSYM_CURPOS_ADJUST = 1 << 1
+    ELF_SSYM_CURPOS_ADJUST = 1 << 1,
+    ELF_SSYM_THREAD_LOCAL = 1 << 2
 };
 
 typedef struct {
