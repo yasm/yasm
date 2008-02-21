@@ -1031,6 +1031,8 @@ elf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
           offsetof(struct elf_section_switch_data, flags), SHF_EXECINSTR },
         { "write", 0, yasm_dir_helper_flag_or,
           offsetof(struct elf_section_switch_data, flags), SHF_WRITE },
+        { "tls", 0, yasm_dir_helper_flag_or,
+          offsetof(struct elf_section_switch_data, flags), SHF_TLS },
         { "progbits", 0, yasm_dir_helper_flag_set,
           offsetof(struct elf_section_switch_data, type), SHT_PROGBITS },
         { "noalloc", 0, yasm_dir_helper_flag_and,
@@ -1039,6 +1041,8 @@ elf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
           offsetof(struct elf_section_switch_data, flags), SHF_EXECINSTR },
         { "nowrite",  0, yasm_dir_helper_flag_and,
           offsetof(struct elf_section_switch_data, flags), SHF_WRITE },
+        { "notls",  0, yasm_dir_helper_flag_and,
+          offsetof(struct elf_section_switch_data, flags), SHF_TLS },
         { "noprogbits", 0, yasm_dir_helper_flag_set,
           offsetof(struct elf_section_switch_data, type), SHT_NOBITS },
         { "nobits", 0, yasm_dir_helper_flag_set,
@@ -1071,7 +1075,7 @@ elf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
         data.flags = SHF_ALLOC + SHF_WRITE;
     } else if (strcmp(sectname, ".tdata") == 0) {
         data.type = SHT_PROGBITS;
-        data.flags = SHF_ALLOC + SHF_WRITE;
+        data.flags = SHF_ALLOC + SHF_WRITE + SHF_TLS;
     } else if (strcmp(sectname, ".rodata") == 0) {
         data.type = SHT_PROGBITS;
         data.flags = SHF_ALLOC;
