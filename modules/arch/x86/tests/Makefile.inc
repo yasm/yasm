@@ -204,6 +204,8 @@ EXTRA_DIST += modules/arch/x86/tests/xchg64.asm
 EXTRA_DIST += modules/arch/x86/tests/xchg64.hex
 EXTRA_DIST += modules/arch/x86/tests/xmm64.asm
 EXTRA_DIST += modules/arch/x86/tests/xmm64.hex
+EXTRA_DIST += modules/arch/x86/tests/xsave.asm
+EXTRA_DIST += modules/arch/x86/tests/xsave.hex
 
 EXTRA_DIST += modules/arch/x86/tests/gas32/Makefile.inc
 EXTRA_DIST += modules/arch/x86/tests/gas64/Makefile.inc

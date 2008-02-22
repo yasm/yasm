@@ -5324,6 +5324,18 @@ add_insn("pshaq", "sse5psh", modifiers=[0x07])
 # roundps, roundpd, roundss, roundsd, ptest are in SSE4.1
 
 #####################################################################
+# Intel XSAVE instructions
+#####################################################################
+add_insn("xgetbv", "threebyte", modifiers=[0x0F, 0x01, 0xD0],
+         cpu=["XSAVE", "386"])
+add_insn("xsetbv", "threebyte", modifiers=[0x0F, 0x01, 0xD1],
+         cpu=["XSAVE", "386", "Priv"])
+add_insn("xsave", "twobytemem", modifiers=[4, 0x0F, 0xAE],
+         cpu=["XSAVE", "386"])
+add_insn("xrstor", "twobytemem", modifiers=[5, 0x0F, 0xAE],
+         cpu=["XSAVE", "386"])
+
+#####################################################################
 # AMD 3DNow! instructions
 #####################################################################
 

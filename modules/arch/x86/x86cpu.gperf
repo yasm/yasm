@@ -58,8 +58,10 @@ x86_cpu_intel(wordptr cpu, unsigned int data)
         BitVector_Bit_On(cpu, CPU_Prot);
     if (data >= PROC_386)
         BitVector_Bit_On(cpu, CPU_SMM);
-    if (data >= PROC_nehalem)
+    if (data >= PROC_nehalem) {
         BitVector_Bit_On(cpu, CPU_SSE42);
+        BitVector_Bit_On(cpu, CPU_XSAVE);
+    }
     if (data >= PROC_penryn)
         BitVector_Bit_On(cpu, CPU_SSE41);
     if (data >= PROC_conroe)
@@ -326,6 +328,8 @@ sse4,		x86_cpu_set_sse4,	0
 nosse4,		x86_cpu_clear_sse4,	0
 sse5,		x86_cpu_set,	CPU_SSE5
 nosse5,		x86_cpu_clear,	CPU_SSE5
+xsave,		x86_cpu_set,	CPU_XSAVE
+noxsave,	x86_cpu_clear,	CPU_XSAVE
 %%
 
 void
