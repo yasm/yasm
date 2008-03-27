@@ -70,6 +70,34 @@ static int linechg_numcount;
   quot = ["'];
 */
 
+static int
+handle_dot_label(YYSTYPE *lvalp, char *tok, size_t toklen, size_t zeropos,
+                 yasm_parser_nasm *parser_nasm)
+{
+    /* check for special non-local labels like ..start */
+    if (tok[zeropos+1] == '.') {
+        lvalp->str_val = yasm__xstrndup(tok+zeropos, toklen-zeropos);
+        /* check for special non-local ..@label */
+        if (lvalp->str_val[zeropos+2] == '@')
+            return NONLOCAL_ID;
+        return SPECIAL_ID;
+    }
+
+    if (!parser_nasm->locallabel_base) {
+        lvalp->str_val = yasm__xstrndup(tok+zeropos, toklen-zeropos);
+        yasm_warn_set(YASM_WARN_GENERAL,
+                      N_("no non-local label before `%s'"),
+                      lvalp->str_val);
+    } else {
+        size_t len = toklen - zeropos + parser_nasm->locallabel_base_len;
+        lvalp->str_val = yasm_xmalloc(len + 1);
+        strcpy(lvalp->str_val, parser_nasm->locallabel_base);
+        strncat(lvalp->str_val, tok+zeropos, toklen-zeropos);
+        lvalp->str_val[len] = '\0';
+    }
+
+    return LOCAL_ID;
+}
 
 int
 nasm_parser_lex(YYSTYPE *lvalp, yasm_parser_nasm *parser_nasm)
@@ -77,7 +105,7 @@ nasm_parser_lex(YYSTYPE *lvalp, yasm_parser_nasm *parser_nasm)
     yasm_scanner *s = &parser_nasm->s;
     YYCTYPE *cursor = s->cur;
     YYCTYPE endch;
-    size_t count, len;
+    size_t count;
     YYCTYPE savech;
 
     /* Handle one token of lookahead */
@@ -286,38 +314,17 @@ scan:
         [-+|^*&/%~$():=,\[]     { RETURN(s->tok[0]); }
         "]"                     { RETURN(s->tok[0]); }
 
-        /* special non-local ..@label */
-        "..@" [a-zA-Z0-9_$#@~.?]+ {
-            lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
-            RETURN(ID);
-        }
-
-        /* special non-local labels like ..start */
-        ".." [a-zA-Z0-9_$#~.?]+ {
-            lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
-            RETURN(SPECIAL_ID);
-        }
-
         /* local label (.label) */
-        "." [a-zA-Z0-9_$#@~?][a-zA-Z0-9_$#@~.?]* {
-            if (!parser_nasm->locallabel_base) {
-                lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
-                yasm_warn_set(YASM_WARN_GENERAL,
-                              N_("no non-local label before `%s'"),
-                              lvalp->str_val);
-            } else {
-                len = TOKLEN + parser_nasm->locallabel_base_len;
-                lvalp->str_val = yasm_xmalloc(len + 1);
-                strcpy(lvalp->str_val, parser_nasm->locallabel_base);
-                strncat(lvalp->str_val, TOK, TOKLEN);
-                lvalp->str_val[len] = '\0';
-            }
-
-            RETURN(LOCAL_ID);
+        "." [a-zA-Z0-9_$#@~.?]+ {
+            RETURN(handle_dot_label(lvalp, TOK, TOKLEN, 0, parser_nasm));
         }
 
         /* forced identifier */
         "$" [a-zA-Z0-9_$#@~.?]+ {
+            if (TOK[1] == '.') {
+                /* handle like .label */
+                RETURN(handle_dot_label(lvalp, TOK, TOKLEN, 1, parser_nasm));
+            }
             lvalp->str_val = yasm__xstrndup(TOK+1, TOKLEN-1);
             RETURN(ID);
         }

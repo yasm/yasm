@@ -62,6 +62,7 @@ enum tokentype {
     ID,
     LOCAL_ID,
     SPECIAL_ID,
+    NONLOCAL_ID,
     LINE,
     NONE                /* special token for lookahead */
 };

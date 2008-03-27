@@ -98,6 +98,7 @@ destroy_curtok_(yasm_parser_nasm *parser_nasm)
         case ID:
         case LOCAL_ID:
         case SPECIAL_ID:
+        case NONLOCAL_ID:
             yasm_xfree(curval.str_val);
             break;
         case STRING:
@@ -169,6 +170,7 @@ describe_token(int token)
         case ID:                str = "identifier"; break;
         case LOCAL_ID:          str = ".identifier"; break;
         case SPECIAL_ID:        str = "..identifier"; break;
+        case NONLOCAL_ID:       str = "..@identifier"; break;
         case LINE:              str = "%line"; break;
         default:
             strch[1] = token;
@@ -349,6 +351,7 @@ parse_line(yasm_parser_nasm *parser_nasm)
             return parse_times(parser_nasm);
         case ID:
         case SPECIAL_ID:
+        case NONLOCAL_ID:
         case LOCAL_ID:
         {
             char *name = ID_val;
@@ -1143,6 +1146,7 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
             /*@fallthrough@*/
         case ID:
         case LOCAL_ID:
+        case NONLOCAL_ID:
             sym = yasm_symtab_use(p_symtab, ID_val, cur_line);
             e = p_expr_new_ident(yasm_expr_sym(sym));
             yasm_xfree(ID_val);
