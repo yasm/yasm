@@ -101,6 +101,27 @@ EXTRA_DIST += Mkfiles/vc8/re2c/re2c.vcproj
 EXTRA_DIST += Mkfiles/vc8/re2c/run.bat
 EXTRA_DIST += Mkfiles/vc8/genperf/genperf.vcproj
 EXTRA_DIST += Mkfiles/vc8/genperf/run.bat
+EXTRA_DIST += Mkfiles/vc9/crt_secure_no_deprecate.vsprops
+EXTRA_DIST += Mkfiles/vc9/yasm.sln
+EXTRA_DIST += Mkfiles/vc9/yasm.vcproj
+EXTRA_DIST += Mkfiles/vc9/config.h
+EXTRA_DIST += Mkfiles/vc9/libyasm-stdint.h
+EXTRA_DIST += Mkfiles/vc9/readme.vc9.txt
+EXTRA_DIST += Mkfiles/vc9/yasm.rules
+EXTRA_DIST += Mkfiles/vc9/genmacro/genmacro.vcproj
+EXTRA_DIST += Mkfiles/vc9/genmacro/run.bat
+EXTRA_DIST += Mkfiles/vc9/genmodule/genmodule.vcproj
+EXTRA_DIST += Mkfiles/vc9/genmodule/run.bat
+EXTRA_DIST += Mkfiles/vc9/genstring/genstring.vcproj
+EXTRA_DIST += Mkfiles/vc9/genstring/run.bat
+EXTRA_DIST += Mkfiles/vc9/genversion/genversion.vcproj
+EXTRA_DIST += Mkfiles/vc9/genversion/run.bat
+EXTRA_DIST += Mkfiles/vc9/libyasm/libyasm.vcproj
+EXTRA_DIST += Mkfiles/vc9/modules/modules.vcproj
+EXTRA_DIST += Mkfiles/vc9/re2c/re2c.vcproj
+EXTRA_DIST += Mkfiles/vc9/re2c/run.bat
+EXTRA_DIST += Mkfiles/vc9/genperf/genperf.vcproj
+EXTRA_DIST += Mkfiles/vc9/genperf/run.bat
 
 # Until this gets fixed in automake
 DISTCLEANFILES += libyasm/stamp-h libyasm/stamp-h[0-9]*
