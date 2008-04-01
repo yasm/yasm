@@ -108,6 +108,7 @@ EXTRA_DIST += Mkfiles/vc9/config.h
 EXTRA_DIST += Mkfiles/vc9/libyasm-stdint.h
 EXTRA_DIST += Mkfiles/vc9/readme.vc9.txt
 EXTRA_DIST += Mkfiles/vc9/yasm.rules
+EXTRA_DIST += Mkfiles/vc9/vc928.c
 EXTRA_DIST += Mkfiles/vc9/genmacro/genmacro.vcproj
 EXTRA_DIST += Mkfiles/vc9/genmacro/run.bat
 EXTRA_DIST += Mkfiles/vc9/genmodule/genmodule.vcproj

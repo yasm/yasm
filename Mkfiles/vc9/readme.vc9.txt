@@ -1,15 +1,17 @@
 
-Building YASM with Microsoft Visual Studio 2008
------------------------------------------------
+Building YASM with Microsoft Visual Studio 2008 (C/C++ v9)
+----------------------------------------------------------
 
 This note describes how to build YASM using Microsoft Visual 
-Studio 2008.
+Studio 2008 (C/C++ v9).  It also provides a way of using 
+these files to build YASM with Visual Studio 2005 (C/C++ v8).
 
 1. The Compiler
 ---------------
 
-If you want to build the 64-bit version of YASM you will need to install the Visual Studio 2008 64-bit tools, which may not be 
-installed by default.
+If you want to build the 64-bit version of YASM you will need 
+to install the Visual Studio 2008 64-bit tools, which may not 
+be installed by default.
 
 2. YASM Download
 ----------------
@@ -86,8 +88,35 @@ has to be used instead:
 This limitation may also cause problems with other instruction 
 that use absolute addresses.
 
+6. Building with Visual Studio 2005
+-----------------------------------
+
+The program vc928.c will convert VC9 build projects into those 
+needed for Visual Studio 2005 (VC8).  It will also convert files 
+that have been converted in this way back into their original 
+form.  It does this conversion by looking for *.vcproj files 
+in the current working directory and its sub-directories and 
+changing the following line in each of them:
+
+    Version="9.00"
+
+to:
+
+    Version="8.00"
+
+or vice versa.
+ 
+It is used by compiling it, placing it in a root build directory 
+and running it from there.  
+
+Because it acts recursively on all sub-directories of this directory 
+it is important not to run it at a directory level in which not all 
+projects are to be converted.
+
+7. Acknowledgements
+-------------------
+
 I am most grateful for the fantastic support that Peter Johnson,
 YASM's creator, has given me in tracking down this issue.
 
-  Brian Gladman, 30th January 2008
-
+  Brian Gladman, 28th March 2008
