@@ -66,6 +66,10 @@
 #define CPU_SSE4a   32      /* AMD Streaming SIMD extensions 4a required */
 #define CPU_SSE5    33      /* AMD Streaming SIMD extensions 5 required */
 #define CPU_XSAVE   34      /* Intel XSAVE instructions */
+#define CPU_AVX     35      /* Intel Advanced Vector Extensions */
+#define CPU_FMA     36      /* Intel Fused-Multiply-Add Extensions */
+#define CPU_AES     37      /* AES instruction */
+#define CPU_CLMUL   38      /* PCLMULQDQ instruction */
 
 typedef struct yasm_arch_x86 {
     yasm_arch_base arch;        /* base structure */
@@ -97,10 +101,11 @@ typedef enum {
     X86_FPUREG = 0x6<<4,
     X86_MMXREG = 0x7<<4,
     X86_XMMREG = 0x8<<4,
-    X86_CRREG = 0x9<<4,
-    X86_DRREG = 0xA<<4,
-    X86_TRREG = 0xB<<4,
-    X86_RIP = 0xC<<4        /* 64-bit mode only, always RIP (regnum ignored) */
+    X86_YMMREG = 0x9<<4,
+    X86_CRREG = 0xA<<4,
+    X86_DRREG = 0xB<<4,
+    X86_TRREG = 0xC<<4,
+    X86_RIP = 0xD<<4        /* 64-bit mode only, always RIP (regnum ignored) */
 } x86_expritem_reg_size;
 
 /* Low 8 bits are used for the prefix value, stored in same data area. */

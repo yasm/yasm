@@ -39,7 +39,7 @@
 
 
 /* "Native" "word" size for intnum calculations. */
-#define BITVECT_NATIVE_SIZE     128
+#define BITVECT_NATIVE_SIZE     256
 
 struct yasm_intnum {
     union val {

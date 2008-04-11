@@ -47,6 +47,7 @@ RCSID("$Id$");
 #define PROC_conroe	11
 #define PROC_penryn	12
 #define PROC_nehalem	13
+#define PROC_sandybridge 14
 
 static void
 x86_cpu_intel(wordptr cpu, unsigned int data)
@@ -58,6 +59,12 @@ x86_cpu_intel(wordptr cpu, unsigned int data)
         BitVector_Bit_On(cpu, CPU_Prot);
     if (data >= PROC_386)
         BitVector_Bit_On(cpu, CPU_SMM);
+    if (data >= PROC_sandybridge) {
+        BitVector_Bit_On(cpu, CPU_AVX);
+        BitVector_Bit_On(cpu, CPU_FMA);
+        BitVector_Bit_On(cpu, CPU_AES);
+        BitVector_Bit_On(cpu, CPU_CLMUL);
+    }
     if (data >= PROC_nehalem) {
         BitVector_Bit_On(cpu, CPU_SSE42);
         BitVector_Bit_On(cpu, CPU_XSAVE);
@@ -266,6 +273,7 @@ conroe,		x86_cpu_intel,	PROC_conroe
 core2,		x86_cpu_intel,	PROC_conroe
 penryn,		x86_cpu_intel,	PROC_penryn
 nehalem,	x86_cpu_intel,	PROC_nehalem
+sandybridge,	x86_cpu_intel,	PROC_sandybridge
 #
 # Features have "no" versions to disable them, and only set/reset the
 # specific feature being changed.  All other bits are left alone.
@@ -330,6 +338,16 @@ sse5,		x86_cpu_set,	CPU_SSE5
 nosse5,		x86_cpu_clear,	CPU_SSE5
 xsave,		x86_cpu_set,	CPU_XSAVE
 noxsave,	x86_cpu_clear,	CPU_XSAVE
+avx,		x86_cpu_set,	CPU_AVX
+noavx,		x86_cpu_clear,	CPU_AVX
+fma,		x86_cpu_set,	CPU_FMA
+nofma,		x86_cpu_clear,	CPU_FMA
+aes,		x86_cpu_set,	CPU_AES
+noaes,		x86_cpu_clear,	CPU_AES
+clmul,		x86_cpu_set,	CPU_CLMUL
+noclmul,	x86_cpu_clear,	CPU_CLMUL
+pclmulqdq,	x86_cpu_set,	CPU_CLMUL
+nopclmulqdq,	x86_cpu_clear,	CPU_CLMUL
 %%
 
 void

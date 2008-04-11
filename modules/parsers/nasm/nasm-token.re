@@ -234,6 +234,10 @@ scan:
             lvalp->int_info = yasm_arch_wordsize(p_object->arch)*8;
             RETURN(SIZE_OVERRIDE);
         }
+        'yword'        {
+            lvalp->int_info = 256;
+            RETURN(SIZE_OVERRIDE);
+        }
 
         /* pseudo-instructions */
         'db'            { lvalp->int_info = 8; RETURN(DECLARE_DATA); }
@@ -262,6 +266,10 @@ scan:
             lvalp->int_info = yasm_arch_wordsize(p_object->arch)*8;
             RETURN(DECLARE_DATA);
         }
+        'dy'           {
+            lvalp->int_info = 256;
+            RETURN(DECLARE_DATA);
+        }
 
         'resb'          { lvalp->int_info = 8; RETURN(RESERVE_SPACE); }
         'reshw'         {
@@ -287,6 +295,10 @@ scan:
         }
         'reso'         {
             lvalp->int_info = yasm_arch_wordsize(p_object->arch)*8;
+            RETURN(RESERVE_SPACE);
+        }
+        'resy'         {
+            lvalp->int_info = 256;
             RETURN(RESERVE_SPACE);
         }
 

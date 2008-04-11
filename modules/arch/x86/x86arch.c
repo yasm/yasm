@@ -399,6 +399,8 @@ yasm_x86__get_reg_size(uintptr_t reg)
             return 64;
         case X86_XMMREG:
             return 128;
+        case X86_YMMREG:
+            return 256;
         case X86_FPUREG:
             return 80;
         default:
@@ -420,6 +422,7 @@ x86_reggroup_get_reg(yasm_arch *arch, uintptr_t reggroup,
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     switch ((x86_expritem_reg_size)(reggroup & ~0xFUL)) {
         case X86_XMMREG:
+        case X86_YMMREG:
             if (arch_x86->mode_bits == 64) {
                 if (regindex > 15)
                     return 0;
@@ -479,6 +482,9 @@ x86_reg_print(yasm_arch *arch, uintptr_t reg, FILE *f)
             break;
         case X86_XMMREG:
             fprintf(f, "xmm%d", (int)(reg&0xF));
+            break;
+        case X86_YMMREG:
+            fprintf(f, "ymm%d", (int)(reg&0xF));
             break;
         case X86_CRREG:
             fprintf(f, "cr%d", (int)(reg&0xF));

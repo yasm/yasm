@@ -597,11 +597,32 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
         bc->len += immlen/8;
     }
 
+    /* VEX prefixes never have REX.  We can come into this function with the
+     * three byte form, so we need to see if we can optimize to the two byte
+     * form.  We can't do it earlier, as we don't know all of the REX byte
+     * until now.
+     */
+    if (insn->special_prefix == 0xC4) {
+        /* See if we can shorten the VEX prefix to its two byte form.
+         * In order to do this, REX.X, REX.B, and REX.W/VEX.W must all be 0,
+         * and the VEX mmmmm field must be 1.
+         */
+        if ((insn->opcode.opcode[0] & 0x1F) == 1 &&
+            (insn->opcode.opcode[1] & 0x80) == 0 &&
+            (insn->rex == 0xff || (insn->rex & 0x0B) == 0)) {
+            insn->opcode.opcode[0] = insn->opcode.opcode[1];
+            insn->opcode.opcode[1] = insn->opcode.opcode[2];
+            insn->opcode.opcode[2] = 0; /* sanity */
+            insn->opcode.len = 2;
+            insn->special_prefix = 0xC5;    /* mark as two-byte VEX */
+        }
+    } else if (insn->rex != 0xff && insn->rex != 0 &&
+               insn->special_prefix != 0xC5)
+        bc->len++;
+
     bc->len += insn->opcode.len;
     bc->len += x86_common_calc_len(&insn->common);
     bc->len += (insn->special_prefix != 0) ? 1:0;
-    if (insn->rex != 0xff && insn->rex != 0)
-        bc->len++;
     return 0;
 }
 
@@ -798,7 +819,25 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
                        x86_ea ? (unsigned int)(x86_ea->ea.segreg>>8) : 0);
     if (insn->special_prefix != 0)
         YASM_WRITE_8(*bufp, insn->special_prefix);
-    if (insn->rex != 0xff && insn->rex != 0) {
+    if (insn->special_prefix == 0xC4) {
+        /* 3-byte VEX; merge in 1s complement of REX.R, REX.X, REX.B */
+        insn->opcode.opcode[0] &= 0x1F;
+        if (insn->rex != 0xff)
+            insn->opcode.opcode[0] |= ((~insn->rex) & 0x07) << 5;
+        /* merge REX.W via ORing; there should never be a case in which REX.W
+         * is important when VEX.W is already set by the instruction.
+         */
+        if (insn->rex != 0xff && (insn->rex & 0x8) != 0)
+            insn->opcode.opcode[1] |= 0x80;
+    } else if (insn->special_prefix == 0xC5) {
+        /* 2-byte VEX; merge in 1s complement of REX.R */
+        insn->opcode.opcode[0] &= 0x7F;
+        if (insn->rex != 0xff && (insn->rex & 0x4) == 0)
+            insn->opcode.opcode[0] |= 0x80;
+        /* No other REX bits should be set */
+        if (insn->rex != 0xff && (insn->rex & 0xB) != 0)
+            yasm_internal_error(N_("x86: REX.WXB set, but 2-byte VEX"));
+    } else if (insn->rex != 0xff && insn->rex != 0) {
         if (insn->common.mode_bits != 64)
             yasm_internal_error(N_("x86: got a REX prefix in non-64-bit mode"));
         YASM_WRITE_8(*bufp, insn->rex);

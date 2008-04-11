@@ -49,6 +49,7 @@ static const char *cpu_find_reverse(unsigned int cpu0, unsigned int cpu1,
 #define MOD_AdSizeR 8   /* Parameter replaces addrsize (jmp only) */
 #define MOD_DOpS64R 9   /* Parameter replaces default 64-bit opersize */
 #define MOD_Op1AddSp 10 /* Parameter is added as "spare" to opcode byte 2 */
+#define MOD_SetVEX  11  /* Parameter replaces internal VEX prefix value */
 
 /* GAS suffix flags for instructions */
 enum x86_gas_suffix_flags {
@@ -73,7 +74,10 @@ enum x86_gas_suffix_flags {
 enum x86_misc_flags {
     /* These are tested against BITS==64. */
     ONLY_64 = 1<<0,         /* Only available in 64-bit mode */
-    NOT_64 = 1<<1           /* Not available (invalid) in 64-bit mode */
+    NOT_64 = 1<<1,          /* Not available (invalid) in 64-bit mode */
+    /* These are tested against whether the base instruction is an AVX one. */
+    ONLY_AVX = 1<<2,        /* Only available in AVX instruction */
+    NOT_AVX = 1<<3          /* Not available (invalid) in AVX instruction */
 };
 
 enum x86_operand_type {
@@ -118,18 +122,18 @@ enum x86_operand_type {
 enum x86_operand_size {
     /* any size acceptable/no size spec acceptable (dep. on strict) */
     OPS_Any = 0,
-    /* 8/16/32/64 bits (from user or reg size) */
+    /* 8/16/32/64/80/128/256 bits (from user or reg size) */
     OPS_8 = 1,
     OPS_16 = 2,
     OPS_32 = 3,
     OPS_64 = 4,
-    /* 80/128 bits (from user) */
     OPS_80 = 5,
     OPS_128 = 6,
+    OPS_256 = 7,
     /* current BITS setting; when this is used the size matched
      * gets stored into the opersize as well.
      */
-    OPS_BITS = 7
+    OPS_BITS = 8
 };
 
 enum x86_operand_targetmod {
@@ -160,7 +164,18 @@ enum x86_operand_action {
     OPA_JmpFar = 10,
     /* ea operand only sets address size (no actual ea field) */
     OPA_AdSizeEA = 11,
-    OPA_DREX = 12   /* operand data goes into DREX "dest" field */
+    OPA_DREX = 12,  /* operand data goes into DREX "dest" field */
+    OPA_VEX = 13,   /* operand data goes into VEX "vvvv" field */
+    /* operand data goes into BOTH VEX "vvvv" field and ea field */
+    OPA_EAVEX = 14,
+    /* operand data goes into BOTH VEX "vvvv" field and spare field */
+    OPA_SpareVEX = 15,
+    /* operand data goes into upper 4 bits of immediate byte (VEX is4 field) */
+    OPA_VEXImmSrc = 16,
+    /* operand data goes into bottom 4 bits of immediate byte
+     * (currently only VEX imz2 field)
+     */
+    OPA_VEXImm = 17
 };
 
 enum x86_operand_post_action {
@@ -184,7 +199,7 @@ typedef struct x86_info_operand {
     unsigned int type:5;
 
     /* size (user-specified, or from register size) */
-    unsigned int size:3;
+    unsigned int size:4;
 
     /* size implicit or explicit ("strictness" of size matching on
      * non-registers -- registers are always strictly matched):
@@ -208,7 +223,7 @@ typedef struct x86_info_operand {
      * an ea field).  Naturally, only one of each of these may be contained
      * in the operands of a single insn_info structure.
      */
-    unsigned int action:4;
+    unsigned int action:5;
 
     /* Postponed actions: actions which can't be completed at
      * parse-time due to possibly dependent expressions.  For these, some
@@ -254,6 +269,14 @@ typedef struct x86_insn_info {
      * mode, they're treated like normal prefixes (e.g. the REX prefix needs
      * to be *after* the F2/F3/66 "prefix").
      * (0=no special prefix)
+     * 0xC0 - 0xCF indicate a VEX prefix, with the four LSBs holding "WLpp":
+     *  W: VEX.W field (meaning depends on opcode)
+     *  L: 0=128-bit, 1=256-bit
+     *  pp: SIMD prefix designation:
+     *      00: None
+     *      01: 66
+     *      10: F3
+     *      11: F2
      */
     unsigned char special_prefix;
 
@@ -424,7 +447,8 @@ x86_finalize_jmp(yasm_bytecode *bc, yasm_bytecode *prev_bc,
     unsigned int mode_bits = id_insn->mode_bits;
     /*unsigned char suffix = id_insn->suffix;*/
     yasm_insn_operand *op;
-    static const unsigned char size_lookup[] = {0, 8, 16, 32, 64, 80, 128, 0};
+    static const unsigned char size_lookup[] =
+        {0, 8, 16, 32, 64, 80, 128, 0, 0};  /* 256 not needed */
     unsigned int i;
 
     /* We know the target is in operand 0, but sanity check for Imm. */
@@ -576,6 +600,12 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
         if (id_insn->insn.num_operands != info->num_operands)
             continue;
 
+        /* Match AVX */
+        if (!(id_insn->misc_flags & ONLY_AVX) && (misc_flags & ONLY_AVX))
+            continue;
+        if ((id_insn->misc_flags & ONLY_AVX) && (misc_flags & NOT_AVX))
+            continue;
+
         /* Match parser mode */
         if ((gas_flags & GAS_ONLY) && id_insn->parser != X86_PARSER_GAS)
             continue;
@@ -644,6 +674,7 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
                         switch ((x86_expritem_reg_size)(op->data.reg&~0xFUL)) {
                             case X86_MMXREG:
                             case X86_XMMREG:
+                            case X86_YMMREG:
                                 break;
                             default:
                                 mismatch = 1;
@@ -968,29 +999,30 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     const x86_insn_info *info = id_insn->group;
     unsigned int mode_bits = id_insn->mode_bits;
     unsigned char *mod_data = id_insn->mod_data;
-    yasm_insn_operand *op, *ops[4], *rev_ops[4];
+    yasm_insn_operand *op, *ops[5], *rev_ops[5];
     /*@null@*/ yasm_expr *imm;
     unsigned char im_len;
     unsigned char im_sign;
     unsigned char spare;
     unsigned char drex;
     unsigned char *pdrex;
+    unsigned char vexdata, vexreg;
     unsigned int i;
-    unsigned int size_lookup[] = {0, 8, 16, 32, 64, 80, 128, 0};
+    unsigned int size_lookup[] = {0, 8, 16, 32, 64, 80, 128, 256, 0};
     unsigned long do_postop = 0;
 
-    size_lookup[7] = mode_bits;
+    size_lookup[OPS_BITS] = mode_bits;
 
     yasm_insn_finalize(&id_insn->insn);
 
     /* Build local array of operands from list, since we know we have a max
-     * of 4 operands.
+     * of 5 operands.
      */
-    if (id_insn->insn.num_operands > 4) {
+    if (id_insn->insn.num_operands > 5) {
         yasm_error_set(YASM_ERROR_TYPE, N_("too many operands"));
         return;
     }
-    ops[0] = ops[1] = ops[2] = ops[3] = NULL;
+    ops[0] = ops[1] = ops[2] = ops[3] = ops[4] = NULL;
     for (i = 0, op = yasm_insn_ops_first(&id_insn->insn);
          op && i < id_insn->insn.num_operands;
          op = yasm_insn_op_next(op), i++)
@@ -1000,7 +1032,7 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
      * as most GAS instructions have reversed operands from Intel style.
      */
     if (id_insn->parser == X86_PARSER_GAS) {
-        rev_ops[0] = rev_ops[1] = rev_ops[2] = rev_ops[3] = NULL;
+        rev_ops[0] = rev_ops[1] = rev_ops[2] = rev_ops[3] = rev_ops[4] = NULL;
         for (i = id_insn->insn.num_operands-1,
              op = yasm_insn_ops_first(&id_insn->insn);
              op; op = yasm_insn_op_next(op), i--)
@@ -1067,11 +1099,21 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
     insn->special_prefix = info->special_prefix;
     spare = info->spare;
     drex = info->drex_oc0 & DREX_OC0_MASK;
+    vexdata = 0;
+    vexreg = 0;
     im_len = 0;
     im_sign = 0;
     insn->postop = X86_POSTOP_NONE;
     insn->rex = 0;
     pdrex = (info->drex_oc0 & NEED_DREX_MASK) ? &drex : NULL;
+
+    /* Move VEX data (stored in special prefix) to separate location to
+     * allow overriding of special prefix by modifiers.
+     */
+    if ((insn->special_prefix & 0xF0) == 0xC0) {
+        vexdata = insn->special_prefix;
+        insn->special_prefix = 0;
+    }
 
     /* Apply modifiers */
     for (i=0; i<NELEMS(info->modifiers); i++) {
@@ -1106,6 +1148,9 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                 break;
             case MOD_Op1AddSp:
                 insn->opcode.opcode[1] += mod_data[i]<<3;
+                break;
+            case MOD_SetVEX:
+                vexdata = mod_data[i];
                 break;
             default:
                 break;
@@ -1185,6 +1230,15 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                             break;
                     }
                     break;
+                case OPA_EAVEX:
+                    if (op->type != YASM_INSN__OPERAND_REG)
+                        yasm_internal_error(N_("invalid operand conversion"));
+                    insn->x86_ea =
+                        yasm_x86__ea_create_reg(insn->x86_ea,
+                            (unsigned long)op->data.reg, &insn->rex, pdrex,
+                            mode_bits);
+                    vexreg = op->data.reg & 0xF;
+                    break;
                 case OPA_Imm:
                     if (op->seg)
                         yasm_error_set(YASM_ERROR_VALUE,
@@ -1215,6 +1269,14 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                             return;
                     } else
                         yasm_internal_error(N_("invalid operand conversion"));
+                    break;
+                case OPA_SpareVEX:
+                    if (op->type != YASM_INSN__OPERAND_REG)
+                        yasm_internal_error(N_("invalid operand conversion"));
+                    if (yasm_x86__set_rex_from_reg(&insn->rex, pdrex,
+                            &spare, op->data.reg, mode_bits, X86_REX_R))
+                        return;
+                    vexreg = op->data.reg & 0xF;
                     break;
                 case OPA_Op0Add:
                     if (op->type == YASM_INSN__OPERAND_REG) {
@@ -1278,8 +1340,64 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                     break;
                 }
                 case OPA_DREX:
-                    drex &= 0x0F;
-                    drex |= (op->data.reg << 4) & 0xF0;
+                    if (op->type == YASM_INSN__OPERAND_REG) {
+                        drex &= 0x0F;
+                        drex |= (op->data.reg << 4) & 0xF0;
+                    } else
+                        yasm_internal_error(N_("invalid operand conversion"));
+                    break;
+                case OPA_VEX:
+                    if (op->type != YASM_INSN__OPERAND_REG)
+                        yasm_internal_error(N_("invalid operand conversion"));
+                    vexreg = op->data.reg & 0xF;
+                    break;
+                case OPA_VEXImmSrc:
+                    if (op->type != YASM_INSN__OPERAND_REG)
+                        yasm_internal_error(N_("invalid operand conversion"));
+
+                    if (!imm) {
+                        imm = yasm_expr_create_ident(
+                            yasm_expr_int(
+                                yasm_intnum_create_uint((op->data.reg << 4)
+                                                        & 0xF0)),
+                            bc->line);
+                    } else {
+                        imm = yasm_expr_create(
+                            YASM_EXPR_OR,
+                            yasm_expr_expr(yasm_expr_create(
+                                YASM_EXPR_AND,
+                                yasm_expr_expr(imm),
+                                yasm_expr_int(yasm_intnum_create_uint(0x0F)),
+                                bc->line)),
+                            yasm_expr_int(
+                                yasm_intnum_create_uint((op->data.reg << 4)
+                                                        & 0xF0)),
+                            bc->line);
+                    }
+                    im_len = 8;
+                    break;
+                case OPA_VEXImm:
+                    if (op->type != YASM_INSN__OPERAND_IMM)
+                        yasm_internal_error(N_("invalid operand conversion"));
+
+                    if (!imm)
+                        imm = op->data.val;
+                    else {
+                        imm = yasm_expr_create(
+                            YASM_EXPR_OR,
+                            yasm_expr_expr(yasm_expr_create(
+                                YASM_EXPR_AND,
+                                yasm_expr_expr(op->data.val),
+                                yasm_expr_int(yasm_intnum_create_uint(0x0F)),
+                                bc->line)),
+                            yasm_expr_expr(yasm_expr_create(
+                                YASM_EXPR_AND,
+                                yasm_expr_expr(imm),
+                                yasm_expr_int(yasm_intnum_create_uint(0xF0)),
+                                bc->line)),
+                            bc->line);
+                    }
+                    im_len = 8;
                     break;
                 default:
                     yasm_internal_error(N_("unknown operand action"));
@@ -1405,6 +1523,66 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
             break;
         default:
             break;
+    }
+
+    /* Convert to VEX prefixes if requested.
+     * To save space in the insn structure, the VEX prefix is written into
+     * special_prefix and the first 2 bytes of the instruction are set to
+     * the second two VEX bytes.  During calc_len() it may be shortened to
+     * one VEX byte (this can only be done after knowledge of REX value).
+     */
+    if (vexdata) {
+        unsigned char vex1 = 0xE0;  /* R=X=B=1, mmmmm=0 */
+        unsigned char vex2;
+        /* Look at the first bytes of the opcode to see what leading bytes
+         * to encode in the VEX mmmmm field.  Leave R=X=B=1 for now.
+         */
+        if (insn->opcode.opcode[0] != 0x0F)
+            yasm_internal_error(N_("first opcode byte of VEX must be 0x0F"));
+
+        if (insn->opcode.opcode[1] == 0x38)
+            vex1 |= 0x02;       /* implied 0x0F 0x38 */
+        else if (insn->opcode.opcode[1] == 0x3A)
+            vex1 |= 0x03;       /* implied 0x0F 0x3A */
+        else {
+            /* Originally a 0F-only opcode; move opcode byte back one position
+             * to make room for VEX prefix.
+             */
+            insn->opcode.opcode[2] = insn->opcode.opcode[1];
+            vex1 |= 0x01;       /* implied 0x0F */
+        }
+
+        /* Check for update of special prefix by modifiers */
+        if (insn->special_prefix != 0) {
+            vexdata &= ~0x03;
+            switch (insn->special_prefix) {
+                case 0x66:
+                    vexdata |= 0x01;
+                    break;
+                case 0xF3:
+                    vexdata |= 0x02;
+                    break;
+                case 0xF2:
+                    vexdata |= 0x03;
+                    break;
+                default:
+                    yasm_internal_error(N_("unrecognized special prefix"));
+            }
+        }
+
+        /* 2nd VEX byte is WvvvvLpp.
+         * W, L, pp come from vexdata
+         * vvvv comes from 1s complement of vexreg
+         */
+        vex2 = (((vexdata & 0x8) << 4) |                /* W */
+                ((15 - (vexreg & 0xF)) << 3) |          /* vvvv */
+                (vexdata & 0x7));                       /* Lpp */
+
+        /* Save to special_prefix and opcode */
+        insn->special_prefix = 0xC4;    /* VEX prefix */
+        insn->opcode.opcode[0] = vex1;
+        insn->opcode.opcode[1] = vex2;
+        insn->opcode.len = 3;   /* two prefix bytes and 1 opcode byte */
     }
 
     x86_id_insn_clear_operands(id_insn);

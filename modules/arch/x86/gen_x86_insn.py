@@ -32,8 +32,16 @@ ordered_cpus = [
     "P4", "IA64", "Hammer"]
 ordered_cpu_features = [
     "FPU", "Cyrix", "AMD", "MMX", "3DNow", "SMM", "SSE", "SSE2",
-    "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42", "SSE4a", "SSE5"]
+    "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42", "SSE4a", "SSE5",
+    "AVX", "FMA", "AES", "CLMUL"]
 unordered_cpu_features = ["Priv", "Prot", "Undoc", "Obs"]
+
+# Predefined VEX prefix field values
+VEXW0 = 0xC0
+VEXW1 = 0xC8
+VEXL0 = 0xC0
+VEXL1 = 0xC4
+VEXpp = 0xC0    # OR with value
 
 def cpu_lcd(cpu1, cpu2):
     """Find the lowest common denominator of two CPU sets."""
@@ -133,6 +141,10 @@ class GroupForm(object):
             self.misc_flags.add("ONLY_64")
         if kwargs.pop("not64", False):
             self.misc_flags.add("NOT_64")
+        if kwargs.pop("onlyavx", False):
+            self.misc_flags.add("ONLY_AVX")
+        if kwargs.pop("notavx", False):
+            self.misc_flags.add("NOT_AVX")
 
         # Operation size
         self.opersize = kwargs.pop("opersize", 0)
@@ -160,6 +172,35 @@ class GroupForm(object):
         self.special_prefix = "0"
         if "prefix" in kwargs:
             self.special_prefix = "0x%02X" % kwargs.pop("prefix")
+
+        # VEX prefix
+        if "vex" in kwargs:
+            self.misc_flags.add("ONLY_AVX")
+            vexW = kwargs.pop("vexw", 0)
+            if vexW not in [0, 1]:
+                raise ValueError("VEX.W must be 0 or 1")
+
+            vexL = kwargs.pop("vex")
+            if vexL == 128 or vexL == 0:
+                vexL = 0
+            elif vexL == 256:
+                vexL = 1
+            else:
+                raise ValueError("VEX.L must be 128 or 256")
+
+            if self.special_prefix in ["0", "0x00"]:
+                vexpp = 0
+            elif self.special_prefix == "0x66":
+                vexpp = 1
+            elif self.special_prefix == "0xF3":
+                vexpp = 2
+            elif self.special_prefix == "0xF2":
+                vexpp = 3
+            else:
+                raise ValueError("Cannot combine VEX and special prefix %s"
+                                 % self.special_prefix)
+
+            self.special_prefix = "0x%02X" % (0xC0 + vexW*8 + vexL*4 + vexpp)
 
         # Spare value
         self.spare = kwargs.pop("spare", 0)
@@ -297,7 +338,8 @@ def add_group(name, **kwargs):
 
 class Insn(object):
     def __init__(self, groupname, suffix=None, parser=None, modifiers=None,
-                 cpu=None, misc_flags=None, only64=False, not64=False):
+                 cpu=None, misc_flags=None, only64=False, not64=False,
+                 avx=False):
         self.groupname = groupname
         if suffix is None:
             self.suffix = None
@@ -332,6 +374,12 @@ class Insn(object):
             if self.misc_flags is None:
                 self.misc_flags = set()
             self.misc_flags.add("NOT_64")
+        if avx:
+            if self.misc_flags is None:
+                self.misc_flags = set()
+            self.misc_flags.add("ONLY_AVX")
+            if self.cpu is None:
+                self.cpu = set(["AVX"])
 
     def auto_cpu(self, parser):
         """Determine lowest common denominator CPU from group and suffix.
@@ -2674,6 +2722,7 @@ add_insn("cmpsw", "onebyte", modifiers=[0xA7, 16])
 # cmpsd has to be non-onebyte for SSE2 forms below
 add_group("cmpsd",
     parsers=["nasm"],
+    notavx=True,
     opersize=32,
     opcode=[0xA7],
     operands=[])
@@ -2703,6 +2752,7 @@ add_insn("movsw", "onebyte", modifiers=[0xA5, 16])
 # movsd has to be non-onebyte for SSE2 forms below
 add_group("movsd",
     parsers=["nasm", "gas"],
+    notavx=True,
     opersize=32,
     opcode=[0xA5],
     operands=[])
@@ -3676,6 +3726,46 @@ add_insn("punpcklwd", "mmxsse2", modifiers=[0x61])
 add_insn("punpckldq", "mmxsse2", modifiers=[0x62])
 add_insn("pxor",      "mmxsse2", modifiers=[0xEF])
 
+# AVX versions don't support the MMX registers
+add_insn("vpackssdw",  "xmm_xmm128", modifiers=[0x66, 0x6B, VEXL0], avx=True)
+add_insn("vpacksswb",  "xmm_xmm128", modifiers=[0x66, 0x63, VEXL0], avx=True)
+add_insn("vpackuswb",  "xmm_xmm128", modifiers=[0x66, 0x67, VEXL0], avx=True)
+add_insn("vpaddb",     "xmm_xmm128", modifiers=[0x66, 0xFC, VEXL0], avx=True)
+add_insn("vpaddw",     "xmm_xmm128", modifiers=[0x66, 0xFD, VEXL0], avx=True)
+add_insn("vpaddd",     "xmm_xmm128", modifiers=[0x66, 0xFE, VEXL0], avx=True)
+add_insn("vpaddq",     "xmm_xmm128", modifiers=[0x66, 0xD4, VEXL0], avx=True)
+add_insn("vpaddsb",    "xmm_xmm128", modifiers=[0x66, 0xEC, VEXL0], avx=True)
+add_insn("vpaddsw",    "xmm_xmm128", modifiers=[0x66, 0xED, VEXL0], avx=True)
+add_insn("vpaddusb",   "xmm_xmm128", modifiers=[0x66, 0xDC, VEXL0], avx=True)
+add_insn("vpaddusw",   "xmm_xmm128", modifiers=[0x66, 0xDD, VEXL0], avx=True)
+add_insn("vpand",      "xmm_xmm128", modifiers=[0x66, 0xDB, VEXL0], avx=True)
+add_insn("vpandn",     "xmm_xmm128", modifiers=[0x66, 0xDF, VEXL0], avx=True)
+add_insn("vpcmpeqb",   "xmm_xmm128", modifiers=[0x66, 0x74, VEXL0], avx=True)
+add_insn("vpcmpeqw",   "xmm_xmm128", modifiers=[0x66, 0x75, VEXL0], avx=True)
+add_insn("vpcmpeqd",   "xmm_xmm128", modifiers=[0x66, 0x76, VEXL0], avx=True)
+add_insn("vpcmpgtb",   "xmm_xmm128", modifiers=[0x66, 0x64, VEXL0], avx=True)
+add_insn("vpcmpgtw",   "xmm_xmm128", modifiers=[0x66, 0x65, VEXL0], avx=True)
+add_insn("vpcmpgtd",   "xmm_xmm128", modifiers=[0x66, 0x66, VEXL0], avx=True)
+add_insn("vpmaddwd",   "xmm_xmm128", modifiers=[0x66, 0xF5, VEXL0], avx=True)
+add_insn("vpmulhw",    "xmm_xmm128", modifiers=[0x66, 0xE5, VEXL0], avx=True)
+add_insn("vpmullw",    "xmm_xmm128", modifiers=[0x66, 0xD5, VEXL0], avx=True)
+add_insn("vpor",       "xmm_xmm128", modifiers=[0x66, 0xEB, VEXL0], avx=True)
+add_insn("vpsubb",     "xmm_xmm128", modifiers=[0x66, 0xF8, VEXL0], avx=True)
+add_insn("vpsubw",     "xmm_xmm128", modifiers=[0x66, 0xF9, VEXL0], avx=True)
+add_insn("vpsubd",     "xmm_xmm128", modifiers=[0x66, 0xFA, VEXL0], avx=True)
+add_insn("vpsubq",     "xmm_xmm128", modifiers=[0x66, 0xFB, VEXL0], avx=True)
+add_insn("vpsubsb",    "xmm_xmm128", modifiers=[0x66, 0xE8, VEXL0], avx=True)
+add_insn("vpsubsw",    "xmm_xmm128", modifiers=[0x66, 0xE9, VEXL0], avx=True)
+add_insn("vpsubusb",   "xmm_xmm128", modifiers=[0x66, 0xD8, VEXL0], avx=True)
+add_insn("vpsubusw",   "xmm_xmm128", modifiers=[0x66, 0xD9, VEXL0], avx=True)
+add_insn("vpunpckhbw", "xmm_xmm128", modifiers=[0x66, 0x68, VEXL0], avx=True)
+add_insn("vpunpckhwd", "xmm_xmm128", modifiers=[0x66, 0x69, VEXL0], avx=True)
+add_insn("vpunpckhdq", "xmm_xmm128", modifiers=[0x66, 0x6A, VEXL0], avx=True)
+add_insn("vpunpcklbw", "xmm_xmm128", modifiers=[0x66, 0x60, VEXL0], avx=True)
+add_insn("vpunpcklwd", "xmm_xmm128", modifiers=[0x66, 0x61, VEXL0], avx=True)
+add_insn("vpunpckldq", "xmm_xmm128", modifiers=[0x66, 0x62, VEXL0], avx=True)
+add_insn("vpxor",      "xmm_xmm128", modifiers=[0x66, 0xEF, VEXL0], avx=True)
+
 add_group("pshift",
     cpu=["MMX"],
     modifiers=["Op1Add"],
@@ -3714,6 +3804,53 @@ add_insn("psrlw", "pshift", modifiers=[0xD1, 0x71, 2])
 add_insn("psrld", "pshift", modifiers=[0xD2, 0x72, 2])
 add_insn("psrlq", "pshift", modifiers=[0xD3, 0x73, 2])
 
+# Ran out of modifiers, so AVX has to be separate
+add_group("vpshift",
+    cpu=["AVX"],
+    modifiers=["Op1Add"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("vpshift",
+    cpu=["AVX"],
+    modifiers=["Gap", "Op1Add", "SpAdd"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x00],
+    spare=0,
+    operands=[Operand(type="SIMDReg", size=128, dest="EAVEX"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("vpshift",
+    cpu=["AVX"],
+    modifiers=["Op1Add"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("vpshift",
+    cpu=["AVX"],
+    modifiers=["Gap", "Op1Add", "SpAdd"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x00],
+    spare=0,
+    operands=[Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+
+add_insn("vpsllw", "vpshift", modifiers=[0xF1, 0x71, 6])
+add_insn("vpslld", "vpshift", modifiers=[0xF2, 0x72, 6])
+add_insn("vpsllq", "vpshift", modifiers=[0xF3, 0x73, 6])
+add_insn("vpsraw", "vpshift", modifiers=[0xE1, 0x71, 4])
+add_insn("vpsrad", "vpshift", modifiers=[0xE2, 0x72, 4])
+add_insn("vpsrlw", "vpshift", modifiers=[0xD1, 0x71, 2])
+add_insn("vpsrld", "vpshift", modifiers=[0xD2, 0x72, 2])
+add_insn("vpsrlq", "vpshift", modifiers=[0xD3, 0x73, 2])
+
 #
 # PIII (Katmai) new instructions / SIMD instructions
 #
@@ -3726,6 +3863,16 @@ add_insn("pminub",  "mmxsse2", modifiers=[0xDA], cpu=["P3", "MMX"])
 add_insn("pmulhuw", "mmxsse2", modifiers=[0xE4], cpu=["P3", "MMX"])
 add_insn("psadbw",  "mmxsse2", modifiers=[0xF6], cpu=["P3", "MMX"])
 
+# AVX versions don't support MMX register
+add_insn("vpavgb",   "xmm_xmm128", modifiers=[0x66, 0xE0, VEXL0], avx=True)
+add_insn("vpavgw",   "xmm_xmm128", modifiers=[0x66, 0xE3, VEXL0], avx=True)
+add_insn("vpmaxsw",  "xmm_xmm128", modifiers=[0x66, 0xEE, VEXL0], avx=True)
+add_insn("vpmaxub",  "xmm_xmm128", modifiers=[0x66, 0xDE, VEXL0], avx=True)
+add_insn("vpminsw",  "xmm_xmm128", modifiers=[0x66, 0xEA, VEXL0], avx=True)
+add_insn("vpminub",  "xmm_xmm128", modifiers=[0x66, 0xDA, VEXL0], avx=True)
+add_insn("vpmulhuw", "xmm_xmm128", modifiers=[0x66, 0xE4, VEXL0], avx=True)
+add_insn("vpsadbw",  "xmm_xmm128", modifiers=[0x66, 0xF6, VEXL0], avx=True)
+
 add_insn("prefetchnta", "twobytemem", modifiers=[0, 0x0F, 0x18], cpu=["P3"])
 add_insn("prefetcht0", "twobytemem", modifiers=[1, 0x0F, 0x18], cpu=["P3"])
 add_insn("prefetcht1", "twobytemem", modifiers=[2, 0x0F, 0x18], cpu=["P3"])
@@ -3733,12 +3880,48 @@ add_insn("prefetcht2", "twobytemem", modifiers=[3, 0x0F, 0x18], cpu=["P3"])
 
 add_insn("sfence", "threebyte", modifiers=[0x0F, 0xAE, 0xF8], cpu=["P3"])
 
-add_group("xmm_xmm128",
+add_group("xmm_xmm128_256",
     cpu=["SSE"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("xmm_xmm128_256",
+    cpu=["AVX"],
     modifiers=["PreAdd", "Op1Add"],
+    vex=128,
     prefix=0x00,
     opcode=[0x0F, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("xmm_xmm128_256",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=256,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA")])
+
+# Version that does not allow YMM registers
+add_group("xmm_xmm128",
+    cpu=["SSE"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("xmm_xmm128",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=128,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
 
 add_insn("addps",    "xmm_xmm128", modifiers=[0, 0x58])
@@ -3757,10 +3940,24 @@ add_insn("unpckhps", "xmm_xmm128", modifiers=[0, 0x15])
 add_insn("unpcklps", "xmm_xmm128", modifiers=[0, 0x14])
 add_insn("xorps",    "xmm_xmm128", modifiers=[0, 0x57])
 
+add_insn("vaddps",    "xmm_xmm128_256", modifiers=[0, 0x58, VEXL0], avx=True)
+add_insn("vandnps",   "xmm_xmm128_256", modifiers=[0, 0x55, VEXL0], avx=True)
+add_insn("vandps",    "xmm_xmm128_256", modifiers=[0, 0x54, VEXL0], avx=True)
+add_insn("vdivps",    "xmm_xmm128_256", modifiers=[0, 0x5E, VEXL0], avx=True)
+add_insn("vmaxps",    "xmm_xmm128_256", modifiers=[0, 0x5F, VEXL0], avx=True)
+add_insn("vminps",    "xmm_xmm128_256", modifiers=[0, 0x5D, VEXL0], avx=True)
+add_insn("vmulps",    "xmm_xmm128_256", modifiers=[0, 0x59, VEXL0], avx=True)
+add_insn("vorps",     "xmm_xmm128_256", modifiers=[0, 0x56, VEXL0], avx=True)
+# vrcpps, vrsqrtps, and vsqrtps don't add third operand
+add_insn("vsubps",    "xmm_xmm128_256", modifiers=[0, 0x5C, VEXL0], avx=True)
+add_insn("vunpckhps", "xmm_xmm128_256", modifiers=[0, 0x15, VEXL0], avx=True)
+add_insn("vunpcklps", "xmm_xmm128_256", modifiers=[0, 0x14, VEXL0], avx=True)
+add_insn("vxorps",    "xmm_xmm128_256", modifiers=[0, 0x57, VEXL0], avx=True)
+
 add_group("cvt_rx_xmm32",
     suffix="l",
     cpu=["SSE"],
-    modifiers=["PreAdd", "Op1Add"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
     prefix=0x00,
     opcode=[0x0F, 0x00],
     operands=[Operand(type="Reg", size=32, dest="Spare"),
@@ -3768,7 +3965,7 @@ add_group("cvt_rx_xmm32",
 add_group("cvt_rx_xmm32",
     suffix="l",
     cpu=["SSE"],
-    modifiers=["PreAdd", "Op1Add"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
     prefix=0x00,
     opcode=[0x0F, 0x00],
     operands=[Operand(type="Reg", size=32, dest="Spare"),
@@ -3777,7 +3974,7 @@ add_group("cvt_rx_xmm32",
 add_group("cvt_rx_xmm32",
     suffix="q",
     cpu=["SSE"],
-    modifiers=["PreAdd", "Op1Add"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
     opersize=64,
     prefix=0x00,
     opcode=[0x0F, 0x00],
@@ -3786,7 +3983,7 @@ add_group("cvt_rx_xmm32",
 add_group("cvt_rx_xmm32",
     suffix="q",
     cpu=["SSE"],
-    modifiers=["PreAdd", "Op1Add"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
     opersize=64,
     prefix=0x00,
     opcode=[0x0F, 0x00],
@@ -3795,6 +3992,8 @@ add_group("cvt_rx_xmm32",
 
 add_insn("cvtss2si", "cvt_rx_xmm32", modifiers=[0xF3, 0x2D])
 add_insn("cvttss2si", "cvt_rx_xmm32", modifiers=[0xF3, 0x2C])
+add_insn("vcvtss2si", "cvt_rx_xmm32", modifiers=[0xF3, 0x2D, VEXL0], avx=True)
+add_insn("vcvttss2si", "cvt_rx_xmm32", modifiers=[0xF3, 0x2C, VEXL0], avx=True)
 
 add_group("cvt_mm_xmm64",
     cpu=["SSE"],
@@ -3821,40 +4020,102 @@ add_group("cvt_xmm_mm_ps",
 
 add_insn("cvtpi2ps", "cvt_xmm_mm_ps", modifiers=[0x2A])
 
+# Memory size can be relaxed only in BITS=32 case, where there's no
+# ambiguity.
 add_group("cvt_xmm_rmx",
     suffix="l",
     cpu=["SSE"],
-    modifiers=["PreAdd", "Op1Add"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
     prefix=0x00,
     opcode=[0x0F, 0x00],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="RM", size=32, dest="EA")])
+add_group("cvt_xmm_rmx",
+    suffix="l",
+    cpu=["SSE"],
+    not64=True,
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
               Operand(type="RM", size=32, relaxed=True, dest="EA")])
 # REX
 add_group("cvt_xmm_rmx",
     suffix="q",
     cpu=["SSE"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
+    opersize=64,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="RM", size=64, dest="EA")])
+add_group("cvt_xmm_rmx",
+    suffix="l",
+    cpu=["AVX"],
+    not64=True,
     modifiers=["PreAdd", "Op1Add"],
+    vex=128,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="RM", size=32, relaxed=True, dest="EA")])
+add_group("cvt_xmm_rmx",
+    suffix="l",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=128,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="RM", size=32, dest="EA")])
+add_group("cvt_xmm_rmx",
+    suffix="q",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=128,
     opersize=64,
     prefix=0x00,
     opcode=[0x0F, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="RM", size=64, relaxed=True, dest="EA")])
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="RM", size=64, dest="EA")])
 
 add_insn("cvtsi2ss", "cvt_xmm_rmx", modifiers=[0xF3, 0x2A])
+add_insn("vcvtsi2ss", "cvt_xmm_rmx", modifiers=[0xF3, 0x2A, VEXL0], avx=True)
 
 add_group("xmm_xmm32",
     cpu=["SSE"],
-    modifiers=["PreAdd", "Op1Add"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
     prefix=0x00,
     opcode=[0x0F, 0x00],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
               Operand(type="SIMDReg", size=128, dest="EA")])
 add_group("xmm_xmm32",
     cpu=["SSE"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="Mem", size=32, relaxed=True, dest="EA")])
+add_group("xmm_xmm32",
+    cpu=["AVX"],
     modifiers=["PreAdd", "Op1Add"],
+    vex=128,
     prefix=0x00,
     opcode=[0x0F, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="EA")])
+add_group("xmm_xmm32",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=128,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="Mem", size=32, relaxed=True, dest="EA")])
 
 add_insn("addss",   "xmm_xmm32", modifiers=[0xF3, 0x58])
@@ -3869,50 +4130,125 @@ add_insn("sqrtss",  "xmm_xmm32", modifiers=[0xF3, 0x51])
 add_insn("subss",   "xmm_xmm32", modifiers=[0xF3, 0x5C])
 add_insn("ucomiss", "xmm_xmm32", modifiers=[0, 0x2E])
 
+add_insn("vaddss",   "xmm_xmm32", modifiers=[0xF3, 0x58, VEXL0], avx=True)
+add_insn("vcomiss",  "xmm_xmm32", modifiers=[0, 0x2F, VEXL0], avx=True)
+add_insn("vdivss",   "xmm_xmm32", modifiers=[0xF3, 0x5E, VEXL0], avx=True)
+add_insn("vmaxss",   "xmm_xmm32", modifiers=[0xF3, 0x5F, VEXL0], avx=True)
+add_insn("vminss",   "xmm_xmm32", modifiers=[0xF3, 0x5D, VEXL0], avx=True)
+add_insn("vmulss",   "xmm_xmm32", modifiers=[0xF3, 0x59, VEXL0], avx=True)
+add_insn("vrcpss",   "xmm_xmm32", modifiers=[0xF3, 0x53, VEXL0], avx=True)
+add_insn("vrsqrtss", "xmm_xmm32", modifiers=[0xF3, 0x52, VEXL0], avx=True)
+add_insn("vsqrtss",  "xmm_xmm32", modifiers=[0xF3, 0x51, VEXL0], avx=True)
+add_insn("vsubss",   "xmm_xmm32", modifiers=[0xF3, 0x5C, VEXL0], avx=True)
+add_insn("vucomiss", "xmm_xmm32", modifiers=[0, 0x2E, VEXL0], avx=True)
+
 add_group("ssecmp_128",
     cpu=["SSE"],
-    modifiers=["Imm8", "PreAdd"],
+    modifiers=["Imm8", "PreAdd", "SetVEX"],
     opcode=[0x0F, 0xC2],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
-
-add_insn("cmpeqps",    "ssecmp_128", modifiers=[0])
-add_insn("cmpleps",    "ssecmp_128", modifiers=[2])
-add_insn("cmpltps",    "ssecmp_128", modifiers=[1])
-add_insn("cmpneqps",   "ssecmp_128", modifiers=[4])
-add_insn("cmpnleps",   "ssecmp_128", modifiers=[6])
-add_insn("cmpnltps",   "ssecmp_128", modifiers=[5])
-add_insn("cmpordps",   "ssecmp_128", modifiers=[7])
-add_insn("cmpunordps", "ssecmp_128", modifiers=[3])
+add_group("ssecmp_128",
+    cpu=["AVX"],
+    modifiers=["Imm8", "PreAdd"],
+    vex=128,
+    opcode=[0x0F, 0xC2],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("ssecmp_128",
+    cpu=["AVX"],
+    modifiers=["Imm8", "PreAdd"],
+    vex=256,
+    opcode=[0x0F, 0xC2],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA")])
 
 add_group("ssecmp_32",
     cpu=["SSE"],
-    modifiers=["Imm8", "PreAdd"],
+    modifiers=["Imm8", "PreAdd", "SetVEX"],
     prefix=0x00,
     opcode=[0x0F, 0xC2],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
               Operand(type="SIMDReg", size=128, dest="EA")])
-
 add_group("ssecmp_32",
     cpu=["SSE"],
+    modifiers=["Imm8", "PreAdd", "SetVEX"],
+    prefix=0x00,
+    opcode=[0x0F, 0xC2],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="Mem", size=32, relaxed=True, dest="EA")])
+add_group("ssecmp_32",
+    cpu=["AVX"],
     modifiers=["Imm8", "PreAdd"],
+    vex=128,
     prefix=0x00,
     opcode=[0x0F, 0xC2],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="EA")])
+add_group("ssecmp_32",
+    cpu=["AVX"],
+    modifiers=["Imm8", "PreAdd"],
+    vex=128,
+    prefix=0x00,
+    opcode=[0x0F, 0xC2],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="Mem", size=32, relaxed=True, dest="EA")])
 
-add_insn("cmpeqss",    "ssecmp_32", modifiers=[0, 0xF3])
-add_insn("cmpless",    "ssecmp_32", modifiers=[2, 0xF3])
-add_insn("cmpltss",    "ssecmp_32", modifiers=[1, 0xF3])
-add_insn("cmpneqss",   "ssecmp_32", modifiers=[4, 0xF3])
-add_insn("cmpnless",   "ssecmp_32", modifiers=[6, 0xF3])
-add_insn("cmpnltss",   "ssecmp_32", modifiers=[5, 0xF3])
-add_insn("cmpordss",   "ssecmp_32", modifiers=[7, 0xF3])
-add_insn("cmpunordss", "ssecmp_32", modifiers=[3, 0xF3])
+ssecoms = [(0x0, "eq"),
+           (0x1, "lt"),
+           (0x2, "le"),
+           (0x3, "unord"),
+           (0x4, "neq"),
+           (0x5, "nlt"),
+           (0x6, "nle"),
+           (0x7, "ord")]
+for ib, cc in ssecoms:
+    add_insn("cmp"+cc+"ps", "ssecmp_128", modifiers=[ib])
+    add_insn("cmp"+cc+"ss", "ssecmp_32", modifiers=[ib, 0xF3])
+
+avxcoms = [(0x00, "eq"),
+           (0x01, "lt"),
+           (0x02, "le"),
+           (0x03, "unord"),
+           (0x04, "neq"),
+           (0x05, "nlt"),
+           (0x06, "nle"),
+           (0x07, "ord"),
+           (0x08, "eq_uq"),
+           (0x09, "nge"),
+           (0x0a, "ngt"),
+           (0x0b, "false"),
+           (0x0c, "neq_oq"),
+           (0x0d, "ge"),
+           (0x0e, "gt"),
+           (0x0f, "true"),
+           (0x10, "eq_os"),
+           (0x11, "lt_oq"),
+           (0x12, "le_oq"),
+           (0x13, "unord_s"),
+           (0x14, "neq_us"),
+           (0x15, "nlt_uq"),
+           (0x16, "nle_uq"),
+           (0x17, "ord_s"),
+           (0x18, "eq_us"),
+           (0x19, "nge_uq"),
+           (0x1a, "ngt_uq"),
+           (0x1b, "false_os"),
+           (0x1c, "neq_os"),
+           (0x1d, "ge_oq"),
+           (0x1e, "gt_oq"),
+           (0x1f, "true_us")]
+for ib, cc in avxcoms:
+    add_insn("vcmp"+cc+"ps", "ssecmp_128", modifiers=[ib, 0, VEXL0], avx=True)
+    add_insn("vcmp"+cc+"ss", "ssecmp_32", modifiers=[ib, 0xF3, VEXL0], avx=True)
 
 add_group("xmm_xmm128_imm",
     cpu=["SSE"],
-    modifiers=["PreAdd", "Op1Add"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
     opcode=[0x0F, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
@@ -3921,35 +4257,87 @@ add_group("xmm_xmm128_imm",
 add_insn("cmpps", "xmm_xmm128_imm", modifiers=[0, 0xC2])
 add_insn("shufps", "xmm_xmm128_imm", modifiers=[0, 0xC6])
 
-add_group("xmm_xmm32_imm",
+# YMM register and 4-operand version of above
+add_group("xmm_xmm128_imm_256",
     cpu=["SSE"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("xmm_xmm128_imm_256",
+    cpu=["AVX"],
     modifiers=["PreAdd", "Op1Add"],
-    prefix=0x00,
+    vex=128,
     opcode=[0x0F, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDReg", size=128, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("xmm_xmm128_imm_256",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=256,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+
+add_insn("vcmpps", "xmm_xmm128_imm_256", modifiers=[0, 0xC2, VEXL0], avx=True)
+add_insn("vshufps", "xmm_xmm128_imm_256", modifiers=[0, 0xC6, VEXL0], avx=True)
 
 add_group("xmm_xmm32_imm",
     cpu=["SSE"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDReg", size=128, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("xmm_xmm32_imm",
+    cpu=["SSE"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="Mem", size=32, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("xmm_xmm32_imm",
+    cpu=["AVX"],
     modifiers=["PreAdd", "Op1Add"],
+    vex=128,
     prefix=0x00,
     opcode=[0x0F, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("xmm_xmm32_imm",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=128,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="Mem", size=32, relaxed=True, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
 add_insn("cmpss", "xmm_xmm32_imm", modifiers=[0xF3, 0xC2])
+add_insn("vcmpss", "xmm_xmm32_imm", modifiers=[0xF3, 0xC2, VEXL0], avx=True)
 
 add_group("ldstmxcsr",
     cpu=["SSE"],
-    modifiers=["SpAdd"],
+    modifiers=["SpAdd", "SetVEX"],
     opcode=[0x0F, 0xAE],
     spare=0,
     operands=[Operand(type="Mem", size=32, relaxed=True, dest="EA")])
 
 add_insn("ldmxcsr", "ldstmxcsr", modifiers=[2])
 add_insn("stmxcsr", "ldstmxcsr", modifiers=[3])
+add_insn("vldmxcsr", "ldstmxcsr", modifiers=[2, VEXL0], avx=True)
+add_insn("vstmxcsr", "ldstmxcsr", modifiers=[3, VEXL0], avx=True)
 
 add_group("maskmovq",
     cpu=["MMX", "P3"],
@@ -3959,71 +4347,157 @@ add_group("maskmovq",
 
 add_insn("maskmovq", "maskmovq")
 
-add_group("movaups",
+# Too many modifiers, so can't reuse first two cases for AVX version
+# Just repeat and disable first two with noavx.
+add_group("movau",
     cpu=["SSE"],
-    modifiers=["Op1Add"],
+    modifiers=["PreAdd", "Op1Add"],
+    notavx=True,
+    prefix=0x00,
     opcode=[0x0F, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
-add_group("movaups",
+add_group("movau",
     cpu=["SSE"],
-    modifiers=["Op1Add"],
-    opcode=[0x0F, 0x01],
+    notavx=True,
+    modifiers=["PreAdd", "Op1Add", "Op1Add"],
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
     operands=[Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
               Operand(type="SIMDReg", size=128, dest="Spare")])
+add_group("movau",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=128,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("movau",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add", "Op1Add"],
+    vex=128,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="Spare")])
+add_group("movau",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=256,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA")])
+add_group("movau",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add", "Op1Add"],
+    vex=256,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDRM", size=256, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=256, dest="Spare")])
 
-add_insn("movaps", "movaups", modifiers=[0x28])
-add_insn("movups", "movaups", modifiers=[0x10])
+add_insn("movaps", "movau", modifiers=[0, 0x28, 0x01])
+add_insn("movups", "movau", modifiers=[0, 0x10, 0x01])
+add_insn("vmovaps", "movau", modifiers=[0, 0x28, 0x01], avx=True)
+add_insn("vmovups", "movau", modifiers=[0, 0x10, 0x01], avx=True)
 
 add_group("movhllhps",
     cpu=["SSE"],
+    modifiers=["Op1Add", "SetVEX"],
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDReg", size=128, dest="EA")])
+add_group("movhllhps",
+    cpu=["AVX"],
     modifiers=["Op1Add"],
+    vex=128,
     opcode=[0x0F, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="SIMDReg", size=128, dest="EA")])
 
 add_insn("movhlps", "movhllhps", modifiers=[0x12])
 add_insn("movlhps", "movhllhps", modifiers=[0x16])
+add_insn("vmovhlps", "movhllhps", modifiers=[0x12, VEXL0], avx=True)
+add_insn("vmovlhps", "movhllhps", modifiers=[0x16, VEXL0], avx=True)
 
-add_group("movhlps",
+add_group("movhlp",
     cpu=["SSE"],
-    modifiers=["Op1Add"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
+    prefix=0x00,
     opcode=[0x0F, 0x00],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
               Operand(type="Mem", size=64, relaxed=True, dest="EA")])
-add_group("movhlps",
+add_group("movhlp",
     cpu=["SSE"],
-    modifiers=["Op1Add"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
+    prefix=0x00,
     opcode=[0x0F, 0x01],
     operands=[Operand(type="Mem", size=64, relaxed=True, dest="EA"),
               Operand(type="SIMDReg", size=128, dest="Spare")])
+add_group("movhlp",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=128,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="Mem", size=64, relaxed=True, dest="EA")])
 
-add_insn("movhps", "movhlps", modifiers=[0x16])
-add_insn("movlps", "movhlps", modifiers=[0x12])
+add_insn("movhps", "movhlp", modifiers=[0, 0x16])
+add_insn("movlps", "movhlp", modifiers=[0, 0x12])
+add_insn("vmovhps", "movhlp", modifiers=[0, 0x16, VEXL0], avx=True)
+add_insn("vmovlps", "movhlp", modifiers=[0, 0x12, VEXL0], avx=True)
 
-add_group("movmskps",
+add_group("movmsk",
     suffix="l",
     cpu=["SSE"],
+    modifiers=["PreAdd", "SetVEX"],
+    prefix=0x00,
     opcode=[0x0F, 0x50],
     operands=[Operand(type="Reg", size=32, dest="Spare"),
               Operand(type="SIMDReg", size=128, dest="EA")])
-add_group("movmskps",
+add_group("movmsk",
     suffix="q",
     cpu=["SSE"],
+    modifiers=["PreAdd", "SetVEX"],
+    prefix=0x00,
     opersize=64,
     opcode=[0x0F, 0x50],
     operands=[Operand(type="Reg", size=64, dest="Spare"),
               Operand(type="SIMDReg", size=128, dest="EA")])
-
-add_insn("movmskps", "movmskps")
-
-add_group("movntps",
+add_group("movmsk",
+    suffix="l",
+    cpu=["AVX"],
+    modifiers=["PreAdd"],
+    vex=256,
+    prefix=0x00,
+    opcode=[0x0F, 0x50],
+    operands=[Operand(type="Reg", size=32, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="EA")])
+add_group("movmsk",
+    suffix="q",
     cpu=["SSE"],
-    opcode=[0x0F, 0x2B],
+    modifiers=["PreAdd"],
+    vex=256,
+    prefix=0x00,
+    opersize=64,
+    opcode=[0x0F, 0x50],
+    operands=[Operand(type="Reg", size=64, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="EA")])
+
+add_insn("movmskps", "movmsk")
+add_insn("vmovmskps", "movmsk", modifiers=[0, VEXL0], avx=True)
+
+add_group("movnt",
+    cpu=["SSE"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
     operands=[Operand(type="Mem", size=128, relaxed=True, dest="EA"),
               Operand(type="SIMDReg", size=128, dest="Spare")])
 
-add_insn("movntps", "movntps")
+add_insn("movntps", "movnt", modifiers=[0, 0x2B])
+add_insn("vmovntps", "movnt", modifiers=[0, 0x2B, VEXL0], avx=True)
 
 add_group("movntq",
     cpu=["SSE"],
@@ -4035,28 +4509,41 @@ add_insn("movntq", "movntq")
 
 add_group("movss",
     cpu=["SSE"],
+    modifiers=["SetVEX"],
     prefix=0xF3,
     opcode=[0x0F, 0x10],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
               Operand(type="SIMDReg", size=128, dest="EA")])
 add_group("movss",
     cpu=["SSE"],
+    modifiers=["SetVEX"],
     prefix=0xF3,
     opcode=[0x0F, 0x10],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
               Operand(type="Mem", size=32, relaxed=True, dest="EA")])
 add_group("movss",
     cpu=["SSE"],
+    modifiers=["SetVEX"],
     prefix=0xF3,
     opcode=[0x0F, 0x11],
     operands=[Operand(type="Mem", size=32, relaxed=True, dest="EA"),
               Operand(type="SIMDReg", size=128, dest="Spare")])
-    
+add_group("movss",
+    cpu=["AVX"],
+    vex=128,
+    prefix=0xF3,
+    opcode=[0x0F, 0x10],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="EA")])
+
 add_insn("movss", "movss")
+add_insn("vmovss", "movss", modifiers=[VEXL0], avx=True)
 
 add_group("pextrw",
     suffix="l",
     cpu=["MMX", "P3"],
+    notavx=True,
     opcode=[0x0F, 0xC5],
     operands=[Operand(type="Reg", size=32, dest="Spare"),
               Operand(type="SIMDReg", size=64, dest="EA"),
@@ -4064,6 +4551,7 @@ add_group("pextrw",
 add_group("pextrw",
     suffix="l",
     cpu=["SSE2"],
+    modifiers=["SetVEX"],
     prefix=0x66,
     opcode=[0x0F, 0xC5],
     operands=[Operand(type="Reg", size=32, dest="Spare"),
@@ -4072,6 +4560,7 @@ add_group("pextrw",
 add_group("pextrw",
     suffix="q",
     cpu=["MMX", "P3"],
+    notavx=True,
     opersize=64,
     opcode=[0x0F, 0xC5],
     operands=[Operand(type="Reg", size=64, dest="Spare"),
@@ -4080,6 +4569,7 @@ add_group("pextrw",
 add_group("pextrw",
     suffix="q",
     cpu=["SSE2"],
+    modifiers=["SetVEX"],
     opersize=64,
     prefix=0x66,
     opcode=[0x0F, 0xC5],
@@ -4089,6 +4579,7 @@ add_group("pextrw",
 # SSE41 instructions
 add_group("pextrw",
     cpu=["SSE41"],
+    modifiers=["SetVEX"],
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x15],
     operands=[Operand(type="Mem", size=16, relaxed=True, dest="EA"),
@@ -4096,6 +4587,7 @@ add_group("pextrw",
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 add_group("pextrw",
     cpu=["SSE41"],
+    modifiers=["SetVEX"],
     opersize=32,
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x15],
@@ -4104,6 +4596,7 @@ add_group("pextrw",
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 add_group("pextrw",
     cpu=["SSE41"],
+    modifiers=["SetVEX"],
     opersize=64,
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x15],
@@ -4112,10 +4605,12 @@ add_group("pextrw",
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
 add_insn("pextrw", "pextrw")
+add_insn("vpextrw", "pextrw", modifiers=[VEXL0], avx=True)
 
 add_group("pinsrw",
     suffix="l",
     cpu=["MMX", "P3"],
+    notavx=True,
     opcode=[0x0F, 0xC4],
     operands=[Operand(type="SIMDReg", size=64, dest="Spare"),
               Operand(type="Reg", size=32, dest="EA"),
@@ -4123,6 +4618,7 @@ add_group("pinsrw",
 add_group("pinsrw",
     suffix="q",
     cpu=["MMX", "P3"],
+    notavx=True,
     opersize=64,
     opcode=[0x0F, 0xC4],
     operands=[Operand(type="SIMDReg", size=64, dest="Spare"),
@@ -4131,6 +4627,7 @@ add_group("pinsrw",
 add_group("pinsrw",
     suffix="l",
     cpu=["MMX", "P3"],
+    notavx=True,
     opcode=[0x0F, 0xC4],
     operands=[Operand(type="SIMDReg", size=64, dest="Spare"),
               Operand(type="Mem", size=16, relaxed=True, dest="EA"),
@@ -4138,40 +4635,77 @@ add_group("pinsrw",
 add_group("pinsrw",
     suffix="l",
     cpu=["SSE2"],
+    modifiers=["SetVEX"],
     prefix=0x66,
     opcode=[0x0F, 0xC4],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
               Operand(type="Reg", size=32, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 add_group("pinsrw",
     suffix="q",
     cpu=["SSE2"],
+    modifiers=["SetVEX"],
     opersize=64,
     prefix=0x66,
     opcode=[0x0F, 0xC4],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
               Operand(type="Reg", size=64, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 add_group("pinsrw",
     suffix="l",
     cpu=["SSE2"],
+    modifiers=["SetVEX"],
+    prefix=0x66,
+    opcode=[0x0F, 0xC4],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="Mem", size=16, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("pinsrw",
+    suffix="l",
+    cpu=["AVX"],
+    vex=128,
     prefix=0x66,
     opcode=[0x0F, 0xC4],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="Reg", size=32, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("pinsrw",
+    suffix="q",
+    cpu=["AVX"],
+    vex=128,
+    opersize=64,
+    prefix=0x66,
+    opcode=[0x0F, 0xC4],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="Reg", size=64, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("pinsrw",
+    suffix="l",
+    cpu=["AVX"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0xC4],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="Mem", size=16, relaxed=True, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
 add_insn("pinsrw", "pinsrw")
+add_insn("vpinsrw", "pinsrw", modifiers=[VEXL0], avx=True)
 
 add_group("pmovmskb",
     suffix="l",
     cpu=["MMX", "P3"],
+    notavx=True,
     opcode=[0x0F, 0xD7],
     operands=[Operand(type="Reg", size=32, dest="Spare"),
               Operand(type="SIMDReg", size=64, dest="EA")])
 add_group("pmovmskb",
     suffix="l",
     cpu=["SSE2"],
+    modifiers=["SetVEX"],
     prefix=0x66,
     opcode=[0x0F, 0xD7],
     operands=[Operand(type="Reg", size=32, dest="Spare"),
@@ -4179,6 +4713,7 @@ add_group("pmovmskb",
 add_group("pmovmskb",
     suffix="q",
     cpu=["MMX", "P3"],
+    notavx=True,
     opersize=64,
     opcode=[0x0F, 0xD7],
     operands=[Operand(type="Reg", size=64, dest="Spare"),
@@ -4186,6 +4721,7 @@ add_group("pmovmskb",
 add_group("pmovmskb",
     suffix="q",
     cpu=["SSE2"],
+    modifiers=["SetVEX"],
     opersize=64,
     prefix=0x66,
     opcode=[0x0F, 0xD7],
@@ -4193,6 +4729,7 @@ add_group("pmovmskb",
               Operand(type="SIMDReg", size=128, dest="EA")])
 
 add_insn("pmovmskb", "pmovmskb")
+add_insn("vpmovmskb", "pmovmskb", modifiers=[VEXL0], avx=True)
 
 add_group("pshufw",
     cpu=["MMX", "P3"],
@@ -4208,17 +4745,35 @@ add_insn("pshufw", "pshufw")
 #####################################################################
 add_group("xmm_xmm64",
     cpu=["SSE2"],
-    modifiers=["PreAdd", "Op1Add"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
     prefix=0x00,
     opcode=[0x0F, 0x00],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
               Operand(type="SIMDReg", size=128, dest="EA")])
 add_group("xmm_xmm64",
     cpu=["SSE2"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="Mem", size=64, relaxed=True, dest="EA")])
+add_group("xmm_xmm64",
+    cpu=["AVX"],
     modifiers=["PreAdd", "Op1Add"],
+    vex=128,
     prefix=0x00,
     opcode=[0x0F, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="EA")])
+add_group("xmm_xmm64",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=128,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="Mem", size=64, relaxed=True, dest="EA")])
 
 add_insn("addsd",    "xmm_xmm64", modifiers=[0xF2, 0x58])
@@ -4233,6 +4788,18 @@ add_insn("mulsd",    "xmm_xmm64", modifiers=[0xF2, 0x59])
 add_insn("subsd",    "xmm_xmm64", modifiers=[0xF2, 0x5C])
 add_insn("sqrtsd",   "xmm_xmm64", modifiers=[0xF2, 0x51])
 add_insn("ucomisd",  "xmm_xmm64", modifiers=[0x66, 0x2E])
+
+add_insn("vaddsd",    "xmm_xmm64", modifiers=[0xF2, 0x58, VEXL0], avx=True)
+add_insn("vcomisd",   "xmm_xmm64", modifiers=[0x66, 0x2F, VEXL0], avx=True)
+# vcvtdq2pd and vcvtps2pd can take ymm, xmm version
+add_insn("vcvtsd2ss", "xmm_xmm64", modifiers=[0xF2, 0x5A, VEXL0], avx=True)
+add_insn("vdivsd",    "xmm_xmm64", modifiers=[0xF2, 0x5E, VEXL0], avx=True)
+add_insn("vmaxsd",    "xmm_xmm64", modifiers=[0xF2, 0x5F, VEXL0], avx=True)
+add_insn("vminsd",    "xmm_xmm64", modifiers=[0xF2, 0x5D, VEXL0], avx=True)
+add_insn("vmulsd",    "xmm_xmm64", modifiers=[0xF2, 0x59, VEXL0], avx=True)
+add_insn("vsubsd",    "xmm_xmm64", modifiers=[0xF2, 0x5C, VEXL0], avx=True)
+add_insn("vsqrtsd",   "xmm_xmm64", modifiers=[0xF2, 0x51, VEXL0], avx=True)
+add_insn("vucomisd",  "xmm_xmm64", modifiers=[0x66, 0x2E, VEXL0], avx=True)
 
 add_insn("addpd",    "xmm_xmm128", modifiers=[0x66, 0x58], cpu=["SSE2"])
 add_insn("andnpd",   "xmm_xmm128", modifiers=[0x66, 0x55], cpu=["SSE2"])
@@ -4252,49 +4819,75 @@ add_insn("unpckhpd", "xmm_xmm128", modifiers=[0x66, 0x15], cpu=["SSE2"])
 add_insn("unpcklpd", "xmm_xmm128", modifiers=[0x66, 0x14], cpu=["SSE2"])
 add_insn("xorpd",    "xmm_xmm128", modifiers=[0x66, 0x57], cpu=["SSE2"])
 
-add_group("ssecmp_64",
-    cpu=["SSE2"],
-    modifiers=["Imm8", "PreAdd"],
-    prefix=0x00,
-    opcode=[0x0F, 0xC2],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDReg", size=128, dest="EA")])
+add_insn("vaddpd",    "xmm_xmm128_256", modifiers=[0x66, 0x58, VEXL0], avx=True)
+add_insn("vandnpd",   "xmm_xmm128_256", modifiers=[0x66, 0x55, VEXL0], avx=True)
+add_insn("vandpd",    "xmm_xmm128_256", modifiers=[0x66, 0x54, VEXL0], avx=True)
+# vcvtdq2ps and vcvtps2dq are 2-operand, YMM capable
+# vcvtpd2dq and vcvtpd2ps take xmm, ymm combination
+add_insn("vdivpd",    "xmm_xmm128_256", modifiers=[0x66, 0x5E, VEXL0], avx=True)
+add_insn("vmaxpd",    "xmm_xmm128_256", modifiers=[0x66, 0x5F, VEXL0], avx=True)
+add_insn("vminpd",    "xmm_xmm128_256", modifiers=[0x66, 0x5D, VEXL0], avx=True)
+add_insn("vmulpd",    "xmm_xmm128_256", modifiers=[0x66, 0x59, VEXL0], avx=True)
+add_insn("vorpd",     "xmm_xmm128_256", modifiers=[0x66, 0x56, VEXL0], avx=True)
+# vsqrtpd doesn't add third operand
+add_insn("vsubpd",    "xmm_xmm128_256", modifiers=[0x66, 0x5C, VEXL0], avx=True)
+add_insn("vunpckhpd", "xmm_xmm128_256", modifiers=[0x66, 0x15, VEXL0], avx=True)
+add_insn("vunpcklpd", "xmm_xmm128_256", modifiers=[0x66, 0x14, VEXL0], avx=True)
+add_insn("vxorpd",    "xmm_xmm128_256", modifiers=[0x66, 0x57, VEXL0], avx=True)
 
 add_group("ssecmp_64",
     cpu=["SSE2"],
+    modifiers=["Imm8", "PreAdd", "SetVEX"],
+    prefix=0x00,
+    opcode=[0x0F, 0xC2],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDReg", size=128, dest="EA")])
+add_group("ssecmp_64",
+    cpu=["SSE2"],
+    modifiers=["Imm8", "PreAdd", "SetVEX"],
+    prefix=0x00,
+    opcode=[0x0F, 0xC2],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="Mem", size=64, relaxed=True, dest="EA")])
+add_group("ssecmp_64",
+    cpu=["AVX"],
     modifiers=["Imm8", "PreAdd"],
+    vex=128,
     prefix=0x00,
     opcode=[0x0F, 0xC2],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="EA")])
+add_group("ssecmp_64",
+    cpu=["AVX"],
+    modifiers=["Imm8", "PreAdd"],
+    vex=128,
+    prefix=0x00,
+    opcode=[0x0F, 0xC2],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="Mem", size=64, relaxed=True, dest="EA")])
 
-add_insn("cmpeqsd",    "ssecmp_64", modifiers=[0, 0xF2])
-add_insn("cmplesd",    "ssecmp_64", modifiers=[2, 0xF2])
-add_insn("cmpltsd",    "ssecmp_64", modifiers=[1, 0xF2])
-add_insn("cmpneqsd",   "ssecmp_64", modifiers=[4, 0xF2])
-add_insn("cmpnlesd",   "ssecmp_64", modifiers=[6, 0xF2])
-add_insn("cmpnltsd",   "ssecmp_64", modifiers=[5, 0xF2])
-add_insn("cmpordsd",   "ssecmp_64", modifiers=[7, 0xF2])
-add_insn("cmpunordsd", "ssecmp_64", modifiers=[3, 0xF2])
+for ib, cc in ssecoms:
+    add_insn("cmp"+cc+"sd", "ssecmp_64", modifiers=[ib, 0xF2])
+    add_insn("cmp"+cc+"pd", "ssecmp_128", modifiers=[ib, 0x66])
 
-add_insn("cmpeqpd",    "ssecmp_128", modifiers=[0, 0x66], cpu=["SSE2"])
-add_insn("cmplepd",    "ssecmp_128", modifiers=[2, 0x66], cpu=["SSE2"])
-add_insn("cmpltpd",    "ssecmp_128", modifiers=[1, 0x66], cpu=["SSE2"])
-add_insn("cmpneqpd",   "ssecmp_128", modifiers=[4, 0x66], cpu=["SSE2"])
-add_insn("cmpnlepd",   "ssecmp_128", modifiers=[6, 0x66], cpu=["SSE2"])
-add_insn("cmpnltpd",   "ssecmp_128", modifiers=[5, 0x66], cpu=["SSE2"])
-add_insn("cmpordpd",   "ssecmp_128", modifiers=[7, 0x66], cpu=["SSE2"])
-add_insn("cmpunordpd", "ssecmp_128", modifiers=[3, 0x66], cpu=["SSE2"])
+for ib, cc in avxcoms:
+    add_insn("vcmp"+cc+"sd", "ssecmp_64", modifiers=[ib, 0xF2, VEXL0], avx=True)
+    add_insn("vcmp"+cc+"pd", "ssecmp_128", modifiers=[ib, 0x66, VEXL0], avx=True)
 
 add_insn("cmppd",  "xmm_xmm128_imm", modifiers=[0x66, 0xC2], cpu=["SSE2"])
 add_insn("shufpd", "xmm_xmm128_imm", modifiers=[0x66, 0xC6], cpu=["SSE2"])
+add_insn("vcmppd",  "xmm_xmm128_imm_256", modifiers=[0x66, 0xC2, VEXL0], avx=True)
+add_insn("vshufpd", "xmm_xmm128_imm_256", modifiers=[0x66, 0xC6, VEXL0], avx=True)
 
 add_insn("cvtsi2sd", "cvt_xmm_rmx", modifiers=[0xF2, 0x2A], cpu=["SSE2"])
+add_insn("vcvtsi2sd", "cvt_xmm_rmx", modifiers=[0xF2, 0x2A, VEXL0], avx=True)
 
 add_group("cvt_rx_xmm64",
     suffix="l",
     cpu=["SSE2"],
-    modifiers=["PreAdd", "Op1Add"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
     prefix=0x00,
     opcode=[0x0F, 0x00],
     operands=[Operand(type="Reg", size=32, dest="Spare"),
@@ -4302,7 +4895,7 @@ add_group("cvt_rx_xmm64",
 add_group("cvt_rx_xmm64",
     suffix="l",
     cpu=["SSE2"],
-    modifiers=["PreAdd", "Op1Add"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
     prefix=0x00,
     opcode=[0x0F, 0x00],
     operands=[Operand(type="Reg", size=32, dest="Spare"),
@@ -4311,7 +4904,7 @@ add_group("cvt_rx_xmm64",
 add_group("cvt_rx_xmm64",
     suffix="q",
     cpu=["SSE2"],
-    modifiers=["PreAdd", "Op1Add"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
     opersize=64,
     prefix=0x00,
     opcode=[0x0F, 0x00],
@@ -4320,7 +4913,7 @@ add_group("cvt_rx_xmm64",
 add_group("cvt_rx_xmm64",
     suffix="q",
     cpu=["SSE2"],
-    modifiers=["PreAdd", "Op1Add"],
+    modifiers=["PreAdd", "Op1Add", "SetVEX"],
     opersize=64,
     prefix=0x00,
     opcode=[0x0F, 0x00],
@@ -4328,6 +4921,7 @@ add_group("cvt_rx_xmm64",
               Operand(type="Mem", size=64, relaxed=True, dest="EA")])
 
 add_insn("cvtsd2si", "cvt_rx_xmm64", modifiers=[0xF2, 0x2D])
+add_insn("vcvtsd2si", "cvt_rx_xmm64", modifiers=[0xF2, 0x2D, VEXL0], avx=True)
 
 add_group("cvt_mm_xmm",
     cpu=["SSE2"],
@@ -4352,105 +4946,92 @@ add_insn("cvtpi2pd", "cvt_xmm_mm_ss", modifiers=[0x66, 0x2A], cpu=["SSE2"])
 # cmpsd SSE2 form
 add_group("cmpsd",
     cpu=["SSE2"],
+    modifiers=["SetVEX"],
     prefix=0xF2,
     opcode=[0x0F, 0xC2],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
               Operand(type="SIMDReg", size=128, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
-
 add_group("cmpsd",
     cpu=["SSE2"],
+    modifiers=["SetVEX"],
+    prefix=0xF2,
+    opcode=[0x0F, 0xC2],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="Mem", size=64, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("cmpsd",
+    cpu=["AVX"],
+    vex=128,
     prefix=0xF2,
     opcode=[0x0F, 0xC2],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("cmpsd",
+    cpu=["AVX"],
+    vex=128,
+    prefix=0xF2,
+    opcode=[0x0F, 0xC2],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="Mem", size=64, relaxed=True, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+
 # cmpsd is added in string instructions above, so don't re-add_insn()
+add_insn("vcmpsd", "cmpsd", modifiers=[VEXL0], avx=True)
 
-add_group("movaupd",
-    cpu=["SSE2"],
-    modifiers=["Op1Add"],
-    prefix=0x66,
-    opcode=[0x0F, 0x00],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
-add_group("movaupd",
-    cpu=["SSE2"],
-    modifiers=["Op1Add"],
-    prefix=0x66,
-    opcode=[0x0F, 0x01],
-    operands=[Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
-              Operand(type="SIMDReg", size=128, dest="Spare")])
+add_insn("movapd", "movau", modifiers=[0x66, 0x28, 0x01], cpu=["SSE2"])
+add_insn("movupd", "movau", modifiers=[0x66, 0x10, 0x01], cpu=["SSE2"])
+add_insn("vmovapd", "movau", modifiers=[0x66, 0x28, 0x01], avx=True)
+add_insn("vmovupd", "movau", modifiers=[0x66, 0x10, 0x01], avx=True)
 
-add_insn("movapd", "movaupd", modifiers=[0x28])
-add_insn("movupd", "movaupd", modifiers=[0x10])
+add_insn("movhpd", "movhlp", modifiers=[0x66, 0x16], cpu=["SSE2"])
+add_insn("movlpd", "movhlp", modifiers=[0x66, 0x12], cpu=["SSE2"])
+add_insn("vmovhpd", "movhlp", modifiers=[0x66, 0x16, VEXL0], avx=True)
+add_insn("vmovlpd", "movhlp", modifiers=[0x66, 0x12, VEXL0], avx=True)
 
-add_group("movhlpd",
-    cpu=["SSE2"],
-    modifiers=["Op1Add"],
-    prefix=0x66,
-    opcode=[0x0F, 0x00],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="Mem", size=64, relaxed=True, dest="EA")])
-add_group("movhlpd",
-    cpu=["SSE2"],
-    modifiers=["Op1Add"],
-    prefix=0x66,
-    opcode=[0x0F, 0x01],
-    operands=[Operand(type="Mem", size=64, relaxed=True, dest="EA"),
-              Operand(type="SIMDReg", size=128, dest="Spare")])
+add_insn("movmskpd", "movmsk", modifiers=[0x66], cpu=["SSE2"])
+add_insn("vmovmskpd", "movmsk", modifiers=[0x66, VEXL0], avx=True)
 
-add_insn("movhpd", "movhlpd", modifiers=[0x16])
-add_insn("movlpd", "movhlpd", modifiers=[0x12])
-
-add_group("movmskpd",
-    suffix="l",
-    cpu=["SSE2"],
-    prefix=0x66,
-    opcode=[0x0F, 0x50],
-    operands=[Operand(type="Reg", size=32, dest="Spare"),
-              Operand(type="SIMDReg", size=128, dest="EA")])
-add_group("movmskpd",
-    suffix="q",
-    cpu=["SSE2"],
-    prefix=0x66,
-    opcode=[0x0F, 0x50],
-    operands=[Operand(type="Reg", size=64, dest="Spare"),
-              Operand(type="SIMDReg", size=128, dest="EA")])
-
-add_insn("movmskpd", "movmskpd")
-
-add_group("movntpddq",
-    cpu=["SSE2"],
-    modifiers=["Op1Add"],
-    prefix=0x66,
-    opcode=[0x0F, 0x00],
-    operands=[Operand(type="Mem", size=128, relaxed=True, dest="EA"),
-              Operand(type="SIMDReg", size=128, dest="Spare")])
-
-add_insn("movntpd", "movntpddq", modifiers=[0x2B])
-add_insn("movntdq", "movntpddq", modifiers=[0xE7])
+add_insn("movntpd", "movnt", modifiers=[0x66, 0x2B], cpu=["SSE2"])
+add_insn("movntdq", "movnt", modifiers=[0x66, 0xE7], cpu=["SSE2"])
+add_insn("vmovntpd", "movnt", modifiers=[0x66, 0x2B, VEXL0], avx=True)
+add_insn("vmovntdq", "movnt", modifiers=[0x66, 0xE7, VEXL0], avx=True)
 
 # movsd SSE2 forms
 add_group("movsd",
     cpu=["SSE2"],
+    modifiers=["SetVEX"],
     prefix=0xF2,
     opcode=[0x0F, 0x10],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
               Operand(type="SIMDReg", size=128, dest="EA")])
 add_group("movsd",
     cpu=["SSE2"],
+    modifiers=["SetVEX"],
     prefix=0xF2,
     opcode=[0x0F, 0x10],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
               Operand(type="Mem", size=64, relaxed=True, dest="EA")])
 add_group("movsd",
     cpu=["SSE2"],
+    modifiers=["SetVEX"],
     prefix=0xF2,
     opcode=[0x0F, 0x11],
     operands=[Operand(type="Mem", size=64, relaxed=True, dest="EA"),
               Operand(type="SIMDReg", size=128, dest="Spare")])
+add_group("movsd",
+    cpu=["AVX"],
+    vex=128,
+    prefix=0xF2,
+    opcode=[0x0F, 0x10],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="EA")])
 # movsd is added in string instructions above, so don't re-add_insn()
+add_insn("vmovsd", "movsd", modifiers=[VEXL0], avx=True)
 
 #####################################################################
 # P4 VMX Instructions
@@ -4527,34 +5108,34 @@ add_insn("pshuflw", "xmm_xmm128_imm", modifiers=[0xF2, 0x70], cpu=["SSE2"])
 add_insn("punpckhqdq", "xmm_xmm128", modifiers=[0x66, 0x6D], cpu=["SSE2"])
 add_insn("punpcklqdq", "xmm_xmm128", modifiers=[0x66, 0x6C], cpu=["SSE2"])
 
+add_insn("vcvttsd2si", "cvt_rx_xmm64", modifiers=[0xF2, 0x2C, VEXL0], avx=True)
+# vcvttpd2dq takes xmm, ymm combination
+# vcvttps2dq is two-operand
+add_insn("vpmuludq", "xmm_xmm128", modifiers=[0x66, 0xF4, VEXL0], avx=True)
+add_insn("vpshufd", "xmm_xmm128_imm", modifiers=[0x66, 0x70, VEXL0], avx=True)
+add_insn("vpshufhw", "xmm_xmm128_imm", modifiers=[0xF3, 0x70, VEXL0], avx=True)
+add_insn("vpshuflw", "xmm_xmm128_imm", modifiers=[0xF2, 0x70, VEXL0], avx=True)
+add_insn("vpunpckhqdq", "xmm_xmm128", modifiers=[0x66, 0x6D, VEXL0], avx=True)
+add_insn("vpunpcklqdq", "xmm_xmm128", modifiers=[0x66, 0x6C, VEXL0], avx=True)
+
 add_insn("cvtss2sd", "xmm_xmm32", modifiers=[0xF3, 0x5A], cpu=["SSE2"])
+add_insn("vcvtss2sd", "xmm_xmm32", modifiers=[0xF3, 0x5A, VEXL0], avx=True)
 
 add_group("maskmovdqu",
     cpu=["SSE2"],
+    modifiers=["SetVEX"],
     prefix=0x66,
     opcode=[0x0F, 0xF7],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
               Operand(type="SIMDReg", size=128, dest="EA")])
 
 add_insn("maskmovdqu", "maskmovdqu")
+add_insn("vmaskmovdqu", "maskmovdqu", modifiers=[VEXL0], avx=True)
 
-add_group("movdqau",
-    cpu=["SSE2"],
-    modifiers=["PreAdd"],
-    prefix=0x00,
-    opcode=[0x0F, 0x6F],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
-add_group("movdqau",
-    cpu=["SSE2"],
-    modifiers=["PreAdd"],
-    prefix=0x00,
-    opcode=[0x0F, 0x7F],
-    operands=[Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
-              Operand(type="SIMDReg", size=128, dest="Spare")])
-
-add_insn("movdqa", "movdqau", modifiers=[0x66])
-add_insn("movdqu", "movdqau", modifiers=[0xF3])
+add_insn("movdqa", "movau", modifiers=[0x66, 0x6F, 0x10], cpu=["SSE2"])
+add_insn("movdqu", "movau", modifiers=[0xF3, 0x6F, 0x10], cpu=["SSE2"])
+add_insn("vmovdqa", "movau", modifiers=[0x66, 0x6F, 0x10], avx=True)
+add_insn("vmovdqu", "movau", modifiers=[0xF3, 0x6F, 0x10], avx=True)
 
 add_group("movdq2q",
     cpu=["SSE2"],
@@ -4576,15 +5157,26 @@ add_insn("movq2dq", "movq2dq")
 
 add_group("pslrldq",
     cpu=["SSE2"],
-    modifiers=["SpAdd"],
+    modifiers=["SpAdd", "SetVEX"],
     prefix=0x66,
     opcode=[0x0F, 0x73],
     spare=0,
-    operands=[Operand(type="SIMDReg", size=128, dest="EA"),
+    operands=[Operand(type="SIMDReg", size=128, dest="EAVEX"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("pslrldq",
+    cpu=["SSE2"],
+    modifiers=["SpAdd", "SetVEX"],
+    prefix=0x66,
+    opcode=[0x0F, 0x73],
+    spare=0,
+    operands=[Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
 add_insn("pslldq", "pslrldq", modifiers=[7])
 add_insn("psrldq", "pslrldq", modifiers=[3])
+add_insn("vpslldq", "pslrldq", modifiers=[7, VEXL0], avx=True)
+add_insn("vpsrldq", "pslrldq", modifiers=[3, VEXL0], avx=True)
 
 #####################################################################
 # SSE3 / PNI Prescott New Instructions instructions
@@ -4595,6 +5187,14 @@ add_insn("haddpd",   "xmm_xmm128", modifiers=[0x66, 0x7C], cpu=["SSE3"])
 add_insn("haddps",   "xmm_xmm128", modifiers=[0xF2, 0x7C], cpu=["SSE3"])
 add_insn("hsubpd",   "xmm_xmm128", modifiers=[0x66, 0x7D], cpu=["SSE3"])
 add_insn("hsubps",   "xmm_xmm128", modifiers=[0xF2, 0x7D], cpu=["SSE3"])
+
+add_insn("vaddsubpd", "xmm_xmm128_256", modifiers=[0x66, 0xD0, VEXL0], avx=True)
+add_insn("vaddsubps", "xmm_xmm128_256", modifiers=[0xF2, 0xD0, VEXL0], avx=True)
+add_insn("vhaddpd",   "xmm_xmm128_256", modifiers=[0x66, 0x7C, VEXL0], avx=True)
+add_insn("vhaddps",   "xmm_xmm128_256", modifiers=[0xF2, 0x7C, VEXL0], avx=True)
+add_insn("vhsubpd",   "xmm_xmm128_256", modifiers=[0x66, 0x7D, VEXL0], avx=True)
+add_insn("vhsubps",   "xmm_xmm128_256", modifiers=[0xF2, 0x7D, VEXL0], avx=True)
+
 add_insn("movshdup", "xmm_xmm128", modifiers=[0xF3, 0x16], cpu=["SSE3"])
 add_insn("movsldup", "xmm_xmm128", modifiers=[0xF3, 0x12], cpu=["SSE3"])
 add_insn("fisttp",   "fildstp", modifiers=[1, 0, 1], cpu=["SSE3"])
@@ -4605,12 +5205,21 @@ add_insn("mwait",   "threebyte", modifiers=[0x0F, 0x01, 0xC9], cpu=["SSE3"])
 
 add_group("lddqu",
     cpu=["SSE3"],
+    modifiers=["SetVEX"],
     prefix=0xF2,
     opcode=[0x0F, 0xF0],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
               Operand(type="Mem", size=128, relaxed=True, dest="EA")])
+add_group("lddqu",
+    cpu=["AVX"],
+    vex=256,
+    prefix=0xF2,
+    opcode=[0x0F, 0xF0],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="Mem", size=256, relaxed=True, dest="EA")])
 
 add_insn("lddqu", "lddqu")
+add_insn("vlddqu", "lddqu", modifiers=[VEXL0], avx=True)
 
 #####################################################################
 # SSSE3 / TNI Tejas New Intructions instructions
@@ -4618,16 +5227,26 @@ add_insn("lddqu", "lddqu")
 
 add_group("ssse3",
     cpu=["SSSE3"],
+    notavx=True,
     modifiers=["Op2Add"],
     opcode=[0x0F, 0x38, 0x00],
     operands=[Operand(type="SIMDReg", size=64, dest="Spare"),
               Operand(type="SIMDRM", size=64, relaxed=True, dest="EA")])
 add_group("ssse3",
     cpu=["SSSE3"],
+    modifiers=["Op2Add", "SetVEX"],
+    prefix=0x66,
+    opcode=[0x0F, 0x38, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("ssse3",
+    cpu=["AVX"],
     modifiers=["Op2Add"],
+    vex=128,
     prefix=0x66,
     opcode=[0x0F, 0x38, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
 
 add_insn("pshufb",    "ssse3", modifiers=[0x00])
@@ -4646,6 +5265,22 @@ add_insn("pabsb",     "ssse3", modifiers=[0x1C])
 add_insn("pabsw",     "ssse3", modifiers=[0x1D])
 add_insn("pabsd",     "ssse3", modifiers=[0x1E])
 
+add_insn("vpshufb",    "ssse3", modifiers=[0x00, VEXL0], avx=True)
+add_insn("vphaddw",    "ssse3", modifiers=[0x01, VEXL0], avx=True)
+add_insn("vphaddd",    "ssse3", modifiers=[0x02, VEXL0], avx=True)
+add_insn("vphaddsw",   "ssse3", modifiers=[0x03, VEXL0], avx=True)
+add_insn("vpmaddubsw", "ssse3", modifiers=[0x04, VEXL0], avx=True)
+add_insn("vphsubw",    "ssse3", modifiers=[0x05, VEXL0], avx=True)
+add_insn("vphsubd",    "ssse3", modifiers=[0x06, VEXL0], avx=True)
+add_insn("vphsubsw",   "ssse3", modifiers=[0x07, VEXL0], avx=True)
+add_insn("vpsignb",    "ssse3", modifiers=[0x08, VEXL0], avx=True)
+add_insn("vpsignw",    "ssse3", modifiers=[0x09, VEXL0], avx=True)
+add_insn("vpsignd",    "ssse3", modifiers=[0x0A, VEXL0], avx=True)
+add_insn("vpmulhrsw",  "ssse3", modifiers=[0x0B, VEXL0], avx=True)
+add_insn("vpabsb",     "ssse3", modifiers=[0x1C, VEXL0], avx=True)
+add_insn("vpabsw",     "ssse3", modifiers=[0x1D, VEXL0], avx=True)
+add_insn("vpabsd",     "ssse3", modifiers=[0x1E, VEXL0], avx=True)
+
 add_group("ssse3imm",
     cpu=["SSSE3"],
     modifiers=["Op2Add"],
@@ -4663,6 +5298,7 @@ add_group("ssse3imm",
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
 add_insn("palignr", "ssse3imm", modifiers=[0x0F])
+add_insn("vpalignr", "sse4imm", modifiers=[0x0F, VEXL0], avx=True)
 
 #####################################################################
 # SSE4.1 / SSE4.2 instructions
@@ -4670,11 +5306,19 @@ add_insn("palignr", "ssse3imm", modifiers=[0x0F])
 
 add_group("sse4",
     cpu=["SSE41"],
-    modifiers=["Op2Add"],
+    modifiers=["Op2Add", "SetVEX"],
     prefix=0x66,
     opcode=[0x0F, 0x38, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("sse4",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=256,
+    prefix=0x66,
+    opcode=[0x0F, 0x38, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA")])
 
 add_insn("packusdw",   "sse4", modifiers=[0x2B])
 add_insn("pcmpeqq",    "sse4", modifiers=[0x29])
@@ -4692,29 +5336,108 @@ add_insn("pmuldq",     "sse4", modifiers=[0x28])
 add_insn("pmulld",     "sse4", modifiers=[0x40])
 add_insn("ptest",      "sse4", modifiers=[0x17])
 
-add_group("sse4imm",
+# AVX versions use ssse3, and disable MMX version, as they're 3-operand
+add_insn("vpackusdw",   "ssse3", modifiers=[0x2B, VEXL0], avx=True)
+add_insn("vpcmpeqq",    "ssse3", modifiers=[0x29, VEXL0], avx=True)
+add_insn("vpcmpgtq",    "ssse3", modifiers=[0x37, VEXL0], avx=True)
+add_insn("vphminposuw", "ssse3", modifiers=[0x41, VEXL0], avx=True)
+add_insn("vpmaxsb",     "ssse3", modifiers=[0x3C, VEXL0], avx=True)
+add_insn("vpmaxsd",     "ssse3", modifiers=[0x3D, VEXL0], avx=True)
+add_insn("vpmaxud",     "ssse3", modifiers=[0x3F, VEXL0], avx=True)
+add_insn("vpmaxuw",     "ssse3", modifiers=[0x3E, VEXL0], avx=True)
+add_insn("vpminsb",     "ssse3", modifiers=[0x38, VEXL0], avx=True)
+add_insn("vpminsd",     "ssse3", modifiers=[0x39, VEXL0], avx=True)
+add_insn("vpminud",     "ssse3", modifiers=[0x3B, VEXL0], avx=True)
+add_insn("vpminuw",     "ssse3", modifiers=[0x3A, VEXL0], avx=True)
+add_insn("vpmuldq",     "ssse3", modifiers=[0x28, VEXL0], avx=True)
+add_insn("vpmulld",     "ssse3", modifiers=[0x40, VEXL0], avx=True)
+# vptest, however, uses SSE4 style (2 operand only)
+add_insn("vptest", "sse4", modifiers=[0x17, VEXL0], avx=True)
+
+add_group("sse4imm_256",
     cpu=["SSE41"],
+    modifiers=["Op2Add", "SetVEX"],
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("sse4imm_256",
+    cpu=["AVX"],
     modifiers=["Op2Add"],
+    vex=128,
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("sse4imm_256",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=256,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+
+# Version that does not allow YMM registers
+add_group("sse4imm",
+    cpu=["SSE41"],
+    modifiers=["Op2Add", "SetVEX"],
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("sse4imm",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+
 for sz in [32, 64]:
     add_group("sse4m%dimm" % sz,
         cpu=["SSE41"],
-        modifiers=["Op2Add"],
+        modifiers=["Op2Add", "SetVEX"],
         prefix=0x66,
         opcode=[0x0F, 0x3A, 0x00],
-        operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+        operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
                   Operand(type="SIMDReg", size=128, dest="EA"),
                   Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
     add_group("sse4m%dimm" % sz,
         cpu=["SSE41"],
+        modifiers=["Op2Add", "SetVEX"],
+        prefix=0x66,
+        opcode=[0x0F, 0x3A, 0x00],
+        operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+                  Operand(type="Mem", size=sz, relaxed=True, dest="EA"),
+                  Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+    add_group("sse4m%dimm" % sz,
+        cpu=["AVX"],
         modifiers=["Op2Add"],
+        vex=128,
         prefix=0x66,
         opcode=[0x0F, 0x3A, 0x00],
         operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+                  Operand(type="SIMDReg", size=128, dest="VEX"),
+                  Operand(type="SIMDReg", size=128, dest="EA"),
+                  Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+    add_group("sse4m%dimm" % sz,
+        cpu=["AVX"],
+        modifiers=["Op2Add"],
+        vex=128,
+        prefix=0x66,
+        opcode=[0x0F, 0x3A, 0x00],
+        operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+                  Operand(type="SIMDReg", size=128, dest="VEX"),
                   Operand(type="Mem", size=sz, relaxed=True, dest="EA"),
                   Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
@@ -4728,6 +5451,17 @@ add_insn("roundpd", "sse4imm", modifiers=[0x09])
 add_insn("roundps", "sse4imm", modifiers=[0x08])
 add_insn("roundsd", "sse4m64imm", modifiers=[0x0B])
 add_insn("roundss", "sse4m32imm", modifiers=[0x0A])
+
+# vdppd, vmpsadbw, and vpblendw do not allow YMM registers
+add_insn("vblendpd", "sse4imm_256", modifiers=[0x0D, VEXL0], avx=True)
+add_insn("vblendps", "sse4imm_256", modifiers=[0x0C, VEXL0], avx=True)
+add_insn("vdppd",    "sse4imm", modifiers=[0x41, VEXL0], avx=True)
+add_insn("vdpps",    "sse4imm_256", modifiers=[0x40, VEXL0], avx=True)
+add_insn("vmpsadbw", "sse4imm", modifiers=[0x42, VEXL0], avx=True)
+add_insn("vpblendw", "sse4imm", modifiers=[0x0E, VEXL0], avx=True)
+# vroundpd and vroundps don't add another register operand
+add_insn("vroundsd", "sse4m64imm", modifiers=[0x0B, VEXL0], avx=True)
+add_insn("vroundss", "sse4m32imm", modifiers=[0x0A, VEXL0], avx=True)
 
 add_group("sse4xmm0",
     cpu=["SSE41"],
@@ -4748,6 +5482,32 @@ add_group("sse4xmm0",
 add_insn("blendvpd", "sse4xmm0", modifiers=[0x15])
 add_insn("blendvps", "sse4xmm0", modifiers=[0x14])
 add_insn("pblendvb", "sse4xmm0", modifiers=[0x10])
+
+# implicit XMM0 can't be VEX-encoded
+add_group("avx_sse4xmm0",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc")])
+add_group("avx_sse4xmm0",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=256,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=256, dest="VEXImmSrc")])
+
+add_insn("vblendvpd", "avx_sse4xmm0", modifiers=[0x4B])
+add_insn("vblendvps", "avx_sse4xmm0", modifiers=[0x4A])
+add_insn("vpblendvb", "avx_sse4xmm0", modifiers=[0x4C])
 
 for sfx, sz in zip("bwl", [8, 16, 32]):
     add_group("crc32",
@@ -4772,6 +5532,7 @@ add_insn("crc32", "crc32")
 
 add_group("extractps",
     cpu=["SSE41"],
+    modifiers=["SetVEX"],
     opersize=32,
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x17],
@@ -4780,6 +5541,7 @@ add_group("extractps",
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 add_group("extractps",
     cpu=["SSE41"],
+    modifiers=["SetVEX"],
     opersize=64,
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x17],
@@ -4788,36 +5550,60 @@ add_group("extractps",
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
 add_insn("extractps", "extractps")
+add_insn("vextractps", "extractps", modifiers=[VEXL0], avx=True)
 
 add_group("insertps",
     cpu=["SSE41"],
+    modifiers=["SetVEX"],
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x21],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
               Operand(type="Mem", size=32, relaxed=True, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 add_group("insertps",
     cpu=["SSE41"],
+    modifiers=["SetVEX"],
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x21],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDReg", size=128, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("insertps",
+    cpu=["AVX"],
+    vex=128,
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x21],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="Mem", size=32, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("insertps",
+    cpu=["AVX"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x21],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="SIMDReg", size=128, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
 add_insn("insertps", "insertps")
+add_insn("vinsertps", "insertps", modifiers=[VEXL0], avx=True)
 
 add_group("movntdqa",
     cpu=["SSE41"],
+    modifiers=["SetVEX"],
     prefix=0x66,
     opcode=[0x0F, 0x38, 0x2A],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
               Operand(type="Mem", size=128, relaxed=True, dest="EA")])
 
 add_insn("movntdqa", "movntdqa")
+add_insn("vmovntdqa", "movntdqa", modifiers=[VEXL0], avx=True)
 
 add_group("sse4pcmpstr",
     cpu=["SSE42"],
-    modifiers=["Op2Add"],
+    modifiers=["Op2Add", "SetVEX"],
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
@@ -4829,8 +5615,14 @@ add_insn("pcmpestrm", "sse4pcmpstr", modifiers=[0x60])
 add_insn("pcmpistri", "sse4pcmpstr", modifiers=[0x63])
 add_insn("pcmpistrm", "sse4pcmpstr", modifiers=[0x62])
 
+add_insn("vpcmpestri", "sse4pcmpstr", modifiers=[0x61, VEXL0], avx=True)
+add_insn("vpcmpestrm", "sse4pcmpstr", modifiers=[0x60, VEXL0], avx=True)
+add_insn("vpcmpistri", "sse4pcmpstr", modifiers=[0x63, VEXL0], avx=True)
+add_insn("vpcmpistrm", "sse4pcmpstr", modifiers=[0x62, VEXL0], avx=True)
+
 add_group("pextrb",
     cpu=["SSE41"],
+    modifiers=["SetVEX"],
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x14],
     operands=[Operand(type="Mem", size=8, relaxed=True, dest="EA"),
@@ -4839,6 +5631,7 @@ add_group("pextrb",
 for sz in [32, 64]:
     add_group("pextrb",
         cpu=["SSE41"],
+        modifiers=["SetVEX"],
         opersize=sz,
         prefix=0x66,
         opcode=[0x0F, 0x3A, 0x14],
@@ -4847,9 +5640,11 @@ for sz in [32, 64]:
                   Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
 add_insn("pextrb", "pextrb")
+add_insn("vpextrb", "pextrb", modifiers=[VEXL0], avx=True)
 
 add_group("pextrd",
     cpu=["SSE41"],
+    modifiers=["SetVEX"],
     opersize=32,
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x16],
@@ -4858,9 +5653,11 @@ add_group("pextrd",
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
 add_insn("pextrd", "pextrd")
+add_insn("vpextrd", "pextrd", modifiers=[VEXL0], avx=True)
 
 add_group("pextrq",
     cpu=["SSE41"],
+    modifiers=["SetVEX"],
     opersize=64,
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x16],
@@ -4869,58 +5666,105 @@ add_group("pextrq",
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
 add_insn("pextrq", "pextrq")
+add_insn("vpextrq", "pextrq", modifiers=[VEXL0], avx=True)
 
 add_group("pinsrb",
     cpu=["SSE41"],
+    modifiers=["SetVEX"],
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x20],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
               Operand(type="Mem", size=8, relaxed=True, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 add_group("pinsrb",
     cpu=["SSE41"],
+    modifiers=["SetVEX"],
     opersize=32,
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x20],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="Reg", size=32, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("pinsrb",
+    cpu=["AVX"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x20],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="Mem", size=8, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("pinsrb",
+    cpu=["AVX"],
+    vex=128,
+    opersize=32,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x20],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="Reg", size=32, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
 add_insn("pinsrb", "pinsrb")
+add_insn("vpinsrb", "pinsrb", modifiers=[VEXL0], avx=True)
 
 add_group("pinsrd",
     cpu=["SSE41"],
+    modifiers=["SetVEX"],
+    opersize=32,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x22],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="RM", size=32, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("pinsrd",
+    cpu=["AVX"],
+    vex=128,
     opersize=32,
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x22],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="RM", size=32, relaxed=True, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
 add_insn("pinsrd", "pinsrd")
+add_insn("vpinsrd", "pinsrd", modifiers=[VEXL0], avx=True)
 
 add_group("pinsrq",
     cpu=["SSE41"],
+    modifiers=["SetVEX"],
     opersize=64,
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x22],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="RM", size=64, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("pinsrq",
+    cpu=["AVX"],
+    vex=128,
+    opersize=64,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x22],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="RM", size=64, relaxed=True, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
 add_insn("pinsrq", "pinsrq")
+add_insn("vpinsrq", "pinsrq", modifiers=[VEXL0], avx=True)
 
 for sz in [16, 32, 64]:
     add_group("sse4m%d" % sz,
         cpu=["SSE41"],
-        modifiers=["Op2Add"],
+        modifiers=["Op2Add", "SetVEX"],
         prefix=0x66,
         opcode=[0x0F, 0x38, 0x00],
         operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
                   Operand(type="Mem", size=sz, relaxed=True, dest="EA")])
     add_group("sse4m%d" % sz,
         cpu=["SSE41"],
-        modifiers=["Op2Add"],
+        modifiers=["Op2Add", "SetVEX"],
         prefix=0x66,
         opcode=[0x0F, 0x38, 0x00],
         operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
@@ -4933,13 +5777,28 @@ add_insn("pmovzxbw", "sse4m64", modifiers=[0x30])
 add_insn("pmovzxwd", "sse4m64", modifiers=[0x33])
 add_insn("pmovzxdq", "sse4m64", modifiers=[0x35])
 
+add_insn("vpmovsxbw", "sse4m64", modifiers=[0x20, VEXL0], avx=True)
+add_insn("vpmovsxwd", "sse4m64", modifiers=[0x23, VEXL0], avx=True)
+add_insn("vpmovsxdq", "sse4m64", modifiers=[0x25, VEXL0], avx=True)
+add_insn("vpmovzxbw", "sse4m64", modifiers=[0x30, VEXL0], avx=True)
+add_insn("vpmovzxwd", "sse4m64", modifiers=[0x33, VEXL0], avx=True)
+add_insn("vpmovzxdq", "sse4m64", modifiers=[0x35, VEXL0], avx=True)
+
 add_insn("pmovsxbd", "sse4m32", modifiers=[0x21])
 add_insn("pmovsxwq", "sse4m32", modifiers=[0x24])
 add_insn("pmovzxbd", "sse4m32", modifiers=[0x31])
 add_insn("pmovzxwq", "sse4m32", modifiers=[0x34])
 
+add_insn("vpmovsxbd", "sse4m32", modifiers=[0x21, VEXL0], avx=True)
+add_insn("vpmovsxwq", "sse4m32", modifiers=[0x24, VEXL0], avx=True)
+add_insn("vpmovzxbd", "sse4m32", modifiers=[0x31, VEXL0], avx=True)
+add_insn("vpmovzxwq", "sse4m32", modifiers=[0x34, VEXL0], avx=True)
+
 add_insn("pmovsxbq", "sse4m16", modifiers=[0x22])
 add_insn("pmovzxbq", "sse4m16", modifiers=[0x32])
+
+add_insn("vpmovsxbq", "sse4m16", modifiers=[0x22, VEXL0], avx=True)
+add_insn("vpmovzxbq", "sse4m16", modifiers=[0x32, VEXL0], avx=True)
 
 for sfx, sz in zip("wlq", [16, 32, 64]):
     add_group("cnt",
@@ -4952,6 +5811,654 @@ for sfx, sz in zip("wlq", [16, 32, 64]):
                   Operand(type="RM", size=sz, relaxed=True, dest="EA")])
 
 add_insn("popcnt", "cnt", modifiers=[0xB8], cpu=["SSE42"])
+
+#####################################################################
+# Intel AVX instructions
+#####################################################################
+
+# Most AVX instructions are mixed in with above SSEx groups.
+# Some make more sense to have separate groups due to naming conflicts
+# that the v-named versions don't have to deal with.
+add_group("vmovd",
+    cpu=["AVX"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x6E],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="RM", size=32, relaxed=True, dest="EA")])
+add_group("vmovd",
+    cpu=["AVX"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x7E],
+    operands=[Operand(type="RM", size=32, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="Spare")])
+
+add_insn("vmovd", "vmovd")
+
+add_group("vmovq",
+    cpu=["AVX"],
+    vex=128,
+    prefix=0xF3,
+    opcode=[0x0F, 0x7E],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="EA")])
+add_group("vmovq",
+    cpu=["AVX"],
+    vex=128,
+    prefix=0xF3,
+    opcode=[0x0F, 0x7E],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="Mem", size=64, relaxed=True, dest="EA")])
+add_group("vmovq",
+    cpu=["AVX"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0xD6],
+    operands=[Operand(type="Mem", size=64, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="Spare")])
+add_group("vmovq",
+    cpu=["AVX"],
+    vex=128,
+    opersize=64,
+    prefix=0x66,
+    opcode=[0x0F, 0x6E],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="RM", size=64, relaxed=True, dest="EA")])
+add_group("vmovq",
+    cpu=["AVX"],
+    vex=128,
+    opersize=64,
+    prefix=0x66,
+    opcode=[0x0F, 0x7E],
+    operands=[Operand(type="RM", size=64, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="Spare")])
+
+add_insn("vmovq", "vmovq")
+
+# Some AVX variants don't add third operand
+add_group("avx_xmm_xmm128",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=128,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("avx_xmm_xmm128",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=256,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA")])
+
+add_insn("vmovshdup", "avx_xmm_xmm128", modifiers=[0xF3, 0x16])
+add_insn("vmovsldup", "avx_xmm_xmm128", modifiers=[0xF3, 0x12])
+add_insn("vrcpps",    "avx_xmm_xmm128", modifiers=[0, 0x53])
+add_insn("vrsqrtps",  "avx_xmm_xmm128", modifiers=[0, 0x52])
+add_insn("vsqrtps",   "avx_xmm_xmm128", modifiers=[0, 0x51])
+add_insn("vsqrtpd",   "avx_xmm_xmm128", modifiers=[0x66, 0x51])
+add_insn("vcvtdq2ps", "avx_xmm_xmm128", modifiers=[0, 0x5B])
+add_insn("vcvtps2dq", "avx_xmm_xmm128", modifiers=[0x66, 0x5B])
+add_insn("vcvttps2dq", "avx_xmm_xmm128", modifiers=[0xF3, 0x5B])
+
+add_group("avx_sse4imm",
+    cpu=["SSE41"],
+    modifiers=["Op2Add"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("avx_sse4imm",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("avx_sse4imm",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=256,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+
+add_insn("vroundpd", "avx_sse4imm", modifiers=[0x09])
+add_insn("vroundps", "avx_sse4imm", modifiers=[0x08])
+
+add_group("vmovddup",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=128,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDReg", size=128, dest="EA")])
+add_group("vmovddup",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=128,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="Mem", size=64, relaxed=True, dest="EA")])
+add_group("vmovddup",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=256,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA")])
+
+add_insn("vmovddup",  "vmovddup", modifiers=[0xF2, 0x12])
+
+# Some conversion functions take ymm, xmm combination
+add_group("avx_cvt_xmm64",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=128,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="EA")])
+add_group("avx_cvt_xmm64",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=128,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="Mem", size=64, relaxed=True, dest="EA")])
+add_group("avx_cvt_xmm64",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=256,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+
+add_insn("vcvtdq2pd", "avx_cvt_xmm64", modifiers=[0xF3, 0xE6])
+add_insn("vcvtps2pd", "avx_cvt_xmm64", modifiers=[0, 0x5A])
+
+# Some conversion functions take xmm, ymm combination
+# Need separate x and y versions for gas mode
+add_group("avx_cvt_xmm128_x",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=128,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("avx_cvt_xmm128_y",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=256,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA")])
+
+add_group("avx_cvt_xmm128",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=128,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDRM", size=128, dest="EA")])
+add_group("avx_cvt_xmm128",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=256,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDRM", size=256, dest="EA")])
+
+add_insn("vcvtpd2dqx", "avx_cvt_xmm128_x", modifiers=[0xF2, 0xE6], parser="gas")
+add_insn("vcvtpd2dqy", "avx_cvt_xmm128_y", modifiers=[0xF2, 0xE6], parser="gas")
+add_insn("vcvtpd2dq", "avx_cvt_xmm128", modifiers=[0xF2, 0xE6])
+
+add_insn("vcvtpd2psx", "avx_cvt_xmm128_x", modifiers=[0x66, 0x5A], parser="gas")
+add_insn("vcvtpd2psy", "avx_cvt_xmm128_y", modifiers=[0x66, 0x5A], parser="gas")
+add_insn("vcvtpd2ps", "avx_cvt_xmm128", modifiers=[0x66, 0x5A])
+
+add_insn("vcvttpd2dqx", "avx_cvt_xmm128_x", modifiers=[0x66, 0xE6], parser="gas")
+add_insn("vcvttpd2dqy", "avx_cvt_xmm128_y", modifiers=[0x66, 0xE6], parser="gas")
+add_insn("vcvttpd2dq", "avx_cvt_xmm128", modifiers=[0x66, 0xE6])
+
+# Instructions new to AVX
+add_insn("vptestps", "sse4", modifiers=[0x0E, VEXL0], avx=True)
+add_insn("vptestpd", "sse4", modifiers=[0x0F, VEXL0], avx=True)
+
+add_group("vbroadcastss",
+    cpu=["AVX"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x38, 0x18],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="Mem", size=32, relaxed=True, dest="EA")])
+add_group("vbroadcastss",
+    cpu=["AVX"],
+    vex=256,
+    prefix=0x66,
+    opcode=[0x0F, 0x38, 0x18],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="Mem", size=32, relaxed=True, dest="EA")])
+
+add_insn("vbroadcastss", "vbroadcastss")
+
+add_group("vbroadcastsd",
+    cpu=["AVX"],
+    vex=256,
+    prefix=0x66,
+    opcode=[0x0F, 0x38, 0x19],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="Mem", size=64, relaxed=True, dest="EA")])
+
+add_insn("vbroadcastsd", "vbroadcastsd")
+
+add_group("vbroadcastf128",
+    cpu=["AVX"],
+    vex=256,
+    prefix=0x66,
+    opcode=[0x0F, 0x38, 0x1A],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="Mem", size=128, relaxed=True, dest="EA")])
+
+add_insn("vbroadcastf128", "vbroadcastf128")
+
+add_group("vextractf128",
+    cpu=["AVX"],
+    vex=256,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x19],
+    operands=[Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+
+add_insn("vextractf128", "vextractf128")
+
+add_group("vinsertf128",
+    cpu=["AVX"],
+    vex=256,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x18],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+
+add_insn("vinsertf128", "vinsertf128")
+
+add_group("vzero",
+    cpu=["AVX"],
+    modifiers=["SetVEX"],
+    opcode=[0x0F, 0x77],
+    operands=[])
+
+add_insn("vzeroall", "vzero", modifiers=[VEXL1])
+add_insn("vzeroupper", "vzero", modifiers=[VEXL0])
+
+add_group("vmaskmov",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x38, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("vmaskmov",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=256,
+    prefix=0x66,
+    opcode=[0x0F, 0x38, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA")])
+add_group("vmaskmov",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x38, 0x02],
+    operands=[Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="Spare")])
+add_group("vmaskmov",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=256,
+    prefix=0x66,
+    opcode=[0x0F, 0x38, 0x02],
+    operands=[Operand(type="SIMDRM", size=256, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDReg", size=256, dest="Spare")])
+
+add_insn("vmaskmovps", "vmaskmov", modifiers=[0x2C])
+add_insn("vmaskmovpd", "vmaskmov", modifiers=[0x2D])
+
+add_group("vpermil",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x38, 0x08],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("vpermil",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=256,
+    prefix=0x66,
+    opcode=[0x0F, 0x38, 0x08],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA")])
+add_group("vpermil",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("vpermil",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=256,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+
+add_insn("vpermilpd", "vpermil", modifiers=[0x05])
+add_insn("vpermilps", "vpermil", modifiers=[0x04])
+
+add_group("vpermil2",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=128,
+    vexw=0,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
+              Operand(type="Imm", dest="VEXImm")])
+add_group("vpermil2",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=256,
+    vexw=1,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="Imm", dest="VEXImm")])
+add_group("vpermil2",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=256,
+    vexw=0,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=256, dest="VEXImmSrc"),
+              Operand(type="Imm", dest="VEXImm")])
+add_group("vpermil2",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=256,
+    vexw=1,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDReg", size=256, dest="VEXImmSrc"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA"),
+              Operand(type="Imm", dest="VEXImm")])
+
+add_insn("vpermil2pd", "vpermil2", modifiers=[0x49])
+add_insn("vpermil2ps", "vpermil2", modifiers=[0x48])
+
+# Immediate aliases for the above
+add_group("vpermil2_fixed",
+    cpu=["AVX"],
+    modifiers=["Op2Add", "Imm8"],
+    vex=128,
+    vexw=0,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc")])
+add_group("vpermil2_fixed",
+    cpu=["AVX"],
+    modifiers=["Op2Add", "Imm8"],
+    vex=256,
+    vexw=1,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("vpermil2_fixed",
+    cpu=["AVX"],
+    modifiers=["Op2Add", "Imm8"],
+    vex=256,
+    vexw=0,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=256, dest="VEXImmSrc")])
+add_group("vpermil2_fixed",
+    cpu=["AVX"],
+    modifiers=["Op2Add", "Imm8"],
+    vex=256,
+    vexw=1,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDReg", size=256, dest="VEXImmSrc"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA")])
+
+for ib, cc in [(0, "td"), (2, "mo"), (3, "mz")]:
+    add_insn("vpermil"+cc+"2pd", "vpermil2_fixed", modifiers=[0x49, ib])
+    add_insn("vpermil"+cc+"2ps", "vpermil2_fixed", modifiers=[0x48, ib])
+
+add_group("vperm2f128",
+    cpu=["AVX"],
+    vex=256,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x06],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+
+add_insn("vperm2f128", "vperm2f128")
+
+#####################################################################
+# Intel FMA instructions
+#####################################################################
+
+add_group("fma_128_256",
+    cpu=["FMA"],
+    modifiers=["Op2Add"],
+    vex=128,
+    vexw=0,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc")])
+add_group("fma_128_256",
+    cpu=["FMA"],
+    modifiers=["Op2Add"],
+    vex=128,
+    vexw=1,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("fma_128_256",
+    cpu=["FMA"],
+    modifiers=["Op2Add"],
+    vex=256,
+    vexw=0,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=256, dest="VEXImmSrc")])
+add_group("fma_128_256",
+    cpu=["FMA"],
+    modifiers=["Op2Add"],
+    vex=256,
+    vexw=1,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDReg", size=256, dest="VEXImmSrc"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA")])
+
+add_insn("vfmaddpd", "fma_128_256", modifiers=[0x69])
+add_insn("vfmaddps", "fma_128_256", modifiers=[0x68])
+add_insn("vfmaddsubpd", "fma_128_256", modifiers=[0x5D])
+add_insn("vfmaddsubps", "fma_128_256", modifiers=[0x5C])
+add_insn("vfmsubaddpd", "fma_128_256", modifiers=[0x5F])
+add_insn("vfmsubaddps", "fma_128_256", modifiers=[0x5E])
+add_insn("vfmsubpd", "fma_128_256", modifiers=[0x6D])
+add_insn("vfmsubps", "fma_128_256", modifiers=[0x6C])
+add_insn("vfnmaddpd", "fma_128_256", modifiers=[0x79])
+add_insn("vfnmaddps", "fma_128_256", modifiers=[0x78])
+add_insn("vfnmsubpd", "fma_128_256", modifiers=[0x7D])
+add_insn("vfnmsubps", "fma_128_256", modifiers=[0x7C])
+
+for sz in [32, 64]:
+    add_group("fma_128_m%d" % sz,
+        cpu=["FMA"],
+        modifiers=["Op2Add"],
+        vex=128,
+        vexw=0,
+        prefix=0x66,
+        opcode=[0x0F, 0x3A, 0x00],
+        operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+                  Operand(type="SIMDReg", size=128, dest="VEX"),
+                  Operand(type="SIMDReg", size=128, dest="EA"),
+                  Operand(type="SIMDReg", size=128, dest="VEXImmSrc")])
+    add_group("fma_128_m%d" % sz,
+        cpu=["FMA"],
+        modifiers=["Op2Add"],
+        vex=128,
+        vexw=0,
+        prefix=0x66,
+        opcode=[0x0F, 0x3A, 0x00],
+        operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+                  Operand(type="SIMDReg", size=128, dest="VEX"),
+                  Operand(type="Mem", size=sz, relaxed=True, dest="EA"),
+                  Operand(type="SIMDReg", size=128, dest="VEXImmSrc")])
+    add_group("fma_128_m%d" % sz,
+        cpu=["FMA"],
+        modifiers=["Op2Add"],
+        vex=128,
+        vexw=1,
+        prefix=0x66,
+        opcode=[0x0F, 0x3A, 0x00],
+        operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+                  Operand(type="SIMDReg", size=128, dest="VEX"),
+                  Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
+                  Operand(type="Mem", size=sz, relaxed=True, dest="EA")])
+
+add_insn("vfmaddsd", "fma_128_m64", modifiers=[0x6B])
+add_insn("vfmaddss", "fma_128_m32", modifiers=[0x6A])
+add_insn("vfmsubsd", "fma_128_m64", modifiers=[0x6F])
+add_insn("vfmsubss", "fma_128_m32", modifiers=[0x6E])
+add_insn("vfnmaddsd", "fma_128_m64", modifiers=[0x7B])
+add_insn("vfnmaddss", "fma_128_m32", modifiers=[0x7A])
+add_insn("vfnmsubsd", "fma_128_m64", modifiers=[0x7F])
+add_insn("vfnmsubss", "fma_128_m32", modifiers=[0x7E])
+
+#####################################################################
+# Intel AES instructions
+#####################################################################
+
+add_group("aes",
+    cpu=["AES"],
+    modifiers=["Op1Add", "Op2Add"],
+    prefix=0x66,
+    opcode=[0x0F, 0x00, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+
+add_insn("aesenc", "aes", modifiers=[0x38, 0xDC])
+add_insn("aesenclast", "aes", modifiers=[0x38, 0xDD])
+add_insn("aesdec", "aes", modifiers=[0x38, 0xDE])
+add_insn("aesdeclast", "aes", modifiers=[0x38, 0xDF])
+add_insn("aesimc", "aes", modifiers=[0x38, 0xDB])
+
+add_group("aes_imm",
+    cpu=["AES"],
+    modifiers=["Op1Add", "Op2Add"],
+    prefix=0x66,
+    opcode=[0x0F, 0x00, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+
+add_insn("aeskeygenassist", "aes_imm", modifiers=[0x3A, 0xDF])
+
+#####################################################################
+# Intel PCLMULQDQ instruction
+#####################################################################
+
+add_insn("pclmulqdq", "aes_imm", modifiers=[0x3A, 0x44], cpu=["CLMUL"])
+
+add_group("pclmulqdq_fixed",
+    cpu=["CLMUL"],
+    modifiers=["Imm8"],
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x44],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+
+add_insn("pclmullqlqdq", "pclmulqdq_fixed", modifiers=[0x00])
+add_insn("pclmulhqlqdq", "pclmulqdq_fixed", modifiers=[0x01])
+add_insn("pclmullqhqdq", "pclmulqdq_fixed", modifiers=[0x10])
+add_insn("pclmulhqhqdq", "pclmulqdq_fixed", modifiers=[0x11])
 
 #####################################################################
 # AMD SSE4a instructions
