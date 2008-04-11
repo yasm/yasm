@@ -67,12 +67,6 @@
 #define CPU_SSE5    33      /* AMD Streaming SIMD extensions 5 required */
 #define CPU_XSAVE   34      /* Intel XSAVE instructions */
 
-/* Technically not CPU capabilities, they do affect what instructions are
- * available.  These are tested against BITS==64.
- */
-#define CPU_64      120     /* Only available in 64-bit mode */
-#define CPU_Not64   121     /* Not available (invalid) in 64-bit mode */
-
 typedef struct yasm_arch_x86 {
     yasm_arch_base arch;        /* base structure */
 

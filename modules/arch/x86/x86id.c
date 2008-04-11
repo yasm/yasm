@@ -69,6 +69,13 @@ enum x86_gas_suffix_flags {
     WEAK = 1<<5             /* Relaxed operand mode for GAS */
 };
 
+/* Miscellaneous flag tests for instructions */
+enum x86_misc_flags {
+    /* These are tested against BITS==64. */
+    ONLY_64 = 1<<0,         /* Only available in 64-bit mode */
+    NOT_64 = 1<<1           /* Not available (invalid) in 64-bit mode */
+};
+
 enum x86_operand_type {
     OPT_Imm = 0,        /* immediate */
     OPT_Reg = 1,        /* any general purpose or FPU register */
@@ -216,14 +223,17 @@ typedef struct x86_insn_info {
     /* GAS suffix flags */
     unsigned int gas_flags:8;      /* Enabled for these GAS suffixes */
 
+    /* Tests against BITS==64 and AVX */
+    unsigned int misc_flags:6;
+
     /* The CPU feature flags needed to execute this instruction.  This is OR'ed
      * with arch-specific data[2].  This combined value is compared with
      * cpu_enabled to see if all bits set here are set in cpu_enabled--if so,
      * the instruction is available on this CPU.
      */
-    unsigned int cpu0:8;
-    unsigned int cpu1:8;
-    unsigned int cpu2:8;
+    unsigned int cpu0:6;
+    unsigned int cpu1:6;
+    unsigned int cpu2:6;
 
     /* Opcode modifiers for variations of instruction.  As each modifier reads
      * its parameter in LSB->MSB order from the arch-specific data[1] from the
@@ -295,6 +305,9 @@ typedef struct x86_id_insn {
 
     /* Suffix flags */
     unsigned int suffix:8;
+
+    /* Tests against BITS==64 and AVX */
+    unsigned int misc_flags:6;
 
     /* Parser enabled at the time of parsing the instruction */
     unsigned int parser:2;
@@ -460,27 +473,15 @@ x86_finalize_jmp(yasm_bytecode *bc, yasm_bytecode *prev_bc,
     jmp->nearop.len = 0;
     for (; num_info>0 && (jmp->shortop.len == 0 || jmp->nearop.len == 0);
          num_info--, info++) {
-        unsigned int cpu0 = info->cpu0;
-        unsigned int cpu1 = info->cpu1;
-        unsigned int cpu2 = info->cpu2;
-
         /* Match CPU */
-        if (mode_bits != 64 &&
-            (cpu0 == CPU_64 || cpu1 == CPU_64 || cpu2 == CPU_64))
+        if (mode_bits != 64 && (info->misc_flags & ONLY_64))
             continue;
-        if (mode_bits == 64 &&
-            (cpu0 == CPU_Not64 || cpu1 == CPU_Not64 || cpu2 == CPU_Not64))
+        if (mode_bits == 64 && (info->misc_flags & NOT_64))
             continue;
 
-        if (cpu0 == CPU_64 || cpu0 == CPU_Not64)
-            cpu0 = CPU_Any;
-        if (cpu1 == CPU_64 || cpu1 == CPU_Not64)
-            cpu1 = CPU_Any;
-        if (cpu2 == CPU_64 || cpu2 == CPU_Not64)
-            cpu2 = CPU_Any;
-        if (!BitVector_bit_test(id_insn->cpu_enabled, cpu0) ||
-            !BitVector_bit_test(id_insn->cpu_enabled, cpu1) ||
-            !BitVector_bit_test(id_insn->cpu_enabled, cpu2))
+        if (!BitVector_bit_test(id_insn->cpu_enabled, info->cpu0) ||
+            !BitVector_bit_test(id_insn->cpu_enabled, info->cpu1) ||
+            !BitVector_bit_test(id_insn->cpu_enabled, info->cpu2))
             continue;
 
         if (info->num_operands == 0)
@@ -553,31 +554,22 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
         yasm_insn_operand *op, **use_ops;
         const x86_info_operand *info_ops =
             &insn_operands[info->operands_index];
-        unsigned int cpu0 = info->cpu0;
-        unsigned int cpu1 = info->cpu1;
-        unsigned int cpu2 = info->cpu2;
         unsigned int gas_flags = info->gas_flags;
+        unsigned int misc_flags = info->misc_flags;
         unsigned int size;
         int mismatch = 0;
         int i;
 
         /* Match CPU */
-        if (mode_bits != 64 &&
-            (cpu0 == CPU_64 || cpu1 == CPU_64 || cpu2 == CPU_64))
+        if (mode_bits != 64 && (misc_flags & ONLY_64))
             continue;
-        if (mode_bits == 64 &&
-            (cpu0 == CPU_Not64 || cpu1 == CPU_Not64 || cpu2 == CPU_Not64))
+        if (mode_bits == 64 && (misc_flags & NOT_64))
             continue;
 
-        if (cpu0 == CPU_64 || cpu0 == CPU_Not64)
-            cpu0 = CPU_Any;
-        if (cpu1 == CPU_64 || cpu1 == CPU_Not64)
-            cpu1 = CPU_Any;
-        if (cpu2 == CPU_64 || cpu2 == CPU_Not64)
-            cpu2 = CPU_Any;
-        if (bypass != 8 && (!BitVector_bit_test(id_insn->cpu_enabled, cpu0) ||
-                            !BitVector_bit_test(id_insn->cpu_enabled, cpu1) ||
-                            !BitVector_bit_test(id_insn->cpu_enabled, cpu2)))
+        if (bypass != 8 &&
+            (!BitVector_bit_test(id_insn->cpu_enabled, info->cpu0) ||
+             !BitVector_bit_test(id_insn->cpu_enabled, info->cpu1) ||
+             !BitVector_bit_test(id_insn->cpu_enabled, info->cpu2)))
             continue;
 
         /* Match # of operands */
@@ -1428,7 +1420,7 @@ typedef struct insnprefix_parse_data {
     /* instruction parse group - NULL if prefix */
     /*@null@*/ const x86_insn_info *group;
 
-    /* For instruction, number of elements in group in lower 8 bits.
+    /* For instruction, number of elements in group.
      * For prefix, prefix type shifted right by 8.
      */
     unsigned int num_info:8;
@@ -1443,10 +1435,13 @@ typedef struct insnprefix_parse_data {
     unsigned int mod_data1:8;
     unsigned int mod_data2:8;
 
+    /* Tests against BITS==64 and AVX */
+    unsigned int misc_flags:6;
+
     /* CPU flags */
-    unsigned int cpu0:8;
-    unsigned int cpu1:8;
-    unsigned int cpu2:8;
+    unsigned int cpu0:6;
+    unsigned int cpu1:6;
+    unsigned int cpu2:6;
 } insnprefix_parse_data;
 
 /* Pull in all parse data */
@@ -1544,7 +1539,6 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
 {
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     /*@null@*/ const insnprefix_parse_data *pdata;
-    unsigned int cpu0, cpu1, cpu2;
     size_t i;
     static char lcaseid[16];
 
@@ -1570,22 +1564,17 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
     if (!pdata)
         return YASM_ARCH_NOTINSNPREFIX;
 
-    cpu0 = pdata->cpu0;
-    cpu1 = pdata->cpu1;
-    cpu2 = pdata->cpu2;
-
     if (pdata->group) {
         x86_id_insn *id_insn;
         wordptr cpu_enabled = arch_x86->cpu_enables[arch_x86->active_cpu];
+        unsigned int cpu0, cpu1, cpu2;
 
-        if (arch_x86->mode_bits != 64 &&
-            (cpu0 == CPU_64 || cpu1 == CPU_64 || cpu2 == CPU_64)) {
+        if (arch_x86->mode_bits != 64 && (pdata->misc_flags & ONLY_64)) {
             yasm_warn_set(YASM_WARN_GENERAL,
                           N_("`%s' is an instruction in 64-bit mode"), id);
             return YASM_ARCH_NOTINSNPREFIX;
         }
-        if (arch_x86->mode_bits == 64 &&
-            (cpu0 == CPU_Not64 || cpu1 == CPU_Not64 || cpu2 == CPU_Not64)) {
+        if (arch_x86->mode_bits == 64 && (pdata->misc_flags & NOT_64)) {
             yasm_error_set(YASM_ERROR_GENERAL,
                            N_("`%s' invalid in 64-bit mode"), id);
             id_insn = yasm_xmalloc(sizeof(x86_id_insn));
@@ -1598,6 +1587,7 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
             id_insn->num_info = NELEMS(not64_insn);
             id_insn->mode_bits = arch_x86->mode_bits;
             id_insn->suffix = 0;
+            id_insn->misc_flags = 0;
             id_insn->parser = arch_x86->parser;
             id_insn->force_strict = arch_x86->force_strict != 0;
             id_insn->default_rel = arch_x86->default_rel != 0;
@@ -1605,12 +1595,10 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
             return YASM_ARCH_INSN;
         }
 
-        if (cpu0 == CPU_64 || cpu0 == CPU_Not64)
-            cpu0 = CPU_Any;
-        if (cpu1 == CPU_64 || cpu1 == CPU_Not64)
-            cpu1 = CPU_Any;
-        if (cpu2 == CPU_64 || cpu2 == CPU_Not64)
-            cpu2 = CPU_Any;
+        cpu0 = pdata->cpu0;
+        cpu1 = pdata->cpu1;
+        cpu2 = pdata->cpu2;
+
         if (!BitVector_bit_test(cpu_enabled, cpu0) ||
             !BitVector_bit_test(cpu_enabled, cpu1) ||
             !BitVector_bit_test(cpu_enabled, cpu2)) {
@@ -1630,6 +1618,7 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
         id_insn->num_info = pdata->num_info;
         id_insn->mode_bits = arch_x86->mode_bits;
         id_insn->suffix = pdata->flags;
+        id_insn->misc_flags = pdata->misc_flags;
         id_insn->parser = arch_x86->parser;
         id_insn->force_strict = arch_x86->force_strict != 0;
         id_insn->default_rel = arch_x86->default_rel != 0;
@@ -1651,8 +1640,7 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
             return YASM_ARCH_NOTINSNPREFIX;
         }
 
-        if (arch_x86->mode_bits != 64 &&
-            (cpu0 == CPU_64 || cpu1 == CPU_64 || cpu2 == CPU_64)) {
+        if (arch_x86->mode_bits != 64 && (pdata->misc_flags & ONLY_64)) {
             yasm_warn_set(YASM_WARN_GENERAL,
                           N_("`%s' is a prefix in 64-bit mode"), id);
             return YASM_ARCH_NOTINSNPREFIX;
@@ -1693,6 +1681,7 @@ yasm_x86__create_empty_insn(yasm_arch *arch, unsigned long line)
     id_insn->num_info = NELEMS(empty_insn);
     id_insn->mode_bits = arch_x86->mode_bits;
     id_insn->suffix = 0;
+    id_insn->misc_flags = 0;
     id_insn->parser = arch_x86->parser;
     id_insn->force_strict = arch_x86->force_strict != 0;
     id_insn->default_rel = arch_x86->default_rel != 0;

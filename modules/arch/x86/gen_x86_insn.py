@@ -78,12 +78,6 @@ def cpu_lcd(cpu1, cpu2):
     for feature in set(unordered_cpu_features) & set(cpu1) & set(cpu2):
         retval.add(feature)
 
-    # 64-bitness
-    if "64" in cpu1 and "64" in cpu2:
-        retval.add("64")
-    if "Not64" in cpu1 and "Not64" in cpu2:
-        retval.add("Not64")
-
     return retval
 
 class Operand(object):
@@ -132,10 +126,13 @@ class GroupForm(object):
 
         # CPU feature flags initialization
         self.cpu = set(kwargs.pop("cpu", []))
+
+        # Misc flags
+        self.misc_flags = set(kwargs.pop("misc_flags", []))
         if kwargs.pop("only64", False):
-            self.cpu.add("64")
+            self.misc_flags.add("ONLY_64")
         if kwargs.pop("not64", False):
-            self.cpu.add("Not64")
+            self.misc_flags.add("NOT_64")
 
         # Operation size
         self.opersize = kwargs.pop("opersize", 0)
@@ -143,8 +140,8 @@ class GroupForm(object):
             self.opersize = 0
 
         if self.opersize == 64:
-            self.cpu.add("64")
-        elif self.opersize == 32 and "64" not in self.cpu:
+            self.misc_flags.add("ONLY_64")
+        elif self.opersize == 32 and "ONLY_64" not in self.misc_flags:
             self.cpu.add("386")
 
         # Default operation size in 64-bit mode
@@ -190,20 +187,20 @@ class GroupForm(object):
         for op in self.operands:
             if op.type in ["Reg", "RM", "Areg", "Creg", "Dreg"]:
                 if op.size == 64:
-                    self.cpu.add("64")
-                elif op.size == 32 and "64" not in self.cpu:
+                    self.misc_flags.add("ONLY_64")
+                elif op.size == 32 and "ONLY_64" not in self.misc_flags:
                     self.cpu.add("386")
             if op.type in ["Imm", "ImmNotSegOff"]:
                 if op.size == 64:
-                    self.cpu.add("64")
-                elif op.size == 32 and "64" not in self.cpu:
+                    self.misc_flags.add("ONLY_64")
+                elif op.size == 32 and "ONLY_64" not in self.misc_flags:
                     self.cpu.add("386")
-            if op.type in ["FS", "GS"] and "64" not in self.cpu:
+            if op.type in ["FS", "GS"] and "ONLY_64" not in self.misc_flags:
                 self.cpu.add("386")
-            if op.type in ["CR4"] and "64" not in self.cpu:
+            if op.type in ["CR4"] and "ONLY_64" not in self.misc_flags:
                 self.cpu.add("586")
             if op.dest == "EA64":
-                self.cpu.add("64")
+                self.misc_flags.add("ONLY_64")
             if op.dest == "DREX":
                 self.drex_oc0 |= 0x80
 
@@ -219,12 +216,9 @@ class GroupForm(object):
         # CPU feature flags finalization
         # Remove redundancies
         maxcpu = -1
-        if "64" in self.cpu:
-            pass #maxcpu = ordered_cpus.index("Hammer")
-        else:
-            maxcpu_set = self.cpu & set(ordered_cpus)
-            if maxcpu_set:
-                maxcpu = max(ordered_cpus.index(x) for x in maxcpu_set)
+        maxcpu_set = self.cpu & set(ordered_cpus)
+        if maxcpu_set:
+            maxcpu = max(ordered_cpus.index(x) for x in maxcpu_set)
         if maxcpu != -1:
             for cpu in ordered_cpus[0:maxcpu]:
                 self.cpu.discard(cpu)
@@ -278,6 +272,7 @@ class GroupForm(object):
 
         # Build instruction info structure initializer
         return "{ "+ ", ".join([gas_flags or "0",
+                                "|".join(self.misc_flags) or "0",
                                 cpus_str[0],
                                 cpus_str[1],
                                 cpus_str[2],
@@ -302,7 +297,7 @@ def add_group(name, **kwargs):
 
 class Insn(object):
     def __init__(self, groupname, suffix=None, parser=None, modifiers=None,
-                 cpu=None, only64=False, not64=False):
+                 cpu=None, misc_flags=None, only64=False, not64=False):
         self.groupname = groupname
         if suffix is None:
             self.suffix = None
@@ -324,20 +319,25 @@ class Insn(object):
         else:
             self.cpu = set(cpu)
 
+        if misc_flags is None:
+            self.misc_flags = None
+        else:
+            self.misc_flags = set([x for x in misc_flags])
+
         if only64:
-            if self.cpu is None:
-                self.cpu = set()
-            self.cpu.add("64")
+            if self.misc_flags is None:
+                self.misc_flags = set()
+            self.misc_flags.add("ONLY_64")
         if not64:
-            if self.cpu is None:
-                self.cpu = set()
-            self.cpu.add("Not64")
+            if self.misc_flags is None:
+                self.misc_flags = set()
+            self.misc_flags.add("NOT_64")
 
     def auto_cpu(self, parser):
-        if self.cpu is not None:
-            return
         """Determine lowest common denominator CPU from group and suffix.
         Does nothing if CPU is already set."""
+        if self.cpu is not None:
+            return
         # Scan through group, matching parser and suffix
         for form in groups[self.groupname]:
             if parser not in form.parsers:
@@ -346,16 +346,34 @@ class Insn(object):
                 (form.suffixes is None or self.suffix not in form.suffixes)):
                 continue
             if self.cpu is None:
-                self.cpu = form.cpu
+                self.cpu = set(form.cpu)
             else:
                 self.cpu = cpu_lcd(self.cpu, form.cpu)
+
+    def auto_misc_flags(self, parser):
+        """Determine lowest common denominator flags from group and suffix.
+        Does nothing if flags is already set."""
+        if self.misc_flags is not None:
+            return
+        # Scan through group, matching parser and suffix
+        for form in groups[self.groupname]:
+            if parser not in form.parsers:
+                continue
+            if (self.suffix is not None and len(self.suffix) == 1 and
+                (form.suffixes is None or self.suffix not in form.suffixes)):
+                continue
+            if self.misc_flags is None:
+                self.misc_flags = set(form.misc_flags)
+            else:
+                self.misc_flags &= form.misc_flags
 
     def copy(self):
         """Return a shallow copy."""
         return Insn(self.groupname,
                     suffix=self.suffix,
                     modifiers=self.modifiers,
-                    cpu=self.cpu)
+                    cpu=self.cpu,
+                    misc_flags=self.misc_flags)
 
     def __str__(self):
         if self.suffix is None:
@@ -387,6 +405,7 @@ class Insn(object):
                            mods_str[0],
                            mods_str[1],
                            mods_str[2],
+                           "|".join(self.misc_flags or []) or "0",
                            cpus_str[0],
                            cpus_str[1],
                            cpus_str[2]])
@@ -409,7 +428,8 @@ class Prefix(object):
                            "0",
                            "0",
                            "0",
-                           self.only64 and "CPU_64" or "0",
+                           self.only64 and "ONLY_64" or "0",
+                           "0",
                            "0",
                            "0"])
 
@@ -440,6 +460,7 @@ def finalize_insns():
                     raise ValueError("duplicate gas instruction %s" % keyword)
                 newinsn = insn.copy()
                 newinsn.auto_cpu("gas")
+                newinsn.auto_misc_flags("gas")
                 gas_insns[keyword] = newinsn
 
                 if insn.suffix is None:
@@ -456,6 +477,7 @@ def finalize_insns():
                         newinsn = insn.copy()
                         newinsn.suffix = suffix
                         newinsn.auto_cpu("gas")
+                        newinsn.auto_misc_flags("gas")
                         gas_insns[keyword] = newinsn
 
             if "nasm" in parsers:
@@ -464,6 +486,7 @@ def finalize_insns():
                     raise ValueError("duplicate nasm instruction %s" % keyword)
                 newinsn = insn.copy()
                 newinsn.auto_cpu("nasm")
+                newinsn.auto_misc_flags("nasm")
                 nasm_insns[keyword] = newinsn
 
 def output_insns(f, parser, insns):
@@ -5610,7 +5633,7 @@ add_insn("svdc", "svdc")
 add_insn("fsetpm", "twobyte", modifiers=[0xDB, 0xE4], cpu=["286", "FPU", "Obs"])
 add_insn("loadall", "twobyte", modifiers=[0x0F, 0x07], cpu=["386", "Undoc"])
 add_insn("loadall286", "twobyte", modifiers=[0x0F, 0x05], cpu=["286", "Undoc"])
-add_insn("salc", "onebyte", modifiers=[0xD6], cpu=["Undoc", "Not64"])
+add_insn("salc", "onebyte", modifiers=[0xD6], cpu=["Undoc"], not64=True)
 add_insn("smi", "onebyte", modifiers=[0xF1], cpu=["386", "Undoc"])
 
 add_group("ibts",
