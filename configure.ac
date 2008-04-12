@@ -67,7 +67,7 @@ AC_HELP_STRING([--enable-python-bindings],[Build Python bindings]),
   yes) enable_python_bindings="yes" ;;
   no)  enable_python_bindings="no" ;;
   *) AC_MSG_ERROR([bad value ${enableval} for --enable-python-bindings]) ;;
-esac], enable_python_bindings="auto")
+esac], enable_python_bindings="no")
 
 #
 # Checks for programs.
