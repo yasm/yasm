@@ -235,6 +235,7 @@ rip,	REG,	X86_RIP,	0,	64
 st,	REGGROUP,	0,	X86_FPUREG,	0
 mm,	REGGROUP,	0,	X86_MMXREG,	0
 xmm,	REGGROUP,	0,	X86_XMMREG,	0
+ymm,	REGGROUP,	0,	X86_YMMREG,	0
 #
 # segment registers
 #
