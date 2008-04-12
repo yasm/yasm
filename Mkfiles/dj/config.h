@@ -119,7 +119,7 @@
 #define PACKAGE_BUILD "HEAD"
 
 /* Define to internal version of this package. */
-#define PACKAGE_INTVER "0.6.99"
+#define PACKAGE_INTVER "0.7.99"
 
 /* Define to the full name of this package. */
 #define PACKAGE_NAME "yasm"
