@@ -63,9 +63,9 @@ static int linechg_numcount;
   any = [\001-\377];
   digit = [0-9];
   iletter = [a-zA-Z];
-  bindigit = [01];
-  octdigit = [0-7];
-  hexdigit = [0-9a-fA-F];
+  bindigit = [01_];
+  octdigit = [0-7_];
+  hexdigit = [0-9a-fA-F_];
   ws = [ \t\r];
   quot = ["'];
 */
@@ -151,14 +151,14 @@ scan:
         }
         /* 10010011b - binary number */
 
-        bindigit+ 'b' {
+        [01] bindigit* 'b' {
             s->tok[TOKLEN-1] = '\0'; /* strip off 'b' */
             lvalp->intn = yasm_intnum_create_bin(TOK);
             RETURN(INTNUM);
         }
 
         /* 777q or 777o - octal number */
-        octdigit+ [qQoO] {
+        [0-7] octdigit* [qQoO] {
             s->tok[TOKLEN-1] = '\0'; /* strip off 'q' or 'o' */
             lvalp->intn = yasm_intnum_create_oct(TOK);
             RETURN(INTNUM);
@@ -541,14 +541,14 @@ directive2:
         }
         /* 10010011b - binary number */
 
-        bindigit+ 'b' {
+        [01] bindigit* 'b' {
             s->tok[TOKLEN-1] = '\0'; /* strip off 'b' */
             lvalp->intn = yasm_intnum_create_bin(TOK);
             RETURN(INTNUM);
         }
 
         /* 777q or 777o - octal number */
-        octdigit+ [qQoO] {
+        [0-7] octdigit* [qQoO] {
             s->tok[TOKLEN-1] = '\0'; /* strip off 'q' or 'o' */
             lvalp->intn = yasm_intnum_create_oct(TOK);
             RETURN(INTNUM);
@@ -562,10 +562,10 @@ directive2:
         }
 
         /* $0AA and 0xAA forms of hexidecimal number */
-        (("$" digit) | "0x") hexdigit+ {
+        (("$" digit) | '0x') hexdigit+ {
             savech = s->tok[TOKLEN];
             s->tok[TOKLEN] = '\0';
-            if (s->tok[1] == 'x')
+            if (s->tok[1] == 'x' || s->tok[1] == 'X')
                 /* skip 0 and x */
                 lvalp->intn = yasm_intnum_create_hex(TOK+2);
             else
