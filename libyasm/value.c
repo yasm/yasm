@@ -276,8 +276,8 @@ value_finalize_scan(yasm_value *value, yasm_expr *e,
                             && sect2 == yasm_bc_get_section(expr_precbc)))) {
                     for (j=0; j<e->numterms; j++) {
                         if (e->terms[j].type == YASM_EXPR_SYM
-                            && yasm_symrec_get_label(e->terms[j].data.sym,
-                                                     &precbc2)
+                            && !yasm_symrec_get_equ(e->terms[j].data.sym)
+                            && !yasm_symrec_is_special(e->terms[j].data.sym)
                             && (used & (1<<j)) == 0) {
                             /* Mark as used */
                             used |= 1<<j;
