@@ -6040,8 +6040,8 @@ add_insn("vcvttpd2dqy", "avx_cvt_xmm128_y", modifiers=[0x66, 0xE6], parser="gas"
 add_insn("vcvttpd2dq", "avx_cvt_xmm128", modifiers=[0x66, 0xE6])
 
 # Instructions new to AVX
-add_insn("vptestps", "sse4", modifiers=[0x0E, VEXL0], avx=True)
-add_insn("vptestpd", "sse4", modifiers=[0x0F, VEXL0], avx=True)
+add_insn("vtestps", "sse4", modifiers=[0x0E, VEXL0], avx=True)
+add_insn("vtestpd", "sse4", modifiers=[0x0F, VEXL0], avx=True)
 
 add_group("vbroadcastss",
     cpu=["AVX"],

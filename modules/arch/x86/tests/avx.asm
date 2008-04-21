@@ -2154,19 +2154,19 @@ vptest ymm1, ymm2
 vptest ymm1, [rax]
 vptest ymm1, yword [rax]
 
-vptestps xmm1, xmm2
-vptestps xmm1, [rax]
-vptestps xmm1, dqword [rax]
-vptestps ymm1, ymm2
-vptestps ymm1, [rax]
-vptestps ymm1, yword [rax]
+vtestps xmm1, xmm2
+vtestps xmm1, [rax]
+vtestps xmm1, dqword [rax]
+vtestps ymm1, ymm2
+vtestps ymm1, [rax]
+vtestps ymm1, yword [rax]
 
-vptestpd xmm1, xmm2
-vptestpd xmm1, [rax]
-vptestpd xmm1, dqword [rax]
-vptestpd ymm1, ymm2
-vptestpd ymm1, [rax]
-vptestpd ymm1, yword [rax]
+vtestpd xmm1, xmm2
+vtestpd xmm1, [rax]
+vtestpd xmm1, dqword [rax]
+vtestpd ymm1, ymm2
+vtestpd ymm1, [rax]
+vtestpd ymm1, yword [rax]
 
 psubb xmm1, xmm2
 psubb xmm1, [rax]
