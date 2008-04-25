@@ -48,7 +48,8 @@ enum tokentype {
     RIGHT_OP,
     ID,
     LABEL,
-    LINE_MARKER,
+    CPP_LINE_MARKER,
+    NASM_LINE_MARKER,
     NONE
 };
 
@@ -90,7 +91,8 @@ enum gas_parser_state {
     INITIAL,
     COMMENT,
     SECTION_DIRECTIVE,
-    INSTDIR
+    INSTDIR,
+    NASM_FILENAME
 };
 
 typedef struct yasm_parser_gas {
@@ -147,6 +149,9 @@ typedef struct yasm_parser_gas {
 
     /* Parser-handled directives HAMT lookup */
     HAMT *dirs;
+
+    int is_nasm_preproc;
+    int is_cpp_preproc;
 } yasm_parser_gas;
 
 /* shorter access names to commonly used parser_gas fields */

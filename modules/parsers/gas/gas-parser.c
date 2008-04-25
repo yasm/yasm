@@ -76,6 +76,11 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp,
     for (i=0; i<10; i++)
         parser_gas.local[i] = 0;
 
+    parser_gas.is_cpp_preproc =
+        yasm__strcasecmp(((yasm_preproc_base*)pp)->module->keyword, "cpp") == 0;
+    parser_gas.is_nasm_preproc =
+        yasm__strcasecmp(((yasm_preproc_base*)pp)->module->keyword, "nasm") == 0;
+
     /* yacc debugging, needs YYDEBUG set in bison.y.in to work */
     parser_gas.debug = 1;
 
@@ -114,6 +119,7 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp,
 static const char *gas_parser_preproc_keywords[] = {
     "raw",
     "cpp",
+    "nasm",
     NULL
 };
 

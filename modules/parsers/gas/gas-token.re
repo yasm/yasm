@@ -302,6 +302,8 @@ gas_parser_lex(YYSTYPE *lvalp, yasm_parser_gas *parser_gas)
             goto comment;
         case SECTION_DIRECTIVE:
             goto section_directive;
+        case NASM_FILENAME:
+            goto nasm_filename;
         default:
             break;
     }
@@ -387,6 +389,11 @@ scan:
         [%][a-zA-Z0-9]+ {
             savech = s->tok[TOKLEN];
             s->tok[TOKLEN] = '\0';
+            if (parser_gas->is_nasm_preproc && strcmp(TOK+1, "line") == 0) {
+                s->tok[TOKLEN] = savech;
+                RETURN(NASM_LINE_MARKER);
+            }
+
             switch (yasm_arch_parse_check_regtmod
                     (p_object->arch, TOK+1, TOKLEN-1, &lvalp->arch_data)) {
                 case YASM_ARCH_REG:
@@ -482,10 +489,9 @@ scan:
 
         "/*"                    { parser_gas->state = COMMENT; goto comment; }
         "#"                     {
-            if (strcmp(((yasm_preproc_base*)parser_gas->preproc)->module->keyword,
-                 "cpp") == 0)
+            if (parser_gas->is_cpp_preproc)
             {
-                RETURN(LINE_MARKER);
+                RETURN(CPP_LINE_MARKER);
             } else
                 goto line_comment;
         }
@@ -566,6 +572,39 @@ section_directive:
                           N_("ignoring unrecognized character `%s'"),
                           yasm__conv_unprint(s->tok[0]));
             goto section_directive;
+        }
+    */
+
+    /* filename portion of nasm preproc %line */
+nasm_filename:
+    strbuf = yasm_xmalloc(STRBUF_ALLOC_SIZE);
+    strbuf_size = STRBUF_ALLOC_SIZE;
+    count = 0;
+
+nasm_filename_scan:
+    SCANINIT();
+
+    /*!re2c
+        "\n" {
+            strbuf_append(count++, cursor, s, '\0');
+            lvalp->str.contents = (char *)strbuf;
+            lvalp->str.len = count;
+            parser_gas->state = INITIAL;
+            RETURN(STRING);
+        }
+
+        ws+ { goto nasm_filename_scan; }
+
+        any {
+            if (cursor == s->eof) {
+                strbuf_append(count++, cursor, s, '\0');
+                lvalp->str.contents = (char *)strbuf;
+                lvalp->str.len = count;
+                parser_gas->state = INITIAL;
+                RETURN(STRING);
+            }
+            strbuf_append(count++, cursor, s, s->tok[0]);
+            goto nasm_filename_scan;
         }
     */
 
