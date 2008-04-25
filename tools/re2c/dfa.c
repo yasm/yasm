@@ -76,10 +76,14 @@ State *
 State_new(void)
 {
     State *s = malloc(sizeof(State));
+    s->label = 0;
     s->rule = NULL;
+    s->next = NULL;
     s->link = NULL;
+    s->depth = 0;
     s->kCount = 0;
     s->kernel = NULL;
+    s->isBase = 0;
     s->action = NULL;
     s->go.nSpans = 0;
     s->go.span = NULL;
