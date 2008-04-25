@@ -45,7 +45,7 @@ fill(Scanner *s, unsigned char *cursor)
 	    s->lim -= cnt;
 	}
 	if((s->top - s->lim) < BSIZE){
-	    unsigned char *buf = malloc(((s->lim - s->bot) + BSIZE));
+	    unsigned char *buf = malloc(((s->lim - s->bot) + BSIZE) + 1);
 	    memcpy(buf, s->tok, s->lim - s->tok);
 	    s->tok = buf;
 	    s->ptr = &buf[s->ptr - s->bot];
