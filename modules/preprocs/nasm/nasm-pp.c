@@ -4237,6 +4237,8 @@ pp_getline(void)
          * buffer or from the input file.
          */
         tline = NULL;
+        if (!istk)
+            return NULL;
         while (istk->expansion && istk->expansion->finishes)
         {
             Line *l = istk->expansion;
