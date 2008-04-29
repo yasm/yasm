@@ -2210,9 +2210,10 @@ static const char *winXX_objfmt_dbgfmt_keywords[] = {
 
 static const yasm_directive win32_objfmt_directives[] = {
     { ".ident",         "gas",  dir_ident,      YASM_DIR_ANY },
-    { ".export",        "gas",  dir_export,     YASM_DIR_ID_REQUIRED },
     { "ident",          "nasm", dir_ident,      YASM_DIR_ANY },
+    { ".export",        "gas",  dir_export,     YASM_DIR_ID_REQUIRED },
     { "export",         "nasm", dir_export,     YASM_DIR_ID_REQUIRED },
+    { ".safeseh",       "gas",  dir_safeseh,    YASM_DIR_ID_REQUIRED },
     { "safeseh",        "nasm", dir_safeseh,    YASM_DIR_ID_REQUIRED },
     { NULL, NULL, NULL, 0 }
 };
@@ -2239,14 +2240,23 @@ static const yasm_directive win64_objfmt_directives[] = {
     { "ident",          "nasm", dir_ident,      YASM_DIR_ANY },
     { ".export",        "gas",  dir_export,     YASM_DIR_ID_REQUIRED },
     { "export",         "nasm", dir_export,     YASM_DIR_ID_REQUIRED },
+    { ".proc_frame",    "gas",  dir_proc_frame, YASM_DIR_ID_REQUIRED },
     { "proc_frame",     "nasm", dir_proc_frame, YASM_DIR_ID_REQUIRED },
+    { ".pushreg",       "gas",  dir_pushreg,    YASM_DIR_ARG_REQUIRED },
     { "pushreg",        "nasm", dir_pushreg,    YASM_DIR_ARG_REQUIRED },
+    { ".setframe",      "gas",  dir_setframe,   YASM_DIR_ARG_REQUIRED },
     { "setframe",       "nasm", dir_setframe,   YASM_DIR_ARG_REQUIRED },
+    { ".allocstack",    "gas",  dir_allocstack, YASM_DIR_ARG_REQUIRED },
     { "allocstack",     "nasm", dir_allocstack, YASM_DIR_ARG_REQUIRED },
+    { ".savereg",       "gas",  dir_savereg,    YASM_DIR_ARG_REQUIRED },
     { "savereg",        "nasm", dir_savereg,    YASM_DIR_ARG_REQUIRED },
+    { ".savexmm128",    "gas",  dir_savexmm128, YASM_DIR_ARG_REQUIRED },
     { "savexmm128",     "nasm", dir_savexmm128, YASM_DIR_ARG_REQUIRED },
+    { ".pushframe",     "gas",  dir_pushframe,  YASM_DIR_ANY },
     { "pushframe",      "nasm", dir_pushframe,  YASM_DIR_ANY },
+    { ".endprolog",     "gas",  dir_endprolog,  YASM_DIR_ANY },
     { "endprolog",      "nasm", dir_endprolog,  YASM_DIR_ANY },
+    { ".endproc_frame", "gas",  dir_endproc_frame, YASM_DIR_ANY },
     { "endproc_frame",  "nasm", dir_endproc_frame, YASM_DIR_ANY },
     { NULL, NULL, NULL, 0 }
 };
