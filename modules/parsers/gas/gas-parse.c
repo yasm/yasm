@@ -395,6 +395,15 @@ nasm_line_marker(yasm_parser_gas *parser_gas)
 
     line = yasm_intnum_get_uint(INTNUM_val);
 
+    /*
+        Set to (line - 1) since the directive indicates that the *next* line
+        will have the number given.
+
+        cpp should never produce line=0, but the if keeps us safe just incase.
+    */
+    if (line != 0)
+        line--;
+
     yasm_intnum_destroy(INTNUM_val);
     get_next_token(); /* INTNUM */
 
@@ -425,7 +434,6 @@ nasm_line_marker(yasm_parser_gas *parser_gas)
     }
 
     filename = STRING_val.contents;
-    get_next_token(); /* STRING */
 
     /* Set linemap. */
     yasm_linemap_set(parser_gas->linemap, filename, line, incr);
@@ -447,6 +455,10 @@ nasm_line_marker(yasm_parser_gas *parser_gas)
         yasm_vps_delete(&vps);
     } else
         yasm_xfree(filename);
+
+    /* We need to poke back on the \n that was consumed by the tokenizer */
+    parser_gas->peek_token = '\n';
+    get_next_token();
 }
 
 /* Line directive */
