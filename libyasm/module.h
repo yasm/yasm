@@ -69,4 +69,7 @@ void yasm_list_modules
 #define yasm_list_preproc(func)         \
     yasm_list_modules(YASM_MODULE_PREPROC, func)
 
+void yasm_register_module(yasm_module_type type, const char *keyword,
+                          void *data);
+
 #endif
