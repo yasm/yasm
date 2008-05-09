@@ -34,7 +34,7 @@
 
 #define UNW_FLAG_EHANDLER   0x01
 #define UNW_FLAG_UHANDLER   0x02
-#define UNW_FLAG_CHAININFO  0x03
+#define UNW_FLAG_CHAININFO  0x04
 
 /* Bytecode callback function prototypes */
 static void win64_uwinfo_bc_destroy(void *contents);
