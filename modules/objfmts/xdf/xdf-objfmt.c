@@ -839,6 +839,7 @@ yasm_objfmt_module yasm_xdf_LTX_objfmt = {
     xdf_objfmt_dbgfmt_keywords,
     "null",
     NULL,       /* no directives */
+    NULL,       /* no standard macros */
     xdf_objfmt_create,
     xdf_objfmt_output,
     xdf_objfmt_destroy,

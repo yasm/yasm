@@ -77,11 +77,18 @@ nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp,
     yasm_symtab_parser_finalize(object->symtab, 0, errwarns);
 }
 
+#include "nasm-macros.c"
+
 /* Define valid preprocessors to use with this parser */
 static const char *nasm_parser_preproc_keywords[] = {
     "raw",
     "nasm",
     NULL
+};
+
+static const yasm_stdmac nasm_parser_stdmacs[] = {
+    { "nasm", "nasm", nasm_standard_mac },
+    { NULL, NULL, NULL }
 };
 
 /* Define parser structure -- see parser.h for details */
@@ -90,5 +97,6 @@ yasm_parser_module yasm_nasm_LTX_parser = {
     "nasm",
     nasm_parser_preproc_keywords,
     "nasm",
+    nasm_parser_stdmacs,
     nasm_parser_do_parse
 };

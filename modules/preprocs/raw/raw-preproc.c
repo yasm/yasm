@@ -147,6 +147,12 @@ raw_preproc_define_builtin(yasm_preproc *preproc, const char *macronameval)
     /* no builtin defines */
 }
 
+static void
+raw_preproc_add_standard(yasm_preproc *preproc, const char **macros)
+{
+    /* no standard macros */
+}
+
 
 /* Define preproc structure -- see preproc.h for details */
 yasm_preproc_module yasm_raw_LTX_preproc = {
@@ -159,5 +165,6 @@ yasm_preproc_module yasm_raw_LTX_preproc = {
     raw_preproc_add_include_file,
     raw_preproc_predefine_macro,
     raw_preproc_undefine_macro,
-    raw_preproc_define_builtin
+    raw_preproc_define_builtin,
+    raw_preproc_add_standard
 };

@@ -52,6 +52,21 @@ typedef struct yasm_objfmt_module yasm_objfmt_module;
 /** Debug format module interface.  \see dbgfmt.h for details. */
 typedef struct yasm_dbgfmt_module yasm_dbgfmt_module;
 
+/** Standard macro structure for modules that allows association of a set of
+ * standard macros with a parser/preprocessor combination.
+ * A NULL-terminated array of these structures is used in a number of module
+ * interfaces.
+ */
+typedef struct yasm_stdmac {
+    const char *parser;         /**< Parser keyword */
+    const char *preproc;        /**< Preprocessor keyword */
+
+    /** NULL-terminated array of standard macros.  May be NULL if no standard
+     * macros should be added for this preprocessor.
+     */
+    const char **macros;
+} yasm_stdmac;
+
 /** YASM associated data callback structure.  Many data structures can have
  * arbitrary data associated with them.
  */

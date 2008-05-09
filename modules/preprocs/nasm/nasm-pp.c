@@ -351,7 +351,9 @@ static int pass;                /* HACK: pass 0 = generate dependencies only */
 static unsigned long unique;    /* unique identifier numbers */
 
 static Line *builtindef = NULL;
+static Line *stddef = NULL;
 static Line *predef = NULL;
+static int first_line = 1;
 
 static ListGen *list;
 
@@ -384,18 +386,19 @@ static MMacro *defining;
 #define PARAM_DELTA 16
 
 /*
- * The standard macro set: defined as `static char *stdmac[]'. Also
- * gives our position in the macro set, when we're processing it.
+ * Macros to make NASM ignore some TASM directives before the first include
+ * directive.
  */
-#include "nasm-macros.c"
-static const char **stdmacpos;
-
-/*
- * The extra standard macros that come from the object format, if
- * any.
- */
-static const char **extrastdmac = NULL;
-int any_extrastdmac;
+static const char *tasm_compat_macros[] =
+{
+    "%idefine IDEAL",
+    "%idefine JUMPS",
+    "%idefine P386",
+    "%idefine P486",
+    "%idefine P586",
+    "%idefine END",
+    NULL
+};
 
 static int nested_mac_count, nested_rep_count;
 
@@ -640,69 +643,6 @@ read_line(void)
 {
     char *buffer, *p, *q;
     int bufsize, continued_count;
-
-    Line *pd, *l;
-    Token *head, **tail, *t;
-
-    /* Nasty hack for builtin defines */
-    for (pd = builtindef; pd; pd = pd->next)
-    {
-        head = NULL;
-        tail = &head;
-        for (t = pd->first; t; t = t->next)
-        {
-            *tail = new_Token(NULL, t->type, t->text, 0);
-            tail = &(*tail)->next;
-        }
-        l = nasm_malloc(sizeof(Line));
-        l->next = istk->expansion;
-        l->first = head;
-        l->finishes = FALSE;
-        istk->expansion = l;
-    }
-
-    if (stdmacpos)
-    {
-        if (*stdmacpos)
-        {
-            char *ret = nasm_strdup(*stdmacpos++);
-            if (!*stdmacpos && any_extrastdmac)
-            {
-                stdmacpos = extrastdmac;
-                any_extrastdmac = FALSE;
-                return ret;
-            }
-            /*
-             * Nasty hack: here we push the contents of `predef' on
-             * to the top-level expansion stack, since this is the
-             * most convenient way to implement the pre-include and
-             * pre-define features.
-             */
-            if (!*stdmacpos)
-            {
-                for (pd = predef; pd; pd = pd->next)
-                {
-                    head = NULL;
-                    tail = &head;
-                    for (t = pd->first; t; t = t->next)
-                    {
-                        *tail = new_Token(NULL, t->type, t->text, 0);
-                        tail = &(*tail)->next;
-                    }
-                    l = nasm_malloc(sizeof(Line));
-                    l->next = istk->expansion;
-                    l->first = head;
-                    l->finishes = FALSE;
-                    istk->expansion = l;
-                }
-            }
-            return ret;
-        }
-        else
-        {
-            stdmacpos = NULL;
-        }
-    }
 
     bufsize = BUF_DELTA;
     buffer = nasm_malloc(BUF_DELTA);
@@ -4213,15 +4153,42 @@ pp_reset(FILE *f, const char *file, int apass, efunc errfunc, evalfunc eval,
         smacros[h] = NULL;
     }
     unique = 0;
-        if (tasm_compatible_mode) {
-            stdmacpos = stdmac;
-        } else {
-                stdmacpos = &stdmac[TASM_MACRO_COUNT];
-        }
-    any_extrastdmac = (extrastdmac != NULL);
+    if (tasm_compatible_mode) {
+        pp_extra_stdmac(tasm_compat_macros);
+    }
     list = listgen;
     evaluate = eval;
     pass = apass;
+    first_line = 1;
+}
+
+/*
+ * Nasty hack: here we push the contents of `predef' on
+ * to the top-level expansion stack, since this is the
+ * most convenient way to implement the pre-include and
+ * pre-define features.
+ */
+static void
+poke_predef(Line *predef_lines)
+{
+    Line *pd, *l;
+    Token *head, **tail, *t;
+
+    for (pd = predef_lines; pd; pd = pd->next)
+    {
+        head = NULL;
+        tail = &head;
+        for (t = pd->first; t; t = t->next)
+        {
+            *tail = new_Token(NULL, t->type, t->text, 0);
+            tail = &(*tail)->next;
+        }
+        l = nasm_malloc(sizeof(Line));
+        l->next = istk->expansion;
+        l->first = head;
+        l->finishes = FALSE;
+        istk->expansion = l;
+    }
 }
 
 static char *
@@ -4237,6 +4204,16 @@ pp_getline(void)
          * buffer or from the input file.
          */
         tline = NULL;
+
+        if (first_line)
+        {
+            /* Reverse order */
+            poke_predef(predef);
+            poke_predef(stddef);
+            poke_predef(builtindef);
+            first_line = 0;
+        }
+
         if (!istk)
             return NULL;
         while (istk->expansion && istk->expansion->finishes)
@@ -4501,6 +4478,7 @@ pp_cleanup(int pass_)
     if (pass_ == 0)
         {
                 free_llist(builtindef);
+                free_llist(stddef);
                 free_llist(predef);
                 delete_Blocks();
         }
@@ -4589,7 +4567,24 @@ pp_builtin_define(char *definition)
 void
 pp_extra_stdmac(const char **macros)
 {
-    extrastdmac = macros;
+    const char **lp;
+
+    for (lp=macros; *lp; lp++)
+    {
+        char *macro;
+        Token *t;
+        Line *l;
+
+        macro = nasm_strdup(*lp);
+        t = tokenise(macro);
+        nasm_free(macro);
+
+        l = nasm_malloc(sizeof(Line));
+        l->next = stddef;
+        l->first = t;
+        l->finishes = FALSE;
+        stddef = l;
+    }
 }
 
 static void

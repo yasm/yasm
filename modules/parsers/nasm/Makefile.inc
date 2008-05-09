@@ -14,7 +14,17 @@ BUILT_SOURCES += nasm-token.c
 
 CLEANFILES += nasm-token.c
 
-EXTRA_DIST += modules/parsers/nasm/tests/Makefile.inc
 EXTRA_DIST += modules/parsers/nasm/nasm-token.re
+
+$(top_srcdir)/modules/parsers/nasm/nasm-parser.c: nasm-macros.c
+
+nasm-macros.c: $(srcdir)/modules/parsers/nasm/nasm-std.mac genmacro$(EXEEXT)
+	$(top_builddir)/genmacro$(EXEEXT) $@ nasm_standard_mac $(srcdir)/modules/parsers/nasm/nasm-std.mac
+
+BUILT_SOURCES += nasm-macros.c
+CLEANFILES += nasm-macros.c
+EXTRA_DIST += modules/parsers/nasm/nasm-std.mac
+
+EXTRA_DIST += modules/parsers/nasm/tests/Makefile.inc
 
 include modules/parsers/nasm/tests/Makefile.inc

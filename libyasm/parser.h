@@ -51,6 +51,9 @@ typedef struct yasm_parser_module {
     /** Default preprocessor. */
     const char *default_preproc_keyword;
 
+    /** NULL-terminated list of standard macro lookups.  NULL if none. */
+    const yasm_stdmac *stdmacs;
+
     /** Parse a source file into an object.
      * \param object    object to parse into (already created)
      * \param pp        preprocessor

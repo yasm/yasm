@@ -120,6 +120,7 @@ static void print_yasm_warning(const char *filename, unsigned long line,
                                const char *msg);
 
 static void apply_preproc_builtins(void);
+static void apply_preproc_standard_macros(const yasm_stdmac *stdmacs);
 static void apply_preproc_saved_options(void);
 static void print_list_keyword_desc(const char *name, const char *keyword);
 
@@ -264,13 +265,17 @@ do_preproc_only(void)
             return EXIT_FAILURE;
     }
 
-    /* Pre-process until done */
+    /* Create preprocessor */
     cur_preproc = yasm_preproc_create(cur_preproc_module, in_filename, NULL,
                                       linemap, errwarns);
 
+    /* Apply macros */
     apply_preproc_builtins();
+    apply_preproc_standard_macros(cur_parser_module->stdmacs);
+    apply_preproc_standard_macros(cur_objfmt_module->stdmacs);
     apply_preproc_saved_options();
 
+    /* Pre-process until done */
     if (generate_make_dependencies) {
         size_t totlen;
 
@@ -429,6 +434,8 @@ do_assemble(void)
                                       object->symtab, linemap, errwarns);
 
     apply_preproc_builtins();
+    apply_preproc_standard_macros(cur_parser_module->stdmacs);
+    apply_preproc_standard_macros(cur_objfmt_module->stdmacs);
     apply_preproc_saved_options();
 
     /* Get initial x86 BITS setting from object format */
@@ -1123,6 +1130,25 @@ apply_preproc_builtins()
     strcat(predef, objfmt_keyword);
     yasm_preproc_define_builtin(cur_preproc, predef);
     yasm_xfree(predef);
+}
+
+static void
+apply_preproc_standard_macros(const yasm_stdmac *stdmacs)
+{
+    int i, matched;
+
+    if (!stdmacs)
+        return;
+
+    matched = -1;
+    for (i=0; stdmacs[i].parser; i++)
+        if (yasm__strcasecmp(stdmacs[i].parser,
+                             cur_parser_module->keyword) == 0 &&
+            yasm__strcasecmp(stdmacs[i].preproc,
+                             cur_preproc_module->keyword) == 0)
+            matched = i;
+    if (matched >= 0 && stdmacs[matched].macros)
+        yasm_preproc_add_standard(cur_preproc, stdmacs[matched].macros);
 }
 
 static void

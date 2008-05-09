@@ -1057,6 +1057,21 @@ static const yasm_directive rdf_objfmt_directives[] = {
     { NULL, NULL, NULL, 0 }
 };
 
+static const char *rdf_nasm_stdmac[] = {
+    "%imacro library 1+.nolist",
+    "[library %1]",
+    "%endmacro",
+    "%imacro module 1+.nolist",
+    "[module %1]",
+    "%endmacro",
+    NULL
+};
+
+static const yasm_stdmac rdf_objfmt_stdmacs[] = {
+    { "nasm", "nasm", rdf_nasm_stdmac },
+    { NULL, NULL, NULL }
+};
+
 /* Define objfmt structure -- see objfmt.h for details */
 yasm_objfmt_module yasm_rdf_LTX_objfmt = {
     "Relocatable Dynamic Object File Format (RDOFF) v2.0",
@@ -1066,6 +1081,7 @@ yasm_objfmt_module yasm_rdf_LTX_objfmt = {
     rdf_objfmt_dbgfmt_keywords,
     "null",
     rdf_objfmt_directives,
+    rdf_objfmt_stdmacs,
     rdf_objfmt_create,
     rdf_objfmt_output,
     rdf_objfmt_destroy,

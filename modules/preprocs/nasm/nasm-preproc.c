@@ -48,6 +48,8 @@ static yasm_linemap *cur_lm;
 static yasm_errwarns *cur_errwarns;
 int tasm_compatible_mode = 0;
 
+#include "nasm-version.c"
+
 typedef struct preproc_dep {
     STAILQ_ENTRY(preproc_dep) link;
     char *name;
@@ -155,6 +157,8 @@ nasm_preproc_create(const char *in_filename, yasm_symtab *symtab,
     preproc_nasm->prior_linnum = 0;
     preproc_nasm->lineinc = 0;
     nasmpp.reset(f, in_filename, 2, nasm_efunc, nasm_evaluate, &nil_list);
+
+    pp_extra_stdmac(nasm_version_mac);
 
     return (yasm_preproc *)preproc_nasm;
 }
@@ -290,6 +294,12 @@ nasm_preproc_define_builtin(yasm_preproc *preproc, const char *macronameval)
     yasm_xfree(mnv);
 }
 
+static void
+nasm_preproc_add_standard(yasm_preproc *preproc, const char **macros)
+{
+    pp_extra_stdmac(macros);
+}
+
 /* Define preproc structure -- see preproc.h for details */
 yasm_preproc_module yasm_nasm_LTX_preproc = {
     "Real NASM Preprocessor",
@@ -301,5 +311,6 @@ yasm_preproc_module yasm_nasm_LTX_preproc = {
     nasm_preproc_add_include_file,
     nasm_preproc_predefine_macro,
     nasm_preproc_undefine_macro,
-    nasm_preproc_define_builtin
+    nasm_preproc_define_builtin,
+    nasm_preproc_add_standard
 };

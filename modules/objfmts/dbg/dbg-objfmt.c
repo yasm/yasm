@@ -165,6 +165,7 @@ yasm_objfmt_module yasm_dbg_LTX_objfmt = {
     dbg_objfmt_dbgfmt_keywords,
     "null",
     NULL,       /* no directives */
+    NULL,       /* no standard macros */
     dbg_objfmt_create,
     dbg_objfmt_output,
     dbg_objfmt_destroy,

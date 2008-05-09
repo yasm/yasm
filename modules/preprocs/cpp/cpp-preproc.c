@@ -377,6 +377,12 @@ cpp_preproc_define_builtin(yasm_preproc *preproc, const char *macronameval)
     cpp_preproc_predefine_macro(preproc, macronameval);
 }
 
+static void
+cpp_preproc_add_standard(yasm_preproc *preproc, const char **macros)
+{
+    /* TODO */
+}
+
 /*******************************************************************************
     Preprocessor module object.
 *******************************************************************************/
@@ -391,5 +397,6 @@ yasm_preproc_module yasm_cpp_LTX_preproc = {
     cpp_preproc_add_include_file,
     cpp_preproc_predefine_macro,
     cpp_preproc_undefine_macro,
-    cpp_preproc_define_builtin
+    cpp_preproc_define_builtin,
+    cpp_preproc_add_standard
 };

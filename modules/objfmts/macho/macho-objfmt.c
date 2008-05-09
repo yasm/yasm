@@ -1551,6 +1551,7 @@ yasm_objfmt_module yasm_macho_LTX_objfmt = {
     macho_objfmt_dbgfmt_keywords,
     "null",
     NULL,   /* no directives */
+    NULL,   /* no standard macros */
     macho_objfmt_create,
     macho_objfmt_output,
     macho_objfmt_destroy,
@@ -1567,6 +1568,7 @@ yasm_objfmt_module yasm_macho32_LTX_objfmt = {
     macho_objfmt_dbgfmt_keywords,
     "null",
     NULL,   /* no directives */
+    NULL,   /* no standard macros */
     macho32_objfmt_create,
     macho_objfmt_output,
     macho_objfmt_destroy,
@@ -1583,6 +1585,7 @@ yasm_objfmt_module yasm_macho64_LTX_objfmt = {
     macho_objfmt_dbgfmt_keywords,
     "null",
     NULL,   /* no directives */
+    NULL,   /* no standard macros */
     macho64_objfmt_create,
     macho_objfmt_output,
     macho_objfmt_destroy,

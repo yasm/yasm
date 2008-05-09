@@ -999,6 +999,12 @@ yapp_preproc_define_builtin(yasm_preproc *preproc, const char *macronameval)
     /* TODO */
 }
 
+static void
+yapp_preproc_add_standard(yasm_preproc *preproc, const char **macros)
+{
+    /* TODO */
+}
+
 /* Define preproc structure -- see preproc.h for details */
 yasm_preproc_module yasm_yapp_LTX_preproc = {
     "YAPP preprocessing (NASM style)",
@@ -1010,5 +1016,6 @@ yasm_preproc_module yasm_yapp_LTX_preproc = {
     yapp_preproc_add_include_file,
     yapp_preproc_predefine_macro,
     yapp_preproc_undefine_macro,
-    yapp_preproc_define_builtin
+    yapp_preproc_define_builtin,
+    yapp_preproc_add_standard
 };

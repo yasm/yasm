@@ -105,6 +105,11 @@ typedef struct yasm_preproc_module {
      * Call yasm_preproc_builtin_define() instead of calling this function.
      */
     void (*define_builtin) (yasm_preproc *preproc, const char *macronameval);
+
+    /** Module-level implementation of yasm_preproc_add_standard().
+     * Call yasm_preproc_add_standard() instead of calling this function.
+     */
+    void (*add_standard) (yasm_preproc *preproc, const char **macros);
 } yasm_preproc_module;
 
 /** Initialize preprocessor.
@@ -169,6 +174,14 @@ void yasm_preproc_undefine_macro(yasm_preproc *preproc, const char *macroname);
 void yasm_preproc_define_builtin(yasm_preproc *preproc,
                                  const char *macronameval);
 
+/** Define additional standard macros, preprocessed after the builtins but
+ * prior to any user-defined macros.
+ * \param preproc       preprocessor
+ * \param macros        NULL-terminated array of macro strings
+ */
+void yasm_preproc_add_standard(yasm_preproc *preproc,
+                               const char **macros);
+
 #ifndef YASM_DOXYGEN
 
 /* Inline macro implementations for preproc functions */
@@ -192,6 +205,9 @@ void yasm_preproc_define_builtin(yasm_preproc *preproc,
 #define yasm_preproc_define_builtin(preproc, macronameval) \
     ((yasm_preproc_base *)preproc)->module->define_builtin(preproc, \
                                                            macronameval)
+#define yasm_preproc_add_standard(preproc, macros) \
+    ((yasm_preproc_base *)preproc)->module->add_standard(preproc, \
+                                                         macros)
 
 #endif
 

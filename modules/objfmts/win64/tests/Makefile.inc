@@ -27,3 +27,7 @@ EXTRA_DIST += modules/objfmts/win64/tests/win64-dataref.masm
 EXTRA_DIST += modules/objfmts/win64/tests/win64-dataref2.asm
 EXTRA_DIST += modules/objfmts/win64/tests/win64-dataref2.hex
 EXTRA_DIST += modules/objfmts/win64/tests/win64-dataref2.masm
+
+EXTRA_DIST += modules/objfmts/win64/tests/gas/Makefile.inc
+
+include modules/objfmts/win64/tests/gas/Makefile.inc

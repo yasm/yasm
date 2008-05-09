@@ -129,6 +129,7 @@ yasm_parser_module yasm_gas_LTX_parser = {
     "gas",
     gas_parser_preproc_keywords,
     "raw",
+    NULL,   /* No standard macros */
     gas_parser_do_parse
 };
 yasm_parser_module yasm_gnu_LTX_parser = {
@@ -136,5 +137,6 @@ yasm_parser_module yasm_gnu_LTX_parser = {
     "gnu",
     gas_parser_preproc_keywords,
     "raw",
+    NULL,   /* No standard macros */
     gas_parser_do_parse
 };
