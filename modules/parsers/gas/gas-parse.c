@@ -1027,6 +1027,11 @@ parse_dirvals(yasm_parser_gas *parser_gas, yasm_valparamhead *vps)
                 vp = yasm_vp_create_string(NULL, STRING_val.contents);
                 get_next_token(); /* STRING */
                 break;
+            case REG:
+                e = p_expr_new_ident(yasm_expr_reg(REG_val));
+                vp = yasm_vp_create_expr(NULL, e);
+                get_next_token(); /* REG */
+                break;
             case '@':
                 /* XXX: is throwing it away *really* the right thing? */
                 get_next_token(); /* @ */
