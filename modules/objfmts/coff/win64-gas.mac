@@ -37,7 +37,7 @@ pushfq
 %endmacro
 
 %imacro alloc_stack 1
-subq %1, %rsp
+subq $%1, %rsp
 .allocstack %1
 %endmacro
 
