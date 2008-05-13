@@ -157,13 +157,25 @@ license.c: COPYING genstring
 
 frontends/yasm/yasm.c: license.c
 
-genmacro: modules/preprocs/nasm/genmacro.c
+genmacro: tools/genmacro/genmacro.c
 	$(BUILDCC) -o $@ $<
 
-nasm-macros.c: modules/preprocs/nasm/standard.mac version.mac genmacro
-	./genmacro modules/preprocs/nasm/standard.mac version.mac
+nasm-version.c: version.mac genmacro
+	./genmacro $@ nasm_version_mac version.mac
 
-modules/preprocs/nasm/nasm-pp.c: nasm-macros.c
+modules/preprocs/nasm/nasm-pp.c: nasm-version.c
+
+nasm-macros.c: modules/parsers/nasm/nasm-std.mac genmacro
+	./genmacro $@ nasm_standard_mac modules/parsers/nasm/nasm-std.mac
+
+modules/parsers/nasm/nasm-parser.c: nasm-macros.c
+
+win64-nasm.c: modules/objfmts/coff/win64-nasm.mac genmacro
+	./genmacro $@ win64_nasm_stdmac modules/objfmts/coff/win64-nasm.mac
+win64-gas.c: modules/objfmts/coff/win64-gas.mac genmacro
+	./genmacro $@ win64_gas_stdmac modules/objfmts/coff/win64-gas.mac
+
+modules/objfmts/coff/coff-objfmt.c: win64-nasm.c win64-gas.c
 
 genversion: modules/preprocs/nasm/genversion.c
 	$(BUILDCC) -IMkfiles/dj -o $@ $<
