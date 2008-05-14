@@ -2823,15 +2823,14 @@ add_insn("btc", "bittest", modifiers=[0xBB, 7])
 for sfx, sz in zip("wlq", [16, 32, 64]):
     add_group("bsfr",
         suffix=sfx,
-        cpu=["386"],
         modifiers=["Op1Add"],
         opersize=sz,
         opcode=[0x0F, 0x00],
         operands=[Operand(type="Reg", size=sz, dest="Spare"),
                   Operand(type="RM", size=sz, relaxed=True, dest="EA")])
 
-add_insn("bsf", "bsfr", modifiers=[0xBC])
-add_insn("bsr", "bsfr", modifiers=[0xBD])
+add_insn("bsf", "bsfr", modifiers=[0xBC], cpu=["386"])
+add_insn("bsr", "bsfr", modifiers=[0xBD], cpu=["386"])
 
 #####################################################################
 # Interrupts and operating system instructions
