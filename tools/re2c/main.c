@@ -45,20 +45,23 @@ static void usage()
 	"-? -h   --help          Display this info.\n"
 	"\n"
 	"-b      --bit-vectors   Implies -s. Use bit vectors as well in the attempt to\n"
-	"                        coax better code out of the compiler. Most useful for\n"
+	"                        coax better code out of the compiler. Most useful for\n");
+    fprintf(stderr,
 	"                        specifications with more than a few keywords (e.g. for\n"
 	"                        most programming languages).\n"
 	"\n"
 	"-e      --ecb           Cross-compile from an ASCII platform to\n"
 	"                        an EBCDIC one.\n"
-	"\n"
+	"\n");
+    fprintf(stderr,
 	"-s      --nested-ifs    Generate nested ifs for some switches. Many compilers\n"
 	"                        need this assist to generate better code.\n"
 	"\n"
 	"-f      --storable-state Generate a scanner with support for storable state\n"
 	"\n"
 	"-o      --output=output Specify the output file instead of stdout\n"
-	"\n"
+	"\n");
+    fprintf(stderr,
 	"-d      --debug-output  Creates a parser that dumps information during\n"
 	"                        about the current position and in which state the\n"
 	"                        parser is.\n"
@@ -159,7 +162,7 @@ int main(int argc, char *argv[])
 	}
     }
 
-    // set up the output stream
+    /* set up the output stream */
     if (outputFileName == 0 || (fileName[0] == '-' && fileName[1] == '\0')) {
 	outputFileName = mystrdup("<stdout>");
 	output = stdout;
