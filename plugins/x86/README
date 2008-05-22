@@ -1,0 +1,10 @@
+This directory demonstrates how to build a yasm builtin module as a plugin.
+This can be useful for integrating custom changes without
+rebuilding/reinstalling yasm.
+It requires access to the yasm source.
+
+The yasm source directory must be defined to cmake, e.g.
+  mkdir objdir
+  cd objdir
+  cmake -DYASM_SOURCE_DIR=/home/foo/yasm ..
+  make

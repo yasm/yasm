@@ -1,0 +1,15 @@
+This directory demonstrates how to build a basic plugin.
+It does not need access to the yasm source, only an installed yasm.
+
+To build:
+  mkdir objdir
+  cd objdir
+  cmake ..
+  make
+
+Testing:
+  yasm -N ./libdbgmod.so -f dbg -
+     db 5
+     ^D
+(result lines will have PLUGIN prefixed to the function calls; this
+demonstrates the plugin is being used rather than the builtin dbg module)

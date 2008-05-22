@@ -38,6 +38,10 @@
 
 #include "yasm-options.h"
 
+#ifdef CMAKE_BUILD
+#include "yasm-plugin.h"
+#endif
+
 #include "license.c"
 
 /* Preprocess-only buffer size */
@@ -102,6 +106,9 @@ static int opt_include_option(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_preproc_option(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_ewmsg_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_makedep_handler(char *cmd, /*@null@*/ char *param, int extra);
+#ifdef CMAKE_BUILD
+static int opt_plugin_handler(char *cmd, /*@null@*/ char *param, int extra);
+#endif
 
 static /*@only@*/ char *replace_extension(const char *orig, /*@null@*/
                                           const char *ext, const char *def);
@@ -189,6 +196,10 @@ static opt_option options[] =
       N_("undefine a macro"), N_("macro") },
     { 'X', NULL, 1, opt_ewmsg_handler, 0,
       N_("select error/warning message style (`gnu' or `vc')"), N_("style") },
+#ifdef CMAKE_BUILD
+    { 'N', "plugin", 1, opt_plugin_handler, 0,
+      N_("load plugin module"), N_("plugin") },
+#endif
 };
 
 /* version message */
@@ -560,6 +571,24 @@ main(int argc, char *argv[])
     yasm_gettext_hook = handle_yasm_gettext;
     yasm_errwarn_initialize();
 
+    /* Initialize BitVector (needed for intnum/floatnum). */
+    if (BitVector_Boot() != ErrCode_Ok) {
+        print_error(_("%s: could not initialize BitVector"), _("FATAL"));
+        return EXIT_FAILURE;
+    }
+
+    /* Initialize intnum and floatnum */
+    yasm_intnum_initialize();
+    yasm_floatnum_initialize();
+
+#ifdef CMAKE_BUILD
+    /* Load standard modules */
+    if (!load_plugin("libyasmstd")) {
+        print_error(_("%s: could not load standard modules"), _("FATAL"));
+        return EXIT_FAILURE;
+    }
+#endif
+
     /* Initialize parameter storage */
     STAILQ_INIT(&preproc_options);
 
@@ -590,16 +619,6 @@ main(int argc, char *argv[])
         if (!errfile)
             return EXIT_FAILURE;
     }
-
-    /* Initialize BitVector (needed for intnum/floatnum). */
-    if (BitVector_Boot() != ErrCode_Ok) {
-        print_error(_("%s: could not initialize BitVector"), _("FATAL"));
-        return EXIT_FAILURE;
-    }
-
-    /* Initialize intnum and floatnum */
-    yasm_intnum_initialize();
-    yasm_floatnum_initialize();
 
     /* If not already specified, default to bin as the object format. */
     if (!cur_objfmt_module) {
@@ -764,6 +783,9 @@ cleanup(yasm_object *object)
 
     if (errfile != stderr && errfile != stdout)
         fclose(errfile);
+#ifdef CMAKE_BUILD
+    unload_plugins();
+#endif
 }
 
 /*
@@ -1117,6 +1139,17 @@ opt_makedep_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
 
     return 0;
 }
+
+#ifdef CMAKE_BUILD
+static int
+opt_plugin_handler(/*@unused@*/ char *cmd, char *param,
+                   /*@unused@*/ int extra)
+{
+    if (!load_plugin(param))
+        print_error(_("warning: could not load plugin `%s'"), param);
+    return 0;
+}
+#endif
 
 static void
 apply_preproc_builtins()
