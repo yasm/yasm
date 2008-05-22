@@ -38,6 +38,10 @@
 
 #define MSG_MAXSIZE     1024
 
+#if !defined(HAVE_TOASCII) || defined(lint)
+# define toascii(c) ((c) & 0x7F)
+#endif
+
 /* Default handlers for replacable functions */
 static /*@exits@*/ void def_internal_error_
     (const char *file, unsigned int line, const char *message);

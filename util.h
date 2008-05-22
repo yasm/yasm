@@ -116,10 +116,6 @@
 # define USE_OUR_OWN_STRCASECMP
 #endif
 
-#if !defined(HAVE_TOASCII) || defined(lint)
-# define toascii(c) ((c) & 0x7F)
-#endif
-
 #include <libyasm/compat-queue.h>
 
 #ifdef HAVE_SYS_CDEFS_H
