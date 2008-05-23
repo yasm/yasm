@@ -34,6 +34,10 @@
 #ifndef YASM_VALUE_H
 #define YASM_VALUE_H
 
+#ifndef YASM_LIB_DECL
+#define YASM_LIB_DECL
+#endif
+
 /** Initialize a #yasm_value with just an expression.  No processing is
  * performed, the expression is simply stuck into value.abs and the other
  * fields are initialized.  Use yasm_expr_extract_value() to perform "smart"
@@ -45,6 +49,7 @@
  * \param e         expression (kept)
  * \param size      value size (in bits)
  */
+YASM_LIB_DECL
 void yasm_value_initialize(/*@out@*/ yasm_value *value,
                            /*@null@*/ /*@kept@*/ yasm_expr *e,
                            unsigned int size);
@@ -56,6 +61,7 @@ void yasm_value_initialize(/*@out@*/ yasm_value *value,
  * \param sym       symrec
  * \param size      value size (in bits)
  */
+YASM_LIB_DECL
 void yasm_value_init_sym(/*@out@*/ yasm_value *value,
                          /*@null@*/ yasm_symrec *sym, unsigned int size);
 
@@ -64,11 +70,13 @@ void yasm_value_init_sym(/*@out@*/ yasm_value *value,
  * \param value     value (copy to create)
  * \param orig      original value
  */
+YASM_LIB_DECL
 void yasm_value_init_copy(yasm_value *value, const yasm_value *orig);
 
 /** Frees any memory inside value; does not free value itself.
  * \param value     value
  */
+YASM_LIB_DECL
 void yasm_value_delete(yasm_value *value);
 
 /** Set a value to be relative to the current assembly position rather than
@@ -80,6 +88,7 @@ void yasm_value_delete(yasm_value *value);
  * \note If value is just an absolute value, will get an absolute symrec to
  *       reference to (via bc's symbol table).
  */
+YASM_LIB_DECL
 void yasm_value_set_curpos_rel(yasm_value *value, yasm_bytecode *bc,
                                unsigned int ip_rel);
 
@@ -89,6 +98,7 @@ void yasm_value_set_curpos_rel(yasm_value *value, yasm_bytecode *bc,
  * \param precbc        previous bytecode to bytecode containing value
  * \return Nonzero if value could not be split.
  */
+YASM_LIB_DECL
 int yasm_value_finalize(yasm_value *value, /*@null@*/ yasm_bytecode *precbc);
 
 /** Break a #yasm_expr into a #yasm_value constituent parts.  Extracts
@@ -110,6 +120,7 @@ int yasm_value_finalize(yasm_value *value, /*@null@*/ yasm_bytecode *precbc);
  * \note This should only be called after the parse is complete.  Calling
  *       before the parse is complete will usually result in an error return.
  */
+YASM_LIB_DECL
 int yasm_value_finalize_expr(/*@out@*/ yasm_value *value,
                              /*@null@*/ /*@kept@*/ yasm_expr *e,
                              /*@null@*/ yasm_bytecode *precbc,
@@ -126,6 +137,7 @@ int yasm_value_finalize_expr(/*@out@*/ yasm_value *value,
  *       as bc (and there is no WRT or SEG).
  * \return Intnum if can be resolved to integer value, otherwise NULL.
  */
+YASM_LIB_DECL
 /*@null@*/ /*@only@*/ yasm_intnum *yasm_value_get_intnum
     (yasm_value *value, /*@null@*/ yasm_bytecode *bc, int calc_bc_dist);
 
@@ -148,6 +160,7 @@ int yasm_value_finalize_expr(/*@out@*/ yasm_value *value,
  * \return 0 if no value output due to value needing relocation;
  *         1 if value output; -1 if error.
  */
+YASM_LIB_DECL
 int yasm_value_output_basic
     (yasm_value *value, /*@out@*/ unsigned char *buf, size_t destsize,
      yasm_bytecode *bc, int warn, yasm_arch *arch);
@@ -157,6 +170,7 @@ int yasm_value_output_basic
  * \param indent_level  indentation level
  * \param f             file
  */
+YASM_LIB_DECL
 void yasm_value_print(const yasm_value *value, FILE *f, int indent_level);
 
 #endif

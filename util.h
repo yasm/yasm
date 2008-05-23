@@ -64,6 +64,7 @@
 #include <strings.h>
 #endif
 
+#include <libyasm-stdint.h>
 #include <libyasm/coretype.h>
 
 #ifdef lint

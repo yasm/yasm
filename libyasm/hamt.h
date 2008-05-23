@@ -34,6 +34,10 @@
 #ifndef YASM_HAMT_H
 #define YASM_HAMT_H
 
+#ifndef YASM_LIB_DECL
+#define YASM_LIB_DECL
+#endif
+
 /** Hash array mapped trie data structure (opaque type). */
 typedef struct HAMT HAMT;
 /** Hash array mapped trie entry (opaque type). */
@@ -45,6 +49,7 @@ typedef struct HAMTEntry HAMTEntry;
  * \param   error_func      function called on internal error
  * \return New, empty, hash array mapped trie.
  */
+YASM_LIB_DECL
 HAMT *HAMT_create(int nocase, /*@exits@*/ void (*error_func)
     (const char *file, unsigned int line, const char *message));
 
@@ -53,6 +58,7 @@ HAMT *HAMT_create(int nocase, /*@exits@*/ void (*error_func)
  * \param hamt          Hash array mapped trie
  * \param deletefunc    Data deletion function
  */
+YASM_LIB_DECL
 void HAMT_destroy(/*@only@*/ HAMT *hamt,
                   void (*deletefunc) (/*@only@*/ void *data));
 
@@ -72,6 +78,7 @@ void HAMT_destroy(/*@only@*/ HAMT *hamt,
  * \param deletefunc    Data deletion function if data is replaced
  * \return Data now associated with key.
  */
+YASM_LIB_DECL
 /*@dependent@*/ void *HAMT_insert(HAMT *hamt, /*@dependent@*/ const char *str,
                                   /*@only@*/ void *data, int *replace,
                                   void (*deletefunc) (/*@only@*/ void *data));
@@ -81,6 +88,7 @@ void HAMT_destroy(/*@only@*/ HAMT *hamt,
  * \param str           Key
  * \return NULL if key/data not present in HAMT, otherwise associated data.
  */
+YASM_LIB_DECL
 /*@dependent@*/ /*@null@*/ void *HAMT_search(HAMT *hamt, const char *str);
 
 /** Traverse over all keys in HAMT, calling function on each data item. 
@@ -90,6 +98,7 @@ void HAMT_destroy(/*@only@*/ HAMT *hamt,
  * \return Stops early (and returns func's return value) if func returns a
  *         nonzero value; otherwise 0.
  */
+YASM_LIB_DECL
 int HAMT_traverse(HAMT *hamt, /*@null@*/ void *d,
                   int (*func) (/*@dependent@*/ /*@null@*/ void *node,
                                /*@null@*/ void *d));
@@ -98,18 +107,21 @@ int HAMT_traverse(HAMT *hamt, /*@null@*/ void *d,
  * \param hamt          Hash array mapped trie
  * \return First entry in HAMT, or NULL if HAMT is empty.
  */
+YASM_LIB_DECL
 const HAMTEntry *HAMT_first(const HAMT *hamt);
 
 /** Get the next entry in a HAMT.
  * \param prev          Previous entry in HAMT
  * \return Next entry in HAMT, or NULL if no more entries.
  */
+YASM_LIB_DECL
 /*@null@*/ const HAMTEntry *HAMT_next(const HAMTEntry *prev);
 
 /** Get the corresponding data for a HAMT entry.
  * \param entry         HAMT entry (as returned by HAMT_first() and HAMT_next())
  * \return Corresponding data item.
  */
+YASM_LIB_DECL
 void *HAMTEntry_get_data(const HAMTEntry *entry);
 
 #endif

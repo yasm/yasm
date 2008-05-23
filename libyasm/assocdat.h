@@ -34,10 +34,15 @@
 #ifndef YASM_ASSOCDAT_H
 #define YASM_ASSOCDAT_H
 
+#ifndef YASM_LIB_DECL
+#define YASM_LIB_DECL
+#endif
+
 /** Associated data container. */
 typedef struct yasm__assoc_data yasm__assoc_data;
 
 /** Create an associated data container. */
+YASM_LIB_DECL
 /*@only@*/ yasm__assoc_data *yasm__assoc_data_create(void);
 
 /** Get associated data for a data callback.
@@ -45,6 +50,7 @@ typedef struct yasm__assoc_data yasm__assoc_data;
  * \param callback      callback used when adding data
  * \return Associated data (NULL if none).
  */
+YASM_LIB_DECL
 /*@dependent@*/ /*@null@*/ void *yasm__assoc_data_get
     (/*@null@*/ yasm__assoc_data *assoc_data,
      const yasm_assoc_data_callback *callback);
@@ -55,16 +61,19 @@ typedef struct yasm__assoc_data yasm__assoc_data;
  * \param callback      callback
  * \param data          data to associate
  */
+YASM_LIB_DECL
 /*@only@*/ yasm__assoc_data *yasm__assoc_data_add
     (/*@null@*/ /*@only@*/ yasm__assoc_data *assoc_data,
      const yasm_assoc_data_callback *callback,
      /*@only@*/ /*@null@*/ void *data);
 
 /** Destroy all associated data in a container. */
+YASM_LIB_DECL
 void yasm__assoc_data_destroy
     (/*@null@*/ /*@only@*/ yasm__assoc_data *assoc_data);
 
 /** Print all associated data in a container. */
+YASM_LIB_DECL
 void yasm__assoc_data_print(const yasm__assoc_data *assoc_data, FILE *f,
                             int indent_level);
 

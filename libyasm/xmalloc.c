@@ -47,11 +47,15 @@ static void def_xfree(/*@only@*/ /*@out@*/ /*@null@*/ void *p)
     /*@modifies p@*/;
 
 /* storage for global function pointers */
+YASM_LIB_DECL
 /*@only@*/ /*@out@*/ void * (*yasm_xmalloc) (size_t size) = def_xmalloc;
+YASM_LIB_DECL
 /*@only@*/ void * (*yasm_xcalloc) (size_t nelem, size_t elsize) = def_xcalloc;
+YASM_LIB_DECL
 /*@only@*/ void * (*yasm_xrealloc)
     (/*@only@*/ /*@out@*/ /*@returned@*/ /*@null@*/ void *oldmem, size_t size)
     /*@modifies oldmem@*/ = def_xrealloc;
+YASM_LIB_DECL
 void (*yasm_xfree) (/*@only@*/ /*@out@*/ /*@null@*/ void *p)
     /*@modifies p@*/ = def_xfree;
 

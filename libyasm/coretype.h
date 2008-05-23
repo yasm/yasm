@@ -34,6 +34,10 @@
 #ifndef YASM_CORETYPE_H
 #define YASM_CORETYPE_H
 
+#ifndef YASM_LIB_DECL
+#define YASM_LIB_DECL
+#endif
+
 /** Architecture instance (mostly opaque type).  \see arch.h for details. */
 typedef struct yasm_arch yasm_arch;
 /** Preprocessor interface.  \see preproc.h for details. */
@@ -302,6 +306,7 @@ typedef int (*yasm_output_reloc_func)
  * \param size      size of each array element
  * \param compar    element comparison function
  */
+YASM_LIB_DECL
 int yasm__mergesort(void *base, size_t nmemb, size_t size,
                     int (*compar)(const void *, const void *));
 
@@ -311,6 +316,7 @@ int yasm__mergesort(void *base, size_t nmemb, size_t size,
  * \param delim     set of 1 or more delimiters
  * \return First/next substring.
  */
+YASM_LIB_DECL
 /*@null@*/ char *yasm__strsep(char **stringp, const char *delim);
 
 /** Compare two strings, ignoring case differences.
@@ -319,6 +325,7 @@ int yasm__mergesort(void *base, size_t nmemb, size_t size,
  * \param s2    string 2
  * \return 0 if strings are equal, -1 if s1<s2, 1 if s1>s2.
  */
+YASM_LIB_DECL
 int yasm__strcasecmp(const char *s1, const char *s2);
 
 /** Compare portion of two strings, ignoring case differences.
@@ -328,6 +335,7 @@ int yasm__strcasecmp(const char *s1, const char *s2);
  * \param n     maximum number of characters to compare
  * \return 0 if strings are equal, -1 if s1<s2, 1 if s1>s2.
  */
+YASM_LIB_DECL
 int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
 
 /** strdup() implementation using yasm_xmalloc().
@@ -335,6 +343,7 @@ int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
  * \param str   string
  * \return Newly allocated duplicate string.
  */
+YASM_LIB_DECL
 /*@only@*/ char *yasm__xstrdup(const char *str);
 
 /** strndup() implementation using yasm_xmalloc().
@@ -343,6 +352,7 @@ int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
  * \param max   maximum number of characters to copy
  * \return Newly allocated duplicate string.
  */
+YASM_LIB_DECL
 /*@only@*/ char *yasm__xstrndup(const char *str, size_t max);
 
 /** Error-checking memory allocation.  A default implementation is provided
@@ -351,6 +361,7 @@ int yasm__strncasecmp(const char *s1, const char *s2, size_t n);
  * \param size      number of bytes to allocate
  * \return Allocated memory block.
  */
+YASM_LIB_DECL
 extern /*@only@*/ /*@out@*/ void * (*yasm_xmalloc) (size_t size);
 
 /** Error-checking memory allocation (with clear-to-0).  A default
@@ -360,6 +371,7 @@ extern /*@only@*/ /*@out@*/ void * (*yasm_xmalloc) (size_t size);
  * \param elsize    size (in bytes) of each element
  * \return Allocated and cleared memory block.
  */
+YASM_LIB_DECL
 extern /*@only@*/ void * (*yasm_xcalloc) (size_t nelem, size_t elsize);
 
 /** Error-checking memory reallocation.  A default implementation is provided
@@ -369,6 +381,7 @@ extern /*@only@*/ void * (*yasm_xcalloc) (size_t nelem, size_t elsize);
  * \param elsize    new size, in bytes
  * \return Re-allocated memory block.
  */
+YASM_LIB_DECL
 extern /*@only@*/ void * (*yasm_xrealloc)
     (/*@only@*/ /*@out@*/ /*@returned@*/ /*@null@*/ void *oldmem, size_t size)
     /*@modifies oldmem@*/;
@@ -377,6 +390,7 @@ extern /*@only@*/ void * (*yasm_xrealloc)
  * that calls yasm_fatal() on allocation errors.
  * \param p     memory block to free
  */
+YASM_LIB_DECL
 extern void (*yasm_xfree) (/*@only@*/ /*@out@*/ /*@null@*/ void *p)
     /*@modifies p@*/;
 

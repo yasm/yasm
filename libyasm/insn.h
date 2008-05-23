@@ -34,6 +34,10 @@
 #ifndef YASM_INSN_H
 #define YASM_INSN_H
 
+#ifndef YASM_LIB_DECL
+#define YASM_LIB_DECL
+#endif
+
 /** Base structure for an effective address.  As with all base
  * structures, must be present as the first element in any
  * #yasm_arch implementation of an effective address.
@@ -154,24 +158,28 @@ struct yasm_insn {
  * \param ea            effective address
  * \param segreg        segment register (0 if none)
  */
+YASM_LIB_DECL
 void yasm_ea_set_segreg(yasm_effaddr *ea, uintptr_t segreg);
 
 /** Create an instruction operand from a register.
  * \param reg   register
  * \return Newly allocated operand.
  */
+YASM_LIB_DECL
 yasm_insn_operand *yasm_operand_create_reg(uintptr_t reg);
 
 /** Create an instruction operand from a segment register.
  * \param segreg        segment register
  * \return Newly allocated operand.
  */
+YASM_LIB_DECL
 yasm_insn_operand *yasm_operand_create_segreg(uintptr_t segreg);
 
 /** Create an instruction operand from an effective address.
  * \param ea    effective address
  * \return Newly allocated operand.
  */
+YASM_LIB_DECL
 yasm_insn_operand *yasm_operand_create_mem(/*@only@*/ yasm_effaddr *ea);
 
 /** Create an instruction operand from an immediate expression.
@@ -180,6 +188,7 @@ yasm_insn_operand *yasm_operand_create_mem(/*@only@*/ yasm_effaddr *ea);
  * \param val   immediate expression
  * \return Newly allocated operand.
  */
+YASM_LIB_DECL
 yasm_insn_operand *yasm_operand_create_imm(/*@only@*/ yasm_expr *val);
 
 /** Get the first operand in an instruction.
@@ -205,6 +214,7 @@ yasm_insn_operand *yasm_insn_op_next(yasm_insn_operand *op);
  * \return If operand was actually appended (it wasn't NULL), the operand;
  *         otherwise NULL.
  */
+YASM_LIB_DECL
 /*@null@*/ yasm_insn_operand *yasm_insn_ops_append
     (yasm_insn *insn,
      /*@returned@*/ /*@null@*/ yasm_insn_operand *op);
@@ -213,18 +223,21 @@ yasm_insn_operand *yasm_insn_op_next(yasm_insn_operand *op);
  * \param insn          instruction
  * \param prefix        data that identifies the prefix
  */
+YASM_LIB_DECL
 void yasm_insn_add_prefix(yasm_insn *insn, uintptr_t prefix);
 
 /** Associate a segment prefix with an instruction.
  * \param insn          instruction
  * \param segreg        data that identifies the segment register
  */
+YASM_LIB_DECL
 void yasm_insn_add_seg_prefix(yasm_insn *insn, uintptr_t segreg);
 
 /** Initialize the common parts of an instruction.
  * \internal For use by yasm_arch implementations only.
  * \param insn          instruction
  */
+YASM_LIB_DECL
 void yasm_insn_initialize(/*@out@*/ yasm_insn *insn);
 
 /** Delete the common parts of an instruction.
@@ -233,6 +246,7 @@ void yasm_insn_initialize(/*@out@*/ yasm_insn *insn);
  * \param content       if nonzero, deletes content of each operand
  * \param arch          architecture
  */
+YASM_LIB_DECL
 void yasm_insn_delete(yasm_insn *insn,
                       void (*ea_destroy) (/*@only@*/ yasm_effaddr *));
 
@@ -243,12 +257,14 @@ void yasm_insn_delete(yasm_insn *insn,
  * \param indent_level  indentation level
  * \param arch          architecture
  */
+YASM_LIB_DECL
 void yasm_insn_print(const yasm_insn *insn, FILE *f, int indent_level);
 
 /** Finalize the common parts of an instruction.
  * \internal For use by yasm_arch implementations only.
  * \param insn          instruction
  */
+YASM_LIB_DECL
 void yasm_insn_finalize(yasm_insn *insn);
 
 #endif

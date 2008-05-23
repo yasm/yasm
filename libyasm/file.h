@@ -34,6 +34,10 @@
 #ifndef YASM_FILE_H
 #define YASM_FILE_H
 
+#ifndef YASM_LIB_DECL
+#define YASM_LIB_DECL
+#endif
+
 /** Re2c scanner state. */
 typedef struct yasm_scanner {
     unsigned char *bot;     /**< Bottom of scan buffer */
@@ -48,11 +52,13 @@ typedef struct yasm_scanner {
 /** Initialize scanner state.
  * \param scanner   Re2c scanner state
  */
+YASM_LIB_DECL
 void yasm_scanner_initialize(yasm_scanner *scanner);
 
 /** Frees any memory used by scanner state; does not free state itself.
  * \param scanner   Re2c scanner state
  */
+YASM_LIB_DECL
 void yasm_scanner_delete(yasm_scanner *scanner);
 
 /** Fill a scanner state structure with data coming from an input function.
@@ -64,6 +70,7 @@ void yasm_scanner_delete(yasm_scanner *scanner);
  * \return 1 if this was the first time this function was called on this
  *         scanner state, 0 otherwise.
  */
+YASM_LIB_DECL
 int yasm_fill_helper
     (yasm_scanner *scanner, unsigned char **cursor,
      size_t (*input_func) (void *d, unsigned char *buf, size_t max),
@@ -78,6 +85,7 @@ int yasm_fill_helper
  * \param str           C-style string (updated in place)
  * \param len           length of string (updated with new length)
  */
+YASM_LIB_DECL
 void yasm_unescape_cstring(unsigned char *str, size_t *len);
 
 /** Split a UNIX pathname into head (directory) and tail (base filename)
@@ -87,6 +95,7 @@ void yasm_unescape_cstring(unsigned char *str, size_t *len);
  * \param tail  (returned) base filename
  * \return Length of head (directory).
  */
+YASM_LIB_DECL
 size_t yasm__splitpath_unix(const char *path, /*@out@*/ const char **tail);
 
 /** Split a Windows pathname into head (directory) and tail (base filename)
@@ -96,6 +105,7 @@ size_t yasm__splitpath_unix(const char *path, /*@out@*/ const char **tail);
  * \param tail  (returned) base filename
  * \return Length of head (directory).
  */
+YASM_LIB_DECL
 size_t yasm__splitpath_win(const char *path, /*@out@*/ const char **tail);
 
 /** Split a pathname into head (directory) and tail (base filename) portions.
@@ -119,6 +129,7 @@ size_t yasm__splitpath_win(const char *path, /*@out@*/ const char **tail);
  * \internal
  * \return Current working directory pathname (newly allocated).
  */
+YASM_LIB_DECL
 /*@only@*/ char *yasm__getcwd(void);
 
 /** Convert a UNIX relative or absolute pathname into an absolute pathname.
@@ -126,6 +137,7 @@ size_t yasm__splitpath_win(const char *path, /*@out@*/ const char **tail);
  * \param path  pathname
  * \return Absolute version of path (newly allocated).
  */
+YASM_LIB_DECL
 /*@only@*/ char *yasm__abspath_unix(const char *path);
 
 /** Convert a Windows relative or absolute pathname into an absolute pathname.
@@ -133,6 +145,7 @@ size_t yasm__splitpath_win(const char *path, /*@out@*/ const char **tail);
  * \param path  pathname
  * \return Absolute version of path (newly allocated).
  */
+YASM_LIB_DECL
 /*@only@*/ char *yasm__abspath_win(const char *path);
 
 /** Convert a relative or absolute pathname into an absolute pathname.
@@ -159,6 +172,7 @@ size_t yasm__splitpath_win(const char *path, /*@out@*/ const char **tail);
  * \param to    to pathname
  * \return Combined path (newly allocated).
  */
+YASM_LIB_DECL
 char *yasm__combpath_unix(const char *from, const char *to);
 
 /** Build a Windows pathname that is equivalent to accessing the "to" pathname
@@ -169,6 +183,7 @@ char *yasm__combpath_unix(const char *from, const char *to);
  * \param to    to pathname
  * \return Combined path (newly allocated).
  */
+YASM_LIB_DECL
 char *yasm__combpath_win(const char *from, const char *to);
 
 /** Build a pathname that is equivalent to accessing the "to" pathname
@@ -208,16 +223,19 @@ char *yasm__combpath_win(const char *from, const char *to);
  *                  may be passed if this is unwanted.
  * \return fopen'ed include file, or NULL if not found.
  */
+YASM_LIB_DECL
 /*@null@*/ FILE *yasm_fopen_include
     (const char *iname, const char *from, const char *mode,
      /*@null@*/ /*@out@*/ /*@only@*/ char **oname);
 
 /** Delete any stored include paths added by yasm_add_include_path().
  */
+YASM_LIB_DECL
 void yasm_delete_include_paths(void);
 
 /** Iterate through include paths.
 */
+YASM_LIB_DECL
 const char * yasm_get_include_dir(void **iter);
 
 /** Add an include path for use by yasm_fopen_include().
@@ -226,6 +244,7 @@ const char * yasm_get_include_dir(void **iter);
  *
  * \param path      path to add
  */
+YASM_LIB_DECL
 void yasm_add_include_path(const char *path);
 
 /** Write an 8-bit value to a buffer, incrementing buffer pointer.
@@ -356,6 +375,7 @@ void yasm_add_include_path(const char *path);
  * \param f     file
  * \return 1 if the write was successful, 0 if not (just like fwrite()).
  */
+YASM_LIB_DECL
 size_t yasm_fwrite_16_l(unsigned short val, FILE *f);
 
 /** Direct-to-file version of YASM_SAVE_32_L().
@@ -365,6 +385,7 @@ size_t yasm_fwrite_16_l(unsigned short val, FILE *f);
  * \param f     file
  * \return 1 if the write was successful, 0 if not (just like fwrite()).
  */
+YASM_LIB_DECL
 size_t yasm_fwrite_32_l(unsigned long val, FILE *f);
 
 /** Direct-to-file version of YASM_SAVE_16_B().
@@ -374,6 +395,7 @@ size_t yasm_fwrite_32_l(unsigned long val, FILE *f);
  * \param f     file
  * \return 1 if the write was successful, 0 if not (just like fwrite()).
  */
+YASM_LIB_DECL
 size_t yasm_fwrite_16_b(unsigned short val, FILE *f);
 
 /** Direct-to-file version of YASM_SAVE_32_B().
@@ -383,6 +405,7 @@ size_t yasm_fwrite_16_b(unsigned short val, FILE *f);
  * \param f     file
  * \return 1 if the write was successful, 0 if not (just like fwrite()).
  */
+YASM_LIB_DECL
 size_t yasm_fwrite_32_b(unsigned long val, FILE *f);
 
 /** Read an 8-bit value from a buffer, incrementing buffer pointer.

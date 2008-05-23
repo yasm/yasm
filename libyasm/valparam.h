@@ -34,6 +34,10 @@
 #ifndef YASM_VALPARAM_H
 #define YASM_VALPARAM_H
 
+#ifndef YASM_LIB_DECL
+#define YASM_LIB_DECL
+#endif
+
 /** Value/parameter pair.  \internal */
 struct yasm_valparam {
     /*@reldef@*/ STAILQ_ENTRY(yasm_valparam) link;  /**< Next pair in list */
@@ -101,6 +105,7 @@ struct yasm_directive {
  * \param objext_valparams      object format-specific value/parameters
  * \param line                  virtual line (from yasm_linemap)
  */
+YASM_LIB_DECL
 void yasm_call_directive(const yasm_directive *directive, yasm_object *object,
                          yasm_valparamhead *valparams,
                          yasm_valparamhead *objext_valparams,
@@ -112,6 +117,7 @@ void yasm_call_directive(const yasm_directive *directive, yasm_object *object,
  * \param id_prefix     identifier prefix for raw identifiers
  * \return Newly allocated valparam.
  */
+YASM_LIB_DECL
 yasm_valparam *yasm_vp_create_id(/*@keep@*/ char *v, /*@keep@*/ char *p,
                                  int id_prefix);
 
@@ -120,6 +126,7 @@ yasm_valparam *yasm_vp_create_id(/*@keep@*/ char *v, /*@keep@*/ char *p,
  * \param p     parameter
  * \return Newly allocated valparam.
  */
+YASM_LIB_DECL
 yasm_valparam *yasm_vp_create_string(/*@keep@*/ char *v, /*@keep@*/ char *p);
 
 /** Create a new valparam with expression parameter.
@@ -127,6 +134,7 @@ yasm_valparam *yasm_vp_create_string(/*@keep@*/ char *v, /*@keep@*/ char *p);
  * \param p     parameter
  * \return Newly allocated valparam.
  */
+YASM_LIB_DECL
 yasm_valparam *yasm_vp_create_expr(/*@keep@*/ char *v,
                                    /*@keep@*/ yasm_expr *p);
 
@@ -138,6 +146,7 @@ yasm_valparam *yasm_vp_create_expr(/*@keep@*/ char *v,
  * \return Expression, or NULL if vp is NULL or the parameter cannot be
  *         converted to an expression.
  */
+YASM_LIB_DECL
 /*@null@*/ /*@only@*/ yasm_expr *yasm_vp_expr
     (const yasm_valparam *vp, yasm_symtab *symtab, unsigned long line);
 
@@ -147,6 +156,7 @@ yasm_valparam *yasm_vp_create_expr(/*@keep@*/ char *v,
  * \return String, or NULL if vp is NULL or the parameter cannot be realized
  *         as a string.
  */
+YASM_LIB_DECL
 /*@null@*/ /*@dependent@*/ const char *yasm_vp_string(const yasm_valparam *vp);
 
 /** Get a valparam parameter as an identifier.
@@ -154,16 +164,19 @@ yasm_valparam *yasm_vp_create_expr(/*@keep@*/ char *v,
  * \return Identifier (string), or NULL if vp is NULL or the parameter is not
  *         an identifier.
  */
+YASM_LIB_DECL
 /*@null@*/ /*@dependent@*/ const char *yasm_vp_id(const yasm_valparam *vp);
 
 /** Create a new linked list of valparams.
  * \return Newly allocated valparam list.
  */
+YASM_LIB_DECL
 yasm_valparamhead *yasm_vps_create(void);
 
 /** Destroy a list of valparams (created with yasm_vps_create).
  * \param headp         list of valparams
  */
+YASM_LIB_DECL
 void yasm_vps_destroy(yasm_valparamhead *headp);
 
 /** Initialize linked list of valparams.
@@ -179,6 +192,7 @@ void yasm_vps_initialize(/*@out@*/ yasm_valparamhead *headp);
  * \warning Deletes val/params.
  * \param headp linked list
  */
+YASM_LIB_DECL
 void yasm_vps_delete(yasm_valparamhead *headp);
 
 /** Append valparam to tail of linked list.
@@ -225,6 +239,7 @@ void yasm_vps_append(yasm_valparamhead *headp, /*@keep@*/ yasm_valparam *vp);
  * \param f     file
  * \param headp linked list
  */
+YASM_LIB_DECL
 void yasm_vps_print(/*@null@*/ const yasm_valparamhead *headp, FILE *f);
 
 /** Directive valparam parse helper structure. */
@@ -280,6 +295,7 @@ typedef struct yasm_dir_help {
  * \return -1 on error, 1 if any arguments matched (including via
  *         catch-all callback), 0 if no match.
  */
+YASM_LIB_DECL
 int yasm_dir_helper(void *obj, yasm_valparam *vp_first, unsigned long line,
                     const yasm_dir_help *help, size_t nhelp, void *data,
                     int (*helper_valparam) (void *object,
@@ -297,6 +313,7 @@ int yasm_dir_helper(void *obj, yasm_valparam *vp_first, unsigned long line,
  * \param arg   flag to set
  * \return 0
  */
+YASM_LIB_DECL
 int yasm_dir_helper_flag_set(void *obj, yasm_valparam *vp, unsigned long line,
                              void *data, uintptr_t arg);
 
@@ -310,6 +327,7 @@ int yasm_dir_helper_flag_set(void *obj, yasm_valparam *vp, unsigned long line,
  * \param arg   flag to OR
  * \return 0
  */
+YASM_LIB_DECL
 int yasm_dir_helper_flag_or(void *obj, yasm_valparam *vp, unsigned long line,
                             void *data, uintptr_t arg);
 
@@ -323,6 +341,7 @@ int yasm_dir_helper_flag_or(void *obj, yasm_valparam *vp, unsigned long line,
  * \param arg   flag to AND
  * \return 0
  */
+YASM_LIB_DECL
 int yasm_dir_helper_flag_and(void *obj, yasm_valparam *vp, unsigned long line,
                              void *data, uintptr_t arg);
 
@@ -340,6 +359,7 @@ int yasm_dir_helper_flag_and(void *obj, yasm_valparam *vp, unsigned long line,
  * \param arg   unused argument
  * \return -1 on error, 0 otherwise.
  */
+YASM_LIB_DECL
 int yasm_dir_helper_expr(void *obj, yasm_valparam *vp, unsigned long line,
                          void *data, uintptr_t arg);
 
@@ -357,6 +377,7 @@ int yasm_dir_helper_expr(void *obj, yasm_valparam *vp, unsigned long line,
  * \param arg   unused argument
  * \return -1 on error, 0 otherwise.
  */
+YASM_LIB_DECL
 int yasm_dir_helper_intn(void *obj, yasm_valparam *vp, unsigned long line,
                          void *data, uintptr_t arg);
 
@@ -373,6 +394,7 @@ int yasm_dir_helper_intn(void *obj, yasm_valparam *vp, unsigned long line,
  * \param arg   unused
  * \return -1 on error, 0 otherwise.
  */
+YASM_LIB_DECL
 int yasm_dir_helper_string(void *obj, yasm_valparam *vp, unsigned long line,
                            void *data, uintptr_t arg);
 
@@ -384,6 +406,7 @@ int yasm_dir_helper_string(void *obj, yasm_valparam *vp, unsigned long line,
  * \param data  unused
  * \return 0
  */
+YASM_LIB_DECL
 int yasm_dir_helper_valparam_warn(void *obj, yasm_valparam *vp,
                                   unsigned long line, void *data);
 #endif

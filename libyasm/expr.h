@@ -34,6 +34,10 @@
 #ifndef YASM_EXPR_H
 #define YASM_EXPR_H
 
+#ifndef YASM_LIB_DECL
+#define YASM_LIB_DECL
+#endif
+
 /** Type of an expression item.  Types are listed in canonical sorting order.
  * See expr_order_terms().
  * Note #YASM_EXPR_PRECBC must be used carefully (in a-b pairs), as only
@@ -86,6 +90,7 @@ struct yasm_expr {
  * \param line      virtual line (where expression defined)
  * \return Newly allocated expression.
  */
+YASM_LIB_DECL
 /*@only@*/ yasm_expr *yasm_expr_create
     (yasm_expr_op op, /*@only@*/ yasm_expr__item *a,
      /*@only@*/ /*@null@*/ yasm_expr__item *b, unsigned long line);
@@ -94,36 +99,42 @@ struct yasm_expr {
  * \param precbc    preceding bytecode
  * \return Newly allocated expression item.
  */
+YASM_LIB_DECL
 /*@only@*/ yasm_expr__item *yasm_expr_precbc(/*@keep@*/ yasm_bytecode *precbc);
 
 /** Create a new symbol expression item.
  * \param sym       symbol
  * \return Newly allocated expression item.
  */
+YASM_LIB_DECL
 /*@only@*/ yasm_expr__item *yasm_expr_sym(/*@keep@*/ yasm_symrec *sym);
 
 /** Create a new expression expression item.
  * \param e         expression
  * \return Newly allocated expression item.
  */
+YASM_LIB_DECL
 /*@only@*/ yasm_expr__item *yasm_expr_expr(/*@keep@*/ yasm_expr *e);
 
 /** Create a new intnum expression item.
  * \param intn      intnum
  * \return Newly allocated expression item.
  */
+YASM_LIB_DECL
 /*@only@*/ yasm_expr__item *yasm_expr_int(/*@keep@*/ yasm_intnum *intn);
 
 /** Create a new floatnum expression item.
  * \param flt       floatnum
  * \return Newly allocated expression item.
  */
+YASM_LIB_DECL
 /*@only@*/ yasm_expr__item *yasm_expr_float(/*@keep@*/ yasm_floatnum *flt);
 
 /** Create a new register expression item.
  * \param reg       register
  * \return Newly allocated expression item.
  */
+YASM_LIB_DECL
 /*@only@*/ yasm_expr__item *yasm_expr_reg(uintptr_t reg);
 
 /** Create a new expression tree e=l op r.
@@ -165,6 +176,7 @@ yasm_expr *yasm_expr_copy(const yasm_expr *e);
 /** Destroy (free allocated memory for) an expression.
  * \param e     expression
  */
+YASM_LIB_DECL
 void yasm_expr_destroy(/*@only@*/ /*@null@*/ yasm_expr *e);
 
 /** Determine if an expression is a specified operation (at the top level).
@@ -173,6 +185,7 @@ void yasm_expr_destroy(/*@only@*/ /*@null@*/ yasm_expr *e);
  * \return Nonzero if the expression was the specified operation at the top
  *         level, zero otherwise.
  */
+YASM_LIB_DECL
 int yasm_expr_is_op(const yasm_expr *e, yasm_expr_op op);
 
 /** Extra transformation function for yasm_expr__level_tree().
@@ -196,6 +209,7 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
  * \param expr_xform_extra_data data to pass to expr_xform_extra
  * \return Leveled expression.
  */
+YASM_LIB_DECL
 /*@only@*/ /*@null@*/ yasm_expr *yasm_expr__level_tree
     (/*@returned@*/ /*@only@*/ /*@null@*/ yasm_expr *e, int fold_const,
      int simplify_ident, int simplify_reg_mul, int calc_bc_dist,
@@ -220,6 +234,7 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
  *         The input expression is modified such that on return, it's the
  *         offset expression.
  */
+YASM_LIB_DECL
 /*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_deep_segoff(yasm_expr **ep);
 
 /** Extract the segment portion of a SEG:OFF expression, leaving the offset.
@@ -229,6 +244,7 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
  *         expression is modified such that on return, it's the offset
  *         expression.
  */
+YASM_LIB_DECL
 /*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_segoff(yasm_expr **ep);
 
 /** Extract the right portion (y) of a x WRT y expression, leaving the left
@@ -239,6 +255,7 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
  *         input expression is modified such that on return, it's the left side
  *         of the WRT expression.
  */
+YASM_LIB_DECL
 /*@only@*/ /*@null@*/ yasm_expr *yasm_expr_extract_wrt(yasm_expr **ep);
 
 /** Get the integer value of an expression if it's just an integer.
@@ -249,6 +266,7 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
  *         integers, ie floats, non-valued labels, registers); otherwise the
  *         intnum value of the expression.
  */
+YASM_LIB_DECL
 /*@dependent@*/ /*@null@*/ yasm_intnum *yasm_expr_get_intnum
     (yasm_expr **ep, int calc_bc_dist);
 
@@ -258,6 +276,7 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
  * \return NULL if the expression is too complex; otherwise the symbol value of
  *         the expression.
  */
+YASM_LIB_DECL
 /*@dependent@*/ /*@null@*/ const yasm_symrec *yasm_expr_get_symrec
     (yasm_expr **ep, int simplify);
 
@@ -267,6 +286,7 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
  * \return NULL if the expression is too complex; otherwise the register value
  *         of the expression.
  */
+YASM_LIB_DECL
 /*@dependent@*/ /*@null@*/ const uintptr_t *yasm_expr_get_reg
     (yasm_expr **ep, int simplify);
 
@@ -274,6 +294,7 @@ typedef /*@only@*/ yasm_expr * (*yasm_expr_xform_func)
  * \param e     expression
  * \param f     file
  */
+YASM_LIB_DECL
 void yasm_expr_print(/*@null@*/ const yasm_expr *e, FILE *f);
 
 /** Traverse over expression tree in order (const version).
@@ -284,6 +305,7 @@ void yasm_expr_print(/*@null@*/ const yasm_expr *e, FILE *f);
  * \return Stops early (and returns 1) if func returns 1.
  *         Otherwise returns 0.
  */
+YASM_LIB_DECL
 int yasm_expr__traverse_leaves_in_const
     (const yasm_expr *e, /*@null@*/ void *d,
      int (*func) (/*@null@*/ const yasm_expr__item *ei, /*@null@*/ void *d));
@@ -296,6 +318,7 @@ int yasm_expr__traverse_leaves_in_const
  * \return Stops early (and returns 1) if func returns 1.
  *         Otherwise returns 0.
  */
+YASM_LIB_DECL
 int yasm_expr__traverse_leaves_in
     (yasm_expr *e, /*@null@*/ void *d,
      int (*func) (/*@null@*/ yasm_expr__item *ei, /*@null@*/ void *d));
@@ -308,6 +331,7 @@ int yasm_expr__traverse_leaves_in
  * \param e     expression
  * \note Only performs reordering on *one* level (no recursion).
  */
+YASM_LIB_DECL
 void yasm_expr__order_terms(yasm_expr *e);
 
 /** Copy entire expression EXCEPT for index "except" at *top level only*.
@@ -315,6 +339,7 @@ void yasm_expr__order_terms(yasm_expr *e);
  * \param except    term index not to copy; -1 to copy all terms
  * \return Newly allocated copy of expression.
  */
+YASM_LIB_DECL
 yasm_expr *yasm_expr__copy_except(const yasm_expr *e, int except);
 
 /** Test if expression contains an item.  Searches recursively into
@@ -323,6 +348,7 @@ yasm_expr *yasm_expr__copy_except(const yasm_expr *e, int except);
  * \param t     type of item to look for
  * \return Nonzero if expression contains an item of type t, zero if not.
  */
+YASM_LIB_DECL
 int yasm_expr__contains(const yasm_expr *e, yasm_expr__type t);
 
 /** Transform symrec-symrec terms in expression into #YASM_EXPR_SUBST items.
@@ -333,6 +359,7 @@ int yasm_expr__contains(const yasm_expr *e, yasm_expr__type t);
  *                      pair, bytecode pair (bc2-bc1), and cbd (callback data)
  * \return Number of transformations made.
  */
+YASM_LIB_DECL
 int yasm_expr__bc_dist_subst(yasm_expr **ep, void *cbd,
                              void (*callback) (unsigned int subst,
                                                yasm_bytecode *precbc,
@@ -346,6 +373,7 @@ int yasm_expr__bc_dist_subst(yasm_expr **ep, void *cbd,
  * \param items         items array
  * \return 1 on error (index out of range).
  */
+YASM_LIB_DECL
 int yasm_expr__subst(yasm_expr *e, unsigned int num_items,
                      const yasm_expr__item *items);
 

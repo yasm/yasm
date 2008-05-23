@@ -27,6 +27,10 @@
 #ifndef YASM_MODULE_H
 #define YASM_MODULE_H
 
+#ifndef YASM_LIB_DECL
+#define YASM_LIB_DECL
+#endif
+
 typedef enum yasm_module_type {
     YASM_MODULE_ARCH = 0,
     YASM_MODULE_DBGFMT,
@@ -36,6 +40,7 @@ typedef enum yasm_module_type {
     YASM_MODULE_PREPROC
 } yasm_module_type;
 
+YASM_LIB_DECL
 /*@dependent@*/ /*@null@*/ void *yasm_load_module
     (yasm_module_type type, const char *keyword);
 
@@ -52,6 +57,7 @@ typedef enum yasm_module_type {
 #define yasm_load_preproc(keyword)      \
     yasm_load_module(YASM_MODULE_PREPROC, keyword)
 
+YASM_LIB_DECL
 void yasm_list_modules
     (yasm_module_type type,
      void (*printfunc) (const char *name, const char *keyword));
@@ -69,6 +75,7 @@ void yasm_list_modules
 #define yasm_list_preproc(func)         \
     yasm_list_modules(YASM_MODULE_PREPROC, func)
 
+YASM_LIB_DECL
 void yasm_register_module(yasm_module_type type, const char *keyword,
                           void *data);
 

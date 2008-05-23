@@ -34,6 +34,10 @@
 #ifndef YASM_ERRWARN_H
 #define YASM_ERRWARN_H
 
+#ifndef YASM_LIB_DECL
+#define YASM_LIB_DECL
+#endif
+
 /** Warning classes (that may be enabled/disabled). */
 typedef enum yasm_warn_class {
     YASM_WARN_NONE = 0,     /**< No warning */
@@ -67,11 +71,13 @@ typedef enum yasm_error_class {
 } yasm_error_class;
 
 /** Initialize any internal data structures. */
+YASM_LIB_DECL
 void yasm_errwarn_initialize(void);
 
 /** Clean up any memory allocated by yasm_errwarn_initialize() or other
  * functions.
  */
+YASM_LIB_DECL
 void yasm_errwarn_cleanup(void);
 
 /** Reporting point of internal errors.  These are usually due to sanity
@@ -82,6 +88,7 @@ void yasm_errwarn_cleanup(void);
  * \param line      source line (ala __LINE__)
  * \param message   internal error message
  */
+YASM_LIB_DECL
 extern /*@exits@*/ void (*yasm_internal_error_)
     (const char *file, unsigned int line, const char *message);
 
@@ -98,6 +105,7 @@ extern /*@exits@*/ void (*yasm_internal_error_)
  * \param message   fatal error message
  * \param va        va_list argument list for message
  */
+YASM_LIB_DECL
 extern /*@exits@*/ void (*yasm_fatal) (const char *message, va_list va);
 
 /** Reporting point of fatal errors, with variable arguments (internal only).
@@ -106,11 +114,13 @@ extern /*@exits@*/ void (*yasm_fatal) (const char *message, va_list va);
  * \param message   fatal error message
  * \param ...       argument list for message
  */
+YASM_LIB_DECL
 /*@exits@*/ void yasm__fatal(const char *message, ...);
 
 /** Unconditionally clear the error indicator, freeing any associated data.
  * Has no effect if the error indicator is not set.
  */
+YASM_LIB_DECL
 void yasm_error_clear(void);
 
 /** Get the error indicator.  YASM_ERROR_NONE is returned if no error has
@@ -127,9 +137,11 @@ yasm_error_class yasm_error_occurred(void);
  * \return Nonzero if error indicator is set and a subclass of eclass, 0
  *         otherwise.
  */
+YASM_LIB_DECL
 int yasm_error_matches(yasm_error_class eclass);
 
 #ifndef YASM_DOXYGEN
+YASM_LIB_DECL
 extern yasm_error_class yasm_eclass;
 #define yasm_error_occurred()       yasm_eclass
 #endif
@@ -140,6 +152,7 @@ extern yasm_error_class yasm_eclass;
  * \param format    printf format string
  * \param va        argument list for format
  */
+YASM_LIB_DECL
 void yasm_error_set_va(yasm_error_class eclass, const char *format, va_list va);
 
 /** Set the error indicator.  Has no effect if the error indicator is already
@@ -148,6 +161,7 @@ void yasm_error_set_va(yasm_error_class eclass, const char *format, va_list va);
  * \param format    printf format string
  * \param ...       argument list for format
  */
+YASM_LIB_DECL
 void yasm_error_set(yasm_error_class eclass, const char *format, ...)
     /*@printflike@*/;
 
@@ -158,6 +172,7 @@ void yasm_error_set(yasm_error_class eclass, const char *format, ...)
  * \param format    printf format string
  * \param va        argument list for format
  */
+YASM_LIB_DECL
 void yasm_error_set_xref_va(unsigned long xrefline, const char *format,
                             va_list va);
 
@@ -168,6 +183,7 @@ void yasm_error_set_xref_va(unsigned long xrefline, const char *format,
  * \param format    printf format string
  * \param ...       argument list for format
  */
+YASM_LIB_DECL
 void yasm_error_set_xref(unsigned long xrefline, const char *format, ...)
     /*@printflike@*/;
 
@@ -183,6 +199,7 @@ void yasm_error_set_xref(unsigned long xrefline, const char *format, ...)
  * \param xrefline  virtual line used for cross-referencing (0 if no xref)
  * \param xrefstr   cross-reference error message (NULL if no xref)
  */
+YASM_LIB_DECL
 void yasm_error_fetch(/*@out@*/ yasm_error_class *eclass,
                       /*@out@*/ /*@only@*/ /*@null@*/ char **str,
                       /*@out@*/ unsigned long *xrefline,
@@ -191,6 +208,7 @@ void yasm_error_fetch(/*@out@*/ yasm_error_class *eclass,
 /** Unconditionally clear all warning indicators, freeing any associated data.
  * Has no effect if no warning indicators have been set.
  */
+YASM_LIB_DECL
 void yasm_warn_clear(void);
 
 /** Get the first warning indicator.  YASM_WARN_NONE is returned if no warning
@@ -198,6 +216,7 @@ void yasm_warn_clear(void);
  * be treated as a boolean value.
  * \return First warning indicator.
  */
+YASM_LIB_DECL
 yasm_warn_class yasm_warn_occurred(void);
 
 /** Add a warning indicator (va_list version).
@@ -205,6 +224,7 @@ yasm_warn_class yasm_warn_occurred(void);
  * \param format    printf format string
  * \param va        argument list for format
  */
+YASM_LIB_DECL
 void yasm_warn_set_va(yasm_warn_class wclass, const char *format, va_list va);
 
 /** Add a warning indicator.
@@ -212,6 +232,7 @@ void yasm_warn_set_va(yasm_warn_class wclass, const char *format, va_list va);
  * \param format    printf format string
  * \param ...       argument list for format
  */
+YASM_LIB_DECL
 void yasm_warn_set(yasm_warn_class wclass, const char *format, ...)
     /*@printflike@*/;
 
@@ -225,30 +246,36 @@ void yasm_warn_set(yasm_warn_class wclass, const char *format, ...)
  * \param wclass    warning class (output)
  * \param str       warning message
  */
+YASM_LIB_DECL
 void yasm_warn_fetch(/*@out@*/ yasm_warn_class *wclass,
                      /*@out@*/ /*@only@*/ char **str);
 
 /** Enable a class of warnings.
  * \param wclass    warning class
  */
+YASM_LIB_DECL
 void yasm_warn_enable(yasm_warn_class wclass);
 
 /** Disable a class of warnings.
  * \param wclass    warning class
  */
+YASM_LIB_DECL
 void yasm_warn_disable(yasm_warn_class wclass);
 
 /** Disable all classes of warnings. */
+YASM_LIB_DECL
 void yasm_warn_disable_all(void);
 
 /** Create an error/warning set for collection of multiple error/warnings.
  * \return Newly allocated set.
  */
+YASM_LIB_DECL
 /*@only@*/ yasm_errwarns *yasm_errwarns_create(void);
 
 /** Destroy an error/warning set.
  * \param errwarns  error/warning set
  */
+YASM_LIB_DECL
 void yasm_errwarns_destroy(/*@only@*/ yasm_errwarns *errwarns);
 
 /** Propagate error indicator and warning indicator(s) to an error/warning set.
@@ -261,6 +288,7 @@ void yasm_errwarns_destroy(/*@only@*/ yasm_errwarns *errwarns);
  * \param errwarns  error/warning set
  * \param line      virtual line
  */
+YASM_LIB_DECL
 void yasm_errwarn_propagate(yasm_errwarns *errwarns, unsigned long line);
 
 /** Get total number of errors logged.
@@ -268,6 +296,7 @@ void yasm_errwarn_propagate(yasm_errwarns *errwarns, unsigned long line);
  * \param warning_as_error  if nonzero, warnings are treated as errors.
  * \return Number of errors.
  */
+YASM_LIB_DECL
 unsigned int yasm_errwarns_num_errors(yasm_errwarns *errwarns,
                                       int warning_as_error);
 
@@ -299,6 +328,7 @@ typedef void (*yasm_print_warning_func)
  * \param print_error       function called to print out errors
  * \param print_warning     function called to print out warnings
  */
+YASM_LIB_DECL
 void yasm_errwarns_output_all
     (yasm_errwarns *errwarns, yasm_linemap *lm, int warning_as_error,
      yasm_print_error_func print_error, yasm_print_warning_func print_warning);
@@ -308,12 +338,14 @@ void yasm_errwarns_output_all
  * \param ch    possibly unprintable character
  * \return Printable string representation (static buffer).
  */
+YASM_LIB_DECL
 char *yasm__conv_unprint(int ch);
 
 /** Hook for library users to map to gettext() if GNU gettext is being used.
  * \param msgid     message catalog identifier
  * \return Translated message.
  */
+YASM_LIB_DECL
 extern const char * (*yasm_gettext_hook) (const char *msgid);
 
 #endif

@@ -36,10 +36,16 @@
 #ifndef YASM_FLOATNUM_H
 #define YASM_FLOATNUM_H
 
+#ifndef YASM_LIB_DECL
+#define YASM_LIB_DECL
+#endif
+
 /** Initialize floatnum internal data structures. */
+YASM_LIB_DECL
 void yasm_floatnum_initialize(void);
 
 /** Clean up internal floatnum allocations. */
+YASM_LIB_DECL
 void yasm_floatnum_cleanup(void);
 
 /** Create a new floatnum from a decimal string.  The input string must be in
@@ -47,17 +53,20 @@ void yasm_floatnum_cleanup(void);
  * \param str   floating point decimal string
  * \return Newly allocated floatnum.
  */
+YASM_LIB_DECL
 /*@only@*/ yasm_floatnum *yasm_floatnum_create(const char *str);
 
 /** Duplicate a floatnum.
  * \param flt   floatnum
  * \return Newly allocated floatnum with the same value as flt.
  */
+YASM_LIB_DECL
 /*@only@*/ yasm_floatnum *yasm_floatnum_copy(const yasm_floatnum *flt);
 
 /** Destroy (free allocated memory for) a floatnum.
  * \param flt   floatnum
  */
+YASM_LIB_DECL
 void yasm_floatnum_destroy(/*@only@*/ yasm_floatnum *flt);
 
 /** Floating point calculation function: acc = acc op operand.
@@ -68,6 +77,7 @@ void yasm_floatnum_destroy(/*@only@*/ yasm_floatnum *flt);
  * \param operand   floatnum operand
  * \return Nonzero on error.
  */
+YASM_LIB_DECL
 int yasm_floatnum_calc(yasm_floatnum *acc, yasm_expr_op op,
                        yasm_floatnum *operand);
 
@@ -78,6 +88,7 @@ int yasm_floatnum_calc(yasm_floatnum *acc, yasm_expr_op op,
  * \return Nonzero if flt can't fit into single precision: -1 if underflow
  *         occurred, 1 if overflow occurred.
  */
+YASM_LIB_DECL
 int yasm_floatnum_get_int(const yasm_floatnum *flt,
                           /*@out@*/ unsigned long *ret_val);
 
@@ -98,6 +109,7 @@ int yasm_floatnum_get_int(const yasm_floatnum *flt,
  * \return Nonzero if flt can't fit into the specified precision: -1 if
  *         underflow occurred, 1 if overflow occurred.
  */
+YASM_LIB_DECL
 int yasm_floatnum_get_sized(const yasm_floatnum *flt, unsigned char *ptr,
                             size_t destsize, size_t valsize, size_t shift,
                             int bigendian, int warn);
@@ -110,12 +122,14 @@ int yasm_floatnum_get_sized(const yasm_floatnum *flt, unsigned char *ptr,
  * \param size      number of bits of output space
  * \return 1 if valid size, 0 if invalid size.
  */
+YASM_LIB_DECL
 int yasm_floatnum_check_size(const yasm_floatnum *flt, size_t size);
 
 /** Print various representations of a floatnum.  For debugging purposes only.
  * \param f         file
  * \param flt       floatnum
  */
+YASM_LIB_DECL
 void yasm_floatnum_print(const yasm_floatnum *flt, FILE *f);
 
 #endif

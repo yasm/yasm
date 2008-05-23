@@ -34,6 +34,10 @@
 #ifndef YASM_SECTION_H
 #define YASM_SECTION_H
 
+#ifndef YASM_LIB_DECL
+#define YASM_LIB_DECL
+#endif
+
 /** Basic YASM relocation.  Object formats will need to extend this
  * structure with additional fields for relocation type, etc.
  */
@@ -79,6 +83,7 @@ struct yasm_object {
  * \param dbgfmt_module debug format module
  * \return Newly allocated object, or NULL on error.
  */
+YASM_LIB_DECL
 /*@null@*/ /*@only@*/ yasm_object *yasm_object_create
     (const char *src_filename, const char *obj_filename,
      /*@kept@*/ yasm_arch *arch,
@@ -99,6 +104,7 @@ struct yasm_object {
  *                  already exists)
  * \return New section.
  */
+YASM_LIB_DECL
 /*@dependent@*/ yasm_section *yasm_object_get_general
     (yasm_object *object, const char *name, unsigned long align, int code,
      int res_only, /*@out@*/ int *isnew, unsigned long line);
@@ -113,6 +119,7 @@ struct yasm_object {
  * \param line                  virtual line (from yasm_linemap)
  * \return 0 if directive recognized, nonzero if unrecognized.
  */
+YASM_LIB_DECL
 int yasm_object_directive(yasm_object *object, const char *name,
                           const char *parser, yasm_valparamhead *valparams,
                           yasm_valparamhead *objext_valparams,
@@ -122,6 +129,7 @@ int yasm_object_directive(yasm_object *object, const char *name,
  * object and all bytecodes within those sections are also deleted.
  * \param object        object
  */
+YASM_LIB_DECL
 void yasm_object_destroy(/*@only@*/ yasm_object *object);
 
 /** Print an object.  For debugging purposes.
@@ -129,6 +137,7 @@ void yasm_object_destroy(/*@only@*/ yasm_object *object);
  * \param f             file
  * \param indent_level  indentation level
  */
+YASM_LIB_DECL
 void yasm_object_print(const yasm_object *object, FILE *f, int indent_level);
 
 /** Finalize an object after parsing.
@@ -136,6 +145,7 @@ void yasm_object_print(const yasm_object *object, FILE *f, int indent_level);
  * \param errwarns      error/warning set
  * \note Errors/warnings are stored into errwarns.
  */
+YASM_LIB_DECL
 void yasm_object_finalize(yasm_object *object, yasm_errwarns *errwarns);
 
 /** Traverses all sections in an object, calling a function on each section.
@@ -145,6 +155,7 @@ void yasm_object_finalize(yasm_object *object, yasm_errwarns *errwarns);
  * \return Stops early (and returns func's return value) if func returns a
  *         nonzero value; otherwise 0.
  */
+YASM_LIB_DECL
 int yasm_object_sections_traverse
     (yasm_object *object, /*@null@*/ void *d,
      int (*func) (yasm_section *sect, /*@null@*/ void *d));
@@ -154,6 +165,7 @@ int yasm_object_sections_traverse
  * \param name          section name
  * \return Section matching name, or NULL if no match found.
  */
+YASM_LIB_DECL
 /*@dependent@*/ /*@null@*/ yasm_section *yasm_object_find_general
     (yasm_object *object, const char *name);
 
@@ -161,6 +173,7 @@ int yasm_object_sections_traverse
  * \param object        object
  * \param src_filename  new source filename (e.g. "file.asm")
  */
+YASM_LIB_DECL
 void yasm_object_set_source_fn(yasm_object *object, const char *src_filename);
 
 /** Optimize an object.  Takes the unoptimized object and optimizes it.
@@ -169,24 +182,28 @@ void yasm_object_set_source_fn(yasm_object *object, const char *src_filename);
  * \param errwarns      error/warning set
  * \note Optimization failures are stored into errwarns.
  */
+YASM_LIB_DECL
 void yasm_object_optimize(yasm_object *object, yasm_errwarns *errwarns);
 
 /** Determine if a section is flagged to contain code.
  * \param sect      section
  * \return Nonzero if section is flagged to contain code.
  */
+YASM_LIB_DECL
 int yasm_section_is_code(yasm_section *sect);
 
 /** Get yasm_optimizer-specific flags.  For yasm_optimizer use only.
  * \param sect      section
  * \return Optimizer-specific flags.
  */
+YASM_LIB_DECL
 unsigned long yasm_section_get_opt_flags(const yasm_section *sect);
 
 /** Set yasm_optimizer-specific flags.  For yasm_optimizer use only.
  * \param sect      section
  * \param opt_flags optimizer-specific flags.
  */
+YASM_LIB_DECL
 void yasm_section_set_opt_flags(yasm_section *sect, unsigned long opt_flags);
 
 /** Determine if a section was declared as the "default" section (e.g. not
@@ -194,18 +211,21 @@ void yasm_section_set_opt_flags(yasm_section *sect, unsigned long opt_flags);
  * \param sect      section
  * \return Nonzero if section was declared as default.
  */
+YASM_LIB_DECL
 int yasm_section_is_default(const yasm_section *sect);
 
 /** Set section "default" flag to a new value.
  * \param sect      section
  * \param def       new value of default flag
  */
+YASM_LIB_DECL
 void yasm_section_set_default(yasm_section *sect, int def);
 
 /** Get object owner of a section.
  * \param sect      section
  * \return Object this section is a part of.
  */
+YASM_LIB_DECL
 yasm_object *yasm_section_get_object(const yasm_section *sect);
 
 /** Get assocated data for a section and data callback.
@@ -213,6 +233,7 @@ yasm_object *yasm_section_get_object(const yasm_section *sect);
  * \param callback  callback used when adding data
  * \return Associated data (NULL if none).
  */
+YASM_LIB_DECL
 /*@dependent@*/ /*@null@*/ void *yasm_section_get_data
     (yasm_section *sect, const yasm_assoc_data_callback *callback);
 
@@ -222,6 +243,7 @@ yasm_object *yasm_section_get_object(const yasm_section *sect);
  * \param callback  callback
  * \param data      data to associate
  */
+YASM_LIB_DECL
 void yasm_section_add_data(yasm_section *sect,
                            const yasm_assoc_data_callback *callback,
                            /*@null@*/ /*@only@*/ void *data);
@@ -235,6 +257,7 @@ void yasm_section_add_data(yasm_section *sect,
  * The section will destroy the relocation address; it is the caller's
  * responsibility to destroy any other allocated data.
  */
+YASM_LIB_DECL
 void yasm_section_add_reloc(yasm_section *sect, yasm_reloc *reloc,
     void (*destroy_func) (/*@only@*/ void *reloc));
 
@@ -242,6 +265,7 @@ void yasm_section_add_reloc(yasm_section *sect, yasm_reloc *reloc,
  * \param sect          section
  * \return First relocation for section.  NULL if no relocations.
  */
+YASM_LIB_DECL
 /*@null@*/ yasm_reloc *yasm_section_relocs_first(yasm_section *sect);
 
 /** Get the next relocation for a section.
@@ -258,6 +282,7 @@ void yasm_section_add_reloc(yasm_section *sect, yasm_reloc *reloc,
  * \param addrp         address of relocation within section (returned)
  * \param symp          relocated symbol (returned)
  */
+YASM_LIB_DECL
 void yasm_reloc_get(yasm_reloc *reloc, yasm_intnum **addrp,
                     /*@dependent@*/ yasm_symrec **symp);
 
@@ -266,6 +291,7 @@ void yasm_reloc_get(yasm_reloc *reloc, yasm_intnum **addrp,
  * \return First bytecode in section (at least one empty bytecode is always
  *         present).
  */
+YASM_LIB_DECL
 yasm_bytecode *yasm_section_bcs_first(yasm_section *sect);
 
 /** Get the last bytecode in a section.
@@ -273,6 +299,7 @@ yasm_bytecode *yasm_section_bcs_first(yasm_section *sect);
  * \return Last bytecode in section (at least one empty bytecode is always
  *         present).
  */
+YASM_LIB_DECL
 yasm_bytecode *yasm_section_bcs_last(yasm_section *sect);
 
 /** Add bytecode to the end of a section.
@@ -284,6 +311,7 @@ yasm_bytecode *yasm_section_bcs_last(yasm_section *sect);
  * \return If bytecode was actually appended (it wasn't NULL or empty), the
  *         bytecode; otherwise NULL.
  */
+YASM_LIB_DECL
 /*@only@*/ /*@null@*/ yasm_bytecode *yasm_section_bcs_append
     (yasm_section *sect,
      /*@returned@*/ /*@only@*/ /*@null@*/ yasm_bytecode *bc);
@@ -298,6 +326,7 @@ yasm_bytecode *yasm_section_bcs_last(yasm_section *sect);
  * \note If errwarns is non-NULL, yasm_errwarn_propagate() is called after
  *       each call to func (with the bytecode's line number).
  */
+YASM_LIB_DECL
 int yasm_section_bcs_traverse
     (yasm_section *sect, /*@null@*/ yasm_errwarns *errwarns,
      /*@null@*/ void *d, int (*func) (yasm_bytecode *bc, /*@null@*/ void *d));
@@ -306,6 +335,7 @@ int yasm_section_bcs_traverse
  * \param   sect    section
  * \return Section name.
  */
+YASM_LIB_DECL
 /*@observer@*/ const char *yasm_section_get_name(const yasm_section *sect);
 
 /** Change alignment of a section.
@@ -313,6 +343,7 @@ int yasm_section_bcs_traverse
  * \param align     alignment in bytes
  * \param line      virtual line
  */
+YASM_LIB_DECL
 void yasm_section_set_align(yasm_section *sect, unsigned long align,
                             unsigned long line);
 
@@ -320,6 +351,7 @@ void yasm_section_set_align(yasm_section *sect, unsigned long align,
  * \param sect      section
  * \return Alignment in bytes (0 if none).
  */
+YASM_LIB_DECL
 unsigned long yasm_section_get_align(const yasm_section *sect);
 
 /** Print a section.  For debugging purposes.
@@ -328,6 +360,7 @@ unsigned long yasm_section_get_align(const yasm_section *sect);
  * \param sect          section
  * \param print_bcs     if nonzero, print bytecodes within section
  */
+YASM_LIB_DECL
 void yasm_section_print(/*@null@*/ const yasm_section *sect, FILE *f,
                         int indent_level, int print_bcs);
 
