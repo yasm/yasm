@@ -61,14 +61,21 @@ load_plugin(const char *name)
 
     /* Load library */
 
-    path = yasm_xmalloc(strlen(name)+5);
-    strcpy(path, name);
+    path = yasm_xmalloc(strlen(name)+10);
 #if defined(_MSC_VER)
+    strcpy(path, name);
     strcat(path, ".dll");
     lib = load_dll(path);
 #elif defined(__GNUC__)
+    strcpy(path, "lib");
+    strcat(path, name);
     strcat(path, ".so");
     lib = load_dll(path);
+    if (!lib) {
+        strcpy(path, name);
+        strcat(path, ".so");
+        lib = load_dll(path);
+    }
 #endif
     yasm_xfree(path);
     if (!lib)

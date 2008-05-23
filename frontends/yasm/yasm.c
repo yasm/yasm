@@ -583,7 +583,7 @@ main(int argc, char *argv[])
 
 #ifdef CMAKE_BUILD
     /* Load standard modules */
-    if (!load_plugin("libyasmstd")) {
+    if (!load_plugin("yasmstd")) {
         print_error(_("%s: could not load standard modules"), _("FATAL"));
         return EXIT_FAILURE;
     }
