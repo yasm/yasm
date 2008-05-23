@@ -1,4 +1,4 @@
-/*
+/* $Id$
  * Semi-portable (Windows and Unix) plugin loading
  *
  *  Copyright (C) 2008  Peter Johnson
