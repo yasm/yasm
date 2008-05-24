@@ -7,9 +7,15 @@ To build:
   cmake ..
   make
 
-Testing:
+Testing (on Windows):
+  yasm -N Release/dbgmod.dll -f dbg -
+     db 5
+     ^Z
+
+Testing (on Unix):
   yasm -N ./libdbgmod.so -f dbg -
      db 5
      ^D
-(result lines will have PLUGIN prefixed to the function calls; this
-demonstrates the plugin is being used rather than the builtin dbg module)
+
+Result lines will have PLUGIN prefixed to the function calls; this
+demonstrates the plugin is being used rather than the builtin dbg module.
