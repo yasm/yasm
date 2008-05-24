@@ -1,4 +1,15 @@
-FIND_PROGRAM(YASM_PATH yasm)
+PROJECT(dbgmod)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.4)
+
+SET (YASM_POSSIBLE_PATHS
+    "$ENV{ProgramFiles}/Yasm/Bin"
+    /usr/bin
+    /usr/local/bin
+    )
+
+FIND_PROGRAM(YASM_PATH yasm
+    PATHS ${YASM_POSSIBLE_PATHS}
+    )
 
 SET (YASM_POSSIBLE_INCLUDE_PATHS
     "${YASM_PATH}"

@@ -1,6 +1,17 @@
+PROJECT(x86mod)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.4)
+
 SET(SOURCE_DIR "${YASM_SOURCE_DIR}/modules/arch/x86")
 
-FIND_PROGRAM(YASM_PATH yasm)
+SET (YASM_POSSIBLE_PATHS
+    "$ENV{ProgramFiles}/Yasm/Bin"
+    /usr/bin
+    /usr/local/bin
+    )
+
+FIND_PROGRAM(YASM_PATH yasm
+    PATHS ${YASM_POSSIBLE_PATHS}
+    )
 
 FIND_PROGRAM(GENPERF_PATH genperf
     DOC "The path to the yasm genperf executable"
