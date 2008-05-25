@@ -29,6 +29,7 @@
 
 #include <string.h>
 
+#include "libyasm-stdint.h"
 #include "yasm-plugin.h"
 
 #if defined(_MSC_VER)
@@ -96,7 +97,7 @@ load_plugin(const char *name)
     init_plugin =
         (void (*)(void))GetProcAddress((HINSTANCE)lib, "yasm_init_plugin");
 #elif defined(__GNUC__)
-    init_plugin = (void (*)(void))dlsym(lib, "yasm_init_plugin");
+    init_plugin = (void (*)(void))(uintptr_t)dlsym(lib, "yasm_init_plugin");
 #endif
 
     if (!init_plugin)
