@@ -223,6 +223,10 @@ yasm_object_create(const char *src_filename, const char *obj_filename,
     object->src_filename = yasm__xstrdup(src_filename);
     object->obj_filename = yasm__xstrdup(obj_filename);
 
+    /* No prefix/suffix */
+    object->global_prefix = yasm__xstrdup("");
+    object->global_suffix = yasm__xstrdup("");
+
     /* Create empty symbol table */
     object->symtab = yasm_symtab_create();
 
@@ -376,6 +380,20 @@ yasm_object_set_source_fn(yasm_object *object, const char *src_filename)
     object->src_filename = yasm__xstrdup(src_filename);
 }
 
+void
+yasm_object_set_global_prefix(yasm_object *object, const char *prefix)
+{
+    yasm_xfree(object->global_prefix);
+    object->global_prefix = yasm__xstrdup(prefix);
+}
+
+void
+yasm_object_set_global_suffix(yasm_object *object, const char *suffix)
+{
+    yasm_xfree(object->global_suffix);
+    object->global_suffix = yasm__xstrdup(suffix);
+}
+
 int
 yasm_section_is_code(yasm_section *sect)
 {
@@ -449,6 +467,10 @@ yasm_object_destroy(yasm_object *object)
 
     /* Delete directives HAMT */
     HAMT_destroy(object->directives, directive_level1_delete);
+
+    /* Delete prefix/suffix */
+    yasm_xfree(object->global_prefix);
+    yasm_xfree(object->global_suffix);
 
     /* Delete associated filenames */
     yasm_xfree(object->src_filename);

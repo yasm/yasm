@@ -453,6 +453,21 @@ yasm_symrec_get_name(const yasm_symrec *sym)
     return sym->name;
 }
 
+char *
+yasm_symrec_get_global_name(const yasm_symrec *sym, const yasm_object *object)
+{
+    if (sym->visibility & (YASM_SYM_GLOBAL|YASM_SYM_COMMON|YASM_SYM_EXTERN)) {
+        char *name = yasm_xmalloc(strlen(object->global_prefix) +
+                                  strlen(sym->name) +
+                                  strlen(object->global_suffix) + 1);
+        strcpy(name, object->global_prefix);
+        strcat(name, sym->name);
+        strcat(name, object->global_suffix);
+        return name;
+    }
+    return yasm__xstrdup(sym->name);
+}
+
 yasm_sym_vis
 yasm_symrec_get_visibility(const yasm_symrec *sym)
 {

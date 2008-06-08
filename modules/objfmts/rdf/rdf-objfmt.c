@@ -520,7 +520,7 @@ rdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 {
     /*@null@*/ rdf_objfmt_output_info *info = (rdf_objfmt_output_info *)d;
     yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
-    const char *name;
+    /*@only@*/ char *name;
     size_t len;
     unsigned long value = 0;
     unsigned int scnum = 0;
@@ -558,7 +558,7 @@ rdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
         return 0;
     }
 
-    name = yasm_symrec_get_name(sym);
+    name = yasm_symrec_get_global_name(sym, info->object);
     len = strlen(name);
 
     if (len > EXIM_LABEL_MAX-1) {
@@ -655,6 +655,7 @@ rdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
     memcpy(localbuf, name, len);
     localbuf += len;
     YASM_WRITE_8(localbuf, 0);          /* 0-terminated name */
+    yasm_xfree(name);
 
     fwrite(info->buf, (unsigned long)(localbuf-info->buf), 1, info->f);
 

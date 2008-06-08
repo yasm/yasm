@@ -86,14 +86,16 @@ static elf_symtab_entry *
 elf_objfmt_symtab_append(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym,
                          elf_section_index sectidx, elf_symbol_binding bind,
                          elf_symbol_type type, elf_symbol_vis vis,
-                         yasm_expr *size, elf_address *value)
+                         yasm_expr *size, elf_address *value,
+                         yasm_object *object)
 {
     elf_symtab_entry *entry = yasm_symrec_get_data(sym, &elf_symrec_data);
 
     if (!entry) {
+        /*@only@*/ char *symname = yasm_symrec_get_global_name(sym, object);
         elf_strtab_entry *name =
-            elf_strtab_append_str(objfmt_elf->strtab,
-                                  yasm_symrec_get_name(sym));
+            elf_strtab_append_str(objfmt_elf->strtab, symname);
+        yasm_xfree(symname);
         entry = elf_symtab_entry_create(name, sym);
         yasm_symrec_add_data(sym, &elf_symrec_data, entry);
     }
@@ -109,7 +111,7 @@ elf_objfmt_symtab_append(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym,
 }
 
 static elf_symtab_entry *
-build_extern(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym)
+build_extern(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym, yasm_object *object)
 {
     yasm_valparamhead *objext_valparams =
         yasm_symrec_get_objext_valparams(sym);
@@ -125,7 +127,7 @@ build_extern(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym)
     }
 
     return elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_GLOBAL, 0,
-                                    STV_DEFAULT, NULL, NULL);
+                                    STV_DEFAULT, NULL, NULL, object);
 }
 
 struct elf_build_global_data {
@@ -166,7 +168,7 @@ elf_global_helper_vis(void *obj, yasm_valparam *vp, unsigned long line,
 
 
 static elf_symtab_entry *
-build_global(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym)
+build_global(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym, yasm_object *object)
 {
     yasm_valparamhead *objext_valparams =
         yasm_symrec_get_objext_valparams(sym);
@@ -201,7 +203,8 @@ build_global(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym)
     }
 
     return elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_GLOBAL,
-                                    data.type, data.vis, data.size, NULL);
+                                    data.type, data.vis, data.size, NULL,
+                                    object);
 }
 
 static /*@null@*/ elf_symtab_entry *
@@ -244,7 +247,7 @@ build_common(yasm_objfmt_elf *objfmt_elf, yasm_symrec *sym, yasm_object *object)
     }
 
     return elf_objfmt_symtab_append(objfmt_elf, sym, SHN_COMMON, STB_GLOBAL,
-                                    0, STV_DEFAULT, *size, &addralign);
+                                    0, STV_DEFAULT, *size, &addralign, object);
 }
 
 static int
@@ -261,7 +264,7 @@ elf_objfmt_build_symtab(yasm_symrec *sym, /*@null@*/ void *d)
     assert(info != NULL);
 
     if (vis & YASM_SYM_EXTERN) {
-        entry = build_extern(info->objfmt_elf, sym);
+        entry = build_extern(info->objfmt_elf, sym, info->object);
         yasm_errwarn_propagate(info->errwarns,
                                yasm_symrec_get_decl_line(sym));
         return 0;
@@ -292,7 +295,7 @@ elf_objfmt_build_symtab(yasm_symrec *sym, /*@null@*/ void *d)
     if (entry && elf_sym_in_table(entry))
         ;
     else if (vis & YASM_SYM_GLOBAL) {
-        entry = build_global(info->objfmt_elf, sym);
+        entry = build_global(info->objfmt_elf, sym, info->object);
         yasm_errwarn_propagate(info->errwarns, yasm_symrec_get_decl_line(sym));
     } else {
         int is_sect = 0;
@@ -315,9 +318,11 @@ elf_objfmt_build_symtab(yasm_symrec *sym, /*@null@*/ void *d)
 #endif
         entry = yasm_symrec_get_data(sym, &elf_symrec_data);
         if (!entry) {
+            /*@only@*/ char *symname =
+                yasm_symrec_get_global_name(sym, info->object);
             elf_strtab_entry *name = !info->local_names || is_sect ? NULL :
-                elf_strtab_append_str(info->objfmt_elf->strtab,
-                                      yasm_symrec_get_name(sym));
+                elf_strtab_append_str(info->objfmt_elf->strtab, symname);
+            yasm_xfree(symname);
             entry = elf_symtab_entry_create(name, sym);
             yasm_symrec_add_data(sym, &elf_symrec_data, entry);
         }
@@ -1234,7 +1239,7 @@ dir_weak(yasm_object *object, yasm_valparamhead *valparams,
     yasm_symrec *sym = yasm_symtab_declare(object->symtab, symname,
                                            YASM_SYM_GLOBAL, line);
     elf_objfmt_symtab_append(objfmt_elf, sym, SHN_UNDEF, STB_WEAK, 0,
-                             STV_DEFAULT, NULL, NULL);
+                             STV_DEFAULT, NULL, NULL, object);
 }
 
 static void

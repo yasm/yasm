@@ -973,7 +973,7 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 
     /* Don't output local syms unless outputting all syms */
     if (info->all_syms || vis != YASM_SYM_LOCAL) {
-        const char *name = yasm_symrec_get_name(sym);
+        /*@only*/ char *name = yasm_symrec_get_global_name(sym, info->object);
         const yasm_expr *equ_val;
         const yasm_intnum *intn;
         unsigned char *localbuf;
@@ -1091,6 +1091,7 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
             }
             fwrite(info->buf, 18, 1, info->f);
         }
+        yasm_xfree(name);
     }
     return 0;
 }
@@ -1105,7 +1106,7 @@ coff_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
 
     /* Don't output local syms unless outputting all syms */
     if (info->all_syms || vis != YASM_SYM_LOCAL) {
-        const char *name = yasm_symrec_get_name(sym);
+        /*@only@*/ char *name = yasm_symrec_get_global_name(sym, info->object);
         /*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
         size_t len = strlen(name);
         int aux;
@@ -1127,6 +1128,7 @@ coff_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
                     break;
             }
         }
+        yasm_xfree(name);
     }
     return 0;
 }
