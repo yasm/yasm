@@ -55,9 +55,9 @@ vfollows:  not defined
 ---- Section .text ------------------------------------------------------------
 
 Real      Virtual   Name
-0000010C  0000010C  showax
-0000010F  0000010F  showax.top
-0000011F  0000011F  showax.dec_dig
+0000010D  0000010D  showax
+00000112  00000112  showax.top
+00000122  00000122  showax.dec_dig
 
 
 ---- Section .data ------------------------------------------------------------
