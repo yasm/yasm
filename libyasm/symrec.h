@@ -255,6 +255,7 @@ YASM_LIB_DECL
 
 /** Get the externally-visible (global) name of a symbol.
  * \param sym       symbol
+ * \param object    object
  * \return Externally-visible symbol name (allocated, caller must free).
  */
 YASM_LIB_DECL
