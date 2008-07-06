@@ -28,12 +28,11 @@ libyasm_a_SOURCES += libyasm/valparam.c
 libyasm_a_SOURCES += libyasm/value.c
 libyasm_a_SOURCES += libyasm/xmalloc.c
 libyasm_a_SOURCES += libyasm/xstrdup.c
-libyasm_a_SOURCES += module.c
+nodist_libyasm_a_SOURCES += module.c
 
 module.c: $(top_srcdir)/libyasm/module.in genmodule$(EXEEXT) Makefile
 	$(top_builddir)/genmodule$(EXEEXT) $(top_srcdir)/libyasm/module.in Makefile
 
-BUILT_SOURCES += module.c
 CLEANFILES += module.c
 
 noinst_PROGRAMS += genmodule
