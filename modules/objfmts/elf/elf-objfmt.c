@@ -962,6 +962,7 @@ struct elf_section_switch_data {
     unsigned long flags;
     unsigned long type;
     int gasflags;
+    int stdsect;
 };
 
 /* GAS-style flags */
@@ -978,6 +979,9 @@ elf_helper_gasflags(void *obj, yasm_valparam *vp, unsigned long line, void *d,
                        N_("non-string section attribute"));
         return -1;
     }
+
+    if (data->stdsect && strlen(s) == 0)
+        return 0;
 
     data->flags = 0;
     for (i=0; i<strlen(s); i++) {
@@ -1064,6 +1068,7 @@ elf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     data.flags = SHF_ALLOC;
     data.type = SHT_PROGBITS;
     data.gasflags = 0;
+    data.stdsect = 1;
 
     vp = yasm_vps_first(valparams);
     sectname = yasm_vp_string(vp);
@@ -1095,6 +1100,7 @@ elf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     } else {
         /* Default to code */
         align = 1;
+        data.stdsect = 0;
     }
 
     flags_override = yasm_dir_helper(object, vp, line, help, NELEMS(help),
