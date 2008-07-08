@@ -980,8 +980,10 @@ elf_helper_gasflags(void *obj, yasm_valparam *vp, unsigned long line, void *d,
         return -1;
     }
 
-    if (data->stdsect && strlen(s) == 0)
+    if (data->stdsect && strlen(s) == 0) {
+        data->gasflags = 1;
         return 0;
+    }
 
     data->flags = 0;
     for (i=0; i<strlen(s); i++) {
