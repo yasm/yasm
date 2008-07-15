@@ -247,48 +247,14 @@ yasm__getcwd(void)
     return buf;
 }
 
-/* FIXME: dumb way for now */
 char *
-yasm__abspath_unix(const char *path)
+yasm__abspath(const char *path)
 {
     char *curdir, *abspath;
-    static const char pathsep[2] = "/";
 
     curdir = yasm__getcwd();
-
-    abspath = yasm_xmalloc(strlen(curdir) + strlen(path) + 2);
-    strcpy(abspath, curdir);
-    strcat(abspath, pathsep);
-    strcat(abspath, path);
-
+    abspath = yasm__combpath(curdir, path);
     yasm_xfree(curdir);
-
-    return abspath;
-}
-
-/* FIXME: dumb way for now */
-char *
-yasm__abspath_win(const char *path)
-{
-    char *curdir, *abspath, *ch;
-    static const char pathsep[2] = "\\";
-
-    curdir = yasm__getcwd();
-
-    abspath = yasm_xmalloc(strlen(curdir) + strlen(path) + 2);
-    strcpy(abspath, curdir);
-    strcat(abspath, pathsep);
-    strcat(abspath, path);
-
-    yasm_xfree(curdir);
-
-    /* Replace all / with \ */
-    ch = abspath;
-    while (*ch) {
-        if (*ch == '/')
-            *ch = '\\';
-        ch++;
-    }
 
     return abspath;
 }
