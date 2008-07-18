@@ -43,6 +43,9 @@
 #include "arch.h"
 
 
+static /*@only@*/ yasm_expr *expr_level_op
+    (/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
+     int simplify_ident, int simplify_reg_mul);
 static int expr_traverse_nodes_post(/*@null@*/ yasm_expr *e,
                                     /*@null@*/ void *d,
                                     int (*func) (/*@null@*/ yasm_expr *e,
@@ -116,7 +119,7 @@ yasm_expr_create(yasm_expr_op op, yasm_expr__item *left,
 
     ptr->line = line;
 
-    return ptr;
+    return expr_level_op(ptr, 1, 1, 0);
 }
 /*@=compmempass@*/
 
@@ -779,7 +782,8 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
             if (i == first_int_term)
                 first_int_term = o;
             o--;
-        }
+        } else
+            o--;
     }
 
     /* Simplify identities, make IDENT if possible, and save to e->numterms. */
