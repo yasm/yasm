@@ -1718,7 +1718,7 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
     yasm_arch_x86 *arch_x86 = (yasm_arch_x86 *)arch;
     /*@null@*/ const insnprefix_parse_data *pdata;
     size_t i;
-    static char lcaseid[16];
+    static char lcaseid[17];
 
     *bc = (yasm_bytecode *)NULL;
     *prefix = 0;
