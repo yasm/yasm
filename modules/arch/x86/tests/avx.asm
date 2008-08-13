@@ -921,6 +921,8 @@ movntdq [rax], xmm1
 movntdq dqword [rax], xmm1
 vmovntdq [rax], xmm1
 vmovntdq dqword [rax], xmm1
+vmovntdq [rax], ymm1
+vmovntdq yword [rax], ymm1
 
 movntdqa xmm1, [rax]
 movntdqa xmm1, dqword [rax]
@@ -931,11 +933,15 @@ movntpd [rax], xmm1
 movntpd dqword [rax], xmm1
 vmovntpd [rax], xmm1
 vmovntpd dqword [rax], xmm1
+vmovntpd [rax], ymm1
+vmovntpd yword [rax], ymm1
 
 movntps [rax], xmm1
 movntps dqword [rax], xmm1
 vmovntps [rax], xmm1
 vmovntps dqword [rax], xmm1
+vmovntps [rax], ymm1
+vmovntps yword [rax], ymm1
 
 movsd xmm1, xmm2
 vmovsd xmm1, xmm2
