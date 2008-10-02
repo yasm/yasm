@@ -5523,7 +5523,20 @@ add_group("avx_sse4xmm0",
 
 add_insn("vblendvpd", "avx_sse4xmm0", modifiers=[0x4B])
 add_insn("vblendvps", "avx_sse4xmm0", modifiers=[0x4A])
-add_insn("vpblendvb", "avx_sse4xmm0", modifiers=[0x4C])
+
+# vpblendvb doesn't have a 256-bit form
+add_group("avx_sse4xmm0_128",
+    cpu=["AVX"],
+    modifiers=["Op2Add"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc")])
+
+add_insn("vpblendvb", "avx_sse4xmm0_128", modifiers=[0x4C])
 
 for sfx, sz in zip("bwl", [8, 16, 32]):
     add_group("crc32",
