@@ -10,6 +10,7 @@ Yasm developers and/or contributors include:
   Stephen Polkowski (x86 instruction patches)
   Henryk Richter (Mach-O object format)
   Ben Skeggs (patches, bug reports)
+  Samuel Thibault (TASM parser and frontend)
 
 -----------------------------------
 Yasm licensing overview and summary
