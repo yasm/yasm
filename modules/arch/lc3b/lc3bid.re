@@ -128,6 +128,7 @@ static const yasm_bytecode_callback lc3b_id_insn_callback = {
     lc3b_id_insn_destroy,
     lc3b_id_insn_print,
     lc3b_id_insn_finalize,
+    NULL,
     yasm_bc_calc_len_common,
     yasm_bc_expand_common,
     yasm_bc_tobytes_common,

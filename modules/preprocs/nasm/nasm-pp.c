@@ -324,7 +324,9 @@ static int is_condition(int arg)
 enum
 {
     TM_ARG, TM_ELIF, TM_ELSE, TM_ENDIF, TM_IF, TM_IFDEF, TM_IFDIFI,
-    TM_IFNDEF, TM_INCLUDE, TM_LOCAL
+    TM_IFNDEF, TM_INCLUDE, TM_LOCAL,
+    TM_REPT, TM_IRP, TM_MACRO,
+    TM_STRUC, TM_SEGMENT
 };
 
 static const char *tasm_directives[] = {
@@ -393,10 +395,53 @@ static const char *tasm_compat_macros[] =
 {
     "%idefine IDEAL",
     "%idefine JUMPS",
-    "%idefine P386",
-    "%idefine P486",
-    "%idefine P586",
     "%idefine END",
+    "%idefine P8086	CPU 8086",
+    "%idefine P186	CPU 186",
+    "%idefine P286	CPU 286",
+    "%idefine P286N	CPU 286",
+    "%idefine P286P	CPU 286 Priv",
+    "%idefine P386	CPU 386",
+    "%idefine P386N	CPU 386",
+    "%idefine P386P	CPU 386 Priv",
+    "%idefine P486	CPU 486",
+    "%idefine P586	CPU 586",
+    "%idefine .8086	CPU 8086",
+    "%idefine .186	CPU 186",
+    "%idefine .286	CPU 286",
+    "%idefine .286C	CPU 286",
+    "%idefine .286P	CPU 286",
+    "%idefine .386	CPU 386",
+    "%idefine .386C	CPU 386",
+    "%idefine .386P	CPU 386",
+    "%idefine .486	CPU 486",
+    "%idefine .486C	CPU 486",
+    "%idefine .486P	CPU 486",
+    "%idefine .586	CPU 586",
+    "%idefine .586C	CPU 586",
+    "%idefine .586P	CPU 586",
+    "",
+    "%imacro TITLE 1",
+    "%endm",
+    "%imacro NAME 1",
+    "%endm",
+    "",
+    "%imacro EXTRN 1-*.nolist",
+    "%rep %0",
+    "[extern %1]",
+    "%rotate 1",
+    "%endrep",
+    "%endmacro",
+    "",
+    "%imacro PUBLIC 1-*.nolist",
+    "%rep %0",
+    "[global %1]",
+    "%rotate 1",
+    "%endrep",
+    "%endmacro",
+    "",
+    "; this is not needed",
+    "%idefine PTR",
     NULL
 };
 
@@ -428,6 +473,7 @@ static void delete_Blocks(void);
 static Token *new_Token(Token * next, int type, const char *text,
                         size_t txtlen);
 static Token *delete_Token(Token * t);
+static Token *tokenise(char *line);
 
 /*
  * Macros for safe checking of token pointers, avoid *(NULL)
@@ -442,67 +488,553 @@ static Token *delete_Token(Token * t);
  * place to do it for the moment, and it is a hack (ideally it would
  * be nice to be able to use the NASM pre-processor to do it).
  */
+
+typedef struct TMEndItem {
+    int type;
+    void *data;
+    struct TMEndItem *next;
+} TMEndItem;
+
+static TMEndItem *EndmStack = NULL, *EndsStack = NULL;
+
+char **TMParameters;
+
+struct TStrucField {
+    char *name;
+    char *type;
+    struct TStrucField *next;
+};
+struct TStruc {
+    char *name;
+    struct TStrucField *fields, *lastField;
+    struct TStruc *next;
+};
+static struct TStruc *TStrucs = NULL;
+static int inTstruc = 0;
+
+struct TSegmentAssume {
+    char *segreg;
+    char *segment;
+};
+struct TSegmentAssume *TAssumes;
+
+const char *tasm_get_segment_register(const char *segment)
+{
+    struct TSegmentAssume *assume;
+    if (!TAssumes)
+        return NULL;
+    for (assume = TAssumes; assume->segreg; assume++) {
+        if (!strcmp(assume->segment, segment))
+            break;
+    }
+    return assume->segreg;
+}
+
 static char *
 check_tasm_directive(char *line)
 {
     int i, j, k, m;
-    size_t len;
-    char *p = line, *oldline, oldchar;
+    size_t len, len2;
+    char *p, *oldline, oldchar, *q, oldchar2;
+    TMEndItem *end;
+
+    if ((p = strchr(line, ';')))
+        *p = '\0';
+
+    p = line;
 
     /* Skip whitespace */
     while (isspace(*p) && *p != 0)
         p++;
 
+    /* Ignore nasm directives */
+    if (*p == '%')
+        return line;
+
     /* Binary search for the directive name */
-    i = -1;
-    j = elements(tasm_directives);
     len = 0;
     while (!isspace(p[len]) && p[len] != 0)
         len++;
-    if (len)
+    if (!len)
+        return line;
+
+    oldchar = p[len];
+    p[len] = 0;
+    i = -1;
+    j = elements(tasm_directives);
+    while (j - i > 1)
     {
-        oldchar = p[len];
-        p[len] = 0;
-        while (j - i > 1)
+        k = (j + i) / 2;
+        m = nasm_stricmp(p, tasm_directives[k]);
+        if (m == 0)
         {
-            k = (j + i) / 2;
-            m = nasm_stricmp(p, tasm_directives[k]);
-            if (m == 0)
+            /* We have found a directive, so jam a % in front of it
+             * so that NASM will then recognise it as one if it's own.
+             */
+            p[len] = oldchar;
+            len = strlen(p);
+            oldline = line;
+            if (k == TM_IFDIFI)
             {
-                /* We have found a directive, so jam a % in front of it
-                 * so that NASM will then recognise it as one if it's own.
+                /* NASM does not recognise IFDIFI, so we convert it to
+                 * %ifdef BOGUS. This is not used in NASM comaptible
+                 * code, but does need to parse for the TASM macro
+                 * package.
                  */
-                p[len] = oldchar;
+                line = nasm_malloc(13);
+                strcpy(line, "%ifdef BOGUS");
+            }
+            else if (k == TM_INCLUDE)
+            {
+                /* add double quotes around file name */
+                p += 7 + 1;
+                while (isspace(*p) && *p)
+                    p++;
                 len = strlen(p);
-                oldline = line;
+                line = nasm_malloc(1 + 7 + 1 + 1 + len + 1 + 1);
+                sprintf(line, "%%include \"%s\"", p);
+            }
+            else
+            {
                 line = nasm_malloc(len + 2);
                 line[0] = '%';
-                if (k == TM_IFDIFI)
-                {
-                    /* NASM does not recognise IFDIFI, so we convert it to
-                     * %ifdef BOGUS. This is not used in NASM comaptible
-                     * code, but does need to parse for the TASM macro
-                     * package.
-                     */
-                    strcpy(line + 1, "ifdef BOGUS");
+                memcpy(line + 1, p, len + 1);
+            }
+            nasm_free(oldline);
+            return line;
+        }
+        else if (m < 0)
+        {
+            j = k;
+        }
+        else
+            i = k;
+    }
+
+    /* Not a simple directive */
+
+    if (!nasm_stricmp(p, "endm")) {
+        /* handle end of endm directive */
+        char **parameter;
+        end = EndmStack;
+        /* undef parameters */
+        if (!end) {
+            error(ERR_FATAL, "ENDM: not in an endm context");
+            return line;
+        }
+        EndmStack = EndmStack->next;
+        nasm_free(line);
+        switch (end->type) {
+        case TM_MACRO:
+            len = 0;
+            for (parameter = end->data; *parameter; parameter++)
+                len += 6 + 1 + strlen(*parameter) + 1;
+            len += 5 + 1;
+            line = nasm_malloc(len);
+            p = line;
+            for (parameter = end->data; *parameter; parameter++) {
+                p += sprintf(p, "%%undef %s\n", *parameter);
+                nasm_free(*parameter);
+            }
+            nasm_free(end->data);
+            nasm_free(end);
+            sprintf(p, "%%endm");
+            return line;
+        case TM_REPT:
+            nasm_free(end);
+            return nasm_strdup("%endrep");
+        case TM_IRP: {
+            char **data;
+            const char *irp_format = 
+                "%%undef %s\n"
+                "%%rotate 1\n"
+                "%%endrep\n"
+                "%%endm\n"
+                "irp %s\n"
+                "%%undef irp";
+            data = end->data;
+            line = nasm_malloc(strlen(irp_format) - 4 + strlen(data[0])
+                   + strlen(data[1]));
+            sprintf(line, irp_format, data[0], data[1]);
+            nasm_free(data[0]);
+            nasm_free(data[1]);
+            nasm_free(data);
+            return line;
+            }
+        default:
+            error(ERR_FATAL, "ENDM: bogus endm context type %d\n",end->type);
+            return NULL;
+        }
+    } else if (!nasm_stricmp(p, "end")) {
+        nasm_free(line);
+        return strdup("");
+    } else if (!nasm_stricmp(p, "rept")) {
+        /* handle repeat directive */
+        end = nasm_malloc(sizeof(*end));
+        end->type = TM_REPT;
+        end->next = EndmStack;
+        EndmStack = end;
+        memcpy(p, "%rep", 4);
+        p[len] = oldchar;
+        return line;
+    } else if (!nasm_stricmp(p, "locals")) {
+        tasm_locals = 1;
+        nasm_free(line);
+        return strdup("");
+    }
+
+    if (!oldchar)
+        return line;
+
+    /* handle two-words directives */
+    q = p + len + 1;
+    /* Skip whitespaces */
+    while (isspace(*q) && *q)
+        q++;
+
+    len2 = 0;
+    while (!isspace(q[len2]) && q[len2]!=',' && q[len2] != 0)
+        len2++;
+    oldchar2 = q[len2];
+    q[len2] = '\0';
+
+    if (!nasm_stricmp(p, "irp")) {
+        /* handle indefinite repeat directive */
+        const char *irp_format = 
+            "%%imacro irp 0-*\n"
+            "%%rep %%0\n"
+            "%%define %s %%1\n";
+        char **data;
+
+        data = malloc(2*sizeof(char*));
+        oldline = line;
+        line = nasm_malloc(strlen(irp_format) - 2 + len2 + 1);
+        sprintf(line,irp_format,q);
+        data[0] = nasm_strdup(q);
+
+        if (!oldchar2)
+            error(ERR_FATAL, "%s: expected <values>", q + len2);
+        p = strchr(q + len2 + 1, '<');
+        if (!p)
+            error(ERR_FATAL, "%s: expected <values>", q + len2);
+        p++;
+        q = strchr(p, '>');
+        data[1] = nasm_strndup(p, q - p);
+
+        end = nasm_malloc(sizeof(*end));
+        end->type = TM_IRP;
+        end->next = EndmStack;
+        end->data = data;
+        EndmStack = end;
+
+        nasm_free(oldline);
+        return line;
+    } else if (!nasm_stricmp(q, "macro")) {
+        char *name = p;
+        /* handle MACRO */
+        /* count parameters */
+        j = 1;
+        i = 0;
+        TMParameters = nasm_malloc(j*sizeof(*TMParameters));
+        len = 0;
+        p = q + len2 + 1;
+        /* Skip whitespaces */
+        while (isspace(*p) && *p)
+            p++;
+        while (*p) {
+            /* Get parameter name */
+            for (q = p; !isspace(*q) && *q != ',' && *q; q++);
+            len2 = q-p;
+            if (len2 == 0)
+                error(ERR_FATAL, "'%s': expected parameter name", p);
+            TMParameters[i] = nasm_malloc(len2 + 1);
+            memcpy(TMParameters[i], p, len2);
+            TMParameters[i][len2] = '\0';
+            len += len2;
+            i++;
+            if (i + 1 > j) {
+                j *= 2;
+                TMParameters = nasm_realloc(TMParameters,
+                                               j*sizeof(*TMParameters));
+            }
+            if (i == 1000)
+                error(ERR_FATAL, "too many parameters for macro %s", name);
+            p = q;
+            while (isspace(*p) && *p)
+                p++;
+            if (!*p)
+                break;
+            if (*p != ',')
+                error(ERR_FATAL, "expected comma");
+            p++;
+            while (isspace(*p) && *p)
+                p++;
+        }
+        TMParameters[i] = NULL;
+        TMParameters = nasm_realloc(TMParameters,
+                                        (i+1)*sizeof(*TMParameters));
+        len += 1 + 6 + 1 + strlen(name) + 1 + 3; /* macro definition */
+        len += i * (1 + 9 + 1 + 1 + 1 + 3 + 2); /* macro parameter definition */
+        oldline = line;
+        p = line = nasm_malloc(len + 1);
+        p += sprintf(p, "%%imacro %s 0-*", name);
+        nasm_free(oldline);
+        for (j = 0; TMParameters[j]; j++) {
+            p += sprintf(p, "\n%%idefine %s %%{%-u}", TMParameters[j], j + 1);
+        }
+        end = nasm_malloc(sizeof(*end));
+        end->type = TM_MACRO;
+        end->next = EndmStack;
+        end->data = TMParameters;
+        EndmStack = end;
+        return line;
+    } else if (!nasm_stricmp(q, "proc")) {
+        /* handle PROC */
+        oldline = line;
+        line = nasm_malloc(2 + len + 1);
+        sprintf(line, "..%s",p);
+        nasm_free(oldline);
+        return line;
+    } else if (!nasm_stricmp(q, "struc")) {
+        /* handle struc */
+        struct TStruc *struc;
+        if (inTstruc) {
+            error(ERR_FATAL, "STRUC: already in a struc context");
+            return line;
+        }
+        oldline = line;
+        line = nasm_malloc(5 + 1 + len + 1);
+        sprintf(line, "struc %s", p);
+        struc = malloc(sizeof(*struc));
+        struc->name = strdup(p);
+        struc->fields = NULL;
+        struc->lastField = NULL;
+        struc->next = TStrucs;
+        TStrucs = struc;
+        inTstruc = 1;
+        nasm_free(oldline);
+        end = nasm_malloc(sizeof(*end));
+        end->type = TM_STRUC;
+        end->next = EndsStack;
+        EndsStack = end;
+        return line;
+    } else if (!nasm_stricmp(q, "segment")) {
+        /* handle SEGMENT */
+        oldline = line;
+        line = strdup(oldchar2?q+len2+1:"");
+        if (tasm_segment) {
+            error(ERR_FATAL, "SEGMENT: already in a segment context");
+            return line;
+        }
+        tasm_segment = strdup(p);
+        nasm_free(oldline);
+        end = nasm_malloc(sizeof(*end));
+        end->type = TM_SEGMENT;
+        end->next = EndsStack;
+        EndsStack = end;
+        return line;
+    } else if (!nasm_stricmp(p, "ends") || !nasm_stricmp(q, "ends")) {
+        /* handle end of ends directive */
+        end = EndsStack;
+        /* undef parameters */
+        if (!end) {
+            error(ERR_FATAL, "ENDS: not in an ends context");
+            return line;
+        }
+        EndsStack = EndsStack->next;
+        nasm_free(line);
+        switch (end->type) {
+        case TM_STRUC:
+            inTstruc = 0;
+            return strdup("endstruc");
+        case TM_SEGMENT:
+            /* XXX: yes, we leak memory here, but that permits labels
+             * to avoid strduping... */
+            tasm_segment = NULL;
+            return strdup("");
+        default:
+            error(ERR_FATAL, "ENDS: bogus ends context type %d",end->type);
+            return NULL;
+        }
+    } else if (!nasm_stricmp(p, "endp") || !nasm_stricmp(q, "endp")) {
+        nasm_free(line);
+        return strdup("");
+    } else if (!nasm_stricmp(p, "assume")) {
+        struct TSegmentAssume *assume;
+        /* handle ASSUME */
+        if (!TAssumes) {
+            TAssumes = nasm_malloc(sizeof(*TAssumes));
+            TAssumes[0].segreg = NULL;
+        }
+        i = 0;
+        q[len2] = oldchar2;
+        /* Skip whitespaces */
+        while (isspace(*q) && *q)
+            q++;
+        while (*q) {
+            p = q;
+            for (; *q && *q != ':' && !isspace(*q); q++);
+            if (!*q)
+                break;
+            /* segment register name */
+            for (assume = TAssumes; assume->segreg; assume++)
+                if (strlen(assume->segreg) == q-p &&
+                    !strncasecmp(assume->segreg, p, q-p))
+                    break;
+            if (!assume->segreg) {
+                i = assume - TAssumes + 1;
+                TAssumes = nasm_realloc(TAssumes, (i+1)*sizeof(*TAssumes));
+                assume = TAssumes + i - 1;
+                assume->segreg = nasm_strndup(p, q-p);
+                assume[1].segreg = NULL;
+            }
+            for (; *q && *q != ':' && isspace(*q); q++);
+            if (*q != ':')
+                error(ERR_FATAL, "expected `:' instead of `%c'", *q);
+            for (q++; *q && isspace(*q); q++);
+
+            /* segment name */
+            p = q;
+            for (; *q && *q != ',' && !isspace(*q); q++);
+            assume->segment = nasm_strndup(p, q-p);
+            for (; *q && isspace(*q); q++);
+            if (*q && *q != ',')
+                error(ERR_FATAL, "expected `,' instead of `%c'", *q);
+        
+            for (q++; *q && isspace(*q); q++);
+        }
+        TAssumes[i].segreg = NULL;
+        TAssumes = nasm_realloc(TAssumes, (i+1)*sizeof(*TAssumes));
+        nasm_free(line);
+        return strdup("");
+    } else if (inTstruc) {
+        struct TStrucField *field;
+        /* TODO: handle unnamed data */
+        field = nasm_malloc(sizeof(*field));
+        field->name = strdup(p);
+        /* TODO: type struc ! */
+        field->type = strdup(q);
+        field->next = NULL;
+        if (!TStrucs->fields)
+                TStrucs->fields = field;
+        else if (TStrucs->lastField)
+                TStrucs->lastField->next = field;
+        TStrucs->lastField = field;
+        if (!oldchar2) {
+            error(ERR_FATAL, "Expected struc field initializer after %s %s", p, q);
+            return line;
+        }
+        oldline = line;
+        line = nasm_malloc(1 + len + 1 + len2 + 1 + strlen(q+len2+1) + 1);
+        sprintf(line, ".%s %s %s", p, q, q+len2+1);
+        nasm_free(oldline);
+        return line;
+    }
+    {
+        struct TStruc *struc;
+        for (struc = TStrucs; struc; struc = struc->next) {
+            if (!strcasecmp(q, struc->name)) {
+                char *r = q + len2 + 1, *s, *t, tasm_param[6];
+                struct TStrucField *field = struc->fields;
+                int size, n, m;
+                if (!oldchar2) {
+                    error(ERR_FATAL, "Expected struc field initializer after %s %s", p, q);
+                    return line;
                 }
-                else
-                {
-                    memcpy(line + 1, p, len + 1);
+                r = strchr(r, '<');
+                if (!r) {
+                    error(ERR_FATAL, "Expected < for struc field initializer in %s %s %s", p, q, r);
+                    return line;
                 }
+                t = strchr(r + 1, '>');
+                if (!t) {
+                    error(ERR_FATAL, "Expected > for struc field initializer in %s %s %s", p, q, r);
+                    return line;
+                }
+                *t = 0;
+                oldline = line;
+                size = len + len2 + 128;
+                line = nasm_malloc(size);
+                if (defining)
+                    for (n=0;TMParameters[n];n++)
+                        if (!strcmp(TMParameters[n],p)) {
+                            sprintf(tasm_param,"%%{%d}",n+1);
+                            p = tasm_param;
+                            break;
+                        }
+                n = sprintf(line, "%s: istruc %s\n", p, q);
+                /* use initialisers */
+                while ((s = strchr(r + 1, ','))) {
+                    if (!field) {
+                        error(ERR_FATAL, "Too many initializers in structure %s %s", p, q);
+                        return oldline;
+                    }
+                    *s = 0;
+                    while (1) {
+                            m = snprintf(line + n, size - n, "%s.%s: at .%s, %s %s\n", p, field->name, field->name, field->type, r + 1);
+                        if (m + 1 <= size - n)
+                                break;
+                        size *= 2;
+                        line = nasm_realloc(line, size);
+                    }
+                    n += m;
+                    r = s;
+                    field = field->next;
+                }
+                /* complete with last initializer and '?' */
+                while(field) {
+                    while (1) {
+                            m = snprintf(line + n, size - n, "%s.%s: at .%s, %s %s\n", p, field->name, field->name, field->type, r ? r + 1: "?");
+                        if (m + 1 <= size - n)
+                                break;
+                        size *= 2;
+                        line = nasm_realloc(line, size);
+                    }
+                    n += m;
+                    r = NULL;
+                    field = field->next;
+                }
+                line = nasm_realloc(line, n + 5);
+                sprintf(line + n, "iend");
                 nasm_free(oldline);
                 return line;
             }
-            else if (m < 0)
-            {
-                j = k;
-            }
-            else
-                i = k;
         }
-        p[len] = oldchar;
     }
+
+    q[len2] = oldchar2;
+    p[len] = oldchar;
+    
     return line;
+}
+
+Token * tasm_join_tokens(Token *tline)
+{
+    Token *t, *prev, *next;
+    for (prev = NULL, t = tline; t; prev = t, t = next) {
+        next = t->next;
+        if (t->type == TOK_OTHER && !strcmp(t->text,"&")) {
+            if (!prev)
+                error(ERR_FATAL, "no token before &");
+            else if (!next)
+                error(ERR_FATAL, "no token after &");
+            else if (prev->type != next->type)
+                error(ERR_FATAL, "can't handle different types of token around &");
+            else if (!prev->text || !next->text)
+                error(ERR_FATAL, "can't handle empty token around &");
+            else {
+                int lenp = strlen(prev->text);
+                int lenn = strlen(next->text);
+                prev->text = nasm_realloc(prev->text, lenp + lenn + 1);
+                strncpy(prev->text + lenp, next->text, lenn + 1);
+                (void) delete_Token(t);
+                prev->next = delete_Token(next);
+                t = prev;
+                next = t->next;
+            }
+        }
+    }
+    return tline;
 }
 
 /*
@@ -517,6 +1049,8 @@ prepreproc(char *line)
     int lineno;
     size_t fnlen;
     char *fname, *oldline;
+    char *c, *d, *ret;
+    Line *l, **lp;
 
     if (line[0] == '#' && line[1] == ' ')
     {
@@ -532,8 +1066,30 @@ prepreproc(char *line)
         nasm_free(oldline);
     }
     if (tasm_compatible_mode)
-        return check_tasm_directive(line);
-    return line;
+        line = check_tasm_directive(line);
+
+    if (!(c = strchr(line, '\n')))
+        return line;
+
+    /* Turn multiline macros into several lines */
+    *c = '\0';
+    ret = nasm_strdup(line);
+
+    lp = &istk->expansion;
+    do {
+        d = strchr(c+1, '\n');
+        if (d)
+            *d = '\0';
+        l = malloc(sizeof(*l));
+        l -> first = tokenise(c+1);
+        l -> finishes = NULL;
+        l -> next = *lp;
+        *lp = l;
+        c = d;
+        lp = &l -> next;
+    } while (c);
+    nasm_free(line);
+    return ret;
 }
 
 /*
@@ -1231,7 +1787,7 @@ static FILE *
 inc_fopen(char *file, char **newname)
 {
     FILE *fp;
-    char *combine = NULL;
+    char *combine = NULL, *c;
     char *pb, *p1, *p2, *file2 = NULL;
 
     /* Try to expand all %ENVVAR% in filename.  Warn, and leave %string%
@@ -1281,6 +1837,27 @@ inc_fopen(char *file, char **newname)
 
     fp = yasm_fopen_include(file2 ? file2 : file, nasm_src_get_fname(), "r",
                             &combine);
+    if (!fp && tasm_compatible_mode)
+    {
+        char *thefile = file2 ? file2 : file;
+        /* try a few case combinations */
+        do {
+            for (c = thefile; *c; c++)
+                *c = toupper(*c);
+            fp = yasm_fopen_include(thefile, nasm_src_get_fname(), "r", &combine);
+            if (fp) break;
+            *thefile = tolower(*thefile);
+            fp = yasm_fopen_include(thefile, nasm_src_get_fname(), "r", &combine);
+            if (fp) break;
+            for (c = thefile; *c; c++)
+                *c = tolower(*c);
+            fp = yasm_fopen_include(thefile, nasm_src_get_fname(), "r", &combine);
+            if (fp) break;
+            *thefile = toupper(*thefile);
+            fp = yasm_fopen_include(thefile, nasm_src_get_fname(), "r", &combine);
+            if (fp) break;
+        } while (0);
+    }
     if (!fp)
         error(ERR_FATAL, "unable to open include file `%s'",
               file2 ? file2 : file);
@@ -4420,6 +4997,9 @@ pp_getline(void)
                 /*
                  * De-tokenise the line again, and emit it.
                  */
+                if (tasm_compatible_mode)
+                    tline = tasm_join_tokens(tline);
+
                 line = detoken(tline, TRUE);
                 free_tlist(tline);
                 break;

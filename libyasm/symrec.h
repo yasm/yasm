@@ -73,6 +73,14 @@ yasm_symtab *yasm_symtab_create(void);
 YASM_LIB_DECL
 void yasm_symtab_destroy(/*@only@*/ yasm_symtab *symtab);
 
+/** Set the symbol table to be case sensitive or not.
+ * Should be called before adding any symbol.
+ * \param symtab    symbol table
+ * \param sensitive whether the symbol table should be case sensitive.
+ */
+YASM_LIB_DECL
+void yasm_symtab_set_case_sensitive(yasm_symtab *symtab, int sensitive);
+
 /** Get a reference to the symbol table's "absolute" symbol.  This is
  * essentially an EQU with no name and value 0, and is used for relocating
  * absolute current-position-relative values.
@@ -317,6 +325,30 @@ typedef /*@dependent@*/ yasm_bytecode *yasm_symrec_get_label_bytecodep;
 YASM_LIB_DECL
 int yasm_symrec_get_label(const yasm_symrec *sym,
                           /*@out@*/ yasm_symrec_get_label_bytecodep *precbc);
+
+/** Set the size of a symbol.
+ * \param sym       symbol
+ * \param size      size to be set
+ */
+void yasm_symrec_set_size(yasm_symrec *sym, int size);
+
+/** Get the size of a symbol.
+ * \param sym       symbol
+ * \return size of the symbol, 0 if none specified by the user.
+ */
+int yasm_symrec_get_size(const yasm_symrec *sym);
+
+/** Set the segment of a symbol.
+ * \param sym       symbol
+ * \param segment   segment to be set
+ */
+void yasm_symrec_set_segment(yasm_symrec *sym, const char *segment);
+
+/** Get the segment of a symbol.
+ * \param sym       symbol
+ * \return segment of the symbol, NULL if none specified by the user.
+ */
+const char *yasm_symrec_get_segment(const yasm_symrec *sym);
 
 /** Determine if symbol is the "absolute" symbol created by
  * yasm_symtab_abs_sym().

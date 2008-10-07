@@ -671,7 +671,7 @@ add_group("twobytemem",
     modifiers=["SpAdd", "Op0Add", "Op1Add"],
     opcode=[0x00, 0x00],
     spare=0,
-    operands=[Operand(type="Mem", dest="EA")])
+    operands=[Operand(type="Mem", relaxed=True, dest="EA")])
 
 #
 # mov
@@ -1666,7 +1666,7 @@ for sfx, sz in zip("wlq", [16, 32, 64]):
         opersize=sz,
         opcode=[0x8D],
         operands=[Operand(type="Reg", size=sz, dest="Spare"),
-                  Operand(type="Mem", size=sz, relaxed=True, dest="EA")])
+                  Operand(type="Mem", relaxed=True, dest="EA")])
 
 add_insn("lea", "lea")
 
@@ -1681,7 +1681,7 @@ for sfx, sz in zip("wl", [16, 32]):
         opersize=sz,
         opcode=[0x00],
         operands=[Operand(type="Reg", size=sz, dest="Spare"),
-                  Operand(type="Mem", dest="EA")])
+                  Operand(type="Mem", relaxed=True, dest="EA")])
 
 add_insn("lds", "ldes", modifiers=[0xC5])
 add_insn("les", "ldes", modifiers=[0xC4])
@@ -1694,7 +1694,7 @@ for sfx, sz in zip("wl", [16, 32]):
         opersize=sz,
         opcode=[0x0F, 0x00],
         operands=[Operand(type="Reg", size=sz, dest="Spare"),
-                  Operand(type="Mem", dest="EA")])
+                  Operand(type="Mem", relaxed=True, dest="EA")])
 
 add_insn("lfs", "lfgss", modifiers=[0xB4])
 add_insn("lgs", "lfgss", modifiers=[0xB5])

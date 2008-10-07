@@ -74,6 +74,9 @@ struct yasm_effaddr {
 
     /** 1 if effective address is forced non-PC-relative. */
     unsigned int not_pc_rel:1;
+
+    /** length of pointed data (in bytes), 0 if unknown. */
+    unsigned int data_len;
 };
 
 /** An instruction operand (opaque type). */

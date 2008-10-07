@@ -47,6 +47,8 @@ yasm_symtab *nasm_symtab;
 static yasm_linemap *cur_lm;
 static yasm_errwarns *cur_errwarns;
 int tasm_compatible_mode = 0;
+int tasm_locals;
+const char *tasm_segment;
 
 #include "nasm-version.c"
 
@@ -305,6 +307,28 @@ yasm_preproc_module yasm_nasm_LTX_preproc = {
     "Real NASM Preprocessor",
     "nasm",
     nasm_preproc_create,
+    nasm_preproc_destroy,
+    nasm_preproc_get_line,
+    nasm_preproc_get_included_file,
+    nasm_preproc_add_include_file,
+    nasm_preproc_predefine_macro,
+    nasm_preproc_undefine_macro,
+    nasm_preproc_define_builtin,
+    nasm_preproc_add_standard
+};
+
+static yasm_preproc *
+tasm_preproc_create(const char *in_filename, yasm_symtab *symtab,
+                    yasm_linemap *lm, yasm_errwarns *errwarns)
+{
+    tasm_compatible_mode = 1;
+    return nasm_preproc_create(in_filename, symtab, lm, errwarns);
+}
+
+yasm_preproc_module yasm_tasm_LTX_preproc = {
+    "Real TASM Preprocessor",
+    "tasm",
+    tasm_preproc_create,
     nasm_preproc_destroy,
     nasm_preproc_get_line,
     nasm_preproc_get_included_file,

@@ -32,6 +32,7 @@ RCSID("$Id$");
 #include <math.h>
 
 #include "modules/parsers/nasm/nasm-parser.h"
+#include "modules/preprocs/nasm/nasm.h"
 
 typedef enum {
     NORM_EXPR,
@@ -62,7 +63,23 @@ static void nasm_parser_directive
      /*@null@*/ yasm_valparamhead *valparams,
      /*@null@*/ yasm_valparamhead *objext_valparams);
 static void define_label(yasm_parser_nasm *parser_nasm, /*@only@*/ char *name,
-                         int local);
+                         unsigned int size, int local);
+
+static void yasm_ea_set_implicit_size_segment(yasm_parser_nasm *parser_nasm,
+                                              yasm_effaddr *ea, yasm_expr *e)
+{
+    if (tasm_compatible_mode) {
+        const char *segment = yasm_expr_segment(e);
+        ea->data_len = yasm_expr_size(e);
+        if (segment) {
+            const char *segreg = tasm_get_segment_register(segment);
+            if (segreg)
+                yasm_arch_parse_check_regtmod(p_object->arch, segreg,
+                                              strlen(segreg), &ea->segreg);
+        }
+    }
+}
+
 
 #define is_eol_tok(tok) ((tok) == 0)
 #define is_eol()        is_eol_tok(curtok)
@@ -242,11 +259,12 @@ nasm_parser_parse(yasm_parser_nasm *parser_nasm)
                 yasm_bc_destroy(bc);
             }
             temp_bc = NULL;
-        } else {
+        } else if (bc) {
             temp_bc = yasm_section_bcs_append(cursect, bc);
             if (temp_bc)
                 parser_nasm->prev_bc = temp_bc;
-        }
+        } else
+            temp_bc = NULL;
         yasm_errwarn_propagate(parser_nasm->errwarns, cur_line);
 
         if (parser_nasm->save_input)
@@ -355,23 +373,33 @@ parse_line(yasm_parser_nasm *parser_nasm)
         case LOCAL_ID:
         {
             char *name = ID_val;
-            int local = (curtok != ID);
+            int local = tasm_compatible_mode
+                ? (curtok == ID || curtok == LOCAL_ID ||
+                        (curtok == SPECIAL_ID && name[0] == '@'))
+                : (curtok != ID);
+            unsigned int size = 0;
 
             get_next_token();
             if (is_eol()) {
                 /* label alone on the line */
                 yasm_warn_set(YASM_WARN_ORPHAN_LABEL,
                     N_("label alone on a line without a colon might be in error"));
-                define_label(parser_nasm, name, local);
+                define_label(parser_nasm, name, 0, local);
                 return NULL;
             }
             if (curtok == ':')
                 get_next_token();
 
-            if (curtok == EQU) {
+            if (curtok == EQU || (tasm_compatible_mode && curtok == '=')) {
                 /* label EQU expr */
                 yasm_expr *e;
                 get_next_token();
+
+                if (tasm_compatible_mode && curtok == SIZE_OVERRIDE) {
+                    size = SIZE_OVERRIDE_val;
+                    get_next_token();
+                }
+
                 e = parse_expr(parser_nasm, NORM_EXPR);
                 if (!e) {
                     yasm_error_set(YASM_ERROR_SYNTAX,
@@ -384,17 +412,30 @@ parse_line(yasm_parser_nasm *parser_nasm)
                 return NULL;
             }
 
-            define_label(parser_nasm, name, local);
-            if (is_eol())
+            if (tasm_compatible_mode && curtok == LABEL)
+                get_next_token();
+
+            if (tasm_compatible_mode && curtok == SIZE_OVERRIDE) {
+                size = SIZE_OVERRIDE_val;
+                get_next_token();
+            }
+
+            if (is_eol()) {
+                define_label(parser_nasm, name, size, local);
                 return NULL;
+            }
             if (curtok == TIMES) {
+                define_label(parser_nasm, name, size, local);
                 get_next_token();
                 return parse_times(parser_nasm);
             }
             bc = parse_exp(parser_nasm);
-            if (!bc)
+            if (!tasm_compatible_mode && !bc)
                 yasm_error_set(YASM_ERROR_SYNTAX,
                                N_("instruction expected after label"));
+            if (tasm_compatible_mode && bc && !size)
+                size = yasm_bc_elem_size(bc);
+            define_label(parser_nasm, name, size, local);
             return bc;
         }
         default:
@@ -510,7 +551,7 @@ parse_exp(yasm_parser_nasm *parser_nasm)
             unsigned int size = DECLARE_DATA_val/8;
             yasm_datavalhead dvs;
             yasm_dataval *dv;
-            yasm_expr *e;
+            yasm_expr *e, *e2;
 
             get_next_token();
 
@@ -529,14 +570,68 @@ parse_exp(yasm_parser_nasm *parser_nasm)
                         goto dv_done;
                     }
                 }
-                if ((e = parse_bexpr(parser_nasm, DV_EXPR)))
-                    dv = yasm_dv_create_expr(e);
-                else {
+                if (curtok == '?') {
+                    yasm_dvs_delete(&dvs);
+                    get_next_token();
+                    if (! is_eol_tok(curtok)) {
+                        yasm_error_set(YASM_ERROR_SYNTAX,
+                                N_("can not handle more than one '?'"));
+                        return NULL;
+                    }
+                    return yasm_bc_create_reserve(
+                            p_expr_new_ident(yasm_expr_int(
+                                yasm_intnum_create_uint(1))),
+                            size, cur_line);
+                }
+                if (!(e = parse_bexpr(parser_nasm, DV_EXPR))) {
                     yasm_error_set(YASM_ERROR_SYNTAX,
                                    N_("expression or string expected"));
                     yasm_dvs_delete(&dvs);
                     return NULL;
                 }
+                if (curtok == DUP) {
+                    get_next_token();
+                    if (curtok != '(') {
+                        yasm_error_set(YASM_ERROR_SYNTAX,
+                                       N_("expected ( after DUP"));
+                        goto error;
+                    }
+                    get_next_token();
+                    if (curtok == '?') {
+                        get_next_token();
+                        if (curtok != ')') {
+                            yasm_error_set(YASM_ERROR_SYNTAX,
+                                N_("expected ) after DUPlicated expression"));
+                            goto error;
+                        }
+                        get_next_token();
+                        if (! is_eol_tok(curtok)) {
+                            yasm_error_set(YASM_ERROR_SYNTAX,
+                                    N_("can not handle more than one '?'"));
+                            goto error;
+                        }
+                        yasm_dvs_delete(&dvs);
+                        return yasm_bc_create_reserve(e, size, cur_line);
+                    } else if ((e2 = parse_bexpr(parser_nasm, DV_EXPR))) {
+                        if (curtok != ')') {
+                            yasm_expr_destroy(e2);
+                            yasm_error_set(YASM_ERROR_SYNTAX,
+                                N_("expected ) after DUPlicated expression"));
+                            goto error;
+                        }
+                        get_next_token();
+                        dv = yasm_dv_create_expr(e2);
+                        yasm_dv_set_multiple(dv, e);
+                    } else {
+                        yasm_error_set(YASM_ERROR_SYNTAX,
+                                       N_("expression or string expected"));
+error:
+                        yasm_expr_destroy(e);
+                        yasm_dvs_delete(&dvs);
+                        return NULL;
+                    }
+                } else
+                    dv = yasm_dv_create_expr(e);
 dv_done:
                 yasm_dvs_append(&dvs, dv);
                 if (is_eol())
@@ -699,12 +794,104 @@ parse_operand(yasm_parser_nasm *parser_nasm)
                                N_("memory address expected"));
                 return NULL;
             }
+
+            if (tasm_compatible_mode && !is_eol() && curtok != ',') {
+                yasm_expr *e, *f;
+                yasm_effaddr *ea;
+
+                switch (op->type) {
+                    case YASM_INSN__OPERAND_IMM:
+                        e = op->data.val;
+                        break;
+                    case YASM_INSN__OPERAND_MEMORY:
+                        if (op->data.ea->disp.rel) {
+                            yasm_error_set(YASM_ERROR_SYNTAX,
+                                    N_("relative adressing not supported\n"));
+                            return NULL;
+                        }
+                        e = yasm_expr_copy(op->data.ea->disp.abs);
+                        yasm_arch_ea_destroy(p_object->arch, op->data.ea);
+                        break;
+                    case YASM_INSN__OPERAND_REG:
+                    case YASM_INSN__OPERAND_SEGREG:
+                        yasm_error_set(YASM_ERROR_SYNTAX,
+                                N_("register adressing not supported\n"));
+                        return NULL;
+                }
+                yasm_xfree(op);
+                f = parse_bexpr(parser_nasm, NORM_EXPR);
+                if (!f) {
+                    yasm_expr_destroy(e);
+                    yasm_error_set(YASM_ERROR_SYNTAX,
+                                   N_("expected expression after ]"));
+                    return NULL;
+                }
+                e = p_expr_new_tree(e, YASM_EXPR_ADD, f);
+                ea = yasm_arch_ea_create(p_object->arch, e);
+                yasm_ea_set_implicit_size_segment(parser_nasm, ea, e);
+                op = yasm_operand_create_mem(ea);
+            }
             return op;
         }
-        case SEGREG:
-            op = yasm_operand_create_segreg(SEGREG_val);
+        case OFFSET:
+        {
+            yasm_insn_operand *op2;
             get_next_token();
+            op = parse_operand(parser_nasm);
+            if (!op) {
+                yasm_error_set(YASM_ERROR_SYNTAX,
+                               N_("memory address expected"));
+                return NULL;
+            }
+            if (op->type == YASM_INSN__OPERAND_IMM)
+                return op;
+            if (op->type != YASM_INSN__OPERAND_MEMORY) {
+                yasm_error_set(YASM_ERROR_SYNTAX,
+                               N_("OFFSET applied to non-memory operand"));
+                return NULL;
+            }
+            if (op->data.ea->disp.rel) {
+                yasm_error_set(YASM_ERROR_SYNTAX,
+                               N_("OFFSET applied to non-absolute memory operand"));
+                return NULL;
+            }
+            if (op->data.ea->disp.abs)
+                op2 = yasm_operand_create_imm(op->data.ea->disp.abs);
+            else
+                op2 = yasm_operand_create_imm(p_expr_new_ident(
+                        yasm_expr_int(yasm_intnum_create_uint(0))));
+            yasm_xfree(op);
+            return op2;
+        }
+        case SEGREG:
+        {
+            uintptr_t segreg = SEGREG_val;
+            get_next_token();
+            if (tasm_compatible_mode && curtok == ':') {
+                get_next_token();
+                op = parse_operand(parser_nasm);
+                if (!op)
+                    return NULL;
+                if (op->type == YASM_INSN__OPERAND_IMM) {
+                    yasm_effaddr *ea = yasm_arch_ea_create(p_object->arch,
+                                                           op->data.val);
+                    yasm_ea_set_implicit_size_segment(parser_nasm, ea, op->data.val);
+                    yasm_insn_operand *op2 = yasm_operand_create_mem(ea);
+                    op2->size = op->size;
+                    yasm_xfree(op);
+                    op = op2;
+                }
+                if (op->type != YASM_INSN__OPERAND_MEMORY) {
+                    yasm_error_set(YASM_ERROR_SYNTAX,
+                                   N_("segment applied to non-memory operand"));
+                    return NULL;
+                }
+                yasm_ea_set_segreg(op->data.ea, segreg);
+                return op;
+            }
+            op = yasm_operand_create_segreg(segreg);
             return op;
+        }
         case REG:
             op = yasm_operand_create_reg(REG_val);
             get_next_token();
@@ -756,13 +943,51 @@ parse_operand(yasm_parser_nasm *parser_nasm)
                 op->targetmod = tmod;
             return op;
         }
+        case ID:
+        case LOCAL_ID:
+        case NONLOCAL_ID:
+            if (tasm_compatible_mode) {
+                get_peek_token(parser_nasm);
+                if (parser_nasm->peek_token == '[') {
+                    yasm_symrec *sym = yasm_symtab_use(p_symtab, ID_val,
+                                                       cur_line);
+                    yasm_expr *e = p_expr_new_ident(yasm_expr_sym(sym)), *f;
+                    yasm_effaddr *ea;
+                    yasm_xfree(ID_val);
+                    get_next_token();
+                    get_next_token();
+                    f = parse_bexpr(parser_nasm, NORM_EXPR);
+                    if (!f) {
+                        yasm_error_set(YASM_ERROR_SYNTAX,
+                                       N_("expected expression after ["));
+                        return NULL;
+                    }
+                    e = p_expr_new_tree(e, YASM_EXPR_ADD, f);
+                    if (!expect(']')) {
+                        yasm_error_set(YASM_ERROR_SYNTAX, N_("missing closing bracket"));
+                        return NULL;
+                    }
+                    get_next_token();
+                    ea = yasm_arch_ea_create(p_object->arch, e);
+                    yasm_ea_set_implicit_size_segment(parser_nasm, ea, e);
+                    op = yasm_operand_create_mem(ea);
+                    return op;
+                }
+            }
+            /* Fallthrough */
         default:
         {
             yasm_expr *e = parse_bexpr(parser_nasm, NORM_EXPR);
             if (!e)
                 return NULL;
             if (curtok != ':')
-                return yasm_operand_create_imm(e);
+                if (tasm_compatible_mode && yasm_expr_size(e)) {
+                    yasm_effaddr *ea = yasm_arch_ea_create(p_object->arch, e);
+                    yasm_ea_set_implicit_size_segment(parser_nasm, ea, e);
+                    op = yasm_operand_create_mem(ea);
+                    return op;
+                } else
+                    return yasm_operand_create_imm(e);
             else {
                 yasm_expr *off;
                 get_next_token();
@@ -836,10 +1061,12 @@ parse_memaddr(yasm_parser_nasm *parser_nasm)
             yasm_expr *e = parse_bexpr(parser_nasm, NORM_EXPR);
             if (!e)
                 return NULL;
-            if (curtok != ':')
-                return yasm_operand_create_mem(
-                    yasm_arch_ea_create(p_object->arch, e));
-            else {
+            if (curtok != ':') {
+                yasm_effaddr *ea = yasm_arch_ea_create(p_object->arch, e);
+                yasm_ea_set_implicit_size_segment(parser_nasm, ea, e);
+                return yasm_operand_create_mem(ea);
+            } else {
+                yasm_effaddr *ea;
                 yasm_expr *off;
                 get_next_token();
                 off = parse_bexpr(parser_nasm, NORM_EXPR);
@@ -847,8 +1074,9 @@ parse_memaddr(yasm_parser_nasm *parser_nasm)
                     yasm_expr_destroy(e);
                     return NULL;
                 }
-                op = yasm_operand_create_mem(
-                    yasm_arch_ea_create(p_object->arch, off));
+                ea = yasm_arch_ea_create(p_object->arch, off);
+                yasm_ea_set_implicit_size_segment(parser_nasm, ea, off);
+                op = yasm_operand_create_mem(ea);
                 op->seg = e;
                 return op;
             }
@@ -1094,6 +1322,30 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
                 return NULL;
             }
             return p_expr_new_branch(YASM_EXPR_NOT, e);
+        case LOW:
+            get_next_token();
+            e = parse_expr6(parser_nasm, type);
+            if (!e) {
+                yasm_error_set(YASM_ERROR_SYNTAX,
+                               N_("expected expression after %s"), "LOW");
+                return NULL;
+            }
+            return p_expr_new_tree(e, YASM_EXPR_AND,
+                p_expr_new_ident(yasm_expr_int(yasm_intnum_create_uint(0xff))));
+        case HIGH:
+            get_next_token();
+            e = parse_expr6(parser_nasm, type);
+            if (!e) {
+                yasm_error_set(YASM_ERROR_SYNTAX,
+                               N_("expected expression after %s"), "HIGH");
+                return NULL;
+            }
+            return p_expr_new_tree(
+                p_expr_new_tree(e, YASM_EXPR_SHR,
+                    p_expr_new_ident(yasm_expr_int(
+                        yasm_intnum_create_uint(8)))),
+                YASM_EXPR_AND,
+                p_expr_new_ident(yasm_expr_int(yasm_intnum_create_uint(0xff))));
         case SEG:
             get_next_token();
             e = parse_expr6(parser_nasm, type);
@@ -1132,10 +1384,16 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
             e = p_expr_new_ident(yasm_expr_reg(REG_val));
             break;
         case STRING:
-            e = p_expr_new_ident(yasm_expr_int(
-                yasm_intnum_create_charconst_nasm(STRING_val.contents)));
+        {
+            yasm_intnum *intn;
+            if (tasm_compatible_mode)
+                intn = yasm_intnum_create_charconst_tasm(STRING_val.contents);
+            else
+                intn = yasm_intnum_create_charconst_nasm(STRING_val.contents);
+            e = p_expr_new_ident(yasm_expr_int(intn));
             yasm_xfree(STRING_val.contents);
             break;
+        }
         case SPECIAL_ID:
             sym = yasm_objfmt_get_special_sym(p_object, ID_val+2, "nasm");
             if (sym) {
@@ -1179,9 +1437,12 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
 }
 
 static void
-define_label(yasm_parser_nasm *parser_nasm, char *name, int local)
+define_label(yasm_parser_nasm *parser_nasm, char *name, unsigned int size,
+             int local)
 {
-    if (!local) {
+    yasm_symrec *symrec;
+
+    if ((!tasm_compatible_mode || tasm_locals) && !local) {
         if (parser_nasm->locallabel_base)
             yasm_xfree(parser_nasm->locallabel_base);
         parser_nasm->locallabel_base_len = strlen(name);
@@ -1191,11 +1452,16 @@ define_label(yasm_parser_nasm *parser_nasm, char *name, int local)
     }
 
     if (parser_nasm->abspos)
-        yasm_symtab_define_equ(p_symtab, name,
-                               yasm_expr_copy(parser_nasm->abspos), cur_line);
+        symrec = yasm_symtab_define_equ(p_symtab, name,
+                                        yasm_expr_copy(parser_nasm->abspos),
+                                        cur_line);
     else
-        yasm_symtab_define_label(p_symtab, name, parser_nasm->prev_bc, 1,
-                                 cur_line);
+        symrec = yasm_symtab_define_label(p_symtab, name, parser_nasm->prev_bc,
+                                          1, cur_line);
+
+    yasm_symrec_set_size(symrec, size);
+    yasm_symrec_set_segment(symrec, tasm_segment);
+
     yasm_xfree(name);
 }
 

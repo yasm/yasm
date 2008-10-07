@@ -28,6 +28,7 @@
 /*@unused@*/ RCSID("$Id$");
 
 #include <limits.h>
+#include <ctype.h>
 
 #include "libyasm-stdint.h"
 #include "coretype.h"
@@ -71,6 +72,8 @@ struct yasm_symrec {
         /* bytecode immediately preceding a label */
         /*@dependent@*/ yasm_bytecode *precbc;
     } value;
+    unsigned int size;          /* 0 if not user-defined */
+    const char *segment;        /* for segmented systems like DOS */
 
     /* associated data; NULL if none */
     /*@null@*/ /*@only@*/ yasm__assoc_data *assoc_data;
@@ -87,6 +90,8 @@ struct yasm_symtab {
     /*@only@*/ HAMT *sym_table;
     /* Symbols not in the table */
     SLIST_HEAD(nontablesymhead_s, non_table_symrec_s) non_table_syms;
+
+    int case_sensitive;
 };
 
 static void
@@ -132,7 +137,14 @@ yasm_symtab_create(void)
     yasm_symtab *symtab = yasm_xmalloc(sizeof(yasm_symtab));
     symtab->sym_table = HAMT_create(0, yasm_internal_error_);
     SLIST_INIT(&symtab->non_table_syms);
+    symtab->case_sensitive = 1;
     return symtab;
+}
+
+void
+yasm_symtab_set_case_sensitive(yasm_symtab *symtab, int sensitive)
+{
+    symtab->case_sensitive = sensitive;
 }
 
 static void
@@ -147,15 +159,24 @@ symrec_destroy_one(/*@only@*/ void *d)
 }
 
 static /*@partial@*/ yasm_symrec *
-symrec_new_common(/*@keep@*/ char *name)
+symrec_new_common(/*@keep@*/ char *name, int case_sensitive)
 {
     yasm_symrec *rec = yasm_xmalloc(sizeof(yasm_symrec));
+
+    if (!case_sensitive) {
+        char *c;
+        for (c=name; *c; c++)
+            *c = tolower(*c);
+    }
+
     rec->name = name;
     rec->type = SYM_UNKNOWN;
     rec->def_line = 0;
     rec->decl_line = 0;
     rec->use_line = 0;
     rec->visibility = YASM_SYM_LOCAL;
+    rec->size = 0;
+    rec->segment = NULL;
     rec->assoc_data = NULL;
     return rec;
 }
@@ -163,10 +184,16 @@ symrec_new_common(/*@keep@*/ char *name)
 static /*@partial@*/ /*@dependent@*/ yasm_symrec *
 symtab_get_or_new_in_table(yasm_symtab *symtab, /*@only@*/ char *name)
 {
-    yasm_symrec *rec = symrec_new_common(name);
+    yasm_symrec *rec = symrec_new_common(name, symtab->case_sensitive);
     int replace = 0;
 
     rec->status = YASM_SYM_NOSTATUS;
+
+    if (!symtab->case_sensitive) {
+        char *c;
+        for (c=name; *c; c++)
+            *c = tolower(*c);
+    }
 
     return HAMT_insert(symtab->sym_table, name, rec, &replace,
                        symrec_destroy_one);
@@ -176,7 +203,7 @@ static /*@partial@*/ /*@dependent@*/ yasm_symrec *
 symtab_get_or_new_not_in_table(yasm_symtab *symtab, /*@only@*/ char *name)
 {
     non_table_symrec *sym = yasm_xmalloc(sizeof(non_table_symrec));
-    sym->rec = symrec_new_common(name);
+    sym->rec = symrec_new_common(name, symtab->case_sensitive);
 
     sym->rec->status = YASM_SYM_NOTINTABLE;
 
@@ -251,7 +278,17 @@ yasm_symtab_use(yasm_symtab *symtab, const char *name, unsigned long line)
 yasm_symrec *
 yasm_symtab_get(yasm_symtab *symtab, const char *name)
 {
-    return HAMT_search(symtab->sym_table, name);
+    if (!symtab->case_sensitive) {
+        char *_name = yasm__xstrdup(name);
+        char *c;
+        yasm_symrec *ret;
+        for (c=_name; *c; c++)
+            *c = tolower(*c);
+        ret = HAMT_search(symtab->sym_table, _name);
+        yasm_xfree(_name);
+        return ret;
+    } else
+      return HAMT_search(symtab->sym_table, name);
 }
 
 static /*@dependent@*/ yasm_symrec *
@@ -273,6 +310,8 @@ symtab_define(yasm_symtab *symtab, const char *name, sym_type type,
         rec->def_line = line;   /* set line number of definition */
         rec->type = type;
         rec->status |= YASM_SYM_DEFINED;
+        rec->size = 0;
+        rec->segment = NULL;
     }
     return rec;
 }
@@ -517,6 +556,30 @@ yasm_symrec_get_label(const yasm_symrec *sym,
     }
     *precbc = sym->value.precbc;
     return 1;
+}
+
+void
+yasm_symrec_set_size(yasm_symrec *sym, int size)
+{
+    sym->size = size;
+}
+
+int
+yasm_symrec_get_size(const yasm_symrec *sym)
+{
+    return sym->size;
+}
+
+void
+yasm_symrec_set_segment(yasm_symrec *sym, const char *segment)
+{
+    sym->segment = segment;
+}
+
+const char *
+yasm_symrec_get_segment(const yasm_symrec *sym)
+{
+    return sym->segment;
 }
 
 int

@@ -27,6 +27,9 @@
 #include <util.h>
 /*@unused@*/ RCSID("$Id$");
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 #include <libyasm.h>
 
 
@@ -1071,7 +1074,8 @@ bin_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
             yasm_errwarn_propagate(info->errwarns, 0);
             return 0;
         }
-        if (fseek(info->f, yasm_intnum_get_int(info->tmp_intn), SEEK_SET) < 0)
+        if (fseek(info->f, yasm_intnum_get_int(info->tmp_intn) + info->start,
+                  SEEK_SET) < 0)
             yasm__fatal(N_("could not seek on output file"));
         yasm_section_bcs_traverse(sect, info->errwarns,
                                   info, bin_objfmt_output_bytecode);
@@ -1105,6 +1109,8 @@ bin_objfmt_output(yasm_object *object, FILE *f, /*@unused@*/ int all_syms,
     bin_group *group, *lma_group, *vma_group, *group_temp;
     yasm_intnum *start, *last, *vdelta;
     bin_groups unsorted_groups, bss_groups;
+
+    info.start = ftell(f);
 
     /* Set ORG to 0 unless otherwise specified */
     if (objfmt_bin->org) {
@@ -1782,6 +1788,7 @@ static const char *bin_nasm_stdmac[] = {
 
 static const yasm_stdmac bin_objfmt_stdmacs[] = {
     { "nasm", "nasm", bin_nasm_stdmac },
+    { "tasm", "tasm", bin_nasm_stdmac },
     { NULL, NULL, NULL }
 };
 
@@ -1797,6 +1804,157 @@ yasm_objfmt_module yasm_bin_LTX_objfmt = {
     bin_objfmt_stdmacs,
     bin_objfmt_create,
     bin_objfmt_output,
+    bin_objfmt_destroy,
+    bin_objfmt_add_default_section,
+    bin_objfmt_section_switch,
+    bin_objfmt_get_special_sym
+};
+
+#define EXE_HEADER_SIZE 0x200
+
+/* DOS .EXE binaries are just raw binaries with a header */
+yasm_objfmt_module yasm_dosexe_LTX_objfmt;
+
+static yasm_objfmt *
+dosexe_objfmt_create(yasm_object *object)
+{
+    yasm_objfmt_bin *objfmt_bin = (yasm_objfmt_bin *) bin_objfmt_create(object);
+    objfmt_bin->objfmt.module = &yasm_dosexe_LTX_objfmt;
+    return (yasm_objfmt *)objfmt_bin;
+}
+
+static unsigned long
+get_sym(yasm_object *object, const char *name) {
+    yasm_symrec *symrec = yasm_symtab_get(object->symtab, name);
+    yasm_bytecode *prevbc;
+    if (!symrec)
+        return 0;
+    if (!yasm_symrec_get_label(symrec, &prevbc))
+        return 0;
+    return prevbc->offset + prevbc->len;
+}
+
+static void
+dosexe_objfmt_output(yasm_object *object, FILE *f, /*@unused@*/ int all_syms,
+                  yasm_errwarns *errwarns)
+{
+    unsigned long tot_size, size, bss_size;
+    unsigned long start, bss;
+    unsigned char c;
+
+    fseek(f, EXE_HEADER_SIZE, SEEK_SET);
+
+    bin_objfmt_output(object, f, all_syms, errwarns);
+
+    tot_size = ftell(f);
+
+    /* if there is a __bss_start symbol, data after it is 0, no need to write
+     * it.  */
+    bss = get_sym(object, "__bss_start");
+    if (bss)
+        size = bss;
+    else
+        size = tot_size;
+    bss_size = tot_size - size;
+#ifdef HAVE_FTRUNCATE
+    if (size != tot_size)
+        ftruncate(fileno(f), EXE_HEADER_SIZE + size);
+#endif
+    fseek(f, 0, SEEK_SET);
+
+    /* magic */
+    fwrite("MZ", 1, 2, f);
+
+    /* file size */
+    c = size & 0xff;
+    fwrite(&c, 1, 1, f);
+    c = !!(size & 0x100);
+    fwrite(&c, 1, 1, f);
+    c = ((size + 511) >> 9) & 0xff;
+    fwrite(&c, 1, 1, f);
+    c = ((size + 511) >> 17) & 0xff;
+    fwrite(&c, 1, 1, f);
+
+    /* relocation # */
+    c = 0;
+    fwrite(&c, 1, 1, f);
+    fwrite(&c, 1, 1, f);
+
+    /* header size */
+    c = EXE_HEADER_SIZE / 16;
+    fwrite(&c, 1, 1, f);
+    c = 0;
+    fwrite(&c, 1, 1, f);
+
+    /* minimum paragraph # */
+    bss_size = (bss_size + 15) >> 4;
+    c = bss_size & 0xff;
+    fwrite(&c, 1, 1, f);
+    c = (bss_size >> 8) & 0xff;
+    fwrite(&c, 1, 1, f);
+
+    /* maximum paragraph # */
+    c = 0xFF;
+    fwrite(&c, 1, 1, f);
+    fwrite(&c, 1, 1, f);
+
+    /* relative value of stack segment */
+    c = 0;
+    fwrite(&c, 1, 1, f);
+    fwrite(&c, 1, 1, f);
+
+    /* SP at start */
+    c = 0;
+    fwrite(&c, 1, 1, f);
+    fwrite(&c, 1, 1, f);
+
+    /* header checksum */
+    c = 0;
+    fwrite(&c, 1, 1, f);
+    fwrite(&c, 1, 1, f);
+
+    /* IP at start */
+    start = get_sym(object, "start");
+    if (!start) {
+        yasm_error_set(YASM_ERROR_GENERAL,
+                N_("%s: could not find symbol `start'"));
+        return;
+    }
+    c = start & 0xff;
+    fwrite(&c, 1, 1, f);
+    c = (start >> 8) & 0xff;
+    fwrite(&c, 1, 1, f);
+
+    /* CS start */
+    c = 0;
+    fwrite(&c, 1, 1, f);
+    fwrite(&c, 1, 1, f);
+
+    /* reloc start */
+    c = 0x22;
+    fwrite(&c, 1, 1, f);
+    c = 0;
+    fwrite(&c, 1, 1, f);
+
+    /* Overlay number */
+    c = 0;
+    fwrite(&c, 1, 1, f);
+    fwrite(&c, 1, 1, f);
+}
+
+
+/* Define objfmt structure -- see objfmt.h for details */
+yasm_objfmt_module yasm_dosexe_LTX_objfmt = {
+    "DOS .EXE format binary",
+    "dosexe",
+    "exe",
+    16,
+    bin_objfmt_dbgfmt_keywords,
+    "null",
+    bin_objfmt_directives,
+    bin_objfmt_stdmacs,
+    dosexe_objfmt_create,
+    dosexe_objfmt_output,
     bin_objfmt_destroy,
     bin_objfmt_add_default_section,
     bin_objfmt_section_switch,

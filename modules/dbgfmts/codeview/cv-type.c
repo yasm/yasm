@@ -492,6 +492,7 @@ static const yasm_bytecode_callback cv_type_bc_callback = {
     cv_type_bc_destroy,
     cv_type_bc_print,
     yasm_bc_finalize_common,
+    NULL,
     cv_type_bc_calc_len,
     yasm_bc_expand_common,
     cv_type_bc_tobytes,

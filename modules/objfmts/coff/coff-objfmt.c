@@ -234,6 +234,7 @@ static const yasm_bytecode_callback win32_sxdata_bc_callback = {
     win32_sxdata_bc_destroy,
     win32_sxdata_bc_print,
     yasm_bc_finalize_common,
+    NULL,
     win32_sxdata_bc_calc_len,
     yasm_bc_expand_common,
     win32_sxdata_bc_tobytes,

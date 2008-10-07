@@ -96,6 +96,7 @@ yasm_operand_create_mem(/*@only@*/ yasm_effaddr *ea)
     retval->size = 0;
     retval->deref = 0;
     retval->strict = 0;
+    retval->size = ea->data_len * 8;
 
     return retval;
 }

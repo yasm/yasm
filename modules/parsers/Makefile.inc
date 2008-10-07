@@ -5,6 +5,7 @@ EXTRA_DIST += modules/parsers/nasm/Makefile.inc
 
 include modules/parsers/gas/Makefile.inc
 include modules/parsers/nasm/Makefile.inc
+include modules/parsers/tasm/Makefile.inc
 
 dist_man_MANS += yasm_parsers.7
 

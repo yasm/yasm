@@ -31,6 +31,8 @@
 
 #include "nasm-parser.h"
 
+#include "modules/preprocs/nasm/nasm.h"
+
 
 static void
 nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp,
@@ -99,4 +101,37 @@ yasm_parser_module yasm_nasm_LTX_parser = {
     "nasm",
     nasm_parser_stdmacs,
     nasm_parser_do_parse
+};
+
+static void
+tasm_parser_do_parse(yasm_object *object, yasm_preproc *pp,
+                     int save_input, yasm_linemap *linemap,
+                     yasm_errwarns *errwarns)
+{
+    tasm_compatible_mode = 1;
+    yasm_symtab_set_case_sensitive(object->symtab, 0);
+    yasm_warn_disable(YASM_WARN_IMPLICIT_SIZE_OVERRIDE);
+    nasm_parser_do_parse(object, pp, save_input, linemap, errwarns);
+}
+
+/* Define valid preprocessors to use with this parser */
+static const char *tasm_parser_preproc_keywords[] = {
+    "raw",
+    "tasm",
+    NULL
+};
+
+static const yasm_stdmac tasm_parser_stdmacs[] = {
+    { "tasm", "tasm", nasm_standard_mac },
+    { NULL, NULL, NULL }
+};
+
+/* Define parser structure -- see parser.h for details */
+yasm_parser_module yasm_tasm_LTX_parser = {
+    "TASM-compatible parser",
+    "tasm",
+    tasm_parser_preproc_keywords,
+    "tasm",
+    tasm_parser_stdmacs,
+    tasm_parser_do_parse
 };

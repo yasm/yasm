@@ -42,7 +42,8 @@
 struct yasm_dataval {
     /*@reldef@*/ STAILQ_ENTRY(yasm_dataval) link;
 
-    enum { DV_EMPTY, DV_VALUE, DV_RAW, DV_ULEB128, DV_SLEB128 } type;
+    enum { DV_EMPTY, DV_VALUE, DV_RAW, DV_ULEB128, DV_SLEB128, DV_RESERVE }
+        type;
 
     union {
         yasm_value val;
@@ -51,16 +52,22 @@ struct yasm_dataval {
             unsigned long len;
         } raw;
     } data;
+
+    /* number of times data is repeated, NULL=1. */
+    /*@only@*/ /*@null@*/ yasm_expr *multiple;
 };
 
 typedef struct bytecode_data {
     /* converted data (linked list) */
     yasm_datavalhead datahead;
+
+    int item_size;
 } bytecode_data;
 
 static void bc_data_destroy(void *contents);
 static void bc_data_print(const void *contents, FILE *f, int indent_level);
 static void bc_data_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
+static int bc_data_item_size(yasm_bytecode *bc);
 static int bc_data_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
                             void *add_span_data);
 static int bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
@@ -71,6 +78,7 @@ static const yasm_bytecode_callback bc_data_callback = {
     bc_data_destroy,
     bc_data_print,
     bc_data_finalize,
+    bc_data_item_size,
     bc_data_calc_len,
     yasm_bc_expand_common,
     bc_data_tobytes,
@@ -131,7 +139,24 @@ bc_data_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
             default:
                 break;
         }
+        if (dv->multiple) {
+            yasm_value val;
+            if (yasm_value_finalize_expr(&val, dv->multiple, prev_bc, 0))
+                yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+                               N_("multiple expression too complex"));
+            else if (val.rel)
+                yasm_error_set(YASM_ERROR_NOT_ABSOLUTE,
+                               N_("multiple expression not absolute"));
+            dv->multiple = val.abs;
+        }
     }
+}
+
+static int
+bc_data_item_size(yasm_bytecode *bc)
+{
+    bytecode_data *bc_data = (bytecode_data *)bc->contents;
+    return bc_data->item_size;
 }
 
 static int
@@ -141,27 +166,37 @@ bc_data_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
     bytecode_data *bc_data = (bytecode_data *)bc->contents;
     yasm_dataval *dv;
     yasm_intnum *intn;
+    int len;
+    unsigned long multiple;
 
     /* Count up element sizes, rounding up string length. */
     STAILQ_FOREACH(dv, &bc_data->datahead, link) {
         switch (dv->type) {
             case DV_EMPTY:
+                len = 0;
                 break;
             case DV_VALUE:
-                bc->len += dv->data.val.size/8;
+                len = dv->data.val.size/8;
                 break;
             case DV_RAW:
-                bc->len += dv->data.raw.len;
+                len = dv->data.raw.len;
                 break;
             case DV_ULEB128:
             case DV_SLEB128:
                 intn = yasm_expr_get_intnum(&dv->data.val.abs, 0);
                 if (!intn)
                     yasm_internal_error(N_("non-constant in data_tobytes"));
-                bc->len +=
-                    yasm_intnum_size_leb128(intn, dv->type == DV_SLEB128);
+                len = yasm_intnum_size_leb128(intn, dv->type == DV_SLEB128);
+                break;
+            case DV_RESERVE:
+                len = dv->data.val.size/8;
                 break;
         }
+
+        if (!yasm_dv_get_multiple(dv, &multiple))
+            len *= multiple;
+
+        bc->len += len;
     }
 
     return 0;
@@ -177,29 +212,47 @@ bc_data_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     unsigned char *bufp_orig = *bufp;
     yasm_intnum *intn;
     unsigned int val_len;
+    unsigned long multiple, i;
 
     STAILQ_FOREACH(dv, &bc_data->datahead, link) {
+        if (yasm_dv_get_multiple(dv, &multiple) || multiple == 0)
+            continue;
         switch (dv->type) {
             case DV_EMPTY:
                 break;
             case DV_VALUE:
                 val_len = dv->data.val.size/8;
-                if (output_value(&dv->data.val, *bufp, val_len,
-                                 (unsigned long)(*bufp-bufp_orig), bc, 1, d))
-                    return 1;
-                *bufp += val_len;
+                for (i=0; i<multiple; i++) {
+                    if (output_value(&dv->data.val, *bufp, val_len,
+                                     (unsigned long)(*bufp-bufp_orig), bc, 1,
+                                     d))
+                        return 1;
+                    *bufp += val_len;
+                }
                 break;
             case DV_RAW:
-                memcpy(*bufp, dv->data.raw.contents, dv->data.raw.len);
-                *bufp += dv->data.raw.len;
+                for (i=0; i<multiple; i++) {
+                    memcpy(*bufp, dv->data.raw.contents, dv->data.raw.len);
+                    *bufp += dv->data.raw.len;
+                }
                 break;
             case DV_ULEB128:
             case DV_SLEB128:
                 intn = yasm_expr_get_intnum(&dv->data.val.abs, 234);
                 if (!intn)
                     yasm_internal_error(N_("non-constant in data_tobytes"));
-                *bufp +=
-                    yasm_intnum_get_leb128(intn, *bufp, dv->type == DV_SLEB128);
+                for (i=0; i<multiple; i++) {
+                    *bufp +=
+                        yasm_intnum_get_leb128(intn, *bufp,
+                                dv->type == DV_SLEB128);
+                }
+            case DV_RESERVE:
+                val_len = dv->data.val.size/8;
+                for (i=0; i<multiple; i++) {
+                    memset(*bufp, 0, val_len);
+                    *bufp += val_len;
+                }
+                break;
         }
     }
 
@@ -218,11 +271,18 @@ yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
 
 
     yasm_dvs_initialize(&data->datahead);
+    data->item_size = size;
 
     /* Prescan input data for length, etc.  Careful: this needs to be
      * precisely paired with the second loop.
      */
     STAILQ_FOREACH(dv, datahead, link) {
+        if (dv->multiple && dv->type != DV_EMPTY && len > 0) {
+            /* Flush previous data */
+            dvo = yasm_dv_create_raw(yasm_xmalloc(len), len);
+            STAILQ_INSERT_TAIL(&data->datahead, dvo, link);
+            len = 0;
+        }
         switch (dv->type) {
             case DV_EMPTY:
                 break;
@@ -247,6 +307,7 @@ yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
                     /* Create bytecode for this value */
                     dvo = yasm_xmalloc(sizeof(yasm_dataval));
                     STAILQ_INSERT_TAIL(&data->datahead, dvo, link);
+                    dvo->multiple = dv->multiple;
                 }
                 break;
             case DV_RAW:
@@ -255,7 +316,19 @@ yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
                 rlen = (rlen + size - 1) / size;
                 len += rlen*size;
                 break;
+            case DV_RESERVE:
+                len += size;
+                break;
         }
+
+        if (dv->multiple && dv->type != DV_EMPTY && len > 0) {
+            /* Flush this data */
+            dvo = yasm_dv_create_raw(yasm_xmalloc(len), len);
+            STAILQ_INSERT_TAIL(&data->datahead, dvo, link);
+            dvo->multiple = dv->multiple;
+            len = 0;
+        }
+
         if (append_zero)
             len++;
     }
@@ -271,6 +344,10 @@ yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
     dvo = STAILQ_FIRST(&data->datahead);
     len = 0;
     while (dv && dvo) {
+        if (dv->multiple && dv->type != DV_EMPTY && len > 0) {
+            dvo = STAILQ_NEXT(dvo, link);
+            len = 0;
+        }
         switch (dv->type) {
             case DV_EMPTY:
                 break;
@@ -323,7 +400,17 @@ yasm_bc_create_data(yasm_datavalhead *datahead, unsigned int size,
                         dvo->data.raw.contents[len++] = 0;
                 }
                 break;
+            case DV_RESERVE:
+                memset(&dvo->data.raw.contents[len], 0, size);
+                len += size;
+                break;
         }
+
+        if (dv->multiple && dv->type != DV_EMPTY && len > 0) {
+            dvo = STAILQ_NEXT(dvo, link);
+            len = 0;
+        }
+
         if (append_zero)
             dvo->data.raw.contents[len++] = 0;
         dv2 = STAILQ_NEXT(dv, link);
@@ -364,6 +451,7 @@ yasm_dv_create_expr(yasm_expr *e)
 
     retval->type = DV_VALUE;
     yasm_value_initialize(&retval->data.val, e, 0);
+    retval->multiple = NULL;
 
     return retval;
 }
@@ -376,8 +464,52 @@ yasm_dv_create_raw(unsigned char *contents, unsigned long len)
     retval->type = DV_RAW;
     retval->data.raw.contents = contents;
     retval->data.raw.len = len;
+    retval->multiple = NULL;
 
     return retval;
+}
+
+yasm_dataval *
+yasm_dv_create_reserve(void)
+{
+    yasm_dataval *retval = yasm_xmalloc(sizeof(yasm_dataval));
+
+    retval->type = DV_RESERVE;
+    retval->multiple = NULL;
+
+    return retval;
+}
+
+void
+yasm_dv_set_multiple(yasm_dataval *dv, yasm_expr *e)
+{
+    if (dv->multiple)
+        dv->multiple = yasm_expr_create_tree( dv->multiple, YASM_EXPR_MUL, e,
+                                             e->line);
+    else
+        dv->multiple = e;
+}
+
+int
+yasm_dv_get_multiple(yasm_dataval *dv, unsigned long *multiple)
+{
+    /*@dependent@*/ /*@null@*/ const yasm_intnum *num;
+
+    *multiple = 1;
+    if (dv->multiple) {
+        num = yasm_expr_get_intnum(&dv->multiple, 0);
+        if (!num) {
+            yasm_error_set(YASM_ERROR_VALUE,
+                           N_("could not determine multiple"));
+            return 1;
+        }
+        if (yasm_intnum_sign(num) < 0) {
+            yasm_error_set(YASM_ERROR_VALUE, N_("multiple is negative"));
+            return 1;
+        }
+        *multiple = yasm_intnum_get_uint(num);
+    }
+    return 0;
 }
 
 void
@@ -398,6 +530,8 @@ yasm_dvs_delete(yasm_datavalhead *headp)
             default:
                 break;
         }
+        if (cur->multiple)
+            yasm_expr_destroy(cur->multiple);
         yasm_xfree(cur);
         cur = next;
     }
@@ -421,6 +555,11 @@ yasm_dvs_print(const yasm_datavalhead *head, FILE *f, int indent_level)
     unsigned long i;
 
     STAILQ_FOREACH(cur, head, link) {
+        fprintf(f, "%*sMultiple=", indent_level, "");
+        if (!cur->multiple)
+            fprintf(f, "nil (1)");
+        else
+            yasm_expr_print(cur->multiple, f);
         switch (cur->type) {
             case DV_EMPTY:
                 fprintf(f, "%*sEmpty\n", indent_level, "");
@@ -444,6 +583,9 @@ yasm_dvs_print(const yasm_datavalhead *head, FILE *f, int indent_level)
             case DV_SLEB128:
                 fprintf(f, "%*sSLEB128 value:\n", indent_level, "");
                 yasm_value_print(&cur->data.val, f, indent_level+1);
+                break;
+            case DV_RESERVE:
+                fprintf(f, "%*sReserved\n", indent_level, "");
                 break;
         }
     }

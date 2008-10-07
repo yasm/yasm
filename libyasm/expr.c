@@ -1444,3 +1444,73 @@ yasm_expr_print(const yasm_expr *e, FILE *f)
             fprintf(f, "%s", opstr);
     }
 }
+
+unsigned int
+yasm_expr_size(const yasm_expr *e)
+{
+    int i;
+    int seen = 0;
+    unsigned int size = 0, newsize;
+
+    if (e->op == YASM_EXPR_IDENT) {
+        if (e->terms[0].type == YASM_EXPR_SYM)
+            return yasm_symrec_get_size(e->terms[0].data.sym);
+        return 0;
+    }
+    if (e->op != YASM_EXPR_ADD && e->op != YASM_EXPR_SUB)
+        return 0;
+
+    for (i=0; i<e->numterms; i++) {
+        newsize = 0;
+        switch (e->terms[i].type) {
+        case YASM_EXPR_EXPR:
+            newsize = yasm_expr_size(e->terms[i].data.expn);
+            break;
+        case YASM_EXPR_SYM:
+            newsize = yasm_symrec_get_size(e->terms[i].data.sym);
+            break;
+        default:
+            break;
+        }
+        if (newsize) {
+            size = newsize;
+            if (seen)
+                /* either sum of idents (?!) or substract of idents */
+                return 0;
+            seen = 1;
+        }
+    }
+    /* exactly one offset */
+    return size;
+}
+
+const char *
+yasm_expr_segment(const yasm_expr *e)
+{
+    int i;
+    int seen = 0;
+    const char *segment = NULL;
+
+    if (e->op == YASM_EXPR_IDENT) {
+        if (e->terms[0].type == YASM_EXPR_SYM)
+            return yasm_symrec_get_segment(e->terms[0].data.sym);
+        return NULL;
+    }
+    if (e->op != YASM_EXPR_ADD && e->op != YASM_EXPR_SUB)
+        return NULL;
+
+    for (i=0; i<e->numterms; i++) {
+        if ((e->op == YASM_EXPR_ADD || !i) &&
+                e->terms[i].type == YASM_EXPR_EXPR) {
+            if ((segment = yasm_expr_segment(e->terms[i].data.expn))) {
+                if (seen) {
+                    /* either sum of idents (?!) or substract of idents */
+                    return NULL;
+                }
+                seen = 1;
+            }
+        }
+    }
+    /* exactly one offset */
+    return segment;
+}

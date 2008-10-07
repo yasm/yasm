@@ -82,7 +82,8 @@ typedef struct yasm_arch_x86 {
     unsigned int amd64_machine;
     enum {
         X86_PARSER_NASM = 0,
-        X86_PARSER_GAS = 1
+        X86_PARSER_TASM = 1,
+        X86_PARSER_GAS = 2
     } parser;
     unsigned int mode_bits;
     unsigned int force_strict;

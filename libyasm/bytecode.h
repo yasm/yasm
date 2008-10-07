@@ -86,6 +86,14 @@ typedef struct yasm_bytecode_callback {
      */
     void (*finalize) (yasm_bytecode *bc, yasm_bytecode *prev_bc);
 
+    /** Return elements size of a data bytecode.
+     * This function should return the size of each elements of a data
+     * bytecode, for proper dereference of symbols attached to it.
+     * \param bc            bytecode
+     * \return 0 if element size is unknown.
+     */
+    int (*elem_size) (yasm_bytecode *bc);
+
     /** Calculates the minimum size of a bytecode.
      * Called from yasm_bc_calc_len().
      * A generic fill-in for this is yasm_bc_calc_len_common(), but as this
@@ -438,6 +446,15 @@ YASM_LIB_DECL
 YASM_LIB_DECL
 unsigned long yasm_bc_next_offset(yasm_bytecode *precbc);
 
+/** Return elemens size of a data bytecode.
+ * Returns the size of each elements of a data bytecode, for proper dereference
+ * of symbols attached to it.
+ * \param bc            bytecode
+ * \return 0 if element size is unknown
+ */
+YASM_LIB_DECL
+int yasm_bc_elem_size(yasm_bytecode *bc);
+
 /** Resolve EQUs in a bytecode and calculate its minimum size.
  * Generates dependent bytecode spans for cases where, if the length spanned
  * increases, it could cause the bytecode size to increase.
@@ -548,10 +565,30 @@ YASM_LIB_DECL
 yasm_dataval *yasm_dv_create_raw(/*@keep@*/ unsigned char *contents,
                                  unsigned long len);
 
+/** Create a new uninitialized data value.
+ * \return Newly allocated data value.
+ */
+yasm_dataval *yasm_dv_create_reserve(void);
+
 #ifndef YASM_DOXYGEN
 #define yasm_dv_create_string(s, l) yasm_dv_create_raw((unsigned char *)(s), \
                                                        (unsigned long)(l))
 #endif
+
+/** Set multiple field of a data value.
+ * A data value can be repeated a number of times when output.  This function
+ * sets that multiple.
+ * \param dv    data value
+ * \param e     multiple (kept, do not free)
+ */
+void yasm_dv_set_multiple(yasm_dataval *dv, /*@keep@*/ yasm_expr *e);
+
+/** Get the data value multiple value as an unsigned long integer.
+ * \param dv            data value
+ * \param multiple      multiple value (output)
+ * \return 1 on error (set with yasm_error_set), 0 on success.
+ */
+int yasm_dv_get_multiple(yasm_dataval *dv, /*@out@*/ unsigned long *multiple);
 
 /** Initialize a list of data values.
  * \param headp list of data values

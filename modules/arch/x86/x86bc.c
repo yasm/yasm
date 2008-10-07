@@ -76,6 +76,7 @@ static const yasm_bytecode_callback x86_bc_callback_insn = {
     x86_bc_insn_destroy,
     x86_bc_insn_print,
     yasm_bc_finalize_common,
+    NULL,
     x86_bc_insn_calc_len,
     x86_bc_insn_expand,
     x86_bc_insn_tobytes,
@@ -86,6 +87,7 @@ static const yasm_bytecode_callback x86_bc_callback_jmp = {
     x86_bc_jmp_destroy,
     x86_bc_jmp_print,
     yasm_bc_finalize_common,
+    NULL,
     x86_bc_jmp_calc_len,
     x86_bc_jmp_expand,
     x86_bc_jmp_tobytes,
@@ -96,6 +98,7 @@ static const yasm_bytecode_callback x86_bc_callback_jmpfar = {
     x86_bc_jmpfar_destroy,
     x86_bc_jmpfar_print,
     yasm_bc_finalize_common,
+    NULL,
     x86_bc_jmpfar_calc_len,
     yasm_bc_expand_common,
     x86_bc_jmpfar_tobytes,
@@ -192,6 +195,7 @@ ea_create(void)
     x86_ea->ea.segreg = 0;
     x86_ea->ea.pc_rel = 0;
     x86_ea->ea.not_pc_rel = 0;
+    x86_ea->ea.data_len = 0;
     x86_ea->modrm = 0;
     x86_ea->valid_modrm = 0;
     x86_ea->need_modrm = 0;
@@ -253,6 +257,8 @@ yasm_x86__ea_create_expr(yasm_arch *arch, yasm_expr *e)
      * the BITS/address override setting.
      */
     x86_ea->need_sib = 0xff;
+
+    x86_ea->ea.data_len = 0;
 
     return (yasm_effaddr *)x86_ea;
 }

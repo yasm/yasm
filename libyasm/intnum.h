@@ -76,12 +76,21 @@ YASM_LIB_DECL
 
 /** Convert character constant to integer value, using NASM rules.  NASM syntax
  * supports automatic conversion from strings such as 'abcd' to a 32-bit
- * integer value.  This function performs those conversions.
+ * integer value (little endian order).  This function performs those conversions.
  * \param str       character constant string
  * \return Newly allocated intnum.
  */
 YASM_LIB_DECL
 /*@only@*/ yasm_intnum *yasm_intnum_create_charconst_nasm(const char *str);
+
+/** Convert character constant to integer value, using TASM rules.  TASM syntax
+ * supports automatic conversion from strings such as 'abcd' to a 32-bit
+ * integer value (big endian order).  This function performs those conversions.
+ * \param str       character constant string
+ * \return Newly allocated intnum.
+ */
+YASM_LIB_DECL
+/*@only@*/ yasm_intnum *yasm_intnum_create_charconst_tasm(const char *str);
 
 /** Create a new intnum from an unsigned integer value.
  * \param i         unsigned integer value

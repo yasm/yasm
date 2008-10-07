@@ -350,6 +350,7 @@ static const yasm_bytecode_callback x86_id_insn_callback = {
     x86_id_insn_destroy,
     x86_id_insn_print,
     x86_id_insn_finalize,
+    NULL,
     yasm_bc_calc_len_common,
     yasm_bc_expand_common,
     yasm_bc_tobytes_common,
@@ -1731,6 +1732,9 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
 
     switch (arch_x86->parser) {
         case X86_PARSER_NASM:
+            pdata = insnprefix_nasm_find(lcaseid, id_len);
+            break;
+        case X86_PARSER_TASM:
             pdata = insnprefix_nasm_find(lcaseid, id_len);
             break;
         case X86_PARSER_GAS:

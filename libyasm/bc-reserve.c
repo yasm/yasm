@@ -46,6 +46,7 @@ typedef struct bytecode_reserve {
 static void bc_reserve_destroy(void *contents);
 static void bc_reserve_print(const void *contents, FILE *f, int indent_level);
 static void bc_reserve_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc);
+static int bc_reserve_elem_size(yasm_bytecode *bc);
 static int bc_reserve_calc_len(yasm_bytecode *bc,
                                yasm_bc_add_span_func add_span,
                                void *add_span_data);
@@ -57,6 +58,7 @@ static const yasm_bytecode_callback bc_reserve_callback = {
     bc_reserve_destroy,
     bc_reserve_print,
     bc_reserve_finalize,
+    bc_reserve_elem_size,
     bc_reserve_calc_len,
     yasm_bc_expand_common,
     bc_reserve_tobytes,
@@ -93,6 +95,13 @@ bc_reserve_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
         bc->multiple = yasm_expr_create_tree(bc->multiple, YASM_EXPR_MUL,
                                              reserve->numitems, bc->line);
     reserve->numitems = NULL;
+}
+
+static int
+bc_reserve_elem_size(yasm_bytecode *bc)
+{
+    bytecode_reserve *reserve = (bytecode_reserve *)bc->contents;
+    return reserve->itemsize;
 }
 
 static int

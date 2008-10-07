@@ -223,6 +223,18 @@ yasm_bc_next_offset(yasm_bytecode *precbc)
 }
 
 int
+yasm_bc_elem_size(yasm_bytecode *bc)
+{
+    if (!bc->callback) {
+        yasm_internal_error(N_("got empty bytecode in yasm_bc_elem_size"));
+        return 0;
+    } else if (!bc->callback->elem_size)
+        return 0;
+    else
+        return bc->callback->elem_size(bc);
+}
+
+int
 yasm_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
                  void *add_span_data)
 {

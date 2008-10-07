@@ -276,5 +276,8 @@ enum {
 #define elements(x)     ( sizeof(x) / sizeof(*(x)) )
 
 extern int tasm_compatible_mode;
+extern int tasm_locals;
+extern const char *tasm_segment;
+const char *tasm_get_segment_register(const char *segment);
 
 #endif

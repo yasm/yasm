@@ -422,7 +422,7 @@ x86_checkea_calc_displen(x86_effaddr *x86_ea, unsigned int wordsize, int noreg,
              * EA.  With no registers, we must have a 16/32 value.
              */
             if (noreg) {
-                yasm_warn_set(YASM_WARN_GENERAL,
+                yasm_warn_set(YASM_WARN_IMPLICIT_SIZE_OVERRIDE,
                               N_("invalid displacement size; fixed"));
                 x86_ea->ea.disp.size = wordsize;
             } else

@@ -32,6 +32,7 @@ RCSID("$Id$");
 #include <libyasm.h>
 
 #include "modules/parsers/nasm/nasm-parser.h"
+#include "modules/preprocs/nasm/nasm.h"
 
 
 #define YYCURSOR        cursor
@@ -76,13 +77,22 @@ handle_dot_label(YYSTYPE *lvalp, char *tok, size_t toklen, size_t zeropos,
 {
     /* check for special non-local labels like ..start */
     if (tok[zeropos+1] == '.') {
-        lvalp->str_val = yasm__xstrndup(tok+zeropos, toklen-zeropos);
+        lvalp->str_val = yasm__xstrndup(tok+zeropos+(tasm_compatible_mode?2:0),
+            toklen-zeropos-(tasm_compatible_mode?2:0));
         /* check for special non-local ..@label */
         if (lvalp->str_val[zeropos+2] == '@')
             return NONLOCAL_ID;
         return SPECIAL_ID;
     }
-
+    if (tasm_compatible_mode && (!tasm_locals || 
+                (tok[zeropos] == '.' &&
+                 tok[zeropos+1] != '@' && tok[zeropos+2] != '@'))) {
+        /* no locals on Tasm without the 'locals' directive */
+        /* .foo is never local either, but .@@foo may be (local structure
+         * members) */
+        lvalp->str_val = yasm__xstrndup(tok + zeropos, toklen - zeropos);
+        return SPECIAL_ID;
+    }
     if (!parser_nasm->locallabel_base) {
         lvalp->str_val = yasm__xstrndup(tok+zeropos, toklen-zeropos);
         yasm_warn_set(YASM_WARN_GENERAL,
@@ -242,65 +252,95 @@ scan:
         }
 
         /* pseudo-instructions */
-        'db'            { lvalp->int_info = 8; RETURN(DECLARE_DATA); }
+        'db'            {
+            lvalp->int_info = 8;
+            parser_nasm->state = INSTRUCTION;
+            RETURN(DECLARE_DATA);
+        }
         'dhw'           {
             lvalp->int_info = yasm_arch_wordsize(p_object->arch)/2;
+            parser_nasm->state = INSTRUCTION;
             RETURN(DECLARE_DATA);
         }
         'dw'            {
             lvalp->int_info = yasm_arch_wordsize(p_object->arch);
+            parser_nasm->state = INSTRUCTION;
             RETURN(DECLARE_DATA);
         }
         'dd'            {
             lvalp->int_info = yasm_arch_wordsize(p_object->arch)*2;
+            parser_nasm->state = INSTRUCTION;
             RETURN(DECLARE_DATA);
         }
         'dq'            {
             lvalp->int_info = yasm_arch_wordsize(p_object->arch)*4;
+            parser_nasm->state = INSTRUCTION;
             RETURN(DECLARE_DATA);
         }
-        'dt'            { lvalp->int_info = 80; RETURN(DECLARE_DATA); }
+        'dt'            {
+            lvalp->int_info = 80;
+            parser_nasm->state = INSTRUCTION;
+            RETURN(DECLARE_DATA);
+        }
         'ddq'           {
             lvalp->int_info = yasm_arch_wordsize(p_object->arch)*8;
+            parser_nasm->state = INSTRUCTION;
             RETURN(DECLARE_DATA);
         }
         'do'           {
             lvalp->int_info = yasm_arch_wordsize(p_object->arch)*8;
+            parser_nasm->state = INSTRUCTION;
             RETURN(DECLARE_DATA);
         }
         'dy'           {
             lvalp->int_info = 256;
+            parser_nasm->state = INSTRUCTION;
             RETURN(DECLARE_DATA);
         }
 
-        'resb'          { lvalp->int_info = 8; RETURN(RESERVE_SPACE); }
+        'resb'          {
+            lvalp->int_info = 8;
+            parser_nasm->state = INSTRUCTION;
+            RETURN(RESERVE_SPACE);
+        }
         'reshw'         {
             lvalp->int_info = yasm_arch_wordsize(p_object->arch)/2;
+            parser_nasm->state = INSTRUCTION;
             RETURN(RESERVE_SPACE);
         }
         'resw'          {
             lvalp->int_info = yasm_arch_wordsize(p_object->arch);
+            parser_nasm->state = INSTRUCTION;
             RETURN(RESERVE_SPACE);
         }
         'resd'          {
             lvalp->int_info = yasm_arch_wordsize(p_object->arch)*2;
+            parser_nasm->state = INSTRUCTION;
             RETURN(RESERVE_SPACE);
         }
         'resq'          {
             lvalp->int_info = yasm_arch_wordsize(p_object->arch)*4;
+            parser_nasm->state = INSTRUCTION;
             RETURN(RESERVE_SPACE);
         }
-        'rest'          { lvalp->int_info = 80; RETURN(RESERVE_SPACE); }
+        'rest'          {
+            lvalp->int_info = 80;
+            parser_nasm->state = INSTRUCTION;
+            RETURN(RESERVE_SPACE);
+        }
         'resdq'         {
             lvalp->int_info = yasm_arch_wordsize(p_object->arch)*8;
+            parser_nasm->state = INSTRUCTION;
             RETURN(RESERVE_SPACE);
         }
         'reso'         {
             lvalp->int_info = yasm_arch_wordsize(p_object->arch)*8;
+            parser_nasm->state = INSTRUCTION;
             RETURN(RESERVE_SPACE);
         }
         'resy'         {
             lvalp->int_info = 256;
+            parser_nasm->state = INSTRUCTION;
             RETURN(RESERVE_SPACE);
         }
 
@@ -325,17 +365,18 @@ scan:
         "//"                    { RETURN(SIGNDIV); }
         "%%"                    { RETURN(SIGNMOD); }
         "$$"                    { RETURN(START_SECTION_ID); }
-        [-+|^*&/%~$():=,\[]     { RETURN(s->tok[0]); }
+        [-+|^*&/%~$():=,\[?]    { RETURN(s->tok[0]); }
         "]"                     { RETURN(s->tok[0]); }
 
         /* local label (.label) */
-        "." [a-zA-Z0-9_$#@~.?]+ {
+        ("." | "@@") [a-zA-Z0-9_$#@~.?]+ {
             RETURN(handle_dot_label(lvalp, TOK, TOKLEN, 0, parser_nasm));
         }
 
         /* forced identifier */
         "$" [a-zA-Z0-9_$#@~.?]+ {
-            if (TOK[1] == '.') {
+            if (TOK[1] == '.' ||
+                    (tasm_compatible_mode && TOK[1] == '@' && TOK[2] == '@')) {
                 /* handle like .label */
                 RETURN(handle_dot_label(lvalp, TOK, TOKLEN, 1, parser_nasm));
             }
@@ -376,11 +417,61 @@ scan:
                     s->tok[TOKLEN] = savech;
                     RETURN(TARGETMOD);
                 default:
+                    break;
+            }
+            if (tasm_compatible_mode) {
+                if (!strcasecmp(TOK, "shl")) {
                     s->tok[TOKLEN] = savech;
+                    RETURN(LEFT_OP);
+                }
+                if (!strcasecmp(TOK, "shr")) {
+                    s->tok[TOKLEN] = savech;
+                    RETURN(RIGHT_OP);
+                }
+                if (!strcasecmp(TOK, "and")) {
+                    s->tok[TOKLEN] = savech;
+                    RETURN('&');
+                }
+                if (!strcasecmp(TOK, "or")) {
+                    s->tok[TOKLEN] = savech;
+                    RETURN('|');
+                }
+                if (!strcasecmp(TOK, "low")) {
+                    s->tok[TOKLEN] = savech;
+                    RETURN(LOW);
+                }
+                if (!strcasecmp(TOK, "high")) {
+                    s->tok[TOKLEN] = savech;
+                    RETURN(HIGH);
+                }
+                if (!strcasecmp(TOK, "offset")) {
+                    s->tok[TOKLEN] = savech;
+                    RETURN(OFFSET);
+                }
+                if (!strcasecmp(TOK, "fword")) {
+                    s->tok[TOKLEN] = savech;
+                    lvalp->int_info = yasm_arch_wordsize(p_object->arch)*2;
+                    RETURN(SIZE_OVERRIDE);
+                }
+                if (!strcasecmp(TOK, "df")) {
+                    s->tok[TOKLEN] = savech;
+                    lvalp->int_info = yasm_arch_wordsize(p_object->arch)*3;
+                    parser_nasm->state = INSTRUCTION;
+                    RETURN(DECLARE_DATA);
+                }
+                if (!strcasecmp(TOK, "label")) {
+                    s->tok[TOKLEN] = savech;
+                    RETURN(LABEL);
+                }
+                if (!strcasecmp(TOK, "dup")) {
+                    s->tok[TOKLEN] = savech;
+                    RETURN(DUP);
+                }
             }
             /* Propagate errors in case we got a warning from the arch */
             yasm_errwarn_propagate(parser_nasm->errwarns, cur_line);
             /* Just an identifier, return as such. */
+            s->tok[TOKLEN] = savech;
             lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
             RETURN(ID);
         }
@@ -637,6 +728,26 @@ stringconst_scan:
 
     /*!re2c
         [\000]  { goto stringconst_error; }
+
+        "''" | '""'     {
+            if (endch != s->tok[0]) {
+                strbuf[count++] = s->tok[0];
+                if (count >= strbuf_size) {
+                    strbuf = yasm_xrealloc(strbuf,
+                                           strbuf_size + STRBUF_ALLOC_SIZE);
+                    strbuf_size += STRBUF_ALLOC_SIZE;
+                }
+            } else if (!tasm_compatible_mode) {
+                YYCURSOR--;
+                goto stringconst_end;
+            }
+            strbuf[count++] = s->tok[0];
+            if (count >= strbuf_size) {
+                strbuf = yasm_xrealloc(strbuf, strbuf_size + STRBUF_ALLOC_SIZE);
+                strbuf_size += STRBUF_ALLOC_SIZE;
+            }
+            goto stringconst_scan;
+        }
 
         any     {
             if (s->tok[0] == endch)

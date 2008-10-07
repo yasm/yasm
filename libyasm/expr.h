@@ -297,6 +297,16 @@ YASM_LIB_DECL
 YASM_LIB_DECL
 void yasm_expr_print(/*@null@*/ const yasm_expr *e, FILE *f);
 
+/** Return the size of an expression, if the user provided it
+ * \param e     expression
+ */
+unsigned int yasm_expr_size(const yasm_expr *e);
+
+/** Return the segment of an expression, if the user provided it
+ * \param e     expression
+ */
+const char *yasm_expr_segment(const yasm_expr *e);
+
 /** Traverse over expression tree in order (const version).
  * Calls func for each leaf (non-operation).
  * \param e     expression

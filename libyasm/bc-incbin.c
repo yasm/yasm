@@ -66,6 +66,7 @@ static const yasm_bytecode_callback bc_incbin_callback = {
     bc_incbin_destroy,
     bc_incbin_print,
     bc_incbin_finalize,
+    NULL,
     bc_incbin_calc_len,
     yasm_bc_expand_common,
     bc_incbin_tobytes,

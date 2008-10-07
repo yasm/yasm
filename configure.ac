@@ -125,7 +125,7 @@ AX_CREATE_STDINT_H([libyasm-stdint.h])
 #
 AC_CHECK_FUNCS([abort toascii vsnprintf])
 AC_CHECK_FUNCS([strsep mergesort getcwd])
-AC_CHECK_FUNCS([popen])
+AC_CHECK_FUNCS([popen ftruncate])
 # Look for the case-insensitive comparison functions
 AC_CHECK_FUNCS([strcasecmp strncasecmp stricmp _stricmp strcmpi])
 

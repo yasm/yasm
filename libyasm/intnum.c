@@ -244,11 +244,58 @@ yasm_intnum_create_charconst_nasm(const char *str)
         case 0:
             break;
         default:
-            /* >32 bit conversion */
+            /* >=32 bit conversion */
             while (len) {
                 BitVector_Move_Left(conv_bv, 8);
                 BitVector_Chunk_Store(conv_bv, 8, 0,
-                                      (unsigned long)str[--len]);
+                                      ((unsigned long)str[--len]) & 0xff);
+            }
+            intn->val.bv = BitVector_Clone(conv_bv);
+    }
+
+    return intn;
+}
+
+yasm_intnum *
+yasm_intnum_create_charconst_tasm(const char *str)
+{
+    yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
+    size_t len = strlen(str);
+
+    if(len*8 > BITVECT_NATIVE_SIZE)
+        yasm_error_set(YASM_ERROR_OVERFLOW,
+                       N_("Character constant too large for internal format"));
+
+    /* be conservative in choosing bitvect in case MSB is set */
+    if (len > 3) {
+        BitVector_Empty(conv_bv);
+        intn->type = INTNUM_BV;
+    } else {
+        intn->val.l = 0;
+        intn->type = INTNUM_L;
+    }
+
+    /* tasm uses big endian notation */
+    int i = 0;
+    switch (len) {
+        case 3:
+            intn->val.l |= ((unsigned long)str[i++]) & 0xff;
+            intn->val.l <<= 8;
+            /*@fallthrough@*/
+        case 2:
+            intn->val.l |= ((unsigned long)str[i++]) & 0xff;
+            intn->val.l <<= 8;
+            /*@fallthrough@*/
+        case 1:
+            intn->val.l |= ((unsigned long)str[i++]) & 0xff;
+        case 0:
+            break;
+        default:
+            /* >=32 bit conversion */
+            while (i < len) {
+                BitVector_Chunk_Store(conv_bv, 8, (len-i-1)*8,
+                                      ((unsigned long)str[i]) & 0xff);
+                i++;
             }
             intn->val.bv = BitVector_Clone(conv_bv);
     }

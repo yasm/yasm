@@ -9,7 +9,7 @@ libyasm_a_SOURCES += modules/preprocs/nasm/nasmlib.c
 libyasm_a_SOURCES += modules/preprocs/nasm/nasm-eval.h
 libyasm_a_SOURCES += modules/preprocs/nasm/nasm-eval.c
 
-YASM_MODULES += preproc_nasm
+YASM_MODULES += preproc_nasm preproc_tasm
 
 $(top_srcdir)/modules/preprocs/nasm/nasm-preproc.c: nasm-version.c
 

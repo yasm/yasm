@@ -66,6 +66,7 @@ static const yasm_bytecode_callback bc_align_callback = {
     bc_align_destroy,
     bc_align_print,
     bc_align_finalize,
+    NULL,
     bc_align_calc_len,
     bc_align_expand,
     bc_align_tobytes,
