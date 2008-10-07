@@ -31,6 +31,9 @@
 /* Define to 1 if you have the <direct.h> header file. */
 #define HAVE_DIRECT_H 1
 
+/* Define to 1 if you have the `ftruncate' function. */
+/* #undef HAVE_FTRUNCATE */
+
 /* Define to 1 if you have the `getcwd' function. */
 #define HAVE_GETCWD 1
 

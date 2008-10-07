@@ -16,7 +16,7 @@ CFLAGS=-DHAVE_CONFIG_H -IMkfiles -I.
 CC?=gcc
 BUILDCC?=$(CC)
 
-all: yasm
+all: yasm tasm
 
 LIBYASM_OBJS= \
  libyasm/assocdat.o \
@@ -100,7 +100,7 @@ MODULES_OBJFMTS_OBJS= \
  modules/objfmts/rdf/rdf-objfmt.o \
  modules/objfmts/xdf/xdf-objfmt.o
 YASM_MODULES+=objfmt_dbg
-YASM_MODULES+=objfmt_bin
+YASM_MODULES+=objfmt_bin objfmt_dosexe
 YASM_MODULES+=objfmt_coff objfmt_win32 objfmt_win64 objfmt_x64
 YASM_MODULES+=objfmt_elf objfmt_elf32 objfmt_elf64
 YASM_MODULES+=objfmt_macho objfmt_macho32 objfmt_macho64
@@ -114,7 +114,7 @@ MODULES_PARSERS_OBJS= \
  modules/parsers/gas/gas-parser.o \
  modules/parsers/gas/gas-parse.o \
  gas-token.o
-YASM_MODULES+=parser_nasm
+YASM_MODULES+=parser_nasm parser_tasm
 YASM_MODULES+=parser_gas parser_gnu
 
 MODULES_PREPROCS_NASM_OBJS= \
@@ -122,7 +122,7 @@ MODULES_PREPROCS_NASM_OBJS= \
  modules/preprocs/nasm/nasm-pp.o \
  modules/preprocs/nasm/nasm-preproc.o \
  modules/preprocs/nasm/nasmlib.o
-YASM_MODULES+=preproc_nasm
+YASM_MODULES+=preproc_nasm preproc_tasm
 
 MODULES_PREPROCS_RAW_OBJS = \
  modules/preprocs/raw/raw-preproc.o
@@ -149,6 +149,12 @@ MODULES_OBJS = \
 YASM_OBJS= \
  frontends/yasm/yasm.o \
  frontends/yasm/yasm-options.o \
+ $(LIBYASM_OBJS) \
+ $(MODULES_OBJS)
+
+TASM_OBJS= \
+ frontends/tasm/tasm.o \
+ frontends/tasm/tasm-options.o \
  $(LIBYASM_OBJS) \
  $(MODULES_OBJS)
 
@@ -245,6 +251,9 @@ genperf: $(GENPERF_SRCS)
 
 yasm: $(YASM_OBJS)
 	$(CC) -o yasm $(YASM_OBJS)
+
+tasm: $(TASM_OBJS)
+	$(CC) -o tasm $(TASM_OBJS)
 
 .c.o:
 	$(CC) -c $(CFLAGS) -o $@ $<
