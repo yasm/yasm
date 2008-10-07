@@ -59,20 +59,9 @@ parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts,
         if (argv[0][0] == '/' && argv[0][1]) {        /* opt */
             got_it = 0;
             for (i = 0; i < nopts; i++) {
-                char lower[3];
-                unsigned len;
-
-                lower[0] = tolower(argv[0][1]);
-                if (!argv[0][2]) {
-                    lower[1] = '\0';
-                } else {
-                    lower[1] = tolower(argv[0][2]);
-                    lower[2] = '\0';
-                }
-
-                len = strlen(options[i].opt);
-                if (!strncmp(lower, options[i].opt, len)) {
-                    char *cmd = &argv[0][1];
+                char *cmd = &argv[0][1];
+                size_t len = strlen(options[i].opt);
+                if (yasm__strncasecmp(cmd, options[i].opt, len) == 0) {
                     char *param;
 
                     param = &argv[0][1+len];
