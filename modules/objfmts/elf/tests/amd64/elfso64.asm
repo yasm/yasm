@@ -21,18 +21,18 @@
 ; [16] Reference a data-section symbol in the data section
 ; [17] Reference a BSS-section symbol in the data section
 
-	  BITS 64
-	  GLOBAL lrotate:function ; [1]
-	  GLOBAL greet:function	; [1]
-	  GLOBAL asmstr:data asmstr.end-asmstr ; [2]
-	  GLOBAL textptr:data 4	; [2]
-	  GLOBAL selfptr:data 4	; [2]
-	  GLOBAL integer:data 4	; [3]
-	  EXTERN printf		; [10]
-	  COMMON commvar 4:4	; [7]
-	  EXTERN _GLOBAL_OFFSET_TABLE_
+	  [BITS 64]
+	  [GLOBAL lrotate:function] ; [1]
+	  [GLOBAL greet:function]	; [1]
+	  [GLOBAL asmstr:data asmstr.end-asmstr] ; [2]
+	  [GLOBAL textptr:data 4]	; [2]
+	  [GLOBAL selfptr:data 4]	; [2]
+	  [GLOBAL integer:data 4]	; [3]
+	  [EXTERN printf]		; [10]
+	  [COMMON commvar 4:4]	; [7]
+	  [EXTERN _GLOBAL_OFFSET_TABLE_]
 
-	  SECTION .text
+	  [SECTION .text]
 
 ; prototype: long lrotate(long x, int num);
 lrotate:			; [1]
@@ -66,7 +66,7 @@ greet	  push rbx		; we'll use RBX for GOT, so save it
 	  pop rbx
 	  ret
 
-	  SECTION .data
+	  [SECTION .data]
 
 ; a string
 asmstr	  db 'hello, world', 0	; [2]
@@ -81,7 +81,7 @@ localptr  dd localint		; [5] [17]
 textptr	  dd greet wrt ..sym	; [15]
 selfptr	  dd selfptr wrt ..sym	; [16]
 
-	  SECTION .bss
+	  [SECTION .bss]
 
 ; an integer
 integer	  resd 1		; [3]
