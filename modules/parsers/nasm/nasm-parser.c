@@ -31,15 +31,14 @@
 
 #include "nasm-parser.h"
 
-#include "modules/preprocs/nasm/nasm.h"
-
 
 static void
-nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp,
-                     int save_input, yasm_linemap *linemap,
-                     yasm_errwarns *errwarns)
+nasm_do_parse(yasm_object *object, yasm_preproc *pp, int save_input,
+              yasm_linemap *linemap, yasm_errwarns *errwarns, int tasm)
 {
     yasm_parser_nasm parser_nasm;
+
+    parser_nasm.tasm = tasm;
 
     parser_nasm.object = object;
     parser_nasm.linemap = linemap;
@@ -79,6 +78,14 @@ nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp,
     yasm_symtab_parser_finalize(object->symtab, 0, errwarns);
 }
 
+static void
+nasm_parser_do_parse(yasm_object *object, yasm_preproc *pp,
+                     int save_input, yasm_linemap *linemap,
+                     yasm_errwarns *errwarns)
+{
+    nasm_do_parse(object, pp, save_input, linemap, errwarns, 0);
+}
+
 #include "nasm-macros.c"
 
 /* Define valid preprocessors to use with this parser */
@@ -108,10 +115,9 @@ tasm_parser_do_parse(yasm_object *object, yasm_preproc *pp,
                      int save_input, yasm_linemap *linemap,
                      yasm_errwarns *errwarns)
 {
-    tasm_compatible_mode = 1;
     yasm_symtab_set_case_sensitive(object->symtab, 0);
     yasm_warn_disable(YASM_WARN_IMPLICIT_SIZE_OVERRIDE);
-    nasm_parser_do_parse(object, pp, save_input, linemap, errwarns);
+    nasm_do_parse(object, pp, save_input, linemap, errwarns, 1);
 }
 
 /* Define valid preprocessors to use with this parser */

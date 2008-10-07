@@ -77,14 +77,14 @@ handle_dot_label(YYSTYPE *lvalp, char *tok, size_t toklen, size_t zeropos,
 {
     /* check for special non-local labels like ..start */
     if (tok[zeropos+1] == '.') {
-        lvalp->str_val = yasm__xstrndup(tok+zeropos+(tasm_compatible_mode?2:0),
-            toklen-zeropos-(tasm_compatible_mode?2:0));
+        lvalp->str_val = yasm__xstrndup(tok+zeropos+(parser_nasm->tasm?2:0),
+            toklen-zeropos-(parser_nasm->tasm?2:0));
         /* check for special non-local ..@label */
         if (lvalp->str_val[zeropos+2] == '@')
             return NONLOCAL_ID;
         return SPECIAL_ID;
     }
-    if (tasm_compatible_mode && (!tasm_locals || 
+    if (parser_nasm->tasm && (!tasm_locals || 
                 (tok[zeropos] == '.' &&
                  tok[zeropos+1] != '@' && tok[zeropos+2] != '@'))) {
         /* no locals on Tasm without the 'locals' directive */
@@ -376,7 +376,7 @@ scan:
         /* forced identifier */
         "$" [a-zA-Z0-9_$#@~.?]+ {
             if (TOK[1] == '.' ||
-                    (tasm_compatible_mode && TOK[1] == '@' && TOK[2] == '@')) {
+                    (parser_nasm->tasm && TOK[1] == '@' && TOK[2] == '@')) {
                 /* handle like .label */
                 RETURN(handle_dot_label(lvalp, TOK, TOKLEN, 1, parser_nasm));
             }
@@ -419,7 +419,7 @@ scan:
                 default:
                     break;
             }
-            if (tasm_compatible_mode) {
+            if (parser_nasm->tasm) {
                 if (!strcasecmp(TOK, "shl")) {
                     s->tok[TOKLEN] = savech;
                     RETURN(LEFT_OP);
@@ -737,7 +737,7 @@ stringconst_scan:
                                            strbuf_size + STRBUF_ALLOC_SIZE);
                     strbuf_size += STRBUF_ALLOC_SIZE;
                 }
-            } else if (!tasm_compatible_mode) {
+            } else if (!parser_nasm->tasm) {
                 YYCURSOR--;
                 goto stringconst_end;
             }
