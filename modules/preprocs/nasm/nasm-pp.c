@@ -878,7 +878,7 @@ check_tasm_directive(char *line)
                 break;
             /* segment register name */
             for (assume = TAssumes; assume->segreg; assume++)
-                if (strlen(assume->segreg) == q-p &&
+                if (strlen(assume->segreg) == (size_t)(q-p) &&
                     !strncasecmp(assume->segreg, p, q-p))
                     break;
             if (!assume->segreg) {
@@ -936,7 +936,7 @@ check_tasm_directive(char *line)
             if (!strcasecmp(q, struc->name)) {
                 char *r = q + len2 + 1, *s, *t, tasm_param[6];
                 struct TStrucField *field = struc->fields;
-                int size, n, m;
+                int size, n;
                 if (!oldchar2) {
                     error(ERR_FATAL, "Expected struc field initializer after %s %s", p, q);
                     return line;
@@ -1008,7 +1008,7 @@ check_tasm_directive(char *line)
     return line;
 }
 
-Token * tasm_join_tokens(Token *tline)
+static Token * tasm_join_tokens(Token *tline)
 {
     Token *t, *prev, *next;
     for (prev = NULL, t = tline; t; prev = t, t = next) {

@@ -166,7 +166,7 @@ bc_data_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
     bytecode_data *bc_data = (bytecode_data *)bc->contents;
     yasm_dataval *dv;
     yasm_intnum *intn;
-    int len;
+    unsigned long len = 0;
     unsigned long multiple;
 
     /* Count up element sizes, rounding up string length. */

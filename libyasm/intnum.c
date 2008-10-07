@@ -261,6 +261,7 @@ yasm_intnum_create_charconst_tasm(const char *str)
 {
     yasm_intnum *intn = yasm_xmalloc(sizeof(yasm_intnum));
     size_t len = strlen(str);
+    size_t i;
 
     if(len*8 > BITVECT_NATIVE_SIZE)
         yasm_error_set(YASM_ERROR_OVERFLOW,
@@ -276,7 +277,7 @@ yasm_intnum_create_charconst_tasm(const char *str)
     }
 
     /* tasm uses big endian notation */
-    int i = 0;
+    i = 0;
     switch (len) {
         case 3:
             intn->val.l |= ((unsigned long)str[i++]) & 0xff;
