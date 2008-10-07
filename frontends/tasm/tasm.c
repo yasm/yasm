@@ -718,7 +718,7 @@ opt_ignore(/*@unused@*/ char *cmd, /*@unused@*/ char *param, int extra)
 static int
 opt_listing_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param, int extra)
 {
-    if (param[0]) {
+    if (param && param[0]) {
         if (param[0] != 'a')
             return 1;
         expanded_listing = 1;
