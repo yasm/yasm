@@ -39,7 +39,6 @@ EXTRA_DIST += modules/parsers/tasm/tests/size.hex
 EXTRA_DIST += modules/parsers/tasm/tests/struc.asm
 EXTRA_DIST += modules/parsers/tasm/tests/struc.errwarn
 EXTRA_DIST += modules/parsers/tasm/tests/struc.hex
-EXTRA_DIST += modules/parsers/tasm/tests/
 
 EXTRA_DIST += modules/parsers/tasm/tests/exe/Makefile.inc
 
