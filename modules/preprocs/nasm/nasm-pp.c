@@ -667,7 +667,7 @@ check_tasm_directive(char *line)
         }
     } else if (!nasm_stricmp(p, "end")) {
         nasm_free(line);
-        return strdup("");
+        return nasm_strdup("");
     } else if (!nasm_stricmp(p, "rept")) {
         /* handle repeat directive */
         end = nasm_malloc(sizeof(*end));
@@ -680,7 +680,7 @@ check_tasm_directive(char *line)
     } else if (!nasm_stricmp(p, "locals")) {
         tasm_locals = 1;
         nasm_free(line);
-        return strdup("");
+        return nasm_strdup("");
     }
 
     if (!oldchar)
@@ -806,7 +806,7 @@ check_tasm_directive(char *line)
         line = nasm_malloc(5 + 1 + len + 1);
         sprintf(line, "struc %s", p);
         struc = malloc(sizeof(*struc));
-        struc->name = strdup(p);
+        struc->name = nasm_strdup(p);
         struc->fields = NULL;
         struc->lastField = NULL;
         struc->next = TStrucs;
@@ -821,12 +821,12 @@ check_tasm_directive(char *line)
     } else if (!nasm_stricmp(q, "segment")) {
         /* handle SEGMENT */
         oldline = line;
-        line = strdup(oldchar2?q+len2+1:"");
+        line = nasm_strdup(oldchar2?q+len2+1:"");
         if (tasm_segment) {
             error(ERR_FATAL, "SEGMENT: already in a segment context");
             return line;
         }
-        tasm_segment = strdup(p);
+        tasm_segment = nasm_strdup(p);
         nasm_free(oldline);
         end = nasm_malloc(sizeof(*end));
         end->type = TM_SEGMENT;
@@ -846,19 +846,19 @@ check_tasm_directive(char *line)
         switch (end->type) {
         case TM_STRUC:
             inTstruc = 0;
-            return strdup("endstruc");
+            return nasm_strdup("endstruc");
         case TM_SEGMENT:
             /* XXX: yes, we leak memory here, but that permits labels
              * to avoid strduping... */
             tasm_segment = NULL;
-            return strdup("");
+            return nasm_strdup("");
         default:
             error(ERR_FATAL, "ENDS: bogus ends context type %d",end->type);
             return NULL;
         }
     } else if (!nasm_stricmp(p, "endp") || !nasm_stricmp(q, "endp")) {
         nasm_free(line);
-        return strdup("");
+        return nasm_strdup("");
     } else if (!nasm_stricmp(p, "assume")) {
         struct TSegmentAssume *assume;
         /* handle ASSUME */
@@ -879,7 +879,7 @@ check_tasm_directive(char *line)
             /* segment register name */
             for (assume = TAssumes; assume->segreg; assume++)
                 if (strlen(assume->segreg) == (size_t)(q-p) &&
-                    !strncasecmp(assume->segreg, p, q-p))
+                    !yasm__strncasecmp(assume->segreg, p, q-p))
                     break;
             if (!assume->segreg) {
                 i = assume - TAssumes + 1;
@@ -906,14 +906,14 @@ check_tasm_directive(char *line)
         TAssumes[i].segreg = NULL;
         TAssumes = nasm_realloc(TAssumes, (i+1)*sizeof(*TAssumes));
         nasm_free(line);
-        return strdup("");
+        return nasm_strdup("");
     } else if (inTstruc) {
         struct TStrucField *field;
         /* TODO: handle unnamed data */
         field = nasm_malloc(sizeof(*field));
-        field->name = strdup(p);
+        field->name = nasm_strdup(p);
         /* TODO: type struc ! */
-        field->type = strdup(q);
+        field->type = nasm_strdup(q);
         field->next = NULL;
         if (!TStrucs->fields)
                 TStrucs->fields = field;
@@ -933,7 +933,7 @@ check_tasm_directive(char *line)
     {
         struct TStruc *struc;
         for (struc = TStrucs; struc; struc = struc->next) {
-            if (!strcasecmp(q, struc->name)) {
+            if (!yasm__strcasecmp(q, struc->name)) {
                 char *r = q + len2 + 1, *s, *t, tasm_param[6];
                 struct TStrucField *field = struc->fields;
                 int size, n;
@@ -970,27 +970,25 @@ check_tasm_directive(char *line)
                         return oldline;
                     }
                     *s = 0;
-                    while (1) {
-                            m = snprintf(line + n, size - n, "%s.%s: at .%s, %s %s\n", p, field->name, field->name, field->type, r + 1);
-                        if (m + 1 <= size - n)
-                                break;
-                        size *= 2;
-                        line = nasm_realloc(line, size);
-                    }
-                    n += m;
+                    m = strlen(p) + 1 + strlen(field->name)*2 + 8 +
+                        strlen(field->type) + 1 + strlen(r+1) + 2;
+                    size += m;
+                    line = nasm_realloc(line, size);
+                    sprintf(line + n, "%s.%s: at .%s, %s %s\n",
+                            p, field->name, field->name, field->type, r + 1);
+                    n += m-1;
                     r = s;
                     field = field->next;
                 }
                 /* complete with last initializer and '?' */
                 while(field) {
-                    while (1) {
-                            m = snprintf(line + n, size - n, "%s.%s: at .%s, %s %s\n", p, field->name, field->name, field->type, r ? r + 1: "?");
-                        if (m + 1 <= size - n)
-                                break;
-                        size *= 2;
-                        line = nasm_realloc(line, size);
-                    }
-                    n += m;
+                    m = strlen(p) + 1 + strlen(field->name)*2 + 8 +
+                        strlen(field->type) + 1 + (r ? strlen(r+1) : 1) + 2;
+                    size += m;
+                    line = nasm_realloc(line, size);
+                    sprintf(line + n, "%s.%s: at .%s, %s %s\n", p, field->name,
+                            field->name, field->type, r ? r + 1: "?");
+                    n += m-1;
                     r = NULL;
                     field = field->next;
                 }

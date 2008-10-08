@@ -420,50 +420,50 @@ scan:
                     break;
             }
             if (parser_nasm->tasm) {
-                if (!strcasecmp(TOK, "shl")) {
+                if (!yasm__strcasecmp(TOK, "shl")) {
                     s->tok[TOKLEN] = savech;
                     RETURN(LEFT_OP);
                 }
-                if (!strcasecmp(TOK, "shr")) {
+                if (!yasm__strcasecmp(TOK, "shr")) {
                     s->tok[TOKLEN] = savech;
                     RETURN(RIGHT_OP);
                 }
-                if (!strcasecmp(TOK, "and")) {
+                if (!yasm__strcasecmp(TOK, "and")) {
                     s->tok[TOKLEN] = savech;
                     RETURN('&');
                 }
-                if (!strcasecmp(TOK, "or")) {
+                if (!yasm__strcasecmp(TOK, "or")) {
                     s->tok[TOKLEN] = savech;
                     RETURN('|');
                 }
-                if (!strcasecmp(TOK, "low")) {
+                if (!yasm__strcasecmp(TOK, "low")) {
                     s->tok[TOKLEN] = savech;
                     RETURN(LOW);
                 }
-                if (!strcasecmp(TOK, "high")) {
+                if (!yasm__strcasecmp(TOK, "high")) {
                     s->tok[TOKLEN] = savech;
                     RETURN(HIGH);
                 }
-                if (!strcasecmp(TOK, "offset")) {
+                if (!yasm__strcasecmp(TOK, "offset")) {
                     s->tok[TOKLEN] = savech;
                     RETURN(OFFSET);
                 }
-                if (!strcasecmp(TOK, "fword")) {
+                if (!yasm__strcasecmp(TOK, "fword")) {
                     s->tok[TOKLEN] = savech;
                     lvalp->int_info = yasm_arch_wordsize(p_object->arch)*2;
                     RETURN(SIZE_OVERRIDE);
                 }
-                if (!strcasecmp(TOK, "df")) {
+                if (!yasm__strcasecmp(TOK, "df")) {
                     s->tok[TOKLEN] = savech;
                     lvalp->int_info = yasm_arch_wordsize(p_object->arch)*3;
                     parser_nasm->state = INSTRUCTION;
                     RETURN(DECLARE_DATA);
                 }
-                if (!strcasecmp(TOK, "label")) {
+                if (!yasm__strcasecmp(TOK, "label")) {
                     s->tok[TOKLEN] = savech;
                     RETURN(LABEL);
                 }
-                if (!strcasecmp(TOK, "dup")) {
+                if (!yasm__strcasecmp(TOK, "dup")) {
                     s->tok[TOKLEN] = savech;
                     RETURN(DUP);
                 }
