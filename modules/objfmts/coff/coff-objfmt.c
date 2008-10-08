@@ -950,7 +950,7 @@ coff_objfmt_count_sym(yasm_symrec *sym, /*@null@*/ void *d)
         sym_data = coff_objfmt_sym_set_data(sym, COFF_SCL_EXT, 0,
                              COFF_SYMTAB_AUX_NONE);
 
-    if (info->all_syms || vis != YASM_SYM_LOCAL) {
+    if (info->all_syms || vis != YASM_SYM_LOCAL || yasm_symrec_is_abs(sym)) {
         /* Save index in symrec data */
         if (!sym_data) {
             sym_data = coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, 0,
@@ -968,16 +968,17 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
 {
     /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
     yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
+    int is_abs = yasm_symrec_is_abs(sym);
 
     assert(info != NULL);
 
     /* Don't output local syms unless outputting all syms */
-    if (info->all_syms || vis != YASM_SYM_LOCAL) {
-        /*@only*/ char *name = yasm_symrec_get_global_name(sym, info->object);
+    if (info->all_syms || vis != YASM_SYM_LOCAL || is_abs) {
+        /*@only*/ char *name;
         const yasm_expr *equ_val;
         const yasm_intnum *intn;
         unsigned char *localbuf;
-        size_t len = strlen(name);
+        size_t len;
         int aux;
         /*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
         unsigned long value = 0;
@@ -987,6 +988,12 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
         unsigned long scnlen = 0;   /* for sect auxent */
         unsigned long nreloc = 0;   /* for sect auxent */
         yasm_objfmt_coff *objfmt_coff = info->objfmt_coff;
+
+        if (is_abs)
+            name = yasm__xstrdup(".absolut");
+        else
+            name = yasm_symrec_get_global_name(sym, info->object);
+        len = strlen(name);
 
         /* Get symrec's of_data (needed for storage class) */
         csymd = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
