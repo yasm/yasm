@@ -139,6 +139,8 @@ nasm_parser_lex(YYSTYPE *lvalp, yasm_parser_nasm *parser_nasm)
 
 scan:
     SCANINIT();
+    if (*cursor == '\0')
+        goto endofinput;
 
     /*!re2c
         /* standard decimal integer */
@@ -387,10 +389,7 @@ scan:
 
         ws+                     { goto scan; }
 
-        [\000]                  {
-            parser_nasm->state = INITIAL;
-            RETURN(s->tok[0]);
-        }
+        [\000]                  { goto endofinput; }
 
         any {
             yasm_warn_set(YASM_WARN_UNREC_CHAR,
@@ -403,6 +402,8 @@ scan:
     /* %line linenum+lineinc filename */
 linechg:
     SCANINIT();
+    if (*cursor == '\0')
+        goto endofinput;
 
     /*!re2c
         digit+ {
@@ -414,10 +415,7 @@ linechg:
             RETURN(INTNUM);
         }
 
-        [\000] {
-            parser_nasm->state = INITIAL;
-            RETURN(s->tok[0]);
-        }
+        [\000] { goto endofinput; }
 
         "+" {
             RETURN(s->tok[0]);
@@ -441,14 +439,13 @@ linechg:
 
 linechg2:
     SCANINIT();
+    if (*cursor == '\0')
+        goto endofinput;
 
     /*!re2c
-        [\000] {
-            parser_nasm->state = INITIAL;
-            RETURN(s->tok[0]);
-        }
+        [\000] { goto endofinput; }
 
-        "\r" { }
+        "\r" { goto linechg2; }
 
         (any \ [\000])+ {
             parser_nasm->state = LINECHG;
@@ -460,12 +457,11 @@ linechg2:
     /* directive: [name value] */
 directive:
     SCANINIT();
+    if (*cursor == '\0')
+        goto endofinput;
 
     /*!re2c
-        [\]\000] {
-            parser_nasm->state = INITIAL;
-            RETURN(s->tok[0]);
-        }
+        [\]\000] { goto endofinput; }
 
         [a-zA-Z_][a-zA-Z_0-9]* {
             lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
@@ -488,6 +484,8 @@ directive:
     /* section directive (the section name portion thereof) */
 section_directive:
     SCANINIT();
+    if (*cursor == '\0')
+        goto endofinput;
 
     /*!re2c
         [a-zA-Z0-9_$#@~.?-]+ {
@@ -508,15 +506,7 @@ section_directive:
             goto section_directive;
         }
 
-        "]" {
-            parser_nasm->state = INITIAL;
-            RETURN(s->tok[0]);
-        }
-
-        [\000]          {
-            parser_nasm->state = INITIAL;
-            RETURN(s->tok[0]);
-        }
+        [\]\000]        { goto endofinput; }
 
         any {
             yasm_warn_set(YASM_WARN_UNREC_CHAR,
@@ -529,6 +519,8 @@ section_directive:
     /* inner part of directive */
 directive2:
     SCANINIT();
+    if (*cursor == '\0')
+        goto endofinput;
 
     /*!re2c
         /* standard decimal integer */
@@ -589,10 +581,7 @@ directive2:
         [-+|^*&/%~$():=,\[]     { RETURN(s->tok[0]); }
 
         /* handle ] for directives */
-        "]" {
-            parser_nasm->state = INITIAL;
-            RETURN(s->tok[0]);
-        }
+        "]"                     { goto endofinput; }
 
         /* forced identifier; within directive, don't strip '$', this is
          * handled later.
@@ -625,10 +614,7 @@ directive2:
 
         ws+                     { goto directive2; }
 
-        [\000]                  {
-            parser_nasm->state = INITIAL;
-            RETURN(s->tok[0]);
-        }
+        [\000]                  { goto endofinput; }
 
         any {
             yasm_warn_set(YASM_WARN_UNREC_CHAR,
@@ -646,23 +632,15 @@ stringconst:
 
 stringconst_scan:
     SCANINIT();
+    if (*cursor == '\0')
+        goto stringconst_error;
 
     /*!re2c
-        [\000]  {
-            yasm_error_set(YASM_ERROR_SYNTAX, N_("unterminated string"));
-            strbuf[count] = '\0';
-            lvalp->str.contents = (char *)strbuf;
-            lvalp->str.len = count;
-            RETURN(STRING);
-        }
+        [\000]  { goto stringconst_error; }
 
         any     {
-            if (s->tok[0] == endch) {
-                strbuf[count] = '\0';
-                lvalp->str.contents = (char *)strbuf;
-                lvalp->str.len = count;
-                RETURN(STRING);
-            }
+            if (s->tok[0] == endch)
+                goto stringconst_end;
 
             strbuf[count++] = s->tok[0];
             if (count >= strbuf_size) {
@@ -673,4 +651,17 @@ stringconst_scan:
             goto stringconst_scan;
         }
     */
+
+stringconst_error:
+    yasm_error_set(YASM_ERROR_SYNTAX, N_("unterminated string"));
+
+stringconst_end:
+    strbuf[count] = '\0';
+    lvalp->str.contents = (char *)strbuf;
+    lvalp->str.len = count;
+    RETURN(STRING);
+
+endofinput:
+    parser_nasm->state = INITIAL;
+    RETURN(s->tok[0]);
 }

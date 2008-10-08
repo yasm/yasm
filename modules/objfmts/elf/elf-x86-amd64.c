@@ -156,6 +156,10 @@ elf_x86_amd64_map_reloc_info_to_type(elf_reloc_entry *reloc,
                     if (esym)
                         esym->type = STT_TLS;
                 }
+                /* Map PC-relative GOT to appropriate relocation */
+                if (reloc->rtype_rel &&
+                    elf_x86_amd64_ssyms[i].reloc == R_X86_64_GOT32)
+                    return (unsigned char) R_X86_64_GOTPCREL;
                 return (unsigned char) elf_x86_amd64_ssyms[i].reloc;
             }
         }

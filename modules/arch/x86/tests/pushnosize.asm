@@ -2,7 +2,7 @@
 push 0		; 6A 00 - equivalent to push byte 0
 push byte 0	; 6A 00
 push word 0	; 6A 00 - optimized
-push dword 0	; 66 68 00000000
+push dword 0	; 66 6A 00 - optimized
 push strict byte 0	; 6A 00
 push strict word 0	; 68 0000
 push strict dword 0	; 66 68 00000000
@@ -17,7 +17,7 @@ push strict dword 128	; 66 68 80000000
 [bits 32]
 push 0		; 6A 00 - equivalent to push byte 0
 push byte 0	; 6A 00
-push word 0	; 66 68 0000
+push word 0	; 66 6A 00 - optimized
 push dword 0	; 6A 00 - optimized
 push strict byte 0	; 6A 00
 push strict word 0	; 66 68 0000
@@ -32,12 +32,12 @@ push strict dword 128	; 6A 80000000
 
 [bits 64]
 push 0		; same as bits 32 output
-push byte 0
-push word 0
-push dword 0	; optimized to byte
-push strict byte 0
-push strict word 0
-push strict dword 0
+push byte 0	; 6A 00; 64 bits pushed onto stack
+push word 0	; 66 6A 00 - 66h prefix, optimized to byte
+push dword 0	; 6A 00 - optimized to byte; note 64 bits pushed onto stack
+push strict byte 0	; 6A 00; 64 bits pushed onto stack
+push strict word 0	; 66 68 0000
+push strict dword 0	; 68 00000000; note 64 bits pushed onto stack
 push 128
 push byte 128	; warning
 push word 128

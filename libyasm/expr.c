@@ -741,7 +741,7 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
      * ordering as was present originally.
      * Combine integer terms as necessary.
      */
-    for (i=e->numterms-1, o=level_numterms-1; i>=0; i--) {
+    for (i=fold_numterms-1, o=level_numterms-1; i>=0; i--) {
         if (e->terms[i].type == YASM_EXPR_EXPR &&
             e->terms[i].data.expn->op == e->op) {
             /* bring up subexpression */
