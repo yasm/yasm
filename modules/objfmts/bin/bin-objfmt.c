@@ -681,13 +681,13 @@ map_symrec_output(yasm_symrec *sym, void *d)
             yasm_section_get_data(info->section, &bin_section_data_cb);
 
         /* Real address */
-        yasm_intnum_set_uint(info->intn, precbc->offset);
+        yasm_intnum_set_uint(info->intn, yasm_bc_next_offset(precbc));
         yasm_intnum_calc(info->intn, YASM_EXPR_ADD, bsd->istart);
         map_print_intnum(info->intn, info);
         fprintf(info->f, "  ");
 
         /* Virtual address */
-        yasm_intnum_set_uint(info->intn, precbc->offset);
+        yasm_intnum_set_uint(info->intn, yasm_bc_next_offset(precbc));
         yasm_intnum_calc(info->intn, YASM_EXPR_ADD, bsd->ivstart);
         map_print_intnum(info->intn, info);
 

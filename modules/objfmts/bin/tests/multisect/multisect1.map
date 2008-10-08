@@ -73,6 +73,6 @@ Real      Virtual   Name
 ---- Section .bss -------------------------------------------------------------
 
 Real      Virtual   Name
-00000020  00000020  stack_ends
+00000420  00000420  stack_ends
 
 

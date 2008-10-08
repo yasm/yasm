@@ -5,8 +5,8 @@ libyasm_a_SOURCES += modules/arch/x86/x86arch.h
 libyasm_a_SOURCES += modules/arch/x86/x86bc.c
 libyasm_a_SOURCES += modules/arch/x86/x86expr.c
 libyasm_a_SOURCES += modules/arch/x86/x86id.c
-libyasm_a_SOURCES += x86cpu.c
-libyasm_a_SOURCES += x86regtmod.c
+nodist_libyasm_a_SOURCES += x86cpu.c
+nodist_libyasm_a_SOURCES += x86regtmod.c
 
 YASM_MODULES += arch_x86
 
@@ -49,8 +49,6 @@ x86regtmod.c: $(srcdir)/modules/arch/x86/x86regtmod.gperf genperf$(EXEEXT)
 
 BUILT_SOURCES += x86insn_nasm.c
 BUILT_SOURCES += x86insn_gas.c
-BUILT_SOURCES += x86cpu.c
-BUILT_SOURCES += x86regtmod.c
 CLEANFILES += x86insn_nasm.c
 CLEANFILES += x86insn_gas.c
 CLEANFILES += x86cpu.c

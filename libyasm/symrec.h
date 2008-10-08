@@ -233,6 +233,7 @@ void yasm_symtab_print(yasm_symtab *symtab, FILE *f, int indent_level);
 
 /** Get the externally-visible (global) name of a symbol.
  * \param sym       symbol
+ * \param object    object
  * \return Externally-visible symbol name (allocated, caller must free).
  */
 /*@only@*/ char *yasm_symrec_get_global_name(const yasm_symrec *sym,
