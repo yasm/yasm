@@ -88,12 +88,7 @@
        Will currently produce an error though the necessary means are provided
        by the Mach-O specification.
 
-  3) position independend coding (64 Bit)
-     Mach-O provides the relocation features X86_64_RELOC_GOT_LOAD and
-     X86_64_RELOC_GOT for C-compatible global offset tables. This IS NOT
-     implemented yet, sorry.
-
-  4) symbol naming for global and external symbols
+  3) symbol naming for global and external symbols
      BSD, Windows and MacOS-X use underscores for global symbols,
      where ELF/Linux does not. This file contains simple means of adding
      underscores to symbols by defining "AUTO_UNDERSCORE" but that
@@ -302,6 +297,8 @@ typedef struct yasm_objfmt_macho {
 
     long parse_scnum;           /* sect numbering in parser */
     int bits;                   /* 32 / 64 */
+
+    yasm_symrec *gotpcrel_sym;  /* ..gotpcrel */
 } yasm_objfmt_macho;
 
 
@@ -368,13 +365,17 @@ macho_objfmt_create_common(yasm_object *object, yasm_objfmt_module *module,
 
     /* Support x86 and amd64 machines of x86 arch */
     if (yasm__strcasecmp(yasm_arch_get_machine(object->arch), "x86") == 0 &&
-        (bits_pref == 0 || bits_pref == 32))
+        (bits_pref == 0 || bits_pref == 32)) {
         objfmt_macho->bits = 32;
-    else if (yasm__strcasecmp(yasm_arch_get_machine(object->arch),
+        objfmt_macho->gotpcrel_sym = NULL;
+    } else if (yasm__strcasecmp(yasm_arch_get_machine(object->arch),
                               "amd64") == 0 &&
-             (bits_pref == 0 || bits_pref == 64))
+             (bits_pref == 0 || bits_pref == 64)) {
         objfmt_macho->bits = 64;
-    else {
+        /* FIXME: misuse of NULL bytecode */
+        objfmt_macho->gotpcrel_sym =
+            yasm_symtab_define_label(object->symtab, "..gotpcrel", NULL, 0, 0);
+    } else {
         yasm_xfree(objfmt_macho);
         return NULL;
     }
@@ -496,9 +497,13 @@ macho_objfmt_output_value(yasm_value *value, unsigned char *buf,
             return 1;
         }
 
-        if (value->wrt) {
+        if (value->curpos_rel && objfmt_macho->gotpcrel_sym &&
+            value->wrt == objfmt_macho->gotpcrel_sym) {
+            reloc->type = X86_64_RELOC_GOT;
+            value->wrt = NULL;
+        } else if (value->wrt) {
             yasm_error_set(YASM_ERROR_TOO_COMPLEX,
-                           N_("macho: WRT not supported"));
+                           N_("macho: invalid WRT"));
             yasm_xfree(reloc);
             return 1;
         }
@@ -513,7 +518,11 @@ macho_objfmt_output_value(yasm_value *value, unsigned char *buf,
             } else {
                 /* Add in the offset plus value size to end up with 0. */
                 intn_plus = offset+destsize;
-                if (value->jump_target)
+                if (reloc->type == X86_64_RELOC_GOT) {
+                    /* XXX: This is a hack */
+                    if (offset >= 2 && buf[-2] == 0x8B)
+                        reloc->type = X86_64_RELOC_GOT_LOAD;
+                } else if (value->jump_target)
                     reloc->type = X86_64_RELOC_BRANCH;
                 else
                     reloc->type = X86_64_RELOC_SIGNED;
@@ -1489,6 +1498,10 @@ static /*@observer@*/ /*@null@*/ yasm_symrec *
 macho_objfmt_get_special_sym(yasm_object *object, const char *name,
                              const char *parser)
 {
+    yasm_objfmt_macho *objfmt_macho = (yasm_objfmt_macho *)object->objfmt;
+    if (yasm__strcasecmp(name, "gotpcrel") == 0) {
+        return objfmt_macho->gotpcrel_sym;
+    }
     return NULL;
 }
 
