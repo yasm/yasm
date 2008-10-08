@@ -91,12 +91,12 @@ that use absolute addresses.
 6. Building with Visual Studio 2005
 -----------------------------------
 
-The program vc928.c will convert VC9 build projects into those 
-needed for Visual Studio 2005 (VC8).  It will also convert files 
-that have been converted in this way back into their original 
-form.  It does this conversion by looking for *.vcproj files 
-in the current working directory and its sub-directories and 
-changing the following line in each of them:
+The Python program vc98_swap.py will convert VC9 build projects 
+into those  needed for Visual Studio 2005 (VC8).  It will also 
+convert files that have been converted in this way back into their
+original form.  It does this conversion by looking for *.vcproj 
+and *.sln files in the current working directory and its sub-directories and changing the following line in each *.vcproj 
+file:
 
     Version="9.00"
 
@@ -105,18 +105,28 @@ to:
     Version="8.00"
 
 or vice versa.
- 
-It is used by compiling it, placing it in a root build directory 
-and running it from there.  
 
-Because it acts recursively on all sub-directories of this directory 
-it is important not to run it at a directory level in which not all 
-projects are to be converted.
+The lines
+
+  Microsoft Visual Studio Solution File, Format Version 10.00
+  # Visual Studio 2008
+ 
+in *.sln files are changed to:
+
+  Microsoft Visual Studio Solution File, Format Version 9.00
+  # Visual Studio 2005
+
+or vice versa.
+
+Because it acts recursively on all sub-directories of this 
+directory it is important not to run it at a directory level 
+in which not all projects are to be converted.
 
 7. Acknowledgements
 -------------------
 
 I am most grateful for the fantastic support that Peter Johnson,
-YASM's creator, has given me in tracking down this issue.
+YASM's creator, has given me in tracking down issues in using
+YASM for the production of Windows x64 code.
 
-  Brian Gladman, 28th March 2008
+  Brian Gladman, 10th October 2008
