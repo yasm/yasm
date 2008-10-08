@@ -29,7 +29,6 @@
 /*@unused@*/ RCSID("$Id: tasm.c 1523 2006-05-06 16:11:56Z peter $");
 
 #include <ctype.h>
-#include <unistd.h>
 #include <libyasm/compat-queue.h>
 #include <libyasm/bitvect.h>
 #include <libyasm.h>
