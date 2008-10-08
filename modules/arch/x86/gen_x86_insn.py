@@ -4493,6 +4493,14 @@ add_group("movnt",
     opcode=[0x0F, 0x00],
     operands=[Operand(type="Mem", size=128, relaxed=True, dest="EA"),
               Operand(type="SIMDReg", size=128, dest="Spare")])
+add_group("movnt",
+    cpu=["AVX"],
+    modifiers=["PreAdd", "Op1Add"],
+    vex=256,
+    prefix=0x00,
+    opcode=[0x0F, 0x00],
+    operands=[Operand(type="Mem", size=256, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=256, dest="Spare")])
 
 add_insn("movntps", "movnt", modifiers=[0, 0x2B])
 add_insn("vmovntps", "movnt", modifiers=[0, 0x2B, VEXL0], avx=True)
@@ -6473,21 +6481,47 @@ add_insn("vfnmsubss", "fma_128_m32", modifiers=[0x7E])
 
 add_group("aes",
     cpu=["AES"],
+    modifiers=["Op1Add", "Op2Add", "SetVEX"],
+    prefix=0x66,
+    opcode=[0x0F, 0x00, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("aes",
+    cpu=["AES", "AVX"],
     modifiers=["Op1Add", "Op2Add"],
+    vex=128,
     prefix=0x66,
     opcode=[0x0F, 0x00, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+
 
 add_insn("aesenc", "aes", modifiers=[0x38, 0xDC])
 add_insn("aesenclast", "aes", modifiers=[0x38, 0xDD])
 add_insn("aesdec", "aes", modifiers=[0x38, 0xDE])
 add_insn("aesdeclast", "aes", modifiers=[0x38, 0xDF])
-add_insn("aesimc", "aes", modifiers=[0x38, 0xDB])
+
+add_insn("vaesenc", "aes", modifiers=[0x38, 0xDC, VEXL0], avx=True)
+add_insn("vaesenclast", "aes", modifiers=[0x38, 0xDD, VEXL0], avx=True)
+add_insn("vaesdec", "aes", modifiers=[0x38, 0xDE, VEXL0], avx=True)
+add_insn("vaesdeclast", "aes", modifiers=[0x38, 0xDF, VEXL0], avx=True)
+
+add_group("aesimc",
+    cpu=["AES"],
+    modifiers=["Op1Add", "Op2Add", "SetVEX"],
+    prefix=0x66,
+    opcode=[0x0F, 0x00, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+
+add_insn("aesimc", "aesimc", modifiers=[0x38, 0xDB])
+add_insn("vaesimc", "aesimc", modifiers=[0x38, 0xDB, VEXL0], avx=True)
+
 
 add_group("aes_imm",
     cpu=["AES"],
-    modifiers=["Op1Add", "Op2Add"],
+    modifiers=["Op1Add", "Op2Add", "SetVEX"],
     prefix=0x66,
     opcode=[0x0F, 0x00, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
@@ -6495,6 +6529,8 @@ add_group("aes_imm",
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
 add_insn("aeskeygenassist", "aes_imm", modifiers=[0x3A, 0xDF])
+add_insn("vaeskeygenassist", "aes_imm", modifiers=[0x3A, 0xDF, VEXL0],
+         avx=True)
 
 #####################################################################
 # Intel PCLMULQDQ instruction

@@ -121,35 +121,12 @@ size_t yasm__splitpath_win(const char *path, /*@out@*/ const char **tail);
  */
 /*@only@*/ char *yasm__getcwd(void);
 
-/** Convert a UNIX relative or absolute pathname into an absolute pathname.
- * \internal
- * \param path  pathname
- * \return Absolute version of path (newly allocated).
- */
-/*@only@*/ char *yasm__abspath_unix(const char *path);
-
-/** Convert a Windows relative or absolute pathname into an absolute pathname.
- * \internal
- * \param path  pathname
- * \return Absolute version of path (newly allocated).
- */
-/*@only@*/ char *yasm__abspath_win(const char *path);
-
 /** Convert a relative or absolute pathname into an absolute pathname.
- * Unless otherwise defined, defaults to yasm__abspath_unix().
  * \internal
  * \param path  pathname
  * \return Absolute version of path (newly allocated).
  */
-#ifndef yasm__abspath
-# if defined (_WIN32) || defined (WIN32) || defined (__MSDOS__) || \
- defined (__DJGPP__) || defined (__OS2__) || defined (__CYGWIN__) || \
- defined (__CYGWIN32__)
-#  define yasm__abspath(path)   yasm__abspath_win(path)
-# else
-#  define yasm__abspath(path)   yasm__abspath_unix(path)
-# endif
-#endif
+/*@only@*/ char *yasm__abspath(const char *path);
 
 /** Build a UNIX pathname that is equivalent to accessing the "to" pathname
  * when you're in the directory containing "from".  Result is relative if both
