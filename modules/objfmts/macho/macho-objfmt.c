@@ -88,20 +88,10 @@
        Will currently produce an error though the necessary means are provided
        by the Mach-O specification.
 
-  3) symbol naming for global and external symbols
-     BSD, Windows and MacOS-X use underscores for global symbols,
-     where ELF/Linux does not. This file contains simple means of adding
-     underscores to symbols by defining "AUTO_UNDERSCORE" but that
-     can be considered not more than a hack. For cross-platform coding,
-     use two symbols for your routines and referenced data.
-
 */
 
 #include <util.h>
 /*@unused@*/ RCSID("$Id$");
-
-/* optional: automatically prefix underscores to global exported symbols */
-/*#define AUTO_UNDERSCORE*/
 
 #include <libyasm.h>
 
@@ -288,7 +278,6 @@ typedef struct macho_symrec_data {
     unsigned long index;        /* index in output order */
     yasm_intnum *value;         /* valid after writing symtable to file */
     unsigned long length;       /* length + 1 (plus auto underscore) */
-    int add_uscore;             /* add underscore (0/1) */
 } macho_symrec_data;
 
 
@@ -808,7 +797,7 @@ static int
 macho_objfmt_count_sym(yasm_symrec *sym, /*@null@*/ void *d)
 {
     /*@null@*/ macho_objfmt_output_info *info = (macho_objfmt_output_info *)d;
-    const char *name;
+    /*@only@*/ char *name;
     yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
 
     assert(info != NULL);
@@ -825,19 +814,13 @@ macho_objfmt_count_sym(yasm_symrec *sym, /*@null@*/ void *d)
             sym_data->index = info->symindex;
             info->symindex++;
 
-            name = yasm_symrec_get_name(sym);   /*printf("%s\n",name); */
-            sym_data->add_uscore = 0;
-#ifdef AUTO_UNDERSCORE
-            if (vis & (YASM_SYM_EXTERN | YASM_SYM_COMMON | YASM_SYM_GLOBAL)) {
-                if (name[0] != '_')
-                    sym_data->add_uscore = 1;
-            }
-#endif
+            name = yasm_symrec_get_global_name(sym, info->object);
+            /*printf("%s\n",name); */
             /* name length + delimiter */
-            sym_data->length =
-                (unsigned long)strlen(name) + sym_data->add_uscore + 1;
+            sym_data->length = (unsigned long)strlen(name) + 1;
             info->strlength += sym_data->length;
             info->indx++;
+            yasm_xfree(name);
         }
     }
     return 0;
@@ -977,13 +960,13 @@ macho_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
     if (info->all_syms ||
         vis & (YASM_SYM_GLOBAL | YASM_SYM_COMMON | YASM_SYM_EXTERN)) {
         if (0 == macho_objfmt_is_section_label(sym)) {
-            const char *name = yasm_symrec_get_name(sym);
+            /*@only@*/ char *name =
+                yasm_symrec_get_global_name(sym, info->object);
             size_t len = strlen(name);
 
             xsymd = yasm_symrec_get_data(sym, &macho_symrec_data_cb);
-            if (xsymd->add_uscore)
-                fputc('_', info->f);
             fwrite(name, len + 1, 1, info->f);
+            yasm_xfree(name);
         }
     }
     return 0;

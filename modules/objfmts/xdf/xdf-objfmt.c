@@ -452,7 +452,7 @@ xdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
     assert(info != NULL);
 
     if (info->all_syms || vis != YASM_SYM_LOCAL) {
-        const char *name = yasm_symrec_get_name(sym);
+        /*@only@*/ char *name = yasm_symrec_get_global_name(sym, info->object);
         const yasm_expr *equ_val;
         const yasm_intnum *intn;
         size_t len = strlen(name);
@@ -514,6 +514,7 @@ xdf_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
         info->strtab_offset += (unsigned long)(len+1);
         YASM_WRITE_32_L(localbuf, flags);       /* flags */
         fwrite(info->buf, 16, 1, info->f);
+        yasm_xfree(name);
     }
     return 0;
 }
@@ -527,9 +528,10 @@ xdf_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
     assert(info != NULL);
 
     if (info->all_syms || vis != YASM_SYM_LOCAL) {
-        const char *name = yasm_symrec_get_name(sym);
+        /*@only@*/ char *name = yasm_symrec_get_global_name(sym, info->object);
         size_t len = strlen(name);
         fwrite(name, len+1, 1, info->f);
+        yasm_xfree(name);
     }
     return 0;
 }

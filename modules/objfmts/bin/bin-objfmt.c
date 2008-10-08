@@ -663,6 +663,7 @@ map_symrec_output(yasm_symrec *sym, void *d)
     map_output_info *info = (map_output_info *)d;
     const yasm_expr *equ;
     /*@dependent@*/ yasm_bytecode *precbc;
+    /*@only@*/ char *name = yasm_symrec_get_global_name(sym, info->object);
 
     assert(info != NULL);
 
@@ -673,7 +674,7 @@ map_symrec_output(yasm_symrec *sym, void *d)
         yasm_intnum_set(info->intn, yasm_expr_get_intnum(&realequ, 0));
         yasm_expr_destroy(realequ);
         map_print_intnum(info->intn, info);
-        fprintf(info->f, "  %s\n", yasm_symrec_get_name(sym));
+        fprintf(info->f, "  %s\n", name);
     } else if (yasm_symrec_get_label(sym, &precbc) &&
                yasm_bc_get_section(precbc) == info->section) {
         bin_section_data *bsd =
@@ -691,8 +692,9 @@ map_symrec_output(yasm_symrec *sym, void *d)
         map_print_intnum(info->intn, info);
 
         /* Name */
-        fprintf(info->f, "  %s\n", yasm_symrec_get_name(sym));
+        fprintf(info->f, "  %s\n", name);
     }
+    yasm_xfree(name);
     return 0;
 }
 

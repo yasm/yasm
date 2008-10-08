@@ -67,6 +67,12 @@ struct yasm_object {
      * second level is directive name.
      */
     /*@owned@*/ struct HAMT *directives;
+
+    /** Prefix prepended to externally-visible symbols (empty string if none) */
+    /*@owned@*/ char *global_prefix;
+
+    /** Suffix appended to externally-visible symbols (empty string if none) */
+    /*@owned@*/ char *global_suffix;
 };
 
 /** Create a new object.  A default section is created as the first section.
@@ -162,6 +168,18 @@ int yasm_object_sections_traverse
  * \param src_filename  new source filename (e.g. "file.asm")
  */
 void yasm_object_set_source_fn(yasm_object *object, const char *src_filename);
+
+/** Change the prefix used for externally-visible symbols.
+ * \param object        object
+ * \param prefix        new prefix
+ */
+void yasm_object_set_global_prefix(yasm_object *object, const char *prefix);
+
+/** Change the suffix used for externally-visible symbols.
+ * \param object        object
+ * \param suffix        new suffix
+ */
+void yasm_object_set_global_suffix(yasm_object *object, const char *suffix);
 
 /** Optimize an object.  Takes the unoptimized object and optimizes it.
  * If successful, the object is ready for output to an object file.

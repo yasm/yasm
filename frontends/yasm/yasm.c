@@ -44,6 +44,7 @@
 #define PREPROC_BUF_SIZE    16384
 
 /*@null@*/ /*@only@*/ static char *obj_filename = NULL, *in_filename = NULL;
+/*@null@*/ /*@only@*/ static char *global_prefix = NULL, *global_suffix = NULL;
 /*@null@*/ /*@only@*/ static char *list_filename = NULL, *map_filename = NULL;
 /*@null@*/ /*@only@*/ static char *machine_name = NULL;
 static int special_options = 0;
@@ -102,6 +103,8 @@ static int opt_include_option(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_preproc_option(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_ewmsg_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_makedep_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_prefix_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_suffix_handler(char *cmd, /*@null@*/ char *param, int extra);
 
 static /*@only@*/ char *replace_extension(const char *orig, /*@null@*/
                                           const char *ext, const char *def);
@@ -188,6 +191,12 @@ static opt_option options[] =
       N_("undefine a macro"), N_("macro") },
     { 'X', NULL, 1, opt_ewmsg_handler, 0,
       N_("select error/warning message style (`gnu' or `vc')"), N_("style") },
+    { 0, "prefix", 1, opt_prefix_handler, 0,
+      N_("prepend argument to name of all external symbols"), N_("prefix") },
+    { 0, "suffix", 1, opt_suffix_handler, 0,
+      N_("append argument to name of all external symbols"), N_("suffix") },
+    { 0, "postfix", 1, opt_suffix_handler, 0,
+      N_("append argument to name of all external symbols"), N_("suffix") },
 };
 
 /* version message */
@@ -424,6 +433,11 @@ do_assemble(void)
         cleanup(object);
         return EXIT_FAILURE;
     }
+
+    if (global_prefix)
+        yasm_object_set_global_prefix(object, global_prefix);
+    if (global_suffix)
+        yasm_object_set_global_suffix(object, global_suffix);
 
     cur_preproc = yasm_preproc_create(cur_preproc_module, in_filename,
                                       object->symtab, linemap, errwarns);
@@ -1107,6 +1121,30 @@ opt_makedep_handler(/*@unused@*/ char *cmd, /*@unused@*/ char *param,
     /* Also set preproc_only to 1, we don't want to generate code */
     preproc_only = 1;
     generate_make_dependencies = 1;
+
+    return 0;
+}
+
+static int
+opt_prefix_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
+{
+    if (global_prefix)
+        yasm_xfree(global_prefix);
+
+    assert(param != NULL);
+    global_prefix = yasm__xstrdup(param);
+
+    return 0;
+}
+
+static int
+opt_suffix_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
+{
+    if (global_suffix)
+        yasm_xfree(global_suffix);
+
+    assert(param != NULL);
+    global_suffix = yasm__xstrdup(param);
 
     return 0;
 }
