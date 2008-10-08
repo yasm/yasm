@@ -51,7 +51,6 @@
 				AssemblerListingLocation="$(IntDir)\"
 				ProgramDataBaseFileName="$(IntDir)\"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="true"
 				DebugInformationFormat="4"
 				CompileAs="0"
 			/>
@@ -131,7 +130,6 @@
 				AssemblerListingLocation="$(IntDir)\"
 				ProgramDataBaseFileName="$(IntDir)\"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="true"
 				DebugInformationFormat="3"
 				CompileAs="0"
 			/>
