@@ -119,7 +119,7 @@
 #define PACKAGE_BUILD "BRANCH"
 
 /* Define to internal version of this package. */
-#define PACKAGE_INTVER "0.7.2"
+#define PACKAGE_INTVER "0.7.3"
 
 /* Define to the full name of this package. */
 #define PACKAGE_NAME "yasm"
