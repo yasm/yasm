@@ -70,6 +70,7 @@
 #define CPU_FMA     36      /* Intel Fused-Multiply-Add Extensions */
 #define CPU_AES     37      /* AES instruction */
 #define CPU_CLMUL   38      /* PCLMULQDQ instruction */
+#define CPU_MOVBE   39      /* MOVBE instruction */
 
 typedef struct yasm_arch_x86 {
     yasm_arch_base arch;        /* base structure */

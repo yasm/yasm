@@ -350,6 +350,8 @@ clmul,		x86_cpu_set,	CPU_CLMUL
 noclmul,	x86_cpu_clear,	CPU_CLMUL
 pclmulqdq,	x86_cpu_set,	CPU_CLMUL
 nopclmulqdq,	x86_cpu_clear,	CPU_CLMUL
+movbe,		x86_cpu_set,	CPU_MOVBE
+nomovbe,	x86_cpu_clear,	CPU_MOVBE
 %%
 
 void

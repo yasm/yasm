@@ -7040,6 +7040,24 @@ add_insn("xrstor", "twobytemem", modifiers=[5, 0x0F, 0xAE],
          cpu=["XSAVE", "386"])
 
 #####################################################################
+# Intel MOVBE instruction
+#####################################################################
+for sz in (16, 32, 64):
+    add_group("movbe",
+        cpu=["MOVBE"],
+        opersize=sz,
+        opcode=[0x0F, 0x38, 0xF0],
+        operands=[Operand(type="Reg", size=sz, dest="Spare"),
+                  Operand(type="Mem", size=sz, relaxed=True, dest="EA")])
+    add_group("movbe",
+        cpu=["MOVBE"],
+        opersize=sz,
+        opcode=[0x0F, 0x38, 0xF1],
+        operands=[Operand(type="Mem", size=sz, relaxed=True, dest="EA"),
+                  Operand(type="Reg", size=sz, dest="Spare")])
+add_insn("movbe", "movbe")
+
+#####################################################################
 # AMD 3DNow! instructions
 #####################################################################
 
