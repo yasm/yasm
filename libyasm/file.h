@@ -117,8 +117,7 @@ size_t yasm__splitpath_win(const char *path, /*@out@*/ const char **tail);
  */
 #ifndef yasm__splitpath
 # if defined (_WIN32) || defined (WIN32) || defined (__MSDOS__) || \
- defined (__DJGPP__) || defined (__OS2__) || defined (__CYGWIN__) || \
- defined (__CYGWIN32__)
+ defined (__DJGPP__) || defined (__OS2__)
 #  define yasm__splitpath(path, tail)   yasm__splitpath_win(path, tail)
 # else
 #  define yasm__splitpath(path, tail)   yasm__splitpath_unix(path, tail)
@@ -173,8 +172,7 @@ char *yasm__combpath_win(const char *from, const char *to);
  */
 #ifndef yasm__combpath
 # if defined (_WIN32) || defined (WIN32) || defined (__MSDOS__) || \
- defined (__DJGPP__) || defined (__OS2__) || defined (__CYGWIN__) || \
- defined (__CYGWIN32__)
+ defined (__DJGPP__) || defined (__OS2__)
 #  define yasm__combpath(from, to)      yasm__combpath_win(from, to)
 # else
 #  define yasm__combpath(from, to)      yasm__combpath_unix(from, to)
