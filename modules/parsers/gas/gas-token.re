@@ -350,7 +350,21 @@ scan:
         }
 
         /* floating point value */
-        "0" [DdEeFfTt] [-+]? (digit+)? ("." digit*)? ('e' [-+]? digit+)? {
+        [-+]? digit* "." digit+ ('e' [-+]? digit+)? {
+            savech = s->tok[TOKLEN];
+            s->tok[TOKLEN] = '\0';
+            lvalp->flt = yasm_floatnum_create(TOK);
+            s->tok[TOKLEN] = savech;
+            RETURN(FLTNUM);
+        }
+        [-+]? digit+ "." digit* ('e' [-+]? digit+)? {
+            savech = s->tok[TOKLEN];
+            s->tok[TOKLEN] = '\0';
+            lvalp->flt = yasm_floatnum_create(TOK);
+            s->tok[TOKLEN] = savech;
+            RETURN(FLTNUM);
+        }
+        "0" [DdEeFfTt] [-+]? digit* ("." digit*)? ('e' [-+]? digit+)? {
             savech = s->tok[TOKLEN];
             s->tok[TOKLEN] = '\0';
             lvalp->flt = yasm_floatnum_create(TOK+2);
