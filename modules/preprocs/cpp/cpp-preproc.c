@@ -103,7 +103,7 @@ cpp_build_cmdline(yasm_preproc_cpp *pp, const char *extra)
     cmdline = p = yasm_xmalloc(strlen(CPP_PROG)+CMDLINE_SIZE);
     limit = p + CMDLINE_SIZE;
     strcpy(p, CPP_PROG);
-    p += 3;
+    p += strlen(CPP_PROG);
 
     arg = TAILQ_FIRST(&pp->cpp_args);
 
