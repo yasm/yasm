@@ -26,8 +26,12 @@
 #
 # NOTE: operands are arranged in NASM / Intel order (e.g. dest, src)
 rcstag = "$Id$"
-scriptname = rcstag.split()[1]
-scriptrev = rcstag.split()[2]
+try:
+    scriptname = rcstag.split()[1]
+    scriptrev = rcstag.split()[2]
+except IndexError:
+    scriptname = "gen_x86_insn.py"
+    scriptrev = "HEAD"
 
 ordered_cpus = [
     "086", "186", "286", "386", "486", "586", "686", "K6", "Athlon", "P3",
