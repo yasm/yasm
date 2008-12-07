@@ -978,6 +978,7 @@ macho_objfmt_calc_sectsize(yasm_section *sect, /*@null@ */ void *d)
     /*@null@ */ macho_objfmt_output_info *info =
         (macho_objfmt_output_info *) d;
     /*@dependent@ *//*@null@ */ macho_section_data *msd;
+    unsigned long align;
 
     assert(info != NULL);
     msd = yasm_section_get_data(sect, &macho_section_data_cb);
@@ -993,6 +994,16 @@ macho_objfmt_calc_sectsize(yasm_section *sect, /*@null@ */ void *d)
     /* accumulate size in memory */
     msd->vmoff = info->vmsize;
     info->vmsize += msd->size;
+
+    /* align both start and end of section */
+    align = yasm_section_get_align(sect);
+    if (align != 0) {
+        unsigned long delta = msd->vmoff % align;
+        if (delta > 0) {
+            msd->vmoff += align - delta;
+            info->vmsize += delta;
+        }
+    }
 
     return 0;
 }
