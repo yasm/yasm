@@ -339,6 +339,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
                      */
                     if (e->terms[i].data.expn->terms[0].type ==
                         YASM_EXPR_REG) {
+                        long delta;
                         if (e->terms[i].data.expn->terms[1].type !=
                             YASM_EXPR_INT)
                             yasm_internal_error(
@@ -347,13 +348,19 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
                                       &regnum, data);
                         if (!reg)
                             return 1;
-                        (*reg) += yasm_intnum_get_int(
+                        delta = yasm_intnum_get_int(
                             e->terms[i].data.expn->terms[1].data.intn);
+                        (*reg) += delta;
                         /* Let last, largest multipler win indexreg */
-                        if (indexreg && *reg > 0 && indexval <= *reg) {
+                        if (indexreg && delta > 0 && indexval <= *reg) {
                             *indexreg = regnum;
                             indexval = *reg;
                             indexmult = 1;
+                        } else if (indexreg && *indexreg == regnum &&
+                                   delta < 0 && *reg <= 1) {
+                            *indexreg = -1;
+                            indexval = 0;
+                            indexmult = 0;
                         }
                     }
                 }
@@ -363,6 +370,7 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
             /* Here, too, check for non-int multipliers against a reg. */
             yasm_expr__order_terms(e);
             if (e->terms[0].type == YASM_EXPR_REG) {
+                long delta;
                 if (e->numterms > 2)
                     return 1;
                 if (e->terms[1].type != YASM_EXPR_INT)
@@ -370,9 +378,19 @@ x86_expr_checkea_getregusage(yasm_expr **ep, /*@null@*/ int *indexreg,
                 reg = get_reg(&e->terms[0], &regnum, data);
                 if (!reg)
                     return 1;
-                (*reg) += yasm_intnum_get_int(e->terms[1].data.intn);
+                delta = yasm_intnum_get_int(e->terms[1].data.intn);
+                (*reg) += delta;
                 if (indexreg)
-                    *indexreg = regnum;
+                {
+                    if (delta < 0 && *reg <= 1)
+                    {
+                        *indexreg = -1;
+                        indexval = 0;
+                        indexmult = 0;
+                    }
+                    else
+                        *indexreg = regnum;
+                }
             }
             break;
         case YASM_EXPR_SEGOFF:

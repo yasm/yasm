@@ -15,3 +15,4 @@ label
 dd 5
 label2
 ;mov ax,[eax+ebx*(label2-label)]	; not supported
+mov ax,[eax*2+ebx*2-ebx]
