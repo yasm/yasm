@@ -1467,7 +1467,6 @@ parse_expr2(yasm_parser_gas *parser_gas)
                 if (!expect(ID)) {
                     yasm_error_set(YASM_ERROR_SYNTAX,
                                    N_("expected identifier after `@'"));
-                    yasm_xfree(name);
                     return NULL;
                 }
                 wrt = yasm_objfmt_get_special_sym(p_object, ID_val, "gas");
