@@ -62,6 +62,9 @@ struct yasm_objfmt_module {
      */
     const unsigned char default_x86_mode_bits;
 
+    /** If @ signs should be legal in identifiers. */
+    const unsigned char id_at_ok;
+
     /** NULL-terminated list of debug format (yasm_dbgfmt) keywords that are
      * valid to use with this object format.  The null debug format
      * (null_dbgfmt, "null") should always be in this list so it's possible to

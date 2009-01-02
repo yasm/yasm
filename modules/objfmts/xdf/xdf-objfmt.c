@@ -838,6 +838,7 @@ yasm_objfmt_module yasm_xdf_LTX_objfmt = {
     "xdf",
     "xdf",
     32,
+    0,
     xdf_objfmt_dbgfmt_keywords,
     "null",
     NULL,       /* no directives */

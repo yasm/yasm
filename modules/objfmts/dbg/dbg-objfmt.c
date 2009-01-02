@@ -162,6 +162,7 @@ yasm_objfmt_module yasm_dbg_LTX_objfmt = {
     "dbg",
     "dbg",
     32,
+    0,
     dbg_objfmt_dbgfmt_keywords,
     "null",
     NULL,       /* no directives */

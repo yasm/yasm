@@ -400,6 +400,16 @@ scan:
             RETURN(ID);
         }
 
+        /* identifier with @ */
+        [a-zA-Z_.]([a-zA-Z0-9_$.]*[@][a-zA-Z0-9_$.]*)+ {
+            /* if @ not part of ID, move the scanner cursor to the first @ */
+            if (!((yasm_objfmt_base *)p_object->objfmt)->module->id_at_ok)
+                cursor = (unsigned char *)strchr(TOK, '@');
+            lvalp->str.contents = yasm__xstrndup(TOK, TOKLEN);
+            lvalp->str.len = TOKLEN;
+            RETURN(ID);
+        }
+
         /* register or segment register */
         [%][a-zA-Z0-9]+ {
             savech = s->tok[TOKLEN];

@@ -1555,6 +1555,7 @@ yasm_objfmt_module yasm_macho_LTX_objfmt = {
     "macho",
     "o",
     32,
+    0,
     macho_objfmt_dbgfmt_keywords,
     "null",
     NULL,   /* no directives */
@@ -1572,6 +1573,7 @@ yasm_objfmt_module yasm_macho32_LTX_objfmt = {
     "macho32",
     "o",
     32,
+    0,
     macho_objfmt_dbgfmt_keywords,
     "null",
     NULL,   /* no directives */
@@ -1589,6 +1591,7 @@ yasm_objfmt_module yasm_macho64_LTX_objfmt = {
     "macho64",
     "o",
     64,
+    0,
     macho_objfmt_dbgfmt_keywords,
     "null",
     NULL,   /* no directives */

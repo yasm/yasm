@@ -1079,6 +1079,7 @@ yasm_objfmt_module yasm_rdf_LTX_objfmt = {
     "rdf",
     "rdf",
     32,
+    0,
     rdf_objfmt_dbgfmt_keywords,
     "null",
     rdf_objfmt_directives,
