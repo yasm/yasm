@@ -32,6 +32,7 @@ RCSID("$Id$");
 
 #include <libyasm.h>
 
+#include <ctype.h>
 #include <limits.h>
 #include <math.h>
 
@@ -108,13 +109,8 @@ destroy_curtok_(yasm_parser_gas *parser_gas)
             break;
         case ID:
         case LABEL:
-            yasm_xfree(curval.str_val);
-            break;
         case STRING:
             yasm_xfree(curval.str.contents);
-            break;
-        case INSN:
-            yasm_bc_destroy(curval.bc);
             break;
         default:
             break;
@@ -156,8 +152,6 @@ expect_(yasm_parser_gas *parser_gas, int token)
         case INTNUM:            str = "integer"; break;
         case FLTNUM:            str = "floating point value"; break;
         case STRING:            str = "string"; break;
-        case INSN:              str = "instruction"; break;
-        case PREFIX:            str = "instruction prefix"; break;
         case REG:               str = "register"; break;
         case REGGROUP:          str = "register group"; break;
         case SEGREG:            str = "segment register"; break;
@@ -205,7 +199,6 @@ parse_line(yasm_parser_gas *parser_gas)
                 return dir->handler(parser_gas, dir->param);
             }
 
-            parser_gas->state = INSTDIR;
             get_next_token(); /* ID */
             if (curtok == ':') {
                 /* Label */
@@ -939,15 +932,38 @@ static yasm_bytecode *
 parse_instr(yasm_parser_gas *parser_gas)
 {
     yasm_bytecode *bc;
+    char *id;
+    size_t id_len;
+    uintptr_t prefix;
 
-    switch (curtok) {
-        case INSN:
+    if (curtok != ID)
+        return NULL;
+
+    id = ID_val;
+    id_len = ID_len;
+
+    /* instructions/prefixes must start with a letter */
+    if (!isalpha(id[0]))
+        return NULL;
+
+    /* check to be sure it's not a label */
+    get_peek_token(parser_gas);
+    if (parser_gas->peek_token == ':')
+        return NULL;
+
+    switch (yasm_arch_parse_check_insnprefix
+            (p_object->arch, ID_val, ID_len, cur_line, &bc, &prefix)) {
+        case YASM_ARCH_INSN:
         {
             yasm_insn *insn;
-            bc = INSN_val;
+
+            /* Propagate errors in case we got a warning from the arch */
+            yasm_errwarn_propagate(parser_gas->errwarns, cur_line);
+
             insn = yasm_bc_get_insn(bc);
 
-            get_next_token();
+            yasm_xfree(id);
+            get_next_token();   /* ID */
             if (is_eol())
                 return bc;      /* no operands */
 
@@ -972,16 +988,21 @@ parse_instr(yasm_parser_gas *parser_gas)
             }
             return bc;
         }
-        case PREFIX:
+        case YASM_ARCH_PREFIX:
         {
-            uintptr_t prefix = PREFIX_val;
-            get_next_token(); /* PREFIX */
+            /* Propagate errors in case we got a warning from the arch */
+            yasm_errwarn_propagate(parser_gas->errwarns, cur_line);
+
+            yasm_xfree(id);
+            get_next_token();   /* ID */
             bc = parse_instr(parser_gas);
             if (!bc)
                 bc = yasm_arch_create_empty_insn(p_object->arch, cur_line);
             yasm_insn_add_prefix(yasm_bc_get_insn(bc), prefix);
             return bc;
         }
+#if 0
+        /* TODO */
         case SEGREG:
         {
             uintptr_t segreg = SEGREG_val;
@@ -991,6 +1012,7 @@ parse_instr(yasm_parser_gas *parser_gas)
                 bc = yasm_arch_create_empty_insn(p_object->arch, cur_line);
             yasm_insn_add_seg_prefix(yasm_bc_get_insn(bc), segreg);
         }
+#endif
         default:
             return NULL;
     }
@@ -1652,59 +1674,59 @@ gas_parser_dir_fill(yasm_parser_gas *parser_gas, /*@only@*/ yasm_expr *repeat,
 
 static dir_lookup dirs_static[] = {
     /* FIXME: Whether this is power-of-two or not depends on arch and objfmt. */
-    {".align",      dir_align,  0,  INSTDIR},
-    {".p2align",    dir_align,  1,  INSTDIR},
-    {".balign",     dir_align,  0,  INSTDIR},
-    {".org",        dir_org,    0,  INSTDIR},
+    {".align",      dir_align,  0,  INITIAL},
+    {".p2align",    dir_align,  1,  INITIAL},
+    {".balign",     dir_align,  0,  INITIAL},
+    {".org",        dir_org,    0,  INITIAL},
     /* data visibility directives */
-    {".local",      dir_local,  0,  INSTDIR},
-    {".comm",       dir_comm,   0,  INSTDIR},
-    {".lcomm",      dir_comm,   1,  INSTDIR},
+    {".local",      dir_local,  0,  INITIAL},
+    {".comm",       dir_comm,   0,  INITIAL},
+    {".lcomm",      dir_comm,   1,  INITIAL},
     /* integer data declaration directives */
-    {".byte",       dir_data,   1,  INSTDIR},
-    {".2byte",      dir_data,   2,  INSTDIR},
-    {".4byte",      dir_data,   4,  INSTDIR},
-    {".8byte",      dir_data,   8,  INSTDIR},
-    {".16byte",     dir_data,   16, INSTDIR},
+    {".byte",       dir_data,   1,  INITIAL},
+    {".2byte",      dir_data,   2,  INITIAL},
+    {".4byte",      dir_data,   4,  INITIAL},
+    {".8byte",      dir_data,   8,  INITIAL},
+    {".16byte",     dir_data,   16, INITIAL},
     /* TODO: These should depend on arch */
-    {".short",      dir_data,   2,  INSTDIR},
-    {".int",        dir_data,   4,  INSTDIR},
-    {".long",       dir_data,   4,  INSTDIR},
-    {".hword",      dir_data,   2,  INSTDIR},
-    {".quad",       dir_data,   8,  INSTDIR},
-    {".octa",       dir_data,   16, INSTDIR},
+    {".short",      dir_data,   2,  INITIAL},
+    {".int",        dir_data,   4,  INITIAL},
+    {".long",       dir_data,   4,  INITIAL},
+    {".hword",      dir_data,   2,  INITIAL},
+    {".quad",       dir_data,   8,  INITIAL},
+    {".octa",       dir_data,   16, INITIAL},
     /* XXX: At least on x86, this is 2 bytes */
-    {".value",      dir_data,   2,  INSTDIR},
+    {".value",      dir_data,   2,  INITIAL},
     /* ASCII data declaration directives */
-    {".ascii",      dir_ascii,  0,  INSTDIR},   /* no terminating zero */
-    {".asciz",      dir_ascii,  1,  INSTDIR},   /* add terminating zero */
-    {".string",     dir_ascii,  1,  INSTDIR},   /* add terminating zero */
+    {".ascii",      dir_ascii,  0,  INITIAL},   /* no terminating zero */
+    {".asciz",      dir_ascii,  1,  INITIAL},   /* add terminating zero */
+    {".string",     dir_ascii,  1,  INITIAL},   /* add terminating zero */
     /* LEB128 integer data declaration directives */
-    {".sleb128",    dir_leb128, 1,  INSTDIR},   /* signed */
-    {".uleb128",    dir_leb128, 0,  INSTDIR},   /* unsigned */
+    {".sleb128",    dir_leb128, 1,  INITIAL},   /* signed */
+    {".uleb128",    dir_leb128, 0,  INITIAL},   /* unsigned */
     /* floating point data declaration directives */
-    {".float",      dir_data,   4,  INSTDIR},
-    {".single",     dir_data,   4,  INSTDIR},
-    {".double",     dir_data,   8,  INSTDIR},
-    {".tfloat",     dir_data,   10, INSTDIR},
+    {".float",      dir_data,   4,  INITIAL},
+    {".single",     dir_data,   4,  INITIAL},
+    {".double",     dir_data,   8,  INITIAL},
+    {".tfloat",     dir_data,   10, INITIAL},
     /* section directives */
     {".bss",        dir_bss_section,    0,  INITIAL},
     {".data",       dir_data_section,   0,  INITIAL},
     {".text",       dir_text_section,   0,  INITIAL},
     {".section",    dir_section,        0, SECTION_DIRECTIVE},
     /* macro directives */
-    {".rept",       dir_rept,   0,  INSTDIR},
-    {".endr",       dir_endr,   0,  INSTDIR},
+    {".rept",       dir_rept,   0,  INITIAL},
+    {".endr",       dir_endr,   0,  INITIAL},
     /* empty space/fill directives */
-    {".skip",       dir_skip,   0,  INSTDIR},
-    {".space",      dir_skip,   0,  INSTDIR},
-    {".fill",       dir_fill,   0,  INSTDIR},
-    {".zero",       dir_zero,   0,  INSTDIR},
+    {".skip",       dir_skip,   0,  INITIAL},
+    {".space",      dir_skip,   0,  INITIAL},
+    {".fill",       dir_fill,   0,  INITIAL},
+    {".zero",       dir_zero,   0,  INITIAL},
     /* other directives */
-    {".equ",        dir_equ,    0,  INSTDIR},
-    {".file",       dir_file,   0,  INSTDIR},
-    {".line",       dir_line,   0,  INSTDIR},
-    {".set",        dir_equ,    0,  INSTDIR}
+    {".equ",        dir_equ,    0,  INITIAL},
+    {".file",       dir_file,   0,  INITIAL},
+    {".line",       dir_line,   0,  INITIAL},
+    {".set",        dir_equ,    0,  INITIAL}
 };
 
 static void
@@ -1722,7 +1744,7 @@ gas_parser_parse(yasm_parser_gas *parser_gas)
     word.name = ".word";
     word.handler = dir_data;
     word.param = yasm_arch_wordsize(p_object->arch)/8;
-    word.newstate = INSTDIR;
+    word.newstate = INITIAL;
 
     /* Create directive lookup */
     parser_gas->dirs = HAMT_create(1, yasm_internal_error_);

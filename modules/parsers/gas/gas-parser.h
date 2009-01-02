@@ -38,8 +38,6 @@ enum tokentype {
     INTNUM = 258,
     FLTNUM,
     STRING,
-    INSN,
-    PREFIX,
     REG,
     REGGROUP,
     SEGREG,
@@ -55,7 +53,6 @@ enum tokentype {
 
 typedef union {
     unsigned int int_info;
-    char *str_val;
     yasm_intnum *intn;
     yasm_floatnum *flt;
     yasm_bytecode *bc;
@@ -91,7 +88,6 @@ enum gas_parser_state {
     INITIAL,
     COMMENT,
     SECTION_DIRECTIVE,
-    INSTDIR,
     NASM_FILENAME
 };
 
@@ -164,14 +160,14 @@ typedef struct yasm_parser_gas {
 #define INTNUM_val              (curval.intn)
 #define FLTNUM_val              (curval.flt)
 #define STRING_val              (curval.str)
-#define INSN_val                (curval.bc)
-#define PREFIX_val              (curval.arch_data)
 #define REG_val                 (curval.arch_data)
 #define REGGROUP_val            (curval.arch_data)
 #define SEGREG_val              (curval.arch_data)
 #define TARGETMOD_val           (curval.arch_data)
-#define ID_val                  (curval.str_val)
-#define LABEL_val               (curval.str_val)
+#define ID_val                  (curval.str.contents)
+#define ID_len                  (curval.str.len)
+#define LABEL_val               (curval.str.contents)
+#define LABEL_len               (curval.str.len)
 
 #define cur_line        (yasm_linemap_get_current(parser_gas->linemap))
 

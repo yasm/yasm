@@ -393,9 +393,10 @@ scan:
             RETURN(s->tok[0]);
         }
 
-        /* label or maybe directive */
-        [_.][a-zA-Z0-9_$.]* {
-            lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
+        /* identifier */
+        [a-zA-Z_.][a-zA-Z0-9_$.]* {
+            lvalp->str.contents = yasm__xstrndup(TOK, TOKLEN);
+            lvalp->str.len = TOKLEN;
             RETURN(ID);
         }
 
@@ -429,75 +430,35 @@ scan:
             RETURN(REG);
         }
 
-        /* label */
-        [a-zA-Z][a-zA-Z0-9_$.]* ws* ':' {
-            /* strip off colon and any whitespace */
-            count = TOKLEN-1;
-            while (s->tok[count] == ' ' || s->tok[count] == '\t'
-                   || s->tok[count] == '\r')
-                count--;
-            /* Just an identifier, return as such. */
-            lvalp->str_val = yasm__xstrndup(TOK, count);
-            RETURN(LABEL);
-        }
-
         /* local label */
         [0-9] ':' {
             /* increment label index */
             parser_gas->local[s->tok[0]-'0']++;
             /* build local label name */
-            lvalp->str_val = yasm_xmalloc(30);
-            sprintf(lvalp->str_val, "L%c\001%lu", s->tok[0],
-                    parser_gas->local[s->tok[0]-'0']);
+            lvalp->str.contents = yasm_xmalloc(30);
+            lvalp->str.len =
+                sprintf(lvalp->str.contents, "L%c\001%lu", s->tok[0],
+                        parser_gas->local[s->tok[0]-'0']);
             RETURN(LABEL);
         }
 
         /* local label forward reference */
         [0-9] 'f' {
             /* build local label name */
-            lvalp->str_val = yasm_xmalloc(30);
-            sprintf(lvalp->str_val, "L%c\001%lu", s->tok[0],
-                    parser_gas->local[s->tok[0]-'0']+1);
+            lvalp->str.contents = yasm_xmalloc(30);
+            lvalp->str.len =
+                sprintf(lvalp->str.contents, "L%c\001%lu", s->tok[0],
+                        parser_gas->local[s->tok[0]-'0']+1);
             RETURN(ID);
         }
 
         /* local label backward reference */
         [0-9] 'b' {
             /* build local label name */
-            lvalp->str_val = yasm_xmalloc(30);
-            sprintf(lvalp->str_val, "L%c\001%lu", s->tok[0],
-                    parser_gas->local[s->tok[0]-'0']);
-            RETURN(ID);
-        }
-
-        /* identifier that may be an instruction, etc. */
-        [a-zA-Z][a-zA-Z0-9_$.]* {
-            /* Can only be an instruction/prefix when not inside an
-             * instruction or directive.
-             */
-            if (parser_gas->state != INSTDIR) {
-                uintptr_t prefix;
-                savech = s->tok[TOKLEN];
-                s->tok[TOKLEN] = '\0';
-                switch (yasm_arch_parse_check_insnprefix
-                        (p_object->arch, TOK, TOKLEN, cur_line, &lvalp->bc,
-                         &prefix)) {
-                    case YASM_ARCH_INSN:
-                        s->tok[TOKLEN] = savech;
-                        parser_gas->state = INSTDIR;
-                        RETURN(INSN);
-                    case YASM_ARCH_PREFIX:
-                        lvalp->arch_data = prefix;
-                        s->tok[TOKLEN] = savech;
-                        RETURN(PREFIX);
-                    default:
-                        s->tok[TOKLEN] = savech;
-                }
-            }
-            /* Propagate errors in case we got a warning from the arch */
-            yasm_errwarn_propagate(parser_gas->errwarns, cur_line);
-            /* Just an identifier, return as such. */
-            lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
+            lvalp->str.contents = yasm_xmalloc(30);
+            lvalp->str.len =
+                sprintf(lvalp->str.contents, "L%c\001%lu", s->tok[0],
+                        parser_gas->local[s->tok[0]-'0']);
             RETURN(ID);
         }
 
@@ -560,7 +521,8 @@ section_directive:
 
     /*!re2c
         [a-zA-Z0-9_$.-]+ {
-            lvalp->str_val = yasm__xstrndup(TOK, TOKLEN);
+            lvalp->str.contents = yasm__xstrndup(TOK, TOKLEN);
+            lvalp->str.len = TOKLEN;
             parser_gas->state = INITIAL;
             RETURN(ID);
         }
