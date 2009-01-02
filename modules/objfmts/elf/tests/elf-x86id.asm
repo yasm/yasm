@@ -5,37 +5,37 @@
 ;#APP
 	;.ident	"$Id$"
 ;#NO_APP
-extern yasm_internal_error_
-extern yasm_expr_copy
-extern yasm_expr_expr
-extern yasm_expr_new
-extern yasm_symrec_define_label
-extern yasm_x86_LTX_mode_bits
-extern yasm_x86__bc_new_jmp
-extern yasm_ea_get_disp
-extern yasm_expr__contains
-extern yasm_x86__get_reg_size
-extern yasm__error
-extern yasm_intnum_new_uint
-extern yasm_expr_int
-extern yasm_ea_delete
-extern yasm_expr_delete
-extern yasm_x86__ea_new_reg
-extern yasm_x86__ea_set_disponly
-extern yasm_x86__ea_new_imm
-extern yasm_x86__set_rex_from_reg
-extern yasm_xfree
-extern yasm_x86__bc_new_insn
-extern yasm__warning
+[extern yasm_internal_error_]
+[extern yasm_expr_copy]
+[extern yasm_expr_expr]
+[extern yasm_expr_new]
+[extern yasm_symrec_define_label]
+[extern yasm_x86_LTX_mode_bits]
+[extern yasm_x86__bc_new_jmp]
+[extern yasm_ea_get_disp]
+[extern yasm_expr__contains]
+[extern yasm_x86__get_reg_size]
+[extern yasm__error]
+[extern yasm_intnum_new_uint]
+[extern yasm_expr_int]
+[extern yasm_ea_delete]
+[extern yasm_expr_delete]
+[extern yasm_x86__ea_new_reg]
+[extern yasm_x86__ea_set_disponly]
+[extern yasm_x86__ea_new_imm]
+[extern yasm_x86__set_rex_from_reg]
+[extern yasm_xfree]
+[extern yasm_x86__bc_new_insn]
+[extern yasm__warning]
 
-	section .data
-	align 4
+	[section .data]
+	[align 4]
 	;.type	cpu_enabled,@object
 	;.size	cpu_enabled,4
 cpu_enabled:
 	dd	-1
-	section	.rodata
-	align 4
+	[section	.rodata]
+	[align 4]
 	;.type	not64_insn,@object
 	;.size	not64_insn,28
 not64_insn:
@@ -52,7 +52,7 @@ not64_insn:
 	dd	0
 	dd	0
 	dd	0
-	align 4
+	[align 4]
 	;.type	onebyte_insn,@object
 	;.size	onebyte_insn,28
 onebyte_insn:
@@ -69,7 +69,7 @@ onebyte_insn:
 	dd	0
 	dd	0
 	dd	0
-	align 4
+	[align 4]
 	;.type	twobyte_insn,@object
 	;.size	twobyte_insn,28
 twobyte_insn:
@@ -86,7 +86,7 @@ twobyte_insn:
 	dd	0
 	dd	0
 	dd	0
-	align 4
+	[align 4]
 	;.type	threebyte_insn,@object
 	;.size	threebyte_insn,28
 threebyte_insn:
@@ -103,7 +103,7 @@ threebyte_insn:
 	dd	0
 	dd	0
 	dd	0
-	align 4
+	[align 4]
 	;.type	onebytemem_insn,@object
 	;.size	onebytemem_insn,28
 onebytemem_insn:
@@ -120,7 +120,7 @@ onebytemem_insn:
 	dd	4098
 	dd	0
 	dd	0
-	align 4
+	[align 4]
 	;.type	twobytemem_insn,@object
 	;.size	twobytemem_insn,28
 twobytemem_insn:
@@ -137,7 +137,7 @@ twobytemem_insn:
 	dd	4098
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	mov_insn,@object
 	;.size	mov_insn,1260
 mov_insn:
@@ -726,7 +726,7 @@ mov_insn:
 	dd	4225
 	dd	16488
 	dd	0
-	align 32
+	[align 32]
 	;.type	movszx_insn,@object
 	;.size	movszx_insn,140
 movszx_insn:
@@ -795,7 +795,7 @@ movszx_insn:
 	dd	16513
 	dd	4163
 	dd	0
-	align 4
+	[align 4]
 	;.type	movsxd_insn,@object
 	;.size	movsxd_insn,28
 movsxd_insn:
@@ -812,7 +812,7 @@ movsxd_insn:
 	dd	16513
 	dd	4195
 	dd	0
-	align 32
+	[align 32]
 	;.type	push_insn,@object
 	;.size	push_insn,784
 push_insn:
@@ -1180,7 +1180,7 @@ push_insn:
 	dd	114
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	pop_insn,@object
 	;.size	pop_insn,588
 pop_insn:
@@ -1457,7 +1457,7 @@ pop_insn:
 	dd	114
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	xchg_insn,@object
 	;.size	xchg_insn,392
 xchg_insn:
@@ -1643,7 +1643,7 @@ xchg_insn:
 	dd	16513
 	dd	4483
 	dd	0
-	align 32
+	[align 32]
 	;.type	in_insn,@object
 	;.size	in_insn,168
 in_insn:
@@ -1725,7 +1725,7 @@ in_insn:
 	dd	107
 	dd	77
 	dd	0
-	align 32
+	[align 32]
 	;.type	out_insn,@object
 	;.size	out_insn,168
 out_insn:
@@ -1807,7 +1807,7 @@ out_insn:
 	dd	77
 	dd	107
 	dd	0
-	align 32
+	[align 32]
 	;.type	lea_insn,@object
 	;.size	lea_insn,84
 lea_insn:
@@ -1850,7 +1850,7 @@ lea_insn:
 	dd	16513
 	dd	4482
 	dd	0
-	align 32
+	[align 32]
 	;.type	ldes_insn,@object
 	;.size	ldes_insn,56
 ldes_insn:
@@ -1880,7 +1880,7 @@ ldes_insn:
 	dd	16481
 	dd	4098
 	dd	0
-	align 32
+	[align 32]
 	;.type	lfgss_insn,@object
 	;.size	lfgss_insn,56
 lfgss_insn:
@@ -1910,7 +1910,7 @@ lfgss_insn:
 	dd	16481
 	dd	4098
 	dd	0
-	align 32
+	[align 32]
 	;.type	arith_insn,@object
 	;.size	arith_insn,644
 arith_insn:
@@ -2213,7 +2213,7 @@ arith_insn:
 	dd	16513
 	dd	4483
 	dd	0
-	align 32
+	[align 32]
 	;.type	incdec_insn,@object
 	;.size	incdec_insn,168
 incdec_insn:
@@ -2295,7 +2295,7 @@ incdec_insn:
 	dd	4227
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	f6_insn,@object
 	;.size	f6_insn,112
 f6_insn:
@@ -2351,7 +2351,7 @@ f6_insn:
 	dd	4227
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	test_insn,@object
 	;.size	test_insn,560
 test_insn:
@@ -2615,7 +2615,7 @@ test_insn:
 	dd	16513
 	dd	4483
 	dd	0
-	align 32
+	[align 32]
 	;.type	aadm_insn,@object
 	;.size	aadm_insn,56
 aadm_insn:
@@ -2645,7 +2645,7 @@ aadm_insn:
 	dd	8480
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	imul_insn,@object
 	;.size	imul_insn,532
 imul_insn:
@@ -2896,7 +2896,7 @@ imul_insn:
 	dd	28801
 	dd	143712
 	dd	0
-	align 32
+	[align 32]
 	;.type	shift_insn,@object
 	;.size	shift_insn,224
 shift_insn:
@@ -3004,7 +3004,7 @@ shift_insn:
 	dd	4227
 	dd	74016
 	dd	0
-	align 32
+	[align 32]
 	;.type	shlrd_insn,@object
 	;.size	shlrd_insn,168
 shlrd_insn:
@@ -3086,7 +3086,7 @@ shlrd_insn:
 	dd	4483
 	dd	16513
 	dd	44
-	align 32
+	[align 32]
 	;.type	call_insn,@object
 	;.size	call_insn,560
 call_insn:
@@ -3350,7 +3350,7 @@ call_insn:
 	dd	5634
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	jmp_insn,@object
 	;.size	jmp_insn,588
 jmp_insn:
@@ -3627,7 +3627,7 @@ jmp_insn:
 	dd	5634
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	retnf_insn,@object
 	;.size	retnf_insn,56
 retnf_insn:
@@ -3657,7 +3657,7 @@ retnf_insn:
 	dd	8512
 	dd	0
 	dd	0
-	align 4
+	[align 4]
 	;.type	enter_insn,@object
 	;.size	enter_insn,28
 enter_insn:
@@ -3674,7 +3674,7 @@ enter_insn:
 	dd	4416
 	dd	8480
 	dd	0
-	align 32
+	[align 32]
 	;.type	jcc_insn,@object
 	;.size	jcc_insn,196
 jcc_insn:
@@ -3769,7 +3769,7 @@ jcc_insn:
 	dd	33280
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	jcxz_insn,@object
 	;.size	jcxz_insn,56
 jcxz_insn:
@@ -3799,7 +3799,7 @@ jcxz_insn:
 	dd	33792
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	loop_insn,@object
 	;.size	loop_insn,224
 loop_insn:
@@ -3907,7 +3907,7 @@ loop_insn:
 	dd	33792
 	dd	37004
 	dd	0
-	align 4
+	[align 4]
 	;.type	setcc_insn,@object
 	;.size	setcc_insn,28
 setcc_insn:
@@ -3924,7 +3924,7 @@ setcc_insn:
 	dd	4387
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	bittest_insn,@object
 	;.size	bittest_insn,168
 bittest_insn:
@@ -4006,7 +4006,7 @@ bittest_insn:
 	dd	4227
 	dd	8224
 	dd	0
-	align 32
+	[align 32]
 	;.type	bsfr_insn,@object
 	;.size	bsfr_insn,84
 bsfr_insn:
@@ -4049,7 +4049,7 @@ bsfr_insn:
 	dd	16513
 	dd	4483
 	dd	0
-	align 4
+	[align 4]
 	;.type	int_insn,@object
 	;.size	int_insn,28
 int_insn:
@@ -4066,7 +4066,7 @@ int_insn:
 	dd	8480
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	bound_insn,@object
 	;.size	bound_insn,56
 bound_insn:
@@ -4096,7 +4096,7 @@ bound_insn:
 	dd	16481
 	dd	4450
 	dd	0
-	align 4
+	[align 4]
 	;.type	arpl_insn,@object
 	;.size	arpl_insn,28
 arpl_insn:
@@ -4113,7 +4113,7 @@ arpl_insn:
 	dd	4419
 	dd	16449
 	dd	0
-	align 32
+	[align 32]
 	;.type	str_insn,@object
 	;.size	str_insn,112
 str_insn:
@@ -4169,7 +4169,7 @@ str_insn:
 	dd	4419
 	dd	0
 	dd	0
-	align 4
+	[align 4]
 	;.type	prot286_insn,@object
 	;.size	prot286_insn,28
 prot286_insn:
@@ -4186,7 +4186,7 @@ prot286_insn:
 	dd	4419
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	sldtmsw_insn,@object
 	;.size	sldtmsw_insn,168
 sldtmsw_insn:
@@ -4268,7 +4268,7 @@ sldtmsw_insn:
 	dd	4225
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	fldstp_insn,@object
 	;.size	fldstp_insn,112
 fldstp_insn:
@@ -4324,7 +4324,7 @@ fldstp_insn:
 	dd	24737
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	fildstp_insn,@object
 	;.size	fildstp_insn,84
 fildstp_insn:
@@ -4367,7 +4367,7 @@ fildstp_insn:
 	dd	4226
 	dd	0
 	dd	0
-	align 4
+	[align 4]
 	;.type	fbldstp_insn,@object
 	;.size	fbldstp_insn,28
 fbldstp_insn:
@@ -4384,7 +4384,7 @@ fbldstp_insn:
 	dd	4514
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	fst_insn,@object
 	;.size	fst_insn,84
 fst_insn:
@@ -4427,7 +4427,7 @@ fst_insn:
 	dd	24737
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	fxch_insn,@object
 	;.size	fxch_insn,112
 fxch_insn:
@@ -4483,7 +4483,7 @@ fxch_insn:
 	dd	0
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	fcom_insn,@object
 	;.size	fcom_insn,112
 fcom_insn:
@@ -4539,7 +4539,7 @@ fcom_insn:
 	dd	170
 	dd	24737
 	dd	0
-	align 32
+	[align 32]
 	;.type	fcom2_insn,@object
 	;.size	fcom2_insn,56
 fcom2_insn:
@@ -4569,7 +4569,7 @@ fcom2_insn:
 	dd	170
 	dd	24737
 	dd	0
-	align 32
+	[align 32]
 	;.type	farith_insn,@object
 	;.size	farith_insn,168
 farith_insn:
@@ -4651,7 +4651,7 @@ farith_insn:
 	dd	24737
 	dd	170
 	dd	0
-	align 32
+	[align 32]
 	;.type	farithp_insn,@object
 	;.size	farithp_insn,84
 farithp_insn:
@@ -4694,7 +4694,7 @@ farithp_insn:
 	dd	24737
 	dd	170
 	dd	0
-	align 32
+	[align 32]
 	;.type	fiarith_insn,@object
 	;.size	fiarith_insn,56
 fiarith_insn:
@@ -4724,7 +4724,7 @@ fiarith_insn:
 	dd	4194
 	dd	0
 	dd	0
-	align 4
+	[align 4]
 	;.type	fldnstcw_insn,@object
 	;.size	fldnstcw_insn,28
 fldnstcw_insn:
@@ -4741,7 +4741,7 @@ fldnstcw_insn:
 	dd	4418
 	dd	0
 	dd	0
-	align 4
+	[align 4]
 	;.type	fstcw_insn,@object
 	;.size	fstcw_insn,28
 fstcw_insn:
@@ -4758,7 +4758,7 @@ fstcw_insn:
 	dd	4418
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	fnstsw_insn,@object
 	;.size	fnstsw_insn,56
 fnstsw_insn:
@@ -4788,7 +4788,7 @@ fnstsw_insn:
 	dd	75
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	fstsw_insn,@object
 	;.size	fstsw_insn,56
 fstsw_insn:
@@ -4818,7 +4818,7 @@ fstsw_insn:
 	dd	75
 	dd	0
 	dd	0
-	align 4
+	[align 4]
 	;.type	ffree_insn,@object
 	;.size	ffree_insn,28
 ffree_insn:
@@ -4835,7 +4835,7 @@ ffree_insn:
 	dd	24737
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	bswap_insn,@object
 	;.size	bswap_insn,56
 bswap_insn:
@@ -4865,7 +4865,7 @@ bswap_insn:
 	dd	24705
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	cmpxchgxadd_insn,@object
 	;.size	cmpxchgxadd_insn,112
 cmpxchgxadd_insn:
@@ -4921,7 +4921,7 @@ cmpxchgxadd_insn:
 	dd	4483
 	dd	16513
 	dd	0
-	align 4
+	[align 4]
 	;.type	cmpxchg8b_insn,@object
 	;.size	cmpxchg8b_insn,28
 cmpxchg8b_insn:
@@ -4938,7 +4938,7 @@ cmpxchg8b_insn:
 	dd	4482
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	cmovcc_insn,@object
 	;.size	cmovcc_insn,84
 cmovcc_insn:
@@ -4981,7 +4981,7 @@ cmovcc_insn:
 	dd	16513
 	dd	4483
 	dd	0
-	align 4
+	[align 4]
 	;.type	fcmovcc_insn,@object
 	;.size	fcmovcc_insn,28
 fcmovcc_insn:
@@ -4998,7 +4998,7 @@ fcmovcc_insn:
 	dd	170
 	dd	24737
 	dd	0
-	align 32
+	[align 32]
 	;.type	movnti_insn,@object
 	;.size	movnti_insn,56
 movnti_insn:
@@ -5028,7 +5028,7 @@ movnti_insn:
 	dd	4482
 	dd	16513
 	dd	0
-	align 4
+	[align 4]
 	;.type	clflush_insn,@object
 	;.size	clflush_insn,28
 clflush_insn:
@@ -5045,7 +5045,7 @@ clflush_insn:
 	dd	4386
 	dd	0
 	dd	0
-	align 32
+	[align 32]
 	;.type	movd_insn,@object
 	;.size	movd_insn,224
 movd_insn:
@@ -5153,7 +5153,7 @@ movd_insn:
 	dd	4483
 	dd	16580
 	dd	0
-	align 32
+	[align 32]
 	;.type	movq_insn,@object
 	;.size	movq_insn,140
 movq_insn:
@@ -5222,7 +5222,7 @@ movq_insn:
 	dd	4485
 	dd	16580
 	dd	0
-	align 32
+	[align 32]
 	;.type	mmxsse2_insn,@object
 	;.size	mmxsse2_insn,56
 mmxsse2_insn:
@@ -5252,7 +5252,7 @@ mmxsse2_insn:
 	dd	16580
 	dd	4549
 	dd	0
-	align 32
+	[align 32]
 	;.type	pshift_insn,@object
 	;.size	pshift_insn,112
 pshift_insn:
@@ -5308,7 +5308,7 @@ pshift_insn:
 	dd	4292
 	dd	8480
 	dd	0
-	align 4
+	[align 4]
 	;.type	sseps_insn,@object
 	;.size	sseps_insn,28
 sseps_insn:
@@ -5325,7 +5325,7 @@ sseps_insn:
 	dd	16580
 	dd	4549
 	dd	0
-	align 4
+	[align 4]
 	;.type	ssess_insn,@object
 	;.size	ssess_insn,28
 ssess_insn:
@@ -5342,7 +5342,7 @@ ssess_insn:
 	dd	16580
 	dd	4549
 	dd	0
-	align 4
+	[align 4]
 	;.type	ssecmpps_insn,@object
 	;.size	ssecmpps_insn,28
 ssecmpps_insn:
@@ -5359,7 +5359,7 @@ ssecmpps_insn:
 	dd	16580
 	dd	4549
 	dd	0
-	align 4
+	[align 4]
 	;.type	ssecmpss_insn,@object
 	;.size	ssecmpss_insn,28
 ssecmpss_insn:
@@ -5376,7 +5376,7 @@ ssecmpss_insn:
 	dd	16580
 	dd	4549
 	dd	0
-	align 4
+	[align 4]
 	;.type	ssepsimm_insn,@object
 	;.size	ssepsimm_insn,28
 ssepsimm_insn:
@@ -5393,7 +5393,7 @@ ssepsimm_insn:
 	dd	16580
 	dd	4549
 	dd	8480
-	align 4
+	[align 4]
 	;.type	ssessimm_insn,@object
 	;.size	ssessimm_insn,28
 ssessimm_insn:
@@ -5410,7 +5410,7 @@ ssessimm_insn:
 	dd	16580
 	dd	4549
 	dd	8480
-	align 4
+	[align 4]
 	;.type	ldstmxcsr_insn,@object
 	;.size	ldstmxcsr_insn,28
 ldstmxcsr_insn:
@@ -5427,7 +5427,7 @@ ldstmxcsr_insn:
 	dd	4450
 	dd	0
 	dd	0
-	align 4
+	[align 4]
 	;.type	maskmovq_insn,@object
 	;.size	maskmovq_insn,28
 maskmovq_insn:
@@ -5444,7 +5444,7 @@ maskmovq_insn:
 	dd	16516
 	dd	4228
 	dd	0
-	align 32
+	[align 32]
 	;.type	movaups_insn,@object
 	;.size	movaups_insn,56
 movaups_insn:
@@ -5474,7 +5474,7 @@ movaups_insn:
 	dd	4549
 	dd	16580
 	dd	0
-	align 4
+	[align 4]
 	;.type	movhllhps_insn,@object
 	;.size	movhllhps_insn,28
 movhllhps_insn:
@@ -5491,7 +5491,7 @@ movhllhps_insn:
 	dd	16580
 	dd	4292
 	dd	0
-	align 32
+	[align 32]
 	;.type	movhlps_insn,@object
 	;.size	movhlps_insn,56
 movhlps_insn:
@@ -5521,7 +5521,7 @@ movhlps_insn:
 	dd	4482
 	dd	16580
 	dd	0
-	align 4
+	[align 4]
 	;.type	movmskps_insn,@object
 	;.size	movmskps_insn,28
 movmskps_insn:
@@ -5538,7 +5538,7 @@ movmskps_insn:
 	dd	4193
 	dd	16580
 	dd	0
-	align 4
+	[align 4]
 	;.type	movntps_insn,@object
 	;.size	movntps_insn,28
 movntps_insn:
@@ -5555,7 +5555,7 @@ movntps_insn:
 	dd	4546
 	dd	16577
 	dd	0
-	align 4
+	[align 4]
 	;.type	movntq_insn,@object
 	;.size	movntq_insn,28
 movntq_insn:
@@ -5572,7 +5572,7 @@ movntq_insn:
 	dd	4482
 	dd	16580
 	dd	0
-	align 32
+	[align 32]
 	;.type	movss_insn,@object
 	;.size	movss_insn,84
 movss_insn:
@@ -5615,7 +5615,7 @@ movss_insn:
 	dd	4482
 	dd	16580
 	dd	0
-	align 32
+	[align 32]
 	;.type	pextrw_insn,@object
 	;.size	pextrw_insn,56
 pextrw_insn:
@@ -5645,7 +5645,7 @@ pextrw_insn:
 	dd	4193
 	dd	16580
 	dd	8480
-	align 32
+	[align 32]
 	;.type	pinsrw_insn,@object
 	;.size	pinsrw_insn,112
 pinsrw_insn:
@@ -5701,7 +5701,7 @@ pinsrw_insn:
 	dd	16516
 	dd	4419
 	dd	8480
-	align 32
+	[align 32]
 	;.type	pmovmskb_insn,@object
 	;.size	pmovmskb_insn,56
 pmovmskb_insn:
@@ -5731,7 +5731,7 @@ pmovmskb_insn:
 	dd	4193
 	dd	16580
 	dd	0
-	align 4
+	[align 4]
 	;.type	pshufw_insn,@object
 	;.size	pshufw_insn,28
 pshufw_insn:
@@ -5748,7 +5748,7 @@ pshufw_insn:
 	dd	16516
 	dd	4485
 	dd	8480
-	align 32
+	[align 32]
 	;.type	cmpsd_insn,@object
 	;.size	cmpsd_insn,56
 cmpsd_insn:
@@ -5778,7 +5778,7 @@ cmpsd_insn:
 	dd	16580
 	dd	4549
 	dd	8480
-	align 32
+	[align 32]
 	;.type	movaupd_insn,@object
 	;.size	movaupd_insn,56
 movaupd_insn:
@@ -5808,7 +5808,7 @@ movaupd_insn:
 	dd	4549
 	dd	16580
 	dd	0
-	align 32
+	[align 32]
 	;.type	movhlpd_insn,@object
 	;.size	movhlpd_insn,56
 movhlpd_insn:
@@ -5838,7 +5838,7 @@ movhlpd_insn:
 	dd	4482
 	dd	16580
 	dd	0
-	align 4
+	[align 4]
 	;.type	movmskpd_insn,@object
 	;.size	movmskpd_insn,28
 movmskpd_insn:
@@ -5855,7 +5855,7 @@ movmskpd_insn:
 	dd	4193
 	dd	16580
 	dd	0
-	align 4
+	[align 4]
 	;.type	movntpddq_insn,@object
 	;.size	movntpddq_insn,28
 movntpddq_insn:
@@ -5872,7 +5872,7 @@ movntpddq_insn:
 	dd	4546
 	dd	16580
 	dd	0
-	align 32
+	[align 32]
 	;.type	movsd_insn,@object
 	;.size	movsd_insn,112
 movsd_insn:
@@ -5928,7 +5928,7 @@ movsd_insn:
 	dd	4482
 	dd	16580
 	dd	0
-	align 4
+	[align 4]
 	;.type	maskmovdqu_insn,@object
 	;.size	maskmovdqu_insn,28
 maskmovdqu_insn:
@@ -5945,7 +5945,7 @@ maskmovdqu_insn:
 	dd	16580
 	dd	4292
 	dd	0
-	align 32
+	[align 32]
 	;.type	movdqau_insn,@object
 	;.size	movdqau_insn,56
 movdqau_insn:
@@ -5975,7 +5975,7 @@ movdqau_insn:
 	dd	4549
 	dd	16580
 	dd	0
-	align 4
+	[align 4]
 	;.type	movdq2q_insn,@object
 	;.size	movdq2q_insn,28
 movdq2q_insn:
@@ -5992,7 +5992,7 @@ movdq2q_insn:
 	dd	16516
 	dd	4292
 	dd	0
-	align 4
+	[align 4]
 	;.type	movq2dq_insn,@object
 	;.size	movq2dq_insn,28
 movq2dq_insn:
@@ -6009,7 +6009,7 @@ movq2dq_insn:
 	dd	16580
 	dd	4228
 	dd	0
-	align 4
+	[align 4]
 	;.type	pslrldq_insn,@object
 	;.size	pslrldq_insn,28
 pslrldq_insn:
@@ -6026,7 +6026,7 @@ pslrldq_insn:
 	dd	4292
 	dd	8480
 	dd	0
-	align 4
+	[align 4]
 	;.type	now3d_insn,@object
 	;.size	now3d_insn,28
 now3d_insn:
@@ -6043,7 +6043,7 @@ now3d_insn:
 	dd	16516
 	dd	4485
 	dd	0
-	align 4
+	[align 4]
 	;.type	cyrixmmx_insn,@object
 	;.size	cyrixmmx_insn,28
 cyrixmmx_insn:
@@ -6060,7 +6060,7 @@ cyrixmmx_insn:
 	dd	16516
 	dd	4485
 	dd	0
-	align 4
+	[align 4]
 	;.type	pmachriw_insn,@object
 	;.size	pmachriw_insn,28
 pmachriw_insn:
@@ -6077,7 +6077,7 @@ pmachriw_insn:
 	dd	16516
 	dd	4482
 	dd	0
-	align 4
+	[align 4]
 	;.type	rsdc_insn,@object
 	;.size	rsdc_insn,28
 rsdc_insn:
@@ -6094,7 +6094,7 @@ rsdc_insn:
 	dd	16454
 	dd	4514
 	dd	0
-	align 4
+	[align 4]
 	;.type	cyrixsmm_insn,@object
 	;.size	cyrixsmm_insn,28
 cyrixsmm_insn:
@@ -6111,7 +6111,7 @@ cyrixsmm_insn:
 	dd	4514
 	dd	0
 	dd	0
-	align 4
+	[align 4]
 	;.type	svdc_insn,@object
 	;.size	svdc_insn,28
 svdc_insn:
@@ -6128,7 +6128,7 @@ svdc_insn:
 	dd	4514
 	dd	16454
 	dd	0
-	align 32
+	[align 32]
 	;.type	ibts_insn,@object
 	;.size	ibts_insn,56
 ibts_insn:
@@ -6158,7 +6158,7 @@ ibts_insn:
 	dd	4451
 	dd	16481
 	dd	0
-	align 32
+	[align 32]
 	;.type	umov_insn,@object
 	;.size	umov_insn,168
 umov_insn:
@@ -6240,7 +6240,7 @@ umov_insn:
 	dd	16481
 	dd	4451
 	dd	0
-	align 32
+	[align 32]
 	;.type	xbts_insn,@object
 	;.size	xbts_insn,56
 xbts_insn:
@@ -6281,14 +6281,14 @@ size_lookup.0:
 	db	80
 	db	-128
 	db	0
-	section	.rodata;.str1.1,"aMS",@progbits,1
+	[section	.rodata];.str1.1,"aMS",@progbits,1
 LC0:
 	db	"invalid operand conversion", 0
 LC1:
 	db	"./modules/arch/x86/x86id.re", 0
 LC2:
 	db	"$", 0
-	section .text
+	[section .text]
 	;.type	x86_new_jmp,@function
 x86_new_jmp:
 	push	ebp
@@ -6524,8 +6524,8 @@ x86_new_jmp:
 	ret
 .Lfe1:
 	;.size	x86_new_jmp,.Lfe1-x86_new_jmp
-	section	.rodata
-	align 32
+	[section	.rodata]
+	[align 32]
 	;.type	size_lookup.1,@object
 	;.size	size_lookup.1,32
 size_lookup.1:
@@ -6537,7 +6537,7 @@ size_lookup.1:
 	dd	10
 	dd	16
 	dd	0
-	section	.rodata;.str1.1
+	[section	.rodata];.str1.1
 LC3:
 	db	"invalid operand type", 0
 LC4:
@@ -6546,25 +6546,25 @@ LC6:
 	db	"mismatch in operand sizes", 0
 LC7:
 	db	"operand size not specified", 0
-	section	.rodata;.str1.32,"aMS",@progbits,1
-	align 32
+	[section	.rodata];.str1.32,"aMS",@progbits,1
+	[align 32]
 LC8:
 	db	"unrecognized x86 ext mod index", 0
-	align 32
+	[align 32]
 LC9:
 	db	"unrecognized x86 extended modifier", 0
-	align 32
+	[align 32]
 LC5:
 	db	"invalid combination of opcode and operands", 0
-	section	.rodata;.str1.1
+	[section	.rodata];.str1.1
 LC10:
 	db	"unknown operand action", 0
-	section	.rodata;.str1.32
-	align 32
+	[section	.rodata];.str1.32
+	[align 32]
 LC11:
 	db	"unknown operand postponed action", 0
-	section .text
-global yasm_x86__parse_insn
+	[section .text]
+[global yasm_x86__parse_insn]
 	;.type	yasm_x86__parse_insn,@function
 yasm_x86__parse_insn:
 	push	ebp
@@ -6626,9 +6626,9 @@ yasm_x86__parse_insn:
 	cmp	eax, 21
 	ja	.L139
 	jmp	DWORD [.L140+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L140:
 	dd	.L53
 	dd	.L57
@@ -6652,7 +6652,7 @@ yasm_x86__parse_insn:
 	dd	.L130
 	dd	.L133
 	dd	.L136
-	section .text
+	[section .text]
 .L53:
 	cmp	DWORD [edi+4], 4
 	jmp	.L273
@@ -7496,12 +7496,12 @@ yasm_x86__parse_insn:
 	ret
 .Lfe2:
 	;.size	yasm_x86__parse_insn,.Lfe2-yasm_x86__parse_insn
-	section	.rodata;.str1.32
-	align 32
+	[section	.rodata];.str1.32
+	[align 32]
 LC12:
 	db	"unrecognized CPU identifier `s'", 0
-	section .text
-global yasm_x86__parse_cpu
+	[section .text]
+[global yasm_x86__parse_cpu]
 	;.type	yasm_x86__parse_cpu,@function
 yasm_x86__parse_cpu:
 	push	ebp
@@ -7515,9 +7515,9 @@ yasm_x86__parse_cpu:
 	cmp	eax, 119
 	ja	.L338
 	jmp	DWORD [.L339+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L339:
 	dd	.L283
 	dd	.L338
@@ -7639,7 +7639,7 @@ yasm_x86__parse_cpu:
 	dd	.L333
 	dd	.L338
 	dd	.L336
-	section .text
+	[section .text]
 .L297:
 	inc	edx
 	mov	cl, BYTE [edx]
@@ -7988,9 +7988,9 @@ yasm_x86__parse_cpu:
 	cmp	eax, 66
 	ja	.L342
 	jmp	DWORD [.L530+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L530:
 	dd	.L504
 	dd	.L342
@@ -8059,7 +8059,7 @@ yasm_x86__parse_cpu:
 	dd	.L525
 	dd	.L342
 	dd	.L528
-	section .text
+	[section .text]
 .L513:
 	inc	edx
 	mov	cl, BYTE [edx]
@@ -9102,27 +9102,27 @@ yasm_x86__parse_cpu:
 	ret
 .Lfe3:
 	;.size	yasm_x86__parse_cpu,.Lfe3-yasm_x86__parse_cpu
-	section	.rodata;.str1.32
-	align 32
+	[section	.rodata];.str1.32
+	[align 32]
 LC16:
 	db	"`s' segment register ignored in 64-bit mode", 0
-	align 32
+	[align 32]
 LC18:
 	db	"Cannot override address size to 16 bits in 64-bit mode", 0
-	align 32
+	[align 32]
 LC17:
 	db	"`s' is a prefix in 64-bit mode", 0
-	align 32
+	[align 32]
 LC15:
 	db	"`s' is a register in 64-bit mode", 0
-	align 32
+	[align 32]
 LC13:
 	db	"`s' is an instruction in 64-bit mode", 0
-	section	.rodata;.str1.1
+	[section	.rodata];.str1.1
 LC14:
 	db	"`s' invalid in 64-bit mode", 0
-	section .text
-global yasm_x86__parse_check_id
+	[section .text]
+[global yasm_x86__parse_check_id]
 	;.type	yasm_x86__parse_check_id,@function
 yasm_x86__parse_check_id:
 	push	ebp
@@ -9140,9 +9140,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 120
 	ja	.L999
 	jmp	DWORD [.L1000+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L1000:
 	dd	.L8702
 	dd	.L999
@@ -9265,7 +9265,7 @@ yasm_x86__parse_check_id:
 	dd	.L991
 	dd	.L994
 	dd	.L997
-	section .text
+	[section .text]
 .L970:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -9295,9 +9295,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 56
 	ja	.L1005
 	jmp	DWORD [.L1069+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L1069:
 	dd	.L1016
 	dd	.L1019
@@ -9356,7 +9356,7 @@ yasm_x86__parse_check_id:
 	dd	.L1064
 	dd	.L1005
 	dd	.L1067
-	section .text
+	[section .text]
 .L949:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -9365,9 +9365,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 71
 	ja	.L1005
 	jmp	DWORD [.L1128+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L1128:
 	dd	.L1072
 	dd	.L1005
@@ -9441,7 +9441,7 @@ yasm_x86__parse_check_id:
 	dd	.L1120
 	dd	.L1123
 	dd	.L1126
-	section .text
+	[section .text]
 .L985:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -9508,9 +9508,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 71
 	ja	.L1005
 	jmp	DWORD [.L1191+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L1191:
 	dd	.L1164
 	dd	.L1005
@@ -9584,7 +9584,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L1189
-	section .text
+	[section .text]
 .L964:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -9593,9 +9593,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 51
 	ja	.L1005
 	jmp	DWORD [.L1227+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L1227:
 	dd	.L1195
 	dd	.L1005
@@ -9649,7 +9649,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1222
 	dd	.L1225
-	section .text
+	[section .text]
 .L979:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -9658,9 +9658,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 66
 	ja	.L1005
 	jmp	DWORD [.L1259+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L1259:
 	dd	.L1230
 	dd	.L1005
@@ -9729,7 +9729,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L1257
-	section .text
+	[section .text]
 .L940:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -9738,9 +9738,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 55
 	ja	.L1005
 	jmp	DWORD [.L1301+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L1301:
 	dd	.L1263
 	dd	.L1266
@@ -9798,7 +9798,7 @@ yasm_x86__parse_check_id:
 	dd	.L1293
 	dd	.L1296
 	dd	.L1299
-	section .text
+	[section .text]
 .L943:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -9807,9 +9807,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 55
 	ja	.L1005
 	jmp	DWORD [.L1328+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L1328:
 	dd	.L1305
 	dd	.L1005
@@ -9867,7 +9867,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L1326
-	section .text
+	[section .text]
 .L967:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -9876,9 +9876,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 52
 	ja	.L1005
 	jmp	DWORD [.L1349+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L1349:
 	dd	.L1332
 	dd	.L1005
@@ -9933,7 +9933,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L1347
-	section .text
+	[section .text]
 .L997:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -9942,9 +9942,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 46
 	ja	.L1005
 	jmp	DWORD [.L1370+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L1370:
 	dd	.L1353
 	dd	.L1356
@@ -9993,7 +9993,7 @@ yasm_x86__parse_check_id:
 	dd	.L1365
 	dd	.L1005
 	dd	.L1368
-	section .text
+	[section .text]
 .L946:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -10002,9 +10002,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 50
 	ja	.L1005
 	jmp	DWORD [.L1394+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L1394:
 	dd	.L1374
 	dd	.L1377
@@ -10057,7 +10057,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L1392
-	section .text
+	[section .text]
 .L937:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -10066,9 +10066,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 48
 	ja	.L1005
 	jmp	DWORD [.L1418+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L1418:
 	dd	.L1398
 	dd	.L1005
@@ -10119,7 +10119,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L1416
-	section .text
+	[section .text]
 .L952:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -10136,9 +10136,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 55
 	ja	.L1005
 	jmp	DWORD [.L1457+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L1457:
 	dd	.L1425
 	dd	.L1005
@@ -10196,7 +10196,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L1455
-	section .text
+	[section .text]
 .L958:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -10205,9 +10205,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 48
 	ja	.L1005
 	jmp	DWORD [.L1475+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L1475:
 	dd	.L1461
 	dd	.L1005
@@ -10258,7 +10258,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L1473
-	section .text
+	[section .text]
 .L961:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -10267,9 +10267,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 57
 	ja	.L1005
 	jmp	DWORD [.L1517+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L1517:
 	dd	.L1479
 	dd	.L1482
@@ -10329,7 +10329,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L1515
-	section .text
+	[section .text]
 .L955:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -10932,9 +10932,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 57
 	ja	.L1005
 	jmp	DWORD [.L1830+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L1830:
 	dd	.L1801
 	dd	.L1804
@@ -10994,7 +10994,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L1828
-	section .text
+	[section .text]
 .L1503:
 	inc	ecx
 	cmp	BYTE [ecx], 0
@@ -11676,9 +11676,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 65
 	ja	.L1005
 	jmp	DWORD [.L2189+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L2189:
 	dd	.L2166
 	dd	.L1005
@@ -11746,7 +11746,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L2184
 	dd	.L2187
-	section .text
+	[section .text]
 .L1437:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -11845,9 +11845,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 54
 	ja	.L1005
 	jmp	DWORD [.L2257+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L2257:
 	dd	.L2240
 	dd	.L1005
@@ -11904,7 +11904,7 @@ yasm_x86__parse_check_id:
 	dd	.L2252
 	dd	.L1005
 	dd	.L2255
-	section .text
+	[section .text]
 .L1452:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -12531,9 +12531,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 53
 	ja	.L1005
 	jmp	DWORD [.L2571+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L2571:
 	dd	.L2554
 	dd	.L1005
@@ -12589,7 +12589,7 @@ yasm_x86__parse_check_id:
 	dd	.L2566
 	dd	.L1005
 	dd	.L2569
-	section .text
+	[section .text]
 .L2554:
 	inc	ecx
 	cmp	BYTE [ecx], 0
@@ -14530,9 +14530,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 53
 	ja	.L1005
 	jmp	DWORD [.L3482+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L3482:
 	dd	.L3465
 	dd	.L1005
@@ -14588,7 +14588,7 @@ yasm_x86__parse_check_id:
 	dd	.L3477
 	dd	.L1005
 	dd	.L3480
-	section .text
+	[section .text]
 .L3465:
 	inc	ecx
 	cmp	BYTE [ecx], 0
@@ -15939,9 +15939,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 54
 	ja	.L1005
 	jmp	DWORD [.L4093+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L4093:
 	dd	.L4076
 	dd	.L1005
@@ -15998,7 +15998,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L4088
 	dd	.L4091
-	section .text
+	[section .text]
 .L4001:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -18089,9 +18089,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 57
 	ja	.L1005
 	jmp	DWORD [.L5073+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L5073:
 	dd	.L5041
 	dd	.L5044
@@ -18151,7 +18151,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L5071
-	section .text
+	[section .text]
 .L5062:
 	inc	ecx
 	cmp	BYTE [ecx], 0
@@ -18167,9 +18167,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 57
 	ja	.L1005
 	jmp	DWORD [.L5109+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L5109:
 	dd	.L5080
 	dd	.L5083
@@ -18229,7 +18229,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L5107
-	section .text
+	[section .text]
 .L5044:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -18577,9 +18577,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 53
 	ja	.L1005
 	jmp	DWORD [.L5310+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L5310:
 	dd	.L5296
 	dd	.L1005
@@ -18635,7 +18635,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L5308
-	section .text
+	[section .text]
 .L5015:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -19766,9 +19766,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 47
 	ja	.L1005
 	jmp	DWORD [.L5855+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L5855:
 	dd	.L5838
 	dd	.L1005
@@ -19818,7 +19818,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L5853
-	section .text
+	[section .text]
 .L1248:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -19875,9 +19875,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 48
 	ja	.L1005
 	jmp	DWORD [.L5902+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L5902:
 	dd	.L5882
 	dd	.L1005
@@ -19928,7 +19928,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L5900
-	section .text
+	[section .text]
 .L5894:
 	inc	ecx
 	cmp	BYTE [ecx], 0
@@ -21890,9 +21890,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 50
 	ja	.L1005
 	jmp	DWORD [.L6775+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L6775:
 	dd	.L6755
 	dd	.L1005
@@ -21945,7 +21945,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L6773
-	section .text
+	[section .text]
 .L1096:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -24308,9 +24308,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 41
 	ja	.L1005
 	jmp	DWORD [.L7863+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L7863:
 	dd	.L7852
 	dd	.L1005
@@ -24354,7 +24354,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L7861
-	section .text
+	[section .text]
 .L1037:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -24462,9 +24462,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 66
 	ja	.L1005
 	jmp	DWORD [.L7931+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L7931:
 	dd	.L7911
 	dd	.L7911
@@ -24533,7 +24533,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L7929
-	section .text
+	[section .text]
 .L1058:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -25478,9 +25478,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 57
 	ja	.L1005
 	jmp	DWORD [.L8375+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L8375:
 	dd	.L8343
 	dd	.L8346
@@ -25540,7 +25540,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L8373
-	section .text
+	[section .text]
 .L8343:
 	inc	ecx
 	mov	dl, BYTE [ecx]
@@ -25611,9 +25611,9 @@ yasm_x86__parse_check_id:
 	cmp	eax, 57
 	ja	.L1005
 	jmp	DWORD [.L8450+eax*4]
-	section	.rodata
-	align 4
-	align 4
+	[section	.rodata]
+	[align 4]
+	[align 4]
 .L8450:
 	dd	.L8421
 	dd	.L8424
@@ -25673,7 +25673,7 @@ yasm_x86__parse_check_id:
 	dd	.L1005
 	dd	.L1005
 	dd	.L8448
-	section .text
+	[section .text]
 .L8364:
 	inc	ecx
 	cmp	BYTE [ecx], 0
