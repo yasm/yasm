@@ -989,7 +989,6 @@ parse_instr(yasm_parser_gas *parser_gas)
             return bc;
         }
         case YASM_ARCH_PREFIX:
-        {
             /* Propagate errors in case we got a warning from the arch */
             yasm_errwarn_propagate(parser_gas->errwarns, cur_line);
 
@@ -1000,19 +999,21 @@ parse_instr(yasm_parser_gas *parser_gas)
                 bc = yasm_arch_create_empty_insn(p_object->arch, cur_line);
             yasm_insn_add_prefix(yasm_bc_get_insn(bc), prefix);
             return bc;
-        }
-#if 0
-        /* TODO */
-        case SEGREG:
-        {
-            uintptr_t segreg = SEGREG_val;
-            get_next_token(); /* SEGREG */
+        default:
+            break;
+    }
+
+    /* Check for segment register used as prefix */
+    switch (yasm_arch_parse_check_regtmod(p_object->arch, ID_val, ID_len,
+                                          &prefix)) {
+        case YASM_ARCH_SEGREG:
+            yasm_xfree(id);
+            get_next_token();   /* ID */
             bc = parse_instr(parser_gas);
             if (!bc)
                 bc = yasm_arch_create_empty_insn(p_object->arch, cur_line);
-            yasm_insn_add_seg_prefix(yasm_bc_get_insn(bc), segreg);
-        }
-#endif
+            yasm_insn_add_seg_prefix(yasm_bc_get_insn(bc), prefix);
+            return bc;
         default:
             return NULL;
     }
