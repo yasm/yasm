@@ -92,8 +92,6 @@ enum gas_parser_state {
 };
 
 typedef struct yasm_parser_gas {
-    int debug;
-
     /*@only@*/ yasm_object *object;
 
     /* last "base" label for local (.) labels */

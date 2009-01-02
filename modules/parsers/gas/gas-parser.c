@@ -81,9 +81,6 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp,
     parser_gas.is_nasm_preproc =
         yasm__strcasecmp(((yasm_preproc_base*)pp)->module->keyword, "nasm") == 0;
 
-    /* yacc debugging, needs YYDEBUG set in bison.y.in to work */
-    parser_gas.debug = 1;
-
     gas_parser_parse(&parser_gas);
 
     /* Check for ending inside a rept */

@@ -89,8 +89,6 @@ typedef union {
 typedef struct yasm_parser_nasm {
     int tasm;
 
-    int debug;
-
     /*@only@*/ yasm_object *object;
 
     /* last "base" label for local (.) labels */

@@ -63,9 +63,6 @@ nasm_do_parse(yasm_object *object, yasm_preproc *pp, int save_input,
 
     parser_nasm.state = INITIAL;
 
-    /* yacc debugging, needs YYDEBUG set in bison.y.in to work */
-    /* nasm_parser_debug = 1; */
-
     nasm_parser_parse(&parser_nasm);
 
     /*yasm_scanner_delete(&parser_nasm.s);*/
