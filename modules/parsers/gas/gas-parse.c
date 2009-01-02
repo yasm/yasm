@@ -946,9 +946,9 @@ parse_instr(yasm_parser_gas *parser_gas)
     if (!isalpha(id[0]))
         return NULL;
 
-    /* check to be sure it's not a label */
+    /* check to be sure it's not a label or equ */
     get_peek_token(parser_gas);
-    if (parser_gas->peek_token == ':')
+    if (parser_gas->peek_token == ':' || parser_gas->peek_token == '=')
         return NULL;
 
     switch (yasm_arch_parse_check_insnprefix
