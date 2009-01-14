@@ -3,6 +3,7 @@
 TESTS += modules/arch/x86/tests/x86_test.sh
 
 EXTRA_DIST += modules/arch/x86/tests/x86_test.sh
+EXTRA_DIST += modules/arch/x86/tests/gen-fma-test.py
 EXTRA_DIST += modules/arch/x86/tests/addbyte.asm
 EXTRA_DIST += modules/arch/x86/tests/addbyte.errwarn
 EXTRA_DIST += modules/arch/x86/tests/addbyte.hex
@@ -212,8 +213,6 @@ EXTRA_DIST += modules/arch/x86/tests/vmx.asm
 EXTRA_DIST += modules/arch/x86/tests/vmx.hex
 EXTRA_DIST += modules/arch/x86/tests/vmx-err.asm
 EXTRA_DIST += modules/arch/x86/tests/vmx-err.errwarn
-EXTRA_DIST += modules/arch/x86/tests/vpermil2.asm
-EXTRA_DIST += modules/arch/x86/tests/vpermil2.hex
 EXTRA_DIST += modules/arch/x86/tests/x86label.asm
 EXTRA_DIST += modules/arch/x86/tests/x86label.hex
 EXTRA_DIST += modules/arch/x86/tests/xchg64.asm

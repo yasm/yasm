@@ -1432,17 +1432,6 @@ vpermilpd xmm1, dqword [rax], 5
 vpermilpd ymm1, [rax], byte 5
 vpermilpd ymm1, yword [rax], 5
 
-vpermil2pd xmm1, xmm2, xmm3, xmm4, 5
-vpermil2pd xmm1, xmm2, [rax], xmm4, 5
-vpermil2pd xmm1, xmm2, dqword [rax], xmm4, 5
-vpermil2pd xmm1, xmm2, xmm3, [rax], 5
-vpermil2pd xmm1, xmm2, xmm3, dqword [rax], 5
-vpermil2pd ymm1, ymm2, ymm3, ymm4, 5
-vpermil2pd ymm1, ymm2, [rax], ymm4, 5
-vpermil2pd ymm1, ymm2, yword [rax], ymm4, 5
-vpermil2pd ymm1, ymm2, ymm3, [rax], 5
-vpermil2pd ymm1, ymm2, ymm3, yword [rax], 5
-
 vpermilps xmm1, xmm2, xmm3
 vpermilps xmm1, xmm2, [rax]
 vpermilps xmm1, xmm2, dqword [rax]
@@ -1453,17 +1442,6 @@ vpermilps xmm1, [rax], byte 5
 vpermilps xmm1, dqword [rax], 5
 vpermilps ymm1, [rax], byte 5
 vpermilps ymm1, yword [rax], 5
-
-vpermil2ps xmm1, xmm2, xmm3, xmm4, 5
-vpermil2ps xmm1, xmm2, [rax], xmm4, 5
-vpermil2ps xmm1, xmm2, dqword [rax], xmm4, 5
-vpermil2ps xmm1, xmm2, xmm3, [rax], 5
-vpermil2ps xmm1, xmm2, xmm3, dqword [rax], 5
-vpermil2ps ymm1, ymm2, ymm3, ymm4, 5
-vpermil2ps ymm1, ymm2, [rax], ymm4, 5
-vpermil2ps ymm1, ymm2, yword [rax], ymm4, 5
-vpermil2ps ymm1, ymm2, ymm3, [rax], 5
-vpermil2ps ymm1, ymm2, ymm3, yword [rax], 5
 
 vperm2f128 ymm1, ymm2, ymm3, 5
 vperm2f128 ymm1, ymm2, [rax], byte 5
