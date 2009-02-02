@@ -6462,20 +6462,49 @@ add_insn("vaeskeygenassist", "aes_imm", modifiers=[0x3A, 0xDF, VEXL0],
 # Intel PCLMULQDQ instruction
 #####################################################################
 
-add_insn("pclmulqdq", "aes_imm", modifiers=[0x3A, 0x44], cpu=["CLMUL"])
+add_group("pclmulqdq",
+    cpu=["CLMUL"],
+    modifiers=["Op1Add", "Op2Add", "SetVEX"],
+    prefix=0x66,
+    opcode=[0x0F, 0x00, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("pclmulqdq",
+    cpu=["CLMUL", "AVX"],
+    modifiers=["Op1Add", "Op2Add"],
+    vex=128,
+    prefix=0x66,
+    opcode=[0x0F, 0x00, 0x00],
+    operands=[Operand(type="SIMDReg", size=128,               dest="Spare"),
+              Operand(type="SIMDReg", size=128,               dest="VEX"),
+              Operand(type="SIMDRM",  size=128, relaxed=True, dest="EA"),
+              Operand(type="Imm",     size=8,   relaxed=True, dest="Imm")])
+
+add_insn("pclmulqdq", "pclmulqdq", modifiers=[0x3A, 0x44])
+add_insn("vpclmulqdq", "pclmulqdq", modifiers=[0x3A, 0x44, VEXL0], avx=True)
 
 add_group("pclmulqdq_fixed",
     cpu=["CLMUL"],
+    modifiers=["Imm8", "SetVEX"],
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x44],
+    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("pclmulqdq_fixed",
+    cpu=["CLMUL", "AVX"],
     modifiers=["Imm8"],
+    vex=128,
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x44],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM",  size=128, relaxed=True, dest="EA")])
 
-add_insn("pclmullqlqdq", "pclmulqdq_fixed", modifiers=[0x00])
-add_insn("pclmulhqlqdq", "pclmulqdq_fixed", modifiers=[0x01])
-add_insn("pclmullqhqdq", "pclmulqdq_fixed", modifiers=[0x10])
-add_insn("pclmulhqhqdq", "pclmulqdq_fixed", modifiers=[0x11])
+for comb, combval in zip(["lql","hql","lqh","hqh"], [0x00,0x01,0x10,0x11]):
+    add_insn("pclmul"+comb+"qdq", "pclmulqdq_fixed", modifiers=[combval])
+    add_insn("vpclmul"+comb+"qdq", "pclmulqdq_fixed",
+             modifiers=[combval, VEXL0], avx=True)
 
 #####################################################################
 # AMD SSE4a instructions
