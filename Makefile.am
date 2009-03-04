@@ -104,6 +104,7 @@ EXTRA_DIST += Mkfiles/vc8/genperf/run.bat
 EXTRA_DIST += Mkfiles/vc9/crt_secure_no_deprecate.vsprops
 EXTRA_DIST += Mkfiles/vc9/yasm.sln
 EXTRA_DIST += Mkfiles/vc9/yasm.vcproj
+EXTRA_DIST += Mkfiles/vc9/ytasm.vcproj
 EXTRA_DIST += Mkfiles/vc9/config.h
 EXTRA_DIST += Mkfiles/vc9/libyasm-stdint.h
 EXTRA_DIST += Mkfiles/vc9/readme.vc9.txt
