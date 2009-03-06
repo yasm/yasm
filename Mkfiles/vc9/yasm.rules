@@ -28,7 +28,7 @@
 					DisplayName="Include Paths"
 					Category="Configuration"
 					Description="Set the paths for any additional include files"
-					Switch="-i &quot;[value]&quot;"
+					Switch="-I &quot;[value]&quot;"
 					Delimited="true"
 					Inheritable="true"
 				/>
@@ -37,7 +37,7 @@
 					DisplayName="Remove Definitions"
 					Category="Pre-Defined Symbols"
 					Description="Remove pre-defined symbols "
-					Switch="-u [value]"
+					Switch="-U [value]"
 					Delimited="true"
 					Inheritable="true"
 				/>
