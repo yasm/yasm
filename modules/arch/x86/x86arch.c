@@ -333,6 +333,8 @@ x86_get_fill(const yasm_arch *arch)
         "\x90",                         /* 1 - nop                      */
         (const unsigned char *)
         "\x66\x90",                     /* 2 - o16; nop                 */
+#if 1   
+        /* recommmended padding for AMD K8 processors                   */
         (const unsigned char *)
         "\x66\x66\x90",                 /* 3 - o16; o16; nop            */
         (const unsigned char *)
@@ -367,6 +369,44 @@ x86_get_fill(const yasm_arch *arch)
         (const unsigned char *)
         "\x66\x66\x66\x90\x66\x66\x66"  /* 15 */
         "\x90\x66\x66\x66\x90\x66\x66\x90"
+#else   
+        /* from Software Optimisation Guide for AMD Family 10h  */
+        /* Processors 40546 revision 3.10 February 2009         */
+        (const unsigned char *)
+        "\x0f\x1f\x00",                 /* 3 */
+        (const unsigned char *)
+        "\x0f\x1f\x40\x00",             /* 4 */
+        (const unsigned char *)
+        "\x0f\x1f\x44\x00\x00",         /* 5 */
+        (const unsigned char *)
+        "\x66\x0f\x1f\x44\x00\x00",     /* 6 */
+        (const unsigned char *)
+        "\x0f\x1f\x80\x00\x00\x00\x00", /* 7 */
+        (const unsigned char *)
+        "\x0f\x1f\x84\x00\x00\x00\x00"  /* 8 */
+        "\x00",
+        (const unsigned char *)
+        "\x66\x0f\x1f\x84\x00\x00\x00"  /* 9 */
+        "\x00\x00",
+        (const unsigned char *)
+        "\x66\x2e\x0f\x1f\x84\x00\x00"  /* 10 */
+        "\x00\x00\x00",
+        (const unsigned char *)
+        "\x0f\x1f\x44\x00\x00\x66\x0f"  /* 11 */
+        "\x1f\x44\x00\x00",
+        (const unsigned char *)
+        "\x66\x0f\x1f\x44\x00\x00\x66"  /* 12 */
+        "\x0f\x1f\x44\x00\x00",
+        (const unsigned char *)
+        "\x66\x0f\x1f\x44\x00\x00\x0f"  /* 13 */
+        "\x1f\x80\x00\x00\x00\x00",
+        (const unsigned char *)
+        "\x0f\x1f\x80\x00\x00\x00\x00"  /* 14 */
+        "\x0f\x1f\x80\x00\x00\x00\x00",
+        (const unsigned char *)
+        "\x0f\x1f\x80\x00\x00\x00\x00"  /* 15 */
+        "\x0f\x1f\x84\x00\x00\x00\x00\x00"
+#endif
     };
     switch (arch_x86->mode_bits) {
         case 16:
