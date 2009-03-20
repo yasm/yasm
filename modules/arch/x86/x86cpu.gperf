@@ -51,7 +51,7 @@ RCSID("$Id$");
 #define PROC_sandybridge 15
 
 static void
-x86_cpu_intel(wordptr cpu, unsigned int data)
+x86_cpu_intel(wordptr cpu, yasm_arch_x86 *arch_x86, unsigned int data)
 {
     BitVector_Empty(cpu);
 
@@ -104,10 +104,16 @@ x86_cpu_intel(wordptr cpu, unsigned int data)
     if (data >= PROC_186)
         BitVector_Bit_On(cpu, CPU_186);
     BitVector_Bit_On(cpu, CPU_086);
+
+    /* Use Intel long NOPs if 686 or better */
+    if (data >= PROC_686)
+        arch_x86->nop = X86_NOP_INTEL;
+    else
+        arch_x86->nop = X86_NOP_BASIC;
 }
 
 static void
-x86_cpu_ia64(wordptr cpu, unsigned int data)
+x86_cpu_ia64(wordptr cpu, yasm_arch_x86 *arch_x86, unsigned int data)
 {
     BitVector_Empty(cpu);
     BitVector_Bit_On(cpu, CPU_Priv);
@@ -137,7 +143,7 @@ x86_cpu_ia64(wordptr cpu, unsigned int data)
 #define PROC_k6     6
 
 static void
-x86_cpu_amd(wordptr cpu, unsigned int data)
+x86_cpu_amd(wordptr cpu, yasm_arch_x86 *arch_x86, unsigned int data)
 {
     BitVector_Empty(cpu);
 
@@ -172,32 +178,44 @@ x86_cpu_amd(wordptr cpu, unsigned int data)
     BitVector_Bit_On(cpu, CPU_286);
     BitVector_Bit_On(cpu, CPU_186);
     BitVector_Bit_On(cpu, CPU_086);
+
+    /* Use AMD long NOPs if k6 or better */
+    if (data >= PROC_k6)
+        arch_x86->nop = X86_NOP_AMD;
+    else
+        arch_x86->nop = X86_NOP_BASIC;
 }
 
 static void
-x86_cpu_set(wordptr cpu, unsigned int data)
+x86_cpu_set(wordptr cpu, yasm_arch_x86 *arch_x86, unsigned int data)
 {
     BitVector_Bit_On(cpu, data);
 }
 
 static void
-x86_cpu_clear(wordptr cpu, unsigned int data)
+x86_cpu_clear(wordptr cpu, yasm_arch_x86 *arch_x86, unsigned int data)
 {
     BitVector_Bit_Off(cpu, data);
 }
 
 static void
-x86_cpu_set_sse4(wordptr cpu, unsigned int data)
+x86_cpu_set_sse4(wordptr cpu, yasm_arch_x86 *arch_x86, unsigned int data)
 {
     BitVector_Bit_On(cpu, CPU_SSE41);
     BitVector_Bit_On(cpu, CPU_SSE42);
 }
 
 static void
-x86_cpu_clear_sse4(wordptr cpu, unsigned int data)
+x86_cpu_clear_sse4(wordptr cpu, yasm_arch_x86 *arch_x86, unsigned int data)
 {
     BitVector_Bit_Off(cpu, CPU_SSE41);
     BitVector_Bit_Off(cpu, CPU_SSE42);
+}
+
+static void
+x86_nop(wordptr cpu, yasm_arch_x86 *arch_x86, unsigned int data)
+{
+    arch_x86->nop = data;
 }
 
 %}
@@ -211,7 +229,7 @@ x86_cpu_clear_sse4(wordptr cpu, unsigned int data)
 %define lookup-function-name cpu_find
 struct cpu_parse_data {
     const char *name;
-    void (*handler) (wordptr cpu, unsigned int data);
+    void (*handler) (wordptr cpu, yasm_arch_x86 *arch_x86, unsigned int data);
     unsigned int data;
 };
 %%
@@ -268,12 +286,15 @@ athlon64,	x86_cpu_amd,	PROC_hammer
 athlon-64,	x86_cpu_amd,	PROC_hammer
 venice,		x86_cpu_amd,	PROC_venice
 k10,		x86_cpu_amd,	PROC_k10
+phenom,		x86_cpu_amd,	PROC_k10
+family10h,	x86_cpu_amd,	PROC_k10
 bulldozer,	x86_cpu_amd,	PROC_bulldozer
 prescott,	x86_cpu_intel,	PROC_prescott
 conroe,		x86_cpu_intel,	PROC_conroe
 core2,		x86_cpu_intel,	PROC_conroe
 penryn,		x86_cpu_intel,	PROC_penryn
 nehalem,	x86_cpu_intel,	PROC_nehalem
+corei7,		x86_cpu_intel,	PROC_nehalem
 westmere,	x86_cpu_intel,	PROC_westmere
 sandybridge,	x86_cpu_intel,	PROC_sandybridge
 #
@@ -352,6 +373,10 @@ pclmulqdq,	x86_cpu_set,	CPU_CLMUL
 nopclmulqdq,	x86_cpu_clear,	CPU_CLMUL
 movbe,		x86_cpu_set,	CPU_MOVBE
 nomovbe,	x86_cpu_clear,	CPU_MOVBE
+# Change NOP patterns
+basicnop,	x86_nop,	X86_NOP_BASIC
+intelnop,	x86_nop,	X86_NOP_INTEL
+amdnop,		x86_nop,	X86_NOP_AMD
 %%
 
 void
@@ -377,7 +402,7 @@ yasm_x86__parse_cpu(yasm_arch_x86 *arch_x86, const char *cpuid,
     }
 
     new_cpu = BitVector_Clone(arch_x86->cpu_enables[arch_x86->active_cpu]);
-    pdata->handler(new_cpu, pdata->data);
+    pdata->handler(new_cpu, arch_x86, pdata->data);
 
     /* try to find an existing match in the CPU table first */
     for (i=0; i<arch_x86->cpu_enables_size; i++) {

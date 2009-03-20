@@ -68,6 +68,7 @@ x86_create(const char *machine, const char *parser,
     arch_x86->mode_bits = 0;
     arch_x86->force_strict = 0;
     arch_x86->default_rel = 0;
+    arch_x86->nop = X86_NOP_BASIC;
 
     if (yasm__strcasecmp(parser, "nasm") == 0)
         arch_x86->parser = X86_PARSER_NASM;
@@ -270,7 +271,7 @@ x86_get_fill(const yasm_arch *arch)
     static const unsigned char fill32_1[1] =
         {0x90};                              /* 1 - nop */
     static const unsigned char fill32_2[2] =
-        {0x89, 0xf6};                        /* 2 - mov esi, esi */
+        {0x66, 0x90};                        /* 2 - xchg ax, ax (o16 nop) */
     static const unsigned char fill32_3[3] =
         {0x8d, 0x76, 0x00};                  /* 3 - lea esi, [esi+byte 0] */
     static const unsigned char fill32_4[4] =
@@ -345,99 +346,100 @@ x86_get_fill(const yasm_arch *arch)
         fill32_12, fill32_13, fill32_14, fill32_15
     };
 
-    static const unsigned char fill64_1[1] =
-        {0x90};                              /* 1 - nop */
-    static const unsigned char fill64_2[2] =
-        {0x66, 0x90};                        /* 2 - o16; nop */
-#if 1   
-    /* recommmended padding for AMD K8 processors */
-    static const unsigned char fill64_3[3] =
-        {0x66, 0x66, 0x90};                  /* 3 - o16; o16; nop */
-    static const unsigned char fill64_4[4] =
-        {0x66, 0x66, 0x66, 0x90};            /* 4 - o16; o16; o16; nop */
-    static const unsigned char fill64_5[5] =
-        {0x66, 0x66, 0x90, 0x66, 0x90};      /* 5 */
-    static const unsigned char fill64_6[6] =
-        {0x66, 0x66, 0x90, 0x66, 0x66, 0x90};/* 6 */
-    static const unsigned char fill64_7[7] =
-        {0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x90}; /* 7 */
-    static const unsigned char fill64_8[8] =
-        {0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x66,  /* 8 */
-         0x90};
-    static const unsigned char fill64_9[9] =
-        {0x66, 0x66, 0x90, 0x66, 0x66, 0x90, 0x66,  /* 9 */
-         0x66, 0x90};
-    static const unsigned char fill64_10[10] =
-        {0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x90,  /* 10 */
-         0x66, 0x66, 0x90};
-    static const unsigned char fill64_11[11] =
-        {0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x66,  /* 11 */
-         0x90, 0x66, 0x66, 0x90};
-    static const unsigned char fill64_12[12] =
-        {0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x66,  /* 12 */
-         0x90, 0x66, 0x66, 0x66, 0x90};
-    static const unsigned char fill64_13[13] =
-        {0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x90,  /* 13 */
-         0x66, 0x66, 0x90, 0x66, 0x66, 0x90};
-    static const unsigned char fill64_14[14] =
-        {0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x66,  /* 14 */
-         0x90, 0x66, 0x66, 0x90, 0x66, 0x66, 0x90};
-    static const unsigned char fill64_15[15] =
-        {0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x66,  /* 15 */
-         0x90, 0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x90};
-#else   
-    /* from Software Optimisation Guide for AMD Family 10h  */
-    /* Processors 40546 revision 3.10 February 2009         */
-    static const unsigned char fill64_3[3] =
-        {0x0f, 0x1f, 0x00};                         /* 3 */
-    static const unsigned char fill64_4[4] =
-        {0x0f, 0x1f, 0x40, 0x00};                   /* 4 */
-    static const unsigned char fill64_5[5] =
-        {0x0f, 0x1f, 0x44, 0x00, 0x00};             /* 5 */
-    static const unsigned char fill64_6[6] =
-        {0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00};       /* 6 */
-    static const unsigned char fill64_7[7] =
-        {0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00}; /* 7 */
-    static const unsigned char fill64_8[8] =
-        {0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00,  /* 8 */
+    /* Long form nops available on more recent Intel and AMD processors */
+    static const unsigned char fill32new_3[3] =
+        {0x0f, 0x1f, 0x00};                         /* 3 - nop(3) */
+    static const unsigned char fill32new_4[4] =
+        {0x0f, 0x1f, 0x40, 0x00};                   /* 4 - nop(4) */
+    static const unsigned char fill32new_5[5] =
+        {0x0f, 0x1f, 0x44, 0x00, 0x00};             /* 5 - nop(5) */
+    static const unsigned char fill32new_6[6] =
+        {0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00};       /* 6 - nop(6) */
+    static const unsigned char fill32new_7[7] =
+        {0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00}; /* 7 - nop(7) */
+    static const unsigned char fill32new_8[8] =
+        {0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00,  /* 8 - nop(8) */
          0x00};
-    static const unsigned char fill64_9[9] =
-        {0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00,  /* 9 */
+    static const unsigned char fill32new_9[9] =
+        {0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00,  /* 9 - nop(9) */
          0x00, 0x00};
-    static const unsigned char fill64_10[10] =
-        {0x66, 0x2e, 0x0f, 0x1f, 0x84, 0x00, 0x00,  /* 10 */
+
+    /* Longer forms preferred by Intel use repeated o16 prefixes */
+    static const unsigned char fill32intel_10[10] =
+        {0x66, 0x2e, 0x0f, 0x1f, 0x84, 0x00, 0x00,  /* 10 - o16; cs; nop */
          0x00, 0x00, 0x00};
-    static const unsigned char fill64_11[11] =
-        {0x0f, 0x1f, 0x44, 0x00, 0x00, 0x66, 0x0f,  /* 11 */
-         0x1f, 0x44, 0x00, 0x00};
-    static const unsigned char fill64_12[12] =
-        {0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00, 0x66,  /* 12 */
-         0x0f, 0x1f, 0x44, 0x00, 0x00};
-    static const unsigned char fill64_13[13] =
-        {0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00, 0x0f,  /* 13 */
-         0x1f, 0x80, 0x00, 0x00, 0x00, 0x00};
-    static const unsigned char fill64_14[14] =
-        {0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00,  /* 14 */
-         0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00};
-    static const unsigned char fill64_15[15] =
-        {0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00,  /* 15 */
+    static const unsigned char fill32intel_11[11] =
+        {0x66, 0x66, 0x2e, 0x0f, 0x1f, 0x84, 0x00,  /* 11 - 2x o16; cs; nop */
+         0x00, 0x00, 0x00, 0x00};
+    static const unsigned char fill32intel_12[12] =
+        {0x66, 0x66, 0x66, 0x2e, 0x0f, 0x1f, 0x84,  /* 12 - 3x o16; cs; nop */
+         0x00, 0x00, 0x00, 0x00, 0x00};
+    static const unsigned char fill32intel_13[13] =
+        {0x66, 0x66, 0x66, 0x66, 0x2e, 0x0f, 0x1f,  /* 13 - 4x o16; cs; nop */
+         0x84, 0x00, 0x00, 0x00, 0x00, 0x00};
+    static const unsigned char fill32intel_14[14] =
+        {0x66, 0x66, 0x66, 0x66, 0x66, 0x2e, 0x0f,  /* 14 - 5x o16; cs; nop */
+         0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00};
+    static const unsigned char fill32intel_15[15] =
+        {0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x2e,  /* 15 - 6x o16; cs; nop */
          0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00};
-#endif
-    static const unsigned char *fill64[16] =
+
+    /* Longer forms preferred by AMD use fewer o16 prefixes and no CS prefix;
+     * Source: Software Optimisation Guide for AMD Family 10h
+     * Processors 40546 revision 3.10 February 2009
+     */
+    static const unsigned char fill32amd_10[10] =
+        {0x66, 0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00,  /* 10 - nop(10) */
+         0x00, 0x00, 0x00};
+    static const unsigned char fill32amd_11[11] =
+        {0x0f, 0x1f, 0x44, 0x00, 0x00,              /* 11 - nop(5) */
+         0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00};       /*      nop(6) */
+    static const unsigned char fill32amd_12[12] =
+        {0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00,        /* 12 - nop(6) */
+         0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00};       /*      nop(6) */
+    static const unsigned char fill32amd_13[13] =
+        {0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00,        /* 13 - nop(6) */
+         0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00}; /*      nop(7) */
+    static const unsigned char fill32amd_14[14] =
+        {0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00,  /* 14 - nop(7) */
+         0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00}; /*      nop(7) */
+    static const unsigned char fill32amd_15[15] =
+        {0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00,        /* 15 - nop(7) */
+         0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00}; /*      nop(8) */
+
+    static const unsigned char *fill32_intel[16] =
     {
-        NULL,      fill64_1,  fill64_2,  fill64_3,
-        fill64_4,  fill64_5,  fill64_6,  fill64_7,
-        fill64_8,  fill64_9,  fill64_10, fill64_11,
-        fill64_12, fill64_13, fill64_14, fill64_15
+        NULL,           fill32_1,       fill32_2,       fill32new_3,
+        fill32new_4,    fill32new_5,    fill32new_6,    fill32new_7,
+        fill32new_8,    fill32new_9,    fill32intel_10, fill32intel_11,
+        fill32intel_12, fill32intel_13, fill32intel_14, fill32intel_15
+    };
+    static const unsigned char *fill32_amd[16] =
+    {
+        NULL,           fill32_1,       fill32_2,       fill32new_3,
+        fill32new_4,    fill32new_5,    fill32new_6,    fill32new_7,
+        fill32new_8,    fill32new_9,    fill32amd_10,   fill32amd_11,
+        fill32amd_12,   fill32amd_13,   fill32amd_14,   fill32amd_15
     };
 
     switch (arch_x86->mode_bits) {
         case 16:
             return fill16;
         case 32:
-            return fill32;
+            if (arch_x86->nop == X86_NOP_INTEL)
+                return fill32_intel;
+            else if (arch_x86->nop == X86_NOP_AMD)
+                return fill32_amd;
+            else
+                return fill32;
         case 64:
-            return fill64;
+            /* We know long nops are available in 64-bit mode; default to Intel
+             * ones if unspecified (to match GAS behavior).
+             */
+            if (arch_x86->nop == X86_NOP_AMD)
+                return fill32_amd;
+            else
+                return fill32_intel;
         default:
             yasm_error_set(YASM_ERROR_VALUE,
                            N_("Invalid mode_bits in x86_get_fill"));
