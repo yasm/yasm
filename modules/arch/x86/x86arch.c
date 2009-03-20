@@ -218,196 +218,219 @@ x86_get_fill(const yasm_arch *arch)
     const yasm_arch_x86 *arch_x86 = (const yasm_arch_x86 *)arch;
 
     /* Fill patterns that GAS uses. */
-    static const unsigned char *fill16[16] = {
-        NULL,                           /* unused                       */
-        (const unsigned char *)
-        "\x90",                         /* 1 - nop                      */
-        (const unsigned char *)
-        "\x89\xf6",                     /* 2 - mov si, si               */
-        (const unsigned char *)
-        "\x8d\x74\x00",                 /* 3 - lea si, [si+byte 0]      */
-        (const unsigned char *)
-        "\x8d\xb4\x00\x00",             /* 4 - lea si, [si+word 0]      */
-        (const unsigned char *)
-        "\x90"                          /* 5 - nop                      */
-        "\x8d\xb4\x00\x00",             /*     lea si, [si+word 0]      */
-        (const unsigned char *)
-        "\x89\xf6"                      /* 6 - mov si, si               */
-        "\x8d\xbd\x00\x00",             /*     lea di, [di+word 0]      */
-        (const unsigned char *)
-        "\x8d\x74\x00"                  /* 7 - lea si, [si+byte 0]      */
-        "\x8d\xbd\x00\x00",             /*     lea di, [di+word 0]      */
-        (const unsigned char *)
-        "\x8d\xb4\x00\x00"              /* 8 - lea si, [si+word 0]      */
-        "\x8d\xbd\x00\x00",             /*     lea di, [di+word 0]      */
-        (const unsigned char *)
-        "\xeb\x07\x90\x90\x90\x90\x90"  /* 9 - jmp $+9; nop fill        */
-        "\x90\x90",
-        (const unsigned char *)
-        "\xeb\x08\x90\x90\x90\x90\x90"  /* 10 - jmp $+10; nop fill      */
-        "\x90\x90\x90",
-        (const unsigned char *)
-        "\xeb\x09\x90\x90\x90\x90\x90"  /* 11 - jmp $+11; nop fill      */
-        "\x90\x90\x90\x90",
-        (const unsigned char *)
-        "\xeb\x0a\x90\x90\x90\x90\x90"  /* 12 - jmp $+12; nop fill      */
-        "\x90\x90\x90\x90\x90",
-        (const unsigned char *)
-        "\xeb\x0b\x90\x90\x90\x90\x90"  /* 13 - jmp $+13; nop fill      */
-        "\x90\x90\x90\x90\x90\x90",
-        (const unsigned char *)
-        "\xeb\x0c\x90\x90\x90\x90\x90"  /* 14 - jmp $+14; nop fill      */
-        "\x90\x90\x90\x90\x90\x90\x90",
-        (const unsigned char *)
-        "\xeb\x0d\x90\x90\x90\x90\x90"  /* 15 - jmp $+15; nop fill      */
-        "\x90\x90\x90\x90\x90\x90\x90\x90"
+    static const unsigned char fill16_1[1] =
+        {0x90};                                 /* 1 - nop */
+    static const unsigned char fill16_2[2] =
+        {0x89, 0xf6};                           /* 2 - mov si, si */
+    static const unsigned char fill16_3[3] =
+        {0x8d, 0x74, 0x00};                     /* 3 - lea si, [si+byte 0] */
+    static const unsigned char fill16_4[4] =
+        {0x8d, 0xb4, 0x00, 0x00};               /* 4 - lea si, [si+word 0] */
+    static const unsigned char fill16_5[5] =
+        {0x90,                                  /* 5 - nop */
+         0x8d, 0xb4, 0x00, 0x00};               /*     lea si, [si+word 0] */
+    static const unsigned char fill16_6[6] =
+        {0x89, 0xf6,                            /* 6 - mov si, si */
+         0x8d, 0xbd, 0x00, 0x00};               /*     lea di, [di+word 0] */
+    static const unsigned char fill16_7[7] =
+        {0x8d, 0x74, 0x00,                      /* 7 - lea si, [si+byte 0] */
+         0x8d, 0xbd, 0x00, 0x00};               /*     lea di, [di+word 0] */
+    static const unsigned char fill16_8[8] =
+        {0x8d, 0xb4, 0x00, 0x00,                /* 8 - lea si, [si+word 0] */
+         0x8d, 0xbd, 0x00, 0x00};               /*     lea di, [di+word 0] */
+    static const unsigned char fill16_9[9] =
+        {0xeb, 0x07, 0x90, 0x90, 0x90, 0x90,    /* 9 - jmp $+9; nop fill */
+         0x90, 0x90, 0x90};
+    static const unsigned char fill16_10[10] =
+        {0xeb, 0x08, 0x90, 0x90, 0x90, 0x90,    /* 10 - jmp $+10; nop fill */
+         0x90, 0x90, 0x90, 0x90};
+    static const unsigned char fill16_11[11] =
+        {0xeb, 0x09, 0x90, 0x90, 0x90, 0x90,    /* 11 - jmp $+11; nop fill */
+         0x90, 0x90, 0x90, 0x90, 0x90};
+    static const unsigned char fill16_12[12] =
+        {0xeb, 0x0a, 0x90, 0x90, 0x90, 0x90,    /* 12 - jmp $+12; nop fill */
+         0x90, 0x90, 0x90, 0x90, 0x90, 0x90};
+    static const unsigned char fill16_13[13] =
+        {0xeb, 0x0b, 0x90, 0x90, 0x90, 0x90,    /* 13 - jmp $+13; nop fill */
+         0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90};
+    static const unsigned char fill16_14[14] =
+        {0xeb, 0x0c, 0x90, 0x90, 0x90, 0x90,    /* 14 - jmp $+14; nop fill */
+         0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90};
+    static const unsigned char fill16_15[15] =
+        {0xeb, 0x0d, 0x90, 0x90, 0x90, 0x90,    /* 15 - jmp $+15; nop fill */
+         0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90};
+    static const unsigned char *fill16[16] =
+    {
+        NULL,      fill16_1,  fill16_2,  fill16_3,
+        fill16_4,  fill16_5,  fill16_6,  fill16_7,
+        fill16_8,  fill16_9,  fill16_10, fill16_11,
+        fill16_12, fill16_13, fill16_14, fill16_15
     };
-    static const unsigned char *fill32[16] = {
-        NULL,                           /* unused                       */
-        (const unsigned char *)
-        "\x90",                         /* 1 - nop                      */
-        (const unsigned char *)
-        "\x89\xf6",                     /* 2 - mov esi, esi             */
-        (const unsigned char *)
-        "\x8d\x76\x00",                 /* 3 - lea esi, [esi+byte 0]    */
-        (const unsigned char *)
-        "\x8d\x74\x26\x00",             /* 4 - lea esi, [esi*1+byte 0]  */
-        (const unsigned char *)
-        "\x90"                          /* 5 - nop                      */
-        "\x8d\x74\x26\x00",             /*     lea esi, [esi*1+byte 0]  */
-        (const unsigned char *)
-        "\x8d\xb6\x00\x00\x00\x00",     /* 6 - lea esi, [esi+dword 0]   */
-        (const unsigned char *)
-        "\x8d\xb4\x26\x00\x00\x00\x00", /* 7 - lea esi, [esi*1+dword 0] */
-        (const unsigned char *)
-        "\x90"                          /* 8 - nop                      */
-        "\x8d\xb4\x26\x00\x00\x00\x00", /*     lea esi, [esi*1+dword 0] */
+
+    static const unsigned char fill32_1[1] =
+        {0x90};                              /* 1 - nop */
+    static const unsigned char fill32_2[2] =
+        {0x89, 0xf6};                        /* 2 - mov esi, esi */
+    static const unsigned char fill32_3[3] =
+        {0x8d, 0x76, 0x00};                  /* 3 - lea esi, [esi+byte 0] */
+    static const unsigned char fill32_4[4] =
+        {0x8d, 0x74, 0x26, 0x00};            /* 4 - lea esi, [esi*1+byte 0] */
+    static const unsigned char fill32_5[5] =
+        {0x90,                               /* 5 - nop */
+         0x8d, 0x74, 0x26, 0x00};            /*     lea esi, [esi*1+byte 0] */
+    static const unsigned char fill32_6[6] =
+        {0x8d, 0xb6, 0x00, 0x00, 0x00, 0x00};/* 6 - lea esi, [esi+dword 0] */
+    static const unsigned char fill32_7[7] =
+        {0x8d, 0xb4, 0x26, 0x00, 0x00, 0x00, /* 7 - lea esi, [esi*1+dword 0] */
+         0x00};
+    static const unsigned char fill32_8[8] =
+        {0x90,                               /* 8 - nop */
+         0x8d, 0xb4, 0x26, 0x00, 0x00, 0x00, /*     lea esi, [esi*1+dword 0] */
+         0x00};
 #if 0
-        /* GAS uses these */
-        (const unsigned char *)
-        "\x89\xf6"                      /* 9 - mov esi, esi             */
-        "\x8d\xbc\x27\x00\x00\x00\x00", /*     lea edi, [edi*1+dword 0] */
-        (const unsigned char *)
-        "\x8d\x76\x00"                  /* 10 - lea esi, [esi+byte 0]   */
-        "\x8d\xbc\x27\x00\x00\x00\x00", /*      lea edi, [edi+dword 0]  */
-        (const unsigned char *)
-        "\x8d\x74\x26\x00"              /* 11 - lea esi, [esi*1+byte 0] */
-        "\x8d\xbc\x27\x00\x00\x00\x00", /*      lea edi, [edi*1+dword 0]*/
-        (const unsigned char *)
-        "\x8d\xb6\x00\x00\x00\x00"      /* 12 - lea esi, [esi+dword 0]  */
-        "\x8d\xbf\x00\x00\x00\x00",     /*      lea edi, [edi+dword 0]  */
-        (const unsigned char *)
-        "\x8d\xb6\x00\x00\x00\x00"      /* 13 - lea esi, [esi+dword 0]  */
-        "\x8d\xbc\x27\x00\x00\x00\x00", /*      lea edi, [edi*1+dword 0]*/
-        (const unsigned char *)
-        "\x8d\xb4\x26\x00\x00\x00\x00"  /* 14 - lea esi, [esi*1+dword 0]*/
-        "\x8d\xbc\x27\x00\x00\x00\x00", /*      lea edi, [edi*1+dword 0]*/
+    /* GAS uses these */
+    static const unsigned char fill32_9[9] =
+        {0x89, 0xf6,                         /* 9 - mov esi, esi */
+         0x8d, 0xbc, 0x27, 0x00, 0x00, 0x00, /*     lea edi, [edi*1+dword 0] */
+         0x00};
+    static const unsigned char fill32_10[10] =
+        {0x8d, 0x76, 0x00,                   /* 10 - lea esi, [esi+byte 0] */
+         0x8d, 0xbc, 0x27, 0x00, 0x00, 0x00, /*      lea edi, [edi+dword 0] */
+         0x00};
+    static const unsigned char fill32_11[11] =
+        {0x8d, 0x74, 0x26, 0x00,             /* 11 - lea esi, [esi*1+byte 0] */
+         0x8d, 0xbc, 0x27, 0x00, 0x00, 0x00, /*      lea edi, [edi*1+dword 0] */
+         0x00};
+    static const unsigned char fill32_12[12] =
+        {0x8d, 0xb6, 0x00, 0x00, 0x00, 0x00, /* 12 - lea esi, [esi+dword 0] */
+         0x8d, 0xbf, 0x00, 0x00, 0x00, 0x00};/*      lea edi, [edi+dword 0] */
+    static const unsigned char fill32_13[13] =
+        {0x8d, 0xb6, 0x00, 0x00, 0x00, 0x00, /* 13 - lea esi, [esi+dword 0] */
+         0x8d, 0xbc, 0x27, 0x00, 0x00, 0x00, /*      lea edi, [edi*1+dword 0] */
+         0x00};
+    static const unsigned char fill32_14[14] =
+        {0x8d, 0xb4, 0x26, 0x00, 0x00, 0x00, /* 14 - lea esi, [esi*1+dword 0] */
+         0x00,
+         0x8d, 0xbc, 0x27, 0x00, 0x00, 0x00, /*      lea edi, [edi*1+dword 0] */
+         0x00};
 #else
-        /* But on newer processors, these are recommended */
-        (const unsigned char *)
-        "\xeb\x07\x90\x90\x90\x90\x90"  /* 9 - jmp $+9; nop fill        */
-        "\x90\x90",
-        (const unsigned char *)
-        "\xeb\x08\x90\x90\x90\x90\x90"  /* 10 - jmp $+10; nop fill      */
-        "\x90\x90\x90",
-        (const unsigned char *)
-        "\xeb\x09\x90\x90\x90\x90\x90"  /* 11 - jmp $+11; nop fill      */
-        "\x90\x90\x90\x90",
-        (const unsigned char *)
-        "\xeb\x0a\x90\x90\x90\x90\x90"  /* 12 - jmp $+12; nop fill      */
-        "\x90\x90\x90\x90\x90",
-        (const unsigned char *)
-        "\xeb\x0b\x90\x90\x90\x90\x90"  /* 13 - jmp $+13; nop fill      */
-        "\x90\x90\x90\x90\x90\x90",
-        (const unsigned char *)
-        "\xeb\x0c\x90\x90\x90\x90\x90"  /* 14 - jmp $+14; nop fill      */
-        "\x90\x90\x90\x90\x90\x90\x90",
+    /* But on newer processors, these are recommended */
+    static const unsigned char fill32_9[9] =
+        {0xeb, 0x07, 0x90, 0x90, 0x90, 0x90, /* 9 - jmp $+9; nop fill */
+         0x90, 0x90, 0x90};
+    static const unsigned char fill32_10[10] =
+        {0xeb, 0x08, 0x90, 0x90, 0x90, 0x90, /* 10 - jmp $+10; nop fill */
+         0x90, 0x90, 0x90, 0x90};
+    static const unsigned char fill32_11[11] =
+        {0xeb, 0x09, 0x90, 0x90, 0x90, 0x90, /* 11 - jmp $+11; nop fill */
+         0x90, 0x90, 0x90, 0x90, 0x90};
+    static const unsigned char fill32_12[12] =
+        {0xeb, 0x0a, 0x90, 0x90, 0x90, 0x90, /* 12 - jmp $+12; nop fill */
+         0x90, 0x90, 0x90, 0x90, 0x90, 0x90};
+    static const unsigned char fill32_13[13] =
+        {0xeb, 0x0b, 0x90, 0x90, 0x90, 0x90, /* 13 - jmp $+13; nop fill */
+         0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90};
+    static const unsigned char fill32_14[14] =
+        {0xeb, 0x0c, 0x90, 0x90, 0x90, 0x90, /* 14 - jmp $+14; nop fill */
+         0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90};
 #endif
-        (const unsigned char *)
-        "\xeb\x0d\x90\x90\x90\x90\x90"  /* 15 - jmp $+15; nop fill      */
-        "\x90\x90\x90\x90\x90\x90\x90\x90"
+    static const unsigned char fill32_15[15] =
+        {0xeb, 0x0d, 0x90, 0x90, 0x90, 0x90, /* 15 - jmp $+15; nop fill */
+         0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90};
+    static const unsigned char *fill32[16] =
+    {
+        NULL,      fill32_1,  fill32_2,  fill32_3,
+        fill32_4,  fill32_5,  fill32_6,  fill32_7,
+        fill32_8,  fill32_9,  fill32_10, fill32_11,
+        fill32_12, fill32_13, fill32_14, fill32_15
     };
-    static const unsigned char *fill64[16] = {
-        NULL,                           /* unused                       */
-        (const unsigned char *)
-        "\x90",                         /* 1 - nop                      */
-        (const unsigned char *)
-        "\x66\x90",                     /* 2 - o16; nop                 */
+
+    static const unsigned char fill64_1[1] =
+        {0x90};                              /* 1 - nop */
+    static const unsigned char fill64_2[2] =
+        {0x66, 0x90};                        /* 2 - o16; nop */
 #if 1   
-        /* recommmended padding for AMD K8 processors                   */
-        (const unsigned char *)
-        "\x66\x66\x90",                 /* 3 - o16; o16; nop            */
-        (const unsigned char *)
-        "\x66\x66\x66\x90",             /* 4 - o16; o16; o16; nop       */
-        (const unsigned char *)
-        "\x66\x66\x90\x66\x90",         /* 5 */
-        (const unsigned char *)
-        "\x66\x66\x90\x66\x66\x90",     /* 6 */
-        (const unsigned char *)
-        "\x66\x66\x66\x90\x66\x66\x90", /* 7 */
-        (const unsigned char *)
-        "\x66\x66\x66\x90\x66\x66\x66"  /* 8 */
-        "\x90",
-        (const unsigned char *)
-        "\x66\x66\x90\x66\x66\x90\x66"  /* 9 */
-        "\x66\x90",
-        (const unsigned char *)
-        "\x66\x66\x66\x90\x66\x66\x90"  /* 10 */
-        "\x66\x66\x90",
-        (const unsigned char *)
-        "\x66\x66\x66\x90\x66\x66\x66"  /* 11 */
-        "\x90\x66\x66\x90",
-        (const unsigned char *)
-        "\x66\x66\x66\x90\x66\x66\x66"  /* 12 */
-        "\x90\x66\x66\x66\x90",
-        (const unsigned char *)
-        "\x66\x66\x66\x90\x66\x66\x90"  /* 13 */
-        "\x66\x66\x90\x66\x66\x90",
-        (const unsigned char *)
-        "\x66\x66\x66\x90\x66\x66\x66"  /* 14 */
-        "\x90\x66\x66\x90\x66\x66\x90",
-        (const unsigned char *)
-        "\x66\x66\x66\x90\x66\x66\x66"  /* 15 */
-        "\x90\x66\x66\x66\x90\x66\x66\x90"
+    /* recommmended padding for AMD K8 processors */
+    static const unsigned char fill64_3[3] =
+        {0x66, 0x66, 0x90};                  /* 3 - o16; o16; nop */
+    static const unsigned char fill64_4[4] =
+        {0x66, 0x66, 0x66, 0x90};            /* 4 - o16; o16; o16; nop */
+    static const unsigned char fill64_5[5] =
+        {0x66, 0x66, 0x90, 0x66, 0x90};      /* 5 */
+    static const unsigned char fill64_6[6] =
+        {0x66, 0x66, 0x90, 0x66, 0x66, 0x90};/* 6 */
+    static const unsigned char fill64_7[7] =
+        {0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x90}; /* 7 */
+    static const unsigned char fill64_8[8] =
+        {0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x66,  /* 8 */
+         0x90};
+    static const unsigned char fill64_9[9] =
+        {0x66, 0x66, 0x90, 0x66, 0x66, 0x90, 0x66,  /* 9 */
+         0x66, 0x90};
+    static const unsigned char fill64_10[10] =
+        {0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x90,  /* 10 */
+         0x66, 0x66, 0x90};
+    static const unsigned char fill64_11[11] =
+        {0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x66,  /* 11 */
+         0x90, 0x66, 0x66, 0x90};
+    static const unsigned char fill64_12[12] =
+        {0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x66,  /* 12 */
+         0x90, 0x66, 0x66, 0x66, 0x90};
+    static const unsigned char fill64_13[13] =
+        {0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x90,  /* 13 */
+         0x66, 0x66, 0x90, 0x66, 0x66, 0x90};
+    static const unsigned char fill64_14[14] =
+        {0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x66,  /* 14 */
+         0x90, 0x66, 0x66, 0x90, 0x66, 0x66, 0x90};
+    static const unsigned char fill64_15[15] =
+        {0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x66,  /* 15 */
+         0x90, 0x66, 0x66, 0x66, 0x90, 0x66, 0x66, 0x90};
 #else   
-        /* from Software Optimisation Guide for AMD Family 10h  */
-        /* Processors 40546 revision 3.10 February 2009         */
-        (const unsigned char *)
-        "\x0f\x1f\x00",                 /* 3 */
-        (const unsigned char *)
-        "\x0f\x1f\x40\x00",             /* 4 */
-        (const unsigned char *)
-        "\x0f\x1f\x44\x00\x00",         /* 5 */
-        (const unsigned char *)
-        "\x66\x0f\x1f\x44\x00\x00",     /* 6 */
-        (const unsigned char *)
-        "\x0f\x1f\x80\x00\x00\x00\x00", /* 7 */
-        (const unsigned char *)
-        "\x0f\x1f\x84\x00\x00\x00\x00"  /* 8 */
-        "\x00",
-        (const unsigned char *)
-        "\x66\x0f\x1f\x84\x00\x00\x00"  /* 9 */
-        "\x00\x00",
-        (const unsigned char *)
-        "\x66\x2e\x0f\x1f\x84\x00\x00"  /* 10 */
-        "\x00\x00\x00",
-        (const unsigned char *)
-        "\x0f\x1f\x44\x00\x00\x66\x0f"  /* 11 */
-        "\x1f\x44\x00\x00",
-        (const unsigned char *)
-        "\x66\x0f\x1f\x44\x00\x00\x66"  /* 12 */
-        "\x0f\x1f\x44\x00\x00",
-        (const unsigned char *)
-        "\x66\x0f\x1f\x44\x00\x00\x0f"  /* 13 */
-        "\x1f\x80\x00\x00\x00\x00",
-        (const unsigned char *)
-        "\x0f\x1f\x80\x00\x00\x00\x00"  /* 14 */
-        "\x0f\x1f\x80\x00\x00\x00\x00",
-        (const unsigned char *)
-        "\x0f\x1f\x80\x00\x00\x00\x00"  /* 15 */
-        "\x0f\x1f\x84\x00\x00\x00\x00\x00"
+    /* from Software Optimisation Guide for AMD Family 10h  */
+    /* Processors 40546 revision 3.10 February 2009         */
+    static const unsigned char fill64_3[3] =
+        {0x0f, 0x1f, 0x00};                         /* 3 */
+    static const unsigned char fill64_4[4] =
+        {0x0f, 0x1f, 0x40, 0x00};                   /* 4 */
+    static const unsigned char fill64_5[5] =
+        {0x0f, 0x1f, 0x44, 0x00, 0x00};             /* 5 */
+    static const unsigned char fill64_6[6] =
+        {0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00};       /* 6 */
+    static const unsigned char fill64_7[7] =
+        {0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00}; /* 7 */
+    static const unsigned char fill64_8[8] =
+        {0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00,  /* 8 */
+         0x00};
+    static const unsigned char fill64_9[9] =
+        {0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00,  /* 9 */
+         0x00, 0x00};
+    static const unsigned char fill64_10[10] =
+        {0x66, 0x2e, 0x0f, 0x1f, 0x84, 0x00, 0x00,  /* 10 */
+         0x00, 0x00, 0x00};
+    static const unsigned char fill64_11[11] =
+        {0x0f, 0x1f, 0x44, 0x00, 0x00, 0x66, 0x0f,  /* 11 */
+         0x1f, 0x44, 0x00, 0x00};
+    static const unsigned char fill64_12[12] =
+        {0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00, 0x66,  /* 12 */
+         0x0f, 0x1f, 0x44, 0x00, 0x00};
+    static const unsigned char fill64_13[13] =
+        {0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00, 0x0f,  /* 13 */
+         0x1f, 0x80, 0x00, 0x00, 0x00, 0x00};
+    static const unsigned char fill64_14[14] =
+        {0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00,  /* 14 */
+         0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00};
+    static const unsigned char fill64_15[15] =
+        {0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00,  /* 15 */
+         0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00};
 #endif
+    static const unsigned char *fill64[16] =
+    {
+        NULL,      fill64_1,  fill64_2,  fill64_3,
+        fill64_4,  fill64_5,  fill64_6,  fill64_7,
+        fill64_8,  fill64_9,  fill64_10, fill64_11,
+        fill64_12, fill64_13, fill64_14, fill64_15
     };
+
     switch (arch_x86->mode_bits) {
         case 16:
             return fill16;
