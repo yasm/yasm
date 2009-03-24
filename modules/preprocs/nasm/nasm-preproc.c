@@ -195,7 +195,10 @@ nasm_preproc_get_line(yasm_preproc *preproc)
 
     line = nasmpp.getline();
     if (!line)
+    {
+        nasmpp.cleanup(1);
         return NULL;    /* EOF */
+    }
 
     linnum = preproc_nasm->prior_linnum += preproc_nasm->lineinc;
     altline = nasm_src_get(&linnum, &preproc_nasm->file_name);

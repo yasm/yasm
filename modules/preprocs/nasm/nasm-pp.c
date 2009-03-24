@@ -5017,11 +5017,15 @@ pp_cleanup(int pass_)
 {
     int h;
 
-    if (defining)
+    if (pass_ == 1)
     {
-        error(ERR_NONFATAL, "end of file while still defining macro `%s'",
-                defining->name);
-        free_mmacro(defining);
+        if (defining)
+        {
+            error(ERR_NONFATAL, "end of file while still defining macro `%s'",
+                    defining->name);
+            free_mmacro(defining);
+        }
+        return;
     }
     while (cstk)
         ctx_pop();
