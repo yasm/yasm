@@ -13,7 +13,7 @@ CFLAGS=-DHAVE_CONFIG_H -IMkfiles/dj -O -I.
 CC?=gcc
 BUILDCC?=$(CC)
 
-all: yasm tasm
+all: yasm ytasm
 
 LIBYASM_OBJS= \
  libyasm/assocdat.o \
@@ -149,7 +149,7 @@ YASM_OBJS= \
  $(LIBYASM_OBJS) \
  $(MODULES_OBJS)
 
-TASM_OBJS= \
+YTASM_OBJS= \
  frontends/tasm/tasm.o \
  frontends/tasm/tasm-options.o \
  $(LIBYASM_OBJS) \
@@ -249,8 +249,8 @@ genperf: $(GENPERF_SRCS)
 yasm: $(YASM_OBJS)
 	$(CC) -o yasm $(YASM_OBJS)
 
-tasm: $(TASM_OBJS)
-	$(CC) -o tasm $(TASM_OBJS)
+ytasm: $(YTASM_OBJS)
+	$(CC) -o ytasm $(YTASM_OBJS)
 
 .c.o:
 	$(CC) -c $(CFLAGS) -o $@ $<

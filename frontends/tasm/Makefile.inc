@@ -1,9 +1,9 @@
 # $Id: Makefile.inc 1463 2006-04-05 05:39:23Z peter $
 
-bin_PROGRAMS += tasm
+bin_PROGRAMS += ytasm
 
-tasm_SOURCES  = frontends/tasm/tasm.c
-tasm_SOURCES += frontends/tasm/tasm-options.c
-tasm_SOURCES += frontends/tasm/tasm-options.h
+ytasm_SOURCES  = frontends/tasm/tasm.c
+ytasm_SOURCES += frontends/tasm/tasm-options.c
+ytasm_SOURCES += frontends/tasm/tasm-options.h
 
-tasm_LDADD = libyasm.a $(INTLLIBS)
+ytasm_LDADD = libyasm.a $(INTLLIBS)
