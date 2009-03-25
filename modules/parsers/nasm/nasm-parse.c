@@ -62,8 +62,9 @@ static void nasm_parser_directive
     (yasm_parser_nasm *parser_nasm, const char *name,
      /*@null@*/ yasm_valparamhead *valparams,
      /*@null@*/ yasm_valparamhead *objext_valparams);
+static void set_nonlocal_label(yasm_parser_nasm *parser_nasm, const char *name);
 static void define_label(yasm_parser_nasm *parser_nasm, /*@only@*/ char *name,
-                         unsigned int size, int local);
+                         unsigned int size);
 
 static void yasm_ea_set_implicit_size_segment(yasm_parser_nasm *parser_nasm,
                                               yasm_effaddr *ea, yasm_expr *e)
@@ -384,7 +385,9 @@ parse_line(yasm_parser_nasm *parser_nasm)
                 /* label alone on the line */
                 yasm_warn_set(YASM_WARN_ORPHAN_LABEL,
                     N_("label alone on a line without a colon might be in error"));
-                define_label(parser_nasm, name, 0, local);
+                if (!local)
+                    set_nonlocal_label(parser_nasm, name);
+                define_label(parser_nasm, name, 0);
                 return NULL;
             }
             if (curtok == ':')
@@ -420,12 +423,15 @@ parse_line(yasm_parser_nasm *parser_nasm)
                 get_next_token();
             }
 
+            if (!local)
+                set_nonlocal_label(parser_nasm, name);
+
             if (is_eol()) {
-                define_label(parser_nasm, name, size, local);
+                define_label(parser_nasm, name, size);
                 return NULL;
             }
             if (curtok == TIMES) {
-                define_label(parser_nasm, name, size, local);
+                define_label(parser_nasm, name, size);
                 get_next_token();
                 return parse_times(parser_nasm);
             }
@@ -435,7 +441,7 @@ parse_line(yasm_parser_nasm *parser_nasm)
                                N_("instruction expected after label"));
             if (parser_nasm->tasm && bc && !size)
                 size = yasm_bc_elem_size(bc);
-            define_label(parser_nasm, name, size, local);
+            define_label(parser_nasm, name, size);
             return bc;
         }
         default:
@@ -1439,12 +1445,9 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
 }
 
 static void
-define_label(yasm_parser_nasm *parser_nasm, char *name, unsigned int size,
-             int local)
+set_nonlocal_label(yasm_parser_nasm *parser_nasm, const char *name)
 {
-    yasm_symrec *symrec;
-
-    if ((!parser_nasm->tasm || tasm_locals) && !local) {
+    if (!parser_nasm->tasm || tasm_locals) {
         if (parser_nasm->locallabel_base)
             yasm_xfree(parser_nasm->locallabel_base);
         parser_nasm->locallabel_base_len = strlen(name);
@@ -1452,6 +1455,12 @@ define_label(yasm_parser_nasm *parser_nasm, char *name, unsigned int size,
             yasm_xmalloc(parser_nasm->locallabel_base_len+1);
         strcpy(parser_nasm->locallabel_base, name);
     }
+}
+
+static void
+define_label(yasm_parser_nasm *parser_nasm, char *name, unsigned int size)
+{
+    yasm_symrec *symrec;
 
     if (parser_nasm->abspos)
         symrec = yasm_symtab_define_equ(p_symtab, name,
