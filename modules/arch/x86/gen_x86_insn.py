@@ -3096,6 +3096,14 @@ add_group("fildstp",
     opcode=[0xDD],
     spare=0,
     operands=[Operand(type="Mem", size=64, dest="EA")])
+# No-suffix alias for memory for GAS compat -> "s" version generated
+add_group("fildstp",
+    cpu=["FPU"],
+    parsers=["gas"],
+    modifiers=["SpAdd"],
+    opcode=[0xDF],
+    spare=0,
+    operands=[Operand(type="Mem", size=16, relaxed=True, dest="EA")])
 
 add_insn("fild", "fildstp", modifiers=[0, 2, 5])
 add_insn("fistp", "fildstp", modifiers=[3, 2, 7])
@@ -3180,6 +3188,14 @@ add_group("fcom",
     modifiers=["Op1Add"],
     opcode=[0xD8, 0x00],
     operands=[Operand(type="Reg", size=80, dest="Op1Add")])
+# No-suffix alias for memory for GAS compat -> "s" version generated
+add_group("fcom",
+    cpu=["FPU"],
+    parsers=["gas"],
+    modifiers=["Gap", "SpAdd"],
+    opcode=[0xD8],
+    spare=0,
+    operands=[Operand(type="Mem", size=32, relaxed=True, dest="EA")])
 # Alias for fcom %st(1) for GAS compat
 add_group("fcom",
     cpu=["FPU"],
