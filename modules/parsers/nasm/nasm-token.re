@@ -436,6 +436,10 @@ scan:
                     s->tok[TOKLEN] = savech;
                     RETURN('|');
                 }
+                if (!yasm__strcasecmp(TOK, "not")) {
+                    s->tok[TOKLEN] = savech;
+                    RETURN('~');
+                }
                 if (!yasm__strcasecmp(TOK, "low")) {
                     s->tok[TOKLEN] = savech;
                     RETURN(LOW);
