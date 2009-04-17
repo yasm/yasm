@@ -538,13 +538,10 @@ check_tasm_directive(char *line)
     char *p, *oldline, oldchar, *q, oldchar2;
     TMEndItem *end;
 
-    if ((p = strchr(line, ';')))
-        *p = '\0';
-
     p = line;
 
     /* Skip whitespace */
-    while (isspace(*p) && *p != 0)
+    while (isspace(*p) && *p != 0 && *p != ';')
         p++;
 
     /* Ignore nasm directives */
@@ -553,7 +550,7 @@ check_tasm_directive(char *line)
 
     /* Binary search for the directive name */
     len = 0;
-    while (!isspace(p[len]) && p[len] != 0)
+    while (!isspace(p[len]) && p[len] != 0 && p[len] != ';')
         len++;
     if (!len)
         return line;
@@ -871,10 +868,10 @@ check_tasm_directive(char *line)
         /* Skip whitespaces */
         while (isspace(*q) && *q)
             q++;
-        while (*q) {
+        while (*q && *q != ';') {
             p = q;
-            for (; *q && *q != ':' && !isspace(*q); q++);
-            if (!*q)
+            for (; *q && *q != ';' && *q != ':' && !isspace(*q); q++);
+            if (!*q || *q == ';')
                 break;
             /* segment register name */
             for (assume = TAssumes; assume->segreg; assume++)
@@ -888,20 +885,22 @@ check_tasm_directive(char *line)
                 assume->segreg = nasm_strndup(p, q-p);
                 assume[1].segreg = NULL;
             }
-            for (; *q && *q != ':' && isspace(*q); q++);
+            for (; *q && *q != ';' && *q != ':' && isspace(*q); q++);
             if (*q != ':')
                 error(ERR_FATAL, "expected `:' instead of `%c'", *q);
             for (q++; *q && isspace(*q); q++);
 
             /* segment name */
             p = q;
-            for (; *q && *q != ',' && !isspace(*q); q++);
+            for (; *q && *q != ';' && *q != ',' && !isspace(*q); q++);
             assume->segment = nasm_strndup(p, q-p);
             for (; *q && isspace(*q); q++);
-            if (*q && *q != ',')
+            if (*q && *q != ';' && *q != ',')
                 error(ERR_FATAL, "expected `,' instead of `%c'", *q);
         
-            for (q++; *q && isspace(*q); q++);
+            if (*q && *q != ';')
+                q++;
+            for (; *q && isspace(*q); q++);
         }
         TAssumes[i].segreg = NULL;
         TAssumes = nasm_realloc(TAssumes, (i+1)*sizeof(*TAssumes));
