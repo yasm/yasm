@@ -39,7 +39,7 @@ ordered_cpus = [
 ordered_cpu_features = [
     "FPU", "Cyrix", "AMD", "MMX", "3DNow", "SMM", "SSE", "SSE2",
     "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42", "SSE4a", "SSE5",
-    "AVX", "FMA", "AES", "CLMUL"]
+    "AVX", "FMA", "AES", "CLMUL", "MOVBE", "XOP", "FMA4", "CVT16"]
 unordered_cpu_features = ["Priv", "Prot", "Undoc", "Obs"]
 
 # Predefined VEX prefix field values
@@ -48,6 +48,13 @@ VEXW1 = 0xC8
 VEXL0 = 0xC0
 VEXL1 = 0xC4
 VEXpp = 0xC0    # OR with value
+
+# Predefined XOP prefix field values
+XOPW0 = 0x80
+XOPW1 = 0x88
+XOPL0 = 0x80
+XOPL1 = 0x84
+XOPpp = 0x80    # OR with value
 
 def cpu_lcd(cpu1, cpu2):
     """Find the lowest common denominator of two CPU sets."""
@@ -208,6 +215,27 @@ class GroupForm(object):
 
             self.special_prefix = "0x%02X" % (0xC0 + vexW*8 + vexL*4 + vexpp)
 
+        # XOP prefix
+        if "xop" in kwargs:
+            xopW = kwargs.pop("xopw", 0)
+            if xopW not in [0, 1]:
+                raise ValueError("XOP.W must be 0 or 1")
+
+            xopL = kwargs.pop("xop")
+            if xopL == 128 or xopL == 0:
+                xopL = 0
+            elif xopL == 256:
+                xopL = 1
+            else:
+                raise ValueError("XOP.L must be 128 or 256")
+
+            # XOPpp is currently reserved (0)
+            xoppp = 0
+            if self.special_prefix not in ["0", "0x00"]:
+                raise ValueError("Cannot combine XOP and special prefix %s"
+                                 % self.special_prefix)
+            self.special_prefix = "0x%02X" % (0x80 + xopW*8 + xopL*4 + xoppp)
+
         # Spare value
         self.spare = kwargs.pop("spare", 0)
 
@@ -225,9 +253,6 @@ class GroupForm(object):
             self.opcode_len = len(self.opcode1)
         else:
             raise KeyError("missing opcode")
-
-        # DREX opcode0 field
-        self.drex_oc0 = kwargs.pop("drex_oc0", 0) and 0x08 or 0
 
         # Build operands string (C array initializer)
         self.operands = kwargs.pop("operands")
@@ -248,8 +273,6 @@ class GroupForm(object):
                 self.cpu.add("586")
             if op.dest == "EA64":
                 self.misc_flags.add("ONLY_64")
-            if op.dest == "DREX":
-                self.drex_oc0 |= 0x80
 
         # Modifiers
         self.modifiers = kwargs.pop("modifiers", [])
@@ -327,8 +350,6 @@ class GroupForm(object):
                                 "%d" % (self.opersize or 0),
                                 "%d" % (self.def_opersize_64 or 0),
                                 self.special_prefix or "0",
-                                self.drex_oc0 and
-                                    ("0x%02X" % self.drex_oc0) or "0",
                                 "%d" % self.opcode_len,
                                 opcodes_str,
                                 "%d" % (self.spare or 0),
@@ -6578,401 +6599,401 @@ add_group("movntss",
 add_insn("movntss", "movntss")
 
 #####################################################################
-# AMD SSE5 instructions
+# AMD CVT16 instructions
 #####################################################################
 
-add_group("sse5com",
-    cpu=["SSE5"],
-    modifiers=["Op2Add"],
-    opcode=[0x0F, 0x25, 0x00],
-    drex_oc0=0,
-    operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-              Operand(type="SIMDReg", size=128, dest="Spare"),
+add_group("vcvtph2ps",
+    cpu=["CVT16"],
+    xop=128,
+    opcode=[0x08, 0xA0],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="Mem", size=64, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("vcvtph2ps",
+    cpu=["CVT16"],
+    xop=128,
+    opcode=[0x08, 0xA0],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("vcvtph2ps",
+    cpu=["CVT16"],
+    xop=256,
+    opcode=[0x08, 0xA0],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_insn("vcvtph2ps", "vcvtph2ps")
 
-for sz in [32, 64]:
-    add_group("sse5com%d" % sz,
-        cpu=["SSE5"],
-        modifiers=["Op2Add"],
-        opcode=[0x0F, 0x25, 0x00],
-        drex_oc0=0,
-        operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-                  Operand(type="SIMDReg", size=128, dest="Spare"),
-                  Operand(type="SIMDReg", size=128, dest="EA"),
-                  Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
-    add_group("sse5com%d" % sz,
-        cpu=["SSE5"],
-        modifiers=["Op2Add"],
-        opcode=[0x0F, 0x25, 0x00],
-        drex_oc0=0,
-        operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-                  Operand(type="SIMDReg", size=128, dest="Spare"),
-                  Operand(type="Mem", size=sz, relaxed=True, dest="EA"),
-                  Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
-
-# Condition code versions
-add_group("sse5comcc",
-    cpu=["SSE5"],
-    modifiers=["Op2Add", "Imm8"],
-    opcode=[0x0F, 0x25, 0x00],
-    drex_oc0=0,
-    operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
+add_group("vcvtps2ph",
+    cpu=["CVT16"],
+    xop=128,
+    opcode=[0x08, 0xA1],
+    operands=[Operand(type="Mem", size=64, relaxed=True, dest="EA"),
               Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("vcvtps2ph",
+    cpu=["CVT16"],
+    xop=128,
+    opcode=[0x08, 0xA1],
+    operands=[Operand(type="SIMDReg", size=128, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_group("vcvtps2ph",
+    cpu=["CVT16"],
+    xop=256,
+    opcode=[0x08, 0xA1],
+    operands=[Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_insn("vcvtps2ph", "vcvtps2ph")
+
+#####################################################################
+# AMD XOP instructions
+#####################################################################
+
+add_group("vfrc_pdps",
+    cpu=["XOP"],
+    modifiers=["Op1Add"],
+    xop=128,
+    opcode=[0x09, 0x80],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("vfrc_pdps",
+    cpu=["XOP"],
+    modifiers=["Op1Add"],
+    xop=256,
+    opcode=[0x09, 0x80],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA")])
+add_insn("vfrczpd", "vfrc_pdps", modifiers=[0x01])
+add_insn("vfrczps", "vfrc_pdps", modifiers=[0x00])
 
-for sz in [32, 64]:
-    add_group("sse5comcc%d" % sz,
-        cpu=["SSE5"],
-        modifiers=["Op2Add", "Imm8"],
-        opcode=[0x0F, 0x25, 0x00],
-        drex_oc0=0,
-        operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-                  Operand(type="SIMDReg", size=128, dest="Spare"),
-                  Operand(type="SIMDReg", size=128, dest="EA")])
-    add_group("sse5comcc%d" % sz,
-        cpu=["SSE5"],
-        modifiers=["Op2Add", "Imm8"],
-        opcode=[0x0F, 0x25, 0x00],
-        drex_oc0=0,
-        operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-                  Operand(type="SIMDReg", size=128, dest="Spare"),
-                  Operand(type="Mem", size=sz, relaxed=True, dest="EA")])
-
-sse5coms = [(0, ""),
-            (0x0, "eq"),
-            (0x1, "lt"), (0x1, "unge"),
-            (0x2, "le"), (0x2, "ungt"),
-            (0x3, "unord"),
-            (0x4, "ne"), (0x4, "neq"),
-            (0x5, "nlt"), (0x5, "uge"),
-            (0x6, "nle"), (0x6, "ugt"),
-            (0x7, "ord"),
-            (0x8, "ueq"),
-            (0x9, "ult"), (0x9, "nge"),
-            (0xa, "ule"), (0xa, "ngt"),
-            (0xb, "false"),
-            (0xc, "une"), (0xc, "uneq"),
-            (0xd, "unlt"), (0xd, "ge"),
-            (0xe, "unle"), (0xe, "gt"),
-            (0xf, "true")]
-for ib, cc in sse5coms:
-    if cc:
-        iname = "sse5comcc"
-    else:
-        iname = "sse5com"
-    add_insn("com"+cc+"ps", iname, modifiers=[0x2C, ib])
-    add_insn("com"+cc+"pd", iname, modifiers=[0x2D, ib])
-    add_insn("com"+cc+"ss", iname+"32", modifiers=[0x2E, ib])
-    add_insn("com"+cc+"sd", iname+"64", modifiers=[0x2F, ib])
-
-sse5coms = list(enumerate(["lt", "le", "gt", "ge",
-                           "eq", "neq", "false", "true"]))
-sse5coms.append((5, "ne"))
-sse5coms.append((0, ""))
-for ib, cc in sse5coms:
-    if cc:
-        iname = "sse5comcc"
-    else:
-        iname = "sse5com"
-    add_insn("pcom"+cc+"b", iname, modifiers=[0x4C, ib])
-    add_insn("pcom"+cc+"w", iname, modifiers=[0x4D, ib])
-    add_insn("pcom"+cc+"d", iname, modifiers=[0x4E, ib])
-    add_insn("pcom"+cc+"q", iname, modifiers=[0x4F, ib])
-
-    add_insn("pcom"+cc+"ub", iname, modifiers=[0x6C, ib])
-    add_insn("pcom"+cc+"uw", iname, modifiers=[0x6D, ib])
-    add_insn("pcom"+cc+"ud", iname, modifiers=[0x6E, ib])
-    add_insn("pcom"+cc+"uq", iname, modifiers=[0x6F, ib])
-
-add_group("cvtph2ps",
-    cpu=["SSE5"],
-    opcode=[0x0F, 0x7A, 0x30],
+add_group("vfrczsd",
+    cpu=["XOP"],
+    xop=128,
+    opcode=[0x09, 0x83],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
               Operand(type="SIMDReg", size=128, dest="EA")])
-add_group("cvtph2ps",
-    cpu=["SSE5"],
-    opcode=[0x0F, 0x7A, 0x30],
+add_group("vfrczsd",
+    cpu=["XOP"],
+    xop=128,
+    opcode=[0x09, 0x83],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
               Operand(type="Mem", size=64, relaxed=True, dest="EA")])
+add_insn("vfrczsd", "vfrczsd")
 
-add_insn("cvtph2ps", "cvtph2ps")
-
-add_group("cvtps2ph",
-    cpu=["SSE5"],
-    opcode=[0x0F, 0x7A, 0x31],
-    operands=[Operand(type="SIMDReg", size=128, dest="EA"),
-              Operand(type="SIMDReg", size=128, dest="Spare")])
-add_group("cvtps2ph",
-    cpu=["SSE5"],
-    opcode=[0x0F, 0x7A, 0x31],
-    operands=[Operand(type="Mem", size=64, relaxed=True, dest="EA"),
-              Operand(type="SIMDReg", size=128, dest="Spare")])
-
-add_insn("cvtps2ph", "cvtps2ph")
-
-add_group("sse5arith",
-    cpu=["SSE5"],
-    modifiers=["Op2Add"],
-    opcode=[0x0F, 0x24, 0x00],
-    drex_oc0=0,
-    operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-              Operand(type="SIMDRegMatch0", size=128, dest=None),
-              Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
-add_group("sse5arith",
-    cpu=["SSE5"],
-    modifiers=["Op2Add"],
-    opcode=[0x0F, 0x24, 0x00],
-    drex_oc0=1,
-    operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-              Operand(type="SIMDRegMatch0", size=128, dest=None),
-              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
-              Operand(type="SIMDReg", size=128, dest="Spare")])
-add_group("sse5arith",
-    cpu=["SSE5"],
-    modifiers=["Op2Add"],
-    opcode=[0x0F, 0x24, 0x04],
-    drex_oc0=0,
-    operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-              Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
-              Operand(type="SIMDRegMatch0", size=128, dest=None)])
-add_group("sse5arith",
-    cpu=["SSE5"],
-    modifiers=["Op2Add"],
-    opcode=[0x0F, 0x24, 0x04],
-    drex_oc0=1,
-    operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
-              Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDRegMatch0", size=128, dest=None)])
-
-for sz in [32, 64]:
-    add_group("sse5arith%d" % sz,
-        cpu=["SSE5"],
-        modifiers=["Op2Add"],
-        opcode=[0x0F, 0x24, 0x00],
-        drex_oc0=0,
-        operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-                  Operand(type="SIMDRegMatch0", size=128, dest=None),
-                  Operand(type="SIMDReg", size=128, dest="Spare"),
-                  Operand(type="SIMDReg", size=128, dest="EA")])
-    add_group("sse5arith%d" % sz,
-        cpu=["SSE5"],
-        modifiers=["Op2Add"],
-        opcode=[0x0F, 0x24, 0x00],
-        drex_oc0=0,
-        operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-                  Operand(type="SIMDRegMatch0", size=128, dest=None),
-                  Operand(type="SIMDReg", size=128, dest="Spare"),
-                  Operand(type="Mem", size=sz, relaxed=True, dest="EA")])
-    add_group("sse5arith%d" % sz,
-        cpu=["SSE5"],
-        modifiers=["Op2Add"],
-        opcode=[0x0F, 0x24, 0x00],
-        drex_oc0=1,
-        operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-                  Operand(type="SIMDRegMatch0", size=128, dest=None),
-                  Operand(type="SIMDReg", size=128, dest="EA"),
-                  Operand(type="SIMDReg", size=128, dest="Spare")])
-    add_group("sse5arith%d" % sz,
-        cpu=["SSE5"],
-        modifiers=["Op2Add"],
-        opcode=[0x0F, 0x24, 0x00],
-        drex_oc0=1,
-        operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-                  Operand(type="SIMDRegMatch0", size=128, dest=None),
-                  Operand(type="Mem", size=sz, relaxed=True, dest="EA"),
-                  Operand(type="SIMDReg", size=128, dest="Spare")])
-    add_group("sse5arith%d" % sz,
-        cpu=["SSE5"],
-        modifiers=["Op2Add"],
-        opcode=[0x0F, 0x24, 0x04],
-        drex_oc0=0,
-        operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-                  Operand(type="SIMDReg", size=128, dest="Spare"),
-                  Operand(type="SIMDReg", size=128, dest="EA"),
-                  Operand(type="SIMDRegMatch0", size=128, dest=None)])
-    add_group("sse5arith%d" % sz,
-        cpu=["SSE5"],
-        modifiers=["Op2Add"],
-        opcode=[0x0F, 0x24, 0x04],
-        drex_oc0=0,
-        operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-                  Operand(type="SIMDReg", size=128, dest="Spare"),
-                  Operand(type="Mem", size=sz, relaxed=True, dest="EA"),
-                  Operand(type="SIMDRegMatch0", size=128, dest=None)])
-    add_group("sse5arith%d" % sz,
-        cpu=["SSE5"],
-        modifiers=["Op2Add"],
-        opcode=[0x0F, 0x24, 0x04],
-        drex_oc0=1,
-        operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-                  Operand(type="SIMDReg", size=128, dest="EA"),
-                  Operand(type="SIMDReg", size=128, dest="Spare"),
-                  Operand(type="SIMDRegMatch0", size=128, dest=None)])
-    add_group("sse5arith%d" % sz,
-        cpu=["SSE5"],
-        modifiers=["Op2Add"],
-        opcode=[0x0F, 0x24, 0x04],
-        drex_oc0=1,
-        operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-                  Operand(type="Mem", size=sz, relaxed=True, dest="EA"),
-                  Operand(type="SIMDReg", size=128, dest="Spare"),
-                  Operand(type="SIMDRegMatch0", size=128, dest=None)])
-
-add_insn("fmaddps", "sse5arith", modifiers=[0x00])
-add_insn("fmaddpd", "sse5arith", modifiers=[0x01])
-add_insn("fmaddss", "sse5arith32", modifiers=[0x02])
-add_insn("fmaddsd", "sse5arith64", modifiers=[0x03])
-
-add_insn("fmsubps", "sse5arith", modifiers=[0x08])
-add_insn("fmsubpd", "sse5arith", modifiers=[0x09])
-add_insn("fmsubss", "sse5arith32", modifiers=[0x0A])
-add_insn("fmsubsd", "sse5arith64", modifiers=[0x0B])
-
-add_insn("fnmaddps", "sse5arith", modifiers=[0x10])
-add_insn("fnmaddpd", "sse5arith", modifiers=[0x11])
-add_insn("fnmaddss", "sse5arith32", modifiers=[0x12])
-add_insn("fnmaddsd", "sse5arith64", modifiers=[0x13])
-
-add_insn("fnmsubps", "sse5arith", modifiers=[0x18])
-add_insn("fnmsubpd", "sse5arith", modifiers=[0x19])
-add_insn("fnmsubss", "sse5arith32", modifiers=[0x1A])
-add_insn("fnmsubsd", "sse5arith64", modifiers=[0x1B])
-
-add_insn("pcmov", "sse5arith", modifiers=[0x22])
-
-add_insn("permps", "sse5arith", modifiers=[0x20])
-add_insn("permpd", "sse5arith", modifiers=[0x21])
-add_insn("pperm", "sse5arith", modifiers=[0x23])
-
-add_group("sse5two",
-    cpu=["SSE5"],
-    modifiers=["Op2Add"],
-    opcode=[0x0F, 0x7A, 0x00],
+add_group("vfrczss",
+    cpu=["XOP"],
+    xop=128,
+    opcode=[0x09, 0x82],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
-for sz in [32, 64]:
-    add_group("sse5two%d" % sz,
-        cpu=["SSE5"],
-        modifiers=["Op2Add"],
-        opcode=[0x0F, 0x7A, 0x00],
-        operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-                  Operand(type="SIMDReg", size=128, dest="EA")])
-    add_group("sse5two%d" % sz,
-        cpu=["SSE5"],
-        modifiers=["Op2Add"],
-        opcode=[0x0F, 0x7A, 0x00],
-        operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-                  Operand(type="Mem", size=sz, relaxed=True, dest="EA")])
-
-add_insn("frczps", "sse5two", modifiers=[0x10])
-add_insn("frczpd", "sse5two", modifiers=[0x11])
-add_insn("frczss", "sse5two32", modifiers=[0x12])
-add_insn("frczsd", "sse5two64", modifiers=[0x13])
-
-add_insn("phaddbw", "sse5two", modifiers=[0x41])
-add_insn("phaddbd", "sse5two", modifiers=[0x42])
-add_insn("phaddbq", "sse5two", modifiers=[0x43])
-add_insn("phaddwd", "sse5two", modifiers=[0x46])
-add_insn("phaddwq", "sse5two", modifiers=[0x47])
-add_insn("phadddq", "sse5two", modifiers=[0x4B])
-
-add_insn("phaddubw", "sse5two", modifiers=[0x51])
-add_insn("phaddubd", "sse5two", modifiers=[0x52])
-add_insn("phaddubq", "sse5two", modifiers=[0x53])
-add_insn("phadduwd", "sse5two", modifiers=[0x56])
-add_insn("phadduwq", "sse5two", modifiers=[0x57])
-add_insn("phaddudq", "sse5two", modifiers=[0x5B])
-
-add_insn("phsubbw", "sse5two", modifiers=[0x61])
-add_insn("phsubwd", "sse5two", modifiers=[0x62])
-add_insn("phsubdq", "sse5two", modifiers=[0x63])
-
-add_group("sse5pmacs",
-    cpu=["SSE5"],
-    modifiers=["Op2Add"],
-    opcode=[0x0F, 0x24, 0x00],
-    drex_oc0=0,
-    operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-              Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
-              Operand(type="SIMDRegMatch0", size=128, dest=None)])
-
-add_insn("pmacsww", "sse5pmacs", modifiers=[0x95])
-add_insn("pmacswd", "sse5pmacs", modifiers=[0x96])
-add_insn("pmacsdql", "sse5pmacs", modifiers=[0x97])
-add_insn("pmacsdd", "sse5pmacs", modifiers=[0x9E])
-add_insn("pmacsdqh", "sse5pmacs", modifiers=[0x9F])
-
-add_insn("pmacssww", "sse5pmacs", modifiers=[0x85])
-add_insn("pmacsswd", "sse5pmacs", modifiers=[0x86])
-add_insn("pmacssdql", "sse5pmacs", modifiers=[0x87])
-add_insn("pmacssdd", "sse5pmacs", modifiers=[0x8E])
-add_insn("pmacssdqh", "sse5pmacs", modifiers=[0x8F])
-
-add_insn("pmadcsswd", "sse5pmacs", modifiers=[0xA6])
-add_insn("pmadcswd", "sse5pmacs", modifiers=[0xB6])
-
-add_group("sse5prot",
-    cpu=["SSE5"],
-    modifiers=["Op2Add"],
-    opcode=[0x0F, 0x24, 0x40],
-    drex_oc0=0,
-    operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-              Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
-add_group("sse5prot",
-    cpu=["SSE5"],
-    modifiers=["Op2Add"],
-    opcode=[0x0F, 0x24, 0x40],
-    drex_oc0=1,
-    operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
-              Operand(type="SIMDReg", size=128, dest="Spare")])
-add_group("sse5prot",
-    cpu=["SSE5"],
-    modifiers=["Op2Add"],
-    opcode=[0x0F, 0x7B, 0x40],
+              Operand(type="SIMDReg", size=128, dest="EA")])
+add_group("vfrczss",
+    cpu=["XOP"],
+    xop=128,
+    opcode=[0x09, 0x82],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="Mem", size=32, relaxed=True, dest="EA")])
+add_insn("vfrczss", "vfrczss")
+
+add_group("vpcmov",
+    cpu=["XOP"],
+    xop=128,
+    xopw=0,
+    opcode=[0x08, 0xA2],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc")])
+add_group("vpcmov",
+    cpu=["XOP"],
+    xop=128,
+    xopw=1,
+    opcode=[0x08, 0xA2],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("vpcmov",
+    cpu=["XOP"],
+    xop=256,
+    xopw=0,
+    opcode=[0x08, 0xA2],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=256, dest="VEXImmSrc")])
+add_group("vpcmov",
+    cpu=["XOP"],
+    xop=256,
+    xopw=1,
+    opcode=[0x08, 0xA2],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDReg", size=256, dest="VEXImmSrc"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA")])
+
+add_insn("vpcmov", "vpcmov")
+
+add_group("vpcom",
+    cpu=["XOP"],
+    modifiers=["Op1Add", "Imm8"],
+    xop=128,
+    opcode=[0x08, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("vpcom_imm",
+    cpu=["XOP"],
+    modifiers=["Op1Add"],
+    xop=128,
+    opcode=[0x08, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
               Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
 
-add_insn("protb", "sse5prot", modifiers=[0x00])
-add_insn("protw", "sse5prot", modifiers=[0x01])
-add_insn("protd", "sse5prot", modifiers=[0x02])
-add_insn("protq", "sse5prot", modifiers=[0x03])
+for opc, sfx in [(0xCC, "b"),
+                 (0xCE, "d"),
+                 (0xCD, "w"),
+                 (0xCF, "q"),
+                 (0xEC, "ub"),
+                 (0xEE, "ud"),
+                 (0xEF, "uq"),
+                 (0xED, "uw")]:
+    add_insn("vpcom"+sfx, "vpcom_imm", modifiers=[opc])
+    for ib, cc in enumerate(["lt", "le", "gt", "ge",
+                             "eq", "neq", "false", "true"]):
+        add_insn("vpcom"+cc+sfx, "vpcom", modifiers=[opc, ib])
+    # ne alias for neq
+    add_insn("vpcomne"+sfx, "vpcom", modifiers=[opc, 5])
 
-add_group("sse5psh",
-    cpu=["SSE5"],
-    modifiers=["Op2Add"],
-    opcode=[0x0F, 0x24, 0x44],
-    drex_oc0=0,
-    operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
-              Operand(type="SIMDReg", size=128, dest="Spare"),
+add_group("vphaddsub",
+    cpu=["XOP"],
+    modifiers=["Op1Add"],
+    xop=128,
+    opcode=[0x09, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
-add_group("sse5psh",
-    cpu=["SSE5"],
-    modifiers=["Op2Add"],
-    opcode=[0x0F, 0x24, 0x44],
-    drex_oc0=1,
-    operands=[Operand(type="SIMDReg", size=128, dest="DREX"),
+
+add_insn("vphaddbw", "vphaddsub", modifiers=[0xC1])
+add_insn("vphaddbd", "vphaddsub", modifiers=[0xC2])
+add_insn("vphaddbq", "vphaddsub", modifiers=[0xC3])
+add_insn("vphaddwd", "vphaddsub", modifiers=[0xC6])
+add_insn("vphaddwq", "vphaddsub", modifiers=[0xC7])
+add_insn("vphadddq", "vphaddsub", modifiers=[0xCB])
+
+add_insn("vphaddubw", "vphaddsub", modifiers=[0xD1])
+add_insn("vphaddubd", "vphaddsub", modifiers=[0xD2])
+add_insn("vphaddubq", "vphaddsub", modifiers=[0xD3])
+add_insn("vphadduwd", "vphaddsub", modifiers=[0xD6])
+add_insn("vphadduwq", "vphaddsub", modifiers=[0xD7])
+add_insn("vphaddudq", "vphaddsub", modifiers=[0xDB])
+
+add_insn("vphsubbw", "vphaddsub", modifiers=[0xE1])
+add_insn("vphsubwd", "vphaddsub", modifiers=[0xE2])
+add_insn("vphsubdq", "vphaddsub", modifiers=[0xE3])
+
+add_group("vpma",
+    cpu=["XOP"],
+    modifiers=["Op1Add"],
+    xop=128,
+    opcode=[0x08, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
-              Operand(type="SIMDReg", size=128, dest="Spare")])
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc")])
 
-add_insn("pshlb", "sse5psh", modifiers=[0x00])
-add_insn("pshlw", "sse5psh", modifiers=[0x01])
-add_insn("pshld", "sse5psh", modifiers=[0x02])
-add_insn("pshlq", "sse5psh", modifiers=[0x03])
+add_insn("vpmacsdd", "vpma", modifiers=[0x9E])
+add_insn("vpmacsdqh", "vpma", modifiers=[0x9F])
+add_insn("vpmacsdql", "vpma", modifiers=[0x97])
+add_insn("vpmacssdd", "vpma", modifiers=[0x8E])
+add_insn("vpmacssdqh", "vpma", modifiers=[0x8F])
+add_insn("vpmacssdql", "vpma", modifiers=[0x87])
+add_insn("vpmacsswd", "vpma", modifiers=[0x86])
+add_insn("vpmacssww", "vpma", modifiers=[0x85])
+add_insn("vpmacswd", "vpma", modifiers=[0x96])
+add_insn("vpmacsww", "vpma", modifiers=[0x95])
+add_insn("vpmadcsswd", "vpma", modifiers=[0xA6])
+add_insn("vpmadcswd", "vpma", modifiers=[0xB6])
 
-add_insn("pshab", "sse5psh", modifiers=[0x04])
-add_insn("pshaw", "sse5psh", modifiers=[0x05])
-add_insn("pshad", "sse5psh", modifiers=[0x06])
-add_insn("pshaq", "sse5psh", modifiers=[0x07])
+add_group("vpperm",
+    cpu=["XOP"],
+    xop=128,
+    xopw=0,
+    opcode=[0x08, 0xA3],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc")])
+add_group("vpperm",
+    cpu=["XOP"],
+    xop=128,
+    xopw=1,
+    opcode=[0x08, 0xA3],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_insn("vpperm", "vpperm")
 
-# roundps, roundpd, roundss, roundsd, ptest are in SSE4.1
+add_group("vprot",
+    cpu=["XOP"],
+    modifiers=["Op1Add"],
+    xop=128,
+    xopw=0,
+    opcode=[0x09, 0x90],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="VEX")])
+add_group("vprot",
+    cpu=["XOP"],
+    modifiers=["Op1Add"],
+    xop=128,
+    xopw=1,
+    opcode=[0x09, 0x90],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("vprot",
+    cpu=["XOP"],
+    modifiers=["Op1Add"],
+    xop=128,
+    opcode=[0x08, 0xC0],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+for opc, sfx in enumerate(["b", "w", "d", "q"]):
+    add_insn("vprot"+sfx, "vprot", modifiers=[opc])
+
+add_group("amd_vpshift",
+    cpu=["XOP"],
+    modifiers=["Op1Add"],
+    xop=128,
+    xopw=0,
+    opcode=[0x09, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="VEX")])
+add_group("amd_vpshift",
+    cpu=["XOP"],
+    modifiers=["Op1Add"],
+    xop=128,
+    xopw=1,
+    opcode=[0x09, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+for opc, sfx in enumerate(["b", "w", "d", "q"]):
+    add_insn("vpsha"+sfx, "amd_vpshift", modifiers=[0x98+opc])
+    add_insn("vpshl"+sfx, "amd_vpshift", modifiers=[0x94+opc])
+
+#####################################################################
+# AMD FMA4 instructions (same as original Intel FMA instructions)
+#####################################################################
+
+add_group("fma_128_256",
+    cpu=["FMA4"],
+    modifiers=["Op2Add"],
+    vex=128,
+    vexw=0,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=128, dest="VEX")])
+add_group("fma_128_256",
+    cpu=["FMA4"],
+    modifiers=["Op2Add"],
+    vex=128,
+    vexw=1,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
+add_group("fma_128_256",
+    cpu=["FMA4"],
+    modifiers=["Op2Add"],
+    vex=256,
+    vexw=0,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEXImmSrc"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA"),
+              Operand(type="SIMDReg", size=256, dest="VEX")])
+add_group("fma_128_256",
+    cpu=["FMA4"],
+    modifiers=["Op2Add"],
+    vex=256,
+    vexw=1,
+    prefix=0x66,
+    opcode=[0x0F, 0x3A, 0x00],
+    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
+              Operand(type="SIMDReg", size=256, dest="VEXImmSrc"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDRM", size=256, relaxed=True, dest="EA")])
+
+add_insn("vfmaddpd", "fma_128_256", modifiers=[0x69])
+add_insn("vfmaddps", "fma_128_256", modifiers=[0x68])
+add_insn("vfmaddsubpd", "fma_128_256", modifiers=[0x5D])
+add_insn("vfmaddsubps", "fma_128_256", modifiers=[0x5C])
+add_insn("vfmsubaddpd", "fma_128_256", modifiers=[0x5F])
+add_insn("vfmsubaddps", "fma_128_256", modifiers=[0x5E])
+add_insn("vfmsubpd", "fma_128_256", modifiers=[0x6D])
+add_insn("vfmsubps", "fma_128_256", modifiers=[0x6C])
+add_insn("vfnmaddpd", "fma_128_256", modifiers=[0x79])
+add_insn("vfnmaddps", "fma_128_256", modifiers=[0x78])
+add_insn("vfnmsubpd", "fma_128_256", modifiers=[0x7D])
+add_insn("vfnmsubps", "fma_128_256", modifiers=[0x7C])
+
+for sz in [32, 64]:
+    add_group("fma_128_m%d" % sz,
+        cpu=["FMA4"],
+        modifiers=["Op2Add"],
+        vex=128,
+        vexw=0,
+        prefix=0x66,
+        opcode=[0x0F, 0x3A, 0x00],
+        operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+                  Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
+                  Operand(type="SIMDReg", size=128, dest="EA"),
+                  Operand(type="SIMDReg", size=128, dest="VEX")])
+    add_group("fma_128_m%d" % sz,
+        cpu=["FMA4"],
+        modifiers=["Op2Add"],
+        vex=128,
+        vexw=0,
+        prefix=0x66,
+        opcode=[0x0F, 0x3A, 0x00],
+        operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+                  Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
+                  Operand(type="Mem", size=sz, relaxed=True, dest="EA"),
+                  Operand(type="SIMDReg", size=128, dest="VEX")])
+    add_group("fma_128_m%d" % sz,
+        cpu=["FMA4"],
+        modifiers=["Op2Add"],
+        vex=128,
+        vexw=1,
+        prefix=0x66,
+        opcode=[0x0F, 0x3A, 0x00],
+        operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+                  Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
+                  Operand(type="SIMDReg", size=128, dest="VEX"),
+                  Operand(type="Mem", size=sz, relaxed=True, dest="EA")])
+
+add_insn("vfmaddsd", "fma_128_m64", modifiers=[0x6B])
+add_insn("vfmaddss", "fma_128_m32", modifiers=[0x6A])
+add_insn("vfmsubsd", "fma_128_m64", modifiers=[0x6F])
+add_insn("vfmsubss", "fma_128_m32", modifiers=[0x6E])
+add_insn("vfnmaddsd", "fma_128_m64", modifiers=[0x7B])
+add_insn("vfnmaddss", "fma_128_m32", modifiers=[0x7A])
+add_insn("vfnmsubsd", "fma_128_m64", modifiers=[0x7F])
+add_insn("vfnmsubss", "fma_128_m32", modifiers=[0x7E])
 
 #####################################################################
 # Intel XSAVE instructions

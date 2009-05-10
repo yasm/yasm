@@ -64,13 +64,15 @@
 #define CPU_SSE41   30      /* Streaming SIMD extensions 4.1 required */
 #define CPU_SSE42   31      /* Streaming SIMD extensions 4.2 required */
 #define CPU_SSE4a   32      /* AMD Streaming SIMD extensions 4a required */
-#define CPU_SSE5    33      /* AMD Streaming SIMD extensions 5 required */
-#define CPU_XSAVE   34      /* Intel XSAVE instructions */
-#define CPU_AVX     35      /* Intel Advanced Vector Extensions */
-#define CPU_FMA     36      /* Intel Fused-Multiply-Add Extensions */
-#define CPU_AES     37      /* AES instruction */
-#define CPU_CLMUL   38      /* PCLMULQDQ instruction */
-#define CPU_MOVBE   39      /* MOVBE instruction */
+#define CPU_XSAVE   33      /* Intel XSAVE instructions */
+#define CPU_AVX     34      /* Intel Advanced Vector Extensions */
+#define CPU_FMA     35      /* Intel Fused-Multiply-Add Extensions */
+#define CPU_AES     36      /* AES instruction */
+#define CPU_CLMUL   37      /* PCLMULQDQ instruction */
+#define CPU_MOVBE   38      /* MOVBE instruction */
+#define CPU_XOP     39      /* AMD XOP extensions */
+#define CPU_FMA4    40      /* AMD Fused-Multiply-Add extensions */
+#define CPU_CVT16   41      /* AMD CVT16 extensions */
 
 typedef struct yasm_arch_x86 {
     yasm_arch_base arch;        /* base structure */
@@ -152,9 +154,9 @@ typedef enum {
  * indicates bit of REX to use if REX is needed.  Will not modify REX if not
  * in 64-bit mode or if it wasn't needed to express reg.
  */
-int yasm_x86__set_rex_from_reg(unsigned char *rex, unsigned char *drex,
-                               unsigned char *low3, uintptr_t reg,
-                               unsigned int bits, x86_rex_bit_pos rexbit);
+int yasm_x86__set_rex_from_reg(unsigned char *rex, unsigned char *low3,
+                               uintptr_t reg, unsigned int bits,
+                               x86_rex_bit_pos rexbit);
 
 /* Effective address type */
 typedef struct x86_effaddr {
@@ -172,19 +174,14 @@ typedef struct x86_effaddr {
     unsigned char valid_sib;    /* 1 if SIB byte currently valid, 0 if not */
     unsigned char need_sib;     /* 1 if SIB byte needed, 0 if not,
                                    0xff if unknown */
-
-    unsigned char drex;         /* DREX SSE5 extension byte */
-    unsigned char need_drex;    /* 1 if DREX byte needed, 0 if not */
 } x86_effaddr;
 
 void yasm_x86__ea_init(x86_effaddr *x86_ea, unsigned int spare,
-                       unsigned int drex, unsigned int need_drex,
                        yasm_bytecode *precbc);
 
 void yasm_x86__ea_set_disponly(x86_effaddr *x86_ea);
 x86_effaddr *yasm_x86__ea_create_reg(x86_effaddr *x86_ea, unsigned long reg,
-                                     unsigned char *rex, unsigned char *drex,
-                                     unsigned int bits);
+                                     unsigned char *rex, unsigned int bits);
 x86_effaddr *yasm_x86__ea_create_imm
     (x86_effaddr *x86_ea, /*@keep@*/ yasm_expr *imm, unsigned int im_len);
 yasm_effaddr *yasm_x86__ea_create_expr(yasm_arch *arch,

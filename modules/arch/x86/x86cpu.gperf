@@ -151,8 +151,11 @@ x86_cpu_amd(wordptr cpu, yasm_arch_x86 *arch_x86, unsigned int data)
     BitVector_Bit_On(cpu, CPU_Prot);
     BitVector_Bit_On(cpu, CPU_SMM);
     BitVector_Bit_On(cpu, CPU_3DNow);
-    if (data >= PROC_bulldozer)
-        BitVector_Bit_On(cpu, CPU_SSE5);
+    if (data >= PROC_bulldozer) {
+        BitVector_Bit_On(cpu, CPU_XOP);
+        BitVector_Bit_On(cpu, CPU_FMA4);
+        BitVector_Bit_On(cpu, CPU_CVT16);
+    }
     if (data >= PROC_k10)
         BitVector_Bit_On(cpu, CPU_SSE4a);
     if (data >= PROC_venice)
@@ -357,8 +360,6 @@ sse4a,		x86_cpu_set,	CPU_SSE4a
 nosse4a,	x86_cpu_clear,	CPU_SSE4a
 sse4,		x86_cpu_set_sse4,	0
 nosse4,		x86_cpu_clear_sse4,	0
-sse5,		x86_cpu_set,	CPU_SSE5
-nosse5,		x86_cpu_clear,	CPU_SSE5
 xsave,		x86_cpu_set,	CPU_XSAVE
 noxsave,	x86_cpu_clear,	CPU_XSAVE
 avx,		x86_cpu_set,	CPU_AVX
@@ -373,6 +374,12 @@ pclmulqdq,	x86_cpu_set,	CPU_CLMUL
 nopclmulqdq,	x86_cpu_clear,	CPU_CLMUL
 movbe,		x86_cpu_set,	CPU_MOVBE
 nomovbe,	x86_cpu_clear,	CPU_MOVBE
+xop,		x86_cpu_set,	CPU_XOP
+noxop,		x86_cpu_clear,	CPU_XOP
+fma4,		x86_cpu_set,	CPU_FMA4
+nofma4,		x86_cpu_clear,	CPU_FMA4
+cvt16,		x86_cpu_set,	CPU_CVT16
+nocvt16,	x86_cpu_clear,	CPU_CVT16
 # Change NOP patterns
 basicnop,	x86_nop,	X86_NOP_BASIC
 intelnop,	x86_nop,	X86_NOP_INTEL
