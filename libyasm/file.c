@@ -235,7 +235,7 @@ yasm__getcwd(void)
 
     size = 1024;
     buf = yasm_xmalloc(size);
-    while (getcwd(buf, size) == NULL) {
+    while (getcwd(buf, size-1) == NULL) {
         if (errno != ERANGE) {
             yasm__fatal(N_("could not determine current working directory"));
             yasm_xfree(buf);
@@ -243,6 +243,13 @@ yasm__getcwd(void)
         }
         size *= 2;
         buf = yasm_xrealloc(buf, size);
+    }
+
+    /* append a '/' if not already present */
+    size = strlen(buf);
+    if (buf[size-1] != '\\' && buf[size-1] != '/') {
+        buf[size] = '/';
+        buf[size+1] = '\0';
     }
     return buf;
 }
