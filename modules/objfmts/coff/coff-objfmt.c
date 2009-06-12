@@ -793,7 +793,8 @@ coff_objfmt_output_section(yasm_section *sect, /*@null@*/ void *d)
                                   coff_objfmt_output_bytecode);
 
         /* Sanity check final section size */
-        if (csd->size != yasm_bc_next_offset(yasm_section_bcs_last(sect)))
+        if (yasm_errwarns_num_errors(info->errwarns, 0) == 0 &&
+            csd->size != yasm_bc_next_offset(yasm_section_bcs_last(sect)))
             yasm_internal_error(
                 N_("coff: section computed size did not match actual size"));
     }
