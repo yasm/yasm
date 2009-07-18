@@ -70,7 +70,7 @@ do
             failedct=`expr $failedct + 1`
         else
             ./test_hd results/${o} > results/${oh}
-            if diff ${og} results/${oh} >/dev/null; then
+            if diff -w ${og} results/${oh} >/dev/null; then
                 if diff -w ${eg} results/${e} >/dev/null; then
                     # Both object file and error/warnings match, it passes!
                     echo $ECHO_N ".$ECHO_C"
