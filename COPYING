@@ -39,8 +39,7 @@ bitvect) are fulfilled.
 -------
 Modules
 -------
-The modules are 2-clause or 3-clause BSD licensed, with the exception of:
- preprocs/nasm - LGPL licensed
+The modules are 2-clause or 3-clause BSD licensed.
 
 ---------
 Frontends
