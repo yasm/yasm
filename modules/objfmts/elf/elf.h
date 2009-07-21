@@ -330,7 +330,18 @@ typedef enum {
     R_X86_64_TLSLD = 20,        /* word32, PC-rel offset to LD GOT block */
     R_X86_64_DTPOFF32 = 21,     /* word32, offset to TLS block */
     R_X86_64_GOTTPOFF = 22,     /* word32, PC-rel offset to IE GOT entry */
-    R_X86_64_TPOFF32 = 23       /* word32, offset in initial TLS block */
+    R_X86_64_TPOFF32 = 23,      /* word32, offset in initial TLS block */
+    R_X86_64_PC64 = 24,         /* word64, PC relative */
+    R_X86_64_GOTOFF64 = 25,     /* word64, offset to GOT */
+    R_X86_64_GOTPC32 = 26,      /* word32, signed pc relative to GOT */
+    R_X86_64_GOT64 = 27,        /* word64, GOT entry offset */
+    R_X86_64_GOTPCREL64 = 28,   /* word64, signed pc relative to GOT entry */
+    R_X86_64_GOTPC64 = 29,      /* word64, signed pc relative to GOT */
+    R_X86_64_GOTPLT64 = 30,     /* like GOT64, but indicates PLT entry needed */
+    R_X86_64_PLTOFF64 = 31,     /* word64, GOT relative offset to PLT entry */
+    R_X86_64_GOTPC32_TLSDESC = 34, /* GOT offset for TLS descriptor */
+    R_X86_64_TLSDESC_CALL = 35, /* Marker for call through TLS descriptor */
+    R_X86_64_TLSDESC = 36       /* TLS descriptor */
 } elf_x86_64_relocation_type;
 
 struct elf_secthead {
@@ -377,6 +388,7 @@ struct elf_reloc_entry {
     size_t               valsize;
     yasm_intnum         *addend;
     /*@null@*/ yasm_symrec *wrt;
+    int                  is_GOT_sym;
 };
 
 STAILQ_HEAD(elf_strtab_head, elf_strtab_entry);
@@ -407,6 +419,7 @@ struct elf_symtab_entry {
 
 extern const yasm_assoc_data_callback elf_section_data;
 extern const yasm_assoc_data_callback elf_symrec_data;
+extern const yasm_assoc_data_callback elf_ssym_symrec_data;
 
 
 const elf_machine_handler *elf_set_arch(struct yasm_arch *arch,
@@ -422,7 +435,8 @@ elf_reloc_entry *elf_reloc_entry_create(yasm_symrec *sym,
                                         /*@null@*/ yasm_symrec *wrt,
                                         yasm_intnum *addr,
                                         int rel,
-                                        size_t valsize);
+                                        size_t valsize,
+                                        int is_GOT_sym);
 void elf_reloc_entry_destroy(void *entry);
 
 /* strtab functions */
@@ -491,7 +505,9 @@ struct yasm_symrec *elf_secthead_set_sym(elf_secthead *shead,
                                          struct yasm_symrec *sym);
 void elf_secthead_add_size(elf_secthead *shead, yasm_intnum *size);
 char *elf_secthead_name_reloc_section(const char *basesect);
-void elf_handle_reloc_addend(yasm_intnum *intn, elf_reloc_entry *reloc);
+void elf_handle_reloc_addend(yasm_intnum *intn,
+                             elf_reloc_entry *reloc,
+                             unsigned long offset);
 unsigned long elf_secthead_write_rel_to_file(FILE *f, elf_section_index symtab,
                                              yasm_section *sect,
                                              elf_secthead *esd,

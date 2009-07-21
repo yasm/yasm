@@ -58,15 +58,14 @@ static const elf_machine_ssym elf_x86_x86_ssyms[] = {
 };
 
 static int
-elf_x86_x86_accepts_reloc(size_t val, yasm_symrec *wrt, yasm_symrec **ssyms)
+elf_x86_x86_accepts_reloc(size_t val, yasm_symrec *wrt)
 {
     if (wrt) {
-        size_t i;
-        for (i=0; i<NELEMS(elf_x86_x86_ssyms); i++) {
-            if (wrt == ssyms[i] && val == elf_x86_x86_ssyms[i].size)
-                return 1;
-        }
-        return 0;
+        const elf_machine_ssym *ssym = (elf_machine_ssym *)
+            yasm_symrec_get_data(wrt, &elf_ssym_symrec_data);
+        if (!ssym || val != ssym->size)
+            return 0;
+        return 1;
     }
     return (val&(val-1)) ? 0 : ((val & (8|16|32)) != 0);
 }
@@ -133,33 +132,50 @@ elf_x86_x86_write_secthead_rel(unsigned char *bufp,
 }
 
 static void
-elf_x86_x86_handle_reloc_addend(yasm_intnum *intn, elf_reloc_entry *reloc)
+elf_x86_x86_handle_reloc_addend(yasm_intnum *intn,
+                                elf_reloc_entry *reloc,
+                                unsigned long offset)
 {
+    int is_GOT = reloc->is_GOT_sym;
+
+    if (reloc->wrt) {
+        const elf_machine_ssym *ssym = (elf_machine_ssym *)
+            yasm_symrec_get_data(reloc->wrt, &elf_ssym_symrec_data);
+        if (!ssym || reloc->valsize != ssym->size)
+            yasm_internal_error(N_("Unsupported WRT"));
+        if (ssym->reloc == R_386_GOTPC)
+            is_GOT = 1;
+    }
+
+    if (is_GOT && reloc->valsize == 32 && offset != 0)
+    {
+        yasm_intnum *off_intn = yasm_intnum_create_uint(offset);
+        yasm_intnum_calc(intn, YASM_EXPR_ADD, off_intn);
+        yasm_intnum_destroy(off_intn);
+    }
     return; /* .rel: Leave addend in intn */
 }
 
 static unsigned int
-elf_x86_x86_map_reloc_info_to_type(elf_reloc_entry *reloc,
-                                   yasm_symrec **ssyms)
+elf_x86_x86_map_reloc_info_to_type(elf_reloc_entry *reloc)
 {
     if (reloc->wrt) {
-        size_t i;
-        for (i=0; i<NELEMS(elf_x86_x86_ssyms); i++) {
-            if (reloc->wrt == ssyms[i] &&
-                reloc->valsize == elf_x86_x86_ssyms[i].size) {
-                /* Force TLS type; this is required by the linker. */
-                if (elf_x86_x86_ssyms[i].sym_rel & ELF_SSYM_THREAD_LOCAL) {
-                    elf_symtab_entry *esym;
+        const elf_machine_ssym *ssym = (elf_machine_ssym *)
+            yasm_symrec_get_data(reloc->wrt, &elf_ssym_symrec_data);
+        if (!ssym || reloc->valsize != ssym->size)
+            yasm_internal_error(N_("Unsupported WRT"));
 
-                    esym = yasm_symrec_get_data(reloc->reloc.sym,
-                                                &elf_symrec_data);
-                    if (esym)
-                        esym->type = STT_TLS;
-                }
-                return (unsigned char) elf_x86_x86_ssyms[i].reloc;
-            }
+        /* Force TLS type; this is required by the linker. */
+        if (ssym->sym_rel & ELF_SSYM_THREAD_LOCAL) {
+            elf_symtab_entry *esym;
+
+            esym = yasm_symrec_get_data(reloc->reloc.sym, &elf_symrec_data);
+            if (esym)
+                esym->type = STT_TLS;
         }
-        yasm_internal_error(N_("Unsupported WRT"));
+        return (unsigned char) ssym->reloc;
+    } else if (reloc->is_GOT_sym && reloc->valsize == 32) {
+        return (unsigned char) R_386_GOTPC;
     } else if (reloc->rtype_rel) {
         switch (reloc->valsize) {
             case 8: return (unsigned char) R_386_PC8;

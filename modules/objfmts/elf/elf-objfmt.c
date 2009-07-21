@@ -68,6 +68,7 @@ typedef struct {
     yasm_section *sect;
     yasm_object *object;
     unsigned long sindex;
+    yasm_symrec *GOT_sym;
 } elf_objfmt_output_info;
 
 typedef struct {
@@ -454,7 +455,7 @@ elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
     int retval;
 
     reloc = elf_reloc_entry_create(sym, NULL,
-        yasm_intnum_create_uint(bc->offset), 0, valsize);
+        yasm_intnum_create_uint(bc->offset), 0, valsize, 0);
     if (reloc == NULL) {
         yasm_error_set(YASM_ERROR_TYPE, N_("elf: invalid relocation size"));
         return 1;
@@ -463,7 +464,7 @@ elf_objfmt_output_reloc(yasm_symrec *sym, yasm_bytecode *bc,
     elf_secthead_append_reloc(info->sect, info->shead, reloc);
 
     zero = yasm_intnum_create_uint(0);
-    elf_handle_reloc_addend(zero, reloc);
+    elf_handle_reloc_addend(zero, reloc, 0);
     retval = yasm_arch_intnum_tobytes(info->object->arch, zero, buf, destsize,
                                       valsize, 0, bc, warn);
     yasm_intnum_destroy(zero);
@@ -546,9 +547,10 @@ elf_objfmt_output_value(yasm_value *value, unsigned char *buf,
         if (value->curpos_rel)
             intn_val += offset;
 
+        /* Check for _GLOBAL_OFFSET_TABLE_ symbol reference */
         reloc = elf_reloc_entry_create(sym, wrt,
             yasm_intnum_create_uint(bc->offset + offset), value->curpos_rel,
-            valsize);
+            valsize, sym == info->GOT_sym);
         if (reloc == NULL) {
             yasm_error_set(YASM_ERROR_TYPE,
                            N_("elf: invalid relocation (WRT or size)"));
@@ -572,7 +574,7 @@ elf_objfmt_output_value(yasm_value *value, unsigned char *buf,
     }
 
     if (reloc)
-        elf_handle_reloc_addend(intn, reloc);
+        elf_handle_reloc_addend(intn, reloc, offset);
     retval = yasm_arch_intnum_tobytes(info->object->arch, intn, buf, destsize,
                                       valsize, 0, bc, warn);
     yasm_intnum_destroy(intn);
@@ -780,6 +782,7 @@ elf_objfmt_output(yasm_object *object, FILE *f, int all_syms,
     info.objfmt_elf = objfmt_elf;
     info.errwarns = errwarns;
     info.f = f;
+    info.GOT_sym = yasm_symtab_get(object->symtab, "_GLOBAL_OFFSET_TABLE_");
 
     /* Update filename strtab */
     elf_strtab_entry_set_str(objfmt_elf->file_strtab_entry,
