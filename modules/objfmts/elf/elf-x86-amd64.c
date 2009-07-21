@@ -169,6 +169,7 @@ elf_x86_amd64_map_reloc_info_to_type(elf_reloc_entry *reloc)
             case 8: return (unsigned char) R_X86_64_PC8;
             case 16: return (unsigned char) R_X86_64_PC16;
             case 32: return (unsigned char) R_X86_64_PC32;
+            case 64: return (unsigned char) R_X86_64_PC64;
             default: yasm_internal_error(N_("Unsupported relocation size"));
         }
     } else {
