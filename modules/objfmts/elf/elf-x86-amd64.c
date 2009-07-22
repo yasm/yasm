@@ -34,7 +34,10 @@
 #include "elf-machine.h"
 
 static elf_machine_ssym elf_x86_amd64_ssyms[] = {
+    {"pltoff",      ELF_SSYM_SYM_RELATIVE,  R_X86_64_PLTOFF64,  64},
     {"plt",         ELF_SSYM_SYM_RELATIVE,  R_X86_64_PLT32,     32},
+    {"gotplt",      ELF_SSYM_SYM_RELATIVE,  R_X86_64_GOTPLT64,  64},
+    {"gotoff",      ELF_SSYM_SYM_RELATIVE,  R_X86_64_GOTOFF64,  64},
     {"gotpcrel",    ELF_SSYM_SYM_RELATIVE,  R_X86_64_GOTPCREL,  32},
     {"tlsgd",       ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
                     R_X86_64_TLSGD,     32},
@@ -46,7 +49,11 @@ static elf_machine_ssym elf_x86_amd64_ssyms[] = {
                     R_X86_64_TPOFF32,   32},
     {"dtpoff",      ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
                     R_X86_64_DTPOFF32,  32},
-    {"got",         ELF_SSYM_SYM_RELATIVE,  R_X86_64_GOT32,     32}
+    {"got",         ELF_SSYM_SYM_RELATIVE,  R_X86_64_GOT32,     32},
+    {"tlsdesc",     ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_X86_64_GOTPC32_TLSDESC,   32},
+    {"tlscall",     ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_X86_64_TLSDESC_CALL,      32}
 };
 
 static int

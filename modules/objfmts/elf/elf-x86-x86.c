@@ -54,7 +54,11 @@ static const elf_machine_ssym elf_x86_x86_ssyms[] = {
                     R_386_TLS_GOTIE,    32},
     {"indntpoff",   ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
                     R_386_TLS_IE,       32},
-    {"got",         ELF_SSYM_SYM_RELATIVE,  R_386_GOT32,        32}
+    {"got",         ELF_SSYM_SYM_RELATIVE,  R_386_GOT32,        32},
+    {"tlsdesc",     ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_386_TLS_GOTDESC,  32},
+    {"tlscall",     ELF_SSYM_SYM_RELATIVE|ELF_SSYM_THREAD_LOCAL,
+                    R_386_TLS_DESC_CALL,    32}
 };
 
 static int
