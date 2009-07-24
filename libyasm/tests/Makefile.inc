@@ -83,6 +83,8 @@ EXTRA_DIST += libyasm/tests/value-samesym.hex
 EXTRA_DIST += libyasm/tests/value-mask.asm
 EXTRA_DIST += libyasm/tests/value-mask.errwarn
 EXTRA_DIST += libyasm/tests/value-mask.hex
+EXTRA_DIST += libyasm/tests/value-shr-symexpr.asm
+EXTRA_DIST += libyasm/tests/value-shr-symexpr.hex
 
 check_PROGRAMS += bitvect_test
 check_PROGRAMS += floatnum_test

@@ -336,54 +336,28 @@ value_finalize_scan(yasm_value *value, yasm_expr *e,
              * XXX: should rshift be an expr instead??
              */
 
-            /* Check for not allowed cases on RHS */
-            switch (e->terms[1].type) {
-                case YASM_EXPR_REG:
-                case YASM_EXPR_FLOAT:
-                    return 1;           /* not legal */
-                case YASM_EXPR_SYM:
-                    return 1;
-                case YASM_EXPR_EXPR:
-                    if (value_finalize_scan(value, e->terms[1].data.expn,
-                                            expr_precbc, 1))
-                        return 1;
-                    break;
-                default:
-                    break;
-            }
+            /* Check for single sym on LHS */
+            if (e->terms[0].type != YASM_EXPR_SYM)
+                break;
 
-            /* Check for single sym and allowed cases on LHS */
-            switch (e->terms[0].type) {
-                /*case YASM_EXPR_REG:   ????? should this be illegal ????? */
-                case YASM_EXPR_FLOAT:
-                    return 1;           /* not legal */
-                case YASM_EXPR_SYM:
-                    if (value->rel || ssym_not_ok)
-                        return 1;
-                    value->rel = e->terms[0].data.sym;
-                    /* and replace with 0 */
-                    e->terms[0].type = YASM_EXPR_INT;
-                    e->terms[0].data.intn = yasm_intnum_create_uint(0);
-                    break;
-                case YASM_EXPR_EXPR:
-                    /* recurse */
-                    if (value_finalize_scan(value, e->terms[0].data.expn,
-                                            expr_precbc, ssym_not_ok))
-                        return 1;
-                    break;
-                default:
-                    break;      /* ignore */
-            }
+            /* If we already have a sym, we can't take another one */
+            if (value->rel || ssym_not_ok)
+                return 1;
 
-            /* Handle RHS */
-            if (!value->rel)
-                break;          /* no handling needed */
+            /* RHS must be a positive integer */
             if (e->terms[1].type != YASM_EXPR_INT)
                 return 1;       /* can't shift sym by non-constant integer */
             shamt = yasm_intnum_get_uint(e->terms[1].data.intn);
             if ((shamt + value->rshift) > YASM_VALUE_RSHIFT_MAX)
                 return 1;       /* total shift would be too large */
+
+            /* Update value */
             value->rshift += shamt;
+            value->rel = e->terms[0].data.sym;
+
+            /* Replace symbol with 0 */
+            e->terms[0].type = YASM_EXPR_INT;
+            e->terms[0].data.intn = yasm_intnum_create_uint(0);
 
             /* Just leave SHR in place */
             break;
