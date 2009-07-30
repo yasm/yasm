@@ -31,7 +31,7 @@ do
     eg=`echo ${asm} | sed 's,.asm$,.errwarn,'`
     m=${a}.map
     mg=`echo ${asm} | sed 's,.asm$,.map,'`
-    if test \! -e ${eg}; then
+    if test \! -f ${eg}; then
         eg=/dev/null
     fi
 

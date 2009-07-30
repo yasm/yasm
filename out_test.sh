@@ -29,7 +29,7 @@ do
     og=`echo ${asm} | sed 's,.asm$,.hex,'`
     e=${a}.ew
     eg=`echo ${asm} | sed 's,.asm$,.errwarn,'`
-    if test \! -e ${eg}; then
+    if test \! -f ${eg}; then
         eg=/dev/null
     fi
 
