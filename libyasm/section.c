@@ -864,6 +864,7 @@ struct yasm_span {
      * checking for circular references (cycles) with id=0 spans.
      */
     yasm_span **backtrace;
+    int backtrace_size;
 
     /* First offset setter following this span's bytecode */
     yasm_offset_setter *os;
@@ -901,6 +902,7 @@ create_span(yasm_bytecode *bc, int id, /*@null@*/ const yasm_value *value,
     span->id = id;
     span->active = 1;
     span->backtrace = NULL;
+    span->backtrace_size = 0;
     span->os = os;
 
     return span;
@@ -1160,7 +1162,8 @@ check_cycle(IntervalTreeNode *node, void *d)
     optimize_data *optd = d;
     yasm_span_term *term = node->data;
     yasm_span *depspan = term->span;
-    int bt_size = 0, dep_bt_size = 0;
+    int i;
+    int depspan_bt_alloc;
 
     /* Only check for cycles in id=0 spans */
     if (depspan->id > 0)
@@ -1170,10 +1173,8 @@ check_cycle(IntervalTreeNode *node, void *d)
      * span is in our backtrace.
      */
     if (optd->span->backtrace) {
-        yasm_span *s;
-        while ((s = optd->span->backtrace[bt_size])) {
-            bt_size++;
-            if (s == depspan)
+        for (i=0; i<optd->span->backtrace_size; i++) {
+            if (optd->span->backtrace[i] == depspan)
                 yasm_error_set(YASM_ERROR_VALUE,
                                N_("circular reference detected"));
         }
@@ -1183,25 +1184,51 @@ check_cycle(IntervalTreeNode *node, void *d)
      * span.
      */
     if (!depspan->backtrace) {
-        depspan->backtrace = yasm_xmalloc((bt_size+2)*sizeof(yasm_span *));
-        if (bt_size > 0)
+        depspan->backtrace = yasm_xmalloc((optd->span->backtrace_size+1)*
+                                          sizeof(yasm_span *));
+        if (optd->span->backtrace_size > 0)
             memcpy(depspan->backtrace, optd->span->backtrace,
-                   bt_size*sizeof(yasm_span *));
-        depspan->backtrace[bt_size] = optd->span;
-        depspan->backtrace[bt_size+1] = NULL;
+                   optd->span->backtrace_size*sizeof(yasm_span *));
+        depspan->backtrace[optd->span->backtrace_size] = optd->span;
+        depspan->backtrace_size = optd->span->backtrace_size+1;
         return;
     }
 
-    while (depspan->backtrace[dep_bt_size])
-        dep_bt_size++;
-    depspan->backtrace =
-        yasm_xrealloc(depspan->backtrace,
-                      (dep_bt_size+bt_size+2)*sizeof(yasm_span *));
-    if (bt_size > 0)
-        memcpy(&depspan->backtrace[dep_bt_size], optd->span->backtrace,
-               (bt_size-1)*sizeof(yasm_span *));
-    depspan->backtrace[dep_bt_size+bt_size] = optd->span;
-    depspan->backtrace[dep_bt_size+bt_size+1] = NULL;
+    /* Add our complete backtrace, checking for duplicates */
+    depspan_bt_alloc = depspan->backtrace_size;
+    for (i=0; i<optd->span->backtrace_size; i++) {
+        int present = 0;
+        int j;
+        for (j=0; j<depspan->backtrace_size; j++) {
+            if (optd->span->backtrace[i] == optd->span->backtrace[j]) {
+                present = 1;
+                break;
+            }
+        }
+        if (present)
+            continue;
+        /* Not already in array; add it. */
+        if (depspan->backtrace_size >= depspan_bt_alloc)
+        {
+            depspan_bt_alloc *= 2;
+            depspan->backtrace =
+                yasm_xrealloc(depspan->backtrace,
+                              depspan_bt_alloc*sizeof(yasm_span *));
+        }
+        depspan->backtrace[depspan->backtrace_size] = optd->span->backtrace[i];
+        depspan->backtrace_size++;
+    }
+
+    /* Add ourselves. */
+    if (depspan->backtrace_size >= depspan_bt_alloc)
+    {
+        depspan_bt_alloc++;
+        depspan->backtrace =
+            yasm_xrealloc(depspan->backtrace,
+                          depspan_bt_alloc*sizeof(yasm_span *));
+    }
+    depspan->backtrace[depspan->backtrace_size] = optd->span;
+    depspan->backtrace_size++;
 }
 
 static void
