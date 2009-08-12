@@ -1,11 +1,12 @@
 cd ..\..\..
 @echo off
-reg query HKCR\Python.File\shell\open\command >nul: 2>&1
+for /f "usebackq tokens=2,3,4" %%f in (`reg query HKCR\Python.File\shell\open\command`) do (if %%f==REG_SZ echo %%g %%h >run_py.bat)
 goto answer%errorlevel%
 :answer0
 echo ... building with Python ...
 @echo on
-modules\arch\x86\gen_x86_insn.py
+call run_py.bat modules\arch\x86\gen_x86_insn.py
+del run_py.bat
 @echo off
 goto end
 :answer1
