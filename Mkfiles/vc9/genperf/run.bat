@@ -3,6 +3,7 @@ cd ..\..\..
 for /f "usebackq tokens=2,3,4" %%f in (`reg query HKCR\Python.File\shell\open\command`) do (if %%f==REG_SZ echo %%g %%h >run_py.bat)
 goto answer%errorlevel%
 :answer0
+if not exist run_py.bat goto answer1
 echo ... building with Python ...
 @echo on
 call run_py.bat modules\arch\x86\gen_x86_insn.py
