@@ -480,6 +480,7 @@ scan:
             } else
                 goto line_comment;
         }
+        "//"                    { goto line_comment; }
 
         ws+                     { goto scan; }
 

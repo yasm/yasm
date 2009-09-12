@@ -2,6 +2,8 @@
 
 /* So is this */
 
+// and so is this
+
 .byte 0		/* at end of line? */
 
 .byte 0		/* at end of line,
