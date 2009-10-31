@@ -38,31 +38,40 @@ re2c_LDADD += re2c-translate.$(OBJEXT)
 re2c_LINK = $(CCLD_FOR_BUILD) -o $@
 
 re2c-main.$(OBJEXT): tools/re2c/main.c
-	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/main.c || echo '$(srcdir)/'`tools/re2c/main.c
+	$(CC_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  -c -o $@ `test -f tools/re2c/main.c || echo '$(srcdir)/'`tools/re2c/main.c
 
 re2c-code.$(OBJEXT): tools/re2c/code.c
-	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/code.c || echo '$(srcdir)/'`tools/re2c/code.c
+	$(CC_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  -c -o $@ `test -f tools/re2c/code.c || echo '$(srcdir)/'`tools/re2c/code.c
 
 re2c-dfa.$(OBJEXT): tools/re2c/dfa.c
-	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/dfa.c || echo '$(srcdir)/'`tools/re2c/dfa.c
+	$(CC_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  -c -o $@ `test -f tools/re2c/dfa.c || echo '$(srcdir)/'`tools/re2c/dfa.c
 
 re2c-parser.$(OBJEXT): tools/re2c/parser.c
-	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/parser.c || echo '$(srcdir)/'`tools/re2c/parser.c
+	$(CC_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  -c -o $@ `test -f tools/re2c/parser.c || echo '$(srcdir)/'`tools/re2c/parser.c
 
 re2c-actions.$(OBJEXT): tools/re2c/actions.c
-	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/actions.c || echo '$(srcdir)/'`tools/re2c/actions.c
+	$(CC_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  -c -o $@ `test -f tools/re2c/actions.c || echo '$(srcdir)/'`tools/re2c/actions.c
 
 re2c-scanner.$(OBJEXT): tools/re2c/scanner.c
-	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/scanner.c || echo '$(srcdir)/'`tools/re2c/scanner.c
+	$(CC_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  -c -o $@ `test -f tools/re2c/scanner.c || echo '$(srcdir)/'`tools/re2c/scanner.c
 
 re2c-mbo_getopt.$(OBJEXT): tools/re2c/mbo_getopt.c
-	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/mbo_getopt.c || echo '$(srcdir)/'`tools/re2c/mbo_getopt.c
+	$(CC_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  -c -o $@ `test -f tools/re2c/mbo_getopt.c || echo '$(srcdir)/'`tools/re2c/mbo_getopt.c
 
 re2c-substr.$(OBJEXT): tools/re2c/substr.c
-	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/substr.c || echo '$(srcdir)/'`tools/re2c/substr.c
+	$(CC_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  -c -o $@ `test -f tools/re2c/substr.c || echo '$(srcdir)/'`tools/re2c/substr.c
 
 re2c-translate.$(OBJEXT): tools/re2c/translate.c
-	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) -c -o $@ `test -f tools/re2c/translate.c || echo '$(srcdir)/'`tools/re2c/translate.c
+	$(CC_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  -c -o $@ `test -f tools/re2c/translate.c || echo '$(srcdir)/'`tools/re2c/translate.c
 
 EXTRA_DIST += tools/re2c/CHANGELOG
 EXTRA_DIST += tools/re2c/NO_WARRANTY
