@@ -309,10 +309,12 @@ yasm_bc_tobytes(yasm_bytecode *bc, unsigned char *buf, unsigned long *bufsize,
     long i;
     int error = 0;
 
-    if (yasm_bc_get_multiple(bc, &bc->mult_int, 1) || bc->mult_int == 0) {
+    long mult;
+    if (yasm_bc_get_multiple(bc, &mult, 1) || mult == 0) {
         *bufsize = 0;
         return NULL;
     }
+    bc->mult_int = mult;
 
     /* special case for reserve bytecodes */
     if (bc->callback->special == YASM_BC_SPECIAL_RESERVE) {
