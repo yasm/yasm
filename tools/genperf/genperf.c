@@ -234,7 +234,7 @@ perfect_gen(FILE *out, const char *lookup_function_name,
     /* The hash function body */
     fprintf(out, "  const struct %s *ret;\n", struct_name);
     for (i=0; i<final.used; ++i)
-        fprintf(out, final.line[i]);
+        fprintf(out, "%s", final.line[i]);
     fprintf(out, "  if (rsl >= %lu) return NULL;\n", nkeys);
     fprintf(out, "  ret = &pd[rsl];\n");
     fprintf(out, "  if (strcmp(key, ret->name) != 0) return NULL;\n");
