@@ -6789,7 +6789,7 @@ add_insn("vphaddubd", "vphaddsub", modifiers=[0xD2])
 add_insn("vphaddubq", "vphaddsub", modifiers=[0xD3])
 add_insn("vphadduwd", "vphaddsub", modifiers=[0xD6])
 add_insn("vphadduwq", "vphaddsub", modifiers=[0xD7])
-add_insn("vphaddudq", "vphaddsub", modifiers=[0xDB])
+add_insn("vphaddudq", "vphaddsub", modifiers=[0xD8])
 
 add_insn("vphsubbw", "vphaddsub", modifiers=[0xE1])
 add_insn("vphsubwd", "vphaddsub", modifiers=[0xE2])
