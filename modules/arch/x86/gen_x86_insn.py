@@ -6901,9 +6901,9 @@ add_group("fma_128_256",
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
+              Operand(type="SIMDReg", size=128, dest="VEX"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
-              Operand(type="SIMDReg", size=128, dest="VEX")])
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc")])
 add_group("fma_128_256",
     cpu=["FMA4"],
     modifiers=["Op2Add"],
@@ -6912,8 +6912,8 @@ add_group("fma_128_256",
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
               Operand(type="SIMDReg", size=128, dest="VEX"),
+              Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
 add_group("fma_128_256",
     cpu=["FMA4"],
@@ -6923,9 +6923,9 @@ add_group("fma_128_256",
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x00],
     operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
-              Operand(type="SIMDReg", size=256, dest="VEXImmSrc"),
+              Operand(type="SIMDReg", size=256, dest="VEX"),
               Operand(type="SIMDRM", size=256, relaxed=True, dest="EA"),
-              Operand(type="SIMDReg", size=256, dest="VEX")])
+              Operand(type="SIMDReg", size=256, dest="VEXImmSrc")])
 add_group("fma_128_256",
     cpu=["FMA4"],
     modifiers=["Op2Add"],
@@ -6934,8 +6934,8 @@ add_group("fma_128_256",
     prefix=0x66,
     opcode=[0x0F, 0x3A, 0x00],
     operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
-              Operand(type="SIMDReg", size=256, dest="VEXImmSrc"),
               Operand(type="SIMDReg", size=256, dest="VEX"),
+              Operand(type="SIMDReg", size=256, dest="VEXImmSrc"),
               Operand(type="SIMDRM", size=256, relaxed=True, dest="EA")])
 
 add_insn("vfmaddpd", "fma_128_256", modifiers=[0x69])
@@ -6960,9 +6960,9 @@ for sz in [32, 64]:
         prefix=0x66,
         opcode=[0x0F, 0x3A, 0x00],
         operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-                  Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
+                  Operand(type="SIMDReg", size=128, dest="VEX"),
                   Operand(type="SIMDReg", size=128, dest="EA"),
-                  Operand(type="SIMDReg", size=128, dest="VEX")])
+                  Operand(type="SIMDReg", size=128, dest="VEXImmSrc")])
     add_group("fma_128_m%d" % sz,
         cpu=["FMA4"],
         modifiers=["Op2Add"],
@@ -6971,9 +6971,9 @@ for sz in [32, 64]:
         prefix=0x66,
         opcode=[0x0F, 0x3A, 0x00],
         operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-                  Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
+                  Operand(type="SIMDReg", size=128, dest="VEX"),
                   Operand(type="Mem", size=sz, relaxed=True, dest="EA"),
-                  Operand(type="SIMDReg", size=128, dest="VEX")])
+                  Operand(type="SIMDReg", size=128, dest="VEXImmSrc")])
     add_group("fma_128_m%d" % sz,
         cpu=["FMA4"],
         modifiers=["Op2Add"],
@@ -6982,8 +6982,8 @@ for sz in [32, 64]:
         prefix=0x66,
         opcode=[0x0F, 0x3A, 0x00],
         operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-                  Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
                   Operand(type="SIMDReg", size=128, dest="VEX"),
+                  Operand(type="SIMDReg", size=128, dest="VEXImmSrc"),
                   Operand(type="Mem", size=sz, relaxed=True, dest="EA")])
 
 add_insn("vfmaddsd", "fma_128_m64", modifiers=[0x6B])
