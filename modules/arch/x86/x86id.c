@@ -53,21 +53,18 @@ static const char *cpu_find_reverse(unsigned int cpu0, unsigned int cpu1,
 
 /* GAS suffix flags for instructions */
 enum x86_gas_suffix_flags {
-    NONE = 0,
-    SUF_B = 1<<0,
-    SUF_W = 1<<1,
-    SUF_L = 1<<2,
-    SUF_Q = 1<<3,
-    SUF_S = 1<<4,
-    SUF_MASK = SUF_B|SUF_W|SUF_L|SUF_Q|SUF_S,
+    SUF_Z = 1<<0,   /* no suffix */
+    SUF_B = 1<<1,
+    SUF_W = 1<<2,
+    SUF_L = 1<<3,
+    SUF_Q = 1<<4,
+    SUF_S = 1<<5,
+    SUF_MASK = SUF_Z|SUF_B|SUF_W|SUF_L|SUF_Q|SUF_S,
 
     /* Flags only used in x86_insn_info */
-    GAS_ONLY = 1<<5,        /* Only available in GAS mode */
-    GAS_ILLEGAL = 1<<6,     /* Illegal in GAS mode */
-    GAS_NO_REV = 1<<7,      /* Don't reverse operands in GAS mode */
-
-    /* Flags only used in insnprefix_parse_data */
-    WEAK = 1<<5             /* Relaxed operand mode for GAS */
+    GAS_ONLY = 1<<6,        /* Only available in GAS mode */
+    GAS_ILLEGAL = 1<<7,     /* Illegal in GAS mode */
+    GAS_NO_REV = 1<<8       /* Don't reverse operands in GAS mode */
 };
 
 /* Miscellaneous flag tests for instructions */
@@ -233,10 +230,10 @@ typedef struct x86_info_operand {
 
 typedef struct x86_insn_info {
     /* GAS suffix flags */
-    unsigned int gas_flags:8;      /* Enabled for these GAS suffixes */
+    unsigned int gas_flags:9;      /* Enabled for these GAS suffixes */
 
     /* Tests against BITS==64, AVX, and XOP */
-    unsigned int misc_flags:6;
+    unsigned int misc_flags:5;
 
     /* The CPU feature flags needed to execute this instruction.  This is OR'ed
      * with arch-specific data[2].  This combined value is compared with
@@ -318,10 +315,10 @@ typedef struct x86_id_insn {
     unsigned int mode_bits:8;
 
     /* Suffix flags */
-    unsigned int suffix:8;
+    unsigned int suffix:9;
 
     /* Tests against BITS==64 and AVX */
-    unsigned int misc_flags:6;
+    unsigned int misc_flags:5;
 
     /* Parser enabled at the time of parsing the instruction */
     unsigned int parser:2;
@@ -385,9 +382,11 @@ x86_finalize_jmpfar(yasm_bytecode *bc, yasm_bytecode *prev_bc,
                     const x86_insn_info *info)
 {
     x86_id_insn *id_insn = (x86_id_insn *)bc->contents;
+    unsigned char *mod_data = id_insn->mod_data;
     unsigned int mode_bits = id_insn->mode_bits;
     x86_jmpfar *jmpfar;
     yasm_insn_operand *op;
+    unsigned int i;
 
     jmpfar = yasm_xmalloc(sizeof(x86_jmpfar));
     x86_finalize_common(&jmpfar->common, info, mode_bits);
@@ -413,8 +412,43 @@ x86_finalize_jmpfar(yasm_bytecode *bc, yasm_bytecode *prev_bc,
             || yasm_value_finalize_expr(&jmpfar->segment, e, prev_bc, 16))
             yasm_error_set(YASM_ERROR_TOO_COMPLEX,
                            N_("jump target expression too complex"));
+    } else if (yasm_insn_op_next(op)) {
+        /* Two operand form (gas) */
+        yasm_insn_operand *op2 = yasm_insn_op_next(op);
+        if (yasm_value_finalize_expr(&jmpfar->segment, op->data.val, prev_bc,
+                                     16))
+            yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+                           N_("jump target segment too complex"));
+        if (yasm_value_finalize_expr(&jmpfar->offset, op2->data.val, prev_bc,
+                                     0))
+            yasm_error_set(YASM_ERROR_TOO_COMPLEX,
+                           N_("jump target offset too complex"));
+        if (op2->size == OPS_BITS)
+            jmpfar->common.opersize = (unsigned char)mode_bits;
     } else
         yasm_internal_error(N_("didn't get FAR expression in jmpfar"));
+
+    /* Apply modifiers */
+    for (i=0; i<NELEMS(info->modifiers); i++) {
+        switch (info->modifiers[i]) {
+            case MOD_Gap:
+                break;
+            case MOD_Op0Add:
+                jmpfar->opcode.opcode[0] += mod_data[i];
+                break;
+            case MOD_Op1Add:
+                jmpfar->opcode.opcode[1] += mod_data[i];
+                break;
+            case MOD_Op2Add:
+                jmpfar->opcode.opcode[2] += mod_data[i];
+                break;
+            case MOD_Op1AddSp:
+                jmpfar->opcode.opcode[1] += mod_data[i]<<3;
+                break;
+            default:
+                break;
+        }
+    }
 
     yasm_x86__bc_apply_prefixes((x86_common *)jmpfar, NULL,
                                 info->def_opersize_64,
@@ -605,7 +639,7 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
             continue;
 
         /* Match suffix (if required) */
-        if (suffix != 0 && suffix != WEAK
+        if (id_insn->parser == X86_PARSER_GAS
             && ((suffix & SUF_MASK) & (gas_flags & SUF_MASK)) == 0)
             continue;
 
@@ -826,7 +860,7 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
 
             /* Check operand size */
             size = size_lookup[info_ops[i].size];
-            if (suffix != 0) {
+            if (id_insn->parser == X86_PARSER_GAS) {
                 /* Require relaxed operands for GAS mode (don't allow
                  * per-operand sizing).
                  */
@@ -868,7 +902,8 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
                 break;
 
             /* Check for 64-bit effective address size in NASM mode */
-            if (suffix == 0 && op->type == YASM_INSN__OPERAND_MEMORY) {
+            if (id_insn->parser != X86_PARSER_GAS &&
+                op->type == YASM_INSN__OPERAND_MEMORY) {
                 if (info_ops[i].eas64) {
                     if (op->data.ea->disp.size != 64)
                         mismatch = 1;
@@ -1850,7 +1885,7 @@ yasm_x86__create_empty_insn(yasm_arch *arch, unsigned long line)
     id_insn->mod_data[2] = 0;
     id_insn->num_info = NELEMS(empty_insn);
     id_insn->mode_bits = arch_x86->mode_bits;
-    id_insn->suffix = 0;
+    id_insn->suffix = (arch_x86->parser == X86_PARSER_GAS) ? SUF_Z : 0;
     id_insn->misc_flags = 0;
     id_insn->parser = arch_x86->parser;
     id_insn->force_strict = arch_x86->force_strict != 0;

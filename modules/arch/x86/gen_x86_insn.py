@@ -178,6 +178,14 @@ class GroupForm(object):
         suffix = kwargs.pop("suffix", None)
         if suffix is not None:
             self.suffixes = [suffix]
+
+        req_suffix = kwargs.pop("req_suffix", False)
+        if not req_suffix:
+            if self.suffixes is None:
+                self.suffixes = ["Z"]
+            else:
+                self.suffixes.append("Z")
+
         if self.suffixes is not None:
             self.suffixes = set(x.upper() for x in self.suffixes)
 
@@ -452,7 +460,7 @@ class Insn(object):
 
     def __str__(self):
         if self.suffix is None:
-            suffix_str = "NONE"
+            suffix_str = "SUF_Z"
         elif len(self.suffix) == 1:
             suffix_str = "SUF_" + self.suffix
         else:
@@ -532,14 +540,6 @@ def finalize_insns():
                 parsers &= insn.parsers
 
             if "gas" in parsers:
-                keyword = name
-                if keyword in gas_insns:
-                    raise ValueError("duplicate gas instruction %s" % keyword)
-                newinsn = insn.copy()
-                newinsn.auto_cpu("gas")
-                newinsn.auto_misc_flags("gas")
-                gas_insns[keyword] = newinsn
-
                 if insn.suffix is None:
                     suffixes = set()
                     for form in group:
@@ -547,7 +547,10 @@ def finalize_insns():
                             suffixes |= form.suffixes
 
                     for suffix in suffixes:
-                        keyword = name+suffix
+                        if suffix == "Z":
+                            keyword = name
+                        else:
+                            keyword = name+suffix
                         if keyword in gas_insns:
                             raise ValueError("duplicate gas instruction %s" %
                                              keyword)
@@ -556,6 +559,15 @@ def finalize_insns():
                         newinsn.auto_cpu("gas")
                         newinsn.auto_misc_flags("gas")
                         gas_insns[keyword] = newinsn
+                else:
+                    keyword = name
+                    if keyword in gas_insns:
+                        raise ValueError("duplicate gas instruction %s" %
+                                         keyword)
+                    newinsn = insn.copy()
+                    newinsn.auto_cpu("gas")
+                    newinsn.auto_misc_flags("gas")
+                    gas_insns[keyword] = newinsn
 
             if "nasm" in parsers:
                 keyword = name
@@ -2206,15 +2218,18 @@ add_group("call",
     opcode=[],
     operands=[Operand(type="ImmNotSegOff", dest="JmpRel")])
 add_group("call",
+    suffix="w",
     opersize=16,
     opcode=[],
     operands=[Operand(type="ImmNotSegOff", size=16, dest="JmpRel")])
 add_group("call",
+    suffix="l",
     not64=True,
     opersize=32,
     opcode=[],
     operands=[Operand(type="ImmNotSegOff", size=32, dest="JmpRel")])
 add_group("call",
+    suffixes=["l", "q"],
     only64=True,
     opersize=64,
     opcode=[],
@@ -2242,59 +2257,77 @@ add_group("call",
     operands=[Operand(type="Imm", tmod="Near", dest="JmpRel")])
 
 add_group("call",
+    suffix="w",
+    req_suffix=True,
     opersize=16,
     opcode=[0xFF],
     spare=2,
     operands=[Operand(type="RM", size=16, dest="EA")])
 add_group("call",
+    suffix="l",
+    req_suffix=True,
     not64=True,
     opersize=32,
     opcode=[0xFF],
     spare=2,
     operands=[Operand(type="RM", size=32, dest="EA")])
 add_group("call",
+    suffix="q",
+    req_suffix=True,
     opersize=64,
     def_opersize_64=64,
     opcode=[0xFF],
     spare=2,
     operands=[Operand(type="RM", size=64, dest="EA")])
 add_group("call",
+    parsers=["gas"],
+    def_opersize_64=64,
+    opcode=[0xFF],
+    spare=2,
+    operands=[Operand(type="Reg", size="BITS", dest="EA")])
+add_group("call",
     def_opersize_64=64,
     opcode=[0xFF],
     spare=2,
     operands=[Operand(type="Mem", dest="EA")])
 add_group("call",
+    parsers=["nasm"],
     opersize=16,
     def_opersize_64=64,
     opcode=[0xFF],
     spare=2,
     operands=[Operand(type="RM", size=16, tmod="Near", dest="EA")])
 add_group("call",
+    parsers=["nasm"],
     not64=True,
     opersize=32,
     opcode=[0xFF],
     spare=2,
     operands=[Operand(type="RM", size=32, tmod="Near", dest="EA")])
 add_group("call",
+    parsers=["nasm"],
     opersize=64,
     def_opersize_64=64,
     opcode=[0xFF],
     spare=2,
     operands=[Operand(type="RM", size=64, tmod="Near", dest="EA")])
 add_group("call",
+    parsers=["nasm"],
     def_opersize_64=64,
     opcode=[0xFF],
     spare=2,
     operands=[Operand(type="Mem", tmod="Near", dest="EA")])
 
-# Far indirect (through memory).  Needs explicit FAR override.
+# Far indirect (through memory).  Needs explicit FAR override (NASM only)
 for sz in [16, 32, 64]:
     add_group("call",
+        parsers=["nasm"],
         opersize=sz,
         opcode=[0xFF],
         spare=3,
         operands=[Operand(type="Mem", size=sz, tmod="Far", dest="EA")])
 add_group("call",
+    parsers=["nasm"],
     opcode=[0xFF],
     spare=3,
     operands=[Operand(type="Mem", tmod="Far", dest="EA")])
@@ -2302,34 +2335,52 @@ add_group("call",
 # With explicit FAR override
 for sz in [16, 32]:
     add_group("call",
+        parsers=["nasm"],
         not64=True,
         opersize=sz,
         opcode=[0x9A],
-        spare=3,
         operands=[Operand(type="Imm", size=sz, tmod="Far", dest="JmpFar")])
 add_group("call",
+    parsers=["nasm"],
     not64=True,
     opcode=[0x9A],
-    spare=3,
     operands=[Operand(type="Imm", tmod="Far", dest="JmpFar")])
 
-# Since not caught by first ImmNotSegOff group, implicitly FAR.
+# Since not caught by first ImmNotSegOff group, implicitly FAR (in NASM).
 for sz in [16, 32]:
     add_group("call",
+        parsers=["nasm"],
         not64=True,
         opersize=sz,
         opcode=[0x9A],
-        spare=3,
         operands=[Operand(type="Imm", size=sz, dest="JmpFar")])
 add_group("call",
+    parsers=["nasm"],
     not64=True,
     opcode=[0x9A],
-    spare=3,
     operands=[Operand(type="Imm", dest="JmpFar")])
 
+# Two-operand FAR (GAS only)
+for sfx, sz in zip("wl", [16, 32]):
+    add_group("call",
+        suffix=sfx,
+        req_suffix=True,
+        parsers=["gas"],
+        not64=True,
+        gas_no_reverse=True,
+        opersize=sz,
+        opcode=[0x9A],
+        operands=[Operand(type="Imm", size=16, relaxed=True, dest="JmpFar"),
+                  Operand(type="Imm", size=sz, relaxed=True, dest="JmpFar")])
+add_group("call",
+    parsers=["gas"],
+    not64=True,
+    gas_no_reverse=True,
+    opcode=[0x9A],
+    operands=[Operand(type="Imm", size=16, relaxed=True, dest="JmpFar"),
+              Operand(type="Imm", size="BITS", relaxed=True, dest="JmpFar")])
+
 add_insn("call", "call")
-add_insn("calll", "call", parser="gas", not64=True)
-add_insn("callq", "call", parser="gas", only64=True)
 
 #
 # jmp
@@ -2338,15 +2389,18 @@ add_group("jmp",
     opcode=[],
     operands=[Operand(type="ImmNotSegOff", dest="JmpRel")])
 add_group("jmp",
+    suffix="w",
     opersize=16,
     opcode=[],
     operands=[Operand(type="ImmNotSegOff", size=16, dest="JmpRel")])
 add_group("jmp",
+    suffix="l",
     not64=True,
     opersize=32,
     opcode=[0x00],
     operands=[Operand(type="ImmNotSegOff", size=32, dest="JmpRel")])
 add_group("jmp",
+    suffixes=["l", "q"],
     only64=True,
     opersize=64,
     opcode=[0x00],
@@ -2379,35 +2433,49 @@ add_group("jmp",
     operands=[Operand(type="Imm", tmod="Near", dest="JmpRel")])
 
 add_group("jmp",
+    suffix="w",
+    req_suffix=True,
     opersize=16,
     def_opersize_64=64,
     opcode=[0xFF],
     spare=4,
     operands=[Operand(type="RM", size=16, dest="EA")])
 add_group("jmp",
+    suffix="l",
+    req_suffix=True,
     not64=True,
     opersize=32,
     opcode=[0xFF],
     spare=4,
     operands=[Operand(type="RM", size=32, dest="EA")])
 add_group("jmp",
+    suffix="q",
+    req_suffix=True,
     opersize=64,
     def_opersize_64=64,
     opcode=[0xFF],
     spare=4,
     operands=[Operand(type="RM", size=64, dest="EA")])
 add_group("jmp",
+    parsers=["gas"],
+    def_opersize_64=64,
+    opcode=[0xFF],
+    spare=4,
+    operands=[Operand(type="Reg", size="BITS", dest="EA")])
+add_group("jmp",
     def_opersize_64=64,
     opcode=[0xFF],
     spare=4,
     operands=[Operand(type="Mem", dest="EA")])
 add_group("jmp",
+    parsers=["nasm"],
     opersize=16,
     def_opersize_64=64,
     opcode=[0xFF],
     spare=4,
     operands=[Operand(type="RM", size=16, tmod="Near", dest="EA")])
 add_group("jmp",
+    parsers=["nasm"],
     not64=True,
     cpu=["386"],
     opersize=32,
@@ -2415,12 +2483,14 @@ add_group("jmp",
     spare=4,
     operands=[Operand(type="RM", size=32, tmod="Near", dest="EA")])
 add_group("jmp",
+    parsers=["nasm"],
     opersize=64,
     def_opersize_64=64,
     opcode=[0xFF],
     spare=4,
     operands=[Operand(type="RM", size=64, tmod="Near", dest="EA")])
 add_group("jmp",
+    parsers=["nasm"],
     def_opersize_64=64,
     opcode=[0xFF],
     spare=4,
@@ -2444,29 +2514,90 @@ for sz in [16, 32]:
         not64=True,
         opersize=sz,
         opcode=[0xEA],
-        spare=3,
         operands=[Operand(type="Imm", size=sz, tmod="Far", dest="JmpFar")])
 add_group("jmp",
     not64=True,
     opcode=[0xEA],
-    spare=3,
     operands=[Operand(type="Imm", tmod="Far", dest="JmpFar")])
 
-# Since not caught by first ImmNotSegOff group, implicitly FAR.
+# Since not caught by first ImmNotSegOff group, implicitly FAR (in NASM).
 for sz in [16, 32]:
     add_group("jmp",
+        parsers=["nasm"],
         not64=True,
         opersize=sz,
         opcode=[0xEA],
-        spare=3,
         operands=[Operand(type="Imm", size=sz, dest="JmpFar")])
 add_group("jmp",
+    parsers=["nasm"],
     not64=True,
     opcode=[0xEA],
-    spare=3,
     operands=[Operand(type="Imm", dest="JmpFar")])
 
+# Two-operand FAR (GAS only)
+for sfx, sz in zip("wl", [16, 32]):
+    add_group("jmp",
+        parsers=["gas"],
+        suffix=sfx,
+        req_suffix=True,
+        not64=True,
+        gas_no_reverse=True,
+        opersize=sz,
+        opcode=[0xEA],
+        operands=[Operand(type="Imm", size=16, relaxed=True, dest="JmpFar"),
+                  Operand(type="Imm", size=sz, relaxed=True, dest="JmpFar")])
+add_group("jmp",
+    parsers=["gas"],
+    not64=True,
+    gas_no_reverse=True,
+    opcode=[0xEA],
+    operands=[Operand(type="Imm", size=16, relaxed=True, dest="JmpFar"),
+              Operand(type="Imm", size="BITS", relaxed=True, dest="JmpFar")])
+
 add_insn("jmp", "jmp")
+
+#
+# GAS far calls/jumps
+#
+
+# Far indirect (through memory)
+for sfx, sz in zip("wlq", [16, 32, 64]):
+    add_group("ljmpcall",
+        suffix=sfx,
+        req_suffix=True,
+        opersize=sz,
+        modifiers=["SpAdd"],
+        opcode=[0xFF],
+        spare=0,
+        operands=[Operand(type="Mem", size=sz, relaxed=True, dest="EA")])
+add_group("ljmpcall",
+    modifiers=["SpAdd"],
+    opcode=[0xFF],
+    spare=0,
+    operands=[Operand(type="Mem", size="BITS", relaxed=True, dest="EA")])
+
+# Two-operand far
+for sfx, sz in zip("wl", [16, 32]):
+    add_group("ljmpcall",
+        not64=True,
+        gas_no_reverse=True,
+        suffix=sfx,
+        req_suffix=True,
+        opersize=sz,
+        modifiers=["Gap", "Op0Add"],
+        opcode=[0x00],
+        operands=[Operand(type="Imm", size=16, relaxed=True, dest="JmpFar"),
+                  Operand(type="Imm", size=sz, relaxed=True, dest="JmpFar")])
+add_group("ljmpcall",
+    not64=True,
+    gas_no_reverse=True,
+    modifiers=["Gap", "Op0Add"],
+    opcode=[0x00],
+    operands=[Operand(type="Imm", size=16, relaxed=True, dest="JmpFar"),
+              Operand(type="Imm", size="BITS", relaxed=True, dest="JmpFar")])
+
+add_insn("ljmp", "ljmpcall", parser="gas", modifiers=[5, 0xEA])
+add_insn("lcall", "ljmpcall", parser="gas", modifiers=[3, 0x9A])
 
 #
 # ret
@@ -2511,10 +2642,11 @@ add_insn("retl", "retnf", parser="gas", modifiers=[0xC2], not64=True)
 add_insn("retq", "retnf", parser="gas", modifiers=[0xC2], only64=True)
 add_insn("retn", "retnf", parser="nasm", modifiers=[0xC2])
 add_insn("retf", "retnf", parser="nasm", modifiers=[0xCA, 64])
-add_insn("lretw", "retnf", parser="gas", modifiers=[0xCA, 16], suffix="NONE")
-add_insn("lretl", "retnf", parser="gas", modifiers=[0xCA], suffix="NONE")
+add_insn("lret", "retnf", parser="gas", modifiers=[0xCA], suffix="z")
+add_insn("lretw", "retnf", parser="gas", modifiers=[0xCA, 16], suffix="w")
+add_insn("lretl", "retnf", parser="gas", modifiers=[0xCA], suffix="l")
 add_insn("lretq", "retnf", parser="gas", modifiers=[0xCA, 64], only64=True,
-         suffix="NONE")
+         suffix="q")
 
 #
 # enter
@@ -2706,6 +2838,45 @@ add_insn("loopz", "loop", modifiers=[1])
 add_insn("loope", "loop", modifiers=[1])
 add_insn("loopnz", "loop", modifiers=[0])
 add_insn("loopne", "loop", modifiers=[0])
+
+# GAS w/l/q suffixes have to set addrsize via modifiers
+for sfx, sz in zip("wlq", [16, 32, 64]):
+    add_group("loop"+sfx,
+        not64=(sz == 16),
+        only64=(sz == 64),
+        modifiers=["Gap", "AdSizeR"],
+        def_opersize_64=64,
+        opcode=[],
+        operands=[Operand(type="Imm", dest="JmpRel")])
+    add_group("loop"+sfx,
+        not64=(sz == 16),
+        only64=(sz == 64),
+        modifiers=["Op0Add", "AdSizeR"],
+        def_opersize_64=64,
+        opcode=[0xE0],
+        operands=[Operand(type="Imm", tmod="Short", dest="JmpRel")])
+
+    add_group("loop"+sfx,
+        not64=(sz == 16),
+        only64=(sz == 64),
+        def_opersize_64=64,
+        opcode=[],
+        operands=[Operand(type="Imm", dest="JmpRel"),
+                  Operand(type="Creg", size=sz, dest="AdSizeR")])
+    add_group("loop"+sfx,
+        not64=(sz == 16),
+        only64=(sz == 64),
+        modifiers=["Op0Add"],
+        def_opersize_64=64,
+        opcode=[0xE0],
+        operands=[Operand(type="Imm", tmod="Short", dest="JmpRel"),
+                  Operand(type="Creg", size=sz, dest="AdSizeR")])
+
+    add_insn("loop"+sfx, "loop"+sfx, parser="gas", modifiers=[2, sz])
+    add_insn("loopz"+sfx, "loop"+sfx, parser="gas", modifiers=[1, sz])
+    add_insn("loope"+sfx, "loop"+sfx, parser="gas", modifiers=[1, sz])
+    add_insn("loopnz"+sfx, "loop"+sfx, parser="gas", modifiers=[0, sz])
+    add_insn("loopne"+sfx, "loop"+sfx, parser="gas", modifiers=[0, sz])
 
 #####################################################################
 # Set byte on flag instructions
@@ -3091,10 +3262,10 @@ add_group("fldstpt",
     modifiers=["SpAdd"],
     opcode=[0xDB],
     spare=0,
-    operands=[Operand(type="Mem", size=80, dest="EA")])
+    operands=[Operand(type="Mem", size=80, relaxed=True, dest="EA")])
 
-add_insn("fldt", "fldstpt", suffix="WEAK", modifiers=[5])
-add_insn("fstpt", "fldstpt", suffix="WEAK", modifiers=[7])
+add_insn("fldt", "fldstpt", modifiers=[5])
+add_insn("fstpt", "fldstpt", modifiers=[7])
 
 add_group("fildstp",
     suffix="s",
