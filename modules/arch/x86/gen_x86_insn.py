@@ -540,31 +540,24 @@ def finalize_insns():
                 parsers &= insn.parsers
 
             if "gas" in parsers:
+                suffixes = set()
                 if insn.suffix is None:
-                    suffixes = set()
                     for form in group:
                         if form.gen_suffix and form.suffixes is not None:
                             suffixes |= form.suffixes
 
-                    for suffix in suffixes:
-                        if suffix == "Z":
-                            keyword = name
-                        else:
-                            keyword = name+suffix
-                        if keyword in gas_insns:
-                            raise ValueError("duplicate gas instruction %s" %
-                                             keyword)
-                        newinsn = insn.copy()
-                        newinsn.suffix = suffix
-                        newinsn.auto_cpu("gas")
-                        newinsn.auto_misc_flags("gas")
-                        gas_insns[keyword] = newinsn
-                else:
-                    keyword = name
+                if not suffixes:
+                    suffixes.add("Z")
+                for suffix in suffixes:
+                    if suffix == "Z":
+                        keyword = name
+                    else:
+                        keyword = name+suffix
                     if keyword in gas_insns:
                         raise ValueError("duplicate gas instruction %s" %
                                          keyword)
                     newinsn = insn.copy()
+                    newinsn.suffix = suffix
                     newinsn.auto_cpu("gas")
                     newinsn.auto_misc_flags("gas")
                     gas_insns[keyword] = newinsn
