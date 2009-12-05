@@ -327,6 +327,10 @@
 			Name="Source Files"
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
+			<File
+				RelativePath=".\run.bat"
+				>
+			</File>
 			<Filter
 				Name="arch"
 				>
