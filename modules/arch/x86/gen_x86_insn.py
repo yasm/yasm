@@ -608,7 +608,10 @@ def output_groups(f):
     # Merge all operand lists into single list
     # Sort by number of operands to shorten output
     all_operands = []
-    gi = groups.itervalues() if version_info[0] == 2 else groups.values()    
+    if version_info[0] == 2:
+        gi = groups.itervalues()
+    else:
+        gi = groups.values()
     for form in sorted((form for g in gi for form in g),
                        key=lambda x:len(x.operands), reverse=True):
         num_operands = len(form.operands)
