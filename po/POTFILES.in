@@ -55,6 +55,8 @@ modules/parsers/gas/gas-token.re
 modules/parsers/nasm/nasm-parse.c
 modules/parsers/nasm/nasm-token.re
 modules/preprocs/cpp/cpp-preproc.c
+modules/preprocs/gas/gas-preproc.c
+modules/preprocs/gas/gas-eval.c
 modules/preprocs/nasm/nasm-preproc.c
 modules/preprocs/nasm/nasm-pp.c
 modules/preprocs/raw/raw-preproc.c

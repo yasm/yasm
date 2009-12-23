@@ -114,6 +114,7 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp,
 
 /* Define valid preprocessors to use with this parser */
 static const char *gas_parser_preproc_keywords[] = {
+    "gas",
     "raw",
     "cpp",
     "nasm",
@@ -133,7 +134,7 @@ yasm_parser_module yasm_gnu_LTX_parser = {
     "GNU AS (GAS)-compatible parser",
     "gnu",
     gas_parser_preproc_keywords,
-    "raw",
+    "gas",
     NULL,   /* No standard macros */
     gas_parser_do_parse
 };
