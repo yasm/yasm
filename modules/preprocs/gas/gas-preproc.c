@@ -61,7 +61,7 @@ typedef struct yasm_preproc_gas {
     int depth;
     int skip_depth;
 
-    char *expr_string;
+    const char *expr_string;
     char *expr_symbol;
     int expr_string_cursor;
 
@@ -388,7 +388,7 @@ static long eval_expr(yasm_preproc_gas *pp, const char *arg1)
     tv.t_type = TOKEN_INVALID;
 
     pp->expr_symbol = NULL;
-    pp->expr_string = (char *) arg1;
+    pp->expr_string = arg1;
     pp->expr_string_cursor = 0;
     expr = evaluate(gas_scan, pp, &tv, pp, CRITICAL, gas_err, pp->defines);
     intn = yasm_expr_get_intnum(&expr, 0);
