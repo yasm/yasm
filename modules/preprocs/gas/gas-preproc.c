@@ -61,7 +61,7 @@ typedef struct yasm_preproc_gas {
     int depth;
     int skip_depth;
 
-    const char *expr_string;
+    char *expr_string;
     char *expr_symbol;
     int expr_string_cursor;
 
@@ -388,7 +388,7 @@ static long eval_expr(yasm_preproc_gas *pp, const char *arg1)
     tv.t_type = TOKEN_INVALID;
 
     pp->expr_symbol = NULL;
-    pp->expr_string = arg1;
+    pp->expr_string = (char *) arg1;
     pp->expr_string_cursor = 0;
     expr = evaluate(gas_scan, pp, &tv, pp, CRITICAL, gas_err, pp->defines);
     intn = yasm_expr_get_intnum(&expr, 0);
@@ -419,9 +419,7 @@ static int handle_if(yasm_preproc_gas *pp, int is_true)
 
 static int handle_endif(yasm_preproc_gas *pp)
 {
-    if (pp->skip_depth) {
-        pp->skip_depth--;
-    } else if (pp->depth) {
+    if (pp->depth) {
         pp->depth--;
     } else {
         yasm_error_set(YASM_ERROR_SYNTAX, N_("\".endif\" without \".if\""));
@@ -433,14 +431,11 @@ static int handle_endif(yasm_preproc_gas *pp)
 
 static int handle_else(yasm_preproc_gas *pp, int is_elseif)
 {
-    if (pp->skip_depth == 1) {
-        pp->skip_depth = 0;
-        pp->depth++;
-    } else if (!pp->depth) {
+    if (!pp->depth) {
         yasm_error_set(YASM_ERROR_SYNTAX, N_("\".%s\" without \".if\""), is_elseif ? "elseif" : "else");
         yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
         return 0;
-    } else if (!pp->skip_depth) {
+    } else {
         pp->skip_depth = 1;
     }
     return 1;
@@ -701,7 +696,24 @@ typedef int (*pp_fn2_t)(yasm_preproc_gas *pp, int param, const char *arg1, const
 
 #define FN(f) ((pp_fn0_t) &(f))
 
-static int process_line(yasm_preproc_gas *pp, const char *line)
+static void kill_comments(yasm_preproc_gas *pp, char *line)
+{
+    char *cstart = strstr(line, "/*");
+    while (cstart) {
+        char *cend = strstr(cstart + 2, "*/");
+
+        if (!cend) {
+            yasm_error_set(YASM_ERROR_SYNTAX, N_("unterminated comment"));
+            yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+            return;
+        }
+
+        strcpy(cstart, cend + 2);
+        cstart = strstr(cstart, "/*");
+    }
+}
+
+static int process_line(yasm_preproc_gas *pp, char *line)
 {
     size_t i;
     struct {
@@ -737,13 +749,28 @@ static int process_line(yasm_preproc_gas *pp, const char *line)
         {"endr", 1, FN(eval_endr), 0},
     };
 
+    kill_comments(pp, line);
+    skip_whitespace2(&line);
+    if (*line == '\0') {
+        return FALSE;
+    }
+
     for (i = 0; i < sizeof(directives)/sizeof(directives[0]); i++) {
         char buf1[1024];
         const char *remainder = matches(line, directives[i].name);
         
         if (remainder) {
-            if (pp->skip_depth && !strncmp("if", directives[i].name, 2)) {
-                pp->skip_depth++;
+            if (pp->skip_depth) {
+                if (!strncmp("if", directives[i].name, 2)) {
+                    pp->skip_depth++;
+                } else if (!strcmp("endif", directives[i].name)) {
+                    pp->skip_depth--;
+                } else if (!strcmp("else", directives[i].name)) {
+                    if (pp->skip_depth == 1) {
+                        pp->skip_depth = 0;
+                        pp->depth++;
+                    }
+                }
                 return FALSE;
             } else if (directives[i].nargs == 0) {
                 pp_fn0_t fn = (pp_fn0_t) directives[i].fn;
@@ -907,7 +934,7 @@ gas_preproc_add_standard(yasm_preproc *preproc, const char **macros)
 
 /* Define preproc structure -- see preproc.h for details */
 yasm_preproc_module yasm_gas_LTX_preproc = {
-    "GAS Preprocessor",
+    "GNU AS (GAS)-compatible preprocessor",
     "gas",
     gas_preproc_create,
     gas_preproc_destroy,
