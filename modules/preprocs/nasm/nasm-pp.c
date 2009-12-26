@@ -4673,8 +4673,8 @@ expand_mmacro(Token * tline)
 }
 
 /*
- * Since preprocessor always operate only on the line that didn't
- * arrived yet, we should always use ERR_OFFBY1. Also since user
+ * Since preprocessor always operates only on the line that didn't
+ * arrive yet, we should always use ERR_OFFBY1. Also since user
  * won't want to see same error twice (preprocessing is done once
  * per pass) we will want to show errors only during pass one.
  */
@@ -4689,7 +4689,11 @@ error(int severity, const char *fmt, ...)
         return;
 
     va_start(arg, fmt);
+#ifdef HAVE_VSNPRINTF
+    vsnprintf(buff, sizeof(buff), fmt, arg);
+#else
     vsprintf(buff, fmt, arg);
+#endif
     va_end(arg);
 
     if (istk && istk->mstk && istk->mstk->name)
