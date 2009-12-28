@@ -6649,7 +6649,7 @@ add_group("aesimc",
     modifiers=["Op1Add", "Op2Add", "SetVEX"],
     prefix=0x66,
     opcode=[0x0F, 0x00, 0x00],
-    operands=[Operand(type="SIMDReg", size=128, dest="SpareVEX"),
+    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
               Operand(type="SIMDRM", size=128, relaxed=True, dest="EA")])
 
 add_insn("aesimc", "aesimc", modifiers=[0x38, 0xDB])
