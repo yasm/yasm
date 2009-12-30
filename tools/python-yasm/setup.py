@@ -52,8 +52,6 @@ def ParseSources(src, srcdir):
     for tok in src.split():
         if tok.endswith(".c"):
             fn = tok
-        elif tok.endswith(".y"):
-            fn = basename(tok)[:-2] + ".c"
         else:
             continue
         if not exists(fn):
@@ -74,8 +72,6 @@ def RunSetup(incldir, cppflags, sources):
                                  sources=sources,
                                  extra_compile_args=cppflags,
                                  include_dirs=incldir,
-                                 library_dirs=['.'],
-                                 libraries=['yasm'],
                        ),
                       ],
           cmdclass = dict(build_ext=build_ext),

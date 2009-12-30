@@ -50,13 +50,13 @@ CLEANFILES += yasm_python.c
 # Now the Python build magic...
 python-setup.txt: Makefile
 	echo "includes=${DEFS} ${DEFAULT_INCLUDES} ${INCLUDES} ${AM_CPPFLAGS} ${CPPFLAGS}" > python-setup.txt
-	echo "sources=${libyasm_a_SOURCES}" >> python-setup.txt
+	echo "sources=${libyasm_a_SOURCES} ${nodist_libyasm_a_SOURCES}" >> python-setup.txt
 	echo "srcdir=${srcdir}" >> python-setup.txt
 	echo "gcc=${GCC}" >> python-setup.txt
 
 CLEANFILES += python-setup.txt
 
-.python-build: python-setup.txt yasm_python.c ${libyasm_a_SOURCES}
+.python-build: python-setup.txt yasm_python.c ${libyasm_a_SOURCES} ${nodist_libyasm_a_SOURCES}
 	$(PYTHON) `test -f tools/python-yasm/setup.py || echo '$(srcdir)/'`tools/python-yasm/setup.py build
 	touch .python-build
 python-build: .python-build
