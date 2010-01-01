@@ -385,7 +385,7 @@ yasm_intnum_create_sized(unsigned char *ptr, int sign, size_t srcsize,
     }
 
     /* Sign extend if needed */
-    if (srcsize*8 < BITVECT_NATIVE_SIZE && sign && (ptr[i] & 0x80) == 0x80)
+    if (srcsize*8 < BITVECT_NATIVE_SIZE && sign && (ptr[i-1] & 0x80) == 0x80)
         BitVector_Interval_Fill(conv_bv, i*8, BITVECT_NATIVE_SIZE-1);
 
     intnum_frombv(intn, conv_bv);
