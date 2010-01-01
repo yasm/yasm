@@ -59,7 +59,7 @@ cdef object __make_expression(yasm_expr *expr):
 cdef class Expression:
     cdef yasm_expr *expr
 
-    def __new__(self, op, *args, **kwargs):
+    def __cinit__(self, op, *args, **kwargs):
         self.expr = NULL
 
         if isinstance(op, Expression):

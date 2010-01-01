@@ -57,7 +57,7 @@ cdef object __make_intnum(yasm_intnum *intn):
 cdef class IntNum:
     cdef yasm_intnum *intn
 
-    def __new__(self, value, base=None):
+    def __cinit__(self, value, base=None):
         cdef unsigned char buf[16]
 
         self.intn = NULL

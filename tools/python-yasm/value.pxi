@@ -25,7 +25,7 @@
 
 cdef class Value:
     cdef yasm_value value
-    def __new__(self, value=None, size=None):
+    def __cinit__(self, value=None, size=None):
         cdef unsigned int sz
         if size is None:
             sz = 0

@@ -26,7 +26,7 @@
 cdef class Symbol:
     cdef yasm_symrec *sym
 
-    def __new__(self, symrec):
+    def __cinit__(self, symrec):
         self.sym = NULL
         if PyCObject_Check(symrec):
             self.sym = <yasm_symrec *>__get_voidp(symrec, Symbol)
@@ -124,7 +124,7 @@ cdef class SymbolTable
 cdef class SymbolTableKeyIterator:
     cdef yasm_symtab_iter *iter
 
-    def __new__(self, symtab):
+    def __cinit__(self, symtab):
         if not isinstance(symtab, SymbolTable):
             raise TypeError
         self.iter = yasm_symtab_first((<SymbolTable>symtab).symtab)
@@ -142,7 +142,7 @@ cdef class SymbolTableKeyIterator:
 cdef class SymbolTableValueIterator:
     cdef yasm_symtab_iter *iter
 
-    def __new__(self, symtab):
+    def __cinit__(self, symtab):
         if not isinstance(symtab, SymbolTable):
             raise TypeError
         self.iter = yasm_symtab_first((<SymbolTable>symtab).symtab)
@@ -160,7 +160,7 @@ cdef class SymbolTableValueIterator:
 cdef class SymbolTableItemIterator:
     cdef yasm_symtab_iter *iter
 
-    def __new__(self, symtab):
+    def __cinit__(self, symtab):
         if not isinstance(symtab, SymbolTable):
             raise TypeError
         self.iter = yasm_symtab_first((<SymbolTable>symtab).symtab)
@@ -190,7 +190,7 @@ cdef int __parse_vis(vis) except -1:
 cdef class SymbolTable:
     cdef yasm_symtab *symtab
 
-    def __new__(self):
+    def __cinit__(self):
         self.symtab = yasm_symtab_create()
 
     def __dealloc__(self):

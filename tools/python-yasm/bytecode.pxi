@@ -28,7 +28,7 @@ cdef class Bytecode:
 
     cdef object __weakref__     # make weak-referenceable
 
-    def __new__(self, bc):
+    def __cinit__(self, bc):
         self.bc = NULL
         if PyCObject_Check(bc):
             self.bc = <yasm_bytecode *>__get_voidp(bc, Bytecode)

@@ -25,7 +25,7 @@
 
 cdef class FloatNum:
     cdef yasm_floatnum *flt
-    def __new__(self, value):
+    def __cinit__(self, value):
         self.flt = NULL
         if isinstance(value, FloatNum):
             self.flt = yasm_floatnum_copy((<FloatNum>value).flt)
