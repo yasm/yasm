@@ -280,31 +280,31 @@ else
 fi
 
 # Detect if we can build Python bindings
-# (needs Python, Python headers, and Pyrex)
+# (needs Python, Python headers, and Cython)
 if test x$enable_python_bindings = xno; then
     have_python_bindings=no
 else
     AC_MSG_NOTICE([Checking to see if we can build Python bindings])
     have_python_bindings=no
     if test x$have_python = xyes; then
-        AC_MSG_CHECKING([for Pyrex >= 0.9.5.1])
-        PYREX_CHECK_VERSION(0.9.5.1, [AC_MSG_RESULT(yes)
-                                      have_pyrex=yes],
+        AC_MSG_CHECKING([for Cython >= 0.11.3])
+        CYTHON_CHECK_VERSION(0.11.3, [AC_MSG_RESULT(yes)
+                                      have_cython=yes],
                                      [AC_MSG_RESULT(no)
-                                      have_pyrex=no])
+                                      have_cython=no])
 
         AM_CHECK_PYTHON_HEADERS(have_python_headers=yes,have_python_headers=no)
 
-        if test x$have_pyrex = xyes -a x$have_python_headers = xyes ; then
+        if test x$have_cython = xyes -a x$have_python_headers = xyes ; then
             have_python_bindings=yes
         fi
     fi
 
     if test x$have_python_bindings = xno ; then
         if test x$enable_python_bindings = xyes ; then
-            AC_MSG_ERROR([Building Python bindings explicitly requested, but can't build Python bindings because either Pyrex, Python headers or a suitable Python version was not found])
+            AC_MSG_ERROR([Building Python bindings explicitly requested, but can't build Python bindings because either Cython, Python headers or a suitable Python version was not found])
         else
-            AC_MSG_WARN([Couldn't find either Pyrex, the Python headers or a suitable version of Python, not building Python bindings])
+            AC_MSG_WARN([Couldn't find either Cython, the Python headers or a suitable version of Python, not building Python bindings])
         fi
     fi
 fi

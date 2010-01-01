@@ -40,9 +40,9 @@ yasm.pyx: $(srcdir)/tools/python-yasm/yasm.pyx
 
 CLEANFILES += yasm.pyx
 
-# Actually run Pyrex
+# Actually run Cython
 yasm_python.c: yasm.pyx _yasm.pxi $(PYBINDING_DEPS)
-	$(PYTHON) -c "from Pyrex.Compiler.Main import main; main(command_line=1)" \
+	$(PYTHON) -c "from Cython.Compiler.Main import main; main(command_line=1)" \
 		-o $@ yasm.pyx
 
 CLEANFILES += yasm_python.c
