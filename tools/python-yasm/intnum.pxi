@@ -115,7 +115,7 @@ cdef class IntNum:
     def __neg__(self): return __intnum_op(self, YASM_EXPR_NEG, None)
     def __pos__(self): return self
     def __abs__(self):
-        if yasm_intnum_sign(self.intn) >= 0: return self
+        if yasm_intnum_sign(self.intn) >= 0: return IntNum(self)
         else: return __intnum_op(self, YASM_EXPR_NEG, None)
     def __nonzero__(self): return not yasm_intnum_is_zero(self.intn)
     def __invert__(self): return __intnum_op(self, YASM_EXPR_NOT, None)

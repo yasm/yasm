@@ -43,15 +43,15 @@ cdef class Symbol:
             cdef yasm_sym_status status
             s = set()
             status = yasm_symrec_get_status(self.sym)
-            if <int>status & <int>SYM_USED: s.add('used')
-            if <int>status & <int>SYM_DEFINED: s.add('defined')
-            if <int>status & <int>SYM_VALUED: s.add('valued')
+            if <int>status & <int>YASM_SYM_USED: s.add('used')
+            if <int>status & <int>YASM_SYM_DEFINED: s.add('defined')
+            if <int>status & <int>YASM_SYM_VALUED: s.add('valued')
             return s
 
     property in_table:
         def __get__(self):
             return bool(<int>yasm_symrec_get_status(self.sym) &
-                        <int>SYM_NOTINTABLE)
+                        <int>YASM_SYM_NOTINTABLE)
 
     property visibility:
         def __get__(self):
