@@ -71,8 +71,6 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp,
 
     parser_gas.state = INITIAL;
 
-    parser_gas.rept = NULL;
-
     for (i=0; i<10; i++)
         parser_gas.local[i] = 0;
 
@@ -82,12 +80,6 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp,
         yasm__strcasecmp(((yasm_preproc_base*)pp)->module->keyword, "nasm") == 0;
 
     gas_parser_parse(&parser_gas);
-
-    /* Check for ending inside a rept */
-    if (parser_gas.rept) {
-        yasm_error_set(YASM_ERROR_SYNTAX, N_("rept without matching endr"));
-        yasm_errwarn_propagate(errwarns, parser_gas.rept->startline);
-    }
 
     /* Check for ending inside a comment */
     if (parser_gas.state == COMMENT) {

@@ -486,53 +486,6 @@ dir_line(yasm_parser_gas *parser_gas, unsigned int param)
     return NULL;
 }
 
-/* Macro directives */
-
-static yasm_bytecode *
-dir_rept(yasm_parser_gas *parser_gas, unsigned int param)
-{
-    yasm_intnum *intn;
-    yasm_expr *e = parse_expr(parser_gas);
-
-    if (!e) {
-        yasm_error_set(YASM_ERROR_SYNTAX,
-                       N_("expression expected after `%s'"),
-                       ".rept");
-        return NULL;
-    }
-    intn = yasm_expr_get_intnum(&e, 0);
-
-    if (!intn) {
-        yasm_error_set(YASM_ERROR_NOT_ABSOLUTE,
-                       N_("rept expression not absolute"));
-    } else if (yasm_intnum_sign(intn) < 0) {
-        yasm_error_set(YASM_ERROR_VALUE,
-                       N_("rept expression is negative"));
-    } else {
-        gas_rept *rept = yasm_xmalloc(sizeof(gas_rept));
-        STAILQ_INIT(&rept->lines);
-        rept->startline = cur_line;
-        rept->numrept = yasm_intnum_get_uint(intn);
-        rept->numdone = 0;
-        rept->line = NULL;
-        rept->linepos = 0;
-        rept->ended = 0;
-        rept->oldbuf = NULL;
-        rept->oldbuflen = 0;
-        rept->oldbufpos = 0;
-        parser_gas->rept = rept;
-    }
-    return NULL;
-}
-
-static yasm_bytecode *
-dir_endr(yasm_parser_gas *parser_gas, unsigned int param)
-{
-    /* Shouldn't ever get here unless we didn't get a DIR_REPT first */
-    yasm_error_set(YASM_ERROR_SYNTAX, N_("endr without matching rept"));
-    return NULL;
-}
-
 /* Alignment directives */
 
 static yasm_bytecode *
@@ -1715,9 +1668,6 @@ static dir_lookup dirs_static[] = {
     {".data",       dir_data_section,   0,  INITIAL},
     {".text",       dir_text_section,   0,  INITIAL},
     {".section",    dir_section,        0, SECTION_DIRECTIVE},
-    /* macro directives */
-    {".rept",       dir_rept,   0,  INITIAL},
-    {".endr",       dir_endr,   0,  INITIAL},
     /* empty space/fill directives */
     {".skip",       dir_skip,   0,  INITIAL},
     {".space",      dir_skip,   0,  INITIAL},
