@@ -492,7 +492,8 @@ void
 IT_destroy(IntervalTree *it)
 {
     IntervalTreeNode *x = it->root->left;
-    SLIST_HEAD(, nodeent) stuffToFree = SLIST_HEAD_INITIALIZER(stuffToFree);
+    SLIST_HEAD(node_head, nodeent)
+        stuffToFree = SLIST_HEAD_INITIALIZER(stuffToFree);
     struct nodeent {
         SLIST_ENTRY(nodeent) link;
         struct IntervalTreeNode *node;

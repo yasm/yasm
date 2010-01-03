@@ -455,7 +455,7 @@ typedef struct incpath {
     /*@owned@*/ char *path;
 } incpath;
 
-STAILQ_HEAD(, incpath) incpaths = STAILQ_HEAD_INITIALIZER(incpaths);
+STAILQ_HEAD(incpath_head, incpath) incpaths = STAILQ_HEAD_INITIALIZER(incpaths);
 
 FILE *
 yasm_fopen_include(const char *iname, const char *from, const char *mode,
