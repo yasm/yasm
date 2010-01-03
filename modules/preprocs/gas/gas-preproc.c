@@ -644,6 +644,8 @@ static int eval_rept(yasm_preproc_gas *pp, int unused, const char *arg1)
     char *line = read_line(pp);
     buffered_line *prev_bline = NULL;
     SLIST_HEAD(buffered_lines_head, buffered_line) lines;
+    int rept_start_file_line_number = pp->next_line_number - 1;
+    int rept_start_output_line_number = pp->current_line_number;
 
     SLIST_INIT(&lines);
 
@@ -696,8 +698,9 @@ static int eval_rept(yasm_preproc_gas *pp, int unused, const char *arg1)
         line = read_line(pp);
         num_lines++;
     }
+    yasm_linemap_set(pp->cur_lm, pp->in_filename, rept_start_output_line_number, rept_start_file_line_number, 0);
     yasm_error_set(YASM_ERROR_SYNTAX, N_("rept without matching endr"));
-    yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
+    yasm_errwarn_propagate(pp->errwarns, rept_start_output_line_number);
     return 0;
 }
 
