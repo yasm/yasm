@@ -158,6 +158,8 @@ find_group_by_section(bin_groups *groups, yasm_section *section)
     return NULL;
 }
 
+#if 0
+/* Debugging function */
 static void
 print_groups(const bin_groups *groups, int indent_level)
 {
@@ -172,6 +174,7 @@ print_groups(const bin_groups *groups, int indent_level)
         }
     }
 }
+#endif
 
 static void
 bin_group_destroy(/*@only@*/ bin_group *group)
