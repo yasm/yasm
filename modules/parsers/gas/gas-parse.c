@@ -321,7 +321,7 @@ cpp_line_marker(yasm_parser_gas *parser_gas)
     get_next_token();
 
     /* Set linemap. */
-    yasm_linemap_set(parser_gas->linemap, filename, line, 1);
+    yasm_linemap_set(parser_gas->linemap, filename, 0, line, 1);
 
     /*
         The first line marker in the file (which should be on the first line
@@ -429,7 +429,7 @@ nasm_line_marker(yasm_parser_gas *parser_gas)
     filename = STRING_val.contents;
 
     /* Set linemap. */
-    yasm_linemap_set(parser_gas->linemap, filename, line, incr);
+    yasm_linemap_set(parser_gas->linemap, filename, 0, line, incr);
 
     /*
         The first line marker in the file (which should be on the first line
@@ -472,12 +472,12 @@ dir_line(yasm_parser_gas *parser_gas, unsigned int param)
 
     if (parser_gas->dir_fileline == 3) {
         /* Have both file and line */
-        yasm_linemap_set(parser_gas->linemap, NULL,
+        yasm_linemap_set(parser_gas->linemap, NULL, 0,
                          parser_gas->dir_line, 1);
     } else if (parser_gas->dir_fileline == 1) {
         /* Had previous file directive only */
         parser_gas->dir_fileline = 3;
-        yasm_linemap_set(parser_gas->linemap, parser_gas->dir_file,
+        yasm_linemap_set(parser_gas->linemap, parser_gas->dir_file, 0,
                          parser_gas->dir_line, 1);
     } else {
         /* Didn't see file yet */
@@ -877,12 +877,12 @@ dir_file(yasm_parser_gas *parser_gas, unsigned int param)
 
             yasm_linemap_lookup(parser_gas->linemap, cur_line, &old_fn,
                                 &old_line);
-            yasm_linemap_set(parser_gas->linemap, filename, old_line,
+            yasm_linemap_set(parser_gas->linemap, filename, 0, old_line,
                              1);
         } else if (parser_gas->dir_fileline == 2) {
             /* Had previous line directive only */
             parser_gas->dir_fileline = 3;
-            yasm_linemap_set(parser_gas->linemap, filename,
+            yasm_linemap_set(parser_gas->linemap, filename, 0,
                              parser_gas->dir_line, 1);
         } else {
             /* Didn't see line yet, save file */

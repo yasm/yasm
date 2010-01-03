@@ -255,7 +255,7 @@ do_preproc_only(void)
 
     /* Initialize line map */
     linemap = yasm_linemap_create();
-    yasm_linemap_set(linemap, in_filename, 1, 1);
+    yasm_linemap_set(linemap, in_filename, 0, 1, 1);
 
     /* Default output to stdout if not specified or generating dependency
        makefiles */
@@ -359,7 +359,7 @@ do_assemble(void)
 
     /* Initialize line map */
     linemap = yasm_linemap_create();
-    yasm_linemap_set(linemap, in_filename, 1, 1);
+    yasm_linemap_set(linemap, in_filename, 0, 1, 1);
 
     /* determine the object filename if not specified */
     if (!obj_filename) {

@@ -316,7 +316,7 @@ parse_line(yasm_parser_nasm *parser_nasm)
             /* %line indicates the line number of the *next* line, so subtract
              * out the increment when setting the line number.
              */
-            yasm_linemap_set(parser_nasm->linemap, filename,
+            yasm_linemap_set(parser_nasm->linemap, filename, 0,
                 yasm_intnum_get_uint(line) - yasm_intnum_get_uint(incr),
                 yasm_intnum_get_uint(incr));
             yasm_intnum_destroy(line);

@@ -91,17 +91,19 @@ void yasm_linemap_add_source(yasm_linemap *linemap,
 YASM_LIB_DECL
 unsigned long yasm_linemap_goto_next(yasm_linemap *linemap);
 
-/** Set a new file/line physical association starting point at the current
+/** Set a new file/line physical association starting point at the specified
  * virtual line.  line_inc indicates how much the "real" line is incremented
  * by for each virtual line increment (0 is perfectly legal).
  * \param linemap       line mapping repository
  * \param filename      physical file name (if NULL, not changed)
+ * \param virtual_line  virtual line number (if 0, linemap->current is used)
  * \param file_line     physical line number
  * \param line_inc      line increment
  */
 YASM_LIB_DECL
 void yasm_linemap_set(yasm_linemap *linemap, /*@null@*/ const char *filename,
-                      unsigned long file_line, unsigned long line_inc);
+                      unsigned long virtual_line, unsigned long file_line,
+                      unsigned long line_inc);
 
 /** Poke a single file/line association, restoring the original physical
  * association starting point.  Caution: increments the current virtual line

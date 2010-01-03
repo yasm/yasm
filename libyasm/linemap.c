@@ -80,22 +80,40 @@ filename_delete_one(/*@only@*/ void *d)
 
 void
 yasm_linemap_set(yasm_linemap *linemap, const char *filename,
-                 unsigned long file_line, unsigned long line_inc)
+                 unsigned long virtual_line, unsigned long file_line,
+                 unsigned long line_inc)
 {
     char *copy;
+    unsigned long i;
     int replace = 0;
-    line_mapping *mapping;
+    line_mapping *mapping = NULL;
 
-    /* Create a new mapping in the map */
-    if (linemap->map_size >= linemap->map_allocated) {
-        /* allocate another size bins when full for 2x space */
-        linemap->map_vector =
-            yasm_xrealloc(linemap->map_vector, 2*linemap->map_allocated
-                          *sizeof(line_mapping));
-        linemap->map_allocated *= 2;
+    if (virtual_line == 0) {
+        virtual_line = linemap->current;
     }
-    mapping = &linemap->map_vector[linemap->map_size];
-    linemap->map_size++;
+
+    /* Replace all existing mappings that have line numbers >= this one. */
+    for (i = linemap->map_size; i > 0; i--) {
+        if (linemap->map_vector[i-1].line < virtual_line) {
+            if (i < linemap->map_size) {
+                mapping = &linemap->map_vector[i];
+                linemap->map_size = i + 1;
+            }
+            break;
+        }
+    }
+
+    if (mapping == NULL) {
+        /* Create a new mapping in the map */
+        if (linemap->map_size >= linemap->map_allocated) {
+            /* allocate another size bins when full for 2x space */
+            linemap->map_vector = yasm_xrealloc(linemap->map_vector,
+                2*linemap->map_allocated*sizeof(line_mapping));
+            linemap->map_allocated *= 2;
+        }
+        mapping = &linemap->map_vector[linemap->map_size];
+        linemap->map_size++;
+    }
 
     /* Fill it */
 
@@ -115,7 +133,7 @@ yasm_linemap_set(yasm_linemap *linemap, const char *filename,
         /*@=aliasunique@*/
     }
 
-    mapping->line = linemap->current;
+    mapping->line = virtual_line;
     mapping->file_line = file_line;
     mapping->line_inc = line_inc;
 }
@@ -128,14 +146,14 @@ yasm_linemap_poke(yasm_linemap *linemap, const char *filename,
     line_mapping *mapping;
 
     linemap->current++;
-    yasm_linemap_set(linemap, filename, file_line, 0);
+    yasm_linemap_set(linemap, filename, 0, file_line, 0);
 
     mapping = &linemap->map_vector[linemap->map_size-1];
 
     line = linemap->current;
 
     linemap->current++;
-    yasm_linemap_set(linemap, mapping->filename,
+    yasm_linemap_set(linemap, mapping->filename, 0,
                      mapping->file_line +
                      mapping->line_inc*(linemap->current-2-mapping->line),
                      mapping->line_inc);
@@ -249,7 +267,7 @@ yasm_linemap_lookup(yasm_linemap *linemap, unsigned long line,
     mapping = &linemap->map_vector[vindex];
 
     *filename = mapping->filename;
-    *file_line = mapping->file_line + mapping->line_inc*(line-mapping->line);
+    *file_line = (line ? mapping->file_line + mapping->line_inc*(line-mapping->line) : 0);
 }
 
 int
