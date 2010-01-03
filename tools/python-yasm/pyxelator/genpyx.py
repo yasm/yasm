@@ -16,7 +16,6 @@ So, for example, when we refer to Node we get ir.Node .
 
 import sys
 from datetime import datetime
-from sets import Set
 
 # XX use this Context class instead of all those kw dicts !! XX
 class Context(object):

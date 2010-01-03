@@ -16,6 +16,18 @@ import os
 import cparse
 import ir
 
+def callcmd(cmd):
+    try:
+        from subprocess import call
+        try:
+            retcode = call(cmd, shell=True)
+            assert retcode == 0, "command failed: %s"%cmd
+        except OSError, e:
+            assert False, "command failed: %s"%e
+    except ImportError:
+        status = os.system( cmd )
+        assert status == 0, "command failed: %s"%cmd
+
 class WorkUnit(object):
     def __init__(self, files, modname, filename,
                  std=False, strip=False, mark_cb=None, 
@@ -62,13 +74,11 @@ class WorkUnit(object):
         ifile.close()
         cmd = '%s %s %s > %s'%(self.CPP,name+'.h',self.CPPFLAGS,name+'.E')
         sys.stderr.write( "# %s\n" % cmd )
-        status = os.system( cmd )
-        assert status == 0, "command failed: %s"%cmd
+        callcmd( cmd )
         assert open(name+'.E').read().count('\n') > 10, "failed to run preprocessor"
         cmd = '%s -dM %s %s > %s'%(self.CPP,name+'.h',self.CPPFLAGS,name+'.dM')
         sys.stderr.write( "# %s\n" % cmd )
-        status = os.system( cmd )
-        assert status == 0, "command failed: %s"%cmd
+        callcmd( cmd )
         assert open(name+'.dM').read().count('\n') > 10, "failed to run preprocessor with -dM"
         return name
 
@@ -157,7 +167,12 @@ def get_syms(libs, libdirs):
     accept = [ ' %s '%c for c in 'TVWBCDGRS' ]
     #f = open('syms.out','w')
     for libname in libnames:
-        fin, fout = os.popen2( 'nm %s' % libname )
+        try:
+            from subprocess import Popen, PIPE
+            p = Popen(['nm', libname], bufsize=1, stdout=PIPE)
+            fout = p.stdout
+        except ImportError:
+            fin, fout = os.popen2( 'nm %s' % libname )
         for line in fout.readlines():
             for acc in accept:
                 if line.count(acc):
