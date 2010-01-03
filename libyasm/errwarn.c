@@ -69,7 +69,7 @@ typedef struct warn {
     yasm_warn_class wclass;
     /*@owned@*/ /*@null@*/ char *wstr;
 } warn;
-static STAILQ_HEAD(, warn) yasm_warns;
+static STAILQ_HEAD(warn_head, warn) yasm_warns;
 
 /* Enabled warnings.  See errwarn.h for a list. */
 static unsigned long warn_class_enabled;
@@ -86,7 +86,7 @@ typedef struct errwarn_data {
 } errwarn_data;
 
 struct yasm_errwarns {
-    /*@reldef@*/ SLIST_HEAD(, errwarn_data) errwarns;
+    /*@reldef@*/ SLIST_HEAD(errwarn_head, errwarn_data) errwarns;
 
     /* Total error count */
     unsigned int ecount;

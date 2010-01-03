@@ -59,7 +59,7 @@ typedef struct yasm_preproc_cpp {
     yasm_preproc_base preproc;   /* base structure */
 
     /* List of arguments to pass to cpp. */
-    TAILQ_HEAD(, cpp_arg_entry) cpp_args;
+    TAILQ_HEAD(cpp_arg_head, cpp_arg_entry) cpp_args;
 
     char *filename;
     FILE *f, *f_deps;

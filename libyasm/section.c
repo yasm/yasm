@@ -871,10 +871,11 @@ struct yasm_span {
 };
 
 typedef struct optimize_data {
-    /*@reldef@*/ TAILQ_HEAD(, yasm_span) spans;
-    /*@reldef@*/ STAILQ_HEAD(, yasm_span) QA, QB;
+    /*@reldef@*/ TAILQ_HEAD(yasm_span_head, yasm_span) spans;
+    /*@reldef@*/ STAILQ_HEAD(yasm_span_shead, yasm_span) QA, QB;
     /*@only@*/ IntervalTree *itree;
-    /*@reldef@*/ STAILQ_HEAD(, yasm_offset_setter) offset_setters;
+    /*@reldef@*/ STAILQ_HEAD(offset_setters_head, yasm_offset_setter)
+        offset_setters;
     long len_diff;      /* used only for optimize_term_expand */
     yasm_span *span;    /* used only for check_cycle */
     yasm_offset_setter *os;

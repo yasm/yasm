@@ -113,7 +113,7 @@ bin_objfmt_create(yasm_object *object)
     return (yasm_objfmt *)objfmt_bin;
 }
 
-typedef TAILQ_HEAD(, bin_group) bin_groups;
+typedef TAILQ_HEAD(bin_group_head, bin_group) bin_groups;
 
 typedef struct bin_group {
     TAILQ_ENTRY(bin_group) link;

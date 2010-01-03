@@ -134,7 +134,7 @@ typedef struct cv8_lineinfo {
     yasm_section *sect;         /* section line numbers are for */
     yasm_symrec *sectsym;       /* symbol for beginning of sect */
     unsigned long num_linenums;
-    STAILQ_HEAD(, cv8_lineset) linesets;
+    STAILQ_HEAD(cv8_lineset_head, cv8_lineset) linesets;
 } cv8_lineinfo;
 
 /* Symbols use a bit of meta-programming to encode formats: each character
@@ -419,7 +419,7 @@ typedef struct cv_line_info {
     yasm_linemap *linemap;
     yasm_errwarns *errwarns;
     unsigned int num_lineinfos;
-    STAILQ_HEAD(, cv8_lineinfo) cv8_lineinfos;
+    STAILQ_HEAD(cv8_lineinfo_head, cv8_lineinfo) cv8_lineinfos;
     /*@null@*/ cv8_lineinfo *cv8_cur_li;
     /*@null@*/ cv8_lineset *cv8_cur_ls;
 } cv_line_info;
