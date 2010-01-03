@@ -653,7 +653,6 @@ static int eval_rept(yasm_preproc_gas *pp, int unused, const char *arg1)
             nesting++;
         } else if (starts_with(line, ".endr") && --nesting == 0) {
             for (i = 0; i < n; i++) {
-                int line = 0;
                 buffered_line *current_line;
                 prev_bline = NULL;
                 SLIST_FOREACH(current_line, &lines, next) {
