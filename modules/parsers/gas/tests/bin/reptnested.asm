@@ -1,7 +1,7 @@
-.rept 6
+.rept 3
 .byte 1
 .rept 2
-.byte 2
-.endr
 .byte 3
 .endr
+.endr
+.byte 5

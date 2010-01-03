@@ -41,6 +41,7 @@
 
 typedef struct buffered_line {
     char *line;
+    int line_number;
     SLIST_ENTRY(buffered_line) next;
 } buffered_line;
 
@@ -61,12 +62,18 @@ typedef struct yasm_preproc_gas {
     int depth;
     int skip_depth;
 
+    int in_comment;
+
     const char *expr_string;
     char *expr_symbol;
     int expr_string_cursor;
 
     SLIST_HEAD(buffered_lines_head, buffered_line) buffered_lines;
     SLIST_HEAD(included_files_head, included_file) included_files;
+
+    int in_line_number;
+    int next_line_number;
+    int current_line_number; /* virtual (output) line number */
 
     yasm_linemap *cur_lm;
     yasm_errwarns *errwarns;
@@ -174,7 +181,7 @@ static char *read_line_from_file(yasm_preproc_gas *pp, FILE *file)
         if (!fgets(p, bufsize - (p - buf), file)) {
             if (ferror(file)) {
                 yasm_error_set(YASM_ERROR_IO, N_("error when reading from file"));
-                yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+                yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
             }
             break;
         }
@@ -204,7 +211,7 @@ static char *read_line_from_file(yasm_preproc_gas *pp, FILE *file)
 
 static char *read_line(yasm_preproc_gas *pp)
 {
-    char *buf;
+    char *line;
 
     if (!SLIST_EMPTY(&pp->included_files)) {
         included_file *inc_file = SLIST_FIRST(&pp->included_files);
@@ -218,17 +225,24 @@ static char *read_line(yasm_preproc_gas *pp)
     if (!SLIST_EMPTY(&pp->buffered_lines)) {
         buffered_line *bline = SLIST_FIRST(&pp->buffered_lines);
         SLIST_REMOVE_HEAD(&pp->buffered_lines, next);
-        buf = bline->line;
+        line = bline->line;
+        if (bline->line_number != -1) {
+            pp->next_line_number = bline->line_number;
+        }
         yasm_xfree(bline);
         if (!SLIST_EMPTY(&pp->included_files)) {
             SLIST_FIRST(&pp->included_files)->lines_remaining--;
         }
-        return buf;
+        return line;
     }
 
-    buf = read_line_from_file(pp, pp->in);
+    line = read_line_from_file(pp, pp->in);
+    if (line) {
+        pp->in_line_number++;
+        pp->next_line_number = pp->in_line_number;
+    }
 
-    return buf;
+    return line;
 }
 
 static const char *get_arg(yasm_preproc_gas *pp, const char *src, char *dest, size_t dest_size)
@@ -245,7 +259,7 @@ static const char *get_arg(yasm_preproc_gas *pp, const char *src, char *dest, si
         skip_whitespace(&comma);        
     } else {
         yasm_error_set(YASM_ERROR_SYNTAX, N_("expected comma"));
-        yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+        yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
     }
     return comma;
 }
@@ -368,7 +382,7 @@ static void gas_err(void *private_data, int severity, const char *fmt, ...)
 
     va_start(args, fmt);
     yasm_error_set_va(YASM_ERROR_SYNTAX, N_(fmt), args);
-    yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+    yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
     va_end(args);
 
     pp->fatal_error = 1;
@@ -423,7 +437,7 @@ static int handle_endif(yasm_preproc_gas *pp)
         pp->depth--;
     } else {
         yasm_error_set(YASM_ERROR_SYNTAX, N_("\".endif\" without \".if\""));
-        yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+        yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
         return 0;
     }
     return 1;
@@ -433,7 +447,7 @@ static int handle_else(yasm_preproc_gas *pp, int is_elseif)
 {
     if (!pp->depth) {
         yasm_error_set(YASM_ERROR_SYNTAX, N_("\".%s\" without \".if\""), is_elseif ? "elseif" : "else");
-        yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+        yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
         return 0;
     } else {
         pp->skip_depth = 1;
@@ -448,7 +462,7 @@ static int eval_if(yasm_preproc_gas *pp, int negate, const char *arg1)
     long value;
     if (!*arg1) {
         yasm_error_set(YASM_ERROR_SYNTAX, N_("expression is required in \".if\" statement"));
-        yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+        yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
         return 0;
     }
     value = eval_expr(pp, arg1);
@@ -470,7 +484,7 @@ static int eval_elseif(yasm_preproc_gas *pp, int unused, const char *arg1)
 {
     if (!*arg1) {
         yasm_error_set(YASM_ERROR_SYNTAX, N_("expression is required in \".elseif\" statement"));
-        yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+        yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
         return 0;
     }
     if (!handle_else(pp, 1)) {
@@ -505,7 +519,7 @@ static int eval_ifc(yasm_preproc_gas *pp, int negate, const char *args)
         }
     }
     yasm_error_set(YASM_ERROR_SYNTAX, N_("\"%s\" expects two single-quoted or unquoted arguments"), negate ? ".ifnc" : ".ifc");
-    yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+    yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
     return 0;
 }
 
@@ -522,7 +536,7 @@ static int eval_ifeqs(yasm_preproc_gas *pp, int negate, const char *args)
         }
     }
     yasm_error_set(YASM_ERROR_SYNTAX, N_("\"%s\" expects two double-quoted arguments"), negate ? ".ifnes" : ".ifeqs");
-    yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+    yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
     return 1;
 }
 
@@ -559,7 +573,7 @@ static int eval_include(yasm_preproc_gas *pp, int unused, const char *arg1)
 
     if (unquote(arg1, filename, sizeof(filename), '"', '\0', NULL) < 0) {
         yasm_error_set(YASM_ERROR_SYNTAX, N_("string expected"));
-        yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+        yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
         return 0;
     }
 
@@ -571,7 +585,7 @@ static int eval_include(yasm_preproc_gas *pp, int unused, const char *arg1)
     file = yasm_fopen_include(filename, current_filename, "r", NULL);
     if (!file) {
         yasm_error_set(YASM_ERROR_SYNTAX, N_("unable to open included file \"%s\""), filename);
-        yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+        yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
         return 0;
     }
 
@@ -581,6 +595,7 @@ static int eval_include(yasm_preproc_gas *pp, int unused, const char *arg1)
     while (line) {
         buffered_line *bline = yasm_xmalloc(sizeof(buffered_line));
         bline->line = line;
+        bline->line_number = -1;
         if (prev_bline) {
             SLIST_INSERT_AFTER(prev_bline, bline, next);
         } else {
@@ -607,12 +622,12 @@ static int eval_set(yasm_preproc_gas *pp, int allow_redefine, const char *name, 
         if (rec) {
             if (!allow_redefine) {
                 yasm_error_set(YASM_ERROR_SYNTAX, N_("symbol \"%s\" is already defined"), name);
-                yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+                yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
                 return 0;
             }
             /* TODO */
             yasm_error_set(YASM_ERROR_SYNTAX, N_("redefining symbols not yet implimented"), name);
-            yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+            yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
             return 0;
         } else {
             yasm_symtab_define_equ(pp->defines, name, expr, 0);
@@ -625,6 +640,7 @@ static int eval_rept(yasm_preproc_gas *pp, int unused, const char *arg1)
 {
     long i, n = eval_expr(pp, arg1);
     long num_lines = 0;
+    long nesting = 1;
     char *line = read_line(pp);
     buffered_line *prev_bline = NULL;
     SLIST_HEAD(buffered_lines_head, buffered_line) lines;
@@ -633,13 +649,17 @@ static int eval_rept(yasm_preproc_gas *pp, int unused, const char *arg1)
 
     while (line) {
         skip_whitespace2(&line);
-        if (!strncmp(line, ".endr", 4)) {
+        if (starts_with(line, ".rept")) {
+            nesting++;
+        } else if (starts_with(line, ".endr") && --nesting == 0) {
             for (i = 0; i < n; i++) {
+                int line = 0;
                 buffered_line *current_line;
                 prev_bline = NULL;
                 SLIST_FOREACH(current_line, &lines, next) {
                     buffered_line *bline = yasm_xmalloc(sizeof(buffered_line));
                     bline->line = yasm__xstrdup(current_line->line);
+                    bline->line_number = current_line->line_number;
                     if (prev_bline) {
                         SLIST_INSERT_AFTER(prev_bline, bline, next);
                     } else {
@@ -664,6 +684,7 @@ static int eval_rept(yasm_preproc_gas *pp, int unused, const char *arg1)
         if (n > 0) {
             buffered_line *bline = yasm_xmalloc(sizeof(buffered_line));
             bline->line = line;
+            bline->line_number = pp->next_line_number;
             if (prev_bline) {
                 SLIST_INSERT_AFTER(prev_bline, bline, next);
             } else {
@@ -676,15 +697,15 @@ static int eval_rept(yasm_preproc_gas *pp, int unused, const char *arg1)
         line = read_line(pp);
         num_lines++;
     }
-    yasm_error_set(YASM_ERROR_SYNTAX, N_("unexpected EOF in \".rept\" block"));
-    yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+    yasm_error_set(YASM_ERROR_SYNTAX, N_("rept without matching endr"));
+    yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
     return 0;
 }
 
 static int eval_endr(yasm_preproc_gas *pp, int unused)
 {
     yasm_error_set(YASM_ERROR_SYNTAX, N_("\".endr\" without \".rept\""));
-    yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+    yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
     return 0;
 }
 
@@ -698,18 +719,74 @@ typedef int (*pp_fn2_t)(yasm_preproc_gas *pp, int param, const char *arg1, const
 
 static void kill_comments(yasm_preproc_gas *pp, char *line)
 {
-    char *cstart = strstr(line, "/*");
+    int next = 2;
+    char *cstart;
+
+    skip_whitespace2(&line);
+    if (*line == '#' || !strncmp(line, "//", 2)) {
+        *line = '\0';
+        return;
+    }
+
+    if (pp->in_comment) {
+        cstart = line;
+        next = 0;
+    } else {
+        cstart = strstr(line, "/*");
+        next = 2;
+    }
+
     while (cstart) {
-        char *cend = strstr(cstart + 2, "*/");
+        char *cend = strstr(cstart + next, "*/");
 
         if (!cend) {
-            yasm_error_set(YASM_ERROR_SYNTAX, N_("unterminated comment"));
-            yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+            *cstart = '\0';
+            pp->in_comment = TRUE;
             return;
         }
 
         strcpy(cstart, cend + 2);
+        pp->in_comment = FALSE;
         cstart = strstr(cstart, "/*");
+        next = 2;
+   }
+}
+
+static void substitute_values(yasm_preproc_gas *pp, char *line)
+{
+    int line_length = strlen(line);
+    struct tokenval tokval;
+
+    pp->expr_string = line;
+    pp->expr_string_cursor = 0;
+    pp->expr_symbol = NULL;
+
+    while (gas_scan(pp, &tokval) != TOKEN_EOS) {
+        if (tokval.t_type == TOKEN_ID) {
+            yasm_symrec *rec = yasm_symtab_get(pp->defines, tokval.t_charptr);
+            if (rec) {
+                int cursor = pp->expr_string_cursor;
+                int k, len = strlen(tokval.t_charptr);
+                char value[64];
+                int value_length = snprintf(value, sizeof(value), "%ld", eval_expr(pp, tokval.t_charptr));
+                int delta = value_length - len;
+
+                line_length += delta;
+                if (delta > 0) {
+                    line = yasm_xrealloc(line, line_length);
+                    for (k = line_length; k >= cursor; k--) {
+                        line[k + delta] = line[k];
+                    }
+                    memcpy(line + cursor - len, value, value_length);
+                } else {
+                    memcpy(line + cursor - len, value, value_length);
+                    strcpy(line + cursor - len + value_length, line + cursor);
+                }
+                pp->expr_string = line;
+                pp->expr_string_cursor = cursor + delta;
+                pp->expr_symbol = NULL;
+            }
+        }
     }
 }
 
@@ -785,7 +862,7 @@ static int process_line(yasm_preproc_gas *pp, char *line)
                 remainder = get_arg(pp, remainder, buf1, sizeof(buf1));
                 if (!remainder || !*remainder || !*buf1) {
                     yasm_error_set(YASM_ERROR_SYNTAX, N_("\".%s\" expects two arguments"), directives[i].name);
-                    yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+                    yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
                     pp->fatal_error = 1;
                 } else {
                     pp_fn2_t fn = (pp_fn2_t) directives[i].fn;
@@ -796,7 +873,12 @@ static int process_line(yasm_preproc_gas *pp, char *line)
         }
     }
 
-    return (pp->skip_depth == 0);
+    if (pp->skip_depth == 0) {
+        substitute_values(pp, line);
+        return TRUE;
+    }
+
+    return FALSE;
 }
 
 /* Functions exported by the preprocessor. */
@@ -824,8 +906,12 @@ gas_preproc_create(const char *in_filename, yasm_symtab *symtab,
     yasm_symtab_set_case_sensitive(pp->defines, 1);
     pp->depth = 0;
     pp->skip_depth = 0;
+    pp->in_comment = FALSE;
     SLIST_INIT(&pp->buffered_lines);
     SLIST_INIT(&pp->included_files);
+    pp->in_line_number = 0;
+    pp->next_line_number = 0;
+    pp->current_line_number = 0;
     pp->cur_lm = lm;
     pp->errwarns = errwarns;
     pp->fatal_error = 0;
@@ -861,6 +947,8 @@ gas_preproc_get_line(yasm_preproc *preproc)
     int done = FALSE;
     char *line = NULL;
 
+    pp->current_line_number++;
+
     do {
         if (line != NULL) {
             yasm_xfree(line);
@@ -870,10 +958,18 @@ gas_preproc_get_line(yasm_preproc *preproc)
         }
         line = read_line(pp);
         if (line == NULL) {
+            if (pp->in_comment) {
+                yasm_linemap_set(pp->cur_lm, pp->in_filename, pp->current_line_number, pp->next_line_number, 0);
+                yasm_warn_set(YASM_WARN_GENERAL, N_("end of file in comment"));
+                yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
+                pp->in_comment = FALSE;
+            }
             return NULL;
         }
         done = process_line(pp, line);
     } while (!done);
+
+    yasm_linemap_set(pp->cur_lm, pp->in_filename, pp->current_line_number, pp->next_line_number, 0);
 
     return line;
 }
