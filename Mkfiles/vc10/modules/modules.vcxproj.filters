@@ -29,6 +29,9 @@
     <Filter Include="Source Files\preprocs\cpp">
       <UniqueIdentifier>{6b3956d4-0bff-4e8e-af61-a7e59b476fa4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\preprocs\gas">
+      <UniqueIdentifier>{446fad62-ac17-49e9-8263-33481f04f182}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files\preprocs\nasm">
       <UniqueIdentifier>{33fb7fc8-61f9-428d-9c94-7a4912fbb678}</UniqueIdentifier>
     </Filter>
@@ -139,6 +142,12 @@
     <ClCompile Include="..\..\..\modules\preprocs\cpp\cpp-preproc.c">
       <Filter>Source Files\preprocs\cpp</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\modules\preprocs\gas\gas-eval.c">
+      <Filter>Source Files\preprocs\gas</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\modules\preprocs\gas\gas-preproc.c">
+      <Filter>Source Files\preprocs\gas</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\modules\preprocs\nasm\nasm-eval.c">
       <Filter>Source Files\preprocs\nasm</Filter>
     </ClCompile>
@@ -191,6 +200,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\modules\parsers\nasm\nasm-parser.h">
       <Filter>Source Files\parsers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\modules\preprocs\gas\gas-eval.h">
+      <Filter>Source Files\preprocs\gas</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\modules\preprocs\nasm\nasm-eval.h">
       <Filter>Source Files\preprocs\nasm</Filter>

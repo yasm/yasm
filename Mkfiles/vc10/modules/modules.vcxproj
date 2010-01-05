@@ -206,6 +206,8 @@
     <ClCompile Include="..\..\..\lc3bid.c" />
     <ClCompile Include="..\..\..\modules\arch\x86\x86arch.c" />
     <ClCompile Include="..\..\..\modules\arch\x86\x86bc.c" />
+    <ClCompile Include="..\..\..\modules\preprocs\gas\gas-eval.c" />
+    <ClCompile Include="..\..\..\modules\preprocs\gas\gas-preproc.c" />
     <ClCompile Include="..\..\..\x86cpu.c" />
     <ClCompile Include="..\..\..\modules\arch\x86\x86expr.c" />
     <ClCompile Include="..\..\..\modules\arch\x86\x86id.c" />
@@ -254,6 +256,7 @@
     <ClInclude Include="..\..\..\modules\objfmts\elf\elf.h" />
     <ClInclude Include="..\..\..\modules\parsers\gas\gas-parser.h" />
     <ClInclude Include="..\..\..\modules\parsers\nasm\nasm-parser.h" />
+    <ClInclude Include="..\..\..\modules\preprocs\gas\gas-eval.h" />
     <ClInclude Include="..\..\..\modules\preprocs\nasm\nasm-eval.h" />
     <ClInclude Include="..\..\..\modules\preprocs\nasm\nasm-pp.h" />
     <ClInclude Include="..\..\..\modules\preprocs\nasm\nasm.h" />

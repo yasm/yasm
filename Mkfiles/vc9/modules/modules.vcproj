@@ -578,6 +578,22 @@
 						>
 					</File>
 				</Filter>
+				<Filter
+					Name="gas"
+					>
+					<File
+						RelativePath="..\..\..\modules\preprocs\gas\gas-eval.c"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\modules\preprocs\gas\gas-eval.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\modules\preprocs\gas\gas-preproc.c"
+						>
+					</File>
+				</Filter>
 			</Filter>
 			<Filter
 				Name="listfmts"

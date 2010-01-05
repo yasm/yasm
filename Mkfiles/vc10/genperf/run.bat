@@ -6,7 +6,7 @@ goto answer%errorlevel%
 if not exist run_py.bat goto answer1
 echo ... building with Python ...
 @echo on
-call run_py.bat modules\arch\x86\gen_x86_insn.23.py
+call run_py.bat modules\arch\x86\gen_x86_insn.py
 del run_py.bat
 @echo off
 goto end

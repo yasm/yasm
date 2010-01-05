@@ -117,6 +117,10 @@
 # define USE_OUR_OWN_STRCASECMP
 #endif
 
+#ifdef _MSC_VER
+# define snprintf						_snprintf
+#endif
+
 #include <libyasm/compat-queue.h>
 
 #ifdef HAVE_SYS_CDEFS_H
