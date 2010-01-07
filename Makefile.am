@@ -2,11 +2,13 @@
 
 SUBDIRS = po .
 
+ACLOCAL_AMFLAGS = -I m4
 AM_YFLAGS = -d
 AM_CFLAGS = @MORE_CFLAGS@
 
 bin_PROGRAMS =
 dist_man_MANS =
+notrans_dist_man_MANS =
 TESTS =
 TESTS_ENVIRONMENT =
 noinst_PROGRAMS = genstring
@@ -31,9 +33,6 @@ EXTRA_DIST = config/config.rpath
 
 # libyasm-stdint.h doesn't clean up after itself?
 CONFIG_CLEAN_FILES = libyasm-stdint.h
-
-# automake doesn't distribute mkinstalldirs?
-EXTRA_DIST += config/mkinstalldirs
 
 EXTRA_DIST += tools/Makefile.inc
 EXTRA_DIST += libyasm/Makefile.inc
@@ -89,20 +88,20 @@ EXTRA_DIST += Mkfiles/vc9/genperf/run.bat
 # Until this gets fixed in automake
 DISTCLEANFILES += libyasm/stamp-h libyasm/stamp-h[0-9]*
 
-ACLOCAL_AMFLAGS = -I m4
-
 distclean-local:
 	-rm -rf results
 if HAVE_PYTHON
 	-rm -rf build
 endif
 
+# Until gets fixed libyasm cross-build for target system
+# use fixinstall-yasm-XXX make targets
 all-local: python-build
 install-exec-hook: python-install
 uninstall-hook: python-uninstall
 
 if BUILD_MAN
-MAINTAINERCLEANFILES += $(dist_man_MANS)
+MAINTAINERCLEANFILES += $(dist_man_MANS) $(notrans_dist_man_MANS)
 endif
 
 # genstring build

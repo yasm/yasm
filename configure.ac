@@ -8,9 +8,9 @@ AC_PREREQ(2.53)
 AC_INIT([yasm], [HEAD], [bug-yasm@tortall.net])
 #AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_AUX_DIR(config)
-AM_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADER([config.h])
 
-AM_INIT_AUTOMAKE(yasm, [HEAD])
+AM_INIT_AUTOMAKE([1.11 foreign])
 AM_MAINTAINER_MODE
 
 AC_DEFINE(PACKAGE_INTVER, ["0.7.99"],
@@ -73,10 +73,11 @@ esac], enable_python_bindings="no")
 # Checks for programs.
 #
 AC_PROG_CPP
-AC_DEFINE_UNQUOTED([CPP_PROG], "${CPP}", [Command name to run C preprocessor])
 AC_PROG_CC_STDC
 AC_PROG_INSTALL
 AC_PROG_LN_S
+#automake default ARFLAGS to "cru"
+AC_CHECK_TOOLS(AR,[$AR ar],[ar])
 AC_PROG_RANLIB
 
 # REQUIRE a standard (ANSI/ISO) C compiler
@@ -233,28 +234,25 @@ if test "$USE_MAINTAINER_MODE" = "yes"; then
 fi
 AC_SUBST(MORE_CFLAGS)
 
-#
-# Cross-building
-#
-if test "$cross_compiling" = "yes"; then
-    AC_MSG_CHECKING([cc for build])
-    CC_FOR_BUILD="${CC_FOR_BUILD-PATH=/usr/bin:$PATH cc}"
-    AC_MSG_RESULT($CC_FOR_BUILD)
-    CCLD_FOR_BUILD="$CC_FOR_BUILD"
-else
-    CC_FOR_BUILD="${CC_FOR_BUILD-$CC}"
-    CCLD_FOR_BUILD="${CCLD_FOR_BUILD-$CC}"
-fi
-
 AC_ARG_VAR(CC_FOR_BUILD,[build system C compiler])
 AC_ARG_VAR(CCLD_FOR_BUILD,[build system C linker frontend])
+if test "${build}" != "${host}" ; then
+  CC_FOR_BUILD=${CC_FOR_BUILD-cc}
+  CCLD_FOR_BUILD=${CCLD_FOR_BUILD-cc}
+else
+  CC_FOR_BUILD="\$(CC)"
+  CCLD_FOR_BUILD="\$(CC)"
+fi
 AC_SUBST(CC_FOR_BUILD)
 AC_SUBST(CCLD_FOR_BUILD)
 
-# libtool erroneously calls CC_FOR_BUILD HOST_CC;
-# --host is the platform that the package is compiled for.
-HOST_CC="$CC_FOR_BUILD"
-AC_SUBST(HOST_CC)
+AC_ARG_VAR(CPP_FOR_HOST,[host system C preprocessor])
+if test "$build" != "$target" || test "$build" != "$host"; then
+  CPP_PROG="${CPP_FOR_HOST-cc -E}"
+else
+  CPP_PROG="${CPP}"
+fi
+AC_DEFINE_UNQUOTED([CPP_PROG], "${CPP_PROG}", [Command name to run C preprocessor])
 
 # Detect if we have Python
 if test x$enable_python = xno; then

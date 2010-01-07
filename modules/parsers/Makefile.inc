@@ -7,7 +7,7 @@ include modules/parsers/gas/Makefile.inc
 include modules/parsers/nasm/Makefile.inc
 include modules/parsers/tasm/Makefile.inc
 
-dist_man_MANS += yasm_parsers.7
+notrans_dist_man_MANS += yasm_parsers.7
 
 if BUILD_MAN
 yasm_parsers.7: modules/parsers/yasm_parsers.xml

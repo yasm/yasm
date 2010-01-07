@@ -22,7 +22,7 @@ include modules/objfmts/win32/Makefile.inc
 include modules/objfmts/win64/Makefile.inc
 include modules/objfmts/xdf/Makefile.inc
 
-dist_man_MANS += yasm_objfmts.7
+notrans_dist_man_MANS += yasm_objfmts.7
 
 if BUILD_MAN
 yasm_objfmts.7: modules/objfmts/yasm_objfmts.xml
