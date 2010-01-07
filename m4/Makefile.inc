@@ -27,4 +27,4 @@ EXTRA_DIST += m4/progtest.m4
 EXTRA_DIST += m4/stdint_h.m4
 EXTRA_DIST += m4/uintmax_t.m4
 EXTRA_DIST += m4/pythonhead.m4
-EXTRA_DIST += m4/pyrex.m4
+EXTRA_DIST += m4/cython.m4

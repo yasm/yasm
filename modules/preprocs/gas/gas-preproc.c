@@ -29,7 +29,7 @@
 /*@unused@*/ RCSID("$Id$");
 
 #include <libyasm.h>
-#include "gas-eval.h"
+#include "modules/preprocs/gas/gas-eval.h"
 
 #define FALSE 0
 #define TRUE  1
