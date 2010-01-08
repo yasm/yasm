@@ -28,7 +28,7 @@
 					DisplayName="Include Paths"
 					Category="Configuration"
 					Description="Set the paths for any additional include files"
-					Switch="-I &quot;[value]&quot;"
+					Switch="-I [value]"
 					Delimited="true"
 					Inheritable="true"
 				/>
@@ -46,22 +46,22 @@
 					DisplayName="Object File Name"
 					Category="Output"
 					Description="Select the output file name"
-					Switch="-o &quot;[value]&quot;"
-					DefaultValue="&quot;$(IntDir)\$(InputName).obj&quot;"
+					Switch="-o [value]"
+					DefaultValue="$(IntDir)\$(InputName).obj"
 				/>
 				<StringProperty
 					Name="ListFileName"
 					DisplayName="List File Name"
 					Category="Output"
 					Description="Select an output listing by setting its file name"
-					Switch="-l &quot;[value]&quot;"
+					Switch="-l [value]"
 				/>
 				<StringProperty
 					Name="PreIncludeFile"
 					DisplayName="Pre Include File"
 					Category="Configuration"
 					Description="Select a pre-included file by setting its name"
-					Switch="-P &quot;[value]&quot;"
+					Switch="-P [value]"
 				/>
 				<BooleanProperty
 					Name="Debug"
