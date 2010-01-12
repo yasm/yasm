@@ -10,7 +10,7 @@ AC_INIT([yasm], [HEAD], [bug-yasm@tortall.net])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADER([config.h])
 
-AM_INIT_AUTOMAKE([1.11 foreign])
+AM_INIT_AUTOMAKE([1.9.6 foreign])
 AM_MAINTAINER_MODE
 
 AC_DEFINE(PACKAGE_INTVER, ["0.7.99"],
