@@ -1432,6 +1432,15 @@ bin_objfmt_add_default_section(yasm_object *object)
     return retval;
 }
 
+/* GAS-style flags */
+static int
+bin_helper_gasflags(void *obj, yasm_valparam *vp, unsigned long line, void *d,
+                    /*@unused@*/ uintptr_t arg)
+{
+    /* TODO */
+    return 0;
+}
+
 static /*@observer@*/ /*@null@*/ yasm_section *
 bin_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
                           /*@unused@*/ /*@null@*/
@@ -1480,7 +1489,8 @@ bin_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
         { "execute", 0, yasm_dir_helper_flag_set,
           offsetof(struct bin_section_switch_data, code), 1 },
         { "noexecute", 0, yasm_dir_helper_flag_set,
-          offsetof(struct bin_section_switch_data, code), 0 }
+          offsetof(struct bin_section_switch_data, code), 0 },
+        { "gasflags", 1, bin_helper_gasflags, 0, 0 }
     };
 
     vp = yasm_vps_first(valparams);
