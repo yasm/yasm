@@ -775,7 +775,7 @@ static void substitute_values(yasm_preproc_gas *pp, char *line)
 
                 line_length += delta;
                 if (delta > 0) {
-                    line = yasm_xrealloc(line, line_length);
+                    line = yasm_xrealloc(line, line_length + 1);
                     for (k = line_length; k >= cursor; k--) {
                         line[k + delta] = line[k];
                     }
