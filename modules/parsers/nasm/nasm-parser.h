@@ -57,6 +57,7 @@ enum tokentype {
     INSN,
     PREFIX,
     REG,
+    REGGROUP,
     SEGREG,
     TARGETMOD,
     LEFT_OP,
@@ -104,6 +105,7 @@ enum nasm_parser_state {
 #define INSN_val                (curval.bc)
 #define PREFIX_val              (curval.arch_data)
 #define REG_val                 (curval.arch_data)
+#define REGGROUP_val            (curval.arch_data)
 #define SEGREG_val              (curval.arch_data)
 #define TARGETMOD_val           (curval.arch_data)
 #define ID_val                  (curval.str_val)

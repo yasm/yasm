@@ -42,6 +42,7 @@ typedef union {
 
 typedef struct yasm_parser_nasm {
     int tasm;
+    int masm;
 
     /*@only@*/ yasm_object *object;
 

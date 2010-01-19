@@ -178,6 +178,7 @@ describe_token(int token)
         case INSN:              str = "instruction"; break;
         case PREFIX:            str = "instruction prefix"; break;
         case REG:               str = "register"; break;
+        case REGGROUP:          str = "register group"; break;
         case SEGREG:            str = "segment register"; break;
         case TARGETMOD:         str = "target modifier"; break;
         case LEFT_OP:           str = "<<"; break;
@@ -843,6 +844,12 @@ parse_operand(yasm_parser_nasm *parser_nasm)
         {
             yasm_insn_operand *op2;
             get_next_token();
+            if (parser_nasm->masm && curtok == ID && !yasm__strcasecmp(ID_val, "flat")) {
+                get_next_token();
+                if (curtok == ':') {
+                    get_next_token();
+                }
+            }
             op = parse_operand(parser_nasm);
             if (!op) {
                 yasm_error_set(YASM_ERROR_SYNTAX,
@@ -904,6 +911,35 @@ parse_operand(yasm_parser_nasm *parser_nasm)
             op = yasm_operand_create_reg(REG_val);
             get_next_token();
             return op;
+        case REGGROUP:
+        {
+            unsigned long regindex;
+            uintptr_t reg = REGGROUP_val;
+            get_next_token(); /* REGGROUP */
+            if (curtok != '(')
+                return yasm_operand_create_reg(reg);
+            get_next_token(); /* '(' */
+            if (!expect(INTNUM)) {
+                yasm_error_set(YASM_ERROR_SYNTAX,
+                               N_("integer register index expected"));
+                return NULL;
+            }
+            regindex = yasm_intnum_get_uint(INTNUM_val);
+            get_next_token(); /* INTNUM */
+            if (!expect(')')) {
+                yasm_error_set(YASM_ERROR_SYNTAX,
+                    N_("missing closing parenthesis for register index"));
+                return NULL;
+            }
+            get_next_token(); /* ')' */
+            reg = yasm_arch_reggroup_get_reg(p_object->arch, reg, regindex);
+            if (reg == 0) {
+                yasm_error_set(YASM_ERROR_SYNTAX, N_("bad register index `%u'"),
+                               regindex);
+                return NULL;
+            }
+            return yasm_operand_create_reg(reg);
+        }
         case STRICT:
             get_next_token();
             op = parse_operand(parser_nasm);
@@ -914,6 +950,9 @@ parse_operand(yasm_parser_nasm *parser_nasm)
         {
             unsigned int size = SIZE_OVERRIDE_val;
             get_next_token();
+            if (parser_nasm->masm && curtok == ID && !yasm__strcasecmp(ID_val, "ptr")) {
+                get_next_token();
+            }
             op = parse_operand(parser_nasm);
             if (!op)
                 return NULL;
@@ -988,15 +1027,34 @@ parse_operand(yasm_parser_nasm *parser_nasm)
             yasm_expr *e = parse_bexpr(parser_nasm, NORM_EXPR);
             if (!e)
                 return NULL;
-            if (curtok != ':')
+            if (curtok != ':') {
                 if (parser_nasm->tasm && yasm_expr_size(e)) {
                     yasm_effaddr *ea = yasm_arch_ea_create(p_object->arch, e);
                     yasm_ea_set_implicit_size_segment(parser_nasm, ea, e);
                     op = yasm_operand_create_mem(ea);
                     return op;
-                } else
+                } else if (curtok == '[') {
+                    yasm_expr *f;
+                    yasm_effaddr *ea;
+                    yasm_insn_operand *op2;
+
+                    op = parse_operand(parser_nasm);
+                    if (!op)
+                        return NULL;
+    
+                    f = op->data.ea->disp.abs;
+                    e = p_expr_new_tree(e, YASM_EXPR_ADD, f);
+                    ea = yasm_arch_ea_create(p_object->arch, e);
+                    yasm_ea_set_implicit_size_segment(parser_nasm, ea, e);
+                    op2 = yasm_operand_create_mem(ea);
+
+                    yasm_xfree(op);
+
+                    return op2;
+                } else {
                     return yasm_operand_create_imm(e);
-            else {
+                }
+            } else {
                 yasm_expr *off;
                 get_next_token();
                 off = parse_bexpr(parser_nasm, NORM_EXPR);

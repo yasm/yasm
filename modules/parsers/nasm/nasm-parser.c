@@ -39,6 +39,7 @@ nasm_do_parse(yasm_object *object, yasm_preproc *pp, int save_input,
     yasm_parser_nasm parser_nasm;
 
     parser_nasm.tasm = tasm;
+    parser_nasm.masm = 0;
 
     parser_nasm.object = object;
     parser_nasm.linemap = linemap;

@@ -84,6 +84,10 @@ handle_dot_label(YYSTYPE *lvalp, char *tok, size_t toklen, size_t zeropos,
             return NONLOCAL_ID;
         return SPECIAL_ID;
     }
+    if (parser_nasm->masm && tok[zeropos] == '.') {
+        lvalp->str_val = yasm__xstrndup(tok + zeropos, toklen - zeropos);
+        return SPECIAL_ID;
+    }
     if (parser_nasm->tasm && (!tasm_locals || 
                 (tok[zeropos] == '.' &&
                  tok[zeropos+1] != '@' && tok[zeropos+2] != '@'))) {
@@ -416,10 +420,20 @@ scan:
                 case YASM_ARCH_TARGETMOD:
                     s->tok[TOKLEN] = savech;
                     RETURN(TARGETMOD);
+                case YASM_ARCH_REGGROUP:
+                    if (parser_nasm->masm) {
+                        s->tok[TOKLEN] = savech;
+                        RETURN(REGGROUP);
+                    }
                 default:
                     break;
             }
-            if (parser_nasm->tasm) {
+            if (parser_nasm->masm) {
+               if (!yasm__strcasecmp(TOK, "offset")) {
+                    s->tok[TOKLEN] = savech;
+                    RETURN(OFFSET);
+                }
+            } else if (parser_nasm->tasm) {
                 if (!yasm__strcasecmp(TOK, "shl")) {
                     s->tok[TOKLEN] = savech;
                     RETURN(LEFT_OP);
