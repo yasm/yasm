@@ -491,6 +491,10 @@
 				Name="parsers"
 				>
 				<File
+					RelativePath="..\..\..\modules\parsers\gas\gas-parse-intel.c"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\modules\parsers\gas\gas-parse.c"
 					>
 				</File>
