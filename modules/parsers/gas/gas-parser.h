@@ -122,6 +122,8 @@ typedef struct yasm_parser_gas {
     /* Parser-handled directives HAMT lookup */
     HAMT *dirs;
 
+    int intel_syntax;
+
     int is_nasm_preproc;
     int is_cpp_preproc;
 } yasm_parser_gas;
@@ -151,6 +153,8 @@ typedef struct yasm_parser_gas {
 #define p_expr_new_tree(l,o,r)  yasm_expr_create_tree(l,o,r,cur_line)
 #define p_expr_new_branch(o,r)  yasm_expr_create_branch(o,r,cur_line)
 #define p_expr_new_ident(r)     yasm_expr_create_ident(r,cur_line)
+
+yasm_bytecode *parse_instr_intel(yasm_parser_gas *parser_gas);
 
 void gas_parser_parse(yasm_parser_gas *parser_gas);
 void gas_parser_cleanup(yasm_parser_gas *parser_gas);

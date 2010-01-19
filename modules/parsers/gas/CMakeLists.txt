@@ -7,5 +7,6 @@ YASM_RE2C(
 YASM_ADD_MODULE(parser_gas
     parsers/gas/gas-parser.c
     parsers/gas/gas-parse.c
+    parsers/gas/gas-parse-intel.c
     gas-token.c
     )

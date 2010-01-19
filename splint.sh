@@ -78,6 +78,7 @@ splint \
  modules/objfmts/rdf/rdf-objfmt.c \
  modules/objfmts/xdf/xdf-objfmt.c \
  modules/parsers/gas/gas-parse.c \
+ modules/parsers/gas/gas-parse-intel.c \
  modules/parsers/gas/gas-parser.c \
  modules/parsers/nasm/nasm-parse.c \
  modules/parsers/nasm/nasm-parser.c \

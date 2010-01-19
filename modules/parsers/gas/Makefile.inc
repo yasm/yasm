@@ -3,6 +3,7 @@
 libyasm_a_SOURCES += modules/parsers/gas/gas-parser.c
 libyasm_a_SOURCES += modules/parsers/gas/gas-parser.h
 libyasm_a_SOURCES += modules/parsers/gas/gas-parse.c
+libyasm_a_SOURCES += modules/parsers/gas/gas-parse-intel.c
 nodist_libyasm_a_SOURCES += gas-token.c
 
 YASM_MODULES += parser_gas parser_gnu

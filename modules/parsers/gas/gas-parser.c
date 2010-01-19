@@ -74,6 +74,8 @@ gas_parser_do_parse(yasm_object *object, yasm_preproc *pp,
     for (i=0; i<10; i++)
         parser_gas.local[i] = 0;
 
+    parser_gas.intel_syntax = 0;
+
     parser_gas.is_cpp_preproc =
         yasm__strcasecmp(((yasm_preproc_base*)pp)->module->keyword, "cpp") == 0;
     parser_gas.is_nasm_preproc =

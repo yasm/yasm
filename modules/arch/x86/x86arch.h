@@ -74,6 +74,14 @@
 #define CPU_FMA4    40      /* AMD Fused-Multiply-Add extensions */
 #define CPU_CVT16   41      /* AMD CVT16 extensions */
 
+enum x86_parser_type {
+    X86_PARSER_NASM = 0,
+    X86_PARSER_TASM = 1,
+    X86_PARSER_GAS = 2
+};
+
+#define PARSER(arch) (((arch)->parser == X86_PARSER_GAS && (arch)->gas_intel_mode) ? X86_PARSER_NASM : (arch)->parser)
+
 typedef struct yasm_arch_x86 {
     yasm_arch_base arch;        /* base structure */
 
@@ -83,14 +91,11 @@ typedef struct yasm_arch_x86 {
     wordptr *cpu_enables;
 
     unsigned int amd64_machine;
-    enum {
-        X86_PARSER_NASM = 0,
-        X86_PARSER_TASM = 1,
-        X86_PARSER_GAS = 2
-    } parser;
+    enum x86_parser_type parser;
     unsigned int mode_bits;
     unsigned int force_strict;
     unsigned int default_rel;
+    unsigned int gas_intel_mode;
 
     enum {
         X86_NOP_BASIC = 0,

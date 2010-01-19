@@ -226,7 +226,7 @@ yasm_x86__ea_create_expr(yasm_arch *arch, yasm_expr *e)
     x86_ea = ea_create();
 
     if (arch_x86->parser == X86_PARSER_GAS) {
-        /* Need to change foo+rip into foo wrt rip.
+        /* Need to change foo+rip into foo wrt rip (even in .intel_syntax mode).
          * Note this assumes a particular ordering coming from the parser
          * to work (it's not very smart)!
          */

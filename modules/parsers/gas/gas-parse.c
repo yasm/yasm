@@ -881,6 +881,26 @@ dir_file(yasm_parser_gas *parser_gas, unsigned int param)
     return NULL;
 }
 
+
+static yasm_bytecode *
+dir_intel_syntax(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    parser_gas->intel_syntax = 1;
+
+    do {
+        destroy_curtok();
+        get_next_token();
+    } while (!is_eol());
+    return NULL;
+}
+
+static yasm_bytecode *
+dir_att_syntax(yasm_parser_gas *parser_gas, unsigned int param)
+{
+    parser_gas->intel_syntax = 0;
+    return NULL;
+}
+
 static yasm_bytecode *
 parse_instr(yasm_parser_gas *parser_gas)
 {
@@ -888,6 +908,19 @@ parse_instr(yasm_parser_gas *parser_gas)
     char *id;
     size_t id_len;
     uintptr_t prefix;
+
+    if (parser_gas->intel_syntax) {
+        bc = parse_instr_intel(parser_gas);
+        if (bc) {
+            yasm_warn_disable(YASM_WARN_UNREC_CHAR);
+             do {
+                destroy_curtok();
+                get_next_token();
+            } while (!is_eol());
+            yasm_warn_enable(YASM_WARN_UNREC_CHAR);
+        }
+        return bc;
+    }
 
     if (curtok != ID)
         return NULL;
@@ -1673,6 +1706,9 @@ static dir_lookup dirs_static[] = {
     {".space",      dir_skip,   0,  INITIAL},
     {".fill",       dir_fill,   0,  INITIAL},
     {".zero",       dir_zero,   0,  INITIAL},
+    /* syntax directives */
+    {".intel_syntax", dir_intel_syntax, 0, INITIAL},
+    {".att_syntax",   dir_att_syntax,   0, INITIAL},    
     /* other directives */
     {".equ",        dir_equ,    0,  INITIAL},
     {".file",       dir_file,   0,  INITIAL},

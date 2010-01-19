@@ -1753,7 +1753,7 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
         lcaseid[i] = tolower(id[i]);
     lcaseid[id_len] = '\0';
 
-    switch (arch_x86->parser) {
+    switch (PARSER(arch_x86)) {
         case X86_PARSER_NASM:
             pdata = insnprefix_nasm_find(lcaseid, id_len);
             break;
@@ -1793,7 +1793,8 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
             id_insn->mode_bits = arch_x86->mode_bits;
             id_insn->suffix = 0;
             id_insn->misc_flags = 0;
-            id_insn->parser = arch_x86->parser;
+            id_insn->parser = PARSER(arch_x86);
+	
             id_insn->force_strict = arch_x86->force_strict != 0;
             id_insn->default_rel = arch_x86->default_rel != 0;
             *bc = yasm_bc_create_common(&x86_id_insn_callback, id_insn, line);
@@ -1824,7 +1825,7 @@ yasm_x86__parse_check_insnprefix(yasm_arch *arch, const char *id,
         id_insn->mode_bits = arch_x86->mode_bits;
         id_insn->suffix = pdata->flags;
         id_insn->misc_flags = pdata->misc_flags;
-        id_insn->parser = arch_x86->parser;
+        id_insn->parser = PARSER(arch_x86);
         id_insn->force_strict = arch_x86->force_strict != 0;
         id_insn->default_rel = arch_x86->default_rel != 0;
         *bc = yasm_bc_create_common(&x86_id_insn_callback, id_insn, line);
@@ -1885,9 +1886,9 @@ yasm_x86__create_empty_insn(yasm_arch *arch, unsigned long line)
     id_insn->mod_data[2] = 0;
     id_insn->num_info = NELEMS(empty_insn);
     id_insn->mode_bits = arch_x86->mode_bits;
-    id_insn->suffix = (arch_x86->parser == X86_PARSER_GAS) ? SUF_Z : 0;
+    id_insn->suffix = (PARSER(arch_x86) == X86_PARSER_GAS) ? SUF_Z : 0;
     id_insn->misc_flags = 0;
-    id_insn->parser = arch_x86->parser;
+    id_insn->parser = PARSER(arch_x86);
     id_insn->force_strict = arch_x86->force_strict != 0;
     id_insn->default_rel = arch_x86->default_rel != 0;
 

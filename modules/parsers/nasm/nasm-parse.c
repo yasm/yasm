@@ -1664,3 +1664,25 @@ nasm_parser_directive(yasm_parser_nasm *parser_nasm, const char *name,
     if (objext_valparams)
         yasm_vps_delete(objext_valparams);
 }
+
+yasm_bytecode *
+gas_intel_syntax_parse_instr(yasm_parser_nasm *parser_nasm, unsigned char *instr)
+{
+    yasm_bytecode *bc = NULL;
+    char *sinstr = (char *) instr;
+
+    parser_nasm->s.bot = instr;
+    parser_nasm->s.tok = instr;
+    parser_nasm->s.ptr = instr;
+    parser_nasm->s.cur = instr;
+    parser_nasm->s.lim = instr + strlen(sinstr) + 1;
+    parser_nasm->s.top = parser_nasm->s.lim;
+    parser_nasm->peek_token = NONE;
+
+    get_next_token();
+    if (!is_eol()) {
+        bc = parse_instr(parser_nasm);
+    }
+
+    return bc;
+}
