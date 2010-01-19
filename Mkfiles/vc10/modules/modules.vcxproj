@@ -206,6 +206,7 @@
     <ClCompile Include="..\..\..\lc3bid.c" />
     <ClCompile Include="..\..\..\modules\arch\x86\x86arch.c" />
     <ClCompile Include="..\..\..\modules\arch\x86\x86bc.c" />
+    <ClCompile Include="..\..\..\modules\parsers\gas\gas-parse-intel.c" />
     <ClCompile Include="..\..\..\modules\preprocs\gas\gas-eval.c" />
     <ClCompile Include="..\..\..\modules\preprocs\gas\gas-preproc.c" />
     <ClCompile Include="..\..\..\x86cpu.c" />

@@ -127,6 +127,9 @@
     <ClCompile Include="..\..\..\modules\objfmts\xdf\xdf-objfmt.c">
       <Filter>Source Files\objfmts</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\modules\parsers\gas\gas-parse-intel.c">
+      <Filter>Source Files\parsers</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\modules\parsers\gas\gas-parse.c">
       <Filter>Source Files\parsers</Filter>
     </ClCompile>
