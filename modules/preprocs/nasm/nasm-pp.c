@@ -5065,7 +5065,13 @@ pp_cleanup(int pass_)
                 free_llist(builtindef);
                 free_llist(stddef);
                 free_llist(predef);
+                builtindef = NULL;
+                stddef = NULL;
+                predef = NULL;
+                freeTokens = NULL;
                 delete_Blocks();
+                blocks.next = NULL;
+                blocks.chunk = NULL;
         }
 }
 
