@@ -13,7 +13,7 @@ CFLAGS=-DHAVE_CONFIG_H -IMkfiles/dj -O -I.
 CC?=gcc
 BUILDCC?=$(CC)
 
-all: yasm ytasm
+all: yasm ytasm vsyasm
 
 LIBYASM_OBJS= \
  libyasm/assocdat.o \
@@ -162,6 +162,12 @@ YTASM_OBJS= \
  $(LIBYASM_OBJS) \
  $(MODULES_OBJS)
 
+VSYASM_OBJS= \
+ frontends/vsyasm/vsyasm.o \
+ frontends/yasm/yasm-options.o \
+ $(LIBYASM_OBJS) \
+ $(MODULES_OBJS)
+
 genstring: genstring.c
 	$(BUILDCC) -o $@ $<
 
@@ -258,6 +264,9 @@ yasm: $(YASM_OBJS)
 
 ytasm: $(YTASM_OBJS)
 	$(CC) -o ytasm $(YTASM_OBJS)
+
+vsyasm: $(VSYASM_OBJS)
+	$(CC) -o vsyasm $(VSYASM_OBJS)
 
 .c.o:
 	$(CC) -c $(CFLAGS) -o $@ $<
