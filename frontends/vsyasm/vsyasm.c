@@ -45,7 +45,8 @@
 #include "license.c"
 
 /*@null@*/ /*@only@*/ static char *objdir_pathname = NULL;
-/*@null@*/ /*@only@*/ static char *global_prefix = NULL, *global_suffix = NULL;
+/*@null@*/ /*@only@*/ static char *global_prefix = NULL, *global_suffix =
+NULL;
 /*@null@*/ /*@only@*/ static char *listdir_pathname = NULL;
 /*@null@*/ /*@only@*/ static char *mapdir_pathname = NULL;
 /*@null@*/ /*@only@*/ static char *machine_name = NULL;
@@ -658,6 +659,20 @@ main(int argc, char *argv[])
     /* If not already specified, output to the current directory. */
     if (!objdir_pathname)
         objdir_pathname = yasm__xstrdup("./");
+    else if((i = yasm__createpath(objdir_pathname)) > 0) {
+        objdir_pathname[i] = '/';
+        objdir_pathname[i+1] = '\0';
+    }
+
+    /* Create other output directories if necessary */
+    if (listdir_pathname && (i = yasm__createpath(listdir_pathname)) > 0) {
+        listdir_pathname[i] = '/';
+        listdir_pathname[i+1] = '\0';
+    }
+    if (mapdir_pathname && (i = yasm__createpath(mapdir_pathname)) > 0) {
+        mapdir_pathname[i] = '/';
+        mapdir_pathname[i+1] = '\0';
+    }
 
     /* Assemble each input file.  Terminate on first error. */
     STAILQ_FOREACH(infile, &input_files, link)
@@ -927,7 +942,6 @@ opt_listdir_handler(/*@unused@*/ char *cmd, char *param,
     assert(param != NULL);
     listdir_pathname = yasm_xmalloc(strlen(param)+2);
     strcpy(listdir_pathname, param);
-    strcat(listdir_pathname, "/");
 
     return 0;
 }
@@ -945,7 +959,6 @@ opt_objdir_handler(/*@unused@*/ char *cmd, char *param,
     assert(param != NULL);
     objdir_pathname = yasm_xmalloc(strlen(param)+2);
     strcpy(objdir_pathname, param);
-    strcat(objdir_pathname, "/");
 
     return 0;
 }
@@ -963,7 +976,6 @@ opt_mapdir_handler(/*@unused@*/ char *cmd, char *param,
     assert(param != NULL);
     mapdir_pathname = yasm_xmalloc(strlen(param)+2);
     strcpy(mapdir_pathname, param);
-    strcat(mapdir_pathname, "/");
 
     return 0;
 }

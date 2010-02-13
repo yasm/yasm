@@ -34,6 +34,14 @@
 #include <direct.h>
 #endif
 
+#ifdef _WIN32
+#include <io.h>
+#endif
+
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+
 #include <ctype.h>
 #include <errno.h>
 
@@ -448,6 +456,68 @@ yasm__combpath_win(const char *from, const char *to)
     out[j++] = '\0';
 
     return out;
+}
+
+size_t
+yasm__createpath_common(const char *path, int win)
+{
+    const char *pp = path, *pe;
+    char *ts, *tp;
+    size_t len, lth;
+
+    lth = len = strlen(path);
+    ts = tp = (char *) malloc(len + 1);
+    pe = pp + len;
+    while (pe > pp) {
+        if ((win && *pe == '\\') || *pe == '/')
+            break;
+        --pe;
+        --lth;
+    }
+
+    while (pp <= pe) {
+        if (pp == pe || (win && *pp == '\\') || *pp == '/') {
+#ifdef _WIN32
+            struct _finddata_t fi; 
+            intptr_t h;
+#elif defined(HAVE_SYS_STAT_H) 
+            struct stat fi;
+#endif
+            *tp = '\0';
+
+#ifdef _WIN32
+            h = _findfirst(ts, &fi);
+            if (h != -1) {
+                if (fi.attrib != _A_SUBDIR) {
+                    _findclose(h);
+                    break;
+                }
+            } else if (errno == ENOENT) {
+                if (_mkdir(ts) == -1) {
+                    _findclose(h);
+                    lth = -1;
+                    break;
+                }
+            }
+            _findclose(h);
+#elif defined(HAVE_SYS_STAT_H)
+            if (stat(ts, &fi) != -1) {
+                if (!S_ISDIR(fi.st_mode))
+                    break;
+            } else if (errno == ENOENT) {
+                if (mkdir(ts, 0755) == -1) {
+                    lth = 0;
+                    break;
+                }
+            }
+#else
+            break;
+#endif
+        }
+        *tp++ = *pp++;
+    }
+    free(ts);
+    return lth;
 }
 
 typedef struct incpath {
