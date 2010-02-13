@@ -1,6 +1,6 @@
 cd ..\..\..
 @echo off
-for /f "usebackq tokens=2,3,4" %%f in (`reg query HKCR\Python.File\shell\open\command`) do (if %%f==REG_SZ echo %%g %%h >run_py.bat)
+for /f "usebackq tokens=2,3,4,5,6" %%f in (`reg query HKCR\Python.File\shell\open\command`) do (if %%f==REG_SZ echo %%g %%h %%i %%j >run_py.bat)
 goto answer%errorlevel%
 :answer0
 if not exist run_py.bat goto answer1

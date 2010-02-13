@@ -29,6 +29,8 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
+				CommandLine="run.bat &quot;$(TargetPath)&quot;"
+				Outputs="x86insn_nasm.c;x86insn_gas.c;x86cpu.c;x86regtmod.c"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -93,7 +95,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="run.bat &quot;$(TargetPath)&quot;"
+				CommandLine=""
 			/>
 		</Configuration>
 		<Configuration
@@ -109,6 +111,8 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
+				CommandLine="run.bat &quot;$(TargetPath)&quot;"
+				Outputs="x86insn_nasm.c;x86insn_gas.c;x86cpu.c;x86regtmod.c"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -173,7 +177,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="run.bat &quot;$(TargetPath)&quot;"
+				CommandLine=""
 			/>
 		</Configuration>
 	</Configurations>

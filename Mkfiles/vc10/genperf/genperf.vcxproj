@@ -71,8 +71,15 @@
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
     <PostBuildEvent>
-      <Command>run.bat "$(TargetPath)"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
+    <CustomBuildStep>
+      <Command>run.bat "$(TargetPath)"</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Outputs>x86insn_nasm.c;x86insn_gas.c;x86cpu.c;x86regtmod.c;%(Outputs)</Outputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -100,8 +107,15 @@
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
     <PostBuildEvent>
-      <Command>run.bat "$(TargetPath)"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
+    <CustomBuildStep>
+      <Command>run.bat "$(TargetPath)"</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Outputs>x86insn_nasm.c;x86insn_gas.c;x86cpu.c;x86regtmod.c;%(Outputs)</Outputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\tools\genperf\genperf.c" />

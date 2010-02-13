@@ -47,6 +47,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ytasm", "ytasm.vcproj", "{2
 		{D715A3D4-EFAA-442E-AD8B-5B4FF64E1DD6} = {D715A3D4-EFAA-442E-AD8B-5B4FF64E1DD6}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vsyasm", "vsyasm.vcproj", "{7FDD85BB-CC86-442B-A425-989B5B296ED5}"
+	ProjectSection(ProjectDependencies) = postProject
+		{29FE7874-1256-4AD6-B889-68E399DC9608} = {29FE7874-1256-4AD6-B889-68E399DC9608}
+		{D715A3D4-EFAA-442E-AD8B-5B4FF64E1DD6} = {D715A3D4-EFAA-442E-AD8B-5B4FF64E1DD6}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -135,6 +141,14 @@ Global
 		{2162937B-0DBD-4450-B45F-DF578D8E7508}.Release|Win32.Build.0 = Release|Win32
 		{2162937B-0DBD-4450-B45F-DF578D8E7508}.Release|x64.ActiveCfg = Release|x64
 		{2162937B-0DBD-4450-B45F-DF578D8E7508}.Release|x64.Build.0 = Release|x64
+		{7FDD85BB-CC86-442B-A425-989B5B296ED5}.Debug|Win32.ActiveCfg = Debug|Win32
+		{7FDD85BB-CC86-442B-A425-989B5B296ED5}.Debug|Win32.Build.0 = Debug|Win32
+		{7FDD85BB-CC86-442B-A425-989B5B296ED5}.Debug|x64.ActiveCfg = Debug|x64
+		{7FDD85BB-CC86-442B-A425-989B5B296ED5}.Debug|x64.Build.0 = Debug|x64
+		{7FDD85BB-CC86-442B-A425-989B5B296ED5}.Release|Win32.ActiveCfg = Release|Win32
+		{7FDD85BB-CC86-442B-A425-989B5B296ED5}.Release|Win32.Build.0 = Release|Win32
+		{7FDD85BB-CC86-442B-A425-989B5B296ED5}.Release|x64.ActiveCfg = Release|x64
+		{7FDD85BB-CC86-442B-A425-989B5B296ED5}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
