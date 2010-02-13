@@ -51,6 +51,15 @@ typedef struct included_file {
     SLIST_ENTRY(included_file) next;
 } included_file;
 
+typedef struct macro_entry {
+    char *name;
+    int num_params;
+    char **params;
+    int num_lines;
+    char **lines;
+    STAILQ_ENTRY(macro_entry) next;
+} macro_entry;
+
 typedef struct yasm_preproc_gas {
     yasm_preproc_base preproc;   /* base structure */
 
@@ -70,6 +79,7 @@ typedef struct yasm_preproc_gas {
 
     SLIST_HEAD(buffered_lines_head, buffered_line) buffered_lines;
     SLIST_HEAD(included_files_head, included_file) included_files;
+    STAILQ_HEAD(macros_head, macro_entry) macros;
 
     int in_line_number;
     int next_line_number;
@@ -636,6 +646,177 @@ static int eval_set(yasm_preproc_gas *pp, int allow_redefine, const char *name, 
     return 1;
 }
 
+static int eval_macro(yasm_preproc_gas *pp, int unused, char *args)
+{
+    char *end;
+    char *line;
+    long nesting = 1;
+    macro_entry *macro = yasm_xmalloc(sizeof(macro_entry));
+
+    memset(macro, 0, sizeof(macro_entry));
+
+    end = args;
+    while (*end && !isspace(*end)) {
+        end++;
+    }
+    macro->name = yasm_xmalloc(end - args + 1);
+    memcpy(macro->name, args, end - args);
+    macro->name[end - args] = '\0';
+
+    skip_whitespace2(&end);
+    while (*end) {
+        args = end;
+        while (*end && !isspace(*end) && *end != ',') {
+            end++;
+        }
+        macro->num_params++;
+        macro->params = yasm_xrealloc(macro->params, macro->num_params*sizeof(char *));
+        macro->params[macro->num_params - 1] = yasm_xmalloc(end - args + 1);
+        memcpy(macro->params[macro->num_params - 1], args, end - args);
+        macro->params[macro->num_params - 1][end - args] = '\0';
+        skip_whitespace2(&end);
+        if (*end == ',') {
+            end++;
+            skip_whitespace2(&end);
+        }
+    }
+
+    STAILQ_INSERT_TAIL(&pp->macros, macro, next);
+
+    line = read_line(pp);
+    while (line) {
+        char *line2 = line;
+        skip_whitespace2(&line2);
+        if (starts_with(line2, ".macro")) {
+            nesting++;
+        } else if (starts_with(line, ".endm") && --nesting == 0) {
+            return 1;
+        }
+        macro->num_lines++;
+        macro->lines = yasm_xrealloc(macro->lines, macro->num_lines*sizeof(char *));
+        macro->lines[macro->num_lines - 1] = line;
+        line = read_line(pp);
+    }
+
+    yasm_error_set(YASM_ERROR_SYNTAX, N_("unexpected EOF in \".macro\" block"));
+    yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+    return 0;
+}
+
+static int eval_endm(yasm_preproc_gas *pp, int unused)
+{
+    yasm_error_set(YASM_ERROR_SYNTAX, N_("\".endm\" without \".macro\""));
+    yasm_errwarn_propagate(pp->errwarns, yasm_linemap_get_current(pp->cur_lm));
+    return 0;
+}
+
+static void get_param_value(macro_entry *macro, int param_index, const char *args, const char **value, int *length)
+{
+    int arg_index = 0;
+    const char *default_value = NULL;
+    const char *end, *eq = strstr(macro->params[param_index], "=");
+
+    if (eq) {
+        default_value = eq + 1;
+    }
+
+    skip_whitespace(&args);
+    end = args;
+    while (*end) {
+        args = end;
+        while (*end && !isspace(*end) && *end != ',') {
+            end++;
+        }
+        if (arg_index == param_index) {
+            if (end == args && default_value) {
+                *value = default_value;
+                *length = strlen(default_value);
+            } else {
+                *value = args;
+                *length = end - args;
+            }
+            return;
+        }
+        arg_index++;
+        skip_whitespace(&end);
+        if (*end == ',') {
+            end++;
+            skip_whitespace(&end);
+        }
+    }
+
+    *value = default_value;
+    *length = (default_value ? strlen(default_value) : 0);
+}
+
+static void expand_macro(yasm_preproc_gas *pp, macro_entry *macro, const char *args)
+{
+    int i, j, k;
+    buffered_line *prev_bline = NULL;
+
+    for (i = 0; i < macro->num_lines; i++) {
+        buffered_line *bline = yasm_xmalloc(sizeof(buffered_line));
+        struct tokenval tokval;
+        int prev_was_backslash = FALSE;
+        int line_length = strlen(macro->lines[i]);
+        char *work = yasm__xstrdup(macro->lines[i]);
+
+        pp->expr_symbol = NULL;
+        pp->expr_string = work;
+        pp->expr_string_cursor = 0;
+        while (gas_scan(pp, &tokval) != TOKEN_EOS) {
+            if (prev_was_backslash) {
+                if (tokval.t_type == TOKEN_ID) {
+                    for (j = 0; j < macro->num_params; j++) {
+                        char *end = strstr(macro->params[j], "=");
+                        int len = (end ? (size_t)(end - macro->params[j])
+                                       : strlen(macro->params[j]));
+                        if (!strncmp(tokval.t_charptr, macro->params[j], len)
+                            && tokval.t_charptr[len] == '\0') {
+                            /* now, find matching argument. */
+                            const char *value;
+                            char *line = work + (pp->expr_string - work);
+                            int cursor = pp->expr_string_cursor;
+                            int value_length, delta;
+
+                            get_param_value(macro, j, args, &value, &value_length);
+
+                            len++; /* leading slash */
+                            delta = value_length - len;
+                            line_length += delta;
+                            if (delta > 0) {
+                                line = yasm_xrealloc(line, line_length + 1);
+                                for (k = strlen(line); k >= cursor; k--) {
+                                    line[k + delta] = line[k];
+                                }
+                                memcpy(line + cursor - len, value, value_length);
+                            } else {
+                                memcpy(line + cursor - len, value, value_length);
+                                strcpy(line + cursor - len + value_length, line + cursor);
+                            }
+                            pp->expr_string = work = line;
+                            pp->expr_string_cursor += delta;
+                        }
+                    }
+                }
+                prev_was_backslash = FALSE;
+            } else if (tokval.t_type == '\\') {
+                prev_was_backslash = TRUE;
+            }
+        }
+
+        bline->line = work + (pp->expr_string - work);
+        pp->expr_string = NULL;
+
+        if (prev_bline) {
+            SLIST_INSERT_AFTER(prev_bline, bline, next);
+        } else {
+            SLIST_INSERT_HEAD(&pp->buffered_lines, bline, next);
+        }
+        prev_bline = bline;
+    }
+}
+
 static int eval_rept(yasm_preproc_gas *pp, int unused, const char *arg1)
 {
     long i, n = eval_expr(pp, arg1);
@@ -794,6 +975,7 @@ static void substitute_values(yasm_preproc_gas *pp, char *line)
 
 static int process_line(yasm_preproc_gas *pp, char *line)
 {
+    macro_entry *macro;
     size_t i;
     struct {
         const char *name;
@@ -824,6 +1006,8 @@ static int process_line(yasm_preproc_gas *pp, char *line)
         {"set", 2, FN(eval_set), 1},
         {"equ", 2, FN(eval_set), 1},
         {"equiv", 2, FN(eval_set), 0},
+        {"macro", 1, FN(eval_macro), 0},
+        {"endm", 0, FN(eval_endm), 0},
         {"rept", 1, FN(eval_rept), 0},
         {"endr", 1, FN(eval_endr), 0},
     };
@@ -832,6 +1016,16 @@ static int process_line(yasm_preproc_gas *pp, char *line)
     skip_whitespace2(&line);
     if (*line == '\0') {
         return FALSE;
+    }
+
+    /* See if this is a macro call. */
+    STAILQ_FOREACH(macro, &pp->macros, next) {
+        const char *remainder = starts_with(line, macro->name);
+        if (remainder && (!*remainder || isspace(*remainder))) {
+            skip_whitespace2(&line);
+            expand_macro(pp, macro, remainder);
+            return FALSE;
+        }
     }
 
     for (i = 0; i < sizeof(directives)/sizeof(directives[0]); i++) {
@@ -911,6 +1105,7 @@ gas_preproc_create(const char *in_filename, yasm_symtab *symtab,
     pp->in_comment = FALSE;
     SLIST_INIT(&pp->buffered_lines);
     SLIST_INIT(&pp->included_files);
+    STAILQ_INIT(&pp->macros);
     pp->in_line_number = 0;
     pp->next_line_number = 0;
     pp->current_line_number = 0;
@@ -938,6 +1133,19 @@ gas_preproc_destroy(yasm_preproc *preproc)
         SLIST_REMOVE_HEAD(&pp->included_files, next);
         yasm_xfree(inc_file->filename);
         yasm_xfree(inc_file);
+    }
+    while (!STAILQ_EMPTY(&pp->macros)) {
+        int i;
+        macro_entry *macro = STAILQ_FIRST(&pp->macros);
+        STAILQ_REMOVE_HEAD(&pp->macros, next);
+        yasm_xfree(macro->name);
+        for (i = 0; i < macro->num_params; i++)
+            yasm_xfree(macro->params[i]);
+        yasm_xfree(macro->params);
+        for (i = 0; i < macro->num_lines; i++)
+            yasm_xfree(macro->lines[i]);
+        yasm_xfree(macro->lines);
+        yasm_xfree(macro);
     }
     yasm_xfree(preproc);
 }
