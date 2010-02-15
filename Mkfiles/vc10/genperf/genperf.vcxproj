@@ -57,7 +57,7 @@
       </PrecompiledHeader>
       <ProgramDataBaseFileName>$(IntDir)</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CompileAs>Default</CompileAs>
     </ClCompile>
     <Link>
@@ -91,12 +91,10 @@
       </PrecompiledHeader>
       <ProgramDataBaseFileName>$(IntDir)</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CompileAs>Default</CompileAs>
     </ClCompile>
     <Link>
       <OutputFile>$(OutDir)genperf.exe</OutputFile>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
       <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>

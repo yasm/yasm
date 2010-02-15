@@ -57,8 +57,8 @@
       </PrecompiledHeader>
       <ProgramDataBaseFileName>$(IntDir)</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <CompileAs>Default</CompileAs>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <OutputFile>$(OutDir)re2c.exe</OutputFile>
@@ -84,12 +84,10 @@
       </PrecompiledHeader>
       <ProgramDataBaseFileName>$(IntDir)</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CompileAs>Default</CompileAs>
     </ClCompile>
     <Link>
       <OutputFile>$(OutDir)re2c.exe</OutputFile>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
       <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
