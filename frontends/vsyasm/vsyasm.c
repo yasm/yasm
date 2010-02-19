@@ -45,8 +45,7 @@
 #include "license.c"
 
 /*@null@*/ /*@only@*/ static char *objdir_pathname = NULL;
-/*@null@*/ /*@only@*/ static char *global_prefix = NULL, *global_suffix =
-NULL;
+/*@null@*/ /*@only@*/ static char *global_prefix = NULL, *global_suffix = NULL;
 /*@null@*/ /*@only@*/ static char *listdir_pathname = NULL;
 /*@null@*/ /*@only@*/ static char *mapdir_pathname = NULL;
 /*@null@*/ /*@only@*/ static char *machine_name = NULL;
@@ -238,6 +237,7 @@ typedef struct constcharparam {
 
 static constcharparam_head preproc_options;
 static constcharparam_head input_files;
+static int num_input_files = 0;
 
 static int
 do_assemble(const char *in_filename)
@@ -659,17 +659,20 @@ main(int argc, char *argv[])
     /* If not already specified, output to the current directory. */
     if (!objdir_pathname)
         objdir_pathname = yasm__xstrdup("./");
-    else if((i = yasm__createpath(objdir_pathname)) > 0) {
+    else if ((i = yasm__createpath(objdir_pathname)) > 0 &&
+             num_input_files > 1) {
         objdir_pathname[i] = '/';
         objdir_pathname[i+1] = '\0';
     }
 
     /* Create other output directories if necessary */
-    if (listdir_pathname && (i = yasm__createpath(listdir_pathname)) > 0) {
+    if (listdir_pathname && (i = yasm__createpath(listdir_pathname)) > 0 &&
+        num_input_files > 1) {
         listdir_pathname[i] = '/';
         listdir_pathname[i+1] = '\0';
     }
-    if (mapdir_pathname && (i = yasm__createpath(mapdir_pathname)) > 0) {
+    if (mapdir_pathname && (i = yasm__createpath(mapdir_pathname)) > 0 &&
+        num_input_files > 1) {
         mapdir_pathname[i] = '/';
         mapdir_pathname[i+1] = '\0';
     }
@@ -780,6 +783,7 @@ not_an_option_handler(char *param)
     cp->param = param;
     cp->id = 0;
     STAILQ_INSERT_TAIL(&input_files, cp, link);
+    ++num_input_files;
     return 0;
 }
 
