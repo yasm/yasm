@@ -15,7 +15,7 @@ goto pyfound
 goto pynotfound
 
 :pyfound
-if not exist run_py.bat goto notfound
+if not exist run_py.bat goto pynotfound
 echo ... building with Python ...
 @echo on
 call run_py.bat modules\arch\x86\gen_x86_insn.py
