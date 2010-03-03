@@ -12,7 +12,7 @@
   <ItemDefinitionGroup>
     <YASM>
       <Debug>False</Debug>
-      <ObjectFileName>$(IntDir)$(TargetName)</ObjectFileName>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
       <PreProc>0</PreProc>
       <Parser>0</Parser>
       <CommandLineTemplate>vsyasm -Xvc -f $(Platform) [AllOptions] [AdditionalOptions] [Inputs]</CommandLineTemplate>
