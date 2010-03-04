@@ -565,9 +565,14 @@ main(int argc, char *argv[])
 
     /* Open error file if specified. */
     if (error_filename) {
+        int j;
         errfile = open_file(error_filename, "wt");
         if (!errfile)
             return EXIT_FAILURE;
+
+        /* Print command line as first line in error file. */
+        for (j=0; j<argc; j++)
+            fprintf(errfile, "%s%c", argv[j], (j==argc-1) ? '\n' : ' ');
     }
 
     /* If not already specified, default to win32 as the object format. */
