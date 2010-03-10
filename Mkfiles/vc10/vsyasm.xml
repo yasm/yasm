@@ -5,18 +5,36 @@
     PageTemplate="tool"
     DisplayName="Yasm Assembler"
     Order="200">
+      
     <Rule.DataSource>
       <DataSource
         Persistence="ProjectFile"
         ItemType="YASM" />
     </Rule.DataSource>
+      
     <Rule.Categories>
+        
       <Category
         Name="General">
         <Category.DisplayName>
           <sys:String>General</sys:String>
         </Category.DisplayName>
       </Category>
+
+      <Category
+        Name="Symbols">
+          <Category.DisplayName>
+              <sys:String>Symbols</sys:String>
+          </Category.DisplayName>
+      </Category>
+
+      <Category
+        Name="Files">
+          <Category.DisplayName>
+              <sys:String>Files</sys:String>
+          </Category.DisplayName>
+      </Category>
+        
       <Category
         Name="Command Line"
         Subtype="CommandLine">
@@ -24,7 +42,9 @@
           <sys:String>Command Line</sys:String>
         </Category.DisplayName>
       </Category>
+        
     </Rule.Categories>
+
     <StringListProperty
       Name="Inputs"
       Category="Command Line"
@@ -37,21 +57,15 @@
           SourceType="Item" />
       </StringListProperty.DataSource>
     </StringListProperty>
+    
     <BoolProperty
       Name="Debug"
-      Subcategory="Output"
+      Subcategory="Configuration"
       HelpContext="0"
       DisplayName="Debug Information"
       Description="Generate debugging information"
       Switch="-g cv8" />
-    <StringListProperty
-      Name="Defines"
-      Subcategory="Pre-Defined Symbols"
-      HelpContext="0"
-      DisplayName="Definitions"
-      Description="Specify pre-defined symbols ('symbol' or 'symbol = value') "
-      Separator=";"
-      Switch="-D [value]" />
+
     <StringListProperty
       Name="IncludePaths"
       Subcategory="Configuration"
@@ -60,35 +74,89 @@
       Description="Set the paths for any additional include files"
       Separator=";"
       Switch="-i &quot;[value]&quot;" />
+
     <StringListProperty
-      Name="UnDefines"
+      Name="Defines"
+      Category="Symbols"
       Subcategory="Pre-Defined Symbols"
       HelpContext="0"
-      DisplayName="Remove Definitions"
+      DisplayName="Defined Symbols"
+      Description="Specify pre-defined symbols ('symbol' or 'symbol = value') "
+      Separator=";"
+      Switch="-d &quot;[value]&quot;" />
+    
+    <StringListProperty
+      Name="UnDefines"
+      Category="Symbols"
+      Subcategory="Pre-Defined Symbols"
+      HelpContext="0"
+      DisplayName="Remove Symbols"
       Description="Remove pre-defined symbols "
       Separator=";"
-      Switch="-u [value]" />
+      Switch="-u &quot;[value]&quot;" />
+    
     <StringProperty
-      Name="ObjectFileName"
+      Name="ObjectFile"
       Subcategory="Output"
       HelpContext="0"
       DisplayName="Object File Name"
       Description="Select the output file name"
       Switch="-o &quot;[value]&quot;" />
+    
     <StringProperty
-      Name="ListFileName"
+      Name="ListFile"
+      Category="Files"
       Subcategory="Output"
       HelpContext="0"
       DisplayName="List File Name"
       Description="Select an output listing by setting its file name"
       Switch="-l &quot;[value]&quot;" />
+    
     <StringProperty
       Name="PreIncludeFile"
+      Category="Files"
       Subcategory="Configuration"
       HelpContext="0"
       DisplayName="Pre Include File"
       Description="Select a pre-included file by setting its name"
       Switch="-P &quot;[value]&quot;" />
+      
+    <StringProperty
+      Name="MapFile"
+      Category="Files"
+      Subcategory="Output"
+      HelpContext="0"
+      DisplayName="Map File Name"
+      Description="Select a map output by setting its file name"
+      Switch="--mapdir= &quot;[value]&quot;" />
+
+    <StringProperty
+      Name="ErrorFile"
+      Category="Files"
+      Subcategory="Output"
+      HelpContext="0"
+      DisplayName="Error File Name"
+      Description="Send error/warning messages to a file by setting its name"
+      Switch="-E &quot;[value]&quot;" />
+
+    <StringProperty
+      Name="SymbolPrefix"
+      Category="Symbols"
+      Subcategory="Symbols"
+      HelpContext="0"
+      DisplayName="External Symbol Prefix"
+      Description="Prepend symbol to all external symbols"
+      Switch="--prefix &quot;[value]&quot;" />
+
+    <StringProperty
+      Name="SymbolSuffix"
+      Category="Symbols"
+      Subcategory="Symbols"
+      HelpContext="0"
+      DisplayName="External Symbol Suffix"
+      Description="Append symbol to all external symbols"
+      Switch="--suffix &quot;[value]&quot;" />
+
     <EnumProperty
       Name="PreProc"
       Subcategory="Configuration"
@@ -104,6 +172,7 @@
         DisplayName="Raw"
         Switch="-rraw" />
     </EnumProperty>
+    
     <EnumProperty
       Name="Parser"
       Subcategory="Configuration"
@@ -119,11 +188,13 @@
         DisplayName="Gas"
         Switch="-pgas" />
     </EnumProperty>
+    
     <StringProperty
       Name="CommandLineTemplate"
       DisplayName="Command Line"
       Visible="False"
       IncludeInCommandLine="False" />
+    
     <DynamicEnumProperty
       Name="YASMBeforeTargets"
       Category="General"
@@ -146,6 +217,7 @@
           HasConfigurationCondition="true" />
       </DynamicEnumProperty.DataSource>
     </DynamicEnumProperty>
+    
     <DynamicEnumProperty
       Name="YASMAfterTargets"
       Category="General"
@@ -169,21 +241,25 @@
           HasConfigurationCondition="true" />
       </DynamicEnumProperty.DataSource>
     </DynamicEnumProperty>
+    
     <StringListProperty
       Name="Outputs"
       DisplayName="Outputs"
       Visible="False"
       IncludeInCommandLine="False" />
+    
     <StringProperty
       Name="ExecutionDescription"
       DisplayName="Execution Description"
       Visible="False"
       IncludeInCommandLine="False" />
+    
     <StringListProperty
       Name="AdditionalDependencies"
       DisplayName="Additional Dependencies"
       IncludeInCommandLine="False"
       Visible="true" />
+    
     <StringProperty
       Subtype="AdditionalOptions"
       Name="AdditionalOptions"
@@ -196,6 +272,7 @@
       </StringProperty.Description>
     </StringProperty>
   </Rule>
+  
   <ItemType
     Name="YASM"
     DisplayName="Yasm Assembler" />

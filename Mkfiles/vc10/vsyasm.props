@@ -12,11 +12,11 @@
   <ItemDefinitionGroup>
     <YASM>
       <Debug>False</Debug>
-      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ObjectFile>$(IntDir)</ObjectFile>
       <PreProc>0</PreProc>
       <Parser>0</Parser>
       <CommandLineTemplate>vsyasm -Xvc -f $(Platform) [AllOptions] [AdditionalOptions] [Inputs]</CommandLineTemplate>
-      <Outputs>%(ObjectFileName)</Outputs>
+      <Outputs>%(ObjectFile)</Outputs>
       <ExecutionDescription>Assembling %(Filename)%(Extension)</ExecutionDescription>
       <ShowOnlyRuleProperties>false</ShowOnlyRuleProperties>
     </YASM>
