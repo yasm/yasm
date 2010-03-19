@@ -285,7 +285,7 @@ do_assemble(const char *in_filename)
     }
 
     if (mapdir_pathname) {
-        fn = replace_extension(base_filename, "lst");
+        fn = replace_extension(base_filename, "map");
         if (!fn)
         {
             print_error(_("could not determine map filename for `%s'"),
