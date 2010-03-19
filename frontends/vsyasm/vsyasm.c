@@ -48,6 +48,8 @@
 /*@null@*/ /*@only@*/ static char *global_prefix = NULL, *global_suffix = NULL;
 /*@null@*/ /*@only@*/ static char *listdir_pathname = NULL;
 /*@null@*/ /*@only@*/ static char *mapdir_pathname = NULL;
+/*@null@*/ /*@only@*/ static char *objext = NULL;
+/*@null@*/ /*@only@*/ static char *listext = NULL, *mapext = NULL;
 /*@null@*/ /*@only@*/ static char *machine_name = NULL;
 static int special_options = 0;
 /*@null@*/ /*@dependent@*/ static const yasm_arch_module *
@@ -93,6 +95,9 @@ static int opt_listfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_listdir_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_objdir_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_mapdir_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_listext_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_objext_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_mapext_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_machine_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_strict_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_warning_handler(char *cmd, /*@null@*/ char *param, int extra);
@@ -163,6 +168,12 @@ static opt_option options[] =
       N_("name of object-file output directory"), N_("pathname") },
     { 0, "mapdir", 1, opt_mapdir_handler, 0,
       N_("name of map-file output directory"), N_("pathname") },
+    { 0, "listext", 1, opt_listext_handler, 0,
+      N_("list-file extension (default `lst')"), N_("ext") },
+    { 0, "objext", 1, opt_objext_handler, 0,
+      N_("object-file extension (default is by object format)"), N_("ext") },
+    { 0, "mapext", 1, opt_mapext_handler, 0,
+      N_("map-file extension (default `map')"), N_("ext") },
     { 'm', "machine", 1, opt_machine_handler, 0,
       N_("select machine (list with -m help)"), N_("machine") },
     { 0, "force-strict", 0, opt_strict_handler, 0,
@@ -262,7 +273,7 @@ do_assemble(const char *in_filename)
     /* replace (or add) extension to base filename */
     yasm__splitpath(in_filename, &base_filename);
     if (base_filename[0] != '\0')
-        fn = replace_extension(base_filename, cur_objfmt_module->extension);
+        fn = replace_extension(base_filename, objext);
     if (!fn)
     {
         print_error(_("could not determine output filename for `%s'"),
@@ -273,7 +284,7 @@ do_assemble(const char *in_filename)
     yasm_xfree(fn);
 
     if (listdir_pathname) {
-        fn = replace_extension(base_filename, "lst");
+        fn = replace_extension(base_filename, listext);
         if (!fn)
         {
             print_error(_("could not determine list filename for `%s'"),
@@ -285,7 +296,7 @@ do_assemble(const char *in_filename)
     }
 
     if (mapdir_pathname) {
-        fn = replace_extension(base_filename, "map");
+        fn = replace_extension(base_filename, mapext);
         if (!fn)
         {
             print_error(_("could not determine map filename for `%s'"),
@@ -682,6 +693,14 @@ main(int argc, char *argv[])
         mapdir_pathname[i+1] = '\0';
     }
 
+    /* If not already specified, set file extensions */
+    if (!objext && cur_objfmt_module->extension)
+        objext = yasm__xstrdup(cur_objfmt_module->extension);
+    if (!listext)
+        listext = yasm__xstrdup("lst");
+    if (!mapext)
+        mapext = yasm__xstrdup("map");
+
     /* Assemble each input file.  Terminate on first error. */
     STAILQ_FOREACH(infile, &input_files, link)
     {
@@ -750,6 +769,12 @@ cleanup(void)
             yasm_xfree(listdir_pathname);
         if (mapdir_pathname)
             yasm_xfree(mapdir_pathname);
+        if (objext)
+            yasm_xfree(objext);
+        if (listext)
+            yasm_xfree(listext);
+        if (mapext)
+            yasm_xfree(mapext);
         if (machine_name)
             yasm_xfree(machine_name);
         if (objfmt_keyword)
@@ -986,6 +1011,48 @@ opt_mapdir_handler(/*@unused@*/ char *cmd, char *param,
     mapdir_pathname = yasm_xmalloc(strlen(param)+2);
     strcpy(mapdir_pathname, param);
 
+    return 0;
+}
+
+static int
+opt_listext_handler(/*@unused@*/ char *cmd, char *param,
+                    /*@unused@*/ int extra)
+{
+    if (listext) {
+        print_error(
+            _("warning: can set only one list extension, last specified used"));
+        yasm_xfree(listext);
+    }
+    assert(param != NULL);
+    listext = yasm__xstrdup(param);
+    return 0;
+}
+
+static int
+opt_objext_handler(/*@unused@*/ char *cmd, char *param,
+                   /*@unused@*/ int extra)
+{
+    if (objext) {
+        print_error(
+            _("warning: can set only one object extension, last specified used"));
+        yasm_xfree(objext);
+    }
+    assert(param != NULL);
+    objext = yasm__xstrdup(param);
+    return 0;
+}
+
+static int
+opt_mapext_handler(/*@unused@*/ char *cmd, char *param,
+                   /*@unused@*/ int extra)
+{
+    if (mapext) {
+        print_error(
+            _("warning: can set only one map extension, last specified used"));
+        yasm_xfree(mapext);
+    }
+    assert(param != NULL);
+    mapext = yasm__xstrdup(param);
     return 0;
 }
 
