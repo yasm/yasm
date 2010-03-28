@@ -1388,10 +1388,11 @@ define_section_symbol(yasm_symtab *symtab, yasm_section *sect,
     yasm_symrec_add_data(sym, &bin_symrec_data_cb, bsymd);
 }
 
-static bin_section_data *
-bin_objfmt_init_new_section(yasm_object *object, yasm_section *sect,
-                            const char *sectname, unsigned long line)
+static void
+bin_objfmt_init_new_section(yasm_section *sect, unsigned long line)
 {
+    yasm_object *object = yasm_section_get_object(sect);
+    const char *sectname = yasm_section_get_name(sect);
     /*yasm_objfmt_bin *objfmt_bin = (yasm_objfmt_bin *)object->objfmt;*/
     bin_section_data *data;
 
@@ -1414,8 +1415,6 @@ bin_objfmt_init_new_section(yasm_object *object, yasm_section *sect,
                           SSYM_VSTART, line);
     define_section_symbol(object->symtab, sect, sectname, ".length",
                           SSYM_LENGTH, line);
-
-    return data;
 }
 
 static yasm_section *
@@ -1425,10 +1424,8 @@ bin_objfmt_add_default_section(yasm_object *object)
     int isnew;
 
     retval = yasm_object_get_general(object, ".text", 0, 1, 0, &isnew, 0);
-    if (isnew) {
-        bin_objfmt_init_new_section(object, retval, ".text", 0);
+    if (isnew)
         yasm_section_set_default(retval, 1);
-    }
     return retval;
 }
 
@@ -1568,10 +1565,7 @@ bin_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     retval = yasm_object_get_general(object, sectname, 0, (int)data.code,
                                      (int)data.bss, &isnew, line);
 
-    if (isnew)
-        bsd = bin_objfmt_init_new_section(object, retval, sectname, line);
-    else
-        bsd = yasm_section_get_data(retval, &bin_section_data_cb);
+    bsd = yasm_section_get_data(retval, &bin_section_data_cb);
 
     if (isnew || yasm_section_is_default(retval)) {
         yasm_section_set_default(retval, 0);
@@ -1820,6 +1814,7 @@ yasm_objfmt_module yasm_bin_LTX_objfmt = {
     bin_objfmt_output,
     bin_objfmt_destroy,
     bin_objfmt_add_default_section,
+    bin_objfmt_init_new_section,
     bin_objfmt_section_switch,
     bin_objfmt_get_special_sym
 };
@@ -1972,6 +1967,7 @@ yasm_objfmt_module yasm_dosexe_LTX_objfmt = {
     dosexe_objfmt_output,
     bin_objfmt_destroy,
     bin_objfmt_add_default_section,
+    bin_objfmt_init_new_section,
     bin_objfmt_section_switch,
     bin_objfmt_get_special_sym
 };

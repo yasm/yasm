@@ -369,10 +369,11 @@ win64_objfmt_create(yasm_object *object)
     return (yasm_objfmt *)objfmt_coff;
 }
 
-static coff_section_data *
-coff_objfmt_init_new_section(yasm_object *object, yasm_section *sect,
-                             const char *sectname, unsigned long line)
+static void
+coff_objfmt_init_new_section(yasm_section *sect, unsigned long line)
 {
+    yasm_object *object = yasm_section_get_object(sect);
+    const char *sectname = yasm_section_get_name(sect);
     yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
     coff_section_data *data;
     yasm_symrec *sym;
@@ -388,6 +389,15 @@ coff_objfmt_init_new_section(yasm_object *object, yasm_section *sect,
     data->flags2 = 0;
     data->strtab_name = 0;
     data->isdebug = 0;
+
+    if (yasm__strncasecmp(sectname, ".debug", 6)==0) {
+        data->flags = COFF_STYP_DATA;
+        if (objfmt_coff->win32)
+            data->flags |= COFF_STYP_DISCARD|COFF_STYP_READ;
+        data->isdebug = 1;
+    } else
+        data->flags = COFF_STYP_TEXT;
+
     yasm_section_add_data(sect, &coff_section_data_cb, data);
 
     sym = yasm_symtab_define_label(object->symtab, sectname,
@@ -395,31 +405,6 @@ coff_objfmt_init_new_section(yasm_object *object, yasm_section *sect,
     yasm_symrec_declare(sym, YASM_SYM_GLOBAL, line);
     coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, 1, COFF_SYMTAB_AUX_SECT);
     data->sym = sym;
-    return data;
-}
-
-static int
-coff_objfmt_init_remaining_section(yasm_section *sect, /*@null@*/ void *d)
-{
-    /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
-    /*@dependent@*/ /*@null@*/ coff_section_data *csd;
-
-    assert(info != NULL);
-    csd = yasm_section_get_data(sect, &coff_section_data_cb);
-    if (!csd) {
-        /* Initialize new one */
-        const char *sectname = yasm_section_get_name(sect);
-        csd = coff_objfmt_init_new_section(info->object, sect, sectname, 0);
-        if (yasm__strncasecmp(sectname, ".debug", 6)==0) {
-            csd->flags = COFF_STYP_DATA;
-            if (info->objfmt_coff->win32)
-                csd->flags |= COFF_STYP_DISCARD|COFF_STYP_READ;
-            csd->isdebug = 1;
-        } else
-            csd->flags = COFF_STYP_TEXT;
-    }
-
-    return 0;
 }
 
 static int
@@ -1182,12 +1167,6 @@ coff_objfmt_output(yasm_object *object, FILE *f, int all_syms,
     info.f = f;
     info.buf = yasm_xmalloc(REGULAR_OUTBUF_SIZE);
 
-    /* Initialize section data (and count in parse_scnum) any sections that
-     * we've not initialized so far.
-     */
-    yasm_object_sections_traverse(object, &info,
-                                  coff_objfmt_init_remaining_section);
-
     /* Allocate space for headers by seeking forward */
     if (fseek(f, (long)(20+40*(objfmt_coff->parse_scnum-1)), SEEK_SET) < 0) {
         yasm__fatal(N_("could not seek on output file"));
@@ -1288,7 +1267,7 @@ coff_objfmt_add_default_section(yasm_object *object)
 
     retval = yasm_object_get_general(object, ".text", 16, 1, 0, &isnew, 0);
     if (isnew) {
-        csd = coff_objfmt_init_new_section(object, retval, ".text", 0);
+        csd = yasm_section_get_data(retval, &coff_section_data_cb);
         csd->flags = COFF_STYP_TEXT;
         if (objfmt_coff->win32)
             csd->flags |= COFF_STYP_EXECUTE | COFF_STYP_READ;
@@ -1571,13 +1550,9 @@ coff_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
 
     retval = yasm_object_get_general(object, realname, align, iscode,
                                      resonly, &isnew, line);
-
-    if (isnew)
-        csd = coff_objfmt_init_new_section(object, retval, realname, line);
-    else
-        csd = yasm_section_get_data(retval, &coff_section_data_cb);
-
     yasm_xfree(realname);
+
+    csd = yasm_section_get_data(retval, &coff_section_data_cb);
 
     if (isnew || yasm_section_is_default(retval)) {
         yasm_section_set_default(retval, 0);
@@ -1676,8 +1651,7 @@ dir_export(yasm_object *object, yasm_valparamhead *valparams,
     /* Initialize directive section if needed */
     if (isnew) {
         coff_section_data *csd;
-        csd = coff_objfmt_init_new_section(object, sect,
-                                           yasm_section_get_name(sect), line);
+        csd = yasm_section_get_data(sect, &coff_section_data_cb);
         csd->flags = COFF_STYP_INFO | COFF_STYP_DISCARD | COFF_STYP_READ;
     }
 
@@ -1724,7 +1698,7 @@ dir_safeseh(yasm_object *object, yasm_valparamhead *valparams,
     /* Initialize sxdata section if needed */
     if (isnew) {
         coff_section_data *csd;
-        csd = coff_objfmt_init_new_section(object, sect, ".sxdata", line);
+        csd = yasm_section_get_data(sect, &coff_section_data_cb);
         csd->flags = COFF_STYP_INFO;
     }
 
@@ -2134,7 +2108,7 @@ dir_endproc_frame(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
 
     /* Initialize xdata section if needed */
     if (isnew) {
-        csd = coff_objfmt_init_new_section(object, sect, ".xdata", line);
+        csd = yasm_section_get_data(sect, &coff_section_data_cb);
         csd->flags = COFF_STYP_DATA | COFF_STYP_READ;
         yasm_section_set_align(sect, 8, line);
     }
@@ -2159,7 +2133,7 @@ dir_endproc_frame(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
 
     /* Initialize pdata section if needed */
     if (isnew) {
-        csd = coff_objfmt_init_new_section(object, sect, ".pdata", line);
+        csd = yasm_section_get_data(sect, &coff_section_data_cb);
         csd->flags = COFF_STYP_DATA | COFF_STYP_READ;
         csd->flags2 = COFF_FLAG_NOBASE;
         yasm_section_set_align(sect, 4, line);
@@ -2209,6 +2183,7 @@ yasm_objfmt_module yasm_coff_LTX_objfmt = {
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_add_default_section,
+    coff_objfmt_init_new_section,
     coff_objfmt_section_switch,
     coff_objfmt_get_special_sym
 };
@@ -2261,6 +2236,7 @@ yasm_objfmt_module yasm_win32_LTX_objfmt = {
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_add_default_section,
+    coff_objfmt_init_new_section,
     coff_objfmt_section_switch,
     coff_objfmt_get_special_sym
 };
@@ -2315,6 +2291,7 @@ yasm_objfmt_module yasm_win64_LTX_objfmt = {
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_add_default_section,
+    coff_objfmt_init_new_section,
     coff_objfmt_section_switch,
     coff_objfmt_get_special_sym
 };
@@ -2332,6 +2309,7 @@ yasm_objfmt_module yasm_x64_LTX_objfmt = {
     coff_objfmt_output,
     coff_objfmt_destroy,
     coff_objfmt_add_default_section,
+    coff_objfmt_init_new_section,
     coff_objfmt_section_switch,
     coff_objfmt_get_special_sym
 };

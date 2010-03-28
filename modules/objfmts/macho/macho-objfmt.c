@@ -1242,10 +1242,11 @@ macho_objfmt_destroy(yasm_objfmt *objfmt)
     yasm_xfree(objfmt);
 }
 
-static macho_section_data *
-macho_objfmt_init_new_section(yasm_object *object, yasm_section *sect,
-                              const char *sectname, unsigned long line)
+static void
+macho_objfmt_init_new_section(yasm_section *sect, unsigned long line)
 {
+    yasm_object *object = yasm_section_get_object(sect);
+    const char *sectname = yasm_section_get_name(sect);
     yasm_objfmt_macho *objfmt_macho = (yasm_objfmt_macho *)object->objfmt;
     macho_section_data *data;
     yasm_symrec *sym;
@@ -1265,7 +1266,6 @@ macho_objfmt_init_new_section(yasm_object *object, yasm_section *sect,
     sym = yasm_symtab_define_label(object->symtab, sectname,
                                    yasm_section_bcs_first(sect), 1, line);
     data->sym = sym;
-    return data;
 }
 
 static yasm_section *
@@ -1278,7 +1278,7 @@ macho_objfmt_add_default_section(yasm_object *object)
     retval = yasm_object_get_general(object, "LC_SEGMENT.__TEXT.__text", 0, 1,
                                      0, &isnew, 0);
     if (isnew) {
-        msd = macho_objfmt_init_new_section(object, retval, ".text", 0);
+        msd = yasm_section_get_data(retval, &macho_section_data_cb);
         msd->segname = yasm__xstrdup("__TEXT");
         msd->sectname = yasm__xstrdup("__text");
         msd->flags = S_ATTR_PURE_INSTRUCTIONS;
@@ -1471,10 +1471,7 @@ macho_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
                                      &isnew, line);
     yasm_xfree(realname);
 
-    if (isnew)
-        msd = macho_objfmt_init_new_section(object, retval, sectname, line);
-    else
-        msd = yasm_section_get_data(retval, &macho_section_data_cb);
+    msd = yasm_section_get_data(retval, &macho_section_data_cb);
 
     if (isnew || yasm_section_is_default(retval)) {
         yasm_section_set_default(retval, 0);
@@ -1564,6 +1561,7 @@ yasm_objfmt_module yasm_macho_LTX_objfmt = {
     macho_objfmt_output,
     macho_objfmt_destroy,
     macho_objfmt_add_default_section,
+    macho_objfmt_init_new_section,
     macho_objfmt_section_switch,
     macho_objfmt_get_special_sym
 };
@@ -1582,6 +1580,7 @@ yasm_objfmt_module yasm_macho32_LTX_objfmt = {
     macho_objfmt_output,
     macho_objfmt_destroy,
     macho_objfmt_add_default_section,
+    macho_objfmt_init_new_section,
     macho_objfmt_section_switch,
     macho_objfmt_get_special_sym
 };
@@ -1600,6 +1599,7 @@ yasm_objfmt_module yasm_macho64_LTX_objfmt = {
     macho_objfmt_output,
     macho_objfmt_destroy,
     macho_objfmt_add_default_section,
+    macho_objfmt_init_new_section,
     macho_objfmt_section_switch,
     macho_objfmt_get_special_sym
 };

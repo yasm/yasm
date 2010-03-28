@@ -89,6 +89,17 @@ dbg_objfmt_destroy(yasm_objfmt *objfmt)
     yasm_xfree(objfmt);
 }
 
+static void
+dbg_objfmt_init_new_section(yasm_section *sect, unsigned long line)
+{
+    yasm_object *object = yasm_section_get_object(sect);
+    yasm_objfmt_dbg *objfmt_dbg = (yasm_objfmt_dbg *)object->objfmt;
+    fprintf(objfmt_dbg->dbgfile, "init_new_section(\"%s\", %lu)\n",
+            yasm_section_get_name(sect), line);
+    yasm_symtab_define_label(object->symtab, ".text",
+        yasm_section_bcs_first(sect), 1, 0);
+}
+
 static yasm_section *
 dbg_objfmt_add_default_section(yasm_object *object)
 {
@@ -96,11 +107,9 @@ dbg_objfmt_add_default_section(yasm_object *object)
     yasm_section *retval;
     int isnew;
 
+    fprintf(objfmt_dbg->dbgfile, "add_default_section()\n");
     retval = yasm_object_get_general(object, ".text", 0, 0, 0, &isnew, 0);
     if (isnew) {
-        fprintf(objfmt_dbg->dbgfile, "(new) ");
-        yasm_symtab_define_label(object->symtab, ".text",
-            yasm_section_bcs_first(retval), 1, 0);
         yasm_section_set_default(retval, 1);
     }
     return retval;
@@ -132,8 +141,6 @@ dbg_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
                                      &isnew, line);
     if (isnew) {
         fprintf(objfmt_dbg->dbgfile, "(new) ");
-        yasm_symtab_define_label(object->symtab, vp->val,
-                                 yasm_section_bcs_first(retval), 1, line);
     }
     yasm_section_set_default(retval, 0);
     fprintf(objfmt_dbg->dbgfile, "\"%s\" section\n", vp->val);
@@ -171,6 +178,7 @@ yasm_objfmt_module yasm_dbg_LTX_objfmt = {
     dbg_objfmt_output,
     dbg_objfmt_destroy,
     dbg_objfmt_add_default_section,
+    dbg_objfmt_init_new_section,
     dbg_objfmt_section_switch,
     dbg_objfmt_get_special_sym
 };

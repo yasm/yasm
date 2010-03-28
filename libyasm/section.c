@@ -346,6 +346,9 @@ yasm_object_get_general(yasm_object *object, const char *name,
     s->res_only = res_only;
     s->def = 0;
 
+    /* Initialize object format specific data */
+    yasm_objfmt_init_new_section(s, line);
+
     *isnew = 1;
     return s;
 }

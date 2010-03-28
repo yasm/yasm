@@ -108,6 +108,11 @@ struct yasm_objfmt_module {
      */
     yasm_section * (*add_default_section) (yasm_object *object);
 
+    /** Module-level implementation of yasm_objfmt_init_new_section().
+     * Call yasm_objfmt_init_new_section() instead of calling this function.
+     */
+    void (*init_new_section) (yasm_section *section, unsigned long line);
+
     /** Module-level implementation of yasm_objfmt_section_switch().
      * Call yasm_objfmt_section_switch() instead of calling this function.
      */
@@ -156,6 +161,13 @@ void yasm_objfmt_destroy(/*@only@*/ yasm_objfmt *objfmt);
  */
 yasm_section *yasm_objfmt_add_default_section(yasm_object *object);
 
+/** Initialize the object-format specific portion of a section.  Called
+ * by yasm_object_get_general(); in general should not be directly called.
+ * \param section   section
+ * \param line      virtual line (from yasm_linemap)
+ */
+void yasm_objfmt_init_new_section(yasm_object *object, unsigned long line);
+
 /** Switch object file sections.  The first val of the valparams should
  * be the section name.  Calls yasm_object_get_general() to actually get
  * the section.
@@ -196,6 +208,9 @@ yasm_section *yasm_objfmt_add_default_section(yasm_object *object);
 #define yasm_objfmt_add_default_section(object) \
     ((yasm_objfmt_base *)((object)->objfmt))->module->add_default_section \
         (object)
+#define yasm_objfmt_init_new_section(section, line) \
+    ((yasm_objfmt_base *)((object)->objfmt))->module->init_new_section \
+        (section, line)
 #define yasm_objfmt_get_special_sym(object, name, parser) \
     ((yasm_objfmt_base *)((object)->objfmt))->module->get_special_sym \
         (object, name, parser)
