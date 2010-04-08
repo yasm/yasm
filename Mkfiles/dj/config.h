@@ -119,22 +119,22 @@
 #define PACKAGE_BUGREPORT "bug-yasm@tortall.net"
 
 /* Define to build version of this package. */
-#define PACKAGE_BUILD "HEAD"
+#define PACKAGE_BUILD "BRANCH"
 
 /* Define to internal version of this package. */
-#define PACKAGE_INTVER "0.7.99"
+#define PACKAGE_INTVER "1.0.0"
 
 /* Define to the full name of this package. */
 #define PACKAGE_NAME "yasm"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "yasm HEAD"
+#define PACKAGE_STRING "yasm 1.0.x"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "yasm"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "HEAD"
+#define PACKAGE_VERSION "1.0.x"
 
 /* Define if the C compiler supports function prototypes. */
 #define PROTOTYPES 1
@@ -158,7 +158,7 @@
 #define STDC_HEADERS 1
 
 /* Version number of package */
-#define VERSION "HEAD"
+#define VERSION "1.0.x"
 
 /* Define if using the dmalloc debugging malloc package */
 /* #undef WITH_DMALLOC */
