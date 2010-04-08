@@ -3858,11 +3858,14 @@ expand_mmac_params(Token * tline)
             char *text = NULL;
             int type = 0, cc;   /* type = 0 to placate optimisers */
             char tmpbuf[30];
+            char *second_text = NULL;
             int n, i;
             MMacro *mac;
 
             t = tline;
             tline = tline->next;
+
+            second_text = strchr(t->text, ':');
 
             mac = istk->mstk;
             while (mac && !mac->name)   /* avoid mistaking %reps for macros */
@@ -3870,93 +3873,36 @@ expand_mmac_params(Token * tline)
             if (!mac)
                 error(ERR_NONFATAL, "`%s': not in a macro call", t->text);
             else
-                switch (t->text[1])
+            {
+                if (second_text)
                 {
-                        /*
-                         * We have to make a substitution of one of the
-                         * forms %1, %-1, %+1, %%foo, %0.
-                         */
-                    case '0':
-                        type = TOK_NUMBER;
-                        sprintf(tmpbuf, "%ld", mac->nparam);
-                        text = nasm_strdup(tmpbuf);
-                        break;
-                    case '%':
-                        type = TOK_ID;
-                        sprintf(tmpbuf, "..@%lu.", mac->unique);
-                        text = nasm_strcat(tmpbuf, t->text + 2);
-                        break;
-                    case '-':
-                        n = atoi(t->text + 2) - 1;
-                        if (n >= mac->nparam)
+                    int end = atoi(second_text+1)-1;
+                    int is_fst = 1;
+                    int k;
+                    n = atoi(t->text + 1)-1;
+                    if (end < 0)
+                        end += mac->nparam;
+
+                    for (k = n; k <= end; k++)
+                    {
+                        if (k >= mac->nparam)
                             tt = NULL;
                         else
                         {
                             if (mac->nparam > 1)
-                                n = (n + mac->rotate) % mac->nparam;
-                            tt = mac->params[n];
-                        }
-                        cc = find_cc(tt);
-                        if (cc == -1)
-                        {
-                            error(ERR_NONFATAL,
-                                    "macro parameter %d is not a condition code",
-                                    n + 1);
-                            text = NULL;
-                        }
-                        else
-                        {
-                            type = TOK_ID;
-                            if (inverse_ccs[cc] == -1)
-                            {
-                                error(ERR_NONFATAL,
-                                        "condition code `%s' is not invertible",
-                                        conditions[cc]);
-                                text = NULL;
-                            }
-                            else
-                                text =
-                                        nasm_strdup(conditions[inverse_ccs
-                                                 [cc]]);
-                        }
-                        break;
-                    case '+':
-                        n = atoi(t->text + 2) - 1;
-                        if (n >= mac->nparam)
-                            tt = NULL;
-                        else
-                        {
-                            if (mac->nparam > 1)
-                                n = (n + mac->rotate) % mac->nparam;
-                            tt = mac->params[n];
-                        }
-                        cc = find_cc(tt);
-                        if (cc == -1)
-                        {
-                            error(ERR_NONFATAL,
-                                    "macro parameter %d is not a condition code",
-                                    n + 1);
-                            text = NULL;
-                        }
-                        else
-                        {
-                            type = TOK_ID;
-                            text = nasm_strdup(conditions[cc]);
-                        }
-                        break;
-                    default:
-                        n = atoi(t->text + 1) - 1;
-                        if (n >= mac->nparam)
-                            tt = NULL;
-                        else
-                        {
-                            if (mac->nparam > 1)
-                                n = (n + mac->rotate) % mac->nparam;
-                            tt = mac->params[n];
+                                k = (k + mac->rotate) % mac->nparam;
+                            tt = mac->params[k];
                         }
                         if (tt)
                         {
-                            for (i = 0; i < mac->paramlen[n]; i++)
+                            if (!is_fst && mac->paramlen[k])
+                            {
+                                *tail = new_Token(NULL, TOK_OTHER, ",", 0);
+                                tail = &(*tail)->next;
+                            }
+                            if (mac->paramlen[k])
+                                is_fst = 0;
+                            for (i = 0; i < mac->paramlen[k]; i++)
                             {
                                 *tail =
                                         new_Token(NULL, tt->type, tt->text,
@@ -3966,8 +3912,111 @@ expand_mmac_params(Token * tline)
                             }
                         }
                         text = NULL;    /* we've done it here */
-                        break;
+                    }
                 }
+                else
+                {
+                    switch (t->text[1])
+                    {
+                            /*
+                             * We have to make a substitution of one of the
+                             * forms %1, %-1, %+1, %%foo, %0.
+                             */
+                        case '0':
+                            type = TOK_NUMBER;
+                            sprintf(tmpbuf, "%ld", mac->nparam);
+                            text = nasm_strdup(tmpbuf);
+                            break;
+                        case '%':
+                            type = TOK_ID;
+                            sprintf(tmpbuf, "..@%lu.", mac->unique);
+                            text = nasm_strcat(tmpbuf, t->text + 2);
+                            break;
+                        case '-':
+                            n = atoi(t->text + 2) - 1;
+                            if (n >= mac->nparam)
+                                tt = NULL;
+                            else
+                            {
+                                if (mac->nparam > 1)
+                                    n = (n + mac->rotate) % mac->nparam;
+                                tt = mac->params[n];
+                            }
+                            cc = find_cc(tt);
+                            if (cc == -1)
+                            {
+                                error(ERR_NONFATAL,
+                                        "macro parameter %d is not a condition code",
+                                        n + 1);
+                                text = NULL;
+                            }
+                            else
+                            {
+                                type = TOK_ID;
+                                if (inverse_ccs[cc] == -1)
+                                {
+                                    error(ERR_NONFATAL,
+                                            "condition code `%s' is not invertible",
+                                            conditions[cc]);
+                                    text = NULL;
+                                }
+                                else
+                                    text =
+                                            nasm_strdup(conditions[inverse_ccs
+                                                     [cc]]);
+                            }
+                            break;
+                        case '+':
+                            n = atoi(t->text + 2) - 1;
+                            if (n >= mac->nparam)
+                                tt = NULL;
+                            else
+                            {
+                                if (mac->nparam > 1)
+                                    n = (n + mac->rotate) % mac->nparam;
+                                tt = mac->params[n];
+                            }
+                            cc = find_cc(tt);
+                            if (cc == -1)
+                            {
+                                error(ERR_NONFATAL,
+                                        "macro parameter %d is not a condition code",
+                                        n + 1);
+                                text = NULL;
+                            }
+                            else
+                            {
+                                type = TOK_ID;
+                                text = nasm_strdup(conditions[cc]);
+                            }
+                            break;
+                        default:
+                            n = atoi(t->text + 1) - 1;
+                            if (n >= mac->nparam)
+                                tt = NULL;
+                            else
+                            {
+                                if (mac->nparam > 1)
+                                    n = (n + mac->rotate) % mac->nparam;
+                                tt = mac->params[n];
+                            }
+                            if (tt)
+                            {
+                                for (i = 0; i < mac->paramlen[n]; i++)
+                                {
+                                    *tail =
+                                            new_Token(NULL, tt->type, tt->text,
+                                            0);
+                                    tail = &(*tail)->next;
+                                    tt = tt->next;
+                                }
+                            }
+                            text = NULL;    /* we've done it here */
+                            break;
+                    }
+                }
+            }
+
             if (!text)
             {
                 delete_Token(t);
