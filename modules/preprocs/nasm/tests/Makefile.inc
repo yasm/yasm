@@ -22,3 +22,5 @@ EXTRA_DIST += modules/preprocs/nasm/tests/nasmpp-nested.errwarn
 EXTRA_DIST += modules/preprocs/nasm/tests/nasmpp-nested.hex
 EXTRA_DIST += modules/preprocs/nasm/tests/orgsect.asm
 EXTRA_DIST += modules/preprocs/nasm/tests/orgsect.hex
+EXTRA_DIST += modules/preprocs/nasm/tests/scope-err.asm
+EXTRA_DIST += modules/preprocs/nasm/tests/scope-err.errwarn

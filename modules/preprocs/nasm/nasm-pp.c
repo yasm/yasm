@@ -63,6 +63,7 @@ struct SMacro
 {
     SMacro *next;
     char *name;
+    int level;
     int casesense;
     int nparam;
     int in_progress;
@@ -276,14 +277,14 @@ static const char *directives[] = {
     "%elifid", "%elifidn", "%elifidni", "%elifmacro", "%elifnctx", "%elifndef",
     "%elifnid", "%elifnidn", "%elifnidni", "%elifnmacro", "%elifnnum", "%elifnstr",
     "%elifnum", "%elifstr", "%else", "%endif", "%endm", "%endmacro",
-    "%endrep", "%error", "%exitrep", "%iassign", "%idefine", "%if",
+    "%endrep", "%endscope", "%error", "%exitrep", "%iassign", "%idefine", "%if",
     "%ifctx", "%ifdef", "%ifid", "%ifidn", "%ifidni", "%ifmacro", "%ifnctx",
     "%ifndef", "%ifnid", "%ifnidn", "%ifnidni", "%ifnmacro", "%ifnnum",
     "%ifnstr", "%ifnum", "%ifstr", "%imacro", "%include",
     "%ixdefine", "%line",
     "%local",
     "%macro", "%pop", "%push", "%rep", "%repl", "%rotate",
-    "%stacksize",
+    "%scope", "%stacksize",
     "%strlen", "%substr", "%undef", "%xdefine"
 };
 enum
@@ -293,14 +294,14 @@ enum
     PP_ELIFID, PP_ELIFIDN, PP_ELIFIDNI, PP_ELIFMACRO, PP_ELIFNCTX, PP_ELIFNDEF,
     PP_ELIFNID, PP_ELIFNIDN, PP_ELIFNIDNI, PP_ELIFNMACRO, PP_ELIFNNUM, PP_ELIFNSTR,
     PP_ELIFNUM, PP_ELIFSTR, PP_ELSE, PP_ENDIF, PP_ENDM, PP_ENDMACRO,
-    PP_ENDREP, PP_ERROR, PP_EXITREP, PP_IASSIGN, PP_IDEFINE, PP_IF,
+    PP_ENDREP, PP_ENDSCOPE, PP_ERROR, PP_EXITREP, PP_IASSIGN, PP_IDEFINE, PP_IF,
     PP_IFCTX, PP_IFDEF, PP_IFID, PP_IFIDN, PP_IFIDNI, PP_IFMACRO, PP_IFNCTX,
     PP_IFNDEF, PP_IFNID, PP_IFNIDN, PP_IFNIDNI, PP_IFNMACRO, PP_IFNNUM,
     PP_IFNSTR, PP_IFNUM, PP_IFSTR, PP_IMACRO, PP_INCLUDE,
     PP_IXDEFINE, PP_LINE,
     PP_LOCAL,
     PP_MACRO, PP_POP, PP_PUSH, PP_REP, PP_REPL, PP_ROTATE,
-    PP_STACKSIZE,
+    PP_SCOPE, PP_STACKSIZE,
     PP_STRLEN, PP_SUBSTR, PP_UNDEF, PP_XDEFINE
 };
 
@@ -338,6 +339,7 @@ static int StackSize = 4;
 static const char *StackPointer = "ebp";
 static int ArgOffset = 8;
 static int LocalOffset = 4;
+static int Level = 0;
 
 
 static Context *cstk;
@@ -1893,6 +1895,7 @@ smacro_defined(Context * ctx, char *name, int nparam, SMacro ** defn,
         int nocase)
 {
     SMacro *m;
+    int highest_level = -1;
 
     if (ctx)
         m = ctx->localmac;
@@ -1910,8 +1913,9 @@ smacro_defined(Context * ctx, char *name, int nparam, SMacro ** defn,
     while (m)
     {
         if (!mstrcmp(m->name, name, m->casesense && nocase) &&
-                (nparam <= 0 || m->nparam == 0 || nparam == m->nparam))
+                (nparam <= 0 || m->nparam == 0 || nparam == m->nparam) && (highest_level < 0 || m->level > highest_level))
         {
+            highest_level = m->level;
             if (defn)
             {
                 if (nparam == m->nparam || nparam == -1)
@@ -1919,12 +1923,11 @@ smacro_defined(Context * ctx, char *name, int nparam, SMacro ** defn,
                 else
                     *defn = NULL;
             }
-            return TRUE;
         }
         m = m->next;
     }
 
-    return FALSE;
+    return highest_level >= 0;
 }
 
 /*
@@ -2790,6 +2793,68 @@ do_directive(Token * tline)
             free_tlist(origline);
             break;
 
+        case PP_SCOPE:
+            if (tline->next)
+                error(ERR_WARNING, "trailing garbage after `%%scope' ignored");
+            Level++;
+            free_tlist(origline);
+            break;
+
+        case PP_ENDSCOPE:
+            if (tline->next)
+                error(ERR_WARNING, "trailing garbage after `%%endscope' ignored");
+            if (!Level)
+                error(ERR_NONFATAL,
+                        "`%%endscope': already popped all levels");
+            else
+            {
+                for (k = 0; k < NHASH; k++)
+                {
+                    SMacro **smlast = &smacros[k];
+                    smac = smacros[k];
+                    while (smac)
+                    {
+                        if (smac->level < Level)
+                        {
+                            smlast = &smac->next;
+                            smac = smac->next;
+                        }
+                        else
+                        {
+                            *smlast = smac->next;
+                            nasm_free(smac->name);
+                            free_tlist(smac->expansion);
+                            nasm_free(smac);
+                            smac = *smlast;
+                        }
+                    }
+                }
+                for (ctx = cstk; ctx; ctx = ctx->next)
+                {
+                    SMacro **smlast = &ctx->localmac;
+                    smac = ctx->localmac;
+                    while (smac)
+                    {
+                        if (smac->level < Level)
+                        {
+                            smlast = &smac->next;
+                            smac = smac->next;
+                        }
+                        else
+                        {
+                            *smlast = smac->next;
+                            nasm_free(smac->name);
+                            free_tlist(smac->expansion);
+                            nasm_free(smac);
+                            smac = *smlast;
+                        }
+                    }
+                }
+                Level--;
+            }
+            free_tlist(origline);
+            break;
+
         case PP_ERROR:
             tline->next = expand_smacro(tline->next);
             tline = tline->next;
@@ -3314,15 +3379,21 @@ do_directive(Token * tline)
                     free_tlist(macro_start);
                     return DIRECTIVE_FOUND;
                 }
-                else
+                else if (smac->level == Level)
                 {
                     /*
-                     * We're redefining, so we have to take over an
-                     * existing SMacro structure. This means freeing
-                     * what was already in it.
+                     * We're redefining in the same level, so we have to 
+                     * take over an existing SMacro structure. This means 
+                     * freeing what was already in it.
                      */
                     nasm_free(smac->name);
                     free_tlist(smac->expansion);
+                }
+                else
+                {
+                    smac = nasm_malloc(sizeof(SMacro));
+                    smac->next = *smhead;
+                    *smhead = smac;
                 }
             }
             else
@@ -3334,6 +3405,7 @@ do_directive(Token * tline)
             smac->name = nasm_strdup(mname);
             smac->casesense = ((i == PP_DEFINE) || (i == PP_XDEFINE));
             smac->nparam = nparam;
+            smac->level = Level;
             smac->expansion = macro_start;
             smac->in_progress = FALSE;
             free_tlist(origline);
@@ -3458,6 +3530,7 @@ do_directive(Token * tline)
             smac->name = nasm_strdup(mname);
             smac->casesense = (i == PP_STRLEN);
             smac->nparam = 0;
+            smac->level = 0;
             smac->expansion = macro_start;
             smac->in_progress = FALSE;
             free_tlist(tline);
@@ -3568,6 +3641,7 @@ do_directive(Token * tline)
             smac->name = nasm_strdup(mname);
             smac->casesense = (i == PP_SUBSTR);
             smac->nparam = 0;
+            smac->level = 0;
             smac->expansion = macro_start;
             smac->in_progress = FALSE;
             free_tlist(tline);
@@ -3663,6 +3737,7 @@ do_directive(Token * tline)
             smac->name = nasm_strdup(mname);
             smac->casesense = (i == PP_ASSIGN);
             smac->nparam = 0;
+            smac->level = 0;
             smac->expansion = macro_start;
             smac->in_progress = FALSE;
             free_tlist(origline);
