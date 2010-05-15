@@ -140,18 +140,7 @@ elf_x86_x86_handle_reloc_addend(yasm_intnum *intn,
                                 elf_reloc_entry *reloc,
                                 unsigned long offset)
 {
-    int is_GOT = reloc->is_GOT_sym;
-
-    if (reloc->wrt) {
-        const elf_machine_ssym *ssym = (elf_machine_ssym *)
-            yasm_symrec_get_data(reloc->wrt, &elf_ssym_symrec_data);
-        if (!ssym || reloc->valsize != ssym->size)
-            yasm_internal_error(N_("Unsupported WRT"));
-        if (ssym->reloc == R_386_GOTPC)
-            is_GOT = 1;
-    }
-
-    if (is_GOT && reloc->valsize == 32 && offset != 0)
+    if (!reloc->wrt && reloc->is_GOT_sym && reloc->valsize == 32 && offset != 0)
     {
         yasm_intnum *off_intn = yasm_intnum_create_uint(offset);
         yasm_intnum_calc(intn, YASM_EXPR_ADD, off_intn);
