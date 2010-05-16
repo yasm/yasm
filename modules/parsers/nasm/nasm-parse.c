@@ -339,6 +339,22 @@ parse_line(yasm_parser_nasm *parser_nasm)
             dirname = DIRECTIVE_NAME_val;
             get_next_token();
 
+            /* ignore [warning].  TODO: actually implement */
+            if (yasm__strcasecmp(dirname, "warning") == 0) {
+                yasm_warn_set(YASM_WARN_GENERAL,
+                    N_("[warning] directive not supported; ignored"));
+
+                /* throw away the rest of the directive tokens */
+                while (!is_eol() && curtok != ']')
+                {
+                    destroy_curtok();
+                    get_next_token();
+                }
+                expect(']');
+                get_next_token();
+                return NULL;
+            }
+
             if (curtok == ']' || curtok == ':')
                 have_vps = 0;
             else if (!parse_directive_valparams(parser_nasm, &dir_vps)) {
