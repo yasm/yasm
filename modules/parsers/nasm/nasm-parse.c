@@ -1321,47 +1321,7 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
     yasm_expr *e;
     yasm_symrec *sym;
 
-    /* directives allow very little and handle IDs specially */
-    if (type == DIR_EXPR) {
-        switch (curtok) {
-        case '~':
-            get_next_token();
-            e = parse_expr6(parser_nasm, type);
-            if (!e) {
-                yasm_error_set(YASM_ERROR_SYNTAX,
-                               N_("expected expression after %s"), "`~'");
-                return NULL;
-            }
-            return p_expr_new_branch(YASM_EXPR_NOT, e);
-        case '(':
-            get_next_token();
-            e = parse_expr(parser_nasm, type);
-            if (!e) {
-                yasm_error_set(YASM_ERROR_SYNTAX,
-                               N_("expected expression after %s"), "`('");
-                return NULL;
-            }
-            if (!expect(')')) {
-                yasm_error_set(YASM_ERROR_SYNTAX, N_("missing parenthesis"));
-                return NULL;
-            }
-            get_next_token();
-            return e;
-        case INTNUM:
-            e = p_expr_new_ident(yasm_expr_int(INTNUM_val));
-            break;
-        case REG:
-            e = p_expr_new_ident(yasm_expr_reg(REG_val));
-            break;
-        case ID:
-            sym = yasm_symtab_use(p_symtab, ID_val, cur_line);
-            e = p_expr_new_ident(yasm_expr_sym(sym));
-            yasm_xfree(ID_val);
-            break;
-        default:
-            return NULL;
-        }
-    } else switch (curtok) {
+    switch (curtok) {
         case '+':
             get_next_token();
             e = parse_expr6(parser_nasm, type);
@@ -1437,10 +1397,8 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
             return e;
         case INTNUM:
             e = p_expr_new_ident(yasm_expr_int(INTNUM_val));
-            break;
-        case FLTNUM:
-            e = p_expr_new_ident(yasm_expr_float(FLTNUM_val));
-            break;
+            get_next_token();
+            return e;
         case REG:
             if (type == DV_EXPR) {
                 yasm_error_set(YASM_ERROR_SYNTAX,
@@ -1448,6 +1406,24 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
                 return NULL;
             }
             e = p_expr_new_ident(yasm_expr_reg(REG_val));
+            get_next_token();
+            return e;
+    }
+
+    /* directives allow very little and handle IDs specially */
+    if (type == DIR_EXPR) {
+        switch (curtok) {
+        case ID:
+            sym = yasm_symtab_use(p_symtab, ID_val, cur_line);
+            e = p_expr_new_ident(yasm_expr_sym(sym));
+            yasm_xfree(ID_val);
+            break;
+        default:
+            return NULL;
+        }
+    } else switch (curtok) {
+        case FLTNUM:
+            e = p_expr_new_ident(yasm_expr_float(FLTNUM_val));
             break;
         case STRING:
         {
@@ -1498,6 +1474,7 @@ parse_expr6(yasm_parser_nasm *parser_nasm, expr_type type)
         default:
             return NULL;
     }
+
     get_next_token();
     return e;
 }
