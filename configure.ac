@@ -5,7 +5,7 @@
 # autoconf setup
 #
 AC_PREREQ(2.53)
-AC_INIT([yasm], [1.0.x], [bug-yasm@tortall.net])
+AC_INIT([yasm], [1.0.1], [bug-yasm@tortall.net])
 #AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADER([config.h])
@@ -13,9 +13,9 @@ AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE([1.9.6 foreign])
 AM_MAINTAINER_MODE
 
-AC_DEFINE(PACKAGE_INTVER, ["1.0.0"],
+AC_DEFINE(PACKAGE_INTVER, ["1.0.1"],
 	  [Define to internal version of this package.])
-AC_DEFINE(PACKAGE_BUILD, ["BRANCH"], [Define to build version of this package.])
+AC_DEFINE(PACKAGE_BUILD, ["2326"], [Define to build version of this package.])
 
 #
 # autoconf command-line options
