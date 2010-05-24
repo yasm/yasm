@@ -15,7 +15,7 @@
       <ObjectFile>$(IntDir)</ObjectFile>
       <PreProc>0</PreProc>
       <Parser>0</Parser>
-      <CommandLineTemplate>vsyasm -Xvc -f $(Platform) [AllOptions] [AdditionalOptions] [Inputs]</CommandLineTemplate>
+      <CommandLineTemplate>"C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\vsyasm" -Xvc -f $(Platform) [AllOptions] [AdditionalOptions] [Inputs]</CommandLineTemplate>
       <Outputs>%(ObjectFile)</Outputs>
       <ExecutionDescription>Assembling %(Filename)%(Extension)</ExecutionDescription>
       <ShowOnlyRuleProperties>false</ShowOnlyRuleProperties>
