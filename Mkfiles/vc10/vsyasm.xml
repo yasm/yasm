@@ -72,7 +72,6 @@
       HelpContext="0"
       DisplayName="Include Paths"
       Description="Set the paths for any additional include files"
-      Separator=";"
       Switch="-i &quot;[value]&quot;" />
 
     <StringListProperty
@@ -82,7 +81,6 @@
       HelpContext="0"
       DisplayName="Defined Symbols"
       Description="Specify pre-defined symbols ('symbol' or 'symbol = value') "
-      Separator=";"
       Switch="-d &quot;[value]&quot;" />
     
     <StringListProperty
@@ -92,7 +90,6 @@
       HelpContext="0"
       DisplayName="Remove Symbols"
       Description="Remove pre-defined symbols "
-      Separator=";"
       Switch="-u &quot;[value]&quot;" />
     
     <StringProperty
