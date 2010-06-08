@@ -25,8 +25,14 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "genstring", "genstring\genstring.vcxproj", "{021CEB0A-F721-4F59-B349-9CEEAF244459}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ytasm", "ytasm.vcxproj", "{2162937B-0DBD-4450-B45F-DF578D8E7508}"
+	ProjectSection(ProjectDependencies) = postProject
+		{021CEB0A-F721-4F59-B349-9CEEAF244459} = {021CEB0A-F721-4F59-B349-9CEEAF244459}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vsyasm", "vsyasm.vcxproj", "{7FDD85BB-CC86-442B-A425-989B5B296ED5}"
+	ProjectSection(ProjectDependencies) = postProject
+		{021CEB0A-F721-4F59-B349-9CEEAF244459} = {021CEB0A-F721-4F59-B349-9CEEAF244459}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
