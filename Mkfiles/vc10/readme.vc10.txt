@@ -35,38 +35,47 @@ as appropriate to build the YASM binaries that you need.
 4. Using YASM with Visual Sudio 2010 and VC++ version 10
 --------------------------------------------------------
 
-1. Firstly you need to locate the directory (or directories) 
+The YASM version vsyasm.exe is designed specifically for use
+with Visual Studio 2010.  To tell Visual Studio where to find
+vsyasm.exe, the environment variable YASMPATH can be set to 
+the absolute path to the directory in which vsyasm.exe is
+located (this path should include the final backslash). 
+
+Alternatively you can locate the directory (or directories) 
 where the VC++ compiler binaries are located and put copies 
-of the appropriate yasm.exe binary in these directories. A
-typical location is:
+of the vsyasm.exe binary in these directories. A typical 
+location is:
 
 C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin
 
 Depending on your system you can use either the win32 or the
-x64 version of YASM.  It must be named yasm.exe.
+x64 version of vsyasm.exe.   It must be named vsyasm.exe. 
 
-2. To use the new custom tools facility in Visual Studio 2010,
-you need to place a copy of three files - yasm.props, yasm.targets 
-and yasm.xml - into the MSBUILD customisation directory, which is
-typically at:
+To use the new custom tools facility in Visual Studio 2010, you
+need to place a copy of three files - yasm.props, yasm.targets 
+and yasm.xml - into the MSBUILD customisation directory, which
+is typically at:
 
 C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\BuildCustomizations
 
 This allows you to configure YASM as an assembler within the VC++
-IDE. To use YASM in a project, right click on the project in the
+IDE. Alternatively, these three files can be placed anywhere and
+the build customisation process described later can be used to set 
+their location.  
+
+To use YASM in a project, right click on the project in the
 Solution Explorer and select 'Build Customisations..'. This will 
 give you a dialog box that allows you to select YASM as an 
 assembler (note that your assembler files need to have the 
-extension '.asm').
+extension '.asm').  If you have put the three vsyasm files 
+described above in a custom location, you will need to let the
+dialogue find them using the 'Find Existing' button below the 
+dialogue.
 
 To assemble a file with YASM, select the Property Page for the 
 file and the select 'Yasm Assembler' in the Tool dialog entry. 
 Then click 'Apply' and an additional property page entry will 
 appear and enable YASM settings to be established.
-
-As alternative to placing the yasm.rules files as described 
-above is to set the rules file path in the Visual Studio 2010
-settings dialogue.
 
 5. A Linker Issue
 -----------------
@@ -94,5 +103,4 @@ I am most grateful for the fantastic support that Peter Johnson,
 YASM's creator, has given me in tracking down issues in using
 YASM for the production of Windows x64 code.
 
-  Brian Gladman, 10th November 2009
-
+  Brian Gladman, 10th June 2010

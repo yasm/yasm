@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{825AC694-358C-4D8D-92DE-33A2691978CE}"
 	ProjectSection(SolutionItems) = preProject
 		crt_secure_no_deprecate.vsprops = crt_secure_no_deprecate.vsprops
-		readme.vc8.txt = readme.vc8.txt
+		readme.vc10.txt = readme.vc10.txt
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libyasm", "libyasm\libyasm.vcxproj", "{29FE7874-1256-4AD6-B889-68E399DC9608}"
