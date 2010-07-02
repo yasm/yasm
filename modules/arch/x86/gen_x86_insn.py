@@ -42,7 +42,7 @@ ordered_cpus = [
 ordered_cpu_features = [
     "FPU", "Cyrix", "AMD", "MMX", "3DNow", "SMM", "SSE", "SSE2",
     "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42", "SSE4a", "SSE5",
-    "AVX", "FMA", "AES", "CLMUL", "MOVBE", "XOP", "FMA4", "CVT16"]
+    "AVX", "FMA", "AES", "CLMUL", "MOVBE", "XOP", "FMA4"]
 unordered_cpu_features = ["Priv", "Prot", "Undoc", "Obs"]
 
 # Predefined VEX prefix field values
@@ -6775,56 +6775,6 @@ add_group("movntss",
               Operand(type="SIMDReg", size=128, dest="Spare")])
 
 add_insn("movntss", "movntss")
-
-#####################################################################
-# AMD CVT16 instructions
-#####################################################################
-
-add_group("vcvtph2ps",
-    cpu=["CVT16"],
-    xop=128,
-    opcode=[0x08, 0xA0],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="Mem", size=64, relaxed=True, dest="EA"),
-              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
-add_group("vcvtph2ps",
-    cpu=["CVT16"],
-    xop=128,
-    opcode=[0x08, 0xA0],
-    operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="SIMDReg", size=128, dest="EA"),
-              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
-add_group("vcvtph2ps",
-    cpu=["CVT16"],
-    xop=256,
-    opcode=[0x08, 0xA0],
-    operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
-              Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
-              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
-add_insn("vcvtph2ps", "vcvtph2ps")
-
-add_group("vcvtps2ph",
-    cpu=["CVT16"],
-    xop=128,
-    opcode=[0x08, 0xA1],
-    operands=[Operand(type="Mem", size=64, relaxed=True, dest="EA"),
-              Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
-add_group("vcvtps2ph",
-    cpu=["CVT16"],
-    xop=128,
-    opcode=[0x08, 0xA1],
-    operands=[Operand(type="SIMDReg", size=128, dest="EA"),
-              Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
-add_group("vcvtps2ph",
-    cpu=["CVT16"],
-    xop=256,
-    opcode=[0x08, 0xA1],
-    operands=[Operand(type="SIMDRM", size=128, relaxed=True, dest="EA"),
-              Operand(type="SIMDReg", size=256, dest="Spare"),
-              Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
-add_insn("vcvtps2ph", "vcvtps2ph")
 
 #####################################################################
 # AMD XOP instructions

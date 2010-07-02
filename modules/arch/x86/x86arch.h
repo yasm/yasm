@@ -72,7 +72,6 @@
 #define CPU_MOVBE   38      /* MOVBE instruction */
 #define CPU_XOP     39      /* AMD XOP extensions */
 #define CPU_FMA4    40      /* AMD Fused-Multiply-Add extensions */
-#define CPU_CVT16   41      /* AMD CVT16 extensions */
 
 enum x86_parser_type {
     X86_PARSER_NASM = 0,
