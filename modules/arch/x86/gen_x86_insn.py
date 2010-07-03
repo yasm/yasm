@@ -7241,7 +7241,7 @@ add_insn("vfnmsubsd", "fma_128_m64", modifiers=[0x7F])
 add_insn("vfnmsubss", "fma_128_m32", modifiers=[0x7E])
 
 #####################################################################
-# Intel XSAVE instructions
+# Intel XSAVE and XSAVEOPT instructions
 #####################################################################
 add_insn("xgetbv", "threebyte", modifiers=[0x0F, 0x01, 0xD0],
          cpu=["XSAVE", "386"])
@@ -7251,6 +7251,18 @@ add_insn("xsave", "twobytemem", modifiers=[4, 0x0F, 0xAE],
          cpu=["XSAVE", "386"])
 add_insn("xrstor", "twobytemem", modifiers=[5, 0x0F, 0xAE],
          cpu=["XSAVE", "386"])
+
+add_insn("xsaveopt", "twobytemem", modifiers=[6, 0x0F, 0xAE],
+         cpu=["XSAVEOPT"])
+
+add_group("xsaveopt64",
+    modifiers=["SpAdd", "Op0Add", "Op1Add"],
+    opcode=[0x00, 0x00],
+    spare=0,
+    opersize=64,
+    operands=[Operand(type="Mem", relaxed=True, dest="EA")])
+add_insn("xsaveopt64", "xsaveopt64", modifiers=[6, 0x0F, 0xAE],
+         cpu=["XSAVEOPT"], only64=True)
 
 #####################################################################
 # Intel MOVBE instruction
