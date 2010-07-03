@@ -72,6 +72,9 @@
 #define CPU_MOVBE   38      /* MOVBE instruction */
 #define CPU_XOP     39      /* AMD XOP extensions */
 #define CPU_FMA4    40      /* AMD Fused-Multiply-Add extensions */
+#define CPU_F16C    41      /* Intel float-16 instructions */
+#define CPU_FSGSBASE 42     /* Intel FSGSBASE instructions */
+#define CPU_RDRND   43      /* Intel RDRND instruction */
 
 enum x86_parser_type {
     X86_PARSER_NASM = 0,

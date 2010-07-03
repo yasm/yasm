@@ -42,7 +42,8 @@ ordered_cpus = [
 ordered_cpu_features = [
     "FPU", "Cyrix", "AMD", "MMX", "3DNow", "SMM", "SSE", "SSE2",
     "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42", "SSE4a", "SSE5",
-    "AVX", "FMA", "AES", "CLMUL", "MOVBE", "XOP", "FMA4"]
+    "AVX", "FMA", "AES", "CLMUL", "MOVBE", "XOP", "FMA4", "F16C",
+    "FSGSBASE", "RDRND"]
 unordered_cpu_features = ["Priv", "Prot", "Undoc", "Obs"]
 
 # Predefined VEX prefix field values
@@ -6720,6 +6721,122 @@ for comb, combval in zip(["lql","hql","lqh","hqh"], [0x00,0x01,0x10,0x11]):
     add_insn("pclmul"+comb+"qdq", "pclmulqdq_fixed", modifiers=[combval])
     add_insn("vpclmul"+comb+"qdq", "pclmulqdq_fixed",
              modifiers=[combval, VEXL0], avx=True)
+
+#####################################################################
+# AVX Post-32nm instructions
+#####################################################################
+
+# RDRND
+add_group("rdrand",
+    cpu=["RDRND"],
+    opersize=16,
+    opcode=[0x0F, 0xC7],
+    spare=6,
+    operands=[Operand(type="Reg", size=16, dest="EA")])
+add_group("rdrand",
+    #suffix="l",
+    cpu=["RDRND"],
+    opersize=32,
+    opcode=[0x0F, 0xC7],
+    spare=6,
+    operands=[Operand(type="Reg", size=32, dest="EA")])
+add_group("rdrand",
+    cpu=["RDRND"],
+    opersize=64,
+    opcode=[0x0F, 0xC7],
+    spare=6,
+    operands=[Operand(type="Reg", size=64, dest="EA")])
+add_insn("rdrand", "rdrand")
+
+# FSGSBASE instructions
+add_group("fs_gs_base",
+    only64=True,
+    cpu=["FSGSBASE"],
+    modifiers=['SpAdd'],
+    opersize=32,
+    prefix=0xF3,
+    opcode=[0x0F, 0xAE],
+    operands=[Operand(type="Reg", size=32, dest="EA")])
+add_group("fs_gs_base",
+    only64=True,
+    cpu=["FSGSBASE"],
+    opersize=64,
+    modifiers=['SpAdd'],
+    prefix=0xF3,
+    opcode=[0x0F, 0xAE],
+    operands=[Operand(type="Reg", size=64, dest="EA")])
+
+add_insn("rdfsbase", "fs_gs_base", modifiers=[0], only64=True)
+add_insn("rdgsbase", "fs_gs_base", modifiers=[1], only64=True)
+add_insn("wrfsbase", "fs_gs_base", modifiers=[2], only64=True)
+add_insn("wrgsbase", "fs_gs_base", modifiers=[3], only64=True)
+
+# Float-16 conversion instructions
+for g in ['ps2ph', 'ph2ps']:
+    operands1=[]
+    operands1.append(Operand(type="SIMDReg", size=128, dest="EA"))
+    operands1.append(Operand(type="SIMDReg", size=128, dest="Spare"))
+
+    operands2=[]
+    operands2.append(Operand(type="Mem", size=64, dest="EA"))
+    operands2.append(Operand(type="SIMDReg", size=128, dest="Spare"))
+
+    operands3=[]
+    operands3.append(Operand(type="SIMDReg", size=128, dest="EA"))
+    operands3.append(Operand(type="SIMDReg", size=256, dest="Spare"))
+
+    operands4=[]
+    operands4.append(Operand(type="Mem", size=128, dest="EA"))
+    operands4.append(Operand(type="SIMDReg", size=256, dest="Spare"))
+
+    if g == 'ph2ps':
+        operands1.reverse()
+        operands2.reverse()
+        operands3.reverse()
+        operands4.reverse()
+        map = 0x38
+    elif g == 'ps2ph':
+        immop = Operand(type="Imm", size=8, relaxed=True, dest="Imm")
+        operands1.append(immop)
+        operands2.append(immop)
+        operands3.append(immop)
+        operands4.append(immop)
+        map = 0x3A
+
+    add_group("avx_cvt" + g,
+        cpu=["F16C", "AVX"],
+        modifiers=["PreAdd", "Op2Add"],
+        vex=128,
+        prefix=0x00,
+        opcode=[0x0F, map, 0x00],
+        operands=operands1)
+
+    add_group("avx_cvt" + g,
+        cpu=["F16C", "AVX"],
+        modifiers=["PreAdd", "Op2Add"],
+        vex=128,
+        prefix=0x00,
+        opcode=[0x0F, map, 0x00],
+        operands=operands2)
+
+    add_group("avx_cvt" + g,
+        cpu=["F16C", "AVX"],
+        modifiers=["PreAdd", "Op2Add"],
+        vex=256,
+        prefix=0x00,
+        opcode=[0x0F, map, 0x00],
+        operands=operands3)
+
+    add_group("avx_cvt" + g,
+        cpu=["F16C", "AVX"],
+        modifiers=["PreAdd", "Op2Add"],
+        vex=256,
+        prefix=0x00,
+        opcode=[0x0F, map, 0x00],
+        operands=operands4)
+
+add_insn("vcvtps2ph", "avx_cvtps2ph", modifiers=[0x66, 0x1D], avx=True)
+add_insn("vcvtph2ps", "avx_cvtph2ps", modifiers=[0x66, 0x13], avx=True)
 
 #####################################################################
 # AMD SSE4a instructions
