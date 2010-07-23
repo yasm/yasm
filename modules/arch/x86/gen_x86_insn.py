@@ -43,7 +43,7 @@ ordered_cpu_features = [
     "FPU", "Cyrix", "AMD", "MMX", "3DNow", "SMM", "SSE", "SSE2",
     "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42", "SSE4a", "SSE5",
     "AVX", "FMA", "AES", "CLMUL", "MOVBE", "XOP", "FMA4", "F16C",
-    "FSGSBASE", "RDRND", "XSAVEOPT", "EPTVPID"]
+    "FSGSBASE", "RDRND", "XSAVEOPT", "EPTVPID", "SMX"]
 unordered_cpu_features = ["Priv", "Prot", "Undoc", "Obs"]
 
 # Predefined VEX prefix field values
