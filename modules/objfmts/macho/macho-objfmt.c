@@ -1001,7 +1001,7 @@ macho_objfmt_calc_sectsize(yasm_section *sect, /*@null@ */ void *d)
         unsigned long delta = msd->vmoff % align;
         if (delta > 0) {
             msd->vmoff += align - delta;
-            info->vmsize += delta;
+            info->vmsize += align - delta;
         }
     }
 

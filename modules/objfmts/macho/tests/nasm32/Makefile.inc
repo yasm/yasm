@@ -11,3 +11,5 @@ EXTRA_DIST += modules/objfmts/macho/tests/nasm32/macho-reloc.hex
 EXTRA_DIST += modules/objfmts/macho/tests/nasm32/macho32-sect.asm
 EXTRA_DIST += modules/objfmts/macho/tests/nasm32/macho32-sect.errwarn
 EXTRA_DIST += modules/objfmts/macho/tests/nasm32/macho32-sect.hex
+EXTRA_DIST += modules/objfmts/macho/tests/nasm32/macho32-size.asm
+EXTRA_DIST += modules/objfmts/macho/tests/nasm32/macho32-size.hex
