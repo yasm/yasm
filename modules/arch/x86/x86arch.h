@@ -76,6 +76,8 @@
 #define CPU_FSGSBASE 42     /* Intel FSGSBASE instructions */
 #define CPU_RDRND   43      /* Intel RDRND instruction */
 #define CPU_XSAVEOPT 44     /* Intel XSAVEOPT instruction */
+#define CPU_EPTVPID 45      /* Intel INVEPT, INVVPID instructions */
+#define CPU_SMX     46      /* Intel SMX instruction (GETSEC) */
 
 enum x86_parser_type {
     X86_PARSER_NASM = 0,

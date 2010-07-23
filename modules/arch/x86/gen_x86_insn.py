@@ -43,7 +43,7 @@ ordered_cpu_features = [
     "FPU", "Cyrix", "AMD", "MMX", "3DNow", "SMM", "SSE", "SSE2",
     "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42", "SSE4a", "SSE5",
     "AVX", "FMA", "AES", "CLMUL", "MOVBE", "XOP", "FMA4", "F16C",
-    "FSGSBASE", "RDRND"]
+    "FSGSBASE", "RDRND", "XSAVEOPT", "EPTVPID"]
 unordered_cpu_features = ["Priv", "Prot", "Undoc", "Obs"]
 
 # Predefined VEX prefix field values
@@ -5272,6 +5272,28 @@ add_insn("vmovsd", "movsd", modifiers=[VEXL0], avx=True)
 # P4 VMX Instructions
 #####################################################################
 
+add_group("eptvpid",
+    modifiers=["Op2Add"],
+    suffix="l",
+    not64=True,
+    cpu=["EPTVPID"],
+    opersize=32,
+    prefix=0x66,
+    opcode=[0x0F, 0x38, 0x80],
+    operands=[Operand(type="Reg", size=32, dest="Spare"),
+              Operand(type="Mem", size=128, relaxed=True, dest="EA")])
+add_group("eptvpid",
+    modifiers=["Op2Add"],
+    suffix="q",
+    cpu=["EPTVPID"],
+    opersize=64,
+    prefix=0x66,
+    opcode=[0x0F, 0x38, 0x80],
+    operands=[Operand(type="Reg", size=64, dest="Spare"),
+              Operand(type="Mem", size=128, relaxed=True, dest="EA")])
+add_insn("invept", "eptvpid", modifiers=[0])
+add_insn("invvpid", "eptvpid", modifiers=[1])
+
 add_insn("vmcall", "threebyte", modifiers=[0x0F, 0x01, 0xC1], cpu=["P4"])
 add_insn("vmlaunch", "threebyte", modifiers=[0x0F, 0x01, 0xC2], cpu=["P4"])
 add_insn("vmresume", "threebyte", modifiers=[0x0F, 0x01, 0xC3], cpu=["P4"])
@@ -5331,6 +5353,11 @@ add_group("vmxthreebytemem",
     operands=[Operand(type="Mem", size=64, relaxed=True, dest="EA")])
 add_insn("vmclear", "vmxthreebytemem", modifiers=[0x66])
 add_insn("vmxon", "vmxthreebytemem", modifiers=[0xF3])
+
+#####################################################################
+# Intel SMX Instructions
+#####################################################################
+add_insn("getsec", "twobyte", modifiers=[0x0F, 0x37], cpu=["SMX"])
 
 add_insn("cvttpd2pi", "cvt_mm_xmm", modifiers=[0x66, 0x2C], cpu=["SSE2"])
 add_insn("cvttsd2si", "cvt_rx_xmm64", modifiers=[0xF2, 0x2C], cpu=["SSE2"])

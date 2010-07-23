@@ -385,6 +385,10 @@ rdrnd,		x86_cpu_set,	CPU_RDRND
 nordrnd,	x86_cpu_clear,	CPU_RDRND
 xsaveopt,	x86_cpu_set,	CPU_XSAVEOPT
 noxsaveopt,	x86_cpu_clear,	CPU_XSAVEOPT
+eptvpid,	x86_cpu_set,	CPU_EPTVPID
+noeptvpid,	x86_cpu_clear,	CPU_EPTVPID
+smx,		x86_cpu_set,	CPU_SMX
+nosmx,		x86_cpu_clear,	CPU_SMX
 # Change NOP patterns
 basicnop,	x86_nop,	X86_NOP_BASIC
 intelnop,	x86_nop,	X86_NOP_INTEL
