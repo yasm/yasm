@@ -252,9 +252,6 @@
     <ClCompile Include="..\..\frontends\yasm\yasm-options.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\frontends\vsyasm\yasm-options.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="libyasm\libyasm.vcxproj">
       <Project>{29fe7874-1256-4ad6-b889-68e399dc9608}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
@@ -263,6 +260,9 @@
       <Project>{d715a3d4-efaa-442e-ad8b-5b4ff64e1dd6}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\frontends\yasm\yasm-options.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

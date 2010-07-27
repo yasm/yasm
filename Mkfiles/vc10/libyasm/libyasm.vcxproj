@@ -229,15 +229,12 @@
     <ClInclude Include="..\..\..\libyasm\file.h" />
     <ClInclude Include="..\..\..\libyasm\arch.h" />
     <ClInclude Include="..\..\..\libyasm\assocdat.h" />
-    <ClInclude Include="..\..\..\libyasm\bc-int.h" />
     <ClInclude Include="..\..\..\libyasm\bitvect.h" />
     <ClInclude Include="..\..\..\libyasm\bytecode.h" />
     <ClInclude Include="..\..\..\libyasm\compat-queue.h" />
-    <ClInclude Include="config.h" />
     <ClInclude Include="..\..\..\libyasm\coretype.h" />
     <ClInclude Include="..\..\..\libyasm\dbgfmt.h" />
     <ClInclude Include="..\..\..\libyasm\errwarn.h" />
-    <ClInclude Include="..\..\..\libyasm\expr-int.h" />
     <ClInclude Include="..\..\..\libyasm\expr.h" />
     <ClInclude Include="..\..\..\libyasm\floatnum.h" />
     <ClInclude Include="..\..\..\libyasm\hamt.h" />
@@ -252,7 +249,6 @@
     <ClInclude Include="..\..\..\libyasm\preproc.h" />
     <ClInclude Include="..\..\..\libyasm\section.h" />
     <ClInclude Include="..\..\..\libyasm\symrec.h" />
-    <ClInclude Include="..\..\..\libyasm\util.h" />
     <ClInclude Include="..\..\..\libyasm\valparam.h" />
     <ClInclude Include="..\..\..\libyasm\value.h" />
   </ItemGroup>

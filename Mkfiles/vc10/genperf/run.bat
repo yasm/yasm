@@ -16,7 +16,13 @@ call %_python_% modules\arch\x86\gen_x86_insn.py
 
 :therest
 @echo on
-%1 x86insn_nasm.gperf x86insn_nasm.c
-%1 x86insn_gas.gperf x86insn_gas.c
-%1 modules\arch\x86\x86cpu.gperf x86cpu.c
-%1 modules\arch\x86\x86regtmod.gperf x86regtmod.c
+call :update %1 x86insn_nasm.gperf x86insn_nasm.c
+call :update %1 x86insn_gas.gperf x86insn_gas.c
+call :update %1 modules\arch\x86\x86cpu.gperf x86cpu.c
+call :update %1 modules\arch\x86\x86regtmod.gperf x86regtmod.c
+goto :eof
+
+:update
+%1 %2 tf
+call mkfiles\vc10\out_copy_rename tf .\ %3
+del tf
