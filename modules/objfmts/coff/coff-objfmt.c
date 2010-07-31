@@ -162,7 +162,9 @@ typedef enum coff_symtab_auxtype {
 } coff_symtab_auxtype;
 
 typedef struct coff_symrec_data {
+    int forcevis;                       /* force visibility in symbol table */
     unsigned long index;                /* assigned COFF symbol table index */
+    unsigned int type;                  /* type */
     coff_symrec_sclass sclass;          /* storage class */
 
     int numaux;                 /* number of auxiliary entries */
@@ -254,7 +256,9 @@ coff_objfmt_sym_set_data(yasm_symrec *sym, coff_symrec_sclass sclass,
 
     sym_data = yasm_xmalloc(sizeof(coff_symrec_data) +
                             (numaux-1)*sizeof(coff_symtab_auxent));
+    sym_data->forcevis = 0;
     sym_data->index = 0;
+    sym_data->type = 0;
     sym_data->sclass = sclass;
     sym_data->numaux = numaux;
     sym_data->auxtype = auxtype;
@@ -343,6 +347,17 @@ win32_objfmt_create(yasm_object *object)
         }
 
         objfmt_coff->win32 = 1;
+        /* Define a @feat.00 symbol for win32 safeseh handling */
+        if (!objfmt_coff->win64) {
+            yasm_symrec *feat00;
+            coff_symrec_data *sym_data;
+            feat00 = yasm_symtab_define_equ(object->symtab, "@feat.00",
+                yasm_expr_create_ident(yasm_expr_int(
+                    yasm_intnum_create_uint(1)), 0), 0);
+            sym_data = coff_objfmt_sym_set_data(feat00, COFF_SCL_STAT, 0,
+                                                COFF_SYMTAB_AUX_NONE);
+            sym_data->forcevis = 1;
+        }
     }
     return (yasm_objfmt *)objfmt_coff;
 }
@@ -937,7 +952,8 @@ coff_objfmt_count_sym(yasm_symrec *sym, /*@null@*/ void *d)
         sym_data = coff_objfmt_sym_set_data(sym, COFF_SCL_EXT, 0,
                              COFF_SYMTAB_AUX_NONE);
 
-    if (info->all_syms || vis != YASM_SYM_LOCAL || yasm_symrec_is_abs(sym)) {
+    if (info->all_syms || vis != YASM_SYM_LOCAL || yasm_symrec_is_abs(sym) ||
+        (sym_data && sym_data->forcevis)) {
         /* Save index in symrec data */
         if (!sym_data) {
             sym_data = coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, 0,
@@ -956,18 +972,20 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
     /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
     yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
     int is_abs = yasm_symrec_is_abs(sym);
+    /*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
+    csymd = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
 
     assert(info != NULL);
 
     /* Don't output local syms unless outputting all syms */
-    if (info->all_syms || vis != YASM_SYM_LOCAL || is_abs) {
+    if (info->all_syms || vis != YASM_SYM_LOCAL || is_abs ||
+        (csymd && csymd->forcevis)) {
         /*@only*/ char *name;
         const yasm_expr *equ_val;
         const yasm_intnum *intn;
         unsigned char *localbuf;
         size_t len;
         int aux;
-        /*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
         unsigned long value = 0;
         unsigned int scnum = 0xfffe;    /* -2 = debugging symbol */
         /*@dependent@*/ /*@null@*/ yasm_section *sect;
@@ -983,7 +1001,6 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
         len = strlen(name);
 
         /* Get symrec's of_data (needed for storage class) */
-        csymd = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
         if (!csymd)
             yasm_internal_error(N_("coff: expected sym data to be present"));
 
@@ -1055,7 +1072,7 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
         }
         YASM_WRITE_32_L(localbuf, value);       /* value */
         YASM_WRITE_16_L(localbuf, scnum);       /* section number */
-        YASM_WRITE_16_L(localbuf, 0);       /* type is always zero (for now) */
+        YASM_WRITE_16_L(localbuf, csymd->type); /* type */
         YASM_WRITE_8(localbuf, csymd->sclass);  /* storage class */
         YASM_WRITE_8(localbuf, csymd->numaux);  /* number of aux entries */
         fwrite(info->buf, 18, 1, info->f);
@@ -1095,17 +1112,18 @@ coff_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
 {
     /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
     yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
+    /*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
+    csymd = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
 
     assert(info != NULL);
 
     /* Don't output local syms unless outputting all syms */
-    if (info->all_syms || vis != YASM_SYM_LOCAL) {
+    if (info->all_syms || vis != YASM_SYM_LOCAL ||
+        (csymd && csymd->forcevis)) {
         /*@only@*/ char *name = yasm_symrec_get_global_name(sym, info->object);
-        /*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
         size_t len = strlen(name);
         int aux;
 
-        csymd = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
         if (!csymd)
             yasm_internal_error(N_("coff: expected sym data to be present"));
 
@@ -1676,13 +1694,20 @@ dir_safeseh(yasm_object *object, yasm_valparamhead *valparams,
     yasm_section *sect;
 
     /* Reference symbol (to generate error if not declared).
-     * Also, symbol must be externally visible, so force global.
+     * Also, symbol must be externally visible, so force it.
      */
     vp = yasm_vps_first(valparams);
     symname = yasm_vp_id(vp);
     if (symname) {
+        coff_symrec_data *sym_data;
         sym = yasm_symtab_use(object->symtab, symname, line);
-        yasm_symrec_declare(sym, YASM_SYM_GLOBAL, line);
+        sym_data = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
+        if (!sym_data) {
+            sym_data = coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, 0,
+                                                COFF_SYMTAB_AUX_NONE);
+        }
+        sym_data->forcevis = 1;
+        sym_data->type = 0x20; /* function */
     } else {
         yasm_error_set(YASM_ERROR_SYNTAX,
                        N_("argument to SAFESEH must be symbol name"));
