@@ -532,7 +532,7 @@ macho_objfmt_output_value(yasm_value *value, unsigned char *buf,
         if ((vis & YASM_SYM_EXTERN) || (vis & YASM_SYM_COMMON)) {
             reloc->ext = 1;
             info->msd->extreloc = 1;    /* section has external relocations */
-        } else if (!value->curpos_rel && !info->is_64) {
+        } else if (!info->is_64) {
             /*@dependent@*/ /*@null@*/ yasm_bytecode *sym_precbc;
 
             /* Local symbols need valued to their actual address */
