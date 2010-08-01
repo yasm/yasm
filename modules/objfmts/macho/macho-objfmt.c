@@ -1188,7 +1188,7 @@ macho_objfmt_output(yasm_object *object, FILE *f, int all_syms,
 
     /* next: section headers */
     /* offset to relocs for first section */
-    info.rel_base = align32((long)fileoffset + (long)info.filesize);
+    info.rel_base = align32((long)fileoff_sections);
     info.s_reloff = 0;          /* offset for relocs of following sections */
     yasm_object_sections_traverse(object, &info, macho_objfmt_output_secthead);
 
@@ -1217,8 +1217,8 @@ macho_objfmt_output(yasm_object *object, FILE *f, int all_syms,
     }
 
     /* padding to long boundary */
-    if (info.rel_base - (fileoffset + info.filesize)) {
-        fwrite(pad_data, info.rel_base - (fileoffset + info.filesize), 1, f);
+    if ((info.rel_base - fileoff_sections) > 0) {
+        fwrite(pad_data, info.rel_base - fileoff_sections, 1, f);
     }
 
     /* relocation data */
