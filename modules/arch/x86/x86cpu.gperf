@@ -381,8 +381,8 @@ f16c,		x86_cpu_set,	CPU_F16C
 nof16c,		x86_cpu_clear,	CPU_F16C
 fsgsbase,	x86_cpu_set,	CPU_FSGSBASE
 nofsgsbase,	x86_cpu_clear,	CPU_FSGSBASE
-rdrnd,		x86_cpu_set,	CPU_RDRND
-nordrnd,	x86_cpu_clear,	CPU_RDRND
+rdrand,		x86_cpu_set,	CPU_RDRAND
+nordrand,	x86_cpu_clear,	CPU_RDRAND
 xsaveopt,	x86_cpu_set,	CPU_XSAVEOPT
 noxsaveopt,	x86_cpu_clear,	CPU_XSAVEOPT
 eptvpid,	x86_cpu_set,	CPU_EPTVPID

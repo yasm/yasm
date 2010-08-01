@@ -43,7 +43,7 @@ ordered_cpu_features = [
     "FPU", "Cyrix", "AMD", "MMX", "3DNow", "SMM", "SSE", "SSE2",
     "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42", "SSE4a", "SSE5",
     "AVX", "FMA", "AES", "CLMUL", "MOVBE", "XOP", "FMA4", "F16C",
-    "FSGSBASE", "RDRND", "XSAVEOPT", "EPTVPID", "SMX"]
+    "FSGSBASE", "RDRAND", "XSAVEOPT", "EPTVPID", "SMX"]
 unordered_cpu_features = ["Priv", "Prot", "Undoc", "Obs"]
 
 # Predefined VEX prefix field values
@@ -6753,22 +6753,22 @@ for comb, combval in zip(["lql","hql","lqh","hqh"], [0x00,0x01,0x10,0x11]):
 # AVX Post-32nm instructions
 #####################################################################
 
-# RDRND
+# RDRAND
 add_group("rdrand",
-    cpu=["RDRND"],
+    cpu=["RDRAND"],
     opersize=16,
     opcode=[0x0F, 0xC7],
     spare=6,
     operands=[Operand(type="Reg", size=16, dest="EA")])
 add_group("rdrand",
     #suffix="l",
-    cpu=["RDRND"],
+    cpu=["RDRAND"],
     opersize=32,
     opcode=[0x0F, 0xC7],
     spare=6,
     operands=[Operand(type="Reg", size=32, dest="EA")])
 add_group("rdrand",
-    cpu=["RDRND"],
+    cpu=["RDRAND"],
     opersize=64,
     opcode=[0x0F, 0xC7],
     spare=6,

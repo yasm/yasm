@@ -74,7 +74,7 @@
 #define CPU_FMA4    40      /* AMD Fused-Multiply-Add extensions */
 #define CPU_F16C    41      /* Intel float-16 instructions */
 #define CPU_FSGSBASE 42     /* Intel FSGSBASE instructions */
-#define CPU_RDRND   43      /* Intel RDRND instruction */
+#define CPU_RDRAND  43      /* Intel RDRAND instruction */
 #define CPU_XSAVEOPT 44     /* Intel XSAVEOPT instruction */
 #define CPU_EPTVPID 45      /* Intel INVEPT, INVVPID instructions */
 #define CPU_SMX     46      /* Intel SMX instruction (GETSEC) */
