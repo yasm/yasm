@@ -948,17 +948,21 @@ coff_objfmt_count_sym(yasm_symrec *sym, /*@null@*/ void *d)
     assert(info != NULL);
 
     sym_data = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
-    if ((vis & (YASM_SYM_EXTERN|YASM_SYM_GLOBAL|YASM_SYM_COMMON)) && !sym_data)
-        sym_data = coff_objfmt_sym_set_data(sym, COFF_SCL_EXT, 0,
-                             COFF_SYMTAB_AUX_NONE);
 
     if (info->all_syms || vis != YASM_SYM_LOCAL || yasm_symrec_is_abs(sym) ||
         (sym_data && sym_data->forcevis)) {
         /* Save index in symrec data */
-        if (!sym_data) {
-            sym_data = coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, 0,
+        if (!sym_data)
+            sym_data = coff_objfmt_sym_set_data(sym, COFF_SCL_NULL, 0,
                                                 COFF_SYMTAB_AUX_NONE);
+        /* Set storage class based on visibility if not already set */
+        if (sym_data->sclass == COFF_SCL_NULL) {
+            if (vis & (YASM_SYM_EXTERN|YASM_SYM_GLOBAL|YASM_SYM_COMMON))
+                sym_data->sclass = COFF_SCL_EXT;
+            else
+                sym_data->sclass = COFF_SCL_STAT;
         }
+
         sym_data->index = info->indx;
 
         info->indx += sym_data->numaux + 1;
@@ -1703,7 +1707,7 @@ dir_safeseh(yasm_object *object, yasm_valparamhead *valparams,
         sym = yasm_symtab_use(object->symtab, symname, line);
         sym_data = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
         if (!sym_data) {
-            sym_data = coff_objfmt_sym_set_data(sym, COFF_SCL_STAT, 0,
+            sym_data = coff_objfmt_sym_set_data(sym, COFF_SCL_NULL, 0,
                                                 COFF_SYMTAB_AUX_NONE);
         }
         sym_data->forcevis = 1;
