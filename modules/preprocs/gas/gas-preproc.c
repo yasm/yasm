@@ -792,7 +792,7 @@ static void expand_macro(yasm_preproc_gas *pp, macro_entry *macro, const char *a
                                 memcpy(line + cursor - len, value, value_length);
                             } else {
                                 memcpy(line + cursor - len, value, value_length);
-                                strcpy(line + cursor - len + value_length, line + cursor);
+                                memmove(line + cursor - len + value_length, line + cursor, strlen(line + cursor) + 1);
                             }
                             pp->expr_string = work = line;
                             pp->expr_string_cursor += delta;
@@ -806,6 +806,7 @@ static void expand_macro(yasm_preproc_gas *pp, macro_entry *macro, const char *a
         }
 
         bline->line = work + (pp->expr_string - work);
+        bline->line_number = -1;
         pp->expr_string = NULL;
 
         if (prev_bline) {
@@ -928,7 +929,7 @@ static void kill_comments(yasm_preproc_gas *pp, char *line)
             return;
         }
 
-        strcpy(cstart, cend + 2);
+        memmove(cstart, cend + 2, strlen(cend + 2) + 1);
         pp->in_comment = FALSE;
         cstart = strstr(cstart, "/*");
         next = 2;
@@ -963,7 +964,7 @@ static void substitute_values(yasm_preproc_gas *pp, char *line)
                     memcpy(line + cursor - len, value, value_length);
                 } else {
                     memcpy(line + cursor - len, value, value_length);
-                    strcpy(line + cursor - len + value_length, line + cursor);
+                    memmove(line + cursor - len + value_length, line + cursor, strlen(line + cursor) + 1);
                 }
                 pp->expr_string = line;
                 pp->expr_string_cursor = cursor + delta;
