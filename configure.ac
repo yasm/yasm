@@ -13,7 +13,7 @@ AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE([1.9.6 foreign])
 AM_MAINTAINER_MODE
 
-AC_DEFINE(PACKAGE_INTVER, ["0.7.99"],
+AC_DEFINE(PACKAGE_INTVER, ["1.1.99"],
 	  [Define to internal version of this package.])
 AC_DEFINE(PACKAGE_BUILD, ["HEAD"], [Define to build version of this package.])
 
