@@ -16,3 +16,17 @@ movzbw %al, %ax
 movzwl %ax, %eax
 movzbq %al, %rax
 movzwq %ax, %rax
+
+movsbw 5,%ax
+movsbl 5,%eax
+movswl 5,%eax
+movsbq 5,%rax
+movswq 5,%rax
+movsx 5,%eax
+movzbw 5,%ax
+movzbl 5,%eax
+movzwl 5,%eax
+movzbq 5,%rax
+movzwq 5,%rax
+movzx 5,%eax
+

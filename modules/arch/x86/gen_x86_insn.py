@@ -560,11 +560,13 @@ def finalize_insns():
                         keyword = name
                     else:
                         keyword = name+suffix
+                    keyword = keyword.lower()
                     if keyword in gas_insns:
                         raise ValueError("duplicate gas instruction %s" %
                                          keyword)
                     newinsn = insn.copy()
-                    newinsn.suffix = suffix
+                    if insn.suffix is None:
+                        newinsn.suffix = suffix
                     newinsn.auto_cpu("gas")
                     newinsn.auto_misc_flags("gas")
                     gas_insns[keyword] = newinsn
