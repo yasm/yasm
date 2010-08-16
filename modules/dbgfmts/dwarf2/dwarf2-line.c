@@ -77,7 +77,8 @@ static unsigned char line_opcode_num_operands[DWARF2_LINE_OPCODE_BASE-1] = {
 typedef enum {
     DW_LNE_end_sequence = 1,
     DW_LNE_set_address,
-    DW_LNE_define_file
+    DW_LNE_define_file,
+    DW_LNE_set_discriminator
 } dwarf_line_number_ext_op;
 
 /* Base and range for line offsets in special opcodes */
@@ -120,6 +121,7 @@ typedef struct dwarf2_line_op {
     /* extended opcode */
     dwarf_line_number_ext_op ext_opcode;
     /*@null@*/ /*@dependent@*/ yasm_symrec *ext_operand;  /* unsigned */
+    /*@null@*/ /*@dependent@*/ yasm_intnum *ext_operand_int; /* unsigned */
     unsigned long ext_operandsize;
 } dwarf2_line_op;
 
@@ -254,6 +256,7 @@ dwarf2_dbgfmt_append_line_op(yasm_section *sect, dwarf_line_number_op opcode,
     line_op->operand = operand;
     line_op->ext_opcode = 0;
     line_op->ext_operand = NULL;
+    line_op->ext_operand_int = NULL;
     line_op->ext_operandsize = 0;
 
     bc = yasm_bc_create_common(&dwarf2_line_op_bc_callback, line_op, 0);
@@ -282,6 +285,31 @@ dwarf2_dbgfmt_append_line_ext_op(yasm_section *sect,
     line_op->operand = yasm_intnum_create_uint(ext_operandsize+1);
     line_op->ext_opcode = ext_opcode;
     line_op->ext_operand = ext_operand;
+    line_op->ext_operand_int = NULL;
+    line_op->ext_operandsize = ext_operandsize;
+
+    bc = yasm_bc_create_common(&dwarf2_line_op_bc_callback, line_op, 0);
+    bc->len = 2 + yasm_intnum_size_leb128(line_op->operand, 0) +
+        ext_operandsize;
+
+    yasm_dwarf2__append_bc(sect, bc);
+    return bc;
+}
+
+static yasm_bytecode *
+dwarf2_dbgfmt_append_line_ext_op_int(yasm_section *sect,
+                                     dwarf_line_number_ext_op ext_opcode,
+                                     /*@only@*/ yasm_intnum *ext_operand)
+{
+    dwarf2_line_op *line_op = yasm_xmalloc(sizeof(dwarf2_line_op));
+    unsigned long ext_operandsize = yasm_intnum_size_leb128(ext_operand, 0);
+    yasm_bytecode *bc;
+
+    line_op->opcode = DW_LNS_extended_op;
+    line_op->operand = yasm_intnum_create_uint(ext_operandsize+1);
+    line_op->ext_opcode = ext_opcode;
+    line_op->ext_operand = NULL;
+    line_op->ext_operand_int = ext_operand;
     line_op->ext_operandsize = ext_operandsize;
 
     bc = yasm_bc_create_common(&dwarf2_line_op_bc_callback, line_op, 0);
@@ -343,6 +371,11 @@ dwarf2_dbgfmt_gen_line_op(yasm_section *debug_line, dwarf2_line_state *state,
         state->column = loc->column;
         dwarf2_dbgfmt_append_line_op(debug_line, DW_LNS_set_column,
                                      yasm_intnum_create_uint(state->column));
+    }
+    if (loc->discriminator != 0) {
+        dwarf2_dbgfmt_append_line_ext_op_int(debug_line,
+            DW_LNE_set_discriminator,
+            yasm_intnum_create_uint(loc->discriminator));
     }
 #ifdef WITH_DWARF3
     if (loc->isa_change) {
@@ -780,6 +813,8 @@ dwarf2_line_op_bc_destroy(void *contents)
     dwarf2_line_op *line_op = (dwarf2_line_op *)contents;
     if (line_op->operand)
         yasm_intnum_destroy(line_op->operand);
+    if (line_op->ext_operand_int)
+        yasm_intnum_destroy(line_op->ext_operand_int);
     yasm_xfree(contents);
 }
 
@@ -820,6 +855,9 @@ dwarf2_line_op_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
                          (unsigned long)(buf-*bufp), bc, 0, d);
             buf += line_op->ext_operandsize;
         }
+        if (line_op->ext_operand_int) {
+            buf += yasm_intnum_get_leb128(line_op->ext_operand_int, buf, 0);
+        }
     }
 
     *bufp = buf;
@@ -831,7 +869,7 @@ yasm_dwarf2__dir_loc(yasm_object *object, yasm_valparamhead *valparams,
                      yasm_valparamhead *objext_valparams, unsigned long line)
 {
     yasm_valparam *vp;
-    int in_is_stmt = 0, in_isa = 0;
+    int in_is_stmt = 0, in_isa = 0, in_discriminator = 0;
 
     /*@dependent@*/ /*@null@*/ const yasm_intnum *intn;
     dwarf2_section_data *dsd;
@@ -892,6 +930,7 @@ yasm_dwarf2__dir_loc(yasm_object *object, yasm_valparamhead *valparams,
 
     /* Defaults for optional settings */
     loc->column = 0;
+    loc->discriminator = 0;
     loc->isa_change = 0;
     loc->isa = 0;
     loc->is_stmt = IS_STMT_NOCHANGE;
@@ -966,11 +1005,33 @@ restart:
             loc->isa_change = 1;
             loc->isa = yasm_intnum_get_uint(intn);
             yasm_expr_destroy(e);
+        } else if (in_discriminator) {
+            in_discriminator = 0;
+            if (!(e = yasm_vp_expr(vp, object->symtab, line)) ||
+                !(intn = yasm_expr_get_intnum(&e, 0))) {
+                yasm_error_set(YASM_ERROR_NOT_CONSTANT,
+                               N_("discriminator value is not a constant"));
+                yasm_xfree(loc);
+                if (e)
+                    yasm_expr_destroy(e);
+                return;
+            }
+            if (yasm_intnum_sign(intn) < 0) {
+                yasm_error_set(YASM_ERROR_VALUE,
+                               N_("discriminator value less than zero"));
+                yasm_xfree(loc);
+                yasm_expr_destroy(e);
+                return;
+            }
+            loc->discriminator = yasm_intnum_get_uint(intn);
+            yasm_expr_destroy(e);
         } else if (!vp->val && (s = yasm_vp_id(vp))) {
             if (yasm__strcasecmp(s, "is_stmt") == 0)
                 in_is_stmt = 1;
             else if (yasm__strcasecmp(s, "isa") == 0)
                 in_isa = 1;
+            else if (yasm__strcasecmp(s, "discriminator") == 0)
+                in_discriminator = 1;
             else if (yasm__strcasecmp(s, "basic_block") == 0)
                 loc->basic_block = 1;
             else if (yasm__strcasecmp(s, "prologue_end") == 0)
@@ -989,15 +1050,19 @@ restart:
         } else if (yasm__strcasecmp(vp->val, "isa") == 0) {
             in_isa = 1;
             goto restart; /* don't go to the next valparam */
+        } else if (yasm__strcasecmp(vp->val, "discriminator") == 0) {
+            in_discriminator = 1;
+            goto restart; /* don't go to the next valparam */
         } else
             yasm_warn_set(YASM_WARN_GENERAL,
                           N_("unrecognized loc option `%s'"), vp->val);
         vp = yasm_vps_next(vp);
     }
 
-    if (in_is_stmt || in_isa) {
+    if (in_is_stmt || in_isa || in_discriminator) {
         yasm_error_set(YASM_ERROR_SYNTAX, N_("%s requires value"),
-                       in_is_stmt ? "is_stmt" : "isa");
+                       in_is_stmt ? "is_stmt" :
+                       (in_isa ? "isa" : "discriminator"));
         yasm_xfree(loc);
         return;
     }
