@@ -183,6 +183,9 @@ typedef struct yasm_objfmt_coff {
 
     coff_symrec_data *filesym_data;         /* Data for .file symbol */
 
+    /* data for .def/.endef and related directives */
+    coff_symrec_data *def_sym;              /* symbol specified by .def */
+
     /* data for win64 proc_frame and related directives */
     unsigned long proc_frame;   /* Line number of start of proc, or 0 */
     unsigned long done_prolog;  /* Line number of end of prologue, or 0 */
@@ -1840,6 +1843,98 @@ dir_ident(yasm_object *object, yasm_valparamhead *valparams,
 }
 
 static void
+dir_def(yasm_object *object, yasm_valparamhead *valparams,
+        yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
+    yasm_valparam *vp;
+    const char *symname;
+    yasm_symrec *sym;
+    coff_symrec_data *sym_data;
+
+    if (objfmt_coff->def_sym) {
+        yasm_warn_set(YASM_WARN_GENERAL,
+                      N_(".def pseudo-op used inside of .def/.endef; ignored"));
+        return;
+    }
+
+    vp = yasm_vps_first(valparams);
+    symname = yasm_vp_id(vp);
+    if (!symname) {
+        yasm_error_set(YASM_ERROR_SYNTAX,
+                       N_("argument to SAFESEH must be symbol name"));
+        return;
+    }
+
+    sym = yasm_symtab_get(object->symtab, symname);
+    sym_data = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
+    if (!sym_data) {
+        sym_data = coff_objfmt_sym_set_data(sym, COFF_SCL_NULL, 0,
+                                            COFF_SYMTAB_AUX_NONE);
+    }
+    objfmt_coff->def_sym = sym_data;
+}
+
+static void
+dir_scl(yasm_object *object, yasm_valparamhead *valparams,
+        yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
+    yasm_intnum *intn = NULL;
+
+    if (!objfmt_coff->def_sym) {
+        yasm_warn_set(YASM_WARN_GENERAL,
+                      N_("%s pseudo-op used outside of .def/.endef; ignored"),
+                      ".scl");
+        return;
+    }
+
+    if (yasm_dir_helper_intn(object, yasm_vps_first(valparams), line,
+                             &intn, 0) < 0)
+        return;
+    if (!intn)
+        return;
+    objfmt_coff->def_sym->sclass = yasm_intnum_get_uint(intn);
+    yasm_intnum_destroy(intn);
+}
+
+static void
+dir_type(yasm_object *object, yasm_valparamhead *valparams,
+         yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
+    yasm_intnum *intn = NULL;
+
+    if (!objfmt_coff->def_sym) {
+        yasm_warn_set(YASM_WARN_GENERAL,
+                      N_("%s pseudo-op used outside of .def/.endef; ignored"),
+                      ".type");
+        return;
+    }
+
+    if (yasm_dir_helper_intn(object, yasm_vps_first(valparams), line,
+                             &intn, 0) < 0)
+        return;
+    if (!intn)
+        return;
+    objfmt_coff->def_sym->type = yasm_intnum_get_uint(intn);
+    yasm_intnum_destroy(intn);
+}
+
+static void
+dir_endef(yasm_object *object, yasm_valparamhead *valparams,
+          yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
+    if (!objfmt_coff->def_sym) {
+        yasm_warn_set(YASM_WARN_GENERAL,
+                      N_(".endef pseudo-op used before .def; ignored"));
+        return;
+    }
+    objfmt_coff->def_sym = NULL;
+}
+
+static void
 dir_proc_frame(yasm_object *object, /*@null@*/ yasm_valparamhead *valparams,
                yasm_valparamhead *objext_valparams, unsigned long line)
 {
@@ -2194,6 +2289,10 @@ static const char *coff_objfmt_dbgfmt_keywords[] = {
 static const yasm_directive coff_objfmt_directives[] = {
     { ".ident",         "gas",  dir_ident,      YASM_DIR_ANY },
     { "ident",          "nasm", dir_ident,      YASM_DIR_ANY },
+    { ".def",           "gas",  dir_def,        YASM_DIR_ID_REQUIRED },
+    { ".endef",         "gas",  dir_endef,      YASM_DIR_ANY },
+    { ".scl",           "gas",  dir_scl,        YASM_DIR_ARG_REQUIRED },
+    { ".type",          "gas",  dir_type,       YASM_DIR_ARG_REQUIRED },
     { NULL, NULL, NULL, 0 }
 };
 
@@ -2228,6 +2327,10 @@ static const char *winXX_objfmt_dbgfmt_keywords[] = {
 static const yasm_directive win32_objfmt_directives[] = {
     { ".ident",         "gas",  dir_ident,      YASM_DIR_ANY },
     { "ident",          "nasm", dir_ident,      YASM_DIR_ANY },
+    { ".def",           "gas",  dir_def,        YASM_DIR_ID_REQUIRED },
+    { ".endef",         "gas",  dir_endef,      YASM_DIR_ANY },
+    { ".scl",           "gas",  dir_scl,        YASM_DIR_ARG_REQUIRED },
+    { ".type",          "gas",  dir_type,       YASM_DIR_ARG_REQUIRED },
     { ".export",        "gas",  dir_export,     YASM_DIR_ID_REQUIRED },
     { "export",         "nasm", dir_export,     YASM_DIR_ID_REQUIRED },
     { ".safeseh",       "gas",  dir_safeseh,    YASM_DIR_ID_REQUIRED },
@@ -2273,6 +2376,10 @@ yasm_objfmt_module yasm_win32_LTX_objfmt = {
 static const yasm_directive win64_objfmt_directives[] = {
     { ".ident",         "gas",  dir_ident,      YASM_DIR_ANY },
     { "ident",          "nasm", dir_ident,      YASM_DIR_ANY },
+    { ".def",           "gas",  dir_def,        YASM_DIR_ID_REQUIRED },
+    { ".endef",         "gas",  dir_endef,      YASM_DIR_ANY },
+    { ".scl",           "gas",  dir_scl,        YASM_DIR_ARG_REQUIRED },
+    { ".type",          "gas",  dir_type,       YASM_DIR_ARG_REQUIRED },
     { ".export",        "gas",  dir_export,     YASM_DIR_ID_REQUIRED },
     { "export",         "nasm", dir_export,     YASM_DIR_ID_REQUIRED },
     { ".proc_frame",    "gas",  dir_proc_frame, YASM_DIR_ID_REQUIRED },
