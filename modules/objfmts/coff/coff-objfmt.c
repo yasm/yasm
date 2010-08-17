@@ -1866,7 +1866,7 @@ dir_def(yasm_object *object, yasm_valparamhead *valparams,
         return;
     }
 
-    sym = yasm_symtab_get(object->symtab, symname);
+    sym = yasm_symtab_use(object->symtab, symname, line);
     sym_data = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
     if (!sym_data) {
         sym_data = coff_objfmt_sym_set_data(sym, COFF_SCL_NULL, 0,
