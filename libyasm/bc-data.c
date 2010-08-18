@@ -480,6 +480,14 @@ yasm_dv_create_reserve(void)
     return retval;
 }
 
+yasm_value *
+yasm_dv_get_value(yasm_dataval *dv)
+{
+    if (dv->type != DV_VALUE)
+        return NULL;
+    return &dv->data.val;
+}
+
 void
 yasm_dv_set_multiple(yasm_dataval *dv, yasm_expr *e)
 {
