@@ -575,6 +575,12 @@ yasm_dataval *yasm_dv_create_reserve(void);
                                                        (unsigned long)(l))
 #endif
 
+/** Get the underlying value of a data value.
+ * \param dv    data value
+ * \return Value, or null if non-value (e.g. string or raw).
+ */
+yasm_value *yasm_dv_get_value(yasm_dataval *dv);
+
 /** Set multiple field of a data value.
  * A data value can be repeated a number of times when output.  This function
  * sets that multiple.
