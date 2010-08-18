@@ -572,8 +572,8 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf,
                 intn_minus = bc->offset;
         }
 
-        if (value->seg_of || value->section_rel) {
-            /* Segment or section-relative generation; zero value. */
+        if (value->seg_of) {
+            /* Segment generation; zero value. */
             intn_val = 0;
             intn_minus = 0;
         }
@@ -1843,6 +1843,39 @@ dir_ident(yasm_object *object, yasm_valparamhead *valparams,
 }
 
 static void
+dir_secrel32(yasm_object *object, yasm_valparamhead *valparams,
+             yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_datavalhead dvs;
+    yasm_valparam *vp;
+
+    if (!object->cur_section) {
+        yasm_error_set(YASM_ERROR_SYNTAX,
+                       N_(".secrel32 can only be used inside of a section"));
+        return;
+    }
+
+    vp = yasm_vps_first(valparams);
+    yasm_dvs_initialize(&dvs);
+    do {
+        yasm_expr *e = yasm_vp_expr(vp, object->symtab, line);
+        yasm_dataval *dv;
+        if (!e) {
+            yasm_error_set(YASM_ERROR_VALUE,
+                           N_(".secrel32 requires expressions"));
+            yasm_dvs_delete(&dvs);
+            return;
+        }
+        dv = yasm_dv_create_expr(e);
+        yasm_dv_get_value(dv)->section_rel = 1;
+        yasm_dvs_append(&dvs, dv);
+    } while ((vp = yasm_vps_next(vp)));
+
+    yasm_section_bcs_append(object->cur_section,
+        yasm_bc_create_data(&dvs, 4, 0, object->arch, line));
+}
+
+static void
 dir_def(yasm_object *object, yasm_valparamhead *valparams,
         yasm_valparamhead *objext_valparams, unsigned long line)
 {
@@ -2293,6 +2326,7 @@ static const yasm_directive coff_objfmt_directives[] = {
     { ".endef",         "gas",  dir_endef,      YASM_DIR_ANY },
     { ".scl",           "gas",  dir_scl,        YASM_DIR_ARG_REQUIRED },
     { ".type",          "gas",  dir_type,       YASM_DIR_ARG_REQUIRED },
+    { ".secrel32",      "gas",  dir_secrel32,   YASM_DIR_ARG_REQUIRED },
     { NULL, NULL, NULL, 0 }
 };
 
@@ -2331,6 +2365,7 @@ static const yasm_directive win32_objfmt_directives[] = {
     { ".endef",         "gas",  dir_endef,      YASM_DIR_ANY },
     { ".scl",           "gas",  dir_scl,        YASM_DIR_ARG_REQUIRED },
     { ".type",          "gas",  dir_type,       YASM_DIR_ARG_REQUIRED },
+    { ".secrel32",      "gas",  dir_secrel32,   YASM_DIR_ARG_REQUIRED },
     { ".export",        "gas",  dir_export,     YASM_DIR_ID_REQUIRED },
     { "export",         "nasm", dir_export,     YASM_DIR_ID_REQUIRED },
     { ".safeseh",       "gas",  dir_safeseh,    YASM_DIR_ID_REQUIRED },
@@ -2380,6 +2415,7 @@ static const yasm_directive win64_objfmt_directives[] = {
     { ".endef",         "gas",  dir_endef,      YASM_DIR_ANY },
     { ".scl",           "gas",  dir_scl,        YASM_DIR_ARG_REQUIRED },
     { ".type",          "gas",  dir_type,       YASM_DIR_ARG_REQUIRED },
+    { ".secrel32",      "gas",  dir_secrel32,   YASM_DIR_ARG_REQUIRED },
     { ".export",        "gas",  dir_export,     YASM_DIR_ID_REQUIRED },
     { "export",         "nasm", dir_export,     YASM_DIR_ID_REQUIRED },
     { ".proc_frame",    "gas",  dir_proc_frame, YASM_DIR_ID_REQUIRED },
