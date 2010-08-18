@@ -453,10 +453,17 @@ yasm_value_finalize_expr(yasm_value *value, yasm_expr *e,
         yasm_value_initialize(value, NULL, size);
         return 0;
     }
+    yasm_value_initialize(value, e, size);
+    return yasm_value_finalize(value, precbc);
+}
 
-    yasm_value_initialize(value,
-                          yasm_expr__level_tree(e, 1, 1, 0, 0, NULL, NULL),
-                          size);
+int
+yasm_value_finalize(yasm_value *value, yasm_bytecode *precbc)
+{
+    if (!value->abs)
+        return 0;
+
+    value->abs = yasm_expr__level_tree(value->abs, 1, 1, 0, 0, NULL, NULL);
 
     /* quit early if there was an issue in simplify() */
     if (yasm_error_occurred())
@@ -547,13 +554,6 @@ yasm_value_finalize_expr(yasm_value *value, yasm_expr *e,
         value->abs = NULL;
     }
     return 0;
-}
-
-int
-yasm_value_finalize(yasm_value *value, yasm_bytecode *precbc)
-{
-    unsigned int valsize = value->size;
-    return yasm_value_finalize_expr(value, value->abs, precbc, valsize);
 }
 
 yasm_intnum *
