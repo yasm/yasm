@@ -382,6 +382,7 @@ static yasm_expr *expr6(void)
         switch (i) {
           case TOKEN_NUM:
             e = yasm_expr_create_ident(yasm_expr_int(tokval->t_integer), 0);
+            tokval->t_integer = NULL;
             break;
           case TOKEN_ID:
             if (symtab) {

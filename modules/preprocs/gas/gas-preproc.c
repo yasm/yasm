@@ -60,6 +60,18 @@ typedef struct macro_entry {
     STAILQ_ENTRY(macro_entry) next;
 } macro_entry;
 
+typedef struct deferred_define {
+    char *name;
+    char *value;
+    SLIST_ENTRY(deferred_define) next;
+} deferred_define;
+
+typedef struct expr_state {
+    const char *string;
+    char *symbol;
+    int string_cursor;
+} expr_state;
+
 typedef struct yasm_preproc_gas {
     yasm_preproc_base preproc;   /* base structure */
 
@@ -67,15 +79,14 @@ typedef struct yasm_preproc_gas {
     char *in_filename;
 
     yasm_symtab *defines;
+    SLIST_HEAD(deferred_defines_head, deferred_define) deferred_defines;
 
     int depth;
     int skip_depth;
 
     int in_comment;
 
-    const char *expr_string;
-    char *expr_symbol;
-    int expr_string_cursor;
+    expr_state expr;
 
     SLIST_HEAD(buffered_lines_head, buffered_line) buffered_lines;
     SLIST_HEAD(included_files_head, included_file) included_files;
@@ -88,9 +99,14 @@ typedef struct yasm_preproc_gas {
     yasm_linemap *cur_lm;
     yasm_errwarns *errwarns;
     int fatal_error;
+    int detect_errors_only;
 } yasm_preproc_gas;
 
 yasm_preproc_module yasm_gas_LTX_preproc;
+
+/* Forward declarations. */
+
+static int substitute_values(yasm_preproc_gas *pp, char **line_ptr);
 
 /* String helpers. */
 
@@ -278,17 +294,44 @@ static const char *get_arg(yasm_preproc_gas *pp, const char *src, char *dest, si
 
 static char get_char(yasm_preproc_gas *pp)
 {
-    return pp->expr_string[pp->expr_string_cursor];
+    return pp->expr.string[pp->expr.string_cursor];
 }
 
 static const char *get_str(yasm_preproc_gas *pp)
 {
-    return pp->expr_string + pp->expr_string_cursor;
+    return pp->expr.string + pp->expr.string_cursor;
 }
 
 static void next_char(yasm_preproc_gas *pp)
 {
-    pp->expr_string_cursor++;
+    pp->expr.string_cursor++;
+}
+
+static int ishex(char c)
+{
+    c = tolower(c);
+    return isdigit(c) || (c >= 'a' && c <= 'f');
+}
+
+static void gas_scan_init(yasm_preproc_gas *pp, struct tokenval *tokval, const char *arg1)
+{
+    pp->expr.symbol = NULL;
+    pp->expr.string = arg1;
+    pp->expr.string_cursor = 0;
+    memset(tokval, 0, sizeof(struct tokenval));
+    tokval->t_type = TOKEN_INVALID;
+}
+
+static void gas_scan_cleanup(yasm_preproc_gas *pp, struct tokenval *tokval)
+{
+    if (tokval->t_integer) {
+        yasm_intnum_destroy(tokval->t_integer);
+        tokval->t_integer = NULL;
+    }
+    if (pp->expr.symbol) {
+        yasm_xfree(pp->expr.symbol);
+        pp->expr.symbol = NULL;
+    }
 }
 
 static int gas_scan(void *preproc, struct tokenval *tokval)
@@ -311,12 +354,34 @@ static int gas_scan(void *preproc, struct tokenval *tokval)
     }
 
     if (isdigit(c)) {
+        int char_index = 0;
         int value = 0;
+
         do {
             value = value*10 + (c - '0');
+            char_index++;
             next_char(pp);
             c = get_char(pp);
+            if (char_index == 1 && c == 'x' && value == 0) {
+                next_char(pp);
+                c = get_char(pp);
+                /* Hex notation. */
+                while (ishex(c)) {
+                    if (isdigit(c)) {
+                        value = (value << 4) | (c - '0');
+                    } else {
+                        value = (value << 4) | (tolower(c) - 'a' + 0xa);
+                    }
+                    next_char(pp);
+                    c = get_char(pp);
+                }
+                break;
+            }
         } while (isdigit(c));
+
+        if (tokval->t_integer) {
+            yasm_intnum_destroy(tokval->t_integer);
+        }
         tokval->t_integer = yasm_intnum_create_int(value);
         return tokval->t_type = TOKEN_NUM;
     }
@@ -373,12 +438,12 @@ static int gas_scan(void *preproc, struct tokenval *tokval)
                 c = get_char(pp);
             }
 
-            pp->expr_symbol = yasm_xrealloc(pp->expr_symbol, symbol_length + 1);
-            memcpy(pp->expr_symbol, str, symbol_length);
-            pp->expr_symbol[symbol_length] = '\0';
+            pp->expr.symbol = yasm_xrealloc(pp->expr.symbol, symbol_length + 1);
+            memcpy(pp->expr.symbol, str, symbol_length);
+            pp->expr.symbol[symbol_length] = '\0';
 
             tokval->t_type = TOKEN_ID;
-            tokval->t_charptr = pp->expr_symbol;
+            tokval->t_charptr = pp->expr.symbol;
         }
     }
     
@@ -390,10 +455,12 @@ static void gas_err(void *private_data, int severity, const char *fmt, ...)
     va_list args;
     yasm_preproc_gas *pp = private_data;
 
-    va_start(args, fmt);
-    yasm_error_set_va(YASM_ERROR_SYNTAX, N_(fmt), args);
-    yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
-    va_end(args);
+    if (!pp->detect_errors_only) {
+        va_start(args, fmt);
+        yasm_error_set_va(YASM_ERROR_SYNTAX, N_(fmt), args);
+        yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
+        va_end(args);
+    }
 
     pp->fatal_error = 1;
 }
@@ -404,25 +471,20 @@ static long eval_expr(yasm_preproc_gas *pp, const char *arg1)
     yasm_expr *expr;
     yasm_intnum *intn;
     long value;
+    expr_state prev_state;
 
     if (!*arg1) {
         return 0;
     }
 
-    tv.t_type = TOKEN_INVALID;
-
-    pp->expr_symbol = NULL;
-    pp->expr_string = arg1;
-    pp->expr_string_cursor = 0;
+    prev_state = pp->expr;
+    gas_scan_init(pp, &tv, arg1);
     expr = evaluate(gas_scan, pp, &tv, pp, CRITICAL, gas_err, pp->defines);
     intn = yasm_expr_get_intnum(&expr, 0);
     value = yasm_intnum_get_int(intn);
     yasm_expr_destroy(expr);
-
-    if (pp->expr_symbol) {
-        yasm_xfree(pp->expr_symbol);
-        pp->expr_symbol = NULL;
-    }
+    gas_scan_cleanup(pp, &tv);
+    pp->expr = prev_state;
 
     return value;
 }
@@ -623,24 +685,103 @@ static int eval_include(yasm_preproc_gas *pp, int unused, const char *arg1)
     return 1;
 }
 
+static int try_eval_expr(yasm_preproc_gas *pp, const char *value, long *result)
+{
+    int success;
+
+    pp->detect_errors_only = 1;
+    *result = eval_expr(pp, value);
+    success = !pp->fatal_error;
+    pp->fatal_error = 0;
+    pp->detect_errors_only = 0;
+
+    return success;
+}
+
+static int remove_define(yasm_preproc_gas *pp, const char *name, int allow_redefine)
+{
+    yasm_symrec *rec = yasm_symtab_get(pp->defines, name);
+    if (rec) {
+        const yasm_symtab_iter *entry;
+        yasm_symtab *new_defines;
+
+        if (!allow_redefine) {
+            yasm_error_set(YASM_ERROR_SYNTAX, N_("symbol \"%s\" is already defined"), name);
+            yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
+            return 0;
+        }
+
+        new_defines = yasm_symtab_create();
+
+        for (entry = yasm_symtab_first(pp->defines); entry; entry = yasm_symtab_next(entry)) {
+            yasm_symrec *entry_rec = yasm_symtab_iter_value(entry);
+            const char *rec_name = yasm_symrec_get_name(entry_rec);
+            if (strcmp(rec_name, name)) {
+                yasm_intnum *num = yasm_intnum_create_int(eval_expr(pp, rec_name));
+                yasm_expr *expr = yasm_expr_create_ident(yasm_expr_int(num), 0);
+                yasm_symtab_define_equ(new_defines, rec_name, expr, 0);
+            } 
+        }
+
+        yasm_symtab_destroy(pp->defines);
+        pp->defines = new_defines;
+    }
+    return (rec != NULL);
+}
+
+static void add_define(yasm_preproc_gas *pp, const char *name, long value, int allow_redefine, int substitute)
+{
+    deferred_define *def, *prev_def, *temp_def;
+    yasm_intnum *num;
+    yasm_expr *expr;
+
+    remove_define(pp, name, allow_redefine);
+
+    /* Add the new define. */
+    num = yasm_intnum_create_int(value);
+    expr = yasm_expr_create_ident(yasm_expr_int(num), 0);
+    yasm_symtab_define_equ(pp->defines, name, expr, 0);
+
+    /* Perform substitution on any deferred defines. */
+    if (substitute) {
+        prev_def = NULL;
+        temp_def = NULL;
+        SLIST_FOREACH_SAFE(def, &pp->deferred_defines, next, temp_def) {
+            if (substitute_values(pp, &def->value)) {
+                /* Value was updated - check if it can be added to the symtab. */
+                if (try_eval_expr(pp, def->value, &value)) {
+                    add_define(pp, def->name, value, FALSE, FALSE);
+                    if (prev_def) {
+                        SLIST_NEXT(prev_def, next) = SLIST_NEXT(def, next);
+                    } else {
+                        SLIST_FIRST(&pp->deferred_defines) = SLIST_NEXT(def, next);
+                    }
+                    yasm_xfree(def->name);
+                    yasm_xfree(def->value);
+                    yasm_xfree(def);
+                    continue;
+                }
+            }
+            prev_def = def;
+        }
+    }
+}
+
 static int eval_set(yasm_preproc_gas *pp, int allow_redefine, const char *name, const char *value)
 {
     if (!pp->skip_depth) {
-        yasm_intnum *num = yasm_intnum_create_int(eval_expr(pp, value));
-        yasm_expr *expr = yasm_expr_create_ident(yasm_expr_int(num), 0);
-        yasm_symrec *rec = yasm_symtab_get(pp->defines, name);
-        if (rec) {
-            if (!allow_redefine) {
-                yasm_error_set(YASM_ERROR_SYNTAX, N_("symbol \"%s\" is already defined"), name);
-                yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
-                return 0;
-            }
-            /* TODO */
-            yasm_error_set(YASM_ERROR_SYNTAX, N_("redefining symbols not yet implimented"), name);
-            yasm_errwarn_propagate(pp->errwarns, pp->current_line_number);
-            return 0;
+        long result;
+
+        if (!try_eval_expr(pp, value, &result)) {
+            deferred_define *def;
+            remove_define(pp, name, allow_redefine);
+            def = yasm_xmalloc(sizeof(deferred_define));
+            def->name = yasm__xstrdup(name);
+            def->value = yasm__xstrdup(value);
+            substitute_values(pp, &def->value);
+            SLIST_INSERT_HEAD(&pp->deferred_defines, def, next);
         } else {
-            yasm_symtab_define_equ(pp->defines, name, expr, 0);
+            add_define(pp, name, result, allow_redefine, TRUE);
         }
     }
     return 1;
@@ -751,7 +892,7 @@ static void get_param_value(macro_entry *macro, int param_index, const char *arg
 
 static void expand_macro(yasm_preproc_gas *pp, macro_entry *macro, const char *args)
 {
-    int i, j, k;
+    int i, j;
     buffered_line *prev_bline = NULL;
 
     for (i = 0; i < macro->num_lines; i++) {
@@ -760,10 +901,9 @@ static void expand_macro(yasm_preproc_gas *pp, macro_entry *macro, const char *a
         int prev_was_backslash = FALSE;
         int line_length = strlen(macro->lines[i]);
         char *work = yasm__xstrdup(macro->lines[i]);
+        expr_state prev_state = pp->expr;
 
-        pp->expr_symbol = NULL;
-        pp->expr_string = work;
-        pp->expr_string_cursor = 0;
+        gas_scan_init(pp, &tokval, work);
         while (gas_scan(pp, &tokval) != TOKEN_EOS) {
             if (prev_was_backslash) {
                 if (tokval.t_type == TOKEN_ID) {
@@ -775,8 +915,8 @@ static void expand_macro(yasm_preproc_gas *pp, macro_entry *macro, const char *a
                             && tokval.t_charptr[len] == '\0') {
                             /* now, find matching argument. */
                             const char *value;
-                            char *line = work + (pp->expr_string - work);
-                            int cursor = pp->expr_string_cursor;
+                            char *line = work + (pp->expr.string - work);
+                            int cursor = pp->expr.string_cursor;
                             int value_length, delta;
 
                             get_param_value(macro, j, args, &value, &value_length);
@@ -786,16 +926,15 @@ static void expand_macro(yasm_preproc_gas *pp, macro_entry *macro, const char *a
                             line_length += delta;
                             if (delta > 0) {
                                 line = yasm_xrealloc(line, line_length + 1);
-                                for (k = strlen(line); k >= cursor; k--) {
-                                    line[k + delta] = line[k];
-                                }
-                                memcpy(line + cursor - len, value, value_length);
-                            } else {
-                                memcpy(line + cursor - len, value, value_length);
-                                memmove(line + cursor - len + value_length, line + cursor, strlen(line + cursor) + 1);
                             }
-                            pp->expr_string = work = line;
-                            pp->expr_string_cursor += delta;
+                            memmove(line + cursor - len + value_length, line + cursor, strlen(line + cursor) + 1);
+                            memcpy(line + cursor - len, value, value_length);
+                            pp->expr.string = work = line;
+                            pp->expr.string_cursor += delta;
+                            if (pp->expr.symbol) {
+                                yasm_xfree(pp->expr.symbol);
+                                pp->expr.symbol = NULL;
+                            }
                         }
                     }
                 }
@@ -804,10 +943,11 @@ static void expand_macro(yasm_preproc_gas *pp, macro_entry *macro, const char *a
                 prev_was_backslash = TRUE;
             }
         }
+        gas_scan_cleanup(pp, &tokval);
 
-        bline->line = work + (pp->expr_string - work);
+        bline->line = work + (pp->expr.string - work);
         bline->line_number = -1;
-        pp->expr_string = NULL;
+        pp->expr = prev_state;
 
         if (prev_bline) {
             SLIST_INSERT_AFTER(prev_bline, bline, next);
@@ -849,7 +989,7 @@ static int eval_rept(yasm_preproc_gas *pp, int unused, const char *arg1)
                         SLIST_INSERT_HEAD(&pp->buffered_lines, bline, next);
                     }
                     prev_bline = bline;
-                 }
+                }
             }
             if (!SLIST_EMPTY(&pp->included_files)) {
                 included_file *inc_file = SLIST_FIRST(&pp->included_files);
@@ -936,21 +1076,21 @@ static void kill_comments(yasm_preproc_gas *pp, char *line)
    }
 }
 
-static void substitute_values(yasm_preproc_gas *pp, char *line)
+static int substitute_values(yasm_preproc_gas *pp, char **line_ptr)
 {
+    int changed = 0;
+    char *line = *line_ptr;
     int line_length = strlen(line);
     struct tokenval tokval;
+    expr_state prev_state = pp->expr;
 
-    pp->expr_string = line;
-    pp->expr_string_cursor = 0;
-    pp->expr_symbol = NULL;
-
+    gas_scan_init(pp, &tokval, line);
     while (gas_scan(pp, &tokval) != TOKEN_EOS) {
         if (tokval.t_type == TOKEN_ID) {
             yasm_symrec *rec = yasm_symtab_get(pp->defines, tokval.t_charptr);
             if (rec) {
-                int cursor = pp->expr_string_cursor;
-                int k, len = strlen(tokval.t_charptr);
+                int cursor = pp->expr.string_cursor;
+                int len = strlen(tokval.t_charptr);
                 char value[64];
                 int value_length = sprintf(value, "%ld", eval_expr(pp, tokval.t_charptr));
                 int delta = value_length - len;
@@ -958,26 +1098,32 @@ static void substitute_values(yasm_preproc_gas *pp, char *line)
                 line_length += delta;
                 if (delta > 0) {
                     line = yasm_xrealloc(line, line_length + 1);
-                    for (k = line_length; k >= cursor; k--) {
-                        line[k + delta] = line[k];
-                    }
-                    memcpy(line + cursor - len, value, value_length);
-                } else {
-                    memcpy(line + cursor - len, value, value_length);
-                    memmove(line + cursor - len + value_length, line + cursor, strlen(line + cursor) + 1);
                 }
-                pp->expr_string = line;
-                pp->expr_string_cursor = cursor + delta;
-                pp->expr_symbol = NULL;
+                memmove(line + cursor - len + value_length, line + cursor, strlen(line + cursor) + 1);
+                memcpy(line + cursor - len, value, value_length);
+                pp->expr.string = line;
+                pp->expr.string_cursor = cursor + delta;
+                changed = 1;
             }
+            yasm_xfree(pp->expr.symbol);
+            pp->expr.symbol = NULL;
         }
     }
+    gas_scan_cleanup(pp, &tokval);
+    pp->expr = prev_state;
+
+    if (changed) {
+        *line_ptr = line;
+    }
+
+    return changed;
 }
 
-static int process_line(yasm_preproc_gas *pp, char *line)
+static int process_line(yasm_preproc_gas *pp, char **line_ptr)
 {
     macro_entry *macro;
     size_t i;
+    char *line = *line_ptr;
     struct {
         const char *name;
         int nargs;
@@ -1071,7 +1217,7 @@ static int process_line(yasm_preproc_gas *pp, char *line)
     }
 
     if (pp->skip_depth == 0) {
-        substitute_values(pp, line);
+        substitute_values(pp, line_ptr);
         return TRUE;
     }
 
@@ -1100,6 +1246,7 @@ gas_preproc_create(const char *in_filename, yasm_symtab *symtab,
     pp->in = f;
     pp->in_filename = yasm__xstrdup(in_filename);
     pp->defines = yasm_symtab_create();
+    SLIST_INIT(&pp->deferred_defines);
     yasm_symtab_set_case_sensitive(pp->defines, 1);
     pp->depth = 0;
     pp->skip_depth = 0;
@@ -1113,6 +1260,7 @@ gas_preproc_create(const char *in_filename, yasm_symtab *symtab,
     pp->cur_lm = lm;
     pp->errwarns = errwarns;
     pp->fatal_error = 0;
+    pp->detect_errors_only = 0;
 
     return (yasm_preproc *) pp;
 }
@@ -1123,6 +1271,13 @@ gas_preproc_destroy(yasm_preproc *preproc)
     yasm_preproc_gas *pp = (yasm_preproc_gas *) preproc;
     yasm_xfree(pp->in_filename);
     yasm_symtab_destroy(pp->defines);
+    while (!SLIST_EMPTY(&pp->deferred_defines)) {
+        deferred_define *def = SLIST_FIRST(&pp->deferred_defines);
+        SLIST_REMOVE_HEAD(&pp->deferred_defines, next);
+        yasm_xfree(def->name);
+        yasm_xfree(def->value);
+        yasm_xfree(def);
+    }
     while (!SLIST_EMPTY(&pp->buffered_lines)) {
         buffered_line *bline = SLIST_FIRST(&pp->buffered_lines);
         SLIST_REMOVE_HEAD(&pp->buffered_lines, next);
@@ -1177,7 +1332,7 @@ gas_preproc_get_line(yasm_preproc *preproc)
             }
             return NULL;
         }
-        done = process_line(pp, line);
+        done = process_line(pp, &line);
     } while (!done);
 
     yasm_linemap_set(pp->cur_lm, pp->in_filename, pp->current_line_number, pp->next_line_number, 0);
