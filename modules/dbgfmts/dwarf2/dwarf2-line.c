@@ -486,12 +486,34 @@ typedef struct dwarf2_line_bc_info {
 } dwarf2_line_bc_info;
 
 static int
+dwarf2_filename_equals(const dwarf2_filename *fn,
+                       char **dirs,
+                       const char *pathname,
+                       unsigned long dirlen,
+                       const char *filename)
+{
+    /* check directory */
+    if (fn->dir == 0) {
+        if (dirlen != 0)
+            return 0;
+    } else {
+        if (strncmp(dirs[fn->dir-1], pathname, dirlen) != 0 ||
+            dirs[fn->dir-1][dirlen] != '\0')
+            return 0;
+    }
+
+    /* check filename */
+    return strcmp(fn->filename, filename) == 0;
+}
+
+static int
 dwarf2_generate_line_bc(yasm_bytecode *bc, /*@null@*/ void *d)
 {
     dwarf2_line_bc_info *info = (dwarf2_line_bc_info *)d;
     yasm_dbgfmt_dwarf2 *dbgfmt_dwarf2 = info->dbgfmt_dwarf2;
     unsigned long i;
-    const char *filename;
+    size_t dirlen;
+    const char *pathname, *filename;
     /*@null@*/ yasm_bytecode *nextbc = yasm_bc__next(bc);
 
     if (nextbc && bc->offset == nextbc->offset)
@@ -509,15 +531,20 @@ dwarf2_generate_line_bc(yasm_bytecode *bc, /*@null@*/ void *d)
         }
     }
 
-    yasm_linemap_lookup(info->linemap, bc->line, &filename, &info->loc.line);
+    yasm_linemap_lookup(info->linemap, bc->line, &pathname, &info->loc.line);
+    dirlen = yasm__splitpath(pathname, &filename);
+
     /* Find file index; just linear search it unless it was the last used */
     if (info->lastfile > 0
-        && strcmp(filename, dbgfmt_dwarf2->filenames[info->lastfile-1].pathname)
-           == 0)
+        && dwarf2_filename_equals(&dbgfmt_dwarf2->filenames[info->lastfile-1],
+                                  dbgfmt_dwarf2->dirs, pathname, dirlen,
+                                  filename))
         info->loc.file = info->lastfile;
     else {
         for (i=0; i<dbgfmt_dwarf2->filenames_size; i++) {
-            if (strcmp(filename, dbgfmt_dwarf2->filenames[i].pathname) == 0)
+            if (dwarf2_filename_equals(&dbgfmt_dwarf2->filenames[i],
+                                       dbgfmt_dwarf2->dirs, pathname, dirlen,
+                                       filename))
                 break;
         }
         if (i >= dbgfmt_dwarf2->filenames_size)
