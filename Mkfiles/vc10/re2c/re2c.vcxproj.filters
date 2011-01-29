@@ -70,6 +70,9 @@
     <ClInclude Include="..\..\..\tools\re2c\token.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\tools\re2c\mbo_getopt.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="run.bat" />

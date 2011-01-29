@@ -14,4 +14,7 @@
   <ItemGroup>
     <None Include="run.bat" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\libyasm\compat-queue.h" />
+  </ItemGroup>
 </Project>

@@ -226,6 +226,7 @@
     <ClCompile Include="..\..\..\libyasm\xstrdup.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\libyasm.h" />
     <ClInclude Include="..\..\..\libyasm\file.h" />
     <ClInclude Include="..\..\..\libyasm\arch.h" />
     <ClInclude Include="..\..\..\libyasm\assocdat.h" />
@@ -242,7 +243,9 @@
     <ClInclude Include="..\..\..\libyasm\intnum.h" />
     <ClInclude Include="..\..\..\libyasm\inttree.h" />
     <ClInclude Include="..\..\..\libyasm\linemap.h" />
+    <ClInclude Include="..\..\..\libyasm\listfmt.h" />
     <ClInclude Include="..\..\..\libyasm\md5.h" />
+    <ClInclude Include="..\..\..\libyasm\module.h" />
     <ClInclude Include="..\..\..\libyasm\objfmt.h" />
     <ClInclude Include="..\..\..\libyasm\parser.h" />
     <ClInclude Include="..\..\..\libyasm\phash.h" />
@@ -251,6 +254,9 @@
     <ClInclude Include="..\..\..\libyasm\symrec.h" />
     <ClInclude Include="..\..\..\libyasm\valparam.h" />
     <ClInclude Include="..\..\..\libyasm\value.h" />
+    <ClInclude Include="..\..\..\util.h" />
+    <ClInclude Include="..\config.h" />
+    <ClInclude Include="..\libyasm-stdint.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\libyasm\module.in" />

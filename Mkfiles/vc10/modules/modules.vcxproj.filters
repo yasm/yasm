@@ -219,5 +219,35 @@
     <ClInclude Include="..\..\..\modules\preprocs\nasm\nasmlib.h">
       <Filter>Source Files\preprocs\nasm</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\libyasm\arch.h" />
+    <ClInclude Include="..\..\..\libyasm\bitvect.h" />
+    <ClInclude Include="..\..\..\libyasm\bytecode.h" />
+    <ClInclude Include="..\..\..\libyasm\compat-queue.h" />
+    <ClInclude Include="..\config.h" />
+    <ClInclude Include="..\..\..\libyasm\coretype.h" />
+    <ClInclude Include="..\..\..\libyasm\dbgfmt.h" />
+    <ClInclude Include="..\..\..\libyasm\errwarn.h" />
+    <ClInclude Include="..\..\..\libyasm\expr.h" />
+    <ClInclude Include="..\..\..\libyasm\file.h" />
+    <ClInclude Include="..\..\..\libyasm\floatnum.h" />
+    <ClInclude Include="..\..\..\libyasm\hamt.h" />
+    <ClInclude Include="..\..\..\libyasm\insn.h" />
+    <ClInclude Include="..\..\..\libyasm\intnum.h" />
+    <ClInclude Include="..\libyasm-stdint.h" />
+    <ClInclude Include="..\..\..\libyasm.h" />
+    <ClInclude Include="..\..\..\libyasm\listfmt.h" />
+    <ClInclude Include="..\..\..\libyasm\md5.h" />
+    <ClInclude Include="..\..\..\libyasm\module.h" />
+    <ClInclude Include="..\..\..\modules\parsers\nasm\nasm-parser-struct.h" />
+    <ClInclude Include="..\..\..\libyasm\objfmt.h" />
+    <ClInclude Include="..\..\..\libyasm\parser.h" />
+    <ClInclude Include="..\..\..\libyasm\phash.h" />
+    <ClInclude Include="..\..\..\libyasm\preproc.h" />
+    <ClInclude Include="..\..\..\libyasm\value.h" />
+    <ClInclude Include="..\..\..\libyasm\valparam.h" />
+    <ClInclude Include="..\..\..\libyasm\symrec.h" />
+    <ClInclude Include="..\..\..\libyasm\linemap.h" />
+    <ClInclude Include="..\..\..\libyasm\section.h" />
+    <ClInclude Include="..\..\..\util.h" />
   </ItemGroup>
 </Project>

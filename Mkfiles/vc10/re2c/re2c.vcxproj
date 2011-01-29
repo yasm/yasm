@@ -117,6 +117,7 @@
     <ClInclude Include="..\..\..\tools\re2c\dfa.h" />
     <ClInclude Include="..\..\..\tools\re2c\globals.h" />
     <ClInclude Include="..\..\..\tools\re2c\ins.h" />
+    <ClInclude Include="..\..\..\tools\re2c\mbo_getopt.h" />
     <ClInclude Include="..\..\..\tools\re2c\parse.h" />
     <ClInclude Include="..\..\..\tools\re2c\parser.h" />
     <ClInclude Include="..\..\..\tools\re2c\re.h" />

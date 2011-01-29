@@ -253,6 +253,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\frontends\tasm\tasm-options.h" />
+    <ClInclude Include="..\..\libyasm.h" />
+    <ClInclude Include="..\..\libyasm\bitvect.h" />
+    <ClInclude Include="..\..\libyasm\compat-queue.h" />
+    <ClInclude Include="..\..\util.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="libyasm\libyasm.vcxproj">

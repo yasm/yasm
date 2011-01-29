@@ -263,6 +263,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\frontends\yasm\yasm-options.h" />
+    <ClInclude Include="..\..\frontends\yasm\yasm-plugin.h" />
+    <ClInclude Include="..\..\libyasm.h" />
+    <ClInclude Include="..\..\libyasm\bitvect.h" />
+    <ClInclude Include="..\..\libyasm\compat-queue.h" />
+    <ClInclude Include="..\..\util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

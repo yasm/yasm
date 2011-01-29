@@ -127,8 +127,13 @@
     <ClCompile Include="..\..\..\libyasm\xstrdup.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\libyasm\compat-queue.h" />
+    <ClInclude Include="..\..\..\libyasm\phash.h" />
     <ClInclude Include="..\..\..\tools\genperf\perfect.h" />
     <ClInclude Include="..\..\..\tools\genperf\standard.h" />
+    <ClInclude Include="..\..\..\util.h" />
+    <ClInclude Include="..\config.h" />
+    <ClInclude Include="..\libyasm-stdint.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="run.bat" />

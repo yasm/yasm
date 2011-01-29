@@ -2,7 +2,7 @@ Building YASM with Microsoft Visual Studio 2010 (C/C++ v10)
 -----------------------------------------------------------
 
 This note describes how to build YASM using Microsoft Visual
-Studio 2010 (C/C++ v10 - currently releasxed as beta 2).  
+Studio 2010 (C/C++ v10).
 
 1. The Compiler
 ---------------
@@ -36,17 +36,21 @@ as appropriate to build the YASM binaries that you need.
 --------------------------------------------------------
 
 The YASM version vsyasm.exe is designed specifically for use
-with Visual Studio 2010.  To tell Visual Studio where to find
+with Visual Studio 2010. To tell Visual Studio where to find
 vsyasm.exe, the environment variable YASMPATH can be set to 
 the absolute path of the directory in which vsyasm.exe is
 located (this path should include the final backslash). 
 
 Alternatively you can find the directory (or directories) 
 where the VC++ compiler binaries are located and put copies 
-of the vsyasm.exe binary in these directories. A typical 
-location is:
+of the vsyasm.exe binary in these directories. The typical 
+location on 64-bit Windows is:
 
 C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin
+
+On 32-bit Windows it is normally at:
+  
+C:\Program Files\Microsoft Visual Studio 10.0\VC\bin
 
 Depending on your system you can use either the win32 or the
 x64 version of vsyasm.exe, which must be named vsyasm.exe. 
@@ -61,6 +65,10 @@ ways to do this:
   which is typically at:
 
     C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\BuildCustomizations
+  
+  or:
+  
+    C:\Program Files\MSBuild\Microsoft.Cpp\v4.0\BuildCustomizations
 
   b. put them in a convenient location and set this path in the 
      'Build Customisations Search Path' in the Visual Studio 
@@ -108,4 +116,4 @@ I am most grateful for the fantastic support that Peter Johnson,
 YASM's creator, has given me in tracking down issues in using
 YASM for the production of Windows x64 code.
 
-  Brian Gladman, 10th June 2010
+  Brian Gladman, 29th January 2011
