@@ -243,6 +243,12 @@ yasm__getcwd(void)
 
     size = 1024;
     buf = yasm_xmalloc(size);
+
+    if (getenv("YASM_TEST_SUITE")) {
+        strcpy(buf, "./");
+        return buf;
+    }
+
     while (getcwd(buf, size-1) == NULL) {
         if (errno != ERANGE) {
             yasm__fatal(N_("could not determine current working directory"));

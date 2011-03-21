@@ -337,7 +337,10 @@ yasm_dwarf2__generate_info(yasm_object *object, yasm_section *debug_line,
 
     /* producer - assembler name */
     abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_producer, DW_FORM_string);
-    dwarf2_append_str(debug_info, PACKAGE " " VERSION);
+    if (getenv("YASM_TEST_SUITE"))
+        dwarf2_append_str(debug_info, "yasm HEAD");
+    else
+        dwarf2_append_str(debug_info, PACKAGE_STRING);
 
     /* language - no standard code for assembler, use MIPS as a substitute */
     abc->len += dwarf2_add_abbrev_attr(abbrev, DW_AT_language, DW_FORM_data2);

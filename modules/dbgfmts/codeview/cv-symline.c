@@ -638,9 +638,12 @@ yasm_cv__generate_symline(yasm_object *object, yasm_linemap *linemap,
     /* add object and compile flag first */
     cv8_add_sym_objname(info.debug_symline,
                         yasm__abspath(object->obj_filename));
-    cv8_add_sym_compile(object, info.debug_symline,
-                        yasm__xstrdup(PACKAGE_NAME " " PACKAGE_INTVER "."
-                                      PACKAGE_BUILD));
+    if (getenv("YASM_TEST_SUITE"))
+        cv8_add_sym_compile(object, info.debug_symline,
+                            yasm__xstrdup("yasm HEAD"));
+    else
+        cv8_add_sym_compile(object, info.debug_symline,
+                            yasm__xstrdup(PACKAGE_STRING));
     /* then iterate through symbol table */
     yasm_symtab_traverse(object->symtab, &info, cv_generate_sym);
     cv8_set_symhead_end(head, yasm_section_bcs_last(info.debug_symline));
