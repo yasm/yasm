@@ -172,16 +172,6 @@
     </varlistentry>
 
     <varlistentry>
-     <term><option>-h</option> or <option>--help</option>: Print a
-      summary of options</term>
-
-     <listitem>
-      <para>Prints a summary of invocation options.  All other options
-       are ignored, and no output file is generated.</para>
-     </listitem>
-    </varlistentry>
-
-    <varlistentry>
      <term><option>-L <replaceable>list</replaceable></option> or
       <option>--lformat=<replaceable>list</replaceable></option>:
       Select list file format</term>
@@ -286,6 +276,16 @@
        to the parser.  To print a list of available preprocessors to
        standard output, use <quote>help</quote> as
        <replaceable>preproc</replaceable>.</para>
+     </listitem>
+    </varlistentry>
+
+    <varlistentry>
+     <term><option>-h</option> or <option>--help</option>: Print a
+      summary of options</term>
+
+     <listitem>
+      <para>Prints a summary of invocation options.  All other options
+       are ignored, and no output file is generated.</para>
      </listitem>
     </varlistentry>
 
