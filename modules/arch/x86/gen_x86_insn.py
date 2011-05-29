@@ -3081,8 +3081,24 @@ add_insn("nop", "onebyte", modifiers=[0x90])
 #
 # Protection control
 #
-add_insn("lar", "bsfr", modifiers=[0x02], cpu=["286", "Prot"])
-add_insn("lsl", "bsfr", modifiers=[0x03], cpu=["286", "Prot"])
+for sfx, sz, sz2 in zip("wlq", [16, 32, 64], [16, 32, 32]):
+    add_group("larlsl",
+        suffix=sfx,
+        modifiers=["Op1Add"],
+        opersize=sz,
+        opcode=[0x0F, 0x00],
+        operands=[Operand(type="Reg", size=sz, dest="Spare"),
+                  Operand(type="Reg", size=sz2, dest="EA")])
+    add_group("larlsl",
+        suffix=sfx,
+        modifiers=["Op1Add"],
+        opersize=sz,
+        opcode=[0x0F, 0x00],
+        operands=[Operand(type="Reg", size=sz, dest="Spare"),
+                  Operand(type="RM", size=16, relaxed=True, dest="EA")])
+
+add_insn("lar", "larlsl", modifiers=[0x02], cpu=["286", "Prot"])
+add_insn("lsl", "larlsl", modifiers=[0x03], cpu=["286", "Prot"])
 
 add_group("arpl",
     suffix="w",
