@@ -523,8 +523,8 @@ stringconst_scan:
     SCANINIT();
 
     /*!re2c
-        /* Handle escaped double-quote by copying and continuing */
-        "\\\""      {
+        /* Handle escaped character by copying both and continuing. */
+        "\\".   {
             if (cursor == s->eof) {
                 yasm_error_set(YASM_ERROR_SYNTAX,
                                N_("unexpected end of file in string"));
@@ -532,7 +532,8 @@ stringconst_scan:
                 lvalp->str.len = count;
                 RETURN(STRING);
             }
-            strbuf_append(count++, cursor, s, '"');
+            strbuf_append(count++, cursor, s, '\\');
+            strbuf_append(count++, cursor, s, s->tok[1]);
             goto stringconst_scan;
         }
 
