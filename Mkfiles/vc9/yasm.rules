@@ -19,7 +19,7 @@
 					DisplayName="Definitions"
 					Category="Pre-Defined Symbols"
 					Description="Specify pre-defined symbols (&apos;symbol&apos; or &apos;symbol = value&apos;) "
-					Switch="-D [value]"
+					Switch="-D &quot;[value]&quot;"
 					Delimited="true"
 					Inheritable="true"
 				/>
@@ -28,7 +28,7 @@
 					DisplayName="Include Paths"
 					Category="Configuration"
 					Description="Set the paths for any additional include files"
-					Switch="-I [value]"
+					Switch="-I &quot;[value]&quot;"
 					Delimited="true"
 					Inheritable="true"
 				/>
@@ -37,7 +37,7 @@
 					DisplayName="Remove Definitions"
 					Category="Pre-Defined Symbols"
 					Description="Remove pre-defined symbols "
-					Switch="-U [value]"
+					Switch="-U &quot;[value]&quot;"
 					Delimited="true"
 					Inheritable="true"
 				/>
@@ -46,7 +46,7 @@
 					DisplayName="Object File Name"
 					Category="Output"
 					Description="Select the output file name"
-					Switch="-o [value]"
+					Switch="-o &quot;[value]&quot;"
 					DefaultValue="$(IntDir)\$(InputName).obj"
 				/>
         <StringProperty
@@ -54,14 +54,14 @@
 					DisplayName="List File Name"
 					Category="Output"
 					Description="Select an output listing by setting its file name"
-					Switch="-l [value]"
+					Switch="-l &quot;[value]&quot;"
 				/>
         <StringProperty
 					Name="PreIncludeFile"
 					DisplayName="Pre Include File"
 					Category="Configuration"
 					Description="Select a pre-included file by setting its name"
-					Switch="-P [value]"
+					Switch="-P &quot;[value]&quot;"
 				/>
         <BooleanProperty
 					Name="Debug"
