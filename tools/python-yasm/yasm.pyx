@@ -97,7 +97,7 @@ cdef void *__get_voidp(object obj, object forclass) except NULL:
 #
 cdef class __assoc_data_callback:
     cdef yasm_assoc_data_callback *cb
-    def __new__(self, destroy, print_):
+    def __cinit__(self, destroy, print_):
         self.cb = <yasm_assoc_data_callback *>malloc(sizeof(yasm_assoc_data_callback))
         self.cb.destroy = <void (*) (void *)>PyCObject_AsVoidPtr(destroy)
         #self.cb.print_ = <void (*) (void *, FILE *, int)>PyCObject_AsVoidPtr(print_)
@@ -107,7 +107,7 @@ cdef class __assoc_data_callback:
 
 cdef class Register:
     cdef unsigned long reg
-    def __new__(self, reg):
+    def __cinit__(self, reg):
         self.reg = reg
 
 include "errwarn.pxi"
