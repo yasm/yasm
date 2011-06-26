@@ -147,6 +147,8 @@ typedef struct yasm_bytecode_callback {
      *                      passed-in buf matches the bytecode length
      *                      (it's okay not to do this if an error
      *                      indication is returned)
+     * \param bufstart      For calculating the correct offset parameter for
+     *                      the \a output_value calls: *bufp - bufstart.
      * \param d             data to pass to each call to
      *                      output_value/output_reloc
      * \param output_value  function to call to convert values into their byte
@@ -158,7 +160,8 @@ typedef struct yasm_bytecode_callback {
      *       preferable if calling this function twice would result in the
      *       same output.
      */
-    int (*tobytes) (yasm_bytecode *bc, unsigned char **bufp, void *d,
+    int (*tobytes) (yasm_bytecode *bc, unsigned char **bufp,
+                    unsigned char *bufstart, void *d,
                     yasm_output_value_func output_value,
                     /*@null@*/ yasm_output_reloc_func output_reloc);
 
@@ -277,7 +280,7 @@ int yasm_bc_expand_common
  */
 YASM_LIB_DECL
 int yasm_bc_tobytes_common
-    (yasm_bytecode *bc, unsigned char **bufp, void *d,
+    (yasm_bytecode *bc, unsigned char **bufp, unsigned char *bufstart, void *d,
      yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 

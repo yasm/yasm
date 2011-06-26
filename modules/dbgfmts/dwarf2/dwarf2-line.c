@@ -132,7 +132,7 @@ static void dwarf2_spp_bc_print(const void *contents, FILE *f,
 static int dwarf2_spp_bc_calc_len
     (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int dwarf2_spp_bc_tobytes
-    (yasm_bytecode *bc, unsigned char **bufp, void *d,
+    (yasm_bytecode *bc, unsigned char **bufp, unsigned char *bufstart, void *d,
      yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
@@ -142,7 +142,7 @@ static void dwarf2_line_op_bc_print(const void *contents, FILE *f,
 static int dwarf2_line_op_bc_calc_len
     (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int dwarf2_line_op_bc_tobytes
-    (yasm_bytecode *bc, unsigned char **bufp, void *d,
+    (yasm_bytecode *bc, unsigned char **bufp, unsigned char *bufstart, void *d,
      yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
@@ -777,7 +777,8 @@ dwarf2_spp_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 }
 
 static int
-dwarf2_spp_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+dwarf2_spp_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp,
+                      unsigned char *bufstart, void *d,
                       yasm_output_value_func output_value,
                       yasm_output_reloc_func output_reloc)
 {
@@ -861,7 +862,8 @@ dwarf2_line_op_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 }
 
 static int
-dwarf2_line_op_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+dwarf2_line_op_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp,
+                          unsigned char *bufstart, void *d,
                           yasm_output_value_func output_value,
                           yasm_output_reloc_func output_reloc)
 {
@@ -879,7 +881,7 @@ dwarf2_line_op_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
             yasm_value_init_sym(&value, line_op->ext_operand,
                                 line_op->ext_operandsize*8);
             output_value(&value, buf, line_op->ext_operandsize,
-                         (unsigned long)(buf-*bufp), bc, 0, d);
+                         (unsigned long)(buf-bufstart), bc, 0, d);
             buf += line_op->ext_operandsize;
         }
         if (line_op->ext_operand_int) {

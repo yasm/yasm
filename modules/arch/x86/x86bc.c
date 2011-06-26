@@ -44,6 +44,7 @@ static int x86_bc_insn_expand(yasm_bytecode *bc, int span, long old_val,
                               long new_val, /*@out@*/ long *neg_thres,
                               /*@out@*/ long *pos_thres);
 static int x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp,
+                               unsigned char *bufstart,
                                void *d, yasm_output_value_func output_value,
                                /*@null@*/ yasm_output_reloc_func output_reloc);
 
@@ -56,6 +57,7 @@ static int x86_bc_jmp_expand(yasm_bytecode *bc, int span, long old_val,
                              long new_val, /*@out@*/ long *neg_thres,
                              /*@out@*/ long *pos_thres);
 static int x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp,
+                              unsigned char *bufstart,
                               void *d, yasm_output_value_func output_value,
                               /*@null@*/ yasm_output_reloc_func output_reloc);
 
@@ -66,7 +68,7 @@ static int x86_bc_jmpfar_calc_len(yasm_bytecode *bc,
                                   yasm_bc_add_span_func add_span,
                                   void *add_span_data);
 static int x86_bc_jmpfar_tobytes
-    (yasm_bytecode *bc, unsigned char **bufp, void *d,
+    (yasm_bytecode *bc, unsigned char **bufp, unsigned char *bufstart, void *d,
      yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
@@ -800,14 +802,14 @@ x86_opcode_tobytes(const x86_opcode *opcode, unsigned char **bufp)
 }
 
 static int
-x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp,
+                    unsigned char *bufstart, void *d,
                     yasm_output_value_func output_value,
                     /*@unused@*/ yasm_output_reloc_func output_reloc)
 {
     x86_insn *insn = (x86_insn *)bc->contents;
     /*@null@*/ x86_effaddr *x86_ea = (x86_effaddr *)insn->x86_ea;
     yasm_value *imm = insn->imm;
-    unsigned char *bufp_orig = *bufp;
 
     /* Prefixes */
     x86_common_tobytes(&insn->common, bufp,
@@ -874,7 +876,7 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
                                          yasm_expr_int(delta), bc->line);
             }
             if (output_value(&x86_ea->ea.disp, *bufp, disp_len,
-                             (unsigned long)(*bufp-bufp_orig), bc, 1, d))
+                             (unsigned long)(*bufp-bufstart), bc, 1, d))
                 return 1;
             *bufp += disp_len;
         }
@@ -892,7 +894,7 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
             imm_len = 1;
         } else
             imm_len = imm->size/8;
-        if (output_value(imm, *bufp, imm_len, (unsigned long)(*bufp-bufp_orig),
+        if (output_value(imm, *bufp, imm_len, (unsigned long)(*bufp-bufstart),
                          bc, 1, d))
             return 1;
         *bufp += imm_len;
@@ -902,14 +904,14 @@ x86_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 }
 
 static int
-x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp,
+                   unsigned char *bufstart, void *d,
                    yasm_output_value_func output_value,
                    /*@unused@*/ yasm_output_reloc_func output_reloc)
 {
     x86_jmp *jmp = (x86_jmp *)bc->contents;
     unsigned char opersize;
     unsigned int i;
-    unsigned char *bufp_orig = *bufp;
     /*@only@*/ yasm_intnum *delta;
 
     /* Prefixes */
@@ -944,7 +946,7 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
             jmp->target.size = 8;
             jmp->target.sign = 1;
             if (output_value(&jmp->target, *bufp, 1,
-                             (unsigned long)(*bufp-bufp_orig), bc, 1, d))
+                             (unsigned long)(*bufp-bufstart), bc, 1, d))
                 return 1;
             *bufp += 1;
             break;
@@ -976,7 +978,7 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
             jmp->target.size = i*8;
             jmp->target.sign = 1;
             if (output_value(&jmp->target, *bufp, i,
-                             (unsigned long)(*bufp-bufp_orig), bc, 1, d))
+                             (unsigned long)(*bufp-bufstart), bc, 1, d))
                 return 1;
             *bufp += i;
             break;
@@ -989,13 +991,13 @@ x86_bc_jmp_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 }
 
 static int
-x86_bc_jmpfar_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+x86_bc_jmpfar_tobytes(yasm_bytecode *bc, unsigned char **bufp,
+                      unsigned char *bufstart, void *d,
                       yasm_output_value_func output_value,
                       /*@unused@*/ yasm_output_reloc_func output_reloc)
 {
     x86_jmpfar *jmpfar = (x86_jmpfar *)bc->contents;
     unsigned int i;
-    unsigned char *bufp_orig = *bufp;
     unsigned char opersize;
 
     x86_common_tobytes(&jmpfar->common, bufp, 0);
@@ -1009,12 +1011,12 @@ x86_bc_jmpfar_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
     i = (opersize == 16) ? 2 : 4;
     jmpfar->offset.size = i*8;
     if (output_value(&jmpfar->offset, *bufp, i,
-                     (unsigned long)(*bufp-bufp_orig), bc, 1, d))
+                     (unsigned long)(*bufp-bufstart), bc, 1, d))
         return 1;
     *bufp += i;
     jmpfar->segment.size = 16;
     if (output_value(&jmpfar->segment, *bufp, 2,
-                     (unsigned long)(*bufp-bufp_orig), bc, 1, d))
+                     (unsigned long)(*bufp-bufstart), bc, 1, d))
         return 1;
     *bufp += 2;
 

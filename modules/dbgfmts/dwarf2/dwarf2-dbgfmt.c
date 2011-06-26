@@ -46,7 +46,7 @@ static void dwarf2_head_bc_print(const void *contents, FILE *f,
 static int dwarf2_head_bc_calc_len
     (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int dwarf2_head_bc_tobytes
-    (yasm_bytecode *bc, unsigned char **bufp, void *d,
+    (yasm_bytecode *bc, unsigned char **bufp, unsigned char *bufstart, void *d,
      yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
@@ -248,7 +248,8 @@ dwarf2_head_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 }
 
 static int
-dwarf2_head_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+dwarf2_head_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp,
+                       unsigned char *bufstart, void *d,
                        yasm_output_value_func output_value,
                        yasm_output_reloc_func output_reloc)
 {
@@ -288,7 +289,7 @@ dwarf2_head_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
                                 yasm_section_bcs_first(head->debug_ptr)),
             dbgfmt_dwarf2->sizeof_offset*8);
         output_value(&value, buf, dbgfmt_dwarf2->sizeof_offset,
-                     (unsigned long)(buf-*bufp), bc, 0, d);
+                     (unsigned long)(buf-bufstart), bc, 0, d);
         buf += dbgfmt_dwarf2->sizeof_offset;
     }
 

@@ -44,6 +44,7 @@ static int lc3b_bc_insn_expand(yasm_bytecode *bc, int span, long old_val,
                                long new_val, /*@out@*/ long *neg_thres,
                                /*@out@*/ long *pos_thres);
 static int lc3b_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp,
+                                unsigned char *bufstart,
                                 void *d, yasm_output_value_func output_value,
                                 /*@null@*/ yasm_output_reloc_func output_reloc);
 
@@ -165,12 +166,14 @@ lc3b_bc_insn_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 }
 
 static int
-lc3b_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+lc3b_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp,
+                     unsigned char *bufstart, void *d,
                      yasm_output_value_func output_value,
                      /*@unused@*/ yasm_output_reloc_func output_reloc)
 {
     lc3b_insn *insn = (lc3b_insn *)bc->contents;
     /*@only@*/ yasm_intnum *delta;
+    unsigned long buf_off = (unsigned long)(*bufp - bufstart);
 
     /* Output opcode */
     YASM_SAVE_16_L(*bufp, insn->opcode);
@@ -181,29 +184,29 @@ lc3b_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
             break;
         case LC3B_IMM_4:
             insn->imm.size = 4;
-            if (output_value(&insn->imm, *bufp, 2, 0, bc, 1, d))
+            if (output_value(&insn->imm, *bufp, 2, buf_off, bc, 1, d))
                 return 1;
             break;
         case LC3B_IMM_5:
             insn->imm.size = 5;
             insn->imm.sign = 1;
-            if (output_value(&insn->imm, *bufp, 2, 0, bc, 1, d))
+            if (output_value(&insn->imm, *bufp, 2, buf_off, bc, 1, d))
                 return 1;
             break;
         case LC3B_IMM_6_WORD:
             insn->imm.size = 6;
-            if (output_value(&insn->imm, *bufp, 2, 0, bc, 1, d))
+            if (output_value(&insn->imm, *bufp, 2, buf_off, bc, 1, d))
                 return 1;
             break;
         case LC3B_IMM_6_BYTE:
             insn->imm.size = 6;
             insn->imm.sign = 1;
-            if (output_value(&insn->imm, *bufp, 2, 0, bc, 1, d))
+            if (output_value(&insn->imm, *bufp, 2, buf_off, bc, 1, d))
                 return 1;
             break;
         case LC3B_IMM_8:
             insn->imm.size = 8;
-            if (output_value(&insn->imm, *bufp, 2, 0, bc, 1, d))
+            if (output_value(&insn->imm, *bufp, 2, buf_off, bc, 1, d))
                 return 1;
             break;
         case LC3B_IMM_9_PC:
@@ -220,12 +223,12 @@ lc3b_bc_insn_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 
             insn->imm.size = 9;
             insn->imm.sign = 1;
-            if (output_value(&insn->imm, *bufp, 2, 0, bc, 1, d))
+            if (output_value(&insn->imm, *bufp, 2, buf_off, bc, 1, d))
                 return 1;
             break;
         case LC3B_IMM_9:
             insn->imm.size = 9;
-            if (output_value(&insn->imm, *bufp, 2, 0, bc, 1, d))
+            if (output_value(&insn->imm, *bufp, 2, buf_off, bc, 1, d))
                 return 1;
             break;
         default:

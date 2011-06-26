@@ -197,7 +197,7 @@ static void dwarf2_abbrev_bc_print(const void *contents, FILE *f,
 static int dwarf2_abbrev_bc_calc_len
     (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int dwarf2_abbrev_bc_tobytes
-    (yasm_bytecode *bc, unsigned char **bufp, void *d,
+    (yasm_bytecode *bc, unsigned char **bufp, unsigned char *bufstart, void *d,
      yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
@@ -397,7 +397,8 @@ dwarf2_abbrev_bc_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 }
 
 static int
-dwarf2_abbrev_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+dwarf2_abbrev_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp,
+                         unsigned char *bufstart, void *d,
                          yasm_output_value_func output_value,
                          yasm_output_reloc_func output_reloc)
 {

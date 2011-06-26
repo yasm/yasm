@@ -58,7 +58,8 @@ static int bc_align_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
 static int bc_align_expand(yasm_bytecode *bc, int span, long old_val,
                            long new_val, /*@out@*/ long *neg_thres,
                            /*@out@*/ long *pos_thres);
-static int bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+static int bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp,
+                            unsigned char *bufstart, void *d,
                             yasm_output_value_func output_value,
                             /*@null@*/ yasm_output_reloc_func output_reloc);
 
@@ -164,7 +165,8 @@ bc_align_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
 }
 
 static int
-bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+bc_align_tobytes(yasm_bytecode *bc, unsigned char **bufp,
+                 unsigned char *bufstart, void *d,
                  yasm_output_value_func output_value,
                  /*@unused@*/ yasm_output_reloc_func output_reloc)
 {

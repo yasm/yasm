@@ -119,7 +119,7 @@ static void stabs_bc_str_print(const void *contents, FILE *f, int
 static int stabs_bc_str_calc_len
     (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int stabs_bc_str_tobytes
-    (yasm_bytecode *bc, unsigned char **bufp, void *d,
+    (yasm_bytecode *bc, unsigned char **bufp, unsigned char *bufstart, void *d,
      yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
@@ -129,7 +129,7 @@ static void stabs_bc_stab_print(const void *contents, FILE *f, int
 static int stabs_bc_stab_calc_len
     (yasm_bytecode *bc, yasm_bc_add_span_func add_span, void *add_span_data);
 static int stabs_bc_stab_tobytes
-    (yasm_bytecode *bc, unsigned char **bufp, void *d,
+    (yasm_bytecode *bc, unsigned char **bufp, unsigned char *bufstart, void *d,
      yasm_output_value_func output_value,
      /*@null@*/ yasm_output_reloc_func output_reloc);
 
@@ -405,7 +405,8 @@ stabs_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
 }
 
 static int
-stabs_bc_stab_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+stabs_bc_stab_tobytes(yasm_bytecode *bc, unsigned char **bufp,
+                      unsigned char *bufstart, void *d,
                       yasm_output_value_func output_value,
                       yasm_output_reloc_func output_reloc)
 {
@@ -439,7 +440,8 @@ stabs_bc_stab_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
 }
 
 static int
-stabs_bc_str_tobytes(yasm_bytecode *bc, unsigned char **bufp, void *d,
+stabs_bc_str_tobytes(yasm_bytecode *bc, unsigned char **bufp,
+                     unsigned char *bufstart, void *d,
                      yasm_output_value_func output_value,
                      yasm_output_reloc_func output_reloc)
 {
