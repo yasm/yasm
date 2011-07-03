@@ -1133,6 +1133,10 @@ add_insn("movsxd", "movsxd", parser="nasm")
 # Push instructions
 #
 add_group("push",
+    def_opersize_64=64,
+    opcode=[0x50],
+    operands=[Operand(type="Reg", size="BITS", dest="Op0Add")])
+add_group("push",
     suffix="w",
     opersize=16,
     def_opersize_64=64,
@@ -1146,9 +1150,16 @@ add_group("push",
     operands=[Operand(type="Reg", size=32, dest="Op0Add")])
 add_group("push",
     suffix="q",
+    only64=True,
     def_opersize_64=64,
     opcode=[0x50],
     operands=[Operand(type="Reg", size=64, dest="Op0Add")])
+
+add_group("push",
+    def_opersize_64=64,
+    opcode=[0xFF],
+    spare=6,
+    operands=[Operand(type="RM", size="BITS", dest="EA")])
 add_group("push",
     suffix="w",
     opersize=16,
@@ -1165,10 +1176,12 @@ add_group("push",
     operands=[Operand(type="RM", size=32, dest="EA")])
 add_group("push",
     suffix="q",
+    only64=True,
     def_opersize_64=64,
     opcode=[0xFF],
     spare=6,
     operands=[Operand(type="RM", size=64, dest="EA")])
+
 add_group("push",
     cpu=["186"],
     parsers=["nasm"],
@@ -1340,6 +1353,10 @@ add_insn("pushaw", "onebyte", modifiers=[0x60, 16], cpu=["186"], not64=True)
 # Pop instructions
 #
 add_group("pop",
+    def_opersize_64=64,
+    opcode=[0x58],
+    operands=[Operand(type="Reg", size="BITS", dest="Op0Add")])
+add_group("pop",
     suffix="w",
     opersize=16,
     def_opersize_64=64,
@@ -1353,9 +1370,15 @@ add_group("pop",
     operands=[Operand(type="Reg", size=32, dest="Op0Add")])
 add_group("pop",
     suffix="q",
+    only64=True,
     def_opersize_64=64,
     opcode=[0x58],
     operands=[Operand(type="Reg", size=64, dest="Op0Add")])
+
+add_group("pop",
+    def_opersize_64=64,
+    opcode=[0x8F],
+    operands=[Operand(type="RM", size="BITS", dest="EA")])
 add_group("pop",
     suffix="w",
     opersize=16,
@@ -1370,9 +1393,11 @@ add_group("pop",
     operands=[Operand(type="RM", size=32, dest="EA")])
 add_group("pop",
     suffix="q",
+    only64=True,
     def_opersize_64=64,
     opcode=[0x8F],
     operands=[Operand(type="RM", size=64, dest="EA")])
+
 # POP CS is debateably valid on the 8086, if obsolete and undocumented.
 # We don't include it because it's VERY unlikely it will ever be used
 # anywhere.  If someone really wants it they can db 0x0F it.

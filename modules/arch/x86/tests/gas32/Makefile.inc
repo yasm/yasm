@@ -19,6 +19,8 @@ EXTRA_DIST += modules/arch/x86/tests/gas32/gas-movdq32.asm
 EXTRA_DIST += modules/arch/x86/tests/gas32/gas-movdq32.hex
 EXTRA_DIST += modules/arch/x86/tests/gas32/gas-movsd.asm
 EXTRA_DIST += modules/arch/x86/tests/gas32/gas-movsd.hex
+EXTRA_DIST += modules/arch/x86/tests/gas32/gas-pop.asm
+EXTRA_DIST += modules/arch/x86/tests/gas32/gas-pop.hex
 EXTRA_DIST += modules/arch/x86/tests/gas32/gas32-jmpcall.asm
 EXTRA_DIST += modules/arch/x86/tests/gas32/gas32-jmpcall.hex
 
