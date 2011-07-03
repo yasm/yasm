@@ -78,6 +78,11 @@
 #define CPU_XSAVEOPT 44     /* Intel XSAVEOPT instruction */
 #define CPU_EPTVPID 45      /* Intel INVEPT, INVVPID instructions */
 #define CPU_SMX     46      /* Intel SMX instruction (GETSEC) */
+#define CPU_AVX2    47      /* Intel AVX2 instructions */
+#define CPU_BMI1    48      /* Intel BMI1 instructions */
+#define CPU_BMI2    49      /* Intel BMI2 instructions */
+#define CPU_INVPCID 50      /* Intel INVPCID instruction */
+#define CPU_LZCNT   51      /* Intel LZCNT instruction */
 
 enum x86_parser_type {
     X86_PARSER_NASM = 0,

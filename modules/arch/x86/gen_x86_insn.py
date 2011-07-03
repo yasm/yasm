@@ -43,7 +43,8 @@ ordered_cpu_features = [
     "FPU", "Cyrix", "AMD", "MMX", "3DNow", "SMM", "SSE", "SSE2",
     "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42", "SSE4a", "SSE5",
     "AVX", "FMA", "AES", "CLMUL", "MOVBE", "XOP", "FMA4", "F16C",
-    "FSGSBASE", "RDRAND", "XSAVEOPT", "EPTVPID", "SMX"]
+    "FSGSBASE", "RDRAND", "XSAVEOPT", "EPTVPID", "SMX", "AVX2", "BMI1",
+    "BMI2", "INVPCID", "LZCNT"]
 unordered_cpu_features = ["Priv", "Prot", "Undoc", "Obs"]
 
 # Predefined VEX prefix field values
@@ -6607,7 +6608,7 @@ add_group("vfma_ps",
               Operand(type="SIMDReg", size=256, dest="VEX"),
               Operand(type="SIMDRM", size=256, relaxed=True, dest="EA")])
 
-### 128/256b FMA PD(W=1) 
+### 128/256b FMA PD(W=1)
 add_group("vfma_pd",
     cpu=["FMA"],
     modifiers=["Op2Add"],
@@ -7353,6 +7354,115 @@ for sz in (16, 32, 64):
 add_insn("movbe", "movbe")
 
 #####################################################################
+# Intel advanced bit manipulations (BMI1/2)
+#####################################################################
+
+add_insn("tzcnt", "cnt", modifiers=[0xBC], cpu=["BMI1"])
+# LZCNT is present as AMD ext
+
+for sfx, sz in zip("wlq", [32, 64]):
+    add_group("vex_gpr_ndd_rm_0F38_regext",
+        suffix=sfx,
+        modifiers=["PreAdd", "Op2Add", "SpAdd" ],
+        opersize=sz,
+        prefix=0x00,
+        opcode=[0x0F, 0x38, 0x00],
+        vex=0, ## VEX.L=0
+        operands=[Operand(type="Reg", size=sz, dest="VEX"),
+                  Operand(type="RM", size=sz, relaxed=True, dest="EA")])
+
+
+add_insn("blsr",   "vex_gpr_ndd_rm_0F38_regext", modifiers=[0x00, 0xF3, 1],
+         cpu=["BMI1"])
+add_insn("blsmsk", "vex_gpr_ndd_rm_0F38_regext", modifiers=[0x00, 0xF3, 2],
+         cpu=["BMI1"])
+add_insn("blsi",   "vex_gpr_ndd_rm_0F38_regext", modifiers=[0x00, 0xF3, 3],
+         cpu=["BMI1"])
+
+for sfx, sz in zip("wlq", [32, 64]):
+    add_group("vex_gpr_reg_rm_0F_imm8",
+        suffix=sfx,
+        modifiers=["PreAdd", "Op1Add", "Op2Add"],
+        opersize=sz,
+        prefix=0x00,
+        opcode=[0x0F, 0x00, 0x00],
+        vex=0, ## VEX.L=0
+        operands=[Operand(type="Reg", size=sz, dest="Spare"),
+                  Operand(type="RM", size=sz, relaxed=True, dest="EA"),
+                  Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+
+add_insn("rorx", "vex_gpr_reg_rm_0F_imm8", modifiers=[0xF2, 0x3A, 0xF0],
+         cpu=["BMI2"])
+
+for sfx, sz in zip("lq", [32, 64]):  # no 16-bit forms
+    add_group("vex_gpr_reg_nds_rm_0F",
+        suffix=sfx,
+        modifiers=["PreAdd", "Op1Add", "Op2Add"],
+        opersize=sz,
+        prefix=0x00,
+        opcode=[0x0F, 0x00, 0x00],
+        vex=0,
+        operands=[Operand(type="Reg", size=sz, dest="Spare"),
+                  Operand(type="Reg", size=sz, dest="VEX"),
+                  Operand(type="RM", size=sz, relaxed=True, dest="EA")])
+
+add_insn("andn", "vex_gpr_reg_nds_rm_0F", modifiers=[0x00, 0x38, 0xF2],
+         cpu=["BMI1"])
+
+add_insn("pdep", "vex_gpr_reg_nds_rm_0F", modifiers=[0xF2, 0x38, 0xF5],
+         cpu=["BMI2"])
+add_insn("pext", "vex_gpr_reg_nds_rm_0F", modifiers=[0xF3, 0x38, 0xF5],
+         cpu=["BMI2"])
+
+for sfx, sz in zip("lq", [32, 64]):  # no 16-bit forms
+    add_group("vex_gpr_reg_rm_nds_0F",
+        suffix=sfx,
+        modifiers=["PreAdd", "Op1Add", "Op2Add"],
+        opersize=sz,
+        prefix=0x00,
+        opcode=[0x0F, 0x00, 0x00],
+        vex=0,
+        operands=[Operand(type="Reg", size=sz, dest="Spare"),
+                  Operand(type="RM", size=sz, relaxed=True, dest="EA"),
+                  Operand(type="Reg", size=sz, dest="VEX")])
+
+add_insn("bzhi", "vex_gpr_reg_rm_nds_0F", modifiers=[0x00, 0x38, 0xF5],
+         cpu=["BMI2"])
+add_insn("bextr","vex_gpr_reg_rm_nds_0F", modifiers=[0x00, 0x38, 0xF7],
+         cpu=["BMI1"])
+add_insn("shlx", "vex_gpr_reg_rm_nds_0F", modifiers=[0x66, 0x38, 0xF7],
+         cpu=["BMI2"])
+add_insn("shrx", "vex_gpr_reg_rm_nds_0F", modifiers=[0xF2, 0x38, 0xF7],
+         cpu=["BMI2"])
+add_insn("sarx", "vex_gpr_reg_rm_nds_0F", modifiers=[0xF3, 0x38, 0xF7],
+         cpu=["BMI2"])
+
+add_insn("mulx", "vex_gpr_reg_nds_rm_0F", modifiers=[0xF2, 0x38, 0xF6],
+         cpu=["BMI2"])
+
+
+
+#####################################################################
+# Intel INVPCID instruction
+#####################################################################
+add_group("invpcid",
+    cpu=["INVPCID", "Priv"],
+    not64=True,
+    prefix=0x66,
+    opcode=[0x0F, 0x38, 0x82],
+    operands=[Operand(type="Reg", size=32, dest="Spare"),
+              Operand(type="Mem", size=128, relaxed=True, dest="EA")])
+add_group("invpcid",
+    cpu=["INVPCID", "Priv"],
+    only64=True,
+    def_opersize_64=64,
+    prefix=0x66,
+    opcode=[0x0F, 0x38, 0x82],
+    operands=[Operand(type="Reg", size=64, dest="Spare"),
+              Operand(type="Mem", size=128, relaxed=True, dest="EA")])
+add_insn("invpcid", "invpcid")
+
+#####################################################################
 # AMD 3DNow! instructions
 #####################################################################
 
@@ -7400,7 +7510,7 @@ add_insn("syscall", "twobyte", modifiers=[0x0F, 0x05], cpu=["686", "AMD"])
 for sfx in [None, "l", "q"]:
     add_insn("sysret"+(sfx or ""), "twobyte", suffix=sfx, modifiers=[0x0F, 0x07],
              cpu=["686", "AMD", "Priv"])
-add_insn("lzcnt", "cnt", modifiers=[0xBD], cpu=["686", "AMD"])
+add_insn("lzcnt", "cnt", modifiers=[0xBD], cpu=["LZCNT"])
 
 #####################################################################
 # AMD x86-64 extensions
