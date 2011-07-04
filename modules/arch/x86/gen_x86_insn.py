@@ -7028,7 +7028,7 @@ for sz in [128, 256]:
 add_insn("vpblendd", "vex_66_0F3A_imm8_avx2", modifiers=[0x02]) 
 
 # Vector register in EA.
-add_group("gather_32x_32x",
+add_group("gather_64x_64x",
     cpu=["AVX2"],
     modifiers=["Op2Add"],
     vex=128,
@@ -7036,9 +7036,9 @@ add_group("gather_32x_32x",
     prefix=0x66,
     opcode=[0x0F, 0x38, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="MemXMMIndex", size=32, relaxed=True, dest="EA"),
+              Operand(type="MemXMMIndex", size=64, relaxed=True, dest="EA"),
               Operand(type="SIMDReg", size=128, dest="VEX")])
-add_group("gather_32x_32x",
+add_group("gather_64x_64x",
     cpu=["AVX2"],
     modifiers=["Op2Add"],
     vex=256,
@@ -7046,10 +7046,10 @@ add_group("gather_32x_32x",
     prefix=0x66,
     opcode=[0x0F, 0x38, 0x00],
     operands=[Operand(type="SIMDReg", size=256, dest="Spare"),
-              Operand(type="MemXMMIndex", size=32, relaxed=True, dest="EA"),
+              Operand(type="MemXMMIndex", size=64, relaxed=True, dest="EA"),
               Operand(type="SIMDReg", size=256, dest="VEX")])
-add_insn("vgatherdpd", "gather_32x_32x", modifiers=[0x92])
-add_insn("vpgatherdq", "gather_32x_32x", modifiers=[0x90])
+add_insn("vgatherdpd", "gather_64x_64x", modifiers=[0x92])
+add_insn("vpgatherdq", "gather_64x_64x", modifiers=[0x90])
 
 add_group("gather_64x_64y",
     cpu=["AVX2"],
@@ -7097,7 +7097,7 @@ add_group("gather_32x_32y",
 add_insn("vgatherdps", "gather_32x_32y", modifiers=[0x92])
 add_insn("vpgatherdd", "gather_32x_32y", modifiers=[0x90])
 
-add_group("gather_64x_64y_128",
+add_group("gather_32x_32y_128",
     cpu=["AVX2"],
     modifiers=["Op2Add"],
     vex=128,
@@ -7105,9 +7105,9 @@ add_group("gather_64x_64y_128",
     prefix=0x66,
     opcode=[0x0F, 0x38, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="MemXMMIndex", size=64, relaxed=True, dest="EA"),
+              Operand(type="MemXMMIndex", size=32, relaxed=True, dest="EA"),
               Operand(type="SIMDReg", size=128, dest="VEX")])
-add_group("gather_64x_64y_128",
+add_group("gather_32x_32y_128",
     cpu=["AVX2"],
     modifiers=["Op2Add"],
     vex=256,
@@ -7115,10 +7115,10 @@ add_group("gather_64x_64y_128",
     prefix=0x66,
     opcode=[0x0F, 0x38, 0x00],
     operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-              Operand(type="MemYMMIndex", size=64, relaxed=True, dest="EA"),
+              Operand(type="MemYMMIndex", size=32, relaxed=True, dest="EA"),
               Operand(type="SIMDReg", size=128, dest="VEX")])
-add_insn("vgatherqps", "gather_64x_64y_128", modifiers=[0x93])
-add_insn("vpgatherqd", "gather_64x_64y_128", modifiers=[0x91])
+add_insn("vgatherqps", "gather_32x_32y_128", modifiers=[0x93])
+add_insn("vpgatherqd", "gather_32x_32y_128", modifiers=[0x91])
 
 #####################################################################
 # Intel FMA instructions

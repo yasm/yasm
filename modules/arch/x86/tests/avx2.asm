@@ -612,9 +612,9 @@ vpsrlvq ymm1, ymm2, ymm3		; c4 e2 ed 45 cb
 vpsrlvq ymm1, ymm2, yword [rax]		; c4 e2 ed 45 08
 
 vgatherdpd xmm1, [rax+xmm1], xmm2	; c4 e2 e9 92 0c 08
-vgatherdpd xmm1, dword [rax+xmm1], xmm2	; c4 e2 e9 92 0c 08
+vgatherdpd xmm1, qword [rax+xmm1], xmm2	; c4 e2 e9 92 0c 08
 vgatherdpd ymm1, [rax+xmm1], ymm2	; c4 e2 ed 92 0c 08
-vgatherdpd ymm1, dword [rax+xmm1], ymm2	; c4 e2 ed 92 0c 08
+vgatherdpd ymm1, qword [rax+xmm1], ymm2	; c4 e2 ed 92 0c 08
 
 vgatherqpd xmm1, [rax+xmm1], xmm2	; c4 e2 e9 93 0c 08
 vgatherqpd xmm1, qword [rax+xmm1], xmm2	; c4 e2 e9 93 0c 08
@@ -627,9 +627,9 @@ vgatherdps ymm1, [rax+ymm1], ymm2	; c4 e2 6d 92 0c 08
 vgatherdps ymm1, dword [rax+ymm1], ymm2	; c4 e2 6d 92 0c 08
 
 vgatherqps xmm1, [rax+xmm1], xmm2	; c4 e2 69 93 0c 08
-vgatherqps xmm1, qword [rax+xmm1], xmm2	; c4 e2 69 93 0c 08
+vgatherqps xmm1, dword [rax+xmm1], xmm2	; c4 e2 69 93 0c 08
 vgatherqps xmm1, [rax+ymm1], xmm2	; c4 e2 6d 93 0c 08
-vgatherqps xmm1, qword [rax+ymm1], xmm2	; c4 e2 6d 93 0c 08
+vgatherqps xmm1, dword [rax+ymm1], xmm2	; c4 e2 6d 93 0c 08
 
 vpgatherdd xmm1, [rax+xmm1], xmm2	; c4 e2 69 90 0c 08
 vpgatherdd xmm1, dword [rax+xmm1], xmm2	; c4 e2 69 90 0c 08
@@ -637,14 +637,14 @@ vpgatherdd ymm1, [rax+ymm1], ymm2	; c4 e2 6d 90 0c 08
 vpgatherdd ymm1, dword [rax+ymm1], ymm2	; c4 e2 6d 90 0c 08
 
 vpgatherqd xmm1, [rax+xmm1], xmm2	; c4 e2 69 91 0c 08
-vpgatherqd xmm1, qword [rax+xmm1], xmm2	; c4 e2 69 91 0c 08
+vpgatherqd xmm1, dword [rax+xmm1], xmm2	; c4 e2 69 91 0c 08
 vpgatherqd xmm1, [rax+ymm1], xmm2	; c4 e2 6d 91 0c 08
-vpgatherqd xmm1, qword [rax+ymm1], xmm2	; c4 e2 6d 91 0c 08
+vpgatherqd xmm1, dword [rax+ymm1], xmm2	; c4 e2 6d 91 0c 08
 
 vpgatherdq xmm1, [rax+xmm1], xmm2	; c4 e2 e9 90 0c 08
-vpgatherdq xmm1, dword [rax+xmm1], xmm2	; c4 e2 e9 90 0c 08
+vpgatherdq xmm1, qword [rax+xmm1], xmm2	; c4 e2 e9 90 0c 08
 vpgatherdq ymm1, [rax+xmm1], ymm2	; c4 e2 ed 90 0c 08
-vpgatherdq ymm1, dword [rax+xmm1], ymm2	; c4 e2 ed 90 0c 08
+vpgatherdq ymm1, qword [rax+xmm1], ymm2	; c4 e2 ed 90 0c 08
 
 vpgatherqq xmm1, [rax+xmm1], xmm2	; c4 e2 e9 91 0c 08
 vpgatherqq xmm1, qword [rax+xmm1], xmm2	; c4 e2 e9 91 0c 08
