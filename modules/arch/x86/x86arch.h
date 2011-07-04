@@ -177,6 +177,9 @@ int yasm_x86__set_rex_from_reg(unsigned char *rex, unsigned char *low3,
 typedef struct x86_effaddr {
     yasm_effaddr ea;            /* base structure */
 
+    /* VSIB uses the normal SIB byte, but this flag enables it. */
+    unsigned char vsib_mode;    /* 0 if not, 1 if XMM, 2 if YMM */
+
     /* How the spare (register) bits in Mod/RM are handled:
      * Even if valid_modrm=0, the spare bits are still valid (don't overwrite!)
      * They're set in bytecode_create_insn().

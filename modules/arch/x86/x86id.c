@@ -111,7 +111,11 @@ enum x86_operand_type {
      */
     OPT_MemrAX = 25,
     /* EAX memory operand only (EA) [special case for SVM skinit opcode] */
-    OPT_MemEAX = 26
+    OPT_MemEAX = 26,
+    /* XMM VSIB memory operand */
+    OPT_MemXMMIndex = 27,
+    /* YMM VSIB memory operand */
+    OPT_MemYMMIndex = 28
 };
 
 enum x86_operand_size {
@@ -346,6 +350,37 @@ static const yasm_bytecode_callback x86_id_insn_callback = {
 };
 
 #include "x86insns.c"
+
+/* Looks for the first SIMD register match for the purposes of VSIB matching.
+ * Full legality checking is performed in EA code.
+ */
+static int
+x86_expr_contains_simd_cb(const yasm_expr__item *ei, void *d)
+{
+    int ymm = *((int *)d);
+    if (ei->type != YASM_EXPR_REG)
+        return 0;
+    switch ((x86_expritem_reg_size)(ei->data.reg & ~0xFUL)) {
+        case X86_XMMREG:
+            if (!ymm)
+                return 1;
+            break;
+        case X86_YMMREG:
+            if (ymm)
+                return 1;
+            break;
+        default:
+            break;
+    }
+    return 0;
+}
+
+static int
+x86_expr_contains_simd(const yasm_expr *e, int ymm)
+{
+    return yasm_expr__traverse_leaves_in_const(e, &ymm,
+                                               x86_expr_contains_simd_cb);
+}
 
 static void
 x86_finalize_common(x86_common *common, const x86_insn_info *info,
@@ -851,6 +886,16 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
                         mismatch = 1;
                     break;
                 }
+                case OPT_MemXMMIndex:
+                    if (op->type != YASM_INSN__OPERAND_MEMORY ||
+                        !x86_expr_contains_simd(op->data.ea->disp.abs, 0))
+                        mismatch = 1;
+                    break;
+                case OPT_MemYMMIndex:
+                    if (op->type != YASM_INSN__OPERAND_MEMORY ||
+                        !x86_expr_contains_simd(op->data.ea->disp.abs, 1))
+                        mismatch = 1;
+                    break;
                 default:
                     yasm_internal_error(N_("invalid operand type"));
             }
@@ -1231,12 +1276,20 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                             if (info_ops[i].type == OPT_MemOffs)
                                 /* Special-case for MOV MemOffs instruction */
                                 yasm_x86__ea_set_disponly(insn->x86_ea);
-                            else if (id_insn->default_rel &&
-                                     !op->data.ea->not_pc_rel &&
-                                     op->data.ea->segreg != 0x6404 &&
-                                     op->data.ea->segreg != 0x6505 &&
-                                     !yasm_expr__contains(
-                                        op->data.ea->disp.abs, YASM_EXPR_REG))
+                            else if (info_ops[i].type == OPT_MemXMMIndex) {
+                                /* Remember VSIB mode */
+                                insn->x86_ea->vsib_mode = 1;
+                                insn->x86_ea->need_sib = 1;
+                            } else if (info_ops[i].type == OPT_MemYMMIndex) {
+                                /* Remember VSIB mode */
+                                insn->x86_ea->vsib_mode = 2;
+                                insn->x86_ea->need_sib = 1;
+                            } else if (id_insn->default_rel &&
+                                       !op->data.ea->not_pc_rel &&
+                                       op->data.ea->segreg != 0x6404 &&
+                                       op->data.ea->segreg != 0x6505 &&
+                                       !yasm_expr__contains(
+                                          op->data.ea->disp.abs, YASM_EXPR_REG))
                                 /* Enable default PC-rel if no regs and segreg
                                  * is not FS or GS.
                                  */

@@ -191,6 +191,7 @@ ea_create(void)
     x86_ea->ea.pc_rel = 0;
     x86_ea->ea.not_pc_rel = 0;
     x86_ea->ea.data_len = 0;
+    x86_ea->vsib_mode = 0;
     x86_ea->modrm = 0;
     x86_ea->valid_modrm = 0;
     x86_ea->need_modrm = 0;
@@ -382,6 +383,8 @@ yasm_x86__ea_print(const yasm_effaddr *ea, FILE *f, int indent_level)
     fprintf(f, "%*sNoSplit=%u\n", indent_level, "", (unsigned int)ea->nosplit);
     fprintf(f, "%*sSegmentOv=%02x\n", indent_level, "",
             (unsigned int)x86_ea->ea.segreg);
+    fprintf(f, "%*sVSIBMode=%u\n", indent_level, "",
+            (unsigned int)x86_ea->vsib_mode);
     fprintf(f, "%*sModRM=%03o ValidRM=%u NeedRM=%u\n", indent_level, "",
             (unsigned int)x86_ea->modrm, (unsigned int)x86_ea->valid_modrm,
             (unsigned int)x86_ea->need_modrm);

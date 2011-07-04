@@ -34,6 +34,7 @@
 
 typedef struct x86_checkea_reg3264_data {
     int *regs;          /* total multiplier for each reg */
+    unsigned char vsib_mode;
     unsigned char bits;
     unsigned char addrsize;
 } x86_checkea_reg3264_data;
@@ -57,6 +58,20 @@ x86_expr_checkea_get_reg3264(yasm_expr__item *ei, int *regnum,
             if (data->addrsize != 64)
                 return 0;
             *regnum = (unsigned int)(ei->data.reg & 0xF);
+            break;
+        case X86_XMMREG:
+            if (data->vsib_mode != 1)
+                return 0;
+            if (data->bits != 64 && (ei->data.reg & 0x8) == 0x8)
+                return 0;
+            *regnum = 17+(unsigned int)(ei->data.reg & 0xF);
+            break;
+        case X86_YMMREG:
+            if (data->vsib_mode != 2)
+                return 0;
+            if (data->bits != 64 && (ei->data.reg & 0x8) == 0x8)
+                return 0;
+            *regnum = 17+(unsigned int)(ei->data.reg & 0xF);
             break;
         case X86_RIP:
             if (data->bits != 64)
@@ -606,6 +621,11 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
                 }
                 /*@fallthrough@*/
             default:
+                /* If SIB is required, but we're in 16-bit mode, set to 32. */
+                if (bits == 16 && x86_ea->need_sib == 1) {
+                    *addrsize = 32;
+                    break;
+                }
                 /* check for use of 16 or 32-bit registers; if none are used
                  * default to bits setting.
                  */
@@ -643,13 +663,19 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
             REG64_R13,
             REG64_R14,
             REG64_R15,
-            REG64_RIP
+            REG64_RIP,
+            SIMDREGS
         } reg3264type;
-        int reg3264mult[17] = {0, 0, 0, 0, 0, 0, 0, 0,
-                               0, 0, 0, 0, 0, 0, 0, 0, 0};
+        int reg3264mult[33] =
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
         x86_checkea_reg3264_data reg3264_data;
         int basereg = REG3264_NONE;     /* "base" register (for SIB) */
         int indexreg = REG3264_NONE;    /* "index" register (for SIB) */
+        int regcount = 17;              /* normally don't check SIMD regs */
+
+        if (x86_ea->vsib_mode != 0)
+            regcount = 33;
 
         /* We can only do 64-bit addresses in 64-bit mode. */
         if (*addrsize == 64 && bits != 64) {
@@ -665,6 +691,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
         }
 
         reg3264_data.regs = reg3264mult;
+        reg3264_data.vsib_mode = x86_ea->vsib_mode;
         reg3264_data.bits = bits;
         reg3264_data.addrsize = *addrsize;
         if (x86_ea->ea.disp.abs) {
@@ -698,7 +725,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
          * Also, if an indexreg hasn't been assigned, try to find one.
          * Meanwhile, check to make sure there's no negative register mults.
          */
-        for (i=0; i<17; i++) {
+        for (i=0; i<regcount; i++) {
             if (reg3264mult[i] < 0) {
                 yasm_error_set(YASM_ERROR_VALUE,
                                N_("invalid effective address"));
@@ -711,10 +738,26 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
                 indexreg = i;
         }
 
-        /* Handle certain special cases of indexreg mults when basereg is
-         * empty.
-         */
-        if (indexreg != REG3264_NONE && basereg == REG3264_NONE)
+        if (x86_ea->vsib_mode != 0) {
+            /* For VSIB, the SIMD register needs to go into the indexreg.
+             * Also check basereg (must be a GPR if present) and indexreg
+             * (must be a SIMD register).
+             */
+            if (basereg >= SIMDREGS &&
+                (indexreg == REG3264_NONE || reg3264mult[indexreg] == 1)) {
+                int temp = basereg;
+                basereg = indexreg;
+                indexreg = temp;
+            }
+            if (basereg >= REG64_RIP || indexreg < SIMDREGS) {
+                yasm_error_set(YASM_ERROR_VALUE,
+                               N_("invalid effective address"));
+                return 1;
+            }
+        } else if (indexreg != REG3264_NONE && basereg == REG3264_NONE)
+            /* Handle certain special cases of indexreg mults when basereg is
+             * empty.
+             */
             switch (reg3264mult[indexreg]) {
                 case 1:
                     /* Only optimize this way if nosplit wasn't specified */
@@ -741,7 +784,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
         /* Make sure there's no other registers than the basereg and indexreg
          * we just found.
          */
-        for (i=0; i<17; i++)
+        for (i=0; i<regcount; i++)
             if (i != basereg && i != indexreg && reg3264mult[i] != 0) {
                 yasm_error_set(YASM_ERROR_VALUE,
                                N_("invalid effective address"));
@@ -861,10 +904,17 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
                 x86_ea->sib |= 040;
                 /* Any scale field is valid, just leave at 0. */
             else {
-                if (yasm_x86__set_rex_from_reg(rex, &low3, (unsigned int)
-                                               (X86_REG64 | indexreg), bits,
-                                               X86_REX_X))
-                    return 1;
+                if (indexreg >= SIMDREGS) {
+                    if (yasm_x86__set_rex_from_reg(rex, &low3,
+                            (unsigned int)(X86_XMMREG | (indexreg-SIMDREGS)),
+                            bits, X86_REX_X))
+                        return 1;
+                } else {
+                    if (yasm_x86__set_rex_from_reg(rex, &low3,
+                            (unsigned int)(X86_REG64 | indexreg),
+                            bits, X86_REX_X))
+                        return 1;
+                }
                 x86_ea->sib |= low3 << 3;
                 /* Set scale field, 1 case -> 0, so don't bother. */
                 switch (reg3264mult[indexreg]) {
