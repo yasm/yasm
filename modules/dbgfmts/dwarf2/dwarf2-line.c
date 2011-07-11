@@ -621,6 +621,7 @@ dwarf2_generate_line_section(yasm_section *sect, /*@null@*/ void *d)
         bcinfo.lastfile = 0;
         bcinfo.loc.isa_change = 0;
         bcinfo.loc.column = 0;
+        bcinfo.loc.discriminator = 0;
         bcinfo.loc.is_stmt = IS_STMT_NOCHANGE;
         bcinfo.loc.basic_block = 0;
         bcinfo.loc.prologue_end = 0;
