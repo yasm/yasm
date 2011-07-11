@@ -535,7 +535,7 @@ expr_can_destroy_int_right(yasm_expr_op op, yasm_intnum *intn)
  * NOTE: Really designed to only be used by expr_level_op().
  */
 static int
-expr_simplify_identity(yasm_expr *e, int numterms, int int_term,
+expr_simplify_identity(yasm_expr *e, int numterms, int *int_term,
                        int simplify_reg_mul)
 {
     int i;
@@ -547,26 +547,27 @@ expr_simplify_identity(yasm_expr *e, int numterms, int int_term,
     save_numterms = e->numterms;
     e->numterms = numterms;
     if (simplify_reg_mul || e->op != YASM_EXPR_MUL
-        || !yasm_intnum_is_pos1(e->terms[int_term].data.intn)
+        || !yasm_intnum_is_pos1(e->terms[*int_term].data.intn)
         || !yasm_expr__contains(e, YASM_EXPR_REG)) {
         /* Check for simple identities that delete the intnum.
          * Don't delete if the intnum is the only thing in the expn.
          */
-        if ((int_term == 0 && numterms > 1 &&
+        if ((*int_term == 0 && numterms > 1 &&
              expr_can_destroy_int_left(e->op, e->terms[0].data.intn)) ||
-            (int_term > 0 &&
-             expr_can_destroy_int_right(e->op, e->terms[int_term].data.intn))) {
+            (*int_term > 0 &&
+             expr_can_destroy_int_right(e->op,
+                                        e->terms[*int_term].data.intn))) {
             /* Delete the intnum */
-            yasm_intnum_destroy(e->terms[int_term].data.intn);
+            yasm_intnum_destroy(e->terms[*int_term].data.intn);
 
             /* Slide everything to its right over by 1 */
-            if (int_term != numterms-1) /* if it wasn't last.. */
-                memmove(&e->terms[int_term], &e->terms[int_term+1],
-                        (numterms-1-int_term)*sizeof(yasm_expr__item));
+            if (*int_term != numterms-1) /* if it wasn't last.. */
+                memmove(&e->terms[*int_term], &e->terms[*int_term+1],
+                        (numterms-1-*int_term)*sizeof(yasm_expr__item));
 
             /* Update numterms */
             numterms--;
-            int_term = -1;      /* no longer an int term */
+            *int_term = -1;     /* no longer an int term */
         }
     }
     e->numterms = save_numterms;
@@ -574,23 +575,23 @@ expr_simplify_identity(yasm_expr *e, int numterms, int int_term,
     /* Check for simple identites that delete everything BUT the intnum.
      * Don't bother if the intnum is the only thing in the expn.
      */
-    if (numterms > 1 && int_term != -1 &&
-        expr_is_constant(e->op, e->terms[int_term].data.intn)) {
+    if (numterms > 1 && *int_term != -1 &&
+        expr_is_constant(e->op, e->terms[*int_term].data.intn)) {
         /* Loop through, deleting everything but the integer term */
         for (i=0; i<e->numterms; i++)
-            if (i != int_term)
+            if (i != *int_term)
                 expr_delete_term(&e->terms[i], 1);
 
         /* Move integer term to the first term (if not already there) */
-        if (int_term != 0)
-            e->terms[0] = e->terms[int_term];   /* structure copy */
+        if (*int_term != 0)
+            e->terms[0] = e->terms[*int_term];  /* structure copy */
 
         /* Set numterms to 1 */
         numterms = 1;
     }
 
     /* Compute NOT, NEG, and LNOT on single intnum. */
-    if (numterms == 1 && int_term == 0 &&
+    if (numterms == 1 && *int_term == 0 &&
         (e->op == YASM_EXPR_NOT || e->op == YASM_EXPR_NEG ||
          e->op == YASM_EXPR_LNOT))
         yasm_intnum_calc(e->terms[0].data.intn, e->op, NULL);
@@ -698,7 +699,7 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
             int new_fold_numterms;
             /* Simplify identities and make IDENT if possible. */
             new_fold_numterms =
-                expr_simplify_identity(e, fold_numterms, first_int_term,
+                expr_simplify_identity(e, fold_numterms, &first_int_term,
                                        simplify_reg_mul);
             level_numterms -= fold_numterms-new_fold_numterms;
             fold_numterms = new_fold_numterms;
@@ -789,7 +790,7 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
     /* Simplify identities, make IDENT if possible, and save to e->numterms. */
     if (simplify_ident && first_int_term != -1) {
         e->numterms = expr_simplify_identity(e, level_numterms,
-                                             first_int_term, simplify_reg_mul);
+                                             &first_int_term, simplify_reg_mul);
     } else {
         e->numterms = level_numterms;
         if (level_numterms == 1)
