@@ -1,5 +1,3 @@
-# $Id$
-
 TESTS += modules/parsers/gas/tests/bin/gas_bin_test.sh
 
 EXTRA_DIST += modules/parsers/gas/tests/bin/gas_bin_test.sh

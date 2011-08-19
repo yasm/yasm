@@ -2,10 +2,6 @@
  * \file assocdat.h
  * \brief YASM associated data storage (libyasm internal use)
  *
- * \rcs
- * $Id$
- * \endrcs
- *
  * \license
  *  Copyright (C) 2003-2007  Peter Johnson
  *

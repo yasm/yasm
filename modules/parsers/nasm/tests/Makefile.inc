@@ -1,5 +1,3 @@
-# $Id$
-
 TESTS += modules/parsers/nasm/tests/nasm_test.sh
 
 EXTRA_DIST += modules/parsers/nasm/tests/nasm_test.sh

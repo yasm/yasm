@@ -1,5 +1,3 @@
-# $Id$
-
 TESTS += modules/objfmts/xdf/tests/xdf_test.sh
 
 EXTRA_DIST += modules/objfmts/xdf/tests/xdf_test.sh

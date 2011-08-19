@@ -1,4 +1,4 @@
-/* $Id$
+/*
  * YAPP preprocessor (mimics NASM's preprocessor) header file
  *
  * Copyright (C) 2001  Michael Urman

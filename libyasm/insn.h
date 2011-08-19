@@ -2,10 +2,6 @@
  * \file libyasm/insn.h
  * \brief YASM mnenomic instruction.
  *
- * \rcs
- * $Id$
- * \endrcs
- *
  * \license
  *  Copyright (C) 2002-2007  Peter Johnson
  *

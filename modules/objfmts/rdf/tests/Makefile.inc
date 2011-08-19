@@ -1,5 +1,3 @@
-# $Id$
-
 TESTS += modules/objfmts/rdf/tests/rdf_test.sh
 
 EXTRA_DIST += modules/objfmts/rdf/tests/rdf_test.sh

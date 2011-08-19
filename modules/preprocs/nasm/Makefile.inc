@@ -1,5 +1,3 @@
-# $Id$
-
 libyasm_a_SOURCES += modules/preprocs/nasm/nasm-preproc.c
 libyasm_a_SOURCES += modules/preprocs/nasm/nasm-pp.h
 libyasm_a_SOURCES += modules/preprocs/nasm/nasm-pp.c

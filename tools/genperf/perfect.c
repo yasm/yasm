@@ -1,6 +1,4 @@
-/* Modified for use with yasm by Peter Johnson.
- * $Id$
- */
+/* Modified for use with yasm by Peter Johnson. */
 /*
 ------------------------------------------------------------------------------
 perfect.c: code to generate code for a hash for perfect hashing.

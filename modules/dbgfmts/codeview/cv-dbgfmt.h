@@ -1,4 +1,4 @@
-/* $Id$
+/*
  * CodeView debugging formats implementation for Yasm
  *
  *  Copyright (C) 2006-2007  Peter Johnson

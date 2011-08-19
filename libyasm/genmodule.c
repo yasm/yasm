@@ -1,4 +1,4 @@
-/* $Id$
+/*
  *
  * Generate module.c from module.in and Makefile.am or Makefile.
  *

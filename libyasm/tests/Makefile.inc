@@ -1,5 +1,3 @@
-# $Id$
-
 TESTS += bitvect_test
 TESTS += floatnum_test
 TESTS += leb128_test

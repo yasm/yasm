@@ -1,5 +1,3 @@
-# $Id$
-
 SUBDIRS = po .
 
 ACLOCAL_AMFLAGS = -I m4

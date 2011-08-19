@@ -1,4 +1,4 @@
-/* $Id$
+/*
  *
  * Generate array-of-const-string from text file.
  *

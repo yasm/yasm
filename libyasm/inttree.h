@@ -1,4 +1,3 @@
-/* $Id$ */
 #ifndef YASM_INTTREE_H
 #define YASM_INTTREE_H
 

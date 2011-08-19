@@ -1,6 +1,5 @@
 # Test wrapper from Quod Libet
 # http://www.sacredchao.net/quodlibet/
-# $Id$
 import unittest, sys
 suites = []
 add = registerCase = suites.append

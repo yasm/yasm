@@ -28,7 +28,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$Id$");
 
 #include <libyasm.h>
 

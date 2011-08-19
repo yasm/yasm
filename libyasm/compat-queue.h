@@ -1,4 +1,4 @@
-/* $Id$
+/*
  * <sys/queue.h> implementation for systems that don't have it.
  *
  * Copyright (c) 1991, 1993

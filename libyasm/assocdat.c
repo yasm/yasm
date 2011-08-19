@@ -25,7 +25,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include "util.h"
-/*@unused@*/ RCSID("$Id$");
 
 #include "coretype.h"
 #include "assocdat.h"

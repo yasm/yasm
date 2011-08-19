@@ -2,10 +2,6 @@
  * \file libyasm.h
  * \brief YASM library primary header file.
  *
- * \rcs
- * $Id$
- * \endrcs
- *
  * \license
  *  Copyright (C) 2003-2007  Peter Johnson
  *

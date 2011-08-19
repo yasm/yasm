@@ -1,5 +1,3 @@
-# $Id$
-
 TESTS += modules/preprocs/tasm/tests/tasmpp_test.sh
 
 EXTRA_DIST += modules/preprocs/tasm/tests/tasmpp_test.sh

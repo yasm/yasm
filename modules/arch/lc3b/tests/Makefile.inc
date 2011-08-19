@@ -1,5 +1,3 @@
-# $Id$
-
 TESTS += modules/arch/lc3b/tests/lc3b_test.sh
 
 EXTRA_DIST += modules/arch/lc3b/tests/lc3b_test.sh

@@ -29,7 +29,6 @@
  */
 #include <util.h>
 #include <ctype.h>
-/*@unused@*/ RCSID("$Id$");
 
 #include "yasm-options.h"
 

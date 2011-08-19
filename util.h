@@ -1,4 +1,4 @@
-/* $Id$
+/*
  * YASM utility functions.
  *
  * Includes standard headers and defines prototypes for replacement functions
@@ -118,18 +118,6 @@
 #endif
 
 #include <libyasm/compat-queue.h>
-
-#ifdef HAVE_SYS_CDEFS_H
-# include <sys/cdefs.h>
-#endif
-
-#ifdef __RCSID
-# define RCSID(s)       __RCSID(s)
-#elif defined(__GNUC__) && defined(__ELF__)
-# define RCSID(s)       __asm__(".ident\t\"" s "\"")
-#else
-# define RCSID(s)       static const char rcsid[] = s
-#endif
 
 #ifdef WITH_DMALLOC
 # include <dmalloc.h>

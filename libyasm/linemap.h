@@ -2,10 +2,6 @@
  * \file libyasm/linemap.h
  * \brief YASM virtual line mapping interface.
  *
- * \rcs
- * $Id$
- * \endrcs
- *
  * \license
  *  Copyright (C) 2002-2007  Peter Johnson
  *

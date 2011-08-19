@@ -28,13 +28,8 @@
 
 from sys import stdout, version_info
 
-rcstag = "$Id$"
-try:
-    scriptname = rcstag.split()[1]
-    scriptrev = rcstag.split()[2]
-except IndexError:
-    scriptname = "gen_x86_insn.py"
-    scriptrev = "HEAD"
+scriptname = "gen_x86_insn.py"
+scriptrev = "HEAD"
 
 ordered_cpus = [
     "086", "186", "286", "386", "486", "586", "686", "K6", "Athlon", "P3",

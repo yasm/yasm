@@ -2,10 +2,6 @@
  * \file libyasm/listfmt.h
  * \brief YASM list format interface.
  *
- * \rcs
- * $Id$
- * \endrcs
- *
  * \license
  *  Copyright (C) 2004-2007  Peter Johnson
  *

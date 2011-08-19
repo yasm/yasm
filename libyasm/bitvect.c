@@ -1,5 +1,4 @@
 #include "util.h"
-RCSID("$Id$");
 
 #include "coretype.h"
 

@@ -1,5 +1,4 @@
 #! /bin/sh
-# $Id$
 
 YASM_TEST_SUITE=1
 export YASM_TEST_SUITE

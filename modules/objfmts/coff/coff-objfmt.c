@@ -26,7 +26,6 @@
  */
 #include <util.h>
 #include <time.h>
-/*@unused@*/ RCSID("$Id$");
 
 #include <libyasm.h>
 

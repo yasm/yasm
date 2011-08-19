@@ -1,5 +1,3 @@
-# $IdPath$
-
 TESTS += modules/preprocs/yapp/tests/yapp_test.sh
 
 EXTRA_DIST += modules/preprocs/yapp/tests/Makefile.inc

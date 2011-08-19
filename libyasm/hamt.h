@@ -2,10 +2,6 @@
  * \file libyasm/hamt.h
  * \brief Hash Array Mapped Trie (HAMT) functions.
  *
- * \rcs
- * $Id$
- * \endrcs
- *
  * \license
  *  Copyright (C) 2001-2007  Peter Johnson
  *

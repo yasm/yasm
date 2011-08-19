@@ -1,4 +1,4 @@
-/* $Id$
+/*
  *
  * Generate Minimal Perfect Hash (genperf)
  *

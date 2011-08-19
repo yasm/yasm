@@ -1,4 +1,4 @@
-/* $Id$
+/*
  * YASM module loader header file
  *
  *  Copyright (C) 2002-2007  Peter Johnson

@@ -1,5 +1,3 @@
-# $Id$
-
 EXTRA_DIST += modules/dbgfmts/stabs/tests/stabs_test.sh
 TESTS += modules/dbgfmts/stabs/tests/stabs_test.sh
 

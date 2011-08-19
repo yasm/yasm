@@ -1,4 +1,3 @@
-# $Id$
 from tests import TestCase, add
 from yasm import SymbolTable, Expression, YasmError
 

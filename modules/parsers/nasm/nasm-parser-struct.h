@@ -1,4 +1,4 @@
-/* $Id$
+/*
  * NASM-compatible parser struct header file
  *
  *  Copyright (C) 2002-2007  Peter Johnson

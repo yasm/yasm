@@ -1,5 +1,3 @@
-# $Id$
-
 EXTRA_DIST += frontends/yasm/Makefile.inc
 EXTRA_DIST += frontends/tasm/Makefile.inc
 EXTRA_DIST += frontends/vsyasm/Makefile.inc

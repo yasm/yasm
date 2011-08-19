@@ -25,7 +25,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$Id$");
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>

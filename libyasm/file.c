@@ -25,7 +25,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$Id$");
 
 /* Need either unistd.h or direct.h to prototype getcwd() and mkdir() */
 #ifdef HAVE_UNISTD_H

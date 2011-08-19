@@ -2,10 +2,6 @@
  * \file libyasm/expr.h
  * \brief YASM expression interface.
  *
- * \rcs
- * $Id$
- * \endrcs
- *
  * \license
  *  Copyright (C) 2001-2007  Michael Urman, Peter Johnson
  *

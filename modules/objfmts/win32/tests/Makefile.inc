@@ -1,5 +1,3 @@
-# $Id$
-
 TESTS += modules/objfmts/win32/tests/win32_test.sh
 
 EXTRA_DIST += modules/objfmts/win32/tests/export.asm

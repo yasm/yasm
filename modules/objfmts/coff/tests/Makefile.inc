@@ -1,5 +1,3 @@
-# $Id$
-
 TESTS += modules/objfmts/coff/tests/coff_test.sh
 
 EXTRA_DIST += modules/objfmts/coff/tests/coff_test.sh

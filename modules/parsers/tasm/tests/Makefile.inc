@@ -1,5 +1,3 @@
-# $Id: Makefile.inc 2063 2008-04-12 08:30:22Z peter $
-
 TESTS += modules/parsers/tasm/tests/tasm_test.sh
 
 EXTRA_DIST += modules/parsers/tasm/tests/tasm_test.sh

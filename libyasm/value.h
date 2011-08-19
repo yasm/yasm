@@ -2,10 +2,6 @@
  * \file libyasm/value.h
  * \brief YASM value interface.
  *
- * \rcs
- * $Id$
- * \endrcs
- *
  * \license
  *  Copyright (C) 2006-2007  Peter Johnson
  *

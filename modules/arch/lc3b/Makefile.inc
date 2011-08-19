@@ -1,5 +1,3 @@
-# $Id$
-
 libyasm_a_SOURCES += modules/arch/lc3b/lc3barch.c
 libyasm_a_SOURCES += modules/arch/lc3b/lc3barch.h
 libyasm_a_SOURCES += modules/arch/lc3b/lc3bbc.c

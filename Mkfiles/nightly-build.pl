@@ -1,5 +1,4 @@
 #!/usr/bin/perl
-# $Id$
 use POSIX qw(strftime);
 
 $|++;

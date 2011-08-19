@@ -2,10 +2,6 @@
  * \file libyasm/coretype.h
  * \brief YASM core types and utility functions.
  *
- * \rcs
- * $Id$
- * \endrcs
- *
  * \license
  *  Copyright (C) 2001-2007  Peter Johnson
  *

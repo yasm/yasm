@@ -1,5 +1,3 @@
-# $Id$
-
 TESTS += modules/arch/x86/tests/x86_test.sh
 
 EXTRA_DIST += modules/arch/x86/tests/x86_test.sh

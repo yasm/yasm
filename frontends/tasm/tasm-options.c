@@ -29,7 +29,6 @@
  */
 #include <util.h>
 #include <ctype.h>
-/*@unused@*/ RCSID("$Id: tasm-options.c 1197 2005-01-24 06:44:25Z peter $");
 
 #include "tasm-options.h"
 

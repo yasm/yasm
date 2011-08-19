@@ -25,7 +25,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$Id: module.in 2080 2008-04-30 04:40:29Z peter $");
 
 #include <libyasm.h>
 

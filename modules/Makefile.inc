@@ -1,5 +1,3 @@
-# $Id$
-
 EXTRA_DIST += modules/arch/Makefile.inc
 EXTRA_DIST += modules/listfmts/Makefile.inc
 EXTRA_DIST += modules/parsers/Makefile.inc

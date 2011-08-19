@@ -1,5 +1,3 @@
-# $Id$
-
 libyasm_a_SOURCES += modules/parsers/gas/gas-parser.c
 libyasm_a_SOURCES += modules/parsers/gas/gas-parser.h
 libyasm_a_SOURCES += modules/parsers/gas/gas-parse.c

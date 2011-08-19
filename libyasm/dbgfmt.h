@@ -2,10 +2,6 @@
  * \file libyasm/dbgfmt.h
  * \brief YASM debug format interface.
  *
- * \rcs
- * $Id$
- * \endrcs
- *
  * \license
  *  Copyright (C) 2002-2007  Peter Johnson
  *

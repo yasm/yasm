@@ -1,4 +1,4 @@
-/* $Id$
+/*
  * DWARF2 debugging format
  *
  *  Copyright (C) 2006-2007  Peter Johnson

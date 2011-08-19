@@ -1,5 +1,3 @@
-# $Id$
-
 EXTRA_DIST += modules/dbgfmts/codeview/Makefile.inc
 EXTRA_DIST += modules/dbgfmts/dwarf2/Makefile.inc
 EXTRA_DIST += modules/dbgfmts/null/Makefile.inc

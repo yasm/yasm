@@ -1,6 +1,4 @@
-/* Modified for use with yasm by Peter Johnson.
- * $Id$
- */
+/* Modified for use with yasm by Peter Johnson. */
 /*
 ------------------------------------------------------------------------------
 By Bob Jenkins, September 1996.

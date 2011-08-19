@@ -1,5 +1,3 @@
-# $Id$
-
 libyasm_a_SOURCES += modules/dbgfmts/codeview/cv-dbgfmt.h
 libyasm_a_SOURCES += modules/dbgfmts/codeview/cv-dbgfmt.c
 libyasm_a_SOURCES += modules/dbgfmts/codeview/cv-symline.c

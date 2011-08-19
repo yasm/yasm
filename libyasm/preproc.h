@@ -2,10 +2,6 @@
  * \file libyasm/preproc.h
  * \brief YASM preprocessor module interface.
  *
- * \rcs
- * $Id$
- * \endrcs
- *
  * \license
  *  Copyright (C) 2001-2007  Peter Johnson
  *

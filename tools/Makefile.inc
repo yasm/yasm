@@ -1,5 +1,3 @@
-# $Id$
-
 EXTRA_DIST += tools/re2c/Makefile.inc
 EXTRA_DIST += tools/genmacro/Makefile.inc
 EXTRA_DIST += tools/genperf/Makefile.inc

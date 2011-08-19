@@ -1,5 +1,3 @@
-# $Id$
-
 libyasm_a_SOURCES += libyasm/assocdat.c
 libyasm_a_SOURCES += libyasm/bitvect.c
 libyasm_a_SOURCES += libyasm/bc-align.c

@@ -1,8 +1,6 @@
 # List of source files containing translatable strings.
 # To update, try "find . -name \*.c | xargs grep -c _\( | grep -v :0 | sort"
 # Copyright (c) 2001  Peter Johnson
-#
-# $Id$
 
 frontends/yasm/yasm-options.c
 frontends/yasm/yasm.c

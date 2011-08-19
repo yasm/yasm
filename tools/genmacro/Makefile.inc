@@ -1,5 +1,3 @@
-# $Id$
-
 # These utility programs have to be built for BUILD host in cross-build.
 # This makes things rather non-standard automake
 

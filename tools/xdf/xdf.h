@@ -1,6 +1,5 @@
 /* XDF - Extended Dynamic Object Format */
 /* Version 2.0 */
-/* $Id$ */
 
 /* FILE HEADER        */
 /* SECTION HEADERS [] */

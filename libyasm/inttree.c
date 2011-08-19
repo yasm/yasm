@@ -1,5 +1,4 @@
 #include "util.h"
-/*@unused@*/ RCSID("$Id$");
 
 #include <stdlib.h>
 #include <stdio.h>

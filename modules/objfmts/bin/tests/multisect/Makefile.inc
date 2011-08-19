@@ -1,5 +1,3 @@
-# $Id$
-
 TESTS += modules/objfmts/bin/tests/multisect/bin_multi_test.sh
 
 EXTRA_DIST += modules/objfmts/bin/tests/multisect/bin_multi_test.sh

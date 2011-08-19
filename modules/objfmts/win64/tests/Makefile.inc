@@ -1,5 +1,3 @@
-# $Id$
-
 TESTS += modules/objfmts/win64/tests/win64_test.sh
 
 EXTRA_DIST += modules/objfmts/win64/tests/win64_test.sh

@@ -1,5 +1,3 @@
-# $Id$
-
 PYBINDING_DEPS  = tools/python-yasm/bytecode.pxi
 PYBINDING_DEPS += tools/python-yasm/errwarn.pxi
 PYBINDING_DEPS += tools/python-yasm/expr.pxi

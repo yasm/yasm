@@ -26,7 +26,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util.h>
-/*@unused@*/ RCSID("$Id: tasm.c 1523 2006-05-06 16:11:56Z peter $");
 
 #include <ctype.h>
 #include <libyasm/compat-queue.h>

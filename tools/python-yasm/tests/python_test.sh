@@ -1,7 +1,6 @@
 #!/bin/sh
 # Based on _sanity.sh from Quod Libet
 # http://www.sacredchao.net/quodlibet/
-# $Id$
 
 set -e
 

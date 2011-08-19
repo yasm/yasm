@@ -1,4 +1,4 @@
-/* $Id$
+/*
  * ELF object format helpers
  *
  *  Copyright (C) 2003-2007  Michael Urman

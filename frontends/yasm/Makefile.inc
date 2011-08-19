@@ -1,5 +1,3 @@
-# $Id$
-
 bin_PROGRAMS += yasm
 dist_man_MANS += yasm.1
 

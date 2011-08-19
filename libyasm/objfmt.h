@@ -2,10 +2,6 @@
  * \file libyasm/objfmt.h
  * \brief YASM object format module interface.
  *
- * \rcs
- * $Id$
- * \endrcs
- *
  * \license
  *  Copyright (C) 2001-2007  Peter Johnson
  *

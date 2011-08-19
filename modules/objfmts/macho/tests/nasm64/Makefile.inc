@@ -1,5 +1,3 @@
-# $Id$
-
 TESTS += modules/objfmts/macho/tests/nasm64/macho64_test.sh
 
 EXTRA_DIST += modules/objfmts/macho/tests/nasm64/nasm-macho64-pic.asm

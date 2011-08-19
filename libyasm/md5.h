@@ -1,9 +1,5 @@
 /* See md5.c for explanation and copyright information.  */
 
-/*
- * $Id$
- */
-
 #ifndef YASM_MD5_H
 #define YASM_MD5_H
 

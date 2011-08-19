@@ -1,5 +1,3 @@
-# $Id$
-
 libyasm_a_SOURCES += modules/preprocs/yapp/yapp-preproc.c
 libyasm_a_SOURCES += modules/preprocs/yapp/yapp-preproc.h
 libyasm_a_SOURCES += modules/preprocs/yapp/yapp-token.h

@@ -1,5 +1,3 @@
-# $Id$
-
 libyasm_a_SOURCES += modules/arch/x86/x86arch.c
 libyasm_a_SOURCES += modules/arch/x86/x86arch.h
 libyasm_a_SOURCES += modules/arch/x86/x86bc.c

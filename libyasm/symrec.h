@@ -2,10 +2,6 @@
  * \file libyasm/symrec.h
  * \brief YASM symbol table interface.
  *
- * \rcs
- * $Id$
- * \endrcs
- *
  * \license
  *  Copyright (C) 2001-2007  Michael Urman, Peter Johnson
  *

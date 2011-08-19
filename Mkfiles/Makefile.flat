@@ -1,5 +1,3 @@
-# $Id$
-#
 # Ultra-flat Makefile "prototype" for non-Unix platforms.
 # Does NOT depend on or use configure.
 #

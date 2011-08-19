@@ -1,6 +1,5 @@
 /* Modified for use with yasm by Peter Johnson. */
 #include "util.h"
-/*@unused@*/ RCSID("$Id$");
 
 /*
 --------------------------------------------------------------------

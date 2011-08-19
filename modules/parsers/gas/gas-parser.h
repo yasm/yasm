@@ -1,4 +1,4 @@
-/* $Id$
+/*
  * GAS-compatible parser header file
  *
  *  Copyright (C) 2005-2007  Peter Johnson

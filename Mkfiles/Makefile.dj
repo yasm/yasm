@@ -1,5 +1,3 @@
-# $Id$
-#
 # Ultra-flat Makefile for DJGPP (also works for Cygwin).
 # Does NOT depend on or use configure.
 #

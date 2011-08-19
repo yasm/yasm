@@ -29,7 +29,6 @@
    this file is only about 3k of object code.  */
 
 #include <util.h>
-/*@unused@*/ RCSID("$Id$");
 
 #include "md5.h"
 

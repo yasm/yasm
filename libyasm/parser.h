@@ -2,10 +2,6 @@
  * \file libyasm/parser.h
  * \brief YASM parser module interface.
  *
- * \rcs
- * $Id$
- * \endrcs
- *
  * \license
  *  Copyright (C) 2001-2007  Peter Johnson
  *

@@ -1,4 +1,4 @@
-/* $Id$
+/*
  * COFF (DJGPP) object format
  *
  *  Copyright (C) 2007  Peter Johnson

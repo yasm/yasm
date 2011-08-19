@@ -1,5 +1,3 @@
-# $Id$
-
 TESTS += modules/dbgfmts/dwarf2/tests/pass64/dwarf2_pass64_test.sh
 
 EXTRA_DIST += modules/dbgfmts/dwarf2/tests/pass64/dwarf2_pass64_test.sh

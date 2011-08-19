@@ -1,5 +1,3 @@
-# $Id$
-
 TESTS += modules/objfmts/macho/tests/gas32/gas_macho32_test.sh
 
 EXTRA_DIST += modules/objfmts/macho/tests/gas32/gas_macho32_test.sh

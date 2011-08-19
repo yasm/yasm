@@ -25,7 +25,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include "util.h"
-RCSID("$Id$");
 
 #include "coretype.h"
 #include "errwarn.h"

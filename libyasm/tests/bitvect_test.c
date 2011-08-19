@@ -1,4 +1,4 @@
-/* $Id$
+/*
  *
  *  Copyright (C) 2001-2007  Peter Johnson
  *

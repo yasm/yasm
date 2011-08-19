@@ -2,10 +2,6 @@
  * \file libyasm/floatnum.h
  * \brief YASM floating point (IEEE) interface.
  *
- * \rcs
- * $Id$
- * \endrcs
- *
  * \license
  *  Copyright (C) 2001-2007  Peter Johnson
  *

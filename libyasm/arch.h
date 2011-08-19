@@ -2,10 +2,6 @@
  * \file libyasm/arch.h
  * \brief YASM architecture interface.
  *
- * \rcs
- * $Id$
- * \endrcs
- *
  * \license
  *  Copyright (C) 2002-2007  Peter Johnson
  *

@@ -1,5 +1,3 @@
-# $Id$
-
 libyasm_a_SOURCES += modules/objfmts/elf/elf.c
 libyasm_a_SOURCES += modules/objfmts/elf/elf.h
 libyasm_a_SOURCES += modules/objfmts/elf/elf-objfmt.c

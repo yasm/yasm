@@ -1,4 +1,4 @@
-/* $Id$
+/*
  * Extended Dynamic Object format dumper
  *
  *  Copyright (C) 2004-2007  Peter Johnson

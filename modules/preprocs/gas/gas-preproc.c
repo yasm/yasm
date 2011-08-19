@@ -26,7 +26,6 @@
  */
 #include <util.h>
 #include <ctype.h>
-/*@unused@*/ RCSID("$Id$");
 
 #include <libyasm.h>
 #include "modules/preprocs/gas/gas-eval.h"
