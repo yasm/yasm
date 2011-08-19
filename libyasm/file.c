@@ -27,10 +27,12 @@
 #include <util.h>
 /*@unused@*/ RCSID("$Id$");
 
-/* Need either unistd.h or direct.h (on Windows) to prototype getcwd() */
-#if defined(HAVE_UNISTD_H)
+/* Need either unistd.h or direct.h to prototype getcwd() and mkdir() */
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
-#elif defined(HAVE_DIRECT_H)
+#endif
+
+#ifdef HAVE_DIRECT_H
 #include <direct.h>
 #endif
 
