@@ -296,7 +296,7 @@ win64_uwinfo_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp,
         YASM_WRITE_8(buf, 1);
 
     /* Size of prolog */
-    output_value(&info->prolog_size, buf, 1, (unsigned long)(buf-*bufstart),
+    output_value(&info->prolog_size, buf, 1, (unsigned long)(buf-bufstart),
                  bc, 1, d);
     buf += 1;
 
