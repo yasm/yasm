@@ -99,7 +99,7 @@ struct elf_machine_handler {
     func_write_reloc write_reloc;
     func_write_proghead write_proghead;
 
-    const elf_machine_ssym *ssyms;      /* array of "special" syms */
+    elf_machine_ssym *ssyms;            /* array of "special" syms */
     const size_t num_ssyms;             /* size of array */
 
     const int bits;                     /* usually 32 or 64 */
