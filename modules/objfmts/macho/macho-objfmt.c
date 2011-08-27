@@ -921,7 +921,26 @@ macho_objfmt_output_symtable(yasm_symrec *sym, /*@null@*/ void *d)
             }
             /*printf("common symbol %s val %lu\n", name, yasm_intnum_get_uint(val));*/
         } else if (vis & YASM_SYM_GLOBAL) {
-            n_type |= N_EXT;
+            yasm_valparamhead *valparams =
+                yasm_symrec_get_objext_valparams(sym);
+
+            struct macho_global_data {
+                unsigned long flag; /* N_PEXT */
+            } data;
+
+            data.flag = 0;
+
+            if (valparams) {
+                static const yasm_dir_help help[] = {
+                    { "private_extern", 0, yasm_dir_helper_flag_set,
+                      offsetof(struct macho_global_data, flag), N_PEXT },
+                };
+                yasm_dir_helper(sym, yasm_vps_first(valparams),
+                                yasm_symrec_get_decl_line(sym), help, NELEMS(help),
+                                &data, yasm_dir_helper_valparam_warn);
+            }
+
+            n_type |= N_EXT | data.flag;
         }
 
         localbuf = info->buf;
