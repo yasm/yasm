@@ -62,6 +62,8 @@ x86regtmod.c
 nasm-version.c
 win64-gas.c
 win64-nasm.c
+YASM-VERSION-FILE
+YASM-VERSION.h
 .sw*
 *.s
 *.asm

@@ -4,17 +4,15 @@
 # autoconf setup
 #
 AC_PREREQ(2.53)
-AC_INIT([yasm], [HEAD], [bug-yasm@tortall.net])
+AC_INIT([yasm],
+       	m4_esyscmd([./YASM-VERSION-GEN.sh && tr -d '\n' <YASM-VERSION-FILE]),
+        [bug-yasm@tortall.net])
 #AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADER([config.h])
 
 AM_INIT_AUTOMAKE([1.9.6 foreign])
 AM_MAINTAINER_MODE
-
-AC_DEFINE(PACKAGE_INTVER, ["1.1.99"],
-	  [Define to internal version of this package.])
-AC_DEFINE(PACKAGE_BUILD, ["HEAD"], [Define to build version of this package.])
 
 #
 # autoconf command-line options

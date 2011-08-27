@@ -36,14 +36,19 @@ int
 main(int argc, char *argv[])
 {
     FILE *out;
-    int major, minor, subminor;
+    int major, minor, subminor, patchlevel, matched;
 
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <outfile>\n", argv[0]);
         return EXIT_FAILURE;
     }
 
-    if (sscanf(PACKAGE_INTVER, "%d.%d.%d", &major, &minor, &subminor) != 3) {
+    matched = sscanf(PACKAGE_VERSION, "%d.%d.%d.%d", &major, &minor, &subminor,
+                     &patchlevel);
+
+    if (matched == 3)
+        patchlevel = 0;
+    else if (matched != 4) {
         fprintf(stderr, "Version tokenizing error\n");
         return EXIT_FAILURE;
     }
@@ -61,17 +66,15 @@ main(int argc, char *argv[])
     fprintf(out, "%%define __YASM_MAJOR__ %d\n", major);
     fprintf(out, "%%define __YASM_MINOR__ %d\n", minor);
     fprintf(out, "%%define __YASM_SUBMINOR__ %d\n", subminor);
-    if (!isdigit(PACKAGE_BUILD[0]))
-        fprintf(out, "%%define __YASM_BUILD__ 0\n");
-    else
-        fprintf(out, "%%define __YASM_BUILD__ %d\n", atoi(PACKAGE_BUILD));
+    fprintf(out, "%%define __YASM_BUILD__ %d\n", patchlevel);
+    fprintf(out, "%%define __YASM_PATCHLEVEL__ %d\n", patchlevel);
 
     /* Version id (hex number) */
-    fprintf(out, "%%define __YASM_VERSION_ID__ 0%02x%02x%02x00h\n", major,
-            minor, subminor);
+    fprintf(out, "%%define __YASM_VERSION_ID__ 0%02x%02x%02x%02xh\n", major,
+            minor, subminor, patchlevel);
 
-    /* Version string - version sans build */
-    fprintf(out, "%%define __YASM_VER__ \"%s\"\n", PACKAGE_INTVER);
+    /* Version string */
+    fprintf(out, "%%define __YASM_VER__ \"%s\"\n", PACKAGE_VERSION);
     fclose(out);
 
     return EXIT_SUCCESS;

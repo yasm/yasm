@@ -7,6 +7,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libyasm", "libyasm\libyasm.vcxproj", "{29FE7874-1256-4AD6-B889-68E399DC9608}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B545983B-8EE0-4A7B-A67A-E749EEAE62A2} = {B545983B-8EE0-4A7B-A67A-E749EEAE62A2}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "modules", "modules\modules.vcxproj", "{D715A3D4-EFAA-442E-AD8B-5B4FF64E1DD6}"
 EndProject

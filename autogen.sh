@@ -73,7 +73,8 @@ if test ! -d "config"; then
 	mkdir config
 fi
 
-rm -f stamp-h.in
+rm -rf autom4te.cache
+rm -f configure config.h config.status config.log stamp-h.in
 #echo "  gettextize -f --no-changelog"
 #echo "N" | gettextize -f --no-changelog || exit 1
 echo "  aclocal $ACLOCAL_FLAGS"

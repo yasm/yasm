@@ -197,7 +197,7 @@ win64-gas.c: modules/objfmts/coff/win64-gas.mac genmacro
 
 modules/objfmts/coff/coff-objfmt.c: win64-nasm.c win64-gas.c
 
-genversion: modules/preprocs/nasm/genversion.c
+genversion: modules/preprocs/nasm/genversion.c YASM-VERSION.h
 	$(BUILDCC) -IMkfiles -I. -o $@ $<
 
 version.mac: genversion
@@ -271,4 +271,9 @@ vsyasm: $(VSYASM_OBJS)
 
 .c.o:
 	$(CC) -c $(CFLAGS) -o $@ $<
+
+$(YASM_OBJS) $(YTASM_OBJS) $(VSYASM_OBJS): YASM-VERSION.h
+
+YASM-VERSION.h: YASM-VERSION-GEN.sh
+	sh YASM-VERSION-GEN.sh
 

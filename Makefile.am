@@ -31,6 +31,7 @@ EXTRA_DIST = config/config.rpath
 
 # libyasm-stdint.h doesn't clean up after itself?
 CONFIG_CLEAN_FILES = libyasm-stdint.h
+CONFIG_CLEAN_FILES += YASM-VERSION-FILE
 
 EXTRA_DIST += tools/Makefile.inc
 EXTRA_DIST += libyasm/Makefile.inc
@@ -55,6 +56,7 @@ EXTRA_DIST += BSD.txt
 EXTRA_DIST += GNU_GPL-2.0
 EXTRA_DIST += GNU_LGPL-2.0
 EXTRA_DIST += splint.sh
+EXTRA_DIST += YASM-VERSION-GEN.sh
 EXTRA_DIST += Mkfiles/Makefile.flat
 EXTRA_DIST += Mkfiles/Makefile.dj
 EXTRA_DIST += Mkfiles/dj/config.h
@@ -121,6 +123,12 @@ EXTRA_DIST += Mkfiles/vc10/re2c/run.bat
 
 # Until this gets fixed in automake
 DISTCLEANFILES += libyasm/stamp-h libyasm/stamp-h[0-9]*
+
+dist-hook: YASM-VERSION-FILE
+	cp YASM-VERSION-FILE $(distdir)/version
+
+YASM-VERSION-FILE: $(top_srcdir)/YASM-VERSION-GEN.sh
+	$(top_srcdir)/YASM-VERSION-GEN.sh
 
 distclean-local:
 	-rm -rf results

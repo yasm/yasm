@@ -1,3 +1,4 @@
+#include "YASM-VERSION.h"
 #define yasm__splitpath(path, tail)     yasm__splitpath_win(path, tail)
 #define yasm__abspath(path)             yasm__abspath_win(path)
 #define yasm__combpath(from, to)        yasm__combpath_win(from, to)
@@ -116,23 +117,17 @@
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT "bug-yasm@tortall.net"
 
-/* Define to build version of this package. */
-#define PACKAGE_BUILD "HEAD"
-
-/* Define to internal version of this package. */
-#define PACKAGE_INTVER "1.1.99"
-
 /* Define to the full name of this package. */
 #define PACKAGE_NAME "yasm"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "yasm HEAD"
+/*#define PACKAGE_STRING "yasm HEAD"*/
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "yasm"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "HEAD"
+/*#define PACKAGE_VERSION "HEAD"*/
 
 /* Define if the C compiler supports function prototypes. */
 #define PROTOTYPES 1
