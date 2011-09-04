@@ -1,6 +1,5 @@
 autom4te.cache
 stamp-h*
-config.*
 libyasm-stdint.h
 nasm-token.c
 nasm-macros.c
@@ -28,7 +27,7 @@ version.mac
 configure
 configure.scan
 configure.lineno
-config.*
+./config.*
 aclocal.m4
 *.tar.gz
 *.la
@@ -42,7 +41,7 @@ libtool
 *.bbg
 *.da
 results
-Makefile
+./Makefile
 Makefile.in
 .*.swp
 python-setup.txt
@@ -65,5 +64,5 @@ win64-nasm.c
 YASM-VERSION-FILE
 YASM-VERSION.h
 .sw*
-*.s
-*.asm
+./*.s
+./*.asm
