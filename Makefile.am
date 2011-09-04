@@ -32,6 +32,7 @@ EXTRA_DIST = config/config.rpath
 # libyasm-stdint.h doesn't clean up after itself?
 CONFIG_CLEAN_FILES = libyasm-stdint.h
 CONFIG_CLEAN_FILES += YASM-VERSION-FILE
+CONFIG_CLEAN_FILES += YASM-VERSION.h
 
 EXTRA_DIST += tools/Makefile.inc
 EXTRA_DIST += libyasm/Makefile.inc
