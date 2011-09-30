@@ -5307,6 +5307,7 @@ make_tok_num(Token * tok, yasm_intnum *val)
 {
     tok->text = yasm_intnum_get_str(val);
     tok->type = TOK_NUMBER;
+    yasm_intnum_destroy(val);
 }
 
 Preproc nasmpp = {
