@@ -844,14 +844,13 @@ void DFA_emit(DFA *d, FILE *o){
     nOrgOline = oline;
     maxFillIndexes = vFillIndexes;
     orgVFillIndexes = vFillIndexes;
-    tmpo = fopen("re2c.tmp", "wt");
+    tmpo = tmpfile();
     for(s = d->head; s; s = s->next){
 	int readCh = 0;
 	State_emit(s, tmpo, &readCh);
 	Go_genGoto(&s->go, tmpo, s, s->next, &readCh);
     }
     fclose(tmpo);
-    remove("re2c.tmp");
     maxFillIndexes = vFillIndexes;
     vFillIndexes = orgVFillIndexes;
     oline = nOrgOline;
