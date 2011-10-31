@@ -74,7 +74,9 @@
       <Command>run.bat "$(TargetPath)"</Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>..\..\..\YASM-VERSION-GEN.bat</Command>
+      <Command>cd ..\..\..\
+YASM-VERSION-GEN.bat
+</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -104,7 +106,9 @@
       <Command>run.bat "$(TargetPath)"</Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>..\..\..\YASM-VERSION-GEN.bat</Command>
+      <Command>cd ..\..\..\
+YASM-VERSION-GEN.bat
+</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
