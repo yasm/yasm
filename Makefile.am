@@ -125,8 +125,11 @@ EXTRA_DIST += Mkfiles/vc10/re2c/run.bat
 # Until this gets fixed in automake
 DISTCLEANFILES += libyasm/stamp-h libyasm/stamp-h[0-9]*
 
-dist-hook: YASM-VERSION-FILE
+dist-hook: YASM-VERSION-FILE YASM-VERSION.h
 	cp YASM-VERSION-FILE $(distdir)/version
+	cp YASM-VERSION.h $(distdir)/Mkfiles/dj/
+	cp YASM-VERSION.h $(distdir)/Mkfiles/vc9/
+	cp YASM-VERSION.h $(distdir)/Mkfiles/vc10/
 
 YASM-VERSION-FILE: $(top_srcdir)/YASM-VERSION-GEN.sh
 	$(top_srcdir)/YASM-VERSION-GEN.sh
