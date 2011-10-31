@@ -1,7 +1,7 @@
 #!/bin/sh
 
 YVF=YASM-VERSION-FILE
-DEF_VER=v1.1.0
+DEF_VER=v1.2.0
 
 LF='
 '
@@ -15,16 +15,6 @@ elif test -d .git -o -f .git &&
 	VN=$(git describe --match "v[0-9]*" --abbrev=4 HEAD 2>/dev/null) &&
 	case "$VN" in
 	*$LF*) (exit 1) ;;
-	v0.1.0*)
-		# Special handling until we get a more recent tag on the
-		# master branch
-		MERGE_BASE=$(git merge-base $DEF_VER HEAD 2>/dev/null)
-		VN1=$(git rev-list $MERGE_BASE..HEAD | wc -l 2>/dev/null)
-		VN2=$(git rev-list --max-count=1 --abbrev-commit --abbrev=4 HEAD 2>/dev/null)
-		VN=$(echo "v$DEF_VER-$VN1-g$VN2" | sed -e 's/ //g')
-		git update-index -q --refresh
-		test -z "$(git diff-index --name-only HEAD --)" ||
-		VN="$VN-dirty" ;;
 	v[0-9]*)
 		git update-index -q --refresh
 		test -z "$(git diff-index --name-only HEAD --)" ||
