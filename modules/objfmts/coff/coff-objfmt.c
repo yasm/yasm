@@ -189,6 +189,8 @@ typedef struct yasm_objfmt_coff {
     unsigned long proc_frame;   /* Line number of start of proc, or 0 */
     unsigned long done_prolog;  /* Line number of end of prologue, or 0 */
     /*@null@*/ coff_unwind_info *unwind;        /* Unwind info */
+
+    yasm_symrec *ssym_imagebase;            /* ..imagebase symbol for win64 */
 } yasm_objfmt_coff;
 
 typedef struct coff_objfmt_output_info {
@@ -296,6 +298,7 @@ coff_common_create(yasm_object *object)
     objfmt_coff->proc_frame = 0;
     objfmt_coff->done_prolog = 0;
     objfmt_coff->unwind = NULL;
+    objfmt_coff->ssym_imagebase = NULL;
 
     return objfmt_coff;
 }
@@ -382,6 +385,8 @@ win64_objfmt_create(yasm_object *object)
         objfmt_coff->objfmt.module = &yasm_win64_LTX_objfmt;
         objfmt_coff->win32 = 1;
         objfmt_coff->win64 = 1;
+        objfmt_coff->ssym_imagebase =
+            yasm_symtab_define_label(object->symtab, "..imagebase", NULL, 0, 0);
     }
     return (yasm_objfmt *)objfmt_coff;
 }
@@ -489,14 +494,18 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf,
         /*@dependent@*/ /*@null@*/ yasm_symrec *sym = value->rel;
         unsigned long addr;
         coff_reloc *reloc;
+        int nobase = info->csd->flags2 & COFF_FLAG_NOBASE;
 
         /* Sometimes we want the relocation to be generated against one
          * symbol but the value generated correspond to a different symbol.
          * This is done through (sym being referenced) WRT (sym used for
          * reloc).  Note both syms need to be in the same section!
          */
-        if (value->wrt) {
+        if (value->wrt && value->wrt == objfmt_coff->ssym_imagebase)
+            nobase = 1;
+        else if (value->wrt) {
             /*@dependent@*/ /*@null@*/ yasm_bytecode *rel_precbc, *wrt_precbc;
+
             if (!yasm_symrec_get_label(sym, &rel_precbc)
                 || !yasm_symrec_get_label(value->wrt, &wrt_precbc)) {
                 yasm_error_set(YASM_ERROR_TOO_COMPLEX,
@@ -644,13 +653,13 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf,
                 yasm_internal_error(N_("coff objfmt: unrecognized machine"));
         } else {
             if (objfmt_coff->machine == COFF_MACHINE_I386) {
-                if (info->csd->flags2 & COFF_FLAG_NOBASE)
+                if (nobase)
                     reloc->type = COFF_RELOC_I386_ADDR32NB;
                 else
                     reloc->type = COFF_RELOC_I386_ADDR32;
             } else if (objfmt_coff->machine == COFF_MACHINE_AMD64) {
                 if (valsize == 32) {
-                    if (info->csd->flags2 & COFF_FLAG_NOBASE)
+                    if (nobase)
                         reloc->type = COFF_RELOC_AMD64_ADDR32NB;
                     else
                         reloc->type = COFF_RELOC_AMD64_ADDR32;
@@ -1514,6 +1523,7 @@ coff_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     } else if (objfmt_coff->win64 && strcmp(sectname, ".xdata") == 0) {
         data.flags = COFF_STYP_DATA | COFF_STYP_READ;
         align = 8;
+        data.flags2 = COFF_FLAG_NOBASE;
     } else if (objfmt_coff->win32 && strcmp(sectname, ".sxdata") == 0) {
         data.flags = COFF_STYP_INFO;
     } else if (strcmp(sectname, ".comment") == 0) {
@@ -1593,6 +1603,17 @@ static /*@observer@*/ /*@null@*/ yasm_symrec *
 coff_objfmt_get_special_sym(yasm_object *object, const char *name,
                             const char *parser)
 {
+    return NULL;
+}
+
+static /*@observer@*/ /*@null@*/ yasm_symrec *
+win64_objfmt_get_special_sym(yasm_object *object, const char *name,
+                             const char *parser)
+{
+    if (yasm__strcasecmp(name, "imagebase") == 0) {
+        yasm_objfmt_coff *objfmt_coff = (yasm_objfmt_coff *)object->objfmt;
+        return objfmt_coff->ssym_imagebase;
+    }
     return NULL;
 }
 
@@ -2465,7 +2486,7 @@ yasm_objfmt_module yasm_win64_LTX_objfmt = {
     coff_objfmt_add_default_section,
     coff_objfmt_init_new_section,
     coff_objfmt_section_switch,
-    coff_objfmt_get_special_sym
+    win64_objfmt_get_special_sym
 };
 yasm_objfmt_module yasm_x64_LTX_objfmt = {
     "Win64",
@@ -2483,5 +2504,5 @@ yasm_objfmt_module yasm_x64_LTX_objfmt = {
     coff_objfmt_add_default_section,
     coff_objfmt_init_new_section,
     coff_objfmt_section_switch,
-    coff_objfmt_get_special_sym
+    win64_objfmt_get_special_sym
 };
