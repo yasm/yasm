@@ -90,6 +90,7 @@ EXTRA_DIST += Mkfiles/vc10/config.h
 EXTRA_DIST += Mkfiles/vc10/crt_secure_no_deprecate.props
 EXTRA_DIST += Mkfiles/vc10/crt_secure_no_deprecate.vsprops
 EXTRA_DIST += Mkfiles/vc10/libyasm-stdint.h
+EXTRA_DIST += Mkfiles/vc10/out_copy_rename.bat
 EXTRA_DIST += Mkfiles/vc10/readme.vc10.txt
 EXTRA_DIST += Mkfiles/vc10/vsyasm.props
 EXTRA_DIST += Mkfiles/vc10/vsyasm.targets
