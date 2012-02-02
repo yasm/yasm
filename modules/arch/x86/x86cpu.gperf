@@ -398,6 +398,8 @@ invpcid,	x86_cpu_set,	CPU_INVPCID
 noinvpcid,	x86_cpu_clear,	CPU_INVPCID
 lzcnt,		x86_cpu_set,	CPU_LZCNT
 nolzcnt,	x86_cpu_clear,	CPU_LZCNT
+tbm,		x86_cpu_set,	CPU_TBM
+notbm,	x86_cpu_clear,	CPU_TBM
 # Change NOP patterns
 basicnop,	x86_nop,	X86_NOP_BASIC
 intelnop,	x86_nop,	X86_NOP_INTEL

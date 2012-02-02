@@ -39,7 +39,7 @@ ordered_cpu_features = [
     "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42", "SSE4a", "SSE5",
     "AVX", "FMA", "AES", "CLMUL", "MOVBE", "XOP", "FMA4", "F16C",
     "FSGSBASE", "RDRAND", "XSAVEOPT", "EPTVPID", "SMX", "AVX2", "BMI1",
-    "BMI2", "INVPCID", "LZCNT"]
+    "BMI2", "INVPCID", "LZCNT", "TBM"]
 unordered_cpu_features = ["Priv", "Prot", "Undoc", "Obs"]
 
 # Predefined VEX prefix field values
@@ -7961,8 +7961,6 @@ for sfx, sz in zip("lq", [32, 64]):  # no 16-bit forms
 
 add_insn("bzhi", "vex_gpr_reg_rm_nds_0F", modifiers=[0x00, 0x38, 0xF5],
          cpu=["BMI2"])
-add_insn("bextr","vex_gpr_reg_rm_nds_0F", modifiers=[0x00, 0x38, 0xF7],
-         cpu=["BMI1"])
 add_insn("shlx", "vex_gpr_reg_rm_nds_0F", modifiers=[0x66, 0x38, 0xF7],
          cpu=["BMI2"])
 add_insn("shrx", "vex_gpr_reg_rm_nds_0F", modifiers=[0xF2, 0x38, 0xF7],
@@ -7973,7 +7971,31 @@ add_insn("sarx", "vex_gpr_reg_rm_nds_0F", modifiers=[0xF3, 0x38, 0xF7],
 add_insn("mulx", "vex_gpr_reg_nds_rm_0F", modifiers=[0xF2, 0x38, 0xF6],
          cpu=["BMI2"])
 
+for sfx, sz in zip("lq", [32, 64]):  # no 16-bit forms
+    add_group("bextr",
+        cpu=["BMI1"],
+        suffix=sfx,
+        opersize=sz,
+        prefix=0x00,
+        opcode=[0x0F, 0x38, 0xF7],
+        vex=0,
+        operands=[Operand(type="Reg", size=sz, dest="Spare"),
+                  Operand(type="RM", size=sz, relaxed=True, dest="EA"),
+                  Operand(type="Reg", size=sz, dest="VEX")])
+    add_group("bextr", # TBM alternate form of bextr
+        cpu=["TBM"],
+        suffix=sfx,
+        opersize=sz,
+        prefix=0x00,
+        opcode=[0x0A, 0x10],
+        xop=128,
+        xopw=(sz==64),
+        onlyavx=True,
+        operands=[Operand(type="Reg", size=sz, dest="Spare"),
+                  Operand(type="RM", size=sz, relaxed=True, dest="EA"),
+                  Operand(type="Imm", size=32, relaxed=True, dest="Imm")])
 
+add_insn("bextr", "bextr")
 
 #####################################################################
 # Intel INVPCID instruction
@@ -7994,6 +8016,33 @@ add_group("invpcid",
     operands=[Operand(type="Reg", size=64, dest="Spare"),
               Operand(type="Mem", size=128, relaxed=True, dest="EA")])
 add_insn("invpcid", "invpcid")
+
+#####################################################################
+# AMD trailing bit manipulation (TBM)
+#####################################################################
+
+for sfx, sz in zip("lq", [32, 64]):  # no 16-bit forms
+    add_group("xop_gpr_reg_rm_09",
+        cpu=["TBM"],
+        suffix=sfx,
+        modifiers=["Op1Add","SpAdd"],
+        opersize=sz,
+        prefix=0x00,
+        opcode=[0x09, 0x00],
+        xop=128,
+        xopw=(sz==64),
+        operands=[Operand(type="Reg", size=sz, dest="VEX"),
+                  Operand(type="RM", size=sz, relaxed=True, dest="EA")])
+
+add_insn("blcfill", "xop_gpr_reg_rm_09", modifiers=[0x01, 1])
+add_insn("blci",    "xop_gpr_reg_rm_09", modifiers=[0x02, 6])
+add_insn("blcic",   "xop_gpr_reg_rm_09", modifiers=[0x01, 5])
+add_insn("blcmsk",  "xop_gpr_reg_rm_09", modifiers=[0x02, 1])
+add_insn("blcs",    "xop_gpr_reg_rm_09", modifiers=[0x01, 3])
+add_insn("blsfill", "xop_gpr_reg_rm_09", modifiers=[0x01, 2])
+add_insn("blsic",   "xop_gpr_reg_rm_09", modifiers=[0x01, 6])
+add_insn("t1mskc",  "xop_gpr_reg_rm_09", modifiers=[0x01, 7])
+add_insn("tzmsk",   "xop_gpr_reg_rm_09", modifiers=[0x01, 4])
 
 #####################################################################
 # AMD 3DNow! instructions

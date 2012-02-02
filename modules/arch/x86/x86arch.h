@@ -83,6 +83,7 @@
 #define CPU_BMI2    49      /* Intel BMI2 instructions */
 #define CPU_INVPCID 50      /* Intel INVPCID instruction */
 #define CPU_LZCNT   51      /* Intel LZCNT instruction */
+#define CPU_TBM     52      /* AMD TBM instruction */
 
 enum x86_parser_type {
     X86_PARSER_NASM = 0,
