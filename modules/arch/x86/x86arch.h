@@ -84,6 +84,7 @@
 #define CPU_INVPCID 50      /* Intel INVPCID instruction */
 #define CPU_LZCNT   51      /* Intel LZCNT instruction */
 #define CPU_TBM     52      /* AMD TBM instruction */
+#define CPU_TSX     53      /* Intel TSX instructions */
 
 enum x86_parser_type {
     X86_PARSER_NASM = 0,
@@ -140,7 +141,8 @@ typedef enum {
     X86_ADDRSIZE = 2<<8,
     X86_OPERSIZE = 3<<8,
     X86_SEGREG = 4<<8,
-    X86_REX = 5<<8
+    X86_REX = 5<<8,
+    X86_ACQREL = 6<<8     /*TSX hint prefixes*/
 } x86_parse_insn_prefix;
 
 typedef enum {
@@ -220,6 +222,8 @@ typedef struct x86_common {
     unsigned char addrsize;         /* 0 or =mode_bits => no override */
     unsigned char opersize;         /* 0 or =mode_bits => no override */
     unsigned char lockrep_pre;      /* 0 indicates no prefix */
+    unsigned char acqrel_pre;      /* 0 indicates no prefix. We need this because
+                                   xqcuire/xrelease might require F0 prefix */
 
     unsigned char mode_bits;
 } x86_common;

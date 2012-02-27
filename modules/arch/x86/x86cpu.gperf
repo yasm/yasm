@@ -390,6 +390,8 @@ smx,		x86_cpu_set,	CPU_SMX
 nosmx,		x86_cpu_clear,	CPU_SMX
 avx2,		x86_cpu_set,	CPU_AVX2
 noavx2,		x86_cpu_clear,	CPU_AVX2
+tsx,		x86_cpu_set,	CPU_TSX
+notsx,		x86_cpu_clear,	CPU_TSX
 bmi1,		x86_cpu_set,	CPU_BMI1
 nobmi1,		x86_cpu_clear,	CPU_BMI1
 bmi2,		x86_cpu_set,	CPU_BMI2

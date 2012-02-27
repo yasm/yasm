@@ -39,7 +39,7 @@ ordered_cpu_features = [
     "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42", "SSE4a", "SSE5",
     "AVX", "FMA", "AES", "CLMUL", "MOVBE", "XOP", "FMA4", "F16C",
     "FSGSBASE", "RDRAND", "XSAVEOPT", "EPTVPID", "SMX", "AVX2", "BMI1",
-    "BMI2", "INVPCID", "LZCNT", "TBM"]
+    "BMI2", "INVPCID", "LZCNT", "TBM", "TSX"]
 unordered_cpu_features = ["Priv", "Prot", "Undoc", "Obs"]
 
 # Predefined VEX prefix field values
@@ -2264,7 +2264,7 @@ add_group("call",
 
 add_group("call",
     opersize=16,
-    def_opersize_64=64,
+    not64=True, #there should not be 16bit call in 64bit mode
     opcode=[0xE8],
     operands=[Operand(type="Imm", size=16, tmod="Near", dest="JmpRel")])
 add_group("call",
@@ -7114,6 +7114,45 @@ add_group("gather_32x_32y_128",
               Operand(type="SIMDReg", size=128, dest="VEX")])
 add_insn("vgatherqps", "gather_32x_32y_128", modifiers=[0x93])
 add_insn("vpgatherqd", "gather_32x_32y_128", modifiers=[0x91])
+
+#####################################################################
+# Intel TSX instructions
+#####################################################################
+add_prefix("xacquire",     "ACQREL",  0xF2)
+add_prefix("xrelease",     "ACQREL",  0xF3)
+
+add_group("tsx_xabort",
+    cpu=["TSX"],
+    opcode=[0xC6, 0xF8],
+    operands=[Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_insn("xabort", "tsx_xabort")
+
+
+
+add_group("tsx_xbegin",
+    cpu=["TSX"],
+    opcode=[0xC7, 0xF8],
+    operands=[Operand(type="Imm", size=32,  tmod="Near", dest="JmpRel")])
+
+add_group("tsx_xbegin",
+    cpu=["TSX"],
+    opersize=16,
+    not64=True, #there should not be 16bit xbegin in 64bit mode
+    opcode=[0xC7, 0xF8],
+    operands=[Operand(type="Imm", size=16,  tmod="Near", dest="JmpRel")])
+add_insn("xbegin", "tsx_xbegin")
+
+add_group("tsx_0x0F_0x01",
+    cpu=["TSX"],
+    modifiers=["Op2Add"],
+    opcode=[0x0F, 0x01, 0x00],
+    operands=[])
+add_insn("xend", "tsx_0x0F_0x01", modifiers=[0xD5])
+add_insn("xtest", "tsx_0x0F_0x01", modifiers=[0xD6])
+
+
+
+
 
 #####################################################################
 # Intel FMA instructions

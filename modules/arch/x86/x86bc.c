@@ -279,6 +279,24 @@ yasm_x86__bc_apply_prefixes(x86_common *common, unsigned char *rex,
 
     for (i=0; i<num_prefixes; i++) {
         switch ((x86_parse_insn_prefix)(prefixes[i] & 0xff00)) {
+            /*To be accurate, we should enforce that TSX hints come only with a
+            predefined set of instructions, and in most cases only with F0
+            prefix. Otherwise they will have completely different semantics.
+            But F0 prefix can come only with a predefined set of instructions
+            too. And if it comes with other instructions, CPU will #UD.
+            Hence, F0-applicability should be enforced too. But it's not
+            currently. Maybe it is the decision made, that user should know
+            himself what he is doing with LOCK prefix. In this case, we should
+            not enforce TSX hints applicability too. And let user take care of
+            correct usage of TSX hints.
+            That is what we are going to do.*/
+            case X86_ACQREL:
+                if (common->acqrel_pre != 0)
+                    yasm_warn_set(YASM_WARN_GENERAL,
+                        N_("multiple XACQUIRE/XRELEASE prefixes, "
+                        "using leftmost"));
+                common->acqrel_pre = (unsigned char)prefixes[i] & 0xff;
+                break;
             case X86_LOCKREP:
                 if (common->lockrep_pre != 0)
                     yasm_warn_set(YASM_WARN_GENERAL,
@@ -395,11 +413,13 @@ yasm_x86__ea_print(const yasm_effaddr *ea, FILE *f, int indent_level)
 static void
 x86_common_print(const x86_common *common, FILE *f, int indent_level)
 {
-    fprintf(f, "%*sAddrSize=%u OperSize=%u LockRepPre=%02x BITS=%u\n",
+    fprintf(f, "%*sAddrSize=%u OperSize=%u LockRepPre=%02x "
+        "ACQREL_Pre=%02x BITS=%u\n",
             indent_level, "",
             (unsigned int)common->addrsize,
             (unsigned int)common->opersize,
             (unsigned int)common->lockrep_pre,
+            (unsigned int)common->acqrel_pre,
             (unsigned int)common->mode_bits);
 }
 
@@ -515,6 +535,9 @@ x86_common_calc_len(const x86_common *common)
         len++;
     if (common->lockrep_pre != 0)
         len++;
+    if (common->acqrel_pre != 0)
+        len++;
+
 
     return len;
 }
@@ -791,6 +814,9 @@ x86_common_tobytes(const x86_common *common, unsigned char **bufp,
         ((common->mode_bits != 64 && common->opersize != common->mode_bits) ||
          (common->mode_bits == 64 && common->opersize == 16)))
         YASM_WRITE_8(*bufp, 0x66);
+    /*TSX hints come before lock prefix*/
+    if (common->acqrel_pre != 0)
+        YASM_WRITE_8(*bufp, common->acqrel_pre);
     if (common->lockrep_pre != 0)
         YASM_WRITE_8(*bufp, common->lockrep_pre);
 }
