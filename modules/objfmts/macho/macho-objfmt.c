@@ -1497,9 +1497,13 @@ macho_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
         msd->sectname = f_sectname;
         msd->flags = flags;
         yasm_section_set_align(retval, align, line);
-    } else if (flags_override)
-        yasm_warn_set(YASM_WARN_GENERAL,
-                      N_("section flags ignored on section redeclaration"));
+    } else if (flags_override) {
+        // align is the only value used from overrides.
+        if (yasm_section_get_align(retval) != align) {
+            yasm_warn_set(YASM_WARN_GENERAL,
+                          N_("section flags ignored on section redeclaration"));
+        }
+    }
     return retval;
 }
 
