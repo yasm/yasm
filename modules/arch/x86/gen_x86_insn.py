@@ -8120,7 +8120,7 @@ add_insn("pfsub", "now3d", modifiers=[0x9A])
 add_insn("pfsubr", "now3d", modifiers=[0xAA])
 add_insn("pi2fd", "now3d", modifiers=[0x0D])
 add_insn("pi2fw", "now3d", modifiers=[0x0C], cpu=["Athlon", "3DNow"])
-add_insn("pmulhrwa", "now3d", modifiers=[0xB7])
+add_insn("pmulhrw", "now3d", modifiers=[0xB7])
 add_insn("pswapd", "now3d", modifiers=[0xBB], cpu=["Athlon", "3DNow"])
 
 #####################################################################
