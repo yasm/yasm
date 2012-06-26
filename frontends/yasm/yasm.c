@@ -355,6 +355,7 @@ do_assemble(void)
     yasm_linemap *linemap;
     yasm_errwarns *errwarns = yasm_errwarns_create();
     int i, matched;
+    const char *machine;
 
     /* Initialize line map */
     linemap = yasm_linemap_create();
@@ -391,7 +392,16 @@ do_assemble(void)
                 yasm__xstrdup(cur_arch_module->default_machine_keyword);
     }
 
-    cur_arch = yasm_arch_create(cur_arch_module, machine_name,
+    /* If we're using amd64 and the default objfmt is elfx32, change the
+     * machine to "x32".
+     */
+    if (strcmp(machine_name, "amd64") == 0 &&
+	strcmp(cur_objfmt_module->keyword, "elfx32") == 0)
+      machine = "x32";
+    else
+      machine = machine_name;
+
+    cur_arch = yasm_arch_create(cur_arch_module, machine,
                                 cur_parser_module->keyword, &arch_error);
     if (!cur_arch) {
         switch (arch_error) {

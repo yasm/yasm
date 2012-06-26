@@ -96,11 +96,12 @@
  <refsect1>
   <title>elf</title>
 
-  <para>The ELF object format really comes in two flavors:
-   <quote>elf32</quote> (for 32-bit targets) and <quote>elf64</quote>
-   (for 64-bit targets).  ELF is a standard object format in common
-   use on modern Unix and compatible systems (e.g. Linux, FreeBSD).
-   ELF has complex support for relocatable and shared objects.</para>
+  <para>The ELF object format really comes in three flavors:
+   <quote>elf32</quote> (for 32-bit targets), <quote>elf64</quote>
+   (for 64-bit targets and <quote>elfx32</quote> (for x32 targets).
+   ELF is a standard object format in common use on modern Unix and
+   compatible systems (e.g. Linux, FreeBSD).  ELF has complex support
+   for relocatable and shared objects.</para>
  </refsect1>
 
  <refsect1>

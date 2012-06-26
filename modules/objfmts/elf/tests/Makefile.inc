@@ -47,9 +47,13 @@ EXTRA_DIST += modules/objfmts/elf/tests/nasm-forceident.asm
 EXTRA_DIST += modules/objfmts/elf/tests/nasm-forceident.hex
 
 EXTRA_DIST += modules/objfmts/elf/tests/amd64/Makefile.inc
+EXTRA_DIST += modules/objfmts/elf/tests/x32/Makefile.inc
 EXTRA_DIST += modules/objfmts/elf/tests/gas32/Makefile.inc
 EXTRA_DIST += modules/objfmts/elf/tests/gas64/Makefile.inc
+EXTRA_DIST += modules/objfmts/elf/tests/gasx32/Makefile.inc
 
 include modules/objfmts/elf/tests/amd64/Makefile.inc
+include modules/objfmts/elf/tests/x32/Makefile.inc
 include modules/objfmts/elf/tests/gas32/Makefile.inc
 include modules/objfmts/elf/tests/gas64/Makefile.inc
+include modules/objfmts/elf/tests/gasx32/Makefile.inc

@@ -56,12 +56,14 @@ const yasm_assoc_data_callback elf_ssym_symrec_data = {
 
 extern elf_machine_handler
     elf_machine_handler_x86_x86,
-    elf_machine_handler_x86_amd64;
+    elf_machine_handler_x86_amd64,
+    elf_machine_handler_x86_x32;
 
 static const elf_machine_handler *elf_machine_handlers[] =
 {
     &elf_machine_handler_x86_x86,
     &elf_machine_handler_x86_amd64,
+    &elf_machine_handler_x86_x32,
     NULL
 };
 static const elf_machine_handler elf_null_machine = {0, 0, 0, 0, 0, 0, 0, 0,
@@ -81,9 +83,13 @@ elf_set_arch(yasm_arch *arch, yasm_symtab *symtab, int bits_pref)
          elf_march = elf_machine_handlers[++i])
     {
         if (yasm__strcasecmp(yasm_arch_keyword(arch), elf_march->arch)==0)
-            if (yasm__strcasecmp(machine, elf_march->machine)==0)
+            if (yasm__strcasecmp(machine, elf_march->machine)==0) {
                 if (bits_pref == 0 || bits_pref == elf_march->bits)
                     break;
+            } else if (bits_pref == elf_march->bits
+                       && yasm__strcasecmp(machine, "amd64") == 0
+                       && yasm__strcasecmp(elf_march->machine, "x32") == 0)
+                break;
     }
 
     if (elf_march && elf_march->num_ssyms > 0)

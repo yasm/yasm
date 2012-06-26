@@ -105,6 +105,7 @@ typedef struct yasm_arch_x86 {
     unsigned int amd64_machine;
     enum x86_parser_type parser;
     unsigned int mode_bits;
+    unsigned int address_size;
     unsigned int force_strict;
     unsigned int default_rel;
     unsigned int gas_intel_mode;

@@ -132,7 +132,9 @@
     assembled will be run in 64-bit mode.  To specify an AMD64 object
     file, use <option>-m amd64</option> on the Yasm command line, or
     explicitly target a 64-bit object format such as <option>-f
-     win64</option> or <option>-f elf64</option>.</para>
+     win64</option> or <option>-f elf64</option>.  <option>-f
+     elfx32</option> can be used to select 32-bit ELF object format
+     for AMD64 processors.</para>
 
    <refsect3>
     <title>Register Changes</title>

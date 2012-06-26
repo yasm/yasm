@@ -80,6 +80,7 @@ typedef struct {
 yasm_objfmt_module yasm_elf_LTX_objfmt;
 yasm_objfmt_module yasm_elf32_LTX_objfmt;
 yasm_objfmt_module yasm_elf64_LTX_objfmt;
+yasm_objfmt_module yasm_elfx32_LTX_objfmt;
 
 
 static elf_symtab_entry *
@@ -397,7 +398,9 @@ elf_objfmt_create(yasm_object *object)
     if (objfmt) {
         objfmt_elf = (yasm_objfmt_elf *)objfmt;
         /* Figure out which bitness of object format to use */
-        if (elf_march->bits == 32)
+        if (strcmp (elf_march->machine, "x32") == 0)
+            objfmt_elf->objfmt.module = &yasm_elfx32_LTX_objfmt;
+        else if (elf_march->bits == 32)
             objfmt_elf->objfmt.module = &yasm_elf32_LTX_objfmt;
         else if (elf_march->bits == 64)
             objfmt_elf->objfmt.module = &yasm_elf64_LTX_objfmt;
@@ -415,6 +418,12 @@ static yasm_objfmt *
 elf64_objfmt_create(yasm_object *object)
 {
     return elf_objfmt_create_common(object, &yasm_elf64_LTX_objfmt, 64, NULL);
+}
+
+static yasm_objfmt *
+elfx32_objfmt_create(yasm_object *object)
+{
+    return elf_objfmt_create_common(object, &yasm_elfx32_LTX_objfmt, 32, NULL);
 }
 
 static long
@@ -1356,6 +1365,25 @@ yasm_objfmt_module yasm_elf64_LTX_objfmt = {
     elf_objfmt_directives,
     elf_objfmt_stdmacs,
     elf64_objfmt_create,
+    elf_objfmt_output,
+    elf_objfmt_destroy,
+    elf_objfmt_add_default_section,
+    elf_objfmt_init_new_section,
+    elf_objfmt_section_switch,
+    elf_objfmt_get_special_sym
+};
+
+yasm_objfmt_module yasm_elfx32_LTX_objfmt = {
+    "ELF (x32)",
+    "elfx32",
+    "o",
+    64,
+    0,
+    elf_objfmt_dbgfmt_keywords,
+    "null",
+    elf_objfmt_directives,
+    elf_objfmt_stdmacs,
+    elfx32_objfmt_create,
     elf_objfmt_output,
     elf_objfmt_destroy,
     elf_objfmt_add_default_section,
