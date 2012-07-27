@@ -533,8 +533,20 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
             bsd = yasm_section_get_data(sect, &bin_section_data_cb);
             assert(bsd != NULL);
             yasm_intnum_calc(dist, YASM_EXPR_ADD, bsd->ivstart);
-            e->terms[i].type = YASM_EXPR_INT;
-            e->terms[i].data.intn = dist;
+            if (bsd->ivseg != NULL) {
+                yasm_expr *sube;
+                yasm_intnum *seg;
+
+                seg = yasm_intnum_copy(bsd->ivseg);
+                sube = yasm_expr_create(YASM_EXPR_SEGOFF,
+                                        yasm_expr_int(seg),
+                                        yasm_expr_int(dist), e->line);
+                e->terms[i].type = YASM_EXPR_EXPR;
+                e->terms[i].data.expn = sube;
+            } else {
+                e->terms[i].type = YASM_EXPR_INT;
+                e->terms[i].data.intn = dist;
+            }
         }
 
         /* Transform our special symrecs into the appropriate value */
