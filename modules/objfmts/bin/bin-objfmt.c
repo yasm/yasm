@@ -104,6 +104,7 @@ static const yasm_assoc_data_callback bin_symrec_data_cb = {
 
 yasm_objfmt_module yasm_bin_LTX_objfmt;
 
+static int bin_objfmt_value_finalize(yasm_value *value, yasm_bytecode *precbc);
 
 static yasm_objfmt *
 bin_objfmt_create(yasm_object *object)
@@ -114,6 +115,8 @@ bin_objfmt_create(yasm_object *object)
     objfmt_bin->map_flags = NO_MAP;
     objfmt_bin->map_filename = NULL;
     objfmt_bin->org = NULL;
+
+    object->overrides->value_finalize = bin_objfmt_value_finalize;
 
     return (yasm_objfmt *)objfmt_bin;
 }
@@ -932,6 +935,13 @@ check_lma_overlap(yasm_section *sect, /*@null@*/ void *d)
     }
 
     yasm_intnum_destroy(overlap);
+    return 0;
+}
+
+static int
+bin_objfmt_value_finalize(yasm_value *value, yasm_bytecode *precbc)
+{
+    /* TODO do some finalization to avoid breaking stuff that depends on it */
     return 0;
 }
 
