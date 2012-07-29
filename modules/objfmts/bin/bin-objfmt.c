@@ -489,11 +489,13 @@ group_assign_vstart_recurse(bin_group *group, yasm_intnum *start,
     }
 }
 
-static /*@null@*/ const yasm_intnum *
-get_ssym_value(yasm_symrec *sym)
+static /*@null@*/ /*@only@*/ yasm_expr *
+get_ssym_value(yasm_symrec *sym, unsigned long line)
 {
     bin_symrec_data *bsymd = yasm_symrec_get_data(sym, &bin_symrec_data_cb);
     bin_section_data *bsd;
+    yasm_intnum *offset;
+    yasm_expr *expr;
 
     if (!bsymd)
         return NULL;
@@ -502,11 +504,22 @@ get_ssym_value(yasm_symrec *sym)
     assert(bsd != NULL);
 
     switch (bsymd->which) {
-        case SSYM_START: return bsd->istart;
-        case SSYM_VSTART: return bsd->ivstart;
-        case SSYM_LENGTH: return bsd->length;
+        case SSYM_START: offset = bsd->istart; break;
+        case SSYM_VSTART: offset = bsd->ivstart; break;
+        case SSYM_LENGTH: offset = bsd->length; break;
+        default: return NULL;
     }
-    return NULL;
+
+    offset = yasm_intnum_copy(offset);
+
+    if (bsymd->which == SSYM_VSTART && bsd->ivseg != NULL)
+        expr = yasm_expr_create(YASM_EXPR_SEGOFF,
+                                yasm_expr_int(yasm_intnum_copy(bsd->ivseg)),
+                                yasm_expr_int(offset), line);
+    else
+        expr = yasm_expr_create_ident(yasm_expr_int(offset), line);
+
+    return expr;
 }
 
 static /*@only@*/ yasm_expr *
@@ -518,7 +531,7 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
         /*@dependent@*/ yasm_section *sect;
         /*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
         /*@null@*/ yasm_intnum *dist;
-        /*@null@*/ const yasm_intnum *ssymval;
+        /*@null@*/ /*@only@*/ yasm_expr *ssymval;
 
         /* Transform symrecs or precbcs that reference sections into
          * vstart + intnum(dist).
@@ -551,9 +564,9 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
 
         /* Transform our special symrecs into the appropriate value */
         if (e->terms[i].type == YASM_EXPR_SYM &&
-            (ssymval = get_ssym_value(e->terms[i].data.sym))) {
-            e->terms[i].type = YASM_EXPR_INT;
-            e->terms[i].data.intn = yasm_intnum_copy(ssymval);
+            (ssymval = get_ssym_value(e->terms[i].data.sym, e->line))) {
+            e->terms[i].type = YASM_EXPR_EXPR;
+            e->terms[i].data.expn = ssymval;
         }
     }
 
@@ -1051,7 +1064,7 @@ bin_objfmt_output_value(yasm_value *value, unsigned char *buf,
     if (value->rel) {
         unsigned int rshift = (unsigned int)value->rshift;
         yasm_expr *syme;
-        /*@null@*/ const yasm_intnum *ssymval;
+        /*@null@*/ yasm_expr *ssymval;
 
         if (yasm_symrec_is_abs(value->rel)) {
             syme = yasm_expr_create_ident(yasm_expr_int(
@@ -1059,9 +1072,8 @@ bin_objfmt_output_value(yasm_value *value, unsigned char *buf,
         } else if (yasm_symrec_get_label(value->rel, &precbc)
                    && (sect = yasm_bc_get_section(precbc))) {
             syme = yasm_expr_create_ident(yasm_expr_sym(value->rel), bc->line);
-        } else if ((ssymval = get_ssym_value(value->rel))) {
-            syme = yasm_expr_create_ident(yasm_expr_int(
-                yasm_intnum_copy(ssymval)), bc->line);
+        } else if ((ssymval = get_ssym_value(value->rel, bc->line))) {
+            syme = ssymval;
         } else
             goto done;
 
