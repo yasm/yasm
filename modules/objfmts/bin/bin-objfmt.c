@@ -512,11 +512,15 @@ get_ssym_value(yasm_symrec *sym, unsigned long line)
 
     offset = yasm_intnum_copy(offset);
 
-    if (bsymd->which == SSYM_VSTART && bsd->ivseg != NULL)
+    if (bsymd->which == SSYM_VSTART && bsd->ivseg != NULL) {
+        yasm_intnum *tmp = yasm_intnum_create_int(16);
+        yasm_intnum_calc(tmp, YASM_EXPR_MUL, bsd->ivseg);
+        yasm_intnum_calc(offset, YASM_EXPR_SUB, tmp);
+        yasm_intnum_destroy(tmp);
         expr = yasm_expr_create(YASM_EXPR_SEGOFF,
                                 yasm_expr_int(yasm_intnum_copy(bsd->ivseg)),
                                 yasm_expr_int(offset), line);
-    else
+    } else
         expr = yasm_expr_create_ident(yasm_expr_int(offset), line);
 
     return expr;
@@ -550,7 +554,11 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
                 yasm_expr *sube;
                 yasm_intnum *seg;
 
-                seg = yasm_intnum_copy(bsd->ivseg);
+                seg = yasm_intnum_create_int(16);
+                yasm_intnum_calc(seg, YASM_EXPR_MUL, bsd->ivseg);
+                yasm_intnum_calc(dist, YASM_EXPR_SUB, seg);
+                yasm_intnum_set(seg, bsd->ivseg);
+                
                 sube = yasm_expr_create(YASM_EXPR_SEGOFF,
                                         yasm_expr_int(seg),
                                         yasm_expr_int(dist), e->line);
