@@ -941,7 +941,85 @@ check_lma_overlap(yasm_section *sect, /*@null@*/ void *d)
 static int
 bin_objfmt_value_finalize(yasm_value *value, yasm_bytecode *precbc)
 {
-    /* TODO do some finalization to avoid breaking stuff that depends on it */
+    value->abs = yasm_expr__level_tree(value->abs, 1, 1, 0, 0, NULL, NULL);
+    
+    /* quit early if there was an issue in simplify() */
+    if (yasm_error_occurred())
+        return 1;
+
+    /* Strip top-level AND masking to an all-1s mask the same size
+     * of the value size.  This allows forced avoidance of overflow warnings.
+     */
+    if (value->abs->op == YASM_EXPR_AND) {
+        int term;
+        
+        /* Calculate 1<<size - 1 value */
+        yasm_intnum *mask = yasm_intnum_create_uint(1);
+        yasm_intnum *mask_tmp = yasm_intnum_create_uint(value->size);
+        yasm_intnum_calc(mask, YASM_EXPR_SHL, mask_tmp);
+        yasm_intnum_set_uint(mask_tmp, 1);
+        yasm_intnum_calc(mask, YASM_EXPR_SUB, mask_tmp);
+        yasm_intnum_destroy(mask_tmp);
+        
+        /* Walk terms and delete matching masks */
+        for (term=value->abs->numterms-1; term>=0; term--) {
+            if (value->abs->terms[term].type == YASM_EXPR_INT &&
+                yasm_intnum_compare(value->abs->terms[term].data.intn,
+                                    mask) == 0) {
+                /* Delete the intnum */
+                yasm_intnum_destroy(value->abs->terms[term].data.intn);
+            
+            /* Slide everything to its right over by 1 */
+            if (term != value->abs->numterms-1) /* if it wasn't last.. */
+                memmove(&value->abs->terms[term],
+                        &value->abs->terms[term+1],
+                        (value->abs->numterms-1-term)*
+                        sizeof(yasm_expr__item));
+                
+                /* Update numterms */
+                value->abs->numterms--;
+            
+            /* Indicate warnings have been disabled */
+            value->no_warn = 1;
+                                    }
+        }
+        if (value->abs->numterms == 1)
+            value->abs->op = YASM_EXPR_IDENT;
+        yasm_intnum_destroy(mask);
+    }
+
+    /* Handle trivial (IDENT) cases immediately */
+    if (value->abs->op == YASM_EXPR_IDENT) {
+        switch (value->abs->terms[0].type) {
+            case YASM_EXPR_INT:
+                if (yasm_intnum_is_zero(value->abs->terms[0].data.intn)) {
+                    yasm_expr_destroy(value->abs);
+                    value->abs = NULL;
+                }
+                return 0;
+            case YASM_EXPR_REG:
+            case YASM_EXPR_FLOAT:
+                return 0;
+            case YASM_EXPR_SYM:
+                value->rel = value->abs->terms[0].data.sym;
+                yasm_expr_destroy(value->abs);
+                value->abs = NULL;
+                return 0;
+            case YASM_EXPR_EXPR:
+                /* Bring up lower values. */
+                while (value->abs->op == YASM_EXPR_IDENT
+                       && value->abs->terms[0].type == YASM_EXPR_EXPR) {
+                    yasm_expr *sube = value->abs->terms[0].data.expn;
+                    yasm_xfree(value->abs);
+                    value->abs = sube;
+                }
+                break;
+            default:
+                return 0;
+        }
+    }
+
+    /* TODO do some more finalization to avoid breaking stuff that depends on it */
     return 0;
 }
 
