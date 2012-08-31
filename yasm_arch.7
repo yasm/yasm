@@ -1,13 +1,22 @@
 '\" t
 .\"     Title: yasm_arch
 .\"    Author: Peter Johnson <peter@tortall.net>
-.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
 .\"      Date: October 2006
 .\"    Manual: Yasm Supported Architectures
 .\"    Source: Yasm
 .\"  Language: English
 .\"
 .TH "YASM_ARCH" "7" "October 2006" "Yasm" "Yasm Supported Architectures"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
 .\" -----------------------------------------------------------------
 .\" * set default formatting
 .\" -----------------------------------------------------------------
@@ -73,12 +82,14 @@ Recently, Intel has introduced an essentially identical version of AMD64 called 
 When an AMD64\-supporting processor is executing in 64\-bit mode, a number of additional extensions are available, including extra general purpose registers, extra SSE2 registers, and RIP\-relative addressing\&.
 .PP
 Yasm extends the base NASM syntax to support AMD64 as follows\&. To enable assembly of instructions for the 64\-bit mode of AMD64 processors, use the directive
-\fBBITS 64\fR\&. As with NASM\'s BITS directive, this does not change the format of the output object file to 64 bits; it only changes the assembler mode to assume that the instructions being assembled will be run in 64\-bit mode\&. To specify an AMD64 object file, use
+\fBBITS 64\fR\&. As with NASM\*(Aqs BITS directive, this does not change the format of the output object file to 64 bits; it only changes the assembler mode to assume that the instructions being assembled will be run in 64\-bit mode\&. To specify an AMD64 object file, use
 \fB\-m amd64\fR
 on the Yasm command line, or explicitly target a 64\-bit object format such as
 \fB\-f win64\fR
 or
 \fB\-f elf64\fR\&.
+\fB\-f elfx32\fR
+can be used to select 32\-bit ELF object format for AMD64 processors\&.
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -762,9 +773,9 @@ mov [rel sym], rbx  ; RIP\-relative (explicit override)
 \fBMemory references\fR
 .RS 4
 .PP
-Usually the size of a memory reference can be deduced by which registers you\'re moving\-\-for example, "mov [rax],ecx" is a 32\-bit move, because ecx is 32 bits\&. YASM currently gives the non\-obvious "invalid combination of opcode and operands" error if it can\'t figure out how much memory you\'re moving\&. The fix in this case is to add a memory size specifier: qword, dword, word, or byte\&.
+Usually the size of a memory reference can be deduced by which registers you\*(Aqre moving\-\-for example, "mov [rax],ecx" is a 32\-bit move, because ecx is 32 bits\&. YASM currently gives the non\-obvious "invalid combination of opcode and operands" error if it can\*(Aqt figure out how much memory you\*(Aqre moving\&. The fix in this case is to add a memory size specifier: qword, dword, word, or byte\&.
 .PP
-Here\'s a 64\-bit memory move, which sets 8 bytes starting at rax:
+Here\*(Aqs a 64\-bit memory move, which sets 8 bytes starting at rax:
 .sp
 .if n \{\
 .RS 4
@@ -776,7 +787,7 @@ mov qword [rax], 1
 .RE
 .\}
 .PP
-Here\'s a 32\-bit memory move, which sets 4 bytes:
+Here\*(Aqs a 32\-bit memory move, which sets 4 bytes:
 .sp
 .if n \{\
 .RS 4
@@ -788,7 +799,7 @@ mov dword [rax], 1
 .RE
 .\}
 .PP
-Here\'s a 16\-bit memory move, which sets 2 bytes:
+Here\*(Aqs a 16\-bit memory move, which sets 2 bytes:
 .sp
 .if n \{\
 .RS 4
@@ -800,7 +811,7 @@ mov word [rax], 1
 .RE
 .\}
 .PP
-Here\'s an 8\-bit memory move, which sets 1 byte:
+Here\*(Aqs an 8\-bit memory move, which sets 1 byte:
 .sp
 .if n \{\
 .RS 4
