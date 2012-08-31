@@ -98,7 +98,7 @@ elf_set_arch(yasm_arch *arch, yasm_symtab *symtab, int bits_pref)
                                                     elf_march->ssyms[i].name,
                                                     NULL, 0, 0);
             yasm_symrec_add_data(elf_ssyms[i], &elf_ssym_symrec_data,
-                                 &elf_march->ssyms[i]);
+                                 (void*)&elf_march->ssyms[i]);
         }
     }
 
