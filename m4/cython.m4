@@ -2,13 +2,14 @@ dnl a macro to check for the installed Cython version; note PYTHON needs to
 dnl be set before this function is called.
 dnl  CYTHON_CHECK_VERSION([MIN-VERSION], [ACTION-IF-TRUE], [ACTION-IF-FALSE])
 AC_DEFUN([CYTHON_CHECK_VERSION],
- [prog="import sys
+ [prog="import re, sys
 from Cython.Compiler.Version import version
 def get_int(arg):
-    try:
-        return int(arg)
-    except ValueError:
+    matched = re.match(r'\d+', arg)
+    if matched is None:
         return 0
+    else:
+        return int(matched.group(0))
 # split strings by '.' and convert to numeric.  Append some zeros
 # because we need at least 4 digits for the hex conversion.
 ver = map(get_int, version.rstrip('abcdefghijklmnopqrstuvwxyz').split('.')) + [[0, 0, 0]]
