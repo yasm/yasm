@@ -643,7 +643,7 @@ x86_find_match(x86_id_insn *id_insn, yasm_insn_operand **ops,
         unsigned int misc_flags = info->misc_flags;
         unsigned int size;
         int mismatch = 0;
-        int i;
+        unsigned int i;
 
         /* Match CPU */
         if (mode_bits != 64 && (misc_flags & ONLY_64))
