@@ -905,7 +905,6 @@ parse_instr(yasm_parser_gas *parser_gas)
 {
     yasm_bytecode *bc;
     char *id;
-    size_t id_len;
     uintptr_t prefix;
 
     if (parser_gas->intel_syntax) {
@@ -925,7 +924,6 @@ parse_instr(yasm_parser_gas *parser_gas)
         return NULL;
 
     id = ID_val;
-    id_len = ID_len;
 
     /* instructions/prefixes must start with a letter */
     if (!isalpha(id[0]))
