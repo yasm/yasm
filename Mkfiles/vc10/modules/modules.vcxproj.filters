@@ -175,6 +175,9 @@
     <ClCompile Include="..\..\..\x86regtmod.c">
       <Filter>Source Files\arch</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\modules\objfmts\elf\elf-x86-x32.c">
+      <Filter>Source Files\objfmts</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\modules\arch\lc3b\lc3barch.h">
