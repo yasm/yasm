@@ -27,6 +27,8 @@ EXTRA_DIST += modules/objfmts/win64/tests/win64-dataref.masm
 EXTRA_DIST += modules/objfmts/win64/tests/win64-dataref2.asm
 EXTRA_DIST += modules/objfmts/win64/tests/win64-dataref2.hex
 EXTRA_DIST += modules/objfmts/win64/tests/win64-dataref2.masm
+EXTRA_DIST += modules/objfmts/win64/tests/win64-function.asm
+EXTRA_DIST += modules/objfmts/win64/tests/win64-function.hex
 EXTRA_DIST += modules/objfmts/win64/tests/win64-imagebase.hex
 EXTRA_DIST += modules/objfmts/win64/tests/win64-imagebase.asm
 
