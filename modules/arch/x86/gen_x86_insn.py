@@ -6943,7 +6943,7 @@ for sz in [128, 256]:
         prefix=0x66,
         opcode=[0x0F, 0x38, 0x59],
         operands=[Operand(type="SIMDReg", size=sz, dest="Spare"),
-                  Operand(type="RM", size=64, relaxed=True, dest="EA")])
+                  Operand(type="SIMDRM", size=64, relaxed=True, dest="EA")])
 
 add_insn("vpbroadcastq", "vpbroadcastq_avx2")
 
