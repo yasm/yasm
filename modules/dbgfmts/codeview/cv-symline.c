@@ -127,12 +127,15 @@ typedef struct cv8_lineset {
     size_t num_pairs;
 } cv8_lineset;
 
+/* Note: Due to line number sorting requirements (by section offset it seems)
+ *       one file may need more than one record per section. */
 typedef struct cv8_lineinfo {
     STAILQ_ENTRY(cv8_lineinfo) link;
     const cv_filename *fn;      /* filename associated with line numbers */
     yasm_section *sect;         /* section line numbers are for */
     yasm_symrec *sectsym;       /* symbol for beginning of sect */
     unsigned long num_linenums;
+    int first_in_sect;          /* First lineinfo for this section. */
     STAILQ_HEAD(cv8_lineset_head, cv8_lineset) linesets;
 } cv8_lineinfo;
 
@@ -443,23 +446,9 @@ cv_generate_line_bc(yasm_bytecode *bc, /*@null@*/ void *d)
         || strcmp(filename, info->cv8_cur_li->fn->filename) != 0) {
         yasm_bytecode *sectbc;
         char symname[8];
+        int first_in_sect = !info->cv8_cur_li;
 
-        /* first see if we already have a lineinfo that is for this section and
-         * filename
-         */
-        STAILQ_FOREACH(info->cv8_cur_li, &info->cv8_lineinfos, link) {
-            if (sect == info->cv8_cur_li->sect
-                && strcmp(filename, info->cv8_cur_li->fn->filename) == 0)
-                break;
-        }
-
-        if (info->cv8_cur_li) {
-            info->cv8_cur_ls = STAILQ_LAST(&info->cv8_cur_li->linesets,
-                                           cv8_lineset, link);
-            goto done;          /* found one */
-        }
-
-        /* Nope; find file */
+        /* Find file */
         for (i=0; i<dbgfmt_cv->filenames_size; i++) {
             if (strcmp(filename, dbgfmt_cv->filenames[i].filename) == 0)
                 break;
@@ -471,6 +460,7 @@ cv_generate_line_bc(yasm_bytecode *bc, /*@null@*/ void *d)
         info->cv8_cur_li = yasm_xmalloc(sizeof(cv8_lineinfo));
         info->cv8_cur_li->fn = &dbgfmt_cv->filenames[i];
         info->cv8_cur_li->sect = sect;
+        info->cv8_cur_li->first_in_sect = first_in_sect;
         sectbc = yasm_section_bcs_first(sect);
         if (sectbc->symrecs && sectbc->symrecs[0])
             info->cv8_cur_li->sectsym = sectbc->symrecs[0];
@@ -485,7 +475,6 @@ cv_generate_line_bc(yasm_bytecode *bc, /*@null@*/ void *d)
         STAILQ_INSERT_TAIL(&info->cv8_lineinfos, info->cv8_cur_li, link);
         info->cv8_cur_ls = NULL;
     }
-done:
 
     /* build new lineset if necessary */
     if (!info->cv8_cur_ls || info->cv8_cur_ls->num_pairs >= 126) {
@@ -622,13 +611,19 @@ yasm_cv__generate_symline(yasm_object *object, yasm_linemap *linemap,
                                   cv_generate_line_section);
 
     /* Output line numbers for sections */
+    head = NULL;
     STAILQ_FOREACH(li, &info.cv8_lineinfos, link) {
-        head = cv8_add_symhead(info.debug_symline, CV8_LINE_NUMS, 0);
+        if (li->first_in_sect) {
+            if (head)
+                cv8_set_symhead_end(head, yasm_section_bcs_last(info.debug_symline));
+            head = cv8_add_symhead(info.debug_symline, CV8_LINE_NUMS, 0);
+        }
         bc = yasm_bc_create_common(&cv8_lineinfo_bc_callback, li, 0);
-        bc->len = 24+li->num_linenums*8;
+        bc->len = (li->first_in_sect ? 24 : 12) + li->num_linenums*8;
         yasm_cv__append_bc(info.debug_symline, bc);
-        cv8_set_symhead_end(head, yasm_section_bcs_last(info.debug_symline));
     }
+    if (head)
+        cv8_set_symhead_end(head, yasm_section_bcs_last(info.debug_symline));
 
     /* Already aligned 4 */
 
@@ -880,22 +875,25 @@ cv8_lineinfo_bc_tobytes(yasm_bytecode *bc, unsigned char **bufp,
     unsigned long i;
     cv8_lineset *ls;
 
-    /* start offset and section */
-    cv_out_sym(li->sectsym, (unsigned long)(buf - bufstart), bc, &buf,
-               d, output_value);
+    if (li->first_in_sect) {
+        /* start offset and section */
+        cv_out_sym(li->sectsym, (unsigned long)(buf - bufstart), bc, &buf,
+                   d, output_value);
 
-    /* Two bytes of pad/alignment */
-    YASM_WRITE_8(buf, 0);
-    YASM_WRITE_8(buf, 0);
+        /* Two bytes of pad/alignment */
+        YASM_WRITE_8(buf, 0);
+        YASM_WRITE_8(buf, 0);
 
-    /* Section length covered by line number info */
-    cval = yasm_calc_bc_dist(yasm_section_bcs_first(li->sect),
-                             yasm_section_bcs_last(li->sect));
-    yasm_arch_intnum_tobytes(object->arch, cval, buf, 4, 32, 0, bc, 0);
-    buf += 4;
+        /* Section length covered by line number info */
+        cval = yasm_calc_bc_dist(yasm_section_bcs_first(li->sect),
+                                 yasm_section_bcs_last(li->sect));
+        yasm_arch_intnum_tobytes(object->arch, cval, buf, 4, 32, 0, bc, 0);
+        yasm_intnum_destroy(cval);
+        buf += 4;
+    }
 
     /* Offset of source file in info table */
-    yasm_intnum_set_uint(cval, li->fn->info_off);
+    cval = yasm_intnum_create_uint(li->fn->info_off);
     yasm_arch_intnum_tobytes(object->arch, cval, buf, 4, 32, 0, bc, 0);
     buf += 4;
 

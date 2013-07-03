@@ -25,15 +25,17 @@ the end (not included in length).
     2 bytes - section index (SECTION to section start)
     2 bytes - pad/align (0)
     4 bytes - section length covered by line number info
-    4 bytes - offset of source file in source file info table
-    4 bytes - number of line number pairs
-    4 bytes - number of bytes of line number pairs + 12
 
-    followed by pairs of:
-      4 bytes - offset in section
-      4 bytes - line number; if high bit is set,
-                end of statement/breakpointable (?) - e.g. lines containing
-	        just labels should have line numbers
+    followed by one or more source mappings:
+      4 bytes - offset of source file in source file info table
+      4 bytes - number of line number pairs
+      4 bytes - number of bytes this mapping takes, i.e. 12 + pair-count * 8.
+
+      followed by pairs of:
+        4 bytes - offset in section
+        4 bytes - line number; if high bit is set,
+                  end of statement/breakpointable (?) - e.g. lines containing
+                  just labels should have line numbers
 
 0x000000F1: symbol information
     enclosed data per below
