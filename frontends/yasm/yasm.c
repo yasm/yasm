@@ -448,9 +448,14 @@ do_assemble(void)
      */
     matched = 0;
     for (i=0; cur_parser_module->preproc_keywords[i]; i++)
+    {
         if (yasm__strcasecmp(cur_parser_module->preproc_keywords[i],
-                             cur_preproc_module->keyword) == 0)
+                             cur_preproc_module->keyword) == 0) {
             matched = 1;
+            break;
+        }
+    }
+
     if (!matched) {
         print_error(_("%s: `%s' is not a valid %s for %s `%s'"), _("FATAL"),
                     cur_preproc_module->keyword, _("preprocessor"),

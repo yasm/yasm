@@ -261,10 +261,14 @@ yasm_object_create(const char *src_filename, const char *obj_filename,
      * for the active object format.
      */
     matched = 0;
-    for (i=0; objfmt_module->dbgfmt_keywords[i]; i++)
+    for (i=0; objfmt_module->dbgfmt_keywords[i]; i++) {
         if (yasm__strcasecmp(objfmt_module->dbgfmt_keywords[i],
-                             dbgfmt_module->keyword) == 0)
+                             dbgfmt_module->keyword) == 0) {
             matched = 1;
+            break;
+        }
+    }
+
     if (!matched) {
         yasm_error_set(YASM_ERROR_GENERAL,
             N_("`%s' is not a valid debug format for object format `%s'"),
