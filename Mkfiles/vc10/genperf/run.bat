@@ -1,7 +1,7 @@
 cd ..\..\..
 @echo off
 
-for /f "usebackq tokens=1*" %%f in (`reg query HKCR\Applications\python.exe\shell\open\command 2^>NUL`) do (set _my_=%%f %%g)
+for /f "usebackq tokens=1*" %%f in (`reg query HKCR\Applications\python.exe\shell\open\command  2^>NUL`) do (set _my_=%%f %%g)
 goto try1%errorlevel%
 
 :try10
