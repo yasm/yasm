@@ -366,7 +366,7 @@ static ListGen *list;
  * FIXME: We should *really* be able to configure this at run time,
  * or even have the hash table automatically expanding when necessary.
  */
-#define NHASH 31
+#define NHASH 4096
 
 /*
  * The current set of multi-line macros we have defined.
