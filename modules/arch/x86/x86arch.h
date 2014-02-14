@@ -85,6 +85,7 @@
 #define CPU_LZCNT   51      /* Intel LZCNT instruction */
 #define CPU_TBM     52      /* AMD TBM instruction */
 #define CPU_TSX     53      /* Intel TSX instructions */
+#define CPU_SHA     54      /* Intel SHA instructions */
 
 enum x86_parser_type {
     X86_PARSER_NASM = 0,

@@ -402,6 +402,8 @@ lzcnt,		x86_cpu_set,	CPU_LZCNT
 nolzcnt,	x86_cpu_clear,	CPU_LZCNT
 tbm,		x86_cpu_set,	CPU_TBM
 notbm,	x86_cpu_clear,	CPU_TBM
+sha,		x86_cpu_set,	CPU_SHA
+nosha,		x86_cpu_clear,	CPU_SHA
 # Change NOP patterns
 basicnop,	x86_nop,	X86_NOP_BASIC
 intelnop,	x86_nop,	X86_NOP_INTEL

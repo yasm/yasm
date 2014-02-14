@@ -39,7 +39,7 @@ ordered_cpu_features = [
     "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42", "SSE4a", "SSE5",
     "AVX", "FMA", "AES", "CLMUL", "MOVBE", "XOP", "FMA4", "F16C",
     "FSGSBASE", "RDRAND", "XSAVEOPT", "EPTVPID", "SMX", "AVX2", "BMI1",
-    "BMI2", "INVPCID", "LZCNT", "TBM", "TSX"]
+    "BMI2", "INVPCID", "LZCNT", "TBM", "TSX", "SHA"]
 unordered_cpu_features = ["Priv", "Prot", "Undoc", "Obs"]
 
 # Predefined VEX prefix field values
@@ -8055,6 +8055,55 @@ add_group("invpcid",
     operands=[Operand(type="Reg", size=64, dest="Spare"),
               Operand(type="Mem", size=128, relaxed=True, dest="EA")])
 add_insn("invpcid", "invpcid")
+
+
+#####################################################################
+add_group("intel_SHA1MSG1",
+	cpu=["SHA"],
+	opcode=[0x0F, 0x38, 0xC9],
+	operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+		Operand(type="SIMDRM", size=128, dest="EA", relaxed=True)])
+add_group("intel_SHA1MSG2",
+	cpu=["SHA"],
+	opcode=[0x0F, 0x38, 0xCA],
+	operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+		Operand(type="SIMDRM", size=128, dest="EA", relaxed=True)])
+add_group("intel_SHA1NEXTE",
+	cpu=["SHA"],
+	opcode=[0x0F, 0x38, 0xC8],
+	operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+		Operand(type="SIMDRM", size=128, dest="EA", relaxed=True)])
+add_group("intel_SHA1RNDS4",
+	cpu=["SHA"],
+	opcode=[0x0F, 0x3A, 0xCC],
+	operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+		Operand(type="SIMDRM", size=128, dest="EA", relaxed=True),
+		Operand(type="Imm", size=8, dest="Imm", relaxed=True)])
+add_group("intel_SHA256MSG1",
+	cpu=["SHA"],
+	opcode=[0x0F, 0x38, 0xCC],
+	operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+		Operand(type="SIMDRM", size=128, dest="EA", relaxed=True)])
+add_group("intel_SHA256MSG2",
+	cpu=["SHA"],
+	opcode=[0x0F, 0x38, 0xCD],
+	operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+		Operand(type="SIMDRM", size=128, dest="EA", relaxed=True)])
+add_group("intel_SHA256RNDS2",
+	cpu=["SHA"],
+	opcode=[0x0F, 0x38, 0xCB],
+	operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+		Operand(type="SIMDReg", size=128, dest="EA")])
+
+
+add_insn("SHA1MSG1", "intel_SHA1MSG1")
+add_insn("SHA1MSG2", "intel_SHA1MSG2")
+add_insn("SHA1NEXTE", "intel_SHA1NEXTE")
+add_insn("SHA1RNDS4", "intel_SHA1RNDS4")
+add_insn("SHA256MSG1", "intel_SHA256MSG1")
+add_insn("SHA256MSG2", "intel_SHA256MSG2")
+add_insn("SHA256RNDS2", "intel_SHA256RNDS2")
+
 
 #####################################################################
 # AMD trailing bit manipulation (TBM)
