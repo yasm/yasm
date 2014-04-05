@@ -404,6 +404,14 @@ tbm,		x86_cpu_set,	CPU_TBM
 notbm,	x86_cpu_clear,	CPU_TBM
 sha,		x86_cpu_set,	CPU_SHA
 nosha,		x86_cpu_clear,	CPU_SHA
+smap,		x86_cpu_set,	CPU_SMAP
+nosmap,		x86_cpu_clear,	CPU_SMAP
+rdseed,		x86_cpu_set,	CPU_RDSEED
+nordseed,	x86_cpu_clear,	CPU_RDSEED
+adx,		x86_cpu_set,	CPU_ADX
+noadx,		x86_cpu_clear,	CPU_ADX
+prfchw,		x86_cpu_set,	CPU_PRFCHW
+noprfchw,	x86_cpu_clear,	CPU_PRFCHW
 # Change NOP patterns
 basicnop,	x86_nop,	X86_NOP_BASIC
 intelnop,	x86_nop,	X86_NOP_INTEL

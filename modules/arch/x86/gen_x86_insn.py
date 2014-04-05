@@ -39,7 +39,8 @@ ordered_cpu_features = [
     "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42", "SSE4a", "SSE5",
     "AVX", "FMA", "AES", "CLMUL", "MOVBE", "XOP", "FMA4", "F16C",
     "FSGSBASE", "RDRAND", "XSAVEOPT", "EPTVPID", "SMX", "AVX2", "BMI1",
-    "BMI2", "INVPCID", "LZCNT", "TBM", "TSX", "SHA"]
+    "BMI2", "INVPCID", "LZCNT", "TBM", "TSX", "SHA", "SMAP", "RDSEED", "ADX",
+    "PRFCHW"]
 unordered_cpu_features = ["Priv", "Prot", "Undoc", "Obs"]
 
 # Predefined VEX prefix field values
@@ -7371,25 +7372,23 @@ for comb, combval in zip(["lql","hql","lqh","hqh"], [0x00,0x01,0x10,0x11]):
 
 # RDRAND
 add_group("rdrand",
-    cpu=["RDRAND"],
+    modifiers=['SpAdd'],
     opersize=16,
     opcode=[0x0F, 0xC7],
-    spare=6,
     operands=[Operand(type="Reg", size=16, dest="EA")])
 add_group("rdrand",
     #suffix="l",
-    cpu=["RDRAND"],
+    modifiers=['SpAdd'],
     opersize=32,
     opcode=[0x0F, 0xC7],
-    spare=6,
     operands=[Operand(type="Reg", size=32, dest="EA")])
 add_group("rdrand",
-    cpu=["RDRAND"],
+    modifiers=['SpAdd'],
     opersize=64,
     opcode=[0x0F, 0xC7],
-    spare=6,
     operands=[Operand(type="Reg", size=64, dest="EA")])
-add_insn("rdrand", "rdrand")
+add_insn("rdrand", "rdrand", modifiers=[6], cpu=["RDRAND"])
+add_insn("rdseed", "rdrand", modifiers=[7], cpu=["RDSEED"])
 
 # FSGSBASE instructions
 add_group("fs_gs_base",
@@ -7932,7 +7931,7 @@ add_insn("movbe", "movbe")
 add_insn("tzcnt", "cnt", modifiers=[0xBC], cpu=["BMI1"])
 # LZCNT is present as AMD ext
 
-for sfx, sz in zip("wlq", [32, 64]):
+for sfx, sz in zip("lq", [32, 64]):
     add_group("vex_gpr_ndd_rm_0F38_regext",
         suffix=sfx,
         modifiers=["PreAdd", "Op2Add", "SpAdd" ],
@@ -7951,7 +7950,7 @@ add_insn("blsmsk", "vex_gpr_ndd_rm_0F38_regext", modifiers=[0x00, 0xF3, 2],
 add_insn("blsi",   "vex_gpr_ndd_rm_0F38_regext", modifiers=[0x00, 0xF3, 3],
          cpu=["BMI1"])
 
-for sfx, sz in zip("wlq", [32, 64]):
+for sfx, sz in zip("lq", [32, 64]):
     add_group("vex_gpr_reg_rm_0F_imm8",
         suffix=sfx,
         modifiers=["PreAdd", "Op1Add", "Op2Add"],
@@ -8058,6 +8057,8 @@ add_insn("invpcid", "invpcid")
 
 
 #####################################################################
+# Intel SHA instructions
+#####################################################################
 add_group("intel_SHA1MSG1",
 	cpu=["SHA"],
 	opcode=[0x0F, 0x38, 0xC9],
@@ -8095,7 +8096,6 @@ add_group("intel_SHA256RNDS2",
 	operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
 		Operand(type="SIMDReg", size=128, dest="EA")])
 
-
 add_insn("SHA1MSG1", "intel_SHA1MSG1")
 add_insn("SHA1MSG2", "intel_SHA1MSG2")
 add_insn("SHA1NEXTE", "intel_SHA1NEXTE")
@@ -8103,6 +8103,28 @@ add_insn("SHA1RNDS4", "intel_SHA1RNDS4")
 add_insn("SHA256MSG1", "intel_SHA256MSG1")
 add_insn("SHA256MSG2", "intel_SHA256MSG2")
 add_insn("SHA256RNDS2", "intel_SHA256RNDS2")
+
+#####################################################################
+# Intel SMAP instructions
+#####################################################################
+add_insn("clac", "threebyte", modifiers=[0x0F, 0x01, 0xCA], cpu=["SMAP"])
+add_insn("stac", "threebyte", modifiers=[0x0F, 0x01, 0xCB], cpu=["SMAP"])
+
+#####################################################################
+# Intel ADX instructions
+#####################################################################
+for sfx, sz in zip("lq", [32, 64]):
+    add_group("vex_gpr_ndd_rm_0F38",
+        suffix=sfx,
+        modifiers=["PreAdd", "Op2Add"],
+        opersize=sz,
+        prefix=0x00,
+        opcode=[0x0F, 0x38, 0x00],
+        operands=[Operand(type="Reg", size=sz, dest="Spare"),
+                  Operand(type="RM", size=sz, relaxed=True, dest="EA")])
+
+add_insn("adcx", "vex_gpr_ndd_rm_0F38", modifiers=[0x66, 0xF6], cpu=["ADX"])
+add_insn("adox", "vex_gpr_ndd_rm_0F38", modifiers=[0xF3, 0xF6], cpu=["ADX"])
 
 
 #####################################################################
@@ -8137,7 +8159,7 @@ add_insn("tzmsk",   "xop_gpr_reg_rm_09", modifiers=[0x01, 4])
 #####################################################################
 
 add_insn("prefetch", "twobytemem", modifiers=[0x00, 0x0F, 0x0D], cpu=["3DNow"])
-add_insn("prefetchw", "twobytemem", modifiers=[0x01, 0x0F, 0x0D], cpu=["3DNow"])
+add_insn("prefetchw", "twobytemem", modifiers=[0x01, 0x0F, 0x0D], cpu=["PRFCHW"])
 add_insn("femms", "twobyte", modifiers=[0x0F, 0x0E], cpu=["3DNow"])
 
 add_group("now3d",

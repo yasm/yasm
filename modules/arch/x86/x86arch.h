@@ -86,6 +86,10 @@
 #define CPU_TBM     52      /* AMD TBM instruction */
 #define CPU_TSX     53      /* Intel TSX instructions */
 #define CPU_SHA     54      /* Intel SHA instructions */
+#define CPU_SMAP    55      /* Intel SMAP instructions */
+#define CPU_RDSEED  56      /* Intel RDSEED instruction */
+#define CPU_ADX     57      /* Intel ADCX and ADOX instructions */
+#define CPU_PRFCHW  58      /* Intel/AMD PREFETCHW instruction */
 
 enum x86_parser_type {
     X86_PARSER_NASM = 0,
