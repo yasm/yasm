@@ -66,3 +66,4 @@ YASM-VERSION.h
 .sw*
 ./*.s
 ./*.asm
+x64
