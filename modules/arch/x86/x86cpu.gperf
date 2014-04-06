@@ -46,8 +46,12 @@
 #define PROC_conroe	11
 #define PROC_penryn	12
 #define PROC_nehalem	13
-#define PROC_westmere   14
-#define PROC_sandybridge 15
+#define PROC_westmere	14
+#define PROC_sandybridge	15
+#define PROC_ivybridge	16
+#define PROC_haswell	17
+#define PROC_broadwell	18
+#define PROC_skylake	19
 
 static void
 x86_cpu_intel(wordptr cpu, yasm_arch_x86 *arch_x86, unsigned int data)
@@ -59,8 +63,35 @@ x86_cpu_intel(wordptr cpu, yasm_arch_x86 *arch_x86, unsigned int data)
         BitVector_Bit_On(cpu, CPU_Prot);
     if (data >= PROC_386)
         BitVector_Bit_On(cpu, CPU_SMM);
-    if (data >= PROC_sandybridge)
+    if (data >= PROC_skylake) {
+        BitVector_Bit_On(cpu, CPU_SHA);
+    }
+    if (data >= PROC_broadwell) {
+        BitVector_Bit_On(cpu, CPU_RDSEED);
+        BitVector_Bit_On(cpu, CPU_ADX);
+        BitVector_Bit_On(cpu, CPU_PRFCHW);
+    }
+    if (data >= PROC_haswell) {
+        BitVector_Bit_On(cpu, CPU_FMA);
+        BitVector_Bit_On(cpu, CPU_AVX2);
+        BitVector_Bit_On(cpu, CPU_BMI1);
+        BitVector_Bit_On(cpu, CPU_BMI2);
+        BitVector_Bit_On(cpu, CPU_INVPCID);
+        BitVector_Bit_On(cpu, CPU_LZCNT);
+        BitVector_Bit_On(cpu, CPU_TSX);
+        BitVector_Bit_On(cpu, CPU_SMAP);
+    }
+    if (data >= PROC_ivybridge) {
+        BitVector_Bit_On(cpu, CPU_F16C);
+        BitVector_Bit_On(cpu, CPU_FSGSBASE);
+        BitVector_Bit_On(cpu, CPU_RDRAND);
+    }
+    if (data >= PROC_sandybridge) {
         BitVector_Bit_On(cpu, CPU_AVX);
+        BitVector_Bit_On(cpu, CPU_XSAVEOPT);
+        BitVector_Bit_On(cpu, CPU_EPTVPID);
+        BitVector_Bit_On(cpu, CPU_SMX);
+    }
     if (data >= PROC_westmere) {
         BitVector_Bit_On(cpu, CPU_AES);
         BitVector_Bit_On(cpu, CPU_CLMUL);
@@ -298,6 +329,10 @@ nehalem,	x86_cpu_intel,	PROC_nehalem
 corei7,		x86_cpu_intel,	PROC_nehalem
 westmere,	x86_cpu_intel,	PROC_westmere
 sandybridge,	x86_cpu_intel,	PROC_sandybridge
+ivybridge,	x86_cpu_intel,	PROC_ivybridge
+haswell,	x86_cpu_intel,	PROC_haswell
+broadwell,	x86_cpu_intel,	PROC_broadwell
+skylake,	x86_cpu_intel,	PROC_skylake
 #
 # Features have "no" versions to disable them, and only set/reset the
 # specific feature being changed.  All other bits are left alone.
