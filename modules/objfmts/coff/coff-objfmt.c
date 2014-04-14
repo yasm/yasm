@@ -1367,6 +1367,7 @@ coff_helper_gasflags(void *obj, yasm_valparam *vp, unsigned long line, void *d,
                 datasect = 1;
                 load = 1;
                 readonly = 0;
+                break;
             case 'x':
                 code = 1;
                 load = 1;
