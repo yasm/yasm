@@ -296,11 +296,13 @@ void yasm_expr_print(/*@null@*/ const yasm_expr *e, FILE *f);
 /** Return the size of an expression, if the user provided it
  * \param e     expression
  */
+YASM_LIB_DECL
 unsigned int yasm_expr_size(const yasm_expr *e);
 
 /** Return the segment of an expression, if the user provided it
  * \param e     expression
  */
+YASM_LIB_DECL
 const char *yasm_expr_segment(const yasm_expr *e);
 
 /** Traverse over expression tree in order (const version).

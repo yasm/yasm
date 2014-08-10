@@ -326,24 +326,28 @@ int yasm_symrec_get_label(const yasm_symrec *sym,
  * \param sym       symbol
  * \param size      size to be set
  */
+YASM_LIB_DECL
 void yasm_symrec_set_size(yasm_symrec *sym, int size);
 
 /** Get the size of a symbol.
  * \param sym       symbol
  * \return size of the symbol, 0 if none specified by the user.
  */
+YASM_LIB_DECL
 int yasm_symrec_get_size(const yasm_symrec *sym);
 
 /** Set the segment of a symbol.
  * \param sym       symbol
  * \param segment   segment to be set
  */
+YASM_LIB_DECL
 void yasm_symrec_set_segment(yasm_symrec *sym, const char *segment);
 
 /** Get the segment of a symbol.
  * \param sym       symbol
  * \return segment of the symbol, NULL if none specified by the user.
  */
+YASM_LIB_DECL
 const char *yasm_symrec_get_segment(const yasm_symrec *sym);
 
 /** Determine if symbol is the "absolute" symbol created by
