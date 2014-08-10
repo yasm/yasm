@@ -12,7 +12,7 @@ macro (VERSION_GEN _version _version_file _default_version)
         list (GET _version_strs 0 _version_strs0)
         if (NOT (${_version_strs0} STREQUAL ""))
             set (_vn "v${_version_strs0}")
-        endif (${_version_strs0})
+        endif (NOT (${_version_strs0} STREQUAL ""))
     elseif (EXISTS "${CMAKE_SOURCE_DIR}/.git")
         execute_process (COMMAND git describe --match "v[0-9]*" --abbrev=4 HEAD
                          RESULT_VARIABLE _git_result
