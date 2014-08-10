@@ -67,3 +67,6 @@ YASM-VERSION.h
 ./*.s
 ./*.asm
 x64
+*.log
+*.trs
+.dirstamp
