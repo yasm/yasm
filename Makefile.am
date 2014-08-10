@@ -122,6 +122,23 @@ EXTRA_DIST += Mkfiles/vc10/modules/modules.vcxproj.filters
 EXTRA_DIST += Mkfiles/vc10/re2c/re2c.vcxproj
 EXTRA_DIST += Mkfiles/vc10/re2c/re2c.vcxproj.filters
 EXTRA_DIST += Mkfiles/vc10/re2c/run.bat
+EXTRA_DIST += Mkfiles/vc12/config.h
+EXTRA_DIST += Mkfiles/vc12/crt_secure_no_deprecate.props
+EXTRA_DIST += Mkfiles/vc12/crt_secure_no_deprecate.vsprops
+EXTRA_DIST += Mkfiles/vc12/libyasm/libyasm.vcxproj
+EXTRA_DIST += Mkfiles/vc12/libyasm/libyasm.vcxproj.filters
+EXTRA_DIST += Mkfiles/vc12/modules/modules.vcxproj
+EXTRA_DIST += Mkfiles/vc12/modules/modules.vcxproj.filters
+EXTRA_DIST += Mkfiles/vc12/out_copy_rename.bat
+EXTRA_DIST += Mkfiles/vc12/readme.vc12.txt
+EXTRA_DIST += Mkfiles/vc12/vsyasm.props
+EXTRA_DIST += Mkfiles/vc12/vsyasm.targets
+EXTRA_DIST += Mkfiles/vc12/vsyasm.vcxproj
+EXTRA_DIST += Mkfiles/vc12/vsyasm.xml
+EXTRA_DIST += Mkfiles/vc12/yasm.sln
+EXTRA_DIST += Mkfiles/vc12/yasm.vcxproj
+EXTRA_DIST += Mkfiles/vc12/yasm.vcxproj.filters
+EXTRA_DIST += Mkfiles/vc12/ytasm.vcxproj
 
 # Until this gets fixed in automake
 DISTCLEANFILES += libyasm/stamp-h libyasm/stamp-h[0-9]*
