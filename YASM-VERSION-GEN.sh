@@ -1,7 +1,7 @@
 #!/bin/sh
 
 YVF=YASM-VERSION-FILE
-DEF_VER=v1.2.0
+DEF_VER=v1.3.0
 
 LF='
 '
