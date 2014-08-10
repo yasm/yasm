@@ -214,7 +214,7 @@ static opt_option options[] =
 /*@observer@*/ static const char *version_msg[] = {
     PACKAGE_STRING,
     "Compiled on " __DATE__ ".",
-    "Copyright (c) 2001-2011 Peter Johnson and other Yasm developers.",
+    "Copyright (c) 2001-2014 Peter Johnson and other Yasm developers.",
     "Run yasm --license for licensing overview and summary."
 };
 
