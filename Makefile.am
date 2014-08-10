@@ -131,6 +131,7 @@ dist-hook: YASM-VERSION-FILE YASM-VERSION.h
 	cp YASM-VERSION.h $(distdir)/Mkfiles/dj/
 	cp YASM-VERSION.h $(distdir)/Mkfiles/vc9/
 	cp YASM-VERSION.h $(distdir)/Mkfiles/vc10/
+	cp YASM-VERSION.h $(distdir)/Mkfiles/vc12/
 
 YASM-VERSION-FILE: $(top_srcdir)/YASM-VERSION-GEN.sh
 	$(top_srcdir)/YASM-VERSION-GEN.sh
