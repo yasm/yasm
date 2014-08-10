@@ -11,7 +11,7 @@ AC_INIT([yasm],
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADER([config.h])
 
-AM_INIT_AUTOMAKE([1.9.6 foreign])
+AM_INIT_AUTOMAKE([1.9.6 foreign subdir-objects])
 AM_MAINTAINER_MODE
 
 #
