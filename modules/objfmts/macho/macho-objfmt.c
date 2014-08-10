@@ -730,12 +730,10 @@ static int
 macho_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 {
     /*@null@*/ macho_objfmt_output_info *info = (macho_objfmt_output_info *)d;
-    yasm_objfmt_macho *objfmt_macho;
     /*@dependent@*/ /*@null@*/ macho_section_data *msd;
     unsigned char *localbuf;
 
     assert(info != NULL);
-    objfmt_macho = info->objfmt_macho;
     msd = yasm_section_get_data(sect, &macho_section_data_cb);
     assert(msd != NULL);
 
@@ -970,8 +968,6 @@ macho_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
 {
     /*@null@*/ macho_objfmt_output_info *info = (macho_objfmt_output_info *)d;
     yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
-    /*@null@*/ macho_symrec_data *xsymd;
-
 
     assert(info != NULL);
 
@@ -982,7 +978,6 @@ macho_objfmt_output_str(yasm_symrec *sym, /*@null@*/ void *d)
                 yasm_symrec_get_global_name(sym, info->object);
             size_t len = strlen(name);
 
-            xsymd = yasm_symrec_get_data(sym, &macho_symrec_data_cb);
             fwrite(name, len + 1, 1, info->f);
             yasm_xfree(name);
         }
@@ -1037,7 +1032,7 @@ macho_objfmt_output(yasm_object *object, FILE *f, int all_syms,
     unsigned long symtab_count = 0;
     unsigned long headsize;
     unsigned int macho_segcmdsize, macho_sectcmdsize, macho_nlistsize;
-    unsigned int macho_relinfosize, macho_segcmd;
+    unsigned int macho_segcmd;
     unsigned int head_ncmds, head_sizeofcmds;
     unsigned long fileoffset, fileoff_sections;
     yasm_intnum *val;
@@ -1072,7 +1067,6 @@ macho_objfmt_output(yasm_object *object, FILE *f, int all_syms,
         macho_segcmdsize = MACHO_SEGCMD64_SIZE;
         macho_sectcmdsize = MACHO_SECTCMD64_SIZE;
         macho_nlistsize = MACHO_NLIST64_SIZE;
-        macho_relinfosize = MACHO_RELINFO64_SIZE;
         long_int_bytes = 8;
     } else {
         headsize =
@@ -1083,7 +1077,6 @@ macho_objfmt_output(yasm_object *object, FILE *f, int all_syms,
         macho_segcmdsize = MACHO_SEGCMD_SIZE;
         macho_sectcmdsize = MACHO_SECTCMD_SIZE;
         macho_nlistsize = MACHO_NLIST_SIZE;
-        macho_relinfosize = MACHO_RELINFO_SIZE;
         long_int_bytes = 4;
     }
 

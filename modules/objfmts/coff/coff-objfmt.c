@@ -524,12 +524,9 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf,
         if (vis & YASM_SYM_COMMON) {
             /* In standard COFF, COMMON symbols have their length added in */
             if (!objfmt_coff->win32) {
-                /*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
                 /*@dependent@*/ /*@null@*/ yasm_expr **csize_expr;
                 /*@dependent@*/ /*@null@*/ yasm_intnum *common_size;
 
-                csymd = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
-                assert(csymd != NULL);
                 csize_expr = yasm_symrec_get_common_size(sym);
                 assert(csize_expr != NULL);
                 common_size = yasm_expr_get_intnum(csize_expr, 1);

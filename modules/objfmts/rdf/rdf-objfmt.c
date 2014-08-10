@@ -183,7 +183,6 @@ rdf_objfmt_output_value(yasm_value *value, unsigned char *buf,
                         yasm_bytecode *bc, int warn, /*@null@*/ void *d)
 {
     /*@null@*/ rdf_objfmt_output_info *info = (rdf_objfmt_output_info *)d;
-    yasm_objfmt_rdf *objfmt_rdf;
     /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
     unsigned long intn_minus;
     unsigned long intn_plus;
@@ -191,7 +190,6 @@ rdf_objfmt_output_value(yasm_value *value, unsigned char *buf,
     unsigned int valsize = value->size;
 
     assert(info != NULL);
-    objfmt_rdf = info->objfmt_rdf;
 
     if (value->abs)
         value->abs = yasm_expr_simplify(value->abs, 1);

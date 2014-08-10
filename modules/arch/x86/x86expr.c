@@ -644,7 +644,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
          (x86_ea->need_sib && !x86_ea->valid_sib))) {
         int i;
         unsigned char low3;
-        typedef enum {
+        enum {
             REG3264_NONE = -1,
             REG3264_EAX = 0,
             REG3264_ECX,
@@ -664,7 +664,7 @@ yasm_x86__expr_checkea(x86_effaddr *x86_ea, unsigned char *addrsize,
             REG64_R15,
             REG64_RIP,
             SIMDREGS
-        } reg3264type;
+        };
         int reg3264mult[33] =
             {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};

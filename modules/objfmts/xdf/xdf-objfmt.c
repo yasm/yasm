@@ -149,14 +149,12 @@ xdf_objfmt_output_value(yasm_value *value, unsigned char *buf,
                         yasm_bytecode *bc, int warn, /*@null@*/ void *d)
 {
     /*@null@*/ xdf_objfmt_output_info *info = (xdf_objfmt_output_info *)d;
-    yasm_objfmt_xdf *objfmt_xdf;
     /*@dependent@*/ /*@null@*/ yasm_intnum *intn;
     unsigned long intn_minus;
     int retval;
     unsigned int valsize = value->size;
 
     assert(info != NULL);
-    objfmt_xdf = info->objfmt_xdf;
 
     if (value->abs)
         value->abs = yasm_expr_simplify(value->abs, 1);
@@ -375,13 +373,11 @@ static int
 xdf_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
 {
     /*@null@*/ xdf_objfmt_output_info *info = (xdf_objfmt_output_info *)d;
-    yasm_objfmt_xdf *objfmt_xdf;
     /*@dependent@*/ /*@null@*/ xdf_section_data *xsd;
     /*@null@*/ xdf_symrec_data *xsymd;
     unsigned char *localbuf;
 
     assert(info != NULL);
-    objfmt_xdf = info->objfmt_xdf;
     xsd = yasm_section_get_data(sect, &xdf_section_data_cb);
     assert(xsd != NULL);
 

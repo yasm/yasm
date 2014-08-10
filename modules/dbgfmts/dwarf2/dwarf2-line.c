@@ -691,7 +691,7 @@ yasm_dwarf2__generate_line(yasm_object *object, yasm_linemap *linemap,
     dwarf2_line_info info;
     int new;
     size_t i;
-    yasm_bytecode *last, *sppbc;
+    yasm_bytecode *sppbc;
     dwarf2_spp *spp;
     dwarf2_head *head;
 
@@ -709,7 +709,6 @@ yasm_dwarf2__generate_line(yasm_object *object, yasm_linemap *linemap,
     info.dbgfmt_dwarf2 = dbgfmt_dwarf2;
     info.debug_line = yasm_object_get_general(object, ".debug_line", 1, 0, 0,
                                               &new, 0);
-    last = yasm_section_bcs_last(info.debug_line);
 
     /* header */
     head = yasm_dwarf2__add_head(dbgfmt_dwarf2, info.debug_line, NULL, 0, 0);

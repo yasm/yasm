@@ -1315,12 +1315,10 @@ yasm_object_optimize(yasm_object *object, yasm_errwarns *errwarns)
         unsigned long offset = 0;
 
         yasm_bytecode *bc = STAILQ_FIRST(&sect->bcs);
-        yasm_bytecode *prevbc;
 
         bc->bc_index = bc_index++;
 
         /* Skip our locally created empty bytecode first. */
-        prevbc = bc;
         bc = STAILQ_NEXT(bc, link);
 
         /* Iterate through the remainder, if any. */
@@ -1358,7 +1356,6 @@ yasm_object_optimize(yasm_object *object, yasm_errwarns *errwarns)
                 offset += bc->len*bc->mult_int;
             }
 
-            prevbc = bc;
             bc = STAILQ_NEXT(bc, link);
         }
     }

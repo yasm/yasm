@@ -316,7 +316,7 @@ stabs_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
     int new;
     yasm_bytecode *dbgbc;
     stabs_stab *stab;
-    yasm_bytecode *filebc, *nullbc, *laststr, *firstbc;
+    yasm_bytecode *filebc, *laststr, *firstbc;
     yasm_symrec *firstsym;
     yasm_section *stext;
 
@@ -371,7 +371,7 @@ stabs_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
     yasm_section_bcs_append(info.stab, dbgbc);
 
     /* initial strtab bytecodes */
-    nullbc = stabs_dbgfmt_append_bcstr(info.stabstr, "");
+    stabs_dbgfmt_append_bcstr(info.stabstr, "");
     filebc = stabs_dbgfmt_append_bcstr(info.stabstr, object->src_filename);
 
     stext = yasm_object_find_general(object, ".text");
