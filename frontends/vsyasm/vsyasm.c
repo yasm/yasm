@@ -37,11 +37,15 @@
 
 #include "frontends/yasm/yasm-options.h"
 
-#ifdef CMAKE_BUILD
+#if defined(CMAKE_BUILD) && defined(BUILD_SHARED_LIBS)
 #include "frontends/yasm/yasm-plugin.h"
 #endif
 
 #include "license.c"
+
+#if defined(CMAKE_BUILD) && !defined(BUILD_SHARED_LIBS)
+void yasm_init_plugin(void);
+#endif
 
 /*@null@*/ /*@only@*/ static char *objdir_pathname = NULL;
 /*@null@*/ /*@only@*/ static char *global_prefix = NULL, *global_suffix = NULL;
@@ -107,7 +111,7 @@ static int opt_preproc_option(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_ewmsg_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_prefix_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_suffix_handler(char *cmd, /*@null@*/ char *param, int extra);
-#ifdef CMAKE_BUILD
+#if defined(CMAKE_BUILD) && defined(BUILD_SHARED_LIBS)
 static int opt_plugin_handler(char *cmd, /*@null@*/ char *param, int extra);
 #endif
 
@@ -207,7 +211,7 @@ static opt_option options[] =
       N_("append argument to name of all external symbols"), N_("suffix") },
     { 0, "postfix", 1, opt_suffix_handler, 0,
       N_("append argument to name of all external symbols"), N_("suffix") },
-#ifdef CMAKE_BUILD
+#if defined(CMAKE_BUILD) && defined(BUILD_SHARED_LIBS)
     { 'N', "plugin", 1, opt_plugin_handler, 0,
       N_("load plugin module"), N_("plugin") },
 #endif
@@ -542,10 +546,14 @@ main(int argc, char *argv[])
 
 #ifdef CMAKE_BUILD
     /* Load standard modules */
+#ifdef BUILD_SHARED_LIBS
     if (!load_plugin("yasmstd")) {
         print_error(_("%s: could not load standard modules"), _("FATAL"));
         return EXIT_FAILURE;
     }
+#else
+    yasm_init_plugin();
+#endif
 #endif
 
     /* Initialize parameter storage */
@@ -783,7 +791,7 @@ cleanup(void)
 
     if (errfile != stderr && errfile != stdout)
         fclose(errfile);
-#ifdef CMAKE_BUILD
+#if defined(CMAKE_BUILD) && defined(BUILD_SHARED_LIBS)
     unload_plugins();
 #endif
 }
@@ -1201,7 +1209,7 @@ opt_suffix_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     return 0;
 }
 
-#ifdef CMAKE_BUILD
+#if defined(CMAKE_BUILD) && defined(BUILD_SHARED_LIBS)
 static int
 opt_plugin_handler(/*@unused@*/ char *cmd, char *param,
                    /*@unused@*/ int extra)

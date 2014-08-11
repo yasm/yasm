@@ -38,13 +38,17 @@
 
 #include "tasm-options.h"
 
-#ifdef CMAKE_BUILD
+#if defined(CMAKE_BUILD) && defined(BUILD_SHARED_LIBS)
 #include "yasm-plugin.h"
 #endif
 
 #include "license.c"
 
 #define DEFAULT_OBJFMT_MODULE   "bin"
+
+#if defined(CMAKE_BUILD) && !defined(BUILD_SHARED_LIBS)
+void yasm_init_plugin(void);
+#endif
 
 /*@null@*/ /*@only@*/ static char *obj_filename = NULL, *in_filename = NULL;
 /*@null@*/ /*@only@*/ static char *list_filename = NULL, *xref_filename = NULL;
@@ -457,10 +461,14 @@ main(int argc, char *argv[])
 
 #ifdef CMAKE_BUILD
     /* Load standard modules */
+#ifdef BUILD_SHARED_LIBS
     if (!load_plugin("yasmstd")) {
         print_error(_("%s: could not load standard modules"), _("FATAL"));
         return EXIT_FAILURE;
     }
+#else
+    yasm_init_plugin();
+#endif
 #endif
 
     /* Initialize parameter storage */
@@ -640,7 +648,7 @@ cleanup(yasm_object *object)
 
     if (errfile != stderr && errfile != stdout)
         fclose(errfile);
-#ifdef CMAKE_BUILD
+#if defined(CMAKE_BUILD) && defined(BUILD_SHARED_LIBS)
     unload_plugins();
 #endif
 }

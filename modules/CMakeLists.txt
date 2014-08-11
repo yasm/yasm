@@ -56,9 +56,11 @@ IF(regen_init_plugin_c)
         FILE(APPEND ${INIT_PLUGIN_C}
              "extern yasm_${_type}_module yasm_${_keyword}_LTX_${_type};\n")
     ENDFOREACH(module)
-    FILE(APPEND ${INIT_PLUGIN_C} "\n#ifdef _MSC_VER\n")
-    FILE(APPEND ${INIT_PLUGIN_C} "__declspec(dllexport)\n")
-    FILE(APPEND ${INIT_PLUGIN_C} "#endif\n")
+    IF(BUILD_SHARED_LIBS)
+        FILE(APPEND ${INIT_PLUGIN_C} "\n#ifdef _MSC_VER\n")
+        FILE(APPEND ${INIT_PLUGIN_C} "__declspec(dllexport)\n")
+        FILE(APPEND ${INIT_PLUGIN_C} "#endif\n")
+    ENDIF(BUILD_SHARED_LIBS)
     FILE(APPEND ${INIT_PLUGIN_C} "void\n")
     FILE(APPEND ${INIT_PLUGIN_C} "yasm_init_plugin(void)\n")
     FILE(APPEND ${INIT_PLUGIN_C} "{\n")
@@ -80,14 +82,22 @@ SET_SOURCE_FILES_PROPERTIES(init_plugin.c GENERATED)
 
 SET(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
-ADD_LIBRARY(yasmstd MODULE
-    init_plugin.c
-    ${YASM_MODULES_SRC}
-    )
-TARGET_LINK_LIBRARIES(yasmstd libyasm)
+IF(BUILD_SHARED_LIBS)
+    ADD_LIBRARY(yasmstd MODULE
+        init_plugin.c
+        ${YASM_MODULES_SRC}
+        )
+    TARGET_LINK_LIBRARIES(yasmstd libyasm)
 
-IF(WIN32)
-    INSTALL(TARGETS yasmstd LIBRARY DESTINATION bin)
-ELSE(WIN32)
-    INSTALL(TARGETS yasmstd LIBRARY DESTINATION lib)
-ENDIF(WIN32)
+    IF(WIN32)
+        INSTALL(TARGETS yasmstd LIBRARY DESTINATION bin)
+    ELSE(WIN32)
+        INSTALL(TARGETS yasmstd LIBRARY DESTINATION lib)
+    ENDIF(WIN32)
+ELSE(BUILD_SHARED_LIBS)
+    ADD_LIBRARY(yasmstd
+        init_plugin.c
+        ${YASM_MODULES_SRC}
+        )
+    TARGET_LINK_LIBRARIES(yasmstd libyasm)
+ENDIF(BUILD_SHARED_LIBS)

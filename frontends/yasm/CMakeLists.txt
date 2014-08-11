@@ -12,12 +12,20 @@ ADD_CUSTOM_COMMAND(
 
 SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
-ADD_EXECUTABLE(yasm
-    yasm.c
-    yasm-options.c
-    yasm-plugin.c
-    )
-TARGET_LINK_LIBRARIES(yasm libyasm ${LIBDL})
+IF(BUILD_SHARED_LIBS)
+    ADD_EXECUTABLE(yasm
+        yasm.c
+        yasm-options.c
+        yasm-plugin.c
+        )
+    TARGET_LINK_LIBRARIES(yasm libyasm ${LIBDL})
+ELSE(BUILD_SHARED_LIBS)
+    ADD_EXECUTABLE(yasm
+        yasm.c
+        yasm-options.c
+        )
+    TARGET_LINK_LIBRARIES(yasm yasmstd libyasm)
+ENDIF(BUILD_SHARED_LIBS)
 
 SET_SOURCE_FILES_PROPERTIES(yasm.c PROPERTIES
     OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/license.c

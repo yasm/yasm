@@ -2,6 +2,9 @@
 
 #define CMAKE_BUILD 1
 
+/* Define if shared libs are being built */
+#cmakedefine BUILD_SHARED_LIBS 1
+
 /* Define if messsage translations are enabled */
 #cmakedefine ENABLE_NLS 1
 

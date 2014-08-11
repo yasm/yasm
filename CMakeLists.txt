@@ -4,7 +4,7 @@ if (COMMAND cmake_policy)
     cmake_policy(SET CMP0003 NEW)
 endif (COMMAND cmake_policy)
 
-SET(BUILD_SHARED_LIBS ON)
+OPTION(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 # Where to look first for cmake modules
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
@@ -31,7 +31,7 @@ VERSION_GEN(PACKAGE_VERSION "${CMAKE_BINARY_DIR}/YASM-VERSION-FILE" "1.1.0")
 
 set (PACKAGE_STRING "yasm ${PACKAGE_VERSION}")
 
-INCLUDE_DIRECTORIES(BEFORE ${CMAKE_BINARY_DIR} ${yasm_SOURCE_DIR})
+INCLUDE_DIRECTORIES(AFTER ${CMAKE_BINARY_DIR} ${yasm_SOURCE_DIR})
 
 INCLUDE(ConfigureChecks.cmake)
 
