@@ -34,15 +34,6 @@
 
 #define REGULAR_OUTBUF_SIZE     1024
 
-/* Defining this to 0 sets all section VMA's to 0 rather than as the same as
- * the LMA.  According to the DJGPP COFF Spec, this should be set to 1
- * (VMA=LMA), and indeed DJGPP's GCC output shows VMA=LMA.  However, NASM
- * outputs VMA=0 (as if this was 0), and GNU objdump output looks a lot nicer
- * with VMA=0.  Who's right?  This is #defined as changing this setting affects
- * several places in the code.
- */
-#define COFF_SET_VMA    (!objfmt_coff->win32)
-
 #define COFF_MACHINE_I386       0x014C
 #define COFF_MACHINE_AMD64      0x8664
 
@@ -430,22 +421,6 @@ coff_objfmt_init_new_section(yasm_section *sect, unsigned long line)
 }
 
 static int
-coff_objfmt_set_section_addr(yasm_section *sect, /*@null@*/ void *d)
-{
-    /*@null@*/ coff_objfmt_output_info *info = (coff_objfmt_output_info *)d;
-    /*@dependent@*/ /*@null@*/ coff_section_data *csd;
-
-    assert(info != NULL);
-    csd = yasm_section_get_data(sect, &coff_section_data_cb);
-    assert(csd != NULL);
-
-    csd->addr = info->addr;
-    info->addr += yasm_bc_next_offset(yasm_section_bcs_last(sect));
-
-    return 0;
-}
-
-static int
 coff_objfmt_output_value(yasm_value *value, unsigned char *buf,
                          unsigned int destsize, unsigned long offset,
                          yasm_bytecode *bc, int warn, /*@null@*/ void *d)
@@ -556,8 +531,6 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf,
                 assert(sym_csd != NULL);
                 sym = sym_csd->sym;
                 intn_val = yasm_bc_next_offset(sym_precbc);
-                if (COFF_SET_VMA)
-                    intn_val += sym_csd->addr;
             }
         }
 
@@ -586,8 +559,6 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf,
         /* Generate reloc */
         reloc = yasm_xmalloc(sizeof(coff_reloc));
         addr = bc->offset + offset;
-        if (COFF_SET_VMA)
-            addr += info->addr;
         reloc->reloc.addr = yasm_intnum_create_uint(addr);
         reloc->reloc.sym = sym;
 
@@ -912,16 +883,8 @@ coff_objfmt_output_secthead(yasm_section *sect, /*@null@*/ void *d)
     } else
         strncpy((char *)localbuf, yasm_section_get_name(sect), 8);
     localbuf += 8;
-    if (csd->isdebug) {
-        YASM_WRITE_32_L(localbuf, 0);           /* physical address */
-        YASM_WRITE_32_L(localbuf, 0);           /* virtual address */
-    } else {
-        YASM_WRITE_32_L(localbuf, csd->addr);   /* physical address */
-        if (COFF_SET_VMA)
-            YASM_WRITE_32_L(localbuf, csd->addr);/* virtual address */
-        else
-            YASM_WRITE_32_L(localbuf, 0);       /* virtual address */
-    }
+    YASM_WRITE_32_L(localbuf, 0);               /* physical address */
+    YASM_WRITE_32_L(localbuf, 0);               /* virtual address */
     YASM_WRITE_32_L(localbuf, csd->size);       /* section size */
     YASM_WRITE_32_L(localbuf, csd->scnptr);     /* file ptr to data */
     YASM_WRITE_32_L(localbuf, csd->relptr);     /* file ptr to relocs */
@@ -1015,7 +978,6 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
         /*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
         unsigned long scnlen = 0;   /* for sect auxent */
         unsigned long nreloc = 0;   /* for sect auxent */
-        yasm_objfmt_coff *objfmt_coff = info->objfmt_coff;
 
         if (is_abs)
             name = yasm__xstrdup(".absolut");
@@ -1043,8 +1005,6 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
                     scnum = csectd->scnum;
                     scnlen = csectd->size;
                     nreloc = csectd->nreloc;
-                    if (COFF_SET_VMA)
-                        value = csectd->addr;
                 } else
                     yasm_internal_error(N_("didn't understand section"));
                 if (precbc)
@@ -1222,17 +1182,6 @@ coff_objfmt_output(yasm_object *object, FILE *f, int all_syms,
     symtab_count = info.indx;
 
     /* Section data/relocs */
-    if (COFF_SET_VMA) {
-        /* If we're setting the VMA, we need to do a first section pass to
-         * determine each section's addr value before actually outputting
-         * relocations, as a relocation's section address is added into the
-         * addends in the generated code.
-         */
-        info.addr = 0;
-        if (yasm_object_sections_traverse(object, &info,
-                                          coff_objfmt_set_section_addr))
-            return;
-    }
     info.addr = 0;
     if (yasm_object_sections_traverse(object, &info,
                                       coff_objfmt_output_section))
