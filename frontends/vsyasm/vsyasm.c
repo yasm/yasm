@@ -185,7 +185,7 @@ static opt_option options[] =
       N_("inhibits warning messages"), NULL },
     { 'W', NULL, 0, opt_warning_handler, 0,
       N_("enables/disables warning"), NULL },
-    { 'E', NULL, 1, opt_error_file, 0,
+    { 'Z', NULL, 1, opt_error_file, 0,
       N_("redirect error messages to file"), N_("file") },
     { 's', NULL, 0, opt_error_stdout, 0,
       N_("redirect error messages to stdout"), NULL },
