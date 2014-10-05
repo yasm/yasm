@@ -112,6 +112,7 @@ parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts,
                     errors++;
             } else {            /* sopt */
                 for (i = 0; i < nopts; i++) {
+                    size_t optlen;
                     if (argv[0][1] == options[i].sopt) {
                         char *cmd = &argv[0][1];
                         char *param;
@@ -134,6 +135,36 @@ parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts,
                             param = NULL;
 
                         if (!options[i].handler(cmd, param, options[i].extra))
+                            got_it = 1;
+                        break;
+                    }
+                    /* also allow longopt with single dash */
+                    if (options[i].lopt &&
+                        strncmp(&argv[0][1], options[i].lopt,
+                                (optlen = strlen(options[i].lopt))) == 0) {
+                        char *param;
+                        char c = argv[0][1 + optlen];
+
+                        if (c != '\0' && c != '=' && !isspace(c))
+                            continue;
+
+                        if (options[i].takes_param) {
+                            param = strchr(&argv[0][1], '=');
+                            if (!param) {
+                                print_error(
+                                    _("option `-%s' needs an argument!"),
+                                    options[i].lopt);
+                                errors++;
+                                goto fail;
+                            } else {
+                                *param = '\0';
+                                param++;
+                            }
+                        } else
+                            param = NULL;
+
+                        if (!options[i].
+                            handler(&argv[0][1], param, options[i].extra))
                             got_it = 1;
                         break;
                     }
