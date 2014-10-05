@@ -58,7 +58,7 @@ yasm_register_module(yasm_module_type type, const char *keyword, void *data)
     assert(type < sizeof(loaded_modules));
 
     if (!loaded_modules[type])
-        loaded_modules[type] = HAMT_create(0, yasm_internal_error_);
+        loaded_modules[type] = HAMT_create(1, yasm_internal_error_);
 
     HAMT_insert(loaded_modules[type], keyword, data, &replace,
                 load_module_destroy);
