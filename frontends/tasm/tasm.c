@@ -356,7 +356,7 @@ do_assemble(void)
     apply_preproc_saved_options();
 
     /* Get initial x86 BITS setting from object format */
-    if (strcmp(cur_arch_module->keyword, "x86") == 0) {
+    if (yasm__strcasecmp(cur_arch_module->keyword, "x86") == 0) {
         yasm_arch_set_var(cur_arch, "mode_bits",
                           cur_objfmt_module->default_x86_mode_bits);
     }
@@ -380,7 +380,7 @@ do_assemble(void)
     check_errors(errwarns, object, linemap);
 
     /* open the object file for output (if not already opened by dbg objfmt) */
-    if (!obj && strcmp(cur_objfmt_module->keyword, "dbg") != 0) {
+    if (!obj && yasm__strcasecmp(cur_objfmt_module->keyword, "dbg") != 0) {
         obj = open_file(obj_filename, "wb");
         if (!obj) {
             cleanup(object);
@@ -390,7 +390,8 @@ do_assemble(void)
 
     /* Write the object file */
     yasm_objfmt_output(object, obj?obj:stderr,
-                       strcmp(cur_dbgfmt_module->keyword, "null"), errwarns);
+                       yasm__strcasecmp(cur_dbgfmt_module->keyword, "null"),
+                       errwarns);
 
     /* Close object file */
     if (obj)
