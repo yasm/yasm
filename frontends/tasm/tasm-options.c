@@ -65,15 +65,18 @@ parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts,
 
                     param = &argv[0][1+len];
                     if (options[i].takes_param) {
-                        if (param[0] == '\0') {
+                        if (param[0] != '\0') {
+                            /* do nothing */
+                        } else if (argc > 1) {
+                            param = argv[1];
+                            argc--;
+                            argv++;
+                        } else {
                             print_error(
-                                _("option `-%c' needs an argument!"),
+                                _("option `-%s' needs an argument!"),
                                 options[i].opt);
                             errors++;
                             goto fail;
-                        } else {
-                            argc--;
-                            argv++;
                         }
                     } else
                         param = NULL;
