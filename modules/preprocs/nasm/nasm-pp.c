@@ -2249,7 +2249,10 @@ if_condition(Token * tline, int i)
                     case PP_ELIFNUM:
                     case PP_IFNNUM:
                     case PP_ELIFNNUM:
-                        j = (t->type == TOK_NUMBER);
+                        while (tok_is_(t, "+") || tok_is_(t, "-") ||
+                                   tok_type_(t, TOK_WHITESPACE))
+                            t = t->next;
+                        j = (t && t->type == TOK_NUMBER);
                         break;
                     case PP_IFSTR:
                     case PP_ELIFSTR:
