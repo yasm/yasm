@@ -125,7 +125,7 @@
       HelpContext="0"
       DisplayName="Map File Name"
       Description="Select a map output by setting its file name"
-      Switch="--mapdir= &quot;[value]&quot;" />
+      Switch="--mapdir=&quot;[value]&quot;" />
 
     <StringProperty
       Name="ErrorFile"
@@ -143,7 +143,7 @@
       HelpContext="0"
       DisplayName="External Symbol Prefix"
       Description="Prepend symbol to all external symbols"
-      Switch="--prefix &quot;[value]&quot;" />
+      Switch="--prefix=&quot;[value]&quot;" />
 
     <StringProperty
       Name="SymbolSuffix"
@@ -152,7 +152,7 @@
       HelpContext="0"
       DisplayName="External Symbol Suffix"
       Description="Append symbol to all external symbols"
-      Switch="--suffix &quot;[value]&quot;" />
+      Switch="--suffix=&quot;[value]&quot;" />
 
     <EnumProperty
       Name="PreProc"
