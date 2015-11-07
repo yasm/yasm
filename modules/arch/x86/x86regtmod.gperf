@@ -284,7 +284,7 @@ yasm_x86__parse_check_regtmod(yasm_arch *arch, const char *id, size_t id_len,
     }
 
     if (type == YASM_ARCH_SEGREG && bits != 0 && arch_x86->mode_bits == bits) {
-        yasm_warn_set(YASM_WARN_GENERAL,
+        yasm_warn_set(YASM_WARN_SEGREG_IN_64BIT,
                       N_("`%s' segment register ignored in %u-bit mode"), id,
                       bits);
     }
