@@ -43,7 +43,8 @@ typedef enum yasm_warn_class {
     YASM_WARN_ORPHAN_LABEL, /**< Label alone on a line without a colon */
     YASM_WARN_UNINIT_CONTENTS, /**< Uninitialized space in code/data section */
     YASM_WARN_SIZE_OVERRIDE,/**< Double size override */
-    YASM_WARN_IMPLICIT_SIZE_OVERRIDE /**< Implicit size override */
+    YASM_WARN_IMPLICIT_SIZE_OVERRIDE, /**< Implicit size override */
+    YASM_WARN_SEGREG_IN_64BIT /**< Segment register ignored in 64-bit mode */
 } yasm_warn_class;
 
 /** Error classes.  Bitmask-based to support limited subclassing. */
