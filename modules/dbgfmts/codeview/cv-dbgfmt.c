@@ -71,6 +71,8 @@ cv_dbgfmt_destroy(/*@only@*/ yasm_dbgfmt *dbgfmt)
     for (i=0; i<dbgfmt_cv->filenames_size; i++) {
         if (dbgfmt_cv->filenames[i].pathname)
             yasm_xfree(dbgfmt_cv->filenames[i].pathname);
+        if (dbgfmt_cv->filenames[i].filename)
+            yasm_xfree(dbgfmt_cv->filenames[i].filename);
     }
     yasm_xfree(dbgfmt_cv->filenames);
     yasm_xfree(dbgfmt);
