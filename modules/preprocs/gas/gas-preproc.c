@@ -1042,6 +1042,32 @@ typedef int (*pp_fn2_t)(yasm_preproc_gas *pp, int param, const char *arg1, const
 
 #define FN(f) ((pp_fn0_t) &(f))
 
+static char *find_str_bound(char *line)
+{
+    for (; line[0]; ++line) {
+        if (line[0] == '"') return line;
+        if (line[0] == '\\' && line[1] == '"') ++line;
+    }
+    return NULL;
+}
+
+static char *find_comment(char *line)
+{
+    char *c, *s;
+
+    for (c = line, s = line; (c = strstr(c, "/*")); s = c) {
+        for (;;) {
+            s = find_str_bound(s);
+            if (!s || s > c) return c;
+
+            s = find_str_bound(s + 1);
+            if (!s || s > c) return NULL;
+        }
+    }
+
+    return NULL;
+}
+
 static void kill_comments(yasm_preproc_gas *pp, char *line)
 {
     int next = 2;
@@ -1057,7 +1083,7 @@ static void kill_comments(yasm_preproc_gas *pp, char *line)
         cstart = line;
         next = 0;
     } else {
-        cstart = strstr(line, "/*");
+        cstart = find_comment(line);
         next = 2;
     }
 
