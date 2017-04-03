@@ -7909,15 +7909,17 @@ add_insn("xsaveopt64", "xsaveopt64", modifiers=[6, 0x0F, 0xAE],
 #####################################################################
 # Intel MOVBE instruction
 #####################################################################
-for sz in (16, 32, 64):
+for sfx, sz in zip("wlq", [16, 32, 64]):
     add_group("movbe",
         cpu=["MOVBE"],
+        suffix=sfx,
         opersize=sz,
         opcode=[0x0F, 0x38, 0xF0],
         operands=[Operand(type="Reg", size=sz, dest="Spare"),
                   Operand(type="Mem", size=sz, relaxed=True, dest="EA")])
     add_group("movbe",
         cpu=["MOVBE"],
+        suffix=sfx,
         opersize=sz,
         opcode=[0x0F, 0x38, 0xF1],
         operands=[Operand(type="Mem", size=sz, relaxed=True, dest="EA"),
