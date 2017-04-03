@@ -290,6 +290,7 @@ coff_common_create(yasm_object *object)
     objfmt_coff->done_prolog = 0;
     objfmt_coff->unwind = NULL;
     objfmt_coff->ssym_imagebase = NULL;
+    objfmt_coff->def_sym = NULL;
 
     return objfmt_coff;
 }
