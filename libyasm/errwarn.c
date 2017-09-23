@@ -492,14 +492,6 @@ yasm_errwarns_output_all(yasm_errwarns *errwarns, yasm_linemap *lm,
     const char *filename, *xref_filename;
     unsigned long line, xref_line;
 
-    /* If we're treating warnings as errors, tell the user about it. */
-    if (warning_as_error && warning_as_error != 2) {
-        print_error("", 0,
-                    yasm_gettext_hook(N_("warnings being treated as errors")),
-                    NULL, 0, NULL);
-        warning_as_error = 2;
-    }
-
     /* Output error/warnings. */
     SLIST_FOREACH(we, &errwarns->errwarns, link) {
         /* Output error/warning */
@@ -514,7 +506,17 @@ yasm_errwarns_output_all(yasm_errwarns *errwarns, yasm_linemap *lm,
             print_error(filename, line, we->msg, xref_filename, xref_line,
                         we->xrefmsg);
         else
+        {
             print_warning(filename, line, we->msg);
+
+            /* If we're treating warnings as errors, tell the user about it. */
+            if (warning_as_error && warning_as_error != 2) {
+                const char *msg =
+                    yasm_gettext_hook(N_("warnings being treated as errors"));
+                print_error(filename, line, msg, NULL, 0, NULL);
+                warning_as_error = 2;
+            }
+        }
     }
 }
 
