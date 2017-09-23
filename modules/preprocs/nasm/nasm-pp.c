@@ -2313,6 +2313,9 @@ expand_macros_in_string(char **p)
     Token *line = tokenise(*p);
     line = expand_smacro(line);
     *p = detoken(line, FALSE);
+    do
+        line = delete_Token(line);
+    while (line);
 }
 
 /**
@@ -2732,6 +2735,7 @@ do_directive(Token * tline)
             inc->next = istk;
             inc->conds = NULL;
             inc->fp = inc_fopen(p, &newname);
+            nasm_free(p);
             inc->fname = nasm_src_set_fname(newname);
             inc->lineno = nasm_src_set_linnum(0);
             inc->lineinc = 1;
@@ -5051,6 +5055,7 @@ pp_getline(void)
                 }
                 istk = i->next;
                 list->downlevel(LIST_INCLUDE);
+                nasm_free(i->fname);
                 nasm_free(i);
                 if (!istk)
                     return NULL;

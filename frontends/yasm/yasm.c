@@ -580,6 +580,7 @@ do_assemble(void)
     yasm_linemap_destroy(linemap);
     yasm_errwarns_destroy(errwarns);
     cleanup(object);
+    yasm_delete_include_paths();
     return EXIT_SUCCESS;
 }
 
