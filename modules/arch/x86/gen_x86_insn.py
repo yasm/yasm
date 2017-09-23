@@ -8267,6 +8267,20 @@ add_insn("vmload", "svm_rax", modifiers=[0xDA])
 add_insn("vmrun", "svm_rax", modifiers=[0xD8])
 add_insn("vmsave", "svm_rax", modifiers=[0xDB])
 
+
+#####################################################################
+# AMD Excavator, new instructions MONITORX, MWAITX   
+#####################################################################
+
+add_insn("monitorx", "threebyte", modifiers=[0x0F, 0x01, 0xFA], cpu=["AMD"])
+add_insn("mwaitx",   "threebyte", modifiers=[0x0F, 0x01, 0xFB], cpu=["AMD"])
+
+#####################################################################
+# AMD Zen, new instructions CLZERO
+#####################################################################
+
+add_insn("clzero",   "threebyte", modifiers=[0x0F, 0x01, 0xFC], cpu=["AMD"])
+
 #####################################################################
 # VIA PadLock instructions
 #####################################################################
