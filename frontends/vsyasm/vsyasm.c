@@ -913,9 +913,9 @@ opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
     size_t i;
     assert(param != NULL);
 #if 1
-    if (!stricmp(param, "win32")) {
+    if (!yasm__strcasecmp(param, "win32")) {
         param = "win32";
-    } else if (!stricmp(param, "win64") || !stricmp(param, "x64")) {
+    } else if (!yasm__strcasecmp(param, "win64") || !yasm__strcasecmp(param, "x64")) {
         param = "win64";
     }
 #endif
