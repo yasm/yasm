@@ -1060,6 +1060,11 @@ yasm_x86__intnum_tobytes(yasm_arch *arch, const yasm_intnum *intn,
                          unsigned char *buf, size_t destsize, size_t valsize,
                          int shift, const yasm_bytecode *bc, int warn)
 {
+    /* Ugly hack, suppress warnings */
+    if (destsize == 1 && valsize == 8 &&
+        yasm_intnum_in_range(intn, 0xffffff80, 0xffffffff))
+        warn = 0;
+
     /* Write value out. */
     yasm_intnum_get_sized(intn, buf, destsize, valsize, shift, 0, warn);
     return 0;
