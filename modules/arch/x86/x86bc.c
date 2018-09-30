@@ -605,6 +605,10 @@ x86_bc_insn_calc_len(yasm_bytecode *bc, yasm_bc_add_span_func add_span,
                     imm->size = 8;
                     imm->sign = 1;
                     immlen = 8;
+                } else if (yasm_intnum_in_range(num, 0xffffff80, 0xffffffff)) {
+                    imm->size = 8;
+                    imm->sign = 1;
+                    immlen = 8;
                 } else {
                     /* We can't.  Copy over the word-sized opcode. */
                     insn->opcode.opcode[0] =
