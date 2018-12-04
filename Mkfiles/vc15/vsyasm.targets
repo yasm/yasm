@@ -35,8 +35,8 @@
       <_YASMReadTlog 
         Include="^%(YASM.FullPath);%(YASM.AdditionalDependencies)"
         Condition="'%(YASM.ExcludedFromBuild)' != 'true' and '%(YASM.ObjectFile)' != ''"/>
-      <_YASMWriteTlog
-        Include="^%(YASM.FullPath);'$(MSBuildProjectDirectory)%(YASM.ObjectFile)'"
+      <_YASMWriteTlog 
+        Include="^%(YASM.FullPath);$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '%(YASM.ObjectFile)'))" 
         Condition="'%(YASM.ExcludedFromBuild)' != 'true' and '%(YASM.ObjectFile)' != ''"/>
     </ItemGroup>
 
@@ -55,8 +55,8 @@
       Encoding="Unicode"/>
 
     <ItemGroup>
-      <_MasmReadTlog Remove="@(_MasmReadTlog)" />
-      <_MasmWriteTlog Remove="@(_MasmWriteTlog)" />
+      <_YASMReadTlog Remove="@(_YASMReadTlog)" />
+      <_YASMWriteTlog Remove="@(_YASMWriteTlog)" />
     </ItemGroup>
 
   </Target>
