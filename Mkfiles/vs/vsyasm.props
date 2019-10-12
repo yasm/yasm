@@ -18,7 +18,7 @@
       <ObjectFile>$(IntDir)%(FileName).obj</ObjectFile>
       <PreProc>0</PreProc>
       <Parser>0</Parser>
-      <CommandLineTemplate>"$(YASM_PATH)"vsyasm.exe -Xvc -f $(Platform) [AllOptions] [AdditionalOptions] [Inputs]</CommandLineTemplate>
+      <CommandLineTemplate>"$(YASM_PATH.TrimEnd('\'))"\vsyasm.exe -Xvc -f $(Platform) [AllOptions] [AdditionalOptions] [Inputs]</CommandLineTemplate>
       <Outputs>%(ObjectFile)</Outputs>
       <ExecutionDescription>Assembling %(Filename)%(Extension) ==> $(IntDir)%(FileName).obj</ExecutionDescription>
       <ShowOnlyRuleProperties>false</ShowOnlyRuleProperties>
