@@ -26,7 +26,6 @@ start:     00000000
 align:     00000008
 follows:   not defined
 vstart:    00000000
-vseg:      not defined
 valign:    00000008
 vfollows:  not defined
 
@@ -38,7 +37,6 @@ start:     00000010
 align:     00000008
 follows:   not defined
 vstart:    00000010
-vseg:      not defined
 valign:    00000008
 vfollows:  not defined
 
@@ -50,7 +48,6 @@ start:     00000014
 align:     00000004
 follows:   not defined
 vstart:    00000014
-vseg:      not defined
 valign:    00000004
 vfollows:  not defined
 
@@ -62,7 +59,6 @@ start:     00000018
 align:     00000008
 follows:   not defined
 vstart:    00000018
-vseg:      not defined
 valign:    00000004
 vfollows:  not defined
 

@@ -459,19 +459,8 @@ yasm_value_finalize_expr(yasm_value *value, yasm_expr *e,
 int
 yasm_value_finalize(yasm_value *value, yasm_bytecode *precbc)
 {
-    yasm_object *object = NULL;
     if (!value->abs)
         return 0;
-
-    if (precbc != NULL)
-        object = yasm_section_get_object(precbc->section);
-
-    if (object && object->overrides->value_finalize) {
-        int result;
-        result = object->overrides->value_finalize(value, precbc);
-        if (result != -1)
-            return result;
-    }
 
     value->abs = yasm_expr__level_tree(value->abs, 1, 1, 0, 0, NULL, NULL);
 

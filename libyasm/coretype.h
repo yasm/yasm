@@ -233,7 +233,6 @@ typedef enum yasm_expr_op {
     YASM_EXPR_NOR,      /**< Bitwise NOR. */
     YASM_EXPR_SHL,      /**< Shift left (logical). */
     YASM_EXPR_SHR,      /**< Shift right (logical). */
-    YASM_EXPR_LOGIC,    /**< Start of logic operations (not an op). */
     YASM_EXPR_LOR,      /**< Logical OR. */
     YASM_EXPR_LAND,     /**< Logical AND. */
     YASM_EXPR_LNOT,     /**< Logical negation. */

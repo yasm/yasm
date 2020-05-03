@@ -43,17 +43,11 @@ typedef struct bin_section_data {
     /* User-provided starts */
     /*@null@*/ /*@owned@*/ yasm_expr *start, *vstart;
 
-    /* User-provided segments */
-    /*@null@*/ /*@owned@*/ yasm_expr *vseg;
-
     /* User-provided follows */
     /*@null@*/ /*@owned@*/ char *follows, *vfollows;
 
     /* Calculated (final) starts, used only during output() */
     /*@null@*/ /*@owned@*/ yasm_intnum *istart, *ivstart;
-
-    /* Calculated (final) starts, used only during output() */
-    /*@null@*/ /*@owned@*/ yasm_intnum *ivseg;
 
     /* Calculated (final) length, used only during output() */
     /*@null@*/ /*@owned@*/ yasm_intnum *length;
@@ -104,7 +98,6 @@ static const yasm_assoc_data_callback bin_symrec_data_cb = {
 
 yasm_objfmt_module yasm_bin_LTX_objfmt;
 
-static int bin_objfmt_value_finalize(yasm_value *value, yasm_bytecode *precbc);
 
 static yasm_objfmt *
 bin_objfmt_create(yasm_object *object)
@@ -115,8 +108,6 @@ bin_objfmt_create(yasm_object *object)
     objfmt_bin->map_flags = NO_MAP;
     objfmt_bin->map_filename = NULL;
     objfmt_bin->org = NULL;
-
-    object->overrides->value_finalize = bin_objfmt_value_finalize;
 
     return (yasm_objfmt *)objfmt_bin;
 }
@@ -295,19 +286,6 @@ bin_lma_create_group(yasm_section *sect, /*@null@*/ void *d)
             bsd->ivstart = yasm_intnum_copy(bsd->ivstart);
     } else
         bsd->ivstart = NULL;
-
-    /* Calculate section integer vseg. */
-    if (bsd->vseg) {
-        bsd->ivseg = yasm_expr_get_intnum(&bsd->vseg, 0);
-        if (!bsd->ivseg) {
-            yasm_error_set(YASM_ERROR_TOO_COMPLEX,
-                           N_("vseg expression is too complex"));
-            yasm_errwarn_propagate(info->errwarns, bsd->vseg->line);
-            return 1;
-        } else
-            bsd->ivseg = yasm_intnum_copy(bsd->ivseg);
-    } else
-        bsd->ivseg = NULL;
 
     /* Calculate section integer length. */
     bsd->length = yasm_calc_bc_dist(yasm_section_bcs_first(sect),
@@ -489,13 +467,11 @@ group_assign_vstart_recurse(bin_group *group, yasm_intnum *start,
     }
 }
 
-static /*@null@*/ /*@only@*/ yasm_expr *
-get_ssym_value(yasm_symrec *sym, unsigned long line)
+static /*@null@*/ const yasm_intnum *
+get_ssym_value(yasm_symrec *sym)
 {
     bin_symrec_data *bsymd = yasm_symrec_get_data(sym, &bin_symrec_data_cb);
     bin_section_data *bsd;
-    yasm_intnum *offset;
-    yasm_expr *expr;
 
     if (!bsymd)
         return NULL;
@@ -504,26 +480,11 @@ get_ssym_value(yasm_symrec *sym, unsigned long line)
     assert(bsd != NULL);
 
     switch (bsymd->which) {
-        case SSYM_START: offset = bsd->istart; break;
-        case SSYM_VSTART: offset = bsd->ivstart; break;
-        case SSYM_LENGTH: offset = bsd->length; break;
-        default: return NULL;
+        case SSYM_START: return bsd->istart;
+        case SSYM_VSTART: return bsd->ivstart;
+        case SSYM_LENGTH: return bsd->length;
     }
-
-    offset = yasm_intnum_copy(offset);
-
-    if (bsymd->which == SSYM_VSTART && bsd->ivseg != NULL) {
-        yasm_intnum *tmp = yasm_intnum_create_int(16);
-        yasm_intnum_calc(tmp, YASM_EXPR_MUL, bsd->ivseg);
-        yasm_intnum_calc(offset, YASM_EXPR_SUB, tmp);
-        yasm_intnum_destroy(tmp);
-        expr = yasm_expr_create(YASM_EXPR_SEGOFF,
-                                yasm_expr_int(yasm_intnum_copy(bsd->ivseg)),
-                                yasm_expr_int(offset), line);
-    } else
-        expr = yasm_expr_create_ident(yasm_expr_int(offset), line);
-
-    return expr;
+    return NULL;
 }
 
 static /*@only@*/ yasm_expr *
@@ -535,7 +496,7 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
         /*@dependent@*/ yasm_section *sect;
         /*@dependent@*/ /*@null@*/ yasm_bytecode *precbc;
         /*@null@*/ yasm_intnum *dist;
-        /*@null@*/ /*@only@*/ yasm_expr *ssymval;
+        /*@null@*/ const yasm_intnum *ssymval;
 
         /* Transform symrecs or precbcs that reference sections into
          * vstart + intnum(dist).
@@ -550,31 +511,15 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
             bsd = yasm_section_get_data(sect, &bin_section_data_cb);
             assert(bsd != NULL);
             yasm_intnum_calc(dist, YASM_EXPR_ADD, bsd->ivstart);
-            if (bsd->ivseg != NULL) {
-                yasm_expr *sube;
-                yasm_intnum *seg;
-
-                seg = yasm_intnum_create_int(16);
-                yasm_intnum_calc(seg, YASM_EXPR_MUL, bsd->ivseg);
-                yasm_intnum_calc(dist, YASM_EXPR_SUB, seg);
-                yasm_intnum_set(seg, bsd->ivseg);
-                
-                sube = yasm_expr_create(YASM_EXPR_SEGOFF,
-                                        yasm_expr_int(seg),
-                                        yasm_expr_int(dist), e->line);
-                e->terms[i].type = YASM_EXPR_EXPR;
-                e->terms[i].data.expn = sube;
-            } else {
-                e->terms[i].type = YASM_EXPR_INT;
-                e->terms[i].data.intn = dist;
-            }
+            e->terms[i].type = YASM_EXPR_INT;
+            e->terms[i].data.intn = dist;
         }
 
         /* Transform our special symrecs into the appropriate value */
         if (e->terms[i].type == YASM_EXPR_SYM &&
-            (ssymval = get_ssym_value(e->terms[i].data.sym, e->line))) {
-            e->terms[i].type = YASM_EXPR_EXPR;
-            e->terms[i].data.expn = ssymval;
+            (ssymval = get_ssym_value(e->terms[i].data.sym))) {
+            e->terms[i].type = YASM_EXPR_INT;
+            e->terms[i].data.intn = yasm_intnum_copy(ssymval);
         }
     }
 
@@ -584,7 +529,6 @@ bin_objfmt_expr_xform(/*@returned@*/ /*@only@*/ yasm_expr *e,
 typedef struct map_output_info {
     /* address width */
     int bytes;
-    int vseg_present;
 
     /* intnum output static data areas */
     unsigned char *buf;
@@ -613,11 +557,6 @@ map_prescan_bytes(yasm_section *sect, void *d)
         info->bytes *= 2;
     while (!yasm_intnum_check_size(bsd->ivstart, info->bytes * 8, 0, 0))
         info->bytes *= 2;
-    if (bsd->ivseg) {
-        info->vseg_present = 1;
-        while (!yasm_intnum_check_size(bsd->ivseg, info->bytes * 8, 0, 0))
-            info->bytes *= 2;
-    }
 
     return 0;
 }
@@ -649,16 +588,6 @@ map_sections_summary(bin_groups *groups, map_output_info *info)
         yasm_intnum_calc(info->intn, YASM_EXPR_ADD, bsd->length);
         map_print_intnum(info->intn, info);
         fprintf(info->f, "  ");
-
-        if (info->vseg_present) {
-            if (bsd->ivseg == NULL) {
-                size_t i;
-                for (i = info->bytes; i != 0; i--)
-                    fprintf(info->f, "--");
-            } else
-                map_print_intnum(bsd->ivseg, info);
-            fprintf(info->f, "  ");
-        }
 
         map_print_intnum(bsd->istart, info);
         fprintf(info->f, "  ");
@@ -705,11 +634,6 @@ map_sections_detail(bin_groups *groups, map_output_info *info)
                 bsd->follows ? bsd->follows : "not defined");
         fprintf(info->f, "\nvstart:    ");
         map_print_intnum(bsd->ivstart, info);
-        fprintf(info->f, "\nvseg:      ");
-        if (bsd->ivseg)
-            map_print_intnum(bsd->ivseg, info);
-        else
-            fprintf(info->f, "not defined");
         fprintf(info->f, "\nvalign:    ");
         map_print_intnum(bsd->valign, info);
         fprintf(info->f, "\nvfollows:  %s\n\n",
@@ -845,7 +769,6 @@ output_map(bin_objfmt_output_info *info)
      * fields.  Start with a minimum of 4.
      */
     mapinfo.bytes = 4;
-    mapinfo.vseg_present = 0;
     while (!yasm_intnum_check_size(info->origin, mapinfo.bytes * 8, 0, 0))
         mapinfo.bytes *= 2;
     yasm_object_sections_traverse(info->object, &mapinfo, map_prescan_bytes);
@@ -868,11 +791,9 @@ output_map(bin_objfmt_output_info *info)
         fprintf(f, "-- Sections (summary) ");
         for (i=0; i<57; i++)
             fputc('-', f);
-        fprintf(f, "\n\n%-*s%-*s%-*s%-*s%-*s%-*s%-*s%s\n",
+        fprintf(f, "\n\n%-*s%-*s%-*s%-*s%-*s%-*s%s\n",
                 mapinfo.bytes*2+2, "Vstart",
                 mapinfo.bytes*2+2, "Vstop",
-                mapinfo.vseg_present ? mapinfo.bytes*2+2 : 0,
-                mapinfo.vseg_present ? "Vseg" : "",
                 mapinfo.bytes*2+2, "Start",
                 mapinfo.bytes*2+2, "Stop",
                 mapinfo.bytes*2+2, "Length",
@@ -972,91 +893,6 @@ check_lma_overlap(yasm_section *sect, /*@null@*/ void *d)
 }
 
 static int
-bin_objfmt_value_finalize(yasm_value *value, yasm_bytecode *precbc)
-{
-    value->abs = yasm_expr__level_tree(value->abs, 1, 1, 0, 0, NULL, NULL);
-    
-    /* quit early if there was an issue in simplify() */
-    if (yasm_error_occurred())
-        return 1;
-
-    /* Strip top-level AND masking to an all-1s mask the same size
-     * of the value size.  This allows forced avoidance of overflow warnings.
-     */
-    if (value->abs->op == YASM_EXPR_AND) {
-        int term;
-        
-        /* Calculate 1<<size - 1 value */
-        yasm_intnum *mask = yasm_intnum_create_uint(1);
-        yasm_intnum *mask_tmp = yasm_intnum_create_uint(value->size);
-        yasm_intnum_calc(mask, YASM_EXPR_SHL, mask_tmp);
-        yasm_intnum_set_uint(mask_tmp, 1);
-        yasm_intnum_calc(mask, YASM_EXPR_SUB, mask_tmp);
-        yasm_intnum_destroy(mask_tmp);
-        
-        /* Walk terms and delete matching masks */
-        for (term=value->abs->numterms-1; term>=0; term--) {
-            if (value->abs->terms[term].type == YASM_EXPR_INT &&
-                yasm_intnum_compare(value->abs->terms[term].data.intn,
-                                    mask) == 0) {
-                /* Delete the intnum */
-                yasm_intnum_destroy(value->abs->terms[term].data.intn);
-            
-            /* Slide everything to its right over by 1 */
-            if (term != value->abs->numterms-1) /* if it wasn't last.. */
-                memmove(&value->abs->terms[term],
-                        &value->abs->terms[term+1],
-                        (value->abs->numterms-1-term)*
-                        sizeof(yasm_expr__item));
-                
-                /* Update numterms */
-                value->abs->numterms--;
-            
-            /* Indicate warnings have been disabled */
-            value->no_warn = 1;
-                                    }
-        }
-        if (value->abs->numterms == 1)
-            value->abs->op = YASM_EXPR_IDENT;
-        yasm_intnum_destroy(mask);
-    }
-
-    /* Handle trivial (IDENT) cases immediately */
-    if (value->abs->op == YASM_EXPR_IDENT) {
-        switch (value->abs->terms[0].type) {
-            case YASM_EXPR_INT:
-                if (yasm_intnum_is_zero(value->abs->terms[0].data.intn)) {
-                    yasm_expr_destroy(value->abs);
-                    value->abs = NULL;
-                }
-                return 0;
-            case YASM_EXPR_REG:
-            case YASM_EXPR_FLOAT:
-                return 0;
-            case YASM_EXPR_SYM:
-                value->rel = value->abs->terms[0].data.sym;
-                yasm_expr_destroy(value->abs);
-                value->abs = NULL;
-                return 0;
-            case YASM_EXPR_EXPR:
-                /* Bring up lower values. */
-                while (value->abs->op == YASM_EXPR_IDENT
-                       && value->abs->terms[0].type == YASM_EXPR_EXPR) {
-                    yasm_expr *sube = value->abs->terms[0].data.expn;
-                    yasm_xfree(value->abs);
-                    value->abs = sube;
-                }
-                break;
-            default:
-                return 0;
-        }
-    }
-
-    /* TODO do some more finalization to avoid breaking stuff that depends on it */
-    return 0;
-}
-
-static int
 bin_objfmt_output_value(yasm_value *value, unsigned char *buf,
                         unsigned int destsize,
                         /*@unused@*/ unsigned long offset, yasm_bytecode *bc,
@@ -1072,7 +908,7 @@ bin_objfmt_output_value(yasm_value *value, unsigned char *buf,
     if (value->rel) {
         unsigned int rshift = (unsigned int)value->rshift;
         yasm_expr *syme;
-        /*@null@*/ yasm_expr *ssymval;
+        /*@null@*/ const yasm_intnum *ssymval;
 
         if (yasm_symrec_is_abs(value->rel)) {
             syme = yasm_expr_create_ident(yasm_expr_int(
@@ -1080,8 +916,9 @@ bin_objfmt_output_value(yasm_value *value, unsigned char *buf,
         } else if (yasm_symrec_get_label(value->rel, &precbc)
                    && (sect = yasm_bc_get_section(precbc))) {
             syme = yasm_expr_create_ident(yasm_expr_sym(value->rel), bc->line);
-        } else if ((ssymval = get_ssym_value(value->rel, bc->line))) {
-            syme = ssymval;
+        } else if ((ssymval = get_ssym_value(value->rel))) {
+            syme = yasm_expr_create_ident(yasm_expr_int(
+                yasm_intnum_copy(ssymval)), bc->line);
         } else
             goto done;
 
@@ -1564,7 +1401,6 @@ bin_objfmt_init_new_section(yasm_section *sect, unsigned long line)
     data->valign = NULL;
     data->start = NULL;
     data->vstart = NULL;
-    data->vseg = NULL;
     data->follows = NULL;
     data->vfollows = NULL;
     data->istart = NULL;
@@ -1619,7 +1455,6 @@ bin_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
         /*@only@*/ /*@null@*/ char *vfollows;
         /*@only@*/ /*@null@*/ yasm_expr *start;
         /*@only@*/ /*@null@*/ yasm_expr *vstart;
-        /*@only@*/ /*@null@*/ yasm_expr *vseg;
         /*@only@*/ /*@null@*/ yasm_intnum *align;
         /*@only@*/ /*@null@*/ yasm_intnum *valign;
         unsigned long bss;
@@ -1635,8 +1470,6 @@ bin_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
           offsetof(struct bin_section_switch_data, start), 0 },
         { "vstart", 1, yasm_dir_helper_expr,
           offsetof(struct bin_section_switch_data, vstart), 0 },
-        { "vseg", 1, yasm_dir_helper_expr,
-          offsetof(struct bin_section_switch_data, vseg), 0 },
         { "align", 1, yasm_dir_helper_intn,
           offsetof(struct bin_section_switch_data, align), 0 },
         { "valign", 1, yasm_dir_helper_intn,
@@ -1670,7 +1503,6 @@ bin_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
         data.vfollows = bsd->vfollows;
         data.start = bsd->start;
         data.vstart = bsd->vstart;
-        data.vseg = bsd->vseg;
         data.align = NULL;
         data.valign = NULL;
         data.bss = bsd->bss;
@@ -1680,7 +1512,6 @@ bin_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
         data.vfollows = NULL;
         data.start = NULL;
         data.vstart = NULL;
-        data.vseg = NULL;
         data.align = NULL;
         data.valign = NULL;
         data.bss = strcmp(sectname, ".bss") == 0;
@@ -1745,7 +1576,6 @@ bin_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
     bsd->valign = data.valign;
     bsd->start = data.start;
     bsd->vstart = data.vstart;
-    bsd->vseg = data.vseg;
     bsd->follows = data.follows;
     bsd->vfollows = data.vfollows;
 
@@ -1854,8 +1684,6 @@ bin_section_data_destroy(void *data)
         yasm_expr_destroy(bsd->start);
     if (bsd->vstart)
         yasm_expr_destroy(bsd->vstart);
-    if (bsd->vseg)
-        yasm_expr_destroy(bsd->vseg);
     if (bsd->follows)
         yasm_xfree(bsd->follows);
     if (bsd->vfollows)
@@ -1891,8 +1719,6 @@ bin_section_data_print(void *data, FILE *f, int indent_level)
     yasm_expr_print(bsd->start, f);
     fprintf(f, "\n%*svstart=", indent_level, "");
     yasm_expr_print(bsd->vstart, f);
-    fprintf(f, "\n%*svseg=", indent_level, "");
-    yasm_expr_print(bsd->vseg, f);
 
     fprintf(f, "\n%*sfollows=", indent_level, "");
     if (bsd->follows)
