@@ -241,11 +241,6 @@ yasm_object_create(const char *src_filename, const char *obj_filename,
     /* Initialize things to NULL in case of error */
     object->dbgfmt = NULL;
 
-    /* Initialize override structure */
-    object->overrides = yasm_xmalloc(sizeof(yasm_overrides));
-
-    object->overrides->value_finalize = NULL;
-
     /* Initialize the object format */
     object->objfmt = yasm_objfmt_create(objfmt_module, object);
     if (!object->objfmt) {
@@ -493,8 +488,6 @@ yasm_object_destroy(yasm_object *object)
     /* Delete architecture */
     if (object->arch)
         yasm_arch_destroy(object->arch);
-
-    yasm_xfree(object->overrides);
 
     yasm_xfree(object);
 }

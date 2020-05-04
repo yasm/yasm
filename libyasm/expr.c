@@ -847,130 +847,14 @@ expr_expand_equ(yasm_expr *e, yasm__exprhead *eh)
 }
 
 static yasm_expr *
-expr_simplify_seg(yasm_expr *e)
-{
-    yasm_expr *sube, *seg;
-
-    if (e->op != YASM_EXPR_SEG && e->op != YASM_EXPR_WRT)
-        return e;
-    if (e->terms[0].type != YASM_EXPR_EXPR)
-        return e;
-    sube = e->terms[0].data.expn;
-
-    seg = yasm_expr_extract_deep_segoff(&sube);
-    if (!seg)
-        return e;
-
-    if (e->op == YASM_EXPR_SEG) {
-        e->op = YASM_EXPR_IDENT;
-        yasm_expr_destroy(sube);
-        e->terms[0].data.expn = seg;
-    } else if (e->op == YASM_EXPR_WRT) {
-        yasm_expr *old_base, *new_base;
-        yasm_expr *wrt, *off;
-        unsigned long line = e->line;
-
-        off = e;
-        wrt = yasm_expr_extract_wrt(&off);
-
-        assert(wrt != NULL);
-
-        old_base = yasm_xmalloc(sizeof(yasm_expr));
-        old_base->op = YASM_EXPR_MUL;
-        old_base->line = line;
-        old_base->numterms = 2;
-        old_base->terms[0].type = YASM_EXPR_INT;
-        old_base->terms[0].data.intn = yasm_intnum_create_int(16);
-        old_base->terms[1].type = YASM_EXPR_EXPR;
-        old_base->terms[1].data.expn = seg;
-
-        new_base = yasm_xmalloc(sizeof(yasm_expr));
-        new_base->op = YASM_EXPR_MUL;
-        new_base->line = line;
-        new_base->numterms = 2;
-        new_base->terms[0].type = YASM_EXPR_INT;
-        new_base->terms[0].data.intn = yasm_intnum_create_int(-16);
-        new_base->terms[1].type = YASM_EXPR_EXPR;
-        new_base->terms[1].data.expn = wrt;
-
-        e = yasm_xmalloc(sizeof(yasm_expr)+sizeof(yasm_expr__item));
-        e->op = YASM_EXPR_ADD;
-        e->line = line;
-        e->numterms = 3;
-        e->terms[0].type = YASM_EXPR_EXPR;
-        e->terms[0].data.expn = off;
-        e->terms[1].type = YASM_EXPR_EXPR;
-        e->terms[1].data.expn = old_base;
-        e->terms[2].type = YASM_EXPR_EXPR;
-        e->terms[2].data.expn = new_base;
-    }
-
-    return e;
-}
-
-static yasm_expr *
-expr_lift_segoff(yasm_expr *e, int calc_bc_dist)
-{
-    yasm_expr *retval = NULL;
-    int i;
-    
-    if (e->op < YASM_EXPR_LOGIC || e->op == YASM_EXPR_SEGOFF) {
-        i = e->op == YASM_EXPR_SEGOFF ? 1 : 0;
-        for (; i<e->numterms; i++) {
-            if (e->terms[i].type == YASM_EXPR_EXPR &&
-                e->terms[i].data.expn->op == YASM_EXPR_SEGOFF) {
-                yasm_expr *sub = e->terms[i].data.expn;
-                e->terms[i] = sub->terms[1];
-                retval = sub;
-                retval->op = YASM_EXPR_SEGOFF;
-                retval->line = e->line;
-                retval->numterms = 2;
-                break;
-            }
-        }
-    }
-
-    if (retval != NULL && e->op == YASM_EXPR_SEGOFF) {
-        yasm_intnum *diff;
-        yasm_expr *helper;
-        e->op = YASM_EXPR_IDENT;
-        e->numterms = 1;
-        retval->op = YASM_EXPR_IDENT;
-        retval->numterms = 1;
-        helper = yasm_xmalloc(sizeof(yasm_expr));
-        helper->op = YASM_EXPR_SUB;
-        helper->numterms = 2;
-        helper->terms[0].type = YASM_EXPR_EXPR;
-        helper->terms[0].data.expn = yasm_expr_copy(e);
-        helper->terms[1].type = YASM_EXPR_EXPR;
-        helper->terms[1].data.expn = yasm_expr_copy(retval);
-        diff = yasm_expr_get_intnum(&helper, calc_bc_dist);
-        if (diff != NULL && yasm_intnum_is_zero(diff)) {
-            yasm_expr_destroy(retval);
-            retval = NULL;
-        } else {
-            retval->op = YASM_EXPR_SEGOFF;
-            retval->numterms = 2;
-        }
-        yasm_expr_destroy(helper);
-        e->op = YASM_EXPR_SEGOFF;
-        e->numterms = 2;
-    }
-
-    return retval;
-}
-
-static yasm_expr *
 expr_level_tree(yasm_expr *e, int fold_const, int simplify_ident,
                 int simplify_reg_mul, int calc_bc_dist,
                 yasm_expr_xform_func expr_xform_extra,
                 void *expr_xform_extra_data)
 {
     int i;
-    yasm_expr *seg;
 
     e = expr_xform_neg(e);
-    e = expr_simplify_seg(e);
 
     /* traverse terms */
     for (i=0; i<e->numterms; i++) {
@@ -982,11 +866,18 @@ expr_level_tree(yasm_expr *e, int fold_const, int simplify_ident,
                                 expr_xform_extra, expr_xform_extra_data);
     }
 
+    /* Check for SEG of SEG:OFF, if we match, simplify to just the segment */
+    if (e->op == YASM_EXPR_SEG && e->terms[0].type == YASM_EXPR_EXPR &&
+        e->terms[0].data.expn->op == YASM_EXPR_SEGOFF) {
+        e->op = YASM_EXPR_IDENT;
+        e->terms[0].data.expn->op = YASM_EXPR_IDENT;
+        /* Destroy the second (offset) term */
+        e->terms[0].data.expn->numterms = 1;
+        expr_delete_term(&e->terms[0].data.expn->terms[1], 1);
+    }
+
     /* do callback */
     e = expr_level_op(e, fold_const, simplify_ident, simplify_reg_mul);
-    seg = expr_lift_segoff(e, calc_bc_dist);
-    if (seg)
-        e = expr_level_op(e, fold_const, simplify_ident, simplify_reg_mul);
     if (calc_bc_dist || expr_xform_extra) {
         if (calc_bc_dist)
             e = expr_xform_bc_dist(e);
@@ -994,11 +885,6 @@ expr_level_tree(yasm_expr *e, int fold_const, int simplify_ident,
             e = expr_xform_extra(e, expr_xform_extra_data);
         e = expr_level_tree(e, fold_const, simplify_ident, simplify_reg_mul,
                             0, NULL, NULL);
-    }
-    if (seg) {
-        seg->terms[1].type = YASM_EXPR_EXPR;
-        seg->terms[1].data.expn = e;
-        e = seg;
     }
     return e;
 }

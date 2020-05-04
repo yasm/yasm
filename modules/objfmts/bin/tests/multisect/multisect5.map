@@ -32,7 +32,6 @@ start:     00000100
 align:     00000004
 follows:   not defined
 vstart:    00000100
-vseg:      not defined
 valign:    00000004
 vfollows:  not defined
 
@@ -44,7 +43,6 @@ start:     00000100
 align:     00000004
 follows:   not defined
 vstart:    00002000
-vseg:      not defined
 valign:    00000004
 vfollows:  not defined
 
@@ -56,7 +54,6 @@ start:     00000200
 align:     00000004
 follows:   sect1
 vstart:    00000200
-vseg:      not defined
 valign:    00000004
 vfollows:  not defined
 
@@ -68,7 +65,6 @@ start:     00000300
 align:     00000004
 follows:   not defined
 vstart:    00004000
-vseg:      not defined
 valign:    00000004
 vfollows:  not defined
 
@@ -80,7 +76,6 @@ start:     00000400
 align:     00000004
 follows:   sect3
 vstart:    00000400
-vseg:      not defined
 valign:    00000004
 vfollows:  not defined
 
@@ -92,7 +87,6 @@ start:     00000500
 align:     00000004
 follows:   not defined
 vstart:    00004100
-vseg:      not defined
 valign:    00000004
 vfollows:  sect3
 
@@ -104,7 +98,6 @@ start:     00000600
 align:     00000004
 follows:   not defined
 vstart:    00006000
-vseg:      not defined
 valign:    00000004
 vfollows:  not defined
 
@@ -116,7 +109,6 @@ start:     00000614
 align:     00000004
 follows:   sect6
 vstart:    00000620
-vseg:      not defined
 valign:    00000010
 vfollows:  not defined
 
@@ -128,7 +120,6 @@ start:     00000718
 align:     00000004
 follows:   sect7
 vstart:    00000730
-vseg:      not defined
 valign:    00000010
 vfollows:  not defined
 
@@ -140,7 +131,6 @@ start:     00000818
 align:     00000004
 follows:   not defined
 vstart:    00000830
-vseg:      not defined
 valign:    00000004
 vfollows:  sect8
 
