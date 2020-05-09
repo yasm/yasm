@@ -1662,10 +1662,12 @@ dir_export(yasm_object *object, yasm_valparamhead *valparams,
     /* Add text as data bytecode */
     yasm_dvs_initialize(&dvs);
     yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup("-export:"),
-                                                strlen("-export:")));
+                                                strlen("-export:"),
+                                                UTF8));
     yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(symname),
-                                                strlen(symname)));
-    yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(" "), 1));
+                                                strlen(symname),
+                                                UTF8));
+    yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(" "), 1, UTF8));
     yasm_section_bcs_append(sect, yasm_bc_create_data(&dvs, 1, 0, NULL, line));
 }
 
@@ -1815,7 +1817,7 @@ dir_ident(yasm_object *object, yasm_valparamhead *valparams,
             return;
         }
         yasm_dvs_append(&dvs,
-                        yasm_dv_create_string(yasm__xstrdup(s), strlen(s)));
+                        yasm_dv_create_string(yasm__xstrdup(s), strlen(s), UTF8));
     } while ((vp = yasm_vps_next(vp)));
 
     yasm_section_bcs_append(comment,

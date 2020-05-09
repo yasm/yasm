@@ -407,7 +407,8 @@ cv_append_str(yasm_section *sect, const char *str)
 
     yasm_dvs_initialize(&dvs);
     yasm_dvs_append(&dvs, yasm_dv_create_string(yasm__xstrdup(str),
-                                                strlen(str)));
+                                                strlen(str),
+                                                UTF8));
     bc = yasm_bc_create_data(&dvs, 1, 1, NULL, 0);
     yasm_bc_finalize(bc, yasm_cv__append_bc(sect, bc));
     yasm_bc_calc_len(bc, NULL, NULL);
