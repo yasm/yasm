@@ -570,8 +570,9 @@ yasm_dv_create_string(char *contents, size_t len, yasm_utfenc enc) {
 
     if (bufn != len) {
         unsigned int cpt;
+        int j=0;
         buf = yasm_xmalloc(bufn);
-        for (int i=0,j=0; i<len;) {
+        for (int i=0; i<len;) {
             if (j > bufn)
                 goto encodeerr;
             int read = next_codepoint(&cpt, raw+i, len-i);
@@ -583,6 +584,7 @@ yasm_dv_create_string(char *contents, size_t len, yasm_utfenc enc) {
                 goto encodeerr;
             j += wrtn;
         }
+        bufn = j;
     }
     return yasm_dv_create_raw(buf, bufn);
 
