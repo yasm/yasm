@@ -1,11 +1,11 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.22823.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30320.27
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{825AC694-358C-4D8D-92DE-33A2691978CE}"
 	ProjectSection(SolutionItems) = preProject
 		crt_secure_no_deprecate.vsprops = crt_secure_no_deprecate.vsprops
-		readme.vc14.txt = readme.vc14.txt
+		readme.vs.txt = readme.vs.txt
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libyasm", "libyasm\libyasm.vcxproj", "{29FE7874-1256-4AD6-B889-68E399DC9608}"
@@ -138,5 +138,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {BE3F09BB-91A9-474C-AAD9-4B4D43DCE89E}
 	EndGlobalSection
 EndGlobal
