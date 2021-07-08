@@ -1286,6 +1286,25 @@ macho_objfmt_add_default_section(yasm_object *object)
     macho_section_data *msd;
     int isnew;
 
+    /* Create a dummy __asm marker section with a single zero byte. This tells
+     * the Apple toolchain that the code came from assembler and has no bitcode.
+     */
+    retval = yasm_object_get_general(object, ".llvmasm", 0, 0, 0, &isnew, 0);
+    if (isnew) {
+        yasm_datavalhead dvs;
+
+        msd = yasm_section_get_data(retval, &macho_section_data_cb);
+        msd->segname = yasm__xstrdup("__LLVM");
+        msd->sectname = yasm__xstrdup("__asm");
+        yasm_section_set_align(retval, 0, 0);
+        yasm_dvs_initialize(&dvs);
+        yasm_dvs_append(&dvs, yasm_dv_create_expr(
+            yasm_expr_create_ident(
+                yasm_expr_int(yasm_intnum_create_uint(0)), line)));
+        yasm_section_bcs_append(retval,
+            yasm_bc_create_data(&dvs, 1, 0, object->arch, 0));
+    }
+
     retval = yasm_object_get_general(object, "LC_SEGMENT.__TEXT.__text", 0, 1,
                                      0, &isnew, 0);
     if (isnew) {
@@ -1346,6 +1365,7 @@ macho_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
         {".const_data",     "__DATA", "__const",        S_REGULAR, 0},
         {".rodata",         "__DATA", "__const",        S_REGULAR, 0},
         {".bss",            "__DATA", "__bss",          S_ZEROFILL, 0},
+        {".llvmasm",        "__LLVM", "__asm",          S_REGULAR, 0},
         {".objc_class_names",   "__TEXT", "__cstring",  S_CSTRING_LITERALS, 0},
         {".objc_meth_var_types","__TEXT", "__cstring",  S_CSTRING_LITERALS, 0},
         {".objc_meth_var_names","__TEXT", "__cstring",  S_CSTRING_LITERALS, 0},
