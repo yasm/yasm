@@ -101,13 +101,7 @@ AM_WITH_DMALLOC
 #
 # Checks for header files.
 #
-AC_HEADER_STDC
 AC_CHECK_HEADERS([strings.h libgen.h unistd.h direct.h sys/stat.h])
-
-# REQUIRE standard C headers
-if test "$ac_cv_header_stdc" != yes; then
-	AC_MSG_ERROR([Standard (ANSI/ISO C89) header files are required.])
-fi
 
 #
 # Checks for typedefs, structures, and compiler characteristics.
